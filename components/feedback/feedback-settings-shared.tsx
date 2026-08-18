@@ -31,25 +31,25 @@ import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import type { SettingsSectionId } from "@/lib/settings-sections";
 
 /**
- * Les réglages du feedback, rendus DEUX FOIS : dans l'onglet Retours des
- * paramètres du projet, et dans le wizard de configuration qui en est devenu le
- * point d'entrée ([feedback-setup-wizard.tsx](feedback-setup-wizard.tsx)).
+ * Feedback settings, rendered TWICE: in the Feedback tab
+ * project parameters, and in the configuration wizard which has become the
+ * entry point ([feedback-setup-wizard.tsx](feedback-setup-wizard.tsx)).
  *
- * Les deux surfaces montrent les mêmes interrupteurs et écrivent par la même
- * route — les recopier, c'était accepter qu'un jour l'un des deux mente. D'où ce
- * module : la page et le wizard n'y ajoutent que leur mise en page.
+ * Both surfaces show the same switches and write by the same
+ * road — copying them down meant accepting that one day one of the two would lie. Gentle
+ * module: the page and the wizard only add their layout.
  *
- * Ce qui est partagé se répartit en deux formes, selon ce que la page en fait :
+ * What is shared is divided into two forms, depending on what the page does with it:
  *
- *  - des **rangées** (`BoardVisibilityRows`, `BoardAccentRow`) pour ce qui, dans
- *    la page, vit à l'intérieur d'une carte plus grande (celle du board, qui
- *    porte aussi l'URL publique et le SSO) ;
- *  - des **cartes entières** (`NumoReviewGroup`, `FeedbackTranslationGroup`)
- *    pour ce qui EST déjà une carte, interrupteur maître compris.
+ * - **rows** (`BoardVisibilityRows`, `BoardAccentRow`) for what, in
+ * the page, lives inside a larger card (that of the board, which
+ * also carries the public URL and SSO);
+ * - **entire cards** (`NumoReviewGroup`, `FeedbackTranslationGroup`)
+ * for what already IS a card, master switch included.
  *
- * L'ancre `SETTINGS_SECTIONS` est facultative et n'est passée que par la page :
- * deux cartes montées en même temps (la page derrière, le wizard devant)
- * poseraient deux fois le même `id` dans le document, et ⌘K déroulerait la
+ * The `SETTINGS_SECTIONS` anchor is optional and is only passed through the page:
+ * two cards mounted at the same time (the page behind, the wizard in front)
+ * would pose the same `id` twice in the document, and ⌘K would unroll the
  * mauvaise.
  */
 
@@ -98,9 +98,9 @@ export async function feedbackApi<T>(
 }
 
 /**
- * L'état du board et les gestes qui l'écrivent — pour la page comme pour le
- * wizard. Les deux montent ce hook en même temps ; React Query déduplique sur
- * la clé, donc ils lisent le même board et se voient l'un l'autre bouger.
+ * The state of the board and the gestures that write it — for the page as for the
+ * wizard. Both ride this hook at the same time; React Query deduplicates on
+ * the key, so they read the same board and see each other move.
  */
 export function useFeedbackBoardSettings(projectId: string) {
   const queryClient = useQueryClient();
@@ -114,13 +114,13 @@ export function useFeedbackBoardSettings(projectId: string) {
   });
 
   /**
-   * Optimiste (MIN-40) : patch le cache tout de suite pour que le switch suive
-   * le doigt, puis persiste ; revert + toast à l'échec.
+   * Optimist (MIN-40): patch it immediately so that the switch follows
+   * the finger, then persists; revert + toast to failure.
    *
-   * La réponse du serveur est réécrite dans le cache — c'est ce qui donne au
-   * wizard le board NEUF (son token, son URL publique) juste après l'avoir
-   * activé : le patch optimiste, lui, ne sait rien inventer d'un board qui
-   * n'existait pas encore.
+   * The server's response is written back to the cache — this is what gives the
+   * wizard the NEW board (its token, its public URL) just after having
+   * activated: the optimistic patch does not know how to invent anything about a board that
+   * did not exist yet.
    */
   const patchBoard = async (body: Partial<BoardSettings>): Promise<boolean> => {
     const previous = queryClient.getQueryData<FeedbackSettingsData>(key);
@@ -141,9 +141,9 @@ export function useFeedbackBoardSettings(projectId: string) {
     }
   };
 
-  // Accent (MIN-59) : le picker `ColorInput` émet en continu pendant le drag. On
-  // patche le cache tout de suite (le swatch suit le doigt) mais on debounce
-  // l'appel réseau pour ne pas spammer la DB. Échec → resync depuis le serveur.
+  // Accent (MIN-59): picker `ColorInput` emits continuously during drag. We
+  // patch the cache right away (the swatch follows the finger) but we debounce
+  // the network call so as not to spam the DB. Failed → resync from server.
   const accentTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const patchBoardDebounced = (body: Partial<BoardSettings>) => {
     queryClient.setQueryData<FeedbackSettingsData>(key, (old) =>
@@ -161,7 +161,7 @@ export function useFeedbackBoardSettings(projectId: string) {
     }, 350);
   };
 
-  /** Les actions qui ne sont pas de simples bascules (secret SSO) : spinner. */
+  /** Actions that are not simple toggles (SSO secret): spinner. */
   const post = async (action: string): Promise<boolean> => {
     setBusy(true);
     try {
@@ -190,7 +190,7 @@ export function useFeedbackBoardSettings(projectId: string) {
   };
 }
 
-/** Pastille d'état : point coloré + libellé, pour lire le statut d'un coup. */
+/** Status dot: colored dot + label, to read the status at once. */
 export function StatusPill({
   active,
   label,
@@ -217,10 +217,10 @@ export function StatusPill({
 }
 
 /**
- * Le corps d'une carte de réglages, sans son en-tête — la forme que prennent les
- * rangées dans le wizard, où le titre de l'étape dit déjà ce qu'elles règlent.
- * Le `FieldGroup` n'est pas décoratif : c'est lui qui porte la container query
- * dont vivent les rangées `responsive`.
+ * The body of a settings card, without its header — the form the settings take
+ * stored in the wizard, where the step title already says what they are adjusting.
+ * The `FieldGroup` is not decorative: it carries the container query
+ * of which the `responsive` rows live.
  */
 export function SettingsRows({ children }: { children: ReactNode }) {
   return (
@@ -231,8 +231,8 @@ export function SettingsRows({ children }: { children: ReactNode }) {
 }
 
 /**
- * Ce que le board montre au public : la parole d'abord (les commentaires), puis
- * les affichages. Trois rangées, à poser dans la carte du board (page) ou dans
+ * What the board shows to the public: the word first (comments), then
+ * displays. Three rows, to be placed in the board card (page) or in
  * `SettingsRows` (wizard).
  */
 export function BoardVisibilityRows({
@@ -249,9 +249,9 @@ export function BoardVisibilityRows({
   const t = useTranslations("Settings");
   return (
     <>
-      {/* Commentaires publics (MIN-196) — la seule rangée du board qui ouvre une
-          PAROLE et pas un affichage : elle vient donc avant celles qui règlent
-          ce qu'on montre. Éteinte, le fil déjà écrit reste lisible ; c'est ce
+      {/* Public Comments (MIN-196) — the only row on the board that opens a
+          WORD and not a display: it therefore comes before those which regulate
+          what we show. When off, the thread already written remains readable; this is what
           que dit son hint. */}
       <SettingsRow
         label={t("feedbackAllowComments")}
@@ -266,7 +266,7 @@ export function BoardVisibilityRows({
         }
       />
 
-      {/* Onglets des vues partagées */}
+      {/* Shared Views Tabs */}
       <SettingsRow
         label={t("feedbackShowViews")}
         hint={t("feedbackShowViewsDesc")}
@@ -313,8 +313,8 @@ export function BoardVisibilityRows({
           ))}
       </SettingsRow>
 
-      {/* Catégories des posts sur le board public (MIN-52) — off par défaut :
-          les catégories restent internes au dashboard équipe. */}
+      {/* Categories of posts on the public board (MIN-52) — off by default:
+          the categories remain internal to the team dashboard. */}
       <SettingsRow
         label={t("feedbackShowCategories")}
         hint={t("feedbackShowCategoriesDesc")}
@@ -331,9 +331,9 @@ export function BoardVisibilityRows({
   );
 }
 
-/** Couleur d'accent du board (MIN-59) : switch optionnel qui révèle deux
- *  `ColorInput` (clair/sombre). Off = accents null → bleu minddy par défaut.
- *  Activer amorce les deux couleurs sur le défaut pour donner un point de départ. */
+/** Board accent color (MIN-59): optional switch that reveals two
+ * `ColorInput` (light/dark). Off = accents null → minddy blue by default.
+ * Enable boots both colors on the default to give a starting point. */
 export function BoardAccentRow({
   board,
   isOwner,
@@ -401,13 +401,13 @@ export function BoardAccentRow({
 }
 
 /**
- * Revue par Numo — l'étape qui catégorise, filtre et modère chaque retour avant
- * publication. Deux interrupteurs, sur le projet (pas sur le board : la revue
- * couvre aussi l'API et la saisie interne).
+ * Review by Numo — the step that categorizes, filters and moderates every feedback before
+ * publication. Two switches, on the project (not on the board: the review
+ * also covers API and internal input).
  *
- * Le second n'existe que tant que le premier est armé : il ne répond qu'à la
- * question « et si le budget IA est épuisé ? ». Désarmer la revue est possible
- * mais déconseillé, d'où l'avertissement en clair plutôt qu'un simple libellé.
+ * The second only exists as long as the first is armed: it only responds to
+ * question “what if the AI ​​budget is exhausted?” ". Disarming the review is possible
+ * but not recommended, hence the warning in clear rather than simple wording.
  */
 export function NumoReviewGroup({
   projectId,
@@ -422,8 +422,8 @@ export function NumoReviewGroup({
   const { projects, updateProject } = useProjects();
   const project = projects.find((p) => p.id === projectId);
 
-  // Miroir local pour que les switches suivent le doigt, puis reconciliation
-  // depuis le projet (refetch) — le pattern de SmartAssignSection.
+  // Local mirroring so that the switches follow the finger, then reconciliation
+  // from the project (refetch) — the SmartAssignSection pattern.
   const [reviewOn, setReviewOn] = useState(
     project?.feedback_review_enabled !== false,
   );
@@ -505,20 +505,20 @@ export function NumoReviewGroup({
 }
 
 /**
- * Traduction automatique des retours (dans la même passe que la revue).
+ * Automatic translation of feedback (in the same pass as the review).
  *
- * Deux réglages, et un troisième qui n'en est pas un :
+ * Two settings, and a third which is not one:
  *
- * - **la langue de l'équipe** — celle vers laquelle on traduit. Elle est semée
- *   à la création du projet avec la langue de l'interface du créateur, parce
- *   que c'est le seul instant où on peut la lire : l'app la tient dans un
- *   cookie, jamais sur le compte, et une passe de revue qui tourne trois jours
- *   plus tard n'aurait aucun moyen de la retrouver ;
- * - **les langues qu'on lit sans aide** — une équipe française n'a pas besoin
- *   qu'on lui traduise l'anglais ;
- * - la langue de l'équipe elle-même, qui est dans la seconde liste d'office et
- *   n'y est donc pas proposée : on ne traduit pas vers sa propre langue, et
- *   offrir la case laisserait croire qu'on peut demander l'inverse.
+ * - **the language of the team** — the one we translate into. It is sown
+ * when creating the project with the language of the creator's interface, because
+ * that this is the only moment where we can read it: the app holds it in a
+ * cookie, never on the account, and a review pass that runs for three days
+ * later would have no way of finding her;
+ * - **languages ​​that we read without help** — a French team does not need
+ *   have the English translated for it;
+ * - the language of the team itself, which is in the second automatic list and
+ * is therefore not offered: we do not translate into our own language, and
+ * offering the box would suggest that we can ask for the opposite.
  */
 export function FeedbackTranslationGroup({
   projectId,
@@ -534,8 +534,8 @@ export function FeedbackTranslationGroup({
   const { projects, updateProject } = useProjects();
   const project = projects.find((p) => p.id === projectId);
 
-  // Miroir local pour que le switch suive le doigt, puis réconciliation depuis
-  // le projet — le pattern de `NumoReviewGroup` juste au-dessus.
+  // Local mirror so that the switch follows the finger, then reconciliation from
+  // the project — the `NumoReviewGroup` pattern just above.
   const [on, setOn] = useState(project?.feedback_translate_enabled !== false);
   useEffect(() => {
     if (project) setOn(project.feedback_translate_enabled !== false);
@@ -543,8 +543,8 @@ export function FeedbackTranslationGroup({
 
   if (!project) return null;
 
-  // NULL en base = jamais renseignée : la revue retombe sur la locale par
-  // défaut de l'app, et le sélecteur montre donc la même chose qu'elle.
+  // NULL in base = never entered: the review falls back to the local by
+  // default of the app, and the selector therefore shows the same thing as it.
   const teamLanguage =
     normalizeLanguage(project.feedback_team_language) ??
     (normalizeLanguage(defaultLocale) as FeedbackLanguage);
@@ -567,9 +567,9 @@ export function FeedbackTranslationGroup({
   );
 
   const label = (code: string) => languageLabel(code, locale);
-  // Deux surfaces peuvent monter cette carte en même temps (la page derrière, le
-  // wizard devant) : un `id` en dur ferait deux fois le même dans le document,
-  // et le libellé du sélecteur pointerait sur le mauvais champ.
+  // Two surfaces can mount this card at the same time (the page behind, the
+  // wizard in front): a hard `id` would do the same thing twice in the document,
+  // and the selector label would point to the wrong field.
   const selectId = `feedback-team-language-${anchor ?? "wizard"}`;
 
   return (
@@ -601,8 +601,8 @@ export function FeedbackTranslationGroup({
     >
       {on && (
         <>
-          {/* Le sélecteur des réglages, celui de la langue de l'interface juste
-              à côté dans le compte — même contrôle, même largeur. */}
+          {/* The settings selector, that of the interface language just
+              next to it in the account — same control, same width. */}
           <SettingsRow
             htmlFor={selectId}
             label={t("feedbackTeamLanguageLabel")}
@@ -628,11 +628,11 @@ export function FeedbackTranslationGroup({
               </Select>
             }
           />
-          {/* Choix multiple : le combobox cherchable de l'app (celui des
-              catégories d'un ticket), et non une grille de cases — quatorze
-              cases à cocher dans une rangée de réglages font un mur qu'on
-              parcourt des yeux au lieu d'y chercher une langue.
-              La langue de l'équipe n'y est pas : elle est exclue d'office, et
+          {/* Multiple choice: the searchable combobox of the app (that of
+              categories of a ticket), and not a grid of boxes — fourteen
+              check boxes in a row of settings make a wall that we
+              looks around instead of looking for a tongue.
+              The language of the team is not there: it is automatically excluded, and
               l'offrir laisserait croire qu'on peut demander l'inverse. */}
           <SettingsRow
             label={t("feedbackNoTranslateLabel")}

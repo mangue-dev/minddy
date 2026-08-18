@@ -12,181 +12,181 @@ import {
 } from "./private-address";
 
 /**
- * LES GARDE-FOUS, REJOUÉS SUR LA DEMANDE DE PERMISSION D'OPENCODE (MIN-286, lot 2).
+ * THE SAFEGUARDS, REPRESENTED ON THE OPENCODE PERMISSION REQUEST (MIN-286, lot 2).
  *
- * Ce que le harness maison faisait DANS le tool (`exec-tool.ts` refusait
- * `git reset --hard` avant de toucher au Sandbox, `repo-host.ts` refusait une
- * écriture hors dépôt), opencode le demande : `permission: {bash: "ask",
- * edit: "ask"}` suspend l'appel et publie `permission.asked` sur le flux. Le
- * superviseur répond — et sa réponse EST le garde-fou.
+ * What the homemade harness did IN the tool (`exec-tool.ts` refused
+ * `git reset --hard` before touching the Sandbox, `repo-host.ts` refused a
+ * writing outside the repository), opencode requests it: `permission: {bash: "ask",
+ * edit: "ask"}` suspends the call and publishes `permission.asked` on the stream. THE
+ * supervisor responds — and his response IS the guardrail.
  *
- * Un module PUR, donc : la décision se teste sans serveur, et
- * [command-guard.ts](../command-guard.ts) comme [repo-path.ts](../repo-path.ts)
- * n'ont pas changé d'une ligne. Ce sont les mêmes fonctions, appelées d'ailleurs.
+ * A PUR module, therefore: the decision is tested without a server, and
+ * [command-guard.ts](../command-guard.ts), like [repo-path.ts](../repo-path.ts),
+ * have not changed a single line. They are the same functions, called from elsewhere.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * CE QUI A ÉTÉ MESURÉ (opencode-ai@1.18.16, faux fournisseur local qui scripte
- * les appels de tool — aucun modèle dépensé)
+ * WHAT WAS MEASURED (opencode-ai@1.18.16, fake local provider that scripts
+ * tool calls — no model spent)
  *
- * 1. **`bash: "ask"` publie une demande**, et `echo hi` la publie :
+ * 1. `bash: "ask"` publishes a request**, and `echo hi` publishes it:
  *    `{permission: "bash", patterns: ["echo hi"], metadata: {command: "echo hi"},
- *    always: ["echo *"], tool: {messageID, callID}}`. Sur une commande ordinaire,
- *    le garde-fou voit donc exactement ce que voyait `run_command`.
+ * always: ["echo *"], tool: {messageID, callID}}`. On an ordinary order,
+ * the guardrail therefore sees exactly what `run_command` saw.
  *
- *    ⚠ **« pour TOUTE commande » était faux** (MIN-362, MIN-363), et la nuance
- *    n'est pas d'école : mesurée commande par commande dans
+ * ⚠ **“for ANY order” was wrong** (MIN-362, MIN-363), and the nuance
+ * is not school: measured order by order in
  *    [opencode-permissions.probe.test.ts](opencode-permissions.probe.test.ts),
- *    `cd <ailleurs>` publie `external_directory` et **jamais** `bash`, et `cd .`
- *    comme `popd` ne publient **rien du tout**. Ces trois-là ne passent JAMAIS
- *    devant `checkCommand`. Sur trente commandes visant un dossier hors dépôt,
- *    dix publient `external_directory`, vingt ne publient que `bash` — dont
- *    `grep`, `find`, `sed`, `node`, `curl`, que `checkCommand` (qui ne vise que
- *    git) laisse passer. **Ce module est un anti-accident, pas un périmètre** ;
- *    le seul périmètre qui tiendrait est au niveau de l'OS (§2 de
- *    [l'audit local](../../../../docs/audits/agent-local-2026-08-14.md)).
- * 2. **Une écriture publie `permission: "edit"`** avec `metadata.filepath`
- *    **ABSOLU** (et un `diff`), quel que soit le tool — `write`, `edit`,
- *    `apply_patch`. Une écriture HORS du dépôt en publie deux : d'abord
+ * `cd <elsewhere>` publishes `external_directory` and **never** `bash`, and `cd .`
+ * like `popd` publish **nothing at all**. These three NEVER pass
+ * in front of `checkCommand`. Out of thirty orders for a non-deposit file,
+ *    ten publish `external_directory`, twenty publish only `bash` — including
+ *    `grep`, `find`, `sed`, `node`, and `curl`, which `checkCommand` (which only
+ * targets git) lets through. **This module is an anti-accident, not a perimeter**;
+ * the only perimeter that would hold is at the OS level (§2 of
+ *    [the local audit](../../../../docs/audits/agent-local-2026-08-14.md)).
+ * 2. **A write publishes `permission: "edit"`** with `metadata.filepath`
+ * **ABSOLUTE** (and a `diff`), whatever the tool — `write`, `edit`,
+ * `apply_patch`. A write OUTSIDE the repository publishes two: first
  *    `external_directory` (`metadata.parentDir`), puis `edit`.
- * 3. **`.git/` n'est protégé par personne chez opencode** : `write` sur
- *    `<dépôt>/.git/config` a été **exécuté** et a écrasé le fichier. C'est
- *    précisément ce que `assertNotGit` garde (écrire un hook ou un `config` =
- *    exfiltration du token d'installation), et c'est la raison pour laquelle
- *    `edit` est en `ask` plutôt qu'en `allow` dans la config du tour.
- * 4. **La réponse porte un MESSAGE, et le modèle le lit** :
- *    `POST /permission/:id/reply {reply: "reject", message}` → le tool revient en
- *    `status: "error"` avec « The user rejected permission to use this specific
- *    tool call with the following feedback: <message> ». C'est ce qui fait qu'un
- *    refus reste ce qu'il a toujours été chez nous : une **erreur de tool** que
- *    le modèle lit et corrige, jamais un tour cassé.
+ * 3. **`.git/` is not protected by anyone at opencode**: `write` on
+ * `<repository>/.git/config` was **executed** and overwrote the file. It is
+ * precisely what `assertNotGit` keeps (write a hook or a `config` =
+ * exfiltration of the installation token), and this is the reason why
+ * `edit` is in `ask` rather than `allow` in the tour config.
+ * 4. **The response carries a MESSAGE, and the model reads it**:
+ * `POST /permission/:id/reply {reply: "reject", message}` → the tool returns to
+ * `status: "error"` with “The user rejected permission to use this specific
+ * tool call with the following feedback: <message>”. This is what makes a
+ * refusal remains what it has always been with us: a **tool error** that
+ * the model reads and corrects, never a broken turn.
  */
 
-/** Une demande de permission, telle que le flux la publie (`permission.asked`). */
+/** A permission request, as the feed publishes it (`permission.asked`). */
 export interface PermissionAsk {
   id: string;
   sessionId: string;
-  /** L'action demandée : `bash`, `edit`, `external_directory`, `webfetch`… */
+  /** The requested action: `bash`, `edit`, `external_directory`, `webfetch`… */
   permission: string;
-  /** L'appel de tool qui l'a déclenchée — ce qui relie le refus au fil. */
+  /** The tool call that triggered it — which ties the denial to the thread. */
   callId: string;
-  /** `metadata.command` sur un `bash`. */
+  /** `metadata.command` on a `bash`. */
   command?: string;
   /**
-   * LE CHEMIN DONT LA DEMANDE PARLE, et il ne voyage pas au même endroit selon
-   * le tool (cf. `permissionPath` dans [opencode-events.ts](opencode-events.ts)) :
-   * `metadata.filepath` sur une ÉCRITURE, absolu (mesure n°2) ; `patterns[0]` sur
-   * une LECTURE, relatif au worktree, parce que `ReadTool` publie un `metadata`
-   * VIDE — mesuré sur le binaire, et c'est le genre de détail qui fait refuser
-   * 100 % des lectures quand on le suppose au lieu de le regarder.
+   * THE PATH OF WHICH THE REQUEST SPEAKS, and it does not travel to the same place according to
+   * the tool (see `permissionPath` in [opencode-events.ts](opencode-events.ts)):
+   * `metadata.filepath` on a WRITING, absolute (measurement n°2); `patterns[0]` on
+   * a READ, relative to the worktree, because `ReadTool` publishes a `metadata`
+   * EMPTY — measured on the binary, and this is the kind of detail that makes you refuse
+   * 100% reads when you assume it instead of looking at it.
    */
   filepath?: string;
   /**
-   * LES FICHIERS D'UN `apply_patch`, UN PAR UN (`metadata.files`).
+   * THE FILES OF A `apply_patch`, ONE BY ONE (`metadata.files`).
    *
-   * `write` et `edit` touchent un fichier et publient un `filepath`. `apply_patch`
-   * en touche N et n'en publie **qu'une seule demande**, dont le `filepath` est la
-   * liste RECOLLÉE : `resources.join(", ")` (mesuré sur le binaire). Prise pour un
-   * chemin, cette chaîne donnait une ligne de « fichiers changés » portant trois à
-   * cinq noms séparés par des virgules — et, plus grave, un `assertNotGit` qui ne
-   * voit qu'un segment `a.ts, .git` : le seul garde-fou du dépôt passait à côté
-   * d'un patch qui touche `.git/config` en second.
+   * `write` and `edit` touch a file and publish a `filepath`. `apply_patch`
+   * in key N and publishes **only one request**, whose `filepath` is the
+   * RECOLLERED list: `resources.join(", ")` (measured on binary). Taken for a
+   * path, this string gave a line of "changed files" bearing three to
+   * five names separated by commas — and, more serious, a `assertNotGit` which does not
+   * sees that a segment `a.ts, .git`: the only guardrail of the depot was passing by
+   * a patch that touches `.git/config` second.
    *
-   * `metadata.files` porte la vraie liste, avec la nature de chaque geste. Vide
-   * (ou absent) sur les tools mono-fichier : `filepath` suffit et fait foi.
+   * `metadata.files` carries the real list, with the nature of each gesture. Empty
+   * (or absent) on single-file tools: `filepath` is sufficient and binding.
    */
   files?: { path: string; status: "added" | "modified" | "deleted" }[];
   /**
-   * `metadata.subagent_type` sur un `task` : le sous-agent demandé, DEMANDÉ
-   * AVANT qu'opencode ne le résolve (mesuré, cf. `decideTask`).
+   * `metadata.subagent_type` on a `task`: the requested sub-agent, REQUESTED
+   * BEFORE opencode resolves it (measured, cf. `decideTask`).
    */
   subagentType?: string;
   /**
-   * L'URL d'un `webfetch` (MIN-360). Elle n'était lue par personne, pour une
-   * raison qui a cessé d'être vraie : `webfetch: "allow"` ne publiait aucune
-   * demande, donc ce verdict ne voyait jamais un seul fetch.
+   * The URL of a `webfetch` (MIN-360). It was not read by anyone, for one
+   * reason which ceased to be true: `webfetch: "allow"` did not publish any
+   * request, so this verdict never saw a single fetch.
    */
   url?: string;
 }
 
 /**
- * Ce que le superviseur sait des sous-agents au moment du verdict — l'offre du
- * tour et ce qui tourne déjà. Absent = pas de délégation à arbitrer.
+ * What the supervisor knows about the subagents at the time of the verdict — the offer of the
+ * turn and what is already turning. Absent = no delegation to arbitrate.
  */
 export interface SubagentContext {
-  /** Les `subagent_type` déclarés en config ([opencode-config.ts](opencode-config.ts)). */
+  /** The `subagent_type` declared in config ([opencode-config.ts](opencode-config.ts)). */
   names: ReadonlySet<string>;
-  /** Filles vivantes à cet instant. */
+  /** Girls alive right now. */
   running: number;
   /**
-   * DÉLÉGATIONS AUTORISÉES ET PAS ENCORE NÉES — sans elles, le plafond ne borne
-   * rien du seul cas qu'il ait à borner.
+   * DELEGATIONS AUTHORIZED AND NOT YET BORN — without them, the ceiling is limited
+   * nothing of the only case that he has to limit.
    *
-   * Une fille n'entre dans `running` qu'à sa NAISSANCE, et le flux ne l'annonce
-   * qu'après coup (`metadata` du part `task`, mesuré : `opencode-delegation.test.ts`
-   * ancre `runningAtAsk === 0`). Un round qui appelle `task` trois fois voyait donc
-   * ses trois demandes arbitrées avant qu'aucune fille n'existe, et `running`
-   * valait zéro aux trois — le plafond passait toujours. Ce qu'on compte ici est
-   * le crédit ouvert entre l'autorisation et la naissance.
+   * A girl only enters `running` at her BIRTH, and the stream only announces her
+   * only afterwards (`metadata` from `task`, measured: `opencode-delegation.test.ts`
+   * anchors `runningAtAsk === 0`). A round that calls `task` three times therefore saw
+   * his three requests arbitrated before any girl existed, and `running`
+   * was worth zero to all three — the ceiling always passed. What we are counting here is
+   * the credit opened between authorization and birth.
    */
   pending?: number;
-  /** Plafond de simultané (`app_config`, MIN-112). */
+  /** Simultaneous ceiling (`app_config`, MIN-112). */
   maxParallel: number;
 }
 
-/** Ce que le superviseur doit répondre, et pourquoi. */
+/** What the supervisor should answer, and why. */
 export interface PermissionVerdict {
   reply: "once" | "reject";
-  /** Le mot au modèle sur un refus — il arrive dans l'erreur de tool (mesure n°4). */
+  /** The word to the model about a refusal — it happens in the tool error (measure no. 4). */
   message?: string;
-  /** `tool_result.reason`, pour que le refus reste mesurable en base. */
+  /** `tool_result.reason`, so that the refusal remains measurable in the base. */
   reason?: string;
 }
 
 const ALLOW: PermissionVerdict = { reply: "once" };
 
-/** `tool_result.reason` d'une permission que ce module ne connaît pas. */
+/** `tool_result.reason` of a permission that this module does not know. */
 export const UNKNOWN_PERMISSION_REASON = "unknown_permission";
 
-/** `tool_result.reason` d'une boucle coupée (`doom_loop`). */
+/** `tool_result.reason` of a cut loop (`doom_loop`). */
 export const DOOM_LOOP_REASON = "doom_loop";
 
-/** `tool_result.reason` d'une capacité que la config du tour a éteinte. */
+/** `tool_result.reason` of an ability that the tower config has turned off. */
 export const DISABLED_PERMISSION_REASON = "disabled_permission";
 
 /**
- * LES PERMISSIONS QU'ON A LUES, ET LA VERSION OÙ ON LES A LUES (MIN-364, lot 7).
+ * THE PERMISSIONS THAT WE READ, AND THE VERSION WHERE WE READ THEM (MIN-364, lot 7).
  *
- * ## Le défaut que ça ferme : un cliquet
+ * ## The fault that it closes: a ratchet
  *
- * `default: reject` est la bonne POSTURE sur la machine de quelqu'un — autoriser
- * ce qu'on n'a jamais lu n'est pas un garde-fou. Mais laissé seul, il fait de
- * chaque montée d'opencode un RETRAIT de capacité que personne ne décide : `lsp`,
- * `plan_enter`/`plan_exit`, `skill`, `doom_loop` étaient tous refusés « par
- * construction », et le seraient restés indéfiniment (§5.5 de l'audit du 15/08).
+ * `default: reject` is the correct POSTURE on someone's machine — allow
+ * what one has never read is no safeguard. But left alone, he makes
+ * each increase in opencode a WITHDRAWAL of capacity that no one decides: `lsp`,
+ * `plan_enter`/`plan_exit`, `skill`, `doom_loop` were all refused “by
+ * construction”, and would have remained so indefinitely (§5.5 of the audit of 08/15).
  *
- * Ce qui manquait n'est pas le refus, c'est le geste qui le lève. Le voici :
- * **cette liste est ce que le harness a lu et tranché**, et
- * `REVIEWED_OPENCODE_VERSION` dit à quelle version. Un test tombe dès que
+ * What was missing was not the refusal, it was the gesture that lifted it. Here it is:
+ * **this list is what the harness read and decided**, and
+ * `REVIEWED_OPENCODE_VERSION` says which version. A test falls as soon as
  * `OPENCODE_VERSION` avance ([opencode-permissions.test.ts](opencode-permissions.test.ts)) :
- * la relecture devient une étape de la montée de version, pas un oubli.
+ * rereading becomes a stage of the version upgrade, not an oversight.
  *
- * ## Comment la relire, à la prochaine montée
+ * ## How to reread it, on the next climb
  *
- * Le binaire porte son propre ruleset par défaut, et c'est lui qui fait foi :
- * `strings opencode | grep 'doom_loop:"ask"'` en donne le bloc complet
+ * The binary carries its own ruleset by default, and it is this which is authentic:
+ * `strings opencode | grep 'doom_loop:"ask"'` gives the complete block
  * (`{"*":"allow", doom_loop:"ask", external_directory:{…}, question:"deny",
- * plan_enter:"deny", plan_exit:"deny", read:{…}}` en 1.18.16), et
- * `GET /experimental/tool` sur un serveur nu donne les ids de tools. Toute
- * permission de plus se case ici avec un verdict et une phrase pour le modèle.
+ * plan_enter:"deny", plan_exit:"deny", read:{…}}` in 1.18.16), and
+ * `GET /experimental/tool` on a bare server gives the tools ids. All
+ * permission more is placed here with a verdict and a sentence for the model.
  */
 export const REVIEWED_OPENCODE_VERSION = "1.18.16";
 
 /**
- * Les noms de permission que `decidePermission` traite explicitement. Tout ce qui
- * n'y est pas tombe dans le `default` — donc refusé en local, en le disant.
+ * The permission names that `decidePermission` explicitly processes. Everything that
+ * does not fall into the `default` — therefore refused locally, saying so.
  */
 export const KNOWN_PERMISSIONS: ReadonlySet<string> = new Set([
-  // Ce qui publie vraiment avec notre config (mesuré) …
+  // What really publishes with our (measured) config...
   "bash",
   "edit",
   "read",
@@ -195,9 +195,9 @@ export const KNOWN_PERMISSIONS: ReadonlySet<string> = new Set([
   "external_directory",
   "question",
   "doom_loop",
-  // … et ce que la config sert en `allow` ou en `deny`, donc qui ne publie pas
-  // aujourd'hui. Lu et tranché quand même : une ACL qui change de version ne doit
-  // pas casser un tour sur une permission dont la conduite est évidente.
+  // …and what the config serves in `allow` or in `deny`, therefore which does not publish
+  // Today. Read and decide anyway: an ACL that changes version should not
+  // not break a turn on a leave whose conduct is obvious.
   "glob",
   "grep",
   "websearch",
@@ -207,45 +207,45 @@ export const KNOWN_PERMISSIONS: ReadonlySet<string> = new Set([
   "plan_exit",
 ]);
 
-/** `tool_result.reason` d'une lecture de fichier de secrets refusée. */
+/** `tool_result.reason` of a secrets file read refused. */
 export const SECRET_FILE_READ_REASON = "secret_file_read";
 
 /**
- * CE QUE LE VERDICT DOIT SAVOIR DU MONDE OÙ IL S'APPLIQUE (MIN-360).
+ * WHAT THE VERDICT MUST KNOW ABOUT THE WORLD WHERE IT APPLIES (MIN-360).
  *
- * Un seul champ, et il en vaut trois : sur le chemin local, la machine n'est plus
- * une frontière. Le dépôt est celui de l'utilisateur (avec son vrai `.env`), la
- * boucle locale est la sienne (avec ses serveurs et sa clé de modèle), et une
- * permission qu'on ne connaît pas ne peut plus être « sans enjeu par défaut ».
+ * A single field, and it is worth three: on the local path, the machine is no longer
+ * a frontier. The repository is that of the user (with its real `.env`), the
+ * local loop is its own (with its servers and its model key), and a
+ * permission that we do not know can no longer be “without issue by default”.
  */
 export interface PermissionScope {
-  /** Le tour joue-t-il sur la machine de l'utilisateur (`isLocalJob`) ? */
+  /** Does the trick play on the user's machine (`isLocalJob`)? */
   local?: boolean;
   /**
-   * LES PORTS DU HARNESS SUR LA BOUCLE LOCALE (MIN-364, décision D8) — le proxy
-   * LLM, le pont de tools, le serveur opencode du tour.
+   * HARNESS PORTS ON THE LOCAL LOOP (MIN-364, decision D8) — the proxy
+   * LLM, the tools bridge, the opencode server of the tour.
    *
-   * Ce sont les SEULS que `webfetch` refuse encore en local. Le refus d'avant
-   * portait sur tout l'espace privé, et son dommage collatéral était exactement
-   * la capacité qu'on veut : `curl localhost:3000` pour aller voir la page qu'on
-   * vient d'écrire rendre. Les deux se distinguent par le port, et le superviseur
-   * est le seul à les connaître — d'où le passage par le scope plutôt qu'une
+   * These are the ONLY ones that `webfetch` still refuses locally. The refusal before
+   * concerned all private space, and its collateral damage was exactly
+   * the capacity we want: `curl localhost:3000` to go to the page we want
+   * just wrote render. Both are distinguished by the port, and the supervisor
+   * is the only one to know them — hence the passage through the scope rather than a
    * constante.
    *
-   * Vide = on ne sait pas quels ports protéger, et on refuse alors toute la
-   * boucle locale : une ignorance ne s'interprète pas en autorisation.
+   * Empty = we do not know which ports to protect, and we then refuse all
+   * local loop: ignorance does not mean authorization.
    */
   harnessPorts?: readonly number[];
 }
 
 /**
- * LE VERDICT LITTÉRAL D'UN `webfetch` — la moitié PURE du garde-fou (MIN-360,
- * puis MIN-364 pour le port).
+ * THE LITERAL VERDICT OF A `webfetch` — the PURE half of the guardrail (MIN-360,
+ * then MIN-364 for the port).
  *
- * L'autre moitié est la RÉSOLUTION du nom, qui demande un résolveur et vit donc
- * dans [local-guard.ts](local-guard.ts). Les deux sont nécessaires : celle-ci
- * refuse `http://127.0.0.1:<port du harness>`, l'autre refuse le domaine public
- * qui pointe dessus.
+ * The other half is the RESOLUTION of the name, which requires a resolver and therefore lives
+ * in [local-guard.ts](local-guard.ts). Both are necessary: ​​this one
+ * refuses `http://127.0.0.1:<harness port>`, the other refuses the public domain
+ * that points to it.
  */
 export function webfetchLiteralVerdict(
   url: string | undefined,
@@ -266,8 +266,8 @@ export function webfetchLiteralVerdict(
 }
 
 /**
- * Ce fetch vise-t-il un service du harness ? Sans liste, TOUT compte : c'est la
- * conduite prudente d'une ignorance, et elle rend le comportement d'avant D8.
+ * Is this fetch aimed at a harness service? Without a list, EVERYTHING counts: this is the
+ * prudent conduct of ignorance, and it returns the behavior before D8.
  */
 export function isHarnessPort(url: string | undefined, harnessPorts: readonly number[]): boolean {
   if (harnessPorts.length === 0) return true;
@@ -275,20 +275,20 @@ export function isHarnessPort(url: string | undefined, harnessPorts: readonly nu
 }
 
 /**
- * LE VERDICT DU HARNESS. Ne lève jamais : un garde-fou qui lève sur une forme
- * inattendue arrêterait le tour au lieu de le protéger, et le seul chemin sûr
- * quand on ne comprend pas la demande est de la refuser en le disant.
+ * THE HARNESS VERDICT. Never lifts: a guardrail that lifts on a form
+ * unexpected would stop the trick instead of protecting it, and the only safe path
+ * when you do not understand the request is to refuse it by saying so.
  */
 export function decidePermission(
   ask: PermissionAsk,
   /**
-   * LE DÉPÔT DU RUN (`job.layout.repoDir`), et il est passé plutôt que lu depuis
-   * une constante (MIN-354).
+   * THE RUN DEPOSIT (`job.layout.repoDir`), and it has been passed rather than read since
+   * a constant (MIN-354).
    *
-   * C'est LE paramètre qui rendait ce verdict inutilisable hors microVM :
-   * `metadata.filepath` est ABSOLU (mesure n°2), donc comparé à `/vercel/sandbox/repo`
-   * sur une machine où le dépôt vit ailleurs, il sortait TOUJOURS — le harness
-   * refusait 100 % des écritures, en croyant garder quelque chose.
+   * This is THE parameter that made this verdict unusable outside of microVM:
+   * `metadata.filepath` is ABSOLUTE (measure n°2), therefore compared to `/vercel/sandbox/repo`
+   * on a machine where the deposit lives elsewhere, it ALWAYS came out — the harness
+   * refused 100% of the scriptures, believing he was keeping something.
    */
   repoDir: string,
   subagents?: SubagentContext,
@@ -300,16 +300,16 @@ export function decidePermission(
 
     case "bash": {
       const command = (ask.command ?? "").trim();
-      // Une demande `bash` sans commande n'existe pas dans la mesure. Si elle
-      // apparaissait, on ne saurait pas ce qu'on autorise : on refuse.
+      // A `bash` request without an order does not exist in the measure. If she
+      // appeared, we would not know what we were authorizing, so we refuse it.
       if (!command) {
         return {
           reply: "reject",
           message: "The harness could not read the command to run, so it refused it.",
         };
       }
-      // Le scope voyage : `git commit` est refusé en microVM (le harness commite)
-      // et rendu au modèle sur la machine de quelqu'un (D6, MIN-364).
+      // The travel scope: `git commit` is refused in microVM (harness commit)
+      // and rendered to the model on someone's machine (D6, MIN-364).
       const verdict = checkCommand(command, { local: scope.local === true });
       if (verdict.allowed) return ALLOW;
       return { reply: "reject", message: verdict.reason, reason: FORBIDDEN_COMMAND_REASON };
@@ -317,11 +317,11 @@ export function decidePermission(
 
     case "edit": {
       /**
-       * TOUS LES CHEMINS DE LA DEMANDE, et pas seulement le premier : une
-       * permission d'`apply_patch` en porte N (cf. `PermissionAsk.files`). Un
-       * seul chemin refusé refuse la demande entière — il n'y a pas de « oui
-       * pour ces trois fichiers, non pour le quatrième » dans le protocole, et
-       * c'est le sens prudent.
+       * ALL PATHS OF DEMAND, and not just the first: a
+       * permission request for `apply_patch` with N entries (see `PermissionAsk.files`). A
+       * single path refused denies the entire request — there is no "yes"
+       * for these three files, not for the fourth” in the protocol, and
+       * This is the prudent sense.
        */
       const targets = editTargets(ask);
       if (targets.length === 0) {
@@ -333,18 +333,18 @@ export function decidePermission(
       try {
         for (const { path } of targets) {
           /**
-           * ⚠ C'EST CE `case` QUI FAISAIT LA FRONTIÈRE, pas la ligne de config
-           * (MIN-364, décision D5).
+           * ⚠ IT IS THIS `case` WHICH MADE THE BORDER, not the config line
+           * (MIN-364, decision D5).
            *
-           * `absoluteInRepo` LÈVE sur tout chemin hors dépôt : `external_directory`
-           * pouvait bien passer en `allow`, l'écriture était refusée ici. Le
-           * périmètre s'ouvre donc ici, et nulle part ailleurs.
+           * `absoluteInRepo` LIFTING on any path outside the depot: `external_directory`
+           * could go to `allow`, the writing was refused here. THE
+           * perimeter therefore opens here, and nowhere else.
            *
-           * Ce qui reste, et qui ne dépend d'aucune décision de périmètre :
-           * **`.git/`**. `assertNotGit` refuse un segment `.git` OÙ QU'IL SOIT dans
-           * le chemin, dépôt de l'agent ou dépôt voisin — un hook écrit là s'exécute
-           * au prochain geste git d'un humain, et un `config` y porte des
-           * identifiants. C'est le seul reste de périmètre du §9 de l'audit.
+           * What remains, and which does not depend on any perimeter decision:
+           * ****CODE_0__**. `assertNotGit` refuses a `.git` segment ANYWHERE in
+           * the path, agent repository or neighboring repository — a hook written there executes
+           * at the next gesture of a human, and a `config` carries
+           * identifiers. This is the only remaining scope of §9 of the audit.
            */
           const abs = scope.local ? absoluteOnDisk(repoDir, path) : absoluteInRepo(repoDir, path);
           assertNotGit(repoDir, abs, path);
@@ -356,33 +356,33 @@ export function decidePermission(
     }
 
     /**
-     * SORTIR DU DOSSIER (MIN-364, décision D5) — et ce `case` a changé de nature
-     * deux fois, ce qui vaut d'être écrit.
+     * EXIT THE FILE (MIN-364, decision D5) — and this `case` has changed in nature
+     * twice, which is worth writing about.
      *
-     * Il a été décrit comme « un second rideau » et comme « ce qui tient le modèle
-     * à l'écart du reste du disque » : les deux étaient faux. Notre config posait
-     * `external_directory: "deny"`, et un `deny` de config **court-circuite avant
-     * toute publication** — mesuré, la demande n'arrivait jamais ici
+     * It has been described as "a second curtain" and as "that which holds the model
+     * away from the rest of the record”: both were wrong. Our config posed
+     * `external_directory: "deny"`, and a config `deny` **short-circuits before
+     * any publication** — measured, the request never arrived here
      * ([opencode-permissions.probe.test.ts](opencode-permissions.probe.test.ts)).
-     * Et même publiée elle n'aurait rien tenu : vingt des trente commandes
-     * mesurées atteignent un dossier extérieur sans jamais publier autre chose
-     * que `bash` (mesure n°1 en tête de fichier).
+     * And even published it would have held nothing: twenty of the thirty orders
+     * measured reach an external folder without ever publishing anything else
+     * as `bash` (measurement n°1 at the head of the file).
      *
-     * **En local, elle est désormais en `ask` et cette branche s'exécute — pour
-     * autoriser.** Le mur d'avant n'attrapait que les tools honnêtes et poussait
-     * le travail vers `bash`, c'est-à-dire vers l'endroit où l'on ne voit plus
-     * rien. Autoriser en LAISSANT UNE TRACE (le superviseur publie un event à
-     * chaque sortie de dossier, cf. `supervisor.ts`) est l'exact contraire : le
-     * verdict ne bride rien, et le fil garde la liste des excursions.
+     * **Locally, it is now in `ask` and this branch is running — for
+     * allow.** The wall before only grabbed the honest tools and pushed
+     * work towards `bash`, that is to say towards the place where we no longer see
+     * Nothing. Authorize by LEAVING A TRACE (the supervisor publishes an event to
+     * each file exit, cf. `supervisor.ts`) is the exact opposite: the
+     * verdict does not restrict anything, and the thread keeps the list of excursions.
      *
-     * La règle « demander avant d'écrire ailleurs » vit dans le PROMPT, et elle
-     * est assumée comme une politesse et non comme un mur (D5, point 1) : un
-     * modèle qui ne la lit pas écrit ailleurs sans demander, et rien ne l'arrête.
-     * Ce qui ne serait pas assumable, c'est de la décrire ailleurs comme une
+     * The “ask before writing elsewhere” rule lives in PROMPT, and it
+     * is assumed as a courtesy and not as a wall (D5, point 1): a
+     * model who doesn't read it writes it elsewhere without asking, and nothing stops her.
+     * What would not be acceptable is to describe it elsewhere as a
      * garantie.
      *
-     * Hors chemin local, rien ne bouge : la microVM n'a qu'un dépôt, la config y
-     * garde son `deny`, et cette branche n'y est jamais atteinte.
+     * Apart from the local path, nothing moves: the microVM only has one repository, the config there
+     * keeps its `deny`, and this branch is never reached.
      */
     case "external_directory":
       if (scope.local) return ALLOW;
@@ -392,21 +392,21 @@ export function decidePermission(
       };
 
     /**
-     * LA LECTURE (MIN-360) — une demande qui n'arrivait jamais, parce que notre
+     * READING (MIN-360) — a request that never happened, because our
      * config disait `read: "allow"`.
      *
-     * Ce que cette ligne effaçait, c'est une protection qu'opencode LIVRE : son
-     * ruleset par défaut met `*.env` et `*.env.*` en `ask`. Nos règles étant
-     * concaténées après et la dernière qui matche gagnant, notre `allow`
-     * supprimait la question. Sans conséquence sur un clone jetable ; en mode
-     * dépôt courant, c'est le `.env` RÉEL de l'utilisateur, avec ses vraies clés,
-     * qui entrait en silence dans le contexte du modèle.
+     * What this line erased is a protection that opencode DELIVERS: its
+     * ruleset by default sets `*.env` and `*.env.*` to `ask`. Our rules being
+     * concatenated after and the last one which matches winner, our `allow`
+     * removed the question. No consequence on a disposable clone; in fashion
+     * current repository, this is the REAL `.env` of the user, with their real keys,
+     * which silently entered the context of the model.
      *
-     * ⚠ CE QUE CE REFUS NE FERME PAS, et il vaut mieux l'écrire que le laisser
-     * croire : `bash` reste ouvert, et `cat .env` ne passe pas par ici. C'est le
-     * « mur de papier » du §2 de l'audit — un périmètre de lecture qui tiendrait
-     * vraiment demanderait de garder le SHELL, ce qui n'est pas de ce lot. Ce
-     * refus-ci ferme le chemin par lequel un modèle distrait y arrive tout seul.
+     * ⚠ WHAT THIS REFUSAL DOES NOT CLOSE, and it is better to write it than leave it
+     * believe: `bash` remains open, and `cat .env` does not pass through here. This is the
+     * “paper wall” of §2 of the audit — a reading scope that would hold
+     * really would require keeping the SHELL, which is not from this lot. This
+     * This refusal closes the path by which a distracted model gets there alone.
      */
     case "read": {
       const path = (ask.filepath ?? "").trim();
@@ -428,57 +428,57 @@ export function decidePermission(
     }
 
     /**
-     * LE FETCH (MIN-360, puis MIN-364). Hors chemin local, il est en `allow` dans
-     * la config et n'arrive donc pas ici. En local, c'est la boucle locale de
-     * l'utilisateur qu'il atteint — voir [private-address.ts](private-address.ts).
+     * THE FETCH (MIN-360, then MIN-364). Except local path, it is in `allow` in
+     * the config and therefore does not arrive here. Locally, it is the local loop of
+     * the user it reaches — see [private-address.ts](private-address.ts).
      *
-     * Le contrôle est en DEUX temps : le littéral ici, la RÉSOLUTION dans
-     * [local-guard.ts](local-guard.ts). Sans le second, un domaine public qui
-     * pointe sur le port du proxy passerait — et c'est la forme qu'a une attaque.
+     * The control is in TWO stages: the literal here, the RESOLUTION in
+     * [local-guard.ts](local-guard.ts). Without the second, a public domain which
+     * pointing to the proxy port would pass — and this is the form that an attack takes.
      *
-     * Ce qui a changé avec D8 : le refus porte sur le PORT, plus sur tout
-     * l'espace privé. Un agent qui ne peut pas aller voir la page qu'il vient
-     * d'écrire n'a plus de boucle de feedback du tout, et c'est précisément celle
-     * que l'app de bureau rend possible pour la première fois.
+     * What has changed with D8: the refusal concerns the PORT, no longer everything
+     * private space. An agent who can't go to the page he came from
+     * to write no longer has a feedback loop at all, and it is precisely that
+     * that the desktop app makes possible for the first time.
      */
     case "webfetch":
       return scope.local ? webfetchLiteralVerdict(ask.url, scope.harnessPorts ?? []) : ALLOW;
 
     /**
-     * LA LECTURE SANS ENJEU (MIN-364, lot 7). `glob` et `grep` sont en `allow`
-     * dans notre config et ne publient donc pas — mais ils sont LUS et décidés,
-     * et c'est ce qui les distingue d'un `default` : le jour où une montée de
-     * version les met en `ask`, ils passent, sans qu'un tour se casse dessus.
+     * READING WITHOUT CHALLENGES (MIN-364, lot 7). `glob` and `grep` are in `allow`
+     * in our config and therefore do not publish — but they are READ and decided,
+     * and this is what distinguishes them from a `default`: the day when a rise in
+     * version puts them in `ask`, they pass, without a turn being broken on them.
      */
     case "glob":
     case "grep":
       return ALLOW;
 
     /**
-     * LA QUESTION (MIN-364, lot 7) — elle n'est PAS consultée : mesuré, un
-     * `ask_user` publie `question.asked` sur le flux et ne passe jamais par une
-     * demande de permission. Ce qui retire vraiment `ask_user` d'une routine est
-     * le jeu de tools de l'agent (`primaryTools`).
+     * THE QUESTION (MIN-364, lot 7) — it is NOT consulted: measured, a
+     * `ask_user` publishes `question.asked` to the feed and never goes through a
+     * request for permission. What really removes `ask_user` from a routine is
+     * the agent toolset (`primaryTools`).
      *
-     * On l'autorise quand même, plutôt que de la laisser au `default` : si une
-     * version se mettait à la publier, un refus casserait `ask_user` en silence
-     * sur 100 % des tours locaux — pour une capacité que la config a déjà
-     * tranchée juste au-dessus.
+     * We still authorize it, rather than leaving it at `default`: if a
+     * version started to publish it, a refusal would break `ask_user` silently
+     * on 100% of local towers — for a capacity that the config already has
+     * trench just above.
      */
     case "question":
       return ALLOW;
 
     /**
-     * LA BOUCLE (MIN-364, lot 7). `doom_loop` est publié quand le modèle rejoue
-     * exactement le même appel de tool avec exactement la même entrée, plusieurs
-     * fois d'affilée (relevé dans le binaire 1.18.16) : la question posée est
-     * « on continue malgré les échecs répétés ? ».
+     * THE LOOP (MIN-364, lot 7). `doom_loop` is released when the model replays
+     * exactly the same tool call with exactly the same input, multiple
+     * times in a row (noted in binary 1.18.16): the question asked is
+     * “do we continue despite repeated failures? ".
      *
-     * On répond NON, et c'est une décision, pas une ignorance : personne n'est
-     * devant l'écran pour arbitrer, et laisser tourner une boucle coûte de
-     * l'argent par round pour produire la même chose. Le message, lui, doit dire
-     * ce qui se passe — un refus qui ressemblait à « permission inconnue » ne
-     * disait rien de la boucle, donc n'aidait pas à en sortir.
+     * We answer NO, and it is a decision, not ignorance: no one is
+     * in front of the screen to arbitrate, and letting a loop run costs
+     * money per round to produce the same thing. The message must say
+     * what is happening — a refusal that resembled “unknown permission” does not
+     * said nothing about the loop, so didn't help getting out of it.
      */
     case "doom_loop":
       return {
@@ -492,14 +492,14 @@ export function decidePermission(
       };
 
     /**
-     * CE QUE LA CONFIG A DÉJÀ ÉTEINT (MIN-364, lot 7) — `websearch` et `todowrite`
-     * sont en `deny`, `skill` est retiré du jeu de tools, `plan_enter`/`plan_exit`
-     * (le mode plan d'opencode) n'ont pas de sens dans un tour ancré à un ticket.
+     * WHAT THE CONFIG HAS ALREADY OFF (MIN-364, batch 7) — `websearch` and `todowrite`
+     * are in `deny`, `skill` is removed from the toolset, `plan_enter`/`plan_exit`
+     * (the opencode plan mode) do not make sense in a tour anchored to a ticket.
      *
-     * Un `deny` de config court-circuite avant publication : ces branches ne
-     * s'exécutent pas aujourd'hui. Elles sont écrites pour que le refus soit une
-     * DÉCISION relue plutôt qu'un défaut, et pour que le modèle lise un motif
-     * plutôt que « le harness ne connaît pas cette permission ».
+     * A `deny` of config bypasses before publication: these branches do not
+     * are not running today. They are written so that refusal is a
+     * DECISION reread rather than a defect, and for the model to read a pattern
+     * rather than “the harness does not know this permission”.
      */
     case "websearch":
     case "todowrite":
@@ -516,22 +516,22 @@ export function decidePermission(
       };
 
     /**
-     * LA PERMISSION QU'ON NE CONNAÎT PAS (MIN-360, puis MIN-364 lot 7).
+     * THE PERMISSION THAT WE DON'T KNOW (MIN-360, then MIN-364 lot 7).
      *
-     * `default: return ALLOW` laissait passer en silence tout type non déclaré.
-     * C'était tenable dans une microVM jetable ; sur la machine de quelqu'un,
-     * autoriser par défaut ce qu'on n'a jamais lu est le contraire d'un garde-fou.
+     * `default: return ALLOW` silently allowed any undeclared type to pass.
+     * This was tenable in a disposable microVM; on someone's machine,
+     * authorizing by default what you have never read is the opposite of a safeguard.
      *
-     * ⚠ MAIS LE REFUS PAR DÉFAUT EST UN CLIQUET, et c'est le §5.5 de l'audit du
-     * 15/08 : en l'état, chaque montée d'opencode RETIRE de la capacité au lieu
-     * d'en ajouter, sans que personne ne le décide. Ce qui manquait n'est pas le
-     * refus — c'est le geste qui le lève : `KNOWN_PERMISSIONS` nomme ce qu'on a
-     * lu, `REVIEWED_OPENCODE_VERSION` dit quand, et un test tombe à la prochaine
-     * montée de version tant que la relecture n'a pas eu lieu.
+     * ⚠ BUT THE DEFAULT REFUSAL IS A RATCHET, and it is §5.5 of the audit of the
+     * 08/15: as it stands, each opencode rise REMOVES capacity instead
+     * to add more, without anyone deciding to do so. What was missing is not the
+     * refusal — it’s the gesture that lifts it: `KNOWN_PERMISSIONS` name what we have
+     * read, `REVIEWED_OPENCODE_VERSION` says when, and a test falls to the next
+     * version upgrade until the rereading has taken place.
      *
-     * Le refus NOMME la permission : c'est ce qui le rend réparable. La première
-     * montée de version qui en ajoute une se voit dans `agent_run_events` plutôt
-     * que de s'ouvrir toute seule.
+     * Refusal NAMES permission: that’s what makes it fixable. The first
+     * version upgrade which adds one is seen in `agent_run_events` rather
+     * rather than opening by itself.
      */
     default:
       if (!scope.local) return ALLOW;
@@ -547,31 +547,31 @@ export function decidePermission(
 }
 
 /**
- * LA DÉLÉGATION (MIN-286, lot 2, tâche 12) — le seul point où l'on peut encore
- * dire non à un `task`, et le seul d'où le modèle entend autre chose qu'un
- * message d'opencode.
+ * THE DELEGATION (MIN-286, lot 2, task 12) — the only point where we can still
+ * say no to a `task`, and the only one from which the model hears something other than a
+ * opencode message.
  *
- * Deux refus, et rien d'autre :
+ * Two refusals, and nothing else:
  *
- * 1. **Le plafond de simultané** (`maxParallel`, réglé en `app_config`). C'est le
- *    même refus, aux mots près, que celui du registre maison
- *    ([subagent.ts](../subagent.ts)) : le sandbox est PARTAGÉ, et deux filles qui
- *    écrivent en même temps se marchent dessus. Chez opencode le `task` de premier
- *    plan BLOQUE le parent, donc le simultané ne vient que d'un round qui appelle
- *    `task` plusieurs fois — c'est exactement ce qu'on borne ici.
- * 2. **Un sous-agent qui n'existe pas.** Opencode répondrait « Unknown agent type:
- *    X », sans dire ce qui est offert au tour (les agents sont dans la description
- *    du tool, qu'un modèle a pu perdre de vue). On lui rend l'offre, comme
- *    `makeSubagentModelResolver` rendait les favoris.
+ * 1. **The simultaneous ceiling** (`maxParallel`, set in `app_config`). This is the
+ * same refusal, except for the words, as that of the house register
+ * ([subagent.ts](../subagent.ts)): the sandbox is SHARED, and two girls who
+ * write at the same time step on each other. At opencode the `task` of first
+ * plan BLOCKS the parent, so the simultaneous only comes from a round that calls
+ * `task` several times — this is exactly what we limit here.
+ * 2. **A subagent that does not exist.** Opencode would respond “Unknown agent type:
+ * X", without saying what is offered in the tour (the agents are in the description
+ * of the tool, which a model may have lost sight of). We return the offer to him, as
+ * `makeSubagentModelResolver` made favorites.
  *
- * Le reste passe : la config a déjà décidé de ce qui est offert, et un garde-fou
- * qui redit la config est un endroit de plus où les deux peuvent diverger.
+ * The rest passes: the config has already decided what is offered, and a safeguard
+ * which restates the config is one more place where the two can diverge.
  */
 function decideTask(ask: PermissionAsk, subagents?: SubagentContext): PermissionVerdict {
   if (!subagents) return ALLOW;
 
-  // Vivantes ET promises : une autorisation déjà donnée compte, sans quoi un round
-  // qui appelle `task` en rafale passe entièrement sous le plafond (cf. `pending`).
+  // Alive AND promised: an authorization already given counts, otherwise one round
+  // which calls `task` in a burst passes entirely under the ceiling (see `pending`).
   const engaged = subagents.running + (subagents.pending ?? 0);
   if (engaged >= subagents.maxParallel) {
     return {
@@ -597,10 +597,10 @@ function decideTask(ask: PermissionAsk, subagents?: SubagentContext): Permission
 }
 
 /**
- * Ce qu'une demande d'écriture engage, fichier par fichier. `files` fait foi dès
- * qu'il est là (`apply_patch`, qui porte aussi la NATURE de chaque geste) ;
- * sinon c'est `filepath`, qui est alors un vrai chemin unique (`write`, `edit`)
- * dont on ne sait dire que « modifié » — la liste de git, en fin de tour,
+ * What a write request commits, file by file. `files` is authentic from
+ * that it is there (`apply_patch`, which also carries the NATURE of each gesture);
+ * otherwise it is `filepath`, which is then a true unique path (`write`, `edit`)
+ * of which we can only say “modified” — the git list, at the end of the tour,
  * tranchera.
  */
 export function editTargets(ask: PermissionAsk): NonNullable<PermissionAsk["files"]> {
@@ -613,9 +613,9 @@ export function editTargets(ask: PermissionAsk): NonNullable<PermissionAsk["file
 }
 
 /**
- * Le chemin absolu d'une écriture, LÈVE s'il sort du dépôt. Un chemin relatif
- * passe par `resolveWithin` (le `..` y est normalisé, la sortie y est refusée) ;
- * un absolu est comparé au dépôt tel quel.
+ * The absolute path of a write, RELEASED if it leaves the repository. A relative path
+ * passes through `resolveWithin` (the `..` is normalized there, the output is refused there);
+ * an absolute is compared to the deposit as is.
  */
 function absoluteInRepo(repoDir: string, filepath: string): string {
   if (!filepath.startsWith("/")) return resolveWithin(repoDir, filepath);
@@ -627,15 +627,15 @@ function absoluteInRepo(repoDir: string, filepath: string): string {
 }
 
 /**
- * LE MÊME CHEMIN, SANS LA FRONTIÈRE (MIN-364, décision D5) — sur la machine de
- * l'utilisateur, où le disque entier est à portée.
+ * THE SAME PATH, WITHOUT THE BORDER (MIN-364, decision D5) — on the machine
+ * the user, where the entire disk is within range.
  *
- * Ne LÈVE plus sur la sortie de dépôt ; elle normalise, et c'est tout. Ce qui
- * garde encore quelque chose est `assertNotGit`, appelé juste après par
- * l'appelant : un segment `.git`, où qu'il soit sur le disque, reste refusé.
+ * No longer LIFTS on the depot exit; it normalizes, and that's it. What
+ * still keeps something is `assertNotGit`, called just after by
+ * the caller: a `.git` segment, wherever it is on the disk, remains refused.
  *
- * Un chemin relatif reste relatif au DÉPÔT, `..` compris : c'est le cwd du
- * modèle, et un `../autre-projet/x.ts` désigne bien le dossier voisin.
+ * A relative path remains relative to the DEPOSIT, `..` included: it is the cwd of the
+ * model, and a `../other-project/x.ts` designates the neighboring folder.
  */
 function absoluteOnDisk(repoDir: string, filepath: string): string {
   return posixPath.normalize(filepath.startsWith("/") ? filepath : `${repoDir}/${filepath}`);

@@ -13,12 +13,12 @@ import {
 } from "./harness-bundle";
 
 /**
- * MIN-293 — CE QUI DÉCIDE SI ON EXÉCUTE LE HARNESS.
+ * MIN-293 — WHAT DECIDES WHETHER TO EXECUTE THE HARNESS.
  *
- * Le fichier gardé ici est le seul code non signé par Apple que l'app lance, et
- * il vit dans un dossier inscriptible par le modèle. Les cas qui comptent ne
- * sont donc pas les cas passants : ce sont ceux où quelque chose ne correspond
- * pas, et où il faut refuser plutôt que réessayer.
+ * The file kept here is the only code not signed by Apple that the app launches, and
+ * it lives in a folder writable by the model. The cases that count do
+ * are therefore not the passing cases: they are those where something does not match
+ *, and where you have to refuse rather than try again.
  */
 
 const SHA = "a".repeat(64);
@@ -34,9 +34,9 @@ describe("parseHarnessManifest", () => {
   });
 
   it("refuse tout ce qui n'est pas une empreinte sha256 en hexadécimal minuscule", () => {
-    // Une valeur qui n'est pas comparable à un hash ne doit pas être comparée :
-    // le refus qui en sortirait dirait « le harness a été modifié », ce qui est
-    // faux et envoie chercher au mauvais endroit.
+    // A value that is not comparable to a hash should not be compared:
+    // the resulting refusal would say “the harness has been modified”, which is
+    // false and sends to search in the wrong place.
     for (const sha256 of [SHA.toUpperCase(), SHA.slice(0, 63), `${SHA}0`, "", "zz"]) {
       expect(parseHarnessManifest({ ...manifest(), sha256 })).toBeNull();
     }
@@ -73,9 +73,9 @@ describe("bundleDecision", () => {
   });
 
   it("retélécharge quand le fichier du disque a une autre empreinte", () => {
-    // Ce n'est PAS un refus : c'est le cas ordinaire d'un déploiement neuf. Le
-    // refus, lui, arrive au contrôle d'avant-fork, sur un fichier qu'on vient
-    // d'écrire et de vérifier.
+    // This is NOT a refusal: this is the ordinary case of a new deployment. THE
+    // refusal, arrives at the pre-fork check, on a file that we have just
+    // to write and verify.
     expect(bundleDecision(manifest(), { sha256: OTHER, bytes: 1000 }, 2)).toEqual({
       action: "download",
     });
@@ -88,8 +88,8 @@ describe("bundleDecision", () => {
   });
 
   it("REFUSE un protocole que cette app ne connaît pas, avant tout téléchargement", () => {
-    // Le harness le refuserait aussi (`parseVmJob`), mais après le fork : à ce
-    // moment-là il ne reste qu'un journal pour en parler.
+    // The harness would also refuse it (`parseVmJob`), but after the fork: at this
+    // at that point there is only one newspaper left to talk about it.
     expect(bundleDecision(manifest({ protocolVersion: 3 }), null, 2)).toEqual({
       action: "refuse",
       reason: "protocol_mismatch",
@@ -103,8 +103,8 @@ describe("verifyDownload", () => {
   });
 
   it("distingue une réponse TRONQUÉE d'une empreinte qui diverge", () => {
-    // Le diagnostic n'est pas le même, et la phrase que l'utilisateur lira non
-    // plus : un wifi qui lâche ne doit pas se lire « le harness a été modifié ».
+    // The diagnosis is not the same, and the sentence that the user will read is not
+    // more: a wifi that fails should not read “the harness has been modified”.
     expect(verifyDownload({ sha256: OTHER, bytes: 12 }, manifest())).toEqual({
       ok: false,
       reason: "download_failed",
@@ -122,9 +122,9 @@ describe("verifyBeforeFork", () => {
   });
 
   it("refuse un fichier RÉÉCRIT entre le téléchargement et le fork", () => {
-    // Le cas pour lequel ce contrôle existe : le bundle vit sous `userData`, le
-    // modèle y écrit sous le même UID, et un tour peut réécrire le harness du
-    // tour suivant pour capter le bail, la clé et l'`authUrl`.
+    // The case for which this control exists: the bundle lives under `userData`, the
+    // model written there under the same UID, and a turn can rewrite the harness of the
+    // next round to capture the lease, key and `authUrl`.
     expect(verifyBeforeFork({ sha256: OTHER, bytes: 1000 }, manifest())).toEqual({
       ok: false,
       reason: "fingerprint_mismatch",

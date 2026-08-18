@@ -7,25 +7,25 @@ import { MinddyLogo } from "@/components/minddy-logo";
 import { appPageMetadata } from "@/lib/app-metadata";
 
 /**
- * Atterrissage du lien de confirmation d'email (MIN-117).
+ * Landing page for the email confirmation link (MIN-117).
  *
- * C'est `next=/auth/confirmed`, posé par le template GoTrue, qui amène ici : le
- * jeton a déjà été vérifié (`verifyOtp`) et la session posée sur CE navigateur
- * — depuis MIN-345 par `/auth/confirm/complete`, au bout d'une confirmation
- * explicite, et non plus par la navigation elle-même. D'où le bouton unique
- * vers `/login`, correct dans les deux
- * cas — l'appareil qui vient de valider y trouve une session et bascule sur
- * `/home` ; un autre navigateur y trouve le formulaire de connexion.
+ * It is `next=/auth/confirmed`, set by the GoTrue template, which brings here: the
+ * token has already been verified (`verifyOtp`) and the session placed on THIS browser
+ * — from MIN-345 by `/auth/confirm/complete`, after confirmation
+ * explicitly, and no longer by the navigation itself. Hence the single button
+ * to `/login`, correct in both
+ * case — the device which has just validated finds a session there and switches to
+ * `/home` ; another browser finds the login form there.
  *
- * Page volontairement hors de `app/(auth)/` : elle n'utilise aucun hook d'auth,
- * donc rien à faire de l'`AuthProvider` de ce segment. Le préfixe `/auth/` est
- * déjà public dans `proxy.ts`.
+ * Page voluntarily outside `app/(auth)/`: it does not use any auth hook,
+ * so nothing to do with the `AuthProvider` of this segment. The `/auth/` prefix is
+ * already public in `proxy.ts`.
  */
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    // Le noindex vient de `app/(app)/layout.tsx` pour l'app interne ; cette page
-    // vit ailleurs, elle le pose donc elle-même.
+    // The noindex comes from `app/(app)/layout.tsx` for the internal app; this page
+    // lives elsewhere, so she asks it herself.
     ...(await appPageMetadata("emailConfirmed")),
     robots: { index: false, follow: false },
   };

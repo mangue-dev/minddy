@@ -24,41 +24,39 @@ import { useAuth } from "@/lib/auth-context";
 import { setLocaleCookie } from "@/lib/set-locale";
 
 /**
- * La conversation Numo VIT AU-DESSUS du panneau, pas dedans.
+ * The Numo conversation LIVES ABOVE the panel, not in it.
  *
- * Le Sheet de `AssistantPanel` démonte son contenu à la fermeture : tant que le
- * chat vivait dans `AssistantShell`, fermer le panneau pendant un tour jetait
- * l'état (le flux SSE continuait de dispatcher dans un reducer mort) et rouvrir
- * repartait d'une restauration. En hissant `useAssistantChat` ici, le tour
- * CONTINUE en fond, la coquille n'est plus qu'une vue, et le FAB peut afficher
- * son liseré tant que Numo travaille.
+ * The `AssistantPanel` Sheet unmounts its contents when closed: as long as the
+ * cat lived in `AssistantShell`, close the panel for a turn threw
+ * the state (the SSE flow continued to dispatch in a dead reducer) and reopen
+ * restarted from a restore. By hoisting `useAssistantChat` here, the trick
+ * CONTINUES in the background, the shell is just a view, and the FAB can display
+ * its border as long as Numo is working.
  *
- * Ce provider porte aussi ce qui doit survivre au démontage de la vue : la
- * PORTÉE de la conversation, et la reprise de la conversation ouverte.
+ * This provider also carries what must survive the disassembly of the view: the
+ * SCOPE of the conversation, and the resumption of the open conversation.
  *
- * Les deux se lisent ailleurs qu'ici depuis MIN-353. La portée est celle de la
- * CONVERSATION, pas de l'URL — c'est [assistant-scope.ts](assistant-scope.ts)
- * qui la tranche, et c'est ce qui fait qu'une navigation ne jette plus le fil en
- * cours. La conversation ouverte, elle, est un fait de SERVEUR
- * (`/api/assistant/active-conversation`) et non plus une clé de localStorage :
- * elle survit au rechargement, à l'onglet d'à côté et à l'app de bureau.
+ * Both have been read elsewhere than here since MIN-353. The scope is that of the
+ * CONVERSATION, not the URL — it's [assistant-scope.ts](assistant-scope.ts)
+ * that slices it, and that's what makes a navigation no longer throw the thread in progress. The open conversation is a fact of SERVEUR
+ * (`/api/assistant/active-conversation`) and no longer a localStorage key:
+ * it survives the reload, the next tab and the desktop app.
  */
 
 type AssistantChatApi = ReturnType<typeof useAssistantChat>;
 
 export interface AssistantChatContextValue extends AssistantChatApi {
-  /** Portée de la conversation vivante : id de projet, ou `null` = global. */
+  /** Living conversation scope: project id, or `null` = global. */
   scopeProjectId: string | null;
-  /** Reprise de la conversation ouverte, lue côté serveur. */
+  /** Resumption of the open conversation, read on the server side. */
   restoring: boolean;
-  /** Numo produit un tour — flux client OU génération côté serveur. */
+  /** Numo produces a round — client flow OR server-side generation. */
   isBusy: boolean;
   /**
-   * Une ouverture a imposé une portée que la conversation vivante ne peut pas
-   * porter : un fil neuf va la remplacer. À lire avant d'envoyer le message
-   * qu'une telle ouverture transporte — expédié maintenant, il partirait dans la
-   * conversation qui s'en va, et le serveur le refuserait (portée ≠ conversation).
-   */
+ * An opening has imposed a scope that living conversation cannot carry
+ *: a new thread will replace it. Read before sending the message
+ * that such an opening carries — sent now, it would go into the departing conversation, and the server would refuse it (scope ≠ conversation).
+ */
   scopeSwitchPending: boolean;
 }
 
@@ -66,9 +64,9 @@ const AssistantChatContext = createContext<AssistantChatContextValue | null>(
   null,
 );
 
-/** Les clés de l'ancien pointeur localStorage, une par portée. Purgées à la
- *  première reprise : le pointeur vit en base désormais, et les laisser traîner
- *  ferait croire un jour à une source de vérité qui n'en est plus une. */
+/** The keys of the old localStorage pointer, one per scope. Purged at the
+ * first restart: the pointer lives in the base from now on, and leaving them lying around
+ * would one day make one believe in a source of truth which is no longer one. */
 const LEGACY_STORAGE_PREFIX = "assistant-active-conv-";
 
 function purgeLegacyStorage(): void {
@@ -80,7 +78,7 @@ function purgeLegacyStorage(): void {
     }
     for (const key of stale) window.localStorage.removeItem(key);
   } catch {
-    // localStorage indisponible (navigation privée, quota) — rien à purger.
+    // localStorage unavailable (private browsing, quota) — nothing to purge.
   }
 }
 
@@ -90,9 +88,9 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
   const currentLocale = useLocale();
   const router = useRouter();
 
-  // Numo peut modifier les réglages du compte côté serveur (via l'API admin),
-  // ce qui ne déclenche aucun événement d'auth client — on recharge donc le
-  // compte, et s'il a changé la langue (un cookie, pas du user_metadata) on
+  // Numo can modify account settings on the server side (via the admin API),
+  // which does not trigger any client auth event — we therefore reload the
+  // account, and if he changed the language (a cookie, not user_metadata) we
   // applique aussi ce changement.
   const handleToolResult = useCallback(
     (name: string, success: boolean, result: unknown) => {
@@ -116,16 +114,16 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
   } = useAssistantChat({ onToolResult: handleToolResult });
 
   /**
-   * L'utilisateur a-t-il DÉJÀ choisi la conversation qu'il veut voir ?
-   *
-   * Une INTENTION, pas un état rendu — et c'est toute la différence. La reprise
-   * lit ce drapeau pour ne pas recouvrir un choix pris pendant que son GET
-   * volait encore. `state.conversationId` ne peut pas jouer ce rôle : il vaut
-   * `null` aussi bien quand rien ne s'est produit que juste après un « nouvelle
-   * conversation », et il reste `null` pendant tout le `loadConversation` d'une
-   * sélection (le dispatch n'arrive qu'après la lecture des messages). Dans les
-   * trois cas la reprise croyait le champ libre.
-   */
+ * Has the user ALREADY chosen the conversation they want to see?
+ *
+ * An INTENTION, not a state reached — and that's the difference. Resume
+ * reads this flag to not overwrite a choice made while its GET
+ * was still flying. `state.conversationId` cannot play this role: it is worth
+ * `null` both when nothing has happened and just after a “new
+ * conversation”, and it remains `null` throughout the `loadConversation` of a
+ * selection (the dispatch only arrives after reading the messages). In the
+ * three cases the recovery believed the field was clear.
+ */
   const userPickedRef = useRef(false);
 
   const loadConversation = useCallback(
@@ -141,8 +139,8 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     resetRaw();
   }, [resetRaw]);
 
-  // Envoyer, c'est choisir aussi : le message ouvre une conversation, et la
-  // reprise n'a plus à en imposer une autre par-dessus.
+  // Sending also means choosing: the message opens a conversation, and the
+  // recovery no longer has to impose another on top.
   const sendMessage = useCallback(
     (...args: Parameters<typeof sendMessageRaw>) => {
       userPickedRef.current = true;
@@ -156,9 +154,9 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     state.status === "executing_tool" ||
     state.status === "generating_server";
 
-  // Portée IMPOSÉE par l'ouverture, s'il y en a une (`undefined` = suivre la
-  // route). Elle ne survit pas à `clearPendingOptions()`, donc elle ne vaut que
-  // pour le geste qui l'a portée — c'est exactement sa durée de validité.
+  // Scope IMPOSED by the opening, if there is one (`undefined` = follow the
+  // road). It doesn't survive `clearPendingOptions()`, so it's only worth
+  // for the gesture that carried it — this is exactly its validity period.
   const overrideProjectId = useMemo<string | null | undefined>(
     () =>
       pendingOptions && "projectId" in pendingOptions
@@ -167,8 +165,8 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     [pendingOptions],
   );
 
-  // Qui décide de la portée : la conversation vivante, sauf ouverture qui en
-  // impose une autre. Une navigation ne la déplace plus — c'est tout le fix.
+  // Who decides the scope: the lively conversation, except opening which
+  // imposes another. A navigation no longer moves it — that's the whole fix.
   const { scopeProjectId: scope, startsNewConversation } = useMemo(
     () =>
       resolveAssistantScope({
@@ -187,35 +185,35 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     ],
   );
 
-  // « Demander à Numo » sur une chose d'un AUTRE projet : le fil en cours ne
-  // peut pas l'accueillir (le serveur refuse un message dont la portée ne
-  // correspond pas à la conversation), on en ouvre un neuf dans la bonne. Jamais
-  // au milieu d'un tour : la bascule attend que Numo ait rendu la main.
+  // “Ask Numo” about something from ANOTHER project: the current thread does not
+  // cannot accommodate it (the server refuses a message whose scope does not
+  // does not correspond to the conversation), we open a new one in the right one. Never
+  // in the middle of a turn: the seesaw waits until Numo has given up.
   useEffect(() => {
     if (startsNewConversation && !isBusy) reset();
   }, [startsNewConversation, isBusy, reset]);
 
-  // Ouverture porteuse d'une action one-shot (prompt auto-envoyé, brouillon) :
-  // pas de reprise, elle courserait l'action et la perdrait. Lu dans un ref
-  // parce que `clearPendingOptions()` remet les options à null juste après.
+  // Opening carrying a one-shot action (self-sent prompt, draft):
+  // no resumption, she would chase the action and lose it. Read in a ref
+  // because `clearPendingOptions()` resets the options to null right after.
   const skipRestoreRef = useRef(false);
   skipRestoreRef.current = Boolean(
     pendingOptions?.prompt || pendingOptions?.draft,
   );
 
-  // La reprise ne se joue qu'UNE fois par session, à la première ouverture du
-  // panneau : la conversation ouverte ne dépend plus de la page où l'on se
-  // trouve, donc rien ne justifie de la rejouer en naviguant. Et rien du tout
-  // chez qui n'ouvre jamais Numo — pas même la requête.
+  // The restart is only played ONE time per session, at the first opening of the
+  // panel: the open conversation no longer depends on the page you are on
+  // found, so there is no reason to replay it while browsing. And nothing at all
+  // who never opens Numo — not even the query.
   const [restoring, setRestoring] = useState(false);
   const [restored, setRestored] = useState(false);
   const startedRef = useRef(false);
   /**
-   * Ce que le serveur porte, à notre connaissance. `undefined` = on ne le sait
-   * pas encore. C'est LUI qui évite les deux écritures parasites de la reprise :
-   * ré-écrire le pointeur qu'on vient de lire, et surtout EFFACER le pointeur au
-   * premier rendu, quand `conversationId` est encore `null`.
-   */
+ * What the server carries, as far as we know. `undefined` = we don't know
+ * yet. It is HE who avoids the two parasitic writes of the recovery:
+ * re-write the pointer that we have just read, and above all DELETE the pointer at
+ * first rendering, when `conversationId` is still `null`.
+ */
   const serverPointerRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
@@ -223,8 +221,8 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     startedRef.current = true;
     purgeLegacyStorage();
 
-    // Ouverture one-shot : rien à reprendre, et le pointeur du serveur reste ce
-    // qu'il est jusqu'à ce que l'envoi qui suit le remplace.
+    // One-shot opening: nothing to restart, and the server pointer remains this
+    // that it is until the next send replaces it.
     if (skipRestoreRef.current) {
       serverPointerRef.current = null;
       setRestored(true);
@@ -237,16 +235,16 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
       try {
         const { conversationId, projectId } = await fetchActiveConversation();
         serverPointerRef.current = conversationId;
-        // L'utilisateur a pu choisir pendant que ce GET volait — sélection dans
-        // l'historique, « nouvelle conversation », envoi immédiat. Son choix
-        // gagne : on ne le recouvre jamais. `loadConversationRaw`, sinon la
-        // reprise se déclarerait elle-même comme un choix.
+        // The user was able to choose while this GET was flying — selection in
+        // history, “new conversation”, immediate sending. His choice
+        // wins: we never recover it. `loadConversationRaw`, otherwise the
+        // resume would declare itself as a choice.
         if (!cancelled && conversationId && !userPickedRef.current) {
           await loadConversationRaw(conversationId, projectId);
         }
       } catch {
-        // Pointeur illisible (réseau) : on repart d'un écran vide, le fil reste
-        // joignable par l'historique. Le pointeur se réécrira au prochain envoi.
+        // Unreadable pointer (network): we start with an empty screen, the thread remains
+        // reachable via history. The pointer will rewrite itself on the next send.
         serverPointerRef.current = null;
       }
       if (!cancelled) {
@@ -260,9 +258,9 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     };
   }, [isOpen, loadConversationRaw]);
 
-  // Miroir du pointeur vers le serveur : ouvrir une conversation l'écrit, en
-  // commencer une neuve l'efface. `restored` est dans les dépendances pour que
-  // le miroir rattrape une conversation ouverte PENDANT la reprise.
+  // Mirror the pointer to the server: open a conversation in writing,
+  // starting a new one erases it. `restored` is in the dependencies so that
+  // the mirror catches up with an open conversation DURING the restart.
   useEffect(() => {
     if (!restored) return;
     if (serverPointerRef.current === state.conversationId) return;
@@ -271,13 +269,13 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
   }, [restored, state.conversationId]);
 
   /**
-   * Le pointeur relu SANS ouvrir le panneau, pour les surfaces qui doivent
-   * savoir s'il reste un fil à reprendre — l'accueil, qui n'affiche son FAB
-   * qu'à cette condition. La reprise ci-dessus ne peut pas le leur dire : elle
-   * ne se déclenche qu'à la première ouverture, et sur l'accueil il n'y en a
-   * pas eu. Une lecture par session, à la demande : qui ne pose pas la question
-   * ne paie pas la requête.
-   */
+ * The pointer read again WITHOUT opening the panel, for surfaces which must
+ * know if there is a thread left to resume — the reception, which only displays its FAB
+ * under this condition. The recovery above cannot tell them: it
+ * only triggers on the first opening, and on the reception there was
+ * none. One reading per session, on demand: who does not ask the question
+ * does not pay for the request.
+ */
   const [probedConversationId, setProbedConversationId] = useState<
     string | null
   >(null);
@@ -288,7 +286,7 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     void fetchActiveConversation()
       .then(({ conversationId }) => setProbedConversationId(conversationId))
       .catch(() => {
-        // Pointeur illisible (réseau) : on s'en tient à l'état vivant, comme la
+        // Unreadable pointer (network): we stick to the live state, like the
         // reprise. Au pire un FAB en moins, jamais un fil perdu.
       });
   }, []);
@@ -343,15 +341,15 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
 }
 
 /**
- * « Numo travaille-t-il ? », et rien d'autre (MIN-323).
+ * “Is Numo working?” ", and nothing else (MIN-323).
  *
- * Un contexte séparé parce que son seul consommateur est le FAB, qui n'a besoin
- * QUE de ce booléen : abonné au contexte complet, il se re-rendait à chaque
- * token SSE — `state` change à chaque fragment de réponse, donc la value aussi.
- * Un booléen ne change, lui, que deux fois par tour.
+ * A separate context because its only consumer is the FAB, which only needs
+ * ONLY this boolean: subscribed to the complete context, it goes back to each
+ * SSE token — `state` changes with each fragment of answer, so the value too.
+ * A boolean only changes twice per turn.
  *
- * Ça ne mord que panneau FERMÉ : panneau ouvert, le FAB rend `null`. C'est
- * précisément le cas où l'utilisateur regarde autre chose.
+ * It only bites CLOSED panel: open panel, the FAB returns `null`. This is
+ * precisely the case where the user is looking at something else.
  */
 const AssistantBusyContext = createContext(false);
 
@@ -360,14 +358,12 @@ export function useAssistantBusy(): boolean {
 }
 
 /**
- * « Reste-t-il un fil à reprendre ? », et rien d'autre — un contexte séparé pour
- * la même raison que le précédent : son consommateur n'a besoin que du booléen,
- * qui ne change qu'aux deux bouts d'une conversation, pas à chaque token.
+ * “Is there a thread left to pick up?” ", and nothing else — a separate context for
+ * the same reason as the previous one: its consumer only needs the boolean,
+ * which only changes on both ends of a conversation, not on each token.
  *
- * `probe` demande la lecture du pointeur serveur, une fois par session. Il vit
- * ici plutôt que chez l'appelant pour que les deux surfaces qui poseraient la
- * question n'en fassent qu'une requête, et que la réponse arrive au même
- * endroit que l'état vivant avec lequel elle se combine
+ * `probe` requests reading of the server pointer, once per session. It lives
+ * here rather than at the caller so that the two surfaces that would ask the question make only one request, and the answer arrives at the same place as the living state with which it combines
  * ([assistant-resumable.ts](assistant-resumable.ts)).
  */
 interface AssistantResumeValue {
@@ -381,9 +377,8 @@ const AssistantResumeContext = createContext<AssistantResumeValue>({
 });
 
 /**
- * Y a-t-il une conversation Numo à rouvrir ? Appeler ce hook DÉCLARE le besoin :
- * il déclenche la lecture du pointeur au montage, et rend `false` tant qu'on ne
- * sait pas — l'accueil préfère un FAB qui apparaît à un FAB qui s'éteint.
+ * Is there a Numo conversation to reopen? Calling this hook DECLARE the need:
+ * it triggers reading of the pointer on mount, and returns `false` as long as we don't know — the home prefers a FAB that appears to a FAB that goes out.
  */
 export function useResumableConversation(): boolean {
   const { hasConversation, probe } = useContext(AssistantResumeContext);

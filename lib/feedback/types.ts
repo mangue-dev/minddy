@@ -1,15 +1,15 @@
 import type { IssueStatus } from "@/lib/issue-constants";
 
 /**
- * Types partagés du feedback public (MIN-37) — importables côté client comme
- * côté serveur (pas de "server-only" ici). Les shapes publiques sont
- * anonymisées : jamais d'email ni de vrai nom côté board.
+ * Public Feedback Shared Types (MIN-37) — client-side importable as
+ * server side (no "server-only" here). Public shapes are
+ * anonymized: never email or real name on the board side.
  */
 
 /**
- * Les états d'un retour. `spam` en fait partie comme les autres — c'est une
- * décision sur le retour, pas un axe parallèle, et l'équipe la pose là où elle
- * pose toutes les autres. Il n'apparaît JAMAIS sur le board public.
+ * States of a return. `spam` is part of it like the others — it’s a
+ * decision on the return, not a parallel axis, and the team places it where it
+ * pose all the others. It NEVER appears on the public board.
  */
 export const FEEDBACK_POST_STATUSES = [
   "open",
@@ -22,14 +22,14 @@ export const FEEDBACK_POST_STATUSES = [
 export type FeedbackPostStatus = (typeof FEEDBACK_POST_STATUSES)[number];
 
 /**
- * Statut public → statut d'issue équivalent, pour emprunter l'icône
+ * Public status → equivalent issue status, to borrow the icon
  * Linear-style des tickets (`StatusIndicator`).
  *
- * Il vit ICI, dans le module partagé, et non dans les briques du board public :
- * quatre surfaces le rendent — le board, le sélecteur du board, la vue équipe,
- * et la section « Relations » d'un ticket — et la dernière est sur le chemin
+ * It lives HERE, in the shared module, and not in the bricks of the public board:
+ * four surfaces make it — the board, the board selector, the team view,
+ * and the “Relationships” section of a ticket — and the last one is on the way
  * chaud du tableau. L'y faire importer un composant du board public tirerait
- * tout le public dans le bundle de l'app pour une table de six entrées.
+ * the entire public in the app bundle for a table of six entries.
  */
 export const FEEDBACK_TO_ISSUE_STATUS: Record<FeedbackPostStatus, IssueStatus> = {
   open: "backlog",
@@ -37,9 +37,9 @@ export const FEEDBACK_TO_ISSUE_STATUS: Record<FeedbackPostStatus, IssueStatus> =
   in_progress: "in_progress",
   shipped: "done",
   declined: "canceled",
-  // Le spam n'a pas d'équivalent chez les tickets : il emprunte l'icône du
-  // ticket annulé pour les endroits qui n'affichent QUE l'indicateur (le
-  // sélecteur de statut), mais le badge, lui, se peint avec son propre signe.
+  // Spam has no equivalent in tickets: it borrows the icon of the
+  // ticket canceled for places that ONLY display the indicator (the
+  // status selector), but the badge is painted with its own sign.
   spam: "canceled",
 };
 
@@ -51,22 +51,22 @@ export function isFeedbackPostStatus(value: unknown): value is FeedbackPostStatu
 }
 
 /**
- * Ce que le board public sait nommer. Le spam n'y est ni listé ni filtrable :
- * proposer le filtre reviendrait à annoncer aux visiteurs qu'il existe une
- * catégorie de retours cachés, et le filtre ne rendrait jamais rien.
+ * What the public board knows how to name. Spam is neither listed nor filterable:
+ * offering the filter would amount to announcing to visitors that there is a
+ * hidden returns category, and the filter would never return anything.
  */
 export const FEEDBACK_PUBLIC_STATUSES: readonly FeedbackPostStatus[] =
   FEEDBACK_POST_STATUSES.filter((status) => status !== "spam");
 
-/** Un retour hors du board public — aujourd'hui le seul cas est le spam. */
+/** A return outside the public board — today the only case is spam. */
 export function isHiddenFeedbackStatus(status: FeedbackPostStatus): boolean {
   return status === "spam";
 }
 
 /**
- * Statuts « terminés » : un besoin livré (shipped), refusé (declined) ou écarté
- * (spam) est résolu et n'a plus à occuper le haut des listes. On les range en
- * bas, board public comme onglet équipe.
+ * “Completed” statuses: a requirement delivered (shipped), refused (declined) or rejected
+ * (spam) is resolved and no longer has to occupy the top of the lists. They are stored in
+ * bottom, public board like team tab.
  */
 export const FEEDBACK_RESOLVED_STATUSES: readonly FeedbackPostStatus[] = [
   "shipped",
@@ -75,28 +75,28 @@ export const FEEDBACK_RESOLVED_STATUSES: readonly FeedbackPostStatus[] = [
 ];
 
 /**
- * Ce qui est encore vivant : ouvert, prévu, en cours. Le complément exact de
- * `FEEDBACK_RESOLVED_STATUSES` parmi les statuts publics — et le point de départ
- * du board. Un visiteur y vient pour voter sur ce qui peut encore bouger ; lui
- * ouvrir l'archive de tout ce qui est tranché, c'est lui faire chercher la
- * matière votable au milieu de ce sur quoi son vote ne changera plus rien.
+ * What is still alive: open, planned, in progress. The exact complement of
+ * `FEEDBACK_RESOLVED_STATUSES` among public statuses — and the starting point
+ * of the board. A visitor comes there to vote on what can still move; him
+ * opening the archive of everything that is decided is to make him search for the
+ * votable matter in the middle of that on which his vote will no longer change anything.
  */
 export const FEEDBACK_OPEN_STATUSES: readonly FeedbackPostStatus[] =
   FEEDBACK_PUBLIC_STATUSES.filter((status) => !FEEDBACK_RESOLVED_STATUSES.includes(status));
 
 /**
- * Le filtre d'état du board public, tel qu'il vit dans l'URL :
- * - `null` (paramètre absent) — le défaut, les retours encore vivants ;
- * - `"all"` — tout ce qui est public, résolus compris ;
- * - un statut — celui-là seul.
+ * The public board status filter, as it lives in the URL:
+ * - `null` (parameter absent) — the fault, the returns still alive;
+ * - `"all"` — everything that is public, including resolved;
+ * - a status — that one alone.
  *
- * Le défaut est l'ABSENCE de paramètre, et pas une valeur nommée : une URL de
- * board partagée reste l'URL du board, et un lien `?status=planned` d'avant ce
+ * The default is the ABSENCE of a parameter, and not a named value: a URL of
+ * shared board remains the URL of the board, and a `?status=planned` link from before
  * groupement continue de dire exactement ce qu'il disait.
  */
 export type PublicStatusFilter = FeedbackPostStatus | "all" | null;
 
-/** Les statuts qu'un filtre laisse passer — `null` = aucune restriction. */
+/** The statuses that a filter lets pass — `null` = no restrictions. */
 export function publicFilterStatuses(
   filter: PublicStatusFilter
 ): readonly FeedbackPostStatus[] | null {
@@ -109,8 +109,8 @@ export function isResolvedFeedbackStatus(status: FeedbackPostStatus): boolean {
 }
 
 /**
- * Repousse les feedbacks résolus en bas sans casser l'ordre déjà appliqué
- * (votes/date) : partition stable — Array.prototype.sort l'est en JS moderne.
+ * Pushes resolved feedback down without breaking the order already applied
+ * (votes/date): partition stable — Array.prototype.sort is stable in modern JS.
  */
 export function sortFeedbackResolvedLast<T>(
   items: T[],
@@ -125,20 +125,20 @@ export function sortFeedbackResolvedLast<T>(
 
 export type FeedbackPostSource = "board" | "api" | "internal";
 
-/** Bornes d'un post, appliquées à la création (lib/server/feedback/posts.ts) et
-    ANNONCÉES aux agents par le contrat d'intégration (lib/feedback/integration-contract.ts) :
-    elles vivent donc ici, en pur, plutôt que dans le core serveur. */
+/** Post bounds, applied to creation (lib/server/feedback/posts.ts) and
+    ANNOUNCED to agents by the integration contract (lib/feedback/integration-contract.ts):
+    they therefore live here, pure, rather than in the core server. */
 export const FEEDBACK_TITLE_MAX = 200;
 export const FEEDBACK_BODY_MAX = 10_000;
 
 /**
- * Ce qu'une dictée de retour peut toucher : le titre et le corps, rien d'autre.
+ * What a return dictation can affect: the title and the body, nothing else.
  *
- * La visibilité (« rendre public ») reste au clavier, délibérément — c'est le
- * seul choix du composeur qui engage la personne, et il vient d'être expliqué
- * juste au-dessus. Le laisser à la voix, c'est laisser un modèle décider de la
- * publication de quelqu'un sur un malentendu. Même raison pour l'auteur du
- * modal interne : c'est au NOM DE QUI on écrit, et ça ne se devine pas.
+ * Visibility (“making public”) remains on the keyboard, deliberately — this is the
+ * only choice of the composer who engages the person, and it has just been explained
+ * just above. Leaving it to the voice is letting a model decide the
+ * someone's post about a misunderstanding. Same reason for the author of
+ * internal modal: it is in WHOSE NAME we write, and that cannot be guessed.
  */
 export interface FeedbackVoiceDraft {
   title: string;
@@ -147,22 +147,22 @@ export interface FeedbackVoiceDraft {
 
 export type FeedbackVoicePatch = Partial<FeedbackVoiceDraft>;
 
-/** Un tour de la conversation de dictée — jetable, jamais persisté. */
+/** A trick of dictation conversation — disposable, never persisted. */
 export interface FeedbackVoiceTurn {
   role: "user" | "assistant";
   content: string;
 }
 
 /**
- * État de PUBLICATION d'un post (MIN-54), distinct du choix de visibilité
- * `is_public` de l'auteur. `pending` = en attente de la revue IA (catégorisation
- * + modération), invisible du board même si public ; `published` = vérifié, listé
+ * PUBLICATION status of a post (MIN-54), distinct from the choice of visibility
+ * `is_public` from the author. `pending` = waiting for the IA review (categorization
+ * + moderation), invisible from the board even if public; `published` = verified, listed
  * si public.
  *
- * Il portait un troisième état, `rejected`, pour le junk détecté par la revue.
- * C'était une deuxième façon d'exclure un retour, à côté de son statut, et
- * l'équipe devait la chercher ailleurs que là où elle lisait tout le reste :
- * c'est devenu le statut `spam`. Ne reste ici que la file d'attente.
+ * It carried a third status, `rejected`, for the junk detected by the magazine.
+ * It was a second way of excluding a return, alongside one's status, and
+ * the team had to look for it somewhere other than where they read everything else:
+ * it became status `spam`. Only the queue remains here.
  */
 export const FEEDBACK_REVIEW_STATES = ["pending", "published"] as const;
 export type FeedbackReviewState = (typeof FEEDBACK_REVIEW_STATES)[number];
@@ -175,8 +175,8 @@ export function isFeedbackReviewState(value: unknown): value is FeedbackReviewSt
 }
 
 /**
- * Nature de sensibilité détectée par l'IA (MIN-54). Non exhaustif côté modèle :
- * validé applicativement, `other` sert de fourre-tout. Null = non sensible.
+ * Nature of sensitivity detected by AI (MIN-54). Not exhaustive on the model side:
+ * validated applicationally, `other` serves as a catch-all. Null = not sensitive.
  */
 export const FEEDBACK_SENSITIVITY_KINDS = [
   "security",
@@ -195,39 +195,39 @@ export function normalizeSensitivityKind(value: unknown): FeedbackSensitivityKin
 }
 
 /**
- * Post tel que rendu sur le board public (anonymisé).
+ * Post as made on the public board (anonymized).
  *
- * Il portait ses catégories : elles ne sortent plus côté public. Le classement
- * d'un retour est une lecture d'ÉQUIPE — ce qu'elle en fait, pas ce qu'il est —
- * et un visiteur n'a rien à en tirer : il vient dire un besoin et voter. Le
- * réglage `show_categories` du board reste en place pour le MCP et les
- * intégrations, il ne pilote simplement plus de rendu public.
+ * He carried his categories: they no longer come out publicly. The ranking
+ * of a return is a TEAM reading — what she makes of it, not what it is —
+ * and a visitor has nothing to gain from it: he comes to express a need and vote. THE
+ * `show_categories` setting of the board remains in place for the MCP and
+ * integrations, it simply no longer drives public release.
  */
 export interface PublicPost {
   id: string;
   title: string;
   body: string;
   status: FeedbackPostStatus;
-  /** false = retour privé : remonté à l'équipe mais absent du board public. */
+  /** false = private feedback: reported to the team but absent from the public board. */
   isPublic: boolean;
-  /** État de publication (MIN-54). Sur le board public toujours `published` ;
-      informatif sur « mes feedbacks » (l'auteur voit ses posts en attente). */
+  /** Publication status (MIN-54). On the public board always `published`;
+      informative on “my feedback” (the author sees his pending posts). */
   reviewState: FeedbackReviewState;
   voteCount: number;
   createdAt: string;
   authorPseudonym: string | null;
   isMine: boolean;
   votedByMe: boolean;
-  /** Nombre de commentaires PUBLICS du fil (réponse d'équipe comprise). */
+  /** Number of PUBLIC comments in the thread (including team replies). */
   commentCount: number;
-  /** Date du dernier commentaire public de l'équipe — le badge « L'équipe a
-      répondu » du board se lit là-dessus, sans charger les fils. */
+  /** Date of the team's last public comment — the "The team has
+      answered » from the board reads on it, without loading the wires. */
   teamRepliedAt: string | null;
 }
 
 /**
- * Visibilité d'un commentaire de retour (MIN-196). Les fils de tickets et
- * d'objectifs sont internes par construction ; seuls les retours ont les deux.
+ * Visibility of a feedback comment (MIN-196). Ticket threads and
+ * objectives are internal by construction; only returns have both.
  */
 export const COMMENT_VISIBILITIES = ["internal", "public"] as const;
 export type CommentVisibility = (typeof COMMENT_VISIBILITIES)[number];
@@ -240,62 +240,62 @@ export function isCommentVisibility(value: unknown): value is CommentVisibility 
 }
 
 /** Borne d'un commentaire public — plus courte que celle d'un retour : on y
-    précise un cas, on n'y écrit pas un second retour. */
+    specifies a case, we do not write a second return there. */
 export const FEEDBACK_COMMENT_BODY_MAX = 5_000;
 
 /**
- * Un commentaire du fil public, tel que le board le rend — anonymisé ICI, à la
+ * A comment from the public thread, as the board makes it — anonymized HERE, at the
  * source, comme `PublicPost`.
  *
- * `authorSeed` est le PSEUDONYME de qui a écrit, et rien d'autre : il ne sert
- * qu'à semer un avatar. Ni nom ni email ne sortent, et le pseudonyme lui-même
- * ne s'affiche jamais — l'avatar en est la seule trace, et deux commentaires de
- * la même personne portent le même visage. Null + `isTeam` = la voix de
- * l'équipe, signée par l'orbe du projet.
+ * `authorSeed` is the PSEUDONYM of who wrote, and nothing else: it is not used
+ * than sowing an avatar. Neither name nor email comes out, and the pseudonym itself
+ * never appears — the avatar is the only trace of it, and two comments from
+ * the same person have the same face. Null + `isTeam` = the voice of
+ * the team, signed by the project orb.
  */
 export interface PublicComment {
   id: string;
   body: string;
   createdAt: string;
   authorSeed: string | null;
-  /** Écrit par l'équipe (ou par la réponse d'équipe d'avant MIN-196). */
+  /** Written by the team (or by the pre-MIN-196 team answer). */
   isTeam: boolean;
-  /** Écrit par le visiteur qui lit — le seul à pouvoir le supprimer. */
+  /** Written by the visitor who reads — the only one who can delete it. */
   isMine: boolean;
   /**
-   * La RACINE du fil quand ce message y répond, null quand il en est un.
-   * Profondeur ≤ 1, comme partout ailleurs dans l'app : on répond à un fil, pas
-   * à une réponse. Un board de retours n'est pas un forum — un arbre y coûterait
-   * une navigation à des gens venus dire une chose et voter.
+   * The ROOT of the thread when this message responds to it, null when it is one.
+   * Depth ≤ 1, like everywhere else in the app: we respond to a thread, not
+   * to an answer. A feedback board is not a forum — a tree would cost there
+   * a navigation to people who came to say one thing and vote.
    */
   parentId: string | null;
 }
 
 /**
- * Le projet tel que le board public le montre : son nom et son icône.
+ * The project as the public board shows it: its name and its icon.
  *
- * Les deux voyagent ENSEMBLE parce qu'ils se rendent ensemble — l'orbe et le
- * nom sont les deux moitiés de « qui répond », et la même paire sert le header,
- * le badge « L'équipe a répondu » et la signature de sa réponse. Passer le seul
- * nom obligeait chaque surface à retrouver l'icône par ses propres moyens.
+ * The two travel TOGETHER because they go together — the orb and the
+ * name are both halves of "who responds", and the same pair serves as the header,
+ * the “The team responded” badge and the signature of its response. Pass the only one
+ * name required each surface to find the icon on its own.
  */
 export interface PublicProject {
   id: string;
   name: string;
   iconUrl: string | null;
-  /** Graine de l'orbe si le tirage a été relancé — sinon `null`, et c'est l'id
+  /** Seed of the orb if the draw was restarted — otherwise `null`, and this is the id
       qui sert (`orbSeedOr`). */
   orbSeed: string | null;
 }
 
-/** Onglet de navigation du site public (board + vues partagées du projet). */
+/** Public site navigation tab (board + shared views of the project). */
 export interface PublicSiteTab {
   label: string;
   href: string;
   active: boolean;
 }
 
-/** Suggestion « ce post existe peut-être déjà » du composeur public. */
+/** Suggestion “this post may already exist” from the public composer. */
 export interface SimilarPost {
   id: string;
   title: string;
@@ -303,37 +303,37 @@ export interface SimilarPost {
   voteCount: number;
 }
 
-/** Identité de session côté board public. */
+/** Public board side session identity. */
 export interface PublicIdentity {
   pseudonym: string;
   email: string | null;
   /**
-   * La graine d'avatar du compte minddy derrière ce visiteur, quand le SSO du
-   * board l'a identifié — son visage de l'app, à l'identique. Null sinon
-   * (OTP, SSO d'un autre produit) : l'avatar retombe alors sur le pseudonyme.
-   * Ne sert QUE dans le header, que son propriétaire est seul à voir.
+   * The avatar seed of the minddy account behind this visitor, when the SSO of the
+   * board identified him — his face from the app, identically. Null otherwise
+   * (OTP, SSO of another product): the avatar then falls back on the pseudonym.
+   * Only used in the header, which only its owner can see.
    */
   avatarSeed: string | null;
 }
 
 /**
- * Un retour vu depuis le TICKET qui le met en œuvre (MIN-196) — la lecture
+ * A return seen from the TICKET which implements it (MIN-196) — reading
  * inverse de `feedback_posts.issue_id`.
  *
- * Volontairement MAIGRE : ni corps, ni auteur, ni fil. C'est ce que lisent la
- * section « Relations » d'un ticket et le préambule d'un agent — assez pour
- * savoir qu'il y a une demande derrière ce travail et si elle vaut le détour
- * (son poids en voix, s'il y a une conversation), et pour aller la lire au bon
- * endroit. Le retour entier s'ouvre ensuite par `get_feedback`.
+ * Deliberately THIN: neither body, nor author, nor thread. This is what the
+ * “Relationships” section of a ticket and an agent’s preamble — enough to
+ * know that there is a demand behind this work and if it is worth the detour
+ * (his weight in voice, if there is a conversation), and to read it at the right
+ * place. The entire return is then opened with `get_feedback`.
  */
 export interface IssueLinkedFeedback {
   id: string;
   title: string;
   status: FeedbackPostStatus;
   vote_count: number;
-  /** false = retour privé : remonté à l'équipe, absent du board public. */
+  /** false = private feedback: reported to the team, absent from the public board. */
   is_public: boolean;
-  /** TOUS les commentaires du retour, publics et internes confondus — c'est ce
-      que rend `get_feedback`, et le compte ne sert qu'à décider d'y aller. */
+  /** ALL feedback comments, public and internal combined — this is what
+      what `get_feedback` renders, and the account is only used to decide to go there. */
   comment_count: number;
 }

@@ -1,20 +1,20 @@
 /**
- * Le format CSV que minddy EXPORTE — la table des colonnes, l'écriture du
- * fichier, et la documentation qui s'en déduit.
+ * The CSV format that minddy EXPORTS — the column table, the writing of the
+ * file, and the resulting documentation.
  *
- * Trois surfaces lisent ce module, et c'est tout l'intérêt qu'il soit unique :
- *   • la route `GET /api/me/issues/export`, qui écrit le fichier ;
- *   • `/llms.txt` et `/llms-full.txt`, qui en publient le contrat — un agent qui
- *     reçoit un export minddy sait quelles colonnes il tient sans les deviner ;
- *   • `lib/import/minddy.ts`, dont la table d'alias reprend ces mêmes en-têtes,
- *     pour que le fichier RENTRE dans minddy aussi bien qu'il en sort.
+ * Three surfaces read this module, and that's the whole point of it being unique:
+ * • the road `GET /api/me/issues/export`, which writes the file;
+ * • `/llms.txt` and `/llms-full.txt`, which publishes the contract — an agent who
+ * receives an export minddy knows which columns it holds without guessing them;
+ * • `lib/import/minddy.ts`, whose table alias takes these same headers,
+ * so that the file ENTERS into minddy as well as it leaves.
  *
- * Le contrat est donc écrit une fois. Ajouter une colonne ici la fait apparaître
- * dans le fichier, dans la doc publiée et — si elle a un champ d'arrivée — dans
- * la relecture à l'import, au lieu des trois oublis habituels.
+ * The contract is therefore written once. Adding a column here makes it appear
+ * in the file, in the published doc and — if it has an arrival field — in
+ * the reread on import, instead of the three usual omissions.
  *
- * Module pur (pas de `server-only`, aucun accès base) : testable, et donc
- * vérifiable contre l'import, ce qui est la seule garantie de l'aller-retour.
+ * Pure module (no `server-only`, no access base): testable, and therefore
+ * verifiable against import, which is the only guarantee of the round trip.
  */
 
 import type {
@@ -23,47 +23,47 @@ import type {
   IssueStatusValue,
 } from "@/lib/issue-validation";
 
-/** Une ligne à écrire — ce que la route a fini de résoudre (noms, identifiants). */
+/** One line to write — what the route has finished resolving (names, identifiers). */
 export interface ExportIssueRow {
-  /** `<CLÉ PROJET>-<numéro>`, ex. MIN-42. */
+  /** `<PROJECT KEY>-<number>`, e.g. MIN-42. */
   identifier: string;
   title: string;
   description: string | null;
   status: IssueStatusValue;
   priority: IssuePriorityValue;
   effort: IssueEffortValue | null;
-  /** Noms des catégories du ticket. */
+  /** Names of the ticket categories. */
   labels: string[];
-  /** Nom d'affichage de l'assigné, `null` si personne. */
+  /** Display name of the assignee, `null` if no one. */
   assignee: string | null;
-  /** Nom de l'objectif, `null` si le ticket n'en a pas. */
+  /** Goal name, `null` if the ticket does not have one. */
   objective: string | null;
-  /** Nom du projet — une portée « tous mes projets » mélange les lignes. */
+  /** Project name — an “all my projects” scope shuffles lines. */
   project: string;
   dueDate: string | null;
   createdAt: string | null;
   completedAt: string | null;
-  /** Identifiant du parent (`MIN-40`), `null` au premier niveau. */
+  /** Parent identifier (`MIN-40`), `null` at the top level. */
   parent: string | null;
 }
 
 export interface ExportColumn {
-  /** L'en-tête tel qu'écrit dans le fichier. La relecture est insensible à la
-   *  casse (`normalizeToken`), mais c'est cette forme-là qui fait foi. */
+  /** The header as written to the file. Rereading is insensitive to
+ * case (`normalizeToken`), but it is this form which is authentic. */
   header: string;
-  /** Ce que la colonne porte, en anglais : cette phrase EST la doc publiée. */
+  /** What the column is about, in English: this sentence IS the published doc. */
   meaning: string;
   value: (row: ExportIssueRow) => string;
 }
 
-/** Le séparateur d'une cellule multi-valeurs. Aussi celui que `splitLabels`
- *  relit à l'import — changer l'un sans l'autre casserait l'aller-retour. */
+/** The separator of a multi-value cell. Also the one that `splitLabels`
+ * rereads on import — changing one without the other would break the round trip. */
 const LABEL_SEPARATOR = ", ";
 
 /**
- * Les colonnes, dans l'ordre du fichier. L'ordre est le même quelle que soit la
- * portée demandée : un export d'un seul projet porte quand même sa colonne
- * `Project`, pour qu'il n'y ait qu'un format à documenter et à relire.
+ * Columns, in file order. The order is the same whatever the
+ * requested scope: an export of a single project still carries its column
+ * `Project`, so that there is only one format to document and reread.
  */
 export const EXPORT_COLUMNS: ExportColumn[] = [
   {
@@ -136,45 +136,44 @@ export const EXPORT_COLUMNS: ExportColumn[] = [
   },
 ];
 
-/** Les en-têtes seuls — ce que la détection de source relit (`lib/import/minddy.ts`). */
+/** Headers only — what source detection reads back (`lib/import/minddy.ts`). */
 export const EXPORT_HEADERS: string[] = EXPORT_COLUMNS.map((c) => c.header);
 
 /**
- * Plafond d'un export. Bien au-dessus de `MAX_IMPORT_ISSUES` (5 000) : sortir
- * ses données ne doit pas être limité par ce qu'on sait ré-avaler d'un coup. Au
- * contact du plafond, la route le DIT (en-tête `X-Minddy-Truncated`) — un
- * fichier tronqué en silence est le pire des exports.
+ * Ceiling of an export. Well above `MAX_IMPORT_ISSUES` (5,000): output
+ * should not be limited by what can be re-imported at once. When the ceiling is
+ * reached, the route says so (`X-Minddy-Truncated` header) — a silently
+ * truncated file is the worst export.
  */
 export const MAX_EXPORT_ISSUES = 20000;
 
-// ── Écriture ────────────────────────────────────────────────────────────────
+// ── Writing ──────────────────────────────── ────────────────────────────────
 
 /**
- * Les premiers caractères qui font d'une cellule une FORMULE à l'ouverture.
+ * The first characters that make a cell a FORMULA when opened.
  *
- * Excel, LibreOffice et Google Sheets lisent `=`, `+`, `-` et `@` en tête de
- * cellule comme le début d'un calcul — et une formule s'exécute à l'ouverture
- * du fichier, sans que personne ait cliqué. Une tabulation ou un retour chariot
- * les rejoignent : ils sont mangés au parsing, et c'est le caractère suivant qui
- * se retrouve en tête.
+ * Excel, LibreOffice, and Google Sheets read `=`, `+`, `-`, and `@` at the top from
+ * cell as the start of a calculation — and a formula is executed when the file is opened, without anyone having clicked. A tab or carriage return
+ * joins them: they are eaten during parsing, and it is the next character that
+ * ends up at the top.
  *
- * Le contenu vient d'un titre ou d'une description de ticket, donc de
- * n'importe qui ayant accès au projet : `=HYPERLINK(...)` dans un titre suffit à
- * transformer l'export d'un collègue en piège (MIN-348).
+ * The content comes from a ticket title or description, therefore from
+ * anyone with access to the project : `=HYPERLINK(...)` in a title is enough to
+ * transform a colleague's export into a trap (MIN-348).
  */
 const FORMULA_LEAD = /^[=+\-@\t\r]/;
 
 /**
- * L'apostrophe qui neutralise une formule. C'est la convention des tableurs
- * eux-mêmes : ils l'écrivent à l'export et la mangent à la lecture, et
- * `lib/import/normalize.ts` fait pareil — c'est ce qui garde l'aller-retour
- * intact sur une description qui commence par une puce markdown.
+ * The apostrophe that neutralizes a formula. This is the convention of spreadsheets
+ * themselves: they write it on export and eat it on reading, and
+ * `lib/import/normalize.ts` does the same — this is what keeps the roundtrip
+ * intact on a description that begins with a markdown bullet.
  */
 export const FORMULA_GUARD = "'";
 
-/** RFC 4180 : on ne met des guillemets que s'il en faut, et on double les siens.
-    Une cellule qu'un tableur lirait comme une formule est neutralisée d'abord,
-    et se retrouve donc toujours entre guillemets. */
+/** RFC 4180: we only put quotation marks if necessary, and we double our own.
+ A cell that a spreadsheet would read as a formula is neutralized first,
+ and is therefore always found between quotation marks. */
 function csvCell(value: string): string {
   const safe = FORMULA_LEAD.test(value) ? `${FORMULA_GUARD}${value}` : value;
   if (!/[",\r\n]/.test(safe) && safe === value && safe === safe.trim()) return safe;
@@ -182,12 +181,12 @@ function csvCell(value: string): string {
 }
 
 /**
- * Le fichier complet, en-tête compris.
+ * The complete file, including the header.
  *
- * CRLF et BOM ne sont pas de la coquetterie : ce sont les deux conditions pour
- * qu'Excel ouvre le fichier sans mutiler les accents ni recoller les lignes
- * d'une description. Notre propre lecteur les absorbe (`parseCsvTable` retire le
- * BOM, papaparse accepte les deux fins de ligne), donc l'aller-retour tient.
+ * CRLF and BOM are not cosmetic: they are the two conditions that let Excel
+ * open the file without mangling accents or joining description lines. Our own
+ * reader absorbs them (`parseCsvTable` removes the BOM, and papaparse accepts
+ * both line endings), so the round trip holds.
  */
 export function buildIssuesCsv(rows: ExportIssueRow[]): string {
   const lines = [EXPORT_HEADERS.map(csvCell).join(",")];
@@ -198,17 +197,18 @@ export function buildIssuesCsv(rows: ExportIssueRow[]): string {
 }
 
 /**
- * Le nom du fichier téléchargé. La clé du projet quand l'export n'en couvre
- * qu'un : c'est le seul mot qui distingue deux exports du même jour.
+ * The downloaded file name. The project key is included when the export covers
+ * only one project: it is the only word distinguishing two exports from the
+ * same day.
  */
 export function exportFileName(projectKey: string | null, isoDate: string): string {
   const scope = projectKey ? `-${projectKey.toLowerCase()}` : "";
   return `minddy-issues${scope}-${isoDate}.csv`;
 }
 
-// ── Contrat publié ──────────────────────────────────────────────────────────
+// ── Published contract ──────────────────────────────────────────────────────
 
-/** La route qui sert l'export, telle que la doc l'annonce. */
+/** The route that serves the export, as announced in the documentation. */
 export const EXPORT_ISSUES_PATH = "/api/me/issues/export";
 
 export interface IssuesCsvDoc {
@@ -220,9 +220,9 @@ export interface IssuesCsvDoc {
 }
 
 /**
- * Le contrat, en données — rendu par `/llms.txt` (les en-têtes) et
- * `/llms-full.txt` (colonne par colonne). Anglais, comme le reste de ce qui est
- * publié pour les agents.
+ * The contract as data — rendered by `/llms.txt` (the headers) and
+ * `/llms-full.txt` (column by column). In English, like the rest of what is
+ * published for agents.
  */
 export function issuesCsvDoc(): IssuesCsvDoc {
   return {

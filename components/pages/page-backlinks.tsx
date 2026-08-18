@@ -1,23 +1,23 @@
 "use client";
 
-// « Cité par » (MIN-279) — ce qui s'appuie sur cette page.
+// “Quoted by” (MIN-279) — which is based on this page.
 //
-// Le geste qui fait passer d'un wiki à un réseau. Une page de spec ne dit rien
-// d'elle-même tant qu'on ne voit pas les six tickets qui la citent : « cette
-// spec, elle sert à quoi ? » est une question qui se pose AU MOMENT où on la
-// lit, et la réponse était jusqu'ici introuvable dans les deux sens.
+// The gesture that takes you from a wiki to a network. A spec page says nothing
+// of itself as long as we do not see the six tickets which quote it: “this
+// spec, what is it used for? » is a question that arises AT THE MOMENT we ask it.
+// reads, and the answer was so far not found in either direction.
 //
-// Trois décisions de dessin, et elles se tiennent :
+// Three design decisions, and they stand:
 //
-//  • EN PIED DU DOCUMENT, pas dans une barre latérale de plus. C'est une lecture
-//    de fin de page — on descend, on finit, on demande « et alors ? ». Un meuble
-//    permanent volerait de la largeur au document pour une réponse qu'on ne
-//    regarde qu'une fois.
-//  • VIDE = ABSENT. Un cadre qui dit « rien ne cite cette page » est un cadre
-//    qu'on lit sur toutes les pages neuves du wiki, pour rien.
-//  • LES DEUX ORIGINES NE SE DISTINGUENT PAS. Le serveur fond la ressource
-//    (MIN-275) et la mention en une seule ligne. Savoir laquelle des deux a
-//    servi n'est pas une question qu'on se pose.
+// • AT THE FOOT OF THE DOCUMENT, not in another sidebar. It's a reading
+// end of page — we go down, we finish, we ask “so what?” ". A piece of furniture
+// permanent would steal width from the document for a response that we don't
+// only watch once.
+// • EMPTY = ABSENT. A frame that says “nothing cites this page” is a frame
+// that we read on all the new pages of the wiki, for nothing.
+// • THE TWO ORIGINS ARE NOT DISTINGUISHED. The server melts the resource
+// (MIN-275) and the mention in a single line. Know which of the two has
+// served is not a question we ask ourselves.
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -31,13 +31,13 @@ import { EntityPill, PillIcon, PILL_INNER_RADIUS } from "@/components/entity-pil
 import { ObjectiveIconBadge } from "@/components/objective-icon";
 import type { PageBacklink } from "@/lib/types";
 
-/** La clé de cache des rétroliens — celle qu'invalide le pont temps réel. */
+/** The trackbacks cache key — the one that the real-time bridge invalidates. */
 export const pageBacklinksKey = (pageId: string) =>
   ["page-backlinks", pageId] as const;
 
-/** Les teintes des deux genres qui en ont une, reprises telles quelles des
-    pilules de contexte de Numo : un ticket est bleu et une page indigo ici comme
-    là-bas. L'objectif, lui, porte SA couleur (ObjectiveIconBadge). */
+/** The shades of the two genres that have one, taken as is from Numo's
+ context pills: a ticket is blue and an indigo page here like
+ there. The objective wears ITS color (ObjectiveIconBadge). */
 const TINT: Record<"issue" | "page", string> = {
   issue: "bg-blue-500/12 text-blue-600 dark:text-blue-400",
   page: "bg-indigo-500/12 text-indigo-600 dark:text-indigo-400",
@@ -57,16 +57,16 @@ export function PageBacklinks({
   const backlinks = useQuery({
     queryKey: pageBacklinksKey(pageId),
     queryFn: () => fetchPageBacklinksApi(projectId, pageId),
-    // Un rétrolien naît d'une écriture faite AILLEURS — dans un ticket, dans une
-    // autre page. Le cache de la fois d'avant est donc périmé par construction.
+    // A trackback is born from a writing made ELSEWHERE — in a ticket, in a
+    // other page. The cache from the previous time is therefore outdated by construction.
     refetchOnMount: "always",
     staleTime: 0,
   });
 
   const items = backlinks.data ?? [];
-  // Ni squelette ni message d'erreur : le panneau n'est pas ce qu'on est venu
-  // lire. Tant qu'on ne sait pas, il n'existe pas — c'est le même silence que
-  // « rien ne cite cette page », et c'est le bon.
+  // Neither skeleton nor error message: the panel is not what we came for
+  // read. As long as we don't know, it doesn't exist - it's the same silence that
+  // “nothing cites this page”, and that’s the right one.
   if (items.length === 0) return null;
 
   return (
@@ -107,8 +107,8 @@ function BacklinkPill({
           />
         ) : (
           <PillIcon radius="md" tint={TINT[item.kind]}>
-            {/* L'émoji d'une page quand elle en a un — la même figure que dans
-                l'arbre de la sidebar, pour qu'on la reconnaisse. */}
+            {/* The emoji of a page when it has one — the same figure as in
+ the sidebar tree, so that we recognize it. */}
             {item.kind === "page" && item.icon ? (
               <span className="text-[11px] leading-none">{item.icon}</span>
             ) : item.kind === "page" ? (
@@ -118,8 +118,8 @@ function BacklinkPill({
             )}
           </PillIcon>
         )}
-        {/* L'identifiant devant le titre, comme partout où un ticket se nomme :
-            c'est lui qu'on cherche des yeux dans une liste. */}
+        {/* The identifier in front of the title, like everywhere where a ticket is named:
+, this is the one we look for in a list. */}
         {item.identifier ? (
           <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
             {item.identifier}

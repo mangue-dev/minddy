@@ -9,20 +9,20 @@ import {
 import { launchAgentRun, type LaunchResult } from "@/lib/server/agent/launch";
 
 /**
- * « Lancer maintenant » (MIN-185) : un passage HORS CALENDRIER.
+ * “Launch now” (MIN-185): an OFF-SCHEDULE passage.
  *
- * Deux choses qu'il ne fait pas, et ce sont elles qui le définissent :
- *  - **il ne déplace pas `next_run_at`.** Essayer sa routine un mardi ne doit
- *    pas faire sauter le lundi suivant ; le calendrier appartient à la cadence,
- *    pas au bouton ;
- *  - **il ne change pas de ligne de facture.** C'est la routine qui travaille,
- *    même déclenchée à la main : la dépense reste sous « Routines ».
+ * Two things he doesn't do, and these are what define him:
+ * - **it does not move `next_run_at`.** Trying your routine on a Tuesday should not
+ * not blow up the following Monday; the calendar belongs to the cadence,
+ *    not the button;
+ * - **it does not change the invoice line.** It is the routine that works,
+ * even triggered by hand: the expense remains under “Routines”.
  *
- * Propriétaire seul, comme toute écriture sur une routine.
+ * Owner alone, like any writing on a routine.
  */
 
 export const runtime = "nodejs";
-// Le kick du lancement draine le premier chunk dans `after()`.
+// The launch kick drains the first chunk into `after()`.
 export const maxDuration = 300;
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -76,14 +76,14 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
     reasoningLevel: routine.reasoning_level,
     baseBranch: routine.base_branch,
     routineId: routine.id,
-    // Le même plafond qu'un passage du calendrier : c'est la routine qui
-    // travaille, et essayer la sienne ne doit pas coûter plus cher que la
-    // laisser partir toute seule.
+    // The same ceiling as a passage in the calendar: it is the routine which
+    // works, and trying yours should not cost more than the
+    // run on its own.
     budgetUsd: await routineRunBudgetUsd(routine),
   });
   if (!result.ok) return launchErrorResponse(result);
-  // Le passage est parti : la routine retient qu'elle a tourné (et l'alerte du
-  // passage précédent s'éteint), sans que son calendrier bouge d'un pouce.
+  // The passage is gone: the routine remembers that it has turned (and the alert of the
+  // previous passage goes out), without its calendar moving an inch.
   await stampRoutineLaunched(routine.id);
   return NextResponse.json({ run: result.run });
 }

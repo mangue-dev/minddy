@@ -3,13 +3,13 @@ import { NextResponse, type NextRequest } from "next/server";
 import { authorizePrRequest, prFileSourceResponse } from "@/lib/server/agent/pr-actions";
 
 /**
- * Version BASE d'un fichier du diff d'une pull request (MIN-143) — la source
- * dont la vue diff a besoin pour déplier le contexte masqué autour des hunks.
- *  GET ?path=… → { content } (texte brut du fichier au merge base).
+ * BASE version of a pull request diff file (MIN-143) — source
+ * which the view diff needs to unfold the hidden context around the hunks.
+ *  GET ?path=… → { content } (raw file text at the merge base).
  *
- * Appelée à la demande, au premier dépliage d'un fichier : ouvrir un diff n'en
- * déclenche aucune. Le chemin demandé est validé contre les fichiers de CE diff
- * — sinon la route donnerait à lire n'importe quel fichier du dépôt.
+ * Called on demand, at the first unfolding of a file: open a diff
+ * triggers none. The requested path is validated against CE diff files
+ * — otherwise the route would read any file in the repository.
  */
 
 type RouteContext = { params: Promise<{ prId: string }> };

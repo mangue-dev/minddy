@@ -4,10 +4,9 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * Le démarrage complet requiert un vrai serveur opencode, un proxy LLM et un
- * pont de tools. Ces tests tiennent donc l'ordonnancement structurel qui fait
- * partie du contrat de latence : les écritures indépendantes sont lancées
- * ensemble, puis toutes terminées avant `startServer`.
+ * Full startup requires a real opencode server, an LLM proxy and a
+ * tools bridge. These tests therefore respect the structural scheduling which is part of the latency contract: the independent writes are launched
+ * together, then all completed before `startServer`.
  */
 const source = readFileSync(join(__dirname, "supervisor.ts"), "utf8");
 

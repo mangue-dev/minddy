@@ -6,7 +6,7 @@ import { discardPage, getPage, trashPage, updatePage } from "@/lib/server/pages"
 
 type RouteContext = { params: Promise<{ id: string; pageId: string }> };
 
-/** GET — une page avec son corps (document ProseMirror). */
+/** GET — a page with its body (ProseMirror document). */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { pageId } = await params;
   const auth = await getAuthedUser(request);
@@ -21,17 +21,17 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 }
 
 /**
- * PATCH — titre, icône, parent, position, corps.
+ * PATCH — title, icon, parent, position, body.
  *
- * Un `parent_id` qui mettrait la page sous un de ses propres descendants répond
- * **409** et n'écrit RIEN : la profondeur est illimitée, donc la seule chose qui
- * empêche la sidebar de partir en récursion infinie est ce refus-là.
+ * A `parent_id` which would put the page under one of its own descendants responds
+ * **409** and writes NOTHING: the depth is unlimited, so the only thing that
+ * prevents the sidebar from going into infinite recursion is this refusal.
  *
- * Un corps envoyé avec une `version` PÉRIMÉE répond 409 lui aussi, et pour la
- * même raison de fond : ne jamais écrire par-dessus ce qu'on n'a pas lu. La
- * différence est dans la réponse — celle-ci porte `conflict: true` et la page
- * du serveur, corps compris, pour que le client fusionne par bloc
- * (`lib/pages-merge.ts`) sans un aller-retour de plus.
+ * A body sent with an EXPIRED `version` also responds 409, and for
+ * same basic reason: never write over what you have not read. There
+ * difference is in the response — this one has `conflict: true` and the page
+ * of the server, including the body, so that the client merges by block
+ * (`lib/pages-merge.ts`) without another round trip.
  */
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { pageId } = await params;
@@ -64,18 +64,18 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
 }
 
 /**
- * DELETE — passage en corbeille, RÉCURSIF (la page et ses descendants).
+ * DELETE — recycle bin, RECURSIVE (the page and its descendants).
  *
- * Rien n'est détruit : la ligne est marquée, sort des lectures pendant 30 jours,
- * et revient telle quelle par `POST .../restore` ou depuis la corbeille. C'est
- * ce qui rend acceptable que supprimer le bloc sous-page dans le corps du parent
- * (MIN-272) supprime la page — le geste est rattrapable.
+ * Nothing is destroyed: the line is marked, output readings for 30 days,
+ * and returns as is by `POST .../restore` or from the trash. It is
+ * which makes it acceptable to remove the subpage block in the parent's body
+ * (MIN-272) deletes the page — the gesture is recoverable.
  *
- * `?discard=1` est l'EXCEPTION, et la seule : une page créée puis quittée sans
- * qu'on y écrive une lettre est détruite pour de bon, plutôt que d'aller
- * encombrer la corbeille d'un document que personne n'a voulu. Le serveur
- * revérifie qu'elle est bien vide et sans sous-page (`discardPage`) : c'est
- * cette garde-là, et non la bonne foi du client, qui rend le chemin sûr.
+ * `?discard=1` is the EXCEPTION, and the only one: a page created then left without
+ * that a letter is written there is destroyed for good, rather than going
+ * cluttering up the trash with a document that no one wanted. The server
+ * double-check that it is empty and without a subpage (`discardPage`): this is
+ * this guard, and not the good faith of the client, which makes the path safe.
  */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { pageId } = await params;

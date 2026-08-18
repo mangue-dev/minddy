@@ -10,23 +10,23 @@ import type {
 } from "@/lib/feedback/types";
 
 /**
- * Une session de dictée de retour, côté client — le jumeau de
- * `useIssueDictation` pour les deux composeurs de feedback (board public et
- * modal interne du dashboard).
+ * A feedback dictation session, client side — the twin of
+ *`useIssueDictation` for the two feedback composers (public board and
+ * internal dashboard modal).
  *
- * Elle est jetable : l'historique nourrit les commandes de suite (« ajoute
- * que… »), vit ici, et meurt avec le modal. Rien n'est persisté.
+ * It is disposable: the history feeds the follow-up commands (" adds
+ * that..."), lives here, and dies with the modal. Nothing is persisted.
  *
- * Le TRANSPORT est injecté (`dictate`) parce que c'est la seule chose qui
- * diffère entre les deux surfaces : le board public passe par une server action
- * (session visiteur, dépense au owner), le dashboard par une route
- * authentifiée. Le reste — l'état occupé, l'historique, le run partagé avec
- * l'écoute, l'annulation — est le même des deux côtés.
+ * TRANSPORT is injected (`dictate`) because it is the only thing that
+ * differs between the two surfaces: the public board goes through a server action
+ * (visitor session, spend to owner), the dashboard through one route
+ * authenticated. The rest — busy state, history, run shared with
+ * listening, canceling — is the same on both sides.
  */
 
 export type FeedbackDictationResult =
   | { ok: true; patch: FeedbackVoicePatch; reply: string }
-  /** L'appelant a déjà dit l'échec à sa façon (porte OTP, quota, indispo). */
+  /** The caller has already said the failure in his own way (OTP door, quota, unavailable). */
   | { ok: false; handled?: boolean };
 
 export function useFeedbackDictation({
@@ -46,8 +46,8 @@ export function useFeedbackDictation({
   const t = useTranslations("Dictate");
   const [busy, setBusy] = useState(false);
   const historyRef = useRef<FeedbackVoiceTurn[]>([]);
-  // Le run de l'écoute qui vient d'avoir lieu : le repasser au rangement range
-  // les deux appels sous une seule ligne du ledger. Consommé une fois.
+  // The listening run that has just taken place: put it back in storage
+  // both calls under a single ledger line. Consumed once.
   const runIdRef = useRef<string | null>(null);
   const abortedRef = useRef(false);
 
@@ -75,9 +75,9 @@ export function useFeedbackDictation({
         { role: "user" as const, content: transcript },
         { role: "assistant" as const, content: result.reply },
       ].slice(-12);
-      // Les champs qui bougent SONT le retour visuel : la phrase de Numo ne
-      // s'affiche que quand rien n'a bougé (commande comprise de travers, ou
-      // rien à changer), sinon elle double ce qu'on voit déjà.
+      // The fields that move ARE the visual feedback: Numo's sentence does not
+      // is only displayed when nothing has moved (command understood incorrectly, or
+      // nothing to change), otherwise it doubles what we already see.
       if (Object.keys(result.patch).length === 0 && result.reply) {
         toast.info(result.reply);
       }
@@ -90,10 +90,10 @@ export function useFeedbackDictation({
     }
   };
 
-  // Le DictateButton capture son callback au démarrage de l'enregistrement :
-  // on route par une ref pour que l'appel lise TOUJOURS l'état courant du
-  // formulaire (le clic sur le micro blure aussi l'éditeur, qui committe juste
-  // avant la prise).
+  // The DictateButton captures its callback when recording starts:
+  // we route through a ref so that the call ALWAYS reads the current state of the
+  // form (clicking on the micro also blurs the editor, which just commits
+  // before taking).
   const runRef = useRef(run);
   useEffect(() => {
     runRef.current = run;
@@ -101,12 +101,12 @@ export function useFeedbackDictation({
 
   const onTranscript = useCallback((text: string) => void runRef.current(text), []);
 
-  /** Mémorise le run de l'écoute — à appeler depuis `uploadAudio`. */
+  /** Stores the listener run — to be called from `uploadAudio`. */
   const noteRun = useCallback((runId: string | null) => {
     runIdRef.current = runId;
   }, []);
 
-  /** Jette la session entière : historique, run en attente, appel en vol. */
+  /** Discard the entire session: history, pending run, in-flight call. */
   const reset = useCallback(() => {
     historyRef.current = [];
     runIdRef.current = null;

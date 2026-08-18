@@ -3,19 +3,18 @@ import { describe, expect, it } from "vitest";
 import { stripUnstorable } from "./runs";
 
 /**
- * MIN-286 — L'OCTET NUL, ET CE QU'IL COÛTAIT.
+ * MIN-286 — THE NULL BYTE, AND WHAT IT COST.
  *
- * Postgres refuse `\u0000` dans une chaîne, `text` comme `jsonb` : l'écriture
- * ENTIÈRE part en `unsupported Unicode escape sequence`. Or tout ce qu'un tour
- * d'agent écrit vient du modèle et de son shell — la sortie d'une commande qui
- * touche un binaire, un log tronqué au milieu d'un caractère, le journal
- * d'événements d'opencode qui les transporte.
+ * Postgres refuses `\u0000` in a string, `text` as `jsonb`: writing
+ * ENTIRE part in `unsupported Unicode escape sequence`. Now everything an agent tour
+ * writes comes from the model and its shell — the output of a command that
+ * touches a binary, a log truncated in the middle of a character, the opencode event log
+ * that carries them.
  *
- * Ce que ça coûtait, mesuré en production le 2026-08-12 (runs `66023558` et
- * `a8051d06`) : plus une seule sauvegarde de checkpoint — donc plus de battement
- * de cœur —, un rapport de fin de tour refusé lui aussi, un fil figé « en cours »
- * sur le dernier geste de l'agent, et le chien de garde qui finit par ranger le
- * run en « le processus s'est arrêté ». Un octet.
+ * What that cost, measured in production on 2026-08-12 (runs `66023558` and
+ * `a8051d06`): no longer a single checkpoint save — therefore no more heartbeat —, an end-of-turn report also refused, a frozen thread “in progress”
+ * on the last gesture of the agent, and the watchdog which ends up putting the
+ * run into “the process has stopped”. One byte.
  */
 describe("ce qui ne peut pas entrer en base", () => {
   it("retire l'octet nul d'une chaîne, sans toucher au reste", () => {
@@ -46,7 +45,7 @@ describe("ce qui ne peut pas entrer en base", () => {
 
   it("retire un demi-caractère isolé, que `JSON` accepte et que Postgres refuse", () => {
     expect(stripUnstorable("coupé au milieu \uD83D")).toBe("coupé au milieu ");
-    // …et laisse la paire entière, qui est un vrai caractère.
+    // …and leaves the pair whole, which is a real character.
     expect(stripUnstorable("un emoji 🙂 entier")).toBe("un emoji 🙂 entier");
   });
 
@@ -60,9 +59,9 @@ describe("ce qui ne peut pas entrer en base", () => {
   });
 
   it("n'a pas de mémoire d'un appel à l'autre", () => {
-    // La regex est globale : la sonder avec `test` avant de remplacer laisserait
-    // `lastIndex` en l'air et ferait sauter un octet sur deux d'une chaîne à
-    // l'autre. Deux appels d'affilée doivent rendre la même chose.
+    // The regex is global: probing it with `test` before replacing would leave
+    // `lastIndex` in the air and would skip every other byte of a string
+    // the other. Two calls in a row should return the same thing.
     expect(stripUnstorable("a\u0000b\u0000c")).toBe("abc");
     expect(stripUnstorable("a\u0000b\u0000c")).toBe("abc");
   });

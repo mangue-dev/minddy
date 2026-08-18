@@ -14,27 +14,27 @@ import {
 } from "@/lib/seed/types";
 
 /**
- * La porte de l'amorce par brief (MIN-172) : ce qui vient du navigateur n'est
- * jamais cru.
+ * The brief bootstrap gate (MIN-172): what comes from the browser is
+ * never believed.
  *
- * L'aperçu est modifiable — titres réécrits, tickets décochés, objectifs
- * abandonnés — donc le corps du commit est un objet que l'utilisateur a
- * fabriqué, dans un onglet qu'on ne contrôle pas. Il repasse ici entier :
- * énumérations validées (`isPriority`, `isEffort`), titres tronqués comme ceux
- * d'un import, plafonds de lot, clés d'objectif et de parent résolues CONTRE
- * LE LOT — une clé qui ne désigne rien du lot est simplement lâchée, jamais
- * suivie.
+ * The preview is editable — titles rewritten, tickets unchecked, goals
+ * abandoned — so the commit body is an object that the user a
+ * made, in a tab that we do not control. It comes back whole here:
+ * validated enumerations (`isPriority`, `isEffort`), truncated titles like those
+ * of an import, batch ceilings, objective and parent keys resolved AGAINST
+ * THE BATCH — a key which does not designate anything in the batch is simply dropped, never
+ * followed.
  *
- * La proposition du modèle passe par la même fonction (`brief-to-issues.ts`) :
- * une seule porte, donc l'aperçu ne peut pas montrer un ticket que l'écriture
- * refuserait ensuite.
+ * The model proposal goes through the same function (`brief-to-issues.ts`):
+ * only one door, so the preview cannot show a ticket that writing
+ * would deny then.
  */
 
-/** Longueur d'une description proposée — quelques lignes, pas un document. */
+/** Length of a proposed description — a few lines, not a document. */
 const MAX_DESCRIPTION_LENGTH = 10_000;
-/** Résumé d'objectif : deux phrases. */
+/** Objective summary: two sentences. */
 const MAX_SUMMARY_LENGTH = 2_000;
-/** Une clé synthétique de lot ("O1", "T14") — jamais un identifiant réel. */
+/** A synthetic batch key ("O1", "T14") — never a real identifier. */
 const MAX_KEY_LENGTH = 40;
 const MAX_LABEL_LENGTH = 60;
 
@@ -42,14 +42,14 @@ const text = (value: unknown, max: number): string =>
   typeof value === "string" ? value.trim().slice(0, max) : "";
 
 /**
- * Nettoie une proposition, d'où qu'elle vienne. Ne lève jamais et ne rejette
- * jamais le lot entier : chaque entrée invalide est écartée seule, parce qu'un
- * ticket mal formé ne doit pas coûter les trente-neuf autres.
+ * Cleans up a proposition, wherever it comes from. Never raise and reject
+ * the entire batch: each invalid entry is discarded alone, because a malformed
+ * ticket should not cost the other thirty-nine.
  */
 export function sanitizeSeedProposal(raw: unknown): SeedProposal {
   const input = (raw ?? {}) as { objectives?: unknown; issues?: unknown };
 
-  // ── Objectifs : clés uniques, un nom obligatoire ──
+  // ── Objectives: unique keys, a mandatory name ──
   const objectives: SeedObjective[] = [];
   const objectiveKeys = new Set<string>();
   for (const entry of asRecords(input.objectives)) {
@@ -65,7 +65,7 @@ export function sanitizeSeedProposal(raw: unknown): SeedProposal {
     objectives.map((objective) => [normalizeToken(objective.key), objective.key])
   );
 
-  // ── Tickets : deux passes, parce qu'un parent peut être cité avant d'exister ──
+  // ── Tickets: two passes, because a parent can be cited before existing ──
   const issues: SeedIssue[] = [];
   const issueKeys = new Set<string>();
   for (const entry of asRecords(input.issues)) {
@@ -73,8 +73,8 @@ export function sanitizeSeedProposal(raw: unknown): SeedProposal {
     const key = text(entry.key, MAX_KEY_LENGTH);
     const title = text(entry.title, MAX_TITLE_LENGTH);
     const token = normalizeToken(key);
-    // Sans clé ou sans titre, il n'y a pas de ticket ; une clé en double
-    // écraserait la première dans la table de résolution des parents.
+    // Without a key or title, there is no ticket; a duplicate key
+    // would overwrite the first one in the parent resolution table.
     if (!token || !title || issueKeys.has(token)) continue;
     issueKeys.add(token);
 
@@ -85,15 +85,15 @@ export function sanitizeSeedProposal(raw: unknown): SeedProposal {
       objectiveKey: objectiveKeyByToken.get(normalizeToken(text(entry.objectiveKey, MAX_KEY_LENGTH))) ?? "",
       priority: isPriority(entry.priority) ? entry.priority : "none",
       effort: isEffort(entry.effort) ? entry.effort : null,
-      // Résolue à la passe suivante, une fois le lot connu en entier.
+      // Resolved in the next pass, once the entire batch is known.
       parentKey: text(entry.parentKey, MAX_KEY_LENGTH),
       labels: sanitizeLabels(entry.labels),
     });
   }
 
-  // Les parents, en deux passes comme à l'import (`lib/import/parse.ts`) :
-  // d'abord les clés qui ne désignent rien du lot retenu (ou soi-même), puis
-  // celles dont le parent est lui-même un sous-ticket — un seul niveau.
+  // The parents, in two passes as during import (`lib/import/parse.ts`):
+  // first the keys which do not designate anything from the selected batch (or oneself), then
+  // those whose parent is itself a subticket — a single level.
   const byToken = new Map(issues.map((issue) => [normalizeToken(issue.key), issue]));
   for (const issue of issues) {
     if (!issue.parentKey) continue;
@@ -112,20 +112,18 @@ export function sanitizeSeedProposal(raw: unknown): SeedProposal {
 }
 
 /**
- * Les étiquettes qui deviendront des catégories : les plus PORTÉES du lot, et
- * six au maximum.
+ * The labels that will become categories: the most CAREFUL of the lot, and
+ * six at most.
  *
- * Un modèle étiquette au fil de sa lecture — il rend une étiquette par sujet
- * qu'il croise. Mesuré sur un vrai brief : treize catégories pour vingt-deux
- * tickets, dont neuf portées une seule fois. Un projet qui vient de naître ne
- * doit pas ouvrir son picker sur treize entrées dont personne ne se sert.
+ * A model labels as it reads — it returns one label per subject
+ * that it encounters. Measured on a real brief: thirteen categories for twenty-two
+ * tickets, nine of which are worn only once. A project that has just been born must not open its picker on thirteen entries that no one uses.
  *
- * Un plafond, et rien d'autre : « écarter ce qu'un seul ticket porte » se
- * défend sur vingt tickets, mais viderait les étiquettes d'un lot de trois. Le
- * plafond, lui, ne mord que là où il y a effectivement trop de catégories.
- * Rien n'est perdu : ce que l'étiquette disait est dans le titre et la
- * description. À fréquence égale, l'ordre d'apparition tranche — le résultat
- * est stable.
+ * A ceiling, and nothing else: “discarding what a single ticket carries” is defended on twenty tickets, but would empty the labels of a batch of three. The
+ * ceiling only bites where there are actually too many categories.
+ * Nothing is lost: what the label said is in the title and the
+ * description. At equal frequency, the order of appearance varies — the result
+ * is stable.
  */
 function keepTopLabels(issues: SeedIssue[]): void {
   const counts = new Map<string, { count: number; rank: number }>();
@@ -151,13 +149,12 @@ function keepTopLabels(issues: SeedIssue[]): void {
 }
 
 /**
- * La proposition validée, telle que le chemin d'import l'écrit. Statut
- * `backlog` : l'utilisateur vient de relire chaque ticket dans l'aperçu, le
- * faire repasser par le triage lui redemanderait le geste qu'il vient de faire.
+ * The committed proposal, as the import path writes it. Status
+ * `backlog`: the user has just reread each ticket in the preview, putting it through the triage again would require the user to repeat the action he has just made.
  *
- * `objectiveIdByKey` porte les objectifs RÉELLEMENT créés : une clé absente
- * (objectif décoché, création ratée) laisse le ticket sans objectif plutôt que
- * de faire échouer le lot.
+ * `objectiveIdByKey` carries the REALLY created objectives: a key absent
+ * (objective unchecked, creation failed) leaves the ticket without objective rather than
+ * causing the batch to fail.
  */
 export function seedProposalToImportedIssues(
   proposal: SeedProposal,
@@ -174,8 +171,8 @@ export function seedProposalToImportedIssues(
     dueDate: null,
     createdAt: null,
     completedAt: null,
-    // La clé du lot devient la clé externe : c'est par elle que l'import
-    // rattache les sous-tickets, sans qu'aucun identifiant réel n'ait circulé.
+    // The batch key becomes the external key: it is through this that the import
+    // attaches the sub-tickets, without any real identifier having been circulated.
     externalKeys: [issue.key],
     parentExternalKey: issue.parentKey || null,
     objectiveId: objectiveIdByKey.get(issue.objectiveKey) ?? null,

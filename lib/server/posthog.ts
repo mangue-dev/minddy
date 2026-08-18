@@ -14,26 +14,25 @@ import { shouldSendServerAnalytics } from "@/lib/analytics-localhost";
 import { isOfficialMinddyCloud } from "@/lib/deployment-profile";
 
 /**
- * Événements PostHog émis par le SERVEUR (MIN-78).
+ * PostHog events emitted by the SERVER (MIN-78).
  *
- * Pourquoi doubler le client : ces événements-là font AUTORITÉ. Ils partent
- * quel que soit le consentement cookies du navigateur (base légale = intérêt
- * légitime sur une donnée non identifiante côté appareil : aucun cookie n'est
- * posé, le `distinctId` est l'id du compte), et surtout ils existent là où il
- * n'y a pas de navigateur du tout — MCP, agent de code, webhooks Stripe/GitHub,
- * crons. C'est le seul moyen de compter fidèlement les tickets créés quand la
- * moitié le sont par un agent.
+ * Why double the client: these events are AUTHORITY. They leave
+ * whatever the browser's cookie consent (legal basis = legitimate interest
+ * on non-identifying data on the device side: no cookie is
+ * placed, the `distinctId` is the account id), and above all they exist where there
+ * is no browser at all — MCP, agent code, Stripe/GitHub webhooks,
+ * crons. This is the only way to accurately count the tickets created when half of them are created by an agent.
  *
- * Ne jamais mettre de PII ni de texte libre dans `properties` : mêmes règles que
- * le catalogue client (compteurs, booléens, enums, ids, tranches).
+ * Never put PII or free text in `properties`: same rules as
+ * the customer catalog (counters, booleans, enums, ids, slices).
  */
 
 let client: PostHog | null = null;
 
 /**
- * Les propriétés `$` sont rejetées par défaut. Cette unique option PostHog est
- * toutefois nécessaire aux téléchargements publics anonymes : elle empêche le
- * SDK serveur de créer un profil de personne pour un UUID jetable.
+ * `$` properties are rejected by default. This single PostHog option is
+ * however necessary for anonymous public uploads: it prevents the
+ * SDK server from creating a person profile for a disposable UUID.
  */
 function sanitizeServerProperties(
   properties: Record<string, unknown> | undefined,
@@ -46,14 +45,14 @@ function sanitizeServerProperties(
 }
 
 /**
- * Client partagé, ou null si les analytics serveur ne doivent pas émettre :
- * pas de clé (self-host, CI), ou exécution en local sans
+ * Shared client, or null if the server analytics must not emit:
+ * no key (self-host, CI), or local execution without
  * `NEXT_PUBLIC_POSTHOG_ALLOW_LOCALHOST=1`.
  *
- * La garde locale est le pendant exact de celle du navigateur
- * (`isLocalAnalyticsHostname`) : sans elle, couper le flag ne silencerait que
- * la moitié de l'instrumentation et un `pnpm dev` continuerait d'écrire dans
- * le projet de production.
+ * Local guarding is the exact counterpart of that of the browser
+ * (`isLocalAnalyticsHostname`): without it, cutting the flag would only silence
+ * half of the instrumentation and a `pnpm dev` would continue writing to
+ * the production project.
  */
 export function getServerPostHog(): PostHog | null {
   const legacyHost = isOfficialMinddyCloud(process.env)
@@ -63,9 +62,9 @@ export function getServerPostHog(): PostHog | null {
   const serverHost = process.env.POSTHOG_HOST?.trim() || legacyHost;
   const publicKey = process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim();
   const publicHost = process.env.NEXT_PUBLIC_POSTHOG_HOST?.trim() || legacyHost;
-  // Une paire reste atomique : mélanger une clé serveur avec l'hôte public (ou
-  // l'inverse) activerait un client que le registre de capacités diagnostique
-  // comme incomplet. La paire serveur explicite garde la priorité.
+  // A pair remains atomic: mix a server key with the public host (or
+  // the reverse) would enable a client that the diagnostic capabilities register
+  // as incomplete. The explicit server pair keeps priority.
   const hasExplicitServerConfig = Boolean(
     process.env.POSTHOG_API_KEY?.trim() || process.env.POSTHOG_HOST?.trim(),
   );
@@ -97,27 +96,26 @@ export function getServerPostHog(): PostHog | null {
 }
 
 export interface ServerEvent {
-  /** Id du compte concerné, ou un id anonyme stable pour les flux publics. */
+  /** ID of the account concerned, or a stable anonymous ID for public feeds. */
   distinctId: string;
   event: ServerAnalyticsEventName;
   properties?: Record<string, unknown>;
-  /** Rattache l'événement à un projet (même type de groupe que côté client). */
+  /** Attaches the event to a project (same type of group as on the client side). */
   groups?: Record<string, string>;
 }
 
 /**
- * Capture un événement serveur ET garantit son envoi avant le gel de la lambda.
+ * Captures a server event AND guarantees its sending before freezing the lambda.
  *
- * Le client `posthog-node` bufferise (`flushAt: 5`, `flushInterval: 10s`). Un
- * événement isolé — le cas le PLUS fréquent ici, par ex. le premier
- * `user_signed_up` de la journée — resterait donc dans la file : la route rend
- * sa réponse, la fonction gèle, l'intervalle de 10s ne se déclenche jamais et
- * l'événement est perdu. `after()` maintient l'invocation en vie juste le temps
- * du flush, sans retarder la réponse.
+ * The client `posthog-node` buffers (`flushAt: 5`, `flushInterval: 10s`). Un
+ * isolated event — the MOST common case here, e.g. the first
+ * `user_signed_up` of the day — would therefore remain in the queue: the route returns
+ * its response, the function freezes, the 10s interval is never triggered and
+ * the event is lost. `after()` keeps the invocation alive just for the flush period, without delaying the response.
  *
- * Les erreurs sont avalées : une panne PostHog ne doit jamais faire échouer une
- * requête utilisateur. À appeler depuis un contexte de requête (route handler /
- * server action) — c'est toujours le cas ici.
+ * Errors are swallowed: a PostHog failure should never cause a
+ * user request to fail. To be called from a request context (route handler /
+ * server action) — this is always the case here.
  */
 export function captureServerEvent({
   distinctId,
@@ -146,17 +144,17 @@ export function captureServerEvent({
       try {
         await posthog.flush();
       } catch {
-        // Un échec de livraison ne doit pas affecter la requête.
+        // A delivery failure should not affect the request.
       }
     });
   } catch {
-    // `after()` hors contexte de requête, ou client en erreur : on ignore.
+    // `after()` out of request context, or client in error: we ignore.
   }
 }
 
 /**
- * Pose des propriétés de personne depuis le serveur (plan Stripe, jalons
- * d'activation). Même garantie de flush que `captureServerEvent`.
+ * Set person properties from the server (Stripe plan, activation milestones
+ *). Same flush guarantee as `captureServerEvent`.
  */
 export function identifyServerUser(
   distinctId: string,

@@ -1,35 +1,35 @@
 /**
- * Où la fenêtre de l'app a le droit d'aller (MIN-291).
+ * Where the app window is allowed to go (MIN-291).
  *
- * Le renderer charge du CODE DISTANT avec notre `preload` attaché. Si un lien
- * vers un site tiers ouvrait ce site *dans* la fenêtre, ce site hériterait du
- * pont — c'est-à-dire de `openExternal` et du reste. La garde n'est donc pas une
- * politesse d'UX : c'est la frontière de la surface exposée.
+ * The renderer loads REMOTE CODE with our `preload` attached. If a link
+ * to a third party site opened this site *in* the window, this site would inherit the
+ * bridge — that is, `openExternal` and the rest. Custody is therefore not a
+ * courtesy of UX: this is the boundary of the exposed surface.
  *
- * Module PUR : la décision se prend ici et se teste ici ; `desktop/src/main.ts`
- * ne fait que la câbler sur `will-navigate` et `setWindowOpenHandler`.
+ * PUR module: the decision is made here and tested here; `desktop/src/main.ts`
+ * just wires it to `will-navigate` and `setWindowOpenHandler`.
  */
 
 /**
- * - `allow` — notre origine, la fenêtre navigue.
- * - `external` — une page web ordinaire ailleurs : elle part au navigateur
- *   système.
- * - `block` — rien de tout ça (`file:`, `javascript:`, `data:`, une URL
- *   illisible). On ne navigue pas, et on ne la passe pas non plus à
- *   `shell.openExternal`, qui la donnerait au système : `open` sur un `file://`
- *   ou un schéma inscrit par une autre app, c'est de l'exécution.
+ * - `allow` — our origin, the window navigates.
+ * - `external` — an ordinary web page elsewhere: it goes to the browser
+ * system.
+ * - `block` — none of that (`file:`, `javascript:`, `data:`, a URL
+ * illegible). We do not sail, nor do we spend it
+ * `shell.openExternal`, which would give it to the system: `open` on a `file://`
+ * or a pattern registered by another app, it's execution.
  */
 export type NavigationDecision = "allow" | "external" | "block";
 
-/** Les seuls schémas qu'on accepte de confier au navigateur du système. */
+/** The only diagrams that we agree to entrust to the system browser. */
 const EXTERNAL_SCHEMES = new Set(["http:", "https:", "mailto:"]);
 
 /**
- * Que faire d'une navigation vers `target`, la fenêtre étant à `origin` ?
+ * What to do with a navigation to `target`, the window being at `origin`?
  *
- * La comparaison porte sur l'ORIGINE complète (schéma + hôte + port), jamais sur
- * l'hôte seul : `http://www.minddy.app` et un sous-domaine voisin sont des
- * tierces parties comme les autres, et doivent sortir.
+ * The comparison concerns the complete ORIGIN (schema + host + port), never on
+ * the host alone: ​​`http://www.minddy.app` and a neighboring subdomain are
+ * third parties like the others, and must come out.
  */
 export function navigationDecision(
   target: string,

@@ -4,24 +4,23 @@ import { ROUTINE_FREQUENCIES } from "@/lib/routine-schedule";
 import { REASONING_LEVELS } from "@/lib/agent-reasoning";
 
 /**
- * Le SCHÉMA du tool `create_routine`, écrit une fois (MIN-185).
+ * The SCHEMA for the `create_routine` tool, written once (MIN-185).
  *
- * Trois surfaces le servent — le chat Numo, l'agent Numo dans sa sandbox, et le
- * MCP (qui le redécrit en zod, parce que son SDK l'exige, mais avec les mêmes
- * phrases). La description ne peut pas être trois fois différente : c'est elle
- * qui dit ce qu'une routine EST, et un modèle qui lit trois définitions d'une
- * même chose en invente une quatrième.
+ * Three surfaces use it — Numo chat, the Numo agent in its sandbox, and MCP
+ * (which re-describes it in Zod because its SDK requires that, but with the same
+ * wording). The description cannot differ across all three: it defines what a
+ * routine IS, and a model that reads three definitions of the same thing invents
+ * a fourth.
  *
- * Ce que la description doit absolument porter, et qui n'est écrit nulle part
- * ailleurs pour le modèle :
- *  - **ce n'est PAS un ticket récurrent** (`recurrence` sur un ticket) ni une
- *    automatisation de projet (`quand … alors …`). Les trois se ressemblent de
- *    loin ; un client qui les confond crée la mauvaise chose ;
- *  - **elle part seule et ne pourra rien demander** — l'`ask_user` lui est
- *    retiré par le jeu de tools. L'instruction doit donc se suffire ;
- *  - **elle a le mandat d'ouvrir une pull request** sans qu'on le lui demande ;
- *  - **seul le propriétaire du projet peut en poser une** ;
- *  - **le fuseau ne se devine pas**.
+ * The description must include the following, because the model sees it nowhere else:
+ * - **this is NOT a recurring ticket** (`recurrence` on a ticket) nor a
+ * project automation (`when … then …`). The three look similar from a distance;
+ * a client that confuses them creates the wrong thing;
+ * - **it runs on its own and cannot ask for anything** — `ask_user` is removed by
+ *   its tool set, so the instruction must be self-contained;
+ * - **it has permission to open a pull request** without being asked;
+ * - **only the project owner can create one**;
+ * - **the time zone cannot be guessed**.
  */
 
 const FREQUENCY_VALUES = [...ROUTINE_FREQUENCIES];
@@ -64,10 +63,10 @@ export const LIST_ROUTINES_DESCRIPTION =
   "of stacking a second routine that does the same job.";
 
 /**
- * Le PLAFOND DE DÉPENSE d'un passage — partagé par les deux tools, et écrit
- * pour un modèle qui ne verra jamais l'écran : sans la phrase sur le défaut, un
- * client le repose à 100 « pour ne pas gêner » et rouvre exactement le trou que
- * le plafond bouche.
+ * The SPENDING CEILING for one run — shared by both tools and written for a model
+ * that will never see the screen: without the sentence about the default, a client
+ * resets it to 100 “to avoid getting in the way” and reopens exactly the hole the
+ * ceiling is meant to close.
  */
 const MAX_SPEND_PERCENT_PROPERTY = {
   type: "number",
@@ -82,7 +81,7 @@ const MAX_SPEND_PERCENT_PROPERTY = {
     "does not apply to owners running on their own API key.",
 };
 
-/** Champs de cadence — partagés par `create_routine` et `update_routine`. */
+/** Schedule fields — shared by `create_routine` and `update_routine`. */
 export const ROUTINE_SCHEDULE_PROPERTIES: Record<string, unknown> = {
   frequency: {
     type: "string",
@@ -128,7 +127,7 @@ export const ROUTINE_SCHEDULE_PROPERTIES: Record<string, unknown> = {
   },
 };
 
-/** Paramètres complets de `create_routine`. */
+/** Complete `create_routine` parameters. */
 export const CREATE_ROUTINE_PARAMETERS = {
   type: "object" as const,
   properties: {
@@ -159,16 +158,15 @@ export const CREATE_ROUTINE_PARAMETERS = {
     },
     max_spend_percent: MAX_SPEND_PERCENT_PROPERTY,
   } as Record<string, unknown>,
-  // `minute`, `weekdays` et `days_of_month` restent hors du requis : les deux
-  // derniers dépendent de la cadence, et un champ requis mais interdit selon la
-  // fréquence est un piège. Tout le reste EST requis — un petit modèle ne
-  // remplit pas un champ optionnel, et `timezone` absent fait partir la routine
-  // trois heures à côté sans que personne ne le voie. Pas de `title` : il est
-  // écrit par minddy, à partir de l'instruction.
+  // `minute`, `weekdays`, and `days_of_month` remain outside `required`: the latter
+  // two depend on the schedule, and a field that is required but forbidden for some
+  // frequencies is a trap. Everything else IS required — a small model will not fill
+  // an optional field, and omitting `timezone` starts the routine three hours away
+  // without anyone noticing. No `title`: minddy writes it from the instruction.
   required: ["prompt", "frequency", "hour", "timezone"],
 };
 
-/** Paramètres de `update_routine` — tout est optionnel sauf la cible. */
+/** `update_routine` parameters — everything is optional except the target. */
 export const UPDATE_ROUTINE_PARAMETERS = {
   type: "object" as const,
   properties: {

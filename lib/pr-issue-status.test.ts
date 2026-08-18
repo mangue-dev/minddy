@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { issueStatusForPrState } from "./pr-issue-status";
 
-// La règle PURE qui aligne le statut d'un ticket sur l'état de sa PR (MIN-46,
-// corrigée par MIN-138 pour le brouillon). L'écriture en base (`applyIssueStatus`)
-// n'est pas testable en node (server-only) et reste dans
+// The PURE rule which aligns the status of a ticket with the state of its PR (MIN-46,
+// corrected by MIN-138 for the draft). Writing in base (`applyIssueStatus`)
+// is not testable in node (server-only) and remains in
 // `lib/server/agent/issue-status-sync`, qui n'applique plus que cette table.
 
 describe("issueStatusForPrState", () => {
@@ -12,8 +12,8 @@ describe("issueStatusForPrState", () => {
   });
 
   it("une PR BROUILLON laisse le ticket en cours — elle n'est pas à relire", () => {
-    // C'est la correction de MIN-138 : le brouillon renvoyait `in_review`, ce qui
-    // faisait apparaître en file de relecture un travail que personne n'a proposé.
+    // This is the correction of MIN-138: the draft returned `in_review`, which
+    // made work appear in the proofreading queue that no one had proposed.
     expect(issueStatusForPrState("draft")).toBe("in_progress");
   });
 

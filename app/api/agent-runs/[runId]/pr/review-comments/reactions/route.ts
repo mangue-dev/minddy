@@ -7,8 +7,8 @@ import {
 } from "@/lib/server/agent/pr-actions";
 
 /**
- * Façade par RUN des réactions de review (MIN-139) — comme ses voisines, elle
- * résout le run → sa PR et délègue, pour les deep-links `?run=` et `/agents`.
+ * Frontage by RUN of review reactions (MIN-139) — like its neighbors, it
+ * resolves the run → its PR and delegates, for the deep-links `?run=` and `/agents`.
  *
  *  POST → { comment_id, content, on }
  */

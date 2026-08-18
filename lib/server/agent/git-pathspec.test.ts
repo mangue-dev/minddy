@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { grepPathspecs, globPathspecs, expandBraces } from "./git-pathspec";
 
 /**
- * Tests des pathspecs git. Deux points critiques : l'INTERSECTION de path + glob
- * (un seul pathspec :(glob)path/glob, pas l'union OR de deux pathspecs), et le
- * développement des ACCOLADES (git ne le fait pas — MIN-116), où l'union OR est
- * cette fois exactement ce qu'on veut.
+ * Tests git pathspecs. Two critical points: the INTERSECTION of path + glob
+ * (a single pathspec:(glob)path/glob, not the OR union of two pathspecs), and the
+ * development of BRACES (git does not do this — MIN-116), where the OR union is
+ * this time exactly what we wants.
  */
 
 describe("grepPathspecs", () => {
@@ -33,8 +33,8 @@ describe("grepPathspecs", () => {
     expect(grepPathspecs(undefined, "*.ts")).toEqual([":(glob)**/*.ts"]);
   });
 
-  // MIN-116 : la forme que le modèle écrit spontanément. Sans développement, git
-  // ne matche RIEN et le tool répond « (no matches) » sur du code qui existe.
+  // MIN-116: the form that the model writes spontaneously. Without development, git
+  // matches NOTHING and the tool responds “(no matches)” on code that exists.
   it("développe les accolades en un pathspec par extension", () => {
     expect(grepPathspecs(undefined, "**/*.{ts,tsx}")).toEqual([
       ":(glob)**/*.ts",
@@ -61,13 +61,13 @@ describe("grepPathspecs", () => {
   });
 
   /**
-   * MIN-226 — la forme que le modèle écrit quand il veut chercher DANS UN
-   * FICHIER : les deux champs portent le chemin, lecture naturelle de « où
-   * chercher » + « quoi chercher ». Imbriqué, ça donnait
-   * `:(glob)components/foo.tsx/components/foo.tsx` — aucun match, git en code 1,
-   * et « (no matches) » sur du code qui existe. Cinq sondes de cette forme ont
-   * menti sur le run qui a écrit le plan de MIN-226.
-   */
+ * MIN-226 — the form that the model writes when it wants to search IN A
+ * FILE: both fields carry the path, natural reading of "where
+ * to search" + "what to search". Nested, it gave
+ * `:(glob)components/foo.tsx/components/foo.tsx` — no matches, git in code 1,
+ * and “(no matches)” on code that exists. Five probes of this form have
+ * lied about the run that wrote the plan for MIN-226.
+ */
   it("path de FICHIER : le glob tombe, on cherche dans ce fichier", () => {
     expect(
       grepPathspecs("components/objective-side-panel.tsx", "components/objective-side-panel.tsx"),
@@ -75,10 +75,10 @@ describe("grepPathspecs", () => {
   });
 
   /**
-   * Le cas EXACT du run de MIN-226 : la sonde sur la page board. Les crochets
-   * d'une route dynamique sont des métacaractères de glob, et les compter comme
-   * tels rendait la garde aveugle au seul chemin qui comptait.
-   */
+ * The EXACT case of the MIN-226 run: the probe on the page board. The brackets
+ * in a dynamic route are glob metacharacters, and counting them as
+ * such made the guard blind to the only path that mattered.
+ */
   it("path de fichier + glob quelconque : le fichier gagne, crochets de route compris", () => {
     expect(grepPathspecs("app/(app)/projects/[id]/page.tsx", "**/*.{ts,tsx}")).toEqual([
       "app/(app)/projects/[id]/page.tsx",
@@ -95,8 +95,8 @@ describe("grepPathspecs", () => {
     ]);
   });
 
-  // Le point de la garde n'est PAS de deviner juste, c'est de ne jamais rétrécir :
-  // un `path` porteur de métacaractères reste un motif, et s'intersecte.
+  // The point of guarding is NOT to guess right, it's to never shrink:
+  // a `path` carrying metacharacters remains a pattern, and intersects.
   it("un path qui contient un métacaractère n'est pas pris pour un fichier", () => {
     expect(grepPathspecs("app/**/api", "*.ts")).toEqual([":(glob)app/**/api/**/*.ts"]);
   });
@@ -171,7 +171,7 @@ describe("expandBraces", () => {
   });
 
   it("rend le motif tel quel au-delà du plafond d'alternatives", () => {
-    // 7 groupes de 2 = 128 alternatives, au-delà des 64 tolérées.
+    // 7 groups of 2 = 128 alternatives, beyond the 64 tolerated.
     const pathological = "{a,b}{c,d}{e,f}{g,h}{i,j}{k,l}{m,n}.ts";
     expect(expandBraces(pathological)).toEqual([pathological]);
   });

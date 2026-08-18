@@ -8,19 +8,19 @@ import {
 } from "./attachment-parts";
 
 /**
- * Les parts d'un prompt @Numo — une ressource SANS OCTETS ne descend pas dans
- * le stockage.
+ * Shares of a @Numo prompt — a resource WITHOUT BYTES does not descend into
+ * storage.
  *
- * Vu en prod : `[numo-comment] failed: TypeError: Cannot read properties of null
- * (reading 'replace')` dans `getFinalPath` de supabase-js. Un lien porte le MIME
- * `text/uri-list`, donc la branche « texte » l'attrapait et l'envoyait au
- * `download()` avec le `storage_path` nul qu'un lien a toujours (MIN-184, et une
- * page citée depuis MIN-275). Ça ne dégradait pas la réponse : ça la faisait
- * tomber ENTIÈRE, sur le simple fait qu'un lien pendait au ticket.
+ * Seen in production: `[numo-comment] failed: TypeError: Cannot read properties of null
+ * (reading 'replace')` in `getFinalPath` from supabase-js. A link carries the MIME
+ * `text/uri-list`, so the “text” branch caught it and sent it to
+ * `download()` with the null `storage_path` that a link always has (MIN-184, and a
+ * page cited from MIN-275). This did not degrade the response: it made it
+ * fall ENTIRELY, on the simple fact that a link was hanging from the ticket.
  */
 
-/** Client dont le stockage LÈVE comme le vrai sur un chemin nul, et qui note ce
-    qu'on lui a demandé. */
+/** Customer whose storage RAISES like the real one on a zero path, and who notes this
+    that we asked him. */
 function fakeService(): SupabaseClient & { asked: unknown[] } {
   const asked: unknown[] = [];
   const client = {

@@ -4,9 +4,9 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { generateClientId } from "@/lib/server/oauth/crypto";
 
 /**
- * Clients OAuth enregistrés dynamiquement (RFC 7591). Clients publics
- * uniquement (token_endpoint_auth_method "none") — aucun secret n'existe,
- * la sécurité repose sur PKCE + la validation stricte des redirect_uris.
+ * Dynamically registered OAuth clients (RFC 7591). Public clients
+ * only (token_endpoint_auth_method "none") — no secrets exist,
+ * security relies on PKCE + strict validation of redirect_uris.
  */
 
 export interface OAuthClient {
@@ -18,10 +18,10 @@ export interface OAuthClient {
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
-/** Schémas qui exécutent du script ou lisent le disque là où le callback est
-    suivi — `Location:` du navigateur, `href` de l'interstitiel de succès. Un
-    client qui en enregistre un ne demande pas un callback, il demande une XSS
-    stockée : refus catégorique, avant même de regarder le reste. */
+/** Schemes that execute script or read disk where the callback is
+ followed by — `Location:` of the browser, `href` of the success interstitial. A
+ client which registers one does not request a callback, it requests a stored XSS
+: categorical refusal, before even looking at the rest. */
 const DANGEROUS_SCHEMES = new Set([
   "javascript:",
   "data:",
@@ -32,19 +32,17 @@ const DANGEROUS_SCHEMES = new Set([
   "filesystem:",
 ]);
 
-/** Schéma privé d'application native (RFC 8252 §7.1) : `cursor:`, `vscode:`… */
+/** Private native application schema (RFC 8252 §7.1): `cursor:`, `vscode:`… */
 const PRIVATE_SCHEME = /^[a-z][a-z0-9+.-]*:$/;
 
-/** https obligatoire, sauf loopback http (clients CLI, RFC 8252 §7.3) et
-    schéma privé d'app native (RFC 8252 §7.1). Fragment interdit
-    (RFC 6749 §3.1.2).
+/** https required, except loopback http (CLI clients, RFC 8252 §7.3) and
+ native app private schema (RFC 8252 §7.1). Forbidden fragment
+ (RFC 6749 §3.1.2).
 
-    Le schéma privé N'EST PAS une largesse : c'est le seul callback qu'une app
-    de bureau sait recevoir, et sans lui Cursor ne peut pas s'authentifier du
-    tout — il enregistre `cursor://anysphere.cursor-mcp/oauth/callback`, se
-    faisait refuser à l'inscription, et la connexion échouait sur
-    « Redirect URI must be https ». Ce qui protège ici, c'est PKCE plus la
-    validation stricte de l'URI enregistrée, pas le schéma. */
+ The private schema is NOT a gift: it is the only callback that a desktop app
+ can receive, and without it Cursor cannot authenticate from
+ at all — it registers `cursor://anysphere.cursor-mcp/oauth/callback`, was refused registration, and connection failed on
+ “Redirect URI must be https”. What's protecting here is PKCE plus strict validation of the registered URI, not the scheme. */
 export function isAllowedRedirectUri(uri: unknown): boolean {
   if (typeof uri !== "string" || uri.length > 2000) return false;
   let parsed: URL;
@@ -100,23 +98,23 @@ export async function getClient(clientId: unknown): Promise<OAuthClient | null> 
   return (data as unknown as OAuthClient) ?? null;
 }
 
-/** Taille de page du balayage des grants — bornée par PostgREST de toute façon. */
+/** Grant scan page size — bounded by PostgREST anyway. */
 const GRANT_PAGE = 1000;
 
 /**
- * Sélectionne, parmi des clients candidats, ceux qui n'ont AUCUN grant.
+ * Selects, among candidate clients, those who have NO grants.
  *
- * L'ordre du raisonnement est le point sensible. La version d'origine lisait
- * `select("client_id")` sur TOUT `oauth_grants` pour en faire l'ensemble « à
- * garder » : au-delà de la limite implicite de PostgREST, la liste revient
- * tronquée sans le dire, et tout grant non lu devient un client « orphelin »
- * — donc supprimé, et la FK emportait alors les grants de tous ses
- * utilisateurs. Un ensemble « à garder » construit par une lecture partielle
- * ne peut pas servir à décider une suppression.
+ * The order of reasoning is the sensitive point. The original version read
+ * `select("client_id")` on ALL `oauth_grants` * to make it the whole "to
+ * keep": beyond the implicit limit of PostgREST, the list returns
+ * truncated without saying so, and any unread grant becomes an "orphaned" client »
+ * — therefore deleted, and the FK then took away the grants of all its
+ * users. A “to keep” set constructed by a partial reading
+ * cannot be used to decide on a deletion.
  *
- * Ici la lecture est bornée aux seuls candidats, paginée jusqu'à épuisement,
- * et la moindre erreur ne rend rien : on ne supprime que ce dont on a la
- * preuve positive qu'il est vide.
+ * Here the reading is limited to candidates only, paginated until exhaustion,
+ * and the slightest error does not return anything: we only delete what we have
+ * proof positive that it is empty.
  */
 export async function selectClientsWithoutGrants(
   candidateIds: string[],
@@ -132,16 +130,16 @@ export async function selectClientsWithoutGrants(
     const page = await readGrantPage(candidateIds, from, from + GRANT_PAGE - 1);
     if ("failed" in page) return [];
     for (const id of page.clientIds) used.add(id);
-    // Page incomplète = fin du balayage. Tous les candidats déjà couverts =
-    // plus rien à apprendre.
+    // Incomplete page = end of scanning. All candidates already covered =
+    // nothing more to learn.
     if (page.clientIds.length < GRANT_PAGE) break;
     if (used.size >= candidateIds.length) break;
   }
   return candidateIds.filter((id) => !used.has(id));
 }
 
-/** Hygiène DCR : purge opportuniste des clients de plus de 7 jours sans
-    aucun grant (spam d'enregistrement). Fire-and-forget. */
+/** DCR Hygiene: opportunistic purge of clients older than 7 days without
+ any grant (registration spam). Fire-and-forget. */
 export function cleanupOrphanClients(): void {
   const service = getServiceClient();
   void (async () => {

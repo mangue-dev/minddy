@@ -6,9 +6,9 @@ import {
 } from "@/lib/keyboard/shortcuts";
 
 /**
- * La plateforme est lue sur `navigator`, qui n'existe pas en `environment:
- * "node"` : on le pose le temps du test. `platform` est en lecture seule sur un
- * vrai `Navigator`, d'où l'objet minimal plutôt qu'un `vi.spyOn`.
+ * The platform is read on `navigator`, which does not exist in environment:
+ * "node"` : on le pose le temps du test. `platform` is read-only on a
+ * true `Navigator`, hence the minimal object rather than a `vi.spyOn`.
  */
 function withPlatform(platform: string, run: () => void) {
   vi.stubGlobal("navigator", { platform, userAgent: platform });
@@ -46,9 +46,9 @@ describe("formatModShiftShortcut", () => {
     );
   });
 
-  // Le point de l'existence de cette fonction : hors Mac on veut le MOT
-  // « Shift » et un second « + », pas le symbole ⇧ au milieu d'une phrase
-  // Windows — ce qu'aurait donné `formatModShortcut("⇧L")`.
+  // The point of the existence of this function: outside Mac we want the MOT
+  // “Shift” and a second “+”, not the ⇧ symbol in the middle of a sentence
+  // Windows — what `formatModShortcut("⇧L")` would have given.
   it("écrit Ctrl+Shift+L ailleurs, en toutes lettres", () => {
     withPlatform("Win32", () =>
       expect(formatModShiftShortcut("L")).toBe("Ctrl+Shift+L")

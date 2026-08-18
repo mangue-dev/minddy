@@ -19,10 +19,10 @@ export interface PaletteItem {
   icon?: ComponentType<{ className?: string }>;
   /** Extra terms to match against when searching (identifier, project name…). */
   keywords?: string[];
-  /** Texte secondaire, CHERCHÉ mais moins fort qu'un titre — l'extrait d'une
-   *  page trouvée par son contenu (MIN-276). Le moteur classe un match de titre
-   *  au-dessus ; c'est ce qui fait passer « trouvée par son titre » devant
-   *  « citée dans un corps » sans tri explicite. */
+  /** Secondary text, SOUGHT-AFTER but less strong than a title — an extract from a
+   * page found by its contents (MIN-276). The engine ranks a title match
+   * above ; this is what puts “found by its title” in front of
+   * “cited in a body” without explicit sorting. */
   description?: string;
   /** Right-aligned trailing content — identifier badge or project chip. */
   meta?: ReactNode;
@@ -55,10 +55,10 @@ export interface PaletteGroup {
  */
 export function HeaderSearchPill({ onOpen }: { onOpen: () => void }) {
   const t = useTranslations("Nav");
-  // La pill ANNONCE le raccourci : elle doit donc dire celui qu'on a sous les
-  // doigts. Le cheat sheet et le pied de la palette résolvent déjà « mod » à la
-  // plateforme ; celle-ci était la dernière à afficher ⌘ en dur, y compris à qui
-  // n'a pas de touche ⌘.
+  // The pill ANNOUNCES the shortcut: it must therefore say the one we have under the
+  // fingers. The cheat sheet and the foot of the palette already solve “mod” at the
+  // platform ; this was the last one to display ⌘ in hard copy, including to whom
+  // has no ⌘ key.
   const mod = useModKey();
   return (
     <button
@@ -71,8 +71,8 @@ export function HeaderSearchPill({ onOpen }: { onOpen: () => void }) {
       <span className="hidden text-left sm:inline-block">
         {t("searchPlaceholder")}
       </span>
-      {/* Deux touches, deux `Kbd` — comme le cheat sheet, et comme le clavier :
-          « ⌘K » dans une seule pastille se lisait comme une touche unique. */}
+      {/* Two keys, two `Kbd` — like the cheat sheet, and like the keyboard:
+ “⌘K” in a single dot read like a single key. */}
       <span className="ml-1 hidden items-center gap-0.5 opacity-60 sm:inline-flex">
         <Kbd>{mod}</Kbd>
         <Kbd>K</Kbd>

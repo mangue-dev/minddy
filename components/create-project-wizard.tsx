@@ -84,48 +84,48 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Wizard de création de projet (MIN-62, MIN-171) : D'où part-on ? → Projet →
- * Icône → Dépôt git → Amorce → Finitions.
- * La forme est celle de tous les wizards de minddy — modale, progression,
+ * Project creation wizard (MIN-62, MIN-171): Where do we start? → Project →
+ * Icon → Git repository → Primer → Finishings.
+ * The form is that of all minddy wizards — modal, progression,
  * animation, boutons : `WizardDialog` (components/wizard/wizard-dialog.tsx).
- * Ce fichier ne décrit que ses étapes et ce qu'elles déclenchent.
+ * This file only describes its steps and what they trigger.
  *
- * Le projet n'est créé qu'à la DERNIÈRE étape : tout ce qui précède est un
- * BROUILLON (nom, clé, favicon résolu mais pas stocké, dépôt choisi mais pas
- * lié). Fermer le wizard en route ne laisse donc pas de projet vide à moitié
- * configuré derrière soi. En contrepartie, chaque étape doit savoir travailler
- * sans projet :
- *  - l'icône ne fait que résoudre le favicon (`/api/account/project-icon`),
- *    l'import réel suit la création ;
- *  - le dépôt se choisit au niveau COMPTE (`/api/account/git-connections`), la
- *    liaison suit la création ;
- *  - l'id du projet est tiré ici, pour que l'orbe montrée dans le wizard soit
- *    bien celle du projet créé.
+ * The project is only created at the LAST step: everything above is a
+ * DRAFT (name, key, favicon resolved but not stored, repository chosen but not
+ * related). Closing the wizard en route therefore does not leave a project half empty
+ * configured behind you. In return, each step must know how to work
+ * without project:
+ * - the icon only resolves the favicon (`/api/account/project-icon`),
+ * the actual import follows the creation;
+ * - the deposit is chosen at the ACCOUNT level (`/api/account/git-connections`), the
+ * connection follows creation;
+ * - the project id is pulled here, so that the orb shown in the wizard is
+ * that of the created project.
  *
- * Ce brouillon n'est plus perdu à la fermeture : dès qu'il porte un nom, il
- * s'enregistre côté serveur (lib/project-draft.ts, table `project_drafts`) et
- * prend une ligne dans la barre latérale, à la place du projet qu'il deviendra.
- * On y revient à l'étape où l'on s'était arrêté, d'une session à l'autre.
+ * This draft is no longer lost when closed: as soon as it has a name, it
+ * is registered on the server side (lib/project-draft.ts, table `project_drafts`) and
+ * takes a line in the sidebar, in place of the project it will become.
+ * We return to the stage where we left off, from one session to the next.
  *
- * L'installation GitHub / l'OAuth GitLab quittent la page en plein écran : le
- * brouillon est enregistré avant de partir, `sessionStorage` n'en garde que
- * l'id, et le callback revient sur `/home?setup=git` où `ProjectDraftResume`
- * rouvre le wizard à l'étape « Dépôt ».
+ * The GitHub installation / GitLab OAuth leaves the page in full screen: the
+ * draft is saved before leaving, `sessionStorage` only keeps
+ * the id, and the callback returns to `/home?setup=git` where `ProjectDraftResume`
+ * reopens the wizard to the “Deposit” step.
  *
- * L'amorce suit la même règle que le reste : l'étape COLLECTE (un brief collé,
- * un CSV déposé), elle n'écrit rien. La passe qui en fait des tickets se joue
- * après la création, sur le board du projet neuf, où `?setup=` la déclenche.
+ * The primer follows the same rule as the rest: the COLLECTION step (a pasted brief,
+ * a CSV submitted), she writes nothing. The pass that makes tickets is played
+ * after creation, on the board of the new project, where `?setup=` triggers it.
  */
 
-/** Reprise du wizard sur un brouillon — repris à la main, ou après un redirect. */
+/** Resumption of the wizard on a draft — resumed manually, or after a redirect. */
 export interface ProjectSetupResumeState {
   draft: ProjectDraft;
-  /** Connexion fraîchement créée par le callback — ouvre le sélecteur de dépôt. */
+  /** Connection freshly created by callback — opens the repository selector. */
   connectionId: string | null;
   /**
-   * Retour d'un aller-retour chez le provider git : on rouvre à l'étape
-   * « Dépôt », d'où l'on était parti, et non à l'étape enregistrée — la sortie
-   * de l'app n'était pas un abandon, c'était le milieu d'un geste.
+   * Return from a round trip to the git provider: we reopen at the stage
+   * “Deposit”, where we started from, and not at the recorded stage — the exit
+   * of the app was not an abandonment, it was the middle of a gesture.
    */
   fromGit?: boolean;
 }
@@ -139,7 +139,7 @@ export function CreateProjectWizard({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Nouvel objet à chaque reprise — déclenche l'initialisation à l'étape git. */
+  /** New object on each restart — triggers initialization at the git stage. */
   resume: ProjectSetupResumeState | null;
 }) {
   const router = useRouter();
@@ -163,40 +163,40 @@ export function CreateProjectWizard({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Le brouillon a-t-il déjà une ligne en base ? Ce qui décide, à la sortie, s'il
-  // y a quelque chose à supprimer — et non s'il y a quelque chose à enregistrer,
-  // qui ne dépend que du nom.
+  // Does the draft already have a baseline? What decides, at the exit, if it
+  // is something to delete — not if there is something to record,
+  // which depends only on the name.
   const [draftExists, setDraftExists] = useState(false);
   const [closePromptOpen, setClosePromptOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
 
-  // Étape « D'où part-on ? » — la réponse décide de ce que l'étape d'amorce
-  // demande, et de rien d'autre : le projet se crée de la même façon des deux
-  // côtés.
+  // Step “Where do we start from?” » — the answer decides what the bootstrap step
+  // request, and nothing else: the project is created in the same way from both
+  // sides.
   const [origin, setOrigin] = useState<ProjectOrigin | null>(null);
 
-  // Étape « Projet ». `draftId` est l'id du futur projet : la graine de l'orbe
-  // doit être connue avant la création, sinon l'aperçu ment.
+  // “Project” stage. `draftId` is the id of the future project: the seed of the orb
+  // must be known before creation, otherwise the preview lies.
   const [draftId, setDraftId] = useState<string>(() => crypto.randomUUID());
-  // La graine de l'orbe si on l'a relancée ici — sinon l'id fait office, comme
-  // pour un projet qui n'a jamais relancé la sienne.
+  // The seed of the orb if we relaunched it here - otherwise the id acts, like
+  // for a project that never relaunched its own.
   const [orbSeed, setOrbSeed] = useState<string | null>(null);
   const previewOrbSeed = orbSeed ?? draftId;
   const [name, setName] = useState("");
   const [key, setKey] = useState("");
   const [keyTouched, setKeyTouched] = useState(false);
-  // Le dernier nom PROPOSÉ. Ce qui distingue « le champ porte une proposition »
-  // de « le champ porte un nom choisi » : tant qu'il tient, on offre d'en tirer
-  // un autre ; dès que l'utilisateur écrit, le nom est le sien.
+  // The last PROPOSED name. What distinguishes “the field carries a proposition”
+  // of “the field bears a chosen name”: as long as it holds, we offer to draw from it
+  // another ; as soon as the user writes, the name is theirs.
   const [suggestedName, setSuggestedName] = useState("");
 
-  // Étape « Icône » : rien n'est stocké tant que le projet n'existe pas — on
-  // garde de quoi rejouer le choix à la création (favicon à ré-importer, ou
-  // image déjà compressée à envoyer).
+  // “Icon” step: nothing is stored until the project exists — we
+  // keep enough to replay the choice at creation (favicon to re-import, or
+  // already compressed image to send).
   const [icon, setIcon] = useState<ProjectIconChoice>({ kind: "none" });
   const iconPreviewUrl = icon.kind === "none" ? null : icon.previewUrl;
 
-  // Étape « Dépôt git » — tout au niveau compte, aucun projet en jeu.
+  // “Git repository” step — everything counts, no project involved.
   const { connections, providers } = useGitConnectionsQuery(open);
   const [connecting, setConnecting] = useState<RepoProviderId | null>(null);
   const [activeConnectionId, setActiveConnectionId] = useState<string | null>(
@@ -206,41 +206,41 @@ export function CreateProjectWizard({
   const [candidatesLoading, setCandidatesLoading] = useState(false);
   const [repo, setRepo] = useState<DraftRepo | null>(null);
 
-  // Étape « Amorce ». Elle collecte, elle n'écrit pas : le brief reste un
-  // texte, le CSV reste un `File` en mémoire — aucun appel réseau ici, le
-  // projet n'existe pas encore.
+  // “Prime” stage. She collects, she does not write: the brief remains a
+  // text, the CSV remains a `File` in memory — no network calls here, the
+  // project does not yet exist.
   const [brief, setBrief] = useState("");
   const [numo, setNumo] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
-  // Un CSV ne tient pas dans sessionStorage : le détour par le provider git
-  // l'oublie. On le redemande, et on le DIT — sinon la zone de dépôt vide
-  // passe pour un bug.
+  // A CSV does not fit in sessionStorage: the detour via the git provider
+  // forget it. We ask it again, and we SAY it — otherwise the empty drop zone
+  // looks like a bug.
   const [csvLost, setCsvLost] = useState(false);
   const csvInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
-  // Étape « Finitions ». Smart Assign est proposé ACTIVÉ : c'est le réglage
-  // qu'on veut par défaut sur un projet neuf, et le décocher reste à un clic.
+  // “Finishing” stage. Smart Assign is proposed ENABLED: this is the setting
+  // that we want by default on a new project, and unchecking it remains one click away.
   const [smartAssignEnabled, setSmartAssignEnabled] = useState(true);
   const [autoAssignEnabled, setAutoAssignEnabled] = useState(false);
 
   const steps = useMemo(() => stepsFor(origin), [origin]);
   const step: ProjectWizardStep = steps[Math.min(stepIndex, steps.length - 1)];
 
-  /** L'amorce telle qu'elle est à cet instant — déduite, jamais stockée deux
-   *  fois : c'est ce que le brouillon porte et ce que `finish()` rejoue. */
+  /** The primer as it is at this moment — deduced, never stored two
+   * times: this is what the draft carries and what `finish()` replays. */
   const seed: DraftSeed | null = useMemo(() => {
     if (origin === "existing") return csvFile ? { kind: "import" } : null;
     if (numo) return { kind: "numo" };
     return brief.trim() ? { kind: "brief", text: brief.trim() } : null;
   }, [origin, csvFile, numo, brief]);
 
-  // Le plafond de la passe (lib/seed/types.ts) : le refuser ici évite de le
-  // découvrir après la création du projet, sur le board.
+  // The ceiling of the pass (lib/seed/types.ts): refusing it here avoids having to
+  // discover after the creation of the project, on the board.
   const briefTooLong = step === "seed" && brief.length > MAX_BRIEF_CHARS;
 
-  /** Une étape FACULTATIVE où rien n'a été posé dit « Passer », pas
-   *  « Continuer ». Les deux avancent pareil — mais « Continuer » sur une étape
+  /** An OPTIONAL step where nothing has been placed says "Skip", not
+   * " Continue ". Both progress the same — but “Continue” on one step
    *  vide laisse croire qu'on emporte quelque chose. */
   const skipLabel = (empty: boolean) =>
     empty ? tCommon("skip") : undefined;
@@ -272,10 +272,10 @@ export function CreateProjectWizard({
     setAutoAssignEnabled(false);
   }, []);
 
-  // Reprise d'un brouillon : il reprend toute sa place, et on rouvre là où on
-  // l'avait laissé — à l'étape enregistrée, ou à l'étape git si l'on revient
-  // d'un aller-retour chez le provider (sélecteur de dépôt ouvert si la
-  // connexion a été créée).
+  // Resumption of a draft: it takes its place again, and we reopen where we
+  // had left it — at the saved step, or at the git step if we return
+  // a round trip to the provider (deposit selector open if the
+  // connection has been created).
   useEffect(() => {
     if (!resume) return;
     const { draft } = resume;
@@ -289,8 +289,8 @@ export function CreateProjectWizard({
     setRepo(draft.repo);
     setBrief(draft.seed?.kind === "brief" ? draft.seed.text : "");
     setNumo(draft.seed?.kind === "numo");
-    // Le CSV n'a pas fait le voyage (voir `DraftSeed`) : la zone de dépôt
-    // repart vide, avec la note qui explique pourquoi.
+    // The CSV did not make the trip (see `DraftSeed`): the drop zone
+    // leaves empty, with the note that explains why.
     setCsvFile(null);
     setCsvLost(draft.seed?.kind === "import");
     setSmartAssignEnabled(draft.smartAssignEnabled);
@@ -304,19 +304,19 @@ export function CreateProjectWizard({
     setActiveConnectionId(resume.connectionId);
   }, [resume]);
 
-  // Entonnoir du wizard (MIN-78) : ouverture, étape vue, abandon. Sans
-  // « abandonné », on ne verrait que les projets créés — jamais l'étape qui
-  // fait décrocher (la leçon AutoKap : c'était l'étape GitHub obligatoire).
+  // Wizard's Funnel (MIN-78): opening, step seen, abandonment. Without
+  // “abandoned”, we would only see the projects created — never the step that
+  // made you drop out (the AutoKap lesson: it was the obligatory GitHub step).
   useTrackView(open, "opened", () =>
     track("project_wizard_opened", {
       source: resume?.fromGit ? "resume" : resume ? "draft" : "sidebar",
     }),
   );
-  // Clé = l'étape : chaque étape atteinte est comptée une fois, revenir en
-  // arrière ne la recompte pas (« combien de gens ont atteint l'étape N »).
+  // Key = step: each step reached is counted once, go back
+  // back does not count it again (“how many people reached step N”).
   useTrackView(open, step, () => track("project_wizard_step_viewed", { step }));
 
-  /** L'état complet du wizard, tel qu'il s'enregistre. */
+  /** The complete state of the wizard, as it is saved. */
   const snapshot = (): ProjectDraftInput => ({
     id: draftId,
     orbSeed,
@@ -332,7 +332,7 @@ export function CreateProjectWizard({
     autoAssignEnabled,
   });
 
-  /** Ferme pour de bon : plus rien en attente, tout remis à zéro. */
+  /** Closes for good: nothing left waiting, everything reset. */
   const closeWizard = useCallback(() => {
     clearPendingDraftId();
     setClosePromptOpen(false);
@@ -340,13 +340,13 @@ export function CreateProjectWizard({
     onOpenChange(false);
   }, [onOpenChange, reset]);
 
-  /** Sortie « je reprendrai » : le brouillon part en base, la modale se ferme. */
+  /** “I will resume” output: the draft goes to the base, the modal closes. */
   const saveAndClose = async () => {
     try {
       await saveProjectDraft(snapshot());
     } catch (err) {
-      // Rien n'est enregistré et la modale reste ouverte : la saisie est encore
-      // là, et fermer maintenant la perdrait pour de bon.
+      // Nothing is recorded and the modal remains open: the entry is still
+      // there, and closing now would lose it for good.
       setClosePromptOpen(false);
       toast.error((err as Error).message);
       return;
@@ -355,7 +355,7 @@ export function CreateProjectWizard({
     closeWizard();
   };
 
-  /** Sortie « j'y renonce » : le brouillon déjà enregistré s'en va avec. */
+  /** “I give it up” output: the draft already recorded goes with it. */
   const discardAndClose = () => {
     track("project_wizard_abandoned", { last_step: step });
     if (draftExists) {
@@ -371,9 +371,9 @@ export function CreateProjectWizard({
       onOpenChange(true);
       return;
     }
-    // Dès qu'il y a un nom, il y a un brouillon à proposer : on ne referme pas
-    // sur la saisie sans demander. Sans nom, il n'y a rien à montrer dans la
-    // barre latérale — et rien à garder.
+    // As soon as there is a name, there is a draft to propose: we do not close
+    // on entering without asking. Without a name, there is nothing to show in the
+    // sidebar — and nothing to keep.
     if (name.trim()) {
       setClosePromptOpen(true);
       return;
@@ -381,18 +381,18 @@ export function CreateProjectWizard({
     discardAndClose();
   };
 
-  /** Retour aux étapes déjà validées uniquement (stepper + lien retour). */
+  /** Return to steps already validated only (stepper + return link). */
   const goToStep = (target: number) => {
     if (submitting) return;
     if (target >= 0 && target < stepIndex) setStepIndex(target);
   };
 
-  // ── Étape « D'où part-on ? » ──────────────────────────────────────────────
-  // Un choix binaire qui demande deux gestes est un choix binaire mal posé : la
-  // carte cliquée pose la réponse ET avance.
+  // ── “Where do we start from?” step » ─────────────────────── ───────────────────────
+  // A binary choice that requires two gestures is an ill-posed binary choice: the
+  // Clicked card poses the answer AND moves forward.
   const chooseOrigin = (next: ProjectOrigin) => {
     setOrigin(next);
-    // Changer d'avis ne traîne pas l'amorce de l'autre branche derrière soi.
+    // Changing your mind does not drag the beginning of the other branch behind you.
     if (next !== origin) {
       setBrief("");
       setNumo(false);
@@ -403,7 +403,7 @@ export function CreateProjectWizard({
     setStepIndex((i) => i + 1);
   };
 
-  // ── Étape « Amorce » ──────────────────────────────────────────────────────
+  // ── “Prime” step ─────────────────────────── ───────────────────────────
   const handleCsvFile = (file: File) => {
     if (file.size > MAX_IMPORT_CSV_BYTES) {
       toast.error(tSettings("importErrorTooLarge"));
@@ -413,26 +413,26 @@ export function CreateProjectWizard({
     setCsvLost(false);
   };
 
-  /** Quitter l'étape d'amorce, quel que soit le chemin (« Continuer »,
-   *  « Passer », le lien vers Numo) : le choix se compte une fois, là. */
+  /** Exit the bootstrap step, regardless of the path ("Continue",
+   * “Skip”, the link to Numo): the choice is counted once, there. */
   const leaveSeedStep = (chosen: DraftSeed | null) => {
     track("project_wizard_seed_chosen", { seed: chosen?.kind ?? "none" });
     setStepIndex((i) => i + 1);
   };
 
-  // ── Étape « Projet » ──────────────────────────────────────────────────────
+  // ── “Project” stage ─────────────────────────── ───────────────────────────
   const handleNameChange = (value: string) => {
     setName(value);
     if (!keyTouched) setKey(suggestKeyFromName(value));
   };
 
   /**
-   * Une proposition de nom, pour qui n'en a pas encore (MIN-170, mode « tout
-   * nouveau projet »). Elle remplit le champ comme une frappe : la clé suit,
-   * et tout reste modifiable — le projet n'est créé qu'à la dernière étape.
+   * A suggested name, for those who don't have one yet (MIN-170, “all
+   * new project"). It fills the field like a keystroke: the key follows,
+   * and everything remains editable — the project is only created at the last step.
    *
-   * On écarte ce qui ferait échouer la validation trois lignes plus bas (un nom
-   * ou une clé déjà pris chez soi) et le nom affiché à l'instant, sinon le
+   * We exclude anything that would cause the validation to fail three lines below (a name
+   * or a key already taken from home) and the name displayed at the moment, otherwise the
    * bouton « en proposer un autre » peut ne rien changer.
    */
   const suggestName = () => {
@@ -450,18 +450,18 @@ export function CreateProjectWizard({
     handleNameChange(next);
   };
 
-  /** Le champ porte encore la proposition — personne ne l'a réécrite depuis. */
+  /** The field still bears the proposition — no one has rewritten it since. */
   const showsSuggestion = suggestedName !== "" && name === suggestedName;
 
   /**
-   * L'issue de secours de l'étape « nom », côté projet existant : ce n'est pas
-   * un projet à créer qu'on avait, c'est celui de l'équipe à rejoindre. Le
-   * wizard reste ouvert dessous — on n'a rien décidé, on est venu lire comment
+   * The emergency exit of the “name” step, on the existing project side: this is not
+   * a project to create that we had is that of the team to join. THE
+   * wizard remains open underneath — we haven't decided anything, we came to read how
    * on s'y prend.
    */
   const openJoin = () => {
-    // Un abandon qui n'en est pas un : sans cet événement, ces comptes se
-    // lisent comme des décrochages à l'étape du nom.
+    // An abandonment which is not one: without this event, these accounts will
+    // read like dropouts at the name stage.
     track("project_wizard_join_opened");
     setJoinOpen(true);
   };
@@ -477,9 +477,9 @@ export function CreateProjectWizard({
       setError(t("keyInvalid"));
       return;
     }
-    // La clé est unique par propriétaire : la vérifier ici évite de découvrir le
-    // conflit trois étapes plus loin, au moment de créer. Le serveur reste juge
-    // (un autre onglet, un autre appareil) — ce n'est qu'un garde-fou avancé.
+    // The key is unique per owner: checking it here avoids discovering the
+    // conflict three steps later, at the time of creation. The server remains the judge
+    // (another tab, another device) — it's just an advanced safeguard.
     if (projects.some((p) => p.owner_id === user?.id && p.key === finalKey)) {
       setError(t("keyTaken", { key: finalKey }));
       return;
@@ -488,7 +488,7 @@ export function CreateProjectWizard({
     setStepIndex((i) => i + 1);
   };
 
-  // ── Étape « Dépôt git » ───────────────────────────────────────────────────
+  // ── “Git repository” step ───────────────────────── ──────────────────────────
   useEffect(() => {
     if (!activeConnectionId) {
       setCandidates(null);
@@ -523,9 +523,9 @@ export function CreateProjectWizard({
       if (res.mode === "reuse") {
         setActiveConnectionId(res.connectionId);
       } else {
-        // On quitte l'app : le brouillon part en base AVANT le redirect, et
-        // sessionStorage n'en garde que l'id. Le callback revient sur
-        // /home?setup=git, où ProjectDraftResume rouvre le wizard ici même.
+        // We leave the app: the draft goes to the database BEFORE the redirect, and
+        // sessionStorage only keeps the id. The callback returns to
+        // /home?setup=git, where ProjectDraftResume reopens the wizard right here.
         await saveProjectDraft(snapshot());
         setDraftExists(true);
         setPendingDraftId(draftId);
@@ -544,8 +544,8 @@ export function CreateProjectWizard({
     );
     const connection = connections.find((c) => c.id === activeConnectionId);
     if (!candidate || !connection) return;
-    // Choisi, pas encore lié : la liaison a besoin d'un projet, elle attend la
-    // création.
+    // Chosen, not yet linked: the link needs a project, it is waiting for the
+    // creation.
     setRepo({
       connectionId: connection.id,
       provider: connection.provider,
@@ -555,17 +555,17 @@ export function CreateProjectWizard({
     setActiveConnectionId(null);
   };
 
-  // ── Création (dernière étape) ─────────────────────────────────────────────
+  // ── Creation (last step) ────────────────────── ───────────────────────
   const finish = async () => {
     setSubmitting(true);
     setError(null);
 
     let created;
     try {
-      // La langue de l'interface part AVEC la création : elle devient la
-      // langue de l'équipe du projet, celle vers laquelle Numo traduira les
-      // retours étrangers. C'est le seul moment où on peut la lire — l'app la
-      // tient dans un cookie, jamais sur le compte.
+      // The language of the interface leaves WITH the creation: it becomes the
+      // language of the project team, the one into which Numo will translate the
+      // foreign returns. This is the only time you can read it — the app
+      // fits in a cookie, never on the account.
       created = await createProject({
         id: draftId,
         orb_seed: orbSeed,
@@ -574,17 +574,17 @@ export function CreateProjectWizard({
         locale,
       });
     } catch (err) {
-      // Nom, clé déjà prise, limite de plan : tout se règle à la première étape,
-      // et le brouillon reste intact — on n'a rien perdu.
+      // Name, key already taken, plan limit: everything is settled in the first step,
+      // and the draft remains intact — nothing has been lost.
       setStepIndex(0);
       setError((err as Error).message);
       setSubmitting(false);
       return;
     }
 
-    // Le brouillon a fait son travail : le projet existe, il n'a plus lieu
-    // d'être. Son échec de suppression ne remet rien en cause — au pire une
-    // ligne de brouillon reste dans la barre latérale, et se jette d'un clic
+    // The draft has done its job: the project exists, it no longer takes place
+    // to be. Its failure to delete does not call anything into question — at worst a
+    // draft line remains in the sidebar, and is thrown with a click
     // droit.
     clearPendingDraftId();
     if (draftExists) {
@@ -597,8 +597,8 @@ export function CreateProjectWizard({
       has_git_link: !!repo,
     });
 
-    // À partir d'ici le projet EXISTE : chacune des finitions peut échouer sans
-    // remettre la création en cause. On le dit, on continue, on n'annule rien.
+    // From here the project EXISTS: each of the finishes can fail without
+    // call creation into question. We say it, we continue, we don't cancel anything.
     const enrich = async (label: string, run: () => Promise<unknown>) => {
       try {
         await run();
@@ -615,8 +615,8 @@ export function CreateProjectWizard({
         importProjectIconApi(created.id, icon.siteUrl),
       );
     } else if (icon.kind === "file") {
-      // L'aperçu est l'image compressée elle-même : la poser sur le projet ne
-      // demande rien de plus que de la renvoyer telle quelle.
+      // The preview is the compressed image itself: placing it on the project does not
+      // asks for nothing more than to send it back as is.
       await enrich("icon", () =>
         uploadProjectIconDataUrlApi(created.id, icon.previewUrl),
       );
@@ -627,27 +627,27 @@ export function CreateProjectWizard({
       );
       if (linked) track("project_git_linked", { provider: repo.provider });
     }
-    // Le brief collé devient une PAGE du wiki, « Brief initial », avant même
-    // qu'on en parle à Numo.
+    // The pasted brief becomes a PAGE of the wiki, “Initial Brief”, even before
+    // let's talk to Numo about it.
     //
-    // Il n'est pas un formulaire jetable : c'est le texte où quelqu'un a posé
-    // ce qu'il veut construire, et jusqu'ici il ne survivait que sous la forme
-    // du premier message d'une conversation — introuvable trois semaines plus
-    // tard, au moment où l'on se demande justement ce qui était prévu au
-    // départ. Une page, elle, se retrouve, se relit, se corrige, et Numo la lit
+    // It is not a disposable form: it is the text where someone has asked
+    // what he wants to build, and until now he only survived in the form
+    // of the first message in a conversation — not found three weeks later
+    // late, when we wonder precisely what was planned in the
+    // departure. A page is found, reread, corrected, and Numo reads it
     // par ses outils comme n'importe quelle autre.
     //
-    // Une finition parmi les autres : son échec n'empêche pas le projet
-    // d'exister, et la conversation part de toute façon avec le brief.
+    // A finish among others: its failure does not prevent the project
+    // to exist, and the conversation starts with the brief anyway.
     if (seed?.kind === "brief" && seed.text.trim()) {
       await enrich("brief page", () =>
         createPageApi(created.id, {
           title: t("wizardBriefPageTitle"),
           icon: "📝",
-          // Le texte part en MARKDOWN : la projection est faite au serveur, par
-          // le même chemin que les pages écrites par l'agent — un brief collé
-          // en markdown arrive donc avec ses titres et ses listes, et un brief
-          // en texte nu avec ses paragraphes.
+          // The text goes MARKDOWN: the projection is made to the server, by
+          // the same path as the pages written by the agent — a pasted brief
+          // in markdown therefore arrives with its titles and its lists, and a brief
+          // in bare text with its paragraphs.
           markdown: seed.text.trim(),
         }),
       );
@@ -660,8 +660,8 @@ export function CreateProjectWizard({
         }),
       );
     }
-    // L'icône et les réglages sont posés après la création : la liste en cache
-    // date déjà d'avant.
+    // The icon and settings are applied after creation: the cached list
+    // already dates back before.
     void queryClient.invalidateQueries({ queryKey: ["projects"] });
     track("project_wizard_completed", {
       has_git_link: !!repo,
@@ -670,21 +670,21 @@ export function CreateProjectWizard({
     });
     toast.success(t("wizardDoneToast", { name: created.name }));
     setSubmitting(false);
-    // `closeWizard` et non `handleOpenChange` : le projet est créé, il n'y a
-    // plus de brouillon à proposer de garder.
+    // `closeWizard` and not `handleOpenChange`: the project is created, there is no
+    // no more draft to offer to keep.
     closeWizard();
 
-    // L'amorce se joue sur le board du projet neuf : c'est le trou qu'on est en
-    // train de combler, et rien de tout ça ne tiendrait dans une étape de wizard
-    // (MIN-170). Ce qui a été saisi voyage en mémoire, l'URL ne porte que
-    // l'instruction, et c'est le board qui ouvre la surface — le wizard vit
-    // AU-DESSUS du panneau de Numo (`ProjectsProvider` le monte avant
-    // `AssistantPanelProvider`), il n'a donc pas la main dessus.
+    // The beginning is played out on the board of the new project: this is the hole we are in
+    // filling in, and none of that would fit in a wizard stage
+    // (MIN-170). What was entered travels in memory, the URL only carries
+    // instruction, and it is the board which opens the surface - the wizard lives
+    // ABOVE Numo's sign (`ProjectsProvider` climbs it before
+    // `AssistantPanelProvider`), so he has no control over it.
     //
-    // Un brief collé et « j'en parle » mènent au MÊME endroit : une
-    // conversation. Le brief n'est pas un formulaire qu'une passe traite dans
-    // son coin, c'est le premier message — Numo peut demander ce qui manque
-    // avant de proposer quoi que ce soit.
+    // A pasted brief and “I’m talking about it” lead to the SAME place: a
+    // conversation. The brief is not a form that a pass processes in
+    // his corner is the first message — Numo can ask what is missing
+    // before proposing anything.
     if (seed?.kind === "brief" || seed?.kind === "numo") {
       putSeedHandoff({
         kind: "numo",
@@ -705,27 +705,27 @@ export function CreateProjectWizard({
   const RepoIcon = repo ? PROVIDER_ICON[repo.provider] : null;
 
   /**
-   * Les étapes, décrites. Le parcours retenu est `steps` (l'amorce dépend de
-   * l'origine) : ce qui n'y figure pas n'est ni rendu, ni compté.
+   * The steps, described. The chosen route is `steps` (the start depends on
+   * origin): what is not there is neither returned nor counted.
    */
   const stepDefs: Record<
     ProjectWizardStep,
     WizardStep<ProjectWizardStep>
   > = {
-    // Le tout premier geste de minddy : deux portes côte à côte, de même poids,
-    // qui se lisent d'un coup d'œil. Chacune montre sa scène — un terrain nu où
-    // une carte se pose, une pile de cartes déjà là — et une ligne pour la
-    // nommer : c'est le dessin qui fait le choix, le libellé confirme.
+    // Minddy's very first gesture: two doors side by side, of the same weight,
+    // which can be read at a glance. Each shows its scene — a bare field where
+    // a card is placed, a pile of cards already there — and a line for the
+    // name: it is the drawing that makes the choice, the wording confirms.
     origin: {
       id: "origin",
       title: t("wizardOriginTitle"),
       subtitle: t("wizardOriginDesc"),
-      // Les deux portes respirent plus large que les champs des étapes
-      // suivantes : c'est le seul écran où l'on regarde avant de lire.
+      // The two doors breathe wider than the fields of steps
+      // following: this is the only screen where you look before reading.
       wide: true,
-      // Un choix binaire qui demande deux gestes est un choix binaire mal posé :
-      // la carte cliquée pose la réponse ET avance, un CTA ne ferait que
-      // redemander confirmation de ce qui vient d'être dit.
+      // A binary choice that requires two gestures is an ill-posed binary choice:
+      // the clicked card poses the answer AND moves forward, a CTA would only
+      // ask again for confirmation of what has just been said.
       hideSubmit: true,
       content: (
         <div
@@ -778,9 +778,9 @@ export function CreateProjectWizard({
               />
             </div>
             <div className="flex w-28 shrink-0 flex-col gap-1.5">
-              {/* La clé demande une explication, pas un hint permanent sous le
-                  champ : elle tient dans un tooltip au survol du « i », et le
-                  sous-titre de l'étape parle du projet. */}
+              {/* The key requires an explanation, not a permanent hint under the
+ field: it fits in a tooltip when hovering over the "i", and the
+ subtitle of the step talks about the project. */}
               <div className="flex items-center gap-1">
                 <label htmlFor="project-key" className="text-sm font-medium">
                   {t("keyLabel")}
@@ -818,12 +818,10 @@ export function CreateProjectWizard({
             </div>
           </div>
 
-          {/* Un projet qui n'existe pas encore n'a pas forcément de nom, et le
-              wizard ne peut pas avancer sans. Plutôt que de bloquer sur un
-              champ vide : un nom de code, tiré au sort, qu'on rejoue autant de
-              fois qu'on veut — et qui se renomme comme n'importe quel autre.
-              Rien à proposer à qui reprend un projet existant : celui-là a déjà
-              son nom. */}
+          {/* A project that does not yet exist does not necessarily have a name, and the
+ wizard cannot advance without it. Rather than blocking on an empty field: a code name, drawn at random, which we replay as many times as we want — and which is renamed like any other.
+ Nothing to offer to anyone taking over an existing project: this one already has
+ its name. */}
           {origin === "new" &&
             (showsSuggestion ? (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -857,13 +855,13 @@ export function CreateProjectWizard({
               </Button>
             ) : null)}
 
-          {/* L'autre chose qu'on peut vouloir ici, et que rien ne disait : ne
-              pas créer de projet du tout. Qui arrive par « un projet existant »
-              parce que son équipe est déjà sur minddy s'apprêtait à en créer un
-              DOUBLON — alors qu'il n'y a qu'à s'y faire inviter. Le lien
-              n'ouvre qu'une explication, le wizard reste là dessous : on ne
-              rejoint pas de son propre chef dans minddy, c'est le propriétaire
-              du projet qui invite. */}
+          {/* The other thing we can want here, and that nothing said: don't
+ not create a project at all. Who arrives through “an existing project”
+ because his team is already on minddy was preparing to create a DOUBLON
+ — when all you have to do is be invited. The link
+ only opens an explanation, the wizard remains there below: we do not join
+ on our own in minddy, it is the owner
+ of the project who invites. */}
           {origin === "existing" && (
             <Button
               type="button"
@@ -1001,10 +999,10 @@ export function CreateProjectWizard({
       content:
         origin === "existing" ? (
           <div className="flex flex-col gap-3">
-            {/* Où trouver le CSV, outil par outil — la même marche à suivre que
-                les réglages et l'onboarding. Demander un export sans dire où il
-                se prend, c'est renvoyer chercher dans la doc de l'outil qu'on
-                quitte. Le fichier déposé, elle a fini son travail. */}
+            {/* Where to find the CSV, tool by tool — the same procedure as
+ settings and onboarding. Requesting an export without saying where it
+ is taken is to go back to looking in the docs of the tool that you
+ is leaving. The file deposited, she finished her work. */}
             {!csvFile && <ImportGuideBlock />}
             <input
               ref={csvInputRef}
@@ -1100,7 +1098,7 @@ export function CreateProjectWizard({
               value={brief}
               onChange={(e) => {
                 setBrief(e.target.value);
-                // Écrire, c'est reprendre la main : le choix de passer par Numo
+                // Writing is taking back control: the choice to go through Numo
                 // ne tient plus.
                 if (numo) setNumo(false);
               }}
@@ -1109,9 +1107,8 @@ export function CreateProjectWizard({
               rows={8}
               className="max-h-[40vh] min-h-40 overflow-y-auto"
             />
-            {/* Le compteur n'apparaît qu'aux abords du plafond : avant, il
-                n'apprend rien et met une limite sous les yeux de qui ne
-                l'atteindra jamais. */}
+            {/* The counter only appears near the ceiling: before, it
+ learns nothing and puts a limit before the eyes of who will never reach it. */}
             {brief.length > MAX_BRIEF_CHARS * 0.75 && (
               <span
                 className={cn(
@@ -1128,9 +1125,9 @@ export function CreateProjectWizard({
               </span>
             )}
 
-            {/* L'autre entrée du mode « nouveau projet » (MIN-173) : en parler
-                plutôt que coller. C'est une porte, pas une note de bas de page —
-                elle se voit et se clique comme le bouton d'à côté. */}
+            {/* The other entry into “new project” mode (MIN-173): talk about it
+ rather than paste. It's a door, not a footnote —
+ it can be seen and clicked like the button next to it. */}
             <div className="mt-1 flex items-center gap-3">
               <span className="h-px flex-1 bg-border" aria-hidden />
               <span className="text-xs text-muted-foreground">
@@ -1163,9 +1160,9 @@ export function CreateProjectWizard({
       content: (
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3 rounded-2xl border border-border p-4">
-            {/* Carré arrondi au ratio des cartes projet (≈ 0,28 — 11px @ 40px),
-                bordé pour rester lisible quand le favicon importé est rond ou
-                transparent. */}
+            {/* Square rounded to the ratio of the project cards (≈ 0.28 — 11px @ 40px),
+ bordered to remain readable when the imported favicon is round or
+ transparent. */}
             <ProjectOrb
               seed={previewOrbSeed}
               iconUrl={iconPreviewUrl}
@@ -1235,10 +1232,10 @@ export function CreateProjectWizard({
           else setStepIndex((i) => i + 1);
         }}
       />
-      {/* Ce qu'on demande à la fermeture : garder, renoncer, ou revenir. Monté
-          en frère du wizard (et non dedans) — le wizard reste ouvert dessous
-          tant qu'on n'a pas tranché, et « Continuer la configuration » le rend
-          tel qu'on l'a laissé. */}
+      {/* What we ask at closing: keep, give up, or return. Mounted
+ in brother of the wizard (and not inside) — the wizard remains open under
+ until we decide, and "Continue configuration" makes it
+ as we left it. */}
       <CloseProjectDraftDialog
         open={closePromptOpen}
         onOpenChange={setClosePromptOpen}
@@ -1246,9 +1243,9 @@ export function CreateProjectWizard({
         onDiscard={discardAndClose}
       />
 
-      {/* La marche à suivre pour se faire inviter — la même qu'à l'étape 1 de
-          l'onboarding, à un mot près : le wizard s'ouvre de n'importe où, donc
-          l'invitation s'annonce là où elle attend depuis partout, l'inbox. */}
+      {/* The procedure to follow to get invited — the same as in step 1 of
+ onboarding, except for one word: the wizard opens from anywhere, so
+ the invitation is announced where it is waiting from everywhere, the inbox. */}
       <OnboardingJoinDialog
         open={joinOpen}
         onOpenChange={setJoinOpen}

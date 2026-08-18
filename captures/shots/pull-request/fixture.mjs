@@ -1,33 +1,33 @@
 /**
- * La pull request de démo — les réponses que la capture fournit à la place du
- * réseau. Voir `intent.md` : le diff d'une PR est lu EN DIRECT chez GitHub, rien
- * en base ne peut le fabriquer, et le monde de démo n'a pas de dépôt connecté.
+ * The demo pull request — the responses that the capture provides in place of the
+ * network. See `intent.md`: the diff of a PR is read LIVE at GitHub, nothing
+ * base can't craft it, and the demo world doesn't have a repository connected.
  *
- * Elle prolonge le run d'agent semé sur AUR-2 : même ticket, même branche, mêmes
- * trois fichiers, et les mêmes totaux que son bloc « 3 fichiers modifiés
+ * It extends the agent run sown on AUR-2: same ticket, same branch, same
+ * three files, and the same totals as its “3 files modified” block
  * +58 −7 ».
  *
- * Les patches sont écrits ligne à ligne : chaque `additions`/`deletions` est le
- * compte réel du patch en face, et chaque en-tête de hunk décrit vraiment les
- * plages qu'il couvre. Un compteur qui ne tombe pas juste se verrait à l'image.
+ * The patches are written line by line: each `additions`/`deletions` is the
+ * real count of the patch in front, and each hunk header really describes the
+ * beaches it covers. A counter that does not fall correctly would be visible in the image.
  */
 
-/** Le projet Aurora, tel qu'il existe vraiment — la pastille de projet en dépend. */
+/** The Aurora Project, as it really exists — the project badge depends on it. */
 export const AURORA_ID = "6cd36606-c297-4920-8ce3-31b5f3697be8";
 
 /**
- * Identifiant de run SYNTHÉTIQUE. Il n'existe pas en base, et c'est voulu :
- * aucune requête oubliée ne peut atteindre un vrai run par ce chemin.
+ * SYNTHETIC run identifier. It does not exist in base, and this is intended:
+ * no forgotten request can reach a real run via this path.
  */
 export const RUN_ID = "demo-pr-aur-2";
 
 /**
- * Identifiant de PR, lui aussi SYNTHÉTIQUE, et devenu la clé de tout le
- * dispositif : depuis MIN-143 la page Pull Requests est indexée par la PR et
- * non plus par le run (`/api/pull-requests/{prId}/…`), parce qu'elle montre
- * aussi les PR humaines, qui n'ont aucun run. Les routes
- * `agent-runs/{runId}/pr/*` existent encore mais ne sont plus que des façades,
- * et cette page ne les appelle plus.
+ * PR identifier, also SYNTHETIC, and has become the key to the entire
+ * device: since MIN-143 the Pull Requests page is indexed by the PR and
+ * no longer by the run (`/api/pull-requests/{prId}/…`), because it shows
+ * also human PRs, which have no runs. The roads
+ * `agent-runs/{runId}/pr/*` still exist but are only facades,
+ * and this page no longer calls them.
  */
 export const PR_ID = "demo-pr-aur-2-row";
 
@@ -178,10 +178,10 @@ export const FILES = [
 ];
 
 /**
- * Les compteurs annoncés doivent être ceux du patch en face — sinon l'image
- * montre « +14 −2 » au-dessus d'un diff qui ajoute onze lignes, et ça se voit.
- * Le contrôle tourne au chargement du module : impossible de capturer avec un
- * fichier dont le compte a dérivé.
+ * The counters announced must be those of the patch opposite — otherwise the image
+ * shows "+14 −2" above a diff that adds eleven lines, and it shows.
+ * The control turns on loading the module: impossible to capture with a
+ * file from which the account was derived.
  */
 function countPatch(patch) {
   const lines = patch.split("\n").filter((l) => !l.startsWith("@@"));
@@ -201,14 +201,14 @@ for (const file of FILES) {
   }
 }
 
-/** Somme des fichiers — doit valoir +58 −7, comme le bloc de la capture agent. */
+/** Sum of files — must be +58 −7, like the agent capture block. */
 export const TOTALS = FILES.reduce(
   (acc, f) => ({ additions: acc.additions + f.additions, deletions: acc.deletions + f.deletions }),
   { additions: 0, deletions: 0 },
 );
 
-/** Le run d'agent semé annonce « 3 fichiers modifiés +58 −7 ». Les deux captures
-    racontent le même travail : leurs totaux ne peuvent pas diverger. */
+/** The seeded agent run announces “3 files modified +58 −7”. The two captures
+ tell the same job: their totals cannot diverge. */
 if (TOTALS.additions !== 58 || TOTALS.deletions !== 7) {
   throw new Error(
     `captures: la PR fait +${TOTALS.additions} −${TOTALS.deletions}, ` +
@@ -240,9 +240,9 @@ export const PR = {
   base: "main",
   headSha: HEAD_SHA,
   commitCount: 2,
-  // `mergeable: true` + `clean` : les forges calculent la fusionnabilité en
-  // asynchrone, et `null` s'affiche « inconnu » (MIN-138). Une PR de vitrine
-  // n'a pas à porter cette réserve — elle est fusionnable, et le dit.
+  // `mergeable: true` + `clean`: forges calculate mergeability using
+  // asynchronous, and `null` displays “unknown” (MIN-138). A showcase PR
+  // does not have to carry this reservation — it is mergeable, and says so.
   mergeable: true,
   mergeableState: "clean",
   user: NUMO,
@@ -250,9 +250,9 @@ export const PR = {
 };
 
 /**
- * Ce que CE compte peut faire sur ce dépôt (MIN-144). Sans lui, le panneau
- * affiche le bandeau « connectez un compte git » à la place de sa barre
- * d'actions : `capability` gouverne l'affordance entière.
+ * What THIS account can do on this deposit (MIN-144). Without it, the panel
+ * displays the “connect a git account” banner instead of its bar
+ * of actions: `capability` governs the entire affordance.
  */
 export const VIEWER = {
   provider: "github",
@@ -263,13 +263,13 @@ export const VIEWER = {
   numoLogin: NUMO.login,
 };
 
-/** Les méthodes offertes par la forge — elles garnissent le menu de fusion. */
+/** The methods offered by the forge — they fill the smelting menu. */
 export const MERGE_METHODS = ["squash", "merge", "rebase"];
 
 /**
- * Les commits de la branche. Ils ne sont pas à l'image (l'onglet ouvert est
+ * Branch commits. They are not in the image (the open tab is
  * « Fichiers »), mais l'onglet « Commits » porte leur compte : deux, comme
- * `PR.commitCount`, et le second est le correctif demandé dans le fil.
+ * `PR.commitCount`, and the second is the fix requested in the thread.
  */
 export const COMMITS = [
   {
@@ -291,7 +291,7 @@ export const COMMITS = [
   },
 ];
 
-/** Le fil : une relecture humaine, la réponse de l'agent. */
+/** The thread: a human proofreading, the agent's response. */
 export const COMMENTS = [
   {
     id: 9001,
@@ -310,11 +310,11 @@ export const COMMENTS = [
 ];
 
 /**
- * L'item de la liste, tel que /api/pull-requests le renverrait. `prId` en est
- * désormais la clé : c'est lui que la page sélectionne et lui qui adresse
- * toutes les lectures du détail. `title`, `author` et `head_branch` sont
- * arrivés avec les PR humaines — sans `author`, la liste ne saurait plus dire
- * qu'une PR vient de Numo.
+ * The list item, such as /api/pull-requests would return it. `prId` is
+ * now the key: it is he who the page selects and he who addresses
+ * all detailed readings. `title`, `author` and `head_branch` are
+ * arrived with human PRs — without `author`, the list would no longer be able to say
+ * that a PR comes from Numo.
  */
 export const LIST_ITEM = {
   prId: PR_ID,
@@ -341,11 +341,11 @@ export const LIST_ITEM = {
 };
 
 /**
- * L'enveloppe complète de `/api/pull-requests`. Les quatre champs qui
- * accompagnent la liste ne sont pas décoratifs : la page rend son écran vide
- * dès que `repoCount === 0` ou `anyPr === false`, AVANT même de regarder la
- * liste. Le fixture qui ne servait que `pullRequests` obtenait donc « Liez un
- * dépôt GitHub ou GitLab » — une page verte, et vide.
+ * The complete envelope of `/api/pull-requests`. The four fields which
+ * accompany the list are not decorative: the page makes its screen empty
+ * as soon as `repoCount === 0` or `anyPr === false`, BEFORE even looking at the
+ * list. The fixture which only served `pullRequests` therefore obtained “Link a
+ * GitHub or GitLab repository” — a green, empty page.
  */
 export const LIST_RESPONSE = {
   pullRequests: [LIST_ITEM],
@@ -355,13 +355,13 @@ export const LIST_RESPONSE = {
   anyPr: true,
 };
 
-/** L'enveloppe de `/api/pull-requests/{prId}` — le détail lu chez la forge. */
+/** The envelope of `/api/pull-requests/{prId}` — the detail read at the forge. */
 export const DETAIL_RESPONSE = {
   pr: PR,
   files: FILES,
   provider: "github",
-  // `checks: null` = AUCUN check connu, distinct d'un échec de lecture
-  // (`checksError`). Le dépôt de démo n'a pas de CI : la barre n'apparaît pas.
+  // `checks: null` = NO known check, distinct from a read failure
+  // (`checksError`). The demo repository has no CI: the bar does not appear.
   checks: null,
   checksError: null,
   reviews: null,

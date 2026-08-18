@@ -29,17 +29,17 @@ import type { StatsCycles } from "@/lib/types";
 /**
  * Page statistiques (MIN-85 — refonte de MIN-12/MIN-58).
  *
- * La page se lit de haut en bas comme un récit, du plus actionnable au plus
- * contemplatif : ce qui se passe maintenant → l'activité de l'année → où le
- * travail est allé → à quel rythme il sort → les totaux depuis le début. Chaque
- * étage a son poids visuel (bandeau à gros chiffres, cartes, bande compacte),
- * et le titre d'une section vit toujours hors de sa carte — ce qui évite les
- * cartes dans les cartes de la version précédente.
+ * The page reads from top to bottom like a story, from most actionable to most
+ * contemplative: what is happening now → the activity of the year → where the
+ * work has gone → how fast it is coming out → totals since start. Each
+ * floor has its visual weight (banner with large numbers, cards, compact strip),
+ * and the title of a section always lives outside its map — which avoids
+ * maps in the previous version maps.
  */
 
-/** Section « Rythme de travail » : tickets par cycle, cadence de complétion vs
- *  échéance, et durée médiane de complétion par effort. Rendue seulement si au
- *  moins une des trois mesures a de la donnée. */
+/** “Work rate” section: tickets per cycle, completion rate vs.
+ * deadline, and median completion time per effort. Returned only if
+ * least one of the three measurements has data. */
 function RhythmSection({ cycles }: { cycles: StatsCycles }) {
   const t = useTranslations("Stats");
   const locale = useLocale();
@@ -49,14 +49,14 @@ function RhythmSection({ cycles }: { cycles: StatsCycles }) {
   const showEffort = cycles.byEffort.length > 0;
   if (!showPerCycle && !showCadence && !showEffort) return null;
 
-  // Cadence : |écart| en jours, avec le sens (avance / retard / à l'heure).
+  // Cadence: |gap| in days, with direction (advance/delay/on time).
   const offset = cycles.avgCompletionOffsetDays;
   let cadenceValue = "—";
   let cadenceHint: string | undefined;
   if (offset !== null) {
     const rounded = Math.round(Math.abs(offset) * 10) / 10;
     if (rounded < 0.05) {
-      // Pile à l'échéance : la valeur se suffit, pas de hint.
+      // Right on expiry: the value is sufficient, no hint.
       cadenceValue = t("cadenceOnTimeValue");
     } else {
       cadenceValue = t("cadenceDays", { value: fmtNum(rounded, locale) });
@@ -117,8 +117,8 @@ export default function StatisticsPage() {
   const { openCreateIssue, canCreate } = useCreate();
   const { openCreateProject } = useProjects();
   const { user } = useAuth();
-  // Vue de la page stats — l'une des rares pages « consultées » plutôt
-  // qu'« utilisées » : sans événement dédié, son usage réel est invisible.
+  // Stats page view — one of the few “viewed” pages rather
+  // only “used”: without a dedicated event, its real use is invisible.
   useTrackView(true, "viewed", () =>
     trackEvent("statistics_viewed", { range: "default" }),
   );
@@ -126,9 +126,9 @@ export default function StatisticsPage() {
   const days = stats?.heatmap.days;
   const streak = useMemo(() => computeStreaks(days ?? []), [days]);
   const year = useMemo(() => heatmapTotals(days ?? []), [days]);
-  // Jour d'inscription, converti dans le MÊME fuseau que le bucketing des
-  // événements (`heatmap.tz`) — sans quoi la case marquée pourrait tomber un
-  // jour à côté pour un compte créé en fin de soirée.
+  // Day of registration, converted into the SAME time zone as bucketing of
+  // events (`heatmap.tz`) — otherwise the marked box could fall one
+  // next day for an account created at the end of the evening.
   const tz = stats?.heatmap.tz;
   const joinedDate = useMemo(
     () => (tz ? dayInZone(user?.created_at, tz) : null),
@@ -153,8 +153,8 @@ export default function StatisticsPage() {
     );
   }
 
-  // Compte neuf : rien de créé, rien de terminé, rien de coché. Aucune des
-  // sections n'a alors quoi que ce soit à raconter — on invite à démarrer.
+  // Account nine: nothing created, nothing completed, nothing checked. None of the
+  // sections then has nothing to say — we invite you to start.
   const isEmpty =
     stats.totals.created === 0 &&
     stats.totals.completed === 0 &&
@@ -162,11 +162,11 @@ export default function StatisticsPage() {
 
   if (isEmpty) {
     return (
-      /* Ni titre ni sous-titre ici : une page de mesures qui n'a rien mesuré n'a
-         pas à s'annoncer. Reste le geste qui lancera le compteur, et il dépend
-         d'où en est le compte — comme sur le board global : sans projet, il n'y
-         a pas de ticket à créer, il y a un projet à faire naître (`canCreate`
-         est exactement ce signal). */
+      /* Neither title nor subtitle here: a page of measurements which has not measured anything has
+         not to announce yourself. There remains the gesture which will start the counter, and it depends
+         where is the account - as on the global board: without a project, there is no
+         there is no ticket to create, there is a project to create (`canCreate`
+         is exactly this signal). */
       <div className="mx-auto w-full max-w-5xl px-6 py-10">
         <EmptyScene icon={BarChart3} title={t("emptyTitle")}>
           {canCreate ? (
@@ -189,10 +189,10 @@ export default function StatisticsPage() {
     <div className="mx-auto w-full max-w-5xl px-6 py-10">
       {header}
 
-      {/* 1 — Le présent : ce qu'il reste sur la pile, l'élan, la série. */}
+      {/* 1 — The present: what remains on the pile, the momentum, the series. */}
       <NowBand workload={stats.workload} week={stats.week} streak={streak} />
 
-      {/* 2 — L'année écoulée, avec son chiffre de tête avant la grille. */}
+      {/* 2 — The past year, with its leading number before the grid. */}
       <StatsSection title={t("activity")} info={t("contributionsInfo")}>
         <StatsCard className="flex flex-col gap-5">
           <Metric
@@ -208,7 +208,7 @@ export default function StatisticsPage() {
         </StatsCard>
       </StatsSection>
 
-      {/* 3 — Où ce travail a atterri. */}
+      {/* 3 — Where this work landed. */}
       <StatsSection
         title={t("perProject")}
         info={t("perProjectInfo")}
@@ -219,10 +219,10 @@ export default function StatisticsPage() {
         />
       </StatsSection>
 
-      {/* 4 — À quel rythme il sort (cycles, cadence, durées par effort). */}
+      {/* 4 — At what rate it comes out (cycles, cadence, durations per effort). */}
       <RhythmSection cycles={stats.cycles} />
 
-      {/* 5 — Les totaux à vie, en petit : le socle, pas l'actualité. */}
+      {/* 5 — Lifetime totals, in small form: the base, not the news. */}
       <StatsSection title={t("allTime")}>
         <StatsCard className="grid grid-cols-2 gap-5 sm:grid-cols-4">
           <TotalItem

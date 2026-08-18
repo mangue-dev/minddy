@@ -49,11 +49,11 @@ export function useObjectivesQuery(projectId: string | null) {
   );
 
   /**
-   * Optimiste depuis MIN-156. Avant, le sélecteur d'état du panneau latéral
-   * (et les cartes de la page Objectifs) lisaient `objective.status` du cache
-   * et gardaient donc l'ancienne valeur jusqu'à la réponse du refetch : plus
-   * d'une seconde à afficher l'état d'avant, juste après l'avoir changé.
-   */
+ * Optimistic since MIN-156. Previously, the side panel state selector
+ * (and the cards on the Objectives page) read `objective.status` from the cache
+ * and therefore kept the old value until the refetch responded: more than
+ * of one second to display the state before, just after having it changed.
+ */
   const updateObjective = useCallback(
     async (objectiveId: string, updates: ObjectiveUpdateInput) => {
       const pid = projectId;
@@ -62,8 +62,8 @@ export function useObjectivesQuery(projectId: string | null) {
             .getQueryData<Objective[]>(objectivesKey(pid))
             ?.find((o) => o.id === objectiveId)
         : undefined;
-      // L'inverse du PATCH, champ par champ : c'est là que le cache revient si
-      // le serveur refuse, sans toucher au reste de la ligne.
+      // The opposite of PATCH, field by field: this is where the cache returns if
+      // the server refuses, without touching the rest of the line.
       const before: Partial<Objective> = {};
       if (current) {
         for (const field of Object.keys(updates) as (keyof ObjectiveUpdateInput)[]) {
@@ -86,8 +86,8 @@ export function useObjectivesQuery(projectId: string | null) {
       }
       try {
         const objective = await updateObjectiveApi(objectiveId, updates);
-        // La ligne serveur entre dans le cache — pas d'invalidation : c'est ce
-        // refetch qui rejouait l'ancien état pendant une seconde.
+        // The server line enters the cache — no invalidation: that's it
+        // refetch which replayed the old state for a second.
         if (pid) patchObjectiveEverywhere(queryClient, pid, objectiveId, objective);
         objectiveWrites.settle(handle, objective);
         return objective;
@@ -96,7 +96,7 @@ export function useObjectivesQuery(projectId: string | null) {
         if (pid && current) {
           patchObjectiveEverywhere(queryClient, pid, objectiveId, before);
         }
-        // Conservé : le toast d'erreur du panneau latéral le récupère.
+        // Kept: side panel error toast picks it up.
         throw err;
       }
     },

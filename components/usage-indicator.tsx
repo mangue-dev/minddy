@@ -35,15 +35,15 @@ import { createCheckoutApi, createPortalApi } from "@/lib/billing-api";
 import { NumoIcon } from "@/components/numo-icon";
 
 /**
- * Usage du plan (MIN-72) — pastille du header + popover : barre de budget
- * unifiée dont les types d'usage tuilent des segments consécutifs ; survoler
- * une ligne du détail allume le segment de ce type EN PLACE, dans sa couleur
- * (mécanique reprise d'AutoKap credits-panel). Le corps (`UsageBreakdownBody`)
- * est partagé tel quel avec l'onglet billing des settings.
+ * Plan usage (MIN-72) — header pad + popover: unified budget bar
+ * whose usage types tile consecutive segments; hover
+ * a detail line lights the segment of this type IN PLACE, in its color
+ * (mechanism taken from AutoKap credits-panel). The body (`UsageBreakdownBody`)
+ * is shared as is with the billing tab of the settings.
  */
 
-// Numo en icône de ligne : visage figé, calé sur la taille des icônes lucide.
-// Ses traits sont intrinsèques au dessin — strokeWidth volontairement ignoré.
+// Numo in line icon: frozen face, aligned with the size of the lucid icons.
+// Its strokes are intrinsic to the drawing — strokeWidth deliberately ignored.
 function NumoRowIcon({ className }: { className?: string; strokeWidth?: number }) {
   return <NumoIcon animated={false} className={className} />;
 }
@@ -63,16 +63,16 @@ export const SEGMENT_UI: Record<
   }
 > = {
   agents: { icon: Bot, text: "text-violet-600 dark:text-violet-400", labelKey: "segmentAgents" },
-  // Les routines (MIN-185), juste après les agents : même moteur, autre ligne
-  // de facture — un abonnement qu'on a laissé tourner, pas un geste qu'on a fait.
+  // The routines (MIN-185), just after the agents: same engine, other line
+  // bill — a subscription that we left running, not a gesture that we made.
   routines: { icon: CalendarClock, text: "text-sky-600 dark:text-sky-400", labelKey: "segmentRoutines" },
   numo: { icon: NumoRowIcon, text: "text-blue-600 dark:text-blue-400", labelKey: "segmentNumo" },
   dictation: { icon: Mic, text: "text-amber-600 dark:text-amber-400", labelKey: "segmentDictation" },
   feedback: { icon: Megaphone, text: "text-emerald-600 dark:text-emerald-400", labelKey: "segmentFeedback" },
-  // Ce que minddy remplit à votre place quand le ticket naît : qui le prend
-  // (Smart Assign) et ce qu'il est (Smart-fill). WandSparkles — l'icône de Smart
-  // Assign dans les réglages de projet, et celle de Smart-fill dans le
-  // formulaire de création.
+  // What minddy fills out for you when the ticket is born: who takes it
+  // (Smart Assign) and what it is (Smart-fill). WandSparkles — the Smart icon
+  // Assign in the project settings, and that of Smart-fill in the
+  // create form.
   automations: { icon: WandSparkles, text: "text-fuchsia-600 dark:text-fuchsia-400", labelKey: "segmentAutomations" },
 };
 
@@ -123,12 +123,12 @@ export function UsageIndicator() {
 }
 
 /**
- * En-tête (% RESTANT + chip de plan), jauge qui se vide avec survol par type,
- * date de reset et lignes du détail. Autonome (lit `useBillingSummary`) —
- * l'appelant possède la coquille (popover ou carte).
+ * Header (% REMAINING + plan chip), gauge which empties when hovered by type,
+ * reset date and detail lines. Standalone (reads `useBillingSummary`) —
+ * the caller owns the shell (popover or card).
  *
- * @param bordered Sépare les blocs par des bordures hautes (carte settings) ;
- *   omis pour le popover.
+ * @param bordered Separates blocks by high borders (card settings);
+ * omitted for popover.
  */
 export function UsageBreakdownBody({ bordered = false }: { bordered?: boolean }) {
   const t = useTranslations("Billing");
@@ -152,11 +152,11 @@ export function UsageBreakdownBody({ bordered = false }: { bordered?: boolean })
     ...SEGMENT_UI[segment.id],
   }));
 
-  // La jauge affiche le RESTANT : elle est pleine au début de la période et se
-  // vide par la droite. Les types consommés tuilent donc consécutivement la
-  // portion vidée (même échelle, dénominateur = budget), à partir du bord du
-  // remplissage : le segment survolé s'allume en place. Une ligne à zéro
-  // n'apporte aucun segment.
+  // The gauge displays the REMAINING: it is full at the start of the period and
+  // empty from the right. The consumed types therefore tile consecutively the
+  // emptied portion (same scale, denominator = budget), from the edge of the
+  // fill: the hovered segment lights in place. A line at zero
+  // doesn't bring any segments.
   const hoveredIndex = rows.findIndex((row) => row.id === hoveredId);
   const hovered = hoveredIndex >= 0 ? rows[hoveredIndex] : null;
   const usdBefore = hovered
@@ -206,15 +206,15 @@ export function UsageBreakdownBody({ bordered = false }: { bordered?: boolean })
 
       <div className={cn("space-y-2 px-4 py-3", bordered && "border-t border-border")}>
         <div className="relative">
-          {/* Remplissage = budget restant : plein à la remise à zéro, vide une
-              fois le budget consommé. */}
+          {/* Filling = remaining budget: full on reset, empty one
+ times the budget consumed. */}
           <Progress
             value={loading ? 0 : remainingPercent}
             className={cn("h-1.5", indicatorClass)}
           />
-          {/* Surcouche de survol : peint le segment du type survolé en place
-              dans la portion consommée, dans sa couleur. Glisse à sa position
-              et s'étire ; largeur 0 + fondu au repos. */}
+          {/* Hover overlay: paints the segment of the hovered type in place
+ in the consumed portion, in its color. Slides to position
+ and stretches; width 0 + fade to rest. */}
           <div
             aria-hidden
             className={cn(
@@ -236,8 +236,8 @@ export function UsageBreakdownBody({ bordered = false }: { bordered?: boolean })
       </div>
 
       <div className={cn("px-4 py-3", bordered && "border-t border-border")}>
-        {/* La jauge compte le restant, le détail compte le consommé : on le dit,
-            sinon les deux pourcentages se lisent dans le même sens. */}
+        {/* The gauge counts the remainder, the detail counts the consumed: we say,
+ otherwise the two percentages read in the same direction. */}
         <p className="mb-1.5 text-xs font-medium text-muted-foreground">
           {t("breakdownTitle")}
         </p>
@@ -302,8 +302,8 @@ export function UsageBreakdownBody({ bordered = false }: { bordered?: boolean })
 }
 
 /**
- * CTA upgrade + lien vers l'onglet billing, sous le corps du popover.
- * `onNavigate` laisse l'appelant fermer son popover au clic.
+ * CTA upgrade + link to the billing tab, under the body of the popover.
+ * `onNavigate` lets the caller close their popover on click.
  */
 function UsageFooter({ onNavigate }: { onNavigate?: () => void }) {
   const t = useTranslations("Billing");

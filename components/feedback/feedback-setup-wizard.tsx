@@ -37,48 +37,48 @@ import { ssoEnvLine } from "@/lib/feedback/env-lines";
 import { integrationKeyEnvLine } from "@/lib/feedback/integration-contract";
 
 /**
- * Le wizard de configuration des retours — LE point d'entrée de l'onglet
- * Retours, dont il est devenu la première chose qu'on y voit.
+ * The returns configuration wizard — THE entry point to the tab
+ * Returns, of which he became the first thing we see there.
  *
- * Il descend du wizard « Intégrer dans mon app » (MIN-37), qui ne faisait que
- * générer un prompt d'intégration, et il en garde le fil : on répond d'abord à
- * la seule question qui décide de tout — **comment les retours arrivent** — et
- * chaque étape suivante découle de cette réponse. Ce qui a changé, c'est qu'il
- * CONFIGURE en chemin au lieu de renvoyer l'utilisateur régler la même chose à
- * la main juste après :
+ * It descends from the “Integrate into my app” wizard (MIN-37), which only
+ * generate an integration prompt, and it keeps the thread: we first respond to
+ * the one question that decides everything — **how the returns arrive** — and
+ * each next step flows from this answer. What has changed is that
+ * CONFIGURE on the way instead of sending the user to set the same thing at
+ * the hand just after:
  *
- *     board  →  type → SSO → ce que voit le public → allure → revue → où le
- *               brancher → le prompt
- *     API    →  type → revue → où le brancher → le prompt
+ * board → type → SSO → what the public sees → appearance → review → where the
+ * plug in → prompt
+ * API → type → review → where to plug it in → prompt
  *
- * Les étapes du milieu ne réinventent rien : ce sont les rangées et les cartes
- * de l'onglet Retours, importées telles quelles
- * ([feedback-settings-shared.tsx](feedback-settings-shared.tsx)), et elles
- * écrivent EN DIRECT par la même route. D'où le seul effet de bord notable du
- * parcours : valider « board public » à la première étape crée et allume le
- * board tout de suite, parce que sans lui les étapes suivantes n'auraient rien
- * à régler. Si l'utilisateur revient en arrière et repart vers l'API, le board
- * est rendu dans l'état où on l'a trouvé — mais on ne l'éteint que si c'est
- * NOUS qui l'avions allumé.
+ * The middle steps don't reinvent anything: they are the rows and the cards
+ * from the Returns tab, imported as is
+ * ([feedback-settings-shared.tsx](feedback-settings-shared.tsx)), and they
+ * write LIVE by the same route. Hence the only notable side effect of
+ * route: validate “board public” in the first step creates and turns on the
+ * board right away, because without it the following steps would have nothing
+ * to be settled. If the user goes back and goes back to the API, the board
+ * is returned to the state in which it was found — but we only extinguish it if it is
+ * WE who lit it.
  *
- * Le prompt final a DEUX destinations, ouvertes toutes les deux dans les DEUX
+ * The final prompt has TWO destinations, both open in BOTH
  * modes :
- *  • le presse-papier, pour l'agent de code de l'utilisateur (Claude Code,
+ * • the clipboard, for the user's code agent (Claude Code,
  *    Cursor…) ;
- *  • NUMO, en un clic : le prompt amorce une conversation d'agent sur le
- *    projet, et l'agent de minddy ouvre la pull request lui-même.
+ * • NUMO, in one click: the prompt initiates an agent conversation on the
+ * project, and minddy's agent opens the pull request itself.
  *
- * Ce qui rend la seconde possible, c'est que plus aucun prompt ne porte de
- * credential : le secret SSO comme la clé d'API vivent dans une variable
- * d'environnement, et le wizard montre à part la LIGNE à coller dans le `.env`.
- * Remettre un secret dans un de ces textes, c'est le mettre dans une
+ * What makes the second possible is that no prompt anymore carries
+ * credential: the SSO secret like the API key lives in a variable
+ * environment, and the wizard shows separately the LINE to paste in the `.env`.
+ * To put a secret in one of these texts is to put it in a
  * conversation d'agent — donc l'un ne va pas sans l'autre.
  */
 
 type Mode = "board" | "api";
 type StepId = "type" | "sso" | "board" | "look" | "review" | "placement" | "done";
 
-/** Une instruction de placement, pas un cahier des charges. */
+/** A placement instruction, not a specification. */
 const PLACEMENT_MAX_CHARS = 500;
 
 export function FeedbackSetupWizard({
@@ -88,7 +88,7 @@ export function FeedbackSetupWizard({
   onOpenChange,
 }: {
   projectId: string;
-  /** Le parcours provisionne et crée des secrets : réservé au owner. */
+  /** The course provisions and creates secrets: reserved for the owner. */
   isOwner: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -105,13 +105,13 @@ export function FeedbackSetupWizard({
   const [generating, setGenerating] = useState(false);
   const [prompt, setPrompt] = useState<string | null>(null);
   const [keyCreated, setKeyCreated] = useState(false);
-  /** La ligne de `.env` que ce prompt-ci attend (secret SSO ou clé), s'il en attend une. */
+  /** The `.env` line that this prompt expects (SSO secret or key), if it expects one. */
   const [env, setEnv] = useState<{ line: string; description: string } | null>(
     null,
   );
   const [copied, setCopied] = useState(false);
   const [envCopied, setEnvCopied] = useState(false);
-  /** Ce parcours a-t-il allumé le board lui-même ? Seul ce cas se défait. */
+  /** Did this journey light up the board itself? Only this case falls apart. */
   const [provisionedBoard, setProvisionedBoard] = useState(false);
 
   const {
@@ -127,17 +127,17 @@ export function FeedbackSetupWizard({
     (i) => i.kind === "feedback" && !i.revoked_at,
   );
 
-  // Numo ne peut travailler que sur un dépôt : sans lien git, l'option ne se
-  // montre pas — un bouton qui n'aurait rien à cloner ne vaut pas un refus.
+  // Numo can only work on a repository: without a git link, the option does not work
+  // not show — a button that has nothing to clone is not worth a refusal.
   const { link } = useProjectGitLinkQuery(projectId);
   const canHandOffToNumo = !!link;
 
   /**
-   * Le parcours s'ouvre sur ce qui est DÉJÀ en place, pas sur les valeurs par
-   * défaut : quelqu'un qui revient régler un détail ne doit pas avoir à
-   * re-choisir ce qu'il a choisi la dernière fois. Une seule fois par ouverture,
-   * et seulement quand les réglages sont chargés — semer sur un board inconnu
-   * reviendrait à semer sur du vide.
+   * The journey opens on what is ALREADY in place, not on the values ​​by
+   * default: someone who comes back to sort out a detail should not have to
+   * re-choose what he chose last time. Only once per opening,
+   * and only when the settings are loaded — sow on an unknown board
+   * would amount to sowing in a vacuum.
    */
   const seeded = useRef(false);
   useEffect(() => {
@@ -151,9 +151,9 @@ export function FeedbackSetupWizard({
     setSso(board?.sso_configured ?? true);
   }, [open, isPending, board, hasFeedbackKey]);
 
-  // Le SSO ne se pose que pour le board : en mode API, c'est l'app appelante
-  // qui dit au nom de qui elle dépose. Les réglages du board non plus, pour la
-  // même raison — il n'y en a pas.
+  // SSO only occurs for the board: in API mode, it is the calling app
+  // who says in whose name she deposes. Neither do the board settings, for
+  // same reason — there is none.
   const steps: StepId[] =
     mode === "board"
       ? ["type", "sso", "board", "look", "review", "placement", "done"]
@@ -182,16 +182,16 @@ export function FeedbackSetupWizard({
       toast.success(t("feedbackWizardCopied"));
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // La copie automatique qui suit la génération peut être refusée (elle ne
-      // part pas d'un clic). Rien à dire ici : la dernière étape porte le
-      // bouton « Copier le prompt », et LUI part bien d'un geste.
+      // The automatic copy which follows the generation can be refused (it does not
+      // does not leave with a click). Nothing to say here: the last step carries the
+      // “Copy prompt” button, and HE leaves with a gesture.
     }
   };
 
   /**
-   * Le choix du canal, APPLIQUÉ. Le board doit exister pour que les trois
-   * étapes suivantes aient quelque chose à régler — et repartir vers l'API le
-   * rend dans l'état où on l'a trouvé.
+   * Channel selection, APPLIED. The board must exist so that the three
+   * next steps have something to fix — and go back to the API on
+   * returned to the condition in which it was found.
    */
   const applyType = async () => {
     const alreadyOn = board?.enabled === true;
@@ -213,10 +213,10 @@ export function FeedbackSetupWizard({
   };
 
   /**
-   * L'identité des visiteurs, APPLIQUÉE. Le secret existant n'est jamais
-   * régénéré (une intégration en place casserait en silence) — il n'est
-   * supprimé que si l'utilisateur demande explicitement l'autre mode, ce que
-   * dit la carte « vérification email » quand un secret existe.
+   * Visitor identity, APPLIED. The existing secret is never
+   * regenerated (an integration in place would break silently) — it is not
+   * deleted only if the user explicitly requests the other mode, which
+   * says the card “email verification” when a secret exists.
    */
   const applySso = async () => {
     const configured = board?.sso_configured ?? false;
@@ -260,9 +260,9 @@ export function FeedbackSetupWizard({
       }
       setPrompt(data.prompt);
       setKeyCreated(data.key_created === true);
-      // Le credential que le prompt ATTEND sans le porter. La clé d'API est en
-      // plus jetable-à-l'affichage (aucune relecture possible) : sa phrase le
-      // dit, là où le secret SSO reste consultable dans les réglages.
+      // The credential that the prompt EXPECTS without carrying it. The API key is in
+      // more disposable-on-display (no rereading possible): his sentence the
+      // said, where the SSO secret remains viewable in the settings.
       setEnv(
         data.api_key
           ? {
@@ -276,7 +276,7 @@ export function FeedbackSetupWizard({
               }
             : null,
       );
-      // Le board/la clé ont pu être provisionnés : rafraîchir les vues settings.
+      // The board/key could be provisioned: refresh the settings views.
       void queryClient.invalidateQueries({
         queryKey: feedbackSettingsKey(projectId),
       });
@@ -293,11 +293,11 @@ export function FeedbackSetupWizard({
   };
 
   /**
-   * Confier le prompt à Numo : même chemin que « lancer un agent » depuis le
-   * carnet (brouillon de conversation sans ticket + composer de la page
-   * Agents), avec le projet déjà choisi. On passe par le composer plutôt que de
-   * lancer d'ici : l'utilisateur relit la consigne, choisit son modèle et sa
-   * branche de base — un run d'agent sur son dépôt ne part pas d'un clic sans
+   * Entrust the prompt to Numo: same path as “launch an agent” from the
+   * notebook (conversation draft without ticket + compose from the page
+   * Agents), with the project already chosen. We go through composing it rather than
+   * launch from here: the user rereads the instructions, chooses their model and its
+   * basic branch — an agent run on its repository does not start with a click without
    * revue.
    */
   const handOffToNumo = () => {
@@ -308,10 +308,10 @@ export function FeedbackSetupWizard({
   };
 
   const stepDefs: Record<StepId, WizardStep<StepId>> = {
-    // Le choix qui décide de tout le reste : où vivent les retours. Deux
-    // portes illustrées, de même poids — mais chacune emmène assez loin pour
-    // mériter sa description, ce que la première étape du wizard de projet, où
-    // les libellés se suffisent, n'a pas besoin de faire.
+    // The choice that decides everything else: where the returns live. Two
+    // doors shown, of the same weight — but each takes far enough to
+    // deserve its description, what the first step of the project wizard, where
+    // the wordings are sufficient, no need to do.
     type: {
       id: "type",
       title: t("feedbackWizardTypeTitle"),
@@ -341,9 +341,9 @@ export function FeedbackSetupWizard({
       ),
     },
 
-    // Le SSO est celui des deux qu'on recommande — mais il est DÉJÀ choisi à
-    // l'ouverture, et une carte sélectionnée le dit mieux qu'une pastille
-    // « recommandé » posée à côté.
+    // The SSO is the one of the two that we recommend — but it is ALREADY chosen at
+    // the opening, and a selected card says it better than a pellet
+    // “recommended” placed next to it.
     sso: {
       id: "sso",
       title: t("feedbackWizardSsoTitle"),
@@ -365,8 +365,8 @@ export function FeedbackSetupWizard({
             selected={!sso}
             icon={Mail}
             label={t("feedbackWizardSsoNo")}
-            // Choisir l'e-mail quand un secret existe SUPPRIME ce secret : la
-            // carte le dit avant le clic, pas un toast après.
+            // Choosing the email when a secret exists DELETES this secret: the
+            // card says it before the click, not a toast after.
             description={
               board?.sso_configured
                 ? t("feedbackWizardSsoNoDescClear")
@@ -378,8 +378,8 @@ export function FeedbackSetupWizard({
       ),
     },
 
-    // À partir d'ici, les rangées sont celles de l'onglet Retours et écrivent
-    // en direct : le board existe déjà, l'étape « type » vient de l'allumer.
+    // From here the rows are those of the Returns tab and write
+    // live: the board already exists, the “type” step has just turned it on.
     board: {
       id: "board",
       title: t("feedbackWizardBoardTitle"),
@@ -414,9 +414,9 @@ export function FeedbackSetupWizard({
               />
             </SettingsRows>
           )}
-          {/* La section se masque seule sans les env VERCEL_* : sur un
-              déploiement qui ne sait pas brancher de domaine, l'étape se réduit
-              à la couleur, ce qui est exactement ce qu'elle a à dire. */}
+          {/* The section is hidden alone without the VERCEL_* env: on a
+ deployment which does not know how to plug in a domain, the step reduces
+ to the color, which is exactly what it has to say. */}
           <CustomDomainSection
             endpoint={`/api/projects/${projectId}/feedback/domain`}
             queryKey={feedbackDomainKey(projectId)}
@@ -426,9 +426,9 @@ export function FeedbackSetupWizard({
       ),
     },
 
-    // Les deux cartes de la page, telles quelles : elles portent leur propre
-    // interrupteur maître, et la revue comme la traduction s'appliquent aux
-    // trois canaux — l'étape est donc la même dans les deux parcours.
+    // The two cards on the page, as is: they carry their own
+    // master switch, and the review and translation apply to
+    // three channels — the step is therefore the same in both courses.
     review: {
       id: "review",
       title: t("feedbackWizardReviewTitle"),
@@ -447,9 +447,9 @@ export function FeedbackSetupWizard({
       title: t("feedbackWizardPlacementTitle"),
       submitLabel: t("feedbackWizardGenerate"),
       content: (
-        // Décrire un emplacement, c'est raconter son app — plus facile à dire
-        // qu'à taper. Le micro se pose DANS le champ, et le transcrit s'ajoute
-        // à la suite de ce qui est déjà écrit plutôt que de l'écraser.
+        // Describing a location means telling its app — easier to say
+        // than to type. The microphone is placed IN the field, and the transcript is added
+        // following what is already written rather than overwriting it.
         <div className="flex flex-col gap-3">
           <div className="relative">
             <Textarea
@@ -475,9 +475,8 @@ export function FeedbackSetupWizard({
               }
             />
           </div>
-          {/* Générer, en mode API, MINTE une clé. Le dire avant le clic : la
-              configuration, elle, est déjà enregistrée — fermer ici ne perd
-              rien, et c'est ce qui rend le renoncement possible. */}
+          {/* Generate, in API mode, MINTE a key. Say it before the click:
+ configuration is already saved — closing here does not lose anything, and this is what makes renunciation possible. */}
           {mode === "api" && (
             <p className="text-xs leading-relaxed text-muted-foreground">
               {t("feedbackWizardPlacementKeyNote")}
@@ -487,8 +486,8 @@ export function FeedbackSetupWizard({
       ),
     },
 
-    // Le prompt existe : la clé a pu être créée, le board provisionné. Revenir
-    // en arrière ne défait rien de tout ça — l'étape est terminale.
+    // The prompt exists: the key could be created, the board provisioned. To come back
+    // going backwards doesn't undo any of that — the stage is terminal.
     done: {
       id: "done",
       title: t("feedbackWizardDoneTitle"),
@@ -497,15 +496,15 @@ export function FeedbackSetupWizard({
         : t("feedbackWizardCopied"),
       lockBack: true,
       submitLabel: t("integrationKeyDone"),
-      // Le prompt lui-même ne s'affiche pas : il est long, il est déjà dans le
-      // presse-papier, et le relire ici n'apprend rien — c'est l'agent qui le
-      // lit. Reste ce qui demande un geste, dans l'ordre où il se fait : la
-      // ligne à poser dans le `.env` d'abord (une clé ne se remontre pas), puis
-      // les deux destinations possibles du prompt, séparées par leur « ou ».
+      // The prompt itself is not displayed: it is long, it is already in the
+      // clipboard, and rereading it here learns nothing — it is the agent who
+      // bed. There remains what requires a gesture, in the order in which it is done: the
+      // line to put in the `.env` first (a key does not show up), then
+      // the two possible destinations of the prompt, separated by their “or”.
       content: (
         <div className="flex flex-col gap-3 text-left">
-          {/* Le prompt ne porte plus de credential : le voici, à part, sous la
-              seule forme qui serve — la ligne du fichier .env. */}
+          {/* The prompt no longer carries a credential: here it is, separately, under the
+ only form that serves — the line of the .env file. */}
           {env && (
             <div className="flex flex-col gap-2 rounded-2xl border border-brand/25 bg-brand/5 p-4">
               <div className="flex flex-col gap-0.5">
@@ -546,9 +545,8 @@ export function FeedbackSetupWizard({
             </div>
           )}
 
-          {/* Première destination : l'agent de code de l'utilisateur. Le prompt
-              y est déjà parti tout seul — ce bouton n'est là que pour le
-              presse-papier écrasé entre-temps. */}
+          {/* First destination: the user's code agent. The prompt
+ has already gone there on its own — this button is only there for the clipboard to be overwritten in the meantime. */}
           <Button
             type="button"
             variant="outline"
@@ -563,7 +561,7 @@ export function FeedbackSetupWizard({
             {t("feedbackWizardCopy")}
           </Button>
 
-          {/* L'autre : l'agent de minddy, sur le dépôt déjà lié au projet. */}
+          {/* The other: minddy's agent, on the deposit already linked to the project. */}
           {canHandOffToNumo && (
             <>
               <div className="mt-1 flex items-center gap-3">
@@ -592,9 +590,9 @@ export function FeedbackSetupWizard({
     },
   };
 
-  // Ce qu'un clic à côté emporterait. Rien, tant qu'aucune étape n'est validée ;
-  // rien non plus sur la dernière, où fermer EST la façon de finir — la question
-  // n'est donc posée qu'entre les deux.
+  // What a click next to it would take away. Nothing, as long as no step is validated;
+  // nothing about the last one either, where closing IS the way to end — the question
+  // is therefore only posed between the two.
   const currentStep = steps[Math.min(stepIndex, steps.length - 1)];
   const atStake = stepIndex > 0 && currentStep !== "done";
 

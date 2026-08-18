@@ -1,26 +1,26 @@
 /**
- * 004 — la quinzaine de Camille.
+ * 004 — Camille’s fortnight.
  *
- * Pour quelle capture : `featureCycle` — « la quinzaine en cours : issues de
- * plusieurs projets dans une même liste, progression visible ».
+ * For which capture: `featureCycle` — “the current fortnight: from
+ * several projects in the same list, visible progress”.
  *
- * Trois contraintes du schéma dictent tout ce script :
+ * Three schema constraints dictate this entire script:
  *
- *  1. Le cycle affiché est celui qui contient la date du jour CÔTÉ SERVEUR
- *     (`reconcileCycles`). L'horloge figée des captures ne vaut que pour le
- *     navigateur : semer d'autres dates ferait apparaître un cycle vide,
- *     fraîchement créé par l'application à côté du nôtre.
- *  2. La fenêtre n'est pas libre : elle se déduit de la cadence du compte,
- *     ancrée sur le lundi 1970-01-05. On écrit donc la cadence dans les
- *     préférences du compte, puis on calcule la fenêtre avec le même algorithme.
- *  3. Un ticket dans un cycle est TOUJOURS assigné au propriétaire du cycle
- *     (trigger `issues_enforce_cycle`) : sinon la base remet `cycle_id` à null
- *     sans rien dire. Seuls les tickets de Camille peuvent donc y entrer.
+ * 1. The cycle displayed is the one that contains today’s date SERVER SIDE
+ * (`reconcileCycles`). The frozen clock of captures only applies to the
+ * browser: sowing other dates would cause an empty cycle to appear,
+ * freshly created by the app next to ours.
+ * 2. The window is not free: it is deduced from the cadence of the account,
+ * anchored on Monday 1970-01-05. We therefore write the cadence in the
+ * account preferences, then we calculate the window with the same algorithm.
+ * 3. A ticket in a cycle is ALWAYS assigned to the owner of the cycle
+ * (trigger `issues_enforce_cycle`): otherwise the database resets `cycle_id` to null
+ * without saying anything. Only Camille's tickets can therefore enter.
  *
- * Conséquence : cette donnée PÉRIME quand la quinzaine bascule. Relancer 003
- * puis 004 la réaligne sur la fenêtre courante.
+ * Consequence: this data EXPIRES when the fortnight changes. Reroll 003
+ * then 004 realigns it to the current window.
  *
- * Idempotent : le cycle est réutilisé s'il couvre déjà la date du jour.
+ * Idempotent: the cycle is reused if it already covers today's date.
  *
  *   node captures/world/seed/004-cycle.mjs --dry-run
  *   node captures/world/seed/004-cycle.mjs
@@ -33,14 +33,14 @@ import { currentCycleWindow, DEMO_CADENCE } from "./_cycle-window.mjs";
 const DRY_RUN = process.argv.includes("--dry-run");
 
 /**
- * Préférences de cycle du compte de démo, écrites dans `user_metadata` (clés
- * de lib/cycle-prefs.ts). `light` = 40 points par semaine : avec une quinzaine,
- * l'objectif tombe à 80, ce qui place l'anneau de capacité autour de la moitié
- * plutôt qu'au ras du sol.
+ * Demo account cycle preferences, written to `user_metadata` (keys
+ * from lib/cycle-prefs.ts). `light` = 40 points per week: with around fifteen,
+ * the target drops to 80, which puts the capacity ring around half
+ * rather than at ground level.
  */
 const CYCLE_PREFS = {
-  // Les cycles sont OPT-IN : sans ce drapeau, la ligne existe en base mais
-  // l'application affiche « Activer les cycles » et l'écran reste vide.
+  // The cycles are OPT-IN: without this flag, the line exists in base but
+  // the application displays “Enable Cycles” and the screen remains blank.
   cycles_enabled: true,
   cycle_duration_weeks: DEMO_CADENCE.durationWeeks,
   cycle_start_dow: DEMO_CADENCE.startDow,
@@ -50,16 +50,16 @@ const CYCLE_PREFS = {
 const INTENSITY_BASE_POINTS = { light: 40, medium: 80, heavy: 120 };
 
 /**
- * Les tickets de la quinzaine, désignés par leur identifiant affiché. Tous
- * sont des tickets de Camille — c'est la condition pour qu'ils y restent.
- * Le mélange AUR + BCN est le sujet même de la capture.
+ * Fortnightly tickets, designated by their displayed identifier. All
+ * are Camille tickets — that’s the condition for them to stay there.
+ * The AUR + BCN mix is ​​the very subject of capture.
  */
 const CYCLE_ISSUES = [
   "AUR-1", "AUR-2", "AUR-9",
   "BCN-1", "BCN-2", "BCN-3", "BCN-4", "BCN-5", "BCN-6", "BCN-7", "BCN-8", "BCN-9",
 ];
 
-/** Résout « AUR-2 » en la ligne de ticket correspondante. */
+/** Resolves "AUR-2" to the corresponding ticket line. */
 async function resolveIssues(world, identifiers) {
   const byKey = new Map(world.demoProjects.map((p) => [p.key, p]));
   const wanted = identifiers.map((id) => {
@@ -100,8 +100,8 @@ async function main() {
   requireProject(world, "AUR");
   requireProject(world, "BCN");
 
-  // 1. La cadence doit être écrite AVANT tout : c'est elle qui définit la
-  //    fenêtre que l'application ira chercher.
+  // 1. The cadence must be written BEFORE everything: it is this which defines the
+  // window that the application will search for.
   await updateDemoUserMetadata(world, {
     userId: people.camille,
     patch: CYCLE_PREFS,
@@ -109,7 +109,7 @@ async function main() {
   });
   console.log("  → préférences de cycle réglées sur le compte de Camille");
 
-  // 2. Le cycle de la fenêtre courante.
+  // 2. The cycle of the current window.
   const { data: cycles, error } = await world.admin
     .from("cycles")
     .select("id, start_date, end_date, target_points")
@@ -128,8 +128,8 @@ async function main() {
         end_date: window.end,
         intensity: CYCLE_PREFS.cycle_intensity,
         target_points: targetPoints,
-        // Réclame l'auto-remplissage : sans ça, l'application y verserait
-        // d'autres tickets au premier chargement et la capture changerait.
+        // Requests auto-filling: without it, the application would pour into it
+        // other tickets on first load and the capture would change.
         filled_at: new Date().toISOString(),
       }],
       "quinzaine",
@@ -142,8 +142,8 @@ async function main() {
     console.log(`  → quinzaine ${cycle.start_date} déjà là, réutilisée`);
   }
 
-  // 3. Les tickets. Un par un : `plan.update` relit et vérifie chaque ligne
-  //    visée avant de la toucher.
+  // 3. Tickets. One by one: `plan.update` rereads and checks each line
+  // aim before hitting it.
   const issues = await resolveIssues(world, CYCLE_ISSUES);
   const misassigned = issues.filter((i) => i.assignee_id !== people.camille);
   if (misassigned.length > 0) {
@@ -166,8 +166,8 @@ async function main() {
     console.log(`  → ${toAttach.length} ticket(s) rangés dans la quinzaine`);
   }
 
-  // 4. Contrôle : le trigger a-t-il gardé nos tickets ? S'il en a éjecté, la
-  //    capture montrerait un cycle incomplet sans qu'aucune erreur ne l'ait dit.
+  // 4. Control: did the trigger keep our tickets? If it ejected, the
+  // capture would show an incomplete cycle without any error saying so.
   const after = await resolveIssues(world, CYCLE_ISSUES);
   const kept = after.filter((i) => i.cycle_id === cycle.id);
   const points = kept.reduce((sum, i) => sum + (EFFORT_POINTS[i.effort] ?? 3), 0);

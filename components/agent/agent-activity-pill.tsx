@@ -109,12 +109,12 @@ function SubagentTooltip({ subagents }: { subagents: TurnSubagent[] }) {
 }
 
 /**
- * Résumé vivant de la session, juste au-dessus du composer.
+ * Lively summary of the session, just above the composer.
  *
- * La surface reste à la largeur de son contenu : le plan, les fichiers et les
- * sous-agents sont trois indicateurs voisins dans une seule pilule, au lieu de
- * trois cartes qui prennent toute la largeur du fil. Les détails restent
- * accessibles au survol, sauf les fichiers qui ouvrent directement la diff.
+ * The surface remains the width of its content: the plan, the files and the
+ * subagents are three neighboring indicators in a single pill, instead of
+ * three cards that take up the entire width of the wire. Details remain
+ * accessible on hover, except files which directly open the diff.
  */
 export function AgentActivityPill({
   planSteps,

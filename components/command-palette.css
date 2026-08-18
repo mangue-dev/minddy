@@ -33,7 +33,7 @@
   --cp-font-sans: var(--font-sans);
   --cp-font-mono: var(--font-mono);
   --cp-fs-input: 0.95rem;
-  --cp-fs-text: 0.875rem;      /* text-sm, comme les rows cmdk actuelles */
+  --cp-fs-text: 0.875rem;      /* text-sm, like current cmdk rows */
   --cp-fs-secondary: 0.8rem;
   --cp-fs-kbd: 0.7rem;
   --cp-fs-base: 1rem;
@@ -44,8 +44,8 @@
   --cp-radius-xl: var(--radius-xl, 1rem);
   --cp-radius-lg: var(--radius-lg, 0.75rem);
   --cp-radius-md: var(--radius-md, 0.5rem);
-  /* Pas var(--radius-sm) (12px chez mangue-ui) : sur des chips kbd de 20px ça
-     rend des cercles. 5px = carré arrondi. */
+  /* Not var(--radius-sm) (12px at mango-ui): on kbd chips of 20px that
+ renders circles. 5px = rounded square. */
   --cp-radius-sm: 0.3125rem;
 
   /* === Spacing scale === */
@@ -58,8 +58,8 @@
   --cp-space-6: 1.5rem;
   --cp-space-8: 2rem;
 
-  /* === Per-entity icon tints (data-item-type = filterCategory ici).
-     Neutres par défaut ; à ajuster pendant le test si on veut des teintes. === */
+  /* === Per-entity icon tints (data-item-type = filterCategory here).
+ Neutral by default; to adjust during the test if you want shades. === */
   --cp-icon-issue: var(--muted-foreground);
   --cp-icon-theme: var(--muted-foreground);
   --cp-icon-create: var(--muted-foreground);
@@ -71,9 +71,9 @@
   --cp-icon-account: var(--muted-foreground);
 }
 
-/* Dark : l'accent mangue-ui (var(--accent)) est quasi invisible sur --popover —
-   l'option sélectionnée doit sauter aux yeux. On force un mix plus contrasté
-   (surlignage des rows + hover/active du popover d'actions). */
+/* Dark: the mango-ui accent (var(--accent)) is almost invisible on --popover —
+ the selected option should be obvious. We force a more contrasting mix
+ (highlighting of rows + hover/active of the action popover). */
 .dark {
   --cp-accent: color-mix(in oklab, var(--foreground) 17%, var(--popover));
   --cp-accent-fg: var(--foreground);

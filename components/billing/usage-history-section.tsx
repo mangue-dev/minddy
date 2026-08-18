@@ -23,15 +23,15 @@ import { SEGMENT_UI } from "@/components/usage-indicator";
 import { EmptyState } from "@/components/empty-state";
 import type { UsageHistoryEntry } from "@/lib/billing-types";
 
-/** Taille de page côté API (get_user_usage_history / route usage-history). */
+/** API side page size (get_user_usage_history / usage-history route). */
 const PAGE_SIZE = 25;
 
 /**
- * Historique d'usage typé de la page billing (MIN-72, retours — façon AutoKap) :
- * un ACCORDÉON replié par défaut ; ouvert, une ligne par run du ledger (date,
- * type avec l'icône/couleur des segments, projet, part du budget en %), filtre
- * par type et pagination Précédent/Suivant (25 par page). Chargement paresseux
- * à la première ouverture.
+ * Typical usage history of the billing page (MIN-72, returns — AutoKap style):
+ * an ACCORDION folded by default; open, one line per run of the ledger (date,
+ * type with icon/color of segments, project, share of budget in %), filter
+ * by type and Previous/Next pagination (25 per page). Lazy loading
+ * when first opened.
  */
 export function UsageHistorySection() {
   const t = useTranslations("Billing");
@@ -161,9 +161,9 @@ export function UsageHistorySection() {
                           strokeWidth={2}
                         />
                         <span className="truncate text-sm text-foreground">
-                          {/* Le geste, pas la famille : « Smart-fill », pas
-                              « Automatisations ». La famille reste lisible —
-                              c'est l'icône et sa couleur. */}
+                          {/* The gesture, not the family: “Smart-fill”, not
+ “Automations”. The family remains readable —
+ is the icon and its color. */}
                           {t(entry.feature ? FEATURE_LABEL_KEYS[entry.feature] : ui.labelKey)}
                         </span>
                         {entry.projectName && (

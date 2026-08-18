@@ -2,26 +2,26 @@ import { createAvatar } from "@dicebear/core";
 import * as lorelei from "@dicebear/lorelei";
 
 /**
- * L'avatar par défaut de minddy.
+ * The default avatar of minddy.
  *
- * Un compte ne porte pas de photo : il porte une graine opaque
- * (`public.user_avatars`), et son portrait se dessine à partir d'elle. Même
- * graine = même portrait, à chaque rendu, sur chaque écran, sans rien stocker.
- * Un nouveau tirage (réglages → « Nouvel avatar ») change la graine, donc le
+ * An account does not carry a photo: it carries an opaque seed
+ * (`public.user_avatars`), and its portrait is drawn from it. Same
+ * seed = same portrait, on each rendering, on each screen, without storing anything.
+ * A new drawing (settings → “New avatar”) changes the seed, so the
  * portrait.
  *
- * Le dessin vient du style `lorelei` de DiceBear (CC0, Lisa Wischofsky) : un
- * visage au trait sur un aplat coloré. Il ne cadre QUE la tête, ce qui le rend
- * encore lisible à 22 px — là où un buste rétrécit en tache. Le rendu est dans
- * `components/user-avatar.tsx`, seul endroit du produit qui dessine un avatar.
+ * The drawing comes from the `lorelei` style of DiceBear (CC0, Lisa Wischofsky): a
+ * line face on a colored solid. It ONLY frames the head, which makes it
+ * still readable at 22 px — where a bust shrinks to a blob. The rendering is in
+ * `components/user-avatar.tsx`, the only place in the product that draws an avatar.
  */
 
 /**
- * Les fonds, sur lesquels DiceBear tire d'après la graine. Une roue de teintes
- * par pas d'environ 24°, dans le même vocabulaire que les catégories
- * (`lib/category-colors.ts`, des Tailwind 500) mais couvrant tout le cercle.
- * Quinze places : plus la roue est longue, moins deux comptes se retrouvent sur
- * la même couleur. Sans `#` — DiceBear veut des hexadécimaux nus.
+ * The funds, which DiceBear draws from according to the seed. A color wheel
+ * in steps of approximately 24°, in the same vocabulary as the categories
+ * (`lib/category-colors.ts`, Tailwind 500) but covering the entire circle.
+ * Fifteen places: the longer the wheel, the fewer two accounts end up on
+ * the same color. Without `#` — DiceBear wants bare hexadecimals.
  */
 export const AVATAR_BACKGROUNDS = [
   "ef4444", // red
@@ -42,27 +42,27 @@ export const AVATAR_BACKGROUNDS = [
 ];
 
 /**
- * Portraits déjà calculés, par graine.
+ * Portraits already calculated, per seed.
  *
- * Deux raisons de garder ce cache. D'abord `createAvatar` reconstruit tout le
- * SVG à chaque appel, et un board redessine les mêmes personnes des dizaines de
- * fois. Ensuite les `<img>` partagent alors la MÊME chaîne : le navigateur ne
- * décode qu'une image, et le DOM ne porte qu'une référence de plus.
+ * Two reasons to keep this cache. First `createAvatar` rebuilds the whole
+ * SVG on each call, and a board redraws the same people dozens of
+ * times. Then the `<img>` then share the SAME string: the browser only
+ * decodes one image, and the DOM only carries one more reference.
  *
- * Purge en bloc au-delà du plafond : le nombre de personnes croisées dans une
- * session se compte en dizaines, donc on ne l'atteint pas — c'est un garde-fou
- * contre une fuite, pas une politique de cache à affiner.
+ * Bulk purge beyond the ceiling: the number of people encountered in a
+ * session is counted in tens, so we do not does not reach it — it is a safeguard
+ * against a leak, not a cache policy to be refined.
  */
 const portraits = new Map<string, string>();
 const MAX_PORTRAITS = 500;
 
-/** Le portrait d'une graine, en `data:` URI prêt pour un `<img>`. */
+/** The portrait of a seed, in `data:` URI ready for a `<img>`. */
 export function avatarDataUri(seed: string): string {
   const known = portraits.get(seed);
   if (known) return known;
 
-  // Sans option `size`, le SVG ne porte qu'un `viewBox` : il s'adapte donc à la
-  // taille CSS de l'image, net à 16 px comme à 64 px, et pèse moins lourd.
+  // Without the `size` option, the SVG only carries a `viewBox`: it therefore adapts to the
+  // CSS size of the image, sharp at 16 px as at 64 px, and weighs less.
   const uri = createAvatar(lorelei, {
     seed,
     backgroundColor: AVATAR_BACKGROUNDS,

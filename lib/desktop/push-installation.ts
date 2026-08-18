@@ -1,4 +1,4 @@
-/** Identité locale qui relie deux tokens successifs de la même installation. */
+/** Local identity that links two successive tokens from the same installation. */
 export function isPushInstallationId(value: unknown): value is string {
   return (
     typeof value === "string" &&
@@ -6,7 +6,7 @@ export function isPushInstallationId(value: unknown): value is string {
   );
 }
 
-/** Un opt-in doit avoir été écrit explicitement ; premier lancement = éteint. */
+/** An opt-in must have been written explicitly; first launch = off. */
 export function nativePushAllowedFromStored(value: unknown): boolean {
   return typeof value === "string" && value.trim() === "1";
 }

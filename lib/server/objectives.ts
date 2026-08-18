@@ -50,8 +50,8 @@ export type ObjectiveResult =
       rawMessage?: string;
     };
 
-// Bornes de longueur (MIN-118) : même plafond de nom que les titres de tickets ;
-// la description est du markdown libre, bornée comme le plan. Au-delà on tronque.
+// Length limits (MIN-118): same name limit as ticket titles;
+// the description is free markdown, bounded like the plan. Beyond that we truncate.
 const MAX_NAME_LENGTH = 500;
 const MAX_DESCRIPTION_LENGTH = 65_536;
 
@@ -65,9 +65,9 @@ export async function createObjective({
   projectId: string;
   actorId: string;
   input: Record<string, unknown>;
-  /** Attribue l'événement « created » à Numo dans le fil d'activité. */
+  /** Assigns the “created” event to Numo in the activity feed. */
   viaAssistant?: boolean;
-  /** Attribue l'événement à une clé MCP (agent) au lieu de l'utilisateur. */
+  /** Assigns the event to an MCP (agent) key instead of the user. */
   mcpKeyId?: string | null;
 }): Promise<ObjectiveResult> {
   const name = typeof input.name === "string" ? input.name.trim() : "";
@@ -92,8 +92,8 @@ export async function createObjective({
     row.lead_user_id = input.lead_user_id ?? null;
   }
   if (isDateOrNull(input.target_date)) row.target_date = input.target_date;
-  // La couleur vient de la palette des catégories (hex #rrggbb) — une valeur
-  // hors format est ignorée, comme un statut inconnu.
+  // The color comes from the category palette (hex #rrggbb) — a value
+  // out of format is ignored, as an unknown status.
   if (isValidColor(input.color) || input.color === null) {
     row.color = input.color ?? null;
   }
@@ -124,10 +124,10 @@ export async function createObjective({
 
   const service = getServiceClient();
 
-  // Le RESPONSABLE est une référence sortante comme une autre (MIN-339) : sans
-  // cette garde, `lead_user_id` accepte n'importe quel compte de la plateforme
-  // et l'objectif affiche — sur l'écran de tout le projet — le nom de quelqu'un
-  // qui n'y est pas.
+  // The MANAGER is an outgoing reference like any other (MIN-339): without
+  // this guard, `lead_user_id` accepts any account on the platform
+  // and the lens displays — on the entire project screen — someone's name
+  // which is not there.
   if (typeof row.lead_user_id === "string") {
     const isMember = await userInProject(
       service,
@@ -178,7 +178,7 @@ export async function createObjective({
     stampMcpKey(stampViaAssistant(created, viaAssistant), mcpKeyId)
   );
 
-  // Les gens cités dans la description de l'objectif qui vient de naître.
+  // The people mentioned in the description of the objective that has just been born.
   await notifyDescriptionMentions(service, {
     projectId,
     actorId,
@@ -188,7 +188,7 @@ export async function createObjective({
     viaAssistant,
   });
 
-  // Et les pages qu'elle cite (MIN-279).
+  // And the pages she cites (MIN-279).
   queuePageLinks(
     service,
     { kind: "objective", id: data.id as string, projectId },
@@ -208,9 +208,9 @@ export async function updateObjective({
   objectiveId: string;
   actorId: string;
   input: Record<string, unknown>;
-  /** Attribue les événements de changement à Numo dans le fil d'activité. */
+  /** Assigns change events to Numo in the activity feed. */
   viaAssistant?: boolean;
-  /** Attribue les événements à une clé MCP (agent) au lieu de l'utilisateur. */
+  /** Assigns events to an MCP (agent) key instead of the user. */
   mcpKeyId?: string | null;
 }): Promise<ObjectiveResult> {
   const updates: Record<string, unknown> = {};
@@ -248,7 +248,7 @@ export async function updateObjective({
     updates.target_date = input.target_date;
   }
   if ("color" in input) {
-    // La couleur vient de la palette des catégories (hex #rrggbb).
+    // The color comes from the category palette (hex #rrggbb).
     if (input.color !== null && !isValidColor(input.color)) {
       return { ok: false, status: 400, errorKey: "invalidColor" };
     }
@@ -277,7 +277,7 @@ export async function updateObjective({
     return { ok: false, status: 404, errorKey: "objectiveNotFound" };
   }
 
-  // Même garde qu'à la création (MIN-339).
+  // Same guard as at creation (MIN-339).
   if (typeof updates.lead_user_id === "string") {
     const isMember = await userInProject(
       service,
@@ -317,8 +317,8 @@ export async function updateObjective({
     stampMcpKey(stampViaAssistant(events, viaAssistant), mcpKeyId)
   );
 
-  // Les gens qui viennent d'être cités dans la description. La version d'avant
-  // sert de référence : relire une description ne repingue pas les anciens.
+  // The people who have just been mentioned in the description. The version before
+  // serves as a reference: rereading a description does not repeat the old ones.
   if ("description" in updates) {
     await notifyDescriptionMentions(service, {
       projectId: objective.project_id as string,
@@ -329,7 +329,7 @@ export async function updateObjective({
       mcpKeyId,
       viaAssistant,
     });
-    // Les pages citées, réécrites en entier — cf. `updateIssueFields`.
+    // The cited pages, rewritten in full — cf. `updateIssueFields`.
     queuePageLinks(
       service,
       {

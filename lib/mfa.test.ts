@@ -11,15 +11,15 @@ import {
 } from "@/lib/mfa";
 
 /**
- * `needsMfaChallenge` est le prédicat de sécurité du second facteur (MIN-132) :
- * c'est lui, et lui seul, qui décide si une requête passe. Le proxy et
- * `getAuthedUser` l'appellent tous les deux — donc une erreur ici n'ouvre pas
- * une route, elle ouvre tout.
+ * `needsMfaChallenge` is the security predicate of the second factor (MIN-132):
+ * it is he, and he alone, who decides if a request passes. The proxy and
+ * `getAuthedUser` both call it — so an error here doesn't open
+ * one route, it opens everything.
  *
- * Ce que ces cas gardent surtout : le drapeau ne vaut QUE `true` littéral. Une
- * chaîne `"false"`, un `0`, un `"true"` recopié depuis un formulaire — tout ça
- * est truthy en JavaScript, et laisserait un compte sans facteur exiger un `aal2`
- * qu'il ne peut pas produire, c'est-à-dire enfermé dehors.
+ * What these cases mostly keep: the flag is ONLY `true` literal. A
+ * string `"false"`, a `0`, a `"true"` copied from a form — all of that
+ * is truthy in JavaScript, and would leave an account without a factor requiring a `aal2`
+ * that it doesn't cannot produce, that is to say locked outside.
  */
 
 describe("hasMfaEnabled", () => {
@@ -38,7 +38,7 @@ describe("hasMfaEnabled", () => {
 describe("needsMfaChallenge", () => {
   const enabled = { [MFA_ENABLED_CLAIM]: true };
 
-  it("exige aal2 dès qu'un facteur est enrôlé", () => {
+  it("requires aal2 as soon as a factor is enrolled", () => {
     expect(needsMfaChallenge({ aal: "aal1", app_metadata: enabled })).toBe(true);
     expect(needsMfaChallenge({ aal: "aal2", app_metadata: enabled })).toBe(false);
   });
@@ -50,8 +50,8 @@ describe("needsMfaChallenge", () => {
   });
 
   it("refuse un `aal` absent ou inattendu sur un compte protégé", () => {
-    // Défaut fermé : tout ce qui n'est pas littéralement "aal2" est un challenge
-    // à passer, pas une permission.
+    // Defect closed: anything not literally "aal2" is a challenge
+    // to pass, not a permission.
     expect(needsMfaChallenge({ app_metadata: enabled })).toBe(true);
     expect(needsMfaChallenge({ aal: "", app_metadata: enabled })).toBe(true);
     expect(needsMfaChallenge({ aal: "aal3", app_metadata: enabled })).toBe(true);
@@ -65,11 +65,11 @@ describe("decodeJwtPayload", () => {
     expect(decodeJwtPayload(`header.${b64}.signature`)).toEqual(payload);
   });
 
-  it("renvoie null sur un jeton illisible plutôt que de lever", () => {
+  it("returns null for an unreadable token instead of throwing", () => {
     expect(decodeJwtPayload("")).toBeNull();
     expect(decodeJwtPayload("pas-un-jwt")).toBeNull();
     expect(decodeJwtPayload("a.!!!.c")).toBeNull();
-    // Un payload JSON valide mais scalaire n'est pas un jeu de claims.
+    // A valid but scalar JSON payload is not a claims set.
     const scalar = Buffer.from('"aal2"', "utf8").toString("base64url");
     expect(decodeJwtPayload(`a.${scalar}.c`)).toBeNull();
   });
@@ -82,19 +82,19 @@ describe("normalizeRecoveryCode", () => {
     expect(normalizeRecoveryCode(" abcd 2345 6789 ")).toBe("ABCD-2345-6789");
   });
 
-  it("rejette ce qui ne peut pas être un code", () => {
+  it("rejects values that cannot be a code", () => {
     expect(normalizeRecoveryCode("")).toBeNull();
     expect(normalizeRecoveryCode("ABCD-2345-678")).toBeNull();
     expect(normalizeRecoveryCode("ABCD-2345-67890")).toBeNull();
-    // Le format court d'avant MIN-347 : 40 bits, il n'en existe plus en base.
+    // The short format before MIN-347: 40 bits, it no longer exists in base.
     expect(normalizeRecoveryCode("ABCD-2345")).toBeNull();
-    // I, L, O et U ne sont pas dans l'alphabet : les accepter reviendrait à
-    // interroger la base pour une saisie qui ne peut rien matcher.
+    // I, L, O and U are not in the alphabet: accepting them would amount to
+    // query the database for an entry that cannot match anything.
     expect(normalizeRecoveryCode("ABCI-2345-6789")).toBeNull();
     expect(normalizeRecoveryCode("ABCO-2345-6789")).toBeNull();
   });
 
-  it("porte 60 bits — le KDF lent ne rattrape pas une entropie manquante", () => {
+  it("carries 60 bits — a slow KDF cannot make up for missing entropy", () => {
     expect(RECOVERY_CODE_LENGTH).toBe(12);
     expect(RECOVERY_CODE_ALPHABET.length).toBe(32);
     expect(RECOVERY_CODE_LENGTH * Math.log2(RECOVERY_CODE_ALPHABET.length)).toBe(60);

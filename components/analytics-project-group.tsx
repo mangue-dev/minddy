@@ -6,18 +6,18 @@ import { useAnalytics } from "@/lib/use-analytics";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 
 /**
- * Associe les événements analytics au projet courant (MIN-78).
+ * Associates analytics events with the current project (MIN-78).
  *
- * PostHog appelle ça un « groupe » : tant que l'association tient, chaque
- * événement porte le projet, ce qui permet de découper entonnoirs et rétention
- * par projet — et de répondre à « ce projet-là est-il vivant ? » plutôt qu'à
- * « cet utilisateur-là l'est-il ? ».
+ * PostHog calls it a “group”: as long as the association holds, each
+ * event carries the project, which makes it possible to cut out funnels and retention
+ * by project — and to answer “is this project alive?” » rather than
+ * “Is this user?” ".
  *
- * Monté une fois dans le layout de l'app, il suit l'URL : `/projects/<id>/…`
- * pose le groupe, tout autre chemin le retire. L'init de PostHog étant différée
- * (≤800 ms), une arrivée directe sur une page projet peut manquer le groupe sur
- * ses tout premiers événements — sans conséquence, les actions mesurées
- * arrivent bien après.
+ * Mounted once in the app layout, it follows the URL: `/projects/<id>/…`
+ * puts the group down, any other path removes it. PostHog init being deferred
+ * (≤800 ms), arriving directly on a project page may miss the group on
+ * its very first events — inconsequential, measured actions
+ * arrive much later.
  */
 export function AnalyticsProjectGroup() {
   const pathname = usePathname();
@@ -25,10 +25,10 @@ export function AnalyticsProjectGroup() {
 
   useEffect(() => {
     const projectId = projectIdFromPath(pathname ?? "");
-    // Deux canaux volontairement : la PROPRIÉTÉ `project_id` (gratuite, sur
-    // laquelle on peut découper dès aujourd'hui) et le GROUPE PostHog (qui
-    // n'apporte ses agrégats qu'avec l'add-on payant, mais ne coûte rien tant
-    // qu'on n'y souscrit pas — la facturation démarre à la souscription).
+    // Two channels voluntarily: PROPERTY `project_id` (free, on
+    // which we can cut today) and the PostHog GROUP (which
+    // only brings its aggregates with the paid add-on, but costs nothing as much
+    // that you do not subscribe to it — billing starts upon subscription).
     setProjectContext(projectId);
     if (projectId) {
       group("project", projectId);

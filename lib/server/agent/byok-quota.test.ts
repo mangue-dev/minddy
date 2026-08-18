@@ -1,18 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-344 — une clé BYOK jamais validée faisait sauter tout plafond.
+ * MIN-344 — a BYOK key never validated would break any ceiling.
  *
- * `checkAgentQuota` ne regardait que l'EXISTENCE d'une ligne `user_ai_keys` :
- * coller n'importe quelle chaîne dans l'écran des réglages passait le compte en
- * usage illimité. Illimité y voulait dire deux choses, et la seconde n'était pas
- * la nôtre à donner — les tokens sont payés par la clé de l'utilisateur, la
- * microVM tourne sur le compte Vercel de minddy, à la minute.
+ * `checkAgentQuota` only looked at the EXISTENCE of a line `user_ai_keys` :
+ * pasting any string in the settings screen skipped the count en
+ * unlimited use. Unlimited meant two things, and the second was not
+ * ours to give away — the tokens are paid for by the user's key, the
+ * microVM runs on minddy's Vercel account, at the minute.
  *
- * Deux règles, deux moitiés de ce fichier :
- *  • une clé que le fournisseur ne reconnaît pas est INERTE (`getUserByok` la
- *    ignore, donc `userHasByokKey` ne la voit pas et le compte reste plafonné) ;
- *  • même validée, elle ne lève JAMAIS le plafond du compute sandbox.
+ * Two rules, two halves of this file:
+ * • a key that the provider does not recognize is INERT (`getUserByok` the
+ * ignores, so `userHasByokKey` does not see it and the account remains capped);
+ * • even validated, it NEVER raises the compute sandbox ceiling.
  */
 
 const probeByokKey = vi.fn();
@@ -133,7 +133,7 @@ describe("getUserByok — la validation gouverne", () => {
   it("accepte un endpoint local sans clé, sans jamais retomber sur la plateforme", async () => {
     keyRow = {
       provider: "ollama",
-      // Le marqueur garde l'enregistrement compatible avec les bases ayant
+      // The marker keeps the record compatible with the bases having
       // encore `key_encrypted NOT NULL`.
       key_encrypted: "sans-cle-local",
       base_url: "http://127.0.0.1:11434",
@@ -153,7 +153,7 @@ describe("getUserByok — la validation gouverne", () => {
   });
 });
 
-// ── Le plafond de compute, lui, ne se lève jamais ────────────────────────────
+// ── The compute ceiling never rises ────────────────────────────
 
 const plan = { id: "pro", allowAgents: true, includedUsageUsd: 10 };
 let usage = {

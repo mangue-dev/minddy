@@ -1,54 +1,53 @@
-// Sélection PURE des branches d'agent (MIN-102), sans DB ni import server-only :
-// testable en node/vitest, comme issue-sync-core.ts. La partie qui interroge la
-// base et la forge vit dans branch-cleanup.ts.
+// PURE selection of agent branches (MIN-102), without DB or server-only import:
+// testable in node/vitest, like issue-sync-core.ts. The party who questions the
+// base and forge lives in branch-cleanup.ts.
 //
-// La liste montre TOUTES les branches que minddy a poussées et qui existent
-// encore sur le dépôt — pas seulement celles dont la PR est fermée. Une session
-// d'agent en attente, ou qui a poussé sans jamais ouvrir de PR, a elle aussi une
-// branche, et on ne peut pas la gérer sans la voir. Ce qui protège n'est donc
-// plus l'absence de la ligne mais son ÉTAT : seules les branches fusionnées
-// arrivent cochées, le reste demande un geste et un avertissement.
+// The list shows ALL branches that minddy pushed that exist
+// still on the repository — not just those whose PR is closed. One session
+// of agent on hold, or who pushed without ever opening a PR, also has a
+// branch, and we can't manage it without seeing it. What protects is therefore not
+// no longer the absence of the line but its STATE: only the merged branches
+// arrive checked, the rest require a gesture and a warning.
 //
-// Deux verrous d'appartenance, et il faut les deux : la branche doit être connue
-// de `agent_runs` (preuve que minddy l'a créée) ET porter le préfixe d'agent
-// (defense in depth, au cas où une ligne de `agent_runs` pointerait une branche
-// saisie à la main).
+// Two membership locks, and you need both: the branch must be known
+// from `agent_runs` (proof that minddy created it) AND have the agent prefix
+// (defense in depth, in case a line of `agent_runs` points to a branch
+// entered by hand).
 
 import type { PullRequestRef } from "@/lib/server/agent/pr";
 
-/** Préfixe des branches poussées par l'agent (cf. `execute.ts`, `workBranch`). */
+/** Prefix of branches pushed by the agent (see `execute.ts`, `workBranch`). */
 export const AGENT_BRANCH_PREFIX = "minddy/agent/";
 
 /**
- * État d'une branche d'agent, par ordre de sûreté décroissante :
- *   • `merged` — sa PR est fusionnée : le travail est livré, rien à perdre ;
- *   • `closed` — sa PR a été refusée : le travail n'existe QUE là ;
- *   • `open`   — sa PR est ouverte ou en brouillon : une session travaille ;
- *   • `none`   — aucune PR : branche fraîchement créée, ou session au repos.
+ * State of an agent branch, in order of decreasing safety:
+ * • `merged` — its PR is merged: the work is delivered, nothing to lose;
+ * • `closed` — its PR has been refused: the work ONLY exists there ;
+ * • `open` — its PR is open or in draft: a session is working ;
+ * • `none` — no PR: freshly created branch, or session at rest.
  */
 export type AgentBranchState = "merged" | "closed" | "open" | "none";
 
-/** `open` et `none` = une session d'agent peut encore s'en servir. */
+/** `open` and `none` = an agent session can still use it. */
 export function isBranchInUse(state: AgentBranchState): boolean {
   return state === "open" || state === "none";
 }
 
-/** Une branche d'agent du dépôt, avec la PR qui la qualifie s'il y en a une. */
+/** An agent branch of the repository, with the qualifying PR if there is one. */
 export interface AgentBranch {
   branch: string;
   state: AgentBranchState;
-  /** Null quand `state` vaut `none` : il n'y a aucune PR à référencer. */
+  /** Null when `state` is `none`: there is no PR to reference. */
   prNumber: number | null;
   prUrl: string | null;
-  /** Date de la PR retenue (ISO), pour le tri. Null sans PR. */
+  /** Date of the PR retained (ISO), for sorting. Void without PR. */
   prCreatedAt: string | null;
 }
 
 /**
- * Garde-fou de suppression : la branche est-elle une branche d'agent qu'on peut
- * effacer sans réfléchir ? Vrai seulement si elle porte le préfixe, n'est pas la
- * branche par défaut du dépôt, et ne contient rien qui puisse sortir du ref
- * attendu (`..`, espace) une fois interpolée dans l'URL de l'API.
+ * Deletion guardrail: is the branch an agent branch that can
+ * be deleted without thinking? True only if it is prefixed, is not the default branch of the repository, and does not contain anything that would fall outside of the expected ref
+ * (`..`, space) when interpolated into the API URL.
  */
 export function isDeletableAgentBranch(branch: string, defaultBranch: string): boolean {
   if (!branch.startsWith(AGENT_BRANCH_PREFIX)) return false;
@@ -58,19 +57,19 @@ export function isDeletableAgentBranch(branch: string, defaultBranch: string): b
   return true;
 }
 
-/** Une PR est-elle encore vivante (ouverte ou brouillon) ? */
+/** Is a PR still alive (open or draft)? */
 function isLive(pr: PullRequestRef): boolean {
   return pr.state === "open" || pr.draft === true;
 }
 
-/** Comparateur de fraîcheur : la PR la plus récemment ouverte gagne. */
+/** Freshness Comparator: The most recently opened PR wins. */
 function newerThan(a: string | null, b: string | null): boolean {
   if (!a) return false;
   if (!b) return true;
   return a > b;
 }
 
-/** Ordre d'affichage : du plus sûr à supprimer au plus risqué. */
+/** Display order: from safest to delete to riskiest. */
 const STATE_ORDER: Record<AgentBranchState, number> = {
   merged: 0,
   closed: 1,
@@ -79,17 +78,16 @@ const STATE_ORDER: Record<AgentBranchState, number> = {
 };
 
 /**
- * Croise trois sources et rend les branches d'agent gérables :
- *   • `knownBranches` — ce que les runs du projet ont enregistré (appartenance),
- *     dans l'ordre d'itération de l'appelant (run le plus récent d'abord), qui
- *     départage les branches sans PR, faute de date à comparer ;
- *   • `remoteBranches` — ce qui existe VRAIMENT sur le dépôt. Sans ce filtre, la
- *     liste ressusciterait toutes les branches jamais créées, dont l'immense
- *     majorité a déjà été supprimée ;
- *   • `pulls` — ce qui donne son état à chaque branche.
+ * Crosses three sources and makes agent branches manageable:
+ * • `knownBranches` — what the project's runs have recorded (membership),
+ * in the caller's iteration order (most recent run first), which
+ * separates branches without PR, due to lack of date to compare ;
+ * • `remoteBranches` — what REALLY exists on the repository. Without this filter, the
+ * list would resurrect every branch ever created, the vast majority of which have already been deleted;
+ * • `pulls` — which gives each branch its state.
  *
- * Une PR vivante l'emporte toujours sur une PR fermée de la même branche (cas
- * d'une PR rouverte) : la branche est alors `open`, jamais proposée cochée.
+ * A living PR always trumps a Closed PR of the same branch (case
+ * of a reopened PR): the branch is then `open`, never offered checked.
  */
 export function selectAgentBranches(opts: {
   pulls: PullRequestRef[];
@@ -99,7 +97,7 @@ export function selectAgentBranches(opts: {
 }): AgentBranch[] {
   const { pulls, knownBranches, remoteBranches, defaultBranch } = opts;
 
-  // Meilleure PR vivante et meilleure PR fermée de chaque branche, en une passe.
+  // Best live PR and best closed PR of each branch, in one pass.
   const live = new Map<string, PullRequestRef>();
   const dead = new Map<string, PullRequestRef>();
   for (const pr of pulls) {
@@ -140,8 +138,8 @@ export function selectAgentBranches(opts: {
     });
   }
 
-  // Tri stable : par état (les fusionnées d'abord, elles seront pré-cochées),
-  // puis par PR la plus récente. Les branches sans PR gardent l'ordre reçu.
+  // Stable sorting: by state (the merged first, they will be pre-checked),
+  // then by the most recent PR. Branches without PR keep the order received.
   return branches
     .map((b, index) => ({ b, index }))
     .sort((x, y) => {

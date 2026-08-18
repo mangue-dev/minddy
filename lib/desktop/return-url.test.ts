@@ -4,13 +4,13 @@ import { billingReturnUrl } from "./return-url";
 import { DESKTOP_RETURN_PATH } from "./config";
 
 /**
- * MIN-362 — le patron `<module>.ts` / `<module>.test.ts` de `lib/desktop/`, tenu
- * jusqu'au bout (cf. [local-surface-coverage.test.ts](../server/agent/local-surface-coverage.test.ts)).
+ * MIN-362 — the `<module>.ts` / `<module>.test.ts` boss of `lib/desktop/`, held
+ * until the end (cf. [local-surface-coverage.test.ts](../server/agent/local-surface-coverage.test.ts)).
  *
- * Ce qui se garde ici n'est pas la concaténation, c'est le CHEMIN DE RETOUR :
- * depuis l'app de bureau, une URL de tiers doit revenir sur la page de rebond,
- * qui rouvre l'app — y renvoyer directement laisserait l'utilisateur dans son
- * navigateur, sa session terminée dans une fenêtre qu'il n'a pas ouverte.
+ * What is kept here is not the concatenation, it is the RETURN PATH:
+ * from the desktop app, a third party URL should return to the page of bounce,
+ * which reopens the app — returning directly to it would leave the user in their
+ * browser, their session ended in a window they did not open.
  */
 describe("billingReturnUrl", () => {
   it("depuis le web, renvoie sur la page elle-même", () => {

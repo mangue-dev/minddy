@@ -13,12 +13,11 @@ import {
 } from "./demo-dictation";
 
 /**
- * MIN-150 — ce qui tient la démo de dictée publique.
+ * MIN-150 — which keeps the dictation demo public.
  *
- * C'est le seul endpoint IA de minddy ouvert à un visiteur anonyme : ses gardes
- * ne sont pas des détails d'implémentation, ce sont la feature. Et sa sortie
- * vient d'un LLM, donc rien de ce qu'il dit n'est vrai tant qu'on ne l'a pas
- * confronté au décor.
+ * This is the only Minddy AI endpoint open to an anonymous visitor: its guards
+ * are not implementation details, they are the feature. And his output
+ * comes from an LLM, so nothing he says is true until you confront him with the scenery.
  */
 
 const MEMBERS: DemoMember[] = [
@@ -57,8 +56,8 @@ describe("gardes d'entrée", () => {
     expect(
       isSameOrigin(post({ origin: "https://evil.example", host: "www.minddy.app" })),
     ).toBe(false);
-    // Un navigateur pose toujours `Origin` sur un POST : son absence est le
-    // signe d'un appel qui ne vient pas d'une page.
+    // A browser always places `Origin` on a POST: its absence is the
+    // sign of a call that does not come from a page.
     expect(isSameOrigin(post({ host: "www.minddy.app" }))).toBe(false);
     expect(isSameOrigin(post({ origin: "pas-une-url", host: "www.minddy.app" }))).toBe(
       false,
@@ -131,13 +130,13 @@ describe("ce que le modèle renvoie, ramené au décor", () => {
     expect(ticket({ due_date: "2030-01-01" }).dueDate).toBeNull();
     expect(ticket({ due_date: "vendredi" }).dueDate).toBeNull();
     expect(ticket({ due_date: 42 }).dueDate).toBeNull();
-    // Aujourd'hui reste une échéance valable — « pour aujourd'hui » se dit.
+    // Today remains a valid deadline — “for today” is said.
     expect(ticket({ due_date: TODAY }).dueDate).toBe(TODAY);
   });
 
   it("ne rend jamais une carte sans titre", () => {
-    // Un modèle qui n'a pas su titrer ne doit pas produire un ticket muet : la
-    // phrase dictée fait un titre acceptable.
+    // A model that did not know how to title should not produce a silent ticket: the
+    // dictated sentence makes an acceptable title.
     expect(ticket({ title: "   " }, "Le bouton d'export ne répond plus").title).toBe(
       "Le bouton d'export ne répond plus",
     );

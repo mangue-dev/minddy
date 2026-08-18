@@ -21,32 +21,32 @@ import { AdminModelsDashboard } from "./admin-models-dashboard";
 import { AdminFinanceDashboard } from "./admin-finance-dashboard";
 
 /**
- * Shell du `/admin` (MIN-90). Quatre onglets : « Vue d'ensemble » (l'app en
- * chiffres), « Utilisateurs » (LA vue des comptes, où vivent désormais toutes
- * les actions admin), « Finances » et « Modèles ».
+ * Shell of `/admin` (MIN-90). Four tabs: “Overview” (the app in
+ * numbers), “Users” (THE accounts view, where all of them now live
+ * the admin actions), “Finances” and “Models”.
  *
- * « Finances » (MIN-92) remplace l'ancien « Coûts IA », qui ne montrait qu'une
- * moitié de l'équation. Sa valeur d'onglet est un CONTRAT : c'est l'URL que
- * porte la notification push du garde-fou de dépense (`/admin?tab=finances`).
+ * “Finances” (MIN-92) replaces the old “AI Costs”, which only showed a
+ * half of the equation. Its tab value is a CONTRACT: this is the URL that
+ * carries the expense guard push notification (`/admin?tab=finances`).
  *
- * Les onglets « Quotas » et « Facturation » ont disparu : ils n'étaient pas des
- * écrans mais des actions — remettre un budget à zéro, forcer un plan — et une
- * action se prend là où on regarde le compte concerné, pas dans un onglet qui
- * redemande son email. Le dashboard suit donc la même règle que le reste de
- * l'app : un onglet = un objet, pas un verbe.
+ * The “Quotas” and “Billing” tabs have disappeared: they were not
+ * screens but actions — resetting a budget, forcing a plan — and a
+ * action is taken where we look at the account concerned, not in a tab which
+ * asks for his email again. The dashboard therefore follows the same rule as the rest of
+ * the app: one tab = one object, not a verb.
  *
- * Le rail d'onglets est une SIDEBAR SECONDAIRE (MIN-262), et non plus une ligne
- * d'onglets posée au-dessus des cartes : la même colonne pleine hauteur, à la
- * même place et avec la même grammaire que le triage, les retours, les pull
- * requests, les sessions d'agent et les réglages. Le titre de l'écran est la
- * ligne de titre de cette barre ; il n'est donc plus écrit au-dessus du contenu,
- * où il faisait doublon avec le fil d'Ariane. Il n'y a pas de champ de filtre :
- * quatre entrées se lisent d'un coup d'œil.
+ * The miter rail is a SECONDARY SIDEBAR (MIN-262), and no longer a line
+ * of tabs placed above the cards: the same full height column, at the
+ * same place and with the same grammar as sorting, returns, pull
+ * requests, agent sessions and settings. The title of the screen is
+ * title line of this bar; it is therefore no longer written above the content,
+ * where it duplicated the breadcrumbs. There is no filter field:
+ * four entries can be read at a glance.
  *
- * L'onglet courant vit dans l'URL (`?tab=`) — un lien vers `/admin?tab=users`
- * rouvre la bonne vue.
+ * The current tab lives in the URL (`?tab=`) — a link to `/admin?tab=users`
+ * reopens the correct view.
  *
- * Accès verrouillé côté serveur par `app/(app)/admin/layout.tsx`.
+ * Access locked on the server side by `app/(app)/admin/layout.tsx`.
  */
 
 const TABS = ["overview", "users", "finances", "models"] as const;
@@ -61,8 +61,8 @@ const ICONS: Record<AdminTab, LucideIcon> = {
   models: Bot,
 };
 
-/** La colonne de contenu est plus large que celle des réglages (`max-w-3xl`) :
-    les tableaux de finances et les grilles de compteurs y sont déjà à l'étroit. */
+/** The content column is wider than the settings column (`max-w-3xl`):
+ the financial tables and the counter grids are already cramped there. */
 const ADMIN_MAX_WIDTH = "max-w-5xl";
 
 export function AdminDashboard() {
@@ -77,9 +77,9 @@ export function AdminDashboard() {
   const valid = (TABS as readonly string[]).includes(requested ?? "");
   const active: AdminTab = valid ? (requested as AdminTab) : DEFAULT_TAB;
 
-  // Sous `md`, le rail et le contenu se relaient en plein écran, comme partout
-  // ailleurs dans l'app. Une URL qui NOMME son onglet ouvre directement le
-  // contenu : on arrive de la palette, d'un lien ou d'une notification push.
+  // Under `md`, the rail and the content take turns in full screen, like everywhere
+  // elsewhere in the app. A URL that NAMEs its tab directly opens the
+  // content: we arrive from the palette, a link or a push notification.
   const [mobileDetail, setMobileDetail] = useState(valid);
 
   const items = useMemo(
@@ -100,13 +100,13 @@ export function AdminDashboard() {
   );
 
   return (
-    // La RANGÉE de l'écran : le rail part dans la sidebar secondaire (par
-    // portail, dans le châssis) et le contenu reste à droite.
+    // The ROW of the screen: the rail leaves in the secondary sidebar (by
+    // portal, in the frame) and the content remains on the right.
     <div className="flex h-full min-h-0">
       <SecondarySidebar title={t("pageTitle")} hiddenOnMobile={mobileDetail}>
-        {/* Des cartes à nous, et non les `Tabs` de mangue-ui : la sélection est
-            dessinée par une pastille qui GLISSE, que l'indicateur de la
-            bibliothèque doublait d'une capsule bordée. Cf. SidebarNavRail. */}
+        {/* Cards of ours, and not the `Tabs` of mango-ui: the selection is
+ drawn by a SLIDING pellet, which the indicator of the
+ library doubled with a lined capsule. See SidebarNavRail. */}
         <SidebarNavRail
           label={t("pageTitle")}
           items={items}
@@ -121,9 +121,9 @@ export function AdminDashboard() {
           mobileDetail ? "flex" : "hidden",
         )}
       >
-        {/* En-tête du panneau, MOBILE seulement : le retour vers le rail et le
-            nom de l'onglet ouvert. Sur desktop le rail est à l'écran et le
-            surligne déjà. */}
+        {/* Panel header, MOBILE only: return to rail and
+ name of the open tab. On desktop the rail is on the screen and the
+ is already highlighted. */}
         <div className="flex shrink-0 items-center gap-2 px-4 py-3 md:hidden">
           <Button
             variant="ghost"
@@ -144,11 +144,10 @@ export function AdminDashboard() {
           className="min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-8 md:px-6 md:pt-6"
         >
           <div className={cn("mx-auto flex flex-col gap-4", ADMIN_MAX_WIDTH)}>
-            {/* Seul le panneau ouvert est monté — c'est déjà ce que faisait
-                `TabsContent`, qui démonte les autres : chacun d'eux part
-                chercher ses chiffres au montage, et les quatre à la fois
-                réveilleraient tout le tableau de bord pour n'en montrer qu'un
-                quart. */}
+            {/* Only the open panel is mounted - this is already what was done
+ `TabsContent`, which dismantles the others: each of them leaves
+ to look for its numbers during assembly, and the four at once
+ would wake up the entire dashboard to show only a quarter. */}
             {active === "overview" && <AdminOverviewDashboard />}
             {active === "users" && <AdminUsersDashboard />}
             {active === "finances" && <AdminFinanceDashboard />}

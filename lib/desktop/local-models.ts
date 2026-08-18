@@ -1,11 +1,11 @@
 import type { AgentProviderId } from "@/lib/agent-providers";
 
-/** Les deux protocoles locaux que la coquille sait découvrir. */
+/** The two local protocols that the shell can discover. */
 export type LocalModelProvider = Extract<AgentProviderId, "local_openai" | "ollama">;
 
 export interface LocalModelDiscoveryInput {
   provider: LocalModelProvider;
-  /** Base URL telle qu'elle est configurée dans les réglages (sans secret). */
+  /** Base URL as configured in the settings (without secret). */
   baseUrl: string;
 }
 
@@ -20,11 +20,10 @@ const MAX_MODEL_ID_LENGTH = 256;
 const NON_CHAT_RE = /(embed(?:ding)?|whisper|tts|dall-e|moderation|audio|image|imagen|veo|realtime|transcribe|rerank)/i;
 
 /**
- * Relit le minimum que la page distante peut demander au main process.
+ * Replays the minimum that the remote page can request from the main process.
  *
- * Ce n'est PAS un proxy : seul un endpoint loopback, sur les deux routes de
- * découverte documentées, peut être atteint. La page ne peut ni lire un réseau
- * privé, ni demander une URL arbitraire à Electron.
+ * This is NOT a proxy: only a loopback endpoint, on the two documented discovery routes, can be reached. The page can neither read a private
+ * network, nor request an arbitrary URL from Electron.
  */
 export function parseLocalModelDiscoveryInput(value: unknown): LocalModelDiscoveryInput | null {
   if (!value || typeof value !== "object") return null;
@@ -36,7 +35,7 @@ export function parseLocalModelDiscoveryInput(value: unknown): LocalModelDiscove
   return trimmed && trimmed.length <= 2048 ? { provider, baseUrl: trimmed } : null;
 }
 
-/** L'URL bornée que la coquille peut joindre, ou null si elle n'est pas locale. */
+/** The bounded URL that the shell can attach to, or null if not local. */
 export function localModelDiscoveryUrl(input: LocalModelDiscoveryInput): string | null {
   let url: URL;
   try {
@@ -56,8 +55,8 @@ export function localModelDiscoveryUrl(input: LocalModelDiscoveryInput): string 
   }
 
   if (input.provider === "ollama") {
-    // Ollama liste ses modèles sur son API native `/api/tags`, même quand le
-    // chat utilise la couche OpenAI-compatible `/v1`.
+    // Ollama lists its models on its native API `/api/tags`, even when the
+    // chat uses the OpenAI-compatible `/v1` layer.
     const rootPath = url.pathname.replace(/\/+$/, "").replace(/\/v1$/i, "");
     url.pathname = `${rootPath || ""}/api/tags`;
   } else {
@@ -67,9 +66,9 @@ export function localModelDiscoveryUrl(input: LocalModelDiscoveryInput): string 
 }
 
 /**
- * Appelée exclusivement par le main process Electron. `redirect: "error"`
- * est important : une adresse loopback ne doit jamais pouvoir devenir un relais
- * vers l'extérieur à la faveur d'un 30x.
+ * Called exclusively by the Electron main process. `redirect: "error"`
+ * is important: a loopback address must never be able to become a relay
+ * to the outside thanks to a 30x.
  */
 export async function discoverLocalModels(
   raw: unknown,
@@ -106,7 +105,7 @@ export async function discoverLocalModels(
   }
 }
 
-/** Les deux formats de catalogue, ramenés au contrat du picker. */
+/** The two catalog formats, reduced to the picker's contract. */
 export function parseDiscoveredModels(provider: LocalModelProvider, body: unknown): string[] {
   if (!body || typeof body !== "object") return [];
   const rows = (body as { models?: unknown; data?: unknown }).models;

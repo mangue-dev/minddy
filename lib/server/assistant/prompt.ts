@@ -37,28 +37,27 @@ export interface PromptProjectContext {
   members: PromptMember[];
   objectives: PromptObjective[];
   categories: PromptCategory[];
-  /** La carte du WIKI (MIN-273) : titres et ids, jamais les corps. Elle est là
-      pour que Numo sache que la doc existe sans avoir à lister d'abord — c'est ce
-      qui fait la différence entre répondre depuis les tickets et répondre depuis
-      ce que l'équipe a écrit. */
+  /** The WIKI map (MIN-273): titles and ids, never the bodies. It's there
+ so Numo knows the doc exists without having to list first — it's this
+ that makes the difference between replying from tickets and replying from
+ what the team has written. */
   pages?: PromptPage[];
 }
 
 export interface PromptPage {
   id: string;
   title: string;
-  /** L'id du parent, pour que l'imbrication se lise dans le prompt. */
+  /** The id of the parent, so that the nesting is read in the prompt. */
   parent_id: string | null;
 }
 
 /**
- * La carte du wiki, telle qu'elle entre dans le prompt (MIN-273) : un titre par
- * ligne, l'imbrication rendue par l'indentation, et l'id à côté — de quoi
- * appeler `get_page` sans passer par `list_pages`.
+ * The wiki map, as entered in the prompt (MIN-273): a title per
+ * line, the nesting rendered by the indentation, and the id next to it — from which
+ * to call `get_page` without going through `list_pages`.
  *
- * Bornée à quarante lignes : le prompt doit dire « la doc existe, et voilà de
- * quoi elle parle », pas transporter l'arbre entier d'un gros wiki. Au-delà,
- * `list_pages` est à un appel.
+ * Limited to forty lines: the prompt must say "the doc exists, and this is what it's talking about", not carry the entire tree of a large wiki. Beyond that,
+ * `list_pages` is one call away.
  */
 const WIKI_MAP_LIMIT = 40;
 
@@ -265,19 +264,19 @@ The project can collect user requests on a feedback board (also fed by its API a
 - Feedback can also arrive server-to-server from their app, without the public board: that's an integration key of kind 'feedback' (see create_integration). Their own coding agent can do the whole thing from its IDE through minddy's MCP server — mention it when the work is clearly in their repo.`;
 
 /**
- * La conduite à tenir face à de la détresse (MIN-296).
+ * What to do in the face of distress (MIN-296).
  *
- * Numo parle de tickets, pas de vie privée — et c'est précisément pourquoi ce
- * bloc existe : sans consigne, un modèle mis devant une phrase de détresse dans
- * une description de ticket répond avec l'outillage du sujet en cours (il crée
- * l'issue, il reformule, il enchaîne). Trois lignes suffisent pour qu'il pose
- * l'outil et nomme un numéro. Elles valent pour TOUTES les surfaces où Numo
- * répond à quelqu'un : le chat, les commentaires de ticket et d'objectif, et le
- * board de feedback public — où la personne en face n'a même pas de compte.
+ * Numo talks about tickets, not privacy — and this is precisely why this
+ * block exists: without instructions, a model placed in front of a distress phrase in
+ * a ticket description responds with the tooling of the current subject (it creates
+ * the outcome, it reformulates, it continues). Three lines are enough for him to put
+ * the tool and name a number. They apply to ALL surfaces where Numo
+ * responds to someone: chat, ticket and goal comments, and the
+ * public feedback board — where the person opposite doesn't even have an account.
  *
- * Les numéros sont ceux des deux pays d'où viennent les utilisateurs
- * aujourd'hui ; ailleurs, on renvoie vers findahelpline.com plutôt que
- * d'inventer un numéro local.
+ * The numbers are those of the two countries where the people come from. users
+ * today; elsewhere, we refer to findahelpline.com rather than
+ * inventing a local number.
  */
 const DISTRESS_BLOCK = `## If someone expresses distress or self-harm
 - If a message expresses suicidal thoughts, self-harm, or acute distress, STOP the task. Do not
@@ -849,11 +848,11 @@ ${DISTRESS_BLOCK}`;
 }
 
 /**
- * L'HEURE de l'utilisateur (MIN-185). Le serveur ne peut pas la deviner : le
- * fuseau vit dans le navigateur, et sans lui « tous les lundis à 13 h » part en
- * UTC — une routine décalée de deux heures, tous les lundis, sans que rien ne
- * le dise. Le bloc porte aussi la date du jour : « le premier de chaque mois »
- * a besoin de savoir quand on est.
+ * THE TIME of the user (MIN-185). The server cannot guess it: the
+ * time zone lives in the browser, and without it "every Monday at 1 p.m." goes to
+ * UTC — a routine shifted by two hours, every Monday, without anything telling
+ *. The block also bears today's date: "the first of each month"
+ * needs to know when it is.
  */
 export function buildClockBlock(timezone: string, now: Date = new Date()): string {
   let local: string;
@@ -864,7 +863,7 @@ export function buildClockBlock(timezone: string, now: Date = new Date()): strin
       timeStyle: "short",
     }).format(now);
   } catch {
-    // Fuseau illisible : on ne l'invente pas. Le tool refusera, et son message
+    // Illegible time zone: we don't invent it. The tool will refuse, and its message
     // dira quoi passer.
     return "";
   }
@@ -893,8 +892,8 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
       );
     }
   } else if (ctx.issueIds?.length) {
-    // Sélection groupée d'un board : la liste EST la demande ("ces tickets"),
-    // donc chaque ticket arrive avec son id — aucune recherche à refaire.
+    // Group selection of a board: the list IS the request ("these tickets"),
+    // so each ticket arrives with its id — no search to do again.
     lines.push(
       `- Selected issues (${ctx.issueIds.length}):`,
       ...ctx.issueIds.map((id, i) => {
@@ -938,8 +937,8 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
       `When the user says "mon cycle", "ma semaine", "remplis mon cycle" or a steering phrase like "priorise les fixs UI", they mean this cycle — use get_cycle / fill_cycle / add_issues_to_cycle / remove_issues_from_cycle. Steering phrases become fill_cycle weight boosts, never forced picks. Speak in effort sizes or % of capacity, never raw points.`
     );
   }
-  // Contexte ÉPINGLÉ : l'utilisateur l'a désigné lui-même (bouton @ du
-  // composer), il prime donc sur ce que la page affichait par hasard.
+  // PINNED context: the user designated it himself (@ button on
+  // compose), it therefore takes precedence over what the page displayed by chance.
   if (ctx.pinned?.length) {
     lines.push(
       `- Pinned by the user for this message (chosen explicitly, not derived from the page):`,

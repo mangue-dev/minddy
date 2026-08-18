@@ -17,13 +17,12 @@ export const NOTIF_FEEDBACK_META_KEY = "notif_feedback";
 export const NOTIF_PAGE_META_KEY = "notif_page";
 
 /** One toggle per trigger family — finer grain would just be noise to manage.
- *  Order = the settings UI's, and the one Numo's tool schema advertises.
+ * Order = the settings UI's, and the one Numo's tool schema advertises.
  *
- *  Les ROUTINES et les PULL REQUESTS ont la leur depuis qu'elles annoncent autre
- *  chose que des runs : une routine tourne toute seule tous les matins, et une
- *  pull request qui s'ouvre concerne tout le projet, Numo ou pas. Les laisser
- *  sous « agent » revenait à ne pouvoir couper le bruit qu'en coupant aussi les
- *  questions que Numo pose. */
+ * ROUTINES and PULL REQUESTS have their own since they advertise something else
+ * something other than runs: a routine runs by itself every morning, and a pull request that opens concerns the entire project, Numo or not. Leaving them
+ * under “agent” meant being able to cut through the noise only by also cutting out the
+ * questions that Numo asks. */
 export const NOTIFICATION_CATEGORIES = [
   "assigned",
   "mention",
@@ -90,30 +89,30 @@ export function categoryOfNotificationType(
     case "agent_done":
     case "agent_question":
     case "agent_failed":
-    // Une chaîne d'automatisation, c'est Numo qui travaille : même bascule que
-    // ses runs, plutôt qu'une catégorie de plus à gérer pour rien.
+    // An automation chain, Numo is working: same switch as
+    // its runs, rather than one more category to manage for nothing.
     case "automation_paused":
     case "automation_stopped":
       return "agent";
     case "routine_done":
       return "routine";
-    // Toute la vie d'une pull request sous la même bascule — ouverte, relue,
-    // fusionnée. Une seule des trois sous un autre interrupteur serait un piège :
-    // on coupe « les pull requests » et il en reste.
+    // The entire life of a pull request under the same switch — opened, reread,
+    // merged. Only one of the three under another switch would be a trap:
+    // we cut “pull requests” and some remains.
     case "pr_opened":
     case "pr_reviewed":
     case "pr_merged":
       return "pullRequest";
     case "feedback_new":
       return "feedback";
-    // Les deux signaux du WIKI sous la même bascule (MIN-278) : être cité dans
-    // une page et voir l'agent y écrire sont le même sujet — « ce qui bouge
-    // dans les pages ». La mention de page ne rejoint PAS « Mentions », qui
-    // parle des tickets, ni l'écriture d'agent « Numo », qui parle des runs :
-    // couper l'un pour l'autre serait couper deux fois trop.
-    // Le fil d'une page (MIN-282) rejoint les deux autres : c'est encore « ce
-    // qui bouge dans les pages ». Le mettre sous « Commentaires » aurait voulu
-    // dire qu'une bascule pensée pour les tickets décide du wiki.
+    // The two WIKI signals under the same flip-flop (MIN-278): be cited in
+    // a page and seeing the agent write on it are the same subject — “what moves
+    // in the pages”. The page mention does NOT join “Mentions”, which
+    // talks about tickets, nor the “Numo” agent writing, which talks about runs:
+    // cutting one for the other would be cutting twice too much.
+    // The thread of a page (MIN-282) joins the other two: it is again “this
+    // which moves in the pages”. Putting it under “Comments” would have liked
+    // say that a toggle designed for tickets decides the wiki.
     case "page_mention":
     case "page_agent_edit":
     case "page_comment":
@@ -122,13 +121,13 @@ export function categoryOfNotificationType(
 }
 
 /**
- * La bascule qui gouverne une notification — le type NE SUFFIT PAS.
+ * The toggle that governs a notification — type IS NOT ENOUGH.
  *
- * Une routine annonce la fin de ses passages avec les types de l'agent
- * (`agent_done` quand elle a ouvert une pull request, `agent_failed` quand elle
- * s'est arrêtée) : seul `routine_id` distingue son passage du run qu'on a lancé
- * à la main. Sans ce détour, couper « Routines » aurait laissé passer l'échec du
- * lendemain matin — la moitié de ce qu'on voulait couper.
+ * A routine announces the end of its passes with the agent's types
+ * (`agent_done` when it has opened a pull request, `agent_failed` when she
+ * stopped): only `routine_id` distinguishes her passage from the run that we launched
+ * by hand. Without this detour, cutting “Routines” would have missed the failure of
+ * the next morning — half of what we wanted to cut.
  */
 export function categoryOfNotification(n: {
   type: NotificationType;

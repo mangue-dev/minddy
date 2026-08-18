@@ -21,17 +21,17 @@ export async function GET(request: NextRequest) {
       .select("id, project_id, invited_by, created_at")
       .eq("invited_user_id", auth.user.id)
       .eq("status", "pending")
-      // `status = 'pending'` ne dit pas qu'une invitation est vivante : rien ne
-      // repasse les périmées à un autre statut (MIN-197 pose `expires_at` à 30
-      // jours, la purge de `retention.ts` n'efface qu'à 90). Sans ce filtre, une
-      // invitation morte reste dans l'inbox pendant deux mois.
+      // `status = 'pending'` does not say that an invitation is alive: nothing
+      // reverts the expired ones to another status (MIN-197 sets `expires_at` to 30
+      // days, purging `retention.ts` only clears at 90). Without this filter,
+      // Dead invitation remains in the inbox for two months.
       .gt("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false });
 
-  // Le rattrapage tourne EN PARALLÈLE de la lecture, pas avant : dans le cas
-  // courant — rien à réclamer — il ne coûte qu'une sonde indexée qui ne rallonge
-  // aucune horloge, et la lecture est déjà bonne. Ce n'est que s'il a rattaché
-  // quelque chose que la première lecture est périmée et qu'on la refait.
+  // The catch-up runs IN PARALLEL of the reading, not before: in the case
+  // current - nothing to claim - it only costs an indexed probe which does not extend
+  // no clock, and the reading is already good. It is only if he has attached
+  // something that the first reading is out of date and we do it again.
   const [claimed, first] = await Promise.all([
     claimPendingInvitationsLate(auth.user),
     listMine(),
@@ -54,8 +54,8 @@ export async function GET(request: NextRequest) {
   const [{ data: projects }, invitersById, seeds] = await Promise.all([
     service.from("projects").select("id, name, key").in("id", projectIds),
     fetchAuthUsersById(service, inviterIds),
-    // L'inbox montre le portrait de qui invite : un nom seul ne dit pas
-    // grand-chose de quelqu'un qu'on n'a pas encore rejoint.
+    // The inbox shows the portrait of who is inviting: a name alone does not say
+    // much about someone we have not joined yet.
     fetchAvatarSeeds(service, inviterIds),
   ]);
 
@@ -109,11 +109,11 @@ export async function PATCH(request: NextRequest) {
     .eq("id", invitationId)
     .maybeSingle();
 
-  // Périmée = introuvable. C'est le SEUL endroit où l'expiration décide d'un
-  // accès : `attachPendingInvitations` la respecte déjà pour les adresses sans
-  // compte, mais une invitation née avec son `invited_user_id` (l'adresse avait
-  // déjà un compte) n'y passe jamais — sans cette garde, elle s'accepte encore
-  // trente jours après sa mort.
+  // Expired = not found. This is the ONLY place where exhalation decides a
+  // access: `attachPendingInvitations` already respects it for addresses without
+  // account, but an invitation born with its `invited_user_id` (the address had
+  // already an account) never goes there — without this guard, it still accepts itself
+  // thirty days after his death.
   const expired =
     invitation?.expires_at != null &&
     Date.parse(invitation.expires_at as string) <= Date.now();
@@ -124,21 +124,21 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: t("invitationNotForYou") }, { status: 403 });
   }
 
-  // Garde en profondeur (MIN-325). La ligne d'invitation était modifiable par
-  // son invité via PostgREST — `project_id` compris — ce qui suffisait à
-  // rediriger une invitation vers le projet d'un autre et à s'y inscrire par
-  // cette route. La policy fautive est supprimée (20261215090000), mais une
-  // policy se réintroduit par distraction : on revérifie ici que la ligne EST
-  // celle que l'application a écrite.
+  // Depth guard (MIN-325). The invitation line was editable by
+  // his guest via PostgREST — `project_id` included — which was enough to
+  // redirect an invitation to someone else's project and register there by
+  // this road. The faulty policy is deleted (20261215090000), but a
+  // policy is reintroduced by distraction: we recheck here that the line IS
+  // the one that the application wrote.
   //
-  //   - l'adresse invitée est celle du compte : une invitation naît soit avec
-  //     l'`invited_user_id` du compte qui porte cette adresse, soit rattachée
-  //     plus tard sur l'email VÉRIFIÉ de la session — dans les deux cas les
-  //     deux colonnes désignent la même personne, et une divergence ne peut
-  //     venir que d'une écriture qui n'est pas la nôtre ;
-  //   - qui invite possède le projet : inviter est réservé au owner
-  //     (`inviteMember`), donc un `invited_by` qui n'est pas l'owner du
-  //     `project_id` de la ligne signe exactement l'invitation détournée.
+  // - the invited address is that of the account: an invitation is born either with
+  // the `invited_user_id` of the account which bears this address, is attached
+  // later on the VERIFIED email of the session — in both cases the
+  // two columns designate the same person, and a discrepancy cannot
+  // come only from a writing that is not ours;
+  // - who invites owns the project: inviting is reserved for the owner
+  // (`inviteMember`), therefore a `invited_by` which is not the owner of the
+  // `project_id` of the line signs exactly the diverted invitation.
   const sessionEmail = auth.user.email?.trim().toLowerCase();
   const invitedEmail = (invitation.invited_email as string | null)
     ?.trim()

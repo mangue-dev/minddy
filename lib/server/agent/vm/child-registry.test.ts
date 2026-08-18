@@ -14,16 +14,16 @@ import {
 } from "./child-registry";
 
 /**
- * MIN-293 — LE REGISTRE DE CE QUI SURVIT AU HARNESS.
+ * MIN-293 — THE RECORD OF WHAT SURVIVES THE HARNESS.
  *
- * Le cas qu'il traite est celui où plus personne ne parle : un harness tué net
- * (⌘Q, plantage du main, `SIGKILL`) laisse derrière lui un serveur opencode qui
- * tient un port — et le tour suivant échoue sur un `listen` refusé, à un endroit
- * qui ne ressemble en rien à sa cause.
+ * The case it deals with is the one where no one speaks anymore: a harness killed net
+ * (⌘Q, hand crash, `SIGKILL`) leaves behind an opencode server which
+ * holds a port — and the next round fails on a refused `listen`, in a place
+ * which in no way resembles its cause.
  *
- * Les tests qui comptent sont donc ceux du fichier ABÎMÉ (c'est l'ordinaire ici)
- * et ceux du tueur : un `process.kill` sur le mauvais numéro tue quelque chose de
- * la session de quelqu'un, et ça ne se rattrape pas.
+ * The tests that count are therefore those of the DAMAGED file (this is the usual here)
+ * and those of the killer: a `process.kill` on the wrong number kills something in
+ * someone's session, and it doesn't recover.
  */
 
 let dir: string;
@@ -44,8 +44,8 @@ describe("parseChildRegistry", () => {
   });
 
   it("ÉCARTE 0, 1 et les négatifs avant qu'ils atteignent le tueur", () => {
-    // `0` signale tout le groupe de l'appelant, `1` est launchd, un négatif
-    // signale un groupe entier. Aucun ne peut venir d'un `spawn` légitime, et
+    // `0` reports the entire caller group, `1` is launchd, a negative
+    // report an entire group. None can come from a legitimate `spawn`, and
     // chacun serait catastrophique.
     for (const pid of [0, 1, -1, -4242, 1.5, "4242"]) {
       expect(parseChildRegistry({ children: [{ pid, kind: "opencode" }] })).toEqual([]);
@@ -115,8 +115,8 @@ describe("killTargets", () => {
   ];
 
   it("signale un job de fond à son GROUPE, le serveur opencode à son pid", () => {
-    // Un job de fond part en `setsid` : il est chef de sa propre session. Tuer
-    // le seul chef laisserait le `npm run dev` qu'il a lancé, port 3000 tenu.
+    // A background job goes to `setsid`: he is head of his own session. Kill
+    // the only leader would leave the `npm run dev` he launched, port 3000 held.
     expect(killTargets(children, { pid: 1 })).toEqual([
       { signalTo: -600, kind: "background", label: "npm run dev" },
       { signalTo: 500, kind: "opencode", label: "serve" },
@@ -129,8 +129,8 @@ describe("killTargets", () => {
   });
 
   it("ne se tue JAMAIS lui-même, ni son parent", () => {
-    // Un registre corrompu qui porterait le pid du main process ferait quitter
-    // l'app en croyant faire le ménage.
+    // A corrupt register which carries the pid of the main process will cause
+    // the app while thinking it's cleaning.
     const targets = killTargets(children, { pid: 500, ppid: 600 });
     expect(targets).toEqual([]);
   });

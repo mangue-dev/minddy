@@ -13,15 +13,15 @@ import { insertStatEvents } from "@/lib/server/stat-events";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
- * Cœur du scratchpad perso (Notes) — la note markdown UNIQUE de l'utilisateur.
- * Partagé par la route API (`/api/me/scratchpad`, client RLS de l'utilisateur)
- * et les tools MCP (client service). Aucune notion de projet : c'est personnel.
+ * Core of the personal scratchpad (Notes) — the user's UNIQUE markdown note.
+ * Shared by the API route (`/api/me/scratchpad`, user's RLS client)
+ * and MCP tools (client service). No notion of project: it's personal.
  *
- * Deux écrivains (l'éditeur WYSIWYG + l'agent via le MCP) → chaque ligne porte un
- * `rev` (compteur de version). Les écritures passent par un compare-and-swap sur
- * ce `rev` : une écriture basée sur une version périmée est REJETÉE (conflicted)
- * plutôt que d'écraser en silence. Le client fusionne 3-way (lib/scratchpad.ts)
- * et réessaie ; l'agent MCP relit et réapplique.
+ * Two writers (the WYSIWYG editor + the agent via the MCP) → each line carries a
+ * `rev` (version counter). Writes go through a compare-and-swap on
+ * this `rev`: a write based on a stale version is REJECTED (conflicted)
+ * rather than silently overwritten. The client merges 3-way (lib/scratchpad.ts)
+ * and tries again; MCP agent rereads and reapplies.
  */
 
 export interface ScratchpadState {
@@ -72,17 +72,17 @@ export async function getScratchpad(
   return data ? toState(data) : EMPTY;
 }
 
-/** Longueur max du libellé snapshoté dans le ledger de stats. */
+/** Max length of the label snapshotted in the stats ledger. */
 const MAX_TASK_TEXT = 500;
 
 /**
- * Trace dans `stat_events` chaque tâche qui vient d'être COCHÉE dans la note.
+ * Trace in `stat_events` each task that has just been CHECKED in the note.
  *
- * Le carnet est une note libre — on y ajoute, coche et supprime des tâches en
- * continu, et « Retirer les tâches terminées » les efface d'un coup — donc le
- * compteur ne peut PAS être dérivé du contenu courant : seule une trace
- * append-only survit à un nettoyage. Best-effort comme `insertStatEvents` :
- * jamais bloquant pour la sauvegarde de la note.
+ * The notebook is a free note - you add, check and delete tasks in
+ * continuously, and "Remove completed tasks" erases them at once - so the
+ * counter cannot be derived from the current content: only an append-only trace
+ * survives a cleanup. Best-effort like `insertStatEvents` :
+ * never blocking for saving the note.
  */
 async function recordTaskCompletions(
   userId: string,
@@ -93,9 +93,9 @@ async function recordTaskCompletions(
   if (checked.length === 0) return;
   const occurredAt = new Date().toISOString();
   try {
-    // Le ledger n'est écrit que par le service client (aucune policy insert) ;
-    // s'il n'est pas configuré, `getServiceClient` jette — hors de question de
-    // faire échouer la sauvegarde de la note pour une statistique.
+    // The ledger is only written by customer service (no policy insert);
+    // if not configured, `getServiceClient` throws — out of the question
+    // fail to save the note for a statistic.
     await insertStatEvents(
       getServiceClient(),
       checked.map((text) => ({
@@ -201,8 +201,8 @@ export async function mutateScratchpad(
   return { status: "conflict" };
 }
 
-/** Un changement d'état demandé : `task_index` 0-based en ordre de document
-    (le `tasks` d'une lecture du carnet). */
+/** A requested state change: `task_index` 0-based in document order
+ (the `tasks` of a notebook reading). */
 export interface ScratchpadTaskChange {
   task_index: number;
   state: PlanTaskState;
@@ -210,20 +210,21 @@ export interface ScratchpadTaskChange {
 
 export type ScratchpadTaskChangeResult =
   | { status: "ok"; state: ScratchpadState }
-  /** `expectedRev` dépassé : les index de l'appelant peuvent pointer ailleurs. */
+  /** `expectedRev` exceeded: the caller's indexes may point elsewhere. */
   | { status: "stale_rev"; rev: number }
-  /** Un index hors bornes rejette TOUT le lot (all-or-nothing). */
+  /** An out-of-bounds index rejects the ENTIRE batch (all-or-nothing). */
   | { status: "out_of_range"; index: number; total: number }
-  /** Édition concurrente pendant l'écriture (CAS perdu) : relire et réessayer. */
+  /** Concurrent editing while writing (CAS lost): reread and try again. */
   | { status: "conflict" };
 
 /**
- * Bascule l'état d'une ou plusieurs tâches EXISTANTES du carnet sans réécrire le
- * doc — la voie précise pour cocher. Partagé par le tool MCP
- * `minddy_update_scratchpad_task` et le tool `update_scratchpad_task` de l'agent
- * de code (MIN-84) : mêmes index, mêmes gardes. `setTaskState` ne réécrit que le
- * marqueur d'une ligne (adressée via `task.line`), le texte reste intact ;
- * l'écriture part sous CAS sur le `rev` relu ici même.
+ * Toggles the state of one or more EXISTING tasks in the notebook without rewriting the
+ * doc — the precise way to check. Shared by the MCP
+ * `minddy_update_scratchpad_task` tool and the agent
+ * tool
+ * code (MIN-84): same indexes, same guards. `setTaskState` only rewrites the
+ * marker of a line (addressed via `task.line`), the text remains intact;
+ * the writing goes under CAS on the `rev` reread here.
  */
 export async function applyScratchpadTaskChanges(
   client: SupabaseClient,
@@ -232,9 +233,9 @@ export async function applyScratchpadTaskChanges(
   expectedRev?: number
 ): Promise<ScratchpadTaskChangeResult> {
   const current = await getScratchpad(client, userId);
-  // Garde anti-index périmés : si la note a avancé depuis la lecture dont
-  // viennent les index, le même index peut désigner une autre tâche — on refuse
-  // plutôt que de basculer la mauvaise ligne.
+  // Anti-expired index guard: if the note has advanced since the reading of which
+  // come the indexes, the same index can designate another task — we refuse
+  // rather than switching the wrong line.
   if (expectedRev !== undefined && current.rev !== expectedRev) {
     return { status: "stale_rev", rev: current.rev };
   }

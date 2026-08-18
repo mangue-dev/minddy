@@ -1,21 +1,21 @@
 /**
- * Le pont entre la page et l'app de bureau (MIN-291) — la surface ENTIÈRE.
+ * The bridge between page and desktop app (MIN-291) — the ENTIRE surface.
  *
- * Le renderer charge du code distant : il ne doit pouvoir appeler que ce qui est
- * exposé ici, nommément, par `contextBridge`. D'où la règle que ce fichier
- * s'impose : **il se lit en trente secondes**. Une liste fermée, aucun membre qui rende
- * un objet Node, aucun qui PRENNE un chemin de fichier, aucun qui exécute quoi
+ * The renderer loads remote code: it must only be able to call what is
+ * exposed here, namely, by `contextBridge`. Hence the rule that this file
+ * is essential: **it can be read in thirty seconds**. A closed list, no member who returns
+ * a Node object, none that TAKES a file path, none that executes what
  * que ce soit.
  *
- * ⚠ L'asymétrie de la dernière règle est le cœur du dossier local (MIN-359), et
- * elle est délibérée : `localRepo` **rend** un chemin, pour qu'un écran puisse
- * dire quel dossier est attaché. Aucun membre n'en **accepte** un. Un chemin ne
- * peut donc entrer dans l'app que par un panneau système, c'est-à-dire par un
- * geste humain — le code distant ne peut pas désigner `~/.ssh` en écrivant une
- * chaîne.
+ * ⚠ The asymmetry of the last rule is the core of the local file (MIN-359), and
+ * it is deliberate: `localRepo` **makes** a path, so that a screen can
+ * tell which folder is attached. No member **accepts** one. A path
+ * can therefore enter the app only through a system panel, that is to say through a
+ * human gesture — remote code cannot designate `~/.ssh` by writing a
+ * chain.
  *
- * L'implémentation vit dans desktop/src/preload.ts et n'a pas le droit d'en
- * exposer davantage ; ce type est ce que les deux côtés relisent.
+ * The implementation lives in desktop/src/preload.ts and has no right to
+ * expose more; this guy is what both sides read again.
  */
 
 import type { DesktopAuthLink } from "@/lib/desktop/auth-link";
@@ -28,26 +28,26 @@ import type { LocalRepoState } from "@/lib/desktop/local-repo";
 import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
 
 export interface DesktopBridge {
-  /** La version de la coquille (`app.getVersion()`), pour l'afficher. */
+  /** The version of the shell (`app.getVersion()`), to display it. */
   readonly version: string;
   /**
-   * Ouvre une URL dans le navigateur du système. C'est par là que passe le tour
-   * d'authentification, et c'est le main process qui refuse tout ce qui n'est
-   * pas `http(s)` — le renderer ne décide pas de ce qu'on donne à `open`.
+   * Opens a URL in the system browser. This is where the trick goes
+   * authentication, and it is the main process which refuses everything that is not
+   * not `http(s)` — the renderer does not decide what we give to `open`.
    */
   openExternal(url: string): void;
   /**
-   * Le retour du tour d'authentification (`minddy://auth?…`). Rend son
-   * désabonnement. Le lien reçu AVANT l'abonnement est rejoué à l'abonnement :
-   * un clic sur le lien du mail peut lancer l'app, et le main process a alors
-   * son deep link bien avant que React ne soit monté.
+   * The return of the authentication round (`minddy://auth?…`). Makes his
+   * unsubscribe. The link received BEFORE the subscription is replayed upon subscription:
+   * a click on the email link can launch the app, and the main process then
+   * its deep link long before React was built.
    */
   onAuthLink(handler: (link: DesktopAuthLink) => void): () => void;
-  /** Le compteur du dock. `0` retire la pastille. */
+  /** The dock counter. `0` removes the tablet. */
   setBadgeCount(count: number): void;
   /**
-   * Inscrit le bundle signé auprès d'APNs et rend son token courant. Optionnel
-   * pour que le site déployé reste compatible avec les anciennes coquilles.
+   * Registers the signed bundle with APNs and makes its token current. Optional
+   * so that the deployed site remains compatible with the old shells.
    */
   registerForPushNotifications?(options?: { activate?: boolean }): Promise<{
     token: string;
@@ -55,110 +55,110 @@ export interface DesktopBridge {
   } | null>;
   /** Retire l'inscription APNs de cette installation. */
   unregisterForPushNotifications?(): Promise<void>;
-  /** Ouvre directement la fiche Notifications de minddy dans Réglages Système. */
+  /** Directly opens minddy's Notifications sheet in System Settings. */
   openNotificationSettings?(): void;
   /**
-   * DEMANDE que les boutons macOS (fermer / réduire / plein écran) soient
-   * montrés ou cachés.
+   * REQUEST that the macOS buttons (close/minimize/full screen) be
+   * shown or hidden.
    *
-   * Ils vivent DANS la barre latérale, à la place de la marque — pas dans une
-   * bande à eux, qui pousserait toute la colonne vers le bas et trahirait la
-   * couture. Repliée au rail, ses 56 px ne les tiennent plus : on les retire,
-   * plutôt que de les laisser déborder sur la navigation. La fenêtre reste
-   * fermable au clavier (⌘W, ⌘Q) et par le menu.
+   * They live IN the sidebar, in place of the brand — not in a
+   * band of theirs, which would push the whole column down and betray the
+   * sewing. Folded back to the rail, its 56 px no longer hold them: we remove them,
+   * rather than letting them spill over into navigation. The window remains
+   * can be closed using the keyboard (⌘W, ⌘Q) and via the menu.
    *
-   * C'est une DEMANDE et pas un ordre, et le main process la refuse dans un cas
-   * qui compte : **en plein écran il ne cache jamais rien**, sans quoi on
-   * retirerait le seul moyen d'en sortir à la souris. Ce que les boutons font
+   * It is a REQUEST and not an order, and the main process refuses it in one case
+   * which matters: **in full screen it never hides anything**, otherwise we
+   * would take away the mouse's only way out. What the buttons do
    * vraiment revient par `onWindowButtons`.
    */
   setWindowButtonsVisible(visible: boolean): void;
   /**
-   * Ce que les boutons font VRAIMENT — la seule chose sur laquelle la mise en
-   * page ait le droit de s'appuyer. Rend son désabonnement, et rejoue l'état
-   * courant à l'abonnement.
+   * What the buttons REALLY do — the only thing the focus on
+   * page has the right to rely. Returns unsubscribe, and replays the status
+   * current subscription.
    *
-   * Deux entrées, une seule connue de la page : la barre latérale demande, et
-   * le plein écran décide sans elle. Une mise en page qui suit la demande
-   * plutôt que le résultat laisse un trou à la place des boutons dès qu'on
-   * passe en plein écran — c'était le cas.
+   * Two entries, only one known to the page: the sidebar asks, and
+   * the full screen decides without it. A layout that follows the request
+   * rather than the result leaves a hole in place of the buttons as soon as we
+   * goes full screen — it did.
    */
   onWindowButtons(handler: (visible: boolean) => void): () => void;
   /**
-   * Remet la fenêtre au premier plan. Le clic sur une notification native est
-   * livré au RENDERER (c'est lui qui l'a émise) et ne réveille rien tout seul :
-   * sans ce membre, cliquer sur la bannière naviguerait dans une fenêtre restée
-   * derrière le navigateur.
+   * Returns the window to the front. Clicking on a native notification is
+   * delivered to RENDERER (it was he who issued it) and does not wake up anything on its own:
+   * without this member, clicking on the banner would navigate to a window remaining
+   * behind the browser.
    */
   focus(): void;
   /**
-   * Change de CANAL — la version de minddy que la fenêtre montre (MIN-352).
+   * Change CHANNEL — the version of minddy that the window shows (MIN-352).
    *
-   * En écriture seulement, et c'est voulu : la page n'a pas à demander dans quel
-   * canal elle est, elle le lit sur sa propre origine
-   * (`desktopChannelForOrigin`, lib/desktop/channel.ts). Un canal recopié ici
-   * serait un second état à tenir synchrone avec l'URL réellement chargée.
+   * In writing only, and this is intentional: the page does not have to ask in which
+   * channel she is, she reads it on her own origin
+   * (`desktopChannelForOrigin`, lib/desktop/channel.ts). A channel copied here
+   * would be a second state to keep synchronous with the URL actually loaded.
    *
-   * L'appel ne rend pas la main : le main process retient le choix, puis
-   * recharge la fenêtre sur l'autre origine. Ce document-ci n'existe plus après.
+   * The call does not return control: the main process retains the choice, then
+   * reloads the window on the other origin. This document no longer exists afterward.
    */
   setChannel(channel: DesktopChannel): void;
   /**
-   * Où en est la mise à jour de la coquille (MIN-353). Rend son désabonnement,
-   * et rejoue l'état courant à l'abonnement — sans quoi une page montée après le
-   * téléchargement (c'est-à-dire toutes, une fois la fenêtre rechargée) ne
-   * saurait jamais qu'une version l'attend.
+   * Where is the shell update (MIN-353). Returns his unsubscription,
+   * and replays the current state at subscription — otherwise a page mounted after the
+   * download (that is to say all, once the window is reloaded)
+   * would never know that a version is waiting for him.
    *
-   * Les valeurs et leurs règles sont dans `lib/desktop/update-status.ts`.
+   * The values ​​and their rules are in `lib/desktop/update-status.ts`.
    */
   onUpdateStatus(handler: (status: DesktopUpdateStatus) => void): () => void;
   /**
-   * DEMANDE l'installation de la mise à jour téléchargée.
+   * REQUEST the installation of the downloaded update.
    *
-   * Ce n'est pas un ordre, et la nuance est tout l'intérêt du membre : le main
-   * process rouvre la boîte native — « Install and Relaunch » / « Later » — au
-   * lieu de relancer l'app sous les doigts de qui vient de cliquer. La page
-   * annonce et rappelle ; c'est le système qui demande le dernier oui, et lui
-   * seul sait si le fichier est encore là.
+   * It's not an order, and the nuance is the whole point of the member: the hand
+   * process reopens the native box — “Install and Relaunch” / “Later” — at
+   * instead of relaunching the app under the fingers of the person who has just clicked. The page
+   * announces and reminds; it is the system which asks for the last yes, and it
+   * only knows if the file is still there.
    *
-   * Sans effet quand rien n'est prêt.
+   * No effect when nothing is ready.
    */
   installUpdate(): void;
   /**
-   * Le dossier de CETTE machine attaché à un projet (MIN-359), **revalidé à
-   * chaque appel** contre le dépôt que le projet a lié.
+   * The file for THIS machine attached to a project (MIN-359), **revalidated at
+   * each appeal** against the deposit that the project has linked.
    *
-   * Un chemin retenu ne prouve rien — le dossier a pu être déplacé, le disque
-   * démonté, le dépôt re-lié ailleurs. Répondre « attaché » sur la foi du
-   * fichier de réglages ferait partir un run vers un dossier qui n'existe plus,
-   * et la panne n'apparaîtrait qu'au premier tour, sur la machine, sans log.
+   * A retained path proves nothing — the folder may have been moved, the disk
+   * dismantled, the deposit re-linked elsewhere. Answer “attached” on the basis of
+   * settings file would send a run to a folder that no longer exists,
+   * and the failure would only appear on the first lap, on the machine, without logs.
    *
-   * `fullName` est le `owner/repo` du projet : c'est la page qui le connaît (le
-   * main process n'a pas de session), et c'est bien elle qui décide contre quoi
-   * on valide. Ce n'est pas une frontière de sécurité — le dossier vient d'un
-   * geste humain dans un panneau système — mais un garde-fou d'inattention.
+   * `fullName` is the `owner/repo` of the project: it is the page which knows it (the
+   * main process does not have a session), and it is she who decides against what
+   * we validate. This is not a security border — the file comes from a
+   * human gesture in a system panel — but a safeguard against inattention.
    */
   localRepo(input: { projectId: string; fullName: string }): Promise<LocalRepoState>;
   /**
-   * Ouvre le panneau système et attache le dossier choisi à ce projet.
+   * Open the system panel and attach the chosen folder to this project.
    *
-   * **C'est le SEUL chemin par lequel un chemin de fichier entre dans l'app.**
-   * Un dossier refusé (pas un dépôt, pas le bon) n'est pas rangé : l'appel rend
-   * le verdict pour que l'écran le dise, et l'attachement précédent reste en
-   * place. Une annulation rend l'état courant, comme si rien ne s'était passé.
+   * **This is the ONLY way a file path enters the app.**
+   * A refused file (not a deposit, not the correct one) is not filed: the appeal returns
+   * the verdict so that the screen says it, and the previous attachment remains in
+   * place. A rollback returns the state to current, as if nothing had happened.
    */
   chooseLocalRepo(input: {
     projectId: string;
     fullName: string;
   }): Promise<LocalRepoState>;
-  /** Oublie le dossier attaché à ce projet. Rend l'état d'après. */
+  /** Forget the folder attached to this project. Returns the following state. */
   forgetLocalRepo(input: { projectId: string }): Promise<LocalRepoState>;
-  /** Les branches déjà présentes dans le dépôt attaché. */
+  /** The branches already present in the attached repository. */
   localRepoBranches?(input: { projectId: string; fullName: string }): Promise<string[]>;
   /**
-   * Lit les modèles exposés par Ollama ou un endpoint OpenAI-compatible sur la
-   * boucle locale. Le main process refuse toute URL qui ne pointe pas vers
-   * loopback, et ne rend jamais autre chose que des ids de modèles.
+   * Reads models exposed by Ollama or an OpenAI-compatible endpoint on the
+   * local loop. The main process refuses any URL that does not point to
+   * loopback, and never returns anything other than template ids.
    */
   discoverLocalModels(input: LocalModelDiscoveryInput): Promise<LocalModelDiscoveryResult>;
 }
@@ -169,17 +169,17 @@ declare global {
   }
 }
 
-/** Le pont, ou `null` dans un navigateur (et pendant le rendu serveur). */
+/** The bridge, or `null` in a browser (and during server rendering). */
 export function getDesktopBridge(): DesktopBridge | null {
   if (typeof window === "undefined") return null;
   return window.minddy ?? null;
 }
 
 /**
- * Tourne-t-on dans l'app de bureau ?
+ * Are we running in the desktop app?
  *
- * La présence du pont, jamais l'user agent : le suffixe `minddy-desktop/…` est
- * là pour les logs du serveur, et un user agent se falsifie depuis la page.
+ * The presence of the bridge, never the user agent: the suffix `minddy-desktop/…` is
+ * there for the server logs, and a user agent fakes itself from the page.
  */
 export function isDesktop(): boolean {
   return getDesktopBridge() !== null;

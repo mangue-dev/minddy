@@ -7,30 +7,29 @@ import {
 } from "@/lib/agent-providers";
 
 /**
- * PROBE D'UNE CLÉ BYOK (MIN-344) — le fournisseur reconnaît-il cette clé ?
+ * PROBE A BYOK KEY (MIN-344) — does the provider recognize this key?
  *
- * Déclarer une clé suffisait à passer en usage illimité. On présente donc la clé
- * au fournisseur AVANT d'en tirer la moindre conséquence de facturation : un
- * appel authentifié, lu pour son STATUT et rien d'autre (on ne garde ni la liste
- * de modèles ni le corps de la réponse — le catalogue a déjà son propre chemin,
- * avec son cache).
+ * Declaring a key was enough to switch to unlimited use. We therefore present the key
+ * to the supplier BEFORE drawing any billing consequences: an authenticated call, read for its STATUS and nothing else (we keep neither the list
+ * of models nor the body of the response — the catalog already has its own path,
+ * with its cache).
  *
- * Trois verdicts, et la nuance compte :
- *   • `valid`     — la clé a répondu, on peut lever les plafonds ;
- *   • `invalid`   — le fournisseur la REFUSE (401/403) : c'est un fait, on le dit
- *                   à l'utilisateur au lieu d'enregistrer une clé morte ;
- *   • `unknown`   — panne réseau, 5xx, endpoint absent : on ne sait pas. La clé
- *                   s'enregistre, mais sans date de validation — donc sans lever
- *                   de plafond, et `getUserByok` retentera plus tard.
+ * Three verdicts, and the nuance counts:
+ * • `valid` — the key responded, we can raise the ceilings;
+ * • `invalid` — the supplier REFUSES it (401/403): it's a fact, we say
+ * to the user instead of registering a dead key;
+ * • `unknown` — network failure, 5xx, endpoint missing: we don't know. The key
+ * is registered, but without validation date — therefore without raising
+ * the ceiling, and `getUserByok` will try again later.
  *
- * `unknown` est le repli SÛR des deux côtés : on ne refuse pas une bonne clé sur
- * un hoquet d'OpenRouter, et on ne crédite pas d'illimité une clé qu'on n'a pas
- * vue marcher.
+ * `unknown` is the SAFE fallback on both sides: you cannot refuse a good key on
+ * a hiccup from OpenRouter, and we do not credit unlimited a key that we do not have
+ * seen working.
  */
 
 export type ByokProbeVerdict = "valid" | "invalid" | "unknown";
 
-/** Au-delà, on ne sait pas — et on ne fait pas attendre l'écran des réglages. */
+/** Beyond that, we don't know — and we don't make you wait for the settings screen. */
 const PROBE_TIMEOUT_MS = 8000;
 
 interface ProbeRequest {
@@ -39,11 +38,11 @@ interface ProbeRequest {
 }
 
 /**
- * L'appel authentifié le moins cher de chaque fournisseur.
+ * The cheapest authenticated call from each provider.
  *
- * OpenRouter a mieux qu'un `/models` — qui est PUBLIC chez lui, et répondrait
- * 200 à une clé bidon : `/key` décrit la clé présentée, donc n'existe que pour
- * une clé qui existe. Les autres passent par leur listing, qui exige la clé.
+ * OpenRouter has better than a `/models` — which is PUBLIC at home, and would respond
+ * 200 to a bogus key: `/key` describes the key presented, so only exists for
+ * a key that exists. The others go through their listing, which requires the key.
  */
 function probeRequestFor(
   provider: AgentProviderId,
@@ -59,17 +58,17 @@ function probeRequestFor(
         headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
       };
     default:
-      // OpenAI, Google et tout serveur OpenAI-compatible : `/models` authentifié.
+      // OpenAI, Google and any OpenAI-compatible server: `/models` authenticated.
       return { url: `${baseUrl}/models`, headers: { Authorization: `Bearer ${apiKey}` } };
   }
 }
 
 /**
- * Présente la clé au fournisseur. Ne lève jamais : un échec est un verdict, pas
- * une exception — l'appelant décide quoi en faire.
+ * Presents the key to the provider. Never throws: a failure is a verdict, not
+ * an exception — the caller decides what to do with it.
  *
- * La base URL est supposée DÉJÀ passée par le garde anti-SSRF (`assertPublicHttpUrl`,
- * MIN-341) : c'est l'appelant qui la tient, ici on ne fait que l'appeler.
+ * The base URL is assumed ALREADY passed through the anti-SSRF guard (`assertPublicHttpUrl`,
+ * MIN-341): it is the caller who holds it, here we just calls it.
  */
 export async function probeByokKey(params: {
   provider: AgentProviderId;
@@ -79,8 +78,8 @@ export async function probeByokKey(params: {
   const { provider, apiKey, baseUrl } = params;
   if (!apiKey || !baseUrl) return "invalid";
   if (!getAgentProvider(provider)) return "invalid";
-  // Une sonde depuis le déploiement cloud annulerait précisément la promesse du
-  // provider local. Son état est établi par le premier appel du proxy local.
+  // A probe from the cloud deployment would precisely cancel the promise of
+  // local provider. Its state is established by the first call to the local proxy.
   if (isLocalAgentProvider(provider)) return "unknown";
 
   const { url, headers } = probeRequestFor(provider, baseUrl.replace(/\/+$/, ""), apiKey);
@@ -90,14 +89,14 @@ export async function probeByokKey(params: {
       signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
     });
     if (res.ok) return "valid";
-    // 401/403 = la clé est refusée. 402 aussi : OpenRouter le rend pour une clé
-    // VRAIE mais sans crédit — elle ne fera tourner aucun run, la traiter comme
-    // valide reviendrait à lever un plafond au bénéfice d'un endpoint qui refuse
-    // déjà de servir. 429/5xx = on ne sait rien de la clé, seulement de l'heure.
+    // 401/403 = the key is refused. 402 also: OpenRouter renders it for a key
+    // TRUE but no credit — she won't run any runs, treat her like
+    // valid would amount to raising a ceiling for the benefit of an endpoint which refuses
+    // already serving. 429/5xx = we know nothing about the key, only the time.
     if (res.status === 401 || res.status === 403 || res.status === 402) return "invalid";
     return "unknown";
   } catch {
-    // Réseau, DNS, timeout : aucune information sur la clé.
+    // Network, DNS, timeout: no information on the key.
     return "unknown";
   }
 }

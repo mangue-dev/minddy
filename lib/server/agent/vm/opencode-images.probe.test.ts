@@ -1,30 +1,30 @@
 /**
- * MIN-286 — sonde des IMAGES : une maquette rendue par un tool de domaine
- * arrive-t-elle jusqu'aux yeux du modèle ?
+ * MIN-286 — IMAGES probe: a model rendered by a domain tool
+ * does it reach the eyes of the model?
  *
- * Ne tourne PAS avec `npm test` : `describe.skipIf` la saute tant que
- * `MDY_OPENCODE_IMAGE_PROBE=1` n'est pas posé. Elle dépense un vrai round sur un
- * vrai modèle de vision (~0,001 $) et a besoin d'`OPENROUTER_API_KEY`.
+ * Does NOT run with `npm test`: `describe.skipIf` skips it as much that
+ * `MDY_OPENCODE_IMAGE_PROBE=1` is not set. She spends a real round on a
+ * real vision model (~$0.001) and needs `OPENROUTER_API_KEY`.
  *
- *   MDY_OPENCODE_IMAGE_PROBE=1 MDY_OPENCODE_BIN=/chemin/vers/opencode \
- *   npx vitest run lib/server/agent/vm/opencode-images.probe.test.ts --testTimeout=600000
+ * MDY_OPENCODE_IMAGE_PROBE=1 MDY_OPENCODE_BIN=/path/to/opencode \
+ * npx vitest run lib/server/agent/vm/opencode-images.probe.test.ts --testTimeout=600000
  *
- * CE QU'ELLE ÉTABLIT, et qu'aucun test unitaire ne peut établir : le modèle
- * DÉCRIT une image qu'il n'a aucun moyen de deviner — quatre quadrants de
- * couleurs, dans l'ordre. Tout le chemin y est réel : le fichier de tool que
- * `renderOpencodeTool` génère, l'enveloppe du pont, la config que
- * `buildOpencodeConfig` produit, le binaire, le modèle.
+ * WHAT IT ESTABLISHES, and which no unit test can establish: the model
+ * DESCRIBES an image that it has no way of guessing — four quadrants of
+ * colors, in order. All the path there is real: the tool file that
+ * `renderOpencodeTool` generates, the bridge envelope, the config that
+ * `buildOpencodeConfig` produces, the binary, the model.
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * CE QUE LA PREMIÈRE VERSION A APPRIS, le 2026-08-12 (dossier §2.22)
+ * ─────────────────────── ──────────────────────── ──────────────────────────────
+ * WHAT THE FIRST VERSION LEARNED, 2026-08-12 (file §2.22)
  *
- * `attachment: true` seul ne suffit PAS. L'image traverse tout le harness, puis
- * opencode la remplace au dernier moment par « ERROR: Cannot read "quad.png"
- * (this model does not support image input). Inform the user. » — le modèle
- * répondait donc NO_IMAGE, et aurait prévenu l'utilisateur d'une limite qui
- * n'existe pas. Ce que le binaire teste, c'est `capabilities.input.image`, qui se
- * déclare par `modalities.input`. C'est CE défaut-là que la sonde garde fermé :
- * il ne se voit qu'ici, un type-check et un test unitaire le laissent passer.
+ * `attachment: true` alone is NOT enough. The image goes through the entire harness, then
+ * opencode replaces it at the last moment with “ERROR: Cannot read "quad.png"
+ * (this model does not support image input). Inform the user. » — the model
+ * therefore responded NO_IMAGE, and would have warned the user of a limit which
+ * does not exist. What the binary tests for is `capabilities.input.image`, which is
+ * declared by `modalities.input`. It is THIS fault that the probe keeps closed:
+ * it is only visible here, a type-check and a unit test let it pass.
  */
 import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
@@ -41,10 +41,10 @@ const LIVE = process.env.MDY_OPENCODE_IMAGE_PROBE === "1";
 const VERSION = process.env.MDY_OPENCODE_VERSION ?? "1.18.16";
 const PORT = Number(process.env.MDY_OPENCODE_IMAGE_PORT ?? 4391);
 const BRIDGE_PORT = Number(process.env.MDY_OPENCODE_IMAGE_BRIDGE_PORT ?? 4392);
-/** Un modèle qui VOIT. Le reste de la sonde ne dépend pas duquel. */
+/** A model that SEES. The rest of the probe does not depend on which. */
 const MODEL = process.env.MDY_OPENCODE_IMAGE_MODEL ?? "anthropic/claude-haiku-4.5";
 
-/** Les creds vivent dans `.env` ; vitest ne le charge pas tout seul. */
+/** Creds live in `.env`; vitest does not load it on its own. */
 function loadEnv(): void {
   const file = path.resolve(process.cwd(), ".env");
   if (!fs.existsSync(file)) return;
@@ -56,17 +56,17 @@ function loadEnv(): void {
 }
 
 /**
- * Une PNG 64×64 en quatre quadrants — rouge, vert, bleu, jaune. Écrite à la main
- * (IHDR/IDAT/IEND) plutôt que posée en fixture : ce qui compte est que le modèle
- * ne puisse pas la deviner, et une image générée ici ne peut pas s'être glissée
- * dans un corpus d'entraînement sous son nom de fichier.
+ * A 64×64 PNG in four quadrants — red, green, blue, yellow. Written by hand
+ * (IHDR/IDAT/IEND) rather than provided as a fixture: what matters is that the
+ * model cannot guess it, and an image generated here could not have slipped into
+ * a training corpus under its filename.
  */
 function quadrantPng(): Buffer {
   const size = 64;
   const half = size / 2;
   const rows: number[] = [];
   for (let y = 0; y < size; y++) {
-    rows.push(0); // filtre `none`
+    rows.push(0); // `none` filter
     for (let x = 0; x < size; x++) {
       const rgb =
         y < half ? (x < half ? [255, 0, 0] : [0, 255, 0]) : x < half ? [0, 0, 255] : [255, 255, 0];
@@ -112,7 +112,7 @@ const JOB = {
   writesToRepo: false,
   interactive: false,
   chain: false,
-  // LE DRAPEAU DE LA SONDE : c'est lui qui pose `modalities.input`.
+  // THE PROBE FLAG: this is what sets `modalities.input`.
   imageInput: true,
   webSearch: false,
   webSearchMax: 5,
@@ -168,7 +168,7 @@ describe.skipIf(!LIVE)("une maquette rendue par un tool de domaine", () => {
       git(["add", "-A"]);
       git(["commit", "-qm", "init"]);
 
-      // Le binaire : réutilisable par `MDY_OPENCODE_BIN`, sinon installé ici.
+      // The binary: reusable by `MDY_OPENCODE_BIN`, otherwise installed here.
       let bin = process.env.MDY_OPENCODE_BIN ?? "";
       if (!bin) {
         execFileSync("npm", ["i", "--no-audit", "--no-fund", `opencode-ai@${VERSION}`], {
@@ -178,7 +178,7 @@ describe.skipIf(!LIVE)("une maquette rendue par un tool de domaine", () => {
         bin = path.join(root, "node_modules", ".bin", "opencode");
       }
 
-      // ── Le PONT, dans sa forme de production : l'enveloppe et son en-tête ──
+      // ── The BRIDGE, in its production form: the envelope and its header ──
       const dataUrl = `data:image/png;base64,${quadrantPng().toString("base64")}`;
       const http = await import("node:http");
       bridge = http.createServer((req, res) => {
@@ -197,12 +197,12 @@ describe.skipIf(!LIVE)("une maquette rendue par un tool de domaine", () => {
       });
       await new Promise<void>((r) => bridge!.listen(BRIDGE_PORT, "127.0.0.1", () => r()));
 
-      // ── Les fichiers de tools et la config, tous deux de PRODUCTION ────────
+      // ── The tools files and the config, both from PRODUCTION ────────
       for (const f of opencodeToolFiles(JOB)) {
         fs.writeFileSync(path.join(toolDir, path.basename(f.path)), f.content);
       }
       const config = buildOpencodeConfig(JOB) as unknown as Record<string, unknown>;
-      // La seule retouche : la vraie clé, que la production pose au firewall.
+      // The only touch-up: the real key, which production places on the firewall.
       const provider = (config.provider as Record<string, { options: Record<string, string> }>)
         .minddy;
       provider.options.apiKey = key!;
@@ -265,9 +265,9 @@ describe.skipIf(!LIVE)("une maquette rendue par un tool de domaine", () => {
         .join("\n")
         .toLowerCase();
 
-      // Quatre couleurs dans l'ordre : rien d'autre que la vue de l'image ne les
-      // donne. Le message d'échec porte la réponse, parce que « NO_IMAGE » et
-      // « rouge/vert inversés » ne se diagnostiquent pas de la même façon.
+      // Four colors in order: nothing other than the image view can tell them
+      // given. The failure message carries the answer, because "NO_IMAGE" and
+      // “inverted red/green” are not diagnosed in the same way.
       expect(said, said).toContain("top-left=red");
       expect(said, said).toContain("top-right=green");
       expect(said, said).toContain("bottom-left=blue");

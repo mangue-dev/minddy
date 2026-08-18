@@ -3,47 +3,47 @@ import { describe, expect, it } from "vitest";
 import { runKeyCapUsd } from "./run-key";
 
 /**
- * Le plafond de la clé de run tient DEUX budgets qui n'ont pas le même statut.
+ * The ceiling of the run key holds TWO budgets which do not have the same status.
  *
- * Celui du RUN est un gouverneur : la boucle s'arrête dessus en le disant, et la
- * clé le double d'une marge pour que ce soit toujours notre message que
- * l'utilisateur lise, jamais un 402 d'API.
+ * The one of the RUN is a governor: the loop stops there by saying it, and the
+ * key doubles it by a margin so that it is always our message that
+ * the user read, never a 402 from API.
  *
- * Celui du COMPTE est un plafond DUR. Il ne se multiplie pas : au-delà, on ferait
- * dépenser un argent qui n'existe pas. C'est ce que l'ancienne version accordait —
- * elle multipliait le `min` des deux, plancher compris, si bien qu'un utilisateur
- * à 3 $ de reste et sans budget de run (le cas COURANT) recevait une clé à 4,50 $.
+ * The ACCOUNT one is a HARD cap. It does not multiply: beyond that, we would
+ * spend money that does not exist. This is what the old version granted —
+ * it multiplied the `min` of the two, including the floor, so that a user
+ * with $3 left and no run budget (the COMMON case) received a $4.50 key.
  */
 
 describe("runKeyCapUsd", () => {
   it("sans budget de run, la clé vaut EXACTEMENT ce qui reste au compte", () => {
-    // Le cas courant — un run lancé à la main n'a pas de `budget_usd`. La marge
-    // n'a rien à mordre ici : ce restant-là est le budget inclus du plan, pas une
-    // consigne de l'utilisateur qu'on pourrait dépasser d'un cheveu.
+    // The common case — a hand-launched run has no `budget_usd`. The margin
+    // has nothing to bite here: this remainder is the included budget of the plan, not a
+    // user instructions that could be exceeded by a hair.
     expect(runKeyCapUsd({ accountRemainingUsd: 3 })).toBe(3);
     expect(runKeyCapUsd({ accountRemainingUsd: 0.4 })).toBe(0.4);
   });
 
   it("prend le plus serré des deux, et le compte a le DERNIER mot", () => {
-    // Le compte a 10 $, le run 2 $ : c'est le budget du run qui borne, marge comprise.
+    // The account has $10, the run $2: this is the budget for the run which limits, margin included.
     expect(runKeyCapUsd({ runBudgetUsd: 2, accountRemainingUsd: 10 })).toBe(3);
-    // L'inverse : la marge du run ne peut pas franchir ce que le compte a encore.
-    // (l'ancienne version rendait 3 $ ici, pour 2 $ réellement disponibles)
+    // The opposite: the margin of the run cannot exceed what the account still has.
+    // (old version made $3 here, for $2 actually available)
     expect(runKeyCapUsd({ runBudgetUsd: 10, accountRemainingUsd: 2 })).toBe(2);
   });
 
   it("déduit ce que le run a déjà dépensé", () => {
-    // Un plafond qui ne déduirait pas se rechargerait à chaque reprise.
+    // A cap that does not deduct would recharge each time.
     expect(runKeyCapUsd({ runBudgetUsd: 2, runSpentUsd: 1.5 })).toBe(0.75);
   });
 
   it("le plancher couvre le round qui déborde — mais jamais au-delà du compte", () => {
-    // Budget de run épuisé, le compte a encore de quoi : le plancher évite une clé
-    // morte, et donc un 402 illisible là où la boucle sait dire « budget atteint ».
+    // Run budget exhausted, the account still has money: the floor avoids a key
+    // dead, and therefore an unreadable 402 where the loop can say “budget reached”.
     expect(runKeyCapUsd({ runBudgetUsd: 2, runSpentUsd: 2, accountRemainingUsd: 5 })).toBe(0.25);
-    // Compte à sec : le plancher ne s'applique pas. Une clé à 0 $ est le résultat
-    // JUSTE — la boucle, qui oppose le même restant à sa dépense, n'appellera de
-    // toute façon pas le modèle (`budget_exhausted` avant le premier round).
+    // Dry account: the floor does not apply. A $0 key is the result
+    // FAIR — the loop, which opposes the same remainder to its expenditure, will not call for
+    // anyway not the model (`budget_exhausted` before the first round).
     expect(runKeyCapUsd({ runBudgetUsd: 0, accountRemainingUsd: 0 })).toBe(0);
     expect(runKeyCapUsd({ accountRemainingUsd: 0.1 })).toBe(0.1);
   });
@@ -54,9 +54,9 @@ describe("runKeyCapUsd", () => {
   });
 
   it("reste borné quand le restant du compte est inconnu (quota injoignable)", () => {
-    // La boucle est alors sans plafond elle aussi : cette clé est le seul garde-fou
-    // du passage. On ne rend PAS l'infini — c'est ce que ce module existe pour
-    // éviter — mais assez pour qu'un run ordinaire (0,07 à 0,24 $) aboutisse.
+    // The loop is then also without a ceiling: this key is the only safeguard
+    // of the passage. We do NOT make infinity — that's what this module exists for
+    // avoid — but enough for an ordinary run ($0.07 to $0.24) to succeed.
     const cap = runKeyCapUsd({});
     expect(Number.isFinite(cap)).toBe(true);
     expect(cap).toBeGreaterThan(0.25);

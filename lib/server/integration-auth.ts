@@ -9,17 +9,17 @@ import {
 import { afterOrNow } from "@/lib/server/after-safe";
 
 /**
- * Authentification par clé d'intégration pour l'API publique (/api/v1/…,
- * serveur-à-serveur, Authorization: Bearer mdy_…). La clé identifie à elle
- * seule l'intégration et donc le projet. Contrairement aux routes de l'app,
- * les erreurs sont en anglais simple avec des codes stables — pas de i18n.
+ * Integration key authentication for public API (/api/v1/…,
+ * server-to-server, Authorization: Bearer mdy_…). The key uniquely identifies
+ * the integration and therefore the project. Unlike app routes,
+ * errors are in plain English with stable codes — no i18n.
  */
 
 export interface AuthedIntegration {
   id: string;
   project_id: string;
   name: string;
-  /** Usage dédié de la clé — chaque endpoint /api/v1 vérifie le sien. */
+  /** Dedicated use of the key — each /api/v1 endpoint verifies its own. */
   kind: "issues" | "feedback";
 }
 
@@ -33,7 +33,7 @@ export type IntegrationAuthResult =
   | { ok: true; integration: AuthedIntegration; project: IntegrationProject }
   | { ok: false; response: NextResponse };
 
-/** Réponse d'erreur de l'API publique : { error: { code, message } }. */
+/** Public API error response: { error: { code, message } }. */
 export function publicApiError(
   status: number,
   code: string,
@@ -70,7 +70,7 @@ export async function authenticateIntegrationKey(
     .eq("key_hash", hashIntegrationKey(key))
     .is("revoked_at", null)
     .maybeSingle();
-  // Clé inconnue et clé révoquée sont volontairement indistinguables.
+  // Unknown key and revoked key are intentionally indistinguishable.
   if (!integration) return { ok: false, response: invalidKey() };
 
   const { data: project } = await service
@@ -81,8 +81,8 @@ export async function authenticateIntegrationKey(
     .maybeSingle();
   if (!project) return { ok: false, response: invalidKey() };
 
-  // Un horodatage d'usage ne retarde pas la requête : il part APRÈS la réponse,
-  // mais rattaché à l'invocation — détaché, il mourrait au gel de la lambda.
+  // A usual timestamp does not delay the request: it leaves AFTER the response,
+  // but attached to the invocation - detached, he would die in the frost of the lambda.
   const usedAt = new Date().toISOString();
   afterOrNow(async () => {
     const { error } = await service
@@ -95,8 +95,8 @@ export async function authenticateIntegrationKey(
   return { ok: true, integration: integration as AuthedIntegration, project };
 }
 
-/** Garde d'usage : une clé issues ne dépose pas de feedback et inversement.
-    Le message pointe vers le bon endpoint pour une DX sans impasse. */
+/** Usage guard: an issues key does not leave feedback and vice versa.
+ The message points to the correct endpoint for deadlock-free DX. */
 export function requireIntegrationKind(
   integration: AuthedIntegration,
   expected: "issues" | "feedback"

@@ -1,33 +1,33 @@
-// Les commentaires SUR LE BLOC (MIN-282) — le liseré, et la pastille qui ouvre
-// le fil.
+// Comments ON THE BLOCK (MIN-282) — the border, and the patch that opens
+// the thread.
 //
-// ─── Pourquoi une DÉCORATION, et pas une mark dans le document ───────────────
+// ─── Why a DECORATION, and not a mark in the document ───────────────
 //
-// Une mark serait du CONTENU. Elle partirait donc en base avec le corps, puis
-// dans la projection markdown (lib/pages-markdown.ts) que lisent Numo, l'agent
-// de code et le MCP — qui n'ont aucune syntaxe pour la dire, la perdraient à la
-// relecture, et rendraient un document légèrement différent de celui qu'ils ont
-// lu. Un aller-retour qui invente du texte, pour une information qui n'est même
-// pas dans le document : elle est dans `page_comments`.
+// A mark would be CONTENT. She would therefore leave for base with the body, then
+// in the markdown projection (lib/pages-markdown.ts) that Numo, the agent, reads
+// of code and the MCP — which have no syntax to say it, would lose it
+// proofreading, and would render a document slightly different from the one they have
+// read. A round trip that invents text, for information that is not even
+// not in the document: it is in `page_comments`.
 //
-// La même raison que le clignement (components/pages/block-flash.ts), plus une :
-// ici l'ensemble des blocs concernés change à chaque commentaire écrit par
-// n'importe qui, temps réel compris. Une décoration se remplace d'une
-// transaction sans toucher au corps — donc sans historique d'annulation, sans
-// enregistrement, sans conflit de version.
+// Same reason as blinking (components/pages/block-flash.ts), plus one:
+// here all the blocks concerned change with each comment written by
+// anyone, real time included. A decoration replaces a
+// transaction without touching the body — therefore without undo history,
+// persistence, or version conflict.
 //
-// ─── Deux décorations, et elles ne disent pas la même chose ─────────────────
+// ─── Two decorations, and they don't say the same thing ─────────────────
 //
-//  • le LISERÉ (`Decoration.node`) : « il y a une discussion ici », visible en
-//    parcourant la page sans rien cliquer ;
-//  • la PASTILLE (`Decoration.widget`) : le compte des messages, et le bouton
-//    qui ouvre le fil À CÔTÉ DU BLOC. C'est elle qui fait que la discussion vit
-//    sur le texte dont elle parle plutôt que dans un pied de page.
+// • the EDGE (`Decoration.node`): “there is a discussion here”, visible in
+// browse the page without clicking anything;
+// • the PASTILLE (`Decoration.widget`): the message count, and the button
+// which opens the thread NEXT TO THE BLOCK. She is the one who keeps the discussion alive
+// on the text she is talking about rather than in a footer.
 //
-// Le widget est du DOM nu, pas du React : ProseMirror le monte et le démonte
-// lui-même à chaque rendu du nœud, et un portail React à cet endroit-là se
-// monterait en pleine phase de commit. Il appelle donc un crochet posé sur le
-// `storage` de l'extension, que le calque de commentaires renseigne (cf.
+// The widget is bare DOM, not React: ProseMirror mounts and unmounts it
+// itself each time the node is rendered, and a React portal there is
+// would go up in the middle of the commit phase. He therefore calls a hook placed on the
+// `storage` of the extension, which the comments layer provides (cf.
 // components/pages/page-comment-layer.tsx).
 
 import { Extension } from "@tiptap/core";
@@ -38,43 +38,43 @@ import { Decoration, DecorationSet } from "@tiptap/pm/view";
 
 import { PAGE_BLOCK_ID_ATTRIBUTE } from "@/lib/pages-mentions";
 
-/** Les classes que peint app/globals.css. */
+/** The classes that app/globals.css paints. */
 const COMMENTED_CLASS = "page-block-commented";
 const BADGE_CLASS = "page-block-comment-badge";
 
-/** L'attribut qui porte l'ancre : le calque le lit sur le clic. */
+/** The attribute that carries the anchor: the layer reads it on click. */
 const BLOCK_ATTR = "data-block-id";
 
 export const blockCommentsKey = new PluginKey<DecorationSet>("blockComments");
 
-/** Combien de messages par bloc commenté — le compte que porte la pastille. */
+/** How many messages per commented block — the count carried by the pastille. */
 export type CommentedBlocks = ReadonlyMap<string, number>;
 
-/** Ce que l'extension garde pour le calque : le crochet d'ouverture du fil, et
-    le libellé de la pastille (le widget ne peut pas lire le catalogue i18n). */
+/** What the extension keeps for the layer: the thread opening hook, and
+ the tag label (the widget cannot read the i18n catalog). */
 export interface BlockCommentsStorage {
   open: ((blockId: string) => void) | null;
   label: string;
 }
 
-/** Les ids de blocs portés par un document — l'ensemble contre lequel se
-    calcule le DÉTACHEMENT d'un fil (lib/page-comments.ts). Lu sur l'éditeur
-    vivant, pas sur la dernière sauvegarde : un bloc supprimé il y a une seconde
-    n'est plus là, même si la base l'a encore. */
+/** The block ids carried by a document — the set against which se
+ calculates the DETACHMENT of a thread (lib/page-comments.ts). Read on the editor
+ alive, not on the last save: a block deleted one second ago
+ is no longer there, even if the database still has it. */
 export function documentBlockIds(editor: Editor | null): Set<string> {
   const ids = new Set<string>();
   if (!editor || editor.isDestroyed) return ids;
   editor.state.doc.descendants((node) => {
     const id = node.attrs?.[PAGE_BLOCK_ID_ATTRIBUTE];
     if (typeof id === "string" && id) ids.add(id);
-    // Premier niveau seulement : c'est là que vit l'ancre (même granularité que
-    // `pageBlockTexts` et que la poignée de bloc).
+    // First level only: this is where the anchor lives (same granularity as
+    // `pageBlockTexts` and the block handle).
     return false;
   });
   return ids;
 }
 
-/** La pastille : le compte, et le clic qui ouvre le fil. */
+/** The sticker: the count, and the click which opens the thread. */
 function badge(
   blockId: string,
   count: number,
@@ -92,9 +92,9 @@ function badge(
     'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' +
     `<span>${count}</span>`;
-  // `mousedown` plutôt que `click`, et `preventDefault` avec : sans ça
-  // ProseMirror place d'abord le curseur, ce qui referme le fil qu'on ouvre en
-  // déplaçant la sélection sous lui.
+  // `mousedown` rather than `click`, and `preventDefault` with: without that
+  // ProseMirror first places the cursor, which closes the thread that we open in
+  // moving the selection below it.
   button.addEventListener("mousedown", (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -120,14 +120,14 @@ function decorationsFor(
           [BLOCK_ATTR]: id,
         })
       );
-      // Le widget est posé À LA FIN du bloc, et rendu hors flux par le CSS : au
-      // début, il s'intercalerait avant la première lettre et décalerait le
-      // texte d'un bloc commenté par rapport à ses voisins.
+      // The widget is placed AT THE END of the block, and made out of flow by the CSS: at
+      // start, it would be inserted before the first letter and shift the
+      // text of a commented block in relation to its neighbors.
       out.push(
         Decoration.widget(pos + node.nodeSize - 1, () => badge(id, count, storage), {
           side: 1,
-          // Il n'est PAS du document : ni copié avec la sélection, ni compté
-          // dans les positions que manipulent les commandes de bloc.
+          // It is NOT from the document: neither copied with the selection, nor counted
+          // in the positions that the block commands manipulate.
           ignoreSelection: true,
           marks: [],
         })
@@ -139,11 +139,11 @@ function decorationsFor(
 }
 
 /**
- * L'extension à monter dans l'éditeur (components/pages/page-editor.tsx).
+ * The extension to mount in the editor (components/pages/page-editor.tsx).
  *
- * Elle ne touche pas au document : rien de ce qu'elle fait ne part en base, ne
- * rentre dans l'historique d'annulation, ni ne déclenche l'enregistrement
- * automatique (une transaction sans changement de document n'émet pas `update`).
+ * It does not touch the document: nothing it does goes to base, does not
+ * enters the cancellation history, nor does it trigger automatic recording
+ * (a transaction without document change does not emit `update`).
  */
 export const BlockComments = Extension.create<
   Record<string, never>,
@@ -170,7 +170,7 @@ export const BlockComments = Extension.create<
                 decorationsFor(tr.doc, meta, storage)
               );
             }
-            // Personne n'a rien annoncé : les décorations suivent leurs blocs.
+            // Nobody announced anything: the decorations follow their blocks.
             return set.map(tr.mapping, tr.doc);
           },
         },
@@ -182,7 +182,7 @@ export const BlockComments = Extension.create<
   },
 });
 
-/** Annonce les blocs qui portent un fil ouvert, et leur compte de messages. */
+/** Announces the blocks which have an open thread, and their message count. */
 export function setCommentedBlocks(
   editor: Editor,
   blocks: CommentedBlocks
@@ -191,8 +191,8 @@ export function setCommentedBlocks(
   editor.view.dispatch(
     editor.state.tr
       .setMeta(blockCommentsKey, blocks)
-      // Ni dans l'historique, ni traité comme une écriture venue de l'extérieur
-      // par les extensions qui distinguent les deux (la poignée de bloc).
+      // Neither in history, nor treated as writing from outside
+      // by the extensions which distinguish the two (the block handle).
       .setMeta("addToHistory", false)
   );
 }

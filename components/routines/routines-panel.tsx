@@ -32,14 +32,14 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * La page ROUTINES (MIN-185) : la liste à gauche, la routine choisie à droite.
+ * The ROUTINES page (MIN-185): the list on the left, the chosen routine on the right.
  *
- * Deux règles gouvernent ce que l'écran offre :
- *  - **le « + » n'existe que sur un projet dont on est PROPRIÉTAIRE** et qui a
- *    un dépôt lié. Un bouton qui mène à un 403 ne s'affiche pas ;
- *  - **un membre VOIT quand même** les routines des projets qu'il a rejoints,
- *    et leurs exécutions. Ce qui tourne sur un dépôt partagé n'est pas un
- *    secret ; seul le geste de le poser appartient à celui qui paye.
+ * Two rules govern what the screen offers:
+ * - **the “+” only exists on a project of which one is the OWNER** and which has
+ * a linked deposit. A button that leads to a 403 is not displayed;
+ * - **a member still SEEs** the routines of the projects he has joined,
+ * and their executions. What runs on a shared repository is not a
+ * secret; only the gesture of placing it belongs to the one who pays.
  */
 export function RoutinesPanel({
   selectedId,
@@ -78,14 +78,14 @@ export function RoutinesPanel({
   );
 
   /**
-   * Un projet éligible au « + » : capacités de routine disponibles, possédé ET
-   * avec un dépôt à cloner.
-   *
-   * Déclarée AVANT les `useMemo` qui l'appellent, et pas à côté de ses autres
-   * lectrices : un `const` fléché reste dans sa zone morte jusqu'à sa ligne, et
-   * un memo qui l'appelle au premier rendu lève un `ReferenceError` — que le
-   * type-check ne voit pas, puisque la référence est parfaitement typée.
-   */
+ * A project eligible for “+”: routine capabilities available, owned AND
+ * with a repository to clone.
+ *
+ * Declared BEFORE the `useMemo` that call it, and not next to its other
+ * readers: one `const` arrow stays in its dead zone until its line, and
+ * a memo that calls it on first rendering raises a `ReferenceError` — which the
+ * type-check does not see, since the reference is perfectly typed.
+ */
   const canCreateIn = (projectId: string | undefined) =>
     !agentCapabilitiesLoading &&
     cloudExecutionConfigured &&
@@ -95,11 +95,11 @@ export function RoutinesPanel({
     gitLinked.has(projectId);
 
   /**
-   * Ce que la colonne AFFICHE. Le filtre ne touche pas `routines`, qui porte la
-   * sélection : sinon taper trois lettres ferait sauter la routine ouverte, une
-   * fois par lettre. Une routine se cherche par son nom, son instruction ou son
-   * projet — les trois choses que la ligne et son détail montrent.
-   */
+ * What the column SHOWS. The filter does not touch `routines`, which carries the
+ * selection: otherwise typing three letters would skip the open routine, one
+ * time per letter. A routine is searched by its name, its instruction or its
+ * project — the three things that the line and its detail show.
+ */
   const visible = useMemo(() => {
     if (!query.trim()) return routines;
     return routines.filter((r) =>
@@ -124,22 +124,22 @@ export function RoutinesPanel({
           }
         : null;
     });
-    // Un FILTRE en cours ne montre que ce qui correspond : un accordéon vide
-    // sous une recherche se lirait comme un résultat.
+    // A FILTER in progress only shows what matches: an empty accordion
+    // under a search would read as a result.
     if (query.trim()) return found;
 
     /**
-     * Hors filtre, TOUS les projets où l'on peut poser une routine ont leur
-     * accordéon, même vides. C'est de là que part la création : le « + » vit
-     * dans l'en-tête d'un projet, et un projet sans routine n'en avait donc
-     * aucun. Les projets où l'on est simple MEMBRE n'entrent que s'ils ont des
-     * routines à lire : un en-tête vide sans rien à voir ni rien à faire n'est
-     * qu'une ligne de plus à parcourir.
-     *
-     * Ces accordéons-là ne se voient qu'à partir de la PREMIÈRE routine : tant
-     * qu'il n'y en a aucune, c'est l'état vide qui tient la colonne, et c'est
-     * son bouton qui ouvre le wizard.
-     */
+ * Excluding the filter, ALL projects where you can add a routine have their
+ * accordion, even empty ones. This is where the creation starts: the “+” lives
+ * in the header of a project, and a project without routine therefore had
+ * none. Projects where you are a simple MEMBER only enter if they have
+ * routines to read: an empty header with nothing to see or anything to do is
+ * just one more line to go through.
+ *
+ * These accordions are only seen from the FIRST routine: as long as
+ * there is none, it is the empty state which holds the column, and it is
+ * its button which opens the wizard.
+ */
     const seen = new Set(found.map((g) => g.key));
     const extra = projects
       .filter((p) => !seen.has(p.id) && canCreateIn(p.id))
@@ -163,16 +163,16 @@ export function RoutinesPanel({
     !!selected && projectById.get(selected.project_id)?.owner_id === user?.id;
 
   /**
-   * Publie la routine ouverte à Numo — « change son heure », « mets-la en
-   * pause », « qu'est-ce qu'elle fait déjà ? » se résolvent alors sur celle-ci,
-   * sans la chercher, exactement comme le panneau d'un ticket publie son ticket
-   * et le tableau de bord des retours son retour.
-   *
-   * Le PROJET part avec elle : une routine n'existe que dans le sien, et les
-   * outils de routine le demandent. Sans routine sélectionnée, rien n'est
-   * publié : cette colonne est cross-projet, et il n'y aurait pas de projet
-   * unique à annoncer.
-   */
+ * Publishes the open routine to Numo — “change her time”, “put her in
+ * pause”, “what is she doing again? » are then resolved on this one,
+ * without looking for it, exactly as the ticket panel publishes its ticket
+ * and the feedback dashboard its return.
+ *
+ * The PROJECT leaves with it: a routine only exists in its own, and the
+ * routine tools the ask. Without routine selected, nothing is
+ * published: this column is cross-project, and there would be no unique project
+ * to announce.
+ */
   useAssistantContext(
     selected
       ? {
@@ -185,14 +185,14 @@ export function RoutinesPanel({
 
   const anyEligible = projects.some((p) => canCreateIn(p.id));
   /**
-   * POURQUOI on ne peut rien poser, quand c'est le cas. Trois murs différents,
-   * et les confondre laisse chercher : aucun projet du tout, des projets mais
-   * aucun dépôt lié (une routine clone un dépôt), ou des projets à dépôt mais
-   * dont on n'est pas propriétaire (seul le owner engage son budget).
-   *
-   * Le composer des conversations dit déjà le deuxième mur ; la page Routines
-   * ne disait rien, et son écran vide se lisait comme un bug.
-   */
+ * WHY we can't put anything down, when this is the case. Three different walls,
+ * and confusing them lets you search: no project at all, projects but
+ * no linked repository (a routine clones a repository), or projects with a repository but
+ * of which you are not the owner (only the owner commits his budget).
+ *
+ * The composition of conversations already says the second wall; the Routines
+ * page said nothing, and its blank screen read like a bug.
+ */
   const noRepoAnywhere = !gitLoading && projects.length > 0 && gitLinked.size === 0;
   const emptyReason =
     agentCapabilitiesLoading
@@ -209,11 +209,11 @@ export function RoutinesPanel({
                 ? null
                 : "emptyNotOwner";
   /**
-   * Ce que dit l'écran quand il n'y a AUCUNE routine — la même phrase des deux
-   * côtés, la colonne et le volet. Un mur qui empêche d'en poser une (aucun
-   * projet, aucun dépôt lié, pas propriétaire) le dit à la place : « créez
-   * votre première routine » à quelqu'un qui ne le peut pas serait une impasse.
-   */
+ * What the screen says when there is NO routine — the same phrase on both
+ * sides, the column and the pane. A wall that prevents putting one (no
+ * project, no linked repository, no owner) instead says: "create
+ * your first routine" to someone who can't would be a dead end.
+ */
   const emptyTitle = emptyReason
     ? t(emptyReason as "emptyNoRepo")
     : t("emptyTitle");
@@ -235,15 +235,14 @@ export function RoutinesPanel({
       ))}
     </div>
   ) : routines.length === 0 ? (
-    /* AUCUNE routine, quels que soient les projets : l'état vide passe devant
-       les accordéons. Un projet éligible mais vide a bien son en-tête et son
-       « + » — mais uniquement à partir de la deuxième routine : tant qu'il n'y
-       en a aucune, une pile d'accordéons vides dit moins bien « il n'y a rien
-       ici » qu'une phrase et un bouton.
+    /* NO routine, whatever the projects: the empty state goes before
+ the accordions. An eligible but empty project does have its header and its
+ “+” — but only from the second routine: as long as there is none, a stack of empty accordions says “there is nothing
+ here” less well than a sentence and a button.
 
-       Un seul appel à l'action : le wizard. Les exemples pré-écrits vivent DANS
-       son étape `job` — les proposer deux fois obligerait à les tenir à jour à
-       deux endroits. */
+ One only call to action: the wizard. The pre-written examples live IN
+ its `job` step — providing them twice would require keeping them updated in
+ two places. */
     <div className="px-3 py-6">
       <EmptyScene icon={CalendarClock} title={emptyTitle} size="compact">
         {anyEligible ? (
@@ -255,8 +254,8 @@ export function RoutinesPanel({
       </EmptyScene>
     </div>
   ) : query.trim() && visible.length === 0 ? (
-    // Le filtre a simplement vidé la liste : une ligne discrète suffit, la
-    // colonne n'est pas vide, elle est restreinte.
+    // The filter has simply emptied the list: a discrete line is enough, the
+    // column is not empty, it is restricted.
     <p className="px-4 py-6 text-center text-sm text-muted-foreground">
       {tCommon("noFilterMatch")}
     </p>
@@ -303,10 +302,10 @@ export function RoutinesPanel({
           }
         >
           {g.items.length === 0 ? (
-            // Un projet ÉLIGIBLE mais encore vide : la ligne dit ce qu'il y a à
-            // voir (rien) plutôt que de laisser un accordéon ouvert sur du vide,
-            // qui se lit comme un chargement qui n'aboutit pas. Le « + » de
-            // l'en-tête est juste au-dessus.
+            // An ELIGIBLE project but still empty: the line says what there is to
+            // see (nothing) rather than leaving an accordion open to nothing,
+            // which reads like an unsuccessful upload. The “+” of
+            // the header is just above.
             <p
               className={cn(
                 "py-1.5 pr-2 text-xs text-muted-foreground",
@@ -342,9 +341,9 @@ export function RoutinesPanel({
           clearLabel: tCommon("clearFilter"),
         }}
         actions={
-          /* Le « + » de la colonne, exactement à la place de celui des
-             conversations. Il n'existe QUE si un projet peut en accueillir une
-             (possédé, dépôt lié) : un bouton qui mène à un 403 ne s'affiche pas. */
+          /* The “+” of the column, exactly in place of that of
+ conversations. It ONLY exists if a project can accommodate one
+ (owned, linked repository): a button that leads to a 403 is not displayed. */
           anyEligible ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -386,15 +385,15 @@ export function RoutinesPanel({
             }}
           />
         ) : loading ? (
-          /* Rien pendant le chargement : la colonne montre déjà ses squelettes,
-             et annoncer « aucune routine » avant d'avoir la réponse ferait
-             clignoter un état vide sur une liste qui n'est pas vide. */
+          /* Nothing while loading: the column already shows its skeletons,
+ and announcing "no routine" before having the answer would cause
+ to flash an empty state on a list that is not empty. */
           null
         ) : routines.length === 0 ? (
-          /* AUCUNE routine : le volet dit la MÊME chose que la colonne, en
-             grand. C'est la surface qu'on regarde en arrivant sur l'onglet —
-             y laisser « choisissez une routine » quand il n'y en a aucune
-             envoyait chercher dans une colonne vide. */
+          /* NO routine: the pane says the SAME thing as the column, en
+ large. This is the surface we look at when arriving at the tab —
+ leaving “choose a routine” when there is none
+ sent searching in an empty column. */
           <div className="flex flex-1 flex-col items-center justify-center p-6">
             <EmptyScene icon={CalendarClock} title={emptyTitle}>
               {anyEligible ? (
@@ -408,8 +407,8 @@ export function RoutinesPanel({
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6">
             <p className="text-sm text-muted-foreground">{t("noSelection")}</p>
-            {/* Le geste, sous la phrase : arriver ici sans rien de sélectionné,
-                c'est aussi souvent vouloir en poser une que vouloir en lire une. */}
+            {/* The gesture, under the sentence: arriving here without anything selected,
+ is as often wanting to place one as wanting to read one. */}
             {anyEligible ? (
               <Button size="sm" variant="outline" onClick={() => openWizard()}>
                 <Plus className="size-4" />
@@ -434,10 +433,10 @@ export function RoutinesPanel({
 }
 
 /**
- * Une routine dans la liste : son titre, et sa cadence en sous-ligne — c'est la
- * question qu'on se pose en parcourant la colonne (« celle-là, elle tourne
- * quand ? »). Un point terne quand elle est en pause, un point d'alerte quand
- * son dernier passage a été sauté.
+ * A routine in the list: its title, and its cadence in the sub-line - this is the
+ * question that we ask ourselves when browsing the column ("this one runs
+ * when?"). A dull point when it is paused, an alert point when
+ * its last passage was skipped.
  */
 function RoutineRow({
   routine,
@@ -460,8 +459,8 @@ function RoutineRow({
       timezone: routine.timezone,
     },
     (key, values) => t(key, values),
-    // Sans le fuseau : sur une ligne de colonne, « (Europe/Paris) » prend plus
-    // de place que la cadence elle-même. Il se lit dans la routine.
+    // Without the time zone: on a column line, “(Europe/Paris)” takes more
+    // more space than the cadence itself. It reads in the routine.
     { locale, omitTimezone: true },
   );
 
@@ -470,8 +469,8 @@ function RoutineRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        // `pr-3` et non `pr-2` : le point d'état (en pause, passage manqué)
-        // touchait le bord droit de la colonne.
+        // `pr-3` and not `pr-2`: the status point (paused, missed passage)
+        // touched the right edge of the column.
         "flex items-center gap-2 rounded-md py-1.5 pr-3 text-left outline-none transition-colors",
         PROJECT_GROUP_INDENT,
         selected ? "bg-muted" : "hover:bg-muted/60 focus-visible:bg-muted/60",

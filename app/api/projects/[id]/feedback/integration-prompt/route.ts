@@ -17,18 +17,18 @@ type RouteContext = { params: Promise<{ id: string }> };
 const PLACEMENT_MAX = 500;
 
 /**
- * POST { mode: 'board'|'api', sso?, placement? } — génère le prompt
- * d'intégration tout-en-un (MIN-37). Owner-only : la génération provisionne ce
- * qui manque — active le board (mode board), génère le secret SSO s'il n'existe
- * pas encore (sans jamais rotater un secret existant), crée une clé
- * d'intégration feedback neuve (mode api — la seule façon d'avoir la clé en
+ * POST { mode: 'board'|'api', sso?, placement? } — generates the prompt
+ * all-in-one integration tool (MIN-37). Owner-only: the generation provisions this
+ * which is missing — activates the board (board mode), generates the SSO secret if it does not exist
+ * not yet (without ever rotating an existing secret), creates a key
+ * new feedback integration (api mode — the only way to have the key in
  * clair).
  *
- * Les credentials reviennent À PART du prompt (`sso_secret`, `api_key`), parce
- * qu'ils n'y sont plus : le prompt nomme la variable d'environnement,
- * l'interface montre la ligne à coller dans le `.env`. Les deux prompts sont
- * ainsi des textes sans secret — c'est ce qui permet de les confier à Numo d'un
- * clic, dans un mode comme dans l'autre.
+ * The credentials return APART from the prompt (`sso_secret`, `api_key`), because
+ * that they are no longer there: the prompt names the environment variable,
+ * the interface shows the line to paste into the `.env`. The two prompts are
+ * thus texts without secrets - this is what allows them to be entrusted to Numo with a
+ * click, in one mode or the other.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  // `null` est du JSON valide : lire body.mode dessus ferait un 500.
+  // `null` is valid JSON: reading body.mode on it would do a 500.
   if (!body || typeof body !== "object") {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
@@ -68,8 +68,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
     let ssoSecret: string | null = null;
     if (sso) {
-      // Ne JAMAIS rotater un secret existant ici : une intégration SSO déjà
-      // en place chez le client casserait silencieusement.
+      // NEVER rotate an existing secret here: an SSO integration already
+      // installed at the customer's premises would break silently.
       ssoSecret = board.sso_secret ?? (await rotateSsoSecret(id));
       if (!ssoSecret) {
         return NextResponse.json({ error: t("databaseError") }, { status: 500 });
@@ -87,8 +87,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ prompt, board_enabled: true, sso_secret: ssoSecret });
   }
 
-  // mode === "api" : une clé neuve à chaque génération (le clair n'est jamais
-  // relisible) — visible et révocable dans Settings → Intégrations.
+  // mode === "api": a new key for each generation (the clear one is never
+  // rereadable) — visible and revocable in Settings → Integrations.
   const created = await createIntegration({
     projectId: id,
     actorId: guard.userId,

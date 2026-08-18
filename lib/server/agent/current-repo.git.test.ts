@@ -20,25 +20,25 @@ import { turnDiff, turnDiffStat } from "./repo-host";
 import { localHost } from "./vm/local-host";
 
 /**
- * MIN-358 — LA CHAÎNE DE FIN DE TOUR CONTRE UN VRAI DÉPÔT GIT, dans un vrai
- * checkout habité par un humain.
+ * MIN-358 — THE END OF ROUND CHAIN ​​AGAINST A REAL GIT REPOSITORY, in a real
+ * checkout manned by a human.
  *
- * Même raison d'être que [sandbox-push-git.test.ts](sandbox-push-git.test.ts) :
- * ce qui se joue ici n'est pas notre logique (couverte en host factice par
- * [current-repo.test.ts](current-repo.test.ts)) mais le COMPORTEMENT DE GIT. La
- * promesse du ticket est « l'index, le HEAD et l'arbre de travail de
- * l'utilisateur ne sont pas touchés », et elle ne se vérifie qu'en regardant son
- * dépôt après coup.
+ * Same reason as [sandbox-push-git.test.ts](sandbox-push-git.test.ts):
+ * what is at stake here is not our logic (covered in dummy host by
+ * [current-repo.test.ts](current-repo.test.ts)) but the BEHAVIOR OF GIT. There
+ * ticket promise is "the index, HEAD and working tree of
+ * the user are not affected", and it is only verified by looking at his
+ * deposit afterwards.
  *
- * Le décor est celui du mode dépôt courant : un dépôt distant, un checkout que
- * l'utilisateur a déjà — avec du WIP, une branche à lui, un `pre-commit` hostile
- * et un `.gitignore` qui couvre son `.env.local` — et une racine de run posée
- * AILLEURS, comme le layout l'exige.
+ * The setting is that of the current deposit mode: a remote deposit, a checkout that
+ * the user already has — with WIP, a branch of his own, a hostile `pre-commit`
+ * and a `.gitignore` which covers its `.env.local` — and a run root posed
+ * ELSEWHERE, as the layout requires.
  *
- * `realpathSync` sur le dossier temporaire, et ce n'est pas de la coquetterie :
- * `/var/folders/…` de macOS est un lien symbolique, `git rev-parse
- * --show-toplevel` rend le chemin physique, et la préparation compare les deux.
- * Un lanceur qui attache un dossier au projet a le même devoir (MIN-359).
+ * `realpathSync` on the temporary folder, and it's not coquetry:
+ * macOS's `/var/folders/…` is a symbolic link, `git rev-parse
+ * --show-toplevel` renders the physical path, and the preparation compares the two.
+ * A launcher who attaches a folder to the project has the same duty (MIN-359).
  */
 
 const run = promisify(execFile);
@@ -53,17 +53,17 @@ let before: RepoState;
 
 const RUN_ID = "11111111-2222-4333-8444-555555555555";
 const WORK_BRANCH = "minddy/agent/min-358-abcd1234";
-/** L'identité du HARNESS — jamais celle du dépôt, qui reste à `humaine`. */
+/** The identity of the HARNESS — never that of the repository, which remains at `humaine`. */
 const COMMITTER = { name: "minddy[bot]", email: "42+minddy[bot]@users.noreply.github.com" };
 const HUMAN_IDENTITY = `git config user.email humaine@example.com && git config user.name humaine && git config commit.gpgsign false`;
 
-/** Branches qui existent VRAIMENT sur le dépôt distant. */
+/** Branches that REALLY exist on the remote repository. */
 async function remoteHeads(): Promise<string[]> {
   const { stdout } = await sh(`git ls-remote --heads ${origin}`, origin);
   return stdout.trim().split("\n").filter(Boolean).map((line) => line.split("\t")[1] ?? "");
 }
 
-/** L'état de l'utilisateur, en une lecture : de quoi comparer avant et après. */
+/** The state of the user, in one reading: enough to compare before and after. */
 async function humanState(): Promise<Record<string, string>> {
   const { stdout } = await sh(
     `git rev-parse HEAD && git branch --show-current && git write-tree && git status --porcelain`,
@@ -73,7 +73,7 @@ async function humanState(): Promise<Record<string, string>> {
   return { head, branch, index, status: status.sort().join("|") };
 }
 
-/** Un push de fin de tour : le périmètre est recalculé, comme le fait le superviseur. */
+/** An end-of-turn push: the perimeter is recalculated, as the supervisor does. */
 async function push(message: string, edited: string[], owned: string[] = []) {
   const scope = turnPaths({ edited, owned, before, after: await readRepoState(host) });
   return await commitTurnAndPush(host, {
@@ -88,12 +88,12 @@ async function push(message: string, edited: string[], owned: string[] = []) {
 }
 
 /**
- * Ce que le commit de la branche de travail apporte au HEAD de l'utilisateur.
+ * What the working branch commit does to the user's HEAD.
  *
- * `core.quotePath=false` et une normalisation NFC : git cite les chemins
- * non-ASCII par défaut, et APFS les range en NFD. Ni l'un ni l'autre ne dit quoi
- * que ce soit de ce qu'on teste — mais les deux suffisent à faire échouer une
- * comparaison de chaînes.
+ * `core.quotePath=false` and NFC normalization: git quotes the paths
+ * non-ASCII by default, and APFS stores them as NFD. Neither one says what
+ * whether it's what we're testing — but both are enough to fail a
+ * string comparison.
  */
 async function deliveredFiles(): Promise<string[]> {
   const ref = runWorkRef(RUN_ID);
@@ -121,8 +121,8 @@ beforeAll(async () => {
   await sh(`git clone -q file://${origin} checkout`, root);
   await sh(`${HUMAN_IDENTITY}`, repo);
 
-  // Le décor de l'humain : sa branche, son WIP suivi, son fichier non suivi, son
-  // `.env.local` réel, et un `pre-commit` qui casse tout ce qui l'appelle.
+  // The setting of the human: its branch, its monitored WIP, its untracked file, its
+  // `.env.local` real, and a `pre-commit` which breaks everything that calls it.
   await sh(`git checkout -q -b humaine`, repo);
   await sh(`printf 'mon WIP\n' >> f.txt`, repo);
   await sh(`printf 'notes perso\n' > NOTES.md`, repo);
@@ -132,7 +132,7 @@ beforeAll(async () => {
     repo,
   );
 
-  // La racine du RUN est ailleurs : le harness n'écrit jamais dans le dépôt.
+  // The root of RUN is elsewhere: the harness never writes to the repository.
   host = localHost(layoutForCurrentRepo(path.join(root, "run"), repo, path.join(root, "oc")));
 });
 
@@ -151,7 +151,7 @@ describe("préparer le dépôt courant", () => {
     expect(prepared.parent).toBe(head.trim());
     expect(prepared.branch).toBe("humaine");
     expect(prepared.resumed).toBe(false);
-    // f.txt modifié, NOTES.md non suivi. `.env.local` est ignoré, donc invisible.
+    // f.txt modified, NOTES.md not followed. `.env.local` is ignored, therefore invisible.
     expect(prepared.dirty).toBe(2);
     expect(before.has(".env.local")).toBe(false);
   });
@@ -182,12 +182,12 @@ describe("le tour qui a travaillé", () => {
   it("ne livre que les chemins de l'agent, et pas le WIP de l'humain", async () => {
     humanBefore = await humanState();
 
-    // Ce que l'agent fait par ses tools d'écriture…
+    // What the agent does with his writing tools…
     await sh(`printf 'de agent\n' > agent.ts`, repo);
     await sh(`printf 'SECRET=vole\n' > .env.local`, repo);
-    // …ce qu'il fait par le SHELL, sans passer par aucune permission `edit`…
+    // …which he does through SHELL, without going through any permission `edit`…
     await sh(`printf 'lock\n' > pnpm-lock.yaml && rm garde.txt`, repo);
-    // …et un chemin que ni l'un ni l'autre n'a produit (il n'existe pas).
+    // …and a path that neither of them produced (it does not exist).
     const res = await push("feat(MIN-358): du vrai travail", [
       "agent.ts",
       ".env.local",
@@ -200,7 +200,7 @@ describe("le tour qui a travaillé", () => {
       "D\tgarde.txt",
       "A\tpnpm-lock.yaml",
     ].sort());
-    // Le WIP de l'humain est resté chez lui, et son `.env.local` avec.
+    // The human's WIP remained at home, and his `.env.local` with it.
     expect(await deliveredFiles()).not.toContain("M\tf.txt");
     expect(await deliveredFiles()).not.toContain("A\tNOTES.md");
     expect(await deliveredFiles()).not.toContain("A\t.env.local");
@@ -211,15 +211,15 @@ describe("le tour qui a travaillé", () => {
     expect(after.head).toBe(humanBefore.head);
     expect(after.branch).toBe("humaine");
     expect(after.index).toBe(humanBefore.index);
-    // Son WIP est toujours là, mot pour mot.
+    // His WIP is still there, word for word.
     const { stdout } = await sh(`tail -1 f.txt && cat NOTES.md`, repo);
     expect(stdout).toBe("mon WIP\nnotes perso\n");
   });
 
   it("n'a pas lancé son `pre-commit` — `commit-tree` n'a pas de hook", async () => {
-    // Le hook sort en 1 : s'il avait tourné, le commit précédent aurait levé.
-    // On le redit ici en le rendant BAVARD, pour que l'échec soit lisible le jour
-    // où quelqu'un remplacerait la plomberie par un `git commit`.
+    // The hook exits at 1: if it had run, the previous commit would have raised.
+    // We say it again here by making it TALKING, so that the failure is readable during the day
+    // where someone would replace the plumbing with a `git commit`.
     await sh(
       `printf '#!/bin/sh\necho HOOK >> ${path.join(root, "hook.log")}\nexit 1\n' > .git/hooks/pre-commit`,
       repo,
@@ -254,9 +254,9 @@ describe("le tour qui a travaillé", () => {
   });
 
   /**
-   * LE CAS QU'AUCUNE ASTUCE NE REFERME : l'agent édite un fichier que
-   * l'utilisateur avait déjà modifié. Le commit emporte alors son travail à lui,
-   * et la seule conduite honnête est de le NOMMER — c'est ce que le superviseur
+   * THE CASE THAT NO TIP CLOSES: the agent edits a file that
+   * the user had already edited. The commit then takes its own work,
+   * and the only honest conduct is to NAME him — that is what the supervisor
    * publie au fil.
    */
   it("nomme les fichiers dont il emporte le travail de l'utilisateur", async () => {
@@ -269,10 +269,10 @@ describe("le tour qui a travaillé", () => {
   });
 
   /**
-   * …et l'inverse, qui est le piège : le travail que l'AGENT a laissé au tour
-   * précédent est encore « modifié » dans l'arbre de travail, puisque nos commits
-   * vivent sur une ref et pas sur le HEAD de l'utilisateur. Sans la soustraction
-   * de `owned`, chaque fichier de l'agent se dénoncerait comme du travail humain.
+   * …and the opposite, which is the trap: the work that the AGENT left to the turn
+   * previous one is still “modified” in the working tree, since our commits
+   * live on a ref and not on the user's HEAD. Without subtraction
+   * of `owned`, each file of the agent would be denounced as human work.
    */
   it("ne prend pas son propre travail des tours précédents pour celui de l'humain", async () => {
     const later = await readRepoState(host);
@@ -283,13 +283,13 @@ describe("le tour qui a travaillé", () => {
 });
 
 /**
- * MIN-358 — LE PÉRIMÈTRE APPLIQUÉ AUX LECTURES DE DIFF DE FIN DE TOUR.
+ * MIN-358 — THE SCOPE APPLIED TO END OF TURN DIFF READS.
  *
- * C'est la moitié du ticket qu'on oublie : le commit ne livre que les chemins de
- * l'agent, mais l'auto-relecture et la portée des tests, elles, comparent une
- * référence à l'ARBRE DE TRAVAIL — qui contient aussi le WIP de l'utilisateur.
- * Sans borne, le modèle relit le travail de quelqu'un d'autre comme s'il était
- * le sien.
+ * This is half the ticket that we forget: the commit only delivers the paths of
+ * the agent, but the self-reading and the scope of the tests, they compare a
+ * reference to the WORK TREE — which also contains the user's WIP.
+ * Unbounded, the model rereads someone else's work as if it were
+ * his.
  */
 describe("les lectures de diff, bornées", () => {
   it("sans borne, elles voient le WIP de l'utilisateur", async () => {
@@ -298,9 +298,9 @@ describe("les lectures de diff, bornées", () => {
   });
 
   it("bornées au périmètre, elles ne voient que l'agent", async () => {
-    // `f.txt` est suivi, donc il sort du `git diff` ; `agent.ts` est neuf dans le
-    // checkout (nos commits vivent sur une ref), donc il ne sort que du statut —
-    // c'est pour ça que `turnDiff` rend les deux.
+    // `f.txt` is followed, so it comes out of `git diff`; `agent.ts` is new in the
+    // checkout (our commits live on a ref), so it only outputs status —
+    // that's why `turnDiff` renders both.
     const { diff, porcelain } = await turnDiff(host, prepared.parent, ["agent.ts", "f.txt"]);
     expect(diff).toContain("f.txt");
     expect(porcelain).toContain("agent.ts");
@@ -308,9 +308,9 @@ describe("les lectures de diff, bornées", () => {
   });
 
   /**
-   * ET LE CAS QUI SE TROMPE TOUT SEUL : une liste VIDE doit borner à RIEN. Un
-   * `-- ` nu se lit comme « tout », c'est-à-dire l'inverse — et un tour qui n'a
-   * touché à aucun fichier rendrait alors l'arbre entier de l'utilisateur.
+   * AND THE CASE THAT IS WRONG: an EMPTY list must end at NOTHING. A
+   * `-- ` nu reads like "all", that is to say the opposite - and a turn which has
+   * touching any files would then render the entire user tree.
    */
   it("un périmètre vide ne rend rien, jamais tout", async () => {
     const { diff, porcelain } = await turnDiff(host, prepared.parent, []);

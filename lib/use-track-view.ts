@@ -3,28 +3,28 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Émet un événement « vu » UNE SEULE FOIS par occurrence logique (MIN-78).
+ * Emits a “seen” event ONLY ONCE per logical occurrence (MIN-78).
  *
- * Pourquoi une garde et pas un simple `useEffect` :
+ * Why a guard and not a simple `useEffect`:
  *
- *  - **React StrictMode**, actif par défaut en développement Next, monte puis
- *    démonte puis remonte chaque composant : l'effet est invoqué DEUX fois.
- *    Sans garde, chaque ouverture compte double et tous les taux de conversion
- *    sont faux d'un facteur deux — ce qui s'est vu en recette avec
- *    `issue_create_dialog_opened` émis deux fois à 3 ms d'intervalle.
- *  - Un simple re-rendu (prop qui change, refetch react-query) relancerait
- *    l'effet aussi, y compris en production.
+ * - **React StrictMode**, active by default in Next development, goes up then
+ * disassembles then reassembles each component: the effect is invoked TWICE.
+ * Without guard, each opening counts double and all conversion rates
+ * are false by a factor of two — which was seen in recipe with
+ * `issue_create_dialog_opened` emitted twice at 3 ms interval.
+ * - A simple re-rendering (prop that changes, refetch react-query) would relaunch
+ * the effect too, including in production.
  *
- * `active` est la condition d'affichage (dialog ouvert, page montée) ; la
- * repasser à `false` réarme l'émission pour la prochaine ouverture. `key`
- * identifie l'occurrence à l'intérieur d'une même ouverture : la changer réarme
- * l'émission — c'est ce qui permet de tracker chaque étape d'un wizard sans
- * re-tracker celles déjà vues quand on revient en arrière.
+ * `active` is the display condition (dialog open, page up); there
+ * return to `false` rearms the transmission for the next opening. `key`
+ * identifies the occurrence within the same opening: changing it resets
+ * the emission — this is what allows you to track each step of a wizard without
+ * re-track those already seen when you go back.
  */
 export function useTrackView(active: boolean, key: string, emit: () => void): void {
   const seen = useRef<Set<string>>(new Set());
-  // L'émetteur est lu via une ref pour qu'une closure recréée à chaque rendu
-  // (le cas normal) ne relance pas l'effet et ne double pas l'événement.
+  // The emitter is read via a ref so that a closure is recreated on each rendering
+  // (the normal case) does not restart the effect and does not double the event.
   const emitRef = useRef(emit);
   emitRef.current = emit;
 

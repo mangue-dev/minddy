@@ -15,37 +15,36 @@ import {
 import { getDomainForBoard } from "@/lib/server/custom-domains";
 
 /**
- * Le board de feedback tel qu'un AGENT le voit (MIN-106).
+ * The feedback board as an AGENT sees it (MIN-106).
  *
- * Numo (dans le chat) et l'agent MCP de l'utilisateur (dans son IDE) ont le même
- * besoin : « quelle est l'URL publique de ce board, et est-elle seulement
- * vivante ? ». Deux tables répondent — `feedback_boards` pour le token et
- * l'activation, `custom_domains` pour l'éventuel domaine du client — et la
- * réponse ne vaut rien si on n'en lit qu'une : un board activé dont le domaine
- * personnalisé est vérifié a une autre URL de référence que son `/f/<token>`.
+ * Numo (in chat) and the user's MCP agent (in their IDE) have the same
+ * need: "what is the public URL of this board, and is it only
+ * alive? ". Two tables respond — `feedback_boards` for the token and
+ * the activation, `custom_domains` for the possible client domain — and the
+ * response is worthless if we only read one: an activated board whose personalized domain
+ * is verified has a reference URL other than its `/f/<token>`.
  *
- * On assemble donc les deux ici, une fois, plutôt que dans chaque outil.
+ * So we put the two together here, once, rather than in each tool.
  *
- * Ce qui ne sort jamais d'ici : le secret SSO. `sso_configured` dit s'il existe,
- * et seul `configureFeedbackBoard` le rend — au moment précis où quelqu'un l'a
- * demandé pour l'écrire dans un `.env`.
+ * What never leaves here: the SSO secret. `sso_configured` says if it exists,
+ * and only `configureFeedbackBoard` returns it — at the precise moment when someone asked it to write it to a `.env`.
  */
 
 export interface FeedbackBoardConfig {
-  /** false = aucun board n'a jamais été créé pour ce projet. */
+  /** false = no boards have ever been created for this project. */
   exists: boolean;
-  /** false = la page publique répond 404 (la collecte par API continue). */
+  /** false = the public page responds 404 (API collection continues). */
   enabled: boolean;
   token: string | null;
-  /** L'URL à donner à l'utilisateur / à coder en dur dans son app. */
+  /** The URL to give to the user / to hardcode into their app. */
   public_url: string | null;
   custom_domain: { domain: string; status: "pending" | "verified" } | null;
   sso_configured: boolean;
   show_categories: boolean;
   show_views: boolean;
-  /** Commentaires publics sur les retours (MIN-196). Faux = lecture seule. */
+  /** Public Comments on Returns (MIN-196). False = read only. */
   allow_comments: boolean;
-  /** Les vues partagées montrées en onglets quand `show_views` est vrai. */
+  /** Shared views shown in tabs when `show_views` is true. */
   visible_view_ids: string[];
 }
 
@@ -93,21 +92,21 @@ export type ConfigureBoardResult =
   | { ok: false; errorKey: "databaseError" | "noFieldsToUpdate" | "boardNotFound" };
 
 /**
- * Publication du board et secret SSO, pour un appelant qui a DÉJÀ vérifié que
- * l'acteur est owner du projet (comme les routes de `app/api/projects/[id]/feedback`).
+ * Publication of the board and SSO secret, for a caller who has ALREADY verified that
+ * the actor is the owner of the project (like the routes of `app/api/projects/[id]/feedback`).
  *
- * `generateSso` ne rote jamais un secret déjà en place : une intégration SSO
- * vivante chez le client casserait silencieusement, et un agent qui relance sa
- * configuration deux fois de suite ne doit pas être un moyen de casser la
- * production. Il renvoie l'existant, ou en crée un s'il n'y en a pas. La
- * rotation reste un geste explicite, dans les réglages.
+ * `generateSso` never burps a secret already in place: an integration SSO
+ * live at the client would silently break, and an agent relaunching its
+ * configuration twice in a row should not be a way to break the
+ * production. It returns the existing one, or creates one if there is none. The
+ * rotation remains an explicit gesture, in the settings.
  */
 export async function configureFeedbackBoard(input: {
   projectId: string;
   enabled?: boolean;
   generateSso?: boolean;
-  /** Options d'affichage de la page publique — mêmes bascules que le PATCH des
-   *  réglages, pour que Numo puisse RÉGLER ce que get_feedback_board lui LIT. */
+  /** Public page display options — same toggles as the PATCH of
+ * settings, so Numo can SET what get_feedback_board READS to it. */
   showCategories?: boolean;
   showViews?: boolean;
   allowComments?: boolean;
@@ -140,8 +139,8 @@ export async function configureFeedbackBoard(input: {
     if (!done) return { ok: false, errorKey: "databaseError" };
   }
 
-  // Les options d'affichage s'écrivent sur un board EXISTANT : sans board, il
-  // n'y a pas de page publique à régler.
+  // The display options are written on an EXISTING board: without a board, it
+  // there is no public page to adjust.
   if (touchesDisplay) {
     if (!(await getBoardForProject(projectId))) {
       return { ok: false, errorKey: "boardNotFound" };
@@ -165,10 +164,10 @@ export async function configureFeedbackBoard(input: {
 
   let ssoSecret: string | null = null;
   if (generateSso) {
-    // Le SSO n'a de sens que sur un board existant. Sans board ET sans
-    // `enabled: true` dans le même appel, on refuse plutôt que d'en créer un
-    // au passage : publier le board d'un projet est une décision, pas un effet
-    // de bord d'une demande de secret.
+    // SSO only makes sense on an existing board. Without board AND without
+    // `enabled: true` in the same call, we refuse rather than creating one
+    // by the way: publishing the board of a project is a decision, not an effect
+    // edge of a secrecy request.
     const board = await getBoardForProject(projectId);
     if (!board) return { ok: false, errorKey: "boardNotFound" };
     ssoSecret = board.sso_secret ?? (await rotateSsoSecret(projectId));

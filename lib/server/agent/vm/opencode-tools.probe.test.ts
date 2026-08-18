@@ -1,25 +1,21 @@
 /**
- * MIN-286 — sonde de PARITÉ DES TOOLS : opencode sert-il vraiment nos 32 tools de
- * domaine, avec nos schémas ?
+ * MIN-286 — TOOLS PARITY probe: does opencode really use our 32 tools in
+ * domain, with our schemas?
  *
- * Ne tourne PAS avec `npm test` : `describe.skipIf` la saute tant que
- * `MDY_OPENCODE_TOOLS_PROBE=1` n'est pas posé. Elle installe le binaire (~350 Mo)
- * dans un dossier temporaire et démarre un vrai serveur.
+ * Does NOT work with `npm test`: `describe.skipIf` skips it as much that
+ * `MDY_OPENCODE_TOOLS_PROBE=1` is not set. It installs the binary (~350 MB)
+ * in a temporary folder and starts a real server.
  *
- *   MDY_OPENCODE_TOOLS_PROBE=1 npx vitest run \
- *     lib/server/agent/vm/opencode-tools.probe.test.ts --testTimeout=600000
+ * MDY_OPENCODE_TOOLS_PROBE=1 npx vitest run \
+ * lib/server/agent/vm/opencode-tools.probe.test.ts --testTimeout=600000
  *
- * CE QU'ELLE ÉTABLIT, et qu'aucun test unitaire ne peut établir : les fichiers
- * que `opencodeToolFiles` écrit sont **chargés par le binaire** et **rendus au
- * modèle avec nos schémas** — types, enums, descriptions, et surtout le partage
- * requis / optionnel. C'est le seul endroit où une release d'opencode qui
- * changerait le chargeur de tools se verrait, et elle se verrait AVANT qu'un run
- * de production découvre que la moitié de ses tools a disparu.
- *
- * Relevé du 2026-08-12 sur `opencode-ai@1.18.16` : **32 tools servis sur 32**,
- * descriptions identiques à l'octet, schémas structurellement identiques, et un
- * appel de bout en bout (modèle → tool généré → pont local) qui rend son
- * résultat dans la conversation.
+ * WHAT IT ESTABLISHES, and which no unit test can establish: the files
+ * that `opencodeToolFiles` writes are **loaded by the binary** and **rendered to the
+ * model with our schemas** — types, enums, descriptions, and above all sharing
+ * required / optional. This is the only place where an opencode release that would change the tools loader would be seen, and it would be seen BEFORE a production run discovered that half of its tools had disappeared. `opencode-ai@1.18.16`: **32 tools served out of 32**,
+ * byte-identical descriptions, structurally identical schemas, and a
+ * end-to-end call (template → generated tool → local bridge) that renders its
+ * result in the conversation.
  */
 import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
@@ -34,7 +30,7 @@ const LIVE = process.env.MDY_OPENCODE_TOOLS_PROBE === "1";
 const VERSION = process.env.MDY_OPENCODE_VERSION ?? "1.18.16";
 const PORT = Number(process.env.MDY_OPENCODE_TOOLS_PORT ?? 4390);
 
-/** Un job de tour le plus LARGE possible : tout ce qui peut être servi l'est. */
+/** A tower job that is as WIDE as possible: everything that can be served is. */
 const JOB = {
   runId: "probe",
   ledgerRunId: "probe",
@@ -80,7 +76,7 @@ const JOB = {
   checkpointMaxBytes: 1,
 } as unknown as VmJob;
 
-/** La forme comparable d'un schéma : ce que le modèle en lit, et rien d'autre. */
+/** The comparable form of a diagram: what the model reads from it, and nothing else. */
 function shape(s: Record<string, unknown> | undefined): unknown {
   if (!s || typeof s !== "object") return s;
   const out: Record<string, unknown> = {};
@@ -114,8 +110,8 @@ describe.skipIf(!LIVE)("les tools de domaine, servis par le vrai binaire", () =>
     async () => {
       root = fs.mkdtempSync(path.join(os.tmpdir(), "mdy-opencode-tools-"));
       const repo = path.join(root, "repo");
-      // Le dossier de tools vit HORS du dépôt — c'est la moitié de ce que la
-      // sonde vérifie : opencode charge bien `$XDG_CONFIG_HOME/opencode/tool`.
+      // The tools folder lives OUTSIDE the repository — that's half of what the
+      // probe checks: opencode loads `$XDG_CONFIG_HOME/opencode/tool`.
       const toolDir = path.join(root, "config", "opencode", "tool");
       fs.mkdirSync(repo, { recursive: true });
       fs.mkdirSync(toolDir, { recursive: true });
@@ -133,8 +129,8 @@ describe.skipIf(!LIVE)("les tools de domaine, servis par le vrai binaire", () =>
       });
       fs.writeFileSync(path.join(root, "package.json"), '{"name":"probe","private":true}');
 
-      // Les fichiers de production, écrits à plat dans le dossier de tools : le
-      // chemin absolu du `VmJob` est celui de la microVM, pas celui d'ici.
+      // The production files, written flat in the tools folder: the
+      // absolute path of `VmJob` is that of the microVM, not the one here.
       for (const f of opencodeToolFiles(JOB)) {
         fs.writeFileSync(path.join(toolDir, path.basename(f.path)), f.content);
       }
@@ -206,8 +202,8 @@ describe.skipIf(!LIVE)("les tools de domaine, servis par le vrai binaire", () =>
         const theirs = JSON.stringify(shape(got.parameters));
         if (mine !== theirs) diffs.push(`${name}: schéma\n  nous=${mine}\n  eux =${theirs}`);
       }
-      // Le message d'échec doit se lire sans ouvrir la sonde : il nomme le tool
-      // et met les deux schémas côte à côte.
+      // The failure message must be read without opening the probe: it names the tool
+      // and puts the two diagrams side by side.
       expect(diffs.join("\n")).toBe("");
       expect(domainToolsFor(JOB).length).toBeGreaterThan(30);
     },

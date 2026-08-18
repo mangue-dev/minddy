@@ -1,12 +1,12 @@
 import { createHash } from "node:crypto";
 
 /**
- * Pseudonymes publics du board de feedback (MIN-37) : jamais de vrai nom ni
- * d'avatar côté public. Dérivé déterministe du feedback_user id, généré UNE
- * fois à la création et stocké sur la ligne — les listes peuvent évoluer sans
- * renommer personne. Liste unique neutre (pas de variante par locale : un
- * pseudonyme est un identifiant stable, pas de la copy). Les collisions sont
- * acceptables, le suffixe 2 chiffres les rend rares.
+ * Public pseudonyms of the feedback board (MIN-37): never real name nor
+ * avatar on the public side. Deterministic derivative of feedback_user id, generated ONE
+ * times on creation and stored on the row — lists can evolve without
+ * renaming person. Neutral unique list (no variation by locale: un
+ * pseudonym is a stable identifier, not copy). Collisions are
+ * acceptable, the 2-digit suffix makes them rare.
  */
 
 const ADJECTIVES = [
@@ -32,7 +32,7 @@ const ANIMALS = [
   "Tanager", "Toucan", "Walrus", "Wombat",
 ] as const;
 
-/** Pseudonyme stable pour un seed donné (le feedback_user id), ex. « Brave Otter 42 ». */
+/** Stable pseudonym for a given seed (the feedback_user id), e.g. “Brave Otter 42”. */
 export function generatePseudonym(seed: string): string {
   const digest = createHash("sha256").update(seed).digest();
   const adjective = ADJECTIVES[digest[0] % ADJECTIVES.length];

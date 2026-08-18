@@ -43,10 +43,10 @@ export function ProjectOrb({
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const { hue, hue2, chroma, lightness, angle, highlightX, highlightY } =
     projectOrbStyle(seed);
-  // Les trois clartés du dégradé gardent l'écart de l'original (±0,07 autour de
-  // l'aplat) : c'est lui qui donne le relief. C'est le CENTRE qui bouge d'une
-  // graine à l'autre, pas l'amplitude — une orbe plate et une orbe contrastée
-  // ne se liraient plus comme la même famille d'objets.
+  // The three lightnesses of the gradient keep the distance from the original (±0.07 around
+  // the solid color): it is this which gives the relief. It is the CENTER which moves one
+  // seed to seed, not amplitude — one flat orb and one contrasting orb
+  // would no longer read as the same family of objects.
   const light = lightness + 0.07;
   const deep = lightness - 0.07;
   const soft = Math.max(0.06, chroma - 0.03);

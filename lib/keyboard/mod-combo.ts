@@ -1,15 +1,14 @@
 import { eventKey } from "@/lib/keyboard/event-key";
 
 /**
- * Le frappé est-il EXACTEMENT « ⌘/Ctrl + `key` » ?
+ * Is the keystroke EXACTLY “⌘/Ctrl + `key`”?
  *
- * « Exactement » est le mot qui compte : ⇧ ou ⌥ en plus font un AUTRE raccourci,
- * et laisser passer ⌘⇧O sur une règle « ⌘ et la lettre O » vole la combinaison
- * du voisin. C'est la même règle que celle du bouton de dictée (⌘⇧D ne doit
- * jamais partir sur ⌘D), sortie ici pour être lisible et testable.
+ * “Exactly” is the word that counts: ⇧ or ⌥ in addition make ANOTHER shortcut,
+ * and let ⌘⇧O pass on a rule “⌘ and the letter O” steals the combination
+ * from the neighbor. This is the same rule as that of the dictation button (⌘⇧D must never go to ⌘D), released here to be readable and testable.
  *
- * La répétition est écartée : un raccourci qui NAVIGUE n'a rien à faire dix fois
- * parce qu'on a gardé la touche enfoncée.
+ * Repetition is avoided: a shortcut that NAVIGATEs has nothing to do ten times
+ * because we kept the key pressed.
  */
 export function matchesModCombo(
   e: Pick<KeyboardEvent, "key" | "repeat" | "metaKey" | "ctrlKey" | "shiftKey" | "altKey">,
@@ -21,12 +20,12 @@ export function matchesModCombo(
 }
 
 /**
- * Le frappé est-il EXACTEMENT « ⌘/Ctrl + ⇧ + `key` » ?
+ * Is the hit EXACTLY “⌘/Ctrl + ⇧ + `key`”?
  *
- * Même exigence que {@link matchesModCombo}, décalée d'un cran : ⇧ est ici
- * REQUIS, ⌥ toujours refusé. C'est la forme du raccourci de dictée (⌘⇧D), que
- * le bouton de dictée porte partout où il est monté et que le raccourci global
- * de création vocale reprend là où personne ne l'a pris.
+ * Same requirement as {@link matchesModCombo}, shifted up one notch: ⇧ is here
+ * REQUIRED, ⌥ always refused. This is the form of the dictation shortcut (⌘⇧D), which
+ * the dictation button carries wherever it is mounted and the global
+ * voice creation shortcut picks up where no one took it.
  */
 export function matchesModShiftCombo(
   e: Pick<KeyboardEvent, "key" | "repeat" | "metaKey" | "ctrlKey" | "shiftKey" | "altKey">,

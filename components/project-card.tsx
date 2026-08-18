@@ -85,8 +85,8 @@ export function ProjectCard({ project }: { project: Project }) {
   const doneCount = issues.filter((i) => !isOpen(i.status)).length;
 
   const open = () => router.push(`/projects/${project.id}`);
-  // Précharge les caches du board dès l'intention de navigation (MIN-89) : le
-  // temps que le clic arrive, les requêtes sont déjà parties.
+  // Preload the board caches from the navigation intention (MIN-89): the
+  // by the time the click arrives, the requests are already gone.
   const prefetch = usePrefetchProject();
   const warm = () => prefetch(project.id);
 
@@ -194,7 +194,7 @@ export function NewProjectCard({
   disabled = false,
 }: {
   onClick: () => void;
-  /** Plafond de projets du plan atteint (MIN-72) : carte grisée, inerte. */
+  /** Plan project ceiling reached (MIN-72): gray card, inert. */
   disabled?: boolean;
 }) {
   const t = useTranslations("Projects");

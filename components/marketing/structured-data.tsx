@@ -7,42 +7,42 @@ import { FAQ_KEYS, MCP_FAQ_KEYS, PRICING_FAQ_KEYS } from "./faq-keys";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
- * Données structurées du site public (schema.org, JSON-LD).
+ * Structured data from the public site (schema.org, JSON-LD).
  *
- * Le `<title>` et le wordmark de la nav suffisent à un humain pour savoir sur
- * quel produit il est tombé ; un analyseur, lui, doit le deviner. Ce graphe
- * donne le nom de l'app et son objet sous forme non ambiguë — c'est exactement
- * ce que vérifie Google au moment de valider le branding de l'écran de
- * consentement OAuth (« le nom d'application configuré ne correspond pas à
- * celui de votre page d'accueil », « votre page d'accueil n'explique pas
- * l'objectif de votre application »).
+ * The `<title>` and the wordmark of the nav are enough for a human to know on
+ * which product it fell on; an analyzer must guess it. This graph
+ * gives the name of the app and its object in unambiguous form — this is exactly
+ * what Google checks when validating the branding of the screen of
+ * OAuth consent ("the configured application name does not correspond to
+ * that of your home page", "your home page does not explain not
+ * the objective of your application).
  *
- * Des nœuds reliés par `@id` plutôt que des blocs indépendants : Google
- * comprend alors qu'il s'agit d'une seule entité vue sous plusieurs angles —
- * l'éditeur, le site, le logiciel.
+ * Nodes linked by `@id` rather than independent blocks: Google
+ * then understands that it is a single entity seen from several angles —
+ * the publisher, the site, the software.
  *
- * `inLanguage` et `url` suivent la page servie (MIN-88) : `/` et `/fr` sont
- * deux URLs, il faut que le graphe le dise, sinon les deux se déclarent
- * anglaises et le hreflang décrit une réalité que les données structurées
- * contredisent. Les `@id`, eux, restent stables : c'est la même entité.
+ * `inLanguage` and `url` follow the page served (MIN-88): `/` and `/fr` are
+ * two URLs, the graph must say so, otherwise both declare
+ * English and the hreflang describes a reality that structured data
+ * contradicts. The `@id` remain stable: it is the same entity.
  *
- * Les prix sont DÉRIVÉS de `BILLING_PLANS`, jamais recopiés : `offers` est le
- * seul champ que Google exploite pour un rich result prix sur une
- * `SoftwareApplication`, et le seul moyen de signaler qu'un palier gratuit
- * existe. Une copie en dur se serait désynchronisée au premier changement de
- * tarif — l'erreur exacte que la landing vient de corriger ailleurs.
+ * The prices are DERIVED from `BILLING_PLANS`, never copied: `offers` is the
+ * the only field that Google uses for a rich result price on a
+ * `SoftwareApplication`, and the only way to signal that a free tier
+ * exists. A hard copy would have gone out of sync at the first change of
+ * price — the exact error that the landing has just corrected elsewhere.
  *
- * Le `FAQPage` est construit depuis les mêmes clés que l'accordéon
- * (`faq-keys.ts`) : une question déclarée ici mais absente de la page est une
- * erreur du Rich Results Test, et c'est la seule façon de ne pas l'introduire.
+ * The `FAQPage` is built from the same keys as the accordion
+ * (`faq-keys.ts`): a question declared here but absent from the page is a
+ * Rich Results Test error, and this is the only way to avoid introducing it.
  */
 
-/** Les six domaines du produit, tels que la nav les nomme déjà — même ordre. */
+/** The six areas of the product, as the nav already names them — same order. */
 const FEATURE_KEYS = ["tracker", "agents", "numo", "speed", "feedback", "more"] as const;
 
 const LANG_TAG: Record<Locale, string> = { en: "en-US", fr: "fr-FR" };
 
-/** La page dont le graphe est rendu, par variante. */
+/** The page whose graph is rendered, by variant. */
 const VARIANT_ROUTE: Record<StructuredDataVariant, PublicRouteKey> = {
   landing: "home",
   pricing: "pricing",
@@ -55,11 +55,11 @@ export async function StructuredData({
   variant = "landing",
 }: {
   /**
-   * `pricing` et `mcp` remplacent le graphe de la landing par celui de leur
-   * propre page. `mcp` rend un `TechArticle` : c'est le type que Google attend
-   * d'une documentation d'intégration, et le seul qui dise qu'une page décrit
-   * une procédure technique plutôt qu'un argumentaire (MIN-93).
-   */
+ * `pricing` and `mcp` replace the landing graph with that of their own
+ * page. `mcp` returns a `TechArticle`: this is the type that Google expects
+ * from integration documentation, and the only one that says that a page describes
+ * a technical procedure rather than an argument (MIN-93).
+ */
   variant?: StructuredDataVariant;
 } = {}) {
   const locale = (await getLocale()) as Locale;
@@ -93,7 +93,7 @@ export async function StructuredData({
       priceCurrency: "EUR",
       url: pricingUrl,
       // Sans `billingDuration`, un prix mensuel se lit comme un prix unique :
-      // P1M dit que les 8 € sont récurrents.
+      // P1M says that the €8 are recurring.
       priceSpecification: {
         "@type": "UnitPriceSpecification",
         price: plan.priceEurMonthly,
@@ -105,8 +105,8 @@ export async function StructuredData({
     })),
   };
 
-  // Chaque variante a ses questions ET son namespace : une question déclarée
-  // ici mais absente de la page est une erreur du Rich Results Test.
+  // Each variant has its questions AND its namespace: a declared question
+  // here but missing from the page is a Rich Results Test error.
   const faqKeys: ReadonlyArray<string> =
     variant === "pricing" ? PRICING_FAQ_KEYS : variant === "mcp" ? MCP_FAQ_KEYS : FAQ_KEYS;
   const tFaq =
@@ -133,11 +133,11 @@ export async function StructuredData({
   };
 
   /**
-   * `/mcp` : un `TechArticle` qui a pour sujet le logiciel, et une
-   * `EntryPoint` qui donne l'URL du serveur MCP. C'est la seule page du site
-   * dont le contenu est une PROCÉDURE — la décrire comme une `WebPage`
-   * ordinaire reviendrait à la ranger avec les pages légales.
-   */
+ * `/mcp`: a `TechArticle` which has the software as its subject, and a
+ * `EntryPoint` which gives the URL of the MCP server. This is the only page on the site
+ * whose content is a PROCEDURE — describing it as an ordinary `WebPage`
+ * would be classifying it with the legal pages.
+ */
   const mcpGraph = [
     organization,
     {
@@ -147,9 +147,9 @@ export async function StructuredData({
       headline: tm("metaTitle"),
       description: tm("metaDescription"),
       inLanguage,
-      // Le `lastModified` de la table des routes fait foi partout ailleurs
-      // (sitemap compris) : deux dates différentes pour la même page sont un
-      // signal contradictoire, et c'est celle-là que Google recoupe.
+      // The `lastModified` of the routes table is valid everywhere else
+      // (sitemap included): two different dates for the same page are one
+      // contradictory signal, and this is the one that Google matches.
       dateModified: route.lastModified,
       about: { "@id": `${SITE_URL}/#software` },
       isPartOf: { "@id": `${SITE_URL}/#website` },
@@ -191,7 +191,7 @@ export async function StructuredData({
             inLanguage,
             isPartOf: { "@id": `${SITE_URL}/#website` },
             publisher: { "@id": `${SITE_URL}/#organization` },
-            // Les mêmes offres que la landing, sur la page qui les détaille.
+            // The same offers as the landing, on the page which details them.
             mainEntity: {
               "@type": "SoftwareApplication",
               "@id": `${SITE_URL}/#software`,
@@ -222,8 +222,8 @@ export async function StructuredData({
             applicationCategory: "DeveloperApplication",
             operatingSystem: "Web",
             inLanguage,
-            // Les six domaines du produit, nommés une seule fois — le menu
-            // « Produit » de la nav lit les mêmes clés.
+            // The six areas of the product, named only once — the menu
+            // “Product” from the nav reads the same keys.
             featureList: FEATURE_KEYS.map((key) => t(`navMenu_${key}_title`)),
             publisher: { "@id": `${SITE_URL}/#organization` },
             offers,
@@ -234,9 +234,9 @@ export async function StructuredData({
   return (
     <script
       type="application/ld+json"
-      // Les chaînes viennent des fichiers de traduction, mais un `<` suivi de
-      // `/script>` refermerait la balise : on remplace donc tout `<` par son
-      // échappement Unicode, que JSON.parse relit comme le caractère d'origine.
+      // The strings come from the translation files, but a `<` followed by
+      // `/script>` would close the tag: we therefore replace all `<` with its
+      // Unicode escape, which JSON.parse rereads as the original character.
       dangerouslySetInnerHTML={{
         __html: JSON.stringify({
           "@context": "https://schema.org",

@@ -11,24 +11,24 @@ import { parseAgentLocalDiff, type AgentLocalDiff } from "./agent-local-diff";
 export type { AgentRunLive } from "./agent-live";
 
 /**
- * Le fil d'une session de l'agent de code EN DIRECT (topic privé
+ * The thread of a LIVE code agent session (private topic
  * `agent-run:{runId}`, migration 20260908090000_agent_live_stream).
  *
- * Numo streame parce que son fil tient la connexion SSE de la route qui fait
- * tourner la boucle. L'agent de code ne peut pas : sa boucle tourne en tâche de
- * fond, sans navigateur au bout. Le serveur diffuse donc deux choses sur le topic
- * du run (lib/server/agent/live.ts), et c'est ici qu'on les reçoit :
+ * Numo streams because its thread holds the SSE connection of the route which does
+ * loop. The code agent cannot: its loop runs as a
+ * task in the background, without a browser at the end. The server therefore broadcasts two things on the topic
+ * of the run (lib/server/agent/live.ts), and this is where we receive them:
  *
- *   `stream` — le texte du round en cours, ~4 fois par seconde. Rendu comme
- *              queue vivante du fil, puis remplacé par le vrai message. Porte
- *              aussi l'état de RÉFLEXION (MIN-122) — un drapeau et un chrono,
- *              jamais le texte du raisonnement : celui-ci n'est pas streamé.
- *   `event`  — une ligne `agent_run_events` fraîchement insérée, poussée
- *              directement dans le cache du fil : les tool-calls et la réponse
- *              apparaissent à l'instant au lieu d'attendre le poll.
+ * `stream` — the text of the current round, ~4 times per second. Rendered as
+ * live tail of the thread, then replaced with the real message. Carries
+ * also the REFLECTION state (MIN-122) — a flag and a timer,
+ * never the text of the reasoning: this is not streamed.
+ * `event` — a freshly inserted `agent_run_events` line, pushed
+ * directly in the thread cache: the tool-calls and the response
+ * appear instantly instead of waiting for the poll.
  *
- * Le polling de `useAgentRunEventsQuery` reste en place : c'est le filet (message
- * perdu, onglet endormi, abonnement pas encore joint).
+ * The polling of `useAgentRunEventsQuery` remains in place: it's the net (message
+ * lost, sleeping tab, subscription not yet attached).
  */
 
 interface Listener {
@@ -40,14 +40,14 @@ interface Listener {
 interface Entry {
   channel: RealtimeChannel | null;
   listeners: Set<Listener>;
-  /** Dernier abonné parti pendant l'ouverture → ne pas joindre après coup. */
+  /** Last subscriber left during opening → do not contact afterwards. */
   closed: boolean;
 }
 
 /**
- * UN canal par run, quel que soit le nombre de fils montés dessus : deux vues du
- * même run coexistent (la modale d'un ticket au-dessus de la page Agents), et un
- * même socket ne peut pas joindre deux fois le même topic.
+ * ONE channel per run, regardless of the number of threads mounted on it: two views of the
+ * same run coexist (the modal of a ticket above the Agents page), and one
+ * same socket cannot join the same topic twice.
  */
 const channels = new Map<string, Entry>();
 
@@ -58,8 +58,8 @@ function subscribeRun(runId: string, listener: Listener): () => void {
     entry = fresh;
     channels.set(runId, fresh);
     const supabase = getSupabase();
-    // Même précaution que le RealtimeProvider : pousser le token AVANT le join,
-    // sinon le canal privé refuse l'abonnement (jeton anon).
+    // Same precaution as the RealtimeProvider: push the token BEFORE the join,
+    // otherwise the private channel refuses the subscription (anon token).
     void supabase.realtime.setAuth().then(() => {
       if (fresh.closed) return;
       const channel = supabase.channel(`agent-run:${runId}`, {
@@ -93,9 +93,9 @@ function subscribeRun(runId: string, listener: Listener): () => void {
   };
 }
 
-/** Patch produit sur la machine pendant le tour. Il partage le même abonnement
- * Realtime que le fil, mais reste séparé du stream texte pour ne pas être
- * retransmis quatre fois par seconde. Au repos, l'event persistant prend le relais. */
+/** Patch produced on the machine during the round. It shares the same
+ * Realtime subscription as the feed, but remains separate from the text stream so as not to be
+ * retransmitted four times per second. When idle, the persistent event takes over. */
 export function useAgentRunLocalDiff(
   runId: string | null,
   active: boolean,
@@ -107,8 +107,8 @@ export function useAgentRunLocalDiff(
     if (!runId || !active) return;
     return subscribeRun(runId, {
       onDiff: (next) => {
-        // Le relais valide déjà la forme ; l'ordre est porté par le wrapper
-        // Realtime. Deux relevés successifs sont des instantanés complets.
+        // The relay already validates the shape; the order is carried by the wrapper
+        //Realtime. Two successive readings are complete snapshots.
         setDiff(next);
       },
     });
@@ -118,8 +118,7 @@ export function useAgentRunLocalDiff(
 }
 
 /**
- * `active` = l'agent travaille. Au repos on ne s'abonne pas : il n'y a rien à
- * diffuser et le fil est figé jusqu'au prochain message.
+ * `active` = the agent is working. When idle, we do not subscribe: there is nothing to broadcast and the thread is frozen until the next message.
  */
 export function useAgentRunLive(
   runId: string | null,
@@ -127,9 +126,9 @@ export function useAgentRunLive(
 ): AgentRunLive | null {
   const queryClient = useQueryClient();
   const [live, setLive] = useState<AgentRunLive | null>(null);
-  // Horodatage du dernier `stream` retenu : deux envois partis à 250 ms d'écart
-  // peuvent arriver dans le désordre, et un texte plus ancien effacerait la fin
-  // de celui déjà affiché.
+  // Timestamp of the last `stream` retained: two sendings sent 250 ms apart
+  // may arrive out of order, and older text would delete the end
+  // of the one already displayed.
   const lastAt = useRef(0);
 
   useEffect(() => {
@@ -142,17 +141,17 @@ export function useAgentRunLive(
         const at = typeof p.at === "number" ? p.at : 0;
         if (at < lastAt.current) return;
         lastAt.current = at;
-        // Ce que la charge change à l'état du fil : à part, et pur
+        // What the charge changes in the state of the wire: apart, and pure
         // ([agent-live.ts](agent-live.ts)).
         setLive((prev) => liveFromStream(prev, p));
       },
       onEvent: (row) => {
-        // Un event posé clôt la phase d'écriture du round — sauf les fichiers, qui
-        // n'ont d'autre relais que le `files_changed` de fin de tour (cf.
+        // A set event closes the writing phase of the round — except the files, which
+        // have no other relay than the `files_changed` at the end of the turn (cf.
         // `liveAfterEvent`).
         setLive((prev) => liveAfterEvent(prev, row.type));
-        // Le cache n'est patché QUE s'il existe déjà : le créer ici ferait passer
-        // la requête pour fraîche et sauterait son chargement initial.
+        // The cache is ONLY patched if it already exists: creating it here would cause
+        // the query for fresh and would skip its initial loading.
         queryClient.setQueryData<{ events: AgentRunEvent[] }>(
           ["agent-run-events", runId],
           (old) => {

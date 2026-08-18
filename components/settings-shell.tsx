@@ -34,9 +34,9 @@ export type SettingsTab = {
   label: string;
   icon?: LucideIcon;
   hidden?: boolean;
-  /** Pastille d'attention sur l'onglet — un réglage y est incomplet. La chaîne
-      est ce que dit le survol et ce que lit un lecteur d'écran : le point seul
-      n'apprendrait rien à qui ne le voit pas. */
+  /** Caution mark on the tab — a setting is incomplete. The chain
+      is what the hover says and what a screen reader reads: the point alone
+      would teach nothing to those who do not see it. */
   indicator?: string;
   content: ReactNode;
 };
@@ -48,46 +48,46 @@ type SettingsShellProps = {
   /** Rendered above the tab content (banners, warnings…). */
   topSlot?: ReactNode;
   /**
-   * « Filtrer les 18 réglages… ». Une FONCTION, pas une chaîne : le namespace
-   * diffère (compte / projet) donc la traduction vient de la page, mais le
-   * nombre — celui des sections réellement cherchables ici, après les droits et
-   * les onglets masqués — n'est connu que du shell.
+   * “Filter the 18 settings…”. A FUNCTION, not a string: the namespace
+   * differs (account / project) so the translation comes from the page, but the
+   * number — that of the sections actually searchable here, after the rights and
+   * hidden tabs — is only known to the shell.
    */
   filterPlaceholder: (count: number) => string;
   /**
-   * Qui regarde l'écran, pour les sections réservées : « Zone sensible » et
-   * « Quitter le projet » vivent dans le MÊME onglet et s'excluent l'une
-   * l'autre. Sans cette réponse, la recherche proposerait au non-propriétaire
-   * une carte qu'il n'aura jamais sous les yeux — et son ancre ne serait jamais
-   * trouvée, donc le déroulé attendrait cinq secondes dans le vide. Omis pour
-   * les réglages du compte, où aucune section n'est conditionnelle.
+   * Who is looking at the screen, for the reserved sections: “Sensitive zone” and
+   * "Leave project" live in the SAME tab and exclude each other
+   * the other. Without this response, the research would suggest to the non-owner
+   * a map that he will never have before his eyes - and his anchor would never be
+   * found, so the unroll would wait five seconds in a vacuum. Omitted for
+   * account settings, where no section is conditional.
    */
   audience?: "owner" | "member";
 };
 
-/** La largeur de la colonne de cartes, la MÊME des deux côtés (MIN-167). Le
-    compte tenait en 880 px et le projet en 1080 : deux écrans qui partagent un
-    shell et n'ont pas la même largeur, c'est déjà « chaque onglet a un look
-    différent ». Depuis que le rail d'onglets est sorti dans la sidebar
-    secondaire, c'est `max-w-3xl` — la même colonne centrée que le détail d'un
-    triage, d'un retour ou d'une pull request. */
+/** The width of the column of cards, the SAME on both sides (MIN-167). THE
+    account took in 880 px and the project in 1080: two screens which share a
+    shell and do not have the same width, it is already "each tab has a different look
+    different ". Since the tab rail came out in the sidebar
+    secondary, it is `max-w-3xl` — the same column centered as the detail of a
+    triage, return or pull request. */
 const SETTINGS_MAX_WIDTH = "max-w-3xl";
 
-/** Le temps que dure l'anneau : celui de poser l'œil, pas plus. */
+/** The time the ring lasts: that of placing the eye, no more. */
 const FOCUS_HIGHLIGHT_MS = 2000;
-/** Au-delà, la section demandée n'arrivera pas (onglet sans elle, droits qui ne
- *  la rendent pas, requête en échec) : on cesse de la guetter. */
+/** Beyond that, the requested section will not arrive (tab without it, rights which do not
+ * do not return it, request in failure): we stop watching for it. */
 const FOCUS_WAIT_MS = 5000;
 
 /**
- * Déroule jusqu'à la carte demandée et la surligne (MIN — recherche des
- * réglages dans ⌘K).
+ * Scroll to the requested card and highlight it (MIN — search for
+ * settings in ⌘K).
  *
- * Elle n'existe presque jamais à la frame où l'URL arrive : l'onglet vient de
- * changer, et la plupart des sections attendent une requête (membres, dépôt
- * lié, réglages du board). D'où la guette plutôt qu'un seul essai — sans elle,
- * une section sur deux ne recevait rien et l'utilisateur atterrissait en haut
- * de l'onglet, à chercher des yeux ce qu'il venait de nommer.
+ * It almost never exists in the frame where the URL arrives: the tab comes from
+ * change, and most sections are waiting for a request (members, filing
+ * linked, board settings). Hence the watch rather than a single test - without it,
+ * every other section received nothing and the user landed at the top
+ * of the tab, looking for what he had just named.
  */
 function useSectionFocus(
   target: { id: SettingsSectionId; nonce: number } | null,
@@ -129,17 +129,17 @@ function useSectionFocus(
 }
 
 /**
- * L'écran de réglages, partagé par le compte (/settings) et un projet
- * (/projects/<id>/settings). Le rail d'onglets est une SIDEBAR SECONDAIRE : il
- * quitte la colonne de contenu pour la colonne de navigation, pleine hauteur, à
- * gauche du header — la même place et la même grammaire que la liste du triage,
- * des retours, des pull requests et des sessions d'agent. Le titre de l'écran
- * est la ligne de titre de cette barre ; il n'est donc plus écrit au-dessus des
- * cartes, où il faisait doublon avec le fil d'Ariane.
+ * The settings screen, shared by the account (/settings) and a project
+ * (/projects/<id>/settings). The miter rail is a SECONDARY SIDEBAR: it
+ * leaves the content column for the navigation column, full height, at
+ * left of the header — the same place and the same grammar as the sorting list,
+ * returns, pull requests and agent sessions. The screen title
+ * is the title line of this bar; it is therefore no longer written above the
+ * maps, where it duplicated the breadcrumbs.
  *
- * L'onglet actif est piloté par `?tab=` : les onglets sont partageables et
- * survivent à un rechargement ; choisir l'onglet par défaut retire le paramètre
- * pour garder l'URL propre.
+ * The active tab is controlled by `?tab=`: the tabs are shareable and
+ * survive reloading; choosing the default tab removes the setting
+ * to keep the URL clean.
  */
 export function SettingsShell({
   title,
@@ -191,9 +191,9 @@ function SettingsTabs({
     : (visibleTabs[0]?.value ?? defaultTab);
   const activeTab = tabParam && validValues.has(tabParam) ? tabParam : fallback;
 
-  // Sous `md`, le rail et le contenu se relaient en plein écran, comme partout
-  // ailleurs dans l'app. Une URL qui NOMME son onglet ouvre directement le
-  // contenu : on arrive de la palette ou d'un lien, pas du rail.
+  // Under `md`, the rail and the content take turns in full screen, like everywhere
+  // elsewhere in the app. A URL that NAMEs its tab directly opens the
+  // content: we arrive from the pallet or a link, not from the rail.
   const [mobileDetail, setMobileDetail] = useState(!!tabParam);
   const contentFade = useScrollFade<HTMLDivElement>();
   const activeLabel =
@@ -202,8 +202,8 @@ function SettingsTabs({
   const setActiveTab = useCallback(
     (value: string) => {
       setMobileDetail(true);
-      // Deux écrans partagent ce shell : les réglages du compte (/settings) et
-      // ceux d'un projet (/projects/<id>/settings). Le chemin les distingue.
+      // Two screens share this shell: account settings (/settings) and
+      // those of a project (/projects/<id>/settings). The path distinguishes them.
       trackEvent("settings_tab_switched", {
         scope: pathname.startsWith("/projects/") ? "project" : "account",
         tab: value,
@@ -220,11 +220,11 @@ function SettingsTabs({
     [fallback, pathname, router, searchParams],
   );
 
-  // `?section=` : la palette ne se contente pas d'ouvrir le bon onglet, elle
-  // nomme la carte. Le paramètre est CONSOMMÉ dès sa lecture — recopié en état
-  // local puis retiré de l'URL. Sans ce retrait, changer d'onglet le trimballe
-  // (setActiveTab recopie la query) et un rechargement rejouerait le surlignage
-  // d'une section qu'on ne cherche plus.
+  // `?section=`: the palette does not just open the right tab, it
+  // name the card. The parameter is CONSUMED as soon as it is read — copied as it stands
+  // local then removed from the URL. Without this removal, changing tab carries it around
+  // (setActiveTab copies the query) and a reload would replay the highlighting
+  // from a section that we no longer look for.
   const sectionParam = searchParams.get(SETTINGS_SECTION_PARAM);
   const [focus, setFocus] = useState<{
     id: SettingsSectionId;
@@ -239,8 +239,8 @@ function SettingsTabs({
     }
     if (consumed.current === sectionParam) return;
     consumed.current = sectionParam;
-    // Le compteur, et pas l'id seul : redemander DEUX FOIS la même section doit
-    // la re-dérouler, or son id n'a pas changé.
+    // The counter, and not the id alone: ​​requesting the same section TWICE must
+    // re-roll it, but its id has not changed.
     setFocus((prev) => ({
       id: sectionParam as SettingsSectionId,
       nonce: (prev?.nonce ?? 0) + 1,
@@ -254,19 +254,19 @@ function SettingsTabs({
   useSectionFocus(focus, !!reduceMotion);
 
   // ── Recherche de sections ────────────────────────────────────────────────
-  // Le rail d'onglets répond à « où est-ce ? », or ce qu'on tape est le nom de
-  // la CARTE : « cadence », « zone sensible », « agir en votre nom » — aucun de
-  // ces mots n'est un onglet. La palette ⌘K sait déjà les trouver ; la colonne
-  // rejoue exactement le même chemin, avec le même catalogue et la même URL
-  // (bon onglet, ancre déroulée, carte surlignée) — cf. settingsSectionHref.
+  // The miter rail answers "where is it?" ", but what we type is the name of
+  // the CARD: “pace”, “sensitive zone”, “act on your behalf” — none of
+  // these words is not a tab. The ⌘K palette already knows how to find them; the column
+  // replays exactly the same path, with the same catalog and the same URL
+  // (right tab, unrolled anchor, highlighted map) — cf. settingsSectionHref.
   const [query, setQuery] = useState("");
   const allSections = useSettingsSections();
   const scope = pathname.startsWith("/projects/") ? "project" : "account";
   const projectId = projectIdFromPath(pathname);
-  // Ce que cet écran-ci peut offrir : sa portée, les droits de qui regarde, et
-  // les onglets réellement montés. Un onglet masqué (droits, plan) n'a pas de
-  // cartes rendues — y envoyer quelqu'un le ferait atterrir sur l'onglet par
-  // défaut, sans rien, et le déroulé guetterait cinq secondes une ancre absente.
+  // What this screen can offer: its scope, the rights of who watches, and
+  // the tabs actually mounted. A hidden tab (rights, plan) has no
+  // returned cards — sending someone there would land them on the tab by
+  // fault, without anything, and the unfolding would wait five seconds for an absent anchor.
   const searchable = useMemo(
     () =>
       allSections.filter(
@@ -279,8 +279,8 @@ function SettingsTabs({
   );
   const matches = useMemo(() => {
     if (!query.trim()) return [];
-    // Les mots-clés du catalogue portent les DEUX langues : « sécurité » se
-    // trouve depuis un écran anglais, et « security » depuis un français.
+    // The keywords in the catalog carry BOTH languages: “security” is
+    // found from an English screen, and “security” from a French one.
     return searchable.filter((s) =>
       matchesFilter(query, [s.title, s.tabLabel, ...s.keywords]),
     );
@@ -290,8 +290,8 @@ function SettingsTabs({
     (section: SettingsSection) => {
       setMobileDetail(true);
       setQuery("");
-      // `replace` et non `push` : on est déjà sur l'écran, seule la destination
-      // interne change — comme un changement d'onglet, qui n'empile pas non plus.
+      // `replace` and not `push`: we are already on the screen, only the destination
+      // internal change — like a tab change, which does not stack either.
       router.replace(settingsSectionHref(section, projectId ?? undefined), {
         scroll: false,
       });
@@ -300,8 +300,8 @@ function SettingsTabs({
   );
 
   return (
-    // La RANGÉE de l'écran : le rail part dans la sidebar secondaire (par
-    // portail, dans le châssis) et les cartes restent à droite.
+    // The ROW of the screen: the rail leaves in the secondary sidebar (by
+    // gate, in the chassis) and the cards remain on the right.
     <div className="flex h-full min-h-0">
       <SecondarySidebar
         title={title}
@@ -313,9 +313,9 @@ function SettingsTabs({
           clearLabel: tCommon("clearFilter"),
         }}
       >
-        {/* Une recherche en cours REMPLACE le rail : ce sont deux réponses à la
-            même question — où aller — et les empiler ferait une colonne à deux
-            listes. Le rail revient dès que le champ est vidé. */}
+        {/* Research in progress REPLACES the rail: these are two answers to the
+            same question — where to go — and stacking them would make a column of two
+            lists. The rail returns as soon as the field is emptied. */}
         {query.trim() ? (
           matches.length === 0 ? (
             <p className="px-4 py-6 text-center text-sm text-muted-foreground">
@@ -336,8 +336,8 @@ function SettingsTabs({
                       <span className="min-w-0 flex-1 truncate text-sm">
                         {section.title}
                       </span>
-                      {/* L'onglet qui la contient, en contexte dim — la même
-                          lecture que sur la ligne de palette. */}
+                      {/* The tab that contains it, in dim context — the same
+                          reading only on the paddle line. */}
                       <span className="shrink-0 text-xs text-muted-foreground">
                         {section.tabLabel}
                       </span>
@@ -348,9 +348,9 @@ function SettingsTabs({
             </ul>
           )
         ) : (
-          /* Des cartes à nous, et non les `Tabs` de mangue-ui : la sélection est
-             dessinée par une pastille qui GLISSE, que l'indicateur de la
-             bibliothèque doublait d'une capsule bordée. Cf. SidebarNavRail. */
+          /* Cards of ours, and not the `Tabs` of mango-ui: the selection is
+             drawn by a pellet that SLIDES, that the indicator of the
+             library lined with a lined capsule. See SidebarNavRail. */
           <SidebarNavRail
             label={title}
             items={visibleTabs}
@@ -366,10 +366,10 @@ function SettingsTabs({
           mobileDetail ? "flex" : "hidden",
         )}
       >
-        {/* En-tête du panneau, MOBILE seulement : le retour vers le rail et le
-            nom de l'onglet ouvert. Sur desktop le rail est à l'écran et le
-            surligne déjà — une barre de plus n'aurait rien à dire, et pousserait
-            les cartes vers le bas pour le répéter. */}
+        {/* Panel header, MOBILE only: return to rail and
+            name of the open tab. On desktop the rail is on the screen and the
+            already highlights — one more bar would have nothing to say, and would push
+            cards down to repeat it. */}
         <div className="flex shrink-0 items-center gap-2 px-4 py-3 md:hidden">
           <Button
             variant="ghost"
@@ -389,13 +389,13 @@ function SettingsTabs({
         >
           <div className={cn("mx-auto flex flex-col gap-4", SETTINGS_MAX_WIDTH)}>
             {topSlot}
-            {/* Seul l'onglet ouvert est monté — c'est déjà ce que faisait
-                `TabsContent`, qui démonte les autres. La clé, elle, force un
-                remontage à chaque changement : un panneau ne doit pas hériter de
-                l'état de son voisin.
+            {/* Only the open tab is mounted — that's already what it did
+                `TabsContent`, which dismantles the others. The key forces a
+                reassembly at each change: a panel must not inherit from
+                the state of its neighbor.
 
-                L'espacement vit ENTRE les cartes : chaque groupe porte son
-                propre cadre, un `space-y-10` (qui séparait des blocs sans bord)
+                Spacing lives BETWEEN the cards: each group carries its
+                own frame, a `space-y-10` (which separated blocks without borders)
                 laisserait des trous. */}
             <div key={activeTab} className="flex flex-col gap-4">
               {visibleTabs.find((tab) => tab.value === activeTab)?.content}

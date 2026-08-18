@@ -32,13 +32,13 @@ import type { Locale } from "@/i18n/config";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
- * Barre de navigation du site public (MIN-73) — landing, tarifs, pages légales.
+ * Public site navigation bar (MIN-73) — landing, prices, legal pages.
  *
- * Pastille flottante centrée, reprise du layout de la nav d'AutoKap : grille
- * `1fr auto 1fr` pour que les liens restent optiquement centrés quel que soit
- * l'encombrement du logo et des boutons. Elle se rétracte dès qu'on quitte le
- * premier écran et revient quand on remonte : sur une landing, la nav appartient
- * au hero, pas au défilement.
+ * Centered floating dot, taken from the layout of the AutoKap nav: grid
+ * `1fr auto 1fr` so that the links remain optically centered regardless
+ * the clutter of the logo and buttons. It retracts as soon as you leave the
+ * first screen and returns when you go back up: on a landing, the nav belongs
+ * to the hero, not to the scrolling.
  */
 
 type NavLink = {
@@ -48,11 +48,11 @@ type NavLink = {
 };
 
 /**
- * Le menu « Produit » : les six sections de la landing, chacune avec ce qu'on y
- * trouve. La nav listait quatre ancres nues — « Le tracker », « Les agents »,
- * « Tarifs », « FAQ » — dont deux n'apprenaient rien à qui ne connaît pas
- * minddy, et laissait de côté la moitié de la page (la vitesse, le board de
- * feedback, le reste). Un mot qui regroupe vaut mieux que quatre qui se
+ * The “Product” menu: the six sections of the landing, each with what we see there
+ * find. The nav listed four bare anchors — “The Tracker,” “The Agents,”
+ * “Prices”, “FAQ” – two of which teach nothing to those who don’t know
+ * minddy, and left out half the page (the speed, the board of
+ * feedback, the rest). One word that brings together is better than four that
  * devinent.
  */
 const PRODUCT_ENTRIES: ReadonlyArray<ProductEntry> = [
@@ -63,33 +63,33 @@ const PRODUCT_ENTRIES: ReadonlyArray<ProductEntry> = [
   { key: "pages", href: "/#pages", icon: FileText },
   { key: "feedback", href: "/#feedback", icon: MessagesSquare },
   { key: "more", href: "/#more", icon: Boxes },
-  // La seule entrée qui mène à une PAGE et non à une section de la landing
-  // (MIN-93). Elle est en dernier pour que le menu se lise toujours comme le
-  // plan de la landing, et sa description dit « documentation » sans le mot :
-  // c'est ce qui la distingue de l'entrée « Agents & MCP » juste au-dessus.
+  // The only entry that leads to a PAGE and not to a section of the landing
+  // (MIN-93). It is last so that the menu always reads like the
+  // plan of the landing, and its description says “documentation” without the word:
+  // this is what distinguishes it from the “Agents & MCP” entry just above.
   { key: "mcp", href: "/mcp", icon: Terminal },
-  // L'app Mac (MIN-292), en dernier : c'est la seule entrée qui ne parle pas de
-  // ce que fait minddy mais de l'endroit d'où on s'en sert. Elle a sa place ici
-  // parce qu'elle est indexable et qu'un lien interne vaut plus qu'une ligne de
-  // sitemap — mais pas plus haut, sinon elle passerait pour la façon normale
-  // d'utiliser minddy, alors que le navigateur en reste le lieu.
+  // The Mac app (MIN-292), last: it's the only entry that doesn't talk about
+  // what minddy does but from where we use it. She belongs here
+  // because it is indexable and an internal link is worth more than a line of
+  // sitemap — but not higher, otherwise it would pass for the normal way
+  // to use minddy, while the browser remains the place.
   { key: "download", href: "/download", icon: Laptop },
 ];
 
 /**
- * Les deux liens directs qui accompagnent le menu.
+ * The two direct links that accompany the menu.
  *
- * « Comment ça marche » vise `#workflow`, le parcours ticket → pull request :
- * c'est la question que se pose un visiteur qui vient de lire le hero, et la
- * section y répond en trois images. La FAQ a quitté la nav — elle est en bas de
- * page, on y arrive en lisant, pas en la cherchant, et elle occupait une place
- * de nav pour une objection qu'on n'a pas encore.
+ * “How it works” aims at `#workflow`, the ticket → pull request route:
+ * this is the question asked by a visitor who has just read the hero, and the
+ * section answers it in three images. The FAQ has left the nav — it is at the bottom of
+ * page, you get there by reading, not by looking for it, and it occupied a place
+ * of nav for an objection that we do not yet have.
  *
- * « Tarifs » vise la PAGE `/pricing`, et non plus la section de la landing :
- * quelqu'un qui clique « Tarifs » dans une barre de navigation demande la
- * grille complète, pas un défilement vers trois cartes suivies d'un second lien
- * à trouver. C'est aussi la seule entrée de la nav qui menait à une ancre alors
- * qu'une vraie page existait — et un lien interne de plus vers une page
+ * “Prices” refers to PAGE `/pricing`, and no longer to the landing section:
+ * someone who clicks “Prices” in a navigation bar asks for the
+ * full grid, not a scroll to three cards followed by a second link
+ * to find. It's also the only entrance to the nav that led to an anchor so
+ * that a real page existed — and one more internal link to a page
  * indexable ne se refuse pas.
  */
 const LINKS: ReadonlyArray<NavLink> = [
@@ -97,7 +97,7 @@ const LINKS: ReadonlyArray<NavLink> = [
   { href: "/pricing", key: "navPricing", icon: Tag },
 ];
 
-/** Ligne et pastille d'icône du tiroir mobile, partagées par ses deux blocs. */
+/** Line and icon pad of the mobile drawer, shared by its two blocks. */
 const MOBILE_ROW =
   "flex items-start gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted active:scale-[0.99]";
 const MOBILE_ICON =
@@ -113,26 +113,26 @@ function NavLogo() {
 }
 
 /**
- * Sonde de session, côté client uniquement.
+ * Session probe, client side only.
  *
- * Le site public n'est pas enveloppé dans les providers de l'app : on a juste
- * besoin de savoir s'il existe une session pour remplacer le couple
- * connexion/inscription par un unique « ouvrir l'app ». Lecture côté CLIENT et
- * non côté serveur pour que les pages publiques restent cacheables par le CDN —
- * un `signedIn` calculé au rendu rendrait le HTML dépendant des cookies, ce qui
- * annulerait le travail de mise en cache du même lot. On part de `false` (le
- * cas majoritaire) pour que le rendu serveur et le premier paint coïncident.
+ * The public site is not wrapped in the app's providers: we just have
+ * need to know if there is a session to replace the couple
+ * connection/registration with a single “open the app”. CUSTOMER side reading and
+ * not on the server side so that public pages remain cacheable by the CDN —
+ * a `signedIn` calculated at rendering would make the HTML dependent on cookies, which
+ * would cancel the caching job of the same batch. We start from `false` (the
+ * majority case) so that the server rendering and the first paint coincide.
  *
  * DEUX PARESSES (MIN-88, revues par MIN-100), parce que
- * `@supabase/supabase-js` pesait dans le bundle INITIAL de la landing pour un
- * simple libellé de bouton :
+ * `@supabase/supabase-js` weighed in the INITIAL bundle of the landing for a
+ * simple button label:
  *
- * 1. Le SDK vit derrière un `next/dynamic` (`session-probe.tsx`) — donc dans un
+ * 1. The SDK lives behind a `next/dynamic` (`session-probe.tsx`) — therefore in a
  *    vrai chunk paresseux. Un `import()` nu ne suffisait PAS : Turbopack en place
- *    la cible dans le groupe de chunks initial du composant, et les 18 Ko
- *    gzippés partaient quand même avec le bundle de départ (mesuré).
- * 2. La sonde n'est même pas montée si aucun cookie d'auth Supabase n'est
- *    présent. Un visiteur anonyme — l'immense majorité sur une landing — ne
+ * the target in the initial chunk group of the component, and the 18 KB
+ * gzipped files still left with the starting bundle (measured).
+ * 2. The probe is not even mounted if no Supabase auth cookie is present
+ * here. An anonymous visitor — the vast majority on a landing — does not
  *    demande donc jamais ce chunk.
  */
 const SessionProbe = dynamic(
@@ -142,12 +142,12 @@ const SessionProbe = dynamic(
 
 function hasAuthCookie(): boolean {
   // Supabase nomme ses cookies `sb-<ref>-auth-token[.n]`. On ne cherche qu'un
-  // indice, pas une preuve : le SDK reste seul juge de la validité.
+  // clue, not proof: the SDK remains the sole judge of validity.
   return document.cookie.includes("-auth-token");
 }
 
-/** `[a-t-on une session, faut-il la demander]`. On part de `false` : le rendu
-    serveur et le premier paint coïncident donc pour le cas majoritaire. */
+/** `[a-t-on une session, faut-il la demander]`. We start from `false`: the rendering
+    server and the first paint therefore coincide for the majority case. */
 function useSession(): [boolean, boolean, (v: boolean) => void] {
   const [hasSession, setHasSession] = useState(false);
   const [probe, setProbe] = useState(false);
@@ -158,8 +158,8 @@ function useSession(): [boolean, boolean, (v: boolean) => void] {
 export function MarketingNav() {
   const { track } = useAnalytics();
   const t = useTranslations("Landing");
-  // Les liens sont écrits une fois en anglais canonique ; sur `/fr` ils doivent
-  // pointer vers les URLs françaises, sinon le premier clic ramène en anglais.
+  // Links are written once in canonical English; on `/fr` they must
+  // point to French URLs, otherwise the first click returns to English.
   const locale = useLocale() as Locale;
   const href = (path: string) => localizedHref(path, locale);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -173,9 +173,9 @@ export function MarketingNav() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Sur la landing, cliquer le logo ne déclenche aucune navigation (on y est
-  // déjà) : on remonte donc explicitement, et on efface l'ancre pour que l'URL
-  // reflète la position réelle. Ailleurs, le lien fait son travail.
+  // On the landing, clicking the logo does not trigger any navigation (we are there
+  // already): we therefore go back explicitly, and we delete the anchor so that the URL
+  // reflects the actual position. Elsewhere, the link does its job.
   const handleLogoClick = useCallback((event: React.MouseEvent<HTMLAnchorElement>) => {
     if (window.location.pathname !== "/") return;
     event.preventDefault();
@@ -233,19 +233,19 @@ export function MarketingNav() {
               <Equal className="h-5 w-5" />
             </button>
 
-            {/* DEUX BOUTONS, jamais trois (MIN-292) : se connecter, et
-                télécharger — le téléchargement en PRIMAIRE. L'app de bureau est
-                la porte qu'on veut pousser, et elle mène de toute façon à la
-                création de compte : on ne fait pas choisir entre deux portes qui
-                donnent sur la même pièce.
+            {/* TWO BUTTONS, never three (MIN-292): connect, and
+                download — download in PRIMARY. The desktop app is
+                the door that we want to push, and it leads in any case to the
+                account creation: we do not make you choose between two doors which
+                overlook the same room.
 
-                **« Créer un compte » a quitté la barre**, et ce n'est pas une
-                omission. Trois contrôles côte à côte demandaient au visiteur de
-                trancher là où le hero le fait déjà pour lui ; l'inscription
-                reste à un clic — depuis le hero, depuis la page de
-                téléchargement, depuis l'écran de connexion qui porte « pas
-                encore de compte ». Et une session existante remplace de toute
-                façon les deux boutons par un seul « ouvrir l'app ». */}
+                **“Create an account” has left the bar**, and it is not a
+                omission. Three side-by-side controls asked the visitor to
+                to decide where the hero already does it for him; registration
+                remains one click away — from the hero, from the page of
+                download, from the login screen which says “not
+                still counting.” And an existing session replaces any
+                way both buttons with a single “open app”. */}
             <div className="hidden items-center gap-2 sm:flex">
               {hasSession ? (
                 <Button asChild size="sm" className="px-4">
@@ -289,9 +289,9 @@ export function MarketingNav() {
             </Link>
           </div>
 
-          {/* Au tactile il n'y a pas de survol, donc pas de menu : le tiroir
-              déplie ce que le menu « Produit » regroupe, sous son intitulé, et
-              les deux liens directs suivent. Mêmes cibles, même ordre. */}
+          {/* On touch screen there is no hover, therefore no menu: the drawer
+              unfolds what the “Product” menu groups together, under its title, and
+              the two direct links follow. Same targets, same order. */}
           <div className="flex-1 overflow-y-auto p-3">
             <p className="px-2.5 pt-1 pb-2 text-xs font-medium text-muted-foreground">
               {t("navProduct")}

@@ -14,20 +14,20 @@ import {
 } from "@/lib/server/notifications";
 
 /**
- * Le fil PUBLIC d'un retour (MIN-196) — le pendant board de
- * `lib/server/feedback/queries.ts`, dont il reprend la règle : tout passe par
- * le service client (les commentaires de retour ne matchent aucune policy), et
- * l'anonymisation se fait ICI, à la source. Ce qui sort de ce module ne porte
- * jamais d'email ni de nom, seulement un pseudonyme en graine d'avatar.
+ * The PUBLIC feedback thread (MIN-196) — the counterpart board of
+ * `lib/server/feedback/queries.ts`, from which it follows the rule: everything goes through
+ * customer service (feedback comments do not match any policy), and
+ * anonymization is done HERE, at the source. What comes out of this module never bears
+ * never has an email or name, only a pseudonym in avatar seed.
  *
- * Une seule règle de lecture, valable partout : un commentaire public SANS
- * `feedback_user_id` est la voix de l'équipe. C'est le cas des réponses écrites
- * depuis la vue équipe (`author_id` renseigné, mais jamais publié) comme des
- * anciennes `team_response` reprises par la migration (ni l'un ni l'autre).
+ * A single reading rule, valid everywhere: a public comment WITHOUT
+ * `feedback_user_id` is the voice of the team. This is the case for responses written
+ * from the team view (`author_id` entered, but never published) as well as old
+ * taken over by the migration (neither one nor the other).
  */
 
-/** Profondeur ≤ 1, comme les fils de tickets : `parent_id` porte toujours la
-    RACINE du fil, jamais la réponse qu'on visait. */
+/** Depth ≤ 1, like ticket threads: `parent_id` always carries the
+ ROOT of the thread, never the response we were aiming for. */
 const PUBLIC_THREAD_LIMIT = 200;
 
 interface PublicCommentRow {
@@ -54,7 +54,7 @@ function toPublicComment(row: PublicCommentRow, viewerId: string | null): Public
   };
 }
 
-/** Le fil public d'un retour, du plus ancien au plus récent. */
+/** The public thread of a return, from oldest to newest. */
 export async function listPublicComments(params: {
   postId: string;
   viewerId: string | null;
@@ -78,23 +78,22 @@ export async function listPublicComments(params: {
 
 export interface PublicCommentSummary {
   count: number;
-  /** Dernier commentaire de l'ÉQUIPE — ce que le badge du board annonce. */
+  /** Final comment from the TEAM — what the board badge says. */
   teamRepliedAt: string | null;
 }
 
-/** Un objet NEUF à chaque appel : le résumé est accumulé en place plus bas, et
-    une constante partagée finirait par compter les commentaires de tout le
-    board sur le premier retour venu. */
+/** A NEW object on each call: the summary is accumulated in place further down, and
+ a shared constant would end up counting the comments of the entire
+ board on the first return that comes. */
 export function emptyCommentSummary(): PublicCommentSummary {
   return { count: 0, teamRepliedAt: null };
 }
 
 /**
- * De quoi peindre une LISTE de retours sans ouvrir un seul fil : combien de
- * commentaires, et quand l'équipe a parlé pour la dernière fois.
+ * Enough to paint a LIST of feedback without opening a single thread: how many
+ * comments, and when the team last spoke.
  *
- * Une requête pour toute la page — un board rend jusqu'à 200 lignes, et une
- * lecture par ligne rendrait la liste plus chère que tout le reste du board.
+ * One query for the entire page — a board renders up to 200 lines, and a per-line read would render the list more expensive than everything else on the board.
  */
 export async function publicCommentSummaries(
   postIds: string[]
@@ -136,12 +135,12 @@ export type AddPublicCommentResult =
   | { ok: false; error: "empty" | "closed" | "notFound" | "failed" };
 
 /**
- * La RACINE du fil visé, ou `null` si le parent n'en est pas un du bon retour.
+ * The ROOT of the targeted thread, or `null` if the parent is not one of the correct return.
  *
- * Répondre à une réponse range le message sous la même racine (profondeur ≤ 1) :
- * la conversation reste une liste de fils, pas un arbre. Le parent doit être
- * public et appartenir à CE retour — sinon on rattacherait une réponse publique
- * à une note d'équipe, et le board la lirait.
+ * Replying to a reply stores the message under the same root (depth ≤ 1):
+ * the conversation remains a list of threads, not a tree. The parent must be
+ * public and belong to THIS feedback — otherwise we would attach a public
+ * response to a team note, and the board would read it.
  */
 async function resolvePublicThreadRoot(
   service: ReturnType<typeof getServiceClient>,
@@ -164,13 +163,13 @@ async function resolvePublicThreadRoot(
 }
 
 /**
- * Un visiteur ajoute un commentaire au fil public.
+ * A visitor adds a comment to the public thread.
  *
- * Trois refus, et ils ne disent pas la même chose : `closed` = le board ne
- * prend plus de commentaires (réglage du projet), `notFound` = ce retour n'a
- * pas de page publique (privé, en attente de revue, écarté, ou fusionné dans un
- * autre) — le même signal que celui que rend `getPublicPostDetail`, pour ne pas
- * annoncer par la bande l'existence d'un retour qu'on ne montre pas.
+ * Three rejections, and they don't say the same thing: `closed` = the board doesn't
+ * takes more comments (project setting), `notFound` = this feedback has
+ * no public page (private, awaiting review, discarded, or merged into a
+ * other) — the same signal as that given by `getPublicPostDetail`, so as not to
+ * announce through the band the existence of a return that is not shown.
  */
 export async function addPublicComment(params: {
   projectId: string;
@@ -178,7 +177,7 @@ export async function addPublicComment(params: {
   postId: string;
   feedbackUserId: string;
   body: string;
-  /** Le message auquel on répond — rangé sous la racine de son fil. */
+  /** The message being responded to — stored under the root of its thread. */
   parentId?: string | null;
 }): Promise<AddPublicCommentResult> {
   const text = params.body.trim().slice(0, FEEDBACK_COMMENT_BODY_MAX);
@@ -226,10 +225,10 @@ export async function addPublicComment(params: {
     return { ok: false, error: "failed" };
   }
 
-  // L'équipe doit APPRENDRE qu'on lui a répondu sur le board : sans ça, un fil
-  // public ne vit que si quelqu'un pense à aller le relire. L'acteur reste nul
-  // — le commentateur est un visiteur, pas un membre, et son identité ne
-  // remonte pas dans le fil de notifications.
+  // The team must LEARN that it was answered on the board: otherwise, a thread
+  // public only lives if someone thinks to go and reread it. The actor remains useless
+  // — the commenter is a visitor, not a member, and their identity is not
+  // not go back to the notifications thread.
   const memberIds = await projectMemberIds(service, params.projectId);
   const rows: NotificationRow[] = [...memberIds].map((uid) => ({
     user_id: uid,
@@ -252,16 +251,16 @@ export async function addPublicComment(params: {
 }
 
 /**
- * Un visiteur retire SON commentaire. L'égalité sur `feedback_user_id` est la
- * garde : elle exclut du même coup les commentaires des autres et ceux de
- * l'équipe (qui n'en portent pas). La modération d'équipe, elle, passe par la
- * route interne — même table, autre porte.
+ * A visitor removes THEIR comment. The equality on `feedback_user_id` is the
+ * guard: it excludes at the same time the comments of others and those of
+ * the team (which do not carry any). Team moderation goes through the
+ * internal route — same table, different door.
  *
- * Un message auquel ON A RÉPONDU ne se supprime plus, et c'est structurel :
- * `comments.parent_id` cascade, donc supprimer une racine emporterait toutes
- * ses réponses — celle de l'équipe comprise. Sans cette garde, n'importe qui
- * pourrait effacer la réponse publique de l'équipe en effaçant sa propre
- * question. On retire ce qu'on a dit tant que personne n'a parlé après.
+ * A message to which WE RESPONDED can no longer be deleted, and it is structural:
+ * `comments.parent_id` cascade, so deleting a root would take away all of its
+ * answers — that of the team included. Without this guard, anyone
+ * could erase the team's public answer by deleting their own
+ * question. We take back what we said as long as no one speaks afterwards.
  */
 export async function deletePublicComment(params: {
   postId: string;

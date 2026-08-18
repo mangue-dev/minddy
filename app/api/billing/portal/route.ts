@@ -13,16 +13,16 @@ import { billingReturnUrl } from "@/lib/desktop/return-url";
 import { canonicalAppOrigin } from "@/lib/server/app-origin";
 
 /**
- * POST /api/billing/portal — { url } de la session Stripe Customer Portal
- * (MIN-72) : gérer/changer/annuler l'abonnement, moyens de paiement, factures.
+ * POST /api/billing/portal — { url } of the Stripe Customer Portal session
+ * (MIN-72): manage/change/cancel subscription, payment methods, invoices.
  *
- * Corps FACULTATIF, `{ desktop?: true }` : le bouton « Retour » du portal doit
- * ramener dans l'app quand c'est d'elle qu'on est parti (MIN-293). Facultatif
- * pour de bon — la route a longtemps été appelée sans corps du tout, et un
- * `POST` sans `Content-Type` ne doit pas devenir un 400 pour un drapeau
+ * OPTIONAL body, `{ desktop?: true }`: the “Return” button of the portal must
+ * bring back into the app when it is from her that we left (MIN-293). Optional
+ * for good — the road has long been called without a body at all, and a
+ * `POST` without `Content-Type` should not become a 400 for a flag
  * d'ergonomie.
  */
-/** `{ desktop: true }`, ou rien du tout — un corps absent ou illisible vaut « web ». */
+/** `{ desktop: true }`, or nothing — an absent or unreadable body means “web”. */
 async function readsDesktopFlag(request: NextRequest): Promise<boolean> {
   try {
     const body = (await request.json()) as { desktop?: unknown };
@@ -55,15 +55,15 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (!isMissingCustomerError(error)) throw error;
     /**
-     * Le client n'existe plus chez Stripe (supprimé au tableau de bord, ou clé
-     * passée sur un autre compte Stripe). **On n'en refait PAS un ici** — au
-     * contraire du checkout : le portal sert à gérer un abonnement, et un client
-     * tout neuf n'en a aucun. On ouvrirait un écran vide en promettant le
+     * The customer no longer exists at Stripe (deleted from the dashboard, or key
+     * placed on another Stripe account). **We are NOT doing one again here** — at
+     * opposite of checkout: the portal is used to manage a subscription, and a customer
+     * brand new has none. We would open a blank screen promising the
      * contraire.
      *
-     * On efface donc la référence morte et on rend le même 400 que si le compte
-     * n'avait jamais eu de client. C'est ce que l'app sait déjà traiter : elle
-     * propose alors le checkout, qui refera un client pour de bon.
+     * We therefore erase the dead reference and return the same 400 as if the account
+     * never had a client. This is what the app already knows how to deal with: it
+     * then offers the checkout, which will make a customer again for good.
      */
     console.warn(
       `[billing] client Stripe périmé (${account.stripe_customer_id}) — référence effacée`

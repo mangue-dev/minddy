@@ -27,13 +27,13 @@ async function parseJson<T>(response: Response): Promise<T> {
   return data as T;
 }
 
-// ── Niveau projet (paramètres du projet) ────────────────────────────────────
+// ── Project level (project settings) ────────────────────────────────────
 
 export interface ProviderConnectInfo {
   id: RepoProviderId;
-  /** Le provider est configuré côté serveur (env présentes). */
+  /** The provider is configured on the server side (env present). */
   configured: boolean;
-  /** Connexion réutilisable de l'owner pour ce provider (ou null). */
+  /** Reusable connection of the owner for this provider (or null). */
   connection: { id: string; account_login: string | null } | null;
 }
 
@@ -42,12 +42,12 @@ export interface ProjectGitLinkResponse {
   isOwner: boolean;
   providers: ProviderConnectInfo[];
   /**
-   * URL où accorder « Issues (Write) » quand la synchro est active mais que
-   * l'installation GitHub n'a accepté que la lecture : l'import marche, le
-   * RETOUR (refermer l'issue distante) non. Recalculé à chaque lecture — il
-   * s'efface de lui-même dès que la permission est accordée. Null le reste du
-   * temps, et pour tout le monde sauf le owner.
-   */
+ * URL where to grant “Issues (Write)” when sync is active but
+ * the GitHub installation only accepted reading: the import works, the
+ * RETURN (close the remote issue) does not. Recalculated on each read — it
+ * clears itself as soon as permission is granted. Null the rest of the
+ * time, and for everyone except the owner.
+ */
   writeMissingUrl: string | null;
 }
 
@@ -61,7 +61,7 @@ export async function fetchProjectGitLinkApi(
   return parseJson(await fetch(`/api/projects/${projectId}/git-link`));
 }
 
-/** Les projets qui ont un dépôt lié — ceux où l'agent peut travailler. */
+/** Projects that have a linked repository — those where the agent can work. */
 export async function fetchGitLinkedProjectsApi(): Promise<{ projectIds: string[] }> {
   return parseJson(await fetch(`/api/projects/git-linked`));
 }
@@ -109,14 +109,14 @@ export async function bindGitRepoApi(
 }
 
 /**
- * Bascule la synchro des issues du dépôt lié (MIN-97). Renvoie la liaison
- * rafraîchie — le backfill, lui, tourne côté serveur après la réponse et
- * arrive par le realtime.
+ * Toggles the synchronization of outputs from the linked repository (MIN-97). Returns the binding
+ * refreshed — the backfill runs on the server side after the response and
+ * arrives via realtime.
  *
- * `writeMissingUrl` n'est présent qu'à l'activation, et seulement quand
- * l'installation GitHub n'a accepté que `Issues (Read)` : l'import marche, mais
- * refermer une issue depuis minddy demande `write`. C'est l'URL de la page où
- * l'accorder.
+ * `writeMissingUrl` is only present upon activation, and only when
+ * the GitHub installation has not accepted that `Issues (Read)`: the import works, but
+ * close an issue from minddy requests `write`. This is the URL of the page where
+ * grants it.
  */
 export async function setGitIssueSyncApi(
   projectId: string,
@@ -134,10 +134,8 @@ export async function setGitIssueSyncApi(
 }
 
 /**
- * Toutes les branches que minddy a poussées sur le dépôt lié et qui existent
- * encore (MIN-102), avec leur état. Le serveur recalcule cette liste au moment
- * de supprimer : ce qu'on affiche ici n'est qu'une proposition, pas une
- * autorisation.
+ * All branches that minddy pushed to the linked repository and which still exist
+ * (MIN-102), with their status. The server recalculates this list when deleting: what is displayed here is only a proposal, not an authorization.
  */
 export async function fetchAgentBranchesApi(
   projectId: string,
@@ -173,7 +171,7 @@ export async function unlinkGitRepoApi(projectId: string): Promise<void> {
   );
 }
 
-// ── Niveau compte (paramètres du compte) ────────────────────────────────────
+// ── Account level (account settings) ────────────────────────────────────
 
 export interface GitConnectionsResponse {
   connections: GitConnection[];
@@ -185,14 +183,14 @@ export async function fetchGitConnectionsApi(): Promise<GitConnectionsResponse> 
 }
 
 /**
- * Démarre une connexion git au niveau COMPTE — depuis les paramètres du compte,
- * ou depuis le wizard de création (MIN-62), qui choisit un dépôt avant que le
- * projet existe. `mode: "reuse"` = aucune sortie de page ; les deux autres modes
- * quittent l'app, l'appelant sauve son brouillon avant de suivre `url`.
+ * Starts a git connection at the ACCOUNT level — from the account settings,
+ * or from the build wizard (MIN-62), which chooses a repository before the
+ * project exists. `mode: "reuse"` = no page exit; the two other modes
+ * leave the app, the caller saves its draft before following `url`.
  *
- * `origin` dit d'où l'on part, et donc où le callback ramène — table close côté
- * serveur. Les deux appelants le passent en clair : un défaut silencieux
- * renverrait le wizard sur la mauvaise page sans que rien ne le signale.
+ * `origin` says where we start from, and therefore where the callback returns — table closed on the server side
+ *. Both callers pass it in plain text: a silent fault
+ * would send the wizard to the wrong page without anything indicating it.
  */
 export async function startAccountGitConnectApi(
   provider: RepoProviderId,
@@ -207,7 +205,7 @@ export async function startAccountGitConnectApi(
   );
 }
 
-/** Dépôts candidats d'une connexion du compte (même liste, sans projet). */
+/** Candidate deposits of an account connection (same list, without project). */
 export async function fetchAccountGitCandidatesApi(
   connectionId: string,
 ): Promise<{ candidates: CandidateRepo[] }> {
@@ -227,7 +225,7 @@ export async function disconnectGitConnectionApi(id: string): Promise<void> {
   );
 }
 
-// ── Compte git personnel (identité des gestes de PR, MIN-144) ───────────────
+// ── Personal git account (PR gesture identity, MIN-144) ───────────────
 
 export interface GitIdentitiesResponse {
   identities: GitIdentity[];
@@ -239,9 +237,9 @@ export async function fetchGitIdentitiesApi(): Promise<GitIdentitiesResponse> {
 }
 
 /**
- * Démarre l'autorisation du compte git personnel. Toujours une sortie de page
- * (l'utilisateur autorise chez la forge) : l'appelant suit `url`. `origin` dit
- * d'où il part, et donc où le callback le ramène — table close côté serveur.
+ * Starts authorization of personal git account. Always a page exit
+ * (user authorizes at the forge): the caller follows `url`. `origin` says
+ * where it leaves, and therefore where the callback brings it back — table closed on the server side.
  */
 export async function startGitIdentityConnectApi(
   provider: RepoProviderId,

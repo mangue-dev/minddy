@@ -6,7 +6,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// Borne de longueur (MIN-118) — même plafond que lib/server/add-comment.ts.
+// Length cap (MIN-118) — same cap as lib/server/add-comment.ts.
 const MAX_COMMENT_LENGTH = 65_536;
 
 /** PATCH /api/comments/[id] — edit (author-only, enforced by RLS). */
@@ -53,10 +53,10 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
 
   // Snapshot storage paths first — deleting a thread root cascades its replies
   // (parent_id FK), whose resource rows go with them. Objects are removed
-  // only once the delete succeeds. Une ressource LIEN n'a pas d'objet
-  // (`storage_path` nul, MIN-184) : l'écarter ici, sinon la liste porterait un
-  // null que `storage.remove()` refuse EN BLOC — un seul lien sur le fil, et
-  // plus aucun fichier du commentaire ne serait effacé.
+  // only once the delete succeeds. A LINK resource has no purpose
+  // (`storage_path` null, MIN-184): discard it here, otherwise the list would carry a
+  // null that `storage.remove()` refuses IN BLOCK — a single link on the thread, and
+  // no more comment files would be deleted.
   const service = getServiceClient();
   const { data: replies } = await service
     .from("comments")

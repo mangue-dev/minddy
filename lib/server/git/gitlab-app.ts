@@ -16,47 +16,46 @@ import {
 import { ensureRepoWebhookSecret } from "./webhook-secret";
 
 /**
- * App OAuth GitLab + plomberie des tokens (MIN-47), portée d'AutoKap
- * (gitlab-app.ts) : l'utilisateur autorise une fois (connect), minddy stocke les
- * tokens access+refresh (chiffrés) et réutilise le compte sur tous ses projets.
- * Les access tokens expirent (~2h) et sont rafraîchis paresseusement au moment
- * du mint. gitlab.com SaaS uniquement. L'agent de code (MIN-69) consomme ces
- * tokens via `getGitlabAccessToken` (clone + module MR `lib/server/agent/mr.ts`) ;
- * le webhook `/api/webhooks/gitlab` est provisionné sur le dépôt par
- * `ensureGitlabIssuesHook` à l'activation de la synchro d'issues (MIN-97), et
- * reste à créer à la main pour les dépôts qui n'utilisent que l'agent.
+ * OAuth GitLab app + token plumbing (MIN-47), AutoKap scope
+ * (gitlab-app.ts): user authorizes once (connect), minddy stores the
+ * access+refresh tokens (encrypted) and reuses the account on all its projects.
+ * The access tokens expire (~2h) and are lazily refreshed at mint time. gitlab.com SaaS only. The code agent (MIN-69) consumes these
+ * tokens via `getGitlabAccessToken` (clone + MR module `lib/server/agent/mr.ts`);
+ * webhook `/api/webhooks/gitlab` is provisioned on the repository by
+ * `ensureGitlabIssuesHook` at activation of issue synchronization (MIN-97), and
+ * remains to be created by hand for repositories that only use the agent.
  */
 
-// `api` est le seul scope nécessaire — et le seul qui marche. Il donne l'accès
-// complet read+write à l'API (fichiers/arbre/compare, commits, merge requests,
-// webhooks), l'équivalent GitLab de Contents R/W + Pull-requests R/W du GitHub App.
+// `api` is the only scope needed — and the only one that works. It gives access
+// complete read+write to the API (files/tree/compare, commits, merge requests,
+// webhooks), the GitLab equivalent of Contents R/W + Pull-requests R/W from the GitHub App.
 //
-// ET C'EST UNE PORTÉE QU'ON NE SAIT PAS RÉDUIRE (MIN-327), à dire plutôt qu'à
-// laisser deviner. Le token qu'on remet à la microVM de l'agent est CET access
-// token : `api`, sur le COMPTE ENTIER de la personne qui a lié le dépôt — pas sur
-// le seul dépôt du projet. Côté GitHub, le mint accepte `repositories` et
-// `permissions` et l'agent y reçoit un token scopé au dépôt, en écriture ou en
+// AND IT IS A SCOPE THAT WE CANNOT REDUCE (MIN-327), to be said rather than
+// leave guessing. The token that is given to the agent's microVM is CET access
+// token: `api`, on the ENTIRE ACCOUNT of the person who linked the deposit — not on
+// the only repository of the project. On the GitHub side, the mint accepts `repositories` and
+// `permissions` and the agent receives a token scoped at the deposit, in writing or in
 // lecture selon son ancrage (`RepoTokenAccess`, lib/server/agent/repo-access.ts) ;
-// GitLab n'a **aucun** équivalent :
+// GitLab has **no** equivalent:
 //
-//   - un token OAuth ne se down-scope pas au moment de l'usage — le scope est
-//     figé à l'autorisation, et `read_repository` seul ne suffirait pas au reste
+// - an OAuth token is not down-scoped at the time of use — the scope is
+// frozen at authorization, and `read_repository` alone would not suffice for the rest
 //     du travail de l'agent (MR, discussions, compare) ;
-//   - le seul mécanisme à portée réduite, le *project access token*, est un jeton
-//     PERSISTANT à créer, stocker, suivre et révoquer, d'une durée minimale d'un
-//     jour. On échangerait un token d'une heure trop large contre un token d'un
-//     jour bien scopé, plus tout un cycle de vie à tenir juste.
+// - the only mechanism with reduced scope, the *project access token*, is a token
+// PERSISTENT to create, store, track and revoke, with a minimum duration of one
+//     day. We would exchange a token of one hour too large for a token of one
+// well-scored day, plus a whole life cycle to keep up.
 //
-// Conséquence assumée, du même genre que l'absence d'identité de bot (MIN-146) :
-// une session de RELECTURE GitLab tourne avec un token qui peut écrire, là où son
-// équivalent GitHub n'a que `contents: read`. C'est écrit ici, dans SECURITY.md,
-// et l'UI de liaison dit déjà sous quel compte l'agent agit.
+// Assumed consequence, of the same kind as the absence of bot identity (MIN-146):
+// a GitLab REVIEW session runs with a token that can write, where its
+// GitHub equivalent only has `contents: read`. It's written here, in SECURITY.md,
+// and the binding UI already says under which account the agent is acting.
 export const GITLAB_OAUTH_SCOPES = "api";
 
-// Rafraîchir quand l'access token est dans cette fenêtre d'expiry.
+// Refresh when the access token is in this expiry window.
 const REFRESH_SKEW_MS = 5 * 60 * 1000;
-// Maintainer = 40 (créer webhooks + merger MRs). Le futur agent ouvre un webhook
-// ET merge, donc le sélecteur ne surface que les projets à Maintainer+.
+// Maintainer = 40 (create webhooks + merger MRs). The future agent opens a webhook
+// AND merge, so the selector only surfaces projects to Maintainer+.
 const MIN_ACCESS_LEVEL_MAINTAINER = 40;
 const PROJECTS_PER_PAGE = 100;
 
@@ -78,9 +77,9 @@ export function isGitlabConfigured(): boolean {
   return capability("gitlab").configured;
 }
 
-// --- OAuth authorize + échange de token ------------------------------------
+// --- OAuth authorize + token exchange ------------------------------------
 
-/** Construit l'URL authorize GitLab vers laquelle la route connect redirige. */
+/** Constructs the authorize GitLab URL that the connect route redirects to. */
 export function getGitlabAuthorizeUrl(opts: {
   redirectUri: string;
   state: string;
@@ -98,7 +97,7 @@ export function getGitlabAuthorizeUrl(opts: {
 export interface GitlabTokenSet {
   accessToken: string;
   refreshToken: string;
-  /** Expiry absolu (ISO) calculé depuis `expires_in`. */
+  /** Absolute Expiry (ISO) calculated from `expires_in`. */
   expiresAt: string;
   scope: string;
 }
@@ -112,7 +111,7 @@ interface RawTokenResponse {
   error_description?: string;
 }
 
-/** POST gitlab.com/oauth/token (form-encoded). Partagé par échange + refresh. */
+/** POST gitlab.com/oauth/token (form-encoded). Shared by exchange + refresh. */
 async function requestGitlabToken(
   params: Record<string, string>,
   nowMs: number,
@@ -148,7 +147,7 @@ async function requestGitlabToken(
   };
 }
 
-/** Échange un code d'autorisation contre un jeu de tokens (callback connect). */
+/** Exchanges an authorization code for a set of tokens (callback connect). */
 export async function exchangeGitlabCode(opts: {
   code: string;
   redirectUri: string;
@@ -168,7 +167,7 @@ export interface GitlabUser {
   username: string;
 }
 
-/** Identifie le compte connecté (git_connections.provider_account_id + affichage). */
+/** Identifies the connected account (git_connections.provider_account_id + display). */
 export async function getGitlabUser(accessToken: string): Promise<GitlabUser> {
   requireCapability("gitlab");
   const response = await fetch(`${GITLAB_API_BASE}/user`, {
@@ -185,7 +184,7 @@ export async function getGitlabUser(accessToken: string): Promise<GitlabUser> {
   return { id: data.id, username: data.username ?? "" };
 }
 
-// --- Mint de token avec refresh paresseux ----------------------------------
+// --- Token mint with lazy refresh ----------------------------------
 
 interface AccountTokenRow {
   id: string;
@@ -210,23 +209,23 @@ async function loadAccountTokenRow(
 }
 
 /**
- * Une rotation à la fois par connexion, DANS ce process — même raison que le
- * partage de promesse de `user-identities.ts` : le panneau d'une merge request
- * tire plusieurs requêtes en parallèle, chacune mint ce token, et deux rotations
- * concurrentes laissent en base un token que l'autre vient d'invalider.
+ * One rotation at a time per connection, IN this process — same reason as
+ * promise sharing of `user-identities.ts`: the panel of a merge request
+ * fires several requests in parallel, each mint this token, and two concurrent rotations
+ * leave in base a token that the other comes from to invalidate.
  */
 const inFlight = new Map<string, Promise<string>>();
 
 /**
- * Renvoie un access token GitLab valide pour une connexion (git_connections.id),
- * en rafraîchissant paresseusement quand on est dans la fenêtre d'expiry.
+ * Returns a valid GitLab access token for a connection (git_connections.id),
+ * refreshing lazily when in the expiry window.
  *
- * Les refresh tokens GitLab sont SINGLE-USE rotatifs : deux appels concurrents
- * peuvent courir pour rafraîchir la même ligne. On récupère au lieu de verrouiller :
- * le perdant relit la ligne (le gagnant a stocké un token frais) et l'utilise.
+ * GitLab refresh tokens are SINGLE-USE rotating: two concurrent calls
+ * can run for refresh the same line. We recover instead of locking:
+ * the loser rereads the line (the winner stored a fresh token) and uses it.
  *
- * `force` saute le raccourci « pas encore expiré » : c'est ce que fait un
- * appelant à qui GitLab vient de répondre 401 sur ce token-là.
+ * `force` skips the "not yet expired" shortcut: this is what a
+ * caller to whom GitLab just responded 401 on this token-there.
  */
 export async function getGitlabAccessToken(
   connectionId: string,
@@ -257,7 +256,7 @@ async function mintGitlabAccessToken(
   if (!force && expiresAtMs - nowMs > REFRESH_SKEW_MS) {
     const token = decryptForgeToken(row.access_token_encrypted);
     if (token) return token;
-    // Déchiffrement échoué (secret tourné / corruption) → on tombe sur un refresh.
+    // Decryption failed (secret twisted / corruption) → we come across a refresh.
   }
 
   const refreshToken = decryptForgeToken(row.refresh_token_encrypted);
@@ -274,9 +273,9 @@ async function mintGitlabAccessToken(
       nowMs,
     );
   } catch (err) {
-    // Course de rotation single-use : un autre worker a rafraîchi en premier.
-    // On relit ; si le gagnant a AVANCÉ l'expiry stockée au-delà de ce qu'on a lu,
-    // son token est frais — on le réutilise.
+    // Single-use rotation race: another worker refreshed first.
+    // We reread; if the winner has ADVANCED the stored expiry beyond what was read,
+    // its token is fresh — we reuse it.
     const recovered = await loadAccountTokenRow(connectionId);
     if (
       recovered &&
@@ -289,12 +288,12 @@ async function mintGitlabAccessToken(
     throw err;
   }
 
-  // Persiste avec un compare-and-set sur l'expiry qu'on a lu. Perdre ce CAS n'est
-  // PAS anodin : la ligne garde le token du gagnant, que notre propre rotation
-  // vient peut-être d'invalider chez GitLab. On le dit — c'est la seule trace qui
-  // nomme cette course, et le probe 401 de `forge-actor.ts` la rattrape.
-  // Sur une rotation FORCÉE, le CAS saute : elle part justement d'une expiry
-  // stockée que la forge a démentie, et c'est notre token qui fait foi.
+  // Persist with a compare-and-set on the expiry we read. Losing this CAS is not
+  // NOT trivial: the line keeps the winner's token, only our own rotation
+  // may have just been invalidated at GitLab. They say it — it’s the only trace that
+  // name this race, and probe 401 of `forge-actor.ts` catches it.
+  // On a FORCED rotation, the CAS jumps: it starts from an expiry
+  // stored that the forge has denied, and it is our token which is authentic.
   const supabase = getServiceClient();
   const persist = supabase
     .from("git_connections")
@@ -319,10 +318,10 @@ async function mintGitlabAccessToken(
   return refreshed.accessToken;
 }
 
-// --- Listing des projets (sélecteur de dépôt) ------------------------------
+// --- Listing of projects (repository selector) ------------------------------
 
 export interface GitlabProject {
-  /** Id numérique du projet (stocké en `external_repo_id`). */
+  /** Numerical id of the project (stored in `external_repo_id`). */
   id: string;
   /** Chemin complet "group/subgroup/project". */
   pathWithNamespace: string;
@@ -331,9 +330,9 @@ export interface GitlabProject {
 }
 
 /**
- * Liste les projets sur lesquels le compte connecté peut agir (Maintainer+, pour
- * que le futur agent puisse créer le webhook et merger les MRs). Paginé via
- * l'en-tête X-Next-Page.
+ * Lists the projects on which the connected account can act (Maintainer+, so
+ * that the future agent can create the webhook and merge the MRs). Paged via
+ * the X-Next-Page.
  */
 export async function listGitlabProjects(
   accessToken: string,
@@ -373,33 +372,33 @@ export async function listGitlabProjects(
   return projects;
 }
 
-// --- Issues + webhook du dépôt (synchro unidirectionnelle, MIN-97) ---------
+// --- Issues + repository webhook (one-way sync, MIN-97) ---------
 
 export interface GitlabIssue {
-  /** Numéro visible dans l'URL (propre au projet), à ne pas confondre avec `id`. */
+  /** Number visible in the URL (specific to the project), not to be confused with `id`. */
   iid: number;
   title: string;
   description: string | null;
   webUrl: string | null;
-  /** Noms des labels — priorité, effort et catégories en sortent (MIN-97 suite).
-   *  L'API REST de GitLab les rend en chaînes nues, là où le webhook les
-   *  enveloppe dans des objets `{title}`. */
+  /** Label names — priority, effort and categories come out (MIN-97 continued).
+ * GitLab's REST API renders them as bare strings, where the webhook wraps them in
+ * objects. */
   labels: string[];
-  /** Logins des assignés, dans l'ordre de GitLab. */
+  /** Logins of assignees, in GitLab order. */
   assigneeLogins: string[];
 }
 
 const ISSUES_PER_PAGE = 100;
 
 /**
- * Liste les issues OUVERTES d'un projet GitLab (backfill de la synchro), paginé
- * via X-Next-Page. Contrairement à GitHub, `/issues` ne mélange pas les merge
- * requests — rien à filtrer. Lève sur une réponse non-OK.
+ * Lists OPEN issues of a GitLab project (sync backfill), paginated
+ * via X-Next-Page. Unlike GitHub, `/issues` does not mix merge
+ * requests — nothing to filter. Lifts on a non-OK response.
  */
 export async function listGitlabOpenIssues(
   accessToken: string,
   projectId: string,
-  /** Plafond dur : on s'arrête dès qu'il est atteint (backfill borné). */
+  /** Hard ceiling: we stop as soon as it is reached (bounded backfill). */
   limit = Number.POSITIVE_INFINITY,
 ): Promise<GitlabIssue[]> {
   requireCapability("gitlab");
@@ -456,10 +455,10 @@ interface GitlabHook {
 }
 
 /**
- * Le corps d'un POST/PUT de hook — le pendant en ÉCRITURE de `GitlabHook`, dont
- * tous les drapeaux sont obligatoires : GitLab traite un drapeau absent comme
- * `false`, donc « oublier » `note_events` désabonne le hook en silence. Nommer
- * la forme fait échouer la compilation plutôt que le webhook.
+ * The body of a POST/PUT hook — the WRITE counterpart of `GitlabHook`, including
+ * all flags are required: GitLab treats a missing flag as
+ * `false`, so "forget" `note_events` unsubscribes the hook by silence. Name
+ * form fails compilation rather than webhook.
  */
 interface GitlabHookWrite {
   url: string;
@@ -474,26 +473,25 @@ interface GitlabHookWrite {
 }
 
 /**
- * Aligne le webhook minddy du projet GitLab sur l'état voulu de la synchro
- * d'issues. GitLab n'a pas d'endpoint global comme la GitHub App : le hook vit
- * SUR LE DÉPÔT, donc on le provisionne à l'activation.
+ * Aligns the GitLab project's minddy webhook with the desired state of the issue sync. GitLab does not have a global endpoint like the GitHub App: the hook lives
+ * ON THE REPOSITORY, so we provision it upon activation.
  *
- * Absent → création (issues + merge requests + notes + réactions + pipelines,
- * jamais les pushs). Présent → un PUT qui ne bascule QUE `issues_events`. Jamais
- * de DELETE : le même hook porte la synchro des MR de l'agent (MIN-69), les
- * commentaires de MR du journal d'activité et le direct des PR (MIN-161) — le
- * désactiver, c'est remettre `issues_events: false`, pas supprimer la ligne.
+ * Absent → creation (issues + merge requests + notes + reactions + pipelines,
+ * never pushes). Present → a PUT which ONLY toggles `issues_events`. Never
+ * DELETE: the same hook carries the agent's MR sync (MIN-69), the
+ * MR comments from the activity log and the direct PR (MIN-161) — the
+ * deactivating is putting back `issues_events: false`, not deleting the line.
  *
- * `opts.secret` est le secret PROPRE À CE DÉPÔT (MIN-333), minté par
- * `ensureRepoWebhookSecret` : c'est l'appelant qui le fournit, parce que c'est
- * lui qui sait dans quel ordre l'écrire (en base d'abord, chez GitLab ensuite).
+ * `opts.secret` is the secret SPECIFIC TO THIS DEPOSIT (MIN-333), minted by
+ * `ensureRepoWebhookSecret`: it is the caller who provides it, because it is
+ * he who knows in what order to write it (in base first, then at GitLab).
  *
- * `opts.enabled` OMIS = on préserve `issues_events` tel quel et on ne crée
- * rien : c'est la forme qu'utilise la rotation de secret, qui ne doit pas
- * décider à la place du réglage du projet.
+ * `opts.enabled` OMITTED = we preserve `issues_events` as is and we do not create
+ * anything: this is the form used by secret rotation, which must not not
+ * decide the project setting instead.
  *
- * Renvoie l'id du hook (stocké en `issue_sync_hook_id`), ou null quand il n'y
- * avait rien à faire. Lève sur échec d'appel API.
+ * Returns the hook id (stored in `issue_sync_hook_id`), or null when there
+ * was nothing to do. Raises on API call failure.
  */
 export async function ensureGitlabIssuesHook(
   accessToken: string,
@@ -530,24 +528,24 @@ export async function ensureGitlabIssuesHook(
   };
 
   if (!existing) {
-    // Rien à créer pour une simple désactivation — ni pour une rotation, qui
-    // n'a de sens que sur un hook déjà posé.
+    // Nothing to create for a simple deactivation — nor for a rotation, which
+    // only makes sense on an already installed hook.
     if (opts.enabled !== true) return null;
     return write(base, "POST", {
       url: webhookUrl,
       token: secret,
       issues_events: true,
       merge_requests_events: true,
-      // Les commentaires de MR (message de fil, remarque de ligne) entrent dans
-      // le journal d'activité du ticket — GitLab ne les livre que sous ce
-      // drapeau, une MR commentée ne produit AUCUN `merge_request` event.
+      // MR comments (thread message, line remark) go into
+      // the ticket activity log — GitLab only delivers them under this
+      // flag, a commented MR produces NO `merge_request` event.
       note_events: true,
-      // Les RÉACTIONS (MIN-161). GitLab est la seule des deux forges à les
-      // livrer — GitHub n'a pas d'événement de réaction du tout —, et c'est ce
-      // drapeau qui les ouvre. Sans lui, réagir sur gitlab.com n'atteint le
-      // panneau ouvert qu'au prochain rafraîchissement.
+      // REACTIONS (MIN-161). GitLab is the only one of the two forges to
+      // commit — GitHub doesn't have a react event at all — and that's what
+      // flag that opens them. Without it, react on gitlab.com does not reach the
+      // panel open only at the next refresh.
       emoji_events: true,
-      // La CI, pour le bandeau de checks en direct.
+      // The CI, for the live check banner.
       pipeline_events: true,
       push_events: false,
       enable_ssl_verification: true,
@@ -557,16 +555,16 @@ export async function ensureGitlabIssuesHook(
   await write(`${base}/${existing.id}`, "PUT", {
     url: webhookUrl,
     token: secret,
-    // Omis = rotation de secret : le réglage du projet n'est pas la question,
-    // on repose ce que le hook portait déjà.
+    // Omitted = secret rotation: project setting is not the issue,
+    // we put back what the hook already carried.
     issues_events: opts.enabled ?? existing.issues_events ?? false,
-    // Le hook est partagé avec la synchro des MR : on le préserve tel quel.
+    // The hook is shared with the MR sync: we preserve it as is.
     merge_requests_events: existing.merge_requests_events ?? true,
-    // Les notes, elles, s'ALIGNENT plutôt que se préserver : c'est ce passage
-    // qui rattrape les dépôts liés avant l'arrivée des commentaires au journal.
+    // The notes ALIGN rather than preserve themselves: this is the passage
+    // which catches up with related repositories before comments arrive at the journal.
     note_events: true,
-    // Même raisonnement pour les réactions et la CI (MIN-161) : c'est ce PUT qui
-    // rattrape les dépôts liés avant le direct, comme il l'a fait pour les notes.
+    // Same reasoning for reactions and CI (MIN-161): it is this PUT which
+    // catch up related repositories before live, as it did for notes.
     emoji_events: true,
     pipeline_events: true,
     push_events: false,
@@ -576,23 +574,20 @@ export async function ensureGitlabIssuesHook(
 }
 
 /**
- * Rotation d'un hook resté sur le secret global historique (MIN-333).
+ * Rotation of a hook remaining on the historical global secret (MIN-333).
  *
- * Déclenchée par le récepteur, HORS chemin critique, au premier événement qui
- * arrive avec `GITLAB_WEBHOOK_SECRET` : c'est le seul moment où l'on sait à la
- * fois que ce dépôt est encore sur l'ancien secret et qu'il est vivant. Elle
- * mint un secret propre au dépôt, réécrit le hook avec, et le repli s'éteint
- * pour ce dépôt-là.
+ * Triggered by the receiver, OFF the critical path, at the first event which
+ * arrives with `GITLAB_WEBHOOK_SECRET`: this is the only moment when we know to the
+ * once this repository is still on the old secret and is alive. She
+ * mints a secret specific to the repository, rewrites the hook with it, and the fallback goes out
+ * for that repository.
  *
- * L'ORDRE est le fond de l'affaire : le secret est écrit en base AVANT le hook.
- * L'inverse laisserait une fenêtre où GitLab signe avec un secret que minddy ne
- * connaît pas encore, donc des événements refusés en 401. Ici, la fenêtre est de
- * l'autre côté — le repli couvre les événements en vol.
+ * THE ORDER is the bottom line: the secret is written in base BEFORE the hook.
+ * The opposite would leave a window where GitLab signs with a secret that minddy doesn't know yet, so 401 denied events. Here the window is on the other side — the fallback covers in-flight events.
  *
- * Best-effort : un échec d'appel GitLab laisse le hook sur l'ancien secret, et
- * l'événement suivant retentera. Le secret en base, lui, est déjà posé — c'est
- * `ensureRepoWebhookSecret` qui le reprendra tel quel, sans en générer un
- * second qui invaliderait ce qu'on vient d'écrire chez la forge.
+ * Best-effort: a failed GitLab call leaves the hook on the old secret, and
+ * the following event will retry. The basic secret is already set - it is
+ * `ensureRepoWebhookSecret` which will take it as is, without generating a second one which would invalidate what we have just written at the forge.
  */
 export async function rotateGitlabWebhookSecret(params: {
   externalRepoId: string;

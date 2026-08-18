@@ -11,21 +11,21 @@ import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
 
 /**
- * Les deux contrats d'une bascule d'inbox, dont aucun ne se voit en essayant
- * l'app : la ligne doit tomber sous la bonne catégorie, et la catégorie doit
- * avoir de quoi se dire à l'écran.
+ * The two contracts of an inbox toggle, neither of which is visible when trying
+ * the app: the line must fall under the correct category, and the category must
+ * have something to say on the screen.
  */
 
 describe("categoryOfNotification", () => {
   it("range une notification de ROUTINE sous « routine », quel que soit son type", () => {
-    // Le piège : une routine annonce ses fins d'exécution avec les types de
-    // l'agent. Sur le type seul, couper « Routines » aurait laissé passer
-    // l'échec du lendemain matin.
+    // The trap: a routine announces its end of execution with the types of
+    // the agent. On the type alone, cutting “Routines” would have missed
+    // failure the next morning.
     expect(categoryOfNotification({ type: "agent_failed", routine_id: "r1" })).toBe("routine");
     expect(categoryOfNotification({ type: "agent_done", routine_id: "r1" })).toBe("routine");
     expect(categoryOfNotification({ type: "routine_done" })).toBe("routine");
 
-    // Le même type sans routine reste un run lancé à la main.
+    // The same type without a routine remains a hand-launched run.
     expect(categoryOfNotification({ type: "agent_failed" })).toBe("agent");
     expect(categoryOfNotification({ type: "agent_done", routine_id: null })).toBe("agent");
   });

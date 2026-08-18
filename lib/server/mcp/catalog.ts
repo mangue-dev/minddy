@@ -5,27 +5,27 @@ import type { ZodTypeAny } from "zod";
 import { registerMinddyTools } from "./tools";
 
 /**
- * Le catalogue des outils MCP, LU DEPUIS LEUR ENREGISTREMENT RÉEL (MIN-88).
+ * The catalog of MCP tools, READ SINCE THEIR ACTUAL RECORDING (MIN-88).
  *
- * `/llms.txt` et la carte de serveur MCP doivent lister les outils de minddy.
- * Les recopier à la main aurait garanti la dérive : un outil ajouté dans
- * `tools.ts` n'apparaîtrait nulle part, un outil renommé mentirait, et un
- * assistant de code écrirait une intégration contre une API qui n'existe plus.
+ * `/llms.txt` and the MCP server card must list the minddy tools.
+ * Copying them by hand would have guaranteed the drift: an added tool in
+ * `tools.ts` would not appear anywhere, a renamed tool would lie, and a
+ * code wizard would write an integration against an API that no longer exists.
  *
- * Alors on ne recopie pas : on rejoue `registerMinddyTools` contre un faux
- * serveur qui se contente de noter ce qu'on lui enregistre. Les descriptions et
- * les paramètres sont donc, par construction, ceux que le serveur annonce.
+ * So we don't copy: we replay `registerMinddyTools` against one false
+ * server which simply notes down what is recorded for it. The descriptions and
+ * parameters are therefore, by construction, those that the server announces.
  *
- * Aucun handler n'est exécuté — on ne garde que la signature.
+ * No handler is executed — only the signature is kept.
  */
 
 export interface CatalogTool {
   name: string;
   title?: string;
   description?: string;
-  /** Paramètres d'entrée, dans l'ordre déclaré. */
+  /** Input parameters, in declared order. */
   params: Array<{ name: string; required: boolean; description?: string }>;
-  /** L'outil est-il annoncé comme sans effet de bord ? */
+  /** Is the tool advertised as having no side effects? */
   readOnly: boolean;
 }
 
@@ -57,8 +57,8 @@ export function mcpToolCatalog(): CatalogTool[] {
         })),
       });
     },
-    // `registerMinddyTools` n'appelle que `registerTool` ; tout autre accès est
-    // un changement de contrat qu'on veut voir échouer bruyamment, pas ignorer.
+    // `registerMinddyTools` only calls `registerTool`; all other access is
+    // a contract change that we want to see fail loudly, not ignore.
   } as unknown as McpServer;
 
   registerMinddyTools(recorder);
@@ -67,12 +67,12 @@ export function mcpToolCatalog(): CatalogTool[] {
 }
 
 /**
- * Première phrase d'une description d'outil — de quoi tenir sur une ligne.
+ * First sentence of a tool description — enough to fit on one line.
  *
- * Les descriptions du registre font jusqu'à cinq cents caractères : c'est le
- * bon format pour un modèle qui choisit un outil, pas pour une liste qu'on
- * parcourt. `/llms.txt` et la page publique `/mcp` coupent donc au même
- * endroit, et de la même façon.
+ * Registry descriptions are up to five hundred characters long: this is the
+ * good format for a model that chooses a tool, not for a list that one
+ * goes through. `/llms.txt` and the public page `/mcp` therefore cut at the same
+ * place, and in the same way.
  */
 export function firstSentence(description: string | undefined): string {
   if (!description) return "";

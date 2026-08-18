@@ -29,9 +29,9 @@ import { FeedbackPostClient } from "../../feedback-post-client";
 import { HeaderIdentity } from "../../header-identity";
 
 /**
- * Page publique d'un post (MIN-37). L'URL d'un doublon fusionné redirige en
- * 308 vers le canonique — qui porte la mention « fusionné depuis », le statut,
- * la réponse d'équipe et l'union des votes.
+ * Public page of a post (MIN-37). The URL of a merged duplicate redirects to
+ * 308 towards the canonical — which bears the mention “merged since”, the status,
+ * the team response and the union of votes.
  */
 
 export const dynamic = "force-dynamic";
@@ -48,21 +48,21 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     getTranslations("PublicFeedback"),
     getLocale(),
   ]);
-  // Le même retour répond sur www.minddy.app/f/<token>/p/<id> ET sur le
-  // domaine du client : le canonical dit laquelle fait foi (MIN-88).
+  // The same feedback responds on www.minddy.app/f/<token>/p/<id> AND on the
+  // client domain: the canonical says which one is authentic (MIN-88).
   const canonical = await publicCanonicalUrl(
     feedbackBasePath(token, domainTarget),
     `/p/${postId}`,
   );
-  // Board absent ou désactivé → la page part en 404 : elle en porte le titre,
-  // et surtout pas un canonical vers une URL qui ne répond pas.
+  // Board absent or deactivated → the page goes to 404: it bears the title,
+  // and especially not a canonical to an unresponsive URL.
   if (!ctx?.board.enabled) {
     return { ...(await appPageMetadata("notFound")), robots: { index: false, follow: false } };
   }
   const project = ctx.project.name;
-  // C'est LA page qu'on colle dans une conversation (« vote pour ça ») : elle
-  // porte le titre du retour, pas celui du board. Un post privé, en attente de
-  // revue ou fusionné ne se nomme pas — voir `getPublicPostMeta`.
+  // This is THE page that we stick in a conversation (“vote for it”): it
+  // bears the title of the return, not that of the board. A private post, waiting for
+  // revised or merged is not named — see `getPublicPostMeta`.
   const post = await getPublicPostMeta(ctx.project.id, postId);
   return publicTokenMetadata({
     title: post ? `${post.title} · ${project}` : `${t("title")} · ${project}`,

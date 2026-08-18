@@ -28,7 +28,7 @@ describe("navigationDecision", () => {
     expect(navigationDecision("file:///etc/passwd", ORIGIN)).toBe("block");
     expect(navigationDecision("javascript:alert(1)", ORIGIN)).toBe("block");
     expect(navigationDecision("data:text/html,<h1>x", ORIGIN)).toBe("block");
-    // Notre propre schéma : il se traite par `open-url`, pas par une navigation.
+    // Our own schema: it is processed by `open-url`, not by navigation.
     expect(navigationDecision("minddy://auth?code=abc", ORIGIN)).toBe("block");
   });
 

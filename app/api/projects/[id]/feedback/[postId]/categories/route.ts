@@ -8,12 +8,12 @@ import { setFeedbackPostCategories } from "@/lib/server/feedback/set-post-catego
 
 type RouteContext = { params: Promise<{ id: string; postId: string }> };
 
-// Plafond du jeu envoyé — bien au-delà d'un board réel, mais borne la requête
-// `.in(...)` côté base. Les ids sont des uuid : 64 caractères suffisent.
+// Ceiling of game sent — well beyond an actual board, but limits the request
+// `.in(...)` base side. The ids are uuids: 64 characters are enough.
 const MAX_CATEGORY_IDS = 100;
 
 /** PUT /api/projects/[id]/feedback/[postId]/categories { category_ids }
-    — remplace le jeu de catégories du post (MIN-52). Membre du projet requis. */
+ — replaces the post's category set (MIN-52). Project member required. */
 export async function PUT(request: NextRequest, { params }: RouteContext) {
   const { id, postId } = await params;
   const guard = await requireProjectMember(request, id);

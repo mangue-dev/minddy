@@ -12,20 +12,20 @@ import { upsertUserIdentity } from "@/lib/server/git/user-identities";
 import { canonicalAppOrigin } from "@/lib/server/app-origin";
 
 /**
- * GET /api/git/github/user-callback — *User authorization callback URL* de la
+ * GET /api/git/github/user-callback — *User authorization callback URL* of the
  * GitHub App (MIN-144).
  *
- * À ne pas confondre avec `/api/git/github/setup`, qui est la Setup URL de
- * l'INSTALLATION : ici l'utilisateur n'installe rien, il autorise minddy à
- * parler EN SON NOM. GitHub redirige avec `code` + notre `state` signé, qui dit
- * d'où l'on est parti. Sous quel compte minddy ranger le jeton, en revanche,
- * c'est la SESSION qui le dit (MIN-324 — cf. callback-session.ts).
+ * Not to be confused with `/api/git/github/setup`, which is the Setup URL of
+ * INSTALLATION: here the user does not install anything, he authorizes minddy to
+ * speak IN HIS NAME. GitHub redirects with `code` + our signed `state`, which says
+ * where we started from. Under which Minddy account to store the token, on the other hand,
+ * it is the SESSION which says it (MIN-324 — cf. callback-session.ts).
  */
 
 /**
- * Retours connus, indexés par `state.origin`. On ne suit JAMAIS l'`origin` brut
- * : c'est une chaîne libre du payload, et la coller dans une URL de redirection
- * en ferait une redirection ouverte.
+ * Known returns, indexed by `state.origin`. We NEVER follow the raw `origin`
+ * : it's a free string from the payload, and paste it in a redirect URL
+ * would make it an open redirect.
  */
 const RETURN_TO: Record<string, string> = {
   settings: "/settings?tab=git",
@@ -33,7 +33,7 @@ const RETURN_TO: Record<string, string> = {
 };
 const DEFAULT_RETURN = "/settings?tab=git";
 
-/** Ajoute `git=<outcome>` au retour choisi, quel que soit son état de requête. */
+/** Appends `git=<outcome>` to the chosen return, regardless of its query state. */
 function redirectTo(base: string, origin: string, outcome: "connected" | "error") {
   const url = new URL(base, origin);
   url.searchParams.set("git", outcome);
@@ -48,15 +48,15 @@ export async function GET(request: NextRequest) {
   const state = verifyGitLinkState(searchParams.get("state"));
   const code = searchParams.get("code");
 
-  // Sans state valide on ne sait pas où revenir : retour aux paramètres du compte.
+  // Without a valid state we don't know where to return: return to account settings.
   if (!state || state.provider !== "github") {
     return applyCookies(redirectTo(DEFAULT_RETURN, origin, "error"));
   }
 
   const base = (state.origin && RETURN_TO[state.origin]) || DEFAULT_RETURN;
 
-  // AVANT l'échange du `code` : un `state` qu'on nous a envoyé désigne l'attaquant,
-  // et brûler le code d'autorisation de la victime ne servirait à personne.
+  // BEFORE the exchange of the `code`: a `state` that we were sent designates the attacker,
+  // and burning the victim's authorization code wouldn't help anyone.
   if (!sessionMatchesState(sessionUserId, state.userId)) {
     return applyCookies(redirectTo(base, origin, "error"));
   }
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     });
     const account = await getGithubUserAccount(tokens.accessToken);
     await upsertUserIdentity({
-      // Égal à `sessionUserId` par la garde ci-dessus, et typé `string`.
+      // Equal to `sessionUserId` by the guard above, and typed `string`.
       userId: state.userId,
       provider: "github",
       providerAccountId: String(account.id),

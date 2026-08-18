@@ -11,33 +11,33 @@ import { layoutForCurrentRepo } from "./harness-layout";
 import { localHost } from "./vm/local-host";
 
 /**
- * MIN-362 — LES HOOKS DE L'UTILISATEUR, VUS DEPUIS UN WORKTREE.
+ * MIN-362 — USER HOOKS, SEEN FROM A WORKTREE.
  *
- * L'audit du 2026-08-14 laissait la question ouverte, et elle n'est pas
- * théorique : le run local dans un worktree dédié (MIN-293) commite dans le
- * dépôt de quelqu'un qui a peut-être husky, lefthook ou un `pre-commit` maison —
- * posé non pas dans `.git/hooks` mais par `core.hooksPath`, comme le font tous
- * ces outils. Un worktree a son propre `.git`, ce qui laisse croire qu'il part
- * d'une ardoise vierge.
+ * The audit of 2026-08-14 left the question open, and it is not
+ * theoretical: local run in a dedicated worktree (MIN-293) commit in the
+ * repository of someone who maybe has husky, lefthook or a homemade `pre-commit` —
+ * placed not in `.git/hooks` but by `core.hooksPath`, as all
+ * of these tools do. A worktree has its own `.git`, which suggests that it starts
+ * from a blank slate.
  *
- * MESURÉ, git 2.45 : **il n'en part pas.** `core.hooksPath` vit dans le
- * `config` du dépôt principal, et ce fichier est PARTAGÉ par tous les worktrees
- * (seul `extensions.worktreeConfig` le découpe). Un `git commit` lancé depuis le
- * worktree exécute donc le hook de l'utilisateur — avec son `exit 1`, sa suite
- * de tests de 40 s, et son accès à tout ce que le shell peut atteindre.
+ * MEASURED, git 2.45: **it does not start from there.** `core.hooksPath` lives in the
+ * `config` from the main repository, and this file is SHARED by all worktrees
+ * (only `extensions.worktreeConfig` cuts it out). A `git commit` launched from the
+ * worktree therefore executes the user's hook — with its `exit 1`, its
+ * suite of 40 s tests, and its access to everything the shell can reach.
  *
- * Ce que ce test garde, c'est donc les DEUX moitiés :
- *  1. le hook s'applique bien depuis un worktree — la réponse à la question de
- *     l'audit, et la raison pour laquelle « on est dans un worktree » ne
- *     protège de rien ;
- *  2. notre chemin de fin de tour, lui, ne le déclenche pas — pas par un
- *     `--no-verify` qu'il aurait fallu penser à mettre, mais parce que
- *     `commitTurnAndPush` est de la PLOMBERIE (`write-tree` + `commit-tree`),
- *     qui n'appelle aucun hook. La propriété tient donc aussi dans un worktree,
- *     et c'est ce qu'on vérifie plutôt que de le supposer.
+ * What this test guard, so it's BOTH halves:
+ * 1. the hook applies from a worktree — the answer to the question of
+ * auditing, and the reason why "we are in a worktree" does not
+ * protect against anything;
+ * 2. our end of turn path does not trigger it — not by a
+ * `--no-verify` that you should have thought about putting, but because
+ * `commitTurnAndPush` is PLUMBING (`write-tree` + `commit-tree`),
+ * which does not call any hook. The property therefore also fits in a worktree,
+ * and this is what we check rather than assuming it.
  *
- * Même famille que [current-repo.git.test.ts](current-repo.git.test.ts) : ce qui
- * est en jeu n'est pas notre logique, c'est le comportement de git.
+ * Same family as [current-repo.git.test.ts](current-repo.git.test.ts): what
+ * is at stake is not our logic, this is the behavior of git.
  */
 
 const exec = promisify(execFile);
@@ -49,7 +49,7 @@ let root = "";
 let origin = "";
 let main = "";
 let worktree = "";
-/** Le témoin : chaque exécution du hook y ajoute une ligne. */
+/** The witness: each execution of the hook adds a line to it. */
 let trace = "";
 
 async function sh(command: string, cwd: string): Promise<{ stdout: string; stderr: string }> {
@@ -80,8 +80,8 @@ beforeAll(async () => {
   await sh(`git clone -q file://${origin} checkout`, root);
   await sh(`${IDENTITY}`, main);
 
-  // Le décor de l'utilisateur : un `core.hooksPath` hors de `.git/hooks`, comme
-  // husky et lefthook le posent, avec un hook qui REFUSE le commit.
+  // The user's setting: a `core.hooksPath` outside of `.git/hooks`, like
+  // husky and lefthook post it, with a hook that REFUSES the commit.
   const hooks = path.join(root, "hooks");
   await sh(`mkdir -p ${hooks}`, root);
   writeFileSync(path.join(hooks, "pre-commit"), `#!/bin/sh\necho passé >> ${trace}\nexit 1\n`, {
@@ -89,7 +89,7 @@ beforeAll(async () => {
   });
   await sh(`git config core.hooksPath ${hooks}`, main);
 
-  // Le worktree du run, sur une branche à nous.
+  // The run worktree, on a branch of ours.
   await sh(`git worktree add -q ${worktree} -b travail-agent`, main);
   await sh(`${IDENTITY}`, worktree);
 });
@@ -102,7 +102,7 @@ describe("un `core.hooksPath` posé sur le dépôt principal", () => {
   it(
     "s'applique au `git commit` d'un WORKTREE — le worktree n'isole rien",
     async () => {
-      // Le worktree ne porte AUCUNE config à lui : il lit celle du principal.
+      // The worktree does not carry ANY config of its own: it reads that of the main.
       const { stdout } = await sh(`git config --get core.hooksPath`, worktree);
       expect(stdout.trim()).toBe(path.join(root, "hooks"));
 
@@ -114,8 +114,8 @@ describe("un `core.hooksPath` posé sur le dépôt principal", () => {
       ).rejects.toThrow();
       expect(traceLines(), "le hook n'a pas laissé sa trace").toBe(before + 1);
     },
-    // Sous la charge des 400 autres fichiers, les processus Git peuvent attendre
-    // plus que le délai Vitest par défaut. Isolé, ce test termine en moins de 1 s.
+    // Under the load of the other 400 files, the Git processes can wait
+    // more than the default Vitest delay. Isolated, this test completes in less than 1 s.
     15_000,
   );
 

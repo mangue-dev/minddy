@@ -3,22 +3,21 @@ import { describe, expect, it } from "vitest";
 import { LEGACY_TOOL_NAMES, buildOpencodeAnchor } from "./opencode-anchor";
 
 /**
- * MIN-286 — l'ancrage minddy servi à opencode en `instructions`.
+ * MIN-286 — the minddy anchor used in opencode in `instructions`.
  *
- * Ce qui se teste ici tient en trois questions, et la première est la seule qui
- * casse un run en silence :
+ * What is tested here is three questions, and the first is the only one which
+ * breaks a run silently:
  *
- *  1. **L'ancrage ne nomme AUCUN tool que le moteur ne sert pas.** Un prompt qui
- *     dit `run_command` à opencode fait appeler un tool inexistant, round après
- *     round, sans qu'aucun test ni aucun event ne le dise — le modèle a juste
- *     l'air bête. C'est le défaut que la table `PromptToolNames` existe pour
- *     rendre impossible, et ce test est ce qui la tient.
- *  2. **La doctrine du produit y est ENTIÈRE.** Les règles dures (statut, plan,
- *     ancres de PR, vérification, un seul message par tour) viennent des fragments
- *     partagés : si l'une disparaît de cet ancrage, elle a disparu du produit pour
- *     les projets basculés, et le fil ne le dira pas non plus.
- *  3. **Les écarts mesurés d'opencode y sont dits** : `task` bloque, pas
- *     d'édition par lot, une question termine le tour.
+ * 1. **The anchor does not name ANY tools that the engine is not serving.** A prompt that
+ * says `run_command` to opencode causes a non-existent tool to be called, round after
+ * round, without any test or event saying so — the model just looks stupid. This is the flaw that the `PromptToolNames` table exists to make
+ * impossible, and this test is what holds it.
+ * 2. **The product doctrine is ENTIRE there.** The hard rules (status, plan,
+ * PR anchors, verification, only one message per round) come from fragments
+ * shared: if one disappears from this anchor, it has disappeared from the product for
+ * switched projects, and the thread won't say it either.
+ * 3. **Measured opencode deviations are said there**: `task` blocks, not
+ * batch editing, one question ends the round.
  */
 
 const variants = [
@@ -115,25 +114,24 @@ describe("buildOpencodeAnchor — les écarts mesurés d'opencode", () => {
 
   it("dit que la délégation BLOQUE, contre la doctrine de la boucle maison", () => {
     expect(text).toContain("BLOCKS until the child is done");
-    // La phrase de la boucle maison serait un contresens ici : chez opencode le
-    // tool ne rend pas avant le rapport.
+    // The house loop phrase would be a misinterpretation here: at opencode the
+    // tool does not render before reporting.
     expect(text).not.toContain("You never wait, and you never poll");
   });
 
   /**
-   * MIN-286 lot 3 — `run_background` est reposé en tool local, donc il est de
-   * NOUS : le prompt d'opencode n'en dit rien, et c'est ici qu'il doit se
-   * décrire. Un tool servi que l'ancrage ne présente pas est un tool que le
-   * modèle n'utilise jamais — la doctrine « fais tourner le code pour de vrai »
-   * repasserait alors par un `&` sans garde-fou.
-   */
+ * MIN-286 batch 3 — `run_background` is stored in tool local, so it is de
+ * US: the opencode prompt says nothing about it, and this is where it must be described. A tool served that the anchor does not present is a tool that the
+ * model never uses — the doctrine “run the code for real”
+ * would then go back to a `&` without safeguards.
+ */
   it("décrit `run_background` et la boucle lancer → sonder → curl → arrêter", () => {
     expect(text).toContain("`run_background`");
     for (const action of ["`start`", "`check`", "`stop`"]) expect(text).toContain(action);
-    // Et il `curl` avec le shell d'OPENCODE, pas avec celui de la boucle maison.
+    // And it `curl` with the OPENCODE shell, not with the home loop one.
     expect(text).toMatch(/`curl` it with `bash`/);
     expect(text).toMatch(/killed when the turn ends/i);
-    // La vérification à l'exécution s'appuie dessus plutôt que sur le repli `&`.
+    // Runtime checking relies on this rather than the `&` fallback.
     expect(text).toMatch(/start the dev server with `run_background`/);
     expect(text).not.toContain("npm run dev > /tmp/dev.log");
   });
@@ -167,23 +165,23 @@ describe("buildOpencodeAnchor — une routine et une relecture ne promettent rie
   it("une relecture garde sa persona en lecture seule", () => {
     const text = buildOpencodeAnchor({ ...FULL, anchor: "pr", interactive: true });
     expect(text).toContain("review a pull request");
-    // Elle ne lance rien en fond : le tool n'est ni servi ni annoncé.
+    // It does not launch anything in the background: the tool is neither served nor announced.
     expect(text).not.toContain("run_background");
     expect(text).toContain("You cannot change the code, and that is structural.");
-    // Ni ancrage de ticket, ni git, ni délégation : ce sont les gestes qu'elle n'a pas.
+    // Neither ticket anchoring, nor git, nor delegation: these are the gestures that it does not have.
     expect(text).not.toContain("## Git and pull requests");
     expect(text).not.toContain("## Delegating to sub-agents");
   });
 });
 
 /**
- * MIN-358 — CE QUE L'ANCRAGE DIT DU DÉPÔT, ET QUI DÉPEND DE À QUI IL EST.
+ * MIN-358 — WHAT THE ANCHOR SAYS ABOUT THE REPOSITORY, AND THAT DEPENDS ON WHOSE IT IS.
  *
- * Trois phrases du bloc git deviennent fausses quand le tour joue dans le
- * checkout de quelqu'un, et chacune coûte du travail humain si le modèle la
- * croit : « le harness committe tout ce que tu as changé » (il ne committe que
- * les chemins de l'agent), `git status` lu comme un diff (il porte le WIP de
- * l'utilisateur), et une fenêtre d'historique de six mois (le dépôt est complet).
+ * Three sentences in the git block become false when the trick plays in the
+ * someone's checkout, and each costs human labor if the model the
+ * believes: "the harness commits everything you changed" (it only commits
+ * the agent paths), `git status` read as a diff (it carries the WIP of
+ * the user), and a six-month history window (the repository is complete).
  */
 describe("buildOpencodeAnchor — le mode dépôt courant", () => {
   const clone = buildOpencodeAnchor({ ...FULL, anchor: "issue", interactive: true });
@@ -201,18 +199,18 @@ describe("buildOpencodeAnchor — le mode dépôt courant", () => {
   });
 
   /**
-   * MIN-364 (§1 de l'audit du 2026-08-15) — LE DÉFAUT QUI N'ÉTAIT PAS UN
-   * ARBITRAGE : personne ne commitait.
-   *
-   * Le harness ne commite plus en mode dépôt courant (D2bis-B), et l'ancrage
-   * promettait pourtant « the harness delivers YOUR work by committing » deux
-   * propositions après un « never commit ». Le modèle finissait ses tours sur
-   * « c'est livré » et rien ne l'était.
-   */
+ * MIN-364 (§1 of the audit of 2026-08-15) — THE DEFECT WHICH WAS NOT A
+ * ARBITRATION: no one committed.
+ *
+ * The harness no longer commits in current deposit mode (D2bis-B), and the anchor
+ * however promised “the harness delivers YOUR work by committing” two
+ * proposals after a “never commit”. The model finished its turns on
+ * “it’s delivered” and nothing was.
+ */
   it("dit que RIEN n'est commité pour le modèle, et que la livraison est sa phrase", () => {
     expect(current).toContain("Nothing is committed for you here");
     expect(current).not.toContain("delivers YOUR work by committing");
-    // Le cloud, lui, commite pour de vrai : sa phrase ne bouge pas.
+    // The cloud commits for real: its sentence does not move.
     expect(clone).toContain("it commits and pushes whatever you changed");
   });
 
@@ -230,18 +228,18 @@ describe("buildOpencodeAnchor — le mode dépôt courant", () => {
   });
 
   /**
-   * MIN-364 (D7) — LA QUESTION NE TUE PLUS LE TOUR SUR UNE MACHINE.
-   *
-   * « ça termine ton tour » pousse le modèle à tout finir avant de demander, et
-   * lui fait lire son propre tour comme perdu au moment où il demande. Les deux
-   * conduites sont fausses quand le tool bloque et rend la réponse dans son
-   * résultat.
-   */
+ * MIN-364 (D7) — QUESTION NO LONGER KILLS THE TURN ON A MACHINE.
+ *
+ * "that ends your turn" pushes the model to finish everything before asking, and
+ * makes him read his own turn as lost the moment he asks. Both
+ * behavior are false when the tool blocks and returns the response in its
+ * result.
+ */
   it("dit que la question SUSPEND le tour, là où le cloud dit qu'elle le termine", () => {
     expect(current).toContain("SUSPENDS your turn — it does not end it");
     expect(current).toContain("comes back to you as the tool's own result");
-    // « SUSPENDS » contient « ENDS » : c'est la phrase entière qui distingue les
-    // deux, jamais le verbe seul.
+    // “SUSPENDS” contains “ENDS”: it is the entire sentence which distinguishes the
+    // two, never the verb alone.
     expect(current).not.toContain("It is not a blocking prompt");
     expect(current).not.toContain("the session goes to sleep");
     expect(clone).toContain("`question` ENDS your turn");
@@ -249,25 +247,23 @@ describe("buildOpencodeAnchor — le mode dépôt courant", () => {
   });
 
   /**
-   * MIN-364 (décision D5) — LE DISQUE EST OUVERT, ET LA RETENUE EST UNE RÈGLE DE
-   * PROMPT, PAS UN MUR.
-   *
-   * C'est un choix assumé : le mur d'avant n'attrapait de toute façon que les
-   * tools honnêtes (vingt des trente commandes mesurées atteignent un dossier
-   * extérieur sans publier autre chose que `bash`). Ce qui ne serait PAS
-   * assumable, c'est de le décrire ailleurs comme une garantie — d'où le test :
-   * la règle doit être écrite comme une demande, et l'écriture ailleurs doit
-   * passer par une VRAIE question.
-   */
+ * MIN-364 (decision D5) — THE DISC IS OPEN, AND HOLDING IS A RULE OF
+ * PROMPT, NOT A WALL.
+ *
+ * This is an assumed choice: the front wall only caught in any case the honest
+ * tools (twenty of the thirty measured commands reach an external
+ * folder without publishing anything other than `bash`). What would NOT be assumed is describing it elsewhere as a guarantee — hence the test:
+ * the rule must be written as a request, and writing elsewhere must go through a REAL question.
+ */
   it("ouvre le disque et demande de DEMANDER avant d'écrire ailleurs", () => {
     expect(current).toContain("the whole disk is within reach");
     expect(current).toContain("ASK before you WRITE anywhere outside this folder");
     expect(current).toContain("`question`");
-    // La règle de tête ne peut plus dire « reste dans le dépôt » : une règle
-    // fausse dans un prompt en affaiblit vingt autres.
+    // The head rule can no longer say “stay in the repository”: a rule
+    // false in a prompt weakens twenty others.
     expect(current).not.toContain("Stay within this repository");
     expect(current).toContain("Reading elsewhere on the disk is fine");
-    // Le cloud, lui, garde son périmètre : le clone est jetable et complet.
+    // The cloud keeps its perimeter: the clone is disposable and complete.
     expect(clone).toContain("Stay within this repository");
     expect(clone).not.toContain("the whole disk is within reach");
   });
@@ -279,19 +275,19 @@ describe("buildOpencodeAnchor — le mode dépôt courant", () => {
   });
 
   /**
-   * LE GARDE-FOU DE SHELL N'EST PLUS LE MÊME DES DEUX CÔTÉS (MIN-364), et c'est
-   * la seule chose que D6 change. Ce test ANCRE la liste servie de chaque côté
-   * sur celle que `command-guard` exécute réellement : le tour local avait, avant
-   * ce lot, le bloc git du CLOUD — donc la liste qui refuse `git commit` — parce
-   * que l'ancrage se lisait sur un `repoMode` que la machine remplace.
-   */
+ * SHELL'S GUARD IS NO LONGER THE SAME ON BOTH SIDES (MIN-364), and that's
+ * the only thing D6 changes. This test ANCHORES the list served on each side
+ * to the one that `command-guard` actually executes: the local round had, before
+ * this batch, the git block of the CLOUD — therefore the list which refuses `git commit` — because
+ * that the anchor was read on a `repoMode` that the machine replaces.
+ */
   it("annonce EXACTEMENT ce que `command-guard` refuse de chaque côté", () => {
     expect(clone).toContain("`git commit`, `git push`, `git reset`");
-    // En dépôt courant `git commit` n'est plus dans la liste des refus…
+    // In current deposit `git commit` is no longer in the refusal list…
     expect(current).toContain("REFUSES what would destroy work that is not yours");
     expect(current).toContain("plus `git push`, which belongs to `create_pr`");
     expect(current).not.toContain("`git commit`, `git push`, `git reset`");
-    // …et les deux côtés refusent toujours ce qui détruit.
+    // …and both sides always refuse what destroys.
     for (const text of [clone, current]) {
       expect(text).toContain("`git reset`");
       expect(text).toContain("`git clean -f`");

@@ -19,70 +19,71 @@ import {
 } from "./opencode-probe-rig";
 
 /**
- * MIN-362 — sonde des PERMISSIONS : ce qu'un « oui » couvre, et ce qu'un `deny`
- * n'empêche pas.
+ * MIN-362 — PERMISSIONS probe: what a “yes” covers, and what a `deny`
+ * does not prevent.
  *
- * Ne tourne PAS avec `npm test` : `describe.skipIf` la saute tant que
- * `MDY_OPENCODE_PERMS_PROBE=1` n'est pas posé. Elle installe le binaire (~140 Mo)
- * et démarre une quinzaine de serveurs — **aucun modèle n'est dépensé**, un faux
- * fournisseur scripte les appels de tool ([opencode-probe-rig.ts](opencode-probe-rig.ts)).
- * Comptée à ~4 min sur le Mac.
+ * Does NOT run with `npm test`: `describe.skipIf` skips it as long as
+ * `MDY_OPENCODE_PERMS_PROBE=1` is not set. It installs the binary (~140 MB)
+ * and starts around fifteen servers — **no model is used**; a fake provider
+ * scripts the tool calls ([opencode-probe-rig.ts](opencode-probe-rig.ts)).
+ * It takes about four minutes on a Mac.
  *
  *   MDY_OPENCODE_PERMS_PROBE=1 npx vitest run \
  *     lib/server/agent/vm/opencode-permissions.probe.test.ts --testTimeout=900000
  *
- *   # en itérant, pour ne pas repayer les 40 s d'installation :
- *   MDY_OPENCODE_BIN=/chemin/vers/node_modules/.bin/opencode …
+ * # Reuse the installed binary on subsequent runs so we do not pay the 40-second
+ * installation cost again:
+ *   MDY_OPENCODE_BIN=/path/to/node_modules/.bin/opencode …
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * POURQUOI ELLE EXISTE
+ * WHY THIS EXISTS
  *
- * L'audit du 2026-08-14 ([docs/audits/agent-local-2026-08-14.md](../../../../docs/audits/agent-local-2026-08-14.md))
- * a levé dix-huit inconnues avec des sondes JETABLES, et les a consignées dans un
- * `.md`. Un `.md` ne se relance pas au prochain bump de
- * [opencode-version.ts](opencode-version.ts) : ce fichier-ci est ce qui reste de
- * ces mesures une fois qu'elles sont devenues exécutables. Ce qu'elle garde
- * décide de vraies lignes de code — le `case "external_directory"` de
- * [opencode-permissions.ts](opencode-permissions.ts), la doctrine du superviseur
- * sur les demandes pendantes, et ce qu'un écran d'opt-in a le droit de PROMETTRE.
+ * The 2026-08-14 audit ([docs/audits/agent-local-2026-08-14.md](../../../../docs/audits/agent-local-2026-08-14.md))
+ * surveyed eighteen unknowns with disposable probes and recorded them in a
+ * `.md` file. A `.md` file does not run again when
+ * [opencode-version.ts](opencode-version.ts) is bumped, so this file preserves
+ * those measurements as executable checks. What it preserves determines real
+ * lines of code — the `case "external_directory"` in
+ * [opencode-permissions.ts](opencode-permissions.ts), the supervisor's policy
+ * for pending requests, and what an opt-in screen is allowed to PROMISE.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * RELEVÉ DU 2026-08-15 sur `opencode-ai@1.18.16`, et ce qu'il change
+ * STATEMENT OF 2026-08-15 on `opencode-ai@1.18.16`, and what it changes
  *
- *  1. `external_directory: "deny"` **court-circuite avant publication** : rien
- *     n'arrive sur le flux, le tool part en erreur. Notre `case
- *     "external_directory"` n'est donc pas un « second rideau » : il est MORT.
- *  2. **L'ordre de déclaration décide**, `deny` n'est pas prioritaire : deux
- *     configs identiques au seul ordre des clés près refusent puis autorisent la
- *     même écriture. C'est le DERNIER motif qui matche qui gagne.
- *  3. **Un « toujours » humain écrase un `deny` de config** (témoin à l'appui :
- *     le même `deny`, seul, refuse bien). Les règles de session sont concaténées
- *     APRÈS celles de la config.
- *  4. **Le motif d'un « toujours » sur `edit` est `*`** — pas un chemin. Un seul
- *     clic rend toutes les écritures suivantes muettes, y compris hors du dépôt.
- *     Sur `bash`, il est par verbe (`echo *`).
- *  5. **Le « toujours » est en mémoire** et meurt avec le process. Le harness
- *     relançant opencode à chaque tour, un « toujours » vaut UN TOUR.
- *  6. **La grammaire des motifs n'est pas la même selon la permission** :
- *     `edit` matche des chemins RELATIFS au dépôt, sans expansion de `~` ;
- *     `external_directory` matche des dossiers ABSOLUS, avec `~` expansé. D'où
- *     le résultat le plus dur de cette sonde : `edit: {"~/.ssh/*": "deny"}`
- *     **ne protège rien du tout**, et ne le dit pas.
- *  7. **Un `deny` nu retire le tool** de ce que le modèle se voit offrir — mais
- *     `/experimental/tool` continue de le lister. Le catalogue servi à l'humain
- *     et celui servi au modèle ne sont pas le même.
- *  8. **Un ruleset de session en `allow` est une vraie ACL** (nouvelle mesure) :
- *     il lève l'`ask` sans amputer le jeu de tools. En `deny`, il l'ampute.
- *  9. **Le système V2 (`/api/permission/saved`) reste vide** : les tools de
- *     1.18.16 ne l'empruntent pas, même pour un « toujours ». La seule
- *     persistance native offerte n'est branchée sur rien.
- * 10. **Dix commandes sur trente** publient `external_directory` ; vingt ne
- *     publient que `bash`, et `cd .` / `popd` ne publient RIEN.
+ * 1. `external_directory: "deny"` **short-circuits before publication**: nothing
+ * reaches the request flow, and the tool returns an error. Our
+ * "external_directory" case is therefore not a “second curtain”: it is DEAD.
+ * 2. **Declaration order decides**, not `deny` priority: two otherwise identical
+ * configs with the keys in opposite orders first refuse and then authorize the
+ * same write. The LAST matching pattern wins.
+ * 3. **A human “always” overwrites a config `deny`** (supporting witness:
+ * the same `deny`, alone, refuses well). Session rules are concatenated
+ * AFTER those in the config.
+ * 4. **The pattern for an “always” on `edit` is `*`** — not a path. Only one
+ * click silences all subsequent writes, including outside the repository.
+ * On `bash`, it is by verb (`echo *`).
+ * 5. **The “always” rule is kept in memory** and dies with the process. Because
+ * the harness restarts opencode on every turn, an “always” rule lasts ONE TURN.
+ * 6. **The grammar of the patterns is not the same depending on the permission**:
+ * `edit` matches paths RELATIVE to the repository, without expansion of `~`;
+ * `external_directory` matches ABSOLUTE folders, with `~` expanded. Hence
+ * the hardest result of this probe: `edit: {"~/.ssh/*": "deny"}`
+ * **doesn't protect anything at all**, and doesn't say it.
+ * 7. **A bare `deny` removes the tool** from what the model is offered — but
+ * `/experimental/tool` continues to list it. The catalog served to humans
+ * and the one used in the model are not the same.
+ * 8. **A session ruleset in `allow` is a real ACL** (new measurement):
+ * it raises `ask` without cutting the toolset. In `deny`, it removes the tool.
+ * 9. **The V2 system (`/api/permission/saved`) remains empty**: version
+ * 1.18.16 does not use it, even for an “always” rule. The only native
+ * persistence mechanism offered is not connected to anything.
+ * 10. **Ten commands out of thirty** publish `external_directory`; twenty
+ * publish only `bash`, and `cd .` / `popd` publish NOTHING.
  */
 
 const LIVE = process.env.MDY_OPENCODE_PERMS_PROBE === "1";
 
-/** Le dossier d'installation du binaire, partagé par toutes les mesures. */
+/** The binary installation folder, shared by all measures. */
 let installRoot = "";
 let bin = "";
 const running: ProbeServer[] = [];
@@ -97,12 +98,13 @@ beforeAll(async () => {
 }, 600_000);
 
 /**
- * UN SERVEUR PAR MESURE, ET PAS UN DE PLUS.
+ * ONE SERVER PER MEASUREMENT, AND NOT ONE MORE.
  *
- * Chaque `it` monte le sien : les laisser vivre jusqu'à la fin du fichier en
- * empile une quinzaine, et la machine s'effondre — mesuré, la sonde partait en
- * timeout à 300 s sur un tour qui prend 3 s quand elle est seule. Les dossiers,
- * eux, survivent jusqu'au bout : c'est là qu'on va lire ce qui a été écrit.
+ * Each `it` creates its own server. If they all remain alive until the end of
+ * the file, about fifteen accumulate and the machine collapses — in one
+ * measurement, the probe timed out after 300 seconds on a turn that takes
+ * three seconds by itself. The servers survive until the end because that is
+ * where we read what they wrote.
  */
 afterEach(() => {
   for (const server of running.splice(0)) server.stop();
@@ -113,7 +115,7 @@ afterAll(() => {
   for (const root of roots) fs.rmSync(root, { recursive: true, force: true });
 });
 
-/** Un décor complet : fournisseur scripté, serveur, dépôt neuf. */
+/** A complete setup: scripted provider, server, and fresh repository. */
 async function boot(
   tag: string,
   turns: Parameters<typeof startProvider>[0],
@@ -132,7 +134,7 @@ async function boot(
   return { server, provider };
 }
 
-/** Joue un tour et attend que la boucle se soit arrêtée — sur une demande ou au repos. */
+/** Plays a round and waits until the loop has stopped — on demand or at rest. */
 async function playTurn(server: ProbeServer, sessionId: string, text = "go"): Promise<void> {
   const asksBefore = server.asks(sessionId).length;
   await server.prompt(sessionId, text);
@@ -141,7 +143,7 @@ async function playTurn(server: ProbeServer, sessionId: string, text = "go"): Pr
     const parts = server.toolParts();
     return server.sawIdle() || parts.some((p) => p.status === "error");
   }, 20_000);
-  // Un tour qui ne s'arrête sur rien doit quand même laisser ses parts arriver.
+  // A trick that doesn't stop at anything must still let its parts happen.
   await waitFor(() => server.toolParts().length > 0, 3_000);
 }
 
@@ -185,7 +187,7 @@ describe.skipIf(!LIVE)("ce qu'une permission publie, et ce qu'elle ne publie pas
       expect(ask.permission).toBe("external_directory");
       expect(ask.metadata.directories).toEqual(["/etc"]);
       expect(ask.metadata.command).toBe("cat /etc/hosts");
-      // Le grain d'un « oui » est le SOUS-ARBRE, pas le fichier demandé.
+      // The kernel of a “yes” is the SUBTREE, not the requested file.
       expect(ask.patterns).toEqual(["/etc/*"]);
       expect(ask.always).toEqual(["/etc/*"]);
     },
@@ -229,7 +231,7 @@ describe.skipIf(!LIVE)("qui gagne, entre deux règles", () => {
   it(
     "un « toujours » humain ÉCRASE un `deny` de config — et le témoin prouve que le `deny` mordait",
     async () => {
-      // Témoin : le `deny` seul, sans aucun « toujours », refuse bien l'écriture.
+      // Witness: `deny` alone, without any “always”, refuses writing.
       const temoin = await boot(
         "always-temoin",
         [{ tools: [] }],
@@ -247,8 +249,8 @@ describe.skipIf(!LIVE)("qui gagne, entre deux règles", () => {
       );
       expect(fs.existsSync(path.join(temoin.server.repo, "vault", "v.txt"))).toBe(false);
 
-      // La mesure : un « toujours » sur une PREMIÈRE écriture anodine, et le
-      // dossier interdit s'ouvre.
+      // The measurement: an “always” rule on a FIRST harmless write opens the
+      // forbidden directory.
       const { server, provider } = await boot(
         "always-ecrase-deny",
         [],
@@ -265,7 +267,7 @@ describe.skipIf(!LIVE)("qui gagne, entre deux règles", () => {
 
       const [ask] = server.asks(session);
       expect(ask.permission).toBe("edit");
-      // Le motif proposé n'est pas le fichier : c'est TOUT.
+      // The proposed reason is not the file: it's EVERYTHING.
       expect(ask.always, "un « toujours » sur `edit` ne porte plus sur un chemin").toEqual(["*"]);
       expect(ask.patterns, "les motifs d'`edit` sont RELATIFS au dépôt").toEqual(["note.txt"]);
 
@@ -297,17 +299,17 @@ describe.skipIf(!LIVE)("qui gagne, entre deux règles", () => {
       expect(first.patterns).toEqual(["echo un"]);
 
       await server.post(`/permission/${first.id}/reply`, { reply: "always" });
-      // `echo deux` passe muet, `ls -la` redemande : le « oui » couvre le verbe.
+      // `echo deux` remains silent, `ls -la` asks again: the “yes” covers the verb.
       await waitFor(() => server.asks(session).length >= 2, 25_000);
       expect(
         server.asks(session).map((a) => a.metadata?.command),
         "un « toujours » sur `echo` a couvert autre chose que `echo`",
       ).toEqual(["echo un", "ls -la"]);
 
-      // Le magasin persistant natif n'a rien vu passer.
+      // The native persistent store saw nothing.
       expect((await server.get("/api/permission/saved")).body).toEqual({ data: [] });
 
-      // ── LE REDÉMARRAGE : le « toujours » ne survit pas au process ──────────
+      // ── THE RESTART: the “always” does not survive the process ──────────
       server.stop();
       const restarted = await startProbeServer({
         bin,
@@ -380,7 +382,7 @@ describe.skipIf(!LIVE)("la grammaire des motifs", () => {
         edit: { "*": "ask", "~/a/*": "allow" },
       });
 
-      // Le motif absolu doit être écrit APRÈS coup : il dépend du dossier tiré.
+      // The absolute reason must be written AFTER the fact: it depends on the file drawn.
       absolu.server.stop();
       const deepOf = (server: ProbeServer) => path.join(server.root, "a", "b", "c");
       const absoluServer = await startProbeServer({
@@ -429,7 +431,7 @@ describe.skipIf(!LIVE)("la grammaire des motifs", () => {
         external_directory: "allow",
         edit: { "*": "allow", "~/.ssh/*": "deny" },
       });
-      // `HOME` de la sonde = sa racine : rien n'est écrit dans le vrai home.
+      // `HOME` of the probe = its root: nothing is written in the real home.
       const ssh = path.join(server.root, ".ssh");
       fs.mkdirSync(ssh, { recursive: true });
       provider.queue.push(
@@ -445,7 +447,7 @@ describe.skipIf(!LIVE)("la grammaire des motifs", () => {
       ).toBe(true);
       expect(server.asks(session), "et il ne demande même pas").toEqual([]);
 
-      // Le MÊME refus, écrit relativement au dépôt, mord.
+      // The SAME refusal, written in relation to the deposit, bites.
       const relatif = await boot("ssh-relatif", [], {
         bash: "allow",
         external_directory: "allow",
@@ -514,7 +516,7 @@ describe.skipIf(!LIVE)("le jeu de tools, et ce que le modèle en voit", () => {
       ).not.toContain("webfetch");
       expect(ferme.provider.offeredTools()).not.toContain("todowrite");
 
-      // Le catalogue REST, lui, ne bouge pas : ce n'est pas ce que le modèle lit.
+      // The REST catalog does not move: it is not what the model reads.
       const rest = await ferme.server.get("/experimental/tool?provider=probe&model=model&agent=build");
       const ids = ((Array.isArray(rest.body) ? rest.body : rest.body.data) as Array<{ id: string }>).map(
         (t) => t.id,
@@ -576,8 +578,8 @@ describe.skipIf(!LIVE)("le jeu de tools, et ce que le modèle en voit", () => {
       await playTurn(server, session);
 
       const [ask] = server.asks(session);
-      // Le pendant V2 de la MÊME demande n'existe pas : les deux systèmes
-      // cohabitent sans se parler.
+      // The V2 counterpart of the SAME request does not exist: the two systems
+      // coexist without communicating.
       expect((await server.get(`/api/session/${session}/permission`)).body).toEqual({ data: [] });
       expect((await server.get("/api/permission/request")).body.data).toEqual([]);
 
@@ -594,21 +596,21 @@ describe.skipIf(!LIVE)("le jeu de tools, et ce que le modèle en voit", () => {
 });
 
 /**
- * LA COUVERTURE RÉELLE D'`external_directory` CÔTÉ SHELL.
+ * THE ACTUAL COVERAGE OF `external_directory` ON THE SHELL SIDE.
  *
- * C'est le résultat central de l'audit (§2), et celui qui décide de ce qu'un
- * écran d'opt-in a le droit de promettre : une carte « l'agent veut sortir du
- * dossier » branchée sur `external_directory` seul enseignerait une garantie
- * fausse. Les vingt commandes de la colonne de droite atteignent le disque en ne
- * publiant qu'une permission `bash` — que `checkCommand` laisse passer, puisqu'il
- * ne vise que git.
+ * This is the central result of the audit (§2), and it determines what an
+ * opt-in screen is allowed to promise: a card saying “the agent wants to leave
+ * the folder” and connected only to `external_directory` would promise a false
+ * guarantee. The twenty commands in the right column reach the disk without
+ * publishing the `bash` permission — and `checkCommand` lets them pass because
+ * it only targets git.
  */
 const COMMANDES_QUI_PUBLIENT = ["cat", "cp", "mv", "rm", "mkdir", "touch", "chmod", "chown", "cd", "pushd"];
 const COMMANDES_MUETTES = [
   "grep", "find", "sed", "head", "tail", "less", "awk", "wc", "python3", "node",
   "tar", "ssh", "curl", "open", "base64", "ln", "xargs", "dd", "rsync", "zip",
 ];
-/** Ni `bash` ni `external_directory` : elles ne passent devant AUCUN garde-fou. */
+/** Neither `bash` nor `external_directory`: they do not pass in front of ANY guardrails. */
 const COMMANDES_INVISIBLES = ["cd .", "popd"];
 
 describe.skipIf(!LIVE)("ce que le shell déclare quand il sort du dépôt", () => {
@@ -663,15 +665,15 @@ describe.skipIf(!LIVE)("ce que le shell déclare quand il sort du dépôt", () =
       const muettes: string[] = [];
       const invisibles: string[] = [];
       for (const [nom, command] of Object.entries(commandes)) {
-        // Une session par commande : la cascade de refus est par session, et on
-        // refuse tout — RIEN de cette liste ne doit s'exécuter.
+        // One session per command: the refusal cascade is per session, and we
+        // deny all — NOTHING on this list should run.
         const session = await server.createSession(nom);
         provider.queue.length = 0;
         provider.queue.push({ tools: [bash(command)] });
         await server.prompt(session);
         await waitFor(() => server.asks(session).length > 0, 10_000);
-        // UNE COMMANDE PEUT EN PUBLIER DEUX (`external_directory` puis `bash`) :
-        // classer sur la première arrivée ferait passer `cp` et `rm` pour muets.
+        // ONE COMMAND CAN PUBLISH TWO (`external_directory` then `bash`):
+        // classifying on the first arrival would make `cp` and `rm` appear silent.
         await sleep(600);
         const asks = server.asks(session);
         const kinds = asks.map((a) => a.permission);
@@ -681,13 +683,13 @@ describe.skipIf(!LIVE)("ce que le shell déclare quand il sort du dépôt", () =
         for (const ask of asks) {
           await server.post(`/permission/${ask.id}/reply`, { reply: "reject", message: "non" });
         }
-        // Le round doit être FINI avant de charger la commande suivante : sinon
-        // son dernier appel au fournisseur emporte le tour de la suivante, qui
-        // ne voit alors rien venir (une commande sur deux tombait à vide).
+        // The round must be ENDED before loading the following command: otherwise
+        // his last call to the supplier takes the turn of the next one, which
+        // then sees nothing coming (one in two orders came up empty).
         await settleProvider(provider);
       }
 
-      // Le message d'échec doit NOMMER la commande qui a changé de camp.
+      // The failure message must NAME the command that switched sides.
       expect(publie.sort()).toEqual([...COMMANDES_QUI_PUBLIENT].sort());
       expect(muettes.sort()).toEqual([...COMMANDES_MUETTES].sort());
       expect(invisibles.sort()).toEqual([...COMMANDES_INVISIBLES].sort());

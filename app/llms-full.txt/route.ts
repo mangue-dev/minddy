@@ -5,16 +5,16 @@ import { issuesCsvDoc } from "@/lib/export/issues-csv";
 import { MCP_ENDPOINT, SITE_URL } from "@/lib/site";
 
 /**
- * `/llms-full.txt` (MIN-88) — la référence complète des outils MCP.
+ * `/llms-full.txt` (MIN-88) — the complete MCP tools reference.
  *
- * Même parti pris que `/llms.txt` (voir son en-tête) : ce fichier sert à écrire
- * une intégration juste, pas à vendre le produit. Il ajoute ce que l'autre
- * résume — le mode d'emploi intégral que le serveur renvoie à l'initialisation,
- * et la signature de chaque outil, paramètre par paramètre.
+ * Same bias as `/llms.txt` (see its header): this file is used to write
+ * a fair integration, not to sell the product. He adds what the other
+ * summarizes — the full instructions that the server sends back upon initialization,
+ * and the signature of each tool, parameter by parameter.
  *
- * Entièrement DÉRIVÉ de `lib/server/mcp/` : renommer un outil ou rendre un
- * paramètre obligatoire se voit ici au déploiement suivant, sans rien à
- * mettre à jour.
+ * FULLY DERIVED from `lib/server/mcp/`: rename a tool or make a
+ * mandatory parameter is seen here at the next deployment, without anything to
+ * to update.
  */
 export function GET(): Response {
   const tools = mcpToolCatalog();
@@ -48,15 +48,15 @@ ${renderIssuesCsv()}
 }
 
 /**
- * Le webhook sortant — la seule partie de l'API qui ne se lit pas dans un
- * schéma d'outil : c'est une route que l'agent doit ÉCRIRE, pas appeler. Elle
- * vient donc en entier, depuis le même contrat que celui rendu par
- * `minddy_create_integration` et `minddy_configure_webhook`.
+ * The outgoing webhook — the only part of the API that does not read into a
+ * tool schema: this is a route that the agent must WRITE, not call. She
+ * therefore comes in full, from the same contract as that rendered by
+ * `minddy_create_integration` and `minddy_configure_webhook`.
  */
 function renderWebhook(): string {
   const w = integrationWebhookDoc();
-  // Les blocs se séparent d'une ligne vide, les puces d'un simple retour : une
-  // liste aérée est une liste « loose » en markdown, et se rend en paragraphes.
+  // The blocks are separated by an empty line, the chips by a simple return: a
+  // aerated list is a “loose” list in markdown, and is rendered in paragraphs.
   const list = (items: string[]) => items.join("\n");
   return [
     "## Webhooks (minddy → your app)",
@@ -78,10 +78,10 @@ function renderWebhook(): string {
 }
 
 /**
- * L'export CSV des tickets — la seule donnée de minddy qui circule en FICHIER.
- * Un agent à qui l'utilisateur tend « mon export » doit savoir ce qu'il tient
- * sans le déduire des trois premières lignes : d'où la table complète, tirée du
- * même module que l'écriture du fichier (`lib/export/issues-csv.ts`).
+ * CSV export of tickets — the only Minddy data that circulates in FILE.
+ * An agent to whom the user hands “my export” must know what he is holding
+ * without deducing it from the first three lines: hence the complete table, taken from
+ * same module as writing the file (`lib/export/issues-csv.ts`).
  */
 function renderIssuesCsv(): string {
   const doc = issuesCsvDoc();

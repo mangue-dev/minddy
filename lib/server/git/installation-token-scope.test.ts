@@ -3,22 +3,22 @@ import crypto from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-327 — LE TOKEN DE FORGE EST SCOPÉ AU DÉPÔT DU PROJET.
+ * MIN-327 — THE FORGE TOKEN IS SCOPED FROM THE PROJECT REPOSITORY.
  *
- * `POST /app/installations/{id}/access_tokens` sans corps rend le token MAXIMAL
- * de l'installation : tous ses dépôts, toutes ses permissions. C'est ce token-là
- * qui partait dans le `.git/config` de la microVM de l'agent — lisible par le
- * modèle, exfiltrable par une injection, et il ouvrait alors tous les dépôts
- * privés du compte pour un projet qui n'en a lié qu'un.
+ * `POST /app/installations/{id}/access_tokens` without a body returns the MAXIMAL
+ * token of the installation: all its repositories, all its permissions. It was this token
+ * which went into the `.git/config` of the agent's microVM — readable by the
+ * model, exfiltrable by an injection, and it then opened all the private repositories
+ * of the account for a project which only linked one.
  *
- * On teste donc les deux moitiés du contrat : ce que `getInstallationToken`
- * ENVOIE (portée + permissions), et ce que `resolveRepoCloneTarget` lui DEMANDE
- * selon qui détiendra le token. Le `fetch` est faux — c'est la seule chose qui
- * sorte du process ici.
+ * We therefore test the two halves of the contract: what `getInstallationToken`
+ * SENDS (scope + permissions), and what `resolveRepoCloneTarget` ASKS it
+ * depending on who will hold the token. The `fetch` is wrong — it's the only thing that
+ * comes out of the process here.
  */
 
 const h = vi.hoisted(() => ({
-  /** Les corps de mint réellement envoyés à GitHub, dans l'ordre. */
+  /** The mint bodies actually sent to GitHub, in order. */
   minted: [] as Array<Record<string, unknown> | null>,
   link: null as Record<string, unknown> | null,
 }));
@@ -59,7 +59,7 @@ beforeEach(() => {
   process.env.GITHUB_APP_ID = "1";
   process.env.GITHUB_APP_SLUG = "minddy-test";
   process.env.GIT_STATE_SECRET = "x".repeat(32);
-  // Clé de test jetable : `mintAppJwt` signe pour de vrai, il lui faut un PEM.
+  // Disposable test key: `mintAppJwt` signs for real, it needs a PEM.
   process.env.GITHUB_APP_PRIVATE_KEY = TEST_PRIVATE_KEY;
 
   let n = 0;
@@ -71,7 +71,7 @@ beforeEach(() => {
       return new Response(
         JSON.stringify({
           token: `ghs_token_${n}`,
-          // Bien au-delà de la fenêtre de sécurité : le cache doit pouvoir jouer.
+          // Well beyond the security window: the cache must be able to play.
           expires_at: new Date(Date.now() + 3_600_000).toISOString(),
         }),
         { status: 200 },
@@ -87,8 +87,8 @@ afterEach(() => {
 
 describe("le mint d'un token d'installation", () => {
   it("n'envoie aucun corps quand on ne lui donne pas de portée", async () => {
-    // La forme historique reste possible — c'est celle des appels qui énumèrent
-    // les dépôts de l'installation, et qui ne PEUVENT pas être scopés à un dépôt.
+    // The historical form remains possible — it is that of the calls which enumerate
+    // installation repositories, and which CANNOT be scoped to a repository.
     await getInstallationToken(4242);
     expect(h.minted).toEqual([null]);
   });
@@ -104,9 +104,9 @@ describe("le mint d'un token d'installation", () => {
   });
 
   it("ne resserre PAS un token large en le resservant depuis le cache", async () => {
-    // Le piège qu'on garde ici : une clé de cache sur le seul `installationId`
-    // rendrait le token maximal du premier appel à un appelant qui a demandé un
-    // token restreint. La restriction serait vraie sur le fil, fausse en mémoire.
+    // The trap we keep here: a cache key on the only `installationId`
+    // would return the maximum token of the first call to a caller who requested a
+    // restricted token. The restriction would be true on the wire, false in memory.
     const large = await getInstallationToken(4242);
     const etroit = await getInstallationToken(4242, {
       repositories: ["minddy"],
@@ -116,7 +116,7 @@ describe("le mint d'un token d'installation", () => {
     expect(h.minted).toHaveLength(2);
   });
 
-  it("resert le même token à portée ÉGALE, quel que soit l'ordre des clés", async () => {
+  it("reuses the same token for an EQUAL scope regardless of key order", async () => {
     const a = await getInstallationToken(4242, {
       repositories: ["b", "a"],
       permissions: { contents: "write", issues: "read" },
@@ -131,17 +131,17 @@ describe("le mint d'un token d'installation", () => {
 });
 
 describe("la cible de clone d'un projet", () => {
-  it("scope TOUJOURS le token au dépôt lié, par son nom court", async () => {
+  it("ALWAYS scopes the token to the linked repository by its short name", async () => {
     await resolveRepoCloneTarget("proj-1");
-    // `mangue-dev/minddy` et non `minddy` vaudrait 422 chez GitHub : c'est le nom
+    // `mangue-dev/minddy` and not `minddy` would be worth 422 at GitHub: that's the name
     // court que `repositories` attend.
     expect(h.minted[0]).toMatchObject({ repositories: ["minddy"] });
   });
 
-  it("ne narrowe pas les permissions du token qui reste dans la fonction", async () => {
-    // `full` : c'est lui qui ouvre les PR, commente, relit, merge. Lui retirer
-    // des permissions ne bornerait rien de plus (le dépôt est déjà le seul) et
-    // casserait les installations qui n'ont pas accepté une permission récente.
+  it("does not narrow the permissions of the token that remains in the function", async () => {
+    // `full`: he is the one who opens the PRs, comments, rereads, merges. Take away from him
+    // permissions would limit nothing more (the repository is already the only one) and
+    // would break installations that did not accept a recent permission.
     await resolveRepoCloneTarget("proj-1", "full");
     expect(h.minted[0]).not.toHaveProperty("permissions");
   });
@@ -155,8 +155,8 @@ describe("la cible de clone d'un projet", () => {
   });
 
   it("donne `contents: read` à la microVM d'une relecture", async () => {
-    // Le cœur du ticket : une relecture est le seul ancrage dont le contenu vient
-    // d'un fork inconnu, et elle n'écrit rien dans le dépôt.
+    // The heart of the ticket: a proofread is the only anchor from which the content comes
+    // from an unknown fork, and it doesn't write anything to the repository.
     await resolveRepoCloneTarget("proj-1", "repo-read");
     expect(h.minted[0]).toMatchObject({
       repositories: ["minddy"],
@@ -164,7 +164,7 @@ describe("la cible de clone d'un projet", () => {
     });
   });
 
-  it("rend des tokens DIFFÉRENTS aux trois profils", async () => {
+  it("returns DIFFERENT tokens for the three profiles", async () => {
     const full = await resolveRepoCloneTarget("proj-1", "full");
     const write = await resolveRepoCloneTarget("proj-1", "repo-write");
     const read = await resolveRepoCloneTarget("proj-1", "repo-read");
@@ -172,9 +172,9 @@ describe("la cible de clone d'un projet", () => {
   });
 });
 
-/** PEM jetable, généré au chargement du fichier : `mintAppJwt` signe pour de vrai,
- *  il lui faut une vraie clé — et une clé en dur dans un dépôt, même de test,
- *  ressemble trop à une vraie pour qu'on en pose une ici. */
+/** Disposable PEM, generated when loading the file: `mintAppJwt` sign for real,
+ * it needs a real key - and a hard key in a repository, even a test one,
+ * looks too much like a real one to put one here. */
 const TEST_PRIVATE_KEY = crypto
   .generateKeyPairSync("rsa", { modulusLength: 2048 })
   .privateKey.export({ type: "pkcs8", format: "pem" })

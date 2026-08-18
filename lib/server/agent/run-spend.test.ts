@@ -1,36 +1,36 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-// `typescript-api` est un alias vers `typescript@5` (cf. package.json et CLAUDE.md) :
-// depuis MIN-180 le dépôt vérifie avec `typescript@7`, qui ne livre plus l'API du
-// compilateur. Un test structurel a besoin d'un TypeScript en JS pour lire un arbre.
+// `typescript-api` is an alias to `typescript@5` (see package.json and CLAUDE.md):
+// since MIN-180 the repository checks with `typescript@7`, which no longer delivers the API
+// compiler. A structural test needs a TypeScript in JS to read a tree.
 import ts from "typescript-api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-215 — la dépense d'un run se lit AU LEDGER, pas à une colonne que seuls les
- * chemins de sortie sains écrivent.
+ * MIN-215 — the expense of a run is read IN THE LEDGER, not in a column that only
+ * healthy output paths write.
  *
- * Ce que ça coûtait. Passage de routine plafonné à 0,75 $. Chunk 1 dépense 0,35 $
- * et se met au repos proprement. Chunk 2 dépense 0,40 $ puis lève sur
- * `commitAndPush` : le catch stampe l'erreur, jamais le coût. Chunk 3 recalcule
- * `0,75 − 0,35 = 0,40 $` de restant — un restant qui n'existe plus — et repart.
- * Le passage finit au-dessus de son plafond, `recomputeChainSpend` sous-compte la
- * chaîne, et « Exécutions précédentes » affiche moins que ce qui a été payé. Une
- * invocation tuée à la limite de durée fait pareil, sans même passer par le catch.
+ * What it cost. Routine passage capped at $0.75. Chunk 1 spends $0.35
+ * and goes to rest cleanly. Chunk 2 spends $0.40 then throws on
+ * `commitAndPush`: the catch stamps the error, never the cost. Chunk 3 recalculates
+ * `0,75 − 0,35 = 0,40 $` of remainder — a remainder that no longer exists — and starts again.
+ * The passage ends up above its cap, `recomputeChainSpend` undercounts the
+ * chain, and "Previous Runs" displays less than what was paid. A
+ * summon killed at the time limit does the same, without even going through the catch.
  *
- * Deux moitiés, donc deux tests. La fonction se vérifie pour de vrai (double du
- * service client) ; ses deux points de consommation, eux, sont dans un
- * `executeAgentRun` qui ne s'atteint qu'avec une microVM, une base et un modèle —
- * mais l'invariant y est lexical (d'où quelle expression le plafond descend, et
- * quelles clés portent les stamps du catch), et ça se lit dans l'arbre. Le
- * compilateur, lui, ne dira jamais rien : `cost_usd` est optionnel sur `stampRun`,
- * et un plafond dérivé de la mauvaise variable type parfaitement.
+ * Two halves, therefore two tests. The function is verified for real (double du
+ * customer service); its two consumption points are in a
+ * `executeAgentRun` which can only be reached with a microVM, a base and a model —
+ * but the invariant there is lexical (hence what expression does the ceiling go down, and
+ * which keys carry the catch stamps), and that can be read in the tree. The
+ * compiler will never say anything: `cost_usd` is optional on `stampRun`,
+ * and a ceiling derived from the wrong variable type perfectly.
  */
 
-// ── la fonction ──────────────────────────────────────────────────────────────
+// ── the function ─────────────────────────────── ───────────────────────────────
 
-/** Ce que la RPC rend au prochain appel : une valeur, une erreur, ou une levée. */
+/** What the RPC returns on the next call: a value, an error, or a throw. */
 let rpcResult: () => { data: unknown; error: { message: string } | null };
 let rpcCalls: Array<{ fn: string; args: Record<string, unknown> }> = [];
 
@@ -62,22 +62,22 @@ describe("spentFromLedger", () => {
     rpcResult = () => ({ data: 0.7512, error: null });
 
     await expect(spentFromLedger("run-1")).resolves.toBeCloseTo(0.7512, 6);
-    // La somme se fait EN BASE : une lecture de lignes serait plafonnée par
-    // PostgREST et rendrait, sur un run bavard, un total silencieusement bas.
+    // The sum is done IN BASE: a reading of lines would be capped by
+    // PostgREST and would, on a chatty run, return a silently low total.
     expect(rpcCalls).toEqual([{ fn: "get_ai_run_spend", args: { p_run_id: "run-1" } }]);
   });
 
   it("accepte le numeric rendu en chaîne", async () => {
-    // Postgres sérialise `numeric` en chaîne selon le chemin : un `Number()` bien
-    // placé vaut mieux qu'un `NaN` qui se propagerait dans le plafond.
+    // Postgres serializes `numeric` to a string depending on the path: a good `Number()`
+    // placed is better than a `NaN` which would propagate in the ceiling.
     rpcResult = () => ({ data: "0.4", error: null });
 
     await expect(spentFromLedger("run-1")).resolves.toBeCloseTo(0.4, 6);
   });
 
   it("rend null — jamais 0 — quand la lecture échoue", async () => {
-    // Le fond du ticket : un 0 se confondrait avec « ce run n'a rien dépensé » et
-    // rechargerait le plafond entier, soit exactement le défaut qu'on corrige.
+    // The bottom of the ticket: a 0 would be confused with “this run spent nothing” and
+    // would reload the entire ceiling, which is exactly the fault we are correcting.
     rpcResult = () => ({ data: null, error: { message: "boom" } });
     await expect(spentFromLedger("run-1")).resolves.toBeNull();
 
@@ -90,16 +90,16 @@ describe("spentFromLedger", () => {
   });
 
   it("rend 0 pour un run qui n'a rien au ledger", async () => {
-    // Le pendant du test du dessus : une somme vide est une VRAIE réponse, et
-    // elle ne doit pas se déguiser en échec de lecture (le run repartirait avec
-    // son plafond entier alors que la réponse est juste).
+    // The counterpart of the test above: an empty sum is a REAL answer, and
+    // it must not disguise itself as a reading failure (the run would leave with
+    // its entire ceiling while the answer is correct).
     rpcResult = () => ({ data: 0, error: null });
 
     await expect(spentFromLedger("run-1")).resolves.toBe(0);
   });
 });
 
-// ── ses deux points de consommation dans execute.ts ──────────────────────────
+// ── its two consumption points in execute.ts ──────────────────────────
 
 const EXECUTE_PATH = join(process.cwd(), "lib/server/agent/execute.ts");
 
@@ -110,7 +110,7 @@ const source = ts.createSourceFile(
   true,
 );
 
-/** Toutes les `const`/`let` du fichier, par nom — les noms visés sont uniques ici. */
+/** All `const`/`let` in the file, by name — the names referred to are unique here. */
 function declarations(): Map<string, ts.VariableDeclaration> {
   const found = new Map<string, ts.VariableDeclaration>();
   const visit = (node: ts.Node) => {
@@ -132,10 +132,10 @@ function initializerOf(name: string): ts.Expression {
 }
 
 /**
- * Les clés que cette expression POSE sur l'objet résultant — en suivant les
- * spreads jusqu'à leur déclaration, et les deux branches d'un `...(cond ? {…} : {})`.
- * C'est la SHAPE qu'on vérifie, pas le texte : le jour où quelqu'un réorganise ces
- * objets, le test suit tant que les clés arrivent au bon endroit.
+ * The keys that this expression PLACES on the resulting object — following the
+ * spreads to their declaration, and the two branches of a `...(cond ? {…} : {})`.
+ * It is the SHAPE that we check, not the text: the day someone rearranges these
+ * objects, the test follows as long as the keys arrive in the right place.
  */
 function producedKeys(expr: ts.Expression, seen = new Set<string>()): Set<string> {
   const keys = new Set<string>();
@@ -170,7 +170,7 @@ function producedKeys(expr: ts.Expression, seen = new Set<string>()): Set<string
   return keys;
 }
 
-/** Les identifiants LUS dans un sous-arbre (une clé d'objet n'est pas une lecture). */
+/** The LUS identifiers in a subtree (an object key is not a read). */
 function valueReads(root: ts.Node): Set<string> {
   const names = new Set<string>();
   const visit = (node: ts.Node) => {
@@ -186,7 +186,7 @@ function valueReads(root: ts.Node): Set<string> {
   return names;
 }
 
-/** Les objets passés à `stampRun(...)` depuis un bloc `catch`, avec leur statut. */
+/** Objects passed to `stampRun(...)` from a `catch` block, with their status. */
 function stampsInCatchClauses(): Array<{ status: string; keys: Set<string> }> {
   const stamps: Array<{ status: string; keys: Set<string> }> = [];
   const visit = (node: ts.Node) => {
@@ -224,8 +224,8 @@ describe("plafond de run et stamps d'erreur (execute.ts)", () => {
     const cap = initializerOf("runCapRemainingUsd");
     const reads = valueReads(cap);
 
-    // Le plafond passe par le montant relu, et par lui seul : c'est ce qui le rend
-    // insensible à un chunk mort — catch comme invocation tuée.
+    // The ceiling passes through the amount read, and through it alone: ​​this is what makes it
+    // insensitive to a dead chunk — catch as killed summon.
     expect(
       [...reads],
       "`runCapRemainingUsd` doit se dériver de `runSpentUsd` (somme du ledger)",
@@ -236,41 +236,41 @@ describe("plafond de run et stamps d'erreur (execute.ts)", () => {
         "la colonne que seuls les chemins de sortie sains écrivent.",
     ).not.toContain("run.cost_usd");
 
-    // Et ce montant est bien le MAX ledger/colonne : le ledger est best-effort,
-    // une insertion ratée y laisserait moins que ce que la colonne porte.
+    // And this amount is indeed the MAX ledger/column: the ledger is best-effort,
+    // a failed insertion would leave less than the column carries.
     const spent = initializerOf("runSpentUsd");
     expect([...valueReads(spent)]).toContain("ledgerSpentUsd");
     expect(spent.getText()).toContain("run.cost_usd");
   });
 
   /**
-   * MIN-224 — `agent_runs.cost_usd` doit vouloir dire LA MÊME CHOSE sur les deux
-   * moteurs tant qu'ils coexistent.
-   *
-   * Mesuré sur le même ticket : le moteur en microVM y écrit la somme du ledger,
-   * `sandbox_compute` compris (0,074913 $) ; celui-ci n'écrivait que le modèle, et
-   * en perdait (0,165908 $ portés pour 0,236836 $ dépensés). La cause tient à
-   * l'ORDRE des gestes — le compute était facturé depuis le `finally`, donc APRÈS
-   * les stamps, si bien qu'aucune relecture du ledger ne pouvait le voir.
-   *
-   * Trois lecteurs mélangeraient sinon deux populations : `recomputeChainSpend`,
-   * `medianCostByIntent` et le coût exposé par l'API du run.
-   */
+ * MIN-224 — `agent_runs.cost_usd` must mean THE SAME THING on both
+ * engines as long as they coexist.
+ *
+ * Measured on the same ticket: the microVM engine writes the sum of the ledger there,
+ * `sandbox_compute` included ($0.074913); this one only wrote the model, and
+ * lost some ($0.165908 worn for $0.236836 spent). The cause is
+ * the ORDER of the gestures — the compute was billed from `finally`, therefore AFTER
+ * the stamps, so that no rereading of the ledger could see it.
+ *
+ * Three readers would otherwise mix two populations: `recomputeChainSpend`,
+ * `medianCostByIntent` and the cost exposed by the run API.
+ */
   it("le repos facture le compute AVANT de relire le ledger", () => {
     /**
-     * L'invariant a DÉMÉNAGÉ avec la boucle (MIN-286, 2026-08-14) : ce n'est plus
-     * la fonction qui conclut un tour, c'est `landVmTurn`. L'ordre, lui, ne change
-     * pas — facturer le compute APRÈS la relecture ne le mettrait jamais dans la
-     * colonne, et `cost_usd` afficherait moins que ce que le run a coûté.
-     */
+ * The invariant MOVED with the loop (MIN-286, 2026-08-14): it is no longer
+ * the function which concludes a round, it is `landVmTurn`. The order doesn't change
+ * — charging for the compute AFTER the replay would never put it in the
+ * column, and `cost_usd` would show less than what the run cost.
+ */
     const rest = readFileSync(join(process.cwd(), "lib/server/agent/vm-rest.ts"), "utf8");
     const billAt = rest.indexOf("await recordSandboxUsage({");
     const ledgerAt = rest.indexOf("await spentFromLedger(");
     expect(billAt, "`landVmTurn` doit facturer le compute du tour").toBeGreaterThan(-1);
     expect(ledgerAt, "`landVmTurn` doit relire le ledger").toBeGreaterThan(-1);
     expect(billAt).toBeLessThan(ledgerAt);
-    // Et le résultat est le MAX des deux minorants : le ledger est best-effort, la
-    // colonne peut porter une ligne qu'il a ratée, et une dépense ne recule pas.
+    // And the result is the MAX of the two lower bounds: the ledger is best-effort, the
+    // column can carry a line that it missed, and an expense does not go backwards.
     expect(rest).toContain("Math.max(run.cost_usd + report.costUsd, ledger ?? 0)");
   });
 
@@ -296,8 +296,8 @@ describe("plafond de run et stamps d'erreur (execute.ts)", () => {
   });
 
   it("le `finally` n'est plus qu'un FILET — la facturation est idempotente", () => {
-    // Deux écritures de compute pour un même chunk partageraient la bande de seq
-    // (`SANDBOX_USAGE_SEQ_BASE + continuations`) et se marcheraient dessus.
+    // Two compute writes for the same chunk would share the seq band
+    // (`SANDBOX_USAGE_SEQ_BASE + continuations`) and would step on each other.
     const bill = initializerOf("billSandboxCompute").getText();
     expect(bill, "la garde d'idempotence a disparu").toContain("sandboxComputeBilled");
     expect(bill, "un tour parti dans la microVM facture LUI-MÊME son compute").toContain(
@@ -307,13 +307,13 @@ describe("plafond de run et stamps d'erreur (execute.ts)", () => {
 
   it("les repos stampés depuis un catch portent le coût, seul `failed` en est dispensé", () => {
     const stamps = stampsInCatchClauses();
-    // Deux repos (amorçage avec checkpoint, erreur mi-tour) + l'échec d'un run vierge.
+    // Two rests (start with checkpoint, mid-turn error) + failure of a blank run.
     expect(stamps.length, "les stamps du catch d'execute.ts ont disparu").toBeGreaterThanOrEqual(3);
 
     for (const stamp of stamps) {
       if (stamp.status === '"failed"') {
-        // Run VIERGE : rien n'a jamais tourné sous ce run_id, il n'y a pas de coût
-        // à recoller — et son checkpoint part à `null` de toute façon.
+        // Run BLANK: nothing has ever run under this run_id, there is no cost
+        // to stick again — and its checkpoint goes to `null` anyway.
         continue;
       }
       expect(

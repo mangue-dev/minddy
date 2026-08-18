@@ -6,17 +6,17 @@ import { FileMinus, FilePen, FilePlus, FileSymlink } from "lucide-react";
 import { FILE_STATUS_LABELS, type FileStatus } from "@/lib/pr-file-tree";
 
 /**
- * Les quatre marques d'un fichier dans un diff : ce qui lui est arrivé, son
- * chemin, ce qu'il pèse, et la proportion. Extraites de `pr-diff` et
- * `pr-file-tree` parce qu'une troisième surface les demandait — le bloc
- * « fichiers changés » d'un tour d'agent, qui les écrivait jusque-là dans son
- * propre vocabulaire (une phrase en texte plat, « modifié app/… ») et ne
- * ressemblait à rien d'autre.
+ * The four marks of a file in a diff: what happened to it, its
+ * path, what it weighs, and the proportion. Extracted from `pr-diff` and
+ * `pr-file-tree` because a third surface requested them — the
+ * “changed files” block of an agent trick, which until then wrote them in its
+ * own vocabulary (a phrase in flat text, “modified app/…”) and ne
+ * looked like nothing else.
  *
- * Une liste de fichiers touchés se lit pareil partout dans minddy : l'icône dit
- * la nature du changement, le mono dit le chemin (dossier éteint, nom en avant),
- * les compteurs disent le volume. Des composants, pas des recopies de classes —
- * la couleur du vert « ajouté » ne se décide qu'ici.
+ * A list of affected files reads the same everywhere in minddy: the icon says
+ * the nature of the change, mono says the path (folder off, name forward),
+ * the counters say the volume. Components, not class copies —
+ * the color of the “added” green is only decided here.
  */
 
 const STATUS_ICONS = {
@@ -26,7 +26,7 @@ const STATUS_ICONS = {
   modified: FilePen,
 } as const satisfies Record<FileStatus, unknown>;
 
-/** Mêmes couleurs que le badge de la carte de fichier, en trait plutôt qu'en aplat. */
+/** Same colors as the file card badge, in line rather than solid. */
 const STATUS_COLORS: Record<FileStatus, string> = {
   added: "text-green-600 dark:text-green-400",
   removed: "text-destructive",
@@ -35,9 +35,9 @@ const STATUS_COLORS: Record<FileStatus, string> = {
 };
 
 /**
- * Ce qui est arrivé au fichier, dit en icône et en couleur. Le mot reste
- * accessible (infobulle + lecteur d'écran) : la couleur seule ne dit rien à qui
- * ne la voit pas, et deux icônes de fichier se ressemblent de loin.
+ * What happened to the file, said in icon and color. The word remains
+ * accessible (tooltip + screen reader): the color alone means nothing to those who
+ * does not see it, and two file icons look similar from a distance.
  */
 export function FileStatusIcon({
   status,
@@ -58,9 +58,9 @@ export function FileStatusIcon({
 }
 
 /**
- * Le chemin complet, dossier éteint et nom de fichier en avant : dans une liste
- * de chemins qui partagent leurs six premiers segments, c'est le dernier qu'on
- * cherche des yeux. Un renommage se dit en préfixe, du même gris que le dossier.
+ * The full path, folder turned off and file name forward: in a list
+ * of paths that share their first six segments, this is the last one that we
+ * look for. A rename is said in prefix, the same gray as the folder.
  */
 export function FilePathLabel({
   path,
@@ -68,7 +68,7 @@ export function FilePathLabel({
   className,
 }: {
   path: string;
-  /** Chemin AVANT, pour un renommage seulement. */
+  /** BEFORE path, for renaming only. */
   previousPath?: string | null;
   className?: string;
 }) {
@@ -88,8 +88,8 @@ export function FilePathLabel({
 }
 
 /**
- * Le volume, en lignes. `tabular-nums` pour que les colonnes d'une liste
- * s'alignent, et que le chiffre ne danse pas quand un direct le fait changer.
+ * The volume, in lines. `tabular-nums` so that the columns of a list
+ * line up, and the number does not dance when a live makes it change.
  */
 export function DiffCounters({
   additions,
@@ -100,10 +100,9 @@ export function DiffCounters({
   additions: number;
   deletions: number;
   /**
-   * Taire un compteur à zéro. Pour la vue LIVE d'un tour d'agent, où git n'a
-   * encore rien compté : « +0 −0 » sur chaque ligne se lirait comme une mesure,
-   * alors que c'est une absence de mesure.
-   */
+ * Keep a counter to zero. For the LIVE view of an agent tour, where git has not counted anything yet: “+0 −0” on each line would read as a measurement,
+ * whereas it is an absence of measurement.
+ */
   hideEmpty?: boolean;
   className?: string;
 }) {
@@ -131,16 +130,16 @@ export function DiffCounters({
 }
 
 /**
- * Le carré de cinq blocs de GitHub : la proportion d'ajouts et de retraits, lue
- * d'un coup d'oeil. Les compteurs chiffrés disent le volume, cette barre dit la
- * NATURE du changement — un fichier réécrit et un fichier étoffé ne se
- * ressemblent pas, même à +40/−40.
+ * GitHub's five-block square: the proportion of additions and removals, read
+ * at a glance. The numerical counters tell the volume, this bar says the
+ * NATURE of the change — a rewritten file and an expanded file don't look like
+ *, even +40/−40.
  */
 export function DiffStatBar({ additions, deletions }: { additions: number; deletions: number }) {
   const total = additions + deletions;
-  // Un côté non nul vaut toujours au moins un bloc, et jamais les cinq quand
-  // l'autre existe : sur +2/−300, l'arrondi effacerait sinon l'ajout, et un
-  // fichier purement ajouté ne se distinguerait plus d'un fichier retouché.
+  // A non-zero side is always worth at least one block, and never all five when
+  // the other exists: on +2/−300, rounding would otherwise erase the addition, and a
+  // purely added file would no longer be distinguishable from a retouched file.
   const green =
     total === 0
       ? 0

@@ -73,34 +73,34 @@ import type { ResourceInput } from "@/lib/types";
 import { MentionLinksProvider } from "@/components/mention-links";
 
 /**
- * Cœur réutilisable de la conversation de l'agent de code (MIN-46 + MIN-68), extrait
- * de la modal pour être hébergé aussi bien dans le `Sheet` flottant (AgentChatModal)
- * que DIRECTEMENT dans la page Agents (liste/détail, sans modal).
+ * Code Agent Conversation Reusable Core (MIN-46 + MIN-68), extract
+ * of the modal to be hosted as well in the floating `Sheet` (AgentChatModal)
+ * that DIRECTLY in the Agents page (list/detail, without modal).
  *
- * Ce composant montre UN run — la conversation, c'est lui. Une issue en porte
- * plusieurs, successifs, dont un seul peut TRAVAILLER à la fois ; ils ne se
- * choisissent plus ici (le sélecteur du milieu de l'en-tête a disparu) mais dans
- * la LISTE de la page Agents, où chacun a sa ligne et son titre. L'hôte désigne
- * donc celui qu'on ouvre, et deux modes se distinguent par le POINT D'ENTRÉE :
+ * This component shows ONE run — it's the conversation. A door exit
+ * several, successive, only one of which can WORK at a time; they don't
+ * choose more here (the middle selector of the header is gone) but in
+ * the LIST on the Agents page, where each has their line and title. The host designates
+ * so the one we open, and two modes are distinguished by the ENTRY POINT:
  *
- *  • CHAUD (`live`) — le run désigné (`initialRunId` / `noteRunId`), ou à défaut
- *    celui qui travaille, sinon le dernier de l'issue : le fil est son flux
- *    d'événements et le composer lui parle DIRECTEMENT (`/steer`), dans son
- *    contexte. Au repos, la conversation se POURSUIT ainsi, naturellement — comme
- *    un chat. Seul le DERNIER run de l'issue est reprennable ; les précédents se
- *    consultent (le serveur applique la même règle).
- *  • FROID (`compose`) — aucun run sur l'issue, ou brouillon de lancement :
- *    composer VIERGE (l'utilisateur dit ce qu'il veut, pas de but pré-écrit) +
- *    picker de modèle. Envoyer lance un run NEUF, qui héritera côté serveur de la
+ * • HOT (`live`) — the designated run (`initialRunId` / `noteRunId`), or failing that
+ * the one who works, otherwise the last of the issue: the thread is its flow
+ * of events and composing it speaks DIRECTLY to it (`/steer`), in its
+ * context. At rest, the conversation CONTINUES thus, naturally — as
+ * a cat. Only the LAST run of the outcome can be repeated; the previous ones
+ * consult (the server applies the same rule).
+ * • COLD (`compose`) — no run on the issue, or launch draft:
+ * compose BLANK (the user says what he wants, no pre-written goal) +
+ * model picker. Send launches a NEW run, which will inherit the server side of the
  *    branche/PR de l'issue.
  *
- * Tant que le composant est `active`, un heartbeat rafraîchit l'horloge d'inactivité
- * du run pour que la sandbox ne soit pas coupée pendant qu'on lit ou écrit.
+ * As long as the component is `active`, a heartbeat refreshes the idle clock
+ * of the run so that the sandbox is not cut while reading or writing.
  *
- * L'en-tête est fourni par l'hôte : `headerTitle` (bloc de gauche — la modal laisse
- * le défaut : modèle en live / issue ciblée en compose ; la page passe son propre
- * titre) et `headerActions` (bloc de droite — expand/close pour la modal, retour /
- * lien PR pour la page).
+ * The header is provided by the host: `headerTitle` (left block — the modal leaves
+ * the default: live model / targeted issue composed; the page passes its own
+ * title) and `headerActions` (right block — expand/close for the modal, return /
+ * PR link for the page).
  */
 export function AgentConversation({
   issueId = null,
@@ -116,52 +116,52 @@ export function AgentConversation({
   initialComposeText,
   composeIntent = "implement",
 }: {
-  /** Issue d'ancrage — null pour une session CARNET (passer `noteRunId`). */
+  /** Anchor issue — null for a NOTEBOOK session (pass `noteRunId`). */
   issueId?: string | null;
-  /** Identifiant lisible (MIN-42) — affiché dans l'en-tête en phase compose. */
+  /** Readable identifier (MIN-42) — displayed in the header in phase compose. */
   issueIdentifier?: string;
   /** Project scope for @ mention suggestions and page resolution. */
   projectId?: string | null;
   /**
-   * Session SANS TICKET (MIN-84) : le run EST la session — conversation d'UN
-   * run, sans historique d'issue ni phase compose (le run existe déjà ; le
-   * compose de ces sessions vit dans SessionCompose, avant toute run).
+   * Session WITHOUT TICKET (MIN-84): the run IS the session — conversation of ONE
+   * run, without outcome history or composite phase (the run already exists; the
+   * composed of these sessions lives in SessionCompose, before any run).
    */
   noteRunId?: string | null;
   /**
-   * Ouvre CE run — celui de la ligne cliquée sur la page Agents, celui que le
-   * panneau d'issue rouvre. Absent → le run qui TRAVAILLE, à défaut le DERNIER
-   * run non `failed` de l'issue, et sans aucun run on compose.
+   * Open THIS run — the one in the line clicked on the Agents page, the one that the
+   * Exit sign reopens. Absent → the run that WORKS, otherwise the LAST
+   * run no `failed` of the outcome, and without any run we compose.
    */
   initialRunId?: string | null;
   /**
-   * Force la phase compose à l'ouverture (brouillon de lancement) même si l'issue
-   * a déjà des runs au repos.
+   * Force the phase to compose at the opening (launch draft) even if the outcome
+   * already has rest runs.
    */
   initialCompose?: boolean;
-  /** Le composant est-il visible/vivant ? Gate la query et le heartbeat. */
+  /** Is the component visible/alive? Gate the question and the heartbeat. */
   active?: boolean;
-  /** Bloc de gauche de l'en-tête (défaut : modèle en live / issue en compose). */
+  /** Left block of the header (default: live model / composite issue). */
   headerTitle?: ReactNode;
-  /** Bloc d'actions à droite de l'en-tête. */
+  /** Action block to the right of the header. */
   headerActions?: ReactNode;
   /**
-   * Appelé dès qu'une run NEUVE vient d'être lancée depuis la phase compose (avant
-   * même que la liste des sessions ne l'ait rattrapée). La page Agents s'en sert
-   * pour retenir l'id de la run le temps de la transition compose → live.
+   * Called as soon as a NEW run has just been launched from the compose phase (before
+   * even if the list of sessions has not caught up). The Agents page uses it
+   * to retain the id of the run during the transition compose → live.
    */
   onLaunched?: (run: AgentRunSummary) => void;
   /**
-   * Prompt pré-écrit qui amorce le composer en phase compose (demande
-   * d'implémentation adaptée à l'issue). One-shot : lu au montage du composer, puis
-   * librement éditable. Sans lui, le composer démarre vide (« New run », modal).
+   * Pre-written prompt that initiates the compose in phase compose (request
+   * implementation adapted to the outcome). One-shot: read when editing the composer, then
+   * freely editable. Without it, the composer starts empty (“New run”, modal).
    */
   initialComposeText?: string;
   /**
-   * Ce que le point d'entrée demandait à l'agent : `plan` (« Générer un plan » /
-   * « Vérifier le plan ») CADRE le ticket sans le commencer — le serveur ne le
-   * passe alors pas « en cours ». Suit le brouillon, pas le texte du composer :
-   * l'utilisateur reste libre de réécrire la consigne.
+   * What the entry point asked the agent: `plan` (“Generate plan” /
+   * "Check plan") FRAMES the ticket without starting it — the server does not
+   * then does not go “in progress”. Follows the draft, not the text of the composer:
+   * the user remains free to rewrite the instruction.
    */
   composeIntent?: AgentComposeIntent;
 }) {
@@ -171,23 +171,23 @@ export function AgentConversation({
   const { mentionables, links, onMentionQuery } = useNumoMentionables(projectId);
 
   /**
-   * Le FAB de Numo s'efface tant que cette conversation est à l'écran : son
-   * composer est épinglé en bas à droite, et le FAB tombe pile sur son bouton
-   * d'envoi. C'est déclaré ICI, par le composant qui porte ce composer, plutôt
-   * que par une liste de routes — la page Agents nous monte sous son onglet
-   * Conversations mais pas sous son onglet Routines, à la même URL, et une
-   * routine ouverte sur l'un de ses passages nous remonte à nouveau.
+   * Numo's FAB fades as long as this conversation is on screen: his
+   * composer is pinned at the bottom right, and the FAB falls right on its button
+   * sending. It is declared HERE, by the component which carries this composer, rather
+   * only by a list of routes — the Agents page shows us under its tab
+   * Conversations but not under its Routines tab, at the same URL, and a
+   * open routine on one of its passages takes us back again.
    */
   useSuppressAssistantFab(active);
 
-  /** Traduit un code d'erreur d'API agent, ou laisse passer le message brut. */
+  /** Translates an agent API error code, or lets the raw message pass. */
   const agentErrorMessage = useAgentErrorMessage();
 
   /**
-   * Rafraîchit les runs de l'ancrage (issue OU run carnet) ET la liste globale des
-   * sessions (page Agents). Cette liste ne poll QUE si une session travaille déjà —
-   * sans invalidation explicite, lancer ou reprendre une run depuis la page la
-   * laisse figée sur le statut de la run précédente jusqu'au prochain rechargement.
+   * Refreshes the anchor runs (issue OR run notebook) AND the global list of
+   * sessions (Agents page). This list ONLY polls if a session is already working —
+   * without explicit invalidation, start or resume a run from the page
+   * leaves it frozen on the status of the previous run until the next reload.
    */
   const refreshRuns = async (): Promise<void> => {
     await Promise.all([
@@ -201,44 +201,44 @@ export function AgentConversation({
     ]);
   };
 
-  // Run explicitement ouverte : `initialRunId`, une run choisie dans l'historique,
-  // ou celle qu'on vient de lancer. `null` → on retombe sur la run ACTIVE de l'issue.
+  // Explicitly open run: `initialRunId`, a run chosen from the history,
+  // or the one we just launched. `null` → we fall back on the ACTIVE run of the outcome.
   const [selectedId, setSelectedId] = useState<string | null>(initialRunId);
-  // Run tout juste lancée : la query ne l'a pas encore renvoyée, on l'affiche depuis
-  // la réponse du POST → bascule live instantanée, sans flash de la phase compose.
+  // Run just launched: the query has not yet returned it, it has been displayed since
+  // POST response → instantaneous live toggle, without phase compose flash.
   const [launched, setLaunched] = useState<AgentRunSummary | null>(null);
-  // « Lancer un nouvel agent » demandé explicitement : force la phase compose même
-  // si l'issue a des runs passées (sinon on rouvrirait la dernière).
+  // “Launch a new agent” requested explicitly: forces the phase to even compose
+  // if the issue has past runs (otherwise we would reopen the last one).
   const [composing, setComposing] = useState(initialCompose);
-  // Messages envoyés dont l'écho serveur n'est pas encore arrivé (bulles optimistes).
+  // Messages sent for which the server echo has not yet arrived (optimistic bubbles).
   const [pendingMessages, setPendingMessages] = useState<
     Array<{ text: string; mentions: AssistantMention[] }>
   >([]);
-  // 1er message d'une session en cours de création : le POST de lancement fait les
-  // pré-checks (dépôt, quota, modèle) avant de rendre la session, et pendant ce
-  // temps il n'y a rien à afficher — le message a quitté le composer et n'existe
-  // encore nulle part. On le tient ici pour le montrer tout de suite.
+  // 1st message of a session being created: the launch POST does the
+  // pre-checks (deposit, quota, model) before rendering the session, and during this
+  // time there is nothing to display — the message has left the composer and does not exist
+  // nowhere yet. We hold it here to show it right away.
   const [launchText, setLaunchText] = useState<string | null>(null);
   const [launchMentions, setLaunchMentions] = useState<AssistantMention[]>([]);
-  // Le POST n'a pas encore rendu la run : son `local_exec` n'est donc pas
-  // disponible pendant la bulle optimiste. On garde le choix validé par le
-  // dossier local pour ne jamais afficher « Ouverture de la sandbox » pendant
-  // qu'un tour local est en cours de préparation.
+  // POST has not yet rendered the run: its `local_exec` is therefore not
+  // available during the optimistic bubble. We keep the choice validated by the
+  // local folder to never show “Opening sandbox” during
+  // that a local tour is being prepared.
   const [launchLocalExec, setLaunchLocalExec] = useState(false);
-  // Demande « créer la PR » envoyée : désactive le bouton le temps que l'agent
-  // reparte (working) ou que la PR apparaisse. Remise à zéro par l'effet plus bas.
+  // “Create PR” request sent: deactivates the button while the agent
+  // starts again (working) or RA appears. Reset by lower effect.
   const [requestingPr, setRequestingPr] = useState(false);
-  // Vue diff de la session (Sheet par-dessus la conversation) : ouverte en
-  // cliquant un fichier des blocs « fichiers changés », PR ou pas.
+  // Diff view of the session (Sheet over the conversation): opened in
+  // clicking a file blocks “files changed”, PR or not.
   const [diffOpen, setDiffOpen] = useState(false);
-  // Le fichier par lequel on est entré : la vue s'ouvre DESSUS. Cliquer une
-  // ligne pour atterrir en haut d'un diff de quarante fichiers, c'est arriver à
-  // côté de ce qu'on a demandé. `null` quand l'entrée ne désigne rien (les deux
-  // nombres de l'en-tête) — la vue s'ouvre alors normalement, en haut.
+  // The file through which we entered: the view opens ABOVE. Click one
+  // line to land at the top of a diff of forty files, it is to arrive at
+  // next to what we asked for. `null` when the entry designates nothing (both
+  // numbers in the header) — the view then opens normally, at the top.
   const [diffFocus, setDiffFocus] = useState<string | null>(null);
-  // La conversation suit ce que l'hôte désigne. Il n'y a plus de sélecteur de
-  // runs ici pour lui disputer la main : ce que l'utilisateur choisit, il le
-  // choisit dans la LISTE, et l'hôte nous le passe en prop.
+  // The conversation follows what the host points to. There is no longer a selector
+  // runs here to compete for his hand: what the user chooses, he
+  // chooses from the LIST, and the host passes it to us as prop.
   useEffect(() => {
     setSelectedId(initialRunId);
     setComposing(initialCompose);
@@ -247,74 +247,74 @@ export function AgentConversation({
   const { runs: issueRuns, loading: issueLoading } = useIssueAgentRunsQuery(
     active && issueId ? issueId : null,
   );
-  // Session CARNET : un seul run, interrogé directement (il EST la session).
+  // NOTEBOOK session: a single run, queried directly (it IS the session).
   const { run: noteRun, loading: noteLoading } = useAgentRunQuery(
     active && noteRunId ? noteRunId : null,
   );
   const runs = noteRunId ? (noteRun ? [noteRun] : []) : issueRuns;
   const loading = noteRunId ? noteLoading : issueLoading;
-  // La run tout juste lancée est active mais pas encore dans `runs` : sans elle, on
-  // proposerait « lancer un nouvel agent » sur une issue déjà occupée (→ 409).
+  // The run just launched is active but not yet in `runs`: without it, we
+  // would suggest “launch a new agent” on an already occupied issue (→ 409).
   const knownRuns =
     launched && !runs.some((r) => r.id === launched.id) ? [launched, ...runs] : runs;
 
   const activeRun = knownRuns.find((r) => isAgentRunActive(r.status)) ?? null;
-  // Résolution de la run affichée : celle désignée, sinon celle qui travaille,
-  // sinon la DERNIÈRE run NON `failed` de l'issue — une conversation au repos se
-  // POURSUIT (modèle conversationnel), elle ne retombe pas sur un composer vierge.
-  // Une run `failed` (morte à l'amorçage) n'a ni fil ni composer : la prendre par
-  // défaut ouvrirait une conversation morte sans action visible — on compose à la
-  // place. Le repli ne sert plus qu'aux appelants SANS run désignée (la modal de
-  // reprise) : la page Agents, elle, ouvre toujours le run de la ligne cliquée.
+  // Resolution of the run displayed: the one designated, otherwise the one working,
+  // otherwise the LAST run NO `failed` of the outcome — a conversation at rest occurs
+  // PUSHED (conversational model), it does not fall back on a blank composition.
+  // A `failed` run (dead at boot) has neither thread nor composer: take it by
+  // default would open a dead conversation without visible action - we dial at the
+  // place. The fallback is only used by callers WITHOUT a designated run (the modal of
+  // resumption): the Agents page always opens the run of the clicked line.
   const liveRun = composing
     ? null
     : selectedId
       ? knownRuns.find((r) => r.id === selectedId) ?? null
       : activeRun ?? knownRuns.find((r) => r.status !== "failed") ?? null;
   /**
-   * Ce que le SERVEUR fait — la vérité des requêtes (polling du fil, du diff,
-   * décision d'interrompre). À distinguer de `working`, qui est ce que
-   * l'INTERFACE raconte : « stopper » ne fait que poser un drapeau, que la boucle
-   * ne lit qu'à la frontière de son round, soit plusieurs secondes plus tard
-   * (parfois bien plus, si elle est en plein appel au modèle). Pendant ce temps,
-   * rien ne bougeait à l'écran : le bouton restait « stopper », le tour continuait
-   * de compter, et on recliquait en croyant que ça n'avait pas marché.
+   * What the SERVER does — the truth of the requests (thread polling, diff,
+   * decision to discontinue). To be distinguished from `working`, which is what
+   * the INTERFACE says: “stopping” only sets a flag, that the loop
+   * only reads at the edge of its round, several seconds later
+   * (sometimes much more, if it is in full use of the model). During this time,
+   * nothing moved on the screen: the button remained “stop”, the tour continued
+   * to count, and we clicked again believing that it hadn't worked.
    */
   const serverWorking = liveRun ? isAgentRunWorking(liveRun.status) : false;
   const [stopping, setStopping] = useState(false);
   const working = serverWorking && !stopping;
-  // `runs` arrive trié du plus récent au plus ancien : runs[0] est la dernière run.
-  // La run qu'on vient de lancer compte AUSSI comme la dernière : entre le POST et
-  // l'arrivée du refetch, `runs` est encore la liste d'AVANT, et la comparer à
-  // runs[0] désignerait la run précédente → on afficherait « run passée, composer
-  // désactivé » sur la run que l'utilisateur vient de démarrer.
+  // `runs` arrives sorted from newest to oldest: runs[0] is the last run.
+  // The run we just launched ALSO counts as the last: between POST and
+  // the arrival of the refetch, `runs` is still the list from BEFORE, and compare it to
+  // runs[0] would designate the previous run → we would display “past run, compose
+  // disabled” on the run that the user has just started.
   const isLatest = liveRun ? knownRuns[0]?.id === liveRun.id : false;
-  // Sa PR est fusionnée → run LIVRÉE : la réveiller pousserait sur une branche déjà
-  // dans la base et rouvrirait un cycle de PR sur du travail fini (409 `prMerged`).
+  // Her PR is merged → run DELIVERED: waking her up would push on a branch already
+  // in the database and would reopen a PR cycle on finished work (409 `prMerged`).
   const delivered = liveRun?.pr_state === "merged";
-  // Le composer parle-t-il à cette run ? Oui même terminée (reprise à chaud) — seul
-  // `failed` n'a rien à reprendre. Mais SEULE la dernière run est reprennable : les
-  // runs d'une issue partagent la branche, et une run passée est restée sur un état
-  // dépassé (son push serait rejeté). On la consulte ; pour continuer, on en lance
-  // une nouvelle. Le serveur applique les mêmes règles (409 `supersededRun` /
+  // Does the dial speak to this run? Yes even finished (hot restart) — alone
+  // `failed` has nothing to take back. But ONLY the last run can be repeated: the
+  // runs from an issue share the branch, and a past run remained in a state
+  // exceeded (his push would be rejected). We consult it; to continue, we launch
+  // news. The server applies the same rules (409 `supersededRun` /
   // `prMerged`).
   const steerable = liveRun
     ? isAgentRunResumable(liveRun.status) && isLatest && !delivered
     : false;
 
-  // Question ask_user ACTIVE (MIN-86) : le dernier event significatif du fil est
-  // une `question` (aucun message user ni résumé après) et l'agent est au repos,
-  // steerable, sans réponse déjà en vol. La carte vivante remplace alors le
-  // composer ; le feed masque la bulle correspondante. Même query react-query que
-  // le feed (clé partagée) → aucune requête supplémentaire.
+  // Question ask_user ACTIVE (MIN-86): the last significant event of the thread is
+  // a `question` (no user message or summary after) and the agent is at rest,
+  // steerable, without response already in flight. The living card then replaces the
+  // compose; compose; the feed hides the corresponding bubble. Same react-query query as
+  // the feed (shared key) → no additional request.
   const { events: liveEvents } = useAgentRunEventsQuery(
     liveRun?.id ?? null,
     serverWorking
   );
-  // Le feed a sa propre lecture pour rendre la queue vivante. Cette seconde
-  // abonnée partage le même canal, mais rend aussi les compteurs Git locaux
-  // disponibles à la pilule du composer — une route serveur ne peut pas lire le
-  // dépôt qui reste sur la machine de l'utilisateur.
+  // The feed has its own reading to make the queue lively. This second
+  // subscriber shares the same channel, but also makes Git counters local
+  // available at the composer pill — a server route cannot read the
+  // deposit that remains on the user's machine.
   const runLive = useAgentRunLive(liveRun?.id ?? null, serverWorking);
   const streamedLocalDiff = useAgentRunLocalDiff(
     liveRun?.local_exec ? liveRun.id : null,
@@ -331,35 +331,35 @@ export function AgentConversation({
   const useLocalDiff = liveRun?.local_exec === true && (!liveRun.local_worktree || serverWorking);
 
   /**
-   * Ce que CETTE session a changé dans le dépôt, cumulé sur tous ses tours (union
-   * des events `files_changed`, compteurs réels de git). C'est l'information que
-   * portait la barre au-dessus du composer ; la pilule n'en montre maintenant
-   * que le décompte — la liste complète reste à un clic dans la diff et sous
-   * chaque réponse dans le fil.
+   * What THIS session changed in the deposit, cumulative over all its turns (union
+   * events `files_changed`, real git counters). This is the information that
+   * carried the bar above the dial; the pill doesn't show any now
+   * that the countdown — the complete list remains one click away in the diff and under
+   * every reply in the thread.
    *
-   * Aucune requête de plus : ce sont les events que le fil charge déjà.
+   * No more requests: these are the events that the thread already loads.
    */
   const sessionFiles = useMemo(
     () => cumulativeBranchFiles(liveEvents).files,
     [liveEvents],
   );
   /**
-   * LES MÊMES DEUX NOMBRES, MAIS PENDANT LE TOUR (MIN-266).
+   * THE SAME TWO NUMBERS, BUT DURING THE TURN (MIN-266).
    *
-   * `files_changed` n'est émis qu'en FIN de tour : tant que l'agent travaillait,
-   * l'en-tête ne bougeait pas d'un chiffre — et au premier tour d'une session il
-   * n'affichait rien du tout, alors que c'est exactement le moment où l'on veut
-   * savoir ce qui est en train d'arriver au dépôt. Ce résumé-là est lu dans la
-   * microVM (`git diff`, sans les patches) et avance donc avec le travail.
+   * `files_changed` is only issued at the END of the turn: as long as the agent was working,
+   * the header didn't move a digit — and on the first turn of a session it
+   * displayed nothing at all, even though this is exactly the moment we want
+   * know what is happening to the repository. This summary is read in the
+   * microVM (`git diff`, without patches) and therefore progresses with the work.
    *
-   * Il ne tourne que pendant le tour ; au repos les events reprennent la main,
-   * et ils sont déjà chargés.
+   * It only turns during the turn; at rest the events take control again,
+   * and they are already loaded.
    */
   const { files: liveDiffFiles } = useAgentRunDiffStatQuery(liveRun?.id ?? null, working);
   const liveHeaderFiles = useMemo(() => {
     if (runLive?.fileStats.length) {
-      // Les events décrivent les tours déjà terminés ; le relevé local remplace
-      // seulement les chemins du tour en cours et conserve le reste de la session.
+      // Events describe rounds that have already been completed; the local statement replaces
+      // only the paths of the current tour and retains the rest of the session.
       const byPath = new Map(sessionFiles.map((file) => [file.path, file]));
       for (const file of runLive.fileStats) byPath.set(file.path, file);
       return [...byPath.values()];
@@ -367,54 +367,54 @@ export function AgentConversation({
     return liveDiffFiles.length > 0 ? liveDiffFiles : sessionFiles;
   }, [liveDiffFiles, runLive?.fileStats, sessionFiles]);
   const sessionTotals = useMemo(
-    // Le direct FAIT FOI dès qu'il a quelque chose : il contient tout ce que
-    // portent les events (les commits des tours passés) PLUS le tour en cours.
+    // The direct is authentic as soon as it has something: it contains everything that
+    // carry the events (commits from past rounds) PLUS the current round.
     () => changeTotals(liveHeaderFiles),
     [liveHeaderFiles],
   );
   /**
-   * Les sous-agents du tour en cours (MIN-112) → indicateur dans la pilule du
-   * composer. Lus sur les MÊMES events que le fil (clé react-query partagée) :
-   * aucune requête de plus.
+   * The sub-agents of the current turn (MIN-112) → indicator in the pill of the
+   * compose. Read on the SAME events as the thread (shared react-query key):
+   * no further requests.
    */
   const subagents = useMemo(
     () => (working ? turnSubagents(liveEvents) : []),
     [liveEvents, working],
   );
   /**
-   * La checklist du tour en cours (`update_plan`) → indicateur dans la pilule du
-   * composer. Mêmes events que le fil, aucune requête de plus. Vide dès que
-   * l'agent est au repos : le plan décrit un travail déjà rendu.
+   * The checklist for the current round (`update_plan`) → indicator in the pill of the
+   * compose. Same events as the thread, no additional requests. Empty as soon as
+   * the agent is at rest: the plan describes work already completed.
    */
   const planSteps = useMemo(
     () => (working ? livePlan(liveEvents) : []),
     [liveEvents, working],
   );
   /**
-   * LA CARTE DE QUESTIONS, ET LE TOUR N'EST PLUS FORCÉMENT FINI (MIN-364, D7).
+   * THE QUESTION CARD, AND THE ROUND IS NO LONGER NECESSARILY ENDED (MIN-364, D7).
    *
-   * Sur la machine de l'utilisateur, `ask_user` SUSPEND le tour au lieu de le
-   * terminer : le modèle attend, l'agent reste `running`, et l'event `question`
-   * porte alors `blocking: true`. Exiger le repos ferait exactement le contraire
-   * de ce qu'on veut — un composer désarmé face à un modèle qui attend une
-   * réponse, et un tour qui ne repart que sur la deadline.
+   * On the user's machine, `ask_user` SUSPENDS the tour instead of
+   * finish: the model waits, the agent remains `running`, and the event `question`
+   * then carries `blocking: true`. Requiring rest would do the exact opposite
+   * of what we want — a composer disarmed in the face of a model waiting for a
+   * response, and a turn that only starts again on the deadline.
    *
-   * Le repos reste exigé pour une question NON bloquante (le chemin microVM) :
-   * là, la carte ne doit s'ouvrir qu'une fois le tour rangé, sinon elle
-   * apparaîtrait le temps du push et de l'export du journal.
+   * Rest remains required for a NON-blocking question (the microVM path):
+   * there, the card must only open once the trick is put away, otherwise it
+   * would appear during the push and export of the log.
    */
   const activeQuestion = useMemo((): {
     eventId: string;
     questions: AskUserQuestion[];
-    /** Le tour ATTEND cette réponse : y répondre ne relance rien, ça le dénoue. */
+    /** The trick WAITS for this response: responding to it doesn't trigger anything, it resolves it. */
     blocking: boolean;
   } | null => {
     if (!liveRun || !steerable) return null;
     const ordered = [...liveEvents].sort((a, b) => a.seq - b.seq);
-    // Réponse déjà en vol ? `pendingMessages` n'est JAMAIS purgée en cas de succès
-    // (cf. lib/agent-pending.ts — la soustraction multi-ensemble en dépend) : on ne
-    // compte que les envois SANS écho serveur, sinon le premier steering de la
-    // session supprimerait la carte jusqu'au rechargement de la page.
+    // Response already in flight? `pendingMessages` is NEVER purged on success
+    // (cf. lib/agent-pending.ts — multi-set subtraction depends on it): we do not
+    // account that sendings WITHOUT server echo, otherwise the first steering of the
+    // session would delete the map until the page reloads.
     const echoed = ordered
       .filter((e) => e.type === "user_message")
       .map((e) => (typeof e.payload?.text === "string" ? e.payload.text : ""));
@@ -431,29 +431,29 @@ export function AgentConversation({
         );
         if (questions.length === 0) return null;
         const blocking = e.payload?.blocking === true;
-        // Une question qui ne bloque pas a terminé son tour : tant que l'agent
-        // travaille, ce qu'on voit à l'écran est le tour SUIVANT.
+        // A question that does not block has completed its turn: as long as the agent
+        // works, what we see on the screen is the NEXT turn.
         if (working && !blocking) return null;
         return { eventId: e.id, questions, blocking };
       }
     }
     return null;
   }, [liveRun, working, steerable, pendingMessages, liveEvents]);
-  // « Créer une pull request » a du sens quand la session est reprennable ET qu'aucune
-  // PR n'existe encore : la barre de changements montre alors le bouton (si du travail
-  // a été poussé). Sinon l'en-tête porte déjà « ouvrir la PR ».
-  // Une session de RELECTURE n'a rien à livrer : elle n'écrit pas dans le dépôt
-  // et n'a pas `create_pr`. Lui proposer le bouton enverrait à l'agent une
+  // “Create a pull request” makes sense when the session is resumeable AND no
+  // PR does not yet exist: the changes bar then shows the button (if work
+  // was pushed). Otherwise the header already says “open PR”.
+  // A REVIEW session has nothing to deliver: it does not write to the repository
+  // and does not have `create_pr`. Offering the button would send the agent a
   // consigne qu'il ne peut que refuser.
   const canCreatePr =
     steerable && liveRun?.pr_number == null && liveRun?.pull_request_id == null;
-  // Les fichiers des blocs « fichiers changés » ouvrent la vue diff de la session
-  // DANS la conversation (note scratchpad : voir le diff pendant que l'agent
-  // modifie, sans attendre la PR) — le Sheet montre le travail poussé, PR ou pas.
+  // Files in “files changed” blocks open the session diff view
+  // IN the conversation (scratchpad note: see the diff while the agent
+  // modifies, without waiting for the PR) — the Sheet shows the work pushed, PR or not.
   //
-  // STABLE (useCallback) : ce callback descend jusqu'aux blocs du fil, qui sont
-  // mémoïsés. Recréé à chaque rendu, il les réveillerait tous à chaque poussée du
-  // direct — soit quatre fois par seconde pendant que l'agent écrit.
+  // STABLE (useCallback): this callback goes down to the thread blocks, which are
+  // memorized. Recreated with each render, it would wake them all with each push of the
+  // direct — four times per second while the agent writes.
   const openDiffSheet = useCallback(() => {
     setDiffFocus(null);
     setDiffOpen(true);
@@ -464,43 +464,43 @@ export function AgentConversation({
   }, []);
   const openDiff = liveRun ? openDiffAt : undefined;
 
-  // Changer de run vide les bulles optimistes : elles appartiennent à la
-  // conversation qu'on quitte, pas à celle qu'on ouvre. `launchText` part avec :
-  // la session lancée existe désormais et son prompt vient du serveur.
+  // Changing runs empties the optimistic bubbles: they belong to the
+  // conversation we leave, not the one we open. `launchText` leaves with:
+  // the launched session now exists and its prompt comes from the server.
   useEffect(() => {
     setPendingMessages([]);
     setLaunchText(null);
     setLaunchLocalExec(false);
     setRequestingPr(false);
-    // L'arrêt demandé vaut pour la session qu'on quitte, pas pour celle qu'on ouvre.
+    // The requested shutdown applies to the session you are leaving, not the one you are opening.
     setStopping(false);
-    // La vue diff appartient à la session qu'on quitte.
+    // The diff view belongs to the session we are leaving.
     setDiffOpen(false);
   }, [liveRun?.id]);
 
-  // Le serveur a rattrapé l'arrêt — ou le tour s'est terminé de lui-même juste
-  // après le clic : l'état optimiste n'a plus rien à couvrir. Il doit repartir,
-  // sinon le tour SUIVANT (relancé par un message) s'afficherait au repos.
+  // The server caught the stop — or the round just ended on its own
+  // after the click: the optimistic state has nothing more to cover. He must leave,
+  // otherwise the NEXT round (relaunched by a message) would be displayed at rest.
   useEffect(() => {
     if (!serverWorking) setStopping(false);
   }, [serverWorking]);
 
-  // La demande de PR a « pris » dès que l'agent repart (working) ou que la PR existe :
-  // on réactive le bouton (il disparaîtra de lui-même via `canCreatePr`).
+  // The PR request has “taken” as soon as the agent leaves (working) or the PR exists:
+  // we reactivate the button (it will disappear by itself via `canCreatePr`).
   useEffect(() => {
     if (working || liveRun?.pr_number != null) setRequestingPr(false);
   }, [working, liveRun?.pr_number]);
 
-  // Un tour qui se termine émet ses DERNIERS events (résumé + `files_changed`) juste
-  // avant de passer `completed` : le polling à 2 s s'arrête dès que le statut n'est
-  // plus « travaille » et peut donc les manquer. On refetch une fois au passage
-  // travail → repos pour que le bloc de fichiers settled et le bouton PR arrivent sans
-  // attendre un remontage. Même raison pour le diff de la session : le push final du
-  // tour arrive à cet instant, une vue diff ouverte doit le refléter sans re-poll.
+  // A round that ends emits its LAST events (summary + `files_changed`) just
+  // before passing `completed`: polling at 2 s stops as soon as the status is
+  // more “works” and can therefore miss them. We refetch once in passing
+  // work → rest so that the settled file block and the PR button arrive without
+  // wait for reassembly. Same reason for the session delay: the final push of the
+  // turn arrives at this time, an open diff view should reflect it without re-poll.
   //
-  // Sur le SERVEUR, et pas sur ce que l'interface affiche : un arrêt optimiste
-  // fait passer `working` à faux des secondes avant que le tour ne rende ses
-  // derniers events, et c'est justement eux qu'on vient chercher ici.
+  // On the SERVER, and not on what the interface displays: an optimistic shutdown
+  // causes `working` to change to false seconds before the turn returns its
+  // latest events, and it is precisely them that we are looking for here.
   const wasWorkingRef = useRef(serverWorking);
   useEffect(() => {
     const runId = liveRun?.id;
@@ -511,8 +511,8 @@ export function AgentConversation({
     wasWorkingRef.current = serverWorking;
   }, [serverWorking, liveRun?.id, queryClient]);
 
-  // Heartbeat tant que le composant est actif sur une session : garde la sandbox
-  // vivante pendant qu'on lit / écrit (le reaper ne coupe que les runs inactifs).
+  // Heartbeat as long as the component is active on a session: keeps the sandbox
+  // alive while reading/writing (the reaper only cuts inactive runs).
   useEffect(() => {
     if (!active || !liveRun) return;
     const id = liveRun.id;
@@ -521,7 +521,7 @@ export function AgentConversation({
     return () => clearInterval(timer);
   }, [active, liveRun?.id]);
 
-  // Sélection de modèle (phase compose).
+  // Model selection (compose phase).
   const {
     provider,
     defaultModel: providerDefaultModel,
@@ -529,35 +529,35 @@ export function AgentConversation({
   } = useAgentModelsQuery();
   const { defaultModel, defaultReasoningLevel } = useAgentPreferencesQuery();
   const [model, setModel] = useState("");
-  // Branche de BASE (phase compose, lignée neuve) : "" = le défaut du dépôt.
-  // Comme le modèle, le choix ne se fait qu'au lancement — figée ensuite.
+  // BASE branch (compose phase, new line): "" = the defect of the deposit.
+  // Like the model, the choice is only made at launch – frozen afterwards.
   const [baseBranch, setBaseBranch] = useState("");
-  // Niveau de raisonnement (MIN-122), figé au lancement lui aussi. `null` = pas
-  // encore touché → on suit le défaut perso, qui peut arriver après le montage.
+  // Level of reasoning (MIN-122), also frozen at launch. `null` = not
+  // still touched → we follow the personal fault, which can occur after assembly.
   const [reasoningOverride, setReasoningOverride] = useState<ReasoningLevel | null>(null);
-  // Les paliers du MODÈLE qui va tourner (override choisi, sinon défaut perso,
-  // sinon défaut du provider) : ce que le sélecteur liste dépend de lui, et le
-  // niveau affiché est rabattu sur ce qu'il accepte.
+  // The bearings of the MODEL which will rotate (override chosen, otherwise personal default,
+  // otherwise default of the provider): what the list selector depends on it, and the
+  // displayed level is lowered to what it accepts.
   const reasoningLevels = useReasoningLevelsFor(model || defaultModel || providerDefaultModel);
   const reasoningLevel = nearestReasoningLevel(
     reasoningOverride ?? defaultReasoningLevel,
     reasoningLevels,
   );
   const [launching, setLaunching] = useState(false);
-  // Les endpoints génériques et locaux n'ont aucun défaut fiable : l'id du
-  // modèle est une décision de leur propriétaire, jamais un repli cloud.
+  // Generic and local endpoints have no reliable fault: the id of the
+  // model is a decision of their owner, never a cloud fallback.
   const localEndpoint = isLocalAgentProvider(provider);
   const modelRequired = (provider === "generic" || localEndpoint) && !defaultModel && !model;
 
-  // OÙ LA CONVERSATION TOURNE (MIN-359), figé au lancement comme ses trois
-  // voisins. Le chip n'existe que dans l'app de bureau ET quand un dossier est
-  // attaché à ce projet sur CETTE machine : ailleurs, il n'y a pas de choix à
-  // offrir, et un chip grisé promettrait une bascule qui n'existe pas.
+  // WHERE THE CONVERSATION TURNS (MIN-359), frozen at launch like its three
+  // neighbors. The chip only exists in the desktop app AND when a folder is
+  // attached to this project on THIS machine: elsewhere, there is no choice
+  // offer, and a grayed chip would promise a toggle that does not exist.
   const localRepo = useLocalRepo(projectId);
 
   const [environment, setEnvironment] = useState<AgentEnvironment>("cloud");
-  // Le dossier a disparu sous l'attachement (déplacé, disque démonté, dépôt
-  // re-lié) : on retombe sur le cloud plutôt que de lancer vers un chemin mort.
+  // The folder has disappeared under the attachment (moved, unmounted disk, deposit
+  // re-linked): we fall back on the cloud rather than launching towards a dead path.
   useEffect(() => {
     setEnvironment(localEndpoint || localRepo.ready ? "local" : "cloud");
   }, [localEndpoint, localRepo.ready]);
@@ -567,9 +567,9 @@ export function AgentConversation({
     attachments: ResourceInput[] = [],
     mentions: AssistantMention[] = [],
   ) => {
-    // La phase compose n'existe que pour un ancrage ISSUE (celui des sessions
-    // sans ticket vit dans SessionCompose, avant toute run) : sans issue, rien
-    // à lancer ici.
+    // The compose phase only exists for an ISSUE anchor (that of sessions
+    // without a ticket lives in SessionCompose, before any run): no exit, nothing
+    // to launch here.
     if (launching || !issueId) return;
     if (modelRequired) {
       toast.error(t("modelRequired"));
@@ -583,10 +583,10 @@ export function AgentConversation({
     }
     const localWorktree = localExec && environment === "worktree";
     setLaunching(true);
-    // Affichage OPTIMISTE du 1er message, comme pour un follow-up : le POST enchaîne
-    // les pré-checks (issue, dépôt, quota, résolution du modèle) avant de rendre la
-    // session, et pendant ce temps le message n'existe nulle part — ni dans le
-    // composer (vidé à l'envoi), ni dans le fil (aucune session à afficher).
+    // OPTIMISTIC display of the 1st message, as for a follow-up: the POST continues
+    // the pre-checks (issue, deposit, quota, model resolution) before submitting the
+    // session, and during this time the message does not exist anywhere — neither in the
+    // compose (emptied on sending), nor in the thread (no session to display).
     if (prompt) setLaunchText(prompt);
     setLaunchMentions(mentions);
     setLaunchLocalExec(localExec);
@@ -594,28 +594,28 @@ export function AgentConversation({
       const { run: started } = await launchAgentRunApi(issueId, {
         prompt: prompt || undefined,
         model: model || undefined,
-        // Le serveur l'ignore si la lignée hérite déjà d'une branche (le picker
-        // est alors verrouillé — ceinture et bretelles côté course).
+        // The server ignores it if the lineage already inherits a branch (the picker
+        // is then locked — belt and shoulder straps on the racing side).
         baseBranch: baseBranch || undefined,
         reasoningLevel,
         intent: composeIntent,
         mentions,
         attachments,
-        // `ready` et pas seulement l'état du chip : entre le choix et l'envoi,
-        // le dossier a pu disparaître.
+        // `ready` and not just the state of the chip: between choice and sending,
+        // the file may have disappeared.
         localExec,
         localWorktree,
       });
-      // La session neuve devient la session ouverte → bascule live immédiate. Son
-      // `prompt` porte le même texte : le fil affiche la MÊME bulle, sans coupure.
+      // The new session becomes the open session → immediate live switch. Her
+      // `prompt` carries the same text: the thread displays the SAME bubble, without interruption.
       setLaunched(started);
       setSelectedId(started.id);
       setComposing(false);
       onLaunched?.(started);
       await refreshRuns();
     } catch (err) {
-      // Refusé (quota, pas de dépôt, une session tourne déjà…) : la session n'existe
-      // pas → on retire la bulle plutôt que de laisser croire au lancement.
+      // Refused (quota, no deposit, a session is already running...): the session does not exist
+      // not → we remove the bubble rather than suggesting the launch.
       setLaunchText(null);
       setLaunchMentions([]);
       setLaunchLocalExec(false);
@@ -625,7 +625,7 @@ export function AgentConversation({
     }
   };
 
-  // Message au repos : poursuit la conversation (nouveau tour dans le même contexte).
+  // Message at rest: continues the conversation (new turn in the same context).
   const steer = async (
     message: string,
     mentions: AssistantMention[] = [],
@@ -634,10 +634,10 @@ export function AgentConversation({
     if (!liveRun) return;
     const text = message.trim();
     if (!text) return;
-    // Affichage OPTIMISTE : la bulle ne reviendrait du serveur qu'au drainage de la
-    // boucle (réveil de sandbox compris, plusieurs secondes) — d'ici là l'utilisateur
-    // aurait l'impression d'avoir tapé dans le vide. Le feed la retire dès que son
-    // écho arrive. En cas d'échec, on la retire nous-mêmes (le message n'existe pas).
+    // OPTIMISTIC display: the bubble would only return from the server when the
+    // loop (including sandbox wake-up, several seconds) — until then the user
+    // would have the impression of having hit a void. The feed removes it as soon as its
+    // echo arrives. If this fails, we remove it ourselves (the message does not exist).
     setPendingMessages((p) => [...p, { text, mentions }]);
     try {
       await steerAgentRunApi(liveRun.id, text, mentions, attachments);
@@ -646,9 +646,9 @@ export function AgentConversation({
         queryClient.invalidateQueries({ queryKey: ["agent-run-events", liveRun.id] }),
       ]);
     } catch (err) {
-      // Refusé (PR fusionnée, run dépassée, course avec une run plus récente lancée
-      // dans un autre onglet…) : le message n'existe nulle part → on retire sa bulle
-      // plutôt que de laisser croire qu'il est parti.
+      // Refused (PR merged, run exceeded, race with a more recent run started
+      // in another tab…): the message does not exist anywhere → we remove its bubble
+      // rather than letting people believe he's gone.
       setPendingMessages((p) => {
         const i = p.findIndex((message) => message.text === text);
         return i === -1 ? p : [...p.slice(0, i), ...p.slice(i + 1)];
@@ -657,13 +657,13 @@ export function AgentConversation({
     }
   };
 
-  // Interrompt la réponse en cours du modèle ; la session revient au repos.
+  // Interrupts the current response of the model; the session returns to rest.
   //
-  // L'interface s'arrête AU CLIC (`stopping`), sans attendre que le serveur ait
-  // pris le drapeau : le bouton redevient « envoyer », le tour se replie sur sa
-  // durée. Ce n'est pas un mensonge sur ce qui se passe côté machine — le tour
-  // s'arrêtera bel et bien, et s'il conclut entre-temps son résumé prend la place
-  // de tout ça — c'est un accusé de réception, la seule chose qui manquait.
+  // The interface stops ON CLICK (`stopping`), without waiting for the server to
+  // took the flag: the button becomes “send” again, the turn folds back to its
+  // duration. It's no lie about what's happening on the machine side — the trick
+  // will indeed stop, and if he concludes in the meantime his summary takes the place
+  // of all that — it's an acknowledgment of receipt, the only thing that was missing.
   const interrupt = async () => {
     if (!liveRun) return;
     setStopping(true);
@@ -671,22 +671,22 @@ export function AgentConversation({
       await interruptAgentRunApi(liveRun.id);
       await refreshRuns();
     } catch (err) {
-      // Refusé (réseau, session disparue) : le tour continue → on rend la main au
-      // bouton plutôt que de laisser l'interface prétendre qu'il s'est arrêté.
+      // Refused (network, session disappeared): the round continues → we return control to the
+      // button rather than letting the interface pretend it has stopped.
       setStopping(false);
       toast.error((err as Error).message);
     }
   };
 
-  // Envoi depuis le composer live. Si l'agent TRAVAILLE : on met d'abord le message
-  // en file PUIS on interrompt → le tour en cours s'arrête et reprend en traitant
-  // ce message en priorité (steering). Au repos : simple relance.
+  // Sending from the live composer. If the agent is WORKING: we put the message first
+  // in line THEN we interrupt → the current round stops and resumes by processing
+  // this message as priority (steering). At rest: simple restart.
   //
-  // SAUF QUAND LE TOUR ATTEND UNE RÉPONSE (MIN-364, D7) : le message n'est alors
-  // pas du steering, il DÉNOUE le tool `question` sur lequel le round est
-  // suspendu. Le harness le reconnaît de toute façon (`pendingQuestion`, cf.
-  // supervisor.ts) et consomme le drapeau d'arrêt sans le jouer ; ne pas l'envoyer
-  // du tout évite simplement de demander l'arrêt de ce qu'on vient de débloquer.
+  // EXCEPT WHEN THE TURN IS WAITING FOR A RESPONSE (MIN-364, D7): the message is then not
+  // not from steering, it UNDOES the tool `question` on which the round is
+  // suspended. The harness recognizes it anyway (`pendingQuestion`, cf.
+  // supervisor.ts) and consumes the shutdown flag without setting it; don't send it
+  // at all simply avoid asking for a stop to what you have just unlocked.
   const sendLive = async (
     message: string,
     attachments: ResourceInput[] = [],
@@ -697,15 +697,15 @@ export function AgentConversation({
     if (!text) return;
     await steer(text, mentions, attachments);
     if (opts.answersBlockingQuestion) return;
-    // Sur ce que fait le SERVEUR, pas sur ce que l'interface montre : un arrêt
-    // déjà demandé mais pas encore pris laisse le tour tourner, et le message
-    // doit quand même le couper.
+    // On what the SERVER does, not on what the interface shows: a shutdown
+    // already requested but not yet taken, let the trick run, and the message
+    // must still cut it.
     if (serverWorking) await interrupt();
   };
 
-  // « Créer une pull request » (note MIN-46) : on n'ouvre PAS la PR nous-mêmes — on
-  // INJECTE un message qui le demande à l'agent, qui l'ouvre via son tool `create_pr`
-  // et itère ensuite dessus comme sur n'importe quelle consigne. Le bouton n'apparaît
+  // “Create a pull request” (note MIN-46): we do NOT open the PR ourselves — we
+  // INJECTS a message requesting it from the agent, who opens it via its tool `create_pr`
+  // and then iterates on it as on any instruction. The button does not appear
   // qu'au repos sans PR (cf. `canCreatePr`), donc un simple steer suffit.
   const createPr = async () => {
     if (!liveRun || requestingPr) return;
@@ -713,11 +713,11 @@ export function AgentConversation({
     await steer(t("createPrPrompt"));
   };
 
-  // Run introuvable / pas encore chargé → spinner, jamais de compose : le run
-  // existe forcément (une conversation naît d'un lancement), il n'est pas encore
-  // arrivé. Vaut pour un run carnet comme pour un run DÉSIGNÉ par l'appelant
-  // (`initialRunId`) — sans ce cas, la conversation qu'on vient d'ouvrir depuis la
-  // liste clignotait en composer vierge le temps que la requête réponde.
+  // Run not found / not yet loaded → spinner, never composed: the run
+  // necessarily exists (a conversation is born from a launch), it is not yet
+  // arrived. Applies to a notebook run as well as a run DESIGNATED by the caller
+  // (`initialRunId`) — without this case, the conversation that we have just opened from the
+  // list flashed in blank dial while the query responded.
   const phase: "live" | "loading" | "compose" = liveRun
     ? "live"
     : loading || noteRunId || (selectedId && !composing)
@@ -725,9 +725,9 @@ export function AgentConversation({
       : "compose";
 
   /**
-   * Action de la session, à gauche de celles de l'hôte (le lien vers la pull
-   * request). Le résumé des fichiers est maintenant dans la pilule au-dessus du
-   * composer, afin que l'en-tête ne change pas de taille quand le diff évolue.
+   * Action of the session, to the left of those of the host (the link to the pull
+   * request). The file summary is now in the pill above the
+   * compose, so that the header does not change size when the diff changes.
    */
   const sessionActions =
     liveRun && canCreatePr && !working ? (
@@ -743,19 +743,19 @@ export function AgentConversation({
       </Button>
     ) : null;
 
-  // Le relevé live a sa place dans la pilule pendant le tour. Une fois le tour
-  // terminé, le bloc final `files_changed` apparaît dans le fil : ne gardons pas
-  // une seconde pilule qui ne contiendrait plus que le même résumé.
+  // The live reading has its place in the pill during the tour. Once the turn
+  // finished, the final block `files_changed` appears in the thread: let's not keep
+  // a second pill which would only contain the same summary.
   const changedFileCount = working ? liveHeaderFiles.length : 0;
 
   return (
     <MentionLinksProvider value={links}>
       <div className="flex h-full flex-col overflow-hidden">
-      {/* En-tête : bloc de gauche fourni par l'hôte (défaut : modèle de la session en
-          live / issue ciblée en compose) + actions à droite. Sans bordure : le fil
-          respire jusqu'en haut, et l'en-tête ne se lit pas comme une barre séparée.
-          Bas volontairement plus serré que le haut (`pb-2.5`) : l'espace sous le
-          titre est déjà donné par le `pt-3` de la barre de sessions juste dessous. */}
+      {/* Header: left block provided by the host (default: session template in
+          live / targeted issue in composite) + actions on the right. Without border: the wire
+          breathes all the way to the top, and the header doesn't read as a separate bar.
+          Bottom deliberately tighter than the top (`pb-2.5`): the space under the
+          title is already given by the `pt-3` of the sessions bar just below. */}
       <div className="flex shrink-0 items-center gap-2 px-4 pt-4 pb-2.5">
         {headerTitle ??
           (liveRun ? (
@@ -781,7 +781,7 @@ export function AgentConversation({
         ) : null}
       </div>
 
-      {/* Fil : flux d'événements (live), lancement en vol, spinner ou intro. */}
+      {/* Feed: event stream (live), in-flight launch, spinner or intro. */}
       <div className="min-h-0 flex-1">
         {phase === "live" && liveRun ? (
           <AgentEventFeed
@@ -799,10 +799,10 @@ export function AgentConversation({
             className="h-full py-4"
           />
         ) : launchText ? (
-          // Session en cours de création : pas encore de session à interroger, mais
-          // le MÊME fil, qui n'affiche que la bulle du 1er message + « travaille ».
-          // Réutiliser le feed (plutôt qu'une bulle ad hoc) garantit qu'au moment où
-          // la session prend le relais, la bulle ne bouge pas d'un pixel.
+          // Session being created: no session to query yet, but
+          // the SAME thread, which only displays the bubble of the 1st message + “works”.
+          // Reusing the feed (rather than an ad hoc bubble) ensures that when
+          // the session takes over, the bubble does not move a pixel.
           <AgentEventFeed
             runId={null}
             status="queued"
@@ -826,18 +826,18 @@ export function AgentConversation({
         )}
       </div>
 
-      {/* Composer : steering/interruption (live) ou lancement pré-écrit (compose).
-          Borné à la même largeur max que le fil et centré. Sur la PAGE Agents il
-          se pose juste au-dessus de la barre de navigation mobile, donc dans le
-          dégradé qu'elle projette : `dock-above-nav` l'en sort (cf. globals.css).
-          Dans la modal, la classe ne coûte rien — le Sheet est son propre
+      {/* Compose: steering/interruption (live) or pre-written launch (compose).
+          Terminaled to the same max width as the wire and centered. On the Agents PAGE it
+          sits just above the mobile navigation bar, so in the
+          gradient that it projects: `dock-above-nav` outputs it (see globals.css).
+          In the modal, the class costs nothing — the Sheet is its own
           contexte d'empilement. */}
       {phase !== "loading" && (
         <div className="dock-above-nav shrink-0">
           <div className="mx-auto w-full max-w-[800px]">
-          {/* Le résumé vivant reste sur une seule ligne et à la largeur de son
-              contenu : plan, fichiers et sous-agents partagent une pilule au lieu
-              de pousser le composer à chaque détail supplémentaire. */}
+          {/* The living summary remains on a single line and at the width of its
+              content: plan, files and subagents share a pill instead
+              to push the dial to each additional detail. */}
           {liveRun ? (
             <AgentActivityPill
               planSteps={planSteps}
@@ -848,9 +848,9 @@ export function AgentConversation({
               onOpenDiff={openDiffSheet}
             />
           ) : null}
-          {/* Question active : la carte prend la PLACE du composer (pattern
-              Claude Code/Codex). Le ChatInput reste MONTÉ, masqué en CSS — le
-              brouillon de l'utilisateur survit et réapparaît après la réponse. */}
+          {/* Active question: the card takes the PLACE of the composer (pattern
+              Claude Code/Codex). The ChatInput remains MOUNTED, hidden in CSS — the
+              The user's draft survives and reappears after the response. */}
           {liveRun && activeQuestion ? (
             <div className="pb-3">
               <AskUserCard
@@ -889,17 +889,17 @@ export function AgentConversation({
                     ? t("livePlaceholder")
                     : t("restPlaceholder")
                   : delivered
-                    ? // Travail livré : on ne rouvre pas un cycle de PR dessus.
+                    ? // Work delivered: we do not reopen a PR cycle on it.
                       t("mergedRunPlaceholder")
-                    : // Run passée : consultation seule (une run plus récente a
-                      // repris la branche). Sinon : run `failed`, rien à reprendre.
+                    : // Past run: consultation only (a more recent run has
+                      // took over the branch). Otherwise: run `failed`, nothing to restart.
                       isLatest
                       ? t("endedPlaceholder")
                       : t("pastRunPlaceholder")
               }
               leadingControls={
                 <>
-                  {/* Modèle figé pour la session : picker verrouillé + tooltip. */}
+                  {/* Fixed model for the session: locked picker + tooltip. */}
                   <ModelCombobox
                     variant="compact"
                     value={liveRun.model ?? ""}
@@ -913,7 +913,7 @@ export function AgentConversation({
                     disabled
                     disabledTooltip={t("modelLocked")}
                   />
-                  {/* Niveau de raisonnement, figé au lancement comme le modèle. */}
+                  {/* Level of reasoning, frozen at launch like the model. */}
                   <ReasoningCombobox
                     value={liveRun.reasoning_level ?? "off"}
                     onChange={() => {}}
@@ -1005,17 +1005,17 @@ export function AgentConversation({
         </div>
       )}
 
-      {/* Vue diff de la session : Sheet par-dessus la conversation, alimentée par
-          le diff vivant du run (PR ou compare de branche). Montée dès qu'une
-          session est ouverte — la query ne part qu'à l'ouverture. */}
+      {/* Session diff view: Sheet over the conversation, powered by
+          the live diff of the run (PR or branch comparison). Rise as soon as a
+          session is open — the query only starts when opened. */}
       {liveRun ? (
         <AgentDiffSheet
           runId={liveRun.id}
           open={diffOpen}
           onOpenChange={setDiffOpen}
           focusPath={diffFocus}
-          // Le vrai statut : c'est lui qui cadence le rafraîchissement du diff, et
-          // le tour pousse encore pendant les secondes qui suivent l'arrêt demandé.
+          // The real status: it is this which sets the pace for the refresh of the diff, and
+          // the lathe continues to push during the seconds following the requested stop.
           working={serverWorking}
           baseBranch={liveRun.base_branch}
           branchName={liveRun.branch_name}

@@ -1,33 +1,33 @@
 # Support
 
-## Choisir le bon canal
+## Choose the right channel
 
-| Besoin | Canal | Engagement |
+| Need | Channel | Commitment |
 | --- | --- | --- |
-| Installer, configurer ou utiliser le cœur open source | [GitHub Discussions](https://github.com/mangue-dev/minddy-issues/discussions) | Entraide publique, au mieux des disponibilités, sans délai garanti |
-| Bug reproductible du cœur | [Formulaire de bug](https://github.com/mangue-dev/minddy-issues/issues/new?template=bug_report.yml) | Triage communautaire, sans garantie de correction ni de calendrier |
-| Évolution du cœur | [Formulaire d'amélioration](https://github.com/mangue-dev/minddy-issues/issues/new?template=feature_request.yml) | Discussion publique ; l'acceptation ne vaut pas engagement de livraison |
-| Vulnérabilité ou preuve d'exploitation | [SECURITY.md](SECURITY.md#12-signaler-une-vulnérabilité) | Canal privé et divulgation coordonnée |
-| Compte hébergé, facturation ou données du service managé | [hello@minddy.app](mailto:hello@minddy.app) | Support privé selon les conditions de l'offre souscrite |
-| SLA, migration, formation ou accompagnement | [hello@minddy.app](mailto:hello@minddy.app) | Prestation commerciale distincte du projet communautaire |
+| Install, configure or use open source core | [GitHub Discussions](https://github.com/mangue-dev/minddy-issues/discussions) | Public assistance, to the best of availability, without guaranteed delay |
+| Reproducible core bug | [Bug form](https://github.com/mangue-dev/minddy-issues/issues/new?template=bug_report.yml) | Community triage, with no guarantee of fix or timeline |
+| Evolution of the heart | [Improvement form](https://github.com/mangue-dev/minddy-issues/issues/new?template=feature_request.yml) | Public discussion; acceptance does not constitute a commitment to delivery |
+| Vulnerability or proof of exploitation | [SECURITY.md](SECURITY.md#12-report-vulnerability) | Private channel and coordinated disclosure |
+| Hosted account, billing or managed service data | [hello@minddy.app](mailto:hello@minddy.app) | Private support according to the conditions of the subscribed offer |
+| SLA, migration, training or support | [hello@minddy.app](mailto:hello@minddy.app) | Commercial service distinct from the community project |
 
-## Support communautaire
+## Community support
 
-Donnez la version ou le commit, l'environnement, le résultat attendu, le
-résultat obtenu et une reproduction minimale. Expurgez les journaux : ne
-publiez jamais de token, e-mail, identifiant de locataire ou donnée client.
+Give the version or commit, the environment, the expected result, the
+result obtained and minimal reproduction. Redact logs: do not
+never publish any token, email, tenant ID or customer data.
 
-Les mainteneurs et contributeurs répondent bénévolement ou dans le temps qu'ils
-peuvent consacrer au projet. Une question peut rester sans réponse et une issue
-peut être fermée si elle est incomplète, non reproductible, hors périmètre ou
-inactive. Toute personne peut aider ; aucune réponse communautaire ne constitue
-une garantie, un SLA ou un engagement contractuel.
+Maintainers and contributors respond voluntarily or in the time they
+can devote to the project. A question may remain unanswered and a way out
+can be closed if it is incomplete, non-reproducible, outside the scope or
+inactive. Anyone can help; no community response constitutes
+a guarantee, an SLA or a contractual commitment.
 
-## Offre commerciale
+## Commercial offering
 
-L'hébergement managé et les prestations associées financent éventuellement le
-projet, mais ne changent ni la licence AGPL du cœur, ni les critères techniques
-d'acceptation d'une contribution. Un contrat de support peut garantir un canal,
-un délai ou une prestation ; il ne donne pas automatiquement priorité à une
-fonction dans le dépôt public. Les données de compte et de facturation restent
-sur le canal privé et ne sont jamais demandées dans une issue publique.
+Managed hosting and associated services possibly finance the
+project, but do not change either the AGPL license of the core, nor the technical criteria
+acceptance of a contribution. A support contract can guarantee a channel,
+a deadline or a service; it does not automatically give priority to a
+function in the public repository. Account and billing data remains
+on the private channel and are never requested in a public issue.

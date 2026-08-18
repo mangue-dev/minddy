@@ -42,67 +42,67 @@ import type { PrLivePart } from "@/lib/pr-live";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
- * POST /api/webhooks/gitlab — récepteur webhook GitLab (MIN-69), pendant de
- * /api/webhooks/github pour les Merge Requests de l'agent de code.
+ * POST /api/webhooks/gitlab — GitLab webhook receiver (MIN-69), for
+ * /api/webhooks/github for code broker Merge Requests.
  *
- * On vérifie le secret (`X-Gitlab-Token`, comparaison à temps constant) puis on
- * traite le hook `Merge Request Hook` (object_kind `merge_request`) :
+ * We check the secret (`X-Gitlab-Token`, constant time comparison) then we
+ * handles the `Merge Request Hook` (object_kind `merge_request`) hook:
  *
- * Le secret est PROPRE AU DÉPÔT (MIN-333) : il est tiré des liaisons dont
- * l'`external_repo_id` est celui de `project.id`, et de nulle autre. Un jeton
- * volé chez un locataire ne signe donc rien chez un autre — c'est exactement ce
- * que le secret global d'avant permettait, GitLab montrant le token d'un hook à
- * qui peut l'éditer. Le repli sur `GITLAB_WEBHOOK_SECRET` ne sert que les hooks
- * pas encore rotés, et déclenche leur rotation.
+ * The secret is SPECIFIC TO THE DEPOSIT (MIN-333): it is taken from the connections whose
+ * the `external_repo_id` is that of `project.id`, and of no other. A token
+ * stolen from one tenant therefore does not sign anything with another - that is exactly what
+ * that the global secret from before allowed, GitLab showing the token of a hook to
+ * who can edit it. Fallback to `GITLAB_WEBHOOK_SECRET` only serves hooks
+ * not yet burped, and triggers their rotation.
  *
- *  - toute action utile → INGÈRE la MR dans `pull_requests` (MIN-143 : de Numo
- *    ou d'un humain, c'est le même fait du dépôt).
- *  - action `merge` / `close` / `reopen` / `open` → met à jour `agent_runs.pr_state`
- *    (la review in-app reflète le vrai état côté GitLab) ET, pour un geste fait
- *    DIRECTEMENT sur GitLab, trace « ouvert / accepté / refusé la MR » dans
- *    l'activité de l'issue liée. L'action `update` sert la bascule BROUILLON
- *    (MIN-138) — GitLab n'a pas d'action dédiée, cf. `gitlabMrStateForAction` — et, quand elle
- *    porte un `oldrev`, le PUSH : « a commité sur la MR ».
- *  - action `approved` / `approval` → trace « approuvé la MR ». GitLab n'a PAS de
+ * - any useful action → INGEST the MR in `pull_requests` (MIN-143: from Numo
+ * or a human, it is the same fact of the deposit).
+ * - action `merge` / `close` / `reopen` / `open` → updates `agent_runs.pr_state`
+ * (the in-app review reflects the true state on the GitLab side) AND, for a gesture made
+ * DIRECTLY on GitLab, trace “open / accepted / refused the MR” in
+ * the activity of the linked issue. The `update` action serves the DRAFT toggle
+ * (MIN-138) — GitLab does not have a dedicated action, cf. `gitlabMrStateForAction` — and, when it
+ * carries a `oldrev`, the PUSH: “committed to the MR”.
+ * - action `approved` / `approval` → trace “approved the MR”. GitLab does NOT have
  *    review « request changes » native : `pr_changes_requested` ne vient que de
- *    l'action in-app. `unapproved`/`unapproval` sont IGNORÉS (aucun événement
- *    minddy correspondant — retirer une approbation n'est pas une action tracée,
- *    GitHub n'a d'ailleurs pas d'équivalent).
- * Le hook `Note Hook` (object_kind `note`) porte les COMMENTAIRES : sur une merge
- * request, ils tracent « commenté la MR » (message de fil) ou « commenté le code
- * de la MR » (note ancrée dans le diff), et déclenchent la relecture de Numo si
- * le message le MENTIONNE (MIN-162, cf. `lib/server/agent/pr-mention`). Le hook `Issue Hook` (object_kind
- * `issue`) porte la synchronisation unidirectionnelle des issues du dépôt vers
- * les projets qui l'ont activée (MIN-97) — sens unique : minddy n'écrit jamais
- * chez GitLab. Le hook `Emoji Hook` (object_kind `emoji`) porte les RÉACTIONS et
- * n'écrit rien : il n'existe que pour le direct (MIN-161). C'est le seul chemin
- * de réaction en temps réel des deux forges — GitHub n'a tout simplement pas
- * d'événement de réaction. Le hook `Pipeline Hook` (object_kind `pipeline`) est
- * traité de même, pour le bandeau CI. Tout autre object_kind est acquitté sans
+ * in-app action. `unapproved`/`unapproval` are IGNORED (no events
+ * minddy correspondent — withdrawing an approval is not a traced action,
+ * GitHub has no equivalent).
+ * The hook `Note Hook` (object_kind `note`) carries COMMENTS: on a merge
+ * request, they trace "commented the MR" (thread message) or "commented the code
+ * of the MR" (note anchored in the diff), and trigger the replay of Numo if
+ * the message MENTIONS it (MIN-162, cf. `lib/server/agent/pr-mention`). The `Issue Hook` (object_kind) hook
+ * `issue`) carries the one-way synchronization of depot issues to
+ * the projects that activated it (MIN-97) — one way: Minddy never writes
+ * at GitLab. The hook `Emoji Hook` (object_kind `emoji`) carries the REACTIONS and
+ * does not write anything: it only exists for live broadcasts (MIN-161). This is the only way
+ * real-time feedback from both forges — GitHub simply doesn't have
+ * reaction event. The `Pipeline Hook` (object_kind `pipeline`) hook is
+ * treated in the same way for the CI headband. Any other object_kind is acknowledged without
  * traitement.
  *
- * DIRECT (MIN-161) : chaque chemin pousse un `changed` sur le topic de la MR,
- * qui NOMME les parties touchées — le panneau ouvert va relire chez la forge,
- * avec le token de celui qui regarde. Émis AVANT les gardes d'anti-écho
- * (`isServiceAccount`, `isPrActionEcho`) : ces gardes protègent l'ACTIVITÉ du
- * doublon, mais le fait que la MR ait bougé est vrai dans tous les cas.
+ * DIRECT (MIN-161): each path pushes a `changed` on the MR topic,
+ * which NAMES the affected parts — the open panel goes to read again at the forge,
+ * with the token of the viewer. Issued BEFORE anti-echo guards
+ * (`isServiceAccount`, `isPrActionEcho`): these guards protect the ACTIVITY of the
+ * duplicate, but the fact that the MR moved is true in all cases.
  *
- * PRÉREQUIS : le hook du dépôt doit être abonné à `note_events`, `emoji_events`
- * et `pipeline_events` — c'est fait à sa création et à chaque passage
- * d'`ensureGitlabIssuesHook`, mais un dépôt lié AVANT cette version garde un
- * hook sans eux tant qu'il n'y repasse pas.
+ * PREREQUISITES: The repository hook must be subscribed to `note_events`, `emoji_events`
+ * and `pipeline_events` — this is done when it is created and at each pass
+ * of `ensureGitlabIssuesHook`, but a linked repository BEFORE this version keeps a
+ * hook without them until it is recreated.
  *
- * Anti-doublon : les actions minddy in-app (merge/close) sont faites avec le token
- * OAuth du COMPTE CONNECTÉ du dépôt — leur écho webhook porte ce compte comme
- * `user`. On ignore donc l'ACTIVITÉ des merge/close émis par le compte de service
- * (l'état, lui, est toujours synchronisé — idempotent). Revers assumé : un merge
- * fait à la main sur gitlab.com par ce même compte n'est pas tracé — impossible à
- * distinguer de l'écho, même compromis que le filtre bot GitHub.
+ * Anti-duplicate: minddy in-app actions (merge/close) are done with the token
+ * OAuth from the CONNECTED ACCOUNT of the repository — their webhook echo carries this account as
+ * `user`. We therefore ignore the ACTIVITY of the merge/close issued by the service account
+ * (the state is always synchronized — idempotent). Assumed setback: a merge
+ * handmade on gitlab.com by this same account is not traced — impossible to
+ * distinguish from echo, same compromise as the GitHub bot filter.
  *
- * Fail-closed intégral : token invalide → 401 ; aucune matière à vérifier
- * (ni chiffrement de secret configuré, ni repli) → 503 sans rien traiter, comme
- * le récepteur GitHub. Une livraison déjà vue (`X-Gitlab-Event-UUID`) est
- * acquittée sans être rejouée.
+ * Fail-closed in full: invalid token → 401; no material to check
+ * (neither secret encryption configured nor fallback) → 503 without processing anything, like
+ * the GitHub receiver. A previously seen delivery (`X-Gitlab-Event-UUID`) is
+ * acknowledged without being replayed.
  */
 
 interface GitlabUserPayload {
@@ -110,7 +110,7 @@ interface GitlabUserPayload {
   username?: string;
 }
 
-/** L'id du compte de forge de l'acteur, en texte (colonne `provider_account_id`). */
+/** The actor's forge account ID as text (column `provider_account_id`). */
 function actorAccountId(user: GitlabUserPayload | undefined | null): string | null {
   return user?.id != null ? String(user.id) : null;
 }
@@ -120,9 +120,9 @@ interface MergeRequestAttributes {
   action?: string;
   state?: string;
   url?: string;
-  /** Ancienne tête : présente sur le seul `update` qui porte un PUSH. */
+  /** Old head: present on the only `update` which carries a PUSH. */
   oldrev?: string;
-  /** MR brouillon — GitLab le dérive du préfixe `Draft:` du titre. */
+  /** MR draft — GitLab derives it from the `Draft:` prefix of the title. */
   draft?: boolean;
   work_in_progress?: boolean;
   title?: string;
@@ -139,27 +139,27 @@ interface MergeRequestEvent {
   user?: GitlabUserPayload;
   project?: { path_with_namespace?: string };
   object_attributes?: MergeRequestAttributes;
-  /** Champs modifiés par un `update` (présents seulement sur cette action). */
+  /** Fields modified by a `update` (present only on this action). */
   changes?: { title?: unknown; draft?: unknown };
 }
 
 /**
- * Actions qui décrivent un état de MR à INGÉRER (MIN-143) — plus large que
- * `gitlabMrStateForAction`, qui ne pilote que le cycle de vie des runs et du
- * ticket. `update` en fait partie : chez GitLab c'est aussi ce qui porte un
- * nouveau push, un changement de titre ou la bascule brouillon.
+ * Actions that describe a state of MR to INGEST (MIN-143) — broader than
+ * `gitlabMrStateForAction`, which only controls the life cycle of runs and
+ * ticket. `update` is one of them: at GitLab it is also what carries a
+ * new push, a title change or the draft toggle.
  */
 const INGESTED_MR_ACTIONS = new Set(["open", "reopen", "close", "merge", "update"]);
 
 /**
- * Enregistre la MR chez minddy — de Numo ou d'un humain, c'est le même fait du
- * dépôt (MIN-143).
+ * Records the MR at minddy — from Numo or a human, it's the same fact of
+ * depot (MIN-143).
  *
- * L'AUTEUR n'est renseigné que sur `open` : le `user` d'un hook GitLab est celui
- * qui a DÉCLENCHÉ l'événement, pas l'auteur de la MR (`object_attributes` ne
- * porte qu'un `author_id` numérique, sans login). Le laisser `undefined` sur les
- * autres actions préserve ce qu'un balayage a déjà lu chez l'API plutôt que de
- * l'écraser par le nom du dernier passant.
+ * The AUTHOR is only indicated on `open`: the `user` of a GitLab hook is that
+ * who TRIGGERED the event, not the author of the MR (`object_attributes`
+ * only carries a digital `author_id`, without login). Leave it `undefined` on
+ * other actions preserve what a scan has already read from the API rather than
+ * overwrite it with the name of the last passer-by.
  */
 async function ingestMergeRequest(
   repoFullName: string,
@@ -193,15 +193,15 @@ async function ingestMergeRequest(
 }
 
 /**
- * L'acteur du hook est-il le compte de service du dépôt (le compte GitLab dont
- * minddy utilise le token) ? Comparé par id de compte (provider_account_id),
- * repli sur le login. Plusieurs projets peuvent lier le même dépôt via des
- * connexions différentes → on collecte toutes les identités liées.
+ * Is the hook actor the repository service account (the GitLab account whose
+ * minddy uses the token)? Compared by account id (provider_account_id),
+ * fallback on the login. Multiple projects can link the same repository via
+ * different connections → we collect all the linked identities.
  *
- * C'est le modèle dont `forgeAccountMatches` (lib/server/agent/pr-activity.ts,
- * MIN-154) hérite, à une tolérance près : ici un login qui gagne contre un id
- * DIFFÉRENT est sans conséquence — on reconnaît un compte de service, on
- * n'attribue le geste à personne.
+ * This is the model including `forgeAccountMatches` (lib/server/agent/pr-activity.ts,
+ * MIN-154) inherits, within a tolerance: here a login which wins against an id
+ * DIFFERENT is of no consequence — we recognize a service account, we
+ * do not attribute the gesture to anyone.
  */
 async function isServiceAccount(
   repoFullName: string,
@@ -214,7 +214,7 @@ async function isServiceAccount(
     .select("git_connections(provider_account_id, account_login)")
     .eq("repo_full_name", repoFullName)
     .eq("provider", "gitlab");
-  // Relation to-one embarquée : objet au runtime, cast via unknown (cf. Supabase).
+  // Embedded to-one relationship: object at runtime, cast via unknown (see Supabase).
   const connections = ((data ?? []) as unknown as Array<{
     git_connections: { provider_account_id: string | null; account_login: string | null } | null;
   }>).map((r) => r.git_connections);
@@ -227,8 +227,8 @@ async function isServiceAccount(
 }
 
 /**
- * Direct d'un event qui ne connaît qu'un iid dans un dépôt. Sorti pour que
- * chaque handler le pousse en une ligne, AVANT ses propres gardes d'anti-écho.
+ * Direct from an event that only knows one iid in a repository. Out so that
+ * each handler pushes it in a line, BEFORE its own anti-echo guards.
  */
 async function broadcastGitlabPr(
   repoFullName: string | undefined,
@@ -251,19 +251,19 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
   const repoFullName = payload.project?.path_with_namespace;
   if (iid == null || !repoFullName) return;
 
-  // Ingestion D'ABORD (MIN-143) : la MR existe chez minddy, de Numo ou d'un
-  // humain. Elle doit passer AVANT le garde `runs.length === 0` plus bas, qui
-  // existe précisément pour ignorer les MR humaines — c'est ce garde qui les
+  // Ingestion FIRST (MIN-143): MR exists in minddy, Numo or a
+  // human. She must pass BEFORE the `runs.length === 0` guard lower down, who
+  // exists precisely to ignore human MRs — it is this guard who
   // rendait invisibles.
   const ingested = INGESTED_MR_ACTIONS.has(action)
     ? await ingestMergeRequest(repoFullName, iid, attrs, payload.user)
     : null;
 
-  // Inbox : le projet apprend qu'une merge request attend des yeux. Ici, juste
-  // après l'ingestion, et pas plus bas avec les autres notifications : celles-ci
-  // partent à l'auteur d'un RUN, or une MR humaine n'en a pas — c'est justement
-  // celle dont personne n'était prévenu. Le compte de service est écarté : quand
-  // il ouvre, c'est Numo, et l'annonce est déjà partie côté agent.
+  // Inbox: The project learns that a merge request is waiting for eyes. Here, right
+  // after ingestion, and not lower with the other notifications: these
+  // leave to the author of a RUN, but a human MR does not have one - it is precisely
+  // the one that no one knew about. The service account is discarded: when
+  // he opens, it's Numo, and the ad has already gone out on the agent side.
   if (action === "open" && !(await isServiceAccount(repoFullName, payload.user))) {
     await notifyPullRequestOpened(ingested, {
       actor: {
@@ -273,14 +273,14 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
     });
   }
 
-  // Direct : l'en-tête a bougé. `oldrev` est le seul `update` qui porte un PUSH
-  // — c'est là, et là seulement, que la liste des commits change.
+  // Direct: the header has moved. `oldrev` is the only `update` that carries a PUSH
+  // — it is there, and there only, that the list of commits changes.
   //
-  // Le FIL bouge aussi, pour la même raison que côté GitHub : la conversation
-  // porte l'ACTIVITÉ de la MR (MIN-159), que GitLab écrit en notes `system`
+  // The FIL is also moving, for the same reason as on the GitHub side: the conversation
+  // carries the MR ACTIVITY (MIN-159), which GitLab writes in notes `system`
   // relues par `listMergeRequestTimeline` — « added 3 commits », « approved
-  // this merge request », « merged ». Ces phrases naissent d'un event
-  // `merge_request` et se rendent DANS le fil.
+  // this merge request”, “merged”. These phrases come from an event
+  // `merge_request` and go INTO the thread.
   const liveParts: PrLivePart[] = attrs.oldrev
     ? ["pr", "conversation", "commits"]
     : ["pr", "conversation"];
@@ -294,7 +294,7 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
   const actionType = prActionForMergeRequest(attrs);
   if (!prState && !actionType) return;
 
-  // Runs concernés. merge/close/reopen/open recalent pr_state au passage.
+  // Runs affected. merge/close/reopen/open resets pr_state in passing.
   const runs: SyncedPrRun[] = prState
     ? await syncPrState({
         repoFullName,
@@ -305,10 +305,10 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
       })
     : await findRunsForPr({ repoFullName, prNumber: iid, provider: "gitlab" });
 
-  // AUCUN run : c'est une MR humaine (MIN-143). Ce garde renvoyait sec — c'est
-  // lui qui les rendait sans effet sur les tickets. Elle peut pourtant en porter
-  // un, par sa branche, son titre ou une ligne de fermeture : la fusionner sur
-  // GitLab doit produire ce que la fusionner depuis minddy produit.
+  // NO run: it's a human MR (MIN-143). This guard was dismissive — it's
+  // he who made them ineffective on the tickets. However, she can wear it
+  // one, by its branch, its title or a closing line: merge it on
+  // GitLab should produce what the merge from minddy produces.
   if (runs.length === 0) {
     const echoed =
       !!actionType &&
@@ -326,11 +326,11 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
     return;
   }
 
-  // Aligne le statut des issues sur le nouvel état MR (MIN-46) :
+  // Aligns the status of the exits with the new MR state (MIN-46):
   // merged→done, closed→todo, open/reopen→in_review.
   if (prState) {
     for (const run of runs) {
-      // `issueId` null = run carnet (MIN-84) : aucune issue à aligner.
+      // `issueId` null = run notebook (MIN-84): no issue to align.
       if (run.createdBy && run.issueId) {
         await syncIssueStatusFromPr({ issueId: run.issueId, actorId: run.createdBy, prState });
       }
@@ -338,11 +338,11 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
   }
 
   if (!actionType) return;
-  // Écho d'une action in-app → déjà tracée par la route avec l'acteur humain : on
-  // ne re-trace pas. Deux lectures nécessaires : le compte de service (le geste
-  // d'un AGENT part encore du compte qui a lié le dépôt) et l'événement déjà
-  // écrit — depuis MIN-144 un geste humain part du compte git de la personne,
-  // qui n'est celui du lien que pour qui a lié le dépôt.
+  // Echo of an in-app action → already traced by the road with the human actor: we
+  // don't re-trace. Two necessary readings: the service account (the gesture
+  // of an AGENT still leaves the account which linked the deposit) and the event already
+  // written — since MIN-144 a human gesture starts from the person's git account,
+  // which is only that of the link for who linked the deposit.
   const echo =
     (isServiceAccountGesture(actionType) &&
       (await isServiceAccount(repoFullName, payload.user))) ||
@@ -363,39 +363,39 @@ async function handleMergeRequest(payload: MergeRequestEvent): Promise<void> {
     provider: "gitlab",
     login: payload.user?.username ?? null,
   });
-  // Inbox : l'auteur du run apprend qu'on a approuvé ou fusionné sa MR (MIN-138).
+  // Inbox: the author of the run learns that his MR (MIN-138) has been approved or merged.
   await notifyForgePrAction({ runs, type: actionType, actorLogin: payload.user?.username ?? null });
 }
 
-/** Une note (commentaire) telle que GitLab la livre — `Note Hook`. */
+/** A note (comment) as GitLab delivers it — `Note Hook`. */
 interface NoteEvent {
   object_kind?: string;
   user?: GitlabUserPayload;
   project?: { path_with_namespace?: string };
-  /** `note` porte le corps du message : c'est le seul signal d'un `@numo` écrit
+  /** `note` carries the body of the message: it is the only signal of a written `@numo`
       depuis GitLab (MIN-162). */
   object_attributes?: { noteable_type?: string; position?: unknown; note?: string | null };
-  /** Présent quand la note porte sur une merge request. */
+  /** Present when the note concerns a merge request. */
   merge_request?: { iid?: number };
 }
 
 /**
- * Commentaire sur une merge request → activité du ticket. Message de fil ou
- * remarque de ligne selon l'ancrage (cf. `prActionForNote`).
+ * Comment on a merge request → ticket activity. Thread message or
+ * line comment based on the anchor (see `prActionForNote`).
  *
- * Pas de garde « compte de service » ici : personne ne commente sous ce token —
- * un commentaire posté depuis minddy part du compte git de la PERSONNE, et c'est
- * `isPrActionEcho` (dans `recordForgePrGesture`) qui reconnaît son écho. L'y
- * ajouter rendrait muets, pour toujours, les commentaires de celui qui a lié le
- * dépôt.
+ * No “service account” guard here: nobody comments under this token —
+ * a comment posted from minddy leaves the PERSON's git account, and it is
+ * `isPrActionEcho` (in `recordForgePrGesture`) which recognizes its echo. There
+ * adding would silence, forever, the comments of the one who linked the
+ * deposit.
  */
 async function handleNote(payload: NoteEvent): Promise<void> {
   const type = prActionForNote(payload.object_attributes ?? {});
   const iid = payload.merge_request?.iid;
   const repoFullName = payload.project?.path_with_namespace;
   if (!type || iid == null || !repoFullName) return;
-  // Direct : la note est ancrée dans le diff (remarque de ligne) ou non (message
-  // de fil) — c'est exactement ce que `prActionForNote` vient de trancher.
+  // Direct: the note is anchored in the diff (line remark) or not (message
+  // of thread) — this is exactly what `prActionForNote` just decided.
   await broadcastGitlabPr(repoFullName, iid, [
     type === "pr_code_commented" ? "reviewComments" : "conversation",
   ]);
@@ -408,10 +408,10 @@ async function handleNote(payload: NoteEvent): Promise<void> {
     login: payload.user?.username ?? null,
   });
 
-  // `@numo` écrit depuis GitLab (MIN-162) — le pendant exact du récepteur
-  // GitHub. L'anti-écho d'un message posté depuis minddy est celui que
-  // `recordForgePrGesture` vient d'appliquer : on le rejoue ici sur le même
-  // geste, parce que la trace et la passe ne se déclenchent pas au même endroit.
+  // `@numo` written from GitLab (MIN-162) — the exact counterpart of the receiver
+  // GitHub. The anti-echo of a message posted from minddy is the one that
+  // `recordForgePrGesture` has just been applied: we replay it here on the same
+  // gesture, because the trace and the pass are not triggered at the same place.
   if (!payload.object_attributes?.note) return;
   const pr = await findPullRequestByNumber({
     provider: "gitlab",
@@ -439,18 +439,18 @@ async function handleNote(payload: NoteEvent): Promise<void> {
 }
 
 /**
- * Une RÉACTION, telle que GitLab la livre — `Emoji Hook` (object_kind `emoji`).
+ * A REACTION, as GitLab delivers it — `Emoji Hook` (object_kind `emoji`).
  *
- * C'est le seul chemin de réaction en direct des deux forges : GitHub n'a pas
- * d'événement de réaction du tout (côté GitHub, seules les réactions posées
- * DEPUIS minddy sont diffusées, par la route ; une réaction posée sur github.com
- * n'arrive qu'au prochain rafraîchissement naturel — c'est un manque de la
- * forge, dit plutôt que caché).
+ * This is the only live reaction path from both forges: GitHub does not have
+ * reaction event at all (on the GitHub side, only reactions posed
+ * SINCE minddy are broadcast, by road; a reaction posted on github.com
+ * only happens at the next natural refreshment — it is a lack of
+ * forge, said rather than hidden).
  *
- * Rien à écrire : une réaction ne trace pas d'activité et ne vit pas en base.
- * Les deux surfaces sont poussées ensemble parce que le hook ne dit pas de façon
- * fiable où pend l'award (fil ou remarque de ligne) — deux invalidations valent
- * mieux qu'une lecture de plus, et le coalescing les absorbe.
+ * Nothing to write: a reaction does not trace activity and does not live in base.
+ * The two surfaces are pushed together because the hook doesn't say any way
+ * reliable where the award hangs (thread or line remark) — two invalidations are worth
+ * better than one more reading, and coalescing absorbs them.
  */
 interface EmojiEvent {
   object_kind?: string;
@@ -467,11 +467,11 @@ async function handleEmoji(payload: EmojiEvent): Promise<void> {
 }
 
 /**
- * Un pipeline, tel que GitLab le livre — `Pipeline Hook`. Direct SEUL : l'état
- * de la CI est lu chez la forge à chaque GET du détail, il n'est pas en base.
- * Le hook ne porte la merge request que pour un pipeline DE merge request ; sur
- * un pipeline de branche, il n'y a rien à rattacher et on n'émet rien (le poll
- * de 15 s reste le filet).
+ * A pipeline, as GitLab delivers — `Pipeline Hook`. Direct ALONE: the state
+ * of the CI is read at the forge at each GET of the detail, it is not in base.
+ * The hook only carries the merge request for a DE merge request pipeline; on
+ * a branch pipeline, there is nothing to attach and we emit nothing (the poll
+ * of 15 s remains the net).
  */
 interface PipelineEvent {
   object_kind?: string;
@@ -488,11 +488,11 @@ async function handlePipeline(payload: PipelineEvent): Promise<void> {
 }
 
 /**
- * Actions `issue` synchronisées. Le ticket minddy REFLÈTE l'issue distante,
- * alors `update` en fait partie — c'est sous ce seul mot que GitLab range tout
- * ce que GitHub détaille en `edited`/`labeled`/`assigned` : un hook `update`
- * porte l'issue entière, et `changes` dit ce qui a bougé. On réconcilie sur
- * l'état complet plutôt que de lire `changes`, ce qui rattrape au passage un
+ * Synchronized `issue` actions. The minddy ticket REFLECTS the remote issue,
+ * then `update` is one of them — it is under this single word that GitLab puts everything
+ * what GitHub details in `edited`/`labeled`/`assigned`: a `update` hook
+ * carries the entire issue, and `changes` says what moved. We reconcile on
+ * the complete state rather than reading `changes`, which in passing catches a
  * hook perdu.
  */
 const SYNCED_ISSUE_ACTIONS = new Set(["open", "close", "reopen", "update"]);
@@ -504,9 +504,9 @@ async function handleIssue(payload: unknown): Promise<void> {
 }
 
 /**
- * L'identifiant NUMÉRIQUE du dépôt, porté par tous les hooks GitLab
- * (`project.id`). C'est lui la clé du secret et du routage (MIN-333) : un
- * `path_with_namespace` se libère et se réattribue, un id non.
+ * The NUMERIC identifier of the repository, carried by all GitLab hooks
+ * (`project.id`). He is the key to secrecy and routing (MIN-333): a
+ * `path_with_namespace` is released and reassigned, an id no.
  */
 function payloadRepoId(payload: unknown): string | null {
   const id = (payload as { project?: { id?: unknown } } | null)?.project?.id;
@@ -518,10 +518,10 @@ function payloadRepoId(payload: unknown): string | null {
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
 
-  // Le corps est lu AVANT la vérification, et c'est nécessaire : le secret est
-  // propre au dépôt (MIN-333), et le seul endroit qui dise de quel dépôt il
-  // s'agit, c'est la charge utile. On n'en tire qu'un identifiant, aucun
-  // traitement — le corps reste invérifié jusqu'à `verifyWebhookToken`.
+  // The body is read BEFORE verification, and it is necessary: ​​the secret is
+  // specific to the depot (MIN-333), and the only place that says which depot it is
+  // This is the payload. We only get one identifier, none
+  // processing — the body remains unverified until `verifyWebhookToken`.
   let payload: MergeRequestEvent & NoteEvent & EmojiEvent & PipelineEvent;
   try {
     payload = JSON.parse(rawBody);
@@ -533,11 +533,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "unknown project" }, { status: 400 });
   }
 
-  // FAIL-CLOSED intégral : ce récepteur MUTE l'état (pr_state, statut d'issue,
-  // activité). Sans matière à vérifier, rien n'est traité — sinon n'importe qui
-  // connaissant le chemin d'un dépôt lié pourrait forger un merge et passer une
-  // issue en done. 503 plutôt que 200, comme le récepteur GitHub et comme
-  // SECURITY.md le promet : GitLab re-livrera une fois la configuration en place.
+  // Full FAIL-CLOSED: this receiver MUTEs the state (pr_state, issue status,
+  // activity). Without material to verify, nothing is processed — except anyone
+  // knowing the path of a linked repository could forge a merge and pass a
+  // issue in done. 503 rather than 200, like the GitHub receiver and like
+  // SECURITY.md promises: GitLab will re-deliver once the configuration is in place.
   if (!isForgeTokenCryptoConfigured() && !legacyGitlabWebhookSecret()) {
     console.error(
       "[webhooks/gitlab] no webhook secret material configured — event refused",
@@ -556,13 +556,13 @@ export async function POST(request: NextRequest) {
     request.headers.get("x-gitlab-token"),
     candidates,
   );
-  // Un jeton reconnu par le secret d'un AUTRE dépôt ne l'est pas ici : les
-  // candidats sont ceux de ce dépôt-là, et d'eux seuls.
+  // A token recognized by the secret of ANOTHER deposit is not recognized here: the
+  // candidates are those of this repository, and of them alone.
   if (verdict === "rejected") {
     return NextResponse.json({ error: "invalid token" }, { status: 401 });
   }
-  // Hook resté sur le secret global historique : on le rote hors chemin
-  // critique, et le repli s'éteint pour ce dépôt.
+  // Hook remained on the global historical secret: we burp it out of the way
+  // critical, and the fallback goes out for that repository.
   if (verdict === "legacy" && candidates.connectionId) {
     afterOrNow(() =>
       rotateGitlabWebhookSecret({
@@ -572,9 +572,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Rejeu : la même livraison, déjà traitée. Après la vérification — marquer une
-  // livraison sans secret valide reviendrait à pouvoir faire taire l'événement
-  // réel qui la porte.
+  // Replay: the same delivery, already processed. After verification — mark a
+  // delivery without a valid secret would amount to being able to silence the event
+  // real person who wears it.
   if (
     await isReplayedForgeDelivery(
       "gitlab",
@@ -585,9 +585,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Merge Requests (agent), Notes (commentaires de MR), Issues (synchro du
-    // dépôt lié), Emoji et Pipeline (direct seul) — tout autre object_kind est
-    // acquitté sans traitement.
+    // Merge Requests (agent), Notes (MR comments), Issues (synchronization of the
+    // linked repository), Emoji and Pipeline (direct only) — any other object_kind is
+    // acquitted without pay.
     if (payload.object_kind === "merge_request") {
       await handleMergeRequest(payload);
     } else if (payload.object_kind === "note") {
@@ -600,7 +600,7 @@ export async function POST(request: NextRequest) {
       await handleIssue(payload);
     }
   } catch (err) {
-    // Best-effort : on acquitte quand même pour que GitLab ne re-livre pas.
+    // Best effort: we still pay so that GitLab does not re-deliver.
     console.error("[webhooks/gitlab] handling failed:", (err as Error).message);
   }
 

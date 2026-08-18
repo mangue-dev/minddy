@@ -6,63 +6,63 @@ import { PriorityIndicator, StatusIndicator } from "@/components/issue-indicator
 import { NumoFace } from "@/components/numo-face";
 
 /**
- * La boucle agent, en figure — l'image du hero (MIN-148).
+ * The agent loop, in figure — the image of the hero (MIN-148).
  *
- * POURQUOI PAS UNE CAPTURE. La boucle ne tient sur aucun écran : elle se joue
- * sur trois (`workflowIssue`, `workflowAgent`, `workflowPr`), et trois captures
- * rétrécies côte à côte dans un hero ne se lisent pas. Surtout, le hero montrait
- * jusqu'ici le board — or un board ressemble forcément à un board, et le poser
- * en première image invitait une comparaison de tracker à tracker, sur le
+ * WHY NOT A CAPTURE. The loop does not fit on any screen: it is played
+ * out of three (`workflowIssue`, `workflowAgent`, `workflowPr`), and three captures
+ * shrunk side by side in a hero cannot be read. Above all, the hero showed
+ * so far the board — and a board necessarily looks like a board, and putting it down
+ * in first image invited a comparison of tracker to tracker, on the
  * terrain de Linear. Ici l'image dit ce que personne d'autre ne peut montrer :
- * un ticket, et sous lui le plan que l'agent a écrit, ce qu'il a exécuté, la
- * pull request qui s'y rattache, et votre relecture.
+ * a ticket, and under it the plan that the agent wrote, what he executed, the
+ * pull request attached to it, and your proofreading.
  *
- * La forme suit l'argument : UNE carte, pas quatre. « Un seul ticket porte
- * tout » se démontre en le dessinant, pas en l'écrivant.
+ * The form follows the argument: ONE card, not four. “Only one ticket carries
+ * everything” is demonstrated by drawing it, not by writing it.
  *
- * FIDÉLITÉ AU PRODUIT, comme `voice-dictation-figure.tsx` :
- *   - le statut et la priorité sont rendus par `StatusIndicator` et
- *     `PriorityIndicator`, les composants du board ;
- *   - les cases à cocher reprennent la géométrie exacte de `TaskRow`
- *     (components/plan-task-row.tsx) : 16 px, rayon 4, cochée en `primary`,
- *     texte barré et grisé ;
- *   - les libellés de la barre de revue sont ceux de la vraie barre
- *     (`PullRequests.reviewApprove` / `reviewRequestChanges`), pas une
+ * PRODUCT LOYALTY, like `voice-dictation-figure.tsx`:
+ * - the status and priority are returned by `StatusIndicator` and
+ * `PriorityIndicator`, the components of the board;
+ * - the check boxes take the exact geometry of `TaskRow`
+ * (components/plan-task-row.tsx): 16 px, radius 4, checked in `primary`,
+ * crossed out and grayed out text;
+ * - the labels of the review bar are those of the real bar
+ * (`PullRequests.reviewApprove` / `reviewRequestChanges`), not one
  *     reformulation marketing ;
- *   - le vert de la pull request ouverte est celui de GitHub, comme
- *     `PR_STATE_STYLES` — recopié et non importé, ce module-là est client.
+ * - the green of the open pull request is that of GitHub, like
+ * `PR_STATE_STYLES` — copied and not imported, this module is client.
  *
- * ELLE SE JOUE (MIN-254). Elle était figée : les quatre temps d'une BOUCLE,
- * posés tous les quatre d'un coup, ce qui est exactement ce qu'une boucle n'est
- * pas. Ils arrivent maintenant l'un après l'autre — le rail descend, le plan
- * s'écrit, les cases se cochent, la pull request se rattache. La démonstration
- * du produit en quatre secondes, sans avoir à la lire.
+ * SHE’S PLAYING (MIN-254). She was frozen: the four beats of a LOOP,
+ * placed all four at once, which is exactly what a loop is
+ * not. They are now coming one after the other — the rail is going down, the plan
+ * is written, the boxes are checked, the pull request is attached. The demonstration
+ * of the product in four seconds, without having to read it.
  *
- * L'animation est ENTIÈREMENT EN CSS (`app/globals.css`, section « Figure de la
- * boucle agent ») : le composant reste un Server Component, le hero n'envoie
- * toujours pas une ligne de JavaScript pour cette image, et elle reste légère
- * pour le LCP — du texte et deux SVG au lieu d'une capture en 16/10. Elle se
- * joue au CHARGEMENT et non au scroll, comme la cascade du hero à laquelle elle
+ * The animation is ENTIRELY IN CSS (`app/globals.css`, section “Figure of the
+ * agent loop"): the component remains a Server Component, the hero does not send
+ * still not a line of JavaScript for this image, and it remains light
+ * for the LCP — text and two SVGs instead of a 16/10 capture. She
+ * plays LOADING and not scrolling, like the hero's stunt to which it
  * appartient.
  *
- * Tout y est en remplissage `backwards` : l'état d'arrivée de chaque animation
- * EST l'état de base de l'élément (case cochée, trait tiré, rail déployé), donc
- * le remplissage n'a qu'un travail — tenir l'état de départ pendant le délai —
- * et l'animation lâche l'élément à la fin au lieu d'en figer une couche
- * composée. Corollaire utile : sans CSS ou en mouvement réduit, la figure
- * s'affiche déjà terminée.
+ * Everything is there in filling `backwards`: the arrival state of each animation
+ * IS the base state of the element (box checked, line drawn, rail extended), so
+ * filling has only one job — hold the starting state during the delay —
+ * and the animation drops the element at the end instead of freezing a layer
+ * composed. Useful corollary: without CSS or with reduced movement, the figure
+ * appears already completed.
  */
 
-/** Rang d'un élément dans la partition : c'est lui qui porte le retard. */
+/** Rank of an element in the partition: it is he who carries the delay. */
 const beat = (i: number) => ({ "--loop-i": i }) as CSSProperties;
 
-/** Les trois tâches du plan, toutes cochées : la boucle montrée est finie. */
+/** The three tasks of the plan, all checked: the loop shown is finished. */
 const PLAN_TASKS = ["repro", "signature", "retry"] as const;
 
-/** La branche de l'agent : du code, donc jamais traduit. */
+/** The agent branch: code, therefore never translated. */
 const BRANCH = "fix/stripe-webhook-500";
 
-/** Un temps de la boucle : pastille sur le rail, intitulé, contenu. */
+/** A time of the loop: pellet on the rail, title, content. */
 function Beat({
   index,
   icon,
@@ -70,7 +70,7 @@ function Beat({
   last,
   children,
 }: {
-  /** Rang dans la cascade — le temps suivant n'arrive qu'après celui-ci. */
+  /** Rank in the cascade — the next beat only comes after this one. */
   index: number;
   icon: React.ReactNode;
   label: string;
@@ -79,24 +79,24 @@ function Beat({
 }) {
   return (
     <li className="loop-step grid grid-cols-[1.75rem_1fr] gap-x-3" style={beat(index)}>
-      {/* Le rail : la pastille, puis le trait qui descend vers le temps
-          suivant. Il vit DANS la colonne et non en position absolue — sa
-          hauteur est donc celle du contenu, quelle que soit la longueur du
-          texte une fois traduit. */}
+      {/* The rail: the pellet, then the line which descends towards time
+          following. He lives IN the column and not in absolute position — his
+          height is therefore that of the content, whatever the length of the
+          text once translated. */}
       <div className="flex flex-col items-center">
         <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-border bg-background text-muted-foreground">
           {icon}
         </span>
-        {/* Le trait se DÉPLOIE vers le bas : il annonce le temps suivant juste
-            avant qu'il n'arrive, ce qui fait lire la figure comme une suite. */}
+        {/* The line DEPLOYS downwards: it announces the next beat exactly
+            before he arrives, which makes the figure read like a sequel. */}
         {!last && (
           <span className="loop-rail mt-1 w-px flex-1 bg-border" style={beat(index)} aria-hidden />
         )}
       </div>
 
       <div className={cn("min-w-0", !last && "pb-5")}>
-        {/* `h-7` : l'intitulé occupe la hauteur de la pastille, les deux
-            s'alignent sans décalage optique. */}
+        {/* `h-7`: the title occupies the height of the pastille, both
+            align without optical shift. */}
         <p className="flex h-7 items-center text-xs font-medium text-muted-foreground">
           {label}
         </p>
@@ -106,7 +106,7 @@ function Beat({
   );
 }
 
-/** Le cadre d'un bloc de contenu — même fond que les encarts de la landing. */
+/** The frame of a content block — same background as the landing inserts. */
 function Panel({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
     <div className={cn("rounded-lg border border-border bg-muted/30 p-3", className)}>
@@ -123,12 +123,12 @@ export async function AgentLoopFigure() {
 
   return (
     <figure className="mx-auto max-w-2xl rounded-xl border border-border bg-card p-5 shadow-sm sm:p-7">
-      {/* ── Le ticket : le seul geste qui reste le vôtre ─────────────────── */}
+      {/* ── The ticket: the only gesture that remains yours ─────────────────── */}
       <header className="loop-step flex items-start gap-3 border-b border-border pb-5" style={beat(0)}>
         <StatusIndicator status="in_progress" className="mt-0.5" />
         <div className="min-w-0 flex-1">
-          {/* Identifiant en dur : c'est un décor, pas une donnée. MIN-42 parce
-              que minddy se suit lui-même dans minddy. */}
+          {/* Hard identifier: it's a decoration, not a piece of data. MIN-42 because
+              that minddy follows itself in minddy. */}
           <p className="font-mono text-xs text-muted-foreground">MIN-42</p>
           <p className="mt-0.5 text-base leading-snug font-semibold text-pretty">
             {t("heroLoopIssueTitle")}
@@ -138,7 +138,7 @@ export async function AgentLoopFigure() {
       </header>
 
       <ol className="mt-5">
-        {/* ① Le plan, écrit par l'agent ─────────────────────────────────── */}
+        {/* ① The plan, written by the agent ─────────────────────────────────── */}
         <Beat index={1} icon={<ListChecks className="size-3.5" />} label={t("heroLoopStepPlan")}>
           <Panel>
             <ul className="flex flex-col gap-2">
@@ -150,8 +150,8 @@ export async function AgentLoopFigure() {
                   >
                     <Check className="size-3" />
                   </span>
-                  {/* La barre est un TRAIT dessiné et non un `line-through` :
-                      une décoration de texte ne s'anime pas, un trait se tire. */}
+                  {/* The bar is a drawn LINE and not a `line-through`:
+                      a text decoration does not animate, a line is drawn. */}
                   <span
                     className="loop-strike relative text-sm leading-relaxed text-muted-foreground"
                     style={beat(i)}
@@ -164,7 +164,7 @@ export async function AgentLoopFigure() {
           </Panel>
         </Beat>
 
-        {/* ② L'exécution ────────────────────────────────────────────────── */}
+        {/* ② Execution ───────────────────────── ───────────────────────── */}
         <Beat index={2} icon={<NumoFace className="h-3.5 w-auto" />} label={t("heroLoopStepRun")}>
           <Panel className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5">
             <span className="font-mono text-xs text-foreground/90">{BRANCH}</span>
@@ -172,7 +172,7 @@ export async function AgentLoopFigure() {
           </Panel>
         </Beat>
 
-        {/* ③ La pull request, rattachée au ticket ────────────────────────── */}
+        {/* ③ The pull request, attached to the ticket ────────────────────────── */}
         <Beat index={3} icon={<GitPullRequest className="size-3.5" />} label={t("heroLoopStepPr")}>
           <Panel className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5">
             <span className="flex items-center gap-2 text-sm font-medium">
@@ -186,10 +186,10 @@ export async function AgentLoopFigure() {
           </Panel>
         </Beat>
 
-        {/* ④ La vérification — le temps qui ne se délègue pas ────────────── */}
+        {/* ④ Verification — the time that cannot be delegated ────────────── */}
         <Beat index={4} icon={<Check className="size-3.5" />} label={t("heroLoopStepReview")} last>
-          {/* Des pastilles, pas des boutons : rien n'est cliquable ici, et un
-              bouton plein appellerait le clic que la vraie action mérite. */}
+          {/* Pellets, not buttons: nothing is clickable here, and a
+              full button would invoke the click that the real action deserves. */}
           <div className="flex flex-wrap gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium shadow-sm">
               <Check className="size-3.5 shrink-0 text-green-700 dark:text-green-400" />

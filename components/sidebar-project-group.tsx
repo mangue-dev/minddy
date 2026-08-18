@@ -7,41 +7,41 @@ import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 
 /**
- * Un PROJET et ses lignes, replié ou non — la grammaire commune des colonnes de
- * navigation qui listent des choses appartenant à des projets (conversations de
- * l'agent, pull requests).
+ * A PROJECT and its lines, folded or not — the common grammar of the columns of
+ * navigation which list things belonging to projects (conversations of
+ * the agent, pull requests).
  *
- * C'est l'échelle à laquelle on cherche : on sait sur quel projet on travaillait
- * bien avant de se souvenir du titre exact de la ligne. Et c'est ce qui permet
- * aux lignes elles-mêmes de ne PLUS porter leur projet — il est écrit une fois,
- * au-dessus d'elles.
+ * This is the scale at which we search: we know on which project we are worked
+ * long before I remembered the exact title of the line. And this is what allows
+ * the lines themselves to no longer carry their project — it is written once,
+ * above them.
  *
- * Ce composant tient la COQUE (en-tête, repli, « afficher plus », alignements) ;
- * les LIGNES restent à l'appelant, qui seul sait ce qu'elles disent. La découpe
- * aussi : combien montrer avant « afficher plus » dépend de ce qui est
- * sélectionné, que l'appelant est seul à connaître.
+ * This component holds the SHELL (header, fallback, "show more", alignments);
+ * the LINES remain at the caller, who alone knows what they say. The cut
+ * also: how much to show before "show more" depends on what is
+ * selected, which only the caller knows.
  */
 
-/** Clé du groupe des lignes ORPHELINES (projet non joint — RLS aberrante). */
+/** Key to the ORPHAN lines group (unattached project — aberrant RLS). */
 export const NO_PROJECT_KEY = "__no_project__";
 
-/** Lignes montrées par projet avant « Afficher plus ». */
+/** Rows shown per project before “Show more”. */
 export const PROJECT_GROUP_LIMIT = 5;
 
 /**
- * Le retrait des lignes sous un en-tête : elles s'alignent sur le NOM du projet
- * (px-2 + orbe + sa gouttière), pas sur son orbe. À poser sur la ligne
- * elle-même, pas sur un conteneur : son fond de survol doit courir sur toute la
- * largeur de la colonne.
+ * The indentation of lines under a header: they align with the project NAME
+ * (px-2 + orb + its gutter), not its orb. To be placed on the line
+ * itself, not on a container: its hover background must run over the entire
+ * width of the column.
  */
 export const PROJECT_GROUP_INDENT = "pl-8";
 
-/** Le projet d'un groupe, réduit à ce que l'en-tête peint. */
+/** A group's project, reduced to what the header paints. */
 export interface GroupProject {
   id: string;
   name: string;
   icon_url: string | null;
-  /** Graine de l'orbe si elle a été relancée — cf. `projectOrbSeed`. */
+  /** Seed of the orb if it has been revived — cf. `projectOrbSeed`. */
   orb_seed: string | null;
 }
 
@@ -52,9 +52,9 @@ export interface ProjectGroup<T> {
 }
 
 /**
- * Un groupe par projet, dans l'ordre d'APPARITION des lignes — qui arrivent
- * déjà triées de la plus récente à la plus ancienne. Le projet dont on a parlé
- * en dernier est donc en tête, et ses lignes gardent leur ordre.
+ * One group per project, in the order of APPEARANCE of the lines — which arrive
+ * already sorted from the most recent to the oldest. The project we talked about
+ * last is therefore at the top, and its lines keep their order.
  */
 export function groupByProject<T>(
   items: readonly T[],
@@ -71,7 +71,7 @@ export function groupByProject<T>(
   return [...groups.values()];
 }
 
-/** Ajoute ou retire une clé d'un ensemble, sans le muter. */
+/** Adds or removes a key from a set, without mutating it. */
 export function toggledSet(set: ReadonlySet<string>, key: string): Set<string> {
   const next = new Set(set);
   if (!next.delete(key)) next.add(key);
@@ -93,28 +93,28 @@ export function SidebarProjectGroup({
   children,
 }: {
   project: GroupProject | null;
-  /** Nom de repli quand le projet n'est pas joint (`NO_PROJECT_KEY`). */
+  /** Fallback name when the project is not attached (`NO_PROJECT_KEY`). */
   fallbackLabel: string;
-  /** Icône d'un groupe spécial qui n'est pas rattaché à un projet. */
+  /** Icon of a special group that is not attached to a project. */
   headerIcon?: ReactNode;
   open: boolean;
   /**
-   * Faux pendant un filtre : la liste est alors dépliée de force, et un en-tête
-   * qui ne peut plus rien replier n'est plus un bouton — il redevient l'étiquette
-   * du projet, sans chevron ni clic mort. Le chevron étant en BOUT de ligne, son
-   * absence ne décale rien.
-   */
+ * False during a filter: the list is then forcibly unfolded, and a header
+ * which can no longer collapse anything is no longer a button — it reverts to the label
+ * of the project, without chevrons or dead clicks. The chevron being at the END of the line, its
+ * absence does not shift anything.
+ */
   collapsible: boolean;
   onToggle: () => void;
   /**
-   * Ce qui se passe dessous, quand on ne le voit plus (spinner, point non lu) :
-   * replier un projet ne doit pas faire disparaître ce qui réclamait l'attention.
-   * Rendu seulement quand le groupe est REPLIÉ.
-   */
+ * What happens underneath, when we no longer see it (spinner, unread point):
+ * folding a project should not make what was demanding attention disappear.
+ * Rendered only when the group is FOLDED.
+ */
   collapsedBadge?: ReactNode;
-  /** Action révélée au survol de l'en-tête (le « + » de la page Agents). */
+  /** Action revealed when hovering over the header (the “+” on the Agents page). */
   actions?: ReactNode;
-  /** Lignes cachées par la coupe → « Afficher plus ». */
+  /** Lines hidden by cut → “Show more”. */
   hiddenCount: number;
   onShowAll: () => void;
   showMoreLabel: string;
@@ -142,10 +142,8 @@ export function SidebarProjectGroup({
 
   return (
     <div className="flex flex-col">
-      {/* Le repli et l'action de l'en-tête sont deux gestes distincts : deux
-          boutons côte à côte, dans une ligne qui s'allume d'un seul tenant au
-          survol (un bouton dans un bouton n'existe pas, en HTML comme à la
-          souris). */}
+      {/* The fallback and the header action are two distinct gestures: two
+ buttons side by side, in a row that lights up as one on hover (a button within a button does not exist, in HTML as well as on a mouse). */}
       <div className="group/project flex items-center rounded-md pr-1 transition-colors hover:bg-muted/60 focus-within:bg-muted/60">
         {collapsible ? (
           <button
@@ -160,10 +158,10 @@ export function SidebarProjectGroup({
           <div className={headerClass}>{header}</div>
         )}
         {actions}
-        {/* Le chevron ferme la ligne, à droite de tout : l'action réserve sa place
-            même invisible, donc rien ne bouge au survol. Il rejoue le geste du
-            grand bouton d'en-tête — d'où `aria-hidden` et le retrait du parcours
-            clavier : un seul contrôle annoncé, pas deux. */}
+        {/* The chevron closes the line, to the right of everything: the action reserves its place
+ even invisible, so nothing moves on hover. It replays the gesture of the
+ large header button — hence `aria-hidden` and the removal of the
+ keyboard path: only one control announced, not two. */}
         {collapsible ? (
           <button
             type="button"
@@ -183,11 +181,11 @@ export function SidebarProjectGroup({
       </div>
 
       {open ? (
-        // Le même écart de 4 px qu'entre les lignes du triage et des retours :
-        // les lignes de ces colonnes sont des pastilles arrondies qui prennent
-        // un fond au survol et à la sélection, et collées les unes aux autres
-        // elles se lisent comme un bloc unique — c'est le fond de la ligne
-        // survolée qui touche celui de sa voisine.
+        // The same 4 px gap as between the sorting and returns lines:
+        // the lines of these columns are rounded pellets which take
+        // a background on hover and selection, and stuck to each other
+        // they are read as a single block — this is the bottom of the line
+        // hovered over which touches that of its neighbor.
         <div className="flex flex-col gap-1 pt-1">
           {children}
           {hiddenCount > 0 ? (

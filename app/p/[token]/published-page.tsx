@@ -17,20 +17,20 @@ import { PublicPageBody } from "@/components/public-page-body";
 import { PagePasswordForm } from "./password-form";
 
 /**
- * Une PAGE PUBLIÉE (MIN-283), rendue pour quelqu'un qui n'a pas de compte.
+ * A PUBLISHED PAGE (MIN-283), rendered for someone who does not have an account.
  *
- * Deux routes s'appuient sur ce fichier : `/p/[token]` (la page que le lien
- * désigne) et `/p/[token]/[pageId]` (une page de sa branche, quand la
- * publication inclut les sous-pages). Un seul rendu pour les deux — la
- * différence tient dans un identifiant, pas dans un écran.
+ * Two routes rely on this file: `/p/[token]` (the page that the link
+ * designates) and `/p/[token]/[pageId]` (a page of its branch, when the
+ * publication includes subpages). A single rendering for both — the
+ * The difference lies in an identifier, not in a screen.
  *
- * **Rien à ajouter à `lib/public-routes.ts`, et c'est délibéré** : une page
- * publiée n'est pas une page publique du SITE. Elle n'a pas de contenu tenu par
- * nous, pas de `lastModified` à la main, pas de place au sitemap, et elle porte
- * `noindex` sauf demande expresse. La question ne se repose donc pas.
+ * **Nothing to add to `lib/public-routes.ts`, and this is deliberate**: one page
+ * published is not a public page of the SITE. It does not have content held by
+ * us, no `lastModified` in hand, no space for the sitemap, and it carries
+ * `noindex` unless expressly requested. The question therefore does not arise.
  */
 
-/** Dédoublonné entre `generateMetadata` et le rendu. */
+/** Deduplicated between `generateMetadata` and rendering. */
 const bundleOf = cache(getPublicPageBundle);
 
 export async function publishedPageMetadata(
@@ -48,8 +48,8 @@ export async function publishedPageMetadata(
       robots: { index: false, follow: false },
     };
   }
-  // Verrouillée, la page ne dit ni son titre ni le nom du projet — seulement
-  // qu'elle est verrouillée, ce que le visiteur voit déjà.
+  // Locked, the page says neither its title nor the name of the project — only
+  // that it is locked, which the visitor already sees.
   if (!(await isShareUnlocked(bundle.share))) {
     const tShare = await getTranslations("PublicShare");
     return publicTokenMetadata({
@@ -60,9 +60,9 @@ export async function publishedPageMetadata(
   }
 
   const title = bundle.page.title || t("untitled");
-  // `publicTokenMetadata` pose `noindex`, et rien ne le lève : publier n'est
-  // pas référencer, et ce n'est même pas une option (cf. la migration
-  // `page_shares_no_indexing`). Un retrait d'index ne se défait pas d'un clic.
+  // `publicTokenMetadata` sets `noindex`, and nothing removes it: publishing is not
+  // not reference, and it is not even an option (see the migration
+  // `page_shares_no_indexing`). An index removal is not undone with a click.
   return publicTokenMetadata({
     title: `${title} · ${bundle.project.name}`,
     description: t("metaDescription", { project: bundle.project.name }),
@@ -99,9 +99,9 @@ export async function PublishedPage({
   return (
     <PublicPageShell
       contained
-      // Le logo du projet et son nom, comme sur le board de retours : une page
-      // publiée circule loin de minddy, et c'est la seule chose qui dise de qui
-      // elle vient.
+      // The project logo and name, as on the feedback board: one page
+      // published is circulating far from minddy, and it is the only thing that says where
+      // it came from.
       heading={
         <div className="flex min-w-0 items-center gap-2">
           <ProjectOrb
@@ -115,11 +115,11 @@ export async function PublishedPage({
         </div>
       }
     >
-      {/* La colonne du document, à la même largeur que dans l'application : ce
-          qu'on publie doit se lire comme ce qu'on a écrit. */}
+      {/* The column of the document, at the same width as in the application: this
+ that we publish must read like what we wrote. */}
       <main className="mx-auto w-full max-w-3xl px-6 py-10 print:px-0 print:py-0">
-        {/* Le fil d'Ariane ne remonte JAMAIS au-dessus de la page publiée : il
-            ne dit rien du wiki d'où elle vient (cf. page-publication.ts). */}
+        {/* The breadcrumb NEVER goes back above the published page: it
+ says nothing about the wiki it comes from (cf. page-publication.ts). */}
         {bundle.trail.length > 0 && (
           <nav className="mb-4 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             {bundle.trail.map((node) => (

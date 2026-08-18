@@ -11,19 +11,19 @@ import {
 import { ChevronRight } from "lucide-react";
 
 /**
- * Déroulé repliable du travail d'un TOUR, partagé par le chat Numo et le fil de
- * l'agent de code — une seule mécanique, une seule apparence :
- *  • ACTIF → ouvert par défaut, en-tête « Travaille depuis X » qui compte en direct.
- *  • terminé → l'en-tête devient « A travaillé pendant X » et l'accordéon se
- *    referme automatiquement (restant repliable/dépliable à la main).
+ * Foldable sequence of the work of a TOUR, shared by the Numo chat and the thread of
+ * the code agent — one mechanic, one appearance:
+ * • ACTIVE → open by default, “Working from X” header which counts live.
+ * • finished → the header changes to “Worked for
+ * closes automatically (remains foldable/unfoldable by hand).
  *
- * L'appelant rend la RÉPONSE du tour juste en dessous : le lecteur suit le travail
- * en cours, puis lit le message final, au lieu de recevoir le tour d'un bloc.
+ * The caller returns the ANSWER to the trick just below: the reader follows the work
+ * in progress, then reads the final message, instead of receiving the turn of a block.
  *
- * À monter avec une `key` STABLE entre l'état actif et l'état terminé du même tour :
- * c'est la même instance qui joue l'animation de fermeture.
+ * To be mounted with a STABLE `key` between the active state and the finished state of the same turn:
+ * This is the same instance that plays the closing animation.
  *
- * Les libellés vivent dans le namespace i18n `Agent` : une seule source pour les
+ * The labels live in the i18n namespace `Agent`: a single source for the
  * deux surfaces.
  */
 export function WorkAccordion({
@@ -32,17 +32,17 @@ export function WorkAccordion({
   active,
   children,
 }: {
-  /** ISO — début du tour. */
+  /** ISO — start of the round. */
   startedAt: string;
-  /** ISO — fin du tour ; `null` tant qu'il travaille. */
+  /** ISO — end of the turn; `null` while it is working. */
   endedAt: string | null;
   active: boolean;
   children: ReactNode;
 }) {
   const t = useTranslations("Agent");
 
-  // Ouvert par défaut tant que ça TRAVAILLE ; se referme automatiquement au
-  // passage travail → terminé, tout en restant repliable à la main.
+  // Open by default as long as it WORKS; closes automatically when
+  // work transition → completed, while remaining foldable by hand.
   const [open, setOpen] = useState(active);
   const wasActive = useRef(active);
   useEffect(() => {
@@ -50,7 +50,7 @@ export function WorkAccordion({
     wasActive.current = active;
   }, [active]);
 
-  // Chrono : compte en direct (tick 1 s) tant qu'actif, sinon durée figée.
+  // Chrono: live count (1 s tick) while active, otherwise fixed duration.
   const now = useNow({ updateInterval: active ? 1000 : undefined });
   const startMs = Date.parse(startedAt);
   const safeStart = Number.isNaN(startMs) ? now.getTime() : startMs;
@@ -74,9 +74,9 @@ export function WorkAccordion({
         <ChevronRight className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
         <span className={cn(active && "text-shimmer")}>{label}</span>
       </CollapsibleTrigger>
-      {/* Bordure fixe pleine largeur sous le toggle : sépare l'indicateur des
-          messages. Toujours visible (ouvert comme fermé), elle ne se déplace pas —
-          le contenu s'anime en dessous. */}
+      {/* Full-width fixed border under the toggle: separates the indicator from the
+ messages. Always visible (open as closed), it does not move —
+ the content animates below. */}
       <div className="border-t border-border" />
       <CollapsibleContent>
         <div className="flex flex-col gap-3 pt-3">{children}</div>

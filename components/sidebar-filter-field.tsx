@@ -7,18 +7,18 @@ import { isTypingTarget } from "@/lib/keyboard/keyboard-context";
 import { eventKey } from "@/lib/keyboard/event-key";
 
 /**
- * Le champ de filtre de la ligne de titre d'une sidebar secondaire.
+ * The filter field in the title line of a secondary sidebar.
  *
- * Ce n'est PAS la recherche de l'application — celle du header ouvre la palette,
- * une modale qui cherche partout et qui emmène ailleurs. Celui-ci réduit la
- * liste qui est juste en dessous, en place, et rien d'autre. D'où le vocabulaire
- * (« Filtrer les… », jamais « Rechercher ») et l'apparence : ni bordure ni fond,
- * la même grammaire discrète que les déclencheurs de filtre de l'app, pas un
- * champ de formulaire. Deux boîtes de recherche sur la même bande de 60 px, aux
- * deux bouts de l'écran, ne doivent pas se ressembler.
+ * This is NOT the application search — the header search opens the palette,
+ * a modal that searches everywhere and takes you elsewhere. This one reduces the
+ * list which is just below, in place, and nothing else. Hence the vocabulary
+ * ("Filter the...", never "Search") and the appearance: neither border nor background,
+ * the same discrete grammar as the app's filter triggers, not a
+ * form field. Two search boxes on the same strip of 60 px, at the
+ * two ends of the screen, must not look alike.
  *
- * Le placeholder NOMME la liste : c'est lui qui reprend le rôle du titre qu'on a
- * retiré de cette ligne (le fil d'Ariane l'écrivait déjà, 340 px plus à droite).
+ * The placeholder NAMES the list: it is he who takes over the role of the title that we
+ * removed from this line (the breadcrumbs wrote it already, 340 px further to the right).
  */
 export function SidebarFilterField({
   value,
@@ -28,22 +28,22 @@ export function SidebarFilterField({
 }: {
   value: string;
   onChange: (value: string) => void;
-  /** « Filtrer les pull requests… » — sert aussi d'étiquette accessible. */
+  /** “Filter pull requests…” — also serves as an accessible label. */
   placeholder: string;
-  /** Étiquette du bouton d'effacement (lecteur d'écran + survol). */
+  /** Clear button label (screen reader + hover). */
   clearLabel: string;
 }) {
   const ref = useRef<HTMLInputElement>(null);
 
-  // `/` met le focus ici, où qu'on soit sur la page. Une seule sidebar
-  // secondaire est montée à la fois, donc pas d'ambiguïté sur la cible ; le test
-  // `offsetParent` écarte le cas où elle est repliée (mobile, détail ouvert),
-  // où voler le focus vers un champ invisible ne mènerait nulle part.
+  // `/` puts the focus here, wherever you are on the page. Only one sidebar
+  // secondary is mounted at once, so no ambiguity on the target; the test
+  // `offsetParent` excludes the case where it is folded (mobile, open detail),
+  // where stealing focus to an invisible field would lead nowhere.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      // Pas de garde sur `shiftKey` : en AZERTY, « / » SE TAPE avec Shift. C'est
-      // `e.key` qui tranche, et il ne peut pas valoir « / » et « ? » à la fois —
-      // le raccourci de l'aide-mémoire reste donc intact.
+      // No guard on `shiftKey`: in AZERTY, “/” TAPES with Shift. It is
+      // `e.key` which decides, and it cannot be equal to “/” and “? » at once —
+      // the cheat sheet shortcut therefore remains intact.
       if (eventKey(e) !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
       if (isTypingTarget(e.target)) return;
       if (document.querySelector('[role="dialog"][data-state="open"]')) return;
@@ -68,16 +68,16 @@ export function SidebarFilterField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        // `text-base` sous md : en dessous de 16 px, iOS zoome sur le champ au
-        // focus et ne redézoome jamais.
+        // `text-base` under md: below 16 px, iOS zooms on the field at
+        // focus and never zoom out again.
         className={cn(
           "min-w-0 flex-1 bg-transparent text-base outline-none md:text-sm",
           "placeholder:text-muted-foreground",
         )}
         onKeyDown={(e) => {
           if (e.key !== "Escape") return;
-          // La touche ne doit pas remonter : elle fermerait le volet mobile ou
-          // le dialogue parent alors qu'on voulait juste vider le filtre.
+          // The button must not go up: it would close the movable shutter or
+          // the parent dialog when we just wanted to empty the filter.
           e.stopPropagation();
           if (value) onChange("");
           else ref.current?.blur();
@@ -101,8 +101,8 @@ export function SidebarFilterField({
 }
 
 /**
- * La normalisation partagée par tous les filtres de sidebar : minuscules, sans
- * accents. « Décor » doit se trouver en tapant « decor », et l'inverse aussi.
+ * The normalization shared by all sidebar filters: lowercase, without
+ * accents. “Décor” must be found by typing “decor”, and vice versa.
  */
 export function normalizeFilterText(text: string): string {
   return text
@@ -112,9 +112,9 @@ export function normalizeFilterText(text: string): string {
 }
 
 /**
- * Vrai si TOUS les mots de la requête se retrouvent dans l'un des champs offerts.
- * Les mots, et pas la chaîne entière : « numo auth » doit matcher une PR dont le
- * titre porte l'un et la branche l'autre.
+ * True if ALL the words in the query are found in one of the fields offered.
+ * The words, and not the entire string: "numo auth" must match a PR of which the
+ * title bears one and the branch the other.
  */
 export function matchesFilter(
   query: string,

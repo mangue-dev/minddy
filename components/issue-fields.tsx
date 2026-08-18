@@ -60,9 +60,9 @@ export function ObjectivePicker({
       options={options}
       noneOption={{ label: tField("noObjective") }}
       trigger={
-        // Un objectif choisi montre SA puce, à sa couleur — comme ses options
-        // juste au-dessus, et comme le picker compact. La cible neutre ne reste
-        // que pour « aucun objectif », où il n'y a aucune couleur à suivre.
+        // A chosen lens shows ITS chip, its color — like its options
+        // just above, and like the compact picker. The neutral target remains
+        // than for "no objective", where there is no color to follow.
         <Button variant="outline" size={size}>
           {current ? (
             <Dot color={current.color} />
@@ -263,7 +263,7 @@ export function DueDateField({
   value: string | null;
   onChange: (v: string | null) => void;
   className?: string;
-  /** Trigger label when empty (defaults to "Échéance"; objectives pass their own). */
+  /** Trigger label when empty (defaults to "Deadline"; objectives pass their own). */
   placeholder?: string;
 }) {
   const tField = useTranslations("Field");

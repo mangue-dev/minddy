@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createSerialQueue } from "./serial-queue";
 
-/** Une promesse qu'on résout à la main, pour tenir une tâche ouverte. */
+/** A promise that is resolved by hand, to keep an open task. */
 function deferred() {
   let resolve!: () => void;
   let reject!: (err: unknown) => void;
@@ -26,7 +26,7 @@ describe("createSerialQueue", () => {
       started.push("b");
     });
 
-    // « a » tient la file : « b » n'a pas encore été appelée.
+    // “a” is holding the queue: “b” has not yet been called.
     await Promise.resolve();
     expect(started).toEqual(["a"]);
 
@@ -35,8 +35,8 @@ describe("createSerialQueue", () => {
     expect(started).toEqual(["a", "b"]);
   });
 
-  // Le cas qui a motivé la file (MIN-353) : le DELETE du pointeur part avant le
-  // PUT, et doit être TRAITÉ avant lui — sinon la base perd le pointeur d'un
+  // The case which motivated the queue (MIN-353): the DELETE of the pointer leaves before the
+  // PUT, and must be PROCESSED before it — otherwise the base loses the pointer of a
   // fil bien vivant.
   it("préserve l'ordre même quand la première tâche est la plus lente", async () => {
     const enqueue = createSerialQueue();
@@ -67,8 +67,8 @@ describe("createSerialQueue", () => {
       done.push("suivante");
     });
 
-    // Le rejet est absorbé : la promesse rendue ne rejette pas, et ce qui suit
-    // s'exécute quand même.
+    // Rejection is absorbed: the promise given does not reject, and what follows
+    // executes anyway.
     await expect(failing).resolves.toBeUndefined();
     await after;
     expect(done).toEqual(["suivante"]);

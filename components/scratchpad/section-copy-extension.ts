@@ -3,25 +3,25 @@ import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 
 /**
- * Hover buttons glued to every heading in the WYSIWYG note : « copier la
- * section » et « lancer un agent » sur la section (MIN-84) — la section = le
- * heading + son contenu jusqu'au heading suivant. Implemented as ProseMirror
+ * Hover buttons glued to every heading in the WYSIWYG note: “copy the
+ * section” and “launch an agent” on the section (MIN-84) — the section = the
+ * heading + its content until the next heading. Implemented as ProseMirror
  * widget decorations (not NodeViews) so they never touch the heading's editable
  * content or the cursor. `onCopy` / `onLaunch` get the heading's 0-based index
  * among all headings — the caller maps it to the section markdown.
  *
  * While a button is hovered/focused it also shows two pieces of shared "hover
  * chrome", both parented to the `.scratchpad-editor` container:
- *   - a tinted box behind the exact section targeted (heading → the last block
- *     before the next heading of the SAME or a shallower level, sub-sections
- *     included), so the target is unmistakable;
- *   - a styled tooltip on the button (matching the app's tooltips) instead of a
- *     raw browser `title`.
+ * - a tinted box behind the exact section targeted (heading → the last block
+ * before the next heading of the SAME or a shallower level, sub-sections
+ * included), so the target is unmistakable;
+ * - a styled tooltip on the button (matching the app's tooltips) instead of a
+ * raw browser `title`.
  */
 export interface SectionCopyOptions {
   onCopy: (headingIndex: number) => void;
   label: string;
-  /** « Lancer un agent » sur la section (absent → bouton non rendu). */
+  /** “Launch an agent” on the section (absent → button not rendered). */
   onLaunch?: (headingIndex: number) => void;
   launchLabel?: string;
 }
@@ -29,11 +29,11 @@ export interface SectionCopyOptions {
 const COPY_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
 
-/** lucide `bot`, même rendu que les icônes React (13px, stroke 2). */
+/** lucid `bot`, same rendering as React icons (13px, stroke 2). */
 const BOT_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>';
 
-/** Rang d'un titre (1–3 dans l'éditeur), 0 pour tout autre bloc. */
+/** Rank of a title (1–3 in the editor), 0 for any other block. */
 const headingRank = (el: Element): number =>
   /^H[1-6]$/.test(el.tagName) ? Number(el.tagName[1]) : 0;
 
@@ -82,9 +82,9 @@ export const SectionCopy = Extension.create<SectionCopyOptions>({
       const cRect = c.container.getBoundingClientRect();
 
       // Tinted box spans the heading down to the last block before the next
-      // heading of the same or a shallower level (or the document end) : les
-      // sous-sections font partie de la section, et le geste les emporte (cf.
-      // scratchpadSectionSubtree) — la boîte doit dire la même chose.
+      // heading of the same or a shallower level (or the document end): the
+      // subsections are part of the section, and the gesture takes them away (cf.
+      // scratchpadSectionSubtree) — the box should say the same thing.
       const rank = headingRank(heading);
       let last: HTMLElement = heading;
       for (
@@ -165,11 +165,11 @@ export const SectionCopy = Extension.create<SectionCopyOptions>({
 
             const decorations: Decoration[] = [];
             let headingIndex = -1;
-            // Titres de PREMIER NIVEAU seulement : une section du carnet, c'est
-            // un titre de la note, pas un `#` égaré dans une citation ou une
-            // liste. C'est aussi ce qui garde cet index égal à celui que compte
-            // le markdown (lib/scratchpad.ts) — un titre imbriqué s'y écrit
-            // « > # … » et n'y compte pas, donc le geste porterait ailleurs.
+            // FIRST LEVEL titles only: a section of the notebook is
+            // a title of the note, not a `#` lost in a quote or a
+            // list. This is also what keeps this index equal to that which counts
+            // markdown (lib/scratchpad.ts) — a nested title is written there
+            // “> #…” and does not count there, so the gesture would apply elsewhere.
             state.doc.forEach((node, pos) => {
               if (node.type.name !== "heading") return;
               headingIndex += 1;
@@ -184,7 +184,7 @@ export const SectionCopy = Extension.create<SectionCopyOptions>({
                   { side: -1, ignoreSelection: true, key: `section-copy-${index}` }
                 )
               );
-              // « Lancer un agent » sur la section (MIN-84) — à gauche du copy.
+              // “Launch an agent” on the section (MIN-84) — to the left of the copy.
               if (options.onLaunch) {
                 const onLaunch = options.onLaunch;
                 decorations.push(

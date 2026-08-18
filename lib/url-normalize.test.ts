@@ -3,16 +3,16 @@ import { describe, expect, it } from "vitest";
 import { hasUrlScheme, normalizeWebUrl, withUrlScheme } from "./url-normalize";
 
 /**
- * MIN-184 — personne ne tape `https://`. Un lien se colle ou se dicte, et le
- * refuser pour un schéma manquant, c'est faire faire à la main ce que la
- * machine sait compléter.
+ * MIN-184 — no one types `https://`. A link sticks or is dictated, and the
+ * refusing for a missing diagram is having to do by hand what the
+ * machine knows how to complete.
  *
- * Ce que ce test garde, c'est la ligne de partage. Elle n'est pas évidente :
- * `linear.app` n'a pas de schéma, `javascript:alert(1)` en a un, et
- * `exemple.com:8080` ressemble aux deux. Les départager sur la seule présence
- * d'un `:` — ce que faisait la première version — traitait le troisième comme
- * un protocole exotique et le refusait. Le critère qui tranche : un vrai schéma
- * ne contient jamais de point.
+ * What this test keeps is the dividing line. It's not obvious:
+ * `linear.app` has no schema, `javascript:alert(1)` has one, and
+ * `exemple.com:8080` looks like both. Deciding them on the sole presence
+ * of a `:` — what the first version did — treated the third as
+ * an exotic protocol and refused it. The deciding criterion: a real schema
+ * never contains a point.
  */
 
 describe("hasUrlScheme", () => {

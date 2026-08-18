@@ -3,24 +3,24 @@ import { applyContextSelection, contextChips } from "./assistant-context";
 import type { AssistantPageContext } from "./assistant-types";
 
 /**
- * Le contexte de Numo vu comme des pilules, et le chemin INVERSE : éteindre
- * l'œil d'une pilule doit retirer du contexte envoyé exactement les champs
- * qu'elle représentait.
+ * Numo's context seen as pills, and the REVERSE path: turn off
+ * the eye of a pill must remove from the sent context exactly the fields
+ * that it represented.
  *
- * C'est ce retour qui se casse en silence. Ajouter une nature de contexte
- * demande deux gestes — la pilule, et son entrée dans la table des champs — et
- * n'en faire qu'un ne lève rien : la pilule s'éteint à l'écran, le message
- * persiste « Numo n'a pas vu ça », et Numo l'a pourtant reçu. D'où le dernier
- * test, qui vaut pour toute nature ajoutée après celle-ci.
+ * It is this return that breaks silently. Adding a context nature
+ * requires two gestures - the pill, and its entry in the field table - and
+ * doing only one does nothing: the pill goes out on the screen, the message
+ * persists "Numo didn't see that", and Numo nevertheless received it. Hence the last
+ * test, which is valid for any nature added after this one.
  */
 
-// Le vrai traducteur n'apporte rien ici : ce qui se vérifie est le CHEMIN d'un
-// champ jusqu'à sa pilule, pas la phrase écrite dessus.
+// The real translator brings nothing here: what is verified is the PATH of a
+// field down to his pill, not the sentence written on it.
 const t = ((key: string) => key) as unknown as Parameters<
   typeof contextChips
 >[1]["t"];
 
-/** Un contexte qui porte UNE pilule de chaque nature ambiante. */
+/** A context that carries ONE pill of each ambient nature. */
 const everything: AssistantPageContext = {
   projectId: "p1",
   issueId: "i1",
@@ -48,7 +48,7 @@ describe("contextChips — la routine", () => {
     expect(routine).toMatchObject({ kind: "routine", label: "Audit sécurité" });
   });
 
-  it("retombe sur un libellé générique quand le titre manque", () => {
+  it("falls back to a generic label when the title is missing", () => {
     const chips = contextChips({ routineId: "r1" }, { t });
     expect(chips.find((c) => c.key === "routine")?.label).toBe("contextRoutine");
   });
@@ -64,22 +64,22 @@ describe("applyContextSelection — ce que l'œil éteint retire", () => {
     const sent = applyContextSelection(everything, new Set(["routine"]));
     expect(sent?.routineId).toBeUndefined();
     expect(sent?.routineTitle).toBeUndefined();
-    // Le reste ne bouge pas : une pilule éteinte n'en éteint pas d'autres.
+    // The rest does not change: one extinguished pill does not extinguish others.
     expect(sent?.feedbackId).toBe("f1");
     expect(sent?.issueId).toBe("i1");
   });
 
-  it("garde la routine tant que sa pilule est allumée", () => {
+  it("keeps the routine while its pill is lit", () => {
     const sent = applyContextSelection(everything, new Set(["feedback"]));
     expect(sent?.routineId).toBe("r1");
   });
 
   /**
-   * Le garde-fou : CHAQUE pilule ambiante doit avoir de quoi s'éteindre. Une
-   * nature ajoutée sans son entrée dans la table passerait tous les tests
-   * ci-dessus et échouerait ici.
-   */
-  it("éteint réellement chacune des pilules d'un contexte complet", () => {
+ * The safeguard: EACH ambient pill must have something to extinguish. A
+ * nature added without its entry in the table would pass all the
+ * tests above and fail here.
+ */
+  it("actually turns off each pill in a complete context", () => {
     for (const chip of contextChips(everything, { t })) {
       const sent = applyContextSelection(everything, new Set([chip.key]));
       const before = Object.keys(everything).length;

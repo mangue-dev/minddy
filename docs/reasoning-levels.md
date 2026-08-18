@@ -1,148 +1,148 @@
-# Le raisonnement de l'agent de code, provider par provider
+# The reasoning of the code agent, provider by provider
 
-> **Date** : 2026-07-29, revu le 2026-08-11 · **Ticket** : MIN-122
+> **Date**: 2026-07-29, reviewed on 2026-08-11 · **Ticket**: MIN-122
 >
-> Ce que l'utilisateur choisit, ce qui part vraiment sur le fil, et ce qui se
-> passe quand le modèle en face n'en veut pas.
+> What the user chooses, what really goes on the thread, and what is
+> passes when the model in front does not want it.
 
-## Ce qui a changé le 2026-08-11 : les paliers sont ceux des MODÈLES
+## What changed on 2026-08-11: the levels are those of the MODELS
 
-Les quatre paliers d'origine (`off` / `low` / `medium` / `high`) étaient les
-mêmes pour tous les modèles. Ils ne le sont plus, parce que les modèles, eux, ne
-le sont pas : OpenRouter publie les paliers acceptés **modèle par modèle** dans
-`/models` (objet `reasoning`, champ `supported_efforts`) — 128 modèles sur 406 en
-déclarent un, et deux d'entre eux ont rarement le même :
+The original four tiers (`off` / `low` / `medium` / `high`) were the
+same for all models. They are no longer, because the models do not
+are not: OpenRouter publishes the accepted levels **model by model** in
+`/models` (object `reasoning`, field `supported_efforts`) — 128 models out of 406 in
+declare one, and two of them are rarely the same:
 
-| Modèle | Ce qu'il accepte |
+| Model | What he accepts |
 | --- | --- |
 | `openai/gpt-5.1` | `low` · `medium` · `high` · `none` |
-| `openai/gpt-5.1-codex-max` | `low` · `medium` · `high` · **`xhigh`**, et `mandatory` (pas de « sans raisonnement ») |
+| `openai/gpt-5.1-codex-max` | `low` · `medium` · `high` · **`xhigh`**, and `mandatory` (no “no reasoning”) |
 | `google/gemini-3.6-flash` | **`minimal`** · `low` · `medium` · `high`, `mandatory` |
-| `anthropic/claude-*` | il raisonne, mais ne publie **aucune** énumération |
-| un modèle sans objet `reasoning` | rien : le sélecteur reste inerte |
+| `anthropic/claude-*` | he reasons, but publishes **no** enumeration |
+| a model without an object `reasoning` | nothing: the selector remains inert |
 
-Le vocabulaire interne s'élargit donc à celui d'OpenRouter — `off`, `minimal`,
-`low`, `medium`, `high`, `xhigh`, `max` — à un mot près : leur `none` est notre
-`off`, qui dit un peu plus (n'envoyer **aucun** champ).
+The internal vocabulary therefore expands to that of OpenRouter — `off`, `minimal`,
+`low`, `medium`, `high`, `xhigh`, `max` — except for one word: their `none` is our
+`off`, which says a little more (do not send **any** fields).
 
-Trois conséquences, toutes dans [lib/agent-reasoning.ts](../lib/agent-reasoning.ts) :
+Three consequences, all in [lib/agent-reasoning.ts](../lib/agent-reasoning.ts):
 
-- **le sélecteur liste ce que le modèle choisi accepte** (`reasoningLevelsFor`),
-  et retombe sur les quatre historiques quand le modèle ne publie rien — un
-  BYOK direct, un modèle hors index. Un palier qu'on ne sait pas nommer est jeté
-  à la lecture de l'index plutôt que deviné ;
-- **un niveau qui ne tient plus est rabattu** (`nearestReasoningLevel`) : d'abord
-  vers le bas, jamais au-dessus de ce qui a été demandé — sauf si le modèle n'a
-  rien de moins cher ;
-- **`xhigh` et `max` ne partent qu'à OpenRouter.** C'est son vocabulaire, et il
-  le rabat lui-même sur ce que le modèle accepte. Les couches compat, elles, ne
-  connaissent que celui de l'API OpenAI : on rabat donc AVANT d'envoyer, parce
-  qu'un champ refusé revient en 400 et tue le round.
+- **the selector lists what the chosen model accepts** (`reasoningLevelsFor`),
+  and falls back on the four histories when the model publishes nothing — a
+  Direct BYOK, a non-index model. A level that we do not know how to name is thrown
+  by reading the index rather than guessing;
+- **a level that no longer holds is lowered** (`nearestReasoningLevel`): first
+  downward, never above what was requested — unless the model has
+  nothing cheaper;
+- **`xhigh` and `max` only go to OpenRouter.** This is its vocabulary, and it
+  the flap itself on what the model accepts. The compat diapers do not
+  only know that of the OpenAI API: we therefore fold BEFORE sending, because
+  that a refused field returns to 400 and kills the round.
 
-La contrainte `CHECK` des deux colonnes concernées a été élargie d'autant
-(`supabase/migrations/20261212090000_agent_reasoning_levels_widen.sql`) : c'est un
-élargissement pur, aucune ligne existante à réécrire.
+The `CHECK` constraint of the two columns concerned has been extended accordingly
+(`supabase/migrations/20261212090000_agent_reasoning_levels_widen.sql`): this is a
+pure enlargement, no existing lines to rewrite.
 
-## Le principe en une phrase
+## The principle in one sentence
 
-**Un seul vocabulaire interne : `effort`.** Les niveaux sont exprimés dans
-`AiChatRequest.reasoning`, puis traduits au dernier moment : `reasoning` chez
-OpenRouter, `reasoning_effort` chez OpenAI/Gemini et `thinking` model-aware chez
-Anthropic. Le contrat et la traduction vivent dans
-[lib/ai-chat.ts](../lib/ai-chat.ts) ; [lib/agent-reasoning.ts](../lib/agent-reasoning.ts)
-ne porte plus de décision propre à une surface.
+**A single internal vocabulary: `effort`.** Levels are expressed in
+`AiChatRequest.reasoning`, then translated at the last moment: `reasoning` at
+OpenRouter, `reasoning_effort` at OpenAI/Gemini and `thinking` model-aware at
+Anthropic. The contract and the translation live in
+[lib/ai-chat.ts](../lib/ai-chat.ts); [lib/agent-reasoning.ts](../lib/agent-reasoning.ts)
+no longer carries a decision specific to a surface.
 
-## Le tableau
+## The table
 
-| Provider | Endpoint | `reasoningField` | Ce qui part sur le fil |
+| Provider | Endpoint | `reasoningField` | What goes on the wire |
 | --- | --- | --- | --- |
 | **OpenRouter** (quota minddy + BYOK) | `openrouter.ai/api/v1/chat/completions` | `reasoning` | `reasoning: { effort: "low"\|"medium"\|"high", exclude: false }` |
 | **OpenAI** (BYOK) | `api.openai.com/v1/chat/completions` | `reasoning_effort` | `reasoning_effort: "low"\|"medium"\|"high"` |
-| **Anthropic** (BYOK) | `api.anthropic.com/v1/chat/completions` | `thinking` | adaptatif sur les familles actuelles ; budget manuel borné seulement quand la famille l'accepte |
+| **Anthropic** (BYOK) | `api.anthropic.com/v1/chat/completions` | `thinking` | adaptive on current families; manual budget limited only when the family accepts it |
 | **Google / Gemini** (BYOK) | `…/v1beta/openai/chat/completions` | `reasoning_effort` | `reasoning_effort: "low"\|"medium"\|"high"` |
-| **Générique** (OpenAI-compatible) | base URL saisie | *(aucun)* | **rien, jamais** |
+| **Generic** (OpenAI-compatible) | base URL entered | *(none)* | **nothing, never** |
 
-À `off`, aucun champ n'est envoyé à OpenRouter/OpenAI/Gemini/generic. Sur une
-famille Claude reconnue, l'adaptateur envoie explicitement
-`thinking: { type: "disabled" }`, car Claude 5 peut raisonner par défaut.
+At `off`, no fields are sent to OpenRouter/OpenAI/Gemini/generic. On a
+Claude family recognized, the adapter explicitly sends
+`thinking: { type: "disabled" }`, because Claude 5 can reason by default.
 
-Exception OpenAI GPT-5.6 : dès que Chat Completions contient des function tools,
-l'adaptateur envoie `reasoning_effort: "none"`, quel que soit le niveau choisi.
-OpenAI refuse cette combinaison avec un effort actif et recommande Responses
-pour conserver à la fois le raisonnement, les tools et le multi-tour.
+OpenAI GPT-5.6 exception: as soon as Chat Completions contains function tools,
+the adapter sends `reasoning_effort: "none"`, regardless of the level chosen.
+OpenAI rejects this combination with active effort and recommends Responses
+to maintain both reasoning, tools and multi-turn.
 
-**Le défaut est `medium`** (« Standard » dans l'UI) : un agent de code gagne à
-réfléchir un peu avant d'agir. `off` a été le défaut le jour de la livraison de
-MIN-122, pour ne rien changer au comportement existant le temps de constater le
-champ sur du vrai ; ce n'était pas le meilleur réglage pour l'utilisateur.
-Le défaut vit à un seul endroit, `DEFAULT_REASONING_LEVEL`
-([lib/agent-reasoning.ts](../lib/agent-reasoning.ts)) : la cascade du serveur
-(`resolveReasoningLevel`), le sélecteur de lancement et le réglage du compte le
-lisent tous. La colonne `agent_runs.reasoning_level` garde, elle, un `default 'off'`
-en base — un filet qui ne sert jamais, `createRun` écrivant toujours le niveau
-résolu.
+**The default is `medium`** (“Standard” in the UI): a code agent gains at
+think a little before acting. `off` was the default on the day of delivery of
+MIN-122, to not change anything in the existing behavior while observing the
+field on the real; this was not the best setting for the user.
+The fault lives in one place, `DEFAULT_REASONING_LEVEL`
+([lib/agent-reasoning.ts](../lib/agent-reasoning.ts)): the server cascade
+(`resolveReasoningLevel`), launch selector and account setting
+everyone reads. The `agent_runs.reasoning_level` column keeps a `default 'off'`
+in base — a net that is never used, `createRun` always writing the level
+resolved.
 
-### Pourquoi le générique reste muet
+### Why the credits remain silent
 
-Sa base URL est un serveur inconnu (vLLM, LM Studio, un proxy maison…). Les
-couches compat *documentées* ignorent les champs inconnus ; un serveur strict, lui,
-répond **400**, et un 400 non reprenable tue le run. Envoyer un champ à un
-endpoint dont on ne sait rien, c'est parier le run de l'utilisateur sur une
-supposition. On ne le fait pas.
+Its base URL is an unknown server (vLLM, LM Studio, an in-house proxy, etc.). The
+*documented* compat layers ignore unknown fields; a strict waiter, he,
+answers **400**, and an unrecoverable 400 kills the run. Send a field to a
+endpoint about which we know nothing, it is betting the user's run on a
+assumption. We don't do it.
 
-## Particularités Anthropic et Gemini
+## Anthropic and Gemini particularities
 
-La couche OpenAI-compatible Anthropic ignore `reasoning_effort`, mais accepte le
-paramètre Anthropic `thinking`. L'adaptateur choisit donc le mode en fonction de
-la famille : adaptatif pour les modèles actuels, manuel uniquement sur les
-familles 4.5/4.6 qui l'acceptent lorsqu'un budget fixe est demandé. Le budget
-manuel reste toujours au moins à 1024 et strictement sous le plafond de sortie.
-Une famille inconnue ne reçoit aucun champ expérimental.
+The OpenAI-compatible Anthropic layer ignores `reasoning_effort`, but accepts the
+Anthropic `thinking` setting. The adapter therefore chooses the mode according to
+the family: adaptive for current models, manual only on
+4.5/4.6 families who accept it when a fixed budget is requested. The budget
+manual always remains at least at 1024 and strictly under the output ceiling.
+An unknown family receives no experimental fields.
 
-Gemini documente au contraire `reasoning_effort` et sa traduction vers
-`thinking_level`/`thinking_budget`. Il ne faut pas envoyer directement le champ
-natif `thinkingConfig` sur la surface OpenAI-compatible.
+Gemini instead documents `reasoning_effort` and its translation to
+`thinking_level`/`thinking_budget`. You should not send the field directly
+native `thinkingConfig` on the OpenAI-compatible surface.
 
-La matrice complète, les sources officielles et les limites de ces couches sont
-tenues dans [l'audit BYOK](audits/byok-provider-compatibility.md).
+The complete matrix, official sources and boundaries of these layers are
+held in [BYOK audit](audits/byok-provider-compatibility.md).
 
-## Ce que chaque niveau veut dire concrètement
+## What each level means in concrete terms
 
-`effort` est un curseur relatif, pas un budget de tokens : c'est le provider qui
-décide combien de tokens de réflexion il accorde, et cela varie d'un modèle à
-l'autre. Ce que minddy garantit, c'est la monotonie — `low` < `medium` < `high` —
-et le fait que `off` ne demande rien.
+`effort` is a relative cursor, not a token budget: it is the provider who
+decides how many reflection tokens it grants, and this varies from model to model
+the other. What minddy guarantees is monotony — `low` < `medium` < `high` —
+and the fact that `off` doesn't ask for anything.
 
-| Niveau | Ce que ça change | Ce que ça coûte |
+| Level | What it changes | What it costs |
 | --- | --- | --- |
-| `off` | Le modèle répond directement. | Rien de plus. |
-| `low` | Une courte passe de réflexion avant d'agir. | +1024 tokens de plafond. |
-| `medium` | Le modèle prend le temps de préparer son travail. | +2048. |
-| `high` | La réflexion la plus longue, pour les tâches difficiles. | +4096. |
+| `off` | The model responds directly. | Nothing more. |
+| `low` | A short thought before acting. | +1024 cap tokens. |
+| `medium` | The model takes the time to prepare her work. | +2048. |
+| `high` | The longest thinking, for difficult tasks. | +4096. |
 
-La colonne « coût » est le relèvement du plafond interne `maxOutputTokens`
-(`reasoningMaxTokens`) : **les tokens de réflexion sont comptés dans le plafond
-de sortie et son alias provider** par les couches compat. Sans ce relèvement, à `high`, la réflexion mangerait
-l'essentiel des 8192 du profil OpenRouter/Anthropic et tronquerait la réponse **et
-les tool-calls** du round.
+The “cost” column is the increase in the internal ceiling `maxOutputTokens`
+(`reasoningMaxTokens`): **reflection tokens are counted towards the cap
+output and its alias provider** by the compat layers. Without this increase, at `high`, the reflection would eat
+most of the 8192 in the OpenRouter/Anthropic profile and would truncate the response **and
+the tool-calls** of the round.
 
-## `high` et le quota minddy
+## `high` and the minddy quota
 
-**Les quatre niveaux sont ouverts à tous**, quota minddy compris. L'abonnement est
-payé : il doit être utilisable en entier.
+**The four levels are open to all**, minddy quota included. The subscription is
+paid: it must be usable in its entirety.
 
-Un plafond « `high` réservé au BYOK » a existé un temps, puis a été retiré — il ne
-protégeait de rien. Les tokens de réflexion sont facturés sur le budget d'usage
-mensuel du plan (`plan.includedUsageUsd`,
-[lib/server/agent/quota.ts](../lib/server/agent/quota.ts)), mais ce budget est
-**déjà** une borne dure : `checkAgentQuota` refuse le lancement quand il est
-épuisé, la boucle s'arrête d'elle-même quand il tombe à zéro en cours de run, et le
-spend-guard garde la clé OpenRouter. Un `high` consomme donc le budget plus vite —
-ce qui est l'affaire de celui qui l'a payé — sans jamais pouvoir le dépasser.
-Restreindre le niveau en plus, c'était une règle à expliquer en échange de rien.
+A “`high` limit reserved for BYOK” existed for a while, then was removed — it does not
+protected from nothing. Reflection tokens are billed from the usage budget
+monthly plan (`plan.includedUsageUsd`,
+[lib/server/agent/quota.ts](../lib/server/agent/quota.ts)), but this budget is
+**already** a hard terminal: `checkAgentQuota` refuses the launch when it is
+exhausted, the loop stops by itself when it drops to zero during the run, and the
+spend-guard keeps the OpenRouter key. A `high` therefore consumes the budget faster —
+which is the business of the one who paid for it - without ever being able to exceed it.
+Restricting the level in addition was a rule to be explained in exchange for nothing.
 
-**Rien à corriger côté comptage** — constaté sur de vrais appels OpenRouter
-(2026-07-29, `anthropic/claude-sonnet-4.5`) :
+**Nothing to correct on the counting side** — observed on real OpenRouter calls
+(2026-07-29, `anthropic/claude-sonnet-4.5`):
 
 ```
 prompt_tokens: 52 · completion_tokens: 170 · total_tokens: 222   (52 + 170 = 222)
@@ -150,88 +150,88 @@ completion_tokens_details.reasoning_tokens: 103
 cost: 0.002706
 ```
 
-`reasoning_tokens` est un **détail de** `completion_tokens`, pas un compteur à
-côté : les tokens de réflexion sont donc déjà dans `completion_tokens` **et** dans
+`reasoning_tokens` is a **detail of** `completion_tokens`, not a counter to
+side: the reflection tokens are therefore already in `completion_tokens` **and** in
 `usage.cost`. `parseOpenRouterUsage` ([lib/server/ai-usage.ts](../lib/server/ai-usage.ts))
-n'a rien à changer — ni pour le quota (compté en USD), ni pour l'affichage des
+has nothing to change — neither for the quota (counted in USD), nor for the display of
 tokens.
 
-Le surcoût est réel et se voit : sur le même prompt court, `off` coûtait
-0.000165 $ et `low` 0.002592 $. Il n'est pas borné par un plafond de niveau — les
-quatre sont ouverts à tous, quota minddy compris — mais par le budget d'usage
-lui-même : `checkAgentQuota` refuse le lancement et la boucle s'arrête d'elle-même
-quand il est épuisé.
+The additional cost is real and can be seen: on the same short prompt, `off` cost
+$0.000165 and `low` $0.002592. It is not limited by a level ceiling — the
+four are open to all, minddy quota included — but by the usage budget
+itself: `checkAgentQuota` refuses the launch and the loop stops by itself
+when he is exhausted.
 
-## Quand le modèle n'est pas capable
+## When the model is not capable
 
-Deux comportements restent possibles, et ils ne se distinguent **qu'à l'exécution** :
+Two behaviors remain possible, and they are distinguished **only at execution**:
 
-1. **Le champ est ignoré.** Le run se déroule normalement, sans réflexion. Rien ne
-   le signale — sinon que le fil n'affichera aucune ligne « Raisonnement ».
-2. **Le champ est rejeté (400).** Cas connu : OpenAI + un modèle non raisonneur
-   (`gpt-4o`, `gpt-4o-mini`). Un 400 n'est pas reprenable : sans garde-fou, il
-   ferait échouer le run.
+1. **The field is ignored.** The run takes place normally, without reflection. Nothing
+   indicates it — otherwise the thread will not display any “Reasoning” lines.
+2. **The field is rejected (400).** Known case: OpenAI + a non-reasoning model
+   (`gpt-4o`, `gpt-4o-mini`). A 400 cannot be taken back: without guardrails, it
+   would cause the run to fail.
 
-Le garde-fou principal est désormais statique : le générique reste muet, et les
-providers connus passent tous par le traducteur model-aware. Un rejet de champ de
-raisonnement n'est pas relancé silencieusement, car cela ferait croire que le
-niveau choisi a été appliqué. Seul l'alias du plafond de sortie peut être retenté,
-une fois, après un 400 qui nomme explicitement cet alias comme non supporté.
+The main safeguard is now static: the credits remain silent, and the
+known providers all go through the model-aware translator. A field rejection of
+reasoning is not restarted silently, because this would make one believe that the
+chosen level has been applied. Only the output ceiling alias can be retried,
+once, after a 400 which explicitly names this alias as unsupported.
 
-**Si un endpoint ignore silencieusement le champ** (niveau choisi, aucun effet
-observable), la bonne réponse est de **retirer sa capacité du registre** plutôt que
-de mentir dans l'UI.
+**If an endpoint silently ignores the field** (level chosen, no effect
+observable), the correct answer is to **remove its capacity from the register** rather than
+to lie in the UI.
 
-## Ce que l'utilisateur voit
+## What the user sees
 
-Le raisonnement **n'est pas streamé**. Il l'était autrefois (une bulle de texte qui
-s'écrivait en direct), ce qui noyait le déroulé du travail sous des pages de
-monologue. À la place :
+The reasoning **is not streamed**. It used to be (a text bubble that
+was written directly), which drowned the progress of the work under pages of
+monologue. Instead:
 
-- pendant la réflexion, une ligne compacte « Raisonnement » (même gabarit qu'un
-  tool-call) avec un **compteur de secondes à droite**, chronométré côté serveur et
-  rediffusé ~4 fois par seconde sur le topic `agent-run:{runId}` ;
-- en fin de round, la trace est persistée (event `thinking` marqué
-  `kind: "reasoning"`, capée à 2000 caractères, avec sa `durationMs`) et reste
-  **repliée** — dépliable pour qui veut la lire.
+- during reflection, a compact “Reasoning” line (same template as a
+  tool-call) with a **seconds counter on the right**, timed on the server side and
+  rebroadcast ~4 times per second on the `agent-run:{runId}` topic;
+- at the end of the round, the trace is persisted (event `thinking` marked
+  `kind: "reasoning"`, capped at 2000 characters, with its `durationMs`) and remains
+  **folded** — unfoldable for anyone who wants to read it.
 
-Le niveau est **figé sur le run** (`agent_runs.reasoning_level`), comme le modèle :
-un run est découpé en chunks repris par des invocations serverless successives, un
-état en mémoire n'y survivrait pas. Le défaut perso vit dans
-`user_agent_preferences.default_reasoning_level` ; `null` (jamais réglé) retombe sur
-`DEFAULT_REASONING_LEVEL`, soit `medium`.
+The level is **frozen on run** (`agent_runs.reasoning_level`), like the model:
+a run is divided into chunks taken up by successive serverless invocations, a
+state in memory would not survive it. The personal flaw lives in
+`user_agent_preferences.default_reasoning_level` ; `null` (never set) falls to
+`DEFAULT_REASONING_LEVEL`, or `medium`.
 
-## Le raisonnement de la compaction
+## The compaction reasoning
 
-L'appel de **compaction** (le résumé du milieu d'historique périmé) ne reçoit
-jamais de niveau de raisonnement : c'est une summarization mécanique, la réflexion
-n'y serait que du coût.
+The **compaction** call (the stale history middle summary) does not receive
+never a level of reasoning: it is a mechanical summarization, reflection
+would only be cost.
 
-## Vérifier
+## Check
 
 ```bash
-npx vitest run lib/agent-reasoning.test.ts   # formes par provider, gate generic, plafond
+npx vitest run lib/agent-reasoning.test.ts   # forms per provider, generic gate, ceiling
 ```
 
-### Ce qui a été vérifié sur du vrai (2026-07-29)
+### What was verified on real (2026-07-29)
 
-Sonde directe sur `openrouter.ai/api/v1/chat/completions` avec la clé plateforme,
-en rejouant le corps que construit `streamCompletionOnce` :
+Direct probe on `openrouter.ai/api/v1/chat/completions` with the platform key,
+by replaying the body that `streamCompletionOnce` constructs:
 
-| Niveau | `reasoning_tokens` | Deltas de raisonnement reçus | Coût |
+| Level | `reasoning_tokens` | Received reasoning deltas | Cost |
 | --- | --- | --- | --- |
-| `off` | 0 | aucun | 0.000165 $ |
-| `low` | 81 | 304 caractères, 1,3 s | 0.002592 $ |
-| `high` | 83 | 311 caractères, 1,7 s | 0.002727 $ |
+| `off` | 0 | none | $0.000165 |
+| `low` | 81 | 304 characters, 1.3 sec | $0.002592 |
+| `high` | 83 | 311 characters, 1.7 sec | $0.002727 |
 
-Trois choses confirmées d'un coup : le champ est **transmis**, il est **respecté**
-(`off` ne produit littéralement aucun token de réflexion), et la trace revient bien
-en `delta.reasoning` — donc le chrono de la boucle a de quoi mesurer.
+Three things confirmed at once: the field is **transmitted**, it is **respected**
+(`off` literally produces no reflection tokens), and the trace returns fine
+in `delta.reasoning` — so the loop timer has something to measure.
 
-### Ce qui reste à constater par provider
+### What remains to be seen by provider
 
-Les BYOK **OpenAI / Anthropic / Gemini directs** n'ont pas été sondés (pas de clé
-de test sous la main). Le cas le plus intéressant y est OpenAI + un modèle **non**
-raisonneur (`gpt-4o-mini`) : c'est le déclencheur attendu du garde-fou 400. Ce
-qu'on vérifie alors, ce n'est pas que le niveau s'applique, c'est que le run **se
-termine quand même**.
+BYOK **OpenAI / Anthropic / Gemini direct** have not been probed (no key
+test on hand). The most interesting case is OpenAI + a **non** model
+reasoner (`gpt-4o-mini`): this is the expected trigger of guardrail 400. This
+that we then check, it is not that the level applies, it is that the run **is
+ends anyway**.

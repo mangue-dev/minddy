@@ -5,14 +5,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { signFeedbackSsoJwt } from "@/lib/feedback/sso-jwt";
 
 /**
- * MIN-345 — l'atterrissage SSO d'un board, du point de vue de ce qui le rend
- * dangereux : une simple navigation `GET` y ouvre une session.
+ * MIN-345 — SSO landing of a board, from the point of view of what makes it
+ * dangerous: a simple navigation `GET` opens a session.
  *
- * Ce qu'on tient ici, et qu'aucun test de `verifyFeedbackSsoJwt` ne peut tenir
- * seul : le jeton est CONSOMMÉ. La vérification de signature dit « ce jeton a
- * été émis par le board » ; elle ne dira jamais « il n'a pas déjà servi ». La
- * différence est toute l'attaque — l'URL traîne dans un `Referer`, un
- * historique, un journal de proxy, et se rejoue.
+ * What we hold here, and that no test of `verifyFeedbackSsoJwt` cannot hold
+ * alone: the token is CONSUMED. Signature verification says “this token has
+ * been issued by the board”; she will never say “he hasn’t already been used”. The
+ * difference is the whole attack — the URL hangs in a `Referer`, a
+ * history, a proxy log, and replays.
  */
 
 const SECRET = "board-sso-secret";
@@ -24,7 +24,7 @@ const board = {
   sso_secret: SECRET as string | null,
 };
 
-/** Les lignes de `feedback_sso_replays`, clés par `board_id.token_id`. */
+/** The lines of `feedback_sso_replays`, keyed by `board_id.token_id`. */
 const consumed = new Set<string>();
 let insertFails = false;
 
@@ -100,15 +100,15 @@ describe("GET /f/<token>/sso", () => {
 
     const replay = await call(jwt);
     expect(landedOnBoard(replay)).toBe(false);
-    // Et surtout : aucune seconde session ouverte.
+    // And above all: no second session open.
     expect(sessions).toHaveLength(1);
   });
 
   /**
-   * Le jeton est signé avec le VRAI secret du board : c'est le cas réel, où le
-   * backend qui signe est libre de son `exp` — notre signeur n'y est pour rien.
-   * Seul le vérificateur peut le refuser, et il doit.
-   */
+ * The token is signed with the REAL secret of the board: this is the real case, where the
+ * backend which signs is free of its `exp` — our signer has nothing to do with it.
+ * Only the verifier can refuse it, and he must.
+ */
   it("refuse un jeton d'un an, pourtant correctement signé", async () => {
     const now = Math.floor(Date.now() / 1000);
     const head = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString(

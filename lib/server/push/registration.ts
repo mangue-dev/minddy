@@ -3,32 +3,32 @@ import "server-only";
 import { isPushInstallationId } from "@/lib/desktop/push-installation";
 
 /**
- * Ce qu'un (ré)enregistrement d'appareil décide de son `enabled` et de sa
+ * What a device (re)registration decides is its `enabled` and its
  * `locale` (MIN-183).
  *
- * DEUX gestes très différents passent par la même route POST :
+ * TWO very different gestures go through the same route POST:
  *
- *   • une ACTIVATION — l'interrupteur des réglages, la permission qu'on vient
- *     d'accorder. Allumer EST son propos ;
- *   • un RAFRAÎCHISSEMENT — la remise d'aplomb au chargement de l'app
- *     (components/push-service-worker.tsx), et le ré-abonnement que le
- *     navigateur déclenche tout seul (`pushsubscriptionchange`). Personne n'a
- *     rien demandé : il ne doit RIEN changer de ce que l'utilisateur a réglé.
+ * • an ACTIVATION — the settings switch, the permission that we just
+ * granted. Switching ON IS its purpose ;
+ * • a REFRESH — the recovery when the app
+ * (components/push-service-worker.tsx) is loaded, and the re-subscription that the
+ * browser triggers on its own (`pushsubscriptionchange`). Nobody asked
+ * anything: they must not change ANYTHING that the user has set.
  *
- * Les confondre coûtait cher, et de façon invisible : `enabled: true` en dur
- * rallumait à chaque chargement de page l'appareil qu'on venait d'éteindre. Le
- * geste marchait sous les doigts, la ligne repassait à « actif » à la navigation
- * suivante — l'interrupteur par appareil, qui est le cœur du ticket, ne tenait
- * pas une seconde page.
+ * Confusing them was expensive, and invisibly: `enabled: true` in hard
+ * restarted the device that had just been turned off each time a page was loaded. The
+ * gesture worked under the fingers, the line returned to "active" at the next navigation
+ * — the switch per device, which is the heart of the ticket, did not hold
+ * a second page.
  *
- * La langue suit la même règle : le service worker n'en a pas à donner (il ne
- * lit pas le cookie `NEXT_LOCALE`). En son absence, on garde celle de la ligne
- * précédente plutôt que de retomber sur l'anglais — un ré-abonnement spontané
- * n'a aucune raison de faire passer un téléphone français en anglais.
+ * The language follows the same rule: the service worker does not have one to give (it does not
+ * read the cookie `NEXT_LOCALE`). In its absence, we keep that of the previous line
+ * rather than falling back to English — a spontaneous re-subscription
+ * has no reason to switch a French telephone to English.
  */
 
-/** L'état de l'appareil AVANT ce POST : sa ligne, ou celle qu'un ré-abonnement
- *  vient de périmer (`oldEndpoint`). `null` quand il n'y en a pas. */
+/** The state of the device BEFORE this POST: its line, or the one that a re-subscription
+ * has just expired (`oldEndpoint`). `null` when there is none. */
 export interface PriorRegistration {
   enabled: boolean;
   locale: string | null;
@@ -42,7 +42,7 @@ export interface ParsedPushRegistration {
   installationId: string | null;
 }
 
-/** Valide la forme locale avant que la route ne fasse le contrôle réseau web. */
+/** Validates the local form before the route does web network checking. */
 export function parsePushRegistration(input: unknown): ParsedPushRegistration | null {
   if (!input || typeof input !== "object") return null;
   const value = input as {
@@ -94,9 +94,9 @@ export function resolveRegistrationState(
       ? input.locale.trim()
       : prior?.locale?.trim() || "en";
   return {
-    // Un rafraîchissement PRÉSERVE ; tout le reste allume. Sans ligne
-    // antérieure, un rafraîchissement porte un abonnement que le serveur ne
-    // connaissait pas : il naît actif, comme une activation.
+    // A PRESERVE refreshment; everything else lights up. Without line
+    // previous, a refresh carries a subscription that the server does not
+    // didn't know: it is born active, like an activation.
     enabled: input.refresh === true ? (prior?.enabled ?? true) : true,
     locale,
   };

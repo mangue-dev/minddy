@@ -35,10 +35,10 @@ export const InlineTextInput = forwardRef<HTMLTextAreaElement, InlineTextInputPr
       if (el && autoFocus && !autoFocusHandledRef.current) {
         autoFocusHandledRef.current = true;
         el.focus({ preventScroll: true });
-        // Un champ pré-rempli arrive avec une PROPOSITION (le nom actuel d'une
-        // vue qu'on renomme, celui qu'on suggère à l'enregistrement) : on la
-        // sélectionne, pour que la première frappe la remplace au lieu de s'y
-        // coller — et Entrée l'accepte telle quelle.
+        // A pre-filled field arrives with a PROPOSAL (the current name of a
+        // view that we rename, the one we suggest for recording): we
+        // select, so that the first hit replaces it instead of jumping to it
+        // paste — and Enter accepts it as is.
         if (el.value) el.select();
       }
     }, [ref, autoFocus]);

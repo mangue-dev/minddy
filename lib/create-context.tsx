@@ -66,19 +66,19 @@ interface OpenIssueOptions {
   status?: IssueStatus;
   objectiveId?: string | null;
   assigneeId?: string | null;
-  /** Ouvre le dialog micro déjà ouvert (raccourci global ⌘⇧D). */
+  /** Opens the already open microphone dialog (global shortcut ⌘⇧D). */
   dictate?: boolean;
 }
 
 interface OpenObjectiveOptions {
   /** Same defaulting as {@link OpenIssueOptions.projectId}. */
   projectId?: string;
-  /** Préremplit le nom — l'ajout rapide depuis un picker d'objectif y passe le
-   *  texte tapé dans la recherche. */
+  /** Prefills the name — quickly adding from a goal picker passes the
+ * typed text into the search. */
   name?: string;
-  /** Rappelé avec l'objectif créé, pour que le picker qui a ouvert le dialog le
-   *  lie à son ticket. Jamais rappelé pour une création dans un AUTRE projet
-   *  (bouton scindé) : l'objectif n'y est pas liable. */
+  /** Recalled with the created objective, so that the picker who opened the dialog
+ * links to his ticket. Never recalled for a creation in ANOTHER project
+ * (split button): the objective is not linkable. */
   onCreated?: (objective: Objective) => void;
 }
 
@@ -101,14 +101,14 @@ function activeObjectiveIdFromUrl(): string | null {
 
 /**
  * App-wide issue/objective creation (MIN-33). Mounts {@link CreateIssueDialog}
- * and {@link ObjectiveDialog} once so "Nouveau ticket/objectif" works from
+ * and {@link ObjectiveDialog} once so "New ticket/objective" works from
  * anywhere — the home page, the cross-project board, the header, the mobile "+"
  * — not just inside a project. The target project defaults to the current route,
  * else the last project a ticket was created in (see {@link lastCreateProjectId}),
  * else the first; both dialogs let the user retarget via their split button.
- * La création de ticket est optimiste et passe par le registre d'écritures en
- * attente + les helpers de cache partagés (MIN-156), comme `createIssue` des
- * deux hooks de board.
+ * Ticket creation is optimistic and goes through the write register en
+ * wait + shared cache helpers (MIN-156), like `createIssue` des
+ * two board hooks.
  *
  * The per-project board keeps its own local dialog for column-scoped presets
  * (a column's "+", objective mode, assigned-to-me) and the `C` shortcut.
@@ -125,8 +125,8 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   // first open and left in place (dialogs stay mounted for reuse).
   const [target, setTarget] = useState<string | null>(null);
   const [issueOpen, setIssueOpen] = useState(false);
-  // Le dialog s'ouvre-t-il en dictée ? Reposé à CHAQUE ouverture, jamais
-  // laissé traîner : sinon un `C` tapé après un ⌘⇧D rallumerait le micro.
+  // Does the dialog open in dictation? Rested at EVERY opening, never
+  // left lying around: otherwise a `C` typed after a ⌘⇧D would turn the microphone back on.
   const [issueDictate, setIssueDictate] = useState(false);
   const [issuePresets, setIssuePresets] = useState<{
     status?: IssueStatus;
@@ -134,10 +134,10 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     assigneeId: string | null;
   }>({ objectiveId: null, assigneeId: null });
   const [objectiveOpen, setObjectiveOpen] = useState(false);
-  // Nom prérempli + destinataire de l'objectif créé, posés par l'ajout rapide
-  // d'un picker. Le rappel vit dans une ref : il ne redessine rien, et il est
-  // CONSOMMÉ à la création — une ouverture suivante (raccourci `O`, en-tête) ne
-  // doit pas relier son objectif au ticket d'avant.
+  // Pre-filled name + recipient of the created objective, set by quick addition
+  // of a picker. The callback lives in a ref: it does not redraw anything, and it is
+  // CONSUMED upon creation — a subsequent opening (shortcut `O`, header) does not
+  // must not link its objective to the previous ticket.
   const [objectiveName, setObjectiveName] = useState<string | undefined>(undefined);
   const objectiveCreatedRef = useRef<((objective: Objective) => void) | null>(null);
 
@@ -145,13 +145,13 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   const { categories } = useCategoriesQuery(target);
   const { objectives } = useObjectivesQuery(target);
 
-  // Optimistic (MIN-40) : la carte apparaît dans le cache du projet ET le board
-  // agrégé dès l'ouverture, le dialog se ferme sans attendre le POST ; réconcilié
-  // au succès, retiré + toast à l'échec. Le realtime propage aux autres clients.
+  // Optimistic (MIN-40): the card appears in the project cache AND the board
+  // aggregated upon opening, the dialog closes without waiting for POST; reconciled
+  // to success, removed + toast to failure. Realtime propagates to other clients.
   const createIssueGlobal = useCallback(
     async (projectId: string, input: CreateIssueInput) => {
-      // Smart-fill (MIN-260) : le serveur remplit le ticket AVANT d'insérer la
-      // ligne, donc pas de carte optimiste — elle serait vide le temps du
+      // Smart-fill (MIN-260): the server fills the ticket BEFORE inserting the
+      // line, so no optimistic map — it would be empty for the duration of
       // remplissage. Cf. [create-issue-deferred](create-issue-deferred.ts).
       if (input.smart_fill) {
         createIssueDeferred({ queryClient, projectId, input, record });
@@ -163,12 +163,12 @@ export function CreateProvider({ children }: { children: ReactNode }) {
         user?.id ?? null,
         queryClient.getQueryData<Issue[]>(["issues", projectId]) ?? []
       );
-      // Inscrite au registre AVANT le patch (MIN-156) : une réponse de GET
-      // partie plus tôt ne peut plus faire disparaître la carte à peine créée.
+      // Registered in the register BEFORE the patch (MIN-156): a GET response
+      // played earlier can no longer make the newly created map disappear.
       const handle = issueWrites.begin({ kind: "insert", row: optimistic });
       insertIssueEverywhere(queryClient, projectId, optimistic);
-      // La carte nomme sa ligne : l'écho temps réel de notre création est
-      // reconnu, pas adopté à côté d'elle (lib/optimistic-issue.ts).
+      // The map names its line: the real-time echo of our creation is
+      // recognized, not adopted alongside it (lib/optimistic-issue.ts).
       void createIssueApi(projectId, { ...input, id: optimistic.id }).then(
         (issue) => {
           insertIssueEverywhere(queryClient, projectId, issue);
@@ -195,9 +195,9 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   const createObjectiveGlobal = useCallback(
     async (projectId: string, input: CreateObjectiveInput) => {
       const objective = await createObjectiveApi(projectId, input);
-      // Posé dans les deux caches qui le lisent (cache du projet + board
-      // cross-projet) avant d'invalider : un ticket lié à cet objectif dans la
-      // foulée affiche son nom et sa couleur tout de suite.
+      // Placed in the two caches that read it (project cache + board
+      // cross-project) before invalidating: a ticket linked to this objective in the
+      // stride displays its name and color immediately.
       insertObjectiveEverywhere(queryClient, projectId, objective);
       void queryClient.invalidateQueries({ queryKey: ["objectives", projectId] });
       return objective;
@@ -205,8 +205,8 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     [queryClient]
   );
 
-  /** Création depuis le dialog, dans le projet visé : c'est celle que l'ajout
-   *  rapide d'un picker attend pour lier l'objectif à son ticket. */
+  /** Creation from the dialog, in the targeted project: this is what the quick addition
+ * of a picker is waiting for to link the objective to his ticket. */
   const createObjectiveForTarget = useCallback(
     async (projectId: string, input: CreateObjectiveInput) => {
       const objective = await createObjectiveGlobal(projectId, input);
@@ -223,8 +223,8 @@ export function CreateProvider({ children }: { children: ReactNode }) {
       if (projectId) return projectId;
       const fromPath = projectIdFromPath(pathname);
       if (fromPath) return fromPath;
-      // Hors projet (accueil, board agrégé, palette) : le dernier projet où un
-      // ticket a été créé, pas le premier de la liste — celui-ci n'est qu'un
+      // Outside of the project (reception, aggregate board, palette): the last project where a
+      // ticket was created, not the first in the list — this one is just one
       // artefact du tri.
       return defaultCreateProjectId(projects, lastCreateProjectId());
     },
@@ -301,23 +301,23 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [projects.length, openCreateIssue, openCreateObjective]);
 
-  // ⌘⇧D partout : « nouveau ticket, à la voix ». C'est le raccourci de dictée,
-  // étendu aux écrans qui n'avaient rien à dicter — au lieu de ne rien faire,
-  // il ouvre le formulaire de création avec le micro déjà ouvert.
+  // ⌘⇧D everywhere: “new ticket, by voice”. This is the dictation shortcut,
+  // extended to screens that had nothing to dictate — instead of doing nothing,
+  // it opens the creation form with the microphone already open.
   //
-  // Il ne PREND jamais la combinaison à qui la porte déjà : chaque bouton de
-  // dictée (panneau du ticket, page Objectifs, dialog d'objectif, retour,
-  // dialog de création lui-même) l'écoute en phase de CAPTURE et fait
-  // `preventDefault`. Ce listener-ci est en phase de bulle, sur la fenêtre :
-  // il passe donc APRÈS eux, et `defaultPrevented` lui dit qu'un micro plus
-  // proche a répondu. Rien à recenser, rien à tenir à jour.
+  // He never TAKES the suit from whoever already wears it: each button of
+  // dictation (ticket panel, Objectives page, objective dialog, return,
+  // creation dialog itself) listens to it in the CAPTURE phase and does
+  // `preventDefault`. This listener is in bubble phase, on the window:
+  // so he goes AFTER them, and `defaultPrevented` tells him that a microphone more
+  // close responded. Nothing to record, nothing to keep up to date.
   useEffect(() => {
     if (projects.length === 0) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (!matchesModShiftCombo(e, "d")) return;
       if (e.defaultPrevented) return;
-      // Un dialog / panneau latéral ouvert tient le clavier (même garde que
-      // `C` et `O` juste au-dessus) : on ne lui empile pas un formulaire.
+      // An open dialog/side panel holds the keyboard (same guard as
+      // `C` and `O` just above): we do not stack a form.
       if (document.querySelector('[role="dialog"][data-state="open"]')) return;
       e.preventDefault();
       openCreateIssue({ dictate: true });
@@ -326,8 +326,8 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [projects.length, openCreateIssue]);
 
-  // Value mémoïsée (MIN-315) : ce provider est traversé par la cascade qui part
-  // d'`AuthProvider`, et ses consommateurs descendent jusqu'aux cartes du board.
+  // Value stored (MIN-315): this provider is crossed by the cascade which leaves
+  // of `AuthProvider`, and its consumers go down to the cards on the board.
   const value = useMemo(
     () => ({
       openCreateIssue,
@@ -360,7 +360,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
           <ObjectiveDialog
             open={objectiveOpen}
             onOpenChange={(next) => {
-              // Fermé sans créer : le rappel du picker meurt avec le dialog.
+              // Closed without creating: the picker callback dies with the dialog.
               if (!next) objectiveCreatedRef.current = null;
               setObjectiveOpen(next);
             }}
@@ -384,9 +384,9 @@ export function useCreate(): CreateContextValue {
   return ctx;
 }
 
-/** Même contexte, mais toléré absent : les composants partagés avec le board
- *  PUBLIC (les cartes) n'ont personne pour monter les dialogs de création, et
- *  cachent simplement ce qui en dépend. */
+/** Same context, but tolerated absent: the components shared with the board
+ * PUBLIC (the boards) have no one to mount the creation dialogs, and
+ * simply hide what depends on them. */
 export function useCreateOptional(): CreateContextValue | null {
   return useContext(CreateContext);
 }

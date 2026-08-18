@@ -1,18 +1,16 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
 /**
- * MIN-154, moitié 2 : le garde anti-rafales de `refreshForgeAccountNames`.
+ * MIN-154, half 2: the burst guard from `refreshForgeAccountNames`.
  *
- * Ce qu'il doit tenir tient en deux phrases. **Un seul aller-retour de forge**
- * par fenêtre — la page des réglages monte ses deux requêtes ensemble
- * (`useGitIdentitiesQuery` + `useGitConnectionsQuery`), et ouvrir l'onglet ne
- * doit pas rejouer trois appels. Mais **les deux requêtes lisent après
- * l'écriture** : un garde qui se contenterait de dater la passe laisserait la
- * seconde retourner en base avant que la première y ait écrit, et le nom périmé
- * s'afficherait sur le chargement même qui devait le corriger.
+ * What he should be holding is two sentences. **Only one forge round trip**
+ * per window — the settings page mounts its two requests together
+ * (`useGitIdentitiesQuery` + `useGitConnectionsQuery`), and opening the tab does not have to replay three calls. But **both queries read after
+ * writing**: a guard who simply dates the pass would let the second one return to base before the first one had written there, and the expired name
+ * would appear on the very load that was supposed to correct it.
  *
- * La forge est tenue en laisse ici (`forgeAnswer`) : c'est la seule façon de
- * placer la seconde requête PENDANT la première, là où le bug vivait.
+ * The forge is on a leash here (`forgeAnswer`): this is the only way to
+ * place the second request DURING the first, where the bug lived.
  */
 
 let stored: string;
@@ -45,7 +43,7 @@ vi.mock("./github-user-auth", () => ({
   },
 }));
 
-// Les deux autres branches ne sont pas le sujet : muettes, elles ne masquent ni
+// The other two branches are not the subject: silent, they neither mask nor
 // ne retardent celle qu'on observe.
 vi.mock("./connections", () => ({
   findReusableConnection: async () => null,
@@ -59,19 +57,19 @@ vi.mock("./gitlab-app", () => ({
 }));
 
 beforeEach(() => {
-  // Le garde est un `Map` de module : sans ça, le second test hériterait de la
-  // fenêtre ouverte par le premier.
+  // The guard is a module `Map`: without it, the second test would inherit the
+  // window opened by the first.
   vi.resetModules();
   stored = "ancien-nom";
   forgeCalls = 0;
   armForge();
 });
 
-it("fait attendre la requête concurrente au lieu de la laisser lire l'ancien nom", async () => {
+it("makes the concurrent request wait instead of letting it read the old name", async () => {
   const { refreshForgeAccountNames } = await import("./account-refresh");
 
   const first = refreshForgeAccountNames("user-1");
-  // Ce que la SECONDE requête verrait en base au moment où on lui rend la main.
+  // What the SECOND request would see in the base when we give it back control.
   let seenBySecond: string | null = null;
   const second = refreshForgeAccountNames("user-1").then(() => {
     seenBySecond = stored;
@@ -84,7 +82,7 @@ it("fait attendre la requête concurrente au lieu de la laisser lire l'ancien no
   expect(seenBySecond).toBe("nouveau-nom");
 });
 
-it("ne redemande rien à la forge dans la fenêtre du garde", async () => {
+it("does not ask the forge again during the guard window", async () => {
   const { refreshForgeAccountNames } = await import("./account-refresh");
 
   releaseForge();
@@ -94,7 +92,7 @@ it("ne redemande rien à la forge dans la fenêtre du garde", async () => {
   expect(forgeCalls).toBe(1);
 });
 
-it("garde une fenêtre par utilisateur", async () => {
+it("keeps a window per user", async () => {
   const { refreshForgeAccountNames } = await import("./account-refresh");
 
   releaseForge();

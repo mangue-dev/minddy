@@ -18,23 +18,23 @@ import { errorReason } from "@/lib/analytics-sanitize";
 import { authErrorMessage } from "@/lib/auth-errors";
 import { MIN_PASSWORD_LENGTH, passwordMeetsPolicy } from "@/lib/password-policy";
 
-/** Où l'on atterrit une fois le mot de passe changé : la session est ouverte. */
+/** Where we land once the password has been changed: the session is open. */
 const AFTER_RESET = "/home";
 
 /**
- * Le bout du parcours « mot de passe oublié » (MIN-297) : on choisit le nouveau.
+ * The end of the “forgotten password” route (MIN-297): we choose the new one.
  *
- * On n'arrive ici qu'avec une SESSION — celle qu'a ouverte `/auth/confirm` en
- * consommant le jeton du lien reçu. D'où la forme de l'écran : pas de champ
- * « ancien mot de passe » (il est précisément ce qu'on a perdu), et pas de jeton
- * dans l'URL non plus. Sans session, il n'y a rien à faire ici, et l'écran le
- * dit au lieu d'afficher un formulaire qui échouerait à la soumission.
+ * We only arrive here with a SESSION — the one opened by `/auth/confirm` in
+ * consuming the received link token. Hence the shape of the screen: no field
+ * “old password” (it is precisely what we lost), and no token
+ * in the URL either. Without a session, there is nothing to do here, and the screen
+ * said instead of displaying a form that would fail on submission.
  *
- * **Le second facteur reste exigé** (MIN-132). Un lien de réinitialisation ouvre
- * une session `aal1` : sans ce pas, une boîte mail compromise suffirait à
- * reprendre un compte protégé par 2FA, et le facteur ne servirait plus à rien
- * précisément le jour où il sert. Le même composant que la connexion s'en
- * charge, avec le même filet « je n'ai plus mon téléphone ».
+ * **The second factor remains required** (MIN-132). A reset link opens
+ * a `aal1` session: without this step, a compromised mailbox would be enough to
+ * take back an account protected by 2FA, and the postman would no longer be of any use
+ * precisely the day he serves. The same component as the connection
+ * charge, with the same net “I no longer have my phone”.
  */
 export function ResetPasswordForm() {
   const t = useTranslations("Auth");
@@ -49,9 +49,9 @@ export function ResetPasswordForm() {
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * `unknown` = on n'a pas encore regardé, donc on n'affiche NI le formulaire NI
-   * le challenge : montrer l'un puis l'autre ferait clignoter l'écran à chaque
-   * arrivée. Même parti pris que l'écran de connexion.
+   * `unknown` = we have not yet looked, so we neither display the form nor
+   * the challenge: showing one then the other would cause the screen to flash each time
+   * arrival. Same bias as the login screen.
    */
   const [mfaStep, setMfaStep] = useState<"unknown" | "none" | "required">("unknown");
   useEffect(() => {
@@ -71,9 +71,9 @@ export function ResetPasswordForm() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    // La politique d'abord : elle est AFFICHÉE, règle par règle, sous le champ.
-    // Comparer les deux saisies avant de la tenir ferait apparaître « ne
-    // correspondent pas » sur un mot de passe que le serveur allait refuser.
+    // The policy first: it is DISPLAYED, rule by rule, under the field.
+    // Comparing the two entries before holding it would bring up “do not
+    // do not match” on a password that the server would refuse.
     if (!passwordMeetsPolicy(password)) {
       setError(t("passwordPolicy"));
       return;
@@ -90,10 +90,10 @@ export function ResetPasswordForm() {
       toast.success(t("resetDone"));
       router.replace(AFTER_RESET);
     } catch (err) {
-      // Le refus brut dans la console : l'appel part du navigateur vers
-      // Supabase, il n'y a rien à lire côté Vercel. Les deux refus attendus
-      // ici sont `weak_password` (mot de passe connu d'une fuite — le contrôle
-      // HIBP est actif côté serveur) et `same_password`.
+      // Raw refusal in the console: the call goes from the browser to
+      // Supabase, there is nothing to read on the Vercel side. The two expected refusals
+      // here are `weak_password` (known leaked password — the check
+      // HIBP is active on the server side) and `same_password`.
       console.error("[reset-password] refus de Supabase Auth:", err);
       track("password_reset_failed", { reason: errorReason(err) });
       setError(authErrorMessage(err, t));
@@ -112,8 +112,8 @@ export function ResetPasswordForm() {
     );
   }
 
-  // Pas de session : le lien a déjà servi, ou trop de temps a passé. La sortie
-  // est un NOUVEAU lien, pas la page de connexion — c'est ce qu'on est venu
+  // No session: the link has already been used, or too much time has passed. The exit
+  // is a NEW link, not the login page — that's what we came for
   // chercher.
   if (!user) {
     return (
@@ -141,8 +141,8 @@ export function ResetPasswordForm() {
         <MfaChallenge
           onVerified={() => setMfaStep("none")}
           onRecovered={async () => {
-            // La 2FA vient d'être coupée : rafraîchir le jeton avant de
-            // continuer, sinon la suite de l'écran lit encore l'ancien drapeau.
+            // 2FA has just been cut: refresh the token before
+            // continue, otherwise the rest of the screen still reads the old flag.
             await refreshUser();
             toast.success(t("mfaDisabledNotice"));
             setMfaStep("none");

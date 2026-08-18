@@ -7,8 +7,8 @@ import {
 } from "./branch-cleanup-core";
 import type { PullRequestRef } from "@/lib/server/agent/pr";
 
-// La partie PURE de la gestion des branches d'agent (MIN-102) — la partie qui
-// parle à la base et à la forge vit dans branch-cleanup.ts et n'est pas testable
+// The PURE part of agent branch management (MIN-102) — the part that
+// talks to base and forge lives in branch-cleanup.ts and is not testable
 // en node (server-only).
 
 const DEFAULT_BRANCH = "main";
@@ -17,7 +17,7 @@ const MERGED_BRANCH = `${AGENT_BRANCH_PREFIX}min-42-abcd1234`;
 const REJECTED_BRANCH = `${AGENT_BRANCH_PREFIX}min-43-beef5678`;
 const BARE_BRANCH = `${AGENT_BRANCH_PREFIX}min-44-cafe9012`;
 
-/** PR minimale : seuls `head`, l'état et le numéro comptent ici. */
+/** Minimum PR: only `head`, state and number matter here. */
 function pull(over: Partial<PullRequestRef> & { number: number }): PullRequestRef {
   return {
     url: `https://github.com/acme/app/pull/${over.number}`,
@@ -40,7 +40,7 @@ const rejected = pull({
   createdAt: "2026-07-02T10:00:00Z",
 });
 
-/** Les trois branches d'agent, telles que `agent_runs` les a enregistrées. */
+/** The three agent branches, as `agent_runs` registered them. */
 const ALL_KNOWN = [MERGED_BRANCH, REJECTED_BRANCH, BARE_BRANCH];
 const ALL_REMOTE = new Set(ALL_KNOWN);
 
@@ -161,7 +161,7 @@ describe("selectAgentBranches", () => {
     });
     const result = select([merged, older], [MERGED_BRANCH]);
     expect(result).toHaveLength(1);
-    // La plus RÉCENTE porte l'état affiché : ici la fusionnée.
+    // The most RECENT has the displayed state: here the merged one.
     expect(result[0]).toMatchObject({ prNumber: 1, state: "merged" });
   });
 

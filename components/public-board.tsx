@@ -17,12 +17,11 @@ import type {
 } from "@/lib/types";
 
 /** One card of the public board, precomputed server-side (parent/relations
-    resolve against ALL project issues, which never reach the client).
+ resolve against ALL project issues, which never reach the client).
 
-    `issue` est une PROJECTION, pas un `Issue` (MIN-342) : ce composant est le
-    seul destinataire client de la page partagée, donc tout ce qu'il déclare
-    finit dans le HTML lu par un anonyme. Voir
-    [lib/public-board-projection.ts](lib/public-board-projection.ts). */
+ `issue` is a PROJECTION, not a `Issue` (MIN-342): this component is the only recipient client of the shared page, so everything it declares
+ ends up in the HTML read by an anonymous person. See
+ [lib/public-board-projection.ts](lib/public-board-projection.ts). */
 export interface PublicCard {
   issue: IssueCardIssue;
   parentNumber?: number;
@@ -44,9 +43,9 @@ export function PublicBoard({
   categories,
   objectives,
 }: {
-  /** Déjà TRIÉES côté serveur, dans l'ordre de la vue : le comparateur lit
-      `position`, `created_at` et `updated_at`, qu'une carte n'affiche pas et
-      qui n'ont donc plus à voyager. */
+  /** Already SORTED on the server side, in view order: the comparator reads
+ `position`, `created_at` and `updated_at`, which a map does not display and
+ which therefore no longer have to travel. */
   cards: PublicCard[];
   config: ViewConfig;
   projectKey: string;

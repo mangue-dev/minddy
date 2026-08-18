@@ -9,14 +9,14 @@ describe("defaultAgentProjectId", () => {
   });
 
   it("falls back to the first project when nothing was launched yet", () => {
-    // La liste arrive triée par `updated_at` : le premier est le projet touché
-    // le plus récemment, pas un premier de tri arbitraire.
+    // The list arrives sorted by `updated_at`: the first is the affected project
+    // most recently, not an arbitrary sort prime.
     expect(defaultAgentProjectId(projects, null)).toBe("a");
   });
 
   it("falls back when the remembered project is gone", () => {
-    // L'id vit dans le navigateur : le projet a pu être supprimé, l'accès
-    // perdu, ou un autre compte être connecté sur la même machine.
+    // The id lives in the browser: the project could have been deleted, access
+    // lost, or another account be connected on the same machine.
     expect(defaultAgentProjectId(projects, "deleted")).toBe("a");
   });
 

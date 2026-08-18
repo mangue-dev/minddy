@@ -11,26 +11,24 @@ import { useNotifications } from "./use-notifications";
 import type { MyNotification } from "./types";
 
 /**
- * Les notifications natives de l'app de bureau (MIN-291) — **zéro
- * infrastructure neuve**.
+ * Desktop app native notifications (MIN-291) — **zero
+ * new infrastructure**.
  *
- * Le pont temps réel de MIN-89 est déjà abonné à TOUS les projets de
- * l'utilisateur et rafraîchit `["notifications"]` à chaque écriture : la liste
- * qu'on lit ici arrive donc d'elle-même, sans table, sans clé, sans émetteur.
- * Il n'y a plus qu'à en faire des bannières. Le renderer les émet et Electron
- * les rend natives ; c'est le même `new Notification()` que le web, vérifié
- * dans une vraie fenêtre par la sonde de MIN-290 (permission déjà `granted`).
+ * The MIN-89 real-time bridge is already subscribed to ALL projects of
+ * the user and refreshes `["notifications"]` at each writing: the list
+ * that we read here therefore arrives by itself, without table, without key, without issuer.
+ * All that remains is to make banners. The renderer emits them and Electron
+ * makes them native; it's the same `new Notification()` as the web, verified
+ * in a real window by the MIN-290 probe (permission already `granted`).
  *
- * **Ce qu'on ne fait pas, et qui est assumé** : app quittée, plus rien. Pas
- * d'APNS, pas de FCM. Qui veut être prévenu à coup sûr garde le web, qui a le
- * vrai push depuis MIN-183 (§3 de docs/desktop-electron.md).
+ * **What we don't do, and which is assumed**: app left, nothing left. No
+ * APNS, no FCM. Who wants to be warned for sure keeps the web, which has the
+ * real push since MIN-183 (§3 of docs/desktop-electron.md).
  *
- * ## L'amorçage silencieux
+ * ## Silent boot
  *
- * Au premier passage, on ENREGISTRE la liste sans rien afficher. Sans ça,
- * ouvrir l'app le matin ferait tomber trente bannières d'un coup — des choses
- * qui se sont passées hier, dont aucune n'est un événement du moment. La
- * première liste n'est pas une nouvelle : c'est un état.
+ * On the first pass, we SAVES the list without displaying anything. Without that, opening the app in the morning would drop thirty banners at once — things that happened yesterday, none of which are current events. The
+ * first list is not news: it is a state.
  */
 export function useDesktopNotifications(): void {
   const { notifications, unreadCount } = useNotifications();
@@ -39,13 +37,13 @@ export function useDesktopNotifications(): void {
   const tIssue = useTranslations("Issue");
   const tTimeline = useTranslations("Timeline");
 
-  /** `null` tant que la première liste n'est pas arrivée (cf. amorçage). */
+  /** `null` until the first list has arrived (see seeding). */
   const seen = useRef<Set<string> | null>(null);
-  /** Les bannières encore à l'écran, pour les refermer quand la ligne est lue. */
+  /** The banners still on the screen, to close them when the line is read. */
   const shown = useRef(new Map<string, Notification>());
 
-  // Le compteur du dock : le chiffre exact des non-lues, celui-là même que
-  // porte la barre latérale. `0` retire la pastille.
+  // The dock counter: the exact number of unread numbers, the same one that
+  // carries the sidebar. `0` removes the token.
   useEffect(() => {
     getDesktopBridge()?.setBadgeCount(unreadCount);
   }, [unreadCount]);
@@ -53,9 +51,9 @@ export function useDesktopNotifications(): void {
   useEffect(() => {
     const bridge = getDesktopBridge();
     if (!bridge) return;
-    // MIN-356 : les coquilles récentes reçoivent la même ligne par APNs, même
-    // quand elles sont quittées. Garder aussi le relais realtime afficherait
-    // chaque événement deux fois. Les anciennes coquilles conservent ce repli.
+    // MIN-356: recent shells receive the same line by APNs, even
+    // when they are left. Also keeping the realtime relay would display
+    // each event twice. The old shells retain this fold.
     if (bridge.registerForPushNotifications) return;
     if (typeof Notification === "undefined") return;
 
@@ -70,9 +68,9 @@ export function useDesktopNotifications(): void {
       if (!n.read_at) fresh.push(n);
     }
 
-    // La liste arrive du plus récent au plus ancien ; les bannières s'empilent
-    // dans l'ordre d'émission. On part donc de la plus ancienne pour que la
-    // plus récente finisse SUR LE DESSUS de la pile.
+    // The list goes from newest to oldest; the banners are stacking up
+    // in the order of issue. We therefore start from the oldest so that the
+    // most recent ends up ON TOP of the stack.
     if (Notification.permission === "granted") {
       const labels = {
         someone: t("someone"),
@@ -92,13 +90,13 @@ export function useDesktopNotifications(): void {
           body: n.comment_excerpt
             ? `${sentence} : ${n.comment_excerpt}`
             : sentence,
-          // Le `tag` est le chemin de destination, comme côté web (public/sw.js) :
-          // deux notifications sur la même cible se REMPLACENT au lieu d'empiler.
+          // The `tag` is the destination path, like on the web side (public/sw.js):
+          // two notifications on the same target REPLACE each other instead of stacking.
           ...(path ? { tag: path } : {}),
         });
         native.onclick = () => {
-          // La fenêtre d'abord : le clic est livré au renderer, qui est derrière
-          // ce que l'utilisateur regardait. Naviguer sans réveiller ne montre rien.
+          // The window first: the click is delivered to the renderer, which is behind
+          // what the user was looking at. Browsing without waking up shows nothing.
           bridge.focus();
           if (path) router.push(path);
           native.close();
@@ -108,9 +106,9 @@ export function useDesktopNotifications(): void {
       }
     }
 
-    // Lue ailleurs (un autre appareil, la page d'inbox, un clic) : la bannière
-    // n'a plus rien à annoncer. Une notification système ne s'efface pas toute
-    // seule — c'est le même constat que lib/push/dismiss.ts côté web.
+    // Read elsewhere (another device, the inbox page, one click): the banner
+    // has nothing more to announce. A system notification does not clear completely
+    // alone — this is the same observation as lib/push/dismiss.ts on the web side.
     const byId = new Map(notifications.map((n) => [n.id, n]));
     for (const [id, native] of shown.current) {
       const row = byId.get(id);
@@ -119,8 +117,8 @@ export function useDesktopNotifications(): void {
       shown.current.delete(id);
     }
 
-    // Le registre suit la liste plutôt que de grossir indéfiniment : une ligne
-    // supprimée en sort, et elle n'y reviendra pas.
+    // The register follows the list rather than growing indefinitely: one line
+    // deleted leaves it, and it won't come back.
     seen.current = new Set(byId.keys());
   }, [notifications, router, t, tIssue, tTimeline]);
 }

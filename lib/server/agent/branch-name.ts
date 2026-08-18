@@ -1,10 +1,10 @@
 /**
- * Convention des branches de travail créées par l'agent.
+ * Convention for work branches created by the agent.
  *
- * Un ticket est identifié par sa clé (`MIN-42`). Une conversation sans ticket
- * n'a pas de clé équivalente : son titre, puis son premier prompt, donnent le
- * libellé humain. Le préfixe reste toujours `agent`, jamais `note` — le carnet
- * n'est qu'un point d'entrée parmi les conversations de Numo.
+ * A ticket is identified by its key (`MIN-42`). A conversation without a ticket
+ * does not have an equivalent key: its title, then its first prompt, gives the
+ * human label. The prefix always remains `agent`, never `note` — the notebook
+ * is just an entry point into Numo's conversations.
  */
 
 const MAX_LABEL_LENGTH = 72;

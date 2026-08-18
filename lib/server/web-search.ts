@@ -19,55 +19,54 @@ import {
 } from "@/lib/ai-chat";
 
 /**
- * Recherche web de Numo — le SEUL chemin d'accès au web de l'app.
+ * Numo web search — the ONLY web path for the app.
  *
- * Elle passe par le plugin `web` d'OpenRouter (moteur Exa forcé), jamais par un
- * service de recherche tiers : une seule clé, une seule facture, un seul ledger.
- * OpenRouter n'expose pas d'endpoint de recherche isolé — le plugin injecte les
- * résultats dans le prompt d'une complétion. On fait donc UN sous-appel dédié,
- * sur un petit modèle, dont la question EST la requête : la recherche reste un
- * tool explicite (le modèle appelant décide quand chercher) et son coût est une
- * ligne de ledger à part.
+ * It goes through the OpenRouter `web` plugin (forced Exa engine), never through a
+ * third-party search service: one key, one invoice, one ledger.
+ * OpenRouter does not expose an isolated search endpoint — the plugin injects the
+ * results into a completion prompt. We therefore make ONE dedicated subcall,
+ * on a small model, whose question IS the query: the search remains an explicit
+ * tool (the calling model decides when to search) and its cost is a separate
+ * ledger line.
  *
- * COÛT — mesuré le 2026-07-27, même requête, même modèle :
- *   sans plugin : usage.cost = $0.0000070
- *   avec plugin : usage.cost = $0.0050820 (dont upstream_inference $0.0000820)
- * L'écart est exactement le forfait Exa ($0.005 par requête, jusqu'à 10
- * résultats). Autrement dit `usage.cost` INCLUT la recherche : la ligne
- * `ai_usage` écrite ici compte le vrai prix, sans calcul maison.
+ * COST — measured on 2026-07-27, same request, same model:
+ * without plugin: usage.cost = $0.0000070
+ * with plugin: usage.cost = $0.0050820 (including upstream_inference $0.0000820)
+ * The difference is exactly the Exa package ($0.005 per query, up to 10
+ * results). In other words `usage.cost` INCLUDES the search: the line
+ * `ai_usage` written here counts the real price, without in-house calculation.
  *
- * Le moteur est épinglé à `exa` volontairement : laissé libre, OpenRouter route
- * vers la recherche NATIVE du provider (OpenAI, Anthropic, Google, xAI) dont le
- * prix est un passthrough variable. Exa = tarif plat, prévisible.
+ * The engine is pinned to `exa` voluntarily: left free, OpenRouter route
+ * to the NATIVE search of the provider (OpenAI, Anthropic, Google, xAI) whose price is a variable passthrough. Exa = flat, predictable price.
  */
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-/** Clés `app_config` (réglables depuis /admin, cf. lib/ai-model-config.ts). */
+/** `app_config` keys (adjustable from /admin, see lib/ai-model-config.ts). */
 export const WEB_SEARCH_MODEL_CONFIG_KEY = "web_search_model";
 export const WEB_SEARCH_ENABLED_CONFIG_KEY = "web_search_enabled";
 
-/** Forfait Exa par recherche, tel que facturé par OpenRouter (USD, indicatif). */
+/** Exa plan per search, as billed by OpenRouter (USD, indicative). */
 export const WEB_SEARCH_USD_PER_CALL = 0.005;
 
-/** Résultats demandés — le forfait est le même de 1 à 10, seul le prompt grossit. */
+/** Requested results — the package is the same from 1 to 10, only the prompt increases. */
 const DEFAULT_MAX_RESULTS = 5;
 const MAX_RESULTS_CAP = 10;
 
 const MAX_QUERY_CHARS = 400;
 const MAX_ANSWER_TOKENS = 800;
-/** Extrait conservé par source (le modèle appelant a déjà la synthèse). */
+/** Excerpt kept by source (the calling model already has the summary). */
 const MAX_SNIPPET_CHARS = 700;
 const TIMEOUT_MS = 45_000;
 
 /**
- * Base de `seq` des lignes `web_search` d'un run : hors de la bande des appels
- * LLM (rounds 0..n) pour qu'un ordre d'affichage reste lisible. Les agents de
- * code utilisent déjà 1e9 pour `sandbox_compute` — d'où 1,5e9 ici.
+ * Base of `seq` of the `web_search` lines of a run: outside the band of calls
+ * LLM (rounds 0..n) so that a display order remains readable. The
+ * code agents already use 1e9 for `sandbox_compute` — hence 1.5e9 here.
  */
 export const WEB_SEARCH_SEQ_BASE = 1_500_000_000;
 
-/** Plafond de recherches par tour (une réponse Numo, un tour d'agent). */
+/** Research cap per turn (one Numo response, one agent turn). */
 export const MAX_WEB_SEARCHES_PER_TURN = 5;
 
 export interface WebSource {
@@ -97,7 +96,7 @@ function cap(text: string, max: number): string {
   return text.length <= max ? text : `${text.slice(0, max)}…`;
 }
 
-/** Réglages de la recherche web (cache app_config de 60 s). */
+/** Web search settings (app_config cache of 60 s). */
 export async function getWebSearchSettings(): Promise<{
   enabled: boolean;
   model: string;
@@ -107,21 +106,21 @@ export async function getWebSearchSettings(): Promise<{
     ...modelConfigKeys(WEB_SEARCH_MODEL_CONFIG_KEY),
   ]);
   return {
-    // Absent = activé (miroir du fallback du registre admin).
+    // Absent = enabled (mirror of admin registry fallback).
     enabled: cfg[WEB_SEARCH_ENABLED_CONFIG_KEY]?.trim() !== "false",
     model: resolveFromValues(WEB_SEARCH_MODEL_CONFIG_KEY, cfg).model,
   };
 }
 
-/** Le drapeau admin seul — pour décider d'OFFRIR le tool ou non. */
+/** The admin flag alone — to decide whether to OFFER the tool or not. */
 export async function isWebSearchEnabled(): Promise<boolean> {
   return (await getWebSearchSettings()).enabled;
 }
 
 /**
- * Retire `web_search` d'un jeu de tools. Un tool coupé côté admin ne doit pas
- * être proposé au modèle : il le gaspillerait un round pour se voir refuser.
- * Générique sur la forme des deux registres (assistant et agent).
+ * Removes `web_search` from a toolset. A tool cut on the admin side must not
+ * be offered to the model: it would waste a round to be refused.
+ * Generic on the form of the two registers (assistant and agent).
  */
 export function withoutWebSearch<T extends { function: { name: string } }>(
   tools: T[]
@@ -146,13 +145,13 @@ interface CompletionResponse {
 }
 
 /**
- * UNE recherche web. Sous-appel OpenRouter non streamé : le plugin `web` cherche,
- * injecte les extraits, le petit modèle répond. Les sources sortent des
- * `annotations` (`url_citation`) de la réponse.
+ * A web search. Non-streamed OpenRouter subcall: plugin `web` searches,
+ * injects extracts, small model responds. The sources come out of the answer.
+ * `annotations` (`url_citation`) .
  */
 export async function runWebSearch(params: {
   query: string;
-  /** Clé OpenRouter (plateforme, ou BYOK OpenRouter de l'utilisateur). */
+  /** OpenRouter key (platform, or user's OpenRouter BYOK). */
   apiKey: string;
   model: string;
   maxResults?: number;
@@ -160,14 +159,14 @@ export async function runWebSearch(params: {
 }): Promise<WebSearchOutcome> {
   const base = stripModelSuffix(params.model);
   const first = await attemptWebSearch(params);
-  // Repli du raccourci de routage (MIN-263) : on ne rejoue que sur un REFUS —
-  // un timeout rejoué mettrait la réponse de Numo à 90 s pour rien.
+  // Fallback of the routing shortcut (MIN-263): we only replay on a REFUSAL —
+  // a replayed timeout would put Numo's response at 90 s for nothing.
   if (first.outcome.ok || !first.refused || base === params.model) return first.outcome;
   console.warn(`[web-search] ${params.model} refused, retrying on ${base}`);
   return (await attemptWebSearch({ ...params, model: base })).outcome;
 }
 
-/** Un essai, et si c'est un échec, s'il vaut la peine d'être rejoué sans suffixe. */
+/** A try, and if it's a failure, whether it's worth replaying without a suffix. */
 async function attemptWebSearch(params: {
   query: string;
   apiKey: string;
@@ -276,18 +275,18 @@ async function attemptWebSearch(params: {
 }
 
 /**
- * La recherche telle que l'appellent les tools (Numo chat, @Numo en commentaire,
- * agents de code) : réglages admin, appel, écriture de la ligne `web_search` au
- * ledger, résultat prêt à renvoyer au modèle. Même forme de retour que les autres
- * tools des deux boucles (`{ result, success }`).
+ * The search as called by the tools (Numo chat, @Numo in comment,
+ * code agents): admin settings, call, writing of the line `web_search` to
+ * ledger, result ready to send back to the model. Same return form as the others
+ * tools of the two loops (`{ result, success }`).
  *
- * L'imputation vient de l'appelant (`billTo`) : la recherche est un sous-appel du
- * tour, elle se facture à qui se facture le tour. Le coût enregistré inclut le
- * forfait de recherche.
+ * The imputation comes from the caller (`billTo`): the search is a subcall of the
+ * round, it is billed to whoever is billed for the round. The recorded cost includes the
+ * research package.
  */
 export async function runWebSearchTool(params: {
   query: string;
-  /** Repli historique/tests. Avec un user, la clé et le modèle se résolvent par surface. */
+  /** Historical fallback/tests. With a user, the key and model resolve by surface. */
   apiKey?: string;
   userId?: string;
   surface?: AiSurface;
@@ -315,9 +314,9 @@ export async function runWebSearchTool(params: {
       }).catch(() => null)
     : null;
 
-  // Le plugin `web` est une capacité OpenRouter, pas une extension du standard
-  // OpenAI-compatible. Une clé native reste donc sur le quota Minddy pour CE
-  // sous-appel ; une clé OpenRouter, elle, utilise bien son modèle par feature.
+  // The `web` plugin is an OpenRouter capability, not an extension of the standard
+  // OpenAI-compatible. A native key therefore remains on the Minddy quota for CE
+  // subcall; an OpenRouter key uses its model per feature.
   const byokOpenRouter = runtime?.provider === "openrouter" ? runtime : null;
   const apiKey =
     byokOpenRouter?.apiKey ??

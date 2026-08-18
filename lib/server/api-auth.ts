@@ -38,40 +38,40 @@ export function createSupabaseFromRequest(request: NextRequest): SupabaseClient 
 }
 
 /**
- * Le même client, mais qui SAIT ÉCRIRE les cookies rafraîchis (MIN-293).
+ * The same client, but which KNOWS WRITE refreshed cookies (MIN-293).
  *
- * ## Pourquoi il existe, et pourquoi il ne remplace pas le précédent
+ * ## Why it exists, and why it does not replace the previous one
  *
- * Lire une session peut la RENOUVELER. Quand le jeton d'accès a expiré,
- * `getClaims()` / `getSession()` échangent le jeton de rafraîchissement contre
- * un couple neuf — et GoTrue **fait tourner** le jeton de rafraîchissement au
- * passage : l'ancien ne vaut plus rien quelques secondes plus tard.
+ * Reading a session can RENEW it. When the access token has expired,
+ * `getClaims()` / `getSession()` exchange the refresh token for
+ * a new pair — and GoTrue **spins** the refresh token to
+ * passage: the old one is no longer worth anything for a few seconds more late.
  *
- * Un adaptateur qui jette ce qu'on lui donne à écrire transforme donc une
- * lecture en DESTRUCTION de session : le serveur a dépensé le jeton, le
- * navigateur garde l'ancien, et le prochain rafraîchissement — le sien comme le
- * nôtre — échoue en `refresh_token_not_found`. Dans les logs :
+ * An adapter that throws away what it is given to write therefore transforms a
+ * read into session DESTRUCTION: the server has spent the token, the
+ * browser keeps the old one, and the next refresh — its own like the
+ * ours — fails in `refresh_token_not_found`. In the logs:
  *
- *     Error [AuthApiError]: Invalid Refresh Token: Refresh Token Not Found
+ * Error [AuthApiError]: Invalid Refresh Token: Refresh Token Not Found
  *
- * Pour les routes de l'app, ça n'arrive pas : le proxy passe AVANT, et lui écrit
- * les cookies (proxy.ts, branche « routes de l'app »). Le jeton est donc déjà
- * frais quand un handler le lit, et son `setAll` vide ne coûte rien. C'est ce
- * que dit `createSupabaseFromRequest`, et ça reste vrai.
+ * For the app routes, this does not happen: the proxy goes FIRST, and writes to it
+ * cookies (proxy.ts, “app routes” branch). The token is therefore already
+ * fresh when a handler reads it, and its empty `setAll` costs nothing. This is what
+ * says, and it remains true.
  *
- * **Le trou est la route PUBLIQUE qui lit quand même une session.** Le proxy la
- * laisse passer sans toucher à l'auth — c'est tout l'intérêt d'être publique —
- * donc le handler est le premier et le seul à ouvrir les cookies, avec un jeton
- * qui peut très bien être expiré. `/feedback` est ce cas : il pré-identifie
- * l'utilisateur connecté, et il le faisait au prix de sa session.
+ * **The hole is the PUBLIC route that still reads a session.** The proxy la
+ * lets it pass without touching auth — that's the whole point of being public —
+ * so the handler is the first and only one to open the cookies, with a token
+ * which may very well be expired. `/feedback` is this case: it pre-identifies
+ * the connected user, and it did it at the cost of his session.
  *
- * D'où ce constructeur-ci, à réserver exactement à ça : **une surface publique
- * qui lit l'utilisateur connecté**. Elle doit passer sa réponse par
- * `applyCookies` avant de la rendre, sans quoi on est revenu au point de départ.
+ * Hence this constructor, to be reserved exactly for that: **a public surface
+ * which reads the connected user**. It must pass its response through
+ * `applyCookies` before returning it, otherwise we are back to the starting point.
  *
- * Le report lui-même vit dans [lib/session-cookies.ts](../session-cookies.ts) :
- * le proxy en a besoin AUSSI (MIN-351) et ne peut pas importer ce module-ci,
- * qui est `server-only` et tire next-intl derrière lui.
+ * The carry itself lives in [lib/session-cookies.ts](../session-cookies.ts):
+ * the proxy needs it ALSO (MIN-351) and cannot import this module,
+ * which is `server-only` and pulls next-intl behind it.
  */
 export function createSupabaseWithCookieSink(
   request: NextRequest
@@ -99,55 +99,55 @@ export type AuthedResult =
       user: User;
       supabase: SupabaseClient;
       /**
-       * Les claims du JWT vérifié, tels quels. `user` en est une reconstruction
-       * partielle : ce qui n'appartient pas au compte mais à la SESSION — `aal`,
-       * `amr`, `session_id` — n'y figure pas, et c'est précisément ce que lit
-       * une garde de fraîcheur d'authentification (MIN-345).
-       */
+ * Verified JWT claims, as is. `user` is a partial reconstruction
+ *: what does not belong to the account but to the SESSION — `aal`,
+ * `amr`, `session_id` — is not there, and this is precisely what reads
+ * a authentication freshness keeper (MIN-345).
+ */
       claims: Record<string, unknown>;
     }
   | { ok: false; response: NextResponse };
 
 /**
- * Résout l'utilisateur authentifié d'un route handler, ou une réponse d'erreur.
+ * Resolves the authenticated user of a route handler, or error response.
  *
- * On vérifie le JWT via `getClaims()` plutôt que `getUser()`. Avec des clés de
- * signature ASYMÉTRIQUES (dashboard Supabase → Auth → JWT Signing Keys), la
- * vérification est LOCALE (WebCrypto + JWKS mis en cache) — aucun aller-retour
- * réseau vers GoTrue par requête, alors que chaque page fan-out en déclenche
- * plusieurs en parallèle. Avec l'ancien secret SYMÉTRIQUE (HS256), `getClaims()`
- * retombe exactement sur `getUser()` : même comportement qu'avant, donc bascule
- * zéro-régression qui s'active toute seule une fois les clés migrées.
+ * We check the JWT via `getClaims()` rather than `getUser()`. With
+ * ASYMMETRICAL signing keys (Supabase dashboard → Auth → JWT Signing Keys), the
+ * verification is LOCAL (WebCrypto + JWKS cached) — no round trip
+ * network to GoTrue per request, while each fan-out page in triggers
+ * several in parallel. With the old SYMMETRICAL secret (HS256), `getClaims()`
+ * falls back exactly to `getUser()`: same behavior as before, so toggles
+ * zero-regression which activates on its own once the keys are migrated.
  *
- * Une instance Supabase injoignable (retries réseau épuisés, ~20 s) n'est PAS
- * une session invalide : la déguiser en 401 fait croire à une déconnexion.
- * On répond 503 avec un message explicite dans ce cas.
+ * An unreachable Supabase instance (exhausted network retries, ~20 s) is NOT
+ * an invalid session: disguising it as 401 makes it appear as a disconnection.
+ * We respond to 503 with an explicit message in this case.
  *
- * ## Second facteur (MIN-132)
+ * ## Second factor (MIN-132)
  *
- * Un compte qui a enrôlé un facteur TOTP n'est servi qu'en `aal2`. Le refus est
- * GLOBAL et vit ici plutôt que route par route : une liste de routes sensibles
- * demanderait d'y penser à chaque ajout, et celle qu'on oublie de compléter est
- * une faille qu'aucun test ne signale. Comme le challenge est posé juste après le
- * mot de passe, une session `aal1` sur un compte protégé veut dire « connexion
- * abandonnée en cours de route » — la refuser ne casse aucun usage normal.
+ * An account that has enrolled a TOTP factor is only served in `aal2`. The refusal is
+ * GLOBAL and lives here rather than route by route: a list of sensitive routes
+ * would require thinking about it for each addition, and the one we forget to complete is
+ * a flaw that no test points out. As the challenge is posed just after the
+ * password, a `aal1` session on a protected account means "connection
+ * abandoned during the process" — refusing it does not break any normal usage.
  *
- * `allowAal1` n'est là que pour la route de récupération (`/api/account/mfa/recover`),
- * le seul endroit qui doit répondre à quelqu'un qui n'a PLUS son téléphone.
+ * `allowAal1` is only there for the road recovery (`/api/account/mfa/recover`),
+ * the only place that should respond to someone who NO LONGER has their phone.
  *
- * ## Origine de la requête (MIN-345)
+ * ## Origin of the request (MIN-345)
  *
- * Ces routes s'authentifient par COOKIE, et un cookie part tout seul. Toute la
- * protection CSRF tenait au `SameSite=Lax` de celui de Supabase — solide, mais
- * seul : rien ici ne regardait d'où venait l'appel. Une écriture qui se déclare
- * d'une autre origine est refusée, et le refus vit ICI pour la même raison que
- * celui du second facteur — une liste de routes sensibles est une liste qu'on
- * oublie de compléter.
+ * These routes are authenticated by COOKIE, and a cookie goes away by itself. All the
+ * CSRF protection was due to `SameSite=Lax` that of Supabase — solid, but
+ * alone: ​​nothing here looked at where the call came from. A write that declares itself
+ * from another origin is refused, and the refusal lives HERE for the same reason as
+ * that of the second factor - a list of sensitive routes is a list that one
+ * forgets to complete.
  *
- * Ce qui n'est PAS refusé : une requête qui ne déclare aucune origine. Elle ne
- * peut pas venir d'une page tierce (le navigateur l'aurait posée), et refuser
- * ferait tomber les appelants sans page — sondes, tests, outils en ligne de
- * commande. Le raisonnement complet est dans `lib/server/same-origin.ts`.
+ * What is NOT refused: a request which does not declare any origin. It cannot
+ * come from a third party page (the browser would have asked it), and refusing
+ * would drop callers without a page — probes, tests, online tools of
+ * command. The full reasoning is in `lib/server/same-origin.ts`.
  */
 export async function getAuthedUser(
   request: NextRequest,
@@ -197,10 +197,10 @@ export async function getAuthedUser(
     };
   }
 
-  // Les claims du JWT vérifié portent tout ce que les handlers lisent (id via
+  // The verified JWT claims carry whatever the handlers read (id via
   // `sub`, email, user_metadata, app_metadata). On reconstruit l'objet `User`
-  // attendu par les appelants à partir de ces claims — pas d'appel réseau
-  // supplémentaire pour aller chercher le compte complet.
+  // expected by callers from these claims — no network call
+  // additional to fetch the full account.
   const user = {
     id: claims.sub,
     email: typeof claims.email === "string" ? claims.email : undefined,

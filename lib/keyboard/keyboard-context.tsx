@@ -1,6 +1,6 @@
 "use client";
 
-// Global navigation keyboard chords, à la AutoKap. A leader key **G** (Go) arms
+// Global navigation keyboard chords, a la AutoKap. A leader key **G** (Go) arms
 // a chord; the next key picks the destination. While a chord is armed, the
 // sidebar surfaces each option's second key as a <Kbd> hint (see AppSidebar) and
 // a short "G then…" toast appears (covers the collapsed-sidebar case).
@@ -17,8 +17,8 @@
 // assistant instead of the assignee picker even while hovering an issue card.
 //
 // It also owns the `?` cheat sheet, co-located here like AutoKap's keyboard
-// store. La barre latérale, elle, n'a plus de repli manuel : le seul rail est
-// celui des pages à sidebar secondaire, et il se déplie au survol.
+//store. The sidebar no longer has a manual fold: the only rail is
+// that of pages with secondary sidebar, and it unfolds on hover.
 
 import {
   createContext,

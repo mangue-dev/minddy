@@ -15,13 +15,13 @@ import { switchLocaleHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
 
 /**
- * Le sélecteur de langue du pied de page public.
+ * The public footer language switcher.
  *
- * Sorti du pied de page pour être chargé PARESSEUSEMENT (MIN-100). Un `Select`
- * Radix tire le positionneur flottant (`react-popper` + `floating-ui`) : mesuré
- * sur la landing, **46 Ko gzippés dans le bundle initial** — le deuxième poste
- * après le framework — pour une liste de deux langues, dans le pied de page,
- * qui ne s'ouvre qu'au clic. Voir `marketing-footer.tsx` pour le montage.
+ * Taken out of the footer to be loaded LAZILY (MIN-100). A `Select`
+ * Radix pulls the floating positioner (`react-popper` + `floating-ui`): measured
+ * on the landing, **46 KB gzipped in the initial bundle** — the second post
+ * after the framework — for a list of two languages, in the footer of page,
+ * which only opens on click. See `marketing-footer.tsx` for mounting.
  */
 export function LanguageSwitcher() {
   const tLang = useTranslations("Language");
@@ -31,11 +31,11 @@ export function LanguageSwitcher() {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Changer de langue CHANGE D'URL sur le site public (MIN-88) : `/pricing`
-  // devient `/fr/tarifs`. Le cookie seul ne suffisait pas — il rafraîchissait la
-  // page en français en laissant l'URL annoncer l'anglais, ce que le canonical
-  // et le hreflang contredisaient aussitôt. Sur l'app interne (aucune URL
-  // localisée), `switchLocaleHref` renvoie `null` et on se contente du cookie.
+  // Change language CHANGE URL on the public site (MIN-88): `/pricing`
+  // becomes `/fr/tarifs`. The cookie alone wasn't enough — it refreshed the
+  // page in French leaving the URL announcing the English, what the canonical
+  // and the hreflang immediately contradicted. On the internal app (no URL
+  // localized), `switchLocaleHref` returns `null` and we just have the cookie.
   const handleLocaleChange = async (value: string) => {
     const next = value as Locale;
     setSelected(next);
@@ -46,10 +46,10 @@ export function LanguageSwitcher() {
 
   return (
     <Select value={selected} onValueChange={handleLocaleChange}>
-      {/* `aria-label` : le déclencheur d'un Select ne rend que la valeur
-          choisie (« Français »), donc un lecteur d'écran annonçait une
-          liste déroulante sans savoir ce qu'elle règle — et l'audit
-          `button-name` échouait sur toutes les pages publiques. */}
+      {/* `aria-label`: the Select trigger only returns the chosen
+ value ("French"), so a screen reader announced a
+ drop-down list without knowing what it sets — and the
+ `button-name` audit failed on all public pages. */}
       <SelectTrigger
         aria-label={tLang("title")}
         className="h-8 w-auto self-start bg-transparent text-xs"

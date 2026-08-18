@@ -6,8 +6,8 @@ import { deleteConnection } from "@/lib/server/git/connections";
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * DELETE /api/account/git-connections/[id] — déconnecte un compte git. Les
- * liaisons projet qui l'utilisent tombent en cascade (project_git_links).
+ * DELETE /api/account/git-connections/[id] — disconnects a git account. THE
+ * Project links that use it cascade (project_git_links).
  */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;

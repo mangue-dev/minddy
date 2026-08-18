@@ -14,24 +14,24 @@ import type { ImportCommitResponse } from "@/lib/import-api";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
- * Le parcours d'import d'un backlog, en grand (MIN-45, MIN-98, MIN-171).
+ * The backlog import process, in large format (MIN-45, MIN-98, MIN-171).
  *
- * Avant, l'import vivait dans une modale `sm:max-w-lg` : la marche à suivre, le
- * dropzone, le tableau de correspondance et TROIS boutons côte à côte dans une
- * colonne de 32 rem. Les boutons débordaient, et le tableau — le seul endroit
- * où un import se répare — était un accordéon replié tout en bas d'une modale
- * qui défilait.
+ * Before, import lived in a `sm:max-w-lg` mode: the procedure to follow, the
+ * dropzone, the lookup table and THREE buttons side by side in one
+ * column of 32 rem. The buttons were overflowing, and the board — the only place
+ * where an import is repaired — was an accordion folded at the bottom of a modal
+ * who was parading.
  *
- * Ce sont trois questions, et elles arrivent l'une après l'autre : d'où l'on
- * part, comment on lit le fichier, ce qu'on écrit. C'est exactement la forme
- * d'un wizard, alors on prend celui du dépôt (`wizard-dialog.tsx`) : grande
- * modale (90vw × 90vh), stepper en haut, CTA pleine largeur en bas de la
- * colonne — plus rien à placer à la main, plus rien qui déborde.
+ * These are three questions, and they come one after the other: where do we
+ * part, how we read the file, what we write. This is exactly the shape
+ * of a wizard, then we take that of the repository (`wizard-dialog.tsx`): large
+ * modal (90vw × 90vh), stepper at the top, full width CTA at the bottom of the
+ * column — nothing to place by hand, nothing to overflow.
  *
- * Le dépôt du fichier EST le geste de la première étape (`hideSubmit`) : elle
- * avance d'elle-même dès que le CSV est analysé. Revenir en arrière depuis la
- * correspondance repose donc la question du fichier, et donc l'oublie — sinon
- * on retomberait sur un dropzone qui ne veut plus rien dire.
+ * Submitting the file IS the gesture of the first step (`hideSubmit`): it
+ * advances by itself as soon as the CSV is analyzed. Go back from
+ * correspondence therefore raises the question of the file, and therefore forgets it - otherwise
+ * we would come back to a dropzone which no longer means anything.
  */
 export function ImportWizardDialog({
   open,
@@ -40,18 +40,18 @@ export function ImportWizardDialog({
   initialFile,
   onProviderSelected,
   onImported,
-  /** Ce que seul l'appelant sait : dans quel projet importer (onboarding). */
+  /** What only the caller knows: into which project to import (onboarding). */
   target,
-  /** Une sortie de côté, sous le dropzone (« le faire plus tard »). */
+  /** A side exit, under the dropzone (“do it later”). */
   sourceFooter,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string;
-  /** CSV déjà tenu par l'appelant (dépôt sur la carte d'onboarding, wizard de
-   *  création) : le parcours s'ouvre alors directement sur la correspondance. */
+  /** CSV already held by the caller (deposit on the onboarding card, wizard of
+   * creation): the route then opens directly to the correspondence. */
   initialFile?: File | null;
-  /** De quel outil vient le compte — l'onboarding en fait un événement. */
+  /** Which tool does the account come from — onboarding makes it an event. */
   onProviderSelected?: (guide: ImportGuide) => void;
   onImported?: (result: ImportCommitResponse) => void;
   target?: ReactNode;
@@ -73,7 +73,7 @@ export function ImportWizardDialog({
     [onImported, onOpenChange]
   );
 
-  // Le fichier est lu : la question suivante est celle de la correspondance.
+  // The file is read: the next question is that of correspondence.
   const goToMapping = useCallback(() => setStepIndex(1), []);
 
   const {
@@ -108,8 +108,8 @@ export function ImportWizardDialog({
       title: tOnboarding("importTitle"),
       subtitle: tOnboarding("importDesc"),
       wide: true,
-      // La carte de l'outil, puis le dépôt : le fichier déposé EST le geste,
-      // un « Continuer » ne ferait que redemander ce qui vient d'être dit.
+      // The tool map, then the deposit: the file deposited IS the gesture,
+      // a “Continue” would only repeat what was just said.
       hideSubmit: true,
       content: (
         <div className="flex flex-col gap-4">
@@ -139,9 +139,9 @@ export function ImportWizardDialog({
               resetLabel={t("importMappingReset")}
             />
 
-            {/* Aucune colonne de titre : le fichier n'est pas refusé, il attend
-                qu'on désigne laquelle porte le nom des tickets — juste en
-                dessous. */}
+            {/* No title column: the file is not refused, it is waiting
+ that we designate which one bears the name of the tickets — just in
+ below. */}
             {!hasTitleColumn && (
               <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-500">
                 <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
@@ -235,22 +235,22 @@ export function ImportWizardDialog({
       open={open}
       onOpenChange={handleOpenChange}
       label={tOnboarding("importTitle")}
-      /* Les trois pilules dès l'ouverture, fichier ou pas : le parcours ne
-         dépend d'aucune réponse — il fait trois pas, et le dire tout de suite
-         est justement ce qu'un stepper sert à faire. */
+      /* The three pills from the opening, file or not: the course does not
+ depends on no answer — it takes three steps, and saying it right away
+ is precisely what a stepper does. */
       steps={steps}
       stepIndex={stepIndex}
       onStepIndexChange={(index) => {
-        // Reculer jusqu'au dropzone, c'est reposer la question du fichier :
-        // l'aperçu du précédent n'aurait plus rien à voir avec ce qu'on y
-        // déposerait.
+        // Going back to the dropzone means asking the question of the file again:
+        // the preview of the previous one would no longer have anything to do with what we see there
+        // would file.
         if (index === 0) reset();
         setStepIndex(index);
       }}
       submitting={importing}
-      /* Le parcours ne demande confirmation qu'une fois le fichier lu : avant,
-         il n'y a rien à perdre — et une question sans enjeu apprend à répondre
-         sans lire. */
+      /* The route only asks for confirmation once the file has been read: before,
+ there is nothing to lose — and a question without stakes teaches how to answer
+ without reading. */
       dismissConfirm={
         prepared
           ? {
@@ -269,8 +269,8 @@ export function ImportWizardDialog({
   );
 }
 
-/** Le fichier qu'on est en train de lire — rappelé en tête des deux étapes qui
- *  en parlent, parce qu'on y prend des décisions à son sujet. */
+/** The file we are reading — recalled at the top of the two steps that
+ * talk about it, because decisions are made about it. */
 function FileLine({
   fileName,
   sourceLabel,

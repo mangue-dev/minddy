@@ -4,23 +4,22 @@ import { useQuery } from "@tanstack/react-query";
 import type { ProjectTriageCount, TriageCountsResponse } from "./types";
 
 /**
- * Ce qui attend d'être trié dans chacun de mes projets (tickets en triage +
- * retours ouverts), pour les chiffres portés par les lignes de projet de la
- * sidebar quand on est HORS d'un projet — accueil, board global, inbox…
+ * What is waiting to be sorted in each of my projects (tickets in sorting +
+ * open returns), for the figures carried by the project lines of the
+ * sidebar when you are OUTSIDE a project — home, global board, inbox…
  *
- * Une route à part et minuscule (GET /api/me/triage-counts) plutôt qu'un champ
- * de /api/me/summary, pour la même raison que l'avertissement Smart Assign : la
- * sidebar est montée sur toutes les pages, le résumé du tableau de bord ne doit
- * pas l'être. Cf. lib/use-smart-assign-warnings-query.ts.
+ * A route separate and lowercase (GET /api/me/triage-counts) rather than a
+ * field of /api/me/summary, for the same reason as the Smart Assign warning: the
+ * sidebar is mounted on all pages, the dashboard summary should
+ * not be. See lib/use-smart-assign-warnings-query.ts.
  *
- * Fraîcheur : le pont temps réel invalide cette clé sur tout événement de
- * ticket, de retour et d'adhésion (lib/realtime-provider.tsx) — c'est-à-dire
- * tout ce qui peut la bouger, périmètre compris. Pas de staleTime, donc.
+ * Freshness: the real-time bridge invalidates this key on any ticket, return and opt-in event (lib/realtime-provider.tsx) — i.e.
+ * all that who can move it, perimeter included. No staleTime, therefore.
  */
 export const TRIAGE_COUNTS_KEY = ["me", "triage-counts"] as const;
 
-/** Identité stable : sans elle, chaque rendu rendrait une table neuve et
-    relancerait les mémos de la sidebar qui en dépendent. */
+/** Stable identity: without it, each rendering would render a new table and
+ would restart the sidebar memos that depend on it. */
 const NO_COUNTS: Record<string, ProjectTriageCount> = {};
 
 export function useTriageCountsQuery() {
@@ -36,7 +35,7 @@ export function useTriageCountsQuery() {
   return { counts: data?.counts ?? NO_COUNTS };
 }
 
-/** Le chiffre affiché : les deux moitiés de la file ne font qu'un badge. */
+/** The number displayed: the two halves of the line make up one badge. */
 export function triageCountTotal(count: ProjectTriageCount | undefined): number {
   return count ? count.triage + count.feedback : 0;
 }

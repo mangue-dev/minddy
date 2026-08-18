@@ -16,13 +16,13 @@ export type TranscribeAudioFormat =
   | "aac";
 
 /**
- * Le type MIME que le navigateur a réellement enregistré → le format attendu
- * par OpenRouter, ou `null` si ce n'est pas de l'audio qu'on sait lire.
+ * The MIME type that the browser actually saved → the format expected
+ * by OpenRouter, or `null` if it is not audio that we can play.
  *
- * Ici et pas dans chaque route : les quatre appelants (dictée authentifiée,
- * démo de la landing, retour dicté) enregistrent avec le MÊME `MediaRecorder`,
- * donc la table est la même — et une copie qui dérive fait un 400 sur un
- * navigateur, jamais sur celui du développeur.
+ * Here and not in each route: the four callers (dictation authenticated,
+ * landing demo, return dictated) save with the SAME `MediaRecorder`,
+ * so the table is the same — and a derived copy does a 400 on a
+ * browser, never on the developer's.
  */
 export function resolveAudioFormat(mimeType: string): TranscribeAudioFormat | null {
   const lower = mimeType.toLowerCase();
@@ -99,9 +99,9 @@ export async function transcribeAudio(
           }),
     },
     body: directBody ?? JSON.stringify(body),
-    // La dictée n'étant plus bornée en durée, une prise peut valoir plusieurs
-    // dizaines de minutes d'audio : 120 s ne suffisaient plus à l'envoyer et à
-    // la transcrire. On reste sous le maxDuration = 300 de /api/transcribe.
+    // As dictation is no longer limited in duration, one take can be worth several
+    // tens of minutes of audio: 120 s was no longer enough to send it and
+    // transcribe it. We remain under the maxDuration = 300 of /api/transcribe.
     signal: AbortSignal.timeout(240_000),
   });
 

@@ -5,7 +5,7 @@ import { fetchPushDevicesApi } from "./push-devices-api";
 
 export const pushDevicesQueryKey = ["push-devices"] as const;
 
-/** Les appareils abonnés aux notifications push du compte (MIN-183). */
+/** Devices subscribed to account push notifications (MIN-183). */
 export function usePushDevicesQuery() {
   const { data, isPending } = useQuery({
     queryKey: pushDevicesQueryKey,

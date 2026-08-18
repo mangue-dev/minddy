@@ -1,22 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-224 — le constat de décès d'une boucle qui vit dans la microVM.
+ * MIN-224 — the death report of a loop that lives in the microVM.
  *
- * CE QUE CE FICHIER GARDE, et il a été écrit APRÈS s'être fait avoir. La première
- * version lisait `Command.exitCode` et concluait « mort » s'il était non nul. Elle
- * a passé tous ses tests, et elle ne marchait pas : une commande lancée en
- * `detached: true` ne voit **jamais** son `exitCode` réconcilié tant que personne
- * ne l'attend. Mesuré sur une vraie microVM le 2026-08-07 — process tué depuis
- * huit minutes, absent de `ps`, plus un event dans le fil — l'API rendait encore
- * `exitCode: null`. Le chien de garde répondait donc « vivant » sur TOUS les
- * décès, et un run dont la boucle meurt restait `running` pour toujours :
- * `requeueStuckRuns` l'exclut par construction et `reapIdleSandboxes` ne ramasse
- * que les runs au repos. Personne ne serait venu.
+ * WHAT THIS FILE KEEPS, and it was written AFTER being fooled. The first
+ * version read `Command.exitCode` and concluded "dead" if it was non-zero. It
+ * passed all its tests, and it did not work: a command launched in
+ * `detached: true` **never** sees its `exitCode` reconciled as long as no one
+ * is waiting for it. Measured on a real microVM on 2026-08-07 — process killed for
+ * eight minutes, missing `ps`, plus one event in the thread — the API was still rendering
+ * `exitCode: null`. The watchdog therefore responded "alive" on ALL deaths, and a run whose loop dies remained `running` forever:
+ * `requeueStuckRuns` excludes it by construction and `reapIdleSandboxes` only picks up
+ * only idle runs. No one would have come.
  *
- * `wait()` est ce qui réconcilie. Sur le même process mort, il a rendu en 270 ms
- * avec `exitCode: 137`. C'est donc lui le constat — borné par NOTRE horloge, pour
- * que l'absence de réponse veuille dire « il travaille » et rien d'autre.
+ * `wait()` is what reconciles. On the same dead process, it rendered in 270 ms
+ * with `exitCode: 137`. So he is the observation — limited by OUR clock, so that the absence of response means “he is working” and nothing else.
  */
 
 const h = vi.hoisted(() => ({
@@ -37,7 +35,7 @@ vi.mock("@vercel/sandbox", () => ({
 
 const { isLoopCommandAlive } = await import("./sandbox");
 
-/** Une commande qui a FINI : `wait()` rend tout de suite, comme la vraie API. */
+/** A command that FINISHED: `wait()` renders immediately, like the real API. */
 const finished = (exitCode: number) => ({
   exitCode: null as number | null,
   wait: async () => {
@@ -46,7 +44,7 @@ const finished = (exitCode: number) => ({
   },
 });
 
-/** Une commande qui TRAVAILLE : `wait()` ne rend jamais, il ne cède qu'à l'abandon. */
+/** A command that WORKS: `wait()` never returns, it only yields on abort. */
 const working = () => ({
   exitCode: null as number | null,
   wait: (p?: { signal?: AbortSignal }) =>
@@ -70,7 +68,7 @@ afterEach(() => {
 
 describe("isLoopCommandAlive", () => {
   it("CONSTATE la mort d'une commande détachée dont l'exitCode n'est pas réconcilié", async () => {
-    // Le défaut trouvé en production : `exitCode` reste `null` sur un process mort
+    // The fault found in production: `exitCode` remains `null` on a dead process
     // depuis des minutes. Sans `wait()`, cette ligne rendait `true`.
     h.command = finished(137);
     expect(await isLoopCommandAlive("agent-x", "cmd-1")).toBe(false);
@@ -92,8 +90,8 @@ describe("isLoopCommandAlive", () => {
   });
 
   it("ne conclut RIEN quand `wait()` échoue pour une autre raison que notre délai", async () => {
-    // API en panne, session expirée. Un chien de garde qui lit ça comme une mort
-    // remettrait au repos des tours en pleine santé.
+    // API down, session expired. A watchdog who reads this as death
+    // would restore towers to full health.
     h.command = {
       exitCode: null,
       wait: async () => {

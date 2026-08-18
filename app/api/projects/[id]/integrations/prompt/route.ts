@@ -12,18 +12,18 @@ type RouteContext = { params: Promise<{ id: string }> };
 const PLACEMENT_MAX = 500;
 
 /**
- * POST { kind, placement?, webhook? } — le prompt d'intégration d'une clé qui
- * EXISTE DÉJÀ.
+ * POST { kind, placement?, webhook? } — the prompt for integrating a key that
+ * ALREADY EXISTS.
  *
- * La route jumelle côté feedback (`/feedback/integration-prompt`) provisionne
- * en même temps qu'elle rédige : elle crée une clé pour pouvoir la montrer en
- * clair. Ici, la clé vient d'être créée par le wizard, et le prompt n'en porte
- * de toute façon aucune — il ne cite que la variable d'environnement. Rédiger
- * ne demande donc RIEN d'autre que le nom du projet : pas d'écriture, pas de
- * clé de plus à révoquer si l'utilisateur ferme la fenêtre.
+ * The twin route on the feedback side (`/feedback/integration-prompt`) provisions
+ * at the same time as she writes: she creates a key to be able to show it in
+ * clear. Here, the key has just been created by the wizard, and the prompt does not contain any
+ * none anyway — it only quotes the environment variable. Write
+ * therefore asks for NOTHING other than the name of the project: no writing, no
+ * one more key to revoke if the user closes the window.
  *
- * Réservé au owner comme le reste des intégrations : le texte décrit la surface
- * d'écriture du projet.
+ * Reserved for the owner like the rest of the integrations: the text describes the surface
+ * writing the project.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  // `null` est du JSON valide : lire body.kind dessus ferait un 500.
+  // `null` is valid JSON: reading body.kind on it would make a 500.
   if (!body || typeof body !== "object") {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
@@ -57,9 +57,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       ? body.placement.trim().slice(0, PLACEMENT_MAX)
       : "";
 
-  // Le webhook n'est décrit que s'il est réglé. On revalide ici ce que le
-  // client annonce : le prompt dira au récepteur quels événements attendre, et
-  // une liste inventée lui ferait écrire une route pour rien.
+  // The webhook is only described if it is set. Here we revalidate what the
+  // client announces: the prompt will tell the receiver what events to expect, and
+  // an invented list would make him write a route for nothing.
   const raw = body.webhook;
   let webhook = null;
   if (raw && typeof raw === "object") {
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const locale =
     (await getLocale()) === "fr" ? ("fr" as const) : ("en" as const);
   const prompt = buildIntegrationPrompt({
-    // Une clé 'feedback' dépose du feedback par l'API : c'est le mode 'api'.
+    // A 'feedback' key provides feedback via the API: this is 'api' mode.
     mode: body.kind === "issues" ? "issues" : "api",
     locale,
     projectName: access.project.name,

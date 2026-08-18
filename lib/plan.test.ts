@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { appendToPlan, parsePlan, planProgress } from "./plan";
 
-/** Raccourci de lecture : "texte" → question ? pour chaque tâche. */
+/** Reading shortcut: "text" → question? for each task. */
 const questionFlags = (plan: string) =>
   parsePlan(plan).tasks.map((t) => [t.text, t.question] as const);
 
@@ -17,10 +17,10 @@ describe("sections de questions", () => {
 - [ ] On garde l'ancien endpoint ?
 - [ ] Quelle limite de taille ?`;
 
-    // 1/2, pas 1/4 : les deux questions ne sont pas du travail.
+    // 1/2, not 1/4: both questions are not work.
     expect(planProgress(plan)).toEqual({ done: 1, total: 2 });
-    // Les questions restent des tâches, aux mêmes indices (le MCP les cible
-    // par index : minddy_update_plan_task ne doit pas se décaler).
+    // The questions remain tasks, with the same indices (the MCP targets them
+    // by index: minddy_update_plan_task must not shift).
     expect(parsePlan(plan).tasks.map((t) => t.index)).toEqual([0, 1, 2, 3]);
     expect(questionFlags(plan)).toEqual([
       ["Ajouter le handler dans app/api/foo/route.ts", false],
@@ -68,9 +68,9 @@ describe("sections de questions", () => {
     ).toEqual([["q1", true]]);
   });
 
-  // MIN-146 : un titre de travail qui PARLE d'une question n'en ouvre pas une.
-  // C'est un rôle, pas un mot-clé — sans quoi « La bascule (à écrire une fois la
-  // question tranchée) » emportait silencieusement tout le reste du plan.
+  // MIN-146: a working title that TALKS about a question does not open one.
+  // It's a role, not a keyword - otherwise "The switch (to be written once the
+  // question decided)” silently carried away all the rest of the plan.
   it("n'ouvre pas de section sur un titre qui mentionne une question", () => {
     expect(
       questionFlags(`## La bascule (à écrire une fois la question tranchée)
@@ -103,8 +103,8 @@ Prose.
 - [x] i18n-contract + tsc verts
 - [-] Run d'agent sur un projet GitLab`;
 
-    // 3/4 : les deux décisions ne comptent pas, le run annulé non plus — mais le
-    // stockage, si. C'est lui que le titre de la section 2 escamotait.
+    // 3/4: the two decisions do not count, nor does the canceled run — but the
+    // storage, yes. It is him that the title of section 2 glossed over.
     expect(planProgress(plan)).toEqual({ done: 3, total: 4 });
   });
 
@@ -162,7 +162,7 @@ Objectif : brancher l'invitation.
 
     const next = appendToPlan(plan, "- [ ] Valider l'email avant l'envoi");
     expect(next).toBe(`${plan}\n- [ ] Valider l'email avant l'envoi`);
-    // Les tâches d'origine gardent leur état et leur index.
+    // The original tasks keep their state and index.
     expect(parsePlan(next!).tasks.map((t) => t.state)).toEqual([
       "completed",
       "in_progress",
@@ -171,9 +171,9 @@ Objectif : brancher l'invitation.
   });
 
   it("sépare d'une ligne vide sauf entre deux cases à cocher", () => {
-    // Deux listes collées = une seule liste à l'écran.
+    // Two pasted lists = only one list on screen.
     expect(appendToPlan("- [ ] t1", "- [ ] t2")).toBe("- [ ] t1\n- [ ] t2");
-    // De la prose après des tâches a besoin de son paragraphe.
+    // Prose after tasks needs its paragraph.
     expect(appendToPlan("- [ ] t1", "Vérification : `pnpm test`.")).toBe(
       "- [ ] t1\n\nVérification : `pnpm test`."
     );
@@ -200,7 +200,7 @@ Objectif : brancher l'invitation.
 ## Questions
 
 - [ ] On garde l'ancien endpoint ?`);
-    // La tâche ajoutée est du travail, pas une question : elle compte.
+    // The added task is work, not a question: it matters.
     expect(planProgress(next)).toEqual({ done: 0, total: 2 });
   });
 
@@ -242,7 +242,7 @@ Objectif : brancher l'invitation.
 ## Questions
 \`\`\``;
 
-    // Le faux titre ne déplace pas l'insertion : le bloc va bien à la fin.
+    // The false title does not move the insertion: the block goes at the end.
     expect(appendToPlan(plan, "- [ ] t2")).toBe(`${plan}\n\n- [ ] t2`);
   });
 

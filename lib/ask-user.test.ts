@@ -48,7 +48,7 @@ describe("parseAskUserQuestions", () => {
     ]);
   });
 
-  it("détecte le suffixe (Recommandé) en français et le retire du label", () => {
+  it("detects the French (Recommandé) suffix and removes it from the label", () => {
     const [q] = parseAskUserQuestions({
       questions: [
         { question: "Layout ?", options: [{ label: "Paginée (Recommandé)" }] },
@@ -85,7 +85,7 @@ describe("parseAskUserQuestions", () => {
     expect(parsed[0].options.map((o) => o.label)).toEqual(["Oui"]);
   });
 
-  it("round-trippe sa propre sortie normalisée (multiSelect, recommended)", () => {
+  it("round-trips its own normalized output (multiSelect, recommended)", () => {
     const first = parseAskUserQuestions({
       questions: [
         {
@@ -99,13 +99,13 @@ describe("parseAskUserQuestions", () => {
     expect(parseAskUserQuestions({ questions: first })).toEqual(first);
   });
 
-  it("tolère des questions et options nues (chaînes)", () => {
+  it("tolerates bare questions and options (strings)", () => {
     expect(parseAskUserQuestions({ questions: ["Quel scope ?"] })).toEqual([
       { question: "Quel scope ?", header: "", multiSelect: false, options: [] },
     ]);
   });
 
-  it("filtre les entrées vides et non-chaînes", () => {
+  it("filters empty and non-string entries", () => {
     const parsed = parseAskUserQuestions({
       questions: [
         { question: "  ", options: [{ label: "a" }] },
@@ -123,7 +123,7 @@ describe("parseAskUserQuestions", () => {
     expect(parsed).toHaveLength(MAX_ASK_USER_QUESTIONS);
   });
 
-  it("renvoie [] sur des args invalides", () => {
+  it("returns [] for invalid arguments", () => {
     expect(parseAskUserQuestions({})).toEqual([]);
     expect(parseAskUserQuestions({ questions: "oops" })).toEqual([]);
   });
@@ -137,7 +137,7 @@ describe("matchAskUserAnswers", () => {
     ],
   });
 
-  it("ré-associe les lignes question → réponse d'un envoi multi", () => {
+  it("re-associates question → answer lines from a multi-question submission", () => {
     expect(
       matchAskUserAnswers(questions, "Quel provider ? → Stripe\nQuelles cibles ? → Web, iOS")
     ).toEqual([
@@ -146,33 +146,33 @@ describe("matchAskUserAnswers", () => {
     ]);
   });
 
-  it("question unique → tout le message est la réponse", () => {
+  it("single question → the whole message is the answer", () => {
     const single = parseAskUserQuestions({ question: "On continue ?" });
     expect(matchAskUserAnswers(single, "Oui, vas-y")).toEqual([
       { question: "On continue ?", answer: "Oui, vas-y" },
     ]);
   });
 
-  it("réponse non appariable (skip) → answers null", () => {
+  it("unmatchable answer (skip) → answers null", () => {
     expect(matchAskUserAnswers(questions, "J'ai passé les questions.")).toEqual([
       { question: "Quel provider ?", answer: null },
       { question: "Quelles cibles ?", answer: null },
     ]);
   });
 
-  it("sans réponse → answers null", () => {
+  it("no answer → answers null", () => {
     expect(matchAskUserAnswers(questions, null).every((e) => e.answer === null)).toBe(true);
   });
 });
 
 describe("composeAskUserReply", () => {
-  it("question unique → la réponse seule", () => {
+  it("single question → the answer alone", () => {
     expect(
       composeAskUserReply([{ question: "Quel provider ?", answer: " Stripe " }])
     ).toBe("Stripe");
   });
 
-  it("plusieurs questions → une ligne question → réponse par question", () => {
+  it("multiple questions → one question → answer line per question", () => {
     expect(
       composeAskUserReply([
         { question: "Quel provider ?", answer: "Stripe" },

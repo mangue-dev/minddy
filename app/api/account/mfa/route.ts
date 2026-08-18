@@ -5,15 +5,15 @@ import { disableMfa, enableMfa, getMfaStatus, issueRecoveryCodes } from "@/lib/s
 import { captureServerEvent } from "@/lib/server/posthog";
 
 /**
- * Second facteur du compte (MIN-132).
+ * Account second factor (MIN-132).
  *
- * L'enrôlement TOTP lui-même (QR, premier code) se joue côté client, contre
- * GoTrue : c'est la vérification du premier code qui monte la session en `aal2`,
- * et seul le SDK peut la faire. Ces routes tiennent ce que le client ne peut pas
- * tenir : le drapeau `app_metadata.mfa_enabled` que le JWT transporte (écriture
- * réservée à la clé de service) et les codes de récupération.
+ * The TOTP enrollment itself (QR, first code) takes place on the client side, against
+ * GoTrue: it is the verification of the first code which sets up the session in `aal2`,
+ * and only the SDK can do it. These routes hold what the client cannot
+ * hold: the `app_metadata.mfa_enabled` flag that the JWT carries (writing
+ * reserved for the service key) and recovery codes.
  *
- * Aucun champ du corps n'est cru sur parole : l'état réel se lit chez GoTrue.
+ * No field of the body is taken at its word: the real state can be read at GoTrue.
  */
 
 export async function GET(request: NextRequest) {
@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Active la 2FA : constate le facteur vérifié, pose le drapeau, et renvoie les
- * dix codes de récupération — la seule fois où ils existent en clair.
+ * Activates 2FA: notes the verified factor, sets the flag, and returns the
+ * ten recovery codes — the only time they exist in plain text.
  */
 export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -53,9 +53,9 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Désactive tout. Pas de confirmation par mot de passe : la session est
- * forcément `aal2` pour arriver ici (c'est le garde-fou de `getAuthedUser`), et
- * un code TOTP frais vaut mieux qu'un mot de passe recopié.
+ * Disable everything. No password confirmation: the session is
+ * necessarily `aal2` to get here (this is the safeguard of `getAuthedUser`), and
+ * a fresh TOTP code is better than a copied password.
  */
 export async function DELETE(request: NextRequest) {
   const auth = await getAuthedUser(request);

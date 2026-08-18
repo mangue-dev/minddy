@@ -102,9 +102,9 @@ export default function TriagePage() {
   const [query, setQuery] = useState("");
 
   /**
-   * Ce que la colonne AFFICHE. Le filtre ne touche pas `triageIssues`, dont la
-   * sélection est dérivée : sinon taper ferait défiler le ticket ouvert à droite,
-   * une fois par lettre — et on filtre justement pour aller EN CHERCHER un.
+   * What the column DISPLAYS. The filter does not affect `triageIssues`, whose
+   * selection is derived: otherwise tapping would scroll the open ticket to the right,
+   * once per letter — and we filter precisely to SEARCH for one.
    */
   const visibleIssues = useMemo(() => {
     if (!query.trim()) return triageIssues;
@@ -116,20 +116,20 @@ export default function TriagePage() {
       ])
     );
   }, [triageIssues, query, project]);
-  // Le fondu qui remplace la bordure sous l'en-tête du détail : il ne paraît
-  // que du côté où il reste quelque chose à découvrir.
+  // The fade that replaces the border under the detail header: it doesn't seem
+  // only on the side where there is still something to discover.
   const detailFade = useScrollFade<HTMLDivElement>();
   const selected = triageIssues.find((i) => i.id === selectedId) ?? null;
 
   /**
-   * Sélection groupée (MIN-75), le même geste que sur le board : Maj+clic sur
-   * une ligne l'ajoute ou la retire, la pilule flottante porte les actions.
-   * Deux sélections cohabitent ici sans se confondre — `selectedId`, le ticket
-   * OUVERT à droite, et celle-ci, les tickets PRIS ensemble.
+   * Group selection (MIN-75), the same gesture as on the board: Shift+click on
+   * one line adds or removes it, the floating pill carries the actions.
+   * Two selections coexist here without confusing each other — `selectedId`, the ticket
+   * OPEN on the right, and this one, the tickets TAKEN together.
    *
-   * Elle se dérive de `triageIssues` et non de `visibleIssues` : le filtre de la
-   * colonne sert justement à aller chercher le ticket suivant à prendre, et le
-   * lier à la sélection la ferait fondre à chaque lettre tapée.
+   * It is derived from `triageIssues` and not from `visibleIssues`: the filter of the
+   * column is precisely used to fetch the next ticket to take, and the
+   * binding to the selection would cause it to melt with each letter typed.
    */
   const [bulkIds, setBulkIds] = useState<Set<string>>(new Set());
   const toggleBulk = useCallback((issueId: string) => {
@@ -141,8 +141,8 @@ export default function TriagePage() {
     });
   }, []);
   const clearBulk = useCallback(() => setBulkIds(new Set()), []);
-  // Un ticket qui quitte le triage (accepté, refusé, doublon) quitte la
-  // sélection du même coup : elle ne retient que ce que la colonne montre encore.
+  // A ticket that leaves triage (accepted, refused, duplicate) leaves the
+  // selection at the same time: it only retains what the column still shows.
   const bulkIssues = useMemo(
     () => triageIssues.filter((issue) => bulkIds.has(issue.id)),
     [triageIssues, bulkIds]
@@ -157,8 +157,8 @@ export default function TriagePage() {
     },
     [bulkIssues, updateIssue]
   );
-  // Une relation a exactement deux bouts : l'action n'existe qu'à deux tickets
-  // (même règle que le board, et le triage est mono-projet par construction).
+  // A relationship has exactly two ends: action only exists at two ends
+  // (same rule as the board, and the sorting is single-project by construction).
   const bulkLink = useMemo(() => {
     if (bulkIssues.length !== 2) return undefined;
     const [first, second] = bulkIssues;
@@ -171,8 +171,8 @@ export default function TriagePage() {
   }, [bulkIssues, addRelation, clearBulk]);
 
   /**
-   * « @ » (MIN-105) : le ticket sous le pointeur — ou la sélection quand il y en
-   * a une — part dans Numo. Même contexte que le bouton Numo de la pilule.
+   * “@” (MIN-105): the ticket under the pointer — or the selection when there is one
+   * has a — share in Numo. Same context as the Numo button on the pill.
    */
   const handleAskNumo = useCallback(
     (targets: Issue[]) => {
@@ -206,7 +206,7 @@ export default function TriagePage() {
 
   const [title, setTitle] = useState("");
   // Accept/decline go through a confirmation dialog with an optional message
-  // (posted as a comment on the issue, à la Linear).
+  // (posted as a comment on the issue, Linear-style).
   const [confirming, setConfirming] = useState<{
     action: "accept" | "decline";
     issue: Issue;
@@ -222,8 +222,8 @@ export default function TriagePage() {
     deleteAttachment,
   } = useIssueTimeline(
     selected?.id ?? null,
-    // Cf. issue-side-panel : la naissance du ticket vient de sa propre ligne
-    // quand l'événement `created` manque au journal.
+    // Cf. issue-side-panel: the birth of the ticket comes from its own line
+    // when the `created` event is missing from the log.
     selected
       ? {
           createdAt: selected.created_at,
@@ -245,15 +245,15 @@ export default function TriagePage() {
     }
   }, [triageIssues, selectedId]);
 
-  // Lien profond depuis la section « À trier » de l'accueil (MIN-104) :
-  // ?issue=<id> sélectionne CE ticket plutôt que le premier de la liste, puis
-  // purge le paramètre pour qu'un refetch de fond ne ramène pas la sélection
-  // ici (même idiome que le ?post= du feedback et le ?open= des objectifs).
+  // Deep link from the “To be sorted” section of the home page (MIN-104):
+  // ?issue=<id> selects THIS ticket rather than the first one in the list, then
+  // purges the parameter so that a background refetch does not bring back the selection
+  // here (same idiom as ?post= for feedback and ?open= for objectives).
   useEffect(() => {
     if (!issueParam) return;
-    // On attend que le ticket soit vraiment dans la liste : purger le paramètre
-    // avant l'arrivée des tickets laisserait l'effet ci-dessus retomber sur le
-    // premier de la file, et le lien profond serait perdu à froid.
+    // We wait until the ticket is really in the list: purge the parameter
+    // before the tickets arrive would let the above effect fall on the
+    // first in line, and the deep link would be lost cold.
     if (!triageIssues.some((i) => i.id === issueParam)) return;
     setSelectedId(issueParam);
     setMobileDetail(true);
@@ -358,10 +358,10 @@ export default function TriagePage() {
 
   if (!loading && triageIssues.length === 0) {
     return (
-      /* Triage vide : la même forme que le board et les objectifs — une scène,
-         une phrase, et ici rien à faire. Pas de bouton : le triage se remplit
-         tout seul, ce n'est pas un endroit où l'on crée. Le titre de la page
-         descend DANS le bloc, il n'a pas à être dit deux fois. */
+      /* Empty yard: the same shape as the board and the objectives — a scene,
+ a sentence, and here nothing to do. No button: the sorting fills
+ by itself, it's not a place where you create. The page title
+ goes INTO the block, it doesn't have to be said twice. */
       <div className="flex h-full flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
           <div className="mx-auto max-w-5xl">
@@ -373,10 +373,10 @@ export default function TriagePage() {
   }
 
   return (
-    /* « @ » au survol d'une ligne (ou sur la sélection) ouvre Numo — même
-       arbitrage que sur le board : la sélection prime sur le survol (MIN-105).
-       Le contexte traverse le portail de la barre secondaire, qui n'est déportée
-       que dans le DOM. */
+    /* “@” on hover over a line (or on selection) opens Numo — even
+ arbitration only on the board: selection takes precedence over hovering (MIN-105).
+ The context crosses the portal of the secondary bar, which is only offset
+ in the DOM. */
     <AskNumoProvider selectedIssues={bulkIssues} onAskNumo={handleAskNumo}>
     <div className="flex h-full min-h-0">
       {/* ── Left: pending list ─────────────────────────────────────────── */}
@@ -397,8 +397,8 @@ export default function TriagePage() {
             ))}
           </div>
         ) : visibleIssues.length === 0 ? (
-          // Un triage vide est traité plus haut, avant le rendu de la colonne :
-          // ici, c'est forcément le filtre qui l'a vidé.
+          // An empty sort is handled above, before rendering the column:
+          // here, it must have been the filter that emptied it.
           <p className="px-4 py-6 text-center text-sm text-muted-foreground">
             {tCommon("noFilterMatch")}
           </p>
@@ -433,10 +433,10 @@ export default function TriagePage() {
         {selected ? (
           <>
             {/* Header: back (mobile) · identifier · triage actions */}
-            {/* En-tête SANS bordure : c'est le fondu du contenu qui dit qu'il
-                continue au-dessus, et une barre séparée le couperait de ce
-                qu'il coiffe (même parti que la pull request et la conversation
-                d'agent). */}
+            {/* Header WITHOUT border: this is the fading of the content that says it
+ continues above, and a separate bar would cut it off from the
+ it caps (same part as the pull request and the
+ agent conversation). */}
             <div className="flex shrink-0 flex-wrap items-center gap-2 px-4 py-3 md:px-6">
               <Button
                 variant="ghost"
@@ -450,9 +450,9 @@ export default function TriagePage() {
               <span className="font-mono text-sm text-muted-foreground">
                 {issueIdentifier(project.key, selected.number)}
               </span>
-              {/* Même ordre que les actions d'une pull request (pr-detail) :
-                  l'action neutre, puis le refus, puis l'acceptation en dernier
-                  — le geste qui fait avancer le ticket est toujours à droite. */}
+              {/* Same order as the actions of a pull request (pr-detail):
+ the neutral action, then the refusal, then the acceptance last
+ — the gesture that advances the ticket is always on the right. */}
               <div className="ml-auto flex items-center gap-1.5">
                 <SearchSelect
                   value={null}
@@ -679,9 +679,9 @@ export default function TriagePage() {
           }}
           onClear={clearBulk}
           onAskNumo={() => handleAskNumo(bulkIssues)}
-          // Triage mono-projet : tous ses objectifs sont proposables. Pas de
-          // ligne de cycle en revanche — un ticket en triage n'y est pas
-          // éligible (voir CYCLE_INELIGIBLE_STATUSES).
+          // Single-project screening: all of its objectives are possible. No
+          // cycle line on the other hand — a triage ticket is not there
+          // eligible (see CYCLE_INELIGIBLE_STATUSES).
           objectives={objectives}
           onLink={bulkLink}
         />
@@ -692,11 +692,11 @@ export default function TriagePage() {
 }
 
 /**
- * Une ligne de la colonne de triage. Composant à part parce qu'elle s'inscrit
- * comme cible de « @ » (un hook par ligne, impossible dans un `.map`).
+ * A row of the sorting column. Separate component because it fits
+ * as target of “@” (one hook per line, impossible in a `.map`).
  *
- * Clic = ouvrir le ticket à droite ; Maj+clic = le prendre dans la sélection
- * groupée, exactement comme une carte du board.
+ * Click = open the ticket on the right; Shift+click = take it into the selection
+ * grouped, exactly like a board map.
  */
 function TriageRow({
   issue,
@@ -710,9 +710,9 @@ function TriageRow({
   issue: Issue;
   identifier: string;
   createdLabel: string;
-  /** Le ticket affiché dans le volet de détail. */
+  /** The ticket displayed in the detail pane. */
   open: boolean;
-  /** Pris dans la sélection groupée. */
+  /** Taken from the group selection. */
   picked: boolean;
   onOpen: () => void;
   onToggleBulk: (issueId: string) => void;
@@ -735,9 +735,9 @@ function TriageRow({
         "flex flex-col gap-1 rounded-lg px-3 py-2.5 text-left outline-none transition-colors",
         open && "bg-muted",
         !open && !picked && "hover:bg-muted/60 focus-visible:bg-muted/60",
-        // Prise dans la sélection : la même teinte que la carte prise sur le
-        // board. Le ticket ouvert le reste visiblement s'il est aussi pris —
-        // sinon la colonne ne dirait plus ce que montre le volet de droite.
+        // Taken from the selection: the same shade as the card taken from the
+        // board. The opened ticket visibly remains open if it is also taken —
+        // otherwise the column would no longer say what the right pane shows.
         picked && "bg-primary/10",
         picked && open && "ring-1 ring-primary/40"
       )}

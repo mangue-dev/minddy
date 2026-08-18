@@ -7,28 +7,28 @@ import { Brain } from "lucide-react";
 import { Markdown } from "@/components/markdown";
 
 /**
- * Le modèle RÉFLÉCHIT (MIN-122). Ligne compacte calquée sur `ToolCallRow`
- * (components/assistant/tool-call-display.tsx) : même gabarit, même densité —
- * une étape de travail parmi les autres, pas un message.
+ * The model REFLECTS (MIN-122). Compact line modeled on `ToolCallRow`
+ * (components/assistant/tool-call-display.tsx): same size, same density —
+ * a work step among others, not a message.
  *
- * Ce qu'on NE fait pas : streamer le raisonnement. Il s'écrivait autrefois en
- * direct dans le fil, ce qui noyait le vrai déroulé sous des pages de monologue.
- * Pendant la réflexion, il n'y a donc qu'un libellé qui respire et un compteur de
- * secondes à droite ; la trace, elle, arrive avec l'event de fin de round et se
- * déplie à la demande.
+ * What we DON’T do: stream the reasoning. It was formerly written in
+ * directly in the thread, which drowned the real unfolding under pages of monologue.
+ * During reflection, there is only one wording that breathes and a counter of
+ * seconds right; the trace arrives with the end of round event and
+ * unfolds on demand.
  *
- * Le compteur n'a PAS d'horloge propre (ni `setInterval`, ni le `useNow` de
- * `WorkAccordion`) : `durationMs` est mesuré côté serveur et re-diffusé ~4 fois
- * par seconde pendant la réflexion — le composant n'a qu'à l'afficher. Une horloge
- * locale ferait diverger le compteur de la durée réellement persistée, et
- * continuerait de tourner sur un round déjà fini.
+ * The counter does NOT have its own clock (neither `setInterval`, nor the `useNow` of
+ * `WorkAccordion`): `durationMs` is measured server-side and re-broadcast ~4 times
+ * per second during reflection — the component just has to display it. A clock
+ * local would cause the counter to diverge from the duration actually persisted, and
+ * would continue to run on a round that has already ended.
  */
 export function ReasoningBlock({
-  /** Réflexion EN COURS : libellé qui respire, compteur qui tourne. */
+  /** Reflection IN PROGRESS: wording that breathes, counter that runs. */
   active,
-  /** Millisecondes de réflexion : mesurées côté serveur, ou le dernier direct reçu. */
+  /** Milliseconds of reflection: measured on the server side, or the last direct received. */
   durationMs,
-  /** Trace persistée, dépliable une fois le round fini. Vide = rien à déplier. */
+  /** Trace persisted, unfoldable once the round is over. Empty = nothing to unfold. */
   text,
 }: {
   active: boolean;
@@ -54,7 +54,7 @@ export function ReasoningBlock({
       <span className={cn("flex-1 truncate text-left", active && "text-shimmer")}>
         {t("reasoning")}
       </span>
-      {/* Compteur à DROITE de la ligne — tabulaire, pour qu'il ne danse pas en
+      {/* Counter to the RIGHT of the line — tabular, so it doesn't dance in
           changeant de chiffre. */}
       <span className="shrink-0 tabular-nums">{counter}</span>
     </div>
@@ -68,10 +68,10 @@ export function ReasoningBlock({
         {row}
       </CollapsibleTrigger>
       <CollapsibleContent>
-        {/* La trace est du MARKDOWN, comme le rapport d'un sous-agent : un modèle
-            qui raisonne écrit des titres, des listes et des chemins en `code`.
-            Rendue en texte brut, on lisait « **Étape 1** » et des « --- » à
-            l'écran. */}
+        {/* The trace is MARKDOWN, like the report of a sub-agent: a model
+ which reasons writes titles, lists and paths in `code`.
+ Rendered in plain text, we read "**Step 1**" and "---" at
+ on the screen. */}
         <div className="ml-5 py-1 text-muted-foreground">
           <Markdown className="text-xs">{trace}</Markdown>
         </div>

@@ -13,12 +13,11 @@ import type { RepoHost, ShellResult } from "./repo-host";
 import { cloudLayout } from "./harness-layout";
 
 /**
- * LA LECTURE DES SORTIES DE GIT, exercée sur des sorties RÉELLES — celles d'un
- * dépôt jetable monté à la main (une modification, une suppression, un
- * renommage, un fichier non suivi, un binaire, un chemin à espaces), recopiées
- * ici telles quelles. C'est tout l'intérêt : ce module ne peut pas s'exercer
- * contre une vraie microVM, mais son travail réel est de LIRE, et ça, ça se
- * teste entièrement.
+ * READING GIT OUTPUTS, performed on REAL outputs — those of a
+ * hand-mounted throwaway repository (a modification, a deletion, a
+ * rename, an untracked file, a binary, a space path), copied
+ * here as is. That's the whole point: this module can't exercise
+ * against a real microVM, but its real job is to READ, and that's fully tested.
  */
 
 const NAME_STATUS = ["D\tdel.txt", "M\tkeep.txt", "R100\tren.txt\tren2.txt"].join("\n");
@@ -96,8 +95,8 @@ describe("parseNumstat", () => {
   it("indexe les compteurs par chemin d'ARRIVÉE d'un renommage", () => {
     const counts = parseNumstat(NUMSTAT);
     expect(counts.get("keep.txt")).toEqual({ additions: 2, deletions: 1 });
-    // Le champ compacté `ren.txt => ren2.txt` s'indexe sur le nom d'après —
-    // sinon les compteurs d'un fichier renommé ne rejoindraient jamais sa ligne.
+    // The packed field `ren.txt => ren2.txt` indexes on the name after —
+    // otherwise the counters of a renamed file would never join its line.
     expect(counts.get("ren2.txt")).toEqual({ additions: 0, deletions: 0 });
     expect(counts.has("ren.txt")).toBe(false);
   });
@@ -119,7 +118,7 @@ describe("splitUnifiedDiff", () => {
   it("rend les HUNKS seuls, sans l'en-tête que la vue reconstruit", () => {
     const patches = splitUnifiedDiff(PATCH);
     expect(patches.get("keep.txt")).toBe("@@ -1,3 +1,4 @@\n a\n-b\n+B\n c\n+d");
-    // Un fichier supprimé n'a pas de `+++ b/...` : son chemin se lit sur `--- a/`.
+    // A deleted file has no `+++ b/...`: its path reads `--- a/`.
     expect(patches.get("del.txt")).toBe("@@ -1 +0,0 @@\n-x");
   });
 
@@ -201,8 +200,8 @@ describe("buildWorkingDiff", () => {
 
   it("compte un fichier NON SUIVI en ajout, avec ses lignes", () => {
     const untracked = built().files.find((f) => f.filename === "untracked.txt");
-    // C'est le cas le plus fréquent d'un tour d'agent, et celui que `git diff`
-    // seul ne voit pas : sans le passage `--no-index`, ce fichier serait absent.
+    // This is the most common case of an agent trick, and the one that `git diff`
+    // only does not see: without the `--no-index` passage, this file would be absent.
     expect(untracked).toMatchObject({ status: "added", additions: 2, deletions: 0 });
   });
 
@@ -247,7 +246,7 @@ new file mode 100644
   });
 });
 
-/** Un hôte de dépôt qui répond par table, et retient ce qu'on lui a demandé. */
+/** A repository host that responds per table, and remembers what was asked of it. */
 function fakeHost(replies: [RegExp, string][]): RepoHost & { commands: string[] } {
   const commands: string[] = [];
   return {
@@ -273,11 +272,11 @@ describe("resolveBaseRef", () => {
   });
 
   /**
-   * LE DÉFAUT QUI FAISAIT LIRE 881 LIGNES POUR 130 (PR 51). Sans le point commun,
-   * le diff en direct compare l'arbre de travail au TIP de la base : les commits
-   * tombés sur `main` depuis la naissance de la branche y apparaissent inversés,
-   * et la vue au repos (la forge, qui montre `base...tête`) dit autre chose.
-   */
+ * THE DEFAULT WHICH WAS READING 881 LINES FOR 130 (PR 51). Without the common point,
+ * the live diff compares the working tree to the TIP of the base: the commits
+ * that have fallen on `main` since the birth of the branch appear inverted,
+ * and the view at rest (the forge, which shows `base...head`) says something else.
+ */
   it("remonte au point commun avec la tête, pas au tip de la base", async () => {
     const host = fakeHost([
       [/rev-parse --verify/, "abc123\n"],
@@ -299,12 +298,12 @@ describe("resolveBaseRef", () => {
   });
 
   it("retombe sur la seule ref distante du clone quand origin/HEAD manque", async () => {
-    // le clone est `--single-branch` : il n'y a qu'une ref distante, et
-    // c'est forcément la base. Aller la demander à la forge coûterait un token.
+    // the clone is `--single-branch`: there is only one remote ref, and
+    // this is necessarily the basis. Going to ask for it at the forge would cost one token.
     const host = fakeHost([[/for-each-ref/, "origin/develop\n"]]);
     expect(await resolveBaseRef(host, null)).toBe("origin/develop");
-    // `origin/HEAD` est exclu : son nom court est « origin » tout court, un ref
-    // valide qui se lit comme un bug dès qu'il apparaît quelque part.
+    // `origin/HEAD` is excluded: its short name is “origin” for short, a ref
+    // valid that reads like a bug as soon as it appears somewhere.
     expect(host.commands.some((c) => c.includes("--exclude=refs/remotes/origin/HEAD"))).toBe(true);
   });
 
@@ -327,8 +326,8 @@ describe("readWorkingDiff", () => {
       [/ls-files --others/, UNTRACKED_PATCH],
     ]);
     await readWorkingDiff(host, "origin/main", { patches: true });
-    // La fin de tour stage et committe SEULE : une intention d'ajout posée ici
-    // finirait dans le commit de quelqu'un d'autre.
+    // The end of the stage tour and commits ALONE: an intention to add placed here
+    // would end up in someone else's commit.
     for (const command of host.commands) {
       expect(command).not.toMatch(/git (add|commit|checkout|stash|reset)\b/);
     }
@@ -373,8 +372,8 @@ describe("readWorkingDiff", () => {
       writeFile: async () => {},
       mkdir: async () => {},
     };
-    // Ce chemin est un BONUS sur celui de la forge : une microVM injoignable doit
-    // faire un repli silencieux, pas une vue diff en panne.
+    // This path is a BONUS on that of the forge: an unreachable microVM must
+    // do a silent fallback, not a crashed diff view.
     await expect(readWorkingDiff(host, "origin/main", { patches: true })).resolves.toEqual({
       files: [],
       truncated: false,

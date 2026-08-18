@@ -10,29 +10,29 @@ import { cloudLayout } from "@/lib/server/agent/harness-layout";
 import { readWorkingDiff, resolveBaseRef } from "@/lib/server/agent/working-diff";
 
 /**
- * Diff VIVANT d'un run d'agent — la vue diff DANS la conversation, sans attendre
- * la PR. GET → `{ files, provider, url, live }`.
+ * Diff LIVE from an agent run — the diff view IN the conversation, without waiting
+ * PR. GET → `{ files, provider, url, live }`.
  *
- * DEUX SOURCES, et laquelle répond dépend de ce que le run est en train de faire :
+ * TWO SOURCES, and which one responds depends on what the run is doing:
  *
- *  • **le tour tourne** → la SANDBOX. `git diff origin/<base>` dans la microVM du
- *    run couvre les commits des tours passés ET l'arbre de travail : c'est le seul
- *    endroit qui sache ce que l'agent vient d'écrire. Sans elle, cliquer un
- *    fichier que le fil venait d'annoncer ouvrait l'état d'AVANT — ou rien du tout
- *    au premier tour, la branche n'existant pas encore côté forge (MIN-266).
- *  • **au repos** (ou sandbox injoignable, ou session de RELECTURE, qui n'écrit
- *    pas dans le dépôt) → la FORGE : les fichiers/patches de la PR quand elle
- *    existe, sinon le compare `base...branche`. C'est le travail poussé, et au
- *    repos il n'y a rien d'autre à montrer.
+ * • **the trick turns** → the SANDBOX. `git diff origin/<base>` in the microVM of
+ * run covers commits from past rounds AND the working tree: it's the only one
+ * place that knows what the agent just wrote. Without it, click one
+ * file that the thread just announced opened BEFORE state — or nothing at all
+ * in the first round, the branch does not yet exist on the forge side (MIN-266).
+ * • **at rest** (or unreachable sandbox, or REVIEW session, which does not write
+ * not in the repository) → the FORGE: the files/patches of the PR when it
+ * exists, otherwise compares `base...branche`. It’s hard work, and
+ * rest there is nothing else to show.
  *
- * Le repli n'est jamais une erreur : une sandbox endormie, expirée ou en train de
- * committer rend simplement une liste vide, et la forge reprend la main.
- * `live: true` dit laquelle a répondu — l'interface l'annonce, un diff qui inclut
- * du travail non poussé ne se lit pas comme un diff de PR.
+ * Fallback is never a mistake: a sleeping, expired, or developing sandbox
+ * committer simply returns an empty list, and the forge takes over.
+ * `live: true` says which one responded — the interface announces it, a diff that includes
+ * non-push work does not read as a PR diff.
  *
- * `?stat=1` sert l'EN-TÊTE de la conversation : les mêmes fichiers SANS leurs
- * patches. Il se redemande toutes les quelques secondes pendant le tour, et deux
- * passes `git diff` courtes ne sont pas le même objet que plusieurs mégaoctets de
+ * `?stat=1` serves the HEADER of the conversation: the same files WITHOUT their
+ * patches. It asks itself again every few seconds during the round, and two
+ * Short `git diff` passes are not the same object as several megabytes of
  * texte.
  */
 
@@ -54,9 +54,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
   const patches = request.nextUrl.searchParams.get("stat") !== "1";
 
-  // Le tour tourne et la microVM écrit : c'est elle qui sait. Une session de
-  // relecture est exclue — elle ne touche pas au dépôt, et son diff EST celui de
-  // la pull request qu'elle lit.
+  // The trick turns and the microVM writes: it is she who knows. A session of
+  // rereading is excluded — it does not affect the deposit, and its difference IS that of
+  // the pull request she reads.
   const working = run.status === "queued" || run.status === "running";
   if (working && run.sandbox_id && run.pull_request_id == null) {
     const live = await readLiveDiff(run.sandbox_id, run.base_branch, patches);
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     }
   }
 
-  // Ni PR ni branche stampée (run à peine lancée) : diff vide, pas une erreur.
+  // Neither PR nor stamped branch (run barely launched): empty diff, not an error.
   const head = run.branch_name;
   if (run.pr_number == null && !head) {
     return NextResponse.json({ files: [], url: null });
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     if (!target) return NextResponse.json({ error: "No repository linked" }, { status: 409 });
     const forge = forgeFor(target.provider);
 
-    // Une PR existe → son diff fait foi (même source que la page Pull requests).
+    // A PR exists → its diff is authentic (same source as the Pull requests page).
     if (run.pr_number != null) {
       const { files, truncated } = await forge.listPullRequestFiles({
         token: target.token,
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       });
     }
 
-    // `head` est forcément là (garde plus haut) — TS ne le déduit pas du combiné.
+    // `head` is necessarily there (keeps higher) — TS does not deduce it from the handset.
     if (!head) return NextResponse.json({ files: [], url: null });
     const { files, url } = await forge.compareBranches({
       token: target.token,
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     });
     return NextResponse.json({ files, provider: target.provider, url });
   } catch (err) {
-    // Branche pas encore poussée (ou supprimée depuis) : diff vide, pas une erreur.
+    // Branch not yet pushed (or since deleted): empty diff, not an error.
     if (isForgeApiError(err) && err.status === 404) {
       return NextResponse.json({ files: [], url: null });
     }
@@ -111,14 +111,14 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 }
 
 /**
- * Le diff lu dans la microVM, ou `null` si elle n'a rien à dire. Aucune erreur
- * ne remonte : ce chemin est un BONUS sur celui de la forge, et une microVM
- * injoignable doit faire un repli silencieux, pas une vue diff en panne.
+ * The diff read in the microVM, or `null` if it has nothing to say. No errors
+ * does not go back: this path is a BONUS on that of the forge, and a microVM
+ * unreachable should do a silent fallback, not a broken diff view.
  *
- * La base du diff se résout DANS le clone (`resolveBaseRef`) plutôt que via la
- * forge : `?stat=1` revient toutes les quelques secondes pendant le tour, et
- * minter un token d'installation à chaque passage pour n'apprendre qu'un nom de
- * branche par défaut serait payer cher un fait que git a sous la main.
+ * The base of the diff resolves IN the clone (`resolveBaseRef`) rather than via the
+ * forge: `?stat=1` returns every few seconds during the turn, and
+ * minter an installation token on each pass to learn only one name of
+ * default branch would pay dearly for a fact that git has on hand.
  */
 async function readLiveDiff(
   sandboxId: string,

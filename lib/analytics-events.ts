@@ -1,35 +1,34 @@
 /**
- * Catalogue d'événements analytics — LA source de vérité des événements PostHog
- * émis côté client via `useAnalytics().track()` (voir `lib/use-analytics.ts`).
+ * Analytics Event Catalog — THE source of truth for PostHog events
+ * emitted client-side via `useAnalytics().track()` (see `lib/use-analytics.ts`).
  *
- * Pour ajouter un événement :
- *   1. ajouter une ligne à `AnalyticsEventProps` (nom → forme des props) ;
- *   2. ajouter le nom au tableau `EVENT_NAMES`.
- * Le `satisfies` refuse un nom qui n'existe pas dans le catalogue, et la garde
- * `_assertNoMissingEvents` plus bas refuse de compiler si un événement
- * catalogué manque au tableau. Comme `track()` est générique sur
- * `AnalyticsEventName`, une faute de frappe au call site est elle aussi une
- * erreur de compilation — plus d'événement perdu en silence.
+ * To add an event:
+ * 1. add a line to `AnalyticsEventProps` (name → prop form);
+ * 2. add the name to the table `EVENT_NAMES`.
+ * The `satisfies` refuses a name that does not exist in the catalog, and keeps it
+ * `_assertNoMissingEvents` below refuses to compile if a cataloged
+ * event is missing from the table. As `track()` is generic to
+ * `AnalyticsEventName`, a typo at the call site is also a
+ * compilation error — no more silently lost events.
  *
- * NOMMAGE : snake_case, `^[a-z0-9_:-]+$` (voir `sanitizeAnalyticsEventName`).
+ * NAMING: snake_case, `^[a-z0-9_:-]+$` (see `sanitizeAnalyticsEventName`).
  *
- * DONNÉES : jamais de PII ni de texte libre dans les props — uniquement des
- * métadonnées (compteurs, booléens, ids, enums, tranches via `lengthBucket` /
- * `durationBucket` / `sizeBucket`). Les props sont sanitisées à l'envoi
- * (primitives, ≤24 clés, strings ≤512 caractères).
+ * DATA: never PII or free text in props — only
+ * metadata (counters, booleans, ids, enums, slices via `lengthBucket` /
+ * `durationBucket` / `sizeBucket`). The props are sanitized on sending
+ * (primitives, ≤24 keys, strings ≤512 characters).
  *
- * Les événements SERVEUR ont leur propre catalogue fermé plus bas. Ils passent
- * par la même sanitisation à l'envoi, même si leurs propriétés restent plus
- * souples parce qu'elles proviennent de webhooks, crons et intégrations.
+ * SERVER events have their own closed catalog below. They pass
+ * through the same sanitization when sending, even if their properties remain more flexible because they come from webhooks, crons and integrations.
  */
 
 /**
- * Catalogue exhaustif des événements émis par `lib/server/posthog.ts`.
+ * Exhaustive catalog of events emitted by `lib/server/posthog.ts`.
  *
- * Garder cette liste distincte du catalogue client évite de confondre un geste
- * navigateur (soumis au choix de cookies) avec le fait métier serveur qui fait
- * autorité. Le type ferme les call sites à la compilation ; le Set protège les
- * valeurs qui traverseraient malgré tout une frontière JavaScript non typée.
+ * Keeping this list distinct from the client catalog avoids confusing a browser gesture
+ * (subject to the choice of cookies) with the server business fact which makes
+ * authority. The type closes call sites at compilation; Set protects
+ * values ​​that would still cross an untyped JavaScript boundary.
  */
 export const SERVER_ANALYTICS_EVENT_NAMES = [
   "account_data_exported",
@@ -64,12 +63,12 @@ export type ServerAnalyticsEventName = typeof SERVER_ANALYTICS_EVENT_NAMES[numbe
 export const ALLOWED_SERVER_ANALYTICS_EVENTS: ReadonlySet<ServerAnalyticsEventName> =
   new Set(SERVER_ANALYTICS_EVENT_NAMES);
 
-/** Valeurs primitives acceptées après sanitisation (optionnelles par confort). */
+/** Primitive values ​​accepted after sanitization (optional for convenience). */
 type PropValue = string | number | boolean | null | undefined;
-/** Événements qui ne portent aucune prop structurée. */
+/** Events that carry no structured prop. */
 type NoProps = Record<string, never>;
 
-/** Statuts de ticket — repris de `lib/issue-constants.ts` (string pour rester souple). */
+/** Ticket statuses — taken from `lib/issue-constants.ts` (string to remain flexible). */
 type IssueStatus = string;
 
 export interface AnalyticsEventProps {
@@ -84,7 +83,7 @@ export interface AnalyticsEventProps {
   signup_submitted: NoProps;
   signup_succeeded: { requires_email_confirmation: boolean };
   signup_failed: { reason: string };
-  /** Parcours « mot de passe oublié » (MIN-297) : demandé, échoué, terminé. */
+  /** “Forgotten password” route (MIN-297): requested, failed, completed. */
   password_reset_requested: NoProps;
   password_reset_failed: { reason: string };
   password_reset_completed: NoProps;
@@ -94,48 +93,45 @@ export interface AnalyticsEventProps {
   onboarding_viewed: { current_step: string; completed_count: number };
   onboarding_step_viewed: { step: string; step_number: number };
   onboarding_step_acknowledged: { step: string };
-  /** Étape « importer mes tickets » (MIN-98) : de quel outil vient le compte.
-   *  `import_started` / `import_completed` couvrent déjà l'import lui-même. */
+  /** “Import my tickets” step (MIN-98): which tool does the account come from.
+ * `import_started` / `import_completed` already cover the import itself. */
   onboarding_import_provider_selected: { provider: string };
-  /** « Rejoindre un projet » à l'étape 1 : le compte n'en crée pas, il attend
-   *  une invitation. C'est le seul endroit du produit qui le dit. */
+  /** “Join a project” in step 1: the account does not create one, it waits for an invitation. This is the only place in the product that says so. */
   onboarding_join_opened: NoProps;
-  /** Étape « connecter un agent » : lequel. Dit pour qui écrire la doc MCP
-   *  en premier. */
+  /** “Connect an agent” step: which one. Tells who to write the MCP
+ * doc for first. */
   onboarding_mcp_agent_selected: { agent: string };
-  /** Étape « votre clé d'API » (MIN-149) : le compte est arrivé avec sa clé.
-   *  C'est la mesure de l'argument BYOK — combien de nouveaux comptes payent
-   *  déjà leurs tokens ailleurs et n'ont pas à être comptés ici. */
+  /** "Your API key" step (MIN-149): The account has arrived with its key.
+ * This is the measure of the BYOK argument — how many new accounts are already paying for their tokens elsewhere and don't have to be counted here. */
   onboarding_ai_key_added: NoProps;
   onboarding_dismissed: { last_step: string; completed_count: number };
   onboarding_completed: { steps_acknowledged: number };
 
-  // ── Projets ──
-  /** `draft` = un brouillon repris depuis la barre latérale ; `resume` = le
-   *  retour d'un aller-retour chez le provider git, qui n'est pas une reprise
-   *  volontaire mais le milieu d'un geste. */
+  // ── Projects ──
+  /** `draft` = a draft taken from the sidebar; `resume` = the
+ * return of a round trip to the git provider, which is not a voluntary recovery
+ * but the middle of a gesture. */
   project_wizard_opened: {
     source: "sidebar" | "home" | "palette" | "resume" | "draft";
   };
   project_wizard_step_viewed: { step: string };
-  /** Fermé SANS garder la saisie. Depuis les brouillons de projet, l'abandon
-   *  est un choix explicite (« Abandonner ») et non plus le sort par défaut de
-   *  toute fermeture : c'est `project_wizard_draft_saved` qu'il faut lui
-   *  comparer pour lire l'étape qui fait décrocher. */
+  /** Closed WITHOUT keeping the entry. Since the project drafts, abandoning
+ * is an explicit choice ("Abort") and no longer the default outcome of
+ * any closure: it is `project_wizard_draft_saved` that must be compared to read the step which causes the disconnection. */
   project_wizard_abandoned: { last_step: string };
-  /** Fermé EN GARDANT la saisie — le brouillon prend sa ligne dans la barre
-   *  latérale. L'étape dit où l'on s'arrête quand on ne renonce pas. */
+  /** Closed WHILE KEEPing input — the draft takes its line in the
+ * sidebar. The stage says where we stop when we don't give up. */
   project_wizard_draft_saved: { step: string };
-  /** La première question du wizard (MIN-171) : d'où on part. C'est la mesure
-   *  de laquelle des deux entrées sert vraiment — un projet neuf à cadrer, ou
-   *  un backlog qui existe déjà ailleurs. */
+  /** The wizard's first question (MIN-171): where do we start from. This is the measure
+ * of which of the two entries is really used — a new project to frame, or
+ * a backlog that already exists elsewhere. */
   project_wizard_origin_chosen: { origin: "new" | "existing" };
-  /** « Je souhaite rejoindre un projet », depuis l'étape « nom » : le compte
-   *  n'avait pas de projet à créer, il lui fallait une invitation. C'est un
-   *  ABANDON légitime du wizard — à retrancher de ceux qui décrochent. */
+  /** “I want to join a project”, from the “name” step: the account
+ * did not have a project to create, it needed an invitation. This is a legitimate
+ * ABANDONMENT of the wizard — to be removed from those who drop out. */
   project_wizard_join_opened: NoProps;
-  /** Ce que l'étape d'amorce a récolté, « rien » compris : l'écart entre
-   *  l'origine choisie et l'amorce retenue dit si l'étape tient sa promesse. */
+  /** What the seed step collected, including “nothing”: the gap between
+ * the chosen origin and the retained seed says whether the step keeps its promise. */
   project_wizard_seed_chosen: { seed: "brief" | "numo" | "import" | "none" };
   project_wizard_completed: {
     has_git_link: boolean;
@@ -147,11 +143,11 @@ export interface AnalyticsEventProps {
   project_deleted: { project_id: string };
   project_updated: { field: string };
   project_icon_changed: { kind: "favicon" | "upload" | "orb" };
-  /** Relance du tirage de l'orbe générée (aucune propriété : c'est un geste). */
+  /** Restart drawing of the generated orb (no property: it's a gesture). */
   project_orb_rerolled: NoProps;
   project_setup_resumed: { step: string };
 
-  // ── Tickets : création ──
+  // ── Tickets: creation ──
   issue_created: {
     source:
       | "dialog"
@@ -161,7 +157,7 @@ export interface AnalyticsEventProps {
       | "board"
       | "objective"
       | "sub_issue"
-      /** Promotion d'un retour : le formulaire s'ouvre déjà rempli par lui. */
+      /** Promotion of a return: the form opens already completed by him. */
       | "feedback";
     has_description: boolean;
     has_categories: boolean;
@@ -169,17 +165,17 @@ export interface AnalyticsEventProps {
     priority: string;
     status: IssueStatus;
     effort?: string | null;
-    /** Créé depuis le sélecteur « dans un autre projet ». */
+    /** Created from the “in another project” selector. */
     cross_project?: boolean;
     resource_count?: number;
     description_length_bucket?: string;
-    /** Le ticket vient d'un brouillon local récupéré (MIN-41). */
+    /** The ticket comes from a retrieved local draft (MIN-41). */
     created_from_draft?: boolean;
-    /** Smart-fill était armé sur ce ticket (MIN-260) : ses propriétés viennent
-        du modèle, pas de la personne. Les autres propriétés de cet événement
-        (priority, effort, has_categories) décrivent alors ce que le FORMULAIRE
-        portait au moment de l'envoi, c'est-à-dire les défauts — le remplissage
-        se fait côté serveur, après. À lire avec ce drapeau, jamais sans. */
+    /** Smart-fill was armed on this ticket (MIN-260): its properties come
+ from the model, not from the person. The other properties of this event
+ (priority, effort, has_categories) then describe what the FORM
+ carried at the time of sending, that is to say the defaults — the filling
+ is done on the server side, afterwards. To read with this flag, never without. */
     smart_fill?: boolean;
   };
   issue_create_dialog_opened: { source: string };
@@ -187,9 +183,9 @@ export interface AnalyticsEventProps {
   issue_draft_recovered: NoProps;
   issue_draft_discarded: NoProps;
 
-  // ── Tickets : édition ──
+  // ── Tickets: edition ──
   issue_opened: { surface: string };
-  /** `from` n'est renseigné que si l'appelant connaissait l'état précédent. */
+  /** `from` is only set if the caller knew the previous state. */
   issue_status_changed: { from?: IssueStatus | null; to: IssueStatus; surface: string };
   issue_priority_changed: { to: string; surface: string };
   issue_assignee_changed: { assigned: boolean; surface: string; self?: boolean };
@@ -205,17 +201,17 @@ export interface AnalyticsEventProps {
   // ── Tickets : contenu ──
   issue_plan_edited: { task_count: number };
   plan_task_toggled: { to_state: "pending" | "in_progress" | "completed" | "cancelled" };
-  /** Le fil d'une PAGE est la quatrième cible (MIN-282), et la seule qui
-      puisse être ANCRÉE à un bloc — d'où `anchored`, absent des trois autres. */
+  /** The thread of a PAGE is the fourth target (MIN-282), and the only one that
+ can be ANCHORED to a block — hence `anchored`, absent from the other three. */
   comment_added: {
     target: "issue" | "objective" | "feedback" | "page";
     length_bucket: string;
   };
   comment_deleted: { target: "issue" | "objective" | "feedback" | "page" };
-  /** Une ressource ajoutée — fichier OU lien (MIN-184). Aucune donnée de
-      contenu : ni l'URL, ni le titre, ni le nom de fichier. `size_bucket` et
-      `mime_kind` (la FAMILLE MIME : image, application…) n'existent que pour un
-      fichier. */
+  /** An added resource — file OR link (MIN-184). No data from
+ content: neither the URL, nor the title, nor the file name. `size_bucket` and
+ `mime_kind` (the MIME FAMILY: image, application…) only exist for one
+ file. */
   resource_added: {
     target: "issue" | "objective" | "comment";
     kind: "file" | "link" | "page";
@@ -243,12 +239,12 @@ export interface AnalyticsEventProps {
   view_shared: { has_password: boolean; has_custom_domain: boolean };
   tab_reordered: NoProps;
 
-  // ── Vues enregistrées de la palette (un écran retenu sous un nom) ──
+  // ── Saved views of the palette (one screen retained under a name) ──
   saved_view_created: NoProps;
   saved_view_opened: NoProps;
   saved_view_deleted: NoProps;
 
-  // ── Sélection groupée (MIN-75) ──
+  // ── Group selection (MIN-75) ──
   bulk_selection_started: { surface: string };
   bulk_action_executed: { action: string; count: number };
   bulk_selection_cleared: { count: number };
@@ -287,8 +283,8 @@ export interface AnalyticsEventProps {
   agent_preferences_updated: { field: string };
 
   // ── Routines (MIN-185) — un run d'agent qui revient tout seul ──
-  // On mesure la FORME du geste (cadence, modèle choisi ou non), jamais
-  // l'instruction : elle décrit le dépôt de quelqu'un.
+  // We measure the FORM of the gesture (cadence, model chosen or not), never
+  // the instruction: it describes someone's deposit.
   routine_created: {
     frequency: string;
     model: string;
@@ -296,7 +292,7 @@ export interface AnalyticsEventProps {
     has_branch: boolean;
     prompt_length_bucket: string;
   };
-  /** « Lancer maintenant » : un passage hors calendrier, déclenché à la main. */
+  /** “Launch now”: an off-schedule passage, triggered by hand. */
   routine_run_now: NoProps;
 
   // ── Pull requests ──
@@ -305,13 +301,13 @@ export interface AnalyticsEventProps {
   pr_diff_file_opened: NoProps;
   pr_review_comment_added: { length_bucket: string };
   pr_review_submitted: { verdict: string };
-  /** « Faire vérifier par Numo » (MIN-141) — la review déclenchée à la main. */
+  /** “Have it checked by Numo” (MIN-141) — the review triggered by hand. */
   pr_ai_review_requested: NoProps;
   /**
-   * Ticket rattaché À LA MAIN à une PR qui n'en avait pas (MIN-163). `pr_state`
-   * dit à quel moment de la vie de la PR on rattrape le lien manquant — c'est ce
-   * qu'on veut savoir pour juger si la convention de nommage suffit.
-   */
+ * Ticket attached BY HAND to a PR which did not have one (MIN-163). `pr_state`
+ * says at what point in the life of the PR we catch the missing link — this is what
+ * we want to know to judge whether the naming convention is sufficient.
+ */
   pr_issue_linked: { pr_state: string };
   pr_external_link_clicked: { provider: string };
 
@@ -330,9 +326,9 @@ export interface AnalyticsEventProps {
   scratchpad_task_promoted: NoProps;
   scratchpad_edited: { length_bucket: string };
 
-  // ── Feedback côté équipe (MIN-37) ──
-  /** Action d'équipe sur un retour (promote, merge, undo…) — le verbe vient
-   *  du dernier segment de la route appelée. */
+  // ── Team-side feedback (MIN-37) ──
+  /** Team action on a return (promote, merge, undo…) — the verb comes
+ * from the last segment of the called route. */
   feedback_action: { action: string };
   feedback_board_viewed: { post_count: number };
   feedback_post_opened: { status: string };
@@ -356,21 +352,21 @@ export interface AnalyticsEventProps {
   public_board_signin_started: { method: "otp" | "sso" };
   public_board_signin_completed: { method: "otp" | "sso" };
 
-  // ── Vues partagées (MIN-26) ──
+  // ── Shared views (MIN-26) ──
   shared_view_opened: { has_password: boolean };
   shared_view_password_submitted: { success: boolean };
   share_link_created: { has_password: boolean };
   share_link_revoked: NoProps;
   share_link_copied: NoProps;
 
-  // ── Pages publiées et exportées (MIN-283) ──
+  // ── Published and exported pages (MIN-283) ──
   page_published: { has_password: boolean; with_children: boolean };
   page_unpublished: NoProps;
   page_exported: { format: "md" | "zip" | "pdf" };
-  /** Une page copiée pour un agent : `source` dit si le geste est passé par le
-      menu ⋯ ou par ⌘L — c'est ce qui dira si le raccourci a trouvé son public,
-      ou si personne ne l'a découvert. `with_instructions` dit si le champ
-      facultatif a servi : s'il ne sert jamais, le dialog est du péage. */
+  /** A page copied for an agent: `source` says if the gesture was made via the
+ menu ⋯ or by ⌘L — this is what will say if the shortcut has found its audience,
+ or if no one has discovered it. `with_instructions` says if the optional
+ field was used: if it is never used, the dialog is toll. */
   page_copied_for_agent: { source: "menu" | "shortcut"; with_instructions: boolean };
 
   // ── Notifications ──
@@ -379,7 +375,7 @@ export interface AnalyticsEventProps {
   notifications_marked_read: { count: number };
   notification_prefs_changed: { key: string; enabled: boolean };
 
-  // ── Réglages ──
+  // ── Settings ──
   settings_opened: { scope: "account" | "project"; source: string };
   settings_tab_switched: { scope: "account" | "project"; tab: string };
   profile_updated: { field: "name" | "email" | "password" | "avatar" };
@@ -388,7 +384,7 @@ export interface AnalyticsEventProps {
   account_preference_toggled: { key: string; enabled: boolean };
   settings_assistant_prompt_sent: { scope: "account" | "project" };
 
-  // Connexions / intégrations
+  // Connections / integrations
   mcp_connect_opened: { source: string };
   mcp_install_copied: { client: string; method: string };
   mcp_client_link_opened: { client: string };
@@ -396,18 +392,18 @@ export interface AnalyticsEventProps {
   ai_key_removed: NoProps;
   git_connection_started: { provider: "github" | "gitlab" };
   git_connection_completed: { provider: "github" | "gitlab" };
-  /** `provider` peut valoir "unknown" : la déconnexion se fait par id de
-   *  connexion, sans que l'appelant sache de quel fournisseur il s'agit. */
+  /** `provider` can be "unknown": disconnection is done by id of
+ * connection, without the caller knowing which provider it is. */
   git_connection_removed: { provider: string };
-  /** Compte git PERSONNEL, sous lequel partent les gestes de PR (MIN-144) —
-   *  distinct de l'installation de l'App ci-dessus. */
+  /** PERSONAL git account, under which PR gestures are sent (MIN-144) —
+ * distinct from the installation of the App above. */
   git_identity_connect_started: { provider: "github" | "gitlab" };
   git_identity_removed: { provider: string };
   project_git_linked: { provider: string };
   project_git_unlinked: { provider: string };
-  /** Synchro unidirectionnelle des issues du dépôt lié (MIN-97). */
+  /** Unidirectional synchronization of linked repository outputs (MIN-97). */
   project_git_issue_sync_toggled: { provider: string; enabled: boolean };
-  /** Ménage des branches d'agent des PR fermées (MIN-102). */
+  /** Cleaning up closed PR agent branches (MIN-102). */
   project_git_branches_cleaned: { provider: string; deleted: number; failed: number };
   oauth_grant_revoked: NoProps;
   connected_app_viewed: NoProps;
@@ -419,20 +415,20 @@ export interface AnalyticsEventProps {
 
   // ── Notifications push / web (MIN-183) ──
   //
-  // AUCUNE PII : ni endpoint (c'est une adresse de livraison, donc un
-  // identifiant d'appareil stable), ni user-agent brut, ni libellé d'appareil.
+  // NO PII: neither endpoint (it is a delivery address, therefore a
+  // stable device identifier), neither raw user-agent nor device label.
   // `platform` reste au niveau de `navigator.platform` (« MacIntel »,
-  // « iPhone ») — assez pour savoir d'où viennent les activations, jamais assez
-  // pour reconnaître quelqu'un.
+  // “iPhone”) — enough to know where the activations come from, never enough
+  // to recognize someone.
   push_device_enabled: { platform: string };
   push_device_disabled: NoProps;
   push_device_removed: NoProps;
-  /** La boîte de dialogue du navigateur a été refusée (ou l'était déjà) : c'est
-   *  LE point de perte du parcours, et il ne se rattrape pas depuis la page. */
+  /** The browser dialog has been refused (or already was): this is
+ * THE lost point of the path, and it is not catching up from the page. */
   push_permission_denied: NoProps;
   push_test_sent: NoProps;
 
-  // Membres, catégories, import
+  // Members, categories, import
   project_member_invited: NoProps;
   project_member_removed: NoProps;
   project_invitation_responded: { response: "accepted" | "declined" };
@@ -442,20 +438,20 @@ export interface AnalyticsEventProps {
   import_started: { source: string };
   import_completed: { source: string; issue_count: number };
   import_failed: { source: string; reason: string };
-  /** L'autre sens : l'export CSV depuis ⌘K. `scope` dit si le compte sort UN
-   *  projet ou tout, `status_count` combien de statuts sont restés cochés — les
-   *  deux réponses qu'on ne peut pas déduire du reste. Un `truncated: true`
-   *  répété dirait que le plafond de la route est trop bas. */
+  /** The other direction: CSV export from ⌘K. `scope` says if the account leaves UN
+ * project or all, `status_count` how many statuses remained checked — the
+ * two answers that cannot be deduced from the rest. A repeated `truncated: true`
+ * would say the route ceiling is too low. */
   issues_exported: {
     scope: "project" | "all";
     status_count: number;
     issue_count: number;
     truncated: boolean;
   };
-  /** Amorce d'un projet par un brief (MIN-172, MIN-173). Seule l'ÉCRITURE se
-   *  compte encore côté navigateur : la demande et la proposition sont passées
-   *  dans la conversation avec Numo, où elles sont un appel d'outil comme un
-   *  autre. `issue_count` est ce qui RESTE après les décochages. */
+  /** Start of a project with a brief (MIN-172, MIN-173). Only WRITING se
+ * still counts on the browser side: the request and the proposal are passed
+ * in the conversation with Numo, where they are a tool call like a
+ * other. `issue_count` is what REMAINS after unchecks. */
   brief_split_applied: { issue_count: number; objective_count: number };
 
   // ── Billing (MIN-72) ──
@@ -463,8 +459,8 @@ export interface AnalyticsEventProps {
   plan_cta_clicked: { plan_id: string; interval: string; current_plan_id: string };
   checkout_started: { plan_id: string; interval: string };
   billing_portal_opened: { current_plan_id: string };
-  // Résiliation et reprise DEPUIS l'app (MIN-296) : le geste ne passe plus par
-  // le portail Stripe, donc plus par `billing_portal_opened`.
+  // Termination and recovery FROM the app (MIN-296): the gesture no longer goes through
+  // the Stripe portal, so no more by `billing_portal_opened`.
   subscription_canceled: NoProps;
   subscription_resumed: NoProps;
   usage_viewed: NoProps;
@@ -474,9 +470,9 @@ export interface AnalyticsEventProps {
 
   // ── Site public (MIN-73) ──
   landing_viewed: NoProps;
-  // `mcp_page`, `comparison` et `changelog` : les pages de contenu ajoutées par
-  // MIN-93. Elles n'existent que pour être trouvées — savoir laquelle amène
-  // vraiment à l'inscription est la moitié de la mesure du lot.
+  // `mcp_page`, `comparison` and `changelog`: the content pages added by
+  //MIN-93. They exist only to be found — knowing which one leads
+  // really at registration is half the lot measurement.
   landing_cta_clicked: {
     location:
       | "hero"
@@ -489,40 +485,40 @@ export interface AnalyticsEventProps {
       | "comparison"
       | "changelog";
   };
-  // `landing_section_viewed` a été retiré (MIN-150) : catalogué à sa création,
-  // il n'a JAMAIS eu d'émetteur, et PostHog n'en a donc jamais reçu un seul.
-  // Un nom qui traîne ici se lit comme une mesure existante — on croit pouvoir
-  // interroger « quelles sections sont vues », et la réponse vide passe pour
-  // une absence de trafic. Le rétablir = une ligne ici + un composant client
-  // qui l'émet, les deux dans le même geste.
+  // `landing_section_viewed` has been removed (MIN-150): cataloged at its creation,
+  // he NEVER had a transmitter, and PostHog therefore never received one.
+  // A name lying around here reads like an existing measurement — we think we can
+  // query "which sections are seen", and the empty response passes as
+  // an absence of traffic. Revert it = a line here + a client component
+  // who emits it, both in the same gesture.
   landing_faq_opened: { question_index: number };
 
   // ── App de bureau (MIN-292) ──
   //
-  // Ce sont les INTENTIONS. Le téléchargement lui-même est compté par le
-  // serveur (`desktop_download_started`, dans app/api/desktop/download) : lui
-  // seul sait qu'un fichier est parti, et il compte aussi les liens partagés
-  // hors de l'app. Les deux ensemble donnent le taux d'aboutissement ; l'un
+  // These are the INTENTIONS. The download itself is counted by the
+  // server (`desktop_download_started`, in app/api/desktop/download): him
+  // only knows that a file is gone, and it also counts shared links
+  // outside the app. The two together give the success rate; mon
   // sans l'autre ne donne rien.
-  /** La proposition d'installer l'app, sur l'accueil web — vue par quelqu'un
-   *  qui y est éligible (un Mac, hors de l'app, jamais écartée). C'est le
-   *  dénominateur des deux événements suivants. */
+  /** The proposal to install the app, on the web home page — seen by someone
+ * who is eligible (a Mac, outside the app, never rejected). This is the
+ * denominator of the next two events. */
   desktop_install_prompt_shown: NoProps;
   desktop_install_prompt_clicked: { surface: "home_banner" | "settings" };
-  /** « Non merci », et c'est pour toujours (voir lib/desktop/install-prompt.ts).
-   *  Le rapport au `shown` dit si la proposition dérange plus qu'elle ne sert. */
+  /** "No thanks", and it's forever (see lib/desktop/install-prompt.ts).
+ * The report to `shown` says if the proposal bothers more than it helps. */
   desktop_install_prompt_dismissed: NoProps;
-  /** Le clic sur le bouton de `/download`. `arch` distingue le lien Intel du
-   *  bouton principal : c'est ce qui dira si les vieux Mac valent encore leur
-   *  build. */
+  /** Clicking on the `/download` button. `arch` distinguishes the Intel link from the
+ * main button: this is what will tell if old Macs are still worth their
+ * build. */
   desktop_download_clicked: { arch: "arm64" | "x64" };
-  /** Démo de dictée jouable (MIN-150). `input` distingue la prise au micro de
-   *  la phrase d'exemple : savoir laquelle des deux fait le « aha » décide de
-   *  laquelle mettre en avant. Aucun texte dicté ne remonte, jamais. */
+  /** Playable dictation demo (MIN-150). `input` distinguishes taking the microphone from
+ * the example sentence: knowing which of the two makes the “aha” decides
+ * which one to highlight. No dictated text comes back, ever. */
   landing_voice_demo_started: { input: "mic" | "sample" };
-  /** `duration_bucket` = l'attente entre le clic et le ticket rempli. Une démo
-   *  qui met dix secondes à répondre n'est plus une démo : c'est la mesure qui
-   *  le dira avant que quiconque s'en plaigne. */
+  /** `duration_bucket` = the wait between click and ticket filled. A demo
+ * that takes ten seconds to respond is no longer a demo: it's the measure that
+ * will tell you before anyone complains. */
   landing_voice_demo_completed: { input: "mic" | "sample"; duration_bucket: string };
   landing_voice_demo_failed: { input: "mic" | "sample"; reason: string };
 
@@ -545,23 +541,23 @@ export interface AnalyticsEventProps {
   objective_opened: NoProps;
   objective_updated: { field: string };
   objective_deleted: NoProps;
-  // « page » depuis MIN-226 : le panneau latéral d'objectif a disparu au profit
-  // de la page Objectifs, et c'est elle qui porte désormais la dictée d'édition.
+  // “page” since MIN-226: the lens side panel has disappeared in favor
+  // of the Objectives page, and it is she who now carries the editing dictation.
   objective_dictation_used: { surface: "create_dialog" | "page" };
   admin_dashboard_viewed: { tab: string };
   external_link_clicked: { destination: string };
 }
 
-/** Union de tous les noms catalogués. */
+/** Union of all cataloged names. */
 export type AnalyticsEventName = keyof AnalyticsEventProps;
 
-/** Props acceptées par `track()` pour un nom donné. */
+/** Props accepted by `track()` for a given name. */
 export type AnalyticsPropsFor<E extends AnalyticsEventName> =
   AnalyticsEventProps[E] & Record<string, PropValue>;
 
 /**
- * Source de l'allowlist runtime. `satisfies` refuse un nom absent du catalogue ;
- * la garde plus bas refuse un nom catalogué absent de ce tableau.
+ * Runtime allowlist source. `satisfies` refuses a name absent from the catalog;
+ * the lower guard refuses a cataloged name absent from this table.
  */
 const EVENT_NAMES = [
   // Consentement
@@ -588,7 +584,7 @@ const EVENT_NAMES = [
   "onboarding_ai_key_added",
   "onboarding_dismissed",
   "onboarding_completed",
-  // Projets
+  // Projects
   "project_wizard_opened",
   "project_wizard_step_viewed",
   "project_wizard_abandoned",
@@ -604,13 +600,13 @@ const EVENT_NAMES = [
   "project_icon_changed",
   "project_orb_rerolled",
   "project_setup_resumed",
-  // Tickets : création
+  // Tickets: creation
   "issue_created",
   "issue_create_dialog_opened",
   "issue_dictation_used",
   "issue_draft_recovered",
   "issue_draft_discarded",
-  // Tickets : édition
+  // Tickets: edition
   "issue_opened",
   "issue_status_changed",
   "issue_priority_changed",
@@ -647,11 +643,11 @@ const EVENT_NAMES = [
   "view_deleted",
   "view_shared",
   "tab_reordered",
-  // Vues enregistrées de la palette
+  // Saved views of the palette
   "saved_view_created",
   "saved_view_opened",
   "saved_view_deleted",
-  // Sélection groupée
+  // Bulk selection
   "bulk_selection_started",
   "bulk_action_executed",
   "bulk_selection_cleared",
@@ -710,7 +706,7 @@ const EVENT_NAMES = [
   "scratchpad_task_completed",
   "scratchpad_task_promoted",
   "scratchpad_edited",
-  // Feedback équipe
+  // Team feedback
   "feedback_action",
   "feedback_board_viewed",
   "feedback_post_opened",
@@ -732,13 +728,13 @@ const EVENT_NAMES = [
   "public_feedback_opened",
   "public_board_signin_started",
   "public_board_signin_completed",
-  // Vues partagées
+  // Shared views
   "shared_view_opened",
   "shared_view_password_submitted",
   "share_link_created",
   "share_link_revoked",
   "share_link_copied",
-  // Pages publiées (MIN-283)
+  // Published pages (MIN-283)
   "page_published",
   "page_unpublished",
   "page_exported",
@@ -748,7 +744,7 @@ const EVENT_NAMES = [
   "notification_clicked",
   "notifications_marked_read",
   "notification_prefs_changed",
-  // Réglages
+  // Settings
   "settings_opened",
   "settings_tab_switched",
   "profile_updated",
@@ -839,11 +835,11 @@ const EVENT_NAMES = [
   "external_link_clicked",
 ] as const satisfies readonly AnalyticsEventName[];
 
-// Garde de compilation : si un événement catalogué manque à EVENT_NAMES, ce type
-// vaut ce nom-là et l'affectation `= true` échoue. Correctif : l'ajouter ci-dessus.
+// Compilation guard: if a cataloged event is missing from EVENT_NAMES, this type
+// is that name and the `= true` assignment fails. Fix: Add it above.
 type _MissingEvent = Exclude<AnalyticsEventName, (typeof EVENT_NAMES)[number]>;
 const _assertNoMissingEvents: _MissingEvent extends never ? true : _MissingEvent = true;
 void _assertNoMissingEvents;
 
-/** Allowlist runtime consommée par `track()`. */
+/** Allowlist runtime consumed by `track()`. */
 export const ALLOWED_ANALYTICS_EVENTS: ReadonlySet<AnalyticsEventName> = new Set(EVENT_NAMES);

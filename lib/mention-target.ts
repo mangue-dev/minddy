@@ -1,19 +1,19 @@
-// Où mène une mention — la règle, en un seul endroit.
+// Where a mention leads — the rule, in one place.
 //
-// Une pilule « @ » DÉSIGNE quelque chose : un ticket, un objectif, une page du
-// wiki, un projet. Cliquer dessus doit y aller, exactement comme un lien du
-// texte. Une personne, elle, ne mène nulle part : minddy n'a pas de page de
-// profil, et une pilule qui se clique sans rien ouvrir ment sur ce qu'elle est.
+// A pill “@” DESIGNATES something: a ticket, an objective, a page of the
+// wiki, a project. Clicking on it should go there, just like a link from the
+// text. A person leads nowhere: minddy has no page of
+// profile, and a pill that clicks without opening anything lies about what it is.
 //
-// Les chemins sont les mêmes que ceux d'une notification
-// (lib/notification-target.ts) : un ticket s'ouvre en panneau sur le board de
-// son projet, un objectif se sélectionne sur la liste des objectifs. Deux
-// entrées vers les mêmes écrans, une seule forme d'URL.
+// The paths are the same as those of a notification
+// (lib/notification-target.ts): a ticket opens as a panel on the board
+// your project, an objective is selected from the list of objectives. Two
+// entries to the same screens, only one form of URL.
 //
-// Module PUR : pas de React, pas de `server-only` — de quoi le tester sans rien
-// monter, et le lire depuis n'importe quelle surface.
+// PUR module: no React, no `server-only` — enough to test it without anything
+// mount, and read it from any surface.
 
-/** Ce qu'une mention peut désigner (cf. components/mention-chip.tsx). */
+/** What a mention can designate (see components/mention-chip.tsx). */
 export type MentionTargetType =
   | "member"
   | "project"
@@ -24,22 +24,22 @@ export type MentionTargetType =
   | "page";
 
 /**
- * Le chemin qu'ouvre une mention, ou `null` quand elle ne mène nulle part.
+ * The path opened by a mention, or `null` when it leads nowhere.
  *
- * `null` couvre deux cas qu'il ne faut pas confondre à l'appel :
- *  - une mention qui n'a PAS de destination (une personne, Numo, un compte de
- *    forge) — il n'y en aura jamais ;
- *  - un ticket, un objectif ou une page dont on ne connaît pas le projet — la
- *    résolution n'a pas (encore) abouti, la pilule reste inerte plutôt que de
- *    fabriquer une URL fausse.
+ * `null` covers two cases that should not be confused when called:
+ * - a mention which has NO destination (a person, Numo, an account of
+ * forge) — there will never be one;
+ * - a ticket, an objective or a page whose project we do not know — the
+ * resolution has not (yet) succeeded, the pill remains inert rather than
+ * creating a false URL.
  */
 export function mentionTargetPath(
   type: MentionTargetType,
   id: string,
   projectId?: string | null,
 ): string | null {
-  // Un projet se désigne par lui-même : son id EST celui de sa destination, il
-  // n'y a rien à résoudre.
+  // A project designates itself: its id IS that of its destination, it
+  // there is nothing to resolve.
   if (type === "project") return id ? `/projects/${id}` : null;
   if (!id || !projectId) return null;
   switch (type) {
@@ -50,25 +50,25 @@ export function mentionTargetPath(
     case "page":
       return `/projects/${projectId}/pages/${id}`;
     default:
-      // member, numo, forge : personne n'a d'écran à ouvrir.
+      // member, numo, forge: no one has a screen to open.
       return null;
   }
 }
 
-/** Ce qu'il faut savoir d'un élément citable pour retrouver son projet. */
+/** What you need to know about a quotable element to find your project. */
 interface MentionRow {
   id: string;
   project_id: string;
 }
 
 /**
- * De quel projet relève l'élément cité — le chaînon manquant entre la pilule,
- * qui ne porte que le type et l'id (components/mention-node.ts), et l'URL de
- * son écran, qui commence par le projet.
+ * Which project does the cited item belong to — the missing link between the pill,
+ * which only has the type and id (components/mention-node.ts), and the URL of
+ * its screen, which starts with the project.
  *
- * Une seule table pour les trois natures, à clé composée : deux entités de
- * types différents peuvent porter le même id sans se marcher dessus, et un id
- * inconnu rend `undefined` — la pilule reste alors du texte.
+ * A single table for the three natures, with a compound key: two entities of
+ * different types can carry the same id without stepping on each other, and an unknown id
+ * makes `undefined` — the pill then remains text.
  */
 export function mentionProjectLookup(sources: {
   issues?: MentionRow[];

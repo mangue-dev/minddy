@@ -44,24 +44,24 @@ import type { AssistantMention } from "@/lib/assistant-types";
 import { resolveAiRuntime } from "@/lib/server/ai-runtime";
 
 /**
- * Point d'entrée UNIQUE pour démarrer un run FROID (MIN-46 + MIN-68). Appelé par
- * tous les triggers de LANCEMENT (sidebar, clic droit, « demander des changements »,
- * chat numo). Résout et FIGE le modèle sur le run (cascade run > user > racine), fait
- * les pré-checks (dépôt lié, quota/BYOK, pas de run déjà actif), fait HÉRITER la PR
- * de l'issue si elle est encore pertinente, crée le run `queued`, puis kicke le drain
- * en `after()` (réponse immédiate à l'utilisateur).
+ * SINGLE entry point to start a COLD run (MIN-46 + MIN-68). Called by
+ * all LAUNCH triggers (sidebar, right click, “request changes”,
+ * cat number). Solves and FREEZES the model on the run (cascade run > user > root), done
+ * the pre-checks (linked deposit, quota/BYOK, no run already active), causes the PR to INHERIT
+ * of the outcome if it is still relevant, creates the run `queued`, then kicks the drain
+ * in `after()` (immediate response to the user).
  *
- * Froid = une run NEUVE : aucun checkpoint, aucun message LLM repris. Elle hérite
- * seulement de l'ARTEFACT (branche + PR) et du résumé de la run précédente, injectés
- * dans son prompt d'amorce par `execute.ts`. La reprise à CHAUD (même session, même
- * contexte) est un chemin distinct : `/steer`, depuis le composer d'une conversation.
+ * Cold = a NEW run: no checkpoint, no LLM message taken up. She inherits
+ * only the ARTIFACT (branch + PR) and the summary of the previous run, injected
+ * in its start prompt with `execute.ts`. HOT recovery (same session, same
+ * context) is a distinct path: `/steer`, from the composer of a conversation.
  */
 
 export type LaunchError =
   | "issueNotFound"
   | "prNotFound"
   | "prIncomplete"
-  /** Reprise d'une PR sans branche à hériter : rien à corriger dessus (MIN-292). */
+  /** Resumption of a PR without a branch to inherit: nothing to correct on it (MIN-292). */
   | "prNoBranch"
   | "noRepo"
   | "unsupportedProvider"
@@ -75,10 +75,10 @@ export type LaunchError =
   | "promptRequired";
 
 /**
- * De quoi écrire « Claude Opus 5 (×12) dépasse le plafond de votre plan Go (×4) ».
- * Le picker grise déjà ces modèles : ce refus-ci n'arrive qu'à un modèle choisi
- * AVANT (défaut perso enregistré, puis downgrade ou plafond réajusté), et il
- * doit donc se suffire à lui-même.
+ * Enough to write “Claude Opus 5 (×12) exceeds the ceiling of your Go plan (×4)”.
+ * The picker is already graying out these models: this refusal only happens to a chosen model
+ * BEFORE (personal fault recorded, then downgrade or ceiling readjusted), and it
+ * must therefore be sufficient in itself.
  */
 export interface ModelAbovePlan {
   model: string;
@@ -99,114 +99,114 @@ export type LaunchResult =
 
 export interface LaunchAgentInput {
   /**
-   * Ticket d'ancrage. ABSENT → run CARNET (MIN-84) : l'agent est découplé du
-   * système de tickets — `projectId` (le dépôt à cloner) et `prompt` (la note,
-   * son instruction) sont alors requis. Un run carnet n'a ni lignée ni héritage :
-   * chaque lancement est une conversation autonome.
+   * Anchor ticket. ABSENT → run CARNET (MIN-84): the agent is decoupled from the
+   * ticket system — `projectId` (the repository to clone) and `prompt` (the note,
+   * his instruction) are then required. A run notebook has neither lineage nor heritage:
+   * each launch is a self-contained conversation.
    */
   issueId?: string | null;
   /**
-   * Pull request dont le run REPREND le travail (MIN-292), quand elle n'a pas de
-   * ticket : une PR ouverte par une session carnet a bien une branche vivante, et
-   * « demander des changements » doit pouvoir repartir dessus. Le projet vient du
-   * dépôt de la PR (comme pour une relecture), la lignée de `inheritableWorkForPr`,
-   * et le run reste un run CARNET — il n'a pas de ticket à occuper ni à déplacer.
-   * Quand `issueId` est aussi fourni, le ticket reste l'ancrage métier du run,
-   * mais cette PR garde la priorité pour la branche héritée.
-   * Sans rapport avec `pullRequestId`, qui ancre une RELECTURE (aucune écriture).
+   * Pull request whose run RESUMES the work (MIN-292), when it has no
+   * ticket: a PR opened by a notebook session has a living branch, and
+   * “requesting changes” must be able to start again. The project comes from
+   * filing of the PR (as for a proofreading), the lineage of `inheritableWorkForPr`,
+   * and the run remains a NOTEBOOK run — it has no tickets to occupy or move.
+   * When `issueId` is also provided, the ticket remains the business anchor of the run,
+   * but this PR keeps priority for the legacy branch.
+   * Unrelated to `pullRequestId`, which anchors a REREAD (no writing).
    */
   continuePullRequestId?: string | null;
   /**
-   * Pull request d'ancrage (MIN-168) : le run RELIT cette PR — il clone sa
-   * branche de tête, lit le code et commente, sans jamais écrire dans le dépôt.
-   * Exclusif avec `issueId` : une session de review n'occupe pas un ticket.
-   * Le projet porteur est résolu ici, à partir du dépôt de la PR et des projets
-   * accessibles à `userId`.
+   * Anchor pull request (MIN-168): the run RELITS this PR — it clones its
+   * head branch, reads the code and comments, without ever writing to the repository.
+   * Exclusive with `issueId`: a review session does not occupy a ticket.
+   * The supporting project is resolved here, from the submission of the PR and the projects
+   * accessible at `userId`.
    */
   pullRequestId?: string | null;
-  /** Projet du run carnet. Ignoré quand `issueId` est fourni (le projet vient du
-   *  ticket). L'appelant a déjà vérifié l'appartenance au projet. */
+  /** Run notebook project. Ignored when `issueId` is provided (the project comes from
+   * ticket). The caller has already verified project membership. */
   projectId?: string | null;
   userId: string;
   triggeredBy: AgentRunTrigger;
-  /** Consigne libre en plus de l'issue (optionnelle) — ou LA note (run carnet). */
+  /** Free instructions in addition to the outcome (optional) — or THE note (run notebook). */
   prompt?: string | null;
   promptMentions?: AssistantMention[] | null;
-  /** Modèle explicite = override/forçage (numo ou l'utilisateur). */
+  /** Explicit model = override/forcing (numo or user). */
   model?: string | null;
-  /** true si le modèle est imposé (numo « utilise tel modèle »). */
+  /** true if the model is imposed (numo “use such model”). */
   forced?: boolean;
   /**
-   * Niveau de raisonnement choisi au lancement (MIN-122). Absent → le défaut perso
-   * de l'utilisateur, sinon `DEFAULT_REASONING_LEVEL` (`medium`). Aucune borne :
-   * les quatre niveaux sont ouverts, y compris en quota minddy (cf.
+   * Level of reasoning chosen at launch (MIN-122). Absent → the personal fault
+   * of the user, otherwise `DEFAULT_REASONING_LEVEL` (`medium`). No terminal:
+   * the four levels are open, including minddy quota (cf.
    * `resolveReasoningLevel`).
    */
   reasoningLevel?: string | null;
   /**
-   * Branche de base choisie au lancement (défaut : la branche par défaut du
-   * dépôt). IGNORÉE si l'issue a une lignée vivante à hériter : la branche de
-   * travail existe déjà, sa base ne se rechoisit pas.
+   * Base branch chosen at launch (default: the default branch of the
+   * deposit). IGNORED if the issue has a living lineage to inherit: the branch of
+   * work already exists, its basis cannot be chosen again.
    */
   baseBranch?: string | null;
   /**
-   * Ce qu'on demande à l'agent, du point de vue du TICKET. Seul `implement`
-   * (le défaut) fait passer le ticket « en cours » ; `plan` (« Générer un
-   * plan » / « Vérifier le plan ») le CADRE sans le commencer, `verify`
-   * (« Vérifier l'implémentation ») CONTRÔLE du travail déjà fait — un ticket
-   * en revue doit y rester, pas régresser « en cours » — et `custom` porte une
-   * consigne libre, dont on ne sait pas si elle est du travail.
+   * What we ask of the agent, from the TICKET point of view. Only `implement`
+   * (the default) changes the ticket to “in progress”; `plan` (“Generate a
+   * plan" / "Check the plan") the FRAME without starting it, `verify`
+   * (“Check implementation”) CHECKING work already done — a ticket
+   * in review must stay there, not regress “in progress” — and `custom` carries a
+   * free deposit, which we do not know if it is work.
    */
   intent?: AgentLaunchIntent;
   /**
-   * Étape d'une CHAÎNE d'automatisation (MIN-147). Le run porte l'id de sa
-   * chaîne — c'est par lui que le crochet de fin de run la retrouve — et le
-   * plafond de dépense que la chaîne lui accorde, rendu exécutoire par la boucle
-   * (`min(quota, run, chaîne)`) et pas seulement affiché.
+   * Step of an automation CHAIN ​​(MIN-147). The run carries the id of its
+   * chain — it is through it that the hook at the end of the run finds it — and the
+   * spending ceiling that the chain grants it, made enforceable by the loop
+ * (`min(quota, run, chain)`) and not just displayed.
    */
   chainId?: string | null;
   budgetUsd?: number | null;
   /**
-   * Passage d'une ROUTINE (MIN-185). Un run de routine EST un run carnet — même
-   * ancrage, même `create_pr`, même chemin de drain — auquel cette seule ligne
-   * ajoute trois choses : la ligne de facture « Routines », le jeu de tools sans
-   * `ask_user` ni `create_routine`, et l'exclusion de la liste des
-   * conversations. `projectId` et `prompt` restent requis, comme tout run
-   * carnet : la routine les fournit.
+   * Passage of a ROUTINE (MIN-185). A routine run IS a notebook run — even
+   * anchor, same `create_pr`, same drain path — to which this single line
+   * adds three things: the “Routines” invoice line, the set of tools without
+   * `ask_user` nor `create_routine`, and exclusion from the list of
+   * conversations. `projectId` and `prompt` remain required, like any run
+   * notebook: routine provides them.
    */
   routineId?: string | null;
   /**
-   * Titre DÉJÀ écrit du run, quand l'appelant en a un — le titre de la routine
-   * (MIN-185). Il remplace la génération par petit modèle, qui est sautée dans
-   * ce cas : un titre écrit une fois vaut mieux qu'un titre repayé chaque matin.
+   * ALREADY written title of the run, when the caller has one — the title of the routine
+   * (MIN-185). It replaces the generation by small model, which is skipped in
+   * this case: a title written once is better than a title repaid every morning.
    */
   title?: string | null;
   /**
-   * La conversation demande à tourner sur la MACHINE de l'utilisateur (MIN-359).
+   * The conversation asks to run on the user's MACHINE (MIN-359).
    *
-   * Une DEMANDE, venue du corps d'un POST : `localExecRequested`
-   * ([local-exec.ts](local-exec.ts)) décide si elle survit, et `createRun` la
-   * fige sur la ligne. Il n'y a pas d'autre entrée, et rien ne la bascule
-   * ensuite — même doctrine que le moteur et la microVM (cf. `createRun`).
+   * A REQUEST, coming from the body of a POST: `localExecRequested`
+   * ([local-exec.ts](local-exec.ts)) decides whether it survives, and `createRun`
+   * freezes on the line. There is no other input, and nothing toggles it
+   * then — same doctrine as the engine and the microVM (see `createRun`).
    */
   localExec?: boolean;
-  /** Demande un worktree local isolé, si le run est admis en local. */
+  /** Request an isolated local worktree, if the run is allowed locally. */
   localWorktree?: boolean;
 }
 
 /**
- * Ce que le lancement fait au statut du ticket : cf. `intentStartsWork`.
- * `review` (MIN-168) est le seul qui ne parle pas d'un ticket du tout : il relit
- * une pull request.
+ * What the launch does to the ticket status: cf. `intentStartsWork`.
+ * `review` (MIN-168) is the only one who doesn't talk about a ticket at all: he rereads
+ * a pull request.
  */
 export type AgentLaunchIntent = "implement" | "plan" | "verify" | "custom" | "review";
 
 /**
- * Le lancement fait-il DÉMARRER le ticket ? Seul « implémenter » est du travail
- * neuf : cadrer vient avant, vérifier vient après, une consigne écrite par
- * l'utilisateur (`custom`) peut être n'importe quoi, et relire (`review`) ne
- * touche même pas au dépôt — aucun des quatre ne doit déplacer le ticket.
- * `undefined` (appelant historique) vaut « implémenter ».
+ * Does launching START the ticket? Only “implement” is work
+ * nine: framing comes before, checking comes after, an instruction written by
+ * user (`custom`) can be anything, and reread (`review`) does not
+ * Don't even touch the deposit — none of the four should move the ticket.
+ * `undefined` (historical caller) is “implement”.
  */
 export function intentStartsWork(intent: AgentLaunchIntent | undefined): boolean {
   return intent === undefined || intent === "implement";
@@ -215,9 +215,9 @@ export function intentStartsWork(intent: AgentLaunchIntent | undefined): boolean
 export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchResult> {
   const service = getServiceClient();
 
-  // Ancrage PULL REQUEST (MIN-168) : chemin à part de bout en bout — le projet
-  // vient du dépôt, le modèle de `pr_review_model`, et rien n'est écrit sur un
-  // ticket (ni statut, ni événement, ni héritage de branche).
+  // PULL REQUEST anchor (MIN-168): separate end-to-end path — the project
+  // comes from the repository, the model of `pr_review_model`, and nothing is written on a
+  // ticket (neither status, nor event, nor branch inheritance).
   if (input.pullRequestId) {
     if (!capability("vercelSandbox").configured) {
       return { ok: false, error: "executionBackendUnavailable" };
@@ -226,14 +226,14 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   }
 
   const issueId = input.issueId ?? null;
-  // Reprise d'une PR (MIN-292) : quand l'appelant fournit une PR explicite, elle
-  // porte la lignée dans tous les cas — y compris quand elle est rattachée à un
-  // ticket. Le ticket reste l'ancrage métier du run, mais il ne peut plus faire
-  // choisir une autre branche que celle de la PR demandée.
+  // Resumption of a PR (MIN-292): when the caller provides an explicit PR, it
+  // carries the lineage in all cases — including when it is linked to a
+  // ticket. The ticket remains the business anchor of the run, but it can no longer do
+  // choose a branch other than that of the requested PR.
   const continuePrId = input.continuePullRequestId ?? null;
   let projectId: string;
-  // Titre du TICKET : la moitié durable de ce que le titreur résume (l'autre est
-  // la consigne). Cf. `agentRunTitleSource`.
+  // Title of the TICKET: the lasting half of what the titrator summarizes (the other is
+  // the instruction). See `agentRunTitleSource`.
   let issueTitle: string | null = null;
   let continuePr: PrRunContext | null = null;
   if (issueId) {
@@ -248,16 +248,16 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     issueTitle = (issue as { title: string | null }).title;
     if (continuePrId) {
       continuePr = await loadPrRunContext(continuePrId);
-      // La PR vient du même geste serveur que le ticket. Refuser un ancrage
-      // incohérent évite de créer un run du ticket sur la branche d'une autre PR.
+      // The PR comes from the same server gesture as the ticket. Refuse an anchor
+      // inconsistent avoids creating a run of the ticket on the branch of another PR.
       if (!continuePr || continuePr.issueId !== issueId) {
         return { ok: false, error: "prNotFound" };
       }
     }
   } else if (continuePrId) {
-    // Même résolution de projet qu'une relecture : une PR appartient à un dépôt,
-    // et le projet porteur est le premier lien accessible au lanceur — c'est lui
-    // qui porte la RLS du run, donc la visibilité de la session.
+    // Same project resolution as a proofread: a PR belongs to a repository,
+    // and the supporting project is the first link accessible to the launcher — it is him
+    // which carries the RLS of the run, therefore the visibility of the session.
     continuePr = await loadPrRunContext(continuePrId);
     if (!continuePr) return { ok: false, error: "prNotFound" };
     const prLink = await resolveProjectLinkForRepo({
@@ -266,21 +266,21 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       repoFullName: continuePr.repoFullName,
     });
     if (!prLink) return { ok: false, error: "prNotFound" };
-    // Comme un run carnet : sans consigne, la session n'aurait pas de mission —
-    // et ici la consigne EST la demande de changements.
+    // Like a run notebook: without instructions, the session would have no mission —
+    // and here the instruction IS the request for changes.
     if (!input.prompt?.trim()) return { ok: false, error: "promptRequired" };
     projectId = prLink.projectId;
   } else {
-    // Conversation générale : sans ticket, le message EST la mission.
+    // General conversation: without a ticket, the message IS the mission.
     if (!input.projectId) return { ok: false, error: "issueNotFound" };
     if (!input.prompt?.trim()) return { ok: false, error: "promptRequired" };
     projectId = input.projectId;
   }
 
-  // Après la résolution du projet, ces lectures ne dépendent plus les unes des
-  // autres. Les lancer ensemble raccourcit le temps avant le kick du drain — et
-  // donc avant le réveil de la sandbox cloud — sans changer les gardes qui les
-  // consomment ci-dessous.
+  // After the resolution of the project, these readings no longer depend on each other.
+  // others. Throwing them together shortens the time before the drain kicks — and
+  // so before the cloud sandbox wakes up — without changing the guards that
+  // consume them below.
   const linkPromise = getProjectLink(projectId);
   const activePromise = continuePr
     ? activeRunForPrNumber({
@@ -299,21 +299,21 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
 
   const link = await linkPromise;
   if (!link) return { ok: false, error: "noRepo" };
-  // Le registre des providers fait autorité (MIN-69) : un provider connu avec la
-  // capacité d'écriture (PR/MR) peut porter l'agent — github ET gitlab.
+  // The authoritative provider register (MIN-69): a known provider with the
+  // write capacity (PR/MR) can carry the agent — github AND gitlab.
   if (!isRepoProviderId(link.provider) || !REPO_PROVIDERS[link.provider].capabilities.write) {
     return { ok: false, error: "unsupportedProvider" };
   }
 
-  // Le ticket est un contexte, pas un verrou : plusieurs conversations peuvent
-  // le citer et travailler en parallèle sur des branches distinctes.
+  // The ticket is a context, not a lock: multiple conversations can
+  // cite it and work in parallel on separate branches.
   //
-  // Une routine ou une chaîne garde son propre verrou : un passage qui traîne
-  // ne doit pas se faire doubler par la même instruction.
+  // A routine or chain keeps its own lock: a passage that drags
+  // must not be duplicated by the same instruction.
   if (continuePr) {
-    // Une reprise de PR, elle, retrouve la règle : deux relances en parallèle
-    // pousseraient sur la MÊME branche. C'est la lignée qui est unique, pas le
-    // carnet — et ici la lignée est la pull request.
+    // A PR resumption rediscovers the rule: two relaunches in parallel
+    // would grow on the SAME branch. It is the lineage that is unique, not the
+    // notebook — and here the lineage is the pull request.
     const active = await activePromise;
     if (active) return { ok: false, error: "alreadyRunning", run: active };
   } else if (input.chainId || input.routineId) {
@@ -334,17 +334,17 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     return { ok: false, error: "executionBackendUnavailable" };
   }
   const byok = await byokPromise;
-  // Ne jamais créer un run cloud qui finirait par choisir OpenRouter : le
-  // provider local est une configuration valide, mais il n'existe que depuis
-  // le proxy de l'app de bureau.
+  // Never create a cloud run that ends up choosing OpenRouter: the
+  // local provider is a valid configuration, but it has only existed since
+  // the desktop app proxy.
   if (isLocalAgentProvider(byok?.provider) && !localExec) {
     return { ok: false, error: "localEndpointRequiresLocalRun" };
   }
 
-  // Le titre ne se lance qu'une fois les gardes passées — un refus ne doit pas
-  // consommer un appel modèle — puis il se recouvre avec la résolution du modèle
-  // et de la branche. Surtout, il ne devient JAMAIS une barrière avant le drain :
-  // la conversation démarre sous son libellé de repli et le titre arrive après.
+  // The title is only launched once the guards have passed — a refusal should not
+  // consume a model call — then it overlaps with model resolution
+  // and the branch. Above all, it NEVER becomes a barrier before the drain:
+  // the conversation starts under its fallback label and the title comes afterwards.
   const titleSource = agentRunTitleSource({ issueTitle, prompt: input.prompt });
   const generatedTitle =
     !input.routineId && titleSource
@@ -364,10 +364,10 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       surface: aiSurface,
     });
     model = resolved.model;
-    // Plafond de modèle du plan (quota minddy uniquement) : il porte sur ce que
-    // l'utilisateur a CHOISI — pas sur les défauts de minddy, dont l'instance
-    // répond. Le picker grise déjà ces modèles ; ce refus attrape le cas où le
-    // choix précède la contrainte (défaut perso enregistré, puis downgrade).
+    // Ceiling of plan model (Minddy quota only): it concerns what
+    // the user CHOSE — not about the faults of minddy, whose instance
+    // answers. The picker is already graying these models; this refusal catches the case where the
+    // choice precedes the constraint (personal default recorded, then downgrade).
     if (resolved.chosenByUser) {
       await ensureModelInPlan({ userId: input.userId, model, mode: quota.mode });
     }
@@ -391,19 +391,19 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     throw err;
   }
 
-  // Niveau de raisonnement figé sur le run, comme le modèle : les chunks suivants
-  // tournent dans d'autres invocations et doivent retrouver le même.
+  // Level of reasoning fixed on the run, like the model: the following chunks
+  // rotate in other invocations and must find the same one.
   const reasoningLevel = await resolveReasoningLevel({
     perRunLevel: input.reasoningLevel,
     userId: input.userId,
   });
 
-  // Une conversation neuve a toujours son workspace. La seule reprise implicite
-  // encore admise ici est une demande EXPLICITE de continuer une pull request :
-  // la lignée se lit alors sur les runs qui portent son numéro. Une PR sans
-  // branche à reprendre (aucun run l'ayant ouverte, ou déjà mergée) est refusée
-  // ici plutôt que de partir en silence sur une branche neuve, ce qui perdrait
-  // le travail qu'on demandait justement de corriger.
+  // A new conversation always has its workspace. The only implicit recovery
+  // still admitted here is an EXPLICIT request to continue a pull request:
+  // the lineage is then read on the runs which bear its number. A PR without
+  // branch to resume (no run having opened it, or already merged) is refused
+  // here rather than leaving silently on a new branch, which would lose
+  // the work that was precisely asked to be corrected.
   const inherited = continuePr
     ? await inheritableWorkForPr({
         repoFullName: continuePr.repoFullName,
@@ -423,17 +423,17 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       createdBy: input.userId,
       prompt: input.prompt ?? null,
       promptMentions: input.promptMentions ?? null,
-      // Le titre fourni gagne : c'est celui de la routine. Un titre généré, lui,
-      // s'écrit après la réponse HTTP — il ne peut pas retarder le premier token.
+      // The title provided wins: it is that of routine. A generated title,
+      // is written after the HTTP response — it cannot delay the first token.
       title: input.title?.trim() || null,
       model,
       modelForced: !!input.forced,
       reasoningLevel,
       keyMode: quota.mode,
       triggeredBy: input.triggeredBy,
-      // Persisté depuis MIN-147 : sans lui, la chaîne ne peut pas savoir ce que
-      // le run qui vient de finir FAISAIT. `undefined` vaut « implémenter »,
-      // comme partout ailleurs (cf. `intentStartsWork`).
+      // Persisted since MIN-147: without it, the channel cannot know what
+      // the run that just finished DID. `undefined` is “implement”,
+      // as everywhere else (see `intentStartsWork`).
       intent: input.intent ?? "implement",
       chainId: input.chainId ?? null,
       budgetUsd: input.budgetUsd ?? null,
@@ -443,18 +443,18 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       prNumber: inherited?.prNumber ?? null,
       prUrl: inherited?.prUrl ?? null,
       prState: inherited?.prState ?? null,
-      // L'ENVIRONNEMENT (MIN-359), figé ici comme le moteur et la microVM. Le
-      // chemin `pr` n'y passe jamais : c'est `launchPrReviewRun`, une fonction à
-      // part, et c'est ainsi que « un run de relecture ne part pas en local »
-      // est une propriété du code plutôt qu'un `if` à ne pas oublier.
+      // THE ENVIRONMENT (MIN-359), frozen here like the engine and the microVM. THE
+      // path `pr` never passes there: it is `launchPrReviewRun`, a function to
+      // leaves, and this is how “a replay run does not start locally”
+      // is a property of the code rather than a `if` to remember.
       localExec,
       localWorktree: localExec && input.localWorktree === true,
     });
   } catch (err) {
-    // Course perdue contre un lancement concurrent (double-clic, deux onglets) :
-    // l'index unique a tranché. Même réponse que le pré-check, pas un 500.
-    // Le verrou ne concerne plus les tickets ; il reste aux automatisations et
-    // aux reprises explicites d'une même pull request.
+    // Lost race against a concurrent launch (double-click, two tabs):
+    // the single index finger decided. Same answer as the pre-check, not a 500.
+    // The lock no longer concerns tickets; it remains for automation and
+    // to explicit repetitions of the same pull request.
     if (err instanceof ActiveRunExistsError) {
       const winner = continuePr
         ? await activeRunForPrNumber({
@@ -475,11 +475,11 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
   }
 
   /**
-   * Le titre est un enrichissement asynchrone, pas une dépendance du lancement.
-   * La promesse a déjà démarré plus haut et a donc recouvert les pré-vols ; ce
-   * callback ne l'attend pas pour ne pas sérialiser le kick du drain derrière
-   * elle. La clause `is(title, null)` respecte un renommage manuel effectué dans
-   * l'intervalle — une réponse lente du petit modèle ne reprend jamais la main.
+   * The title is an asynchronous enrichment, not a launch dependency.
+   * The promise has already started higher and has therefore covered the pre-flights; This
+   * callback does not wait for it so as not to serialize the kick of the drain behind
+   * She. The `is(title, null)` clause respects a manual renaming carried out in
+   * the interval — a slow response from the small model never regains control.
    */
   if (!input.title?.trim() && generatedTitle) {
     after(() => {
@@ -499,27 +499,27 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
 
   if (issueId) {
     const recordLaunch = async () => {
-      // Trace dans le journal d'activité de l'issue : qui a lancé l'agent + le modèle.
+      // Trace in the activity log of the issue: who launched the agent + the model.
       await insertEvents(service, [
         {
           issue_id: issueId,
           actor_id: input.userId,
           type: "agent_launched",
           to_value: model,
-          // Acteur TECHNIQUE vs acteur AFFICHÉ (MIN-147) : le run part sous le
-          // compte qui paye et dont vient la clé, mais c'est l'automatisation que
-          // la timeline doit nommer — même vocabulaire que `via_smart_assign`.
+          // TECHNICAL actor vs DISPLAYED actor (MIN-147): the run starts under the
+          // account that pays and from which the key comes, but it is automation that
+          // the timeline must be named — same vocabulary as `via_smart_assign`.
           ...(input.triggeredBy === "automation" ? { via_automation: true } : {}),
         },
       ]);
 
-      // Agent lancé → l'issue passe « en cours » (MIN-46). Deux exceptions :
-      //  • run qui n'est pas du travail neuf (`intent` `plan`, `verify` ou
-      //    `custom` — cadrer avant, contrôler après, consigne libre) : le ticket
-      //    garde son statut, quel qu'il soit ;
-      //  • la run hérite d'une PR encore en revue (open/draft) — c'est SON état qui
-      //    gouverne le statut (in_review), on ne le fait pas régresser le temps d'une
-      //    itération. Une PR refusée (closed → issue `todo`) repasse bien « en cours ».
+      // Agent launched → the outcome changes to “in progress” (MIN-46). Two exceptions:
+      // • run which is not new work (`intent` `plan`, `verify` or
+      // `custom` — frame before, check after, free deposit): the ticket
+      //    keeps its status, whatever it is;
+      // • the run inherits a PR still under review (open/draft) — it is ITS state which
+      // governs the status (in_review), we do not make it regress for a period of time
+      // iteration. A rejected PR (closed → issue `todo`) returns to “in progress”.
       if (
         intentStartsWork(input.intent) &&
         inherited?.prState !== "open" &&
@@ -530,9 +530,9 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
     };
 
     if (run.local_exec) {
-      // Le renderer doit recevoir l'id au plus vite pour réclamer le tour à
-      // Electron. Ces deux écritures ne construisent ni le job ni son bail : on
-      // les garde dans la durée de la route, mais hors du chemin de la réponse.
+      // The renderer must receive the id as quickly as possible to claim the turn
+      // Electron. These two writings do not construct either the job or its lease: we
+      // keeps them in the duration of the route, but out of the way of the response.
       after(() => {
         void recordLaunch().catch((err) =>
           console.error("[agent-launch] local launch bookkeeping failed:", (err as Error).message),
@@ -542,41 +542,41 @@ export async function launchAgentRun(input: LaunchAgentInput): Promise<LaunchRes
       await recordLaunch();
     }
 
-    // Un lancement MANUEL, quel que soit son mode, dit que quelqu'un prend le
-    // ticket en main : la chaîne qui l'attendait en sursis s'annule (MIN-147).
-    // Sans ça, seule l'implémentation était couverte — elle seule déplace le
-    // ticket —, et lancer un plan ou une vérification à la main laissait le
-    // sursis courir jusqu'au bout, pour repartir sur le travail qu'on venait de
-    // prendre. Une chaîne qui TOURNE n'est pas concernée : là, c'est ce
-    // lancement-ci qui est refusé (`alreadyRunning`, plus haut).
+    // A MANUAL launch, regardless of its mode, means that someone takes the
+    // ticket in hand: the chain that was waiting for him on reprieve is canceled (MIN-147).
+    // Without that, only the implementation was covered — it alone moves the
+    // ticket —, and launching a plan or a check by hand left the
+    // reprieve to run to the end, to get back to the work we had just done
+    // take. A chain that RUNS is not concerned: there, that's what
+    // launch which is refused (`alreadyRunning`, above).
     if (input.triggeredBy !== "automation") handOffToHuman(issueId);
   }
 
-  // Le drain exclut déjà `local_exec`, mais le réveiller lançait tout de même une
-  // invocation serverless qui ne pouvait prendre ce run.
+  // The drain already excludes `local_exec`, but waking it up still launched a
+  // serverless invocation that could not take this run.
   if (!run.local_exec) kickAgentDrain(service);
   return { ok: true, run };
 }
 
 /**
- * Lance une session de RELECTURE d'une pull request (MIN-168).
+ * Starts a REVIEW session of a pull request (MIN-168).
  *
- * Le chemin est distinct de bout en bout, et chaque écart au lancement d'un run
- * de ticket est une décision :
- *  - **le projet vient du DÉPÔT**, pas d'un ticket : une PR appartient à un
- *    dépôt, que plusieurs projets peuvent lier. On retient le premier lien dont
- *    le projet est accessible au lanceur (`resolveProjectLinkForRepo`) — c'est
- *    lui qui portera la RLS du run, et donc la visibilité de la session ;
- *  - **le modèle vient de `resolvePrReviewModel`**, délibérément distinct du
- *    modèle d'écriture (cf. `model.ts`) ;
- *  - **aucune écriture sur un ticket** : ni `agent_launched`, ni changement de
- *    statut, ni héritage de branche. La PR liée peut porter un ticket ; relire
- *    n'est pas travailler dessus ;
- *  - **un run actif par PR**, même règle que par ticket, pour la même raison.
+ * The path is distinct from start to finish, and each deviation at the start of a run
+ * ticket is a decision:
+ * - **the project comes from the DEPOSIT**, not from a ticket: a PR belongs to a
+ * repository, which several projects can link. We retain the first link of which
+ * the project is accessible to the launcher (`resolveProjectLinkForRepo`) — it is
+ * he who will carry the RLS of the run, and therefore the visibility of the session;
+ * - **the model comes from `resolvePrReviewModel`**, deliberately distinct from
+ * writing model (see `model.ts`);
+ * - **no writing on a ticket**: neither `agent_launched` nor change of
+ * status, nor branch inheritance. The linked PR can carry a ticket; reread
+ * is not working on it;
+ * - **one active run per PR**, same rule as per ticket, for the same reason.
  *
- * Les branches de la PR sont un PRÉREQUIS : sans elles, la sandbox n'a rien à
- * cloner. On refuse au lancement (`prIncomplete`) plutôt qu'au premier chunk —
- * un run mort-né coûte un claim et laisse une session vide à l'écran.
+ * The PR branches are a PREREQUISITE: without them, the sandbox has nothing to do
+ * clone. We refuse at launch (`prIncomplete`) rather than at the first chunk —
+ * a stillborn run costs a claim and leaves an empty session on the screen.
  */
 async function launchPrReviewRun(
   input: LaunchAgentInput,
@@ -587,9 +587,9 @@ async function launchPrReviewRun(
   if (!isRepoProviderId(pr.provider) || !REPO_PROVIDERS[pr.provider].capabilities.write) {
     return { ok: false, error: "unsupportedProvider" };
   }
-  // La base est indispensable (c'est elle qu'on clone, et le diff s'y adosse) ;
-  // la tête, elle, se retrouve par la ref serveur de la PR même sur un fork —
-  // d'où la seule exigence portée ici.
+  // The base is essential (this is what we clone, and the diff is based on it);
+  // the head is found by the server ref of the PR even on a fork —
+  // hence the only requirement made here.
   if (!pr.baseBranch) return { ok: false, error: "prIncomplete" };
 
   const link = await resolveProjectLinkForRepo({
@@ -597,8 +597,8 @@ async function launchPrReviewRun(
     provider: pr.provider,
     repoFullName: pr.repoFullName,
   });
-  // Aucun projet accessible ne lie ce dépôt : du point de vue du lanceur, cette
-  // PR n'existe pas. Même réponse que partout ailleurs (MIN-143).
+  // No accessible project links this repository: from the launcher's point of view, this
+  // PR does not exist. Same answer as everywhere else (MIN-143).
   if (!link) return { ok: false, error: "prNotFound" };
 
   const active = await activeRunForPullRequest(pullRequestId);
@@ -659,15 +659,15 @@ async function launchPrReviewRun(
       projectId: link.projectId,
       issueId: null,
       pullRequestId,
-      // Le sha RELU par cette session : figé au lancement, comparé plus tard à la
-      // tête courante pour savoir si relancer aurait quelque chose de neuf à lire.
+      // The sha RELUDE by this session: frozen at launch, compared later to the
+      // running head to see if relaunching would have anything new to read.
       prHeadSha: pr.headSha,
       repoLinkId: link.linkId,
       connectionId: link.connectionId,
       createdBy: input.userId,
       prompt: input.prompt ?? null,
-      // Titre de la session : celui de la pull request. Pas de résumé à générer —
-      // contrairement à une note, une PR a déjà un titre écrit pour être lu.
+      // Session title: that of the pull request. No summary to generate —
+      // Unlike a note, a PR already has a title written to be read.
       title: prSessionTitle(pr),
       model,
       modelForced: !!input.forced,
@@ -675,11 +675,11 @@ async function launchPrReviewRun(
       keyMode: quota.mode,
       triggeredBy: input.triggeredBy,
       intent: "review",
-      // La base sert de point de comparaison à `git diff` dans la sandbox.
+      // The base serves as a point of comparison to `git diff` in the sandbox.
       baseBranch: pr.baseBranch,
     });
   } catch (err) {
-    // Course perdue contre un lancement concurrent : l'index unique a tranché.
+    // Lost race against a competing launch: the unique index has decided.
     if (err instanceof ActiveRunExistsError) {
       const winner = await activeRunForPullRequest(pullRequestId);
       return { ok: false, error: "alreadyRunning", run: winner ?? undefined };
@@ -691,7 +691,7 @@ async function launchPrReviewRun(
   return { ok: true, run };
 }
 
-/** Titre lisible d'une session de review — celui de la PR, à défaut son numéro. */
+/** Readable title of a review session — that of the PR, failing that its number. */
 function prSessionTitle(pr: PrRunContext): string {
   const title = pr.title?.trim();
   return title ? `#${pr.number} ${title}` : `#${pr.number}`;
@@ -702,18 +702,18 @@ export type ContinueResult =
   | { ok: false; error: LaunchError; run?: AgentRun; quota?: AgentQuota };
 
 /**
- * Démarre une conversation depuis un trigger sans identifiant de conversation.
- * Une mention de ticket ne détourne jamais une autre conversation. Seule une
- * mention dans le fil d'une PR rejoint sa review active, car le fil désigne déjà
- * cette execution partagée.
- * Une run `completed` (au repos) n'est pas reprise ici : la reprise à chaud d'une
- * conversation existante se fait depuis le composer de SA conversation (`/steer`).
+ * Starts a conversation from a trigger without a conversation ID.
+ * A mention of a ticket never distracts from another conversation. Only one
+ * mention in the thread of a PR joins its active review, because the thread already designates
+ * this shared execution.
+ * A `completed` run (at rest) is not repeated here: hot restart of a
+ * existing conversation is done from the composer of ITS conversation (`/steer`).
  */
 export async function continueOrLaunchAgentRun(
   input: LaunchAgentInput,
 ): Promise<ContinueResult> {
-  // Une review qui tourne lit déjà cette PR : la question de son fil lui parvient
-  // en steering au lieu d'ouvrir une seconde session sur le même diff.
+  // A review that is running is already reading this PR: the question of his thread reaches him
+  // in steering instead of opening a second session on the same diff.
   const active = input.pullRequestId
     ? await activeRunForPullRequest(input.pullRequestId)
     : null;
@@ -728,13 +728,13 @@ export async function continueOrLaunchAgentRun(
 }
 
 /**
- * Kick basse latence : lance les runs dus après la réponse HTTP, dans la même
- * invocation. Ne lève jamais — le cron (toutes les 2 min) est le filet.
+ * Low latency kick: launches the runs due after the HTTP response, in the same
+ * invocation. Never raise — the cron (every 2 min) is the net.
  *
- * Plus de chaînage derrière (MIN-225) : un lancement se compte en secondes, une
- * fenêtre en absorbe donc tous les runs dus, et les deux chemins qui remettent un
- * run en file — le steering et le repli de fournisseur — appellent ce kick-ci
- * directement plutôt que d'attendre un tick.
+ * No more chaining behind (MIN-225): a launch is counted in seconds, a
+ * window therefore absorbs all the runs due, and the two paths which return a
+ * run in line — steering and provider fallback — call this kick
+ * directly rather than waiting for a tick.
  */
 export function kickAgentDrain(service: SupabaseClient): void {
   after(async () => {

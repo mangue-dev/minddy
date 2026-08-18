@@ -1,19 +1,19 @@
 import { PagePrintView } from "@/components/pages/page-print-view";
 
 /**
- * La vue d'IMPRESSION d'une page (MIN-283) — ce qui fait le PDF.
+ * The PRINT view of a page (MIN-283) — what makes the PDF.
  *
- * `?scope=branch` imprime la page ET ses sous-pages, une par page de papier.
+ * `?scope=branch` prints the page AND its subpages, one per page of paper.
  *
- * **Pourquoi `pages-print/` et pas `pages/[pageId]/print`** : le segment
- * `pages/` porte un layout qui monte la barre secondaire et l'arbre du projet
- * (app/(app)/projects/[id]/pages/layout.tsx). Une vue d'impression n'a rien à
- * faire dedans — elle s'ouvre dans un onglet, appelle `window.print()` et se
- * ferme. La sortir du segment coûte un mot dans l'URL et évite de monter tout
- * un meuble pour l'imprimer aussitôt.
+ * **Why `pages-print/` and not `pages/[pageId]/print`**: the segment
+ * `pages/` carries a layout that raises the secondary bar and the project tree
+ * (app/(app)/projects/[id]/pages/layout.tsx). A print view has nothing to
+ * do in it — it opens in a tab, calls `window.print()` and
+ * farm. Taking it out of the segment costs one word in the URL and avoids having to mount everything
+ * a piece of furniture to print it immediately.
  *
- * Le chemin reste sous `/projects`, qui est protégé (lib/protected-prefixes.ts) :
- * imprimer une page demande d'y avoir accès, comme la lire.
+ * The path remains under `/projects`, which is protected (lib/protected-prefixes.ts):
+ * printing a page requires access to it, like reading it.
  */
 export default async function PagePrintRoute({
   params,

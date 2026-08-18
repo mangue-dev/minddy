@@ -1,21 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * Tools CARNET de l'agent de code (MIN-84, étendus en MIN-125). Ce qui se joue ici
- * est la protection d'un document PERSONNEL sans historique ni undo, écrit par un
- * agent autonome : une section inconnue doit dire lesquelles existent plutôt que
- * de créer un titre au hasard, et `set_scratchpad` — l'écrasement total — exige un
- * `rev` à jour, là où Numo chat et le MCP le laissent optionnel.
+ * Tools Code Agent NOTEBOOK (MIN-84, expanded to MIN-125). What's at stake here
+ * is the protection of a PERSONAL document with no history or undo, written by a
+ * autonomous agent: an unknown section must say which ones exist rather than
+ * creating a title at random, and `set_scratchpad` — total overwriting — requires a
+ * `rev` up to date, where Numo chat and MCP leave it optional.
  *
- * Le carnet est simulé par une ligne unique en mémoire, avec le MÊME
- * compare-and-swap que la vraie table (`user_scratchpad.rev`).
+ * The notebook is simulated by a single line in memory, with the SAME
+ * compare-and-swap as the real table (`user_scratchpad.rev`).
  */
 
 const { store } = vi.hoisted(() => ({ store: { content: "", rev: 0 } }));
 
-// Fausse table `user_scratchpad` : le cœur de lib/server/scratchpad.ts tourne
-// POUR DE VRAI par-dessus, compare-and-swap sur `rev` compris — c'est ce
-// verrou-là que ces tests doivent voir refuser une écriture.
+// False table `user_scratchpad`: the heart of lib/server/scratchpad.ts is running
+// FOR REAL on top, compare-and-swap on `rev` included — that's what
+// lock that these tests must refuse a write.
 vi.mock("@/lib/supabase-service", () => {
   const row = () => ({
     content: store.content,
@@ -44,7 +44,7 @@ vi.mock("@/lib/supabase-service", () => {
     };
     query.maybeSingle = async () => {
       if (mode === "select") return { data: row(), error: null };
-      // CAS : l'update ne matche aucune ligne si le `rev` attendu a bougé.
+      // CASE: the update does not match any line if the expected `rev` has moved.
       if (mode === "update" && filters.rev !== store.rev) {
         return { data: null, error: null };
       }
@@ -57,7 +57,7 @@ vi.mock("@/lib/supabase-service", () => {
   return { getServiceClient: () => ({ from }) };
 });
 
-// Le ledger de stats est best-effort et hors sujet ici.
+// The stats ledger is best-effort and off-topic here.
 vi.mock("@/lib/server/stat-events", () => ({ insertStatEvents: async () => undefined }));
 
 import { executeScratchpadTool } from "./scratchpad-tools";

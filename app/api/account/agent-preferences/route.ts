@@ -7,23 +7,23 @@ import { userHasByokKey } from "@/lib/server/agent/model";
 import { isPlanLimitError, planLimitResponse } from "@/lib/server/plan-limit-error";
 
 /**
- * Préférences agent de l'utilisateur (MIN-46) : son modèle par défaut, et son
- * niveau de raisonnement par défaut (MIN-122). RLS self-manage
- * (user_agent_preferences) → on utilise le cookie client. `default_model` null =
- * suit le défaut racine (app_config.agent_model) ; `default_reasoning_level`
- * null = `off`. Un modèle explicite est un id libre (comme au lancement) — pas
- * d'allowlist ; la clé effective (BYOK ou plateforme) est résolue à l'exécution
- * du run.
+ * User agent preferences (MIN-46): its default model, and its
+ * default reasoning level (MIN-122). Self-managed RLS
+ * (user_agent_preferences) → we use the client cookie. `default_model` null =
+ * follows root default (app_config.agent_model); `default_reasoning_level`
+ * null = `off`. An explicit model is a free id (as at launch) — not
+ * allowlist; the effective key (BYOK or platform) is resolved at runtime
+ * of the run.
  *
- * Le PUT est PARTIEL : seuls les champs PRÉSENTS dans le corps sont écrits — les
- * deux réglages vivent sur la même ligne et sont édités par deux contrôles
- * distincts, l'un ne doit pas effacer l'autre.
+ * The PUT is PARTIAL: only the fields PRESENT in the body are written — the
+ * two settings live on the same line and are edited by two controls
+ * distinct, and one must not erase the other.
  */
 
 /**
- * Garde-fou léger sur l'id modèle. Accepte les deux formes rencontrées :
- * `provider/model` (OpenRouter, ex. deepseek/deepseek-v4-flash:free) ET les ids
- * natifs sans slash (OpenAI `gpt-4o`, Anthropic `claude-opus-4-1`, Gemini…).
+ * Light guardrail on model id. Accepts the two forms encountered:
+ * `provider/model` (OpenRouter, e.g. deepseek/deepseek-v4-flash:free) AND the ids
+ * native IDs without a slash (OpenAI `gpt-4o`, Anthropic `claude-opus-4-1`, Gemini…).
  */
 const MODEL_ID_RE = /^[\w./:@-]{1,200}$/;
 
@@ -56,7 +56,7 @@ export async function PUT(request: NextRequest) {
   let body: PrefsBody;
   try {
     const parsed: unknown = await request.json();
-    // Corps non-objet (null, chaîne…) : le `in` plus bas lèverait au lieu de refuser.
+    // Non-object body (null, string…): the lower `in` would raise instead of refusing.
     if (!parsed || typeof parsed !== "object") throw new Error("not an object");
     body = parsed as PrefsBody;
   } catch {
@@ -73,12 +73,12 @@ export async function PUT(request: NextRequest) {
     if (model !== null && (typeof model !== "string" || !MODEL_ID_RE.test(model.trim()))) {
       return NextResponse.json({ error: "Invalid model" }, { status: 400 });
     }
-    // On stocke la forme que la regex a validée — pas les blancs autour.
+    // We store the form that the regex validated — not the white spaces around it.
     patch.default_model = model === null ? null : model.trim();
-    // Plafond de modèle du plan : on refuse d'ENREGISTRER ce qui serait refusé
-    // au lancement. Le picker grise déjà ces modèles ; ici on ferme la saisie
-    // libre, et on évite surtout d'écrire une préférence qui bloquerait ensuite
-    // tous les runs du compte. Rien à vérifier en BYOK : ce sont ses tokens.
+    // Ceiling of the plan model: we refuse to REGISTER what would be refused
+    // at launch. The picker is already graying these models; here we close the entry
+    // free, and above all we avoid writing a preference which would then block
+    // all runs in the account. Nothing to check in BYOK: these are its tokens.
     if (patch.default_model) {
       try {
         await ensureModelInPlan({

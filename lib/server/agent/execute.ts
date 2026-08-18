@@ -74,36 +74,34 @@ import {
 import { checkAgentQuota } from "./quota";
 import { generatedAgentBranchName } from "./branch-name";
 
-/** Le plus serré des plafonds fournis (les absents ne bornent rien). */
+/** The tightest of the provided ceilings (omitted values impose no limit). */
 function minDefined(...values: (number | undefined)[]): number | undefined {
   const defined = values.filter((v): v is number => v != null && Number.isFinite(v));
   return defined.length > 0 ? Math.min(...defined) : undefined;
 }
 
 /**
- * Exécute UN chunk d'un RUN d'agent (MIN-46 + MIN-68, modèle CONVERSATIONNEL).
- * Réveille (snapshot persistant) ou clone le Sandbox, rehydrate le checkpoint,
- * fait tourner la boucle jusqu'à la soft-deadline, puis :
- *   - suspended  → commit+push WIP, checkpoint persisté, run re-`queued` (continue
- *                  le tour, en process ou via l'auto-invoke) ;
- *   - completed  → fin de tour NATURELLE (l'agent a répondu) : commit+push de ce
- *                  qui a changé. AUCUNE PR n'est créée ici — si la session en suit
- *                  déjà une, le push l'a mise à jour (et on la ROUVRE si elle avait
- *                  été refusée) ; en créer une est la décision de l'agent (tool
- *                  `create_pr`) ou de l'utilisateur. Run → `completed` (repos).
- *   - interrupted / erreur LLM → même REPOS `completed` (checkpoint conservé,
- *                  error_message le cas échéant) : la session attend simplement le
- *                  prochain message de l'utilisateur.
- * Au repos, une session ne bloque PLUS le ticket : seuls queued/running comptent
- * comme « un agent travaille ». Elle reste reprennable à CHAUD depuis le composer
- * de sa conversation (checkpoint + snapshot conservés).
- * Seule une erreur d'AMORÇAGE (repo/modèle) → `failed`. Le drain appelle après claim.
+ * Executes ONE chunk of an agent RUN (MIN-46 + MIN-68, CONVERSATIONAL model).
+ * Wakes up (persistent snapshot) or clones the Sandbox, rehydrates the checkpoint,
+ * runs the loop until the soft deadline, then:
+ * - suspended → commit+push WIP, checkpoint persisted, run re-`queued` (continues
+ * the round, in process or via auto-invoke);
+ * - completed → end of a NATURAL round (the agent responded): commit+push of what
+ * has changed. NO PR is created here — if the session already follows one, the
+ * push has updated it (and we REOPEN it if it had been refused); creating one is
+ * the decision of the agent (tool `create_pr`) or the user. Run → `completed` (idle).
+ * - interrupted / LLM error → same idle `completed` (checkpoint kept,
+ * error_message if applicable): the session simply waits for the next user message.
+ * When idle, a session NO LONGER blocks the ticket: only queued/running count
+ * as "an agent is working". It remains HOT and resumable from the conversation
+ * composer (checkpoint + snapshot preserved).
+ * Only a BOOT error (repo/model) → `failed`. The drain calls after claiming.
  */
 
 /**
- * Identité git des commits de l'agent, selon le forge. Côté GitHub on commit sous
- * le bot de l'App (`<slug>[bot]`, rattachable à un vrai compte GitHub) — sinon le
- * contrôle d'auteur de Vercel bloque le déploiement. Ailleurs, identité générique.
+ * Git identity of agent commits, depending on the forge. On the GitHub side we commit under
+ * the App bot (`<slug>[bot]`, attachable to a real GitHub account) — otherwise the
+ * Vercel author control blocks the deployment. Elsewhere, generic identity.
  */
 async function resolveCommitterIdentity(
   target: RepoCloneTarget,
@@ -118,17 +116,17 @@ function defaultCommitterIdentity(): { name: string; email: string } {
   return { name: `${SITE_NAME} agent`, email: CONTACT_EMAIL };
 }
 
-/** Borne du re-queue « message en attente » sur erreur mid-turn (catch final) :
-    `attempts` (incrémenté à chaque claim) n'est pas remis à zéro sur ce chemin,
-    donc une erreur persistante s'arrête après ce nombre de claims. */
+/** Terminal state of the “message waiting” re-queue on a mid-turn error (final catch):
+ `attempts` (incremented at each claim) is not reset to zero on this path,
+ so a persistent error stops after this many claims. */
 const MAX_ERROR_REQUEUE_ATTEMPTS = 2;
 /**
- * Ce qu'un appel d'exécuteur a fait du run.
+ * What an executor call did to the run.
  *
- * `detached` (MIN-224) est le cinquième, et il ne ressemble à aucun des autres :
- * le tour n'est ni fini ni suspendu, il TOURNE — dans la microVM, hors de cette
- * invocation. Le run reste `running` et personne ne l'attend. C'est le drain qui
- * lit cette valeur, et ce qu'elle lui dit est « passe au suivant ».
+ * `detached` (MIN-224) is the fifth, and it is unlike any of the others:
+ * the round is neither finished nor suspended; it RUNS — in the microVM, outside this
+ * invocation. The run remains `running` and no one is waiting for it. The drain reads
+ * this value, and it tells the drain to "go to the next one".
  */
 export type ExecuteOutcome =
   | "completed"
@@ -142,45 +140,43 @@ function cap(str: string, max: number): string {
 }
 
 /**
- * UNE CONVERSATION QUE PLUS PERSONNE NE SAIT RELIRE (MIN-286) — le seul reste de
- * la boucle maison après sa suppression.
+ * A CONVERSATION THAT NO ONE CAN READ AGAIN (MIN-286) — the only remnant of
+ * the home loop after its deletion.
  *
- * Les deux moteurs ne gardaient pas leur mémoire au même endroit :
- * `checkpoint.messages` pour la boucle, `checkpoint.opencode` pour le journal
- * d'événements. Un run mené par la boucle, repris aujourd'hui, part donc chez
- * opencode avec un journal VIDE. Il n'y a rien à sauver là — le format n'a pas de
- * traducteur, et en écrire un pour des conversations closes depuis le 10 août ne
- * vaut pas son code.
+ * The two engines did not keep their memory in the same place:
+ * `checkpoint.messages` for the loop, `checkpoint.opencode` for the
+ * event log. A run led by the loop, resumed today, therefore leaves opencode with an
+ * EMPTY log. There is nothing to save there — the format has no translator, and writing
+ * one for conversations closed since August 10 is not worth the code.
  *
- * Ce qui n'est pas acceptable, en revanche, c'est de le taire : le modèle croirait
- * poursuivre un échange qu'il n'a jamais lu, et l'utilisateur lirait un agent
- * amnésique sans savoir pourquoi. On le DIT donc dans le prompt du tour — c'est
- * exactement la place de la voix du harness, et le modèle en parle de lui-même.
+ * What is not acceptable, however, is to keep it quiet: the model would believe it was
+ * continuing an exchange it never read, and the user would see an agent with amnesia
+ * without knowing why. So we SAY it in the turn prompt — that is exactly where the
+ * harness voice is, and the model speaks about it for itself.
  */
 function priorConversationLost(run: AgentRun): boolean {
   const saved = run.checkpoint;
   return !!saved?.messages?.length && !saved.opencode;
 }
 
-/** La phrase que le tour repris lit à la place de l'historique qu'il n'a plus. */
+/** The sentence the resumed turn reads in place of the history it no longer has. */
 const PRIOR_CONVERSATION_LOST_NOTE: Record<string, string> = {
   fr: "Note : les tours précédents de cette session ont été joués par l'ancien moteur, dont l'historique n'est pas lisible ici. Tu ne vois pas cet échange — repars du ticket et de l'état du dépôt, et dis-le si ça change quelque chose.",
   en: "Note: the earlier turns of this session ran on the previous engine, whose history cannot be read here. You cannot see that exchange — work from the issue and the state of the repository, and say so if it matters.",
 };
 
 /**
- * LE PROMPT D'UN TOUR OPENCODE, tiré de l'amorce (MIN-286).
+ * THE PROMPT OF AN OPENCODE TURN, taken from the primer (MIN-286).
  *
- * L'amorce d'un tour froid est CONVERSATIONNELLE : un prompt système, puis des
- * messages utilisateur — contexte du ticket ou de la pull request, travail hérité
- * d'une PR, instructions du dépôt, et en dernier la demande du lanceur. Opencode
- * n'accepte qu'un message : on lui rend donc ces morceaux-là, dans l'ordre, séparés
- * comme des blocs.
+ * The initiation of a cold turn is CONVERSATIONAL: a system prompt, then
+ * user messages — context of the ticket or pull request, work inherited
+ * from a PR, repository instructions, and lastly the launcher request. Opencode
+ * only accepts one message: we therefore return these pieces, in order, separated
+ * as blocks.
  *
- * Le message SYSTÈME est délibérément laissé de côté : son vis-à-vis chez opencode
- * est l'ancrage servi en `instructions` (cf. `buildOpencodeAnchor`), et l'envoyer
- * ici en plus le dirait deux fois, une fois dans le système et une fois dans la
- * bouche de l'utilisateur.
+ * The SYSTEM message is deliberately left aside: its counterpart at opencode
+ * is the anchor used in `instructions` (see `buildOpencodeAnchor`), and sending it
+ * here as well would say it twice, once in the system and once in the user's mouth.
  */
 function userPromptFromMessages(messages: AgentChatMessage[]): string {
   return messages
@@ -188,8 +184,8 @@ function userPromptFromMessages(messages: AgentChatMessage[]): string {
     .map((m) =>
       typeof m.content === "string"
         ? m.content
-        : // Une amorce n'a que du texte (les images arrivent par les tools) ; le
-          // repli existe pour ne jamais rendre « [object Object] » à un modèle.
+        : // A primer only has text (the images arrive via the tools); this
+          // fallback ensures that “[object Object]” is never rendered in a template.
           (m.content ?? [])
             .map((part) => ("text" in part && typeof part.text === "string" ? part.text : ""))
             .join(""),
@@ -215,9 +211,9 @@ interface IssueContext {
   plan: string | null;
   projectName: string | null;
   projectKey: string;
-  /** Ressources du ticket (et de ses commentaires) — annoncées dans l'amorce
-      pour que l'agent sache qu'elles existent : un fichier s'y ouvre via
-      `read_resource`, un lien s'y lit directement. */
+  /** Resources of the issue (and its comments) — announced in the primer
+   * so the agent knows they exist: a file opens there via `read_resource`,
+   * and a link is read there directly. */
   resources: AgentResourceContext[];
 }
 
@@ -231,9 +227,9 @@ async function loadIssueContext(
   const [{ data: issue }, { data: project }, { data: attachmentRows }] = await Promise.all([
     service
       .from("issues")
-      // Une session opencode reprise possède déjà son amorce dans sa base locale.
-      // Ne relire ni le long markdown ni le plan ne peut influencer son prochain
-      // prompt ; c'était du transport et du décodage avant chaque premier token.
+      // A resumed opencode session already has its start in its local database.
+      // Rereading neither the long markdown nor the plan can influence your next one
+      // prompt; it was transport and decoding before each first token.
       .select(includePromptContext ? "number, title, description, plan" : "number, title")
       .is("deleted_at", null)
       .eq("id", issueId)
@@ -279,8 +275,8 @@ async function loadIssueContext(
         ? {
             id: a.id,
             kind: "page" as const,
-            // Le titre VIVANT : l'amorce est un instantané, autant qu'il soit
-            // pris au moment du run et pas à celui de l'ajout.
+            // The title is LIVE: the value above is a snapshot, whereas this one
+            // is read at run time rather than when the attachment was added.
             name: joinedPage(a.page)?.title?.trim() || a.file_name || "page",
             pageId: a.page_id,
           }
@@ -295,7 +291,7 @@ async function loadIssueContext(
   };
 }
 
-/** Contexte projet d'un run CARNET (MIN-84) : pas de ticket, juste le projet. */
+/** Project context of a NOTEBOOK run (MIN-84): no issue, just the project. */
 async function loadProjectContext(
   projectId: string,
 ): Promise<{ key: string; name: string | null }> {
@@ -312,18 +308,18 @@ async function loadProjectContext(
 }
 
 /**
- * Assemble le message d'amorce d'une run FROIDE qui hérite du travail du ticket
- * (MIN-68, indexé sur la branche), ou null si la run n'hérite de rien (premier
- * lancement). Deux formes :
- *  • la lignée porte une PR → PR + fil de review lus À CHAUD sur GitHub (pas figés
- *    au lancement : entre la création de la run et son exécution, un reviewer a pu
- *    commenter, et c'est souvent CE commentaire qui motive la relance) ;
- *  • la lignée n'a pas (encore) de PR → message de branche héritée (le travail
- *    poussé continue ; `create_pr` reste une décision).
- * Le résumé de la run précédente vient de la base (`outcome`).
+ * Assembles the bootstrap message for a COLD run that inherits work from an issue
+ * (MIN-68, indexed to the branch), or null if the run inherits nothing (first
+ * run). Two forms:
+ * • the lineage carries a PR → PR + review thread read LIVE from GitHub (not fixed
+ * at launch: between the creation of the run and its execution, a reviewer may have
+ * commented, and it is often THIS comment that motivates the restart);
+ * • the lineage does not come from a PR → legacy branch message (the pushed work
+ * continues; `create_pr` remains a decision).
+ * The previous run's summary comes from the base (`outcome`).
  *
- * Best-effort : GitHub indisponible ne doit pas faire échouer la run — on retombe
- * sur le contexte minimal (« tu itères sur cette branche, va la lire »).
+ * Best-effort: GitHub being unavailable should not make the run fail — we fall back
+ * to minimal context (“you are iterating on this branch; go read it”).
  */
 async function buildInheritedPrContext(
   run: AgentRun,
@@ -331,23 +327,22 @@ async function buildInheritedPrContext(
     forge: Forge;
     token: string;
     repoFullName: string;
-    /** Forge du dépôt — un numéro de PR n'est unique QUE par forge (cf. MIN-69). */
+    /** Repository provider — a PR number is ONLY unique per provider (see MIN-69). */
     provider: RepoProviderId;
     repo: AgentRepoContext;
   },
 ): Promise<string | null> {
-  // Un run CARNET n'hérite de rien PAR DÉFAUT (pas de lignée). L'exception est
-  // celui qui REPREND une pull request (MIN-292) : sa lignée est la PR, et la
-  // suite de cette fonction sait déjà la raconter à partir de `pr_number` — c'est
-  // seulement le résumé de la session précédente qui se lit ailleurs (par PR, pas
-  // par ticket). Sans PR héritée, rien à dire : la branche d'un run carnet neuf
-  // n'a pas de passé.
+  // A NOTEBOOK run inherits nothing BY DEFAULT (no lineage). The exception is
+  // a run that RESUMES a pull request (MIN-292): its lineage is the PR, and the
+  // rest of this function already knows this from `pr_number` — only the summary
+  // of the previous session must be read elsewhere (by PR, not per issue). Without
+  // a legacy PR, there is nothing to say: a new notebook run's branch has no past.
   if (!run.issue_id && run.pr_number == null) return null;
   const issueId = run.issue_id;
   if (run.pr_number == null) {
     if (!issueId) return null;
-    // Pas de PR : la branche héritée porte-t-elle du travail d'une session
-    // précédente ? (Une branche neuve stampée par un premier chunk crashé, non.)
+    // No PR: does the legacy branch carry work from a previous session?
+    // (A new branch stamped by a first crashed chunk does not.)
     if (!run.branch_name) return null;
     const inherited = await branchHasPriorRun(
       issueId,
@@ -373,8 +368,8 @@ async function buildInheritedPrContext(
         number,
       })
       .catch(() => []),
-    // Commentaires ancrés au code : l'agent doit voir ce qu'on lui demande de
-    // corriger LIGNE À LIGNE, pas seulement le fil de conversation.
+    // Comments anchored to the code: the agent must see what it is asked to do
+    // LINE BY LINE, not just the conversation thread.
     opts.forge
       .listPullRequestReviewComments({
         token: opts.token,
@@ -382,9 +377,9 @@ async function buildInheritedPrContext(
         number,
       })
       .catch(() => []),
-    // Fils RÉSOLUS (MIN-139) : sans eux l'agent relirait un point déjà réglé
-    // comme une demande vivante. Best-effort — l'état manquant vaut « inconnu »,
-    // et les fils repartent alors tous non marqués, comme avant.
+    // RESOLVED threads (MIN-139): without them the agent would reread an already
+    // resolved point as an active request. Best-effort — missing state is “unknown”,
+    // so the threads remain unmarked, as before.
     opts.forge
       .listReviewThreads({
         token: opts.token,
@@ -392,8 +387,8 @@ async function buildInheritedPrContext(
         number,
       })
       .catch(() => []),
-    // Le fil de la lignée : par ticket quand il y en a un, par pull request
-    // sinon (une PR de carnet reprise — MIN-292).
+    // The lineage thread: by issue when there is one, by pull request otherwise
+    // (a resumed notebook PR — MIN-292).
     (issueId
       ? previousRunSummaryForIssue(issueId, run.id)
       : previousRunSummaryForPr(
@@ -413,9 +408,9 @@ async function buildInheritedPrContext(
       number,
       title: pr?.title ?? null,
       body: pr?.body ?? null,
-      // Le vocabulaire minddy, pas celui de la forge (MIN-164) : dire `open`
-      // d'un brouillon cacherait à l'agent que ce travail n'a jamais été
-      // proposé. PR illisible → on se rabat sur l'état figé au lancement.
+      // Minddy vocabulary, not that of the provider (MIN-164): say `open`.
+      // Calling a draft `open` would hide from the agent that this work was never
+      // proposed. PR unreadable → we fall back to the state frozen at launch.
       state: pr ? prStateFromRef(pr) : run.pr_state,
       comments: comments.map((c) => ({ author: c.user?.login ?? null, body: c.body })),
       lineThreads: toPrLineThreads(reviewComments, reviewThreads),
@@ -425,9 +420,9 @@ async function buildInheritedPrContext(
 }
 
 /**
- * Message de commit d'une fin de tour : la première ligne de la réponse de l'agent
- * (nettoyée du markdown, bornée), sinon un générique. Les PR sont squash-mergées
- * par défaut — le message n'a pas besoin d'être parfait, juste lisible.
+ * End of turn commit message: the first line of the agent's response
+ * (cleaned of markdown, bounded), otherwise a generic. PRs are squash-merged
+ * by default — the message doesn't need to be perfect, just readable.
  */
 export function commitMessageFromReply(reply: string, identifier: string): string {
   const firstLine = reply.split("\n").find((l) => l.trim())?.trim() ?? "";
@@ -441,16 +436,16 @@ export async function executeAgentRun(
   opts: {
     deadlineMs: number;
     /**
-     * LE TOUR EST PRÉPARÉ, PAS LANCÉ (MIN-293) — appelé quand `run.local_exec`,
-     * juste avant que la fonction rende `"detached"`.
+     * THE TURN IS PREPARED, NOT STARTED (MIN-293) — called when `run.local_exec`,
+     * just before the function returns `"detached"`.
      *
-     * Un rappel plutôt qu'un élargissement d'`ExecuteOutcome` : le drain est
-     * l'autre appelant, il ne le passe pas, et il ne doit rien avoir à relire. Il
-     * ne draine d'ailleurs jamais un run local (cf. `claimableRuns`, drain.ts) —
-     * le rappel n'a donc qu'un seul appelant, la route de déclenchement.
+     * A callback rather than an expansion of `ExecuteOutcome`: the drain is the
+     * other caller, it does not pass it, and it has nothing to reread. It never
+     * drains a local run either (see `claimableRuns`, drain.ts) — so this callback
+     * has only one caller, the trigger route.
      *
-     * `layout` et `bootstrapMs` en sont absents : ils appartiennent à la machine
-     * (cf. [lib/desktop/local-turn.ts](../../desktop/local-turn.ts)).
+     * `layout` and `bootstrapMs` are omitted: they belong to the machine
+     * (see [lib/desktop/local-turn.ts](../../desktop/local-turn.ts)).
      */
     onLocalAssignment?: (
       job: Omit<VmJob, "layout" | "bootstrapMs">,
@@ -460,18 +455,18 @@ export async function executeAgentRun(
 ): Promise<ExecuteOutcome> {
   const callStart = Date.now();
   /**
-   * Events du chunk, SÉRIALISÉS derrière une chaîne de promesses (MIN-112).
+   * Chunk events, SERIALIZED behind a promise chain (MIN-112).
    *
-   * `appendEvent` calcule `seq` en lisant le max puis en insérant, et
-   * `idx_agent_run_events_run_seq` est UNIQUE : c'était sûr tant qu'un chunk n'avait
-   * qu'un émetteur. Depuis les sous-agents, une fille émet EN MÊME TEMPS que son
-   * parent. `appendEvent` retente désormais sur collision — il ne PERD plus rien —
-   * mais l'ORDRE du fil resterait au hasard des courses. La chaîne le rétablit : les
-   * events partent dans l'ordre où ils ont été produits, donc `?after=<seq>` reste
-   * un curseur honnête et le fil relu raconte les faits dans l'ordre.
+   * `appendEvent` computes `seq` by reading the maximum and then inserting, and
+   * `idx_agent_run_events_run_seq` is UNIQUE: this was safe while a chunk had
+   * only one emitter. Since subagents, a child can emit AT THE SAME TIME as its
+   * parent. `appendEvent` now retries on collision — it no longer LOSES anything —
+   * but the thread ORDER would still be determined by race timing. The chain restores
+   * it: events are sent in the order they were produced, so `?after=<seq>` remains
+   * an honest cursor and the replayed thread tells the story in order.
    *
-   * Le maillon avale les erreurs (`appendEvent` est déjà best-effort) : une chaîne
-   * cassée arrêterait tous les events suivants du chunk.
+   * The chain link swallows errors (`appendEvent` is already best-effort): a broken
+   * chain would stop all subsequent events in the chunk.
    */
   let emitChain: Promise<void> = Promise.resolve();
   const emit: EmitAgentEvent = (type, payload) => {
@@ -481,73 +476,72 @@ export async function executeAgentRun(
     return emitChain;
   };
   /**
-   * Qui paye ce run (MIN-131) : son CRÉATEUR, pas le owner du projet — un membre
-   * qui lance un agent chez quelqu'un d'autre consomme son propre budget, et
-   * c'est déjà son quota qui l'a autorisé (`checkAgentQuota(run.created_by)`).
-   * Calculé ici, avant le `try`, pour que le métrage sandbox du `finally` en
-   * dispose aussi. Un run sans créateur ne peut pas atteindre la sandbox (le
-   * tour throw), mais s'il y arrivait, la ligne le dirait plutôt que d'aller
-   * chercher un payeur par défaut.
+   * Who pays for this run (MIN-131): its CREATOR, not the project owner — a member
+   * who starts an agent in someone else's project consumes their own budget, and
+   * their quota already authorized it (`checkAgentQuota(run.created_by)`).
+   * Computed here, before the `try`, so the sandbox metering in `finally` can use
+   * it too. A run without a creator cannot reach the sandbox (the turn throws),
+   * but if it did, this line would make that explicit rather than finding a
+   * default payer.
    */
   const runBillTo: AiUsageBillTo = run.created_by
     ? { userId: run.created_by }
     : { unattributed: `run ${run.id} sans created_by` };
   /**
-   * SOUS QUELLE LIGNE ce run se facture (MIN-185). Techniquement c'est le même
-   * run ; en facturation, non : un run d'agent est un geste qu'on a fait, un
-   * passage de routine est un abonnement qu'on a laissé tourner. Résolu ICI,
-   * une fois, avant le `try` — le métrage de la microVM vit dans le `finally`,
-   * et une des deux moitiés rangée ailleurs que l'autre rendrait la séparation
-   * à moitié fausse.
+   * WHICH LINE bills this run (MIN-185). Technically it is the same run; for
+   * billing, it is not: an agent run is an action we took, while a routine run is
+   * a subscription we left running. Resolved HERE, once, before the `try` — the
+   * microVM metering lives in `finally`, and storing either half somewhere other
+   * than the other would make the separation partly wrong.
    */
   const usageFeature = run.routine_id ? "routine_code" : "agent_code";
   const sandboxUsageFeature = run.routine_id ? "routine_compute" : "sandbox_compute";
   let sandbox: Sandbox | null = null;
   /**
-   * Les secrets de ce chunk (MIN-239) — le token de forge, sous toutes les formes
-   * qu'il aura prises. Déclaré AVANT le `try` parce que le `catch` en a besoin : un
-   * `git clone` qui échoue recopie l'URL de clone ENTIÈRE dans son stderr, et ce
-   * message-là finit en `agent_runs.error_message`, affiché dans l'UI.
+   * The secrets for this chunk (MIN-239) — the forge token, in every form it may
+   * have taken. Declared BEFORE the `try` because `catch` needs it: a failed
+   * `git clone` copies the ENTIRE clone URL into stderr, and that message ends up
+   * in `agent_runs.error_message`, displayed in the UI.
    *
-   * Nourri à chaque résolution de cible : le token est re-minté avant chaque push
-   * (un tour dure des heures, un token d'installation une heure), et un `.git/config`
-   * lu au round 3 porte celui du clone, pas celui du dernier push. Le registre les
-   * garde tous.
+   * Populated on every target resolution: the token is re-minted before every push
+   * (a turn lasts hours, an installation token lasts one hour), and a `.git/config`
+   * read on round 3 contains the clone token, not the latest push token. The
+   * registry keeps them all.
    */
   const secrets = new SecretRedactor();
-  // Jobs de fond du chunk (MIN-114), visibles du `finally` : quel que soit le
-  // chemin de sortie (fin de tour, erreur, interruption), rien ne survit au chunk.
+  // Chunk background jobs (MIN-114), visible to `finally`: regardless of the
+  // exit path (turn completion, error, interruption), nothing survives the chunk.
   let backgroundJobs: BackgroundJobs | null = null;
   /**
-   * La boucle a-t-elle VRAIMENT été lancée dans la microVM (MIN-224) ? C'est ce
-   * qui décide qui facture le compute de ce passage, et il n'y a pas de troisième
-   * réponse : soit la boucle tourne et c'est elle qui rendra la note (amorçage
-   * compris), soit elle n'a jamais démarré et la fonction est la seule à savoir
-   * qu'une microVM a été réveillée pour rien. Voir le `finally`.
+   * Was the loop REALLY started in the microVM (MIN-224)? This determines who
+   * bills the compute for this pass, and there is no third answer: either the
+   * loop is running and will submit the bill (including bootstrap), or it never
+   * started and this function is the only one that knows a microVM was woken for
+   * nothing. See `finally`.
    */
   let vmLoopLaunched = false;
-  /** Un tour local ne démarre jamais de microVM. Calculé avant le premier event
-   *  pour pouvoir recouvrir son écriture avec toute la préparation du job. */
+  /** A local turn never starts a microVM. Computed before the first event so its
+   *  write can overlap all job preparation. */
   const localTurn = run.local_exec === true;
 
   /**
-   * LE MÉTRAGE COMPUTE DU CHUNK, appelable AVANT la mise au repos (MIN-224).
+   * CHUNK COMPUTE METERING, callable BEFORE suspension (MIN-224).
    *
-   * Il vivait dans le seul `finally`, donc APRÈS les stamps — et c'est ce qui
-   * faisait diverger le sens d'`agent_runs.cost_usd` entre les deux moteurs. La
-   * nouvelle forme facture le compute puis relit le ledger ([vm-rest.ts](vm-rest.ts)),
-   * si bien que sa colonne vaut la somme du ledger, compute compris ; ici la
-   * colonne ne portait que le modèle, ET en perdait — un chunk mort sans stamper
-   * n'a jamais porté sa part.
+   * It used to live only in `finally`, and therefore AFTER the stamps — which made
+   * the meaning of `agent_runs.cost_usd` diverge between the two engines. The new
+   * form bills compute and then rereads the ledger ([vm-rest.ts](vm-rest.ts)), so
+   * the column equals the ledger total, including compute; here the column held
+   * only model usage, AND lost some of it — a dead chunk that never stamped never
+   * recorded its share.
    *
-   * IDEMPOTENT, et il faut qu'il le soit : le `finally` reste le filet de tout ce
-   * qui ne passe pas par un repos (un throw, un amorçage raté). Deux écritures
-   * partageraient la bande de seq (`SANDBOX_USAGE_SEQ_BASE + continuations`) et se
-   * marcheraient dessus.
+   * IDEMPOTENT, as it must be: `finally` remains the safety net for anything that
+   * does not pass through suspension (a throw, a failed bootstrap). Two writes
+   * would share the seq range (`SANDBOX_USAGE_SEQ_BASE + continuations`) and
+   * overwrite each other.
    *
-   * `Date.now() - callStart` À L'APPEL : facturé depuis le repos plutôt que depuis
-   * le `finally`, il perd les quelques centaines de millisecondes du stamp — un
-   * minorant, dans le bon sens de l'erreur.
+   * `Date.now() - callStart` AT CALL TIME: billed from suspension rather than from
+   * `finally`, it loses the few hundred milliseconds spent stamping — a lower
+   * bound, in the safe direction of the error.
    */
   let sandboxComputeBilled = false;
   const billSandboxCompute = async (): Promise<void> => {
@@ -557,8 +551,8 @@ export async function executeAgentRun(
       runId: run.run_id ?? run.id,
       seq: SANDBOX_USAGE_SEQ_BASE + run.continuations,
       billTo: runBillTo,
-      // Les minutes de microVM d'une routine se rangent avec elle : sans ça,
-      // la moitié compute de sa dépense resterait sous « Agents ».
+      // A routine's microVM minutes are grouped with the routine: otherwise,
+      // the compute half of its spending would remain under “Agents”.
       feature: sandboxUsageFeature,
       projectId: run.project_id,
       durationMs: Date.now() - callStart,
@@ -567,22 +561,22 @@ export async function executeAgentRun(
 
   try {
     const runningEvent = emit("status", { status: "running", continuation: run.continuations });
-    // Le cloud doit montrer l'ouverture de la sandbox avant de la réveiller. En
-    // local, l'UI connaît déjà le statut via le claim : on laisse cette écriture
-    // se faire pendant les lectures de contexte, puis on la rejoint avant retour.
+    // Cloud must show the sandbox opening before waking it. Locally, the UI already
+    // knows the status from the claim: let this write happen during context reads,
+    // then await it before returning.
     if (!localTurn) await runningEvent;
 
     if (!run.created_by) throw new Error("Run has no owner");
     if (!run.model) throw new Error("Run has no model");
 
-    // Interruption demandée alors que le run était EN FILE (entre deux tours) : on
-    // repasse au repos sans même réveiller la sandbox.
+    // Interruption requested while the run was QUEUED (between turns): return it to
+    // rest without even waking the sandbox.
     //
-    // Sauf s'il reste un message NON CONSOMMÉ : le composer envoie toujours le
-    // couple steer PUIS interrupt quand l'agent « travaille » (et `queued` compte
-    // comme tel), donc le message peut être arrivé juste avant le drapeau. Reposer
-    // ici l'avalerait — personne ne draine un run au repos, et l'utilisateur verrait
-    // l'agent mourir sans avoir lu sa consigne. On re-queue pour le traiter.
+    // Unless an UNCONSUMED message remains: the composer always sends the steer
+    // pair THEN interrupt when the agent is “working” (`queued` counts as such),
+    // so the message may have arrived just before the flag. Resting here would
+    // swallow it — no one drains a resting run, and the user would see the agent
+    // die without reading the instruction. Re-queue it for processing.
     if (run.interrupt_requested) {
       await clearInterrupt(run.id);
       const pending = await hasPendingRunMessages(run.id);
@@ -597,16 +591,16 @@ export async function executeAgentRun(
       return "interrupted";
     }
 
-    // Ces lectures sont indépendantes. Les sérialiser retardait le job local
-    // avant même que le Mac puisse démarrer opencode, alors que le premier token
-    // ne dépend que de leur résultat final. On conserve l'attente de la cible en
-    // premier pour garder son erreur et sa frontière de sécurité inchangées.
+    // These reads are independent. Serializing them delayed the local job before
+    // the Mac could even start opencode, although the first token depends only on
+    // their final result. Keep target resolution first so its error and security
+    // boundary remain unchanged.
     const targetPromise = resolveRepoCloneTarget(run.project_id);
     const issuePromise = run.issue_id
       ? loadIssueContext(run, run.issue_id, {
-          // Sur une reprise opencode, le prompt est volontairement vide : le
-          // modèle relit sa base SQLite et le steering arrive via le superviseur.
-          // Le contexte riche (description, plan, ressources) est donc inutile.
+          // On an opencode continuation, the prompt is intentionally empty: the
+          // model rereads its SQLite database and steering arrives via the
+          // supervisor. Rich context (description, plan, resources) is unnecessary.
           includePromptContext: !run.checkpoint?.opencode?.sessionId,
         })
       : Promise.resolve(null);
@@ -619,30 +613,30 @@ export async function executeAgentRun(
       checkAgentQuota(run.created_by ?? "", aiSurface).catch(() => null),
       spentFromLedger(run.run_id ?? run.id),
     ]);
-    // Un run BYOK est figé sur son propre payeur. Si la configuration a disparu,
-    // ou si un endpoint local a été demandé depuis le cloud, la préparation
-    // échoue explicitement : elle ne peut jamais reprendre la clé plateforme.
+    // A BYOK run is fixed to its own payer. If the configuration disappeared, or a
+    // local endpoint was requested from the cloud, preparation fails explicitly:
+    // it must never fall back to the platform key.
     const endpointPromise = resolveAgentApiKey(run.created_by, aiSurface, {
       allowLocal: localTurn,
       requireByok: run.key_mode === "byok",
     });
 
-    // Cible de clone (token frais pour ce chunk) + client PR/MR du provider.
+    // Clone target (fresh token for this chunk) + the provider's PR/MR client.
     const target = await targetPromise;
     if (!target) throw new Error("No repository linked to this project");
     secrets.addAuthUrl(target.authUrl);
     secrets.add(target.token);
     const forge = forgeFor(target.provider);
-    // Cette identité peut demander la forge au premier tour du process. Elle ne
-    // dépend d'aucun autre contexte : la démarrer ici la recouvre avec le quota,
-    // les préférences, le ticket et la construction du prompt.
+    // This identity may need the forge on the process's first turn. It depends on
+    // no other context, so starting it here overlaps quota, preferences, issue,
+    // and prompt construction.
     const committerPromise = run.pull_request_id
       ? Promise.resolve(defaultCommitterIdentity())
       : resolveCommitterIdentity(target);
 
-    // Ancrage du run, à TROIS valeurs : ticket minddy, CARNET (MIN-84, la note du
-    // lanceur est l'instruction), ou PULL REQUEST (MIN-168 — une session de
-    // relecture, en lecture seule sur le dépôt).
+    // Run anchor, with THREE values: minddy issue, NOTEBOOK (MIN-84, the launcher's
+    // note is the instruction), or PULL REQUEST (MIN-168 — a read-only review
+    // session on the repository).
     const [issue, prRun, prefs, quotaAndLedger, endpoint] = await Promise.all([
       issuePromise,
       prRunPromise,
@@ -650,8 +644,8 @@ export async function executeAgentRun(
       quotaAndLedgerPromise,
       endpointPromise,
     ]);
-    // Un run ancré à une PR dont la ligne a disparu ne doit PAS retomber en run
-    // carnet : il se croirait autorisé à créer une branche et à pousser dessus.
+    // A run anchored to a PR whose row disappeared must NOT fall back to a notebook
+    // run: it would believe it is allowed to create and push to a branch.
     if (run.pull_request_id && !prRun) {
       throw new Error("The pull request this review was anchored to no longer exists");
     }
@@ -662,22 +656,22 @@ export async function executeAgentRun(
       unattended: run.routine_id !== null,
     });
     /**
-     * LE TOKEN QUI DESCEND DANS LA MICROVM, et il n'est plus celui d'au-dessus
+     * THE TOKEN THAT GOES INTO THE MICROVM, which is no longer the one above it
      * (MIN-327).
      *
-     * `target` reste le token de la FONCTION : il ouvre des PR, commente, relit,
-     * merge, et il ne sort jamais du process. Celui-ci part dans le `.git/config`
-     * de la VM, là où le modèle lance du shell — il n'a donc que ce que `git`
-     * demande, et rien de plus :
+     * `target` remains the FUNCTION token: it opens PRs, comments, reviews, merges,
+     * and never leaves the process. This one goes into the VM's `.git/config`,
+     * where the model runs shell commands — so it has only what `git` requests,
+     * and nothing more:
      *
-     * - un run de ticket ou de carnet POUSSE → `contents: write` ;
-     * - une RELECTURE ne pousse rien (`writesToRepo` ci-dessous) et son contenu
-     *   vient d'un fork inconnu → `contents: read`. C'est le cœur du ticket : elle
-     *   recevait un token en écriture, sur tous les dépôts de l'installation.
+     * - an issue or notebook run PUSHES → `contents: write`;
+     * - a REVIEW pushes nothing (`writesToRepo` below) and its content comes from
+     *   an unknown fork → `contents: read`. This is the heart of the issue: it was
+     *   receiving a write token for every repository in the installation.
      *
-     * Le mint peut échouer (forge en panne entre les deux appels) : on retombe sur
-     * `target` plutôt que de faire mourir le tour. C'est le pire cas, et il est
-     * celui d'avant.
+     * Minting can fail (the forge goes down between the two calls): fall back to
+     * `target` rather than killing the turn. This is the worst case, and it is the
+     * previous behavior.
      */
     const vmTarget = localTurn
       ? target
@@ -688,23 +682,23 @@ export async function executeAgentRun(
     secrets.addAuthUrl(vmTarget.authUrl);
     secrets.add(vmTarget.token);
     /**
-     * Le harnais écrit-il dans le DÉPÔT pour cette session ? Faux pour une
-     * relecture, et c'est la moitié harnais de la garantie « aucune écriture » —
-     * l'autre moitié étant le jeu de tools, qui n'a aucune édition. Une phrase de
-     * prompt ne tiendrait ni l'une ni l'autre.
+     * Does the harness write to the REPOSITORY for this session? False for a
+     * review, and this is the harness half of the “no writes” guarantee — the other
+     * half is the tool set, which has no editing capability. A prompt sentence
+     * would guarantee neither.
      */
     const writesToRepo = policy.repository === "write";
     const project = issue
       ? { key: issue.projectKey, name: issue.projectName }
       : await loadProjectContext(run.project_id);
-    // Référence lisible du run dans les messages de commit (`wip(...)`).
+    // Readable run reference in commit messages (`wip(...)`).
     const commitRef = issue?.identifier ?? "agent";
-    // Langue du commentaire + du résumé de l'agent = celle du lanceur (défaut owner),
-    // et statut d'atterrissage des tickets créés par l'agent = son réglage de compte.
+    // Comment and agent-summary language comes from the launcher (owner by default),
+    // and the landing status for issues created by the agent comes from its account setting.
     const { locale: commentLocale, numoDefaultStatus } = prefs;
-    // Session de relecture : les branches sont celles de la PR — sa base est le
-    // point de comparaison du diff, sa tête ce qu'on relit. Ailleurs, la base
-    // choisie au lancement et la branche de travail du run.
+    // Review session: the branches are those of the PR — its base is the diff
+    // comparison point, and its head is what we review. Otherwise, use the base
+    // selected at launch and the run's working branch.
     const baseBranch = (prRun?.baseBranch || run.base_branch) ?? target.defaultBranch;
     const workBranch = prRun
       ? pullRequestLocalBranch(prRun)
@@ -717,53 +711,52 @@ export async function executeAgentRun(
         });
 
     /**
-     * Budget d'usage RESTANT à l'entrée du chunk. Snapshoté une fois ici : la
-     * boucle compare son coût accumulé à ce restant, sans relire l'usage à chaque
-     * round. En BYOK le COMPTE est illimité, mais un run local porte son propre
-     * `budget_usd`, choisi par l'utilisateur.
+     * REMAINING usage budget at chunk entry. Snapshotted once here: the loop compares
+     * its accumulated cost with this remainder without rereading usage every round.
+     * With BYOK the ACCOUNT is unlimited, but a local run has its own `budget_usd`,
+     * chosen by the user.
      *
-     * Deux lectures, une seule attente : la somme du ledger (cf. `runSpentUsd`)
-     * ne dépend pas du quota, elle part avec lui.
+     * Two reads, one wait: the ledger total (see `runSpentUsd`) does not depend on
+     * the quota and runs alongside it.
      *
-     * LU AVANT LA MICROVM depuis MIN-223, et pas seulement pour la boucle : c'est
-     * ce restant qui donne son plafond à la clé LLM du run, et cette clé doit
-     * exister avant la politique réseau, donc avant la VM. Une seule lecture pour
-     * les deux usages — la stale de quelques secondes que ça introduit côté boucle
-     * est sans effet (le plafond a 1,5× de marge, et le ledger est relu à chaque
-     * chunk).
+     * READ BEFORE THE MICROVM since MIN-223, and not only for the loop: this
+     * remainder caps the run's LLM key, and that key must exist before the network
+     * policy, and therefore before the VM. One read serves both uses — the few
+     * seconds of staleness this introduces in the loop have no effect (the cap has
+     * a 1.5× margin, and the ledger is reread for every chunk).
      */
     const [quotaNow, ledgerSpentUsd] = quotaAndLedger;
 
-    // Endpoint du run (BYOK de l'utilisateur, ou clé plateforme OpenRouter).
-    // Résolu AVANT l'amorce de l'historique : le prompt système ne décrit que les
-    // tools réellement offerts, et web_search en dépend. Et avant la microVM
-    // depuis MIN-223 : c'est cette clé (ou celle du run, ci-dessous) que le
-    // firewall injectera — la politique réseau ne peut pas se construire sans.
+    // Run endpoint (the user's BYOK endpoint or the OpenRouter platform key).
+    // Resolved BEFORE history bootstrap: the system prompt describes only the
+    // tools actually offered, and web_search depends on it. Also before the
+    // microVM since MIN-223: this key (or the run key below) is what the firewall
+    // injects — the network policy cannot be built without it.
     const { apiKey, baseUrl, provider, mode: keyMode } = endpoint;
 
     /**
-     * LA CLÉ QUE LE FIREWALL INJECTERA, et elle n'est pas forcément `apiKey`.
+     * THE KEY THE FIREWALL WILL INJECT, which is not necessarily `apiKey`.
      *
-     * En mode plateforme, on émet une clé POUR CE RUN, à plafond dur tenu par
-     * OpenRouter (`run-key.ts`) : la politique réseau empêche la VM de LIRE la
-     * clé, pas de l'UTILISER hors de la boucle — un `curl` sur la route créditée
-     * dépense sans passer par le ledger. Le plafond fournisseur est ce qui borne
-     * cette dépense-là, et il vit hors de la VM comme hors de notre code.
+     * In platform mode, we issue a key FOR THIS RUN with a hard cap enforced by
+     * OpenRouter (`run-key.ts`): the network policy prevents the VM from READING
+     * the key, not from USING it outside the loop — a `curl` against the credited
+     * route spends without going through the ledger. The provider cap bounds that
+     * spending, and it lives outside both the VM and our code.
      *
-     * En BYOK, aucun mint : c'est la clé de l'utilisateur, sur son compte à lui,
-     * et l'API de provisioning n'émet que sur le compte qui la détient. Elle est
-     * aussi inexfiltrable que la nôtre, mais non plafonnable — c'est dit dans
-     * l'écran BYOK, pas corrigé ici.
+     * With BYOK, there is no minting: this is the user's key on their account, and
+     * the provisioning API issues only on the account that owns it. It is as
+     * non-exfiltrable as ours, but cannot be capped — that is stated on the BYOK
+     * screen and is not fixed here.
      *
-     * Le mint échoue en silence (variable non posée, API en panne) → on retombe
-     * sur `apiKey`. Un garde-fou de dépense qui manque ne doit pas empêcher un
-     * run de tourner ; il doit se voir dans les logs.
+     * Minting fails silently (variable unset, API down) → fall back to `apiKey`. A
+     * missing spending safeguard must not prevent a run from executing; it must be
+     * visible in the logs.
      */
     let vmKeyHash: string | null = null;
     let vmKey = apiKey;
-    // En local, la clé ne doit jamais entrer dans le job : le proxy la demande
-    // une seule fois à `/llm-key`, qui la minte et persiste son hash. La minter
-    // aussi ici créait puis révoquait une clé avant le premier token.
+    // Locally, the key must never enter the job: the proxy requests it once from
+    // `/llm-key`, which mints it and persists its hash. Minting it here as well
+    // would create and revoke a key before the first token.
     if (keyMode === "platform" && !localTurn) {
       const minted = await mintRunKey({
         runId: run.id,
@@ -782,46 +775,44 @@ export async function executeAgentRun(
 
     /**
      * ─────────────────────────────────────────────────────────────────────────
-     * LE TOUR JOUE-T-IL SUR UNE MACHINE ? (MIN-293)
+     * DOES THE TURN RUN ON A MACHINE? (MIN-293)
      *
-     * À partir d'ici, et jusqu'au lancement, la fonction fait exactement le même
-     * travail dans les deux cas — c'est le même tour, avec le même contexte, le
-     * même modèle et le même plafond. **Trois choses seulement disparaissent, et
-     * chacune parce qu'elle demande un DISQUE que le serveur n'a pas :**
+     * From here until launch, the function does exactly the same work in both cases
+     * — it is the same turn, with the same context, model, and cap. **Only three
+     * things disappear, each because it requires a DISK the server does not have:**
      *
-     * 1. **la microVM** — on n'en réveille aucune, donc rien n'est cloné, aucune
-     *    politique réseau n'est posée, et `billSandboxCompute` ne facture rien
-     *    (sa garde `!sandbox` suffit, elle était déjà là) ;
-     * 2. **la baseline du diff** (`revParseHead`) — c'est le HEAD d'une machine
-     *    que la fonction n'a jamais vue. Le job part avec `""`, et **le harness
-     *    la résout lui-même** : `job.filesFromSha || current?.parent`
-     *    ([supervisor.ts](vm/supervisor.ts)), écrit pour ce cas exact en MIN-358 ;
-     * 3. **la lecture d'`AGENTS.md`** — le message dédié qu'on injecte au modèle
-     *    ne peut pas être fabriqué ici. Ce n'est PAS une perte de contexte :
-     *    `instructions.paths` est une constante (`REPO_INSTRUCTION_FILES`), elle
-     *    part telle quelle, et opencode charge ces fichiers **depuis le disque**
-     *    par sa propre clé `instructions` ([opencode-config.ts](vm/opencode-config.ts)).
-     *    Le modèle les lit donc quand même ; c'est l'emballage minddy qui manque,
-     *    et le compte d'octets qui reste à zéro.
+     * 1. **the microVM** — none is woken, so nothing is cloned, no network policy
+     *    is applied, and `billSandboxCompute` bills nothing (its existing
+     *    `!sandbox` guard is sufficient);
+     * 2. **the diff baseline** (`revParseHead`) — this is the HEAD of a machine the
+     *    function has never seen. The job starts with `""`, and **the harness
+     *    resolves it itself**: `job.filesFromSha || current?.parent`
+     *    ([supervisor.ts](vm/supervisor.ts)), written for this exact case in MIN-358;
+     * 3. **reading `AGENTS.md`** — the dedicated message injected into the model
+     *    cannot be built here. This is NOT a loss of context:
+     *    `instructions.paths` is a constant (`REPO_INSTRUCTION_FILES`), is passed
+     *    as-is, and opencode loads these files **from disk** through its own
+     *    `instructions` key ([opencode-config.ts](vm/opencode-config.ts)).
+     *    The model still reads them; only the minddy wrapper is missing, and the
+     *    byte count remains zero.
      *
-     * Les jobs de fond suivent : `run_background` n'est pas servi sur une machine
-     * (cf. `agentToolsFor`), et le registre de cette fonction n'a jamais servi
-     * qu'à un `stopAll` de filet dans le chemin détaché.
+     * Background jobs follow the same rule: `run_background` is not provided on a
+     * machine (see `agentToolsFor`), and this function's registry has only ever
+     * been used for a safety-net `stopAll` on the detached path.
      *
-     * ⚠ **La fonction ne LANCE rien dans ce cas** : elle prépare et rend
-     * l'affectation par `onLocalAssignment`. La présence, le claim et
-     * l'aiguillage appartiennent à MIN-294 ; ici, le seul appelant est la route
-     * de déclenchement de dév.
+     * ⚠ **The function STARTS nothing in this case**: it prepares and returns the
+     * assignment through `onLocalAssignment`. Presence, claiming, and routing
+     * belong to MIN-294; here, the only caller is the development trigger route.
      */
-    // Sandbox : réveille la microVM (filesystem restauré depuis le snapshot
-    // persistant → reprise rapide) ; sinon `onCreate` clone la branche de travail.
-    // Nom déterministe → même microVM/snapshot d'un tour à l'autre.
+    // Sandbox: wake the microVM (filesystem restored from the persistent snapshot
+    // → fast continuation); otherwise `onCreate` clones the working branch.
+    // Deterministic name → the same microVM/snapshot from one turn to the next.
     const { sandbox: sb } = localTurn ? { sandbox: null } : await getOrCreateAgentSandbox({
       name: agentSandboxName(run.id),
-      // MIN-223 : la microVM ne détient aucun secret DE MINDDY (le token de forge,
-      // lui, est dans son `.git/config` par construction — cf. `vmTarget`).
-      // Reposée à chaque réveil — la politique survit à la reprise, mais avec la
-      // clé d'HIER dedans, et celle-là est révoquée à la mise au repos.
+      // MIN-223: the microVM holds no MINDDY secret (the forge token is in its
+      // `.git/config` by construction — see `vmTarget`).
+      // Reapplied on every wake — the policy survives continuation, but with
+      // YESTERDAY'S key in it, and that key is revoked on suspension.
       networkPolicy: buildAgentNetworkPolicy({
         baseUrl,
         llmKey: vmKey,
@@ -829,17 +820,16 @@ export async function executeAgentRun(
       }),
       onCreate: async (fresh) => {
         if (prRun) {
-          // Par la REF SERVEUR de la PR, pas par le nom de branche : sur un fork,
-          // la branche de tête n'existe pas dans le dépôt de base (cf.
-          // `clonePullRequest`). Aucune identité de committer à résoudre — rien
-          // ne sera commité.
+          // By the PR's SERVER REF, not the branch name: on a fork, the head branch
+          // does not exist in the base repository (see `clonePullRequest`). No
+          // committer identity needs resolving — nothing will be committed.
           //
-          // La base du diff est demandée à la FORGE (MIN-258), pas déduite du
-          // clone : `origin/<base>` est un tip vivant, et differ contre lui
-          // ferait passer pour une suppression de la PR tout commit fusionné dans
-          // la base depuis son ouverture. Best-effort des deux côtés — un merge
-          // base illisible dégrade la relecture, il ne l'annule pas. La tête est
-          // donnée par son SHA : sur un fork, son nom de branche n'existe pas ici.
+          // The diff base is requested from the FORGE (MIN-258), not inferred from
+          // the clone: `origin/<base>` is a moving tip, and diffing against it would
+          // make every commit merged into the base since the PR opened look like a
+          // deletion from the PR. Best-effort on both sides — an unreadable merge
+          // base degrades the review but does not cancel it. The head is given by
+          // its SHA: on a fork, its branch name does not exist here.
           const baseSha = await forge
             .getMergeBaseSha({
               token: target.token,
@@ -853,9 +843,9 @@ export async function executeAgentRun(
               return null;
             });
           await clonePullRequest(sandboxHost(fresh, cloudLayout()), {
-            // `vmTarget` : ce que le clone écrit dans `.git/config` reste lisible
-            // pour toute la vie de la microVM. Pour une relecture, c'est un token
-            // en LECTURE, sur le seul dépôt lié (MIN-327).
+            // `vmTarget`: what the clone writes to `.git/config` remains readable
+            // for the microVM's entire lifetime. For a review, it is a READ token
+            // for the single linked repository (MIN-327).
             authUrl: vmTarget.authUrl,
             baseBranch,
             headRef: pullRequestHeadRef(prRun.provider, prRun.number),
@@ -865,10 +855,9 @@ export async function executeAgentRun(
           });
           return;
         }
-        // L'identité de committer n'est plus écrite dans le clone (MIN-358) :
-        // elle voyage dans le job et se pose par `git -c`, sur la seule commande
-        // qui commite. Un geste qu'on n'a qu'à un endroit ne peut pas fuir dans
-        // le dépôt de quelqu'un.
+        // The committer identity is no longer written into the clone (MIN-358): it
+        // travels in the job and is supplied with `git -c`, on the only command
+        // that commits. A value used in one place cannot leak into someone's repo.
         await cloneRepo(sandboxHost(fresh, cloudLayout()), {
           authUrl: vmTarget.authUrl,
           baseBranch,
@@ -878,94 +867,92 @@ export async function executeAgentRun(
     });
     sandbox = sb;
     /**
-     * Les mains sur le dépôt, par RPC (MIN-224). Dans l'ancienne forme c'est le
-     * seul chemin ; dans la nouvelle, la fonction n'en garde que l'amorçage (une
-     * lecture d'`AGENTS.md`, l'écriture du bundle) et c'est la boucle, dans la
-     * microVM, qui reprend les mêmes gestes sur le disque local.
+     * Hands on the repository, through RPC (MIN-224). In the old form this was the
+     * only path; in the new form, the function keeps only bootstrap (reading
+     * `AGENTS.md`, writing the bundle), and the loop in the microVM performs the
+     * same operations on the local disk.
      *
-     * `null` SUR UN TOUR LOCAL (MIN-293) : le dépôt est sur un disque que la
-     * fonction ne peut pas atteindre. Les trois appelants sont gardés un par un
-     * plutôt que par un hôte factice — un hôte qui rendrait des réponses vides
-     * ferait passer « je ne peux pas lire » pour « il n'y a rien à lire », et
-     * c'est exactement la distinction qui compte pour `AGENTS.md`.
+     * `null` ON A LOCAL TURN (MIN-293): the repository is on a disk the function
+     * cannot reach. Keep the three callers separate rather than using a fake host
+     * — a host returning empty responses would turn “I cannot read” into “there is
+     * nothing to read”, which is exactly the distinction that matters for `AGENTS.md`.
      */
     const host = sb ? sandboxHost(sb, cloudLayout()) : null;
 
-    // Persiste l'identité du Sandbox + la base AVANT la boucle (reprise si crash).
-    // sandbox_stopped_at:null → la microVM est de nouveau vivante (le reaper l'ignore).
+    // Persist the Sandbox identity and base BEFORE the loop (resume after a crash).
+    // sandbox_stopped_at:null → the microVM is alive again (the reaper ignores it).
     //
-    // `branch_name`, lui, attend le PREMIER PUSH RÉEL (MIN-123, `noteBranchPushed`
-    // plus bas) : tant que rien n'est poussé, la branche n'existe que dans la
-    // microVM, et les surfaces qui lisent une branche (vue diff, héritage de
-    // lignée, ménage des branches) ne doivent pas en désigner une qui n'est pas
-    // sur le dépôt. Le nom, lui, est déterministe — un chunk suivant le retrouve
-    // sans avoir besoin de le relire en base.
+    // `branch_name` waits for the FIRST REAL PUSH (MIN-123, `noteBranchPushed`
+    // below): until something is pushed, the branch exists only in the microVM,
+    // and surfaces that read a branch (diff view, lineage inheritance, branch
+    // cleanup) must not refer to one that is absent from the repository. The name
+    // is deterministic, so a later chunk can recover it without rereading it from
+    // the database.
     await stampRun(run.id, {
-      // Un tour local n'a pas de microVM à nommer, et lui en écrire une serait
-      // pire qu'inutile : `handleControlPlaneRequest` compare `sandbox_id` au nom
-      // signé de l'appelant, et le chien de garde interroge la plateforme sur ce
-      // nom-là. Une valeur inventée ferait mentir les deux.
+      // A local turn has no microVM to name, and writing one would be worse than
+      // useless: `handleControlPlaneRequest` compares `sandbox_id` with the
+      // caller's signed name, and the watchdog queries the platform by that name.
+      // An invented value would make both of them lie.
       ...(sandbox ? { sandbox_id: sandboxName(sandbox), sandbox_stopped_at: null } : {}),
       base_branch: baseBranch,
-      // MIN-223 : de quoi révoquer la clé du run quand la VM sera mise au repos.
-      // Écrit MÊME quand le mint a échoué (null) — sinon on garderait le hash
-      // d'une clé qui n'est plus celle que le firewall injecte, et le reaper
-      // révoquerait dans le vide en croyant avoir fermé le robinet.
+      // MIN-223: what is needed to revoke the run key when the VM is suspended.
+      // Written EVEN when minting failed (null) — otherwise we would retain the
+      // hash of a key that is no longer the one injected by the firewall, and the
+      // reaper would revoke nothing while believing it had closed the tap.
       provider_key_id: vmKeyHash,
     });
 
-    // La clé du chunk PRÉCÉDENT n'a plus personne pour l'utiliser : la politique
-    // qu'on vient de poser injecte la nouvelle. Révoquée tout de suite plutôt
-    // qu'attendue à son expiration — c'est un appel, une fois par chunk, sur un
-    // chunk qui dure des minutes, et l'oublier laisserait traîner autant de clés
-    // vivantes que de reprises.
+    // No one can use the PREVIOUS chunk's key anymore: the policy just installed
+    // injects the new one. Revoke it immediately rather than waiting for expiry —
+    // this is one call per chunk, on a chunk that lasts minutes, and forgetting it
+    // would leave as many live keys as continuations.
     if (run.provider_key_id && run.provider_key_id !== vmKeyHash) {
       await revokeRunKey(run.provider_key_id);
     }
 
 
-    // La machine est là. C'est la seule chose que le fil ne pouvait pas deviner :
-    // entre le `status: running` du haut de ce chunk et le premier pas de l'agent,
-    // il se passe plusieurs secondes de réveil de microVM et de clone — le fil
-    // affichait « travaille » alors que personne ne travaillait encore. Cet event
-    // ferme cette fenêtre : avant lui « ouverture de la sandbox », après lui le
-    // travail (cf. `sandboxReady` dans components/agent/agent-event-feed.tsx).
+    // The machine is ready. This is the only thing the thread could not infer:
+    // between `status: running` at the top of this chunk and the agent's first
+    // step, several seconds pass while the microVM wakes and the repo is cloned —
+    // the thread showed “working” while nobody was working yet. This event closes
+    // that gap: before it, “sandbox opening”; after it, work (see `sandboxReady`
+    // in components/agent/agent-event-feed.tsx).
     if (sandbox) await emit("status", { phase: "sandbox_ready" });
 
-    // Baseline du « diff par tour » (MIN-46, event `files_changed`) : HEAD à l'entrée
-    // du chunk. `filesFromSha` est le point depuis lequel la fin de tour diffe — le
-    // dernier sha émis (persisté dans le checkpoint, survit aux chunks WIP), ou ce
-    // baseline au tout premier chunk du run (« rien de changé encore »).
+    // “Diff per turn” baseline (MIN-46, `files_changed` event): HEAD at chunk
+    // entry. `filesFromSha` is the point from which turn completion computes the
+    // diff — the last emitted SHA (persisted in the checkpoint and surviving WIP
+    // chunks), or this baseline on the run's first chunk (“nothing changed yet”).
     //
-    // ⚠ SUR UN TOUR LOCAL (MIN-293), c'est le HEAD d'une machine que la fonction
-    // n'a jamais vue : le job part avec `""`, et le harness la résout lui-même
-    // (`job.filesFromSha || current?.parent`, supervisor.ts, écrit pour ce cas
-    // exact en MIN-358).
+    // ⚠ ON A LOCAL TURN (MIN-293), this is the HEAD of a machine the function has
+    // never seen: the job starts with `""`, and the harness resolves it itself
+    // (`job.filesFromSha || current?.parent`, supervisor.ts, written for this exact
+    // case in MIN-358).
     const baselineHead = host ? await revParseHead(host) : "";
     const filesFromSha = run.checkpoint?.lastFilesSha ?? baselineHead;
 
-    // Recherche web : réservée aux runs qui parlent à OpenRouter (quota minddy ou
-    // BYOK OpenRouter — la recherche part alors sur la MÊME clé que le run, donc
-    // sur la même facture). Ailleurs le tool n'est pas offert (cf. agentToolsFor).
-    // Plafond par chunk, et une ligne `web_search` au ledger par recherche.
+    // Web search: reserved for runs that use OpenRouter (minddy quota or OpenRouter
+    // BYOK — search then uses the SAME key as the run and therefore the same bill).
+    // The tool is not offered elsewhere (see agentToolsFor). Per-chunk cap, and one
+    // `web_search` ledger row per search.
     const webSearchAllowed = provider === "openrouter" && (await isWebSearchEnabled());
 
-    // Le modèle du run VOIT-IL les images (MIN-111) ? Résolu ici, avant l'amorce,
-    // pour la même raison que web_search : le prompt ne doit décrire que ce que le
-    // run sait vraiment faire. C'est aussi ce qui autorise `read_resource` à
-    // renvoyer une maquette au lieu de sa fiche signalétique.
+    // CAN the run's model SEE images (MIN-111)? Resolve this here, before bootstrap,
+    // for the same reason as web_search: the prompt must describe only what the
+    // run can actually do. This also lets `read_resource` return a mockup instead
+    // of its metadata.
     const imageInput = await supportsImageInput(run.model, provider, apiKey).catch(() => false);
 
-    // Sous-agents (MIN-112) : réglages résolus ICI, avant l'amorce, pour la même
-    // raison que `web_search` et les images — le prompt système ne doit décrire que
-    // ce que le run sait vraiment faire.
+    // Subagents (MIN-112): resolve settings HERE, before bootstrap, for the same
+    // reason as `web_search` and images — the system prompt must describe only
+    // what the run can actually do.
     //
-    // Le choix du MODÈLE d'un sous-agent suit la même règle du tout ou rien que
-    // `web_search` : un run BYOK Anthropic ne peut pas faire tourner `deepseek/…`,
-    // donc hors OpenRouter le champ `model` disparaît du schéma et la fille hérite
-    // du modèle du parent. Le catalogue n'est chargé que dans ce cas (il est caché
-    // une heure et ne lève jamais) : c'est lui qui valide un id, et il FILTRE sur le
-    // tool-calling — un sous-agent qui ne sait pas appeler d'outil ne peut rien faire.
+    // A subagent's MODEL selection follows the same all-or-nothing rule as
+    // `web_search`: an Anthropic BYOK run cannot run `deepseek/…`, so outside
+    // OpenRouter the `model` field disappears from the schema and the child
+    // inherits the parent's model. Load the catalog only in that case (it is cached
+    // for an hour and never throws): it validates an ID and FILTERS for tool
+    // calling — a subagent that cannot call tools cannot do anything.
     const subagentModels = provider === "openrouter";
     const [rawFavorites, subagentMaxParallel, subagentCatalog] = await Promise.all([
       getSubagentFavorites().catch(() => []),
@@ -974,21 +961,21 @@ export async function executeAgentRun(
         ? getAgentModelsForUser(run.created_by).catch(() => null)
         : Promise.resolve(null),
     ]);
-    // Le plafond de modèle du plan vaut AUSSI pour les filles : le catalogue
-    // servi ici est déjà passé au tamis, et les favoris hors plafond sortent du
-    // prompt. Sans ça, `spawn_agent` rouvrait par le bas ce que le picker ferme
-    // par le haut — sur le quota minddy, et décidé par un modèle.
+    // The plan's model cap also applies to children: the catalog served here has
+    // already been filtered, and favorites above the cap are removed from the
+    // prompt. Without this, `spawn_agent` would reopen from below what the picker
+    // closes from above — against the minddy quota, and decided by a model.
     const subagentScope = scopeSubagentModels({
       favorites: rawFavorites,
       catalog: subagentCatalog ?? { models: [], maxMultiplier: null },
     });
     const subagentFavorites = subagentScope.favorites;
     /**
-     * LES PRIX DES MODÈLES DE FILLE (MIN-286) — même index, même cache et même
-     * raison que `modelPricing` ci-dessous : le harness opencode déclare un
-     * modèle par favori offert, et un modèle sans prix y rend `cost: 0`. Une
-     * fille dont on ne connaît pas le prix n'est pas offerte du tout
-     * (`subagentModelChoices`), plutôt qu'offerte gratuite au ledger.
+     * CHILD MODEL PRICES (MIN-286) — same index, same cache, and same reason as
+     * `modelPricing` below: the opencode harness declares one model per offered
+     * favorite, and a model without a price produces `cost: 0`. A child whose price
+     * is unknown is not offered at all (`subagentModelChoices`) rather than being
+     * offered for free in the ledger.
      */
     const subagentPricing = Object.fromEntries(
       (
@@ -1001,47 +988,46 @@ export async function executeAgentRun(
       ).flatMap(([id, pricing]) => (pricing ? [[id, pricing] as const] : [])),
     );
 
-    // Rehydrate ou amorce l'historique. L'amorce est CONVERSATIONNELLE : contexte
-    // (dépôt + ticket) puis, en DERNIER message utilisateur, la demande réelle du
-    // lanceur — l'agent répond à elle, le ticket n'est que son ancrage.
+    // Rehydrate or bootstrap history. Bootstrap is CONVERSATIONAL: context
+    // (repository + issue), then the launcher's actual request as the LAST user
+    // message — the agent answers that request; the issue is only its anchor.
     let messages: AgentChatMessage[];
-    /** Contexte de PR chargé à l'amorce (null hors relecture, ou sur un chunk repris). */
+    /** PR context loaded during bootstrap (null outside review or on a continued chunk). */
     let prBoot: Awaited<ReturnType<typeof loadPrReviewBoot>> | null = null;
     let usageSeqStart = run.checkpoint?.usageSeq ?? run.continuations * 1000;
-    // Instructions repo déjà servies : reprises du checkpoint sur un tour éclaté en
-    // plusieurs chunks, sinon vides — l'amorce les remplit juste en dessous (MIN-115).
+    // Repository instructions already served: restored from the checkpoint on a
+    // turn split across multiple chunks, otherwise empty — bootstrap fills them
+    // just below (MIN-115).
     const instructions: InstructionsState = {
       paths: [...(run.checkpoint?.instructions?.paths ?? [])],
       bytes: run.checkpoint?.instructions?.bytes ?? 0,
     };
     if (run.checkpoint?.opencode?.sessionId) {
       /**
-       * UN TOUR REPRIS SOUS OPENCODE N'A PAS D'AMORCE À REFAIRE (MIN-286).
+       * A CONTINUED OPENCODE TURN NEEDS NO BOOTSTRAP (MIN-286).
        *
-       * Sa mémoire est le journal d'événements, que le superviseur rejoue : le
-       * contexte du ticket, les instructions du dépôt et la demande du lanceur y
-       * sont déjà, dits une fois au premier tour. Rejouer l'amorce ici les
-       * reposterait PAR-DESSUS l'historique restauré — l'agent relirait la
-       * consigne initiale comme si elle venait d'arriver, et repartirait faire ce
-       * qu'il vient de faire. C'est ce que `VmJob.opencodeInput` promet en toutes
-       * lettres (« `prompt` est vide sur un tour REPRIS : la demande y arrive par
-       * le steering »), et l'amorce coûterait en plus six appels de forge.
+       * Its memory is the event journal replayed by the supervisor: the issue
+       * context, repository instructions, and launcher's request are already there,
+       * stated once on the first turn. Replaying bootstrap here would post them ON
+       * TOP OF the restored history — the agent would reread the initial instruction
+       * as if it had just arrived and repeat work it just completed. This is exactly
+       * what `VmJob.opencodeInput` promises (“`prompt` is empty on a CONTINUED turn:
+       * the request arrives through steering”), and bootstrap would also cost six
+       * forge calls.
        *
-       * ET C'EST LA SEULE MÉMOIRE QU'ON SACHE ENCORE LIRE. Un vieux checkpoint
-       * de la boucle maison porte sa conversation dans `messages` ; cette
-       * branche-ci ne le reconnaît pas, il retombe donc sur l'amorce FROIDE —
-       * contexte du ticket recomposé, plus la phrase de `priorConversationLost`
-       * qui dit au modèle ce qu'il ne voit pas. Le rejouer serait pire : il
-       * partirait en prompt, et l'agent relirait une conversation entière comme
-       * une consigne qui vient d'arriver.
+       * AND IT IS THE ONLY MEMORY WE CAN STILL READ. An old checkpoint from the
+       * homegrown loop stores its conversation in `messages`; this branch does not
+       * recognize it, so it falls back to COLD bootstrap — rebuilt issue context,
+       * plus the `priorConversationLost` sentence telling the model what it cannot
+       * see. Replaying it would be worse: it would become a prompt, and the agent
+       * would reread an entire conversation as a newly arrived instruction.
        */
       messages = [];
     } else {
-      // Ce qu'une relecture ne peut PAS lire dans la sandbox : le ticket, la
-      // discussion déjà tenue sur la PR, la CI, le sommaire des fichiers. Chargé
-      // ICI seulement (amorce à froid) : un chunk repris a tout ça dans son
-      // checkpoint, et repayer six appels de forge pour le réécrire à l'identique
-      // serait du réseau pour rien.
+      // What a review cannot read in the sandbox: the issue, the discussion already
+      // held on the PR, CI, and the file summary. Load it HERE only (cold bootstrap):
+      // a continued chunk has all of this in its checkpoint, and paying for six
+      // forge calls to rewrite it identically would waste network traffic.
       prBoot = prRun
         ? await loadPrReviewBoot({
             forge,
@@ -1053,10 +1039,10 @@ export async function executeAgentRun(
             pr: prRun,
           })
         : null;
-      // Le sha VRAIMENT relu, tel que la forge vient de le donner : celui posé au
-      // lancement vient de `pull_requests.head_sha`, qui date du dernier webhook
-      // et peut être en retard (ou absent). C'est ce sha-ci que « relancer
-      // aurait-il quelque chose de neuf à lire ? » doit comparer.
+      // The SHA ACTUALLY reviewed, as just returned by the forge: the one stored at
+      // launch comes from `pull_requests.head_sha`, which dates from the last
+      // webhook and may be stale (or missing). This is the SHA that “would rerunning
+      // have anything new to read?” must compare.
       if (prBoot?.headSha && prBoot.headSha !== run.pr_head_sha) {
         await stampRun(run.id, { pr_head_sha: prBoot.headSha });
       }
@@ -1079,9 +1065,9 @@ export async function executeAgentRun(
             reviews: prBoot?.reviews,
             lineThreads: prBoot?.lineThreads,
             checks: prBoot?.checks ?? null,
-            // Le prompt du lanceur EST la demande d'une session de relecture (la
-            // mention `@numo`, ou une consigne écrite au clic) : il se lit en tête
-            // du contexte, pas comme un message de plus à la fin.
+            // The launcher's prompt IS the request for a review session (the
+            // `@numo` mention or an instruction written on click): read it at the
+            // head of the context, not as another message at the end.
             question: run.prompt,
           })
         : issue
@@ -1104,17 +1090,17 @@ export async function executeAgentRun(
               numoDefaultStatus,
             });
       /**
-       * PAS DE MESSAGE `system` (MIN-286, 2026-08-14) : opencode a le sien, et le
-       * nôtre — l'ancrage minddy — descend par `instructions`, reconstruit à chaque
-       * tour. L'amorce n'assemble donc plus qu'un message UTILISATEUR, celui dont
-       * `userPromptFromMessages` tire le prompt du tour.
+       * NO `system` MESSAGE (MIN-286, 2026-08-14): opencode has its own, and ours
+       * — the minddy anchor — is passed through `instructions`, rebuilt on every
+       * turn. Bootstrap therefore assembles only one USER message, from which
+       * `userPromptFromMessages` extracts the turn prompt.
        */
       messages = [{ role: "user", content: contextMsg }];
-      // Session FROIDE héritant d'une PR (MIN-68) : elle n'a aucun checkpoint, mais
-      // la branche porte déjà du travail. On lui donne sa seule mémoire de ce passé —
-      // résumé de la session précédente, PR, fil de review — pour qu'elle itère au
-      // lieu de tout refaire. Sans objet pour une relecture, qui n'a ni lignée ni
-      // travail antérieur : son contexte de PR est déjà celui du dessus.
+      // COLD session inheriting from a PR (MIN-68): it has no checkpoint, but the
+      // branch already contains work. Give it the only memory of that past — the
+      // previous session summary, PR, and review thread — so it can iterate instead
+      // of starting over. Not applicable to a review, which has neither lineage nor
+      // prior work: its PR context is already the one above.
       const inheritedPr = writesToRepo
         ? await buildInheritedPrContext(run, {
             forge,
@@ -1125,20 +1111,20 @@ export async function executeAgentRun(
           })
         : null;
       if (inheritedPr) messages.push({ role: "user", content: inheritedPr });
-      // Instructions du dépôt (AGENTS.md / CLAUDE.md) — message dédié après le contexte.
-      // La racine est TOUJOURS marquée vue, trouvée ou non : ce qui suit ne recharge
-      // que les sous-dossiers, à la première édition dedans (MIN-115).
+      // Repository instructions (AGENTS.md / CLAUDE.md) — a dedicated message after
+      // the context. The root is ALWAYS marked as seen, whether found or not: only
+      // subdirectories are loaded below, on their first edit (MIN-115).
       //
-      // L'ANCRAGE DÉCIDE DE LA SOURCE (MIN-328) : sur une relecture, le clone est
-      // sur la TÊTE de la pull request — le dépôt de l'auteur, pas celui du projet.
-      // Les instructions sont alors lues à la base (`pr-base`), ou pas du tout.
-      // `prRun` et pas `anchor` : c'est le CLONE qui décide, et c'est `prRun` qui
-      // fait cloner sur la tête (cf. `onCreate`).
+      // THE ANCHOR DECIDES THE SOURCE (MIN-328): during a review, the clone is at
+      // the pull request HEAD — the author's repository, not the project repository.
+      // Instructions are then read at the base (`pr-base`), or not at all.
+      // `prRun`, not `anchor`: the CLONE decides, and `prRun` makes us clone the
+      // head (see `onCreate`).
       //
-      // `null` SUR UN TOUR LOCAL : le disque est ailleurs. Le modèle lit quand
-      // même ces fichiers — opencode les charge par sa propre clé `instructions`,
-      // qui reçoit `instructions.paths` juste en dessous — et c'est l'emballage
-      // minddy qui manque, pas le contenu.
+      // `null` ON A LOCAL TURN: the disk is elsewhere. The model still reads these
+      // files — opencode loads them through its own `instructions` key, which
+      // receives `instructions.paths` just below — so only the minddy wrapper is
+      // missing, not the content.
       const repoInstructions = host
         ? await readRepoInstructions(host, prRun ? "pr" : anchor)
         : null;
@@ -1147,20 +1133,20 @@ export async function executeAgentRun(
         messages.push({ role: "user", content: repoInstructions.message });
         instructions.bytes += repoInstructions.bytes;
       }
-      // La demande du lanceur, en dernier : c'est À ELLE que l'agent répond.
-      // Run CARNET : la demande part emballée dans la MÊME structure que « copier
-      // le prompt » du carnet (balises <notes>, sémantique des cases, « ce sont
-      // des notes personnelles, pas une spec — demande avant de deviner »), SANS
-      // le bloc MCP : ses tools natifs (read_scratchpad…) le remplacent.
+      // The launcher's request comes last: it is what the agent answers.
+      // NOTEBOOK run: the request is wrapped in the SAME structure as the notebook's
+      // “copy prompt” action (`<notes>` tags, checkbox semantics, “these are
+      // personal notes, not a spec — ask before guessing”), WITHOUT the MCP block:
+      // its native tools (`read_scratchpad`…) replace it.
       //
-      // Lancé DEPUIS le carnet, le prompt arrive déjà emballé (le composer le
-      // montre en clair, cf. use-launch-agent-note.ts) et `buildScratchpadPrompt`
-      // le laisse passer tel quel. L'emballage ici sert donc les runs carnet
-      // partis d'ailleurs — une consigne libre tapée dans le composer, une
-      // routine — qui, eux, n'ont que du texte nu.
-      // Une relecture n'a PAS de message final : sa demande est déjà en tête de
-      // son contexte (« What you were asked »), et la répéter ici la ferait lire
-      // deux fois.
+      // Launched FROM the notebook, the prompt is already wrapped (the composer
+      // displays it plainly; see use-launch-agent-note.ts) and
+      // `buildScratchpadPrompt` passes it through unchanged. This wrapper is thus
+      // for notebook runs launched elsewhere — free-form text typed in the composer
+      // or a routine — which otherwise have only raw text.
+      // A review has NO final message: its request is already at the head of its
+      // context (“What you were asked”), and repeating it here would make it read it
+      // twice.
       if (run.prompt?.trim() && !prRun) {
         messages.push({
           role: "user",
@@ -1173,47 +1159,47 @@ export async function executeAgentRun(
     }
 
     /**
-     * CE QUE LE MOTEUR OPENCODE REÇOIT DU TOUR (MIN-286) : son ancrage minddy et
-     * le message à poster. Composé ICI, dans la fonction, comme tout le reste de
-     * l'amorçage — la microVM n'a ni le ticket, ni les favoris, ni la locale.
+     * WHAT THE OPENCODE ENGINE RECEIVES FOR THE TURN (MIN-286): its minddy anchor
+     * and the message to post. Composed HERE in the function, like all other
+     * bootstrap data — the microVM has neither the issue, favorites, nor locale.
      *
-     * L'ancrage se reconstruit à chaque tour (cf. `VmJob.opencodeInput`).
+     * The anchor is rebuilt on every turn (see `VmJob.opencodeInput`).
      *
-     * Le prompt, lui, est ce que l'amorce a mis dans les messages UTILISATEUR :
-     * contexte du ticket (ou de la pull request), travail hérité, instructions du
-     * dépôt, demande du lanceur. Sur un tour repris, l'amorce n'a rien écrit —
-     * l'historique vit dans le journal d'opencode — et le prompt vient du steering.
+     * The prompt is what bootstrap put in the USER messages: issue (or pull request)
+     * context, inherited work, repository instructions, and the launcher's request.
+     * On a continued turn, bootstrap wrote nothing — history lives in the opencode
+     * journal — and the prompt comes from steering.
      */
     /**
-     * DANS QUEL DÉPÔT CE TOUR ÉCRIT (MIN-358). Une constante ici, et c'est le
-     * fait : cette fonction a créé la microVM et cloné dedans, elle ne sait
-     * produire qu'un clone. Le mode `current` appartient au lanceur de bureau
-     * (MIN-293), qui travaille dans un dépôt existant avant lui.
+     * WHICH REPOSITORY THIS TURN WRITES TO (MIN-358). A constant here, and a fact:
+     * this function created the microVM and cloned into it, so it can produce only
+     * a clone. The `current` mode belongs to the desktop launcher (MIN-293), which
+     * works in a repository that existed before it.
      *
-     * Nommé plutôt qu'écrit deux fois : le job le porte, et l'ancrage servi au
-     * modèle en dépend — dire l'un sans l'autre donnerait un tour qui écrit d'une
-     * façon et se croit dans l'autre.
+     * Name it rather than writing it twice: the job carries it, and the anchor served
+     * to the model depends on it — stating one without the other would produce a
+     * turn that writes one way while believing it is in the other.
      */
     const repoMode: VmJob["repoMode"] = "clone";
     /**
-     * ⚠ ET POURTANT L'ANCRAGE NE SE LIT PAS SUR `repoMode` (MIN-364).
+     * ⚠ YET THE ANCHOR IS NOT READ FROM `repoMode` (MIN-364).
      *
-     * `repoMode` est un champ que la MACHINE remplace — `assignmentToJob` y pose
-     * `"current"` en valeur ([lib/desktop/local-turn.ts](../../desktop/local-turn.ts)).
-     * Le `"clone"` ci-dessus n'est donc, sur un tour local, qu'un placeholder que
-     * personne ne joue. L'ancrage, lui, est composé ICI et part tel quel : le lire
-     * sur ce placeholder servait au tour local **le bloc git du cloud** — « the
-     * harness commits and pushes whatever you changed at the end of each turn »,
-     * alors que le harness local ne commite rien (D2bis-B) et que le garde-fou
-     * refusait au modèle de commiter. C'est la troisième version des trois textes
-     * du §1 de l'audit du 2026-08-15, et la plus fausse des trois.
+     * `repoMode` is a field the MACHINE replaces — `assignmentToJob` sets it to
+     * `"current"` ([lib/desktop/local-turn.ts](../../desktop/local-turn.ts)). The
+     * `"clone"` above is therefore only a placeholder on a local turn; nobody uses
+     * it. The anchor is composed HERE and passed through unchanged: reading it from
+     * this placeholder gave the local turn **the cloud's git block** — “the harness
+     * commits and pushes whatever you changed at the end of each turn”, even though
+     * the local harness commits nothing (D2bis-B) and the guard refused to let the
+     * model commit. This is the third version of the three texts in §1 of the
+     * 2026-08-15 audit, and the most inaccurate of the three.
      *
-     * Le fait qu'il faut dire au modèle est « ce checkout existait avant toi », et
-     * `run.local_exec` est ce qui le sait côté serveur.
+     * The fact to tell the model is “this checkout existed before you”, and
+     * `run.local_exec` is what knows that on the server.
      */
-    // Le worktree local est bien sur la machine de l'utilisateur, mais pas dans
-    // son checkout : il reprend donc les règles d'un clone (le harnais livre le
-    // commit), tandis que le mode historique garde la protection du dépôt courant.
+    // The local worktree is on the user's machine, but not in their checkout: it
+    // therefore follows clone rules (the harness delivers the commit), while the
+    // historical mode retains current-repository protection.
     const currentRepo =
       (localTurn && !run.local_worktree) || isCurrentRepoJob({ repoMode });
     const opencodeInput = {
@@ -1226,8 +1212,8 @@ export async function executeAgentRun(
         webSearchMax: MAX_WEB_SEARCHES_PER_TURN,
         chain: !!run.chain_id,
         images: imageInput,
-        // Une relecture ne délègue pas, et un tour sans place de fille ne doit pas
-        // lire une section qui décrit un tool que la config ne sert pas.
+        // A review does not delegate, and a turn without room for a child must not
+        // read a section describing a tool the config does not provide.
         ...(writesToRepo && subagentMaxParallel > 0
           ? {
               subagents: {
@@ -1239,17 +1225,17 @@ export async function executeAgentRun(
           : {}),
       }),
       /**
-       * Le tour repris d'une session jouée par l'ancien moteur lit d'abord ce
-       * qu'il a perdu (cf. `priorConversationLost`) : sans cette phrase, il
-       * répondrait à un message dont il ne voit pas le contexte.
+       * A continued turn from a session run by the old engine first reads what it
+       * lost (see `priorConversationLost`): without this sentence, it would answer
+       * a message whose context it cannot see.
        */
       prompt: priorConversationLost(run)
         ? `${PRIOR_CONVERSATION_LOST_NOTE[commentLocale] ?? PRIOR_CONVERSATION_LOST_NOTE.en}\n\n${userPromptFromMessages(messages)}`
         : userPromptFromMessages(messages),
     };
 
-    // État PR de la session, MUTÉ pendant le tour (create_pr, réouverture au push) :
-    // la fin de tour lit l'état à jour, pas celui figé au claim.
+    // Session PR state, MUTATED during the turn (create_pr, reopening on push):
+    // turn completion reads the current state, not the one frozen at claim time.
     const prState: { number: number | null; url: string | null; state: AgentRun["pr_state"] } = {
       number: run.pr_number,
       url: run.pr_url,
@@ -1257,12 +1243,12 @@ export async function executeAgentRun(
     };
 
     /**
-     * L'atterrissage du tour sur la pull request et le ticket — ouvrir, rouvrir,
-     * enregistrer, commenter, tracer. Une IMPLÉMENTATION unique
-     * ([pr-landing.ts](pr-landing.ts)) depuis MIN-224 : la nouvelle forme, où la
-     * boucle vit dans la microVM, fait atterrir ses tours par le plan de contrôle
-     * et doit raconter exactement la même chose. Deux copies auraient divergé au
-     * premier correctif porté d'un seul côté.
+     * Landing the turn on the pull request and issue — open, reopen, record, comment,
+     * trace. A single IMPLEMENTATION
+     * ([pr-landing.ts](pr-landing.ts)) since MIN-224: the new form, where the loop
+     * lives in the microVM, lands its turns through the control plane and must tell
+     * exactly the same story. Two copies would diverge at the first fix applied to
+     * only one side.
      */
     const _landing: PrLandingContext = {
       run,
@@ -1275,160 +1261,154 @@ export async function executeAgentRun(
       emit,
       prState,
     };
-    // Fenêtre de contexte ET prix d'entrée du modèle (OpenRouter) : le seuil de
-    // compaction se dérive des deux — la fenêtre le BORNE, le prix le DIMENSIONNE.
-    // Une seule lecture d'index sert les deux (cache de process).
-    // `modelPricing` sort du MÊME index (donc du même aller-retour caché) : il
-    // descend dans la microVM pour que le harness opencode facture à nos prix
-    // plutôt qu'à ceux d'un catalogue tiers (MIN-286, cf. `VmModelPricing`).
+    // Model context window AND input price (OpenRouter): derive the compaction
+    // threshold from both — the window BOUNDS it, and the price SIZES it. One index
+    // read serves both (process cache).
+    // `modelPricing` comes from the SAME index (and therefore the same cached round
+    // trip): it goes into the microVM so the opencode harness bills at our prices
+    // rather than those of a third-party catalog (MIN-286, see `VmModelPricing`).
     const [contextWindow, inputUsdPerMTok, modelPricing] = await Promise.all([
       getModelContextWindow(run.model, provider, apiKey).catch(() => null),
       getModelInputPrice(run.model, provider, apiKey).catch(() => null),
       getModelPricing(run.model, provider, apiKey).catch(() => null),
     ]);
-    // Contextes des tools métier, construits côte à côte : les deux jeux sont
-    // servis quel que soit l'ancrage (MIN-125). Ce que l'ancrage décide encore,
-    // c'est `anchorIssueId` — la cible par défaut des tools ticket.
+    // Business-tool contexts, built side by side: both sets are provided regardless
+    // of the anchor (MIN-125). What the anchor still decides is `anchorIssueId` —
+    // the default target for issue tools.
     //
-    // Sur une RELECTURE, ce défaut est le ticket que la PULL REQUEST met en
-    // œuvre : `run.issue_id` est toujours nul (une session de review n'occupe
-    // pas un ticket), mais la PR, elle, en porte souvent un — et c'est ce
-    // ticket-là que l'agent veut lire quand il compare le code au plan. Sans
-    // cette ligne, le tool annoncerait un défaut qui n'existe pas et le premier
-    // `read_issue` sans argument brûlerait un round.
+    // During a REVIEW, this default is the issue implemented by the PULL REQUEST:
+    // `run.issue_id` is always null (a review session does not occupy an issue), but
+    // the PR often carries one — and that is the issue the agent wants to read when
+    // comparing code with the plan. Without this line, the tool would advertise a
+    // nonexistent default and the first argumentless `read_issue` would waste a
+    // round.
     //
-    // Une PR sans ticket (le cas normal d'une PR humaine, MIN-143) laisse le
-    // défaut nul : `issue` redevient obligatoire, ce que le tool dit aussi.
+    // A PR without an issue (the normal case for a human PR, MIN-143) leaves the
+    // default null: `issue` becomes required again, as the tool also says.
     /**
-     * Les trois écritures de PR (MIN-168), câblées comme `create_pr` : la forge du
-     * provider et le token de `resolveRepoCloneTarget` — Numo commente sous
-     * l'identité de minddy, jamais sous celle d'un humain (cf. la table
-     * d'identité de `forge.ts`).
+     * The three PR writes (MIN-168), wired like `create_pr`: the provider's forge
+     * and the token from `resolveRepoCloneTarget` — Numo comments as minddy, never
+     * as a human (see the identity table in `forge.ts`).
      *
-     * `files()` est PARESSEUX et mémoïsé : la validation d'ancre en a besoin, un
-     * tour qui ne commente aucune ligne n'a aucune raison de le payer, et un chunk
-     * repris n'a pas de `prBoot` à réutiliser. On re-résout un token frais à
-     * l'appel — un chunk peut durer plus longtemps que le token du claim.
+     * `files()` is LAZY and memoized: anchor validation needs it, a turn that does
+     * not comment on any line has no reason to pay for it, and a continued chunk
+     * has no `prBoot` to reuse. Resolve a fresh token at call time — a chunk may
+     * last longer than the claim token.
      */
     /**
-     * Les pull requests DU PROJET (MIN-267), câblées comme les précédentes : la
-     * forge du provider et un token re-résolu À CHAQUE APPEL — un tour de microVM
-     * dure des heures, le token d'installation non.
+     * PROJECT pull requests (MIN-267), wired like the previous ones: the provider's
+     * forge and a token resolved again ON EVERY CALL — a microVM turn lasts hours,
+     * but an installation token does not.
      *
-     * `null` sur une RELECTURE : elle a `prToolCtx` sur la pull request qu'elle
-     * relit, et sa lecture seule est une propriété du jeu de tools. Deux verrous,
-     * comme pour `create_pr` : le tool n'est pas dans son jeu, et le handler ne
-     * lui est pas câblé.
+     * `null` during a REVIEW: it has `prToolCtx` for the pull request it reviews,
+     * and its read-only behavior is a property of the tool set. Two locks, as with
+     * `create_pr`: the tool is not in its set, and the handler is not wired to it.
      */
-    // Jobs de fond du chunk (MIN-114). Ils meurent AVANT chaque push (un watcher
-    // qui écrit pendant le `git add -A` commiterait n'importe quoi) et de toute
-    // façon en fin de chunk (`finally`) : un processus oublié mangerait la microVM
-    // jusqu'au reaper, et serait encore là au tour suivant sans que le modèle le
-    // sache. Le registre ne survit pas au chunk — c'est assumé, et le tool le dit.
+    // Chunk background jobs (MIN-114). They die BEFORE every push (a watcher that
+    // writes during `git add -A` would commit anything) and in any case at chunk
+    // end (`finally`): an abandoned process would consume the microVM until the
+    // reaper and still be there on the next turn without the model knowing. The
+    // registry does not survive the chunk — this is intentional, and the tool says so.
     //
-    // AUCUN SUR UN TOUR LOCAL (MIN-293) : `run_background` n'est pas servi sur
-    // une machine (cf. `agentToolsFor`), et ce registre-ci n'a de toute façon
-    // jamais servi qu'au `stopAll` de filet du `finally` depuis que la boucle
-    // vit dans la microVM.
+    // NONE ON A LOCAL TURN (MIN-293): `run_background` is not provided on a
+    // machine (see `agentToolsFor`), and this registry has only ever been used for
+    // the `finally` safety-net `stopAll` since the loop moved into the microVM.
     backgroundJobs = host
       ? new BackgroundJobs(repoBackgroundRunner(host), run.continuations * 1000)
       : null;
 
-    // Fichiers édités depuis le dernier type-check (MIN-110). Vidé à chaque check :
-    // un tour qui ne touche à rien après coup n'en relance pas un second. PARTAGÉ
-    // avec les sous-agents (MIN-112) : c'est ce que le type-check lit, et une fille
-    // qui casse un type doit le faire dire avant que le parent ne réponde.
+    // Files edited since the last type-check (MIN-110). Cleared on every check: a
+    // turn that changes nothing afterward does not launch a second one. SHARED with
+    // subagents (MIN-112): this is what type-check reads, and a child that breaks a
+    // type must report it before the parent responds.
     //
-    // SEMÉ depuis le checkpoint (MIN-210), comme `instructions` et `lastFilesSha` :
-    // c'est de l'état de TOUR, et un tour qui déborde d'un chunk doit type-checker
-    // ce qu'il a édité AVANT la soft-deadline. Le chemin `completed` ne l'écrit pas
-    // (le tour y est fini), donc le semis reste vide au premier chunk d'un tour.
-    /** Ce que le modèle a vérifié lui-même sur ce chunk (MIN-262) — rempli par
-     *  `run_command`, périmé par toute édition, lu par la porte de livraison.
-     *  PARTAGÉ avec les filles, comme `editedPaths`. Il ne voyage PAS dans le
-     *  checkpoint : un chunk qui reprend n'a rien vu passer vert lui-même. */
+    // SEEDED from the checkpoint (MIN-210), like `instructions` and `lastFilesSha`:
+    // this is TURN state, and a turn that spills into another chunk must type-check
+    // what it edited BEFORE the soft deadline. The `completed` path does not write
+    // it (the turn is finished there), so the seed remains empty on a turn's first
+    // chunk.
+    /** What the model verified itself on this chunk (MIN-262) — filled by
+     *  `run_command`, invalidated by any edit, and read by the delivery gate.
+     *  SHARED with children, like `editedPaths`. It does NOT travel in the
+     *  checkpoint: a continued chunk has not seen anything pass green itself. */
 
-    // `quotaNow` et `ledgerSpentUsd` sont lus plus haut, avant la microVM (MIN-223) :
-    // le plafond de la clé LLM du run en dépend, et cette clé précède la politique
-    // réseau, donc la VM.
+    // `quotaNow` and `ledgerSpentUsd` are read above, before the microVM (MIN-223):
+    // the run LLM key's cap depends on them, and that key precedes the network
+    // policy, and therefore the VM.
     //
-    // Deux plafonds, le plus serré gagne : le QUOTA du compte, et celui que
-    // l'appelant a éventuellement posé sur CE run. Une chaîne d'automatisation
-    // n'en ajoute PAS un troisième (MIN-147) : la couper au milieu laisserait un
-    // ticket à moitié fait sans explication lisible — c'est le quota, global et
-    // visible, qui borne la dépense.
+    // Two caps, with the tighter one winning: the account QUOTA and any cap the
+    // caller set on THIS run. An automation chain does NOT add a third (MIN-147):
+    // stopping it midway would leave a half-finished issue without a readable
+    // explanation — the global, visible quota bounds spending.
     //
-    /** Ce qu'il reste du budget d'usage du COMPTE. `undefined` en BYOK. */
+    /** Remaining account usage budget. `undefined` with BYOK. */
     const accountRemainingUsd =
       quotaNow && !quotaNow.unlimited ? Math.max(0, quotaNow.remaining ?? 0) : undefined;
     /**
-     * Ce que le run a déjà dépensé, tous chunks joués confondus — le montant que
-     * son plafond déduit.
+     * What the run has already spent across all completed chunks — the amount
+     * deducted from its cap.
      *
-     * LU AU LEDGER (MIN-215), plus à la seule colonne `cost_usd` : celle-ci n'est
-     * écrite que par les chemins de sortie SAINS d'ici, donc un chunk qui lève au
-     * milieu (un `commitAndPush` qui échoue) ou dont l'invocation est tuée à la
-     * limite de durée n'y porte jamais sa dépense — et le plafond se rechargeait
-     * d'autant. Un passage à 0,75 $ dont le chunk 2 mourait après 0,40 $ repartait
-     * au chunk 3 avec un restant qui n'existait plus, et finissait au-dessus de
-     * son plafond. Le ledger, lui, est écrit APPEL PAR APPEL, avant l'accident :
-     * c'est déjà la doctrine du quota du compte, qui pour cette raison exacte ne
-     * souffrait pas du problème (`checkAgentQuota` relit l'usage réel à chaque
-     * chunk). La somme porte aussi les lignes `sandbox_compute` : le plafond voit
-     * enfin la moitié microVM de la facture.
+     * READ FROM THE LEDGER (MIN-215), not only from the `cost_usd` column: that
+     * column is written only by the HEALTHY exit paths here, so a chunk that throws
+     * midway (a failed `commitAndPush`) or whose invocation is killed at the time
+     * limit never records its spending there — and the cap was replenished by that
+     * amount. A $0.75 pass whose chunk 2 died after $0.40 would resume chunk 3 with
+     * a nonexistent remainder and finish above its cap. The ledger is written CALL
+     * BY CALL, before the accident: this is already the account-quota policy, which
+     * avoids this exact problem (`checkAgentQuota` rereads actual usage for every
+     * chunk). The total also includes `sandbox_compute` rows: the cap finally sees
+     * the microVM half of the bill.
      *
-     * Le MAX des deux, et pas le ledger seul : `recordAiUsage` est best-effort
-     * (il avale ses erreurs), donc une insertion ratée laisserait au ledger moins
-     * que ce que la colonne porte. Les deux sont des MINORANTS de la dépense
-     * réelle — le plus grand est le plus vrai. Même raison pour le repli sur la
-     * colonne quand la lecture échoue : jamais pire qu'avant.
+     * The MAXIMUM of the two, not the ledger alone: `recordAiUsage` is best-effort
+     * (it swallows errors), so a failed insert could leave the ledger below what the
+     * column contains. Both are LOWER BOUNDS on actual spending — the larger is the
+     * more accurate one. The same reasoning applies to falling back to the column
+     * when the read fails: never worse than before.
      */
     const runSpentUsd = Math.max(run.cost_usd, ledgerSpentUsd ?? 0);
     /**
-     * Ce qu'il reste du plafond posé sur CE run — DÉDUCTION FAITE des chunks
-     * déjà joués. Sans cette soustraction le plafond se rechargeait à chaque
-     * continuation : la boucle compare son coût de CHUNK au budget, et un run en
-     * cinq chunks aurait dépensé cinq fois son plafond.
+     * What remains of the cap set on THIS run — AFTER DEDUCTING already completed
+     * chunks. Without this subtraction, the cap would refill on every continuation:
+     * the loop compares its CHUNK cost with the budget, and a five-chunk run would
+     * spend five times its cap.
      */
     const runCapRemainingUsd =
       run.budget_usd == null ? undefined : Math.max(0, Number(run.budget_usd) - runSpentUsd);
     const budgetUsd = minDefined(accountRemainingUsd, runCapRemainingUsd);
     /**
-     * LE MÊME CALCUL, RELU EN COURS DE CHUNK (MIN-224).
+     * THE SAME CALCULATION, REREAD DURING THE CHUNK (MIN-224).
      *
-     * `budgetUsd` ci-dessus est un snapshot, et rien ne réserve de budget : deux
-     * runs lancés à la même seconde lisent le même restant et le prennent chacun
-     * pour plafond, donc ils peuvent dépenser le double. Ce chunk relit déjà à son
-     * entrée — au pire toutes les cinq minutes ; ce crochet resserre à une.
+     * `budgetUsd` above is a snapshot, and nothing reserves budget: two runs launched
+     * in the same second read the same remainder and each treats it as a cap, so
+     * they can spend twice as much. This chunk already rereads it at entry — at most
+     * every five minutes; this hook tightens that to one.
      *
-     * Throttlé ici plutôt que dans la boucle : la lecture coûte deux requêtes
-     * (facturation + somme du ledger) et un round peut durer trois secondes.
-     * `null` = pas encore l'heure, ou lecture en panne — la boucle garde alors son
-     * plafond, une facturation injoignable n'arrête pas un run.
+     * Throttled here rather than in the loop: the read costs two requests (billing +
+     * ledger total), and a round can last three seconds. `null` means not yet time
+     * or a failed read — the loop then keeps its cap; unreachable billing does not
+     * stop a run.
      */
     /**
-     * ── LA BIFURCATION (MIN-224) ────────────────────────────────────────────
+     * ── THE BRANCH (MIN-224) ────────────────────────────────────────────
      *
-     * Tout ce qui précède est l'AMORÇAGE, et il est commun aux deux moteurs :
-     * résoudre le dépôt, le modèle, la clé, le contexte du ticket, réveiller la
-     * microVM, poser la politique réseau, construire l'historique. Une seule
-     * implémentation, donc — un amorçage écrit deux fois aurait divergé, et la
-     * divergence se serait lue dans le premier message du système.
+     * Everything above is BOOTSTRAP, shared by both engines: resolve the repository,
+     * model, key, and issue context; wake the microVM; apply the network policy; and
+     * build history. One implementation, therefore — bootstrap written twice would
+     * diverge, and the divergence would appear in the first system message.
      *
-     * Ce qui suit, en revanche, se joue ailleurs. La fonction écrit le harness
-     * dans la VM, lance la boucle en détaché, persiste l'identifiant de la
-     * commande, et REND LA MAIN. Plus de soft-deadline, plus de budget de chunk,
-     * plus d'attente : le tour vivra aussi longtemps qu'il lui faudra, et c'est
-     * lui qui appellera le plan de contrôle pour se mettre au repos.
+     * What follows happens elsewhere. The function writes the harness into the VM,
+     * starts the loop detached, persists the command ID, and RETURNS CONTROL. No
+     * soft deadline, chunk budget, or waiting: the turn lives as long as needed,
+     * and calls the control plane itself to suspend.
      *
-     * Le run reste `running` — c'est exact, il tourne. Ce qui le sortira de là,
-     * c'est son propre rapport de fin de tour, ou le chien de garde qui aura
-     * constaté la mort de son process (`reapDeadVmRuns`, drain.ts).
+     * The run remains `running` — correctly, it is running. What takes it out of
+     * that state is its own turn-completion report, or the watchdog after it notices
+     * that its process died (`reapDeadVmRuns`, drain.ts).
      */
     /**
-     * LA MÉMOIRE DE LA SESSION, RASSEMBLÉE ICI ET NULLE PART AILLEURS. Une
-     * lecture par TOUR — la ligne du run, elle, est relue à chaque appel du
-     * plan de contrôle, et c'est pour ça que le journal en est sorti.
+     * THE SESSION MEMORY, ASSEMBLED HERE AND NOWHERE ELSE. Read once per TURN — the
+     * run row is reread on every control-plane call, which is why the journal lives
+     * outside it.
      */
     const pointer = run.checkpoint?.opencode;
     const opencodeJournal = pointer?.sessionId
@@ -1438,15 +1418,15 @@ export async function executeAgentRun(
           seq: pointer.seq ?? {},
         }
       : undefined;
-    // `bootstrapMs` manque exprès : c'est `startVmLoop` qui le pose, parce que
-    // c'est lui qui sait quand l'amorçage se termine (cf. `VmJob.bootstrapMs`).
+    // `bootstrapMs` is intentionally missing: `startVmLoop` sets it because it knows
+    // when bootstrap ends (see `VmJob.bootstrapMs`).
     const job: Omit<VmJob, "bootstrapMs"> = {
       protocolVersion: VM_PROTOCOL_VERSION,
       /**
-       * OÙ CE TOUR TRAVAILLE (MIN-354). Une microVM est créée pour un run et
-       * pour lui seul : son layout est celui du cloud, sans autre choix à faire.
-       * Ce qui change, c'est que le harness l'APPREND au lieu de le supposer —
-       * et c'est ce qui permettra à un autre lanceur d'en poser un autre.
+       * WHERE THIS TURN WORKS (MIN-354). A microVM is created for one run and that
+       * run alone: its layout is the cloud layout, with no other choice to make.
+       * What changes is that the harness LEARNS it instead of assuming it — which
+       * lets another launcher provide a different one.
        */
       layout: cloudLayout(),
       runId: run.id,
@@ -1467,21 +1447,21 @@ export async function executeAgentRun(
       chain: !!run.chain_id,
       imageInput,
       webSearch: webSearchAllowed,
-      // Le plafond de recherches du tour part AVEC le job : la constante vit
-      // dans le module qui facture la recherche, et celui-là n'entre pas dans
-      // le bundle de la microVM (cf. `VmJob.webSearchMax`).
+      // The turn's search cap travels WITH the job: the constant lives in the module
+      // that bills search, and that module is not included in the microVM bundle
+      // (see `VmJob.webSearchMax`).
       webSearchMax: MAX_WEB_SEARCHES_PER_TURN,
       subagents: {
         models: subagentModels,
         favorites: subagentFavorites,
         /**
-         * UNE RELECTURE NE DÉLÈGUE PAS, et c'est ce plafond qui le dit sous
-         * opencode : la config sert le tool `task` dès qu'il est > 0
-         * ([opencode-config.ts](vm/opencode-config.ts), `primaryTools`). Les
-         * deux prompts posent déjà la même condition (l.1308 et l.1442) — le
-         * job, lui, l'avait perdue : le modèle recevait un tool de délégation
-         * que son ancrage ne décrit pas et que `PR_REVIEW_TOOLS` refuse, et
-         * une relecture pouvait ouvrir deux sessions filles qui ÉDITENT.
+         * A REVIEW DOES NOT DELEGATE, and this cap enforces that in opencode: the
+         * config serves the `task` tool whenever it is > 0
+         * ([opencode-config.ts](vm/opencode-config.ts), `primaryTools`). Both
+         * prompts already impose the same condition (l.1308 and l.1442), but the
+         * job had lost it: the model received a delegation tool its anchor did not
+         * describe and `PR_REVIEW_TOOLS` refused, and a review could open two child
+         * sessions that EDIT.
          */
         maxParallel: writesToRepo ? subagentMaxParallel : 0,
         allowedIds: subagentScope.allowedIds,
@@ -1490,22 +1470,21 @@ export async function executeAgentRun(
         ...(Object.keys(subagentPricing).length > 0 ? { pricing: subagentPricing } : {}),
       },
       /**
-       * LE JOURNAL D'OPENCODE DU TOUR PRÉCÉDENT — c'est LUI la mémoire d'un run
-       * mené par opencode, et il ne descendait pas dans la microVM (MIN-286).
+       * THE PREVIOUS TURN'S OPENCODE JOURNAL — it is the memory of a run led by
+       * opencode, and it was not passed into the microVM (MIN-286).
        *
-       * Le superviseur le rejoue (`/sync/replay`) pour retrouver sa session ;
-       * sans lui, `job.opencode` est `undefined`, il crée une session NEUVE, et
-       * le tour repart sans une ligne de sa conversation. Le chemin d'écriture
-       * était complet de bout en bout (le superviseur l'exporte, le plan de
-       * contrôle l'estampille, `AgentCheckpoint` le déclare) : seule cette
-       * lecture-ci manquait, donc rien ne se voyait — pas d'erreur, pas de type
-       * qui proteste, juste un agent amnésique d'un tour à l'autre.
+       * The supervisor replays it (`/sync/replay`) to recover its session; without
+       * it, `job.opencode` is `undefined`, a NEW session is created, and the turn
+       * resumes without a line of its conversation. The write path was complete
+       * end to end (the supervisor exports it, the control plane stamps it,
+       * `AgentCheckpoint` declares it): only this read was missing, so nothing
+       * showed up — no error, no type failure, just an agent with amnesia from one
+       * turn to the next.
        */
       /**
-       * LE JOURNAL, RASSEMBLÉ DEPUIS SA TABLE (MIN-286, 2026-08-13). La ligne
-       * du run n'en porte que le pointeur : les events vivent en append dans
-       * `agent_run_journal`, parce qu'ils charrient la sortie complète de
-       * chaque tool et qu'un checkpoint ne pouvait pas les tenir.
+       * THE JOURNAL, REASSEMBLED FROM ITS TABLE (MIN-286, 2026-08-13). The run row
+       * carries only its pointer: events are appended to `agent_run_journal`, because
+       * they carry the complete output of every tool and a checkpoint could not hold it.
        */
       ...(opencodeJournal ? { opencode: opencodeJournal } : {}),
       opencodeInput,
@@ -1517,27 +1496,26 @@ export async function executeAgentRun(
       prInlineComments: run.checkpoint?.prInlineComments ?? 0,
       baseBranch,
       workBranch,
-      // Un premier tour dont aucune branche n'a encore été stampée ne peut pas
-      // exister sur le remote. Le harness peut alors partir directement de HEAD
-      // au lieu de payer un `git fetch` voué à répondre « ref inexistante ».
+      // A first turn whose branch has not yet been stamped cannot exist on the
+      // remote. The harness can start directly from HEAD instead of paying for a
+      // `git fetch` destined to return “ref does not exist”.
       remoteWorkMayExist: run.branch_name != null || run.continuations > 0,
       /**
-       * LA FONCTION NE SAIT PRODUIRE QU'UN CLONE (MIN-358). C'est elle qui a
-       * créé la microVM et cloné dedans ; le mode `current` appartient à un
-       * lanceur qui, lui, travaille dans un dépôt qui existait avant lui.
+       * THE FUNCTION CAN PRODUCE ONLY A CLONE (MIN-358). It created the microVM and
+       * cloned into it; the `current` mode belongs to a launcher that works in a
+       * repository that existed before it.
        */
       repoMode,
       /**
-       * Une relecture ne commite RIEN : lui résoudre le bot de l'App coûterait un
-       * appel de forge pour une identité que personne n'utilisera. Ailleurs c'est
-       * le bot, mémoïsé par process (cf. `getGithubBotCommitIdentity`).
+       * A review commits NOTHING: resolving the App bot would cost a provider call
+       * for an identity nobody will use. Elsewhere it is the process-memoized bot
+       * (see `getGithubBotCommitIdentity`).
        */
       committer: prRun
         ? defaultCommitterIdentity()
         : await committerPromise,
-      // Le job PART dans la microVM : c'est `vmTarget`, jamais `target`
-      // (MIN-327). La boucle n'en fait que du `git` — et une relecture n'en
-      // reçoit qu'un token en lecture.
+      // The job GOES into the microVM: it is `vmTarget`, never `target` (MIN-327).
+      // The loop uses it only for `git` — and a review receives only a read token.
       authUrl: vmTarget.authUrl,
       commitRef,
       filesFromSha,
@@ -1545,65 +1523,60 @@ export async function executeAgentRun(
       feature: usageFeature,
     };
     /**
-     * LE TOUR PART SUR UNE MACHINE (MIN-293) — et la fonction s'arrête ici.
+     * THE TURN STARTS ON A MACHINE (MIN-293) — and the function stops here.
      *
-     * Elle a fait tout son travail : le contexte, le modèle, le plafond, le bail
-     * de dépense, la branche, l'identité de committer, l'URL de push. Ce qu'elle
-     * ne peut pas faire, c'est écrire sur un disque qu'elle ne voit pas — donc
-     * elle REND le job au lieu de le poser.
+     * It has done all its work: context, model, cap, spending lease, branch,
+     * committer identity, and push URL. What it cannot do is write to a disk it
+     * cannot see — so it RETURNS the job instead of placing it.
      *
-     * **`layout` en est absent, et c'est l'invariant du lot** : le serveur
-     * possède tout ce qui concerne le run, la machine possède tout ce qui
-     * concerne le disque (cf. [lib/desktop/local-turn.ts](../../desktop/local-turn.ts)).
-     * `bootstrapMs` aussi : il n'y a pas de microVM dont il faudrait facturer le
-     * réveil.
+     * **`layout` is absent, and this is the batch invariant**: the server owns
+     * everything related to the run, while the machine owns everything related to
+     * the disk (see [lib/desktop/local-turn.ts](../../desktop/local-turn.ts)).
+     * `bootstrapMs` is absent too: there is no microVM whose wake-up must be billed.
      *
-     * PAS DE `loop_command_id` : il n'y a aucune commande de plateforme à
-     * interroger. Le chien de garde le sait depuis MIN-355 et donne à un run
-     * local la borne des deux heures plutôt que celle des quinze minutes
-     * (`reapDeadVmRuns`, drain.ts) — c'est la première des sept casses de
-     * l'audit, et elle est réglée là-bas, pas ici.
+     * NO `loop_command_id`: there is no platform command to query. The watchdog
+     * knows this since MIN-355 and gives a local run the two-hour limit rather than
+     * the fifteen-minute one (`reapDeadVmRuns`, drain.ts) — this is the first of the
+     * audit's seven failures, and it is fixed there, not here.
      *
-     * Le run reste `running` : il l'est. Ce qui le sortira de là, c'est son
-     * rapport de fin de tour ou le chien de garde, exactement comme dans le cloud.
+     * The run remains `running`: it is running. Its turn-completion report or the
+     * watchdog will take it out of that state, exactly as in the cloud.
      */
     if (localTurn) {
       /**
-       * ⚠ **`layout` EST RETIRÉ ICI, À LA MAIN, ET C'EST LE CŒUR DE L'AFFAIRE.**
+       * ⚠ **`layout` IS REMOVED HERE, BY HAND, AND THAT IS THE HEART OF THE MATTER.**
        *
-       * Le type de `onLocalAssignment` dit `Omit<VmJob, "layout" | "bootstrapMs">`,
-       * et c'est **une fiction de compilateur** : l'objet ci-dessus porte bien un
-       * `layout: cloudLayout()` à l'exécution, parce qu'il fallait bien en poser
-       * un pour satisfaire `VmJob`. Envoyé tel quel, il donnait à la machine les
-       * chemins `/vercel/sandbox` — c'est-à-dire un dossier qui n'existe pas
-       * chez elle, et surtout un layout que le serveur n'a AUCUN moyen de
-       * connaître.
+       * The `onLocalAssignment` type says `Omit<VmJob, "layout" | "bootstrapMs">`,
+       * and it is **a compiler fiction**: the object above does carry
+       * `layout: cloudLayout()` at runtime, because one was needed to satisfy
+       * `VmJob`. Sent as-is, it would give the machine the `/vercel/sandbox` paths
+       * — a directory that does not exist there, and, more importantly, a layout
+       * the server has NO way to know.
        *
-       * Le parseur de la coquille l'a refusé, et il a eu raison : `"layout" in
-       * job` est chez lui un refus sec ([lib/desktop/local-turn.ts](../../desktop/local-turn.ts)),
-       * précisément parce que `repoDir` est la racine de sécurité de toutes les
-       * écritures du modèle et qu'elle ne se reçoit pas d'ailleurs.
+       * The shell parser rejected it, correctly: `"layout" in job` is a hard
+       * rejection there ([lib/desktop/local-turn.ts](../../desktop/local-turn.ts)),
+       * precisely because `repoDir` is the security root for all model writes and
+       * must not be received from elsewhere.
        *
-       * La leçon vaut d'être écrite : **un `Omit<>` sur une frontière réseau ne
-       * retire rien.** Ce qui a rattrapé la faute, c'est la garde d'en face, pas
-       * le type.
+       * The lesson is worth recording: **an `Omit<>` across a network boundary
+       * removes nothing.** What caught the mistake was the guard on the other side,
+       * not the type.
        */
       const { layout: _cloudLayout, ...assignment } = job;
       opts.onLocalAssignment?.(assignment, { repoFullName: target.repoFullName });
-      // Le claim initial (ou le steer d'une reprise) a déjà rafraîchi l'activité.
-      // On rejoint seulement l'event démarré au début : dans la pratique il est
-      // terminé depuis longtemps, sans ajouter une nouvelle écriture SQL.
+      // The initial claim (or steering of a continuation) already refreshed activity.
+      // We only await the event started at the beginning: in practice it finished
+      // long ago, without adding another SQL write.
       await runningEvent;
-      // Le drapeau de boucle partie n'est PAS posé ici : il dit « une microVM
-      // tourne, et c'est la boucle qui la facturera ». Il n'y en a aucune, et la
-      // garde `!sandbox` de `billSandboxCompute` — celle qui existait déjà —
-      // suffit. Poser les deux donnerait deux raisons de ne pas facturer la même
-      // chose, donc un jour deux raisons qui divergent.
+      // The loop-started flag is NOT set here: it means “a microVM is running, and
+      // the loop will bill it”. There is none, and the existing `!sandbox` guard in
+      // `billSandboxCompute` is sufficient. Setting both would give two reasons not
+      // to bill the same thing, and eventually two reasons that diverge.
       return "detached";
     }
 
-    // `sandbox` et non `sb` : le compilateur sait qu'il est non nul ici, la
-    // branche locale étant sortie juste au-dessus.
+    // `sandbox`, not `sb`: the compiler knows it is non-null here because the local
+    // branch returned just above.
     if (!sandbox) throw new Error("no sandbox to start the loop in");
     const cmdId = await startVmLoop(sandbox, job, callStart);
     await stampRun(run.id, {
@@ -1611,53 +1584,53 @@ export async function executeAgentRun(
       last_activity_at: new Date().toISOString(),
     });
     /**
-     * À PARTIR D'ICI, LE COMPUTE APPARTIENT À LA BOUCLE. Elle facturera le tour
-     * entier — amorçage compris, qu'on vient de lui passer. Le `finally` ne doit
-     * donc plus rien écrire, sous peine de compter deux fois la même microVM.
+     * FROM HERE ON, COMPUTE BELONGS TO THE LOOP. It will bill the entire turn —
+     * including bootstrap, which we just passed to it. `finally` must therefore
+     * write nothing more, or it would count the same microVM twice.
      *
-     * Posé APRÈS le stamp, et pas avant : si celui-ci échoue, le tour part sans
-     * que son `loop_command_id` soit en base — le rapport de fin sera refusé en
-     * 409 et le chien de garde n'aura rien à interroger. Personne ne facturera
-     * cette microVM-là si ce n'est pas nous.
+     * Set AFTER the stamp, not before: if the stamp fails, the turn starts without
+     * its `loop_command_id` in the database — the completion report will be rejected
+     * with 409 and the watchdog will have nothing to query. Nobody will bill that
+     * microVM unless we do.
      */
     vmLoopLaunched = true;
     return "detached";
   } catch (err) {
-    // Substitué AVANT tout usage (MIN-239) : un `git clone` refusé recopie l'URL de
-    // clone entière — token compris — dans son stderr, et ce message part dans
-    // l'event `error` puis dans `agent_runs.error_message`, lu dans l'UI.
+    // Redacted BEFORE any use (MIN-239): a rejected `git clone` copies the entire
+    // clone URL — including the token — into stderr, and this message goes into the
+    // `error` event and then `agent_runs.error_message`, which the UI displays.
     const message = secrets.redact(err instanceof Error ? err.message : String(err));
     await emit("error", { message });
     /**
-     * La dépense du run RELUE AU LEDGER (MIN-215), à écrire sur les stamps de
-     * repos d'ici. Un chunk qui lève est sorti de sa boucle sans passer par le
-     * moindre `newCost` : sa dépense modèle est au ledger, mais `cost_usd` ne l'a
-     * jamais vue. Personne ne la retrouvait ensuite — le chunk suivant repart de
-     * la colonne, donc le trou est définitif : `recomputeChainSpend` sous-compte
-     * la chaîne, `medianCostByIntent` biaise ses estimations, et « Exécutions
-     * précédentes » affiche moins que ce qui a été payé.
+     * Run spending READ FROM THE LEDGER (MIN-215), to be written on this path's
+     * suspension stamps. A chunk that throws exits its loop without any `newCost`:
+     * its model spending is in the ledger, but `cost_usd` never saw it. Nothing
+     * could recover it afterward — the next chunk starts from the column, so the
+     * gap is permanent: `recomputeChainSpend` undercounts the chain,
+     * `medianCostByIntent` biases its estimates, and “Previous executions” shows
+     * less than was paid.
      *
-     * Écrit tel quel plutôt que cumulé : le catch ne sait pas ce que ce chunk-ci
-     * a dépensé (il n'a pas de `result`), et la somme du ledger est déjà le total
-     * du run. `Math.max` pour la même raison qu'à l'entrée du chunk — le ledger
-     * est best-effort, la colonne peut porter une ligne qu'il a ratée, et une
-     * dépense affichée ne doit jamais reculer.
+     * Written as-is rather than accumulated: the catch does not know what this
+     * chunk spent (it has no `result`), and the ledger total is already the run total.
+     * `Math.max` for the same reason as at chunk entry — the ledger is best-effort,
+     * the column may contain a row it missed, and displayed spending must never go
+     * backward.
      *
-     * Le compute de ce chunk est facturé AVANT la relecture (MIN-224), comme sur
-     * les repos sains : sinon la colonne d'un chunk mort porterait le modèle mais
-     * pas la microVM qu'il a bel et bien réveillée, et les deux moteurs
-     * n'écriraient toujours pas la même chose.
+     * This chunk's compute is billed BEFORE the reread (MIN-224), as on healthy
+     * suspensions: otherwise a dead chunk's column would contain the model but not
+     * the microVM it actually woke, and the two engines would still write different
+     * things.
      */
     await billSandboxCompute();
     const spentUsd = await spentFromLedger(run.run_id ?? run.id);
     const costFromLedger =
       spentUsd == null ? {} : { cost_usd: Math.max(run.cost_usd, spentUsd) };
-    // Erreur d'AMORÇAGE (repo/modèle/clone : sandbox jamais acquise).
+    // BOOTSTRAP error (repository/model/clone: sandbox never acquired).
     if (!sandbox) {
-      // Une CONVERSATION EXISTANTE (checkpoint) ne meurt jamais sur une erreur
-      // d'amorçage — souvent transitoire (mint de token GitHub, 502). REPOS avec
-      // l'erreur visible : le prochain message retentera l'amorçage, contexte
-      // intact. Seule une run VIERGE (rien à préserver) échoue en `failed`.
+      // An EXISTING CONVERSATION (checkpoint) never dies on a bootstrap error — often
+      // transient (GitHub token minting, 502). SUSPEND with the visible error: the
+      // next message retries bootstrap with the context intact. Only a BLANK run
+      // (nothing to preserve) fails as `failed`.
       if (run.checkpoint?.messages?.length) {
         await stampRun(run.id, {
           status: "completed",
@@ -1666,9 +1639,9 @@ export async function executeAgentRun(
           attempts: 0,
           last_activity_at: new Date().toISOString(),
           interrupt_requested: false,
-          // Rien n'a été dépensé DANS ce chunk (l'amorçage n'appelle pas le
-          // modèle), mais un chunk précédent a pu mourir sans stamper : ce repos
-          // est l'occasion de recoller la colonne au ledger.
+          // Nothing was spent IN this chunk (bootstrap does not call the model), but
+          // a previous chunk may have died without stamping: this suspension is an
+          // opportunity to bring the column back in line with the ledger.
           ...costFromLedger,
         });
         await notifyAgentRun(run, "agent_failed");
@@ -1683,12 +1656,12 @@ export async function executeAgentRun(
       await notifyAgentRun(run, "agent_failed");
       return "failed";
     }
-    // Erreur EN COURS DE TOUR → la session reste reprennable : REPOS, checkpoint du
-    // dernier état sain conservé (non écrasé), microVM gardée. Si un message de
-    // steering attend (accepté pendant le tour, jamais drainé), on RE-QUEUE pour ne
-    // pas l'orpheliner — borné par `attempts` (incrémenté à chaque claim, jamais
-    // remis à zéro sur ce chemin) pour qu'une erreur persistante ne boucle pas
-    // claim → erreur → re-queue indéfiniment.
+    // ERROR DURING THE TURN → the session remains resumable: SUSPEND, preserving
+    // the last healthy checkpoint (not overwritten) and keeping the microVM. If a
+    // steering message is waiting (accepted during the turn, never drained),
+    // RE-QUEUE it so it is not orphaned — bounded by `attempts` (incremented at every
+    // claim and never reset on this path) so a persistent error does not loop
+    // claim → error → re-queue forever.
     await clearInterrupt(run.id).catch(() => {});
     const retryForPending =
       run.attempts < MAX_ERROR_REQUEUE_ATTEMPTS &&
@@ -1697,9 +1670,9 @@ export async function executeAgentRun(
       status: retryForPending ? "queued" : "completed",
       ...(retryForPending
         ? { not_before: new Date().toISOString() }
-        : // Repos sain : le budget de reprise sur crash repart entier (sinon il
-          // s'épuise sur la vie du run et le prochain crash effacerait son
-          // checkpoint via requeueStuckRuns).
+        : // Healthy suspension: the crash-retry budget starts over (otherwise it
+          // would be consumed over the run's lifetime and the next crash would erase
+          // its checkpoint through requeueStuckRuns).
           { attempts: 0 }),
       error_message: cap(message, 1000),
       continuations: 0,
@@ -1712,35 +1685,34 @@ export async function executeAgentRun(
     if (!retryForPending) await notifyAgentRun(run, "agent_failed");
     return "completed";
   } finally {
-    // Filet des jobs de fond (MIN-114) : les chemins de push les ont déjà tués, mais
-    // pas le chemin d'ERREUR mid-tour — et un serveur laissé vivant tiendrait la
-    // microVM éveillée jusqu'au reaper. Best-effort, jamais bloquant.
+    // Background-job safety net (MIN-114): push paths have already killed them, but
+    // the mid-turn ERROR path has not — and a surviving server would keep the
+    // microVM awake until the reaper. Best-effort, never blocking.
     if (backgroundJobs) await backgroundJobs.stopAll().catch(() => 0);
 
-    // Métrage du compute sandbox (MIN-72) : chaque tranche d'exécution où la
-    // microVM a été réveillée est facturée en wall-clock — y compris les tours
-    // en échec. Bande de seq dédiée pour ne pas croiser celle des appels LLM
-    // (continuations × 1000 + rounds).
+    // Sandbox compute metering (MIN-72): every execution slice in which the microVM
+    // was awake is billed by wall-clock time — including failed turns. A dedicated
+    // seq range prevents collisions with LLM-call sequences (continuations × 1000
+    // + rounds).
     /**
-     * LE FILET, et plus le chemin normal (MIN-224). Les mises au repos facturent
-     * désormais AVANT de relire le ledger, pour que `cost_usd` veuille dire la
-     * même chose sur les deux moteurs ; `billSandboxCompute` est idempotent, donc
-     * ce qui passe ici est ce qui n'est passé par aucun repos — un throw hors
-     * `catch`, une sortie que personne n'a prévue.
+     * THE SAFETY NET, not the normal path (MIN-224). Suspensions now bill BEFORE
+     * rereading the ledger, so `cost_usd` means the same thing in both engines;
+     * `billSandboxCompute` is idempotent, so what passes here is what passed through
+     * no suspension — a throw outside `catch`, or an exit nobody anticipated.
      *
-     * PAS quand la boucle est PARTIE dans la microVM : le tour n'est pas fini
-     * quand cette fonction rend la main, et son wall-clock est tenu par la boucle
-     * elle-même — amorçage compris, qu'on lui a passé dans son job
-     * (`VmJob.bootstrapMs`). Facturer ici en plus compterait deux fois la même
-     * microVM. La garde vit dans `billSandboxCompute`.
+     * NOT when the loop has STARTED in the microVM: the turn is not finished when
+     * this function returns, and its wall-clock is tracked by the loop itself —
+     * including bootstrap, which was passed in its job (`VmJob.bootstrapMs`). Billing
+     * here as well would count the same microVM twice. The guard lives in
+     * `billSandboxCompute`.
      *
-     * MAIS ON FACTURE QUAND ELLE N'EST PAS PARTIE, et c'est le trou qui manquait.
-     * Un amorçage qui LÈVE — clone en échec, `writeFiles` refusé, politique
-     * réseau invalide — a quand même réveillé une machine, parfois cloné un dépôt
-     * entier, et tombe dans le `catch` sans qu'aucun rapport ne vienne jamais. Le
-     * chien de garde ne le rattrape pas non plus : il ne balaie que les runs
-     * `running`, et celui-ci vient d'être mis au repos. La fonction est donc le
-     * seul témoin de ce compute-là.
+     * BUT WE BILL WHEN IT HAS NOT STARTED, and that was the missing gap.
+     * Bootstrap that THROWS — failed clone, rejected `writeFiles`, invalid network
+     * policy — still woke a machine and sometimes cloned an entire
+     * repository, then fell into `catch` without any report ever arriving. The
+     * watchdog does not catch it either: it scans only `running` runs, and this one
+     * has just been suspended. The function is therefore the only witness to that
+     * compute.
      */
     await billSandboxCompute();
   }

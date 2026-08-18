@@ -3,14 +3,14 @@ import { turnSubagents } from "./agent-subagents";
 import type { AgentRunEvent } from "./agent-api";
 
 /**
- * Ce que la carte au-dessus du composer lit pour dire « ça tourne encore ».
+ * What the card above the composer reads to say "it's still running."
  *
- * Deux cas portent tout le reste. Une fille COUPÉE n'émet ni résumé ni erreur —
- * seul le parent annonce la livraison de son rapport : sans cette lecture-là, elle
- * resterait « au travail » pour toujours, et la carte mentirait exactement là où
- * elle est censée rassurer. Et la fenêtre est le TOUR, pas la session : les filles
- * d'un tour passé ont déjà rendu, les lister ferait grandir la carte à chaque
- * délégation de la conversation.
+ * Two cases carry everything else. A CUT daughter issues neither summary nor error —
+ * only the parent announces the delivery of her report: without this reading, she
+ * would remain "at work" forever, and the card would lie exactly where
+ * it is supposed to reassure. And the window is the TURN, not the session: the girls
+ * from a past turn have already given in, listing them would make the card grow with each
+ * delegation of the conversation.
  */
 
 let seq = 0;
@@ -24,7 +24,7 @@ function ev(
 }
 
 describe("turnSubagents", () => {
-  it("rend une fille lancée, sans instant de fin tant qu'elle tourne", () => {
+  it("renders a launched child without an end time while it is running", () => {
     expect(
       turnSubagents([
         ev("tool_call", { name: "spawn_agent", id: "t1" }),
@@ -36,7 +36,7 @@ describe("turnSubagents", () => {
     ]);
   });
 
-  it("fige la fille qui a rendu son résumé, et garde celle qui tourne encore", () => {
+  it("freezes the child that returned its summary and keeps the other running", () => {
     const found = turnSubagents([
       ev("thinking", { subagent_id: "sub-1", subagent_mode: "explore", text: "…" }),
       ev("thinking", { subagent_id: "sub-2", subagent_mode: "implement", text: "…" }),
@@ -48,7 +48,7 @@ describe("turnSubagents", () => {
     ]);
   });
 
-  it("fige une fille en échec", () => {
+  it("freezes a failed child", () => {
     const [sub] = turnSubagents([
       ev("thinking", { subagent_id: "sub-1", text: "…" }),
       ev("error", { subagent_id: "sub-1", message: "boum" }, "2026-08-08T10:01:00.000Z"),
@@ -56,9 +56,9 @@ describe("turnSubagents", () => {
     expect(sub.endedAt).toBe("2026-08-08T10:01:00.000Z");
   });
 
-  it("fige une fille COUPÉE, que seul le parent déclare livrée", () => {
-    // Ni résumé ni erreur : une boucle suspendue n'en émet aucun. C'est l'event
-    // `status` du PARENT qui clôt la ligne.
+  it("freezes a STOPPED child, which only the parent declares delivered", () => {
+    // Neither summary nor error: a suspended loop emits none. This is the event
+    // `status` of the PARENT which closes the line.
     const [sub] = turnSubagents([
       ev("thinking", { subagent_id: "sub-1", text: "…" }),
       ev(
@@ -70,12 +70,12 @@ describe("turnSubagents", () => {
     expect(sub.endedAt).toBe("2026-08-08T10:03:00.000Z");
   });
 
-  it("oublie les filles du tour PRÉCÉDENT — la réponse du parent le referme", () => {
+  it("forgets children from the PREVIOUS turn — the parent's response closes it", () => {
     expect(
       turnSubagents([
         ev("thinking", { subagent_id: "sub-1", text: "…" }),
         ev("summary", { subagent_id: "sub-1", text: "rapport" }),
-        // Le PARENT répond : le tour est fini, tout ce qui précède avec.
+        // The PARENT responds: the round is over, with all the above.
         ev("summary", { text: "voilà ce que j'ai trouvé" }),
         ev("user_message", { text: "continue" }),
         ev("thinking", { subagent_id: "sub-2", subagent_mode: "implement", text: "…" }),
@@ -83,7 +83,7 @@ describe("turnSubagents", () => {
     ).toEqual(["sub-2"]);
   });
 
-  it("rend les filles de la plus ancienne à la plus récente", () => {
+  it("returns children from oldest to newest", () => {
     expect(
       turnSubagents([
         ev("thinking", { subagent_id: "sub-2", text: "…" }, "2026-08-08T10:00:10.000Z"),

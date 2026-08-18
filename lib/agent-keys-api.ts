@@ -5,9 +5,9 @@ import type { AiSurface, ByokFeatureModels } from "./ai-surfaces";
 import { trackEvent } from "./analytics";
 
 /**
- * Fetchers client de l'agent de code (MIN-46) : clés BYOK OpenRouter du compte,
- * modèle par défaut et niveau de raisonnement par défaut (MIN-122) de
- * l'utilisateur. La clé en clair n'est jamais renvoyée.
+ * Code Agent Client Fetchers (MIN-46): BYOK OpenRouter keys of the account,
+ * default model and default reasoning level (MIN-122) of
+ * the user. The plaintext key is never returned.
  */
 
 async function parseJson<T>(response: Response): Promise<T> {
@@ -34,14 +34,14 @@ export interface AiKey {
   created_at: string;
   last_used_at: string | null;
   /**
-   * Instant où le fournisseur a reconnu la clé (MIN-344). `null` = jamais
-   * confirmée : la clé est enregistrée, mais elle ne lève aucun plafond — le
-   * compte reste sur le quota minddy tant qu'elle ne répond pas.
-   */
+ * Time when the provider recognized the key (MIN-344). `null` = never
+ * confirmed: the key is saved, but it does not raise any cap — the
+ * account remains on the minddy quota as long as she does not respond.
+ */
   validated_at: string | null;
   enabled_surfaces: AiSurface[];
   feature_models: ByokFeatureModels;
-  /** Défauts effectifs admin/provider, secrets exclus. */
+  /** Effective admin/provider defaults, secrets excluded. */
   resolved_feature_models?: ByokFeatureModels;
 }
 
@@ -49,13 +49,13 @@ export async function fetchAiKeysApi(): Promise<{ keys: AiKey[] }> {
   return parseJson(await fetch("/api/account/ai-keys"));
 }
 
-/** Enregistre le BYOK actif (remplace l'existant). Les providers locaux peuvent ne pas avoir de clé. */
+/** Registers the active BYOK (replaces the existing one). Local providers may not have a key. */
 export async function addAiKeyApi(input: {
   provider: string;
   key?: string;
   baseUrl?: string;
 }): Promise<{ key: AiKey }> {
-  // Jamais la clé, évidemment — seulement le fournisseur choisi.
+  // Never the key, obviously — only the chosen supplier.
   trackEvent("ai_key_added", { provider: input.provider });
   return parseJson(
     await fetch("/api/account/ai-keys", {
@@ -66,13 +66,13 @@ export async function addAiKeyApi(input: {
   );
 }
 
-/** Retire le BYOK actif (single-active : pas de provider à préciser). */
+/** Removes active BYOK (single-active: no provider to specify). */
 export async function deleteAiKeyApi(): Promise<void> {
   trackEvent("ai_key_removed", {});
   await parseJson(await fetch("/api/account/ai-keys", { method: "DELETE" }));
 }
 
-/** Met à jour les surfaces et/ou modèles de la clé active, jamais son secret. */
+/** Updates the surfaces and/or models of the active key, never its secret. */
 export async function updateAiKeyPreferencesApi(patch: {
   enabled_surfaces?: AiSurface[];
   feature_models?: ByokFeatureModels;
@@ -97,9 +97,9 @@ export async function fetchAgentPreferencesApi(): Promise<AgentPreferences> {
 }
 
 /**
- * Écriture PARTIELLE : seuls les champs passés sont envoyés (le PUT n'écrit que
- * ce qu'il reçoit) — les deux réglages partagent une ligne, l'un ne doit pas
- * effacer l'autre.
+ * PARTIAL write: only passed fields are sent (the PUT only writes
+ * what it receives) — the two settings share a line, one must not
+ * clear the other.
  */
 export async function saveAgentPreferencesApi(
   patch: Partial<AgentPreferences>,

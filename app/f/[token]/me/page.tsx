@@ -39,14 +39,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     getTranslations("PublicFeedback"),
     getLocale(),
   ]);
-  // Le même board répond sur www.minddy.app/f/<token> ET sur le domaine du
-  // client : le canonical dit laquelle des deux URLs fait foi (MIN-88).
+  // The same board responds on www.minddy.app/f/<token> AND on the domain
+  // client: the canonical says which of the two URLs is authentic (MIN-88).
   const canonical = await publicCanonicalUrl(
     feedbackBasePath(token, domainTarget),
     "/me",
   );
-  // Board absent ou désactivé → la page part en 404 : elle en porte le titre,
-  // et surtout pas un canonical vers une URL qui ne répond pas.
+  // Board absent or deactivated → the page goes to 404: it bears the title,
+  // and especially not a canonical to an unresponsive URL.
   if (!ctx?.board.enabled) {
     return { ...(await appPageMetadata("notFound")), robots: { index: false, follow: false } };
   }

@@ -25,10 +25,10 @@ type LocalProjectCatalogRow = {
 };
 
 /**
- * Le serveur connaît les projets accessibles, la machine connaît les chemins.
- * Cette moitié sans chemin est jointe dans le lanceur avant que le job local ne
- * soit écrit ; l'agent peut alors retrouver un projet cité par son nom et n'a
- * plus à demander où il est sur le poste.
+ * The server knows the accessible projects, the machine knows the paths.
+ * This pathless half is joined in the launcher before the local job
+ * is written; the agent can then find a project cited by name and has no
+ * no more asking where he is on the post.
  */
 async function localProjectCatalog(
   supabase: SupabaseClient,
@@ -77,46 +77,46 @@ async function localProjectCatalog(
 }
 
 /**
- * `POST /api/desktop/local-turn` — **LE DÉCLENCHEUR DE TOUR LOCAL (MIN-293).**
+ * `POST /api/desktop/local-turn` — **THE LOCAL TOWER TRIGGER (MIN-293).**
  *
- * ## Ce qu'il est, et ce qu'il n'est pas
+ * ## What it is, and what it is not
  *
- * Depuis MIN-371, deux appels arrivent ici : le clone réclame le prochain run de
- * ses projets attachés, ou l'ancien déclencheur de développement désigne un id.
- * Dans les deux cas cette route prépare le tour que l'utilisateur a marqué
- * local et rend à sa machine ce qu'il faut pour le jouer.
+ * From MIN-371, two calls arrive here: the clone requests the next run of
+ * its attached projects, or the old development trigger designates an id.
+ * In both cases this route prepares the turn that the user has marked
+ * local and gives his machine what it needs to play it.
  *
- * Le pull est aussi la présence : une machine qui ne réclame plus n'est plus là.
- * Aucun abonnement de page ni heartbeat n'est nécessaire, et le navigateur qui
- * contrôle la conversation peut se trouver sur un autre appareil.
+ * The sweater is also presence: a machine that no longer demands is no longer there.
+ * No page subscription or heartbeat is necessary, and the browser that
+ * The conversation may be on another device.
  *
- * ## Les cinq portes, dans cet ordre
+ * ## The five doors, in this order
  *
- * 1. **une session**, puis une sélection limitée aux projets attachés annoncés
- *    par le clone et aux runs créés par ce même utilisateur ;
- * 2. **le droit de lire ce run** — la sélection passe par la RLS et la garde est
- *    répétée avant tout claim ;
- * 3. **la nature du run** — `rowMayRunLocally` : un run d'ancrage `pr`, de
- *    webhook, de routine, de chaîne ou du board public de feedback **ne part
- *    jamais sur une machine**, parce que son contexte est du texte d'attaquant
- *    potentiel et qu'en local une injection de prompt est un shell sur le poste
- *    de quelqu'un ([local-exec-scope.ts](../../../../lib/server/agent/local-exec-scope.ts)) ;
- * 4. **l'admission** — `admitLocalRun` : un BYOK interactif passe directement ;
- *    une clé plateforme exige le mint fournisseur ;
- * 5. **le claim** — `queued → running`, atomique, une seule machine gagne.
+ * 1. **a session**, then a selection limited to the announced attached projects
+ * by the clone and to runs created by this same user;
+ * 2. **the right to read this run** — the selection goes through the RLS and the guard is
+ * repeated before any claim;
+ * 3. **the nature of the run** — `rowMayRunLocally`: an anchor run `pr`, of
+ * webhook, routine, channel or public feedback board **does not leave
+ * never on a machine**, because its context is attacker text
+ * potential and that locally a prompt injection is a shell on the workstation
+ *    of someone ([local-exec-scope.ts](../../../../lib/server/agent/local-exec-scope.ts));
+ * 4. **admission** — `admitLocalRun`: an interactive BYOK passes directly;
+ * a platform key requires the provider mint;
+ * 5. **the claim** — `queued → running`, atomic, only one machine wins.
  *
- * ## Pourquoi le bail est monté EN DERNIER
+ * ## Why is the lease set up LAST
  *
- * Émettre, c'est révoquer : `issueLocalExecToken` incrémente `local_exec_gen`
- * avant de signer, donc tout jeton émis auparavant pour ce run meurt à cette
- * seconde. Le monter avant la préparation reviendrait à tuer un tour en cours
- * pour découvrir ensuite qu'on ne peut pas en préparer un nouveau.
+ * To issue is to revoke: `issueLocalExecToken` increments `local_exec_gen`
+ * before signing, so any token previously issued for this run dies at this
+ * second. Mounting it before preparation would mean killing a round in progress
+ * only to discover that you can't make a new one.
  */
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-/** La préparation d'un tour fait un appel de forge et lit le journal d'opencode.
- *  Le même ordre de grandeur qu'un lancement, sans le réveil de microVM. */
+/** Preparing for a round makes a forge call and reads the opencode log.
+ * The same order of magnitude as a launch, without microVM waking up. */
 export const maxDuration = 120;
 
 const DEVICE_ID = /^[0-9a-f]{32}$/;
@@ -129,7 +129,7 @@ type LocalTurnRequest = {
   projectIds?: unknown;
 };
 
-/** Le pull n'accepte qu'une liste courte d'UUID uniques, jamais des chemins. */
+/** The pull only accepts a short list of unique UUIDs, never paths. */
 function claimProjects(body: LocalTurnRequest | null): string[] | null {
   if (!DEVICE_ID.test(typeof body?.deviceId === "string" ? body.deviceId : "")) return null;
   if (!Array.isArray(body?.projectIds) || body.projectIds.length > MAX_CLAIM_PROJECTS) return null;
@@ -163,8 +163,8 @@ export async function POST(request: NextRequest) {
   if (!run && !runId) {
     return NextResponse.json({ status: "idle" }, { headers: { "cache-control": "no-store" } });
   }
-  // Un run illisible et un run inexistant rendent la MÊME chose : un identifiant
-  // de run ne doit pas servir à apprendre qu'il existe.
+  // An unreadable run and a non-existent run render the SAME thing: an identifier
+  // of run should not be used to learn that it exists.
   if (!run || !(await canReadAgentRun(auth.user.id, run))) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
@@ -176,25 +176,25 @@ export async function POST(request: NextRequest) {
   }
   const scope = rowMayRunLocally(run);
   if (!scope.ok) {
-    // Ne devrait pas arriver — `createRun` applique déjà la règle — mais c'est le
-    // second rideau à l'endroit qui compte : sans affectation, aucune machine ne
-    // peut jouer ce run.
+    // Shouldn't happen — `createRun` already applies the rule — but it does
+    // second curtain at the place that counts: without allocation, no machine
+    // can run this turn.
     console.error(`[desktop-local-turn] ${selectedRunId} : contexte tiers (${scope.reason})`);
     return NextResponse.json({ error: `third-party context: ${scope.reason}` }, { status: 409 });
   }
   /**
-   * L'ADMISSION lit le mode FIGÉ SUR LE RUN. `launchAgentRun` l'a résolu avant
-   * `createRun` et les chunks suivants doivent précisément garder ce choix :
-   * refaire ici toute la résolution du provider ajoutait un aller-retour avant
-   * le claim sans produire une vérité plus fraîche.
+   * ADMISSION reads FROZEN ON RUN mode. `launchAgentRun` solved it before
+   * `createRun` and the following chunks must precisely keep this choice:
+   * redo here all the resolution of the provider added a round trip before
+   * the claim without producing a fresher truth.
    */
   const admission = admitLocalRun({ keyMode: run.key_mode });
   if (!admission.ok) {
     /**
-     * Pas de clé plafonnée à faire descendre sur la machine : le run reste
-     * parfaitement exécutable dans une microVM, où le firewall porte la clé.
-     * La transition garde `queued + local_exec` pour ne jamais convertir sous
-     * les pieds d'une autre coquille qui aurait gagné le claim entre-temps.
+     * No capped key to lower on the machine: the run remains
+     * perfectly executable in a microVM, where the firewall carries the key.
+     * The transition keeps `queued + local_exec` to never convert under
+     * the feet of another shell which would have won the claim in the meantime.
      */
     const cloudRun = await declineQueuedLocalRun(run.id);
     if (!cloudRun) {
@@ -213,33 +213,33 @@ export async function POST(request: NextRequest) {
   }
 
   /**
-   * LE CLAIM. `queued → running`, atomique en base : deux machines qui
-   * réclameraient le même run se départagent ici, pas plus loin.
+   * THE CLAIM. `queued → running`, atomic in base: two machines which
+   * would claim the same run to be decided here, no further.
    *
-   * Un run déjà `running` n'est pas claimable, et c'est le bon défaut — un tour
-   * tourne peut-être déjà quelque part, et lui en superposer un second ferait
-   * écrire le même checkpoint par deux harness.
+   * A run that is already `running` is not claimable, and this is the correct default — a turn
+   * is perhaps already running somewhere, and superimposing a second one on it would
+   * enter the same checkpoint by two harnesses.
    */
   const claimed = await claimRun(run.id);
   if (!claimed) {
     return NextResponse.json({ error: "run is not queued" }, { status: 409 });
   }
   mark("claimed");
-  // Aucun catalogue sur les pulls `idle` : ce serait deux lectures de base
-  // toutes les deux secondes pour ne rien rendre. Une fois le claim gagné, la
-  // RLS applique le périmètre de l'interface et la lecture recouvre la
-  // préparation du tour.
+  // No catalog on `idle` sweaters: these would be two basic readings
+  // every two seconds to return nothing. Once the claim is won, the
+  // RLS applies the perimeter of the interface and the reading covers the
+  // preparation of the tour.
   const projectsPromise = localProjectCatalog(auth.supabase);
 
-  // Un objet et non un `let` : `tsc` ne suit pas une affectation faite depuis un
-  // rappel, et réduirait la variable à `null` juste après.
+  // An object and not a `let`: `tsc` does not follow an assignment made from an
+  // callback, and would reduce the variable to `null` right after.
   const prepared: {
     job: Omit<VmJob, "layout" | "bootstrapMs"> | null;
     repoFullName: string | null;
   } = { job: null, repoFullName: null };
   const outcome = await executeAgentRun(claimed, {
-    // Pas de deadline utile : la fonction ne fait plus tourner de boucle depuis
-    // MIN-225, et la branche locale ne réveille aucune microVM.
+    // No useful deadline: the function no longer runs a loop since
+    // MIN-225, and the local branch does not wake up any microVMs.
     deadlineMs: 120_000,
     onLocalAssignment: (job, meta) => {
       prepared.job = job;
@@ -249,14 +249,14 @@ export async function POST(request: NextRequest) {
   mark("prepared");
 
   if (!prepared.job) {
-    // `executeAgentRun` a déjà mis le run au repos et raconté l'échec au fil : on
-    // ne le double pas d'un message inventé ici.
+    // `executeAgentRun` has already put the run to rest and reported the failure to the thread: we
+    // don't double it with a made-up message here.
     return NextResponse.json({ error: `turn not prepared (${outcome})` }, { status: 409 });
   }
 
-  // Cette identité doit exister avant d'émettre le bail : émettre un jeton
-  // incrémente sa génération et révoque le précédent. Ne faisons pas cette
-  // écriture irréversible pour une affectation incomplète.
+  // This identity must exist before issuing the lease: issue a token
+  // increments its generation and revokes the previous one. Let's not do this
+  // irreversible writing for an incomplete assignment.
   if (!prepared.repoFullName) {
     return NextResponse.json({ error: "prepared turn has no repository identity" }, { status: 409 });
   }
@@ -270,13 +270,13 @@ export async function POST(request: NextRequest) {
   const projects = await projectsPromise;
 
   /**
-   * Le `owner/repo` du projet part avec l'affectation : c'est contre lui que la
-   * machine revalide le dossier attaché, **au moment du tour**. L'attachement a pu
-   * être fait il y a un mois, et un chemin retenu ne prouve rien.
+   * The `owner/repo` of the project leaves with the assignment: it is against him that the
+   * machine revalidates the attached file, **at the time of the turn**. The attachment could
+   * been done a month ago, and a chosen path proves nothing.
    */
-  // `executeAgentRun` vient de résoudre cette même cible pour construire le job.
-  // La faire refrapper la forge ici créait un second token uniquement pour relire
-  // le `owner/repo`. Le callback rend maintenant cette donnée non secrète avec le job.
+  // `executeAgentRun` has just resolved this same target to build the job.
+  // Having her rehit the forge here created a second token just for rereading
+  // the `owner/repo`. The callback now makes this data non-secret with the job.
   return NextResponse.json(
     {
       runId: run.id,
@@ -285,9 +285,9 @@ export async function POST(request: NextRequest) {
       localWorktree: run.local_worktree === true,
       projects,
       diagnostics: { ...timings, total: Date.now() - startedAt },
-      // Le bail voyage DANS le job (`controlToken`), et pas à côté : un job local
-      // est, par définition, un job qui porte un jeton (`isLocalJob`). Une seconde
-      // vérité sur le même fait finirait par diverger.
+      // The lease travels IN the job (`controlToken`), and not next to it: a local job
+      // is, by definition, a job that carries a token (`isLocalJob`). One second
+      // truth about the same fact would eventually diverge.
       job: { ...prepared.job, controlToken: lease.token },
     },
     { headers: { "cache-control": "no-store" } },

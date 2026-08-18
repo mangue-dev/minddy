@@ -15,14 +15,14 @@ import {
 import { FORBIDDEN_COMMAND_REASON } from "./command-guard";
 
 /**
- * Jobs de fond (MIN-114). Ce qui se teste ici est la POLITIQUE : le garde-fou git
- * (sinon `run_background` serait une porte dérobée sur `git push`), le plafond de
- * jobs, l'INCRÉMENT de sortie (un watcher bavard ne doit pas resaturer le contexte
- * à chaque sonde) et le message d'un job qui n'existe plus. Les mains dans la
- * microVM sont derrière un faux runner.
+ * Background jobs (MIN-114). What is tested here is the POLICY: the git
+ * guardrail (otherwise `run_background` would be a backdoor to `git push` *), the ceiling of
+ * jobs, the output INCREMENT (a chatty watcher should not resaturate the context
+ * on each probe) and the message of a job that no longer exists. Hands in the
+ * microVM are behind a fake runner.
  */
 
-/** Faux processus : ce qu'il a écrit, s'il tourne encore, son code de sortie. */
+/** False process: what it wrote, if it is still running, its exit code. */
 interface FakeProc {
   log: string;
   running: boolean;
@@ -48,8 +48,8 @@ function fakeRunner() {
       const proc = procs.get(jobId)!;
       const maxBytes = 32;
       const increment = proc.log.length - offset;
-      // Comme la sandbox : on ne tire que la QUEUE de l'incrément, et l'offset
-      // avance quand même jusqu'au bout du log.
+      // Like the sandbox: we only draw the TAIL of the increment, and the offset
+      // still advance to the end of the log.
       const chunk = increment > 0 ? proc.log.slice(Math.max(offset, proc.log.length - maxBytes)) : "";
       return {
         chunk,
@@ -83,8 +83,8 @@ describe("le shell d'un job", () => {
   it("détache le job, redirige ses flux et fait écrire le PID par le job", () => {
     const script = backgroundStartScript(paths, "npm run dev", "/vercel/sandbox/tool-output");
     expect(script).toContain("setsid sh -c");
-    // stdin fermé : un job qui attend une saisie mourrait au lieu de tenir la
-    // microVM ; stdout/stderr dans le log, sinon le lanceur attendrait sa fin.
+    // stdin closed: a job waiting for an entry would die instead of holding the
+    // microVM; stdout/stderr in the log, otherwise the launcher would wait for its end.
     expect(script).toMatch(/> '\/vercel\/sandbox\/tool-output\/bg-1\.log' 2>&1 < \/dev\/null &/);
     expect(script).toContain("echo $$ >");
     expect(script).toContain("echo $? >");
@@ -93,14 +93,14 @@ describe("le shell d'un job", () => {
 
   it("passe une commande à guillemets sans la casser", () => {
     const script = backgroundStartScript(paths, `sh -c 'echo it'\\''s alive'`, "/tmp");
-    // Une seule chaîne quotée pour tout le corps du job : rien ne s'échappe.
+    // A single quoted string for the entire body of the job: nothing escapes.
     expect(script).toContain(`echo it'`);
     expect(script.match(/setsid sh -c '/g)).toHaveLength(1);
   });
 
   it("met la commande dans un sous-shell pour ne pas perdre son code de sortie", () => {
-    // Mesuré sur une vraie microVM : sans les parenthèses, `echo boom; exit 3`
-    // quittait le shell du job AVANT la ligne qui écrit le code de sortie.
+    // Measured on a real microVM: without the parentheses, `echo boom; exit 3`
+    // exited the job shell BEFORE the line that writes the exit code.
     const script = backgroundStartScript(paths, "echo boom; exit 3", "/tmp");
     expect(script).toContain("( echo boom; exit 3\n)");
   });
@@ -115,7 +115,7 @@ describe("le shell d'un job", () => {
 
   it("juge la vie du job sur son ÉTAT, pas sur `kill -0` (les zombies de la microVM)", () => {
     // Le PID 1 de la microVM ne moissonne pas : un job mort y reste ZOMBIE, et
-    // `kill -0` réussit dessus — un serveur planté serait rapporté « running ».
+    // `kill -0` succeeds for it—a crashed server would be reported as “running”.
     for (const script of [backgroundProbeScript(paths, 4242, 0, 100), backgroundStopScript(4242)]) {
       expect(script).toContain("ps -o stat= -p 4242");
       expect(script).toContain(`""|Z*) return 1`);
@@ -129,7 +129,7 @@ describe("le shell d'un job", () => {
     expect(script).toContain(`if [ "$pgid" = "4242" ]; then target="-4242"; else target="4242"; fi`);
     expect(script).toContain("kill -TERM $target");
     expect(script).toContain("kill -KILL $target");
-    // Un processus déjà mort n'est pas une erreur de tool.
+    // A process that is already dead is not a tool error.
     expect(script.trimEnd().endsWith("exit 0")).toBe(true);
   });
 });
@@ -176,7 +176,7 @@ describe("run_background — garde-fou git (MIN-108 vaut ici aussi)", () => {
     expect(out.success).toBe(false);
     expect(out.reason).toBe(FORBIDDEN_COMMAND_REASON);
     expect(String(asRecord(out.result).error)).toMatch(/harness owns the remote/i);
-    // Rien n'a été lancé dans la microVM : le refus arrive AVANT.
+    // Nothing has been launched in the microVM: the refusal happens BEFORE.
     expect(starts).toHaveLength(0);
   });
 
@@ -229,7 +229,7 @@ describe("run_background — plafond de jobs", () => {
   it("compte les slots AVANT de lancer : deux starts simultanés ne passent pas en double", async () => {
     const { runner, starts } = fakeRunner();
     const jobs = new BackgroundJobs(runner);
-    // Les tool-calls d'un round partent en Promise.all — le plafond doit tenir.
+    // The tool-calls of a round go to Promise.all — the ceiling must hold.
     const outs = await Promise.all(
       Array.from({ length: MAX_BACKGROUND_JOBS + 2 }, (_, i) =>
         jobs.handle({ action: "start", command: `sleep ${i}` }),
@@ -271,7 +271,7 @@ describe("run_background — `check` renvoie l'incrément, pas tout depuis le d�
     expect(String(result.output).length).toBeLessThanOrEqual(BACKGROUND_OUTPUT_CAP);
     expect(String(result.note)).toContain("bg-1.log");
     expect(String(result.note)).toMatch(/bytes were skipped/);
-    // L'offset a bien avancé jusqu'au bout : la sonde suivante ne rejoue pas tout.
+    // The offset has progressed well to the end: the next probe does not replay everything.
     const next = await jobs.handle({ action: "check", job_id: "bg-1" });
     expect(String(asRecord(next.result).output)).toMatch(/nothing new/i);
   });
@@ -293,12 +293,12 @@ describe("run_background — `check` renvoie l'incrément, pas tout depuis le d�
 });
 
 /**
- * MIN-286 lot 3 — le log complet vit HORS du dépôt (le `git add -A` de fin de
- * tour ne doit jamais le voir), et les deux moteurs n'y accèdent pas pareil : chez
- * opencode, une lecture hors dépôt publie `external_directory`, que le harness
- * REFUSE. Envoyer le modèle y lire avec `read` serait l'envoyer contre un mur
- * qu'on tient nous-mêmes — et l'envoyer chez `read_file`, un tool qui n'existe
- * pas chez lui.
+ * MIN-286 batch 3 — the complete log lives OUTSIDE the repository (the `git add -A` at the end of
+ * should never see it), and the two engines do not access it the same: at
+ * opencode, a read outside the repository publishes `external_directory`, which the harness
+ * DENIED. Sending the model there to read with `read` would be sending it against a wall
+ * that we hold ourselves — and sending it to `read_file`, a tool that does not exist
+ * there.
  */
 describe("run_background — où lire le log complet, selon le moteur", () => {
   it("envoie la boucle maison sur `read_file` / `grep`", async () => {
@@ -362,7 +362,7 @@ describe("run_background — fin de tour", () => {
     expect(await jobs.stopAll()).toBe(2);
     expect(procs.get("bg-1")!.running).toBe(false);
     expect(procs.get("bg-2")!.running).toBe(false);
-    // Idempotent : appelé avant le push PUIS dans le `finally`.
+    // Idempotent: called before the push THEN in the `finally`.
     expect(await jobs.stopAll()).toBe(0);
     expect(procs.get("bg-1")!.killed).toBe(1);
   });
@@ -387,7 +387,7 @@ describe("run_background — fin de tour", () => {
     const out = await jobs.handle({ action: "start", command: "npm run dev", workdir: "../.." });
     expect(out.success).toBe(false);
     expect(String(asRecord(out.result).error)).toMatch(/escapes the repository/);
-    // Le slot réservé est rendu : l'échec ne consomme pas un job.
+    // The reserved slot is returned: failure does not consume a job.
     expect(jobs.liveCount()).toBe(0);
   });
 });

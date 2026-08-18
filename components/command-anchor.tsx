@@ -24,8 +24,8 @@ export function CommandAnchor({
   children: React.ReactNode;
   /** Overrides the default popover width (w-60). */
   className?: string;
-  /** Texte de recherche contrôlé — les menus qui portent une ligne de création
-   *  le lisent pour en faire le nom de ce qu'ils créent. */
+  /** Controlled search text — menus that carry a creative line
+   * read it to make it the name of what they create. */
   searchValue?: string;
   onSearchValueChange?: (value: string) => void;
   hideEmpty?: boolean;

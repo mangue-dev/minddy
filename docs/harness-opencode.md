@@ -1,1536 +1,1536 @@
-# Remplacer notre boucle d'agent par opencode headless
+# Replace our agent loop with headless opencode
 
-> **DÉCISION PRISE le 2026-08-12 : on y va.** Les trois sondes du lot 0 passent
-> (reprise §2.2, coût §2.5, packaging §2.7), aucune ne réduit le chantier, et
-> Clément a validé le virage. Le repli qu'envisageait le plan — « opencode dans un
-> tour, checkpoint maison autour » — est sans objet : la reprise fonctionne. Ce
-> document cesse d'être un dossier d'instruction pour devenir la **référence de
-> mise en œuvre** des lots 1 à 3.
+> **DECISION TAKEN on 2026-08-12: here we go.** The three probes from batch 0 pass
+> (recovery §2.2, cost §2.5, packaging §2.7), none reduces the work, and
+> Clément validated the turn. The fallback that the plan envisaged — “opencode in a
+> tower, checkpoint house around” — is irrelevant: the recovery works. This
+> document ceases to be an instruction file to become the **reference of
+> implementation** of lots 1 to 3.
 >
-> **Date** : 2026-08-12 · **Ticket** : MIN-286
+> **Date**: 2026-08-12 · **Ticket**: MIN-286
 >
-> **Bases épinglées** : minddy à `77a7503` ; **opencode `opencode-ai@1.18.16`**
-> (npm, licence MIT), le binaire natif, pas le dépôt.
+> **Pinned bases**: minddy at `77a7503`; **opencode `opencode-ai@1.18.16`**
+> (npm, MIT license), the native binary, not the repository.
 >
-> **Méthode.** Tout ce que ce document affirme d'opencode a été **mesuré sur ce
-> binaire-là**, serveur headless démarré et piloté en HTTP : la doc publique est
-> muette ou fausse sur au moins cinq des points qui décident du chantier. Quand
-> une ligne vient d'une lecture de source et non d'une exécution, c'est dit.
-> Les mesures qui ont coûté du modèle (vraie clé OpenRouter, dépôt jetable) sont
-> datées et chiffrées ; les mesures de surface (liste des tools, schéma de config,
-> agents, permissions) ne coûtent rien et se rejouent en trente secondes :
+> **Method.** Everything this document claims about opencode has been **measured on this
+> binary there**, headless server started and controlled in HTTP: the public doc is
+> silent or false on at least five of the points which decide the construction site. When
+> a line comes from a source reading and not from an execution, it is said.
+> The measures that cost the model (real OpenRouter key, disposable repository) are
+> dated and quantified; surface measurements (list of tools, config diagram,
+> agents, permissions) cost nothing and are replayed in thirty seconds:
 >
 > ```bash
-> opencode serve --port 4211 --hostname 127.0.0.1     # OPENCODE_DB=/tmp/oc.db
+> opencode serve --port 4211 --hostname 127.0.0.1 # OPENCODE_DB=/tmp/oc.db
 > curl -s "localhost:4211/experimental/tool/ids?directory=$REPO"
 > curl -s "localhost:4211/experimental/tool?directory=$REPO&provider=openrouter&model=$M&agent=build"
 > curl -s "localhost:4211/api/agent?directory=$REPO"
-> curl -s localhost:4211/doc          # OpenAPI complet : 162 routes
+> curl -s localhost:4211/doc # Full OpenAPI: 162 routes
 > ```
 >
-> **Ce document n'est pas une comparaison.** Le dossier « qui vaut quoi » est
-> [docs/harness-2026-08.md](harness-2026-08.md), et il est toujours d'actualité.
-> Ici, la décision est prise : on adopte opencode. Ce qui suit est la **frontière**
-> et l'**inventaire de parité** — ce qui cesse d'être notre code, et ce qui doit
-> le rester.
+> **This document is not a comparison.** The “who is worth what” file is
+> [docs/harness-2026-08.md](harness-2026-08.md), and it is still relevant.
+> Here, the decision is made: we adopt opencode. The following is the **border**
+> and the **parity inventory** — what ceases to be our code, and what must
+> stay that way.
 
 ---
 
-## 1. La frontière
+## 1. The border
 
-La microVM fait tourner `opencode serve`. Un **superviseur** mince — l'actuel
-[vm/main.ts](../lib/server/agent/vm/main.ts), vidé de sa boucle — le pilote en
-HTTP, traduit son flux `/event` en `agent_run_events`, et rend le `VmTurnReport`
-que le plan de contrôle attend déjà
-([vm/protocol.ts](../lib/server/agent/vm/protocol.ts)). La fonction Vercel ne
-change pas de rôle : elle lance, elle sert le plan de contrôle, elle ne boucle pas.
+The microVM runs `opencode serve`. A thin **supervisor** — the current one
+[vm/main.ts](../lib/server/agent/vm/main.ts), emptied of its loop — the driver
+HTTP, translates its `/event` stream into `agent_run_events`, and returns the `VmTurnReport`
+that the control plan is already waiting
+([vm/protocol.ts](../lib/server/agent/vm/protocol.ts)). The Vercel function does not
+does not change roles: it launches, it serves the control plane, it does not loop.
 
-| Reste à nous, et pour toujours | Passe à opencode |
+| Stay with us, and forever | Switch to opencode |
 | --- | --- |
-| Le plan de contrôle et ses routes | La boucle de tours (prompt → tools → réponse) |
-| Le ledger, les quotas, les plafonds | L'appel modèle, le streaming, les retries |
-| Le fil d'events du produit (`agent_run_events`) | La troncature de sortie, la compaction |
-| Les tools de **domaine** (ticket, carnet, pages, PR) | Les tools de **fichier** et le shell |
-| La forge (clone, branche, commit, push, PR) | L'état de session (SQLite + journal d'events) |
-| Les règles de livraison (gate, self-review, plan closure) | La délégation à des sous-agents |
+| The control plan and its routes | The trick loop (prompt → tools → response) |
+| The ledger, quotas, ceilings | The model call, streaming, retries |
+| The product events thread (`agent_run_events`) | Output truncation, compaction |
+| **domain** tools (ticket, notebook, pages, PR) | **File** tools and the shell |
+| The Forge (clone, branch, commit, push, PR) | Session state (SQLite + event log) |
+| Delivery rules (gate, self-review, plan closure) | Delegation to sub-agents |
 
-**Aucun secret n'entre dans la VM.** Inchangé : le `transform` du firewall pose la
-clé en sortie, opencode envoie le placeholder (`llmPlaceholderKey` du `VmJob`).
-Le test miroir de
-[vm-bundle-secrets.test.ts](../lib/server/agent/vm-bundle-secrets.test.ts) doit
-exister pour le `OPENCODE_CONFIG_CONTENT` produit.
+**No secrets enter the VM.** Unchanged: the `transform` of the firewall sets the
+key output, opencode sends the placeholder (`llmPlaceholderKey` of `VmJob`).
+The mirror test of
+[vm-bundle-secrets.test.ts](../lib/server/agent/vm-bundle-secrets.test.ts) must
+exist for the `OPENCODE_CONFIG_CONTENT` product.
 
-**Ce que ce virage suppose, et qu'il faut dire** : on adopte la cadence de release
-d'un tiers sur le chemin le plus critique du produit. C'est le prix assumé — le
-même raisonnement que « on construit un tracker, pas un agent de code ».
+**What this shift implies, and what needs to be said**: we adopt the release cadence
+by a third on the most critical path of the product. This is the assumed price — the
+same reasoning as “we build a tracker, not a code agent”.
 
 ---
 
-## 2. Ce qui a été mesuré
+## 2. What was measured
 
-### 2.1 Les cinq points de parité (2026-08-12, run réel, ~0,01 $)
+### 2.1 The five points of parity (2026-08-12, real run, ~$0.01)
 
-| Question | Mesure |
+| Question | Measurement |
 | --- | --- |
-| Traçabilité du coût | **Par message assistant, donc par round** : `cost` (USD) + `tokens {input, output, reasoning, cache:{read, write}}` + `modelID` + `providerID` + `finish`. Relevé : `cost: 0.000994616`, `cache.read: 1792`. |
-| Choix du modèle | **Par requête** : `model: {providerID, modelID}`. Deux modèles dans la **même** session, chacun facturé à son prix (deepseek 0,00026 $ puis haiku 0,0114 $). 345 modèles OpenRouter chargés avec prix et fenêtre. |
-| BYOK | `provider.<id>.options.{apiKey, baseURL}` en config, et `OPENCODE_CONFIG_CONTENT` / `OPENCODE_AUTH_CONTENT` passent **tout par variable d'environnement, sans fichier**. |
-| Tools de domaine | Un tool maison déposé en `.opencode/tool/*.ts` est **servi au modèle et appelé** : `read_minddy_issue(identifier: "MIN-286")` → appel complet avec `callID`, `input`, `output`, horodatage début/fin. |
-| Interruption | `POST /session/:id/abort` rend en **40 ms**, la requête en vol se termine proprement. |
+| Cost traceability | **Per assistant message, therefore per round**: `cost` (USD) + `tokens {input, output, reasoning, cache:{read, write}}` + `modelID` + `providerID` + `finish`. Reported: `cost: 0.000994616`, `cache.read: 1792`. |
+| Choice of model | **By request**: `model: {providerID, modelID}`. Two models in the **same** session, each billed at its own price (deepseek $0.00026 then haiku $0.0114). 345 OpenRouter models loaded with price and window. |
+| BYOK | `provider.<id>.options.{apiKey, baseURL}` in config, and `OPENCODE_CONFIG_CONTENT` / `OPENCODE_AUTH_CONTENT` pass **everything by environment variable, without file**. |
+| Domain Tools | An in-house tool filed in `.opencode/tool/*.ts` is **served to the model and called**: `read_minddy_issue(identifier: "MIN-286")` → complete call with `callID`, `input`, `output`, start/end timestamp. |
+| Interruption | `POST /session/:id/abort` renders in **40 ms**, the in-flight request completes properly. |
 
-### 2.2 La reprise — le point qui pouvait tuer le chantier (2026-08-12, 0,006 $)
+### 2.2 The recovery — the point that could kill the site (2026-08-12, $0.006)
 
-Deux serveurs isolés par `OPENCODE_DB`, base B **vide**, dépôt B **recloné à un
-autre chemin**. `POST /sync/history` exporte l'historique en **événements**
-(`{aggregateID, seq, type, data}`), `POST /sync/replay` le rejoue chez B :
-session restaurée **avec son id**, ses 9 messages, son coût cumulé à l'identique
-(0,00393204 $), et le modèle a **restitué le mot secret du premier tour** sur une
-machine qui n'avait jamais vu la conversation. **86 events, 61 Ko, replay en 95 ms.**
-Et c'est **incrémental** par `seq` : 5 events / 3,6 Ko pour le dernier tour.
+Two servers isolated by `OPENCODE_DB`, base B **empty**, repository B **recloned to one
+other path**. `POST /sync/history` exports history in **events**
+(`{aggregateID, seq, type, data}`), `POST /sync/replay` plays it again at B:
+session restored **with its id**, its 9 messages, its cumulative cost identically
+($0.00393204), and the model **returned the secret word from the first round** on a
+machine that had never seen the conversation. **86 events, 61 KB, replay in 95 ms.**
+And it's **incremental** by `seq`: 5 events / 3.6 KB for the last round.
 
-Trois conséquences :
+Three consequences:
 
-- **(a)** le checkpoint cesse d'être un gros document réécrit à chaque tour : il
-  devient un **journal append-only**. `VM_MAX_CHECKPOINT_BYTES`
-  ([protocol.ts:52](../lib/server/agent/vm/protocol.ts)) et tout `fitCheckpoint`
-  deviennent sans objet ;
-- **(b)** le `projectID` d'opencode est le **hash du premier commit** du dépôt,
-  pas un chemin (`2be2c2a3…` sur le dépôt de sonde) : un clone neuf dans une
-  microVM neuve retombe seul sur la bonne identité de projet ;
-- **(c)** piège qu'aucune doc ne dit : l'export rend du **snake_case**
-  (`aggregate_id`), le replay attend du **camelCase** (`aggregateID`).
+- **(a)** the checkpoint ceases to be a big document rewritten every turn: it
+  becomes an **append-only journal**. `VM_MAX_CHECKPOINT_BYTES`
+  ([protocol.ts:52](../lib/server/agent/vm/protocol.ts)) and all `fitCheckpoint`
+  become irrelevant;
+- **(b)** the `projectID` of opencode is the **hash of the first commit** of the repository,
+  not a path (`2be2c2a3…` on the probe repository): a new clone in a
+  new microVM falls alone on the correct project identity;
+- **(c)** trap that no doc says: the export returns **snake_case**
+  (`aggregate_id`), the replay expects **camelCase** (`aggregateID`).
 
-Ce qui **ne voyage pas** : le travail non commité. Attendu, et déjà couvert par la
-branche WIP poussée en fin de tour.
+What **does not travel**: uncommitted work. Expected, and already covered by the
+WIP branch pushed at end of turn.
 
-### 2.3 Ce que la surface du binaire dit (mesuré le 2026-08-12, coût nul)
+### 2.3 What the surface of the binary says (measured on 2026-08-12, zero cost)
 
-- **14 tools intégrés**, et pas un de plus :
+- **14 integrated tools**, and not one more:
   `invalid, question, bash, read, glob, grep, edit, write, task, webfetch, todowrite, websearch, skill, apply_patch`.
-- **Deux d'entre eux sont conditionnels, et la condition est la nôtre.**
-  `apply_patch` remplace `edit`/`write` sur les modèles `gpt-*` — mesuré :
-  `openai/gpt-5.5` reçoit `apply_patch` **sans** `edit`/`write`, `deepseek-v4-flash`
-  reçoit l'inverse. C'est exactement `usesApplyPatch`
-  ([patch.ts](../lib/server/agent/patch.ts), MIN-115), déjà rendu.
-- **`websearch` n'est PAS servi sur `openrouter`** — mesuré : absent des trois jeux
-  de tools rendus. La source le confirme (`webSearchEnabled` : provider `opencode`,
-  ou clé Exa / Parallel). **Notre `web_search` ne disparaît donc pas** : il doit être
-  un tool de domaine de toute façon, ce que le plafond et la facturation exigeaient
-  déjà (§3).
-- **`read` lit aussi les répertoires** (« For directories, entries are returned one
-  per line … with a trailing `/` »). `list_dir` a donc un vis-à-vis, contrairement
-  à ce qu'on croyait.
-- **`bash` est un shell PERSISTANT** (« a persistent bash session »), avec `workdir`.
-  C'est une **correction d'un défaut de chez nous** : notre `runShell` repart d'un
-  `sh -c` neuf à chaque appel, et 29 commandes de production préfixent un `cd`
-  ([agent-harness-comparison.md](agent-harness-comparison.md) §3.6). Timeout par
-  défaut 120 s (le nôtre : `RUN_COMMAND_TIMEOUT_MS` = 180 s, à reporter en config).
-  Troncature à 2 000 lignes / 50 Ko avec bascule vers un fichier relisable —
-  réglable par `tool_output.{max_lines, max_bytes}`.
-- **`task` sait reprendre une fille et la mettre en fond** : `task_id` continue la
-  session d'un sous-agent, et le lancement en fond est notifié au retour. Nos trois
-  tools de délégation (`spawn_agent`, `agent_status`, `list_agents`) tombent dans
-  celui-là plus `/experimental/session/:id/background`.
-- **Les agents livrés couvrent nos deux modes de sous-agent** :
-  `explore` (mode `subagent`) porte déjà notre doctrine — permissions `* deny`,
-  puis `grep/glob/read/webfetch/websearch allow`. `general` = notre `implement`.
-  La lecture seule y est une **propriété du jeu de permissions**, pas une phrase de
-  prompt : même doctrine que `subagentToolsFor`.
-- **Les permissions sont une ACL ordonnée**, pas trois booléens :
-  `{action, resource, effect: allow|ask|deny}`, dernière règle gagnante, `resource`
-  en glob. L'agent `plan` livré le montre : `edit * deny` puis
-  `edit .opencode/plans/*.md allow`. C'est ce qui exprime notre `writesToRepo: false`
-  d'une session de relecture.
+- **Two of them are conditional, and the condition is ours.**
+  `apply_patch` replaces `edit`/`write` on `gpt-*` models — measured:
+  `openai/gpt-5.5` receives `apply_patch` **without** `edit`/`write`, `deepseek-v4-flash`
+  receives the opposite. It's exactly `usesApplyPatch`
+  ([patch.ts](../lib/server/agent/patch.ts), MIN-115), already rendered.
+- **`websearch` is NOT served on `openrouter`** — measured: absent from all three games
+  of tools rendered. The source confirms this (`webSearchEnabled`: provider `opencode`,
+  or Exa / Parallel key). **Our `web_search` therefore does not disappear**: it must be
+  a domain tool anyway, which the cap and billing required
+  already (§3).
+- **`read` also reads directories** (“For directories, entries are returned one
+  per line … with a trailing `/`"). `list_dir` therefore has a counterpart, unlike
+  what we believed.
+- **`bash` is a PERSISTENT** shell (“a persistent bash session”), with `workdir`.
+  This is a **correction of a defect from us**: our `runShell` starts again from a
+  `sh -c` nine on each call, and 29 production commands prefix a `cd`
+  ([agent-harness-comparison.md](agent-harness-comparison.md) §3.6). Timeout by
+  default 120 s (ours: `RUN_COMMAND_TIMEOUT_MS` = 180 s, to be reported in config).
+  Truncation at 2,000 lines / 50 KB with switch to a rereadable file —
+  adjustable by `tool_output.{max_lines, max_bytes}`.
+- **`task` knows how to take a girl and put her in the background**: `task_id` continues
+  session of a subagent, and the launch in the background is notified upon return. Our three
+  delegation tools (`spawn_agent`, `agent_status`, `list_agents`) fall into
+  this one more `/experimental/session/:id/background`.
+- **The agents delivered cover our two sub-agent modes**:
+  `explore` (`subagent` mode) already carries our doctrine — `* deny` permissions,
+  then `grep/glob/read/webfetch/websearch allow`. `general` = our `implement`.
+  Read-only is a **property of the permission set**, not a sentence.
+  prompt: same doctrine as `subagentToolsFor`.
+- **Permissions are an ordered ACL**, not three booleans:
+  `{action, resource, effect: allow|ask|deny}`, last winning rule, `resource`
+  overall. The delivered `plan` agent shows this: `edit * deny` then
+  `edit .opencode/plans/*.md allow`. This is what expresses our `writesToRepo: false`
+  of a proofreading session.
 
-  **⚠ Le `read *.env ask` livré par défaut, lui, était NEUTRALISÉ par notre config
-  (corrigé en MIN-360).** Le ruleset du binaire porte bien
+**⚠ The `read *.env ask` delivered by default was NEUTRALIZED by our config
+  (corrected in MIN-360).** The binary ruleset works well
   `read: {"*": "allow", "*.env": "ask", "*.env.*": "ask", "*.env.example": "allow"}`
-  — cette phrase-là était vraie. Ce qui manquait est la suite : **nos règles sont
-  concaténées APRÈS**, et la dernière qui matche gagne. Notre `read: "allow"`
-  supprimait donc la question, aux deux endroits où il était écrit (la carte
-  globale, et le littéral des sous-agents `explore`, c'est-à-dire précisément ceux
-  dont le métier est de lire). Sans conséquence sur un clone jetable ; en mode
-  dépôt courant, c'est le `.env` **réel** de l'utilisateur qui entrait en silence
-  dans le contexte du modèle.
-  Depuis MIN-360, `read` passe en `ask` **sur le chemin local** et le verdict est à
-  nous ([opencode-permissions.ts](../lib/server/agent/vm/opencode-permissions.ts)) :
-  prendre la main plutôt que redéclarer leur glob, parce qu'une ACL qu'on ne
-  contrôle pas dépend de l'ordre de concaténation et de la sémantique de glob d'une
-  version. **Une lecture générale à en tirer : ce qu'opencode livre ne survit à
-  notre config que si on l'y réécrit.**
-- **La config porte tout ce dont la parité a besoin** (schéma OpenAPI) :
+  — that sentence was true. What was missing is the following: **our rules are
+  concatenated AFTER**, and the last one to match wins. Our `read: "allow"`
+  therefore deleted the question, in the two places where it was written (the map
+  global, and the literal of the `explore` subagents, that is to say precisely those
+  whose job is to read). No consequence on a disposable clone; in fashion
+  current repository, it is the `.env` **real** of the user who entered silently
+  in the context of the model.
+  Since MIN-360, `read` changes to `ask` **on the local path** and the verdict is
+  we ([opencode-permissions.ts](../lib/server/agent/vm/opencode-permissions.ts)):
+  take control rather than redeclare their glob, because an ACL that we do not
+  control not depends on the concatenation order and glob semantics of a
+  version. **A general reading to take from it: what opencode book does not survive
+  our config only if we rewrite it.**
+- **The config carries everything parity needs** (OpenAPI schema):
   `agent.<id>.{prompt, tools, permission, model, temperature, maxSteps}`,
-  `tools` (carte nom → booléen ; **attention, elle ne RETIRE pas l'intégré, elle
-  le passe en `deny`** — c'est le jeu de tools de l'agent qui le fait
-  disparaître, cf. §2.8), `instructions[]`, `subagent_depth`
-  (notre hiérarchie à un niveau), `plugin[]`, `provider`, `small_model`,
+  `tools` (card name → boolean; **be careful, it does not REMOVE the built-in, it
+  changes it to `deny`** — it's the agent's toolset that does it
+  disappear, cf. §2.8), `instructions[]`, `subagent_depth`
+  (our one-level hierarchy), `plugin[]`, `provider`, `small_model`,
   `compaction.{auto, prune, tail_turns, preserve_recent_tokens, reserved}`,
   `shell`, `tool_output`.
-- **162 routes** au total, dont celles dont le superviseur dépend :
+- **162 routes** in total, including those on which the supervisor depends:
   `/session/:id/{prompt, wait, interrupt, permission/:id/reply, question/:id/reply, message, history, event}`,
   `/global/health`, `/event`, `/config/providers`, `/experimental/tool`.
 
-### 2.4 Piège : le serveur porte DEUX générations d'API
+### 2.4 Trap: the server carries TWO generations of API
 
-Le même binaire sert `/session/*` (héritée) **et** `/api/session/*` (v2), et elles
-**n'ont pas les mêmes routes**. Relevé dans l'OpenAPI du 1.18.16 :
+The same binary serves `/session/*` (legacy) **and** `/api/session/*` (v2), and they
+**do not have the same roads**. Noted in the OpenAPI of 1.18.16:
 
-| Ce dont le superviseur a besoin | Où c'est |
+| What the supervisor needs | Where is it |
 | --- | --- |
-| `abort`, `children`, `fork`, `shell`, `prompt_async`, `diff`, `todo` | **héritée** : `/session/:id/…` |
-| `wait` (⚠️ **répond 503**, cf. §2.10), `question/:id/reply`, `history`, `context`, `interrupt`, `compact` | **v2** : `/api/session/:id/…` |
-| `message` (POST = poster un tour), `permission/:id/reply` | les **deux** |
+| `abort`, `children`, `fork`, `shell`, `prompt_async`, `diff`, `todo` | **legacy**: `/session/:id/…` |
+| `wait` (⚠️ **answers 503**, cf. §2.10), `question/:id/reply`, `history`, `context`, `interrupt`, `compact` | **v2**: `/api/session/:id/…` |
+| `message` (POST = post a trick), `permission/:id/reply` | the **two** |
 
-Il n'y a **pas** de `POST /session/:id/prompt` : côté héritée, poster un tour c'est
-`POST /session/:id/message` (bloquant, rend le message assistant complet — c'est ce
-que les sondes utilisent), et `prompt` n'existe que sur `/api`. Une faute d'un
-segment ne rend pas un 404 mais **la page HTML du TUI**, donc un
-`JSON.parse` qui explose sur `<!doctype` : erreur rencontrée, à connaître.
-Pour un tour long, la paire est `POST /session/:id/prompt_async` (204 immédiat)
-puis `POST /api/session/:id/wait` — deux préfixes différents pour les deux moitiés
-du même geste. À isoler dans un client unique, sinon la faute se répétera partout.
-Et `/sync/history` rend bien du `snake_case` (`aggregate_id`) là où `/sync/replay`
-attend du `camelCase` : c'est **dans le schéma**, ce n'est pas un accident de sonde.
+There is **no** `POST /session/:id/prompt`: on the legacy side, posting a trick is
+`POST /session/:id/message` (blocking, makes the assistant message complete — this is what
+that the probes use), and `prompt` only exists on `/api`. A fault of a
+segment does not return a 404 but **the TUI HTML page**, therefore a
+`JSON.parse` which explodes on `<!doctype`: error encountered, please note.
+For a long spin, the pair is `POST /session/:id/prompt_async` (204 immediate)
+then `POST /api/session/:id/wait` — two different prefixes for the two halves
+with the same gesture. To be isolated in a single client, otherwise the fault will be repeated everywhere.
+And `/sync/history` renders `snake_case` (`aggregate_id`) where `/sync/replay`
+expects `camelCase`: it's **in the diagram**, it's not a probe accident.
 
-### 2.5 Le coût : écart NUL sur 5 générations (2026-08-12, 0,008 $)
+### 2.5 The cost: ZERO difference over 5 generations (2026-08-12, $0.008)
 
-C'était la question qui décidait du branchement du ledger. **Elle est tranchée, et
-dans le bon sens.**
+This was the question that decided the connection of the ledger. **It is cut, and
+in a good way.**
 
-Montage : un **proxy local** entre opencode et OpenRouter (`baseURL` pointé sur
-`127.0.0.1`), qui relaie tel quel et note l'`id` de chaque génération lu dans le
-flux SSE. Après le tour, `GET /api/v1/generation?id=…` rend le coût **facturé** de
-chacune. Cinq générations, deux modèles, un tour réel avec `read`, `bash` et `glob`.
+Assembly: a **local proxy** between opencode and OpenRouter (`baseURL` pointed to
+`127.0.0.1`), which relays as is and notes the `id` of each generation read in the
+SSE flow. After the turn, `GET /api/v1/generation?id=…` returns the **charged** cost of
+each. Five generations, two models, one real ride with `read`, `bash` and `glob`.
 
-| # | Modèle | `cost` d'opencode | Facturé par OpenRouter | Écart |
+| # | Model | opencode `cost` | Billed by OpenRouter | Gap |
 | --- | --- | --- | --- | --- |
-| 1 | `anthropic/claude-haiku-4.5` | 0,00246325 | 0,00246325 | **0** |
-| 2 | `anthropic/claude-haiku-4.5` | 0,00148755 | 0,00148755 | **0** |
-| 3 | `anthropic/claude-haiku-4.5` | 0,00162075 | 0,00162075 | **0** |
-| 4 | `anthropic/claude-haiku-4.5` | 0,00123180 | 0,00123180 | **0** |
-| 5 | `deepseek/deepseek-chat-v3.1` | 0,00113352 | 0,00113352 | **0** |
+| 1 | `anthropic/claude-haiku-4.5` | 0.00246325 | 0.00246325 | **0** |
+| 2 | `anthropic/claude-haiku-4.5` | 0.00148755 | 0.00148755 | **0** |
+| 3 | `anthropic/claude-haiku-4.5` | 0.00162075 | 0.00162075 | **0** |
+| 4 | `anthropic/claude-haiku-4.5` | 0.00123180 | 0.00123180 | **0** |
+| 5 | `deepseek/deepseek-chat-v3.1` | 0.00113352 | 0.00113352 | **0** |
 
-Exact **round par round**, pas seulement sur le total, et **cache compris** : le
-découpage en tokens se réconcilie lui aussi à l'unité près
-(`input + cache.read + cache.write` = `native_tokens_prompt` sur les cinq).
+Exact **round by round**, not just on the total, and **cache included**: the
+division into tokens is also reconciled to the nearest unit
+(`input + cache.read + cache.write` = `native_tokens_prompt` out of five).
 
-**Et pourtant opencode n'interroge pas OpenRouter sur le coût.** Il le calcule,
-prix du catalogue models.dev × tokens, en décimal exact
-(`Session.getUsage`, `session.ts:337`) — aucun `usage: {include: true}` n'est
-envoyé. L'égalité vient de ce que models.dev **recopie** la grille d'OpenRouter.
-Ce qui se conclut, et ce qui ne se conclut pas :
+**And yet opencode does not ask OpenRouter about the cost.** It calculates it,
+catalog price models.dev × tokens, in exact decimal
+(`Session.getUsage`, `session.ts:337`) — no `usage: {include: true}` is
+sent. The equality comes from the fact that models.dev **copies** the OpenRouter grid.
+What is concluded, and what is not concluded:
 
-- ✅ **le `cost` d'opencode est utilisable au ledger tel quel** : ce n'est pas une
-  approximation à 5 %, c'est le même nombre ;
-- ⚠️ **le risque n'est pas arithmétique, il est de CATALOGUE.** Un prix qui change
-  chez OpenRouter et qui traîne chez models.dev, un modèle routé vers un
-  fournisseur sous-jacent à un autre tarif, une variante `:floor`/`:nitro` : là,
-  l'écart apparaîtra, et rien dans opencode ne le signalera.
+- ✅ **the `cost` of opencode can be used in the ledger as is**: it is not a
+  5% approximation, it's the same number;
+- ⚠️ **the risk is not arithmetic, it is CATALOGUE.** A price that changes
+  at OpenRouter and hanging around at models.dev, a model routed to a
+  underlying supplier to another tariff, a variant `:floor`/`:nitro`: there,
+  the gap will appear, and nothing in opencode will point it out.
 
-> **Réglé depuis, au lot 1 (§2.8)** : on ne dépend plus du catalogue de models.dev.
-> Le provider qu'on déclare porte **nos** prix, lus dans l'index OpenRouter — la
-> même source que le multiplicateur et le plafond de plan. Le risque de dérive
-> devient un risque sur NOTRE index, qu'on sait déjà surveiller.
+> **Adjusted since, in batch 1 (§2.8)**: we no longer depend on the models.dev catalog.
+> The provider we declare bears **our** prices, read in the OpenRouter index — the
+> same source as the multiplier and the plan ceiling. The risk of drift
+> becomes a risk on OUR index, which we already know how to monitor.
 
-### 2.6 `generation_id` : récupérable, pour ~40 lignes
+### 2.6 `generation_id`: recoverable, for ~40 lines
 
-Opencode ne l'expose nulle part — les clés d'un message assistant sont
+Opencode doesn't expose it anywhere — the keys for a helper message are
 `id, sessionID, role, time, parentID, modelID, providerID, mode, agent, path, cost,
-tokens, finish`, et c'est tout. **Mais la sonde l'a récupéré 5 fois sur 5** en
-s'interposant : c'est le proxy local du §2.5.
+tokens, finish`, and that's it. **But the probe recovered it 5 times out of 5** in
+interposing: this is the local proxy of §2.5.
 
-Transposé en production, ça marche : le `baseURL` d'opencode devient
-`127.0.0.1:<port>` **dans la microVM**, le superviseur relaie vers l'URL de
-complétion réelle — toujours avec le placeholder, donc toujours transformé par le
-firewall, `network-policy.ts` inchangé et aucun secret dans la VM. Le proxy est
-aussi l'endroit où poser `usage: {include: true}` si on veut le coût du
-fournisseur plutôt que celui du catalogue.
+Transposed into production, it works: the `baseURL` of opencode becomes
+`127.0.0.1:<port>` **in the microVM**, the supervisor relays to the URL of
+real completion — always with the placeholder, therefore always transformed by the
+firewall, `network-policy.ts` unchanged and no secrets in the VM. The proxy is
+also the place to put `usage: {include: true}` if you want the cost of
+supplier rather than that of the catalog.
 
-**Recommandation** : brancher le ledger sur le `cost` d'opencode (`estimated: false`,
-c'est le même nombre), et poser le proxy dans le superviseur dès le lot 1 — il ne
-coûte presque rien, il rend `generation_id` pour le support et la réconciliation,
-et c'est lui qui rattrapera une dérive de catalogue le jour où elle arrivera.
+**Recommendation**: connect the ledger to the opencode `cost` (`estimated: false`,
+it is the same number), and place the proxy in the supervisor from batch 1 — it does not
+costs almost nothing, it makes `generation_id` for support and reconciliation,
+and it is he who will catch up with a catalog drift the day it arrives.
 
-### 2.7 Le packaging dans la microVM : oui, et le démarrage coûte 1,3 s
+### 2.7 Packaging in the microVM: yes, and startup costs 1.3 s
 
-Mesuré le 2026-08-12 dans une **vraie** microVM Vercel Sandbox, runtime `node24` —
-le même que le code agent (`SANDBOX_RUNTIME`,
-[repo-host.ts:37](../lib/server/agent/repo-host.ts)) —, 2 vCPU, 4,28 Go de RAM. La
-sonde est dans le dépôt et se rejoue :
+Measured on 2026-08-12 in a **real** Vercel Sandbox microVM, runtime `node24` —
+the same as the agent code (`SANDBOX_RUNTIME`,
+[repo-host.ts:37](../lib/server/agent/repo-host.ts)) —, 2 vCPU, 4.28 GB RAM. The
+probe is in the repository and is replayed:
 [opencode-packaging.probe.test.ts](../lib/server/agent/vm/opencode-packaging.probe.test.ts).
 
-| Mesure | Valeur |
+| Measurement | Value |
 | --- | --- |
-| `npm i opencode-ai@1.18.16` | **10,6 s** (10,6 / 11,5 / 11,8 / 9,5 s sur quatre passages) |
-| Poids sur disque | **351 Mo** de `node_modules` (binaire natif : 144 Mo) |
-| Démarrage à froid → `/global/health` | **1 336 ms** |
-| Démarrage à chaud | **1 238 ms** |
-| Démarrage sans catalogue en ligne (`OPENCODE_DISABLE_MODELS_FETCH=1`) | **1 248 ms**, `healthy: true` |
-| Tools servis dans la VM | les 14, identiques au poste |
+| `npm i opencode-ai@1.18.16` | **10.6 s** (10.6 / 11.5 / 11.8 / 9.5 s over four passes) |
+| Weight on disc | **351 MB** of `node_modules` (native binary: 144 MB) |
+| Cold start → `/global/health` | **1336ms** |
+| Hot start | **1238ms** |
+| Getting started without an online catalog (`OPENCODE_DISABLE_MODELS_FETCH=1`) | **1248ms**, `healthy: true` |
+| Tools served in the VM | the 14, identical to the position |
 
-**Ce que ça change concrètement** : le seul coût réel est l'**installation**, pas le
-démarrage. Et il se supprime — `sandbox.ts` sait déjà booter sur une image
-pré-chauffée (`AGENT_SANDBOX_SNAPSHOT_ID`). **Recommandation : cuire opencode dans
-ce snapshot**, et le coût du virage sur le chemin critique tombe à ~1,3 s par
-microVM neuve.
+**What this actually changes**: the only real cost is the **installation**, not the
+startup. And it deletes itself — `sandbox.ts` already knows how to boot from an image
+pre-heated (`AGENT_SANDBOX_SNAPSHOT_ID`). **Recommendation: bake opencode in
+this snapshot**, and the cost of turning on the critical path drops to ~1.3 s per
+new microVM.
 
-**FAIT le 2026-08-12** :
-[scripts/create-agent-snapshot.ts](../scripts/create-agent-snapshot.ts) installe
-opencode dans `/vercel/oc` avant de figer l'image, et la question qui restait
-ouverte est tranchée par la mesure — **`/vercel/oc` survit bien à la prise
-d'image**, alors qu'il est hors de `/vercel/sandbox`, le répertoire de travail des
-runs. Le script rejoue donc un reboot sur son propre snapshot et n'annonce l'id
-qu'après avoir vu `opencode --version` répondre dessus : sans ce contrôle, une
-image qui n'aurait rien cuit rendrait un id parfaitement valide, et la seule trace
-en serait une lenteur que personne ne relie jamais à ici. Relevé : **12 s
-d'installation, 351 Mo, image de 0,54 Go**, `expiration: 0` (**jamais** — un
-snapshot de base est une image de produit ; ceux des runs, eux, expirent bien).
+**DONE on 2026-08-12**:
+[scripts/create-agent-snapshot.ts](../scripts/create-agent-snapshot.ts) installs
+opencode in `/vercel/oc` before freezing the image, and the question that remained
+open is decided by the measurement — **`/vercel/oc` survives well when taken
+image**, while it is outside `/vercel/sandbox`, the working directory of
+runs. The script therefore replays a reboot on its own snapshot and does not announce the id
+that after seeing `opencode --version` respond to it: without this control, a
+image which would not have cooked anything would make a perfectly valid id, and the only trace
+would be a slowness that no one ever connects with here. Reading: **12 s
+installation, 351 MB, 0.54 GB image**, `expiration: 0` (**never** — one
+base snapshot is a product image; those of runs expire well).
 
-Deux conséquences écrites dans le code plutôt que dans une mémoire :
+Two consequences written in code rather than in memory:
 
-- le snapshot est à **rejouer après tout bump d'`OPENCODE_VERSION`** ;
-- et si on l'oublie, `opencode-host.ts` compare désormais la version **posée sur le
-  disque** à son épingle, et réinstalle quand elles divergent. Un simple test
-  d'existence aurait trouvé le binaire d'hier très bien, et tous les runs
-  auraient tourné sur l'ancien moteur pendant que le dépôt jure le contraire.
+- the snapshot must be replayed after any `OPENCODE_VERSION`** bump;
+- and if we forget it, `opencode-host.ts` now compares the version **placed on the
+  disk** to its pin, and reinstalls when they diverge. A simple test
+  of existence would have found yesterday's binary very good, and all the runs
+  would have run on the old engine while the depot swears to the contrary.
 
-Le démarrage sans catalogue en ligne marche aussi, ce qui veut dire qu'un run ne
-dépend pas de la disponibilité de models.dev — à confirmer sur les **prix**
-(le catalogue embarqué doit être frais, cf. le risque de dérive du §2.5).
+Starting without an online catalog also works, which means that a run does not
+does not depend on the availability of models.dev — to be confirmed on **prices**
+(the onboard catalog must be fresh, see the risk of drift in §2.5).
 
-**PIÈGE DE RECETTE, et il a coûté trois passages** : dans un `sh -c` du Sandbox,
-lancer un serveur en `nohup … &` (ou `setsid … &`, fds redirigés, `</dev/null`
-compris) **fait tomber la commande RPC** — `TypeError: terminated` /
-`UND_ERR_SOCKET` en ~25 s, sans une seule ligne de sortie, et le `detached: true`
-du SDK n'y change rien. Le même serveur **au premier plan démarre parfaitement**.
-La forme qui marche : garder le serveur au premier plan, lire la ligne
-« listening » sur le tube pour chronométrer, interroger l'API depuis la même
-commande, et borner le tout par `timeout` sous les 75 s au bout desquels la socket
-RPC se ferme de toute façon. C'est la forme qu'a la sonde.
+**RECIPE TRAP, and it cost three passes**: in a `sh -c` of the Sandbox,
+launch a server in `nohup … &` (or `setsid … &`, redirected fds, `</dev/null`
+included) **drops the RPC command** — `TypeError: terminated` /
+`UND_ERR_SOCKET` in ~25 s, without a single output line, and the `detached: true`
+of the SDK changes nothing. The same server **in the foreground starts perfectly**.
+The form that works: keep the server in the foreground, read the line
+“listening” on the tube to time, query the API from the same
+command, and limit everything by `timeout` under the 75 s at the end of which the socket
+RPC exits anyway. This is the shape of the probe.
 
-### 2.8 La config d'un tour : quatre mesures qui la dessinent (lot 1, coût nul)
+### 2.8 The configuration of a lathe: four measurements which outline it (lot 1, zero cost)
 
-Mesuré le 2026-08-12 en écrivant [opencode-config.ts](../lib/server/agent/vm/opencode-config.ts),
-sur le même binaire, avec un **faux endpoint OpenAI-compatible local** — il rend
-un flux SSE canonique et **journalise le corps de chaque requête**. C'est ce qui
-permet de vérifier ce qui part vraiment au modèle sans dépenser un centime, et
-trois des quatre points ci-dessous ne se voient QUE là.
+Measured on 2026-08-12 by writing [opencode-config.ts](../lib/server/agent/vm/opencode-config.ts),
+on the same binary, with a **fake local OpenAI-compatible endpoint** — it makes
+a canonical SSE flow and **logs the body of each request**. This is what
+allows you to check what really goes into the model without spending a cent, and
+three of the four points below are ONLY seen there.
 
-1. **Un modèle déclaré sans `cost` rend `cost: 0`.** Tokens exacts
-   (`input: 1000, output: 200`), coût nul. Avec `cost: {input: 3, output: 15}`
-   déclaré dans le provider, opencode rend **0,006 $** — exact au décimal.
-   **Conséquence, et elle est structurante** : on déclare **notre propre
-   provider** (`minddy`, sur `@ai-sdk/openai-compatible`, la seule couche que nos
-   cinq providers parlent tous) **avec NOS prix**, ceux de l'index OpenRouter. Le
-   coût qu'opencode rend est alors le nôtre, et le seul risque que la sonde de
-   coût avait laissé ouvert — la **dérive du catalogue** models.dev (§2.5) —
-   disparaît. D'où `VmJob.pricing` ([protocol.ts](../lib/server/agent/vm/protocol.ts)),
-   rempli par `getModelPricing` ([model.ts](../lib/server/agent/model.ts)) depuis
-   le même index, cache compris. Prix inconnus (BYOK hors index) → pas de `cost`,
-   et l'usage devra s'écrire `estimated` plutôt qu'à zéro.
-2. **`reasoning_effort` à plat est RETIRÉ du corps** sur l'appel principal —
-   opencode possède cette clé. La forme **imbriquée** `options.reasoning = {effort}`
-   passe intacte, et un champ quelconque (`extra_marker`) passe aussi : ce n'est
-   donc pas un filtre général, c'est cette clé-là. Le piège est qu'elle **survit
-   sur le petit modèle** (titre), donc une vérification superficielle la voit
-   partir. Pour nous : OpenRouter est servi (c'est déjà notre forme,
-   `reasoningField: "reasoning"`), mais les couches compat **openai / anthropic /
-   google perdent leur niveau de raisonnement** en 1.18.16 — c'est le proxy local
-   du superviseur (§2.6) qui le réinjectera, sa deuxième raison d'être.
-3. **`tools: {x: false}` n'ENLÈVE pas l'intégré `x`** : il reste servi au modèle
-   et opencode en fait une permission `deny` (mesuré sur `todowrite`). Ce qui le
-   fait disparaître, c'est le jeu de tools de l'**agent** (`agent.<id>.tools`).
-   La config pose donc les deux — la carte globale pour la permission, le jeu de
-   l'agent pour l'absence. §2.3 disait « c'est par là que `websearch` et
-   `todowrite` sortiront » : c'est vrai du résultat, faux du mécanisme.
-4. **`agent.<id>.prompt` REMPLACE le prompt système intégré**, et `instructions`
-   est une liste de **chemins de fichier** dont le contenu est ajouté au message
-   système (marqueur retrouvé dans le corps). L'ancrage minddy voyage donc par un
-   fichier écrit sous `HARNESS_DIR`, hors du dépôt. Accessoirement : un id de
-   modèle **à slash** (`minddy/deepseek/deepseek-chat-v3.1`) est coupé au PREMIER
-   slash et résout correctement, de la config jusqu'au corps de requête.
+1. **A model declared without `cost` makes `cost: 0`.** Exact tokens
+   (`input: 1000, output: 200`), zero cost. With `cost: {input: 3, output: 15}`
+   declared in the provider, opencode renders **0.006 $** — exact to decimal.
+   **Consequence, and it is structuring**: we declare **our own
+   provider** (`minddy`, on `@ai-sdk/openai-compatible`, the only layer that our
+   five providers all speak) **with OUR prices**, those of the OpenRouter index. The
+   cost that opencode renders is then ours, and the only risk that the probe of
+   cost had left open — the **catalogue drift** models.dev (§2.5) —
+   disappears. Hence `VmJob.pricing` ([protocol.ts](../lib/server/agent/vm/protocol.ts)),
+   filled by `getModelPricing` ([model.ts](../lib/server/agent/model.ts)) from
+   the same index, including cache. Unknown prices (BYOK excluding index) → no `cost`,
+   and the usage should be written `estimated` rather than zero.
+2. **`reasoning_effort` flat is REMOVED from the body** on the main call —
+   opencode has this key. The **nested** form `options.reasoning = {effort}`
+   passes intact, and any field (`extra_marker`) also passes: this is not
+   so not a general filter, it's this key. The trap is that she survives
+   on the small model** (title), so a cursory check sees it
+   leave. For us: OpenRouter is served (it is already our form,
+   `reasoningField: "reasoning"`), but compat layers **openai / anthropic /
+   google lose their level of reasoning** in 1.18.16 — it's the local proxy
+   of the supervisor (§2.6) who will reinject it, its second reason for being.
+3. **`tools: {x: false}` does not REMOVE the built-in `x`**: it remains used in the model
+   and opencode makes it a `deny` permission (measured on `todowrite`). What
+   made disappear, it is the tool set of the **agent** (`agent.<id>.tools`).
+   The config therefore poses both — the global map for permission, the set of
+   the agent for the absence. §2.3 said “this is how `websearch` and
+   `todowrite` will come out”: true of the result, false of the mechanism.
+4. **`agent.<id>.prompt` REPLACES the built-in system prompt**, and `instructions`
+   is a list of **file paths** whose contents are appended to the message
+   system (marker found in the body). Minddy anchor travels so by a
+   file written under `HARNESS_DIR`, outside the repository. Incidentally: an id of
+   **slash** model (`minddy/deepseek/deepseek-chat-v3.1`) is cut at FIRST
+   slash and resolves correctly, from the config to the request body.
 
-### 2.9 Les tools de domaine : 32 sur 32, avec nos schémas (lot 1, coût nul)
+### 2.9 Domain tools: 32 out of 32, with our diagrams (lot 1, zero cost)
 
-Mesuré le 2026-08-12 en écrivant [opencode-tools.ts](../lib/server/agent/vm/opencode-tools.ts),
-et **rejouable** : [opencode-tools.probe.test.ts](../lib/server/agent/vm/opencode-tools.probe.test.ts)
-(gardée par `MDY_OPENCODE_TOOLS_PROBE=1`) installe le binaire, écrit les fichiers
-de production, démarre un serveur et compare les schémas servis aux nôtres. **7,5 s.**
+Measured on 2026-08-12 by writing [opencode-tools.ts](../lib/server/agent/vm/opencode-tools.ts),
+and **replayable**: [opencode-tools.probe.test.ts](../lib/server/agent/vm/opencode-tools.probe.test.ts)
+(kept by `MDY_OPENCODE_TOOLS_PROBE=1`) installs the binary, writes the files
+production, starts a server and compares the schemas served to ours. **7.5 sec.**
 
-| Ce qu'il fallait savoir | Mesure |
+| What you needed to know | Measurement |
 | --- | --- |
-| Nos tools sont-ils servis ? | **32 sur 32**, descriptions identiques à l'octet, schémas structurellement identiques (types, enums, descriptions, partage requis/optionnel). |
-| Un tool est-il vraiment APPELÉ ? | Oui, de bout en bout : modèle → tool généré → pont local → résultat dans la conversation, avec `callID` et `sessionID`. |
-| Faut-il installer quoi que ce soit ? | Non. `@opencode-ai/plugin` est résolu par le runtime du binaire ; aucun `node_modules` à poser. |
+| Are our tools used? | **32 of 32**, byte-identical descriptions, structurally identical schemas (types, enums, descriptions, required/optional sharing). |
+| Is a tool really CALLED? | Yes, end to end: model → tool generated → local bridge → result in the conversation, with `callID` and `sessionID`. |
+| Does anything need to be installed? | No. `@opencode-ai/plugin` is resolved by the binary runtime; no `node_modules` to set. |
 
-Trois pièges, et le premier décide de la forme du générateur :
+Three traps, and the first decides the shape of the generator:
 
-1. **Deux formes de déclaration, une seule utilisable.** L'objet nu
-   (`export default { description, args, execute }`) traite `args` comme une
-   carte *nom → schéma* et **rend TOUT obligatoire** — y poser un JSON Schema
-   complet produit un schéma absurde (`required: ["properties",
-   "additionalProperties"]`, mesuré) que le modèle reçoit tel quel, sans une
-   erreur. La forme `tool({...})` accepte `tool.schema` (zod) avec `.optional()`
-   et rend le schéma exact. Nos tools ont des paramètres optionnels partout : le
-   générateur **émet donc du zod**, traduit depuis les schémas de `tools.ts`.
-2. **Un tool peut vivre hors du dépôt** : `$XDG_CONFIG_HOME/opencode/tool/*.ts`
-   est chargé comme le `.opencode/tool/` d'un projet. Ce n'est pas une
-   préférence — dans le dépôt, les 32 fichiers entreraient dans le `git add -A`
-   de fin de tour et seraient commités chez l'utilisateur.
-3. **`process.env` est lisible depuis un tool**, ce qui permet à l'adresse du
-   pont de descendre sans être écrite en dur dans le code généré.
+1. **Two forms of declaration, only one usable.** The bare object
+   (`export default { description, args, execute }`) treats `args` as a
+   card *name → schema* and **makes EVERYTHING mandatory** — put a JSON Schema on it
+   complete produces an absurd schema (`required: ["properties",
+   "additionalProperties"]`, measured) that the model receives as is, without a
+   error. The form `tool({...})` accepts `tool.schema` (zod) with `.optional()`
+   and renders the diagram exactly. Our tools have optional parameters everywhere: the
+   generator **thus emits zod**, translated from the `tools.ts` schematics.
+2. **A tool can live outside the repository**: `$XDG_CONFIG_HOME/opencode/tool/*.ts`
+   is loaded as the `.opencode/tool/` of a project. It's not a
+   preference — in the repository, the 32 files would go into the `git add -A`
+   end of turn and would be committed to the user.
+3. **`process.env` is readable from a tool**, which allows the address of the
+   bridge to go down without being hardwritten in the generated code.
 
-**Une inflexion du cadrage, assumée** : le tool généré poste au **superviseur**
-(127.0.0.1) et non directement au plan de contrôle. La garantie ne bouge pas —
-c'est le superviseur qui fait l'appel sortant, donc toujours l'OIDC du firewall et
-aucun secret dans la VM — mais elle rend possible ce qu'un appel direct
-interdisait : les compteurs de TOUR (plafond de recherches web, plafond d'images,
-ancres de review déjà posées), `create_pr` qui est coupé en deux (la VM pousse, la
-fonction ouvre), et les règles de livraison qui doivent voir passer les appels.
+**An assumed shift in framing**: the generated tool is sent to the **supervisor**
+(127.0.0.1) and not directly to the control plane. The guarantee does not change —
+it is the supervisor who makes the outgoing call, therefore always the OIDC of the firewall and
+no secrets in the VM — but it makes possible what a direct call
+prohibited: TOUR counters (web search ceiling, image ceiling,
+review anchors already installed), `create_pr` which is cut in two (the VM pushes, the
+function opens), and the delivery rules which must see the calls made.
 
-**Ce qui reste ouvert, et qu'il faudra trancher au lot 2** : les IMAGES. Le tool
-généré rend du texte ; `read_resource` sur une maquette rend aujourd'hui une image
-que le modèle regarde vraiment (MIN-111). Le contexte d'exécution d'un tool
-opencode expose `metadata` et des parts — à mesurer avant de brancher le ledger.
+**What remains open, and which will have to be decided in lot 2**: the IMAGES. The tool
+generated renders text; `read_resource` on a mockup today renders an image
+that the model really looks (MIN-111). The execution context of a tool
+opencode exposes `metadata` and shares — to measure before plugging in the ledger.
 
-### 2.10 Le pilotage d'un tour : deux routes du §2.4 sont fausses (lot 1)
+### 2.10 Driving a tour: two routes in §2.4 are wrong (lot 1)
 
-Mesuré le 2026-08-12 en écrivant le client
-([opencode-client.ts](../lib/server/agent/vm/opencode-client.ts)) et le
-superviseur ([supervisor.ts](../lib/server/agent/vm/supervisor.ts)).
+Measured on 2026-08-12 by writing to the customer
+([opencode-client.ts](../lib/server/agent/vm/opencode-client.ts)) and the
+supervisor ([supervisor.ts](../lib/server/agent/vm/supervisor.ts)).
 
-| Route | Ce que le §2.4 en disait | Ce qu'elle fait |
+| Road | What §2.4 said about it | What she does |
 | --- | --- | --- |
-| `POST /api/session/:id/wait` | la moitié v2 du couple prompt/wait | **503** — « Session wait is not available yet ». Elle est dans l'OpenAPI, le serveur ne l'implémente pas. |
-| réponse à une permission | `POST /permission/:id/reply` | Elle EXISTE et c'est celle-là qu'il faut (corrigé au lot 2, §2.13) : corps `{reply, message?}`. `POST /session/:id/permissions/:permissionID` marche aussi mais est `deprecated` **et n'a pas de `message`**. |
+| `POST /api/session/:id/wait` | half v2 of the prompt/wait couple | **503** — “Session wait is not available yet”. It is in the OpenAPI, the server does not implement it. |
+| response to permission | `POST /permission/:id/reply` | It EXISTS and this is the one we need (corrected in batch 2, §2.13): body `{reply, message?}`. `POST /session/:id/permissions/:permissionID` also works but is `deprecated` **and has no `message`**. |
 
-Conséquence directe, et elle est meilleure que le plan : **la fin d'un tour se lit
-sur `session.idle` du flux `/event`**, qu'on consomme de toute façon pour le fil.
-Aucune requête HTTP ne reste ouverte pendant les heures que dure un tour.
-Vérifié de bout en bout contre le binaire : santé, création de session,
-`prompt_async` (204), flux jusqu'à `session.idle`, `abort` (200).
+Direct consequence, and it is better than the plan: **the end of a turn reads
+on `session.idle` of the `/event`** stream, which we consume anyway for the thread.
+No HTTP request remains open during the hours that a tour lasts.
+Verified end-to-end against binary: health, session creation,
+`prompt_async` (204), flow to `session.idle`, `abort` (200).
 
-**Le piège du snake_case (§2.2) mord aussi À LA LECTURE**, et c'est le défaut que
-le premier jet du superviseur portait : le curseur d'export incrémental se dérive
-d'`aggregateID`, que `/sync/history` **n'envoie pas** (il rend `aggregate_id`). Le
-curseur restait donc vide, et chaque tour ré-exportait l'historique entier — qui
-grossit jusqu'à ne plus passer, sans qu'aucun test ne tombe. La normalisation est
-désormais faite **dès la lecture**, pas seulement avant le replay. Relevé sur le
-binaire : 131 events exportés, tous en camelCase après passage du client.
+**The trap of snake_case (§2.2) also bites ON READING**, and this is the fault that
+the first draft of the supervisor carried: the incremental export cursor drifts
+of `aggregateID`, which `/sync/history` **does not send** (it returns `aggregate_id`). The
+cursor therefore remained empty, and each turn re-exported the entire history — which
+grows until it no longer passes, without any test falling. Normalization is
+now done **from the reading**, not just before the replay. Recorded on the
+binary: 131 events exported, all in camelCase after client passage.
 
-### 2.11 Les trois sondes du lot 0, ensemble
+### 2.11 The three probes from lot 0, together
 
-| Sonde | Verdict | Coût de la mesure |
+| Probe | Verdict | Cost of measurement |
 | --- | --- | --- |
-| Reprise d'une session sur une autre machine | **passe** — journal d'events rejouable, incrémental | 0,006 $ |
-| Coût au ledger | **passe** — écart nul, `generation_id` récupérable | 0,008 $ |
-| Packaging dans la microVM | **passe** — 1,3 s de démarrage, 10,6 s d'install supprimables par snapshot | quelques minutes de Sandbox |
+| Resumption of a session on another machine | **pass** — replayable, incremental event log | $0.006 |
+| Cost per ledger | **pass** — zero gap, `generation_id` recoverable | $0.008 |
+| Packaging in microVM | **pass** — 1.3 s startup, 10.6 s install removable by snapshot | a few minutes of Sandbox |
 
-Aucune ne bloque. Le chantier peut passer au lot 1 — reste la **décision** de
-Clément, qui est un point du plan à elle seule.
+None block. The site can move on to lot 1 — remains the **decision** of
+Clément, who is a point of the plan in her own right.
 
 
-### 2.12 Le ledger d'un tour : le proxy est posé, et le flux est celui du SERVEUR (lot 2)
+### 2.12 The ledger of a round: the proxy is installed, and the flow is that of the SERVER (batch 2)
 
-Écrit le 2026-08-12 en branchant `ai_usage`
-([supervisor.ts](../lib/server/agent/vm/supervisor.ts), `TurnLedger` ;
+Written on 2026-08-12 by plugging in `ai_usage`
+([supervisor.ts](../lib/server/agent/vm/supervisor.ts), `TurnLedger`;
 [llm-proxy.ts](../lib/server/agent/vm/llm-proxy.ts)).
 
-Le proxy du §2.6 **existe** : opencode parle à `127.0.0.1`, le superviseur relaie
-vers le fournisseur avec le placeholder, `network-policy.ts` ne change pas. Il rend
-trois choses qui n'ont aucun autre point d'observation — le `generation_id`, le
-**coût facturé** (`usage: {include: true}`, qui prime sur celui qu'opencode
-calcule), et le `reasoning_effort` à plat que le §2.8 avait vu disparaître du corps.
+The proxy of §2.6 **exists**: opencode speaks to `127.0.0.1`, the supervisor relays
+to the provider with the placeholder, `network-policy.ts` does not change. He makes
+three things which have no other point of observation — the `generation_id`, the
+**charged cost** (`usage: {include: true}`, which takes precedence over the one that opencode
+calculates), and the flat `reasoning_effort` that §2.8 had seen disappear from the body.
 
-Ce que le branchement a fait apparaître, et qu'aucune doc ne dit :
+What the connection revealed, and which no doc says:
 
-1. **Le flux `/event` est celui du SERVEUR, pas d'une session.** Quand le modèle
-   délègue, la fille ouvre sa propre session et ses frames arrivent mêlées à celles
-   de la mère. Trois défauts en découlaient, tous silencieux : un `session.idle`
-   de fille **terminait le tour**, le texte de la fille entrait dans la réponse
-   (donc dans le message de commit), et sa dépense se rangeait dans la bande de
-   `seq` du parent. Tout ce qui se traduit porte donc maintenant sa `sessionId`, et
-   les filles écrivent dans la bande `subagentUsageSeq` — la convention de la
-   boucle maison, pour que l'ordre d'un run se lise pareil aux deux moteurs.
-2. **La réponse du tour était TOUJOURS vide**, et le test qui l'a montrée n'existait
-   pas : `message.updated` (fin de round) arrive **avant** `session.idle`, et c'est
-   lui qui vide le texte du direct. Le tour lisait sa réponse dans ce sac déjà vidé.
-   Le fil n'affichait rien et le message de commit retombait sur sa forme générique.
-   Le dernier round terminé est désormais gardé à part (`replyOf`).
-3. **Le checkpoint doit porter `usageSeq`.** `execute.ts` le relit
-   (`run.checkpoint?.usageSeq ?? …`) ; sans lui, un tour repris renumérote ses
-   lignes par-dessus celles du tour d'avant. Rien n'est perdu — pas de contrainte
-   d'unicité, la dépense se somme — mais l'ordre des appels d'un run devient faux,
-   ce qui est exactement ce qu'un `seq` sert à dire.
+1. **The `/event` flow is that of the SERVER, not of a session.** When the model
+   delegates, the girl opens her own session and her frames arrive mixed with those
+   of the mother. Three faults resulted, all silent: a `session.idle`
+   of girl **finished the round**, the girl's text entered the response
+   (therefore in the commit message), and its expenditure fell within the band of
+   `seq` of the parent. Everything that is translated now carries its `sessionId`, and
+   girls write in the band `subagentUsageSeq` — the convention of the
+   home loop, so that the order of a run reads the same on both engines.
+2. **The trick answer was ALWAYS empty**, and the test that showed it didn't exist
+   step: `message.updated` (end of round) arrives **before** `session.idle`, and it is
+   him who empties the live text. The trick read his answer in this already emptied bag.
+   The thread displayed nothing and the commit message fell back to its generic form.
+   The last completed round is now kept separate (`replyOf`).
+3. **The checkpoint must have `usageSeq`.** `execute.ts` rereads it
+   (`run.checkpoint?.usageSeq ?? …`); without him, a repeated turn renumbers his
+   lines over those of the previous round. Nothing is lost - no constraints
+   of uniqueness, the expense is summed — but the order of the calls of a run becomes false,
+   which is exactly what a `seq` is used to say.
 
-**Le plafond de dépense se tient au même endroit**, à la frontière de round : le
-cumul des `message.updated` contre `budgetUsd`, relu toutes les minutes
-(`BUDGET_REFRESH_INTERVAL_MS`, déplacée en [agent-models.ts](../lib/agent-models.ts)
-pour que le superviseur ne réimporte pas la boucle que le lot 3 supprime), puis
-`abort` et statut `budget_exhausted` — pas `error`, sinon la fonction retenterait
-un run qui n'a plus de quoi payer. **Ce qui reste à mesurer** : ce qu'opencode
-facture d'un round coupé en vol. S'il pose un `finish` sur le message avorté, la
-ligne s'écrit comme un round ordinaire ; sinon la dépense sort des compteurs, et
-c'est le défaut que MIN-216 avait fermé côté boucle maison
-([abandoned-spend.ts](../lib/server/agent/abandoned-spend.ts), gardé pour ça).
+**The spending cap is held in the same place**, at the round border: the
+accumulation of `message.updated` against `budgetUsd`, reread every minute
+(`BUDGET_REFRESH_INTERVAL_MS`, moved to [agent-models.ts](../lib/agent-models.ts)
+so that the supervisor does not reimport the loop that batch 3 deletes), then
+`abort` and status `budget_exhausted` — not `error`, otherwise the function would retry
+a run that no longer has enough to pay for. **What remains to be measured**: what opencode
+invoice for a round cut in flight. If it places a `finish` on the aborted message, the
+line is written like an ordinary round; otherwise the expense comes out of the meters, and
+this is the fault that MIN-216 had closed on the home loop side
+([abandoned-spend.ts](../lib/server/agent/abandoned-spend.ts), kept for this).
 
-L'appariement round → génération se fait par modèle, puis par tokens de sortie,
-sinon dans l'ordre d'arrivée : **exact en séquentiel**, seulement probable quand
-deux filles tournent en parallèle sur le même modèle. Ce qui se joue là est une
-référence de réconciliation, pas une dépense — les tokens et le coût viennent du
-round, jamais de l'appariement.
+The round → generation pairing is done by model, then by output tokens,
+otherwise in order of arrival: **exact sequentially**, only probable when
+two girls run in parallel on the same model. What is at stake here is a
+reconciliation reference, not an expense — the tokens and cost come from the
+round, never pairing.
 
-### 2.13 Les garde-fous et `ask_user` : ce que la permission publie (lot 2)
+### 2.13 Safeguards and `ask_user`: what the permission publishes (batch 2)
 
-Mesuré le 2026-08-12 avec un **faux fournisseur local** qui scripte les appels de
-tool — le modèle ne tourne pas, la mesure ne coûte rien, et elle porte sur le vrai
-binaire ([opencode-permissions.ts](../lib/server/agent/vm/opencode-permissions.ts)).
+Measured on 2026-08-12 with a **fake local provider** who scripts calls from
+tool — the model does not rotate, the measurement costs nothing, and it relates to the real
+binary ([opencode-permissions.ts](../lib/server/agent/vm/opencode-permissions.ts)).
 
-| Ce qu'on voulait savoir | Mesure |
+| What we wanted to know | Measurement |
 | --- | --- |
-| Ce qu'une permission publie | `permission.asked` → `{id, sessionID, permission, patterns, metadata, always, tool: {messageID, callID}}`. **Forme héritée**, pas `permission.v2.asked`. |
-| `bash: "ask"` demande-t-il pour tout ? | **Oui**, `echo hi` comprise : `metadata.command` porte la commande. Le garde-fou voit donc exactement ce que voyait `run_command`. |
-| Ce qu'une écriture publie | `permission: "edit"`, `metadata.filepath` **ABSOLU** (+ un `diff`), quel que soit le tool (`write`, `edit`, `apply_patch`). Hors dépôt, une `external_directory` la précède. |
-| Comment un refus parle au modèle | `POST /permission/:id/reply {reply: "reject", message}` → le tool revient en `error` : « The user rejected permission … with the following feedback: *message* ». Le refus reste donc **une erreur de tool**, comme chez nous. |
-| Ce que `question` fait | `question.asked` → `{id, sessionID, questions: [{question, header, options: [{label, description}], multiple}], tool: {callID}}`, et le tool **BLOQUE** jusqu'à `POST /question/:id/reply` ou `/reject`. |
-| Ce qu'un `abort` laisse derrière | Le tool en vol passe en `error` (« Tool execution aborted ») et l'historique **reste apparié** : le tour suivant repart sans trou. |
+| What a permission publishes | `permission.asked` → `{id, sessionID, permission, patterns, metadata, always, tool: {messageID, callID}}`. **Legacy form**, not `permission.v2.asked`. |
+| Does `bash: "ask"` ask for everything? | **Yes**, including `echo hi`: `metadata.command` carries the command. The guardrail therefore sees exactly what `run_command` saw. |
+| What a writing publishes | `permission: "edit"`, `metadata.filepath` **ABSOLUTE** (+ a `diff`), whatever the tool (`write`, `edit`, `apply_patch`). Outside of the deposit, a `external_directory` precedes it. |
+| How a rejection speaks to the model | `POST /permission/:id/reply {reply: "reject", message}` → the tool returns to `error`: “The user rejected permission … with the following feedback: *message*”. The refusal therefore remains **a tool error**, like with us. |
+| What `question` does | `question.asked` → `{id, sessionID, questions: [{question, header, options: [{label, description}], multiple}], tool: {callID}}`, and the tool **BLOCK** until `POST /question/:id/reply` or `/reject`. |
+| What a `abort` leaves behind | The tool in flight goes to `error` (“Tool execution aborted”) and the history **remains matched**: the next round starts again without a hole. |
 
-Trois conséquences, et deux d'entre elles corrigent du code déjà écrit :
+Three consequences, and two of them correct code already written:
 
-1. **`.git/` n'est gardé par personne chez opencode** — mesuré : un `write` sur
-   `<dépôt>/.git/config` a été **exécuté** et a écrasé le fichier. C'est
-   exactement ce qu'`assertNotGit` protège (écrire un hook ou un `config` =
-   exfiltration du token d'installation). D'où `permission.edit: "ask"` sur une
-   session qui écrit, là où le lot 1 avait mis `allow` : c'est le `ask` qui donne
-   la main au superviseur. Le piège du branchement, attrapé par un test :
-   `resolveWithin` prend un chemin **relatif** et recolle un absolu sous le dépôt
-   (`/etc/passwd` → `<dépôt>/etc/passwd`), donc ne refuse rien — or `filepath` est
-   justement absolu.
-2. **Un `abort` publie `session.error` `MessageAbortedError`.** Nous coupons
-   nous-mêmes dans trois cas VOULUS (plafond de dépense, question posée, deadline) :
-   sans filtre, chacun écrivait un event `error` au fil et un
-   `errorMessage: "Aborted"` par-dessus le vrai motif. Le traducteur l'écarte.
-3. **`ask_user` reste TERMINAL, contre le grain d'opencode.** Chez nous la session
-   se met en attente et la réponse revient au tour suivant par le steering ; chez
-   opencode le tool bloque, et tenir une microVM ouverte le temps qu'un humain
-   revienne coûterait des heures de compute pour ne rien faire. Le superviseur
-   émet donc notre event `question` (même payload, la carte du feed ne sait rien
-   du moteur), **écarte** la question et **coupe** la session — les deux gestes
-   laissent un historique apparié. La permission `question`, elle, **n'est pas
-   consultée** : ce qui retire vraiment `ask_user` d'une routine est le jeu de
-   tools de l'agent, pas l'ACL.
-### 2.14 Les sous-agents : le nom de l'agent EST le modèle (lot 2)
+1. **`.git/` is not kept by anyone at opencode** — measured: one `write` on
+`<repository>/.git/config` was **executed** and overwrote the file. It's
+   exactly what `assertNotGit` protects (write a hook or a `config` =
+   exfiltration of the installation token). Hence `permission.edit: "ask"` on a
+   session which writes, where batch 1 had put `allow`: it is the `ask` which gives
+   hand to the supervisor. The connection trap, caught by a test:
+   `resolveWithin` takes a **relative** path and pastes an absolute under the repository
+(`/etc/passwd` → `<repository>/etc/passwd`), so does not refuse anything — but `filepath` is
+   absolutely absolute.
+2. **A `abort` publishes `session.error` `MessageAbortedError`.** We cut
+   ourselves in three WANTED cases (spending ceiling, question asked, deadline):
+   without filter, each wrote a `error` event to the thread and a
+   `errorMessage: "Aborted"` over the real pattern. The translator dismisses it.
+3. **`ask_user` remains TERMINAL, against the grain of opencode.** With us the session
+   goes on hold and the response comes back the next turn via the steering; at
+   opencode the tool blocks, and keep a microVM open for the time that a human
+   coming back would cost hours of computing time to do nothing. The supervisor
+   therefore emits our event `question` (same payload, the feed map knows nothing
+   of the engine), **dismisses** the question and **cuts** the session — both gestures
+   leave a matched history. The `question` permission **is not
+   consulted**: what really removes `ask_user` from a routine is the game of
+   tools of the agent, not the ACL.
+### 2.14 Sub-agents: the name of the agent IS the model (batch 2)
 
-Mesuré le 2026-08-12, même montage qu'au §2.13 (faux fournisseur local, coût nul),
-plus une lecture du binaire. Cinq mesures, dont trois corrigent le cadrage :
+Measured on 2026-08-12, same setup as in §2.13 (fake local supplier, zero cost),
+plus a reading of the binary. Five measures, three of which correct the framing:
 
-| Ce qu'on voulait savoir | Mesure |
+| What we wanted to know | Measurement |
 | --- | --- |
-| Le tool `task` sait-il choisir un modèle ? | **Non.** Son schéma est `{description, prompt, subagent_type, task_id, command}` — et rien d'autre. Le modèle d'une fille vient de `agent.<id>.model` (`b.model ?? le modèle du message parent`). |
-| Comment le modèle apprend l'offre | Le serveur colle à la description du tool `task` : « Available agent types and the tools they have access to: » puis un `- <nom>: <description>` par agent **non primaire**. Sans `description`, il écrit « This subagent should only be called manually by the user ». |
-| Comment on retire un sous-agent de l'offre | `permission.task` est évaluée avec le **nom de l'agent** comme patron : `{"*": "allow", "explore-cheap": "deny"}` fait disparaître `explore-cheap` de la liste servie. |
-| Ce qu'une fille reçoit vraiment | `agent.<id>.tools` **retire** pour de bon, joker compris : `{"*": false, read: true}` → **un seul tool** dans le corps de la requête. Vérifié sur le corps, pas sur `/experimental/tool`, qui rend le registre entier sans appliquer l'agent. |
-| Ce que la délégation publie | `permission.asked` `{permission: "task", patterns: ["explore-cheap"], metadata: {description, subagent_type}}`, **avant** qu'opencode ne résolve l'agent ; puis le part du tool porte `state.metadata = {parentSessionId, sessionId, model}` — le seul endroit d'où rattacher une fille à son appel. |
+| Does the `task` tool know how to choose a model? | **No.** Its schema is `{description, prompt, subagent_type, task_id, command}` — and nothing else. A girl's model comes from `agent.<id>.model` (`b.model ?? the parent message's model`). |
+| How the model learns the offer | The server sticks to the description of the tool `task`: “Available agent types and the tools they have access to:” then a `- <name>: <description>` per **non-primary** agent. Without `description`, it writes "This subagent should only be called manually by the user". |
+| How to remove a sub-agent from the offer | `permission.task` is evaluated with **agent name** as boss: `{"*": "allow", "explore-cheap": "deny"}` removes `explore-cheap` from the served list. |
+| What a girl really gets | `agent.<id>.tools` **removes** for good, including wildcard: `{"*": false, read: true}` → **only one tool** in the request body. Checked on the body, not on `/experimental/tool`, which renders the entire registry without applying the agent. |
+| What the delegation publishes | `permission.asked` `{permission: "task", patterns: ["explore-cheap"], metadata: {description, subagent_type}}`, **before** opencode resolves the agent; then the part of the tool carries `state.metadata = {parentSessionId, sessionId, model}` — the only place from which to attach a girl to her call. |
 
-Quatre conséquences :
+Four consequences:
 
-1. **Un agent par (mode × modèle).** `explore` / `general` sur le modèle du run,
-   puis `explore-<slug>` / `general-<slug>` par favori. C'est la seule traduction
-   possible du champ `model` de `spawn_agent`.
-2. **L'offre se resserre sur les favoris curatés**, et c'est assumé : `spawn_agent`
-   acceptait n'importe quel id du catalogue (`allowedIds`, ~345 modèles), qu'on ne
-   peut pas énumérer en agents sans gonfler la description du tool de 700 lignes.
-   Le plafond de plan reste tenu — les favoris sont déjà passés par
-   `scopeSubagentModels` —, il l'est simplement **par construction** plutôt que par
-   un résolveur. Un nom hors liste revient en erreur de tool, avec l'offre.
-3. **Chaque modèle offert doit être TARIFÉ** dans le `provider` (même mesure qu'au
-   §2.8 : pas de `cost` → `cost: 0`). Un favori dont l'index OpenRouter ne donne
-   pas le prix n'est pas offert du tout — mesuré de bout en bout : une fille sur
-   un modèle tarifé rend son coût comme la mère.
-4. **`OPENCODE_ENABLE_PARALLEL` n'a rien à voir avec le parallélisme des filles**,
-   contrairement à ce que le plan supposait : c'est le drapeau du fournisseur de
-   recherche web *Parallel* (`RuntimeFlags.enableParallel`, à côté d'`enableExa`).
-   Le plafond de simultané (`maxParallel`, `app_config`) se tient donc sur la
-   demande de permission du `task`, qui est le seul point de contrôle qui existe.
-   À savoir avec : sans `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS`, un `task`
-   **bloque** le parent — le simultané ne vient que d'un round qui appelle `task`
-   plusieurs fois.
+1. **One agent per (mode × model).** `explore` / `general` on the run model,
+   then `explore-<slug>` / `general-<slug>` by favorite. This is the only translation
+   possible from the `model` field of `spawn_agent`.
+2. **The offer is tightening on curated favorites**, and it is assumed: `spawn_agent`
+   accepted any id from the catalog (`allowedIds`, ~345 models), which we do not
+   cannot list in agents without inflating the tool description by 700 lines.
+   The plan ceiling remains held — the favorites have already passed
+   `scopeSubagentModels` — it is simply **by construction** rather than by
+   a resolver. A name off the list returns as a tool error, with the offer.
+3. **Each model offered must be PRICED** in the `provider` (same measure as in
+   §2.8: no `cost` → `cost: 0`). A favorite whose OpenRouter index does not give
+   not the price is not offered at all — measured end to end: one girl on
+   a priced model makes its cost like the mother.
+4. **`OPENCODE_ENABLE_PARALLEL` has nothing to do with girls' parallelism**,
+   contrary to what the plan assumed: it is the flag of the supplier of
+   *Parallel* web search (`RuntimeFlags.enableParallel`, next to `enableExa`).
+   The simultaneous ceiling (`maxParallel`, `app_config`) is therefore held on the
+   permission request from `task`, which is the only checkpoint that exists.
+   Namely with: without `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS`, a `task`
+   **blocks** the parent — the concurrent only comes from a round that calls `task`
+   several times.
 
-**Piège lu dans le binaire, pas encore mordu** : `POST /permission/:id/reply` avec
-`reply: "reject"` rejette AUSSI **toutes les autres permissions en attente de la
-même session** (`Permission.reply`, la boucle sur `pending`). Un refus concurrent
-peut donc emporter un appel légitime suspendu au même instant. Rare tant que le
-superviseur répond au fil de l'eau (une demande à la fois), à garder en tête le
-jour où un refus inexpliqué apparaîtra à côté d'un autre.
+**Trap read in the binary, not yet bitten**: `POST /permission/:id/reply` with
+`reply: "reject"` ALSO rejects **all other permissions awaiting the
+same session** (`Permission.reply`, loop on `pending`). A competing refusal
+can therefore carry a legitimate appeal suspended at the same time. Rare as long as
+supervisor responds as needed (one request at a time), to keep in mind the
+day when one unexplained refusal will appear alongside another.
 
-### 2.15 Les règles de livraison : pas de plugin, et le code de sortie du shell (lot 2)
+### 2.15 Delivery rules: no plugin, and shell exit code (batch 2)
 
-Le plan annonçait « delivery-gate, self-review, plan-closure **réimplantés en
-plugin opencode** (`tool.execute.before/after`, `session.idle`) ». **Le plugin n'a
-pas lieu d'être**, et ce n'est pas un raccourci : les trois faits que ces règles
-lisent arrivent déjà chez nous.
+The plan announced “delivery-gate, self-review, plan-closure **reimplemented in
+opencode** plugin (`tool.execute.before/after`, `session.idle`)”. **The plugin does not have
+no place to be**, and it is not a shortcut: the three facts that these rules
+They are already arriving at our house.
 
-| Le fait que la règle lit | D'où il venait | D'où il vient maintenant |
+| The fact that the rule reads | Where he came from | Where he comes from now |
 | --- | --- | --- |
-| `editedPaths` | nos tools `edit_file` / `write_file` / `apply_patch` | la **demande de permission** `edit`, quand le superviseur l'autorise (`metadata.filepath`, absolu — §2.13) |
-| « le modèle a testé lui-même » (`VerificationSink`, MIN-262) | le code de sortie de `run_command` | **`state.metadata.exit`** du part du tool `bash` |
-| le plan écrit (`planWrites`) | `watchPlanWrites` sur les tools ticket | le **même** `watchPlanWrites`, posé sur le passe-plat du pont |
+| `editedPaths` | our tools `edit_file` / `write_file` / `apply_patch` | the **permission request** `edit`, when the supervisor authorizes it (`metadata.filepath`, absolute — §2.13) |
+| “the model tested itself” (`VerificationSink`, MIN-262) | the exit code of `run_command` | **`state.metadata.exit`** from the tool `bash` |
+| the written plan (`planWrites`) | `watchPlanWrites` on ticket tools | the **same** `watchPlanWrites`, placed on the deck hatch |
 
-Un plugin aurait donc ajouté un troisième endroit où le harness parle au modèle,
-dans un fichier généré tournant *dans* opencode, sans rien rendre de plus. Les
-quatre modules restent **inchangés, avec leurs tests** ; le câblage vit dans
+A plugin would therefore have added a third place where the harness speaks to the model,
+in a generated file running *in* opencode, without rendering anything more. The
+four modules remain **unchanged, with their tests**; the wiring lives in
 [opencode-delivery.ts](../lib/server/agent/vm/opencode-delivery.ts).
 
-**Deux choses à savoir, et la seconde est un piège.**
+**Two things to know, and the second is a trap.**
 
-1. **Le `bash` d'opencode pose `exit` sur son `metadata`** (lu dans la source :
-   `metadata: {output, exit: code, truncated, …}`), et un code **non nul ne fait
-   pas échouer le tool** — le part reste `completed`. Le statut du tool ne dit
-   donc RIEN du verdict de la commande : seul `metadata.exit` le dit. Et il vaut
-   `null` sur une commande abandonnée ou tuée par le timeout — un code inconnu
-   n'est pas un zéro, et le prendre pour tel ferait **taire** la porte de
-   livraison sur un tour que personne n'a vérifié.
-2. **La voix du harness (`followUp`) part dans le TEXTE du résultat de tool.** La
-   boucle maison la servait en message `user` après le round, faute de pouvoir
-   grossir un résultat qu'elle élidait par le milieu ; chez opencode un résultat
-   de tool *est* le texte que le tool rend, et rien ne l'élide sous les plafonds
-   de `tool_output` (2 000 lignes / 50 Ko — le plus gros bloc, le diff, est capé à
-   12 Ko). Le pont le colle donc après le résultat, séparé d'une ligne vide.
+1. **Opencode's `bash` places `exit` on its `metadata`** (read in the source:
+   `metadata: {output, exit: code, truncated, …}`), and a **non-zero code does not
+   not fail the tool** — the part remains `completed`. The status of the tool does not say
+   so NOTHING about the command's verdict: only `metadata.exit` says it. And it is worth
+   `null` on a command aborted or killed by timeout — an unknown code
+   is not a zero, and taking it as such would **silence** the door of
+   delivery on a tour that no one checked.
+2. **The voice of the harness (`followUp`) goes into the TEXT of the tool result.** The
+   home loop served it as a `user` message after the round, due to lack of power
+   magnify a result that it elided in the middle; at opencode a result
+   tool *is* the text that the tool renders, and nothing elides it under the caps
+   of `tool_output` (2,000 lines / 50 KB — the largest block, the diff, is capped at
+   12 KB). The bridge therefore pastes it after the result, separated from an empty line.
 
-**Ce qu'on assume** : l'édition est notée à l'**autorisation**, pas à l'exécution.
-Une écriture autorisée puis ratée fait payer un type-check inutile — le sens
-prudent, l'inverse laissant partir du code que la porte n'a pas vu.
+**What we assume**: the edition is noted at **authorization**, not at execution.
+An authorized then failed write charges for an unnecessary type-check — the meaning
+cautious, the opposite letting out code that the door has not seen.
 
-### 2.16 La forge : `create_pr` est le seul tool coupé en deux (lot 2)
+### 2.16 The forge: `create_pr` is the only tool cut in two (lot 2)
 
-Les huit autres tools de forge ne bougent pas : les trois écritures d'une
-relecture (`comment_pr`, `comment_pr_line`, `reply_pr_thread`) et les sept pull
-requests du projet sont des **tools de domaine ordinaires** — ils passent par le
-pont, qui les fait suivre au plan de contrôle, seul détenteur du token de forge
-([pr-tools.ts](../lib/server/agent/pr-tools.ts) et
-[project-pr-tools.ts](../lib/server/agent/project-pr-tools.ts) ne changent pas
-d'une ligne). Le seul état qui fasse l'aller-retour est le **compteur d'ancres**
-(`prInlineComments`) : le plafond des 5 se compte sur la vie du RUN, la fonction
-l'oppose et rend celui qu'elle a atteint, le pont le garde, le checkpoint le
-porte au tour suivant.
+The other eight forging tools do not move: the three writings of a
+replay (`comment_pr`, `comment_pr_line`, `reply_pr_thread`) and the seven pull
+project requests are **ordinary domain tools** — they go through the
+bridge, which sends them to the control plane, sole holder of the forge token
+([pr-tools.ts](../lib/server/agent/pr-tools.ts) and
+[project-pr-tools.ts](../lib/server/agent/project-pr-tools.ts) do not change
+of one line). The only state that goes back and forth is the **anchor counter**
+(`prInlineComments`): the ceiling of 5 is counted over the life of the RUN, the function
+opposes it and returns the one it has reached, the bridge guards it, the checkpoint
+carries to the next round.
 
-`create_pr`, lui, se coupe en deux — **la VM pousse, la fonction ouvre** —, et
-c'est dans le bon sens : le dépôt est dans la microVM, le token de forge et
-l'état de la pull request côté fonction. Le superviseur exécute donc la moitié
-push lui-même (`supervisorTools`, [supervisor.ts](../lib/server/agent/vm/supervisor.ts))
-et poste le résultat de push au plan de contrôle, qui appelle
-`openPullRequestAfterPush` inchangé.
+`create_pr` is cut in two — **the VM pushes, the function opens** —, and
+this is the right way: the repository is in the microVM, the forge token and
+the status of the pull request on the function side. The supervisor therefore executes half
+push itself (`supervisorTools`, [supervisor.ts](../lib/server/agent/vm/supervisor.ts))
+and posts the push result to the control plane, which calls
+`openPullRequestAfterPush` unchanged.
 
-**Trois différences avec la boucle maison, et chacune répare un cas réel :**
+**Three differences with the home loop, and each fixes a real case:**
 
-1. **La branche est REMONTÉE, pas relue.** `agent_runs.branch_name` n'est stampé
-   qu'après un push réel (MIN-123), or ce push-ci est le premier du run dans le
-   cas normal : la fonction lirait une branche nulle et ouvrirait la pull request
-   sur une tête vide.
-2. **Le `jobsNote` est de retour** (§2.21). `bash` n'a pas de mode fond, mais
-   `run_background` est reposé en tool local : un serveur de dev peut donc tourner
-   au moment de la livraison. Il est tué AVANT le staging, et le modèle l'apprend
-   dans la même réponse — un serveur arrêté en silence lui laisse croire qu'il
-   tourne (MIN-209).
-3. **Le verrou d'écriture du parent est tenu ICI.** `commitAndPush` fait
-   `git add -A` sur un sandbox PARTAGÉ : livrer pendant qu'un `implement`
-   travaille emporterait son travail à moitié posé. Chez opencode le tool `task`
-   BLOQUE le parent, donc le cas est rare — mais un round qui appelle `task` et
-   `create_pr` côte à côte le rouvre, et la demande de permission ne voit passer
-   que les tools d'opencode.
+1. **The branch is UP, not reread.** `agent_runs.branch_name` is not stamped
+   that after a real push (MIN-123), but this push is the first of the run in the
+   normal case: the function would read a null branch and open the pull request
+   on an empty head.
+2. **The `jobsNote` is back** (§2.21). `bash` does not have a background mode, but
+   `run_background` is stored as a local tool: a dev server can therefore run
+   at the time of delivery. He is killed BEFORE staging, and the model learns about it
+   in the same response — a silently stopped waiter makes him believe that he
+   turns (MIN-209).
+3. **Parent's write lock is held HERE.** `commitAndPush` done
+   `git add -A` on a SHARED sandbox: deliver while a `implement`
+   work would take away his half-finished work. At opencode the tool `task`
+   BLOCKS the parent, so the case is rare — but a round that calls `task` and
+   `create_pr` side by side reopens it, and the permission request does not pass
+   than opencode tools.
 
-**Une session de RELECTURE (`writesToRepo: false`) n'a pas ce tool du tout**, et
-à trois tours de clé plutôt qu'une phrase de prompt : `agentToolsFor` ne le sert
-pas à l'ancrage `pr` (donc aucun fichier généré), le pont le refuse s'il arrivait
-quand même, et la config pose `permission.edit: "deny"` en retirant `edit` /
-`write` / `apply_patch` du jeu de tools de l'agent (§2.8, mesure n°4 : la carte
-globale pose la permission, le jeu de l'agent fait l'absence).
+**A REVIEW session (`writesToRepo: false`) does not have this tool at all**, and
+three turns of the key rather than a prompt phrase: `agentToolsFor` is not useful
+not at the `pr` anchor (so no file generated), the bridge refuses it if it arrived
+anyway, and the config sets `permission.edit: "deny"` by removing `edit` /
+`write` / `apply_patch` of the agent's toolset (§2.8, measure n°4: the card
+global poses the permission, the agent game does the absence).
 
-### 2.17 Le commit de fin de tour : où opencode pose SES fichiers (lot 2)
+### 2.17 The end-of-round commit: where opencode places ITS files (batch 2)
 
-Le commit et le push de fin de tour ne changent pas de nature — `commitAndPush`
-après `session.idle`, message dérivé de la réponse (`commitMessageFromReply`),
-diff du tour par `changedFiles`. Un seul chemin de push existe dans le
-superviseur, partagé avec `create_pr` (§2.16) : l'URL de push y est **re-résolue
-à chaque fois**, parce qu'un tour dure des heures et un token d'installation de
-forge une heure.
+The commit and end-of-round push do not change in nature — `commitAndPush`
+after `session.idle`, message derived from the response (`commitMessageFromReply`),
+diff of the turn by `changedFiles`. Only one push path exists in the
+supervisor, shared with `create_pr` (§2.16): the push URL is **re-resolved there
+every time**, because a tour lasts hours and an installation token
+forge one hour.
 
-Ce qui demandait une mesure, c'est ce qu'opencode écrit **où**, puisque le tour
-finit par un `git add -A`. Mesuré le 2026-08-12 (serveur réel sur un dépôt git
-jetable, session créée) :
+What required a measurement is what opencode writes **where**, since the round
+ends with a `git add -A`. Measured on 2026-08-12 (real server on a git repository
+disposable, session created):
 
-| Ce qu'opencode écrit | Où, par défaut | Où on le met |
+| What opencode writes | Where, by default | Where we put it |
 | --- | --- | --- |
-| l'état (sessions, messages, permissions) | `$XDG_DATA_HOME/opencode/opencode.db` | `OPENCODE_DB` → `HARNESS_DIR/opencode.db` |
-| les **snapshots** de travail — des dépôts git | `$XDG_DATA_HOME/opencode/repos/` | `XDG_DATA_HOME` → `HARNESS_DIR/data` |
-| les journaux | `$XDG_DATA_HOME/opencode/log/` | idem |
-| les binaires téléchargés | `$XDG_CACHE_HOME/opencode/bin/` | `XDG_CACHE_HOME` → `HARNESS_DIR/cache` |
-| nos 32 tools de domaine | `$XDG_CONFIG_HOME/opencode/tool/` | `XDG_CONFIG_HOME` → `HARNESS_DIR/config` |
+| state (sessions, messages, permissions) | `$XDG_DATA_HOME/opencode/opencode.db` | `OPENCODE_DB` → `HARNESS_DIR/opencode.db` |
+| working **snapshots** — git repositories | `$XDG_DATA_HOME/opencode/repos/` | `XDG_DATA_HOME` → `HARNESS_DIR/data` |
+| newspapers | `$XDG_DATA_HOME/opencode/log/` | ditto |
+| downloaded binaries | `$XDG_CACHE_HOME/opencode/bin/` | `XDG_CACHE_HOME` → `HARNESS_DIR/cache` |
+| our 32 domain tools | `$XDG_CONFIG_HOME/opencode/tool/` | `XDG_CONFIG_HOME` → `HARNESS_DIR/config` |
 
-**Le dépôt lui-même reste vierge** : après démarrage et création de session,
-`git status --porcelain` ne rend rien, et il n'y a pas de `.opencode/` dans le
-projet — l'état a quitté le disque du dépôt pour SQLite (§2.2).
+**The repository itself remains blank**: after startup and session creation,
+`git status --porcelain` doesn't return anything, and there is no `.opencode/` in the
+project — the state has left the repository disk for SQLite (§2.2).
 
-Les deux variables ajoutées ne corrigent donc pas un défaut constaté mais en
-ferment un possible : par défaut ces dossiers partent dans le `$HOME` de la
-microVM — hors du dépôt, mais **hors de notre portée**, alors qu'un `$HOME`
-absent ou posé sur le dépôt par une image de sandbox suffirait à ramener des
-dépôts git entiers dans le commit du tour. Tout l'état d'opencode tient
-maintenant sous `HARNESS_DIR`, qui est **frère** de `REPO_DIR` et donc hors de
-portée de `git add -A`.
+The two added variables therefore do not correct an observed defect but in
+close a possible: by default these files go to the `$HOME` of the
+microVM — outside the repository, but **out of our reach**, whereas a `$HOME`
+absent or placed on the repository by a sandbox image would be enough to bring back
+entire git repositories in the tour commit. All opencode state holds
+now under `HARNESS_DIR`, which is **brother** of `REPO_DIR` and therefore out of
+scope of `git add -A`.
 
 ---
 
-### 2.18 L'ancrage minddy et le prompt du tour (lot 3)
+### 2.18 The minddy anchor and the turn prompt (lot 3)
 
-Le lot 1 avait posé `instructions: [OPENCODE_ANCHOR_FILE]` dans la config sans que
-personne n'écrive ce fichier : le superviseur recevait un `SupervisorInput` que
-seul un test remplissait. C'est ce que ce lot ferme, et la question à trancher
-n'était pas technique — **que met-on dedans ?**
+Batch 1 had installed `instructions: [OPENCODE_ANCHOR_FILE]` in the config without
+no one writes this file: the supervisor received a `SupervisorInput` that
+only one test fulfilled. This is what this lot closes, and the question to be decided
+was not technical — **what do we put in it?**
 
-**Ce qu'on n'y met pas** : une redescription des tools d'opencode. Son prompt
-système décrit déjà `read`, `edit`, `bash`, `task`, `question` ; les redire moins
-bien, dans le même message système, c'est se contredire soi-même.
+**What we don't put there**: a redescription of opencode tools. Its prompt
+system already described `read`, `edit`, `bash`, `task`, `question`; repeat them less
+well, in the same system message, it is contradicting oneself.
 
-**Ce qu'on y met** : les trois choses qu'opencode ne peut pas savoir.
+**What we put there**: the three things that opencode cannot know.
 
-1. **Qui l'agent est** dans minddy, et à quoi la session est ancrée (ticket /
-   carnet / relecture de PR).
-2. **Les 32 tools de domaine** et leur doctrine — le plan du ticket appartient à
-   l'utilisateur, un statut ne s'écrit jamais, une remarque ancrée est rationnée.
-3. **Ce que le HARNESS impose à ses tools à lui** : git nous appartient et le shell
-   refuse ce qui détruit du travail, la recherche web est la nôtre et plafonnée, une
-   question TERMINE le tour, la porte de livraison du premier `create_pr`.
+1. **Who the agent is** in minddy, and what the session is anchored to (ticket /
+   notebook / PR proofreading).
+2. **The 32 domain tools** and their doctrine — the ticket plan belongs to
+   the user, a status is never written, an anchored remark is rationed.
+3. **What HARNESS imposes on its tools**: git belongs to us and the shell
+   refuses what destroys work, web research is ours and capped, a
+   question ENDS the round, the delivery door of the first `create_pr`.
 
-**Et c'est LE MÊME TEXTE que la boucle maison.** Les fragments de doctrine ont été
-sortis du corps de `buildAgentSystemPrompt`
-([prompt.ts](../lib/server/agent/prompt.ts)) et sont appelés par les deux moteurs ;
-la seule chose qui varie est déclarée dans une table, `PromptToolNames` (`read_file`
+**And it's THE SAME TEXT as the house loop.** The doctrine fragments have been
+taken out of the body of `buildAgentSystemPrompt`
+([prompt.ts](../lib/server/agent/prompt.ts)) and are called by both engines;
+the only thing that varies is declared in a table, `PromptToolNames` (`read_file`
 → `read`, `run_command` → `bash`, `spawn_agent` → `task`, `ask_user` → `question` ;
-`run_background`, lui, porte le MÊME nom des deux côtés depuis §2.21). Deux gardes
-tiennent l'ensemble :
+`run_background` has the SAME name on both sides since §2.21). Two guards
+hold together:
 
-- le prompt de la boucle maison est **inchangé à l'octet** — vérifié sur 192
-  combinaisons d'ancrage × options pendant le refactor ;
-- l'ancrage servi à opencode ne contient **aucun nom de tool de l'ancien harnais**
-  ([opencode-anchor.test.ts](../lib/server/agent/opencode-anchor.test.ts)) : c'est
-  le seul défaut de cette famille qui ne se voit nulle part — un modèle appelle un
-  tool qui n'existe pas, round après round, et il a juste l'air bête.
+- the home loop prompt is **unchanged at byte** — checked on 192
+  anchor × options combinations during refactor;
+- the anchor used for opencode does not contain **any tool name from the old harness**
+  ([opencode-anchor.test.ts](../lib/server/agent/opencode-anchor.test.ts)): this is
+  the only fault of this family which is not seen anywhere - a model calls for a
+  tool that doesn't exist, round after round, and he just looks stupid.
 
-Trois écarts sont écrits à la main, parce que la mesure les a rendus différents :
-`task` **bloque** le parent (§2.14, donc « tu n'attends jamais, tu ne sondes
-jamais » est faux ici), il n'y a **pas d'édition par lot** (§3.2), et `bash` **ne
-garde pas** la sortie complète d'une commande (pas de `full_output_path` à
-promettre — c'est `shellSavesOutput` dans la table, et non plus l'absence de tool
-de fond, qui le dit).
+Three deviations are written by hand, because the measurement made them different:
+`task` **blocks** the parent (§2.14, so “you never wait, you never probe
+never" is false here), there is **no batch editing** (§3.2), and `bash` **does not
+does not** keep the complete output of a command (no `full_output_path` to
+promise — it's `shellSavesOutput` in the table, not the absence of tool
+background, who says it).
 
-Le **prompt du tour**, lui, est ce que l'amorce a mis dans les messages
-utilisateur : contexte du ticket ou de la pull request, travail hérité, instructions
-du dépôt, demande du lanceur. Sur un tour repris il est vide — l'historique est dans
-le journal, et la demande arrive par le steering (§2.19).
+The **prompt of the turn** is what the leader put in the messages
+user: ticket or pull request context, legacy work, instructions
+from the depot, request from the launcher. On a restart it is empty — the history is in
+the log, and the request arrives via the steering (§2.19).
 
-### 2.19 Le steering et le « Stop » (lot 3)
+### 2.19 Steering and “Stop” (lot 3)
 
-Les deux gestes les plus visibles du produit, et les deux qui manquaient au
-superviseur : le bouton « Stop » ne faisait rien, et un message écrit pendant un
-tour restait dans la file jusqu'au tour suivant — sur un tour qui dure des heures,
-c'est-à-dire indéfiniment.
+The two most visible gestures of the product, and the two that were missing from the
+supervisor: the “Stop” button did nothing, and a message was written for a
+lap remained in line until the next lap — on a lap that lasts hours,
+that is to say indefinitely.
 
-**Un message ne s'injecte pas dans une session qui travaille.** Chez opencode il n'y
-a pas d'historique à muter entre deux appels : il y a un tour en cours. Le geste est
-donc `abort` (40 ms mesurés, la requête en vol se termine proprement) puis un
-nouveau prompt **au `session.idle` qui suit** — la même frontière sûre que la boucle
-maison, atteinte par l'autre bout.
+**A message is not injected into a working session.** At opencode there is no
+there is no history to transfer between two calls: there is a round in progress. The gesture is
+so `abort` (40 ms measured, the request in flight completes properly) then a
+new prompt **to the following `session.idle`** — the same safe boundary as the loop
+house, reached from the other end.
 
-Deux règles qui décident du reste :
+Two rules that decide the rest:
 
-- **On ne draine la file que quand on est en mesure de poster derrière.**
-  `pullSteering` consomme ; un message drainé et non posté est perdu pour de bon,
-  puisque le plan de contrôle ne re-queue un run que sur ce qui reste dans la file.
-  D'où la sonde `hasPendingMessages` avant le drain.
-- **Un « Stop » accompagné d'un message se poursuit dans CE tour**, et le drapeau
-  est alors **consommé** — sans quoi le sondage suivant le relirait et sortirait,
-  message accepté et jamais joué. C'est mot pour mot le raisonnement de
-  `clearInterrupt` dans `agent-loop.ts`, et les deux moteurs le tiennent pareil.
+- **We only drain the line when we are able to post behind.**
+  `pullSteering` consumes; a message drained and not posted is lost for good,
+  since the control plane only re-queues a run on what remains in the queue.
+  Hence the `hasPendingMessages` probe before the drain.
+- **A “Stop” accompanied by a message continues in THIS lap**, and the flag
+  is then **consumed** — otherwise the next poll would reread it and exit,
+  message accepted and never played. This is word for word the reasoning of
+  `clearInterrupt` into `agent-loop.ts`, and both engines hold it the same.
 
-Le sondage est **temporel** (5 s) et non par round, puisqu'il n'y a plus de round à
-nous : sa granularité est celle du flux d'events. Un `bash` de trois minutes retarde
-donc le stop d'autant — c'était déjà vrai de la boucle maison, qui ne relisait le
-drapeau qu'entre deux rounds.
+The poll is **temporal** (5 s) and not per round, since there are no more rounds to
+us: its granularity is that of the flow of events. A three minute `bash` delays
+therefore the stop all the more — this was already true of the house loop, which did not reread the
+flag only between two rounds.
 
-### 2.20 Pas de drapeau : opencode EST le moteur (lot 3)
+### 2.20 No flag: opencode IS the engine (batch 3)
 
-La première version de ce lot posait un drapeau par projet en `app_config`, sur le
-modèle du drapeau VM de MIN-224. **Clément l'a retiré**, et l'argument est le bon :
-minddy a un utilisateur, et un interrupteur qu'une seule personne pourrait actionner
-ne vaut pas la surface qu'il ajoute. `agent_opencode_projects` et
-`agent_loop_in_vm_projects` ont donc disparu tous les deux, avec le module qui les
-lisait — tout run neuf part sur opencode, dans la microVM, sans rien demander.
+The first version of this batch placed a flag per project in `app_config`, on the
+VM flag model of MIN-224. **Clément removed it**, and the argument is correct:
+minddy has a user, and a switch that only one person could flip
+not worth the surface area it adds. `agent_opencode_projects` and
+`agent_loop_in_vm_projects` have therefore both disappeared, with the module which
+read — brand new run leaves on opencode, in the microVM, without asking anything.
 
-**Ce qui reste, et qui n'est pas le drapeau** : la colonne `agent_runs.agent_engine`,
-écrite à la création et jamais relue ailleurs. Elle ne décide de rien ; elle **dit**
-quel harness a joué ce run-là. Deux raisons de la garder :
+**What remains, and which is not the flag**: the `agent_runs.agent_engine` column,
+written at creation and never reread elsewhere. She doesn't decide anything; she **said**
+which harness played that run. Two reasons to keep it:
 
-1. **Un run déjà en vol garde son moteur.** Les deux ne gardent pas leur mémoire au
-   même endroit (`checkpoint.messages` contre `checkpoint.opencode`) : rebasculer une
-   conversation en cours ne lui ferait pas perdre un réglage, ça lui ferait perdre son
-   historique. Le déploiement de la bascule est donc sans effet sur ce qui tourne.
-2. **La lecture d'un incident.** « Pourquoi ce run s'est-il comporté autrement ? » se
-   répond sur la ligne, pas sur l'état d'une config au moment où on regarde.
+1. **A run already in flight keeps its engine.** Both do not keep their memory in
+   same place (`checkpoint.messages` against `checkpoint.opencode`): switch back
+   conversation in progress would not cause him to lose a setting, it would cause him to lose his
+   historical. The deployment of the seesaw therefore has no effect on what rotates.
+2. **Reading an incident.** “Why did this run behave differently?” » se
+   responds on the line, not on the state of a config at the time we look.
 
-La valeur `loop` disparaîtra avec `agent-loop.ts`, quand il ne restera plus rien à
-reprendre. Et `loop_in_vm` est désormais toujours vrai : la colonne est lue par les
-balayeurs (`reapDeadVmRuns` la veut vraie, `requeueStuckRuns` la veut fausse), donc
-elle doit dire la vérité même quand plus personne ne la décide.
+The `loop` value will disappear with `agent-loop.ts`, when there is nothing left to
+resume. And `loop_in_vm` is now always true: the column is read by
+sweepers (`reapDeadVmRuns` wants it true, `requeueStuckRuns` wants it false), so
+she must tell the truth even when no one decides to do so anymore.
 
-Le serveur, enfin, est tenu par
-[vm/opencode-host.ts](../lib/server/agent/vm/opencode-host.ts) : `spawn` d'un
-enfant ordinaire depuis le process du harness (le piège du `nohup` du §2.7 ne
-concernait qu'une commande RPC du Sandbox), version **épinglée**, et installation
-**seulement si le binaire manque** — cuit dans `AGENT_SANDBOX_SNAPSHOT_ID` il ne
-manque jamais et le tour paie 1,3 s, sinon le repli coûte les 10,6 s mesurés.
+The server, finally, is held by
+[vm/opencode-host.ts](../lib/server/agent/vm/opencode-host.ts): `spawn` of a
+ordinary child from the harness process (the `nohup` trap of §2.7 does not
+only concerned a Sandbox RPC command), version **pinned**, and installation
+**only if binary is missing** — baked into `AGENT_SANDBOX_SNAPSHOT_ID` it doesn't
+never misses and the turn pays 1.3 s, otherwise the fallback costs the measured 10.6 s.
 
-### 2.21 `run_background`, reposé en tool local (lot 3)
+### 2.21 `run_background`, reposted in tool local (batch 3)
 
-`bash` n'a **pas** de mode fond, et le registre `BackgroundJob` d'opencode sert
-`task`, pas le shell (§3.2). Le repli qui tenait jusqu'ici était une phrase de
-prompt : « ton shell est PERSISTANT, lance ton serveur en `&` et tue-le toi-même ».
-Il portait la doctrine — *faire tourner le code pour de vrai* — et **aucun de ses
-garde-fous** :
+`bash` has **no** background mode, and the opencode register `BackgroundJob` serves
+`task`, not the shell (§3.2). The withdrawal that held until now was a sentence of
+prompt: “your shell is PERSISTENT, start your server in `&` and kill it yourself”.
+He carried the doctrine — *run the code for real* — and **none of his
+guardrails**:
 
-- rien ne tuait le serveur avant le `git add -A` de fin de tour, donc il écrivait
-  dans le dépôt pendant qu'on le commitait, et il tenait la microVM éveillée après ;
-- sa sortie n'était bornée par personne (`BACKGROUND_OUTPUT_CAP`, l'incrément par
-  sonde) : un watcher bavard revenait en entier dans le contexte ;
-- `checkCommand` ne voyait pas passer la commande — un `git push` lancé en `&`
-  aurait échappé au garde-fou git de MIN-108.
+- nothing killed the server before the end of turn `git add -A`, so it wrote
+  in the repository while we committed it, and it kept the microVM awake afterwards;
+- its output was not bounded by anyone (`BACKGROUND_OUTPUT_CAP`, the increment by
+  probe): a chatty watcher came back in full in the context;
+- `checkCommand` did not see the order being placed — a `git push` launched in `&`
+  would have escaped the git guardrail of MIN-108.
 
-Le tool est donc reposé, et **c'est le seul tool LOCAL** de ce harnais : il ne sort
-jamais de la microVM. [background.ts](../lib/server/agent/background.ts) ne bouge pas
-d'une ligne — la politique (plafond de 3 jobs, garde-fou, offsets, mise en forme) y
-est pure, et ses tests non plus ne bougent pas. Seul le câblage est neuf :
+The tool is therefore rested, and **it is the only LOCAL tool** of this harness: it does not come out
+never from microVM. [background.ts](../lib/server/agent/background.ts) does not move
+of one line — the policy (ceiling of 3 jobs, safeguards, offsets, formatting)
+is pure, and its tests don't move either. Only the wiring is new:
 
-| Ce qu'il fallait | Où |
+| What was needed | Where |
 | --- | --- |
-| Le fichier servi au modèle | `opencodeToolFiles` le génère comme les 32 autres (`LOCAL_TOOL_NAMES`) |
-| L'exécution | Le pont, en `supervisorTool` — pas de `cp.callTool` : le plan de contrôle n'a pas de dépôt à faire tourner |
-| Les mains sur le dépôt | `repoBackgroundRunner`, déménagé d'`exec-tool.ts` vers [repo-host.ts](../lib/server/agent/repo-host.ts) — les deux moteurs s'en servent, et le lot 3 finira par supprimer le premier |
-| L'arrêt avant tout staging | `create_pr` (avec son `jobsNote`) et la fin de tour, avant le push |
-| Le prompt | `backgroundToolNote`, fragment PARTAGÉ : la boucle maison est inchangée à l'octet, l'ancrage d'opencode le rend avec `bash` pour shell |
+| The file used for the model | `opencodeToolFiles` generates it like the other 32 (`LOCAL_TOOL_NAMES`) |
+| Execution | The bridge, in `supervisorTool` — no `cp.callTool`: the control plane has no repository to run |
+| Hands on deposit | `repoBackgroundRunner`, moved from `exec-tool.ts` to [repo-host.ts](../lib/server/agent/repo-host.ts) — both engines use it, and batch 3 will eventually remove the first |
+| The stop before any staging | `create_pr` (with its `jobsNote`) and the end of the turn, before the push |
+| The prompt | `backgroundToolNote`, SHARED fragment: home loop is byte unchanged, opencode anchor makes it with `bash` for shell |
 
-**Un piège mesuré sur le binaire, qui aurait rendu le tool à moitié inutile** : le
-log complet d'un job vit dans `TOOL_OUTPUT_DIR`, donc **hors du dépôt** — sans quoi
-le `git add -A` de fin de tour le commiterait. Or opencode gate les lectures hors
-projet derrière la permission `external_directory`, que **nous refusons** (§ garde-
-fous). La note qui dit au modèle où est son log est donc devenue dépendante du
-moteur : `read_file`/`grep` pour la boucle maison, **le shell** (`tail`, `grep`)
-pour opencode. Le texte d'origine l'aurait envoyé contre un mur qu'on tient
-nous-mêmes, et vers un tool (`read_file`) qui n'existe pas chez lui.
+**A trap measured on the binary, which would have made the tool half useless**: the
+complete log of a job lives in `TOOL_OUTPUT_DIR`, therefore **outside the repository** — otherwise
+the `git add -A` at the end of the turn would commit it. Or opencode gates readings out
+project behind the `external_directory` permission, which **we refuse** (§ safeguard
+crazy). The note which tells the model where its log is has therefore become dependent on the
+engine: `read_file`/`grep` for the home loop, **the shell** (`tail`, `grep`)
+for opencode. The original text would have sent him against a wall that is held
+ourselves, and to a tool (`read_file`) which does not exist there.
 
-**Un piège de table, attrapé au passage** : `PromptToolNames.background` servait
-aussi de discriminant de moteur — « pas de tool de fond » valait « pas de
-`full_output_path` non plus ». Les deux se sont séparés le jour où opencode a eu un
-tool de fond : le champ `shellSavesOutput` dit maintenant la seconde chose, sans
-quoi l'ancrage se serait mis à promettre au modèle un fichier de sortie complète que
-le `bash` d'opencode ne garde pas.
+**A table trap, caught in passing**: `PromptToolNames.background` was used
+also an engine discriminator — “no background tool” was worth “no
+`full_output_path` neither.” The two broke up the day opencode had a
+background tool: the `shellSavesOutput` field now says the second thing, without
+what the anchor would have started to promise to the model a complete output file that
+opencode's `bash` does not keep.
 
-Une session de **relecture** n'en a pas : `PR_REVIEW_TOOLS` ne le porte pas, donc il
-n'est ni généré, ni routé, ni annoncé — une review tient dans une session.
+A **replay** session does not have one: `PR_REVIEW_TOOLS` does not carry it, so it
+is neither generated, nor routed, nor announced — a review takes place in a session.
 
-### 2.22 Les images de `read_resource` : elles traversent, et il fallait DEUX déclarations (lot 3)
+### 2.22 The images of `read_resource`: they cross, and TWO declarations were needed (batch 3)
 
-Mesuré le 2026-08-12 sur `opencode-ai@1.18.16`, serveur réel, vraie clé, modèle de
-vision, ~0,004 $ sur quatre passages. La sonde reste dans le dépôt et se rejoue :
+Measured on 2026-08-12 on `opencode-ai@1.18.16`, real server, real key, model of
+vision, ~$0.004 over four passes. The probe remains in the depot and replays:
 [opencode-images.probe.test.ts](../lib/server/agent/vm/opencode-images.probe.test.ts)
-(`MDY_OPENCODE_IMAGE_PROBE=1`) — le modèle doit nommer les quatre quadrants d'une
-PNG 64×64 générée à l'exécution, ce qu'aucun modèle ne devine.
+(`MDY_OPENCODE_IMAGE_PROBE=1`) — the model must name the four quadrants of a
+64x64 PNG generated at runtime, which no model guesses.
 
-Le plan supposait un **prompt de relance** portant l'image après le tool. Ce n'était
-pas nécessaire, et la vraie voie est meilleure : le `ToolResult` d'`@opencode-ai/plugin`
-a une forme riche, `{title, output, attachments}`, et `ToolAttachment` est
-`{type: "file", mime, url, filename}` — **une data URL passe telle quelle**, ce qui
-tombe pile sur `AgentToolImage` ([content.ts](../lib/server/agent/content.ts)), qui
-est déjà une data URL et pour la même raison (l'historique est rejoué des heures
-plus tard, une URL signée a expiré).
+The plan assumed a **prompt restart** carrying the image after the tool. It was not
+not necessary, and the real way is better: the `ToolResult` of `@opencode-ai/plugin`
+has a rich form, `{title, output, attachments}`, and `ToolAttachment` is
+`{type: "file", mime, url, filename}` — **a data URL passes as is**, which
+falls right on `AgentToolImage` ([content.ts](../lib/server/agent/content.ts)), which
+is already a data URL and for the same reason (the history is replayed for hours
+later a signed URL expired).
 
-Ce qu'opencode en fait, lu dans le corps de requête : il pose un message `user`
-juste après le round, `[{type: "text", text: "Attached media from tool result:"},
-{type: "image_url", image_url: {url: …}}]` — **exactement** ce que la boucle maison
-construisait. Ce message n'est PAS persisté en session (vérifié sur
-`/session/:id/message` : trois messages, pas quatre), donc il ne produit aucun
-événement et ne peut pas entrer dans le texte du round ni dans le message de commit.
+What opencode does with it, read in the request body: it sends a message `user`
+just after the round, `[{type: "text", text: "Attached media from tool result:"},
+{type: "image_url", image_url: {url: …}}]` — **exactly** what the house loop does
+was building. This message is NOT persisted in session (checked on
+`/session/:id/message`: three messages, not four), so it produces no
+event and cannot enter the round text or commit message.
 
-**LE PIÈGE, et il coûtait la parité en silence.** `attachment: true` sur le modèle
-**ne suffit pas**. L'image traverse tout le harness, et opencode la remplace au
-dernier moment par un texte :
+**THE TRAP, and it silently cost parity.** `attachment: true` on the model
+**is not enough**. The image passes through the entire harness, and opencode replaces it at
+last moment by a text:
 
 > `ERROR: Cannot read "quad.png" (this model does not support image input). Inform the user.`
 
-Le modèle répondait donc `NO_IMAGE` — et en production il aurait prévenu
-l'utilisateur d'une limite qui n'existe pas. Ce que le binaire teste, c'est
-`capabilities.input.image`, qui se déclare en config par **`modalities.input`**.
-D'où les deux champs posés ensemble dans `modelDef`, sur le même `job.imageInput`.
-Rien dans un type-check ni dans un test unitaire ne l'aurait dit.
+The model therefore responded `NO_IMAGE` — and in production it would have warned
+the user of a limit that does not exist. What the binary tests is
+`capabilities.input.image`, which is declared in config by **`modalities.input`**.
+Hence the two fields placed together in `modelDef`, on the same `job.imageInput`.
+Nothing in a type-check or in a unit test would have said that.
 
-Le câblage, lui, tient en trois pièces :
+The wiring is made up of three parts:
 
-| Pièce | Ce qu'elle fait |
+| Room | What she does |
 | --- | --- |
-| [opencode-config.ts](../lib/server/agent/vm/opencode-config.ts) | `attachment` **et** `modalities.input: ["text","image"]` quand `job.imageInput` |
-| [tool-bridge.ts](../lib/server/agent/vm/tool-bridge.ts) | les `images` du plan de contrôle deviennent une **enveloppe** `{output, attachments}`, annoncée par l'en-tête `x-minddy-attachments` |
-| [opencode-tools.ts](../lib/server/agent/vm/opencode-tools.ts) | le tool généré rend l'enveloppe en `ToolResult` riche ; sans l'en-tête, il rend le texte comme avant, à l'octet |
+| [opencode-config.ts](../lib/server/agent/vm/opencode-config.ts) | `attachment` **and** `modalities.input: ["text","image"]` when `job.imageInput` |
+| [tool-bridge.ts](../lib/server/agent/vm/tool-bridge.ts) | the `images` of the control plane becomes a **shell** `{output, attachments}`, announced by the header `x-minddy-attachments` |
+| [opencode-tools.ts](../lib/server/agent/vm/opencode-tools.ts) | the generated tool makes the envelope `ToolResult` rich; without the header, it renders the text as before, to the byte |
 
-Le **texte** du résultat ne change pas : la fiche signalétique reste ce que le
-modèle lit, l'image s'y ajoute. Un fil raconte donc la même chose des deux côtés de
-la bascule. Les sous-agents n'en ont pas besoin : `read_resource` est dans
-`SUBAGENT_FORBIDDEN_TOOLS`, leurs modèles ne déclarent donc pas la modalité.
+The **text** of the result does not change: the MSDS remains what it is
+model reads, the image is added. A thread therefore tells the same thing on both sides of
+the seesaw. Subagents don't need it: `read_resource` is in
+`SUBAGENT_FORBIDDEN_TOOLS`, their models therefore do not declare the modality.
 
-### 2.23 Le round coupé en vol : opencode n'en facture RIEN, le proxy si (lot 3)
+### 2.23 The round cut in flight: opencode charges NOTHING, the proxy does (lot 3)
 
-Mesuré le 2026-08-12, serveur réel, vraie clé, ~0,003 $ par passage. Sonde
-rejouable :
+Measured on 2026-08-12, real server, real key, ~$0.003 per pass. Probe
+replayable:
 [opencode-abort.probe.test.ts](../lib/server/agent/vm/opencode-abort.probe.test.ts)
-(`MDY_OPENCODE_ABORT_PROBE=1`) — elle monte le **vrai** proxy de production.
+(`MDY_OPENCODE_ABORT_PROBE=1`) — it mounts the **real** production proxy.
 
-C'est la question que le plan avait laissée ouverte, et la réponse est la
-mauvaise :
+This is the question that the plan left open, and the answer is
+bad:
 
-| Après un `abort` en pleine génération | Ce qu'on relève |
+| After a `abort` in full generation | What we note |
 | --- | --- |
-| Le message assistant d'opencode | `finish: null`, `cost: 0`, `tokens: {input: 0, output: 0}`, `error: MessageAbortedError` — alors que **179 caractères** étaient écrits |
-| Notre traducteur | exige un `finish` pour écrire au ledger, à raison : sans lui il écrirait une ligne vide puis une vraie |
-| Le fournisseur | a facturé **0,002827 $** (2 032 tokens de prompt, 159 de complétion) |
+| The opencode helper message | `finish: null`, `cost: 0`, `tokens: {input: 0, output: 0}`, `error: MessageAbortedError` — while **179 characters** were written |
+| Our translator | requires a `finish` to write to the ledger, rightly so: without it it would write an empty line then a real |
+| The supplier | charged **$0.002827** (2,032 prompt tokens, 159 completion tokens) |
 
-Toutes les sorties du superviseur sauf une passent par un `abort` — plafond de
-dépense, « Stop », steering, deadline, question du modèle. La dépense sortait donc
-du ledger, du quota et de la facture **sur un geste déclenchable à volonté** :
-exactement le défaut que MIN-216 avait fermé côté boucle maison, rouvert par le
-changement de moteur.
+All but one of the supervisor outputs pass through a `abort` — ceiling of
+expenditure, “Stop”, steering, deadline, question of the model. The expense therefore came out
+of the ledger, the quota and the invoice **on a gesture that can be triggered at will**:
+exactly the fault that MIN-216 had closed on the home loop side, reopened by the
+engine change.
 
-**Ce qui le referme, et c'est une propriété du proxy, pas une estimation** : il ne
-passe aucun signal à son `fetch` amont. Quand opencode s'en va, la boucle de
-lecture continue jusqu'à la dernière frame — **1 221 ms plus tard, sans une erreur
-de socket** — et cette frame-là porte `usage`, donc le coût facturé et le
-`generation_id`. Le superviseur appelle donc `proxy.settle()` puis `proxy.drain()`
-en fin de tour (`TurnLedger.recordOrphans`) et écrit la ligne au montant du
-FOURNISSEUR, `estimated: false`.
+**Which closes it, and this is a property of the proxy, not an estimate**: it does not
+passes no signal to its upstream `fetch`. When opencode leaves, the loop
+continuous playback until the last frame — **1221 ms later, without an error
+of socket** — and this frame carries `usage`, therefore the cost invoiced and the
+`generation_id`. The supervisor therefore calls `proxy.settle()` then `proxy.drain()`
+at the end of the round (`TurnLedger.recordOrphans`) and writes the line to the amount of
+SUPPLIER, `estimated: false`.
 
-Deux choix qui vont avec :
+Two choices that go with it:
 
-- un flux qui n'aurait même pas rendu son `usage` (fournisseur coupé, panne
-  réseau) **n'est pas écrit** : une ligne à zéro se lirait « cet appel était
-  gratuit », ce qui refait le trou. Elle est journalisée, elle.
-- la ligne prend un `seq` de la **mère** : le proxy voit du HTTP, pas des
-  sessions. Une ligne mal rangée vaut mieux qu'une dépense qui n'existe nulle part.
+- a flow which would not even have returned its `usage` (supplier cut off, breakdown
+  network) **is not written**: a zero line would read “this call was
+  free”, which makes the hole again. She's in the journal.
+- the line takes a `seq` from the **mother**: the proxy sees HTTP, not
+  sessions. A messy line is better than an expense that doesn't exist anywhere.
 
-`abandoned-spend.ts` reste dans le dépôt pour la boucle maison, mais le chemin
-opencode ne s'en sert pas : il n'a rien à estimer.
+`abandoned-spend.ts` remains in the repository for the home loop, but the path
+opencode doesn't use it: it has nothing to estimate.
 
-### 2.24 Le premier run de production : mort au démarrage, muet au fil (lot 3)
+### 2.24 The first production run: dead at startup, silent at runtime (batch 3)
 
-Premier vrai run sur opencode en production, 2026-08-12. Le fil affiche « Ouverture
-de la sandbox » puis « L'agent Numo travaille » — et plus rien, jamais. Autopsie par
-la ligne du run : `error_message: "opencode did not become healthy within 60000 ms"`,
-posé **6 min 30** après le démarrage du harness. Deux défauts, et le second ne se
-serait vu qu'après avoir corrigé le premier.
+First real run on opencode in production, 2026-08-12. The thread displays “Opening
+from the sandbox” then “Agent Numo is working” — and nothing more, ever. Autopsy by
+the run line: `error_message: "opencode did not become healthy within 60000 ms"`,
+installed **6 min 30** after starting the harness. Two faults, and the second does not
+would be seen only after correcting the first one.
 
-**1. La sonde de santé n'avait pas de plafond, donc l'attente n'en avait pas non
-plus.** Les logs de la microVM disent que le serveur a démarré (`opencode server
-listening on http://127.0.0.1:4096`, sa base SQLite créée à T+1 s), et pourtant la
-sonde n'a rien obtenu. Sur une microVM **neuve**, le disque est hydraté
-paresseusement : le premier exec des 176 Mo de binaire se paie bien plus cher que
-les 1,3 s mesurées au lot 0 sur une VM chaude, et pendant ce temps le serveur
-**accepte la connexion sans répondre**. Un `fetch` sans signal attend alors le
-`headersTimeout` d'undici — **300 s** —, ce qui explique l'écart entre les 60 000 ms
-annoncés et les 6 min 30 vécues : la boucle de sondage ne bouclait pas, elle faisait
-UNE requête et attendait cinq minutes. Corrigé des deux côtés : `healthy()` porte son
-propre plafond (2 s), le plafond de démarrage passe à 5 min, l'erreur cite le temps
-**réellement** attendu, et une ligne de journal tombe toutes les 15 s pour que le
-prochain diagnostic tienne dans une lecture de logs.
+**1. The health probe had no cap, so the wait didn't have one either
+more.** The microVM logs say that the server started (`opencode server
+listening on http://127.0.0.1:4096`, its SQLite database created at T+1 s), and yet the
+probe got nothing. On a **new** microVM, the disk is hydrated
+lazily: the first exec of the 176 MB of binary costs much more than
+the 1.3 s measured at batch 0 on a hot VM, and during this time the server
+**accepts the connection without responding**. A `fetch` without signal then waits for the
+`headersTimeout` from undici — **300 s** —, which explains the difference between the 60,000 ms
+announced and the 6 min 30 experienced: the survey loop did not complete, it made
+A query and waited five minutes. Corrected on both sides: `healthy()` carries its
+own cap (2 sec), boot cap changes to 5 min, error cites time
+**actually** expected, and a log line falls every 15 s so that the
+next diagnosis takes place in a log reading.
 
-**2. Les deltas de RÉFLEXION portent `field: "text"`, comme la réponse.** Lu dans le
-binaire 1.18.16 (`case "reasoning-delta"` → `updatePartDelta({… field:"text"})`) puis
-**capturé** contre un faux fournisseur local, coût nul
-([fixtures/opencode-reasoning.ndjson](../lib/server/agent/vm/fixtures/opencode-reasoning.ndjson)) :
-une frame de delta ne dit rien de ce qu'elle transporte, seul le
-`message.part.updated` d'ouverture du part le dit (`type: "reasoning"`, `text: ""`,
-`time.start`). Tant qu'on ne le lisait pas, la chaîne de pensée entrait dans le texte
-du round — donc dans ce que le fil affiche comme la parole de l'agent, et dans le
-message de commit — et le compteur de réflexion du fil (MIN-122) restait éteint : un
-modèle à `reasoning_level: high` peut penser des minutes avant son premier mot, et le
-fil n'avait rien à montrer pendant ce temps. La traduction tient désormais la nature
-de chaque part, écarte la réflexion du sac de texte, allume `reasoningActive` au
-direct et rend la trace repliée sous le **même** event `thinking` que la boucle
-maison.
+**2. REFLECTION deltas carry `field: "text"`, like the answer.** Read in the
+binary 1.18.16 (`case "reasoning-delta"` → `updatePartDelta({… field:"text"})`) then
+**captured** against a fake local supplier, zero cost
+([fixtures/opencode-reasoning.ndjson](../lib/server/agent/vm/fixtures/opencode-reasoning.ndjson)):
+a delta frame says nothing about what it transports, only the
+`message.part.updated` opening of the said part (`type: "reasoning"`, `text: ""`,
+`time.start`). As long as it was not read, the chain of thought entered the text
+of the round — therefore in what the thread displays as the agent's word, and in the
+commit message — and the thread reflection counter (MIN-122) remained off: a
+`reasoning_level: high` model can think minutes before its first word, and the
+fil had nothing to show during this time. The translation now holds nature
+on each side, removes the reflection from the bag of text, turns on `reasoningActive` on
+direct and makes the trace folded under the **same** event `thinking` as the loop
+house.
 
-**Au passage, le même défaut ailleurs** : notre propre prompt, republié par la
-session en `message.part.updated` de type `text`, entrait lui aussi dans la réponse
-du tour (mesuré sur la fixture : la réponse commençait par « dis bonjour »). Le rôle
-d'un message ne se lit que sur `message.updated` — on le retient, et les parts des
-messages `user` sont écartés.
+**By the way, the same fault elsewhere**: our own prompt, republished by the
+session in `message.part.updated` of type `text`, was also included in the response
+of the turn (measured on the fixture: the response began with “say hello”). The role
+of a message can only be read on `message.updated` — we retain it, and the shares of
+`user` messages are discarded.
 
 ---
 
-### 2.25 Le fil ne racontait plus le tour : trois symptômes, un seul manque (lot 3)
+### 2.25 The thread no longer told the trick: three symptoms, only one missing (lot 3)
 
-Deuxième run de production, 2026-08-12, `openai/gpt-5.6-luna`. Le travail est bon
-(PR ouverte, tests et type-check passés), mais **l'écran ment sur trois points** :
+Second production run, 2026-08-12, `openai/gpt-5.6-luna`. The work is good
+(PR open, tests and type-check passed), but **the screen lies on three points**:
 
-1. le texte que le modèle écrit entre deux séries de tools apparaît en direct puis
-   **disparaît** ;
-2. le tour se termine normalement et le fil le rend **« interrompu »** ;
-3. sur le message suivant, l'indicateur repart avec le chrono du tour **précédent**,
-   dont le déroulé se vide ensuite en events bruts, sans clôture.
+1. the text that the model writes between two sets of tools appears live then
+   **disappears**;
+2. the round ends normally and the thread makes it **"interrupted"**;
+3. on the following message, the indicator restarts with the time of the **previous** lap,
+   the unfolding of which then empties into raw events, without closure.
 
-**Un seul manque les explique tous les trois** : le superviseur n'émettait AUCUN
-event pour le texte du modèle. Le run compte 148 events — `tool_call`,
-`tool_result`, `thinking (reasoning)`, `status` — et pas une bulle de texte.
+**A single lack explains all three**: the supervisor did not issue ANY
+event for the template text. The run has 148 events — `tool_call`,
+`tool_result`, `thinking (reasoning)`, `status` — and not a text bubble.
 
-- Le direct n'est persisté nulle part (c'est sa définition) : sans event derrière,
-  la narration s'efface à la fin du round. → symptôme 1.
-- Le fil ne connaît qu'un seul signe de fin de tour, l'event **`summary`**
-  (`closesTurn`, agent-event-feed.tsx). Un tour au repos sans clôture est lu comme
-  un tour arrêté en cours de route. → symptôme 2.
-- Le tour restant ouvert, le travail du tour suivant s'empile dans le même
-  accordéon, et le `user_message` du steering **vide** le travail non clos en items
-  libres (`flush()`). → symptôme 3.
+- The direct is not persisted anywhere (this is its definition): without an event behind it,
+  the narration fades at the end of the round. → symptom 1.
+- The thread only knows one end of turn sign, the **`summary`** event
+  (`closesTurn`, agent-event-feed.tsx). A lap at rest without a fence is read as
+  a tour stopped along the way. → symptom 2.
+- The round remaining open, the work of the next round is stacked in the same
+  accordion, and the `user_message` of the steering **empty** the work not closed in items
+  free (`flush()`). → symptom 3.
 
-La règle de la boucle maison est reprise au mot (`agent-loop.ts`) : `thinking`
-(sans `kind`, 2 000 caractères) pour le texte d'un round qui CONTINUE — chez
-opencode, `message.updated` avec `finish: "tool-calls"` —, `summary` (8 000) pour la
-réponse du tour, émis en fin de tour et **seulement** s'il s'est terminé
-normalement : un tour coupé n'a pas de mot de la fin, et le fil doit continuer de
-le dire interrompu. Le direct se tait à la fin d'un round intermédiaire (`clearLive`)
-mais **garde** le texte du dernier round : son `summary` ne part qu'après l'export
-du journal et le push, et l'effacer plus tôt ferait clignoter la réponse.
+The house loop rule is repeated at the word (`agent-loop.ts`): `thinking`
+(without `kind`, 2,000 characters) for the text of a round that CONTINUES — at
+opencode, `message.updated` with `finish: "tool-calls"` —, `summary` (8,000) for
+turn response, issued at the end of the turn and **only** if it has ended
+normally: a cut turn has no final word, and the thread must continue to
+say it interrupted. The live stream goes silent at the end of an intermediate round (`clearLive`)
+but **keep** the text of the last round: its `summary` only leaves after export
+of the log and push it, and clearing it earlier would flash the response.
 
-**Et les filles** : leur rapport ne remontait nulle part non plus. Le bloc d'un
-sous-agent lit un `summary` marqué à son nom et se referme sur
-`status: subagent_report` — les deux partent désormais sur son `session.idle`.
+**And the girls**: their relationship didn't go anywhere either. The block of one
+subagent reads a `summary` marked with its name and closes on
+`status: subagent_report` — the two now leave on his `session.idle`.
 
-### 2.26 La relecture du chantier : quatorze défauts, et le motif qu'ils partagent
+### 2.26 Rereading the site: fourteen defects, and the reason they share
 
-Passe de vérification du 2026-08-12, plan et dossier en main, code lu ligne à
-ligne. Quatorze défauts confirmés — corrigés, chacun avec son test —, seize
-soupçons réfutés. **Aucune tâche du plan n'était fausse au point de repartir en
-« à faire » : ce qui manquait était toujours un maillon, jamais la brique.**
+Verification pass dated 2026-08-12, plan and file in hand, code read line at
+line. Fourteen confirmed defects — corrected, each with its own test —, sixteen
+suspicions refuted. **No task in the plan was wrong enough to start again
+“to do”: what was missing was always a link, never the brick.**
 
-**Le motif, et il est le même six fois : une écriture complète, une lecture
-absente.** Un chemin où l'on produit soigneusement une donnée que personne ne
-relit ne lève rien, ne type rien de travers, et ne se voit que sur un run réel.
+**The pattern, and it is the same six times: a complete writing, a reading
+absent.** A path where we carefully produce data that no one
+relit doesn't lift anything, doesn't type anything wrong, and is only seen on a real run.
 
-| Le défaut | Ce qui manquait |
+| The default | What was missing |
 | --- | --- |
-| **La reprise ne reprenait rien.** `VmJob.opencode` n'était écrit par personne (`execute.ts`) : chaque tour créait une session NEUVE. Le superviseur exportait, le plan de contrôle estampillait, `AgentCheckpoint` déclarait — et la microVM ne recevait rien. La sonde du lot 0 mesurait un chemin que la prod n'empruntait jamais. | une ligne de lecture |
-| **Un tour repris rejouait son amorce.** Corollaire du précédent : `messages` étant vide sous opencode, l'amorce à froid repartait, et le contexte du ticket + la demande du lanceur seraient repostés PAR-DESSUS l'historique restauré. `VmJob.opencodeInput` promet pourtant « `prompt` est vide sur un tour REPRIS ». | une branche |
-| **Un flux muet gelait le tour.** « Stop », steering, sauvegarde périodique et échéance murale vivaient tous DANS le corps de la boucle d'events. Un `bash` de vingt minutes ne publie rien : plus d'horloge, et surtout plus de `last_activity_at` — le chien de garde partait sonder une microVM vivante (§2.24 en avait corrigé le symptôme, pas la cause). D'où le **battement** (`LIFECYCLE_BEAT_MS`), qui court contre l'event suivant. | un timer |
-| **Le journal n'était borné par rien.** L'export est incrémental, l'ENVOI ne l'est pas : le checkpoint porte l'accumulateur entier. Le plan tenait le plafond de 4,5 Mo pour « sans objet » depuis que le checkpoint était devenu append-only — **un journal append-only se réécrit entier à chaque sauvegarde**. Passé la barre : 413 rangé en panne passagère, plus aucune sauvegarde, plus de battement de cœur, rapport final refusé. On lâche le journal (jamais on ne le rabote : `/sync/replay` veut des `seq` contigus) et on dit `turnHistoryReset`. | le plafond |
-| **Un message de steering drainé pouvait mourir.** `pullSteering` CONSOMME, et le tour peut sortir entre le drainage et le post (plafond, deadline, run conclu). Accepté à l'écran, perdu pour toujours — et le run ne se réveillait pas, puisque c'est la file qui le re-queue. D'où `POST /messages`, qui le remet en file. | un chemin de retour |
-| **Le plafond de sous-agents ne bornait rien.** Il se comptait sur les filles VIVANTES, or la naissance suit l'autorisation (le dépôt l'ancre lui-même : `runningAtAsk === 0`). Un round qui appelle `task` trois fois voyait ses trois demandes passer. `SubagentContext.pending` compte le crédit ouvert. | le compte des promises |
-| **Une réponse d'erreur du fournisseur faisait facturer un round DEUX fois.** Le lecteur du proxy allouait dès la première ligne JSON lisible : un `{"error":…}` sur 429 devenait une génération au modèle VIDE, donc appariable à tout. Le round repartait sans son coût, et la vraie génération finissait en « orpheline ». | deux gardes (statut, et trace) |
-| **`prompt_tokens` ne voulait pas dire la même chose sur les deux moteurs.** L'`input` d'opencode EXCLUT le cache. Le plan disait `input→prompt_tokens` : **c'est le plan qui avait tort**, et sa propre mesure le dit (`input + cache.read + cache.write = native_tokens_prompt`, §2.5). Le taux de hit `cached_tokens / prompt_tokens` (MIN-242) pouvait dépasser 1, et la comparaison ligne à ligne — le critère de bascule — ne comparait pas la même chose. | l'addition |
-| **La porte de livraison était aveugle au shell.** `rm`, `mv`, `sed -i`, un codemod : plus de `delete_file` ni de `move_file` sous opencode, donc `editedPaths` restait vide et un tour qui n'a fait que ça livrait **sans un contrôle**. C'est l'arbre de travail qui tranche maintenant (`probeRepoTouched`), en recours seulement. | la lecture de git |
-| **`abortsRequested` ne se remettait jamais à zéro.** Un `abort` peut ne rien publier (opencode répond 200 sur une session au repos), et le steering coupe justement des sessions qui viennent parfois de finir. Le crédit restait ouvert, et la coupure SUIVANTE — celle que personne n'a demandée — se faisait avaler : ni event, ni erreur, un tour rangé « terminé ». | la remise à zéro au round |
-| **Une fin de tour sur `length` partait deux fois.** La narration se décidait sur « ≠ `stop` », alors que `tool-calls` est la seule fin qui CONTINUE. Le texte partait en `thinking` (2 000) puis en `summary` (8 000) — et le fil dédoublonne par égalité de texte, que deux plafonds ne rendent jamais. | le bon prédicat |
-| **`update_plan` faisait une bulle.** Tool de CONTRÔLE : la boucle maison n'en émettait aucun event. Chez opencode il passe par le binaire, donc le flux publie ses parts — la checklist était racontée deux fois. | un filtre |
-| **`webfetch` partait sans son URL.** Aucun vis-à-vis maison, donc aucun cas dans `toolArgSummary` : l'event partait à `{}`. Un tour de lecture web illisible au replay. | un `case` |
-| **Le motif d'un refus local ne remontait plus.** `forbidden_command` sur un `run_background` mourait dans le pont : les refus cessaient d'être mesurables sur `agent_run_events`. | un rappel |
+| **The restart did not restart anything.** `VmJob.opencode` was not written by anyone (`execute.ts`): each turn created a NEW session. The supervisor exported, the control plane stamped, `AgentCheckpoint` declared — and the microVM received nothing. The batch 0 probe measured a path that production never took. | a reading line |
+| **A restarted round replayed its start.** Corollary of the previous one: `messages` being empty under opencode, the cold start would restart, and the context of the ticket + the launcher's request would be reposted OVER the restored history. `VmJob.opencodeInput` however promises “`prompt` is empty on a RESUME round”. | a branch |
+| **A silent stream froze the round.** "Stop", steering, periodic save and wall deadline all lived IN the body of the event loop. A twenty-minute `bash` publishes nothing: no more clock, and above all no more `last_activity_at` — the watchdog went to probe a living microVM (§2.24 had corrected the symptom, not the cause). Hence the **beat** (`LIFECYCLE_BEAT_MS`), which runs against the next event. | a timer |
+| **The log was not limited by anything.** The export is incremental, the SEND is not: the checkpoint carries the entire accumulator. The plan held the 4.5MB cap as "not applicable" since the checkpoint became append-only — **an append-only log rewrites itself entirely with each save**. Passed the bar: 413 put away as a temporary breakdown, no more backup, no more heartbeat, final report refused. We drop the log (we never plan it: `/sync/replay` wants contiguous `seq`) and we say `turnHistoryReset`. | the ceiling |
+| **A drained steering message could die.** `pullSteering` CONSUMES, and the turn can exit between the drainage and the post (ceiling, deadline, run concluded). Accepted on screen, lost forever — and the run didn't wake up, since it was the queue that re-queued it. Hence `POST /messages`, which puts it back in line. | a way back |
+| **The ceiling of sub-agents did not limit anything.** It was counted on LIVE girls, but the birth follows the authorization (the deposit itself anchors it: `runningAtAsk === 0`). A round that calls `task` three times saw all three requests pass. `SubagentContext.pending` counts the open credit. | the account of the brides |
+| **An error response from the provider caused a round to be billed TWICE.** The proxy reader allocated from the first readable JSON line: one `{"error":…}` out of 429 became a generation with the EMPTY model, therefore matchable to everything. The round started again without its cost, and the real generation ended up as “orphans”. | two guards (status, and trace) |
+| **`prompt_tokens` did not mean the same thing on both engines.** Opencode's `input` EXCLUDES cache. The plan said `input→prompt_tokens`: **it was the plan that was wrong**, and its own measure said so (`input + cache.read + cache.write = native_tokens_prompt`, §2.5). The `cached_tokens / prompt_tokens` (MIN-242) hit rate could exceed 1, and the row-to-row comparison — the toggle criterion — was not comparing the same thing. | the addition |
+| **The delivery gate was blind to the shell.** `rm`, `mv`, `sed -i`, a codemod: no more `delete_file` nor `move_file` under opencode, so `editedPaths` remained empty and a trick that only delivered **without a check**. It is the working tree which decides now (`probeRepoTouched`), in recourse only. | reading git |
+| **`abortsRequested` never resets to zero.** A `abort` can publish nothing (opencode responds 200 on an idle session), and the steering cuts sessions which have sometimes just ended. The credit remained open, and the FOLLOWING cut — the one that no one asked for — was swallowed: no event, no error, a round put “finished”. | round reset |
+| **An end of turn on `length` started twice.** The narration was decided on “≠ `stop`”, while `tool-calls` is the only ending that CONTINUES. The text started in `thinking` (2,000) then in `summary` (8,000) — and the thread duplicates by equality of text, which two ceilings never return. | the good predicate |
+| **`update_plan` made a bubble.** CONTROL Tool: the house loop did not emit any events. At opencode it goes through binary, so the flow publishes its parts — the checklist was told twice. | a filter |
+| **`webfetch` left without its URL.** No opposite house, therefore no case in `toolArgSummary`: the event left at `{}`. A web reading tour that is unreadable on replay. | a `case` |
+| **The reason for a local refusal no longer came up.** `forbidden_command` on a `run_background` died in the bridge: refusals ceased to be measurable on `agent_run_events`. | a reminder |
 
-Et un quinzième, hors VM : le garde-fou d'installation de
-[create-agent-snapshot.ts](../scripts/create-agent-snapshot.ts) ne pouvait pas se
-déclencher — `npm i … | tail -5` rend le code de sortie de `tail`, qui réussit
-toujours. Un registre en panne se serait fait prendre pour un binaire de mauvaise
-version dix lignes plus bas.
+And a fifteenth, excluding VM: the installation safeguard of
+[create-agent-snapshot.ts](../scripts/create-agent-snapshot.ts) could not be
+trigger — `npm i … | tail -5` returns the exit code of `tail`, which succeeds
+always. A broken register would have been mistaken for a bad binary.
+version ten lines below.
 
-**Ce que la relecture n'a PAS trouvé, et qui vaut d'être dit** : les seize
-soupçons réfutés portaient presque tous sur les endroits les plus commentés du
-chantier — le proxy, les permissions, l'appariement des générations, les images.
-Là où le code explique pourquoi il fait ce qu'il fait, il avait raison. Les
-quatorze vrais défauts vivent tous à une FRONTIÈRE : entre deux modules, entre le
-plan et la VM, entre une écriture et sa lecture.
+**What the rereading did NOT find, and which is worth saying**: the sixteen
+refuted suspicions almost all focused on the most commented places in the
+construction site — proxy, permissions, generation matching, images.
+Where the code explains why it does what it does, it was right. The
+fourteen real faults all live at a BORDER: between two modules, between the
+plan and the VM, between a write and its read.
 
-### 2.27 La deuxième relecture : sept défauts, tous sur un chemin d'EXCEPTION
+### 2.27 The second rereading: seven defects, all on an EXCEPTIONAL path
 
-Passe du 2026-08-13, menée par six lecteurs indépendants suivis d'une réfutation
-contradictoire de chaque soupçon : **sept défauts confirmés et corrigés**, six
-réfutés. Aucune tâche du plan ne repart en « à faire » — comme la fois d'avant,
-ce qui manquait était un maillon, jamais la brique.
+Pass dated 2026-08-13, conducted by six independent readers followed by a rebuttal
+contradictory of each suspicion: **seven defects confirmed and corrected**, six
+refuted. No task in the plan goes back to “to be done” — like the time before,
+what was missing was a link, never the brick.
 
-**Le motif, cette fois, n'est plus « une écriture sans lecture » mais « le chemin
-NORMAL est traité, l'autre non ».** Chaque défaut se lit de la même manière : ce
-qui devait arriver à la fin d'un round arrivait bien à la fin d'un round *réussi*,
-et nulle part ailleurs.
+**The motif, this time, is no longer “writing without reading” but “the path
+NORMAL is treated, the other is not”.** Each defect is read in the same way: this
+which should arrive at the end of a round did indeed arrive at the end of a *successful* round,
+and nowhere else.
 
-| Le défaut | Ce qui manquait |
+| The default | What was missing |
 | --- | --- |
-| **Un tour mort en vol ne facturait rien.** `recordOrphans` — le seul écrivain de la dépense d'un round qu'opencode ne facture pas (§2.23) — vivait après la boucle, donc uniquement sur le chemin heureux. Or la SEULE façon d'apprendre que le serveur opencode est mort est son flux `/event` qui se rompt : l'exception sautait la reprise, le `finally` fermait le proxy derrière, et le rapport annonçait `costUsd: 0` sur un round que le fournisseur avait facturé. Le trou de MIN-216, rouvert sur le chemin où il est le plus probable. | le `catch` |
-| **Le texte d'un round coupé se recollait devant le suivant.** Le sac de texte n'était vidé qu'à la fin d'un round FACTURÉ ; un round avorté n'en a pas. Sur un steering (`abort` puis nouveau prompt sur la même session), le fragment écrit avant la coupure repartait en tête du direct, de la réponse du tour, du `summary` **et du message de commit**. | le vidage sur `MessageAbortedError` |
-| **`sessionError` ne se remettait jamais à zéro.** Une erreur de session non-coupure ne SORT PAS de la boucle. Reposté par un message de steering, le tour finissait bien, poussait — et se rangeait quand même `error`, sans son `summary`, donc rendu « interrompu » par le fil. | la remise à zéro au repost |
-| **Le compteur d'outils du direct était cumulatif, filles comprises.** Le fil lit `tools === 0` comme « ce texte est peut-être la réponse » (`isLiveAnswer`) ; la boucle maison envoie l'accumulateur INTERNE au round. Cumulé, il ne retombait jamais : dès qu'un tour avait appelé un tool une fois, toutes ses réponses suivantes s'affichaient comme de la narration. | la remise à zéro au round |
-| **Les descriptions de tools citaient les tools de l'ANCIEN harnais.** `agentToolsFor` est la seule source, et son texte dit « use run_command for those », « exactly like edit_file ». Servi tel quel, `run_background` envoyait le modèle appeler un tool qu'opencode ne sert pas — pendant que son prompt système, lui, citait `bash` (`OPENCODE_TOOL_NAMES`). Deux vérités dans le même contexte. | la table de noms, à la génération |
-| **Une RELECTURE recevait la délégation.** `primaryTools` sert `task` dès que `subagents.maxParallel > 0`, et le job posait ce plafond sans regarder `writesToRepo` — les deux prompts, eux, le conditionnaient déjà. Un run de relecture pouvait donc ouvrir des filles qui ÉDITENT le dépôt. | la même condition sur le job |
-| **Suppressions et fichiers neufs faits au shell ne déclenchaient aucun contrôle.** `probeRepoTouched` (§2.26) ouvrait la porte mais remplissait `editedPaths` avec `turnDiffStat.files`, qui EXCLUT les suppressions et ne compte les fichiers neufs qu'en nombre : un tour qui ne faisait que `rm lib/x.ts` livrait sans un type-check, alors que c'est le changement qui casse le typage ailleurs. Et rien ne PÉRIMAIT la vérification du modèle (`noteVerificationStale` n'a qu'un appelant, la permission `edit`) : un `npm test` vert d'avant le `rm` faisait taire la porte. La boucle maison faisait les deux depuis `delete_file`. | `turnTouchedPaths`, et la péremption |
+| **A dead turn in flight charged nothing.** `recordOrphans` — the only writer of a round's expense that opencode does not charge (§2.23) — lived after the loop, so only on the happy path. But the ONLY way to learn that the opencode server is dead is its `/event` flow which breaks: the exception skipped the restart, the `finally` closed the proxy behind, and the report announced `costUsd: 0` on a round that the provider had billed for. The hole of MIN-216, reopened on the path where it is most likely. | the `catch` |
+| **The text of a cut round was glued back together in front of the next one.** The text bag was only emptied at the end of a BILLED round; an aborted round does not. On a steering (`abort` then new prompt on the same session), the fragment written before the cut went back to the top of the live, the turn response, the `summary` **and the commit message**. | the dump on `MessageAbortedError` |
+| **`sessionError` never reset.** A non-cutting session error does NOT exit the loop. Reposted by a message from steering, the tour ended well, pushed - and still parked `error`, without its `summary`, therefore made “interrupted” by the wire. | reset on repost |
+| **The live's tool counter was cumulative, including girls.** The thread reads `tools === 0` as "this text may be the answer" (`isLiveAnswer`); the home loop sends the INTERNAL accumulator to the round. Cumulatively, it never fell: as soon as a turn had called a tool once, all its subsequent responses were displayed as narration. | round reset |
+| **The tool descriptions cited the OLD harness tools.** `agentToolsFor` is the only source, and its text says "use run_command for those", "exactly like edit_file". Served as is, `run_background` sent the model to call a tool that opencode does not serve — while its system prompt cited `bash` (`OPENCODE_TOOL_NAMES`). Two truths in the same context. | the name table, at generation |
+| **A REVIEW received the delegation.** `primaryTools` serves `task` as soon as `subagents.maxParallel > 0`, and the job set this ceiling without looking at `writesToRepo` — the two prompts already conditioned it. A proofreading run could therefore open girls who EDIT the repository. | the same condition on the job |
+| **Deletions and new files made in the shell did not trigger any checks.** `probeRepoTouched` (§2.26) opened the door but filled `editedPaths` with `turnDiffStat.files`, which EXCLUDES deletions and only counts new files in number: a trick that only did `rm lib/x.ts` deliver without one type-check, while it is the change that breaks the typing elsewhere. And nothing PERMITTED the model check (`noteVerificationStale` has only one caller, the `edit` permission): a green `npm test` before the `rm` silenced the door. The home loop did both since `delete_file`. | `turnTouchedPaths`, and expiration |
 
-**Ce qui a été réfuté**, et vaut d'être noté pour ne pas y revenir : le flux `/event`
-souscrit après le premier prompt (mesuré : aucune frame perdue), le steering drainé
-sur un `prompt_async` en échec (le journal est rejoué avant), `recordOrphans` sur
-un fournisseur non-OpenRouter, le plafond de temps du `bash` (120 s **par défaut**,
-que le modèle peut monter à 600 s — l'inverse d'un plafond perdu), et le plafond
-d'images par tour (`MAX_IMAGES_PER_TURN`) : le message qu'opencode fabrique d'une
-pièce jointe n'est PAS persisté en session (§2.22), donc il ne repart pas à chaque
-round et n'entre pas dans le journal ; il reste un écart de comportement à mesurer
-pendant la semaine d'observation, pas un défaut avec une sortie fausse.
+**What has been refuted**, and is worth noting so as not to return to it: the `/event` flow
+subscribed after the first prompt (measured: no frame lost), the steering drained
+on a failed `prompt_async` (the log is replayed before), `recordOrphans` on
+a non-OpenRouter provider, the time limit of `bash` (120 s **by default**,
+that the model can go up to 600 s — the opposite of a lost ceiling), and the ceiling
+of images per round (`MAX_IMAGES_PER_TURN`): the message that opencode produces of a
+attachment is NOT persisted in session (§2.22), so it does not restart each time
+round and does not enter the log; there remains a behavioral gap to be measured
+during the week of observation, not one fault with a false output.
 
-### 2.28 Un octet nul, et le tour se fige — l'incident du 2026-08-12 (23 h)
+### 2.28 A null byte, and the round freezes — the incident of 2026-08-12 (11 p.m.)
 
-Deux symptômes rapportés le même soir, un seul défaut dessous, et il n'est pas
-dans le superviseur : **il est dans ce que Postgres accepte**.
+Two symptoms reported the same evening, only one defect underneath, and it is not
+in the supervisor: **it is in what Postgres accepts**.
 
-Ce qui se voit : un message de steering envoyé pendant que l'agent répond coupe sa
-réponse **et ne le relance pas** — comme un « Stop ». Le tour reste « en cours »,
-figé sur le même tool pendant un quart d'heure, la microVM tourne toujours, et le
-message a disparu de la conversation au rechargement. Puis, quelques minutes plus
-tard, la session se range toute seule avec « le processus de ce tour s'est arrêté
-avant d'avoir fini ».
+What is visible: a steering message sent while the agent is responding cuts off
+response **and don't restart it** — like a “Stop”. The tour remains “in progress”,
+frozen on the same tool for a quarter of an hour, the microVM is still running, and the
+message disappeared from the conversation on reload. Then, a few more minutes
+late, the session clears itself with "the process of this round has stopped
+before I finish.”
 
-Ce qui s'est passé, lu dans les logs de production (runs `66023558`, `a8051d06`) :
+What happened, read in the production logs (runs `66023558`, `a8051d06`):
 
 ```
 [agent-runs] stampRun 66023558 → (fields) failed: unsupported Unicode escape sequence   PUT /checkpoint → 409
 [agent-runs] stampRun 66023558 → completed failed: unsupported Unicode escape sequence  POST /rest → 200
 ```
 
-`\u0000` ne se stocke NI en `text` NI en `jsonb` : Postgres refuse la ligne
-entière. Et ce que nous écrivons vient d'un modèle et de son shell — la sortie
-d'une commande qui touche un binaire, un log tronqué au milieu d'un caractère, le
-journal d'événements d'opencode qui les transporte. **Un octet, et la chaîne
-entière tombe, dans cet ordre :**
+`\u0000` is stored NEITHER in `text` NOR in `jsonb`: Postgres refuses the line
+whole. And what we write comes from a model and its shell — the output
+of a command that affects a binary, a log truncated in the middle of a character, the
+opencode event log that carries them. **A byte, and the string
+whole falls, in this order:**
 
-1. la sauvegarde périodique est refusée ⇒ **le battement de cœur s'arrête** ;
-2. le plan de contrôle rend **409**, et le superviseur lit un 409 comme « le run a
-   été conclu ailleurs » : il coupe le tour et rend la main. Le steering n'était
-   pour rien dans la coupure — il tombait au même moment ;
-3. le rapport de fin de tour ne s'écrit pas non plus, et `landVmTurn` avale
-   l'échec : le run **reste `running`** alors que la VM meurt derrière ;
-4. le chien de garde le constate trois minutes plus tard — d'où la phrase sur le
-   processus arrêté, qui décrivait une conséquence, pas la cause.
+1. periodic backup is refused ⇒ **the heartbeat stops**;
+2. the control plan renders **409**, and the supervisor reads a 409 as "run has
+   been concluded elsewhere”: he cuts the trick and returns the hand. The steering was not
+   for nothing in the cut - he fell at the same moment;
+3. the end of turn report is not written either, and `landVmTurn` swallows
+   failure: the run **remains `running`** while the VM dies behind;
+4. the guard dog notices it three minutes later — hence the phrase about the
+   stopped process, which described a consequence, not the cause.
 
-Trois correctifs, un par maillon, et le premier suffirait à fermer le cas connu :
+Three fixes, one per link, and the first would be enough to close the known case:
 
-- **`stripUnstorable`** ([runs.ts](../lib/server/agent/runs.ts)) retire l'octet nul
-  et les demi-caractères isolés de tout ce qui part en base — `stampRun`,
-  `appendEvent`, `insertRunMessage`. On les retire plutôt que de refuser
-  l'écriture : ils ne valent rien pour personne, et le tour vaut beaucoup.
-- **Une panne d'écriture n'est plus un run conclu** : `stampRunResult` distingue
-  « la garde n'a pas matché » de « la base a refusé », et le plan de contrôle rend
-  **503** sur le second — le client retente, le tour continue. C'est ce qui
-  transformait n'importe quel hoquet de base en mort d'un tour vivant.
-- **La mise au repos aboutit** : si le checkpoint est refusé, `vm-rest` refait le
-  stamp **sans lui** et le dit au fil (`checkpointRefused`). Une session repart de
-  son état précédent, au lieu de rester ouverte jusqu'au chien de garde.
+- **`stripUnstorable`** ([runs.ts](../lib/server/agent/runs.ts)) removes the null byte
+  and the isolated half-characters of everything that goes into base — `stampRun`,
+  `appendEvent`, `insertRunMessage`. We withdraw them rather than refuse
+  writing: they are worth nothing to anyone, and the trick is worth a lot.
+- **A write failure is no longer a completed run**: `stampRunResult` distinguishes
+  “the guard did not match” of “the base refused”, and the control plan makes
+  **503** on the second — the client tries again, the round continues. This is what
+  turned any basic hiccup into the death of a living trick.
+- **The quiescence is successful**: if the checkpoint is refused, `vm-rest` does it again
+  stamp **without it** and says it to the thread (`checkpointRefused`). A session starts from
+  its previous state, instead of remaining open until the watchdog.
 
-Et un quatrième, hors chaîne mais du même soir : `insertRunMessage` ne regardait
-pas le résultat de son insert. supabase-js ne lève pas — il rend `{ error }`. La
-route de steering répondait donc `ok` sur un message que **personne n'avait mis en
-file** : bulle optimiste à l'écran, agent qui ne lit rien, message disparu au
-rechargement. Il lève maintenant, et le composer retire sa bulle en le disant.
+And a fourth, off-channel but from the same evening: `insertRunMessage` was not watching
+not the result of its insert. supabase-js does not raise — it returns `{ error }`. The
+the steering route therefore replied `ok` on a message that **no one had posted
+file**: optimistic bubble on the screen, agent who does not read anything, message disappeared
+reloading. It rises now, and the composer removes his bubble while saying it.
 
-### 2.29 Le journal sort de la ligne du run — la mémoire d'une vraie session
+### 2.29 The log leaves the run line — the memory of a real session
 
-Le premier tour long qui réussit (2026-08-13, run `1e8775aa`, 31 minutes, 753
-events, 1,03 $) s'est terminé sur `turnHistoryReset` : **toute la conversation
-perdue**. Le tour suivant, celui qui devait juste ouvrir la pull request, est donc
-reparti du ticket — il a refait un plan, réexploré le dépôt, puis ouvert la PR.
-Vu de l'écran : « il recommence depuis le début ». Et il a lâché son journal une
-seconde fois, au bout de quatre minutes.
+The first successful long run (2026-08-13, run `1e8775aa`, 31 minutes, 753
+events, $1.03) ended on `turnHistoryReset`: **entire conversation
+lost**. The next round, the one that was just supposed to open the pull request, is therefore
+left the ticket — he redid a plan, re-explored the repository, then opened the PR.
+Seen from the screen: “it starts again from the beginning”. And he dropped his newspaper
+second time, after four minutes.
 
-**Ce que pèse vraiment un journal**, mesuré sur le checkpoint d'un tour de deux
-minutes : 226 events, **333 Ko**. Le détail explique tout — un
-`message.part.updated` de tool porte la **sortie complète** du tool (une lecture
-de 260 lignes = 22 Ko), et opencode republie le part à chaque changement d'état
-(`pending`, `running`, `completed`). Le plafond de 3,2 Mo tombe donc **au bout
-d'une quinzaine de lectures de fichiers**. Ce n'était pas un cas limite : c'était
-l'issue NORMALE de tout tour qui travaille.
+**What a newspaper really weighs**, measured at the checkpoint of a tour of two
+minutes: 226 events, **333 KB**. The detail explains everything — a
+`message.part.updated` of tool carries the **full output** of the tool (a read
+of 260 lines = 22 KB), and opencode republishes the part at each change of state
+(`pending`, `running`, `completed`). The 3.2 MB ceiling therefore falls **at the end
+about fifteen file readings**. This was not a borderline case: it was
+the NORMAL outcome of any working trick.
 
-Deux plafonds, et le second ne se voyait pas :
+Two ceilings, and the second was not visible:
 
-1. le **corps** du plan de contrôle (4,5 Mo côté plateforme, 3,2 chez nous) — un
-   journal append-only se réécrit entier à chaque sauvegarde ;
-2. la **ligne du run**, relue par `getRun` à **chaque appel** du plan de contrôle
-   (un par tool, par event, par ligne de ledger). Un journal de 333 Ko s'y payait
-   des centaines de fois par tour, en pure perte.
+1. the **body** of the control plane (4.5 MB on the platform side, 3.2 with us) — a
+   append-only log rewrites itself integer on each save;
+2. the **run line**, reread by `getRun` at **each call** of the control plan
+   (one per tool, per event, per ledger line). A 333 KB newspaper was paid for there
+   hundreds of times per turn, to no avail.
 
-D'où [`agent_run_journal`](../supabase/migrations/20261214090000_agent_run_journal.sql) :
-le journal s'écrit en **append**, un lot par sauvegarde, et la ligne du run n'en
-garde que le **pointeur** (`{sessionId, seq}`, quelques dizaines d'octets). Le
-superviseur pousse ses incréments (`POST /journal`, découpés à 1,5 Mo pour tenir
-dans un corps — jamais un event à cheval sur deux lots, `/sync/replay` voulant une
-suite contiguë), et la fonction rassemble le tout **une fois par tour** avant de
-le passer à la microVM.
+Hence [`agent_run_journal`](../supabase/migrations/20261214090000_agent_run_journal.sql):
+the log is written in **append**, one batch per backup, and the run line does not
+keeps only the **pointer** (`{sessionId, seq}`, a few dozen bytes). The
+supervisor pushes its increments (`POST /journal`, cut to 1.5 MB to fit
+in a body — never an event straddling two lots, `/sync/replay` wanting one
+contiguous sequence), and the function brings everything together **once per turn** before
+pass it to the microVM.
 
-Trois conséquences, dont une qui n'était pas le but : la mémoire d'une session
-n'a plus de plafond de taille, le plan de contrôle cesse de transporter le journal
-à chaque appel de tool, et `turnHistoryReset` n'a plus de raison de se déclencher
-sur ce chemin. Le curseur, lui, **n'avance qu'une fois le lot écrit** : un envoi
-qui échoue fait réexporter la même tranche au passage suivant, plutôt que de
-laisser un trou définitif dans le journal.
-
----
-
-### 2.30 La fenêtre d'observation, relevée en base (2026-08-14)
-
-Premier relevé de la semaine d'observation, sur les **14 runs** de production
-depuis la bascule (2026-08-12 18 h → 2026-08-14 08 h), lus en base par l'API REST
-en clé service. Tous portent `agent_engine = opencode` : il n'y a plus qu'un
-moteur, et c'est bien lui qui joue.
-
-**La traçabilité tient, et elle se vérifie à l'arithmétique.** Pour chacun des
-onze runs sains, `agent_runs.cost_usd` est **exactement** la somme de ses lignes
-de ledger, `agent_code` + `sandbox_compute`, à l'arrondi près (0,038833 =
-0,029027 + 0,009806). Sur les **394 lignes** `agent_code` de la fenêtre :
-
-| Ce qu'on voulait ne pas perdre | Relevé |
-| --- | --- |
-| Coût réel, pas estimé | `estimated: false` sur **394/394** |
-| Réconciliation fournisseur | `generation_id` présent sur **394/394** |
-| Imputation à un humain | `user_id` présent sur **394/394** |
-| Deux modèles distincts facturés chacun à son prix | oui (`gpt-5.6-luna`, `deepseek-v4-flash`) |
-
-Total de la fenêtre : **1,42 $** sur la ligne des runs, **1,40 $** au ledger
-modèle, l'écart étant le compute de microVM, lui aussi au ledger.
-
-**Le seul défaut trouvé, et il est réel.** Les trois runs dont le process est mort
-(« The agent process stopped unexpectedly ») portent `cost_usd = 0` sur leur
-ligne, alors que le ledger porte leur dépense : **0,159 $** de modèle, **0,190 $**
-compute compris, invisibles sur la ligne. Les trois lignes ont été recollées à la
-main le 2026-08-14, au montant du ledger. La cause
-est dans `reapDeadVmRuns` ([drain.ts](../lib/server/agent/drain.ts)) : le chien de
-garde facturait bien le compute de la microVM, mais ne recollait jamais la
-**colonne** au ledger — ce que `landVmTurn` fait pourtant sur le chemin sain
-(`Math.max` du rapport de fin de tour). Ni la facture ni les plafonds n'étaient
-touchés (`finance.ts` lit le ledger, `control-plane.ts` et `execute.ts` prennent
-déjà le MAX des deux) : ce qui mentait, c'est **ce qu'un humain relit après un
-incident**. Le trou de MIN-216, sur le dernier chemin qui ne l'avait pas rebouché.
-
-Corrigé dans le même geste, avec ses trois tests
-([vm-watchdog.test.ts](../lib/server/agent/vm-watchdog.test.ts)) : le MAX, le
-non-recul quand le ledger est en retard, et l'**ordre** — la relecture du ledger
-vient APRÈS `recordSandboxUsage`, sans quoi la somme relue n'emporterait pas la
-ligne de compute qu'on vient d'écrire. Ce défaut n'est pas propre à opencode : le
-chien de garde est commun aux deux moteurs, la bascule l'a seulement rendu
-fréquent.
-
-**Deux erreurs de la fenêtre qui ne sont pas des défauts de harnais** : un
-`reasoning_effort` en double (run `c7465b6b`, 20 h 17), corrigé le soir même par
-`patchCompletionBody` ; et « No endpoints available matching your guardrail
-restrictions » sur `deepseek-v4-pro` — une politique de fournisseur OpenRouter,
-hors de notre code.
-
-**Ce que la fenêtre ne dit pas encore.** Elle a un jour et demi, pas une semaine,
-et les trois processus morts sont tous ANTÉRIEURS aux correctifs de §2.28 et
-§2.29 : les quatre runs du 2026-08-14 sont propres de bout en bout. C'est
-encourageant, ce n'est pas la preuve — il faut la suite de la semaine.
-`AGENT_SANDBOX_SNAPSHOT_ID` est en place sur Vercel (Production et Preview).
+Three consequences, one of which was not the goal: the memory of a session
+no longer has a size cap, the control plane stops carrying the log
+at each tool call, and `turnHistoryReset` no longer has a reason to trigger
+on this path. The cursor **only advances once the batch has been written**: a sending
+which fails causes the same slice to be re-exported on the next pass, rather than
+leave a permanent hole in the newspaper.
 
 ---
 
-### 2.31 La suppression de la boucle maison (2026-08-14)
+### 2.30 The observation window, recorded at base (2026-08-14)
 
-Décidée par Clément **sans attendre la fin de la semaine d'observation** : les
-quatre runs du 14 sont propres, et une boucle qu'on garde « au cas où » est une
-boucle qu'il faut continuer de faire compiler.
+First reading of the observation week, on the **14 production runs**
+from the switch (2026-08-12 6 p.m. → 2026-08-14 8 a.m.), read in base by the REST API
+in service key. All carry `agent_engine = opencode`: there is only one left
+engine, and it is he who plays the role.
 
-**Ce qui est parti** — 83 fichiers touchés, **18 100 lignes en moins** :
+**Traceability holds, and it is verified by arithmetic.** For each of the
+eleven healthy runs, `agent_runs.cost_usd` is **exactly** the sum of its rows
+of ledger, `agent_code` + `sandbox_compute`, to the nearest rounding (0.038833 =
+0.029027 + 0.009806). On the **394 lines** `agent_code` of the window:
 
-| Ce qui disparaît | Pourquoi |
+| What we wanted not to lose | Statement |
 | --- | --- |
-| `agent-loop.ts` (2 305 l.), `tool-loop.ts`, `compact.ts`, `checkpoint-fit.ts` | la boucle, sa détection de cycles, sa compaction, son rabotage de checkpoint |
-| `vm/turn.ts` (+ son test) | la boucle jouée DANS la microVM ; `vm/main.ts` n'aiguille plus |
-| `subagent.ts` (1 066 l.), `subagent-templates.ts` | le registre des filles — opencode ouvre ses sessions lui-même (§2.14) |
-| `exec-tool.ts` (1 053 l.), `patch.ts` | l'exécuteur des 25 tools et l'édition par enveloppe : opencode rend les siens |
-| les 15 tools génériques de `tools.ts`, `subagentToolsFor` | annoncés à personne — le pont ne sert que le domaine et le local |
-| `buildAgentSystemPrompt`, `buildSubagentSystemPrompt` (`prompt.ts`) | le prompt de la boucle ; l'ancrage d'opencode garde les fragments |
-| `caching.ts`, `abandoned-spend.ts` | le cache de prompt et l'estimation d'un round coupé : le proxy fait mieux (§2.23) |
-| ~1 100 lignes d'`execute.ts` | la boucle en fonction, ses sous-agents, ses handlers `create_pr`/`web_search` |
+| Actual cost, not estimated | `estimated: false` of **394/394** |
+| Supplier reconciliation | `generation_id` present on **394/394** |
+| Imputation to a human | `user_id` present on **394/394** |
+| Two distinct models, each billed at its own price | yes (`gpt-5.6-luna`, `deepseek-v4-flash`) |
 
-**Ce qui est resté, et ce n'est pas de la nostalgie** : `edit.ts` (le moteur
-d'édition sert aussi `minddy_edit_issue_text`, côté MCP), `prune.ts` /
-`content.ts` (leurs helpers de troncature sont lus par cinq tools de domaine),
-`retry.ts` (le repli de fournisseur, encore joué par `landVmTurn`), et
-`agent-contract.ts` — un module NEUF, où les types que la boucle hébergeait sans
-les posséder ont déménagé : event, ligne d'usage, charge de direct, étape de plan.
+Window total: **$1.42** on the runs line, **$1.40** on the ledger
+model, the difference being the microVM compute, also at the ledger.
 
-**Trois choses trouvées en coupant, et aucune n'était dans le plan :**
+**The only defect found, and it is real.** The three runs whose process died
+(“The agent process stopped unexpectedly”) carry `cost_usd = 0` on their
+line, while the ledger carries their expense: **$0.159** model, **$0.190**
+compute included, invisible on the line. The three lines were glued back together
+hand on 2026-08-14, to the amount of the ledger. The cause
+is in `reapDeadVmRuns` ([drain.ts](../lib/server/agent/drain.ts)): the dog of
+the watchdog charged correctly for the compute of the microVM, but never put the
+**column** to the ledger — what `landVmTurn` does on the healthy path
+(`Math.max` from the end of turn report). Neither the bill nor the ceilings were
+affected (`finance.ts` reads the ledger, `control-plane.ts` and `execute.ts` take
+already the MAX of both): what lied is **what a human rereads after a
+incident**. The MIN-216 hole, on the last path which had not filled it.
 
-1. **Le prompt système de la boucle était construit à chaque tour froid, puis
-   jeté.** `userPromptFromMessages` ne garde que les messages `user` ; le message
-   `system` composé juste au-dessus ne partait nulle part. Il n'a jamais rien
-   coûté au modèle — seulement à nous, à chaque amorce.
-2. **Un run hérité aurait posté sa conversation entière comme prompt.** L'amorce
-   faisait `messages = run.checkpoint.messages` quand le checkpoint en portait ;
-   sous opencode, ce tableau devient le PROMPT du tour. Un vieux run repris aurait
-   relu sa propre conversation comme une consigne qui vient d'arriver. La branche
-   est retirée : un checkpoint de boucle n'est plus reconnu, le tour retombe sur
-   l'amorce froide.
-3. **Et il le DIT.** `priorConversationLost` ajoute une phrase au prompt du tour
-   repris : « les tours précédents ont été joués par l'ancien moteur, tu ne vois
-   pas cet échange ». Écrire un traducteur de format pour des conversations closes
-   depuis le 10 août ne valait pas son code ; le taire aurait donné un agent
-   amnésique sans explication, ce qui est le défaut que ce chantier a passé son
-   temps à corriger.
+Corrected in the same gesture, with its three tests
+([vm-watchdog.test.ts](../lib/server/agent/vm-watchdog.test.ts)): the MAX, the
+no backtracking when the ledger is late, and the **order** — rereading the ledger
+comes AFTER `recordSandboxUsage`, otherwise the amount read would not carry the
+compute line that we have just written. This defect is not specific to opencode: the
+watchdog is common to both motors, the rocker only made it
+frequent.
 
-**Une régression antérieure, constatée au passage** : `collectTouchedInstructions`
-(MIN-115, les `AGENTS.md` de sous-dossier servis à la première lecture dedans)
-**n'a plus aucun appelant** depuis la bascule — c'était l'exec-tool qui les
-collait au résultat, et opencode lit les fichiers lui-même. Le module est gardé,
-sa politique est intacte ; ce qui manque est le câblage sur le pont. Ce n'est pas
-la suppression qui l'a causé, elle l'a rendu visible.
+**Two window errors that are not harness faults**: one
+`reasoning_effort` in duplicate (run `c7465b6b`, 8:17 p.m.), corrected the same evening by
+`patchCompletionBody` ; and “No endpoints available matching your guardrail
+restrictions” on `deepseek-v4-pro` — an OpenRouter provider policy,
+outside of our code.
 
-**Ce que les tests deviennent.** 4 559 cas au vert, contre 4 973 avant. Les cas
-partis testaient la boucle (son streaming, ses reprises de filles, ses tools
-d'édition) ; ceux qui gardaient une doctrine encore vivante ont été REPOINTÉS
-plutôt que supprimés — la porte de livraison garde ses 32 cas purs,
-`repo-instructions-source.test.ts` (MIN-328, le prompt d'un fork) vise désormais
-`repo-instructions.ts`, `run-spend.test.ts` vise `landVmTurn`, et
-`platform-tool-anchors.test.ts` (MIN-326) confronte l'annonce à la table sans
-passer par l'exécuteur. `AGENT_ENGINES` garde ses deux valeurs — des centaines de
-lignes de runs portent `loop` — mais un `LIVE_AGENT_ENGINES` les distingue de ce
-qui peut encore JOUER : c'est sur celui-là que compte le garde-fou des secrets.
+**What the window doesn't say yet.** She's a day and a half old, not a week old,
+and the three dead processes are all BEFORE the fixes in §2.28 and
+§2.29: the four runs of 2026-08-14 are clean from start to finish. It's
+encouraging, this is not the proof — we need the rest of the week.
+`AGENT_SANDBOX_SNAPSHOT_ID` is in place on Vercel (Production and Preview).
 
-### 2.30 Le contenu d'un dépôt exécutait du code — les deux écoutilles (MIN-360)
+---
 
-Opencode **auto-découvre** depuis le dépôt, et minddy ne posait aucune des deux
-variables qui l'en empêchent. Dans une microVM jetable, sans enjeu. En mode dépôt
-courant sur la machine de l'utilisateur, c'est **de l'exécution de code arbitraire
-depuis le contenu d'un dépôt** — un vecteur d'injection qui contourne entièrement
-le modèle de permissions, puisqu'il s'exécute avant lui.
+### 2.31 Removing the home loop (2026-08-14)
 
-Relevé **dans le binaire** (1.18.16, `opencode-darwin-arm64`), pas déduit d'une doc :
+Decided by Clément **without waiting for the end of the observation week**: the
+four runs of 14 are clean, and a loop that we keep “just in case” is a
+loop that must continue to be compiled.
 
-| Variable | Ce qu'elle coupe, tel que le code le dit |
+**What's gone** — 83 files affected, **18,100 lines less**:
+
+| What disappears | Why |
 | --- | --- |
-| `OPENCODE_PURE=1` | Le chargeur de plugins **serveur** fait `let A = flags.pure ? [] : config.plugin_origins ?? []`. Plus aucun plugin externe : ni ceux déclarés dans un `opencode.json` du dépôt, ni les `*.ts` ramassés sous `.opencode/plugin(s)/`. Nos plugins à nous ne sont pas concernés — il n'y en a aucun (§2.15). |
-| `OPENCODE_DISABLE_PROJECT_CONFIG=1` | `ConfigPaths.directories` cesse de remonter chercher `.opencode/` depuis le dépôt, `ConfigPaths.files` de remonter chercher `opencode.json(c)`. Ça ferme les **tools** du dépôt (des `*.ts` exécutés dès que le modèle les appelle) et ses **serveurs MCP** (un process lancé au démarrage de la session). |
+| `agent-loop.ts` (2,305 l.), `tool-loop.ts`, `compact.ts`, `checkpoint-fit.ts` | the loop, its cycle detection, its compaction, its checkpoint planing |
+| `vm/turn.ts` (+ its test) | the loop played IN the microVM; `vm/main.ts` no longer needles |
+| `subagent.ts` (1,066 l.), `subagent-templates.ts` | the girls' registry — opencode opens its sessions itself (§2.14) |
+| `exec-tool.ts` (1,053 l.), `patch.ts` | the executor of the 25 tools and editing by envelope: opencode makes its own |
+| the 15 generic tools of `tools.ts`, `subagentToolsFor` | announced to no one — the bridge only serves the domain and the premises |
+| `buildAgentSystemPrompt`, `buildSubagentSystemPrompt` (`prompt.ts`) | the loop prompt; opencode anchor keeps fragments |
+| `caching.ts`, `abandoned-spend.ts` | the prompt cache and the estimation of a cut round: the proxy does better (§2.23) |
+| ~1,100 lines of `execute.ts` | the operating loop, its subagents, its handlers `create_pr`/`web_search` |
 
-**Pourquoi notre config ne suffisait pas**, alors que l'ordre de fusion nous est
-favorable : `OPENCODE_CONFIG_CONTENT` est bien appliqué **après** les
-`opencode.json` du dépôt, donc notre ACL gagne sur ce qui se REMPLACE. Mais
-`plugin`, `mcp` et les tools d'un `.opencode/` **s'ajoutent** — il n'y a rien à
-gagner sur une liste qui se concatène.
+**What remained, and it's not nostalgia**: `edit.ts` (the engine
+edition also serves `minddy_edit_issue_text`, MCP side), `prune.ts` /
+`content.ts` (their truncation helpers are read by five domain tools),
+`retry.ts` (provider fallback, again played by `landVmTurn`), and
+`agent-contract.ts` — a NEW module, where the types that the loop hosted without
+own them have moved: event, usage line, direct load, plan stage.
 
-**Ce que la seconde écoutille emporte au passage, et qu'il fallait rendre :** les
-`AGENTS.md` / `CLAUDE.md` du dépôt, qu'opencode chargeait par la MÊME remontée.
-Ils repassent en `instructions[]`, nommés, racine seulement, sondés par le
-superviseur. Ce qu'on perd — les fichiers de sous-dossiers, qu'opencode collait au
-fil de l'eau — est le prix de la fermeture, et il est écrit dans le code.
-**Notre** dossier de tools, lui, est intact : il vient de `Path.config`
-(`XDG_CONFIG_HOME`), qui reste inclus inconditionnellement.
+**Three things found while cutting, and none were in the plan:**
 
-### 2.31 Ce qui remonte de la machine de l'utilisateur (MIN-361)
+1. **The loop prompt system was built every cold turn, then
+   discarded.** `userPromptFromMessages` only keeps `user` messages; the message
+   `system` composed just above didn't go anywhere. He never has anything
+   cost the model — only us, at each start.
+2. **A legacy run would have posted its entire conversation as a prompt.** The primer
+   did `messages = run.checkpoint.messages` when the checkpoint carried them;
+   under opencode, this table becomes the PROMPT of the round. An old repeat run would have
+   reread his own conversation as an instruction that had just arrived. The branch
+   is removed: a loop checkpoint is no longer recognized, the turn falls on
+   the cold primer.
+3. **And he SAYS it.** `priorConversationLost` adds a sentence to the turn prompt
+   resumed: "the previous rounds were played by the old engine, you don't see
+   not this exchange.” Write a format translator for closed conversations
+   since August 10 was not worth its code; silence would have given an agent
+   amnesiac without explanation, which is the fault that this site has spent its
+   time to correct.
 
-Tout le reste du chantier local raisonne sur ce qui **descend** — le jeton du
-run, la clé du modèle, le token de forge. Ce qui **remonte** est le seul point du
-dossier qui ne se répare pas après coup : ce qui est monté est monté. D'où trois
-décisions, prises avant le lanceur (MIN-293) plutôt que pendant.
+**A previous regression, noted in passing**: `collectTouchedInstructions`
+(MIN-115, subfolder `AGENTS.md` served on first read in)
+**no longer has any callers** since the switch — it was the exec-tool that
+stuck to the result, and opencode reads the files itself. The module is kept,
+its policy is intact; what is missing is the wiring on the bridge. It's not
+the suppression that caused it made it visible.
 
-**1. Un run local n'exporte pas son journal.** `agent_run_journal` porte la
-sortie COMPLÈTE de chaque tool — une lecture de 260 lignes y pèse 22 Ko,
-republiée deux à trois fois —, il est conservé 30 jours et rejoué devant le
-modèle. Sa seule justification écrite est « rendre un tour indépendant de la
-microVM qui l'a précédé », et **elle tombe justement sur une machine** : la base
-SQLite d'opencode vit sous `harnessDir`, donc sous la racine **du run** et non du
-tour, et la session est encore là au tour suivant. On exporterait un service déjà
-rendu au prix du disque de quelqu'un dans la base de production.
+**What the tests are becoming.** 4,559 cases green, compared to 4,973 before. The cases
+parties tested the loop (its streaming, its girl covers, its tools
+publishing); those who kept a doctrine still alive were REPOINTED
+rather than deleted — the delivery door keeps its 32 pure cases,
+`repo-instructions-source.test.ts` (MIN-328, the fork prompt) now aims
+`repo-instructions.ts`, `run-spend.test.ts` aims for `landVmTurn`, and
+`platform-tool-anchors.test.ts` (MIN-326) confronts the announcement at the table without
+go through the executor. `AGENT_ENGINES` keeps its two values — hundreds of
+lines of runs carry `loop` — but a `LIVE_AGENT_ENGINES` distinguishes them from this
+who can still PLAY: it is on this that the safeguard of secrets is counting.
+
+### 2.30 Repository contents were executing code — both hatches (MIN-360)
+
+Opencode **auto-discovers** from the repository, and minddy wasn't asking either
+variables that prevent it. In a disposable microVM, with no issues. In deposit mode
+current on the user's machine, this is **execution of arbitrary code
+from the contents of a repository** — an injection vector that completely bypasses
+the permissions model, since it executes before it.
+
+Found **in binary** (1.18.16, `opencode-darwin-arm64`), not deduced from a doc:
+
+| Varies | What it cuts, as the code says |
+| --- | --- |
+| `OPENCODE_PURE=1` | The **server** plugin loader does `let A = flags.pure ? [] : config.plugin_origins ?? []`. No more external plugins: neither those declared in a `opencode.json` of the repository, nor the `*.ts` collected under `.opencode/plugin(s)/`. Our plugins are not affected — there are none (§2.15). |
+| `OPENCODE_DISABLE_PROJECT_CONFIG=1` | `ConfigPaths.directories` stops fetching `.opencode/` from the repository, `ConfigPaths.files` stops fetching `opencode.json(c)`. This closes the **tools** of the repository (`*.ts` executed as soon as the model calls them) and its **MCP servers** (a process launched at the start of the session). |
+
+**Why our config was not enough**, while the merge order is for us
+favorable: `OPENCODE_CONFIG_CONTENT` is correctly applied **after** the
+`opencode.json` of the repository, so our ACL gains on what REPLACES itself. But
+`plugin`, `mcp` and the tools of a `.opencode/` **are added** — there is nothing to
+win on a list that concatenates.
+
+**What the second hatch takes away, and which had to be returned:** the
+`AGENTS.md` / `CLAUDE.md` of the repository, which opencode loaded by the SAME return.
+They return to `instructions[]`, named, root only, probed by the
+supervisor. What we lose — subfolder files, which opencode stuck to
+thread of water — is the price of the closure, and it is written in the code.
+**Our** tools folder is intact: it comes from `Path.config`
+(`XDG_CONFIG_HOME`), which remains included unconditionally.
+
+### 2.31 What comes back from the user's machine (MIN-361)
+
+All the rest of the local site reasons on what **comes down** — the token of
+run, model key, forge token. What **goes back** is the only point of the
+file that cannot be repaired after the fact: what is assembled is assembled. Hence three
+decisions, made before the launcher (MIN-293) rather than during.
+
+**1. A local run does not export its log.** `agent_run_journal` carries the
+COMPLETE output of each tool — a reading of 260 lines weighs 22 KB,
+republished two to three times — it is kept for 30 days and replayed in front of the
+model. Its only written justification is “to make a turn independent of the
+microVM which preceded it", and **she comes across a machine**: the base
+Opencode SQLite lives under `harnessDir`, therefore under the root **of run** and not of
+round, and the session is still there in the next round. We would export a service already
+rendered at the price of someone's disk in the production base.
 
 | | microVM | machine |
 | --- | --- | --- |
-| Mémoire de la session entre deux tours | `agent_run_journal`, rejoué au démarrage | la base SQLite locale, jamais partie |
-| Sortie complète des tools côté serveur | oui, 30 jours | **rien** |
-| Médecine légale d'un run raté | le journal | les aperçus du fil, et le journal d'opencode resté chez son propriétaire |
+| Memory of the session between two rounds | `agent_run_journal`, replayed at startup | the local SQLite database, never left |
+| Full release of server-side tools | yes, 30 days | **nothing** |
+| Forensics of a failed run | the newspaper | thread previews, and the opencode log left with its owner |
 
-**Ce que ça impose au lanceur** : la racine d'un run local ne se nettoie pas
-entre deux tours. Si elle disparaît quand même, le superviseur le voit (`test -f`
-sur `opencodeDbPath`) et ouvre une session neuve — un `sessionId` de checkpoint
-sans sa base prompterait dans le vide, et casserait la conversation pour de bon.
+**What this imposes on the launcher**: the root of a local run is not cleaned
+between two turns. If it still disappears, the supervisor sees it (`test -f`
+on `opencodeDbPath`) and logs in again — a checkpoint `sessionId`
+without its basis would speed off into the void, and break the conversation for good.
 
-**2. Ce qui monte encore est filtré, pas cru.** `agent_run_events` est persisté
-30 jours et lu par tout membre du projet. Deux gestes à la frontière de sortie,
-là où la substitution des secrets est déjà posée
-([local-uplink.ts](../lib/server/agent/vm/local-uplink.ts)) :
+**2. What still comes up is filtered, not raw.** `agent_run_events` is persisted
+30 days and read by any member of the project. Two gestures at the exit border,
+where the substitution of secrets is already posed
+([local-uplink.ts](../lib/server/agent/vm/local-uplink.ts)):
 
-- **les chemins de la machine sont réécrits** — le dépôt devient relatif, la
-  maison devient `~`. C'est le geste qui traite `/Users/<prénom nom>/…`, lequel
-  n'est pas dans les sorties suspectes mais dans **toutes** : chaque trace de
-  pile, chaque `pwd`, y compris pour un fichier qui est DANS le dépôt. Une règle
-  qui ne regarderait que ce qui sort du dépôt le laisserait passer intégralement.
-  Il passe aussi le mot de la fin, donc le **message de commit** et
+- **the machine paths are rewritten** — the deposit becomes relative, the
+ house becomes `~`. This is the gesture that processes `/Users/<first name last name>/…`, which
+  is not in the suspicious outputs but in **all**: every trace of
+  stack, each `pwd`, including for a file that is IN the repository. A rule
+  who would only look at what comes out of the deposit would let it pass in its entirety.
+  It also passes the final word, therefore the **commit message** and
   `agent_runs.outcome` ;
-- **une sortie qui parle d'ailleurs est retenue, et seulement comptée.** Le
-  déclencheur est l'APPEL autant que la sortie : `cat ~/.ssh/id_rsa` rend du
-  texte qui ne porte aucun chemin, et c'est le cas qui compte. Ce qui reste
-  visible est le **geste** — on doit pouvoir lire ce que l'agent est allé faire,
-  surtout hors du dossier ; ce qui ne monte pas est le **contenu**.
+- **an output that speaks from elsewhere is retained, and only counted.** The
+  trigger is the CALL as well as the exit: `cat ~/.ssh/id_rsa` makes
+  text which carries no path, and this is the case which counts. What remains
+  visible is the **gesture** — we must be able to read what the agent went to do,
+  especially outside the file; what doesn't rise is the **content**.
 
-« Personnel » veut dire `/Users/x`, `/home/x`, `~`, et les points de montage
-(`/Volumes`, `/mnt`, `/media`). **Pas `/usr`, pas `/opt`, pas `/etc`** — ces
-trois-là sont identiques sur tous les Mac, ils sont dans la moitié des traces de
-pile, et `/etc` apparaît dans le CONTENU des dépôts (un Dockerfile, une conf
-nginx). Les y inclure ferait retenir des lectures parfaitement ordinaires, et une
-garde qui vide le fil de ses sorties honnêtes ne reste pas en place. Le résidu
-est donc nommé plutôt que masqué : `cat /etc/hosts` par le shell monte, du même
-ordre que le « mur de papier » du §2 de l'audit local.
+“Personal” means `/Users/x`, `/home/x`, `~`, and mount points
+(`/Volumes`, `/mnt`, `/media`). **Not `/usr`, not `/opt`, not `/etc`** — these
+three are identical on all Macs, they are in half of the traces of
+stack, and `/etc` appears in the CONTENT repositories (a Dockerfile, a conf
+nginx). Including them would result in perfectly ordinary readings being remembered, and a
+guard who empties the thread of his honest exits does not stay in place. The residue
+is therefore named rather than hidden: `cat /etc/hosts` by the shell goes up, in the same way
+order as the “paper wall” of §2 of the local audit.
 
-**3. C'est dit littéralement**, dans l'écran qui attache le dossier
-(`Settings.localRepoWarning`) et dans la politique de confidentialité
-(`Privacy.agentText`, `Privacy.retentionAgentDesc`) : ce que l'agent fait sur la
-machine part dans le fil, y reste 30 jours et se lit à plusieurs.
+**3. It's said literally**, in the screen that attaches the folder
+(`Settings.localRepoWarning`) and in the privacy policy
+(`Privacy.agentText`, `Privacy.retentionAgentDesc`): what the agent does on the
+machine goes into the thread, stays there for 30 days and can be read by several people.
 
-**Ce que ce lot ne ferme pas**, et qui appartient au lot des garde-fous : le
-chemin d'exfiltration le plus court n'est pas `curl`, c'est `git add -A` → commit
-→ push → pull request. C'est le scan de secrets avant push
-([secret-scan.ts](../lib/server/agent/secret-scan.ts), MIN-360) qui le garde ; ce
-ticket-ci ne portait que sur ce qu'on **stocke**.
+**What this lot does not close**, and which belongs to the lot of safeguards: the
+shortest exfiltration path is not `curl`, it's `git add -A` → commit
+→ push → pull request. This is the scanning of secrets before push
+([secret-scan.ts](../lib/server/agent/secret-scan.ts), MIN-360) which keeps it; this
+This ticket only related to what we **store**.
 
-### 2.32 Les permissions, figées en sondes — et quatre mesures de plus (MIN-362)
+### 2.32 Permissions, frozen in probes — and four more measures (MIN-362)
 
-L'audit local du 2026-08-14 avait levé ses dix-huit inconnues avec des sondes
-**jetables**, consignées dans un `.md`. Elles sont maintenant exécutables, et
-elles se relancent au prochain bump d'`OPENCODE_VERSION` :
+The local audit of 2026-08-14 had revealed its eighteen unknowns with probes
+**disposable**, recorded in a `.md`. They are now executable, and
+they restart at the next bump of `OPENCODE_VERSION`:
 
-| Sonde | Ce qu'elle garde | Coût |
+| Probe | What she keeps | Cost |
 | --- | --- | --- |
-| [opencode-permissions.probe.test.ts](../lib/server/agent/vm/opencode-permissions.probe.test.ts) (`MDY_OPENCODE_PERMS_PROBE=1`) | l'ordre des règles, le motif d'un « toujours », la cascade de refus, la grammaire des motifs, le jeu de tools, le ruleset de session, le magasin V2, et les 30 commandes de shell | ~2 min, **aucun modèle** |
-| [opencode-wait.probe.test.ts](../lib/server/agent/vm/opencode-wait.probe.test.ts) (`MDY_OPENCODE_WAIT_PROBE=1`) | l'absence de timeout, la mort du process pendant une attente, la question qui ne termine pas le tour, et — sous `MDY_OPENCODE_WAIT_LIVE=1` — la même attente avec un **vrai** fournisseur | ~50 s, +2 min et ~0,003 $ pour le cas live |
-| [worktree-hooks.git.test.ts](../lib/server/agent/worktree-hooks.git.test.ts) | `core.hooksPath` du dépôt principal **s'applique** au commit d'un worktree ; notre fin de tour, elle, est de la plomberie | ordinaire, dans `npm test` |
+| [opencode-permissions.probe.test.ts](../lib/server/agent/vm/opencode-permissions.probe.test.ts) (`MDY_OPENCODE_PERMS_PROBE=1`) | the order of the rules, the pattern of an “always”, the refusal cascade, the grammar of the patterns, the toolset, the session ruleset, the V2 store, and the 30 shell commands | ~2 min, **no model** |
+| [opencode-wait.probe.test.ts](../lib/server/agent/vm/opencode-wait.probe.test.ts) (`MDY_OPENCODE_WAIT_PROBE=1`) | the absence of timeout, the death of the process during a wait, the question which does not end the round, and — under `MDY_OPENCODE_WAIT_LIVE=1` — the same wait with a **real** provider | ~50 s, +2 min and ~$0.003 for the live case |
+| [worktree-hooks.git.test.ts](../lib/server/agent/worktree-hooks.git.test.ts) | `core.hooksPath` of the main repository **applies** to the commit of a worktree; our end of the tour is plumbing | ordinary, in `npm test` |
 
-Le décor est partagé : [opencode-probe-rig.ts](../lib/server/agent/vm/opencode-probe-rig.ts),
-un faux fournisseur OpenAI-compatible qui **scripte** les appels de tool — c'est
-ce qui rend la mesure déterministe et gratuite.
+The decor is shared: [opencode-probe-rig.ts](../lib/server/agent/vm/opencode-probe-rig.ts),
+a fake OpenAI-compatible provider that **scripts** tool calls — it's
+which makes the measurement deterministic and free.
 
-**Ce que ces sondes ont ajouté à l'audit**, et qui change des lignes de code :
+**What these probes added to the audit**, and which changes lines of code:
 
-1. **La grammaire des motifs n'est pas la même selon la permission.** `edit`
-   matche des chemins **relatifs au dépôt**, sans expansion de `~` ;
-   `external_directory` matche des dossiers **absolus**, avec `~` expansé. Le
-   corollaire est dur : `permission.edit = {"~/.ssh/*": "deny"}` — la façon
-   dont n'importe qui écrirait la protection — **n'empêche rien et ne demande
-   rien**. Écrit `"../.ssh/*"`, le même refus mord. Une ACL de chemins pour le
-   run local doit donc se construire en relatif, ou ne pas se construire.
-2. **Le catalogue REST n'est pas celui du modèle.** Un `deny` nu retire bien le
-   tool de ce qui est **offert au modèle** (mesuré dans le corps de requête du
-   fournisseur), mais `/experimental/tool` continue de le lister. La mesure de
-   l'audit était juste ; l'endroit où la lire ne l'était pas.
-3. **Un ruleset de session en `action: "allow"` est une vraie ACL** (inconnue du
-   §9 de l'audit) : il lève l'`ask` de la config sans amputer le jeu de tools —
-   là où le `deny` de session, lui, ampute. C'est la seule forme d'autorisation
-   par session qui ne coûte pas un tool.
-4. **Le système V2 n'est branché sur rien** : ni `/api/session/:id/permission`,
-   ni `/api/permission/request`, ni `/api/permission/saved` ne voient passer
-   quoi que ce soit — même après un « toujours ». La seule persistance native
-   offerte reste donc inutilisable en 1.18.16.
-5. **Une attente longue survit avec un vrai fournisseur** : 120 s de demande
-   pendante sur un round Haiku via le proxy, et le tour repart quand on répond.
-   Le faux fournisseur ne pouvait pas le dire — il avait fini son flux avant.
-6. **`core.hooksPath` traverse les worktrees.** Le `config` du dépôt principal
-   est partagé (seul `extensions.worktreeConfig` le découpe) : un `git commit`
-   depuis le worktree d'un run exécute le `pre-commit` de l'utilisateur, husky
-   compris. Ce n'est pas notre chemin — `commitTurnAndPush` est de la plomberie
-   — mais tout ce qui commiterait autrement dans un worktree doit le savoir.
+1. **The grammar of the patterns is not the same depending on the permission.** `edit`
+   matches paths **relative to the repository**, without expanding `~`;
+   `external_directory` matches **absolute** folders, with expanded `~`. The
+   corollary is hard: `permission.edit = {"~/.ssh/*": "deny"}` — the way
+   whose protection anyone would write — **does not prevent anything and does not require
+   nothing**. Writes `"../.ssh/*"`, the same refusal bites. A path ACL for the
+   run local must therefore be constructed relative, or not constructed.
+2. **The REST catalog is not that of the model.** A bare `deny` removes the
+   tool of what is **offered to the model** (measured in the request body of the
+   provider), but `/experimental/tool` continues to list it. The measurement of
+   the audit was fair; the place to read it was not.
+3. **A session ruleset in `action: "allow"` is a real ACL** (unknown to the
+   §9 of the audit): it lifts the `ask` from the config without cutting the set of tools —
+   where the session `deny` cuts off. This is the only form of authorization
+   per session which does not cost a tool.
+4. **The V2 system is not connected to anything**: neither `/api/session/:id/permission`,
+   neither `/api/permission/request` nor `/api/permission/saved` sees
+   anything — even after an “always”. The only native persistence
+   offered therefore remains unusable in 1.18.16.
+5. **A long wait survives with a real supplier**: 120 seconds of request
+   pending on a Haiku round via the proxy, and the round restarts when you respond.
+   The fake provider couldn't tell — he had finished his feed before.
+6. **`core.hooksPath` traverses worktrees.** The `config` of the main repository
+   is shared (only `extensions.worktreeConfig` cuts it): a `git commit`
+   from the worktree of a run executes the user's `pre-commit`, husky
+   understood. This is not our way — `commitTurnAndPush` is plumbing
+   — but anything that would otherwise commit to a worktree should know that.
 
 ---
 
-## 3. L'inventaire de parité — nos 51 tools, un par un
+## 3. The parity inventory — our 51 tools, one by one
 
-Source : [tools.ts](../lib/server/agent/tools.ts) (1 801 lignes). 51 tools servis,
-répartis en `CORE_TOOLS` (18), `MINDDY_TOOLS` (22), `PR_TOOLS` (3),
-`PROJECT_PR_TOOLS` (7) et `create_pr`.
+Source: [tools.ts](../lib/server/agent/tools.ts) (1,801 lines). 51 tools served,
+divided into `CORE_TOOLS` (18), `MINDDY_TOOLS` (22), `PR_TOOLS` (3),
+`PROJECT_PR_TOOLS` (7) and `create_pr`.
 
-### 3.1 Rendus par opencode — 14 tools qui cessent d'être notre code
+### 3.1 Rendered by opencode — 14 tools that cease to be our code
 
-| Le nôtre | Chez opencode | Ce qu'il faut savoir |
+| Ours | At opencode | What you need to know |
 | --- | --- | --- |
-| `read_file` | `read` | Même forme : `filePath` absolu, `offset`/`limit`, lignes numérotées, images et PDF en pièce jointe. |
-| `list_dir` | `read` (sur un répertoire) | Pas de tool dédié : c'est `read` qui liste, un nom par ligne, `/` final sur les dossiers. |
+| `read_file` | `read` | Same form: absolute `filePath`, `offset`/`limit`, numbered lines, images and PDF attachment. |
+| `list_dir` | `read` (on a directory) | No dedicated tool: it is `read` which lists, one name per line, the final `/` on the folders. |
 | `glob` | `glob` | `pattern` + `path`. |
-| `grep` | `grep` | `pattern` + `path` + `include`, ripgrep. Nos [grep-pattern.ts](../lib/server/agent/grep-pattern.ts) / [grep-scope.ts](../lib/server/agent/grep-scope.ts) tombent avec. |
-| `edit_file` | `edit` | `oldString`/`newString`/`replaceAll`. Notre cascade de [edit.ts](../lib/server/agent/edit.ts) est **empruntée à opencode** : on rend l'original. |
-| `write_file` | `write` | Même paire, même exclusion mutuelle avec `apply_patch`. |
-| `apply_patch` | `apply_patch` | **Même bascule que la nôtre** sur `gpt-*` (mesuré §2.3). |
-| `run_command` | `bash` | Shell **persistant** (gain), `workdir` (gain), timeout à reporter à 180 s. |
-| `move_file` | `bash` | `mv`. Pas de tool dédié — et le garde-fou reste le nôtre (§3.4). |
-| `delete_file` | `bash` | `rm`, idem. |
-| `spawn_agent` | `task` | **FAIT** (§2.14) : `subagent_type` + `prompt`. Le champ `model` devient le NOM de l'agent (`explore-<slug>`), le plafond de plan est tenu par construction, le plafond de simultané par le verdict de permission. |
-| `agent_status` | `task` (`task_id`) | Reprise d'une fille par son id, notification au retour d'un lancement en fond. |
-| `list_agents` | — | Sans objet : le superviseur voit les sessions filles par `/session/:id/children`. |
-| `ask_user` | `question` | Tool natif + `POST /session/:id/question/:requestID/reply`. Le superviseur y branche notre `ask_user`. |
+| `grep` | `grep` | `pattern` + `path` + `include`, ripgrep. Our [grep-pattern.ts](../lib/server/agent/grep-pattern.ts) / [grep-scope.ts](../lib/server/agent/grep-scope.ts) fall with it. |
+| `edit_file` | `edit` | `oldString`/`newString`/`replaceAll`. Our cascade of [edit.ts](../lib/server/agent/edit.ts) is **borrowed from opencode**: we return the original. |
+| `write_file` | `write` | Same pair, same mutual exclusion with `apply_patch`. |
+| `apply_patch` | `apply_patch` | **Same toggle as ours** on `gpt-*` (measured §2.3). |
+| `run_command` | `bash` | Shell **persistent** (gain), `workdir` (gain), timeout to be postponed to 180 s. |
+| `move_file` | `bash` | `mv`. No dedicated tool — and the safeguard remains ours (§3.4). |
+| `delete_file` | `bash` | `rm`, same. |
+| `spawn_agent` | `task` | **FACT** (§2.14): `subagent_type` + `prompt`. The `model` field becomes the NAME of the agent (`explore-<slug>`), the plan ceiling is held by construction, the simultaneous ceiling by the permission verdict. |
+| `agent_status` | `task` (`task_id`) | Resumption of a girl by her id, notification upon return of a launch in the background. |
+| `list_agents` | — | Not applicable: the supervisor sees child sessions by `/session/:id/children`. |
+| `ask_user` | `question` | Native tool + `POST /session/:id/question/:requestID/reply`. The supervisor plugs our `ask_user` into it. |
 
-### 3.2 Sans vis-à-vis natif — 2 tools à reposer nous-mêmes, **dans la VM**
+### 3.2 Without native counterparts — 2 tools to install ourselves, **in the VM**
 
-Ce sont des tools **locaux** (`.opencode/tool/*.ts`, exécutés dans la microVM) et
-non des tools de domaine : ils ne parlent pas au plan de contrôle.
+These are **local** tools (`.opencode/tool/*.ts`, executed in the microVM) and
+no domain tools: they do not talk to the control plane.
 
-| Le nôtre | Pourquoi il ne tombe pas | Ce qu'on fait |
+| Ours | Why it doesn't fall | What we do |
 | --- | --- | --- |
-| `apply_edits` | Opencode n'a **pas** d'édition par lot (pas de `multiedit` en 1.18.16). | À trancher : le reposer en tool local, ou l'abandonner et laisser le modèle enchaîner des `edit`. La deuxième option coûte des rounds ; la première maintient un tool d'édition, c'est-à-dire exactement ce qu'on voulait arrêter de maintenir. **Défaut proposé : l'abandonner**, et mesurer le surcoût en rounds sur la semaine de bascule. |
-| `run_background` | `bash` n'a pas de mode fond ; le registre `BackgroundJob` d'opencode sert `task`, pas le shell. | **FAIT (§2.21)** : reposé en tool LOCAL, servi par le pont et exécuté par le superviseur. [background.ts](../lib/server/agent/background.ts) ne bouge pas d'une ligne. |
+| `apply_edits` | Opencode has **no** batch editing (no `multiedit` in 1.18.16). | To decide: put it back in local tool, or abandon it and let the model chain `edit`. The second option costs rounds; the first maintains an editing tool, that is to say exactly what we wanted to stop maintaining. **Proposed default: abandon it**, and measure the additional cost in rounds over the changeover week. |
+| `run_background` | `bash` does not have a background mode; opencode's `BackgroundJob` register serves `task`, not the shell. | **DONE (§2.21)**: reposted in LOCAL tool, served by the bridge and executed by the supervisor. [background.ts](../lib/server/agent/background.ts) does not move one line. |
 
-### 3.3 À redéclarer en tools de DOMAINE — 35
+### 3.3 To be redeclared in DOMAIN tools — 35
 
-> **FAIT au lot 1** : [opencode-tools.ts](../lib/server/agent/vm/opencode-tools.ts)
-> les génère, **32 servis sur 32 avec nos schémas** (§2.9). Il n'y a pas de
-> « table unique » à écrire, et c'est mieux ainsi : le générateur appelle
-> `agentToolsFor` et filtre sur les `Set` de routage
-> ([platform-tool-names.ts](../lib/server/agent/platform-tool-names.ts)) — la
-> source EST `tools.ts`, donc rien ne peut diverger. Les 3 manquants au compte de
-> 35 ne sont pas perdus : `ask_user` a un vis-à-vis natif (`question`), et
-> `read_attachment` est un nom d'exécution qui n'est plus servi.
+> **DONE in batch 1**: [opencode-tools.ts](../lib/server/agent/vm/opencode-tools.ts)
+> generates them, **32 served out of 32 with our schemas** (§2.9). There is no
+> “single table” to write, and it’s better this way: the generator calls
+> `agentToolsFor` and filter on routing `Set`
+> ([platform-tool-names.ts](../lib/server/agent/platform-tool-names.ts)) — the
+> source IS `tools.ts`, so nothing can diverge. The 3 missing from the account
+> 35 are not lost: `ask_user` has a native counterpart (`question`), and
+> `read_attachment` is a runtime name that is no longer used.
 
-Chacun devient un `$XDG_CONFIG_HOME/opencode/tool/*.ts` — **hors du dépôt**, sans
-quoi le `git add -A` de fin de tour les commiterait — qui poste au superviseur,
-lequel appelle le plan de contrôle avec l'identité que lui donne l'OIDC du
-firewall (même chemin que
+Each becomes a `$XDG_CONFIG_HOME/opencode/tool/*.ts` — **outside the repository**, without
+what the end-of-turn `git add -A` would commit them — which posts to the supervisor,
+which calls the control plan with the identity given to it by the OIDC of the
+firewall (same path as
 [control-plane-client.ts](../lib/server/agent/vm/control-plane-client.ts)).
 
-> **Le pont est écrit** : [tool-bridge.ts](../lib/server/agent/vm/tool-bridge.ts),
-> un serveur local que le superviseur ouvre AVANT opencode (son adresse entre
-> dans l'environnement) et dont l'URL est `MDY_SUPERVISOR_URL`. Il existe pour
-> ce que **le plan de contrôle ne compte pas** — il facture ce qu'on lui demande,
-> il ne sait pas ce qu'est un tour : le plafond de recherches web, les ancres de
-> relecture déjà posées, la lecture d'images. Deux règles de réponse qui tiennent
-> tout le reste : un tool en ÉCHEC répond **200** avec `{"error": …}` (le modèle
-> doit lire l'erreur et décider — un 5xx lui ferait rendre une phrase de
-> transport qui masque le motif), un **nom inconnu répond 404** (celui-là est
-> notre défaut, il doit se voir).
+> **The bridge is written**: [tool-bridge.ts](../lib/server/agent/vm/tool-bridge.ts),
+> a local server that the supervisor opens BEFORE opencode (its address between
+> in the environment) and whose URL is `MDY_SUPERVISOR_URL`. It exists for
+> what **the control plan does not count** — it charges what is asked of it,
+> he doesn't know what a trick is: the web search ceiling, the anchors of
+> proofreading already asked, reading images. Two response rules that hold
+> everything else: a FAILED tool responds **200** with `{"error": …}` (the model
+> must read the error and decide — a 5xx would make it return a sentence of
+> transport which hides the reason), an **unknown name responds 404** (this one is
+> our fault, it must be seen).
 
-| Famille | Tools |
+| Family | Tools |
 | --- | --- |
 | Tickets (8) | `search_issues`, `read_issue`, `read_feedback`, `read_resource`, `update_issue`, `write_issue_plan`, `append_to_plan`, `edit_issue_text` |
 | Wiki (7) | `list_pages`, `search_pages`, `read_page`, `create_page`, `update_page`, `append_to_page`, `edit_page_text` |
-| Carnet (4) | `read_scratchpad`, `add_scratchpad_tasks`, `update_scratchpad_task`, `set_scratchpad` |
-| Création / automatisation (3) | `create_issue`, `create_routine`, `report_verdict` |
-| PR du projet (7) | `list_pull_requests`, `read_pull_request`, `comment_pull_request`, `comment_pull_request_line`, `reply_pull_request_thread`, `review_pull_request`, `set_pull_request_state` |
-| PR relue (3) | `comment_pr_line`, `comment_pr`, `reply_pr_thread` |
-| Livraison (1) | `create_pr` |
-| Plan de session (1) | `update_plan` — `todowrite` est éteint : notre checklist **est** le plan du ticket, elle se synchronise ([plan-sync.ts](../lib/server/agent/plan-sync.ts)), une todo locale ne se lit nulle part |
-| Web (1) | `web_search` — **FAIT** : le `websearch` intégré est éteint (§2.3, il n'est pas servi sur OpenRouter de toute façon) et le nôtre le remplace. Le plafond du tour (`webSearchMax`, 5 — `MAX_WEB_SEARCHES_PER_TURN`) est tenu par le pont, mère et filles confondues, et le compteur sert de `seq` : deux recherches d'un même tour font deux lignes de ledger, pas une. Une recherche refusée n'atteint jamais le plan de contrôle, donc ne paie pas le forfait Exa (`WEB_SEARCH_USD_PER_CALL`, 0,005 $) |
+| Notebook (4) | `read_scratchpad`, `add_scratchpad_tasks`, `update_scratchpad_task`, `set_scratchpad` |
+| Creation / automation (3) | `create_issue`, `create_routine`, `report_verdict` |
+| Project PR (7) | `list_pull_requests`, `read_pull_request`, `comment_pull_request`, `comment_pull_request_line`, `reply_pull_request_thread`, `review_pull_request`, `set_pull_request_state` |
+| PR reread (3) | `comment_pr_line`, `comment_pr`, `reply_pr_thread` |
+| Delivery (1) | `create_pr` |
+| Session plan (1) | `update_plan` — `todowrite` is off: our checklist **is** the ticket plan, it synchronizes ([plan-sync.ts](../lib/server/agent/plan-sync.ts)), a local todo cannot be read anywhere |
+| Web (1) | `web_search` — **FACT**: the built-in `websearch` is turned off (§2.3, it's not served on OpenRouter anyway) and ours replaces it. The ceiling of the turn (`webSearchMax`, 5 — `MAX_WEB_SEARCHES_PER_TURN`) is held by the bridge, mother and daughters combined, and the counter serves as `seq`: two searches of the same turn make two ledger lines, not one. A rejected search never reaches the control plane, so does not pay the Exa plan (`WEB_SEARCH_USD_PER_CALL`, $0.005) |
 
-Ce qui **ne change pas** avec eux : le ciblage par ancrage (`TARGET_SUFFIX`,
-`withRequiredIssue`), les retraits structurels (`NON_INTERACTIVE_FORBIDDEN_TOOLS`
-pour une routine, la lecture seule d'une relecture, `SUBAGENT_FORBIDDEN_TOOLS`).
-Ils se posent désormais par la **config** (`agent.<id>.tools` + `permission`) au
-lieu d'un `filter` sur un tableau — mais ce sont les mêmes règles, et elles restent
-**structurelles**, pas des phrases de prompt.
+What **does not change** with them: anchor targeting (`TARGET_SUFFIX`,
+`withRequiredIssue`), structural setbacks (`NON_INTERACTIVE_FORBIDDEN_TOOLS`
+for a routine, read-only replay, `SUBAGENT_FORBIDDEN_TOOLS`).
+They are now posed by the **config** (`agent.<id>.tools` + `permission`) at
+instead of a `filter` on a board — but they are the same rules, and they remain
+**structural**, not prompt sentences.
 
-### 3.4 Ce qui n'est pas un tool et ne bouge pas d'une ligne
+### 3.4 What is not a tool and does not move a line
 
-Fonctions pures, testées, sans vis-à-vis chez opencode. Le superviseur les rejoue
-sur `POST /permission/:id/reply` et dans un **plugin** (`tool.execute.before/after`,
+Pure, tested, unobtrusive functions at opencode. The supervisor plays them again
+on `POST /permission/:id/reply` and in a **plugin** (`tool.execute.before/after`,
 `session.idle`).
 
-> **FAIT au lot 2** pour les deux premières : `command-guard` et `repo-path` sont
-> rejoués sur `permission.asked` par
-> [opencode-permissions.ts](../lib/server/agent/vm/opencode-permissions.ts) — un
-> module pur, et **leurs tests n'ont pas bougé d'une ligne** (§2.13).
+> **DONE in batch 2** for the first two: `command-guard` and `repo-path` are
+> replayed on `permission.asked` by
+> [opencode-permissions.ts](../lib/server/agent/vm/opencode-permissions.ts) — a
+> pure module, and **their tests did not move a single line** (§2.13).
 
 [command-guard.ts](../lib/server/agent/command-guard.ts) ·
 [repo-path.ts](../lib/server/agent/repo-path.ts) (`resolveWithin`, `assertNotGit`) ·
@@ -1541,27 +1541,27 @@ sur `POST /permission/:id/reply` et dans un **plugin** (`tool.execute.before/aft
 [quota.ts](../lib/server/agent/quota.ts) ·
 [abandoned-spend.ts](../lib/server/agent/abandoned-spend.ts).
 
-**Leurs tests existants doivent passer inchangés.** C'est le critère : si un de ces
-tests doit bouger, c'est qu'on a déplacé une règle produit sans le vouloir.
+**Their existing tests must pass unchanged.** This is the criterion: if one of these
+tests must move, it is because we moved a product rule without meaning to.
 
-### 3.5 À supprimer, mais seulement après la bascule
+### 3.5 To be deleted, but only after the switch
 
-`agent-loop.ts` (2 407 l.), la moitié générique de `tools.ts`, `tool-loop.ts`,
+`agent-loop.ts` (2,407 l.), the generic half of `tools.ts`, `tool-loop.ts`,
 `prune.ts`, `compact.ts`, `edit.ts`, `patch.ts`, `subagent*.ts`, `retry.ts`,
-`content.ts`, `checkpoint-fit.ts`. **Chaque ligne confirmée par un `grep` avant de
-partir, pas de mémoire** — et pas avant la semaine de bascule du lot 3.
+`content.ts`, `checkpoint-fit.ts`. **Each line confirmed with a `grep` before
+leave, no memory** — and not before the changeover week of batch 3.
 
 ---
 
-## 4. Ce qui reste à trancher
+## 4. What remains to be decided
 
-1. ~~**Le coût au ledger**~~ → **tranché** (§2.5) : écart nul, on branche le `cost`
-   d'opencode, et le proxy du superviseur garde `generation_id` (§2.6).
-2. ~~**Le démarrage à froid dans le Sandbox**~~ → **tranché** (§2.7) : 1,3 s, et
-   l'installation se cuit dans le snapshot pré-chauffé.
-3. ~~**La décision d'y aller**~~ → **prise le 2026-08-12**, cf. l'en-tête.
-4. **`apply_edits`** : abandonné (défaut proposé) ou reposé en tool local ? La seule
-   question encore ouverte, et elle se tranche sur mesure — pendant la semaine de
-   bascule du lot 3, au surcoût en rounds constaté, pas avant.
+1. ~~**The cost to the ledger**~~ → **sliced** (§2.5): zero difference, we plug in the `cost`
+   of opencode, and the supervisor proxy keeps `generation_id` (§2.6).
+2. ~~**Cold start in the Sandbox**~~ → **clear** (§2.7): 1.3 s, and
+   the installation cooks in the pre-heated snapshot.
+3. ~~**The decision to go**~~ → **taken on 2026-08-12**, cf. the header.
+4. **`apply_edits`**: abandoned (proposed default) or reposted in local tool? The only one
+   question still open, and it is decided on measure - during the week of
+   switch of batch 3, at the additional cost in rounds observed, not before.
 
-Le reste du chantier est dans le plan de MIN-286.
+The rest of the site is in the MIN-286 plan.

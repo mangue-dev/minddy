@@ -71,32 +71,32 @@ import {
 } from "@/components/pull-requests/pr-review-comments";
 
 /**
- * Vue diff d'une PR (MIN-66, passée à `@pierre/diffs` en MIN-181) : liste de
- * fichiers repliables avec compteurs +/−, bascule unifié ↔ côte-à-côte, et
- * dépliage du contexte masqué entre les hunks façon GitHub. Consommée par le
- * panneau de détail d'une PR (pr-detail), les feuilles de diff d'un commit et
- * d'un run d'agent.
+ * Diff view of a PR (MIN-66, passed to `@pierre/diffs` in MIN-181): list of
+ * collapsible files with +/− counters, unified ↔ side-by-side toggle, and
+ * unfolding the hidden context between the hunks GitHub style. Consumed by the
+ * detail panel of a PR (pre-detail), the diff sheets of a commit and
+ * of an agent run.
  *
- * GitHub renvoie un `patch` par fichier (fragment de hunks) : on reconstruit un
- * diff unifié complet autour, puis on le fait analyser par la lib. Les fichiers
- * binaires/trop gros arrivent sans `patch` → repli « voir sur GitHub ».
+ * GitHub returns one `patch` per file (a fragment of hunks): we reconstruct a
+ * complete unified diff around, then we have it analyzed by the lib. The files
+ * binaries/too big arrive without `patch` → fallback “see on GitHub”.
  *
- * Ce que la lib prend en charge, et qui vivait ici avant : la coloration
- * (Shiki, hors du rendu, donc plus de plafond de lignes), le marquage mot-à-mot
- * des lignes retouchées, les barres de dépliage, la virtualisation, la
- * sélection multi-lignes. Ce qui reste à nous : la carte du fichier, l'ancrage
- * des fils de review, et les deux règles de la forge qui décident où un
- * commentaire a le droit d'aller.
+ * What the lib supports, and which lived here before: coloring
+ * (Shiki, out of rendering, so no more line ceiling), word-for-word marking
+ * retouched lines, unfolding bars, virtualization,
+ * multi-line selection. What remains to us: the file map, the anchor
+ * review threads, and the two rules of the forge which decide where a
+ * comment has the right to go.
  */
 
-/** Nombre de lignes qu'une flèche déplie d'un coup (comme GitHub). */
+/** Number of lines that an arrow expands at once (like GitHub). */
 const EXPANSION_LINE_COUNT = 20;
 
 type ViewType = "unified" | "split";
 
 /**
- * Ce qu'une annotation transporte jusqu'à `renderAnnotation` : la clé d'ancre
- * (qui indexe brouillons et composers) et les fils à empiler sous la ligne.
+ * What an annotation carries to `renderAnnotation`: the anchor key
+ * (which indexes drafts and composers) and threads to stack under the line.
  */
 interface AnnotationMeta {
   key: string;
@@ -106,12 +106,12 @@ interface AnnotationMeta {
 
 type ThreadAnnotation = DiffLineAnnotation<AnnotationMeta>;
 
-/** Chemin qui adresse la version de base : l'ancien nom si le fichier a été renommé. */
+/** Path that addresses the base version: the old name if the file has been renamed. */
 function basePathOf(f: PullRequestFile): string {
   return f.previous_filename ?? f.filename;
 }
 
-/** Reconstruit un diff unifié complet à partir du patch par-fichier de GitHub. */
+/** Rebuilt a complete unified diff from GitHub's per-file patch. */
 export function toUnifiedDiff(f: PullRequestFile): string {
   if (!f.patch) return "";
   const base = basePathOf(f);
@@ -121,11 +121,11 @@ export function toUnifiedDiff(f: PullRequestFile): string {
 }
 
 /**
- * Ce qui est arrivé au fichier, dit en couleur — même forme que les badges
- * d'état de PR (`pr-state-badge`) : teinte à 10 %, bord à 20 %, jamais un aplat.
- * Et mêmes couleurs que là-bas, pour que le vert veuille dire la même chose d'un
- * bout à l'autre de la page : vert ajouté, rouge supprimé, violet renommé, bleu
- * modifié.
+ * What happened to the file, told in color — same shape as badges
+ * PR status (`pr-state-badge`): tint at 10%, edge at 20%, never a solid color.
+ * And same colors as there, so that green means the same thing of a
+ * end to end of page: green added, red removed, purple renamed, blue
+ * amended.
  */
 const FILE_STATUS_STYLES: Record<FileStatus, string> = {
   added:
@@ -149,12 +149,12 @@ function FileStatusBadge({ status }: { status: FileStatus }) {
   );
 }
 
-/** Pose un attribut seulement s'il change — la passe tourne à chaque rendu. */
+/** Set an attribute only if it changes — the pass rotates with each render. */
 function setLabel(node: Element, label: string) {
   if (node.getAttribute("aria-label") !== label) node.setAttribute("aria-label", label);
 }
 
-/** Plage couverte par une remarque, dans le vocabulaire de la lib. */
+/** Range covered by a remark, in the vocabulary of the lib. */
 interface CommentRange {
   side: DiffSide;
   start: number;
@@ -162,20 +162,20 @@ interface CommentRange {
 }
 
 /**
- * Peint les lignes que couvre chaque remarque multi-lignes.
+ * Paints the lines that each multi-line note covers.
  *
- * Pourquoi en DOM, et pas par `selectedLines` : cette prop-là ne tient qu'UNE
- * plage par fichier et sert le geste en cours (la sélection à la souris), alors
- * qu'un fichier peut porter plusieurs remarques de plage à la fois. La lib
- * n'offre rien d'autre — ses « décorations » ne sont pas pilotables de
- * l'extérieur. On pose donc notre propre attribut, et son style vit avec lui
- * dans `lib/diff-theme`.
+ * Why in DOM, and not by `selectedLines`: this prop only holds ONE
+ * range per file and serves the current gesture (mouse selection), then
+ * that a file can carry several range remarks at the same time. The lib
+ * offers nothing else — its “decorations” cannot be controlled from
+ * the exterior. We therefore pose our own attribute, and its style lives with it
+ * in `lib/diff-theme`.
  *
- * La lecture des lignes suit exactement la règle de la lib : `data-line` porte
- * le numéro DU CÔTÉ de la ligne (celui que dirait un clic dessus), et
- * `data-alt-line` celui d'en face. En côte-à-côte, chaque colonne ne parle que
- * de son côté. En unifié, une ligne de CONTEXTE est la seule à représenter les
- * deux : c'est le seul endroit où l'on va lire l'autre numéro.
+ * Reading the lines follows exactly the rule of the lib: `data-line` carries
+ * the number ON THE SIDE of the line (the one that clicking on it would say), and
+ * `data-alt-line` the one opposite. Side by side, each column only speaks
+ * on his side. In unified, a CONTEXT line is the only one to represent the
+ * two: this is the only place where we will read the other issue.
  */
 function markCommentRanges(root: ShadowRoot, ranges: CommentRange[]) {
   for (const marked of root.querySelectorAll(`[${DIFF_RANGE_ATTRIBUTE}]`)) {
@@ -209,8 +209,8 @@ function markCommentRanges(root: ShadowRoot, ranges: CommentRange[]) {
       if (!covered) continue;
 
       row.setAttribute(DIFF_RANGE_ATTRIBUTE, "");
-      // Le numéro de ligne partage l'index de sa ligne, et lui seul porte le
-      // trait vertical qui donne à la plage ses deux bouts.
+      // The line number shares the index of its line, and it alone carries the
+      // vertical line which gives the beach its two ends.
       const index = row.getAttribute("data-line-index");
       if (index) {
         column
@@ -222,16 +222,16 @@ function markCommentRanges(root: ShadowRoot, ranges: CommentRange[]) {
 }
 
 /**
- * Met en français (ou en anglais) les barres de dépliage, dont la lib écrit les
- * libellés en dur (« 12 unmodified lines », « Expand all ») et dont les flèches
- * n'ont aucun intitulé.
+ * Puts in French (or English) the unfolding bars, of which the lib writes the
+ * labeled in hard text (“12 unmodified lines”, “Expand all”) and whose arrows
+ * have no title.
  *
- * Fait en DOM plutôt qu'en props parce que la lib n'offre pas de crochet : tout
- * ça est rendu dans l'ombre, et la seule voie déclarative
- * (`hunkSeparators: "custom"`) est déjà marquée `@deprecated`. La passe est
- * idempotente et sans regret : elle ne réécrit que ce qu'elle reconnaît, donc le
- * jour où la lib changera sa formulation, on retombera sur l'anglais plutôt que
- * sur un contresens.
+ * Done in DOM rather than props because the lib doesn't offer hooks: all
+ * it is rendered in the shadows, and the only declarative way
+ * (`hunkSeparators: "custom"`) is already marked `@deprecated`. The pass is
+ * idempotent and without regret: she only rewrites what she recognizes, therefore the
+ * day when the lib changes its formulation, we will fall back on English rather than
+ * on a misinterpretation.
  */
 function localizeDiffChrome(
   root: ShadowRoot,
@@ -253,17 +253,17 @@ function localizeDiffChrome(
 }
 
 /**
- * Retire le saut de ligne final. Un fichier qui en porte un (le cas normal)
- * donnerait sinon une dernière ligne fantôme au dépliage de fin.
+ * Remove the final line break. A file that carries one (the normal case)
+ * would otherwise give a final ghost line at the end unfolding.
  */
 function trimTrailingNewline(content: string): string {
   return content.endsWith("\n") ? content.slice(0, -1) : content;
 }
 
 /**
- * Un fichier de la PR : en-tête repliable + diff. Composant à part car tout
- * l'état (composers ouverts, brouillons, ancres effectivement rendues) est PAR
- * fichier — impossible à tenir dans le `files.map` du parent.
+ * A PR file: collapsible header + diff. Component apart because everything
+ * the state (composers open, drafts, anchors actually rendered) is PAR
+ * file — impossible to fit in parent's `files.map`.
  */
 function PrDiffFile({
   file,
@@ -287,36 +287,36 @@ function PrDiffFile({
   onCommentPosted,
 }: {
   file: PullRequestFile;
-  /** Diff analysé du fichier, absent quand il n'y a pas de patch (binaire, image…). */
+  /** Diff analyzed from the file, absent when there is no patch (binary, image, etc.). */
   fileDiff?: FileDiffMetadata;
   viewType: ViewType;
-  /** Replier les lignes trop longues plutôt que défiler horizontalement. */
+  /** Fold lines that are too long rather than scrolling horizontally. */
   wrap: boolean;
-  /** Thème résolu de minddy — il force la branche des `light-dark()` de la lib. */
+  /** Resolved minddy theme — it forces the `light-dark()` branch of the lib. */
   themeType: "light" | "dark";
-  /** Locale active — le poids des images se formate avec (Ko/Mo, séparateurs). */
+  /** Active local — the size of the images is formatted with (KB/MB, separators). */
   locale: string;
   endpoint: PrEndpoint;
   prUrl?: string | null;
   provider?: RepoProviderId;
-  /** Lecture seule : ni « + » de gouttière, ni « Répondre ». */
+  /** Read only: neither “+” gutter nor “Reply”. */
   readOnly?: boolean;
-  /** La version de base est-elle relisible par `endpoint` ? Faux pour un diff
-      local non poussé : proposer le dépliage finirait alors en 404. */
+  /** Is the basic version rereadable by `endpoint`? Wrong for a difference
+      local not pushed: proposing unfolding would then end in 404. */
   expandableContext: boolean;
-  /** Résoudre un fil, séparément : c'est une écriture sur le dépôt (MIN-144). */
+  /** Resolve a thread, separately: it is a write on the repository (MIN-144). */
   canResolve?: boolean;
   collapsed: boolean;
   onToggle: () => void;
-  /** Confie la carte au parent, qui est celui qui sait défiler jusqu'à elle. */
+  /** Give the card to the parent, who is the one who knows how to scroll to it. */
   registerCard: (path: string, node: HTMLElement | null) => void;
-  /** Commentaires de review de CE fichier (déjà filtrés par le parent). */
+  /** Review comments for THIS file (already filtered by parent). */
   reviewComments: PullRequestReviewComment[];
-  /** État des fils de la PR, TOUS fichiers confondus : l'appariement se fait par
-      id de racine, pas par chemin — inutile de le filtrer en amont. */
+  /** Status of the PR wires, ALL files combined: pairing is done by
+      root id, not by path — no need to filter it upstream. */
   reviewThreads: ReviewThreadState[];
-  /** Réactions de la PR, tous fichiers confondus : appariées par id de
-      commentaire, comme les fils le sont par id de racine. */
+  /** RA reactions, all files combined: matched by id of
+      comment, as children are by root id. */
   reviewReactions: ReviewCommentReaction[];
   onCommentPosted: () => unknown;
 }) {
@@ -327,19 +327,19 @@ function PrDiffFile({
     [registerCard, file.filename],
   );
 
-  // Brouillons indexés par clé d'ancre : un envoi qui échoue GARDE son texte, et
-  // ouvrir un second composer ne détruit pas le premier. Ils ne sont vidés qu'au
-  // succès ou à l'annulation explicite.
+  // Drafts indexed by anchor key: a failed submission KEEPS its text, and
+  // opening a second composer does not destroy the first. They are only emptied
+  // success or explicit cancellation.
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [openAnchors, setOpenAnchors] = useState<Record<string, CommentAnchor>>({});
   const [postingKey, setPostingKey] = useState<string | null>(null);
 
   /**
-   * Ancres dont la lib a effectivement rendu la ligne. Relevé APRÈS chaque rendu
-   * (`onPostRender`), et pas déduit des hunks : c'est la seule mesure qui suit
-   * le dépliage, dont l'état vit dans la lib. Un fil qui n'y figure pas se replie
-   * dans les « périmés », et remonte à sa place dès que le contexte autour est
-   * déplié — la propriété qu'on garantissait avant à la main.
+   * Anchors whose lib actually rendered the line. Reported AFTER each rendering
+   * (`onPostRender`), and not deducted from hunks: this is the only measurement that follows
+   * unfolding, the state of which lives in the lib. A thread that is not there folds
+   * in the “outdated”, and returns to its place as soon as the surrounding context is
+   * unfolded — the property that was previously guaranteed by hand.
    */
   const [placedKeys, setPlacedKeys] = useState<ReadonlySet<string>>(EMPTY_KEYS);
   const instanceRef = useRef<FileDiffInstance<AnnotationMeta> | null>(null);
@@ -354,9 +354,9 @@ function PrDiffFile({
   );
 
   /**
-   * Une annotation par ligne visée : les fils de cette ligne, plus une entrée
-   * vide pour un composer ouvert là où il n'y a encore aucun fil. La lib place
-   * chacune sous sa ligne, ou pas du tout si la ligne n'est pas rendue.
+   * An annotation per targeted line: the wires of this line, plus an entry
+   * empty for an open composer where there are no wires yet. The lib place
+   * each under its line, or not at all if the line is not rendered.
    */
   const lineAnnotations = useMemo(() => {
     const byKey = new Map<string, ThreadAnnotation>();
@@ -382,24 +382,24 @@ function PrDiffFile({
   }, [threads, openAnchors]);
 
   /**
-   * Les plages à peindre : une par remarque multi-lignes. Sans elles, un
-   * commentaire posé sur dix lignes se lit comme un commentaire sur la dernière
-   * — l'intitulé le dit, mais il faut le lire pour s'en apercevoir.
+   * The areas to paint: one per multi-line remark. Without them, a
+   * comment placed on ten lines reads like a comment on the last
+   * — the title says so, but you have to read it to see it.
    */
   const commentRanges = useMemo(() => {
     const ranges: CommentRange[] = [];
     for (const thread of threads) {
       const anchor = threadAnchor(thread);
       const start = thread.root.start_line;
-      // `line` est la DERNIÈRE ligne de la plage : une « plage » qui ne
-      // remonterait pas au-dessus n'en est pas une.
+      // `line` is the LAST line of the range: a “range” that does not
+      // would not rise above is not one of them.
       if (!anchor || start == null || start >= anchor.line) continue;
       ranges.push({ side: anchor.side, start, end: anchor.line });
     }
     return ranges;
   }, [threads]);
 
-  /** Fils qui ne s'ancrent nulle part dans le diff rendu — repliés en bas. */
+  /** Wires that don't anchor anywhere in the rendered diff — folded at the bottom. */
   const staleThreads = useMemo(() => {
     return threads.filter((thread) => {
       const anchor = threadAnchor(thread);
@@ -410,8 +410,8 @@ function PrDiffFile({
   const closeComposer = useCallback((key: string) => {
     setOpenAnchors(({ [key]: _closed, ...rest }) => rest);
     setDrafts(({ [key]: _cleared, ...rest }) => rest);
-    // La plage reste surlignée tant que le composer est ouvert ; elle s'éteint
-    // avec lui, comme sur GitHub.
+    // The range remains highlighted as long as the composer is open; she turns off
+    // with it, like on GitHub.
     instanceRef.current?.setSelectedLines(null);
   }, []);
 
@@ -424,8 +424,8 @@ function PrDiffFile({
       try {
         await postPrReviewCommentApi(endpoint, {
           body,
-          // Un commentaire de review s'adresse au chemin ACTUEL du fichier, même
-          // renommé (contrairement au dépliage, qui lit la version de base).
+          // A review comment addresses the CURRENT path of the file, even
+          // renamed (unlike unfold, which reads the base version).
           path: file.filename,
           line: anchor.line,
           side: toGithubSide(anchor.side),
@@ -436,8 +436,8 @@ function PrDiffFile({
               }
             : {}),
         });
-        // Fermé (et brouillon vidé) au SUCCÈS seulement : sur échec le composer
-        // reste ouvert avec le texte.
+        // Closed (and draft emptied) on SUCCESS only: on failure compose it
+        // remains open with the text.
         closeComposer(key);
         await onCommentPosted();
       } catch (err) {
@@ -451,14 +451,14 @@ function PrDiffFile({
   );
 
   /**
-   * Charge les deux versions du fichier pour que la lib puisse déplier le
-   * contexte masqué. Appelée au PREMIER dépliage de ce fichier : ouvrir une PR
-   * de trente fichiers sans rien déplier ne déclenche aucun appel.
+   * Load both versions of the file so that the lib can unfold the
+   * hidden context. Called at the FIRST unfolding of this file: open a PR
+   * of thirty files without unfolding anything does not trigger any calls.
    *
-   * Le serveur ne sert que la version BASE — c'est tout ce dont le dépliage a
-   * besoin côté gauche, et la version tête s'en déduit exactement en lui
-   * appliquant le patch. Une seconde route (et un second aller-retour) pour un
-   * texte qu'on peut reconstruire ne se justifiait pas.
+   * The server only serves the BASE version — that's all the unfolding has.
+   * need left side, and the head version is deduced exactly in him
+   * applying the patch. A second route (and a second round trip) for a
+   * text we could reconstruct was not justified.
    */
   const loadDiffFiles = useCallback<FileDiffContentsLoader>(
     async (meta) => {
@@ -467,8 +467,8 @@ function PrDiffFile({
         const oldContents = trimTrailingNewline(content);
         const patched = applyPatch(oldContents, toUnifiedDiff(file));
         if (patched === false) {
-          // La base a bougé sous nous (tête repoussée entre l'ouverture de la vue
-          // et le clic) : sans les deux versions, la lib ne peut rien déplier.
+          // The base moved beneath us (head pushed back between sight opening
+          // and the click): without both versions, the lib cannot unfold anything.
           throw new Error("Patch does not apply to the base revision");
         }
         return {
@@ -476,9 +476,9 @@ function PrDiffFile({
           newFile: { name: meta.name, contents: trimTrailingNewline(patched) },
         };
       } catch (err) {
-        // La lib avale l'échec (elle le journalise et laisse le diff en place) :
-        // sans ce mot, un clic sur la barre de dépliage ne ferait simplement
-        // rien, et rien ne dirait pourquoi. La barre reste recliquable.
+        // The lib swallows the failure (it logs it and leaves the diff in place):
+        // without this word, clicking on the unfold bar would simply
+        // nothing, and nothing would say why. The bar remains re-clickable.
         toast.error(t("expandFailed"));
         throw err;
       }
@@ -487,25 +487,25 @@ function PrDiffFile({
   );
 
   /**
-   * Un fichier ajouté n'a pas de version de base, un fichier supprimé pas de
-   * version de tête — et dans les deux cas le patch EST déjà le fichier entier :
-   * il n'y a rien à déplier. Sans chargeur, la lib n'offre pas l'affordance,
-   * plutôt que de proposer un dépliage qui finirait en 404.
+   * An added file has no base version, a deleted file has no
+   * head version — and in both cases the patch IS already the entire file:
+   * there is nothing to unfold. Without a loader, the lib does not offer the affordance,
+   * rather than proposing an unfolding which would end in 404.
    */
   const expandable =
     expandableContext && file.status !== "added" && file.status !== "removed";
 
   /**
-   * Ouvre le composer sur la sélection de gouttière. `range` porte la plage
-   * complète du glissement : c'est elle qui offre le commentaire multi-lignes,
-   * que le serveur savait déjà envoyer.
+   * Opens the composer on the gutter selection. `range` wears the beach
+   * complete sliding: it is this which offers the multi-line comment,
+   * that the server already knew how to send.
    */
   const onGutterUtilityClick = useCallback(
     (range: SelectedLineRange) => {
       const hunks = fileDiff?.hunks ?? [];
       const anchor = commentAnchor(hunks, range, {
-        // GitLab ancre une note sur UNE ligne (`old_line`/`new_line`) : lui
-        // envoyer une plage la réduirait en silence à son dernier point.
+        // GitLab anchors a note on ONE line (`old_line`/`new_line`): him
+        // sending a range would silently reduce it to its last point.
         multiLine: provider !== "gitlab",
       });
       if (!anchor) {
@@ -519,12 +519,12 @@ function PrDiffFile({
   );
 
   /**
-   * Nomme le « + » de la gouttière au survol de la ligne.
+   * Name the “+” of the gutter when hovering over the line.
    *
-   * Pas dans la passe de traduction ci-dessus : ce bouton-là n'existe pas encore
-   * au moment des rendus. La lib le fabrique DÉTACHÉ et ne l'accroche à une
-   * ligne qu'au survol — c'est-à-dire juste avant cet appel. Sans intitulé, il
-   * n'a qu'une icône, donc aucun nom accessible.
+   * Not in the translation pass above: this button does not exist yet
+   * at the time of rendering. The lib makes it DETACHED and only hooks it to a
+   * line only when hovering — that is, just before this call. Without title, it
+   * only has one icon, so no accessible name.
    */
   const onLineEnter = useCallback(
     ({ numberElement }: DiffLineEventBaseProps) => {
@@ -537,22 +537,22 @@ function PrDiffFile({
   const renderAnnotation = useCallback(
     (annotation: ThreadAnnotation): ReactNode => {
       const { key, line, threads: list } = annotation.metadata;
-      // Pas encore placée : ces fils-là sont rendus dans le repli des périmés, et
-      // les monter ici en plus les dédoublerait (deux cartes, deux états de
-      // dépli, pour un même fil). Le premier rendu passe forcément par là — le
-      // relevé n'a pas encore eu lieu — puis `onPostRender` remet tout en place,
-      // avant peinture.
+      // Not yet placed: these threads are returned to the obsolete fold, and
+      // mounting them here in addition would duplicate them (two cards, two states of
+      // unfolded, for the same thread). The first rendering necessarily goes through this — the
+      // reading has not yet taken place — then `onPostRender` puts everything back in place,
+      // before painting.
       if (!placedKeys.has(key)) return null;
       const anchor = openAnchors[key];
       return (
         <LineWidget
           anchor={{
             line,
-            // La plage d'une remarque multi-lignes : celle qu'on est en train
-            // d'écrire, sinon celle des fils déjà là. Les fils ne la donnent que
-            // s'ils s'accordent tous dessus — deux plages différentes sous le
-            // même numéro ne se résument pas en un seul intitulé, et on retombe
-            // alors sur la ligne d'ancrage, qui elle est toujours vraie.
+            // The range of a multi-line remark: the one we are currently making
+            // to write, if not that of the threads already there. The sons only give it
+            // if they all agree on it — two different ranges under the
+            // same number cannot be summed up in a single title, and we fall back
+            // then on the anchor line, which is always true.
             startLine: anchor ? anchor.startLine : (sharedStartLine(list) ?? undefined),
             kind: lineKind(fileDiff?.hunks ?? [], annotation.side, line) ?? "context",
           }}
@@ -601,31 +601,31 @@ function PrDiffFile({
   );
 
   /**
-   * Après chaque rendu de la lib (montage, changement d'option, dépliage) :
-   * garder la main sur l'instance, traduire les barres de dépliage, et relever
-   * quelles annotations ont trouvé leur ligne. Le relevé se lit dans l'ombre —
-   * un `<slot>` par annotation placée, nommé comme la lib le nomme — parce que
-   * c'est la seule chose qui dise la vérité sur l'état de dépliage.
+   * After each rendering of the lib (assembly, option change, unfolding):
+   * keep control of the instance, translate the unfolding bars, and raise
+   * which annotations found their line. The reading can be read in the shadows —
+   * one `<slot>` per placed annotation, named as the lib names it — because
+   * it is the only thing that tells the truth about the state of unfolding.
    */
   const onPostRender = useCallback(
     (node: HTMLElement, instance: FileDiffInstance<AnnotationMeta>, phase: PostRenderPhase) => {
       if (phase === "unmount") {
         instanceRef.current = null;
-        // Rendre l'ombre au propre — sinon le montage SUIVANT sur le même
-        // élément croit avoir affaire à du HTML prérendu.
+        // Make the shadow proper — otherwise the FOLLOWING assembly on the same
+        // element thinks it is dealing with pre-rendered HTML.
         //
-        // Le démontage de la lib vide le `<pre>` mais le LAISSE dans le Shadow
-        // DOM. Son `hydrate` lit ça comme « le diff est déjà peint, je n'ai
-        // qu'à me rebrancher dessus » : il saute le rendu, et on reste sur le
-        // squelette vide. En production ça ne se voit pas — React jette
-        // l'élément avec le composant. En développement, `reactStrictMode`
-        // monte, démonte et remonte SUR LE MÊME NOEUD : le diff naissait vide,
-        // et il fallait replier puis déplier le fichier (donc deux clics) pour
-        // obtenir un élément neuf qui, lui, se peignait.
+        // Unmounting the lib empties the `<pre>` but LEAVES it in the Shadow
+        // DOM. Its `hydrate` reads this as "the diff is already painted, I didn't
+        // to reconnect with it”: he skips the rendering, and we stay on the
+        // empty skeleton. In production it is not visible — React throws
+        // the element with the component. In development, `reactStrictMode`
+        // mounts, disassembles and reassembles ON THE SAME NODE: the diff was born empty,
+        // and it was necessary to fold then unfold the file (so two clicks) to
+        // obtain a new element which itself could be painted.
         //
-        // Les feuilles de style adoptées vivent sur le `shadowRoot`, pas parmi
-        // ses enfants : elles survivent, et le prochain rendu reconstruit le
-        // reste (sprite, thème, code).
+        // Adopted style sheets live on `shadowRoot`, not among
+        // his children: they survive, and the next rendering reconstructs the
+        // rest (sprite, theme, code).
         node.shadowRoot?.replaceChildren();
         return;
       }
@@ -649,16 +649,16 @@ function PrDiffFile({
       theme: DIFF_THEMES,
       themeType,
       diffStyle: viewType,
-      // Le régime décidé plus haut, en côte-à-côte comme en unifié : la lib
-      // synchronise le défilement de ses deux volets.
+      // The regime decided above, side by side as well as unified: the lib
+      // synchronizes the scrolling of its two panes.
       overflow: wrap ? ("wrap" as const) : ("scroll" as const),
       disableFileHeader: true,
-      // La carte porte déjà le nom du fichier et ses compteurs : le séparateur
-      // n'a qu'à dire ce qu'il masque, et à offrir de le déplier.
+      // The card already has the name of the file and its counters: the separator
+      // only has to say what it hides, and offer to unfold it.
       hunkSeparators: "line-info" as const,
       expansionLineCount: EXPANSION_LINE_COUNT,
-      // Doublon assumé avec le pool de workers, qui l'emporte quand il colore :
-      // c'est le repli du fil principal, et il doit rendre la même chose.
+      // Duplicate assumed with the worker pool, which wins when it colors:
+      // it's the main thread's fold, and it should render the same thing.
       lineDiffType: DIFF_LINE_DIFF_TYPE,
       unsafeCSS: DIFF_UNSAFE_CSS,
       loadDiffFiles: expandable ? loadDiffFiles : undefined,
@@ -680,18 +680,18 @@ function PrDiffFile({
     ],
   );
 
-  // Un fichier sans patch : image qu'on sait montrer, binaire qu'on ne sait pas,
-  // fichier sans changement de contenu (renommage pur), ou fichier texte que la
-  // forge a jugé trop volumineux — quatre situations que le message unique
-  // d'avant confondait.
+  // A file without a patch: an image we can show, a binary we cannot,
+  // file without content change (pure renaming), or text file that the
+  // forge deemed it too bulky — four situations that the single message
+  // from before was confusing.
   const missing = fileDiff ? null : noPatchKind(file);
 
   return (
-    // `overflow-clip` et non `overflow-hidden` : les deux découpent les coins
-    // arrondis, mais `hidden` fait de la carte un CONTENEUR DE DÉFILEMENT, ce
-    // qui neutralise le `sticky` de l'en-tête (il collerait au bord de la carte,
-    // c'est-à-dire nulle part). `clip` ne défile pas, donc l'en-tête colle au
-    // vrai conteneur, celui de l'hôte.
+    // `overflow-clip` and not `overflow-hidden`: both cut corners
+    // rounded, but `hidden` makes the map a SCROLL CONTAINER, this
+    // which neutralizes the `sticky` of the header (it would stick to the edge of the card,
+    // i.e. nowhere). `clip` does not scroll, so the header sticks to the
+    // real container, that of the host.
     <div
       ref={setCardRef}
       id={fileAnchorId(file.filename)}
@@ -701,20 +701,20 @@ function PrDiffFile({
         type="button"
         onClick={onToggle}
         className={cn(
-          // Collé au bord haut, partout : `top-0` et rien d'autre. Les trois
-          // hôtes ont un conteneur qui commence sous un en-tête (le bandeau de
-          // la PR, celui des deux feuilles), donc l'en-tête de fichier vient s'y
-          // poser contre — et un décalage, si petit soit-il, se lirait comme un
-          // élément qui flotte.
+          // Sticking to the top edge, everywhere: `top-0` and nothing else. The three
+          // hosts have a container that starts under a header (the banner
+          // the PR, that of the two sheets), so the file header comes there
+          // pose against it — and a shift, however small, would read like a
+          // element that floats.
           //
-          // Collant DANS SA CARTE : le `sticky` est borné par son bloc
-          // conteneur, donc l'en-tête du fichier suivant chasse le précédent en
-          // arrivant. C'est le comportement voulu, et il est gratuit — surtout
-          // ne pas fabriquer un en-tête flottant unique par-dessus la liste.
+          // Sticky IN ITS CARD: the `sticky` is bounded by its block
+          // container, so the header of the next file chases the previous one by
+          // arriving. This is the intended behavior, and it's free — especially
+          // don't make a single floating header on top of the list.
           "sticky top-0 z-10 flex w-full items-center gap-2 bg-card px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/60",
-          // Le diff a le MÊME fond que la carte (`--diffs-light-bg: var(--card)`) :
-          // sans ce trait, l'en-tête collé flotterait au milieu du code sans
-          // qu'on voie où il commence.
+          // The diff has the SAME background as the map (`--diffs-light-bg: var(--card)`):
+          // without this trait, the pasted header would float in the middle of the code without
+          // let's see where it starts.
           collapsed ? null : "border-b border-border",
         )}
       >
@@ -746,7 +746,7 @@ function PrDiffFile({
                 : missing === "unchanged"
                   ? t("noContentChange")
                   : t("tooLargeFile")}{" "}
-              {/* Rien à aller voir ailleurs quand il n'y a rien à voir. */}
+              {/* Nothing to go elsewhere when there is nothing to see. */}
               {prUrl && missing !== "unchanged" ? (
                 <a
                   href={prUrl}
@@ -759,9 +759,9 @@ function PrDiffFile({
               ) : null}
             </div>
           )}
-          {/* Hors du `fileDiff ?` : un fichier binaire ou trop gros n'a pas de
-              diff, donc AUCUN de ses fils ne s'ancre — ils vivent tous ici
-              plutôt que de disparaître avec le diff qu'on ne sait pas rendre. */}
+          {/* Outside `fileDiff ?`: a binary or oversized file has no
+              diff, so NONE of his sons anchor — they all live here
+              rather than disappearing with the diff that we don't know how to render. */}
           <StaleThreads
             threads={staleThreads}
             replies={replies}
@@ -775,7 +775,7 @@ function PrDiffFile({
   );
 }
 
-/** Références stables : `?? []` / `?? () => {}` en ligne casseraient les mémos. */
+/** Stable references: `?? []` / `?? () => {}` online would break the memos. */
 const NO_COMMENTS: PullRequestReviewComment[] = [];
 const NO_THREADS: ReviewThreadState[] = [];
 const NO_REACTIONS: ReviewCommentReaction[] = [];
@@ -803,28 +803,28 @@ export function PrDiff({
   className,
 }: {
   files: PullRequestFile[];
-  /** Run porteur du diff — sert à charger la version base d'un fichier au dépliage. */
+  /** Run carrying the diff — is used to load the base version of a file when unfolding. */
   endpoint: PrEndpoint;
   prUrl?: string | null;
-  /** Provider du dépôt (vocabulaire des liens « Voir sur … ») — défaut GitHub. */
+  /** Repository provider (“See on…” link vocabulary) — GitHub default. */
   provider?: RepoProviderId;
-  /** Lecture seule : pas de commentaires de review (vue diff sans PR — la
-      conversation de l'agent ; la review vit sur la page Pull requests). */
+  /** Read only: no review comments (diff view without PR — the
+      agent conversation; the review lives on the Pull requests page). */
   readOnly?: boolean;
-  /** Autorise le chargement paresseux du contexte hors hunk. */
+  /** Allow lazy loading of context out of hunk. */
   expandableContext?: boolean;
-  /** Résoudre un fil, gouverné À PART (MIN-144) : commenter demande `read` sur
-      le dépôt, résoudre demande `write`. Défaut `!readOnly` — les appelants qui
-      ne connaissent pas la distinction (agent-diff-sheet) ne changent pas. */
+  /** Solve a thread, governed APART (MIN-144): comment request `read` on
+      the repository, resolve request `write`. Default `!readOnly` — callers who
+      do not know the distinction (agent-diff-sheet) do not change. */
   canResolve?: boolean;
-  /** Commentaires de review de la PR, tous fichiers confondus. */
+  /** PR review comments, all files combined. */
   reviewComments?: PullRequestReviewComment[];
-  /** État de résolution des fils (MIN-139). Vide = état INCONNU : les fils se
-      lisent et se répondent, mais aucun ne s'annonce résolu ni ne se résout. */
+  /** Thread resolution status (MIN-139). Empty = UNKNOWN state: the wires are
+      read and respond to each other, but none appears to be resolved or is resolved. */
   reviewThreads?: ReviewThreadState[];
-  /** Réactions emoji des commentaires (MIN-139). Vide = aucune à afficher. */
+  /** Comment emoji reactions (MIN-139). Blank = none to display. */
   reviewReactions?: ReviewCommentReaction[];
-  /** Rafraîchit les commentaires après un envoi réussi. */
+  /** Refreshes comments after successful submission. */
   onCommentPosted?: () => unknown;
   className?: string;
 }) {
@@ -834,24 +834,24 @@ export function PrDiff({
   const isMobile = useIsMobile();
   const [viewType, setViewType] = useState<ViewType>("unified");
   /**
-   * Repli des lignes longues : `null` tant que personne n'a tranché, et c'est
-   * alors la LARGEUR qui décide.
+   * Folding long lines: `null` as long as no one has decided, and that's
+   * then the WIDTH decides.
    *
-   * Au large, défilement, comme les forges : replier une ligne longue casse
-   * l'alignement des numéros et déforme le code indenté. Sur un téléphone, ce
-   * raisonnement s'inverse — la boîte fait quelques dizaines de caractères, donc
-   * défiler horizontalement ne montre plus jamais une ligne entière, et il faut
-   * balayer ligne par ligne pour lire un hunk. Mieux vaut du code replié que du
+   * Offshore, scrolling, like the forges: folding a long line breaks
+   * number alignment and distorts indented code. On a phone, this
+   * reasoning is reversed — the box is a few dozen characters long, so
+   * scrolling horizontally never shows an entire line again, and you have to
+   * scan line by line to read a hunk. Better folded code than
    * code hors champ.
    *
-   * Un DÉFAUT, pas une contrainte : dès qu'on touche la bascule, le choix tient,
-   * et il survit à une rotation d'écran.
+   * A FAULT, not a constraint: as soon as you touch the seesaw, the choice holds,
+   * and it survives a screen rotation.
    */
   const [wrapChoice, setWrapChoice] = useState<boolean | null>(null);
   const wrap = wrapChoice ?? isMobile;
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
-  /** Les cartes montées, par chemin — ce que l'arbre vise quand on clique une ligne. */
+  /** Mounted maps, by path — what the tree targets when you click on a line. */
   const cards = useRef(new Map<string, HTMLElement>());
   const registerCard = useCallback((path: string, node: HTMLElement | null) => {
     if (node) cards.current.set(path, node);
@@ -859,13 +859,13 @@ export function PrDiff({
   }, []);
 
   /**
-   * Emmène au fichier : on le déplie s'il était replié, PUIS on défile. L'ordre
-   * n'est pas cosmétique — défiler vers une carte encore repliée viserait une
-   * boîte de 40 px, et le dépliage qui suit ferait pousser le diff ailleurs.
+   * Take to the file: unfold it if it was folded, THEN scroll. The order
+   * is not cosmetic — scrolling to a still folded map would aim for a
+   * box of 40 px, and the unfolding that follows would push the diff elsewhere.
    *
-   * `flushSync` plutôt qu'un `requestAnimationFrame` : il garantit que le
-   * dépliage est DANS LE DOM avant qu'on mesure, là où l'image suivante n'est
-   * qu'un pari sur l'ordonnancement de React.
+   * `flushSync` rather than a `requestAnimationFrame`: it guarantees that the
+   * unfolding is IN THE DOM before we measure, where the next image is
+   * than a bet on React's scheduling.
    */
   const jumpToFile = useCallback((path: string) => {
     flushSync(() => {
@@ -878,11 +878,11 @@ export function PrDiff({
     });
     const card = cards.current.get(path);
     card?.scrollIntoView({ block: "start" });
-    // Le focus SUIT le saut, sur l'en-tête du fichier visé (le premier bouton de
-    // la carte). Sans ça il resterait sur le compteur, en haut de la vue, alors
-    // que l'oeil est vingt fichiers plus bas — et Radix, en le rendant au
-    // déclencheur à la fermeture du panneau, y ramènerait le défilement avec.
-    // `preventScroll` : le cadrage vient d'être fait, le focus n'a pas à le refaire.
+    // The focus FOLLOWS the jump, on the header of the targeted file (the first button of
+    // the map). Without that it would remain on the counter, at the top of the view, so
+    // that the eye is twenty files lower — and Radix, by returning it to the
+    // trigger when closing the panel, would bring scrolling back with it.
+    // `preventScroll`: the framing has just been done, the focus does not have to be done again.
     card?.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
   }, []);
 
@@ -896,9 +896,9 @@ export function PrDiff({
     return map;
   }, [reviewComments]);
 
-  // Commentaires dont le fichier n'est pas dans la PR (dépassement des 100
-  // fichiers de l'API, fichier retiré depuis) : sans ce repli ils disparaîtraient
-  // sans laisser de trace.
+  // Comments whose file is not in the PR (exceeding 100
+  // API files, file removed since): without this fallback they would disappear
+  // without leaving a trace.
   const orphanThreads = useMemo(() => {
     const known = new Set(files.map((f) => f.filename));
     return groupReviewThreads(
@@ -908,23 +908,23 @@ export function PrDiff({
   }, [reviewComments, reviewThreads, files]);
 
   /**
-   * Le diff unifié complet de la PR, en une chaîne. Mémoïsé À PART, et c'est
-   * lui — pas le tableau `files` — qui commande l'analyse : un rafraîchissement
-   * qui rend exactement les mêmes patchs rend la même chaîne, donc les mêmes
-   * objets de diff. Or la lib HYDRATE ces objets-là (le contexte déplié y est
-   * fusionné) : les recréer à chaque `refetch` effacerait sous les doigts ce que
-   * l'utilisateur vient de déplier.
+   * The complete unified PR diff, in one chain. Memorized APART, and it is
+   * him — not the table `files` — which controls the analysis: a refresh
+   * which renders exactly the same patches renders the same string, therefore the same
+   * objects of diff. But the lib HYDRATES these objects (the unfolded context is there
+   * merged): recreating them at each `refetch` would erase under the fingers what
+   * the user has just unfolded.
    */
   const diffText = useMemo(() => files.map(toUnifiedDiff).filter(Boolean).join("\n"), [files]);
 
   /**
-   * Analyse une fois, puis indexe par chemin. La lib nomme chaque fichier
-   * d'après le côté `b/` du `diff --git` qu'on écrit — donc `file.filename`,
-   * pour un fichier ajouté, supprimé ou renommé comme pour les autres.
+   * Parse once, then index by path. The lib names each file
+   * according to the `b/` side of the `diff --git` that we write — therefore `file.filename`,
+   * for an added, deleted or renamed file as for the others.
    *
-   * Pas de préfixe de cache : il indexerait la coloration sur une clé stable
-   * alors que le contenu d'une PR change sous nous (un commit poussé, une
-   * review relancée).
+   * No cache prefix: it would index the coloring on a stable key
+   * while the content of a PR changes under us (a pushed commit, a
+   * review restarted).
    */
   const parsedByPath = useMemo(() => {
     const map = new Map<string, FileDiffMetadata>();
@@ -945,8 +945,8 @@ export function PrDiff({
   );
 
   if (files.length === 0) {
-    // `className` porte l'espacement que l'hôte attend autour du diff : le
-    // perdre ici collerait le message au bord.
+    // `className` carries the spacing that the host expects around the diff: the
+    // losing here would stick the message to the edge.
     return <p className={cn("text-sm text-muted-foreground", className)}>{t("noDiff")}</p>;
   }
 
@@ -965,9 +965,9 @@ export function PrDiff({
     <PrDiffWorkers>
       <div className={cn("pr-diff-view flex flex-col gap-2", className)}>
         <div className="flex items-center justify-between gap-3">
-          {/* Le compteur EST le déclencheur de l'arbre : il occupait déjà cette
-              place et dit déjà de quoi l'arbre parle. Un bouton de plus dans la
-              barre serait un chrome que personne n'a demandé. */}
+          {/* The counter IS the tree trigger: it already occupied this
+              place and already says what the tree is talking about. One more button in the
+              bar would be a chrome that no one asked for. */}
           <PrFileTreeButton
             files={files}
             totalAdditions={totalAdd}

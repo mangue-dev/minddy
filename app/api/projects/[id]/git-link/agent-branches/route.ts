@@ -10,25 +10,25 @@ import {
 } from "@/lib/server/git/branch-cleanup";
 
 /**
- * Branches d'agent du dépôt lié (MIN-102) : GET rend TOUTES celles que minddy a
- * poussées et qui existent encore (avec leur état — PR fusionnée, refusée,
- * ouverte, ou aucune), POST supprime celles qu'on lui désigne.
+ * Linked Repository Agent Branches (MIN-102): GET returns ALL that minddy has
+ * pushed and which still exist (with their status — PR merged, refused,
+ * open, or none), POST deletes those designated to it.
  *
- * Owner uniquement — supprimer des branches distantes est du même ordre que
- * délier le dépôt. Le POST ne fait pas confiance à sa liste : le module serveur
- * recalcule l'aperçu et n'accepte que son intersection.
+ * Owner only — deleting remote branches is the same as
+ * untie the deposit. POST does not trust its list: the server module
+ * recalculates the preview and accepts only its intersection.
  */
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// Une suppression par branche, en séquence, chez la forge : même budget que les
+// One deletion per branch, in sequence, at the forge: same budget as the
 // autres routes qui parlent au provider.
 export const maxDuration = 60;
 
-/** Plafond de sécurité du POST — bien au-delà d'un ménage réel. */
+/** POST safety ceiling — well beyond an actual household. */
 const MAX_BRANCHES_PER_REQUEST = 200;
 
-/** Auth + owner du projet. Renvoie la réponse d'échec, ou null si ça passe. */
+/** Auth + project owner. Returns the failure response, or null if it passes. */
 async function denyUnlessOwner(
   request: NextRequest,
   projectId: string,
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     !Array.isArray(branches) ||
     branches.length === 0 ||
     branches.length > MAX_BRANCHES_PER_REQUEST ||
-    // 255 = le plafond des noms de ref côté forges — au-delà, pas une branche.
+    // 255 = the ceiling of the ref names on the forges side — beyond that, not a branch.
     !branches.every((b) => typeof b === "string" && b.length > 0 && b.length <= 255)
   ) {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });

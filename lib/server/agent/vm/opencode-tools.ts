@@ -9,109 +9,109 @@ import { opencodeToolDir } from "./opencode-config";
 import { isLocalJob, type VmJob } from "./protocol";
 
 /**
- * LES TOOLS DE DOMAINE, ÉCRITS POUR OPENCODE (MIN-286, lot 1) — les ~35 tools
- * qui ne cessent PAS d'être notre code, rendus dans la forme qu'opencode charge.
+ * DOMAIN TOOLS, WRITTEN FOR OPENCODE (MIN-286, lot 1) — the ~35 tools
+ * which does NOT stop being our code, rendered in the form that opencode loads.
  *
- * LA RÈGLE DU FICHIER, et c'est elle qui décide de tout le reste : **il n'y a pas
- * de deuxième table**. Les schémas, les descriptions, le ciblage par ancrage
- * (`TARGET_SUFFIX`), les retraits structurels (`web_search` hors OpenRouter,
- * `report_verdict` hors chaîne, `create_routine` hors session interactive)
- * viennent d'`agentToolsFor` ([tools.ts](../tools.ts)) — les MÊMES définitions
- * qu'aujourd'hui, rendues autrement. Recopier ces schémas ici aurait créé deux
- * vérités qui divergent au premier ticket, et la divergence ne se verrait que
- * dans le comportement d'un modèle.
+ * THE FILE RULE, and it is she who decides everything else: **there is no
+ * second table**. Schemas, descriptions, anchor targeting
+ * (`TARGET_SUFFIX`), structural withdrawals (`web_search` outside OpenRouter,
+ * `report_verdict` outside chain, `create_routine` outside interactive session)
+ * come from `agentToolsFor` ([tools.ts](../tools.ts)) — the SAME definitions
+ * than today, rendered differently. Copying these diagrams here would have created two
+ * truths which diverge at the first ticket, and the divergence would only be seen
+ * in the behavior of a model.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * CE QUI A ÉTÉ MESURÉ SUR `opencode-ai@1.18.16`, et qui n'est écrit nulle part
+ * WHAT WAS MEASURED ON `opencode-ai@1.18.16`, and which is not written anywhere
  *
- * 1. **Un tool se déclare en TypeScript, et deux formes sont acceptées — une
- *    seule est utilisable.** L'objet nu (`export default { description, args,
- *    execute }`) traite `args` comme une carte *nom → schéma*, et **rend TOUT
- *    obligatoire** : passer un JSON Schema complet y produit un schéma absurde
- *    (`required: ["properties", "additionalProperties"]`, mesuré) que le modèle
- *    reçoit tel quel. La forme `tool({...})` de `@opencode-ai/plugin`, elle,
- *    accepte `tool.schema` (zod) avec `.optional()` et `.enum()`, et rend le
- *    schéma exact. **Nos tools ont des paramètres optionnels partout** : c'est
- *    donc `tool()`, et c'est pour ça que ce module ÉMET DU CODE zod plutôt que
+ * 1. **A tool is declared in TypeScript, and two forms are accepted — one
+ * only one is usable.** The bare object (`export default { description, args,
+ * execute }`) traite `args` as a map *name → schema*, and **renders EVERYTHING
+ * obligatory**: passing a complete JSON Schema produces an absurd schema
+ * (`required: ["properties", "additionalProperties"]`, measured) than the model
+ * receive as is. The form `tool({...})` of `@opencode-ai/plugin`, for its part,
+ * accepts `tool.schema` (zod) with `.optional()` and `.enum()`, and returns the
+ * exact diagram. **Our tools have optional parameters everywhere**: this is
+ * therefore `tool()`, and that is why this module EMITS zod CODE rather than
  *    de recopier un JSON Schema.
- * 2. **`@opencode-ai/plugin` n'a pas à être installé** : le runtime TypeScript du
- *    binaire le résout seul. Aucun `node_modules` à poser dans la microVM.
- * 3. **Les tools peuvent vivre HORS DU DÉPÔT** — `$XDG_CONFIG_HOME/opencode/tool/`
- *    est chargé comme `.opencode/tool/` du projet (mesuré : servi ET appelé).
- *    C'est indispensable, pas une préférence : dans le dépôt, ils entreraient
- *    dans le `git add -A` de fin de tour et se retrouveraient commités chez
- *    l'utilisateur. D'où `opencodeToolDir`, sous le harness du run.
- * 4. **`process.env` est lisible depuis un tool** (mesuré) — c'est par là que
- *    l'adresse du superviseur descend, sans qu'aucune valeur ne soit écrite en
- *    dur dans le code généré.
+ * 2. **`@opencode-ai/plugin` does not have to be installed**: the TypeScript runtime of
+ * binary solves it alone. No `node_modules` to place in the microVM.
+ * 3. **Tools can live OUTSIDE THE DEPOSIT** — `$XDG_CONFIG_HOME/opencode/tool/`
+ * is loaded as `.opencode/tool/` of the project (measured: served AND called).
+ * It is essential, not a preference: in the deposit, they would enter
+ * in the `git add -A` at the end of the turn and would find themselves committed to
+ * the user. Hence `opencodeToolDir`, under the run harness.
+ * 4. **`process.env` is readable from a tool** (measured) — this is how
+ * the supervisor address goes down, without any value being written in
+ * hard in the generated code.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * POURQUOI LE TOOL PASSE PAR LE SUPERVISEUR, ET NON DIRECTEMENT PAR LE PLAN DE
- * CONTRÔLE
+ * WHY THE TOOL GOES THROUGH THE SUPERVISOR, AND NOT DIRECTLY THROUGH THE MANAGEMENT PLAN
+ * CONTROL
  *
- * Le cadrage disait « chacun un `fetch` vers le plan de contrôle ». Un saut local
- * de plus tient la même garantie — c'est le superviseur qui fait l'appel sortant,
- * donc l'identité reste prouvée par l'OIDC du firewall, et aucun secret n'entre
- * dans la VM — et il rend trois choses qu'un appel direct rendrait impossibles :
+ * The framing said “each one a `fetch` to the control plane”. A local hop
+ * moreover holds the same guarantee — it is the supervisor who makes the outgoing call,
+ * therefore the identity remains proven by the OIDC of the firewall, and no secret enters
+ * in the VM — and it does three things that a direct call would make impossible:
  *
- * - **les compteurs de TOUR** : le plafond de recherches web
- *   (`webSearchMax`), le plafond d'images (`MAX_IMAGES_PER_TURN`) et les ancres
- *   de review déjà posées sont des états du tour. Un tool sans mémoire les
- *   perdrait, et le plan de contrôle ne compte rien — il facture ce qu'on lui
+ * - **TOUR counters**: the web search limit
+ * (`webSearchMax`), image cap (`MAX_IMAGES_PER_TURN`) and anchors
+ * reviews already asked are states of the tour. A tool without memory
+ * would lose, and the control plan counts for nothing — it charges what it is charged
  *   demande ;
- * - **`create_pr`**, qui est coupé en deux par construction : la VM POUSSE, la
- *   fonction OUVRE. Seul le superviseur a le dépôt ;
- * - **les règles de livraison** (gate, self-review, plan closure), qui doivent
- *   voir passer les appels.
+ * - **`create_pr`**, which is cut in two by construction: the VM PUSHES, the
+ * OPEN function. Only the supervisor has the deposit;
+ * - **delivery rules** (gate, self-review, plan closure), which must
+ * see making calls.
  *
- * Le code généré, lui, ne sait rien de tout ça : il poste un JSON et rend ce
- * qu'on lui répond. C'est le point — un tool généré qui contient de la logique
- * est un tool qu'on maintient en deux exemplaires.
+ * The generated code does not know any of this: it posts a JSON and returns this
+ * that we answer him. That's the point — a generated tool that contains logic
+ * is a tool that is maintained in two copies.
  */
 
-/** L'en-tête posé sur chaque fichier généré : personne ne l'édite à la main. */
+/** The header placed on each generated file: no one edits it by hand. */
 const HEADER = `// Généré par lib/server/agent/vm/opencode-tools.ts — NE PAS ÉDITER.\n// MIN-286 : ce fichier est réécrit à chaque tour depuis les définitions de tools.ts.\n`;
 
 /**
- * La variable qui porte l'adresse du superviseur. Lue par le code généré, posée
- * par le superviseur au démarrage : le port est choisi à l'exécution, il ne peut
- * donc pas être écrit dans le fichier.
+ * The variable which carries the address of the supervisor. Read by the generated code, placed
+ * by the supervisor at startup: the port is chosen at runtime, it cannot
+ * therefore not be written to the file.
  */
 export const SUPERVISOR_URL_ENV = "MDY_SUPERVISOR_URL";
 
 /**
- * L'EN-TÊTE QUI DIT « CETTE RÉPONSE PORTE UNE IMAGE » (MIN-286, lot 3).
+ * THE HEADER WHICH SAYS “THIS ANSWER HAS AN IMAGE” (MIN-286, lot 3).
  *
- * Le pont répond du TEXTE dans l'écrasante majorité des cas, et le tool généré le
- * rend tel quel. Une seule réponse ne rentre pas là-dedans : `read_resource` sur
- * une maquette, qui doit devenir une **pièce jointe** de message pour que le
- * modèle la VOIE au lieu d'en lire la fiche signalétique (mesuré, dossier §2.22).
+ * The bridge responds to TEXT in the overwhelming majority of cases, and the tool generated
+ * makes it as is. Only one answer does not fit in there: `read_resource` on
+ * a model, which must become a **message attachment** so that the
+ * model the PATH instead of reading the data sheet (measured, file §2.22).
  *
- * On l'annonce par un en-tête plutôt que par la forme du corps : c'est le seul
- * moyen de distinguer les deux sans qu'un tool de domaine qui rendrait, lui,
- * légitimement un objet `{output, attachments}` ne soit pris pour une enveloppe.
- * Les deux chemins existants ne bougent donc pas d'un octet.
+ * It is announced by a header rather than by the shape of the body: it is the only
+ * way to distinguish the two without a domain tool which would render
+ * legitimately a `{output, attachments}` object is not taken for an envelope.
+ * The two existing paths therefore do not move one byte.
  */
 export const TOOL_ATTACHMENTS_HEADER = "x-minddy-attachments";
 
 /**
- * Les tools qui deviennent des tools de DOMAINE, c'est-à-dire ceux dont
- * l'exécution vit côté serveur. Dérivés des `Set` de routage
- * ([platform-tool-names.ts](../platform-tool-names.ts)) plutôt que réécrits :
- * ce sont les mêmes noms que `exec-tool.ts` route aujourd'hui.
+ * The tools which become DOMAIN tools, that is to say those whose
+ * execution lives on the server side. Derivative of routing `Set`
+ * ([platform-tool-names.ts](../platform-tool-names.ts)) rather than rewritten:
+ * these are the same names as `exec-tool.ts` route today.
  *
- * Les trois ajouts, et pourquoi chacun n'est pas dans ces `Set` :
- *  - `create_pr` — coupé en deux (la VM pousse, la fonction ouvre) ;
- *  - `web_search` — facturé et plafonné par nous, et de toute façon pas servi
- *    par opencode sur OpenRouter ;
- *  - `ask_user` n'y est PAS : il a un vis-à-vis natif (`question`), que le
- *    superviseur branche sur notre file de questions.
+ * The three additions, and why each is not in these `Set`:
+ * - `create_pr` — cut in two (the VM pushes, the function opens);
+ * - `web_search` — billed and capped by us, and not served anyway
+ * by opencode on OpenRouter;
+ * - `ask_user` is NOT there: it has a native counterpart (`question`), which the
+ * supervisor plugs into our question queue.
  *
- * `update_plan` n'y est PLUS : il n'a jamais eu de handler côté serveur (c'est
- * un tool de CONTRÔLE, que la boucle maison exécutait elle-même sans sortir),
- * donc chaque appel repartait en `404: unknown platform tool: update_plan` — la
- * checklist du fil restait vide sur tous les runs opencode. Il est passé aux
- * tools LOCAUX, où il aurait dû être dès le départ.
+ * `update_plan` is NO LONGER there: it never had a server-side handler (this is
+ * a CONTROL tool, which the home loop executed itself without exiting),
+ * so each call went back to `404: unknown platform tool: update_plan` — the
+ * thread checklist remained empty on all opencode runs. He passed to
+ * tools LOCAL, where it should have been from the start.
  */
 export const DOMAIN_TOOL_NAMES: ReadonlySet<string> = new Set([
   ...ISSUE_TOOL_NAMES,
@@ -123,49 +123,49 @@ export const DOMAIN_TOOL_NAMES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * LES TOOLS LOCAUX — ceux que le SUPERVISEUR exécute dans la microVM, sans jamais
+ * LOCAL TOOLS — those that the SUPERVISOR runs in the microVM, without ever
  * sortir d'elle (MIN-286, lot 3 ; dossier §3.2).
  *
- * `update_plan` en est, et c'est ce qui manquait : c'est un tool de CONTRÔLE,
- * pas de domaine. Il n'exécute rien — il émet l'event `plan_update` que le fil
- * rend en checklist, et miroite les états vers le plan du ticket. La boucle
- * maison le traitait ainsi ([agent-loop.ts](../agent-loop.ts)) ; rangé côté
- * domaine, il partait au plan de contrôle, qui n'a jamais eu de handler à lui
- * opposer — 404 à chaque appel, checklist morte.
+ * `update_plan` is, and that's what was missing: it's a CONTROL tool,
+ * no domain. It doesn't execute anything — it emits the `plan_update` event that the thread
+ * renders it as a checklist, and mirrors the states to the ticket plan. The loop
+ * house treated it like this ([agent-loop.ts](../agent-loop.ts)); stored aside
+ * domain, he went to the control plane, which never had a handler of his own
+ * oppose — 404 on each call, dead checklist.
  *
- * `run_background` était le seul jusque-là : `bash` n'a pas de mode fond, et le registre de
- * jobs d'opencode sert `task`, pas le shell. Le repli qui tenait jusqu'ici — dire
- * au modèle de lancer son serveur en `&` dans le shell persistant — portait la
- * doctrine (« fais tourner le code pour de vrai ») sans aucun de ses garde-fous :
- * rien ne tuait le serveur avant le `git add -A`, sa sortie n'était bornée par
- * personne, et `checkCommand` ne voyait pas passer la commande. Le tool est donc
- * reposé, et c'est [background.ts](../background.ts) inchangé qui le tient — la
- * politique est pure, seul le câblage est neuf.
+ * `run_background` was the only one until then: `bash` does not have a background mode, and the register
+ * opencode jobs serves `task`, not the shell. The withdrawal that held until now — say
+ * to the model to launch its server in `&` in the persistent shell — carried the
+ * doctrine (“run the code for real”) without any of its safeguards:
+ * nothing killed the server before `git add -A`, its output was not limited by
+ * no one, and `checkCommand` did not see the order placed. The tool is therefore
+ * rested, and it is [background.ts](../background.ts) unchanged which holds it — the
+ * policy is pure, only the wiring is new.
  *
- * Il traverse le même pont que les tools de domaine : le fichier généré est
- * identique, c'est le pont qui l'exécute au lieu de le faire suivre.
+ * It crosses the same bridge as domain tools: the generated file is
+ * identical, it is the bridge which executes it instead of forwarding it.
  */
 export const LOCAL_TOOL_NAMES: ReadonlySet<string> = new Set([
   "run_background",
   "update_plan",
-  // Le catalogue des projets porte des chemins, donc il ne peut être résolu que
-  // dans le harness local où l'app de bureau l'a construit.
+  // The project catalog carries paths, so it can only be resolved
+  // in the local harness where the desktop app built it.
   "list_projects",
 ]);
 
 /**
- * Les tools de domaine SERVIS par ce tour, avec leurs descriptions déjà taillées
- * à son ancrage. `agentToolsFor` fait tout le travail — on ne garde que ceux dont
- * l'exécution nous revient, les autres étant rendus par opencode.
+ * The domain tools SERVED by this tour, with their descriptions already cut
+ * to its anchorage. `agentToolsFor` does all the work — we only keep those whose
+ * the execution is ours, the others being rendered by opencode.
  */
 export function domainToolsFor(job: VmJob): AgentToolDef[] {
   return toolsFor(job).filter((t) => DOMAIN_TOOL_NAMES.has(t.function.name));
 }
 
 /**
- * Les tools LOCAUX servis par ce tour. Le superviseur s'en sert pour ne câbler
- * `run_background` que là où il est offert — une session de relecture ne lance
- * rien en fond, et un tool routé sans être servi est un tool qu'on maintient pour
+ * LOCAL tools served by this tour. The supervisor uses it to not wire
+ * `run_background` only where it is offered — a replay session does not launch
+ * nothing in the background, and a tool routed without being served is a tool that is maintained for
  * personne.
  */
 export function localToolsFor(job: VmJob): AgentToolDef[] {
@@ -173,9 +173,9 @@ export function localToolsFor(job: VmJob): AgentToolDef[] {
 }
 
 /**
- * Tout ce qu'on ÉCRIT dans le dossier de tools : domaine + local. Une session de
- * relecture n'a pas `run_background` (`PR_REVIEW_TOOLS` ne le porte pas), et c'est
- * `agentToolsFor` qui le dit — pas une deuxième condition ici.
+ * Everything we WRITE in the tools folder: domain + local. A session of
+ * replay does not have `run_background` (`PR_REVIEW_TOOLS` does not carry it), and it is
+ * `agentToolsFor` which says so — not a second condition here.
  */
 function bridgedToolsFor(job: VmJob): AgentToolDef[] {
   return toolsFor(job).filter(
@@ -193,10 +193,10 @@ function toolsFor(job: VmJob): AgentToolDef[] {
     subagentModels: job.subagents.models,
     chain: job.chain,
     interactive: job.interactive,
-    // MIN-293 : `run_background` n'est pas servi sur une machine. La condition
-    // est posée ICI, dans la seule fabrique de tools du harness, et pas une
-    // deuxième fois dans `localToolsFor` — le pont n'écrit que ce qui est servi,
-    // et le superviseur ne câble que ce que le pont a écrit.
+    // MIN-293: `run_background` is not served on a machine. The condition
+    // is placed HERE, in the only harness tool factory, and not one
+    // second time in `localToolsFor` — the bridge only writes what is served,
+    // and the supervisor only wires what the bridge has written.
     local: isLocalJob(job),
   });
 }
@@ -210,26 +210,26 @@ type JsonSchema = {
   required?: string[];
 };
 
-/** `"a\nb"` → une littérale TypeScript sûre. `JSON.stringify` échappe tout. */
+/** `"a\nb"` → a safe TypeScript literal. `JSON.stringify` escapes everything. */
 function literal(value: string): string {
   return JSON.stringify(value);
 }
 
 /**
- * LES TOOLS QUE NOS DESCRIPTIONS CITENT, DITS AVEC LES NOMS D'OPENCODE (MIN-286).
+ * THE TOOLS THAT OUR DESCRIPTIONS QUOTE, SAY WITH OPENCODE NAMES (MIN-286).
  *
- * `agentToolsFor` est la seule source des descriptions, et elles parlent des tools
+ * `agentToolsFor` is the only source of the descriptions, and they talk about tools
  * VOISINS : « use run_command for those », « exactly like edit_file », « download
- * them with run_command ». Ces noms-là sont ceux de la boucle maison, et le
- * modèle qui les lit sous opencode appelle un tool qui n'existe pas — pendant que
- * son prompt système, lui, cite les bons ([prompt.ts](../prompt.ts),
- * `OPENCODE_TOOL_NAMES`). Deux vérités dans le même contexte, et un round brûlé
- * pour découvrir laquelle est la bonne.
+ * them with run_command”. These names are those of the house loop, and the
+ * model that reads them under opencode calls a tool that does not exist — while
+ * its prompt system cites the correct ones ([prompt.ts](../prompt.ts),
+ * `OPENCODE_TOOL_NAMES`). Two truths in the same context, and a burnt round
+ * to find out which one is correct.
  *
- * La table est celle du traducteur d'events ([opencode-events.ts](opencode-events.ts),
- * `TOOL_NAMES`) lue à l'envers, plus `list_dir` — chez opencode, c'est `read` qui
- * liste. Un nom sans vis-à-vis (`apply_edits`) n'y est pas : le renommer
- * promettrait autre chose plutôt que rien.
+ * The table is that of the events translator ([opencode-events.ts](opencode-events.ts),
+ * `TOOL_NAMES`) read backwards, plus `list_dir` — at opencode, it's `read` which
+ * list. An unopposed name (`apply_edits`) is not there: rename it
+ * would promise something else rather than nothing.
  */
 const OPENCODE_NAME_FOR: Record<string, string> = {
   read_file: "read",
@@ -243,20 +243,20 @@ const OPENCODE_NAME_FOR: Record<string, string> = {
 
 const OPENCODE_NAME_RE = new RegExp(`\\b(${Object.keys(OPENCODE_NAME_FOR).join("|")})\\b`, "g");
 
-/** Une description de `tools.ts`, retaillée aux noms qu'opencode sert vraiment. */
+/** A description of `tools.ts`, resized to the names that opencode actually uses. */
 export function retargetToolNames(text: string): string {
   return text.replace(OPENCODE_NAME_RE, (name) => OPENCODE_NAME_FOR[name] ?? name);
 }
 
 /**
- * Un schéma JSON, rendu en expression `tool.schema.…`.
+ * A JSON schema, rendered as an expression `tool.schema.…`.
  *
- * Ce que ce traducteur couvre est exactement ce que `tools.ts` emploie —
- * `string`, `number`, `boolean`, `array` (avec `items`), `object` (imbriqué),
- * `enum`, `description`. Le reste **lève**, et c'est délibéré : un schéma qu'on
+ * What this translator covers is exactly what `tools.ts` uses —
+ * `string`, `number`, `boolean`, `array` (with `items`), `object` (nested),
+ * `enum`, `description`. The rest **rises**, and this is deliberate: a pattern that we
  * ne sait pas traduire deviendrait sinon un `any` silencieux, donc un tool dont
- * le modèle ne connaît plus la forme. Une erreur au démarrage du tour se voit ;
- * un paramètre disparu, non.
+ * the model no longer knows the form. An error when starting the tour is seen;
+ * a parameter disappeared, no.
  */
 export function schemaExpression(schema: JsonSchema, path = "args"): string {
   const describe = (expr: string) =>
@@ -265,8 +265,8 @@ export function schemaExpression(schema: JsonSchema, path = "args"): string {
       : expr;
 
   if (Array.isArray(schema.enum) && schema.enum.length > 0) {
-    // Les enums de `tools.ts` sont tous des chaînes ; un enum d'autre chose
-    // n'aurait pas de traduction évidente, et il vaut mieux le savoir ici.
+    // The enums of `tools.ts` are all strings; an enum of something else
+    // would not have an obvious translation, and it is better to know it here.
     if (!schema.enum.every((v) => typeof v === "string")) {
       throw new Error(`${path}: enum non textuel, sans traduction`);
     }
@@ -299,7 +299,7 @@ export function schemaExpression(schema: JsonSchema, path = "args"): string {
   }
 }
 
-/** La carte `args` d'un tool : une propriété par ligne, optionnelle sauf requise. */
+/** The `args` card of a tool: one property per line, optional unless required. */
 function argsBlock(def: AgentToolDef): string {
   const { properties, required } = def.function.parameters;
   const req = new Set(required ?? []);
@@ -311,23 +311,23 @@ function argsBlock(def: AgentToolDef): string {
 }
 
 /**
- * LE FICHIER D'UN TOOL. Toujours la même forme, à la description et au schéma
- * près : il poste, il rend.
+ * THE FILE OF A TOOL. Always the same shape, description and diagram
+ * close: he posts, he returns.
  *
- * `JSON.stringify` du résultat, et pas une mise en forme : c'est ce que la boucle
- * fait déjà aujourd'hui côté modèle, et une deuxième mise en forme ici serait une
- * deuxième chose à garder en phase avec l'autre moteur pendant la bascule.
+ * `JSON.stringify` of the result, and not formatting: that's what the loop
+ * already done today on the model side, and a second formatting here would be a
+ * second thing to keep in phase with the other motor during the switch.
  *
- * Un échec de transport n'est PAS une exception qui remonte : le modèle doit lire
- * l'erreur et pouvoir réessayer ou faire autrement. Un tool qui lève coupe le
- * round, ce qui est la manière la plus chère de dire « réessaie ».
+ * A transport failure is NOT a rising exception: the model should read
+ * error and be able to try again or do something else. A tool that lifts cuts the
+ * round, which is the more expensive way of saying “try again”.
  *
- * LA SEULE BRANCHE : l'en-tête `TOOL_ATTACHMENTS_HEADER`, qui annonce une image
- * (`read_resource` sur une maquette). Le corps est alors une **enveloppe**
- * `{output, attachments}` que le tool rend telle quelle — c'est la forme riche du
- * `ToolResult` d'`@opencode-ai/plugin`, et opencode la transforme en une partie
- * `image_url` d'un message `user` posé après le round (mesuré, dossier §2.22).
- * Une enveloppe illisible retombe sur le texte : une maquette perdue vaut mieux
+ * THE ONLY BRANCH: the `TOOL_ATTACHMENTS_HEADER` header, which announces an image
+ * (`read_resource` on a model). The body is then an **envelope**
+ * `{output, attachments}` that the tool renders as is — it is the rich form of the
+ * `ToolResult` of `@opencode-ai/plugin`, and opencode transforms it into a part
+ * `image_url` of a message `user` posted after the round (measured, file §2.22).
+ * An illegible envelope falls on the text: a lost model is better
  * qu'un round perdu.
  */
 export function renderOpencodeTool(def: AgentToolDef): string {
@@ -366,18 +366,18 @@ export default tool({
 `;
 }
 
-/** Un fichier à écrire dans la microVM : chemin absolu et contenu. */
+/** A file to write in the microVM: absolute path and content. */
 export interface OpencodeToolFile {
   path: string;
   content: string;
 }
 
 /**
- * TOUS les tools de domaine d'un tour, prêts à écrire. Le superviseur pose ce
- * tableau tel quel avant de démarrer le serveur.
+ * ALL domain tools in one turn, ready to write. The supervisor asks this
+ * table as is before starting the server.
  *
- * Le nom de fichier EST le nom du tool : c'est ce qu'opencode enregistre, et le
- * faire diverger reviendrait à servir `read_issue` sous le nom `read-issue.ts`.
+ * The file name IS the name of the tool: this is what opencode records, and the
+ * to diverge would amount to serving `read_issue` under the name `read-issue.ts`.
  */
 export function opencodeToolFiles(job: VmJob): OpencodeToolFile[] {
   return bridgedToolsFor(job).map((def) => ({

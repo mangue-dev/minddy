@@ -7,34 +7,34 @@ import { getSupabase } from "./supabase";
 import { parsePrLiveParts, prLiveQueryKeys, pullRequestTopic } from "./pr-live";
 
 /**
- * Le direct d'UNE pull request, du point de vue de l'écran qui la regarde.
+ * The live view of ONE pull request, from the point of view of the screen viewing it.
  *
- * Le panneau PR charge quatre caches indépendants (`["pull-request", id]`,
+ * The PR panel loads four independent caches (`["pull-request", id]`,
  * `["pr-comments", id]`, `["pr-commits", id]`, `["pr-review-comments", …]`),
- * tous servis par la forge à la demande. Aucun ne pollait : le fil d'une PR ne
- * bougeait qu'au retour d'un geste local ou à la fin d'un run de Numo. Un
- * commentaire posté sur github.com, une approbation, un commit poussé, un fil
- * résolu : rien n'atteignait le panneau ouvert avant un rechargement.
+ * all served by the on-demand forge. None polluted: the thread of a PR only
+ * moved when returning from a local gesture or at the end of a Numo run. A
+ * comment posted on github.com, an approval, a push commit, a thread
+ * resolved: nothing was hitting the open panel before a reload.
  *
- * Le topic `pull-request:{id}` porte des messages `changed` qui NOMMENT les
- * parties touchées ; on invalide les caches correspondants et React Query va
- * relire. Rien de plus : le contenu se lit avec le token du lecteur (MIN-144),
- * pousser ce qu'un autre a lu serait faux.
+ * Topic `pull-request:{id}` has messages `changed` which NAME them
+ * affected parts; we invalidate the corresponding caches and React Query will
+ * reread. Nothing more: the content is read with the reader's token (MIN-144),
+ * pushing what someone else has read would be wrong.
  *
- * Topic dédié plutôt que le `project:{id}` existant, pour la même raison
- * qu'`agent-run:{id}` : seuls les onglets qui REGARDENT cette PR s'y abonnent,
- * au lieu d'arroser tous les membres du projet pour un fil que personne d'autre
- * n'a ouvert. La LISTE, elle, passe bien par le topic projet (le trigger de la
- * migration) — ce sont deux besoins différents.
+ * Dedicated topic rather than the existing `project:{id}`, for the same reason
+ * as `agent-run:{id}`: only tabs that VIEW this PR subscribe to it,
+ * instead of hosing everyone in the project for a thread that no one else
+ * has opened. The LIST goes through the project topic (the trigger for the
+ * migration) — these are two different needs.
  */
 
 /**
- * Coalescing par clé. Une review GitHub arrive en RAFALE — un
- * `pull_request_review` puis N `pull_request_review_comment` — et chaque message
- * demanderait son propre aller-retour de forge. Fenêtre plus large que celle du
- * provider (200 ms) : ici un refetch coûte un appel d'API distante, pas une
- * requête PostgREST.
- */
+ * Coalescing by key. A GitHub review comes in a BURST — a
+ * `pull_request_review` then N `pull_request_review_comment` — and each message
+ * would require its own forge round trip. Window wider than that of
+ * provider (200 ms): here a refetch costs a remote API call, not a
+ * PostgREST.
+ request */
 const INVALIDATE_COALESCE_MS = 500;
 
 interface Listener {
@@ -47,7 +47,7 @@ interface Entry {
   closed: boolean;
 }
 
-/** UN canal par PR, quel que soit le nombre de vues montées dessus. */
+/** ONE channel per PR, regardless of the number of views mounted on it. */
 const channels = new Map<string, Entry>();
 
 function subscribePr(prId: string, listener: Listener): () => void {
@@ -57,7 +57,7 @@ function subscribePr(prId: string, listener: Listener): () => void {
     entry = fresh;
     channels.set(prId, fresh);
     const supabase = getSupabase();
-    // Le token AVANT le join, sinon le canal privé refuse l'abonnement.
+    // The token BEFORE the join, otherwise the private channel refuses the subscription.
     void supabase.realtime.setAuth().then(() => {
       if (fresh.closed) return;
       const channel = supabase.channel(pullRequestTopic(prId), {
@@ -90,8 +90,8 @@ export function usePrLive(prId: string | null, enabled = true) {
   useEffect(() => {
     if (!prId || !enabled) return;
 
-    // Coalescing en TRAÎNE, comme le pont du provider : le premier message
-    // programme l'invalidation, ceux de la fenêtre montent dedans.
+    // Coalescing in TRAILS, like the provider's bridge: the first message
+    // program the invalidation, those in the window go up in it.
     const timers = new Map<string, ReturnType<typeof setTimeout>>();
     const invalidate = (key: QueryKey) => {
       const hash = JSON.stringify(key);

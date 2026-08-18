@@ -8,17 +8,17 @@ import { useProjects } from "@/lib/projects-context";
 import { clearPendingDraftId, readPendingDraftId } from "@/lib/project-draft";
 
 /**
- * Reprise du wizard de création (MIN-62). L'installation GitHub / l'OAuth
- * GitLab quittent la page en plein écran ; le projet n'existe pas encore, alors
- * le callback revient sur `/home?setup=git[&git=connected&connection=…]`.
+ * Resumption of the creation wizard (MIN-62). GitHub installation / OAuth
+ * GitLab leaves the page in full screen; the project does not yet exist, so
+ * the callback returns to `/home?setup=git[&git=connected&connection=…]`.
  *
- * Le brouillon, lui, est déjà en base : `sessionStorage` n'en garde que l'id, le
- * temps de l'aller-retour. Ce composant (monté une fois pour toute l'app, rendu
- * null) lit ce pointeur, retrouve le brouillon dans la liste et rouvre le
- * wizard à l'étape git — sélecteur de dépôt ouvert si la connexion a été créée.
+ * The draft is already in the base: `sessionStorage` only keeps the id, the
+ * round trip time. This component (mounted once for the entire app, rendered
+ * null) reads this pointer, finds the draft in the list and reopens the
+ * wizard in the git step — repository selector open if the connection has been created.
  *
- * Sans pointeur (autre onglet, session perdue) ou sans brouillon correspondant,
- * il ne reste que le toast : rien à rouvrir.
+ * Without pointer (other tab, session lost) or without draft correspondent,
+ * only the toast remains: nothing to reopen.
  */
 export function ProjectDraftResume() {
   const pathname = usePathname();
@@ -27,8 +27,8 @@ export function ProjectDraftResume() {
   const t = useTranslations("Settings");
   const { projectDrafts, resumeProjectDraft } = useProjects();
 
-  // L'id lu à l'arrivée. La reprise, elle, attend la liste des brouillons — la
-  // requête peut très bien n'avoir pas encore répondu quand l'URL est nettoyée.
+  // The id read on arrival. The resumption awaits the list of drafts — the
+  // request may very well not have responded yet when the URL is cleaned.
   const [pending, setPending] = useState<{
     draftId: string;
     connectionId: string | null;
@@ -66,9 +66,9 @@ export function ProjectDraftResume() {
   useEffect(() => {
     if (!pending) return;
     const draft = projectDrafts.find((d) => d.id === pending.draftId);
-    // Pas encore là : la liste peut être en vol. On repassera à sa réponse — et
-    // si le brouillon a disparu (supprimé ailleurs), rien ne se rouvrira, ce
-    // qui est exactement ce qu'il faut.
+    // Not there yet: the list may be in flight. We will return to his response — and
+    // if the draft has disappeared (deleted elsewhere), nothing will reopen, this
+    // which is exactly what is needed.
     if (!draft) return;
     setPending(null);
     clearPendingDraftId();

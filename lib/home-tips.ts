@@ -1,48 +1,47 @@
-// Les astuces du bas de l'accueil : ce que minddy sait faire et qu'on ne
-// découvre pas en cliquant.
+// Tips from the bottom of the reception: what minddy knows how to do and what we don't
+// don't discover by clicking.
 //
-// Un tracker se prend en main par ses écrans, et s'habite par ses raccourcis. Le
-// deuxième apprentissage n'arrive jamais tout seul : personne n'ouvre le cheat
-// sheet pour apprendre qu'il existe, personne ne va lire les réglages pour
-// découvrir Smart Fill. L'accueil est le seul écran qu'on revoit tous les jours
-// sans rien y chercher de précis — c'est donc le seul endroit où une phrase peut
+// A tracker is controlled by its screens, and used by its shortcuts. THE
+// second learning never happens alone: ​​no one opens the cheat
+// sheet to learn that it exists, no one will read the settings for
+// discover Smart Fill. The home page is the only screen we see every day
+// without looking for anything specific — it is therefore the only place where a sentence can
 // apprendre quelque chose sans interrompre personne.
 //
-// D'où la forme : UNE ligne, en bas, tirée au sort à chaque chargement, jamais
-// deux fois la même dans la même vie de page. Elle n'attend aucune réponse et ne
-// se ferme pas ; c'est ce qui lui permet de rester là tous les jours.
+// Hence the form: ONE line, at the bottom, drawn at random each time you load, never
+// twice the same in the same page life. She expects no response and does not
+// does not close; that's what keeps him there every day.
 //
-// Trois règles portent le fichier :
+// Three rules carry the file:
 //
-//  1. **Une astuce dit une chose VRAIE, et une seule.** Elle décrit un geste
-//     réel de l'application d'aujourd'hui. Une astuce périmée est pire que pas
+// 1. **A tip says one TRUE thing, and only one thing.** It describes a gesture
+// real from today's application. An outdated tip is worse than none
 //     d'astuce : elle envoie chercher un bouton qui n'existe plus.
-//  2. **Les touches ne sont pas recopiées ici.** Une astuce qui parle d'un
-//     raccourci cite son `id` dans le registre du cheat sheet
-//     (lib/keyboard/shortcuts.ts) et rien d'autre ; les touches sont lues
-//     là-bas au rendu. Le jour où ⌘K devient autre chose, l'astuce suit sans
-//     qu'on y pense — et c'était bien l'écueil, deux endroits qui promettent
-//     deux touches différentes pour le même geste.
-//  3. **Pas de placeholder.** Les clés transitent par cette table, donc hors du
+// 2. **The keys are not copied here.** A tip that talks about a
+// shortcut quotes its `id` in the cheat sheet register
+// (lib/keyboard/shortcuts.ts) and nothing else; the keys are read
+// there when rendered. The day ⌘K becomes something else, the trick follows without
+// let's think about it - and that was indeed the pitfall, two places which promise
+// two different keys for the same gesture.
+// 3. **No placeholder.** The keys pass through this table, therefore outside the
 //     typage strict de next-intl (cf. lib/i18n-keys.ts) : un message qui
-//     réclamerait des valeurs afficherait « Home.tips.x » en bas de l'accueil.
-//     `lib/home-tips.test.ts` refuse toute astuce dont le message en porte un.
+// would request values ​​would display “Home.tips.x” at the bottom of the home page.
+// `lib/home-tips.test.ts` refuses any tip whose message carries one.
 //
-// Le registre est celui du reste de l'accueil : un collègue qui montre un geste,
-// pas une infobulle publicitaire. Une astuce tient en une ligne, à l'indicatif,
-// et ne vend rien.
+// The register is that of the rest of the reception: a colleague who shows a gesture,
+// not an advertising tooltip. A tip fits in one line, in the indicative,
+// and doesn't sell anything.
 
 import type { MessageKey } from "@/lib/i18n-keys";
 import { CHEATSHEET, type CheatsheetShortcut } from "@/lib/keyboard/shortcuts";
 
 export interface HomeTip {
-  /** La phrase, sous `Home.tips`. */
+  /** The phrase, under `Home.tips`. */
   key: MessageKey<"Home.tips">;
   /**
-   * L'id du raccourci dans `CHEATSHEET`, quand l'astuce en désigne un. Ses
-   * touches sont rendues au bout de la phrase, LUES DANS LE REGISTRE : elles ne
-   * sont jamais écrites ici, ni dans le catalogue de messages.
-   */
+ * The id of the shortcut in `CHEATSHEET`, when the hint designates one. Its
+ * keys are rendered at the end of the sentence, READ IN THE REGISTER: they are never written here, nor in the message catalog.
+ */
   shortcut?: string;
 }
 
@@ -52,15 +51,14 @@ const tip = (key: MessageKey<"Home.tips">, shortcut?: string): HomeTip => ({
 });
 
 /**
- * Le vivier.
+ * The fishpond.
  *
- * L'ordre n'a aucune importance à l'écran (le tirage est uniforme) ; il n'est
- * là que pour la relecture, du geste le plus quotidien au réglage le plus
- * lointain. Y ajouter une astuce est le geste normal quand on livre une
- * fonctionnalité qui ne se voit pas.
+ * The order has no importance on the screen (the draw is uniform); it is
+ * only there for rereading, from the most everyday gesture to the most distant setting. Adding a tip is the normal gesture when delivering a
+ * functionality that is not visible.
  */
 export const HOME_TIPS: HomeTip[] = [
-  // — Le clavier, d'abord : ce sont les gestes qu'on répète cent fois par jour.
+  // — The keyboard, first: these are the gestures that we repeat a hundred times a day.
   tip("palette", "gen.palette"),
   tip("cheatsheet", "gen.cheatsheet"),
   tip("search", "gen.search"),
@@ -74,7 +72,7 @@ export const HOME_TIPS: HomeTip[] = [
   tip("inbox", "nav.inbox"),
   tip("assistant", "nav.assistant"),
 
-  // — La carte survolée : la moitié du travail d'un board se fait sans l'ouvrir.
+  // — The hovered map: half the work of a board is done without opening it.
   tip("hoverCard", "card.status"),
   tip("hoverAssignee", "card.assignee"),
   tip("hoverDueDate", "card.dueDate"),
@@ -85,12 +83,12 @@ export const HOME_TIPS: HomeTip[] = [
   tip("dictateIssue", "create.issueDictate"),
   tip("objectiveIssues", "nav.objectiveIssues"),
 
-  // — Les gestes à la souris qu'aucun menu n'annonce.
+  // — Mouse gestures that no menu announces.
   tip("shiftClick"),
   tip("marquee"),
   tip("rightClick"),
 
-  // — Le board et les tickets.
+  // — The board and tickets.
   tip("savedViews"),
   tip("shareView"),
   tip("recurring"),
@@ -103,7 +101,7 @@ export const HOME_TIPS: HomeTip[] = [
   tip("drafts"),
   tip("trash"),
 
-  // — Le carnet, les pages, les cycles, les objectifs.
+  // — The notebook, the pages, the cycles, the objectives.
   tip("notebookSlash"),
   tip("notebookPrompt"),
   tip("pagesSlash"),
@@ -117,7 +115,7 @@ export const HOME_TIPS: HomeTip[] = [
   tip("objectives"),
   tip("stats"),
 
-  // — Ce qui branche minddy sur le reste : agent, dépôt, entrées, sorties.
+  // — What connects minddy to the rest: agent, deposit, entries, exits.
   tip("agentPr"),
   tip("routines"),
   tip("automations"),
@@ -127,13 +125,13 @@ export const HOME_TIPS: HomeTip[] = [
   tip("import"),
   tip("export"),
 
-  // — Le confort : réglages qu'on ne cherche que si l'on sait qu'ils existent.
+  // — Comfort: adjustments that we only look for if we know they exist.
   tip("zenMode"),
   tip("sendShortcut"),
   tip("desktopApp"),
 ];
 
-/** Le registre du cheat sheet, à plat : un raccourci par id. */
+/** The cheat sheet register, flat: a shortcut by id. */
 const SHORTCUTS: ReadonlyMap<string, CheatsheetShortcut> = new Map(
   CHEATSHEET.flatMap((section) =>
     section.shortcuts.map((sc) => [sc.id, sc] as const),
@@ -141,21 +139,19 @@ const SHORTCUTS: ReadonlyMap<string, CheatsheetShortcut> = new Map(
 );
 
 /**
- * Le raccourci d'une astuce, tel qu'il est écrit dans le cheat sheet — ou
- * `undefined` pour une astuce qui n'en désigne aucun.
+ * The shortcut for a cheat, as written in the cheat sheet — or
+ * `undefined` for a cheat that does not designate any.
  *
- * Rend `undefined` aussi pour un id inconnu : une astuce qui cite un raccourci
- * supprimé se lit encore comme une phrase, et le test du catalogue est là pour
- * que ça n'arrive pas silencieusement.
+ * Returns `undefined` also for an unknown id: a cheat that cites a shortcut
+ * deleted still reads like a sentence, and the catalog test is there to make sure it doesn't happen silently.
  */
 export function tipShortcut(t: HomeTip): CheatsheetShortcut | undefined {
   return t.shortcut ? SHORTCUTS.get(t.shortcut) : undefined;
 }
 
 /**
- * Une astuce du vivier, tirée par `seed`. Déterministe à graine égale : c'est ce
- * qui permet à l'accueil de garder la même astuce tant que la page vit, et d'en
- * changer au chargement suivant — comme le salut juste au-dessus
+ * A pool trick, pulled by `seed`. Deterministic with equal seed: it's this
+ * that allows the welcome to keep the same tip as long as the page lives, and to change it on the next load — like the greeting just above
  * (lib/home-greeting.ts).
  */
 export function pickTip(seed: number): HomeTip {

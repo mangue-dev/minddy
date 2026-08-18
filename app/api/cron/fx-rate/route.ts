@@ -3,16 +3,16 @@ import { verifyCronSecret } from "@/lib/server/cron-auth";
 import { syncFxRates } from "@/lib/server/fx";
 
 /**
- * Cron quotidien (Vercel Cron, vercel.json) : le taux USD→EUR du jour, écrit
- * dans `fx_rates` pour que la page Finances convertisse chaque coût au taux de
- * SA journée (MIN-92).
+ * Daily Cron (Vercel Cron, vercel.json): the USD→EUR rate of the day, written
+ * in `fx_rates` so that the Finances page converts each cost at the rate of
+ * ITS day (MIN-92).
  *
- * Programmé APRÈS 16 h CET (`30 15 * * *` UTC) : la BCE publie une fois par jour
- * ouvré vers 16 h CET, un cron matinal ne ramènerait que le taux de la veille.
+ * Scheduled AFTER 4 p.m. CET (`30 15 * * *` UTC): the ECB publishes once a day
+ * worked around 4 p.m. CET, a morning cron would only bring back the rate of the day before.
  *
- * Vercel envoie `Authorization: Bearer ${CRON_SECRET}` ; la route est
- * inutilisable sans. Un échec de l'appel externe n'écrit rien et répond quand
- * même 200 : le dernier taux connu sert, il n'y a rien à réessayer avant demain.
+ * Vercel sends `Authorization: Bearer ${CRON_SECRET}`; the road is
+ * unusable without. A failed external call writes nothing and responds when
+ * even 200: the last known rate is used, there is nothing to try again until tomorrow.
  */
 
 export const maxDuration = 60;

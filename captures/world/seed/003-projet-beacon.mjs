@@ -1,22 +1,21 @@
 /**
- * 003 — le second projet « Beacon » (BCN).
+ * 003 — the second “Beacon” project (BCN).
  *
- * Pour quelle capture : `featureCycle`. Le cycle est une quinzaine PERSONNELLE
- * et CROSS-PROJET — sa capture doit montrer des tickets de plusieurs projets
- * dans une même liste. Avec un seul projet, l'écran ne dit rien de ce qu'il
- * est censé démontrer.
+ * Used by `featureCycle`. The cycle is a PERSONAL, CROSS-PROJECT fortnight —
+ * its capture must show tickets from several projects in the same list. With
+ * only one project, the screen would not demonstrate what it is meant to show.
  *
- * La plupart des tickets sont assignés à Camille : le schéma impose qu'un
- * ticket entré dans un cycle soit assigné au propriétaire du cycle (trigger
- * `issues_enforce_cycle`), donc seuls ses tickets pourront y entrer.
+ * Most tickets are assigned to Camille: the database constraint requires any
+ * ticket added to a cycle to be assigned to that cycle's owner (trigger
+ * `issues_enforce_cycle`), so only his tickets can enter.
  *
- * Les dates sont posées relativement au cycle courant, calculé à l'exécution :
- * voir 004-cycle.mjs, qui explique pourquoi elles ne peuvent pas être figées.
+ * The dates are set relative to the current cycle, calculated at runtime:
+ * see 004-cycle.mjs, which explains why they cannot be frozen.
  *
- * Idempotent : projet réutilisé s'il existe, seuls les tickets absents créés.
+ * Idempotent: project reused if it exists, only absent tickets created.
  *
- *   node captures/world/seed/003-projet-beacon.mjs --dry-run
- *   node captures/world/seed/003-projet-beacon.mjs
+ * node captures/world/seed/003-projet-beacon.mjs --dry-run
+ * node captures/world/seed/003-projet-beacon.mjs
  */
 import { openDemoWorld, createPlan, callRpc } from "../../lib/guards.mjs";
 import { resolvePeople } from "./_people.mjs";
@@ -29,10 +28,10 @@ const DRY_RUN = process.argv.includes("--dry-run");
 const PROJECT = { name: "Beacon", key: "BCN" };
 
 /**
- * Le board de Beacon. `at` et `doneAt` sont des positions RELATIVES dans la
- * partie écoulée de la quinzaine courante (0 = son début, 1 = aujourd'hui) :
- * les dates absolues sont calculées à l'exécution, pour que la donnée reste
- * étalée quel que soit le jour où le seed tourne.
+ * The Beacon board. `at` and `doneAt` are RELATIVE positions in the
+ * elapsed part of the current fortnight (0 = its start, 1 = today):
+ * absolute dates are calculated at runtime, so that the data remains
+ * spread out whatever day the seed turns.
  */
 const ISSUES = [
   {
@@ -221,7 +220,7 @@ async function main() {
     console.log(`  → projet ${project.key} déjà là, réutilisé`);
   }
 
-  // Voir 002 : les catégories viennent de l'app, pas d'un trigger.
+  // See 002: categories come from the app, not from a trigger.
   await ensureCategories(world, project.id);
 
   const { data: existing, error } = await world.admin
@@ -263,7 +262,7 @@ async function main() {
     console.log(`  → ${rows.length} ticket(s) ajoutés à ${project.key}`);
   }
 
-  // Descriptions et catégories — seconde passe, voir `_issues.mjs`.
+  // Descriptions and categories — second pass, see `_issues.mjs`.
   await syncIssueMetadata(world, project, ISSUES);
 }
 

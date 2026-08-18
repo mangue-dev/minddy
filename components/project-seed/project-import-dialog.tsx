@@ -3,16 +3,16 @@
 import { ImportWizardDialog } from "@/components/import/import-wizard-dialog";
 
 /**
- * L'amorce d'un projet par un import (MIN-171) — la surface que `?setup=import`
- * ouvre sur le board du projet qui vient d'être créé.
+ * The start of a project by an import (MIN-171) — the surface that `?setup=import`
+ * opens on the board of the project which has just been created.
  *
- * Le parcours est celui du wizard d'import (`import-wizard-dialog.tsx`), tel
- * quel : ce dialog ne lui ajoute rien — pas même le sélecteur de projet du
- * dialog d'onboarding, puisque ici le projet est connu, c'est celui qu'on
- * regarde.
+ * The route is that of the import wizard (`import-wizard-dialog.tsx`), tel
+ * which: this dialog does not add anything to it — not even the project selector of the
+ * onboarding dialog, since here the project is known, it is the one that we
+ * look at.
  *
- * `initialFile` est le CSV déposé pendant le wizard de création : le parcours
- * s'ouvre alors directement sur la correspondance.
+ * `initialFile` is the CSV deposited during the wizard creation: the path
+ * then opens directly to the correspondence.
  */
 export function ProjectImportDialog({
   open,

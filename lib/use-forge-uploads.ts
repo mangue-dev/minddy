@@ -8,35 +8,35 @@ import { compressImage } from "@/lib/image-compress";
 import { MAX_ATTACHMENT_BYTES } from "@/lib/use-attachment-uploads";
 
 /**
- * Joindre un fichier à un commentaire de pull request (MIN-162).
+ * Attach a file to a pull request comment (MIN-162).
  *
- * Rien à voir avec `useAttachmentUploads`, malgré le geste identique : là-bas un
- * fichier devient une LIGNE liée au commentaire, ici il devient du MARKDOWN
- * DANS son corps. C'est la seule forme qui survive au voyage — le commentaire
- * part chez la forge, qui n'a aucune idée de ce qu'est une pièce jointe minddy,
- * et n'affichera que ce que le texte dit.
+ * Nothing to do with `useAttachmentUploads`, despite the identical gesture: there a
+ * file becomes a LINE linked to the comment, here it becomes MARKDOWN
+ * IN his body. This is the only form that survives the journey — the comment
+ * goes to the forge, which has no idea what a minddy,
+ * attachment is and will only display what the text says.
  *
- * D'où le comportement, qui est celui de github.com : le fichier s'insère à
- * l'endroit du texte, d'abord comme une ligne d'attente nommée, puis remplacée
- * par le vrai lien quand l'hébergement a répondu. On continue d'écrire pendant
- * ce temps, et l'envoi reste bloqué tant qu'une attente traîne — poster
- * « ⏳ capture.png » ne rendrait service à personne.
+ * Hence the behavior, which is that of github.com: the file inserts at
+ * the location of the text, first as a named queue, then replaced
+ * with the real link when the hosting responded. We continue writing for
+ * this time, and the sending remains blocked as long as a wait drags — post
+ * “⏳ capture.png” would not do anyone any favors.
  *
- * L'upload passe par le serveur (`/api/pull-requests/{id}/attachments`), pas en
- * direct-to-storage : la destination est un bucket public, et c'est le contrôle
- * d'accès à la PR qui empêche d'en faire un hébergeur ouvert.
+ * The upload goes through the server (`/api/pull-requests/{id}/attachments`), not en
+ * direct-to-storage: the destination is a public bucket, and it is the
+ * access control to the PR that prevents it from being made an open host.
  */
 export function useForgeUploads(
-  /** Base de la PR : `/api/pull-requests/{id}` ou la façade `/api/agent-runs/{id}/pr`. */
+  /** PR base: `/api/pull-requests/{id}` or facade `/api/agent-runs/{id}/pr`. */
   endpoint: string,
-  /** Le composer applique la transformation à son brouillon — c'est lui qui le
-      détient, et l'insertion doit respecter ce qui a été tapé entre-temps. */
+  /** The composer applies the transformation to his draft — he is the one who holds the
+, and the insertion must respect what has been typed in the meantime. */
   edit: (transform: (draft: string) => string) => void,
 ) {
   const t = useTranslations("Resources");
   const [uploading, setUploading] = useState(0);
-  // `addFiles` est appelé depuis des gestionnaires de collage / dépôt dont la
-  // fermeture peut être périmée : la référence, elle, ne l'est jamais.
+  // `addFiles` is called from paste/repository managers whose
+  // closure may be out of date: the reference never is.
   const editRef = useRef(edit);
   editRef.current = edit;
 
@@ -48,8 +48,8 @@ export function useForgeUploads(
           continue;
         }
         const name = file.name || "fichier";
-        // La ligne d'attente porte un jeton unique : deux fichiers du même nom
-        // déposés ensemble ne doivent pas se remplacer l'un l'autre.
+        // The queue carries a unique token: two files of the same name
+        // filed together should not replace each other.
         const token = crypto.randomUUID().slice(0, 8);
         const placeholder = `![${t("uploadingFile", { name })} ${token}]()`;
 
@@ -60,9 +60,9 @@ export function useForgeUploads(
 
         void (async () => {
           try {
-            // Même compression que les pièces jointes de ticket : une capture de
-            // rétine pèse plusieurs mégaoctets pour rien, et elle sera regardée
-            // dans une colonne de commentaire.
+            // Same compression as ticket attachments: a capture of
+            // retina weighs several megabytes for nothing, and it will be looked at
+            // in a comment column.
             const blob =
               file.type.startsWith("image/") &&
               file.type !== "image/gif" &&
@@ -90,8 +90,8 @@ export function useForgeUploads(
             );
           } catch (err) {
             toast.error((err as Error).message || t("uploadFailed", { name }));
-            // Retirer la ligne d'attente ET le saut de ligne qui la suivait :
-            // un fichier raté ne doit pas laisser un trou dans le message.
+            // Remove the waiting line AND the line break that followed it:
+            // a failed file should not leave a gap in the message.
             editRef.current((draft) => draft.replace(`${placeholder}\n`, "").replace(placeholder, ""));
           } finally {
             setUploading((n) => n - 1);

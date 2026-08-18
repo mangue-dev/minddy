@@ -6,17 +6,16 @@ import { durationParts, fmtNum } from "@/lib/stats-derive";
 import type { StatsCycleEffort } from "@/lib/types";
 
 /**
- * Durée médiane de complétion par effort (MIN-85).
+ * Median completion time per effort (MIN-85).
  *
- * Anciennement cinq boîtes juxtaposées, chacune avec sa propre échelle
- * implicite : on ne pouvait pas voir qu'un L prend six fois plus qu'un S. Ici,
- * une barre par effort sur une échelle commune (le plus long = 100 %), donc la
- * comparaison est immédiate — c'est tout l'intérêt de la mesure.
+ * Formerly five juxtaposed boxes, each with its own scale
+ * implied: we couldn't see that an L takes six times more than an S. Here,
+ * a bar per effort on a scale common (the longest = 100%), so the
+ * comparison is immediate — that's the whole point of the measurement.
  *
- * Ces durées sont des médianes, pas des moyennes : sur un échantillon de dix
- * tickets, un seul démarré avant des vacances suffit à faire dire à la moyenne
- * qu'un M prend trois semaines. Une barre qui ne décrit plus le cas courant ne
- * se compare plus à rien.
+ * These durations are medians, not averages: on a sample of ten
+ * tickets, a single one started before a vacation is enough to make the average say
+ * that an M takes three weeks. A bar that no longer describes the current case no longer compares to anything.
  */
 export function EffortDurations({ byEffort }: { byEffort: StatsCycleEffort[] }) {
   const t = useTranslations("Stats");
@@ -35,9 +34,7 @@ export function EffortDurations({ byEffort }: { byEffort: StatsCycleEffort[] }) 
               {EFFORT_MAP[e.effort].label}
             </span>
             <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
-              {/* Teinte neutre dérivée du texte : ces barres mesurent du TEMPS,
-                  pas de la complétion — leur donner l'accent de marque ou le
-                  vert « terminé » leur ferait dire autre chose. */}
+              {/* Neutral tint derived from text: These bars measure TIME, not completion — giving them the brand accent or the green "done" would make them say something else. */}
               <div
                 className="h-full rounded-full bg-foreground/30 transition-all"
                 style={{ width: `${Math.max(width, 3)}%` }}

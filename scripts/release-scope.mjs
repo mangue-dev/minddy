@@ -42,10 +42,10 @@ export function selectReleaseScopes(mode, detected, custom = {}) {
   } else if (mode === "custom") {
     selected = { core: Boolean(custom.core), web: Boolean(custom.web), desktop: Boolean(custom.desktop) };
   } else {
-    throw new Error(`mode de déploiement inconnu : ${mode}`);
+    throw new Error(`unknown deployment mode: ${mode}`);
   }
-  // Un tag public doit viser le SHA de production. Publier le cœur implique
-  // donc la promotion Cloud du commit, même si aucun fichier web n'a changé.
+  // A public tag must target the production SHA. Publishing the heart implies
+  // therefore the Cloud promotion of the commit, even if no web file has changed.
   if (selected.core) selected.web = true;
   return selected;
 }

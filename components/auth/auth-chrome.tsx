@@ -14,18 +14,18 @@ import { MIN_PASSWORD_LENGTH, checkPassword } from "@/lib/password-policy";
 import { getDesktopBridge, isDesktop } from "@/lib/desktop/bridge";
 
 /**
- * Ce que la connexion et l'inscription ont en commun (MIN-300).
+ * What login and registration have in common (MIN-300).
  *
- * Les deux écrans ont divergé le jour où l'inscription est devenue un parcours
- * à part (`/signup`) et la connexion une simple carte centrée (`/login`). Ce
- * qu'ils partagent est ce qui ne dépend d'aucun des deux : la marque, les
- * boutons de provider, les mentions légales, et le fait de savoir si l'on est
- * dans la fenêtre de l'app de bureau. Le reste appartient à chacun.
+ * The two screens diverged the day registration became a course
+ * apart (`/signup`) and the connection a simple centered card (`/login`). This
+ * that they share is what does not depend on either of them: the brand, the
+ * provider buttons, legal notices, and knowing if you are
+ * in the desktop app window. The rest is up to everyone.
  */
 
 export type OAuthProvider = "google" | "github";
 
-/** Logo Google multicolore (inline — pas d'asset externe). */
+/** Multicolor Google logo (inline — no external asset). */
 export function GoogleGlyph() {
   return (
     <svg className="size-4" viewBox="0 0 24 24" aria-hidden="true">
@@ -50,11 +50,11 @@ export function GoogleGlyph() {
 }
 
 /**
- * Sommes-nous dans la fenêtre de l'app de bureau ?
+ * Are we in the desktop app window?
  *
- * Lu APRÈS le montage : `window.minddy` n'existe pas au rendu serveur, et le
- * supposer ferait diverger l'hydratation. Donc `false` au premier rendu, dans
- * l'app comme ailleurs — ce qui en dépend doit rester juste dans les deux cas.
+ * Read AFTER editing: `window.minddy` does not exist in server rendering, and the
+ * assuming would cause hydration to diverge. So `false` at first rendering, in
+ * the app as elsewhere — what depends on it must remain correct in both cases.
  */
 export function useInDesktopApp(): boolean {
   const [inDesktopApp, setInDesktopApp] = useState(false);
@@ -62,7 +62,7 @@ export function useInDesktopApp(): boolean {
   return inDesktopApp;
 }
 
-/** La marque, avec ou sans lien vers le site public. */
+/** The brand, with or without a link to the public site. */
 export function LogoMark({ asLink }: { asLink: boolean }) {
   const mark = (
     <>
@@ -92,17 +92,17 @@ export function LogoMark({ asLink }: { asLink: boolean }) {
 }
 
 /**
- * Un lien vers une page publique depuis un écran d'auth.
+ * A link to a public page from an auth screen.
  *
- * **Dans l'app de bureau, il ouvre le NAVIGATEUR** (MIN-292) : la fenêtre ne
- * montre que l'authentification et l'app, et une page publique n'y entre pas.
- * La coquille a bien un garde-fou pour ça, mais il agit APRÈS coup — une
- * navigation SPA n'est pas annulable, il ne peut que ramener à l'entrée, et il
- * jetterait le formulaire à moitié rempli. Le geste juste est donc de ne pas
- * naviguer du tout.
+ * **In the desktop app, it opens the BROWSER** (MIN-292): the window does not
+ * shows that authentication and the app, and a public page does not enter it.
+ * The shell does have a safeguard for this, but it acts AFTER the fact — a
+ * SPA navigation cannot be canceled, it can only return to the entrance, and it
+ * would throw away the half-completed form. The right gesture is therefore not to
+ * navigate at all.
  *
- * Ça reste un vrai `<a href>` : le lien est copiable, ouvrable au milieu, et
- * lisible par un lecteur d'écran comme n'importe quel autre.
+ * It remains a real `<a href>`: the link is copyable, openable in the middle, and
+ * readable by a screen reader like any other.
  */
 export function LegalLink({
   href,
@@ -127,9 +127,9 @@ export function LegalLink({
       className={className}
       onClick={(event) => {
         event.preventDefault();
-        // Absolue, et bâtie sur l'origine COURANTE : en développement la
-        // coquille pointe sur `localhost`, et un lien vers la production
-        // ouvrirait la mauvaise page.
+        // Absolute, and built on the CURRENT origin: in development the
+        // shell points to `localhost`, and a link to production
+        // would open the wrong page.
         getDesktopBridge()?.openExternal(new URL(href, window.location.origin).href);
       }}
     >
@@ -139,9 +139,9 @@ export function LegalLink({
 }
 
 /**
- * La mention d'information au point de collecte (RGPD art. 13, MIN-119). Elle
- * vit sous le bouton d'INSCRIPTION et nulle part ailleurs : c'est là que des
- * données sont collectées pour la première fois, une connexion ne collecte rien
+ * The mention of information at the point of collection (GDPR art. 13, MIN-119). She
+ * lives under the REGISTRATION button and nowhere else: this is where
+ * data is collected for the first time, a connection does not collect anything
  * de neuf.
  */
 export function SignupLegalNotice({ external }: { external: boolean }) {
@@ -166,8 +166,8 @@ export function SignupLegalNotice({ external }: { external: boolean }) {
 }
 
 /**
- * Google et GitHub, le même bouton pour se connecter et s'inscrire : Supabase
- * crée le compte au premier passage.
+ * Google and GitHub, the same button to connect and register: Supabase
+ * creates the account on the first pass.
  */
 export function OAuthButtons({
   pending,
@@ -206,11 +206,11 @@ export function OAuthButtons({
 }
 
 /**
- * Le trait « ou par e-mail » entre les providers et le formulaire.
+ * The “or by e-mail” line between the providers and the form.
  *
- * Deux traits et un mot entre eux, et non un mot sur fond opaque POSÉ sur un
- * trait continu : depuis que la coquille peint un halo coloré, un `bg-background`
- * au milieu de l'écran se voit — c'est une pastille grise sur un dégradé vert.
+ * Two lines and a word between them, and not a word on an opaque background PLACED on a
+ * continuous line: since the shell paints a colored halo, a `bg-background`
+ * in the middle of the screen you can see — it's a gray dot on a green gradient.
  */
 export function AuthSeparator({ label }: { label: string }) {
   return (
@@ -222,7 +222,7 @@ export function AuthSeparator({ label }: { label: string }) {
   );
 }
 
-/** Un champ et son étiquette — la même paire sur les deux écrans. */
+/** A field and its label — the same pair on both screens. */
 export function Field({
   id,
   label,
@@ -243,20 +243,20 @@ export function Field({
 }
 
 /**
- * La colonne des écrans d'auth : la marque en haut à gauche, le contenu au
- * centre, sur toute la hauteur. Le fond, lui, appartient à la coquille
- * (`app/(auth)/auth-shell.tsx`) — les deux écrans le partagent.
+ * The column of auth screens: the mark at the top left, the content at
+ * center, all the way up. The bottom belongs to the shell
+ * (`app/(auth)/auth-shell.tsx`) — both screens share it.
  *
- * Dans l'app de bureau, le logo ne ramène nulle part : le site public n'y a pas
- * de place, et un lien qui rebondirait aussitôt vers ici vaut moins qu'une
- * marque posée (MIN-291).
+ * In the desktop app, the logo does not lead anywhere: the public site is not there
+ * space, and a link that immediately bounces back to here is worth less than a
+ * mark installed (MIN-291).
  *
- * **Et il passe à DROITE.** Les boutons macOS sont dessinés par le système
- * par-dessus la vue web, dans le coin haut-gauche, et aucun `z-index` ne passe
- * devant : posée à `p-8`, la marque tombait dessous. Ces écrans-là n'ont pas de
- * barre latérale pour leur faire une place dans sa ligne de marque, donc le coin
- * leur revient en entier et c'est la marque qui bouge. Le geste est le même que
- * dans la barre : une place échangée, rien de neuf à l'écran.
+ * **And it shifts to the RIGHT.** macOS buttons are drawn by the system
+ * above the web view, in the top left corner, and no `z-index` passes
+ * in front: placed at `p-8`, the mark fell below. These screens do not have
+ * sidebar to make a place for them in its brand line, therefore the corner
+ * comes back to them in full and it is the brand that moves. The gesture is the same as
+ * in the bar: a place swapped, nothing new on the screen.
  */
 export function AuthColumn({
   inDesktopApp,
@@ -278,20 +278,20 @@ export function AuthColumn({
 }
 
 /**
- * Les exigences du mot de passe, cochées à la frappe.
+ * Password requirements, checked as you type.
  *
- * Elles étaient tenues par Supabase seul : on tapait, on cliquait, et le serveur
- * répondait en anglais une liste de conditions qu'on n'avait jamais vues. Les
- * mêmes règles sont maintenant évaluées ici ([password-policy.ts](../../lib/password-policy.ts)),
- * et le bouton reste grisé tant qu'elles ne sont pas toutes tenues : le refus du
- * serveur devient un filet, plus un mode de dialogue.
+ * They were held by Supabase alone: ​​we typed, we clicked, and the server
+ * responded in English with a list of conditions that we had never seen. THE
+ * same rules are now evaluated here ([password-policy.ts](../../lib/password-policy.ts)),
+ * and the button remains grayed out as long as they are not all held: the refusal of the
+ * server becomes a fallback, not a dialog mode.
  *
- * `aria-live` sur la liste : la coche est une information visuelle, et sans elle
- * un lecteur d'écran n'entendrait jamais que la règle vient d'être satisfaite.
+ * `aria-live` on the list: the checkmark is visual information, and without it
+ * a screen reader would never hear that the rule has just been satisfied.
  *
- * Partagée par les deux écrans qui posent un mot de passe (MIN-297) : le wizard
- * d'inscription et la définition d'un nouveau mot de passe. Les mêmes règles y
- * sont exigées, elles doivent y être DITES de la même façon.
+ * Shared by the two screens which set a password (MIN-297): the wizard
+ * registration and setting a new password. The same rules
+ * are required, they must be SAYING in the same way.
  */
 export function PasswordRules({ password }: { password: string }) {
   const t = useTranslations("Auth");
@@ -320,13 +320,13 @@ export function PasswordRules({ password }: { password: string }) {
 }
 
 /**
- * L'icône d'un e-mail parti — l'écran « regardez votre boîte mail ».
+ * A gone email icon — the “look at your mailbox” screen.
  *
- * Posée sur son bloc isométrique (`IsoIcon`), comme les états vides de l'app et
- * les cartes de la landing (MIN-254), et non une lucide de face dans une
- * pastille ronde : cette pastille-là est le dessin le plus neutre possible, donc
- * celui qui ne dit rien de minddy. Cet écran est le dernier du parcours
- * d'inscription, et le seul qui n'ait qu'une image à montrer.
+ * Placed on its isometric block (`IsoIcon`), like the empty states of the app and
+ * the cards of the landing (MIN-254), and not a lucid face in a
+ * round pellet: this pellet is the most neutral drawing possible, so
+ * the one who doesn't say anything about minddy. This screen is the last of the route
+ * registration, and the only one that only has one image to show.
  */
 export function MailGlyph() {
   return <IsoIcon icon={Mail} className="mx-auto w-24" />;

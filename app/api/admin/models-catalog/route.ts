@@ -5,18 +5,18 @@ import { isAdminUser } from "@/lib/server/admin";
 import { getAdminModelCatalog } from "@/lib/server/agent/models-catalog";
 
 /**
- * Catalogue de modèles du dashboard admin (`/admin` → onglet « Modèles »).
+ * Admin dashboard template catalog (`/admin` → “Templates” tab).
  *
- * Volontairement distinct de `/api/agent/models` : celui-là résout le provider
- * ACTIF du compte (son BYOK), alors que les modèles d'`app_config` tournent
- * toujours sur la clé plateforme OpenRouter — proposer le catalogue Anthropic
- * d'un admin en BYOK ferait écrire des ids inutilisables au runtime. Et il ne
- * filtre pas sur le tool-calling, puisque la config couvre aussi la
- * transcription et les embeddings.
+ * Deliberately distinct from `/api/agent/models`: this one resolves the provider
+ * ACTIVE of the account (its BYOK), while the `app_config` models are running
+ * still on the OpenRouter platform key — offer the Anthropic catalog
+ * of an admin in BYOK would cause runtime to write unusable ids. And he doesn't
+ * not filter on tool-calling, since the config also covers the
+ * transcription and embeddings.
  *
- * Chaque modèle porte son multiplicateur de coût, sans plafond en face : c'est
- * ici qu'on choisit ce que minddy paye — l'échelle de coût y est l'information
- * de travail, alors qu'aucun plan de facturation ne s'applique à un réglage
+ * Each model carries its cost multiplier, without a ceiling in front: it is
+ * here we choose what minddy pays — the cost scale is the information
+ * work, while no billing plan applies to a setting
  * d'instance.
  */
 

@@ -5,21 +5,21 @@ import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { resolveCapabilities } from "@/lib/capabilities";
 
 /**
- * Pages légales (mentions, CGU, confidentialité, cookies) — accessibles sans
- * compte, d'où leur présence dans PUBLIC_ROUTES du proxy. Elles partagent le
- * chrome du site public depuis MIN-73 : même navigation, même pied de page (dont
- * la colonne « Légal » qui remplace l'ancienne navigation croisée). Seule la
- * colonne de texte leur est propre.
+ * Legal pages (notices, CGU, confidentiality, cookies) — accessible without
+ * account, hence their presence in PUBLIC_ROUTES of the proxy. They share the
+ * chrome of the public site since MIN-73: same navigation, same footer (including
+ * the “Legal” column which replaces the old cross navigation). Only the
+ * column of text is their own.
  *
- * `Analytics` et `SpeedInsights` vivent ICI, pas au layout racine (MIN-323).
+ * `Analytics` and `SpeedInsights` live HERE, not at the root layout (MIN-323).
  *
- * Ils installent des `PerformanceObserver` et un écouteur de navigation sur tout
- * ce qu'ils couvrent. Au layout racine, ils tournaient dans l'app authentifiée —
- * qui n'en a pas l'usage : sa mesure d'audience passe par PostHog, et ses écrans
- * ne sont pas des pages publiques dont on optimise le Web Vital.
+ * They install `PerformanceObserver` and a navigation listener on everything
+ * what they cover. In the root layout, they were running in the authenticated app —
+ * who does not use it: their audience measurement goes through PostHog, and their screens
+ * are not public pages for which Web Vital is optimized.
  *
- * Contrepartie assumée : plus de pageviews Vercel sur l'app connectée. C'est
- * exactement ce qu'on cherchait — la mesure suit les pages publiques.
+ * Assumed compensation: no more Vercel pageviews on the connected app. It is
+ * exactly what we were looking for — the measurement follows public pages.
  */
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
   const webAnalytics = resolveCapabilities(process.env).vercelWebAnalytics.configured;

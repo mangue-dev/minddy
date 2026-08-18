@@ -33,14 +33,14 @@ export function shouldAutoStartOnPromptCopy(status: IssueStatusValue): boolean {
 }
 
 /**
- * Même règle pour une tâche du CARNET (quatre états, pas huit statuts) : seule
- * une tâche pas encore commencée avance. Confier la tâche à un agent, c'est la
- * commencer — mais cochée ou annulée, elle ne revient pas en arrière, et « en
- * cours » y est déjà.
+ * Same rule for a NOTEBOOK task (four states, not eight statuses): only
+ * a task not yet started advances. Entrusting the task to an agent is the
+ * start — but checked or canceled, it does not go back, and "en
+ * course" is already there.
  *
- * Sert aux DEUX gestes de passation, comme sur un ticket : « copier le prompt »
- * (sous l'option de compte ci-dessus) et « lancer un agent » (toujours, cf.
- * `intentStartsWork` côté serveur).
+ * Used for BOTH handover gestures, as on a ticket: "copy prompt"
+ * (under account option above) and "launch an agent" (always, cf.
+ * `intentStartsWork` on the server side).
  */
 export function shouldAutoStartTask(state: PlanTaskState): boolean {
   return state === "pending";

@@ -9,23 +9,23 @@ import { getPageFilePath } from "@/lib/server/page-files";
 type RouteContext = { params: Promise<{ id: string; fileId: string }> };
 
 /**
- * GET /api/projects/[id]/pages/files/[fileId] — la porte de lecture d'un fichier
- * de page (MIN-280). `?download=1` pour l'enregistrer plutôt que l'afficher.
+ * GET /api/projects/[id]/pages/files/[fileId] — the port for reading a file
+ * (MIN-280). `?download=1` to save it rather than display it.
  *
- * C'est CETTE URL qui est rangée dans le document, et c'est pour elle qu'elle
- * doit être stable et sans secret : elle survit des mois dans un corps, elle
- * traverse la projection markdown que lit Numo, et elle sert de `src` à une
- * balise `<img>`. Le fichier privé, lui, est servi par une redirection 302 vers
- * une URL signée de courte durée — exactement le montage de
- * `/api/attachments/file`, avec un identifiant à la place d'un chemin.
+ * It is THIS URL which is stored in the document, and it is for this that it
+ * must be stable and without secrets: it survives for months in a body, it
+ * passes through the markdown projection that Numo reads, and it serves as `src` for a
+ * `<img>` tag. The private file is served by a 302 redirection to
+ * a short-lived signed URL — exactly the montage of
+ * `/api/attachments/file`, with an identifier instead of a path.
  *
- * L'accès se lit sur le PROJET de l'URL, et la ligne doit lui appartenir : sans
- * cette seconde condition, un identifiant de fichier valide ressortirait sous
- * n'importe quel projet dont on est membre.
+ * The access is read on the PROJECT of the URL, and the line must belong to it: without
+ * this second condition, a valid file ID would be exposed under
+ * any project of which we are a member.
  *
- * Une page à la corbeille garde ses fichiers lisibles — même parti pris que son
- * activité et ses rétroliens : la corbeille est réversible, et une image qui
- * cesserait de charger avant la purge ferait croire à une perte.
+ * A page in the trash keeps its files readable — same bias as its
+ * activity and its trackbacks: the basket is reversible, and an image which
+ * would stop charging before purging would make it appear as a loss.
  */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id: projectId, fileId } = await params;
@@ -43,10 +43,10 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const download = request.nextUrl.searchParams.get("download") === "1";
   const url = await signedAttachmentUrl(service, file.storage_path, {
     download: download ? file.file_name : false,
-    // Le type de la LIGNE fait foi ici : il a été déduit des octets à l'envoi
-    // (lib/server/page-files.ts), l'envoi d'un fichier de page passant par le
-    // serveur. Hors allowlist, la signature repartira en « pièce jointe »
-    // (MIN-340) — un `.png` qui contient du HTML ne s'ouvre pas.
+    // The type of the LINE is authentic here: it was deducted from the bytes when sending
+    // (lib/server/page-files.ts), sending a page file through the
+    // server. Outside the allowlist, the signature will return as an “attachment”
+    // (MIN-340) — a `.png` containing HTML must not be opened.
     mimeType: file.mime_type,
   });
   if (!url) return notFound;

@@ -1,28 +1,28 @@
 /**
- * Les calques PORTÉS, et les deux questions qu'un panneau « maison » doit leur
- * poser (MIN-284).
+ * The CARRIED layers, and the two questions that a "home" panel must ask them
+ * (MIN-284).
  *
- * Un panneau qui se ferme au clic extérieur le décide en regardant si la cible
- * est dans son propre DOM. C'est juste — tant que rien ne s'ouvre par-dessus
- * lui. Or un menu, un dialogue de confirmation ou un toast sont montés en
- * PORTAIL, en fin de `body` : au sens du DOM, ils sont « ailleurs », et le
- * panneau se referme sur le clic qui les vise.
+ * A panel that closes on external clicking decides this by looking if the target
+ * is in its own DOM. That's fair — as long as nothing opens over
+ * him. However, a menu, a confirmation dialog or a toast are mounted in
+ * PORTAL, at the end of `body`: in the sense of the DOM, they are "elsewhere", and the
+ * panel closes on the click which targets them.
  *
- * Le symptôme, sur le fil de commentaires d'un bloc : cliquer « Supprimer »
- * dans le menu « ⋯ » fermait le panneau, donc démontait le commentaire, donc
- * emportait le dialogue de confirmation avant qu'on ait pu confirmer. Le geste
- * ne supprimait rien, et ne disait rien non plus — il ressemblait à une fermeture
- * voulue. Même chose pour « Modifier », et pour ÉCHAP, que le panneau
- * interceptait en capture avant que le dialogue l'ait vu.
+ * The symptom, on the comments thread of a block: clicking “Delete”
+ * in the “⋯” menu closed the panel, therefore unmounting the comment, therefore
+ * took away the confirmation dialog before we could confirm. The
+ * gesture didn't delete anything, nor did it say anything — it looked like an intended closing
+ *. Same thing for "Modify", and for ESC, which the panel
+ * intercepted in capture before the dialog saw it.
  *
- * Les sélecteurs sont ceux de Radix (via mangue-ui) et de Sonner. Ils décrivent
- * une CONVENTION de bibliothèque plutôt qu'un composant à nous : c'est pourquoi
- * ils vivent ici, en un seul endroit, plutôt que recopiés dans chaque panneau.
+ * The selectors are those of Radix (via mango-ui) and Sonner. They describe
+ * a library CONVENTION rather than a component of ours: that's why
+ * they live here, in one place, rather than copied into each panel.
  */
 
-/** Ce qui se pose PAR-DESSUS : un clic dedans n'est pas un clic « ailleurs ». */
+/** What lies ABOVE: a click inside is not a click “elsewhere”. */
 const OVERLAY_SELECTOR = [
-  // Menus, popovers, sélecteurs, infobulles — tout ce que Radix positionne.
+  // Menus, popovers, selectors, tooltips — everything Radix positions.
   "[data-radix-popper-content-wrapper]",
   '[data-slot="alert-dialog-overlay"]',
   '[data-slot="dialog-overlay"]',
@@ -33,20 +33,20 @@ const OVERLAY_SELECTOR = [
 ].join(",");
 
 /**
- * Ce à quoi ÉCHAP appartient d'abord.
+ * What ESC belongs to first.
  *
- * Plus étroit que ci-dessus, et volontairement : une infobulle ne prend pas
- * ÉCHAP, donc le panneau doit rester fermable au clavier pendant qu'on en
- * survole une.
+ * Narrower than above, and on purpose: a tooltip does not take
+ * ESC, so the panel must remain keyboard-closable while
+ * hovers a.
  */
 const DISMISSIBLE_SELECTOR = '[role="menu"],[role="dialog"],[role="alertdialog"]';
 
-/** La cible d'un clic est-elle dans un calque posé par-dessus le panneau ? */
+/** Is the target of a click in a layer placed on top of the panel? */
 export function isInOverlayLayer(node: Element | null | undefined): boolean {
   return !!node?.closest(OVERLAY_SELECTOR);
 }
 
-/** Un menu ou un dialogue est-il ouvert quelque part ? Alors ÉCHAP est à lui. */
+/** Is a menu or dialog open somewhere? So ESCAPE is his. */
 export function hasOpenDismissibleLayer(root: ParentNode): boolean {
   return !!root.querySelector(DISMISSIBLE_SELECTOR);
 }

@@ -1,58 +1,58 @@
 /**
- * Le changelog public (MIN-93) — la liste des livraisons, du plus récent au
- * plus ancien.
+ * The public changelog (MIN-93) — the list of commits, from newest to
+ * oldest.
  *
- * ## Pourquoi ce fichier et pas les issues `done`
+ * ## Why this file and not the issues `done`
  *
- * Le plan proposait de dériver la page des issues minddy passées à `done` sur
- * le projet lui-même : le produit se documenterait avec lui-même, ce qui est
- * une jolie démonstration. Essayé, écarté, pour trois raisons de fond :
+ * The plan proposed to derive the minddy issues page passed to `done` on
+ * the project itself: the product would document itself with itself, which is
+ * a nice demonstration. Tried, rejected, for three basic reasons:
  *
- * 1. **La langue.** Les issues de minddy sont écrites en français. Le site
- *    public est canonique en ANGLAIS. Une page anglaise remplie de « Refondre
- *    les métadonnées de toutes les pages avec i18n » n'est pas une page
- *    anglaise, et rien ne peut la traduire à la volée sans mentir.
- * 2. **L'audience.** Un titre d'issue s'adresse à celui qui va la faire ; une
- *    entrée de changelog à celui qui utilise le produit. « Différer l'import de
- *    posthog-js » et « Dashboard admin doit déclencher le fil d'ariane » sont
- *    de vraies livraisons, et n'ont rien à faire sur une page publique.
- * 3. **Le tri.** Il faudrait un drapeau « public » sur les issues, donc une
- *    migration et une case de plus dans l'UI, pour un besoin qu'une liste de
- *    quinze lignes couvre.
+ * 1. **The language.** Minddy's issues are written in French. The public
+ * site is canonical in ENGLISH. An English page filled with "Recast
+ * metadata of all pages with i18n" is not an English
+ * page, and nothing can translate it on the fly without lying.
+ * 2. **The audience.** An issue title is addressed to the person who is going to do it; a
+ * changelog entry to whoever uses the product. “Defer import of
+ * posthog-js” and “Dashboard admin must trigger breadcrumbs” are
+ * real deliveries, and have nothing to do on a public page.
+ * 3. **Sorting.** There should be a “public” flag on the outputs, so a
+ * migration and one more box in the UI, for a need that a list of
+ * fifteen lines covers.
  *
- * D'où : une entrée par livraison, écrite pour un lecteur, dans les deux
- * langues. Le geste reste le même — quand un lot d'issues passe à `done`, on
- * ajoute une entrée — mais on la RÉÉCRIT.
+ * Hence: one entry per delivery, written for a reader, in both
+ * languages. The action remains the same — when a batch of issues changes to `done`, we
+ * adds an entry — but we REWRITE it.
  *
- * ## Ce que contient ce fichier, et ce qu'il ne contient pas
+ * ## What this file contains, and what it doesn't contain
  *
- * Uniquement l'identifiant et la date. Les textes vivent dans le namespace
- * `Changelog` des deux catalogues (`entry_<id>_title`, `entry_<id>_body`), avec
- * tout le reste de la copie du site — donc dans le périmètre d'un audit de
- * copy, et traduisibles comme n'importe quelle autre chaîne.
+ * Only the identifier and the date. The texts live in the namespace
+ * `Changelog` of the two catalogs (`entry_<id>_title`, `entry_<id>_body`), with
+ * all the rest of the site copy — therefore within the scope of an audit of
+ * copy, and translatable like any other string.
  *
- * C'est aussi ce qui permet à `lib/public-routes.ts` d'importer ce module pour
- * en tirer le `lastModified` de la page sans alourdir le middleware : même dans
- * cinq ans, ce fichier ne pèsera que des identifiants et des dates.
+ * This is also what allows `lib/public-routes.ts` to import this module to
+ * extract the `lastModified` from the page without burdening the middleware: even in
+ * five years, this file will only weigh identifiers and dates.
  *
- * ## Ajouter une entrée
+ * ## Add an entry
  *
- * En tête de liste : `{ id: "<slug-court>", date: "AAAA-MM-JJ" }`, la date du
- * DÉPLOIEMENT, puis `entry_<id>_title` et `entry_<id>_body` dans `en.json` et
- * `fr.json`. `changelog.test.ts` refuse une entrée sans texte, une date mal
- * formée ou une liste mal triée.
+ * At the top of the list: `{ id: "<slug-court>", date: "AAAA-MM-JJ" }`, the date of
+ * DEPLOYMENT, then `entry_<id>_title` and `entry_<id>_body` in `en.json` and
+ * `fr.json`. `changelog.test.ts` rejects input without text, a poorly formed date
+ *, or a poorly sorted list.
  */
 
 import type { Locale } from "@/i18n/config";
 
 export interface ChangelogEntry {
-  /** Slug stable : clé i18n, ancre de l'URL et `guid` du flux RSS. */
+  /** Stable slug: i18n key, URL anchor and `guid` of the RSS feed. */
   id: string;
-  /** Date de déploiement, ISO court. */
+  /** Deployment date, short ISO. */
   date: string;
 }
 
-/** Du plus récent au plus ancien — c'est l'ordre d'affichage ET celui du flux. */
+/** Newest to oldest — this is the display order AND the order of the feed. */
 export const CHANGELOG_ENTRIES: ReadonlyArray<ChangelogEntry> = [
   { id: "pages", date: "2026-08-11" },
   { id: "smart-fill", date: "2026-08-10" },
@@ -88,28 +88,27 @@ export const CHANGELOG_ENTRIES: ReadonlyArray<ChangelogEntry> = [
 ];
 
 /**
- * La date de la dernière entrée, telle que la lisent le sitemap et l'en-tête
- * de la page. C'est le seul `lastModified` de la table des routes qui ne soit
- * pas tenu à la main : sur cette page-là, « le contenu a changé » et « une
- * entrée a été ajoutée » sont exactement la même chose.
+ * The date of the last entry, as read by the sitemap and the
+ * header of the page. This is the only `lastModified` in the routes table that is not
+ * hand-held: on this page, "the content has changed" and "an
+ * entry has been added" are exactly the same thing.
  */
 export const CHANGELOG_LAST_MODIFIED: string = CHANGELOG_ENTRIES[0].date;
 
-/** Combien de temps une livraison reste « nouvelle » pour la pastille du menu. */
+/** How long does a delivery remain “new” for the menu tab. */
 export const RECENT_CHANGELOG_DAYS = 5;
 
 /**
- * Y a-t-il une livraison de moins de cinq jours ? C'est ce que signale la
- * pastille bleue du menu de compte, dans l'app.
+ * Is there delivery in less than five days? This is indicated by the
+ * blue dot in the account menu, in the app.
  *
- * Pas d'état « lu » derrière : la pastille dit « quelque chose est sorti cette
- * semaine », pas « vous ne l'avez pas vu ». Rien à stocker, rien à
- * synchroniser entre appareils, et elle s'éteint toute seule.
+ * No “read” status behind it: the dot says “something came out this
+ * week”, not “you haven’t seen it”. Nothing to store, nothing to synchronize between devices, and it turns off by itself.
  *
- * Aucune borne basse volontairement : les dates sont écrites à la main, en
- * UTC-minuit, et publiées le jour même. Un utilisateur à Paris qui ouvre l'app
- * à 1 h du matin est encore la veille en UTC — exiger `age >= 0` éteindrait la
- * pastille précisément le jour de la sortie.
+ * No lower limit on purpose: the dates are written by hand, in
+ * UTC-midnight, and published the same day. A user in Paris who opens the app
+ * at 1 a.m. is still the day before in UTC — requiring `age >= 0` would turn off the
+ * tablet precisely on the day of release.
  */
 export function hasRecentChangelog(now: number = Date.now()): boolean {
   const [year, month, day] = CHANGELOG_LAST_MODIFIED.split("-").map(Number);
@@ -117,12 +116,12 @@ export function hasRecentChangelog(now: number = Date.now()): boolean {
   return age < RECENT_CHANGELOG_DAYS * 24 * 60 * 60 * 1000;
 }
 
-/** Le nom de format Intl de la langue servie. */
+/** The Intl format name of the language served. */
 function intlLocale(locale: Locale): string {
   return locale === "fr" ? "fr-FR" : "en-GB";
 }
 
-/** Date lisible dans la langue servie, sans dépendre du fuseau du serveur. */
+/** Readable date in the language served, without depending on the server's time zone. */
 export function formatChangelogDate(iso: string, locale: Locale): string {
   const [year, month, day] = iso.split("-").map(Number);
   return new Intl.DateTimeFormat(intlLocale(locale), {
@@ -134,14 +133,12 @@ export function formatChangelogDate(iso: string, locale: Locale): string {
 }
 
 /**
- * « Il y a deux jours » plutôt que « 26 juillet 2026 » : ce qu'on cherche en
- * ouvrant un changelog n'est pas la date, c'est la fraîcheur. La date exacte
- * reste dans l'attribut `datetime`, que lisent les analyseurs, et en infobulle.
+ * “Two days ago” rather than “July 26, 2026”: what we're looking for when opening a changelog is not the date, it's the freshness. The exact date
+ * remains in the `datetime` attribute, which the analyzers read, and in the tooltip.
  *
- * **Au jour près, jamais à l'heure.** Une entrée ne porte qu'une date : dire
- * « il y a 20 heures » lui prêterait une précision qu'elle n'a pas. Le plancher
- * à zéro règle au passage le décalage horaire, qui annoncerait sinon une
- * livraison du jour « dans quatre heures » à un lecteur à l'est de l'UTC.
+ * **To the day, never to the hour.** An entry only carries a date: saying
+ * "20 hours ago" would give it a precision that it doesn't have. The floor
+ * at zero sets the time difference, which would otherwise announce a delivery of the day "in four hours" to a drive east of UTC.
  */
 export function formatChangelogAge(
   iso: string,

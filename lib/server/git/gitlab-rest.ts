@@ -1,10 +1,10 @@
 import "server-only";
 
 /**
- * Plomberie REST bas niveau partagée pour le provider GitLab (MIN-47), portée
- * d'AutoKap (gitlab-rest.ts) — réduite au minimum du flux de liaison inerte :
- * base URL, en-têtes d'auth, pagination via l'en-tête X-Next-Page.
- * gitlab.com SaaS uniquement pour v1.
+ * Shared low-level REST plumbing for GitLab provider (MIN-47), scope
+ * from AutoKap (gitlab-rest.ts) — minimized inert binding flow:
+ * base URL, auth headers, pagination via header X-Next-Page.
+ * gitlab.com SaaS only for v1.
  */
 
 export const GITLAB_HOST = "https://gitlab.com";
@@ -23,8 +23,8 @@ export function gitlabHeaders(
 }
 
 /**
- * GitLab pagine avec un en-tête `X-Next-Page` (mode offset). Renvoie le numéro
- * de page suivant, ou null quand épuisé.
+ * GitLab pages with a `X-Next-Page` header (offset mode). Returns the next page number
+ *, or null when exhausted.
  */
 export function gitlabNextPage(response: Response): number | null {
   const next = response.headers.get("x-next-page");

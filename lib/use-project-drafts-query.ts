@@ -13,18 +13,18 @@ import type { ProjectDraft, ProjectDraftInput } from "./project-draft";
 const DRAFTS_KEY = ["project-drafts"] as const;
 
 export interface UseProjectDraftsResult {
-  /** Mes brouillons, du plus récent au plus ancien (l'ordre de la barre latérale). */
+  /** My drafts, newest to oldest (sidebar order). */
   drafts: ProjectDraft[];
   saveDraft: (draft: ProjectDraftInput) => Promise<ProjectDraft>;
   deleteDraft: (id: string) => Promise<void>;
 }
 
 /**
- * Les brouillons de création de projet (monté une fois via `ProjectsProvider`).
+ * Project creation drafts (mounted once via `ProjectsProvider`).
  *
- * Pas de pont temps réel : un brouillon est strictement personnel et n'est écrit
- * que par l'onglet où le wizard tourne — l'invalidation qui suit chaque écriture
- * suffit. Un autre onglet le verra à son prochain montage.
+ * No real-time bridge: a draft is strictly personal and is only written
+ * by the tab where the wizard runs — the invalidation which follows each write
+ * is enough. Another tab will see it on its next edit.
  */
 export function useProjectDrafts(): UseProjectDraftsResult {
   const queryClient = useQueryClient();

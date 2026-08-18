@@ -1,20 +1,20 @@
 /**
- * Les surfaces IA qu'un compte peut faire passer sur sa clé BYOK (MIN-366).
- * Ce module reste pur : l'API, les réglages client et le runtime serveur
- * partagent exactement les mêmes identifiants et les mêmes valeurs par défaut.
+ * The AI ​​surfaces that an account can pass on its BYOK key (MIN-366).
+ * This module remains pure: the API, client settings and server runtime
+ * share exactly the same identifiers and the same default values.
  */
 
 export const AI_SURFACES = ["agent", "assistant", "automations", "voice", "feedback"] as const;
 
 export type AiSurface = (typeof AI_SURFACES)[number];
 
-/** Une clé existante ou nouvellement créée couvre tout tant que l'user ne décoche rien. */
+/** An existing or newly created key covers everything as long as the user does not uncheck anything. */
 export const DEFAULT_BYOK_SURFACES: AiSurface[] = [...AI_SURFACES];
 
 /**
- * Les types d'appel dont le modèle peut différer. Ils correspondent aux vrais
- * réglages plateforme dans app_config ; OpenRouter BYOK peut donc reprendre la
- * valeur Minddy du même nom sans table de correspondance fragile.
+ * Call types whose template may differ. They correspond to the real
+ * platform settings in app_config; OpenRouter BYOK can therefore take the
+ * Minddy value of the same name without a fragile correspondence table.
  */
 export const BYOK_MODEL_KEYS = [
   "agent_model",
@@ -42,8 +42,8 @@ export interface AiSurfaceDefinition {
 }
 
 export const AI_SURFACE_DEFINITIONS: readonly AiSurfaceDefinition[] = [
-  // Le modèle agent et son raisonnement ont déjà leur groupe dédié juste sous
-  // les surfaces dans /settings ; on ne rend pas deux contrôles concurrents.
+  // The agent model and its reasoning already have their dedicated group just below
+  // surfaces in /settings; we do not make two concurrent controls.
   { id: "agent", modelKeys: [] },
   {
     id: "assistant",
@@ -77,7 +77,7 @@ export function isByokModelKey(value: string): value is ByokModelKey {
   return BYOK_MODEL_KEY_SET.has(value);
 }
 
-/** Clé app_config du modèle pré-sélectionné pour un provider natif. */
+/** App_config key of the pre-selected model for a native provider. */
 export function byokFeatureDefaultModelKey(provider: string, modelKey: ByokModelKey): string {
   return `byok_default_${provider}_${modelKey}`;
 }
@@ -94,8 +94,8 @@ export function parseAiSurfaces(value: unknown): AiSurface[] | null {
 }
 
 /**
- * Normalise la map de modèles envoyée par le compte. Une chaîne vide efface le
- * choix et laisse le défaut admin gagner ; les clés inconnues sont refusées.
+ * Normalizes the template map sent by the account. An empty string clears the
+ * choice and lets the default admin win; unknown keys are refused.
  */
 export function parseByokFeatureModels(value: unknown): ByokFeatureModels | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -114,7 +114,7 @@ export function surfaceForModelKey(modelKey: ByokModelKey): AiSurface {
   return definition.id;
 }
 
-/** Les chaînes et routines sont des automatisations même si elles exécutent le même agent. */
+/** Chains and routines are automations even if they run the same agent. */
 export function surfaceForAgentRun(run: {
   chain_id?: string | null;
   routine_id?: string | null;

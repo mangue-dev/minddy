@@ -27,25 +27,25 @@ import type { AgentBranch, AgentBranchState } from "@/lib/types";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
- * Gestion des branches d'agent (MIN-102) : TOUTES les branches que minddy a
- * poussées et qui vivent encore sur le dépôt, quel que soit l'état de leur PR —
- * y compris celles qui n'en ont aucune (branche fraîche, session au repos). On
- * ne peut pas gérer ce qu'on ne voit pas ; ce qui protège n'est pas l'absence de
- * la ligne mais son état.
+ * Agent branch management (MIN-102): ALL branches that minddy has
+ * pushed and which still live on the repository, regardless of the state of their PR —
+ * including those which have none (fresh branch, idle session). On
+ * cannot handle what we cannot see; what protects is not the absence of
+ * the line but its state.
  *
- * Deux portes d'entrée, un seul dialogue : le bouton de la section Git des
- * paramètres du projet (`GitBranchCleanup`), et la command palette, qui monte
- * `BranchCleanupDialog` directement depuis l'app shell. D'où le dialogue
- * CONTRÔLÉ, qui charge son aperçu à l'ouverture au lieu de le recevoir.
+ * Two entry doors, a single dialog: the button in the Git section of the
+ * project parameters (`GitBranchCleanup`), and the command palette, which goes up
+ * `BranchCleanupDialog` directly from the shell app. Hence the
+ * CONTROLLED dialog, which loads its preview when opened instead of receiving it.
  *
- * Pré-cochage : les branches de PR FUSIONNÉES seulement. Les trois autres états
- * demandent un geste, et deux avertissements distincts se déclenchent à la
- * sélection : les PR refusées portent du travail qui n'existe nulle part
- * ailleurs, et les branches sans PR ou à PR ouverte servent encore à une
- * session. Rien ne part au premier clic : le pied demande une confirmation.
+ * Pre-checking: Merged PR branches only. The other three states
+ * require a gesture, and two distinct warnings are triggered upon
+ * selection: rejected PRs carry work that does not exist anywhere
+ * else, and branches without a PR or with an open PR still serve a
+ * session. Nothing happens on the first click: the foot asks for confirmation.
  */
 
-/** Libellé et allure du badge d'état — l'ordre du tri va de haut en bas. */
+/** Status badge wording and appearance — sort order goes from top to bottom. */
 const STATE_BADGE: Record<
   AgentBranchState,
   { key: MessageKey<"Settings">; variant: "secondary" | "outline" }
@@ -56,7 +56,7 @@ const STATE_BADGE: Record<
   none: { key: "gitCleanBranchesNoPr", variant: "outline" },
 };
 
-/** `open` et `none` : une session d'agent peut encore travailler cette branche. */
+/** `open` and `none`: an agent session can still work this branch. */
 function isInUse(state: AgentBranchState): boolean {
   return state === "open" || state === "none";
 }
@@ -73,9 +73,9 @@ export function BranchCleanupDialog({
 }) {
   const t = useTranslations("Settings");
 
-  // Vrai dès le départ : l'effet qui charge ne tourne qu'APRÈS le premier rendu,
-  // et partir à faux y peignait « aucune branche à nettoyer » le temps d'une
-  // image, avant même d'avoir demandé la liste.
+  // True from the start: the loading effect only runs AFTER the first rendering,
+  // and falsely painted “no branches to clean” for the duration of a
+  // image, even before requesting the list.
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [branches, setBranches] = useState<AgentBranch[]>([]);
@@ -83,11 +83,11 @@ export function BranchCleanupDialog({
   const [truncated, setTruncated] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  /** Échecs de la dernière suppression, affichés en place sous leur branche. */
+  /** Last delete failures, displayed in place under their branch. */
   const [failures, setFailures] = useState<Record<string, string>>({});
 
-  // L'aperçu est rechargé À CHAQUE ouverture : entre deux ménages, des PR se
-  // ferment et des branches disparaissent — un cache mentirait vite.
+  // The overview is reloaded EACH time it is opened: between two households, PRs are
+  // close and branches disappear — a cache would quickly lie.
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
@@ -100,7 +100,7 @@ export function BranchCleanupDialog({
         if (cancelled) return;
         setBranches(res.branches);
         setTruncated(res.truncated);
-        // Seules les fusionnées arrivent cochées : leur travail est livré.
+        // Only the merged ones arrive checked: their work is delivered.
         setSelected(
           new Set(
             res.branches.filter((b) => b.state === "merged").map((b) => b.branch),
@@ -142,7 +142,7 @@ export function BranchCleanupDialog({
       const ok = results.filter((r) => r.ok);
       const failed = results.filter((r) => !r.ok);
 
-      // Les réussites quittent la liste ; les échecs y restent, avec leur cause.
+      // Successes leave the list; the failures remain there, with their cause.
       const gone = new Set(ok.map((r) => r.branch));
       setBranches((prev) => prev.filter((b) => !gone.has(b.branch)));
       setSelected((prev) => new Set([...prev].filter((b) => !gone.has(b))));
@@ -252,8 +252,8 @@ export function BranchCleanupDialog({
           </p>
         )}
 
-        {/* Rouge, et pas gris comme l'avertissement des PR refusées : là, une
-            session d'agent peut encore pousser sur la branche qu'on efface. */}
+        {/* Red, and not gray like the PR refused warning: there, a
+ agent session can still push on the branch that is being deleted. */}
         {inUseSelected > 0 && (
           <p className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-2.5 text-xs text-destructive">
             <AlertTriangle className="mt-px size-3.5 shrink-0" />
@@ -300,7 +300,7 @@ export function BranchCleanupDialog({
   );
 }
 
-/** L'entrée de la section Git des paramètres du projet : bouton + dialogue. */
+/** The entry to the Git section of the project settings: button + dialog. */
 export function GitBranchCleanup({
   projectId,
   provider,

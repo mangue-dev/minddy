@@ -1,100 +1,100 @@
-# Gouvernance de minddy
+# Minddy governance
 
-Cette gouvernance s'applique au cœur public distribué sous AGPL-3.0-only. Elle
-ne régit pas l'exploitation du service managé ni les contrats commerciaux,
-séparés conformément à [docs/licensing.md](docs/licensing.md).
+This governance applies to the public core distributed under AGPL-3.0-only. She
+does not govern the operation of the managed service or commercial contracts,
+separated in accordance with [docs/licensing.md](docs/licensing.md).
 
-## Rôles
+## Roles
 
-- **Contributeur** : toute personne qui signale, documente, révise ou propose un
-  changement. Ce rôle ne donne aucun droit d'écriture.
-- **Reviewer** : contributeur régulier auquel un mainteneur confie la revue et
-  le triage sur un domaine. Il recommande une décision mais ne fusionne pas sans
-  droit explicite.
-- **Mainteneur** : personne disposant des droits de triage et de fusion. Elle
-  garantit le périmètre, la qualité, la sécurité, la licence et la cohérence des
-  décisions. Les mainteneurs sont propriétaires du code via
+- **Contributor**: any person who reports, documents, reviews or proposes a
+change. This role does not give any writing rights.
+- **Reviewer**: regular contributor to whom a maintainer entrusts the review and
+sorting on a domain. It recommends a decision but does not merge without
+  explicit permission.
+- **Maintainer**: person with sorting and merging rights. She
+guarantees the scope, quality, security, licensing and consistency of
+decisions. Maintainers own the code through
   [`.github/CODEOWNERS`](.github/CODEOWNERS).
-- **Mainteneur principal** : responsable du dépôt et dernier arbitre lorsqu'un
-  consensus est impossible. Ce rôle est actuellement tenu par
+- **Main maintainer**: responsible for the deposit and final arbiter when a
+consensus is impossible. This role is currently held by
   [@mangue-dev](https://github.com/mangue-dev).
 
-Un mainteneur peut promouvoir un reviewer ou un mainteneur après des
-contributions soutenues, des revues fiables et une adhésion démontrée aux
-politiques du projet. La décision est annoncée publiquement. Le rôle peut être
-retiré après six mois d'inactivité, à la demande de la personne, ou pour raisons
-de sécurité ou de conduite, avec une trace publique quand la confidentialité le
-permet.
+A maintainer can promote a reviewer or a maintainer after
+sustained contributions, reliable reviews and demonstrated adherence to
+project policies. The decision is announced publicly. The role can be
+removed after six months of inactivity, at the request of the person, or for reasons
+safety or conduct, with a public record when confidentiality requires it.
+when confidentiality requires it.
 
-## Proposer et décider
+## Propose and decide
 
-1. Les bugs et améliorations passent par les formulaires d'issue. Un changement
-   important (architecture, données, API, licence, sécurité ou compatibilité)
-   doit être discuté et accepté avant son implémentation.
-2. Les décisions ordinaires recherchent un **consensus paresseux** : en
-   l'absence d'objection motivée pendant trois jours ouvrés, un mainteneur peut
-   accepter. Une décision structurante reste ouverte au moins sept jours
-   calendaires et consigne les options, contraintes et conséquences.
-3. Une objection doit proposer un risque vérifiable ou une alternative. Le
-   mainteneur responsable synthétise la décision dans l'issue ou la pull
-   request. En cas de désaccord persistant, le mainteneur principal tranche et
-   explique pourquoi.
-4. Une urgence de sécurité peut être traitée en privé et fusionnée sans délai.
-   La décision et les éléments publiables sont consignés après la correction.
+1. Bugs and improvements go through the issue forms. A change
+important (architecture, data, API, license, security or compatibility)
+must be discussed and accepted before its implementation.
+2. Ordinary decisions seek **lazy consensus**: in
+the absence of a reasoned objection for three working days, a maintainer may
+accept. A structuring decision remains open for at least seven days
+calendars and records options, constraints and consequences.
+3. An objection must propose a verifiable risk or alternative. THE
+responsible maintainer summarizes the decision in the issue or the pull
+request. In the event of persistent disagreement, the main maintainer decides and
+   explains why.
+4. A security emergency can be handled privately and merged without delay.
+The decision and the publishable elements are recorded after the correction.
 
-Une personne se récuse lorsqu'elle a un intérêt financier direct, un conflit
-personnel ou a produit seule le changement litigieux. Aucun auteur n'approuve
-sa propre pull request. Les changements de licence, de frontière commerciale ou
-de cette gouvernance exigent une issue dédiée et l'accord explicite du
-mainteneur principal.
+A person recuses himself when he has a direct financial interest, a conflict
+personal or alone produced the disputed change. No author approves
+its own pull request. Changes in license, commercial boundary or
+of this governance require a dedicated outcome and the explicit agreement of the
+main maintainer.
 
-## Revue et fusion
+## Review and merge
 
-Toute contribution externe arrive par pull request depuis une branche ou un
-fork. Le mainteneur commence par lire le diff, en particulier les scripts,
-workflows, manifests et lockfiles, avant d'autoriser l'exécution de CI. Les
-instructions de sécurité sont détaillées dans [CONTRIBUTING.md](CONTRIBUTING.md).
+Any external contribution arrives by pull request from a branch or a
+fork. The maintainer starts by reading the diff, especially the scripts,
+workflows, manifests and lockfiles, before authorizing CI execution. THE
+Safety instructions are detailed in [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Une pull request doit avoir un périmètre cohérent, une issue acceptée lorsque le
-changement n'est pas trivial, des tests proportionnés au risque, une
-documentation à jour, des commits conformes au DCO et tous les checks au vert.
-Une approbation d'un code owner est requise. Une approbation devient caduque
-après un nouveau push significatif. La fusion se fait par **squash merge** ; le
-titre et le corps du commit final doivent conserver le contexte et le sign-off
-DCO. Un mainteneur peut fermer une proposition correcte mais hors stratégie ou
-impossible à maintenir.
+A pull request must have a coherent scope, an accepted outcome when the
+change is not trivial, tests proportionate to the risk, a
+up-to-date documentation, DCO-compliant commits and all green checks.
+Owner code approval is required. An approval becomes invalid
+after another significant push. The merger is done by **squash merge**; THE
+title and body of the final commit must retain context and sign-off
+COD. A maintainer can close a correct but out-of-strategy proposal or
+impossible to maintain.
 
-## Branches et réglages GitHub
+## GitHub branches and settings
 
-`main` est la branche d'intégration et `production` la branche de publication.
-Les deux refusent les pushs directs et les force-pushs. Les règles attendues
-sont versionnées dans [`.github/REPOSITORY_SETTINGS.md`](.github/REPOSITORY_SETTINGS.md).
-Elles exigent notamment une pull request, une revue code owner, la résolution
-des conversations et ces checks :
+`main` is the integration branch and `production` is the release branch.
+Both refuse direct pushes and force-pushes. The expected rules
+are versioned in [`.github/REPOSITORY_SETTINGS.md`](.github/REPOSITORY_SETTINGS.md).
+They require in particular a pull request, a code owner review, resolution
+conversations and these checks:
 
 - `CI / Tests & typecheck` ;
-- `CI / Audit des dépendances` ;
+- `CI / Dependency audit`;
 - `DCO / Developer Certificate of Origin`.
 
-Les administrateurs suivent les mêmes règles, hors intervention d'urgence
-documentée. Les branches sont supprimées après fusion et seul le squash merge
-est autorisé.
+Administrators follow the same rules, excluding emergency intervention
+documented. Branches are deleted after merge and only squash merge
+is permitted.
 
-## Labels et triage
+## Labels and sorting
 
-Les formulaires posent `bug` ou `enhancement`. `documentation`, `dependencies`
-et `security` décrivent le domaine ; `needs reproduction` indique qu'un bug ne
-peut pas encore être confirmé ; `breaking change` signale une incompatibilité ;
-`status: blocked` rend une dépendance explicite. `good first issue` et
-`help wanted` ne sont posés que si le périmètre et les critères d'acceptation
-sont suffisamment précis pour une contribution externe.
+Forms ask `bug` or `enhancement`. `documentation`, `dependencies`
+and `security` describe the domain; `needs reproduction` indicates that a bug does not
+cannot yet be confirmed; `breaking change` indicates an incompatibility;
+`status: blocked` makes a dependency explicit. `good first issue` and
+`help wanted` are only set if the scope and acceptance criteria
+are sufficiently precise for external contribution.
 
-## Dépendances
+## Dependencies
 
-Dependabot propose chaque semaine les mises à jour npm des applications web et
-desktop, et chaque mois celles des GitHub Actions. Une dépendance n'est ajoutée
-que si sa nécessité, sa maintenance, sa provenance et sa licence sont
-compatibles avec [docs/licensing.md](docs/licensing.md). Les mises à jour
-majeures ne sont jamais fusionnées automatiquement. Toute mise à jour passe par
-la CI et l'audit high/critical des trois lockfiles ; une alerte exploitable est
-priorisée selon son impact réel et peut suivre le canal privé de sécurité.
+Dependabot offers npm updates for web applications every week and
+desktop, and each month those of GitHub Actions. A dependency is not added
+only if its necessity, maintenance, provenance and license are
+compatible with [docs/licensing.md](docs/licensing.md). Updates
+majors are never merged automatically. Any update goes through
+the CI and the high/critical audit of the three lockfiles; an actionable alert is
+prioritized according to its real impact and can follow the private security channel.

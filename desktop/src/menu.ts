@@ -7,28 +7,26 @@ import { diagnosticReport } from "./run-log";
 import { checkForUpdatesFromMenu } from "./updater";
 
 /**
- * Le menu applicatif (MIN-291).
+ * The application menu (MIN-291).
  *
- * La sonde de MIN-290 a montré que le menu PAR DÉFAUT d'Electron porte
- * 19 accélérateurs, dont deux qu'une app ne doit pas offrir sur une SPA
- * authentifiée : **⌘W ferme la fenêtre** (et il n'y en a qu'une : l'app devient
- * une icône de dock sans porte d'entrée) et **⌘R recharge** (soit, sur une SPA,
- * perdre l'écran en cours pour rien). Les autres — ⌘K, ⌘P, ⌘; — ne sont touchés
- * par aucun accélérateur, donc la palette et le reste passent tels quels.
+ * The MIN-290 probe showed that Electron's DEFAULT menu carries
+ * 19 accelerators, two of which an app should not offer on an authenticated SPA
+ * : **⌘W closes the window** (and there is only one: the app becomes
+ * a dock icon without an entrance) and **⌘R reloads** (i.e., on a SPA,
+ * lose the current screen for nothing). Others — ⌘K, ⌘P, ⌘; — are not touched
+ * by any accelerator, so the palette and the rest pass as is.
  *
- * Le menu ne sert donc pas à ajouter : il sert à RETIRER, et à laisser en place
- * l'édition (couper/copier/coller, et surtout ⌘A / ⌘Z, qui sont des rôles natifs
- * sans lesquels rien ne fonctionne dans un champ) et la fenêtre.
+ * The menu is therefore not used to add: it is used to REMOVE, and to leave in place
+ * editing (cut/copy/paste, and especially ⌘A / ⌘Z, which are roles native
+ * without which nothing works in a control) and the window.
  *
- * **Une exception, et une seule : le canal** (MIN-352). L'écran de réglages
- * porte le même interrupteur, et c'est là qu'on le cherche — mais cet
- * interrupteur-là est SERVI par l'origine qu'il commande. Si la preview ne
- * charge pas, la fenêtre n'a plus d'écran de réglages du tout, et le menu est la
- * seule chose qui reste pour revenir en production. C'est pour ce cas-là qu'il
- * existe ici, pas pour le confort.
+ * **One exception, and one only: the channel** (MIN-352). The settings screen
+ * has the same switch, and that's where we look for it - but this
+ * switch is SERVED by the origin it controls. If the preview doesn't load, the window no longer has a settings screen at all, and the menu is the only thing left to get back into production. This is why it
+ * exists here, not for convenience.
  *
- * Le menu se RECONSTRUIT à chaque bascule (`setChannel`, main.ts) : la coche est
- * posée à la construction, elle ne se met pas à jour toute seule.
+ * The menu is REBUILT at each toggle (`setChannel`, main.ts): the check mark is
+ * set at construction, it is not updated every time. only.
  */
 export function buildAppMenu(
   window: BrowserWindow,
@@ -43,22 +41,22 @@ export function buildAppMenu(
           {
             label: app.name,
             submenu: [
-              // `about` ouvre le panneau natif, dont le contenu est posé par
-              // `app.setAboutPanelOptions` (main.ts). Sans ça, il affiche le nom
-              // et la version d'Electron.
+              // `about` opens the native panel, the content of which is placed by
+              // `app.setAboutPanelOptions` (main.ts). Without that, it displays the name
+              // and Electron's version.
               { role: "about" },
               {
-                // La vérification DEMANDÉE : c'est la seule qui répond « vous
-                // êtes à jour », parce qu'ici quelqu'un a posé la question. Celle
-                // qui tourne toute seule, elle, se tait (updater.ts).
+                // The REQUESTED verification: it is the only one that answers “you
+                // are up to date”, because here someone asked the question. That
+                // which runs on its own stays silent (updater.ts).
                 label: "Check for Updates…",
                 click: () => void checkForUpdatesFromMenu(),
               },
               {
-                // Le canal, en clair : ce n'est pas « une bêta », c'est la même
-                // app servie par le dernier commit de `main`. Mêmes données,
-                // mêmes comptes — d'où l'absence d'avertissement ici, et la
-                // phrase complète dans les réglages, où il y a la place.
+                // The channel, in plain language: it’s not “a beta”, it’s the same
+                // app served by the last commit of `main`. Same data,
+                // same accounts — hence the absence of warning here, and the
+                // complete sentence in the settings, where there is room.
                 label: "Preview Latest Features",
                 type: "checkbox",
                 checked: channel === "preview",
@@ -93,9 +91,9 @@ export function buildAppMenu(
     {
       label: "View",
       submenu: [
-        // Pas de `reload` ni de `forceReload` : ⌘R sur une SPA authentifiée jette
-        // l'écran en cours et ne répare rien. Le zoom, lui, est un réglage
-        // d'accessibilité, et il reste.
+        // No `reload` nor `forceReload`: ⌘R on an authenticated SPA throws
+        // the current screen and does not repair anything. The zoom is an adjustment
+        // accessibility, and it remains.
         { role: "resetZoom" },
         { role: "zoomIn" },
         { role: "zoomOut" },
@@ -110,10 +108,10 @@ export function buildAppMenu(
         { role: "zoom" },
         { type: "separator" },
         {
-          // À la place de ⌘W : la fenêtre est unique, la faire disparaître sans
-          // moyen de la rappeler serait une impasse. On la cache, et l'icône du
-          // dock la ramène. `hideWindow` plutôt que `hide()` : en plein écran il
-          // faut refermer le Space avant, sinon il reste noir (MIN-353).
+          // Instead of ⌘W: the window is unique, make it disappear without
+          // way to recall it would be a dead end. We hide it, and the icon of
+          // dock brings it back. `hideWindow` rather than `hide()`: in full screen it
+          // must close the Space first, otherwise it remains black (MIN-353).
           label: "Close Window",
           accelerator: "CmdOrCtrl+W",
           click: () => hideWindow(window),
@@ -125,27 +123,26 @@ export function buildAppMenu(
       submenu: [
         {
           /**
-           * LE RAPPORT DE DIAGNOSTIC (MIN-363), et il va au PRESSE-PAPIER.
-           *
-           * C'est le geste qui rend soluble le premier ticket de support de
-           * l'agent local : quand un tour rate avant que le harness ait parlé,
-           * rien n'a été publié côté serveur — le journal du process est la
-           * seule chose qui parle ([run-log.ts](run-log.ts)).
-           *
-           * **Jamais d'envoi automatique.** Le rapport porte un chemin de dépôt,
-           * donc un nom d'utilisateur et l'arborescence d'une machine : c'est
-           * exactement ce qu'on n'expédie pas sans que quelqu'un l'ait relu.
-           * Ici, dans Help, plutôt que dans les réglages : c'est là qu'on le
-           * cherche quand l'app va mal, et le menu reste atteignable même si la
-           * page ne charge pas — la raison même pour laquelle le canal y est.
-           */
+ * THE DIAGNOSTIC REPORT (MIN-363), and it goes to the CLIPBOARD.
+ *
+ * This is the gesture that makes the first support ticket from
+ * the local agent soluble: when a turn misses before the harness has spoken,
+ * nothing was published on the server side — the process log is the only thing that speaks ([run-log.ts](run-log.ts)).
+ *
+ * **Never automatically sent.** The report carries a deposit path,
+ * therefore a user name and the tree structure of a machine: it's
+ * exactly what we don't ship without someone having proofread it.
+ * Here, in Help, rather than in the settings: this is where we look for it
+ * when the app is going bad, and the menu remains accessible even if the
+ * page does not load — the very reason for which channel is there.
+ */
           label: "Copy Diagnostic Report",
           click: () => clipboard.writeText(diagnosticReport()),
         },
         { type: "separator" },
         {
-          // Le SITE, pas l'origine active : ce lien mène à la vitrine, qui n'a
-          // pas de canal — et une preview de la landing n'intéresse personne.
+          // The SITE, not the active origin: this link leads to the showcase, which has no
+          // no channel — and a preview of the landing interests no one.
           label: "minddy.app",
           click: () => void shell.openExternal(DESKTOP_STABLE_ORIGIN),
         },

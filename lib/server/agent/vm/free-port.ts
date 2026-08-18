@@ -1,27 +1,23 @@
 import { createServer } from "node:net";
 
 /**
- * UN PORT LIBRE, DEMANDÉ AU SYSTÈME (MIN-354).
+ * A FREE PORT, REQUESTED FROM THE SYSTEM (MIN-354).
  *
- * Le harness ouvrait deux sockets sur des numéros écrits en dur : 4096 pour
- * `opencode serve`, 4097 pour le pont de tools. Dans une microVM créée pour un
- * seul run, rien d'autre n'écoute et le choix ne coûte rien. Sur un ordinateur,
- * les deux hypothèses tombent d'un coup : un développeur peut déjà tenir 4096,
- * et surtout **deux runs simultanés se disputeraient les mêmes deux ports** — le
- * second mourrait sur un `listen` refusé, à un endroit qui ne ressemble en rien
- * à sa cause.
+ * The harness opened two sockets on hard-written numbers: 4096 for
+ * `opencode serve`, 4097 for the tools bridge. In a microVM created for a single run, nothing else is listening and the choice costs nothing. On a computer,
+ * the two hypotheses fall at once: a developer can already hold 4096,
+ * and above all **two simultaneous runs would compete for the same two ports** - the
+ * second would die on a refused `listen`, in a place which in no way resembles
+ * its cause.
  *
- * On demande donc le port au noyau (`listen(0)`), on le lit, et on relâche. Il
- * reste une fenêtre entre ce relâchement et le `listen` du vrai serveur : c'est
- * la limite connue de ce geste, et elle est acceptable parce qu'aucun autre
- * moyen n'existe pour un processus qu'on ne contrôle pas — `opencode serve` veut
- * un numéro de port en argument, il ne sait pas hériter d'une socket déjà
- * ouverte. Le pont de tools, lui, sait écouter sur `0` directement, et c'est ce
- * qu'il fait ([tool-bridge.ts](tool-bridge.ts)).
+ * We therefore ask the kernel for the port (`listen(0)`), we read it, and we release. There
+ * remains a window between this release and the `listen` of the real server: this is
+ * the known limit of this gesture, and it is acceptable because no other
+ * means exists for a process that we do not control — `opencode serve` wants
+ * a port number as an argument, it does not know how to inherit from a socket already
+ * open. The tools bridge knows how to listen on `0` directly, and this is what it does ([tool-bridge.ts](tool-bridge.ts)).
  *
- * `127.0.0.1` explicitement, jamais `0.0.0.0` : ce qu'on réserve ici n'a aucune
- * raison d'être joignable depuis le réseau de la machine, et un port de boucle
- * locale ne se dispute qu'avec les processus du même hôte.
+ * `127.0.0.1` * explicitly, never `0.0.0.0`: this that we reserve here has no reason to be reachable from the machine's network, and a local loop port only argues with processes on the same host.
  */
 export function reservePort(): Promise<number> {
   return new Promise((resolve, reject) => {

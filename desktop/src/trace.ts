@@ -1,39 +1,39 @@
 /**
- * La trace du MAIN process (MIN-307) — **éteinte par défaut**.
+ * The MAIN process trace (MIN-307) — **off by default**.
  *
- * Le pendant de lib/desktop/trace.ts, côté coquille. Elle existe parce que la
- * page ne peut pas voir ce qui se passe ici : elle ignore quand la fenêtre est
- * cachée plutôt que fermée, quand macOS l'endort, et ce que `applyWindowButtons`
- * a réellement posé sur elle. Or c'est exactement là que vivent les événements
- * qui séparent la coquille du navigateur.
+ * The counterpart of lib/desktop/trace.ts, on the shell side. It exists because the
+ * page cannot see what is happening here: it ignores when the window is
+ * hidden rather than closed, when macOS puts it to sleep, and what `applyWindowButtons`
+ * actually posed on her. But this is exactly where the events live
+ * which separate the shell from the browser.
  *
- * **Allumage** : `MINDDY_TRACE=1` dans l'environnement du process. Les lignes
- * partent sur la sortie standard — en développement `npm --prefix desktop run
- * dev`, en binaire signé les journaux du système.
+ * **Power on**: `MINDDY_TRACE=1` in the process environment. The lines
+ * go to standard output — in development `npm --prefix desktop run
+ * dev`, in binary signed system logs.
  *
- * Ce qui est instrumenté, et pourquoi :
+ * What is instrumented, and why:
  *
- * - `applyWindowButtons` / `publishWindowButtons` — les deux moitiés du pont vu
- *   d'ici. Une demande de la page sans publication en retour, ou l'inverse, se
- *   lit en une ligne ;
- * - `did-start-loading` — la remise à zéro qui suit un chargement plein, celle
- *   qui laissait les feux absents (MIN-304) ;
- * - `show` / `hide` / `blur` — ⌘W et le feu rouge CACHENT la fenêtre au lieu de
- *   la détruire, donc le même document vit des dizaines de cycles par jour ;
- * - `powerMonitor` sur `suspend` / `resume` / `lock-screen` — la cause la plus
- *   fréquente des coupures de socket, et la page n'en sait rien : elle ne voit
- *   que le `visibilitychange` qui suit, quand il suit.
+ * - `applyWindowButtons` / `publishWindowButtons` — the two halves of the bridge seen
+ * from here. A request for the page without publication in return, or vice versa, is
+ * reads in one line;
+ * - `did-start-loading` — the reset which follows a full load, that
+ * which left the lights absent (MIN-304);
+ * - `show` / `hide` / `blur` — ⌘W and the red light HIDE the window instead of
+ * destroy it, so the same document lives dozens of cycles per day;
+ * - `powerMonitor` on `suspend` / `resume` / `lock-screen` — the most common cause
+ * frequent socket outages, and the page knows nothing about it: it does not see
+ * than the `visibilitychange` which follows, when it follows.
  */
 
-/** La trace tourne-t-elle ? Lu une fois, au chargement du module. */
+/** Does the track turn? Read once, when the module loads. */
 export const TRACING = process.env.MINDDY_TRACE === "1";
 
 /**
- * Une ligne de trace. **No-op quand la trace est éteinte** — c'est ce qui permet
- * d'en semer aux points chauds sans y penser.
+ * A trace line. **No-op when the trace is off** — this is what allows
+ * to seed them at hot spots without thinking about it.
  *
- * Le détail est passé en objet et non formaté par l'appelant : un `trace()`
- * éteint ne doit rien coûter, pas même une concaténation.
+ * The detail is passed as an object and not formatted by the caller: a `trace()`
+ * off should not cost anything, not even a concatenation.
  */
 export function trace(kind: string, detail?: Record<string, unknown>): void {
   if (!TRACING) return;

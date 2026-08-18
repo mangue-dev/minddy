@@ -1,29 +1,29 @@
 /**
- * captures/ — couche de sécurité entre les scripts de seed et la base DE PROD.
+ * captures/ — security layer between the seed scripts and the PROD database.
  *
- * L'INVARIANT, et il tient en une phrase : aucune écriture ne peut atteindre
- * une ligne qui n'appartient pas au monde de démo. Ce n'est pas « on n'écrit
- * que des INSERT » — corriger un titre ou retirer un ticket de démo est
- * parfaitement légitime. Ce qui est interdit, c'est de toucher au reste.
+ * THE INVARIANT, and it fits in one sentence: no writing can reach
+ * a line that does not belong to the demo world. It’s not “we don’t write
+ * only INSERTs” — correcting a title or removing a demo ticket is
+ * perfectly legitimate. What is forbidden is to touch the rest.
  *
- * Règle absolue : AUCUN script de seed ne parle directement à Supabase.
- * Tout passe par ce module, qui applique les garde-fous suivants :
+ * Absolute rule: NO seed script speaks directly to Supabase.
+ * Everything goes through this module, which applies the following safeguards:
  *
- *   1. Tables sur liste blanche (captures/lib/config.mjs).
- *   2. Chaque ligne insérée doit être rattachée au monde de démo, par un
- *      propriétaire, un projet, ou une ligne parente elle-même prouvée de
- *      démo. Une ligne qui pointe ailleurs est REJETÉE avant le réseau.
- *   3. Toute modification ou tout retrait relit les lignes visées et vérifie
- *      qu'elles sont bien à nous AVANT d'agir. On ne fait jamais confiance
+ * 1. Whitelisted tables (captures/lib/config.mjs).
+ * 2. Each inserted line must be attached to the demo world, by a
+ * owner, a project, or a parent line itself proven to be
+ * demo. A line that points elsewhere is REJECTED before the network.
+ * 3. Any modification or withdrawal rereads the lines concerned and verifies
+ * that they are ours BEFORE we act. We never trust
  *      au filtre.
- *   4. Ni TRUNCATE, ni SQL arbitraire, ni réinitialisation. Aucune exception.
- *   5. Mesure du rayon de souffle : si des lignes hors démo DISPARAISSENT,
- *      on hurle. Une hausse est juste de l'activité concurrente, on l'ignore.
+ * 4. No TRUNCATE, no arbitrary SQL, no reset. No exceptions.
+ * 5. Measuring the blast radius: if lines outside the demo DISAPPEAR,
+ * we scream. An increase is just competing activity, we ignore it.
  *   6. Rien ne part sans confirmation explicite.
  *
- * On n'appelle JAMAIS l'API HTTP de l'app pour créer de la donnée. Écrire
- * en base directement court-circuite les routes, et donc le Smart Assign,
- * les notifications, les events PostHog, les emails Resend et la facturation.
+ * We NEVER call the app's HTTP API to create data. To write
+ * in base directly short-circuits the routes, and therefore the Smart Assign,
+ * notifications, PostHog events, Resend emails and billing.
  */
 import { createClient } from "@supabase/supabase-js";
 import { requireEnv } from "./env.mjs";
@@ -35,7 +35,7 @@ import {
   WRITABLE_TABLES,
 } from "./config.mjs";
 
-/** Client service-role. Contourne RLS — d'où tous les garde-fous ci-dessus. */
+/** Customer service-role. Bypasses RLS — hence all the guardrails above. */
 function adminClient() {
   return createClient(
     requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
@@ -44,11 +44,11 @@ function adminClient() {
   );
 }
 
-// ── Cohérence du périmètre, vérifiée au chargement ───────────────────────────
-// Une table sans ancrage laisserait passer n'importe quelle ligne. Un parent
-// déclaré après son enfant ne serait pas encore résolu au moment de valider.
-// Les deux sont des erreurs de configuration, pas des cas limites : on refuse
-// de démarrer plutôt que d'écrire avec un garde-fou troué.
+// ── Perimeter consistency, checked upon loading ───────────────────────────
+// A table without anchors would let any line through. A parent
+// declared after his child would not yet be resolved at the time of validation.
+// Both are configuration errors, not borderline cases: we refuse
+// to start rather than writing with a hole in the guardrail.
 const DECLARATION_ORDER = Object.keys(TABLE_SCOPES);
 for (const [table, spec] of Object.entries(TABLE_SCOPES)) {
   const anchors = [spec.ownerColumn, spec.projectColumn, ...(spec.parents || [])];
@@ -67,19 +67,19 @@ for (const [table, spec] of Object.entries(TABLE_SCOPES)) {
   }
 }
 
-/** Tables servant de parent à au moins une autre : leurs ids doivent être résolus. */
+/** Tables serving as parent to at least one other: their ids must be resolved. */
 const PARENT_TABLES = new Set(
   Object.values(TABLE_SCOPES).flatMap((spec) => (spec.parents || []).map((p) => p.table)),
 );
 PARENT_TABLES.add("projects"); // ancrage de `projectColumn`
 
 /**
- * Liste les comptes de la famille de démo.
+ * Lists demo family accounts.
  *
- * La résolution passe par l'API admin de Supabase Auth, PAS par une table
- * miroir : `public.profiles` a été supprimée (migration 20260706130000) et
- * minddy lit désormais les identités directement dans `auth.users` — même
- * source de vérité que `lib/server/auth-users.ts` côté app.
+ * Resolution goes through the Supabase Auth admin API, NOT through a table
+ * mirror: `public.profiles` was removed (migration 20260706130000) and
+ * minddy now reads identities directly from `auth.users` — even
+ * source of truth that `lib/server/auth-users.ts` app side.
  */
 async function listDemoAccounts(admin) {
   const family = [];
@@ -101,9 +101,9 @@ async function listDemoAccounts(admin) {
 }
 
 /**
- * Applique à une requête les filtres d'ancrage d'une table. Renvoie `null` si
- * un ancrage est vide — auquel cas il n'existe AUCUNE ligne de démo pour cette
- * table, et il ne faut surtout pas lancer une requête sans filtre.
+ * Applies table anchor filters to a query. Returns `null` if
+ * an anchor is empty — in which case there are NO demo lines for that
+ * table, and you should definitely not run a query without a filter.
  */
 function applyAnchors(query, spec, world) {
   if (spec.projectColumn) {
@@ -124,9 +124,9 @@ function applyAnchors(query, spec, world) {
 }
 
 /**
- * Ouvre le monde de démo : résout le compte, ses projets, et renvoie un
- * handle que les scripts de seed utilisent. Échoue si le compte n'existe pas
- * (c'est `capture-world` qui le crée, délibérément et une seule fois).
+ * Opens the demo world: resolves the account, its projects, and returns a
+ * handle that the seed scripts use. Fails if account does not exist
+ * (it is `capture-world` who creates it, deliberately and only once).
  */
 export async function openDemoWorld({ allowMissing = false } = {}) {
   const admin = adminClient();
@@ -143,19 +143,19 @@ export async function openDemoWorld({ allowMissing = false } = {}) {
     admin,
     demoUserIds: new Set(family.map((u) => u.id)),
     demoUsers: family,
-    /** Identifiants des lignes de démo, par table. Sert d'ancrage aux enfants. */
+    /** Demo row identifiers, per table. Serves as an anchor for children. */
     demoIds: {},
     demoProjects: [],
 
-    /** Re-résout la famille de démo, ses projets, et tous les ids d'ancrage. */
+    /** Re-resolves the demo family, its projects, and all anchor ids. */
     async refresh() {
       const fresh = await listDemoAccounts(admin);
       this.demoUsers = fresh;
       this.demoUserIds = new Set(fresh.map((u) => u.id));
       this.demoIds = {};
 
-      // Ordre de déclaration = ordre de dépendance : quand on résout une table,
-      // les ids de ses parents sont déjà connus.
+      // Order of declaration = order of dependency: when we resolve a table,
+      // his parents' IDs are already known.
       for (const table of DECLARATION_ORDER) {
         if (!PARENT_TABLES.has(table)) continue;
         const spec = TABLE_SCOPES[table];
@@ -183,18 +183,18 @@ export async function openDemoWorld({ allowMissing = false } = {}) {
     },
   };
 
-  // Amorçage : `projects` s'ancre sur les comptes, tout le reste en découle.
+  // Bootstrapping: `projects` anchors itself to the accounts, everything else follows from there.
   world.demoIds.projects = new Set();
   await world.refresh();
   return world;
 }
 
 /**
- * Vérifie qu'une ligne ne peut toucher que le périmètre de démo.
+ * Verifies that a line can only touch the demo perimeter.
  *
- * Tous les ancrages déclarés doivent passer. Un parent inconnu du monde de
- * démo — parce qu'il n'existe pas, ou parce qu'il appartient à quelqu'un
- * d'autre — fait échouer la validation avant tout accès réseau.
+ * All declared anchors must pass. An unknown relative of the world of
+ * demo — because it doesn't exist, or because it belongs to someone
+ * else — fails validation before any network access.
  */
 function validateRow(world, table, row, index) {
   const spec = TABLE_SCOPES[table];
@@ -251,13 +251,13 @@ function validateRow(world, table, row, index) {
 }
 
 /**
- * Compte, pour chaque table écrivable, les lignes situées HORS du périmètre
- * de démo. Ce vecteur doit être rigoureusement identique avant et après un
- * seed. Tout écart signifie qu'on a touché à de la donnée qui n'est pas à nous.
+ * Counts, for each writable table, the lines located OUTSIDE the perimeter
+ * demo. This vector must be strictly identical before and after a
+ * seed. Any discrepancy means that we have touched data that is not ours.
  *
- * Mesuré par différence (total − démo) plutôt que par un NOT IN : deux
- * comptages d'en-tête, aucune liste d'identifiants à faire transiter, et le
- * résultat reste juste quel que soit le nombre de lignes de démo.
+ * Measured by difference (total − demo) rather than by a NOT IN: two
+ * header counts, no list of identifiers to pass through, and the
+ * result remains correct regardless of the number of demo lines.
  */
 export async function measureBlastRadius(world) {
   const counts = {};
@@ -284,16 +284,16 @@ export async function measureBlastRadius(world) {
 }
 
 /**
- * Compare deux mesures. Seule une BAISSE est alarmante.
+ * Compare two measurements. Only a DECLINE is alarming.
  *
- * Une hausse du compte « hors démo » ne peut pas venir de nous : nos écritures
- * sont validées comme appartenant au périmètre de démo, donc elles alimentent
- * le compte « dedans ». Une hausse signifie simplement qu'un vrai utilisateur
- * (ou toi, dans un autre onglet) a créé quelque chose pendant le run. Faire
- * échouer là-dessus produirait de fausses alertes en permanence.
+ * An increase in the “non-demo” account cannot come from us: our writings
+ * are validated as belonging to the demo scope, therefore they feed
+ * the “inside” account. An increase simply means that a real user
+ * (or you, in another tab) created something during the run. Do
+ * failing on this would produce false alarms constantly.
  *
- * Une baisse, en revanche, veut dire que des lignes qui ne sont pas à nous ont
- * disparu. Ça, ça n'arrive jamais normalement.
+ * A drop, on the other hand, means that lines that are not ours have
+ * disappeared. That never happens normally.
  */
 function diffBlastRadius(before, after) {
   const lost = [];
@@ -318,9 +318,9 @@ function assertWritable(table) {
 }
 
 /**
- * Lit les lignes visées et vérifie qu'elles appartiennent TOUTES au monde de
- * démo. C'est ce qui rend une modification ou une suppression ciblée sûre :
- * on ne fait jamais confiance au filtre, on regarde les lignes réelles avant
+ * Reads the targeted lines and checks that they ALL belong to the world of
+ * demo. This is what makes a targeted edit or deletion safe:
+ * we never trust the filter, we look at the real lines before
  * de toucher quoi que ce soit.
  */
 async function readOwnedRows(world, table, match) {
@@ -337,19 +337,19 @@ async function readOwnedRows(world, table, match) {
 }
 
 /**
- * Un plan de modification. On le construit, on le DÉCRIT à l'utilisateur en
- * français, on attend son accord, et seulement ensuite on l'applique.
+ * A modification plan. We build it, we DESCRIBE it to the user by
+ * French, we wait for his agreement, and only then we apply it.
  *
- * L'invariant du dossier n'est pas « on n'écrit que des INSERT », c'est
- * « aucune écriture ne peut atteindre une ligne qui n'appartient pas au monde
- * de démo ». Corriger un titre ou retirer trois tickets de démo est donc
- * permis, et vérifié ligne par ligne avant exécution.
+ * The invariant of the file is not “we only write INSERTs”, it is
+ * “no writing can reach a line that does not belong to the world
+ * demo”. Correcting a title or removing three demo tickets is therefore
+ * permitted, and checked line by line before execution.
  */
 export function createPlan(world) {
   const steps = [];
 
   return {
-    /** Ajoute des lignes. Rien ne part sur le réseau ici. */
+    /** Add lines. Nothing goes on the network here. */
     insert(table, rows, label) {
       assertWritable(table);
       const list = Array.isArray(rows) ? rows : [rows];
@@ -358,7 +358,7 @@ export function createPlan(world) {
     },
 
     /**
-     * Modifie des lignes de démo existantes.
+     * Edits existing demo lines.
      *   plan.update("issues", { id }, { status: "in_review" }, "passage en revue")
      */
     update(table, match, patch, label) {
@@ -368,7 +368,7 @@ export function createPlan(world) {
     },
 
     /**
-     * Retire des lignes de démo existantes.
+     * Removes existing demo lines.
      *   plan.remove("issues", { id }, "ticket en trop")
      */
     remove(table, match, label) {
@@ -377,7 +377,7 @@ export function createPlan(world) {
       return this;
     },
 
-    /** Résumé en français, destiné à l'utilisateur. Pas de jargon technique. */
+    /** Summary in French, intended for the user. No technical jargon. */
     describe() {
       const lines = [];
       for (const step of steps) {
@@ -403,7 +403,7 @@ export function createPlan(world) {
       return lines.join("\n");
     },
 
-    /** Valide TOUT le plan avant d'écrire quoi que ce soit, puis applique. */
+    /** Validate the ENTIRE plan before writing anything, then follow through. */
     async apply({ confirmed } = {}) {
       if (confirmed !== true) {
         throw new Error(
@@ -412,14 +412,14 @@ export function createPlan(world) {
         );
       }
 
-      // Validation intégrale AVANT la première écriture.
+      // Full validation BEFORE the first write.
       for (const step of steps) {
         if (step.kind === "insert") {
           step.rows.forEach((row, i) => validateRow(world, step.table, row, i));
         } else {
           step.targets = await readOwnedRows(world, step.table, step.match);
           if (step.kind === "update") {
-            // Une modification ne doit jamais faire sortir la ligne du périmètre.
+            // A modification must never take the line outside the perimeter.
             validateRow(world, step.table, { ...step.targets[0], ...step.patch }, 0);
           }
         }
@@ -465,7 +465,7 @@ export function createPlan(world) {
   };
 }
 
-/** Appelle une RPC de la liste blanche, en vérifiant sa cible. */
+/** Calls a whitelisted RPC, checking its target. */
 export async function callRpc(world, name, args) {
   if (!ALLOWED_RPC.has(name)) {
     throw new Error(`captures: RPC "${name}" non autorisée.`);
@@ -479,9 +479,9 @@ export async function callRpc(world, name, args) {
 }
 
 /**
- * Supprime le monde de démo. SEULE opération destructive du dossier, et elle
- * ne peut viser que des comptes dont l'email correspond au motif. Le reste
- * part en cascade (projects → issues → …) via les clés étrangères du schéma.
+ * Deletes the demo world. ONLY destructive operation of the file, and it
+ * can only target accounts whose email matches the reason. The rest
+ * cascades (projects → issues → …) via the foreign keys of the schema.
  */
 export async function deleteDemoWorld(world, { confirmed } = {}) {
   if (confirmed !== true) {
@@ -499,9 +499,9 @@ export async function deleteDemoWorld(world, { confirmed } = {}) {
     const { error } = await world.admin.auth.admin.deleteUser(user.id);
     if (error) throw new Error(`captures: suppression de ${user.email} — ${error.message}`);
   }
-  // On remesure avec les MÊMES ensembles d'ids qu'avant : les lignes de démo
-  // ont disparu, donc le compte « hors démo » doit être rigoureusement
-  // identique. Repartir d'un monde vide fausserait la comparaison.
+  // We measure again with the SAME sets of ids as before: the demo lines
+  // have disappeared, so the “non-demo” account must be rigorously
+  // identical. Starting from an empty world would distort the comparison.
   const after = await measureBlastRadius(world);
   const { lost } = diffBlastRadius(before, after);
   if (lost.length > 0) {
@@ -512,12 +512,12 @@ export async function deleteDemoWorld(world, { confirmed } = {}) {
 }
 
 /**
- * Modifie les préférences d'un compte de DÉMO (`user_metadata`).
+ * Changes the preferences of a DEMO account (`user_metadata`).
  *
- * Certaines vues ne se règlent pas par une table : la cadence et l'intensité
- * du cycle vivent dans les métadonnées du compte (`lib/cycle-prefs.ts`). La
- * fonction refuse tout compte hors famille de démo, et fusionne au lieu
- * d'écraser — les métadonnées existantes (nom affiché) sont préservées.
+ * Some views cannot be regulated by a table: cadence and intensity
+ * of the cycle live in the account metadata (`lib/cycle-prefs.ts`). There
+ * function refuses any account outside the demo family, and instead merges
+ * overwrite — existing metadata (displayed name) is preserved.
  */
 export async function updateDemoUserMetadata(world, { userId, patch, confirmed } = {}) {
   if (confirmed !== true) {
@@ -538,11 +538,11 @@ export async function updateDemoUserMetadata(world, { userId, patch, confirmed }
 }
 
 /**
- * Crée un compte de démo. Réservé au skill capture-world, et c'est le seul
- * endroit du dossier qui touche à `auth.users` — les scripts de seed n'ont
- * donc jamais besoin d'instancier un client Supabase eux-mêmes.
+ * Create a demo account. Reserved for the capture-world skill, and it is the only one
+ * location in the folder that touches `auth.users` — the seed scripts do not have
+ * so never need to instantiate a Supabase client themselves.
  *
- * Idempotent : si le compte existe déjà, il est renvoyé tel quel.
+ * Idempotent: If the account already exists, it is returned as is.
  */
 export async function createDemoUser({ email = DEMO_EMAIL, fullName, password, confirmed } = {}) {
   if (confirmed !== true) {

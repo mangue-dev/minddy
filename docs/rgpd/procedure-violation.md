@@ -1,179 +1,179 @@
-# Procédure de gestion des violations de données — minddy
+# Procedure for handling data breaches — minddy
 
-*Articles 33 et 34 du RGPD. Document interne, à présenter en cas de contrôle.*
+*Articles 33 and 34 of the GDPR. Internal document, to be presented in the event of an inspection.*
 
-Une **violation de données personnelles** est tout incident de sécurité —
-accidentel ou illicite — qui entraîne la destruction, la perte, l'altération, la
-divulgation non autorisée de données personnelles, ou l'accès non autorisé à
-celles-ci. Les trois formes comptent, pas seulement la fuite :
+A **personal data breach** is any security incident —
+accidental or unlawful — which results in the destruction, loss, alteration,
+unauthorized disclosure of personal data, or unauthorized access to
+these. All three forms count, not just the escape:
 
-- **confidentialité** — quelqu'un a vu ce qu'il ne devait pas voir ;
-- **intégrité** — des données ont été altérées sans autorisation ;
-- **disponibilité** — des données sont perdues ou inaccessibles.
+- **confidentiality** — someone saw what they should not see;
+- **integrity** — data has been altered without authorization;
+- **availability** — data is lost or inaccessible.
 
-Une sauvegarde effacée par erreur sans copie est une violation, au même titre
-qu'une base exposée publiquement.
+A backup deleted by mistake without a copy is a violation, in the same way
+than a publicly exposed base.
 
-**Le délai de 72 heures court à partir du moment où la violation est
-*constatée*, pas de celui où elle a eu lieu.** Le chronomètre démarre au premier
-signal crédible, même si l'ampleur est encore inconnue. Une notification
-incomplète envoyée dans les délais vaut mieux qu'une notification complète
-envoyée trop tard : l'article 33.4 prévoit explicitement une communication en
-plusieurs temps.
+**The 72 hour period starts from the moment the violation is
+*observed*, not the one where it took place.** The timer starts at the first
+credible signal, even if the extent is still unknown. A notification
+incomplete notification sent on time is better than complete notification
+sent too late: article 33.4 explicitly provides for communication in
+several times.
 
 ---
 
-## Rôles
+## Roles
 
-| Rôle | Qui |
+| Role | Who |
 | --- | --- |
-| Responsable de traitement | Clément Guérin |
-| Point de contact | hello@minddy.app |
-| Décision de notifier | Le responsable de traitement, seul |
+| Data controller | Clément Guérin |
+| Point of contact | hello@minddy.app |
+| Decision to notify | The data controller, alone |
 
-Il n'y a pas de DPO : la décision et la rédaction incombent au responsable de
-traitement.
+There is no DPO: the decision and drafting are the responsibility of the person responsible for
+treatment.
 
 ---
 
-## 1. Détecter
+## 1. Detect
 
-Sources d'alerte à surveiller :
+Alert sources to monitor:
 
-- alertes de sécurité de l'hébergeur (Supabase, Vercel) et du dépôt de code ;
-- comportement anormal en production : pic de requêtes, accès inattendus dans les
-  journaux, erreurs d'autorisation en série ;
-- signalement d'un utilisateur ou d'un chercheur en sécurité arrivant sur
-  hello@minddy.app ;
-- constat propre lors d'une intervention : mauvaise politique `Row Level
-  Security`, secret commité, sauvegarde manquante.
+- security alerts from the host (Supabase, Vercel) and the code repository;
+- abnormal behavior in production: peak of requests, unexpected accesses in
+  logs, serial authorization errors;
+- report of a user or security researcher arriving on
+  hello@minddy.app;
+- own observation during an intervention: poor `Row Level policy
+  Security`, secret committed, backup missing.
 
-**Dès le premier signal crédible : noter la date et l'heure.** C'est cet
-horodatage qui fait foi pour le délai de 72 heures.
+**From the first credible signal: note the date and time.** This is
+timestamp which is valid for the 72-hour period.
 
-## 2. Contenir — immédiatement, avant toute analyse
+## 2. Contain — immediately, before any analysis
 
-L'ordre compte : on arrête l'hémorragie d'abord, on comprend ensuite.
+The order matters: we stop the bleeding first, then we understand.
 
-1. Révoquer ce qui peut l'être : clés API, jetons, sessions, clés de service,
-   accès des sous-traitants.
-2. Couper l'accès fautif : désactiver la route, rétablir la politique RLS,
-   retirer le déploiement.
-3. Faire tourner les secrets exposés (variables d'environnement, clés de
-   chiffrement, jetons Git).
-4. **Ne rien supprimer** : les journaux, la trace de la requête fautive et l'état
-   de la base sont les preuves. Les figer, les exporter si nécessaire.
+1. Revoke what can be revoked: API keys, tokens, sessions, service keys,
+   access of subcontractors.
+2. Cut off the faulty access: deactivate the route, reestablish the RLS policy,
+   remove the deployment.
+3. Rotate the exposed secrets (environment variables, keys of
+   encryption, Git tokens).
+4. **Do not delete anything**: logs, trace of the faulty request and status
+   of the basis are the proofs. Freeze them, export them if necessary.
 
 ## 3. Qualifier
 
-Répondre par écrit, dans le [registre des violations](registre-des-violations.md) :
+Respond in writing, in the [register of violations](registre-des-violations.md):
 
-| Question | À documenter |
+| Question | To be documented |
 | --- | --- |
-| Quoi ? | Nature de la violation (confidentialité / intégrité / disponibilité) |
-| Quelles données ? | Catégories précises — identification, contenu, authentification, facturation |
-| Combien de personnes ? | Nombre exact ou estimation motivée |
-| Depuis quand ? | Fenêtre d'exposition |
-| Qui a pu y accéder ? | Public, un tiers identifié, personne (accès théorique) |
-| Conséquences probables ? | Usurpation, divulgation d'informations professionnelles, perte de travail, fraude |
-| Aggravants ? | Données facilement réidentifiables, personnes vulnérables, volume important, données de connexion réutilisables ailleurs |
+| What ? | Nature of the violation (confidentiality / integrity / availability) |
+| What data? | Specific categories — identification, content, authentication, billing |
+| How many people? | Exact number or reasoned estimate |
+| Since when? | Exhibition window |
+| Who was able to access it? | Public, an identified third party, person (theoretical access) |
+| Probable consequences? | Theft, disclosure of professional information, loss of work, fraud |
+| Aggravators? | Easily re-identifiable data, vulnerable people, large volume, connection data reusable elsewhere |
 
-## 4. Décider de notifier
+## 4. Decide to notify
 
-Deux décisions distinctes, à ne pas confondre.
+Two distinct decisions, not to be confused.
 
-### 4.1 Notification à la CNIL — article 33
+### 4.1 Notification to the CNIL — article 33
 
-**Obligatoire sauf si** la violation est *improbable* d'engendrer un risque pour
-les droits et libertés des personnes. La dispense est l'exception ; le doute
-conduit à notifier.
+**Mandatory unless** the violation is *unlikely* to create a risk for
+the rights and freedoms of people. Dispensation is the exception; doubt
+leads to notify.
 
-**Ne pas notifier** peut se justifier, par exemple, si les données exposées
-étaient chiffrées avec une clé restée hors d'atteinte, ou si l'exposition était
-théorique et démontrablement sans accès effectif. **Cette décision se motive par
-écrit dans le registre**, avec le raisonnement — c'est ce document que la CNIL
-lira si elle apprend l'incident par ailleurs.
+**Not notifying** may be justified, for example, if the data exposed
+were encrypted with a key that remained out of reach, or if the exposure was
+theoretical and demonstrably without effective access. **This decision is motivated by
+written in the register**, with the reasoning — it is this document that the CNIL
+will read if she learns of the incident elsewhere.
 
-**Délai : 72 heures** à compter de la constatation. Au-delà, la notification
-reste due mais doit expliquer le retard.
+**Deadline: 72 hours** from the observation. Beyond that, the notification
+remains due but must explain the delay.
 
-**Canal** : téléservice de notification de la CNIL —
+**Channel**: CNIL notification teleservice —
 <https://notifications.cnil.fr>.
 
-**Contenu minimal** (art. 33.3) :
+**Minimum content** (Art. 33.3):
 
-- nature de la violation, catégories et nombre approximatif de personnes
-  concernées, catégories et nombre approximatif d'enregistrements ;
-- coordonnées du point de contact (hello@minddy.app) ;
-- conséquences probables ;
-- mesures prises ou envisagées pour y remédier et en atténuer les effets.
+- nature of the violation, categories and approximate number of people
+  concerned, categories and approximate number of records;
+- contact details (hello@minddy.app);
+- probable consequences;
+- measures taken or envisaged to remedy them and mitigate their effects.
 
-Si tout n'est pas connu à 72 heures : notifier avec ce qui est établi et
-compléter ensuite (art. 33.4).
+If everything is not known within 72 hours: notify with what is established and
+then complete (art. 33.4).
 
-### 4.2 Information des personnes concernées — article 34
+### 4.2 Information of data subjects — article 34
 
-**Obligatoire si** la violation est susceptible d'engendrer un **risque élevé**
-pour les droits et libertés des personnes. Le seuil est plus haut que celui de la
-notification à la CNIL : toute violation notifiée ne donne pas lieu à information
-des personnes.
+**Mandatory if** the violation is likely to result in a **high risk**
+for the rights and freedoms of people. The threshold is higher than that of the
+notification to the CNIL: any notified violation does not give rise to information
+people.
 
-**Dispenses** (art. 34.3) : données rendues incompréhensibles par un chiffrement
-robuste ; mesures ultérieures qui écartent le risque élevé ; effort
-disproportionné — auquel cas une communication publique équivalente remplace
-l'information individuelle.
+**Exemptions** (art. 34.3): data made incomprehensible by encryption
+robust; subsequent measures that avert the high risk; effort
+disproportionate — in which case an equivalent public communication replaces
+individual information.
 
-**Délai** : dans les meilleurs délais.
+**Deadline**: as soon as possible.
 
-**Canal** : e-mail à l'adresse du compte, et, si le nombre le justifie, bandeau
-dans l'application et note publique sur le site.
+**Channel**: e-mail to the account address, and, if the number justifies it, banner
+in the application and public note on the site.
 
-**Contenu** : en termes clairs et simples — ce qui s'est passé, quelles données
-sont concernées, quelles conséquences possibles, ce que minddy a fait, **ce que
-la personne doit faire** (changer son mot de passe, révoquer une clé, surveiller
-un accès), et le contact hello@minddy.app.
+**Content**: in plain and simple terms — what happened, what data
+are affected, what possible consequences, what minddy did, **what
+the person must do** (change their password, revoke a key, monitor
+access), and the contact hello@minddy.app.
 
-Une communication qui minimise ou noie l'information est une communication non
-conforme. Dire ce qui s'est passé, y compris quand c'est une faute d'inattention,
-est à la fois l'obligation et la seule position tenable.
+Communication that minimizes or drowns out information is communication that is not
+compliant. Say what happened, including when it was a careless mistake,
+is both the obligation and the only tenable position.
 
-## 5. Consigner — dans tous les cas
+## 5. Record — in all cases
 
-**Toute violation est inscrite au registre, y compris celle qui n'est pas
-notifiée.** C'est une obligation autonome de l'article 33.5, et l'absence de
-registre est en soi un manquement — indépendamment de la gravité de l'incident.
+**All violations are entered in the register, including those that are not
+notified.** This is an independent obligation of Article 33.5, and the absence of
+register is itself a breach — regardless of the seriousness of the incident.
 
-Voir [registre-des-violations.md](registre-des-violations.md).
+See [registre-des-violations.md](registre-des-violations.md).
 
-## 6. Corriger
+## 6. Correct
 
-Une fois l'incident clos :
+Once the incident is closed:
 
-- corriger la cause racine, et pas seulement le symptôme ;
-- ajouter le test ou le garde-fou qui aurait détecté la faille — une politique
-  RLS manquante se rattrape par un test qui vérifie l'isolation, pas par une
-  relecture attentive ;
-- mettre à jour le registre interne des traitements si les mesures de sécurité
-  changent ;
-- reprendre cette procédure si l'incident a montré qu'elle était incomplète.
+- correct the root cause, and not just the symptom;
+- add the test or safeguard that would have detected the flaw — a policy
+  Missing RLS is made up for by a test that checks the insulation, not by a
+  careful proofreading;
+- update the internal processing register if security measures
+  change;
+- repeat this procedure if the incident showed that it was incomplete.
 
 ---
 
-## Aide-mémoire — les 72 premières heures
+## Cheat sheet — the first 72 hours
 
-| Quand | Quoi |
+| When | What |
 | --- | --- |
-| **H+0** | Noter date et heure de la constatation. Contenir : révoquer, couper, faire tourner les secrets. Ne rien effacer. |
-| **H+2** | Qualifier : quelles données, combien de personnes, quelle fenêtre, quel accès effectif. Ouvrir la ligne au registre. |
-| **H+12** | Décider : notification CNIL ? information des personnes ? Motiver par écrit dans les deux cas, y compris le « non ». |
-| **H+72** | Notification CNIL déposée si elle est due, même incomplète. |
-| **Ensuite** | Information des personnes si risque élevé. Compléments à la CNIL. Correction de la cause racine. |
+| **H+0** | Note date and time of observation. Contain: revoke, cut, rotate secrets. Do not delete anything. |
+| **H+2** | Qualify: what data, how many people, what window, what effective access. Open the line at the register. |
+| **H+12** | Decide: CNIL notification? information of people? Give reasons in writing in both cases, including “no”. |
+| **H+72** | CNIL notification filed if due, even incomplete. |
+| **Then** | Inform people if high risk. Supplements to the CNIL. Fixing the root cause. |
 
 ---
 
-## Documents liés
+## Related documents
 
-- Registre interne des activités de traitement
-- [Sous-traitants et transferts](sous-traitants.md)
-- [Registre des violations](registre-des-violations.md)
-- CNIL — [Notifier une violation de données personnelles](https://www.cnil.fr/fr/notifier-une-violation-de-donnees-personnelles)
+- Internal register of processing activities
+- [Subcontractors and transfers](subcontractors.md)
+- [Register of violations](register-of-violations.md)
+- CNIL — [Notify a personal data violation](https://www.cnil.fr/fr/notifier-une-violation-de-donnees-personnelles)

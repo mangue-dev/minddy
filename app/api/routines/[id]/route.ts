@@ -5,11 +5,11 @@ import { deleteRoutine, getRoutineForUser, updateRoutine } from "@/lib/server/ro
 import { routineErrorResponse } from "../route";
 
 /**
- * Une ROUTINE (MIN-185) : la lire, la modifier, la supprimer.
+ * A ROUTINE (MIN-185): read it, modify it, delete it.
  *
- * `GET` est ouvert aux membres du projet — voir ce qui tourne sur le dépôt
- * qu'on partage. `PATCH` et `DELETE` sont au propriétaire seul, et c'est la
- * fabrique qui le dit : cette route ne relaie que son refus.
+ * `GET` is open to project members — see what's running on the repository
+ * that we share. `PATCH` and `DELETE` are the sole owner, and this is the
+ * factory that says it: this road only relays its refusal.
  */
 
 export const runtime = "nodejs";
@@ -59,8 +59,8 @@ export async function PATCH(request: NextRequest, ctx: RouteContext) {
   const result = await updateRoutine({
     routineId: id,
     actorId: auth.user.id,
-    // Seuls les champs PRÉSENTS partent : la fabrique distingue « absent » de
-    // « vidé », et un `undefined` qui traverse effacerait un modèle choisi.
+    // Only the PRESENT fields leave: the factory distinguishes “absent” from
+    // "emptied", and a `undefined` passing through would erase a chosen model.
     ...(body.prompt !== undefined ? { prompt: str(body.prompt, MAX_PROMPT_LENGTH) } : {}),
     ...(body.model !== undefined ? { model: str(body.model, MAX_SHORT_FIELD) || null } : {}),
     ...(body.reasoningLevel !== undefined

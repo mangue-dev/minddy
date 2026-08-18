@@ -3,24 +3,24 @@ import "server-only";
 import { getClient, type OAuthClient } from "@/lib/server/oauth/clients";
 
 /**
- * Validation de la requête d'autorisation (RFC 6749 §4.1.1 + PKCE), partagée
- * entre la page de consentement (GET) et la route de décision (POST — qui
- * re-valide tout : les champs cachés d'un formulaire ne sont pas fiables).
+ * Validation of the authorization request (RFC 6749 §4.1.1 + PKCE), shared
+ * between the consent page (GET) and the decision route (POST — which
+ * re-validates everything: hidden fields in a form are not reliable).
  *
- * Un seul verdict d'échec, et il ne redirige JAMAIS. La RFC autorise à
- * renvoyer une erreur protocolaire au `redirect_uri` une fois celui-ci
- * reconnu (§4.1.2.1) ; ici l'enregistrement dynamique de client est ouvert à
- * tous, donc « URI enregistrée » ne veut rien dire de plus que « URI qu'un
- * inconnu a déposée ». Rendre la redirection sur un paramètre invalide, c'est
- * offrir un redirecteur ouvert permanent sous notre domaine, déclenchable par
- * une simple URL — `?response_type=x` suffit. Une erreur de protocole se rend
- * donc sur notre propre page.
+ * Only one failure verdict, and it NEVER redirects. The RFC authorizes
+ * to return a protocol error to the `redirect_uri` once it
+ * is recognized (§4.1.2.1); here dynamic client registration is open to
+ * everyone, so "registered URI" means nothing more than "URI that an unknown
+ * filed". Making the redirection on an invalid parameter is
+ * offering a permanent open redirector under our domain, triggerable by
+ * a simple URL — `?response_type=x` is enough. A protocol error returns
+ * therefore on our own page.
  *
- * Reste une seule redirection vers le client, après validation COMPLÈTE : la
- * décision de l'utilisateur (`code`, ou `error=access_denied` s'il refuse).
+ * There remains only one redirection to the client, after COMPLETE validation: the
+ * decision of the user (`code`, or `error=access_denied` if it refuses).
  */
 
-// base64url(sha256) = 43 caractères ; la RFC borne 43-128.
+// base64url(sha256) = 43 characters; RFC terminal 43-128.
 const CHALLENGE_RE = /^[A-Za-z0-9_-]{43,128}$/;
 
 export type AuthorizeParams = Partial<
@@ -37,8 +37,8 @@ export type AuthorizeParams = Partial<
   >
 >;
 
-/** Motifs d'échec, tels qu'ils s'affichent : chacun a sa phrase sur la page
-    d'erreur (namespace i18n `OAuthConsent`). */
+/** Failure reasons, as displayed: each has its own sentence on the
+ error page (i18n namespace `OAuthConsent`). */
 export type AuthorizeFailure =
   | "unknown_client"
   | "invalid_redirect_uri"
@@ -59,8 +59,8 @@ export type AuthorizeValidation =
       state: string | null;
     };
 
-/** URL MCP canonique attendue en `resource` (RFC 8707) — comparaison après
-    canonisation légère (host insensible à la casse, slash final toléré). */
+/** Canonical MCP URL expected in `resource` (RFC 8707) — comparison after
+ light canonicalization (host case insensitive, final slash tolerated). */
 export function isValidResource(resource: string, origin: string): boolean {
   try {
     const parsed = new URL(resource);
@@ -85,7 +85,7 @@ export async function validateAuthorizeRequest(
   if (!client) return { kind: "invalid", reason: "unknown_client" };
 
   const redirectUri = params.redirect_uri;
-  // Comparaison STRICTE avec les URIs enregistrées — aucune normalisation.
+  // STRICT comparison with registered URIs — no normalization.
   if (!redirectUri || !client.redirect_uris.includes(redirectUri)) {
     return { kind: "invalid", reason: "invalid_redirect_uri" };
   }
@@ -120,7 +120,7 @@ export async function validateAuthorizeRequest(
   };
 }
 
-/** redirect_uri + paramètres ajoutés (code/erreur + state réécho verbatim). */
+/** redirect_uri + parameters added (code/error + verbatim reecho state). */
 export function buildCallbackUrl(
   redirectUri: string,
   params: Record<string, string | null>

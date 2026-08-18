@@ -2,16 +2,15 @@ import { cache } from "react";
 import { createServerSupabase } from "@/lib/supabase-server";
 
 /**
- * Nom d'un projet, pour les titres de page (MIN-95).
+ * Name of a project, for page titles (MIN-95).
  *
- * Les `generateMetadata` s'empilent : celui de `projects/[id]/layout.tsx` et
- * celui de son sous-layout (`triage`, `objectives`, `settings`, `feedback`)
- * s'exécutent tous les deux pour une même requête, et tous les deux veulent le
- * nom du projet. `cache()` leur fait partager une seule lecture.
+ * The `generateMetadata` stack: that of `projects/[id]/layout.tsx` and
+ * that of its sublayout (`triage`, `objectives`, `settings`, `feedback`)
+ * both run for the same query, and both want the
+ * project name. `cache()` makes them share a single reading.
  *
- * Renvoie `null` plutôt que de jeter : un titre est un ornement, une page n'a
- * pas à tomber parce que la RLS a refusé la lecture ou que le projet n'existe
- * pas — l'appelant retombe sur le libellé générique traduit.
+ * Returns `null` rather than throwing away: a title is an ornament, a page does not have to fall because the RLS refused the reading or the project does not exist
+ * not — the caller falls back on the translated generic wording.
  */
 export const projectName = cache(async (id: string): Promise<string | null> => {
   try {

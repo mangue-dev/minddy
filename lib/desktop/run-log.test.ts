@@ -27,8 +27,8 @@ describe("le nom d'un journal de run", () => {
   it("porte la date en tête, donc l'ordre alphabétique est l'ordre du temps", () => {
     const earlier = runLogFileName("r-1", new Date("2026-08-15T09:12:33.123Z"));
     const later = runLogFileName("r-2", new Date("2026-08-15T09:12:34.000Z"));
-    // C'est CE tri que la rotation utilise : sans lui, elle lirait des `mtime`,
-    // qu'une sauvegarde ou un `rsync` réécrit.
+    // It is THIS sort that the rotation uses: without it, it would read `mtime`,
+    // that a backup or a `rsync` rewrites.
     expect([later, earlier].sort()).toEqual([earlier, later]);
   });
 
@@ -84,8 +84,8 @@ describe("la rotation", () => {
   });
 
   it("garde TOUJOURS le plus récent, même seul au-dessus du plafond", () => {
-    // Le tour qui déraille et crache 200 Mo est exactement celui qu'on veut
-    // lire : une rotation qui le supprime laisse un dossier propre et rien à
+    // The trick that goes off the rails and spits out 200 MB is exactly what we want
+    // read: a rotation that removes it leaves a clean folder and nothing to
     // envoyer au support.
     const names = [file("2026-08-14.log", 200_000_000), file("2026-08-13.log", 10)];
     expect(pruneRunLogs(names, { maxBytes: 1_000 })).toEqual(["2026-08-13.log"]);
@@ -137,7 +137,7 @@ describe("la substitution des secrets", () => {
   });
 
   it("ignore ce qui est trop court pour être un secret", () => {
-    // Substituer « dev » barbouillerait tout le journal de `[redacted]`.
+    // Substituting "dev" would smear the entire log with `[redacted]`.
     const redact = runLogRedactor(["dev"]);
     expect(redact("/Users/dev/Projets")).toBe("/Users/dev/Projets");
   });
@@ -172,8 +172,8 @@ describe("le rapport de diagnostic", () => {
   });
 
   it("dit qu'aucun tour n'a joué plutôt que de rendre un rapport vide", () => {
-    // « la machine n'a jamais reçu de run » et « le run a échoué au démarrage »
-    // sont deux tickets de support différents.
+    // “the machine never received a run” and “the run failed at startup”
+    // are two different support tickets.
     const report = formatDiagnosticReport({ ...base, logCount: 0, lastRun: null });
     expect(report).toContain("No agent run has ever started on this machine");
     expect(report).toContain("**Harness bundle:** —");

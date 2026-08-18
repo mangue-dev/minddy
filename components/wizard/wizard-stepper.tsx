@@ -1,10 +1,8 @@
 import { cn } from "mangue-ui";
 
 /**
- * Indicateur d'étapes du wizard (MIN-62), porté d'AutoKap (wizard-stepper.tsx) :
- * une rangée de pilules — l'étape active est une barre large, les étapes
- * passées sont courtes, atténuées et cliquables pour revenir en arrière, les
- * étapes à venir restent verrouillées (pas encore validées).
+ * Wizard steps indicator (MIN-62), ported from AutoKap (wizard-stepper.tsx):
+ * a row of pills — active step is a wide bar, past steps are short, faded and clickable to go back, upcoming steps remain locked (not yet validated).
  */
 export function WizardStepper({
   currentStep,
@@ -16,9 +14,9 @@ export function WizardStepper({
   currentStep: number;
   totalSteps: number;
   className?: string;
-  /** Rend les étapes passées cliquables pour y sauter directement. */
+  /** Makes past steps clickable to jump directly to them. */
   onStepClick?: (step: number) => void;
-  /** Label accessible / tooltip natif d'une étape (son titre). */
+  /** Accessible label / native tooltip of a step (its title). */
   getStepLabel?: (step: number) => string;
 }) {
   return (

@@ -2,7 +2,7 @@
 
 import { FeedbackTeamPage } from "@/components/feedback/feedback-team-page";
 
-/** Onglet Feedback du projet (MIN-37) — gestion côté équipe du board public. */
+/** Project Feedback tab (MIN-37) — management on the team side of the public board. */
 export default function ProjectFeedbackPage() {
   return <FeedbackTeamPage />;
 }

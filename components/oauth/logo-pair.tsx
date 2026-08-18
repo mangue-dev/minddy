@@ -3,16 +3,16 @@ import { cn } from "mangue-ui";
 import { MinddyLogo } from "@/components/minddy-logo";
 
 /**
- * Paire de logos des pages OAuth : minddy ⟷ l'application, côte à côte, SANS
- * containers (les marques respirent). Entre les deux : trois points en
- * connexion, remplacés par une coche sur l'état "success".
+ * Pair of OAuth page logos: minddy ⟷ the application, side by side, WITHOUT
+ * containers (the brands breathe). Between the two: three dots in
+ * connection, replaced by a check mark on the "success" state.
  *
- * En face de minddy, une silhouette générique et rien d'autre. Le composant
- * rendait le vrai logo du vendeur deviné à partir du `client_name` — un champ
- * libre, posé par le client lui-même à l'inscription, qui est ouverte à tous.
- * Afficher la marque d'Anthropic parce qu'une application s'est appelée
- * « Claude », c'est signer d'une identité que personne n'a vérifiée, sur
- * l'écran précis où l'utilisateur décide à qui il donne son compte (MIN-346).
+ * In front of minddy, a generic silhouette and nothing else. The component
+ * made the real logo of the seller guessed from the `client_name` — a free field
+ *, set by the customer himself during registration, which is open to all.
+ * Display the Anthropic brand because an application was called
+ * "Claude" is signing of an identity that no one has verified, on
+ * the precise screen where the user decides to whom he gives his account (MIN-346).
  */
 export function OAuthLogoPair({
   state = "connect",

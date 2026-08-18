@@ -1,25 +1,25 @@
 /**
- * 010 — passer le compte de démo en plan Pro.
+ * 010 — upgrade the demo account to the Pro plan.
  *
- * Pourquoi : les écrans Agents et Pull Requests sont fermés derrière
- * `AgentsPlanGate`, qui remplace la page entière par un encart de vente quand
- * le plan n'autorise pas les agents. Camille était sur `free` :
+ * Why: the Agents and Pull Requests screens are closed behind
+ * `AgentsPlanGate`, which replaces the entire page with a sales insert when
+ * the plan does not allow agents. Camille was on `free`:
  *   free → allowAgents: false, allowMembers: false, maxProjects: 2
  *   go   → allowAgents: true,  allowMembers: false
- *   pro  → allowAgents: true,  allowMembers: true,  projets illimités
+ * pro → allowAgents: true, allowMembers: true, unlimited projects
  *
- * D'où `pro` et pas `go` : le monde de démo montre trois personnes assignées
- * sur les boards, ce que `allowMembers` conditionne, et compte déjà deux
- * projets — soit le plafond exact du plan gratuit.
+ * Hence `pro` and not `go`: the demo world shows three assigned people
+ * on the boards, what `allowMembers` conditions, and already has two
+ * projects — or the exact ceiling of the free plan.
  *
- * COMMENT, et c'est le point important : on écrit UNIQUEMENT
- * `admin_override_plan_id`, la colonne que le schéma prévoit pour ça (« offrir
- * Pro à un testeur »), prioritaire sur Stripe dans
- * `resolvePlanFromBillingAccount`. Aucun client Stripe n'est créé, aucun
- * abonnement, aucun paiement, aucun webhook. Les colonnes `stripe_*` restent
- * intégralement nulles.
+ * HOW, and this is the important point: we write ONLY
+ * `admin_override_plan_id`, the column that the diagram provides for this (“offer
+ * Pro to a tester"), priority over Stripe in
+ * `resolvePlanFromBillingAccount`. No Stripe clients are created, no
+ * subscription, no payment, no webhook. The `stripe_*` columns remain
+ * entirely zero.
  *
- * Idempotent : si l'override est déjà posé, le script ne touche à rien.
+ * Idempotent: if the override is already set, the script does not affect anything.
  *
  *   node captures/world/seed/010-plan-pro.mjs --dry-run
  *   node captures/world/seed/010-plan-pro.mjs
@@ -80,7 +80,7 @@ async function main() {
   console.log(plan.describe());
   await plan.apply({ confirmed: true });
 
-  // Contrôle : l'override est posé, et RIEN de Stripe n'a été touché.
+  // Control: the override is set, and NOTHING of Stripe has been touched.
   const { data: after } = await world.admin
     .from("billing_accounts")
     .select("admin_override_plan_id, stripe_customer_id, stripe_subscription_id, stripe_plan_id, stripe_subscription_status")

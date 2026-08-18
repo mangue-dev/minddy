@@ -1,83 +1,83 @@
 /**
- * Plans & billing (MIN-72) — la source de vérité des plans, côté partagé
- * (importable client ET serveur, aucune dépendance server-only).
+ * Plans & billing (MIN-72) — the source of truth for plans, shared side
+ * (importable client AND server, no server-only dependency).
  *
- * Modèle : chaque plan inclut un BUDGET D'USAGE mensuel en USD, décompté au
- * COÛT BRUT (le coût OpenRouter/Vercel réel, sans surcharge par action — la
- * marge est sur le prix de l'abonnement). Le ledger `ai_usage` fournit le
- * dépensé ; la fenêtre est la période Stripe courante (ou le mois calendaire
- * pour les comptes free). Prix affichés en EUR, budgets en USD (la devise des
- * coûts rapportés par OpenRouter).
+ * Model: each plan includes a monthly USAGE BUDGET in USD, deducted as
+ * GROSS COST (the actual OpenRouter/Vercel cost, without overhead per action — the
+ * margin is on the subscription price). The ledger `ai_usage` provides the
+ * spent ; window is the current Stripe period (or calendar month
+ * for free accounts). Prices displayed in EUR, budgets in USD (the currency of
+ * costs reported by OpenRouter).
  */
 
 export type BillingPlanId = "free" | "go" | "pro";
 
-/** Cadence de facturation d'un abonnement (= `recurring.interval` côté Stripe). */
+/** Billing rate for a subscription (= `recurring.interval` on the Stripe side). */
 export type BillingInterval = "month" | "year";
 
 export interface BillingPlan {
   id: BillingPlanId;
-  /** Prix d'affichage (le prix facturé vient du price Stripe configuré en env). */
+  /** Display price (the price charged comes from the Stripe price configured in approx). */
   priceEurMonthly: number;
-  /** Budget d'usage IA mensuel inclus, en USD de coût brut. */
+  /** Monthly AI usage budget included, in gross cost USD. */
   includedUsageUsd: number;
   /**
-   * Modèle le plus cher que ce plan peut CHOISIR sur le quota minddy, exprimé en
-   * multiplicateur du modèle par défaut de minddy (cf. lib/model-multiplier.ts).
+   * The most expensive model that this plan can CHOOSE on the minddy quota, expressed in
+   * minddy's default model multiplier (see lib/model-multiplier.ts).
    *
-   * Un budget en USD ne suffisait pas à protéger l'échelle : sur un plan à petit
-   * budget, un modèle à ×12 le vide en trois runs, et l'utilisateur découvre le
-   * plafond au moment où il tombe. Le multiplicateur, lui, se lit AVANT de
-   * lancer, dans le picker, à côté de chaque modèle.
+   * A USD budget was not enough to protect scale: on a small scale
+   * budget, a ×12 model empties it in three runs, and the user discovers the
+   * ceiling as it falls. The multiplier is read BEFORE
+   * throw, in the picker, next to each model.
    *
-   * Ne s'applique QU'au quota minddy : en BYOK l'utilisateur paye ses tokens,
-   * le catalogue lui est ouvert en entier. Et jamais aux défauts de minddy
-   * eux-mêmes (`agent_model`, `pr_review_model`) : l'instance répond de ses
-   * propres choix, elle ne se les refuse pas.
+   * ONLY applies to the minddy quota: in BYOK the user pays for their tokens,
+   * the entire catalog is open to him. And never minddy's faults
+   * themselves (`agent_model`, `pr_review_model`): the instance responds to its
+   * her own choices, she does not refuse them.
    *
-   * Ces valeurs sont ACCROCHÉES au défaut du moment. Calées sur
-   * deepseek-v4-flash (~0,21 $/Mtok), elles donnent à chaque plan une frontière
-   * qui se nomme : Go va jusqu'à Claude Haiku 4.5 (×14), Pro jusqu'à Sonnet 5
-   * (×29) et GPT-5.2 (×38), Opus 5 (×71) reste au BYOK. Changer `agent_model`
-   * en /admin déplace TOUTE l'échelle — un défaut deux fois plus cher divise
-   * tous les multiplicateurs par deux et ouvre les plafonds d'autant. Le jour
-   * où ça arrive, ces trois nombres se rejouent contre le nouveau baseline.
+   * These values ​​are HOOKED to the current default. Propped on
+   * deepseek-v4-flash (~$0.21/Mtok), they give each plane a boundary
+   * which is called: Go goes up to Claude Haiku 4.5 (×14), Pro up to Sonnet 5
+   * (×29) and GPT-5.2 (×38), Opus 5 (×71) remains BYOK. Change `agent_model`
+   * en /admin moves the WHOLE scale — a default twice as expensive divides
+   * all multipliers by two and opens the caps by that much. The day
+   * where it happens, these three numbers are replayed against the new baseline.
    */
   maxModelMultiplier: number;
   /**
-   * Les OCTETS que les projets de ce compte peuvent tenir dans le storage —
-   * pièces jointes de ticket et fichiers de page confondus (MIN-348).
+   * BYTES that projects in this account can hold in storage —
+   * ticket attachments and page files combined (MIN-348).
    *
-   * Le seul plafond du produit que TypeScript ne fait pas respecter : l'envoi
-   * part du navigateur DIRECTEMENT vers le bucket, avec le JWT de son auteur, et
-   * ne traverse aucune de nos routes. C'est donc la policy `attachments insert`
-   * (migration 20261229090000) qui l'applique, en lisant la table
-   * `plan_storage_quotas`. Ces trois nombres et cette table-là doivent dire la
-   * même chose — `lib/billing-plans.test.ts` le vérifie en lisant le SQL.
+   * The only product cap that TypeScript doesn't enforce: sending
+   * leaves the browser DIRECTLY to the bucket, with the JWT of its author, and
+   * does not cross any of our roads. So this is the policy `attachments insert`
+   * (migration 20261229090000) which applies it, reading the table
+   * `plan_storage_quotas`. These three numbers and this table must say the
+   * same thing — `lib/billing-plans.test.ts` checks it by reading the SQL.
    *
-   * L'imputation suit celle de l'usage IA : ce qui compte, c'est le OWNER du
-   * projet où le fichier atterrit, pas le membre qui l'a déposé.
+   * The imputation follows that of AI use: what counts is the OWNER of the
+   * project where the file lands, not the member who dropped it.
    */
   maxStorageBytes: number;
-  /** null = illimité. */
+  /** null = unlimited. */
   maxProjects: number | null;
-  /** null = illimité. */
+  /** null = unlimited. */
   maxIssuesPerProject: number | null;
-  /** Accès aux agents de code (lancement de runs sur la clé plateforme ou BYOK). */
+  /** Access to code agents (launch of runs on the platform key or BYOK). */
   allowAgents: boolean;
   /**
-   * Invités par projet — les personnes qu'on fait entrer, le OWNER NON COMPRIS
-   * (« 2 invités » = deux personnes en plus de soi). `null` = illimité.
+   * Guests per project — the people we bring in, the OWNER NOT INCLUDED
+   * (“2 guests” = two people in addition to yourself). `null` = unlimited.
    *
-   * C'était un booléen, vrai sur le seul Pro (MIN-199) : personne ne pouvait
-   * faire entrer qui que ce soit sans passer à 20 €/mois. On faisait donc payer
-   * l'effet de réseau AVANT qu'il existe, alors que c'est lui qui amène les
-   * utilisateurs suivants. Ce qui se vend, c'est désormais la QUANTITÉ — comme
-   * `maxProjects` et `maxIssuesPerProject` — et ce qui reste au Pro, c'est
-   * l'équipe qui grandit.
+   * It was a boolean, true on the only Pro (MIN-199): no one could
+   * bring anyone in without spending €20/month. So we charged
+   * the network effect BEFORE it exists, when it is it which brings the
+   * following users. What sells is now QUANTITY — like
+   * `maxProjects` and `maxIssuesPerProject` — and what remains for the Pro is
+   * the growing team.
    */
   maxMembersPerProject: number | null;
-  /** Plan mis en avant dans l'UI. */
+  /** Plan highlighted in the UI. */
   highlighted?: boolean;
 }
 
@@ -117,8 +117,8 @@ export const BILLING_PLANS: BillingPlan[] = [
     maxMembersPerProject: null,
   },
 ];
-// Un plan « Ultra » (~100-200 €, gros budget d'usage) est envisagé : l'ajouter
-// ici + un price Stripe suffit, tout le reste est piloté par ces champs.
+// An “Ultra” plan (~100-200 €, large usage budget) is considered: add it
+// here + a Stripe price is enough, everything else is driven by these fields.
 
 export const DEFAULT_BILLING_PLAN_ID: BillingPlanId = "free";
 
@@ -133,20 +133,20 @@ export function coerceBillingPlanId(value: unknown): BillingPlanId | null {
     : null;
 }
 
-/** Rang pour comparer les plans (upgrade vs manage dans l'UI). */
+/** Rank to compare plans (upgrade vs manage in the UI). */
 export function billingPlanRank(id: BillingPlanId): number {
   return BILLING_PLANS.findIndex((plan) => plan.id === id);
 }
 
 /**
- * Le plan à PROPOSER à quelqu'un qui a épuisé son budget d'usage : le premier
- * au-dessus qui donne réellement PLUS de budget et qui autorise les agents.
- * `null` = il n'y en a pas — l'utilisateur est au sommet de l'échelle, et la
- * carte de budget épuisé ne doit alors proposer que d'attendre ou de passer en
- * BYOK. Proposer un upgrade qui n'existe pas serait une impasse.
+ * The plan to PROPOSE to someone who has exhausted their usage budget: the first
+ * above which actually gives MORE budget and which authorizes agents.
+ * `null` = there is none — the user is at the top of the ladder, and the
+ * exhausted budget card must then only suggest waiting or switching to
+ * BYOK. Proposing an upgrade that does not exist would be a dead end.
  *
- * Le jour où un plan « Ultra » s'ajoute à `BILLING_PLANS`, il est proposé tout
- * seul — rien d'autre à câbler.
+ * The day an “Ultra” plan is added to `BILLING_PLANS`, it is offered all
+ * alone — nothing else to wire.
  */
 export function nextBillingPlanId(current: BillingPlanId): BillingPlanId | null {
   const budget = getBillingPlan(current).includedUsageUsd;
@@ -158,43 +158,43 @@ export function nextBillingPlanId(current: BillingPlanId): BillingPlanId | null 
 
 // ── Facturation annuelle ─────────────────────────────────────────────────────
 
-/** Mois offerts sur l'annuel : on facture 10 mois pour 12 (2 mois offerts). */
+/** Months offered on the annual: we charge 10 months for 12 (2 months offered). */
 export const ANNUAL_FREE_MONTHS = 2;
 export const ANNUAL_BILLED_MONTHS = 12 - ANNUAL_FREE_MONTHS;
 
-/** Prix annuel d'affichage (le prix facturé vient du price Stripe annuel). */
+/** Annual display price (the price charged comes from the annual Stripe price). */
 export function annualPriceEur(plan: BillingPlan): number {
   return plan.priceEurMonthly * ANNUAL_BILLED_MONTHS;
 }
 
-/** Coût mensuel équivalent d'un abonnement annuel, arrondi au centime. */
+/** Equivalent monthly cost of an annual subscription, rounded to the nearest cent. */
 export function annualMonthlyEquivalentEur(plan: BillingPlan): number {
   return Math.round((annualPriceEur(plan) / 12) * 100) / 100;
 }
 
-// ── Coûts non-LLM ────────────────────────────────────────────────────────────
+// ── Non-LLM costs ────────────────────────────── ──────────────────────────────
 
 /**
- * Approximation du coût Vercel Sandbox par minute de wall-clock d'un run agent
- * (CPU actif + mémoire provisionnée, majoritairement en attente du LLM).
- * À recaler sur les factures réelles.
+ * Approximation of the Vercel Sandbox cost per minute of wall-clock of an agent run
+ * (Active CPU + provisioned memory, mostly waiting for LLM).
+ * To be adjusted on the actual invoices.
  */
 export const SANDBOX_USD_PER_MINUTE = 0.002;
 
 // ── Segments d'affichage de l'usage ─────────────────────────────────────────
 
 /**
- * Les features du ledger que l'utilisateur voit dans sa barre d'usage — 1:1 avec
- * `AiFeature` (lib/server/ai-usage.ts) + le CHECK de la migration, à ceci près
- * que les features internes (`import_map`, `brief_split`, `landing_demo`) n'y
- * sont pas : personne ne les lit.
+ * The ledger features that the user sees in their usage bar — 1:1 with
+ * `AiFeature` (lib/server/ai-usage.ts) + the CHECK of the migration, except for this
+ * that the internal features (`import_map`, `brief_split`, `landing_demo`) are not
+ * are not: no one reads them.
  *
- * Une LISTE, pas seulement une union : c'est elle que `billing-plans.test.ts`
- * parcourt pour vérifier que chaque feature tombe dans exactement UN segment.
- * Une feature ajoutée à l'union sans segment ne lèverait rien — la barre la
- * sous-compterait en silence face au total, et l'historique la rangerait sous
- * « Numo » par repli. Le test est le seul endroit qui l'attrape ; il lui faut
- * de quoi énumérer.
+ * A LIST, not just a union: it is this that `billing-plans.test.ts`
+ * scans to verify that each feature falls into exactly ONE segment.
+ * A feature added to the union without a segment would not raise anything — the bar
+ * would silently undercount the total, and the history would file it under
+ * “Numo” by fallback. The test is the only place that catches it; he needs
+ * enough to list.
  */
 export const BILLABLE_FEATURES = [
   "numo_chat",
@@ -211,8 +211,8 @@ export const BILLABLE_FEATURES = [
   "sandbox_compute",
   "web_search",
   "pr_review",
-  // Une ROUTINE (MIN-185) : le même run que `agent_code`/`sandbox_compute`, sur
-  // une autre ligne de facture. Cf. le segment `routines` plus bas.
+  // A ROUTINE (MIN-185): the same run as `agent_code`/`sandbox_compute`, on
+  // another invoice line. See the `routines` segment below.
   "routine_code",
   "routine_compute",
 ] as const;
@@ -230,71 +230,71 @@ export type UsageSegmentId =
 export interface UsageSegment {
   id: UsageSegmentId;
   features: BillableFeature[];
-  /** Classe Tailwind du remplissage de la barre + de la pastille de légende. */
+  /** Tailwind class of bar filling + legend patch. */
   barClass: string;
 }
 
 /**
- * Le regroupement typé montré à l'utilisateur (« 5 % sur les agents, 2 % sur la
- * dictée… ») : la barre unifiée du header et de la page billing tuile ces
- * segments dans cet ordre.
+ * The typed grouping shown to the user (“5% on agents, 2% on
+ * dictation…”): the unified bar of the header and the page billing tiles these
+ * segments in this order.
  */
 export const USAGE_SEGMENTS: UsageSegment[] = [
-  // LLM + compute sandbox d'un même run : pour l'utilisateur, c'est UN agent.
-  // La review d'une PR par Numo (MIN-141) les rejoint : c'est le même Numo qui
-  // lit du code, et la ranger ailleurs ferait chercher sa dépense dans la
-  // mauvaise ligne — même si le tour se paye sans microVM.
+  // LLM + compute sandbox of the same run: for the user, it is ONE agent.
+  // The review of a PR by Numo (MIN-141) joins them: it is the same Numo who
+  // reads the code, and storing it elsewhere would cause its expense to be found in the
+  // bad line — even if the trick is paid without microVM.
   {
     id: "agents",
     features: ["agent_code", "sandbox_compute", "pr_review"],
     barClass: "bg-violet-500",
   },
-  // Les ROUTINES (MIN-185), juste après les agents — c'est à eux qu'on les
-  // compare. Techniquement c'est le même run ; en facturation ce n'est pas la
-  // même dépense : un run d'agent est un geste qu'on a fait, une routine est un
-  // abonnement qu'on a laissé tourner, et « qu'est-ce qui a mangé mon budget ce
-  // mois-ci ? » ne se répond que si les deux se lisent séparément. Tokens ET
-  // minutes de microVM, sinon la séparation serait à moitié fausse.
-  // `web_search` déclenchée DANS une routine reste rangée avec Numo, comme
-  // celle d'un run d'agent : c'est le même tool, au même prix anecdotique.
+  // The ROUTINES (MIN-185), just after the agents — we give them to them
+  // compared. Technically it's the same run; in billing this is not the
+  // same expense: an agent run is a gesture that we made, a routine is a
+  // subscription that we let run, and “what ate my budget this
+  // month? » is only answered if the two are read separately. ET Tokens
+  // minutes of microVM, otherwise the separation would be half wrong.
+  // `web_search` triggered IN a routine remains stored with Numo, like
+  // that of an agent run: it's the same tool, at the same anecdotal price.
   {
     id: "routines",
     features: ["routine_code", "routine_compute"],
     barClass: "bg-sky-500",
   },
-  // La recherche web est un tool de Numo (chat, commentaires) ET des agents,
-  // mais elle reste anecdotique face au reste : on la range avec Numo plutôt que
-  // d'ajouter une couleur à la barre pour quelques centimes. (Les routines, à
-  // l'inverse, ont mérité la leur : une dépense récurrente qu'on veut pouvoir
-  // regarder seule, pas quelques centimes noyés.)
+  // Web search is a Numo tool (chat, comments) AND agents,
+  // but it remains anecdotal compared to the rest: we place it with Numo rather than
+  // to add a color to the bar for a few cents. (Routines,
+  // the opposite, have deserved theirs: a recurring expense that we want to be able to
+  // look alone, not a few pennies drowned.)
   {
     id: "numo",
     features: ["numo_chat", "numo_comment", "web_search"],
     barClass: "bg-blue-500",
   },
   { id: "dictation", features: ["dictation", "transcription"], barClass: "bg-amber-500" },
-  // Les retours : le tri d'un retour à son arrivée, la dictée de celui qu'on
-  // écrit, ET les embeddings, qui ne servent qu'à eux (rapprochement des
-  // doublons du board public). La voix reste ici plutôt qu'avec la dictée des
-  // tickets : c'est la dépense d'un retour, et c'est cette ligne-là qu'on lit
-  // quand on se demande ce que coûte le board.
+  // Returns: the sorting of a return upon its arrival, the dictation of the one we
+  // written, AND the embeddings, which only serve them (reconciliation of
+  // duplicates of the public board). The voice remains here rather than with the dictation of
+  // tickets: this is the expense of a return, and it is this line that we read
+  // when you wonder what the board costs.
   {
     id: "feedback",
     features: ["feedback_classify", "feedback_analyze", "feedback_voice", "embedding"],
     barClass: "bg-emerald-500",
   },
-  // LES AUTOMATISATIONS DU FORMULAIRE : ce que minddy remplit à votre place au
-  // moment où le ticket naît — qui le prend (Smart Assign, MIN-31) et ce qu'il
-  // est (Smart-fill, MIN-260). Deux features, une ligne : on ne les arme pas
-  // ensemble, mais on se demande leur coût ensemble, parce que c'est la même
-  // question — « qu'est-ce que ça me coûte de ne plus remplir mes tickets ? ».
+  // FORM AUTOMATIONS: what minddy fills out for you
+  // moment the ticket is born — who takes it (Smart Assign, MIN-31) and what it
+  // is (Smart-fill, MIN-260). Two features, one line: we don’t arm them
+  // together, but we wonder their cost together, because it is the same
+  // question — “what does it cost me to no longer fill out my tickets?” ".
   //
-  // La ligne s'appelait « Smart Assign », et le commentaire d'alors écartait
-  // exprès le mot « automatisations », qui désigne déjà les chaînes de règles
-  // (MIN-147). Il le désigne toujours — mais ces chaînes ne dépensent rien en
-  // propre : leur coût est celui des runs qu'elles lancent, et il se lit dans la
-  // ligne des agents. Le mot était donc libre, et à deux features le nom d'un
-  // seul produit cachait l'autre moitié de la ligne.
+  // The line was called "Smart Assign", and the commentary at the time dismissed
+  // expressly the word “automations”, which already designates chains of rules
+  // (MIN-147). He always points to it — but these channels spend nothing on
+  // own: their cost is that of the runs they launch, and it can be read in the
+  // agent line. The word was therefore free, and with two features the name of a
+  // single product hid the other half of the line.
   {
     id: "automations",
     features: ["smart_assign", "smart_fill"],
@@ -302,8 +302,8 @@ export const USAGE_SEGMENTS: UsageSegment[] = [
   },
 ];
 
-/** Multiple d'usage d'un plan vs Free (« 10× plus d'usage ») — pour l'UI, qui
-    parle en pourcentages et multiples, jamais en montants USD. */
+/** Multiple usage of a plan vs. Free (“10× more usage”) — for the UI, which
+    speaks in percentages and multiples, never in USD amounts. */
 export function usageMultiplierVsFree(plan: BillingPlan): number {
   const free = getBillingPlan("free");
   if (free.includedUsageUsd <= 0) return 1;

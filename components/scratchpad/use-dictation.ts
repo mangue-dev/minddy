@@ -25,8 +25,8 @@ const AUDIO_BITS_PER_SECOND = 48_000; // ~6 KB/s → 10 MB ≈ 28 min
 const SAFETY_STOP_MS = 20 * 60_000;
 // Peak deviation from the analyser's 128 midline that counts as speech.
 const SPEECH_PEAK_THRESHOLD = 20;
-// Fin du carnet envoyée à Numo comme échantillon d'orthographe (la route en
-// garde 3 000) — inutile de faire voyager une note de 64 ko à chaque prise.
+// End of notebook sent to Numo as a spelling sample (the route in
+// keep 3,000) — no need to carry a 64 kb note with each take.
 const NOTE_SAMPLE_CHARS = 4000;
 
 export type DictationStatus =
@@ -35,7 +35,7 @@ export type DictationStatus =
   | "recording"
   /** Audio → texte (/api/transcribe). */
   | "processing"
-  /** Texte brut → tâches propres (Numo). */
+  /** Plain text → own tasks (Numo). */
   | "polishing";
 
 function pickRecorderMimeType(): string | undefined {
@@ -120,9 +120,9 @@ export function useDictation({
     };
   }, [cleanup]);
 
-  /** Étape Numo : transcript brut → tâches propres. `tasks: null` = échec, et
-   *  l'appelant insère alors le brut ; `message` porte l'explication déjà
-   *  localisée du serveur quand il y en a une (budget d'usage épuisé). */
+  /** Numo step: raw transcript → clean tasks. `tasks: null` = failure, and
+ * the caller then inserts the raw; `message` carries the explanation already
+ * located on the server when there is one (used budget exhausted). */
   const polish = useCallback(
     async (
       transcript: string
@@ -137,8 +137,8 @@ export function useDictation({
           }),
         });
         if (!res.ok) {
-          // 403 = limite de plan (budget d'usage IA épuisé) : dire laquelle vaut
-          // mieux que « Numo n'a pas pu ».
+          // 403 = plan limit (AI usage budget exhausted): say which one is worth
+          // better than “Numo could not”.
           if (res.status === 403) {
             const data = (await res.json().catch(() => ({}))) as {
               error?: unknown;
@@ -189,8 +189,8 @@ export function useDictation({
           } else if (res.status === 413) {
             toast.error(t("tooLarge"));
           } else if (res.status === 403) {
-            // Limite de plan (budget d'usage IA épuisé) — message déjà localisé
-            // par le serveur, autrement plus parlant que « Échec ».
+            // Plan limit (AI usage budget exhausted) — message already located
+            // by the server, much more meaningful than “Failure”.
             const data = (await res.json().catch(() => ({}))) as {
               error?: unknown;
             };
@@ -216,8 +216,8 @@ export function useDictation({
         if (tasks) {
           onTasksRef.current(tasks);
         } else {
-          // La prise est bonne, seule la mise au propre a échoué : on insère le
-          // brut plutôt que de faire redire la phrase.
+          // The socket is good, only the adjustment failed: we insert the
+          // raw rather than repeating the sentence.
           onTasksRef.current([text]);
           toast.error(message ?? tScratch("dictationPolishFailed"));
         }

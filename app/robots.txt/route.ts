@@ -2,38 +2,38 @@ import { PROTECTED_PREFIXES } from "@/lib/protected-prefixes";
 import { SITE_URL } from "@/lib/site";
 
 /**
- * robots.txt (MIN-73, complété par MIN-88).
+ * robots.txt (MIN-73, supplemented by MIN-88).
  *
- * Écrit à la main plutôt que via `MetadataRoute.Robots` : la convention de Next
- * ne sait émettre que `User-agent` / `Allow` / `Disallow` / `Sitemap`, or il
- * manque ici deux choses qu'elle ne peut pas produire — la ligne
- * `Content-Signal`, et des groupes par robot.
+ * Written by hand rather than via `MetadataRoute.Robots`: the Next convention
+ * can only issue `User-agent` / `Allow` / `Disallow` / `Sitemap`, but it
+ * two things are missing here that it cannot produce — the line
+ * `Content-Signal`, and groups per robot.
  *
- * Trois décisions :
+ * Three decisions:
  *
- * 1. **Hors production, tout est interdit.** `preview.minddy.app/robots.txt`
- *    répondait `Allow: /` sur un site complet : un deuxième minddy, indexable,
- *    en concurrence directe avec le vrai sur ses propres requêtes. Le
- *    `X-Robots-Tag` de `next.config.mjs` complète, parce qu'un robots.txt ne
- *    gouverne que la DÉCOUVERTE : une URL déjà connue est visitée quand même.
+ * 1. **Outside production, everything is prohibited.** `preview.minddy.app/robots.txt`
+ * replied `Allow: /` on a complete site: a second minddy, indexable,
+ * in direct competition with the real one on its own requests. THE
+ * `X-Robots-Tag` of `next.config.mjs` complete, because a robots.txt does not
+ * governs that DISCOVERY: an already known URL is visited anyway.
  *
- * 2. **Les robots d'IA sont les bienvenus** — explicitement, pas par défaut.
+ * 2. **AI bots are welcome** — explicitly, not by default.
  *    Ceux qui citent (`OAI-SearchBot`, `Claude-SearchBot`, `PerplexityBot`…)
- *    comme ceux qui entraînent (`GPTBot`, `ClaudeBot`, `Google-Extended`…).
- *    Une jeune app n'a rien à protéger et tout à gagner à être connue des
- *    modèles ; ils passaient déjà, mais rien ne le disait, et l'absence de
- *    règle explicite se lit comme un oubli.
+ * like those that result in (`GPTBot`, `ClaudeBot`, `Google-Extended`…).
+ * A young app has nothing to protect and everything to gain from being known to
+ * models; they were already passing, but nothing said so, and the absence of
+ * explicit rule reads like an oversight.
  *
- * 3. **`Content-Signal`** (Cloudflare, septembre 2025) dit la même chose dans
- *    la forme que les éditeurs sont en train d'adopter : `search=yes`,
- *    `ai-input=yes` (citation dans une réponse), `ai-train=yes`.
+ * 3. **`Content-Signal`** (Cloudflare, September 2025) says the same thing in
+ * the form that publishers are adopting: `search=yes`,
+ * `ai-input=yes` (quote in an answer), `ai-train=yes`.
  *
- * La liste des `Disallow` est DÉRIVÉE de `lib/protected-prefixes.ts` : c'est la
- * même question posée deux fois (« qu'est-ce qui est privé ? »), elle ne doit
- * pas avoir deux réponses.
+ * The list of `Disallow` is DERIVED from `lib/protected-prefixes.ts`: this is the
+ * same question asked twice ("what is private?"), it should not
+ * not have two answers.
  */
 
-/** Robots qui citent des pages dans une réponse, et moteurs classiques. */
+/** Robots that quote pages in a response, and classic engines. */
 const CITATION_BOTS = [
   "Googlebot",
   "Bingbot",
@@ -45,23 +45,23 @@ const CITATION_BOTS = [
   "PerplexityBot",
 ];
 
-/** Robots de collecte pour l'entraînement des modèles. */
+/** Collection robots for model training. */
 const TRAINING_BOTS = ["GPTBot", "ClaudeBot", "Google-Extended", "Applebot-Extended"];
 
 const DISALLOW = [
   "/api/",
   "/auth/",
-  // Redirection SSO vers le board de feedback : une redirection, pas une page.
+  // SSO redirection to the feedback board: a redirection, not a page.
   "/feedback",
-  // Vues partagées, boards publics et pages publiées : l'URL EST le secret
+  // Shared views, public boards and published pages: the URL IS the secret
   // (MIN-26, MIN-37, MIN-283).
   "/share/",
   "/f/",
   "/p/",
-  // Sans barre finale : un `Disallow` est un préfixe littéral, `/projects`
-  // couvre donc `/projects` ET `/projects/<id>/board`. La contrepartie est
-  // qu'il couvrirait aussi une future page publique dont l'URL commencerait
-  // par ces lettres — à surveiller si le site gagne un `/agents-pour-jira`.
+  // Without trailing bar: a `Disallow` is a literal prefix, `/projects`
+  // therefore covers `/projects` AND `/projects/<id>/board`. The counterpart is
+  // that it would also cover a future public page whose URL would begin
+  // by these letters — to watch if the site gains a `/agents-pour-jira`.
   ...PROTECTED_PREFIXES,
 ];
 

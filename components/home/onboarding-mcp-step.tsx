@@ -6,13 +6,13 @@ import { useAnalytics } from "@/lib/use-analytics";
 import { McpConnectPanel } from "@/components/settings/mcp-connect-panel";
 
 /**
- * Étape « connecter un agent » de l'onboarding : le panneau des réglages du
- * compte, tel quel — grille d'agents, puis dialog d'installation — plus la
- * seule chose que l'étape ajoute, sa sortie.
+ * “Connect an agent” step of onboarding: the settings panel of the
+ * account, as is — agent grid, then installation dialog — plus the
+ * only thing the stage adds, its output.
  *
- * Choisir un agent et passer franchissent la même étape : connecter un agent
- * est une proposition, jamais un prérequis. Les deux chemins restent distincts
- * pour l'analytics.
+ * Choosing an agent and going through the same step: connecting an agent
+ * is a proposition, never a prerequisite. The two paths remain distinct
+ * for analytics.
  */
 export function OnboardingMcpStep({
   onDone,
@@ -29,8 +29,8 @@ export function OnboardingMcpStep({
   return (
     <div className="flex w-full flex-col gap-3">
       <McpConnectPanel
-        // Quel agent lisent vraiment les comptes qui arrivent — la donnée qui
-        // dit pour qui écrire la doc MCP en premier.
+        // Which agent really reads the accounts that come in — the data that
+        // says for whom to write the MCP doc first.
         onSelect={(agent) => track("onboarding_mcp_agent_selected", { agent: agent.id })}
         onConnected={onDone}
       />

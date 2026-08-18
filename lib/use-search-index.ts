@@ -13,17 +13,17 @@
 // - it is revalidated on palette open only when stale (`refetchQueries({ stale:
 //   true })`), so hammering ⌘K doesn't hammer the server.
 //
-// Fraîcheur : l'index est un INSTANTANÉ, et le rafraîchir coûte 4 000 lignes.
-// Trois choses le tiennent à jour sans le recharger :
-// - le projet COURANT ne le lit même pas : app-shell-chrome remplace ses lignes
+// Freshness: the index is a SNAPSHOT, and refreshing it costs 4000 rows.
+// Three things keep it up to date without reloading it:
+// - the CURRENT project doesn't even read it: app-shell-chrome replaces its lines
 //   par ["issues", projectId] / ["objectives", projectId], toujours vivants ;
-// - les actions ⌘; patchent la ligne qu'elles touchent (patchSearchIndexIssue) ;
-// - ce qui est écrit AILLEURS (Numo, le MCP, un coéquipier) est posé ligne à
-//   ligne par le pont temps réel — writeIndexRow plus bas. Sans lui, un ticket
-//   créé pendant la session n'était trouvable dans ⌘K qu'au rechargement complet
-//   de l'index, et seulement hors du projet courant.
-// Le rechargement complet reste le filet : marqué périmé par le pont, rejoué à
-// l'ouverture de la palette.
+// - actions ⌘; patch the line they touch (patchSearchIndexIssue);
+// - what is written ELSEWHERE (Numo, the MCP, a teammate) is placed line at
+// line by the real-time bridge — writeIndexRow lower. Without him, a ticket
+// created during the session could only be found in ⌘K upon full reload
+// of the index, and only outside the current project.
+// Complete reload remains the net: marked expired by the bridge, replayed at
+// opening the palette.
 
 import { useCallback, useEffect, useState } from "react";
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
@@ -124,18 +124,18 @@ export function patchSearchIndexIssue(
 }
 
 /**
- * Ajouter ou retirer une ligne de l'index, pour ce qui est écrit AILLEURS
+ * Add or remove a row from the index, for what is written ELSEWHERE
  * (lib/optimistic/remote-echo.ts).
  *
- * Le patch ci-dessus ne suffisait pas : il ne touche que des lignes DÉJÀ
- * indexées. Un ticket que Numo vient de créer n'y est par définition pas — la
- * palette ne le trouvait donc qu'après un rechargement complet de l'index (4 000
- * lignes, déclenché à son ouverture quand l'instantané est périmé). Sauf dans le
- * projet courant, dont app-shell-chrome remplace les lignes par ses caches
- * vivants ; ailleurs, ⌘K ignorait le ticket.
+ * The patch above was not enough: it only affects rows ALREADY
+ * indexed. A ticket that Numo has just created is by definition not there — the
+ * palette therefore only found it after a complete reload of the index (4,000
+ * lines, triggered when it is opened when the snapshot is out of date). Except in the
+ * current project, whose app-shell-chrome replaces the lines with its live
+ * caches; elsewhere, ⌘K ignored the ticket.
  *
- * Une ligne inconnue est mise EN TÊTE : la route trie `updated_at desc`, et ce
- * qui vient d'être écrit est ce qu'il y a de plus récent.
+ * An unknown line is put at the HEAD: the route sorts `updated_at desc`, and this
+ * which has just been written is the most recent.
  */
 function writeIndexRow<T extends { id: string }>(
   queryClient: QueryClient,

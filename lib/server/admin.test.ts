@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-344 — le gate admin croyait un e-mail NON CONFIRMÉ.
+ * MIN-344 — the gate admin believed an UNCONFIRMED email.
  *
- * `ADMIN_EMAILS` compare une adresse, et le JWT en porte une — mais aucun claim
- * ne dit qu'elle a été confirmée. S'inscrire avec l'adresse d'un admin (le cas
- * qui compte : un admin listé mais pas encore inscrit) donnait donc le privilège
- * le plus élevé du produit à qui n'a jamais ouvert la boîte mail correspondante.
+ * `ADMIN_EMAILS` compares an address, and the JWT carries one — but no claim
+ * says it was confirmed. Registering with the address of an admin (the case
+ * which counts: an admin listed but not yet registered) therefore gave the highest privilege
+ * of the product to those who have never opened the corresponding mailbox.
  *
- * Ce que ces tests épinglent : la seule source qui fasse foi est
- * `auth.users.email_confirmed_at`, lue en clé de service — jamais un claim, et
- * surtout pas `user_metadata.email_verified`, que l'utilisateur écrit lui-même.
- * Et le fail-closed : une lecture en panne ne fabrique pas un admin.
+ * What these tests pinpoint: the only authoritative source is
+ * `auth.users.email_confirmed_at`, read in service key — never a claim, and
+ * especially not `user_metadata.email_verified`, which the user writes himself.
+ * And fail-closed: a failed reading does not create an admin.
  */
 
 const getUserById = vi.fn();

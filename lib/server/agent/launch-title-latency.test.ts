@@ -4,10 +4,9 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * MIN-368 — le titre est un enrichissement, pas une dépendance du premier tour.
- * Cette garde de structure couvre l'ordre d'orchestration : les tests de
- * lancement moquent `after()` pour ne pas démarrer de drain, et ne peuvent donc
- * pas observer ce contrat temporel directement.
+ * MIN-368 — the title is an enrichment, not a dependency of the first round.
+ * This structure guard covers the orchestration order: tests of
+ * launch mock `after()` for not starting a drain, and therefore cannot observe this temporal contract directly.
  */
 describe("lancement sans attendre le titre de session", () => {
   const source = readFileSync(path.join(process.cwd(), "lib/server/agent/launch.ts"), "utf8");

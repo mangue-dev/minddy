@@ -5,33 +5,31 @@ import { afterOrNow } from "@/lib/server/after-safe";
 import { sha256Hex } from "@/lib/server/oauth/crypto";
 
 /**
- * Le compteur d'échecs d'un partage protégé — PERSISTANT (MIN-347).
+ * The failure counter of a protected share — PERSISTENT (MIN-347).
  *
- * `checkSessionRateLimit` reste la première ligne : elle est gratuite et coupe
- * le martèlement avant toute requête. Mais elle vit en mémoire, donc par
- * instance, et repart à zéro à chaque déploiement — sur une porte anonyme dont
- * le seul secret est un mot de passe, c'est un frein qu'il suffit d'attendre.
- * Ce module-ci compte en base, comme le fait déjà l'OTP du board public.
+ * `checkSessionRateLimit` remains the first line: it is free and cuts
+ * the pounding before any request. But it lives in memory, so by
+ * instance, and starts from zero with each deployment — on an anonymous door whose only secret is a password, it's a brake that you just have to wait for.
+ * This module counts in base, as the OTP of the public board already does.
  *
- * Deux plafonds, parce qu'il y a deux façons de balayer :
- *  - PAR ORIGINE, serré : c'est le cas courant, une machine qui essaie ;
- *  - PAR PARTAGE, large : le balayage distribué. Large parce que ce plafond-là
- *    ferme la porte à TOUT LE MONDE, y compris aux visiteurs légitimes — il est
- *    posé au-dessus de ce qu'une équipe entière peut rater en une heure, et il
- *    tombe de lui-même une heure plus tard.
+ * Two ceilings, because there are two ways to scan:
+ * - BY ORIGIN, tight: this is the common case, a machine that tries ;
+ * - BY SHARING, wide: distributed scanning. Large because that ceiling
+ * closes the door to EVERYONE, including legitimate visitors — it's
+ * placed above what an entire team can miss in an hour, and it
+ * falls by itself an hour later.
  *
- * Un déverrouillage réussi efface les échecs de son origine : se tromper deux
- * fois avant de trouver ne laisse pas de dette.
+ * A successful unlocking erases failures from its origin: making a mistake twice before finding leaves no debt.
  */
 
-/** Fenêtre des deux compteurs. */
+/** Window of the two counters. */
 const WINDOW_MS = 60 * 60 * 1000;
-/** Échecs tolérés par origine et par partage, sur la fenêtre. */
+/** Failures tolerated by origin and by sharing, on the window. */
 const MAX_PER_IP = 10;
-/** Échecs tolérés sur un partage, toutes origines confondues. */
+/** Failures tolerated on a share, all origins combined. */
 const MAX_PER_SHARE = 100;
 
-/** Empreinte d'origine, jamais l'IP en clair — même sel que `feedback_otp_codes`. */
+/** Original fingerprint, never the clear IP — same salt as `feedback_otp_codes`. */
 function hashIp(ip: string): string {
   return sha256Hex(
     `share-unlock-ip:${process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""}:${ip}`
@@ -39,11 +37,11 @@ function hashIp(ip: string): string {
 }
 
 /**
- * Reste-t-il des essais ? Lit les deux compteurs en une passe.
+ * Are there any tests left? Reads both counters in one pass.
  *
- * Ne LÈVE jamais : une base qui répond mal ne doit pas transformer une page
- * publique en 500. On laisse passer — la limite en mémoire, elle, tient
- * toujours, et scrypt est de toute façon devant.
+ * Never RAISES: a base that responds poorly must not transform a public
+ * page into 500. We let it pass — the limit in memory, it always holds
+ *, and scrypt is in front anyway.
  */
 export async function shareUnlockAttemptsLeft(
   shareId: string,
@@ -51,8 +49,8 @@ export async function shareUnlockAttemptsLeft(
 ): Promise<boolean> {
   const since = new Date(Date.now() - WINDOW_MS).toISOString();
   try {
-    // Dans le `try` : sur une configuration incomplète, `getServiceClient` lève,
-    // et ça ne doit pas se voir en 500 sur une page publique.
+    // In the `try`: on an incomplete configuration, `getServiceClient` raises,
+    // and it should not be seen in 500 on a public page.
     const service = getServiceClient();
     const [byIp, byShare] = await Promise.all([
       service
@@ -75,11 +73,11 @@ export async function shareUnlockAttemptsLeft(
 }
 
 /**
- * Range un échec, et purge au passage ce qui est sorti de la fenêtre.
+ * Stores a failure, and purges what came out of the window.
  *
- * Hors chemin critique, donc par `afterOrNow` : la réponse part sans attendre,
- * mais l'invocation reste en vie le temps de l'écriture. Détacher la promesse
- * la ferait mourir en vol, et le compteur ne compterait rien.
+ * Off the critical path, therefore by `afterOrNow`: the response leaves without waiting,
+ * but the invocation remains alive for the duration of the writing. Detaching the promise
+ * would cause it to die in flight, and the counter would count nothing.
  */
 export function recordShareUnlockFailure(shareId: string, ip: string): void {
   const ipHash = hashIp(ip);
@@ -100,7 +98,7 @@ export function recordShareUnlockFailure(shareId: string, ip: string): void {
   });
 }
 
-/** Le bon mot de passe efface l'ardoise de cette origine. */
+/** The correct password wipes the slate clean from this origin. */
 export function clearShareUnlockFailures(shareId: string, ip: string): void {
   const ipHash = hashIp(ip);
   afterOrNow(async () => {

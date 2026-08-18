@@ -33,13 +33,13 @@ function isProviderConfigured(provider: RepoProviderId): boolean {
 
 /**
  * GET /api/account/git-connections
- *  - défaut : { connections, providers } (connexions git du compte, sanitisées).
- *  - ?candidates=<connectionId> : { candidates } (dépôts de la connexion).
+ * - default: { connections, providers } (account git connections, sanitized).
+ * - ?candidates=<connectionId>: { candidates } (connection deposits).
  *
- * Le variant `candidates` double celui de `/api/projects/[id]/git-link` sans le
- * projet : le wizard de création choisit un dépôt AVANT que le projet existe
- * (MIN-62), la liaison se fait à la création. Rien de projet ici — la connexion
- * appartient au compte, `getUserConnection` en est la seule garde.
+ * The `candidates` variant doubles that of `/api/projects/[id]/git-link` without the
+ * project: the creation wizard chooses a repository BEFORE the project exists
+ * (MIN-62), the connection is made at creation. Nothing planned here — the connection
+ * belongs to the account, `getUserConnection` is the sole guardian.
  */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -62,9 +62,9 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Le login stocké est un instantané de la connexion du compte : on le recale
-  // avant de le lire, sinon un renommage chez la forge s'affiche à vie (MIN-154).
-  // Pas dans la branche `candidates` : elle liste des dépôts, pas des comptes.
+  // The stored login is a snapshot of the account connection: we reset it
+  // before reading it, otherwise a rename at the forge is displayed for life (MIN-154).
+  // Not in the `candidates` branch: it lists deposits, not accounts.
   await refreshForgeAccountNames(auth.user.id);
   const connections = await listUserConnections(auth.user.id);
   if (!connections) {
@@ -77,20 +77,20 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ connections, providers });
 }
 
-/** D'où part la connexion — c'est ce qui décide où le callback ramène. */
+/** Where the connection starts from — that's what decides where the callback leads back to. */
 const ORIGINS = new Set(["wizard", "settings"]);
 
 /**
  * POST /api/account/git-connections — { action:'start', provider, origin? }
  *  → { mode:'reuse', connectionId } | { mode:'install'|'oauth', url }
  *
- * Connexion au niveau COMPTE : le `state` porte le projet sentinelle
- * `__account__`, et son `origin` la destination du retour.
- *  - `wizard`   → `/home?setup=git` : le wizard de création s'y rouvre depuis
- *    son brouillon (lib/project-draft.ts), puisqu'à ce stade il n'y a pas
- *    encore de projet.
- *  - `settings` → `/settings?tab=git` : les paramètres du compte, d'où l'on
- *    connecte un compte git sans passer par un projet.
+ * Connection at the ACCOUNT level: the `state` carries the sentinel project
+ * `__account__`, and its `origin` the return destination.
+ * - `wizard` → `/home?setup=git`: the creation wizard reopens there from
+ * his draft (lib/project-draft.ts), since at this stage there is no
+ * still a project.
+ * - `settings` → `/settings?tab=git`: the account settings, from where we
+ * connect a git account without going through a project.
  */
 export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -118,8 +118,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Déjà connecté → reuse : pas de round-trip provider, donc pas de redirect
-  // plein écran, donc pas de brouillon à sauver.
+  // Already connected → reuse: no round-trip provider, therefore no redirect
+  // full screen, so no draft to save.
   const existing = await findReusableConnection(auth.user.id, provider);
   if (existing) {
     return NextResponse.json({ mode: "reuse", connectionId: existing.id });

@@ -1,7 +1,7 @@
 /**
- * La petite frontière pure entre une charge utile APNs et la coquille Electron
- * (MIN-356). APNs livre un dictionnaire non typé ; le main process n'en retient
- * que le texte visible et une route relative de minddy.
+ * The small pure boundary between an APNs payload and the Electron
+ * shell (MIN-356). APNs delivers an untyped dictionary; the main process only retains
+ * the visible text and a relative route of minddy.
  */
 
 export interface NativePushContent {
@@ -11,11 +11,11 @@ export interface NativePushContent {
 }
 
 /**
- * Le volet macOS qui laisse l'utilisateur lever un refus déjà prononcé.
+ * The macOS pane which lets the user lift an already pronounced refusal.
  *
- * Le bundle id est fixé par le MAIN process, jamais fourni par la page distante.
- * `id` sélectionne directement l'app au lieu de déposer la personne devant la
- * liste entière des notifications.
+ * The bundle id is set by the MAIN process, never provided by the remote page.
+ * `id` directly selects the app instead of placing the person in front of the
+ * entire list of notifications.
  */
 export function nativeNotificationSettingsUrl(bundleId: string): string {
   return (
@@ -44,7 +44,7 @@ export function nativePushContent(input: unknown): NativePushContent | null {
   return { title, body, url };
 }
 
-/** Une charge distante ne peut ouvrir qu'une route de l'origine déjà choisie. */
+/** A remote load can only open a route from the already chosen origin. */
 export function nativePushTarget(value: unknown): string | null {
   if (typeof value !== "string") return null;
   if (!value.startsWith("/") || value.startsWith("//")) return null;

@@ -14,11 +14,11 @@ import {
 } from "@/lib/pr-diff-anchors";
 
 /**
- * Les cas ci-dessous reproduisent le comportement RÉEL de l'API GitHub, relevé
- * contre une vraie PR : c'est lui qui dicte les règles, pas l'intuition.
+ * The cases below reproduce the REAL behavior of the GitHub API, noted
+ * against a real PR: it dictates the rules, not intuition.
  */
 
-/** Diff dont le SEUL hunk touche la ligne 150 (contexte 147→153). */
+/** Diff whose ONLY hunk touches line 150 (context 147→153). */
 const DIFF = `diff --git a/probe.txt b/probe.txt
 --- a/probe.txt
 +++ b/probe.txt
@@ -56,7 +56,7 @@ function comment(over: Partial<PullRequestReviewComment> = {}): PullRequestRevie
 }
 
 describe("toDiffSide / toGithubSide", () => {
-  it("apparie les deux vocabulaires du même côté", () => {
+  it("pairs the two vocabularies on the same side", () => {
     expect(toDiffSide("LEFT")).toBe("deletions");
     expect(toDiffSide("RIGHT")).toBe("additions");
     expect(toGithubSide("deletions")).toBe("LEFT");
@@ -65,12 +65,12 @@ describe("toDiffSide / toGithubSide", () => {
 });
 
 describe("threadAnchor", () => {
-  it("ancre un commentaire de droite sur la ligne nouvelle", () => {
+  it("anchors a right-side comment on the new line", () => {
     const [thread] = groupReviewThreads([comment({ line: 150, side: "RIGHT" })]);
     expect(threadAnchor(thread)).toEqual({ side: "additions", line: 150 });
   });
 
-  it("ancre un commentaire de gauche sur la ligne ancienne", () => {
+  it("anchors a left-side comment on the old line", () => {
     const [thread] = groupReviewThreads([comment({ line: 150, side: "LEFT" })]);
     expect(threadAnchor(thread)).toEqual({ side: "deletions", line: 150 });
   });
@@ -81,11 +81,11 @@ describe("threadAnchor", () => {
   });
 
   it("rend l'ancre DÉCLARÉE, même hors des hunks — c'est le rendu qui tranche", () => {
-    // Le cas qui piège : relevé sur l'API réelle, un commentaire posé sur une
-    // ligne de CONTEXTE garde son `line` après que le diff a bougé ailleurs. On
-    // ne le déclare pas périmé ici : la lib ne créera simplement pas de `<slot>`
-    // pour cette ligne, et il se repliera dans les « périmés » — jusqu'à ce
-    // qu'un dépliage de contexte le ramène à sa place, sans rien recalculer.
+    // The trap case: noted on the real API, a comment made on a
+    // CONTEXT line keeps its `line` after the diff has moved elsewhere. We
+    // don't declare it obsolete here: the lib will simply not create `<slot>`
+    // for this line, and it will fall back into “expired” — until
+    // that a context unfolding brings it back to its place, without recalculating anything.
     const [thread] = groupReviewThreads([comment({ line: 97, side: "RIGHT" })]);
     expect(threadAnchor(thread)).toEqual({ side: "additions", line: 97 });
     expect(isLineInDiff(HUNKS, "additions", 97)).toBe(false);
@@ -93,9 +93,9 @@ describe("threadAnchor", () => {
 });
 
 describe("anchorKey", () => {
-  it("sépare les deux côtés d'un même numéro de ligne", () => {
-    // En unifié, une ligne modifiée produit DEUX lignes numérotées 150 : la
-    // supprimée et l'ajoutée. Elles ne partagent ni annotation ni brouillon.
+  it("separates the two sides of the same line number", () => {
+    // In unified, a modified line produces TWO lines numbered 150: the
+    // deleted and added it. They do not share annotations or drafts.
     expect(anchorKey({ side: "deletions", line: 150 })).not.toBe(
       anchorKey({ side: "additions", line: 150 }),
     );
@@ -103,15 +103,15 @@ describe("anchorKey", () => {
 });
 
 describe("isLineInDiff", () => {
-  it("retient les lignes du hunk, des deux côtés", () => {
+  it("keeps hunk lines on both sides", () => {
     expect(isLineInDiff(HUNKS, "additions", 147)).toBe(true);
     expect(isLineInDiff(HUNKS, "additions", 153)).toBe(true);
     expect(isLineInDiff(HUNKS, "deletions", 150)).toBe(true);
   });
 
-  it("EXCLUT ce qui est hors hunk — GitHub le refuse en 422", () => {
-    // Ces lignes-là existent dans le fichier et s'affichent une fois le contexte
-    // déplié : elles ne sont pour autant PAS dans le diff que la forge connaît.
+  it("EXCLUDES what is outside the hunk — GitHub rejects it with 422", () => {
+    // These lines exist in the file and are displayed once the context
+    // unfolded: they are however NOT in the difficulty that the forge is experiencing.
     expect(isLineInDiff(HUNKS, "additions", 146)).toBe(false);
     expect(isLineInDiff(HUNKS, "additions", 154)).toBe(false);
     expect(isLineInDiff(HUNKS, "additions", 97)).toBe(false);
@@ -139,21 +139,21 @@ describe("commentAnchor", () => {
     ...over,
   });
 
-  it("ancre un clic simple sur la ligne visée", () => {
+  it("anchors a simple click on the targeted line", () => {
     expect(commentAnchor(HUNKS, range(), { multiLine: true })).toEqual({
       side: "additions",
       line: 150,
     });
   });
 
-  it("refuse une ligne hors diff plutôt que d'offrir un envoi voué au 422", () => {
+  it("rejects a line outside the diff instead of offering a request doomed to 422", () => {
     expect(commentAnchor(HUNKS, range({ start: 97, end: 97 }), { multiLine: true })).toBeNull();
   });
 
-  it("remet une plage dans l'ordre du fichier, quel que soit le sens du glissement", () => {
+  it("orders a range by file position regardless of drag direction", () => {
     const down = commentAnchor(HUNKS, range({ start: 148, end: 152 }), { multiLine: true });
     const up = commentAnchor(HUNKS, range({ start: 152, end: 148 }), { multiLine: true });
-    // GitHub veut `line` = DERNIÈRE ligne et `start_line` = la première.
+    // GitHub wants `line` = LAST line and `start_line` = the first.
     expect(down).toEqual({
       side: "additions",
       line: 152,
@@ -163,7 +163,7 @@ describe("commentAnchor", () => {
     expect(up).toEqual(down);
   });
 
-  it("ramène la plage à sa ligne d'arrivée quand elle change de côté", () => {
+  it("moves the range to its destination line when it changes sides", () => {
     const anchor = commentAnchor(
       HUNKS,
       range({ start: 150, side: "deletions", end: 152, endSide: "additions" }),
@@ -172,12 +172,12 @@ describe("commentAnchor", () => {
     expect(anchor).toEqual({ side: "additions", line: 152 });
   });
 
-  it("ramène la plage à sa ligne d'arrivée là où les plages n'existent pas (GitLab)", () => {
+  it("moves the range to its destination line where ranges do not exist (GitLab)", () => {
     const anchor = commentAnchor(HUNKS, range({ start: 148, end: 152 }), { multiLine: false });
     expect(anchor).toEqual({ side: "additions", line: 152 });
   });
 
-  it("refuse une plage dont un bout sort du diff", () => {
+  it("rejects a range with an endpoint outside the diff", () => {
     expect(commentAnchor(HUNKS, range({ start: 145, end: 152 }), { multiLine: true })).toEqual({
       side: "additions",
       line: 152,
@@ -190,18 +190,18 @@ describe("sharedStartLine", () => {
   const thread = (id: number, start: number | null) =>
     groupReviewThreads([comment({ id, line: 15, start_line: start })])[0];
 
-  it("rend la plage quand le seul fil en porte une", () => {
+  it("returns the range when the only thread carries one", () => {
     expect(sharedStartLine([thread(1, 6)])).toBe(6);
   });
 
-  it("ne rend rien pour une remarque d'une seule ligne", () => {
+  it("returns nothing for a one-line comment", () => {
     expect(sharedStartLine([thread(1, null)])).toBeNull();
     expect(sharedStartLine([])).toBeNull();
   });
 
-  it("se tait quand deux fils de la même ligne couvrent des plages différentes", () => {
-    // Un seul intitulé ne peut pas dire deux plages : on retombe alors sur la
-    // ligne d'ancrage, qui reste vraie pour les deux.
+  it("stays silent when two threads on the same line cover different ranges", () => {
+    // A single title cannot say two ranges: we then fall back on the
+    // anchor line, which remains true for both.
     expect(sharedStartLine([thread(1, 6), thread(2, 9)])).toBeNull();
     expect(sharedStartLine([thread(1, 6), thread(2, null)])).toBeNull();
   });

@@ -1,58 +1,57 @@
 /**
- * « Copier pour l'agent » — ce que ⌘L et l'entrée du menu ⋯ d'une page
- * déposent dans le presse-papiers.
+ * "Copy for agent" — what ⌘L and the menu entry ⋯ of a page
+ * drop to the clipboard.
  *
- * Une page n'a PAS d'identifiant humain. Un ticket se donne à un agent en
- * l'appelant « MIN-42 » ; une page, elle, n'existe pour le MCP que par deux
- * UUID (cf. `PAGE_ID`, lib/server/mcp/page-tools.ts) — que personne ne lit ni
- * ne retape. C'est toute la raison de ce geste : coller son URL ne suffit pas,
- * puisque rien n'y dit à l'agent quel outil ouvre ça.
+ * A page does NOT have a human identifier. A ticket is given to an agent en
+ * calling it “MIN-42”; a page, for the MCP, only exists in two
+ * UUIDs (see `PAGE_ID`, lib/server/mcp/page-tools.ts) — which no one reads nor
+ * retypes. This is the whole reason for this gesture: pasting your URL is not enough,
+ * since nothing tells the agent which tool opens it.
  *
- * D'où les deux moitiés du texte copié, et pas une seule :
+ * Hence the two halves of the copied text, and not just one:
  *
- * - l'URL, parce qu'un lien doit rester un lien — celui qui le colle dans une
- *   conversation, un commit ou un message à un collègue veut qu'on puisse
- *   cliquer dessus ;
- * - les COORDONNÉES MCP, parce qu'un agent ne devine pas qu'un chemin
- *   `/projects/<uuid>/pages/<uuid>` se lit avec `minddy_get_page`. Les deux
- *   ids sont réécrits en clair plutôt que laissés à extraire de l'URL : un
- *   argument d'outil ne se fabrique pas par découpage d'une chaîne.
+ * - the URL, because a link must remain a link — the one who pastes it into a
+ * conversation, a commit or a message to a colleague wants to be able to
+ * click on it;
+ * - the MCP COORDINATES, because an agent does not guess that a path
+ * `/projects/<uuid>/pages/<uuid>` is read with `minddy_get_page`. The two
+ * ids are rewritten in plaintext rather than left to extract from the URL: a
+ * tool argument is not made by splitting a string.
  *
- * Et, au milieu, la CONSIGNE — facultative, sur le patron du prompt
- * personnalisé d'un ticket (`buildIssueCustomPrompt`, lib/issue-prompt.ts) :
- * « transforme cette page en tickets », « relis la section Sécurité ». Sans
- * elle, le texte ne demande rien et ne fait que désigner la page ; c'est à
- * l'agent qu'on dira quoi en faire, dans la conversation. Avec elle, le geste
- * est complet — et c'est le cas fréquent, puisqu'on donne rarement une page
- * pour le plaisir de la donner.
+ * And, in the middle, the INSTRUCTION — optional, on the pattern of the prompt
+ * custom ticket prompt (`buildIssueCustomPrompt`, lib/issue-prompt.ts):
+ * "turns this page into tickets", "read the Security section again". Without
+ * it, the text does not ask for anything and only designates the page; it is
+ * the agent who will be told what to do with it, in the conversation. With it, the gesture
+ * is complete - and this is often the case, since we rarely give a page
+ * for the pleasure of giving it.
  *
- * Elle est reprise VERBATIM, dans la langue où elle a été écrite : c'est LA
- * demande. Le reste est TOUJOURS en anglais, comme les prompts de ticket : le
- * titre de la page part tel quel, mais ce qui l'entoure s'adresse à un modèle,
- * pas à l'utilisateur, quelle que soit la langue de l'interface.
+ * It is repeated VERBATIM, in the language where it was written: it is THE
+ * request. The rest is ALWAYS in English, like the ticket prompts: the
+ * title of the page leaves as is, but what surrounds it is addressed to a model,
+ * not to the user, whatever the language of the interface.
  *
- * Les outils d'écriture sont NOMMÉS. Ils sont dans la liste de l'agent, mais
- * cette liste se charge parfois à la demande : les citer coûte une phrase et
- * évite un aller-retour « je ne peux que lire ».
+ * The writing tools are NAMED. They are in the agent's list, but
+ * this list sometimes loads on demand: quoting them costs a sentence and
+ * avoids an "I can only read" round trip.
  */
 
-/** Faute de titre, la page reste nommable — et en anglais, comme le reste. */
+/** In the absence of a title, the page remains nameable — and in English, like the rest. */
 const UNTITLED = "Untitled";
 
 export interface PageAgentPromptInput {
-  /** Origine de l'app (`window.location.origin`) : l'URL doit ramener LÀ d'où
-      elle a été copiée — le domaine de production, mais aussi le poste de
-      développement ou l'app desktop. */
+  /** Origin of the app (`window.location.origin`): the URL must return THERE from where
+ it was copied — the production domain, but also the development workstation or the desktop app. */
   origin: string;
   projectId: string;
   pageId: string;
   title: string;
-  /** Ce que l'utilisateur veut voir fait de cette page. Vide = on ne demande
-      rien, on désigne seulement la page. */
+  /** What the user wants to see makes this page. Empty = we don't ask
+ anything, we only designate the page. */
   instructions?: string;
 }
 
-/** L'URL in-app d'une page, telle que la sidebar et le fil d'Ariane la font. */
+/** The in-app URL of a page, such as its sidebar and breadcrumbs. */
 export function pageHref(
   origin: string,
   projectId: string,
@@ -71,18 +70,18 @@ export function buildPageAgentPrompt({
   const name = title.trim() || UNTITLED;
   const asked = instructions?.trim();
 
-  // Le corps de la page n'est jamais inliné : il peut faire des dizaines de
-  // milliers de jetons, et l'agent a l'outil pour le lire — c'est même le seul
-  // moyen qu'il le lise À JOUR plutôt que dans l'état où il était à la copie.
+  // The body of the page is never inlined: it can be dozens of
+  // thousands of tokens, and the agent has the tool to read it — it’s even the only one
+  // means that it reads UPDATED rather than in the state it was in when copied.
   const tools = `Read it with the minddy MCP tool \`minddy_get_page\` (project_id "${projectId}", page_id "${pageId}"). Write back with \`minddy_update_page\`, \`minddy_append_to_page\` or \`minddy_edit_page_text\`, and comment with \`minddy_add_page_comment\`.`;
 
   const head = `minddy page "${name}" — ${pageHref(origin, projectId, pageId)}`;
 
   if (!asked) return `${head}\n\n${tools}`;
 
-  // « these instructions are the request itself » : la même précaution que sur
-  // un ticket. Sans elle, un modèle prend la consigne pour une précision et se
-  // met à faire « tout ce qu'on peut faire d'une page » par-dessus.
+  // “these instructions are the request itself”: the same precaution as on
+  // a ticket. Without it, a model takes the instruction for precision and
+  // set to do “everything that can be done on a page” on top.
   return `${head}
 
 Here is what I want you to do with this page — these instructions are the request itself, so follow them rather than inventing a broader task:

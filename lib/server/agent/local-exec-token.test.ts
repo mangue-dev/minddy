@@ -11,22 +11,22 @@ import {
 } from "./local-exec-token";
 
 /**
- * MIN-355 — LE JETON QUI REMPLACE LE FIREWALL, et ce qu'il refuse.
+ * MIN-355 — THE TOKEN THAT REPLACES THE FIREWALL, and what it refuses.
  *
- * Sur le chemin cloud, il n'y a rien à vérifier : le `runId` est dérivé d'un claim
- * que la plateforme signe après la sortie de la VM. Ici, tout est à vérifier —
- * c'est le renversement complet, et chacune des lignes ci-dessous ferme une porte
- * qu'un jeton mal lu ouvrirait sur la ligne d'un run.
+ * On the cloud path, there is nothing to check: the `runId` is derived from a claim
+ * that the platform signs after the release of the VM. Here, everything has to be verified —
+ * it is the complete reversal, and each of the lines below closes a door
+ * that a misread token would open on the line of a run.
  *
- * PUR, donc testable sans base, sans HTTP et sans microVM : c'est précisément pour
- * ça que l'admission vit dans ce module et pas dans la route
- * (`vitest.config.ts` ne lit que `lib/**`).
+ * PUR, therefore testable without base, without HTTP and without microVM: it is precisely for
+ * that admission lives in this module and not in the route
+ * (`vitest.config.ts` only reads `lib/**`).
  */
 
 const SECRET = "s3cret-de-test";
 const RUN_ID = "11111111-2222-4333-8444-555555555555";
-/** Une seconde fixe : deux `Date.now()` dans un même test rendraient les bornes
- *  illisibles, et c'est justement des bornes qu'on parle. */
+/** A fixed second: two `Date.now()` in the same test would make the terminals
+ * unreadable, and it is precisely the terminals that we are talking about. */
 const NOW = 1_800_000_000;
 
 describe("le jeton d'exécution locale", () => {
@@ -50,8 +50,8 @@ describe("le jeton d'exécution locale", () => {
   });
 
   it("refuse une charge utile réécrite sous une signature valide", () => {
-    // Le geste évident d'un porteur de jeton : garder la signature, changer le
-    // run. C'est la seule chose que le HMAC existe pour empêcher.
+    // The obvious gesture of a token holder: keep the signature, change the
+    //run. This is the only thing HMAC exists to prevent.
     const [header, , signature] = signLocalExecToken(
       { runId: RUN_ID, gen: 0 },
       SECRET,
@@ -68,9 +68,9 @@ describe("le jeton d'exécution locale", () => {
   });
 
   it("n'accepte QUE HS256 — aucune confusion d'algorithme possible", () => {
-    // `alg: none` est l'attaque de manuel : sans ce refus, une charge utile nue
-    // suffirait. On la fabrique complète, signature comprise, pour prouver que
-    // c'est bien l'en-tête qui la refuse et pas le HMAC.
+    // `alg: none` is the textbook attack: without this denial, a bare payload
+    // would suffice. We make it complete, signature included, to prove that
+    // it is indeed the header which refuses it and not the HMAC.
     const header = Buffer.from(JSON.stringify({ alg: "none", typ: "JWT" })).toString("base64url");
     const payload = Buffer.from(
       JSON.stringify({ rid: RUN_ID, gen: 0, exp: NOW + 60 }),
@@ -94,9 +94,9 @@ describe("le jeton d'exécution locale", () => {
   });
 
   it("impose le plafond À LA VÉRIFICATION, seul endroit qui tourne chez nous", () => {
-    // Un `exp` à un an, signé avec la bonne clé : c'est ce que produirait un
-    // signeur devenu trop généreux — et c'est exactement ce que le plafond posé
-    // dans le signeur seul ne saurait plus refuser.
+    // A `exp` at one year, signed with the correct key: this is what a
+    // signer become too generous — and that's exactly what the ceiling posed
+    // in the signer alone can no longer refuse.
     const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
     const payload = Buffer.from(
       JSON.stringify({ rid: RUN_ID, gen: 0, exp: NOW + 365 * 24 * 3600 }),
@@ -111,8 +111,8 @@ describe("le jeton d'exécution locale", () => {
   });
 
   it("exige un `rid` qui ait la forme d'un identifiant de run", () => {
-    // Le même refus que `runIdFromSandboxName` côté cloud, et pour la même raison :
-    // ce champ part en requête Postgrest.
+    // The same refusal as `runIdFromSandboxName` on the cloud side, and for the same reason:
+    // this field goes into Postgrest request.
     const token = signLocalExecToken({ runId: "../../admin", gen: 0 }, SECRET, NOW);
     expect(verifyLocalExecToken(token, SECRET, NOW)).toEqual({ ok: false, error: "bad_claims" });
   });
@@ -143,8 +143,8 @@ describe("le secret, dérivé de la clé de service", () => {
     expect(derived).not.toBeNull();
     expect(derived).not.toContain("service-role-key");
     expect(resolveLocalExecSecret(env)).toBe(derived);
-    // Changer la clé de service (ou le label, notre bouton de rotation) révoque
-    // tous les jetons en vol : c'est ce que dit cette inégalité.
+    // Changing the service key (or label, our spin button) revokes
+    // all tokens in flight: that's what this inequality says.
     expect(resolveLocalExecSecret({ SUPABASE_SERVICE_ROLE_KEY: "autre" })).not.toBe(derived);
   });
 });
@@ -175,8 +175,8 @@ describe("l'admission de la voie locale", () => {
   });
 
   it("dit POURQUOI un jeton est refusé — c'est ce qui permet d'en redemander un", () => {
-    // Un 403 n'est pas retenté (cf. `retryable`) : le harness doit pouvoir
-    // distinguer « demande un jeton frais à l'app » de « tu n'as rien à faire ici ».
+    // A 403 is not retried (see `retryable`): the harness must be able to
+    // distinguish “request a fresh token from the app” from “you have nothing to do here”.
     const expired = signLocalExecToken({ runId: RUN_ID, gen: 0, ttlSeconds: 1 }, SECRET, 1_000);
     expect(admitLocalCaller(`Bearer ${expired}`, SECRET)).toEqual({
       ok: false,
@@ -186,8 +186,8 @@ describe("l'admission de la voie locale", () => {
   });
 
   it("ferme la voie en 503 quand le déploiement ne sait pas signer", () => {
-    // Jamais un passe-droit : un plan de contrôle qui ne peut pas vérifier ne
-    // vérifie pas — même conduite que le locataire manquant côté cloud.
+    // Never a free pass: a control plan which cannot verify does not
+    // does not check — same behavior as the missing tenant on the cloud side.
     expect(admitLocalCaller(bearer(), null)).toEqual({
       ok: false,
       status: 503,

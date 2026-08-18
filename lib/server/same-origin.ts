@@ -1,39 +1,39 @@
 /**
- * D'où vient cette requête ? (MIN-345)
+ * Where does this request come from? (MIN-345)
  *
- * Toute la protection CSRF de minddy reposait sur le `SameSite=Lax` du cookie
- * Supabase. C'est solide pour un `POST` — un formulaire ou un `fetch` venu d'un
- * autre site n'emporte pas le cookie — mais `Lax` a une exception, et c'est
- * exactement celle qui nous a coûté trois surfaces : **la navigation `GET` de
- * premier niveau**. Un lien cliqué depuis n'importe où arrive chez nous avec la
- * session complète.
+ * Minddy's entire CSRF protection relied on the `SameSite=Lax` of the cookie
+ * Supabase. This is solid for a `POST` — a form or a `fetch` coming from a
+ * other site doesn't take the cookie — but `Lax` has an exception, and that's
+ * exactly the one that cost us three surfaces: **the navigation `GET` of
+ * first level**. A link clicked from anywhere arrives at our home with the
+ * full session.
  *
- * La réponse de fond est ailleurs (ne rien muter sur un `GET`). Ce module est le
- * contrôle qui manquait par-dessus : est-ce que le navigateur DIT venir de chez
+ * The basic answer is elsewhere (do not mutate anything on a `GET`). This module is the
+ * control that was missing above: does the browser SAY it comes from
  * nous ?
  *
- * ## Deux niveaux, et pourquoi ils ne sont pas le même
+ * ## Two levels, and why they are not the same
  *
- * `isSameOriginRequest` **exige** l'en-tête. À réserver aux surfaces dont on
- * sait qu'elles sont toujours atteintes par un navigateur — un formulaire de
- * l'app —, parce que tout navigateur envoie `Origin` sur une requête non-`GET`
- * depuis 2020, et qu'une requête sans en-tête y est donc une anomalie.
+ * `isSameOriginRequest` **requires** header. To be reserved for surfaces which are
+ * knows that they are always reached by a browser — a form of
+ * the app —, because any browser sends `Origin` on a non-`GET` request
+ * since 2020, and that a request without a header is therefore an anomaly.
  *
- * `hasForeignOrigin` ne refuse que ce qui est **explicitement d'ailleurs**.
- * C'est la garde des routes d'API : une absence d'`Origin` y passe, à dessein.
- * Elle ne peut pas venir d'une page tierce (le navigateur l'aurait posée), et
- * la refuser ferait tomber des appelants légitimes qui n'ont pas de page — un
- * outil en ligne de commande, une sonde, un test. On refuse ce qui se déclare
- * étranger ; on ne demande pas ses papiers à qui ne se déclare pas.
+ * `hasForeignOrigin` only refuses what is **explicitly elsewhere**.
+ * This is the API route guard: an absence of `Origin` is there, on purpose.
+ * It cannot come from a third-party page (the browser would have asked it), and
+ * refusing it would drop legitimate callers who don't have a page — a
+ * command line tool, a probe, a test. We refuse what is declared
+ * stranger ; We do not ask for our papers from anyone who does not declare themselves.
  *
- * ## Ce à quoi on compare
+ * ## What we compare to
  *
- * Au `host` de la requête elle-même, jamais à une liste de domaines. minddy est
- * servi sous plusieurs origines légitimes — `www.minddy.app`, les préversions
- * Vercel, `localhost` en développement, les domaines personnalisés des clients
- * — et une liste écrite quelque part serait fausse le jour où l'une d'elles
- * change. « La page qui appelle est servie par le même host que la route
- * appelée » n'a rien à tenir à jour.
+ * To `host` of the query itself, never to a list of domains. minddy is
+ * served under several legitimate origins — `www.minddy.app`, previews
+ * Vercel, `localhost` in development, customer custom domains
+ * — and a list written somewhere would be false the day one of them
+ * exchange. “The calling page is served by the same host as the route
+ * called” has nothing to keep up to date.
  */
 
 type HeaderBag = { headers: { get(name: string): string | null } };
@@ -52,23 +52,23 @@ function expectedHost(request: HeaderBag): string | null {
 }
 
 /**
- * L'origine déclarée par le navigateur, ou celle du `Referer` à défaut —
- * certaines navigations n'ont que le second. `null` = rien de déclaré.
+ * The origin declared by the browser, or that of `Referer` failing that —
+ * some navigations only have the second. `null` = nothing declared.
  */
 function declaredHost(request: HeaderBag): string | null {
   return hostOf(request.headers.get("origin")) ?? hostOf(request.headers.get("referer"));
 }
 
-/** Vrai seulement si la requête DIT venir de chez nous. Une requête muette est
-    refusée — voir l'en-tête du fichier pour savoir où c'est le bon choix. */
+/** True only if the request SAYS coming from us. A silent query is
+    refused — see the file header to see where this is the correct choice. */
 export function isSameOriginRequest(request: HeaderBag): boolean {
   const host = expectedHost(request);
   const declared = declaredHost(request);
   return Boolean(host && declared && host === declared);
 }
 
-/** Vrai quand la requête se déclare d'une AUTRE origine. Une requête muette
-    rend `false` : rien à lui reprocher. */
+/** True when the request is declared from ANOTHER origin. A silent request
+    makes `false`: nothing to complain about. */
 export function hasForeignOrigin(request: HeaderBag): boolean {
   const declared = declaredHost(request);
   if (!declared) return false;
@@ -76,8 +76,8 @@ export function hasForeignOrigin(request: HeaderBag): boolean {
   return Boolean(host) && declared !== host;
 }
 
-/** Les méthodes qui changent l'état, et donc celles qu'une page tierce ne doit
-    jamais pouvoir déclencher au nom de quelqu'un. */
+/** Methods that change state, and therefore those that a third-party page should not
+    never be able to trigger on someone's behalf. */
 export function isMutatingMethod(method: string): boolean {
   const verb = method.toUpperCase();
   return verb !== "GET" && verb !== "HEAD" && verb !== "OPTIONS";

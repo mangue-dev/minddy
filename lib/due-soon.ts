@@ -1,15 +1,15 @@
-// Fenêtre « échéance proche » du tableau de bord (MIN-96).
+// “Near due date” window on the dashboard (MIN-96).
 //
-// La fenêtre n'est pas la même pour tous les tickets : elle vaut le POIDS du
-// ticket, en jours — xs 1, s 2, m 3, l 5, xl 8. C'est la suite de Fibonacci que
-// lib/cycle.ts utilise déjà comme points d'effort, donc on la RÉUTILISE au lieu
-// de la redéclarer : un XS ne mérite l'attention que la veille, un XL doit être
-// vu huit jours avant, et un ticket non estimé compte comme un M.
+// The window is not the same for all tickets: it is worth the WEIGHT of the
+// ticket, in days — xs 1, s 2, m 3, l 5, xl 8. It is the Fibonacci sequence that
+// lib/cycle.ts already uses it as effort points, so we REUSE it instead
+// to redeclare it: an XS only deserves attention the day before, an XL must be
+// seen eight days before, and an unvalued ticket counts as an M.
 //
-// Tout se compte en JOURS CALENDAIRES du fuseau de l'utilisateur, jamais en
-// millisecondes : « il reste 1 jour » veut dire « c'est demain sur le
-// calendrier », pas « dans 24 heures ». C'est aussi la convention SQL du dépôt
-// pour les échéances (`(due_date at time zone p_tz)::date`, cf.
+// Everything is counted in CALENDAR DAYS of the user's time zone, never in
+// milliseconds: “1 day left” means “it’s tomorrow on the
+// calendar”, not “in 24 hours”. This is also the SQL convention of the repository
+// for deadlines (`(due_date at time zone p_tz)::date`, cf.
 // supabase/migrations/20260804090000_cycle_stats.sql).
 
 import { EFFORT_POINTS, effortToPoints } from "./cycle";
@@ -22,23 +22,22 @@ import {
 
 const DAY_MS = 86_400_000;
 
-/** La fenêtre la plus large (XL) — c'est elle qui borne le préfiltre SQL. */
+/** The largest window (XL) — this is what limits the SQL prefilter. */
 export const DUE_SOON_MAX_DAYS = EFFORT_POINTS.xl;
 
-/** Le jour calendaire d'un instant, dans un fuseau donné ("YYYY-MM-DD").
-    `en-CA` est le raccourci ISO d'Intl — même recette que `todayInTz`. */
+/** The calendar day of an instant, in a given time zone ("YYYY-MM-DD").
+ `en-CA` is the ISO shortcut for Intl — same recipe as `todayInTz`. */
 export function calendarDayInTz(date: Date, tz: string | null | undefined): string {
   try {
     return new Intl.DateTimeFormat("en-CA", { timeZone: tz || "UTC" }).format(date);
   } catch {
-    // Fuseau inconnu (en-tête bricolé) : UTC plutôt qu'une exception.
+    // Unknown time zone (tinkered header): UTC rather than an exception.
     return new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(date);
   }
 }
 
-/** Écart en jours entre deux jours calendaires "YYYY-MM-DD" (`to` − `from`).
-    Les deux passent par minuit UTC, donc aucun changement d'heure ne s'y
-    glisse : un jour calendaire y fait toujours 24 h. */
+/** Difference in days between two calendar days "YYYY-MM-DD" (`to` − `from`).
+ Both pass by midnight UTC, so no time change occurs: a calendar day is always 24 hours. */
 export function daysBetweenDays(from: string, to: string): number | null {
   const a = Date.parse(`${from}T00:00:00Z`);
   const b = Date.parse(`${to}T00:00:00Z`);
@@ -46,28 +45,28 @@ export function daysBetweenDays(from: string, to: string): number | null {
   return Math.round((b - a) / DAY_MS);
 }
 
-/** Décale un jour calendaire de `n` jours. */
+/** Shifts a calendar day by `n` days. */
 export function addDays(day: string, n: number): string {
   const ms = Date.parse(`${day}T00:00:00Z`);
   if (Number.isNaN(ms)) return day;
   return new Date(ms + n * DAY_MS).toISOString().slice(0, 10);
 }
 
-/** Le jour calendaire d'une échéance stockée, dans le fuseau de l'utilisateur. */
+/** The calendar day of a stored deadline, in the user's time zone. */
 export function dueDateCalendarDay(
   dueDate: string,
   tz: string | null | undefined,
 ): string | null {
-  // Une valeur héritée sans heure EST déjà un jour calendaire (la colonne était
-  // un `date` avant 20260707120000) : la faire passer par un fuseau la
-  // décalerait d'un jour.
+  // An inherited value without a time IS already a calendar day (the column was
+  // a `date` before 20260707120000): pass it through a time zone
+  // would shift by one day.
   if (DATE_ONLY.test(dueDate)) return dueDate;
   const d = new Date(dueDate);
   return Number.isNaN(d.getTime()) ? null : calendarDayInTz(d, tz);
 }
 
-/** Jours restants avant l'échéance : 0 le jour même, négatif en retard.
-    `null` quand la valeur stockée est illisible. */
+/** Days remaining before due: 0 on the same day, negative late.
+ `null` when the stored value is unreadable. */
 export function daysUntilDue(
   dueDate: string,
   today: string,
@@ -77,8 +76,7 @@ export function daysUntilDue(
   return day === null ? null : daysBetweenDays(today, day);
 }
 
-/** Le strict nécessaire pour trancher — n'importe quelle ligne de ticket s'y
-    conforme (le board complet comme les colonnes réduites de la home). */
+/** What is strictly necessary to decide — any ticket line is compliant (the complete board as well as the reduced columns of the home). */
 export interface DueSoonCandidate {
   due_date: string | null;
   effort: IssueEffort | null;
@@ -86,12 +84,12 @@ export interface DueSoonCandidate {
 }
 
 /**
- * Le ticket entre-t-il dans la section ? Ouvert, daté, et à moins de jours de
- * son échéance que son effort ne pèse.
+ * Does the ticket fit into the section? Open, dated, and less days from
+ * its deadline than its effort weighs.
  *
- * Les tickets EN RETARD y restent : leur écart est négatif, donc toujours sous
- * la fenêtre. Les statuts clos sortent — done et canceled comme le demande la
- * spec, plus duplicate, dont l'échéance ne veut plus rien dire.
+ * LATE tickets remain there: their difference is negative, therefore always under
+ * the window. The closed statuses come out — done and canceled as requested by the
+ * spec, plus duplicate, whose expiry no longer means anything.
  */
 export function isDueSoon(
   issue: DueSoonCandidate,
@@ -104,10 +102,10 @@ export function isDueSoon(
 }
 
 /**
- * Borne haute du préfiltre SQL : un instant dont on est sûr qu'il tombe APRÈS
- * la fin du dernier jour retenu, quel que soit le fuseau (±14 h au pire, d'où
- * les deux jours de marge). Le filtre exact reste `isDueSoon` — celui-ci ne
- * sert qu'à ne pas ramener toutes les échéances de la base.
+ * Upper limit of the SQL prefilter: an instant which we are sure to fall AFTER
+ * the end of the last day retained, whatever the time zone (±14 h at worst, hence
+ * the two days of margin). The exact filter remains `isDueSoon` — this one does not
+ * only serves to not bring back all the deadlines in the database.
  */
 export function dueSoonUpperBound(today: string): string {
   return `${addDays(today, DUE_SOON_MAX_DAYS + 2)}T00:00:00.000Z`;

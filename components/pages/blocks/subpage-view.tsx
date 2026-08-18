@@ -8,8 +8,8 @@ import {
   type NodeViewProps,
 } from "@tiptap/react";
 import { useTranslations } from "next-intl";
-// `cx` et pas `cn` de mangue-ui : le baril tire le sélecteur d'emoji, et le
-// registre de blocs cesserait d'être importable hors navigateur (cf. cx.ts).
+// `cx` and not `cn` of mango-ui: the barrel draws the emoji selector, and the
+// block register would cease to be importable outside the browser (see cx.ts).
 import { cx } from "@/components/pages/blocks/cx";
 import { FileText, RotateCcw } from "lucide-react";
 import {
@@ -19,18 +19,18 @@ import {
 import { usePagesLookup } from "@/components/pages/pages-lookup";
 
 /**
- * La vue d'un bloc sous-page : l'icône et le titre de la page CIBLE, relus à
- * chaque rendu depuis le cache du projet — jamais recopiés dans le nœud.
+ * The view of a subpage block: the icon and title of the TARGET page, reread at
+ * each rendering from the project cache — never copied into the node.
  *
- * Trois états, et le troisième est celui qui compte (MIN-272) :
+ * Three states, and the third is the one that counts (MIN-272):
  *
- *  - la page est là : son icône, son titre, et un lien vers elle ;
- *  - le cache n'a pas fini de charger : la même ligne, en attente ;
- *  - la page n'est PLUS là — corbeillée d'un autre onglet, ou bloc laissé
- *    derrière par un reparentage. Le bloc se rend alors DÉSACTIVÉ, avec de quoi
- *    la ressortir de la corbeille. Jamais une ligne vide, jamais un plantage :
- *    un bloc qui disparaît en silence du document ferait douter de ce qu'on a
- *    écrit, là où une ligne barrée dit exactement ce qui s'est passé.
+ * - the page is there: its icon, its title, and a link to it;
+ * - the cache has not finished loading: the same line, waiting;
+ * - the page is NO LONGER there — trashed by another tab, or block left
+ * behind by reparenting. The block then becomes DEACTIVATED, allowing
+ * to be removed from the trash. Never an empty line, never a crash:
+ * a block that silently disappears from the document would make you doubt what you have
+ * written, where a crossed out line says exactly what happened.
  */
 export function SubpageView({ node, selected }: NodeViewProps) {
   const t = useTranslations("Pages");
@@ -39,23 +39,23 @@ export function SubpageView({ node, selected }: NodeViewProps) {
   const page = pageId ? lookup?.get(pageId) : undefined;
   const [restoring, setRestoring] = useState(false);
 
-  // Orphelin : le cache est chargé, et il ne connaît pas cette page. Un bloc
-  // sans `pageId` du tout (création qui n'a pas abouti) n'est pas orphelin — il
-  // n'a jamais pointé nulle part.
+  // Orphan: the cache is loaded, and it does not know this page. A block
+  // without `pageId` at all (creation which was not successful) is not an orphan — it
+  // never pointed anywhere.
   const orphan = !!pageId && !page && lookup?.ready === true;
   const href = page && lookup?.href ? lookup.href(page.id) : null;
 
-  // La typographie du CORPS, dite explicitement : le bloc est une ligne du
+  // The typography of the BODY, said explicitly: the block is a line of the
   // document, pas un titre. `text-base font-normal` parce qu'un poids plus lourd
-  // le fait lire comme une section ; `text-foreground no-underline` parce que
-  // l'éditeur peint TOUS ses `<a>` en `text-primary` avec un soulignement à lui
-  // (page-editor.tsx, `PROSE`) — sans ces deux-là, ce lien-ci héritait de la
-  // couleur des liens du texte et portait deux traits superposés.
+  // make it read as a section; `text-foreground no-underline` because
+  // the editor paints ALL his `<a>` as `text-primary` with an underline of his own
+  // (page-editor.tsx, `PROSE`) — without these two, this link inherited the
+  // color of the text links and had two superimposed lines.
   //
-  // Le seul soulignement est donc le nôtre, et il est plus PÂLE que le texte :
-  // il dit « ceci mène ailleurs » sans réclamer l'œil, comme dans Notion. Un
-  // trait de la couleur du texte fait une ligne aussi noire que les lettres, et
-  // c'est ce qui donnait au bloc son air de titre.
+  // The only underlining is therefore ours, and it is PALER than the text:
+  // he says “this leads elsewhere” without demanding the eye, as in Notion. A
+  // stroke of the text color makes a line as black as the letters, and
+  // this is what gave the block its title look.
   const label = (
     <span
       className={cx(
@@ -79,11 +79,11 @@ export function SubpageView({ node, selected }: NodeViewProps) {
       as="div"
       data-page-id={pageId}
       data-orphan={orphan || undefined}
-      // `py-1` et non `py-1.5` : la gouttière (poignée + `+`) se centre sur la
+      // `py-1` and not `py-1.5`: the gutter (handle + `+`) is centered on the
       // hauteur de LIGNE du bloc, rembourrage compris (block-gutter.tsx). Plus
-      // la ligne s'écarte de celle d'un paragraphe, plus la marge s'en éloigne
-      // à l'œil — une ligne de corps rembourrée d'un cran garde les deux
-      // alignés comme sur les autres blocs.
+      // the line deviates from that of a paragraph, the more the margin moves away from it
+      // to the eye — a padded body line keeps both
+      // aligned as on the other blocks.
       className={cx(
         "my-1 flex items-center gap-2 rounded-lg px-2 py-1 leading-relaxed transition-colors",
         !orphan && "hover:bg-muted",
@@ -103,18 +103,18 @@ export function SubpageView({ node, selected }: NodeViewProps) {
       )}
 
       {href ? (
-        // Une vraie ancre : le ⌘-clic et le clic du milieu ouvrent la page dans
-        // un onglet, comme partout ailleurs. Un `onClick` sur un `div` ne sait
+        // A real anchor: the ⌘-click and the middle click open the page in
+        // a tab, like everywhere else. A `onClick` on a `div` does not know
         // faire ni l'un ni l'autre.
-        // `editor-node-link` n'est pas une classe utilitaire : c'est la marque
-        // par laquelle l'éditeur laisse cette ancre tranquille — ni sa couleur
-        // de lien, ni son `window.open` (components/editor-node-link.ts, et
-        // page-editor.tsx pour `PROSE` et `handleClick`).
+        // `editor-node-link` is not a utility class: it is the brand
+        // by which the editor leaves this anchor alone — nor its color
+        // link, nor its `window.open` (components/editor-node-link.ts, and
+        // page-editor.tsx for `PROSE` and `handleClick`).
         //
-        // Une vraie ancre, et pas un `div` cliquable : ⌘-clic, clic du milieu et
-        // « ouvrir dans un nouvel onglet » du menu contextuel viennent avec, et
-        // aucun `onClick` ne sait les refaire. Le clic ORDINAIRE, lui, passe par
-        // le routeur — une navigation d'application, pas un rechargement.
+        // A real anchor, not a clickable `div`: ⌘-click, middle click and
+        // “open in new tab” context menu come with, and
+        // no `onClick` knows how to redo them. The ORDINARY click goes through
+        // the router — an application navigation, not a reload.
         <a
           href={href}
           className={cx(NODE_LINK_CLASS, "min-w-0 flex-1 truncate")}
@@ -151,16 +151,16 @@ export function SubpageView({ node, selected }: NodeViewProps) {
 }
 
 /**
- * La vue, prête à être greffée sur le nœud sous-page (blocks/subpage.ts) — par
- * l'éditeur de page, qui l'injecte dans `pageExtensions({ nodeViews })`.
+ * The view, ready to be grafted onto the subpage node (blocks/subpage.ts) — by
+ * the page editor, which injects it into `pageExtensions({ nodeViews })`.
  *
- * Elle vit ICI et non sur le nœud parce que ce fichier est un module client :
- * le nœud, lui, est monté hors navigateur par la projection markdown (MCP,
- * Numo, agent), et une référence client appelée depuis le serveur lève.
+ * It lives HERE and not on the node because this file is a client module :
+ * the node is mounted outside the browser by the markdown projection (MCP,
+ * Numo, agent), and a client reference called from the server raises.
  */
 export function subpageNodeView(): NodeViewRenderer {
-  // Même artefact de types que la vue des tâches (task-item-view.tsx) : deux
-  // copies de @tiptap/core de MÊME version, donc deux identités de type pour un
+  // Same artifact types as the task view (task-item-view.tsx): two
+  // copies of @tiptap/core of the SAME version, so two type identities for one
   // seul runtime.
   return ReactNodeViewRenderer(SubpageView) as unknown as NodeViewRenderer;
 }

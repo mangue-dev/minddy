@@ -1,591 +1,591 @@
-# Une app de bureau pour minddy — cadrage
+# A desktop app for minddy — framing
 
-> **Date** : 2026-08-13 · **Ticket** : MIN-285 · **Statut** : exploration, aucun
-> code Electron écrit.
+> **Date**: 2026-08-13 · **Ticket**: MIN-285 · **Status**: exploration, none
+> Electron code written.
 >
-> **Quatre décisions prises avant d'écrire**, et ce document ne les rouvre pas :
-> le livrable de MIN-285 est ce texte, pas un prototype ; **l'agent qui agit sur
-> le dépôt local est le sujet**, le wrapper n'en est que le véhicule ; les
-> les notifications se contentaient initialement de l'app ouverte (remplacé par
-> APNs en MIN-356) ; macOS est la seule cible.
+> **Four decisions taken before writing**, and this document does not reopen them:
+> the deliverable of MIN-285 is this text, not a prototype; **the agent who acts on
+> the local repository is the subject**, the wrapper is only the vehicle; the
+> notifications were initially limited to the open app (replaced by
+> APNs in MIN-356); macOS is the only target.
 >
-> **Ce qui a été lu pour l'écrire**, plutôt que supposé : le harness de la
-> microVM et son protocole ([vm/protocol.ts](../lib/server/agent/vm/protocol.ts),
+> **What was read to write it**, rather than assumed: the harness of the
+> microVM and its protocol ([vm/protocol.ts](../lib/server/agent/vm/protocol.ts),
 > [vm/local-host.ts](../lib/server/agent/vm/local-host.ts),
-> [vm-launch.ts](../lib/server/agent/vm-launch.ts)), la porte du plan de contrôle
+> [vm-launch.ts](../lib/server/agent/vm-launch.ts)), the control plane gate
 > ([app/api/agent-vm/[...path]/route.ts](<../app/api/agent-vm/[...path]/route.ts>)),
-> la politique réseau ([network-policy.ts](../lib/server/agent/network-policy.ts)),
-> la clé par run ([run-key.ts](../lib/server/agent/run-key.ts)), le push existant
-> ([public/sw.js](../public/sw.js), [lib/push/](../lib/push/)) et l'écran de
-> connexion ([login-form.tsx](../components/auth/login-form.tsx)).
-> **Rien n'a été mesuré** : aucune des durées de ce document n'est une sonde, et
-> les endroits où ça manque sont dits à la fin.
+> the network policy ([network-policy.ts](../lib/server/agent/network-policy.ts)),
+> the key by run ([run-key.ts](../lib/server/agent/run-key.ts)), the existing push
+> ([public/sw.js](../public/sw.js), [lib/push/](../lib/push/)) and the
+> login ([login-form.tsx](../components/auth/login-form.tsx)).
+> **Nothing has been measured**: none of the durations in this document are a probe, and
+> the places where it is missing are said at the end.
 
 ---
 
-## Ce que le ticket croyait, et ce que le dépôt dit
+## What the ticket believed, and what the repository said
 
-Deux prémisses de MIN-285 ne tiennent pas telles quelles. L'une lui retire son
-premier argument, l'autre le rend beaucoup plus constructible qu'il n'en a l'air.
+Two premises of MIN-285 do not hold as is. One takes away his
+first argument, the other makes it much more constructible than it seems.
 
-**Le Web Push est indisponible dans Electron.** Electron n'est pas bâti sur Chromium
-mais sur *Chromium Content*, un sous-ensemble qui **n'embarque pas le service de
-push**. Mesuré dans une vraie fenêtre en MIN-291, et la nuance compte : l'API,
-elle, est bien là — `PushManager` existe, `pushManager` est sur le prototype de
-`ServiceWorkerRegistration`, et `/sw.js` s'enregistre normalement. C'est
-`subscribe()` qui échoue, sur `AbortError: Registration failed - push service not
-available`. Conséquence pratique, et elle n'est pas cosmétique :
-`isPushSupported()` ([lib/push/client.ts](../lib/push/client.ts)) rend **`true`**
-dans l'app, donc l'interrupteur des réglages s'y afficherait comme partout et
-échouerait sur une erreur illisible. D'où la branche desktop de
+**Web Push is not available in Electron.** Electron is not built on Chromium
+but on *Chromium Content*, a subset which **does not include the service of
+push**. Measured in a real window in MIN-291, and the nuance matters: the API,
+it is there — `PushManager` exists, `pushManager` is on the prototype of
+`ServiceWorkerRegistration`, and `/sw.js` register normally. It's
+`subscribe()` which fails, on `AbortError: Registration failed - push service not
+available`. Practical consequence, and it is not cosmetic:
+`isPushSupported()` ([lib/push/client.ts](../lib/push/client.ts)) makes **`true`**
+in the app, so the settings switch would be displayed there like everywhere and
+would fail on an unreadable error. Hence the desktop branch of
 [account-push-devices-section.tsx](../components/settings/account-push-devices-section.tsx)
-le disait explicitement jusqu'à MIN-356.
-Or minddy a déjà le vrai push web depuis MIN-183 — service worker, VAPID, émetteur
-serveur — et il sonne **même quand l'app est fermée**, dans Chrome comme dans
-Safari. Emballer la web app dans Electron ne l'améliore pas : ça le supprime. Les
-Le remplacement livré en MIN-356 est l'APNs d'Apple (`pushNotifications`,
-**macOS uniquement**) : entitlement sur l'app signée, token associé au compte
-par la page authentifiée et second émetteur côté serveur. VAPID reste inchangé
-pour le web ; aucun FCM non officiel n'entre dans la coquille.
+said it explicitly until MIN-356.
+But minddy already has the real web push from MIN-183 — service worker, VAPID, transmitter
+server — and it rings **even when the app is closed**, in Chrome as in
+Safari. Packaging the web app in Electron does not improve it: it deletes it. The
+The replacement delivered in MIN-356 is the Apple APNs (`pushNotifications`,
+**macOS only**): entitlement on the signed app, token associated with the account
+by the authenticated page and second server-side issuer. VAPID remains unchanged
+for the web; no unofficial FCM enters the shell.
 
-**Tu as déjà une app installable.** [app/manifest.json](../app/manifest.json), les
-icônes 192/512, le service worker : « fenêtre sans barre d'URL, icône dans le
-dock, notifications même fermée » est une PWA, elle est à portée, elle ne coûte ni
-signature ni notarisation ni maintenance d'un binaire Chromium. **Tout ce qu'un
-wrapper Electron apporte de plus au confort d'usage, la PWA l'apporte déjà** — sauf
-une chose, et c'est celle qui justifie le chantier : la PWA ne touchera jamais ton
-disque.
+**You already have an installable app.** [app/manifest.json](../app/manifest.json),
+icons 192/512, the service worker: "window without URL bar, icon in the
+dock, notifications even closed" is a PWA, it is within reach, it costs neither
+signature, notarization or maintenance of a Chromium binary. **All that a
+wrapper Electron also provides comfort of use, the PWA already provides it** — except
+one thing, and it is the one that justifies the project: the PWA will never touch your
+disk.
 
-**Le harness, lui, est déjà à moitié local.** Depuis MIN-224 la boucle de l'agent
-ne vit plus dans une fonction : c'est un **bundle Node autonome** produit par
-[scripts/build-agent-vm.mjs](../scripts/build-agent-vm.mjs), écrit sur le disque de
-la microVM et lancé par `node main.js`. Il écrit ses fichiers et lance ses commandes
-par [local-host.ts](../lib/server/agent/vm/local-host.ts) — `node:fs` et
-`node:child_process`, rien d'autre — et il ne parle au backend que par HTTPS, via
-[control-plane-client.ts](../lib/server/agent/vm/control-plane-client.ts). Le faire
-tourner sur un Mac au lieu d'une microVM `iad1` n'est pas une réécriture : c'est un
-changement d'hébergeur, avec **trois verrous** (§4) et un renoncement (§4.4).
+**The harness is already half local.** Since MIN-224 the agent loop
+no longer lives in a function: it is an **autonomous Node bundle** produced by
+[scripts/build-agent-vm.mjs](../scripts/build-agent-vm.mjs), written to disk
+the microVM and launched by `node main.js`. He writes his files and launches his commands
+by [local-host.ts](../lib/server/agent/vm/local-host.ts) — `node:fs` and
+`node:child_process`, nothing else — and it only talks to the backend over HTTPS, via
+[control-plane-client.ts](../lib/server/agent/vm/control-plane-client.ts). Do it
+running on a Mac instead of a microVM `iad1` is not a rewrite: it is a
+change of host, with **three locks** (§4) and a waiver (§4.4).
 
 ---
 
-## 1. Ce qu'Electron apporte, et ce qu'il retire
+## 1. What Electron brings, and what it takes away
 
-| | PWA installée | Wrapper Electron |
+| | PWA installed | Electron Wrapper |
 | --- | --- | --- |
-| Fenêtre dédiée, icône au dock | oui | oui |
-| Notifications **app fermée** | **oui** (Web Push) | **oui** (APNs, MIN-356) |
-| Notifications app ouverte | oui | oui, natives |
-| Raccourci global (⌥ Espace) | non | oui |
-| Menu natif, badge de dock chiffré | partiel | oui |
-| **Exécuter du code sur ta machine** | **jamais** | **oui** |
-| Coût d'entrée | zéro | signature + notarisation + canal de mise à jour |
-| Coût récurrent | zéro | ~99 $/an, et une majeure Electron toutes les 8 semaines |
+| Dedicated window, dock icon | yes | yes |
+| Notifications **app closed** | **yes** (Web Push) | **yes** (APNs, MIN-356) |
+| Open app notifications | yes | yes, native |
+| Global shortcut (⌥ Space) | no | yes |
+| Native menu, encrypted dock badge | partial | yes |
+| **Execute code on your machine** | **never** | **yes** |
+| Entry cost | zero | signature + notarization + update channel |
+| Recurring cost | zero | ~$99/year, and an Electron major every 8 weeks |
 
-La ligne qui décide est la sixième. Les cinq premières se discutent ; celle-là
-n'a pas de substitut. **Le dossier de l'app de bureau, c'est l'agent local, et
-rien d'autre.** Si l'agent local ne se fait pas, il faut soigner la PWA et fermer
-ce ticket — c'est moins de travail et un meilleur résultat sur les notifications.
+The line that decides is the sixth. The first five are discussed; that one
+has no substitute. **The desktop app folder is the local agent, and
+nothing else.** If the local agent is not done, the PWA must be treated and closed
+this ticket — it's less work and a better result on notifications.
 
-Une conséquence à tenir tout du long : **la coquille doit rester mince**. Tout ce
-qu'elle contient devra être signé, notarisé, distribué et mis à jour sur les
-machines des gens, à un rythme qui n'est pas celui de `git push`. Une coquille de
-300 lignes se met à jour deux fois par an ; une coquille qui a des écrans à elle
-devient une seconde app à maintenir.
+One consequence to keep in mind throughout: **the shell must remain thin**. All this
+that it contains must be signed, notarized, distributed and updated on the
+people's machines, at a pace that is not that of `git push`. A shell of
+300 lines is updated twice a year; a shell that has screens of its own
+becomes a second app to maintain.
 
 ---
 
-## 2. La coquille
+## 2. The shell
 
-**Décision : une seule `BrowserWindow`, qui charge `https://www.minddy.app`, sans
-aucun rendu local.** Pas de `file://`, pas de bundle de l'UI dans l'app — c'est ce
-qui garantit que l'app de bureau et le web disent toujours la même chose, et que
-livrer une feature ne demande pas de re-signer un binaire.
+**Decision: a single `BrowserWindow`, which loads `https://www.minddy.app`, without
+no local rendering.** No `file://`, no UI bundle in the app — that's what
+which ensures that the desktop app and the web always say the same thing, and that
+delivering a feature does not require re-signing a binary.
 
-Les réglages qui ne se discutent pas :
+Settings that cannot be discussed:
 
-- `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`. Le renderer
-  charge du **code distant** : il ne doit pouvoir appeler que ce qu'un `preload`
-  expose nommément par `contextBridge`, et cette surface doit se lire en trente
-  secondes.
-- Une **garde de navigation** (`will-navigate`) qui refuse tout ce qui n'est pas
-  notre origine, et un `setWindowOpenHandler` qui envoie le reste dans le
-  navigateur système. Sans ça, un lien vers un site tiers ouvre ce site *dans*
-  minddy, avec notre `preload` chargé.
-- Un suffixe d'user agent (`minddy-desktop/<version>`), pour que le serveur et
-  l'UI sachent tous deux qu'on est dans l'app.
+- `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`. The renderer
+  load of **remote code**: it must only be able to call what a `preload`
+  exposed by name by `contextBridge`, and this surface must be read in thirty
+  seconds.
+- A **navigation guard** (`will-navigate`) which refuses everything that is not
+  our origin, and a `setWindowOpenHandler` which sends the rest into the
+  system browser. Without that, a link to a third party site opens this site *in*
+  minddy, with our `preload` loaded.
+- A user agent suffix (`minddy-desktop/<version>`), so that the server and
+  the UI both know that we are in the app.
 
-**La barre de titre est une décision d'interface, pas un réglage.** Elle est
-masquée (`titleBarStyle: "hidden"`, et non `frame: false` — sans cadre, les
-boutons ne se positionnent plus depuis la même origine et remontent dans le
-coin). Trois conséquences se tiennent ensemble :
+**The title bar is an interface decision, not a setting.** It is
+hidden (`titleBarStyle: "hidden"`, not `frame: false` — without a frame, the
+buttons are no longer positioned from the same origin and go back into the
+corner). Three consequences stand together:
 
-- macOS ne sait plus par où saisir la fenêtre. `-webkit-app-region` est du CSS,
-  donc c'est la PAGE qui doit le dire (app/globals.css, section « app de
-  bureau »). **Une seule bande, dans le layout racine**, haute comme l'en-tête
-  de l'app (60 px) et présente sur tout ce que la fenêtre affiche. La première
-  version accrochait la prise à l'en-tête du shell et à la ligne de marque —
-  c'est-à-dire aux deux meubles que six configurations n'ont pas : mode zen,
-  pages légales, board public, page publiée, vue partagée, `not-found`. La
-  fenêtre y était strictement immobile (MIN-292). Une zone `drag` avalant le
-  clic, la bande s'accompagne d'un `no-drag` GLOBAL sur tout ce qui s'active.
-- Les boutons du système n'existent plus d'eux-mêmes : ils s'allument à la main,
-  et se posent **dans la ligne de marque de la barre latérale, à la place de la
-  marque**, qui passe à droite. Pas dans une bande à eux, qui pousserait toute la
-  colonne vers le bas et se trahirait par une couture d'une autre couleur.
-- Barre REPLIÉE (rail), ses 56 px ne les tiennent plus : on les retire, et la
-  marque reprend sa place. Le survol qui déplie le rail les ramène — une barre
-  dépliée par-dessus la secondaire est une barre dépliée comme une autre. Aller
-  les cliquer depuis là revient à SORTIR de la barre du point de vue de
-  Chromium : le rail se refermerait sous le pointeur et les emporterait, d'où le
-  guetteur de `app-sidebar.tsx`, qui reconnaît cette sortie-là à son coin.
+- macOS no longer knows where to enter the window. `-webkit-app-region` is CSS,
+  so it is the PAGE which must say it (app/globals.css, section “app de
+  office"). **Single strip, in root layout**, as high as the header
+  of the app (60 px) and present on everything the window displays. The first
+  version hooked the socket to the shell header and mark line —
+  that is to say to the two pieces of furniture that six configurations do not have: zen mode,
+  legal pages, public board, published page, shared view, `not-found`. The
+  window was strictly still there (MIN-292). A `drag` zone swallowing the
+  click, the band is accompanied by a GLOBAL `no-drag` on everything that activates.
+- The system buttons no longer exist on their own: they light up by hand,
+  and arise **in the sidebar mark line, in place of the
+  mark**, which passes to the right. Not in a gang of their own, which would push the whole
+  column downwards and would be betrayed by a seam of another color.
+- FOLDED bar (rail), its 56 px no longer hold them: we remove them, and
+  brand takes its place. The flyover that unfolds the rail brings them back — a bar
+  unfolded over the secondary is an unfolded bar like any other. Go
+  clicking them from there means EXIT the bar from the point of view of
+  Chromium: the rail would close under the pointer and take them away, hence the
+  lookout for `app-sidebar.tsx`, who recognizes this exit at his corner.
 
-**Ce qui est du SITE ne suit pas dans la fenêtre — et « site » veut dire TOUT le
-site** (resserré en MIN-292). L'app de bureau ne montre que deux choses :
-l'authentification, et l'app. Les tarifs, la doc du serveur MCP, les
-comparatifs, les nouveautés, les pages légales, la page de téléchargement, et
-les surfaces publiques à jeton — board de feedback, page publiée, vue partagée —
-s'ouvrent dans le NAVIGATEUR. Un board de feedback public dans une fenêtre
-installée, c'est le site web dans une fenêtre.
+**SITE doesn't follow in the window — and "site" means ALL
+site** (tightened to MIN-292). The desktop app only shows two things:
+authentication, and app. Prices, MCP server documentation,
+comparisons, new features, legal pages, download page, and
+public tokenized surfaces — feedback board, published page, shared view —
+open in the BROWSER. A public feedback board in a window
+installed, it's the website in a window.
 
-La seule exception est la **landing**, qui ne part pas dehors mais ramène à
-l'entrée : on n'y va pas, on y TOMBE, par un logo qui pointe sur `/`. Lancer un
-navigateur à chaque clic de logo serait un châtiment.
+The only exception is **landing**, which does not go outside but returns to
+the entrance: we don't go there, we FALL there, through a logo that points to `/`. Throw a
+browser with each logo click would be a punishment.
 
-La décision est dérivée de `PUBLIC_ROUTES`, donc une page publique de plus sort
-de la fenêtre sans que personne y pense
-([window-routes.ts](../lib/desktop/window-routes.ts)). Et elle a demandé
-**quatre** points d'accroche, dont deux qu'on ne trouve pas en réfléchissant :
-`will-redirect`, parce que le board de feedback s'atteint par une redirection
-SERVEUR (`/feedback` pose un JWT et renvoie vers `/f/<jeton>`, aucun lien ne
-pointe jamais dessus), et `did-navigate-in-page`, pour les navigations SPA. Ce
-dernier n'est PAS annulable : il ne peut que ramener à l'entrée, et défaire la
-navigation a été essayé deux fois sans succès (`canGoBack()` rend `false` juste
-après un `pushState` ; la promesse d'`executeJavaScript("history.back()")`
-rejette, la navigation détruisant le contexte qui l'attendait). D'où le partage
-des rôles : le main process garantit qu'aucune page publique ne s'affiche, et
-c'est la PAGE qui évite d'y arriver — les mentions légales de l'écran
-d'inscription ouvrent le navigateur elles-mêmes plutôt que de naviguer.
+The decision is derived from `PUBLIC_ROUTES`, so one more public page comes out
+from the window without anyone thinking about it
+([window-routes.ts](../lib/desktop/window-routes.ts)). And she asked
+**four** hook points, two of which we don't find when thinking:
+`will-redirect`, because the feedback board is reached by a redirection
+SERVER (`/feedback` sets a JWT and returns to `/f/<jeton>`, no link
+never points to it), and `did-navigate-in-page`, for SPA navigations. This
+last is NOT cancelable: it can only bring back to the entry, and undo the
+navigation was tried twice without success (`canGoBack()` makes `false` just
+after a `pushState`; the promise of `executeJavaScript("history.back()")`
+rejects, navigation destroying the context that expected it). Hence the sharing
+roles: the main process guarantees that no public page is displayed, and
+it’s the PAGE that avoids getting there — the legal notices on the screen
+registration opens the browser themselves rather than browsing.
 
-Le bandeau de cookies, lui : une carte flottante qui demande la permission
-de mesurer s'adresse à quelqu'un qui vient d'arriver de nulle part, et dans une
-app installée elle ne dit plus qu'une chose — « ceci est un site web dans une
-fenêtre ». Le choix, lui, ne disparaît pas. Il se pose **une fois**, au centre, dans le
-langage de l'app — deux réponses franches, aucune sortie sans répondre, pour que
-la question ne se repose jamais (le défaut même des bandeaux qu'on remplace) —
-et il vit ensuite dans les réglages (onglet Données), où toute app de bureau le
-met, RÉVERSIBLE, ce qu'il n'était pas tant que le bandeau était le seul chemin.
+The cookie banner: a floating card that asks permission
+to measure is aimed at someone who has just arrived from nowhere, and in a
+app installed it only says one thing — “this is a website in a
+window”. The choice does not disappear. It arises **once**, in the center, in the
+app language — two straight answers, no exit without answering, so that
+the question never rests (the very fault of the headbands that are replaced) —
+and it then lives in the settings (Data tab), where any desktop app
+met, REVERSIBLE, which it was not as long as the blindfold was the only way.
 
-Le laisser seulement dans les réglages avait été essayé une heure : personne n'y
-serait allé, et la mesure serait restée éteinte pour tout le monde sans que ce
-soit un choix. Tant qu'aucune réponse n'est donnée, le consentement vaut `null`
-et PostHog reste sans cookie ni identité — rien n'est mesuré en douce.
+Leaving it only in the settings had been tried for an hour: no one there
+would have gone, and the measure would have remained extinguished for everyone without this
+or a choice. As long as no response is given, consent is worth `null`
+and PostHog remains cookie- and identity-free — nothing is surreptitiously measured.
 
-**Une boîte de dialogue les retire, sans que rien ne bouge.** Ils sont natifs, et
-aucun `z-index` ne passe devant : un dialogue les gardait en travers de son coin,
-par-dessus son propre voile. On les retire donc — mais la ligne de marque garde
-leur PLACE, figée à ce qu'elle valait à l'ouverture, et dessine trois pastilles
-inertes à l'identique
-([app-sidebar.tsx](../components/app-sidebar.tsx), `WindowButtonDecoys`). Elles
-passent sous le voile comme le reste de l'app. Sans ce leurre, la marque sautait
-d'un bout à l'autre de la barre à chaque ouverture de dialogue, pour un objet
-qu'on ne regarde même pas.
+**A dialog box removes them, without anything moving.** They are native, and
+no `z-index` passes in front: a dialogue kept them across its corner,
+over his own veil. We therefore remove them - but the brand line keeps
+their PLACE, frozen at what it was worth at the opening, and draws three pellets
+identically inert
+([app-sidebar.tsx](../components/app-sidebar.tsx), `WindowButtonDecoys`). They
+go under the veil like the rest of the app. Without this lure, the brand would jump
+from one end of the bar to the other each time a dialog is opened, for an object
+that we don't even look at.
 
-Leur géométrie est **relevée sur une capture d'écran système décodée pixel par
-pixel**, et pas déduite : bords gauches à 19, 42 et 65, haut à 22, **14 px de
-diamètre**, donc 23 px de centre à centre. La première version reprenait
-l'origine donnée à `trafficLightPosition` et un pas supposé de 20 px — la seule
-des trois valeurs qui était juste était l'origine, et le décalage se voyait.
+Their geometry is **noted on a pixel-decoded system screenshot by
+pixel**, and not deducted: left edges at 19, 42 and 65, top at 22, **14 px from
+diameter**, so 23 px from center to center. The first version included
+the origin given to `trafficLightPosition` and an assumed step of 20 px — the only
+of the three values which was correct was the origin, and the shift could be seen.
 
-Et la demande **appartient à la page** : elle meurt avec elle. Un rechargement
-alors qu'un dialogue est ouvert laissait sinon les boutons cachés pour toujours,
-sans plus personne pour les rendre.
+And the request **belongs to the page**: it dies with it. A reload
+while a dialog is open otherwise leaves the buttons hidden forever,
+with no one left to return them.
 
-**Et en plein écran, on ne les cache jamais.** macOS les emmène en haut de
-l'écran, sous sa propre garde ; les masquer par-dessus retire le seul moyen d'en
-sortir à la souris. La page, elle, doit quand même l'apprendre pour ne pas leur
-garder leur place — d'où deux notions distinctes, ce que la barre DEMANDE et ce
-que les boutons FONT, et un aller-retour par le pont
+**And in full screen, we never hide them.** macOS takes them to the top of
+the screen, under his own care; hiding them on top removes the only way to
+exit with the mouse. The page must still learn it so as not to
+keep their place - hence two distinct notions, what the bar DEMANDS and what
+that the buttons DO, and a round trip over the bridge
 ([lib/use-window-buttons.ts](../lib/use-window-buttons.ts)).
 
-**Le seul vrai piège est l'authentification.** minddy propose Google et GitHub
-([login-form.tsx](../components/auth/login-form.tsx)), et la politique de Google
-est de **refuser OAuth depuis un navigateur embarqué** : l'écran « this browser or
-app may not be secure ». La sonde de MIN-290 a nuancé le fait sans changer la
-décision : dans une `BrowserWindow` ordinaire (user agent Chrome + `Electron/43`),
-l'écran d'identification de Google **s'affiche normalement**, aucun refus — on n'a
-pas mené le tour jusqu'au bout avec de vrais identifiants. C'est une détection
-qu'on ne contrôle pas et qui peut se resserrer du jour au lendemain ; s'appuyer
-dessus, c'est faire dépendre la connexion d'une politique tierce. Falsifier
-l'user agent pour passer est fragile et contraire à cette politique. Le chemin
-correct est le même que celui de toutes les apps de bureau :
+**The only real pitfall is authentication.** minddy suggests Google and GitHub
+([login-form.tsx](../components/auth/login-form.tsx)), and Google policy
+is to **refuse OAuth from an embedded browser**: the “this browser or
+app may not be secure. The MIN-290 probe qualified the fact without changing the
+decision: in an ordinary `BrowserWindow` (user agent Chrome + `Electron/43`),
+the Google identification screen **is displayed normally**, no refusal — we have not
+not carried out the trick to the end with real identifiers. It is a detection
+which we cannot control and which can tighten overnight; lean
+above, it means making the connection dependent on a third-party policy. Falsify
+the user agent to pass is fragile and against this policy. The path
+correct is the same as all desktop apps:
 
-1. l'app demande l'URL d'autorisation sans naviguer (`signInWithOAuth` avec
-   `skipBrowserRedirect`), et l'ouvre avec `shell.openExternal` ;
-2. le navigateur système fait le tour, revient sur `/auth/callback`, qui — **quand
-   la demande vient du desktop** — redirige vers `minddy://auth?code=…` au lieu de
-   poser un cookie ;
-3. l'app reçoit le deep link (`app.setAsDefaultProtocolClient` + `open-url`, et
-   `CFBundleURLTypes` dans l'Info.plist), et échange le code contre une session
-   dans sa propre partition (`exchangeCodeForSession`, flux PKCE).
+1. the app asks for the authorization URL without navigating (`signInWithOAuth` with
+   `skipBrowserRedirect`), and opens it with `shell.openExternal`;
+2. system browser cycles around, returns to `/auth/callback`, which — **when
+   the request comes from desktop** — redirects to `minddy://auth?code=…` instead of
+   place a cookie;
+3. the app receives the deep link (`app.setAsDefaultProtocolClient` + `open-url`, and
+   `CFBundleURLTypes` in the Info.plist), and exchanges the code for a session
+   in its own partition (`exchangeCodeForSession`, PKCE stream).
 
-**Ce chemin est nécessaire de toute façon**, même sans OAuth : un lien magique
-reçu par mail s'ouvre dans le navigateur par défaut, jamais dans Electron. Donc on
-le construit une fois et les trois chemins d'entrée s'en servent. Seule la
-connexion par mot de passe fonctionne sans lui.
+**This path is necessary anyway**, even without OAuth: a magic link
+received by email opens in the default browser, never in Electron. So we
+builds it once and all three entry paths use it. Only the
+password login works without it.
 
-Ce qui restait à vérifier dans une vraie fenêtre — palette ⌘K, presse-papier,
-collage d'images dans tiptap, glisser-déposer, realtime en arrière-plan — a été
-vérifié : voir §7.1. Rien ne casse ; il faut un menu applicatif à nous.
+What remained to check in a real window — ⌘K palette, clipboard,
+image collage in tiptap, drag and drop, realtime in background — has been
+verified: see §7.1. Nothing breaks; we need an application menu of our own.
 
-**Construit en MIN-291**, et deux choses à savoir avant d'y toucher. La coquille
-vit dans [desktop/](../desktop/README.md) et ne contient que du câblage : les
-décisions — garde de navigation, contenu du deep link, surface du pont — vivent
-dans `lib/desktop/` et y sont testées, parce qu'un dossier qu'on ne compile
-qu'avec Electron installé ne peut pas l'être par la suite du dépôt. Et
-**`minddy://` ne se teste pas avant l'empaquetage** : hors app empaquetée,
-`app.setAsDefaultProtocolClient` inscrit *Electron.app* auprès de LaunchServices,
-pas notre instance, et un `open minddy://…` n'atteint donc rien. C'est
-`CFBundleURLTypes` qui le règle, et il arrive avec le `.dmg` de MIN-292 — la
-première vraie connexion par lien externe se vérifie là.
-
----
-
-## 3. Les notifications : Web Push et APNs
-
-MIN-291 utilisait le temps réel puis `new Notification()` tant que le renderer
-tournait. MIN-356 garde ce chemin comme compatibilité pour une ancienne coquille,
-mais les versions actuelles s'inscrivent auprès d'APNs au lancement. Le token du
-bundle signé passe par le pont Electron, puis par la session web authentifiée,
-et rejoint `push_subscriptions` avec `transport = 'apns'`.
-
-À l'insertion d'une ligne d'inbox, le serveur construit toujours une seule
-formulation. `sendPushToUser` choisit ensuite VAPID pour un navigateur ou APNs
-pour l'app macOS. APNs affiche l'alerte quand aucun process minddy ne tourne ; si
-l'app tourne, `received-apns-notification` la transforme en bannière native et
-son clic ouvre la route transportée. Le relais realtime est alors coupé pour ne
-pas afficher deux fois la même chose. Le badge du dock reste alimenté par la
-liste temps réel : lui représente un état exact, pas un événement APNs.
-
-Ce que ça ouvre en revanche, et qui n'existe pas sur le web : le clic sur une
-notification réveille la fenêtre sur le bon ticket, le badge est un chiffre exact,
-et le raccourci global ouvre la palette sans passer par le navigateur.
+**Built in MIN-291**, and two things to know before you touch it. The shell
+lives in [desktop/](../desktop/README.md) and contains only cabling: the
+decisions — navigation guard, deep link content, deck surface — live
+in `lib/desktop/` and are tested there, because a folder that is not compiled
+that with Electron installed cannot be installed after the deposit. And
+**`minddy://` is not tested before packaging**: outside packaged apps,
+`app.setAsDefaultProtocolClient` registered *Electron.app* with LaunchServices,
+not our instance, and a `open minddy://…` therefore achieves nothing. It's
+`CFBundleURLTypes` that settles it, and he arrives with the `.dmg` of MIN-292 — the
+first real connection by external link is verified there.
 
 ---
 
-## 4. L'agent local
+## 3. Notifications: Web Push and APNs
 
-C'est le sujet. Aujourd'hui, un tour d'agent se joue ainsi : la fonction crée une
-microVM, y écrit `main.js` et `job.json`, lance `node main.js` détaché, et rend la
-main ([vm-launch.ts](../lib/server/agent/vm-launch.ts)). La VM clone le dépôt avec
-un token éphémère, fait travailler le modèle, pousse une branche et ouvre une pull
-request, et rend son rapport au plan de contrôle.
+MIN-291 used real time then `new Notification()` as the renderer
+was turning. MIN-356 keeps this path as compatibility for an old shell,
+but current versions register with APNs at launch. The token of
+signed bundle goes through the Electron bridge, then through the authenticated web session,
+and joins `push_subscriptions` with `transport = 'apns'`.
 
-**Ce qui doit changer pour que ce même tour se joue sur un Mac : le lanceur, et
-trois verrous.** Le reste — la boucle, les tools, le ledger, le fil — ne bouge
-presque pas, et c'est ce qui rend le chantier raisonnable.
+When inserting an inbox line, the server always constructs a single
+wording. `sendPushToUser` then chooses VAPID for a browser or APNs
+for the macOS app. APNs displays the alert when no minddy process is running; if
+the app runs, `received-apns-notification` transforms it into a native banner and
+its click opens the transported route. The realtime relay is then cut so as not to
+do not display the same thing twice. The dock badge remains powered by the
+real-time list: represents an exact state, not an APNs event.
 
-> ### ⚠ Le critère de bascule a changé (MIN-363)
+What it opens on the other hand, and which does not exist on the web: clicking on a
+notification wakes up the window on the correct ticket, the badge is an exact number,
+and the global shortcut opens the palette without using the browser.
+
+---
+
+## 4. The local agent
+
+This is the subject. Today, an agent's trick is played like this: the function creates a
+microVM, writes `main.js` and `job.json`, launches `node main.js` detached, and returns the
+main ([vm-launch.ts](../lib/server/agent/vm-launch.ts)). The VM clones the repository with
+an ephemeral token, makes the model work, pushes a branch and opens a sweater
+request, and reports to the control plan.
+
+**What must change for this same trick to be played on a Mac: the launcher, and
+three locks.** The rest — the loop, the tools, the ledger, the wire — does not move
+almost none, and that’s what makes the project reasonable.
+
+> ### ⚠ The toggle criterion has changed (MIN-363)
 >
-> Ce paragraphe disait *« le produit est identique, seule la machine change »*,
-> §4.3 le répétait en toutes lettres (« C'est le critère de bascule »), et MIN-293
-> le portait comme critère d'acceptation. **Il est mort.** L'audit du 2026-08-14
-> l'a mesuré, et le code écrit depuis l'a confirmé. Le laisser là serait un piège
-> pour le prochain qui ouvre ce dossier : il découperait des lots sur une promesse
-> que le dépôt contredit déjà.
+> This paragraph said *“the product is identical, only the machine changes”*,
+> §4.3 repeated it in full (“This is the tipping point”), and MIN-293
+> wore it as an acceptance criterion. **He is dead.** The audit of 2026-08-14
+> measured it, and code written since has confirmed it. Leaving him there would be a trap
+> for the next person who opens this file: he would cut lots on a promise
+> which the filing already contradicts.
 >
-> **Le critère qui le remplace :** *le run local rend le même TRAVAIL — même fil,
-> mêmes events, même ledger, même pull request — et les écarts qu'il porte sont
-> ceux de la liste ci-dessous, nommés, assumés, et dits dans l'interface là où
-> l'utilisateur les rencontre.* Un écart qui n'est pas dans cette liste est un
-> défaut ; un écart qui y est mais que l'interface tait est un défaut aussi.
+> **The criterion that replaces it:** *the local run renders the same WORK — same thread,
+> same events, same ledger, same pull request — and the differences it carries are
+> those in the list below, named, assumed, and said in the interface where
+> the user encounters them.* A deviation that is not in this list is a
+> default; a gap that is there but that the interface is silent is also a fault.
 >
-> | L'écart | Pourquoi il est irréductible |
+> | The gap | Why it is irreducible |
 > | --- | --- |
-> | **Le diff en direct tombe** | [`/api/agent-runs/[runId]/diff`](<../app/api/agent-runs/[runId]/diff/route.ts>) lit la **microVM** par RPC pendant que le tour tourne — c'est le seul endroit qui sache ce que l'agent vient d'écrire. Le backend n'a **aucun accès** au disque de l'utilisateur : sur un run local, il ne reste que la forge, donc le travail **poussé**. Pendant le tour, la vue diff montre l'état d'avant ; au premier tour, elle ne montre rien (la branche n'existe pas encore). Ce n'est pas une régression à réparer, c'est une conséquence de la topologie. |
-> | **Le type-check peut se taire** | `detectTypeChecker` ([diagnostics.ts](../lib/server/agent/diagnostics.ts)) exige un `./node_modules/.bin/tsc` **exécutable** et rend `null` sinon — sans lever, par conception. Sur un dépôt de l'utilisateur dont les dépendances ne sont pas installées, la porte de livraison ne dit rien plutôt que de dire « ça compile ». Un silence qui ressemble à un feu vert. |
-> | **La fin de tour change de forme** | En mode dépôt courant (D2 de l'audit, [current-repo.ts](../lib/server/agent/current-repo.ts)), on ne touche ni à l'index, ni au HEAD, ni à l'arbre de l'utilisateur : le commit se fabrique dans un index jetable, s'accroche à `refs/minddy/run/<id>/work` et part par sha. **Aucune branche locale n'est créée**, `git add -A` n'existe plus, et un fichier que l'humain édite en même temps que l'agent se dit au fil au lieu de se trancher. Même PR à l'arrivée, chemin différent. |
-> | **La pull request devient un geste** | Décision D2bis-B, prise le 2026-08-15 en voyant le premier vrai tour local : **le tour ne commite rien et ne pousse rien**, son livrable est l'arbre de travail. Il poussait une branche à chaque fin de tour — par sha, depuis un index jetable, donc introuvable dans le `git branch` de l'utilisateur. Ouvrir une pull request reste possible et reste `create_pr` ; ce n'est simplement plus la fin d'un tour. |
-> | **Le confinement n'existe plus** | §4.4 ci-dessous, et l'audit §2 le chiffre : sur trente commandes visant un dossier hors dépôt, **vingt ne publient qu'une permission `bash`**, que `command-guard` — qui ne vise que git — laisse passer. Les approbations d'opencode sont un **anti-accident**, pas une frontière. Une carte « l'agent veut sortir du dossier » branchée sur `external_directory` seul enseignerait une garantie fausse. |
+> | **Live broadcast drops** | [`/api/agent-runs/[runId]/diff`](<../app/api/agent-runs/[runId]/diff/route.ts>) reads the **microVM** via RPC while the tower is running — this is the only place that knows what the agent just wrote. The backend has **no access** to the user's disk: on a local run, only the forge remains, so the work is **pushed**. During the tour, the diff view shows the state before; in the first round, it shows nothing (the branch does not exist yet). This is not a regression to be repaired, it is a consequence of the topology. |
+> | **Type-check can shut up** | `detectTypeChecker` ([diagnostics.ts](../lib/server/agent/diagnostics.ts)) requires an `./node_modules/.bin/tsc` **executable** and returns `null` otherwise — without raising, by design. On a user repository whose dependencies are not installed, the release gate says nothing rather than saying "it compiles". A silence that feels like a green light. |
+> | **The end of the turn changes shape** | In current repository mode (D2 of the audit, [current-repo.ts](../lib/server/agent/current-repo.ts)), we do not touch the index, nor the HEAD, nor the user tree: the commit is made in a disposable index, hooks to `refs/minddy/run/<id>/work` and leaves by sha. **No local branch is created**, `git add -A` no longer exists, and a file that the human edits at the same time as the agent is said to the thread instead of slicing. Same PR at the finish, different path. |
+> | **The pull request becomes a gesture** | Decision D2bis-B, taken on 2026-08-15 upon seeing the first real local tour: **the tour commits nothing and pushes nothing**, its deliverable is the working tree. It pushed a branch at the end of each round — by sha, from a disposable index, therefore not found in the user's `git branch`. Opening a pull request remains possible and remains `create_pr`; it’s just not the end of a round anymore. |
+> | **Containment no longer exists** | §4.4 below, and the audit §2 the figure: out of thirty commands targeting a non-repository file, **twenty only publish a `bash`** permission, which `command-guard` — which only targets git — lets pass. Opencode approvals are an accident proof, not a boundary. An “agent wants out of file” card plugged into `external_directory` alone would teach a false guarantee. |
 >
-> Deux paragraphes de ce §4 ont été écrits **avant** ces décisions et ne décrivent
-> plus le produit : **§4.3** (le worktree dédié — renversé par D2 : le défaut est
-> le dépôt courant, le worktree devient une option) et **§4.5** (le repli cloud en
-> cours de conversation — annulé par D1 : l'environnement se choisit avant le
-> premier tour et ne change plus). Ils sont conservés pour le raisonnement qu'ils
-> portent ; la décision qui fait foi est celle de
-> [l'audit §12](audits/agent-local-2026-08-14.md).
+> Two paragraphs of this §4 were written **before** these decisions and do not describe
+> plus the product: **§4.3** (the dedicated worktree — reversed by D2: the default is
+> the current repository, the worktree becomes an option) and **§4.5** (cloud fallback in
+> conversation class — canceled by D1: the environment is chosen before the
+> first round and does not change again). They are kept for the reasoning that they
+> carry; the authentic decision is that of
+> [audit §12](audits/agent-local-2026-08-14.md).
 
-### 4.1 Verrou 1 — prouver quel run on est
+### 4.1 Lock 1 — prove which run you are on
 
-Aujourd'hui la VM ne porte **aucun** jeton : le firewall de Vercel Sandbox forwarde
-ses requêtes en y ajoutant un OIDC signé par la plateforme, dont le claim
-`sandbox_name` vaut `agent-<run.id>`. Le `runId` n'est donc jamais lu dans le corps
-— il est *dérivé* — et une VM ne peut rien prétendre d'autre que son propre run.
-Sur un Mac, il n'y a pas de firewall pour signer quoi que ce soit.
+Today the VM does not carry **any** token: the Vercel Sandbox forwarde firewall
+its requests by adding an OIDC signed by the platform, whose claim
+`sandbox_name` is `agent-<run.id>`. The `runId` is therefore never read in the body
+— it is *derived* — and a VM cannot claim anything other than its own run.
+On a Mac, there is no firewall to sign anything.
 
-**Décision : un jeton de run, porté par le client, et une deuxième voie d'admission
-dans la seule route qui en dépend.** La séparation faite en MIN-223 nous sert
-exactement là : `handleControlPlaneRequest` prend déjà `runId` **en paramètre
-d'entrée** ; c'est
+**Decision: a run token, carried by the customer, and a second admission route
+in the only road that depends on it.** The separation made in MIN-223 serves us
+exactly there: `handleControlPlaneRequest` already takes `runId` **as a parameter
+input** ; it's
 [app/api/agent-vm/[...path]/route.ts](<../app/api/agent-vm/[...path]/route.ts>)
-qui le dérive du claim, et c'est le seul fichier à toucher. Un jeton opaque, tiré
-au lancement, stocké sur la ligne `agent_runs` (haché), à durée de vie du tour,
-envoyé en `authorization` — et `handleControlPlaneRequest` ne voit aucune
-différence.
+which derives it from the claim, and it is the only file to touch. An opaque token, drawn
+at launch, stored on the `agent_runs` line (hashed), for the life of the round,
+sent as `authorization` — and `handleControlPlaneRequest` sees no
+difference.
 
-**Ce qu'on perd, et qui doit être écrit** : un jeton sur un disque est volable, un
-OIDC de plateforme ne l'est pas. Le dégât reste borné à *ce run-là*, pendant *ce
-tour-là* — mais l'invariant « la machine qui exécute ne porte aucun secret » cesse
-d'être vrai, et il ne faut pas prétendre le contraire ailleurs dans le code.
+**What we lose, and which must be written**: a token on a disk is stealable, a
+Platform OIDC is not. The damage remains limited to *this run*, during *this
+turn there* — but the invariant “the machine which executes carries no secrets” ceases
+to be true, and the contrary should not be claimed elsewhere in the code.
 
-### 4.2 Verrou 2 — la clé du modèle
+### 4.2 Lock 2 — the model key
 
-Même problème, une marche plus haut. Aujourd'hui la boucle envoie un **placeholder**
-dans `authorization` et c'est le firewall qui pose la vraie clé après la sortie de
-la VM ([network-policy.ts](../lib/server/agent/network-policy.ts)) ; le proxy local
-d'opencode ([vm/llm-proxy.ts](../lib/server/agent/vm/llm-proxy.ts)) relaie sans rien
-détenir. Sur un Mac, une vraie clé devra bien exister quelque part.
+Same problem, one step higher. Today the loop sends a **placeholder**
+in `authorization` and it is the firewall which sets the real key after exiting
+the VM ([network-policy.ts](../lib/server/agent/network-policy.ts)); the local proxy
+of opencode ([vm/llm-proxy.ts](../lib/server/agent/vm/llm-proxy.ts)) relays without anything
+to hold. On a Mac, a real key must exist somewhere.
 
-**Décision : la clé par run à plafond dur, celle de
-[run-key.ts](../lib/server/agent/run-key.ts) — elle est déjà écrite.** Une clé
-OpenRouter émise pour ce run, avec `limit` en dollars et `expires_at`, tenue par le
-fournisseur et non par notre code. Ce que la machine détient n'est alors pas *notre*
-clé mais un droit de dépenser le budget de ce run, que l'utilisateur possède déjà.
-C'est exactement la doctrine que `run-key.ts` énonce pour la VM, appliquée à une
-machine où l'hypothèse de compromission est *plus* forte.
+**Decision: the key per run at hard ceiling, that of
+[run-key.ts](../lib/server/agent/run-key.ts) — it is already written.** A key
+OpenRouter issued for this run, with `limit` in dollars and `expires_at`, held by the
+supplier and not by our code. What the machine holds is then not *our*
+key but a right to spend the budget for this run, which the user already has.
+This is exactly the doctrine that `run-key.ts` states for the VM, applied to a
+machine where the hypothesis of compromise is *stronger*.
 
-**Conséquence à ne pas manquer** : `run-key.ts` **dégrade volontairement** quand
-`OPENROUTER_PROVISIONING_KEY` est absent — il retombe sur la clé plateforme, sans
-plafond. Cette dégradation est raisonnable dans une microVM jetable ; sur la machine
-d'un utilisateur elle est inacceptable. **Sur le chemin local, l'absence de mint
-doit refuser le run**, pas le déplafonner. C'est une ligne de code et c'est le
-genre de ligne qu'on n'écrit pas si personne ne l'a dite.
+**Consequence not to be missed**: `run-key.ts` **degrades voluntarily** when
+`OPENROUTER_PROVISIONING_KEY` is missing — it falls on the platform key, without
+ceiling. This degradation is reasonable in a disposable microVM; on the machine
+from a user it is unacceptable. **On the local path, the absence of mint
+must refuse the run**, not uncapped it. It's a line of code and it's the
+kind of line you don't write if no one has said it.
 
-L'alternative — relayer toutes les complétions par notre backend, qui poserait la
-clé — garde l'invariant intact mais nous met un proxy en flux tendu sur la totalité
-du trafic d'un run, avec sa latence, sa facture et une durée de fonction à
-surveiller. On ne la prend pas ; on la note comme repli si le mint devenait
-indisponible.
+The alternative — relay all completions through our backend, which would pose the
+key — keeps the invariant intact but gives us a just-in-time proxy over the entire
+of the traffic of a run, with its latency, its bill and a function duration to
+monitor. We don't take it; we note it as a fallback if the mint becomes
+unavailable.
 
-### 4.3 Verrou 3 — quel dépôt, et où
+### 4.3 Lock 3 — what repository, and where
 
-Trois formes possibles, et le choix n'est pas cosmétique.
+Three possible shapes, and the choice is not cosmetic.
 
-- **Dans ta copie de travail.** Non. L'agent y écrirait pendant que tu y travailles,
-  sur ta branche, dans ton index.
-- **Un clone frais dans le dossier de l'app.** Sûr, mais ça jette précisément ce
-  pour quoi on est venu : ta chaîne d'outils, tes caches, ton `node_modules`.
-- **Un `git worktree` géré par minddy** (`~/Library/Application Support/minddy/…`).
-  Mêmes objets git, branche à part, index à part : l'agent ne peut pas te marcher
-  dessus, et la machine reste la tienne. **C'est celle-là.**
+- **In your working copy.** No. The agent would write there while you work there,
+  on your branch, in your index finger.
+- **A fresh clone in the app folder.** Safe, but it throws precisely what
+  what we came for: your toolchain, your caches, your `node_modules`.
+- **A `git worktree` managed by minddy** (`~/Library/Application Support/minddy/…`).
+  Same git objects, separate branch, separate index: the agent can't walk you
+  on it, and the machine remains yours. **That's the one.**
 
-Deux conséquences que le worktree ne résout pas, et qu'il faut traiter :
+Two consequences that the worktree does not resolve, and which must be addressed:
 
-1. **`node_modules` n'est pas partagé** entre worktrees. Le premier tour paie une
-   installation — comme la microVM aujourd'hui, donc pas une régression, mais pas
-   le gain qu'on imagine. Le gain réel est au *deuxième* tour : le worktree, lui,
-   survit.
-2. **Les fichiers non versionnés sont absents** — `.env`, `.env.local`. Or « le
-   dev server démarre et les tests voient les vraies variables » est un des
-   arguments du local. Il faut donc un réglage **explicite et par projet** : la
-   liste des fichiers ignorés à recopier dans le worktree. Explicite, parce que
-   recopier des secrets dans un répertoire où un modèle exécute du shell est une
-   décision, pas un défaut.
+1. **`node_modules` is not shared** between worktrees. The first round pays a
+   installation — like microVM today, so not a regression, but not
+   the gain we imagine. The real gain is in the *second* round: the worktree,
+   survives.
+2. **Unversioned files are missing** — `.env`, `.env.local`. But “the
+   dev server starts and the tests see the real variables" is one of the
+   local arguments. It is therefore necessary to make an adjustment **explicit and per project**: the
+   list of ignored files to copy into the worktree. Explicit, because
+   copying secrets into a directory where a model runs the shell is a
+   decision, not a fault.
 
-Le tour se termine par un push et une pull request, avec un token de forge frais
-demandé au plan de contrôle (`/repo-auth`) : **c'est le travail rendu qui est le
-même** — même fil, mêmes events, même PR. Le CHEMIN, lui, n'est pas le même, et
-c'est le critère réécrit en tête de §4 qui le dit : pas de diff en direct pendant
-le tour, un type-check qui peut se taire, et une fin de tour qui, en mode dépôt
-courant, ne passe plus par l'index ni par une branche locale.
+The round ends with a push and a pull request, with a fresh forge token
+requested from the control plane (`/repo-auth`): **it is the work rendered which is the
+same** — same thread, same events, same PR. The PATH is not the same, and
+it is the rewritten criterion at the top of §4 which says it: no live diff during
+the turn, a type-check which can be silent, and an end of turn which, in deposit mode
+current, no longer goes through the index or a local branch.
 
-### 4.4 Ce qu'on perd : le confinement
+### 4.4 What we lose: confinement
 
-Il faut l'écrire en toutes lettres, parce que tout le raisonnement de sécurité de
-l'agent repose dessus. Aujourd'hui, la doctrine assumée est *« la microVM est
-compromise par hypothèse »* : le modèle y exécute du shell arbitraire, et c'est
-sans conséquence parce que la VM est jetable, sans secret, et qu'elle meurt à la
-fin du tour. **Sur ton Mac, aucune de ces trois phrases n'est vraie.** Le modèle a
-accès à tes clés SSH, tes jetons, tes autres dépôts, ton trousseau.
+It must be written in full, because all the security reasoning of
+the agent rests on it. Today, the accepted doctrine is *“the microVM is
+compromised by hypothesis »*: the model executes arbitrary shell there, and it is
+without consequence because the VM is disposable, without secrets, and it dies when
+end of the round. **On your Mac, none of these three sentences are true.** The model has
+access to your SSH keys, your tokens, your other repositories, your keychain.
 
-Ce n'est pas rédhibitoire — c'est ce que tu acceptes déjà en lançant un agent de
-code en local — mais ça ne se laisse pas sous-entendre :
+This is not prohibitive — this is what you already accept by launching a
+code locally — but this is not implied:
 
-- **opt-in explicite, par projet**, avec un écran qui dit ce que ça autorise, et
-  jamais un défaut ;
-- [command-guard.ts](../lib/server/agent/command-guard.ts) et
-  [repo-path.ts](../lib/server/agent/repo-path.ts) continuent de s'appliquer, mais
-  il faut cesser de les décrire comme « du confort » : sur le chemin local, ce sont
-  les seuls garde-fous qui restent ;
-- **la politique réseau ne s'applique plus du tout.** Elle est une propriété du
-  firewall Vercel, pas du harness.
+- **explicit opt-in, per project**, with a screen that says what this allows, and
+  never a fault;
+- [command-guard.ts](../lib/server/agent/command-guard.ts) and
+  [repo-path.ts](../lib/server/agent/repo-path.ts) still applies, but
+  we must stop describing them as “comfort”: on the local path, they are
+  the only remaining safeguards;
+- **the network policy no longer applies at all.** It is a property of the
+  Vercel firewall, not harness.
 
-Une piste de durcissement, à explorer plus tard et pas en v1 : lancer le process
-sous un profil *seatbelt* macOS (`sandbox-exec`) restreignant l'écriture au
-worktree. C'est ce que font Chrome et les agents de code sérieux ; l'API est
-formellement dépréciée mais bien vivante.
+A hardening path, to be explored later and not in v1: launch the process
+under a *seatbelt* macOS profile (`sandbox-exec`) restricting writing to
+worktree. This is what Chrome and serious code brokers do; the API is
+formally depreciated but very much alive.
 
-### 4.5 Comment un run arrive sur ta machine
+### 4.5 How a run arrives on your machine
 
-> **Le lanceur existe depuis MIN-293, et sa forme n'est pas celle décrite plus
-> bas.** Ce paragraphe reste pour son raisonnement ; ce qui a été construit tient
-> en un invariant et trois surfaces.
+> **The launcher has existed since MIN-293, and its form is not as described above
+> bottom.** This paragraph remains for its reasoning; what was built holds
+> in one invariant and three surfaces.
 >
-> **L'invariant : le serveur possède tout ce qui concerne le RUN, la machine
-> possède tout ce qui concerne le DISQUE.** Le serveur ne connaît aucun chemin de
-> cet ordinateur — un chemin de home ne veut rien dire ailleurs, et le ranger côté
-> base le publierait, faux, à tous les membres du projet. La machine, elle, ne
-> fabrique aucun champ de run. Le contrat qui les relie est un `VmJob` **amputé de
-> son `layout`**, c'est-à-dire du seul champ qui parle de disque
+> **The invariant: the server owns everything relating to RUN, the machine
+> has everything related to the DISK.** The server does not know any path to
+> this computer — a home path means nothing elsewhere, and put it aside
+> base would publish it, falsely, to all members of the project. The machine does not
+> produces no run field. The contract that connects them is a `VmJob` **amputated
+> its `layout`**, that is to say the only field that talks about disk
 > ([lib/desktop/local-turn.ts](../lib/desktop/local-turn.ts)).
 >
-> **Et une règle qui en découle, plus simple que n'importe quel arbitrage : la
-> machine ne parle qu'à l'origine qui lui a donné son travail.** Le manifeste du
-> harness, ses octets, l'affectation et le plan de contrôle viennent tous de
-> l'origine du canal actif, ou d'aucune. C'est ce qui empêche une coquille en
-> preview de jouer un tour avec le harness de production — le contrat typé
-> divergerait en silence — et c'est aussi ce qui fait marcher le développement
-> contre `localhost`.
+> **And a rule that results from this, simpler than any arbitration: the
+> machine only speaks to the origin which gave it its work.** The manifesto of
+> harness, its bytes, assignment and control plane all come from
+> the origin of the active channel, or none. This is what prevents a typo from
+> preview of playing a trick with the production harness — the typical contract
+> would diverge silently — and that’s also what makes development work
+> against `localhost`.
 >
-> | Surface | Ce qu'elle fait |
+> | Area | What she does |
 > | --- | --- |
-> | `GET /api/desktop/harness` | le manifeste : empreinte, taille, version de protocole, version d'opencode. Demandé à **chaque** tour, deux cents octets. |
-> | `GET /api/desktop/harness/bundle` | les octets, quand l'empreinte a changé. Un fichier par empreinte sous `userData/harness/`. |
-> | `POST /api/desktop/local-turn` | le pull du clone (MIN-371) : sélectionner parmi ses projets attachés, admettre, claim, préparer, monter le bail, rendre l'affectation. L'ancien appel par identifiant reste compatible. |
+> | `GET /api/desktop/harness` | the manifest: footprint, size, protocol version, opencode version. Requested **each** round, two hundred bytes. |
+> | `GET /api/desktop/harness/bundle` | the bytes, when the fingerprint has changed. One file per fingerprint under `userData/harness/`. |
+> | `POST /api/desktop/local-turn` | the clone pull (MIN-371): select from its attached projects, admit, claim, prepare, set up the lease, return the assignment. The old call by identifier remains compatible. |
 >
-> Depuis MIN-371, le clone appelle cette surface en arrière-plan avec sa session
-> et les seuls identifiants de ses projets attachés. Il relit la liste à chaque
-> passage, ne transmet aucun chemin et joue l'affectation avec le lanceur déjà en
-> place. Le renderer n'est plus dans la boucle : un téléphone peut envoyer le
-> message suivant, le run repasse en file et le clone le réclame.
+> Since MIN-371, the clone calls this surface in the background with its session
+> and the only identifiers of its attached projects. He rereads the list each time
+> passage, does not pass any path and plays the assignment with the launcher already in
+> place. The renderer is no longer in the loop: a phone can send the
+> next message, the run returns to the queue and the clone requests it.
 >
-> Trois différences avec ce qui suit, et chacune vient d'une décision prise
-> depuis : **le repli cloud n'existe pas en cours de conversation** (D1 :
-> l'environnement se choisit avant le premier tour) ; **la présence n'est pas un
-> heartbeat** mais un pull avec bail, une machine qui ne réclame plus n'étant plus
-> là (§5) ; et **le drain ne prend jamais un run local** — sans quoi l'utilisateur
-> demande sa machine, obtient le cloud, et rien ne le lui dit.
+> Three differences with what follows, and each comes from a decision made
+> since: **the cloud fallback does not exist during the conversation** (D1:
+> the environment is chosen before the first round); **presence is not a
+> heartbeat** but a sweater with lease, a machine which no longer demands no longer being
+> there (§5); and **the drain never takes a local run** — otherwise the user
+> asks for his machine, gets the cloud, and nothing tells him.
 
-Le lanceur est le seul morceau réellement neuf.
+The launcher is the only truly new piece.
 
-- L'app de bureau **annonce sa présence** (un heartbeat par utilisateur, sur le
-  pont temps réel déjà en place), en disant quels projets elle a en local.
-- Au lancement, [launch.ts](../lib/server/agent/launch.ts) regarde une préférence
-  de projet (« exécuter sur ma machine ») **et** une présence vivante. Si les deux
-  sont là, il ne crée pas de sandbox : il laisse le run en attente et le diffuse
-  sur son topic.
-- L'app le prend, écrit `job.json`, et lance le bundle.
-- **Pas de présence dans les quelques secondes → repli sur le cloud**, et le fil
-  le dit. Un run qui reste en attente parce qu'un Mac est en veille est un run
-  perdu ; un run qui bascule dans le cloud en le disant est un run.
+- The desktop app **announces its presence** (one heartbeat per user, on the
+  real-time bridge already in place), saying what projects it has locally.
+- On launch, [launch.ts](../lib/server/agent/launch.ts) looks at a preference
+  of project (“execute on my machine”) **and** a living presence. If both
+  are there, it does not create a sandbox: it leaves the run waiting and broadcasts it
+  on his topic.
+- The app takes it, writes `job.json`, and launches the bundle.
+- **No presence within a few seconds → fallback to the cloud**, and the wire
+  says it. A run that remains pending because a Mac is asleep is a run
+  lost; a run that switches to the cloud by saying it is a run.
 
-Deux détails qui ont l'air petits :
+Two details that seem small:
 
-**Le bundle se télécharge par tour, il ne s'embarque pas dans l'app.** Le contrat
-entre le harness et le plan de contrôle est typé et il bouge
-([protocol.ts](../lib/server/agent/vm/protocol.ts)) : une app installée il y a deux
-mois ne doit pas jouer un tour avec un harness de deux mois. Comme la fonction
-l'écrit dans la VM, l'app le récupère depuis le déploiement — c'est ce qui garde la
-coquille mince (§1) et le contrat vérifié par le compilateur.
+**The bundle is downloaded per turn, it is not embedded in the app.** The contract
+between the harness and the control plane is typed and it moves
+([protocol.ts](../lib/server/agent/vm/protocol.ts)): an app installed two years ago
+month should not play tricks with a two-month harness. Like the function
+writes it in the VM, the app retrieves it from the deployment — this is what keeps the
+thin shell (§1) and the contract checked by the compiler.
 
-**Electron embarque Node**, donc rien à installer côté utilisateur pour ça
-(`utilityProcess.fork`, ou un fork avec `ELECTRON_RUN_AS_NODE`). Minddy embarque
-aussi le CLI npm — absent d'Electron — et expose des shims `node`/`npm` adossés
-au runtime signé. Le harness les utilise pour amorcer ou réparer son OpenCode
-épinglé, et l'agent peut ensuite installer les dépendances du dépôt même sans
-chaîne Node système. Le `PATH` du shell utilisateur reste prioritaire quand il
-est déjà configuré. Le Node d'Electron correspond à la cible `node24` du bundle.
-La version d'OpenCode est une constante partagée
-([opencode-version.ts](../lib/server/agent/vm/opencode-version.ts)), écrite pour
-avoir exactement ce genre de deuxième lecteur.
+**Electron embeds Node**, so nothing to install on the user side for that
+(`utilityProcess.fork`, or a fork with `ELECTRON_RUN_AS_NODE`). Minddy embarks
+also the npm CLI — absent from Electron — and exposes backed `node`/`npm` shims
+in the signed runtime. The harness uses them to boot or repair its OpenCode
+pinned, and the agent can then install the repository dependencies even without
+System Node string. The `PATH` of the user shell remains priority when it
+is already configured. The Electron Node corresponds to the `node24` target of the bundle.
+OpenCode version is a shared constant
+([opencode-version.ts](../lib/server/agent/vm/opencode-version.ts)), written for
+have exactly this kind of second drive.
 
 ---
 
-## 5. Distribuer sur macOS
+## 5. Distribute on macOS
 
-> **Construit en MIN-292.** Tout ce que ce paragraphe décrit est câblé :
-> [desktop/electron-builder.yml](../desktop/electron-builder.yml) porte
-> l'identité du bundle, le hardened runtime et la notarisation ;
-> [desktop/src/updater.ts](../desktop/src/updater.ts) les mises à jour ;
-> [scripts/publish-desktop.mjs](../scripts/publish-desktop.mjs) la publication du
-> flux ; `/download` la page. Ne restent que les gestes qui demandent un compte
-> Apple, et ils ont leur marche à marche dans la procédure interne de signature.
+> **Built in MIN-292.** Everything this paragraph describes is hardwired:
+> [desktop/electron-builder.yml](../desktop/electron-builder.yml) door
+> bundle identity, hardened runtime and notarization;
+> [desktop/src/updater.ts](../desktop/src/updater.ts) updates;
+> [scripts/publish-desktop.mjs](../scripts/publish-desktop.mjs) the publication of
+> flow; `/download` the page. Only the gestures that demand an account remain
+> Apple, and they have their way in the internal signing procedure.
 >
-> Une chose que ce cadrage n'avait pas dite, et qui compte : **l'IDENTITÉ de
-> l'app arrive ici et nulle part avant**. Tant qu'on lançait depuis le dépôt,
-> macOS lisait l'`Info.plist` d'`Electron.app` — icône Electron au dock,
-> « Electron » dans la barre de menus, et un `minddy://` qui n'atteignait
-> personne parce que LaunchServices inscrivait Electron.app. C'est le bundle qui
-> parle, pas le code.
+> One thing that this framing had not said, and which matters: **the IDENTITY of
+> the app arrives here and nowhere before**. As long as we launched from the depot,
+> macOS read the `Info.plist` from `Electron.app` — Electron icon in the dock,
+> “Electron” in the menu bar, and a `minddy://` which did not reach
+> no one because LaunchServices was registering Electron.app. This is the bundle that
+> speaks, not code.
 
-Rien d'ici n'est optionnel : hors App Store, macOS refuse de lancer une app non
-notarisée, et le message qu'il affiche fait fuir.
+Nothing here is optional: outside the App Store, macOS refuses to launch an app not
+notarized, and the message it displays scares people away.
 
-- **Apple Developer Program : 99 $/an.** Certificat *Developer ID Application*,
-  *hardened runtime* activé, signature, puis notarisation (`notarytool`) et
-  agrafage du ticket. C'est mécanique une fois branché, et c'est un secret de plus
-  en CI.
-- **Mises à jour** : `electron-updater`, avec un flux servi depuis un stockage
-  quelconque (un blob suffit). Squirrel.Mac **exige** une app signée : la signature
-  n'est pas seulement une formalité de premier lancement, c'est ce qui permet à
-  l'app de se mettre à jour ensuite.
-- **Poids** : de l'ordre de 100 Mo, Chromium compris — pour afficher un site que
-  Safari affiche déjà. C'est le prix du §4, pas celui du §2.
-- **Entretien** : une majeure Electron toutes les 8 semaines, trois majeures
-  supportées — soit environ six mois avant qu'une version cesse de recevoir des
-  correctifs de sécurité. Un binaire qui embarque Chromium et vit chez des gens ne
-  se laisse pas geler.
-- **Pas d'App Store.** Apple rejette les enveloppes web fines, et l'App Sandbox
-  interdirait précisément le §4. Distribution directe, depuis un `.dmg` lié à la
+- **Apple Developer Program: $99/year.** *Developer ID Application* certificate,
+  *hardened runtime* activated, signature, then notarization (`notarytool`) and
+  stapling the ticket. It's mechanical once plugged in, and that's another secret
+  in CI.
+- **Updates**: `electron-updater`, with a stream served from storage
+  any (a blob is enough). Squirrel.Mac **requires** a signed app: signature
+  is not just a first launch formality, it is what allows
+  the app to update afterwards.
+- **Weight**: around 100 MB, Chromium included — to display a site that
+  Safari already displays. This is the price of §4, not that of §2.
+- **Maintenance**: one Electron major every 8 weeks, three majors
+  supported — approximately six months before a version stops receiving support
+  security fixes. A binary that embeds Chromium and lives in people does not
+  does not allow itself to freeze.
+- **No App Store.** Apple rejects thin web wrappers, and App Sandbox
+  would specifically prohibit §4. Direct distribution, from a `.dmg` linked to the
   landing.
 
 ---
 
-## 6. Ce que ce cadrage met hors périmètre
+## 6. What this framing puts outside the perimeter
 
-- **Tout mode hors-ligne et toute donnée locale.** Le ticket le dit et c'est la
-  bonne décision : le service worker n'a délibérément aucun handler `fetch`
-  ([public/sw.js](../public/sw.js)), et lui en donner un ferait de nous les
-  responsables de ce qui s'affiche.
-- **Windows et Linux.** À rouvrir quand un utilisateur le demande, pas avant.
-- **APNS.** Voir §3.
-- **L'App Store.** Voir §5.
+- **All offline mode and all local data.** The ticket says so and that's it
+  good decision: the service worker deliberately has no `fetch` handler
+  ([public/sw.js](../public/sw.js)), and giving it one would make us
+  responsible for what is displayed.
+- **Windows and Linux.** To reopen when a user requests it, not before.
+- **APNS.** See §3.
+- **The App Store.** See §5.
 
 ---
 
-## 7. Ce que ce cadrage n'a pas fait
+## 7. What this framing did not do
 
-Quatre choses sont écrites au conditionnel parce qu'elles n'ont pas été mesurées.
-Aucune ne remet en cause la direction ; toutes doivent tomber avant le lot
-correspondant.
+Four things are written in the conditional because they were not measured.
+None calls into question the management; all must fall before the lot
+corresponding.
 
-1. ~~**Ce qui casse dans une vraie fenêtre.**~~ **Mesuré (MIN-290), et la réponse
-   est : rien.** Une coquille jetable sur Electron 43.4.0 a chargé
-   `https://www.minddy.app` en `sandbox: true` / `contextIsolation: true`,
-   connectée par mot de passe. Marchent tels quels : ⌘K et ⌘P (le menu par
-   défaut porte 19 accélérateurs, aucun ne touche ⌘K, ⌘P ni ⌘;) ; le
-   presse-papier dans les deux sens, permissions déjà accordées ; le collage
-   d'une image du presse-papier système dans tiptap, téléversée et insérée ; le
-   dépôt d'un vrai fichier sur l'éditeur (`Input.dispatchDragEvent`), téléversé
-   et inséré au point du lâcher ; `new Notification()` depuis le renderer, sans
-   demande de permission ; la session, qui persiste dans la partition.
-   **Le realtime survit à l'arrière-plan** : fenêtre cachée 7 minutes, la
-   WebSocket Supabase reste ouverte et le battement garde son rythme (~2/min),
-   avec `backgroundThrottling` à `true` comme à `false` — inutile de le couper.
-   Ce qu'il reste à faire, et c'est du travail, pas un risque : **un menu
-   applicatif à nous**, parce que le menu par défaut donne ⌘W à « fermer la
-   fenêtre » et ⌘R à « recharger », deux gestes qu'une app ne doit pas offrir
-   sur une SPA authentifiée.
-   Deux réserves honnêtes : sept minutes ne sont pas une nuit, et le clavier a
-   été injecté par Chromium sur une partie des essais — l'arbitrage du menu
-   natif, lui, a été lu dans le menu plutôt que frappé.
-2. **Le gain réel du local.** Personne n'a chiffré ce que le tour gagne à tourner
-   sur un Mac plutôt que dans `iad1`. Le dossier ne repose pas dessus (il repose
-   sur *« l'agent voit ta machine »*), mais il ne faut pas resservir un chiffre
-   qu'on n'a pas.
-3. ~~**Le Node d'Electron contre la cible du bundle.**~~ **Mesuré (MIN-290) :**
-   Electron 43.4.0 embarque **Node 24.18.1** — la cible `node24` du bundle,
-   trait pour trait.
-4. **L'installation d'opencode sur une machine sans npm.** Aujourd'hui la VM fait
-   `npm i opencode-ai` en ~10,6 s ; sur une machine d'utilisateur, il faut décider
-   si on dépend de npm ou si on télécharge la release épinglée.
+1. ~~**What breaks in a real window.**~~ **Measured (MIN-290), and the answer
+   is: nothing.** A throwaway shell on Electron 43.4.0 loaded
+   `https://www.minddy.app` to `sandbox: true` / `contextIsolation: true`,
+   connected by password. Work as is: ⌘K and ⌘P (the menu by
+   default carries 19 accelerators, none touch ⌘K, ⌘P nor ⌘ ;) ; the
+   clipboard in both directions, permissions already granted; the collage
+   an image from the system clipboard in tiptap, uploaded and inserted; the
+   deposit of a real file on the editor (`Input.dispatchDragEvent`), uploaded
+   and inserted at the point of release; `new Notification()` from the renderer, without
+   request for permission; the session, which persists in the partition.
+   **Realtime survives in the background**: hidden window 7 minutes, the
+   WebSocket Supabase remains open and the beat keeps its rhythm (~2/min),
+   with `backgroundThrottling` to `true` as well as `false` — no need to cut it.
+   What remains to be done, and it's work, not a risk: **a menu
+   application to us**, because the default menu gives ⌘W to “close the
+   window” and ⌘R to “reload”, two gestures that an app should not offer
+   on an authenticated SPA.
+   Two honest caveats: seven minutes is not a night, and the keyboard has
+   was injected by Chromium on part of the tests — menu arbitration
+   native, it was read in the menu rather than struck.
+2. **The real gain of the local.** Nobody has quantified what the trick gains from turning
+   on a Mac rather than in `iad1`. The backrest does not rest on it (it rests
+   on *“the agent sees your machine”*), but you should not reserve a number
+   which we don't have.
+3. ~~**Electron Node against the bundle target.**~~ **Measured (MIN-290):**
+   Electron 43.4.0 ships **Node 24.18.1** — the `node24` target of the bundle,
+   line for line.
+4. **Installation of opencode on a machine without npm.** Today the VM does
+   `npm i opencode-ai` in ~10.6 s; on a user machine, one must decide
+   if we depend on npm or if we download the pinned release.

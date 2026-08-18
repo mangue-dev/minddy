@@ -7,43 +7,42 @@ import { WINDOW_BUTTONS_WIDTH } from "@/components/desktop-window-buttons";
 import { useHoldWindowButtons, useWideLayout } from "@/lib/use-window-buttons";
 
 /**
- * L'entrée et la sortie de la navigation, en mode zen. Plus courte que
- * `transitions.shell` (320 ms), et c'est délibéré : la courbe du châssis est
- * celle d'une mise en page qui se réorganise — header, fil d'Ariane et contenu
- * glissent ensemble, et il faut le temps de la lire. Ici RIEN d'autre ne bouge :
- * le bloc passe au-dessus, il ne doit que suivre le pointeur. La même courbe,
- * sur un tiers de moins.
+ * Entry and exit from navigation, in zen mode. Shorter than
+ * `transitions.shell` (320 ms), and this is deliberate: the curve of the frame is
+ * that of a layout which is reorganized — header, breadcrumbs and content
+ * slide together, and it takes time to read it. Here NOTHING else moves:
+ * the block passes above, it should only follow the pointer. The same curve,
+ * on a third less.
  */
 const OVERLAY_SLIDE = { duration: 0.2, ease: [0.32, 0.72, 0, 1] } as const;
 
-/** Largeur de la lisière sensible, au bord GAUCHE du châssis, qui rappelle la
- *  navigation en mode zen. Assez large pour se viser sans mire, assez fine pour
- *  ne pas manger de clics au contenu. */
+/** Width of the sensitive edge, at the LEFT edge of the chassis, which recalls
+ * navigation in zen mode. Wide enough to aim without a sight, thin enough to
+ * not eat up clicks on the content. */
 const HOTZONE = 12;
 
 /**
- * Le bloc de navigation du mode zen (MIN-134) : la barre primaire, et la
- * secondaire quand la page en porte une. Hors du flux, rappelé au survol du bord
- * gauche, il se déplie AU-DESSUS du contenu sans rien décaler — le même marché
- * que le rail de la primaire. **Le zen retire le meuble, pas la navigation.**
+ * The Zen mode navigation block (MIN-134): the primary bar, and the secondary
+ * when the page has one. Out of the flow, recalled when hovering over the left edge
+ *, it unfolds ABOVE the content without shifting anything — the same market
+ * as the primary rail. **Zen removes the furniture, not the navigation.**
  *
- * Il porte TOUJOURS la primaire, y compris sur les pages sans barre secondaire.
- * La version d'avant ne rappelait que la secondaire : sur les autres pages, le
- * zen ne laissait plus aucune navigation — et sur l'app de bureau, la barre
- * démontée rendait ses BOUTONS DE FENÊTRE, qui restaient posés en travers du
- * contenu (leur seul hôte, la ligne de marque, n'était plus là).
+ * It ALWAYS carries the primary, including on pages without a secondary bar.
+ * The previous version only recalled the secondary: on other pages, the
+ * zen no longer left any navigation — and on the desktop app, the bar
+ * disassembled rendered its WINDOW BUTTONS, which remained placed across the
+ * contents (their only host, the brand line, was no longer there).
  *
- * D'où le second rôle de ce composant : tant que le bloc est rangé, il tient les
- * boutons retirés ; le survol qui ramène la barre les ramène avec elle, à leur
- * place, sur sa ligne de marque. Sous 768 px on ne les retire pas — l'AppShell
- * n'y rend plus les barres latérales, et le mode zen n'a pas de header pour les
- * accueillir : les cacher là fermerait la fenêtre à double tour.
+ * Hence the secondary role of this component: as long as the block is stored, it holds the
+ * buttons removed; the hover that brings the bar back takes them with it, to their
+ * place, on its mark line. Under 768 px we do not remove them — the AppShell
+ * no longer renders the sidebars there, and zen mode does not have a header for welcoming them: hiding them there would double-close the window.
  */
 export function ZenNavOverlay({
   width,
   children,
 }: {
-  /** Largeur du bloc : la primaire seule, ou la primaire plus la secondaire. */
+  /** Block width: primary alone, or primary plus secondary. */
   width: number;
   children: ReactNode;
 }) {
@@ -55,59 +54,59 @@ export function ZenNavOverlay({
   const shown = open || focusWithin;
 
   const openPanel = useCallback(() => setOpen(true), []);
-  // Sans délai de grâce : le bloc suit le pointeur, il ne le fait pas attendre.
-  // Le rail de la primaire en garde un (150 ms) parce qu'il RESTE à l'écran une
-  // fois replié — un frôlement le fait battre. Celui-ci s'en va tout entier ;
-  // le seul geste qui le sort de l'écran est celui qui le quitte vraiment.
+  // Without grace period: the block follows the pointer, it does not make it wait.
+  // The primary rail keeps one (150 ms) because it REMAINS on the screen one
+  // when folded — a touch makes it beat. This one goes away entirely;
+  // the only gesture that takes him off the screen is the one that really leaves him.
   const closePanel = useCallback(() => setOpen(false), []);
 
-  // Les boutons macOS suivent la barre qui les héberge : rangée, ils s'en vont
-  // avec elle. Voir lib/use-window-buttons.ts pour ce que « retirer » veut dire.
+  // The macOS buttons follow the bar that houses them: put away, they leave
+  // with her. See lib/use-window-buttons.ts for what “remove” means.
   const wide = useWideLayout();
   useHoldWindowButtons("zen", wide && !shown);
 
   /**
-   * Ce qui referme le bloc est de la GÉOMÉTRIE, pas un `onPointerLeave`.
-   *
-   * La barre secondaire n'est pas rendue ici : elle y est TÉLÉPORTÉE. Et un
-   * portail, en React, propage ses événements le long de l'arbre REACT, pas du
-   * DOM — la liste est bien dans le bloc à l'écran, mais elle n'en est pas un
-   * descendant pour les gestionnaires posés dessus. Résultat : entrer dans la
-   * liste ne comptait pas comme rester dedans, en sortir ne comptait pas comme
-   * le quitter, et le bloc ouvert ne se refermait plus jamais.
-   *
-   * Un `pointermove` sur le document, comparé au rectangle du bloc, ne dépend ni
-   * de l'arbre React ni de qui est monté où. Il n'écoute que tant que le bloc
-   * est ouvert — au repos, il ne coûte rien.
-   */
+ * What closes the block is GEOMETRY, not a `onPointerLeave`.
+ *
+ * The secondary bar is not rendered here: it is TELEPORTED there. And a
+ * portal, in React, propagates its events along the REACT tree, not the
+ * DOM — the list is indeed in the block on the screen, but it is not a
+ * descending for the managers placed on it. Result: entering the
+ * list did not count as staying in it, leaving it did not count as
+ * leaving it, and the open block was never closed again.
+ *
+ * A `pointermove` on the document, compared to the rectangle of the block, does not depend on
+ * of the React tree or who is mounted where. It only listens as long as the
+ * block is open — when idle, it costs nothing.
+ */
   useEffect(() => {
     if (!open) return;
     const onMove = (e: PointerEvent) => {
       const el = panel.current;
       if (!el) return;
-      // Un menu ⋯, un menu de compte ou une infobulle se pose HORS du bloc
-      // (portail Radix), et lui aller dessus n'est pas le quitter : ce qu'on
-      // manipule vient de la navigation et la ramènerait aussitôt.
+      // A menu ⋯, an account menu or a tooltip appears OUTSIDE the block
+      // (Radix portal), and going over him is not leaving him: what we
+      // manipulate comes from navigation and would bring it back immediately.
       const target = e.target as Element | null;
       if (target?.closest?.("[data-radix-popper-content-wrapper]")) {
         setOpen(true);
         return;
       }
-      // Une sidebar secondaire est téléportée dans le panneau. Elle se trouve
-      // bien sous `panel` dans le DOM final, même si React ne la considère pas
-      // comme un descendant pour ses événements. Tester cette appartenance
-      // avant la géométrie évite que le filtre de sa bande haute referme la nav
-      // lors d'un décalage de coordonnées (notamment dans l'app de bureau).
+      // A secondary sidebar is teleported into the panel. She is found
+      // well under `panel` in the final DOM, even if React does not consider it
+      // as a descendant for its events. Test this belonging
+      // before the geometry prevents the filter of its high band from closing the nav
+      // during a coordinate shift (especially in the desktop app).
       if (target && el.contains(target)) {
         setOpen(true);
         return;
       }
-      // La zone testée est celle du bloc OUVERT, pas le rectangle qu'il occupe à
-      // l'instant : pendant son entrée, un pointeur qui file vers l'endroit où
-      // il arrive serait « dehors » et le renverrait aussitôt. On la calcule sur
-      // la boîte de navigation du châssis (son `offsetParent`, largeur nulle) —
-      // c'est aussi elle qui fait que tout est mesuré depuis le bord du
-      // CONTENEUR, et non du moniteur, sur ultrawide.
+      // The area tested is that of the OPEN block, not the rectangle it occupies
+      // the moment: during its entry, a pointer which goes towards the place where
+      // he arrives would be “out” and would send him back immediately. It is calculated on
+      // the chassis navigation box (its `offsetParent`, zero width) —
+      // it is also she who ensures that everything is measured from the edge of the
+      // CONTAINER, not monitor, on ultrawide.
       const box = (el.offsetParent ?? el).getBoundingClientRect();
       const inside =
         e.clientX >= box.left &&
@@ -117,18 +116,18 @@ export function ZenNavOverlay({
       setOpen(inside);
     };
     document.addEventListener("pointermove", onMove);
-    // Quitter la FENÊTRE par le haut ou par la droite ne produit plus aucun
-    // `pointermove` : sans ceci le bloc resterait ouvert derrière un autre
-    // onglet, pour se découvrir déplié au retour.
+    // Exiting the WINDOW from the top or from the right no longer produces any
+    // `pointermove`: without this the block would remain open behind another
+    // tab, to reveal itself unfolded upon return.
     const onDocumentLeave = (e: PointerEvent) => {
-      // Les boutons de fenêtre macOS sont natifs : y entrer fait quitter le DOM
-      // sans `pointermove` exploitable. Ils occupent ce coin précis ; garder le
-      // panneau ouvert permet d'achever le geste au lieu de le refermer sous le
-      // pointeur. Dès qu'il revient dans la page, `onMove` reprend la décision.
-      // Même protection pendant la traversée de la bande haute du panneau : le
-      // grip de déplacement de la fenêtre peut engloutir le mouvement suivant,
-      // particulièrement si le pointeur va vite. Sans ce filet, la nav se
-      // referme avant même que le curseur atteigne son filtre ou ses contrôles.
+      // macOS window buttons are native: entering them exits the DOM
+      // without `pointermove` exploitable. They occupy this precise corner; keep it
+      // open panel allows you to complete the gesture instead of closing it under the
+      // pointer. As soon as he returns to the page, `onMove` takes over the decision.
+      // Same protection when crossing the upper band of the panel: the
+      // window moving grip can swallow up the next move,
+      // especially if the pointer is going fast. Without this net, the navigation
+      // close before the cursor even reaches its filter or controls.
       if (
         (e.clientX <= WINDOW_BUTTONS_WIDTH || e.clientX <= width) &&
         e.clientY <= 60
@@ -144,14 +143,14 @@ export function ZenNavOverlay({
     };
   }, [open, width, closePanel]);
 
-  // Le focus clavier, pour la même raison, s'écoute en NATIF sur le bloc :
-  // `focusin`/`focusout` remontent le DOM, donc ils voient la barre téléportée
-  // — ce que `onFocusCapture` de React ne ferait pas.
+  // The keyboard focus, for the same reason, is listened to NATIVE on the block:
+  // `focusin`/`focusout` go up the DOM, so they see the teleported bar
+  // — which React's `onFocusCapture` would not do.
   useEffect(() => {
     const el = panel.current;
     if (!el) return;
-    // Seul le focus VENU DU CLAVIER retient le bloc : cliquer une ligne lui
-    // donne aussi le focus, et c'est le moment précis où il doit se ranger.
+    // Only the focus COMING FROM THE KEYBOARD retains the block: click a line for it
+    // also gives the focus, and this is the precise moment where it must move away.
     const focusIn = (e: FocusEvent) => {
       const t = e.target as HTMLElement | null;
       if (t?.matches?.(":focus-visible")) setFocusWithin(true);
@@ -169,11 +168,10 @@ export function ZenNavOverlay({
 
   return (
     <>
-      {/* La lisière. Elle ne fait rien d'autre qu'écouter le pointeur : le bloc
-          rangé est hors champ, il n'y a donc plus rien à survoler pour le
-          rappeler. Sous le bloc en z-index, pour qu'il la recouvre une fois
-          ouvert au lieu de lui reprendre le pointeur. Ici les gestionnaires
-          React suffisent — elle est vide, aucun portail n'y atterrit. */}
+      {/* The edge. It does nothing other than listen to the pointer: the stored block
+ is out of scope, so there is nothing left to hover over to recall it. Under the z-index block, so that it covers it once
+ opened instead of taking the pointer back from it. Here the React
+ handlers are enough — it's empty, no portal lands there. */}
       <div
         aria-hidden
         className={`zen-nav-hotzone absolute inset-y-0 left-0 ${shown ? "z-30" : "z-[41]"}`}
@@ -186,8 +184,8 @@ export function ZenNavOverlay({
         className="absolute inset-y-0 left-0 z-40 flex h-full overflow-hidden bg-sidebar transition-shadow duration-200 data-[open=true]:shadow-[8px_0_32px_-8px_rgba(0,0,0,0.45)]"
         data-open={shown}
         style={{ width }}
-        // `initial` explicite et fermé : le mode zen ne s'active jamais au
-        // rendu serveur, le bloc part donc toujours de sa position rangée.
+        // `initial` explicit and closed: zen mode is never activated when
+        // rendered server, the block therefore always starts from its stored position.
         initial={{ x: -width }}
         animate={{ x: shown ? 0 : -width }}
         transition={reduce ? { duration: 0 } : OVERLAY_SLIDE}

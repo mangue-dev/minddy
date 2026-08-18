@@ -4,31 +4,31 @@ import {
 } from "@/lib/feedback/languages";
 
 /**
- * Faut-il traduire ce retour — la règle, en pur, hors base et hors LLM.
+ * Should this return be translated — the rule, pure, out of base and out of LLM.
  *
- * Elle est écrite ici plutôt que dans le prompt parce qu'un modèle à qui l'on
- * demande « traduis si nécessaire » traduit trop : il rend une version française
- * d'un texte déjà français dès qu'il y voit trois mots anglais. Le modèle
- * répond donc à une question factuelle — dans quelle langue est ce texte — et
- * c'est ce fichier qui décide quoi en faire.
+ * It is written here rather than in the prompt because a model to which we
+ * asks “translate if necessary” translates too much: it returns a French version
+ * of an already French text as soon as he sees three English words there. The model
+ * therefore answers a factual question — what language is this text in — and
+ * it is this file that decides what to do with it.
  */
 
-/** Les réglages de traduction d'un projet, tels que la revue les lit. */
+/** A project's translation settings, as the review reads them. */
 export interface FeedbackTranslationSettings {
-  /** `feedback_translate_enabled` — l'interrupteur du projet. */
+  /** `feedback_translate_enabled` — the project switch. */
   enabled: boolean;
-  /** La langue de l'équipe, celle vers laquelle on traduit. */
+  /** The language of the team, the one into which we translate. */
   teamLanguage: FeedbackLanguage;
-  /** Les langues qu'on lit sans aide (`feedback_no_translate_languages`). */
+  /** Languages ​​that we read without help (`feedback_no_translate_languages`). */
   skipLanguages: readonly string[];
 }
 
 /**
- * Traduire, oui ou non, sachant la langue détectée.
+ * Translate, yes or no, knowing the detected language.
  *
- * `sourceLanguage` null veut dire « la revue n'a pas su » : dans le doute on ne
- * traduit pas — une traduction fausse coûte plus cher qu'une traduction absente,
- * puisque l'équipe la lira sans savoir qu'elle est fausse.
+ * `sourceLanguage` null means “the journal did not know”: if in doubt, we do not
+ * translate — a false translation costs more than an absent translation,
+ * since the team will read it without knowing that it is false.
  */
 export function shouldTranslateFeedback(
   settings: FeedbackTranslationSettings,
@@ -37,8 +37,8 @@ export function shouldTranslateFeedback(
   if (!settings.enabled) return false;
   const source = normalizeLanguage(sourceLanguage);
   if (!source) return false;
-  // Traduire vers sa propre langue n'a pas de sens, et c'est le cas le plus
-  // fréquent : la plupart des retours arrivent déjà dans la langue de l'équipe.
+  // Translating into your own language makes no sense, and this is the case most
+  // frequent: most feedback already arrives in the team's language.
   if (source === settings.teamLanguage) return false;
   return !settings.skipLanguages.some(
     (skipped) => normalizeLanguage(skipped) === source
@@ -46,12 +46,12 @@ export function shouldTranslateFeedback(
 }
 
 /**
- * La liste blanche telle qu'elle est RÉELLEMENT appliquée.
+ * The whitelist as it is ACTUALLY applied.
  *
- * La langue de l'équipe en fait partie d'office — elle n'a pas à être cochée
- * pour ne pas être traduite, et l'afficher comme un choix laisserait croire
- * qu'on peut demander l'inverse. Le reste est normalisé et dédoublonné : deux
- * façons d'écrire `pt` ne font pas deux entrées.
+ * The team language is automatically part of it — it does not have to be checked
+ * not to be translated, and displaying it as a choice would lead you to believe
+ * that you can request the opposite. The rest is normalized and deduplicated: two
+ * ways of writing `pt` do not make two entries.
  */
 export function effectiveSkipLanguages(
   settings: FeedbackTranslationSettings

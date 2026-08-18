@@ -1,33 +1,33 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-// `typescript-api` est un alias vers `typescript@5` (cf. package.json et CLAUDE.md) :
-// depuis MIN-180 le dépôt vérifie avec `typescript@7`, qui ne livre plus l'API
-// du compilateur. Les tests structurels ont donc leur propre TypeScript, en JS.
+// `typescript-api` is an alias to `typescript@5` (see package.json and CLAUDE.md):
+// since MIN-180 the repository checks with `typescript@7`, which no longer ships the API
+// from the compiler. Structural tests therefore have their own TypeScript, in JS.
 import ts from "typescript-api";
 import { describe, expect, it } from "vitest";
 
 /**
- * MIN-276 — `search_text` est écrite par TOUS les chemins d'écriture du corps,
- * ou elle ment.
+ * MIN-276 — `search_text` is written by ALL write paths in the body,
+ * or it lies.
  *
- * La colonne dérivée est la seule chose que la recherche lit. Elle est écrite
- * par un rattrapage (`queueSearchText`), et non par la base : rien, dans le
- * schéma comme dans les types, n'oblige un chemin d'écriture à l'appeler. Un
- * `insert` ou un `update` qui porte `content` sans son rattrapage ne casse
- * rien de visible — il rend juste une page introuvable par son contenu, en
- * silence, et pour toujours. C'est exactement le genre de trou qu'un test de
- * comportement ne trouve pas : il faudrait avoir DEVINÉ le chemin manquant pour
- * écrire le cas qui le couvre.
+ * The derived column is the only thing the search reads. It is written
+ * by a catch-up (`queueSearchText`), and not by the base: nothing, in the
+ * schema as in the types, forces a writing path to call it. A
+ * `insert` or a `update` that carries `content` without its override does not break
+ * anything visible — it just makes a page unfindable by its content, in
+ * silent, and forever. This is exactly the kind of hole that a test of
+ * behavior does not find: you would have to have GUESSED the missing path for
+ * write the case which covers it.
  *
- * D'où un test STRUCTUREL, et sa règle, qui se relit sans retracer les appels :
- * **dans `lib/server/pages.ts`, toute fonction qui écrit `content` appelle
- * `queueSearchText`.** Un chemin ajouté plus tard sans son rattrapage fait
- * tomber ce test en nommant la fonction fautive.
+ * Hence a STRUCTURAL test, and its rule, which can be reread without tracing the calls :
+ * **in `lib/server/pages.ts`, any function that writes `content` calls
+ * `queueSearchText`.** A path added later without its catchup makes
+ * fail this test by naming the offending function.
  *
- * Ce qu'il ne prétend pas couvrir : que le rattrapage écrive le BON texte. Ça,
- * c'est `pages.test.ts`, qui fait tourner le vrai noyau sur une table en
- * mémoire.
+ * What it does not claim to cover: that the catch-up writes the RIGHT text. This,
+ * is `pages.test.ts`, which runs the real kernel on a table in
+ * memory.
  */
 
 const PAGES_PATH = join(process.cwd(), "lib/server/pages.ts");
@@ -41,7 +41,7 @@ function parsePages(): ts.SourceFile {
   );
 }
 
-/** Le nom de la fonction qui contient ce nœud — ce qu'on nomme dans l'échec. */
+/** The name of the function that contains this node — what we call it in failure. */
 function enclosingFunction(node: ts.Node): string {
   let cursor: ts.Node | undefined = node;
   while (cursor) {
@@ -59,7 +59,7 @@ function enclosingFunction(node: ts.Node): string {
   return "<module>";
 }
 
-/** La ligne écrit-elle un corps ? `{ content: … }` ou `row.content = …`. */
+/** Does the line write a body? `{ content: … }` or `row.content = …`. */
 function mentionsContent(node: ts.Node): boolean {
   let found = false;
   const visit = (n: ts.Node) => {
@@ -79,7 +79,7 @@ function mentionsContent(node: ts.Node): boolean {
   return found;
 }
 
-/** Le nœud de fonction qui contient ce nœud, pour n'inspecter que son corps. */
+/** The function node that contains this node, to only inspect its body. */
 function enclosingNode(node: ts.Node): ts.Node {
   let cursor: ts.Node | undefined = node;
   while (cursor) {
@@ -96,11 +96,11 @@ function enclosingNode(node: ts.Node): ts.Node {
 }
 
 /**
- * La TABLE visée par un `.insert(…)` / `.update(…)` — `service.from("pages")`.
+ * The TABLE targeted by a `.insert(…)` / `.update(…)` — `service.from("pages")`.
  *
- * Sans elle, l'analyse compterait l'insertion d'une ligne d'HISTORIQUE
- * (`page_versions`, qui porte elle aussi une colonne `content`) comme un chemin
- * d'écriture de page, et exigerait de l'archiveur qu'il s'archive lui-même.
+ * Without it, the analysis would count the insertion of a HISTORY line
+ * (`page_versions`, which also has a `content` column) as a page write path
+ *, and would require the archiver to archive itself.
  */
 function targetTable(node: ts.CallExpression): string | null {
   let cursor: ts.Expression = node.expression;
@@ -119,17 +119,15 @@ function targetTable(node: ts.CallExpression): string | null {
 }
 
 /**
- * Les fonctions qui ÉCRIVENT le corps, et celles qui rattrapent le texte.
+ * The functions which WRITE the body, and those which catch the text.
  *
- * Ce qu'on cherche : un appel `.insert(…)` / `.update(…)` qui porte `content`.
- * Il le porte de deux façons, et les deux comptent — dans le littéral qu'on lui
- * passe (`{ content: doc }`, le miroir du parent), ou dans une VARIABLE
- * construite plus haut (`patch`, `rows`), auquel cas c'est le `content:` ou le
- * `.content =` de la même fonction qui le dit.
+ * What we are looking for: a call `.insert(…)` / `.update(…)` which carries `content`.
+ * It carries it in two ways, and both count — in the literal that we pass to it (`{ content: doc }`, the mirror of the parent), or in a VARIABLE
+ * constructed above (`patch`, `rows`), in which case it is `content:` or
+ * `.content =` from the same function that says it.
  *
- * La distinction est ce qui garde le test juste : la corbeille et la
- * restauration écrivent aussi la table, mais jamais le corps — elles ne
- * doivent donc pas être exigées de rattraper quoi que ce soit.
+ * The distinction is what keeps the test fair: the trash and
+ * restore also write the table, but never the body — so they don't have to be required to catch anything either.
  */
 function scan() {
   const src = parsePages();
@@ -167,8 +165,8 @@ describe("les chemins d'écriture du corps d'une page", () => {
   it("écrivent tous leur texte de recherche", () => {
     const { writes, syncs } = scan();
 
-    // Le test ne vaut que s'il VOIT les chemins : une refonte qui les rendrait
-    // invisibles à l'analyse le laisserait passer en silence.
+    // The test is only valid if it SEES the paths: a redesign which would make them
+    // invisible to analysis would let it pass silently.
     expect(writes.size).toBeGreaterThanOrEqual(4);
 
     const missing = [...writes].filter((fn) => !syncs.has(fn));
@@ -182,8 +180,8 @@ describe("les chemins d'écriture du corps d'une page", () => {
 
   it("couvrent les quatre gestes connus", () => {
     const { writes } = scan();
-    // Un garde-fou du garde-fou : si l'un de ces noms disparaît, c'est que le
-    // module a bougé, et la règle ci-dessus doit être relue plutôt que crue.
+    // A guardrail of the guardrail: if one of these names disappears, it is because the
+    // module has moved, and the rule above should be reread rather than believed.
     for (const fn of ["createPage", "duplicatePage", "updatePage", "syncParentBody"]) {
       expect(writes.has(fn), `${fn} n'est plus vu comme un chemin d'écriture`).toBe(
         true

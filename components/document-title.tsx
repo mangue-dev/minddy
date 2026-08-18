@@ -3,18 +3,18 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Pose `document.title` tant qu'il est monté, puis rend la main (MIN-95).
+ * Places `document.title` while it is mounted, then returns control (MIN-95).
  *
- * Un ticket n'a pas d'URL à lui : il s'ouvre en panneau, sur `?issue=<id>`.
- * Aucun `generateMetadata` ne peut donc le nommer — les paramètres de recherche
- * n'atteignent pas les layouts, et les pages de tableau sont des composants
- * clients. Le titre d'onglet reste pourtant la seule façon de retrouver le bon
- * ticket parmi cinq onglets ouverts, d'où ce détour par le DOM.
+ * A ticket does not have its own URL: it opens in a panel, on `?issue=<id>`.
+ * No `generateMetadata` can therefore name it — the search parameters
+ * do not reach layouts, and table pages are components
+ * customers. However, the tab title remains the only way to find the correct one
+ * ticket among five open tabs, hence this detour through the DOM.
  *
- * Au démontage, le titre d'origine revient — fermer le panneau n'est pas une
- * navigation, personne d'autre ne le reposera. Sauf si quelqu'un l'a changé
- * entre-temps : c'est alors que Next a rendu le titre d'une NOUVELLE page,
- * qu'on se garderait bien d'écraser.
+ * When disassembled, the original title returns — closing the panel is not a
+ * navigation, no one else will put it down. Unless someone changed it
+ * in the meantime: that's when Next made the title of a NEW page,
+ * which we would be careful not to crush.
  */
 export function DocumentTitle({ title }: { title: string }) {
   const original = useRef<string | null>(null);
@@ -26,8 +26,8 @@ export function DocumentTitle({ title }: { title: string }) {
     applied.current = title;
   }, [title]);
 
-  // Dépendances vides : ce nettoyage ne doit courir qu'au démontage, pas à
-  // chaque changement de titre (il restaurerait le titre du ticket précédent).
+  // Empty outbuildings: this cleaning should only take place when dismantling, not when
+  // each title change (it would restore the title of the previous ticket).
   useEffect(
     () => () => {
       if (original.current !== null && document.title === applied.current) {

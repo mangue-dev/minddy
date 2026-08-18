@@ -6,16 +6,16 @@ import { fetchRoutineRunsApi, fetchRoutinesApi, type Routine } from "./routines-
 import { isAgentRunWorking } from "./agent-api";
 
 /**
- * Les ROUTINES (MIN-185) côté client.
+ * ROUTINES (MIN-185) on the client side.
  *
- * La liste ne poll PAS : une routine ne bouge qu'à sa création, à son édition ou
- * à son échéance, et les trois passent par une invalidation explicite (mutation
- * locale, ou pont realtime pour un passage qui démarre). Un timer ne ferait que
- * payer des requêtes pour une liste immobile 23 h sur 24.
+ * The list does NOT poll: a routine only moves when it is created, when it is edited or
+ * when it expires, and all three go through an explicit invalidation (mutation
+ * local, or realtime bridge for one passage that starts). A timer would only
+ * pay for requests for a list that is immobile 23 hours a day.
  *
- * Les EXÉCUTIONS, elles, suivent la règle des runs d'agent : ~3 s tant qu'un
- * passage travaille, un filet à 12 s tant qu'il y a des runs, rien du tout
- * ensuite.
+ * EXECUTIONS follow the rule for agent runs: ~3 s as long as a
+ * passage works, a net of 12 s as long as there are runs, nothing at all all
+ * then.
  */
 
 export function routinesQueryKey() {
@@ -27,17 +27,16 @@ export function routineRunsQueryKey(routineId: string) {
 }
 
 /**
- * Écrit une routine DANS LE CACHE, sans requête — le socle de la bascule
- * OPTIMISTE de l'interrupteur (MIN-185).
+ * Writes a routine INTO CACHE, without query — the base of the toggle
+ * OPTIMISTIC switch (MIN-185).
  *
- * La colonne et le volet de détail lisent la même entrée : un seul écrit met
- * les deux à jour dans le même rendu, sans attendre le serveur. Rend
- * l'instantané d'AVANT, à réinstaller tel quel si l'écriture est refusée —
- * remettre « à la main » le champ qu'on croit avoir changé raterait tout ce que
- * le serveur change avec lui (ici `next_run_at`).
+ * The column and the detail pane read the same entry: a single write updates
+ * both in the same rendering, without waiting for the server. Returns
+ * the BEFORE snapshot, to be reinstalled as is if the write is refused —
+ * putting back "by hand" the field that we believe to have changed would miss everything that
+ * the server changes with it (here `next_run_at`).
  *
- * `undefined` = la liste n'est pas encore en cache : il n'y a alors rien à
- * annuler, et le prochain chargement dira la vérité.
+ * `undefined` = the list is not yet cached: then there is nothing to undo, and the next load will tell the truth.
  */
 export function patchRoutineInCache(
   queryClient: QueryClient,

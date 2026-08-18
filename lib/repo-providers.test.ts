@@ -12,9 +12,9 @@ describe("parseForgeLogin", () => {
       name: "clementguerin",
       isBot: false,
     });
-    // Un login qui CONTIENT « bot » n'en est pas un.
+    // A login that CONTAINS “bot” is not a login.
     expect(parseForgeLogin("robotnik").isBot).toBe(false);
-    // Le suffixe ne compte qu'à la fin.
+    // The suffix only counts at the end.
     expect(parseForgeLogin("[bot]vercel").isBot).toBe(false);
   });
 
@@ -31,7 +31,7 @@ describe("prIdentifier", () => {
   it("suit la notation de sa forge", () => {
     expect(prIdentifier("github", 30)).toBe("#30");
     expect(prIdentifier("gitlab", 30)).toBe("!30");
-    // Provider inconnu ou absent : GitHub par défaut, comme `getRepoProvider`.
+    // Unknown or absent Provider: GitHub by default, like `getRepoProvider`.
     expect(prIdentifier(null, 30)).toBe("#30");
   });
 });

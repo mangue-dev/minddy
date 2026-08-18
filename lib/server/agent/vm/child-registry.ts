@@ -1,60 +1,60 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 /**
- * CE QUI SURVIT AU HARNESS, ET COMMENT ON LE RETROUVE (MIN-293).
+ * WHAT SURVIVES THE HARNESS, AND HOW WE FIND IT (MIN-293).
  *
- * ## Le fait, mesuré, qui rend ce fichier nécessaire
+ * ## The measured fact that makes this file necessary
  *
- * Le serveur opencode est lancé par `spawn` ordinaire
- * ([opencode-host.ts](opencode-host.ts)), et le commentaire qui l'accompagne dit
- * « l'enfant meurt avec nous ». **C'est vrai du chemin heureux et faux du reste**
- * : sur POSIX, un enfant n'est pas tué quand son parent meurt, il est réparenté.
- * Ce qui le tue aujourd'hui, c'est le `finally` du superviseur — donc rien du
- * tout quand le harness est tué net (⌘Q, plantage du main process, `SIGKILL`).
+ * The opencode server is started by `spawn` ordinary
+ * ([opencode-host.ts](opencode-host.ts)), and the accompanying comment says
+ * "the child dies with us". **It's true of the happy path and false of the rest**
+ *: on POSIX, a child is not killed when its parent dies, it is repaired.
+ * What kills it today is the `finally` of the supervisor — so nothing of the
+ * everything when the harness is killed outright (⌘Q, crash of the main process, `SIGKILL`).
  *
- * Ce qui reste alors : 143 Mo en mémoire, le port du tour tenu, et **le tour
- * suivant qui échoue sur un `listen` refusé** — à un endroit qui ne ressemble en
- * rien à sa cause. Les jobs de fond du modèle sont pires encore : ils partent en
- * `setsid`, **explicitement pour survivre au shell**, et le `npm run dev` qu'ils
- * tiennent garde le port 3000 sans que rien nulle part ne sache où le retrouver.
+ * What then remains: 143 MB in memory, the port of the held turn, and **the following turn
+ * which fails on a refused `listen`** — in a place that looks nothing like it in
+ * cause. The background jobs of the model are even worse: they go to
+ * `setsid`, **explicitly to survive the shell**, and the `npm run dev` they
+ * guard port 3000 with nothing anywhere knowing where to find it.
  *
- * Dans une microVM, rien de tout ça ne compte : la machine meurt à la fin du
- * tour. Sur un Mac, c'est de l'ordure qui s'accumule dans la session de
- * quelqu'un.
+ * In a microVM, none of this matters: the machine dies at the end of the
+ * turn. On a Mac, it's junk that accumulates in someone's session.
  *
- * ## La forme : un fichier, pas un protocole
  *
- * Le harness inscrit ses enfants à longue vie dans `<harnessDir>/children.json`,
- * **avant** qu'ils servent à quoi que ce soit, et les retire quand il les a
- * arrêtés lui-même. Le lanceur, qui a écrit `job.json` dans ce même dossier et
- * sait donc où regarder, relit le fichier quand un tour se termine — et au
- * démarrage de l'app, pour les orphelins d'un plantage précédent.
+ * ## The form: a file, not a protocol
  *
- * **Un fichier plutôt qu'un message IPC**, parce que le cas qu'on traite est
- * précisément celui où plus personne ne parle : un process tué net n'envoie pas
- * de message d'adieu. Et **écrit en synchrone**, parce qu'une écriture asynchrone
- * peut n'avoir pas eu lieu à l'instant où on tue.
+ * The harness registers its long-lived children in `<harnessDir>/children.json`,
+ * **before** they are used for anything, and removes them when he has
+ * stopped them himself. The launcher, which wrote `job.json` in this same folder and
+ * therefore knows where to look, rereads the file when a round ends — and at
+ * starts the app, for those orphaned by a previous crash.
  *
- * ## Rien ici ne lève
+ * **A file rather than a message IPC**, because the case we are dealing with is
+ * precisely the one where no one speaks anymore: a process killed outright does not send
+ * a farewell message. And **writes synchronously**, because an asynchronous write
+ * may not have happened at the time of killing.
  *
- * Un disque plein ou un dossier en lecture seule ne doivent pas faire tomber un
- * tour : ce registre est ce qu'on lit quand ça a mal fini, pas une raison de mal
- * finir. Le pire cas d'un échec ici est celui d'avant ce fichier.
+ * ## Nothing here throws
+ *
+ * A full disk or a read-only folder should not drop a
+ * turn: this register is what we read when it ended badly, not a reason to end badly
+ *. The worst case of a failure here is before this file.
  */
 
-/** Le nom du fichier, sous `harnessDir` — à côté du job et du bundle. */
+/** The name of the file, under `harnessDir` — next to the job and the bundle. */
 export const CHILD_REGISTRY_FILE = "children.json";
 
-/** Ce qu'un enfant à longue vie déclare de lui-même. */
+/** What a long-lived child declares about himself. */
 export interface HarnessChild {
   readonly pid: number;
   /**
-   * `opencode` : le serveur du tour, qui tient un port et une base SQLite.
-   * `background` : un job du modèle, chef de sa propre session (`setsid`), donc
-   * un GROUPE de processus — c'est `-pid` qu'il faut signaler, pas `pid`.
-   */
+ * `opencode`: the server of the tower, which holds a port and a SQLite base.
+ * `background`: a job of the model, head of its own session (`setsid`), therefore
+ * a GROUP of processes — it is `-pid` that needs to be reported, not `pid`.
+ */
   readonly kind: "opencode" | "background";
-  /** De quoi lire le registre sans deviner : `opencode serve --port 51234`. */
+  /** Enough to read the register without guessing: `opencode serve --port 51234`. */
   readonly label?: string;
 }
 
@@ -63,14 +63,14 @@ export function childRegistryPath(harnessDir: string): string {
 }
 
 /**
- * Le registre relu de ce qu'on trouve sur le disque.
+ * The replayed register of what is found on the disk.
  *
- * Tout ce qui n'a pas la forme attendue disparaît en silence — un fichier
- * tronqué par un arrêt brutal est le cas ORDINAIRE ici, puisque l'arrêt brutal
- * est la raison d'être du fichier. Et les pid absurdes sont écartés avant même
- * d'arriver au tueur : `0` signale tout le groupe de l'appelant, `1` est
- * `launchd`, et un négatif signale un groupe entier. Aucun des trois ne peut
- * venir d'un `spawn` légitime, et chacun serait catastrophique.
+ * Anything that does not have the expected form disappears silently — a file
+ * truncated by a hard shutdown is the ORDINARY case here, since hard stopping
+ * is the reason for the file. And the nonsense pids are ruled out before
+ * even gets to the killer: `0` flags the caller's entire group, `1` is
+ * `launchd`, and a negative flags an entire group. None of the three can
+ * come from a legitimate `spawn`, and any one would be catastrophic.
  */
 export function parseChildRegistry(raw: unknown): HarnessChild[] {
   if (typeof raw !== "object" || raw === null) return [];
@@ -94,7 +94,7 @@ export function serializeChildRegistry(children: readonly HarnessChild[]): strin
   return `${JSON.stringify({ children }, null, 2)}\n`;
 }
 
-/** Les enfants inscrits pour ce tour. Vide quand le fichier manque ou ment. */
+/** Children registered for this tour. Empty when the file is missing or lying. */
 export function readHarnessChildren(harnessDir: string): HarnessChild[] {
   try {
     return parseChildRegistry(JSON.parse(readFileSync(childRegistryPath(harnessDir), "utf8")));
@@ -104,33 +104,33 @@ export function readHarnessChildren(harnessDir: string): HarnessChild[] {
 }
 
 /**
- * Inscrit un enfant. **Appelé AVANT que l'enfant serve à quoi que ce soit** : un
- * process tué entre son `spawn` et son inscription est exactement l'orphelin
- * qu'on cherche à ne plus produire.
+ * Registers a child. **Called BEFORE the child is used for anything**: a
+ * process killed between its `spawn` and its registration is exactly the orphan
+ * that we are trying to no longer produce.
  */
 export function noteHarnessChild(harnessDir: string, child: HarnessChild): void {
   write(harnessDir, [...readHarnessChildren(harnessDir).filter((c) => c.pid !== child.pid), child]);
 }
 
-/** Retire un enfant qu'on vient d'arrêter soi-même. */
+/** Remove a child who has just been arrested yourself. */
 export function forgetHarnessChild(harnessDir: string, pid: number): void {
   write(harnessDir, readHarnessChildren(harnessDir).filter((c) => c.pid !== pid));
 }
 
 /**
- * LES PID QU'ON A LE DROIT DE TUER, et dans quel ordre.
+ * THE PIDS WE HAVE THE RIGHT TO KILL, and in what order.
  *
- * Pur, et testé, parce que c'est la seule partie où une faute a des conséquences
- * qu'on ne rattrape pas : un `process.kill` sur le mauvais numéro tue quelque
- * chose de la session de quelqu'un.
+ * Pure, and tested, because this is the only part where a mistake has consequences
+ * that we cannot make up for: a `process.kill` on the wrong number kills something
+ * something from someone's session.
  *
- * - **jamais soi-même**, ni le parent : un registre corrompu qui porterait le pid
- *   du main process ferait quitter l'app en croyant faire le ménage ;
- * - **les jobs de fond d'abord** : ils sont plus nombreux et plus volatils, et le
- *   serveur opencode est ce qui bloque le tour suivant — on veut sa mort en
- *   dernier, quand le reste a déjà lâché ce qu'il tenait ;
- * - **un `background` se signale en GROUPE** (`-pid`), parce qu'il est parti en
- *   `setsid` : tuer le seul chef laisserait le `npm run dev` qu'il a lancé.
+ * - **never yourself**, nor the parent: a corrupted registry carrying the pid
+ * of the main process would cause the app to quit thinking it was cleaning;
+ * - **background jobs first**: there are more and more of them volatile, and the
+ * opencode server is what blocks the next round — we want him to die in
+ * last, when the rest has already let go of what he was holding;
+ * - **a `background` is reported in a GROUP** (`-pid`), because he has left en
+ * `setsid`: Killing the lone leader would leave the `npm run dev` he cast.
  */
 export function killTargets(
   children: readonly HarnessChild[],

@@ -1,7 +1,7 @@
-// Récurrence d'un ticket (MIN-136) : les cadences et le calcul de la prochaine
-// échéance. Partagé client/serveur — le picker s'en sert pour annoncer la
-// prochaine date, lib/server/recurrence.ts pour la poser sur l'occurrence
-// suivante. Aucune dépendance : ni React, ni next-intl, ni supabase.
+// Recurrence of a ticket (MIN-136): cadences and calculation of the next
+// due date. Shared client/server — the picker uses it to announce the
+// next date, lib/server/recurrence.ts to place it on the occurrence
+// following. No dependency: neither React, nor next-intl, nor supabase.
 
 import { isDueDateOverdue, parseDueDate } from "./due-date";
 
@@ -12,15 +12,15 @@ export type RecurrenceCadence = (typeof RECURRENCE_CADENCES)[number];
 export const isRecurrenceCadence = (v: unknown): v is RecurrenceCadence =>
   typeof v === "string" && (RECURRENCE_CADENCES as readonly string[]).includes(v);
 
-/** Cadence ou null — ce que vaut le champ dans un payload d'API. */
+/** Cadence or null — what the field is worth in an API payload. */
 export const isRecurrenceOrNull = (v: unknown): v is RecurrenceCadence | null =>
   v === null || isRecurrenceCadence(v);
 
 /**
- * L'identifiant de la SÉRIE d'un ticket : son `recurrence_series_id`, ou son
- * propre id. Le ticket d'origine ne porte pas de série — sa série, c'est lui ;
- * chaque occurrence qu'il engendre reçoit son id. Une convention plutôt qu'une
- * écriture de plus à la création, et une seule façon de grouper une série.
+ * The identifier of the SERIES of a ticket: its `recurrence_series_id`, or its
+ * own id. The original ticket does not have a series - it is his series;
+ * each occurrence it generates receives its id. A convention rather than
+ * more writing at creation, and only one way to group a series.
  */
 export function seriesIdOf(issue: {
   id: string;
@@ -31,29 +31,29 @@ export function seriesIdOf(issue: {
 
 const DAY_MS = 86_400_000;
 
-/** Garde-fou de la boucle de rattrapage : elle part d'une estimation, donc
-    deux ou trois tours suffisent toujours. Au-delà, une date aberrante. */
+/** Guardrail of the catch-up loop: it starts from an estimate, therefore
+    two or three turns are always enough. Beyond that, an aberrant date. */
 const MAX_STEPS = 64;
 
 /**
- * L'échéance de l'occurrence suivante.
+ * The deadline for the next occurrence.
  *
- * `base` est l'échéance de l'occurrence qui vient d'être terminée : c'est elle
- * qui donne le rythme, pas la date de clôture — une revue du lundi terminée le
- * mercredi retombe bien sur le lundi suivant. Et un ticket resté ouvert trois
- * mois ne produit pas une occurrence déjà en retard : on avance d'autant de
- * cadences qu'il faut pour repasser devant `now`.
+ * `base` is the deadline of the occurrence which has just been completed: it is
+ * which sets the pace, not the closing date — a Monday review finished on
+ * Wednesday falls on the following Monday. And a ticket remained open three
+ * month does not produce an occurrence that is already late: we move forward by as much
+ * cadences it takes to get back in front of `now`.
  *
- * Le quantième est CLAMPÉ : le 31 janvier + 1 mois donne le 28 février (le 29
- * les années bissextiles), pas le 3 mars comme le ferait `setUTCMonth` seul. Et
- * chaque pas se recalcule depuis `base`, jamais depuis le résultat clampé —
- * une échéance de fin de mois le reste au mois suivant.
+ * The date is CLAMPED: January 31 + 1 month gives February 28 (the 29
+ * leap years), not March 3 as `setUTCMonth` alone would do. And
+ * each step is recalculated from `base`, never from the clamped result —
+ * an end-of-month deadline, the remainder for the following month.
  *
- * Le calcul travaille sur les composantes UTC, faute de connaître le fuseau de
- * qui que ce soit : minddy ne le stocke nulle part. Deux écarts en découlent,
- * assumés — l'heure murale glisse d'une heure aux changements d'heure, et le
- * clamp de fin de mois peut tomber un jour trop tard pour une échéance sans
- * heure posée à l'est de Greenwich (minuit à Paris, c'est la veille 23 h UTC).
+ * The calculation works on the UTC components, due to lack of knowing the time zone.
+ * whoever it is: minddy doesn't store it anywhere. Two discrepancies arise from this,
+ * assumed — the wall time slides by one hour when the time changes, and the
+ * end of month clamp may fall a day too late for a deadline without
+ * time east of Greenwich (midnight in Paris, it is 11 p.m. UTC the day before).
  */
 export function nextDueDate(
   base: Date,
@@ -64,16 +64,16 @@ export function nextDueDate(
 }
 
 /**
- * L'échéance de DÉPART d'une récurrence : la date choisie si elle est encore
- * devant, sinon la première occurrence à venir.
+ * The DEPARTURE deadline for a recurrence: the chosen date if it is still
+ * ahead, otherwise the first occurrence to come.
  *
- * Ce que l'utilisateur désigne dans le calendrier, c'est le rythme — « le
- * lundi », « le 3 du mois » — pas une date figée. Choisir lundi dernier en
- * hebdomadaire veut donc dire « tous les lundis », et la prochaine échéance est
- * lundi prochain : un ticket récurrent ne naît pas en retard.
+ * What the user designates in the calendar is the rhythm — “the
+ * Monday”, “the 3rd of the month” — not a fixed date. Choose last Monday in
+ * weekly therefore means “every Monday”, and the next deadline is
+ * next Monday: a recurring ticket is not born late.
  *
- * Contrairement à {@link nextDueDate}, qui avance TOUJOURS d'au moins une
- * cadence (l'occurrence terminée doit céder la place), celle-ci peut ne pas
+ * Unlike {@link nextDueDate}, which ALWAYS advances by at least one
+ * cadence (the completed occurrence must give way), this may not
  * bouger du tout.
  */
 export function startDueDate(
@@ -85,10 +85,10 @@ export function startDueDate(
 }
 
 /**
- * Avance `base` d'au moins `minSteps` cadences, puis autant qu'il faut pour ne
- * plus être en retard — « en retard » au sens du reste de l'app
- * ({@link isDueDateOverdue}) : une échéance sans heure vaut jusqu'au bout de sa
- * journée, une échéance datée jusqu'à son heure.
+ * Advance `base` by at least `minSteps` cadences, then as much as necessary to
+ * no longer be late — “late” in the sense of the rest of the app
+ * ({@link isDueDateOverdue}): a deadline without a time is valid until the end of its
+ * day, a deadline dated up to its time.
  */
 function advanceFrom(
   base: Date,
@@ -96,7 +96,7 @@ function advanceFrom(
   now: Date,
   minSteps: number,
 ): Date {
-  // Partir d'une estimation plutôt que de `minSteps` : sans elle, une échéance
+  // Start from an estimate rather than `minSteps`: without it, a deadline
   // vieille de dix ans en quotidien ferait quelques milliers de tours.
   let steps = Math.max(minSteps, estimateSteps(base, cadence, now));
   let next = addCadence(base, cadence, steps);
@@ -108,13 +108,13 @@ function advanceFrom(
 }
 
 /**
- * Les occurrences d'une série qui tombent entre `from` et `to`, `base`
- * comprise. Sert au calendrier du picker, qui montre en bleu les prochaines
- * échéances du ticket : elles sortent de la MÊME arithmétique que celle qui les
- * posera vraiment (clamp de fin de mois compris), donc ce qui est surligné est
+ * Occurrences in a series that fall between `from` and `to`, `base`
+ * understood. Used for the picker's calendar, which shows in blue the next
+ * ticket deadlines: they come from the SAME arithmetic as that which
+ * will really pose (end of month clamp included), so what is highlighted is
  * exactement ce qui arrivera.
  *
- * Rien avant `base` : une récurrence ne remonte pas le temps.
+ * Nothing before `base`: a recurrence does not go back in time.
  */
 export function occurrencesBetween(
   base: Date,
@@ -124,8 +124,8 @@ export function occurrencesBetween(
   max = 64,
 ): Date[] {
   const out: Date[] = [];
-  // Démarrer près de `from` plutôt qu'à `base` : une série vieille de dix ans
-  // n'a pas à être déroulée jour par jour pour afficher un mois.
+  // Starting near `from` rather than `base`: a ten-year-old series
+  // does not have to be scrolled day by day to display a month.
   const first = Math.max(0, estimateSteps(base, cadence, from));
   for (let i = 0; i < max * 2 && out.length < max; i++) {
     const d = addCadence(base, cadence, first + i);
@@ -135,8 +135,8 @@ export function occurrencesBetween(
   return out;
 }
 
-/** Combien de cadences séparent `base` de `now`, arrondi PAR DÉFAUT : la boucle
-    d'appel n'avance que vers l'avant, elle ne doit jamais partir trop loin. */
+/** How many cadences separate `base` from `now`, rounded DEFAULT: the loop
+    call only advances forward, it must never go too far. */
 function estimateSteps(base: Date, cadence: RecurrenceCadence, now: Date): number {
   const diff = now.getTime() - base.getTime();
   if (diff <= 0) return 0;
@@ -155,7 +155,7 @@ function estimateSteps(base: Date, cadence: RecurrenceCadence, now: Date): numbe
   }
 }
 
-/** `base` avancée de `steps` cadences (voir le clamp du quantième ci-dessus). */
+/** `base` advanced by `steps` cadences (see the date clamp above). */
 function addCadence(base: Date, cadence: RecurrenceCadence, steps: number): Date {
   const next = new Date(base.getTime());
   switch (cadence) {
@@ -172,12 +172,12 @@ function addCadence(base: Date, cadence: RecurrenceCadence, steps: number): Date
   }
 }
 
-/** Décale de `months` mois en gardant le quantième, clampé à la fin du mois. */
+/** Shift by `months` month while keeping the date, clamped at the end of the month. */
 function shiftMonths(base: Date, months: number): Date {
   const year = base.getUTCFullYear();
   const month = base.getUTCMonth() + months;
   const day = base.getUTCDate();
-  // Jour 0 du mois suivant = dernier jour du mois visé.
+  // Day 0 of the following month = last day of the target month.
   const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
   const next = new Date(base.getTime());
   next.setUTCFullYear(year, month, Math.min(day, lastDay));
@@ -185,10 +185,10 @@ function shiftMonths(base: Date, months: number): Date {
 }
 
 /**
- * La prochaine échéance à partir d'une valeur STOCKÉE (ISO, ou l'ancienne forme
- * « YYYY-MM-DD »), rendue en ISO. Null quand il n'y a pas de date de départ
- * exploitable — une récurrence sans échéance n'existe pas (l'API la refuse),
- * mais une ligne écrite avant cette règle pourrait encore traîner.
+ * The next due date from a STORED value (ISO, or the old form
+ * “YYYY-MM-DD”), rendered in ISO. Null when there is no departure date
+ * exploitable — a recurrence without deadline does not exist (the API refuses it),
+ * but a line written before this rule could still be lying around.
  */
 export function nextDueDateISO(
   storedDueDate: string | null | undefined,
@@ -201,10 +201,10 @@ export function nextDueDateISO(
 }
 
 /**
- * L'échéance de départ d'une récurrence, à partir d'une valeur STOCKÉE — voir
- * {@link startDueDate}. Rendue TELLE QUELLE si elle n'est pas déjà passée, pour
- * qu'une écriture qui ne change rien n'en ait pas l'air (l'événement d'activité
- * et le format d'origine sont préservés).
+ * The starting deadline for a recurrence, from a STORED value — see
+ * {@link startDueDate}. Rendered AS IS if not already passed, for
+ * that a writing which changes nothing does not seem to do so (the activity event
+ * and the original format are preserved).
  */
 export function startDueDateISO(
   storedDueDate: string | null | undefined,

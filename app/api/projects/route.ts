@@ -15,8 +15,8 @@ import { DEFAULT_CATEGORIES } from "@/lib/default-categories";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
 import { normalizeLanguage } from "@/lib/feedback/languages";
 
-// Bornes de longueur (MIN-118) — mêmes plafonds que updateProjectSettings :
-// au-delà on tronque. La couleur est un jeton court, jamais un texte.
+// Length bounds (MIN-118) — same caps as updateProjectSettings:
+// beyond that we truncate. Color is a short token, never text.
 const MAX_NAME_LENGTH = 200;
 const MAX_COLOR_LENGTH = 32;
 
@@ -70,24 +70,24 @@ export async function POST(request: NextRequest) {
     typeof input.color === "string" ? input.color.slice(0, MAX_COLOR_LENGTH) : null;
   const smartAssignEnabled = input.smart_assign_enabled === true;
   const autoAssignEnabled = input.auto_assign_enabled === true;
-  // La langue de l'interface au moment de la création devient celle de
-  // l'équipe, et c'est vers elle que Numo traduira les retours étrangers. Elle
-  // ne se lit QUE d'ici : l'app la tient dans un cookie, jamais sur le compte,
-  // donc une passe de revue qui tourne trois jours plus tard n'a aucun moyen de
-  // la retrouver. Absente (appel d'agent, script) → null, et la revue retombe
-  // sur la locale par défaut de l'app.
+  // The language of the interface at the time of creation becomes that of
+  // the team, and it is to this that Numo will translate the foreign feedback. She
+  // can ONLY be read from here: the app keeps it in a cookie, never on the account,
+  // so a review pass that runs three days later has no way of
+  // find her. Absent (agent call, script) → null, and the review drops
+  // on the default locale of the app.
   const teamLanguage = normalizeLanguage(input.locale);
-  // Id fourni par le client (wizard de création, MIN-62) : la graine de l'orbe
-  // générée est l'id du projet, et le wizard la montre AVANT de créer. Sans ça
-  // l'aperçu afficherait un dégradé, le projet créé un autre. Un uuid v4 tiré au
-  // hasard n'entre en collision avec rien ; tout le reste est refusé.
+  // Customer-provided ID (creation wizard, MIN-62): the orb seed
+  // generated is the project id, and the wizard shows it BEFORE creating. Without that
+  // the preview would show one gradient, the project created another. A uuid v4 taken from
+  // chance does not collide with anything; everything else is refused.
   const id =
     typeof input.id === "string" && UUID_RE.test(input.id) ? input.id : null;
 
-  // La graine de l'orbe suit la même règle que l'id, et pour la même raison :
-  // le wizard peut avoir relancé le tirage avant que le projet existe, et
-  // l'aperçu qu'il a montré doit être celui qu'on crée. Absente, la colonne
-  // reste nulle et c'est l'id qui sert.
+  // The orb seed follows the same rule as the id, and for the same reason:
+  // the wizard may have restarted the draw before the project exists, and
+  // the preview he showed must be the one we create. Absent, the column
+  // remains zero and it is the id that is used.
   const orbSeed =
     typeof input.orb_seed === "string" && UUID_RE.test(input.orb_seed)
       ? input.orb_seed
@@ -140,9 +140,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
 
-  // Les catégories par défaut, dans la langue de celui qui crée le projet.
-  // C'était un trigger Postgres, qui écrivait six noms français à tout le
-  // monde — la base ne connaît pas la langue de l'appelant, l'app si.
+  // The default categories, in the language of the person creating the project.
+  // It was a Postgres trigger, which wrote six French names to all
+  // world — the base does not know the language of the caller, the app does.
   const tCategories = await getTranslations("Categories.defaults");
   await seedDefaultCategories({
     projectId: data.id as string,

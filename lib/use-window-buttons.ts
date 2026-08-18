@@ -6,25 +6,25 @@ import { getDesktopBridge } from "./desktop/bridge";
 import { trace } from "./desktop/trace";
 
 /**
- * Les boutons macOS : qui les retire, ce qu'ils font, et ce que la barre
- * latérale doit en montrer (MIN-291).
+ * macOS buttons: who removes them, what they do, and what the bar
+ * side must show (MIN-291).
  *
- * **Ce qu'ils font se demande au main process, ça ne se devine pas.** Deux
- * choses décident : la page, qui sait quand ils gênent — barre repliée, boîte de
- * dialogue ouverte ; et le PLEIN ÉCRAN, où macOS les emmène en haut de l'écran,
- * sous sa propre garde, sans prévenir personne. Une mise en page branchée sur la
- * demande plutôt que sur le résultat laisse un trou de 78 px dès qu'on passe en
- * plein écran. Vu à l'usage.
+ * **What they do is asked in the main process, it cannot be guessed.** Two
+ * things decide: the page, who knows when they get in the way — folded bar, box of
+ * open dialogue; and FULL SCREEN, where macOS takes them to the top of the screen,
+ * under his own custody, without warning anyone. A layout connected to the
+ * request rather than on the result leaves a hole of 78 px as soon as we switch to
+ * full screen. Seen in use.
  */
 
 /**
- * Les raisons de les retirer, en cours. Un `Set` et non un booléen : elles se
- * cumulent — une boîte de dialogue peut s'ouvrir alors que la barre est déjà au
- * rail — et la dernière qui se lève ne doit pas les rendre pour les autres.
+ * The reasons for removing them, in progress. A `Set` and not a Boolean: they are
+ * cumulate — a dialog box may open while the bar is already at
+ * rail — and the last one to rise must not return them for the others.
  *
- * L'état vit hors de React, au niveau du module : c'est une propriété de la
- * FENÊTRE, pas d'un arbre de composants, et les demandeurs sont dispersés (la
- * barre latérale, le guetteur de modales) sans ancêtre commun qui ne soit pas le
+ * State lives outside of React, at the module level: it is a property of the
+ * WINDOW, no component tree, and the requesters are scattered (the
+ * sidebar, the modal watcher) without a common ancestor that is not the
  * layout entier.
  */
 const holds = new Set<string>();
@@ -32,40 +32,40 @@ const holds = new Set<string>();
 let flush = 0;
 
 /**
- * On annonce l'état des raisons **une fois la pile retombée**, pas à chaque
- * mouvement — et c'est ce qui empêche les boutons de CLIGNOTER.
+ * We announce the state of the reasons **once the pile is down**, not every time
+ * movement — and this is what stops the buttons from FLASHING.
  *
- * Une raison peut être relâchée puis reprise dans le même tour de boucle : React
- * démonte les effets d'un sous-arbre avant de monter ceux du suivant, et deux
- * écrans qui demandent la même chose se relaient exactement comme ça. Poussé
- * tel quel, ça donne deux messages — « montre-les », puis « cache-les » — que le
- * main process exécute l'un après l'autre. Les boutons sont NATIFS : ils
- * apparaissent à l'instant même, hors de tout rendu de la page, et le compositeur
- * a tout le temps de les peindre entre les deux. On les voit surgir puis
- * disparaître, sans que rien à l'écran n'ait bougé.
+ * A reason can be released and then resumed in the same loop: React
+ * disassembles the effects of one subtree before mounting those of the next, and two
+ * screens that ask the same thing take turns exactly like that. Pushed
+ * as it is, it gives two messages — “show them”, then “hide them” — that the
+ * main process executes one after the other. The buttons are NATIVE: they
+ * appear instantly, outside of any rendering of the page, and the composer
+ * has plenty of time to paint them in between. We see them emerge then
+ * disappear, without anything on the screen having moved.
  *
- * Un report à la fin du tour suffit : les deux mouvements s'y annulent, et il ne
- * part qu'UN message, portant l'état retombé. Ce qui change vraiment part à
- * l'image suivante — personne ne peut voir la différence.
+ * A postponement at the end of the turn is enough: the two movements cancel each other out, and there is no
+ * leaves only ONE message, carrying the fallen state. What really changes is
+ * the following image — no one can see the difference.
  *
- * ⚠ On n'ajoute PAS de déduplication sur la valeur envoyée, et c'est délibéré :
- * `useWindowButtonsSlot` attend une réponse du pont pour dégeler sa mise en page
- * (cf. `settling`). Taire un message parce qu'il répète le précédent — cas réel :
- * un dialogue qui s'ouvre et se ferme alors que le rail tient déjà les boutons —
- * la laisserait attendre une réponse qui ne viendrait jamais. Un message de trop
- * ne coûte qu'un `setWindowButtonVisibility` de plus.
+ * ⚠ We do NOT add deduplication to the value sent, and this is deliberate:
+ * `useWindowButtonsSlot` is waiting for a response from the bridge to unfreeze its layout
+ * (see `settling`). Silencing a message because it repeats the previous one — real case:
+ * a dialog that opens and closes while the rail is already holding the buttons —
+ * would leave her waiting for an answer that would never come. One message too many
+ * only costs one `setWindowButtonVisibility` more.
  */
 function pushToBridge(): void {
   if (flush) return;
   flush = window.setTimeout(() => {
     flush = 0;
     const wanted = holds.size === 0;
-    // Les deux bouts du pont sont tracés (MIN-307) : ce qu'on DEMANDE ici, ce qui
-    // REVIENT dans `useWindowButtonsSlot`. C'est l'écart entre les deux qui dit
-    // qu'un message s'est perdu ou est arrivé au mauvais moment.
+    // The two ends of the bridge are traced (MIN-307): what we ASK here, what
+    // COMES BACK to `useWindowButtonsSlot`. It's the gap between the two that says
+    // that a message was lost or arrived at the wrong time.
     //
-    // La trace est posée DANS le report, pas à l'appel : c'est le message
-    // réellement envoyé qu'elle doit décrire, et plusieurs appels d'une même
+    // The trace is placed IN the report, not in the call: this is the message
+    // actually sent that it must describe, and several calls of the same
     // image n'en produisent qu'un.
     trace("wb:push", { wanted, holds: [...holds].join("|") || "—" });
     getDesktopBridge()?.setWindowButtonsVisible(wanted);
@@ -73,11 +73,11 @@ function pushToBridge(): void {
 }
 
 /**
- * Retire les boutons tant que `active` est vrai, sous une raison nommée.
+ * Remove buttons as long as `active` is true, under a named reason.
  *
- * La raison n'est pas décorative : c'est elle qui permet à deux demandeurs de
- * coexister sans que l'un annule l'autre. Le relâchement est automatique au
- * démontage — le mode zen démonte la barre latérale, et une fenêtre sans barre
+ * The reason is not decorative: it is what allows two applicants to
+ * coexist without one canceling the other. Release is automatic when
+ * unmount — zen mode unmounts the sidebar, and a window without a bar
  * ni boutons n'aurait plus de fermeture visible.
  */
 export function useHoldWindowButtons(reason: string, active: boolean): void {
@@ -94,26 +94,26 @@ export function useHoldWindowButtons(reason: string, active: boolean): void {
 }
 
 /**
- * Le garde-fou : **la demande peut être remise à zéro sans que la page le
- * sache**, et il faut alors la réaffirmer.
+ * The safeguard: **the request can be reset without the page
+ * know**, and it must then be reaffirmed.
  *
- * La coquille remet `wantsWindowButtons` à vrai à chaque nouveau document —
- * légitime, une page neuve n'a jamais rien demandé. Mais elle l'a longtemps fait
- * sur un événement trop large (`did-start-loading`, qui couvre aussi les
- * navigations de la SPA), et le résultat était muet : les boutons revenaient par
- * dessus une barre au rail, définitivement, parce que personne côté page n'avait
- * de raison de redemander. Rien dans le code de la page ne pouvait le laisser
- * voir — le `Set` était juste, c'est l'autre bout qui ne l'écoutait plus.
+ * The shell resets `wantsWindowButtons` to true for each new document —
+ * legitimate, a new page has never asked for anything. But she did it for a long time
+ * on an event that is too broad (`did-start-loading`, which also covers
+ * navigations of the SPA), and the result was silent: the buttons returned by
+ * above a bar to the rail, definitely, because no one on the page side had
+ * reason to ask again. Nothing in the page's code could let it
+ * see — the `Set` was correct, it was the other end who was no longer listening to it.
  *
- * L'événement est corrigé (desktop/src/main.ts), et **ce garde-fou reste** : il
- * ne dépend d'aucun événement en particulier, seulement de la contradiction
- * elle-même. Les boutons sont annoncés PRÉSENTS alors que la page a des raisons
- * de les retirer ? Quelque chose a repris la main ; on redemande. En plein écran
- * la coquille annonce `false`, donc ce cas-là ne se déclenche jamais à tort, et
+ * The event is corrected (desktop/src/main.ts), and **this guardrail remains**: it
+ * does not depend on any particular event, only on the contradiction
+ * herself. The buttons are announced PRESENT even though the page has reasons
+ * to remove them? Something has taken over; we ask again. Full screen
+ * the shell announces `false`, so this case is never triggered wrongly, and
  * il n'y a pas de boucle possible : notre demande fait publier `false`.
  *
- * Un seul abonnement pour toute la page, ouvert à la première raison posée et
- * gardé ensuite — c'est une propriété de la fenêtre, pas d'un composant.
+ * A single subscription for the entire page, open to the first reason asked and
+ * kept afterwards — this is a property of the window, not of a component.
  */
 let contradictionWatcher: (() => void) | null = null;
 
@@ -126,31 +126,31 @@ function watchContradiction(): void {
 }
 
 /**
- * Réaffirme, une fois par document, ce que CE document veut (MIN-304).
+ * Reaffirms, once per document, what THIS document wants (MIN-304).
  *
- * **Une fenêtre sans feux est une fenêtre qu'on ne peut plus fermer ni réduire à
- * la souris.** Or les deux moitiés de l'état ne vivent pas au même endroit :
- * `wantsWindowButtons` est une variable du MAIN qui survit aux documents,
- * `holds` est un module de la PAGE qui meurt avec elle. Le main remet sa moitié
- * à `true` au début d'un chargement plein — mais son message part à l'ancien
- * document, encore vivant, et le nouveau démarre avec un `holds` vide sans
- * jamais rien pousser : `useHoldWindowButtons` sort sur `if (!active) return`.
- * Personne, côté page, n'a alors de raison de les redemander, et ce qui répare
- * n'est pas la navigation mais un cycle de raison — en pratique, ouvrir puis
- * fermer la palette ⌘K.
+ * **A window without lights is a window that can no longer be closed or reduced to
+ * the mouse.** But the two halves of the state do not live in the same place:
+ * `wantsWindowButtons` is a MAIN variable that survives documents,
+ * `holds` is a PAGE module that dies with it. The hand returns its half
+ * to `true` at the start of a full load — but its message goes to the old one
+ * document, still alive, and the new one starts with an empty `holds` without
+ * never push anything: `useHoldWindowButtons` comes out on `if (!active) return`.
+ * No one, on the page side, then has any reason to ask for them again, and what repairs
+ * is not navigation but a cycle of reason — in practice, open then
+ * close the ⌘K palette.
  *
- * D'où cet appel INCONDITIONNEL au montage. Il coûte un message et referme le
- * trou pour de bon : quel que soit l'état que le main a gardé, il vaut ensuite
- * ce que ce document-ci demande, c'est-à-dire rien tant que rien n'est ouvert.
+ * Hence this UNCONDITIONAL call for editing. It costs a message and closes it
+ * hole for good: whatever state the hand has kept, it is then worth
+ * what this document asks for, that is to say nothing as long as nothing is opened.
  *
- * ⚠ À monter au layout RACINE (components/desktop-chrome.tsx), surtout pas dans
- * `DesktopWindowButtons` : celui-là ne vit que sous app/(app)/app-providers.tsx,
- * donc il est absent de la connexion, de `/f/`, de `/p/` et de la page 404 —
- * exactement les écrans qu'on atteint par un chargement plein.
+ * ⚠ To mount in the ROOT layout (components/desktop-chrome.tsx), especially not in
+ * `DesktopWindowButtons`: this one only lives under app/(app)/app-providers.tsx,
+ * so it is missing from connection, `/f/`, `/p/` and page 404 —
+ * exactly the screens that are reached by a full load.
  *
- * ⚠ Ce crochet et `watchContradiction` ci-dessus ne font pas double emploi : il
- * couvre le DÉBUT d'un document (un `holds` neuf que personne n'a poussé),
- * l'autre couvre la SUITE (une demande reprise en cours de vie de la page).
+ * ⚠ This hook and `watchContradiction` above do not duplicate: they
+ * covers the START of a document (a new `holds` that no one pushed),
+ * the other covers the SUITE (a request taken up during the life of the page).
  */
 export function useAffirmWindowButtons(): void {
   useEffect(() => {
@@ -163,18 +163,18 @@ export function useAffirmWindowButtons(): void {
 /**
  * Quelque chose couvre-t-il l'app — dialogue, wizard, panneau, tiroir ?
  *
- * **Deux marqueurs, parce qu'il y a deux familles**, et aucun des deux ne suffit
- * seul — les trois cas ont été relevés dans le DOM plutôt que supposés :
+ * **Two markers, because there are two families**, and neither is enough
+ * alone — the three cases were noted in the DOM rather than assumed:
  *
- * - le **voile** de mangue-ui (`data-slot="…-overlay"`). Il attrape le carnet de
- *   notes, dialogue NON modal — on continue de lire derrière, donc pas
+ * - the **veil** of mango-ui (`data-slot="…-overlay"`). He grabs the notebook
+ * notes, NON-modal dialogue — we continue reading behind, so no
  *   d'`aria-modal` — mais qui pose bien son voile ;
- * - **`aria-modal="true"`**. Il attrape la palette ⌘K, qui vient de son propre
- *   paquet : ni `data-slot`, ni voile mangue-ui, mais bel et bien un modal.
+ * - **`aria-modal="true"`**. He grabs the ⌘K palette, which comes of its own
+ * package: neither `data-slot`, nor mango-ui veil, but indeed a modal.
  *
- * Ce qu'on écarte au passage, et c'est le but : `role="dialog"` tout court, que
- * Radix donne AUSSI aux popovers et aux sélecteurs. Ils ne couvrent rien, et les
- * boutons clignoteraient à chaque menu ouvert.
+ * What we dismiss in passing, and that is the goal: `role="dialog"` quite simply, that
+ * Radix ALSO gives popovers and selectors. They don't cover anything, and
+ * buttons would flash with each opened menu.
  */
 const MODAL_SELECTOR = [
   '[data-slot="dialog-overlay"]',
@@ -187,43 +187,43 @@ const MODAL_SELECTOR = [
 ].join(", ");
 
 /**
- * UN observateur pour tous les lecteurs. Deux composants posent la question (le
- * guetteur qui retire les boutons, la barre qui dessine les leurres) et rien ne
- * justifie deux `MutationObserver` sur le document.
+ * AN observer for all readers. Two components raise the question (the
+ * spotter who removes the buttons, the bar which draws the lures) and nothing
+ * justifies two `MutationObserver` on the document.
  *
- * L'observation : l'arrivée du portail ne suffit pas — les attributs sont posés
- * après l'insertion — donc on écoute aussi ceux-là, mais **dans le même
- * `observe()`**. C'est le piège qui m'a coûté un tour : un second appel sur le
- * même nœud ne s'ajoute pas au premier, il REMPLACE ses options. L'examen est
- * reporté d'une image : une lecture du DOM par rafale, pas une par nœud inséré.
+ * Observation: the arrival of the portal is not enough — the attributes are established
+ * after the insertion — so we also listen to those, but **in the same
+ * `observe()`**. This is the trap that cost me a ride: a second call on the
+ * same node is not added to the first, it REPLACES its options. The exam is
+ * carried over by one frame: one DOM read per burst, not one per inserted node.
  *
- * **Ce qu'on a essayé et écarté (MIN-312), pour ne pas le réessayer.**
+ * **What we tried and discarded (MIN-312), so as not to try it again.**
  *
- * L'idée était de scinder en deux observateurs — les attributs en `subtree`, la
+ * The idea was to split into two observers — the attributes in `subtree`, the
  * pose des portails en enfants DIRECTS de `<body>` sans `subtree` —, ce qui
- * aurait supprimé l'allocation d'un `MutationRecord` par nœud inséré n'importe
- * où dans l'app. Elle ne tient pas ici : **la palette ⌘K n'est pas portalisée**,
- * elle est rendue en place dans l'arbre (lib/command-palette/CommandPalette.tsx),
- * profondément sous `<body>`. Et son `aria-modal="true"` est posé AVANT
- * l'insertion, donc aucun enregistrement d'attribut n'est émis non plus : un
- * `childList` sans `subtree` serait resté muet sur elle, pour toujours.
+ * would have removed the allocation of one `MutationRecord` per inserted node regardless
+ * where in the app. It does not fit here: **the ⌘K palette is not portalized**,
+ * it is rendered in place in the tree (lib/command-palette/CommandPalette.tsx),
+ * deep under `<body>`. And its `aria-modal="true"` is placed BEFORE
+ * insertion, so no attribute record is emitted either: a
+ * `childList` without `subtree` would have remained silent about her, forever.
  *
- * Restent les deux gestes qui, eux, tiennent :
+ * There remain the two gestures which hold:
  *
- * - **rien du tout hors de la coquille.** `useAnyModalOpen` n'a qu'un seul
- *   consommateur, `DesktopWindowButtons`, qui ne sert qu'à retirer des boutons
- *   natifs. Sur le web, l'observateur travaillait pour personne ;
- * - **un `querySelector` par rafale UTILE.** Le cas dominant — la frappe dans
- *   tiptap, le fil d'agent qui se remplit — n'insère que des nœuds de TEXTE, et
- *   un nœud de texte ne peut porter ni `data-slot` ni `aria-modal`. On ne
- *   traverse donc le document que si la rafale contient au moins un élément.
+ * - **nothing at all out of the shell.** `useAnyModalOpen` only has one
+ * consumer, `DesktopWindowButtons`, which is only used to remove buttons
+ * natives. On the web, the observer worked for no one;
+ * - **one `querySelector` per USEFUL burst.** The dominant case — the strike in
+ * tiptap, the agent thread that fills — only inserts TEXT nodes, and
+ * a text node cannot carry either `data-slot` or `aria-modal`. We don't
+ * therefore only crosses the document if the burst contains at least one element.
  */
 let modalOpen = false;
 let observer: MutationObserver | null = null;
 let scheduled = 0;
 const modalListeners = new Set<() => void>();
 
-/** Cette rafale peut-elle changer la réponse ? (cf. le commentaire ci-dessus) */
+/** Can this burst change the answer? (see comment above) */
 function mayAffectModal(records: MutationRecord[]): boolean {
   for (const record of records) {
     if (record.type !== "childList") return true;
@@ -245,7 +245,7 @@ function readModalOpen(): void {
 }
 
 function subscribeModal(listener: () => void): () => void {
-  // Hors coquille, il n'y a pas de boutons natifs à retirer : rien à observer.
+  // Outside of the shell, there are no native buttons to remove: nothing to observe.
   if (!getDesktopBridge()) return () => {};
 
   modalListeners.add(listener);
@@ -279,32 +279,32 @@ export function useAnyModalOpen(): boolean {
   return useSyncExternalStore(
     subscribeModal,
     () => modalOpen,
-    // Rendu serveur : rien n'est ouvert, et il n'y a pas de DOM à interroger.
+    // Server rendering: nothing is open, and there is no DOM to query.
     () => false
   );
 }
 
-/* ─── Qui héberge les boutons ──────────────────────────────────────────── */
+/* ─── Who hosts the buttons ────────────────────── ────────────────────── */
 
 /**
- * Le point de bascule de la mise en page (`--breakpoint-desktop` de l'app).
- * Sous cette largeur, l'AppShell ne rend plus les barres latérales : c'est
- * l'en-tête qui se retrouve dans le coin haut-gauche, donc sous les boutons.
+ * The layout toggle point (`--breakpoint-desktop` of the app).
+ * Below this width, the AppShell no longer renders the sidebars: this is
+ * the header which is found in the top left corner, therefore under the buttons.
  */
 const DESKTOP_BREAKPOINT_PX = 768;
 
 /**
- * La barre latérale est-elle rendue ? (≥ 768 px)
+ * Is the sidebar rendered? (≥768px)
  *
- * Ce qui en dépend : **qui héberge les boutons macOS**. Ils vivent dans la ligne
- * de marque de la barre, mais l'AppShell la retire sous 768 px — elle reste
- * MONTÉE (`display: none`), ce qui est le piège : sans cette question, elle
- * continuait de demander leur retrait quand son rail se repliait, et de leur
- * réserver une place que personne ne voyait. Sous 768 px, c'est l'en-tête qui
- * les accueille.
+ * What depends on it: **who hosts the macOS buttons**. They live in the line
+ * mark of the bar, but the AppShell removes it below 768 px — it remains
+ * CLIMB (`display: none`), which is the trap: without this question, it
+ * continued to request their removal when its rail folded, and their
+ * reserve a place that no one saw. Under 768 px, it is the header which
+ * welcomes them.
  *
  * `false` au premier rendu, serveur comme client — il n'y a pas de `matchMedia`
- * à interroger côté serveur, et le supposer ferait diverger l'hydratation.
+ * to query on the server side, and assuming it would cause the hydration to diverge.
  */
 export function useWideLayout(): boolean {
   const [wide, setWide] = useState(false);
@@ -318,20 +318,20 @@ export function useWideLayout(): boolean {
   return wide;
 }
 
-/* ─── Ce que la ligne de marque doit montrer ───────────────────────────── */
+/* ─── What the brand line should show ───────────────────────────── */
 
 export interface WindowButtonsSlot {
-  /** La ligne de marque garde-t-elle leur place ? (la marque passe à droite) */
+  /** Does the brand line keep their place? (the mark goes to the right) */
   reserved: boolean;
-  /** Faut-il dessiner des LEURRES, les vrais étant retirés le temps d'un modal ? */
+  /** Should we draw LURES, the real ones being removed for the duration of a modal? */
   decoy: boolean;
   /**
-   * A-t-on reçu le premier état de la fenêtre ?
+   * Have we received the first state of the window?
    *
-   * Uniquement pour l'ANIMATION : la marque glisse d'un bord à l'autre quand la
-   * place s'ouvre ou se referme (plein écran, rail), et il ne faut pas qu'elle
-   * glisse au tout premier affichage — avant la réponse du pont, la place vaut
-   * « fermée » par défaut, et animer ce rattrapage-là ferait démarrer l'app sur
+   * For ANIMATION only: the mark slides from one edge to the other when the
+   * place opens or closes (full screen, rail), and it must not be
+   * slides at the very first display — before the bridge responds, the place is worth
+   * “closed” by default, and animating this catch-up would start the app on
    * un logo qui traverse sa barre.
    */
   ready: boolean;
@@ -340,34 +340,34 @@ export interface WindowButtonsSlot {
 const CLOSED: WindowButtonsSlot = { reserved: false, decoy: false, ready: false };
 
 /**
- * Ce que la surface qui les héberge doit afficher à leur place.
+ * What the surface that hosts them should display in their place.
  *
- * `hosts` : cette surface est-elle celle qui les accueille en ce moment ? La
- * barre latérale au-dessus de 768 px, l'en-tête en dessous — voir
- * `useWideLayout`. Une surface qui n'héberge pas ne réserve rien.
+ * `hosts`: is this surface the one that welcomes them at the moment? There
+ * sidebar above 768 px, header below — view
+ * `useWideLayout`. A surface that does not host reserves nothing.
  *
- * Le point délicat, et c'est lui qui justifie ce crochet : **une boîte de
- * dialogue ne doit pas faire sauter la barre**. Retirer les boutons est
- * nécessaire — ils sont natifs, dessinés par le système au-dessus de la vue web,
- * et aucun `z-index` ne passe devant : sans ça ils restent en travers du coin du
- * dialogue, par-dessus son voile. Mais si la mise en page suivait bêtement leur
- * disparition, la marque sauterait à gauche à chaque ouverture et reviendrait à
- * la fermeture, pour un objet qu'on ne regarde même pas.
+ * The delicate point, and it is this which justifies this hook: **a box of
+ * dialogue should not blow the bar**. Removing the buttons is
+ * necessary — they are native, drawn by the system on top of the web view,
+ * and no `z-index` passes in front: otherwise they remain across the corner of the
+ * dialogue, over her veil. But if the layout stupidly followed their
+ * disappearance, the mark would jump to the left at each opening and return to
+ * closing, for an object that we don't even look at.
  *
- * D'où : la place reste RÉSERVÉE — figée à ce qu'elle valait au moment où le
- * dialogue s'est ouvert — et on dessine trois pastilles à l'identique. Elles
- * passent sous le voile comme le reste de l'app, ce qui est exactement l'effet
- * qu'on cherchait au départ.
+ * Hence: the place remains RESERVED — frozen at what it was worth at the time the
+ * dialogue has opened — and we draw three identical pellets. They
+ * go under the veil like the rest of the app, which is exactly the effect
+ * that we were initially looking for.
  *
- * ⚠ **Le dégel ne peut pas suivre la fermeture du dialogue : il doit suivre le
- * RETOUR des boutons.** C'est toute l'histoire du sursaut de ~50 ms qu'on voyait
- * à la fermeture. Les deux nouvelles ne viennent pas du même endroit : le
- * dialogue est parti du DOM (immédiat), les boutons reviennent du main process
- * (un aller-retour IPC plus loin). Dégeler sur le premier, c'est lire `visible`
- * alors qu'il vaut encore `false` — la place se referme, la marque saute à
- * gauche, et l'IPC arrive juste après pour tout remettre. D'où `settling` : à la
- * fermeture, on reste sur la valeur gelée jusqu'au PROCHAIN message du pont.
- * Il arrive toujours — relâcher la demande la republie (`applyWindowButtons`).
+ * ⚠ **Thawing cannot follow the closing of the dialog: it must follow the
+ * RETURN of the buttons.** This is the whole story of the ~50 ms burst that we saw
+ * upon closing. The two news do not come from the same place: the
+ * dialog left the DOM (immediate), the buttons return from the main process
+ * (an IPC round trip further). Thawing on the first one reads `visible`
+ * while it is still worth `false` — the place closes, the mark jumps to
+ * left, and the IPC comes right after to put everything back. Hence `settling`: at the
+ * closing, we remain on the frozen value until the NEXT message from the bridge.
+ * It always happens — releasing the request republishes it (`applyWindowButtons`).
  */
 export function useWindowButtonsSlot(hosts = true): WindowButtonsSlot {
   const [visible, setVisible] = useState(false);
@@ -375,9 +375,9 @@ export function useWindowButtonsSlot(hosts = true): WindowButtonsSlot {
   const [ready, setReady] = useState(false);
   const modal = useAnyModalOpen();
 
-  // La fermeture du dialogue est-elle encore en train d'être digérée par le
-  // main process ? Ajusté PENDANT le rendu (et non dans un effet) : un effet
-  // s'exécute après la peinture, et la trame fautive serait déjà à l'écran.
+  // Is the closure of dialogue still being digested by the
+  // main process? Adjusted DURING rendering (not in an effect): an effect
+  // runs after painting, and the offending frame would already be on screen.
   const [settling, setSettling] = useState(true);
   const [wasModal, setWasModal] = useState(false);
   if (wasModal !== modal) {
@@ -385,7 +385,7 @@ export function useWindowButtonsSlot(hosts = true): WindowButtonsSlot {
     if (!modal) setSettling(true);
   }
 
-  // Ce que valait la place au dernier moment STABLE — ni dialogue ouvert, ni
+  // What the place was worth at the last moment STABLE — no open dialogue, no
   // fermeture en cours de digestion.
   const frozen = useRef(false);
   useEffect(() => {
@@ -395,8 +395,8 @@ export function useWindowButtonsSlot(hosts = true): WindowButtonsSlot {
   useEffect(() => {
     const bridge = getDesktopBridge();
     if (!bridge) return;
-    // L'état courant est rejoué à l'abonnement : la fenêtre peut être en plein
-    // écran au chargement, et personne n'aurait alors rien à annoncer.
+    // The current state is replayed upon subscription: the window can be in full
+    // screen when loading, and then no one would have anything to announce.
     return bridge.onWindowButtons((next) => {
       trace("wb:state", { visible: next });
       setVisible(next);
@@ -406,13 +406,13 @@ export function useWindowButtonsSlot(hosts = true): WindowButtonsSlot {
   }, []);
 
   /**
-   * L'animation s'arme une IMAGE APRÈS la première position, jamais avec elle.
+   * The animation sets one FRAME AFTER the first position, never with it.
    *
-   * Une transition part dès lors qu'elle est déclarée au moment où la propriété
-   * change : poser la durée et la position d'arrivée dans le même rendu ferait
-   * glisser la marque au démarrage de l'app, ce que ce drapeau est précisément
-   * là pour éviter. Deux `requestAnimationFrame` — le premier laisse React
-   * peindre la position, le second arme le mouvement pour la SUITE.
+   * A transition starts when it is declared at the time the property
+   * change: putting the duration and the arrival position in the same rendering would
+   * drag mark when starting the app, what this flag is precisely
+   * there to avoid. Two `requestAnimationFrame` — the first leaves React
+   * paint the position, the second arms the movement for the SUITE.
    */
   useEffect(() => {
     if (!started) return;

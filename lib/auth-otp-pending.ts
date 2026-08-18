@@ -4,51 +4,49 @@ import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
 import { parseOtpType } from "@/lib/desktop/auth-link";
 
 /**
- * Le jeton d'un lien e-mail, mis en attente le temps qu'on demande à la
- * personne si elle a bien demandé CE tour d'authentification (MIN-345).
+ * The token of an e-mail link, put on hold while we ask the
+ * person if they have requested THIS round of authentication (MIN-345).
  *
- * ## Ce qu'on répare
+ * ## What we repair
  *
- * `GET /auth/callback?token_hash=…&type=magiclink` ouvrait une session. Une
- * navigation, un jeton, et le navigateur est connecté — à un compte que rien ne
- * rattache à la personne devant l'écran. C'est la fixation de session dans sa
- * forme la plus simple : l'attaquant demande un lien pour SON compte, l'envoie
- * à sa victime, et tout ce qu'elle écrit ensuite est écrit chez lui.
+ * `GET /auth/callback?token_hash=…&type=magiclink` was logging in. A
+ * navigation, a token, and the browser is connected — to an account that nothing
+ * links to the person in front of the screen. This is session fixation in its
+ * simplest form: the attacker requests a link for HIS account, sends it
+ * to his victim, and everything she then writes is written to him.
  *
- * Le chemin OAuth, lui, n'a pas ce défaut et n'a rien à faire ici : le
- * vérificateur PKCE vit dans un cookie posé au DÉPART du tour, et
- * `exchangeCodeForSession` échoue sans lui. Le tour y est déjà lié à son
- * initiateur, et par une preuve plus forte qu'un nonce à nous.
+ * The OAuth path does not have this defect and has nothing to do here: The
+ * PKCE checker lives in a cookie placed at the START of the round, and
+ * `exchangeCodeForSession` fails without it. The trick there is already linked to its
+ * initiator, and by a stronger proof than a nonce of ours.
  *
- * ## Pourquoi un cookie plutôt qu'un nonce dans le lien
+ * ## Why a cookie rather than a nonce in the link
  *
- * Parce que le lien ne peut pas en porter un. Le gabarit GoTrue le compose
- * lui-même (`{{ .RedirectTo }}?token_hash=…`) : rien de ce qu'on ajoute à
- * `emailRedirectTo` n'y survit proprement. Et surtout, un nonce posé au départ
- * exigerait d'ouvrir le mail DANS le navigateur qui a demandé le lien — ce qui
- * casserait l'invitation, qui n'a par nature aucun tour de départ chez son
- * destinataire, et la confirmation d'inscription lue sur le téléphone.
+ * Because the link cannot carry one. The GoTrue template composes it
+ * itself (`{{ .RedirectTo }}?token_hash=…`): nothing that is added to
+ * `emailRedirectTo` survives there properly. And above all, a nonce placed at the start
+ * would require opening the email IN the browser which requested the link — which
+ * would break the invitation, which by nature has no starting point at its
+ * recipient, and the registration confirmation read on the phone.
  *
- * Donc : on ne consomme rien sur un `GET`. Le jeton attend dans ce cookie —
- * `httpOnly` (aucun script n'y touche) et `SameSite=Lax` (un `POST` venu d'un
- * autre site ne l'emporte pas, donc ne peut pas le faire consommer) — et la
- * session ne naît que du `POST` d'une personne qui a lu à qui elle se connecte.
+ * So: we do not consume anything on a `GET`. The token waits in this cookie —
+ * `httpOnly` (no script touches it) and `SameSite=Lax` (a `POST` from another site does not take it, so cannot consume it) — and the
+ * session does not is born only from the `POST` of a person who has read to whom they are connecting.
  *
- * Module pur, sans `server-only` : c'est ce qui le rend testable des deux côtés
- * du contrat, celui qui écrit le cookie et celui qui le lit.
+ * Pure module, without `server-only`: this is what makes it testable on both sides
+ * of the contract, the one who writes the cookie and the one who writes it lit.
  */
 
 export const AUTH_PENDING_COOKIE = "mdy_auth_pending";
 
-/** Le temps qu'on laisse pour lire l'écran et cliquer. Le jeton GoTrue, lui,
-    a sa propre expiration, plus courte le plus souvent — la nôtre ne la
-    prolonge pas, elle borne juste la traînée du cookie. */
+/** The time allowed to read the screen and click. The GoTrue token,
+ has its own expiration, usually shorter — ours does not extend it, it just limits the trail of the cookie. */
 export const AUTH_PENDING_TTL_SECONDS = 15 * 60;
 
 export interface PendingOtp {
   tokenHash: string;
   type: EmailOtpType;
-  /** Où aller une fois la session ouverte — déjà passé au tamis. */
+  /** Where to go once the session is open — already sifted. */
   next: string;
 }
 
@@ -62,10 +60,10 @@ export function encodePendingOtp(pending: PendingOtp): string {
   ).toString("base64url");
 }
 
-/** Rend `null` sur tout ce qui n'est pas un jeton en attente exploitable — un
-    cookie tronqué, périmé dans sa forme, ou un `type` que GoTrue ne connaît
-    pas. Le `next` repasse au tamis : ce cookie a beau être le nôtre, il a fait
-    un aller-retour par le navigateur. */
+/** Returns `null` on anything that is not a workable pending token — a truncated
+ cookie, stale in form, or a `type` that GoTrue does not know about
+. The `next` goes through the sieve again: this cookie may well be ours, but it has made
+ a round trip through the browser. */
 export function decodePendingOtp(raw: string | undefined | null): PendingOtp | null {
   if (!raw) return null;
   try {
@@ -84,9 +82,8 @@ export function decodePendingOtp(raw: string | undefined | null): PendingOtp | n
   }
 }
 
-/** Les options du cookie, à l'écriture comme à l'effacement — les deux DOIVENT
-    porter le même `path`, sans quoi la suppression rate sa cible et le jeton
-    consommé reste dans le navigateur. */
+/** The options for the cookie, both when writing and when deleting — both MUST carry the same `path`, otherwise the deletion misses its target and the consumed
+ token remains in the browser. */
 export function authPendingCookieOptions(maxAgeSeconds = AUTH_PENDING_TTL_SECONDS) {
   return {
     httpOnly: true,

@@ -1,66 +1,66 @@
-# Le carnet de tâches
+# The task notebook
 
-Emplacement de landing : `scratchpad`. La section qui l'accompagne s'appelle
-« Tout ce qui n'est pas encore un ticket » et promet, entre autres, de *« lancer
-l'agent de code directement sur une section, sans passer par un ticket »*.
+Landing location: `scratchpad`. The accompanying section is called
+“Everything that is not yet a ticket” and promises, among other things, to *“launch
+the code agent directly on a section, without going through a ticket »*.
 
 ## Ce que l'image doit montrer
 
-- La modale du carnet, ouverte par le raccourci **G puis N** — celui que le
-  texte de la section cite mot pour mot.
-- **Deux sections `##`** (« Before the release », « Loose ends ») et leurs
-  **neuf tâches**, dans les quatre états : cochée et barrée, en cours, à faire,
-  annulée.
-- Une **action de section visible au survol** : la section pointée se détache
-  sur un fond gris, ses deux boutons apparaissent contre son titre, et
-  l'infobulle nomme l'action (« Lancer un agent sur la section »).
-- Le carnet est **personnel et cross-projet** : rien à l'écran ne le rattache à
-  un projet, et c'est voulu.
+- The notebook modal, opened by the shortcut **G then N** — the one that the
+section text quotes verbatim.
+- **Two sections `##`** (“Before the release”, “Loose ends”) and their
+**nine tasks**, in the four states: checked and crossed out, in progress, to do,
+canceled.
+- A **section action visible on hover**: the pointed section detaches
+on a gray background, its two buttons appear against its title, and
+the tooltip names the action (“Launch an agent on the section”).
+- The notebook is **personal and cross-project**: nothing on the screen links it to
+a project, and it is desired.
 
-## Où
+## Or
 
-N'importe quelle page de l'app — ici le board d'Aurora, pour que le fond soit
-le même que les autres captures. Connecté en Camille Roy.
+Any page of the app — here the Aurora board, so that the background is
+the same as the other captures. Connected to Camille Roy.
 
-## Cadrage — pourquoi 1024 × 768 et pas 1447 × 1085
+## Framing — why 1024 × 768 and not 1447 × 1085
 
-C'est le seul emplacement qui déroge à la fenêtre commune, et la raison tient à
-la modale elle-même.
+This is the only location that deviates from the common window, and the reason is that
+the modal itself.
 
-`--spacing-dialog-w/h` valent `90vw` / `90vh` : **la modale grandit avec la
-fenêtre, pas son contenu.** Le corps du carnet a des métriques fixes — 192 px de
-marge haute (`pt-48`, une surface d'écriture qui commence bas, comme un
-éditeur de notes), 336 px de tâches, 48 px de marge basse, soit 576 px en tout.
+`--spacing-dialog-w/h` are equal to `90vw` / `90vh`: **the modal grows with the
+window, not its contents.** The body of the notebook has fixed metrics — 192 px of
+high margin (`pt-48`, a writing surface that starts low, like a
+note editor), 336 px of tasks, 48 ​​px of bottom margin, or 576 px in total.
 
-Conséquence : à 1085 px de haut, la modale fait 976 px et **60 % de sa surface
-est du blanc**. À 768, elle fait 691 px, et le blanc restant (115 px) se lit
-comme la respiration voulue par le `pt-48`, pas comme un chargement raté.
+Consequence: at 1085 px high, the modal is 976 px and **60% of its surface
+is white**. At 768, it is 691 px, and the remaining white (115 px) reads
+like the breathing desired by the `pt-48`, not like a failed loading.
 
-L'autre voie était d'allonger la note jusqu'à remplir la grande modale : il
-aurait fallu **une quinzaine de tâches de plus**, soit quatre sections et une
-vingtaine de lignes. Un carnet de « choses à faire tout de suite » qui en
-compte vingt ne dit plus la même chose, et ça demandait une écriture en base.
-La fenêtre coûte moins cher que la donnée.
+The other way was to lengthen the note until it filled the big modal: it
+would have required **around fifteen more tasks**, i.e. four sections and one
+twenty lines. A notebook of “things to do right away” which
+counting twenty no longer says the same thing, and it required writing in base.
+The window costs less than the data.
 
-## Déclinaisons
+## Variations
 
 fr/light, fr/dark, en/light, en/dark
 
-## Pièges connus
+## Known pitfalls
 
-- **`G` puis `N` se tape avant d'ouvrir quoi que ce soit**, sur un board déjà
-  stabilisé — c'est l'inverse du piège de la palette, où la frappe suit
-  l'ouverture d'une surface et perd ses premiers caractères. Ici le raccourci
-  ouvre la surface ; il n'y a rien à perdre.
-- **Les titres de section sont des données, pas des libellés.** « Before the
-  release » et « Loose ends » sont en anglais dans les deux variantes : c'est
-  l'ancre de contrôle, elle vaut pour FR comme pour EN.
-- **Les boutons de section sont des widgets ProseMirror**, injectés par une
-  décoration (`section-copy-extension.ts`), pas des composants React. Ils ne
-  portent ni rôle ni test-id : on les vise par leurs classes
-  `.scratchpad-section-launch` / `.scratchpad-section-copy`, qui sont leur seul
+- **`G` then `N` is typed before opening anything**, on a board already
+stabilized — this is the opposite of the paddle trap, where the strike follows
+the opening of a surface and loses its first characters. Here the shortcut
+opens the surface; there is nothing to lose.
+- **Section titles are data, not labels.** “Before the
+release” and “Loose ends” are in English in both variants: it is
+the control anchor, it is valid for FR as well as for EN.
+- **Section buttons are ProseMirror widgets**, injected by a
+decoration (`section-copy-extension.ts`), not React components. They don't
+carry neither role nor test-id: we target them by their classes
+`.scratchpad-section-launch` / `.scratchpad-section-copy`, which are their only
   identifiant stable.
-- **Le survol doit être forcé.** Les boutons ne sont visibles qu'au survol du
-  titre : `hover()` sans `force` attend une visibilité qui n'arrivera jamais.
-- **L'infobulle et le fond de section sont posés par du JS**, sur `mouseenter`,
-  via la classe `is-visible`. C'est elle qu'on attend — pas un délai.
+- **Hover must be forced.** The buttons are only visible when hovering over the
+title: `hover()` without `force` expects visibility that will never arrive.
+- **The tooltip and the section background are set by JS**, on `mouseenter`,
+via the `is-visible` class. She’s the one we’re waiting for — not a deadline.

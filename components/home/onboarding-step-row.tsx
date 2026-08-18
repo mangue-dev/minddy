@@ -4,13 +4,13 @@ import { Check } from "lucide-react";
 import { cn } from "mangue-ui";
 
 /**
- * Une ligne de la colonne de gauche de l'onboarding — reprise telle quelle
+ * One line from the left column of onboarding — taken as is
  * d'AutoKap (`components/onboarding-step-row.tsx`), aux primitives mangue-ui
- * près : une pastille numérotée tant que l'étape est devant, la coche verte et
- * le titre barré une fois derrière, un liseré pointillé sur l'étape courante.
+ * near: a numbered dot as long as the step is ahead, the green checkmark and
+ * the title crossed out once behind, a dotted border on the current step.
  *
- * La pastille disparaît quand l'étape est faite : ce qu'on veut lire à ce
- * moment-là est « c'est fait », pas son rang.
+ * The tablet disappears when the step is completed: what we want to read at this
+ * that moment is “it’s done”, not its rank.
  */
 export type OnboardingStepRowState = "pending" | "current" | "completed";
 

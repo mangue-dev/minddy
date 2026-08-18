@@ -19,8 +19,8 @@ export function getSupabase(): SupabaseClient {
         "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY"
       );
     }
-    // `cookieOptions` : c'est CE client qui écrit les cookies de session au
-    // moment de la connexion, et le paquet n'y met pas `Secure` (MIN-351).
+    // `cookieOptions`: THIS client writes session cookies to
+    // time of connection, and the packet does not put `Secure` (MIN-351).
     _supabase = createBrowserClient(url, key, {
       cookieOptions: SESSION_COOKIE_OPTIONS,
     });

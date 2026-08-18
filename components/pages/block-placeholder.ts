@@ -1,26 +1,26 @@
-// Le PLACEHOLDER d'un bloc vide (MIN-270) — un plugin à nous, et pourquoi.
+// The PLACEHOLDER of an empty block (MIN-270) — a plugin of ours, and why.
 //
-// `Placeholder` de @tiptap/extensions n'a que deux modes, et aucun ne convient :
+// `Placeholder` from @tiptap/extensions has only two modes, and neither is suitable:
 //
-//  - par défaut (`includeChildren: false`), il ne regarde que le nœud de
-//    PROFONDEUR 1. Pour un item de liste ou une ligne de citation, c'est le
-//    `<ul>` ou le `<blockquote>` — pas un bloc de texte : rien n'était décoré,
-//    et la moitié des blocs vides restaient muets ;
-//  - avec `includeChildren`, il décore tout nœud dont la PLAGE contient le
-//    curseur, bornes comprises. Deux blocs vides qui se touchent partagent une
-//    borne : le curseur posé entre eux les allumait tous les deux, plus leurs
-//    ancêtres vides. Trois placeholders pour un curseur.
+// - by default (`includeChildren: false`), it only looks at the node of
+// DEPTH 1. For a list item or a quote line, this is the
+// `<ul>` or `<blockquote>` — not a block of text: nothing was decorated,
+// and half of the empty blocks remained silent;
+// - with `includeChildren`, it decorates any node whose RANGE contains the
+// cursor, limits included. Two empty blocks that touch each other share a
+// terminal: the cursor placed between them turned them both on, plus their
+// empty ancestors. Three placeholders for a slider.
 //
-// Et on ne peut pas rattraper le second depuis la callback de texte : elle est
-// appelée pendant l'`apply` de la transaction, où `editor.state` est encore
-// l'état d'AVANT. Le bloc qu'on vient d'atteindre y est donc invisible.
+// And we cannot catch the second from the text callback: it is
+// called during the `apply` of the transaction, where `editor.state` is still
+// the BEFORE state. The block we have just reached is therefore invisible.
 //
-// D'où ce plugin. Il tient en une règle — le bloc de texte qui CONTIENT le
-// curseur, s'il est vide — et la lit dans `props.decorations(state)`, à qui
-// ProseMirror passe l'état courant. Un seul placeholder, à la bonne profondeur,
-// jamais en retard d'une frappe.
+// Hence this plugin. It comes down to one rule — the block of text that CONTAINS the
+// cursor, if empty — and reads it into `props.decorations(state)`, to which
+// ProseMirror switches to current state. A single placeholder, at the right depth,
+// never late for a keystroke.
 //
-// Pas de "use client" ni d'import de composant : ce module est monté par le
+// No "use client" or component import: this module is mounted by the
 // registre de blocs, qui doit rester importable hors navigateur (cf. lib/cx.ts).
 
 import { Extension } from "@tiptap/core";
@@ -32,11 +32,11 @@ import type { useTranslations } from "next-intl";
 
 type PagesTranslator = ReturnType<typeof useTranslations<"Pages">>;
 
-/** La classe posée sur le bloc décoré — le CSS de `.page-editor` la peint. */
+/** The class placed on the decorated block — the CSS of `.page-editor` paints it. */
 export const PLACEHOLDER_CLASS = "is-empty";
 
 export interface BlockPlaceholderOptions {
-  /** Le texte à afficher, ou une chaîne vide pour ne rien afficher. */
+  /** The text to display, or an empty string to display nothing. */
   text: (context: { node: Node; depth: number }) => string;
 }
 
@@ -51,20 +51,20 @@ export const BlockPlaceholder = Extension.create<BlockPlaceholderOptions>({
     const { editor, options } = this;
 
     /**
-     * L'éditeur a-t-il le CURSEUR ?
-     *
-     * Une sélection survit au focus : cliquer hors du document laisse le caret
-     * là où il était, et le placeholder restait donc allumé sur une ligne que
-     * plus personne n'éditait — une invitation à écrire posée sur un document
-     * qu'on a quitté.
-     *
-     * Le drapeau est tenu ici plutôt que lu sur `editor.isFocused` : celui-ci
-     * est mis à jour par les propres écouteurs de tiptap, et rien ne garantit
-     * qu'ils passent avant les nôtres. Et comme un focus ne produit aucune
-     * transaction, il faut en pousser une à vide pour que ProseMirror recalcule
-     * les décorations — sans elle, le placeholder ne s'éteindrait qu'à la
-     * frappe suivante.
-     */
+ * Does the editor have the CURSOR?
+ *
+ * A selection survives the focus: clicking outside the document leaves the caret
+ * where it was, and the placeholder therefore remained lit on a line that
+ * no one was editing anymore — an invitation to write placed on a document
+ * that we left.
+ *
+ * The flag is held here rather than read on `editor.isFocused`: this one
+ * is updated by tiptap's own listeners, and there is no guarantee
+ * that they come before ours. And since a focus does not produce any
+ * transaction, you have to push one empty so that ProseMirror recalculates
+ * the decorations — without it, the placeholder would only turn off on the
+ * next keystroke.
+ */
     let focused = false;
 
     return [
@@ -86,8 +86,8 @@ export const BlockPlaceholder = Extension.create<BlockPlaceholderOptions>({
           decorations(state: EditorState) {
             if (!editor.isEditable || !focused) return null;
             const { selection } = state;
-            // Une SÉLECTION n'est pas un curseur : on n'invite pas à écrire là
-            // où l'utilisateur est en train de choisir du texte.
+            // A SELECTION is not a cursor: we do not invite you to write there
+            // where the user is choosing text.
             if (!selection.empty) return null;
 
             const { $anchor } = selection;
@@ -113,14 +113,14 @@ export const BlockPlaceholder = Extension.create<BlockPlaceholderOptions>({
 });
 
 /**
- * Le texte, qui DÉPEND du bloc vide sous le curseur.
+ * The text, which DEPENDS on the empty block under the cursor.
  *
- * Une invitation unique (« tapez / pour les blocs ») répétée sur un titre vide,
- * un item de liste vide et une ligne de citation vide dit trois fois la même
- * chose au mauvais moment : dans une liste, « / » n'est pas ce qu'on cherche,
- * c'est du texte. Un titre annonce donc son niveau, un bloc imbriqué invite
- * juste à écrire, et seule la ligne de premier niveau — la seule où le
- * catalogue est le bon geste — porte l'invitation complète.
+ * A single invitation ("type / for blocks") repeated on an empty title,
+ * an empty list item and an empty quote line says the same thing three times
+ * thing at the wrong time: in a list, "/" is not what we are looking for,
+ * it is text. A title therefore announces its level, a nested block invites
+ * just to write, and only the first level line — the only one where the
+ * catalog is the right gesture — carries the complete invitation.
  */
 export function pagePlaceholder(t: PagesTranslator) {
   return ({ node, depth }: { node: Node; depth: number }): string => {
@@ -130,8 +130,8 @@ export function pagePlaceholder(t: PagesTranslator) {
       if (level === 2) return t("blockHeading2");
       return t("blockHeading3");
     }
-    // Profondeur 1 = enfant direct du document. Au-delà, le bloc est DANS un
-    // autre (liste, citation, dépliant, tâche).
+    // Depth 1 = direct child of the document. Beyond that, the block is IN a
+    // other (list, quote, leaflet, task).
     if (depth > 1) return t("placeholderNested");
     return t("placeholder");
   };

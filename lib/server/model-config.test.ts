@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * Résolution d'un réglage de modèle et repli de son raccourci de routage
+ * Resolving a template setting and collapsing its routing shortcut
  * (MIN-263).
  *
- * Ce qui compte : un raccourci est un réglage de CONFORT. S'il ne trouve pas de
- * provider, l'appel doit repartir sur le modèle nu — jamais éteindre la
- * fonctionnalité. Et sans raccourci, rien ne doit être rejoué : le repli n'est
- * pas un retry générique, il ferait payer deux fois chaque panne réseau.
+ * What matters: a shortcut is a COMFORT setting. If he does not find
+ * provider, the call must restart on the bare model — never turn off the
+ * functionality. And without a shortcut, nothing has to be replayed: the fallback is not
+ * not a generic retry, it would charge twice for each network outage.
  */
 
 const { config } = vi.hoisted(() => ({ config: new Map<string, string | null>() }));
@@ -104,8 +104,8 @@ describe("withModelSuffixFallback", () => {
   });
 
   it("rejoue aussi sur une valeur d'échec convenue (`ok`)", async () => {
-    // `forcedToolCall` ne lève pas : il rend `null`. Sans `ok`, cet échec-là
-    // passerait pour un succès et le repli ne partirait jamais.
+    // `forcedToolCall` does not raise: it returns `null`. Without `ok`, this failure
+    // would be seen as a success and the withdrawal would never go away.
     const run = vi.fn(async (m: string) => (m.includes(":") ? null : { fine: true }));
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const out = await withModelSuffixFallback("openai/gpt-5:nitro", run, {
@@ -124,8 +124,8 @@ describe("withModelSuffixFallback", () => {
   });
 
   it("ne rejoue pas une VARIANTE de modèle sur la variante payante", async () => {
-    // `…:free` n'est pas un raccourci de routage : rejouer sans lui, c'est
-    // changer de modèle et se mettre à payer, en silence.
+    // `…:free` is not a routing shortcut: playing again without it is
+    // change model and start paying, silently.
     const run = vi.fn(async () => {
       throw new Error("rate limited");
     });
@@ -148,7 +148,7 @@ describe("withModelSuffixFallback", () => {
 describe("fetchOpenRouterWithSuffixFallback", () => {
   const URL_ = "https://openrouter.ai/api/v1/chat/completions";
 
-  /** Corps de requête minimal — seul le modèle change entre deux essais. */
+  /** Minimal request body — only the template changes between two tries. */
   const request = (model: string) => ({ method: "POST", body: JSON.stringify({ model }) });
 
   function stubFetch(handler: (model: string) => { ok: boolean; status: number }) {
@@ -174,8 +174,8 @@ describe("fetchOpenRouterWithSuffixFallback", () => {
   });
 
   it("rejoue sur le modèle nu quand OpenRouter refuse, et le RETOURNE", async () => {
-    // Le modèle rendu est ce à quoi les boucles à plusieurs rounds se collent :
-    // sans lui, chaque tour repaierait une requête refusée.
+    // The rendered model is what the multi-round loops stick to:
+    // without it, each turn would repay a refused request.
     const fetchSpy = stubFetch((model) => ({ ok: !model.includes(":"), status: 404 }));
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const out = await fetchOpenRouterWithSuffixFallback(

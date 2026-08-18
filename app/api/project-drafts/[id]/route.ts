@@ -5,16 +5,16 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * DELETE /api/project-drafts/[id] — jeter un brouillon.
+ * DELETE /api/project-drafts/[id] — discard a draft.
  *
- * Deux appelants : le menu contextuel de la barre latérale (« Supprimer le
- * brouillon »), et le wizard lui-même une fois le projet créé — le brouillon a
- * alors fait son travail. Pas de corbeille : un brouillon n'est pas une donnée
- * du projet, c'est un formulaire à moitié rempli.
+ * Two callers: the sidebar context menu (“Delete
+ * draft"), and the wizard itself once the project has been created — the draft has
+ * then does its job. No trash: a draft is not data
+ * of the project, it is a half-filled form.
  *
- * La RLS fait le tri (on ne supprime que les siens) : un id inconnu ne touche
- * aucune ligne et répond quand même 204 — la suppression est idempotente, et
- * rejouer un DELETE ne doit pas afficher d'erreur.
+ * The RLS does the sorting (we only delete its own): an unknown id does not affect
+ * no line and still responds 204 — the deletion is idempotent, and
+ * replaying a DELETE should not show an error.
  */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;

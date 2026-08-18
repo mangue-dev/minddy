@@ -2,19 +2,18 @@ import { Skeleton } from "mangue-ui";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 
 /**
- * Squelettes de segment (MIN-89).
+ * Segment skeletons (MIN-89).
  *
- * L'app est entièrement rendue côté client : sans `loading.tsx`, une transition
- * de route ne peint RIEN tant que le composant client n'est pas monté et que ses
- * propres skeletons n'apparaissent pas. Ces composants comblent exactement cet
- * intervalle, et sont volontairement calqués sur la mise en page réelle — un
- * squelette qui ne tombe pas au bon endroit produit un saut à l'hydratation,
- * ce qui est pire que l'écran vide qu'il remplace.
+ * The app is fully rendered client-side: without `loading.tsx`, a route transition
+ * paints NOTHING until the client component is mounted and its own skeletons are not mounted. do not appear. These components fill exactly this
+ * gap, and are intentionally modeled after the actual layout — a
+ * skeleton that doesn't fall in the right place produces a hydration jump,
+ * which is worse than the blank screen it replaces.
  *
- * Server Components : pas de "use client" ici, `Skeleton` est un simple <div>.
+ * Server Components: no "use client" here, `Skeleton` is a simple <div>.
  */
 
-/** Deux familles de gabarits dans l'app : page-document centrée, et board plein écran. */
+/** Two families of templates in the app: centered document page, and full-screen board. */
 type DocWidth = "3xl" | "5xl";
 
 const MAX_W: Record<DocWidth, string> = {
@@ -23,8 +22,8 @@ const MAX_W: Record<DocWidth, string> = {
 };
 
 /**
- * Page-document : titre puis blocs empilés. Reprend
- * `mx-auto w-full max-w-Nxl px-6 py-10` des pages concernées.
+ * Document page: title then stacked blocks. Resumes
+ * `mx-auto w-full max-w-Nxl px-6 py-10` of the affected pages.
  */
 export function DocPageSkeleton({
   width = "5xl",
@@ -48,15 +47,15 @@ export function DocPageSkeleton({
 }
 
 /**
- * Les écrans à SIDEBAR SECONDAIRE : triage, retours, pull requests, sessions
- * d'agent, réglages. Une colonne de navigation pleine hauteur à gauche, une
- * colonne de cartes centrée à droite.
+ * SECONDARY SIDEBAR screens: triage, returns, pull requests, agent sessions
+ *, settings. A full height navigation column on the left, a
+ * column of cards centered on the right.
  *
- * Le squelette monte une VRAIE `SecondarySidebar`, et pas une colonne qui lui
- * ressemble : c'est le montage qui met la barre primaire au rail. Sans lui, une
- * navigation vers ces écrans déplierait la primaire et refermerait la gouttière
- * le temps du chargement, pour tout rouvrir à l'arrivée de l'écran — un
- * aller-retour de 376 px sur toute la moitié droite.
+ * The skeleton mounts a REAL `SecondarySidebar`, not a column that looks like it
+ *: this is the assembly that puts the primary bar to the rail. Without it, a
+ * navigation to these screens would unfold the primary and close the gutter
+ * during loading, to reopen everything when the screen arrives — a
+ * round trip of 376 px over the entire right half.
  */
 export function ListDetailSkeleton({
   rows = 6,
@@ -93,17 +92,17 @@ export function ListDetailSkeleton({
 }
 
 /**
- * L'onglet Pages (MIN-270) : un ARBRE à gauche, un document à droite.
+ * The Pages tab (MIN-270): a TREE on the left, a document on the right.
  *
- * Il ne réutilise pas `ListDetailSkeleton` parce que les deux moitiés diffèrent
- * des deux côtés — une ligne d'arbre fait 28 px là où une carte de triage en
- * fait 56, et le panneau de droite est un document (titre puis paragraphes),
- * pas une pile de cartes. Un squelette qui ne tombe pas au bon endroit produit
- * un saut à l'arrivée de l'écran, ce qui est pire que rien.
+ * It does not reuse `ListDetailSkeleton` because the two halves differ
+ * on both sides — a tree line is 28 px where a yard card en
+ * is 56, and the right panel is a document (title then paragraphs),
+ * not a stack of cards. A skeleton that doesn't fall in the right place produces
+ * a jump at the screen, which is worse than nothing.
  *
- * Les largeurs décroissantes des lignes imitent des titres de longueurs
- * différentes : six barres identiques se lisent comme un tableau, pas comme un
- * arbre.
+ * The decreasing widths of the lines imitate titles of different lengths
+ *: six identical bars read like a table, not like a
+ * tree.
  */
 export function PageTreeSkeleton({ rows = 7 }: { rows?: number }) {
   const indents = [0, 16, 16, 0, 16, 32, 0];
@@ -135,16 +134,16 @@ export function PageTreeSkeleton({ rows = 7 }: { rows?: number }) {
   );
 }
 
-/** Réglages (MIN-167) : le gabarit ci-dessus, avec des lignes d'onglets. */
+/** Settings (MIN-167): the template above, with miter lines. */
 export function SettingsPageSkeleton({ rows = 3 }: { rows?: number }) {
   return <ListDetailSkeleton rows={6} rowClassName="h-10" cards={rows} />;
 }
 
 /**
- * Board kanban : barre d'outils puis colonnes. Reprend la structure pleine
- * hauteur de `app/(app)/projects/[id]/page.tsx` (`flex h-full flex-col`, puis
- * `min-h-0 flex-1 px-6 pt-4`) pour que la bascule vers le vrai board ne déplace
- * ni la toolbar ni le haut des colonnes.
+ * Kanban board: toolbar then columns. Takes the full structure
+ * height of `app/(app)/projects/[id]/page.tsx` (`flex h-full flex-col`, then
+ * `min-h-0 flex-1 px-6 pt-4`) so that the switch to the real board does not move
+ * neither the toolbar nor the top of the columns.
  */
 export function BoardSkeleton({ columns = 4 }: { columns?: number }) {
   return (
@@ -160,8 +159,8 @@ export function BoardSkeleton({ columns = 4 }: { columns?: number }) {
           {Array.from({ length: columns }).map((_, col) => (
             <div key={col} className="flex min-w-[260px] flex-1 flex-col gap-3">
               <Skeleton className="h-5 w-28" />
-              {/* Colonnes dégressives : un mur de cartes identiques lit comme un
-                  bug d'affichage, pas comme un chargement. */}
+              {/* Decreasing columns: a wall of identical cards reads like a
+ display bug, not a loading. */}
               {Array.from({ length: Math.max(1, 4 - col) }).map((_, card) => (
                 <Skeleton key={card} className="h-24 rounded-xl" />
               ))}
@@ -174,7 +173,7 @@ export function BoardSkeleton({ columns = 4 }: { columns?: number }) {
 }
 
 /**
- * Page pleine hauteur à contenu centré (objectifs, triage) :
+ * Full height page with centered content (objectives, sorting):
  * `min-h-0 flex-1 overflow-y-auto px-6 py-8` + `mx-auto max-w-5xl`.
  */
 export function ScrollPageSkeleton({ rows = 4 }: { rows?: number }) {

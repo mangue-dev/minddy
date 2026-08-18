@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 /**
- * MIN-379 — bootstrap reproductible d'une instance Supabase minddy.
+ * MIN-379 — reproducible bootstrap of a Supabase minddy instance.
  *
- * Deux modes, volontairement explicites :
+ * Two deliberately explicit modes:
  *   pnpm bootstrap:supabase
- *     démarre et prépare la pile locale définie par supabase/config.toml.
+ * starts and prepares the local stack defined by supabase/config.toml.
  *   pnpm bootstrap:supabase -- --db-url "$SUPABASE_DB_URL"
- *     prépare une pile auto-hébergée déjà démarrée. L'URL PostgreSQL doit être
- *     celle d'un rôle qui peut appliquer les migrations Supabase.
+ * prepares an already started self-hosted stack. The PostgreSQL URL must be
+ * that of a role that can apply Supabase migrations.
  *
- * Le script ne redémarre jamais une pile distante et n'écrase jamais une valeur
- * déjà présente dans le fichier d'environnement. Les migrations sont la source
- * de vérité du schéma ; l'API Storage est celle des buckets, car ils ne font
- * pas partie d'un dump de schéma PostgreSQL.
+ * The script never restarts a remote stack or overwrites a value
+ * already present in the environment file. Migration is the source
+ * of truth of the diagram; the Storage API is that of buckets, because they do not
+ * not part of a PostgreSQL schema dump.
  */
 import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -33,7 +33,7 @@ const GENERATED_SECRET_KEYS = [
 ];
 
 export function fail(message) {
-  throw new Error(`Bootstrap Supabase impossible : ${message}`);
+  throw new Error(`Supabase bootstrap failed: ${message}`);
 }
 
 export function parseArgs(argv) {
@@ -43,7 +43,7 @@ export function parseArgs(argv) {
     const arg = argv[index];
     const value = () => {
       const next = argv[++index];
-      if (!next || next.startsWith("--")) fail(`${arg} attend une valeur.`);
+      if (!next || next.startsWith("--")) fail(`${arg} expects a value.`);
       return next;
     };
 
@@ -64,13 +64,13 @@ export function parseArgs(argv) {
     } else if (arg === "--help" || arg === "-h") {
       options.help = true;
     } else {
-      fail(`option inconnue : ${arg}. Consultez --help.`);
+      fail(`unknown option: ${arg}. See --help.`);
     }
   }
 
-  if (!options.local && !options.dbUrl) fail("--db-url est requis hors mode local.");
+  if (!options.local && !options.dbUrl) fail("--db-url is required outside local mode.");
   if (!options.envFile.startsWith(`${ROOT_DIR}/`)) {
-    fail("--env-file doit rester dans ce clone pour éviter d'écrire un fichier inattendu.");
+    fail("--env-file must stay inside this clone to avoid writing an unexpected file.");
   }
   return options;
 }
@@ -79,36 +79,36 @@ export function help() {
   return `Usage: pnpm bootstrap:supabase [-- --local | --db-url <postgres-url>] [options]
 
 Options:
-  --local              Prépare la pile Docker locale (défaut).
-  --db-url <url>       Applique les migrations à une pile distante déjà démarrée.
-  --skip-start         Ne lance pas \`supabase start\` en mode local.
-  --env-file <path>    Fichier local à compléter (défaut : .env.local).
-  --dry-run            Contrôle les prérequis sans écrire ni appliquer.
-  -h, --help           Affiche cette aide.
+  --local              Prepare the local Docker stack (default).
+  --db-url <url>       Applies migrations to an already started remote stack.
+  --skip-start         Does not run \`supabase start\` in local mode.
+  --env-file <path>    Local file to complete (default: .env.local).
+  --dry-run            Checks prerequisites without writing or applying changes.
+  -h, --help           Shows this help.
 
-Mode distant : fournissez aussi NEXT_PUBLIC_SUPABASE_URL,
-NEXT_PUBLIC_SUPABASE_ANON_KEY et SUPABASE_SERVICE_ROLE_KEY dans le shell. Les
-cinq secrets applicatifs manquants sont générés dans .env.local.`;
+Remote mode: also provide NEXT_PUBLIC_SUPABASE_URL,
+NEXT_PUBLIC_SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY in the shell. The
+five missing application secrets are generated in .env.local.`;
 }
 
 export function listMigrations(directory = MIGRATIONS_DIR) {
-  if (!existsSync(directory)) fail(`répertoire de migrations absent : ${directory}`);
+  if (!existsSync(directory)) fail(`migration directory is missing: ${directory}`);
   const files = readdirSync(directory)
     .filter((file) => file.endsWith(".sql"))
     .sort();
-  if (files.length === 0) fail("aucune migration SQL trouvée.");
+  if (files.length === 0) fail("no SQL migrations found.");
 
   const seenVersions = new Set();
   for (const file of files) {
     const match = /^(\d{14})_[a-z0-9_]+\.sql$/.exec(file);
-    if (!match) fail(`nom de migration invalide : ${file} (attendu : YYYYMMDDHHMMSS_nom.sql).`);
-    if (seenVersions.has(match[1])) fail(`version de migration dupliquée : ${match[1]}.`);
+    if (!match) fail(`invalid migration name: ${file} (expected: YYYYMMDDHHMMSS_name.sql).`);
+    if (seenVersions.has(match[1])) fail(`duplicate migration version: ${match[1]}.`);
     seenVersions.add(match[1]);
   }
 
   const contents = files.map((file) => readFileSync(resolve(directory, file), "utf8")).join("\n");
   if (!/create extension if not exists\s+"?vector"?\s+with schema\s+"?extensions"?/i.test(contents)) {
-    fail("l'extension vector n'est plus déclarée dans les migrations.");
+    fail("the vector extension is no longer declared in the migrations.");
   }
   return files;
 }
@@ -136,8 +136,8 @@ function unquoteEnvValue(value) {
 }
 
 function envLine(key, value) {
-  // Hex, URL et clés JWT n'ont pas besoin de quoting. L'échappement protège les
-  // valeurs externes inhabituelles sans transformer le fichier en shell script.
+  // Hex, URL and JWT keys do not need quoting. The exhaust protects
+  // unusual external values ​​without turning the file into a shell script.
   const rendered = /^[A-Za-z0-9._~:/?#[\]@!$&'()*+,;=%-]+$/.test(value)
     ? value
     : JSON.stringify(value);
@@ -153,7 +153,7 @@ export function appendMissingEnv(file, values) {
     additions.push(envLine(key, value));
   }
   if (additions.length === 0) return [];
-  const prefix = before.length === 0 ? "# Généré par pnpm bootstrap:supabase — ne pas committer.\n" : before.endsWith("\n") ? "" : "\n";
+  const prefix = before.length === 0 ? "# Generated by pnpm bootstrap:supabase — do not commit.\n" : before.endsWith("\n") ? "" : "\n";
   writeFileSync(file, `${before}${prefix}${additions.join("\n")}\n`, { mode: 0o600 });
   return additions.map((line) => line.slice(0, line.indexOf("=")));
 }
@@ -173,11 +173,11 @@ export function run(command, args, { dryRun = false, env } = {}) {
     env: { ...process.env, ...env },
   });
   if (result.error?.code === "ENOENT") {
-    fail(`commande absente : ${command}. Installez-la puis relancez.`);
+    fail(`command is missing: ${command}. Install it and try again.`);
   }
   if (result.status !== 0) {
-    const details = (result.stderr || result.stdout || "erreur sans sortie").trim();
-    fail(`${command} a échoué (code ${result.status}) : ${details}`);
+    const details = (result.stderr || result.stdout || "error without output").trim();
+    fail(`${command} failed (code ${result.status}): ${details}`);
   }
   return result;
 }
@@ -201,7 +201,7 @@ export function readLocalStatus({ dryRun = false } = {}) {
   );
   const missing = ["API_URL", "ANON_KEY", "SERVICE_ROLE_KEY", "DB_URL"].filter((key) => !status[key]);
   if (missing.length > 0) {
-    fail(`la pile locale ne fournit pas ${missing.join(", ")}. Vérifiez \`supabase status\`.`);
+    fail(`the local stack does not provide ${missing.join(", ")}. Check \`supabase status\`.`);
   }
   return status;
 }
@@ -215,8 +215,8 @@ function remoteAppValues() {
   const missing = required.filter((key) => !process.env[key]?.trim());
   if (missing.length > 0) {
     fail(
-      `${missing.join(", ")} manque dans le shell. Ces valeurs viennent de la pile Supabase ` +
-        "auto-hébergée ; elles ne peuvent pas être déduites de l'URL PostgreSQL."
+      `${missing.join(", ")} is missing from the shell. These values come from the ` +
+        "self-hosted Supabase stack; they cannot be derived from the PostgreSQL URL."
     );
   }
   return Object.fromEntries(required.map((key) => [key, process.env[key].trim()]));
@@ -225,9 +225,8 @@ function remoteAppValues() {
 async function reconcileAndVerify({ dbUrl, appValues, dryRun, local }) {
   const reconcile = resolve(SCRIPT_DIR, "reconcile-storage-buckets.mjs");
   const verify = resolve(SCRIPT_DIR, "verify-supabase-bootstrap.mjs");
-  // Les URL et clé de service restent dans l'environnement des sous-processus,
-  // jamais dans leur ligne de commande (visible par les autres processus du
-  // poste sur certains systèmes).
+  // URLs and the service key stay in the subprocess environment, never in the
+  // command line (which is visible to other processes on some systems).
   const env = {
     MDY_BOOTSTRAP_SUPABASE_URL: appValues.NEXT_PUBLIC_SUPABASE_URL,
     MDY_BOOTSTRAP_SERVICE_ROLE_KEY: appValues.SUPABASE_SERVICE_ROLE_KEY,
@@ -245,14 +244,14 @@ export async function main(argv = process.argv.slice(2)) {
   }
 
   const migrations = listMigrations();
-  console.log(`→ ${migrations.length} migrations validées, de ${migrations[0]} à ${migrations.at(-1)}.`);
+  console.log(`→ ${migrations.length} migrations validated, from ${migrations[0]} to ${migrations.at(-1)}.`);
   run("supabase", ["--version"], { dryRun: options.dryRun });
 
   let dbUrl;
   let appValues;
   if (options.local) {
-    // La CLI télécharge/contrôle les services via Docker. Le diagnostiquer avant
-    // `supabase start` évite le très vague « Cannot connect to Docker daemon ».
+    // The CLI downloads and checks services through Docker. Checking it before
+    // `supabase start` avoids the vague “Cannot connect to Docker daemon”.
     run("docker", ["info"], { dryRun: options.dryRun });
     if (options.start) run("supabase", ["start"], { dryRun: options.dryRun });
     const status = readLocalStatus({ dryRun: options.dryRun });
@@ -269,10 +268,10 @@ export async function main(argv = process.argv.slice(2)) {
 
   const generated = { ...appValues, ...generatedSecrets() };
   if (options.dryRun) {
-    console.log(`→ compléterait ${basename(options.envFile)} sans remplacer de valeurs existantes.`);
+    console.log(`→ would complete ${basename(options.envFile)} without replacing existing values.`);
   } else {
     const added = appendMissingEnv(options.envFile, generated);
-    console.log(added.length === 0 ? `→ ${basename(options.envFile)} est déjà complet.` : `→ ${basename(options.envFile)} complété : ${added.join(", ")}.`);
+    console.log(added.length === 0 ? `→ ${basename(options.envFile)} is already complete.` : `→ ${basename(options.envFile)} completed: ${added.join(", ")}.`);
   }
 
   const pushArgs = options.local
@@ -280,7 +279,7 @@ export async function main(argv = process.argv.slice(2)) {
     : ["db", "push", "--db-url", dbUrl, "--yes"];
   run("supabase", pushArgs, { dryRun: options.dryRun });
   await reconcileAndVerify({ dbUrl, appValues, dryRun: options.dryRun, local: options.local });
-  console.log("✓ Instance Supabase prête : migrations, stockage, valeurs initiales et prérequis vérifiés.");
+  console.log("✓ Supabase instance ready: migrations, storage, initial values, and prerequisites verified.");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

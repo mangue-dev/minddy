@@ -11,15 +11,15 @@ type NumoIconProps = Omit<NumoFaceProps, "ref" | "paint" | "defs"> & {
   /** Drives the facial reaction. Defaults to a calm blink/glance loop. */
   state?: NumoState;
   /**
-   * Set to `false` for a still face — appropriate for tiny list icons (e.g. a
-   * command-palette row rendered once per project) where perpetual blink/glance
-   * loops would be noisy and wasteful. Defaults to `true`.
-   *
-   * ⚠ Ce drapeau n'empêche pas framer-motion d'entrer dans le bundle : le hook
-   * est appelé au premier niveau, donc l'import existe de toute façon. Un
-   * appelant qui ne veut QUE le visage immobile — et qui n'embarque pas déjà
-   * framer-motion — rend `NumoFace` directement (MIN-100).
-   */
+ * Set to `false` for a still face — appropriate for tiny list icons (e.g. a
+ * command-palette row rendered once per project) where perpetual blink/glance
+ * loops would be noisy and wasteful. Defaults to `true`.
+ *
+ * ⚠ This flag does not prevent framer-motion from entering the bundle: the hook
+ * is called at the first level, so the import exists anyway. A
+ * caller who ONLY wants the face still — and who doesn't already ship
+ * framer-motion — renders `NumoFace` directly (MIN-100).
+ */
   animated?: boolean;
 };
 
@@ -48,13 +48,13 @@ const GRADIENT_TILE = 48;
 /**
  * Numo — the minddy assistant's animated face. A minimalist mascot (blob
  * outline + two eyes + smile). The head outline stays still; the eyes and mouth
- * move together as one face (`data-numo-face`). Base colour is inherited via
+ * move together as one face (`data-numo-face`). Base color is inherited via
  * `currentColor` (tint with a `text-*` class). While thinking, the face glances
- * to the top-right and a soft bluish gradient flows across it. Honours
+ * to the top-right and a soft bluish gradient flows across it. Honors
  * `prefers-reduced-motion` by rendering a still face.
  *
- * Le dessin lui-même est dans `numo-face.tsx`, qui n'a besoin d'aucun JS : ce
- * fichier-ci n'ajoute que le mouvement.
+ * The drawing itself is in `numo-face.tsx`, which doesn't need any JS: this
+ * file only adds the movement.
  */
 export function NumoIcon({
   state = "idle",

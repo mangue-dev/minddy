@@ -3,17 +3,16 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 vi.mock("server-only", () => ({}));
 
 /**
- * MIN-296 — ce que la suppression de compte laisse (ou non) dans les BUCKETS.
+ * MIN-296 — what account deletion leaves (or doesn't) in BUCKETS.
  *
- * Les lignes cascadent avec `auth.users`, les octets non : chaque bucket qui
- * porte quelque chose de la personne doit être balayé à la main, et un bucket
- * oublié ne se voit nulle part — la requête réussit, l'écran dit « supprimé »,
- * et le fichier reste servi par son URL. Il en manquait un : les pièces jointes
- * des commentaires de pull request (bucket `forge-attachments`, PUBLIC).
+ * Rows cascade with `auth.users`, bytes don't: each bucket that carries something of the person must be scanned by hand, and a bucket
+ * forgotten is not seen anywhere — the request succeeds, the screen says "deleted",
+ * and the file remains served by its URL. One was missing: attachments
+ * pull request comments (bucket `forge-attachments`, PUBLIC).
  *
- * Ce fichier épingle les quatre balayages ensemble : c'est la LISTE qui est le
- * sujet, pas chacun pris à part. Un cinquième bucket ajouté un jour sans son
- * passage ici fera tomber le test du décompte.
+ * This file pins the four scans together: it is the LIST that is the
+ * subject, not each one separately. A fifth bucket added on a day without its
+ * passing here will break the countdown test.
  */
 
 const service = vi.hoisted(() => {
@@ -21,7 +20,7 @@ const service = vi.hoisted(() => {
   const objects: Record<string, string[]> = {};
   const tables: Record<string, Record<string, unknown>[]> = {};
 
-  /** Constructeur de requête minimal : tout chaîne, et l'objet est awaitable. */
+  /** Minimal query constructor: any string, and the object is awaitable. */
   const query = (rows: Record<string, unknown>[]) => {
     const builder: Record<string, unknown> = {
       maybeSingle: async () => ({ data: rows[0] ?? null, error: null }),
@@ -40,8 +39,8 @@ const service = vi.hoisted(() => {
     from: (table: string) => query(tables[table] ?? []),
     storage: {
       from: (bucket: string) => ({
-        // `list` ne descend pas : on rend les entrées du niveau demandé, les
-        // dossiers sans métadonnées comme le vrai service.
+        // `list` does not go down: we return the entries of the requested level, the
+        // folders without metadata like the real service.
         list: async (prefix: string) => {
           const all = objects[bucket] ?? [];
           const scoped = all.filter((p) => (prefix ? p.startsWith(`${prefix}/`) : true));
@@ -91,7 +90,7 @@ const USER = "11111111-1111-4111-8111-111111111111";
 const PROJECT = "22222222-2222-4222-8222-222222222222";
 const PR = "33333333-3333-4333-8333-333333333333";
 
-/** Tous les chemins effacés, tous buckets confondus. */
+/** All paths deleted, all buckets combined. */
 const removedPaths = () => service.removed.flatMap((r) => r.paths);
 
 beforeEach(() => {
@@ -139,7 +138,7 @@ describe("deleteAccount — le balayage des buckets", () => {
         `${PROJECT}/icon.png`,
       ])
     );
-    // Quatre objets, un par famille : ressource, chat, icône, PR.
+    // Four objects, one per family: resource, chat, icon, PR.
     expect(result.removedStorageObjects).toBe(4);
     expect(result.warnings).toEqual([]);
   });

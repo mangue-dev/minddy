@@ -49,7 +49,7 @@ import type {
 
 const ALL_PULL_REQUESTS_QUERY_KEY = ["pull-requests", "all"] as const;
 
-/** `open` comprend les brouillons, comme le filtre servi par l'API. */
+/** `open` understands drafts, like the filter served by the API. */
 function matchesStateFilter(state: PullRequestListItem["pr_state"], filter: unknown): boolean {
   return (
     filter === "all" ||
@@ -59,9 +59,9 @@ function matchesStateFilter(state: PullRequestListItem["pr_state"], filter: unkn
 }
 
 /**
- * Applique un changement d'état à toutes les variantes en cache de la liste.
- * Une ligne qui sort du filtre courant disparaît immédiatement : la sidebar et
- * le détail choisissent donc leur nouvel état dans le même rendu.
+ * Applies a state change to all cached variants in the list.
+ * A line that leaves the current filter disappears immediately: the sidebar and
+ * the detail therefore chooses their new state in the same rendering.
  */
 function updateCachedPullRequestState(
   queryClient: ReturnType<typeof useQueryClient>,
@@ -79,9 +79,9 @@ function updateCachedPullRequestState(
     queryClient.setQueryData(key, { ...data, pullRequests });
   }
 
-  // Le détail a son propre cache, servi par la forge. Le laisser attendre le
-  // refetch après avoir déjà changé la sidebar faisait cohabiter deux états de
-  // la même PR pendant un aller-retour réseau.
+  // The detail has its own cache, served by the forge. Let him wait
+  // refetch after having already changed the sidebar made two states of
+  // the same PR during a network round trip.
   queryClient.setQueryData<AgentRunPrResponse>(["pull-request", prId], (data) => {
     if (!data?.pr) return data;
     return {
@@ -97,40 +97,40 @@ function updateCachedPullRequestState(
 }
 
 /**
- * Page Pull Requests (MIN-66, élargie par MIN-143) — vue liste/détail façon
- * triage : à gauche TOUTES les PR des dépôts liés (de Numo comme des humains,
- * tous projets accessibles), à droite le diff + commentaires + actions.
+ * Pull Requests page (MIN-66, expanded by MIN-143) — list view/detail way
+ * sorting: on the left ALL the PRs of the linked repositories (from Numo as well as from humans,
+ * all accessible projects), on the right the diff + comments + actions.
  *
- * Deux filtres, et pas un de plus. L'ÉTAT, servi par le serveur — « toutes »
- * veut maintenant dire des centaines de lignes. L'AUTEUR, appliqué sur la page
- * chargée, avec l'entrée « ouvertes par Numo » qui est la question qu'on se pose
- * vraiment souvent. Ce qui MANQUE volontairement, c'est « à relire par moi » : il
- * faudrait savoir quel compte de forge est quel membre minddy, et `git_connections`
- * ne le dit que du compte qui a lié le dépôt.
+ * Two filters, and not one more. STATUS, served by the server — “all”
+ * now means hundreds of lines. THE AUTHOR, applied on the page
+ * loaded, with the entry “opened by Numo” which is the question we ask ourselves
+ * really often. What is deliberately MISSING is “to be reread by me”: it
+ * should know which forge account is which minddy member, and `git_connections`
+ * only says it about the account that linked the deposit.
  */
 
-/** Valeur du filtre d'auteur : tous, Numo, ou un login de forge précis. */
+/** Author filter value: all, Numo, or a specific forge login. */
 const AUTHOR_ALL = "__all__";
 const AUTHOR_NUMO = "__numo__";
 
 /**
- * Les états servis par le filtre, dans l'ordre du menu.
+ * The states served by the filter, in menu order.
  *
- * Une TABLE plutôt que quatre entrées écrites à la main : le menu et le libellé
- * du bouton lisent la même source, donc ils ne peuvent pas diverger. Typée en
- * `MessageKey` et non en `string` — une clé qui n'existe pas ne compile pas
- * (cf. CLAUDE.md), là où un `Record<string, string>` afficherait sereinement
- * « PullRequests.filterOpen » à l'écran.
+ * A TABLE rather than four hand-written entries: the menu and the wording
+ * of the button read the same source, so they cannot diverge. Typed in
+ * `MessageKey` and not `string` — a key that does not exist does not compile
+ * (see CLAUDE.md), where a `Record<string, string>` would calmly display
+ * “PullRequests.filterOpen” on the screen.
  */
 const STATE_FILTERS: ReadonlyArray<{
   value: PullRequestStateFilter;
   label: MessageKey<"PullRequests">;
   /**
-   * Titre de la colonne vide quand c'est CET état, et lui seul, qui la vide —
-   * « aucune pull request fusionnée » dit ce qu'on cherchait, là où « aucune
-   * dans ces filtres » renvoie l'utilisateur ouvrir le menu pour se rappeler
-   * lesquels. « Toutes » n'en a pas : un état qui n'exclut rien n'a rien à
-   * nommer, et cette surface-là est déjà traitée avant le rendu de la colonne.
+   * Title of the empty column when it is THIS state, and this state alone, which empties it —
+   * “no merged pull requests” says what we were looking for, where “none
+   * in these filters » returns the user open the menu to remember
+   * which ones. “All” does not have one: a state which excludes nothing has nothing to
+   * name, and this surface is already processed before rendering the column.
    */
   empty?: MessageKey<"PullRequests">;
 }> = [
@@ -141,18 +141,18 @@ const STATE_FILTERS: ReadonlyArray<{
 ];
 
 /**
- * Le filtre de la colonne : UN déclencheur pour les deux dimensions.
+ * The column filter: ONE trigger for both dimensions.
  *
- * C'est un COMBOBOX, le même que les sélecteurs de champ d'un ticket (statut,
- * priorité, assigné) — `SearchMenu`, donc cmdk, donc cherchable. Sur un dépôt à
- * quinze contributeurs, une liste d'auteurs qu'on ne peut que parcourir des yeux
- * n'est pas un filtre, c'est un annuaire.
+ * It is a COMBOBOX, the same as the field selectors of a ticket (status,
+ * priority, assigned) — `SearchMenu`, therefore cmdk, therefore searchable. On a deposit at
+ * fifteen contributors, a list of authors that we can only scan with our eyes
+ * is not a filter, it is a directory.
  *
- * Le déclencheur ne porte plus ni libellé ni chevron, juste l'icône de filtre :
- * la ligne fait 320 px, et le champ de saisie a besoin de tout ce qu'on peut lui
- * laisser. Ce que le libellé disait — l'état courant — passe dans le tooltip, et
- * une pastille signale de loin qu'un filtre est posé ; sans elle, une liste
- * restreinte n'aurait plus rien pour le dire.
+ * The trigger no longer has any label or chevron, just the filter icon:
+ * the line is 320 px, and the input field needs everything we can get it
+ * to leave. What the label said — the current state — goes into the tooltip, and
+ * a pellet indicates from afar that a filter is installed; without it, a list
+ * restricted would have nothing left to say about it.
  */
 function PrFilterMenu({
   state,
@@ -173,8 +173,8 @@ function PrFilterMenu({
   const stateLabel = t(
     STATE_FILTERS.find((s) => s.value === state)?.label ?? "filterOpen",
   );
-  // « Ouvertes, tous auteurs » est le point de départ : rien à signaler. Tout le
-  // reste restreint la liste, et doit se voir sans ouvrir le menu.
+  // “Open, all authors” is the starting point: nothing to report. All the
+  // The list remains restricted, and must be seen without opening the menu.
   const active = state !== "open" || author !== AUTHOR_ALL;
 
   const pick = (run: () => void) => {
@@ -189,8 +189,8 @@ function PrFilterMenu({
       align="end"
       tooltip={t("filterTooltip", { state: stateLabel })}
       trigger={
-        /* `-mr-2` compense le padding du bouton : l'icône s'aligne alors sur le
-           bord droit des lignes de la liste, pas 8 px en-deçà. */
+        /* `-mr-2` compensates for the padding of the button: the icon then aligns with the
+           right edge of the list lines, not 8 px below. */
         <Button
           variant="ghost"
           size="icon-sm"
@@ -200,8 +200,8 @@ function PrFilterMenu({
           <span className="relative flex items-center justify-center">
             <ListFilter className="size-4" />
             {active ? (
-              /* L'anneau à la couleur de la barre détache la pastille du trait
-                 de l'icône, qui passe juste dessous. */
+              /* The ring in the color of the bar detaches the pellet from the line
+                 of the icon, which passes just below. */
               <span
                 aria-hidden
                 className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-primary ring-2 ring-sidebar"
@@ -224,8 +224,8 @@ function PrFilterMenu({
           </CommandItem>
         ))}
       </CommandGroup>
-      {/* L'auteur ne se pose que là où Numo et les humains cohabitent : à un
-          seul auteur, le groupe n'aurait rien à trancher. */}
+      {/* The author only arises where Numo and humans coexist: at a
+          sole author, the group would have nothing to decide. */}
       {authors.length > 1 ? (
         <>
           <CommandSeparator className="my-1" />
@@ -254,8 +254,8 @@ function PrFilterMenu({
                 onSelect={() => pick(() => onAuthorChange(a.login))}
                 {...checkedProps(a.login === author)}
               >
-                {/* `GitLogin` tronque déjà le nom sans écraser sa pastille
-                    « bot » — l'envelopper d'un `truncate` la couperait. */}
+                {/* `GitLogin` already truncates the name without overwriting its pastille
+                    “bot” — wrapping it in a `truncate` would cut it. */}
                 <GitLogin login={a.login} />
               </CommandItem>
             ))}
@@ -267,9 +267,9 @@ function PrFilterMenu({
 }
 
 /**
- * Une pull request dans la liste. Elle dit ce qu'elle disait déjà — identifiant,
- * ticket lié, état, date, titre, auteur — MOINS son projet, qui est écrit
- * au-dessus d'elle par l'accordéon et n'a plus à l'être une fois par ligne.
+ * A pull request in the list. She says what she was already saying — identifying,
+ * linked ticket, status, date, title, author — LESS his project, which is written
+ * above it by the accordion and no longer has to be done once per line.
  */
 function PrRow({
   pr,
@@ -283,9 +283,9 @@ function PrRow({
   onSelect: () => void;
 }) {
   const t = useTranslations("PullRequests");
-  // L'identifiant de la PR d'abord — c'est CETTE ligne qu'on regarde ; le ticket
-  // lié se lit à droite, derrière un chevron qui dit la relation (même forme que
-  // le sous-ticket dans la carte d'issue).
+  // The PR identifier first — it's THIS line we're looking at; the ticket
+  // linked is read on the right, behind a chevron which indicates the relationship (same form as
+  // the sub-ticket in the exit card).
   const identifier = prIdentifier(pr.provider, pr.pr_number);
   const linkedIssue =
     pr.issue && pr.project ? issueIdentifier(pr.project.key, pr.issue.number) : null;
@@ -294,11 +294,11 @@ function PrRow({
     <button
       type="button"
       onClick={onSelect}
-      // La sélection DÉRIVÉE de la page, et non l'état des CLICS : les deux
-      // divergent dans les deux cas d'ouverture les plus courants — à l'arrivée
-      // sur la page (rien n'a été cliqué, la première PR s'affiche) et sur un
-      // `?run=`, résolu en PR sans passer par l'état. La liste ne surlignait
-      // alors rien, en face d'une PR bel et bien ouverte.
+      // The DERIVED selection of the page, not the CLICKS state: both
+      // diverge in the two most common opening cases — upon arrival
+      // on the page (nothing has been clicked, the first PR is displayed) and on a
+      // `?run=`, resolved in PR without going through the state. The list did not highlight
+      // then nothing, in front of a well and truly open PR.
       aria-current={selected ? "true" : undefined}
       className={cn(
         "flex flex-col gap-1 rounded-lg py-2 pr-2 text-left outline-none transition-colors",
@@ -326,9 +326,9 @@ function PrRow({
         {pr.title ?? pr.issue?.title ?? identifier}
       </span>
       <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-        {/* L'AUTEUR distingue une PR de Numo d'une PR humaine, maintenant qu'elles
-            cohabitent. Le run tranche : il ne ment pas, là où le login de la forge
-            dépend de l'installation. */}
+        {/* THE AUTHOR distinguishes a Numo PR from a human PR, now that they
+            cohabit. The run decides: it does not lie, where the login of the forge
+            depends on the installation. */}
         {pr.runId ? (
           <NumoIcon animated={false} className="size-3.5 shrink-0" />
         ) : pr.author ? (
@@ -348,7 +348,7 @@ function PrRow({
   );
 }
 
-/** Un projet et ses pull requests — la coque partagée, garnie de `PrRow`. */
+/** A project and its pull requests — the shared shell, filled with `PrRow`. */
 function PrGroupRows({
   group,
   open,
@@ -373,8 +373,8 @@ function PrGroupRows({
   const tCommon = useTranslations("Common");
   const prs = group.items;
 
-  // La PR OUVERTE reste visible : si elle est au-delà des cinq premières, la
-  // coupe descend jusqu'à elle plutôt que de la cacher.
+  // The OPEN PR remains visible: if it is beyond the first five, the
+  // cut goes down to it rather than hiding it.
   const selectedIndex = prs.findIndex((p) => p.prId === selectedId);
   const shown = showAll
     ? prs
@@ -390,8 +390,8 @@ function PrGroupRows({
       hiddenCount={prs.length - shown.length}
       onShowAll={onShowAll}
       showMoreLabel={tCommon("showMore")}
-      // Replié, l'en-tête garde le seul signal qui n'attend pas : un agent
-      // travaille sur l'une de ces PR.
+      // Folded, the header keeps the only signal that does not wait: an agent
+      // working on one of these PRs.
       collapsedBadge={
         prs.some((p) => p.activeRunId) ? <Spinner className="size-3 shrink-0" /> : null
       }
@@ -417,10 +417,10 @@ export function PullRequestsPage() {
   const { projects, openCreateProject, loading: projectsLoading } = useProjects();
   const queryClient = useQueryClient();
 
-  // Les actions de forge sont lentes, mais leur état est connu dès le clic : on
-  // patche la liste avant la réponse, puis on réconcilie avec le serveur. Le
-  // snapshot permet de remettre exactement les listes en place si la forge
-  // refuse finalement l'action (protection de branche, droits retirés…).
+  // Forging actions are slow, but their state is known from the click: we
+  // patches the list before the response, then reconciles with the server. THE
+  // snapshot allows you to put the lists exactly back in place if the forge
+  // ultimately refuses the action (branch protection, rights withdrawn, etc.).
   const applyOptimisticState = useCallback(
     (prId: string, state: PullRequestListItem["pr_state"]) => {
       const previous = queryClient.getQueriesData<PullRequestListResponse>({
@@ -446,10 +446,10 @@ export function PullRequestsPage() {
     [queryClient],
   );
 
-  // Deep-links : `?pr=<id>` (direct, MIN-143) et `?run=<id>` (historique — la
-  // sidebar d'issue et tous les liens déjà en circulation parlent en run).
-  // Les deux présélectionnent la PR et basculent le filtre sur « tous » pour
-  // qu'elle soit visible quel que soit son état.
+  // Deep-links: `?pr=<id>` (direct, MIN-143) and `?run=<id>` (historical — the
+  // issue sidebar and all links already in circulation speak in run).
+  // Both preselect the PR and switch the filter to “all” to
+  // that it is visible whatever its state.
   const searchParams = useSearchParams();
   const runParam = searchParams.get("run");
   const prParam = searchParams.get("pr");
@@ -461,10 +461,10 @@ export function PullRequestsPage() {
   const [limit, setLimit] = useState(PULL_REQUESTS_PAGE);
   const [selectedPrId, setSelectedPrId] = useState<string | null>(prParam);
   const [mobileDetail, setMobileDetail] = useState(!!deepLink);
-  // Issue liée ouverte dans le panneau latéral (par-dessus la page, pas de navigation).
+  // Related issue open in side panel (on top of page, no navigation).
   const [panel, setPanel] = useState<{ projectId: string; issueId: string } | null>(null);
-  // Accordéon de la liste : les projets REPLIÉS (tout est déplié par défaut — on
-  // arrive pour voir, pas pour ouvrir) et ceux dont on a demandé toutes les PR.
+  // Accordion of the list: FOLDED projects (everything is unfolded by default - we
+  // arrives to see, not to open) and those for whom we requested all the PRs.
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -472,7 +472,7 @@ export function PullRequestsPage() {
     () => new Set(),
   );
 
-  /** Replie / déplie un projet. Le replier remet sa liste à ses cinq premières. */
+  /** Folds/unfolds a project. Folding it back resets his list to his top five. */
   const toggleGroup = (key: string) => {
     const wasOpen = !collapsedGroups.has(key);
     setCollapsedGroups((prev) => toggledSet(prev, key));
@@ -481,14 +481,14 @@ export function PullRequestsPage() {
     }
   };
 
-  // Le deep-link est ÉPINGLÉ côté serveur : la PR visée entre dans la réponse
-  // même si elle tombe hors de la page (une PR d'il y a six mois). Sans ça, le
-  // lien retomberait sur la première de la liste — la PR d'un autre ticket.
+  // The deep-link is PINED on the server side: the targeted PR enters the response
+  // even if it falls off the page (a PR from six months ago). Without that, the
+  // link would fall to the first in the list — the PR of another ticket.
   const pin = useMemo(() => ({ pr: prParam, run: runParam }), [prParam, runParam]);
   const { pullRequests, hasMore, truncated, repoCount, anyPr, loading, fetching, refetch } =
     useAllPullRequestsQuery(filter, limit, pin);
 
-  // Suit les changements de param (navigation client vers une autre PR).
+  // Tracks param changes (client navigation to another PR).
   useEffect(() => {
     if (!deepLink) return;
     if (prParam) setSelectedPrId(prParam);
@@ -496,11 +496,11 @@ export function PullRequestsPage() {
     setMobileDetail(true);
   }, [deepLink, prParam]);
 
-  // Le deep-link HISTORIQUE parle en `run` (les liens « voir la pull request »
-  // portent le run le plus récent) : on le résout en `prId` dès que la liste
-  // arrive. Une PR est partagée par TOUS les runs successifs de son ticket
-  // (MIN-68) — on matche donc sur n'importe lequel, sinon le lien tomberait à
-  // côté et l'effet de garde plus bas ouvrirait la PR d'un autre ticket.
+  // The HISTORICAL deep-link speaks in `run` (the “see pull request” links
+  // carry the most recent run): we resolve it to `prId` as soon as the list
+  // arrived. A PR is shared by ALL successive runs of its ticket
+  // (MIN-68) — we therefore match on any one, otherwise the link would fall to
+  // side and the lower guard effect would open the PR of another ticket.
   const deepLinkedByRun = useMemo(
     () =>
       runParam && !prParam
@@ -508,7 +508,7 @@ export function PullRequestsPage() {
         : null,
     [runParam, prParam, pullRequests],
   );
-  // Auteurs présents dans la page chargée — le menu ne propose que ce qu'on a.
+  // Authors present in the loaded page — the menu only offers what we have.
   const authors = useMemo(() => {
     const seen = new Map<string, { login: string; avatar_url: string | null }>();
     for (const pr of pullRequests) {
@@ -519,21 +519,21 @@ export function PullRequestsPage() {
 
   const filtered = useMemo(() => {
     if (author === AUTHOR_ALL) return pullRequests;
-    // « Ouvertes par Numo » se lit sur le RUN, pas sur le login : selon la forge
-    // et l'installation, l'auteur d'une PR de Numo est tantôt l'app, tantôt le
-    // compte connecté. Le run, lui, ne ment pas.
+    // “Opened by Numo” is read on the RUN, not on the login: according to the forge
+    // and installation, the author of a Numo PR is sometimes the app, sometimes the
+    // connected account. The run doesn't lie.
     if (author === AUTHOR_NUMO) return pullRequests.filter((p) => !!p.runId);
     return pullRequests.filter((p) => p.author?.login === author);
   }, [pullRequests, author]);
 
   /**
-   * Ce que la colonne AFFICHE. Distinct de `filtered`, dont la sélection est
-   * dérivée : le filtre texte ne doit pas la déplacer. Autrement chaque frappe
-   * ferait retomber le détail sur la première ligne restante — et repartir
-   * chercher son diff, une fois par lettre.
+   * What the column DISPLAYS. Distinct from `filtered`, the selection of which is
+   * derived: the text filter must not move it. Otherwise each keystroke
+   * would drop the detail onto the first remaining line — and start again
+   * search for its diff, once per letter.
    *
-   * Les champs cherchés sont ceux qu'on LIT sur une ligne, plus la branche :
-   * c'est souvent son nom qu'on a en tête pour une PR qu'on vient de pousser.
+   * The fields sought are those that are READ on a line, plus the branch:
+   * it's often his name that we have in mind for a PR that we have just pushed.
    */
   const visible = useMemo(() => {
     if (!query.trim()) return filtered;
@@ -553,24 +553,24 @@ export function PullRequestsPage() {
   }, [filtered, query]);
 
   /**
-   * La sélection est DÉRIVÉE, pas gardée par un effet.
+   * The selection is DERIVED, not guarded by an effect.
    *
-   * Elle l'était : un effet résolvait le deep-link, un second remettait la
-   * sélection dans le filtre. Les deux se déclenchaient au même rendu — celui où
-   * la liste arrive — et le second écrasait le premier, ouvrant la PREMIÈRE PR
-   * de la liste au lieu de celle du lien. Mesuré : `?run=<run de la PR #1>`
-   * ouvrait la PR #17.
+   * It was: one effect resolved the deep-link, a second reset the
+   * selection in the filter. Both were triggered at the same rendering — the one where
+   * the list arrives — and the second overwrites the first, opening the FIRST PR
+   * of the list instead of that of the link. Measured: `?run=<PR #1 run>`
+   * opened PR #17.
    *
-   * L'ordre ci-dessous DIT la règle, au lieu de la faire émerger d'une course :
-   * le clic de l'utilisateur d'abord (tant qu'il est dans le filtre), puis le
-   * deep-link, puis la première de la liste — et rien tant qu'un fetch est en
-   * vol, sinon on ouvrirait un défaut juste avant que la bonne PR arrive.
+   * The order below SAYS the rule, instead of making it emerge from a race:
+   * the user clicks first (while it is in the filter), then the
+   * deep-link, then the first in the list — and nothing as long as a fetch is in effect.
+   * flight, otherwise we would open a defect just before the good PR arrives.
    */
   const clicked =
     selectedPrId && filtered.some((p) => p.prId === selectedPrId) ? selectedPrId : null;
-  // Un refetch de fond ne doit jamais fermer le panneau : c'était la source du
-  // clignotement à chaque retour dans la fenêtre. Seul un lien profond encore
-  // en cours de résolution attend sa réponse avant de prendre la première PR.
+  // A background refetch should never close the panel: it was the source of the
+  // flashing each time you return to the window. Only a deep connection yet
+  // being resolved waits for its response before taking the first PR.
   const waitingForDeepLink = !!deepLink && fetching && !deepLinkedByRun && !clicked;
   const selectedId =
     clicked ??
@@ -578,16 +578,16 @@ export function PullRequestsPage() {
     (waitingForDeepLink ? null : (filtered[0]?.prId ?? null));
   const selected = filtered.find((p) => p.prId === selectedId) ?? null;
 
-  // « Enregistrer la vue actuelle » (⌘K) : la PR ouverte est une sélection de
-  // la page, dérivée plutôt que poussée dans l'adresse — `?pr=` est justement
-  // ce qui la rétablit (et l'épingle côté serveur, même vieille de six mois).
+  // “Save current view” (⌘K): the open PR is a selection of
+  // the page, derived rather than pushed into the address — `?pr=` is precisely
+  // which restores it (and the pin on the server side, even if it's six months old).
   usePublishCurrentView({
     href: selected ? `/pull-requests?pr=${encodeURIComponent(selected.prId)}` : "/pull-requests",
     label: selected ? `${t("title")} · ${selected.title}` : t("title"),
   });
 
-  // Publie la PR sélectionnée à Numo : il résout « cette PR », la lit
-  // (read_pull_request) et peut lancer des changements sur l'issue liée.
+  // Publishes the selected PR to Numo: it resolves “this PR”, reads it
+  // (read_pull_request) and can initiate changes to the linked issue.
   useAssistantContext(
     selected && selected.project && selected.issue
       ? {
@@ -606,18 +606,18 @@ export function PullRequestsPage() {
     () => groupByProject(visible, (p) => p.project),
     [visible],
   );
-  // Un filtre en cours DÉPLIE tout et lève la coupe des cinq : chercher, c'est
-  // demander à voir ce qui correspond, pas à savoir où c'est rangé.
+  // A filter in progress UNFOLDS everything and lifts the cup of five: searching is
+  // ask to see what fits, not to know where it is stored.
   const filtering = query.trim().length > 0;
 
   const fmtDay = (at: string): string =>
     format.dateTime(new Date(at), { day: "numeric", month: "short" });
 
   /**
-   * Rien à lister NULLE PART — à distinguer d'un filtre sans résultat, qui garde
-   * sa petite boîte dans la colonne. Trois marches, dans l'ordre où on les
-   * franchit : un projet, un dépôt lié, puis des pull requests. `anyPr` compte
-   * tous les états, sinon « aucune ouverte » passerait pour « aucune jamais ».
+   * Nothing to list NOWHERE — to be distinguished from a filter without results, which keeps
+   * its little box in the column. Three steps, in the order in which they are
+   * crosses: a project, a linked repository, then pull requests. `anyPr` account
+   * all states, otherwise “none open” would pass for “none ever”.
    */
   if (!loading && !projectsLoading && (projects.length === 0 || repoCount === 0 || !anyPr)) {
     return (
@@ -631,8 +631,8 @@ export function PullRequestsPage() {
               </Button>
             </EmptyScene>
           ) : (
-            /* Sans dépôt lié, il n'y a pas de bouton à offrir : le dépôt se lie
-               dans les réglages D'UN projet, et on ne sait pas lequel. */
+            /* Without a linked deposit, there is no button to offer: the deposit is linked
+               in the settings OF ONE project, and we don't know which one. */
             <EmptyScene
               icon={GitPullRequest}
               title={repoCount === 0 ? t("emptyNoRepo") : t("emptyNone")}
@@ -645,7 +645,7 @@ export function PullRequestsPage() {
 
   return (
     <div className="flex h-full min-h-0">
-      {/* ── Gauche : liste des PR ───────────────────────────────────────── */}
+      {/* ── Left: pull request list ─────────────────────────────────────── */}
       <SecondarySidebar
         title={t("title")}
         hiddenOnMobile={mobileDetail}
@@ -675,17 +675,17 @@ export function PullRequestsPage() {
             ))}
           </div>
         ) : visible.length === 0 ? (
-          /* Des PR existent forcément ici — la surface entièrement vide est
-             traitée plus haut, avant le rendu de la colonne. La liste ne peut
-             donc être vide que parce qu'un filtre l'a vidée, et la même scène
-             que les autres états vides le dit, à la taille de la colonne.
-             « Rien ne correspond » et « aucune PR dans cet état » ne sont pas la
-             même nouvelle : la première se répare en effaçant trois lettres, la
-             seconde demande de rouvrir le filtre — d'où le bouton, qui n'a rien
-             à offrir tant que c'est la saisie qui restreint.
+          /* PRs necessarily exist here — the completely empty surface is
+             processed above, before rendering the column. The list cannot
+             therefore be empty only because a filter emptied it, and the same scene
+             as the other empty states say, to the size of the column.
+             “Nothing matches” and “no PR in this state” are not the
+             same news: the first can be repaired by erasing three letters, the
+             second request to reopen the filter — hence the button, which has nothing
+             to offer as long as it is the seizure that restricts.
 
-             Et quand l'état est la SEULE restriction, la scène le nomme. Dès
-             qu'un auteur s'y ajoute, elle repasse au libellé générique : « aucune
+             And when the condition is the ONLY restriction, the scene names it. Of the
+             that an author is added, it returns to the generic wording: “none
              pull request ouverte » serait faux s'il en existe, mais d'un autre. */
           <EmptyScene
             size="compact"
@@ -717,10 +717,10 @@ export function PullRequestsPage() {
           </EmptyScene>
         ) : (
           <div className="flex flex-col gap-2 px-2 pt-2 pb-4">
-            {/* Un projet, ses pull requests — même accordéon que la colonne des
-                conversations de l'agent (`SidebarProjectGroup`). C'est lui qui
-                porte le projet, et c'est pour ça que les lignes ne le portent
-                plus : il serait écrit une fois par ligne sous son propre titre. */}
+            {/* A project, its pull requests — same accordion as the column of
+                agent conversations (`SidebarProjectGroup`). It is he who
+                carries the project, and that’s why the lines don’t carry it
+                plus: it would be written once per line under its own title. */}
             {groups.map((g) => (
               <PrGroupRows
                 key={g.key}
@@ -752,8 +752,8 @@ export function PullRequestsPage() {
               </Button>
             ) : null}
 
-            {/* La pagination d'une forge a été coupée : le dire, plutôt que de
-                laisser croire que la liste est complète. */}
+            {/* The pagination of a forge has been cut: say it, rather than
+                let us believe that the list is complete. */}
             {truncated ? (
               <p className="px-3 pt-3 text-xs text-muted-foreground">{t("listTruncated")}</p>
             ) : null}
@@ -761,7 +761,7 @@ export function PullRequestsPage() {
         )}
       </SecondarySidebar>
 
-      {/* ── Droite : détail de la PR ────────────────────────────────────── */}
+      {/* ── Right: detail of the PR ────────────────────────────────────── */}
       <div
         className={cn(
           "min-h-0 min-w-0 flex-1 flex-col md:flex",
@@ -785,7 +785,7 @@ export function PullRequestsPage() {
         )}
       </div>
 
-      {/* Panneau latéral de l'issue liée — overlay par-dessus la page (pas de nav). */}
+      {/* Linked issue side panel — overlay over the page (no nav). */}
       {panel ? (
         <PrIssuePanel
           key={`${panel.projectId}:${panel.issueId}`}

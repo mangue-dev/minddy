@@ -5,13 +5,13 @@ import type { StatsWeek, StatsWorkload } from "@/lib/types";
 import { Delta, Metric, StatsCard } from "./stats-chrome";
 
 /**
- * Bandeau « en ce moment » (MIN-85) — le présent, en tête de page : ce qu'il
- * reste sur la pile, l'élan des 7 derniers jours, et la série en cours.
+ * “Right now” banner (MIN-85) — the present, at the top of the page: what
+ * remains on the pile, the momentum of the last 7 days, and the current series.
  *
- * Une seule carte à 3 colonnes séparées par des filets, plutôt que 3 cartes :
- * ces trois chiffres se lisent ensemble (« où j'en suis là, maintenant »), et
- * un bloc unique donne à la section le poids visuel qu'elle mérite en haut de
- * page. Sous `sm`, les colonnes s'empilent et les filets passent à l'horizontale.
+ * A single card with 3 columns separated by lines, rather than 3 cards :
+ * these three numbers read together ("where I am now"), and
+ * a single block gives the section the visual weight it deserves at the top of
+ * page. Under `sm`, the columns stack and the nets become horizontal.
  */
 export function NowBand({
   workload,

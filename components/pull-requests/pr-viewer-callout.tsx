@@ -9,29 +9,29 @@ import { getRepoProvider } from "@/lib/repo-providers";
 import type { PrViewer } from "@/lib/agent-api";
 
 /**
- * Le SEUL endroit où minddy explique ce que vous pouvez faire sur cette PR
- * (MIN-144), posé au-dessus des onglets. Ailleurs, les affordances d'écriture
- * DISPARAISSENT plutôt que de rester grisées : six boutons désactivés sans motif
- * ne disent rien, une phrase le dit une fois.
+ * The ONLY place where minddy explains what you can do on this PR
+ * (MIN-144), placed above the tabs. Elsewhere, the writing affordances
+ * DISAPPEAR rather than remaining grayed out: six buttons deactivated without reason
+ * say nothing, a sentence says it once.
  *
- * Trois messages, et rien du tout quand tout va bien (`capability === "write"`) :
- *  • aucun compte git connecté → le bouton qui l'autorise ;
- *  • compte connecté sans droit sur ce dépôt → le lien vers le dépôt ;
- *  • droit de lecture seulement → « vous pouvez commenter, pas fusionner ».
+ * Three messages, and nothing at all when all is well (`capability === "write"`) :
+ * • no git account connected → the button that authorizes it;
+ * • account connected without rights to this repository → the link to the repository ;
+ * • read rights only → “you can comment, not merge”.
  */
 export function PrViewerCallout({
   viewer,
   repoUrl,
 }: {
   viewer: PrViewer | null;
-  /** Lien vers la PR chez la forge — de quoi aller demander l'accès. */
+  /** Link to the PR at the forge - enough to ask for access. */
   repoUrl?: string | null;
 }) {
   const t = useTranslations("PullRequests");
   const [connecting, setConnecting] = useState(false);
 
-  // Tant que le GET n'a pas répondu, on ne raconte rien : un bandeau qui
-  // apparaît puis disparaît à chaque poll serait pire que le silence.
+  // As long as the GET has not responded, we say nothing: a blindfold which
+  // appears then disappears with each poll would be worse than silence.
   if (!viewer || viewer.capability === "write") return null;
 
   const providerName = getRepoProvider(viewer.provider).displayName;
@@ -49,13 +49,13 @@ export function PrViewerCallout({
     }
   };
 
-  // Cinq causes, jamais confondues. Les deux traîtresses sont les dernières.
-  // Quand l'instance n'a pas de quoi autoriser, ce n'est PAS « vous n'avez pas
-  // de compte » — le dire ainsi accuse l'utilisateur d'une configuration serveur
-  // absente, et le laisse chercher un bouton qui n'existe pas. Et quand la forge
-  // refuse le token d'un compte pourtant connecté, ce n'est PAS un droit
-  // dégradé : le dire ainsi accuse ses droits sur le dépôt — jusqu'à annoncer au
-  // propriétaire du dépôt qu'il ne peut pas y fusionner.
+  // Five causes, never confused. The two traitors are the last.
+  // When the instance doesn't have anything to authorize, it's NOT "you don't have
+  // account » — saying it this way accuses the user of a server configuration
+  // absent, and lets it look for a button that doesn't exist. And when the forge
+  // refuse the token from an account that is connected, this is NOT a right
+  // degraded: saying it this way acknowledges one's rights on the deposit - to the point of announcing to
+  // owner of the repository that he cannot merge into it.
   const { title, body } = !viewer.connected
     ? !viewer.configured
       ? {
@@ -87,8 +87,8 @@ export function PrViewerCallout({
         {title ? <p className="text-sm font-medium">{title}</p> : null}
         <p className="text-xs text-muted-foreground">{body}</p>
       </div>
-      {/* Le bouton n'existe que s'il mène quelque part : sans env côté serveur
-          (self-host), l'autorisation répondrait 400 — le message seul suffit. */}
+      {/* The button only exists if it leads somewhere: without server-side env
+ (self-host), the authorization would respond 400 — the message alone is enough. */}
       {!viewer.connected && viewer.configured ? (
         <Button size="sm" variant="outline" onClick={() => void connect()} disabled={connecting}>
           {connecting ? <Spinner /> : null}

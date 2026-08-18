@@ -7,14 +7,13 @@ import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
 
 /**
- * Les deux modes de Smart Assign se lisent différemment dans l'activité d'un
- * ticket (MIN-31). Le drapeau `smart_assign_ai` est le seul témoin observable de
- * la différence : sans lui, un projet solo affecté d'office au propriétaire et un
- * vrai choix du modèle rendaient la même phrase, et seule la latence les
- * distinguait.
+ * The two Smart Assign modes read differently in the activity of a
+ * ticket (MIN-31). The `smart_assign_ai` flag is the only observable witness to
+ * the difference: without it, a solo project automatically assigned to the owner and a
+ * real choice of model rendered the same sentence, and only the latency distinguished them.
  *
- * Le test passe par le VRAI formateur sur les deux catalogues — il vérifie donc
- * aussi que `{to}` est bien substitué, pas rendu en « Activity.… ».
+ * The test goes through the TRUE formatter on both catalogs — it therefore checks
+ * also that `{to}` is indeed substituted, not rendered in “Activity.…”.
  */
 
 const ALICE = "11111111-1111-1111-1111-111111111111";
@@ -60,7 +59,7 @@ function assignment(smartAssignAi: boolean | undefined): IssueEvent {
 }
 
 describe("describeEvent — les deux modes de Smart Assign", () => {
-  it("mode automatique : la phrase ne prétend pas avoir choisi", () => {
+  it("automatic mode: the sentence does not claim to have chosen", () => {
     expect(describeEvent(assignment(false), ctx, translators("fr"))).toBe(
       "a assigné le ticket à Bob"
     );
@@ -69,7 +68,7 @@ describe("describeEvent — les deux modes de Smart Assign", () => {
     );
   });
 
-  it("choix du modèle : la phrase nomme les règles d'attribution", () => {
+  it("model choice: the sentence names the assignment rules", () => {
     expect(describeEvent(assignment(true), ctx, translators("fr"))).toBe(
       "a choisi Bob d'après les règles d'attribution"
     );
@@ -78,19 +77,19 @@ describe("describeEvent — les deux modes de Smart Assign", () => {
     );
   });
 
-  it("les deux phrases diffèrent — sans quoi la distinction serait décorative", () => {
+  it("the two sentences differ — otherwise the distinction would be cosmetic", () => {
     const auto = describeEvent(assignment(false), ctx, translators("fr"));
     const byModel = describeEvent(assignment(true), ctx, translators("fr"));
     expect(auto).not.toBe(byModel);
   });
 
-  it("événement d'avant la colonne (drapeau absent) : lu comme automatique", () => {
+  it("event from before the column (flag absent): read as automatic", () => {
     expect(describeEvent(assignment(undefined), ctx, translators("fr"))).toBe(
       "a assigné le ticket à Bob"
     );
   });
 
-  it("une affectation humaine garde sa phrase de réassignation", () => {
+  it("a human assignment keeps its reassignment sentence", () => {
     const manual = {
       ...assignment(false),
       actor_id: ALICE,

@@ -1,18 +1,18 @@
 "use client";
 
-// Ce qu'une DESCRIPTION peut citer : les gens du projet, les tickets et
-// objectifs de tous mes projets, et les pages du wiki de celui-ci.
+// What a DESCRIPTION can cite: project people, tickets and
+// objectives of all my projects, and the wiki pages of this one.
 //
-// La source des tickets et des objectifs est l'index de la palette
-// (lib/use-search-index) : il porte déjà chaque ticket et chaque objectif de
-// chaque projet, il se charge une fois par onglet hors du chemin critique, et il
-// est partagé. Citer un ticket ne coûte donc aucune requête de plus — c'est ce
-// qui rend la mention cross-projet abordable là où charger les tickets de tous
-// les projets ne le serait pas.
+// The source of tickets and goals is the palette index
+// (lib/use-search-index): it already carries each ticket and each objective of
+// each project, it loads once per tab off the critical path, and it
+// is shared. Citing a ticket therefore costs no additional query — that's what
+// which makes the cross-project mention affordable where everyone's tickets can be loaded
+// projects would not.
 //
-// Les caches du projet COURANT priment sur l'instantané de l'index, comme pour
-// la palette (lib/palette-index-merge) : un ticket créé il y a dix secondes est
-// citable tout de suite, et un ticket supprimé cesse de l'être.
+// COURANT project caches take precedence over the index snapshot, as for
+// the palette (lib/palette-index-merge): a ticket created ten seconds ago is
+// immediately quotable, and a deleted ticket ceases to be cited.
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -39,35 +39,35 @@ import type { Member } from "@/lib/types";
 export interface MentionSources {
   issues: MentionIssue[];
   objectives: MentionObjective[];
-  /** Les pages du wiki du projet COURANT (MIN-273). Elles ne viennent pas de
-      l'index de la palette : citer une page d'un autre projet n'a pas de sens —
-      un wiki appartient à son projet, et son titre n'est unique que chez lui. */
+  /** The COURANT project wiki pages (MIN-273). They do not come from
+      the palette index: quoting a page from another project makes no sense —
+      a wiki belongs to his project, and its title is unique only to him. */
   pages: MentionPage[];
-  /** Réclame l'index tout de suite — à appeler au premier « @ » tapé, plutôt
-      que d'attendre le temps mort qui l'arme d'habitude. */
+  /** Request the index right away — call at the first “@” typed, rather
+      than to wait for the dead time which usually arms it. */
   armNow: () => void;
 }
 
 /**
- * Les tickets et objectifs citables, à ID STABLE d'un rendu à l'autre : c'est
- * cette identité que mémoïsent le scanner du rendu markdown et la liste de
- * suggestions de l'éditeur. Les reconstruire à chaque rendu ferait se reposer
- * le contenu sous le caret.
+ * Citable tickets and objectives, with STABLE ID from one rendering to another: this is
+ * this identity that the markdown rendering scanner and the list of
+ * editor's suggestions. Rebuilding them on each render would make it rest
+ * the content under the caret.
  *
- * `projectId` est le projet courant, quand la surface en a un : ses lignes
- * fraîches remplacent celles de l'instantané.
+ * `projectId` is the current project, when the surface has one: its lines
+ * fresh ones replace those of the snapshot.
  */
 export function useMentionSources(projectId?: string | null): MentionSources {
   const { index, armNow } = useSearchIndex();
   const { projects } = useProjects();
-  // Les caches du projet courant, quand il y en a un. Les hooks sont appelés
-  // sans condition (règle des hooks) ; sans projet ils rendent des listes vides
-  // et le remplacement ne se déclenche pas.
+  // The caches of the current project, when there is one. Hooks are called
+  // unconditionally (hook rule); without a project they return empty lists
+  // and the replacement does not trigger.
   const { issues: freshIssues } = useIssuesQuery(projectId ?? null);
   const { objectives: freshObjectives } = useObjectivesQuery(projectId ?? null);
-  // Le cache du wiki, celui-là même que lit la sidebar : citer une page ne coûte
-  // donc aucune requête de plus, et une page renommée change de libellé partout
-  // en même temps.
+  // The wiki cache, the same one that the sidebar reads: citing a page does not cost
+  // so no more requests, and a renamed page changes its wording everywhere
+  // at the same time.
   const { pages: projectPages } = usePagesQuery(projectId ?? null);
 
   const keyByProject = useMemo(
@@ -82,9 +82,9 @@ export function useMentionSources(projectId?: string | null): MentionSources {
       projectId ? freshIssues : null,
     );
     return rows.flatMap((row) => {
-      // Sans la clé de son projet, un ticket n'a pas d'identifiant — donc rien
-      // à écrire après l'arobase. Il sort de la liste plutôt que d'y entrer
-      // sous un libellé bancal.
+      // Without its project key, a ticket has no identifier — therefore nothing
+      // to write after the at sign. It leaves the list rather than entering it
+      // under shaky wording.
       const key = keyByProject.get(row.project_id);
       if (!key) return [];
       return [
@@ -129,15 +129,15 @@ export function useMentionSources(projectId?: string | null): MentionSources {
 }
 
 /**
- * Où mène chaque élément citable — le projet d'un ticket, d'un objectif ou
- * d'une page, résolu par son id.
+ * Where does each quotable element lead — the project of a ticket, a goal or
+ * of a page, resolved by its id.
  *
- * La résolution se fait à la LECTURE et non à la pose de la pilule : le nœud ne
- * porte que le type et l'id (cf. components/mention-node.ts), et c'est ce qui
- * fait qu'une mention écrite avant cette navigation-ci se clique tout autant.
- * Une mention dont l'élément n'est pas dans les sources — l'index n'est pas
- * encore arrivé, le ticket appartient à un projet qu'on a quitté — rend `null`
- * et reste du texte.
+ * The resolution is done by READING and not by putting the pill: the node does not
+ * carries only the type and the id (see components/mention-node.ts), and this is what
+ * makes a mention written before this navigation click just as much.
+ * A mention whose element is not in the sources — the index is not
+ * yet arrived, the ticket belongs to a project that we left — returns `null`
+ * and rest of the text.
  */
 export function useMentionLinksFor(sources: {
   issues: MentionIssue[];
@@ -166,14 +166,14 @@ export function useMentionLinksFor(sources: {
 }
 
 /**
- * Ce qu'il faut passer à `<MarkdownEditor mentions={…} />` : la liste proposée
- * après le « @ », et la règle qui relit un texte déjà écrit.
+ * What to pass to `<MarkdownEditor mentions={…} />`: the proposed list
+ * after the “@”, and the rule which rereads a text already written.
  *
- * Les deux listes ne sont pas les mêmes, et c'est voulu. On PROPOSE les membres
- * du projet où l'on écrit — citer quelqu'un qui n'y a pas accès ne le
- * préviendrait pas, et le serveur écarterait la notification. On RELIT en
- * revanche tout ce qui a pu être cité, y compris depuis un autre projet : une
- * description importée ou déplacée doit garder ses pilules.
+ * The two lists are not the same, and that is intentional. We PROPOSE the members
+ * of the project where we write — quoting someone who does not have access to it does not
+ * would not warn, and the server would dismiss the notification. We RELIT in
+ * on the other hand everything that could have been cited, including from another project: a
+ * description imported or moved must keep his pills.
  */
 export function useDescriptionMentions(
   projectId: string | null | undefined,
@@ -204,8 +204,8 @@ export function useDescriptionMentions(
         label: o.name,
         color: o.color,
       })),
-      // Une page SANS TITRE n'est pas citable : « @ » suivi de rien ne désigne
-      // rien, et la pilule s'afficherait vide.
+      // A page WITHOUT A TITLE is not quotable: “@” followed by nothing denotes
+      // nothing, and the pill would appear empty.
       ...pages
         .filter((p) => p.title.trim())
         .map((p) => ({
@@ -223,10 +223,10 @@ export function useDescriptionMentions(
     [members, issues, objectives, pages],
   );
 
-  // Mémoïsé : l'objet est lu comme une IDENTITÉ en aval — l'éditeur reconstruit
-  // ses extensions quand ses options changent, et le contexte des destinations
-  // rerendrait toutes les pilules. Le rendre à neuf à chaque rendu ferait les
-  // deux à chaque frappe.
+  // Memorized: the object is read as a downstream IDENTITY — the editor reconstructs
+  // its extensions when its options change, and the context of the destinations
+  // would give back all the pills. Making it new on each rendering would do the
+  // two with each strike.
   return useMemo(
     () => ({ options, scan, links, onQuery: armNow }),
     [options, scan, links, armNow],

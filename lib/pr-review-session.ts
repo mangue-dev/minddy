@@ -1,16 +1,16 @@
 /**
- * La relecture d'une PR par Numo vue comme une SESSION D'AGENT (MIN-168) — le
- * vocabulaire partagé entre le serveur qui la lance (`lib/server/agent/launch.ts`)
- * et l'écran qui l'affiche (`components/pull-requests/pr-review-thread.tsx`).
+ * The rereading of a PR by Numo seen as an AGENT SESSION (MIN-168) — the
+ * vocabulary shared between the server which launches it (`lib/server/agent/launch.ts`)
+ * and the screen which displays it (`components/pull-requests/pr-review-thread.tsx`).
  *
- * Module PUR : aucun import serveur, il traverse la frontière.
+ * PUR module: no server import, it crosses the border.
  *
- * Ce qui a disparu par rapport à l'ancienne passe (`lib/pr-review-run.ts`) : le
- * flux d'événements maison, ses phases, ses `finding`, son direct. Une relecture
- * est maintenant un run d'agent comme un autre — son déroulé est celui de
- * `agent_run_events`, et il se regarde dans la session, pas dans le fil de la PR.
- * Ne reste ici que ce dont le fil de la PR a besoin : dire que l'agent travaille
- * ou qu'il a fini, et ouvrir la session.
+ * What has disappeared compared to the old pass (`lib/pr-review-run.ts`): the
+ * house event flow, its phases, its `finding`, its live. A replay
+ * is now an agent run like any other — its flow is that of
+ * `agent_run_events`, and it looks in the session, not in the PR thread.
+ * All that's left here is what the PR thread needs: saying that the agent is working
+ * or finished, and log in.
  */
 
 export type PrReviewRunStatus =
@@ -20,26 +20,26 @@ export type PrReviewRunStatus =
   | "failed"
   | "canceled";
 
-/** La session de relecture, réduite à ce que le fil de la PR en montre. */
+/** The replay session, reduced to what the PR thread shows. */
 export interface PrReviewRunSummary {
   runId: string;
   status: PrReviewRunStatus;
-  /** L'agent TRAVAILLE (queued/running) — le serveur tranche, pas l'écran. */
+  /** The agent is WORKING (queued/running) — the server is slicing, not the screen. */
   working: boolean;
   model: string | null;
   createdAt: string;
-  /** Fin de la dernière réponse, ou null tant qu'il n'y en a pas eu. */
+  /** End of last response, or null until there was one. */
   completedAt: string | null;
 }
 
-/** Réponse du GET `./ai-review` : la session, et de quoi décider d'en relancer une. */
+/** Response from GET `./ai-review`: the session, and how to decide to restart one. */
 export interface PrReviewSession {
   run: PrReviewRunSummary | null;
-  /** SHA relu par la dernière session TERMINÉE — comparé à la tête courante :
-   *  tant qu'ils sont égaux, relancer repaierait un run pour le même code. */
+  /** SHA reread by the last TERMINATED session — compared to the current head:
+ * as long as they are equal, restarting would repay a run for the same code. */
   reviewedHeadSha: string | null;
   model: {
-    /** Défaut réglé en /admin : ce que vaut « défaut » dans le picker. */
+    /** Default set in /admin: what “default” is worth in the picker. */
     instance: string;
     /** Dernier choix du compte, ou null s'il n'en a jamais fait. */
     preferred: string | null;

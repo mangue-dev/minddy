@@ -7,15 +7,15 @@ import {
 } from "@/lib/deployment-profile";
 
 /**
- * Envoi du code OTP par email via Resend (fetch brut, même philosophie que le
- * client OpenRouter — pas de dépendance). Resend est opt-in via
- * `EMAIL_PROVIDER=resend`; `console` garde le flux testable en développement.
+ * Sending the OTP code by email via Resend (raw fetch, same philosophy as the
+ * OpenRouter client — no dependency). Resend is opt-in via
+ * `EMAIL_PROVIDER=resend`; `console` keeps the flow testable in development.
  *
- * Le corps ne dit PAS de quel board vient la demande (MIN-342). Un anonyme
- * choisit le destinataire de cet e-mail ; y interpoler le nom d'un projet —
- * choisi librement par qui ouvre un board — revenait à louer le domaine vérifié
- * de minddy pour écrire une ligne de texte chez n'importe qui. Ce qui reste
- * est entièrement écrit par nous : un code, et à quoi il sert.
+ * The body does NOT say which board the request comes from (MIN-342). An anonymous
+ * chooses the recipient of this email; interpolating the name of a project —
+ * freely chosen by anyone opening a board — amounted to renting the verified domain
+ * from minddy to write a line of text for anyone. What remains
+ * is entirely written by us: a code, and what it is used for.
  */
 
 const RESEND_URL = "https://api.resend.com/emails";

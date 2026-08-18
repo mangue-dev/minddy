@@ -22,33 +22,33 @@ const instrumentSerif = Instrument_Serif({
   display: "swap",
 });
 
-/* ── Ce qui allume les safe areas ─────────────────────────────────────────────
-   Sans cet export, Next sert son viewport par défaut — `width=device-width,
-   initial-scale=1`, sans `viewport-fit`. Or `viewport-fit: auto` cale la fenêtre
-   DANS la zone sûre : la page ne passe jamais sous l'encoche ni sous la barre
-   d'indicateur d'accueil, et par conséquent **tous les `env(safe-area-inset-*)`
-   valent 0**. Le dépôt en écrit sept — la pilule de navigation mobile et le
-   dégagement qu'elle réserve (`--mobile-nav-height`, app/globals.css), le FAB de
-   Numo, le bandeau de nouvelle version, le tiroir de la nav marketing, le
-   panneau de l'assistant — et pas un seul ne mesurait quoi que ce soit.
+/* ── What lights up the safe areas ────────────────────── ───────────────────────
+   Without this export, Next serves its default viewport — `width=device-width,
+   initial-scale=1`, sans `viewport-fit`. Or `viewport-fit: auto scales the window
+   IN the safe zone: the page never passes under the notch or under the bar
+   home indicator, and therefore **all `env(safe-area-inset-*)`
+   are worth 0**. The filing writes seven — the mobile browsing pill and the
+   clearance that it reserves (`--mobile-nav-height`, app/globals.css), the FOB of
+   Numo, the new version banner, the nav marketing drawer, the
+   wizard panel — and not a single one measured anything.
 
-   `cover` rend la page à fond perdu et redonne aux insets leur vraie valeur :
-   c'est la ligne qui met en service tout ce travail déjà écrit. Ce qui touche un
-   bord de l'écran doit donc, à partir d'ici, porter son inset — voir le bloc des
-   safe areas dans app/globals.css pour les surfaces de mangue-ui.
+   `cover` makes the page full bleed and gives the insets their true value:
+   this is the line that puts all this work already written into operation. What affects a
+   edge of the screen must therefore, from here, carry its inset — see the block of
+   safe areas in app/globals.css for mango-ui surfaces.
 
-   On ne touche NI à `maximumScale` NI à `userScalable` : brider le zoom est un
-   défaut d'accessibilité, et aucun des correctifs ci-dessus n'en a besoin.
+   We do not touch `maximumScale` NOR `userScalable`: restricting the zoom is a
+   accessibility flaw, and none of the fixes above need it.
 
-   `interactiveWidget` répond à l'autre moitié du problème : le clavier. Par
-   défaut (`resizes-visual`), le clavier logiciel ne rétrécit QUE la fenêtre
-   visuelle — le viewport de mise en page garde sa hauteur, donc un pied de page
-   ancré en `fixed` reste calé sur un bas d'écran qui n'est plus visible, et
-   passe DERRIÈRE le clavier. C'est le cas des deux composers du produit (pull
-   request, session d'agent), ceux-là mêmes que `.dock-above-nav` remonte déjà
-   au-dessus de la barre mobile dans app/globals.css. `resizes-content` rétrécit
-   le viewport de mise en page : `h-dvh` du shell suit, et le composer remonte
-   avec le clavier au lieu de disparaître dessous. */
+   `interactiveWidget` addresses the other half of the problem: the keyboard. By
+   default (`resizes-visual`), the software keyboard ONLY shrinks the window
+   visual — the layout viewport keeps its height, therefore a footer
+   anchored in `fixed` remains stuck on a bottom of the screen which is no longer visible, and
+   goes BEHIND the keyboard. This is the case for the two components of the product (sweater
+   request, agent session), the same ones that `.dock-above-nav` already goes back to
+   above the moving bar in app/globals.css. `resizes-content` shrinks
+   the layout viewport: `h-dvh` of the shell follows, and the composer goes up
+   with the keyboard instead of disappearing underneath. */
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -59,18 +59,18 @@ export const viewport: Viewport = {
 export async function generateMetadata(): Promise<Metadata> {
   const [t, locale] = await Promise.all([getTranslations("Meta"), getLocale()]);
   return {
-    // Base des URLs relatives (canonical, OpenGraph) — sans elle, les pages
-    // publiques déclarent des `og:url` relatives, que les crawlers ignorent.
+    // Base of relative URLs (canonical, OpenGraph) — without it, the pages
+    // public declare relative `og:url`, which crawlers ignore.
     metadataBase: new URL(SITE_URL),
     // `default` applies to pages without their own title; `template` wraps
     // per-page titles set by nested (server) layouts, e.g. "Inbox · minddy".
     title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
     description: t("description"),
-    // Défauts de partage (MIN-88). Next DÉRIVE `twitter:*` d'`openGraph`, mais
-    // il ne dérive rien de ce qui n'existe pas : sans ces défauts, une page qui
-    // ne déclare pas son propre bloc — les quatre pages légales, /login —
-    // partait sans la moindre vignette. `lib/seo.ts` les remplace page par page
-    // sur les six routes publiques ; ceci est le filet pour tout le reste.
+    // Sharing faults (MIN-88). Next DERIVES `twitter:*` from `openGraph`, but
+    // nothing derives from what does not exist: without these defects, a page which
+    // does not declare its own block — the four legal pages, /login —
+    // left without the slightest sticker. `lib/seo.ts` replaces them page by page
+    // on the six public roads; this is the net for everything else.
     openGraph: {
       type: "website",
       siteName: "minddy",
@@ -84,9 +84,9 @@ export async function generateMetadata(): Promise<Metadata> {
       title: "minddy",
       description: t("description"),
     },
-    // Propriété du site dans Google Search Console / Bing Webmaster Tools.
-    // Les clés à chaîne vide sont omises : tant que le jeton n'est pas collé
-    // dans `lib/site.ts`, aucune balise vide n'est servie.
+    // Site ownership in Google Search Console / Bing Webmaster Tools.
+    // Empty string keys are omitted: until token is stuck
+    // in `lib/site.ts`, no empty tag is served.
     verification: {
       ...(SITE_VERIFICATION.google ? { google: SITE_VERIFICATION.google } : {}),
       ...(SITE_VERIFICATION.bing
@@ -109,34 +109,34 @@ export default async function RootLayout({
     headers(),
   ]);
 
-  // Pages publiques anonymes (board de feedback, vues partagées) : le proxy pose
-  // ce header pour qu'elles suivent la préférence système au lieu d'être forcées
-  // en dark comme l'app interne (MIN-60).
+  // Anonymous public pages (feedback board, shared views): the proxy poses
+  // this header so that they follow the system preference instead of being forced
+  // to dark mode like the internal app (MIN-60).
   const defaultTheme = headerList.get("x-minddy-public") === "1" ? "system" : "dark";
 
-  // Ce provider n'envoie au navigateur que les quatre namespaces du site public
-  // au lieu des 67 du catalogue : les messages sont une PROP de composant
-  // client, donc du flux RSC inline, donc 39 Ko gzippés de plus à télécharger
-  // avant l'image du LCP (MIN-100).
+  // This provider only sends the four namespaces of the public site to the browser
+  // instead of the 67 in the catalog: the messages are a component PROP
+  // client, therefore of the RSC inline flow, therefore 39 KB gzipped more to download
+  // before the LCP image (MIN-100).
   //
-  // **Toujours les mêmes, quelle que soit la route.** Ce layout choisissait
-  // autrefois entre catalogue réduit et catalogue complet selon un en-tête posé
-  // par le proxy sur les pages marketing — mais un layout partagé n'est PAS
-  // re-rendu lors d'une navigation cliente : partie de la landing, la page
-  // `/login` héritait des quatre namespaces du marketing et affichait
-  // « Auth.signIn » jusqu'au premier rechargement. Un jeu de messages dérivé de
-  // la requête est figé au premier document ; il ne peut donc dépendre que de ce
-  // qui est vrai partout.
+  // **Always the same, whatever the road.** This layout chose
+  // formerly between reduced catalog and complete catalog according to a header placed
+  // by proxy on marketing pages — but a shared layout is NOT
+  // re-rendered during customer navigation: part of the landing, the page
+  // `/login` inherited the four marketing namespaces and displayed
+  // “Auth.signIn” until the first reload. A set of messages derived from
+  // the request is fixed at the first document; it can therefore only depend on this
+  // which is true everywhere.
   //
-  // Les segments qui traduisent ailleurs montent `FullCatalogMessages`.
+  // Segments that translate elsewhere mount `FullCatalogMessages`.
   const clientMessages = publicClientMessages(messages);
 
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
-        {/* Thème appliqué AVANT le premier paint. Injecté hors de l'arbre React
+        {/* Theme applied BEFORE the first paint. Injected out of React tree
             (useServerInsertedHTML) : un <script> rendu par un composant fait
-            râler React 19 à chaque re-rendu client du root layout — voir le
+            complaining about React 19 every time the client re-renders the root layout — see the
             composant. */}
         <ThemeInitScript defaultTheme={defaultTheme} />
       </head>
@@ -145,38 +145,38 @@ export default async function RootLayout({
       >
         <ThemeProvider defaultTheme={defaultTheme}>
           <NextIntlClientProvider messages={clientMessages}>
-            {/* La bande par laquelle on déplace la fenêtre de l'app de bureau
-                (MIN-292). Ici, et pas dans un shell : c'est la seule position du
-                dépôt d'où elle couvre TOUTES les configurations. Un audit en
-                avait trouvé cinq sans aucune prise — mode zen, pages légales,
-                board public `/f/`, page publiée `/p/`, vue partagée `/share/`,
-                plus `not-found` — parce que les prises vivaient dans l'en-tête
-                et la barre latérale, c'est-à-dire dans les deux meubles que ces
-                écrans n'ont pas.
+            {/* The strip by which you move the desktop app window
+                (MIN-292). Here, and not in a shell: this is the only position of
+                repository from where it covers ALL configurations. An audit in
+                had found five without any catch — zen mode, legal pages,
+                public board `/f/`, published page `/p/`, shared view `/share/`,
+                plus `not-found` — because the sockets lived in the header
+                and the sidebar, that is to say in the two pieces of furniture that these
+                screens do not have.
 
-                **AVANT `{children}`, et ce n'est pas cosmétique** : Chromique
-                calcule les régions déplaçables en parcourant l'arbre de mise en
-                page dans l'ordre, et un `no-drag` rencontré PLUS TARD creuse le
-                `drag` rencontré avant. Placée en dernier, la bande reprendrait
-                aux boutons de l'en-tête le trou qu'ils viennent de se creuser.
+                **BEFORE `{children}`, and it's not cosmetic**: Chromic
+                calculates draggable regions by traversing the layout tree
+                page in order, and a `no-drag` encountered LATER digs the
+                `drag` encountered before. Placed last, the tape would resume
+                to the buttons of the header the hole they have just dug for themselves.
 
-                Hors app de bureau, `globals.css` la laisse en `display: none` :
-                elle ne coûte rien à un navigateur. */}
+                Outside of the desktop app, `globals.css` leaves it in `display: none`:
+                it costs a browser nothing. */}
             <div aria-hidden className="desktop-drag-band" />
             {children}
-            {/* Marque le document dans l'app de bureau (MIN-291) : c'est ce que
-                lisent les zones de déplacement de la fenêtre, qui n'ont pas
-                d'autre source possible que la page. Ne rend rien. */}
+            {/* Mark the document in the desktop app (MIN-291): this is what
+                read the window movement zones, which do not have
+                other possible source than the page. Don't give anything back. */}
             <DesktopChrome />
             <LazyToaster />
             <CookieBanner />
-            {/* PostHog (MIN-78). Monté ici, donc actif PARTOUT — y compris sur
-                les pages publiques (landing, board de feedback, vues partagées),
-                c'est là que se joue l'acquisition. Ne rend rien et n'enveloppe
-                rien : il charge le client à l'idle et le dépose dans
+            {/* PostHog (MIN-78). Mounted here, therefore active EVERYWHERE — including on
+                public pages (landing, feedback board, shared views),
+                this is where acquisition comes into play. Don't return anything and don't wrap
+                nothing: it charges the client to the idle and drops it in
                 `lib/analytics.ts`, ce qui garde `posthog-js` hors du bundle
-                initial (MIN-94). L'init est différée et cookieless tant que le
-                bandeau n'a pas été tranché — voir le composant. */}
+                initial (MIN-94). The init is deferred and cookieless as long as the
+                headband has not been sliced ​​— see component. */}
             <PostHogInit />
           </NextIntlClientProvider>
         </ThemeProvider>

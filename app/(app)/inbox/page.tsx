@@ -42,11 +42,11 @@ const AGENT_TYPES: readonly NotificationType[] = [
   "agent_done",
   "agent_question",
   "agent_failed",
-  // Une routine, c'est Numo qui tourne tout seul : son visage, comme un run.
+  // A routine is Numo running on his own: his face, like a run.
   "routine_done",
-  // Une écriture d'agent dans une page (MIN-278) : la ligne n'a PAS d'acteur
-  // humain — c'est justement ce qu'elle annonce —, et sans son visage ici elle
-  // retomberait sur la bulle de commentaire du repli.
+  // An agent entry in a page (MIN-278): the line has NO actor
+  // human - this is precisely what she announces -, and without her face here she
+  // would fall back on the comment bubble of the fallback.
   "page_agent_edit",
 ];
 
@@ -78,15 +78,15 @@ function groupOf(at: string): DateGroup {
 }
 
 /**
- * La marque de QUI a déclenché la ligne, au même endroit pour tout le monde :
- * le portrait de la personne, le visage de Numo, le logo de l'agent branché sur
- * le MCP, la baguette de Smart Assign — le vocabulaire de la timeline d'un
- * ticket (components/actor-avatars.tsx), pour que la même action se reconnaisse
- * des deux côtés.
+ * The brand of WHO started the line, in the same place for everyone:
+ * the portrait of the person, the face of Numo, the logo of the agent plugged into
+ * MCP, the Smart Assign wand — the vocabulary of a timeline
+ * ticket (components/actor-avatars.tsx), so that the same action is recognized
+ * on both sides.
  *
- * Faute d'acteur — un retour déposé sur le board public, une notification d'un
- * compte parti — l'icône du TYPE reprend sa place : mieux vaut dire ce qui est
- * arrivé que dessiner un visage qui n'existe pas.
+ * Actor misconduct — a return filed on the public board, a notification of a
+ * account gone — the TYPE icon returns to its place: it is better to say what is
+ * happened to draw a face that doesn't exist.
  */
 function RowAvatar({
   notification: n,
@@ -98,9 +98,9 @@ function RowAvatar({
   if (n.from_numo || AGENT_TYPES.includes(n.type)) {
     return <NumoAvatar className="size-8" iconClassName="size-5" />;
   }
-  // `via_automation` (MIN-147) : la chaîne s'est garée ou arrêtée. Son acteur
-  // est la RÈGLE, comme dans la timeline — et sans ce test la ligne n'a ni
-  // acteur ni type reconnu, et retombe sur la bulle de commentaire du repli.
+  // `via_automation` (MIN-147): The channel has parked or stopped. His actor
+  // is the RULE, as in the timeline — and without this test the line has neither
+  // actor nor recognized type, and falls back on the comment bubble of the fallback.
   if (n.via_automation) {
     return <AutomationAvatar className="size-8" iconClassName="size-4" />;
   }
@@ -125,8 +125,8 @@ function RowAvatar({
       />
     );
   }
-  // Une action de PR vient d'un compte de la forge, pas d'un utilisateur minddy :
-  // aucun portrait à dessiner, l'icône du type dit ce qui est arrivé (MIN-138).
+  // A PR action comes from a forge account, not from a minddy user:
+  // no portrait to draw, the guy icon says what happened (MIN-138).
   const Icon =
     n.type === "assigned"
       ? UserPlus
@@ -156,12 +156,12 @@ export default function InboxPage() {
   const t = useTranslations("Inbox");
   const tIssue = useTranslations("Issue");
   const tProjects = useTranslations("Projects");
-  // Le seul emprunt à la timeline : le repli d'une clé MCP sans nom, qui se dit
-  // au même endroit des deux côtés.
+  // The only borrowing from the timeline: the folding of an unnamed MCP key, which is said
+  // in the same place on both sides.
   const tTimeline = useTranslations("Timeline");
-  // Les mots que la ligne emprunte, rassemblés une fois : la formulation, elle,
-  // vit dans lib/notification-line.ts — la même qu'une bannière poussée et
-  // qu'une notification native de l'app de bureau (MIN-291).
+  // The words that the line borrows, collected once: the formulation, it,
+  // lives in lib/notification-line.ts — the same as a pushed banner and
+  // as a native desktop app notification (MIN-291).
   const labels = {
     someone: t("someone"),
     mcpFallback: tTimeline("mcpFallback"),
@@ -172,8 +172,8 @@ export default function InboxPage() {
     }),
   };
   const format = useFormatter();
-  // Référence de temps stable pour les horodatages relatifs, rafraîchie
-  // chaque minute — sans ça next-intl retombe sur Date.now() et prévient.
+  // Stable time reference for relative timestamps, refreshed
+  // every minute — otherwise next-intl falls back to Date.now() and warns.
   const now = useNow({ updateInterval: 60_000 });
   const {
     notifications,
@@ -185,10 +185,10 @@ export default function InboxPage() {
     remove,
     clearRead,
   } = useNotifications();
-  // Les invitations de projet ne sont pas des notifications : elles vivent dans
-  // leur table, se répondent au lieu de se lire, et disparaissent une fois
-  // répondues. Elles arrivent donc ici en section propre, en tête — mais avec
-  // exactement les mêmes boutons que la bannière de la home.
+  // Project invitations are not notifications: they live in
+  // their table, respond to each other instead of reading each other, and disappear once
+  // answered. They therefore arrive here in their own section, at the head - but with
+  // exactly the same buttons as the home banner.
   const {
     invitations,
     busyId: invitationBusyId,
@@ -201,8 +201,8 @@ export default function InboxPage() {
       case "unread":
         return notifications.filter((n) => !n.read_at);
       case "mentions":
-        // Une citation dans une PAGE en est une (MIN-278) : le filtre répond à
-        // « où m'a-t-on appelé », pas « dans quel type d'objet ».
+        // A quote in a PAGE is one (MIN-278): the filter responds to
+        // “where was I called”, not “in what type of object”.
         return notifications.filter(
           (n) => n.type === "mention" || n.type === "page_mention"
         );
@@ -211,7 +211,7 @@ export default function InboxPage() {
     }
   }, [notifications, filter]);
 
-  // La liste arrive triée par date desc — les groupes se remplissent dans
+  // The list arrives sorted by desc date — the groups fill in
   // l'ordre Aujourd'hui / Hier / Plus ancien.
   const groups = useMemo(() => {
     const buckets = new Map<DateGroup, MyNotification[]>();
@@ -225,40 +225,40 @@ export default function InboxPage() {
   }, [visible]);
 
   const readCount = notifications.length - unreadCount;
-  // Une invitation sans réponse est par nature « non lue » : elle compte dans le
-  // filtre et reste visible quand on le sélectionne. Seul « Mentions » l'écarte.
+  // An unanswered invitation is by nature “unread”: it counts towards the
+  // filter and remains visible when selected. Only “Mentions” rules it out.
   const showInvitations = filter !== "mentions" && invitations.length > 0;
   const pendingCount = unreadCount + invitations.length;
 
   /**
-   * Rien du tout : aucune notification, aucune invitation en attente. Ni les
-   * filtres ni les actions de tête n'ont alors de prise — l'écran se réduit à la
-   * scène, et au raccourci vers ce qui décide de ce qui atterrit ici. À
-   * distinguer d'un FILTRE vide, qui garde la page et sa ligne « Rien ici ».
+   * Nothing at all: no notifications, no pending invitations. Neither the
+   * filters nor head actions then have any effect — the screen is reduced to the
+   * scene, and the shortcut to what decides what lands here. HAS
+   * distinguish it from an empty FILTER, which keeps the page and its “Nothing here” line.
    */
   const trulyEmpty = !loading && notifications.length === 0 && invitations.length === 0;
 
-  // Toute mutation est optimiste dans le hook — ici on ne gère que l'échec.
+  // Any mutation is optimistic in the hook — here we only handle failure.
   const act = (p: Promise<void>) =>
     void p.catch((e) => toast.error((e as Error).message));
 
-  // La destination est celle de `lib/notification-target.ts` — la même que
-  // suivra le clic sur la notification SYSTÈME (MIN-183), qui n'a pas cette
-  // page sous la main pour la recalculer.
+  // The destination is `lib/notification-target.ts` — the same as
+  // will follow the click on the SYSTEM notification (MIN-183), which does not have this
+  // page at hand to recalculate it.
   const open = (n: MyNotification) => {
     if (!n.read_at) act(markRead([n.id]));
     const path = notificationTargetPath(n);
     if (path) router.push(path);
   };
 
-  /** Ligne 1 : ce dont on parle — réf + titre du ticket, ou nom de la cible. */
+  /** Line 1: what we're talking about — ref + ticket title, or target name. */
   const titleOf = (n: MyNotification): string => notificationTitle(n, labels);
 
-  /** Qui invite : son nom, à défaut son adresse, à défaut « Quelqu'un ». */
+  /** Who invites: their name, failing that their address, failing that “Someone”. */
   const inviterOf = (inv: MyInvitation): string =>
     inv.inviter_name || inv.inviter_email || t("someone");
 
-  /** Ligne 2 : qui a fait quoi — complétée par l'extrait du commentaire. */
+  /** Line 2: who did what — supplemented by the excerpt from the comment. */
   const sentenceOf = (n: MyNotification): string => {
     const sentence = t(NOTIFICATION_LINE_KEYS[n.type], {
       actor: notificationActor(n, labels),
@@ -298,7 +298,7 @@ export default function InboxPage() {
               {t("markAllRead")}
             </Button>
           )}
-          {/* Raccourci vers l'onglet Inbox des réglages du compte — c'est là
+          {/* Shortcut to the Inbox tab of account settings — it's there
               qu'on choisit ce qui atterrit ici. */}
           <IconButton size="sm" aria-label={t("settings")} title={t("settings")} asChild>
             <Link href="/settings?tab=inbox">
@@ -345,9 +345,9 @@ export default function InboxPage() {
               const busy = invitationBusyId === inv.id;
               return (
                 <li key={inv.id} className="relative flex items-center gap-3 px-4 py-3">
-                  {/* Le portrait de qui invite, à la place de l'icône de type :
-                      une invitation vient de quelqu'un, pas d'un système — et le
-                      même badge que les notifications non lues à son coin. */}
+                  {/* The portrait of who is inviting, instead of the type icon:
+ an invitation comes from someone, not from a system — and the
+ same badge as the unread notifications at its corner. */}
                   <span className="relative shrink-0">
                     <UserAvatar
                       seed={inv.inviter_avatar_seed}
@@ -359,8 +359,8 @@ export default function InboxPage() {
                       aria-hidden
                     />
                   </span>
-                  {/* Le nom du projet suffit — sa clé ne dit rien à qui n'y est
-                      pas encore entré. */}
+                  {/* The name of the project is enough — its key means nothing to anyone who is not there
+ not entered yet. */}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium text-foreground">
                       {inv.project_name}
@@ -401,9 +401,9 @@ export default function InboxPage() {
           ))}
         </div>
       ) : notifications.length === 0 ? (
-        // Une invitation seule tient lieu de contenu : le « vous êtes à jour »
-        // mentirait juste en dessous d'une chose qui attend une réponse. Sans
-        // invitation, la page entière est déjà partie sur sa scène, plus haut.
+        // Only an invitation takes the place of content: “you are up to date”
+        // would lie just below something that requires a response. Without
+        // invitation, the entire page has already left on its stage, higher up.
         null
       ) : visible.length === 0 ? (
         showInvitations ? null : (
@@ -433,12 +433,12 @@ export default function InboxPage() {
                         "hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
                       )}
                     >
-                      {/* Non lu : bleu ; JAUNE quand Numo attend une réponse —
-                          même langage que la liste des sessions d'agent.
-                          Le point est un BADGE posé au coin du portrait, pas une
-                          pastille placée avant lui : il ne prend aucune place
-                          dans le flux, donc rien ne se décale d'une ligne lue à
-                          une non lue. L'anneau le détache du portrait. */}
+                      {/* Unread: blue; YELLOW when Numo is waiting for a response —
+ same language as the list of agent sessions.
+ The point is a BADGE placed at the corner of the portrait, not a
+ pastille placed before it: it takes no place
+ in the flow, so nothing shifts from a line read to
+ a unread. The ring detaches him from the portrait. */}
                       <span className="relative shrink-0">
                         <RowAvatar notification={n} unread={unread} />
                         {unread && (
@@ -460,8 +460,8 @@ export default function InboxPage() {
                               {n.project_key}-{n.issue_number}
                             </span>
                           )}
-                          {/* Une PR se reconnaît à son numéro, à la place où un
-                              ticket porte sa référence. */}
+                          {/* A PR can be recognized by its number, in the place where a
+ ticket carries its reference. */}
                           {n.pull_request_id && n.pull_request_number != null && (
                             <span className="shrink-0 font-mono text-xs text-muted-foreground">
                               #{n.pull_request_number}
@@ -494,7 +494,7 @@ export default function InboxPage() {
                         {format.relativeTime(new Date(n.created_at), now)}
                       </span>
                     </button>
-                    {/* Actions au survol — en calque sur l'horodatage. */}
+                    {/* Actions on hover — overlaid on the timestamp. */}
                     <span className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                       {unread ? (
                         <IconButton

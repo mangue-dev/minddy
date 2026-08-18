@@ -1,109 +1,109 @@
 /**
- * Les images collées dans un commentaire de forge (MIN-162) — pourquoi elles ne
- * se rendaient pas dans minddy, et par où elles passent maintenant.
+ * Images pasted into a forge comment (MIN-162) — why they don't
+ * weren't going to minddy, and where they're going now.
  *
- * ## Ce qui se passe vraiment
+ * ## What really happens
  *
- * Une image déposée dans un commentaire sur github.com s'écrit, dans le corps
- * markdown que sert l'API, `https://github.com/user-attachments/assets/<uuid>`.
- * Cette URL-là n'est PAS servable : mesuré contre la vraie API (dépôt privé
- * `mangue-dev/minddy-issues`, PR #30), elle répond **404** à tout ce que minddy
- * peut présenter —
+ * An image posted in a comment on github.com is written, in the body
+ * markdown served by the API, `https://github.com/user-attachments/assets/<uuid>`.
+ * This URL is NOT serviceable: measured against the real API (private repository
+ * `mangue-dev/minddy-issues`, PR #30), she responds **404** to everything minddy
+ * can present —
  *
- * | Qui demande | Réponse |
+ * | Who asks | Answer |
  * | --- | --- |
- * | anonyme (le `<img>` du navigateur, sans cookie GitHub cross-site) | 404 |
- * | token d'installation de la GitHub App (`ghs_`) | 404 |
- * | token utilisateur-vers-serveur de l'App (`ghu_`) | 404 |
- * | token OAuth classique à scope `repo` (`gho_`) | 302 → l'image |
+ * | anonymous (the `<img>` of the browser, without GitHub cross-site cookies) | 404 |
+ * | GitHub App installation token (`ghs_`) | 404 |
+ * | App user-to-server token (`ghu_`) | 404 |
+ * | classic OAuth token with scope `repo` (`gho_`) | 302 → the image |
  *
- * — et minddy ne détient aucun `gho_`. La piste « proxy avec le token
- * d'installation » du cadrage initial ne marche donc pas : elle proxifierait
- * un 404. (La piste « domaines autorisés » était déjà écartée : le rendu passe
- * par une balise `<img>` brute, aucune allowlist `next/image` n'intervient.)
+ * — and minddy does not hold any `gho_`. The “proxy with token” track
+ * from the initial framing therefore does not work: it would proxy a 404. (The
+ * “authorized domains” track was already discarded: the rendering passes
+ * by a raw `<img>` tag, no `next/image` allowlist occurs.)
  *
- * ## Par où ça passe
+ * ## Where does it go
  *
- * GitHub sait rendre le commentaire lui-même : avec
- * `Accept: application/vnd.github.full+json`, la réponse porte un `body_html` où
- * chaque image est réécrite en
- * `private-user-images.githubusercontent.com/<id>/<n>-<uuid>.<ext>?jwt=<signé>`,
- * et **cette URL-là se sert sans aucune authentification** (mesuré : 200,
- * image/png). C'est la même réécriture pour un dépôt public et pour un dépôt
- * privé — une seule mécanique à connaître.
+ * GitHub knows how to render the comment itself: with
+ * `Accept: application/vnd.github.full+json`, the response has a `body_html` where
+ * each image is rewritten in
+ * `private-user-images.githubusercontent.com/<id>/<n>-<uuid>.<ext>?jwt=<signature>`,
+ * and **this URL is used without any authentication** (measured: 200,
+ * image/png). It's the same rewrite for a public repository and for a repository
+ * private — only one mechanic to know.
  *
- * Le `jwt` ne vit que **300 secondes**. C'est ce qui interdit de le coller dans
- * la réponse `/comments` et d'en rester là : un panneau resté ouvert cinq
- * minutes n'afficherait plus rien. D'où le détour par une route de minddy
- * (`/api/pull-requests/[prId]/image?asset=<uuid>`), qui redemande une URL
- * fraîche à chaque chargement d'image.
+ * The `jwt` only lives **300 seconds**. This is what prohibits sticking it in
+ * the response `/comments` and leave it there: one panel remained open five
+ * minutes would no longer display anything. Hence the detour via a minddy road
+ * (`/api/pull-requests/[prId]/image?asset=<uuid>`), which requests a URL again
+ * fresh every time you load an image.
  *
- * L'`uuid` est la clé d'appariement des deux formes : il est présent dans l'URL
- * publique **et** dans le nom de fichier de l'URL signée. Rien à corréler par
+ * The `uuid` is the key for matching the two forms: it is present in the URL
+ * public **and** in the file name of the signed URL. Nothing to correlate with
  * position.
  *
- * Ce module est pur des deux côtés : le client y lit ce qu'il faut réécrire, le
- * serveur ce qu'il faut résoudre.
+ * This module is pure on both sides: the client reads what needs to be rewritten, the
+ * server what needs to be resolved.
  */
 
 /**
- * Le bucket PUBLIC où atterrissent les fichiers joints à un commentaire de PR
- * (MIN-162). Public parce que le commentaire part chez la forge : son URL est
- * lue par GitHub, par ses e-mails de notification, et par des gens qui n'ont pas
- * de compte minddy. Écriture serveur uniquement — cf. la migration.
+ * The PUBLIC bucket where files attached to a PR comment land
+ * (MIN-162). Public because the comment goes to the forge: its URL is
+ * read by GitHub, by its notification emails, and by people who don't have
+ * minddy account. Server writing only — cf. migration.
  */
 export const FORGE_ATTACHMENTS_BUCKET = "forge-attachments";
 
 /**
- * Ce qu'un fichier hébergé ajoute au corps du commentaire. Une image s'INSÈRE
- * (elle se regarde dans le fil, ici comme chez la forge) ; tout le reste devient
- * un lien nommé — un `![](…)` sur un PDF ne donnerait qu'une icône cassée.
+ * What a hosted file adds to the comment body. An image INSERTS
+ * (she looks at herself in the wire, here as at the forge); everything else becomes
+ * a named link — a `![](…)` on a PDF would only result in a broken icon.
  */
 export function forgeAttachmentMarkdown(file: {
   url: string;
   name: string;
   isImage: boolean;
 }): string {
-  // Les crochets d'un nom de fichier casseraient la syntaxe du lien.
+  // Brackets in a file name would break the link syntax.
   const label = file.name.replace(/[[\]]/g, "");
   return file.isImage ? `![${label}](${file.url})` : `[${label}](${file.url})`;
 }
 
-/** `…/user-attachments/assets/<uuid>` — la forme qui arrive dans le markdown. */
+/** `…/user-attachments/assets/<uuid>` — the form that arrives in the markdown. */
 const PUBLIC_ASSET_RE =
   /^https:\/\/github\.com\/user-attachments\/assets\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
-/** `…/<ownerId>/<n>-<uuid>.<ext>?jwt=…` — la forme signée que rend `body_html`. */
+/** `…/<ownerId>/<n>-<uuid>.<ext>?jwt=…` — the signed form rendered by `body_html`. */
 const SIGNED_ASSET_RE =
   /^https:\/\/private-user-images\.githubusercontent\.com\/\d+\/\d+-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.[a-z0-9]+/i;
 
-/** Le seul hôte que la route d'image accepte d'aller chercher (garde SSRF). */
+/** The only host that the image route agrees to fetch (SSRF guard). */
 export const SIGNED_ASSET_HOST = "private-user-images.githubusercontent.com";
 
-/** Un identifiant d'asset tel qu'il arrive en paramètre d'URL. Contraint AVANT
-    toute résolution : il sert de clé de recherche, jamais de chemin. */
+/** An asset identifier as it arrives as a URL parameter. Constrained BEFORE
+    any resolution: it serves as a search key, never as a path. */
 export function isForgeAssetId(raw: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw);
 }
 
-/** L'uuid d'une URL d'asset publique, ou null si ce n'en est pas une. */
+/** The uuid of a public asset URL, or null if it is not one. */
 export function forgeAssetId(src: string): string | null {
   return PUBLIC_ASSET_RE.exec(src.trim())?.[1]?.toLowerCase() ?? null;
 }
 
-/** L'uuid d'une URL SIGNÉE, ou null. Le préfixe numérique du nom de fichier est
-    l'id interne de l'upload — il ne nous sert à rien, seul l'uuid apparie. */
+/** The uuid of a SIGNED URL, or null. The numeric prefix of the file name is
+    the internal id of the upload — it is of no use to us, only the uuid matches. */
 export function signedForgeAssetId(url: string): string | null {
   return SIGNED_ASSET_RE.exec(url.trim())?.[1]?.toLowerCase() ?? null;
 }
 
 /**
- * Les `src` d'image d'un `body_html`, indexés par uuid d'asset. Une lecture de
- * chaîne plutôt qu'un parseur : la réponse vient de GitHub, on n'en garde que
- * ce qui matche `SIGNED_ASSET_RE` — donc jamais une URL arbitraire.
+ * The image `src` of a `body_html`, indexed by asset uuid. A reading of
+ * string rather than a parser: the answer comes from GitHub, we only keep
+ * which matches `SIGNED_ASSET_RE` — so never an arbitrary URL.
  *
- * `&amp;` : le HTML échappe les séparateurs de query, l'URL doit être déséchappée
- * avant d'être suivie (le `jwt` en dépend).
+ * `&amp;`: HTML escapes query separators, URL must be unescaped
+ * before being followed (the `jwt` depends on it).
  */
 export function collectSignedAssets(
   htmls: Iterable<string | null | undefined>,
@@ -114,8 +114,8 @@ export function collectSignedAssets(
     for (const match of html.matchAll(/<img\b[^>]*\bsrc="([^"]+)"/gi)) {
       const url = match[1].replace(/&amp;/g, "&");
       const id = signedForgeAssetId(url);
-      // Premier gagnant : un même asset cité deux fois porte deux jwt également
-      // valides, inutile d'en garder plus d'un.
+      // First one wins: the same asset cited twice carries two equally valid
+      // JWTs, so there is no reason to keep more than one.
       if (id && !into.has(id)) into.set(id, url);
     }
   }
@@ -123,12 +123,12 @@ export function collectSignedAssets(
 }
 
 /**
- * La `src` à rendre pour une image de commentaire de forge : la route de minddy
- * quand c'est un asset GitHub, l'URL d'origine sinon (un badge CI, une image
- * hébergée ailleurs — rien à proxifier, et le proxy ne saurait pas la résoudre).
+ * The `src` to render for an image in a forge comment: minddy's route when it
+ * is a GitHub asset, and the original URL otherwise (a CI badge or an image
+ * hosted elsewhere — nothing to proxy, and the proxy could not resolve it).
  *
- * `endpoint` est la base de la PR (`/api/pull-requests/{id}`), celle que le reste
- * de la vue utilise déjà.
+ * `endpoint` is the PR base (`/api/pull-requests/{id}`), which the rest of the
+ * view already uses.
  */
 export function forgeImageSrc(src: string | undefined, endpoint: string): string | undefined {
   if (!src) return src;

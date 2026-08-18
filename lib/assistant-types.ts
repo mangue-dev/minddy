@@ -70,66 +70,66 @@ export type AssistantSSEEvent =
   | { type: "done"; data: Record<string, never> };
 
 /**
- * Un élément de contexte choisi à la main (bouton @ du composer) : un ticket,
- * un projet ou un membre de l'équipe. Le libellé vient du client — il n'est là
- * que pour que Numo puisse nommer la chose sans re-résoudre son id.
+ * A hand-chosen context element (@ button on the composer): a ticket,
+ * a project or a team member. The label comes from the client — it's only there
+ * so Numo can name the thing without re-resolving its id.
  */
 export interface AssistantPinnedContext {
   kind: "issue" | "project" | "member" | "objective" | "page";
   id: string;
-  /** « MIN-42 », « minddy », « Clément » — ce qu'affiche la pilule. */
+  /** Examples such as “MIN-42”, “minddy”, and “Clément Guérin” — what the pill displays. */
   label: string;
-  /** Détail secondaire : titre du ticket, e-mail du membre. */
+  /** Secondary detail: ticket title, member email. */
   detail?: string;
-  /** Membres : la graine du portrait (public.user_avatars), qui n'est PAS
-      toujours le user_id — la déduire afficherait un autre visage. */
+  /** Members: the portrait seed (public.user_avatars), which is NOT
+ still the user_id — inferring it would show another face. */
   avatarSeed?: string;
-  /** Objectifs : leur couleur — c'est elle que porte leur cible, ici comme
-      partout ailleurs dans l'application. */
+  /** Objectives: their color — this is what their target wears, here like
+ everywhere else in the application. */
   color?: string | null;
 }
 
 /**
- * Une commande « / » choisie dans le menu slash du composer. L'id est canonique
- * (le libellé, lui, est localisé — « /create issue » / « /créer ticket ») :
- * c'est lui qui voyage dans la requête et se persiste sur `metadata.command`
- * du message utilisateur, où le serveur le déplie en instructions pour Numo.
+ * A “/” command chosen from the composer slash menu. The id is canonical
+ * (the label is localized - "/create issue" / "/create ticket"):
+ * it is he who travels in the request and persists on `metadata.command`
+ * of the user message, where the server unfolds it into instructions for Numo.
  */
 export type AssistantCommandId = "create-issue";
 
 /**
- * Une mention « @ » écrite DANS le message (membre de l'équipe, projet, ticket
- * ou objectif), résolue au moment de la frappe. Persistée sur
- * `metadata.mentions` du message utilisateur : elle sert à re-rendre la pilule
- * dans la bulle, et à dire à Numo qui/quoi ce nom désigne exactement.
+ * An "@" mention written IN the message (team member, project, ticket
+ * or goal), resolved at the time of typing. Persisted on
+ * `metadata.mentions` of the user message: it is used to return the pill
+ * to the bubble, and to tell Numo who/what this name designates exactly.
  */
 export interface AssistantMention {
   type: "member" | "project" | "issue" | "objective" | "page";
   id: string;
-  /** Le texte écrit après le « @ » dans le message. */
+  /** The text written after the “@” in the message. */
   label: string;
-  /** Membres : la graine du portrait — voir AssistantPinnedContext.avatarSeed. */
+  /** Members: the portrait seed — see AssistantPinnedContext.avatarSeed. */
   avatarSeed?: string;
   /** Objectifs : leur couleur — voir AssistantPinnedContext.color. */
   color?: string | null;
-  /** Pages du wiki : leur émoji (MIN-273). */
+  /** Wiki pages: their emoji (MIN-273). */
   icon?: string | null;
 }
 
 /**
  * Structured "what the user is currently looking at" context, attached to a
- * chat request so Numo can resolve deictic references ("ce ticket", "cette
- * vue") to a concrete issue/board without guessing. Derived ambiently from
+ * chat request so Numo can resolve deictic references ("this ticket", "this
+ * view") to a concrete issue/board without guessing. Derived ambiently from
  * the page the user is on. Plain opens with no surface leave it undefined.
  * Client-set, server-validated.
  */
 export interface AssistantPageContext {
   projectId?: string;
   /**
-   * Contexte ÉPINGLÉ à la main depuis le composer (bouton @), par opposition
-   * au reste de cet objet, déduit de la page. Il survit à la navigation : c'est
-   * l'utilisateur qui l'a choisi, pas la page qui l'a publié.
-   */
+ * Context PINED by hand from the composer (@ button), as opposed to
+ * from the rest of this object, inferred from the page. It survives navigation: it's
+ * the user who chose it, not the page that published it.
+ */
   pinned?: AssistantPinnedContext[];
   /** Legacy (pre views-v2): the board tab the message was sent from. No longer
       populated — kept so old persisted messages still render their badge. */
@@ -146,7 +146,7 @@ export interface AssistantPageContext {
   /** The objective whose filtered board is displayed, when any. */
   objectiveId?: string;
   objectiveName?: string;
-  /** Sa couleur — ce que porte sa cible sur la pilule de contexte. */
+  /** Its color — what its target wears on the context pill. */
   objectiveColor?: string | null;
   /** The feedback post open in the team dashboard, when any (MIN-52). */
   feedbackId?: string;
@@ -168,10 +168,10 @@ export interface AssistantPageContext {
   /** Human date-range label ("6–19 juil") — used for the context badge. */
   cycleLabel?: string;
   /**
-   * La PAGE du wiki ouverte (MIN-273). Le titre voyage avec l'id pour que la
-   * pilule le dise sans relire la page, et pour que Numo puisse la nommer avant
-   * son premier appel de tool.
-   */
+ * The opened wiki PAGE (MIN-273). The title travels with the id so that the
+ * pill says it without rereading the page, and so that Numo can name it before
+ * its first call of tool.
+ */
   pageId?: string;
   pageTitle?: string;
   pageIcon?: string | null;
@@ -200,22 +200,21 @@ export interface AssistantChatRequest {
     size_bytes: number;
   }>;
   /**
-   * Les « @ » écrits dans le message (membres, projets), résolus côté client.
-   * Persistés sur la métadonnée du message et donnés à Numo sous forme d'une
-   * ligne de résolution nom → id.
-   */
+ * The "@" written in the message (members, projects), resolved on the client side.
+ * Persisted on the message metadata and given to Numo in the form of a
+ * resolution line name → id.
+ */
   mentions?: AssistantMention[];
   /**
-   * La commande « / » posée en tête du message, quand il y en a une. Validée
-   * serveur, persistée sur la métadonnée du message et dépliée en bloc
-   * d'instructions accroché à ce message (même mécanique que les mentions).
-   */
+ * The “/” command placed at the top of the message, when there is one. Validated
+ * server, persisted on the message metadata and unfolded as a block
+ * of instructions attached to this message (same mechanics as the mentions).
+ */
   command?: AssistantCommandId;
   /**
-   * Le fuseau IANA du navigateur (MIN-185). Sans lui, « crée une routine tous
-   * les lundis à 13 h » partirait en UTC sans que personne ne le sache — et se
-   * découvrirait des semaines plus tard, à l'heure où la routine tourne. C'est
-   * une donnée que seul le client connaît : le serveur ne peut pas la deviner.
-   */
+ * The browser's IANA zone (MIN-185). Without it, "creates a routine every
+ * Mondays at 1 p.m." would go into UTC without anyone knowing — and would find out weeks later, when the routine runs. This is
+ * data that only the client knows: the server cannot guess it.
+ */
   timezone?: string;
 }

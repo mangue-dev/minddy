@@ -1,30 +1,30 @@
 "use client";
 
 /**
- * Les pages créées PENDANT CETTE VISITE et pas encore écrites (MIN-270).
+ * Pages created DURING THIS VISIT and not yet written (MIN-270).
  *
- * Créer une page ne doit pas la sauvegarder : on ouvre le « + », on tombe sur
- * autre chose, on repart — et il ne doit rien rester. La page existe pourtant
- * en base dès le premier instant, et c'est délibéré : son id est ce qui donne
- * une URL partageable, une présence, un bloc sous-page dans le parent, et
- * l'enregistrement automatique dès la première lettre. Ce qu'on diffère n'est
- * donc pas la création, c'est le fait qu'elle SURVIVE.
+ * Creating a page should not save it: we open the “+”, we come across
+ * something else, we leave again — and there should be nothing left. The page nevertheless exists
+ * in base from the first moment, and this is deliberate: its id is what gives
+ * a shareable URL, a presence, a subpage block in the parent, and
+ * automatic registration from the first letter. What we differ is not
+ * therefore not the creation, it is the fact that it SURVIVES.
  *
- * D'où cette table : elle retient quelles pages sont encore des brouillons.
- * Quitter l'une d'elles sans y avoir mis ni titre, ni icône, ni texte la
- * détruit (`discardPageApi`) ; la première lettre tapée l'en sort et elle
- * redevient une page comme les autres.
+ * Hence this table: it remembers which pages are still drafts.
+ * Leave one of them without having put any title, icon or text there
+ * destroyed (`discardPageApi`); the first letter typed takes it out and it
+ * becomes a page like the others again.
  *
- * Un ensemble au niveau du MODULE, et non un état React : l'information doit
- * survivre au démontage du composant qui la produit — c'est justement au moment
- * où `PageView` se démonte qu'on la lit. Elle est volontairement PERDUE au
- * rechargement de l'onglet : une page qu'on a quittée en fermant le navigateur
- * n'est plus rattrapable par personne, et la détruire au retour serait une
- * surprise plutôt qu'un service.
+ * A set at the MODULE level, and not a React state: the information must
+ * survive the disassembly of the component that produces it — this is precisely when
+ * where `PageView` is disassembled as it is read. It is voluntarily LOST on
+ * reloading the tab: a page that we left by closing the browser
+ * can no longer be retrieved by anyone, and destroying it upon return would be a
+ * surprise rather than a service.
  */
 const drafts = new Set<string>();
 
-/** Cette page vient d'être créée : elle ne survit pas à un départ sans écrit. */
+/** This page has just been created: it will not survive leaving without writing. */
 export function markDraftPage(pageId: string): void {
   drafts.add(pageId);
 }
@@ -33,23 +33,22 @@ export function isDraftPage(pageId: string): boolean {
   return drafts.has(pageId);
 }
 
-/** Elle a été écrite, détruite, ou son sort est réglé : ce n'est plus un brouillon. */
+/** It has been written, destroyed, or its fate has been resolved: it is no longer a draft. */
 export function forgetDraftPage(pageId: string): void {
   drafts.delete(pageId);
 }
 
 /**
- * Les destructions PROGRAMMÉES, et pourquoi elles ne sont pas immédiates.
+ * SCHEDULED destructions, and why they are not immediate.
  *
- * Le signal du départ est le démontage de `PageView`. En développement, React
- * monte, démonte et remonte chaque composant (Strict Mode) : une destruction
- * faite dans le démontage détruirait la page à la seconde où on la crée, sans
- * que personne ait rien quitté. On la programme donc, et un remontage immédiat
- * l'annule — le délai n'a besoin que d'être plus long que ce battement-là.
+ * The signal to start is the disassembly of `PageView`. In development, React
+ * mounts, disassembles and reassembles each component (Strict Mode): a destruction
+ * done in the disassembly would destroy the page the second it is created, without anyone having left anything. We therefore program it, and an immediate reassembly
+ * cancels it - the delay only needs to be longer than this beat.
  *
- * Ce n'est pas qu'un artifice de développement : le même battement peut venir
- * d'une reprise de Suspense ou d'un rendu concurrent abandonné. Reporter d'un
- * cheveu une destruction n'a aucun coût ; la faire pour rien en a un.
+ * This is not just a development artifice: the same beat can come
+ * from a rerun of Suspense or from an abandoned competing rendition. Reporting from a
+ * hair destruction has no cost; doing it for nothing has one.
  */
 const DISCARD_DELAY_MS = 60;
 
@@ -67,7 +66,7 @@ export function scheduleDraftDiscard(pageId: string, discard: () => void): void 
   );
 }
 
-/** On est revenu (ou on n'était jamais parti) : la page vit. */
+/** We came back (or we never left): the page lives. */
 export function cancelDraftDiscard(pageId: string): void {
   const timer = pending.get(pageId);
   if (timer === undefined) return;

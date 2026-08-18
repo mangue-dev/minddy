@@ -3,7 +3,7 @@
 import type { SeedProposal } from "@/lib/seed/types";
 import { trackEvent } from "./analytics";
 
-/** Ce que l'écriture de l'amorce rend — de quoi dire ce qui vient d'exister. */
+/** What the writing of the beginning renders — enough to say what has just existed. */
 export interface SeedCommitResponse {
   created: number;
   objectives_created: number;
@@ -12,16 +12,16 @@ export interface SeedCommitResponse {
 }
 
 /**
- * La DEMANDE de découpe n'est plus une route du navigateur (MIN-173) : un brief
- * n'est plus un formulaire qu'une passe traite dans son coin, c'est le premier
- * message d'une conversation, et c'est Numo qui appelle la fabrique
+ * The cutting REQUEST is no longer a navigator route (MIN-173): a brief
+ * is no longer a form that a pass treats in its corner, it is the first
+ * message from a conversation, and it's Numo who calls the factory
  * (`propose_backlog`, `lib/server/assistant/execute-tool.ts`). Il ne reste ici
- * que l'ÉCRITURE de ce que l'aperçu a fait valider — la même, quel que soit
- * l'écran qui l'a montré.
+ * that the WRITING of what the preview has validated — the same, whatever
+ * the screen that showed it.
  */
 
-/** POST la proposition TELLE QUE L'APERÇU LA MONTRE — décochages et titres
- *  réécrits compris. Le serveur la revalide en entier avant d'écrire. */
+/** POST the proposal AS THE PREVIEW SHOWS — unchecks and titles
+ * rewritten included. The server completely revalidates it before writing. */
 export async function applyBriefApi(
   projectId: string,
   proposal: SeedProposal

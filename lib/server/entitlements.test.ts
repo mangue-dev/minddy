@@ -1,21 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-133 — la corbeille ne doit RIEN coûter au plan.
+ * MIN-133 — the trash must cost NOTHING to the plan.
  *
- * C'est le piège de tout soft delete : la ligne reste en base, et une garde de
- * plan écrite en « compte les lignes » se met à facturer ce que l'utilisateur
- * croit avoir supprimé. Un compte Free plafonné à 2 projets et 300 tickets se
- * retrouverait bloqué juste après avoir fait le ménage — le pire moment.
+ * This is the trap of any soft delete: the line remains in base, and a guard of
+ * plan written in “counts the lines” begins to charge what the user
+ * believes he has deleted. A Free account capped at 2 projects and 300 tickets would find
+ * blocked just after cleaning up — the worst time.
  *
- * Ces tests épinglent la seule règle qui vaille : ce qui est à la corbeille est
- * sorti du décompte, tout de suite, sans attendre la purge des 30 jours. Le
- * double Supabase applique donc les filtres pour de vrai, sinon il ne dirait
- * rien de ce que la garde compte vraiment.
- *
- * MIN-199 y ajoute le plafond d'INVITÉS par projet, qui a le même piège sous une
- * autre forme : ce qu'on compte n'est pas seulement ce qui existe (les membres)
- * mais aussi ce qui est promis (les invitations en attente).
+ * These tests highlight the only valid rule: what is in the trash is
+ * removed from the count, immediately, without waiting for the 30-day purge. The double Supabase therefore applies the filters for real, otherwise it wouldn't say anything that custody really matters. that we count is not only what exists (the members)
+ * but also what is promised (the pending invitations).
  */
 
 interface Row extends Record<string, unknown> {
@@ -32,14 +27,14 @@ let issueRows: Row[] = [];
 let memberRows: Row[] = [];
 let invitationRows: Row[] = [];
 
-/** Le plan que la garde lit — réécrit par les tests qui changent de palier. */
+/** The plan the guard reads — rewritten by the tests that change tiers. */
 let plan: {
   maxProjects: number | null;
   maxIssuesPerProject: number | null;
   maxMembersPerProject: number | null;
 };
 
-/** Double de chaîne PostgREST : accumule les filtres, puis compte. */
+/** PostgREST string duplicate: accumulate filters, then count. */
 function table(rows: () => Row[]) {
   const filters: ((row: Row) => boolean)[] = [];
   const query: Record<string, unknown> = {};
@@ -64,7 +59,7 @@ function table(rows: () => Row[]) {
     );
     return query;
   };
-  // `or("owner_id.eq.X,id.in.(a,b)")` — la seule forme utilisée par la garde.
+  // `or("owner_id.eq.X,id.in.(a,b)")` — the only form used by the guard.
   query.or = (expression: string) => {
     const owner = /owner_id\.eq\.([^,)]+)/.exec(expression)?.[1];
     const ids = /id\.in\.\(([^)]*)\)/.exec(expression)?.[1];
@@ -76,8 +71,8 @@ function table(rows: () => Row[]) {
     data: rows().find((row) => filters.every((f) => f(row))) ?? null,
     error: null,
   });
-  // Un `select()` est awaité tel quel, avec ou sans `{ count: "exact", head }` :
-  // on rend les deux formes, la garde ne lit que celle qui la concerne.
+  // A `select()` is awaited as is, with or without `{ count: "exact", head }`:
+  // we render both forms, the guard only reads the one that concerns it.
   query.then = (resolve: (value: unknown) => unknown) => {
     const matching = rows().filter((row) => filters.every((f) => f(row)));
     return Promise.resolve({
@@ -132,12 +127,12 @@ beforeEach(() => {
   issueRows = [];
   memberRows = [];
   invitationRows = [];
-  // Plan Free : 2 projets, 300 tickets par projet, 2 invités par projet.
+  // Free Plan: 2 projects, 300 tickets per project, 2 guests per project.
   plan = { maxProjects: 2, maxIssuesPerProject: 300, maxMembersPerProject: 2 };
 });
 
-describe("limite de projets", () => {
-  it("ne vend aucune limite structurelle à une instance auto-hébergée", async () => {
+describe("project limit", () => {
+  it("sells no structural limit to a self-hosted instance", async () => {
     process.env.MINDDY_MANAGED_BILLING = "";
     projectRows = [
       { id: "p1", owner_id: OWNER, deleted_at: null },
@@ -147,7 +142,7 @@ describe("limite de projets", () => {
     await expect(ensureProjectLimit(OWNER)).resolves.toBeUndefined();
   });
 
-  it("ne compte pas un projet mis à la corbeille", async () => {
+  it("does not count a trashed project", async () => {
     projectRows = [
       { id: "p1", owner_id: OWNER, deleted_at: null },
       { id: "p2", owner_id: OWNER, deleted_at: TRASHED },
@@ -155,7 +150,7 @@ describe("limite de projets", () => {
     await expect(countAccessibleProjects(OWNER)).resolves.toBe(1);
   });
 
-  it("rend sa place à un compte plein dès qu'il en corbeille un", async () => {
+  it("frees a slot for a full account as soon as one project is trashed", async () => {
     projectRows = [
       { id: "p1", owner_id: OWNER, deleted_at: null },
       { id: "p2", owner_id: OWNER, deleted_at: null },
@@ -167,7 +162,7 @@ describe("limite de projets", () => {
   });
 });
 
-describe("limite de tickets par projet", () => {
+describe("ticket limit per project", () => {
   const fill = (n: number, deleted: string | null) =>
     Array.from({ length: n }, (_, i) => ({
       id: `i${deleted ? "d" : ""}${i}`,
@@ -175,13 +170,13 @@ describe("limite de tickets par projet", () => {
       deleted_at: deleted,
     }));
 
-  it("ne compte pas les tickets mis à la corbeille", async () => {
+  it("does not count trashed tickets", async () => {
     projectRows = [{ id: PROJECT, owner_id: OWNER, deleted_at: null }];
     issueRows = [...fill(299, null), ...fill(50, TRASHED)];
     await expect(ensureIssueLimit(PROJECT)).resolves.toBeUndefined();
   });
 
-  it("bloque quand le plafond est atteint par des tickets VIVANTS", async () => {
+  it("blocks when the cap is reached by LIVE tickets", async () => {
     projectRows = [{ id: PROJECT, owner_id: OWNER, deleted_at: null }];
     issueRows = fill(300, null);
     await expect(ensureIssueLimit(PROJECT)).rejects.toThrow();
@@ -194,8 +189,8 @@ describe("plafond d'invités par projet (MIN-199)", () => {
     project_id: PROJECT,
     user_id: `u${n}`,
   });
-  // `expires_at` est NOT NULL en base (MIN-197) : le double le modélise, sinon
-  // il testerait une ligne qui ne peut pas exister.
+  // `expires_at` is NOT NULL in base (MIN-197): double models it, otherwise
+  // it would test for a line that cannot exist.
   const LIVE = new Date(Date.now() + 30 * 86_400_000).toISOString();
   const DEAD = new Date(Date.now() - 86_400_000).toISOString();
   const invitation = (n: number, status: string, expires = LIVE): Row => ({
@@ -205,7 +200,7 @@ describe("plafond d'invités par projet (MIN-199)", () => {
     expires_at: expires,
   });
 
-  it("laisse passer les deux premiers invités du plan gratuit", async () => {
+  it("allows the first two guests on the free plan through", async () => {
     await expect(
       ensureMemberSlotAvailable(OWNER, PROJECT)
     ).resolves.toBeUndefined();
@@ -219,13 +214,13 @@ describe("plafond d'invités par projet (MIN-199)", () => {
     await expect(ensureMemberSlotAvailable(OWNER, PROJECT)).rejects.toThrow();
   });
 
-  it("compte une invitation EN ATTENTE comme une place prise", async () => {
+  it("counts a PENDING invitation as an occupied slot", async () => {
     memberRows = [member(1)];
     invitationRows = [invitation(1, "pending")];
     await expect(ensureMemberSlotAvailable(OWNER, PROJECT)).rejects.toThrow();
   });
 
-  it("rend sa place à une invitation annulée ou acceptée", async () => {
+  it("frees a slot for a cancelled or accepted invitation", async () => {
     memberRows = [member(1)];
     invitationRows = [invitation(1, "cancelled"), invitation(2, "accepted")];
     await expect(
@@ -233,11 +228,11 @@ describe("plafond d'invités par projet (MIN-199)", () => {
     ).resolves.toBeUndefined();
   });
 
-  // Rien ne repasse une invitation périmée à un autre statut : elle reste
-  // `pending` jusqu'à la purge des 90 jours. Si elle comptait, une place du plan
-  // resterait prise deux mois par une invitation que plus personne ne peut
-  // accepter — le piège de MIN-133 (la corbeille qui coûte) sous une autre forme.
-  it("rend sa place à une invitation PÉRIMÉE, restée pending", async () => {
+  // Nothing reverts an expired invitation to another status: it remains
+  // `pending` until the 90 days have been purged. If it counted, a place in the plan
+  // would remain taken for two months by an invitation that no one can anymore
+  // accept — the trap of MIN-133 (the expensive trash) in another form.
+  it("frees a slot for an EXPIRED invitation that remained pending", async () => {
     memberRows = [member(1)];
     invitationRows = [invitation(1, "pending", DEAD)];
     await expect(
@@ -245,7 +240,7 @@ describe("plafond d'invités par projet (MIN-199)", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("ne compte que le projet visé", async () => {
+  it("counts only the targeted project", async () => {
     memberRows = [
       { id: "m1", project_id: "autre-projet", user_id: "u1" },
       { id: "m2", project_id: "autre-projet", user_id: "u2" },
@@ -255,7 +250,7 @@ describe("plafond d'invités par projet (MIN-199)", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("ne compte jamais rien quand le plan est illimité (Pro)", async () => {
+  it("never counts anything when the plan is unlimited (Pro)", async () => {
     plan.maxMembersPerProject = null;
     memberRows = Array.from({ length: 50 }, (_, i) => member(i));
     await expect(
@@ -263,9 +258,9 @@ describe("plafond d'invités par projet (MIN-199)", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("ne rétrograde pas un projet déjà au-dessus de son plafond", async () => {
-    // Abonnement expiré : les 4 membres restent, seule la 5e invitation est
-    // refusée — la garde ne s'exécute qu'à l'invitation, jamais rétroactivement.
+  it("does not downgrade a project already above its cap", async () => {
+    // Subscription expired: the 4 members remain, only the 5th invitation is
+    // refused — custody is only carried out upon invitation, never retroactively.
     memberRows = [member(1), member(2), member(3), member(4)];
     await expect(ensureMemberSlotAvailable(OWNER, PROJECT)).rejects.toThrow();
     expect(memberRows).toHaveLength(4);

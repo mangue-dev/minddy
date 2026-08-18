@@ -7,11 +7,11 @@ import {
 import type { Category, Issue, Objective } from "@/lib/types";
 
 /**
- * MIN-342 — la vue partagée sérialise dans son HTML tout ce qu'elle passe au
- * board client. Le test qui compte n'est donc pas « les bons champs sont là »
- * (n'importe quelle projection le dit) mais « RIEN d'autre n'est là » : c'est
- * la liste fermée qui est le garde-fou, et une colonne neuve sur `Issue` ne
- * doit pas s'y inviter en silence.
+ * MIN-342 — the shared view serializes everything it passes to the
+ * board client into its HTML. The test that counts is therefore not "the good fields are there"
+ * (any projection says so) but "NOTHING else is there": it is
+ * the closed list which is the safeguard, and a new column on `Issue` does not
+ * must not be used in silence.
  */
 
 function issue(over: Partial<Issue> = {}): Issue {

@@ -1,21 +1,21 @@
 "use client";
 
-// Le CALQUE des commentaires d'une page (MIN-282) — ce qui vit SUR le document,
-// et rien d'autre.
+// The LAYER of comments on a page (MIN-282) — what lives ON the document,
+// and nothing else.
 //
-// Il ne rend aucune surface dans le flux : ni section, ni pied de page. Une
-// discussion sur un passage se lit à côté du passage (le fil ouvert par la
-// pastille du bloc, components/pages/page-comment-popover.tsx) ; une discussion
-// sur la page ENTIÈRE se lit dans son activité, avec les autres gestes
-// (components/pages/page-activity.tsx, onglet « Activité » de l'historique).
+// It does not render any surface in the flow: neither section nor footer. A
+// discussion on a passage is read next to the passage (the thread opened by the
+// block pad, components/pages/page-comment-popover.tsx); a discussion
+// on the ENTIRE page can be read in its activity, with the other gestures
+// (components/pages/page-activity.tsx, “Activity” tab in history).
 //
-// Ce que ce composant tient, et qu'aucun des deux ne peut tenir seul :
+// What this component holds, and which neither can hold alone:
 //
-//  • l'ensemble des blocs qui EXISTENT dans le document à l'écran — c'est lui,
-//    et pas la dernière sauvegarde, qui décide de ce qui est détaché ;
-//  • les liserés et les pastilles redescendus sur l'éditeur ;
-//  • le fil ouvert, d'où qu'on l'ouvre : la pastille d'un bloc, ou la bulle
-//    « Commenter » qui vient de naître d'une sélection.
+// • all the blocks that EXIST in the document on the screen — it’s him,
+// and not the last save, which decides what is detached;
+// • the borders and dots returned to the editor;
+// • the open thread, wherever we open it: the pellet of a block, or the bubble
+// “Comment” which has just been born from a selection.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -41,8 +41,8 @@ export function PageCommentLayer({
   editor,
   members,
   currentUserId,
-  /** Une sélection vient d'être commentée depuis la bulle : le fil s'ouvre sur
-      son bloc, en mode « nouveau ». */
+  /** A selection has just been commented on from the bubble: the thread opens on
+ its block, in “new” mode. */
   draftAnchor,
   onDraftAnchorDone,
 }: {
@@ -57,7 +57,7 @@ export function PageCommentLayer({
   const t = useTranslations("Pages");
   const [openBlockId, setOpenBlockId] = useState<string | null>(null);
 
-  /* ── Ce que le document porte, en ce moment ────────────────────────────── */
+  /* ── What the document is about, right now ────────────────────────────── */
   const [blockIds, setBlockIds] = useState<ReadonlySet<string>>(
     () => new Set<string>()
   );
@@ -77,21 +77,21 @@ export function PageCommentLayer({
     blockIds,
   });
 
-  /** Le compte des messages par bloc — ce que porte la pastille. La règle de ce
-      qui s'allume vit dans le module pur, avec le détachement : c'est la même
-      question, et elle se teste sans monter un éditeur. */
+  /** The message count per block — what the sticker carries. The rule of this
+ which lights up lives in the pure module, with the detachment: it is the same
+ question, and it can be tested without setting up an editor. */
   const commentedBlocks = useMemo<CommentedBlocks>(
     () => commentedBlockCounts(threads),
     [threads]
   );
 
-  // Le crochet que la pastille appelle, et son libellé : le widget est du DOM
-  // nu, il ne peut lire ni le catalogue i18n ni un état React (cf.
+  // The hook that the pellet calls, and its label: the widget is from the DOM
+  // bare, it can read neither the i18n catalog nor a React state (cf.
   // block-comments.ts).
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
-    // `editor.storage` n'est pas typé par extension : le nom est celui de
-    // `BlockComments.name`, et c'est le seul point de contact.
+    // `editor.storage` is not typed by extension: the name is that of
+    // `BlockComments.name`, and this is the only point of contact.
     const storage = (editor.storage as unknown as Record<string, unknown>)
       .blockComments as BlockCommentsStorage | undefined;
     if (!storage) return;
@@ -105,12 +105,12 @@ export function PageCommentLayer({
     };
   }, [editor, t, onDraftAnchorDone]);
 
-  // Les décorations, redescendues sur l'éditeur. Elles suivent le TEMPS RÉEL
-  // sans rien de plus : la liste change, l'effet rejoue.
+  // The decorations, sent back to the editor. They follow REAL TIME
+  // without anything more: the list changes, the effect replays.
   //
-  // Le garde-fou n'est pas une micro-optimisation : `blockIds` se refabrique à
-  // chaque frappe, donc sans lui chaque lettre tapée enverrait une transaction
-  // de décoration — que les décorations suivent déjà toutes seules (`set.map`).
+  // The guardrail is not a micro-optimization: `blockIds` is remanufactured at
+  // each keystroke, so without it each letter typed would send a transaction
+  // decoration — that the decorations already follow on their own (`set.map`).
   const painted = useRef("");
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
@@ -123,8 +123,8 @@ export function PageCommentLayer({
     setCommentedBlocks(editor, commentedBlocks);
   }, [editor, commentedBlocks]);
 
-  // Le bloc dont le fil est ouvert : celui qu'on vient de sélectionner, sinon
-  // celui dont on a cliqué la pastille.
+  // The block whose thread is open: the one we have just selected, otherwise
+  // the one whose sticker was clicked.
   const target = useMemo<BlockCommentTarget | null>(() => {
     if (draftAnchor) return draftAnchor;
     return openBlockId ? { blockId: openBlockId } : null;
@@ -135,9 +135,9 @@ export function PageCommentLayer({
     onDraftAnchorDone();
   }, [onDraftAnchorDone]);
 
-  // Les fils DE CE BLOC — y compris quand on vient d'en commencer un neuf sur
-  // un bloc déjà commenté : la discussion en cours doit être sous les yeux
-  // pendant qu'on écrit, sinon on répète ce qui vient d'être dit.
+  // The threads OF THIS BLOCK — including when we have just started a new one on
+  // a block already commented on: the current discussion must be in front of you
+  // while we write, otherwise we repeat what has just been said.
   const openThreads = useMemo(
     () =>
       target

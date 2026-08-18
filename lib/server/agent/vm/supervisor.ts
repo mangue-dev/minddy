@@ -36,8 +36,8 @@ import {
   type BackgroundJobRunner,
 } from "../background";
 import { forgetHarnessChild, noteHarnessChild } from "./child-registry";
-// La MÊME normalisation que la boucle maison : `update_plan` est un tool de
-// contrôle, et les deux moteurs doivent en tirer le même event `plan_update`.
+// The SAME normalization as the home loop: `update_plan` is a tool for
+// control, and both engines must derive the same event `plan_update`.
 import { normalizePlan } from "../agent-contract";
 import { redactDeep, SecretRedactor } from "../redact";
 import { cap } from "../tool-summary";
@@ -89,178 +89,178 @@ import {
 } from "../working-diff";
 
 /**
- * LE SUPERVISEUR (MIN-286, lot 1) — ce que devient `runVmTurn` quand la boucle
- * cesse d'être notre code.
+ * THE SUPERVISOR (MIN-286, lot 1) — what `runVmTurn` becomes when the loop
+ * ceases to be our code.
  *
- * Il ne boucle pas. Il **pose le décor** (config, tools de domaine, ancrage),
- * **démarre `opencode serve`**, **poste le tour**, **traduit son flux** en
- * `agent_run_events`, et **rend le rapport** que le plan de contrôle attend déjà.
- * Tout ce qui reste de nous — le commit, le push, le diff du tour, le ledger, le
- * fil — est là ; tout ce qui était la boucle (rounds, retries, compaction,
- * troncature, appel modèle) n'y est plus.
+ * It doesn't loop. It **sets the scene** (config, domain tools, anchoring),
+ * **starts `opencode serve`**, **posts the tour**, **translates its flow** into
+ * `agent_run_events`, and **renders the report** that the control plane is already waiting for.
+ * Everything that's left of us — the commit, the push, the round diff, the ledger, the
+ * thread — is there; everything that was the loop (rounds, retries, compaction,
+ * truncation, model call) is no longer there.
  *
- * `main.ts` ne change pas : il appelle un tour, il obtient un `VmTurnReport`, et
- * sa garantie (« le tour rend TOUJOURS un rapport ») reste sa garantie.
- *
- * ─────────────────────────────────────────────────────────────────────────────
- * CE QUI EST ICI, ET CE QUI N'Y EST PAS ENCORE
- *
- * Ce fichier est le socle du lot 1 : démarrage, session, prompt, traduction du
- * flux, fin de tour. Le lot 2 y a accroché le ledger, le plafond de dépense, les
- * garde-fous (`command-guard` / `repo-path`, rejoués sur `permission.asked`),
- * `ask_user` (le tool `question`), les sous-agents, le pont de tools
- * ([tool-bridge.ts](tool-bridge.ts)), les règles de livraison
- * ([opencode-delivery.ts](opencode-delivery.ts)) et la forge (`create_pr`, coupé
- * en deux : la VM pousse, la fonction ouvre).
+ * `main.ts` does not change: it calls a turn, it obtains a `VmTurnReport`, and
+ * its guarantee (“the turn ALWAYS returns a report”) remains its guarantee.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * DEUX MESURES QUI DÉCIDENT DE LA FORME (opencode-ai@1.18.16)
+ * WHAT IS HERE, AND WHAT IS NOT YET
  *
- * 1. **`POST /api/session/:id/wait` répond 503** — la route existe dans l'OpenAPI,
- *    le serveur ne l'implémente pas. La fin d'un tour se lit donc sur
- *    `session.idle` du flux `/event`. C'est mieux de toute façon : rien ne tient
- *    une requête HTTP ouverte pendant les heures que dure un tour.
- * 2. **Le serveur doit rester au PREMIER PLAN** dans la microVM. Un `nohup … &`
- *    dans un `sh -c` du Sandbox fait tomber la commande RPC (`UND_ERR_SOCKET` en
- *    ~25 s, zéro ligne de sortie), le même serveur au premier plan démarre très
- *    bien — mesuré trois fois au lot 0. D'où `startServer`, injecté : ici on
- *    lance un process node ordinaire, et c'est l'appelant (la microVM) qui sait
- *    comment tenir son serveur en vie.
+ * This file is the basis of lot 1: startup, session, prompt, translation of
+ * flow, end of turn. Lot 2 hung the ledger, the spending ceiling, the
+ * guardrails (`command-guard` / `repo-path`, replayed on `permission.asked`),
+ * `ask_user` (the `question` tool), subagents, tools bridge
+ * ([tool-bridge.ts](tool-bridge.ts)), delivery rules
+ * ([opencode-delivery.ts](opencode-delivery.ts)) and the forge (`create_pr`, cut
+ * in two: the VM pushes, the function opens).
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * TWO MEASUREMENTS THAT DECIDE THE SHAPE (opencode-ai@1.18.16)
+ *
+ * 1. ****CODE_0__ responds 503** — the route exists in the OpenAPI,
+ * the server does not implement it. The end of a round is therefore read on
+ * `session.idle` of stream `/event`. It's better anyway: nothing holds
+ * an HTTP request opened during the hours that a tour lasts.
+ * 2. **The server must remain in the FOREground** in the microVM. A `nohup … &`
+ * in a `sh -c` of the Sandbox drops the RPC command (`UND_ERR_SOCKET` in
+ * ~25 s, zero output lines), the same server in the foreground starts very
+ * well — measured three times in batch 0. Hence `startServer`, injected: here we
+ * launches an ordinary process node, and it is the caller (the microVM) who knows
+ *    how to keep its server alive.
  */
 
 /**
- * Plafond d'attente du démarrage du serveur.
+ * Waiting limit for server startup.
  *
- * ~1,3 s mesuré au lot 0 — sur une microVM déjà chaude. **Le premier run de
- * production est mort ici** (2026-08-12) : sur une VM fraîchement créée depuis le
- * snapshot, le disque s'hydrate paresseusement et le premier exec des 176 Mo du
- * binaire se compte en minutes, pendant lesquelles le serveur accepte la connexion
- * sans répondre. Le plafond ne borne donc PAS la lenteur normale (elle est de
- * l'ordre de la seconde) : il borne le serveur qui ne démarrera jamais, et il doit
- * être large devant le pire démarrage à froid mesuré.
+ * ~1.3 s measured at batch 0 — on an already hot microVM. **The first run of
+ * production is dead here** (2026-08-12): on a VM freshly created since the
+ * snapshot, the disk hydrates lazily and the first exec of the 176 MB of the
+ * binary is counted in minutes, during which the server accepts the connection
+ * without responding. The ceiling therefore does NOT limit normal slowness (it is
+ * order of the second): it limits the server which will never start, and it must
+ * be wide in front of the worst cold start measured.
  */
 export const OPENCODE_BOOT_TIMEOUT_MS = 5 * 60_000;
 
 /**
- * LE PORT DU SERVEUR OPENCODE — un argument, plus une constante (MIN-354).
+ * THE OPENCODE SERVER PORT — one argument, plus a constant (MIN-354).
  *
- * Il valait 4096 en dur, et c'était vrai tant que le harness était seul dans une
- * microVM créée pour lui. Sur un ordinateur, deux runs simultanés se
- * disputeraient la même socket et le second mourrait sur un `listen` refusé — à
- * un endroit qui ne ressemble en rien à sa cause. `main.ts` le réserve au
- * système avant de démarrer ([free-port.ts](free-port.ts)).
+ * It was worth 4096 hard, and that was true as long as the harness was alone in a
+ * microVM created for him. On a computer, two simultaneous runs occur
+ * would compete for the same socket and the second would die on a refused `listen` — at
+ * a place that bears no resemblance to its cause. `main.ts` reserves it for
+ * system before starting ([free-port.ts](free-port.ts)).
  *
- * OBLIGATOIRE dans `SupervisorDeps`, et pas optionnel avec un repli à 4096 : un
- * défaut fixe est exactement la collision qu'on vient de supprimer, avec en plus
- * l'assurance que personne ne la verrait venir.
+ * MANDATORY in `SupervisorDeps`, and not optional with a fallback to 4096: a
+ * fixed default is exactly the collision that we have just removed, with the addition
+ * the assurance that no one would see it coming.
  */
 
-/** Cadence du direct — la même que la boucle maison (`emitLive`, 250 ms). */
+/** Live cadence — the same as the home loop (`emitLive`, 250 ms). */
 export const LIVE_INTERVAL_MS = 250;
 
 /**
- * Bornes du scan de secrets avant push (MIN-360). Elles ne servent qu'à ce qu'un
- * tour de refonte ne paie pas le scan en minutes : un secret est court, et il est
- * en tête d'un fichier bien plus souvent qu'à sa fin.
+ * Secrets scan terminals before push (MIN-360). They are only used for
+ * recast tower does not pay for the scan in minutes: a secret is short, and it is
+ * at the head of a file much more often than at the end.
  */
 const SECRET_SCAN_MAX_BYTES = 2_000_000;
 const SECRET_SCAN_MAX_FILES = 200;
 
 /**
- * Cadence de sondage du « Stop » et de la file de steering.
+ * Probing cadence of the “Stop” and the steering queue.
  *
- * Deux requêtes au plan de contrôle toutes les cinq secondes au pire, et une seule
- * dans le cas courant (`/interrupt`, puis `/messages/pending` seulement s'il n'y a
- * pas de stop) — à comparer aux ~4 appels PAR SECONDE du direct. Ce n'est donc pas
- * ce sondage qui pèse sur le compte d'invocations.
+ * Two requests to the control plane every five seconds at worst, and only one
+ * in the current case (`/interrupt`, then `/messages/pending` only if there is no
+ * no stop) — compare to ~4 calls PER SECOND live. It is therefore not
+ * this survey which weighs on the count of invocations.
  */
 export const STEER_POLL_INTERVAL_MS = 5_000;
 
 /**
- * LE BATTEMENT DU TOUR — ce qui fait vivre le « Stop », le steering, la
- * sauvegarde périodique et l'échéance murale QUAND LE FLUX SE TAIT.
+ * THE BEAT OF THE TOUR — what brings the “Stop”, the steering, the
+ * periodic backup and wall deadline WHEN THE FLOW DIES UP.
  *
- * Un `bash` de vingt minutes ne publie rien entre son début et sa fin : sans
- * battement, le tour n'avait plus aucune horloge, et son seul signe de vie
- * (`last_activity_at`, écrit par la sauvegarde) se figeait. Aligné sur le sondage
- * de steering, dont il est la borne supérieure de latence.
+ * A twenty-minute `bash` publishes nothing between its beginning and its end: without
+ * beat, the tower no longer had any clock, and its only sign of life
+ * (`last_activity_at`, written by backup) froze. Aligned with the survey
+ * of steering, of which it is the upper limit of latency.
  */
 export const LIFECYCLE_BEAT_MS = 5_000;
 
-/** Le jeton du battement, distinct de tout `IteratorResult`. */
+/** The beat token, distinct from any `IteratorResult`. */
 const LIFECYCLE_BEAT = Symbol("lifecycle-beat");
 
 /**
- * Cadence de la sauvegarde périodique du checkpoint — qui est AUSSI le seul
- * battement de cœur d'un tour d'opencode (cf. `maybeSaveCheckpoint`).
+ * Cadence of the periodic backup of the checkpoint — which is ALSO the only
+ * heartbeat of a round of opencode (see `maybeSaveCheckpoint`).
  *
- * DEUX MINUTES, sous les trois du chien de garde (`VM_LOOP_PROBE_AFTER_MS` dans
- * [drain.ts](../drain.ts)) : un tour vivant garde ainsi un `last_activity_at`
- * frais et n'est jamais candidat à la sonde de la plateforme. La boucle maison
- * sauvegarde toutes les cinq minutes ([turn.ts](turn.ts)) — elle peut, sa
- * commande répond à la sonde ; ici la sauvegarde est le seul signe de vie.
+ * TWO MINUTES, under the three of the watchdog (`VM_LOOP_PROBE_AFTER_MS` in
+ * [drain.ts](../drain.ts)): a live round therefore keeps a `last_activity_at`
+ * fresh and is never a candidate for the platform probe. The house loop
+ * backup every five minutes ([turn.ts](turn.ts)) — it can,
+ * command responds to probe; here saving is the only sign of life.
  */
 export const SUPERVISOR_CHECKPOINT_SAVE_INTERVAL_MS = 2 * 60_000;
 
 /**
- * Combien de temps on attend, en fin de tour, qu'un round coupé finisse d'arriver
- * chez le fournisseur (`proxy.settle`, MIN-286 lot 3).
+ * How long do we wait, at the end of the turn, for a cut round to finish arriving?
+ * at the supplier (`proxy.settle`, MIN-286 lot 3).
  *
- * Mesuré : l'amont continue **1 221 ms** après le départ du client, et c'est sa
- * dernière frame qui porte le coût. Dix secondes laissent une marge large devant
- * ce chiffre tout en bornant le seul cas gênant — un flux que le fournisseur ne
- * fermerait jamais, qui retiendrait la fin du tour pour une ligne de ledger.
+ * Measured: the upstream continues **1,221 ms** after the customer leaves, and this is
+ * last frame that carries the cost. Ten seconds leaves a wide margin ahead
+ * this figure while limiting the only annoying case — a flow that the supplier does not
+ * would never close, which would hold the end of the round for a ledger line.
  */
 export const ORPHAN_SETTLE_MS = 10_000;
 
 /**
- * Plafond mural d'un TOUR. Repris de [turn.ts](turn.ts) sans changer de valeur :
- * ce qu'il protège n'a pas changé de nature — la session de microVM est plafonnée
- * à 24 h par la plateforme, et un tour tué par elle ne laisserait aucune trace.
+ * Wall-clock limit for a ROUND. Taken from [turn.ts](turn.ts) without changing the value:
+ * what it protects has not changed in nature — the microVM session is capped
+ * at 24 p.m. by the platform, and a round killed by it would leave no trace.
  */
 export const SUPERVISOR_TURN_SOFT_DEADLINE_MS = 12 * 60 * 60_000;
 
 /**
- * L'ÉTAT D'OPENCODE ENTRE DEUX TOURS, porté par le checkpoint.
+ * THE OPENCODE STATUS BETWEEN TWO TOURS, carried by the checkpoint.
  *
- * Ce n'est plus une conversation sérialisée mais un **journal d'événements**
- * (sonde du lot 0) : la session repart avec son id, ses messages et son coût
- * cumulé sur une microVM qui n'a jamais vu la conversation.
+ * It is no longer a serialized conversation but an **event log**
+ * (probe from batch 0): the session leaves with its id, its messages and its cost
+ * accumulated on a microVM that never saw the conversation.
  *
- * Ce que le checkpoint porte n'est QUE le pointeur — la session et le curseur par
- * agrégat. Les events, eux, vivent dans `agent_run_journal` (MIN-286,
- * 2026-08-13) : ils portent la sortie complète de chaque tool, et un checkpoint
- * qui les charriait dépassait le plafond du plan de contrôle en une quinzaine de
- * lectures de fichiers.
+ * What the checkpoint carries is ONLY the pointer — the session and the cursor by
+ * AGGREGATE. The events live in `agent_run_journal` (MIN-286,
+ * 2026-08-13): they carry the complete output of each tool, and a checkpoint
+ * who carried them exceeded the ceiling of the control plan in around fifteen
+ * file reads.
  */
 export interface OpencodeCheckpointState {
   sessionId: string;
-  /** Dernier `seq` connu par agrégat — l'argument de la prochaine exportation. */
+  /** Last `seq` known by aggregate — the argument for the next export. */
   seq: Record<string, number>;
 }
 
-/** Un checkpoint de ce moteur : notre état de tour, plus le journal d'opencode. */
+/** A checkpoint of this engine: our tower state, plus the opencode log. */
 export type OpencodeCheckpoint = AgentCheckpoint & { opencode?: OpencodeCheckpointState };
 
-/** Ce que le superviseur a besoin de savoir faire, et qu'on lui injecte. */
+/** What the supervisor needs to know how to do, and that we inject into him. */
 export interface SupervisorDeps {
   /**
-   * Démarre le serveur et rend de quoi l'arrêter. Injecté parce que la façon de
-   * tenir un process en vie appartient à l'hôte (cf. le piège du `nohup`), et
-   * parce qu'un test n'a pas à faire tourner un binaire de 144 Mo.
+   * Starts the server and makes it necessary to stop it. Injected because the way of
+   * keeping a process alive is up to the host (see the `nohup` trap), and
+   * because a test doesn't have to run a 144 MB binary.
    */
   startServer(env: Record<string, string>): Promise<{ stop(): Promise<void> }>;
-  /** Écrit un fichier dans la microVM (config, tools, ancrage). */
+  /** Writes a file to the microVM (config, tools, anchor). */
   writeFile(path: string, content: string): Promise<void>;
-  /** Le client HTTP du serveur — injecté pour les mêmes raisons. */
+  /** The server's HTTP client — injected for the same reasons. */
   client(baseUrl: string): OpencodeClient;
   /**
-   * Le proxy local posé devant le fournisseur ([llm-proxy.ts](llm-proxy.ts)).
-   * Injecté pour qu'un test n'ouvre pas de socket ; en production, c'est
+   * The local proxy placed in front of the provider ([llm-proxy.ts](llm-proxy.ts)).
+   * Injected so that a test does not open a socket; in production, it is
    * `startLlmProxy`.
    */
   startProxy?(job: VmJob): Promise<LlmProxy>;
-  /** Le pont de tools ([tool-bridge.ts](tool-bridge.ts)). Injecté pour un test. */
+  /** The tools bridge ([tool-bridge.ts](tool-bridge.ts)). Injected for a test. */
   startToolBridge?(opts: {
     job: VmJob;
     cp: ControlPlaneClient;
@@ -268,49 +268,49 @@ export interface SupervisorDeps {
     supervisorTools?: Record<string, SupervisorTool>;
     port?: number;
   }): Promise<ToolBridge>;
-  /** Le port réservé du serveur opencode (cf. le bloc ci-dessus). */
+  /** The reserved port of the opencode server (see the block above). */
   opencodePort: number;
   /**
-   * Le port du pont de tools. ABSENT = éphémère, choisi par le système, et c'est
-   * le cas de production : le pont rend son URL, personne n'a à connaître son
-   * numéro. Un test peut en imposer un.
+   * The port of the bridge of tools. ABSENT = ephemeral, chosen by the system, and it is
+   * the production case: the bridge renders its URL, no one has to know its
+   * number. A test can impose one.
    */
   toolBridgePort?: number;
   now?(): number;
-  /** Attente du démarrage. Réglable pour qu'un test ne poireaute pas 60 s. */
+  /** Waiting for startup. Adjustable so that a test does not wait 60 seconds. */
   bootTimeoutMs?: number;
-  /** Le battement du tour (cf. `LIFECYCLE_BEAT_MS`). Réglable pour la même raison. */
+  /** The beat of the tour (see `LIFECYCLE_BEAT_MS`). Adjustable for the same reason. */
   lifecycleBeatMs?: number;
 }
 
-/** Le texte d'ancrage minddy, servi en `instructions` au prompt système. */
+/** Minddy anchor text, served as `instructions` to the system prompt. */
 export interface SupervisorInput {
-  /** Ce que le tour demande au modèle (le message de l'utilisateur, ou l'amorce). */
+  /** What the trick asks of the model (the user's message, or the prompt). */
   prompt: string;
-  /** L'ancrage minddy (ticket / carnet / relecture), réinjecté en `instructions`. */
+  /** The minddy anchor (ticket / notebook / reread), reinjected in `instructions`. */
   anchorInstructions: string;
 }
 
 /**
- * LES JOBS DE FOND, INSCRITS AU REGISTRE D'ENFANTS (MIN-364, décision D8).
+ * GROUND JOBS, REGISTERED IN THE CHILDREN'S REGISTRY (MIN-364, decision D8).
  *
- * C'était la CONDITION écrite de la réouverture de `run_background` en local, et
- * elle tient en une ligne de fait : les jobs partent en `setsid`, donc ils
- * survivent au shell qui les a lancés — et au harness lui-même quand il est tué
- * net (⌘Q, plantage du main process), puisque le `stopAll` de fin de tour ne
- * tourne alors jamais. Sans registre, le `npm run dev` du modèle restait vivant,
- * le port 3000 tenu, **et rien nulle part ne savait où le retrouver**.
+ * This was the written CONDITION of reopening `run_background` locally, and
+ * it comes down to one fact: the jobs leave in `setsid`, so they
+ * survive the shell that launched them — and the harness itself when it is killed
+ * net (⌘Q, main process crash), since the end of turn `stopAll`
+ * then never turns. Without a register, the `npm run dev` of the model remained alive,
+ * port 3000 held, **and nowhere knew where to find it**.
  *
- * L'inscription se fait DERRIÈRE le `start` plutôt que dans `background.ts` :
- * ce module-là est pur et testable sans disque, et c'est ce qui fait sa valeur.
- * Ici, le superviseur sait déjà écrire sur le disque de la machine.
+ * The inscription is done BEHIND the `start` rather than in `background.ts`:
+ * this module is pure and testable without a disk, and that is what makes it valuable.
+ * Here, the supervisor already knows how to write to the machine's disk.
  *
- * `kind: "background"` n'est pas cosmétique : `killTargets` signale ces enfants
- * **en GROUPE** (`-pid`), parce que le chef de session n'est pas le serveur mais
- * le shell qui l'a lancé — tuer le seul chef laisserait le `next dev` derrière.
+ * `kind: "background"` is not cosmetic: `killTargets` reports these children
+ * **in GROUP** (`-pid`), because the session leader is not the server but
+ * the shell that launched it — killing the lone leader would leave the `next dev` behind.
  *
- * Hors chemin local, la fonction rend le runner tel quel : la microVM meurt avec
- * ses enfants, et un fichier de plus n'y garderait rien.
+ * Outside the local path, the function returns the runner as it is: the microVM dies with
+ * his children, and one more file would keep nothing there.
  */
 function registeredBackgroundRunner(
   runner: BackgroundJobRunner,
@@ -321,8 +321,8 @@ function registeredBackgroundRunner(
   return {
     start: async (opts) => {
       const started = await runner.start(opts);
-      // APRÈS le start, parce que c'est lui qui rend le pid — et le seul instant
-      // non couvert est celui où le job n'a pas encore de numéro à écrire.
+      // AFTER the start, because it is he who makes the pid — and the only moment
+      // uncovered is one where the job does not yet have a number to write.
       if (started.pid > 0) {
         noteHarnessChild(harnessDir, {
           pid: started.pid,
@@ -335,15 +335,15 @@ function registeredBackgroundRunner(
     read: (opts) => runner.read(opts),
     stop: async (opts) => {
       await runner.stop(opts);
-      // Retiré seulement quand on l'a arrêté SOI-MÊME : un job qu'on n'a pas su
-      // tuer doit rester dans le registre, c'est justement lui que le lanceur
-      // aura à moissonner.
+      // Removed only when you stopped it YOURSELF: a job you didn't know about
+      // kill must remain in the register, it is precisely him who is the launcher
+      // will have to harvest.
       forgetHarnessChild(harnessDir, opts.pid);
     },
   };
 }
 
-/** Le port d'une URL de service local, ou 0 si elle n'en porte pas de lisible. */
+/** The port of a local service URL, or 0 if it does not carry a readable one. */
 function portOfUrl(url: string): number {
   try {
     const parsed = new URL(url);
@@ -354,15 +354,15 @@ function portOfUrl(url: string): number {
 }
 
 /**
- * Combien de fichiers de conventions on sert au plus, et jusqu'à quelle
- * profondeur. Un monorepo en porte une poignée ; trente serait le signe d'autre
- * chose, et le budget d'octets (`formatServedInstructions`) ne serait de toute
- * façon plus tenu par les derniers.
+ * How many convention files are used at most, and to what extent?
+ * depth. A monorepo carries a handful; thirty would be the sign else
+ * thing, and the byte budget (`formatServedInstructions`) would not be at all
+ * way more held by the latter.
  */
 const INSTRUCTION_FILES_MAX = 20;
 const INSTRUCTION_FILES_MAX_DEPTH = 5;
 
-/** Dossiers qu'on ne traverse pas : ce qu'on y trouverait n'est pas du projet. */
+/** Files that we do not go through: what we would find there is not part of the project. */
 const INSTRUCTION_SEARCH_PRUNED = [
   "node_modules",
   ".git",
@@ -376,28 +376,28 @@ const INSTRUCTION_SEARCH_PRUNED = [
 ];
 
 /**
- * LES CONVENTIONS DU DÉPÔT, TROUVÉES PLUTÔT QU'AUTO-DÉCOUVERTES (MIN-360, puis
- * MIN-364 pour les imbriquées).
+ * DEPOSIT CONVENTIONS, FOUND RATHER THAN SELF-DISCOVERED (MIN-360, then
+ * MIN-364 for nested).
  *
- * Opencode allait chercher `AGENTS.md` et `CLAUDE.md` tout seul, en remontant
- * depuis le dépôt. C'est la MÊME remontée qui ramassait les plugins et les tools
- * d'un `.opencode/`, c'est-à-dire du code arbitraire écrit par quiconque peut
- * committer — et c'est cette remontée qu'on a coupée
+ * Opencode would fetch `AGENTS.md` and `CLAUDE.md` on its own, going up
+ * from the depot. It’s the SAME feedback that collected the plugins and tools
+ * of a `.opencode/`, that is to say arbitrary code written by anyone who can
+ * committer — and it’s this feedback that we cut
  * (`OPENCODE_DISABLE_PROJECT_CONFIG`, cf. [opencode-config.ts](opencode-config.ts)).
  *
- * On rend donc le seul morceau qui n'exécute rien : ces deux noms de fichiers, et
- * rien d'autre. **La racine ET les sous-dossiers** (MIN-364) : le mécanisme
- * paresseux qui servait les imbriqués se collait au RÉSULTAT d'un tool de
- * fichier, et ces tools appartiennent à opencode — il n'a plus de point
- * d'accroche, donc un monorepo dont chaque paquet porte ses conventions ne les
- * voyait plus du tout.
+ * We therefore return the only piece that does not execute anything: these two file names, and
+ * nothing else. **The root AND subfolders** (MIN-364): the mechanism
+ * lazy person who served the nested ones stuck to the RESULT of a tool
+ * file, and these tools belong to opencode — it no longer has a point
+ * hook, so a monorepo in which each package carries its conventions does not
+ * no longer saw them at all.
  *
- * L'ordre est celui de la profondeur, du plus GÉNÉRAL au plus SPÉCIFIQUE : c'est
- * l'ordre dans lequel les règles se surchargent, et c'est celui que le document
- * servi annonce au modèle.
+ * The order is that of depth, from the most GENERAL to the most SPECIFIC: it is
+ * the order in which the rules are overloaded, and this is the order that the document
+ * served ad to model.
  *
- * Best-effort de bout en bout : une sonde muette rend une liste vide, jamais une
- * erreur — un tour ne s'arrête pas parce qu'un `find` n'a pas répondu.
+ * End-to-end best effort: a mute probe returns an empty list, never a
+ * error — a round does not stop because a `find` did not respond.
  */
 async function findInstructionFiles(host: RepoHost): Promise<string[]> {
   const names = REPO_INSTRUCTION_FILES;
@@ -413,8 +413,8 @@ async function findInstructionFiles(host: RepoHost): Promise<string[]> {
       .split("\n")
       .map((line) => line.trim().replace(/^\.\//, ""))
       .filter((line) => line && names.includes(line.split("/").pop() ?? ""));
-    // Profondeur d'abord (le général avant le spécifique), puis l'ordre déclaré
-    // des noms — `AGENTS.md` avant `CLAUDE.md`, comme partout ailleurs.
+    // Depth first (the general before the specific), then the declared order
+    // names — `AGENTS.md` before `CLAUDE.md`, like everywhere else.
     return [...new Set(found)]
       .sort((a, b) => {
         const depth = a.split("/").length - b.split("/").length;
@@ -428,20 +428,20 @@ async function findInstructionFiles(host: RepoHost): Promise<string[]> {
 }
 
 /**
- * LE DOCUMENT DE CONVENTIONS SERVI AU TOUR, écrit à côté de l'ancrage.
+ * THE CONVENTIONS DOCUMENT SERVED AT THE TOUR, written next to the anchor.
  *
- * ⚠ C'EST ICI QUE LA NOTE DE FRONTIÈRE REVIENT (MIN-364, §5.4 de l'audit du
- * 15/08). Elle manquait sur le chemin local : `readRepoInstructions` n'est appelé
- * que côté serveur, où `host` est `null` en local, donc le CONTENU des `AGENTS.md`
- * arrivait bien (opencode charge la clé `instructions`) mais sans la phrase qui
- * dit au modèle que ces fichiers sont des DONNÉES sur le projet et non une source
- * d'ordres. C'est exactement le garde-fou d'injection de prompt sur un fichier que
- * quiconque peut committer — et le dépôt d'une relecture n'est même pas celui de
- * l'utilisateur.
+ * ⚠ THIS IS WHERE THE BORDER NOTE COMES BACK (MIN-364, §5.4 of the audit of
+ * 15/08). It was missing on the local path: `readRepoInstructions` is not called
+ * that on the server side, where `host` is `null` locally, therefore the CONTENT of `AGENTS.md`
+ * arrived well (opencode loads the `instructions` key) but without the sentence which
+ * tells the model that these files are DATA about the project and not a source
+ * orders. This is exactly the safeguard for prompt injection on a file that
+ * anyone can commit — and the submission of a review is not even that of
+ * the user.
  *
- * On lit nous-mêmes plutôt que de nommer N chemins à opencode, parce que c'est la
- * seule façon de PLAFONNER : il lit en entier ce qu'on lui nomme, et trente
- * `AGENTS.md` de monorepo entreraient au complet dans le prompt système, à chaque
+ * We read ourselves rather than naming N paths to opencode, because that's the
+ * only way to HIGH: he reads in full what is given to him, and thirty
+ * `AGENTS.md` of monorepo would enter in full in the system prompt, each time
  * round.
  */
 async function servedInstructionsFile(
@@ -450,9 +450,9 @@ async function servedInstructionsFile(
 ): Promise<string[]> {
   const paths = await findInstructionFiles(host);
   if (paths.length === 0) return [];
-  // Chaque lecture est indépendante et le document final garde l'ordre de
-  // `paths` grâce à `Promise.all`. Dans un monorepo, les lire en série faisait
-  // attendre le serveur opencode derrière chaque aller-retour disque/RPC.
+  // Each reading is independent and the final document keeps the order of
+  // `paths` thanks to `Promise.all`. In a monorepo, reading them serially made
+  // wait for the opencode server behind each disk/RPC round trip.
   const files = (
     await Promise.all(
       paths.map(async (path): Promise<RepoInstructionFile | null> => {
@@ -467,18 +467,18 @@ async function servedInstructionsFile(
   try {
     await writeFile(target, document);
   } catch {
-    // Un fichier qu'on n'a pas su écrire ne doit pas faire tomber le tour : le
-    // modèle travaillera sans les conventions, ce qui est le cas d'avant ce lot.
+    // A file that we did not know how to write should not bring down the trick: the
+    // model will work without the conventions, which is the case before this batch.
     return [];
   }
   return [target];
 }
 
 /**
- * JOUE LE TOUR. Ne lève pas sur un échec de travail (push raté, serveur qui ne
- * démarre pas) : ces échecs se DISENT dans le rapport — même règle que
- * `runVmTurn`, et pour la même raison : un tour qui a écrit du code et n'a pas su
- * le pousser doit quand même remonter son état.
+ * PLAY THE TOUR. Do not raise on a job failure (failed push, server that does not
+ * not start): these failures are SAYED in the report — same rule as
+ * `runVmTurn`, and for the same reason: a trick that wrote code and didn't know
+ * pushing it should still raise its state.
  */
 export async function runOpencodeTurn(
   job: VmJob,
@@ -489,9 +489,9 @@ export async function runOpencodeTurn(
 ): Promise<VmTurnReport> {
   const now = deps.now ?? (() => Date.now());
   const startedAt = now();
-  // Les tours locaux traversent plusieurs processus et services HTTP avant que
-  // le fournisseur puisse émettre un token. Ces jalons restent dans le log du
-  // harness (jamais dans le fil) pour attribuer la latence à une étape réelle.
+  // Local tours pass through multiple HTTP processes and services before
+  // the supplier can issue a token. These milestones remain in the log of
+  // harness (never in the thread) to assign latency to an actual step.
   const timing = (stage: string) =>
     console.log(`[agent-timing] ${stage} +${now() - startedAt}ms`);
   timing("supervisor-start");
@@ -516,17 +516,17 @@ export async function runOpencodeTurn(
   secrets.addAuthUrl(authUrl);
 
   /**
-   * CE TOUR JOUE-T-IL SUR LA MACHINE DE QUELQU'UN ? (MIN-360)
+   * IS THIS THINK PLAYING ON ANYONE’S MACHINE? (MIN-360)
    *
-   * Lu une fois, ici, et passé partout : c'est le drapeau qui décide de trois
-   * garde-fous que la microVM n'avait pas besoin de porter — la lecture des
-   * `.env`, la portée de `webfetch`, et le refus d'une permission inconnue.
+   * Read once, here, and passed everywhere: it is the flag which decides three
+   * safeguards that the microVM did not need to carry — reading
+   * `.env`, the scope of `webfetch`, and the denial of an unknown permission.
    */
   const local = isLocalJob(job);
 
-  // Le mint plafonné est le seul aller-retour obligatoire avant d'ouvrir le
-  // proxy local. Il n'a besoin ni du dépôt ni des fichiers du harness : le
-  // démarrer dès l'entrée recouvre sa latence avec toute cette préparation.
+  // The capped mint is the only mandatory round trip before opening the
+  // local proxy. It does not need either the repository or the harness files: the
+  // starting from the entry covers its latency with all this preparation.
   const localLlmKeyPromise = local
     ? (() => {
         timing("llm-key-requested");
@@ -536,25 +536,25 @@ export async function runOpencodeTurn(
         });
       })()
     : null;
-  // Un dépôt invalide peut faire sortir avant que le proxy rejoigne la clé.
-  // L'erreur reste portée par la promesse originale si elle est attendue, mais
-  // ne devient pas un rejet non géré sur ce chemin de sortie précoce.
+  // An invalid repository may exit before the proxy joins the key.
+  // The error remains carried by the original promise if it is expected, but
+  // does not become an unhandled release on this early exit path.
   void localLlmKeyPromise?.catch(() => {});
 
   /**
-   * CE QU'UNE CHAÎNE DEVIENT AVANT DE QUITTER LA MACHINE (MIN-361).
+   * WHAT A CHAIN ​​HAPPENS BEFORE LEAVING THE MACHINE (MIN-361).
    *
-   * Les secrets d'abord — c'est l'invariant de MIN-239, et il vaut partout —,
-   * puis, sur le chemin local SEULEMENT, les chemins de la machine
-   * ([local-uplink.ts](local-uplink.ts)). Un seul crochet plutôt qu'un `if` à
-   * chaque sortie : les sorties de texte d'un tour sont cinq (le mot de la fin,
-   * le direct, le message de commit, l'erreur de session, le rapport d'échec),
-   * et une seule oubliée suffit à faire monter `/Users/<prénom nom>/…`.
+   * The secrets first - this is the invariant of MIN-239, and it applies everywhere -,
+   * then, on the local path ONLY, the machine paths
+   * ([local-uplink.ts](local-uplink.ts)). A single bracket rather than a `if` to
+   * each output: the text outputs of a round are five (the final word,
+   * live, commit message, session error, failure report),
+ * and just one forgotten one is enough to raise `/Users/<first last name>/…`.
    */
   const outward = (text: string): string =>
     local ? scrubPaths(secrets.redact(text), job.layout.repoDir) : secrets.redact(text);
 
-  /** Ce qu'on rend quand le tour n'a pas pu commencer (ou s'est cassé en vol). */
+  /** What we return when the tour could not start (or was broken in flight). */
   const failed = (message: string, costUsd = 0): VmTurnReport => ({
     status: "error",
     errorMessage: cap(outward(message), 1000),
@@ -567,20 +567,20 @@ export async function runOpencodeTurn(
   });
 
   /**
-   * LE DÉPÔT DE L'UTILISATEUR, PRÉPARÉ AVANT TOUT LE RESTE (MIN-358).
+   * THE USER'S DEPOSIT, PREPARED BEFORE EVERYTHING ELSE (MIN-358).
    *
-   * Avant le décor, avant le proxy, avant le pont : c'est le seul endroit d'où
-   * l'on peut encore sortir sans rien avoir ouvert à refermer. Et il n'y a pas de
-   * mode dégradé — un dépôt qu'on ne sait pas lire est un tour qui n'a nulle part
-   * où écrire.
+   * Before the decor, before the proxy, before the bridge: this is the only place from which
+   * you can still go out without having opened anything to close. And there is no
+   * degraded mode — a deposit that you cannot read is a trick that has nowhere
+   * where to write.
    *
-   * `null` en mode clone, et c'est ce `null` qui, plus bas, décide de la forme du
-   * commit : `git add -A` dans un clone à nous, l'index temporaire dans le
+   * `null` in clone mode, and it is this `null` which, further down, decides the shape of the
+   * commit: `git add -A` in a clone of ours, the temporary index in the
    * checkout de quelqu'un.
    */
   let current: CurrentRepoState | null = null;
-  /** L'arbre de travail tel qu'il était AVANT que le modèle ne touche à rien —
-   *  l'autre moitié du périmètre du tour (cf. `turnScope`). */
+  /** The working tree as it was BEFORE the model touched anything —
+   * the other half of the perimeter of the turn (see `turnScope`). */
   let stateAtStart: RepoState = new Map();
   if (isCurrentRepoJob(job)) {
     try {
@@ -595,12 +595,12 @@ export async function runOpencodeTurn(
     } catch (err) {
       return failed((err as Error).message);
     }
-    // Event neutre (invisible au fil, comptable en base) : la branche que
-    // l'utilisateur avait sous les doigts et ce qu'il avait en cours quand le
-    // tour a commencé. C'est ce qui permettra de relire un tour dont la pull
-    // request contient des commits que personne n'attribue à l'agent.
-    // Informatif et invisible dans le fil : ne bloque ni l'écriture de la config
-    // ni le mint de clé derrière un aller-retour vers le plan de contrôle.
+    // Neutral event (invisible to the wire, accounting in base): the branch that
+    // the user had under his fingers and what he had in progress when the
+    // tour has started. This is what will allow you to reread a trick whose pull
+    // request contains commits that no one attributes to the agent.
+    // Informative and invisible in the thread: does not block writing of the config
+    // nor the key mint behind a round trip to the control plane.
     void cp
       .emit("status", {
         phase: "current_repo",
@@ -611,30 +611,30 @@ export async function runOpencodeTurn(
       .catch(() => {});
   }
   /**
-   * La baseline du diff du tour. En mode clone elle vient du job ; en mode dépôt
-   * courant, au PREMIER tour, la fonction ne pouvait pas la connaître — c'est le
-   * HEAD d'une machine qu'elle n'a jamais vue. Le harness la résout donc lui-même.
+   * The baseline of the lap difference. In clone mode it comes from the job; in deposit mode
+   * current, in the FIRST round, the function could not know it — this is the
+   * HEAD of a machine she has never seen. The harness therefore resolves it itself.
    */
   const filesFromSha = job.filesFromSha || current?.parent || "";
 
-  // ── Le décor, posé avant le premier octet de serveur ───────────────────────
-  // L'ancrage et les fichiers de tools ont des destinations distinctes. Une
-  // barrière unique avant `startServer` garde la configuration atomique vue par
-  // opencode, sans ajouter 32 attentes disque/RPC au premier token.
+  // ── The setting, set before the first server byte ───────────────────────
+  // The anchor and tools files have separate destinations. A
+  // unique barrier before `startServer` keeps the atomic configuration seen by
+  // opencode, without adding 32 disk/RPC waits before the first token.
   await Promise.all([
     deps.writeFile(opencodeAnchorFile(job.layout), input.anchorInstructions),
     ...opencodeToolFiles(job).map((file) => deps.writeFile(file.path, file.content)),
   ]);
   timing("harness-files-ready");
-  // Les conventions du dépôt ne dépendent ni du proxy ni du pont. On commence
-  // leur découverte tout de suite, puis on attend le document juste avant de
-  // donner l'environnement au serveur : opencode voit toujours le fichier
-  // complet, mais le coût disque/RPC se recouvre avec l'initialisation locale.
+  // The repository conventions are independent of the proxy or the bridge. We start
+  // their discovery immediately, then we wait for the document just before
+  // give the environment to the server: opencode always sees the file
+  // full, but the disk/RPC cost overlaps with local initialization.
   const servedInstructionsPromise = servedInstructionsFile(host, deps.writeFile);
 
-  // Le mint de la clé locale est un aller-retour vers le plan de contrôle. Il
-  // ne dépend pas du pont : on le recouvre avec la construction du reste du
-  // superviseur au lieu de le mettre sur le chemin critique du serveur.
+  // The local key mint is a round trip to the control plane. He
+  // does not depend on the bridge: it is covered with the construction of the rest of the
+  // supervisor instead of putting it on the server's critical path.
   const proxyPromise = (deps.startProxy ??
     ((j: VmJob) =>
       startLlmProxy({
@@ -646,38 +646,38 @@ export async function runOpencodeTurn(
           : {}),
       })))(job);
 
-  // Le proxy AVANT le serveur : sa `baseURL` entre dans la config du tour, donc
-  // elle doit être connue avant qu'opencode ne lise son environnement.
-  // `secrets.redact` est une lambda liée au registre, qui est MUTABLE : le token
-  // re-minté avant un push (cf. `pushWork`) est substitué par le proxy dès qu'il
-  // est enregistré, sans que le proxy ait à être reconstruit.
+  // The proxy BEFORE the server: its `baseURL` enters the tour config, so
+  // it must be known before opencode reads its environment.
+  // `secrets.redact` is a lambda linked to the register, which is MUTABLE: the token
+  // re-minted before a push (see `pushWork`) is replaced by the proxy as soon as it
+  // is saved, without the proxy having to be rebuilt.
   //
-  // ET C'EST LUI QUI PORTE LA CLÉ SUR UNE MACHINE (MIN-357) : `apiKey` n'est
-  // câblé que pour un tour local, où aucun firewall ne la posera à la sortie. Le
-  // superviseur ne la voit jamais — il passe le MOYEN de la demander, et elle ne
-  // vit que dans la mémoire du proxy, ni dans le job ni dans l'environnement du
-  // serveur opencode. Un mint refusé fait lever `startLlmProxy`, donc échouer le
-  // tour avec son motif : c'est la conduite voulue, pas une régression.
+  // AND IT'S HE WHO HAS THE KEY TO A MACHINE (MIN-357): `apiKey` is not
+  // wired only for a local turn, where no firewall will install it at the exit. THE
+  // supervisor never sees her — he goes out of his way to ask for her, and she doesn't
+  // lives only in the proxy memory, neither in the job nor in the environment of the
+  // opencode server. A refused mint causes `startLlmProxy` to raise, therefore failing
+  // turn with its motive: it is the desired behavior, not a regression.
   const proxy = await proxyPromise;
   timing("llm-proxy-ready");
   /**
-   * Le pont de tools, ouvert AVANT le serveur pour la même raison que le proxy :
-   * son adresse entre dans l'environnement d'opencode, donc elle doit exister
-   * avant qu'il ne le lise. C'est lui qui tient les compteurs du TOUR — plafond
-   * de recherches web, ancres de relecture ([tool-bridge.ts](tool-bridge.ts)).
+   * The tools bridge, opened BEFORE the server for the same reason as the proxy:
+   * its address falls into the opencode environment, so it must exist
+   * before he reads it. He’s the one who keeps the TOUR counters — ceiling
+ * web searches and review anchors ([tool-bridge.ts](tool-bridge.ts)).
    */
   /**
-   * LE PÉRIMÈTRE DU TOUR (MIN-358) — ce que ce tour, et lui seul, a le droit de
-   * livrer et de relire dans le dépôt de quelqu'un d'autre.
+   * THE PERIMETER OF THE TOUR (MIN-358) — what this turn, and it alone, has the right to
+   * deliver and proofread in someone else's repository.
    *
-   * Deux sources unies ici parce que le superviseur est le seul à avoir les
-   * deux : l'instantané pris avant le premier round, et les éditions notées par
-   * les permissions d'opencode ([current-repo.ts](../current-repo.ts) explique
-   * pourquoi aucune des deux ne suffit).
+   * Two sources united here because the supervisor is the only one with the
+   * two: the snapshot taken before the first round, and the editions noted by
+   * opencode permissions ([current-repo.ts](../current-repo.ts) explains
+   * why neither is enough).
    *
-   * Recalculé à chaque appel, jamais mémoïsé : l'arbre de travail bouge pendant
-   * tout le tour, et une liste figée au premier `create_pr` raterait tout ce que
-   * le modèle écrit ensuite.
+   * Recalculated at each call, never memorized: the work tree moves during
+   * all the way around, and a list frozen at the first `create_pr` would miss everything that
+   * the model then writes.
    */
   const turnScope = async (): Promise<TurnPaths> => {
     if (!current) return { paths: [], carried: [] };
@@ -691,14 +691,14 @@ export async function runOpencodeTurn(
   };
 
   /**
-   * LE PÉRIMÈTRE ATTRIBUÉ — plus strict que `turnScope`.
+   * THE ASSIGNED SCOPE — stricter than `turnScope`.
    *
-   * `turnScope` doit encore voir le shell pour une livraison explicite (codegen,
-   * `rm`, lockfile). Il compare donc l'arbre avant/après et, dans un checkout
-   * partagé, ne peut pas distinguer deux auteurs concurrents. Le diff présenté
-   * comme « changements de cet agent » n'a pas le droit de faire cette
-   * supposition : il ne prend que les écritures observées par les permissions
-   * `edit`, cumulées dans le checkpoint de ce run.
+   * `turnScope` must still see the shell for explicit delivery (codegen,
+   * `rm`, lockfile). It therefore compares the tree before/after and, in a checkout
+   * shared, cannot distinguish two competing authors. The difference presented
+   * as "changes this agent" has no right to do this
+   * assumption: it only takes the writes observed by the permissions
+   * `edit`, accumulated in the checkpoint of this run.
    */
   const attributedScope = async (): Promise<string[]> => {
     if (!current) return [];
@@ -706,10 +706,10 @@ export async function runOpencodeTurn(
   };
 
   /**
-   * LES RÈGLES DE LIVRAISON (lot 2, tâche 14), construites AVANT le pont : c'est
-   * lui qui sert `write_issue_plan` et `create_pr`, donc lui qui porte la voix du
-   * harness. Le superviseur, de son côté, leur donne les deux faits qui viennent
-   * des tools intégrés — une écriture autorisée, une commande terminée.
+   * THE DELIVERY RULES (lot 2, task 14), built BEFORE the bridge: it is
+   * he who serves `write_issue_plan` and `create_pr`, therefore he who carries the voice of
+   * harness. The supervisor, for his part, gives them the two facts that come
+   * Integrated tools — one write allowed, one command completed.
    */
   const delivery = makeOpencodeDelivery({
     host,
@@ -722,23 +722,23 @@ export async function runOpencodeTurn(
   });
 
   /**
-   * Un run local n'est pas lisible par la route `/diff` du serveur : le dépôt
-   * est sur la machine qui exécute le harnais. Après une édition, cette machine
-   * relit donc son propre diff et l'attache au flux temps réel. Le délai laisse
-   * l'outil d'OpenCode finir d'écrire avant le `git diff`; on ne lance qu'une
-   * lecture groupée pour une rafale d'éditions.
+   * A local run is not readable by the server's `/diff` route: the repository
+   * is on the machine that runs the harness. After an edition, this machine
+   * therefore rereads its own diff and attaches it to the real-time stream. The deadline leaves
+   * the OpenCode tool finishes writing before `git diff`; we only launch one
+   * batch reading for a burst of edits.
   */
   let liveStatsTimer: ReturnType<typeof setTimeout> | null = null;
   let refreshLocalLiveStats = () => {};
 
   /**
-   * L'offre de sous-agents du tour, telle que la config vient de la déclarer.
-   * Une seule source ([opencode-config.ts](opencode-config.ts)) : ce qui est
-   * servi au modèle, ce que le garde-fou accepte et ce que le fil affiche sont
-   * dérivés du même tableau, donc ne peuvent pas diverger.
+   * The offer of sub-agents of the tour, as the config has just declared it.
+   * Single source ([opencode-config.ts](opencode-config.ts)): what is
+   * served to the model, what the guardrail accepts and what the thread displays are
+   * derived from the same array, so cannot diverge.
    *
-   * Construits AVANT le pont parce que `create_pr` les consulte : commiter
-   * pendant qu'une fille écrit emporterait son travail à moitié posé.
+   * Built BEFORE the bridge because `create_pr` consults them: commit
+   * while a girl writing would take away her half-finished work.
    */
   const agentTable = new Map(subagentAgentTable(job).map((a) => [a.name, a]));
   const subagents = new SubagentRegistry(
@@ -746,27 +746,27 @@ export async function runOpencodeTurn(
   );
 
   /**
-   * LES JOBS DE FOND (MIN-286, lot 3 ; MIN-114 pour la politique) — `bash` n'a pas
-   * de mode fond, donc le tool est à nous et son registre vit ICI.
+   * GROUND JOBS (MIN-286, lot 3; MIN-114 for politics) — `bash` does not have
+   * background mode, so the tool is ours and its register lives HERE.
    *
-   * `background.ts` ne bouge pas d'une ligne : le plafond de jobs, le garde-fou
-   * `checkCommand`, les offsets et la mise en forme y sont purs, et ce sont eux
-   * qui manquaient au repli (« lance ton serveur en `&` ») que ce tool remplace.
-   * Ce qui est neuf tient en trois branchements : le pont l'exécute, `create_pr`
-   * tue avant de stager, la fin de tour tue avant de commiter.
+   * `background.ts` does not move one line: the job ceiling, the safeguard
+   * `checkCommand`, offsets and formatting are pure there, and they are
+ * that were missing from the fallback ("start your server with `&`") that this tool replaces.
+   * What is new takes three connections: the bridge executes it, `create_pr`
+   * kills before staging, end of turn kills before committing.
    *
-   * `seqBase: 0` comme dans [turn.ts](turn.ts) : les fichiers de log sont
-   * numérotés par TOUR, et un tour a sa microVM.
+   * `seqBase: 0` as in [turn.ts](turn.ts): the log files are
+   * numbered by TOWER, and a tower has its microVM.
    */
   const background = new BackgroundJobs(
     registeredBackgroundRunner(repoBackgroundRunner(host), job.layout.harnessDir, local),
     0,
-    // Le log vit hors du dépôt, et une lecture hors dépôt est refusée par notre
-    // propre verdict de permission (`external_directory`) : c'est le SHELL qu'on
-    // envoie le lire, pas `read`.
+    // The log lives outside the repository, and a reading outside the repository is refused by our
+    // own permission verdict (`external_directory`): this is the SHELL that we
+    // sends it to read, not `read`.
     OPENCODE_BACKGROUND_LOG_NOTES,
-    // Le même monde que celui du verdict de permission : un `git commit` lancé en
-    // fond se juge comme un `git commit` de premier plan (MIN-364).
+    // The same world as that of the permission verdict: a `git commit` launched in
+    // in the foreground, it is judged like a foreground `git commit` (MIN-364).
     { local },
   );
   const servesBackground = localToolsFor(job).some(
@@ -774,9 +774,9 @@ export async function runOpencodeTurn(
   );
 
   /**
-   * Les jobs tués avant un `git add -A`, DIT au modèle. Un serveur arrêté en
-   * silence lui laisse croire qu'il tourne, et il enchaîne des `curl` sur un port
-   * mort en cherchant ce qu'il a cassé (MIN-209).
+   * Jobs killed before a `git add -A`, TOLD to the model. A server stopped in
+   * silence lets him believe that it is running, and he strings `curl` on a port
+   * died looking for what he broke (MIN-209).
    */
   async function stopJobsForStaging(): Promise<string> {
     const stopped = await background.stopAll().catch(() => 0);
@@ -788,35 +788,35 @@ export async function runOpencodeTurn(
   }
 
   /**
-   * LE PUSH DU TOUR, en un seul endroit — il sert deux fois : `create_pr` (la VM
-   * pousse, la fonction ouvre) et la fin de tour.
+   * THE PUSH OF THE TOUR, in one place — it is used twice: `create_pr` (the VM
+   * pushes, the function opens) and the end of the turn.
    *
-   * L'URL de push est RE-RÉSOLUE à chaque fois, et ce n'est pas une précaution de
-   * style : un tour de microVM dure des heures, un token d'installation de forge
-   * une heure. Le registre de secrets est cumulatif — le token du clone reste
-   * lisible dans `.git/config` longtemps après avoir été remplacé ici.
+   * The push URL is RE-RESOLVED every time, and this is not a safety precaution.
+ * For example: a microVM round lasts hours, while a forge installation token
+ * expires after an hour. The secret register is cumulative — the clone token remains
+   * readable in `.git/config` long after being replaced here.
    */
   /**
-   * LE SCAN DE SECRETS, ET IL EST DUR (MIN-360) — il LÈVE, donc rien n'est commité
-   * et rien n'est poussé.
+   * THE SECRETS SCAN, AND IT'S HARD (MIN-360) — it LIFTS, so nothing is committed
+   * and nothing is pushed.
    *
-   * Ce qui le rend nécessaire tient en une phrase : la fin de tour publie une pull
-   * request **sans humain devant l'écran**, et la porte de livraison
-   * ([delivery-gate.ts](../delivery-gate.ts)) est une porte de QUALITÉ — rien n'y
-   * cherchait une fuite. Tant que le dépôt était un clone jetable, le seul secret à
-   * portée était celui du dépôt ; en mode dépôt courant, le `.env` réel de
-   * l'utilisateur est à côté des fichiers du tour.
+   * What makes it necessary can be summed up in one sentence: the end of the tour publishes a pull
+   * request **without a human in front of the screen**, and the delivery door
+   * ([delivery-gate.ts](../delivery-gate.ts)) is a QUALITY gate — nothing there
+   * was looking for a leak. As long as the repository was a disposable clone, the only secret
+   * scope was that of the deposit; in current deposit mode, the real `.env` of
+   * the user is next to the tour files.
    *
-   * DEUX SOURCES, parce qu'aucune ne suffit :
+   * TWO SOURCES, because neither is enough:
    *
-   * 1. **le diff** ([secret-scan.ts](../secret-scan.ts) n'y lit que les lignes
-   *    AJOUTÉES : un secret déjà présent dans le dépôt bloquerait sinon tous les
-   *    tours qui touchent à ce fichier, pour toujours) ;
-   * 2. **les fichiers NEUFS**, qui n'apparaissent dans aucun `git diff` tant qu'ils
-   *    ne sont pas suivis — et un `.env` recopié est exactement ça.
+   * 1. **the diff** ([secret-scan.ts](../secret-scan.ts) only reads the lines
+   * ADDED: a secret already present in the repository would otherwise block all
+   * turns that touch this file, forever);
+   * 2. **NEW files**, which do not appear in any `git diff` as long as they
+   * are not tracked — and a copied `.env` is exactly that.
    *
-   * Le refus revient au modèle comme une erreur de tool sur `create_pr`, et se
-   * publie au fil par `pushError` en fin de tour. Aucun des deux n'est un silence.
+   * The refusal returns to the model as a tool error on `create_pr`, and is
+   * publishes in the thread by `pushError` at the end of the round. Neither is a silence.
    */
   async function assertNoSecretsPushed(): Promise<void> {
     const scope = current ? (await turnScope()).paths : undefined;
@@ -827,15 +827,15 @@ export async function runOpencodeTurn(
       .split("\n")
       .filter((line) => line.startsWith("??"))
       .map((line) => line.slice(3).trim())
-      // Un chemin non-ASCII sort CITÉ de `git status --porcelain` (le `-z` seul ne
-      // cite pas, cf. current-repo.ts). On le laisse tomber plutôt que de le
-      // déciter à la main : c'est le scan d'un fichier neuf qu'on perd, pas le
-      // diff, et une désérialisation approximative ferait ouvrir un mauvais chemin.
+      // A non-ASCII path leaves CITY of `git status --porcelain` (the `-z` alone does not
+      // not cite, cf. current-repo.ts). We let it fall rather than
+      // recite by hand: it is the scan of a new file that we lose, not the
+      // diff, and rough deserialization would open a wrong path.
       .filter((path) => path && !path.startsWith('"'))
       .slice(0, SECRET_SCAN_MAX_FILES);
     for (const path of untracked) {
-      // Un fichier de la famille dotenv se refuse sur son NOM : son contenu n'a
-      // pas à ressembler à quoi que ce soit pour ne pas partir dans une PR.
+      // A file from the dotenv family refuses its NAME: its content has no
+      // not to resemble anything so as not to end up in a PR.
       if (isSecretFile(path)) {
         findings.push({ kind: "environment file", file: path, sample: path });
         continue;
@@ -861,9 +861,9 @@ export async function runOpencodeTurn(
       });
     }
     /**
-     * LE MÊME PUSH, DANS LE DÉPÔT DE QUELQU'UN D'AUTRE (MIN-358) — index
-     * temporaire, `commit-tree`, ref à nous. Rien de ce que l'utilisateur a sous
-     * les doigts n'est touché, et la pull request sort quand même.
+     * THE SAME PUSH, IN SOMEONE ELSE'S DEPOSIT (MIN-358) — index
+     * temporary, `commit-tree`, ref to us. Nothing the user has under
+     * fingers are not touched, and the pull request still goes out.
      */
     const pushed = await commitTurnAndPush(host, {
       runId: job.runId,
@@ -871,17 +871,17 @@ export async function runOpencodeTurn(
       workBranch: job.workBranch,
       message,
       committer: job.committer,
-      // Le parent RÉEL est relu par `commitTurnAndPush` à chaque appel : le
-      // second push d'un tour (`create_pr`, puis la fin de tour) doit prolonger
-      // le premier commit, pas lui fabriquer un frère.
+      // The REAL parent is reread by `commitTurnAndPush` at each call: the
+      // second push of a turn (`create_pr`, then the end of the turn) must extend
+      // the first commit, not make him a brother.
       fallbackParent: current.parent,
       scope: await turnScope(),
     });
     /**
-     * LE CAS QUE RIEN NE REFERME, ET QUI DOIT DONC SE DIRE : l'agent a livré des
-     * fichiers que l'utilisateur avait lui aussi modifiés, donc son travail à lui
-     * part dans la pull request. C'est le prix du mode dépôt courant — deux mains
-     * dans le même fichier — et ce qui serait fautif, ce serait de le taire.
+     * THE CASE THAT NOTHING CLOSES, AND WHICH MUST THEREFORE BE SAYED: the agent delivered
+     * files that the user had also modified, therefore his work
+     * part in the pull request. This is the price of the current deposit mode — two hands
+     * in the same file — and what would be wrong would be to keep silent about it.
      */
     if (pushed.carried.length > 0) {
       await cp
@@ -896,31 +896,31 @@ export async function runOpencodeTurn(
   }
 
   /**
-   * `create_pr` — LE SEUL TOOL COUPÉ EN DEUX, et il l'est dans le bon sens : le
-   * dépôt vit dans la microVM, le token de forge et l'état de la pull request
-   * côté fonction ([control-plane.ts](../control-plane.ts), `runCreatePr`). Le
-   * superviseur pousse donc, puis fait ouvrir.
+   * `create_pr` — THE ONLY TOOL CUT IN HALF, and it is in a good way: the
+   * repository lives in the microVM, forge token and pull request state
+   * function side ([control-plane.ts](../control-plane.ts), `runCreatePr`). THE
+ * the supervisor therefore pushes, then opens it.
    *
-   * Trois choses le distinguent d'un passe-plat, et chacune répare un cas réel :
+   * Three things distinguish it from a hatch, and each one fixes a real case:
    *
-   * 1. **Il ne franchit pas la porte de livraison seul** : le pont l'enveloppe de
-   *    `gateCreatePr` ([opencode-delivery.ts](opencode-delivery.ts)), donc le
-   *    premier appel d'un tour qui a édité rend les contrôles au lieu de pousser.
-   * 2. **La branche est REMONTÉE, pas relue.** `agent_runs.branch_name` n'est
-   *    stampé qu'après un push réel (MIN-123), or ce push-ci est justement le
-   *    premier du run dans le cas normal : la fonction lirait une branche nulle
-   *    et ouvrirait la pull request sur une tête vide.
-   * 3. **Il refuse pendant qu'une fille écrit.** Le sandbox est PARTAGÉ et
-   *    `commitAndPush` fait `git add -A` : livrer maintenant emporterait le
-   *    travail d'un `implement` à moitié posé (un composant sans ses traductions,
-   *    un renommage laissé au milieu). C'est le verrou d'écriture du parent
-   *    ([subagent.ts](../subagent.ts), `writeLock`), tenu ici parce que la
-   *    demande de permission ne voit passer que les tools d'opencode.
+   * 1. **He does not cross the delivery door alone**: the bridge envelops him
+   * `gateCreatePr` ([opencode-delivery.ts](opencode-delivery.ts)), so the
+   * first call of a trick that has edited makes the controls instead of pushing.
+   * 2. **The branch is UP, not read again.** `agent_runs.branch_name` is not
+   * stamped only after a real push (MIN-123), but this push is precisely the
+   * first of the run in the normal case: the function would read a null branch
+   * and would open the pull request on an empty header.
+   * 3. **He refuses while a girl writes.** The sandbox is SHARED and
+   * `commitAndPush` does `git add -A`: delivering now would take the
+   * work of a half-assed `implement` (a component without its translations,
+   * a rename left in the middle). This is the parent's write lock
+   * ([subagent.ts](../subagent.ts), `writeLock`), kept here because the
+   * permission request only sees opencode tools.
    *
-   * Et il porte de nouveau un `jobsNote` : depuis que `run_background` est reposé
-   * en tool local, un serveur de dev peut très bien tourner au moment de la
-   * livraison. Il est tué AVANT le staging, et le modèle l'apprend dans la même
-   * réponse — y compris quand le push échoue derrière.
+   * And it has a `jobsNote` again: since `run_background` is rested
+   * in tool local, a dev server can very well be running at the time of
+   * delivery. It is killed BEFORE staging, and the model learns it in the same
+   * response — including when the push fails behind.
    */
   const createPr: SupervisorTool | null = job.writesToRepo
     ? async (args) => {
@@ -937,15 +937,15 @@ export async function runOpencodeTurn(
           };
         }
         const title = typeof args.title === "string" ? args.title.trim() : "";
-        // Rien ne doit écrire dans le dépôt pendant le `git add -A` : un watcher
-        // qui régénère un fichier au milieu du staging se fait commiter à moitié.
+        // Nothing should be written to the repository during `git add -A`: a watcher
+        // who regenerates a file in the middle of staging gets committed halfway.
         const jobsNote = await stopJobsForStaging();
         let pushed: VmPushResult;
         try {
           pushed = await pushWork(title || `wip(${job.commitRef}): agent update`);
         } catch (err) {
-          // Un push raté est une erreur de TOOL : le modèle la lit et décide. Le
-          // message peut recopier l'URL de push, token compris (MIN-239).
+          // A failed push is a TOOL error: the model reads it and decides. THE
+          // the message may echo the push URL, including the token (MIN-239).
           const detail = `push failed: ${outward((err as Error).message)}`;
           return {
             result: { error: jobsNote ? `${detail} ${jobsNote}` : detail },
@@ -963,34 +963,34 @@ export async function runOpencodeTurn(
     : null;
 
   /**
-   * Motif du refus d'un appel de tool, par `callId`. Il ne sert qu'à une chose, et
-   * elle compte : reposer `tool_result.reason` sur l'event du tool refusé, comme la
-   * boucle maison le faisait (`FORBIDDEN_COMMAND_REASON` est ce qui rend les refus
-   * MESURABLES sur `agent_run_events`). Le traducteur, lui, est pur : il ne sait ni
-   * ce qu'on a répondu à une permission, ni ce que le pont a refusé.
+   * Reason for refusing a tool call, by `callId`. It only serves one thing, and
+   * it counts: place `tool_result.reason` on the event of the tool refused, like the
+   * home loop was doing it (`FORBIDDEN_COMMAND_REASON` is what makes the refusals
+   * MEASURABLE on `agent_run_events`). The translator is pure: he knows neither
+   * what one responded to a permission, nor what the bridge refused.
    *
-   * Déclaré AVANT le pont parce que les deux l'alimentent : le verdict de
-   * permission pour les tools intégrés, le pont pour les tools locaux
-   * (`run_background`, dont `checkCommand` écarte un `git push`).
+   * Declared BEFORE the bridge because both feed it: the verdict of
+   * permission for built-in tools, bridge for local tools
+   * (`run_background`, of which `checkCommand` excludes a `git push`).
    */
   const refusedCalls = new Map<string, string>();
 
   /**
-   * APPELS DE TOOL QUI ONT PARLÉ D'AILLEURS QUE DU DÉPÔT, par `callId` et avec
-   * leur compte de chemins (MIN-361). Chemin local seulement.
+   * TOOL CALLS WHO TALKED ABOUT OTHER THAN THE DEPOSIT, by `callId` and with
+ * their path count (MIN-361). Local path only.
    *
-   * Jumelle de `refusedCalls`, et pour la même raison de forme : ce qu'on
-   * apprend à l'APPEL doit encore être su au RÉSULTAT, qui arrive plus tard et
-   * ne porte que son identifiant. Sans elle, la sortie d'un `cat ~/.ssh/id_rsa`
-   * monterait entière — le texte d'une clé privée ne contient aucun chemin, donc
-   * rien à regarder dans la sortie elle-même.
+   * Twin of `refusedCalls`, and for the same reason of form: what we
+   * learns at the CALL must still be known at the RESULT, which arrives later and
+   * only carries its identifier. Without it, output a `cat ~/.ssh/id_rsa`
+   * would rise integer — the text of a private key contains no path, so
+   * nothing to look at in the output itself.
    */
   const foreignCalls = new Map<string, number>();
-  /** Combien de sorties sont restées sur la machine — le tour le journalise. */
+  /** How many outputs remained on the machine — the lathe logs it. */
   let withheldOutputs = 0;
   /**
-   * La DERNIÈRE checklist miroitée vers le ticket, sérialisée. Une réémission à
-   * l'identique ne réécrit pas le plan de quelqu'un d'autre (cf. `update_plan`).
+   * The LAST checklist mirrored to the ticket, serialized. A reissue at
+   * the identical does not rewrite someone else's plan (see `update_plan`).
    */
   let lastPlanSynced = "";
 
@@ -999,44 +999,44 @@ export async function runOpencodeTurn(
     cp,
     delivery,
     onToolRefused: (callId, reason) => refusedCalls.set(callId, reason),
-    // Une session de RELECTURE n'a ni l'un ni l'autre : `agentToolsFor` ne les
-    // sert pas à l'ancrage `pr`, et le pont refuse ce qui arriverait quand même.
+    // A REVIEW session has neither: `agentToolsFor` does not have them
+    // is not used for anchoring `pr`, and the bridge refuses what would happen anyway.
     supervisorTools: {
       ...(createPr ? { create_pr: createPr } : {}),
-      // `handle` ne lève jamais : tout revient au modèle comme un résultat de
-      // tool, réussi ou en erreur (plafond atteint, commande refusée, job inconnu).
+      // `handle` never raises: everything returns to the model as a result of
+      // tool, successful or in error (ceiling reached, order refused, unknown job).
       ...(servesBackground ? { run_background: (args) => background.handle(args) } : {}),
       /**
-       * LA CHECKLIST DU TOUR — un tool de CONTRÔLE, exécuté ici et nulle part
-       * ailleurs (le même geste que la boucle maison : normaliser, émettre
-       * `plan_update`, miroiter vers le plan du ticket, répondre `ok`).
+       * THE TOUR CHECKLIST — a CONTROL tool, executed here and nowhere
+       * elsewhere (the same gesture as the home loop: normalize, emit
+       * `plan_update`, mirror to the ticket map, respond `ok`).
        *
-       * Il partait jusqu'ici au plan de contrôle avec les tools de domaine, qui
-       * n'a pas de handler pour lui : `404: unknown platform tool: update_plan`
-       * à chaque appel, sur TOUS les runs opencode — la barre de plan du fil ne
-       * s'est jamais remplie, et le modèle lisait une erreur là où il attendait
-       * un accusé de réception.
+       * Until now it was based on the control plane with the domain tools, which
+       * does not have a handler for it: `404: unknown platform tool: update_plan`
+       * on every call, on ALL opencode runs — the thread map bar does not
+       * never filled, and the model was reading an error where it expected
+       * an acknowledgment of receipt.
        */
       update_plan: async (args) => {
         const plan = normalizePlan(args.plan);
         await cp.emit("plan_update", { plan });
         /**
-         * MIROIR VERS LE PLAN DU TICKET — best-effort, et **jamais deux fois pour
-         * le même plan** (MIN-364, lot 9).
+         * MIRROR TO TICKET PLAN — best effort, and **never twice for
+         * the same plan** (MIN-364, lot 9).
          *
-         * C'est la vraie réponse au §3 #12 de l'audit du 15/08, qui reprochait à
-         * `todowrite` de coûter « 20 écritures réseau sur une surface partagée » :
-         * mesuré, `todowrite` n'écrit nulle part hors d'opencode. L'écriture
-         * réseau, c'est CELLE-CI — et le ticket est bien une surface partagée,
-         * que d'autres lisent et éditent.
+         * This is the real response to §3 #12 of the audit of 08/15, which criticized
+         * `todowrite` to cost “20 network writes on a shared surface”:
+         * measured, `todowrite` does not write anywhere outside of opencode. Writing
+         * network, it is THIS one — and the ticket is indeed a shared surface,
+         * which others read and edit.
          *
-         * Un modèle réémet couramment sa checklist à l'identique (le prompt lui
-         * demande d'envoyer le plan ENTIER à chaque changement, et « changement »
-         * est son jugement). Ces répétitions-là n'apprennent rien à personne et
-         * réécrivent quand même le plan de quelqu'un d'autre.
+         * A model commonly reissues its checklist identically (the prompt
+         * request to send the ENTIRE plan at each change, and "change"
+         * is his judgment). These repetitions teach nothing to anyone and
+         * rewrite someone else's plan anyway.
          *
-         * L'event, lui, part toujours : il est le journal de ce que le modèle a
-         * FAIT, et « il a réémis cinq fois le même plan » est un fait qu'une
+         * The event always leaves: it is the log of what the model has
+         * FACT, and “he reissued the same plan five times” is a fact that a
          * autopsie doit pouvoir lire.
          */
         const signature = JSON.stringify(plan);
@@ -1046,9 +1046,9 @@ export async function runOpencodeTurn(
         }
         return { result: { ok: true }, success: true };
       },
-      // Les chemins ont été joints par l'app de bureau au job local. Ils ne
-      // passent jamais par le plan de contrôle ; le tool reste donc entièrement
-      // local et n'existe même pas sur un run cloud.
+      // The paths were joined by the desktop app to the local job. They don't
+      // never go through the control plane; the tool therefore remains entirely
+      // local and does not even exist on a cloud run.
       ...(isLocalJob(job)
         ? {
             list_projects: async () => ({
@@ -1074,24 +1074,24 @@ export async function runOpencodeTurn(
       baseUrl: proxy.url,
       repoInstructionFiles: await servedInstructionsPromise,
     }),
-    // L'adresse du pont, lue par les 32 tools générés (cf. `SUPERVISOR_URL_ENV`).
+    // The address of the bridge, read by the 32 tools generated (see `SUPERVISOR_URL_ENV`).
     [SUPERVISOR_URL_ENV]: bridge.url,
   };
 
   /**
-   * LES TROIS PORTS QUE `webfetch` REFUSE ENCORE (MIN-364, décision D8).
+   * THE THREE PORTS THAT `webfetch` STILL REFUSES (MIN-364, decision D8).
    *
-   * Le refus portait sur tout l'espace privé, et son dommage collatéral était la
-   * capacité qu'on veut : `curl localhost:3000` pour aller voir rendre la page
-   * qu'on vient d'écrire. Ce qui reste refusé est ce qui n'est pas une page —
-   * le **proxy LLM** (il porte la clé du modèle), le **pont de tools** (il
-   * n'authentifie RIEN : joindre son port, c'est appeler `create_pr` ou
-   * `update_issue` à la place de l'agent) et le **serveur opencode** du tour
-   * (son API répond à qui la joint : ouvrir une session, répondre à une
-   * permission à la place du superviseur).
+   * The refusal covered all private space, and its collateral damage was the
+   * capacity we want: `curl localhost:3000` to see render the page
+   * that we have just written. What remains refused is what is not a page —
+   * the **LLM proxy** (it carries the model key), the **tools bridge** (it
+   * does not authenticate ANYTHING: joining your port means calling `create_pr` or
+   * `update_issue` in place of the agent) and the **opencode server** of the tour
+   * (its API responds to whoever joins it: open a session, respond to a
+   * permission in place of the supervisor).
    *
-   * Lus ici parce que c'est ici, et nulle part ailleurs, qu'ils sont connus : les
-   * deux premiers sont attribués au démarrage, le troisième vient de l'hôte.
+   * Read here because it is here, and nowhere else, that they are known: the
+   * first two are assigned at startup, the third comes from the host.
    */
   const harnessPorts = [
     portOfUrl(proxy.url),
@@ -1100,20 +1100,20 @@ export async function runOpencodeTurn(
   ].filter((port) => port > 0);
 
   /**
-   * DÉMARRÉ DANS LE `try`, et ce n'est pas un détail de forme : le proxy et le
-   * pont écoutent déjà. Un serveur qui ne démarre pas laisserait sinon leurs deux
-   * sockets ouvertes, et un process qui enchaînerait deux tours se ferait refuser
-   * son `listen` et mourrait de ça, pas de sa cause.
+   * STARTED IN `try`, and this is not a technical detail: the proxy and the
+   * bridge are already listening. A server that does not start would otherwise leave both
+   * open sockets, and a process which chained two rounds would be refused
+   * his `listen` and would die from that, not from its cause.
    */
   let server: { stop(): Promise<void> } | null = null;
   const client = deps.client(`http://127.0.0.1:${deps.opencodePort}`);
 
   /**
-   * LE LEDGER DU TOUR, DÉCLARÉ HORS DU `try` — pour que le chemin d'EXCEPTION
-   * puisse encore lui reprendre ce que le fournisseur a facturé (MIN-286).
+   * THE LEDGER OF THE TOUR, DECLARED OUTSIDE THE `try` — so that the EXCEPTIONAL path
+   * can still take back what the supplier invoiced (MIN-286).
    *
-   * Il ne prend sa valeur qu'une fois la session connue ; avant ça il n'y a rien
-   * à rendre, et `null` le dit.
+   * It only takes its value once the session is known; before that there is nothing
+   * to return, and `null` says so.
    */
   let ledger: TurnLedger | null = null;
 
@@ -1123,19 +1123,19 @@ export async function runOpencodeTurn(
     const bootTimeoutMs = deps.bootTimeoutMs ?? OPENCODE_BOOT_TIMEOUT_MS;
     const bootStartedAt = now();
     if (!(await client.waitHealthy(bootTimeoutMs))) {
-      // Le temps RÉELLEMENT attendu, pas le plafond : les deux ne coïncident que
-      // si chaque sonde a rendu à l'heure, et c'est justement ce qu'on veut lire.
+      // The REALLY expected time, not the ceiling: the two only coincide
+      // if each probe returned on time, and that is precisely what we want to read.
       return failed(
         `opencode did not become healthy — waited ${now() - bootStartedAt} ms (cap ${bootTimeoutMs} ms)`,
       );
     }
     timing("opencode-healthy");
 
-    // OpenCode charge paresseusement le catalogue (et la configuration modèle)
-    // au premier prompt. On l'amorce dès que le serveur répond et on recouvre ce
-    // coût avec la création/reprise de session et le mint de la clé locale.
-    // Un endpoint de confort qui échoue ne doit toutefois jamais refuser le run :
-    // le prompt sait effectuer lui-même exactement le même chargement.
+    // OpenCode lazy loads catalog (and model configuration)
+    // at the first prompt. We start it as soon as the server responds and we recover this
+    // cost with session creation/resumption and local key mint.
+    // However, a comfort endpoint that fails should never refuse the run:
+    // the prompt knows how to perform exactly the same loading itself.
     const warmToolsPromise = client
       .warmTools(job.model)
       .then(() => timing("opencode-tools-ready"))
@@ -1143,31 +1143,31 @@ export async function runOpencodeTurn(
         console.warn("[supervisor] opencode tool warm-up failed:", (err as Error).message);
       });
 
-    // ── La session : reprise par le journal, ou neuve ────────────────────────
+    // ── The session: resumed by the journal, or new ────────────────────────
     let sessionId = previous?.sessionId ?? "";
     if (previous?.events?.length) {
-      // La reprise coûte 95 ms pour 86 events (mesuré) — et c'est ce qui rend un
-      // tour indépendant de la microVM qui l'a précédé.
+      // Recovery costs 95 ms for 86 events (measured) — and that's what makes a
+      // tower independent of the microVM that preceded it.
       await client.syncReplay(previous.events).catch((err) => {
         console.error("[supervisor] replay failed:", (err as Error).message);
         sessionId = "";
       });
     }
     /**
-     * SUR UNE MACHINE, LA MÉMOIRE EST UN FICHIER — donc elle peut manquer
+     * ON A MACHINE, MEMORY IS A FILE — so it can be missing
      * (MIN-361).
      *
-     * Un run local n'exporte pas son journal (cf. `syncJournal`) : sa
-     * conversation vit dans la base SQLite d'opencode, sous la racine du run. Le
-     * checkpoint, lui, porte toujours le `sessionId` — et un identifiant sans sa
-     * base est ce qu'il y a de pire, un tour qui prompte une session que le
-     * serveur ne connaît pas. Un dossier de travail nettoyé, une autre machine,
-     * un `~/Library` purgé suffisent.
+     * A local run does not export its journal (see `syncJournal`): its
+     * conversation lives in the opencode SQLite database, under the run root. THE
+     * checkpoint always bears the `sessionId` — and an identifier without its
+     * base is the worst, a turn that speeds up a session that the
+     * server does not know. A cleaned work file, another machine,
+     * a purged `~/Library` is enough.
      *
-     * On repart alors à neuf, ce que le code sait déjà faire juste en dessous :
-     * la conversation perd sa mémoire, le ticket et le dépôt sont toujours là.
-     * La sonde est un `test -f` — jamais une raison de refuser le tour, d'où le
-     * `catch` qui vaut « absent ».
+     * We then start fresh, which the code already knows how to do just below:
+     * the conversation loses its memory, the ticket and the deposit are still there.
+     * The probe is a `test -f` — never a reason to refuse the trick, hence the
+     * `catch` returns “absent”.
      */
     if (local && sessionId) {
       const probe = await host
@@ -1183,12 +1183,12 @@ export async function runOpencodeTurn(
     }
     timing(previous?.sessionId ? "opencode-session-resumed" : "opencode-session-created");
 
-    // Le serveur et la session ont été amorcés pendant le mint. On garde le
-    // refus AVANT le prompt — aucun appel fournisseur ne part sans clé — mais
-    // une clé lente ne sérialise plus tout le démarrage d'OpenCode derrière elle.
+    // The server and session were booted during mint. We keep the
+    // refusal BEFORE the prompt — no supplier call goes out without a key — but
+    // a slow key no longer serializes all OpenCode startup behind it.
     await Promise.all([warmToolsPromise, ...(localLlmKeyPromise ? [localLlmKeyPromise] : [])]);
 
-    // ── Le flux, traduit au fil de l'eau ─────────────────────────────────────
+    // ── The flow, translated as the water goes by ─────────────────────────────────────
     const state = newTurnStreamState();
     const turnLedger = new TurnLedger(job, sessionId, subagents);
     ledger = turnLedger;
@@ -1196,43 +1196,43 @@ export async function runOpencodeTurn(
     let sessionError: string | undefined;
     let lastLiveAt = 0;
     /**
-     * OUTILS AMORCÉS DANS LE ROUND EN COURS — par ROUND, et par la MÈRE seule.
+     * TOOLS STARTED IN THE CURRENT ROUND — by ROUND, and by the MOTHER alone.
      *
-     * Le fil lit ce compteur comme un prédicat : `tools === 0` ⇒ le texte en
-     * train de s'écrire est peut-être la réponse finale, et il prend la place du
-     * résumé ([agent-event-feed.tsx](../../../../components/agent/agent-event-feed.tsx),
-     * `isLiveAnswer`). La boucle maison envoie `acc.size`, l'accumulateur INTERNE
-     * à un round (`agent-loop.ts`) : un cumul de tour dirait « narration » sur
-     * toutes les réponses d'un tour qui a appelé un tool une fois, et compterait
-     * en plus les gestes des filles, qui ne sont pas ceux de la mère.
+     * The thread reads this counter as a predicate: `tools === 0` ⇒ the text in
+     * being written is perhaps the final answer, and it takes the place of
+     * summary ([agent-event-feed.tsx](../../../../components/agent/agent-event-feed.tsx),
+     * `isLiveAnswer`). The home loop sends `acc.size`, the INTERNAL accumulator
+     * to a round (`agent-loop.ts`): a cumulative turn would say “narration” on
+     * all responses of a trick that called a tool once, and would count
+     * in addition the gestures of the daughters, which are not those of the mother.
      */
     let toolsSeen = 0;
-    /** La fin du dernier round de la mère — `idle` ne porte pas cette information. */
+    /** The end of the mother's last round — `idle` does not carry this information. */
     let lastParentFinish: string | null = null;
-    /** Une annonce d'action textuelle ne se répare qu'une fois : jamais de boucle. */
+    /** A text action announcement only repairs once: never loops. */
     let repairedPreamble = false;
     let repairedPermissionCascade = false;
     let rejectedPermissionThisRound = false;
     /**
-     * LA RÉFLEXION EN COURS, telle que le direct la raconte (MIN-122).
+     * THE REFLECTION IN PROGRESS, as the live broadcast tells it (MIN-122).
      *
-     * `startedAt` est l'horodatage d'opencode ; la durée se calcule ici parce que
-     * c'est ici qu'il y a une horloge — le traducteur, lui, reste pur. Remis à
-     * `null` dès que le part se ferme : un compteur qui continuerait de courir
-     * derrière un modèle qui écrit dirait qu'il pense encore.
+     * `startedAt` is the opencode timestamp; the duration is calculated here because
+     * it is here that there is a clock - the translator remains pure. Returned to
+     * `null` as soon as the part closes: a counter which would continue to run
+     * behind a model who writes would say that he still thinks.
      */
     let reasoningSince: number | null = null;
     /**
-     * LES FICHIERS DU TOUR EN COURS, portés par CHAQUE charge du direct — la
-     * moitié provisoire dont `files_changed` (dérivé de git, en fin de tour) est
-     * l'autorité. Le module est partagé avec l'autre moteur ([live-edits.ts](../live-edits.ts))
-     * pour la raison qui l'a fait naître : un état tenu en double finit par ne
-     * plus l'être, et la liste ne s'affichait alors que sur un des deux chemins.
+     * THE FILES OF THE CURRENT TOUR, carried by EACH load of the live — the
+     * provisional half of which `files_changed` (derived from git, at the end of the round) is
+     * authority. The module is shared with the other engine ([live-edits.ts](../live-edits.ts))
+     * for the reason which gave rise to it: a state held in duplicate ends up not
+     * no longer be, and the list was then only displayed on one of the two paths.
      *
-     * Ce qu'on sait ici est plus pauvre qu'un `edit_file` maison : la demande de
-     * permission donne le CHEMIN, pas la nature du geste. Tout est donc noté
-     * `modified` — la liste de git, en fin de tour, dira « ajouté » ou
-     * « supprimé » si c'en était.
+     * What we know here is poorer than a homemade `edit_file`: the demand for
+     * permission gives the PATH, not the nature of the gesture. So everything is noted
+     * `modified` — the git list, at the end of the turn, will say “added” or
+     * “deleted” if it was.
      */
     const liveEdits = newLiveEditLog();
     refreshLocalLiveStats = () => {
@@ -1248,9 +1248,9 @@ export async function runOpencodeTurn(
               scope,
               maxBytes: LOCAL_WORKING_DIFF_MAX_BYTES,
             }).catch(() => null);
-            // La permission arrive AVANT que l'outil ait fini d'écrire. Un gros
-            // patch peut donc ne pas être visible au premier relevé : deux reprises
-            // courtes valent mieux qu'un diff vide jusqu'à la fin du tour.
+            // The permission comes BEFORE the tool has finished writing. A big one
+            // patch may therefore not be visible at the first reading: twice
+            // Short ones are better than an empty diff until the end of the round.
             if (!diff || diff.files.length === 0) {
               if (attempt < 2) {
                 attempt += 1;
@@ -1272,44 +1272,44 @@ export async function runOpencodeTurn(
       };
       schedule();
     };
-    /** Ce que le tour a encore le droit de dépenser. Absent = aucun plafond. */
+    /** What the tour still has the right to spend. Absent = no cap. */
     let budgetUsd = job.budgetUsd;
     let lastBudgetAt = now();
     let budgetExhausted = false;
-    /** Le tour s'est terminé sur des questions : la session ATTEND l'utilisateur. */
+    /** The round ended with questions: the session WAITING for the user. */
     let askedUser = false;
     /**
-     * LA QUESTION SUSPEND-ELLE LE TOUR, OU LE TERMINE-T-ELLE (MIN-364, D7) ?
+     * DOES THE QUESTION SUSPEND THE TURN, OR DOES IT END IT (MIN-364, D7)?
      *
-     * Sur la machine de l'utilisateur, elle suspend : le tool `question` bloque
-     * sans timeout, personne ne paie de compute pendant ce temps, et quelqu'un est
-     * devant l'écran. En microVM elle termine — c'est le motif d'origine, et il
-     * reste vrai là-bas.
+     * On the user's machine, it suspends: the tool `question` blocks
+     * without timeout, no one pays compute during this time, and someone is
+     * in front of the screen. In microVM it terminates — this is the original pattern, and it
+     * stays true there.
      *
-     * `job.interactive === false` (une ROUTINE) n'a de toute façon pas le tool.
+     * `job.interactive === false` (a ROUTINE) doesn't have the tool anyway.
      */
     const questionsSuspend = local && job.interactive !== false;
     /**
-     * LA QUESTION EN VOL. Non nulle = le modèle attend, le tour est suspendu, et
-     * le prochain message de l'utilisateur est SA RÉPONSE — pas du steering.
+     * THE QUESTION IN FLIGHT. Not zero = the model is waiting, the turn is suspended, and
+     * the user's next message is THEIR RESPONSE — not steering.
      *
-     * Elle porte ses questions parce que le protocole d'opencode veut les réponses
-     * DANS L'ORDRE des questions posées (`answers: string[][]`), là où la carte de
-     * l'UI ne renvoie qu'un texte composé : `matchAskUserAnswers` fait le chemin
-     * inverse, et il lui faut la liste.
+     * She brings her questions because the opencode protocol wants the answers
+     * IN THE ORDER of the questions asked (`answers: string[][]`), where the map of
+     * the UI only returns a composed text: `matchAskUserAnswers` does the path
+     * reverse, and he needs the list.
      */
     let pendingQuestion: { id: string; questions: AskUserQuestion[] } | null = null;
-    /** Les dossiers hors dépôt déjà annoncés au fil — un par tour, pas un par accès. */
+    /** The non-deposit files already announced in the thread — one per turn, not one per access. */
     const outsideDirs = new Set<string>();
     /**
-     * UNE COUPURE QU'ON A DEMANDÉE, et une seule — le drapeau se CONSOMME.
+     * ONE CUT THAT WE REQUESTED, and only one — the flag is CONSUMED.
      *
-     * Opencode publie la même `MessageAbortedError` qu'on ait coupé le round
-     * (plafond, « Stop », steering, deadline, question) ou qu'il ait été tranché
-     * en vol. Ce compteur est ce qui les distingue : ce qu'on a demandé se tait,
-     * le reste est une panne. Consommé plutôt que laissé à `true`, parce qu'un
-     * tour continue après un steering — la coupure SUIVANTE, elle, n'a été
-     * demandée par personne.
+     * Opencode publishes the same `MessageAbortedError` after the round has been cut
+     * (ceiling, “Stop”, steering, deadline, question) or whether it has been decided
+     * in flight. This counter is what distinguishes them: what we asked for is silent,
+     * the rest is a failure. Consumed rather than left at `true`, because a
+     * lap continues after steering — the FOLLOWING cut was not
+     * requested per person.
      */
     let abortsRequested = 0;
     const abortSession = async (): Promise<void> => {
@@ -1317,96 +1317,96 @@ export async function runOpencodeTurn(
       await client.abort(sessionId);
     };
     /**
-     * Délégations AUTORISÉES dont la fille n'est pas encore née, par `callId`.
-     * Le plafond de simultané se compte dessus autant que sur les vivantes
-     * (cf. `SubagentContext.pending`) ; le crédit se solde à la naissance de la
-     * fille, ou à la fin du `task` s'il n'en a jamais fait.
+     * AUTHORIZED delegations whose daughter has not yet been born, by `callId`.
+     * The simultaneous ceiling is counted on it as much as on the living ones
+     * (see `SubagentContext.pending`); the credit is settled at the birth of the
+     * daughter, or at the end of `task` if he has never done one.
      */
     const pendingTasks = new Set<string>();
 
     const abortEvents = new AbortController();
     const stream = client.events(abortEvents.signal);
-    // Réarmé à chaque prompt. Un event `reasoning`, texte ou tool/permission est
-    // le premier signal effectivement produit par le modèle ; les événements de
-    // connexion du serveur ne comptent donc pas comme un faux premier token.
+    // Reset at each prompt. A `reasoning`, text or tool/permission event is
+    // the first signal actually produced by the model; the events of
+    // server connection events therefore do not count as a false first token.
     let awaitingFirstModelSignal = false;
 
     /**
-     * ── LE STEERING ET LE « STOP » (MIN-286, lot 3) ───────────────────────────
+     * ── STEERING AND “STOP” (MIN-286, lot 3) ───────────────────────────
      *
-     * Ce que la boucle maison faisait à chaque frontière de round : drainer les
-     * messages de l'utilisateur, les injecter, et sortir sur le drapeau
-     * d'interruption. Sans ça, un projet basculé perdrait les deux gestes les plus
-     * visibles du produit — le bouton « Stop » ne ferait rien, et un message écrit
-     * pendant qu'un tour travaille resterait dans la file jusqu'au tour d'après.
+     * What the house loop did at each round boundary: drain the
+     * user messages, inject them, and output to the flag
+     * interruption. Without that, a tilted project would lose the two most important gestures
+     * visible to the product — the “Stop” button would do nothing, and a written message
+     * while a round is working would remain in the queue until the next round.
      *
-     * UN MESSAGE NE S'INJECTE PAS DANS UNE SESSION QUI TRAVAILLE. Chez opencode il
-     * n'y a pas d'historique à muter entre deux appels : il y a un tour en cours.
-     * Le geste est donc `abort` (40 ms mesurés, la requête en vol se termine
-     * proprement) puis un nouveau prompt sur la session — ce qui passe par
-     * `pendingPrompt`, posté au `session.idle` qui suit. C'est la même frontière que
-     * la boucle maison, atteinte par l'autre bout.
+     * A MESSAGE DOES NOT INJECT INTO A WORKING SESSION. At opencode he
+     * there is no history to transfer between two calls: there is a round in progress.
+     * The gesture is therefore `abort` (40 ms measured, the request in flight ends
+     * properly) then a new prompt on the session — which goes through
+     * `pendingPrompt`, posted at `session.idle` which follows. It is the same border as
+     * the home loop, reached from the other end.
      *
-     * `pullSteering` DRAINE : on ne l'appelle donc que quand on est en mesure de
-     * poster derrière. Un message drainé et non posté serait perdu — personne ne le
-     * remet dans la file, et le plan de contrôle ne re-queue le run que sur la file.
+     * `pullSteering` DRAINE: we therefore only call it when we are able to
+     * post behind. A message drained and not posted would be lost — no one will.
+     * re-queues, and the control plane only re-queues the run on the queue.
      */
     let pendingPrompt: Array<{ message: AgentUserMessage; steered: boolean }> = [];
     let interrupted = false;
     let lastSteerAt = now();
 
     /**
-     * LE CURSEUR DU JOURNAL D'OPENCODE — et RIEN QUE le curseur (MIN-286,
+     * THE OPENCODE LOG CURSOR — and NOTHING BUT the cursor (MIN-286,
      * 2026-08-13).
      *
-     * Le superviseur n'accumule plus les events : il pousse chaque incrément dans
-     * `agent_run_journal` (`POST /journal`) et ne garde que la position par
-     * agrégat. Ce qu'il portait avant — le journal entier, réécrit à chaque
-     * sauvegarde — ne pouvait pas tenir : un `read` de 260 lignes pèse 22 Ko
-     * dedans, republié deux à trois fois par opencode, et le corps du plan de
-     * contrôle est plafonné à 3,2 Mo. Un tour de 31 minutes perdait donc TOUTE sa
-     * conversation, et le tour suivant repartait du ticket comme s'il n'avait
-     * jamais travaillé (mesuré le 2026-08-13, run `1e8775aa`).
+     * The supervisor no longer accumulates events: it pushes each increment into
+     * `agent_run_journal` (`POST /journal`) and only keeps the position by
+     * AGGREGATE. What he carried before — the entire diary, rewritten each time
+     * backup — could not hold: a `read` of 260 lines weighs 22 KB
+     * inside, republished two to three times by opencode, and the body of the plan
+     * control is capped at 3.2 MB. A 31 minute tour would therefore lose ALL its
+     * conversation, and the next round started again from the ticket as if it had not
+     * never worked (measured on 2026-08-13, run `1e8775aa`).
      */
     let journalSeq: Record<string, number> = { ...previous?.seq };
     /**
-     * L'INCRÉMENT, DÉCOUPÉ POUR LE TRANSPORT. Le corps d'une requête reste
-     * plafonné par la plateforme : un round qui lit deux cents fichiers rendrait
-     * un seul export de plusieurs mégaoctets. On envoie donc par lots — et jamais
-     * un event à cheval sur deux lots, `/sync/replay` voulant une suite contiguë.
+     * THE INCREMENT, CUT FOR TRANSPORT. The body of a request remains
+     * capped by the platform: a round that reads two hundred files would make
+     * a single export of several megabytes. We therefore send in batches — and never
+     * an event straddling two lots, `/sync/replay` wanting a contiguous suite.
      */
     const JOURNAL_BATCH_BYTES = 1_500_000;
 
     /**
-     * Exporte ce qui est neuf et le POUSSE. Rend le pointeur que le checkpoint
-     * portera — la session et le curseur, quelques dizaines d'octets.
+     * Exports what is new and PUSHES it. Makes the pointer as the checkpoint
+     * will carry — the session and the cursor, a few dozen bytes.
      *
      * ───────────────────────────────────────────────────────────────────────
-     * SAUF SUR UNE MACHINE, OÙ IL N'EXPORTE RIEN (MIN-361).
+     * EXCEPT ON A MACHINE, WHERE IT EXPORTS NOTHING (MIN-361).
      *
-     * Ce journal porte la sortie COMPLÈTE de chaque tool, il est persisté 30
-     * jours dans la base de production, et il est rejoué devant le modèle. Dans
-     * une microVM, c'est le contenu d'un clone jetable d'un dépôt que le projet
-     * possède déjà ; sur une machine, c'est le disque de quelqu'un — le contenu
-     * de ses fichiers, et ce que le shell est allé lire.
+     * This log carries the COMPLETE output of each tool, it is persisted 30
+     * days in the production base, and it is replayed in front of the model. In
+     * a microVM is the content of a disposable clone of a repository that the project
+     * already owns; on a machine, it's someone's disk — the contents
+     * of its files, and what the shell went to read.
      *
-     * **Sa seule justification écrite tombe justement là** : « c'est ce qui rend
-     * un tour indépendant de la microVM qui l'a précédé » (cf. la reprise de
-     * session plus haut). Une microVM est détruite à la fin du tour ; une
-     * machine, non. La base SQLite d'opencode vit sous `harnessDir`
-     * ([opencode-config.ts](opencode-config.ts)), donc sous la racine DU RUN
-     * ([harness-layout.ts](../harness-layout.ts)) et pas du tour : la session
-     * est encore là au tour suivant, et l'export ne rendrait qu'un service déjà
-     * rendu — au prix du seul point non réparable du dossier.
+     * **Its only written justification falls precisely there**: “this is what makes
+     * a tour independent of the microVM which preceded it” (cf. the resumption of
+     * session above). A microVM is destroyed at the end of the round; a
+     * machine, no. The opencode SQLite database lives under `harnessDir`
+ * ([opencode-config.ts](opencode-config.ts)), so under the RUN root
+     * ([harness-layout.ts](../harness-layout.ts)) and step of the turn: the session
+     * is still there in the next round, and the export would only provide a service already
+     * returned — at the cost of the only non-repairable point in the file.
      *
-     * CE QU'ON PERD, et il vaut mieux l'écrire que le découvrir : la médecine
-     * légale SERVEUR d'un run local. Le journal était la seule trace complète
-     * des sorties de tools ; autopsier un run local se fera donc sur les aperçus
-     * du fil, et sur le journal d'opencode resté chez son propriétaire.
+     * WHAT WE LOSE, and it is better to write it than to discover it: medicine
+     * legal SERVER of a local run. The diary was the only complete record
+     * tool outputs; autopsy a local run will therefore be done on the previews
+     * thread, and on the opencode log left with its owner.
      *
-     * CE QUE ÇA IMPOSE AU LANCEUR (MIN-293) : la racine d'un run local ne se
-     * nettoie pas entre deux tours. Si elle disparaît quand même, la reprise de
-     * session le voit et repart à neuf plutôt que de prompter dans le vide.
+     * WHAT THIS IMPOSES ON THE LAUNCHER (MIN-293): the root of a local run is not
+     * Do not clean between two turns. If it nevertheless disappears, the resumption of
+     * session sees this and starts fresh rather than rushing into the void.
      */
     const syncJournal = async (): Promise<OpencodeCheckpointState> => {
       if (local) return { sessionId, seq: journalSeq };
@@ -1421,108 +1421,108 @@ export async function runOpencodeTurn(
       };
       for (const raw of fresh) {
         /**
-         * LE JOURNAL EST SUBSTITUÉ COMME LE FIL (MIN-328). Il porte la sortie
-         * COMPLÈTE de chaque tool — un `cat .git/config`, un `git remote -v` —,
-         * il est écrit dans `agent_run_journal`, et il est rejoué dans la session
-         * au tour suivant : un secret qui y entre est persisté en base ET remis
-         * devant le modèle. Le fil d'events l'était depuis MIN-239, pas lui.
+         * THE NEWSPAPER IS SUBSTITUTED LIKE THE WIRE (MIN-328). It carries the exit
+         * COMPLETE of each tool — a `cat .git/config`, a `git remote -v` —,
+         * it is written to `agent_run_journal`, and it is replayed in the session
+         * in the next round: a secret that enters it is persisted in the base AND returned
+         * in front of the model. The events thread was there since MIN-239, not him.
          */
         const event = redactDeep(raw, secrets.redact) as Record<string, unknown>;
         const size = JSON.stringify(event).length;
-        // Un event plus gros que le lot part SEUL : le découper serait le casser.
+        // An event larger than the lot goes ALONE: cutting it out would mean breaking it.
         if (bytes > 0 && bytes + size > JOURNAL_BATCH_BYTES) await flush();
         batch.push(event);
         bytes += size;
       }
       await flush();
-      // Le curseur n'avance qu'une fois l'incrément ÉCRIT : un envoi qui lève
-      // laisse la position d'avant, et le passage suivant réexporte la même
-      // tranche plutôt que de laisser un trou dans le journal.
+      // The cursor only advances once the increment is WRITTEN: a sending which raises
+      // leaves the position from before, and the next pass re-exports the same
+      // slice rather than leaving a hole in the newspaper.
       journalSeq = lastSeqByAggregate(journalSeq, fresh);
       return { sessionId, seq: journalSeq };
     };
 
     /**
-     * LA SAUVEGARDE PÉRIODIQUE, ET LE BATTEMENT DE CŒUR AVEC — car c'est le même
-     * geste (MIN-286 ; le défaut est celui du run de la PR 51).
+     * THE PERIODIC BACKUP, AND THE HEARTBEAT WITH — because it is the same
+     * gesture (MIN-286; the default is that of the PR 51 run).
      *
-     * Ce moteur n'en avait AUCUN. Le seul écrivain de `last_activity_at` sur un
-     * run qui travaille est cette sauvegarde ([control-plane.ts](../control-plane.ts),
-     * `PUT /checkpoint`), et le superviseur ne construisait son checkpoint qu'à
-     * la toute fin. Un tour d'opencode paraissait donc muet depuis son lancement,
-     * et le chien de garde des microVM ([drain.ts](../drain.ts)) allait interroger
-     * la plateforme dès trois minutes de « silence » — sur un tour parfaitement
-     * vivant. Une sonde qui répond mal à ce moment-là conclut « process mort » :
-     * le fil affiche « le processus de ce tour s'est arrêté avant d'avoir fini »,
-     * le run passe au repos, et le rapport de fin de tour arrive derrière pour se
-     * faire refuser en 409 — **la conversation du tour est alors perdue**, ce qui
-     * est exactement ce que le message promettait d'éviter (« restaurée depuis sa
-     * dernière sauvegarde » : il n'y en avait aucune).
+     * This engine had NONE. The only writer of `last_activity_at` on a
+     * run that works is this backup ([control-plane.ts](../control-plane.ts),
+     * `PUT /checkpoint`), and the supervisor only built his checkpoint
+     * the very end. An opencode tour therefore seemed silent since its launch,
+     * and the microVM watchdog ([drain.ts](../drain.ts)) was going to query
+     * the platform from three minutes of “silence” — on a perfectly
+     * alive. A probe which responds poorly at this time concludes “process dead”:
+     * the thread displays "the process of this round stopped before finishing",
+     * the run goes to rest, and the end of lap report arrives behind to
+     * to be refused in 409 — **the conversation of the turn is then lost**, which
+     * is exactly what the message promised to avoid ("restored since its
+     * last backup”: there was none).
      *
-     * DEUX MINUTES, et le chiffre n'est pas libre : il doit rester SOUS le délai
-     * au bout duquel le chien de garde va sonder (trois minutes de
-     * `last_activity_at` figé, `VM_LOOP_PROBE_AFTER_MS`). Un tour vivant n'est
-     * alors jamais candidat à la sonde, et la question de savoir si la sonde dit
-     * vrai ne se pose plus. La boucle maison sauvegarde toutes les cinq minutes
-     * ([turn.ts](turn.ts)) : elle peut se le permettre, son process répond à la
-     * sonde depuis son lancement.
+     * TWO MINUTES, and the number is not free: it must remain UNDER the time limit
+     * at the end of which the watchdog will probe (three minutes of
+     * `last_activity_at` frozen, `VM_LOOP_PROBE_AFTER_MS`). A living ride is not
+     * then never a candidate for the probe, and the question of whether the probe says
+     * true no longer arises. Home loop saves every five minutes
+     * ([turn.ts](turn.ts)): it can afford it, its process responds to the
+     * the probe has been running since startup.
      */
     let lastSaveAt = now();
-    /** Le run a été conclu SOUS nous (409 sur la sauvegarde) : le tour s'arrête. */
+    /** The run was concluded UNDER us (409 on the save): the round ends. */
     let runClosed = false;
     const maybeSaveCheckpoint = async (): Promise<void> => {
       if (now() - lastSaveAt < SUPERVISOR_CHECKPOINT_SAVE_INTERVAL_MS) return;
       lastSaveAt = now();
       try {
         const opencode = await syncJournal();
-        // `lastFilesSha` reste celui du départ : rien n'est poussé avant la fin
-        // du tour, donc la baseline du diff n'a pas bougé.
+        // `lastFilesSha` remains at the start: nothing is pushed before the end
+        // of the lap, so the baseline of the diff has not moved.
         if (!(await cp.saveCheckpointQuietly(turnCheckpoint(filesFromSha, opencode)))) {
           runClosed = true;
         }
       } catch (err) {
-        // Une sauvegarde ratée ne casse pas le tour : elle coûte la reprise, et
-        // le prochain passage réessaiera. Ce qu'elle ne doit pas faire, c'est
-        // repousser l'échéance en silence — d'où la trace.
+        // A failed save does not break the round: it costs the restart, and
+        // the next pass will try again. What she should not do is
+        // pushing back the deadline in silence — hence the trace.
         console.error("[supervisor] periodic checkpoint failed:", (err as Error).message);
       }
     };
 
     /**
-     * L'ÉTAT DU TOUR, à la forme du checkpoint — le même objet en cours de route
-     * et à l'arrivée, à deux champs près (le sha des fichiers, qui bouge au push).
-     * Écrit une fois : deux constructions parallèles finiraient par diverger, et
-     * c'est la moitié en cours de route qui serait oubliée.
+     * THE STATUS OF THE TOUR, in the shape of the checkpoint — the same object along the way
+     * and on arrival, within two fields (the sha of the files, which moves when pushed).
+     * Written once: two parallel constructions would eventually diverge, and
+     * it’s the half along the way that would be forgotten.
      */
     function turnCheckpoint(
       lastFilesSha: string,
       opencode?: OpencodeCheckpointState,
     ): OpencodeCheckpoint {
       return {
-        // L'historique de la CONVERSATION n'est plus ici : il vit dans le journal
-        // d'opencode. Le champ reste (le type est partagé avec l'autre moteur) et
-        // part vide — c'est ce qui rend la bascule réversible sans migration.
+        // The history of the CONVERSATION is no longer here: it lives in the newspaper
+        // of opencode. The field remains (the type is shared with the other engine) and
+        // empty part — this is what makes the switch reversible without migration.
         messages: [],
         /**
-         * OÙ EN EST LA NUMÉROTATION DU LEDGER, et c'est le tour SUIVANT qui la lit
-         * (`execute.ts` : `run.checkpoint?.usageSeq ?? …`). Sans elle, un tour
-         * repris renumérote ses lignes par-dessus celles du tour d'avant : rien
-         * n'est perdu (pas de contrainte d'unicité, la dépense se somme), mais
-         * l'ordre des appels d'un run devient faux — et c'est exactement ce qu'un
-         * `seq` sert à dire.
+         * WHERE IS THE LEDGER NUMBERING, and it is the NEXT turn that reads it
+         * (`execute.ts`: `run.checkpoint?.usageSeq ?? …`). Without it, a round
+         * taken again renumbers its lines over those of the previous round: nothing
+         * is not lost (no uniqueness constraint, the expense is summed), but
+         * the order of a run's calls becomes wrong — and that's exactly what a
+         * `seq` is used to say.
          */
         usageSeq: turnLedger.nextParentSeq,
         lastFilesSha,
         instructions: { paths: [...job.instructions.paths], bytes: job.instructions.bytes },
-        // Le plafond des 5 ancres de relecture se compte sur la vie du RUN, pas du
-        // tour : le compte revient de la fonction à chaque appel, et c'est le
-        // checkpoint qui le porte jusqu'au tour suivant (miroir de `turn.ts`).
+        // The ceiling of the 5 replay anchors is counted over the life of the RUN, not the
+        // turn: the count returns from the function at each call, and it is the
+        // checkpoint which carries it until the next round (mirror of `turn.ts`).
         ...(bridge.prInlineComments > 0 ? { prInlineComments: bridge.prInlineComments } : {}),
         /**
-         * L'ÉTAT DE LA PORTE DE LIVRAISON, qui porte sur le TOUR et voyage donc
-         * semé. Sans lui, un tour repris après coupure de la VM se croit vierge :
-         * il n'a plus rien édité, donc plus rien à type-checker ni à relire, et le
-         * code part chez un humain sans qu'aucun contrôle ne l'ait vu.
+         * THE STATE OF THE DELIVERY DOOR, which relates to the TOUR and therefore travels
+         * sown. Without it, a tour resumed after cutting the VM is considered blank:
+         * he has no longer edited anything, so there is nothing left to type-check or reread, and the
+         * code goes to a human without any control having seen it.
          */
         ...(delivery.checkpointEditedPaths().length > 0
           ? { editedPaths: delivery.checkpointEditedPaths() }
@@ -1537,23 +1537,23 @@ export async function runOpencodeTurn(
         .filter((message) => message.text.trim());
 
     /**
-     * RÉPOND À LA QUESTION EN VOL, et le round REPART DE LUI-MÊME (D7).
+     * ANSWER THE QUESTION IN FLIGHT, and the round STARTS BY ITSELF (D7).
      *
-     * Ni `abort`, ni re-prompt : le tool `question` est suspendu à cette requête,
-     * et lui répondre le résout en `completed` avec « User has answered your
-     * questions: … ». C'est ce qui SUPPRIME le détour d'avant — la réponse n'a
-     * plus à repasser par le steering, donc plus à ouvrir un tour de plus.
+     * Neither `abort` nor re-prompt: the tool `question` is suspended on this request,
+     * and answering it resolves it to `completed` with “User has answered your
+     * questions: … ". This is what REMOVES the detour from before - the answer did not
+     * no more going through the steering, so no more opening one more lap.
      *
-     * Le fil, lui, reçoit quand même son `user_message` : sans lui, la réponse de
-     * l'utilisateur n'aurait aucune trace dans la conversation (elle vit dans le
-     * résultat du tool, que le fil ne montre pas comme une parole humaine).
+     * The thread still receives its `user_message`: without it, the response from
+     * the user would have no trace in the conversation (she lives in the
+     * result of the tool, which the thread does not show as human speech).
      */
     const answerPendingQuestion = async (messages: AgentUserMessage[]): Promise<void> => {
       const asked = pendingQuestion;
       if (!asked) return;
-      // Plusieurs messages ne devraient pas arriver (la carte remplace le
-      // composer), mais s'ils arrivent ils sont tous la réponse : en perdre un
-      // serait perdre une phrase que l'utilisateur a écrite.
+      // Multiple messages should not arrive (the card replaces the
+      // compose), but if they arrive they are all the answer: lose one
+      // would lose a sentence that the user wrote.
       const text = messages.map((m) => m.text.trim()).filter(Boolean).join("\n\n");
       const mentions = messages.flatMap((m) => m.mentions ?? []);
       pendingQuestion = null;
@@ -1562,30 +1562,30 @@ export async function runOpencodeTurn(
         ...(mentions.length > 0 ? { mentions } : {}),
       });
       /**
-       * L'INVERSE DE LA CARTE : elle compose `question → réponse` par ligne, on
-       * ré-associe. Une réponse qu'on n'arrive à apparier à rien — texte libre
-       * tapé hors carte, « je passe » — part ENTIÈRE sur la première question
-       * plutôt qu'en « Unanswered » : opencode recopie les libellés tels quels au
-       * modèle, et le silence serait la seule forme qui perde vraiment ce que
-       * l'utilisateur a dit.
+      * THE REVERSE OF THE CARD: it composes `question → answer` per line, we
+       * re-associate. An answer that we can't match to anything — free text
+       * typed off-card, “I pass” — FULL part on the first question
+       * rather than “Unanswered”: opencode copies the labels as they are
+       * model, and silence would be the only form that really loses what
+       * the user said.
        */
       const matched = matchAskUserAnswers(asked.questions, text);
       const answers = matched.some((entry) => entry.answer)
         ? matched.map((entry) => (entry.answer ? [entry.answer] : []))
         : asked.questions.map((_, i) => (i === 0 ? [text] : []));
       await client.replyQuestion(asked.id, answers).catch((err) => {
-        // Une réponse qui n'arrive pas laisse le tool suspendu jusqu'à la
-        // deadline. À dire — mais pas à faire tomber le tour, comme pour les
-        // permissions : le modèle verra son tool ne jamais rendre.
+        // A response that does not arrive leaves the tool hanging until the
+        // deadline. To say - but not to bring down the trick, as for the
+        // permissions: the model will see its tool never render.
         console.error("[supervisor] question reply failed:", (err as Error).message);
       });
     };
 
     /**
-     * ÉCARTE la question en vol — le geste de TOUTE sortie de tour qui en trouve
-     * une (« Stop », deadline, plafond, run conclu ailleurs). Sans lui, le tool
-     * resterait `running` pour toujours dans l'historique d'opencode, et le tour
-     * suivant rejouerait un appel jamais résolu.
+     * DISMISSES the question in flight — the gesture of ANY tower exit that finds one
+     * one (“Stop”, deadline, ceiling, run concluded elsewhere). Without him, the tool
+     * would remain `running` forever in opencode history, and the turn
+     * next would replay a call that was never resolved.
      */
     const closePendingQuestion = async (): Promise<void> => {
       const asked = pendingQuestion;
@@ -1594,39 +1594,39 @@ export async function runOpencodeTurn(
       await client.rejectQuestion(asked.id);
     };
     /**
-     * Poste le prompt en attente sur une session au repos, et dit au fil ce qui
-     * vient de l'UTILISATEUR.
+     * Post the pending prompt on an idle session, and tell the thread what
+     * comes from the USER.
      *
-     * `steered` distingue les deux, et ce n'est pas cosmétique : le prompt du tour
-     * est déjà dans le fil (c'est le message de lancement, ou la réponse affichée
-     * par le composer), alors qu'un message de steering n'a pas d'autre trace.
-     * Émettre les deux ferait lire deux fois la même phrase à l'utilisateur.
+     * `steered` distinguishes the two, and it is not cosmetic: the turn prompt
+     * is already in the thread (this is the launch message, or the response displayed
+     * by composing it), while a steering message has no other trace.
+     * Emitting both would cause the user to read the same sentence twice.
      */
     const postPending = async (): Promise<void> => {
       const parts = pendingPrompt.splice(0);
       if (parts.length === 0) return;
       /**
-       * UN ROUND NEUF N'A AUCUNE COUPURE EN ATTENTE. Le compteur se DÉCRÉMENTAIT
-       * seulement, et un `abort` peut très bien ne rien publier — opencode répond
-       * 200 sur une session déjà au repos (`opencode-client.ts`), et le steering
-       * coupe justement une session dont le round vient parfois de finir. Le
-       * crédit restait alors ouvert jusqu'à la fin du tour, et la PROCHAINE
-       * coupure subie — celle que personne n'a demandée — se faisait avaler en
-       * silence : ni event, ni erreur, un tour rangé « terminé ».
+       * A NEW ROUND HAS NO PENDING CUTS. The counter was DECREMENTING
+       * only, and a `abort` can very well not publish anything — opencode responds
+       * 200 on a session already at rest (`opencode-client.ts`), and the steering
+       * cuts off a session whose round has sometimes just ended. THE
+       * credit then remained open until the end of the round, and the NEXT
+       * cut suffered — the one that no one asked for — was being swallowed in
+       * silence: no event, no error, a “finished” round.
        *
-       * L'ordre du flux rend la remise à zéro sûre : `session.error`
-       * (`MessageAbortedError`) précède le `session.idle` d'où l'on repose, donc
-       * une vraie coupure demandée est déjà consommée quand on arrive ici.
+       * The flow order makes resetting safe: `session.error`
+       * (`MessageAbortedError`) precedes the `session.idle` from which we rest, therefore
+       * a real break requested is already consumed when we arrive here.
        */
       abortsRequested = 0;
       /**
-       * ET LE TOUR REPART PROPRE. Un round coupé (steering) ne publie ni `usage`
-       * ni fin de round : sans cette remise à zéro, son compteur d'outils
-       * continuait de courir sous les rounds suivants. Et une erreur de session
-       * déjà passée ne doit pas condamner ce qui recommence ici : on la garde
-       * pour le fil (l'event `error` est parti), pas pour le VERDICT du tour —
-       * sinon un tour relancé qui finit bien se rangeait « en erreur », sans son
-       * `summary`, donc lu comme interrompu.
+       * AND THE ROUND STARTS CLEAN. A cut round (steering) does not publish either `usage`
+       * nor end of round: without this reset, its tool counter
+       * continued to run under in the following rounds. And a session error
+       * already passed should not condemn what starts again here: we keep it
+       * for the thread (the event `error` is gone), not for the VERDICT of the round —
+       * otherwise a restarted round which ends well would be placed "in error", without its
+       * `summary`, and would therefore be read as interrupted.
        */
       toolsSeen = 0;
       sessionError = undefined;
@@ -1645,30 +1645,30 @@ export async function runOpencodeTurn(
        awaitingFirstModelSignal = true;
        timing("prompt-accepted");
        /**
-        * Un provider peut streamer d'abord du raisonnement ou les arguments d'un
-        * tool qu'OpenCode ne transforme en event qu'une fois le bloc terminé.
-        * GPT-OSS-20B l'a fait pendant 48 s alors qu'OpenRouter avait livré son
-        * premier token en moins d'une seconde. À ce stade le prompt EST accepté
-        * et le round travaille réellement : quitter « démarrage de la session »
-        * pour l'indicateur de réflexion décrit donc la réalité, sans inventer de
-        * texte ni doubler le stream final.
+        * A provider can first stream the reasoning or arguments of a
+        * tool that OpenCode only transforms into an event once the block is finished.
+        * GPT-OSS-20B did this for 48 s while OpenRouter had delivered its
+        * first token in less than a second. At this point the prompt IS accepted
+        * and the round actually works: exit “session start”
+        * for the reflection indicator therefore describes reality, without inventing
+        * text nor double the final stream.
         */
        if (reasoningSince === null) reasoningSince = now();
        publishLive({
          text: "",
          tools: toolsSeen,
          reasoningActive: true,
-         // Non nul : ce n'est plus l'état « démarrage », le round a commencé.
+         // Not zero: it is no longer the “start” state, the round has started.
          reasoningMs: 1,
          ...liveEdits.payload(),
        });
     };
 
     /**
-     * LE PREMIER PROMPT DU TOUR : ce que la fonction a composé (contexte du ticket
-     * + demande, sur un tour froid) PLUS ce qui attendait dans la file. Un tour
-     * repris n'a que le second — c'est par là qu'arrivent la réponse à une question
-     * et le « et maintenant fais plutôt ça » écrit pendant que la VM dormait.
+     * THE FIRST PROMPT OF THE ROUND: what the function composed (context of the ticket
+     * + request, on a cold ride) PLUS what was waiting in line. A ride
+     * taken up only has the second - that's how the answer to a question comes
+     * and the “and now do this instead” written while the VM was sleeping.
      */
     pendingPrompt = [
        ...(input.prompt.trim()
@@ -1678,10 +1678,10 @@ export async function runOpencodeTurn(
     ];
     if (pendingPrompt.length === 0) {
       /**
-       * RIEN À DIRE AU MODÈLE : on ne poste pas un prompt vide, et surtout on ne
-       * fabrique pas une relance (« continue ») qui ferait payer un round pour
-       * apprendre qu'il n'y a rien à faire. Le tour se termine, la fonction met la
-       * session au repos, et le prochain message la réveillera.
+       * NOTHING TO SAY TO THE MODEL: we do not post an empty prompt, and above all we do not
+       * do not make a raise ("continue") which would make one round pay for
+       * learn that there is nothing to do. The round ends, the function puts the
+       * session idle, and the next message will wake it up.
        */
       console.error("[supervisor] nothing to prompt — ending the turn");
       return {
@@ -1700,54 +1700,54 @@ export async function runOpencodeTurn(
     let timedOut = false;
 
     /**
-     * ── LA VIE DU TOUR, HORS DU FLUX ──────────────────────────────────────────
+     * ── THE LIFE OF THE TOUR, OUTSIDE THE FLOW ───────────────────── ─────────────────────
      *
-     * Le « Stop », le steering, le battement de cœur et l'échéance murale. Rend
-     * `true` quand le tour doit sortir.
+     * The “Stop”, the steering, the heartbeat and the wall deadline. Returns
+     * `true` when the turn should come out.
      *
-     * Sortie de la boucle d'events pour une raison qui n'est pas de forme : ces
-     * quatre-là ne doivent PAS dépendre de l'arrivée d'un event. Un `bash` de
-     * vingt minutes, un modèle qui réfléchit longtemps, un fournisseur qui cale :
-     * le flux se tait, et avec lui s'arrêtaient le seul écrivain de
-     * `last_activity_at` — donc le chien de garde partait sonder une microVM
-     * parfaitement vivante (`drain.ts`, trois minutes) —, le bouton « Stop », et
-     * la deadline de douze heures. Un flux muet gelait le tour entier.
+     * Exiting the event loop for an irregular reason: these
+     * These four should NOT depend on the arrival of an event. A `bash` of
+     * twenty minutes, a model who thinks for a long time, a supplier who stalls:
+     * the flow was silent, and with it stopped the only writer of
+     * `last_activity_at` — so the watchdog went to probe a microVM
+     * perfectly alive (`drain.ts`, three minutes) —, the “Stop” button, and
+     * the twelve hour deadline. A silent stream froze the entire tower.
      */
     const lifecycle = async (): Promise<boolean> => {
       /**
-       * LE « STOP » ET LE STEERING. La granularité est celle du battement : un
-       * `bash` de trois minutes retarde le stop de cinq secondes au plus, là où il
-       * le retardait de trois minutes — c'était déjà le pire cas de la boucle
-       * maison, qui ne relisait le drapeau qu'entre deux rounds.
+       * THE “STOP” AND THE STEERING. The granularity is that of the beat: a
+       * `bash` of three minutes delays the stop by five seconds at most, where it
+       * delayed it by three minutes — it was already the worst case of the loop
+       * house, who only reread the flag between two rounds.
        */
       if (now() - lastSteerAt >= STEER_POLL_INTERVAL_MS) {
         lastSteerAt = now();
         const stopping = await cp.checkInterrupt().catch(() => false);
         /**
-         * UN STOP ACCOMPAGNÉ D'UN MESSAGE se poursuit dans CE tour (« arrête-toi
-         * et fais plutôt ça ») : le composer envoie toujours le couple steer
-         * PUIS interrupt. On ne draine donc que là, et on consomme le drapeau —
-         * sans quoi le sondage suivant le relirait et sortirait, message accepté
-         * et jamais joué (même raisonnement que `clearInterrupt` dans
+         * A STOP ACCOMPANIED BY A MESSAGE continues in THIS lap (“stop
+         * and do this instead): the dialer always sends the torque steer
+         * THEN interrupt. So we only drain there, and we consume the flag -
+         * otherwise the following survey would reread it and come out, message accepted
+         * and never played (same reasoning as `clearInterrupt` in
          * `agent-loop.ts`).
          *
-         * Hors stop, on ne draine QU'APRÈS avoir su qu'il y a quelque chose :
-         * `pullSteering` consomme, et un message drainé sans être joué serait
-         * perdu pour de bon.
+         * Outside of stopping, we only drain AFTER knowing that there is something:
+         * `pullSteering` consumes, and a message drained without being played would be
+         * lost for good.
          */
         const steered =
           stopping || (await cp.hasPendingMessages().catch(() => false))
             ? await takeSteering()
             : [];
         /**
-         * LA RÉPONSE À UNE QUESTION N'EST PAS DU STEERING (D7). Elle dénoue un
-         * tool suspendu, et le round qui l'attendait repart tout seul : couper
-         * la session ici tuerait précisément le round qu'on vient de débloquer.
+         * THE ANSWER TO A QUESTION IS NOT STEERING (D7). She unties a
+         * tool suspended, and the round that was waiting for it starts again by itself: cut
+         * the session here would kill precisely the round that we have just unlocked.
          *
-         * Le « Stop » qui l'accompagne est consommé sans être joué, et c'est la
-         * bonne conduite : le composer envoie toujours le couple steer + interrupt
+         * The “Stop” which accompanies it is consumed without being played, and it is the
+         * good driving: the dial always sends the steer + interrupt torque
          * ([agent-conversation.tsx](../../../components/agent/agent-conversation.tsx)),
-         * or ici l'utilisateur RÉPOND — il ne demande pas l'arrêt.
+         * but here the user RESPONDS — he is not asking to stop.
          */
         if (pendingQuestion && steered.length > 0) {
           if (stopping) await cp.clearInterrupt().catch(() => {});
@@ -1771,11 +1771,11 @@ export async function runOpencodeTurn(
           await abortSession();
         }
       }
-      // La sauvegarde périodique EST le battement de cœur (cf. son commentaire).
+      // The periodic backup IS the heartbeat (see his comment).
       await maybeSaveCheckpoint();
       if (runClosed) {
-        // Le run a été conclu ailleurs (annulé, ou déjà stampé). Continuer, ce
-        // serait dépenser au nom d'une conversation qui n'existe plus.
+        // The run was concluded elsewhere (cancelled, or already stamped). Continue, this
+        // would be spending in the name of a conversation that no longer exists.
         interrupted = true;
         await closePendingQuestion();
         await abortSession();
@@ -1792,11 +1792,11 @@ export async function runOpencodeTurn(
 
     try {
       /**
-       * LE FLUX, LU À LA MAIN PLUTÔT QU'EN `for await` — pour que le silence ne
-       * gèle rien (cf. `lifecycle`). L'attente de l'event suivant court contre un
-       * battement ; la promesse en vol est GARDÉE d'un tour de boucle à l'autre,
-       * sans quoi chaque battement en ouvrirait une nouvelle et laisserait tomber
-       * l'event que la précédente allait rendre.
+       * THE FLOW, READ BY HAND RATHER THAN IN `for await` — so that silence does not
+       * freezes nothing (see `lifecycle`). The wait for the next event runs against a
+       * beat; the promise in flight is KEPT from one turn of the loop to the next,
+       * otherwise each beat would open a new one and drop
+       * the event that the previous one was going to make.
        */
       const beatMs = deps.lifecycleBeatMs ?? LIFECYCLE_BEAT_MS;
       const iterator = stream[Symbol.asyncIterator]();
@@ -1824,10 +1824,10 @@ export async function runOpencodeTurn(
           awaitingFirstModelSignal = false;
           timing("first-model-signal");
         }
-        // Une session qui n'est pas la mère est une FILLE : le modèle a délégué,
-        // et opencode publie tout sur le même flux. Ce qui vient d'elle se dit,
-        // se compte et se facture — mais dans sa bande à elle, et sans jamais
-        // parler au nom de la mère (cf. `Translation.sessionId`).
+        // A session that is not the mother is a DAUGHTER: the model has delegated,
+        // and opencode publishes everything to the same feed. What comes from her is said,
+        // is counted and billed — but in her own gang, and without ever
+        // speak on behalf of the mother (see `Translation.sessionId`).
         const child = !!out.sessionId && out.sessionId !== sessionId;
         if (!child && !firstVisibleTextSignal && liveTextOf(state, sessionId).trim().length > 0) {
           firstVisibleTextSignal = true;
@@ -1835,15 +1835,15 @@ export async function runOpencodeTurn(
         }
 
         /**
-         * LE GARDE-FOU, RÉPONDU AVANT TOUT LE RESTE — un tool suspendu attend, et
-         * chaque milliseconde de plus est du temps de microVM facturé. La
-         * décision est pure ([opencode-permissions.ts](opencode-permissions.ts)),
-         * ce qui la rend testable sans serveur ; ce qui est ici est le
-         * branchement, et le fait qu'un refus se raconte au fil.
+         * THE GUARD, ANSWER BEFORE ALL THE REST — a suspended tool waits, and
+         * every extra millisecond is billed microVM time. There
+         * decision is pure ([opencode-permissions.ts](opencode-permissions.ts)),
+         * which makes it testable without a server; what is here is the
+         * connection, and the fact that a refusal is told over the wire.
          */
-        // Une fille rattachée à son appel de `task` : c'est ce qui donne son nom
-        // aux events qui vont suivre, et sa bande au ledger. Sa naissance solde
-        // du même geste le crédit ouvert par l'autorisation (cf. `pendingTasks`).
+        // A girl linked to her call of `task`: this is what gives her name
+        // to the events that follow, and his gang at the ledger. His birth balance
+        // with the same gesture the credit opened by the authorization (see `pendingTasks`).
         if (out.child) {
           subagents.register(out.child);
           pendingTasks.delete(out.child.callId);
@@ -1862,15 +1862,15 @@ export async function runOpencodeTurn(
             { local, harnessPorts },
           );
           /**
-           * PUIS LE DISQUE ET LE RÉSOLVEUR (MIN-360), et sur le chemin local
-           * seulement. Deux garde-fous ne se décident pas sur une chaîne : un
-           * lien symbolique posé dans le dépôt (`ln -s`, que rien n'empêche) et
-           * un domaine public qui résout vers la boucle locale.
+           * THEN DISK AND RESOLVER (MIN-360), and on the local path
+           * only. Two safeguards cannot be decided on a chain: one
+           * symbolic link placed in the repository (`ln -s`, which nothing prevents) and
+           * a public domain that resolves to the local loop.
            *
-           * Le sens est à sens unique — `refineLocalVerdict` ne peut que refuser
-           * ce qui était autorisé —, et il est appliqué AVANT les effets de bord
-           * du verdict : une écriture refusée ici ne doit pas entrer dans le
-           * périmètre du tour.
+           * The meaning is one way — `refineLocalVerdict` can only refuse
+           * what was authorized —, and it is applied BEFORE the side effects
+           * of the verdict: a writing refused here must not enter into the
+           * perimeter of the tour.
            */
           if (local) {
             verdict = await refineLocalVerdict(out.permission, verdict, job.layout.repoDir, {
@@ -1882,10 +1882,10 @@ export async function runOpencodeTurn(
           }
           if (verdict.reply === "reject") rejectedPermissionThisRound = true;
           /**
-           * UNE DÉLÉGATION AUTORISÉE OUVRE UN CRÉDIT, jusqu'à ce que sa fille
-           * existe. C'est ce qui rend le plafond de simultané opérant sur le seul
-           * cas qui le mette à l'épreuve : un round qui appelle `task` plusieurs
-           * fois, dont les demandes sont toutes arbitrées avant la première
+           * AN AUTHORIZED DELEGATION OPENS A CREDIT, until his daughter
+           * exists. This is what makes the simultaneous cap operating on the only
+           * case which puts it to the test: a round which calls `task` several
+           * times, whose requests are all arbitrated before the first
            * naissance (cf. `SubagentContext.pending`).
            */
           if (
@@ -1896,17 +1896,17 @@ export async function runOpencodeTurn(
             pendingTasks.add(out.permission.callId);
           }
           /**
-           * CHAQUE SORTIE DE DOSSIER LAISSE UNE TRACE (MIN-364, décision D5).
+           * EACH FILE EXIT LEAVES A TRACE (MIN-364, decision D5).
            *
-           * C'est la contrepartie de l'ouverture, et sa seule justification
-           * honnête : le mur d'avant n'attrapait que les tools honnêtes et
-           * poussait le travail vers `bash`, c'est-à-dire vers l'endroit où l'on
-           * ne voit plus rien. Ici le verdict ne bride rien ET le fil garde la
-           * liste — l'exact contraire de la situation du §2 de l'audit.
+           * This is the counterpart of openness, and its only justification
+           * honest: the wall before only caught honest tools and
+           * pushed the work towards `bash`, that is to say towards the place where we
+           * can't see anything anymore. Here the verdict does not restrict anything AND the thread keeps the
+           * list — the exact opposite of the situation in §2 of the audit.
            *
-           * Le chemin est réécrit par `scrubPaths` comme tout le reste du chemin
-           * local : ce qui monte dit « l'agent est sorti vers `~/Projets/autre` »,
-           * pas le nom de l'utilisateur.
+           * The path is rewritten by `scrubPaths` like the rest of the path
+           * local: what comes up says “the agent went out to `~/Projets/autre`”,
+           * not the user name.
            */
           if (
             local &&
@@ -1915,11 +1915,11 @@ export async function runOpencodeTurn(
             !child
           ) {
             /**
-             * UNE FOIS PAR DOSSIER, pas une fois par fichier. Opencode redemande
-             * à chaque accès (on répond `once`, jamais `always`), et un tour qui
-             * lit trente fichiers d'un dépôt voisin publierait trente lignes
-             * identiques : le fil deviendrait illisible, donc la trace ne serait
-             * plus lue — ce qui reviendrait à ne pas l'avoir.
+             * ONCE PER FOLDER, not once per file. Opencode asks again
+             * at each access (we answer `once`, never `always`), and a turn which
+             * reads thirty files from a neighboring repository would publish thirty lines
+             * identical: the thread would become illegible, so the trace would not be
+             * no longer read — which would mean not having it.
              */
             const outside = scrubPaths(out.permission.filepath ?? "", job.layout.repoDir);
             if (outside && !outsideDirs.has(outside)) {
@@ -1928,26 +1928,26 @@ export async function runOpencodeTurn(
             }
           }
           /**
-           * UNE ÉCRITURE AUTORISÉE EST UNE ÉDITION DU TOUR. C'est le seul endroit
-           * où on la voit : chez opencode, l'édition est un tool INTÉGRÉ, et sa
-           * demande de permission est ce que notre `edit_file` nous disait. De là
-           * viennent le type-check ciblé de la porte de livraison, le mode
-           * `related` du runner de tests, et le verrou « le dépôt a été touché ».
+           * AN AUTHORIZED WRITING IS A TOUR EDITION. This is the only place
+           * where we see it: at opencode, editing is an INTEGRATED tool, and its
+           * request for permission is what our `edit_file` was telling us. From there
+           * come the targeted type-check of the delivery door, the mode
+           * `related` of the test runner, and the “repository has been hit” lock.
            */
           if (out.permission.permission === "edit" && verdict.reply === "once") {
             /**
-             * UN PATCH TOUCHE N FICHIERS ET NE DEMANDE QU'UNE FOIS. `editPaths`
-             * rend la vraie liste (`metadata.files`) plutôt que le `filepath`
-             * recollé à la virgule, qui donnait une seule ligne « a.ts, b.ts,
-             * c.ts » dans les fichiers changés — et une seule entrée pour le
-             * type-check ciblé de la porte de livraison, sur un chemin qui
-             * n'existe pas.
+             * ONE PATCH TOUCHES N FILES AND ONLY REQUESTS ONCE. `editPaths`
+             * returns the real list (`metadata.files`) rather than the `filepath`
+             * glued back to the comma, which gave a single line “a.ts, b.ts,
+             * c.ts” in the changed files — and a single entry for the
+             * targeted type-check of the delivery gate, on a path that
+             * does not exist.
              */
             const targets = editTargets(out.permission);
             for (const { path } of targets) delivery.noteEdit(path);
-            // …et elles se VOIENT tout de suite : une édition n'avance pas le
-            // round (ni texte, ni réflexion), donc rien d'autre ne ferait partir
-            // une charge de direct avant le round suivant.
+            // …and they are SEEN immediately: an edition does not advance the
+            // round (neither text nor reflection), so nothing else would make
+            // a direct charge before the next round.
             const live = targets
               .map(({ path, status }) => ({ path: repoRelative(job.layout.repoDir, path), status }))
               .filter((edit) => edit.path);
@@ -1961,44 +1961,44 @@ export async function runOpencodeTurn(
                 reasoningMs: 0,
                 ...liveEdits.payload(),
               });
-              // Les chemins sont visibles tout de suite ; les compteurs exacts
-              // suivent dès que l'outil a fini de les écrire sur le disque local.
+              // The paths are visible immediately; the exact counters
+              // follow as soon as the tool has finished writing them to the local disk.
               refreshLocalLiveStats();
             }
           }
           await client
             .replyPermission(out.permission.id, verdict.reply, verdict.message)
             .catch((err) => {
-              // Un verdict qui n'arrive pas laisse le tool suspendu jusqu'à la
-              // deadline du tour. À dire, donc — mais pas à faire tomber le tour :
-              // le modèle verra son tool ne jamais rendre, et c'est déjà un signal.
+              // A verdict that does not arrive leaves the tool hanging until the
+              // deadline of the round. To say, therefore – but not to bring down the trick:
+              // the model will see its tool never render, and that is already a signal.
               console.error("[supervisor] permission reply failed:", (err as Error).message);
             });
         }
 
         /**
-         * LA QUESTION — ET C'EST LE SEUL ENDROIT DU HARNESS OÙ LES DEUX MONDES
-         * FONT DEUX CHOSES DIFFÉRENTES DU MÊME EVENT (MIN-364, décision D7).
+         * THE QUESTION — AND THIS IS THE ONLY PLACE IN HARNESS WHERE BOTH WORLDS
+         * DO TWO DIFFERENT THINGS OF THE SAME EVENT (MIN-364, decision D7).
          *
-         * **En microVM, `ask_user` reste TERMINAL.** Les questions partent au fil,
-         * la session se met en attente, et la réponse revient au tour suivant par
-         * le steering. Chez opencode le tool BLOQUE — tenir une microVM ouverte le
-         * temps qu'un humain revienne coûterait des heures de compute pour ne rien
-         * faire. On écarte donc la question (le tool se résout, l'historique reste
-         * apparié) et on coupe le tour. Mesuré : `reject` rend le tool en erreur
-         * « The user dismissed this question », et l'`abort` seul le rendrait
-         * « Tool execution aborted » — les deux laissent un historique que le tour
-         * suivant rejoue sans trou.
+         * **In microVM, `ask_user` remains TERMINAL.** The questions follow,
+         * the session goes on hold, and the response comes back in the next round with
+         * the steering. At opencode the tool BLOQUE — keep a microVM open on
+         * time for a human to come back would cost hours of computing to do nothing
+         * TO DO. We therefore dismiss the question (the tool resolves, the history remains
+         * paired) and we cut the round. Measured: `reject` makes the tool in error
+         * “The user dismissed this question”, and the `abort` alone would make it
+         * “Tool execution aborted” — both leave a history that the trick
+         * the next round replays without a gap.
          *
-         * **Sur la machine de quelqu'un, elle SUSPEND.** Le motif du refus nommait
-         * la microVM, et il vaut zéro sur un Mac : il n'y a pas de compute à
-         * payer, et l'utilisateur est devant l'écran. Le tool bloque tout seul —
-         * mesuré, sans timeout, et y répondre ne termine pas le tour
-         * ([opencode-wait.probe.test.ts](opencode-wait.probe.test.ts)) — donc il
-         * n'y a littéralement RIEN à faire ici : on note la question en vol, et
-         * `lifecycle` reconnaîtra le prochain message de l'utilisateur comme sa
-         * réponse. Le détour d'avant (rejet → coupure du tour → réponse déguisée
-         * en steering au tour suivant) disparaît avec ses trois étapes.
+         * **On someone's machine, it SUSPENDS.** The reason for refusal was named
+         * the microVM, and it is zero on a Mac: there is no compute to
+         * pay, and the user is in front of the screen. The tool blocks itself —
+         * measured, without timeout, and answering it does not end the round
+         * ([opencode-wait.probe.test.ts](opencode-wait.probe.test.ts)) — therefore there is
+         * there is literally NOTHING to do here: we note the question in flight, and
+         * `lifecycle` will recognize the user's next message as its
+         * answer. The detour from before (rejection → turn cut → disguised response
+         * in steering on the next turn) disappears with its three steps.
          */
         if (out.question && !child) {
           if (questionsSuspend) {
@@ -2011,35 +2011,35 @@ export async function runOpencodeTurn(
         }
 
         /**
-         * CE QUE LE MODÈLE A VÉRIFIÉ LUI-MÊME (MIN-262) : une commande de test du
-         * dépôt sortie en 0, sans réédition derrière, fait taire la porte de
-         * livraison — elle ne relance pas 80 s de tests pour apprendre ce que le
-         * tour vient de lire. Une fille compte comme la mère : c'est le même
-         * dépôt, et la porte ne regarde que le dépôt.
+         * WHAT THE MODEL CHECKED ITSELF (MIN-262): a test command from the
+         * deposit released in 0, without reissue behind, silences the door of
+         * delivery — it does not restart 80 s of tests to learn what the
+         * turn just read. A daughter counts as the mother: it's the same
+         * deposit, and the door only looks at the deposit.
          */
         if (out.shell) {
           delivery.noteShell(out.shell.command, out.shell.exit);
-          // `bash` peut écrire sans passer par la permission `edit` (codemod,
-          // générateur, mv/rm). Son retour est alors le premier instant où le
-          // patch est certainement sur disque.
+          // `bash` can write without using the `edit` permission (codemod,
+          // generator, mv/rm). His return is then the first moment where the
+          // patch is definitely on disk.
           if (local && out.shell.exit === 0 && !child) refreshLocalLiveStats();
         }
 
         for (const event of out.events) {
           /**
-           * `update_plan` NE FAIT PAS DE BULLE — c'est un tool de CONTRÔLE, et la
-           * boucle maison n'en émettait aucun event (`agent-loop.ts` : `emit`
-           * `plan_update` puis `continue`, avant toute écriture de `tool_call`).
-           * Chez opencode il passe par le binaire comme les autres, donc le flux
-           * en publie les parts : sans ce filtre, le fil montrait la checklist
-           * DEUX fois — une barre de plan et un appel de tool brut au-dessus —, et
-           * le compteur d'outils du direct comptait un geste qui n'en est pas un.
+           * `update_plan` DOES NOT MAKE BUBBLES — it is a CONTROL tool, and the
+           * home loop did not emit any event (`agent-loop.ts`: `emit`
+           * `plan_update` then `continue`, before any writing of `tool_call`).
+           * At opencode it goes through binary like the others, so the flow
+           * publishes the shares: without this filter, the thread showed the checklist
+           * TWICE — a plan bar and a raw tool call above —, and
+           * the live tool counter counted a gesture which is not one.
            */
           if (event.payload.name === "update_plan") continue;
           if (event.type === "tool_call" && !child) toolsSeen += 1;
-          // Un `task` qui se termine sans avoir fait de fille (erreur, refus)
-          // rendrait son crédit éternellement ouvert : le plafond se refermerait
-          // sur un tour qui ne délègue plus rien.
+          // A `task` which ends without having made a girl (error, refusal)
+          // would make its credit eternally open: the ceiling would close
+          // on a tour that no longer delegates anything.
           if (event.type === "tool_result" && event.payload.name === "spawn_agent") {
             pendingTasks.delete(String(event.payload.id ?? ""));
           }
@@ -2049,39 +2049,39 @@ export async function runOpencodeTurn(
               : undefined;
           let payload = redactPayload(event.payload, secrets);
           /**
-           * LA CARTE DE QUESTIONS DOIT SAVOIR SI ELLE BLOQUE (MIN-364, D7).
+           * THE QUESTION CARD NEEDS TO KNOW IF IT IS BLOCKING (MIN-364, D7).
            *
-           * Le fil ne montrait la carte qu'au REPOS, et c'était juste tant qu'une
-           * question terminait le tour. Elle suspend maintenant : l'agent est
-           * `running` pendant qu'il attend, et une carte qui n'apparaît qu'au repos
-           * laisserait l'utilisateur devant un composer désarmé, sans rien à quoi
-           * répondre, pendant que le modèle attend sa réponse.
+           * The thread only showed the map at REST, and that was only fair as long as one
+           * question ended the round. She now suspends: the agent is
+           * `running` while waiting, and a card that only appears when resting
+           * would leave the user in front of a disarmed dialer, with nothing to
+           * respond, while the model waits for its response.
            *
-           * Le drapeau voyage sur l'EVENT plutôt que sur le run : le fil relit ses
-           * events, et un run passé doit se relire tel qu'il s'est joué.
+           * The flag travels on the EVENT rather than on the run: the thread rereads its
+           * events, and a past run must be replayed as it was played.
            */
           if (questionsSuspend && event.type === "question") {
             payload = { ...payload, blocking: true };
           }
           /**
-           * PUIS LES CHEMINS DE LA MACHINE, SUR LE CHEMIN LOCAL (MIN-361).
+           * THEN THE MACHINE ROADS, ON THE LOCAL ROAD (MIN-361).
            *
-           * `agent_run_events` est persisté 30 jours et lu par tout membre du
-           * projet. Deux gestes, et ils ne font pas le même travail
+           * `agent_run_events` is persisted for 30 days and read by any member of the
+           * project. Two gestures, and they don't do the same job
            * ([local-uplink.ts](local-uplink.ts)) :
            *
-           * - **tout est réécrit** — le dépôt devient relatif, la maison devient
-           *   `~`. C'est ce qui traite `/Users/<prénom nom>/…`, qui n'est pas
-           *   dans les sorties suspectes mais dans toutes ;
-           * - **une sortie qui parle d'ailleurs est RETENUE**, et seulement
-           *   comptée. Le déclencheur est l'APPEL autant que la sortie : un
-           *   `cat ~/.ssh/id_rsa` rend du texte qui ne porte aucun chemin, et
-           *   c'est pourtant le cas qui compte. D'où la table des appels
-           *   étrangers, jumelle de `refusedCalls`.
+           * - **everything is rewritten** — the deposit becomes relative, the house becomes
+           * `~`. This is what deals with `/Users/<first last name>/…`, which is not
+           * in suspicious outings but in all;
+           * - **an output that speaks about elsewhere is RETAINED**, and only
+           * counted. The trigger is the CALL as well as the exit: a
+           * `cat ~/.ssh/id_rsa` renders text that carries no path, and
+           * Yet it is the case that counts. Hence the calls table
+           * foreigners, twin of `refusedCalls`.
            *
-           * Ce qui reste visible est le GESTE : on doit pouvoir lire ce que
-           * l'agent est allé faire, surtout quand il est allé le faire hors du
-           * dossier. Ce qui ne monte pas est le CONTENU.
+           * What remains visible is the GESTURE: we must be able to read what
+           * the agent went to do, especially when he went to do it outside the
+           * case. What doesn't rise is the CONTENT.
            */
           if (local) {
             const filtered = filterLocalPayload(payload, job.layout.repoDir);
@@ -2094,8 +2094,8 @@ export async function runOpencodeTurn(
               const fromCall = foreignCalls.get(callId) ?? 0;
               const paths = fromCall + filtered.foreignCount;
               if (paths > 0) {
-                // La taille de la sortie TELLE QU'ELLE ÉTAIT : c'est elle que le
-                // compte doit dire, pas celle de la version réécrite.
+                // The size of the output AS IT WAS: this is what the
+                // account must say, not that of the rewritten version.
                 const chars = String(event.payload.preview ?? "").length;
                 payload = { ...payload, preview: withheldOutput(chars, paths), withheld: paths };
                 withheldOutputs += 1;
@@ -2103,45 +2103,45 @@ export async function runOpencodeTurn(
               foreignCalls.delete(callId);
             }
           }
-          // Un `spawn_agent` ne porte que le NOM de l'agent : on lui rend le mode
-          // et le modèle que le fil affiche depuis MIN-112.
+          // A `spawn_agent` only carries the NAME of the agent: we return the mode to it
+          // and the pattern that the thread displays since MIN-112.
           if (payload.name === "spawn_agent") payload = describeSpawn(payload, agentTable);
-          // Ce qui vient d'une fille se dit SOUS son appel de `task` : sans ce
-          // marquage, le fil attribuerait à l'agent principal les gestes de
-          // quelqu'un d'autre, et les déplierait au premier niveau.
+          // What comes from a girl is said UNDER her call of `task`: without this
+          // marking, the thread would attribute to the main agent the gestures of
+          // someone else, and would unfold them on the first level.
           const entry = child ? subagents.entry(out.sessionId ?? "") : undefined;
           if (entry) payload = markChildPayload(payload, entry);
           await cp.emit(event.type, {
             ...payload,
             ...(reason ? { reason } : {}),
-            // Une fille que le flux n'a rattachée à rien reste marquée : mieux
-            // vaut un event replié sous un id de session qu'un geste attribué à
-            // l'agent principal.
+            // A girl that the flow has not attached to anything remains marked: better
+            // is worth an event folded under a session id as a gesture attributed to
+            // the main agent.
             ...(child && !entry ? { subagent_id: out.sessionId } : {}),
           });
         }
         if (out.usage) {
           /**
-           * LE DIRECT SE TAIT À LA FIN D'UN ROUND QUI CONTINUE, comme `clearLive`
-           * de la boucle maison : ce qui vient de s'écrire est déjà parti au fil
-           * en `thinking`, et le laisser aussi dans la charge du direct le ferait
-           * lire en double — une bulle provisoire sous sa version définitive.
+           * THE LIVE GOES QUIET AT THE END OF A CONTINUING ROUND, like `clearLive`
+           * of the house loop: what has just been written has already been written
+           * in `thinking`, and also leaving it in charge of the direct would do it
+           * read in duplicate — a provisional bubble under its final version.
            *
-           * Le round FINAL, lui, garde son texte au direct : sa version définitive
-           * (`summary`) ne part qu'à la toute fin du tour, et l'effacer ici ferait
-           * disparaître la réponse de l'écran le temps de l'export du journal et
-           * du push. « Final » se lit sur `tool-calls`, et pas sur « différent de
-           * `stop` » : c'est la SEULE fin qui laisse la session travailler, et le
-           * traducteur tranche déjà la narration sur le même critère.
+           * The FINAL round keeps its text live: its definitive version
+           * (`summary`) only leaves at the very end of the turn, and clearing it here would
+           * disappear the response from the screen while the log is exported and
+           * of the push. “Final” reads `tool-calls`, not “different from
+           * `stop`”: this is the ONLY end that lets the session work, and the
+           * translator already decides the narration on the same criterion.
            */
           if (!child && out.usage.finish === "tool-calls") {
             reasoningSince = null;
             lastLiveAt = 0;
             publishLive({
               text: "",
-              // `tools: 0` comme le `clearLive` de la boucle maison : la charge de
-              // purge ne décrit plus rien, et un compteur non nul y ferait lire
-              // une bulle vide plutôt que rien.
+              // `tools: 0` like `clearLive` of the house loop: the load of
+              // purge no longer describes anything, and a non-zero counter would read
+              // an empty bubble rather than nothing.
               tools: 0,
               reasoningActive: false,
               reasoningMs: 0,
@@ -2149,58 +2149,58 @@ export async function runOpencodeTurn(
             });
           }
           if (!child) lastParentFinish = out.usage.finish;
-          // Le round est clos, quelle que soit sa fin : le compteur d'outils
-          // repart de zéro pour le suivant.
+          // The round is closed, whatever its end: the tool counter
+          // start from scratch for the next one.
           if (!child) toolsSeen = 0;
           const line = await turnLedger.record(cp, out.usage, proxy);
           costUsd += line.cost;
           /**
-           * LE PLAFOND, TENU ICI ET PAS DANS LA BOUCLE — parce qu'il n'y a plus
-           * de boucle à nous. La frontière de round reste la même qu'avant : on
-           * ne coupe jamais un appel en vol, on refuse le suivant (politique
-           * assumée de [usage.ts](../../usage.ts), comme chez Claude/ChatGPT).
+           * THE CEILING, HELD HERE AND NOT IN THE LOOP — because there is no longer
+           * of loop to us. The round boundary remains the same as before: we
+           * never disconnect a call in flight, we refuse the next one (policy
+           * assumed from [usage.ts](../../usage.ts), as in Claude/ChatGPT).
            *
-           * Il se RELIT (`budgetRemaining`), il n'est pas seulement snapshoté au
-           * lancement : rien ne réserve de budget, deux runs concurrents lisent
-           * le même restant et le prennent chacun pour plafond. Ce qui borne la
-           * casse est la fréquence de relecture — et un tour de microVM dure des
-           * heures, donc un plafond figé au démarrage serait aveugle du début à
-           * la fin.
+           * It RELITS (`budgetRemaining`), it is not only snapshotted at
+           * launch: nothing reserves budget, two competing runs read
+           * the same remaining and each take it as the ceiling. What limits the
+           * case is the replay frequency — and a round of microVM lasts for
+           * hours, so a fixed ceiling at start-up would be blind from start to
+           * the end.
            */
           if (now() - lastBudgetAt >= BUDGET_REFRESH_INTERVAL_MS) {
             lastBudgetAt = now();
             const fresh = await cp.budgetRemaining();
-            // `costUsd + restant` : le crochet rend ce qu'on a encore le DROIT
-            // de dépenser, la garde compare des dépenses de tour.
+            // `costUsd + restant`: the hook makes what we still have the RIGHT
+            // to spend, the guard compares tower expenses.
             if (fresh !== null) budgetUsd = costUsd + Math.max(0, fresh);
           }
           if (budgetUsd !== undefined && costUsd >= budgetUsd) {
             budgetExhausted = true;
             /**
-             * 40 ms mesurés : la requête en vol se termine proprement, et le tour
-             * garde son journal, son push et son rapport.
+             * 40 ms measured: the in-flight request completes properly, and the round
+             * keeps his log, his push and his report.
              *
-             * RESTE À MESURER, et [abandoned-spend.ts](../abandoned-spend.ts) est
-             * gardé pour ça : ce qu'opencode facture d'un round coupé au milieu.
-             * S'il pose un `finish` sur le message avorté, notre garde du
-             * traducteur l'écrit au ledger comme un round ordinaire ; sinon la
-             * dépense sort des compteurs, ce qui est exactement le défaut que
-             * MIN-216 avait fermé côté boucle maison.
+             * REMAINS TO BE MEASURED, and [abandoned-spend.ts](../abandoned-spend.ts) is
+             * kept for that: what opencode charges for a round cut in the middle.
+             * If he places a `finish` on the aborted message, our security guard
+             * translator writes it in the ledger like an ordinary round; otherwise the
+             * expenditure comes out of the counters, which is exactly the fault that
+             * MIN-216 had closed on the home loop side.
              */
             await closePendingQuestion();
             await abortSession();
             break;
           }
         }
-        // Ce que la réflexion de la MÈRE change au direct : elle l'allume, et elle
-        // le pousse toute seule — un modèle qui pense trois minutes avant d'écrire
-        // son premier mot n'émet aucun `liveText`, et le fil resterait muet.
+        // What the MOTHER's reflection changes directly: it turns it on, and it
+        // pushes it by itself — a model who thinks three minutes before writing
+        // its first word does not emit any `liveText`, and the thread would remain silent.
         if (!child && out.reasoning) {
           reasoningSince = out.reasoning.active ? (out.reasoning.startedAt || now()) : null;
         }
-        // Le signal optimiste posé à l'acceptation du prompt ne doit pas rester
-        // allumé sous le texte d'un modèle qui ne publie aucun part de
-        // raisonnement explicite. Dès qu'il écrit, l'écriture est l'état juste.
+        // The optimistic signal placed upon acceptance of the prompt must not remain
+        // lit under the text of a model which does not publish any part of
+        // explicit reasoning. As soon as he writes, writing is the right state.
         if (!child && out.liveText !== undefined && out.reasoning === undefined) {
           reasoningSince = null;
         }
@@ -2215,34 +2215,34 @@ export async function runOpencodeTurn(
             tools: toolsSeen,
             reasoningActive: reasoningSince !== null,
             reasoningMs: reasoningSince === null ? 0 : Math.max(0, now() - reasoningSince),
-            // La liste part avec CHAQUE charge : le fil efface ce qu'une charge
-            // tait, donc l'émettre à part la ferait disparaître à la suivante.
+            // The list goes with EACH load: the wire erases what a load
+            // was silent, so emitting it separately would make it disappear on the next one.
             ...liveEdits.payload(),
           });
         }
         /**
-         * L'ERREUR D'UNE FILLE N'EST PAS L'ERREUR DU TOUR. Elle revient au parent
-         * comme une erreur de `task` — il la lit et décide —, exactement comme un
-         * sous-agent qui échouait dans la boucle maison. La ranger ici mettrait le
-         * TOUR en `error` : le fil dirait que le run est mort alors que l'agent
+         * A GIRL'S MISTAKE IS NOT THE MISTAKE OF THE TOUR. It returns to the parent
+         * like an error from `task` — he reads it and decides —, exactly like a
+         * subagent that failed in the home loop. Storing it here would
+         * TOUR in `error`: the thread would say that the run is dead while the agent
          * continue de travailler.
          */
         if (out.error && !child) sessionError = out.error;
         /**
-         * LA COUPURE QUE PERSONNE N'A DEMANDÉE — la panne la plus silencieuse du
-         * harness avant qu'elle ne soit dite.
+         * THE OUTAGE NOBODY ASKED FOR — the quietest outage in the world
+         * harness before it is said.
          *
-         * Une coupure VOULUE se tait : on la consomme et le motif qui l'a
-         * déclenchée (plafond, « Stop », deadline, question, steering) fait déjà
-         * le rapport. Ce qui reste est un round tranché en vol — et sans cette
-         * garde, il ne laissait RIEN : pas d'event, pas de résumé, pas d'erreur.
-         * Le tour se rangeait « terminé », le fil restait figé sur son dernier
-         * status (« Ouverture de la sandbox » quand la coupure tombe au premier
-         * round), et la dépense était bien réelle. Mesuré sur le run `ec9b2ed5`.
+         * A WANTED break is silent: we consume it and the reason that caused it
+         * triggered (ceiling, “Stop”, deadline, question, steering) already done
+         * the report. What remains is a round sliced ​​in flight - and without this
+         * guard, he left NOTHING: no event, no summary, no error.
+         * The round was put away “finished”, the thread remained frozen on its last
+         * status (“Opening the sandbox” when the cutoff falls on the first
+         * round), and the expense was very real. Measured on run `ec9b2ed5`.
          *
-         * On le dit AU FIL et au rapport : `error` sans `errorCode` ne fait pas
-         * re-queuer ([vm-rest.ts](../vm-rest.ts)) — le tour se repose, mais en
-         * disant pourquoi, et le message suivant reprend la session.
+         * We say it IN THE WIRE and in the report: `error` without `errorCode` does not
+         * re-queue ([vm-rest.ts](../vm-rest.ts)) — the round rests, but in
+         * saying why, and the next message resumes the session.
          */
         if (out.aborted && !child) {
           if (abortsRequested > 0) {
@@ -2253,19 +2253,19 @@ export async function runOpencodeTurn(
             break;
           }
         }
-        // Les questions sont PARTIES au fil (juste au-dessus) : on sort une fois
-        // l'event émis, pas avant — sinon la carte de questions n'existerait pas
-        // et la session attendrait une réponse à rien.
+        // The questions are PART in the thread (just above): we go out once
+        // the event emitted, not before — otherwise the question card would not exist
+        // and the session would expect a response to nothing.
         if (askedUser) break;
-        // `session.idle` d'une FILLE ne termine pas le tour : la mère, elle,
-        // attend encore son rapport. Elle libère en revanche une place sous le
-        // plafond de simultané.
+        // `session.idle` of a GIRL does not complete the round: the mother,
+        // is still awaiting his report. However, it frees up a place under the
+        // simultaneous ceiling.
         /**
-         * UNE FILLE QUI SE TAIT A RENDU SON RAPPORT, et le fil veut l'entendre :
-         * son bloc lit un `summary` marqué à son nom (c'est ce qui remplit
-         * « rapport ») et un `status: subagent_report` (c'est ce qui le referme et
-         * arrête son chrono). Les deux existaient dans la boucle maison ; sans
-         * eux, une fille reste éternellement « au travail » sous un tour terminé.
+         * A GIRL WHO KEPT QUIET HAS GIVED HER REPORT, and the thread wants to hear it:
+         * its block reads a `summary` marked with its name (this is what fills
+         * “report”) and a `status: subagent_report` (this is what closes it and
+         * stops the clock). Both existed in the home loop; without
+         * them, a girl remains eternally “at work” under a completed turn.
          */
         if (out.idle && child) {
           const childSession = out.sessionId ?? "";
@@ -2282,9 +2282,9 @@ export async function runOpencodeTurn(
         }
         if (out.idle && !child) {
           /**
-           * LA FRONTIÈRE SÛRE, et le seul endroit d'où l'on parle au modèle : la
-           * session est au repos, l'historique est apparié. Un message de steering
-           * arrivé pendant le tour a coupé le round (`abort`) et attend ici.
+           * THE SAFE BORDER, and the only place from which we speak to the model: the
+           * session is idle, history is matched. A steering message
+           * arrived during the round cut the round (`abort`) and waits here.
            */
           if (pendingPrompt.length > 0) {
             await cp.emit("status", { phase: "steered" });
@@ -2292,11 +2292,11 @@ export async function runOpencodeTurn(
             continue;
           }
           /**
-           * OpenCode 1.18.16 fait d'un `reject` un refus de TOUTES les demandes
-           * parallèles, puis met la session au repos. Ce n'est pas une réponse du
-           * modèle : c'est une frontière de permission. On lui rend UNE chance
-           * de lire les erreurs et de choisir une autre voie ; bornée à une fois,
-           * elle ne transforme pas un garde-fou en boucle de tentatives.
+           * OpenCode 1.18.16 makes a `reject` deny ALL requests
+           * parallels, then quiesces the session. This is not a response from
+           * model: this is a permission boundary. We give him ONE chance
+           * to read the errors and choose another path; limited to once,
+           * it does not turn a safeguard into a retry loop.
            */
           if (
             rejectedPermissionThisRound &&
@@ -2314,18 +2314,18 @@ export async function runOpencodeTurn(
             continue;
           }
           /**
-           * GPT-5.6 Luna a été observé terminant un round `stop` par « Je vais
-           * inventorier… puis vérifier… », sans aucun appel de tool. Une couche
-           * OpenAI-compatible avait aplati ce qui était sémantiquement une
-           * commentary en texte assistant : pour opencode, `stop` + `idle` est
-           * une conclusion parfaitement valide, alors que la phrase promet
-           * encore tout le travail.
+           * GPT-5.6 Luna has been observed ending a `stop` round with "I'm going
+           * inventory… then check…”, without any call to tool. One layer
+           * OpenAI-compatible had flattened what was semantically a
+           * commentary in wizard text: for opencode, `stop` + `idle` is
+           * a perfectly valid conclusion, while the sentence promises
+           * still all the work.
            *
-           * On répare la contradiction UNE fois, dans la même session : le texte
-           * devient la narration intermédiaire qu'il aurait dû être, puis une
-           * consigne interne demande d'agir sans réannoncer. La détection est
-           * volontairement étroite (`opencode-continuation.ts`) pour ne jamais
-           * relancer une vraie réponse qui parlerait simplement au futur.
+           * We repair the contradiction ONCE, in the same session: the text
+           * becomes the intermediate narration that it should have been, then a
+           * internal instruction requires action without announcing again. Detection is
+           * deliberately narrow (`opencode-continuation.ts`) so as never to
+           * relaunch a real answer that would simply speak to the future.
            */
           const stranded = outward(replyOf(state, sessionId));
           if (
@@ -2360,25 +2360,25 @@ export async function runOpencodeTurn(
       }
       abortEvents.abort();
       /**
-       * ET LA QUESTION EN VOL EST ÉCARTÉE, quelle que soit la sortie (D7) — y
-       * compris celle que personne n'a prévue (le flux qui se rompt, une panne du
-       * serveur opencode). Un tool `question` laissé `running` reste figé pour
-       * toujours dans la base d'opencode, que le tour suivant relit : mesuré au
-       * lot 0 de la sonde d'attente, rien ne le ressuscite.
+       * AND THE QUESTION IN FLIGHT IS DISMISSED, whatever the exit (D7) — y
+       * including the one that no one predicted (the flow that breaks, a breakdown of the
+       * opencode server). A tool `question` left `running` remains frozen for
+       * still in the opencode base, which the next round rereads: measured at
+       * batch 0 of the waiting probe, nothing revives it.
        */
       await closePendingQuestion().catch(() => {});
       /**
-       * CE QU'ON A DRAINÉ SANS SAVOIR LE JOUER RETOURNE EN FILE (MIN-286).
+       * WHAT WE DRAINED WITHOUT KNOWING TO PLAY IT COMES BACK IN A FILE (MIN-286).
        *
-       * `pullSteering` CONSOMME, et on ne draine qu'en sachant qu'on va couper pour
-       * reposter derrière — sauf que le tour peut sortir entre les deux : plafond
-       * de dépense atteint sur le round coupé, deadline, run conclu ailleurs,
-       * coupure subie. Le message était alors consommé en base et vivant dans
-       * `pendingPrompt`, une variable locale qui meurt avec la microVM : accepté à
-       * l'écran, perdu pour toujours, et le run ne se réveillait même pas — c'est
-       * la file qui le re-queue.
+       * `pullSteering` CONSUMES, and we only drain knowing that we are going to cut to
+       * repost behind — except that the round can come out between the two: ceiling
+       * expenditure reached on the cut round, deadline, run concluded elsewhere,
+       * cut suffered. The message was then consumed in base and living in
+       * `pendingPrompt`, a local variable that dies with the microVM: accepted at
+       * the screen, lost forever, and the run wouldn't even wake up — it's
+       * the line that re-tails it.
        *
-       * Le chemin heureux ne passe pas par ici : `postPending` a déjà vidé le sac.
+       * The happy path does not go this way: `postPending` has already emptied the bag.
        */
        const unposted = pendingPrompt
          .filter((part) => part.steered)
@@ -2388,27 +2388,27 @@ export async function runOpencodeTurn(
     }
 
     /**
-     * LE ROUND COUPÉ EN VOL, RENDU AU LEDGER (MIN-286, lot 3, dossier §2.23).
+     * THE ROUND CUT IN FLIGHT, RETURNED TO THE LEDGER (MIN-286, lot 3, file §2.23).
      *
-     * Toutes les sorties de la boucle ci-dessus sauf une passent par un `abort` :
-     * plafond de dépense, « Stop », steering, deadline, question du modèle. Et
-     * mesuré sur le binaire : opencode ne facture RIEN d'un round avorté — pas de
-     * `finish`, donc pas de `usage`, donc pas de ligne. Le fournisseur, lui, a
-     * facturé. Le proxy est le seul à l'avoir vu passer ; on lui reprend ce que
-     * plus aucun round ne viendra chercher.
+     * All but one of the outputs of the loop above go through a `abort`:
+     * spending ceiling, “Stop”, steering, deadline, question of model. And
+     * measured on binary: opencode charges NOTHING for an aborted round — no
+     * `finish`, therefore no `usage`, therefore no line. The supplier has
+     * Invoice. The proxy is the only one who saw it happen; we take back from him what
+     * no more rounds will come to fetch.
      *
-     * `costUsd` est ajouté au cumul du tour **après** le plafond, volontairement :
-     * ce round-là est déjà coupé, l'opposer à nouveau au plafond ne changerait
-     * rien qu'un message. Ce qui compte est qu'il soit au ledger, donc au quota
-     * du compte et à la facture.
+     * `costUsd` is added to the round total **after** the cap, voluntarily:
+     * this round is already cut, opposing it again to the ceiling would not change
+     * just a message. What matters is that he is on the ledger, therefore on the quota
+     * account and invoice.
      */
     costUsd += await turnLedger.recordOrphans(cp, proxy);
 
     /**
-     * CE QUI N'EST PAS MONTÉ SE COMPTE (MIN-361). Event neutre — invisible au
-     * fil, comptable en base, comme `current_repo` : c'est le seul moyen de
-     * savoir, après coup, qu'un tour a lu hors du dossier, sans faire monter ce
-     * qu'il y a lu. Best-effort : un compte perdu ne coûte pas le tour.
+     * WHAT IS NOT ASSEMBLED IS COUNTED (MIN-361). Neutral event — invisible to
+     * thread, accounting in base, like `current_repo`: this is the only way to
+     * know, after the fact, that a round has read out of the file, without raising this
+     * that he read there. Best-effort: a lost account does not cost the tour.
      */
     if (withheldOutputs > 0) {
       console.log(`[supervisor] ${withheldOutputs} tool output(s) stayed on this machine`);
@@ -2417,98 +2417,98 @@ export async function runOpencodeTurn(
         .catch(() => {});
     }
 
-    // ── L'état d'opencode, exporté pour le tour suivant ──────────────────────
+    // ── The opencode state, exported for the next round ──────────────────────
     let opencodeState: OpencodeCheckpointState | undefined;
     try {
-      // Incrémental depuis le DERNIER export, périodique compris : le curseur est
-      // celui de l'accumulateur, pas celui du tour précédent.
+      // Incremental since the LAST export, periodic included: the cursor is
+      // that of the accumulator, not that of the previous round.
       opencodeState = await syncJournal();
     } catch (err) {
-      // Un journal qu'on n'a pas su exporter ne perd pas le tour : il perd la
-      // REPRISE, et le tour suivant repartira d'une session neuve. À dire, donc,
-      // et pas à avaler en silence.
+      // A newspaper that we have not been able to export does not lose the trick: it loses the
+      // RESUME, and the next round will start with a new session. To say, therefore,
+      // and not to swallow in silence.
       console.error("[supervisor] history export failed:", (err as Error).message);
     }
 
-    // ── Le push, le diff, le rapport ─────────────────────────────────────────
+    // ── The push, the diff, the report ──────────────────── ─────────────────────
     /**
-     * Un tour qui a posé ses questions n'a PAS de réponse, et c'est la même règle
-     * que la boucle maison (`reply: ""` sur `ask_user`) : la carte de questions
-     * clôt le fil, il n'y a pas de mot de la fin à afficher, et le commit prend
-     * son message générique plutôt qu'une phrase écrite avant la question.
+     * A trick that has asked its questions has NO answers, and it's the same rule
+     * than the house loop (`reply: ""` on `ask_user`): the question card
+     * closes the thread, there is no final word to display, and the commit takes
+     * its generic message rather than a sentence written before the question.
      *
-     * SUBSTITUÉ ET RÉÉCRIT ICI, une fois pour ses TROIS destinations (MIN-361) :
-     * l'event `summary`, le message de commit
-     * ([commit-message.ts](../commit-message.ts)) et le `reply` du rapport, qui
-     * devient `agent_runs.outcome`. Seule la première passait par le registre de
-     * secrets ; les deux autres emportaient telle quelle la parole du modèle —
-     * donc, sur une machine, les chemins qu'il venait de citer, jusque dans un
-     * message de commit poussé sur la forge.
+     * SUBSTITUTED AND REWRITTEN HERE, once for its THREE destinations (MIN-361):
+     * the `summary` event, the commit message
+     * ([commit-message.ts](../commit-message.ts)) and the `reply` of the report, which
+     * becomes `agent_runs.outcome`. Only the first passed through the register of
+     * secrets; the other two took the word of the model as it was -
+     * therefore, on a machine, the paths that he had just mentioned, even in a
+     * commit message pushed to the forge.
      */
     const reply = askedUser ? "" : outward(replyOf(state, sessionId));
     /**
-     * LE MOT DE LA FIN, DIT AU FIL — et c'est ce qui CLÔT le tour à l'écran.
+     * THE FINAL WORD, SAID TO THE WIRE — and this is what ENDS the round on the screen.
      *
-     * Le fil ne connaît qu'un seul signe de fin : l'event `summary`
+     * The thread only knows one end sign: the `summary` event
      * ([agent-event-feed.tsx](../../../../components/agent/agent-event-feed.tsx),
-     * `closesTurn`). Sans lui, le déroulé du tour reste ouvert, et un tour au
-     * repos sans clôture est lu comme un tour INTERROMPU : c'est ce qu'on a vu sur
-     * les premiers runs opencode — le tour finissait bien, la PR était ouverte, et
-     * le fil affichait « interrompu », puis le tour suivant venait s'empiler dans
-     * le même accordéon avec le chrono du précédent.
+     * `closesTurn`). Without him, the course of the turn remains open, and a turn
+     * rest without closure is read as an INTERRUPTED turn: this is what we saw on
+     * the first opencode runs — the round ended well, the PR was open, and
+     * the thread displayed “interrupted”, then the next round was stacked in
+     * the same accordion with the chrono from the previous one.
      *
-     * Plafonné à 8 000 comme la boucle maison, et posé AVANT le push : ce qui suit
-     * peut échouer (push, forge, export du journal), et la réponse de l'agent ne
-     * doit pas se perdre avec.
+     * Capped at 8,000 like the home loop, and placed BEFORE the push: the following
+     * may fail (push, forge, log export), and the agent response does not
+     * must not get lost with it.
      */
     const endedWell = !budgetExhausted && !interrupted && !sessionError && !timedOut;
     if (reply.trim() && endedWell) {
       await cp.emit("summary", { text: cap(reply, 8000) });
     }
     /**
-     * Le verrou « le dépôt a été touché », posé une dernière fois avant le push :
-     * un tour qui n'ouvre pas de pull request n'a jamais franchi la porte, et
-     * c'est pourtant ce verrou que le tour SUIVANT relit dans son checkpoint.
+     * The “repository has been touched” lock, set one last time before the push:
+     * a round that doesn't open a pull request never made it through the gate, and
+     * However, it is this lock that the FOLLOWING turn reads again in its checkpoint.
      */
-    // …et ce que le SHELL a fait au dépôt sans passer par un tool d'écriture
-    // (`rm`, `mv`, un codemod) : sans cette lecture, un tour qui n'a fait que ça
-    // se croit vierge, et le tour suivant le relit tel quel dans son checkpoint.
+    // …and what SHELL did to the repository without using a writing tool
+    // (`rm`, `mv`, a codemod): without this reading, a trick that did just that
+    // thinks he is a virgin, and the next turn reads him as is in his checkpoint.
     await delivery.probeRepoTouched();
     delivery.noteEdits();
     /**
-     * LES JOBS DE FOND, TUÉS AVANT LE PUSH — et avant lui seulement : ils ont
-     * servi pendant tout le tour. Un serveur laissé vivant écrirait dans le dépôt
-     * pendant le `git add -A` (un `.next/`, un fichier de build régénéré), et il
-     * tiendrait la microVM éveillée après la fin du tour. Même geste que
-     * [turn.ts](turn.ts), au même endroit.
+     * THE BACKGROUND JOBS, KILLED BEFORE THE PUSH — and before it only: they
+     * served throughout the tour. A server left alive would write to the repository
+     * during `git add -A` (a `.next/`, a regenerated build file), and it
+     * would keep the microVM awake after the round ends. Same gesture as
+     * [turn.ts](turn.ts), in the same place.
      */
     await background.stopAll().catch(() => 0);
     let pushed: VmPushResult | null = null;
     let pushError: string | undefined;
     /**
      * ─────────────────────────────────────────────────────────────────────────
-     * EN MODE DÉPÔT COURANT, LE TOUR NE COMMITE RIEN (MIN-293, décision D2bis-B).
+     * IN CURRENT DEPOSIT MODE, THE TOUR DOES NOT COMMIT ANYTHING (MIN-293, decision D2bis-B).
      *
-     * L'audit laissait le livrable ouvert : le tour poussait une branche à chaque
-     * fin de tour, comme dans le cloud. **Sur le disque de quelqu'un, c'est le
-     * mauvais geste** — l'agent édite là où l'humain travaille, et il n'a aucune
-     * raison de décider tout seul que ce travail-là part sur une forge. La branche
-     * arrivait d'ailleurs sans exister localement (commit dans un index jetable,
-     * poussé par sha), donc on la lisait dans l'interface sans pouvoir la trouver
-     * dans son propre `git branch` : une branche qu'on n'a pas demandée, à un
-     * endroit qu'on ne voit pas.
+     * The audit left the deliverable open: the tour pushed a branch at each
+     * end of turn, like in the cloud. **On someone's record, it's the
+     * bad move** — the agent edits where the human works, and it has no
+     * reason to decide alone that this work should go to a forge. The branch
+     * arrived elsewhere without existing locally (committed in a disposable index,
+     * pushed by sha), so we read it in the interface without being able to find it
+     * in its own `git branch`: a branch that was not requested, to a
+     * a place we cannot see.
      *
-     * **Le livrable devient l'arbre de travail.** L'agent édite, le fil dit ce
-     * qui a bougé, et l'humain relit dans son éditeur puis commite lui-même —
-     * c'est le produit de Claude Code, et c'est cohérent avec la décision D2 qui
-     * fait du dépôt courant le défaut.
+     * **The deliverable becomes the work tree.** The agent edits, the thread says what
+     * which has moved, and the human rereads in his editor then commits himself —
+     * it is the product of Claude Code, and it is consistent with the D2 decision which
+     * makes the current deposit the default.
      *
-     * ⚠ **CE QUE ÇA COÛTE, ET IL FAUT LE DIRE** : « le produit est identique,
-     * seule la machine change » est encore un peu moins vrai. La pull request
-     * cesse d'être la fin d'un tour pour devenir un GESTE EXPLICITE — le tool
-     * `create_pr`, que le modèle sert toujours et qui pousse quand on le lui
-     * demande. Rien de la machinerie de MIN-358 ne meurt : elle change
-     * simplement de déclencheur.
+     * ⚠ **WHAT IT COSTS, AND IT HAS TO BE SAYED**: “the product is identical,
+     * only the machine changes” is even a little less true. The pull request
+     * ceases to be the end of a turn to become an EXPLICIT GESTURE — the tool
+     * `create_pr`, that the model always serves and which grows when we do so
+     * request. Nothing about MIN-358's machinery dies: it changes
+     * simply a trigger.
      */
     if (job.writesToRepo && !current) {
       try {
@@ -2520,11 +2520,11 @@ export async function runOpencodeTurn(
     }
 
     /**
-     * L'ORDRE DES CAUSES, et il n'est pas indifférent : `budget_exhausted` est
-     * un statut à part dans le protocole, et la fonction en tire une conduite
-     * propre — event `quota_exhausted`, pas de re-queue, message qui distingue le
-     * plafond du RUN de celui du COMPTE ([execute.ts](../execute.ts)). Le ranger
-     * sous `error` ferait retenter un run qui n'a plus de quoi payer.
+     * THE ORDER OF CAUSES, and it is not indifferent: `budget_exhausted` is
+     * a separate status in the protocol, and the function derives a behavior from it
+     * own — event `quota_exhausted`, no re-queue, message which distinguishes the
+     * ceiling of the RUN of that of the ACCOUNT ([execute.ts](../execute.ts)). put it away
+     * under `error` would retry a run that can no longer pay for itself.
      */
     const status: VmTurnReport["status"] = budgetExhausted
       ? "budget_exhausted"
@@ -2535,12 +2535,12 @@ export async function runOpencodeTurn(
           : "completed";
 
     /**
-     * CE QUE LE TOUR A CHANGÉ — et ça ne se lit plus au même endroit selon le
-     * mode (MIN-293). En clone, c'est le diff entre la baseline et ce qu'on vient
-     * de pousser. En dépôt courant, il n'y a rien à pousser : c'est le diff entre
-     * la baseline et **l'arbre de travail**, borné au périmètre du tour — sans
-     * quoi les fichiers que l'humain avait déjà en cours remonteraient au fil
-     * comme si l'agent les avait touchés.
+     * WHAT THE TOUR HAS CHANGED — and it no longer reads in the same place according to the
+     * mode (MIN-293). In clone, it's the difference between the baseline and what we come from
+     * to push. In current deposit, there is nothing to push: this is the difference between
+     * the baseline and **the work tree**, limited to the perimeter of the tour — without
+     * what files that the human already had in progress would go up over time
+     * as if the agent had touched them.
      */
     const rawLocalDiff =
       status === "completed" && local && filesFromSha
@@ -2566,8 +2566,8 @@ export async function runOpencodeTurn(
             ? await changedFiles(host, filesFromSha, pushed.headSha).catch(() => null)
             : null;
 
-    // Le MÊME constructeur que la sauvegarde périodique : seul le sha des
-    // fichiers change, et il ne change qu'ici (c'est le push qui l'a bougé).
+    // The SAME constructor as the periodic backup: only the sha of
+    // files changes, and it only changes here (it was the push that moved it).
     const checkpoint: OpencodeCheckpoint = turnCheckpoint(
       status === "completed" ? pushed?.headSha || filesFromSha : filesFromSha,
       opencodeState,
@@ -2576,15 +2576,15 @@ export async function runOpencodeTurn(
     return {
       status,
       ...(reply ? { reply } : {}),
-      // C'est lui qui met la session en `awaiting_input` et envoie la notification
-      // `agent_question` plutôt qu'`agent_done` ([vm-rest.ts](../vm-rest.ts)).
+      // It is he who puts the session in `awaiting_input` and sends the notification
+      // `agent_question` rather than `agent_done` ([vm-rest.ts](../vm-rest.ts)).
       ...(askedUser ? { askedUser: true } : {}),
       ...(timedOut ? { errorCode: "turnTooLong" as const } : {}),
       ...(sessionError ? { errorMessage: cap(outward(sessionError), 1000) } : {}),
       costUsd,
       checkpoint,
-      // Plus rien ne se lâche : le journal ne transite plus par le checkpoint,
-      // il est écrit en append au fil du tour (cf. `syncJournal`).
+      // Nothing is let go: the newspaper no longer passes through the checkpoint,
+      // it is written as an append throughout the turn (see `syncJournal`).
       checkpointDropped: [],
       checkpointBytes: JSON.stringify(checkpoint).length,
       pushed,
@@ -2597,24 +2597,24 @@ export async function runOpencodeTurn(
     };
   } catch (err) {
     /**
-     * UN TOUR QUI MEURT A QUAND MÊME DÉPENSÉ (MIN-286).
+     * A TOUR THAT DIES EVEN SPENT (MIN-286).
      *
-     * Le chemin heureux reprend au proxy ce qu'aucun round n'est venu chercher
-     * (`recordOrphans`, plus haut) ; le chemin d'exception passait à côté, et le
-     * `finally` fermait le proxy derrière lui — la dépense partait avec la
-     * microVM. Or c'est justement ici qu'elle est la plus probable : la seule
-     * façon d'apprendre que le serveur opencode est mort est le flux `/event`
-     * qui se rompt, et le round en vol a bel et bien été facturé.
+     * The happy path takes from the proxy what no round came to get
+     * (`recordOrphans`, above); the exceptional path passed by, and the
+     * `finally` closed the proxy behind it — the expense left with the
+     * microVM. But it is precisely here that it is most probable: the only
+     * way to learn that opencode server is dead is the `/event` stream
+     * which breaks, and the round in flight has indeed been billed.
      *
-     * Best-effort et sans lever : on rend le tour en erreur, pas la panne du
-     * ledger par-dessus.
+     * Best effort and without lifting: we return the lathe in error, not the breakdown of the
+     * with the ledger on top.
      */
     const salvaged = ledger ? await ledger.recordOrphans(cp, proxy).catch(() => 0) : 0;
     return failed((err as Error).message, salvaged);
   } finally {
-    // Filet : un tour qui sort par une exception n'est pas passé par l'arrêt
-    // d'avant-push, et un serveur de dev survivrait au tour. `stopAll` est
-    // idempotent — un job déjà tué n'est plus vivant, donc il n'est pas retué.
+    // Net: a round that exits through an exception has not passed through the stop
+    // pre-push, and a dev server would survive the round. `stopAll` is
+    // idempotent — a job that has already been killed is no longer alive, so it is not killed again.
     await background.stopAll().catch(() => 0);
     await server?.stop().catch(() => {});
     await proxy.close().catch(() => {});
@@ -2622,7 +2622,7 @@ export async function runOpencodeTurn(
   }
 }
 
-/** Forme forge du patch local → forme historique de `files_changed`. */
+/** Forge-shaped form of the local patch → historical shape of `files_changed`. */
 function localDiffStat(file: WorkingDiff["files"][number]) {
   return {
     path: file.filename,
@@ -2634,58 +2634,58 @@ function localDiffStat(file: WorkingDiff["files"][number]) {
 }
 
 /**
- * LE LEDGER D'UN TOUR (MIN-286, lot 2) — une ligne `ai_usage` par ROUND, mère et
- * filles comprises, sous le `run_id` du run.
+ * THE LEDGER OF A ROUND (MIN-286, batch 2) — an `ai_usage` line by ROUND, mother and
+ * girls included, under the `run_id` of the run.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * D'OÙ VIENNENT LES TROIS NOMBRES, et pourquoi ils ne viennent pas du même endroit
+ * WHERE DO THE THREE NUMBERS COME FROM, and why they don't come from the same place
  *
- * - **Les tokens** viennent du message assistant d'opencode. Le mapping est
- *   celui du plan : `input→prompt_tokens`, `output→completion_tokens`,
- *   `cache.read→cached_tokens`, `cache.write→cache_write_tokens`. Le
- *   raisonnement n'a pas de colonne : il est DÉJÀ dans `output` (mesuré au
- *   lot 0), l'ajouter compterait deux fois les mêmes tokens.
- * - **Le coût** vient du FOURNISSEUR quand le proxy a su le lire, d'opencode
- *   sinon. La sonde du lot 0 a mesuré les deux égaux sur cinq générations, ce
- *   qui n'est pas une promesse : le jour où ils divergent, c'est la facture qui
- *   a raison. C'est aussi ce qui rend le ledger comparable ligne à ligne entre
- *   les deux moteurs — le critère de bascule du lot 3.
- * - **Le `generation_id`** ne vient que du proxy : opencode ne l'expose nulle
- *   part (dossier §2.6).
+ * - **Tokens** come from the opencode wizard message. The mapping is
+ *   the one from the plan: `input→prompt_tokens`, `output→completion_tokens`,
+ * `cache.read→cached_tokens`, `cache.write→cache_write_tokens`. THE
+ * reasoning has no column: it is ALREADY in `output` (measured at
+ * batch 0), adding it would count the same tokens twice.
+ * - **The cost** comes from the SUPPLIER when the proxy was able to read it, from opencode
+ * Otherwise. The batch 0 probe measured the two equals over five generations, this
+ * which is not a promise: the day they diverge, it is the invoice which
+ * is right. This is also what makes the ledger comparable line to line between
+ * both engines — the tipping point for lot 3.
+ * - **The `generation_id`** only comes from the proxy: opencode does not expose it
+ *   part (section §2.6).
  *
- * `estimated` dit « ce coût est CALCULÉ, pas relevé chez le fournisseur ». Donc :
- * faux dès que le proxy a rendu le coût facturé ; faux aussi sur le coût
- * d'opencode calculé avec NOS prix (décision du lot 0, écart nul mesuré) ; vrai
- * quand le job n'a pas de prix — là, opencode rend zéro, et une ligne à zéro
- * marquée « exacte » serait un mensonge qu'on ne rattrape plus.
+ * `estimated` says “this cost is CALCULATED, not taken from the supplier”. SO :
+ * false as soon as the proxy has returned the invoiced cost; also wrong about the cost
+ * opencode calculated with OUR price (batch 0 decision, zero difference measured); TRUE
+ * when the job has no price — there, opencode returns zero, and a line as zero
+ * marked “exact” would be a lie that cannot be caught up again.
  *
- * LES SEQ : la mère continue la numérotation du run (`usageSeqStart`), chaque
- * fille prend la sienne dans la bande des sous-agents (`subagentUsageSeq`, base
- * 2e9, 1 000 par slot) — la MÊME convention que la boucle maison, sans quoi
- * l'ordre d'appel d'un run cesse de se lire au ledger.
+ * THE SEQ: the mother continues the numbering of the run (`usageSeqStart`), each
+ * daughter takes hers in the band of sub-agents (`subagentUsageSeq`, base
+ * 2e9, 1,000 per slot) — the SAME convention as the house loop, otherwise
+ * the call order of a run stops being readable in the ledger.
  */
 class TurnLedger {
   private parentSeq: number;
-  /** Rounds déjà écrits par une fille — son avancée dans sa bande. */
+  /** Rounds already written by a girl — her progress in her band. */
   private readonly childSeq = new Map<string, number>();
 
   constructor(
     private readonly job: VmJob,
-    /** La session de la mère : tout le reste du flux est une fille. */
+    /** The mother's session: everything else in the flow is a girl. */
     private readonly parentSession: string,
-    /** Qui numérote les filles — le MÊME registre que le fil, sans quoi la
-     *  dépense d'une fille et ses events ne parleraient pas de la même. */
+    /** Who numbers the girls — the SAME register as the thread, otherwise the
+     * a girl's expenses and her events would not speak of the same. */
     private readonly subagents: SubagentRegistry,
   ) {
     this.parentSeq = job.usageSeqStart;
   }
 
-  /** Le prochain `seq` LIBRE de la mère — ce que le checkpoint doit porter. */
+  /** Mother's next FREE `seq` — what the checkpoint should carry. */
   get nextParentSeq(): number {
     return this.parentSeq;
   }
 
-  /** Écrit le round, et rend ce qui a été facturé. */
+  /** Writes the round, and returns what was billed. */
   async record(
     cp: ControlPlaneClient,
     usage: RoundUsage,
@@ -2694,15 +2694,15 @@ class TurnLedger {
     const generation = proxy.take({ model: usage.model, outputTokens: usage.outputTokens });
     const cost = generation?.costUsd ?? usage.costUsd;
     /**
-     * `prompt_tokens` AU SENS DU FOURNISSEUR, cache compris — et pas l'`input`
-     * d'opencode, qui l'EXCLUT (identité mesurée au lot 0, dossier §2.5 :
+     * `prompt_tokens` IN THE SENSE OF THE SUPPLIER, including cache — and not `input`
+     * of opencode, which EXCLUDES it (identity measured at batch 0, file §2.5:
      * `input + cache.read + cache.write = native_tokens_prompt`).
      *
-     * La colonne a un sens écrit, et deux lecteurs en dépendent : le taux de hit
-     * du cache se lit `cached_tokens / prompt_tokens` (migration MIN-242), qui
-     * dépassait 1 sur ce chemin, et la comparaison ligne à ligne des deux moteurs
-     * est le critère de bascule du lot 3 — la boucle maison, elle, écrit le
-     * `prompt_tokens` d'OpenRouter, comme `recordOrphans` juste en dessous.
+     * The column has a written meaning, and two readers depend on it: the hit rate
+     * the cache is read as `cached_tokens / prompt_tokens` (MIN-242 migration), which
+     * exceeded 1 on this path, and the line-to-line comparison of the two engines
+     * is the switching criterion of lot 3 — the house loop, for its part, writes the
+     * OpenRouter's `prompt_tokens`, like `recordOrphans` immediately below.
      */
     const promptTokens = usage.inputTokens + usage.cacheReadTokens + usage.cacheWriteTokens;
     await cp.recordUsage({
@@ -2725,32 +2725,32 @@ class TurnLedger {
   }
 
   /**
-   * LES ROUNDS COUPÉS EN VOL — ceux dont opencode ne dira jamais rien.
+   * THE ROUNDS CUT IN FLIGHT — the ones that opencode will never say anything about.
    *
-   * Mesuré (dossier §2.23) : un round avorté rend `finish: null`, `cost: 0`,
-   * `tokens: 0` et une `MessageAbortedError`, alors que le fournisseur a facturé.
-   * Le proxy, lui, a lu la dernière frame du flux — il ne coupe pas l'amont quand
-   * le client s'en va. On écrit donc la ligne avec SES nombres.
+   * Measured (file §2.23): an aborted round returns `finish: null`, `cost: 0`,
+   * `tokens: 0` and a `MessageAbortedError`, while the supplier has invoiced.
+   * The proxy has read the last frame of the stream — it does not cut upstream when
+   * the customer leaves. We therefore write the line with ITS numbers.
    *
-   * `estimated: false` sans hésiter : ce n'est pas un calcul, c'est le montant
-   * facturé, lu dans la réponse. Un flux qui n'aurait même pas rendu son `usage`
-   * (fournisseur coupé, panne réseau) n'est pas écrit du tout : une ligne à zéro
-   * se lirait « cet appel était gratuit », ce qui refait exactement le trou.
+   * `estimated: false` without hesitation: it’s not a calculation, it’s the amount
+   * charged, read in the response. A flow that wouldn't even have returned its `usage`
+   * (supplier cut off, network failure) is not written at all: a line with zero
+   * would read “this call was free”, which exactly fills the gap.
    *
-   * `seq` : la bande de la MÈRE, toujours. Le proxy ne sait pas de quelle session
-   * venait la requête — il voit du HTTP, pas des sessions — et une ligne rangée
-   * sous la mère vaut infiniment mieux qu'une dépense qui n'existe nulle part.
+   * `seq`: the MOTHER gang, always. Proxy doesn't know which session
+   * came the request — he sees HTTP, not sessions — and a row
+   * under the mother is infinitely better than an expense that does not exist anywhere.
    */
   async recordOrphans(cp: ControlPlaneClient, proxy: LlmProxy): Promise<number> {
-    // La course : l'amont finit APRÈS le client (1,2 s mesurés). Drainer sans
-    // attendre ne trouverait rien.
+    // The race: the upstream finishes AFTER the customer (1.2 seconds measured). Drain without
+    // waiting would find nothing.
     await proxy.settle(ORPHAN_SETTLE_MS);
     let total = 0;
     for (const gen of proxy.drain()) {
       const usage = gen.usage;
       if (!usage || gen.costUsd == null) {
-        // Rien de facturable à écrire, mais ça se DIT : c'est le seul signe
-        // qu'une dépense a pu sortir des compteurs.
+        // Nothing billable to write, but it SAYS: it's the only sign
+        // that an expense could have gone off the counters.
         console.error(
           `[supervisor] round coupé sans usage du fournisseur (gen ${gen.id ?? "?"}) — non facturé`,
         );
@@ -2780,18 +2780,18 @@ class TurnLedger {
   }
 
   /**
-   * Le `seq` de ce round. Une session inconnue tombe dans la bande de la mère
-   * seulement si le flux n'a pas dit d'où elle venait — mieux vaut un round de
-   * mère mal rangé qu'une ligne perdue.
+   * The `seq` of this round. An unknown session falls into the mother's gang
+   * only if the stream didn't say where it came from — better a round of
+   * mother misplaced than a lost line.
    */
   private seqFor(sessionId: string): number {
     if (!sessionId || sessionId === this.parentSession) return this.parentSeq++;
 
     const slot = this.subagents.slotOf(sessionId);
-    // Les slots repartent de zéro à chaque TOUR, comme la boucle maison recrée
-    // son registre de sous-agents à chaque tour (`seqBase: 0`). Deux tours qui
-    // délèguent réutilisent donc la même bande : `ai_usage.seq` n'a pas de
-    // contrainte d'unicité, et la dépense, elle, se somme.
+    // The slots start from scratch each ROUND, like the house loop recreates
+    // its register of subagents each round (`seqBase: 0`). Two towers which
+    // delegate therefore reuse the same band: `ai_usage.seq` has no
+    // constraint of uniqueness, and the expense is summed up.
     const used = this.childSeq.get(sessionId) ?? 0;
     this.childSeq.set(sessionId, used + 1);
     return subagentUsageSeq(slot) + used;
@@ -2799,20 +2799,20 @@ class TurnLedger {
 }
 
 /**
- * LE REGISTRE DES FILLES D'UN TOUR (MIN-286, lot 2, tâche 12).
+ * THE REGISTER OF GIRLS IN A TOUR (MIN-286, lot 2, task 12).
  *
- * Il ne LANCE rien — c'est opencode qui lance, et c'est tout l'objet du virage.
- * Il tient les trois choses qu'opencode ne tient pas pour nous :
+ * It doesn't LAUNCH anything — it's opencode that launches, and that's the whole point of the turn.
+ * It holds the three things that opencode doesn't hold for us:
  *
- * 1. **Un nom court et stable** (`sub-1`, `sub-2`), celui que le fil connaît
- *    depuis MIN-112 : le feed replie les events d'une fille sous la ligne
- *    `spawn_agent` par `subagent_id` + `parent_call_id`, et un id de session
- *    opencode (`ses_00960557effe…`) n'a jamais rien voulu dire pour personne.
- * 2. **La bande de `seq` du ledger** : la fille n°N écrit dans
- *    `subagentUsageSeq(N-1)`, la MÊME convention que la boucle maison — sans quoi
- *    l'ordre d'appel d'un run cesse de se lire au ledger.
- * 3. **Combien tournent**, qui est le plafond de simultané (`maxParallel`). Une
- *    fille est vivante de son rattachement jusqu'à son `session.idle`.
+ * 1. **A short and stable name** (`sub-1`, `sub-2`), the one that the thread knows
+ * since MIN-112: the feed folds the events of a girl under the line
+ * `spawn_agent` by `subagent_id` + `parent_call_id`, and a session id
+ * opencode (`ses_00960557effe…`) never meant anything to anyone.
+ * 2. **The ledger's `seq` gang**: girl n°N writes in
+ * `subagentUsageSeq(N-1)`, the SAME convention as the home loop — otherwise
+ *    the call order of a run stops being readable in the ledger.
+ * 3. **How ​​many spins**, which is the simultaneous ceiling (`maxParallel`). A
+ * daughter is alive from her attachment until her `session.idle`.
  */
 export class SubagentRegistry {
   private readonly bySession = new Map<
@@ -2821,11 +2821,11 @@ export class SubagentRegistry {
   >();
 
   constructor(
-    /** Nom d'agent → notre mode, tel que la config l'a déclaré. */
+    /** Agent name → our mode, as the config declared it. */
     private readonly modes: ReadonlyMap<string, "explore" | "implement">,
   ) {}
 
-  /** Rattache une fille à l'appel de `task` qui l'a lancée. Idempotent. */
+  /** Attaches a girl to the call from `task` who initiated it. Idempotent. */
   register(child: { sessionId: string; callId: string; agent: string }): void {
     if (this.bySession.has(child.sessionId)) return;
     const index = this.bySession.size;
@@ -2833,9 +2833,9 @@ export class SubagentRegistry {
       index,
       id: `sub-${index + 1}`,
       callId: child.callId,
-      // Un nom d'agent inconnu ne devrait pas exister (le verdict de permission
-      // l'a refusé), mais s'il passait, `implement` est le pire cas : c'est celui
-      // sous lequel le fil montre une fille qui peut écrire.
+      // An unknown agent name should not exist (the permission verdict
+      // refused it), but if it passed, `implement` is the worst case: it is the one
+      // under which the thread shows a girl who can write.
       mode: this.modes.get(child.agent) ?? "implement",
       done: false,
     });
@@ -2846,8 +2846,8 @@ export class SubagentRegistry {
   }
 
   /**
-   * La bande de la fille. Une session inconnue en obtient une quand même :
-   * une dépense qu'on ne sait pas rattacher vaut mieux rangée que perdue.
+   * The girl's gang. An unknown session still gets one:
+   * An expense that you don't know how to account for is better stored away than lost.
    */
   slotOf(sessionId: string): number {
     const known = this.bySession.get(sessionId);
@@ -2856,7 +2856,7 @@ export class SubagentRegistry {
     return this.bySession.get(sessionId)!.index;
   }
 
-  /** Une fille au repos ne compte plus dans le simultané. */
+  /** A girl at rest no longer counts in the simultaneous. */
   finish(sessionId: string): void {
     const entry = this.bySession.get(sessionId);
     if (entry) entry.done = true;
@@ -2869,13 +2869,13 @@ export class SubagentRegistry {
   }
 
   /**
-   * La fille qui ÉCRIT en ce moment, s'il y en a une — le verrou d'écriture du
-   * parent ([subagent.ts](../subagent.ts), `runningImplementId`), rendu ici sous
-   * le nom court que le fil affiche. Le seul appelant est `create_pr` : le
-   * `git add -A` de la livraison emporterait sinon un travail à moitié posé.
+   * The girl who is WRITING right now, if there is one — the writing lock of
+   * parent ([subagent.ts](../subagent.ts), `runningImplementId`), rendered here under
+   * the short name that the thread displays. The only caller is `create_pr`: the
+   * `git add -A` of delivery would otherwise result in half-finished work.
    *
-   * En pratique le cas est rare — chez opencode le tool `task` BLOQUE le parent —
-   * mais un round qui appelle `task` et `create_pr` côte à côte le rouvre.
+   * In practice the case is rare — at opencode the tool `task` BLOCKS the parent —
+   * but a round that calls `task` and `create_pr` side by side reopens it.
    */
   runningImplementId(): string | null {
     for (const entry of this.bySession.values()) {
@@ -2886,12 +2886,12 @@ export class SubagentRegistry {
 }
 
 /**
- * LE MARQUAGE D'UN EVENT DE FILLE — les mêmes champs qu'en MIN-112, au nom près.
+ * MARKING A GIRL'S EVENT — the same fields as in MIN-112, except for the name.
  *
- * `subagent_id` + `parent_call_id` sont ce qui replie l'event sous la ligne
- * `spawn_agent` dans le fil ; `subagent_mode` est ce qu'il affiche. Et l'id de
- * l'appel de tool est PRÉFIXÉ, pour la raison qui l'a toujours été : deux modèles
- * peuvent rendre le même `call_1`, et le fil apparie par id.
+ * `subagent_id` + `parent_call_id` are what folds the event below the line
+ * `spawn_agent` in thread; `subagent_mode` is what it displays. And the id of
+ * the tool call is PREFIXED, for the reason it always was: two models
+ * can return the same `call_1`, and the thread matches by id.
  */
 export function markChildPayload(
   payload: Record<string, unknown>,
@@ -2908,13 +2908,13 @@ export function markChildPayload(
 }
 
 /**
- * Ce que le fil doit lire d'un `spawn_agent`, quand opencode n'en connaît que le
- * nom d'agent.
+ * What the thread should read from a `spawn_agent`, when opencode only knows the
+ * the agent name.
  *
- * `toolArgSummary` a déjà rangé le `subagent_type` sous `mode` (c'est le champ
- * qu'il attend) — sauf que ce `mode`-là vaut `explore-anthropic-claude-haiku-4-5`,
- * pas `explore`. On lui rend donc les deux champs que `spawn_agent` portait, et
- * que la relecture d'un run affiche : le mode, et le modèle de la fille.
+ * `toolArgSummary` has already stored the `subagent_type` under `mode` (this is the field
+ * that he is waiting for) — except that this `mode` is worth `explore-anthropic-claude-haiku-4-5`,
+ * not `explore`. We therefore return the two fields that `spawn_agent` carried, and
+ * that replaying a run displays: the mode, and the model of the girl.
  */
 export function describeSpawn(
   payload: Record<string, unknown>,
@@ -2929,7 +2929,7 @@ export function describeSpawn(
   };
 }
 
-/** Le curseur d'export, agrégat par agrégat. */
+/** The export cursor, aggregate by aggregate. */
 export function lastSeqByAggregate(
   previous: Record<string, number>,
   events: Record<string, unknown>[],
@@ -2945,11 +2945,11 @@ export function lastSeqByAggregate(
 }
 
 /**
- * Le token de forge ne sort ni dans un event ni dans le checkpoint (MIN-239) : il
- * est lisible dans `.git/config`, et trois tools l'en sortent. La substitution
- * s'applique aux CHAÎNES du payload, **en profondeur** — un `preview` de tool est
- * exactement là où il atterrissait. Elle vit dans `redact.ts` depuis MIN-343,
- * où Numo la partage : une seule substitution, pas deux.
+ * The forge token does not come out either in an event or in the checkpoint (MIN-239): it
+ * is readable in `.git/config`, and three tools take it out. The substitution
+ * applies to CHAINS of the payload, **in depth** — a tool `preview` is
+ * exactly where he landed. She has lived in `redact.ts` since MIN-343,
+ * where Numo shares it: just one substitution, not two.
  */
 function redactPayload(
   payload: Record<string, unknown>,

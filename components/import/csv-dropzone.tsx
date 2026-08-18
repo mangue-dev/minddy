@@ -6,19 +6,19 @@ import { cn } from "mangue-ui";
 import { FileUp } from "lucide-react";
 
 /**
- * La zone de dépôt du CSV, et le lien vers le gabarit — le seul geste de
- * l'étape « d'où l'on part ».
+ * The CSV drop zone, and the link to the template — the only gesture of
+ * the “where we start from” stage.
  *
- * Sortie du panneau des réglages quand le wizard d'import est né : les deux
- * surfaces déposent le même fichier, et un dropzone qui diverge est un dropzone
- * dont l'une des deux versions n'accepte plus le glisser-déposer.
+ * Exit from the settings panel when the import wizard is born: both
+ * surfaces drop the same file, and a diverging dropzone is a dropzone
+ * one of the two versions no longer accepts drag and drop.
  *
- * Les libellés gardent le namespace i18n `Settings` où ils sont nés.
+ * The labels keep the i18n namespace `Settings` where they were born.
  */
 export function CsvDropzone({
   onFile,
   className,
-  /** Plus haute dans le wizard, où elle a la place — et où elle est le geste. */
+  /** Higher in the wizard, where it has the place — and where it is the gesture. */
   size = "sm",
 }: {
   onFile: (file: File) => void;
@@ -53,8 +53,8 @@ export function CsvDropzone({
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) onFile(file);
-          // Redéposer le MÊME fichier après un retour en arrière doit relancer
-          // la lecture : sans ce vidage, `change` ne part pas une seconde fois.
+          // Redepositing the SAME file after backtracking should restart
+          // reading: without this dump, `change` does not leave a second time.
           e.target.value = "";
         }}
       />

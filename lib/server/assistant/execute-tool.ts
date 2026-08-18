@@ -19,8 +19,8 @@ import {
   type PageToolResult,
 } from "@/lib/server/page-tools";
 
-/** Les noms que Numo porte, pour que les refus du patch renvoient vers des tools
- *  qui existent DANS LE CHAT (cf. IssueTextTools). */
+/** The names that Numo bears, so that patch refusals refer to tools
+ * which exist IN THE CHAT (see IssueTextTools). */
 const NUMO_TEXT_TOOLS: IssueTextTools = {
   read: "get_issue",
   appendToPlan: "append_to_plan",
@@ -186,19 +186,19 @@ export interface ToolContext {
   /** Where a launch_code_agent call comes from (chat vs @numo comment). */
   triggerSource?: "chat" | "mention";
   /**
-   * Recherche web du tour courant : le run du ledger auquel rattacher ses lignes
-   * `web_search`, et le compteur (MUTÉ) qui plafonne les recherches d'un même
-   * tour. Absent = la surface n'ouvre pas la recherche web.
-   */
+ * Web search for the current tour: the run of the ledger to which to attach its lines
+ * `web_search`, and the counter (MUTED) which caps searches for the same
+ * tour. Absent = surface does not open web search.
+ */
   webSearch?: WebSearchTurn;
-  /** Conversation du tour (drill-down du ledger). Null hors chat. */
+  /** Conversation for the turn (ledger drill-down). Null outside chat. */
   conversationId?: string | null;
 }
 
-/** État de la recherche web pour UN tour (une réponse Numo, un @Numo). */
+/** Status of web search for ONE round (one Numo response, one @Numo). */
 export interface WebSearchTurn {
   runId: string;
-  /** Recherches déjà faites ce tour — sert de plafond ET de `seq` de ledger. */
+  /** Research already done this round — serves as a cap AND a ledger `seq`. */
   used: number;
 }
 
@@ -206,34 +206,33 @@ export interface ToolExecution {
   result: unknown;
   success: boolean;
   /**
-   * Ce que le MODÈLE relit, quand ce n'est pas ce que l'écran montre. Une
-   * proposition d'amorce (MIN-173) fait quarante titres avec leurs
-   * descriptions : le fil doit les afficher, le modèle vient de les écrire et
-   * n'a plus rien à en faire. `result` part alors au navigateur et sur la
-   * métadonnée du message, `modelResult` dans l'historique de la conversation.
-   */
+ * What the MODEL reads back, when it's not what the screen shows. A
+ * seed proposal (MIN-173) makes forty titles with their
+ * descriptions: the thread must display them, the model has just written them and
+ * has nothing more to do with them. `result` then goes to the browser and to the
+ * message metadata, `modelResult` in the conversation history.
+ */
   modelResult?: unknown;
   /**
-   * Les IDENTIFIANTS VIVANTS que `result` porte — une clé `mdy_` fraîchement
-   * créée, le secret SSO d'un board (MIN-343).
-   *
-   * Ils partent au navigateur avec le résultat, en direct, et ne vont NULLE PART
-   * ailleurs : la boucle les substitue avant d'écrire `assistant_messages` et
-   * avant de rendre la main au modèle. Un secret laissé dans l'historique serait
-   * rejoué au fournisseur à chaque tour, relisible en base, et repartirait dans
-   * l'export de compte — trois fuites pour une valeur qui ne sert qu'une fois,
-   * sous les yeux de son propriétaire.
-   *
-   * Corollaire assumé : le modèle ne voit jamais la valeur, donc ne peut pas la
-   * recopier dans sa réponse. C'est l'écran qui la montre (`SecretCallout`), et
-   * le prompt le lui dit.
-   */
+ * The LIVE IDENTIFIERS that `result` carries — a freshly created `mdy_` * key, the SSO secret of a board (MIN-343).
+ *
+ * They go to the browser with the result, live, and will not NOWHERE
+ * elsewhere: the loop substitutes them before writing `assistant_messages` and
+ * before returning control to the model. A secret left in the history would be
+ * replayed to the supplier each turn, rereadable in base, and would start again in
+ * account export — three leaks for a value which is only used once,
+ * under the eyes of its owner.
+ *
+ * Corollary assumed: the model never sees the value, so cannot copy the
+ * into its response. It's the screen that shows it (`SecretCallout`), and
+ * the prompt tells it.
+ */
   secrets?: string[];
   /**
-   * Le tour s'arrête ici : la main passe à l'utilisateur, comme sur `ask_user`.
-   * Ce que la boucle enchaînerait ne servirait à rien tant qu'il n'a pas
-   * répondu à ce que ce résultat lui met sous les yeux.
-   */
+ * The turn ends here: the hand passes to the user, as on `ask_user`.
+ * What the loop would chain would be of no use until he has
+ * responded to what this result puts in front of him.
+ */
   pause?: boolean;
 }
 
@@ -246,8 +245,8 @@ function libError(r: { errorKey?: string; rawMessage?: string }): ToolExecution 
   return toolError(r.rawMessage ?? r.errorKey ?? "Request failed");
 }
 
-/** Refus de rattachement d'une PR, dits à Numo pour qu'il les relaie tels quels
-    plutôt que d'inventer une raison. */
+/** Refusal to attach a PR, told to Numo so that he relays them as they are
+ rather than inventing a reason. */
 const PR_LINK_REFUSALS: Record<PrLinkRefusal, string> = {
   pr_already_linked:
     "This pull request is already attached to another issue. The link is definitive: it cannot be replaced, and there is no unlink.",
@@ -277,8 +276,8 @@ function launchErrorMessage(r: Extract<LaunchResult, { ok: false }>): string {
     case "noModelForProvider":
       return "The active provider has no default model, so a model must be chosen. Call list_agent_models to find an available model id for this provider, then relaunch with that model (or the user can set a default in Account settings).";
     case "modelAbovePlan":
-      // Numo relaie ce refus tel quel : c'est lui qui a pu forcer le modèle, et
-      // il doit pouvoir en proposer un autre sans que l'utilisateur devine.
+      // Numo relays this refusal as it is: it was he who was able to force the model, and
+      // it must be able to suggest another one without the user guessing.
       return r.modelLimit
         ? `The model ${r.modelLimit.model} costs ×${r.modelLimit.multiplier} the usage of minddy's default model, above the ×${r.modelLimit.limit} ceiling of the ${r.modelLimit.planId} plan. Call list_agent_models to pick a model within the ceiling, or the user can upgrade their plan.`
         : "That model is above the usage ceiling of the user's plan. Call list_agent_models to pick a cheaper one.";
@@ -288,9 +287,9 @@ function launchErrorMessage(r: Extract<LaunchResult, { ok: false }>): string {
 }
 
 /**
- * Refus d'une écriture de routine (MIN-185), dits à Numo pour qu'il les relaie
- * plutôt que d'inventer une raison — ou pire, de chercher un contournement.
- * `ownerOnly` en particulier : c'est une règle, pas un obstacle technique.
+ * Refusal of a routine write (MIN-185), told to Numo to relay them
+ * rather than inventing a reason — or worse, looking for a workaround.
+ * `ownerOnly` in particular: it's a rule, not a technical obstacle.
  */
 function routineErrorMessage(r: {
   errorKey: string;
@@ -322,14 +321,14 @@ function routineErrorMessage(r: {
   }
 }
 
-/** Les jours d'une cadence, tels qu'un modèle les envoie (souvent en vrac). */
+/** The days of a cadence, such as a model sends them (often in bulk). */
 function numberList(value: unknown): number[] {
   return Array.isArray(value)
     ? value.filter((v): v is number => typeof v === "number" && Number.isFinite(v))
     : [];
 }
 
-/** Une routine, telle que Numo la relit et la rapporte — cadence en clair. */
+/** A routine, as Numo reads it back and reports it — cadence in plain language. */
 function routineForTool(routine: {
   id: string;
   title: string;
@@ -352,7 +351,7 @@ function routineForTool(routine: {
     title: routine.title,
     prompt: routine.prompt,
     model: routine.model,
-    /** Ce qu'UN passage peut dépenser, en % du budget mensuel du propriétaire. */
+    /** What ONE passage can spend, as a % of the owner's monthly budget. */
     max_spend_percent: routine.max_spend_percent,
     frequency: routine.frequency,
     hour: routine.hour,
@@ -610,10 +609,10 @@ async function listGlobalFilterOptions(
 }
 
 /**
- * Recherche web (hors minddy) — un sous-appel OpenRouter facturé, d'où le
- * plafond par tour : au-delà, on refuse et on invite le modèle à répondre avec ce
- * qu'il a plutôt que de rechercher en boucle. La ligne de ledger `web_search`
- * est écrite par runWebSearchTool, sur le run du tour.
+ * Web search (excluding minddy) — a billed OpenRouter subcall, hence the
+ * ceiling per turn: beyond that, we refuse and invite the model to respond with this
+ * that it has rather than searching in a loop. The ledger line `web_search`
+ * is written by runWebSearchTool, on the tour run.
  */
 async function executeWebSearch(
   args: Record<string, unknown>,
@@ -696,7 +695,7 @@ export async function executeTool(
         : toolError(r.error);
     }
 
-    // ── Corbeille (MIN-133 — personnelle et inter-projets) ──────────────
+    // ── Trash (MIN-133 — personal and inter-project) ──────────────
     if (
       toolName === "list_trash" ||
       toolName === "move_to_trash" ||
@@ -812,15 +811,15 @@ export async function executeTool(
         };
       }
       case "list_objectives": {
-        // Les RESSOURCES viennent avec, et c'est ce que la description du tool
-        // promet depuis toujours — elle le promettait sans que rien ne les
-        // envoie (MIN-275). Un objectif qui porte la page de sa spec le disait
-        // donc dans l'app et nulle part pour Numo, qui repartait recoller un
-        // lien markdown dans une description.
+        // RESOURCES come with it, and that's what the tool description says
+        // has always promised — she promised it without anything happening
+        // send (MIN-275). A lens that carries the page of its spec said so
+        // so in the app and nowhere for Numo, who went back to glue a
+        // markdown link in a description.
         //
-        // Lu au client de SESSION, donc sous `pages_select` : une page
-        // corbeillée redescend `page: null`, et la pilule reste inerte sans
-        // qu'on ait à s'occuper de la corbeille (lib/server/resource-select.ts).
+        // Read to the SESSION client, therefore under `pages_select`: a page
+        // basket goes back down `page: null`, and the pill remains inert without
+        // that we have to take care of the trash (lib/server/resource-select.ts).
         const [{ data, error }, { data: attachmentRows }] = await Promise.all([
           ctx.supabase
             .from("objectives")
@@ -835,9 +834,9 @@ export async function executeTool(
             )
             .eq("project_id", projectId)
             .not("objective_id", "is", null)
-            // Une ressource d'objectif se reconnaît à son `comment_id` nul : le
-            // fil de discussion en porte aussi, et elles n'appartiennent pas à
-            // l'objectif mais au message.
+            // An objective resource can be recognized by its null `comment_id`: the
+            // thread has some too, and they don't belong to
+            // the objective, but to the message.
             .is("comment_id", null)
             .order("created_at", { ascending: true }),
         ]);
@@ -873,8 +872,8 @@ export async function executeTool(
       case "list_integrations": {
         const { data, error } = await ctx.supabase
           .from("integrations")
-          // Une seule chaîne littérale : `select` type ses colonnes en LISANT
-          // ce texte, et une concaténation lui rend le résultat opaque.
+          // A single literal string: `select` types its columns as READ
+          // this text, and a concatenation makes the result opaque.
           .select(
             "id, name, kind, revoked_at, webhook_url, webhook_events, webhook_scope, webhook_last_status, webhook_last_at"
           )
@@ -888,8 +887,8 @@ export async function executeTool(
               name: row.name,
               kind: row.kind,
               revoked_at: row.revoked_at,
-              // Sans URL il n'y a pas de webhook : `null` plutôt qu'un objet à
-              // moitié rempli, qui ferait croire à un webhook éteint mais réglé.
+              // Without URL there is no webhook: `null` rather than an object to
+              // half filled, which would make it look like a webhook is turned off but set.
               webhook: row.webhook_url
                 ? {
                     url: row.webhook_url,
@@ -935,14 +934,14 @@ export async function executeTool(
         };
       }
 
-      // L'amorce d'un projet, par la conversation (MIN-173). Aucune fabrique de
-      // plus : c'est la passe du brief collé (MIN-172), appelée avec ce que
-      // Numo a établi avec l'utilisateur au lieu d'un texte collé. Elle N'ÉCRIT
-      // RIEN — ce qui s'écrit est ce que l'aperçu du fil aura fait valider, par
-      // `/api/projects/[id]/brief/apply`, exactement comme depuis le board.
+      // The start of a project, through conversation (MIN-173). No factory
+      // more: this is the pass of the glued brief (MIN-172), called with what
+      // Numo set with user instead of pasted text. She DOES NOT WRITE
+      // NOTHING — what is written is what the preview of the thread will have validated, by
+      // `/api/projects/[id]/brief/apply`, exactly like from the board.
       case "propose_backlog": {
-        // Réservée au propriétaire, comme la modale : c'est lui qui paye
-        // l'appel, et c'est un lot de tickets d'un coup dans SON projet.
+        // Reserved for the owner, like the modal: it is he who pays
+        // the call, and it's a batch of tickets all at once in HIS project.
         if (!access.isOwner) {
           return toolError(
             "Only the project owner can seed the backlog of this project."
@@ -970,8 +969,8 @@ export async function executeTool(
           issues: proposal.issues.length,
         };
         return {
-          // `proposal` ne sert qu'à l'écran : c'est lui que la carte du fil
-          // affiche, décoche et envoie à l'écriture.
+          // `proposal` is only used on the screen: it is the thread card
+          // show, uncheck and send to write.
           result: { status: "awaiting_user_review", project_id: projectId, ...counts, proposal },
           modelResult: {
             status: "awaiting_user_review",
@@ -1025,10 +1024,10 @@ export async function executeTool(
         };
       }
 
-      // ── Pages : le wiki du projet (MIN-273) ─────────────────────────
+      // ── Pages: the project wiki (MIN-273) ─────────────────────────
       //
-      // Le même noyau que le MCP et l'agent de code (lib/server/page-tools.ts) :
-      // ce bloc ne fait que traduire les arguments de Numo et rendre ses refus.
+      // The same kernel as the MCP and the code agent (lib/server/page-tools.ts):
+      // this block only translates Numo's arguments and renders his refusals.
       case "create_page":
         return executeCreatePage(args, ctx, projectId);
       case "list_pages":
@@ -1128,8 +1127,8 @@ export async function executeTool(
         });
         if (!edit.ok) return toolError(edit.message);
 
-        // Un plan patché repart par writePlan : même écriture, mêmes tâches
-        // rendues, donc les index restent utilisables juste après.
+        // A patched plan starts again with writePlan: same writing, same tasks
+        // rendered, so the indexes remain usable immediately afterwards.
         if (field === "plan") {
           if (edit.content.length > MAX_PLAN_LENGTH) {
             return toolError(`The plan is capped at ${MAX_PLAN_LENGTH} characters.`);
@@ -1176,10 +1175,10 @@ export async function executeTool(
         return { result: { category_ids: result.categoryIds }, success: true };
       }
 
-      // Relations entre tickets (MIN-25) — même cœur que les routes HTTP et le
-      // tool MCP. Les DEUX bouts sont vérifiés dans le projet de la
-      // conversation : le cœur contrôle l'accès au projet, pas le fait que la
-      // cible en soit (une relation inter-projets n'existe pas).
+      // Relationships between tickets (MIN-25) — same core as HTTP routes and
+      // tool MCP. BOTH ends are checked in the draft
+      // conversation: the heart controls access to the project, not the fact that the
+      // target in itself (an inter-project relationship does not exist).
       case "link_issues": {
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
         const targetId =
@@ -1200,8 +1199,8 @@ export async function executeTool(
 
         if (args.remove === true) {
           const existing = await findIssueRelation(projectId, issueId, relation, targetId);
-          // Idempotent, comme le tool MCP : retirer ce qui n'est pas là n'est
-          // pas une erreur, c'est déjà l'état demandé.
+          // Idempotent, like the MCP tool: removing what is not there is not
+          // not an error, this is already the requested state.
           if (!existing) {
             return { result: { removed: false, relation }, success: true };
           }
@@ -1242,10 +1241,10 @@ export async function executeTool(
       }
 
       /**
-       * Numo n'a pas de fichier à envoyer : sa moitié de la ressource, c'est le
-       * LIEN. La cible est un ticket OU un objectif, jamais les deux — un
-       * `insertAttachments` avec deux parents violerait attachments_parent_ck.
-       */
+ * Numo has no file to send: its half of the resource is the
+ * LINK. The target is a ticket OR a goal, never both — a
+ * `insertAttachments` with two parents would violate attachments_parent_ck.
+ */
       case "add_resource": {
         const url = typeof args.url === "string" ? args.url.trim() : "";
         const pageId = typeof args.page_id === "string" ? args.page_id.trim() : "";
@@ -1284,8 +1283,8 @@ export async function executeTool(
 
         let resource;
         if (pageId) {
-          // Le titre est relu ici, pas demandé au modèle : c'est la seule source
-          // qui ne puisse pas se tromper de page.
+          // The title is reread here, not requested from the model: this is the only source
+          // that cannot select the wrong page.
           const { data: page } = await ctx.supabase
             .from("pages")
             .select("id, title")
@@ -1355,12 +1354,12 @@ export async function executeTool(
         const prompt =
           typeof args.prompt === "string" && args.prompt.trim() ? args.prompt.trim() : undefined;
 
-        // Trois modes NATIFS (cadrer / implémenter / vérifier l'implémentation) :
-        // le message envoyé est exactement celui des boutons de l'app, construit
-        // depuis les mêmes textes i18n — l'assistant n'a pas à réécrire la
-        // consigne, et son `prompt` éventuel vient la préciser à la fin. Le
-        // quatrième choix (`custom`, ou tout mode inconnu) retombe sur le
-        // comportement d'origine : le prompt de l'assistant EST la demande.
+        // Three NATIVE modes (frame / implement / check implementation):
+        // the message sent is exactly that of the app buttons, constructed
+        // from the same i18n texts — the assistant does not have to rewrite the
+        // instruction, and its possible `prompt` specifies it at the end. THE
+        // fourth choice (`custom`, or any unknown mode) falls on the
+        // original behavior: the helper prompt IS the request.
         const mode = isAgentLaunchMode(args.mode) ? args.mode : null;
         if (mode && !issueId) {
           return toolError("issue_id is required for plan, implement and verify.");
@@ -1383,8 +1382,8 @@ export async function executeTool(
           });
         }
 
-        // Sans conversation_id explicite, chaque appel ouvre une conversation et
-        // une branche propres. Le ticket éventuel n'est que son contexte.
+        // Without explicit conversation_id, each call opens a conversation and
+        // a clean branch. The possible ticket is only its context.
         const result = await launchAgentRun({
           ...(issueId ? { issueId } : { projectId }),
           userId: ctx.userId,
@@ -1392,11 +1391,11 @@ export async function executeTool(
           prompt: message,
           model,
           forced: !!model,
-          // Omis = le défaut du compte s'applique (resolveReasoningLevel).
+          // Omitted = account default applies (resolveReasoningLevel).
           ...(isReasoningLevel(args.reasoning_level)
             ? { reasoningLevel: args.reasoning_level }
             : {}),
-          // Cadrer ne fait pas démarrer le ticket ; implémenter et vérifier, si.
+          // Framing does not start the ticket; implement and check, yes.
           ...(mode ? { intent: intentForLaunchMode(mode) } : {}),
         });
         if (!result.ok) return toolError(launchErrorMessage(result));
@@ -1431,8 +1430,8 @@ export async function executeTool(
           minute: typeof args.minute === "number" ? args.minute : 0,
           weekdays: numberList(args.weekdays),
           daysOfMonth: numberList(args.days_of_month),
-          // Le fuseau du navigateur est dans le contexte de Numo : s'il ne
-          // l'a pas passé, on refuse plutôt que de partir en UTC.
+          // The browser's time zone is in the context of Numo: if it does not
+          // has not passed it, we refuse rather than leaving in UTC.
           timezone: typeof args.timezone === "string" ? args.timezone : "",
         });
         if (!result.ok) return toolError(routineErrorMessage(result));
@@ -1480,20 +1479,20 @@ export async function executeTool(
         const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
         if (!scoped.ok) return toolError(scoped.error);
 
-        // La PR du ticket vient de `pull_requests`, source de vérité depuis
-        // MIN-143 : une PR humaine, ou rattachée par convention (identifiant
-        // dans la branche, « Fixes KEY-42 »), ou rattachée après coup par
-        // link_pull_request, n'a AUCUN run — la chercher dans `agent_runs`
-        // faisait échouer l'outil sur une PR que l'utilisateur avait sous les
-        // yeux. Le repli sur le run couvre les lignes d'avant la table.
+        // The PR of the ticket comes from `pull_requests`, source of truth since
+        // MIN-143: a human PR, or attached by convention (identifier
+        // in the branch, “Fixes KEY-42”), or attached afterwards by
+        // link_pull_request, has NO run — look for it in `agent_runs`
+        // caused the tool to fail on a PR that the user had under
+        // eyes. The fallback on the run covers the rows before the table.
         const linkedPr = await findPullRequestForIssue(issueId);
         let prNumber = linkedPr?.number ?? null;
         if (prNumber == null) {
-          // Repli aligné sur findPullRequestForIssue : la PR VIVANTE d'abord,
-          // sinon la plus récente. Un ticket d'avant la table peut porter
-          // plusieurs runs à PR (reprises successives) — prendre la plus
-          // ancienne ferait lire une PR fermée depuis des semaines pendant
-          // qu'une autre est ouverte.
+          // Fallback aligned with findPullRequestForIssue: LIVE PR first,
+          // otherwise the most recent. A pre-table ticket may carry
+          // several runs at PR (successive repeats) — take the most
+          // old would read a PR closed for weeks for
+          // that another is open.
           const { data: runs } = await ctx.supabase
             .from("agent_runs")
             .select("pr_number, pr_state")
@@ -1524,7 +1523,7 @@ export async function executeTool(
               number: prNumber,
             })
             .catch(() => []),
-          // Résolution des fils (MIN-139), best-effort comme ci-dessus.
+          // Thread resolution (MIN-139), best-effort as above.
           forge
             .listReviewThreads({
               token: target.token,
@@ -1534,10 +1533,10 @@ export async function executeTool(
             .catch(() => []),
         ]);
 
-        // Checks CI (MIN-138) : demander des changements sur une CI rouge n'a
-        // d'intérêt que si l'agent voit CE qui casse. `null` = illisible
-        // (permission de l'App non acceptée, dépôt sans CI) — jamais bloquant,
-        // comme les commentaires de review juste au-dessus.
+        // Checks CI (MIN-138): request changes to a red CI that has not
+        // of interest only if the agent sees WHAT breaks. `null` = unreadable
+        // (App permission not accepted, deposit without CI) — never blocking,
+        // like the review comments just above.
         const checks = pr.headSha
           ? await forge
               .listChecks({
@@ -1581,22 +1580,22 @@ export async function executeTool(
                   ? f.patch.slice(0, PATCH_CAP) + "\n… (diff truncated)"
                   : f.patch ?? null,
             })),
-            // La pagination de la forge a coupé la liste : le dire plutôt que de
-            // laisser conclure sur ce qui a été vu.
+            // The pagination of the forge cut the list: say it rather than
+            // let conclude on what has been seen.
             files_truncated: diff.truncated,
-            // Commentaires ancrés au code, regroupés en fils. `line: null` = le
-            // code visé a changé depuis : l'ancre ne vaut plus, seul le hunk dit
-            // de quoi on parlait.
+            // Comments anchored to the code, grouped into threads. `line: null` = the
+            // target code has changed since: the anchor is no longer worth, only the hunk says
+            // what the discussion was about.
             review_comments: groupReviewThreads(reviewComments, reviewThreads).map((thread) => ({
               path: thread.root.path,
               line: thread.root.line,
               original_line: thread.root.original_line,
               side: thread.root.side,
-              // Première ligne d'une remarque multi-lignes (`line` = la
-              // dernière) — sans elle, la plage visée se réduit à un point.
+              // First line of a multi-line remark (`line` = the
+              // last) — without it, the target range is reduced to one point.
               start_line: thread.root.start_line,
               outdated: thread.root.line == null,
-              // Fil marqué résolu = point réglé (`false` couvre aussi l'inconnu).
+              // Thread marked resolved = point set (`false` also covers the unknown).
               resolved: !!thread.resolution?.resolved,
               diff_hunk: thread.root.diff_hunk,
               comments: thread.comments.map((c) => ({
@@ -1611,10 +1610,10 @@ export async function executeTool(
       }
 
       /**
-       * Rattacher à la main une PR restée orpheline (MIN-163bis). La règle et
-       * ses refus vivent dans `linkPullRequestToIssue`, partagés avec l'app et
-       * le MCP ; ici, on ne fait que le garde d'accès et la traduction.
-       */
+ * Reattach to the hand an orphaned PR (MIN-163bis). The rule and
+ * its refusals live in `linkPullRequestToIssue`, shared with the app and
+ * the MCP; here, we only do gatekeeping and translation.
+ */
       case "link_pull_request": {
         const issueId = typeof args.issue_id === "string" ? args.issue_id : "";
         const scoped = await assertIssueInProject(ctx.supabase, issueId, projectId);
@@ -1805,9 +1804,9 @@ export async function executeTool(
       }
 
       case "list_feedback": {
-        // Filtre côté requête, pas sur la fenêtre de 500 renvoyée : celle-ci
-        // est ordonnée par votes, donc un statut qui n'en récolte pas (spam,
-        // declined) tombe hors plafond et la liste revenait vide à tort.
+        // Filter on the query side, not on the window of 500 returned: this one
+        // is ordered by votes, therefore a status which does not collect any (spam,
+        // declined) falls outside the ceiling and the list wrongly returns empty.
         const statuses = Array.isArray(args.status)
           ? args.status.filter(isFeedbackPostStatus)
           : undefined;
@@ -1875,8 +1874,8 @@ export async function executeTool(
                   }
                 : null,
               comments: (comments ?? []).map((c) => {
-                // Un commentaire public écrit par un VISITEUR du board : Numo
-                // travaille pour l'équipe, il le voit donc nommé, comme elle.
+                // A public comment written by a VISITOR of the board: Numo
+                // works for the team, so he sees it named, like her.
                 const visitor = c.feedback_users as unknown as {
                   name: string | null;
                   email: string | null;
@@ -1998,9 +1997,9 @@ export async function executeTool(
         }
         const scoped = await getProjectFeedbackPost(projectId, postId);
         if (!scoped) return toolError("Feedback post not found in this project.");
-        // La réponse d'équipe est un commentaire PUBLIC du fil du retour
-        // (MIN-196), plus un champ du retour. Signée « Équipe <projet> » sur le
-        // board — jamais du nom de qui l'a écrite, Numo compris.
+        // The team response is a PUBLIC comment from the feedback thread
+        // (MIN-196), plus a return field. Signed “Team <project>” on the
+        // board — never in the name of who wrote it, including Numo.
         const result = await addCommentToFeedbackPost({
           postId,
           actorId: ctx.userId,
@@ -2104,7 +2103,7 @@ export async function executeTool(
       // ── Integrations (owner-gated) ────────────────────────────────────
       case "create_integration": {
         if (!access.isOwner) return settingsError("ownerOnly");
-        // 'issues' | 'feedback' — validé côté core, défaut 'issues'.
+        // 'issues' | 'feedback' — validated on the core side, default 'issues'.
         const kind = isIntegrationKind(args.kind) ? args.kind : "issues";
         const result = await createIntegration({
           projectId,
@@ -2152,9 +2151,9 @@ export async function executeTool(
               webhook_events: result.integration.webhook_events,
               webhook_scope: result.integration.webhook_scope,
             },
-            // Le récepteur reste à écrire, et rien de son contrat ne se devine
-            // (la clé du HMAC n'est pas la clé d'API). Éteindre le webhook, en
-            // revanche, ne demande plus rien : pas de contrat à relayer.
+            // The receiver remains to be written, and nothing about his contract can be guessed
+            // (the HMAC key is not the API key). Turn off the webhook,
+            // on the other hand, don't ask for anything anymore: no contract to relay.
             ...(result.integration.webhook_url
               ? { contract: integrationWebhookDoc() }
               : {}),
@@ -2226,17 +2225,17 @@ function parseIssueIds(args: Record<string, unknown>): string[] | null {
   return ids.length === raw.length ? ids : null;
 }
 
-// ── Corbeille (MIN-133) ────────────────────────────────────────────────
-// Les trois outils délèguent à lib/server/trash.ts, qui porte SES contrôles
-// d'accès (client service, RLS contournée) : un membre du projet supprime et
-// restaure son contenu, un projet ne répond qu'à son propriétaire. Rien à
-// vérifier ici, donc — comme les routes de /api/me/trash.
+// ── Trash (MIN-133) ────────────────────────────────────────────────────
+// All three tools delegate to lib/server/trash.ts, which carries ITS checks
+// access (client service, RLS bypassed): a project member deletes and
+// restores its content, a project only responds to its owner. Nothing to
+// check here, so — like the routes to /api/me/trash.
 //
-// La purge définitive n'est délibérément PAS exposée : elle ne se rattrape pas,
-// et le balayage nocturne la fait de toute façon au bout des 30 jours. Ce que
-// Numo peut faire reste réversible.
+// The definitive purge is deliberately NOT exposed: it does not catch up,
+// and night scanning does it anyway after 30 days. That
+// Numo can make remains reversible.
 
-/** Message lisible pour Numo — les cœurs rendent des clés i18n, pas des phrases. */
+/** Readable message for Numo — cores render i18n keys, not sentences. */
 const TRASH_ERROR_MESSAGES: Record<string, string> = {
   issueNotFound: "Issue not found, or not in a project you can access.",
   objectiveNotFound: "Objective not found, or not in a project you can access.",
@@ -2285,10 +2284,10 @@ async function executeTrashTool(
     );
   }
 
-  // `kind: "agent"` (MIN-278) : le geste tourne sous l'id du compte qui l'a
-  // permis, mais c'est Numo qui l'a fait. Sans ce mot, l'activité d'une page
-  // corbeillée par l'agent nommerait l'humain — la fausse attribution que la
-  // règle d'identité interdit, et que l'écriture de page évite déjà.
+  // `kind: "agent"` (MIN-278): the gesture runs under the id of the account that has it
+  // allowed, but it was Numo who did it. Without this word, the activity of a page
+  // basketed by the agent would name the human — the false attribution that the
+  // identity rule prohibited, and which page writing already avoids.
   const result =
     toolName === "move_to_trash"
       ? await softDeleteItem(type, id, ctx.userId, "agent")
@@ -2420,8 +2419,8 @@ const scratchpadTaskList = (content: string) =>
     index: t.index,
     text: t.text,
     state: t.state,
-    // La liste est à plat : `depth` est la SEULE chose qui dise qu'une tâche
-    // appartient à celle d'avant (0 = premier niveau, sans limite de niveaux).
+    // The list is flat: `depth` is the ONLY thing that says a task
+    // belongs to the one before (0 = first level, without level limit).
     depth: t.depth,
   }));
 
@@ -2441,13 +2440,13 @@ const STALE_REV = (expected: number, actual: number, indices: boolean) =>
   `The notebook changed since rev ${expected} (it is now at rev ${actual}) — the user edited it meanwhile. Call get_scratchpad again${indices ? " for fresh task indices" : ", reapply your change onto the fresh content"}, then retry.`;
 
 /**
- * Les gestes de PAGE côté Numo (MIN-273 ; chercher depuis MIN-276).
+ * PAGE gestures on the Numo side (MIN-273; search from MIN-276).
  *
- * Rien de la logique n'est ici : le noyau (`lib/server/page-tools.ts`) est celui
- * du MCP et de l'agent de code, projection markdown comprise. Ce que fait cette
- * fonction, et qui n'est pas rien : elle nomme les tools DE CETTE SURFACE dans
- * les refus (`get_page`, pas `minddy_get_page`), sans quoi un modèle qui suit le
- * conseil d'un message d'erreur brûle un tour sur un « Unknown tool ».
+ * None of the logic is here: the kernel (`lib/server/page-tools.ts`) is that
+ * of the MCP and the code agent, markdown projection included. What this
+ * function does, and which is not nothing: it names the tools OF THIS SURFACE in
+ * refusals (`get_page`, not `minddy_get_page`), otherwise a model which follows the
+ * advice of an error message burns a turn on an "Unknown tool .
  */
 async function executePageTool(
   toolName: string,
@@ -2532,7 +2531,7 @@ async function executePageTool(
   }
 }
 
-/** La création n'a pas de `page_id` : elle sort du dispatch ci-dessus. */
+/** The creation has no `page_id`: it leaves the dispatch above. */
 async function executeCreatePage(
   args: Record<string, unknown>,
   ctx: ToolContext,

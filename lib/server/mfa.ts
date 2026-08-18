@@ -13,25 +13,25 @@ import {
 } from "@/lib/mfa";
 
 /**
- * Second facteur — le côté serveur (MIN-132).
+ * Second factor — the server side (MIN-132).
  *
- * Deux états à tenir cohérents : les facteurs chez GoTrue (`auth.mfa_factors`,
- * atteignables uniquement par l'API admin) et le drapeau `app_metadata.mfa_enabled`
- * que le JWT transporte. Le drapeau est un CACHE du premier, et l'ordre des
- * écritures suit toujours la même règle : à l'activation on pose le drapeau APRÈS
- * avoir constaté un facteur vérifié ; à la désactivation on le retire AVANT de
- * supprimer les facteurs. Une interruption au milieu laisse donc, dans les deux
- * cas, un compte ACCESSIBLE plutôt qu'un compte muré.
+ * Two states to keep consistent: the factors at GoTrue (`auth.mfa_factors`,
+ * only reachable by the admin API) and the flag `app_metadata.mfa_enabled`
+ * that the JWT carries. The flag is a CACHE of the first, and the order of
+ * entries always follows the same rule: upon activation we set the flag AFTER
+ * having observed a verified factor; when deactivated, it is removed BEFORE
+ * delete the factors. An interruption in the middle therefore leaves, in both
+ * cases, an ACCESSIBLE account rather than a walled account.
  *
- * Aucune de ces fonctions ne fait confiance à ce que le client raconte : l'état
- * réel se lit chez GoTrue, jamais dans le corps de la requête.
+ * None of these functions trusts what the client says: the actual status
+ * is read in GoTrue, never in the body of the query.
  */
 
 export interface MfaStatus {
   enabled: boolean;
-  /** Facteurs TOTP vérifiés — 1 en pratique, l'API n'en interdit pas plusieurs. */
+  /** TOTP factors checked — 1 in practice, the API does not prohibit several. */
   verifiedFactors: number;
-  /** Codes de récupération encore consommables. */
+  /** Recovery codes still consumable. */
   unusedRecoveryCodes: number;
 }
 
@@ -54,15 +54,15 @@ async function countUnusedRecoveryCodes(userId: string): Promise<number> {
 }
 
 /**
- * Pose le drapeau lu par `getClaims()`, en préservant le reste d'`app_metadata`.
+ * Sets the flag read by `getClaims()`, preserving the rest of `app_metadata`.
  *
- * Écrit `false` pour désactiver, JAMAIS un `delete` : GoTrue FUSIONNE
- * `app_metadata` au lieu de le remplacer, donc une clé absente du corps est une
- * clé qu'on laisse telle quelle. Retirer la clé côté TS ne retirait donc rien du
- * tout — le compte restait marqué « 2FA active » alors qu'il n'avait plus aucun
- * facteur pour la satisfaire, c'est-à-dire enfermé dehors définitivement. C'est
- * exactement le scénario que les codes de récupération existent pour éviter, et
- * il se produisait au moment de s'en servir.
+ * Writes `false` to disable, NEVER a `delete`: GoTrue MERGE
+ * `app_metadata` instead of replacing it, so a key missing from the body is a
+ * key that is left as is. Removing the key from the TS side therefore removed nothing from the
+ * everything - the account remained marked "2FA active" even though it no longer had any
+ * factor to satisfy it, that is to say locked out permanently. This is
+ * exactly the scenario that recovery codes exist to prevent, and
+ * was happening when you used them.
  */
 async function setEnabledFlag(userId: string, enabled: boolean): Promise<void> {
   const service = getServiceClient();
@@ -93,10 +93,10 @@ export async function getMfaStatus(userId: string): Promise<MfaStatus> {
 }
 
 /**
- * Active la 2FA du compte. Le client a déjà fait l'enrôlement et le premier
- * challenge (c'est ce qui lui donne sa session `aal2`) ; ici on CONSTATE le
- * facteur vérifié chez GoTrue, puis on pose le drapeau. Renvoie `false` si aucun
- * facteur vérifié n'existe — auquel cas il n'y a rien à activer.
+ * Enables account 2FA. The client has already done the enrollment and the first
+ * challenge (this is what gives him his `aal2` session); here we OBSERVE the
+ * factor verified at GoTrue, then we place the flag. Returns `false` if no
+ * checked factor exists — in which case there is nothing to enable.
  */
 export async function enableMfa(userId: string): Promise<boolean> {
   const factors = await listFactors(userId);
@@ -106,11 +106,11 @@ export async function enableMfa(userId: string): Promise<boolean> {
 }
 
 /**
- * Désactive tout : drapeau, facteurs, codes de récupération. C'est aussi la
- * sortie empruntée par un code de récupération — d'où le retrait du drapeau EN
- * PREMIER : si la suppression des facteurs échoue à mi-chemin, le compte reste
- * utilisable et la personne peut recommencer, alors que l'ordre inverse la
- * laisserait devant un challenge qu'elle ne peut plus passer.
+ * Disables everything: flag, factors, recovery codes. This is also the
+ * exit taken by a recovery code — hence the removal of the EN
+ * flag FIRST: if removing the factors fails halfway, the account remains
+ * usable and the person can start again, whereas the reverse order
+ * would leave a challenge they can no longer handle pass.
  */
 export async function disableMfa(userId: string): Promise<void> {
   await setEnabledFlag(userId, false);
@@ -132,7 +132,7 @@ export async function disableMfa(userId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-/** Un code au format `XXXX-XXXX-XXXX`, tiré avec `randomInt` (CSPRNG). */
+/** A code in the format `XXXX-XXXX-XXXX`, drawn with `randomInt` (CSPRNG). */
 function generateRecoveryCode(): string {
   let out = "";
   for (let i = 0; i < RECOVERY_CODE_LENGTH; i++) {
@@ -142,21 +142,20 @@ function generateRecoveryCode(): string {
 }
 
 /**
- * Hachage d'un code de récupération : scrypt, SALÉ PAR CODE (MIN-347).
+ * Hash of a recovery code: scrypt, SALTED BY CODE (MIN-347).
  *
- * C'était un sha256 nu, sur l'argument — écrit dans la migration — qu'un code
- * porte assez d'entropie pour qu'il n'y ait « rien à deviner par force brute
- * hors ligne ». L'argument tenait pour un mot de passe ; il ne tient pas ici :
- * les codes viennent d'un alphabet connu, d'une longueur connue, et une base
- * qui fuit se balaie hors ligne à quelques milliards d'empreintes par seconde.
- * Sans sel, les dix codes du compte se cassent d'ailleurs dans le MÊME balayage.
- * Et ce sont les codes qui CONTOURNENT le second facteur : ils valent le
- * facteur lui-même.
+ * This was a bare sha256, on the argument — written in the migration — that a code
+ * carries enough entropy that there is "nothing to guess by force brute
+ * offline”. The argument was a password; it doesn't fit here:
+ * the codes come from a known alphabet, of a known length, and a leaky base
+ * scans offline at a few billion fingerprints per second.
+ * Without salt, the ten account codes break in the SAME scan.
+ * And these are the codes which BYPASS the second factor: they are worth the
+ * factor itself.
  *
- * Format stocké : `scrypt$<N>$<selHex>$<empreinteHex>`. Le `N` est dans la
- * ligne pour que durcir le paramètre demain ne rende pas illisibles les codes
- * frappés aujourd'hui — la vérification lit celui de la ligne, jamais une
- * constante d'ici.
+ * Stored format: `scrypt$<N>$<selHex>$<empreinteHex>`. The `N` is in the
+ * line so that hardening the setting tomorrow doesn't make the
+ * codes hit today unreadable — the check reads the one in the line, never a constant from here.
  */
 const SCRYPT_N = 1 << 14;
 const SCRYPT_KEYLEN = 32;
@@ -168,17 +167,17 @@ function hashRecoveryCode(code: string): string {
 }
 
 /**
- * Le code correspond-il à cette ligne ? Faux sur tout ce qui n'est pas au
- * format ci-dessus — un reliquat de l'ancien sha256 nu ne peut donc plus être
- * consommé, il est mort à la lecture (il n'en existe aucun en base, la migration
- * qui accompagne ce changement les efface).
+ * Does the code match this line? False on everything that is not in the
+ * format above — a remainder of the old bare sha256 can therefore no longer be
+ * consumed, it is dead on reading (there are none in the base, the migration
+ * which accompanies this change erases them).
  */
 function recoveryCodeMatches(code: string, stored: string): boolean {
   const parts = stored.split("$");
   if (parts.length !== 4 || parts[0] !== "scrypt") return false;
   const cost = Number(parts[1]);
-  // `N` doit être une puissance de deux ≥ 2 ; borné pour qu'une ligne trafiquée
-  // ne se transforme pas en déni de service (scrypt à N=2³⁰ ne rend pas la main).
+  // `N` must be a power of two ≥ 2; limited so that a tampered line
+  // does not turn into a denial of service (scrypt at N=2³⁰ does not give up).
   if (!Number.isInteger(cost) || cost < 2 || cost > 1 << 20 || (cost & (cost - 1)) !== 0) {
     return false;
   }
@@ -198,9 +197,9 @@ function recoveryCodeMatches(code: string, stored: string): boolean {
 }
 
 /**
- * Frappe une série neuve et EFFACE la précédente — utilisés ou non. Les codes en
- * clair ne repassent jamais par ici : c'est la seule et unique fois qu'ils
- * existent hors de la tête de la personne.
+ * Strikes a new series and CLEARS the previous one — used or not. The clear codes in
+ * never come back this way: this is the one and only time that they
+ * exist outside the person's head.
  */
 export async function issueRecoveryCodes(userId: string): Promise<string[]> {
   const codes = new Set<string>();
@@ -222,17 +221,17 @@ export async function issueRecoveryCodes(userId: string): Promise<string[]> {
 }
 
 /**
- * Consomme un code.
+ * Consumes a code.
  *
- * Le sel par code coûte la requête d'index : on ne peut plus demander « la ligne
- * dont l'empreinte vaut ceci », il faut dériver contre chaque ligne encore
- * consommable. Dix lignes au plus, dix scrypt au pire — de l'ordre d'une demi-
- * seconde sur un geste qu'on fait une fois. C'est le prix du sel, et il est payé
- * ici plutôt que par la personne dont la base a fuité.
+ * Salt per code costs the index query: we can no longer ask for "the line
+ * whose fingerprint is worth this", we must derive against each line still
+ * consumable. Ten lines at most, ten scrypt at worst — on the order of half a
+ * second on a gesture you make once. This is the price of salt, and it is paid
+ * here rather than by the person whose base was leaked.
  *
- * La marque `used_at` reste posée par un `update … is null` : c'est lui qui fait
- * la course, deux envois simultanés du même code ne peuvent pas réussir tous les
- * deux, et c'est Postgres qui tranche — pas l'ordre d'arrivée dans le handler.
+ * The mark `used_at` remains placed by a `update … is null`: it is he who does
+ * the race, two simultaneous sendings of the same code cannot succeed every
+ * two, and Postgres decides — not the order of arrival in the handler.
  */
 export async function consumeRecoveryCode(
   userId: string,

@@ -6,9 +6,9 @@ import { undoMerge } from "@/lib/server/feedback/merge";
 
 type RouteContext = { params: Promise<{ id: string; eventId: string }> };
 
-/** POST — défait une fusion de posts. LIFO : si la cible a été fusionnée
-    depuis, il faut défaire la fusion la plus récente d'abord. La paire défaite
-    est mémorisée : l'IA ne la re-proposera jamais. */
+/** POST — undoes a post merge. LIFO: if the target has been merged
+ since then, you must undo the most recent merge first. The defeated pair
+ is memorized: the AI ​​will never propose it again. */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id, eventId } = await params;
   const guard = await requireProjectMember(request, id);

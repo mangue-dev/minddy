@@ -11,17 +11,17 @@ import type {
 } from "@/components/pages/blocks/types";
 
 /**
- * Le dépliant — un bloc, TROIS nœuds (`details` > `detailsSummary` +
- * `detailsContent`). C'est le cas qui justifie que la sérialisation puisse vivre
- * dans le fichier du bloc plutôt que sur le descripteur : le registre ne sait
- * greffer un `toMarkdown` que sur le nœud nommé, et il en faut trois ici. Le
- * descripteur ne déclare donc que son `sample`, et c'est lui qui tient le
- * contrat — il traverse un vrai éditeur dans lib/pages-blocks.test.ts.
+ * The leaflet — one block, THREE nodes (`details` > `detailsSummary` +
+ * `detailsContent`). This is the case which justifies that serialization can live
+ * in the block file rather than on the descriptor: the register only knows how to
+ * graft a `toMarkdown` on the named node, and three are needed here. The
+ * descriptor therefore only declares its `sample`, and it is he who holds the
+ * contract — it passes through a real editor in lib/pages-blocks.test.ts.
  *
- * **Markdown n'a pas de dépliant.** Aucune syntaxe, ni CommonMark ni GFM. Le
- * seul repliable que GitHub, Notion et Obsidian rendent tous les trois est le
- * `<details>` HTML — c'est donc lui la projection, et c'est ce que Numo lira.
- * (D'où `html: true` sur l'extension Markdown de l'éditeur de page.)
+ * **Markdown has no leaflet.** No syntax, nor CommonMark nor GFM. The
+ * only collapsible that GitHub, Notion and Obsidian all three render is the
+ * `<details>` HTML — so that's the projection, and that's what Numo will read.
+ * (Hence `html: true` on the editor's Markdown extension page.)
  */
 
 const detailsMarkdown = {
@@ -35,21 +35,19 @@ const detailsMarkdown = {
 };
 
 /**
- * Le résumé s'écrit DANS une balise — et ce qu'on y pose est déjà ÉCHAPPÉ, sans
- * qu'une ligne de ce fichier s'en charge (vérifié en MIN-350, et écrit ici parce
- * que la lecture du code dit exactement le contraire).
+ * The summary is written IN a tag — and what we put there is already ESCAPED, without a line in this file taking care of it (checked in MIN-350, and written here because reading the code says exactly the opposite).
  *
- * C'est tiptap-markdown qui le fait, sur TOUT nœud texte du document et pas
- * seulement ici : son sérialiseur de texte passe par `escapeHTML`
- * (`tiptap-markdown/src/extensions/nodes/text.js`), qui remplace `<` et `>` par
- * leurs entités. Un résumé « A <b> x » sort donc en `A &lt;b&gt; x`, et la
- * lecture le redécode en texte — la balise ne se referme pas, l'aller-retour
- * revient identique, et `lib/pages-markdown.test.ts` le tient.
+ * It's tiptap-markdown that does it, on ANY text node in the document and not
+ * only here: its text serializer goes through `escapeHTML`
+ * (`tiptap-markdown/src/extensions/nodes/text.js`), which replaces `<` and `>` by
+ * their entities. A summary “A <b> x” therefore comes out as `A &lt;b&gt; x`, and the
+ * reading re-decodes it into text — the tag does not close, the round trip
+ * returns identical, and `lib/pages-markdown.test.ts` holds it.
  *
- * La perte assumée qui reste, minuscule et de la même famille que les autres :
- * un résumé dont le texte est littéralement `&lt;` revient en `<`. Rien ne
- * distingue les deux dans la projection, ici pas plus qu'ailleurs — c'est le
- * prix de `html: true`, qui est le prix du dépliant.
+ * The remaining assumed loss, tiny and from the same family as the others:
+ * a summary whose text is literally `&lt;` returns to `<`. Nothing
+ * distinguishes the two in the projection, here any more than elsewhere — it's the
+ * price of `html: true`, which is the price of the leaflet.
  */
 const summaryMarkdown = {
   serialize(state: MarkdownState, node: MarkdownNode) {
@@ -62,8 +60,8 @@ const summaryMarkdown = {
 };
 
 const contentMarkdown = {
-  // Le corps s'écrit nu : ce qui est replié reste du markdown ordinaire, donc
-  // lisible et modifiable par Numo sans connaître le dépliant.
+  // The body is written naked: what is folded remains ordinary markdown, so
+  // readable and modifiable by Numo without knowing the leaflet.
   serialize(state: MarkdownState, node: MarkdownNode) {
     state.renderContent(node);
   },
@@ -71,13 +69,13 @@ const contentMarkdown = {
 };
 
 /**
- * Les deux libellés du bouton de repli, posés par l'éditeur au montage.
+ * The two labels of the fallback button, set by the editor during mounting.
  *
- * Le registre de blocs n'a pas de traducteur — il est monté headless par la
- * projection markdown et par les outils MCP, où aucun libellé n'a de sens. Les
- * valeurs par défaut ne sont donc là que pour ces surfaces-là ; dès qu'un
- * navigateur est en jeu, components/pages/page-editor.tsx appelle
- * `setDetailsLabels` avec les chaînes du catalogue.
+ * The block register has no translator — it is mounted headless by the
+ * markdown projection and by the MCP tools, where neither label makes sense. The
+ * default values ​​are therefore only there for these surfaces; as soon as a
+ * browser is in play, components/pages/page-editor.tsx calls
+ * `setDetailsLabels` with the catalog strings.
  */
 const labels = { expand: "Expand", collapse: "Collapse" };
 
@@ -89,7 +87,7 @@ export function setDetailsLabels(next: {
   labels.collapse = next.collapse;
 }
 
-/** Le chevron du bouton, en SVG inline — même tracé que `ChevronRight`. */
+/** The chevron of the button, in inline SVG — same layout as `ChevronRight`. */
 const CHEVRON =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
 
@@ -99,20 +97,20 @@ const PageDetails = Details.extend({
   },
 }).configure({
   /**
-   * `persist` : l'état plié / déplié entre dans le DOCUMENT.
-   *
-   * Sans lui, tiptap ne garde l'ouverture que dans la classe CSS du node view —
-   * toute la page rouvre donc repliée au rechargement, y compris les dépliants
-   * qu'on venait d'ouvrir. Un dépliant est un choix de rédaction (« ceci est
-   * secondaire »), pas un état d'affichage : il se range avec le texte.
-   */
+ * `persist`: the folded/unfolded state enters the DOCUMENT.
+ *
+ * Without it, tiptap only keeps the opening in the CSS class of the node view —
+ * the whole page therefore reopens folded on reload, including the leaflets
+ * that we had just opened. A leaflet is an editorial choice ("this is
+ * secondary"), not a display state: it fits with the text.
+ */
   persist: true,
   /**
-   * Le bouton que rend tiptap est VIDE — pas d'icône, pas de dimension, aucun
-   * style. Laissé tel quel, le dépliant n'a rien de cliquable à l'écran : on
-   * voit deux paragraphes empilés, dont l'un disparaît parfois. C'est ici qu'on
-   * lui donne son chevron, et dans app/globals.css qu'il prend sa place.
-   */
+ * The button that tiptap renders is EMPTY — no icon, no dimension, no
+ * style. Left as is, the leaflet has nothing clickable on the screen: on
+ * sees two stacked paragraphs, one of which sometimes disappears. This is where we
+ * gives it its chevron, and in app/globals.css it takes its place.
+ */
   renderToggleButton: ({ element, isOpen }: { element: HTMLElement; isOpen: boolean }) => {
     element.className = "page-details-toggle";
     element.setAttribute("aria-expanded", String(isOpen));

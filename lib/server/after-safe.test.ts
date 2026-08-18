@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-147 — `after()` hors requête.
+ * MIN-147 — `after()` out of request.
  *
- * Les travaux de fond de `updateIssueFields` (Smart Assign, cycles, synchro du
- * feedback, automatisations) étaient programmés par `after()`, qui EXIGE un
- * contexte de requête. Tant que ce cœur d'écriture n'était appelé que par des
- * routes, la question ne se posait pas.
+ * The background work of `updateIssueFields` (Smart Assign, cycles, sync of
+ * feedback, automations) was programmed by `after()`, which REQUIRES a
+ * query context. As long as this write core was only called by
+ * routes, the question did not arise.
  *
- * Le moteur d'automatisations l'appelle depuis une cascade — hors de toute
- * requête. `after()` y lève, et il levait AVANT le crochet suivant : il
- * emportait donc tout ce qui restait à programmer, plus l'écriture elle-même.
+ * The automation engine calls it from a cascade — outside of any
+ * request. `after()` raises it, and it raised BEFORE the following hook: it
+ * therefore took away everything that remained to be programmed, plus the writing itself.
  */
 
 const H = vi.hoisted(() => ({
@@ -38,7 +38,7 @@ describe("afterOrNow", () => {
     const work = vi.fn();
     afterOrNow(work);
     expect(H.registered).toHaveLength(1);
-    expect(work).not.toHaveBeenCalled(); // rien sur le chemin critique
+    expect(work).not.toHaveBeenCalled(); // nothing on the critical path
     H.registered[0]();
     expect(work).toHaveBeenCalledTimes(1);
   });
@@ -47,7 +47,7 @@ describe("afterOrNow", () => {
     H.throws = true;
     const work = vi.fn();
     expect(() => afterOrNow(work)).not.toThrow();
-    // Sans requête, il n'y a pas de réponse à attendre.
+    // Without a request, there is no response to wait for.
     expect(work).toHaveBeenCalledTimes(1);
   });
 
@@ -62,9 +62,9 @@ describe("afterOrNow", () => {
   });
 
   it("le crochet ATTEND le travail — sinon la lambda gèle en vol", async () => {
-    // `after()` rend au `waitUntil` de la plateforme ce que rend son callback.
-    // Un callback qui rend la main avant la fin du travail laisse geler
-    // l'invocation, et une requête sortante en cours meurt : « fetch failed ».
+    // `after()` returns to the platform's `waitUntil` what its callback renders.
+    // A callback that gives up before the end of the work leaves it frozen
+    // the invocation, and a current outgoing request dies: “fetch failed”.
     let done = false;
     afterOrNow(async () => {
       await new Promise((r) => setTimeout(r, 5));

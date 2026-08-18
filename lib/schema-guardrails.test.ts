@@ -5,56 +5,56 @@ import { describe, expect, it } from "vitest";
 import { BASELINE_MIGRATION, canonicalSql } from "@/test/sql-migrations";
 
 /**
- * Le garde-fou du schéma : ce qui a été durci une fois doit le rester.
+ * The safeguard of the diagram: what has once been hardened must remain so.
  *
- * MIN-118 avait fermé quatre portes ; MIN-338 les a retrouvées ouvertes — pas
- * par malveillance, par ignorance. Chacune des migrations fautives (`pages` et
- * son DELETE, `ai_usage_run_spend` et son definer, les `*_select` des tables
- * d'agent sans clause TO) était juste, prise seule. La règle n'existait que
- * dans le commentaire d'un fichier que personne n'avait de raison d'ouvrir.
+ * MIN-118 had closed four doors; MIN-338 found them open — not
+ * out of malice, out of ignorance. Each of the faulty migrations (`pages` and
+ * its DELETE, `ai_usage_run_spend` and its definer, the `*_select` of the tables
+ * of agent without TO clause) was fair, taken alone. The rule only existed
+ * in the comment of a file that no one had any reason to open.
  *
- * Ce test la sort de là. Il ne relit PAS la base — il lit les migrations, là où
- * la faute s'écrit, et n'inspecte que les fichiers postérieurs au dernier balai
- * ({@link SWEEP}) : ce qui précède a été rattrapé par les BOUCLES de ce balai,
- * pas par le texte de son propre fichier, et le relire donnerait des fautes
- * déjà corrigées. L'état réel de la prod, lui, se contrôle avec
- * `node scripts/security-probe.mjs`, qui exerce les mêmes invariants contre
- * PostgREST avec la vraie clé anon et un vrai JWT.
+ * This test gets her out of there. It does NOT reread the base — it reads the migrations, where
+ * the fault is written, and only inspects files after the last sweep
+ * ({@link SWEEP}): the above was caught up by the LOOPS of this broom,
+ * not by the text of its own file, and rereading it would give mistakes
+ * already corrected. The real state of production is controlled with
+ * `node scripts/security-probe.mjs`, which exercises the same invariants against
+ * PostgREST with the real anon key and a real JWT.
  *
- * Quand ce test échoue, le correctif n'est presque jamais de modifier l'ancienne
- * migration (elle est déjà appliquée en prod) : c'est d'ajouter une migration
- * qui recopie les boucles de {@link SWEEP}, écrites pour être rejouées — et de
- * faire avancer {@link SWEEP} jusqu'à elle.
+ * When this test fails, the fix is ​​almost never to modify the old
+ * migration (it is already applied in prod): it is to add a migration
+ * which copies the loops of {@link SWEEP}, written to be replayed — and of
+ * advance {@link SWEEP} to her.
  */
 
 const ROOT = join(import.meta.dirname, "..");
 const MIGRATIONS = join(ROOT, "supabase", "migrations");
 
-/** La baseline intègre le dernier balai. Tout fichier APRÈS elle est soumis aux règles. */
+/** The baseline includes the last broom. Any file AFTER it is subject to the rules. */
 const SWEEP = BASELINE_MIGRATION.split("_")[0];
 
 /**
- * Les seules `security definer` que `authenticated` doit pouvoir exécuter :
- * celles qu'une expression de POLICY appelle. Même motif que dans
- * `20260926093000_definer_grants_sweep.sql` — une famille, pas une liste, parce
- * qu'une liste ne connaît pas les fonctions écrites après elle.
+ * The only `security definer` that `authenticated` must be able to execute:
+ * those that a POLICY expression calls. Same reason as in
+ * `20260926093000_definer_grants_sweep.sql` — a family, not a list, because
+ * that a list does not know the functions written after it.
  */
 const POLICY_HELPERS =
   /^(can_access_.*|is_project_member|is_project_owner|can_watch_.*|.*_quota_ok)$/;
 
-/** Les rôles qu'une policy a le droit de viser. `public` et `anon` : jamais. */
+/** The roles that a policy has the right to target. `public` and `anon`: never. */
 const ALLOWED_POLICY_ROLES = new Set(["authenticated", "service_role"]);
 
 type Migration = { version: string; file: string; sql: string; statements: string[] };
 
 /**
- * Découpe un fichier SQL en instructions, commentaires retirés.
+ * Breaks a SQL file into statements, comments removed.
  *
- * Le seul point délicat est le dollar-quoting : un corps `$$ … ; -- … $$`
- * contient des `;` et des `--` qui ne sont ni des fins d'instruction ni des
- * commentaires. On avance donc caractère par caractère plutôt qu'avec un
- * `split(";")`, et le corps est recopié tel quel — c'est lui qui porte les
- * boucles des balais, que les règles ci-dessous savent reconnaître.
+ * The only delicate point is the dollar-quoting: a body `$$ … ; -- … $$`
+ * contains `;` and `--` which are neither instruction purposes nor
+ * comments. We therefore advance character by character rather than with a
+ * `split(";")`, and the body is copied as is — it is he who wears the
+ * broom loops, which the rules below can recognize.
  */
 function statementsOf(sql: string): string[] {
   const out: string[] = [];
@@ -105,20 +105,20 @@ const migrations: Migration[] = readdirSync(MIGRATIONS)
   .sort()
   .map((file) => parse(file, readFileSync(join(MIGRATIONS, file), "utf8")));
 
-/** Les fichiers soumis aux règles : ceux écrits après le dernier balai. */
+/** Files subject to the rules: those written after the last sweep. */
 const after = migrations.filter((m) => m.version > SWEEP);
 
 /**
- * Les tables portant `project_id`, accumulées sur TOUTES les migrations — une
- * colonne peut arriver bien après la création de sa table.
+ * Tables bearing `project_id`, accumulated over ALL migrations — one
+ * column can arrive well after its table has been created.
  */
 function projectScopedTables(all: Migration[], upTo: string): Set<string> {
   const tables = new Set<string>();
   for (const m of all) {
     if (m.version > upTo) break;
-    // Le baseline est un dump pg_dump : ses CREATE TABLE contiennent des
-    // expressions riches que le petit découpeur d'instructions n'a pas à
-    // comprendre. La borne `);` reste en revanche stable.
+    // The baseline is a pg_dump: its CREATE TABLE contains
+    // rich expressions that the little instruction slicer doesn't have to
+    // to understand. The `);` terminal, however, remains stable.
     const creates =
       /create table (?:if not exists )?(?:public\.)?(\w+)\s*\(([\s\S]*?)\);/gi;
     for (const create of m.sql.matchAll(creates)) {
@@ -132,13 +132,13 @@ function projectScopedTables(all: Migration[], upTo: string): Set<string> {
   return tables;
 }
 
-// ── Les règles ───────────────────────────────────────────────────────────────
-// Chacune rend la liste des fautes, `file : ce qui ne va pas`. Elles sont
-// appliquées deux fois plus bas : aux vraies migrations, et à des fichiers
-// synthétiques qui portent la faute — sans quoi, tant qu'aucune migration ne
-// suit le balai, ce fichier passerait au vert sans rien avoir regardé.
+// ── The rules ─────────────────────────────── ────────────────────────────────
+// Each returns the list of faults, `file : what is wrong`. They are
+// applied twice lower: to real migrations, and to files
+// synthetics who bear the blame - otherwise, as long as no migration
+// follows the broom, this file would turn green without having looked at anything.
 
-/** Sans clause `TO`, une policy retombe sur le rôle `public` — donc `anon`. */
+/** Without a `TO` clause, a policy falls on the `public` role — therefore `anon`. */
 function policiesTargetARole(files: Migration[]): string[] {
   const offenders: string[] = [];
   for (const m of files) {
@@ -160,7 +160,7 @@ function policiesTargetARole(files: Migration[]): string[] {
   return offenders;
 }
 
-/** Une table sans RLS est lisible et écrivable par toute clé anon. */
+/** A table without RLS is readable and writable by any anon key. */
 function newTablesEnableRls(files: Migration[]): string[] {
   const offenders: string[] = [];
   for (const m of files) {
@@ -180,10 +180,10 @@ function newTablesEnableRls(files: Migration[]): string[] {
 }
 
 /**
- * Le bootstrap Supabase pose un `alter default privileges … grant all on
- * functions to anon, authenticated` : toute fonction créée dans `public` naît
- * exécutable par la clé anon publique. `revoke … from public` NE SUFFIT PAS —
- * c'est exactement la forme qui a laissé `get_ai_run_spend` ouverte.
+ * The Supabase bootstrap sets an `alter default privileges … grant all on
+ * functions to anon, authenticated`: every function created in `public` is born
+ * executable by the public anon key. `revoke … from public` IS NOT ENOUGH —
+ * this is exactly the form that left `get_ai_run_spend` open.
  */
 function definersAreClosed(files: Migration[]): string[] {
   const offenders: string[] = [];
@@ -198,16 +198,16 @@ function definersAreClosed(files: Migration[]): string[] {
       if (!/\bset search_path\b/i.test(header)) {
         offenders.push(`${m.file} : ${name} n'a pas de \`set search_path\``);
       }
-      // Une fonction trigger n'est pas appelable par PostgREST, et les aides de
-      // policy DOIVENT rester exécutables par `authenticated` (les révoquer
-      // fait LEVER la branche, ce qui fait tomber la policy entière).
+      // A trigger function cannot be called by PostgREST, and the helpers of
+      // policy MUST remain executable by `authenticated` (revoke them
+      // RAISES the branch, which causes the entire policy to fall).
       if (/returns trigger\b/i.test(header) || POLICY_HELPERS.test(name)) continue;
       const closed = m.statements.some(
         (s) =>
           (new RegExp(`^revoke .*\\bon function (?:public\\.)?${name}\\b`, "i").test(s) &&
             /\banon\b/i.test(s) &&
             /\bauthenticated\b/i.test(s)) ||
-          // Ou le balai lui-même, recopié : il les ferme toutes d'un coup.
+          // Or the broom itself, copied: it closes them all at once.
           (/^do /i.test(s) && /revoke all on function/i.test(s) && /prosecdef/i.test(s))
       );
       if (!closed) {
@@ -222,9 +222,9 @@ function definersAreClosed(files: Migration[]): string[] {
 }
 
 /**
- * Un `with check` ne voit que la ligne NOUVELLE : il ne peut pas épingler
- * `project_id`. Ouvrir l'UPDATE d'une table cloisonnée sans rejouer le trigger
- * de gel, c'est laisser un membre déplacer la ligne dans son propre projet.
+ * A `with check` only sees the NEW line: it cannot pin
+ * `project_id`. Open the UPDATE of a partitioned table without replaying the trigger
+ * to freeze is to let a member move the line in their own project.
  */
 function updatePoliciesFreezeProjectId(files: Migration[], all: Migration[]): string[] {
   const offenders: string[] = [];
@@ -244,21 +244,21 @@ function updatePoliciesFreezeProjectId(files: Migration[], all: Migration[]): st
   return offenders;
 }
 
-// ── Le dépôt ─────────────────────────────────────────────────────────────────
+// ── The deposit ──────────────────────────────── ─────────────────────────────────
 
-describe("garde-fou du schéma", () => {
-  it("aucune version de migration en double", () => {
-    // Le piège récurrent : la version est la clé primaire du registre distant.
-    // Deux fichiers qui la partagent, et le second reste « en attente » POUR
-    // TOUJOURS, sauté en silence par `db push` (arrivé deux fois).
+describe("schema guardrail", () => {
+  it("has no duplicate migration versions", () => {
+    // The recurring pitfall: the version is the primary key of the remote registry.
+    // Two files that share it, and the second remains “pending” FOR
+    // ALWAYS, silently jumped by `db push` (happened twice).
     const seen = new Map<string, string[]>();
     for (const m of migrations) seen.set(m.version, [...(seen.get(m.version) ?? []), m.file]);
     expect([...seen.values()].filter((files) => files.length > 1)).toEqual([]);
   });
 
-  it("le balai de référence existe", () => {
-    // Si la constante ne désigne plus rien, tout le reste passerait au vert en
-    // n'inspectant aucun fichier.
+  it("has the reference sweep", () => {
+    // If the constant no longer denotes anything, everything else would turn green
+    // not inspecting any files.
     expect(migrations.some((m) => m.version === SWEEP)).toBe(true);
   });
 
@@ -266,11 +266,11 @@ describe("garde-fou du schéma", () => {
     expect(projectScopedTables(migrations, SWEEP)).toContain("issues");
   });
 
-  it("toute policy vise explicitement un rôle, jamais `public` ni `anon`", () => {
+  it("every policy explicitly targets a role, never `public` or `anon`", () => {
     expect(policiesTargetARole(after)).toEqual([]);
   });
 
-  it("toute table créée active la RLS dans le même fichier", () => {
+  it("every created table enables RLS in the same file", () => {
     expect(newTablesEnableRls(after)).toEqual([]);
   });
 
@@ -278,21 +278,21 @@ describe("garde-fou du schéma", () => {
     expect(definersAreClosed(after)).toEqual([]);
   });
 
-  it("toute policy UPDATE sur une table à `project_id` vient avec le gel", () => {
+  it("every UPDATE policy on a table with `project_id` includes the freeze", () => {
     expect(updatePoliciesFreezeProjectId(after, migrations)).toEqual([]);
   });
 });
 
-// ── Les règles elles-mêmes ───────────────────────────────────────────────────
-// Les quatre fautes de MIN-338, réécrites telles qu'elles ont été commises, et
-// leur forme correcte à côté. C'est ce bloc qui prouve que le bloc précédent
+// ── The rules themselves ───────────────────────── ──────────────────────────
+// The four mistakes of MIN-338, rewritten as they were committed, and
+// their correct form next to it. It is this block which proves that the previous block
 // regarde quelque chose.
 
 const later = (sql: string) => [parse("29990101000000_probe.sql", sql)];
 
-describe("garde-fou du schéma — les fautes qu'il attrape", () => {
-  it("attrape une policy sans clause TO, et laisse passer `to authenticated`", () => {
-    // Telle qu'écrite dans 20261126090000 et suivantes.
+describe("schema guardrail — the mistakes it catches", () => {
+  it("catches a policy without a TO clause and allows `to authenticated`", () => {
+    // As written in 20261126090000 et seq.
     expect(
       policiesTargetARole(
         later("create policy agent_runs_select on public.agent_runs for select using (true);")
@@ -307,7 +307,7 @@ describe("garde-fou du schéma — les fautes qu'il attrape", () => {
     ).toEqual([]);
   });
 
-  it("attrape une table créée sans RLS", () => {
+  it("catches a table created without RLS", () => {
     expect(newTablesEnableRls(later("create table public.t (id uuid primary key);"))).toHaveLength(1);
     expect(
       newTablesEnableRls(
@@ -319,8 +319,8 @@ describe("garde-fou du schéma — les fautes qu'il attrape", () => {
     ).toEqual([]);
   });
 
-  it("attrape un definer qui ne révoque que `from public`", () => {
-    // La forme exacte de get_ai_run_spend (20261118090000).
+  it("catches a definer that revokes only `from public`", () => {
+    // The exact form of get_ai_run_spend (20261118090000).
     const leaky =
       "create function public.get_ai_run_spend(p uuid) returns numeric language sql " +
       "security definer set search_path = public as $$ select 1 $$;\n" +
@@ -338,7 +338,7 @@ describe("garde-fou du schéma — les fautes qu'il attrape", () => {
     expect(definersAreClosed(later(floating))).toHaveLength(1);
   });
 
-  it("laisse passer une fonction trigger et une aide de policy", () => {
+  it("allows a trigger function and a policy helper through", () => {
     expect(
       definersAreClosed(
         later(
@@ -357,7 +357,7 @@ describe("garde-fou du schéma — les fautes qu'il attrape", () => {
     ).toEqual([]);
   });
 
-  it("attrape une policy UPDATE ouverte sans le gel de `project_id`", () => {
+  it("catches an open UPDATE policy without the `project_id` freeze", () => {
     const naked = later("create policy issues_update on public.issues for update to authenticated " +
       "using (public.can_access_project(project_id)) with check (public.can_access_project(project_id));");
     expect(updatePoliciesFreezeProjectId(naked, [...migrations, ...naked])).toHaveLength(1);
@@ -371,7 +371,7 @@ describe("garde-fou du schéma — les fautes qu'il attrape", () => {
     expect(updatePoliciesFreezeProjectId(withFreeze, [...migrations, ...withFreeze])).toEqual([]);
   });
 
-  it("découpe un corps dollar-quoté sans se faire couper par ses `;`", () => {
+  it("splits a dollar-quoted body without being cut by its `;` characters", () => {
     const st = statementsOf(
       "create function public.f() returns void language plpgsql as $$ begin -- ; pas un commentaire\n" +
         " perform 1; perform 2; end $$;\nselect 1;"

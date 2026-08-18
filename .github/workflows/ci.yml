@@ -1,23 +1,23 @@
 name: CI
 
-# Ce workflow est le pipeline versionné de référence. Tests, audit et typecheck
-# tournent sur un runner jetable qui ne voit aucun secret de production.
+# This workflow is the reference versioned pipeline. Testing, auditing and typechecking
+# run on a disposable runner that sees no production secrets.
 #
-# Ici, le même code tourne dans un runner jetable qui ne voit AUCUN secret :
+# Here, the same code runs in a disposable runner that sees NO secrets:
 #
-#   - `pull_request` (et pas `pull_request_target`) : le job s'exécute avec le
-#     `GITHUB_TOKEN` en lecture seule d'un fork, sans accès aux secrets du dépôt.
-#     `pull_request_target`, lui, tournerait dans le contexte du dépôt de base
-#     AVEC ses secrets, en checkoutant le code du contributeur — c'est
-#     exactement l'inverse de ce qu'on veut. Ne pas le réintroduire.
-#   - `permissions: contents: read` : le jeton du job ne peut rien écrire.
-#   - aucun `secrets.*` n'apparaît dans ce fichier, et il ne doit jamais en
-#     apparaître. Un job qui a besoin d'un secret est un job qui ne doit pas
-#     tourner sur du code de PR.
+# - `pull_request` (and not `pull_request_target`): the job executes with the
+# `GITHUB_TOKEN` read-only of a fork, without access to repository secrets.
+# `pull_request_target` would run in the context of the base repository
+# WITH its secrets, by checking out the contributor's code — it's
+# exactly the opposite of what we want. Do not reintroduce it.
+# - `permissions: contents: read`: the job token cannot write anything.
+# - no `secrets.*` appears in this file, and it should never
+# appear. A job that needs a secret is a job that shouldn't
+# run on PR code.
 #
-# Complément côté réglages GitHub (pas versionnable) : Settings → Actions →
-# « Require approval for all external contributors », pour qu'aucune PR de fork
-# ne démarre un job sans relecture humaine.
+# Additional GitHub settings side (not versionable): Settings → Actions →
+# “Require approval for all external contributors”, so that no fork PR
+# do not start a job without human proofreading.
 
 on:
   pull_request:
@@ -33,8 +33,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Rien d'autre. Pas de clé Supabase, pas de token : la suite et le typecheck
-  # sont purs, et le build de la projection des pages (voir plus bas) aussi.
+  # Nothing else. No Supabase key, no token: the rest and the typecheck
+  # are pure, and the page projection build (see below) too.
   CI: "true"
 
 jobs:
@@ -47,19 +47,19 @@ jobs:
         with:
           persist-credentials: false
 
-      # Aucun document interne, identifiant de production ou secret ne doit
-      # atteindre la forge, même si un contributeur contourne son .gitignore.
+      # No internal documents, production identifiers or secrets should be
+      # reach the forge, even if a contributor bypasses their .gitignore.
       - name: Public repository check
         run: node scripts/check-public-repo.mjs
 
-      # pnpm est le gestionnaire qui installe RÉELLEMENT ce dépôt (node_modules
-      # est un store pnpm) ; `package-lock.json` est tenu en second pour les
-      # outils qui n'en lisent qu'un. La CI installe donc par pnpm, sinon elle
-      # vérifierait un arbre que personne n'exécute.
+      # pnpm is the manager that ACTUALLY installs this repository (node_modules
+      # is a pnpm store); `package-lock.json` is held second for
+      # tools that only read one. The CI therefore installs by pnpm, otherwise it
+      # would check a tree that no one is running.
       #
-      # pnpm 10 n'exécute pas les scripts de build des dépendances hors de
-      # `pnpm.onlyBuiltDependencies` (ici : esbuild seul). C'est ce qui borne ce
-      # qu'un paquet compromis peut faire à l'installation.
+      # pnpm 10 does not run dependency build scripts outside of
+      # `pnpm.onlyBuiltDependencies` (here: esbuild alone). This is what limits this
+      # what a compromised package can do to the installation.
       - uses: pnpm/action-setup@v4
         with:
           version: 10.28.0
@@ -71,25 +71,25 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Le linter passe en premier : 2 s, et il attrape une classe d'erreurs que
-      # le typecheck ne voit pas (optional chaining non sûr, variable morte,
-      # options de `fetch` invalides). `--deny-warnings` en fait une barrière —
-      # sans lui, oxlint sort 0 et la CI ne dirait rien.
+      # The linter goes first: 2 s, and it catches a class of errors that
+      # the typecheck does not see (unsafe optional chaining, dead variable,
+      # invalid `fetch` options). `--deny-warnings` makes it a barrier —
+      # without it, oxlint outputs 0 and the CI would say nothing.
       - name: Lint
         run: pnpm run lint
 
       - name: Typecheck
         run: pnpm run typecheck
 
-      # Le tsconfig racine exclut la coquille Electron, qui a son propre build.
-      # Le bundle résout néanmoins tous ses imports locaux : il attrape donc une
-      # API déplacée dans le launcher avant la publication d'un binaire cassé.
+      # The root tsconfig excludes the Electron shell, which has its own build.
+      # The bundle nevertheless resolves all its local imports: it therefore catches a
+      # API moved to launcher before releasing a broken binary.
       - name: Desktop bundle
         run: node scripts/build-desktop.mjs
 
-      # `vitest` construit d'abord le bundle de la projection des pages
-      # (test/build-pages-md-setup.ts) : c'est du code du dépôt exécuté avant le
-      # premier test, et c'est précisément pour ça qu'il doit tourner ici.
+      # `vitest` first builds the page projection bundle
+      # (test/build-pages-md-setup.ts): this is code from the repository executed before the
+      # first test, and that's precisely why it has to run here.
       - name: Tests
         run: pnpm run test
 
@@ -97,7 +97,7 @@ jobs:
         run: pnpm run test:release
 
   editions:
-    name: Édition / ${{ matrix.edition }}
+    name: Edition / ${{ matrix.edition }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -134,10 +134,10 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Chaque scénario est un processus neuf et ne reçoit que des valeurs
-      # factices versionnées. `source` exporte aussi les valeurs vides : une
-      # variable absente et un opt-out vide suivent donc le contrat de prod.
-      - name: Vérifier le contrat d'édition
+      # Each scenario is a new process and only receives values
+      # versioned dummy. `source` also exports empty values: one
+      # absent variable and an empty opt-out therefore follow the production contract.
+      - name: Check the edition contract
         shell: bash
         run: |
           set -a
@@ -145,10 +145,10 @@ jobs:
           set +a
           pnpm exec vitest run lib/server/editions.integration.test.ts
 
-      # Les deux éditions déployables doivent aussi compiler et ouvrir un port
-      # HTTP avec exactement la fixture testée. Les variantes partielles sont
-      # volontairement indisponibles et restent couvertes par le diagnostic.
-      - name: Build et démarrage éphémère
+      #Both deployable editions must also compile and open a port
+      #HTTP with exactly the fixture tested. The partial variants are
+      #voluntarily unavailable and remain covered by the diagnosis.
+      - name: Build and ephemeral startup
         if: matrix.smoke
         shell: bash
         run: |
@@ -169,7 +169,7 @@ jobs:
           exit 1
 
   audit:
-    name: Audit des dépendances
+    name: Dependencies audit
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -185,7 +185,7 @@ jobs:
         with:
           node-version: 24
 
-      # Pas d'installation : l'audit lit les lockfiles, il n'a pas besoin de
-      # l'arbre. Les trois lockfiles du dépôt sont couverts par ce script.
+      #No installation: the audit reads the lockfiles, it does not need
+      # the tree. The three lockfiles of the repository are covered by this script.
       - name: Audit (high+)
         run: node scripts/audit.mjs

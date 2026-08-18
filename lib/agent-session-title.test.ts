@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import { agentSessionTitle } from "./agent-session-title";
 
 /**
- * Le nom d'une conversation de l'agent, dans la colonne comme dans l'en-tête.
- * Ce qui compte ici : un run = une conversation, donc un ticket en porte
- * plusieurs — et sans son identifiant devant, rien ne les distingue.
+ * The name of an agent conversation, in the column as well as in the header.
+ * What matters here: one run = one conversation, so a ticket carries
+ * several — and without its identifier in front, nothing distinguishes them.
  */
 const project = { id: "p1", key: "MIN", name: "minddy", icon_url: null, orb_seed: null };
 const issue = { id: "i1", number: 42, title: "La redirection après login boucle" };
@@ -21,8 +21,8 @@ describe("agentSessionTitle", () => {
   });
 
   it("retombe sur le titre du ticket quand la génération n'a rien donné", () => {
-    // Un run d'avant `agent_runs.title`, ou dont l'appel au titreur a échoué :
-    // mieux vaut le titre du ticket que le repli générique.
+    // A run before `agent_runs.title`, or whose call to the titrator failed:
+    // better ticket title than generic fallback.
     expect(agentSessionTitle({ title: null, issue, project }, "Sans titre")).toBe(
       "MIN-42: La redirection après login boucle",
     );
@@ -48,8 +48,8 @@ describe("agentSessionTitle", () => {
   });
 
   it("sans projet joint, pas d'identifiant à écrire — le titre suffit", () => {
-    // Cas de RLS aberrante : la ligne est peinte quand même, sans préfixe
-    // inventé (« undefined-42 » se serait lu comme une donnée).
+    // Case of aberrant RLS: the line is painted anyway, without prefix
+    // invented (“undefined-42” would have read like data).
     expect(
       agentSessionTitle({ title: "Corriger la redirection", issue, project: null }, "Sans titre"),
     ).toBe("Corriger la redirection");

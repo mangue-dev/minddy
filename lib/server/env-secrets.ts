@@ -1,53 +1,53 @@
 import "server-only";
 
 /**
- * Les secrets d'environnement qui servent de CLÉ — vérifiés au démarrage
+ * Environment secrets that serve as KEY — checked at startup
  * (MIN-347).
  *
- * Chacun d'eux avait, jusqu'ici, le même contrôle : « est-ce que la variable est
- * là ? ». Une chaîne de trois caractères passait donc sans un mot, et la clé
- * AES-GCM dérivée d'un scrypt qui part d'un secret de trois caractères ne vaut
- * pas mieux que ces trois caractères-là. Pareil pour le HMAC des `state` git :
- * un secret court est un `state` forgeable, c'est-à-dire une installation
- * attribuée au projet de quelqu'un d'autre.
+ * Each of them had, until now, the same control: "is the variable
+ * there ? ". A string of three characters therefore passed without a word, and the key
+ * AES-GCM derived from a scrypt which starts from a secret of three characters is not worth
+ * no better than these three characters. Same for the HMAC of `state` git:
+ * a short secret is a forgeable `state`, i.e. an installation
+ * attributed to someone else's project.
  *
- * Ce module dit DEUX choses, et refuse dans les deux cas :
- *  - une variable non vide mais trop courte : refus PARTOUT, y compris en
- *    développement — c'est une erreur de configuration, et un secret jouet en
- *    dev finit par être copié en prod ; une variable optionnelle vide équivaut
- *    en revanche à « absente », pour qu'un `.env.example` copié reste valide ;
- *  - une variable absente alors qu'elle est requise : refus dans un
- *    environnement DÉPLOYÉ seulement. Sur un poste, on travaille très bien sans
- *    Stripe ni GitLab ; ce qui n'a pas le droit de manquer en ligne, c'est ce
- *    dont dépend une donnée déjà écrite (les enveloppes en base) ou une porte
+ * This module says TWO things, and refuses in both cases:
+ * - a non-empty variable but too short: refusal EVERYWHERE, including in
+ * development — this is a configuration error, and a toy secret in
+ * dev ends up being copied to prod; an empty optional variable is equivalent
+ * on the other hand to “absent”, so that a copied `.env.example` remains valid;
+ * - a variable absent although it is required: refusal in a
+ * DEPLOYED environment only. On a job, we work very well without
+ * Stripe nor GitLab; what is not allowed to be missing online is this
+ * on which a piece of already written data depends (the base envelopes) or a gate
  *    ouverte au public.
  *
- * Le contrôle tourne dans [instrumentation.ts](../../instrumentation.ts), avant
- * la première requête, ET au point d'usage via `requireSecret` : le premier dit
- * le problème tout de suite et en entier, le second garantit qu'aucun chemin ne
- * se sert d'un secret que personne n'a regardé.
+ * The control runs in [instrumentation.ts](../../instrumentation.ts), before
+ * the first request, AND at the point of use via `requireSecret`: the first says
+ * the problem immediately and in full, the second guarantees that no path
+ * uses a secret that no one has seen.
  */
 
-/** De quoi lire des variables : `process.env`, ou un décor de test. */
+/** Enough to read variables: `process.env`, or a test setting. */
 export type SecretEnv = Record<string, string | undefined>;
 
 export interface SecretSpec {
   name: string;
-  /** Longueur minimale, en caractères. */
+  /** Minimum length, in characters. */
   minLength: number;
-  /** Autres noms acceptés, dans l'ordre de lecture (compat historique). */
+  /** Other names accepted, in reading order (historical compass). */
   aliases?: string[];
-  /** Requis dans un environnement déployé ? */
+  /** Required in a deployed environment? */
   requiredWhenDeployed: boolean;
-  /** À quoi il sert — repris tel quel dans le message d'erreur. */
+  /** What it is used for — listed as is in the error message. */
   purpose: string;
 }
 
 /**
- * 32 caractères : nos propres secrets sont frappés en `openssl rand -hex 32`
- * (64 caractères), le plancher est donc deux fois plus bas que le réel. Il
- * n'est pas là pour juger d'une entropie qu'on ne peut pas mesurer depuis une
- * chaîne — il est là pour que « changeme » et « test » ne passent pas.
+ * 32 characters: our own secrets are minted in `openssl rand -hex 32`
+ * (64 characters), the floor is therefore twice as low as the real one. He
+ * is not there to judge an entropy that cannot be measured from a
+ * string — it is there so that “changeme” and “test” do not pass.
  */
 const KEY_MIN = 32;
 
@@ -89,9 +89,9 @@ export const SECRET_SPECS: SecretSpec[] = [
     requiredWhenDeployed: true,
     purpose: "clé de service Supabase",
   },
-  // Optionnels : la fonctionnalité correspondante s'éteint proprement sans eux
-  // (le fournisseur est masqué, le webhook refuse tout). Mais s'ils sont posés,
-  // ils sont mesurés comme les autres.
+  // Optional: the corresponding functionality turns off properly without them
+  // (the provider is hidden, the webhook refuses everything). But if they are placed,
+  // they are measured like the others.
   {
     name: "GITHUB_WEBHOOK_SECRET",
     minLength: KEY_MIN,
@@ -124,7 +124,7 @@ export const SECRET_SPECS: SecretSpec[] = [
   },
 ];
 
-/** Environnement déployé, chez Vercel comme sur tout serveur Node de production. */
+/** Deployed environment, at Vercel as on any production Node server. */
 function isDeployed(env: SecretEnv): boolean {
   return (
     env.NODE_ENV === "production" ||
@@ -134,7 +134,7 @@ function isDeployed(env: SecretEnv): boolean {
   );
 }
 
-/** La valeur lue pour cette spec (nom principal, puis alias), déjà nettoyée. */
+/** The value read for this spec (main name, then alias), already cleaned. */
 function readValue(
   spec: SecretSpec,
   env: SecretEnv
@@ -148,8 +148,8 @@ function readValue(
 }
 
 /**
- * Les problèmes trouvés, en clair. Ne LÈVE pas : c'est l'appelant qui décide
- * quoi en faire, et c'est ce qui rend la règle testable sans manipuler
+ * The problems found, in plain English. Don't RISE: it's the caller who decides
+ * what to do with it, and this is what makes the rule testable without manipulating
  * `process.env` du processus de test.
  */
 export function findSecretProblems(env: SecretEnv = process.env): string[] {
@@ -161,8 +161,8 @@ export function findSecretProblems(env: SecretEnv = process.env): string[] {
     const names = [spec.name, ...(spec.aliases ?? [])].join(" ou ");
 
     if (!found || found.value.length === 0) {
-      // Une capacité optionnelle vide est désactivée. Un secret obligatoire
-      // vide reste une erreur plus précise qu'un simple « absent ».
+      // An empty optional capacity is disabled. A mandatory secret
+      // empty remains a more precise error than a simple “absent”.
       if (found && spec.requiredWhenDeployed) {
         problems.push(`${found.key} est vide (${spec.purpose}).`);
       } else if (deployed && spec.requiredWhenDeployed) {
@@ -183,9 +183,9 @@ export function findSecretProblems(env: SecretEnv = process.env): string[] {
 }
 
 /**
- * Le contrôle du démarrage. LÈVE sur le premier jeu de problèmes, en les disant
- * TOUS — corriger une variable pour découvrir la suivante au redéploiement
- * suivant, c'est trois déploiements pour une erreur de copier-coller.
+ * Startup control. STAND UP on the first set of problems, saying them
+ * ALL — correct one variable to discover the next one on redeployment
+ * Next, that's three deployments for a copy-paste error.
  */
 export function assertSecretsAreStrong(env: SecretEnv = process.env): void {
   const problems = findSecretProblems(env);
@@ -197,9 +197,9 @@ export function assertSecretsAreStrong(env: SecretEnv = process.env): void {
 }
 
 /**
- * Le secret, au point d'usage, ou une exception. C'est la même règle que
- * ci-dessus appliquée à une seule variable : jamais de repli silencieux, jamais
- * de chiffrement avec une clé qu'on n'a pas regardée.
+ * Secrecy, at the point of use, or an exception. It is the same rule as
+ * above applied to a single variable: never silent fallback, never
+ * encryption with a key that we haven't looked at.
  */
 export function requireSecret(name: string, env: SecretEnv = process.env): string {
   const spec = SECRET_SPECS.find((s) => s.name === name);
@@ -217,7 +217,7 @@ export function requireSecret(name: string, env: SecretEnv = process.env): strin
   return found.value;
 }
 
-/** Le secret est-il déployé ET utilisable ? (garde de configuration.) */
+/** Is the secret deployed AND usable? (configuration guard.) */
 export function hasStrongSecret(name: string, env: SecretEnv = process.env): boolean {
   try {
     requireSecret(name, env);

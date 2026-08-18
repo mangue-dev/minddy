@@ -5,23 +5,23 @@ import { useEffect } from "react";
 import { isDesktop } from "@/lib/desktop/bridge";
 
 /**
- * L'app de bureau n'affiche jamais le site public (MIN-291).
+ * The desktop app never displays the public site (MIN-291).
  *
- * L'argumentaire s'adresse à quelqu'un qui ne s'est pas encore décidé ; dans
- * l'app installée, cette personne-là n'existe pas. Elle a déjà téléchargé,
- * signé le premier lancement, et ce qu'elle veut voir en ouvrant la fenêtre,
- * c'est son travail — ou l'écran qui l'y mène.
+ * The argument is aimed at someone who has not yet decided; In
+ * the app installed, this person does not exist. She has already downloaded,
+ * signed the first launch, and what she wants to see when opening the window,
+ * it’s his work — or the screen that takes him there.
  *
- * **La destination est `/home`, pas `/login`**, et c'est ce qui fait que la
- * règle n'a qu'un cas : le proxy y renvoie vers `/login` quand la session
- * manque, et rend l'app quand elle est là. Viser `/login` directement
- * ferait clignoter l'écran de connexion sous les yeux de quelqu'un qui est
- * déjà connecté.
+ * **The destination is `/home`, not `/login`**, and that's what makes the
+ * rule has only one case: the proxy y returns to `/login` when the session
+ * missing, and returns the app when it is there. Aim `/login` directly
+ * would cause the login screen to flash in front of someone who is
+ * already connected.
  *
- * Monté dans le layout du groupe `(marketing)`, il couvre landing, tarifs,
- * changelog et le reste d'un coup — y compris quand on y arrive par une
- * navigation cliente, que le main process ne voit pas passer. Le cas courant,
- * lui, ne l'atteint jamais : la fenêtre charge `/home` d'entrée
+ * Mounted in the layout of the `(marketing)` group, it covers landing, prices,
+ * changelog and the rest at once — including when you get there by
+ * client navigation, which the main process does not see pass. The common case,
+ * him, never reaches it: the window loads `/home` input
  * (desktop/src/main.ts).
  */
 export function DesktopMarketingRedirect() {

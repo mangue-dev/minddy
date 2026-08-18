@@ -3,14 +3,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { authorizePrRequest, prFileBytesResponse } from "@/lib/server/agent/pr-actions";
 
 /**
- * Octets d'un fichier du diff d'une pull request (MIN-66) — ce que la vue diff
- * met dans ses balises `<img>` pour montrer une image modifiée côte à côte, au
- * lieu de renoncer sur « diff indisponible ».
- *  GET ?path=…&side=base|head → le fichier, sous le type MIME de son extension.
+ * Bytes of a pull request diff file (MIN-66) — what the diff view
+ * puts in its `<img>` tags to show a modified image side by side, at
+ * instead of giving up on “diff unavailable”.
+ * GET ?path=…&side=base|head → the file, under the MIME type of its extension.
  *
- * Proxy et non lien direct : le dépôt est souvent privé, et un `<img src>` ne
- * peut pas porter le jeton d'installation. Voir `prFileBytesResponse` pour les
- * gardes (chemin dans CE diff, extension image connue, taille plafonnée).
+ * Proxy and not direct link: the repository is often private, and a `<img src>` does not
+ * cannot carry the installation token. See `prFileBytesResponse` for
+ * guards (path in CE diff, known image extension, capped size).
  */
 
 type RouteContext = { params: Promise<{ prId: string }> };

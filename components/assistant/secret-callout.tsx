@@ -12,22 +12,22 @@ import {
 } from "@/lib/feedback/integration-contract";
 
 /**
- * L'IDENTIFIANT VIVANT NE PASSE PLUS PAR LA PHRASE DE NUMO (MIN-343).
+ * THE LIVING IDENTIFIER NO LONGER GOES THROUGH THE PHRASE OF NUMO (MIN-343).
  *
- * Une clé `mdy_` fraîchement créée, le secret SSO d'un board : ils arrivent au
- * navigateur avec le résultat d'outil, en direct, et nulle part ailleurs — la
- * boucle les substitue avant d'écrire `assistant_messages` et avant de rendre la
- * main au modèle. Le modèle ne les voit donc pas, et ne peut pas les recopier
- * dans sa réponse : c'est cette carte qui les montre, une fois.
+ * A freshly created `mdy_` key, the SSO secret of a board: they arrive at
+ * browser with the tool result, live, and nowhere else — the
+ * loop substitutes them before writing `assistant_messages` and before returning the
+ * hand to model. The model therefore does not see them, and cannot copy them
+ * in his response: it's this card that shows them, once.
  *
- * D'où la forme : la LIGNE de `.env` (`MINDDY_API_KEY=…`), pas la valeur nue —
- * c'est déjà ce que montrent les réglages, et c'est exactement ce que la
- * documentation d'intégration attend là-bas. Rechargez le fil et la carte
- * disparaît : l'historique persisté ne porte que `[redacted]`, ce qui est le but.
+ * Hence the form: LINE of `.env` (`MINDDY_API_KEY=…`), not the bare value —
+ * This is already what the settings show, and this is exactly what the
+ * Integration documentation is waiting there. Reload the wire and card
+ * disappears: the persisted history only carries `[redacted]`, which is the goal.
  */
 
-/** Le secret porté par un résultat d'outil, s'il est encore VIVANT — un fil
- *  rechargé relit `[redacted]`, et la carte ne s'affiche alors pas du tout. */
+/** The secret carried by a tool result, if it is still ALIVE — a thread
+ * reloaded reads `[redacted]` again, and the card is then not displayed at all. */
 export function liveSecretOf(
   toolName: string,
   result: unknown

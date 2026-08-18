@@ -6,33 +6,30 @@ import { Button, Input, Spinner } from "mangue-ui";
 import { Lock } from "lucide-react";
 import { IsoIcon } from "@/components/illustrations/iso-icon";
 
-/** Clé du namespace PublicShare rendue sous le champ. */
+/** PublicShare namespace key rendered under the field. */
 export type ShareUnlockState = {
   error: "wrongPassword" | "tooManyAttempts";
 } | null;
 
 /**
- * La porte d'un partage protégé par mot de passe — une seule, pour la vue
- * partagée (MIN-26) comme pour la page publiée (MIN-283).
+ * The door to a password-protected share — only one, for the shared view
+ * (MIN-26) as well as for the published page (MIN-283).
  *
- * Le formulaire ne sait RIEN de ce qu'il protège : c'est la moitié du sujet.
- * Un partage verrouillé ne doit révéler ni le nom de la vue, ni le titre de la
- * page, ni celui du projet — seulement qu'il est verrouillé, ce que le visiteur
- * voit déjà. L'action, elle, vient de la route : chacune connaît son chemin de
- * retour et le path de son cookie.
+ * The form knows NOTHING about what it is protecting: that's half the point.
+ * A share locked should not reveal the view name, the page title, or the project title — only that it is locked, which the visitor already sees. The action comes from the road: each person knows their return path and the path of their cookie.
  *
- * Le cadenas est une SCÈNE isométrique, comme les états vides de l'application
- * (components/illustrations/iso-icon.tsx) : cet écran est souvent la première
- * chose qu'un client voit de minddy, et une pastille grise avec une icône de
- * 16 px y ressemble à une erreur. Le dessin est le même langage que le reste du
- * produit, sans un trait de SVG à écrire.
+ * The padlock is an isometric SCENE, like the empty states of the application
+ * (components/illustrations/iso-icon.tsx): this screen is often the first
+ * thing a customer sees from minddy, and a gray dot with a
+ * 16 px icon there looks like an error. The drawing is the same language as the rest of the
+ * product, without a stroke of SVG to write.
  */
 export function SharePasswordForm({
   action,
   title,
 }: {
   action: (prev: ShareUnlockState, formData: FormData) => Promise<ShareUnlockState>;
-  /** Le libellé au-dessus du champ. Par défaut, celui de la vue partagée. */
+  /** The label above the field. By default, that of the shared view. */
   title?: string;
 }) {
   const t = useTranslations("PublicShare");

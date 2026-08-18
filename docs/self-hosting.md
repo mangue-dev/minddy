@@ -1,17 +1,17 @@
-# Auto-héberger minddy
+# Self-host minddy
 
-minddy s'appuie sur une pile Supabase complète : PostgreSQL, Auth, Storage et
-Realtime. Une base PostgreSQL seule ne suffit pas : les migrations utilisent les
-schémas `auth`, `storage`, `realtime` et `extensions`, et l'application appelle
-les API Auth et Storage.
+minddy relies on a complete Supabase stack: PostgreSQL, Auth, Storage and
+Realtime. A PostgreSQL database alone is not enough: migrations use
+schemes `auth`, `storage`, `realtime` and `extensions`, and the application calls
+the Auth and Storage APIs.
 
-Après l'installation initiale, utilisez le
-[`runbook d'exploitation`](self-hosting-operations.md) pour sauvegarder,
-mettre à jour, restaurer et diagnostiquer l'instance. Il signale les fenêtres
-d'indisponibilité et les opérations irréversibles avant leurs commandes.
+After initial installation, use the
+[`runbook d'exploitation`](self-hosting-operations.md) to save,
+update, restore and diagnose the instance. He points out the windows
+of unavailability and irreversible operations before their orders.
 
-Supabase est la **seule infrastructure obligatoire**. La configuration minimale
-d'un serveur public contient son origine canonique et les trois accès Supabase :
+Supabase is the **only mandatory infrastructure**. The minimum configuration
+of a public server contains its canonical origin and the three Supabase accesses:
 
 ```dotenv
 NEXT_PUBLIC_APP_URL=https://tickets.example.test
@@ -20,38 +20,38 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=…
 SUPABASE_SERVICE_ROLE_KEY=…
 ```
 
-En développement, `NEXT_PUBLIC_APP_URL` peut rester vide et vaut alors
-`http://localhost:3000`. Elle doit être explicite sur un serveur public : elle
-alimente les liens d'invitation, OAuth/MCP et les webhooks GitLab, sans jamais
-retomber sur une URL de l'infrastructure minddy. `NEXT_PUBLIC_SITE_NAME` et
-`NEXT_PUBLIC_CONTACT_EMAIL` personnalisent les valeurs de marque publiques.
-`NEXT_PUBLIC_PRODUCT_FEEDBACK_URL` ajoute, si l'opérateur le souhaite, un lien
-externe « Partager un retour » ; absent, ce lien est masqué.
+In development, `NEXT_PUBLIC_APP_URL` can remain empty and is then worth
+`http://localhost:3000`. It must be explicit on a public server: it
+powers invite links, OAuth/MCP and GitLab webhooks, without ever
+fall back on a URL from the minddy infrastructure. `NEXT_PUBLIC_SITE_NAME` and
+`NEXT_PUBLIC_CONTACT_EMAIL` personalize public brand values.
+`NEXT_PUBLIC_PRODUCT_FEEDBACK_URL` adds, if the operator wishes, a link
+external “Share feedback”; missing, this link is hidden.
 
-Avec cette configuration, le cœur (comptes, projets, tickets, objectifs, pages,
-feedback, API et stockage Supabase) démarre. Stripe, OpenRouter, Vercel,
-PostHog, Resend, les push et les forges ne sont ni contactés ni nécessaires.
+With this configuration, the core (accounts, projects, tickets, objectives, pages,
+feedback, API and Supabase storage) starts. Stripe, OpenRouter, Vercel,
+PostHog, Resend, pushes and forges are neither contacted nor necessary.
 
-La configuration versionnée pour la pile locale est
-[`supabase/config.toml`](../supabase/config.toml). Pour une infrastructure
-distante, partez de la distribution officielle Supabase auto-hébergée et assurez
-que ces quatre services sont exposés avant de lancer le bootstrap.
+The versioned configuration for the local stack is
+[`supabase/config.toml`](../supabase/config.toml). For an infrastructure
+remote, start from the official self-hosted Supabase distribution and ensure
+that these four services are exposed before launching the bootstrap.
 
-## Prérequis
+## Prerequisites
 
-- Node.js 24 et pnpm 10 ;
-- la [Supabase CLI](https://supabase.com/docs/guides/local-development) dans le
+- Node.js 24 and pnpm 10;
+- the [Supabase CLI](https://supabase.com/docs/guides/local-development) in the
   `PATH` ;
-- `psql` dans le `PATH` (le bootstrap l'utilise pour contrôler le résultat) ;
-- Docker pour le mode local, ou une pile Supabase auto-hébergée déjà démarrée ;
-- pour le mode distant, une URL PostgreSQL d'un rôle propriétaire du schéma,
-  l'URL publique de l'API Supabase, sa clé anon et sa clé `service_role`.
+- `psql` in the `PATH` (the bootstrap uses it to control the result);
+- Docker for local mode, or a self-hosted Supabase stack already started;
+- for remote mode, a PostgreSQL URL of a schema owner role,
+  the public URL of the Supabase API, its anon key and its `service_role` key.
 
-Ne transmettez jamais la clé `service_role` au navigateur ou à Git. Elle n'est
-nécessaire qu'au shell qui lance cette procédure et est copiée dans `.env.local`,
-un fichier ignoré par Git.
+Never pass the `service_role` key to the browser or Git. She is not
+necessary only for the shell which launches this procedure and is copied to `.env.local`,
+a file ignored by Git.
 
-## Pile locale, de zéro
+## Local stack, from zero
 
 ```bash
 corepack enable
@@ -61,81 +61,81 @@ pnpm bootstrap:supabase
 pnpm dev
 ```
 
-`bootstrap:supabase` démarre la pile définie dans `supabase/config.toml`, valide
-les noms et l'ordre du baseline et des migrations en attente, applique les migrations,
-complète `.env.local` et vérifie ensuite la base et l'API Storage. Il génère les
-secrets applicatifs qui protègent les webhooks et les données chiffrées ; les
-clés Supabase sont récupérées depuis `supabase status`.
+`bootstrap:supabase` starts the stack defined in `supabase/config.toml`, valid
+the names and order of the baseline and pending migrations, applies the migrations,
+completes `.env.local` and then checks the database and the Storage API. It generates the
+application secrets that protect webhooks and encrypted data; the
+Supabase keys are retrieved from `supabase status`.
 
-Le bootstrap peut générer des secrets applicatifs facultatifs pour préparer les
-fonctions correspondantes, mais leur simple présence ne les active pas. En
-particulier, les services managés exigent `MINDDY_MANAGED_AI=1` ou
-`MINDDY_MANAGED_BILLING=1`, Resend exige `EMAIL_PROVIDER=resend`, et Vercel
-Sandbox exige `AGENT_EXECUTION_BACKEND=vercel`.
+The bootstrap can generate optional application secrets to prepare the
+corresponding functions, but their mere presence does not activate them. In
+In particular, managed services require `MINDDY_MANAGED_AI=1` or
+`MINDDY_MANAGED_BILLING=1`, Resend requires `EMAIL_PROVIDER=resend`, and Vercel
+Sandbox requires `AGENT_EXECUTION_BACKEND=vercel`.
 
-## Capacités facultatives et remplacements
+## Optional abilities and replacements
 
-| Capacité | Nature | Configuration / remplacement |
+| Capacity | Nature | Configuration / replacement |
 | --- | --- | --- |
-| Base, Auth, Realtime, Storage | obligatoire | Pile Supabase complète ; le stockage de production reste le Storage de cette instance |
-| IA | remplaçable | BYOK ou endpoint local ; quota OpenRouter managé seulement avec `MINDDY_MANAGED_AI=1` |
-| Agent de code | remplaçable | Runtime local, ou Vercel Sandbox explicitement choisi avec `AGENT_EXECUTION_BACKEND=vercel`; hors Vercel, `NEXT_PUBLIC_APP_URL` est aussi requis pour joindre le plan de contrôle de cette instance |
-| Jobs de fond | remplaçable | N'importe quel ordonnanceur HTTP sur `/api/cron/*`, protégé par `CRON_SECRET`; `vercel.json` fournit l'adaptateur Vercel Cron |
-| E-mail Auth | remplaçable | SMTP configuré dans Supabase/GoTrue |
-| E-mail applicatif | remplaçable | `EMAIL_PROVIDER=resend` + clé + expéditeurs, ou `console` en développement |
-| Domaines Vercel, Vercel Analytics/Speed Insights, PostHog, Web Push, APNs, GitHub, GitLab, Stripe | facultative | Absence = interface masquée/inactive et aucun appel réseau ; la télémétrie Vercel exige `NEXT_PUBLIC_VERCEL_ANALYTICS=1` |
+| Base, Auth, Realtime, Storage | obligatory | Complete Supabase battery; production storage remains the Storage of this instance |
+| AI | replaceable | BYOK or local endpoint; OpenRouter quota managed only with `MINDDY_MANAGED_AI=1` |
+| Code Officer | replaceable | Local Runtime, or Vercel Sandbox explicitly chosen with `AGENT_EXECUTION_BACKEND=vercel`; outside Vercel, `NEXT_PUBLIC_APP_URL` is also required to attach the control plane of this instance |
+| Background jobs | replaceable | Any HTTP scheduler on `/api/cron/*`, protected by `CRON_SECRET`; `vercel.json` provides Vercel Cron adapter |
+| Email Auth | replaceable | SMTP configured in Supabase/GoTrue |
+| Application email | replaceable | `EMAIL_PROVIDER=resend` + key + senders, or `console` in development |
+| Domains Vercel, Vercel Analytics/Speed ​​Insights, PostHog, Web Push, APNs, GitHub, GitLab, Stripe | optional | Absent = interface hidden/inactive and no network calls; Vercel telemetry requires `NEXT_PUBLIC_VERCEL_ANALYTICS=1` |
 
-Les adaptateurs de forge fournis ciblent explicitement `github.com` et
-`gitlab.com`. GitHub Enterprise Server et les instances GitLab auto-hébergées ne
-sont pas sélectionnés silencieusement : ils ne sont pas encore supportés et
-nécessitent un provider alternatif.
+The provided forge adapters explicitly target `github.com` and
+`gitlab.com`. GitHub Enterprise Server and self-hosted GitLab instances do not
+are not selected silently: they are not yet supported and
+require an alternative provider.
 
-Les expéditeurs, hôtes PostHog, sujet VAPID et bundle APNs n'ont volontairement
-aucune valeur par défaut sur une instance auto-hébergée : ils doivent décrire
-l'infrastructure de l'opérateur, jamais celle de minddy.
+The senders, PostHog hosts, VAPID subject and bundle APNs have not voluntarily
+no default value on a self-hosted instance: they must describe
+the operator's infrastructure, never that of minddy.
 
 ### PostHog
 
-PostHog reste dans le cœur public comme provider d'analytics facultatif. Il ne
-sert pas à distinguer une édition et ne contacte jamais le projet de Minddy
-Cloud depuis une instance auto-hébergée.
+PostHog remains in the public heart as an optional analytics provider. He doesn't
+is not used to distinguish an edition and never contacts Minddy's project
+Cloud from a self-hosted instance.
 
-| Mode | Configuration | Comportement |
+| Fashion | Configuration | Behavior |
 | --- | --- | --- |
-| Désactivé (défaut) | Aucune paire PostHog | Aucun client navigateur ou serveur n'est construit, le chunk `posthog-js` n'est pas téléchargé et les appels de tracking sont des no-op. |
-| PostHog de l'opérateur | `NEXT_PUBLIC_POSTHOG_KEY` + `NEXT_PUBLIC_POSTHOG_HOST`, et/ou `POSTHOG_API_KEY` + `POSTHOG_HOST` | Seules les surfaces dont la paire est complète émettent vers le PostHog Cloud ou l'endpoint auto-hébergé choisi par l'opérateur. Les demi-configurations ne sont jamais mélangées. |
-| Minddy Cloud | Clés du projet Minddy Cloud ; l'hôte d'ingestion UE historique est conservé par le profil officiel | Même code public, configuration d'exploitation distincte. Aucun secret de lecture ou d'administration PostHog n'est requis par l'application. |
+| Disabled (default) | No PostHog pair | No browser client or server is built, the `posthog-js` chunk is not downloaded and tracking calls are a no-op. |
+| Operator PostHog | `NEXT_PUBLIC_POSTHOG_KEY` + `NEXT_PUBLIC_POSTHOG_HOST`, and/or `POSTHOG_API_KEY` + `POSTHOG_HOST` | Only surfaces whose pair is complete transmit to the PostHog Cloud or the self-hosted endpoint chosen by the operator. Half configurations are never mixed. |
+| Minddy Cloud | Minddy Cloud Project Keys; historical EU ingestion host is kept by the official profile | Same public code, separate operating configuration. No PostHog read or administration secrets are required by the application. |
 
-Le chemin navigateur respecte le choix de cookies : avant choix il fonctionne
-en mémoire, un accord autorise la persistance et un refus coupe toute capture
-du navigateur. Le chemin serveur couvre les faits métier qui existent aussi
-sans navigateur (MCP, webhooks, crons) ; il n'écrit aucun cookie, passe par un
-catalogue fermé et n'accepte que des métadonnées sanitisées. L'opérateur est
-responsable de documenter sa destination, sa base légale et sa rétention.
+The browser path respects the choice of cookies: before choice it works
+in memory, an agreement allows persistence and a refusal cuts all capture
+of the browser. The server path covers business facts that also exist
+without browser (MCP, webhooks, crons); it doesn't write any cookies, goes through a
+closed catalog and only accepts sanitized metadata. The operator is
+responsible for documenting its destination, legal basis and retention.
 
-Le `vercel.json` versionne les horaires utilisés par le produit hébergé afin
-qu'un déploiement de production ne perde pas ses jobs. Sans `CRON_SECRET`, les
-routes répondent 401 avant d'ouvrir la base ou un service externe. Un opérateur
-Vercel qui ne souhaite aucune invocation doit retirer la section `crons` de sa
-configuration de déploiement. Avec un autre ordonnanceur, appelez les mêmes
-routes avec `Authorization: Bearer <CRON_SECRET>`.
+The `vercel.json` versions the times used by the hosted product in order to
+that a production deployment does not lose its jobs. Without `CRON_SECRET`, the
+routes respond 401 before opening the database or an external service. An operator
+Vercel who does not want any invocation must remove the `crons` section from his
+deployment configuration. With another scheduler, call the same
+routes with `Authorization: Bearer <CRON_SECRET>`.
 
-Pour préserver les déploiements existants, les anciennes valeurs minddy (choix
-des services managés, Resend, Sandbox, télémétrie publique et identités push)
-restent reconnues uniquement lorsque Vercel et l'origine canonique
-`*.minddy.app` identifient ensemble le cloud officiel. Vercel seul, un secret
-seul ou un autre domaine n'active jamais ce profil de compatibilité. Les
-variables explicites ci-dessus restent la configuration de toute autre instance.
+To preserve existing deployments, old minddy values (choice
+managed services, Resend, Sandbox, public telemetry and push identities)
+remain recognized only when Vercel and the canonical origin
+`*.minddy.app` together identify the official cloud. Vercel alone, a secret
+alone or another domain never activates this compatibility profile. The
+Explicit variables above remain the configuration of any other instance.
 
-La commande est réexécutable : `supabase db push` n'applique que les migrations
-absentes et les valeurs déjà présentes dans `.env.local` ne sont jamais
-remplacées. Pour repartir d'une base locale vide, l'action est explicitement
-destructive : `supabase db reset --local`, puis relancez le bootstrap.
+The command can be re-executed: `supabase db push` only applies migrations
+absent and the values already present in `.env.local` are never
+replaced. To start from an empty local base, the action is explicitly
+destructive: `supabase db reset --local`, then restart the bootstrap.
 
-## Pile auto-hébergée distante
+## Remote self-hosted stack
 
-La pile distante doit être démarrée et ses API joignables. Exportez les valeurs
-avant de lancer la commande :
+The remote stack must be started and its APIs reachable. Export the values
+before running the command:
 
 ```bash
 export NEXT_PUBLIC_SUPABASE_URL="https://supabase.example.test"
@@ -145,60 +145,60 @@ export SUPABASE_DB_URL="postgresql://postgres:…@db.example.test:5432/postgres"
 pnpm bootstrap:supabase -- --db-url "$SUPABASE_DB_URL"
 ```
 
-Le script ne peut pas déduire les clés HTTP depuis une URL PostgreSQL ; il refuse
-donc de commencer si l'une de ces valeurs manque. Après les migrations, il
-contrôle `vector` dans le schéma `extensions`, les schémas Supabase requis, la
-publication Realtime, les tables et valeurs `app_config`, les buckets actifs et
-la policy d'upload. Les buckets sont créés ou mis à jour par l'API Storage : ils
-ne font pas partie d'un dump de schéma PostgreSQL. Le bucket historique `avatars`, inutilisé par minddy, est
-supprimé uniquement s'il est vide ; s'il contient des objets, la commande refuse
-avec un diagnostic afin qu'ils soient archivés ou supprimés consciemment.
+The script cannot derive HTTP keys from a PostgreSQL URL; he refuses
+so start if one of these values is missing. After the migrations, it
+control `vector` in the `extensions` schema, the required Supabase schemas, the
+Realtime publication, `app_config` tables and values, active buckets and
+the upload policy. Buckets are created or updated by the Storage API: they
+are not part of a PostgreSQL schema dump. The historical bucket `avatars`, unused by minddy, is
+deleted only if empty; if it contains objects, the command refuses
+with a diagnosis so that they can be archived or consciously deleted.
 
-## Transition depuis l'historique avant baseline
+## Transition from history before baseline
 
-Le dépôt a consolidé les 211 migrations historiques en un baseline de schéma et
-une migration de données initiales. Une **instance neuve** applique directement
-ces deux fichiers. Pour une instance existante, ne lancez pas `db push` avant
-d'avoir sauvegardé la base et remplacé son historique de migration : son schéma
-est déjà à jour, seul `supabase_migrations.schema_migrations` doit oublier les
-210 anciennes versions et conserver la version du baseline
+The repository consolidated the 211 historical migrations into a schema baseline and
+an initial data migration. A **new instance** applies directly
+these two files. For an existing instance, do not run `db push` before
+to have saved the database and replaced its migration history: its schema
+is already up to date, only `supabase_migrations.schema_migrations` must forget the
+210 old versions and keep the baseline version
 `20270106090000`.
 
-Faites cette opération dans une fenêtre de maintenance, après une sauvegarde
-restaurable et après avoir vérifié l'absence de dérive (`supabase db diff` ou
-une comparaison avec l'instance de production) :
+Do this in a maintenance window, after a backup
+restorable and after checking the absence of drift (`supabase db diff` or
+a comparison with the production instance):
 
 ```bash
-# Sans --apply : vérifie que l'instance porte exactement les 211 versions attendues.
-# --linked utilise le projet sélectionné par `supabase link`.
+# Without --apply: verify that the instance carries exactly the 211 expected versions.
+# --linked uses the project selected by `supabase link`.
 pnpm repair:squashed-migrations -- --linked
 
-# Retire uniquement les 210 enregistrements historiques ; ni schéma ni données ne bougent.
+# Remove only the 210 historical records; neither schema nor data changes.
 pnpm repair:squashed-migrations -- --linked --apply
 pnpm bootstrap:supabase -- --db-url "$SUPABASE_DB_URL"
 ```
 
-Le script s'arrête si l'instance n'est pas exactement au niveau de l'ancien
-historique. Une fois la réparation faite, le bootstrap ne réapplique pas le
-baseline et peut poursuivre normalement avec les futures migrations.
+The script stops if the instance is not exactly at the old level
+historical. Once the repair is made, the bootstrap does not reapply the
+baseline and can continue normally with future migrations.
 
-Si l'équipe avait appliqué une ou plusieurs migrations SQL à la main, le
-registre peut être incomplet alors que le schéma est bien présent. Comparez
-d'abord le schéma avec le baseline et corrigez les écarts voulus dans une
-migration versionnée. Le mode explicite ci-dessous remplace ensuite le registre
-par le baseline ; l'empreinte recopiée évite de réparer entre deux changements
-d'historique :
+If the team had applied one or more SQL migrations by hand, the
+register may be incomplete even though the diagram is present. Compare
+first the diagram with the baseline and correct the desired deviations in a
+versioned migration. The explicit mode below then replaces the registry
+by the baseline; the copied imprint avoids repairs between two changes
+history:
 
 ```bash
 supabase db diff --linked --schema public,extensions,storage
 pnpm repair:squashed-migrations -- --linked --allow-manual-schema
 pnpm repair:squashed-migrations -- --linked --allow-manual-schema --apply \
-  --confirm-history '<empreinte affichée>'
+  --confirm-history '<displayed fingerprint>'
 ```
 
-## Vérification et test
+## Verification and testing
 
-Pour vérifier une instance déjà préparée sans modifier son schéma :
+To check an already prepared instance without modifying its schema:
 
 ```bash
 pnpm verify:supabase --db-url "$SUPABASE_DB_URL" \
@@ -206,7 +206,7 @@ pnpm verify:supabase --db-url "$SUPABASE_DB_URL" \
   --service-role-key "$SUPABASE_SERVICE_ROLE_KEY"
 ```
 
-`pnpm test:bootstrap:supabase` teste automatiquement l'intégrité des migrations,
-les diagnostics et la seconde exécution du générateur d'environnement. Le chemin
-à exercer sur une pile jetable est le mode local : lancez `pnpm bootstrap:supabase`
-dans un clone neuf, puis une seconde fois ; les deux passages doivent réussir.
+`pnpm test:bootstrap:supabase` automatically tests the integrity of migrations,
+diagnostics and the second execution of the environment generator. The path
+to exercise on a disposable battery is local mode: launch `pnpm bootstrap:supabase`
+in a new clone, then a second time; both passes must succeed.

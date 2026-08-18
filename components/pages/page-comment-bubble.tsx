@@ -1,26 +1,26 @@
 "use client";
 
-// La bulle « Commenter » (MIN-282) — le geste qui ancre une discussion à un bloc.
+// The “Comment” bubble (MIN-282) — the gesture that anchors a discussion to a block.
 //
-// On sélectionne du texte, une bulle paraît au-dessus, on clique : le fil
-// s'ouvre À CÔTÉ du bloc (page-comment-popover.tsx), ancré sur lui, avec
-// l'extrait sélectionné figé dedans. C'est ce qui rend la relecture utile — « cette phrase-là » — et c'est
-// la seule chose qu'un fil de page sans ancre ne saurait pas dire.
+// We select some text, a bubble appears above, we click: the thread
+// opens NEXT to the block (page-comment-popover.tsx), anchored to it, with
+// the selected extract frozen in it. This is what makes rereading useful — “that sentence” — and it’s
+// the only thing that a page thread without an anchor would not be able to say.
 //
-// ─── Trois choix de mécanique ───────────────────────────────────────────────
+// ─── Three mechanical choices ─────────────────────── ────────────────────────
 //
-//  • `position: fixed` et des coordonnées d'ÉCRAN (`coordsAtPos`), plutôt qu'un
-//    parent positionné. La colonne du document porte déjà la réserve de
-//    gouttière et le positionnement du chrome de bloc (cf. page-view.tsx) ; y
-//    ajouter une ancre pour cette bulle-ci demanderait de la faire descendre
-//    dans l'éditeur, qui n'a délibérément ni `relative` ni retrait.
-//  • `onMouseDown` avec `preventDefault`, et pas `onClick` : cliquer un bouton
-//    hors de la zone éditable efface la sélection AVANT le clic, donc le geste
+// • `position: fixed` and SCREEN coordinates (`coordsAtPos`), rather than a
+// positioned parent. The column of the document already bears the reservation of
+// gutter and positioning of the block chrome (see page-view.tsx); y
+// adding an anchor for this bubble would require lowering it
+// in the editor, which deliberately has neither `relative` nor indent.
+// • `onMouseDown` with `preventDefault`, and not `onClick`: click a button
+// outside the editable area erases the selection BEFORE the click, therefore the gesture
 //    perdrait exactement ce qu'il vient chercher.
-//  • L'ancre est le bloc de PREMIER NIVEAU qui contient le début de la
-//    sélection — la même granularité que la poignée, que le lien de bloc et que
-//    la fusion de MIN-271. Une sélection à cheval sur deux blocs s'ancre donc au
-//    premier : c'est de lui que part la phrase qu'on commente.
+// • The anchor is the FIRST LEVEL block which contains the start of the
+// selection — the same granularity as the handle, block link and
+// the merger of MIN-271. A selection straddling two blocks is therefore anchored to the
+// first: it is from him that the sentence we are commenting on comes from.
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -31,17 +31,17 @@ import { cn } from "mangue-ui";
 import { PAGE_BLOCK_ID_ATTRIBUTE } from "@/lib/pages-mentions";
 import { MAX_QUOTE_LENGTH } from "@/lib/page-comments";
 
-/** Ce qu'un clic sur la bulle rend : où ancrer, et ce dont on parle. */
+/** What clicking on the bubble does: where to anchor, and what we're talking about. */
 export interface PageCommentAnchor {
   blockId: string;
   quote: string;
 }
 
-/** Le bloc de premier niveau qui contient cette position, et son id. */
+/** The first level block that contains this position, and its id. */
 function anchorBlockId(editor: Editor, pos: number): string | null {
   const resolved = editor.state.doc.resolve(pos);
-  // `depth >= 1` : le nœud de profondeur 1 est le bloc de premier niveau. Une
-  // sélection dans une puce remonte donc à la liste, comme partout ailleurs.
+  // `depth >= 1`: node of depth 1 is the first level block. A
+  // selection in a bullet therefore goes back to the list, like everywhere else.
   const node = resolved.depth >= 1 ? resolved.node(1) : null;
   const id = node?.attrs?.[PAGE_BLOCK_ID_ATTRIBUTE];
   return typeof id === "string" && id ? id : null;
@@ -53,8 +53,8 @@ interface BubbleState {
   anchor: PageCommentAnchor;
 }
 
-/** Hauteur réservée au-dessus de la sélection — la bulle ne doit pas couvrir
-    la ligne dont on parle. */
+/** Reserved height above the selection — the bubble must not cover
+ the line we are talking about. */
 const OFFSET = 8;
 
 export function PageCommentBubble({
@@ -79,8 +79,8 @@ export function PageCommentBubble({
     }
     const quote = editor.state.doc.textBetween(from, to, " ").trim();
     const blockId = anchorBlockId(editor, from);
-    // Une sélection de blocs entiers (glissé dans la gouttière) n'a pas de
-    // texte : il n'y aurait rien à citer, et le geste appartient au menu ⋯.
+    // A selection of entire blocks (slipped into the gutter) has no
+    // text: there would be nothing to quote, and the gesture belongs to the menu ⋯.
     if (!blockId || !quote) {
       setState(null);
       return;
@@ -98,9 +98,9 @@ export function PageCommentBubble({
     if (!editor) return;
     editor.on("selectionUpdate", measure);
     editor.on("transaction", measure);
-    // Le document défile sous la bulle : elle est en coordonnées d'écran, donc
-    // elle doit se remesurer. `capture` — le conteneur qui défile est un div,
-    // et l'événement de défilement d'un élément ne remonte pas.
+    // The document scrolls under the bubble: it is in screen coordinates, so
+    // she must remeasure herself. `capture` — the scrolling container is a div,
+    // and an element's scroll event doesn't move up.
     window.addEventListener("scroll", measure, true);
     window.addEventListener("resize", measure);
     return () => {
@@ -116,8 +116,8 @@ export function PageCommentBubble({
   return (
     <button
       type="button"
-      // Cf. l'en-tête : la sélection meurt avant le clic sans ce
-      // `preventDefault`, et c'est elle qu'on vient chercher.
+      // See the header: the selection dies before the click without this
+      // `preventDefault`, and she's the one we're looking for.
       onMouseDown={(event) => {
         event.preventDefault();
         onComment(state.anchor);

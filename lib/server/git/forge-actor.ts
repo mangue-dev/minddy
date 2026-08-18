@@ -15,19 +15,18 @@ import {
 } from "./repo-capability";
 
 /**
- * L'ACTEUR d'un geste humain sur une pull request (MIN-144) : le token du compte
- * git de l'utilisateur connecté, plus ce qu'il a le droit de faire sur ce dépôt.
+ * THE ACTOR of a human gesture on a pull request (MIN-144): the token of the account
+ * git of the connected user, plus what he has the right to do on this repository.
  *
- * C'est le second porteur de `PrScope`. Le premier — `target.token`, token
- * d'installation GitHub ou OAuth du LIEN GitLab — continue de servir aux
- * lectures et à tout ce que fait Numo : l'agent EST minddy, il doit rester le
- * bot. La ligne de partage est *humain vs agent*, pas *écriture vs lecture*.
+ * This is the second holder of `PrScope`. The first one — `target.token`, token
+ * GitHub or OAuth installation of the GitLab LINK — continues to be used for readings and everything Numo does: the agent IS minddy, it must remain the
+ * bot. The dividing line is *human vs agent*, not *writing vs reading*.
  *
- * Côté GitLab, l'acteur corrige au passage un vrai bug d'identité :
- * `resolveRepoCloneTargetForRepo` prend la connexion portée par le LIEN de
- * projet — celle de qui a lié le dépôt. Un membre B écrivait donc sous
- * l'identité GitLab du membre A. Ici, c'est SA propre connexion, jamais celle du
- * lien.
+ * On the GitLab side, the actor corrects a real identity bug in passing:
+ * `resolveRepoCloneTargetForRepo` takes the connection carried by the LINK of
+ * project — that of which linked the repository. A member B therefore wrote under
+ * the GitLab identity of member A. Here, it is HIS own connection, never that of the
+ * link.
  */
 
 export type ForgeActor =
@@ -41,27 +40,27 @@ export type ForgeActor =
   | {
       kind: "none";
       /**
-       * `noAccount` = rien de connecté ; `noRepoAccess` = 404 ; `expired` = un
-       * compte est bien connecté mais la forge REFUSE son token (401).
-       *
-       * Les trois mènent à des phrases différentes, et confondre le dernier avec
-       * autre chose est le pire des trois : c'est ce qui faisait dire à minddy
-       * « votre compte git ne peut pas fusionner ce dépôt » au propriétaire du
-       * dépôt (mesuré le 2026-08-03), avant de lui servir un `Bad credentials`
-       * brut au premier geste.
-       */
+ * `noAccount` = nothing connected; `noRepoAccess` = 404; `expired` = a
+ * account is well connected but the forge REFUSES its token (401).
+ *
+ * The three lead to different sentences, and confusing the last one with
+ * something else is the worst of the three: that's what made minddy say
+ * "your git account cannot merge this repository" to the owner of the
+ * deposit (measured on 2026-08-03), before serving him a raw `Bad credentials`
+ * at the first gesture.
+ */
       reason: "noAccount" | "noRepoAccess" | "expired";
       login?: string | null;
     };
 
 /**
- * Cache in-process du VERDICT d'appartenance, par (userId, provider, dépôt).
- * TTL court : le droit d'un compte sur un dépôt bouge rarement, mais quand il
- * bouge, cinq minutes est le pire délai acceptable.
+ * In-process cache of the membership VERDICT, by (userId, provider, deposit).
+ * Short TTL: the right of an account on a deposit rarely moves, but when it
+ * moves, five minutes is the worst acceptable delay.
  *
- * Il ne garde QUE la capability, jamais le token : le mint a déjà son propre
- * cache (ligne DB côté GitHub, refresh paresseux côté GitLab), et cacher un
- * token ici le ferait survivre à une déconnexion.
+ * It ONLY keeps the capability, never the token: the mint already has its own
+ * cache (DB line on the GitHub side, lazy refresh on the GitLab side), and hiding a
+ * token here would make it survive a disconnection.
  */
 const CAPABILITY_TTL_MS = 5 * 60_000;
 const capabilityCache = new Map<string, { capability: RepoCapability; at: number }>();
@@ -71,17 +70,17 @@ function cacheKey(userId: string, provider: RepoProviderId, repoFullName: string
 }
 
 /**
- * Les tokens dont une rotation forcée n'a RIEN tiré — l'autorisation est à
- * refaire, et rien d'automatique ne la réparera.
+ * Tokens that a forced rotation did NOTHING pull — the permission is to
+ * redo, and nothing automatic will fix it.
  *
- * Sans ce garde, chacune des trois ou quatre requêtes que le panneau d'une PR
- * tire toutes les quinze secondes rejouerait la rotation, soit une quinzaine
- * d'échanges OAuth ratés par minute sur un compte déjà perdu.
+ * Without this guard, each of the three or four requests that a PR
+ * panel pulls every fifteen seconds would replay the rotation, or around fifteen
+ * failed OAuth exchanges per minute on an account already lost.
  *
- * Indexé par l'EMPREINTE du token, pas par l'utilisateur : réautoriser change le
- * token, donc l'empreinte, donc le garde se lève de lui-même — là où un TTL
- * ferait attendre la fin de sa fenêtre à quelqu'un qui vient de réparer. Une
- * empreinte n'est pas un secret ; le token, lui, ne s'écrit nulle part ici.
+ * Indexed by the FINGERPRINT of the token, not by the user: reauthorization changes the
+ * token, therefore the fingerprint, therefore the guard rises by itself - where a TTL
+ * would make someone who just repaired wait for their window to end. A
+ * fingerprint is not a secret; the token is not written anywhere here.
  */
 const deadTokens = new Set<string>();
 const DEAD_TOKENS_MAX = 500;
@@ -91,14 +90,14 @@ function tokenFingerprint(token: string): string {
 }
 
 function rememberDeadToken(token: string): void {
-  // Borne mémoire : un process de longue vie ne doit pas accumuler sans fin.
-  // On repart de zéro plutôt que d'évincer finement — le coût d'un oubli est un
-  // échange OAuth de plus, pas une erreur.
+  // Memory terminal: a long-lived process must not accumulate endlessly.
+  // We start from scratch rather than finely evicting — the cost of forgetting is a
+  // OAuth exchange again, not an error.
   if (deadTokens.size >= DEAD_TOKENS_MAX) deadTokens.clear();
   deadTokens.add(tokenFingerprint(token));
 }
 
-/** Le login/avatar du compte, pour les dire dans l'UI sans second aller-retour. */
+/** The login/avatar of the account, to say them in the UI without a second round trip. */
 interface ActorAccount {
   token: string;
   login: string | null;
@@ -106,14 +105,14 @@ interface ActorAccount {
 }
 
 /**
- * Mint du token du compte de CET utilisateur, ou null s'il n'en a pas connecté
- * (ou si le token est irrécupérable : secret tourné, refresh mort — l'appelant
- * en fait « reconnecte ton compte », jamais une 500).
+ * Mint of the token of THIS user's account, or null if he has not connected one
+ * (or if the token is unrecoverable: secret turned, refresh dead - the caller
+ * in fact "reconnect your account", never a 500).
  */
 async function resolveAccount(
   userId: string,
   provider: RepoProviderId,
-  /** Ignore l'expiry stockée et fait tourner le token : voir `resolveForgeActor`. */
+  /** Ignores the stored expiry and rotates the token: see `resolveForgeActor`. */
   force = false,
 ): Promise<ActorAccount | null> {
   if (provider === "github") return getGithubUserToken(userId, { force });
@@ -131,28 +130,27 @@ async function resolveAccount(
   }
 }
 
-/** `expired` = la forge a refusé le token lui-même (401), pas le dépôt. */
+/** `expired` = the forge refused the token itself (401), not the deposit. */
 type CapabilityProbe =
   | { outcome: "capability"; capability: RepoCapability; cacheable: boolean }
   | { outcome: "expired" };
 
 /**
- * Appartenance au dépôt, vue par le compte de l'utilisateur.
+ * Membership in the repository, seen by the user's account.
  *
- * Les deux forges répondent **404** quand le compte ne voit pas le dépôt (elles
- * en cachent jusqu'à l'existence) : c'est le seul verdict « pas membre », et le
- * seul qu'on mette en cache.
+ * Both forges respond **404** when the account does not see the repository (they
+ * hide its existence): this is the only "not member" verdict, and the
+ * alone that we cache.
  *
- * **401** ne parle pas du dépôt : il parle du TOKEN. Le lire comme un droit
- * dégradé — ce que faisait le repli sur `read` — produit la pire phrase possible,
- * « votre compte ne peut pas fusionner ce dépôt », adressée à quelqu'un qui en
- * est propriétaire ; puis un `Bad credentials` nu au premier geste. Un token
- * refusé se dit « reconnectez votre compte », et rien d'autre.
+ * **401** does not talk about the deposit: it talks about the TOKEN. Reading it as a degraded right
+ * — which is what falling back to `read` * did — produces the worst possible sentence,
+ * "your account cannot merge this repository", addressed to someone who owns it; then a bare `Bad credentials` at the first gesture. A refused token
+ * says "reconnect your account", and nothing else.
  *
- * Le reste — 403 (quota d'API épuisé, SSO d'organisation non validé), 5xx,
- * réponse illisible — retombe sur `read` SANS cache : une panne ou une limite de
- * débit ne doit pas se figer cinq minutes en « vous n'êtes pas membre ». Le
- * geste d'écriture, lui, échouera avec le vrai message de la forge.
+ * The rest — 403 (API quota exhausted, organization SSO not validated), 5xx,
+ * unreadable response — falls back to `read` WITHOUT cache: an outage or limit of
+ * flow must not freeze for five minutes in “you are not a member”. The
+ * writing gesture will fail with the true message from the forge.
  */
 async function fetchCapability(
   provider: RepoProviderId,
@@ -189,8 +187,8 @@ async function fetchCapability(
 }
 
 /**
- * Qui agit, et jusqu'où. Ne lève jamais : toute panne se traduit en refus
- * explicite que l'UI sait expliquer.
+ * Who acts, and to what extent. Never raises: any failure results in an explicit refusal
+ * that the UI knows how to explain.
  */
 export async function resolveForgeActor(opts: {
   userId: string;
@@ -200,9 +198,9 @@ export async function resolveForgeActor(opts: {
   let account = await resolveAccount(opts.userId, opts.provider);
   if (!account) return { kind: "none", reason: "noAccount" };
 
-  // Token déjà constaté mort : ni probe, ni rotation. AVANT le cache de
-  // capability — un droit mémorisé il y a trois minutes ne rend pas un token
-  // utilisable, et le rendre ici ferait repartir un geste voué au 401.
+  // Token already found dead: neither probe nor rotation. BEFORE the cache
+  // capability — a right stored three minutes ago does not return a token
+  // usable, and returning it here would restart a gesture doomed to 401.
   if (deadTokens.has(tokenFingerprint(account.token))) {
     return { kind: "none", reason: "expired", login: account.login };
   }
@@ -219,9 +217,9 @@ export async function resolveForgeActor(opts: {
     try {
       return await fetchCapability(opts.provider, opts.repoFullName, token);
     } catch (err) {
-      // Réseau mort : on ne prétend ni qu'il a le droit ni qu'il ne l'a pas.
-      // Sans cache, la tentative suivante retentera — et l'écriture, elle,
-      // échouera avec le message de la forge.
+      // Dead network: we neither claim that it has the right nor that it does not have it.
+      // Without cache, the next attempt will retry — and the writing will
+      // will fail with the forge message.
       console.warn(`[forge-actor] capability probe failed: ${(err as Error).message}`);
       return null;
     }
@@ -230,12 +228,12 @@ export async function resolveForgeActor(opts: {
   let probed = await probe(account.token);
   if (!probed) return { kind: "actor", ...account, capability: "read" };
 
-  // Token refusé : l'expiry stockée mentait. Une rotation forcée rattrape le cas
-  // où une course l'a laissée en base derrière un token déjà invalidé par
-  // GitHub — c'est la panne qui coûtait huit heures d'écriture à l'utilisateur,
-  // et elle se répare ici sans qu'il ait rien à faire. Une seule tentative : si
-  // le refresh token est mort lui aussi, l'autorisation est bel et bien à
-  // refaire, et c'est ce qu'on dit.
+  // Token refused: the stored expiry lied. A forced rotation catches the case
+  // where a race left it in base behind a token already invalidated by
+  // GitHub — this is the outage that cost the user eight hours of writing time,
+  // and it repairs itself here without him having to do anything. Only one attempt: if
+  // the refresh token is also dead, the authorization is indeed up
+  // redo, and that's what we say.
   if (probed.outcome === "expired") {
     const rotated = await resolveAccount(opts.userId, opts.provider, true);
     if (!rotated || rotated.token === account.token) {

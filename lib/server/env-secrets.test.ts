@@ -10,19 +10,19 @@ import {
 } from "@/lib/server/env-secrets";
 
 /**
- * MIN-347 — aucun contrôle de force sur les clés d'environnement.
+ * MIN-347 — no force checks on environment keys.
  *
- * Le seul contrôle était « la variable est-elle là ? ». Une clé de chiffrement
- * de trois caractères passait donc sans un mot, et tout ce qu'elle scelle
- * ensuite en base vaut ces trois caractères.
+ * The only check was "is the variable there?" ". An encryption key
+ * of three characters therefore passed without a word, and everything it seals
+ * then in base is worth these three characters.
  *
- * Ces cas travaillent sur un `env` PASSÉ EN ARGUMENT, jamais sur celui du
- * processus : un test qui écrit dans `process.env` fuit sur ses voisins.
+ * These cases work on a `env` PASSED AS AN ARGUMENT, never on that of
+ * process: a test who writes in `process.env` leaks to its neighbors.
  */
 
 const strong = "0".repeat(64);
 
-/** Un environnement déployé minimal — seul le cœur Supabase est obligatoire. */
+/** A minimal deployed environment — only the Supabase core is required. */
 function healthyEnv(): SecretEnv {
   const env: SecretEnv = { VERCEL: "1", VERCEL_ENV: "production" };
   for (const spec of SECRET_SPECS) {
@@ -64,7 +64,7 @@ describe("findSecretProblems", () => {
     delete deployed.AI_KEY_ENCRYPTION_SECRET;
     expect(findSecretProblems(deployed)).toEqual([]);
 
-    // Poste de développement : rien n'est posé, et c'est très bien.
+    // Development station: nothing is set, and that's very good.
     expect(findSecretProblems({})).toEqual([]);
   });
 
@@ -84,8 +84,8 @@ describe("findSecretProblems", () => {
   it("accepte l'ancien nom du secret de chiffrement des tokens de forge", () => {
     const env = healthyEnv();
     delete env.GIT_TOKEN_ENCRYPTION_SECRET;
-    // Les enveloppes déjà en base ont été scellées avec celui-ci : le refuser
-    // rendrait illisibles toutes les connexions GitLab existantes.
+    // The envelopes already in base have been sealed with this one: refuse it
+    // would make all existing GitLab connections unreadable.
     env.GITLAB_TOKEN_ENCRYPTION_SECRET = strong;
     expect(findSecretProblems(env)).toEqual([]);
   });
@@ -122,7 +122,7 @@ describe("requireSecret", () => {
   });
 
   it("refuse un nom qui n'est pas au catalogue", () => {
-    // Sinon un secret ajouté un jour échapperait au contrôle sans qu'on le voie.
+    // Otherwise a secret added one day would escape control without us seeing it.
     expect(() => requireSecret("MDY_PAS_UNE_SPEC", {})).toThrow(/SECRET_SPECS/);
   });
 });

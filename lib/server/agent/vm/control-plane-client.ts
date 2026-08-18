@@ -11,62 +11,62 @@ import type { VmToolResponse, VmTurnReport } from "./protocol";
 import type { AgentUserMessage } from "@/lib/agent-mentions";
 
 /**
- * LE CÔTÉ VM DU PLAN DE CONTRÔLE (MIN-224) — l'unique porte par laquelle la
- * boucle, depuis la microVM, touche la base, le ledger, les tickets, le carnet et
- * la forge.
+ * THE VM SIDE OF THE CONTROL PLANE (MIN-224) — the only door through which the
+ * loop, from the microVM, touches the base, the ledger, the tickets, the notebook and
+ * the forge.
  *
- * CE QUI FAIT QUE ÇA MARCHE SANS AUCUN SECRET, DANS UNE MICROVM. La VM ne porte
- * rien : pas de clé Supabase, pas de jeton d'identité. Elle appelle NOTRE PROPRE
- * ORIGINE en https, et le firewall de Vercel Sandbox forwarde la requête vers la
- * route de collecte en y ajoutant un OIDC signé par la plateforme, dont le claim
- * `sandbox_name` vaut `agent-<run.id>`. Le `runId` n'est donc JAMAIS dans le
- * corps : il est dérivé de ce claim côté serveur, et la VM ne peut rien prétendre
- * d'autre que son propre run. Il n'y a pas d'en-tête d'authentification à poser, et
- * c'est normal — il n'y en a pas.
+ * WHAT MAKES IT WORK WITHOUT ANY SECRET, IN A MICROVM. The VM does not carry
+ * nothing: no Supabase key, no identity token. She calls OUR OWN
+ * ORIGIN in https, and the Vercel Sandbox firewall forwards the request to the
+ * collection route by adding an OIDC signed by the platform, including the claim
+ * `sandbox_name` is `agent-<run.id>`. The `runId` is therefore NEVER in the
+ * body: it is derived from this claim on the server side, and the VM cannot claim anything
+ * other than his own run. There is no authentication header to set, and
+ * This is normal — there is none.
  *
- * ET SUR UNE MACHINE, IL FAUT EN POSER UN (MIN-355). Aucun firewall ne signe pour
- * un harness qui tourne sur un Mac : il porte alors un jeton HS256 `{rid, gen, exp}`
- * que le serveur a signé, et `getToken` est par où il arrive. Deux points qui ont
- * l'air de détails et n'en sont pas :
+ * AND ON A MACHINE, YOU NEED TO INSTALL ONE (MIN-355). No firewall signs for
+ * a harness that runs on a Mac: it then carries an HS256 `{rid, gen, exp}` token
+ * that the server signed, and `getToken` is where it comes in. Two points which have
+ * seem like details and are not:
  *
- * - **`emitLive` pose ses en-têtes à un SECOND endroit** (son `fetch` détaché, plus
- *   bas). Le jeton posé sur `request()` mais pas sur lui donnerait un tour qui
- *   aboutit, un fil qui ne stream plus pendant des heures, et zéro erreur — le
- *   `catch` y est vide par conception ;
- * - **un GETTER, pas une chaîne.** Le jeton dure quinze minutes et un tour dure des
- *   heures : il sera renouvelé sous le harness (MIN-294), et c'est ce joint-là qui
- *   le permet sans rien changer d'autre ici.
+ * - **`emitLive` places its headers in a SECOND place** (its detached `fetch`, more
+ * down). The token placed on `request()` but not on it would give a turn which
+ * results, a thread that no longer streams for hours, and zero errors — the
+ * `catch` is empty by design;
+ * - **a GETTER, not a string.** The token lasts fifteen minutes and a turn lasts
+ * hours: it will be renewed under the harness (MIN-294), and it is this joint which
+ * allows it without changing anything else here.
  *
- * LA DISCIPLINE DE CE MODULE, et elle vaut d'être dite : **rien de ce qui est
- * best-effort ne doit pouvoir tuer un tour.** Un event perdu se rattrape au poll
- * du fil ; un tour mort à cause d'un event perdu, non. D'où la séparation en deux
- * familles :
+ * THE DISCIPLINE OF THIS MODULE, and it is worth saying: **nothing that is
+ * best-effort must be able to kill a round.** A lost event is recovered by polling
+ * the thread; a dead turn due to a lost event is not. Hence the separation into two
+ * families:
  *
- * - `postQuiet` — events, direct, ledger, checkpoint périodique : les erreurs
- *   sont journalisées et avalées ;
- * - `request` — tools, checkpoint de fin, rapport de fin de tour : les erreurs
- *   REMONTENT, parce qu'un tool qui échoue doit se dire au modèle, et qu'un
- *   rapport de fin de tour perdu est un tour perdu.
+ * - `postQuiet` — events, direct, ledger, periodic checkpoint: errors
+ * are logged and swallowed;
+ * - `request` — tools, end checkpoint, end of turn report: errors
+ * RISING, because a tool that fails must tell itself to the model, and a
+ * end of lost turn report is a lost turn.
  *
- * LE DIRECT (`/stream`) EST LE SEUL POINT CHER, et il est chiffré : `emitLive`
- * diffuse ~4×/s, soit ~2 400 appels sur un tour de dix minutes. Le cadrage a
- * mesuré l'aller-retour à ~55 ms et tranché : on garde 250 ms pour la v1 et on
- * MESURE. C'est aussi pour ça qu'il ne s'attend pas — cf. `emitLive` plus bas.
+ * DIRECT (`/stream`) IS THE ONLY EXPENSIVE POINT, and it is encrypted: `emitLive`
+ * broadcasts ~4×/s, or ~2,400 calls over a ten-minute shift. The framing has
+ * measured the round trip at ~55 ms and decided: we keep 250 ms for v1 and we
+ * MEASURE. This is also why he does not expect — cf. `emitLive` below.
  */
 
-/** Combien de fois on retente un appel de plan de contrôle avant d'abandonner. */
+/** How many times do we retry a control plane call before giving up. */
 const MAX_ATTEMPTS = 3;
-/** Attente de base entre deux essais (doublée à chaque fois). */
+/** Base wait between two trials (doubled each time). */
 const RETRY_BASE_MS = 400;
 /**
- * Plafond d'un appel de plan de contrôle. Large devant les ~55 ms mesurés, mais
- * BORNÉ : sans lui, un `fetch` qui ne rend jamais la main gèlerait un tour de
- * plusieurs heures sur une requête d'event.
+ * Ceiling of a control plane call. Large compared to the ~55 ms measured, but
+ * BOUNDED: without it, a `fetch` that never surrenders the hand would freeze a turn of
+ * several hours on an event request.
  */
 const REQUEST_TIMEOUT_MS = 30_000;
 
-/** Erreur d'une surface du plan de contrôle, avec son statut — l'appelant en a
- *  besoin pour distinguer « le run n'est plus en cours » (409) d'une panne. */
+/** Error of a control plane surface, with its status — the caller has it
+ * need to distinguish “the run is no longer in progress” (409) from a breakdown. */
 export class ControlPlaneError extends Error {
   constructor(
     readonly status: number,
@@ -80,10 +80,10 @@ export class ControlPlaneError extends Error {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * Un statut vaut-il d'être retenté ? Les 5xx et les 429, oui — la fonction a pu
- * être recyclée, ou le déploiement redémarrer. Les 4xx, non : un corps trop gros
- * ou une surface inconnue ne s'améliorera pas au deuxième essai, et retenter ne
- * ferait que retarder l'erreur que l'appelant doit lire.
+ * Is a status worth trying again? The 5xx and the 429, yes — the function could
+ * be recycled, or the deployment restarted. The 4xx, no: too big a body
+ * or an unfamiliar surface will not improve on the second try, and trying again will not
+ * would only delay the error for the caller to read.
  */
 function retryable(status: number): boolean {
   return status === 429 || status >= 500;
@@ -91,97 +91,97 @@ function retryable(status: number): boolean {
 
 export interface ControlPlaneClient {
   emit(type: AgentEventType, payload: Record<string, unknown>): Promise<void>;
-  /** Le type de la BOUCLE, pas une copie : la charge est sérialisée telle quelle
-   *  (`JSON.stringify(progress)`), donc tout champ absent d'ici passerait quand
-   *  même — jusqu'au jour où quelqu'un ajoute une liste blanche et le perd. */
+  /** The LOOP type, not a copy: the load is serialized as is
+   *  (`JSON.stringify(progress)`), so every field absent here would pass through
+   * same — until one day someone whitelists it and loses it. */
   emitLive(progress: AgentLiveProgress): void;
-  /** Diff Git local, envoyé séparément du stream texte pour ne pas recopier
-   *  jusqu'à 240 Ko quatre fois par seconde. Best-effort comme le direct. */
+  /** Local Git diff, sent separately from the text stream so as not to copy
+   * up to 240 KB four times per second. Best-effort like live. */
   emitDiff(diff: AgentLiveDiff): void;
   recordUsage: (line: AgentUsageLine) => Promise<void>;
   /**
-   * Sauvegarde périodique. Ne lève pas — mais rend `false` quand le plan de
-   * contrôle a répondu 409 : le run n'est PLUS `running` (annulé, ou conclu par
-   * quelqu'un d'autre). C'est le seul signal qui parvienne à une VM dont la
-   * conversation a été fermée sous elle, et l'appelant doit s'arrêter.
+   * Periodic backup. Does not raise — but returns `false` when the plan
+   * control responded 409: the run is NO LONGER `running` (cancelled, or concluded by
+   * someone else). This is the only signal that reaches a VM whose
+   * conversation has been closed under it, and the caller must stop.
    */
   saveCheckpointQuietly(checkpoint: AgentCheckpoint): Promise<boolean>;
   /**
-   * POUSSE UN INCRÉMENT DU JOURNAL D'OPENCODE (MIN-286, 2026-08-13).
+   * PUSH AN INCREMENT OF THE OPENCODE LOG (MIN-286, 2026-08-13).
    *
-   * LÈVE en cas d'échec, contrairement aux surfaces de confort : ce qui se perd
-   * ici est la MÉMOIRE de la session, et le curseur du superviseur ne doit pas
-   * avancer sur un lot qui n'est pas écrit — sinon le journal garde un trou, et
-   * `/sync/replay` refuse une suite non contiguë.
+   * LIFT in case of failure, unlike comfort surfaces: what is lost
+   * here is the MEMORY of the session, and the supervisor cursor should not
+   * move forward on a batch that is not written — otherwise the journal leaves a hole, and
+   * `/sync/replay` refuses a non-contiguous sequence.
    */
   appendJournal(sessionId: string, events: Record<string, unknown>[]): Promise<void>;
   pullSteering(): Promise<AgentUserMessage[]>;
   /**
-   * REMET EN FILE ce qu'on a drainé sans avoir su le jouer — `pullSteering`
-   * consomme, et un tour qui sort avant d'avoir reposté emporterait le message
-   * dans la mort de sa microVM. Réinsérés sans auteur, ils redeviennent des
-   * messages en attente : le run se re-queue, et le tour suivant les délivre.
+   * RETURN IN FILE what we drained without knowing how to play it — `pullSteering`
+   * consumes, and a turn that exits before having reposted would carry the message
+   * in the death of his microVM. Reinserted without an author, they become again
+   * pending messages: the run re-queues, and the next round delivers them.
    */
   pushSteering(texts: AgentUserMessage[]): Promise<void>;
   /**
-   * Reste-t-il un message NON CONSOMMÉ ? Sonde de l'attente d'un sous-agent : elle
-   * ne DRAINE pas, contrairement à `pullSteering` — le message doit rester en file
-   * pour que le round suivant l'injecte dans l'historique.
+   * Is there any message left that is NOT CONSUMED? Probe of the expectation of a sub-agent: she
+   * does not DRAIN, unlike `pullSteering` — the message must remain in queue
+   * so that the next round injects it into the history.
    */
   hasPendingMessages(): Promise<boolean>;
   checkInterrupt(): Promise<boolean>;
   /**
-   * EFFACE le drapeau d'interruption. Appelé par la boucle quand le « stop » qu'elle
-   * vient de lire arrivait avec un message : le tour continue alors dans ce
-   * tour-ci, au lieu de sortir pour être re-queué par le message resté en file.
+   * CLEARS the interrupt flag. Called by the loop when the “stop” it
+   * just read arrived with a message: the tour then continues in this
+   * this turn, instead of going out to be re-queued by the message remaining in queue.
    */
   clearInterrupt(): Promise<void>;
   /**
-   * Ce que ce tour a ENCORE le droit de dépenser, relu maintenant — le plus serré
-   * du restant mensuel du compte et du plafond du run. `null` = inconnu (lecture
-   * en panne) ou aucun plafond applicable : l'appelant garde son plafond courant.
+   * What this round STILL has the right to spend, reread now — the tightest
+   * of the monthly remainder of the account and the run ceiling. `null` = unknown (read
+   * broken) or no applicable limit: the caller keeps his current limit.
    *
-   * Existe parce que rien ne réserve de budget : deux runs concurrents lisent le
-   * même restant et le prennent chacun pour plafond. L'ancienne forme relisait à
-   * chaque chunk, donc au pire toutes les cinq minutes ; un tour de microVM dure
-   * des heures, et sans cette surface son plafond serait aveugle du début à la fin.
+   * Exists because nothing reserves budget: two competing runs read the
+   * same remaining and each take it as a ceiling. The old form read back to
+   * each chunk, so at worst every five minutes; a round of microVM lasts
+   * hours, and without this surface his ceiling would be blind from start to finish.
    */
   budgetRemaining(): Promise<number | null>;
   syncPlan(steps: PlanStep[]): Promise<void>;
-  /** Un tool de PLATEFORME (ticket, carnet, pull request, recherche web, PR). */
+  /** A PLATFORM tool (ticket, notebook, pull request, web search, PR). */
   callTool(name: string, body: Record<string, unknown>): Promise<VmToolResponse>;
-  /** Une URL de push avec un token de forge FRAIS — un tour dure plus qu'un token. */
+  /** A push URL with a FRESH forge token — one turn lasts longer than one token. */
   repoAuthUrl(): Promise<string | null>;
   /**
-   * LA CLÉ DU MODÈLE D'UN TOUR LOCAL (MIN-357), mintée à plafond dur pour ce run.
+   * THE KEY TO THE MODEL OF A LOCAL TOUR (MIN-357), minted to hard ceiling for this run.
    *
-   * LÈVE, et c'est l'inverse exact de sa voisine `repoAuthUrl` : celle-là a un
-   * repli (le token que le job porte déjà), celle-ci n'en a aucun — il n'y a
-   * aucune clé ailleurs, et il ne doit pas y en avoir. Un 503 ici veut dire « ce
-   * déploiement ne sait pas plafonner », et la seule conduite juste est que le
-   * tour ne parte pas plutôt qu'il parte sans plafond.
+   * RISE, and it is the exact opposite of its neighbor `repoAuthUrl`: this one has a
+   * fallback (the token that the job already carries), this one has none — there is no
+   * no keys anywhere else, and there shouldn't be any. A 503 here means “this
+   * deployment does not know how to peak", and the only correct behavior is that the
+   * tour does not leave rather than leaving without a ceiling.
    *
-   * Elle n'est appelée QUE sur le chemin local : une microVM n'en a pas besoin
-   * (le firewall pose la clé après sa sortie) et se ferait refuser. `null` est
-   * réservé aux endpoints locaux sans authentification.
+   * It is ONLY called on the local path: a microVM does not need it
+   * (the firewall installs the key after its exit) and would be refused. `null` is
+   * reserved for local endpoints without authentication.
    */
   llmKey(): Promise<string | null>;
-  /** Le rapport de fin de tour. C'est lui qui met la session au repos. */
+  /** The end of turn report. He is the one who puts the session to rest. */
   reportTurn(report: VmTurnReport): Promise<void>;
 }
 
 export function createControlPlaneClient(
   appOrigin: string,
   /**
-   * Le jeton d'exécution locale, RELU À CHAQUE APPEL (MIN-355). Absent en microVM,
-   * où il n'y a rien à porter. Rendre `null` revient à appeler sans en-tête : la
-   * route répond alors 403, ce qui est exactement ce qu'il faut qu'il arrive.
+   * The local execution token, RE-READ ON EACH CALL (MIN-355). Absent in microVM,
+   * where there is nothing to wear. Making `null` amounts to calling without a header: the
+   * route then responds 403, which is exactly what should happen.
    */
   getToken?: () => string | null | undefined,
 ): ControlPlaneClient {
   const url = (surface: string) => agentVmUrl(appOrigin, surface);
 
-  /** Le SEUL endroit qui fabrique l'en-tête, pour ses deux consommateurs. */
+  /** The ONLY place that makes the header, for both of its consumers. */
   function authHeaders(): Record<string, string> {
     const token = getToken?.();
     return token ? { authorization: `Bearer ${token}` } : {};
@@ -210,9 +210,9 @@ export function createControlPlaneClient(
         if (!retryable(res.status) || attempt === MAX_ATTEMPTS) throw err;
         lastError = err;
       } catch (e) {
-        // Une `ControlPlaneError` non retentable a déjà été relancée ci-dessus ;
-        // ce qui arrive ici est une panne de transport (DNS, TLS, timeout), et
-        // celle-là se retente.
+        // An unretryable `ControlPlaneError` has already been restarted above;
+        // what happens here is a transport failure (DNS, TLS, timeout), and
+        // this one is repeated.
         if (e instanceof ControlPlaneError && !retryable(e.status)) throw e;
         lastError = e as Error;
         if (attempt === MAX_ATTEMPTS) throw lastError;
@@ -222,7 +222,7 @@ export function createControlPlaneClient(
     throw lastError ?? new Error(`${method} ${surface} failed`);
   }
 
-  /** Ce dont la perte est rattrapable : on journalise et on continue. */
+  /** What the loss of which can be made up for: we journal and we continue. */
   async function postQuiet(surface: string, body: unknown): Promise<void> {
     try {
       await request("POST", surface, body);
@@ -235,18 +235,18 @@ export function createControlPlaneClient(
     emit: (type, payload) => postQuiet("/events", { type, payload }),
 
     /**
-     * SYNCHRONE et DÉTACHÉ, exactement comme `broadcastRunStream` l'est dans la
-     * fonction : la boucle appelle ça au milieu d'un stream LLM, quatre fois par
-     * seconde. L'attendre ferait payer la latence du plan de contrôle à chaque
-     * fragment de texte — et le direct n'a aucune valeur en retard.
+     * SYNCHRONOUS and DETACHED, exactly as `broadcastRunStream` is in the
+     * function: the loop calls this in the middle of an LLM stream, four times per
+     * second. Waiting for it would make the control plane latency pay for each
+     * fragment of text — and live has no value in delay.
      *
-     * Le `catch` vide n'est pas une négligence : c'est le seul appel de ce
-     * fichier dont la perte ne se rattrape ni ne se journalise utilement (une
-     * ligne d'erreur toutes les 250 ms noierait les logs du tour).
+     * The empty `catch` is not an oversight: it is the only call of this
+     * file whose loss is not recovered or usefully logged (a
+     * error line every 250 ms would drown the lap logs).
      *
-     * C'est aussi ce qui rend le jeton facile à oublier ICI (MIN-355) : sans
-     * `authHeaders()` sur cette ligne, un tour local aboutirait normalement et ne
-     * streamerait plus rien pendant des heures, sans une erreur nulle part.
+     * This is also what makes the token easy to forget HERE (MIN-355): without
+     * `authHeaders()` on this line, a local tour would normally succeed and would not
+     * would stream nothing for hours, without an error anywhere.
      */
     emitLive: (progress) => {
       void fetch(url("/stream"), {
@@ -274,9 +274,9 @@ export function createControlPlaneClient(
         cacheWriteTokens: line.cacheWriteTokens,
         cost: line.cost,
         estimated: line.estimated,
-        // `runId`, `billTo` et `projectId` ne sont PAS envoyés : le plan de
-        // contrôle les dérive de la ligne du run. La VM ne choisit pas qui paye
-        // ce qu'elle dépense.
+        // `runId`, `billTo` and `projectId` are NOT sent: the
+        // controls run line drift. The VM does not choose who pays
+        // what she spends.
       }),
 
     appendJournal: async (sessionId, events) => {
@@ -299,11 +299,11 @@ export function createControlPlaneClient(
     },
 
     /**
-     * NE LÈVE PAS, et c'est un choix. Ces deux-là sont appelés au sommet de chaque
-     * round et pendant les streams : une panne passagère du plan de contrôle ferait
-     * tomber un tour de deux heures pour n'avoir pas su lire une file vide. Un
-     * message de steering lu au round suivant est une seconde de retard ; un tour
-     * mort est un tour à refaire.
+     * DON’T RISE, and that’s a choice. These two are called to the top of each
+     * round and during streams: a temporary failure of the control plane would
+     * fall a two-hour lap for not knowing how to read an empty line. A
+     * steering message read in the next round is one second late; a ride
+     * death is a trick to repeat.
      */
     pullSteering: async () => {
       try {
@@ -320,8 +320,8 @@ export function createControlPlaneClient(
       try {
         await request("POST", "/messages", { messages: texts });
       } catch (err) {
-        // Le tour se termine de toute façon : ce qui se perd ici est le message,
-        // et c'est précisément ce qu'il faut dire.
+        // The trick ends anyway: what is lost here is the message,
+        // and that is precisely what needs to be said.
         console.error("[agent-vm] steering requeue failed:", (err as Error).message);
       }
     },
@@ -331,8 +331,8 @@ export function createControlPlaneClient(
         const body = (await request("GET", "/messages/pending")) as { pending?: unknown };
         return body.pending === true;
       } catch (err) {
-        // Même règle que les deux voisines : une panne passagère ne doit pas
-        // rompre une attente, seulement la laisser aller à son terme.
+        // Same rule as the two neighbors: a temporary breakdown must not
+        // break an expectation, only let it come to an end.
         console.error("[agent-vm] pending steering read failed:", (err as Error).message);
         return false;
       }
@@ -349,11 +349,11 @@ export function createControlPlaneClient(
     },
 
     /**
-     * LÈVE si elle échoue, à la différence de ses voisines — et c'est l'exception qui
-     * confirme leur règle. Ne pas savoir lire une file peut attendre le round
-     * suivant ; croire avoir effacé un drapeau qui est resté levé fait sortir le
-     * tour au round d'après, message accepté et jamais joué. La boucle traite donc
-     * l'échec comme un « toujours interrompu » (elle relit le drapeau derrière).
+     * RISE if it fails, unlike its neighbors — and this is the exception that
+     * confirms their rule. Not knowing how to read a line can wait for the round
+     * following ; believing that you have erased a flag that remained raised brings out the
+     * turn to the next round, message accepted and never played. The loop therefore processes
+     * failure as “always interrupted” (she rereads the flag behind).
      */
     clearInterrupt: async () => {
       await request("DELETE", "/interrupt");
@@ -366,9 +366,9 @@ export function createControlPlaneClient(
           ? body.remainingUsd
           : null;
       } catch (err) {
-        // `null` et pas 0 : une facturation injoignable ne doit pas arrêter un
-        // tour en cours. C'est le pire cas assumé — on garde le plafond d'entrée,
-        // qui est celui de l'ancienne forme.
+        // `null` and not 0: unreachable billing should not stop a
+        // round in progress. This is the worst case assumed — we keep the entry ceiling,
+        // which is that of the old form.
         console.error("[agent-vm] budget read failed:", (err as Error).message);
         return null;
       }
@@ -386,9 +386,9 @@ export function createControlPlaneClient(
         const body = (await request("POST", "/repo-auth")) as { authUrl?: unknown };
         return typeof body.authUrl === "string" && body.authUrl ? body.authUrl : null;
       } catch (err) {
-        // Le job en porte déjà un, posé au démarrage : un token qui n'a pas pu
-        // être rafraîchi n'est pas une raison de ne pas pousser. L'appelant
-        // retombe dessus.
+        // The job already has one, installed at startup: a token that could not
+        // Being refreshed is no reason not to push. The caller
+        // falls back to it.
         console.error("[agent-vm] repo auth refresh failed:", (err as Error).message);
         return null;
       }
@@ -396,9 +396,9 @@ export function createControlPlaneClient(
 
     llmKey: async () => {
       const body = (await request("POST", "/llm-key")) as { key?: unknown };
-      // `null` est le contrat explicite d'un endpoint local sans auth. Toute
-      // autre forme creuse reste une faute du plan de contrôle : confondre les
-      // deux masquerait une clé cloud perdue derrière un 401 du fournisseur.
+      // `null` is the explicit contract of a local endpoint without auth. All
+      // other hollow form remains a fault of the control plan: confusing the
+      // two would hide a lost cloud key behind a 401 from the provider.
       if (body.key === null) return null;
       if (typeof body.key !== "string" || !body.key.trim()) {
         throw new Error("POST /llm-key returned no key");

@@ -4,52 +4,50 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * LE BUNDLE DE LA COQUILLE ELECTRON (MIN-291).
+ * THE ELECTRON SHELL BUNDLE (MIN-291).
  *
- * Deux fichiers, et deux seulement : le main process et le preload. Ils
- * importent de `lib/desktop/` (la garde de navigation, le parsing du deep link,
- * le contrat du pont), qui est du TypeScript du dépôt avec ses alias `@/…` — un
- * bundle est donc le moyen le plus court d'obtenir du JS qu'Electron charge tel
- * quel, sans `node_modules` à installer dans l'app.
+ * Two files, and two only: the main process and the preload. They
+ * import from `lib/desktop/` (the navigation guard, the deep link parsing,
+ * the bridge contract), which is the TypeScript of the repository with its aliases `@/…` — a
+ * bundle is therefore the shortest way to get JS that Electron loads tel
+ * which, without `node_modules` to install in the app.
  *
- * Le preload est bundlé **en CJS et sans `sandbox: false`** : dans un renderer
- * en `sandbox: true`, Electron charge le preload dans un contexte restreint qui
- * ne connaît que `require('electron')` et quelques modules — pas d'ESM, pas de
- * `node_modules`. Tout ce qu'il touche doit donc être DANS le fichier.
+ * The preload is bundled **in CJS and without `sandbox: false`**: in a renderer
+ * in `sandbox: true`, Electron loads the preload in a restricted context which
+ * only knows `require('electron')` and a few modules — no ESM, no
+ * `node_modules`. Everything it touches must therefore be IN the file.
  *
- * Rien de ce qui est bundlé ici ne doit tirer de React, de Next ou de code
- * serveur : d'où le plafond ci-dessous, qui rend l'accident visible au build
- * plutôt que dans une app signée. C'est le même garde-fou que le bundle de la
- * microVM, pour la même raison — ce qui part chez les gens ne se relit pas.
+ * Nothing bundled here must draw from React, Next or code
+ * server: hence the cap below, which makes the crash visible at build
+ * rather than in a signed app. This is the same safeguard as the
+ * microVM bundle, for the same reason — what goes out to people doesn't get read again.
  */
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(dir, "..");
 const OUT_DIR = path.join(repo, "desktop", "dist");
 
-/** Une coquille MINCE (§1 de docs/desktop-electron.md) : main + preload, en Ko. */
+/** A THIN shell (§1 of docs/desktop-electron.md): main + preload, in KB. */
 const MAX_BUNDLE_BYTES = 200_000;
 
 await mkdir(OUT_DIR, { recursive: true });
 
 /**
- * LA VERSION DE L'APP EST CELLE DU DÉPÔT (MIN-292).
+ * THE VERSION OF THE APP IS THAT OF THE DEPOSIT (MIN-292).
  *
- * Un seul numéro pour la web app et la coquille, et ce n'est pas une coquetterie
- * de rangement : la coquille est une fenêtre sur `www.minddy.app`, donc « quelle
- * version de minddy est-ce ? » n'a qu'une réponse honnête. Deux numéros
- * distincts obligeraient à traduire de l'un à l'autre pour lire un rapport de
- * bug — l'user agent de la fenêtre (`minddy-desktop/<version>`) et la fenêtre
- * « À propos » portent tous deux ce nombre.
+ * A single number for the web app and the shell, and this is not a vanity
+ * of storage: the shell is a window on `www.minddy.app`, therefore " what
+ * version of minddy is this? » has only one honest answer. Two distinct
+ * numbers would require translating from one to the other to read a bug report — the user agent window (`minddy-desktop/<version>`) and the
+ * "About" window both carry this number.
  *
- * **Il est recopié plutôt que dérivé à l'exécution** parce que c'est
- * electron-builder qui le lit, dans `desktop/package.json`, et lui ne connaît
- * que ce fichier. Le voir bouger dans un diff est donc normal, et c'est même
- * l'intérêt : une publication l'accompagne, pas l'inverse.
+ * **It is copied rather than derived at runtime** because it is
+ * electron-builder which reads it, in `desktop/package.json`, and it only knows
+ * this file. Seeing it move in a diff is therefore normal, and that's even the point: a publication accompanies it, not the other way around.
  *
- * **Ce que ça ne déclenche pas** : une mise à jour chez les gens. Le flux
- * n'annonce que ce qui a été publié (`latest-mac.yml`) ; monter ce numéro sans
- * publier de binaire ne dit rien à personne.
+ * **What it doesn't trigger**: an update among people. The feed
+ * only announces what has been published (`latest-mac.yml`); mount this number without
+ * publishing binary doesn't tell anyone anything.
  */
 const repoPkgPath = path.join(repo, "package.json");
 const desktopPkgPath = path.join(repo, "desktop", "package.json");
@@ -60,8 +58,8 @@ const desktopPkg = JSON.parse(desktopPkgRaw);
 if (desktopPkg.version !== version) {
   const previous = desktopPkg.version;
   desktopPkg.version = version;
-  // Réécriture ciblée du fichier tel qu'il est écrit, indentation comprise :
-  // `JSON.stringify` reformaterait tout le fichier pour un seul champ.
+  // Targeted rewriting of the file as it is written, including indentation:
+  // `JSON.stringify` would reformat the entire file for a single field.
   await writeFile(
     desktopPkgPath,
     desktopPkgRaw.replace(
@@ -69,7 +67,7 @@ if (desktopPkg.version !== version) {
       `"version": ${JSON.stringify(version)}`
     )
   );
-  console.log(`[build:desktop] version ${previous} → ${version} (celle du dépôt)`);
+  console.log(`[build:desktop] version ${previous} → ${version} (repository version)`);
 }
 
 const result = await build({
@@ -81,17 +79,16 @@ const result = await build({
   bundle: true,
   platform: "node",
   format: "cjs",
-  // Electron 43 embarque Node 24 — mesuré en MIN-290, et c'est aussi la cible du
+  // Electron 43 ships Node 24 — measured in MIN-290, which is also the target of the
   // bundle du harness de l'agent (§7.3).
   target: "node24",
-  // `electron` est fourni par le runtime, jamais par nous. `electron-updater`,
-  // lui, est une vraie dépendance npm : elle est empaquetée dans l'app par
-  // electron-builder (ses `node_modules` de production) et se charge par
-  // `require` à l'exécution. La bundler ici la ferait entrer deux fois — et
-  // surtout, elle lit `app-update.yml` par le chemin de son propre paquet.
+  // `electron` is provided by the runtime, never by us. `electron-updater`,
+  // however, is a real npm dependency: electron-builder packages it in the app
+  // (from its production `node_modules`) and loads it through `require` at runtime.
+  // Bundling it here would include it twice — and, most importantly, it reads
+  // `app-update.yml` through its own package path.
   external: ["electron", "electron-updater"],
-  // Pas de minification : quand la coquille casse chez quelqu'un, la pile
-  // d'appel est tout ce qu'on aura.
+  // No minification: when the shell breaks for someone, the call stack is all we have.
   minify: false,
   sourcemap: false,
   tsconfig: path.join(repo, "desktop", "tsconfig.json"),
@@ -99,8 +96,8 @@ const result = await build({
   metafile: true,
 });
 
-// Les chemins du metafile sont relatifs au RÉPERTOIRE COURANT, pas au dépôt :
-// ce script se lance aussi bien depuis la racine que depuis `desktop/`.
+// Metafile paths are relative to the CURRENT DIRECTORY, not the repository:
+// this script runs from either the root or `desktop/`.
 for (const [file, output] of Object.entries(result.metafile.outputs)) {
   const { size } = await stat(path.resolve(process.cwd(), file));
   if (size > MAX_BUNDLE_BYTES) {
@@ -110,7 +107,7 @@ for (const [file, output] of Object.entries(result.metafile.outputs)) {
       .map(([f, i]) => `  ${(i.bytesInOutput / 1024).toFixed(0)} Ko  ${f}`)
       .join("\n");
     console.error(
-      `[build:desktop] ${file} fait ${(size / 1024).toFixed(0)} Ko, au-dessus du plafond de ${(MAX_BUNDLE_BYTES / 1024).toFixed(0)} Ko.\nLes plus gros contributeurs :\n${inputs}`
+      `[build:desktop] ${file} is ${(size / 1024).toFixed(0)} KB, above the ${(MAX_BUNDLE_BYTES / 1024).toFixed(0)} KB ceiling.\nLargest contributors:\n${inputs}`
     );
     process.exit(1);
   }

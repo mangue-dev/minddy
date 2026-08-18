@@ -9,44 +9,44 @@ import type {
 } from "@/components/pages/blocks/types";
 
 /**
- * Le bloc IMAGE (MIN-280) — un nœud atomique de BLOC, qui ne porte qu'une
- * adresse, un texte alternatif et une largeur.
+ * The IMAGE block (MIN-280) — an atomic BLOCK node, which carries only one
+ * address, alt text and width.
  *
- * Trois décisions valent d'être écrites, parce qu'aucune n'est évidente à la
+ * Three decisions are worth writing down, because none is obvious at first glance.
  * relecture :
  *
- * **1. Un bloc, pas une image en ligne.** Markdown, lui, n'a que l'image en
- * ligne (`![…](…)` vit dans un paragraphe). Ce n'est pas une contradiction : le
- * nœud est déclaré `group: "block"`, et l'analyseur DOM de ProseMirror, quand il
- * rencontre un `<img>` dans un `<p>`, ferme le paragraphe et pose le bloc — le
- * texte qui précédait et celui qui suit restent deux paragraphes. Rien n'est
- * perdu, et une image collée au milieu d'une phrase par Numo remonte donc à sa
- * propre ligne. C'est le comportement qu'on veut : dans une page, une capture
- * d'écran est un bloc qu'on déplace, pas une lettre du paragraphe.
+ * **1. A block, not an inline image.** Markdown only has the inline image.
+ * line (`![…](…)` lives in a paragraph). This is not a contradiction: the
+ * node is declared `group: "block"`, and the ProseMirror DOM parser, when it
+ * encounters a `<img>` in a `<p>`, closes the paragraph and places the block — the
+ * text which preceded and which follows remain two paragraphs. Nothing is
+ * lost, and an image stuck in the middle of a sentence by Numo therefore dates back to his
+ * own line. This is the behavior we want: in a page, a capture
+ * screen is a block that is moved, not a letter of the paragraph.
  *
- * **2. `src` porte l'URL de la ROUTE, jamais le chemin du bucket ni une URL
- * signée** (le pourquoi, en entier, est dans lib/page-files.ts). Une image dont
- * le `src` est une URL EXTERNE est un cas parfaitement normal — Numo écrit
- * `![graphe](https://…)`, et ça marche : ce bloc ne suppose nulle part que le
- * fichier soit à nous.
+ * **2. `src` carries the URL of the ROUTE, never the bucket path or a URL
+ * signed** (the full reason is in lib/page-files.ts). An image of which
+ * the `src` is an EXTERNAL URL is a perfectly normal case — Numo writes
+ * `![graphe](https://…)`, and it works: this block nowhere assumes that the
+ * file is ours.
  *
- * **3. La LARGEUR est un pourcentage de la colonne, pas des pixels.** Une page
- * se lit sur un écran de portable comme sur un 27 pouces ; une image posée à
- * 640 px déborde de l'un et flotte au milieu de l'autre. Le pourcentage tient
- * dans les deux, et c'est aussi le seul réglage qui reste juste quand la colonne
+ * **3. WIDTH is a percentage of the column, not the pixels.** One page
+ * can be read on a laptop screen like a 27-inch one; an image posed to
+ * 640 px overflows from one and floats in the middle of the other. The percentage is
+ * in both, and it is also the only adjustment that remains just when the column
  * de texte change de largeur.
  *
- * `uploadId` est l'exception qui confirme le reste : le seul attribut qui n'a de
- * sens qu'ici et maintenant. Il tient le temps du téléversement — la vue le lit
- * pour afficher l'aperçu local et l'avancement (components/pages/blocks/image-view.tsx),
- * et il retombe à `null` dès que le `src` définitif arrive.
+ * `uploadId` is the exception which confirms the rest: the only attribute which has no
+ * meaning only here and now. It takes the time to upload — the view reads it
+ * to display the local preview and progress (components/pages/blocks/image-view.tsx),
+ * and it falls back to `null` as soon as the definitive `src` arrives.
  */
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     pageImage: {
-      /** Poser un bloc image. Sans `src`, c'est un emplacement en attente de
-          son téléversement (`uploadId`). */
+      /** Place an image block. Without `src`, it is a location waiting for
+          its upload (`uploadId`). */
       insertPageImage: (attrs: {
         src?: string | null;
         alt?: string | null;
@@ -60,23 +60,23 @@ declare module "@tiptap/core" {
   }
 }
 
-/** Ce que la SURFACE pose sur les deux blocs de fichier : de quoi ouvrir une
-    boîte de dialogue. Lu au moment du geste et jamais capturé, comme les
-    crochets de la sous-page — le registre est monté headless par la projection
-    markdown, où aucun sélecteur de fichier n'a de sens. */
+/** What the SURFACE places on the two file blocks: enough to open a
+    dialog box. Read at the moment of the gesture and never captured, like the
+    subpage brackets — the register is mounted headless by projection
+    markdown, where no file selector makes sense. */
 export interface PageFilePickStorage {
-  /** `accept` d'un `<input type="file">` (`"image/*"`, ou vide pour tout). */
+  /** `accept` of a `<input type="file">` (`"image/*"`, or empty for all). */
   pick: ((accept: string) => void) | null;
   markdown?: unknown;
 }
 
-/** Bornes de la largeur, en pourcentage de la colonne de texte. En deçà de 10 %
-    une image n'est plus qu'un point ; au-delà de 100 % elle déborderait. */
+/** Width bounds, as a percentage of the text column. Below 10%
+    an image is nothing more than a point; beyond 100% it would overflow. */
 export const IMAGE_MIN_WIDTH = 10;
 export const IMAGE_MAX_WIDTH = 100;
 
-/** La largeur telle qu'on accepte de la ranger : un entier borné, ou `null`
-    (« pleine colonne », l'absence de réglage plutôt qu'un 100 écrit partout). */
+/** The width as we agree to store it: a bounded integer, or `null`
+    (“full column”, the absence of adjustment rather than a 100 written everywhere). */
 export function clampImageWidth(value: unknown): number | null {
   const width = typeof value === "string" ? Number(value) : value;
   if (typeof width !== "number" || !Number.isFinite(width)) return null;
@@ -94,24 +94,24 @@ export const PageImage = Node.create({
 
   addAttributes() {
     return {
-      // Le `src` est RENORMALISÉ à la lecture, et c'est ce qui empêche une
-      // image de disparaître d'un document qu'on rouvre ailleurs.
+      // The `src` is RENORMALISED when reading, and this is what prevents a
+      // image of disappearing from a document that is reopened elsewhere.
       //
-      // Copier un bloc image ne recopie pas le document : le presse-papiers
-      // porte du HTML, et Chrome y réécrit `/api/…` en `http://localhost:3000/api/…`.
-      // Collé, le bloc range cette adresse-là — visible sur le poste qui a
-      // collé, morte partout ailleurs, et invisible pour le balayage des
-      // orphelins, qui finit par effacer le fichier qu'elle nommait. Un cas
-      // vécu (MIN-284) : le bloc fichier, dont l'adresse voyage en `data-src`
-      // que le navigateur ne touche pas, n'a jamais rien eu.
+      // Copying an image block does not copy the document: the clipboard
+      // carries HTML, and Chrome rewrites `/api/…` to `http://localhost:3000/api/…`.
+      // Pasted, the block stores this address - visible on the post which has
+      // stuck, dead everywhere else, and invisible to scanning
+      // orphans, which ends up deleting the file it named. A case
+      // lived (MIN-284): the file block, whose address travels to `data-src`
+      // that the browser does not touch, never had anything.
       src: {
         default: null,
         parseHTML: (element) => normalizePageFileSrc(element.getAttribute("src")),
       },
-      // La LÉGENDE, et le texte alternatif : un seul champ, parce que markdown
-      // n'en a qu'un (`![légende](…)`) et qu'en avoir deux dans le nœud aurait
-      // voulu dire en perdre un à chaque aller-retour. Une bonne légende est un
-      // bon texte alternatif — c'est même la seule définition utilisable des
+      // The LEGEND, and the alternative text: a single field, because markdown
+      // only has one (`![caption](…)`) and having two in the node would have
+      // meant losing one each time there and back. A good caption is a
+      // good alternative text — it is even the only usable definition of
       // deux.
       alt: { default: null },
       width: {
@@ -121,8 +121,8 @@ export const PageImage = Node.create({
           attributes.width ? { "data-width": String(attributes.width) } : {},
       },
       // Hors document : jamais rendu en HTML, donc jamais relu. Un
-      // téléversement ne survit pas au rechargement de la page, et c'est très
-      // bien — ce qui survit, lui, est ce qui a un `src`.
+      // upload does not survive page reload, and this is very
+      // well — what survives is what has a `src`.
       uploadId: { default: null, rendered: false },
     };
   },
@@ -135,9 +135,9 @@ export const PageImage = Node.create({
     return ["img", HTMLAttributes];
   },
 
-  /** Le sélecteur de fichier, posé par la surface au montage — même montage que
-      `storage.subpage.create` : le registre est headless, et ouvrir une boîte de
-      dialogue n'a de sens que dans un navigateur. */
+  /** The file selector, placed by the surface during assembly — same assembly as
+      `storage.subpage.create`: the register is headless, and open a box
+      dialog only makes sense in a browser. */
   addStorage() {
     return { pick: null };
   },
@@ -172,15 +172,15 @@ export const imageBlock: PageBlock = {
       "illustration",
     ],
   },
-  // Une image ne se « transforme » pas depuis un paragraphe : il n'y a aucun
-  // texte à convertir en fichier. Elle s'insère, comme la sous-page.
+  // An image does not “transform” from a paragraph: there is no
+  // text to convert to file. It is inserted, like the subpage.
   turnInto: false,
-  // Et comme la sous-page, elle DOIT donc porter son `insert` : sans lui, le
-  // registre retombe sur « effacer la plage, puis convertir », et une entrée de
-  // menu dont `turnInto` est `false` n'aurait fait qu'avaler le « /image ».
-  // Le sélecteur vient de la surface (`storage.image.pick`) ; sans lui — un
-  // éditeur en lecture seule, l'aperçu d'une version — l'entrée ne fait rien,
-  // mais elle n'est pas offerte là non plus.
+  // And like the subpage, it MUST therefore carry its `insert`: without it, the
+  // register falls back to "clear range, then convert", and an entry of
+  // menu whose `turnInto` is `false` would only have swallowed the “/image”.
+  // The selector comes from the surface (`storage.image.pick`); without him — a
+  // read-only editor, preview of a version — entry does nothing,
+  // but it is not offered there either.
   insert: (editor, range) => {
     editor.chain().focus().deleteRange(range).run();
     editor.storage.image?.pick?.("image/*");
@@ -189,12 +189,12 @@ export const imageBlock: PageBlock = {
   markdown: {
     sample: "![A screenshot](/api/projects/00000000-0000-4000-8000-000000000000/pages/files/11111111-1111-4111-8111-111111111111)",
     toMarkdown: (state: MarkdownState, node: MarkdownNode) => {
-      // Échappée, et refusée avec son protocole — cf. blocks/file.ts (MIN-350).
+      // Escaped, and refused with its protocol — cf. blocks/file.ts (MIN-350).
       const src = markdownLinkDestination(node.attrs.src);
       const alt = typeof node.attrs.alt === "string" ? node.attrs.alt : "";
-      // Un emplacement dont le téléversement n'a pas abouti n'écrit RIEN plutôt
-      // qu'un `![](…)` vide : le markdown est ce que lit Numo, et une image sans
-      // adresse n'y est ni du contenu ni une information.
+      // A location that failed to upload writes NOTHING instead
+      // than an empty `![](…)`: the markdown is what Numo reads, and an image without
+      // address is neither content nor information.
       if (!src) return;
       state.write(`![${state.esc(alt)}](${src})`);
       state.closeBlock(node);

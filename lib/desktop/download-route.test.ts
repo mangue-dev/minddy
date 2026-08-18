@@ -2,21 +2,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 /**
- * LE COMPTE DES TÉLÉCHARGEMENTS DE L'APP DE BUREAU (MIN-292).
+ * THE DESKTOP APP DOWNLOAD COUNT (MIN-292).
  *
- * Il ne se voit nulle part : la route rend une redirection, et qu'elle émette
- * ou non son événement ne change rien à l'écran. C'est exactement le genre de
- * câblage qui se débranche sans bruit, et dont on s'aperçoit six mois plus tard
- * devant un graphe plat. D'où ce test.
+ * It is not seen anywhere: the route renders a redirect, and whether it issues
+ * or not its event changes nothing on the screen. This is exactly the kind of
+ * wiring that is disconnected without noise, and which we notice six months later
+ * in front of a flat graph. Hence this test.
  *
- * Ce qu'il tient, et qui ne se déduit d'aucun type :
- *   - un événement par `.dmg` réellement servi, et AUCUN quand la route échoue
- *     (flux injoignable, architecture sans fichier) — sinon le compte gonfle de
- *     téléchargements qui n'ont jamais eu lieu ;
- *   - l'identité PostHog du navigateur est REPRISE quand elle existe, pour que
- *     le téléchargement se recouse au parcours qui l'a précédé ;
- *   - sans elle, l'événement part anonyme ET sans profil de personne : le
- *     serveur ne doit pas fabriquer le suivi que le navigateur s'est refusé.
+ * What it holds, and which cannot be deduced from any type:
+ * - one event per `.dmg` actually served, and NONE when the route fails
+ * (unreachable flow, fileless architecture) — otherwise the count inflates de
+ * downloads which never took place;
+ * - the PostHog identity of the browser is RESUMED when it exists, so that
+ * the download repeats itself to the path which preceded it;
+ * - without it, the event starts anonymous AND without a person's profile: the
+ * server must not make the tracking that the browser has refused.
  */
 
 const captureServerEvent = vi.fn();
@@ -40,7 +40,7 @@ releaseDate: '2026-08-13T09:12:44.113Z'
 const BASE = "https://blob.example.com/desktop";
 const POSTHOG_KEY = "phc_test";
 
-/** Le flux répond, ou pas : c'est le seul IO de la route. */
+/** The flow responds, or not: it is the only IO on the route. */
 function mockFeed(body: string | null): void {
   vi.stubGlobal(
     "fetch",
@@ -56,7 +56,7 @@ function request(url: string, cookie?: string): NextRequest {
   return new NextRequest(url, cookie ? { headers: { cookie } } : undefined);
 }
 
-/** Le cookie que `posthog-js` pose une fois les cookies acceptés. */
+/** The cookie that `posthog-js` sets once cookies are accepted. */
 function posthogCookie(distinctId: string): string {
   return `ph_${POSTHOG_KEY}_posthog=${encodeURIComponent(
     JSON.stringify({ distinct_id: distinctId })
@@ -112,7 +112,7 @@ describe("GET /api/desktop/download", () => {
     );
     const event = captureServerEvent.mock.calls[0][0];
     expect(event.distinctId).toBe("visiteur-42");
-    // Identité connue : le profil de personne se met à jour comme d'habitude.
+    // Known identity: the person profile updates as usual.
     expect(event.properties).not.toHaveProperty("$process_person_profile");
   });
 

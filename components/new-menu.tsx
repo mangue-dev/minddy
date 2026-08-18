@@ -64,7 +64,7 @@ export function useCreateActions(): CreateAction[] {
       key: "new-project",
       icon: FolderPlus,
       label: t("newProject"),
-      // Plafond de projets du plan atteint (MIN-72) → action grisée.
+      // Project ceiling of the plan reached (MIN-72) → action grayed out.
       disabled: projectLimitReached,
       onSelect: openCreateProject,
     },

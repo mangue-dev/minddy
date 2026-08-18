@@ -1,8 +1,8 @@
-// `server-only` remplacé par un no-op dans le bundle de la microVM (MIN-224).
+// `server-only` replaced by a no-op in the microVM bundle (MIN-224).
 //
-// Le vrai paquet LÈVE quand il est importé hors d'un contexte serveur React, ce
-// qui est exactement le cas de la microVM : elle fait tourner du Node nu. Aucun
-// module du bundle ne devrait l'importer — le tri a été fait, et le test de
-// graphe le garde — mais un import oublié doit se traduire par un module inerte,
-// pas par un harness qui refuse de démarrer.
+// The real LEVEL package when imported outside of a React server context, this
+// which is exactly the case of the microVM: it runs bare Node. None
+// bundle module should not import it — the sorting has been done, and the test
+// graph keeps it — but a forgotten import must result in an inert module,
+// not by a harness that refuses to start.
 module.exports = {};

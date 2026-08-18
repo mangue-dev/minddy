@@ -3,13 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentRun } from "@/lib/server/agent/runs";
 
 /**
- * MIN-147 — le crochet de fin de run, et le seul repos qui n'en est pas un.
+ * MIN-147 — the end-of-run hook, and the only rest that isn't a rest.
  *
- * `ask_user` termine le tour de l'agent en `completed` avec `awaiting_input` :
- * du point de vue du run, c'est un repos ; du point de vue du TRAVAIL, c'est une
- * question restée sans réponse. Enchaîner là-dessus lance l'étape suivante par
- * dessus la question — qui part alors avec le run, sans que personne ne l'ait
- * lue. La dépense se cumule quand même : elle a bien eu lieu.
+ * `ask_user` ends the agent's turn at `completed` with `awaiting_input` :
+ * from the point from the point of view of the run, it’s a rest; From a WORK perspective, this is an unanswered question. Continuing on this launches the next step by
+ * on the question — which then leaves with the run, without anyone having
+ * read it. The expense still accumulates: it has indeed taken place.
  */
 
 const C = vi.hoisted(() => ({ chain: null as Record<string, unknown> | null }));
@@ -39,7 +38,7 @@ function run(extra: Partial<AgentRun>): AgentRun {
   } as AgentRun;
 }
 
-/** Le crochet est fire-and-forget : on laisse la chaîne de promesses se vider. */
+/** The hook is fire-and-forget: we let the promise chain empty. */
 async function settle() {
   await vi.waitFor(() => expect(chain.recomputeChainSpend).toHaveBeenCalled());
   for (let i = 0; i < 5; i++) await Promise.resolve();
@@ -52,7 +51,7 @@ describe("notifyChainOfRunEnd", () => {
   it("un run qui ATTEND une réponse ne fait pas avancer la chaîne", async () => {
     notifyChainOfRunEnd(run({ awaiting_input: true }));
     await settle();
-    // La dépense, oui — elle a eu lieu. L'étape suivante, non.
+    // The expense, yes — it took place. The next step, no.
     expect(chain.recomputeChainSpend).toHaveBeenCalledWith("chain-1");
     expect(engine.scheduleAutomations).not.toHaveBeenCalled();
   });
@@ -80,10 +79,10 @@ describe("notifyChainOfRunEnd", () => {
   });
 
   it("prendre la main annule le SURSIS, jamais une chaîne qui tourne", async () => {
-    // Les gestes manuels qui ne déplacent PAS le ticket — lancer un plan, une
-    // vérification, une consigne libre, copier l'un de ces prompts — ne se
-    // voient nulle part ailleurs : sans ce signal, le sursis courait jusqu'au
-    // bout et Numo repartait sur un travail déjà pris en charge.
+    // Manual gestures that do NOT move the ticket — launch a plan,
+    // verification, a free instruction, copy one of these prompts — does not
+    // see nowhere else: without this signal, the reprieve would run until
+    // end and Numo started again on work already taken care of.
     C.chain = { id: "chain-1", status: "pending" };
     handOffToHuman("i1");
     await vi.waitFor(() => expect(chain.cancelPendingChain).toHaveBeenCalled());
@@ -91,8 +90,8 @@ describe("notifyChainOfRunEnd", () => {
   });
 
   it("une chaîne qui TOURNE n'est pas touchée par une prise en main", async () => {
-    // Ce cas-là est déjà arbitré à la source : le lancement manuel est refusé
-    // (`alreadyRunning`). Annuler ici couperait une chaîne en plein travail.
+    // This case is already arbitrated at the source: manual launch is refused
+    // (`alreadyRunning`). Canceling here would cut a channel mid-work.
     C.chain = { id: "chain-1", status: "running" };
     handOffToHuman("i1");
     await vi.waitFor(() => expect(chain.chainForIssue).toHaveBeenCalled());

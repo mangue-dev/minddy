@@ -1,44 +1,44 @@
 "use client";
 
 /**
- * Refermer une notification poussée quand on arrive sur la page qu'elle désigne.
+ * Close a pushed notification when you arrive on the page it designates.
  *
- * Une notification système ne s'efface pas toute seule : une fois affichée, elle
- * reste dans le centre de notifications jusqu'à ce qu'on la balaye à la main —
- * y compris quand on a lu le commentaire qu'elle annonçait, dans l'app, dix
- * secondes plus tôt. Le clic sur la bannière, lui, la referme (`notificationclick`
- * dans public/sw.js) ; c'est le chemin d'à côté, celui qui passe par l'app, qui
- * laissait tout derrière lui.
+ * A system notification does not disappear on its own: once displayed, it
+ * stays in the notification center until swiped by hand —
+ * including when we read the comment she announced, in the app, ten
+ * seconds earlier. Clicking on the banner closes it (`notificationclick`
+ * in public/sw.js); it's the next way, the one that goes through the app, that
+ * left everything behind.
  *
- * ## Ce que « la page concernée » veut dire
+ * ## What “the affected page” means
  *
- * La charge utile poussée porte le chemin de sa cible (`notificationTargetPath`),
- * et rien d'autre ne l'identifie. Le rapprochement se fait donc URL contre URL :
- * même chemin, et mêmes valeurs pour les paramètres qui DÉSIGNENT la cible
- * (`NOTIFICATION_TARGET_PARAMS`). Les autres paramètres sont ignorés dans les
- * deux sens — l'app en ajoute (un onglet, un filtre, une vue) sans que ça change
- * ce qu'on est en train de regarder.
+ * The pushed payload carries the path to its target (`notificationTargetPath`),
+ * and nothing else identifies it. The comparison is therefore made URL against URL:
+ * same path, and same values ​​for the parameters that DESIGNATE the target
+ * (`NOTIFICATION_TARGET_PARAMS`). Other parameters are ignored in the
+ * two meanings — the app adds more (a tab, a filter, a view) without it changing
+ * what we are looking at.
  *
- * L'asymétrie est voulue : une notification de ticket (`?issue=…`) ne se referme
- * PAS parce qu'on est sur le board qui le contient, seulement quand le ticket
- * lui-même est ouvert.
+ * The asymmetry is intended: a ticket notification (`?issue=…`) does not close
+ * NOT because we are on the board that contains it, only when the ticket
+ * itself is open.
  *
- * ## Où ça vit
+ * ## Where it lives
  *
- * Ici et nulle part ailleurs. Le service worker ne décide de rien : il prévient
- * les onglets qu'il vient d'afficher quelque chose (`push-shown`), et c'est la
- * page — la seule à savoir ce qu'elle affiche — qui tranche. Il ne pourrait pas
- * faire autrement de toute façon : public/sw.js est servi tel quel, sans build,
+ * Here and nowhere else. The service worker does not decide anything: he warns
+ * tabs it just displayed something (`push-shown`), and that's the
+ * page — the only one to know what it displays — which decides. He couldn't
+ * do otherwise anyway: public/sw.js is served as is, without build,
  * donc sans import.
  */
 
 import { NOTIFICATION_TARGET_PARAMS } from "@/lib/notification-target";
 
-/** Base bidon : les deux URL sont des chemins relatifs, l'origine ne sert qu'à
- *  `new URL` et disparaît de la comparaison. */
+/** False base: the two URLs are relative paths, the origin is only used to
+ * `new URL` and disappears from the comparison. */
 const BASE = "http://minddy.invalid";
 
-/** `/inbox/` et `/inbox` sont la même page. */
+/** `/inbox/` and `/inbox` are the same page. */
 function normalizePath(pathname: string): string {
   return pathname.length > 1 && pathname.endsWith("/")
     ? pathname.slice(0, -1)
@@ -46,9 +46,9 @@ function normalizePath(pathname: string): string {
 }
 
 /**
- * L'écran actuellement affiché (`currentUrl`) est-il celui vers lequel mène une
- * notification (`targetUrl`) ? Les deux sont des chemins relatifs, éventuellement
- * avec une query.
+ * Is the screen currently displayed (`currentUrl`) the one to which a
+ * notification (`targetUrl`)? Both are relative paths, possibly
+ * with a query.
  */
 export function showsNotificationTarget(
   currentUrl: string,
@@ -75,8 +75,8 @@ export function showsNotificationTarget(
   return true;
 }
 
-/** Ce vers quoi mène une notification affichée : le service worker le range dans
- *  `data.url`, et se rabat sur le `tag` (qui est ce même chemin) par sécurité. */
+/** What a displayed notification leads to: the service worker places it in
+ * `data.url`, and falls back on `tag` (which is the same path) for safety. */
 function notificationUrl(notification: Notification): string | null {
   const fromData = (notification.data as { url?: unknown } | null)?.url;
   if (typeof fromData === "string" && fromData) return fromData;
@@ -84,19 +84,19 @@ function notificationUrl(notification: Notification): string | null {
 }
 
 /**
- * Referme toutes les notifications affichées qui mènent à l'écran donné. Rend le
- * nombre de notifications refermées.
+ * Closes all displayed notifications that lead to the given screen. Make it
+ * number of closed notifications.
  *
- * Best-effort de bout en bout, et silencieux : sans permission il n'y a pas
- * d'enregistrement, sans enregistrement il n'y a rien à refermer, et
- * `getNotifications` manque encore sur certains Safari — aucun de ces cas n'est
- * une panne, et aucun n'a à remonter jusqu'à l'utilisateur.
+ * Best-effort from start to finish, and silent: without permission there is no
+ * recording, without recording there is nothing to close, and
+ * `getNotifications` is still missing on some Safaris — none of these cases are
+ * a failure, and none has to be traced back to the user.
  */
 export async function closeNotificationsForView(currentUrl: string): Promise<number> {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return 0;
-  // Sans permission, il ne peut RIEN y avoir d'affiché : on sort avant le
-  // moindre await. C'est le cas de l'immense majorité des visites, et ça
-  // s'appelle à chaque navigation.
+  // Without permission, NOTHING can be posted: we go out before
+  // least await. This is the case for the vast majority of visits, and that
+  // is called every time you browse.
   if (typeof Notification === "undefined" || Notification.permission !== "granted") {
     return 0;
   }

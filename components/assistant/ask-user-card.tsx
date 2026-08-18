@@ -22,34 +22,34 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Carte de questions `ask_user` (MIN-86) — partagée entre le chat Numo et le fil
- * de l'agent de code, en parité avec l'outil AskUserQuestion de Claude Code :
- * PAGINÉE (un set de questions à la fois, chips-onglets + Précédent/Suivant),
- * options en liste verticale avec description et badge « Recommandé », radio
- * (choix exclusif, cercle plein quand coché) ou checkboxes (`multiSelect`),
- * « Autre chose… » qui se transforme en champ de saisie inline, un ENVOI GLOBAL
- * (un seul bouton Envoyer valide l'ensemble) et une croix pour PASSER les
- * questions sans répondre.
+ * `ask_user` question card (MIN-86) — shared between Numo chat and feed
+ * of the code agent, in parity with the AskUserQuestion tool from Claude Code:
+ * PAGINED (one set of questions at a time, chips-tabs + Previous/Next),
+ * options in vertical list with description and “Recommended” badge, radio
+ * (exclusive choice, full circle when checked) or checkboxes (`multiSelect`),
+ * “Something else…” which becomes an inline input, a GLOBAL SEND
+ * (a single Send button validates the whole thing) and a cross to SKIP the
+ * questions without answering.
  *
- * La carte VIVANTE remplace le composer (pattern Claude Code/Codex) — rendue par
- * la surface hôte avec `onAnswer`/`onSkip`. Sans `onAnswer`, elle est le simple
- * enregistrement inerte d'une question passée, affiché dans le fil.
+ * The VIVANTE card replaces the composer (Claude Code/Codex pattern) — rendered by
+ * the host surface with `onAnswer`/`onSkip`. Without `onAnswer`, it is the simple
+ * inert recording of a past question, posted in the thread.
  */
 
 interface AskUserCardProps {
   questions: AskUserQuestion[];
-  /** Envoie la réponse composée comme message utilisateur. Absent = carte inerte. */
+  /** Sends the composed response as a user message. Absent = inert card. */
   onAnswer?: (text: string) => void;
-  /** Passe les questions sans répondre (croix en haut à droite de la carte). */
+  /** Skip the questions without answering (cross at the top right of the card). */
   onSkip?: () => void;
 }
 
-/** Brouillon de réponse d'une question : options cochées + saisie libre. */
+/** Draft answer to a question: options checked + free entry. */
 type Draft = { values: string[]; other: boolean; otherValue: string };
 
-/** Délai avant l'avance automatique au set suivant après un choix radio : le
-    temps de VOIR l'option se cocher — sans lui, le changement d'onglet
-    immédiat ressemble à un bug. */
+/** Delay before automatic advance to the next set after a radio choice: the
+ time to SEE the option is checked — without it, the immediate tab change
+ looks like a bug. */
 const AUTO_ADVANCE_MS = 250;
 
 const EMPTY_DRAFT: Draft = { values: [], other: false, otherValue: "" };
@@ -58,7 +58,7 @@ function draftAnswered(d: Draft | undefined): boolean {
   return !!d && (d.values.length > 0 || d.otherValue.trim().length > 0);
 }
 
-/** Réponse d'une question : options cochées + éventuelle saisie libre, jointes. */
+/** Answer to a question: options checked + possible free entry, attached. */
 function draftAnswer(d: Draft | undefined): string {
   if (!d) return "";
   const parts = [...d.values];
@@ -73,8 +73,8 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
   const [current, setCurrent] = useState(0);
   const [submitted, setSubmitted] = useState(false);
 
-  // Avance automatique différée (choix radio) — annulée par toute interaction
-  // intermédiaire (désélection, navigation manuelle) et au démontage.
+  // Delayed automatic advance (radio choice) — canceled by any interaction
+  // intermediate (deselection, manual navigation) and disassembly.
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
     () => () => {
@@ -103,8 +103,8 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
   const isLast = page === sets - 1;
   const allAnswered = questions.every((_, i) => draftAnswered(drafts[i]));
   const showSkip = live && !!onSkip;
-  // Sans options, la question appelle une réponse libre : le champ s'affiche
-  // directement, sans passer par la ligne « Autre chose… ».
+  // Without options, the question calls for a free answer: the field is displayed
+  // directly, without going through the “Something else…” line.
   const freeOnly = q.options.length === 0;
 
   const submit = () => {
@@ -130,13 +130,13 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
     if (!live) return;
     const d = drafts[page] ?? EMPTY_DRAFT;
     if (q.multiSelect) {
-      // Checkbox : on combine librement, la saisie libre reste indépendante.
+      // Checkbox: you can combine freely, free entry remains independent.
       const values = d.values.includes(label)
         ? d.values.filter((v) => v !== label)
         : [...d.values, label];
       setDraft(page, { ...d, values });
     } else {
-      // Radio : choix exclusif — sélectionner ferme « Autre chose… », re-cliquer désélectionne.
+      // Radio: exclusive choice — selecting closes “Something else…”, clicking again deselects.
       const selecting = !d.values.includes(label);
       clearAdvance();
       setDraft(page, {
@@ -144,10 +144,10 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
         other: false,
         otherValue: "",
       });
-      // Répondre en radio fait avancer au set suivant tout seul, après un court
-      // délai qui laisse VOIR la sélection (les checkboxes restent manuelles —
-      // on en coche plusieurs). Jamais d'envoi automatique : depuis le dernier
-      // set, c'est le bouton Envoyer qui valide.
+      // Responding on the radio advances to the next set on its own, after a short
+      // delay which lets SEE the selection (the checkboxes remain manual —
+      // we check several). Never automatic sending: since last
+      // set, it is the Send button which validates.
       if (selecting && sets > 1 && !isLast) {
         advanceTimer.current = setTimeout(() => {
           advanceTimer.current = null;
@@ -162,14 +162,14 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
     clearAdvance();
     const d = drafts[page] ?? EMPTY_DRAFT;
     if (q.multiSelect) {
-      // Checkbox : « Autre chose… » se coche/décoche comme une option.
+      // Checkbox: “Something else…” is checked/unchecked as an option.
       setDraft(page, d.other ? { ...d, other: false, otherValue: "" } : { ...d, other: true });
     } else {
       setDraft(page, { values: [], other: true, otherValue: "" });
     }
   };
 
-  // Indicateur de sélection : radio = cercle PLEIN quand coché ; checkbox = case.
+  // Selection indicator: radio = FULL circle when checked; checkbox = checkbox.
   const OptionIcon = ({ selected }: { selected: boolean }) => {
     if (q.multiSelect) {
       const Icon = selected ? SquareCheck : Square;
@@ -182,8 +182,8 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
         />
       );
     }
-    // Radio classique : anneau + espace + point plein quand coché. Encre
-    // (`primary`), comme la Checkbox de mangue-ui — pas de couleur de marque.
+    // Classic radio: ring + space + full dot when checked. Ink
+    // (`primary`), like mango-ui's Checkbox — no branding color.
     return (
       <span
         aria-hidden
@@ -234,9 +234,9 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
     </button>
   );
 
-  // `withIcon` : l'input REMPLACE la ligne « Autre chose… » (radio / question
-  // libre) et garde son indicateur ; sans icône, il s'affiche SOUS la ligne
-  // cochée (multi-sélection).
+  // `withIcon`: the entry REPLACES the line “Something else…” (radio / question
+  // free) and keeps its indicator; without icon, it is displayed BELOW the line
+  // checked (multi-selection).
   const otherInput = (withIcon: boolean) => (
     <div className={cn("flex items-center gap-2 py-1", withIcon ? "px-2.5" : "pl-8 pr-2.5")}>
       {withIcon && (
@@ -269,7 +269,7 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
         onKeyDown={(e) => {
           if (e.key !== "Enter") return;
           e.preventDefault();
-          // Entrée : avance au set suivant, ou envoie depuis le dernier.
+          // Enter: advance to the next set, or send from the last one.
           if (!isLast) goTo(page + 1);
           else if (allAnswered) submit();
         }}
@@ -279,15 +279,15 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
   );
 
   return (
-    // La carte prend la PLACE du composer : elle en reprend la surface (carte
-    // bordée, ombre légère, rounded-2xl) plutôt qu'une teinte de marque — elle
-    // suit ainsi le thème clair/sombre comme le reste de l'interface.
+    // The map takes the PLACE of the composer: it takes up the surface (map
+    // edged, light shade, rounded-2xl) rather than a branded shade — she
+    // thus follows the light/dark theme like the rest of the interface.
     //
-    // Elle en reprend aussi le RACCOURCI : ⌘/Ctrl+Entrée envoie les réponses —
-    // ou Entrée seule, si le compte l'a réglé ainsi. Le champ de réponse libre
-    // garde la priorité (Entrée y avance d'une question et `preventDefault`),
-    // d'où la garde `defaultPrevented` : sans elle, en mode « Entrée envoie »,
-    // la même frappe avancerait ET enverrait.
+    // It also includes the SHORTCUT: ⌘/Ctrl+Enter sends the responses —
+    // or Entry only, if the account has it set that way. The free response field
+    // keeps priority (Enter advances one question and `preventDefault`),
+    // hence the `defaultPrevented` guard: without it, in “Enter send” mode,
+    // the same strike would advance AND send.
     <div
       className="relative rounded-2xl border border-border bg-card px-3.5 py-3 text-sm shadow-sm"
       onKeyDown={(e) => {
@@ -297,7 +297,7 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
         submit();
       }}
     >
-      {/* Croix « passer les questions » — coin haut droit de la carte. */}
+      {/* “Skip questions” cross — top right corner of the card. */}
       {showSkip && (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -318,7 +318,7 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
         </Tooltip>
       )}
 
-      {/* Chips-onglets des sets — uniquement à plusieurs questions. */}
+      {/* Chips-tabs from sets — multi-question only. */}
       {sets > 1 && (
         <div
           className={cn(
@@ -369,16 +369,16 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
               () => pickOption(o.label)
             )
           )}
-          {/* « Autre chose… » : la ligne se transforme en champ de saisie au clic. */}
+          {/* “Something else…”: the line transforms into an input field when clicked. */}
           {freeOnly || (draft?.other && !q.multiSelect)
             ? otherInput(true)
             : optionRow(t("otherOption"), "", false, !!draft?.other, pickOther)}
-          {/* En multi-sélection, « Autre chose… » reste cochée ET ouvre le champ dessous. */}
+          {/* In multi-selection, “Something else…” remains checked AND opens the field below. */}
           {q.multiSelect && draft?.other && otherInput(false)}
         </div>
       </div>
 
-      {/* Pied : navigation libre entre les sets, envoi GLOBAL au dernier. */}
+      {/* Foot: free navigation between sets, GLOBAL sending to the last one. */}
       {(sets > 1 || live) && (
         <div className="mt-1 flex items-center justify-between gap-2 pt-1.5">
           <div>

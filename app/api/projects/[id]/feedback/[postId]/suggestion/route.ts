@@ -8,8 +8,8 @@ import { mergePosts, rejectMergeSuggestion } from "@/lib/server/feedback/merge";
 
 type RouteContext = { params: Promise<{ id: string; postId: string }> };
 
-/** POST { action: "accept" | "reject" } — traite la suggestion IA du post :
-    accept = merge (undoable), reject = mémorisé pour toujours (anti-récidive). */
+/** POST { action: "accept" | "reject" } — handles the AI ​​suggestion in the post:
+ accept = merge (undoable), reject = remembered forever (anti-relapse). */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id, postId } = await params;
   const guard = await requireProjectMember(request, id);
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  // `null` est du JSON valide : lire body.action dessus ferait un 500.
+  // `null` is valid JSON: reading body.action on it would do a 500.
   if (!body || typeof body !== "object") {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }

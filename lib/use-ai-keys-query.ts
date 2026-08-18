@@ -6,15 +6,15 @@ import { fetchAiKeysApi } from "./agent-keys-api";
 export const aiKeysQueryKey = ["ai-keys"] as const;
 
 /**
- * Clés BYOK du compte (sanitisées : provider + préfixe, jamais la clé).
+ * BYOK account keys (sanitized: provider + prefix, never the key).
  *
- * `enabled` : l'onboarding a besoin de savoir si une clé existe (MIN-149), mais
- * il n'est visible que pour un compte neuf. Sans ce garde-fou, chaque affichage
- * de la home tirerait cette lecture pour tout le monde, alors qu'elle ne sert
- * qu'à une étape que la plupart des comptes ne verront jamais. Une requête
- * désactivée reste `pending` pour toujours : c'est `enabled` qui referme
- * `loading` (cf. lib/query-provider.tsx), pour que l'appelant n'attende pas une
- * réponse qui ne viendra pas.
+ * `enabled`: onboarding needs to know if a key exists (MIN-149), but
+ * it is only visible for a new account. Without this safeguard, each display
+ * of the home would draw this reading for everyone, while it is not useful
+ * only at a stage that most accounts will never see. A request
+ * disabled remains `pending` forever: it is `enabled` which closes
+ * `loading` (see lib/query-provider.tsx), so that the caller does not wait for a
+ * answer which will not come.
  */
 export function useAiKeysQuery({ enabled = true }: { enabled?: boolean } = {}) {
   const { data, isPending } = useQuery({

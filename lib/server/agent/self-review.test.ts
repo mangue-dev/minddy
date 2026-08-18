@@ -48,8 +48,8 @@ describe("formatSelfReview", () => {
     const block = formatSelfReview({ diff: DIFF, porcelain: "" });
     expect(block).toContain("deleteViewTitle");
     expect(block).toContain("```diff");
-    // La consigne doit DISSUADER de relancer la commande : le harness l'a déjà
-    // lancée, et un aller-retour de tool en plus est exactement ce qu'on évite.
+    // The instruction should DISDUCE you from restarting the command: the harness already has it
+    // launched, and an additional tool round trip is exactly what we avoid.
     expect(block).toContain("do not run it again");
   });
 
@@ -95,20 +95,20 @@ describe("formatSelfReview", () => {
   });
 });
 
-// ── Ce qui, ailleurs, écrit le même état (MIN-252) ──────────────────────────
+// ── Which, elsewhere, writes the same state (MIN-252) ──────────────────────────
 
 /**
- * LE CAS FONDATEUR, en dur : le diff de la PR 48 sur `use-agent-run-live.ts`.
+ * THE FOUNDING CASE, in hard copy: the difference from PR 48 on `use-agent-run-live.ts`.
  *
- * Le changement pose `files` dans l'état du round — DANS un `setLive((prev) =>
- * …)` dont la tête d'appel, elle, ne bouge pas — et laisse intact, quinze lignes
- * plus bas, le `setLive(null)` de `onEvent` qui le remet à zéro à chaque event
- * posé. Cette ligne-là n'est dans AUCUN hunk : c'est exactement ce que le bloc
+ * The change sets `files` in the state of the round — IN a `setLive((prev) =>
+ * …)` whose call head does not move — and leaves fifteen lines intact
+ * lower, the `setLive(null)` of `onEvent` which resets it to zero at each event
+ * laid. This line is not in ANY hunk: this is exactly what the block
  * doit faire remonter.
  *
- * Deux pièges du cas réel, tenus ici tels quels : le symbole ne s'écrit sur
- * aucune ligne `+`, et la ligne à remonter porte MOT POUR MOT le même
- * `setLive(null);` qu'une ligne du diff.
+ * Two traps of the real case, kept here as they are: the symbol is not written on
+ * no line `+`, and the line to go up carries VOM FOR WORD the same
+ * `setLive(null);` than a line in the diff.
  */
 const PR48_DIFF = `diff --git a/lib/use-agent-run-live.ts b/lib/use-agent-run-live.ts
 --- a/lib/use-agent-run-live.ts
@@ -121,7 +121,7 @@ const PR48_DIFF = `diff --git a/lib/use-agent-run-live.ts b/lib/use-agent-run-li
 @@ -139,11 +150,19 @@ export function useAgentRunLive(
          const reasoningMs = typeof p.reasoningMs === "number" ? p.reasoningMs : 0;
 +        const { files, truncated } = parseFilesChangedPayload(p.files, p.filesTruncated);
-         // Envoi À VIDE : les vrais events du round sont posés.
+          // EMPTY send: the real events from the round are already in place.
 -        if (!text && !tools && !reasoningActive) {
 +        if (!text && !tools && !reasoningActive && files.length === 0) {
            setLive(null);
@@ -140,9 +140,9 @@ const PR48_DIFF = `diff --git a/lib/use-agent-run-live.ts b/lib/use-agent-run-li
        onEvent: (row) => {
 `;
 
-/** Ce que `git grep -n 'setLive *\\('` rend sur le fichier tel que le tour l'a
- *  laissé — la déclaration (`const [live, setLive] = useState(…)`) n'y est pas,
- *  elle n'appelle rien. */
+/** What `git grep -n 'setLive *\\('` renders on the file as the turn has it
+ * left — the declaration (`const [live, setLive] = useState(…)`) is not there,
+ *  it calls nothing. */
 const PR48_GREP = [
   "lib/use-agent-run-live.ts:140:    setLive(null);",
   "lib/use-agent-run-live.ts:154:          setLive(null);",
@@ -150,15 +150,15 @@ const PR48_GREP = [
   "lib/use-agent-run-live.ts:171:        setLive(null);",
 ].join("\n");
 
-/** Un diff d'un seul hunk sur `a.ts`, dont la première ligne est la `startLine`
- *  du fichier — les numéros comptent, l'exclusion se fait dessus. */
+/** A single hunk diff on `a.ts`, whose first line is `startLine`
+ * of the file — the numbers count, the exclusion is done on them. */
 function hunk(lines: string[], startLine = 1, file = "a.ts"): string {
   return [`--- a/${file}`, `+++ b/${file}`, `@@ -1,1 +${startLine},${lines.length} @@`, ...lines].join(
     "\n",
   );
 }
 
-/** Un hôte qui répond la MÊME sortie à tout grep — on teste le tri, pas git. */
+/** A host that responds the SAME output to any grep — we test sorting, not git. */
 function hostReturning(stdout: string, exitCode = 0): RepoHost {
   return {
     layout: cloudLayout(),
@@ -176,8 +176,8 @@ describe("assignedSymbols", () => {
 
   it("lit le hunk — les lignes ajoutées ET leur contexte, jamais les retraits", () => {
     const diff = hunk([" setContext(1);", "-setRemoved(2);", "+setAdded(3);"]);
-    // `setRemoved` n'est plus dans le fichier : le grepper serait chercher une
-    // ligne que le tour vient de supprimer.
+    // `setRemoved` is no longer in the file: the grepper would look for a
+    // line that the trick has just deleted.
     expect(assignedSymbols(diff).map((s) => s.name)).toEqual(["setAdded", "setContext"]);
   });
 
@@ -228,8 +228,8 @@ describe("overwriteSitesForTurn", () => {
     const hits = await overwriteSitesForTurn(hostReturning(PR48_GREP), PR48_DIFF);
     const live = hits.find((hit) => hit.symbol.name === "setLive");
     expect(live).toBeDefined();
-    // La ligne 171 EST le défaut : le `setLive(null)` de `onEvent` écrit l'état
-    // que le diff vient de poser, et il n'est nulle part dans le diff.
+    // Line 171 IS the fault: `setLive(null)` of `onEvent` writes the status
+    // that the diff just posed, and it's nowhere in the diff.
     expect(live!.sites.map((s) => s.line)).toContain(171);
     expect(live!.sites.find((s) => s.line === 171)!.text).toBe("setLive(null);");
   });
@@ -237,9 +237,9 @@ describe("overwriteSitesForTurn", () => {
   it("ne rend pas les lignes que le diff porte déjà", async () => {
     const hits = await overwriteSitesForTurn(hostReturning(PR48_GREP), PR48_DIFF);
     const lines = hits.flatMap((hit) => hit.sites.map((s) => s.line));
-    // 154 et 157 sont DANS les hunks : les rapporter ferait relire au modèle ce
-    // qu'il vient de lire, deux paragraphes plus haut. Et 154 porte le même
-    // texte que 171 — l'exclusion se fait donc sur la ligne, pas sur le texte.
+    // 154 and 157 are IN the hunks: bringing them back would make the model reread this
+    // which he just read, two paragraphs above. And 154 wears the same
+    // text as 171 — the exclusion is therefore made on the line, not on the text.
     expect(lines).not.toContain(154);
     expect(lines).not.toContain(157);
     expect(lines).toContain(140);
@@ -256,19 +256,19 @@ describe("overwriteSitesForTurn", () => {
   });
 
   /**
-   * LE CAP SE JUGE AVANT L'EXCLUSION DU DIFF (trouvaille d'audit).
+   * THE CAP IS JUDGED BEFORE THE EXCLUSION OF THE DIFF (audit finding).
    *
-   * `git grep` est capé à `MAX_SITES_SCANNED + 1` lignes précisément pour SAVOIR
-   * qu'un symbole est trop répandu et le jeter. Mais l'exclusion des lignes du
-   * diff passait avant le comptage — et comme le symbole est EXTRAIT du diff, ses
-   * propres lignes sont dans ce grep. Il suffisait donc qu'une seule d'entre elles
-   * tombe dans les 13 premières pour que le compte redescende à 12 et que le
-   * symbole survive, en s'annonçant « 12 other writes » avec deux cents derrière.
+   * `git grep` is capped at `MAX_SITES_SCANNED + 1` lines precisely to KNOW
+   * that a symbol is too common and throw it away. But the exclusion of lines from
+   * diff came before counting — and since the symbol is EXTRACTED from the diff, its
+   * own lines are in this grep. It was therefore enough that only one of them
+   * falls in the first 13 so that the count goes down to 12 and the
+   * symbol survives, announcing itself “12 other writes” with two hundred behind.
    */
   it("jette un symbole trop répandu même quand une de ses lignes est dans le diff", async () => {
     const diff = hunk(["+  setOpen(true);"], 7, "app/board/page.tsx");
-    // 13 lignes = le cap dépassé. La 3e est celle du diff : avant le correctif,
-    // `selectSites` la retirait et le compte redescendait à 12, sous le seuil.
+    // 13 lines = the milestone exceeded. The 3rd is that of the diff: before the fix,
+    // `selectSites` removed it and the count went down to 12, below the threshold.
     const grep = [
       "components/c1.tsx:4:setOpen(false);",
       "components/c2.tsx:9:setOpen(true);",

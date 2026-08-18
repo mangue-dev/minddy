@@ -4,8 +4,8 @@ import { requireProjectMember } from "@/lib/server/feedback/team-guard";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** GET — compteur léger pour le badge de la sidebar : feedbacks canoniques
-    encore ouverts ou prévus (le pendant du compteur de triage). */
+/** GET — lightweight counter for the sidebar badge: canonical feedback
+ still open or planned (the counterpart of the sorting counter). */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const guard = await requireProjectMember(request, id);

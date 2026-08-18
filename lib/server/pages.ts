@@ -30,55 +30,54 @@ import {
 import type { PageDocJSON } from "@/lib/pages-merge";
 
 /**
- * Les PAGES d'un projet (MIN-266) — le noyau serveur, partagé par les routes
- * (`app/api/projects/[id]/pages/**`) et, plus tard, par le MCP.
+ * PAGES of a project (MIN-266) — the server core, shared by routes
+ * (`app/api/projects/[id]/pages/**`) and, later, by the MCP.
  *
- * TOUT passe par le client service, RLS contournée : le contrôle d'accès vit
- * donc ici, dans `access()`, et il est le même pour les six gestes — lire,
- * créer, modifier, déplacer, corbeiller, restaurer. Membre du projet = tous les
- * droits, comme pour les objectifs : un wiki d'équipe qui demanderait une
- * permission par page n'est plus un wiki d'équipe.
+ * EVERYTHING goes through the client service, RLS bypassed: access control lives
+ * so here in `access()`, and it is the same for all six gestures — read,
+ * create, modify, move, trash, restore. Project member = all
+ * rights, as for goals: a team wiki that would require one
+ * permission per page is no longer a team wiki.
  *
- * Deux raisons de ne PAS écrire au client de session, alors que la policy
- * `pages_update` le permettrait :
+ * Two reasons NOT to write to the session client, while the policy
+ * `pages_update` would allow it:
  *
- * 1. la garde de CYCLE (`wouldCreateCycle`) a besoin de lire toutes les pages
- *    du projet, corbeillées comprises, avant d'écrire — ce que la policy de
- *    lecture masque justement ;
- * 2. la corbeille rend la ligne invisible à `pages_select`, donc le RETURNING
- *    d'un `update` fait au client de session ne la rendrait plus et la route
- *    croirait à un 404 (même piège que `lib/server/trash.ts`).
+ * 1. the CYCLE guard (`wouldCreateCycle`) needs to read all the pages
+ * of the project, including trashed pages, before writing — which the reading policy of
+ * precisely hides ;
+ * 2. the trash makes the line invisible to `pages_select`, so the RETURNING
+ * of a `update` done to the session client would no longer make it and the route
+ * would believe a 404 (same trap as `lib/server/trash.ts`).
  *
- * Depuis MIN-276, une règle de plus, et c'est un INVARIANT du module : **toute
- * écriture de `content` est suivie de `queueSearchText`**, qui rejoue la
- * projection markdown dans la colonne `search_text` — celle qu'indexe la
- * recherche. Un chemin d'écriture qui l'oublie ne casse rien de visible : il
- * laisse simplement la page introuvable par son contenu, en silence. D'où le
- * test STRUCTUREL de `pages-search-paths.test.ts`, qui relit ce fichier et
- * refuse un `insert`/`update` portant `content` sans son rattrapage.
+ * Since MIN-276, one more rule, and it is an INVARIANT of the module: **any
+ * writing of `content` is followed by `queueSearchText`**, which replays the
+ * markdown projection in column `search_text` — the one that la
+ * is indexing. A write path that forgets it doesn't break anything visible: it
+ * simply leaves the page unfindable by its content, silently. Hence the
+ * STRUCTURAL test of `pages-search-paths.test.ts`, which rereads this file and
+ * refuses a `insert`/`update` carrying `content` without its catch-up.
  *
- * Depuis MIN-277, la même règle vaut une seconde fois, et pour la même raison :
- * **toute écriture du corps porte son auteur (`writtenBy`) et archive l'état
- * qu'elle recouvre (`stampPageWrite`)**. Un chemin qui l'oublie ne casse rien de
- * visible non plus — il rend juste une écriture anonyme et irréversible, ce
- * qu'on ne découvre que le jour où l'agent a écrasé une page. Le test
- * structurel de `pages-history-paths.test.ts` le refuse de la même façon.
+ * Since MIN-277, the same rule applies a second time, and for the same reason:
+ * **any writing in the body bears its author (`writtenBy`) and archives the state
+ * that it covers (`stampPageWrite`)**. A path that forgets it doesn't break anything visible either — it just makes an anonymous and irreversible writing, this
+ * that we only discover the day the agent overwrites a page. The structural test
+ * of `pages-history-paths.test.ts` refuses it in the same way.
  *
- * Depuis MIN-278, une TROISIÈME, de la même famille : **toute écriture ANNONCE
- * ce qu'elle fait** (`announcePageWrite`) — sa ligne d'activité, les gens
- * qu'elle vient de citer, et le lanceur du run quand c'est l'agent qui écrit.
- * L'oublier ne casse rien de visible une fois de plus : ça rend simplement une
- * page qui change sans que rien ne se passe, ce qui était l'état d'avant le
- * ticket. Même test structurel, avec une seule exception nommée — le miroir
- * `syncParentBody`, qui n'est jamais un geste en soi.
+ * Since MIN-278, a THIRD, of the same family: **all writing ANNOUNCES
+ * what it does** (`announcePageWrite`) — her line of activity, the people
+ * that she has just mentioned, and the launcher of the run when it is the agent who writes.
+ * Forgetting it does not break anything visible once again: it simply returns a
+ * page which changes without anything happening, which was the state before the
+ * ticket. Same structural test, with a single named exception — the mirror
+ * `syncParentBody`, which is never a gesture in itself.
  *
- * Depuis MIN-279, une QUATRIÈME, et c'est la même famille une fois de plus :
- * **toute écriture de `content` rejoue les liens de la page**
- * (`queuePageBodyLinks`), c'est-à-dire les rétroliens que son corps FABRIQUE
- * chez les pages qu'il cite. L'oublier ne casse rien de visible ici — ça laisse
- * juste une AUTRE page ignorer qu'elle est citée, ce qu'on ne découvre jamais
- * depuis celle qu'on est en train d'écrire. `page-links-paths.test.ts` le refuse
- * avec la même règle : `queueSearchText` et `queuePageBodyLinks` vont ensemble.
+ * Since MIN-279, a FOURTH, and it's the same family once again:
+ * **any writing of `content` replays the links of the page**
+ * (`queuePageBodyLinks`), that is to say the trackbacks that its body MAKES
+ * in the pages it cites. Forgetting it doesn't break anything visible here — it leaves
+ * just ANOTHER page unaware that it's cited, which we never find out
+ * from the one we're currently writing. `page-links-paths.test.ts` refuses it
+ * with the same rule: `queueSearchText` and `queuePageBodyLinks` go together.
  */
 
 export type PageResult<T> =
@@ -88,11 +87,11 @@ export type PageResult<T> =
       status: number;
       errorKey: PageErrorKey;
       /**
-       * La page TELLE QU'ELLE EST en base, jointe au refus de version (MIN-271).
-       * Sans elle, le client n'aurait qu'un 409 et devrait redemander le
-       * document pour fusionner — un aller-retour de plus au pire moment, celui
-       * où deux personnes écrivent en même temps.
-       */
+ * The page AS IS in the base, attached to the version refusal (MIN-271).
+ * Without it, the client would only have a 409 and would have to re-request the
+ * document to merge — one more round trip at the worst moment, that
+ * where two people are writing at the same time time.
+ */
       conflict?: Page;
     };
 
@@ -110,47 +109,47 @@ export type PageErrorKey =
   | "noFieldsToUpdate"
   | "databaseError";
 
-/** Le titre d'une page : même plafond qu'un titre de ticket (MIN-118). */
+/** The title of a page: same ceiling as a ticket title (MIN-118). */
 const MAX_TITLE_LENGTH = 500;
 
 /**
- * Le corps, en octets de JSON. Un document ProseMirror de 1 Mo, c'est déjà une
- * page qu'aucun éditeur ne rend confortablement ; au-delà on refuse plutôt que
- * de laisser une écriture faire tomber la requête sur une limite de plateforme,
- * là où l'utilisateur ne comprendrait rien au message.
+ * The body, in bytes of JSON. A 1 MB ProseMirror document is already a
+ * page that no editor renders comfortably; beyond that we refuse rather than
+ * to let a write cause the request to fall on a platform limit,
+ * where the user would understand nothing of the message.
  */
 const MAX_CONTENT_BYTES = 1_000_000;
 
-/** Un emoji, pas une phrase : on borne court plutôt que de valider un alphabet. */
+/** An emoji, not a sentence: we limit ourselves rather than validating an alphabet. */
 const MAX_ICON_LENGTH = 16;
 
 /**
- * Les colonnes de la LISTE. Le corps en est absent, volontairement : la sidebar
- * charge toutes les pages du projet d'un coup (c'est tout l'intérêt du modèle à
- * plat), et y joindre chaque document ProseMirror ferait de cette requête la
- * plus lourde de l'écran pour un contenu que personne n'affiche. Le corps se
- * lit page par page, à l'ouverture.
+ * The columns of the LIST. The body is absent, deliberately: the sidebar
+ * loads all the pages of the project at once (that's the whole point of the flat
+ * model), and attaching each ProseMirror document to it would make this query the
+ * heaviest on the screen for content that no one displays. The body reads
+ * page by page, when opened.
  */
 const LIST_COLUMNS =
   "id, project_id, parent_id, title, icon, version, position, favorite, created_by, updated_by, updated_kind, updated_api_key_id, created_at, updated_at, deleted_at, deleted_by, deleted_root_id, parent_block_removed";
 
 const FULL_COLUMNS = `${LIST_COLUMNS}, content`;
 
-/** Une page sans son corps — ce que rend la liste. */
+/** A page without its body — what the list renders. */
 export type PageSummary = Omit<Page, "content">;
 
 type Service = ReturnType<typeof getServiceClient>;
 
-/* ─── Accès ────────────────────────────────────────────────────────────────── */
+/* ─── Access ───────────────────────────────── ───────────────────────────────── */
 
-/** Le projet doit être accessible à l'acteur, sinon il n'existe pas pour lui. */
+/** The project must be accessible to the actor, otherwise it does not exist for him. */
 async function access(actorId: string, projectId: string): Promise<boolean> {
   return (await getProjectAccess(actorId, projectId)) !== null;
 }
 
 /**
- * Une page et son projet, ou null. `includeTrashed` n'est vrai que pour les
- * gestes qui portent justement sur une page corbeillée (restaurer).
+ * A page and its project, or null. `includeTrashed` is only true for
+ * gestures which refer to a trashed page (restore).
  */
 async function loadPage(
   service: Service,
@@ -164,11 +163,11 @@ async function loadPage(
 }
 
 /**
- * Toutes les pages du projet, corbeillées comprises, en une requête.
+ * All the pages of the project, including trashed, in one request.
  *
- * C'est la lecture qui rend la garde de cycle possible : reparenter demande de
- * connaître la chaîne des ancêtres, et la reconstituer par sauts successifs
- * serait un N+1 dont la profondeur est justement illimitée.
+ * It is the reading which makes cycle guarding possible: reparenting requires
+ * to know the chain of ancestors, and to reconstitute it by successive jumps
+ * would be an N+1 whose depth is precisely unlimited.
  */
 async function loadProjectPages(
   service: Service,
@@ -181,14 +180,14 @@ async function loadProjectPages(
   return (data ?? []) as unknown as Page[];
 }
 
-/* ─── L'auteur d'une écriture, et l'état qu'elle recouvre (MIN-277) ────────── */
+/* ─── The author of a writing, and the state it covers (MIN-277) ────────── */
 
 /**
- * Les colonnes d'AUTEUR à poser sur toute écriture de page.
+ * The AUTHOR columns to be placed on any page entry.
  *
- * `kind` ne se déduit pas de `actorId` : une écriture de Numo, du MCP ou de
- * l'agent de code porte l'id du compte qui l'a permise. C'est la SURFACE qui
- * sait de quel geste il s'agit, et elle le transporte jusqu'ici.
+ * `kind` is not deduced from `actorId`: an entry from Numo, MCP or
+ * the code agent carries the id of the account which has it permitted. It's the SURFACE that
+ * knows what gesture it is, and it transports it here.
  */
 function writtenBy(
   actorId: string,
@@ -199,10 +198,10 @@ function writtenBy(
   updated_kind: PageWriteKind;
   updated_api_key_id: string | null;
 } {
-  // La CLÉ, quand l'écriture vient du MCP (MIN-282) : « agent » recouvre deux
-  // visages — Numo, et l'agent qui tient une clé, qui a un nom et un logo. La
-  // colonne est ce qui permet à l'historique de montrer le bon, comme
-  // l'activité le fait déjà par `issue_events.api_key_id`.
+  // The KEY, when the writing comes from the MCP (MIN-282): “agent” covers two
+  // faces — Numo, and the agent who holds a key, who has a name and a logo. There
+  // column is what allows the history to show the correct one, like
+  // the activity already does this by `issue_events.api_key_id`.
   return {
     updated_by: actorId,
     updated_kind: kind,
@@ -211,34 +210,34 @@ function writtenBy(
 }
 
 /**
- * La fenêtre de COALESCENCE de l'historique.
+ * The history COALESCENCE window.
  *
- * L'éditeur enregistre une seconde après la dernière frappe : une version par
- * écriture ferait quarante lignes pour un paragraphe écrit d'une traite, et un
- * historique qu'on ne lit plus. Une même personne qui écrit sans s'arrêter ne
- * produit donc qu'une ligne par tranche de cinq minutes — la règle de Notion,
- * et celle qui rend l'historique lisible plutôt qu'exhaustif.
+ * The editor saves one second after the last keystroke: a version by
+ * writing would make forty lines for a paragraph written in one go, and a
+ * history that we no longer read. The same person who writes without stopping only
+ * therefore only produces one line per five minutes - the rule of Notion,
+ * and the one which makes the history readable rather than exhaustive.
  *
- * Ce que la fenêtre ne recouvre JAMAIS : un changement d'auteur. L'état écrit
- * par un humain est archivé quoi qu'il arrive avant que l'agent (ou un
- * coéquipier) ne le recouvre — c'est exactement l'état qu'on viendra chercher.
+ * What the window NEVER covers: a change of author. The state written
+ * by a human is archived no matter what happens before the agent (or a
+ * teammate) recovers it — this is exactly the state we will come for.
  */
 const VERSION_COALESCE_MS = 5 * 60_000;
 
 /**
- * Archive l'état qu'une écriture vient de RECOUVRIR.
+ * Archives the state that a write has just OVERLAYED.
  *
- * Appelée après l'écriture, jamais avant : une écriture refusée (conflit de
- * version) n'a rien recouvert, et sa ligne d'historique serait un doublon de
- * l'état courant.
+ * Called after the write, never before: a rejected write (conflict of
+ * version) has not covered anything, and its history line would be a duplicate of
+ * state current.
  *
- * `previous` à `null` = une CRÉATION : il n'y a rien derrière elle. Le point
- * d'appel est conservé quand même, et c'est voulu — la règle « toute écriture
- * du corps passe par ici » se lit alors sur tous les chemins, sans exception à
- * retenir (cf. `pages-history-paths.test.ts`).
+ * `previous` to `null` = a CREATION: there is nothing behind it. The call point
+ * is kept anyway, and this is intended — the rule “all writing
+ * of the body goes through here” is then read on all paths, without exception to
+ * retained (see `pages-history-paths.test.ts`).
  *
- * Hors chemin critique (`afterOrNow`) : la sauvegarde de l'éditeur ne doit pas
- * attendre l'archivage, et une promesse détachée mourrait avec la réponse
+ * Excluding critical path (`afterOrNow`): publisher save should not
+ * wait for check-in, and a detached promise would die with response
  * (lib/server/after-safe.ts).
  */
 function stampPageWrite({
@@ -249,24 +248,24 @@ function stampPageWrite({
   always = false,
 }: {
   service: Service;
-  /** L'état d'AVANT l'écriture, tel qu'il a été lu. `null` sur une création. */
+  /** The state BEFORE writing, as it was read. `null` on a creation. */
   previous: Page | null;
-  /** L'auteur de l'écriture qui recouvre — celui qui ferme la fenêtre. */
+  /** The author of the covering writing — the one who closes the window. */
   actorId: string;
   kind: PageWriteKind;
-  /** Archive sans passer par la coalescence : la restauration d'une version ne
-      doit jamais perdre l'état d'avant elle, même écrit dix secondes plus tôt. */
+  /** Archive without going through coalescence: restoring a version ne
+ must never lose the state before it, even written ten seconds earlier. */
   always?: boolean;
 }): void {
   if (!previous) return;
 
-  // L'auteur de l'ÉTAT archivé, et non celui de l'écriture qui l'efface. Sur
-  // une page jamais réécrite depuis sa création (ou née avant MIN-277), c'est
-  // son créateur : la ligne d'historique nomme quelqu'un plutôt que personne.
+  // The author of the archived STATE, and not the author of the writing that erases it. On
+  // a page never rewritten since its creation (or born before MIN-277), it is
+  // its creator: the history line names someone rather than no one.
   const authorId = previous.updated_by ?? previous.created_by;
   const authorKind: PageWriteKind = previous.updated_kind ?? "human";
-  // La clé de l'état ARCHIVÉ, comme son auteur : celle d'avant l'écriture qui
-  // le recouvre. Null dès que l'auteur n'est pas un agent de clé.
+  // The key to the ARCHIVED state, like its author: that before writing which
+  // covers it. Null as soon as the author is not a key agent.
   const authorKeyId = previous.updated_api_key_id ?? null;
 
   afterOrNow(async () => {
@@ -296,25 +295,25 @@ function stampPageWrite({
 }
 
 /**
- * Ce qu'une écriture de page FAIT SAVOIR (MIN-278).
+ * What a page write DOES KNOW (MIN-278).
  *
- * Le pendant de `stampPageWrite`, et posé au même endroit pour la même raison :
- * une page pouvait changer sans que rien ne se passe — ni notification, ni ligne
- * d'activité, nulle part. Trois signaux, un seul point de passage :
+ * The counterpart of `stampPageWrite`, and placed in the same place for the same reason:
+ * a page could change without anything happening — neither notification, nor line
+ * of activity, nowhere. Three signals, a single crossing point:
  *
- *  1. **l'activité** — « créée / modifiée / mise à la corbeille / restaurée »,
- *     avec son auteur, coalescée par page + acteur + 5 minutes ;
- *  2. **les mentions** — ceux qu'on vient de citer, et eux seuls (la comparaison
- *     avec le document PRÉCÉDENT est ce qui fait qu'une rafale d'autosaves ne
- *     notifie qu'une fois, à la sauvegarde où le nom apparaît) ;
- *  3. **l'écriture d'AGENT** — au seul lanceur du run.
+ * 1. **the activity** — “created / modified / trashed / restored”,
+ * with its author, coalesced by page + actor + 5 minutes;
+ * 2. **the mentions** — those just cited, and them alone (the comparison
+ * with the PREVIOUS document is what makes a burst of autosaves only notify
+ * once, to the save where the name appears);
+ * 3. **writing AGENT** — to the sole launcher of the run.
  *
- * Hors chemin critique (`afterOrNow`), comme l'archivage : la sauvegarde de
- * l'éditeur ne doit attendre aucun des trois, et une promesse détachée mourrait
- * avec la réponse (lib/server/after-safe.ts).
+ * Off critical path (`afterOrNow`), like archiving: saving
+ * the publisher should not wait for any of the three, and a detached promise would die
+ * with the response (lib/server/after-safe.ts).
  *
- * Best-effort de bout en bout : aucun des trois ne remonte à l'appelant. Une
- * ligne d'activité perdue ne doit pas faire échouer une écriture réussie.
+ * End-to-end best-effort: none of the three does not go back to the appellant. A
+ * line of lost activity should not cause a successful write to fail.
  */
 function announcePageWrite({
   service,
@@ -327,19 +326,19 @@ function announcePageWrite({
   scanMentions = true,
 }: {
   service: Service;
-  /** La page telle qu'elle vient d'être écrite. */
+  /** The page as it was just written. */
   page: Page;
-  /** L'état d'AVANT, pour le diff des mentions. `null` sur une création. */
+  /** The BEFORE state, for the difference in mentions. `null` on a creation. */
   previous: Page | null;
   actorId: string;
   kind: PageWriteKind;
-  /** La clé MCP derrière l'écriture, quand elle vient de là. C'est ce qui
-      distingue les deux agents que `kind: "agent"` recouvre : celui d'une clé,
-      qui a un nom (« Claude Code (mcp) »), et le nôtre, qui s'appelle Numo. */
+  /** The MCP key behind the writing, when it comes from there. This is what
+ distinguishes the two agents that `kind: "agent"` covers: that of a key,
+ which has a name (“Claude Code (mcp)”), and ours, which is called Numo. */
   mcpKeyId?: string | null;
   event: PageEventType;
-  /** La DUPLICATION le coupe : recopier un texte n'est pas citer quelqu'un, et
-      copier une page repingerait tous les noms qu'elle porte. */
+  /** DUPLICATION cuts it: recopying a text is not quoting someone, and
+ copying a page would recopy all the names it bears. */
   scanMentions?: boolean;
 }): void {
   afterOrNow(async () => {
@@ -351,8 +350,8 @@ function announcePageWrite({
       mcpKeyId,
     });
 
-    // Les mentions ne se lisent que sur un CORPS. Un renommage ne cite
-    // personne, et une corbeille encore moins.
+    // Mentions can only be read on a BODY. A rename does not quote
+    // no one, and even less a trash can.
     if (scanMentions && page.content !== undefined && page.content !== null) {
       await notifyPageMentions(service, {
         projectId: page.project_id,
@@ -360,17 +359,17 @@ function announcePageWrite({
         actorId,
         doc: page.content,
         previousDoc: previous?.content ?? undefined,
-        // Citer quelqu'un depuis un texte écrit par l'agent reste une citation
-        // de l'AGENT : la ligne le nomme, lui, et pas le compte sous lequel il
-        // a écrit.
+        // Quoting someone from a text written by the agent remains a quote
+        // of the AGENT: the line names him, and not the account under which he
+        // wrote.
         viaAssistant: kind === "agent",
         mcpKeyId,
       });
     }
 
-    // « seulement quand l'acteur est l'agent » : c'est la SURFACE qui le sait
-    // (les six outils de lib/server/page-tools.ts signent `kind: "agent"`), et
-    // `actorId` est le compte qui l'a permise — donc le lanceur du run.
+    // “only when the actor is the agent”: it’s the SURFACE that knows this
+    // (the six tools in lib/server/page-tools.ts sign `kind: "agent"`), and
+    // `actorId` is the account that enabled it — therefore the launcher of the run.
     if (kind === "agent") {
       await notifyAgentPageWrite(service, {
         projectId: page.project_id,
@@ -383,7 +382,7 @@ function announcePageWrite({
 
 /* ─── Lecture ──────────────────────────────────────────────────────────────── */
 
-/** Les pages VIVANTES du projet, à plat. L'arbre se reconstruit chez l'appelant. */
+/** The LIVING pages of the project, flat. The tree is rebuilt at the caller's house. */
 export async function listPages(
   projectId: string,
   actorId: string
@@ -408,7 +407,7 @@ export async function listPages(
   return { ok: true, pages: (data ?? []) as unknown as PageSummary[] };
 }
 
-/** Une page avec son corps. */
+/** A page with his body. */
 export async function getPage(
   pageId: string,
   actorId: string
@@ -423,15 +422,15 @@ export async function getPage(
 }
 
 /**
- * Chercher dans les pages d'UN projet, titre et contenu (MIN-276).
+ * Search the pages of ONE project, title and content (MIN-276).
  *
- * Le tri et l'extrait viennent de Postgres (`search_pages`, cf. la migration) :
- * `ts_rank_cd` sait ce qu'un `ilike` ne saura jamais — qu'un mot en titre pèse
- * plus qu'un mot cité en passant, et où couper la phrase qui explique le
- * résultat.
+ * Sorting and extracting come from Postgres (`search_pages`, see migration):
+ * `ts_rank_cd` knows what a `ilike` will never know - that a word in title weighs
+ * more than a word cited in passing, and where to cut the sentence which explains the
+ * result.
  *
- * Une requête vide rend une liste vide SANS aller en base : c'est l'état de la
- * barre de recherche à l'ouverture, et il ne vaut pas un aller-retour.
+ * An empty query returns an empty list WITHOUT going to the base: this is the state of the
+ * search bar when opening, and it's not worth a round trip.
  */
 export async function searchProjectPages({
   projectId,
@@ -461,7 +460,7 @@ export async function searchProjectPages({
   return { ok: true, hits: result.hits };
 }
 
-/* ─── Création ─────────────────────────────────────────────────────────────── */
+/* ─── Creation ─────────────────────────────── ──────────────────────────────── */
 
 export async function createPage({
   projectId,
@@ -472,10 +471,10 @@ export async function createPage({
 }: {
   projectId: string;
   actorId: string;
-  /** La nature du geste (MIN-277) : « agent » sur les six outils d'écriture. */
+  /** The nature of the gesture (MIN-277): “agent” on the six writing tools. */
   kind?: PageWriteKind;
-  /** La clé MCP derrière le geste (MIN-278) : elle NOMME l'agent dans l'activité
-      et dans les citations. Absente sur nos propres agents, qui sont Numo. */
+  /** The MCP key behind the gesture (MIN-278): it NAMES the agent in the activity
+ and in quotes. Absent on our own agents, who are Numo. */
   mcpKeyId?: string | null;
   input: Record<string, unknown>;
 }): Promise<PageResult<Page>> {
@@ -488,23 +487,23 @@ export async function createPage({
 
   const all = await loadProjectPages(service, projectId);
   if (parentId) {
-    // Le parent doit exister, appartenir au MÊME projet et être vivant : créer
-    // sous une page corbeillée fabriquerait une page invisible dès sa naissance.
+    // The parent must exist, belong to the SAME project and be alive: create
+    // under a trashed page would create an invisible page from its birth.
     const parent = all.find((p) => p.id === parentId && !p.deleted_at);
     if (!parent) return { ok: false, status: 404, errorKey: "pageParentNotFound" };
   }
 
-  // Le corps peut arriver en MARKDOWN plutôt qu'en JSON ProseMirror : c'est par
-  // là que le wizard de projet pose le brief collé en page « Brief initial »
-  // (MIN-170). La projection est la MÊME que celle des outils de Numo
-  // (lib/server/pages-projection.ts) — une page écrite par le wizard et une
-  // page écrite par l'agent se relisent donc pareil, blocs et ids compris.
+  // The body can arrive in MARKDOWN rather than in JSON ProseMirror: this is by
+  // where the project wizard places the brief pasted on the “Initial Brief” page
+  // (MIN-170). The projection is the SAME as that of Numo tools
+  // (lib/server/pages-projection.ts) — a page written by the wizard and one
+  // page written by the agent therefore reads the same, blocks and ids included.
   //
-  // La faire ICI et non chez l'appelant a deux effets : le schéma de page
-  // (tiptap, le registre de blocs) reste hors du bundle du navigateur, et le
-  // plafond de taille pèse le JSON PRODUIT, celui qui part vraiment en base.
+  // Doing it HERE and not at the caller has two effects: the page schema
+  // (tiptap, the block register) stays out of the browser bundle, and the
+  // size ceiling weighs the JSON PRODUCT, the one that really starts at the base.
   //
-  // `content` l'emporte quand les deux sont là : c'est le format natif.
+  // `content` wins when both are there: this is the native format.
   const raw =
     input.content === undefined && typeof input.markdown === "string"
       ? await bodyFromMarkdownServer(input.markdown)
@@ -547,11 +546,11 @@ export async function createPage({
   const page = data as unknown as Page;
   queueSearchText(service, [page.id]);
   queuePageBodyLinks(service, [page.id]);
-  // Une création ne recouvre rien : l'appel ne pose que la règle (cf.
-  // `stampPageWrite`), il n'écrit aucune ligne d'historique.
+  // A creation covers nothing: the call only establishes the rule (cf.
+  // `stampPageWrite`), it does not write any history lines.
   stampPageWrite({ service, previous: null, actorId, kind });
-  // Elle se DIT, en revanche : le wizard de projet et les agents créent des
-  // pages entières d'un coup, mentions comprises (MIN-278).
+  // It SAYS, on the other hand: the project wizard and the agents create
+  // entire pages at once, including mentions (MIN-278).
   announcePageWrite({
     service,
     page,
@@ -567,25 +566,25 @@ export async function createPage({
 /* ─── Duplication ──────────────────────────────────────────────────────────── */
 
 /**
- * Copie une page ET toute sa descendance (MIN-272).
+ * Copies a page AND all its descendants (MIN-272).
  *
- * Deux choses la distinguent d'un `insert` de plus, et les deux comptent :
+ * Two things distinguish it from one more `insert`, and both count:
  *
- * 1. **les liens internes sont réécrits.** Recopier les corps tels quels
- *    donnerait une copie dont les blocs sous-page pointent encore vers les
- *    ORIGINAUX — deux arbres dans la sidebar, un seul jeu de liens. D'où les
- *    ids tirés AVANT l'écriture : il faut connaître la table
- *    `ancien → nouveau` pour réécrire les corps, donc on ne peut pas laisser la
- *    base les fabriquer. Une citation hors de la branche copiée reste intacte.
- * 2. **une seule écriture.** Le tableau part d'un coup : une copie à moitié
- *    faite laisserait des pages orphelines qu'il faudrait retrouver à la main.
+ * 1. **internal links are rewritten.** Copy the bodies as is
+ * would result in a copy whose subpage blocks still point to the
+ * ORIGINALS — two trees in the sidebar, a single set of links. Hence the
+ * ids drawn BEFORE writing: you have to know the table
+ * `ancien → nouveau` to rewrite the bodies, so we cannot let the
+ * base produce them. A quote outside the copied branch remains intact.
+ * 2. **only one write.** The table starts at once: a half-done copy
+ * would leave orphan pages that would have to be found by hand.
  *
- * La copie prend le MÊME titre. Un suffixe « (copie) » demanderait une
- * traduction, donc ferait dépendre une donnée de la langue de qui a cliqué —
- * et la page s'ouvre juste après, où le titre se change en une frappe.
+ * The copy takes the SAME title. A suffix “(copy)” would require a
+ * translation, therefore making data depend on the language of who clicked —
+ * and the page opens just after, where the title changes to a keystroke.
  *
- * La racine reste chez le même parent, en fin de fratrie ; les descendants
- * gardent leur position, l'ordre interne de la branche est donc préservé.
+ * The root remains with the same parent, at the end of the siblings; the descendants
+ * keep their position, the internal order of the branch is therefore preserved.
  */
 export async function duplicatePage(
   pageId: string,
@@ -601,8 +600,8 @@ export async function duplicatePage(
 
   const all = await loadProjectPages(service, page.project_id);
   const live = all.filter((p) => !p.deleted_at);
-  // `descendantIds` rend les descendants en largeur, donc les parents avant
-  // leurs enfants : l'ordre d'insertion satisfait la clé étrangère de lui-même.
+  // `descendantIds` renders the descendants in width, therefore the parents before
+  // their children: the insertion order satisfies the foreign key of itself.
   const family = [pageId, ...descendantIds(live, pageId)];
 
   const { data: sources, error: readError } = await service
@@ -628,9 +627,9 @@ export async function duplicatePage(
       {
         id: idMap.get(id)!,
         project_id: source.project_id,
-        // La RACINE reste où elle est ; les descendants suivent leur parent
-        // COPIÉ, jamais l'original — sans quoi la copie s'accrocherait à l'arbre
-        // d'origine et les deux branches se mélangeraient.
+        // The ROOT stays where it is; descendants follow their parent
+        // COPIED, never the original — otherwise the copy would hang on the tree
+        // original and the two branches would mix.
         parent_id: root
           ? source.parent_id
           : (idMap.get(source.parent_id ?? "") ?? null),
@@ -639,8 +638,8 @@ export async function duplicatePage(
         content: remapSubpages(source.content as PageDocJSON | null, idMap),
         position: root ? rootPosition : source.position,
         created_by: actorId,
-        // La COPIE est une écriture neuve, de celui qui l'a demandée : elle
-        // porte son nom, et non celui du dernier auteur de l'original.
+        // The COPY is a new writing, from the one who requested it: it
+        // bears his name, and not that of the last author of the original.
         ...writtenBy(actorId, kind),
       },
     ];
@@ -655,8 +654,8 @@ export async function duplicatePage(
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
 
-  // Toute la branche, pas seulement la racine : chaque copie porte son propre
-  // corps (les liens internes y ont même été réécrits), donc son propre texte.
+  // The whole branch, not just the root: each copy carries its own
+  // body (the internal links have even been rewritten), therefore its own text.
   queueSearchText(
     service,
     (data as unknown as Page[]).map((row) => row.id)
@@ -665,14 +664,14 @@ export async function duplicatePage(
     service,
     (data as unknown as Page[]).map((row) => row.id)
   );
-  // Des pages NEUVES : comme la création, elles ne recouvrent rien.
+  // NEW pages: like creation, they cover nothing.
   stampPageWrite({ service, previous: null, actorId, kind });
 
   const rootId = idMap.get(pageId);
   const copy = (data as unknown as Page[]).find((row) => row.id === rootId);
   if (!copy) return { ok: false, status: 500, errorKey: "databaseError" };
-  // La RACINE seule est annoncée : une branche de vingt pages copiée d'un geste
-  // est un geste, pas vingt.
+  // The ROOT alone is announced: a branch of twenty pages copied with a gesture
+  // is one gesture, not twenty.
   announcePageWrite({
     service,
     page: copy,
@@ -688,17 +687,17 @@ export async function duplicatePage(
 /* ─── Modification ─────────────────────────────────────────────────────────── */
 
 /**
- * Modifie une page. Les champs absents ne bougent pas.
+ * Edits a page. Absent fields do not move.
  *
- * `parent_id` est le seul qui puisse être REFUSÉ : la profondeur étant
- * illimitée, mettre une page sous un de ses propres descendants fermerait une
- * boucle et ferait partir la sidebar en récursion infinie. 409, et rien n'est
- * écrit — pas même les autres champs de la même requête, qui seraient sinon
- * appliqués « à moitié » sur un geste que l'utilisateur croit refusé.
+ * `parent_id` is the only one that can be REFUSED: the depth being
+ * is unlimited, putting a page under one of its own descendants would close a
+ * loop and send the sidebar into infinite recursion. 409, and nothing is
+ * written — not even the other fields of the same request, which would otherwise be
+ * "half-applied" to a gesture that the user believes to be refused.
  *
- * Un reparentage sans `position` explicite replace la page en fin de sa NOUVELLE
- * fratrie : garder l'ancienne clé la ferait atterrir à une place arbitraire au
- * milieu de pages qui n'ont rien à voir.
+ * A reparenting without explicit `position` places the page at the end of its NEW
+ * siblings: keeping the old key would land it in an arbitrary place in the
+ * middle of pages that have nothing to do with it.
  */
 export async function updatePage({
   pageId,
@@ -710,12 +709,12 @@ export async function updatePage({
 }: {
   pageId: string;
   actorId: string;
-  /** La nature du geste (MIN-277) : « agent » sur les six outils d'écriture. */
+  /** The nature of the gesture (MIN-277): “agent” on the six writing tools. */
   kind?: PageWriteKind;
-  /** La clé MCP derrière le geste (MIN-278) : cf. `createPage`. */
+  /** The MCP key behind the gesture (MIN-278): cf. `createPage`. */
   mcpKeyId?: string | null;
-  /** Archive l'état recouvert hors coalescence — la restauration d'une version
-      (cf. `restorePageVersion`), seul geste qui l'exige. */
+  /** Archives the covered state outside of coalescence — restoring a version
+ (see `restorePageVersion`), the only action that requires it. */
   alwaysArchive?: boolean;
   input: Record<string, unknown>;
 }): Promise<PageResult<Page>> {
@@ -733,8 +732,8 @@ export async function updatePage({
 
   if ("icon" in input) patch.icon = readIcon(input.icon);
 
-  // Le favori est un booléen NU : partagé par le projet, il n'a ni ordre ni
-  // propriétaire à écrire à côté (cf. la migration `pages_favorite`).
+  // The favorite is a NU boolean: shared by the project, it has neither order nor
+  // owner to write next to it (see the `pages_favorite` migration).
   if (typeof input.favorite === "boolean") patch.favorite = input.favorite;
 
   const content = readContent(input.content);
@@ -748,8 +747,8 @@ export async function updatePage({
     return { ok: false, status: 400, errorKey: "pageContentRefused" };
   }
 
-  // La VERSION sur laquelle l'écriture s'appuie (MIN-271). Elle n'a de sens
-  // qu'avec un corps : renommer une page ne se dispute avec personne.
+  // The VERSION on which the writing is based (MIN-271). It doesn't make sense
+  // only with a body: renaming a page is not an argument with anyone.
   const expected =
     content !== undefined && typeof input.version === "number"
       ? input.version
@@ -760,8 +759,8 @@ export async function updatePage({
 
   if (content !== undefined) {
     patch.content = content;
-    // `version` compte les écritures du CORPS, pas les renommages : c'est le
-    // garde-fou de la sauvegarde concurrente (MIN-271).
+    // `version` counts BODY writes, not renames: this is the
+    // concurrent backup guardrail (MIN-271).
     patch.version = page.version + 1;
   }
 
@@ -794,36 +793,36 @@ export async function updatePage({
     }
   }
 
-  // Une position explicite vient du glisser-déposer : le client a calculé la
-  // clé entre les deux voisines qu'il voit (`positionBetween`). Hors alphabet,
-  // elle trierait n'importe où — on l'ignore plutôt que de l'écrire.
+  // An explicit position comes from drag and drop: the client has calculated the
+  // key between the two neighbors it sees (`positionBetween`). Outside the alphabet,
+  // it would sort anywhere — we ignore it rather than write it down.
   if (isPosition(input.position)) patch.position = input.position;
 
   if (Object.keys(patch).length === 0) {
     return { ok: false, status: 400, errorKey: "noFieldsToUpdate" };
   }
 
-  // L'auteur est posé sur ce qui touche au DOCUMENT — corps, titre, icône :
-  // renommer une page est bien la modifier, et l'en-tête dit « modifiée par »,
-  // pas « corps écrit par ».
+  // The author is focused on what concerns the DOCUMENT - body, title, icon:
+  // renaming a page means modifying it, and the header says "modified by",
+  // not “body written by”.
   //
-  // Le RANGEMENT, lui, ne signe pas. Épingler une page (le favori est partagé
-  // par le projet, cf. la migration `pages_favorite`) ou la glisser dans
-  // l'arbre ne dit rien de son contenu, et signer ces gestes-là ferait afficher
-  // « modifiée par Bob » en tête d'une page que Bob n'a jamais ouverte —
-  // exactement la fausse attribution que MIN-277 existe pour éviter.
+  // STORAGE does not sign. Pin a page (the favorite is shared
+  // by the project, cf. migration `pages_favorite`) or drag it into
+  // the tree says nothing about its contents, and signing these gestures would display
+  // “edited by Bob” at the top of a page that Bob never opened —
+  // exactly the false attribution that MIN-277 exists to avoid.
   //
-  // L'HISTORIQUE, lui, ne s'occupe que du corps — c'est le seul état qu'on
+  // HISTORY only deals with the body - it is the only state that we
   // puisse vouloir remonter.
   const writesDocument =
     patch.content !== undefined || patch.title !== undefined || "icon" in patch;
   if (writesDocument) Object.assign(patch, writtenBy(actorId, kind));
 
-  // Le verrou est DANS l'écriture, pas seulement dans le contrôle ci-dessus :
-  // deux enregistrements partis à la même milliseconde passent tous les deux le
-  // contrôle (ils ont lu la même ligne) et le second effacerait le premier. La
-  // condition `version = celle qu'on a lue` fait que l'un des deux n'écrit
-  // rien, et repart en fusion comme s'il avait été refusé d'emblée.
+  // The lock is IN the write, not just in the control above:
+  // two recordings started at the same millisecond both pass the
+  // control (they read the same line) and the second would erase the first. There
+  // condition `version = celle qu'on a lue` means that one of the two does not write
+  // nothing, and melts again as if it had been refused from the start.
   const write = service.from("pages").update(patch).eq("id", pageId);
   if (expected !== null) write.eq("version", expected);
 
@@ -837,9 +836,9 @@ export async function updatePage({
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
   if (!data) {
-    // Aucune ligne : soit la page vient de partir à la corbeille, soit la
-    // version a bougé entre la lecture et l'écriture. On relit pour trancher —
-    // les deux réponses ne se rattrapent pas de la même façon.
+    // No line: either the page has just gone to the trash, or the
+    // version moved between reading and writing. We reread to decide —
+    // the two answers do not match in the same way.
     if (expected !== null) {
       const fresh = await loadPage(service, pageId);
       if (fresh) {
@@ -848,22 +847,22 @@ export async function updatePage({
     }
     return { ok: false, status: 404, errorKey: "pageNotFound" };
   }
-  // Le titre entre dans l'index par la colonne générée, sans rien à écrire ; le
-  // corps, lui, a besoin de sa projection. La file ne part donc que quand le
-  // corps a bougé — un renommage n'a aucun texte à rejouer.
+  // The title enters the index through the generated column, without anything to write; THE
+  // body needs its projection. The line therefore only leaves when the
+  // body has moved — a rename has no text to replay.
   if (patch.content !== undefined) {
     queueSearchText(service, [pageId]);
     queuePageBodyLinks(service, [pageId]);
-    // L'état d'AVANT, celui qu'on vient de recouvrir : la ligne lue en tête de
-    // cette fonction. Une écriture qui porte sa `version` (l'éditeur, les outils
-    // d'agent) garantit en plus que c'était bien l'état EN BASE à l'instant de
-    // l'écriture — la condition `eq("version", expected)` a filtré le reste.
+    // The BEFORE state, the one we have just covered: the line read at the top of
+    // this function. A writing that carries its `version` (the editor, the tools
+    // of agent) also guarantees that it was indeed the BASIC state at the moment of
+    // writing — the `eq("version", expected)` condition filtered the rest.
     stampPageWrite({ service, previous: page, actorId, kind, always: alwaysArchive });
   }
-  // L'annonce suit la MÊME frontière que la signature (`writesDocument`) : le
-  // rangement — épingler, glisser dans l'arbre — ne fait pas une ligne
-  // « modifiée par ». Sinon réordonner la sidebar remplirait l'activité d'un
-  // projet de gestes que personne ne considère comme des modifications.
+  // The announcement follows the SAME boundary as the signature (`writesDocument`): the
+  // storage — pin, drag into the tree — does not make a line
+  // “modified by”. Otherwise reordering the sidebar would fulfill the activity of a
+  // draft gestures that no one considers as modifications.
   if (writesDocument) {
     announcePageWrite({
       service,
@@ -878,30 +877,25 @@ export async function updatePage({
   return { ok: true, page: data as unknown as Page };
 }
 
-/* ─── Le miroir : le bloc sous-page dans le corps du parent ────────────────── */
+/* ─── The mirror: the subpage block in the body of the parent ────────────────── */
 
 /**
- * La même information est portée à deux endroits, et c'est là que sont tous les
- * pièges (MIN-272) : `parent_id` fait la vérité, le bloc `subpage` du corps du
- * parent n'en est qu'une VUE. Ces deux fonctions tiennent la vue à jour quand la
- * vérité bouge.
+ * The same information is carried in two places, and that's where all the
+ * traps are (MIN-272): `parent_id` does the truth, the `subpage` block of the parent
+ * body is just a VIEW of it. These two functions keep the view updated when the
+ * truth moves.
  *
- * Pourquoi ici, et pas dans l'éditeur : mettre une page à la corbeille depuis
- * l'arbre doit retirer son bloc du corps du parent **même si personne n'a le
- * parent ouvert** — et c'est le cas courant. Un geste fait dans la sidebar, ou
- * par Numo via le MCP, doit laisser la base cohérente sans qu'un navigateur y
- * soit pour quelque chose.
+ * Why here, and not in the editor: trash a page from
+ * the tree must remove its block from the parent's body **even if no one has the
+ * parent open** — and this is the case current. A gesture made in the sidebar, or
+ * by Numo via the MCP, must leave the database coherent without a browser y
+ * having anything to do with it.
  *
- * Ce que ça fait à un client qui a justement ce parent sous les yeux : sa
- * prochaine sauvegarde part sur une `version` périmée, donc en 409, et la fusion
- * de MIN-271 avale la suppression SANS BRUIT — un bloc qu'il n'a pas touché et
- * que le distant a retiré s'en va sans bandeau (lib/pages-merge.ts, `decide`).
- * Le bloc reste visible à l'écran jusque-là, en état orphelin, ce que sa vue
- * sait rendre.
- *
- * Une panne sur cette écriture-là ne fait PAS échouer le geste : la page est
- * bien à la corbeille, et un bloc orphelin de plus se rend proprement. Refuser
- * la suppression parce que le miroir n'a pas suivi serait le mauvais échange.
+ * What this does to a client who has this parent in front of them: his
+ * next backup leaves on a `version` expired, therefore in 409, and the merge
+ * of MIN-271 swallows the deletion WITHOUT NOISE — a block that it has not touched and
+ * that the remote has removed leaves without banner (lib/pages-merge.ts, __keep the trash, and one more orphan block renders cleanly. Decline
+ * deleting because the mirror didn't follow through would be the wrong swap.
  */
 async function syncParentBody(
   service: Service,
@@ -915,39 +909,39 @@ async function syncParentBody(
   const { doc, changed } = edit((parent.content as PageDocJSON | null) ?? null);
   if (!changed) return;
 
-  // `version` est incrémentée comme pour n'importe quelle écriture du corps :
-  // c'est ce compteur qui déclenche la fusion chez qui édite en même temps.
-  // La condition sur la version lue fait le reste — si quelqu'un a écrit entre
-  // la lecture et ici, on ne l'écrase pas ; son propre enregistrement suivant
-  // repassera par la fusion, et le bloc orphelin se rendra en attendant.
+  // `version` is incremented as for any body entry:
+  // it is this counter which triggers the merge for those who edit at the same time.
+  // The condition on the read version does the rest — if someone wrote between
+  // reading and here, we don't overwrite it; his own recording next
+  // will go through the merge again, and the orphan block will surrender in the meantime.
   const { error } = await service
     .from("pages")
     .update({
       content: doc,
       version: parent.version + 1,
-      // L'auteur du miroir est celui du GESTE (corbeille, restauration), et le
-      // geste est humain : l'agent n'a pas de chemin vers la corbeille.
+      // The author of the mirror is that of the GESTE (basket, restoration), and the
+      // gesture is human: the agent has no path to the trash.
       ...writtenBy(actorId, "human"),
     })
     .eq("id", parentId)
     .eq("version", parent.version)
     .is("deleted_at", null);
   if (error) console.error("[pages] subpage sync failed:", error.message);
-  // Le corps du PARENT vient de changer (un bloc sous-page en moins ou en
-  // plus) : c'est une écriture de `content` comme une autre, et son texte
-  // indexé doit suivre — même quand personne n'a le parent ouvert.
+  // The body of the PARENT has just changed (one subpage block less or less
+  // more): it is a writing of `content` like any other, and its text
+  // indexed must follow — even when no one has the parent open.
   else {
     queueSearchText(service, [parentId]);
     queuePageBodyLinks(service, [parentId]);
-    // Et son état d'avant est archivé comme n'importe quel autre : le corps du
-    // parent perd un bloc sans que personne l'ait ouvert, c'est précisément une
-    // écriture qu'on peut vouloir remonter.
+    // And its previous state is archived like any other: the body of
+    // parent loses a block without anyone having opened it, this is precisely a
+    // writing that we may want to reassemble.
     stampPageWrite({ service, previous: parent, actorId, kind: "human" });
-    // Pas d'ANNONCE ici (MIN-278), et c'est délibéré : ce miroir n'est jamais
-    // un geste en soi — il accompagne toujours une corbeille ou une
-    // restauration, qui a déjà posé sa ligne. En poser une seconde ferait lire
-    // « X a modifié Dossier » à chaque sous-page supprimée. Et il ne peut pas
-    // faire apparaître de mention : il ne fait qu'ajouter ou retirer un bloc
+    // No ANNOUNCEMENT here (MIN-278), and this is deliberate: this mirror is never
+    // a gesture in itself — it always accompanies a basket or a
+    // restoration, which has already laid its line. Putting down a second would read
+    // “X modified Folder” for each deleted subpage. And he can't
+    // make a mention appear: it only adds or removes a block
     // sous-page.
   }
 }
@@ -955,25 +949,25 @@ async function syncParentBody(
 /* ─── Corbeille ────────────────────────────────────────────────────────────── */
 
 /**
- * Met une page à la corbeille AVEC toute sa descendance (MIN-266).
+ * Puts a page in the trash WITH all its descendants (MIN-266).
  *
- * Récursive parce que le geste qui l'appelle le plus souvent n'est pas un
- * bouton « supprimer » : c'est l'effacement du bloc sous-page dans le corps du
- * parent (MIN-272). Laisser les descendants vivants ferait apparaître vingt
- * pages orphelines à la racine de la sidebar pour une ligne de texte effacée.
+ * Recursive because the gesture that calls it most often is not a
+ * “delete” button: this deletes the subpage block in the body of the
+ * parent (MIN-272). Leaving the descendants alive would cause twenty
+ * orphan pages to appear at the root of the sidebar for a deleted line of text.
  *
- * `deleted_root_id` marque les descendants et NON la racine : la corbeille
- * n'affiche donc qu'une ligne pour tout l'arbre, et la restauration retrouve
- * exactement ce qui est parti ensemble. Une sous-page DÉJÀ à la corbeille avant
- * ce geste n'est pas retouchée (`is deleted_at null`) : elle garde sa propre
- * racine, et restaurer le parent ne la ramène pas — ce que personne n'a demandé.
+ * `deleted_root_id` marks the descendants and NOT the root: the trash
+ * therefore only displays one line for the entire tree, and the restoration finds
+ * exactly what went together. A subpage ALREADY in the trash before
+ * this gesture is not touched (`is deleted_at null`): it keeps its own
+ * root, and restoring the parent does not bring it back — which no one asked for.
  */
 export async function trashPage(
   pageId: string,
   actorId: string,
-  /** La nature du geste (MIN-278) : « agent » quand c'est Numo qui corbeille —
-      la corbeille lui est ouverte (`move_to_trash`, type `page`), et sans ça la
-      ligne d'activité nommerait l'humain d'un geste qu'il n'a pas fait. */
+  /** The nature of the gesture (MIN-278): "agent" when it is Numo who takes the trash -
+ the trash is open to him (`move_to_trash`, type `page`), and without that the
+ line of activity would name the human with a gesture that he did not make. */
   kind: PageWriteKind = "human"
 ): Promise<{ ok: true; trashed: number } | { ok: false; status: number; errorKey: PageErrorKey }> {
   const service = getServiceClient();
@@ -1016,14 +1010,14 @@ export async function trashPage(
     }
   }
 
-  // Le sens inverse (MIN-272) : le bloc du corps du parent s'en va avec la
-  // page. Seule la RACINE du geste est concernée — les blocs des descendants
-  // vivent dans des corps qui partent à la corbeille en même temps.
+  // The opposite direction (MIN-272): the block of the parent's body leaves with the
+  // page. Only the ROOT of the gesture is affected — the descendant blocks
+  // live in bodies that go to the trash at the same time.
   //
-  // Et on RETIENT qu'on l'a retiré : la restauration ne doit remettre un bloc
-  // que là où il y en avait un (cf. la migration, colonne
-  // `parent_block_removed`). Une page née dans la sidebar n'a jamais eu de
-  // bloc, la ressortir de la corbeille ne doit pas lui en inventer un.
+  // And we REMEMBER that we removed it: the restoration must not put back a block
+  // only where there was one (see migration, column
+  // `parent_block_removed`). A page born in the sidebar has never had
+  // block, taking it out of the trash does not have to invent one for it.
   if (page.parent_id) {
     let cleared = false;
     await syncParentBody(service, page.parent_id, actorId, (doc) => {
@@ -1042,9 +1036,9 @@ export async function trashPage(
     }
   }
 
-  // La RACINE du geste seule (MIN-278) : la descendance part avec elle, et une
-  // ligne par page ferait vingt lignes pour un bloc effacé. La corbeille reste
-  // le seul geste destructeur des pages — c'est la ligne qu'on vient chercher.
+  // The ROOT of the gesture alone (MIN-278): the descendants leave with it, and a
+  // line per page would make twenty lines for one erased block. The trash remains
+  // the only destructive gesture on the pages — it's the line we're looking for.
   announcePageWrite({
     service,
     page,
@@ -1058,8 +1052,8 @@ export async function trashPage(
 }
 
 /**
- * Un corps qu'on peut considérer comme JAMAIS ÉCRIT : vide, ou réduit au
- * paragraphe vide que rend une page qu'on vient de créer.
+ * A body that can be considered NEVER WRITTEN: empty, or reduced to
+ * empty paragraph rendered by a page that has just been created.
  */
 function isBlankDoc(content: unknown): boolean {
   const blocks = (content as { content?: unknown[] } | null)?.content;
@@ -1070,19 +1064,19 @@ function isBlankDoc(content: unknown): boolean {
 }
 
 /**
- * DÉTRUIT une page restée vide — le seul geste du module qui ne passe pas par
- * la corbeille (MIN-270).
+ * DESTROYS a page that remains empty - the only gesture of the module which does not pass through
+ * the trash (MIN-270).
  *
- * Il ne sert qu'à une chose : créer une page puis repartir sans y écrire une
- * lettre ne doit rien laisser derrière. Passer par la corbeille remplirait
- * celle-ci de pages sans titre que personne n'a voulues, ce qui est exactement
- * le bruit qu'on cherche à éviter.
+ * It only serves one thing: create a page then leave without writing a
+ * letter there must leave nothing behind. Going through the trash would fill
+ * it with untitled pages that no one wanted, which is exactly
+ * the noise we are trying to avoid.
  *
- * Ce qui rend la destruction acceptable, c'est la GARDE, et elle est vérifiée
- * ICI plutôt qu'au client : sans titre, sans icône, sans corps, sans
- * sous-page. Une page qui échoue à ce test répond 409 et n'est pas touchée —
- * le client n'a donc aucun moyen de faire disparaître du contenu par ce
- * chemin, même en mentant sur ce qu'il croit vide.
+ * What makes destruction acceptable is CUSTODY, and it is checked
+ * HERE instead only to the client: without title, without icon, without body, without
+ * subpage. A page that fails this test responds 409 and is not touched —
+ * so the client has no way of making content disappear via this
+ * path, even by lying about what it believes to be empty.
  */
 export async function discardPage(
   pageId: string,
@@ -1105,9 +1099,9 @@ export async function discardPage(
   );
   if (hasChildren) return { ok: false, status: 409, errorKey: "pageNotEmpty" };
 
-  // Le bloc du corps du parent part AVANT la ligne : c'est le même sens que la
-  // corbeille (MIN-272), et l'ordre compte — une ligne détruite dont le bloc
-  // survit laisse un lien mort dans le document du parent.
+  // The block of the parent's body leaves BEFORE the line: it is the same direction as the
+  // trash (MIN-272), and the order counts — a destroyed line whose block
+  // survive leaves a dead link in the parent document.
   if (page.parent_id) {
     await syncParentBody(service, page.parent_id, actorId, (doc) => {
       const { doc: next, removed } = removeSubpages(doc, [pageId]);
@@ -1127,20 +1121,19 @@ export async function discardPage(
 }
 
 /**
- * Restaure une page et tout ce qui est parti avec elle.
+ * Restores a page and everything that went with it.
  *
- * Le cas qui compte : la page restaurée avait un parent, lui-même encore à la
- * corbeille (il a été supprimé séparément, ou l'utilisateur restaure depuis la
- * corbeille une page dont l'arbre a bougé). Rendre l'enfant sans le parent le
- * laisserait VISIBLE nulle part — la sidebar ne l'affiche pas, et sa page est
- * un lien mort. Il remonte donc à la racine, en fin de fratrie : mal placé
- * plutôt qu'introuvable.
+ * The case that matters: the restored page had a parent, itself still in the
+ * trash (it was deleted separately, or the user restores from the
+ * trash a page whose the tree moved). Making the child without the parent the
+ * would leave VISIBLE nowhere — the sidebar doesn't show it, and its page is
+ * a dead link. It therefore goes back to the root, at the end of the siblings: misplaced
+ * rather than not found.
  */
 export async function restorePage(
   pageId: string,
   actorId: string,
-  /** Comme la corbeille ci-dessus : restaurer est le geste inverse, et il
-      s'ouvre au même appelant. */
+  /** Like the recycle bin above: restore is the reverse gesture, and it opens to the same caller. */
   kind: PageWriteKind = "human"
 ): Promise<{ ok: true; restored: number } | { ok: false; status: number; errorKey: PageErrorKey }> {
   const service = getServiceClient();
@@ -1164,7 +1157,7 @@ export async function restorePage(
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
 
-  // Le parent est-il encore absent ? (Corbeillé de son côté, ou purgé.)
+  // Is the parent still absent? (Trashed for his part, or purged.)
   const parent = page.parent_id
     ? all.find((p) => p.id === page.parent_id && !p.deleted_at)
     : null;
@@ -1183,17 +1176,17 @@ export async function restorePage(
       return { ok: false, status: 500, errorKey: "databaseError" };
     }
   } else if (parent && page.parent_block_removed) {
-    // Le bloc revient dans le corps du parent, en FIN de document (MIN-272).
-    // Rien ne se remet en double : `appendSubpage` ne pose rien si le corps
-    // cite déjà la page — le cas d'un bloc recréé à la main entre-temps.
+    // The block returns to the parent body, at the END of the document (MIN-272).
+    // Nothing is duplicated: `appendSubpage` does not set anything if the body
+    // already cites the page — the case of a block recreated by hand in the meantime.
     await syncParentBody(service, parent.id, actorId, (doc) => {
       const { doc: next, added } = appendSubpage(doc, pageId);
       return { doc: next, changed: added };
     });
   }
 
-  // La marque ne survit pas à la restauration : la page est de nouveau vivante,
-  // et c'est le prochain passage à la corbeille qui dira ce qu'il en est alors.
+  // The brand does not survive the restoration: the page is alive again,
+  // and it's the next move to the trash that will say what it is then.
   if (page.parent_block_removed) {
     await service
       .from("pages")
@@ -1201,8 +1194,8 @@ export async function restorePage(
       .eq("id", pageId);
   }
 
-  // Le pendant de la corbeille : sans cette ligne, une page réapparue dans la
-  // sidebar l'aurait fait sans que rien ne le dise.
+  // The counterpart of the trash can: without this line, a page reappears in the
+  // sidebar would have done it without anything saying so.
   announcePageWrite({
     service,
     page,
@@ -1215,7 +1208,7 @@ export async function restorePage(
   return { ok: true, restored: family.length };
 }
 
-/* ─── Lecture des entrées ──────────────────────────────────────────────────── */
+/* ─── Reading input ────────────────────────── ────────────────────────── */
 
 function readTitle(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
@@ -1229,21 +1222,19 @@ function readIcon(value: unknown): string | null {
 }
 
 /**
- * Le corps ProseMirror. `undefined` = le champ n'est pas dans la requête,
- * `"too-large"` = refusé. Une valeur qui n'est pas un objet est ignorée plutôt
- * que refusée : c'est le même traitement qu'un statut inconnu ailleurs, et le
- * seul dommage possible est de ne pas écrire ce qu'on n'a pas su lire.
+ * The ProseMirror body. `undefined` = field is not in the request,
+ * `"too-large"` = refused. A value which is not an object is ignored rather than refused: it is the same treatment as an unknown status elsewhere, and the only possible harm is not to write what one has not been able to read.
  *
- * Trois gardes, dans CET ordre, et l'ordre est le sujet :
+ * Three guards, in THIS order, and the order is the subject :
  *
- * 1. la PROFONDEUR d'abord (MIN-348) — peser un document, c'est le sérialiser,
- *    et `JSON.stringify` descend l'arbre par la pile d'appels : sur un corps
- *    imbriqué dix mille fois, c'est le garde-fou qui tombe, pas ce qu'il devait
- *    arrêter. La descente récursive du schéma tomberait de même ;
- * 2. la TAILLE, avant de parcourir l'arbre nœud par nœud ;
- * 3. le SCHÉMA (MIN-350) : types connus, attributs connus, adresses sans
- *    protocole hostile (lib/page-content-schema.ts). Il rend le corps NETTOYÉ
- *    de ses attributs inconnus — c'est cette valeur-là qui part en base.
+ * 1. DEPTH first (MIN-348) — weighing a document is serializing it,
+ * and `JSON.stringify` goes down the tree through the call stack: on a body
+ * nested ten thousand times, this is the guardrail falling, not what he was supposed to
+ * stop. Recursive descent of the schema would fall similarly;
+ * 2. the SIZE, before traversing the tree node by node;
+ * 3. the SCHEMA (MIN-350): known types, known attributes, addresses without
+ * hostile protocol (lib/page-content-schema.ts). It makes the body CLEAN
+ * of its unknown attributes — it is this value which is taken as base.
  */
 function readContent(
   value: unknown

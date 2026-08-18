@@ -7,15 +7,15 @@ import {
 } from "@/lib/server/agent/pr-actions";
 
 /**
- * Réactions emoji du FIL de conversation (MIN-147) — le pendant exact de
- * `../../review-comments/reactions`, sur l'autre surface : sur GitHub, réagir
- * marche partout, et minddy ne le laissait faire que sur les commentaires ancrés
- * à une ligne de code.
+ * Conversation THREAD emoji reactions (MIN-147) — the exact counterpart of
+ * `../../review-comments/reactions`, on the other surface: on GitHub, react
+ * walks everywhere, and minddy only let him do it on anchored comments
+ * to a line of code.
  *
- * `comment_id: 0` vise le CORPS de la pull request (`PR_BODY_COMMENT_ID`), le
- * message qui ouvre le fil — d'où `allowBody`, que la route de review n'ouvre pas.
+ * `comment_id: 0` targets the BODY of the pull request (`PR_BODY_COMMENT_ID`), the
+ * message that opens the thread — hence `allowBody`, that the review route does not open.
  *
- *  POST → { comment_id, content, on }   pose (`on: true`) ou retire la réaction
+ * POST → { comment_id, content, on } post (`on: true`) or remove the reaction
  */
 
 type RouteContext = { params: Promise<{ prId: string }> };

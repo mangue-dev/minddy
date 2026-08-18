@@ -1,65 +1,63 @@
 /**
- * LE DOSSIER LOCAL D'UN PROJET (MIN-359) — la moitié qui se décide sans disque.
+ * THE LOCAL FOLDER OF A PROJECT (MIN-359) — the half that is decided without a disk.
  *
- * L'app de bureau attache un dossier de la machine à un projet ; c'est ce dossier
- * que l'agent ouvrira quand la conversation tourne en local (D1 de
+ * The desktop app attaches a machine folder to a project; it is this folder
+ * that the agent will open when the conversation is local (D1 of
  * [docs/audits/agent-local-2026-08-14.md](../../docs/audits/agent-local-2026-08-14.md)).
- * Tout ce qui se décide ici — est-ce un dépôt git, est-ce LE dépôt du projet,
- * qu'est-ce que le fichier de réglages a le droit de contenir — est écrit en
- * fonctions pures, testées, comme la garde de navigation et la garde micro.
- * Le `fs` et le panneau système vivent dans `desktop/src/local-repo.ts`.
+ * Everything that is decided here — is this a git repository, is this THE project repository,
+ * what is the settings file allowed to contain — is written in
+ * pure, tested functions, like navigation guard and micro guard.
+ * The `fs` and the system panel live in `desktop/src/local-repo.ts`.
  *
- * ## Le réglage est l'attachement, et il n'existe que sur une machine
+ * ## The setting is attach, and it only exists on one machine
  *
- * Le cadrage plaçait l'opt-in « exécuter en local » au niveau du PROJET. C'est
- * intenable : un chemin de home ne veut rien dire ailleurs que sur la machine qui
- * le porte, et le ranger côté serveur le publierait — faux — à tous les membres.
- * L'attachement vit donc dans `userData`, par projet, sur CETTE machine, et il
- * n'y a rien à migrer côté base : `agent_runs.local_exec` (MIN-355) est le seul
- * état serveur, par run, figé au lancement.
+ * The scoping placed the "run locally" opt-in at the PROJECT level. This is
+ * untenable: a home path means nothing anywhere other than on the machine which
+ * carries it, and storing it on the server side would publish it — false — to all members.
+ * The attachment therefore lives in `userData`, by project, on THIS machine, and it
+ * there is nothing to migrate on the database side: `agent_runs.local_exec` (MIN-355) is the only one
+ * server state, per run, frozen at launch.
  *
- * Conséquence produit, qu'il faut assumer plutôt que découvrir : sur un projet à
- * trois, un membre sur Windows ne voit simplement pas le sélecteur et ses runs
- * partent dans le cloud. Un propriétaire ne peut pas non plus INTERDIRE le local
- * à ses membres — c'est une politique d'organisation, pas ce lot.
+ * Product consequence, which must be assumed rather than discovered: on a project with
+ * three, a member on Windows just doesn't see the selector and its runs
+ * go to the cloud. An owner also cannot DENY local
+ * to its members — that's an organizational policy, not this lot.
  *
- * ## Aucun `git` lancé pour valider
+ * ## No `git` launched to validate
  *
- * On lit `.git/config` avec `fs`, on ne lance pas `git`. Sur un Mac sans Command
- * Line Tools, la moindre invocation de `git` fait surgir la fenêtre d'installation
- * de Xcode — au milieu d'un geste de réglage, sans que personne ne l'ait demandé.
- * Le fichier suffit, et son parseur se teste.
- */
+ * We read `.git/config` with `fs`, we do not launch `git`. On a Mac without Command
+ * Line Tools, the slightest invocation of `git` brings up the
+ * installation window for
 
-/** Pourquoi un dossier ne peut pas servir de dépôt local à ce projet. */
+/** Why a folder cannot serve as a local repository for this project. */
 export type LocalRepoRefusal =
-  /** Le chemin n'existe plus, ou n'est pas un dossier (dépôt déplacé, disque démonté). */
+  /** The path no longer exists, or is not a folder (repository moved, disk unmounted). */
   | "missing"
-  /** Pas de `.git` lisible : ce n'est pas un dépôt (ni un worktree). */
+  /** No readable `.git`: this is not a repository (nor a worktree). */
   | "notGit"
-  /** Un dépôt, mais sans aucun remote : impossible de dire lequel c'est. */
+  /** A repository, but without any remote: impossible to say which one it is. */
   | "noRemote"
-  /** Un dépôt, mais pas celui que le projet a lié. */
+  /** A repository, but not the one the project linked to. */
   | "wrongRepo";
 
-/** Ce qu'on sait du dossier après lecture du disque — l'entrée des décisions. */
+/** What we know about the file after reading the disk — the decision entry. */
 export interface LocalRepoFacts {
-  /** Le chemin existe ET c'est un dossier. */
+  /** The path exists AND it is a folder. */
   readonly isDirectory: boolean;
-  /** Le contenu de `.git/config`, ou `null` si on n'a pas su le lire. */
+  /** The content of `.git/config`, or `null` if you were unable to read it. */
   readonly gitConfig: string | null;
 }
 
-/** Le dépôt que le projet a lié, tel que le serveur le nomme. */
+/** The repository that the project linked to, as the server names it. */
 export interface ExpectedRepo {
-  /** `owner/name` (GitHub) ou `groupe/sous-groupe/projet` (GitLab). */
+  /** `owner/name` (GitHub) or `group/subgroup/project` (GitLab). */
   readonly fullName: string;
 }
 
 /**
- * L'état d'un attachement, tel que la page le lit. Un seul type pour les trois
- * gestes (lire, attacher, détacher) : l'appelant n'a jamais à croiser deux
- * formes pour savoir quoi afficher.
+ * The state of an attachment, as the page reads it. A single type for all three
+ * gestures (read, attach, detach): the caller never has to cross two
+ * shapes to know what to display.
  */
 export type LocalRepoState =
   | { readonly status: "none" }
@@ -71,12 +69,12 @@ export type LocalRepoState =
     };
 
 /**
- * Les remotes déclarés dans un `.git/config`.
+ * Remotes declared in a `.git/config`.
  *
- * Le format est celui de `git config` : des sections `[remote "nom"]` suivies de
- * `clé = valeur`. On ne cherche que `url`, et on tolère ce que git tolère —
- * indentation libre, espaces autour du `=`, sections en une ligne
- * (`[remote "origin"]` avec la sous-section entre guillemets).
+ * The format is that of `git config`: sections `[remote "nom"]` followed by
+ * `key = value`. We only look for `url`, and we tolerate what git tolerates —
+ * free indentation, spaces around `=`, single-line sections
+ * (`[remote "origin"]` with the subsection in quotes).
  */
 export function parseGitConfigRemotes(
   text: string,
@@ -87,8 +85,8 @@ export function parseGitConfigRemotes(
     const line = raw.trim();
     if (!line || line.startsWith("#") || line.startsWith(";")) continue;
     if (line.startsWith("[")) {
-      // `[remote "origin"]`, et rien d'autre : `[core]`, `[branch "main"]`,
-      // `[submodule …]` referment la section courante sans rien ajouter.
+      // `[remote "origin"]`, and nothing else: `[core]`, `[branch "main"]`,
+      // `[submodule …]` closes the current section without adding anything.
       const section = /^\[remote\s+"(.+)"\]$/.exec(line);
       current = section ? (section[1] ?? null) : null;
       continue;
@@ -101,18 +99,17 @@ export function parseGitConfigRemotes(
 }
 
 /**
- * Le `owner/repo` que désigne une URL de remote, ou `null`.
+ * The `owner/repo` that a remote URL designates, or `null`.
  *
- * Trois formes, et il faut les trois : `git@host:owner/repo.git` (le SCP
- * historique, ce que GitHub propose par défaut), `ssh://git@host/owner/repo.git`
- * et `https://host/owner/repo(.git)`. GitLab autorisant les sous-groupes, tout
- * ce qui suit l'hôte est gardé, pas seulement deux segments.
+ * Three forms, and you need all three: `git@host:owner/repo.git` (the historical SCP
+ *, which GitHub offers by default), `ssh://git@host/owner/repo.git`
+ * and `https://host/owner/repo(.git)`. GitLab allows subgroups, everything after the host is kept, not just two segments.
  */
 export function remoteRepoPath(url: string): string | null {
   const trimmed = url.trim();
   if (!trimmed) return null;
 
-  // Forme SCP : pas d'URL au sens de `new URL`, il faut la reconnaître à part.
+  // SCP form: no URL in the sense of `new URL`, it must be recognized separately.
   const scp = /^[^/]+@([^/:]+):(.+)$/.exec(trimmed);
   const raw = scp
     ? scp[2]
@@ -134,15 +131,14 @@ function safeUrlPath(url: string): string | null {
 }
 
 /**
- * Ce dossier est-il le dépôt que le projet a lié ?
+ * Is this folder the repository that the project linked to?
  *
- * **On compare le chemin du dépôt, PAS l'hôte** — et c'est une décision, pas un
- * raccourci. Un même dépôt se joint par `github.com`, par un GitHub Enterprise,
- * par un GitLab auto-hébergé ou par un miroir interne ; exiger l'hôte du
- * fournisseur refuserait des dossiers parfaitement légitimes, et le refus serait
- * incompréhensible. Le risque résiduel — deux `owner/repo` identiques sur deux
- * forges — suppose que quelqu'un se trompe de dossier en le choisissant lui-même
- * dans un panneau système : c'est un garde-fou d'inattention, pas une frontière.
+ * **We are comparing the repository path, NOT the host** — and it is a decision, not a
+ * shortcut. The same repository is joined by `github.com`, by a GitHub Enterprise,
+ * by a self-hosted GitLab or by an internal mirror; requiring the host from the
+ * provider would refuse perfectly legitimate files, and the refusal would be
+ * incomprehensible. The residual risk — two out of two identical `owner/repo` * forges — supposes that someone chooses the wrong folder by choosing it themselves
+ * in a system panel: it is a safeguard against inattention, not a boundary.
  */
 export function remoteMatchesRepo(url: string, expected: ExpectedRepo): boolean {
   const path = remoteRepoPath(url);
@@ -152,7 +148,7 @@ export function remoteMatchesRepo(url: string, expected: ExpectedRepo): boolean 
   return path.toLowerCase() === wanted.toLowerCase();
 }
 
-/** Le dossier est-il utilisable comme dépôt local de ce projet ? */
+/** Can the folder be used as a local repository for this project? */
 export function localRepoVerdict(
   facts: LocalRepoFacts,
   expected: ExpectedRepo,
@@ -166,25 +162,25 @@ export function localRepoVerdict(
 }
 
 /**
- * Le pointeur d'un `.git` FICHIER — ce qu'est `.git` dans un worktree et dans un
- * sous-module : une ligne `gitdir: <chemin>`. Le chemin peut être relatif au
- * dossier qui porte le fichier ; c'est à l'appelant de le résoudre, il a `path`.
+ * The pointer to a `.git` FILE — what `.git` is in a worktree and in a
+ * submodule: a `gitdir: <chemin>` line. The path can be relative to
+ * folder which contains the file; it's up to the caller to resolve it, it has `path`.
  */
 export function parseGitDirPointer(text: string): string | null {
   const match = /^\s*gitdir:\s*(.+?)\s*$/m.exec(text);
   return match?.[1] ?? null;
 }
 
-/** Ce que le fichier de réglages contient : un chemin par projet. */
+/** What the settings file contains: one path per project. */
 export type LocalRepoStore = Record<string, string>;
 
 /**
- * Le store relu depuis le disque, réduit à ce qu'il a le droit d'être.
+ * The store read from disk, reduced to what it has the right to be.
  *
- * **Tout ce qui n'est pas une paire de chaînes disparaît en silence**, comme le
- * canal : un fichier tronqué par un arrêt brutal ne doit pas empêcher l'app de
- * s'ouvrir, et un chemin relatif glissé là à la main ne doit pas devenir le
- * dossier de travail d'un agent.
+ * **Everything that is not a pair of strings disappears silently**, like the
+ * channel: a file truncated by a hard shutdown should not prevent the app from
+ * open, and a relative path dragged there by hand must not become the
+ * working folder of an agent.
  */
 export function parseLocalRepoStore(raw: unknown): LocalRepoStore {
   if (typeof raw !== "object" || raw === null) return {};
@@ -199,7 +195,7 @@ export function parseLocalRepoStore(raw: unknown): LocalRepoStore {
   return store;
 }
 
-/** La forme écrite sur le disque — un objet nommé, pour pouvoir grandir. */
+/** The form written on the disk — a named object, so it can grow. */
 export function serializeLocalRepoStore(store: LocalRepoStore): string {
   return `${JSON.stringify({ projects: store }, null, 2)}\n`;
 }
@@ -220,7 +216,7 @@ export function withoutLocalRepo(
   return rest;
 }
 
-/** Le dernier segment d'un chemin — ce que le chip affiche quand la place manque. */
+/** The last segment of a path — what the chip displays when there is no space. */
 export function localRepoFolderName(path: string): string {
   const segments = path.replace(/\/+$/, "").split("/");
   return segments[segments.length - 1] || path;

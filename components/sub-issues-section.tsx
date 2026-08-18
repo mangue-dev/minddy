@@ -37,9 +37,9 @@ export function SubIssuesSection({
   const [adding, setAdding] = useState(false);
 
   const total = children.length;
-  // Un sous-ticket annulé (ou doublon) est fini pour le suivi, au même titre
-  // qu'un terminé : il ne sera jamais travaillé. Même convention que
-  // statusCompletionCredit (lib/cycle.ts), qui donne 1 à tout statut clos.
+  // A canceled (or duplicate) sub-ticket is finished for tracking, in the same way
+  // only one finished: it will never be worked on. Same convention as
+  // statusCompletionCredit (lib/cycle.ts), which gives 1 to any closed status.
   const done = children.filter((c) => isClosedStatus(c.status)).length;
   const percent = total === 0 ? 0 : Math.round((done / total) * 100);
 

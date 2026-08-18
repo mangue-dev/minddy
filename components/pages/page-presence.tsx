@@ -1,18 +1,18 @@
 "use client";
 
-// LES AVATARS DE PRÉSENCE (MIN-271) — qui d'autre lit cette page, en ce moment.
+// THE AVATARS OF PRESENCE (MIN-271) — who else is reading this page, right now.
 //
-// C'est la moitié PRÉVENTIVE de la feature : la sauvegarde versionnée rattrape
-// la collision une fois qu'elle a eu lieu, l'avatar en haut de page l'évite. La
-// personne qui voit quelqu'un d'autre sur son document ne se comporte pas de la
-// même façon — et c'est justement ce qu'un document partagé ne dit jamais tout
+// This is the PREVENTIVE half of the feature: the versioned backup catches up
+// the collision once it has occurred, the avatar at the top of the page avoids it. There
+// person who sees someone else on their document does not behave like that
+// same way — and this is precisely what a shared document never says everything
 // seul.
 //
-// On ne se montre PAS soi-même : le seul visage qu'un utilisateur ne cherche
-// pas sur son propre écran est le sien, et le laisser ferait croire à deux
-// lecteurs là où il n'y en a qu'un. Le tri est fait à la SOURCE, une fois pour
-// toutes les surfaces (lib/page-presence.ts) — l'arbre, lui, ne sait même pas
-// qui je suis, et il posait sa pastille sur mon propre deuxième onglet.
+// You do NOT show yourself: the only face a user is not looking for
+// not on his own screen is his, and leaving it would make it seem like two
+// readers where there is only one. The sorting is done at the SOURCE, once for
+// all surfaces (lib/page-presence.ts) — the tree doesn't even know
+// who I am, and he placed his tablet on my own second tab.
 
 import { createContext, useContext, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
@@ -29,18 +29,18 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-/* ── Le canal, monté UNE fois ──────────────────────────────────────────── */
+/* ── The channel, mounted ONCE ────────────────────── ────────────────────── */
 
 const EMPTY: PagePresenceMap = new Map();
 const PresenceContext = createContext<PagePresenceMap>(EMPTY);
 
 /**
- * L'abonnement vit dans la COQUILLE des pages, pas dans la page ouverte.
+ * The subscription lives in the SHELL of the pages, not in the open page.
  *
- * C'est ce qui fait qu'il tient : `PageView` se remonte à chaque navigation
- * (`key={pageId}`), donc y mettre le canal le ferait quitter et rejoindre à
- * chaque clic dans l'arbre — et clignoter chez tout le monde. La coquille, elle,
- * traverse les navigations ; changer de page n'y est qu'un `track` de plus.
+ * This is what makes it stick: `PageView` rewinds on each navigation
+ * (`key={pageId}`), so putting the channel there would make it quit and rejoin at
+ * every click in the tree — and flash in everyone. The shell,
+ * crosses navigations; changing pages is just another `track`.
  */
 export function PagePresenceProvider({
   projectId,
@@ -59,20 +59,20 @@ export function PagePresenceProvider({
   );
 }
 
-/** Tout ce que d'AUTRES regardent dans le projet — l'arbre en a besoin en
-    entier. */
+/** Anything OTHERS look at in the project — the tree needs it in full
+. */
 export function usePresentPages(): PagePresenceMap {
   return useContext(PresenceContext);
 }
 
-/** Les autres présents sur une page donnée. */
+/** Others present on a given page. */
 export function usePresentOn(pageId: string | null): string[] {
   const present = useContext(PresenceContext);
   return (pageId ? present.get(pageId) : undefined) ?? [];
 }
 
-/** Au-delà, on compte : cinq visages en haut d'un document, c'est déjà une
-    barre d'outils. */
+/** Beyond that, we count: five faces at the top of a document, it's already a
+ toolbar. */
 const MAX_FACES = 3;
 
 export function PagePresence({
@@ -80,7 +80,7 @@ export function PagePresence({
   members,
   className,
 }: {
-  /** Les AUTRES présents sur cette page — déjà triés (lib/page-presence.ts). */
+  /** OTHERS present on this page — already sorted (lib/page-presence.ts). */
   userIds: readonly string[];
   members: readonly Member[];
   className?: string;
@@ -97,8 +97,8 @@ export function PagePresence({
     <div className={cn("flex items-center", className)}>
       {faces.map((id) => {
         const member = byId.get(id);
-        // Un présent qu'on ne connaît pas (membre ajouté depuis le chargement
-        // de la liste) garde sa place : un avatar neutre vaut mieux qu'un
+        // A present that we don't know (member added since loading
+        // from the list) keeps its place: a neutral avatar is better than a
         // lecteur invisible.
         const name = member ? displayName(member) : t("presenceUnknown");
         return (
@@ -125,11 +125,11 @@ export function PagePresence({
 }
 
 /**
- * La PASTILLE de l'arbre : une page que quelqu'un d'autre regarde en ce moment.
+ * The tree PELLET: a page that someone else is looking at at the moment.
  *
- * Un point, pas un avatar : la ligne de l'arbre est déjà dense (icône, titre,
- * chevron, bouton `+`), et l'information utile à cet endroit est binaire —
- * « il y a quelqu'un ». Qui, on le lit en ouvrant la page.
+ * A point, not an avatar: the tree line is already dense (icon, title,
+ * chevron, `+` button), and the useful information there is binary —
+ * “there is someone”. Which, we read it when opening the page.
  */
 export function PagePresenceDot({
   count,

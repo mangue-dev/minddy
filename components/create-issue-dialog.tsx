@@ -124,26 +124,26 @@ export function CreateIssueDialog({
       the new issue doesn't instantly vanish from it). */
   initialAssigneeId?: string | null;
   /**
-   * Contenu de départ — le formulaire s'ouvre déjà écrit. C'est la promotion
-   * d'un retour en ticket : tout ce que le retour sait dire (son titre, son
-   * texte, ses catégories) est posé, et l'humain complète le reste plutôt que
-   * de recopier ce qu'il a sous les yeux.
+   * Starting content — the form opens already written. It's the promotion
+   * of a return in ticket: everything that the return can say (its title, its
+   * text, its categories) is posed, and the human completes the rest rather than
+   * to copy what he has in front of him.
    *
-   * À la différence des trois presets ci-dessus, il n'est appliqué qu'UNE fois
-   * par ouverture : réappliqué à chaque rendu, il écraserait la frappe en
+   * Unlike the three presets above, it is only applied ONCE
+   * by opening: reapplied to each rendering, it would overwrite the keystroke
    * cours.
    */
   initialTitle?: string;
   initialDescription?: string;
   initialCategoryIds?: string[];
   /**
-   * Ouvre le formulaire micro déjà ouvert : le raccourci global ⌘⇧D n'ouvre
-   * pas un dialog qu'il faudrait ensuite mettre en dictée, il ouvre une prise
-   * de parole. Simplement transmis au bouton de dictée — c'est LUI qui
-   * déclenche, à son montage (voir `autoStart`).
+   * Opens the micro form already open: the global shortcut ⌘⇧D does not open
+   * not a dialogue that would then have to be dictated, it opens a take
+   * of speech. Simply transmitted to the dictation button — it is HE who
+   * triggers, when mounted (see `autoStart`).
    */
   autoDictate?: boolean;
-  /** Surface d'où vient la création — analytics uniquement (MIN-78). */
+  /** Surface where creation comes from — analytics only (MIN-78). */
   analyticsSource?: AnalyticsPropsFor<"issue_created">["source"];
 }) {
   const t = useTranslations("IssueUI");
@@ -170,8 +170,8 @@ export function CreateIssueDialog({
   // re-open the confirmation just dismissed. This ref muffles the dialog's close
   // signal for the brief window right after the confirmation closes.
   const ignoreCloseAfterConfirmRef = useRef(false);
-  // Une prise en cours de transcription (l'audio est parti, le texte n'est pas
-  // revenu) : avec la suite Numo, c'est la fenêtre où fermer perd la dictée.
+  // A take being transcribed (the audio is gone, the text is not
+  // income): with the Numo suite, this is the window where closing loses dictation.
   const [transcribing, setTranscribing] = useState(false);
   // Remount the markdown editor to swap its content (it only commits on blur).
   const [editorKey, setEditorKey] = useState(0);
@@ -179,13 +179,13 @@ export function CreateIssueDialog({
   // typed but not yet committed (commit happens on blur) when the dialog closes.
   const editorNonEmptyRef = useRef(false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
-  // Le contenu du dialog, pour savoir si le clavier lui appartient encore : un
-  // second dialog par-dessus (confirmation de brouillon, création d'objectif
-  // depuis le picker) doit garder ses touches pour lui.
+  // The content of the dialog, to know if the keyboard still belongs to him: a
+  // second dialog on top (draft confirmation, objective creation
+  // from the picker) must keep his touches to himself.
   const contentRef = useRef<HTMLDivElement>(null);
   const createMoreId = useId();
-  // ⌘/Ctrl + Entrée crée le ticket, d'où qu'on soit dans le formulaire — y
-  // compris depuis la description, que le champ de titre ne couvre pas.
+  // ⌘/Ctrl + Enter creates the ticket, from wherever you are in the form — y
+  // understood from the description, which the title field does not cover.
   const submitShortcut = useSubmitShortcut();
   const uploads = useAttachmentUploads(() => `projects/${projectId}`);
   const drop = useFileDrop(uploads.addFiles);
@@ -193,18 +193,18 @@ export function CreateIssueDialog({
   const mentions = useDescriptionMentions(projectId, members);
 
   /**
-   * SMART-FILL (MIN-260) — armé par le compte, coupable par ticket.
+   * SMART-FILL (MIN-260) — armed by the count, guilty by the ticket.
    *
-   * `smartFillAvailable` décide si la bascule EXISTE : préférence coupée dans
-   * les réglages, elle ne paraît nulle part et la rangée d'options reste
-   * entière. `smartFill` est son état pour CE ticket, reposé à chaque ouverture
-   * — couper Smart-fill sur un ticket ne le coupe pas pour le suivant, c'est un
-   * geste ponctuel, pas un réglage déguisé.
+   * `smartFillAvailable` decides if the toggle EXISTS: preference cut in
+   * the settings, it does not appear anywhere and the row of options remains
+   * whole. `smartFill` is its state for THIS ticket, reset each time it is opened
+   * — cutting Smart-fill on one ticket does not cut it for the next one, it is a
+   * one-off gesture, not a disguised adjustment.
    *
-   * Quand il est actif, la rangée ne garde que les trois propriétés que
-   * Smart-fill ne touche pas — statut, assigné, échéance. Les quatre autres ne
-   * sont pas grisées mais RETIRÉES : un champ visible et vide, sur un formulaire
-   * où quelque chose va le remplir, se lit comme un oubli.
+   * When active, the row only keeps the three properties that
+   * Smart-fill does not touch — status, assigned, due date. The other four
+   * are not grayed out but REMOVED: a visible and empty field, on a form
+   * where something is going to fill it, reads like an oversight.
    */
   const smartFillAvailable = resolveSmartFill(user?.user_metadata);
   const [smartFill, setSmartFill] = useState(smartFillAvailable);
@@ -212,7 +212,7 @@ export function CreateIssueDialog({
     if (open) setSmartFill(smartFillAvailable);
   }, [open, smartFillAvailable]);
 
-  // Account preference (Préférences → auto-attribution): pre-fill the assignee
+  // Account preference (Preferences → auto-assign): pre-fill the assignee
   // with the creator. Guarded on membership — the assignee picker only lists
   // this project's members, so only seed when the user actually belongs here.
   const defaultAssigneeId =
@@ -245,10 +245,10 @@ export function CreateIssueDialog({
     }));
   }, [open, initialStatus, initialObjectiveId, initialAssigneeId, defaultAssigneeId]);
 
-  // Le contenu de départ, posé UNE fois par ouverture. Le drapeau est un ref et
-  // non une dépendance d'effet : `initialCategoryIds` est un tableau, donc une
-  // identité neuve à chaque rendu du parent, et sans ce garde-fou chaque rendu
-  // réécrirait le titre par-dessus ce qu'on est en train de taper.
+  // The starting content, placed ONCE per opening. The flag is a ref and
+  // not an effect dependency: `initialCategoryIds` is an array, therefore a
+  // new identity with each rendering of the parent, and without this safeguard each rendering
+  // would rewrite the title over what we are currently typing.
   const seededRef = useRef(false);
   useEffect(() => {
     if (!open) {
@@ -266,19 +266,19 @@ export function CreateIssueDialog({
     if (initialCategoryIds?.length) setCategoryIds(initialCategoryIds);
   }, [open, initialTitle, initialDescription, initialCategoryIds]);
 
-  // Ouverture à la voix : armé à l'ouverture, DÉSARMÉ dès que la prise part.
-  // Le désarmement n'est pas une précaution en l'air — pendant que Numo reprend
-  // la dictée, le bouton cède sa place à l'icône « thinking » et se démonte ;
-  // il remonte quand Numo a fini, et un drapeau resté levé le ferait
-  // réenregistrer dans la foulée du ticket qu'on vient de dicter.
+  // Opening by voice: armed when opened, DISARMED as soon as the socket is released.
+  // Disarmament is not an empty precaution — while Numo resumes
+  // dictation, the button gives way to the “thinking” icon and is disassembled;
+  // it goes back up when Numo has finished, and a flag left raised would
+  // re-record immediately after the ticket that has just been dictated.
   const [dictateArmed, setDictateArmed] = useState(false);
   useEffect(() => {
     setDictateArmed(open && autoDictate);
   }, [open, autoDictate]);
 
-  // Ouverture du dialog (MIN-78) : le dénominateur du taux d'abandon — combien
-  // de dialogs ouverts finissent en ticket réellement créé. `useTrackView`
-  // garantit une seule émission par ouverture (StrictMode double les effets).
+  // Opening the dialog (MIN-78): the denominator of the abandonment rate — how much
+  // of opened dialogs end up in a ticket actually created. `useTrackView`
+  // guarantees a single emission per opening (StrictMode doubles the effects).
   useTrackView(open, "opened", () =>
     track("issue_create_dialog_opened", { source: analyticsSource })
   );
@@ -301,11 +301,11 @@ export function CreateIssueDialog({
           el.isContentEditable)
       )
         return;
-      // Un dialog empilé par-dessus (le picker d'objectif ouvre celui de
-      // création d'objectif) piège le focus chez lui : sans ce garde-fou, une
-      // touche pressée là-haut ouvrirait un picker DERRIÈRE lui. Les poppers
-      // portalisés (les pickers eux-mêmes) sont hors du contenu du dialog, mais
-      // leur champ de recherche est un INPUT — déjà écarté juste au-dessus.
+      // A dialog stacked on top (the objective picker opens that of
+      // creation of objective) traps the focus at home: without this safeguard, a
+      // button pressed up there would open a picker BEHIND it. Poppers
+      // portalized (the pickers themselves) are outside the content of the dialog, but
+      // their search field is an INPUT — already discarded just above.
       if (contentRef.current && el && !contentRef.current.contains(el)) return;
       const field = SHORTCUT_KEYS[eventKey(e)];
       if (!field) return;
@@ -374,19 +374,19 @@ export function CreateIssueDialog({
     closeAndReset();
   };
 
-  // « Abandonner » : on ferme SANS garder, et le brouillon d'origine s'en va
-  // avec — sinon on retrouverait dans la rangée de reprise celui qu'on croyait
-  // avoir abandonné. Même geste que la création réussie, qui consomme aussi le
-  // brouillon dont elle vient.
+  // “Abandon”: we close WITHOUT keeping, and the original draft goes away
+  // with — otherwise we would find in the repeat row the one we thought
+  // having given up. Same gesture as successful creation, which also consumes the
+  // draft it came from.
   const discardDraftAndClose = () => {
     if (activeDraftId) drafts.remove(activeDraftId);
     closeAndReset();
   };
 
   const handleOpenChange = (next: boolean) => {
-    // Une dictée en vol travaille SUR ce formulaire : le transcript, puis le
-    // patch de Numo, vont y atterrir. Fermer maintenant les jetterait — on
-    // refuse, en le disant (une Échap sans effet passerait pour une panne).
+    // An in-flight dictation works ON this form: the transcript, then the
+    // patch of Numo, will land there. Closing now would throw them away — we
+    // refuses, saying so (an Escape without effect would pass for a failure).
     if (!next && (transcribing || numoBusy)) {
       toast.info(t("dictationInFlight"), { id: "dictation-in-flight" });
       return;
@@ -487,13 +487,13 @@ export function CreateIssueDialog({
           resources: uploads.inputs,
           smart_fill: smartFill,
         });
-        // Smart-fill : la carte n'est pas encore là (le serveur remplit avant
-        // d'insérer), et le toast est la seule chose qui dit qu'elle arrive.
-        // Sans lui, on referme un formulaire sur un board qui n'a pas bougé.
+        // Smart-fill: the card is not yet there (the server fills before
+        // to insert), and the toast is the only thing that says it's coming.
+        // Without it, we close a form on a board that has not moved.
         toast.success(smartFill ? t("smartFillPendingToast") : t("issueCreatedToast"));
       }
-      // Analytics (MIN-78) : métadonnées seulement — jamais le titre ni la
-      // description, seulement leur présence et la tranche de longueur.
+      // Analytics (MIN-78): metadata only — never the title or the
+      // description, only their presence and the length range.
       track("issue_created", {
         source: analyticsSource,
         has_description: description.trim().length > 0,
@@ -570,11 +570,11 @@ export function CreateIssueDialog({
   } = useIssueDictation({
     projectId,
     mode: "create",
-    // Smart-fill armé : la dictée ne pose plus priorité, effort, catégories ni
-    // objectif — la route retire ces arguments de son tool, et c'est Smart-fill
-    // qui les posera à la création (MIN-260). Sans ça, une dictée remplissait
-    // des champs que le formulaire ne montre plus, et qui gagnaient sur
-    // l'automatisation qu'on croyait armée.
+    // Armed smart-fill: dictation no longer poses priority, effort, categories or
+    // objective — the route removes these arguments from its tool, and it is Smart-fill
+    // who will pose them to creation (MIN-260). Without that, a dictation would fill
+    // fields that the form no longer shows, and which gained on
+    // automation that we thought was armed.
     smartFill,
     getDraft: () => ({
       title,
@@ -588,13 +588,13 @@ export function CreateIssueDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        {/* Trois largeurs, trois marges. Au large, le modal garde ses 32 px.
-          Sous `sm`, il ne fait plus que la fenêtre moins 32 px : 20 px suffisent
-          à le faire respirer sans manger la ligne. Sous 480 px, mangue-ui le
-          bascule en bottom sheet (vaul) et pose DÉJÀ ses propres 16 px sur le
-          contenu — les nôtres s'y ajouteraient, soit près d'un tiers de la
-          largeur d'un téléphone perdu en marges, d'où le `p-0` de ce cas-là
-          (l'attribut de vaul, seul repère fiable du basculement). */}
+        {/* Three widths, three margins. At large, the modal keeps its 32 px.
+ Under `sm`, it only makes the window minus 32 px: 20 px is enough
+ to make it breathe without eating up the line. Under 480 px, mango-ui the
+ switches to bottom sheet (vaul) and ALREADY places its own 16 px on the
+ content - ours would be added to it, or almost a third of the
+ width of a phone lost in the margins, hence the `p-0` of this case
+ (the vaul attribute, the only reliable benchmark for the switchover). */}
         <DialogContent
           ref={contentRef}
           className="p-8 max-sm:p-5 data-vaul-drawer:p-0 sm:max-w-2xl"
@@ -674,8 +674,8 @@ export function CreateIssueDialog({
                 onOpenChange={(o) => setOpenPicker(o ? "status" : null)}
                 shortcutHint={KEY_FOR_FIELD.status}
               />
-              {/* Priorité, effort et catégories : ce que Smart-fill pose
-                  lui-même. Retirés — pas grisés — quand il est armé. */}
+              {/* Priority, effort and categories: what Smart-fill poses
+ itself. Removed—not grayed out—when armed. */}
               {!smartFill && (
                 <>
                 <PriorityCompact
@@ -722,8 +722,8 @@ export function CreateIssueDialog({
                 onOpenChange={(o) => setOpenPicker(o ? "dueDate" : null)}
                 shortcutHint={KEY_FOR_FIELD.dueDate}
               />
-              {/* L'objectif aussi vient de Smart-fill — il ferme la liste des
-                  quatre, et la bascule prend leur place au bout de la rangée. */}
+              {/* The objective also comes from Smart-fill — it closes the list of
+ four, and the toggle takes their place at the end of the row. */}
               {!smartFill && (
                 <ObjectiveCompact
                   value={fields.objective_id}
@@ -743,9 +743,9 @@ export function CreateIssueDialog({
             </div>
 
             {/* Bottom bar — voice dictation at left, create controls at right.
-              Elle passe à la ligne sous `sm` : micro, trombone et « créer
-              plus » tiennent sur la première, le bouton — qui porte le nom du
-              projet — prend la seconde, pleine largeur. */}
+ It moves to the line under `sm`: microphone, paper clip and “create
+ more” fit on the first, the button — which bears the name of the
+ project — takes the second, full width. */}
             <div className="mt-6 flex flex-wrap items-center gap-3 sm:mt-8">
               {numoBusy ? (
                 <span
@@ -776,10 +776,10 @@ export function CreateIssueDialog({
                   {t("numoWorking")}
                 </span>
               )}
-              {/* Le wiki proposé est celui de CE projet. Créer le ticket dans un
-                  autre projet (l'entrée du menu de création) fait voyager les
-                  fichiers, jamais les pages : le serveur écarte celles qui
-                  n'appartiennent pas au projet d'arrivée (MIN-275). */}
+              {/* The proposed wiki is that of THIS project. Create the ticket in a
+ other project (the creation menu entry) sends the
+ files, never the pages: the server discards those which
+ do not belong to the arrival project (MIN-275). */}
               <AddResourceButton
                 onFiles={uploads.addFiles}
                 onLink={uploads.addLink}
@@ -800,8 +800,8 @@ export function CreateIssueDialog({
                   onCheckedChange={setCreateMore}
                 />
               </div>
-              {/* Le bouton dans son propre bloc : c'est lui qui bascule sur une
-                ligne à lui, pleine largeur, quand la barre passe à la ligne. */}
+              {/* The button in its own block: it is he who switches to a
+ line, full width, when the bar passes the line. */}
               <div className="flex items-center justify-end gap-2 max-sm:w-full sm:ml-1">
                 <Button
                   type="button"
@@ -812,9 +812,9 @@ export function CreateIssueDialog({
                   {tCommon("cancel")}
                 </Button>
                 {otherProjects.length > 0 && currentProject ? (
-                  /* L'infobulle s'accroche à l'action, pas au chevron : ses
-                     props traversent `SplitButton` jusqu'au bouton de gauche,
-                     le seul que ⌘↵ actionne. */
+                  /* The tooltip clings to the action, not the chevron: its
+ props pass through `SplitButton` to the left button,
+ the only one that ⌘↵ activates. */
                   <SendShortcutTooltip
                     scope="form"
                     label={t("createInProject", { project: currentProject.name })}
@@ -858,9 +858,9 @@ export function CreateIssueDialog({
             </div>
           </form>
 
-          {/* Numo reprend la dictée : le liseré souligne le bord du modal
-            pendant qu'il travaille — même signal que l'icône Numo « thinking »
-            qui remplace le micro plus haut. */}
+          {/* Numo takes over the dictation: the border highlights the edge of the modal
+ while he works — same signal as the Numo “thinking”
+ icon which replaces the microphone above. */}
           <AgentBeamOverlay active={numoBusy} />
         </DialogContent>
       </Dialog>

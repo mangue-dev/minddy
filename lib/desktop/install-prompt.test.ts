@@ -7,7 +7,7 @@ import {
 } from "./install-prompt";
 
 describe("resolveDesktopPromptDismissed", () => {
-  it("est faux par défaut — on n'a rien écarté tant qu'on n'a rien dit", () => {
+  it("is false by default — nothing has been dismissed until stated otherwise", () => {
     expect(resolveDesktopPromptDismissed(undefined)).toBe(false);
     expect(resolveDesktopPromptDismissed(null)).toBe(false);
     expect(resolveDesktopPromptDismissed({})).toBe(false);
@@ -15,26 +15,26 @@ describe("resolveDesktopPromptDismissed", () => {
 
   it("n'accepte que le VRAI booléen", () => {
     expect(resolveDesktopPromptDismissed({ [DESKTOP_PROMPT_DISMISSED_META_KEY]: true })).toBe(true);
-    // Une valeur héritée d'un autre format ne doit pas cacher la proposition
-    // pour toujours sur un malentendu.
+    // A value inherited from another format must not hide the proposition
+    // forever on a misunderstanding.
     expect(resolveDesktopPromptDismissed({ [DESKTOP_PROMPT_DISMISSED_META_KEY]: "true" })).toBe(false);
     expect(resolveDesktopPromptDismissed({ [DESKTOP_PROMPT_DISMISSED_META_KEY]: 1 })).toBe(false);
   });
 });
 
 describe("isMacPlatform", () => {
-  it("reconnaît un Mac par le champ non déprécié", () => {
+  it("recognizes a Mac from the non-deprecated field", () => {
     expect(isMacPlatform({ uaDataPlatform: "macOS", maxTouchPoints: 0 })).toBe(true);
     expect(isMacPlatform({ uaDataPlatform: "Windows", maxTouchPoints: 0 })).toBe(false);
     expect(isMacPlatform({ uaDataPlatform: "Linux", maxTouchPoints: 0 })).toBe(false);
   });
 
-  it("retombe sur `platform` — c'est le seul chemin de Safari", () => {
+  it("falls back to `platform` — it is Safari's only path", () => {
     expect(isMacPlatform({ platform: "MacIntel", maxTouchPoints: 0 })).toBe(true);
     expect(isMacPlatform({ platform: "Win32", maxTouchPoints: 0 })).toBe(false);
   });
 
-  it("retombe enfin sur l'user agent", () => {
+  it("finally falls back to the user agent", () => {
     expect(
       isMacPlatform({ userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" })
     ).toBe(true);
@@ -42,11 +42,11 @@ describe("isMacPlatform", () => {
   });
 
   /**
-   * Le piège qui justifie tout le module : depuis iPadOS 13 un iPad se déclare
-   * `MacIntel` avec un user agent de Macintosh. Sans le test tactile, on lui
-   * proposerait un `.dmg`.
-   */
-  it("ne prend PAS un iPad pour un Mac", () => {
+ * The trap that justifies the whole module: since iPadOS 13 an iPad declares itself
+ * `MacIntel` with a Macintosh user agent. Without the touch test, we would
+ * offer a `.dmg`.
+ */
+  it("does NOT mistake an iPad for a Mac", () => {
     expect(
       isMacPlatform({
         platform: "MacIntel",
@@ -64,11 +64,11 @@ describe("isMacPlatform", () => {
 describe("shouldOfferDesktopApp", () => {
   const mac = { inDesktopApp: false, isMac: true, dismissed: false };
 
-  it("propose sur un Mac, dans un navigateur, à qui n'a rien écarté", () => {
+  it("offers on a Mac in a browser to someone who has dismissed nothing", () => {
     expect(shouldOfferDesktopApp(mac)).toBe(true);
   });
 
-  it("se tait dans l'app elle-même", () => {
+  it("stays silent inside the app itself", () => {
     expect(shouldOfferDesktopApp({ ...mac, inDesktopApp: true })).toBe(false);
   });
 
@@ -76,7 +76,7 @@ describe("shouldOfferDesktopApp", () => {
     expect(shouldOfferDesktopApp({ ...mac, isMac: false })).toBe(false);
   });
 
-  it("se tait une fois écartée, et pour toujours", () => {
+  it("stays silent once dismissed, forever", () => {
     expect(shouldOfferDesktopApp({ ...mac, dismissed: true })).toBe(false);
   });
 });

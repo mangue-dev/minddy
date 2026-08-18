@@ -5,18 +5,18 @@ import { readFileSync } from "node:fs";
 import { hashSharePassword, unlockCookieValue } from "@/lib/server/view-shares";
 
 /**
- * MIN-283 — la porte d'un partage protégé par mot de passe, écrite une fois
- * pour les deux surfaces publiques (vue partagée, page publiée).
+ * MIN-283 — the door to a password-protected share, written once
+ * for both public surfaces (shared view, published page).
  *
- * Ce qui est vérifié ici est ce qui protège vraiment : un mauvais mot de passe
- * ne pose pas de cookie, un bon en pose un lié à CE partage, et le cookie
- * cesse de valoir dès que le mot de passe change — sans qu'aucune session ne
- * soit tenue nulle part.
+ * What is checked here is what really protects: a bad password
+ * does not set a cookie, a good one does. one linked to THIS sharing, and the cookie
+ * ceases to be valid as soon as the password changes — without any session
+ * being held anywhere.
  *
- * MIN-347 y ajoute les deux freins qui manquaient : le cookie se compare en
- * temps constant (c'était un `===`), et les échecs se comptent en BASE — le
- * compteur en mémoire repartait à zéro à chaque déploiement, sur la seule porte
- * du produit dont le secret tient dans un mot de passe choisi à la main.
+ * MIN-347 adds the two brakes that were missing: the cookie compares itself in
+ * constant time (it was a `===`), and failures are counted in BASIC — the
+ * counter in memory restarts from zero each time it is deployed, on the sole
+ * door of the product whose secret lies in a hand-chosen password.
  */
 
 const target = { current: null as unknown };
@@ -95,7 +95,7 @@ describe("unlockShareWithPassword", () => {
     });
     expect(result).toEqual({ ok: false, error: "wrongPassword" });
     expect(setCookie).not.toHaveBeenCalled();
-    // L'échec est rangé en base : c'est lui qui survit au déploiement suivant.
+    // The failure is placed in the base: it is the one that survives the next deployment.
     expect(recordFailure).toHaveBeenCalledWith("share-1", "203.0.113.7");
   });
 
@@ -117,7 +117,7 @@ describe("unlockShareWithPassword", () => {
       password: "ouvre-toi",
       cookiePath: "/p/inconnu",
     });
-    // Le même refus : la réponse ne dit pas si le partage existe.
+    // The same refusal: the response does not say if the sharing exists.
     expect(result).toEqual({ ok: false, error: "wrongPassword" });
   });
 
@@ -143,7 +143,7 @@ describe("unlockShareWithPassword", () => {
       unlockCookieValue("tok", hash)
     );
     expect(await isShareUnlocked(passwordShare().share)).toBe(true);
-    // Se tromper avant de trouver ne laisse pas de dette.
+    // Making mistakes before finding leaves no debt.
     expect(clearFailures).toHaveBeenCalledWith("share-1", "203.0.113.7");
   });
 
@@ -194,9 +194,9 @@ describe("isShareUnlocked", () => {
 
 describe("la comparaison du cookie", () => {
   it("ne passe plus par un `===` sur le secret", () => {
-    // Test structurel : la comparaison en temps constant ne se voit pas à
-    // l'exécution, seul le code dit si elle est là. Ce qui est gardé, c'est
-    // qu'aucun `===` ne revienne un jour sur la valeur du cookie.
+    // Structural test: the constant time comparison is not visible
+    // execution, only the code says if it is there. What is kept is
+    // that no `===` ever changes the value of the cookie.
     const source = readFileSync("lib/server/share-unlock.ts", "utf8");
     expect(source).not.toMatch(/cookie\s*===/);
     expect(source).toContain("unlockCookieMatches");

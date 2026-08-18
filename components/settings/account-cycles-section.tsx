@@ -37,9 +37,9 @@ import {
  * on failure. Toggling any of them invalidates the board cache — the next
  * GET /api/me/board lazily reconciles the cycle timeline (create/fill).
  *
- * L'interrupteur maître vit dans l'EN-TÊTE de son groupe (MIN-167) : le reste
- * des réglages n'existe que s'il est armé, et le lire au-dessus d'eux dit
- * exactement ça.
+ * The master switch lives in the HEADER of its group (MIN-167): the rest
+ * of the settings only exists if it is armed, and reading it above them says
+ * exactly that.
  */
 export function AccountCyclesSection() {
   const t = useTranslations("Cycles");
@@ -53,11 +53,11 @@ export function AccountCyclesSection() {
   }, [user]);
 
   /**
-   * Écriture optimiste, NON verrouillée : plus de `saving` partagé qui figeait
-   * toute la section. updateUserMetadata sérialise et fusionne côté serveur, et
-   * l'effet ci-dessus resynchronise depuis le user à jour ; revert + toast à
-   * l'échec.
-   */
+ * Optimistic write, NOT locked: no more shared `saving` that was freezing
+ * the whole section. updateUserMetadata serializes and merges server-side, and
+ * the above effect resyncs from the updated user; revert + toast to
+ * failure.
+ */
   const save = async (metaKey: string, value: unknown, next: Partial<CyclePrefs>) => {
     if (!user) return;
     const prev = prefs;
@@ -79,7 +79,7 @@ export function AccountCyclesSection() {
       new Date(Date.UTC(2024, 0, dow))
     );
 
-  // Le seul verrou légitime : les réglages fins n'ont de sens que cycles activés.
+  // The only legitimate lock: fine adjustments only make sense with activated cycles.
   const knobsDisabled = !user || !prefs.enabled;
 
   return (

@@ -10,15 +10,14 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Chrome partagé de la page statistiques (MIN-85).
+ * Shared Chrome of the statistics page (MIN-85).
  *
- * Règle de mise en page : le titre d'une section vit TOUJOURS au-dessus de sa
- * carte, jamais dedans. C'est ce qui permet d'imbriquer du contenu (barres,
- * sous-cartes) sans empiler trois niveaux de bordures comme le faisait
- * l'ancienne section « Cycles ».
+ * Layout rule: the title of a section ALWAYS lives above its
+ * card, never in it. This is what allows you to nest content (bars,
+ * subcards) without stacking three levels of borders like the old “Cycles” section did.
  */
 
-/** Petit « i » avec une infobulle expliquant ce que compte une métrique. */
+/** Small “i” with a tooltip explaining what a metric counts. */
 export function InfoHint({ text }: { text: string }) {
   return (
     <Tooltip>
@@ -38,7 +37,7 @@ export function InfoHint({ text }: { text: string }) {
   );
 }
 
-/** En-tête de section : titre + info optionnelle, puis une ligne de contexte. */
+/** Section header: title + optional info, then a context line. */
 export function StatsSectionHeader({
   title,
   info,
@@ -51,8 +50,8 @@ export function StatsSectionHeader({
   return (
     <div className="mb-3">
       <div className="flex items-center gap-1.5">
-        {/* Casse normale : le titre se distingue par sa graisse, pas par des
-            majuscules — c'est la convention des autres écrans de l'app. */}
+        {/* Normal case: the title is distinguished by its boldness, not by uppercase
+ — this is the convention for other screens in the app. */}
         <h2 className="text-sm font-semibold tracking-tight text-foreground">
           {title}
         </h2>
@@ -65,7 +64,7 @@ export function StatsSectionHeader({
   );
 }
 
-/** Section complète : en-tête hors carte + enfants (souvent une `StatsCard`). */
+/** Complete section: off-map header + children (often a `StatsCard`). */
 export function StatsSection({
   title,
   info,
@@ -87,7 +86,7 @@ export function StatsSection({
   );
 }
 
-/** Surface de carte unique, réutilisée telle quelle par toutes les sections. */
+/** Single map surface, reused as is by all sections. */
 export function StatsCard({
   className,
   children,
@@ -108,10 +107,10 @@ export function StatsCard({
 }
 
 /**
- * Une métrique. Deux poids :
- *   - `hero` : les 3 chiffres du bandeau « en ce moment » (texte 3xl) ;
- *   - `card` : une mesure secondaire à l'intérieur d'une carte (texte 2xl).
- * Le libellé passe avant la valeur : on lit ce qu'on regarde, puis combien.
+ * A metric. Two weights:
+ * - `hero`: the 3 digits of the “at the moment” banner (3xl text);
+ * - `card`: a secondary measurement inside a card (2xl text).
+ * The label comes before the value: we read this that we look at, then how many.
  */
 export function Metric({
   label,
@@ -152,8 +151,8 @@ export function Metric({
 }
 
 /**
- * Écart vs la période précédente. Volontairement neutre en couleur : une
- * semaine calme n'est pas une erreur — la flèche porte le sens, pas une alerte.
+ * Difference vs. previous period. Deliberately neutral in color: a
+ * quiet week is not an error — the arrow carries the meaning, not an alert.
  */
 export function Delta({ value, label }: { value: number; label: string }) {
   const Icon = value === 0 ? Minus : value > 0 ? ArrowUpRight : ArrowDownRight;
@@ -165,7 +164,7 @@ export function Delta({ value, label }: { value: number; label: string }) {
   );
 }
 
-/** Une mesure de la bande « depuis le début » — petite, alignée, sans carte. */
+/** A measurement of the tape “from the beginning” — small, aligned, without a map. */
 export function TotalItem({
   label,
   value,

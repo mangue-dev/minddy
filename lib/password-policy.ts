@@ -1,30 +1,30 @@
 /**
- * Ce qu'un mot de passe doit valoir, DIT AVANT d'être exigé (MIN-300).
+ * What a password must be worth, SAID BEFORE being required (MIN-300).
  *
- * Les règles sont celles du projet Supabase (Auth → Password Requirements) :
- * huit caractères, une minuscule, une majuscule, un chiffre. Elles étaient
- * appliquées là-bas et nulle part ici — la personne tapait son mot de passe,
- * cliquait, et récupérait une phrase anglaise du serveur listant des conditions
- * qu'on ne lui avait jamais montrées.
+ * The rules are those of the Supabase project (Auth → Password Requirements):
+ * eight characters, one lower case, one upper case, one number. They were
+ * applied there and nowhere here — the person typed their password,
+ * clicked, and retrieved an English sentence from the server listing conditions
+ * that had never been shown to them.
  *
- * Les mêmes règles sont donc évaluées ici, à la frappe : l'écran affiche la
- * liste, elle se coche à mesure, et le bouton n'est actif qu'une fois tout vert.
- * Le refus du serveur devient un filet, plus un mode de dialogue.
+ * The same rules are therefore evaluated here, when typing: the screen displays the
+ * list, it is checked as it goes, and the button is only active once it is green.
+ * The server's refusal becomes a net, no longer a dialogue mode.
  *
- * **Ce module reste la copie d'une vérité qui vit ailleurs.** Changer la
- * politique dans le dashboard Supabase sans la changer ici, c'est réintroduire
- * exactement ce qu'on corrige — ou pire, un bouton actif sur un mot de passe que
- * le serveur refusera. Les valeurs en vigueur sont consignées dans le bloc
- * « Durcissement Auth » de [.env.example](../.env.example), avec le contrôle de
- * fuite (HIBP) qui, lui, n'a pas d'équivalent ici : c'est un appel réseau de
- * GoTrue, et il ressort en `weak_password`.
+ * **This module remains the copy of a truth that lives elsewhere.** Change the
+ * policy in the Supabase dashboard without changing it here, it's reintroducing
+ * exactly what we're correcting — or worse, an active button on a password that
+ * the server will refuse. The values in force are recorded in the
+ * “Auth hardening” block of [.env.example](../.env.example), with the check of
+ * leak (HIBP) which has no equivalent here: it is a network call of
+ * GoTrue, and it comes out in `weak_password`.
  */
 
 export const MIN_PASSWORD_LENGTH = 8;
 
 /**
- * L'identifiant d'une règle est une clé du namespace `Auth` : c'est l'écran qui
- * traduit, un module testé en `environment: node` n'a pas de traducteur.
+ * The identifier of a rule is a key of the `Auth` namespace: it is the screen which
+ * translates, a module tested in `environment: node` does not have a translator.
  */
 export type PasswordRuleId =
   | "passwordRuleLength"
@@ -37,7 +37,7 @@ interface PasswordRule {
   test: (password: string) => boolean;
 }
 
-/** Dans l'ordre où l'écran les montre. */
+/** In the order the screen shows them. */
 export const PASSWORD_RULES: readonly PasswordRule[] = [
   { id: "passwordRuleLength", test: (p) => p.length >= MIN_PASSWORD_LENGTH },
   { id: "passwordRuleLower", test: (p) => /[a-z]/.test(p) },
@@ -46,13 +46,13 @@ export const PASSWORD_RULES: readonly PasswordRule[] = [
 ];
 
 /**
- * L'état de chaque règle, dans l'ordre d'affichage. Rendu à chaque frappe, donc
- * on rend la liste entière : un indicateur qui ne montrerait que la règle
- * suivante ferait deviner les autres.
+ * The status of each rule, in display order. Rendered on each keystroke, so
+ * we render the entire list: an indicator which would only show the following rule
+ * would make the others guess.
  *
- * Les classes de caractères sont volontairement ASCII, comme celles de GoTrue
- * (`[a-z]`, `[A-Z]`, `[0-9]`) : « É » n'y compte pas pour une majuscule, et une
- * liste qui dirait le contraire mentirait au moment du refus.
+ * The character classes are deliberately ASCII, like those of GoTrue
+ * (`[a-z]`, `[A-Z]`, `[0-9]`): accented letters do not count as capital letters, and a
+ * list which says otherwise would lie at the time of refusal.
  */
 export function checkPassword(
   password: string
@@ -60,7 +60,7 @@ export function checkPassword(
   return PASSWORD_RULES.map((rule) => ({ id: rule.id, met: rule.test(password) }));
 }
 
-/** Toutes les règles sont tenues. */
+/** All rules are followed. */
 export function passwordMeetsPolicy(password: string): boolean {
   return PASSWORD_RULES.every((rule) => rule.test(password));
 }

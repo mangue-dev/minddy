@@ -16,39 +16,39 @@ import {
 } from "@/lib/issue-validation";
 
 /**
- * SMART-FILL (MIN-260) — CE QUE LE TICKET EST, déduit de ce qu'on vient d'écrire.
+ * SMART-FILL (MIN-260) — WHAT THE TICKET IS, deduced from what we have just written.
  *
- * Le formulaire demande sept propriétés à chaque ticket. Quatre se lisent dans le
- * titre et la description — la priorité, l'effort, les catégories, l'objectif —
- * et les reposer à la main à chaque fois est le geste que cette passe supprime.
- * Les trois autres n'y sont pas : le statut, l'assigné et l'échéance disent une
- * intention, pas un contenu, et Smart-fill n'y touche jamais.
+ * The form asks for seven properties on each ticket. Four are read in the
+ * title and description — priority, effort, categories, objective —
+ * and putting them back by hand each time is the gesture that this pass eliminates.
+ * The other three are not there: the status, the assigned and the deadline say a
+ * intention, not content, and Smart-fill never touches it.
  *
- * **Elle tourne AVANT l'insert**, dans le POST de création
- * ([create-issue.ts](create-issue.ts)) — pas en `after()` comme la moitié IA de
- * Smart Assign. C'est ce qui tient la promesse « le ticket n'apparaît dans le
- * board qu'une fois rempli » : la ligne naît complète, donc il n'y a ni ligne à
- * masquer, ni colonne « en cours de remplissage », ni filtre à poser sur les
- * lectures et sur le direct, ni balai pour les lignes restées invisibles. Rien
- * de tout ça n'est bloquant à l'écran pour autant : le dialog n'attend déjà pas
- * le POST (cf. `createIssue` dans lib/use-issues-query.ts), il ferme et pose un
+ * **It turns BEFORE the insert**, in the POST of creation
+ * ([create-issue.ts](create-issue.ts)) — not in `after()` like the AI ​​half of
+ * Smart Assign. This is what keeps the promise “the ticket does not appear in the
+ * board only once filled”: the line is born complete, so there is no line to
+ * hide, neither “being filled” column, nor filter to place on the
+ * readings and on the live feed, nor a sweep for the lines that remained invisible. Nothing
+ * all of this is not blocking the screen however: the dialog is already not waiting
+ * the POST (see `createIssue` in lib/use-issues-query.ts), it closes and places a
  * toast.
  *
- * **Elle ne lève jamais et ne fait jamais échouer une création.** Pas de clé, pas
- * de budget, modèle muet, JSON de travers : le patch est vide et le ticket naît
- * tel qu'il a été écrit. Un ticket sans priorité est un ticket ; une création qui
- * échoue parce qu'une aide a échoué, non.
+ * **It never raises or fails a creation.** No key, no
+ * budget, silent model, JSON crooked: the patch is empty and the ticket is born
+ * as it was written. A ticket without priority is a ticket; a creation that
+ * fails because a help failed, no.
  *
- * **Qui paye : celui qui a armé la bascule**, donc l'auteur du ticket — et pas le
- * owner du projet comme Smart Assign. Ce n'est pas une incohérence, c'est la même
- * règle appliquée à deux réglages différents : Smart Assign est un réglage DU
- * PROJET, que le owner active pour tout le monde ; Smart-fill est une préférence
- * DE COMPTE, que chacun arme pour soi et coupe par ticket. Le payeur suit la
- * personne qui décide.
+ * **Who pays: the one who activated the scale**, therefore the author of the ticket - and not the
+ * project owner as Smart Assign. It's not an inconsistency, it's the same
+ * rule applied to two different settings: Smart Assign is a DU setting
+ * PROJECT, which the owner activates for everyone; Smart-fill is a preference
+ * IN ACCOUNT, let each arm for himself and cut by ticket. The payer follows the
+ * person who decides.
  */
 
-/** Le patch que Smart-fill sait poser — les quatre champs qui se déduisent, et
- *  jamais un de plus. Un champ absent = le modèle n'a rien su en dire. */
+/** The patch that Smart-fill knows how to install — the four fields that can be deduced, and
+ * never one more. An absent field = the model was unable to say anything about it. */
 export interface SmartFillPatch {
   priority?: IssuePriorityValue;
   effort?: IssueEffortValue | null;
@@ -56,42 +56,42 @@ export interface SmartFillPatch {
   objective_id?: string | null;
 }
 
-/** Ce que le modèle a le droit de nommer : les vraies catégories et les vrais
- *  objectifs du projet. Rien n'est créé — associer ou laisser vide. */
+/** What the model has the right to name: the real categories and the real
+ * project objectives. Nothing is created — associate or leave blank. */
 export interface SmartFillContext {
   categories: { id: string; name: string }[];
   objectives: { id: string; name: string; status: string }[];
 }
 
-/** Titre/description tronqués avant le prompt : un ticket collé d'un document
- *  entier ne doit pas faire dériver le coût d'un rangement. */
+/** Title/description truncated before prompt: a ticket pasted from a document
+ * whole must not cause the cost of storage to drift. */
 const MAX_TITLE_CHARS = 500;
 const MAX_DESCRIPTION_CHARS = 4000;
-/** Au-delà, la liste ne guide plus le modèle, elle le noie — et un projet à
- *  trois cents objectifs n'a de toute façon pas un objectif ÉVIDENT. */
+/** Beyond that, the list no longer guides the model, it drowns it out — and a project to
+ * three hundred goals is not an OBVIOUS goal anyway. */
 const MAX_CONTEXT_ITEMS = 60;
-/** Plus de catégories que ça sur un ticket, c'est un ticket qui n'est plus rangé. */
+/** More categories than that on a ticket means a ticket that is no longer stored. */
 const MAX_CATEGORIES_PER_ISSUE = 3;
 
 /**
- * LE SENTINELLE DU « RIEN » — `"none"`, et pas `null`.
+ * THE SENTINEL OF “NOTHING” — `"none"`, not `null`.
  *
- * Deux raisons, et la seconde est la vraie. D'abord un type union
- * (`["string", "null"]`) n'est pas accepté partout en appel de fonction strict,
- * et un schéma refusé ne se voit PAS : l'appel rend `null`, le patch est vide,
- * et les tickets cessent simplement d'être remplis sans que rien ne le dise.
- * Ensuite, un petit modèle répond bien mieux à une valeur qu'il peut choisir
- * dans une liste qu'à une absence qu'il doit produire.
+ * Two reasons, and the second is the real one. First a union type
+ * (`["string", "null"]`) is not accepted everywhere in strict function calls,
+ * and a refused schema is NOT seen: the call returns `null`, the patch is empty,
+ * and the tickets simply stop being filled without anything saying so.
+ * Then a small model responds much better to a value it can choose
+ * in a list than an absence that it must produce.
  */
 const NONE = "none";
 
 /**
- * Le patch, filtré contre les VRAIS ids du projet et les enums des champs.
+ * The patch, filtered against REAL project ids and field enums.
  *
- * Pur, et c'est là que vit tout ce qui peut se tromper : un modèle qui invente un
- * id d'objectif malgré l'enum, qui rend `"critical"` au lieu de `"urgent"`, qui
- * range le ticket dans huit catégories, ou qui répond `"none"` là où le schéma
- * ne l'offre pas. Rien de ce qu'il rend n'est écrit sans être reconnu ici.
+ * Pure, and that's where everything that can go wrong lives: a model that invents a
+ * objective id despite the enum, which renders `"critical"` instead of `"urgent"`, which
+ * places the ticket in eight categories, or which answers `"none"` where the diagram
+ * don't offer it. Nothing he renders is written without being acknowledged here.
  */
 export function sanitizeSmartFill(
   raw: Record<string, unknown> | null,
@@ -100,15 +100,15 @@ export function sanitizeSmartFill(
   if (!raw) return {};
   const patch: SmartFillPatch = {};
 
-  // `none` est une priorité valide, mais c'est le DÉFAUT du formulaire : la
-  // poser n'apprend rien et ferait passer « le modèle n'a pas su » pour « le
-  // modèle a jugé que c'était sans priorité ».
+  // `none` is a valid priority, but it is the DEFAULT of the form: the
+  // asking learns nothing and would pass off "the model did not know" for "the
+  // model judged that it was without priority.
   if (isPriority(raw.priority) && raw.priority !== "none") patch.priority = raw.priority;
 
-  // L'effort est nullable côté ticket, et « rien d'estimable » est une VRAIE
-  // réponse (un ticket d'une ligne, une question) : elle arrive en `"none"` —
-  // le sentinelle du schéma — et se traduit en `null`. Le `null` littéral est
-  // accepté aussi : c'est ce qu'un modèle rend spontanément malgré le schéma.
+  // The effort is void on the ticket side, and “nothing valuable” is a REAL
+  // response (a one-line ticket, a question): it arrives in `"none"` —
+  // the sentinel of the schema — and translates to `null`. The literal `null` is
+  // also accepted: this is what a model renders spontaneously despite the diagram.
   if (raw.effort === NONE || raw.effort === null) patch.effort = null;
   else if (isEffort(raw.effort)) patch.effort = raw.effort;
 
@@ -122,20 +122,20 @@ export function sanitizeSmartFill(
     if (ids.length > 0) patch.category_ids = ids.slice(0, MAX_CATEGORIES_PER_ISSUE);
   }
 
-  // Un objectif ne se DEVINE pas : sans correspondance franche, le champ reste
-  // vide. Le prompt le dit, et cette garde le tient — un ticket rangé sous le
-  // mauvais objectif coûte plus cher à défaire qu'un ticket sans objectif.
-  // `"none"` n'a rien à rattraper : le champ n'est simplement pas posé, et
-  // aucun objectif ne peut porter cet id (ce sont des UUID).
+  // An objective cannot be GUESSED: without clear correspondence, the field remains
+  // empty. The prompt says it, and this guard holds it — a ticket tucked under the
+  // bad objective costs more to undo than a ticket with no objective.
+  // `"none"` has nothing to fix: the field is simply not set, and
+  // no lens can carry this id (these are UUIDs).
   if (typeof raw.objective_id === "string" && ctx.objectives.some((o) => o.id === raw.objective_id))
     patch.objective_id = raw.objective_id;
 
   return patch;
 }
 
-/** Le prompt système. Sépare explicitement ce qui s'estime (priorité, effort) de
- *  ce qui se RECONNAÎT (catégories, objectif) : les deux premiers ont toujours
- *  une réponse, les deux autres n'en ont une que s'il y a de quoi. */
+/** The system prompt. Explicitly separates what is valued (priority, effort) from
+ * what is RECOGNIZED (categories, objective): the first two have always
+ * an answer, the other two only have one if there is something. */
 export function buildSmartFillPrompt(projectName: string, ctx: SmartFillContext): string {
   const categoryLines =
     ctx.categories
@@ -168,14 +168,14 @@ ${objectiveLines}`;
 
 
 /**
- * Le schéma du tool, construit AVEC le contexte : les ids possibles sont des
- * `enum`, comme la liste des membres l'est pour Smart Assign. Le modèle ne peut
+ * The tool schema, built WITH the context: the possible ids are
+ * `enum`, as the member list is for Smart Assign. The model cannot
  * donc pas inventer un id — il peut encore en choisir un mauvais, ce que
  * `sanitizeSmartFill` ne rattrapera pas, mais il ne peut plus en fabriquer.
  *
- * TOUS les champs sont `required`. Un argument présenté comme optionnel n'est
- * tout simplement pas répondu par un petit modèle, et Smart-fill tourne par
- * construction sur un modèle rapide : « pas de réponse » doit être une VALEUR.
+ * ALL fields are `required`. An argument presented as optional is not
+ * just not answered by a small model, and Smart-fill turns by
+ * construction on a fast model: “no response” must be a VALUE.
  */
 function fillParameters(ctx: SmartFillContext): Record<string, unknown> {
   return {
@@ -203,11 +203,11 @@ function fillParameters(ctx: SmartFillContext): Record<string, unknown> {
 }
 
 /**
- * Les catégories et les objectifs du projet. Client SERVICE : cette passe tourne
- * dans le POST de création, où la session de l'appelant existe — mais elle sert
- * aussi les créations sans humain devant (MCP, intégrations), et lire par un
- * chemin unique évite qu'un jour l'une des deux voies rende une liste vide sans
- * que personne ne le voie.
+ * The categories and objectives of the project. Customer SERVICE: this pass runs
+ * in the creation POST, where the caller's session exists — but it serves
+ * also creations without humans in front (MCP, integrations), and read by a
+ * single path prevents one day one of the two paths from rendering an empty list without
+ * let no one see it.
  */
 async function gatherContext(projectId: string): Promise<SmartFillContext> {
   const service = getServiceClient();
@@ -217,8 +217,8 @@ async function gatherContext(projectId: string): Promise<SmartFillContext> {
       .from("objectives")
       .select("id, name, status")
       .eq("project_id", projectId)
-      // Un objectif terminé ou abandonné n'accueille pas un ticket qui naît :
-      // le proposer au modèle, c'est l'inviter à rouvrir un travail clos.
+      // A completed or abandoned objective does not accommodate a ticket that arises:
+      // proposing it to the model is inviting him to reopen closed work.
       .in("status", ["planned", "in_progress"]),
   ]);
   return {
@@ -228,8 +228,8 @@ async function gatherContext(projectId: string): Promise<SmartFillContext> {
 }
 
 /**
- * Le point d'entrée. Rend le patch à fusionner dans la ligne avant l'insert, ou
- * un patch VIDE — jamais une exception, jamais une création qui échoue.
+ * The entry point. Makes the patch to merge into the row before the insert, or
+ * an EMPTY patch — never an exception, never a failed creation.
  */
 export async function runSmartFill({
   projectId,
@@ -240,8 +240,8 @@ export async function runSmartFill({
 }: {
   projectId: string;
   projectName: string;
-  /** Qui crée, donc qui paye. Sans lui (intégration, webhook), on ne remplit
-   *  pas : une dépense qu'on ne peut imputer à personne ne se fait pas. */
+  /** Who creates, therefore who pays. Without it (integration, webhook), we do not complete
+   * not: an expense that cannot be attributed to anyone is not incurred. */
   actorId: string | null;
   title: string;
   description: string | null;
@@ -254,8 +254,8 @@ export async function runSmartFill({
     ]);
     const enabled = (config["smart_fill_enabled"] ?? aiModelFallback("smart_fill_enabled")) !== "false";
     if (!enabled) return {};
-    // Le budget de CELUI QUI A ARMÉ la bascule, comme pour la dictée. À sec, on
-    // ne remplit pas — et le ticket naît quand même.
+    // The budget of THE ONE WHO ARMED the scale, as for dictation. Dry, we
+    // does not fill out — and the ticket is still born.
     if (!(await hasUsageBudget(actorId, "automations"))) return {};
 
     const { model } = resolveFromValues("smart_fill_model", config);
@@ -274,8 +274,8 @@ export async function runSmartFill({
         logPrefix: "smart-fill",
         modelKey: "smart_fill_model",
         maxTokens: 256,
-        // Quelqu'un attend devant son écran : au-delà, le ticket doit naître
-        // sans son remplissage plutôt que de faire patienter une minute.
+        // Someone is waiting in front of their screen: beyond that, the ticket must be born
+        // without its filling rather than making you wait a minute.
         timeoutMs: 20_000,
         record: { feature: "smart_fill", billTo: { userId: actorId }, projectId },
       },

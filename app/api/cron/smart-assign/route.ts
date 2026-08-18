@@ -4,17 +4,17 @@ import { verifyCronSecret } from "@/lib/server/cron-auth";
 import { sweepUnassignedIssues } from "@/lib/server/smart-assign";
 
 /**
- * Le FILET de Smart Assign (MIN-31) : les tickets qu'un déclenchement aurait dû
- * assigner et qui sont restés sans personne.
+ * The Smart Assign NET (MIN-31): tickets that should have been triggered
+ * assign and who remained without anyone.
  *
- * Il existe parce qu'un ticket créé par le MCP l'a prouvé : l'affectation vivait
- * dans un `after()`, l'`after()` n'est pas allé au bout, et il n'est rien resté
- * — ni assigné, ni erreur, ni nouvelle tentative. Le cas déterministe écrit
- * désormais avant la réponse et ne dépend plus de rien ; l'appel au modèle, lui,
- * reste différé, donc perdable. C'est ce reste que ce réveil rattrape.
+ * It exists because a ticket created by the MCP proved it: the assignment lived
+ * in a `after()`, the `after()` did not go to the end, and nothing was left
+ * — neither assigned, nor error, nor retry. The written deterministic case
+ * now before the answer and no longer depends on anything; the call to the model, he,
+ * remains deferred, therefore loseable. It is this remainder that this awakening catches up with.
  *
- * Court par construction : le balayage est borné (24 h, jamais assigné, 100
- * tickets), et l'immense majorité des réveils ne trouve rien.
+ * Short by construction: the scan is limited (24 h, never assigned, 100
+ * tickets), and the vast majority of wake-ups find nothing.
  */
 
 export const runtime = "nodejs";

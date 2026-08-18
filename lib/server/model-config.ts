@@ -9,36 +9,36 @@ import {
 } from "@/lib/ai-model-config";
 
 /**
- * Résolution d'un réglage de modèle : l'id choisi côté admin, plus son
- * raccourci de routage OpenRouter s'il en porte un (MIN-263).
+ * Resolving a template setting: the id chosen on the admin side, plus its
+ * OpenRouter routing shortcut if it carries one (MIN-263).
  *
- * Un seul endroit lit les DEUX lignes `app_config` — le modèle et son suffixe —
- * et les recolle. Les appelants n'ont donc jamais à connaître l'existence du
- * suffixe : ils demandent un modèle par sa clé, et reçoivent l'id à envoyer.
+ * Only one place reads BOTH lines `app_config` — the template and its suffix —
+ * and glue them back together. Callers therefore never have to know the existence of the
+ * suffix: they request a model by its key, and receive the id to send.
  *
- * Ce que le suffixe change : rien au modèle, tout à l'ORDRE des providers qui
- * le servent (`nitro` = le plus rapide, `floor` = le moins cher, `exacto` = le
- * plus fiable en tool-calling). D'où le repli de `withModelSuffixFallback` :
- * quand aucun provider ne satisfait l'ordre demandé, OpenRouter refuse l'appel
- * entier — mieux vaut alors le modèle nu qu'une fonctionnalité éteinte.
+ * What the suffix changes: nothing to the model, everything to the ORDER of the providers which
+ * serve it (`nitro` = the most fast, `floor` = the cheapest, `exacto` = the
+ * more reliable in tool-calling). Hence the fallback of `withModelSuffixFallback`:
+ * when no provider satisfies the requested order, OpenRouter refuses the entire
+ * call — better the bare model than a disabled functionality.
  */
 
 export interface ResolvedModel {
-  /** L'id à ENVOYER : la base plus son suffixe, quand il y en a un. */
+  /** The id to SEND: the base plus its suffix, when there is one. */
   model: string;
-  /** L'id nu, sans suffixe — pour un affichage ou une recherche au catalogue. */
+  /** The bare id, without suffix — for display or catalog searching. */
   base: string;
-  /** Le raccourci retenu, ou `null` quand l'admin n'en a posé aucun. */
+  /** The selected shortcut, or `null` when the admin has not set any. */
   suffix: string | null;
 }
 
 /**
- * Le modèle d'un réglage, suffixe compris. Une ligne absente ou vide retombe
- * sur le `fallback` du registre (`lib/ai-model-config.ts`) — qui suit les
- * évolutions du défaut produit, contrairement à une valeur figée en base.
+ * The template for a setting, including the suffix. An absent or empty line falls
+ * to the `fallback` of the register (`lib/ai-model-config.ts`) — which follows the
+ * changes in the fault produced, unlike a value fixed in base.
  *
- * UNE seule requête pour les deux clés, et le cache 60 s d'`app-config` par
- * dessus : lire le suffixe ne coûte pas un aller-retour de plus.
+ * A single request for the two keys, and the 60 s cache d'`app-config` by
+ * above: reading the suffix does not cost an extra round trip.
  */
 export async function resolveConfiguredModel(key: string): Promise<ResolvedModel> {
   const suffixKey = modelSuffixKey(key);
@@ -50,10 +50,10 @@ export async function resolveConfiguredModel(key: string): Promise<ResolvedModel
 }
 
 /**
- * La même résolution, sur des valeurs DÉJÀ lues — pour les appelants qui
- * chargent plusieurs clés d'un coup (un drapeau et son modèle, par exemple) et
- * n'ont pas à repasser par la base. Penser à inclure `modelSuffixKey(key)` dans
- * le lot demandé, sans quoi le suffixe passera pour absent.
+ * The same resolution, on values ​​ALREADY read — for callers who
+ * load several keys at once (a flag and its model, for example) and
+ * do not have to go through the base again. Remember to include `modelSuffixKey(key)` in
+ * the requested batch, otherwise the suffix will appear absent.
  */
 export function resolveFromValues(
   key: string,
@@ -65,9 +65,9 @@ export function resolveFromValues(
 }
 
 /**
- * Une CASCADE de réglages : le premier posé gagne, avec SON suffixe — celui de
- * `assistant_model` quand c'est lui qui répond, celui de `fallback_model`
- * quand c'est l'autre. Aucune ligne posée : le défaut code de la première clé.
+ * A CASCADE of settings: the first one to pose wins, with HIS suffix — that of
+ * `assistant_model` when it's him who responds, that of `fallback_model`
+ * when it's the other. No line installed: the default code of the first key.
  */
 export function resolveCascadeFromValues(
   keys: string[],
@@ -79,22 +79,22 @@ export function resolveCascadeFromValues(
   return resolveFromValues(keys[0], values);
 }
 
-/** Les clés à demander à `getAppConfigValues` pour résoudre `key` en entier. */
+/** The keys to request from `getAppConfigValues` to resolve `key` in full. */
 export function modelConfigKeys(key: string): [string, string] {
   return [key, modelSuffixKey(key)];
 }
 
 /**
- * Un `fetch` vers OpenRouter qui REJOUE une fois sur le modèle nu quand la
- * requête est refusée et que le modèle portait un raccourci de routage.
+ * A `fetch` to OpenRouter that REPLAYS once on the bare model when the
+ * request is refused and the model carried a routing shortcut.
  *
- * `request(model)` reconstruit l'objet de requête : c'est le seul endroit où le
- * modèle change entre les deux essais, et ça évite d'avoir à recopier un corps
- * de requête pour la seconde tentative.
+ * `request(model)` rebuilds the request object: this is the only place where the
+ * model changes between the two tests, and this avoids having to copy a request body
+ * for the second attempt.
  *
- * On rend AUSSI le modèle qui a servi, pour que les boucles à plusieurs rounds
- * (les dictées) collent au modèle qui a marché au lieu de re-tenter le suffixe
- * — et donc de payer deux requêtes à chaque tour.
+ * We ALSO return the model which was used, so that the loops with several rounds
+ * (the dictations) stick to the model which worked instead of re-attempt the suffix
+ * — and therefore pay two requests each turn.
  */
 export async function fetchOpenRouterWithSuffixFallback(
   url: string,
@@ -110,21 +110,21 @@ export async function fetchOpenRouterWithSuffixFallback(
 }
 
 /**
- * Joue `run` sur le modèle suffixé, et REJOUE UNE FOIS sur le modèle nu si
- * l'appel échoue.
+ * Plays `run` on the suffixed model, and REPLAYS ONCE on the bare model if
+ * the call fails.
  *
- * Le repli demandé par MIN-263 : un raccourci de routage peut ne trouver aucun
- * provider (`:exacto` sur un modèle qu'aucun fournisseur vérifié ne sert), et
- * OpenRouter répond alors 404 sur l'appel entier. Un réglage de confort ne doit
- * pas éteindre une fonctionnalité — on retombe sur le modèle de base.
+ * The fallback requested by MIN-263: a routing shortcut may not find any
+ * provider (`:exacto` on a pattern that no verified provider serves), and
+ * OpenRouter then responds 404 on the entire call. A comfort setting should
+ * not turn off a feature — we fall back to the basic model.
  *
- * Rejouer ne double jamais une réponse déjà commencée : le refus arrive au
- * moment de la requête, avant le premier token. Et sans suffixe, `run` n'est
- * appelé qu'une fois — le repli n'est pas un retry générique.
+ * Replay never doubles a response already started: the refusal occurs at
+ * the moment of the request, before the first token. And without a suffix, `run` * is only
+ * called once — the fallback is not a generic retry.
  *
- * `ok` sert aux appelants qui ne LÈVENT pas en cas d'échec mais rendent une
- * valeur convenue (`forcedToolCall` rend `null`) : sans lui, leur échec passe
- * pour un succès et le repli ne se déclenche pas.
+ * `ok` is for callers that don't REAR on failure but return a
+ * value agreed (`forcedToolCall` returns `null`): without it, their failure passes
+ * for a success and the fallback is not triggered.
  */
 export async function withModelSuffixFallback<T>(
   model: string,

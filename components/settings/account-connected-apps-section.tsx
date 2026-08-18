@@ -17,9 +17,9 @@ import { EmptyScene } from "@/components/empty-scene";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { BrandLogo } from "@/components/brand-logo";
 
-/** « Applications connectées » : les grants OAuth actifs (agents connectés
-    via le consentement navigateur, sans clé). Révoquer coupe l'accès
-    immédiatement — access token, refresh token et attribution future. */
+/** “Connected applications”: active OAuth grants (agents connected
+ via browser consent, without a key). Revoke cuts access
+ immediately — access token, refresh token and future allocation. */
 export function AccountConnectedAppsSection() {
   const t = useTranslations("Account");
   const tc = useTranslations("Common");

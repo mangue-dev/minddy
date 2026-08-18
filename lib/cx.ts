@@ -1,15 +1,10 @@
 /**
- * Le joint de classes des VUES de nœud tiptap — et la seule raison de ne pas
- * prendre `cn` de mangue-ui.
+ * The tiptap node VIEWS class join — and the only reason not to
+ * take `cn` from mango-ui.
  *
- * Le baril `mangue-ui` tire le sélecteur d'emoji, donc `@emoji-mart/data` et son
- * JSON. Une vue de bloc qui l'importe rend le REGISTRE ENTIER inutilisable hors
- * navigateur — or la projection markdown (MIN-269), les outils MCP (MIN-273) et
- * lib/pages-blocks.test.ts montent tous le catalogue sans DOM ni bundler.
- *
- * `cn` sert à fusionner des classes Tailwind concurrentes ; ces vues n'en ont
- * pas besoin, elles ne font que joindre des conditions. Partout ailleurs dans
- * le dépôt — l'éditeur de page compris — c'est `cn` qu'on prend.
+ * The barrel `mangue-ui` pulls the emoji picker, so `@emoji-mart/data` and its
+ * JSON. A block view that imports it makes the ENTIRE REGISTER unusable outside of the KEEP_8_TOKEN * `cn` is used to merge competing Tailwind classes; These views don't need it, they just attach conditions. Everywhere else in
+ * the repository — including the page editor — we take `cn`.
  */
 export function cx(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(" ");

@@ -1,26 +1,26 @@
 /**
- * workflowIssue — AUR-2 ouvert sur son plan d'implémentation.
+ * workflowIssue — AUR-2 open on its implementation plan.
  *
- * Voir `intent.md` : la consigne du catalogue décrit une page de détail qui
- * n'existe pas, et une vue « description + plan » que les onglets rendent
- * impossible. On photographie l'onglet Plan, qui est ce que la landing décrit.
+ * See `intent.md`: the catalog guideline describes a detail page that
+ * does not exist, and a “description + plan” view that the tabs render
+ * impossible. We photograph the Plan tab, which is what the landing describes.
  *
- *   node captures/shots/issue-plan/shot.mjs             # produit les PNG
- *   node captures/shots/issue-plan/shot.mjs --publish   # + livre sur la landing
+ * node captures/shots/issue-plan/shot.mjs # produces the PNGs
+ * node captures/shots/issue-plan/shot.mjs --publish # + book on the landing
  */
 import { openPage, settle, shoot, CAPTURE, DEFAULT_VIEW_NAMES } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 
 /**
- * Débranché de la landing depuis le 2026-07-26 : `workflowIssue` est servi par
- * `shots/issue-create`. Le drapeau est lu par `publish.mjs --shots`, qui saute
- * ce dossier — sans lui, l'ordre du disque déciderait laquelle des deux images
- * part en production. Voir `intent.md`.
+ * Disconnected from the landing since 2026-07-26: `workflowIssue` is served by
+ * `shots/issue-create`. The flag is read by `publish.mjs --shots`, which jumps
+ * this folder — without it, disk order would decide which of the two images
+ * reaches production. See `intent.md`.
  */
-// Volontairement non exporté ET non référencé : `publish.mjs` ne l'importe pas,
-// il teste le TEXTE du fichier (`/^const RETIRED = true/m`). La ligne est donc
-// porteuse telle quelle — la « nettoyer » rendrait le dossier publiable à
-// nouveau, en silence.
+// Deliberately not exported AND not referenced: `publish.mjs` does not import it,
+// it tests the TEXT of the file (`/^const RETIRED = true/m`). The line is therefore
+// kept as-is — “cleaning” it would make the file publishable
+// again, silently.
 // oxlint-disable-next-line no-unused-vars
 const RETIRED = true;
 
@@ -29,17 +29,17 @@ const OUT = "captures/shots/issue-plan/out";
 const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";
 
 /**
- * 4/3, le rapport du cadre — obligatoire : `<ScreenshotSlot>` rend l'image en
- * `object-cover`, et une capture 16/10 y perdrait 145 px sur la droite, soit le
- * tiers du panneau. La hauteur reste celle des autres captures ; c'est la
- * largeur qui cède. Voir `intent.md`.
+ * 4/3, the frame ratio — obligatory: `<ScreenshotSlot>` renders the image in
+ * `object-cover`, and a 16/10 capture would lose 145 px on the right, i.e.
+ * third of the panel. The height remains that of the other captures; this is the
+ * width which gives way. See `intent.md`.
  */
 const VIEWPORT = { width: 1447, height: 1085 };
 
 /**
- * Ancres de contenu : des chemins de fichiers écrits dans le plan. Ce sont des
- * DONNÉES, donc identiques en français et en anglais — contrairement à « À
- * faire » ou « terminée », qui casseraient une variante sur deux.
+ * Content anchors: file paths written in the plan. These are
+ * DATA, therefore identical in French and English — unlike translated status
+ * labels such as “To do” or “finished”, which would break one of the variants.
  */
 const PLAN_ANCHORS = [
   "lib/palette/actions.ts",
@@ -49,11 +49,11 @@ const PLAN_ANCHORS = [
 
 const PUBLISH = process.argv.includes("--publish");
 
-// `workflowIssue` est servi par `shots/issue-create` depuis le 2026-07-26 — voir
-// `intent.md`. Ce script vise donc le MÊME emplacement qu'un autre, et publier
-// écraserait la modale de création par le plan, sans un mot. Produire les PNG
-// reste permis : le script est gardé en état de marche, seul le raccordement à
-// la landing est coupé.
+// `workflowIssue` is served by `shots/issue-create` since 2026-07-26 — see
+// `intent.md`. This script therefore targets the SAME location as another, and publish
+// would crush the modal of creation by the plan, without a word. Produce the PNGs
+// remains permitted: the script is kept in working order, only the connection to
+// the landing is cut.
 if (PUBLISH) {
   console.error(
     "captures: `issue-plan` n'alimente plus la landing.\n" +
@@ -76,20 +76,20 @@ async function capture({ locale, theme }) {
     await page.goto(`${CAPTURE.baseUrl}/projects/${AURORA}`, { waitUntil: "domcontentloaded" });
     await settle(page, { expect: "text=AUR-1" });
 
-    // Le board est le décor : on le veut complet avant d'ouvrir le panneau. Sa
-    // barre d'onglets arrive par une requête séparée, plus tard que les cartes.
+    // The board is the decor: we want it complete before opening the panel. Its
+    // tab bar arrives by a separate query, later than maps.
     await page
       .getByRole("button", { name: DEFAULT_VIEW_NAMES[locale], exact: true })
       .waitFor({ state: "visible", timeout: 15_000 });
 
-    // Ouvrir le ticket comme un utilisateur : en cliquant sa carte. L'ancre est
-    // l'identifiant, pas un titre — il ne dépend d'aucune traduction.
+    // Open the ticket as a user: by clicking on their card. The anchor is
+    // the identifier, not a title — it does not depend on any translation.
     await page.getByText("AUR-2", { exact: true }).first().click();
     const panel = page.getByRole("dialog").first();
     await panel.waitFor({ state: "visible", timeout: 10_000 });
 
-    // Le panneau s'ouvre toujours sur Description (initialTab). L'onglet Plan
-    // se désigne par son RANG : son libellé porte le compteur « 2/6 » collé.
+    // The panel always opens to Description (initialTab). The Plan tab
+    // is designated by its RANK: its wording bears the counter “2/6” stuck on.
     const planTab = page.getByRole("tab").nth(1);
     await planTab.click();
     await planTab.waitFor({ state: "visible" });
@@ -98,17 +98,17 @@ async function capture({ locale, theme }) {
       throw new Error(`${locale}/${theme} — l'onglet Plan n'est pas sélectionné.`);
     }
 
-    // Le curseur reste sur l'onglet après le clic : on le pose sur le voile, qui
-    // n'a aucun état de survol, pour ne pas allumer une ligne de tâche.
+    // The cursor remains on the tab after the click: we place it on the veil, which
+    // has no hover state, so as not to light up a task row.
     await page.mouse.move(400, 1200);
 
-    // Contrôle du CONTENU : les tâches nomment-elles vraiment des fichiers ?
+    // CONTENT Control: Do tasks really name files?
     const check = await page.evaluate((anchors) => {
       const dialog = document.querySelector('[role="dialog"]');
       const text = dialog?.textContent || "";
-      // Le barré est posé sur le CONTENEUR de la tâche, pas sur son texte : en
-      // CSS la décoration se propage à l'affichage mais pas au style calculé
-      // des descendants. On interroge donc les conteneurs.
+      // The strikethrough is placed on the CONTAINER of the task, not on its text: in
+      // CSS decoration propagates to display but not to calculated style
+      // descendants. We therefore interrogate the containers.
       const struck = [...(dialog?.querySelectorAll("*") || [])].filter(
         (el) =>
           el.textContent.trim() &&
@@ -116,8 +116,8 @@ async function capture({ locale, theme }) {
       ).length;
       return {
         missing: anchors.filter((a) => !text.includes(a)),
-        // Sans limite de mot : `textContent` recolle les nœuds voisins, et le
-        // compteur de l'onglet sort en « Plan2/6 ».
+        // Without word limit: `textContent` joins neighboring nodes, and
+        // the tab counter comes out as « Plan2/6 ».
         progress: /2\s*\/\s*6/.test(text),
         struck,
       };

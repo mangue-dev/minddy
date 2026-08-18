@@ -2,42 +2,41 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RemoteIssueIdentity } from "@/lib/server/git/issue-push";
 
 /**
- * `scheduleRemoteStatusPush` — la moitié MONTANTE de la synchro : le statut d'un
- * ticket minddy referme (ou rouvre) l'issue dont il vient.
+ * `scheduleRemoteStatusPush` — the UP half of the sync: the status of a
+ * ticket minddy closes (or reopens) the issue it came from.
  *
- * C'est le seul endroit de la synchro d'issues qui ÉCRIT chez un tiers, et sur
- * le compte de quelqu'un. Trois propriétés méritent d'être épinglées pour cette
- * raison-là, pas pour la couverture :
+ * This is the only place in the issue sync that WRITEs to a third party, and on
+ * someone's account. Three properties deserve to be pinned for this
+ * reason, not for the cover:
  *
- *  1. **Le silence par défaut.** La quasi-totalité des tickets naissent dans
- *     minddy et n'ont aucune identité distante : le crochet doit sortir sans
- *     LA MOINDRE requête. Une garde qui se relâcherait ferait un aller-retour
- *     réseau à chaque déplacement de carte, pour rien.
- *  2. **Le toggle coupe les deux sens.** Couper l'import doit couper le retour :
- *     il serait incompréhensible qu'un interrupteur unique n'en arrête qu'un —
- *     et l'utilisateur qui coupe croirait avoir coupé.
- *  3. **Ce qu'on écrit vraiment.** `done` est une coche violette « completed »,
- *     `canceled` un cercle gris « not planned ». C'est la seule nuance de nos
- *     trois statuts clos qui survive à la traversée, et elle se joue sur un
- *     champ du corps de la requête.
+ * 1. **Silence by default.** Almost all tickets are born in
+ * minddy and have no remote identity: the hook must exit without
+ * THE LEAST query. A guard that would relax would make a round trip
+ * network for each card move, for nothing.
+ * 2. **The toggle cuts both directions.** Cutting the import must cut the return:
+ * it would be incomprehensible if a single switch only stopped one —
+ * and the user who cuts would believe to have cut.
+ * 3. **What we really write.** `done` is a purple “completed” check mark,
+ * `canceled` a gray “not planned” circle. This is the only nuance of our
+ * three closed statuses that survives traversal, and it plays on a
+ * field in the request body.
  *
- * Le module est best-effort de bout en bout : rien de ce qui échoue ici ne doit
- * remonter à celui qui a déplacé la carte.
+ * The module is best-effort from start to finish: nothing that fails here should be traced back to the one that failed. moved the card.
  */
 
 interface Row extends Record<string, unknown> {}
 
 let linkRows: Row[] = [];
-/** Les appels HTTP sortants, dans l'ordre — la sonde de tout ce fichier. */
+/** Outgoing HTTP calls, in order — probe this entire file. */
 let calls: { url: string; method: string; body: Record<string, unknown>; auth: string }[] =
   [];
-/** Les travaux d'arrière-plan programmés, à attendre explicitement. */
+/** Scheduled background jobs to wait for explicitly. */
 let background: Promise<unknown>[] = [];
-/** Ce que `resolveForgeActor` rend — l'acteur humain et son droit sur le dépôt. */
+/** What `resolveForgeActor` renders — the human actor and their right to the deposit. */
 let actor: { kind: "actor"; token: string; capability: string } | { kind: "none" } = {
   kind: "none",
 };
-/** Réponse de la forge : `null` = 200, sinon le code d'erreur à rendre. */
+/** Response from the forge: `null` = 200, otherwise the error code to return. */
 let httpError: number | null = null;
 
 function table(rows: () => Row[]) {
@@ -59,8 +58,8 @@ vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({ from: () => table(() => linkRows) }),
 }));
 
-// Le crochet de fond exécute tout de suite ET rend sa promesse au test : sans
-// ça, les assertions courraient devant le travail qu'elles observent.
+// The background hook executes immediately AND returns its promise to the test: without
+// that, the assertions would run in front of the work they observe.
 vi.mock("@/lib/server/after-safe", () => ({
   afterOrNow: (work: () => Promise<void>) => {
     background.push(work().catch(() => {}));
@@ -81,7 +80,7 @@ const { scheduleRemoteStatusPush } = await import("@/lib/server/git/issue-push")
 
 const PROJECT = "project-1";
 
-/** Une liaison active, telle que `project_git_links` la porte. */
+/** An active binding, such as `project_git_links` carries it. */
 function link(overrides: Row = {}): void {
   linkRows.push({
     project_id: PROJECT,
@@ -95,7 +94,7 @@ function link(overrides: Row = {}): void {
   });
 }
 
-/** Le ticket importé d'un dépôt — celui qui a une identité distante. */
+/** The ticket imported from a repository — one that has a remote identity. */
 const IMPORTED: RemoteIssueIdentity = {
   projectId: PROJECT,
   provider: "github",
@@ -103,7 +102,7 @@ const IMPORTED: RemoteIssueIdentity = {
   number: 7,
 };
 
-/** Programme la répercussion et ATTEND le travail de fond qu'elle a posé. */
+/** Schedule the repercussion and WAIT for the background work it has done. */
 async function push(issue: RemoteIssueIdentity, status: string): Promise<void> {
   scheduleRemoteStatusPush({
     issue,
@@ -140,21 +139,21 @@ beforeEach(() => {
 });
 
 describe("scheduleRemoteStatusPush — quand il ne se passe RIEN", () => {
-  it("sort sans aucune requête pour un ticket né dans minddy", async () => {
+  it("returns without a request for a ticket born in minddy", async () => {
     link();
     await push({ ...IMPORTED, provider: null, repoId: null, number: null }, "done");
 
     expect(calls).toHaveLength(0);
   });
 
-  it("ne pousse pas quand la synchro est coupée — le toggle arrête les DEUX sens", async () => {
+  it("does not push when sync is disabled — the toggle stops BOTH directions", async () => {
     link({ issue_sync_enabled: false });
     await push(IMPORTED, "done");
 
     expect(calls).toHaveLength(0);
   });
 
-  it("ne pousse pas vers un dépôt que ce projet n'a pas lié", async () => {
+  it("does not push to a repository that this project has not linked", async () => {
     link({ external_repo_id: "un-autre-depot" });
     await push(IMPORTED, "done");
 
@@ -165,7 +164,7 @@ describe("scheduleRemoteStatusPush — quand il ne se passe RIEN", () => {
 describe("scheduleRemoteStatusPush — GitHub", () => {
   beforeEach(() => link());
 
-  it("ferme en « completed » pour un travail fait", async () => {
+  it("closes as « completed » for completed work", async () => {
     await push(IMPORTED, "done");
 
     expect(calls).toHaveLength(1);
@@ -174,7 +173,7 @@ describe("scheduleRemoteStatusPush — GitHub", () => {
     expect(calls[0].body).toEqual({ state: "closed", state_reason: "completed" });
   });
 
-  it("ferme en « not planned » pour un travail qui n'aura pas lieu", async () => {
+  it("closes as « not planned » for work that will not happen", async () => {
     await push(IMPORTED, "canceled");
     await push(IMPORTED, "duplicate");
 
@@ -187,28 +186,28 @@ describe("scheduleRemoteStatusPush — GitHub", () => {
     expect(calls[0].body).toEqual({ state: "open" });
   });
 
-  it("signe avec le compte de l'humain quand il peut écrire sur le dépôt", async () => {
+  it("signs with the human's account when it can write to the repository", async () => {
     actor = { kind: "actor", token: "human-token", capability: "write" };
     await push(IMPORTED, "done");
 
     expect(calls[0].auth).toBe("Bearer human-token");
   });
 
-  it("retombe sur l'App quand l'humain n'a que la LECTURE — pas un 403 en son nom", async () => {
+  it("falls back to the App when the human has only READ access — not a 403 in their name", async () => {
     actor = { kind: "actor", token: "human-token", capability: "read" };
     await push(IMPORTED, "done");
 
     expect(calls[0].auth).toBe("Bearer app-token");
   });
 
-  it("retombe sur l'App quand personne n'a connecté de compte", async () => {
+  it("falls back to the App when nobody has connected an account", async () => {
     await push(IMPORTED, "done");
 
     expect(calls[0].auth).toBe("Bearer app-token");
   });
 
-  it("avale un refus de la forge — déplacer une carte ne doit jamais échouer", async () => {
-    httpError = 403; // « Resource not accessible by integration » : Issues (Write) refusé.
+  it("swallows a forge rejection — moving a card must never fail", async () => {
+    httpError = 403; // “Resource not accessible by integration”: Issues (Write) refused.
     await expect(push(IMPORTED, "done")).resolves.toBeUndefined();
     expect(calls).toHaveLength(1);
   });
@@ -219,7 +218,7 @@ describe("scheduleRemoteStatusPush — GitLab", () => {
 
   const GITLAB_ISSUE: RemoteIssueIdentity = { ...IMPORTED, provider: "gitlab" };
 
-  it("envoie une TRANSITION, pas un état — GitLab ne prend que `state_event`", async () => {
+  it("sends a TRANSITION, not a state — GitLab accepts only `state_event`", async () => {
     await push(GITLAB_ISSUE, "done");
 
     expect(calls[0].method).toBe("PUT");
@@ -227,7 +226,7 @@ describe("scheduleRemoteStatusPush — GitLab", () => {
     expect(calls[0].body).toEqual({ state_event: "close" });
   });
 
-  it("ferme pareil pour les trois statuts clos — pas d'équivalent de `state_reason`", async () => {
+  it("closes the same way for the three closed statuses — no equivalent of `state_reason`", async () => {
     await push(GITLAB_ISSUE, "done");
     await push(GITLAB_ISSUE, "canceled");
 
@@ -243,7 +242,7 @@ describe("scheduleRemoteStatusPush — GitLab", () => {
     expect(calls[0].body).toEqual({ state_event: "reopen" });
   });
 
-  it("signe avec la connexion du lieur, faute d'App", async () => {
+  it("signs with the linker's connection when there is no App", async () => {
     await push(GITLAB_ISSUE, "done");
 
     expect(calls[0].auth).toBe("Bearer gitlab-connection-token");

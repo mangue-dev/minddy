@@ -6,14 +6,14 @@ import { mcpResourceUrl, oauthIssuer } from "@/lib/server/oauth/issuer";
 import { OAUTH_CORS_HEADERS } from "@/lib/server/oauth/cors";
 
 /**
- * Protected Resource Metadata (RFC 9728) du endpoint MCP. Le catch-all sert
- * la forme racine (celle que le WWW-Authenticate de withMcpAuth annonce) ET
- * la forme avec chemin inséré `…/oauth-protected-resource/api/mcp` que les
+ * Protected Resource Metadata (RFC 9728) of the MCP endpoint. The catch-all serves
+ * the root form (the one that WWW-Authenticate of withMcpAuth announces) AND
+ * the form with inserted path `…/oauth-protected-resource/api/mcp` that the
  * clients spec-2025-06-18 construisent. On n'utilise PAS protectedResourceHandler
- * nu : à la racine il dériverait un `resource` sans /api/mcp.
+ * bare: at the root it would derive a `resource` without /api/mcp.
  *
- * L'origine vient de l'environnement, jamais de `x-forwarded-host` : le
- * `resource` annoncé ici est celui que les clients renverront au `/authorize`.
+ * The origin comes from the environment, never from `x-forwarded-host`: the
+ * `resource` announced here is the one that clients will return to `/authorize`.
  */
 export function GET() {
   const metadata = generateProtectedResourceMetadata({

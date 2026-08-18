@@ -23,10 +23,10 @@ import {
 } from "./feedback-bits";
 
 /**
- * Page publique d'un post (MIN-37) : besoin votable rendu en markdown, puis le
- * fil public où l'équipe répond et où l'on peut préciser sa demande (MIN-196).
- * Toute action nécessitant une identité passe par la porte OTP puis se rejoue
- * automatiquement — le vote comme le commentaire.
+ * Public page of a post (MIN-37): votable need rendered in markdown, then the
+ * public thread where the team responds and where you can specify your request (MIN-196).
+ * Any action requiring an identity goes through the OTP gate and then replays
+ * automatically — both voting and commenting.
  */
 
 export function FeedbackPostClient({
@@ -40,13 +40,13 @@ export function FeedbackPostClient({
   identity,
 }: {
   token: string;
-  /** Préfixe public des liens : /f/<token>, ou "" sur domaine personnalisé. */
+  /** Public link prefix: /f/<token>, or "" on custom domain. */
   basePath: string;
   project: PublicProject;
   post: PublicPost;
   mergedFromTitles: string[];
   comments: PublicComment[];
-  /** Réglage du board : faux = fil en lecture seule. */
+  /** Board setting: false = read-only wire. */
   allowComments: boolean;
   identity: PublicIdentity | null;
 }) {
@@ -87,12 +87,11 @@ export function FeedbackPostClient({
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 pb-16 pt-5 desktop:px-0">
       <BackToBoardLink basePath={basePath} />
 
-      {/* Qui, dans quel état, depuis quand — AVANT le titre. En dessous, la
-          ligne se lisait comme une signature de bas de page alors qu'elle est
-          le cadre de lecture du titre : savoir qu'un besoin est « Prévu »
-          change ce qu'on lit ensuite, et l'apprendre après coup oblige à le
-          relire. C'est aussi l'ordre de la ligne du board — la même carte,
-          dépliée. */}
+      {/* Who, in what state, since when — BEFORE the title. Below, the
+ line read like a footer signature whereas it is
+ the reading frame of the title: knowing that a need is “Planned”
+ changes what we read next, and learning it afterwards requires re-reading it. This is also the order of the board line — the same card,
+ unfolded. */}
       <div className="flex flex-col gap-2.5">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
           <AuthorAvatar pseudonym={post.authorPseudonym} />
@@ -118,11 +117,11 @@ export function FeedbackPostClient({
         </div>
       )}
 
-      {/* La réponse de l'équipe n'est plus un encart : c'est le premier message
-          du fil public (MIN-196). L'encadré en faisait une propriété du retour —
-          une bannière que le produit affiche sur sa propre page, au même titre
-          qu'un statut — alors que c'est quelqu'un qui répond à quelqu'un. Elle
-          se lit maintenant là où on peut lui répondre. */}
+      {/* The team's response is no longer an insert: it is the first message
+ in the public thread (MIN-196). The box made it a property of the return -
+ a banner that the product displays on its own page, in the same way as
+ as a status - when it is someone who responds to someone. It
+ now reads where it can be answered. */}
       <PublicComments
         token={token}
         project={project}

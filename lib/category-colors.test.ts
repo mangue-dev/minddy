@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { CATEGORY_COLORS, pickFreeCategoryColor } from "./category-colors";
 
-// L'ajout rapide d'une catégorie depuis un picker ne demande pas de couleur :
-// c'est cette fonction qui en choisit une, et toute la lisibilité des étiquettes
-// d'un projet tient à ce qu'elle ne repique pas une couleur déjà prise.
+// Quickly adding a category from a picker does not require a color:
+// it is this function which chooses one, and all the readability of the labels
+// of a project ensures that it does not transplant a color already taken.
 describe("pickFreeCategoryColor", () => {
   it("évite les couleurs déjà utilisées par le projet", () => {
     const used = CATEGORY_COLORS.slice(0, 9);
@@ -18,8 +18,8 @@ describe("pickFreeCategoryColor", () => {
   });
 
   it("ignore une couleur hors palette", () => {
-    // Une catégorie recolorée à la main hors palette ne doit pas rétrécir le
-    // choix — elle n'y correspond à rien.
+    // A hand-recolored category outside of the palette should not shrink the
+    // choice — it doesn't correspond to anything.
     const color = pickFreeCategoryColor(["#123456"]);
     expect(CATEGORY_COLORS).toContain(color);
   });
@@ -27,7 +27,7 @@ describe("pickFreeCategoryColor", () => {
   it("pioche dans la palette entière sur un projet neuf", () => {
     const seen = new Set<string>();
     for (let i = 0; i < 300; i++) seen.add(pickFreeCategoryColor([]));
-    // Tirage aléatoire : 300 essais sur 10 couleurs, toutes doivent sortir.
+    // Random draw: 300 tests on 10 colors, all must come out.
     expect(seen.size).toBe(CATEGORY_COLORS.length);
   });
 });

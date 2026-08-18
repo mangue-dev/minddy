@@ -43,10 +43,10 @@ export function useScrollFade<T extends HTMLElement>(
   fade: string = FADE
 ) {
   const elRef = useRef<T | null>(null);
-  // Le nœud est AUSSI un état : l'élément observé peut n'arriver qu'après le
-  // premier rendu (un aperçu qui ne se monte qu'une fois ses données là, cf.
-  // l'accueil), et l'effet doit alors se rejouer pour l'observer. Avec la seule
-  // ref, il tournait une fois dans le vide et plus rien ne mesurait jamais.
+  // The node is ALSO a state: the observed element may only arrive after the
+  // first rendering (a preview which is only shown once its data is there, cf.
+  // reception), and the effect must then be replayed to observe it. With the only
+  // ref, it revolved once in a vacuum and nothing ever measured again.
   const [node, setNode] = useState<T | null>(null);
   const [edges, setEdges] = useState({ start: false, end: false });
   const frameRef = useRef<number | null>(null);
@@ -65,19 +65,19 @@ export function useScrollFade<T extends HTMLElement>(
   }, [axis]);
 
   /**
-   * Mesure AU PLUS UNE FOIS PAR IMAGE.
-   *
-   * Ces trois lectures (`scrollTop`, `clientHeight`, `scrollHeight`) forcent le
-   * navigateur à recalculer la mise en page, et ce qui les déclenche n'est pas
-   * un geste de l'utilisateur : c'est un `MutationObserver` en `subtree`, donc
-   * TOUT changement du contenu. Un fil d'agent qui streame réécrit son markdown
-   * plusieurs fois par seconde, chaque réécriture remue des centaines de nœuds —
-   * on mesurait donc à cette cadence-là, en bloquant le fil principal à chaque
-   * fois. C'est ce qui faisait « sauter » toute l'interface, barre latérale
-   * comprise, au moment précis où l'agent commence à écrire.
-   *
-   * Une image suffit : personne ne peut voir un fondu apparaître plus tôt.
-   */
+ * Measured AT MOST ONCE PER IMAGE.
+ *
+ * These three reads (`scrollTop`, `clientHeight`, `scrollHeight`) force the
+ * browser to recalculate the layout, and what triggers them is not not
+ * a user gesture: it's a `MutationObserver` in `subtree`, therefore
+ * ANY change in content. A streaming agent thread rewrites its markdown
+ * several times per second, each rewrite stirs hundreds of nodes —
+ * so we measured at this rate, blocking the main thread each
+ * time. This is what made the entire interface, including the sidebar
+ *, "jump" at the precise moment when the agent starts writing.
+ *
+ * One image is enough: no one can see a fade appear earlier.
+ */
   const update = useCallback(() => {
     if (frameRef.current != null) return;
     frameRef.current = requestAnimationFrame(() => {
@@ -117,8 +117,8 @@ export function useScrollFade<T extends HTMLElement>(
       : undefined,
   };
 
-  // `edges` sort avec le reste : « il reste du contenu de ce côté » sert au-delà du
-  // fondu — c'est aussi la condition d'un bouton de retour en bas (le fil de l'agent).
-  // Le mesurer deux fois sur le même nœud n'apprendrait rien de plus.
+  // `edges` comes out with the rest: “there is content left on this side” serves beyond the
+  // fade — this is also the condition for a back button at the bottom (the agent thread).
+  // Measuring it twice on the same node would not teach anything more.
   return { ref, scrollProps, edges };
 }

@@ -2,106 +2,107 @@ import { sq, type RepoHost } from "./repo-host";
 import type { PlatformToolHandler } from "./agent-contract";
 
 /**
- * Contrôle de CLÔTURE d'un plan (MIN-236) — le harness pose la question à la
- * place du modèle, après `write_issue_plan` et avant qu'il ne rende la main.
+ * CLOSING control of a plan (MIN-236) — the harness asks the question to the
+ * model's place, after `write_issue_plan` and before he returns control.
  *
- * Le défaut visé n'est pas l'exploration : sur le run qui a coûté MIN-226, le
- * DERNIER appel avant l'écriture était un `grep ObjectiveSidePanel` qui rendait
- * les 4 fichiers en clair, et le plan n'en a nommé que 2. L'information était en
- * contexte. MIN-226 a refermé les deux causes mécaniques (le `grep` qui mentait,
- * la règle de clôture du prompt) ; celle-ci ne se referme pas par une consigne,
- * parce qu'un plan incomplet se lit exactement comme un plan complet — c'est
- * précisément ce qui le rend invisible à sa propre relecture.
+ * The targeted fault is not exploration: on the run which cost MIN-226, the
+ * LAST call before writing was a `grep ObjectiveSidePanel` which made
+ * the 4 files in plain text, and the plan only named 2. The information was in
+ * context. MIN-226 closed the two mechanical causes (the `grep` which lied,
+ * the prompt closing rule); it does not close with an instruction,
+ * because an incomplete plan reads exactly like a complete plan — it's
+ * precisely what makes it invisible to its own rereading.
  *
- * D'où la même doctrine que le type-check de fin de tour (`diagnostics.ts`) et
- * l'auto-relecture du diff (`self-review.ts`) : ce que le prompt DEMANDE, le
- * harness l'EXÉCUTE, et remet le résultat dans le contexte. Ici : les
- * identifiants que le plan nomme sont grepés pour de vrai, et les fichiers qui
- * les contiennent sans être nommés reviennent au modèle.
+ * Hence the same doctrine as the end-of-turn type-check (`diagnostics.ts`) and
+ * self-reading of the diff (`self-review.ts`): what the prompt REQUESTS, the
+ * harness EXECUTES it, and puts the result back into context. Here: the
+ * identifiers that the plan names are clustered for real, and the files that
+ * contain them without being named returns to the model.
  *
- * **Une observation, pas un verdict.** Le harness ne sait pas distinguer un
- * appelant oublié d'une omission délibérée — un fichier de test qui cite le
- * composant sans être concerné par le changement est un cas parfaitement normal.
- * Il constate, le modèle tranche (`append_to_plan`, ou rien).
+ * **An observation, not a verdict.** The harness cannot distinguish a
+ * forgotten caller from deliberate omission — a test file that cites the
+ * component without being affected by the change is a perfectly normal case.
+ * He notes, the model decides (`append_to_plan`, or nothing).
  *
- * Tout est MÉCANIQUE : aucune lecture sémantique du plan, aucun appel de modèle.
- * Extraire des tokens, les grep, soustraire ce que le plan nomme déjà.
+ * Everything is MECHANICAL: no semantic reading of the plan, no model call.
+ * Extract tokens, grep them, subtract what the plan already names.
  */
 
-/** Budget mural du grep de clôture. Une seule commande, capée large : sur un gros
- *  dépôt `git grep -F` reste en dessous de la seconde par motif. */
+/** Closing grep wall budget. A single order, cape wide: on a large
+ * deposit `git grep -F` remains below the second per reason. */
 export const PLAN_CLOSURE_TIMEOUT_MS = 60_000;
-/** Budget minimum restant sur le chunk pour lancer le contrôle. Plus bas que le
- *  type-check (un `git grep` ne coûte rien), mais il faut laisser au modèle de
- *  quoi lire les fichiers rendus et compléter son plan. */
+/** Minimum budget remaining on the chunk to launch the check. Lower than the
+ * type-check (a `git grep` costs nothing), but you have to let the model
+ * what to read the rendered files and complete your plan. */
 export const PLAN_CLOSURE_MIN_BUDGET_MS = 45_000;
 
-/** Motifs grepés au maximum. Au-delà, on paie une commande de plus pour un signal
- *  que le modèle ne lira pas : les identifiants d'un plan sont ordonnés, les
- *  premiers portent le changement. */
+/** Patterns clustered as much as possible. Beyond that, we pay one more order for a signal
+ * that the model will not read: the identifiers of a plan are ordered, the
+ * The first bring change. */
 export const MAX_NEEDLES = 12;
 /**
- * Au-delà de ce nombre de fichiers, un motif est JETÉ plutôt que rapporté.
+ * Beyond this number of files, a pattern is DISCARDED rather than reported.
  *
- * C'est le garde-fou qui décide de l'utilité de tout le mécanisme. Un symbole
- * présent dans 40 fichiers est un utilitaire commun, pas un appelant oublié : le
- * rapporter noierait le seul motif qui compte sous ceux dont le plan n'avait
- * aucune raison de parler. Le cas fondateur tient largement dessous (4 fichiers).
+ * It is the safeguard that decides the usefulness of the whole mechanism. A symbol
+ * present in 40 files is a common utility, not a forgotten caller: the
+ * report would drown the only reason that matters under those whose plan had not
+ * no reason to speak. The founding case fits largely below (4 files).
  */
 export const MAX_FILES_PER_NEEDLE = 12;
-/** Fichiers listés par motif dans le bloc rendu. */
+/** Files listed by pattern in the rendered block. */
 const FILES_SHOWN_PER_NEEDLE = 8;
-/** Motifs listés dans le bloc rendu. */
+/** Patterns listed in the rendered block. */
 const NEEDLES_SHOWN = 6;
 
-/** Marqueur de groupe dans la sortie de la commande — un préfixe qu'aucun chemin
- *  de fichier ne porte, donc le découpage est sans ambiguïté. */
+/** Group marker in command output — a prefix that no path
+ * of file does not carry, so the division is unambiguous. */
 const GROUP_MARK = "@@needle ";
 
-/** Un motif grepé et les fichiers du dépôt qui le contiennent. */
+/** A clustered pattern and the repository files that contain it. */
 export interface ClosureHit {
-  /** Le motif tel qu'il a été grepé (littéral). */
+  /** The pattern as it was grated (literal). */
   needle: string;
-  /** Le token du plan dont il vient — identique au motif sauf pour un chemin,
-   *  dont on grep le basename sans extension. */
+  /** The token of the plan it comes from — identical to the pattern except for a path,
+   * of which we grep the basename without extension. */
   source: string;
-  /** Chemins relatifs au dépôt, tels que `git grep -l` les rend. */
+  /** Paths relative to the repository, such as `git grep -l` renders them. */
   files: string[];
 }
 
 // ── Extraction ───────────────────────────────────────────────────────────────
 
-/** Blocs de code fencés : leur contenu est un EXEMPLE, pas la liste de courses du
- *  plan. Les garder ferait grep chaque identifiant d'un extrait collé. */
+/** Closed code blocks: their content is an EXAMPLE, not the shopping list of the
+ * plan. Keeping them would grep each id of a pasted snippet. */
 const FENCE_BLOCK = /^```[\s\S]*?^```/gm;
-/** Span de code inline — la convention du plan pour ses identifiants. */
+/** Inline code span — the plan's convention for its identifiers. */
 const INLINE_CODE = /`([^`\n]+)`/g;
-/** Chemin nu (hors backticks) : `lib/server/agent/execute.ts`. Un plan les écrit
- *  souvent sans les baliser, et ce sont eux qui portent le plus d'information. */
+/** Bare path (outside backticks): `lib/server/agent/execute.ts`. Plans often write
+ *  these without marking them up, and they carry the most information. */
 const BARE_PATH = /(?:^|[\s(,;:])((?:[\w.@\-[\]()]+\/)+[\w.@\-[\]()]+\.[A-Za-z0-9]+)/g;
 
-/** Identifiant de code : PascalCase, camelCase, ou SCREAMING_SNAKE_CASE. Un token
- *  tout en minuscules (`plan`, `grep`, `objectif`) est un mot, pas un symbole. */
+/** Code identifier: PascalCase, camelCase, or SCREAMING_SNAKE_CASE. An all-lowercase
+ *  token (`plan`, `grep`, `objective`) is a word, not a symbol. */
 const PASCAL_OR_CAMEL = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const SCREAMING = /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+$/;
 
-/** Chemin de fichier : au moins un `/` et une extension. */
+/** File path: at least one `/` and an extension. */
 const PATH_LIKE = /^[\w.@\-[\]()/]+\.[A-Za-z0-9]+$/;
 
 /**
- * Ce nom de fichier (extensions ôtées) désigne-t-il quelque chose, ou est-ce un
- * mot ?
+ * Does this filename (with its extensions removed) identify something, or is it a
+ * word?
  *
- * MESURÉ sur ce dépôt : sans ce filtre, `lib/server/agent/execute.ts` donnait le
- * motif `execute` et `vm/turn.ts` le motif `turn` — deux mots anglais courants,
- * ramenant l'un plus de cent fichiers et l'autre autant, tous jetés ensuite, après
- * avoir mangé deux des douze places de motifs. C'est la même règle que pour un
- * identifiant nu, appliquée au bon endroit : il faut une BOSSE (`objectiveSidePanel`)
- * ou un séparateur (`plan-closure`, `self_review`) pour qu'un nom soit un nom.
+ * MEASURED on this repository: without this filter, `lib/server/agent/execute.ts`
+ * produced the `execute` pattern and `vm/turn.ts` the `turn` pattern — two common
+ * English words, bringing back more than a hundred files each, all discarded
+ * afterward and consuming two of the twelve pattern slots. It is the same rule
+ * as for a bare identifier, applied in the right place: a HUMP
+ * (`objectiveSidePanel`) or a separator (`plan-closure`, `self_review`) is needed
+ * for a name to count as a name.
  *
- * Une liste de noms génériques (`page`, `route`, `index`, `middleware`…) faisait le
- * même travail en moins bien : il aurait fallu la tenir à jour à chaque convention
- * de framework, alors qu'aucun de ces noms ne passe cette règle-ci.
+ * A list of generic names (`page`, `route`, `index`, `middleware`…) would do the
+ * same job less well: it would need updating for every framework convention,
+ * even though none of these names passes this rule.
  */
 function isDistinctiveStem(stem: string): boolean {
   if (stem.length < 4) return false;
@@ -109,22 +110,24 @@ function isDistinctiveStem(stem: string): boolean {
   return /^[a-z_$][A-Za-z0-9_$]*[A-Z]/.test(stem) || /^[A-Z][A-Za-z0-9_$]*[a-z]/.test(stem);
 }
 
-/** Le nom de fichier sans SES extensions : `plan-closure.test.ts` → `plan-closure`.
- *  Une seule passe laisserait `plan-closure.test`, qui ne trouve rien. */
+/** The filename without its extensions: `plan-closure.test.ts` → `plan-closure`.
+ *  A single pass would leave `plan-closure.test`, which finds nothing. */
 function stemOf(basename: string): string {
   return basename.replace(/\.[A-Za-z0-9]+$/, "").replace(/\.(?:test|spec|stories|d)$/, "");
 }
 
 /**
- * Les motifs à grep, tirés du markdown du plan.
+ * The grep patterns, extracted from the plan's markdown.
  *
- * Deux sources : les spans de code inline (la convention du plan) et les chemins
- * écrits sans backticks. Un chemin devient le motif « basename sans extension » —
- * `components/objectives/objective-side-panel.tsx` → `objective-side-panel` : ce
- * qu'on cherche, ce sont ses IMPORTATEURS, et un import ne cite jamais le chemin
- * complet tel que le plan l'écrit (`@/components/…`, `./objective-side-panel`).
+ * Two sources: inline code spans (the plan's convention) and paths written
+ * without backticks. A path becomes the “basename without extension” pattern —
+ * `components/objectives/objective-side-panel.tsx` → `objective-side-panel`: what
+ * we seek are its IMPORTERS, and an import never cites the full path
+ * rather than the full path as the plan writes it (`@/components/…`,
+ * `./objective-side-panel`).
  *
- * Ordre du document préservé, doublons retirés, cap à `MAX_NEEDLES`.
+ * Document order is preserved, duplicates are removed, and the result is capped
+ * at `MAX_NEEDLES`.
  */
 export function planNeedles(plan: string): { needle: string; source: string }[] {
   const body = plan.replace(FENCE_BLOCK, "\n");
@@ -144,9 +147,9 @@ export function planNeedles(plan: string): { needle: string; source: string }[] 
   return out;
 }
 
-/** Le motif que ce token vaut, ou `null` s'il n'a rien d'un symbole de code. */
+/** The pattern represented by this token, or `null` if it is not a code symbol. */
 function needleFor(token: string): string | null {
-  // Une apostrophe casserait le quoting shell, un espace n'est jamais un symbole.
+  // An apostrophe would break shell quoting, and a space is never a symbol.
   if (!token || token.length > 80 || /[\s'\\`]/.test(token)) return null;
 
   if (token.includes("/")) {
@@ -158,27 +161,27 @@ function needleFor(token: string): string | null {
   if (token.length < 4) return null;
   if (SCREAMING.test(token)) return token;
   if (!PASCAL_OR_CAMEL.test(token)) return null;
-  // Une bosse au moins : c'est ce qui sépare `ObjectiveSidePanel` de `objectif`.
+  // A bump at least: that's what separates `ObjectiveSidePanel` from `objectif`.
   return isDistinctiveStem(token) ? token : null;
 }
 
-// ── Le grep ──────────────────────────────────────────────────────────────────
+// ── The grep ───────────────────────────────── ─────────────────────────────────
 
 /**
- * UNE commande pour tous les motifs. Un `host.exec` par motif coûterait un
- * aller-retour réseau chacun depuis la fonction (le moteur hors microVM parle à
- * la sandbox par le réseau) ; la boucle `sh` en coûte un pour tous.
+ * ONE order for all designs. A `host.exec` per pattern would cost one
+ * network round trip each from the function (the engine outside microVM speaks to
+ * the sandbox via the network); the `sh` loop costs one for all.
  *
- * Chaque groupe s'ouvre sur `@@needle <motif>`, puis liste ses fichiers, un par
- * ligne — pas de `sed`/`awk` à supposer présents, et un parseur trivial. Le `||
- * true` absorbe le code 1 de `git grep` (aucun match), qui est un résultat, pas
- * une panne.
+ * Each group opens on `@@needle <motif>`, then lists its files, one by
+ * line — no `sed`/`awk` assuming present, and a trivial parser. The `||
+ * `true` absorbs exit code 1 from `git grep` (no match), which is a result, not
+ * a breakdown.
  *
- * `| head` est INTERDIT dans `grepRepo` parce qu'il masquerait le code de sortie
- * de git, seul moyen d'y distinguer « aucun match » d'une erreur de motif. Ici on
- * jette ce code de toute façon (`|| true`), donc il n'y a rien à masquer : le cap
- * évite juste de faire traverser mille chemins à la sortie pour un motif qui sera
- * jeté un cran plus loin. Une ligne de plus que le cap suffit à le savoir.
+ * `| head` is PROHIBITED in `grepRepo` because it would hide the exit code
+ * from git, the only way to distinguish “no match” from a pattern error. Here we
+ * throws this code anyway (`|| true`), so there is nothing to hide: the cap
+ * just avoid crossing a thousand paths at the exit for a reason that will be
+ * taken a step further. One line more than the cape is enough to know that.
  */
 export function buildClosureCommand(needles: readonly string[]): string {
   const groups = needles.map(
@@ -188,7 +191,7 @@ export function buildClosureCommand(needles: readonly string[]): string {
   return groups.join(" ");
 }
 
-/** Découpe la sortie de `buildClosureCommand` en fichiers par motif. */
+/** Splits the output of `buildClosureCommand` into files by pattern. */
 export function parseClosureOutput(stdout: string): Map<string, string[]> {
   const byNeedle = new Map<string, string[]>();
   let current: string[] | null = null;
@@ -204,19 +207,19 @@ export function parseClosureOutput(stdout: string): Map<string, string[]> {
   return byNeedle;
 }
 
-// ── Ce que le plan nomme déjà ────────────────────────────────────────────────
+// ── What the plan already names ──────────────────────── ────────────────────────
 
 /**
- * Le plan nomme-t-il ce fichier ?
+ * Does the plan name this file?
  *
- * Trois formes admises, de la plus stricte à la plus lâche : le chemin complet,
- * un suffixe d'au moins deux segments (`objectives/page.tsx` pour
- * `app/objectives/page.tsx` — un plan écrit souvent le chemin court), et le
- * basename seul quand il est distinctif (jamais `page.tsx`).
+ * Three accepted forms, from the strictest to the loosest: the complete path,
+ * a suffix of at least two segments (`objectives/page.tsx` for
+ * `app/objectives/page.tsx` — a plan often writes the short path), and the
+ * basename alone when it is distinctive (never `page.tsx`).
  *
- * Volontairement LÂCHE : un faux « déjà nommé » ne coûte qu'un silence, quand un
- * faux « oublié » coûte au modèle une vérification inutile à chaque plan. Entre
- * les deux erreurs, la bavarde est la seule qui se paie à tous les coups.
+ * Deliberately COWARD: a false “already named” costs only silence, when a
+ * false “forgotten” costs the model an unnecessary check at each shot. Between
+ * both mistakes, the talkative one is the only one that pays for itself every time.
  */
 export function planNamesFile(plan: string, file: string): boolean {
   const path = file.replace(/^\.\//, "");
@@ -228,34 +231,34 @@ export function planNamesFile(plan: string, file: string): boolean {
   }
 
   const base = segments[segments.length - 1];
-  // Même règle qu'à l'extraction : un `page.tsx` cité tout seul ne nomme rien.
+  // Same rule as for extraction: a `page.tsx` cited alone does not name anything.
   if (!isDistinctiveStem(stemOf(base))) return false;
   return plan.includes(base);
 }
 
-// ── Le bloc servi au modèle ──────────────────────────────────────────────────
+// ── The block used for the model ───────────────────────── ─────────────────────────
 
 const HEADER = `Before you reply: the harness grepped the identifiers your plan names, and found files that contain them and that the plan never mentions.`;
 
 const FOOTER = `This is an observation, not a verdict — the harness cannot tell a call site you forgot from one you left out on purpose. Open the ones that matter. If a file belongs in the plan, add it with \`append_to_plan\` (never rewrite the plan). If it does not, carry on: no need to justify the omission.`;
 
 /**
- * Le bloc de clôture, ou `null` s'il n'y a rien à dire — le cas NORMAL, et celui
- * qui doit rester silencieux : un plan complet ne mérite pas un paragraphe qui
- * dit qu'il est complet.
+ * The closing block, or `null` if there is nothing to say — the NORMAL case, and the
+ * which must remain silent: a complete plan does not deserve a paragraph which
+ * says it is complete.
  *
- * PUR : la sandbox est lue par l'appelant, comme `formatTypeErrors` et
- * `formatSelfReview`, pour que le tri, les caps et la formulation se testent sans
+ * PUR: the sandbox is read by the caller, as `formatTypeErrors` and
+ * `formatSelfReview`, so that the sorting, headings and formulation can be tested without
  * microVM.
  */
 export function formatPlanClosure(input: {
-  /** Le markdown du plan écrit ce tour (appends du même tour compris). */
+  /** The markdown of the plan writes this turn (adds from the same turn included). */
   plan: string;
-  /** Ce que le grep a rendu, par motif. */
+  /** What grep rendered, by pattern. */
   hits: readonly ClosureHit[];
 }): string | null {
   const kept = input.hits
-    // Un motif trop répandu ne dit rien de la clôture du plan (cf. MAX_FILES_PER_NEEDLE).
+    // A pattern that is too widespread says nothing about the closure of the plan (see MAX_FILES_PER_NEEDLE).
     .filter((hit) => hit.files.length > 0 && hit.files.length <= MAX_FILES_PER_NEEDLE)
     .map((hit) => ({
       ...hit,
@@ -283,14 +286,14 @@ export function formatPlanClosure(input: {
   return `${HEADER}\n\n${blocks.join("\n\n")}${more}\n\n${FOOTER}`;
 }
 
-// ── Le crochet impur ─────────────────────────────────────────────────────────
+// ── The impure hook ──────────────────────────── ─────────────────────────────
 
 /**
- * Lance le grep de clôture dans la sandbox et rend le bloc à servir, ou `null`.
+ * Runs the closing grep in the sandbox and makes the block to serve, or `null`.
  *
- * Best-effort de bout en bout, comme le type-check : pas de dépôt, `git` absent,
- * timeout, sortie illisible → `null`. Un contrôle de clôture qui ferait échouer un
- * tour serait un contrôle qu'on retirerait la semaine suivante.
+ * Best-effort end-to-end, like type-check: no repository, `git` missing,
+ * timeout, unreadable output → `null`. A closing check that would cause a
+ * round would be a control that we would remove the following week.
  */
 export async function planClosureForTurn(host: RepoHost, plan: string): Promise<string | null> {
   const needles = planNeedles(plan);
@@ -300,10 +303,10 @@ export async function planClosureForTurn(host: RepoHost, plan: string): Promise<
       cwd: host.layout.repoDir,
       timeoutMs: PLAN_CLOSURE_TIMEOUT_MS,
     });
-    // La commande sort en 0 quoi qu'il arrive (`|| true`) : un dépôt absent ou un
-    // `git` introuvable rendent des groupes VIDES, et `formatPlanClosure` se tait
-    // tout seul. Ce garde ne couvre donc que l'échec du shell lui-même — sandbox
-    // morte, commande tuée par le timeout —, où la sortie est un fragment.
+    // The command exits as 0 whatever happens (`|| true`): an absent deposit or a
+    // `git` not found makes groups EMPTY, and `formatPlanClosure` goes silent
+    // all alone. This guard therefore only covers the failure of the shell itself — sandbox
+    // dead, command killed by timeout —, where the output is a fragment.
     if (res.exitCode !== 0) return null;
     const byNeedle = parseClosureOutput(res.stdout);
     const hits: ClosureHit[] = needles.map(({ needle, source }) => ({
@@ -317,51 +320,51 @@ export async function planClosureForTurn(host: RepoHost, plan: string): Promise<
   }
 }
 
-/** Le plan écrit pendant un tour, tel que les crochets de fin de tour le lisent
- *  — la clôture d'ici, et la relecture de `plan-review.ts` (MIN-237). */
+/** The plan written during a round, as the end-of-round brackets read it
+ * — the closing here, and the rereading of `plan-review.ts` (MIN-237). */
 export interface PlanWriteSink {
-  /** Un `write_issue_plan` a RÉUSSI ce tour — sans ça, rien à vérifier. */
+  /** A `write_issue_plan` SUCCEEDED this round — otherwise, nothing to check. */
   wrote: boolean;
-  /** Le markdown vérifié : le plan écrit, plus les blocs ajoutés dans le même
-   *  tour (ils nomment des fichiers, donc ils comptent comme couverture). */
+  /** The verified markdown: the written plan, plus the blocks added in the same
+   *  round (they name files, so they count as coverage). */
   markdown: string;
 }
 
 /**
- * Un sink neuf. Vit à l'échelle du CHUNK, comme `selfReviewed` et pour la même
- * raison : il ne voyage pas dans le checkpoint.
+ * A new sink. Lives on the scale of CHUNK, like `selfReviewed` and for the same
+ * reason: he does not travel through the checkpoint.
  *
- * Ce que ça laisse passer, dit plutôt qu'à découvrir : côté FONCTION, un chunk qui
- * meurt entre le `write_issue_plan` et la fin du tour repart sans le plan, donc sans
- * contrôle. Le prix de le faire voyager serait un plan de 64 ko de plus dans un
- * checkpoint que `fitCheckpoint` taille déjà au plus juste, pour une fenêtre de
- * quelques secondes — et la fenêtre n'existe pas du tout dans la microVM (MIN-224),
- * où le tour entier tient dans un seul processus.
+ * What this lets slip through, said rather than discovered: on the FUNCTION side, a chunk which
+ * dies between `write_issue_plan` and the end of the turn leaves without the plan, therefore without
+ * control. The price of making it travel would be an extra 64kb plan in a
+ * checkpoint that `fitCheckpoint` already sizes as narrowly as possible, for a window of
+ * a few seconds — and the window does not exist at all in the microVM (MIN-224),
+ * where the whole trick fits into a single process.
  */
 export function newPlanWriteSink(): PlanWriteSink {
   return { wrote: false, markdown: "" };
 }
 
 /**
- * Enveloppe le handler des tools ticket pour noter, au passage, le plan que le
- * tour écrit. Le sink est muté ici et lu par le crochet de fin de tour — même
- * découpage que `editedPaths` pour le type-check.
+ * Envelop the tools ticket handler to note, in passing, the plan that the
+ * written tour. The sink is mutated here and read by the end-of-turn hook — even
+ * slicing as `editedPaths` for type-check.
  *
- * On ne note QUE les appels réussis : un `write_issue_plan` refusé (ticket
- * introuvable, plan vide) n'a rien écrit, et grep son markdown ferait parler le
- * harness d'un plan qui n'existe pas.
+ * We ONLY note successful calls: a `write_issue_plan` refused (ticket
+ * not found, empty plan) has not written anything, and grep its markdown would make the
+ * harness to grep the markdown of a plan that does not exist.
  *
- * `append_to_plan` ne DÉCLENCHE pas le contrôle (le plan qu'il complète n'est pas
- * dans ses arguments, donc on ne saurait pas ce qui est déjà nommé) mais il
- * COMPTE quand un `write_issue_plan` a eu lieu dans le même tour.
+ * `append_to_plan` does not TRIGGER the control (the plan it completes is not
+ * in his arguments, so we would not know what is already named) but he
+ * COUNTS when a `write_issue_plan` occurred in the same turn.
  *
- * `edit_issue_text` sur le plan est REJOUÉ sur le markdown noté (MIN-237) : c'est
- * par lui que le modèle corrige son plan après la relecture, et la clôture tourne
- * APRÈS elle. Sans ce rejeu, le grep rapporterait comme oublié un fichier que le
- * modèle vient de nommer. La substitution est celle du tool (unique, ou globale
- * avec `replace_all`), appliquée seulement si le passage est présent ici : notre
- * copie ne couvre que ce que CE tour a écrit, celle du serveur peut être plus
- * large, et un patch qui ne s'applique pas ne doit rien casser.
+ * `edit_issue_text` on the plan is REPLAYED on the noted markdown (MIN-237): it is
+ * by him that the model corrects his plan after proofreading, and the closing turns
+ * AFTER her. Without this replay, grep would report as forgotten a file that the
+ * model just named. The substitution is that of the tool (single, or global
+ * with `replace_all`), applied only if the passage is present here: our
+ * copy only covers what THIS round wrote, the server's may be more
+ * wide, and a patch that is not applied should not break anything.
  */
 export function watchPlanWrites(
   handler: PlatformToolHandler,

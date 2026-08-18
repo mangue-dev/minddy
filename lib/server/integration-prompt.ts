@@ -4,23 +4,23 @@ import { SSO_ENV_VAR } from "@/lib/feedback/env-lines";
 import { INTEGRATION_ENV_VAR } from "@/lib/feedback/integration-contract";
 
 /**
- * Prompt d'intégration tout-en-un (MIN-37) : un texte prêt à coller dans un
- * agent de code (Claude Code, Cursor…) — ou à confier à Numo — qui décrit QUOI
- * brancher dans l'app du client, OÙ (instruction libre de l'utilisateur) et
- * COMMENT. Trois modes, un par façon de relier une app à minddy : lien vers le
- * board public (± pré-auth SSO), dépôt de feedback par l'API, création de
- * tickets par l'API.
+ * All-in-one integration prompt (MIN-37): text ready to paste into a
+ * code agent (Claude Code, Cursor…) — or hand to Numo — describing WHAT to
+ * connect in the client's app, WHERE (a free-form user instruction), and HOW.
+ * Three modes cover the ways an app can connect to minddy: a link to the public
+ * board (with optional SSO pre-authentication), feedback submission through the API,
+ * and issue creation through the API.
  *
- * Les deux modes API portent en plus, quand un webhook est réglé, la route qui
- * REÇOIT : c'est l'autre sens de circulation, et c'est celui qu'un agent laissé
- * à lui-même remplace par une boucle de polling.
+ * When a webhook is configured, the two API modes also include the route that
+ * RECEIVES events. This is the reverse direction of the integration, and it is the
+ * one an unattended agent would otherwise replace with a polling loop.
  *
- * AUCUN credential n'y figure, dans aucun mode : le prompt nomme la variable
- * d'environnement (`MINDDY_SSO_SECRET`, `MINDDY_FEEDBACK_KEY`, `MINDDY_API_KEY`)
- * et l'utilisateur la renseigne lui-même, à partir de la ligne que l'interface
- * lui montre. C'est ce qui fait de ces textes des consignes ordinaires — qu'on
- * colle où l'on veut, qu'on confie à Numo — et non des secrets à manipuler avec
- * précaution. Le module ne reçoit donc ni secret ni clé : rien à laisser fuir.
+ * NO credential appears in any mode: the prompt names the environment variable
+ * (`MINDDY_SSO_SECRET`, `MINDDY_FEEDBACK_KEY`, `MINDDY_API_KEY`)
+ * and the user fills it in from the line the interface shows. This keeps these texts
+ * as ordinary instructions — safe to paste anywhere or hand to Numo — rather than
+ * secrets requiring special handling. The module therefore receives neither secret
+ * nor key: there is nothing to leak.
  */
 
 const FEEDBACK_KEY_ENV_VAR = INTEGRATION_ENV_VAR.feedback;
@@ -28,7 +28,7 @@ const ISSUES_KEY_ENV_VAR = INTEGRATION_ENV_VAR.issues;
 
 export type IntegrationPromptMode = "board" | "api" | "issues";
 
-/** Le webhook TEL QU'IL EST RÉGLÉ — absent, il n'y a pas de route à écrire. */
+/** The webhook AS CONFIGURED — if absent, there is no route to write. */
 export interface IntegrationPromptWebhook {
   url: string;
   events: string[];
@@ -39,14 +39,14 @@ export interface IntegrationPromptInput {
   mode: IntegrationPromptMode;
   locale: "fr" | "en";
   projectName: string;
-  /** Instruction libre : où placer le bouton / où brancher la collecte. */
+  /** Free instruction: where to place the button / where to connect the collection. */
   placement: string;
   origin: string;
   /** Mode board. */
   boardUrl?: string;
-  /** Pré-identification SSO demandée — le SECRET, lui, n'entre pas ici. */
+  /** SSO pre-identification requested — the SECRET does not enter here. */
   sso?: boolean;
-  /** Modes API : la route de réception à écrire, si un webhook est réglé. */
+  /** API modes: the receive route to write, if a webhook is configured. */
   webhook?: IntegrationPromptWebhook | null;
 }
 
@@ -54,7 +54,7 @@ export function buildIntegrationPrompt(input: IntegrationPromptInput): string {
   const placement = input.placement.trim();
   const fr = input.locale === "fr";
   if (input.mode === "board") {
-    // Le board est une page de minddy : rien n'y revient vers l'app.
+    // The board is a minddy page: nothing goes back to the app.
     return fr
       ? boardPromptFr(input, placement)
       : boardPromptEn(input, placement);
@@ -77,7 +77,7 @@ export function buildIntegrationPrompt(input: IntegrationPromptInput): string {
   }`;
 }
 
-// ── Webhook : la route qui REÇOIT ────────────────────────────────────────────
+// ── Webhook: the road that RECEIVES ────────────────────────────────────────────
 
 function webhookSectionFr(
   webhook: IntegrationPromptWebhook,
@@ -227,7 +227,7 @@ ${
 }`;
 }
 
-// ── API serveur-à-serveur ────────────────────────────────────────────────────
+// ── Server-to-server API ───────────────────────────────────────────────────────
 
 function apiPromptFr(input: IntegrationPromptInput, placement: string): string {
   return `# Intégrer le feedback minddy dans cette application (API serveur-à-serveur)
@@ -270,7 +270,7 @@ ${placement || "À l'endroit le plus naturel (bouton « Feedback » + petite mod
 - Il apparaît dans minddy → projet « ${input.projectName} » → onglet Feedback, attribué à l'utilisateur transmis.`;
 }
 
-// ── Tickets par l'API ────────────────────────────────────────────────────────
+// ── Issues through the API ─────────────────────────────────────────────────────
 
 function issuesPromptFr(
   input: IntegrationPromptInput,

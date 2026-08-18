@@ -1,59 +1,58 @@
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
- * Catalogue des captures du site public (MIN-73).
+ * Public site capture catalog (MIN-73).
  *
- * Chaque entrée est une commande de capture : quel écran ouvrir, dans quel état,
- * et dans quel rapport d'image l'afficher. Tant qu'aucune image n'est publiée
- * pour la variante demandée, le composant `<ScreenshotSlot>` rend un cadre de
- * réservation qui affiche la consigne — la mise en page est donc déjà juste,
- * seule l'image manque.
+ * Each entry is a capture command: which screen to open, in what state,
+ * and in what aspect ratio to display it. As long as no image is published
+ * for the requested variant, the `<ScreenshotSlot>` component renders a reservation frame which displays the instruction — the layout is therefore already correct,
+ * only the image is missing.
  *
- * **Une consigne d'ici n'est pas une vérité sur le produit.** Cinq des onze
- * entrées d'origine décrivaient une UI qui n'existe pas : une route de détail
- * d'issue (c'est un panneau latéral), une vue « description ET plan » que des
- * onglets rendent exclusives, des appels d'outils « dépliés » qui ne se
- * déplient pas, un badge de contexte inatteignable, une réponse d'équipe absente
- * du board public. Lire l'écran visé avant de capturer, et corriger l'intention
- * plutôt que le produit — chaque `captures/shots/<nom>/intent.md` dit laquelle.
+ * **A instruction from here is not not a truth about the product.** Five of the eleven
+ * original entries described a UI that does not exist: a detail
+ * exit route (it's a side panel), a "description AND plan" view that the
+ * tabs make exclusive, "unfolded" tool calls that do not se
+ * not unfolding, an unreachable context badge, an absent team response
+ * from the public board. Read the target screen before capturing, and correct the intention
+ * rather than the product — each `captures/shots/<nom>/intent.md` says which one.
  *
- * `voiceDictate` a été RETIRÉ : la dictée n'est pas photographiable (le popover
- * n'existe qu'après un `getUserMedia` réussi) et, surtout, une capture montrerait
- * qu'on enregistre au lieu de montrer ce que la phrase dite devient. La section
- * rend `<VoiceDictationFigure>`, une figure, à la place.
+ * `voiceDictate` has been REMOVED: the dictation is not photographable (the popover
+ * only exists after a successful `getUserMedia`) and, above all, a capture would show
+ * that we save instead of showing what the said sentence becomes. The
+ * section makes `<VoiceDictationFigure>`, a figure, instead.
  *
- * Les captures sont produites par le dossier `captures/` (skills
- * `capture-world` pour les données, `capture-shot` pour les images), publiées
- * dans `public/captures/` sous le nom `<id>-<langue>-<thème>.webp`, et
- * recensées dans `screenshot-manifest.ts` par `node captures/lib/publish.mjs`.
+ * Captures are produced by the `captures/` folder (skills
+ * `capture-world` for data, `capture-shot` for images), published
+ * in `public/captures/` under the name `<id>-<locale>-<theme>.webp`, and
+ * listed in `screenshot-manifest.ts` by `node captures/lib/publish.mjs`.
  *
- * `src` ne sert plus qu'aux exceptions : une image posée à la main, hors de
- * cette chaîne. C'est un patron où `{theme}` et `{lang}` sont substitués.
+ * `src` is only used for exceptions: an image placed by hand, outside
+ * this chain. This is a pattern where `{theme}` and `{lang}` are substituted.
  */
 import { PUBLISHED_SCREENSHOTS } from "./screenshot-manifest";
 
 export interface ScreenshotSlot {
-  /** Clé stable, utilisée comme identifiant dans le code des sections. */
+  /** Stable key, used as an identifier in the section code. */
   id: string;
-  /** Écran à capturer, en toutes lettres (chemin dans l'app). */
+  /** Screen to capture, in full (path in the app). */
   route: string;
-  /** État attendu à l'écran : ce qui doit être visible, et avec quelles données. */
+  /** Expected state on the screen: what should be visible, and with what data. */
   shot: string;
   /**
-   * Clé i18n du texte alternatif de l'image (namespace `Landing`).
-   *
-   * C'est `shot` qui servait d'`alt` : trois cents caractères de consigne de
-   * PRODUCTION (« Sidebar visible, pas de modale ouverte »), en français quelle
-   * que soit la langue de la page. Un `alt` décrit ce qu'on voit à quelqu'un
-   * qui ne le voit pas — pas ce qu'il fallait faire pour le photographier.
-   */
+ * i18n key for the alternative text of the image (namespace `Landing`).
+ *
+ * It was `shot` which served as `alt`: three hundred character instructions for
+ * PRODUCTION (“Sidebar visible, not of open modal"), in French whatever
+ * whatever the language of the page. A `alt` describes what you see to someone
+ * who doesn't see it — not what you had to do to photograph it.
+ */
   altKey: MessageKey<"Landing">;
   /** Rapport d'image du cadre, en notation CSS `aspect-ratio`. */
   ratio: string;
   /**
-   * Exception : patron d'URL d'une image posée à la main, hors de la chaîne
-   * `captures/`. `null` = comportement normal, l'image vient du manifeste.
-   */
+ * Exception: URL pattern of a hand-placed image, outside the chain
+ * `captures/`. `null` = normal behavior, the image comes from the manifest.
+ */
   src: string | null;
 }
 
@@ -130,11 +129,11 @@ const SLOTS = {
     ratio: "16/10",
     src: null,
   },
-  // AUCUNE SECTION NE LE PLACE depuis MIN-148 : la section tracker, devenue un
-  // temps de réassurance, montre le board plutôt que le cycle. L'emplacement
-  // reste ici, et sa capture publiée avec lui — la chaîne `captures/` sait le
-  // produire (`captures/shots/cycle/`), et la page qui en aura besoin n'aura
-  // rien à refaire.
+  // NO SECTION PLACES IT since MIN-148: the tracker section, which has become a
+  // reassurance time, shows the board rather than the cycle. The location
+  // stays here, and its capture published with it — the `captures/` chain knows it
+  // produce (`captures/shots/cycle/`), and the page that needs it will not have
+  // nothing to do again.
   featureCycle: {
     id: "featureCycle",
     route: "/home (bloc cycle) ou la page cycle",
@@ -169,13 +168,13 @@ export type ScreenshotSlotId = keyof typeof SLOTS;
 export const SCREENSHOT_SLOTS: Record<ScreenshotSlotId, ScreenshotSlot> = SLOTS;
 
 /**
- * L'URL de la capture d'un emplacement, pour une langue et un thème donnés —
- * ou `null` s'il n'y en a pas, auquel cas le cadre de réservation s'affiche.
+ * The URL to capture a location, for a given language and theme —
+ * or `null` if there is none, in which case the placeholder is displayed.
  *
- * La correspondance est EXACTE : une variante non publiée ne se rabat pas sur
- * une autre. Servir une capture française sur la page anglaise, ou une image
- * claire sur un fond sombre, se remarque plus qu'un cadre vide — et masquerait
- * le fait qu'il reste une capture à produire.
+ * The match is EXACT: an unpublished variant does not collapse on
+ * another. Serving a French capture on the English page, or a clear image
+ * on a dark background, is more noticeable than an empty frame — and would hide
+ * the fact that there is still a capture to be produced.
  */
 export function screenshotSrc(
   slot: ScreenshotSlot,

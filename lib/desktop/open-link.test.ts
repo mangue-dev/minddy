@@ -3,13 +3,13 @@ import { buildDesktopOpenUrl, parseDesktopOpenLink } from "./open-link";
 import { billingReturnUrl } from "./return-url";
 import { parseDesktopAuthLink } from "./auth-link";
 
-/** L'aller-retour complet : ce que la page de rebond émet, ce que l'app relit. */
+/** The complete round trip: what the bounce page emits, what the app rereads. */
 function roundTrip(next: string): string | null {
   return parseDesktopOpenLink(buildDesktopOpenUrl(next));
 }
 
 describe("buildDesktopOpenUrl", () => {
-  it("émet notre schéma sur l'hôte `open`", () => {
+  it("emits our scheme on the `open` host", () => {
     expect(buildDesktopOpenUrl("/billing")).toBe("minddy://open?next=%2Fbilling");
   });
 
@@ -17,10 +17,10 @@ describe("buildDesktopOpenUrl", () => {
     expect(roundTrip("/billing?billing=success")).toBe("/billing?billing=success");
   });
 
-  it("réduit une destination externe au repli interne", () => {
-    // macOS livre à l'app TOUT ce qui porte notre schéma, y compris ce qu'on
-    // n'a jamais émis : une destination absolue serait une fenêtre qu'un tiers
-    // pointe où il veut.
+  it("reduces an external destination to the internal fallback", () => {
+    // macOS delivers to the app EVERYTHING that carries our schema, including what we
+    // has never emitted: an absolute destination would be a window that a third party
+    // points where he wants.
     expect(roundTrip("https://evil.example/x")).toBe("/home");
     expect(roundTrip("//evil.example")).toBe("/home");
   });
@@ -31,16 +31,16 @@ describe("parseDesktopOpenLink", () => {
     expect(parseDesktopOpenLink("minddy:open?next=%2Fbilling")).toBe("/billing");
   });
 
-  it("refuse un autre schéma, un autre hôte, un lien sans destination", () => {
+  it("rejects another scheme, another host, or a link without a destination", () => {
     expect(parseDesktopOpenLink("https://www.minddy.app/open?next=/billing")).toBeNull();
     expect(parseDesktopOpenLink("minddy://auth?code=abc")).toBeNull();
     expect(parseDesktopOpenLink("minddy://open")).toBeNull();
     expect(parseDesktopOpenLink("")).toBeNull();
   });
 
-  it("ne se marche pas sur les pieds avec le lien d'authentification", () => {
-    // Les deux lecteurs se croisent dans `receiveDeepLink` : chacun doit rendre
-    // `null` sur l'hôte de l'autre, sans quoi le premier consulté avale tout.
+  it("does not interfere with the authentication link", () => {
+    // The two readers intersect in `receiveDeepLink`: each must return
+    // `null` on the other's host, otherwise the first consulted swallows everything.
     expect(parseDesktopAuthLink(buildDesktopOpenUrl("/billing"))).toBeNull();
   });
 });
@@ -48,7 +48,7 @@ describe("parseDesktopOpenLink", () => {
 describe("billingReturnUrl", () => {
   const ORIGIN = "https://www.minddy.app";
 
-  it("depuis le web : la page elle-même", () => {
+  it("from the web: the page itself", () => {
     expect(billingReturnUrl(ORIGIN, "/billing?billing=success", false)).toBe(
       "https://www.minddy.app/billing?billing=success"
     );
@@ -59,9 +59,9 @@ describe("billingReturnUrl", () => {
     expect(url).toBe(
       "https://www.minddy.app/desktop/return?next=%2Fbilling%3Fbilling%3Dsuccess"
     );
-    // Stripe n'accepte que du http(s) : le rebond doit rester une vraie URL.
+    // Stripe only accepts http(s): the bounce must remain a real URL.
     expect(new URL(url).protocol).toBe("https:");
-    // Et ce que cette page-là émettra doit ramener à la bonne destination.
+    // And what this page will emit must lead to the right destination.
     const next = new URL(url).searchParams.get("next");
     expect(roundTrip(next ?? "")).toBe("/billing?billing=success");
   });

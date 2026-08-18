@@ -13,7 +13,7 @@ export interface CheatsheetShortcut {
   /** i18n key under `Keyboard.shortcuts`. */
   labelKey: MessageKey<"Keyboard.shortcuts">;
   keys: string[][];
-  /** Combinaison ÉQUIVALENTE (pas une suite) — rendue après un « / ». */
+  /** EQUIVALENT combination (not a sequence) — rendered after a “/”. */
   altKeys?: string[][];
 }
 
@@ -44,7 +44,7 @@ export const CHEATSHEET: CheatsheetSection[] = [
     ],
   },
   {
-    // Ces chords ne sont routés que depuis un projet (keyboard-context runChord).
+    // These chords are only routed from a project (keyboard-context runChord).
     id: "project",
     titleKey: "project",
     shortcuts: [
@@ -62,20 +62,20 @@ export const CHEATSHEET: CheatsheetSection[] = [
         labelKey: "navProjectSettings",
         keys: [["G"], ["S"]],
       },
-      // Le seul de la section qui ne soit pas un chord : il ne vaut que sur la
-      // page Objectifs, un objectif ouvert, et le bouton le porte déjà en clair.
+      // The only one in the section that is not a chord: it only applies to the
+      // Objectives page, an open objective, and the button already has it in plain text.
       {
         id: "nav.objectiveIssues",
         labelKey: "navObjectiveIssues",
         keys: [["mod", "O"]],
       },
-      // Même cas : pas un chord, et il ne vaut que sur une page ouverte — le
-      // menu ⋯ de la page l'affiche aussi, à côté de l'entrée qu'il déclenche.
+      // Same case: not a chord, and it is only valid on an open page — the
+      // menu ⋯ of the page displays it too, next to the entry it triggers.
       {
         id: "page.copyForAgent",
         labelKey: "pageCopyForAgent",
-        // ⇧ obligatoire : ⌘L nu est pris par la barre d'adresse du navigateur
-        // et n'atteint jamais la page (cf. components/pages/page-view.tsx).
+        // ⇧ obligatory: ⌘L bare is taken by the browser address bar
+        // and never reaches the page (see components/pages/page-view.tsx).
         keys: [["mod", "⇧", "L"]],
       },
     ],
@@ -91,9 +91,9 @@ export const CHEATSHEET: CheatsheetSection[] = [
         altKeys: [["mod", "P"]],
       },
       { id: "gen.search", labelKey: "search", keys: [["F"]] },
-      // Le filtre de la colonne de gauche, sur les écrans qui en ont une
-      // (triage, retours, pull requests, sessions, réglages). Il RÉDUIT la liste
-      // affichée — la palette, elle, cherche partout et emmène ailleurs.
+      // The filter in the left column, on screens that have one
+      // (triage, returns, pull requests, sessions, settings). It REDUCES the list
+      // displayed — the palette searches everywhere and takes it elsewhere.
       { id: "gen.filterList", labelKey: "filterList", keys: [["/"]] },
       { id: "gen.undo", labelKey: "undo", keys: [["mod", "Z"]] },
       { id: "gen.redo", labelKey: "redo", keys: [["mod", "⇧", "Z"]] },
@@ -105,9 +105,9 @@ export const CHEATSHEET: CheatsheetSection[] = [
     titleKey: "create",
     shortcuts: [
       { id: "create.issue", labelKey: "createIssue", keys: [["C"]] },
-      // Le même raccourci que la dictée, là où il n'y avait rien à dicter : le
-      // formulaire s'ouvre micro ouvert. Les surfaces qui portent DÉJÀ ⌘⇧D
-      // (panneau du ticket, page Objectifs) le gardent pour elles.
+      // The same shortcut as dictation, where there was nothing to dictate:
+      // form opens open mic. Surfaces that ALREADY wear ⌘⇧D
+      // (ticket panel, Objectives page) keep it for themselves.
       {
         id: "create.issueDictate",
         labelKey: "createIssueDictate",
@@ -128,14 +128,14 @@ export const CHEATSHEET: CheatsheetSection[] = [
       { id: "card.labels", labelKey: "labels", keys: [["L"]] },
       { id: "card.dueDate", labelKey: "dueDate", keys: [["D"]] },
       { id: "card.objective", labelKey: "objective", keys: [["O"]] },
-      // Le seul raccourci de la section qui accepte AUSSI la sélection multiple :
-      // quand la pilule est là, « @ » parle des tickets cochés (MIN-105).
+      // The only shortcut in the section that ALSO accepts multiple selection:
+      // when the pill is there, “@” speaks of checked tickets (MIN-105).
       { id: "card.askNumo", labelKey: "askNumo", keys: [["@"]] },
       { id: "card.copyPrompt", labelKey: "copyPrompt", keys: [["⇧", "P"]] },
       { id: "card.launchAgent", labelKey: "launchAgent", keys: [["⇧", "A"]] },
-      // Monté partout où DictateButton porte le raccourci : panneau du ticket
-      // et dialog « nouveau ticket ». Il lui faut ⌘ : un combo ⇧ seul se
-      // déclenchait sur une majuscule tapée dans le titre ou la description.
+      // Mounted wherever DictateButton carries the shortcut: ticket panel
+      // and “new ticket” dialog. He needs ⌘: a combo ⇧ alone
+      // triggered on a capital letter typed in the title or description.
       { id: "card.dictate", labelKey: "dictate", keys: [["mod", "⇧", "D"]] },
     ],
   },
@@ -151,15 +151,15 @@ export function resolveKeyToken(token: string): string {
 }
 
 /**
- * Le même raccourci, mais tel qu'on l'ÉCRIT DANS UNE PHRASE — « ⌘K » sur un
- * Mac, « Ctrl+K » ailleurs. `KbdSequence` rend des touches côte à côte ; une
- * marche à suivre ou un toast, eux, ont besoin d'une chaîne, et le « + » que le
- * monde Windows attend entre les deux ne se devine pas d'un tableau de tokens.
+ * The same shortcut, but as WRITTEN IN A SENTENCE — “⌘K” on a
+ * Mac, “Ctrl+K” elsewhere. `KbdSequence` renders keys side by side; a
+ * procedure or a toast, they need a string, and the "+" that the
+ * Windows world expects between the two cannot be guessed from an array of tokens.
  *
- * À n'appeler que côté client (`navigator`) : au rendu serveur il n'y a pas de
- * plateforme à lire, et la phrase dirait « Ctrl » à un utilisateur de Mac. Pour
- * une phrase RENDUE (par opposition à un toast déclenché par un geste), passer
- * par `useModShortcut`, qui gère l'hydratation.
+ * To be called only on the client side (`navigator`): in server rendering there is no de
+ * platform to read, and the phrase would say "Ctrl" to a Mac user. For
+ * a RENDERED phrase (as opposed to a gesture-triggered toast), pass
+ * through `useModShortcut`, which handles hydration.
  */
 export function formatModShortcut(key: string): string {
   const mod = resolveKeyToken("mod");
@@ -167,11 +167,11 @@ export function formatModShortcut(key: string): string {
 }
 
 /**
- * Le même, avec ⇧ — « ⌘⇧L » sur un Mac, « Ctrl+Shift+L » ailleurs.
+ * The same, with ⇧ — “⌘⇧L” on a Mac, “Ctrl+Shift+L” elsewhere.
  *
- * Écrit à part plutôt qu'en passant « ⇧L » au précédent : hors Mac la forme
- * attendue est « Ctrl+Shift+L », avec le mot et le second « + », et non
- * « Ctrl+⇧L » — un symbole de Mac au milieu d'une phrase Windows.
+ * Written separately rather than passing “⇧L” to the previous one: outside Mac the expected form
+ * is “Ctrl+Shift+L ”, with the word and the second “+”, not
+ * “Ctrl+⇧L” — a Mac symbol in the middle of a Windows sentence.
  */
 export function formatModShiftShortcut(key: string): string {
   const mod = resolveKeyToken("mod");

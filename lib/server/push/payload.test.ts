@@ -14,11 +14,10 @@ import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
 
 /**
- * La charge utile poussée doit dire EXACTEMENT ce que dit la ligne d'inbox — au
- * mot près, dans les deux langues. Le test passe donc par le VRAI formateur sur
- * les vrais catalogues : il attrape aussi bien une clé absente (qui rendrait
- * « Inbox.… ») qu'un `{actor}` non substitué, les deux fautes que le typage
- * laisse passer (cf. CLAUDE.md).
+ * The pushed payload must say EXACTLY what the inbox line says — word for word, in both languages. The test therefore goes through the REAL formatter on
+ * the real catalogs: it catches both an absent key (which would make
+ * "Inbox....") and an unsubstituted `{actor}`, the two faults that the typing
+ * lets pass (see CLAUDE.md).
  */
 
 const PROJECT = "11111111-1111-1111-1111-111111111111";
@@ -44,9 +43,8 @@ const ALL_TYPES: readonly NotificationType[] = [
   "page_comment",
 ];
 
-/** Le tableau ci-dessus doit être EXHAUSTIF : un type ajouté au produit sans sa
-    phrase pousserait « Inbox.… » sur un écran verrouillé, et rien ici ne le
-    dirait si la liste était seulement « à jour à peu près ». */
+/** The table above should be COMPLETE: a type added to the product without its
+ phrase would push "Inbox...." on a locked screen, and nothing here would tell if the list was only "about current". */
 const _exhaustive: Record<NotificationType, true> = Object.fromEntries(
   ALL_TYPES.map((type) => [type, true])
 ) as Record<NotificationType, true>;
@@ -95,7 +93,7 @@ describe("buildPushPayload", () => {
     const withActor = buildPushPayload(ctxWithIssue(), issueRow("mention"), "en");
     expect(withActor!.body).toBe(en.Inbox.lineMention.replace("{actor}", "Alice"));
 
-    // Acteur inconnu du contexte (compte supprimé) : le repli est TRADUIT.
+    // Actor unknown to context (account deleted): fallback is TRANSLATED.
     const anonCtx = ctxWithIssue("");
     expect(buildPushPayload(anonCtx, issueRow("mention"), "en")!.body).toBe(
       en.Inbox.lineMention.replace("{actor}", en.Inbox.someone)
@@ -126,9 +124,9 @@ describe("buildPushPayload", () => {
   });
 
   it("nomme Numo d'une citation posée par l'agent dans une page", () => {
-    // MIN-278 : le geste est passé sous le compte qui l'a permis, mais c'est
-    // l'agent qui a écrit la phrase. Sans ce drapeau, la bannière annoncerait à
-    // Bob que Clément l'a mentionné — ce que Clément n'a pas fait.
+    // MIN-278: the gesture went under the account that allowed it, but it is
+    // the agent who wrote the sentence. Without this flag, the banner would announce to
+    // Bob that Clement mentioned it — which Clement did not do.
     const ctx = ctxWithIssue();
     ctx.pages.set("pg", "Décisions produit");
 
@@ -149,7 +147,7 @@ describe("buildPushPayload", () => {
       tag: `/projects/${PROJECT}/pages/pg#b2`,
     });
 
-    // Par le MCP, on connaît son NOM : c'est lui qui s'affiche, pas « Numo ».
+    // Through the MCP, we know his NAME: it is he who is displayed, not “Numo”.
     ctx.apiKeyActors.set("k1", { name: "Claude Code (mcp)", agent: "claude" });
     const mcp = buildPushPayload(
       ctx,
@@ -190,7 +188,7 @@ describe("buildPushPayload", () => {
       url: `/projects/${PROJECT}/feedback?post=fp`,
     });
 
-    // Une PR ouverte mène à la page Pull requests, qui n'est pas dans un projet.
+    // An open PR leads to the Pull requests page, which is not in a project.
     const pr = buildPushPayload(
       ctx,
       issueRow("pr_opened", { issue_id: null, pull_request_id: "pr" }),
@@ -202,7 +200,7 @@ describe("buildPushPayload", () => {
     });
   });
 
-  // Ne rien pousser vaut mieux qu'ouvrir un écran vide : la cible mise à la
+  // Pushing nothing is better than opening a blank screen: the target is focused
   // corbeille (MIN-133) sort de l'hydratation, donc du push.
   it("ne pousse rien quand la cible a disparu ou qu'il n'y a pas de projet", () => {
     expect(buildPushPayload(emptyPushContext(), issueRow("comment"), "fr")).toBeNull();
@@ -245,8 +243,8 @@ describe("toPushLocale", () => {
 });
 
 describe("loadPushContext", () => {
-  /** Client Supabase minimal : `from(table).select().in().is()` est un thenable
-   *  qui rend les lignes préparées pour cette table. */
+  /** Minimal Supabase client: `from(table).select().in().is()` is a thenable
+ * that renders prepared rows for this table. */
   function stubService(
     tables: Record<string, unknown[]>,
     seen: string[] = []
@@ -286,7 +284,7 @@ describe("loadPushContext", () => {
       },
       seen
     );
-    // Deux destinataires, un seul ticket : une lecture de `issues`, pas deux.
+    // Two recipients, one ticket: one reading of `issues`, not two.
     const ctx = await loadPushContext(service, [
       issueRow("mention", { actor_id: null }),
       issueRow("mention", { actor_id: null, user_id: "u2" } as Partial<NotificationRow>),
@@ -295,7 +293,7 @@ describe("loadPushContext", () => {
     expect(ctx.issues.get(ISSUE)).toEqual({ number: 42, title: "Réparer le sélecteur" });
     expect(ctx.projectKeys.get(PROJECT)).toBe("MIN");
 
-    // Et la charge utile se construit bien à partir de ce contexte-là.
+    // And the payload is built from this context.
     expect(buildPushPayload(ctx, issueRow("mention", { actor_id: null }), "en")).toMatchObject(
       { title: "MIN-42 · Réparer le sélecteur" }
     );

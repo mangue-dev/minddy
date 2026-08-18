@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * Les deux récepteurs de webhook de forge, exercés à la porte (MIN-333).
+ * The two forge webhook receivers, trained at the gate (MIN-333).
  *
- * Le fichier voisin (`webhook-tenant-isolation.test.ts`) tient la mécanique du
- * secret et du routage ; celui-ci tient ce que la ROUTE en fait — le code de
- * réponse, et surtout ce qui est traité ou ne l'est pas. C'est la moitié qui
- * compte pour un attaquant : un 401 qui aurait déjà écrit ne protège rien.
+ * The neighbor file (`webhook-tenant-isolation.test.ts`) holds the mechanics of the
+ * secret and routing; this one holds what the ROUTE does in it — the code of
+ * response, and especially what is processed or not. It's the half that
+ * counts for an attacker: a 401 that has already been written protects nothing.
  *
- * Trois promesses, les mêmes des deux côtés :
- *  · aucune matière à vérifier → **503**, rien traité (et la forge re-livrera) ;
- *  · jeton d'un autre locataire → **401**, rien traité ;
- *  · livraison déjà vue → acquittée sans être rejouée.
+ * Three promises, the same on both sides:
+ * · no material to verify → **503**, nothing processed (and the forge will re-deliver) ;
+ * · token from another tenant → **401**, nothing processed ;
+ * · delivery already seen → acknowledged without being replayed.
  */
 
 process.env.GIT_TOKEN_ENCRYPTION_SECRET = "test-secret-for-forge-envelopes-32ch";
@@ -19,7 +19,7 @@ process.env.GIT_TOKEN_ENCRYPTION_SECRET = "test-secret-for-forge-envelopes-32ch"
 interface Row extends Record<string, unknown> {}
 
 let linkRows: Row[] = [];
-/** Les identifiants de livraison déjà enregistrés — l'anti-rejeu en base. */
+/** Delivery identifiers already registered — basic anti-replay. */
 let deliveries: string[] = [];
 
 function linksTable() {
@@ -47,7 +47,7 @@ function linksTable() {
   return query;
 }
 
-/** La table d'anti-rejeu : c'est la clé primaire qui fait la garde (23505). */
+/** The anti-replay table: it is the primary key which guards (23505). */
 function deliveriesTable() {
   return {
     insert: async (row: { provider: string; delivery_id: string }) => {
@@ -68,7 +68,7 @@ vi.mock("@/lib/supabase-service", () => ({
   }),
 }));
 
-/** Le travail réel du récepteur, réduit à une sonde : a-t-il été fait ? */
+/** The real work of the receiver, reduced to a probe: has it been done? */
 const syncRemoteIssueEvent = vi.fn(async () => {});
 vi.mock("@/lib/server/git/issue-sync", () => ({
   syncRemoteIssueEvent: (...a: unknown[]) => syncRemoteIssueEvent(...(a as [])),
@@ -192,7 +192,7 @@ beforeEach(() => {
 });
 
 describe("POST /api/webhooks/gitlab", () => {
-  it("aucune matière à vérifier → 503, rien traité", async () => {
+  it("no material to verify → 503, nothing processed", async () => {
     delete process.env.GIT_TOKEN_ENCRYPTION_SECRET;
     const response = await gitlabPOST(gitlabRequest("n'importe quoi"));
     expect(response.status).toBe(503);
@@ -210,13 +210,13 @@ describe("POST /api/webhooks/gitlab", () => {
       externalRepoId: "2002",
     });
 
-    // Le mainteneur du dépôt 2002 lit son jeton chez lui et signe pour 1001.
+    // The maintainer of repository 2002 reads his token at home and signs for 1001.
     const response = await gitlabPOST(gitlabRequest(other));
     expect(response.status).toBe(401);
     expect(syncRemoteIssueEvent).not.toHaveBeenCalled();
   });
 
-  it("le jeton du dépôt → 200, et l'issue est synchronisée", async () => {
+  it("repository token → 200, and the issue is synchronized", async () => {
     const secret = await ensureRepoWebhookSecret({
       provider: "gitlab",
       externalRepoId: "1001",
@@ -234,12 +234,12 @@ describe("POST /api/webhooks/gitlab", () => {
     expect(syncRemoteIssueEvent).not.toHaveBeenCalled();
   });
 
-  it("un hook resté sur le secret global : traité, PUIS roté", async () => {
+  it("a hook still using the global secret: processed, THEN rotated", async () => {
     process.env.GITLAB_WEBHOOK_SECRET = "legacy-global-secret";
     const response = await gitlabPOST(gitlabRequest("legacy-global-secret"));
     expect(response.status).toBe(200);
-    // Le traitement passe : refuser couperait la synchro des dépôts liés avant
-    // cette version, le temps d'une rotation qu'ils n'ont pas encore eue.
+    // The processing passes: refusing would cut the synchronization of the deposits linked before
+    // this version, time for a rotation that they haven't had yet.
     expect(syncRemoteIssueEvent).toHaveBeenCalledTimes(1);
     expect(rotateGitlabWebhookSecret).toHaveBeenCalledWith({
       externalRepoId: "1001",
@@ -247,7 +247,7 @@ describe("POST /api/webhooks/gitlab", () => {
     });
   });
 
-  it("une livraison déjà vue n'est pas rejouée", async () => {
+  it("a delivery already seen is not replayed", async () => {
     const secret = await ensureRepoWebhookSecret({
       provider: "gitlab",
       externalRepoId: "1001",
@@ -260,7 +260,7 @@ describe("POST /api/webhooks/gitlab", () => {
     expect(syncRemoteIssueEvent).toHaveBeenCalledTimes(1);
   });
 
-  it("une charge sans dépôt identifiable → 400", async () => {
+  it("a payload without an identifiable repository → 400", async () => {
     const response = await gitlabPOST(
       gitlabRequest("peu importe", { body: { object_kind: "issue" } }),
     );
@@ -270,21 +270,21 @@ describe("POST /api/webhooks/gitlab", () => {
 });
 
 describe("POST /api/webhooks/github", () => {
-  it("secret absent → 503, rien traité", async () => {
+  it("missing secret → 503, nothing processed", async () => {
     delete process.env.GITHUB_WEBHOOK_SECRET;
     const response = await githubPOST(githubRequest());
     expect(response.status).toBe(503);
     expect(syncRemoteIssueEvent).not.toHaveBeenCalled();
   });
 
-  it("signature invalide → 401, rien traité", async () => {
+  it("invalid signature → 401, nothing processed", async () => {
     verifyGithubSignature.mockReturnValue(false);
     const response = await githubPOST(githubRequest());
     expect(response.status).toBe(401);
     expect(syncRemoteIssueEvent).not.toHaveBeenCalled();
   });
 
-  it("une livraison déjà vue n'est pas rejouée", async () => {
+  it("a delivery already seen is not replayed", async () => {
     const deliveryId = "livraison-gh-1";
     await githubPOST(githubRequest({ deliveryId }));
     const replay = await githubPOST(githubRequest({ deliveryId }));

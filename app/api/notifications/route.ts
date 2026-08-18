@@ -9,11 +9,11 @@ import { accessibleProjectIds } from "@/lib/server/project-access";
 import { displayName } from "@/lib/display-name";
 import type { MyNotification } from "@/lib/types";
 
-/** Longueur de l'extrait de commentaire montré sous la ligne d'inbox. */
+/** Length of the comment snippet shown below the inbox line. */
 const EXCERPT_MAX = 140;
 
-/** Borne des lots d'ids (MIN-118) — l'inbox n'affiche que 100 lignes, et les
-    gestes « tout » passent par `all` / `allRead`, pas par une liste d'ids. */
+/** Terminal batch ID (MIN-118) — the inbox only displays 100 lines, and the
+ gestures "all" go through `all` / `allRead`, not through a list of ids. */
 const MAX_IDS = 500;
 
 const excerptOf = (body: string): string => {
@@ -46,18 +46,18 @@ export async function GET(request: NextRequest) {
   const service = getServiceClient();
 
   /**
-   * L'accès est reposé ICI, avant toute hydratation (MIN-351).
+   * Access is rested HERE, before any hydration (MIN-351).
    *
-   * La RLS garantit que ces lignes sont les miennes — pas que j'aie encore le
-   * droit de lire ce qu'elles DÉSIGNENT. Une notification est un fait daté ;
-   * l'hydratation, elle, va chercher en clé service des titres et des extraits
-   * de commentaires **vivants**. Retiré du projet, l'ancien membre gardait donc
-   * dans son inbox une fenêtre en lecture continue sur des tickets et des
-   * discussions devenus étrangers — leurs titres d'aujourd'hui, pas ceux du
-   * jour où il a été notifié.
+   * The RLS guarantees that these lines are mine — not that I have the
+   * right to read what they DESIGNATE. A notification is a dated fact;
+   * hydration, it will look for titles and extracts in the service key
+   * of **live** comments. Removed from the project, the former member therefore kept
+   * in its inbox a continuous reading window on tickets and
+   * discussions become foreign — their headlines today, not those of the
+   * day it was notified.
    *
-   * Une ligne sans `project_id` reste : elle ne désigne rien qui appartienne à
-   * un projet, il n'y a donc pas d'accès à revérifier.
+   * A line without `project_id` remains: it does not designate anything belonging to
+   * a project, so there is no access to recheck.
    */
   const visible = await accessibleProjectIds(
     auth.user.id,
@@ -113,19 +113,19 @@ export async function GET(request: NextRequest) {
       ? service.from("feedback_posts").select("id, title").in("id", feedbackPostIds)
       .is("deleted_at", null)
       : Promise.resolve({ data: [] as { id: string; title: string }[] }),
-    // La ROUTINE d'une notification programmée (MIN-185) : son titre EST le
-    // titre de la ligne d'inbox — elle n'a ni ticket ni commentaire à montrer.
+    // The ROUTINE of a scheduled notification (MIN-185): its title IS the
+    // title of the inbox line — it has no tickets or comments to show.
     routineIds.length
       ? service.from("agent_routines").select("id, title").in("id", routineIds)
       : Promise.resolve({ data: [] as { id: string; title: string }[] }),
-    // La PULL REQUEST d'une notification d'ouverture : son numéro et son titre
-    // font la première ligne, comme la référence et le titre d'un ticket.
+    // The PULL REQUEST of an opening notification: its number and title
+    // make the first line, like the reference and title of a ticket.
     prIds.length
       ? service.from("pull_requests").select("id, number, title").in("id", prIds)
       : Promise.resolve({ data: [] as { id: string; number: number; title: string }[] }),
-    // La PAGE d'une notification du wiki (MIN-278) : son titre EST la ligne.
-    // Les corbeillées sont écartées comme les tickets — la notification survit
-    // à la corbeille (MIN-133), mais la ligne mènerait à un écran vide.
+    // The PAGE of a wiki notification (MIN-278): its title IS the line.
+    // Bins are discarded like tickets — notification survives
+    // to the trash (MIN-133), but the line would lead to a blank screen.
     pageIds.length
       ? service
           .from("pages")
@@ -137,8 +137,8 @@ export async function GET(request: NextRequest) {
       ? service.from("projects").select("id, key").in("id", projectIds)
       : Promise.resolve({ data: [] as { id: string; key: string }[] }),
     fetchAuthUsersById(service, actorIds),
-    // La marque de l'acteur, à côté de son nom : l'inbox montre le portrait de
-    // qui a déclenché la ligne (lib/server/avatar-seeds.ts).
+    // The actor's brand, next to his name: the inbox shows the portrait of
+    // which triggered the line (lib/server/avatar-seeds.ts).
     fetchAvatarSeeds(service, actorIds),
     commentIds.length
       ? service
@@ -166,38 +166,38 @@ export async function GET(request: NextRequest) {
   const projectMap = new Map((projects ?? []).map((p) => [p.id, p]));
   const commentMap = new Map((comments ?? []).map((c) => [c.id, c]));
 
-  // L'agent derrière une action MCP. Deux provenances pour la même chose : la
-  // notification elle-même la porte (affectation), ou le commentaire dont elle
-  // découle (mention / réponse) — la ligne du commentaire reste la source de
-  // vérité pour ce qui a été écrit, comme pour `via_assistant`.
+  // The agent behind an MCP action. Two sources for the same thing:
+  // notification itself the door (assignment), or the comment of which it
+  // follows (mention / response) — the comment line remains the source of
+  // truth for what was written, as for `via_assistant`.
   const keyActors = await resolveApiKeyActors([
     ...readable.map((n) => n.api_key_id as string | null),
     ...(comments ?? []).map((c) => c.api_key_id),
   ]);
 
   /**
-   * La cible est-elle encore là ? Depuis MIN-133, supprimer ne supprime plus :
-   * la notification survit à la mise en corbeille de son ticket, de son
-   * objectif ou de son retour, là où le `on delete cascade` l'emportait avant.
-   * Les hydratations ci-dessus écartant les corbeillés, la ligne s'afficherait
-   * sans titre et mènerait à un écran vide — on la retire de l'inbox, sans la
-   * détruire : restaurer l'élément la fait revenir, non lue si elle l'était.
+   * Is the target still there? Since MIN-133, delete no longer deletes:
+   * the notification survives the trashing of its ticket, its
+   * objective or its return, where the `on delete cascade` carried it before.
+   * The hydrations above excluding the baskets, the line would be displayed
+   * without title and would lead to a blank screen - we remove it from the inbox, without
+   * destroy: restoring the element brings it back, unread if it was.
    *
-   * `data === null` = la lecture a ÉCHOUÉ, et non « rien de vivant » : on ne
-   * filtre alors sur rien, plutôt que de vider l'inbox sur une erreur passagère.
+   * `data === null` = the reading FAILED, and not “nothing alive”: we
+   * then filters on nothing, rather than emptying the inbox on a temporary error.
    */
   const targetAlive = (n: (typeof readable)[number]): boolean =>
     (!n.issue_id || !issues || issueMap.has(n.issue_id)) &&
     (!n.objective_id || !objectives || objectiveMap.has(n.objective_id)) &&
     (!n.feedback_post_id || !feedbackPosts || feedbackMap.has(n.feedback_post_id)) &&
-    // Une routine supprimée emporte ses notifications par cascade : ce filtre
-    // ne rattrape donc qu'une lecture partielle, pas une suppression.
+    // A deleted routine carries its notifications by cascade: this filter
+    // therefore only catches a partial reading, not a deletion.
     (!n.routine_id || !routines || routineMap.has(n.routine_id)) &&
-    // Idem pour une pull request : la ligne part par cascade avec elle, ce
-    // filtre ne rattrape donc qu'une lecture partielle.
+    // Same for a pull request: the line cascades with it, this
+    // filter therefore only catches a partial reading.
     (!n.pull_request_id || !pullRequests || prMap.has(n.pull_request_id)) &&
-    // Une page à la corbeille : même règle que les tickets — la ligne sort de
-    // l'inbox sans être détruite, et revient si la page est restaurée.
+    // One page in the trash: same rule as tickets — the line goes out of
+    // the inbox without being destroyed, and returns if the page is restored.
     (!n.page_id || !pages || pageMap.has(n.page_id));
 
   const result: MyNotification[] = readable.filter(targetAlive).map((n) => {
@@ -213,9 +213,9 @@ export async function GET(request: NextRequest) {
     // A Numo comment is stored under the triggering user's author_id (the row
     // belongs to them, the words don't) — the inbox names Numo, like the
     // timeline does, otherwise the requester reads "you commented".
-    // La LIGNE peut le dire elle-même depuis MIN-278 : une citation posée par
-    // Numo dans une page n'a pas de commentaire derrière elle où lire le
-    // drapeau, et sans lui elle nommerait le compte qui a permis le geste.
+    // The LINE can say it itself since MIN-278: a quote posed by
+    // Numo in a page has no comment behind it where to read the
+    // flag, and without it it would name the account that allowed the gesture.
     const fromNumo = !!n.via_assistant || !!comment?.via_assistant;
     const viaMcp = !fromNumo && (!!n.via_mcp || !!comment?.via_mcp);
     const keyActor = viaMcp
@@ -252,8 +252,8 @@ export async function GET(request: NextRequest) {
         : actor
           ? displayName(toNamed(actor))
           : null,
-      // Le portrait suit le nom : pas de graine pour un acteur non humain
-      // (Numo, agent MCP, Smart Assign), qui a sa propre marque côté client.
+      // The portrait follows the name: no seed for a non-human actor
+      // (Numo, MCP agent, Smart Assign), which has its own brand on the client side.
       actor_avatar_seed:
         !fromNumo && !viaMcp && n.actor_id
           ? (actorSeeds.get(n.actor_id as string) ?? null)

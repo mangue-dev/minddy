@@ -7,27 +7,27 @@ import { getBillingWindow, getUserUsage } from "@/lib/server/usage";
 import type { AdminQuotaResetsResponse } from "@/lib/types";
 
 /**
- * Administration du BUDGET D'USAGE d'un compte (`/admin` → fiche d'un compte).
- * Gate identique aux autres endpoints admin : JWT via getClaims + isAdminUser.
+ * Account USAGE BUDGET administration (`/admin` → account detail) .
+ * Same gate as other admin endpoints: JWT via getClaims + isAdminUser.
  *
- * Depuis MIN-72 il n'y a PLUS de plafond global : la limite de chaque
- * utilisateur est le budget mensuel de SON plan (lib/billing-plans.ts), toutes
+ * Since MIN-72 there is NO LONGER a global ceiling: the limit of each
+ * user is the monthly budget of HIS plan (lib/billing-plans.ts), all
  * features confondues.
  *
- *  GET    ?userId=<uuid>  → les remises à zéro de SA période de facturation en
- *                           cours, de la plus récente à la plus ancienne.
- *  POST   { userId }      → en pose une de plus : le décompte repart de
+ * GET ?userId=<uuid> → resets of SA billing period in
+ * courses, from the most recent to the oldest.
+ * POST { userId } → asks one more: the countdown starts again from
  *                           maintenant.
- *  DELETE ?id=<uuid>      → en retire une ; la précédente reprend la main.
+ * DELETE ?id=<uuid> → removes one; the previous one takes control.
  *
- * Elles s'EMPILENT : la table est un registre (une ligne par geste), et c'est la
- * plus récente qui fixe le début de la fenêtre comptée. Offrir une deuxième
- * rallonge dans le mois ne fait donc plus disparaître la trace de la première —
- * et le compte de la période dit ce qu'on a déjà donné.
+ * They STACK: the table is a register (one line per gesture), and it is the
+ * most recent which sets the start of the counted window. Offer a second
+ * extension in the month therefore no longer makes the trace of the first disappear —
+ * and the account of the period says what has already been given.
  *
- * Une remise à zéro NE SUPPRIME AUCUNE donnée de coût : `ai_usage` est un ledger
- * append-only, source des analyses. On déplace seulement le début de la fenêtre
- * comptée (cf. migrations 20260811090000 et 20261105090000).
+ * A reset DOES NOT DELETE ANY cost data: `ai_usage` is a ledger
+ * append-only, analysis source. We only move the start of the window
+ * counted (see migrations 20260811090000 and 20261105090000).
  */
 
 async function requireAdmin(
@@ -44,12 +44,12 @@ async function requireAdmin(
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * L'état complet du budget d'un compte APRÈS écriture, recalculé côté serveur.
+ * The complete state of an account's budget AFTER writing, recalculated on the server side.
  *
- * Les trois verbes le renvoient, et c'est volontaire : retirer une remise à zéro
- * ROUVRE la fenêtre sur des dépenses qui n'étaient plus comptées — le client n'a
- * aucun moyen de deviner le nouveau montant, et le supposer ferait clignoter un
- * chiffre faux jusqu'au prochain chargement.
+ * The three verbs return it, and it is intentional: remove a reset
+ * REOPEN the window on expenses that were no longer counted — the customer did not
+ * no way to guess the new amount, and guessing it would flash a
+ * a false number until the next load.
  */
 async function quotaStateOf(userId: string): Promise<AdminQuotaResetsResponse> {
   const usage = await getUserUsage(userId);
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/** POST { userId } — une remise à zéro de plus : le quota repart de maintenant. */
+/** POST { userId } — one more reset: the quota starts again from now. */
 export async function POST(request: NextRequest) {
   const admin = await requireAdmin(request);
   if (!admin.ok) return admin.response;
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
   let body: { userId?: unknown };
   try {
     const parsed: unknown = await request.json();
-    // Corps non-objet (null, chaîne…) : refusé ici plutôt que de crasher plus bas.
+    // Non-object body (null, string…): refused here rather than crashing further down.
     if (!parsed || typeof parsed !== "object") throw new Error("not an object");
     body = parsed as { userId?: unknown };
   } catch {
@@ -116,9 +116,9 @@ export async function POST(request: NextRequest) {
 
   const service = getServiceClient();
   const resetAt = new Date().toISOString();
-  // INSERT, plus upsert : chaque geste laisse sa propre ligne. L'ancien
-  // `onConflict: user_id` écrasait la précédente — c'est exactement ce qui
-  // empêchait d'en poser plusieurs.
+  // INSERT, then upsert: each action gets its own row. The old
+  // `onConflict: user_id` overwrote the previous one — that's exactly what
+  // prevented several from being asked.
   const { error } = await service.from("agent_quota_resets").insert({
     user_id: userId,
     reset_at: resetAt,
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/** DELETE ?id= — retire UNE remise à zéro ; la précédente reprend la main. */
+/** DELETE ?id= — removes A reset; the previous one takes control. */
 export async function DELETE(request: NextRequest) {
   const admin = await requireAdmin(request);
   if (!admin.ok) return admin.response;
@@ -149,8 +149,8 @@ export async function DELETE(request: NextRequest) {
   }
 
   const service = getServiceClient();
-  // `select` au retour : c'est la seule façon de savoir de QUEL compte était ce
-  // geste, donc quel état recalculer.
+  // `select` on return: this is the only way to know WHICH account it was from
+  // gesture, so which state to recalculate.
   const { data, error } = await service
     .from("agent_quota_resets")
     .delete()

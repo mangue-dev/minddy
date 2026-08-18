@@ -4,7 +4,7 @@ import { getResolvedBilling } from "@/lib/server/billing-accounts";
 import type { BillingStatusResponse } from "@/lib/billing-types";
 import { managedServices } from "@/lib/managed-services";
 
-/** GET /api/billing — plan effectif + état d'abonnement du caller (MIN-72). */
+/** GET /api/billing — effective plan + caller subscription status (MIN-72). */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;

@@ -18,10 +18,10 @@ export type UnlockState = { error: ShareUnlockError } | null;
  * httpOnly cookie scoped to this share's path. On success, redirects back to
  * the share page so the server re-renders it unlocked.
  *
- * Tout ce qui touche au secret vit dans `lib/server/share-unlock.ts`, partagé
- * avec la page publiée (MIN-283) : ici il ne reste que le chemin de retour,
- * qui est propre à cette route — et conscient du domaine personnalisé (MIN-36),
- * où le path visible est la racine.
+ * Everything secret lives in `lib/server/share-unlock.ts`, shared
+ * with the published page (MIN-283): here only the return path remains,
+ * which is specific to this route — and aware of the custom domain (MIN-36),
+ * where the visible path is the root.
  */
 export async function unlockShare(
   token: string,

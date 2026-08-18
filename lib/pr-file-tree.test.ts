@@ -17,7 +17,7 @@ function file(filename: string, extra: Partial<PullRequestFile> = {}): PullReque
   };
 }
 
-/** Le nœud de ce chemin, cherché en profondeur — évite d'indexer à la main. */
+/** The node of this path, searched in depth — avoids indexing by hand. */
 function at(nodes: FileTreeNode[], path: string): FileTreeNode | undefined {
   for (const node of nodes) {
     if (node.path === path) return node;
@@ -34,13 +34,13 @@ function dirs(nodes: FileTreeNode[]): FileTreeDir[] {
 }
 
 describe("buildFileTree", () => {
-  it("pose un chemin à un seul segment en feuille de la racine", () => {
+  it("places a single-segment path as a root leaf", () => {
     const tree = buildFileTree([file("README.md")]);
     expect(tree).toHaveLength(1);
     expect(tree[0]).toMatchObject({ kind: "file", label: "README.md", path: "README.md" });
   });
 
-  it("replie une chaîne de dossiers à enfant unique sur une seule ligne", () => {
+  it("collapses a chain of single-child folders onto one line", () => {
     const tree = buildFileTree([file("app/(app)/lab/diff/page.tsx")]);
     expect(tree).toHaveLength(1);
     const root = tree[0];
@@ -56,7 +56,7 @@ describe("buildFileTree", () => {
     });
   });
 
-  it("arrête le repli au premier dossier qui a deux enfants", () => {
+  it("stops collapsing at the first folder with two children", () => {
     const tree = buildFileTree([
       file("app/lab/diff/page.tsx"),
       file("app/lab/tree/page.tsx"),
@@ -73,7 +73,7 @@ describe("buildFileTree", () => {
     expect(dirs(tree)[0].children.map((c) => c.label)).toEqual(["only.ts"]);
   });
 
-  it("dit le renommage sur la ligne quand le NOM change", () => {
+  it("shows the rename on the line when the NAME changes", () => {
     const tree = buildFileTree([
       file("lib/pr-file-tree.ts", { status: "renamed", previous_filename: "lib/tree.ts" }),
     ]);
@@ -86,7 +86,7 @@ describe("buildFileTree", () => {
   });
 
   it("laisse le nom seul quand le fichier n'a fait que déménager", () => {
-    // L'arbre place déjà le fichier sous son nouveau dossier : répéter le
+    // The tree already places the file under its new folder: repeat
     // chemin d'origine n'apprendrait rien de plus.
     const tree = buildFileTree([
       file("utils/dates.ts", { status: "renamed", previous_filename: "lib/dates.ts" }),
@@ -109,14 +109,14 @@ describe("buildFileTree", () => {
     });
   });
 
-  it("garde distincts deux fichiers de même nom dans des dossiers différents", () => {
+  it("keeps two same-named files in different folders distinct", () => {
     const tree = buildFileTree([file("lib/index.ts"), file("app/index.ts")]);
     expect(tree.map((n) => n.path)).toEqual(["app", "lib"]);
     expect(at(tree, "app/index.ts")).toBeDefined();
     expect(at(tree, "lib/index.ts")).toBeDefined();
   });
 
-  it("cumule les compteurs sur les dossiers, repli compris", () => {
+  it("aggregates counts on folders, including collapsed ones", () => {
     const tree = buildFileTree([
       file("src/deep/a.ts", { additions: 3, deletions: 1 }),
       file("src/deep/b.ts", { additions: 4, deletions: 2 }),
@@ -127,7 +127,7 @@ describe("buildFileTree", () => {
     expect(at(tree, "src/deep")).toMatchObject({ additions: 7, deletions: 3 });
   });
 
-  it("cumule aussi sur un dossier replié — le total est celui de la chaîne entière", () => {
+  it("also aggregates on a collapsed folder — the total is for the entire chain", () => {
     const tree = buildFileTree([
       file("a/b/c/one.ts", { additions: 5, deletions: 2 }),
       file("a/b/c/two.ts", { additions: 1, deletions: 1 }),
@@ -140,7 +140,7 @@ describe("buildFileTree", () => {
     });
   });
 
-  it("trie les dossiers avant les fichiers, chaque groupe par son nom", () => {
+  it("sorts folders before files, each group by name", () => {
     const tree = buildFileTree([
       file("zebra.md"),
       file("alpha.md"),
@@ -150,19 +150,19 @@ describe("buildFileTree", () => {
     expect(tree.map((n) => n.label)).toEqual(["api", "ui", "alpha.md", "zebra.md"]);
   });
 
-  it("ignore un chemin vide plutôt que d'inventer un dossier sans nom", () => {
+  it("ignores an empty path instead of inventing an unnamed folder", () => {
     expect(buildFileTree([file("")])).toEqual([]);
     const tree = buildFileTree([file("/lib//dup.ts")]);
     expect(tree[0]).toMatchObject({ kind: "dir", label: "lib", path: "lib" });
   });
 
-  it("rend un arbre vide sur une PR sans fichier", () => {
+  it("returns an empty tree for a PR without files", () => {
     expect(buildFileTree([])).toEqual([]);
   });
 });
 
 describe("fileStatusOf", () => {
-  it("normalise les statuts que la forge invente au-delà des quatre qu'on peint", () => {
+  it("normalizes statuses the forge invents beyond the four we render", () => {
     expect(fileStatusOf(file("a.ts", { status: "changed" }))).toBe("modified");
     expect(fileStatusOf(file("a.ts", { status: "copied" }))).toBe("modified");
     expect(fileStatusOf(file("a.ts", { status: "added" }))).toBe("added");
@@ -170,7 +170,7 @@ describe("fileStatusOf", () => {
   });
 
   it("lit `previous_filename` comme second témoin du renommage", () => {
-    // GitLab sert `changed` avec un ancien nom : c'est un renommage.
+    // GitLab serves `changed` with an old name: it's a rename.
     expect(fileStatusOf(file("b.ts", { status: "changed", previous_filename: "a.ts" }))).toBe(
       "renamed",
     );

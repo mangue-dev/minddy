@@ -20,49 +20,49 @@ import {
 } from "@/components/marketing/faq-keys";
 
 /**
- * Version Markdown des pages publiques (MIN-88), servie sur négociation de
- * contenu : `Accept: text/markdown` sur `/` ou `/fr/tarifs` arrive ici, réécrit
- * par le proxy. Chaque page HTML l'annonce aussi par un en-tête
+ * Markdown version of public pages (MIN-88), served upon negotiation of
+ * content: `Accept: text/markdown` on `/` or `/fr/tarifs` comes here, rewritten
+ * by the proxy. Each HTML page also announces it with a header
  * `Link: <…>; rel="alternate"; type="text/markdown"`.
  *
- * **Pourquoi.** Un agent qui veut lire une page paie aujourd'hui 440 Ko de HTML
- * pour en extraire 4 Ko de texte, et doit deviner la structure au passage. Le
- * Markdown lui donne le même contenu, hiérarchisé, sans un octet de balisage
- * inutile. C'est l'un des points que note l'auditeur agentique de Cloudflare, et
- * le seul de sa liste qui coûte quelque chose à produire.
+ * **Why.** An agent who wants to read a page today pays for 440 KB of HTML
+ * to extract 4 KB of text, and must guess the structure along the way. THE
+ * Markdown gives it the same content, hierarchical, without a byte of markup
+ * useless. This is one of the points that Cloudflare's agentic auditor notes, and
+ * the only one on his list that costs anything to produce.
  *
- * **Ce que ça n'est pas.** Pas un miroir octet pour octet du HTML. Le contenu
- * est reconstruit depuis LES MÊMES CLÉS i18n que les composants — donc il ne
- * peut pas raconter autre chose que la page — mais l'ordre et le regroupement
- * sont réécrits pour un lecteur qui lit du texte, pas une mise en page. Les
- * quatre pages légales renvoient leur titre, leur description et un lien : leur
- * corps est de la prose structurée en JSX, le réécrire ici en ferait une
- * deuxième source de vérité juridique, ce qu'on ne veut à aucun prix.
+ * **Which it is not.** Not a byte-for-byte mirror of HTML. The content
+ * is rebuilt from THE SAME i18n KEYS as the components — so it does not
+ * cannot tell anything other than the page - but the order and grouping
+ * are rewritten for a reader who reads text, not layout. THE
+ * four legal pages return their title, their description and a link: their
+ * body is structured prose in JSX, rewriting it here would make it
+ * second source of legal truth, which we do not want at any price.
  */
 
 const KEYS = new Set<string>(PUBLIC_ROUTES.map((route) => route.key));
 
-/** Les comparatifs, retrouvés par la clé de route que le proxy nous passe. */
+/** The comparisons, found by the route key that the proxy gives us. */
 const COMPARISON_BY_ROUTE = new Map<string, Comparison>(
   COMPARISONS.map((comparison) => [comparison.routeKey, comparison]),
 );
 
 /**
- * Quelle page rendre, et dans quelle langue — lu dans les EN-TÊTES posés par le
- * proxy, avec la query en secours.
+ * Which page to render, and in what language — read in the HEADERS set by the
+ * proxy, with the query as a backup.
  *
- * Le proxy passait l'information en query (`/md?route=pricing&locale=fr`).
- * Elle n'arrivait pas : sur une réécriture de middleware, Next 16 donne au
- * route handler l'URL D'ORIGINE (`request.nextUrl` et `request.url` valent
- * `/pricing`), pas la cible. `route` était donc toujours absent, `/md` retombait
- * sur son défaut, et TOUTES les pages du site servaient le Markdown de la
- * landing — mesuré en construisant la version Markdown des pages de MIN-93.
+ * The proxy passed the information into query (`/md?route=pricing&locale=fr`).
+ * It didn't happen: on a middleware rewrite, Next 16 gives the
+ * route handler the ORIGINAL URL (`request.nextUrl` and `request.url` are equal
+ * `/pricing`), not the target. `route` was therefore still absent, `/md` fell
+ * on its default, and ALL pages of the site served the Markdown of the
+ * landing — measured by building the Markdown version of MIN-93 pages.
  *
- * Les en-têtes de requête, eux, traversent la réécriture : c'est déjà par là
+ * The request headers go through the rewriting: it's already there
  * que `x-minddy-locale` atteint `i18n/request.ts`.
  *
- * La query reste lue en second pour que `/md?route=…&locale=…` continue de
- * fonctionner en appel direct — c'est ce qu'on tape pour vérifier une page.
+ * The query remains read second so that `/md?route=…&locale=…` continues to
+ * operate in direct call — this is what you type to check a page.
  */
 function requested(request: NextRequest): { rawKey: string; rawLocale: string } {
   const params = request.nextUrl.searchParams;
@@ -177,8 +177,8 @@ async function renderPricing(locale: Locale, canonical: string): Promise<string>
     header(t("metaTitle"), t("metaDescription"), canonical),
     `## ${t("heroTitle")}`,
     t("heroSubtitle"),
-    // Les prix viennent de BILLING_PLANS, jamais d'une copie — même règle que
-    // les données structurées.
+    // Prices come from BILLING_PLANS, never from a copy — same rule as
+    // structured data.
     BILLING_PLANS.map(
       (plan) => `- **${tb(planNameKey[plan.id])}**: ${plan.priceEurMonthly} EUR / month`,
     ).join("\n"),
@@ -191,16 +191,16 @@ async function renderPricing(locale: Locale, canonical: string): Promise<string>
 }
 
 /**
- * `/mcp` en Markdown (MIN-93) — la seule page du site dont la version texte a
- * une chance d'être VRAIMENT lue par une machine, puisque son sujet est de
- * brancher une machine.
+ * `/mcp` in Markdown (MIN-93) — the only page on the site whose text version has
+ * a chance to REALLY be read by a machine, since its subject is
+ * plug in a machine.
  *
- * Contrairement à `/llms.txt`, qui s'adresse à l'assistant en train d'écrire
- * l'intégration, celle-ci rend la page telle qu'elle est lue : les blocs de
- * configuration par agent, l'autorisation, les outils groupés, et surtout les
- * trois phrases qu'on tape à son agent. Mêmes sources exactement — le registre
- * `MCP_AGENTS` et le catalogue d'outils — donc aucune des deux ne peut décrire
- * un serveur que minddy n'expose plus.
+ * Unlike `/llms.txt`, which addresses the wizard currently writing
+ * integration, this renders the page as it is read: the blocks of
+ * configuration by agent, authorization, grouped tools, and especially the
+ * three sentences that you type to your agent. Exactly same sources — the register
+ * `MCP_AGENTS` and the tool catalog — so neither can describe
+ * a server that minddy no longer exposes.
  */
 async function renderMcp(locale: Locale, canonical: string): Promise<string> {
   const [t, tl] = await Promise.all([
@@ -220,8 +220,8 @@ async function renderMcp(locale: Locale, canonical: string): Promise<string> {
 
     `## ${t("connectTitle")}`,
     t("connectSubtitle"),
-    // Le prompt d'abord : un lecteur qui EST une machine n'a pas besoin des
-    // sept blocs de configuration, il a besoin de la consigne.
+    // The prompt first: a reader which IS a machine does not need the
+    // seven configuration blocks, it needs the instruction.
     `### ${t("assistantTitle")}`,
     t("assistantBody"),
     `> ${t("assistantPrompt", { endpoint: MCP_ENDPOINT, guide: `${SITE_URL}/llms.txt` })}`,
@@ -229,9 +229,9 @@ async function renderMcp(locale: Locale, canonical: string): Promise<string> {
       [
         `### ${agent.label}`,
         t(`kind_${agent.kind}`),
-        // Un bloc clôturé plutôt qu'un `code` en ligne : la configuration de
-        // Windsurf tient sur cinq lignes, et un agent qui relit ce fichier doit
-        // pouvoir la recopier telle quelle.
+        // A closed block rather than an online `code`: the configuration of
+        // Windsurf is five lines, and an agent who rereads this file must
+        // be able to copy it as it is.
         `\`\`\`\n${agent.build(MCP_ENDPOINT)}\n\`\`\``,
       ].join("\n\n"),
     ).join("\n\n"),
@@ -244,9 +244,9 @@ async function renderMcp(locale: Locale, canonical: string): Promise<string> {
 
     `## ${t("toolsTitle")}`,
     t("toolsSubtitle"),
-    // Les mêmes phrases que la page et que la landing. La référence complète des
-    // outils vit dans `/llms-full.txt`, qui s'adresse aux machines — la
-    // dupliquer ici ne servirait personne.
+    // The same sentences as the page and the landing. The complete reference of
+    // tools lives in `/llms-full.txt`, which is for machines — the
+    // duplicating it here would help nobody.
     ([
       "read",
       "plan",
@@ -279,17 +279,17 @@ async function renderMcp(locale: Locale, canonical: string): Promise<string> {
 }
 
 /**
- * Le changelog en Markdown (MIN-93) — la version texte la plus simple du site,
- * et probablement la plus utile : « qu'est-ce qui a changé dans minddy » est
- * une question qu'on pose à un modèle, et il n'a besoin que de dates et de
+ * The changelog in Markdown (MIN-93) — the simplest text version of the site,
+ * and probably the most useful: "what changed in minddy" is
+ * a question you ask a model, and all he needs are dates and
  * phrases.
  */
 async function renderChangelog(locale: Locale, canonical: string): Promise<string> {
   const t = await getTranslations({ locale, namespace: "Changelog" });
 
   return [
-    // Pas de sous-titre : la page n'en a plus, et l'en-tête porte déjà la
-    // description. Une phrase de plus avant la liste ne dirait rien de neuf.
+    // No subtitle: the page no longer has one, and the header already bears the
+    // description. One more sentence before the list wouldn't say anything new.
     header(t("metaTitle"), t("metaDescription"), canonical),
     ...CHANGELOG_ENTRIES.map((entry) =>
       [
@@ -303,13 +303,13 @@ async function renderChangelog(locale: Locale, canonical: string): Promise<strin
 }
 
 /**
- * Un comparatif en Markdown (MIN-93). Le tableau HTML devient un vrai tableau
- * Markdown : c'est la forme qu'un modèle recopie sans se tromper de colonne, et
- * la seule raison pour laquelle une version texte de cette page a un intérêt.
+ * A comparison in Markdown (MIN-93). HTML table becomes a real table
+ * Markdown: this is the form that a model copies without making a mistake in the column, and
+ * the only reason a text version of this page is of interest.
  *
- * L'ordre de la page est conservé — ce que l'autre outil fait mieux vient
- * AVANT ce que minddy fait autrement. Une version texte qui inverserait les
- * deux ne dirait pas la même chose que la page qu'elle prétend refléter.
+ * The order of the page is preserved — what the other tool does better comes
+ * BEFORE what minddy does otherwise. A text version that would reverse the
+ * two would not say the same thing as the page it claims to reflect.
  */
 async function renderComparison(
   comparison: Comparison,

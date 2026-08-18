@@ -2,23 +2,23 @@ import type { Locale } from "@/i18n/config";
 import { formatChangelogAge, formatChangelogDate } from "@/lib/changelog";
 
 /**
- * La liste des livraisons, telle qu'elle s'affiche — partagée par la page
- * publique `/changelog` et par le modal « Nouveautés » de l'app.
+ * The list of deliveries, as it appears — shared by the page
+ * public `/changelog` and by the “New features” modal of the app.
  *
- * Le composant ne traduit RIEN : il reçoit des titres et des corps déjà
- * résolus. C'est ce qui lui permet d'être rendu des deux côtés de la frontière
- * serveur/client sans rien coûter. Le root layout n'envoie au navigateur que
- * les quatre namespaces du site public (MIN-100) ; un composant client qui
- * appellerait `useTranslations("Changelog")` afficherait des chemins de clés
- * sur `/changelog`, ou obligerait à embarquer le namespace — qui grandit à
- * chaque livraison — dans le bundle de la landing. Les deux appelants savent
- * déjà traduire, chacun avec sa moitié de next-intl.
+ * The component translates NOTHING: it receives titles and bodies already
+ * resolved. This is what allows it to be made on both sides of the border
+ * server/client without costing anything. The root layout only sends to the browser
+ * the four namespaces of the public site (MIN-100); a client component that
+ * would call `useTranslations("Changelog")` would display key paths
+ * on `/changelog`, or would require embedding the namespace — which grows to
+ * each delivery — in the landing bundle. Both callers know
+ * already translate, each with its half of next-intl.
  */
 
 export interface ChangelogEntryContent {
-  /** Slug stable : ancre de l'URL et `guid` du flux RSS. */
+  /** Stable slug: URL anchor and `guid` of the RSS feed. */
   id: string;
-  /** Date de déploiement, ISO court. */
+  /** Deployment date, short ISO. */
   date: string;
   title: string;
   body: string;
@@ -34,8 +34,8 @@ export function ChangelogEntries({
   return (
     <ol className="flex flex-col">
       {entries.map((entry) => (
-        // L'ancre permet de pointer une livraison précise — c'est ce qu'on
-        // colle dans une réponse à un utilisateur qui attendait quelque chose.
+        // The anchor allows you to clock a precise delivery — that's what we
+        // sticks in a response to a user who was expecting something.
         <li
           key={entry.id}
           id={entry.id}

@@ -1,17 +1,17 @@
-// Un export minddy relu par minddy — la table d'alias de NOTRE propre format.
+// A minddy export reread by minddy — the alias table of OUR own format.
 //
-// Elle n'a pas d'autre source de vérité que `lib/export/issues-csv.ts` : les
-// en-têtes ci-dessous sont ceux que l'export écrit, et le test d'aller-retour
-// (`lib/import/import.test.ts`) le vérifie colonne par colonne. Un fichier
-// exporté d'un projet rentre donc entier dans un autre — c'est ce qui fait de
-// l'export un vrai déménagement et pas seulement une sortie de données.
+// It has no other source of truth than `lib/export/issues-csv.ts`: the
+// headers below are the ones that the export writes, and the round trip test
+// (`lib/import/import.test.ts`) checks it column by column. A file
+// exported from one project therefore fits completely into another — that's what makes it
+// export a real move and not just a data output.
 //
-// Deux colonnes sont écrites et JAMAIS relues, d'où leur `ignore` explicite :
-// « Project » et « Objective » nomment un contexte du projet de DÉPART, qui
-// n'existe pas forcément à l'arrivée. Les marquer ici plutôt que de les laisser
-// tomber par défaut change une chose : `mappingHasGaps` sait qu'elles sont un
-// choix et pas un oubli, donc la passe du modèle n'a pas à être payée pour
-// « placer » deux colonnes qu'on a décidé de ne pas importer.
+// Two columns are written and NEVER reread, hence their explicit `ignore`:
+// “Project” and “Objective” name a context of the START project, which
+// does not necessarily exist on arrival. Mark them here rather than leaving them
+// falling to default changes one thing: `mappingHasGaps` knows that they are a
+// choice and not an oversight, so the model pass does not have to be paid for
+// “place” two columns that we decided not to import.
 
 import type { ColumnAliases } from "@/lib/import/types";
 

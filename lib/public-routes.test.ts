@@ -33,8 +33,8 @@ describe("public routes table", () => {
   it("maps French paths back to their English original", () => {
     for (const route of PUBLIC_ROUTES) {
       expect(englishPathForFrench(route.fr)).toBe(route.en);
-      // Une URL anglaise n'est pas une URL française : sans ça, `/pricing`
-      // serait réécrite sur elle-même en se déclarant française.
+      // An English URL is not a French URL: without it, `/pricing`
+      // would be rewritten about itself by declaring itself French.
       expect(englishPathForFrench(route.en)).toBeNull();
     }
   });
@@ -50,16 +50,16 @@ describe("public routes table", () => {
 
 describe("protected prefixes", () => {
   /**
-   * Le proxy protège une LISTE NOIRE : tout ce qui n'y est pas tombe dans le
-   * rendu Next (et donc en 404 s'il n'y a pas de route). C'est ce qui rend les
-   * vrais 404 possibles — mais ça veut dire qu'une route d'app ajoutée demain
-   * serait publique par défaut. Ce test est le garde-fou.
-   */
+ * The proxy protects a BLACKLIST: everything that is not there falls into the
+ * rendered Next (and therefore in 404 if there is no route). This is what makes
+ * true 404s possible — but it means that an app route added tomorrow
+ * would be public by default. This test is the safeguard.
+ */
   it("covers every route folder of app/(app)", () => {
     const appDir = path.join(REPO_ROOT, "app", "(app)");
     const segments = readdirSync(appDir, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
-      // Les groupes `(…)` et les segments privés `_…` ne produisent pas d'URL.
+      // `(…)` groups and `_…` private segments do not produce URLs.
       .filter((entry) => !entry.name.startsWith("(") && !entry.name.startsWith("_"))
       .map((entry) => `/${entry.name}`);
 
@@ -82,13 +82,12 @@ describe("protected prefixes", () => {
 
 describe("French slug redirects in next.config.mjs", () => {
   /**
-   * Un `.mjs` ne peut pas importer la table TypeScript : la liste de
-   * redirections y est recopiée. Ce test est ce qui empêche les deux de
-   * diverger — ajouter une page publique sans sa redirection le fait échouer.
-   */
+ * A `.mjs` cannot import the TypeScript table: the list of
+ * redirects is copied there. This test is what prevents the two from diverging — adding a public page without its redirect causes it to fail.
+ */
   it("redirects every English slug used under /fr to its translated slug", () => {
     const expected = PUBLIC_ROUTES
-      // La landing n'a pas de slug : `/fr` EST son URL française.
+      // The landing has no slug: `/fr` IS its French URL.
       .filter((route) => route.en !== "/" && route.fr !== `/fr${route.en}`)
       .map((route) => ({ source: `/fr${route.en}`, destination: route.fr }));
 
@@ -97,7 +96,7 @@ describe("French slug redirects in next.config.mjs", () => {
     );
   });
 
-  /** Même raison : la liste sert à poser l'en-tête de cache CDN. */
+  /** Same reason: the list is used to set the CDN cache header. */
   it("lists exactly the public URLs for the CDN cache header", () => {
     expect([...CONFIG_PUBLIC_ROUTE_PATHS].sort()).toEqual(
       [...PUBLIC_ROUTE_PATHS].sort(),
@@ -107,12 +106,12 @@ describe("French slug redirects in next.config.mjs", () => {
 
 describe("CDN cache header vs custom domains", () => {
   /**
-   * Le `/` d'un domaine personnalisé sert un board de feedback, personnalisé
-   * par cookie. Il tombait sous l'en-tête de cache CDN posé sur `/` pour la
-   * landing, sans `Vary` : le CDN pouvait servir à un visiteur la page d'un
-   * autre (MIN-337). La condition `has: host` est ce qui l'en sort — et elle
-   * n'apparaît nulle part dans les types.
-   */
+ * The `/` of a custom domain serves a feedback board, personalized
+ * per cookie. It fell under the CDN cache header placed on `/` for the
+ * landing, without `Vary`: the CDN could serve to a visitor the page of another
+ * (MIN-337). The `has: host` condition is what breaks it — and it
+ * doesn't appear anywhere in the types.
+ */
   const cacheEntries = async () =>
     (await nextConfig.headers!()).filter((entry) =>
       entry.headers.some((header) => header.key === "Vercel-CDN-Cache-Control"),
@@ -129,15 +128,15 @@ describe("CDN cache header vs custom domains", () => {
   });
 
   it("matches only hosts that serve minddy itself", () => {
-    // Next compare la valeur ancrée, sur le host sans port et en minuscules.
+    // Next compares the anchored value, on the host without port and in lowercase.
     const matches = (host: string) => new RegExp(`^${PRIMARY_HOST_PATTERN}$`).test(host);
 
     for (const host of ["minddy.app", "www.minddy.app", "preview.minddy.app", "localhost"]) {
       expect(matches(host)).toBe(true);
       expect(isPrimaryHost(host)).toBe(true);
     }
-    // Un domaine client, et le sous-domaine de dogfooding qui EST un domaine
-    // client (allowlisté par l'ops) : jamais de cache partagé.
+    // A client domain, and the dogfooding subdomain which IS a domain
+    // client (allowed by ops): never shared cache.
     process.env.MDY_CUSTOM_DOMAIN_ALLOWLIST = "feedback.minddy.app";
     try {
       for (const host of ["feedback.acme.com", "acme.com", "feedback.minddy.app"]) {

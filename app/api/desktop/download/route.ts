@@ -10,41 +10,41 @@ import { posthogCookieName, readPosthogDistinctId } from "@/lib/posthog-cookie";
 import { captureServerEvent } from "@/lib/server/posthog";
 
 /**
- * `/api/desktop/download` — la porte du `.dmg` (MIN-292).
+ * `/api/desktop/download` — the door to `.dmg` (MIN-292).
  *
- * Elle existe pour une seule raison : **aucun numéro de version ne doit être
- * écrit dans la page**. Le nom du binaire porte sa version
+ * It exists for one reason only: **no version number should be
+ * written on the page**. The name of the binary bears its version
  * (`minddy-1.2.0-arm64.dmg`), donc un lien direct depuis `/download` obligerait
- * à retoucher `messages/en.json` et `messages/fr.json` à chaque publication — et
- * la page mentirait le jour où on oublie. Ici, elle pointe sur une URL stable,
- * et c'est le manifeste qui dit où elle mène.
+ * to retouch `messages/en.json` and `messages/fr.json` with each publication — and
+ * the page would lie the day we forget. Here it points to a stable URL,
+ * and it is the manifesto which says where it leads.
  *
- * Le fichier lui-même n'est jamais servi PAR nous : on redirige vers le blob.
- * Faire transiter cent mégaoctets par une fonction serait payer du calcul pour
- * du transfert que le stockage fait mieux.
+ * The file itself is never served BY us: we redirect to the blob.
+ * Passing a hundred megabytes through a function would cost calculation for
+ * transfer than storage does better.
  *
- * Pas d'authentification, évidemment — c'est un téléchargement public. Et pas de
- * cache CDN sur la redirection : elle change à chaque publication, et une
- * redirection périmée envoie tout le monde sur un 404.
+ * No authentication, obviously — it's a public download. And no
+ * CDN cache on the redirection: it changes with each publication, and a
+ * Outdated redirect sends everyone to a 404.
  *
- * ## C'est ICI qu'on compte les téléchargements
+ * ## THIS is where we count downloads
  *
- * Et pas au clic, côté navigateur. Un clic est une INTENTION — il en part aussi
- * du bandeau de l'accueil, des réglages, de la landing, et le compte des trois
- * ne dira jamais combien de `.dmg` sont réellement partis. Cette route est le
- * point de passage obligé : tout ce qui télécharge passe par elle, y compris un
- * lien collé dans un message, et elle sait ce que le clic ne sait pas — quelle
+ * And not by click, on the browser side. A click is an INTENTION — it also starts from it
+ * the welcome banner, the settings, the landing, and the account of the three
+ * will never say how many `.dmg` are actually gone. This road is the
+ * obligatory passage point: everything that downloads goes through it, including a
+ * link pasted into a message, and it knows what the click doesn't know — what
  * architecture, quelle version.
  *
- * Elle part sans condition de consentement, comme les autres événements serveur
- * (voir lib/server/posthog.ts) : aucun cookie n'est POSÉ ici. Celui de PostHog
- * est seulement LU s'il existe déjà, pour recoudre le téléchargement au reste de
- * la visite ; sinon l'événement est anonyme et ne crée aucun profil de personne.
+ * It leaves without consent condition, like other server events
+ * (see lib/server/posthog.ts): no cookies are SET here. The one from PostHog
+ * is only READ if it already exists, to sew the download to the rest of
+ * the visit; otherwise the event is anonymous and does not create any person profile.
  */
 
 export const dynamic = "force-dynamic";
 
-/** Le défaut, et il n'est pas neutre : tous les Mac vendus depuis 2020. */
+/** The default, and it is not neutral: all Macs sold since 2020. */
 const DEFAULT_ARCH = "arm64";
 
 export async function GET(request: NextRequest) {
@@ -59,9 +59,9 @@ export async function GET(request: NextRequest) {
   const requested = request.nextUrl.searchParams.get("arch");
   const arch = isMacArch(requested) ? requested : DEFAULT_ARCH;
 
-  // `no-store` sur la lecture du manifeste : le cache de `fetch` retiendrait la
-  // version précédente pendant la fenêtre qui suit une publication, c'est-à-dire
-  // exactement le moment où quelqu'un vient chercher la nouvelle.
+  // `no-store` on reading the manifest: the `fetch` cache would retain the
+  // previous version during the window following a release, i.e.
+  // exactly the moment when someone comes looking for the news.
   const response = await fetch(`${base}/latest-mac.yml`, { cache: "no-store" }).catch(
     () => null
   );
@@ -84,11 +84,11 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * L'événement du téléchargement — émis seulement quand un fichier part vraiment.
+ * The download event — emitted only when a file actually leaves.
  *
- * `$process_person_profile: false` dans le cas anonyme : sans lui, chaque
- * téléchargement sans cookie créerait une personne de plus dans PostHog, un
- * fantôme d'un seul événement. Le compte, lui, reste exact — c'est ce qu'on
+ * `$process_person_profile: false` in the anonymous case: without it, each
+ * cookieless download would create one more person in PostHog, a
+ * ghost of a single event. The count remains accurate - that's what we
  * cherche.
  */
 function captureDownload(

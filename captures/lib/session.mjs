@@ -1,9 +1,9 @@
 /**
- * captures/ — session du compte de démo.
+ * captures/ — demo account session.
  *
- * On se connecte UNE fois par l'interface réelle, et on réutilise l'état
- * (cookies + localStorage) pour toutes les captures suivantes. Ça évite N
- * connexions simultanées sur le même compte, que n'importe quel fournisseur
+ * We connect ONCE via the real interface, and we reuse the state
+ * (cookies + localStorage) for all subsequent captures. This avoids N
+ * simultaneous connections to the same account, as any provider
  * d'auth finit par freiner.
  *
  *   node captures/lib/session.mjs
@@ -23,19 +23,19 @@ export async function refreshSession() {
   const context = await browser.newContext({ locale: "fr-FR" });
   const page = await context.newPage();
 
-  // `load`, pas `domcontentloaded` : le bouton est un `type="submit"` dans un
-  // vrai `<form>`, et cliquer avant que React ait pris la main déclenche la
-  // soumission NATIVE — le navigateur part en `GET /login?`, la page se
-  // recharge, et l'attente d'URL expire sans le moindre message d'erreur.
+  // `load`, not `domcontentloaded`: the button is a `type="submit"` in a
+  // true `<form>`, and clicking before React has taken control triggers the
+  // NATIVE submission — the browser goes to `GET /login?`, the page goes
+  // reloads, and the URL wait expires without any error message.
   await page.goto(`${CAPTURE.baseUrl}/login`, { waitUntil: "load" });
   await page.evaluate(() => document.fonts.ready);
 
   const submit = page.getByRole("button", { name: /connexion|se connecter|sign in|log in/i });
   const leftAuth = (url) => !/\/(login|signup)/.test(url.pathname);
 
-  // Aucun marqueur d'hydratation n'est exposé par Next : plutôt qu'un timer
-  // arbitraire, on retente. Un clic parti trop tôt se voit — on est toujours
-  // sur /login — et le suivant tombe sur une page hydratée.
+  // No hydration marker is displayed by Next: rather than a timer
+  // arbitrary, we try again. A click gone too soon is visible — we are still
+  // on /login — and the next one lands on a hydrated page.
   for (let attempt = 1; ; attempt += 1) {
     await page.getByRole("textbox", { name: /e-?mail/i }).fill(DEMO_EMAIL);
     await page.getByRole("textbox", { name: /mot de passe|password/i }).fill(password);

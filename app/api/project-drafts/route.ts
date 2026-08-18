@@ -4,20 +4,20 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 
 /**
- * Les brouillons de création de projet (table `project_drafts`, RLS
- * self-manage → client cookie, aucun accès service requis).
+ * Project creation drafts (`project_drafts` table, RLS
+ * self-manage → cookie client, no service access required).
  *
- * Cette route est un ENTREPÔT, pas un modèle : `data` est l'état du formulaire
- * du wizard, qui bouge à chaque étape qu'on lui ajoute, et c'est le client qui
- * sait le relire (lib/project-draft.ts le fait défensivement). On ne valide donc
- * ici que ce dont la base a besoin — un id, un nom, une étape courte, un objet —
- * plus un plafond de taille, l'icône y voyageant en data URL.
+ * This route is a WAREHOUSE, not a template: `data` is the state of the form
+ * of the wizard, which moves with each step that is added to it, and it is the client who
+ * knows how to proofread it (lib/project-draft.ts does it defensively). We therefore do not validate
+ * here only what the database needs — an id, a name, a short step, an object —
+ * plus a size ceiling, with the icon traveling there as a data URL.
  */
 
 const MAX_NAME_LENGTH = 200;
 const MAX_STEP_LENGTH = 40;
-/** Le brouillon complet, sérialisé. Une icône compressée pèse quelques dizaines
- *  de Ko : ce plafond laisse la place, sans laisser passer un presse-papier. */
+/** The complete draft, serialized. A compressed icon weighs a few dozen
+ * of Ko: this ceiling leaves room, without letting a paperweight pass through. */
 const MAX_DATA_BYTES = 512 * 1024;
 
 const UUID_RE =
@@ -25,7 +25,7 @@ const UUID_RE =
 
 const SELECT = "id, name, step, data, updated_at";
 
-/** GET /api/project-drafts — mes brouillons, du plus récent au plus ancien. */
+/** GET /api/project-drafts — my drafts, from newest to oldest. */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
@@ -46,9 +46,9 @@ export async function GET(request: NextRequest) {
 /**
  * PUT /api/project-drafts — pose ou remplace UN brouillon.
  *
- * Un upsert par id, et non un POST puis des PATCH : l'id est celui du futur
- * projet, tiré par le wizard à son ouverture, et le client ne sait pas — n'a pas
- * à savoir — si ce brouillon-là a déjà été écrit une fois.
+ * An upsert by id, not a POST then PATCH: the id is that of the future
+ * project, drawn by the wizard when it is opened, and the client does not know — does not have
+ * namely — if this draft has already been written once.
  */
 export async function PUT(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -85,8 +85,8 @@ export async function PUT(request: NextRequest) {
   if (!id) {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  // Un brouillon sans nom n'a rien à montrer dans la barre latérale : le wizard
-  // n'en enregistre pas, et la route ne l'accepte pas non plus.
+  // A draft with no name has nothing to show in the sidebar: the wizard
+  // doesn't record any, and the road doesn't accept it either.
   if (!name) {
     return NextResponse.json({ error: t("nameRequired") }, { status: 400 });
   }
@@ -97,9 +97,9 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: t("draftTooLarge") }, { status: 413 });
   }
 
-  // `user_id` explicite : la policy d'insertion l'exige (with check), et c'est
-  // aussi ce qui empêche d'écraser le brouillon d'un autre — la policy d'update
-  // ne verrait sinon aucune ligne à modifier, et l'upsert en créerait une.
+  // `user_id` explicit: the insertion policy requires it (with check), and it is
+  // also what prevents overwriting someone else’s draft — the update policy
+  // would otherwise see no lines to modify, and the upsert would create one.
   const { data: row, error } = await auth.supabase
     .from("project_drafts")
     .upsert(

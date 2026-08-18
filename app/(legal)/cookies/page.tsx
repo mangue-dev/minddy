@@ -53,10 +53,10 @@ export default async function CookiesPage() {
                 purpose: t("essentialCookie2Purpose"),
                 duration: t("essentialCookie2Duration"),
               },
-              // MIN-119 — la session d'un board public de feedback. Elle n'est
-              // pas déposée sur minddy.app mais sur le board qu'on visite, y
-              // compris sous le domaine de son éditeur : raison de plus pour la
-              // déclarer, c'est le seul endroit qui en parle.
+              // MIN-119 — a public feedback board session. She is not
+              // not posted on minddy.app but on the board we visit, there
+              // included under the domain of its publisher: all the more reason for the
+              // declare, this is the only place that talks about it.
               {
                 name: t("essentialCookie3Name"),
                 purpose: t("essentialCookie3Purpose"),
@@ -80,8 +80,8 @@ export default async function CookiesPage() {
             ]}
           />
 
-          {/* Pas de badge : le stockage local n'est pas soumis au consentement,
-              c'est un état d'interface qui ne quitte pas l'appareil. */}
+          {/* No badge: local storage is not subject to consent,
+ it is an interface state that does not leave the device. */}
           <CookieTable
             caption={t("localStorageName")}
             description={t("localStorageDesc")}

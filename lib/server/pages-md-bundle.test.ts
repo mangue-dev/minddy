@@ -4,63 +4,62 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * LE BUNDLE DE LA PROJECTION, LU DANS LE TEXTE (MIN-295).
+ * THE PROJECTION BUNDLE, READ IN THE TEXT (MIN-295).
  *
- * Ce test est le seul du dépôt qui regarde un ARTEFACT plutôt qu'un source, et
- * c'est toute la raison de son existence. `minddy_create_page` répondait en
- * production « [tiptap error]: there is no window object available », quel que
- * soit le contenu — donc `update_page`, `append_to_page` et `edit_page_text`
- * aussi, côté MCP comme côté Numo et agent de code. Le wiki de minddy était vide
- * parce que rien n'avait jamais pu y être écrit par un agent.
+ * This test is the only one in the repository that inspects an ARTIFACT rather than
+ * source code, and that is the whole reason it exists. In production,
+ * `minddy_create_page` returned « [tiptap error]: there is no window object available »
+ * regardless of the content — so `update_page`, `append_to_page`, and `edit_page_text`
+ * failed too, on the MCP side as well as for Numo and the coding agent. minddy's wiki
+ * was empty because an agent could never write anything to it.
  *
- * La cause n'était pas dans le code, elle était dans sa COMPILATION. `@tiptap/core`
- * garde `elementFromString` derrière `if (typeof window === "undefined") throw`.
- * Le bundler de Next substitue `typeof window` → `"undefined"` côté serveur : la
- * condition devient constante et la fonction se réduit à un `throw`
- * inconditionnel. Relevé tel quel dans `.next/server/chunks` :
+ * The cause was not in the code, it was in its COMPILATION. `@tiptap/core`
+ * keeps `elementFromString` behind `if (typeof window === "undefined") throw`.
+ * Next's bundler substitutes `typeof window` → `"undefined"` on the server side:
+ * the condition becomes constant and the function reduces to an unconditional
+ * `throw`. Reported as-is in `.next/server/chunks`:
  *
  *     function iQ(e){throw Error("[tiptap error]: there is no window object…")}
  *
- * `lib/server/pages-projection.ts` installait pourtant bien jsdom, et
- * `pages-projection.test.ts` le vérifiait. Mais il vérifiait le RUNTIME, et la
- * substitution a lieu au BUILD : aucun test ne pouvait le voir, parce qu'aucun
- * ne lisait ce qui est réellement livré. D'où les deux cas ci-dessous.
+ * `lib/server/pages-projection.ts` did install jsdom correctly, and
+ * `pages-projection.test.ts` checked it. But that test checked the RUNTIME, while
+ * the substitution happens at BUILD time. No test could see it because none read
+ * what was actually delivered. Hence the two cases below.
  */
 
 const REPO = path.resolve(import.meta.dirname, "..", "..");
 const BUNDLE = path.join(REPO, ".pages-md", "main.js");
 
-/** Le drapeau exact que Vercel passe à Node (relevé sur `process.execArgv`). */
+/** The exact flag that Vercel passes to Node (taken from `process.execArgv`). */
 const VERCEL_NODE_FLAG = "--no-experimental-require-module";
 
-describe("le bundle de la projection markdown des pages", () => {
-  it("garde le test `typeof window` d'elementFromString à l'exécution", () => {
+describe("the pages' Markdown projection bundle", () => {
+  it("keeps elementFromString's `typeof window` guard at runtime", () => {
     const source = readFileSync(BUNDLE, "utf8");
 
-    // Le message est là — c'est bien ce `elementFromString`-ci qu'on regarde.
+    // The message is there — it’s this `elementFromString` that we’re looking at.
     expect(source).toContain("there is no window object available");
 
-    // Et il est encore GARDÉ. Un bundler qui aurait substitué `typeof window`
-    // laisserait le `throw` sans son `if`, et c'est précisément la panne.
+    // And it’s still KEPT. A bundler that would have substituted `typeof window`
+    // would leave the `throw` without its `if`, and that is precisely the problem.
     expect(
       source,
-      "le garde `typeof window` a été replié : elementFromString est réduit à un throw"
+      "the `typeof window` guard was folded away: elementFromString was reduced to a throw"
     ).toMatch(/typeof window === ["']undefined["']/);
   });
 
-  // 20 s, et ce n'est pas une assertion de performance — c'est ce que ce cas
-  // COÛTE : un process Node de plus, un `require` d'un bundle de 1,1 Mo et un
-  // DOM jsdom monté de zéro. Le défaut de 5 s tenait tant que la suite ne
-  // chargeait pas la machine ailleurs ; le premier test qui lance des
-  // sous-process en parallèle (`lib/desktop/git-config.git.test.ts`, MIN-359) le
-  // faisait dépasser une fois sur deux, et le message parlait d'un délai, pas de
-  // ce qui l'avait consommé. Un cas dont l'échec dépend de ses VOISINS
-  // n'apprend rien sur ce qu'il teste.
-  it("se charge et projette dans la condition de Vercel", { timeout: 20_000 }, () => {
-    // Le graphe entier passé au `require` d'un Node sans interop ESM — le piège
-    // déjà pris avec jsdom, et celui qui écarte `serverExternalPackages` :
-    // `tiptap-markdown` et `@tiptap/extension-unique-id` publient un point
-    // d'entrée `require`, mais sous `"type": "module"`.
+  // 20 s is not a performance assertion — it is what this case COSTS: one more
+  // Node process, a `require` of a 1.1 MB bundle, and a jsdom DOM built from scratch.
+  // The old 5 s default held until the suite started loading the machine elsewhere;
+  // the first test to launch parallel subprocesses (`lib/desktop/git-config.git.test.ts`,
+  // MIN-359) made it exceed the limit half the time. The message described a timeout,
+  // not what consumed it. A case whose failure depends on its NEIGHBORS teaches us
+  // nothing about what it tests.
+  it("loads and projects under the Vercel condition", { timeout: 20_000 }, () => {
+    // Pass the entire graph to `require` in a Node process without ESM interop — the
+    // trap already encountered with jsdom, and the one that rules out
+    // `serverExternalPackages`: `tiptap-markdown` and `@tiptap/extension-unique-id`
+    // expose a `require` entry point but are under `"type": "module"`.
     const probe = `
       const { JSDOM } = require("jsdom");
       const win = new JSDOM("<!doctype html><html><body></body></html>").window;
@@ -71,8 +70,8 @@ describe("le bundle de la projection markdown des pages", () => {
       globalThis.document = win.document;
 
       const { bodyFromMarkdown, bodyToMarkdown } = require(${JSON.stringify(BUNDLE)});
-      // Un bloc RICHE : le dépliant traverse DOMParser puis le parseHTML du
-      // registre, donc tout le chemin qui tombait.
+      // A RICH block: the disclosure element passes through DOMParser and then the
+      // registry's parseHTML, covering the entire path that used to fail.
       const md = "## Contexte\\n\\n- [x] une tâche faite\\n\\n<details>\\n<summary>Un dépliant</summary>\\n\\nson contenu\\n\\n</details>";
       const back = bodyToMarkdown(bodyFromMarkdown(md));
       if (back !== md) {
@@ -86,6 +85,6 @@ describe("le bundle de la projection markdown des pages", () => {
         stdio: "pipe",
       });
 
-    expect(run, "la projection ne tourne pas dans la condition de Vercel").not.toThrow();
+    expect(run, "the projection does not run under the Vercel condition").not.toThrow();
   });
 });

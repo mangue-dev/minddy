@@ -6,9 +6,9 @@ import { UsageBreakdownBody } from "@/components/usage-indicator";
 import { useBillingSummary } from "@/lib/use-billing-query";
 
 /**
- * Carte usage de la page billing (MIN-72) : le corps partagé avec le popover du
- * header (barre segmentée + hover par type) suivi des limites structurelles du
- * plan. Tout se dit en pourcentages/quantités — jamais en montants.
+ * Card usage of the billing page (MIN-72): the body shared with the popover of the
+ * header (segmented bar + hover by type) followed by the structural limits of the
+ * plan. Everything is said in percentages/quantities — never in amounts.
  */
 export function UsageSection() {
   const t = useTranslations("Billing");

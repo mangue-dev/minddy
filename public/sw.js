@@ -1,31 +1,30 @@
 /**
- * Service worker de minddy — notifications push, et RIEN D'AUTRE (MIN-183).
+ * Minddy service worker — push notifications, and NOTHING ELSE (MIN-183).
  *
- * ⚠ PAS DE HANDLER `fetch`. C'est délibéré et c'est important : dès qu'un
- * service worker intercepte `fetch`, il devient responsable de ce que le
- * navigateur affiche, et la moindre erreur de cache sert un HTML périmé à des
- * gens qui n'ont aucun moyen de s'en sortir (vider le cache d'un site ne se
- * trouve pas). minddy n'a pas besoin de mode hors-ligne ; il a besoin de
- * recevoir des push. Un worker qui ne fait que ça ne peut pas casser la page.
+ * ⚠ NO `fetch` HANDLER. This is deliberate and it's important: as soon as a
+ * service worker intercepts `fetch` *, it becomes responsible for what the
+ * browser displays, and the slightest cache error serves stale HTML to people who have no way of getting out of it (clearing a site's cache doesn't se
+ * not found). minddy doesn't need offline mode; it needs
+ * to receive pushes. A worker that only does that cannot break the page.
  *
- * Fichier STATIQUE dans `public/`, servi à la racine de l'origine : il obtient
- * le scope `/` sans en-tête `Service-Worker-Allowed`. Le matcher du proxy exclut
- * déjà les `.js`, il n'y a aucune whitelist à ajouter. Ses en-têtes (type MIME,
- * pas de cache) sont posés dans next.config.mjs.
+ * STATIC file in `public/`, served at the original root: it gets
+ * scope `/` without header `Service-Worker-Allowed`. The proxy matcher already excludes
+ * `.js`, there is no whitelist to add. Its headers (MIME type,
+ * no cache) are placed in next.config.mjs.
  *
- * Écrit en JS sans build : ce fichier est servi TEL QUEL. Pas d'import, pas de
- * syntaxe qui aurait besoin d'être transpilée.
+ * Written in JS without build: this file is served AS IS. No import, no
+ * syntax that would need to be transpiled.
  */
 
-/** Icônes du manifeste — les seules que le dépôt embarque. */
+/** Manifest icons — the only ones the repository ships. */
 const ICON = "/web-app-manifest-192x192.png";
 
 self.addEventListener("push", (event) => {
-  // `userVisibleOnly: true` est le contrat de l'abonnement : un push qui
-  // n'affiche RIEN fait perdre la permission au bout de quelques occurrences
-  // (Chrome affiche alors une notification « ce site tourne en arrière-plan »).
-  // D'où le repli : on montre toujours quelque chose, même si la charge utile
-  // est illisible.
+  // `userVisibleOnly: true` is the subscription contract: a push which
+  // displays NOTHING, loses permission after a few occurrences
+  // (Chrome then displays a notification “this site is running in the background”).
+  // Hence the fallback: we always show something, even if the payload
+  // is unreadable.
   let data = {};
   try {
     if (event.data) data = event.data.json();
@@ -38,9 +37,9 @@ self.addEventListener("push", (event) => {
     body: data.body || "",
     icon: ICON,
     badge: ICON,
-    // Le `tag` est le chemin de destination : deux notifications sur le même
-    // ticket se REMPLACENT au lieu d'empiler. `renotify: false` pour que le
-    // remplacement soit silencieux — le téléphone ne resonne pas.
+    // The `tag` is the destination path: two notifications on the same
+    // ticket REPLACES instead of stacking. `renotify: false` so that the
+    // replacement is silent — the phone does not ring.
     tag: data.tag || "minddy",
     renotify: false,
     data: { url: data.url || "/inbox" },
@@ -52,20 +51,19 @@ self.addEventListener("push", (event) => {
 });
 
 /**
- * Prévient les onglets ouverts qu'une notification vient d'être affichée, pour
- * que celui qui regarde DÉJÀ la page concernée la referme aussitôt
- * (components/push-notification-dismiss.tsx). Sans ce message, ce cas-là n'a
- * aucun signal : ni la route ni la visibilité ne changent quand la bannière
- * tombe sous les yeux de quelqu'un qui est au bon endroit.
+ * Warns open tabs that a notification has just been displayed, so that whoever is ALREADY looking at the page concerned closes it immediately
+ * (components/push-notification-dismiss.tsx). Without this message, this case has
+ * no signal: neither the route nor the visibility changes when the banner
+ * falls under the eyes of someone who is in the right place.
  *
- * Le worker ne décide de rien et n'envoie aucune URL : il ne sait pas ce que
- * chaque onglet affiche, et le rapprochement vit en un seul exemplaire, côté
- * page (lib/push/dismiss.ts). Ici on ne fait que réveiller tout le monde.
+ * The worker does not decide anything and does not send any URL: it does not know what
+ * each tab displays, and the reconciliation lives in a single copy, side
+ * page (lib/push/dismiss.ts). Here we just wake everyone up.
  *
- * `includeUncontrolled: true` est OBLIGATOIRE : ce worker n'a pas de handler
- * `fetch` et n'appelle pas `clients.claim()`, donc il ne CONTRÔLE aucun onglet.
- * Sans ce drapeau, `matchAll` rendrait une liste vide, toujours. Un client
- * non contrôlé reçoit très bien un `postMessage`.
+ * `includeUncontrolled: true` is MANDATORY: this worker does not have a handler
+ * `fetch` and does not call `clients.claim()`, so it does not CONTROL any tab.
+ * Without this flag, `matchAll` would make a list empty, always. An uncontrolled
+ * client receives a `postMessage`.
  */
 async function notifyClients() {
   const windows = await self.clients.matchAll({
@@ -88,8 +86,8 @@ self.addEventListener("notificationclick", (event) => {
         type: "window",
         includeUncontrolled: true,
       });
-      // Un onglet minddy déjà ouvert : on le remet au premier plan et on l'y
-      // envoie, plutôt que d'ouvrir un deuxième onglet de la même app.
+      // A minddy tab already open: we put it back in the foreground and we put it there
+      // send, rather than opening a second tab of the same app.
       for (const client of windows) {
         if (new URL(client.url).origin !== self.location.origin) continue;
         await client.focus();
@@ -97,8 +95,8 @@ self.addEventListener("notificationclick", (event) => {
           try {
             await client.navigate(target);
           } catch {
-            // Safari refuse `navigate()` dans certains cas : l'onglet est déjà
-            // au premier plan, c'est le principal.
+            // Safari refuses `navigate()` in certain cases: the tab is already
+            // in the foreground, this is the main thing.
           }
         }
         return;
@@ -109,13 +107,13 @@ self.addEventListener("notificationclick", (event) => {
 });
 
 /**
- * Le navigateur peut FAIRE TOURNER un abonnement tout seul (expiration côté
- * service de push, changement de clés). Sans ce handler, l'appareil cesse
- * silencieusement de recevoir quoi que ce soit, et sa ligne reste dans les
- * réglages en prétendant le contraire.
+ * The browser can RUN a subscription on its own (expiration side
+ * push service, change of keys). Without this handler, the device silently stops
+ * receiving anything, and its line remains in the
+ * settings pretending otherwise.
  *
- * La clé publique est allée chercher sur `/api/push/vapid` : un service worker
- * n'a pas accès aux variables inlinées dans le bundle client.
+ * The public key is fetched from `/api/push/vapid`: a service worker
+ * does not have access to variables inlined in the client bundle.
  */
 self.addEventListener("pushsubscriptionchange", (event) => {
   event.waitUntil(
@@ -140,10 +138,10 @@ self.addEventListener("pushsubscriptionchange", (event) => {
             endpoint: subscription.endpoint,
             keys: json.keys,
             oldEndpoint: oldEndpoint || undefined,
-            // Le navigateur a fait tourner l'abonnement de lui-même : personne
-            // n'a rien demandé. `refresh` dit au serveur de reprendre l'état de
-            // l'ancienne ligne (allumé/éteint, langue) au lieu de tout remettre
-            // par défaut — un worker n'a ni interrupteur ni cookie de langue.
+            // The browser ran the subscription on its own: no one
+            // didn't ask for anything. `refresh` tells the server to resume the state of
+            // the old line (on/off, language) instead of putting everything back
+            // default — a worker has no language switches or cookies.
             refresh: true,
           }),
         });
@@ -154,8 +152,8 @@ self.addEventListener("pushsubscriptionchange", (event) => {
   );
 });
 
-/** `applicationServerKey` veut des octets bruts ; VAPID se transporte en
- *  base64url. Recopié de lib/push/client.ts — un service worker n'importe pas. */
+/** `applicationServerKey` wants raw bytes; VAPID is transported as
+ * base64url. Copied from lib/push/client.ts — a service worker doesn't matter. */
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");

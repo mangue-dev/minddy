@@ -30,9 +30,8 @@ import type { ChipRelation } from "@/components/relation-chips";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 
 /**
- * ⚠ Mémoïsée (MIN-316). Le board rejouait ses colonnes — donc toutes leurs
- * cartes — à chaque rendu du board, y compris pour un état qui ne les
- * concerne pas. Ses props doivent rester stables pour que ça morde.
+ * ⚠ Memorized (MIN-316). The board replayed its columns — therefore all their
+ * cards — each time the board was rendered, including for a state that did not concern them. Its props must remain stable for it to bite.
  */
 export const KanbanColumn = memo(function KanbanColumn({
   status,
@@ -84,17 +83,17 @@ export const KanbanColumn = memo(function KanbanColumn({
     type: IssueRelationType,
     targetId: string
   ) => void;
-  /** Corbeille depuis le clic droit d'une carte (absent → l'entrée disparaît). */
+  /** Trash from right-clicking a card (absent → entry disappears). */
   onDeleteIssue?: (issueId: string) => Promise<void>;
   /** Per-issue extra right-click actions (cycle add/remove — MIN-32). */
   buildMenuActions?: (issue: Issue) => ContextMenuAction[];
   /** My current cycle's id — its cards show the blue cycle icon. */
   currentCycleId?: string | null;
   selectedIds: Set<string>;
-  /** Les tickets embarqués par le glisser en cours — estompés comme la carte
-      saisie, pour qu'on voie ce que le paquet contient. */
+  /** Tickets loaded by the current drag — dimmed like the card
+ entered, so we can see what the packet contains. */
   draggingIds?: Set<string>;
-  /** Le repère de dépôt, quand c'est CETTE colonne que le glisser vise. */
+  /** The drop mark, when dragging is aimed at THIS column. */
   dropPreview?: DropPreview;
   onSelect: (issueId: string) => void;
 }) {
@@ -104,7 +103,7 @@ export const KanbanColumn = memo(function KanbanColumn({
   const ts = useTranslations("Status");
 
   // dnd-kit needs the droppable node; useScrollFade needs it to measure scroll;
-  // le repère de dépôt s'y fait défiler quand il tombe hors du champ de vision.
+  // the drop mark is scrolled there when it falls out of the field of vision.
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const setScrollRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -124,22 +123,22 @@ export const KanbanColumn = memo(function KanbanColumn({
         <span className="text-xs text-muted-foreground">{issues.length}</span>
       </div>
 
-      {/* Le fondu de bord est dessiné À CÔTÉ du scroller, jamais dessus : un
-          `mask-image` sur un conteneur qui défile le fait re-compositer à
-          chaque image (MIN-319). D'où ce parent `relative`. */}
+      {/* The edge fade is drawn NEXT to the scroller, never on it: a
+ `mask-image` on a scrolling container causes it to recompose to
+ each frame (MIN-319). Hence this parent `relative`. */}
       <div
         className={cn(
           "relative flex min-h-0 flex-1 flex-col rounded-xl transition-colors",
-          // Le fond s'allume sur la colonne qui RECEVRA, pas sur celle que le
-          // pointeur effleure : survoler une carte ne fait pas de sa colonne
-          // un `isOver`, et le fond clignotait d'une carte à l'autre.
+          // The background lights up on the column that WILL RECEIVE, not the one that the
+          // pointer touches: hovering over a card does not make its column
+          // a `isOver`, and the background flashed from one card to another.
           //
-          // ⚠ Le fond ET son arrondi sont ICI, pas sur le défileur : un
-          // `rounded-xl` posé sur un conteneur qui défile ROGNE son contenu
-          // dans les quatre arcs de coin. Le point du repère de dépôt s'y
-          // faisait grignoter dès que le trait tombait en haut de colonne
-          // (PR 66). Même boîte, même arrondi à l'écran, mais le découpage du
-          // défileur redevient carré.
+          // ⚠ The background AND its rounding are HERE, not on the scroller: a
+          // `rounded-xl` placed on a container which scrolls CROPS its contents
+          // in the four corner arcs. The point of the deposit marker is there
+          // made to nibble as soon as the line fell at the top of the column
+          // (PR 66). Same box, same rounding on the screen, but the cutting of the
+          // scroller becomes square again.
           (dropPreview || isOver) && "bg-muted/50"
         )}
       >
@@ -189,7 +188,7 @@ export const KanbanColumn = memo(function KanbanColumn({
                 </Fragment>
               );
             })}
-            {/* `beforeIssueId === null` : le paquet se pose en fin de colonne. */}
+            {/* `beforeIssueId === null`: the packet is placed at the end of the column. */}
             {dropPreview && dropPreview.beforeIssueId === null && (
               <BoardDropIndicator count={dropPreview.count} />
             )}

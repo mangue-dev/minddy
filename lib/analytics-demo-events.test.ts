@@ -1,18 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-150 — les trois événements de la démo de dictée arrivent-ils vraiment
- * jusqu'à `posthog.capture` ?
+ * MIN-150 — do the three events in the dictation demo really happen
+ * until `posthog.capture` ?
  *
- * La question n'est pas rhétorique : entre l'appel du composant et PostHog, il y
- * a deux portes qui laissent tomber en SILENCE — l'allowlist runtime
- * (`ALLOWED_ANALYTICS_EVENTS`, un nom absent du tableau `EVENT_NAMES` est jeté)
- * et la sanitisation des props (tout ce qui n'est pas une primitive disparaît).
- * Le typage couvre le call site, pas ces deux-là : un événement catalogué mais
- * oublié dans `EVENT_NAMES` compile et ne part jamais.
+ * The question is not rhetorical: between the component call and PostHog, there are
+ * two gates which drop to SILENCE — the runtime allowlist
+ * (`ALLOWED_ANALYTICS_EVENTS`, a name missing from the `EVENT_NAMES` array is thrown)
+ * and sanitization of props (everything that is not a primitive disappears).
+ * The typing covers the call site, not these two: a cataloged event but
+ * forgotten in `EVENT_NAMES` compiles and never leaves.
  *
- * On injecte donc un faux client à la place de PostHog et on regarde ce qui
- * l'atteint. Ce qui se passe APRÈS `capture` appartient à posthog-js.
+ * So we inject a fake client in place of PostHog and we see what
+ * reaches it. What happens AFTER `capture` is up to posthog-js.
  */
 
 type Captured = { event: string; props: Record<string, unknown> | undefined };
@@ -20,7 +20,7 @@ type Captured = { event: string; props: Record<string, unknown> | undefined };
 async function withStubClient() {
   vi.resetModules();
   // `trackEvent` refuse de partir hors navigateur (`typeof window === "undefined"`) :
-  // la suite tourne en environnement node, il faut donc lui en donner un.
+  // the suite runs in a node environment, so you have to give it one.
   vi.stubGlobal("window", {});
   const mod = await import("./analytics");
   const captured: Captured[] = [];
@@ -63,7 +63,7 @@ describe("les événements de la démo de dictée atteignent PostHog", () => {
 
     expect(captured[0].event).toBe("landing_voice_demo_completed");
     expect(captured[0].props).toEqual({ input: "sample", duration_bucket: "1_5s" });
-    // Le contenu du ticket et la phrase dictée ne quittent jamais le navigateur.
+    // The content of the ticket and the dictated sentence never leave the browser.
     expect(JSON.stringify(captured[0].props)).not.toMatch(/Stripe|Léa/);
   });
 
@@ -86,8 +86,8 @@ describe("les événements de la démo de dictée atteignent PostHog", () => {
   it("jette un nom voisin mais absent du catalogue", async () => {
     const { trackEvent, captured } = await withStubClient();
 
-    // La faute typique : renommer l'événement dans le composant et oublier
-    // `EVENT_NAMES`. Elle ne doit pas passer, et elle ne passe pas.
+    // The typical mistake: rename the event in the component and forget
+    // `EVENT_NAMES`. It must not pass, and it does not pass.
     (trackEvent as (e: string, p?: unknown) => void)("landing_voice_demo_start", {
       input: "mic",
     });
@@ -99,7 +99,7 @@ describe("les événements de la démo de dictée atteignent PostHog", () => {
     vi.resetModules();
     vi.stubGlobal("window", {});
     const { trackEvent } = await import("./analytics");
-    // Aucun client déposé : l'appel est inerte, il ne doit pas lever.
+    // No client filed: the call is inert, it should not be raised.
     expect(() => trackEvent("landing_voice_demo_started", { input: "mic" })).not.toThrow();
   });
 });

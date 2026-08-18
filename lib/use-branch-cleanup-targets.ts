@@ -4,10 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import type { BranchCleanupTarget } from "./types";
 
 /**
- * Projets où le ménage des branches d'agent (MIN-102) est offert — un par ligne
- * de la command palette, quelle que soit la page. Une seule requête pour tous
- * mes projets, là où interroger la liaison git projet par projet en coûterait
- * autant que j'ai de projets.
+ * Projects where agent branch housekeeping (MIN-102) is offered — one per line
+ * of the command palette, regardless of page. A single query for all
+ * my projects, where querying the git link on a project-by-project basis would cost
+ * as many as I have projects.
  */
 export const branchCleanupTargetsQueryKey = ["me", "branch-cleanup-targets"] as const;
 
@@ -22,8 +22,8 @@ export function useBranchCleanupTargets(): BranchCleanupTarget[] {
   const { data } = useQuery({
     queryKey: branchCleanupTargetsQueryKey,
     queryFn: fetchTargets,
-    // La liste ne bouge qu'en liant un dépôt ou en lançant un premier agent :
-    // une lecture par heure suffit largement, le cache persisté fait le reste.
+    // The list only moves when linking a repository or launching a first agent:
+    // one reading per hour is more than enough, the persistent cache does the rest.
     staleTime: 60 * 60_000,
   });
   return data ?? [];

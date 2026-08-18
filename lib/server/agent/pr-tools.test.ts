@@ -14,19 +14,19 @@ import {
 import type { Forge } from "./forge";
 
 /**
- * Les écritures de PR d'une session de relecture (MIN-168). Ce qui se teste ici
- * est ce qui décide de la QUALITÉ de la review, et que ni le prompt ni le modèle
- * ne garantissent :
- *  - une ancre hors diff ne part JAMAIS chez la forge, et l'erreur rendue est
- *    exploitable (elle nomme les lignes commentables) ;
- *  - le plafond des cinq tient sur le run, pas sur le tour ;
- *  - un fichier renommé se retrouve par ses DEUX noms, mais le commentaire part
- *    toujours sur le nom actuel ;
- *  - la synthèse est signée exactement une fois.
+ * PR writes from a replay session (MIN-168). What is tested here
+ * is what decides the QUALITY of the review, and neither the prompt nor the model
+ * guarantee:
+ * - an anchor outside of diff NEVER goes to the forge, and the error returned is
+ * exploitable (it names the commentable lines) ;
+ * - the cap of five is on the run, not on the turn;
+ * - a renamed file is found by BOTH of its names, but the comment leaves
+ * always on the current name ;
+ * - the summary is signed exactly once.
  */
 
-// Un patch minimal : un hunk qui commence à la ligne 10 des deux côtés.
-//   contexte 10/10, supprimée 11 (LEFT), ajoutée 11 (RIGHT), contexte 12/12
+// A minimal patch: a hunk that starts at line 10 on both sides.
+// context 10/10, deleted 11 (LEFT), added 11 (RIGHT), context 12/12
 const PATCH = [
   "@@ -10,3 +10,3 @@",
   " const a = 1;",
@@ -111,8 +111,8 @@ describe("resolvePrCommentAnchor", () => {
     });
     expect(res.ok).toBe(false);
     if (res.ok) return;
-    // L'erreur doit être ACTIONNABLE : elle nomme le fichier et les lignes
-    // possibles, pour que le tour suivant vise juste au lieu de retenter au hasard.
+    // The error must be ACTIONABLE: it names the file and the lines
+    // possible, so that the next round aims correctly instead of trying again at random.
     expect(res.error).toContain("lib/demo.ts");
     expect(res.error).toContain("10–12");
   });
@@ -144,8 +144,8 @@ describe("resolvePrCommentAnchor", () => {
     for (const name of ["lib/renamed.ts", "lib/old-name.ts"]) {
       for (const side of ["LEFT", "RIGHT"] as const) {
         const res = resolvePrCommentAnchor(FILES, { path: name, line: 11, side });
-        // Le commentaire s'adresse au fichier tel qu'il est DANS la PR : une
-        // ancre posée sur l'ancien nom se ferait refuser par la forge.
+        // The comment is addressed to the file as it is IN the PR: a
+        // anchor placed on the old name would be refused by the forge.
         expect(res).toEqual({ ok: true, path: "lib/renamed.ts" });
       }
     }
@@ -175,7 +175,7 @@ describe("findReviewableFile", () => {
 describe("commentableRanges", () => {
   it("fusionne les lignes contiguës et distingue les deux côtés", () => {
     expect(formatRanges(commentableRanges(PATCH, "RIGHT"))).toBe("10–12");
-    // Côté LEFT : contexte 10, supprimée 11, contexte 12 (l'ajoutée n'y est pas).
+    // LEFT side: context 10, deleted 11, context 12 (the added one is not there).
     expect(formatRanges(commentableRanges(PATCH, "LEFT"))).toBe("10–12");
   });
 });
@@ -235,8 +235,8 @@ describe("comment_pr_line", () => {
   });
 
   it("refuse au-delà du plafond, sans appeler la forge", async () => {
-    // Le compteur vient du checkpoint : c'est le cas d'un run REPRIS qui a déjà
-    // posé ses cinq ancres au tour précédent.
+    // The counter comes from the checkpoint: this is the case of a RESUMED run which has already
+    // placed his five anchors in the previous round.
     const { ctx, forge } = makeCtx({ used: AI_REVIEW_MAX_INLINE_COMMENTS });
     const out = await executePrTool(ctx, "comment_pr_line", {
       path: "lib/demo.ts",

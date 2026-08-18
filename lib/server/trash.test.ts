@@ -5,33 +5,32 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { attachmentPaths, TRASH_TYPES } from "./trash";
 
 /**
- * MIN-133 — la purge doit emporter les FICHIERS avec la ligne.
+ * MIN-133 — the purge must take the FILES with the line.
  *
- * `attachments` cascade avec son parent, mais les objets du bucket, eux, ne
- * cascadent pas : leurs chemins doivent être relevés AVANT le delete, sinon ils
- * restent dans le storage sans plus aucune ligne pour les nommer — invisibles,
- * et impossibles à rattraper ensuite.
+ * `attachments` cascade with its parent, but the objects in the bucket do not
+ * cascade: their paths must be noted BEFORE the delete, otherwise they
+ * remain in the storage without any line to name them — invisible,
+ * and impossible to catch afterwards.
  *
- * Une ressource pend d'exactement un parent (`attachments_parent_ck`), et
- * QUATRE des cinq types de la corbeille en portent : un objectif depuis
- * 20260728091000, un retour depuis 20260731090000. Ce test épingle la
- * correspondance type → colonne, la seule chose qui décide si un fichier est
- * relevé ou oublié — la routine (MIN-201) comprise, dont l'absence de colonne
- * est un CHOIX (elle n'a aucune surface où déposer un fichier) et non un oubli :
- * lui en inventer une ferait échouer la purge sur une colonne inexistante.
+ * A resource hangs from exactly one parent (`attachments_parent_ck`), and
+ * FOUR of the five types in the bin carry them: an objective from
+ * 20260728091000, a return from 20260731090000. This test pinpoints the
+ * type → column match, the only thing that decides if a file is
+ * found or forgotten — the routine (MIN-201) included, including the absence of column
+ * is a CHOICE (it has no surface on which to deposit a file) and not an oversight:
+ * inventing one would cause the purge to fail on a non-existent column.
  *
- * Depuis MIN-280, une PAGE en porte elle aussi — dans `page_files`, l'autre
- * table, celle des fichiers posés DANS un corps de document. Le type « page »
- * n'est donc plus une exception, et un projet interroge les deux.
+ * Since MIN-280, a PAGE also carries one — in `page_files`, the other
+ * table, that of files placed IN a document body. The “page” type
+ * is therefore no longer an exception, and a project queries both.
  *
- * Depuis MIN-184 une ressource peut être un LIEN, sans objet dans le bucket :
- * la requête doit donc écarter les `storage_path` nuls, sinon la liste rendue
- * porterait des nulls que `storage.remove()` refuse — et la purge, qui les
- * passe en bloc, n'effacerait plus rien du tout.
+ * Since MIN-184 a resource can be a LINK, without an object in the bucket:
+ * the query must therefore exclude null `storage_path`, otherwise the list rendered
+ * would carry nulls that `storage.remove()` refuses — and the purge, which takes place in bulk, would no longer erase anything at all.
  */
 
-/** Double PostgREST minimal : retient la TABLE, la colonne interrogée et le
-    filtre `.not(...)`, rend un chemin. */
+/** Double minimal PostgREST: retains the TABLE, the queried column and the
+ filter `.not(...)`, returns a path. */
 function serviceSpy() {
   const calls: {
     table: string;
@@ -93,20 +92,20 @@ describe("attachmentPaths", () => {
   });
 
   /**
-   * MIN-280 — un fichier posé DANS un corps de page vit dans `page_files`, pas
-   * dans `attachments` (deux durées de vie, deux tables). La purge doit donc
-   * interroger les DEUX là où les deux existent, sans quoi purger un projet
-   * laisserait dans le bucket toutes les images de son wiki — la faute exacte
-   * que ce fichier existe pour empêcher, une table plus tard.
-   */
-  it("relève les fichiers d'une PAGE dans page_files, et nulle part ailleurs", async () => {
+ * MIN-280 — a file placed IN a page body lives in `page_files`, not
+ * in `attachments` (two lifetimes, two tables). The purge must therefore
+ * query BOTH where both exist, otherwise purging a project
+ * would leave all the images from its wiki in the bucket — the exact fault
+ * that this file exists to prevent, a table later.
+ */
+  it("restores files from a PAGE in page_files and nowhere else", async () => {
     const { client, calls } = serviceSpy();
     const paths = await attachmentPaths(client, "page", ["a"]);
     expect(calls).toEqual([{ table: "page_files", column: "page_id", ids: ["a"] }]);
     expect(paths).toEqual(["projects/x/a/f.png"]);
   });
 
-  it("relève les DEUX pour un projet : ses ressources et ses fichiers de page", async () => {
+  it("restores BOTH for a project: its resources and page files", async () => {
     const { client, calls } = serviceSpy();
     const paths = await attachmentPaths(client, "project", ["a"]);
     expect(calls.map((c) => `${c.table}.${c.column}`)).toEqual([
@@ -116,7 +115,7 @@ describe("attachmentPaths", () => {
     expect(paths).toHaveLength(2);
   });
 
-  it("écarte les ressources sans objet dans le bucket (les liens)", async () => {
+  it("discards resources without a bucket object (links)", async () => {
     const { client, calls } = serviceSpy();
     await attachmentPaths(client, "issue", ["a"]);
     expect(calls[0].notNullOn).toBe("storage_path is null");
@@ -128,11 +127,11 @@ describe("attachmentPaths", () => {
     expect(calls).toHaveLength(0);
   });
 
-  it("couvre tous les types de la corbeille, sans exception muette", async () => {
-    // Un type ajouté à la corbeille sans passer ici serait purgé en laissant ses
-    // fichiers derrière lui : chaque type doit interroger l'une des deux tables,
-    // ou avoir dit explicitement qu'il n'en porte aucune (`routine`, qui n'a
-    // aucune surface où déposer un fichier).
+  it("covers every trash type without a silent exception", async () => {
+    // A type added to the trash without going here would be purged leaving its
+    // files behind it: each type must query one of the two tables,
+    // or have explicitly said that he does not carry any (`routine`, which has no
+    // no surface to place a file on).
     const withoutFiles: string[] = ["routine"];
     for (const type of TRASH_TYPES) {
       const { client, calls } = serviceSpy();

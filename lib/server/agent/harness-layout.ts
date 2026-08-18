@@ -1,136 +1,133 @@
 /**
- * OÙ LE HARNESS TRAVAILLE — et pourquoi ce n'est plus une constante (MIN-354).
+ * WHERE THE HARNESS WORKS — and why it's no longer a constant (MIN-354).
  *
- * Tous ces chemins étaient des `const` de module sous `/vercel/sandbox`. C'était
- * vrai tant que le seul disque du harness était celui d'une microVM créée pour
- * lui : un run, une machine, aucune chance de collision. Deux choses cassent
- * cette hypothèse, et il faut les deux pour comprendre la forme ci-dessous.
+ * All of these paths were module `const` under `/vercel/sandbox`. This was
+ * true as long as the only disk in the harness was that of a microVM created for
+ * him: one run, one machine, no chance of collision. Two things break
+ * this assumption, and you need both to understand the form below.
  *
- * 1. **`/vercel/…` n'existe pas sur un Mac**, et n'y est pas créable sans root.
- *    Mesuré : `.agent-vm/main.js` s'exécute tel quel sous le Node d'Electron et
- *    meurt sur `/vercel/sandbox/harness/job.json` — avant la moindre autre ligne.
- * 2. **Une machine peut porter DEUX runs à la fois.** Une microVM est créée par
- *    run ; un ordinateur, non. Deux tickets lancés à la suite sur le même poste
- *    partageraient le job du harness, la base SQLite d'opencode, le dossier de
- *    sorties de tools et les ports — avec des symptômes qui ne ressemblent en
- *    rien à leur cause.
+ * 1. **`/vercel/…` does not exist on a Mac**, and is not createable there without root.
+ * Measured: `.agent-vm/main.js` runs as is under the Electron Node and
+ * dies on `/vercel/sandbox/harness/job.json` — before any other line.
+ * 2. **A machine can carry TWO runs at once.** A microVM is created by
+ * run ; a computer, no. Two tickets launched in succession on the same workstation
+ * would share the harness job, the SQLite opencode base, the file of
+ * tools outputs and ports — with symptoms that bear no resemblance to their cause.
  *
- * D'où un OBJET, dérivé d'une racine unique par run, et non une variable
- * d'environnement posée une fois pour le process : une variable d'environnement
- * a exactement le défaut qu'on cherche à supprimer, elle est globale.
+ * Hence an OBJECT, derived from a single root per run, and not an environment variable
+ * set once for the process: an environment variable
+ * has exactly the fault we are trying to remove, it is global.
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * DEUX RACINES, ET C'EST VOULU
+ * ─────────────────────── ──────────────────────── ──────────────────────────────
+ * TWO ROOTS, AND THIS IS WANTED
  *
- * `root` est la racine DU RUN : tout ce qui appartient à un tour et à lui seul —
- * le dépôt de travail, les sorties de tools, le harness, le `.tsbuildinfo`.
+ * `root` is the root OF THE RUN: everything that belongs to a turn and to it alone —
+ * the work deposit, the tool outputs, the harness, the `.tsbuildinfo`.
  *
- * `opencodeDir` n'en fait pas partie. C'est 144 Mo de binaire, installés une
- * fois (10,6 s) et cuits dans le snapshot de la microVM
- * ([opencode-host.ts](vm/opencode-host.ts)) : le poser sous la racine du run
- * reviendrait à le réinstaller à chaque ticket. Il est propre à la MACHINE, pas
- * au run, et rien de ce qu'un run y écrit ne le distingue d'un autre.
+ * `opencodeDir` is not one of them. It's 144 MB of binary, installed one
+ * time (10.6 s) and baked in the microVM snapshot
+ * ([opencode-host.ts](vm/opencode-host.ts)): placing it under the root of run
+ * would mean reinstalling it on each ticket. It is specific to the MACHINE, not
+ * to the run, and nothing that one run writes there distinguishes it from another.
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * `repoDir` EST LA RACINE DE SÉCURITÉ
+ * ─────────────────────── ──────────────────────── ──────────────────────────────
+ * `repoDir` IS THE SECURITY ROOT
  *
  * `resolveWithin`, `assertNotGit`, `resolveReadable` ([repo-path.ts](repo-path.ts))
- * et `absoluteInRepo` ([opencode-permissions.ts](vm/opencode-permissions.ts))
- * comparent tous à cette valeur. Tant qu'elle était un littéral, sa forme allait
- * de soi ; elle arrive désormais par un JSON écrit ailleurs. `assertUsableLayout`
- * est ce qui reprend le rôle du littéral : un chemin relatif ou un slash final
- * rendraient ces quatre fonctions muettes plutôt que fausses —
- * `resolveWithin("repo", "../x")` ne sort de rien du tout, puisque « rien » est
- * ce à quoi il compare.
+ * and `absoluteInRepo` ([opencode-permissions.ts](vm/opencode-permissions.ts))
+ * all compare to this value. As long as it was a literal, its form was self-evident; it now arrives via JSON written elsewhere. `assertUsableLayout`
+ * is what takes over the role of the literal: a relative path or a final slash
+ * would make these four functions silent rather than false —
+ * `resolveWithin("repo", "../x")` does not come out of anything at all, since "nothing" is
+ * what it does compare.
  *
- * Module PUR et SANS AUCUN import : il part dans le bundle de la microVM, il est
- * lu par le script de snapshot lancé à la main (`tsx`), et par la fonction.
+ * PURE module and WITHOUT ANY import: it goes into the microVM bundle, it is
+ * read by the snapshot script launched by hand (`tsx`), and by the function.
  */
 
-/** Le disque d'un run, tel que le harness et les garde-fous le voient. */
+/** The record of a run, as the harness and guardrails see it. */
 export interface HarnessLayout {
-  /** La racine UNIQUE du run. Tout ce qui suit en dérive, sauf `opencodeDir`. */
+  /** The UNIQUE root of the run. Everything that follows derives from it, except `opencodeDir`. */
   root: string;
   /**
-   * Où vit le dépôt du tour — et LA RACINE DE SÉCURITÉ (cf. en-tête). Aucune
-   * écriture du modèle ne sort d'ici.
-   *
-   * Cloné pour le tour dans le cas courant ; en mode dépôt courant (MIN-358),
-   * c'est le checkout que l'utilisateur avait déjà, et il n'est PAS sous `root`
-   * (cf. `layoutForCurrentRepo`).
-   */
+ * Where the tower repository lives — and THE SECURITY ROOT (see header). No
+ * pattern writing exits here.
+ *
+ * Cloned for the trick in the current case; in current deposit mode (MIN-358),
+ * this is the checkout that the user already had, and it is NOT under `root`
+ * (see `layoutForCurrentRepo`).
+ */
   repoDir: string;
   /**
-   * Où le harness dépose les sorties de tools trop longues pour le modèle
-   * (MIN-107). DÉLIBÉRÉMENT hors de `repoDir` : la fin de tour ne le voit pas,
-   * donc rien de tout ça n'atterrit dans un commit ou une PR — et, dans le dépôt
-   * courant de l'utilisateur, rien de tout ça n'apparaît dans son `git status`.
-   */
+ * Where the harness drops tool outputs that are too long for the model
+ * (MIN-107). DELIBERATELY out of `repoDir`: the end of round doesn't see it,
+ * so none of that lands in a commit or a PR — and, in the user's current
+ * repository, none of that appears in their `git status`.
+ */
   toolOutputDir: string;
   /**
-   * Où vit le HARNESS lui-même — bundle, job du tour, config et état d'opencode.
-   *
-   * Hors de `repoDir` pour la même raison que `toolOutputDir`, et c'est encore
-   * plus vrai ici : la fin de tour emporterait sinon le code du harness ET le
-   * job, qui porte l'historique de la conversation ET l'URL de push, dans un
-   * commit du dépôt de l'utilisateur puis dans sa pull request.
-   */
+ * Where the HARNESS itself lives — bundle, tour job, config and opencode state.
+ *
+ * Outside of `repoDir` for the same reason as `toolOutputDir`, and it's still
+ * more true here: the end of the round would carry otherwise the harness code AND the
+ * job, which carries the conversation history AND the push URL, in a
+ * commit of the user's repository then in his pull request.
+ */
   harnessDir: string;
   /**
-   * Le `.tsbuildinfo` du type-check de livraison ([diagnostics.ts](diagnostics.ts)).
-   * Hors du dépôt (même raison), et il persiste avec la racine du run : c'est ce
-   * qui fait passer les tours suivants de 22 s à 11 s.
-   */
+ * The `.tsbuildinfo` of the delivery type-check ([diagnostics.ts](diagnostics.ts)).
+ * Outside the repository (same reason), and it persists with the root of the run: it is this
+ * which reduces the following rounds from 22 s to 11 s.
+ */
   typecheckDir: string;
   /**
-   * Où le binaire opencode est INSTALLÉ. Propre à la machine, PAS au run
-   * (cf. en-tête) : deux runs simultanés le partagent, et c'est ce qu'on veut.
-   */
+ * Where the opencode binary is INSTALLED. Specific to the machine, NOT to the run
+ * (see header): two simultaneous runs share it, and that's what we want.
+ */
   opencodeDir: string;
 }
 
 /**
- * LE BUNDLE DU HARNESS ET LE JOB DU TOUR — deux fonctions PURES du layout.
+ * THE HARNESS BUNDLE AND THE TOUR JOB — two PURE layout functions.
  *
- * Elles vivaient dans [vm/protocol.ts](vm/protocol.ts), qui les re-exporte encore
- * pour ses lecteurs historiques. Elles sont ici depuis MIN-293 pour une raison de
- * GRAPHE : le lanceur de l'app de bureau a besoin de ces deux chemins, et
- * `protocol.ts` type-importe `../runs`, qui est `server-only` — l'y suivre
- * ferait entrer la moitié du serveur dans le type-check de la coquille, qui
- * n'a ni `global.d.ts` ni les mêmes réglages, et le casserait sur des fichiers
- * qui n'ont rien à voir avec elle.
+ * They lived in [vm/protocol.ts](vm/protocol.ts), which still re-exports them
+ * for its historical readers. They've been here since MIN-293 for a reason of
+ * GRAPH: the desktop app launcher needs both of these paths, and
+ * `protocol.ts` import-type `../runs`, which is `server-only` — following it there
+ * would bring in half of the server in the shell's type-check, which
+ * has neither `global.d.ts` nor the same settings, and would break it on files
+ * that have nothing to do with it.
  *
- * Ce module-ci n'a AUCUN import, et c'est exactement pourquoi il est le bon
- * endroit : il est déjà lu par la fonction, par le bundle de la microVM et par un
- * script `tsx` lancé à la main. La coquille est le quatrième lecteur, et le
- * dernier qui pouvait encore faire tomber cette propriété.
+ * This module has NO import, and that's exactly why it is the good
+ * location: it is already read by the function, by the microVM bundle and by a
+ * script `tsx` launched by hand. The shell is the fourth reader, and the last one that could still drop this property.
  */
 
-/** Le bundle du harness, écrit avant chaque tour à côté de son job. */
+/** The harness bundle, written before each round next to its job. */
 export function vmBundlePath(layout: HarnessLayout): string {
   return `${layout.harnessDir}/main.js`;
 }
 
 /**
- * Le job du tour, écrit à côté du bundle.
+ * The job of the tour, written next to the bundle.
  *
- * Une FONCTION du layout, mais le harness ne peut pas s'en servir pour trouver
- * son propre job : le layout est DANS le job. Cet œuf et cette poule se résolvent
- * par l'argument de ligne de commande que le lanceur passe — c'est la seule
- * information dont le harness ait besoin avant de savoir quoi que ce soit d'autre.
+ * A FUNCTION of the layout, but the harness cannot use it to find
+ * its own job: the layout is IN the job. This chicken and egg resolves
+ * by the command line argument that the caster passes — it's the only
+ * information the harness needs before knowing anything else.
  */
 export function vmJobPath(layout: HarnessLayout): string {
   return `${layout.harnessDir}/job.json`;
 }
 
-/** La racine du disque d'un run en microVM. Une VM par run : elle suffit à elle seule. */
+/** The root of the disk of a microVM run. One VM per run: that alone is enough. */
 export const CLOUD_SANDBOX_ROOT = "/vercel/sandbox";
 
-/** Où le binaire opencode est cuit dans l'image pré-chauffée de la microVM. */
+/** Where the opencode binary is baked into the microVM's pre-heated image. */
 export const CLOUD_OPENCODE_DIR = "/vercel/oc";
 
-/** Le layout dérivé d'une racine de run. La seule fabrique — nulle part ailleurs
- *  on ne recolle un chemin de harness à la main. */
+/** The layout derived from a run root. The only factory - nowhere else
+ * does one glue a harness path by hand. */
 export function layoutForRoot(root: string, opencodeDir: string): HarnessLayout {
   const base = trimTrailingSlashes(root);
   return {
@@ -143,22 +140,21 @@ export function layoutForRoot(root: string, opencodeDir: string): HarnessLayout 
   };
 }
 
-/** Le layout d'un run en microVM — exactement les chemins d'avant MIN-354. */
+/** The layout of a microVM run — exactly the paths before MIN-354. */
 export function cloudLayout(): HarnessLayout {
   return layoutForRoot(CLOUD_SANDBOX_ROOT, CLOUD_OPENCODE_DIR);
 }
 
 /**
- * LE LAYOUT DU MODE DÉPÔT COURANT (MIN-358) — tout ce qui est du run sous la
- * racine du run, mais le DÉPÔT ailleurs : là où l'utilisateur l'a déjà cloné.
+ * THE CURRENT DEPOSIT MODE LAYOUT (MIN-358) — everything from the run under the run root, but the DEPOSIT elsewhere: where the user has already cloned it.
  *
- * C'est le seul cas où `repoDir` n'est pas `<root>/repo`, et il n'est pas un
- * assouplissement de MIN-354 mais son premier vrai client : le dépôt cesse
- * d'être un dossier qu'on crée pour devenir un dossier qu'on trouve. Ce qui
- * reste tenu, et qui était la VRAIE raison de la règle « sous la racine », c'est
- * que le harness, ses sorties de tools et son `.tsbuildinfo` ne soient jamais
- * DANS le dépôt — sinon ils apparaîtraient dans le `git status` de l'utilisateur
- * et, pire, dans le périmètre du tour ([current-repo.ts](current-repo.ts)).
+ * This is the only case where `repoDir` is not `<root>/repo`, and it is not a
+ * relaxation of MIN-354 but its first real client: the deposit ceases
+ * to be a folder that we create to become a folder that we find. What
+ * still holds, and was the REAL reason for the "under the root" rule, is
+ * that the harness, its tools outputs and its `.tsbuildinfo` are never
+ * IN the repository — otherwise they would appear in the `git status` of the user
+ * and, worse, within the scope of the round ([current-repo.ts](current-repo.ts)).
  */
 export function layoutForCurrentRepo(
   root: string,
@@ -169,15 +165,15 @@ export function layoutForCurrentRepo(
 }
 
 /**
- * LA RACINE D'UN RUN SUR UNE MACHINE PARTAGÉE — un dossier par identifiant de
- * run, sous un dossier de travail commun.
+ * THE ROOT OF A RUN ON A SHARED MACHINE — a folder per identifier of
+ * run, under a common working folder.
  *
- * C'est le geste que la microVM rendait gratuit et qu'un ordinateur ne rend pas :
- * sans lui, deux runs lancés à la suite écrivent leur job, leur base SQLite et
- * leurs sorties de tools au même endroit, et le second efface le premier en
- * silence. Le `runId` est passé au tamis des caractères de chemin — il vient de
- * la base, mais un identifiant qui porterait un `/` ou un `..` ferait sortir la
- * racine de son dossier de travail, et c'est elle qui borne tout le reste.
+ * This is the gesture that the microVM made free and that a computer does not make:
+ * without it, two runs launched at the rest write their job, their SQLite base and
+ * their tools outputs in the same place, and the second erases the first in
+ * silence. The `runId` is passed through the sieve of path characters — it comes from
+ * the base, but an identifier carrying an `/` or a `..` would take the root
+ * out of its working folder, and it is this which bounds everything else.
  */
 export function runScopedRoot(baseDir: string, runId: string): string {
   const safe = runId.replace(/[^A-Za-z0-9._-]/g, "-").replace(/^\.+/, "") || "run";
@@ -185,32 +181,29 @@ export function runScopedRoot(baseDir: string, runId: string): string {
 }
 
 /**
- * REFUSE UN LAYOUT QUE LES GARDE-FOUS NE SAURAIENT PAS TENIR.
+ * REFUSES A LAYOUT THAT THE GUARDRAINS CANNOT HOLD.
  *
- * Trois exigences, et chacune correspond à une hypothèse que les littéraux
- * d'hier rendaient évidente :
+ * Three requirements, and each corresponds to an assumption that yesterday's literals
+ * made obvious:
  *
- * - **absolu** — `resolveWithin` normalise `<base>/<chemin>` et compare au
- *   préfixe. Sur une base relative, un `../..` du modèle sort du dépôt sans que
- *   la comparaison le voie ;
- * - **sans slash final** — `assertNotGit` compare à `${base}/.git`, et
- *   `resolveWithin` à `${base}/` : une base finissant par `/` produit un
- *   `//`, que `normalize` efface d'un côté et pas de l'autre ;
- * - **le harness hors du dépôt** — c'est ce qui garantit que `toolOutputDir`,
- *   `harnessDir` et `typecheckDir` ne sont pas des enfants du dépôt, donc que le
- *   `git add -A` de fin de tour ne les emporte jamais.
+ * - **absolute** — `resolveWithin` normalizes `<base>/<chemin>` and compares to the
+ * prefix. On a relative basis, a `../..` of the model leaves the repository without the comparison seeing it; `${base}/`: a base ending with `/` produces a
+ * `//`, which `normalize` erases on one side and not on the other;
+ * - **the harness outside the repository** — this is what guarantees that `toolOutputDir`,
+ * `harnessDir` and `typecheckDir` are not children of the repository, so the end-of-turn
+ * `git add -A` never overrides them.
  *
- * CE QUI A CHANGÉ EN MIN-358, et pourquoi ce n'est pas un relâchement : la règle
- * s'écrivait « le dépôt sous la racine », ce qui n'était qu'une FAÇON de dire la
- * troisième — vraie tant que le dépôt était un dossier qu'on créait. En mode
- * dépôt courant, le dépôt est celui de l'utilisateur et vit où il vit ; ce qu'on
- * doit encore refuser, c'est un harness qui s'installerait DEDANS. La règle est
- * donc dite pour ce qu'elle protège, et les trois dossiers du run restent, eux,
- * tenus sous la racine du run.
+ * WHAT CHANGED IN MIN-358, and why it's not a relaxation: the rule
+ * was written "the repository under the root", which was just a WAY of saying the
+ * third — true as long as the repository was a folder that we created. In
+ * current deposit mode, the deposit is that of the user and lives where he lives; what we
+ * must still refuse is a harness that would be installed INSIDE. The rule is
+ * therefore said for what it protects, and the three folders of the run remain,
+ * held under the root of the run.
  *
- * LÈVE, et ne rend pas un booléen : le seul appelant est le harness au moment
- * où il lit son job, et un layout douteux n'a pas de mode dégradé — il n'y a
- * rien à faire d'un tour dont on ne sait pas où il écrit.
+ * RISES, and does not return a boolean: the only caller is the harness at the moment
+ * when it reads its job, and a questionable layout has no degraded mode — there is
+ * nothing to do with a trick where we don't know where it writes.
  */
 export function assertUsableLayout(layout: HarnessLayout): void {
   const dirs: Array<[keyof HarnessLayout, string]> = [

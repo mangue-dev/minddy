@@ -1,64 +1,64 @@
 # Releases publiques
 
-Ce document est le contrat de release du **cœur public** de minddy.
-`npm run deploy` est l'entrée unique pour le mainteneur : son assistant choisit
-et orchestre les opérations ci-dessous. Les workflows et scripts spécialisés
-restent séparés en interne pour être rejouables par la CI, mais il n'est pas
-nécessaire de les lancer un par un.
+This document is the release contract for minddy's **public heart**.
+`npm run deploy` is the single entry for the maintainer: his assistant chooses
+and orchestrates the operations below. Specialized workflows and scripts
+remain separated internally to be replayable by the CI, but it is not
+necessary to launch them one by one.
 
-### Cœur et Cloud, concrètement
+### Heart and Cloud, concretely
 
-Le **cœur minddy** est le produit distribuable : code source, migrations,
-application Next.js et coquille desktop. Une release du cœur crée une version
-publique durable (`v0.10.0`) que n'importe quel opérateur peut télécharger et
-installer. Elle ne modifie pas, à elle seule, le site utilisé par nos clients.
+The **minddy heart** is the distributable product: source code, migrations,
+Next.js application and desktop shell. A core release creates a version
+durable public (`v0.10.0`) that any operator can download and
+install. It does not, in itself, modify the site used by our customers.
 
-**Minddy Cloud** est notre instance en fonctionnement sur `www.minddy.app` : le
-même cœur, configuré avec notre Supabase, nos domaines, nos services optionnels
-et notre hébergement Vercel. Le déployer change ce que les utilisateurs voient
-en production. Il peut être déployé plusieurs fois entre deux releases du cœur.
-Les pages marketing vivent dans le même build web : les publier est donc un
-déploiement Cloud, mais un changement marketing seul ne mérite pas une nouvelle
-version du produit.
+**Minddy Cloud** is our running instance on `www.minddy.app`: the
+same core, configured with our Supabase, our domains, our optional services
+and our Vercel accommodation. Deploying it changes what users see
+in production. It can be deployed several times between two core releases.
+The marketing pages live in the same web build: publishing them is therefore a
+Cloud deployment, but a marketing change alone does not deserve a new
+product version.
 
-Toute promotion Cloud est précédée de la
-[`checklist de sécurité`](security-release-checklist.md). Le compte rendu
-complété, ses risques résiduels et la décision de pentest sont revus avant
-l'approbation de l'environnement de production ; leur référence est conservée
-dans le run GitHub du SHA promu.
+Any Cloud promotion is preceded by the
+[`security release checklist`](security-release-checklist.md). The report
+completed, its residual risks and the pentest decision are reviewed before
+approval of the production environment; their reference is preserved
+in the GitHub run of the promoted SHA.
 
-## Les trois cadences
+## The three cadences
 
-| Périmètre | Identifiant | Déclencheur | Artefact ou preuve |
+| Perimeter | Identifier | Trigger | Artifact or evidence |
 | --- | --- | --- | --- |
-| Cœur public | SemVer `X.Y.Z`, tag annoté `vX.Y.Z` | workflow `Public core release`, sur le SHA de `production` | source, migrations, manifeste, notes, checksums et attestations GitHub |
-| Minddy Cloud | SHA Git + identifiant immuable du déploiement Vercel | workflow `Promote production`, après CI verte et approbation | SHA identique sur `main` et `production`, URL et statut du GitHub Deployment Vercel |
-| Site marketing | SHA Git + identifiant du déploiement | pipeline d'hébergement du site | déploiement ; aucun bump ou tag du cœur si seul le contenu marketing change |
+| Public Heart | SemVer `X.Y.Z`, annotated tag `vX.Y.Z` | workflow `Public core release`, on the SHA of `production` | source, migrations, manifest, notes, checksums and attestations GitHub |
+| Minddy Cloud | SHA Git + immutable identifier of the Vercel deployment | workflow `Promote production`, after green CI and approval | Same SHA on `main` and `production`, URL and status of GitHub Deployment Vercel |
+| Marketing website | SHA Git + deployment identifier | site hosting pipeline | deployment ; no bump or tag from the heart if only the marketing content changes |
 
-Le dépôt reste simple : les contributions convergent sur `main`, les branches
-de travail passent par pull request, et `production` désigne uniquement ce que
-sert Minddy Cloud. Il n'existe pas de branche de release longue durée. Un
-correctif d'une ancienne majeure part exceptionnellement d'une branche
-`release/X.x`, puis reçoit un tag SemVer normal.
+The deposit remains simple: the contributions converge on `main`, the branches
+work goes through pull request, and `production` only denotes what
+serves Minddy Cloud. There is no long-running release branch. A
+patch of an old major part exceptionally from a branch
+`release/X.x`, then receives a normal SemVer tag.
 
-## Versionnement et changelog
+## Versioning and changelog
 
-Le cœur suit SemVer :
+The heart follows SemVer:
 
-- **patch** : correction compatible, durcissement ou migration additive sans
-  changement de contrat public ;
-- **minor** : fonctionnalité compatible, nouvelle variable optionnelle ou
-  migration additive qui demande une action documentée ;
-- **major** : rupture d'API/configuration, suppression annoncée ou migration de
-  données incompatible avec l'ancienne application.
+- **patch**: compatible correction, hardening or additive migration without
+  change of public contract;
+- **minor**: compatible functionality, new optional variable or
+  additive migration which requires documented action;
+- **major**: API/configuration breakage, announced deletion or migration of
+  data incompatible with the old application.
 
-`CHANGELOG.md` ne décrit que le cœur et sa coquille desktop publique. Chaque PR
-visible pour les utilisateurs ajoute une entrée sous `Unreleased` dans
-`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed` ou `Security`. Les détails
-d'exploitation Cloud et les changements purement marketing restent dans leurs
-journaux respectifs.
+`CHANGELOG.md` only describes the core and its public desktop shell. Each PR
+visible to users adds an entry under `Unreleased` in
+`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed` or `Security`. The details
+of Cloud operations and purely marketing changes remain in their
+respective newspapers.
 
-## La commande unique
+## The single order
 
 Depuis un `main` propre :
 
@@ -66,133 +66,133 @@ Depuis un `main` propre :
 npm run deploy
 ```
 
-L'assistant affiche ce qu'il a détecté depuis le dernier tag et depuis
-`production`, puis propose :
+The assistant displays what it has detected since the last tag and since
+`production`, then suggests:
 
-1. **Recommandation automatique** : sélection fondée sur les fichiers modifiés ;
-2. **Tout publier directement** : cœur + web Cloud + macOS ;
-3. **Choisir périmètre par périmètre** ;
-4. annuler.
+1. **Automatic recommendation**: selection based on modified files;
+2. **Publish everything directly**: core + web Cloud + macOS;
+3. **Choose perimeter by perimeter**;
+4. cancel.
 
-En mode automatique :
+In automatic mode:
 
-- des fichiers produit/API/migrations/docs suggèrent une release du cœur ;
-- tout commit absent de `production` suggère le déploiement web ;
-- les chemins marketing sont signalés et n'entraînent pas seuls une release du
-  cœur ;
-- macOS n'est suggéré que si l'empreinte réelle de la coquille diffère de la
-  dernière publication.
+- product/API/migrations/docs files suggest a core release;
+- any commit missing from `production` suggests web deployment;
+- the marketing paths are indicated and do not alone lead to a release of the
+  heart;
+- macOS is only suggested if the actual shell footprint differs from the
+  last publication.
 
-Si le cœur est sélectionné, l'assistant demande patch/minor/major ou une version
-explicite. Il met à jour les quatre manifests/lockfiles et le changelog, crée le
-commit signé DCO, pousse `main` et attend sa CI distante. Il déclenche ensuite
-`Promote production`, qui attend l'approbation de l'environnement
-`cloud-production`, revérifie la CI réussie du SHA exact, refuse toute divergence
-et avance `production` en fast-forward. Le workflow attend le GitHub Deployment
-Vercel `Production` au statut `success`. Il n'utilise aucun token Vercel local.
+If core is selected, the wizard asks for patch/minor/major or a version
+explicit. It updates the four manifests/lockfiles and the changelog, creates the
+commit signed DCO, pushes `main` and waits for its remote CI. It then triggers
+`Promote production`, which is waiting for environment approval
+`cloud-production`, rechecks successful CI of exact SHA, rejects any discrepancies
+and advances `production` in fast-forward. Workflow waits for GitHub Deployment
+Vercel `Production` to `success` status. It does not use any local Vercel tokens.
 
-Une release du cœur implique cette promotion Cloud : le tag public ne peut être
-créé que sur un commit réellement déployé. Après la promotion, l'assistant lance
-`Public core release` sur `production` avec la version et le SHA immuable. Le
-workflow `scripts/release-policy.mjs` refuse une ref différente, un checkout
-différent ou une tête `production` différente. Une version préparée mais restée
-sans tag après un échec est détectée et proposée à nouveau, sans second bump.
+A core release involves this Cloud promotion: the public tag cannot be
+created only on a commit actually deployed. After promotion, the wizard launches
+`Public core release` to `production` with version and immutable SHA. The
+workflow `scripts/release-policy.mjs` refuses a different ref, a checkout
+different or a different `production` head. A version prepared but left
+without a tag after a failure is detected and offered again, without a second bump.
 
-Les variantes scriptables sont `npm run deploy -- auto`, `-- all` et
-`-- custom`. Même « all » conserve les contrôles et la question de version :
-« direct » signifie un seul parcours, pas un contournement de la CI.
+Scriptable variants are `npm run deploy -- auto`, `-- all` and
+`-- custom`. Even 'all' retains the version checks and question:
+“direct” means a single route, not a bypass of the CI.
 
-Pour chaque parcours qui inclut le web, la commande demande la référence stable
-du compte rendu de sécurité, si des risques résiduels y sont consignés et le
-statut du pentest. En non-interactif, utiliser
-`MINDDY_SECURITY_REVIEW_REF`, `MINDDY_RESIDUAL_RISKS` et
-`MINDDY_PENTEST_STATUS` comme décrit par la checklist. Le workflow
-`Promote production` refuse une checklist périmée, une preuve absente ou un
-pentest requis mais non terminé avant d'ouvrir la barrière d'approbation.
+For each path that includes the web, the command requests the stable reference
+of the safety report, if residual risks are recorded there and the
+pentest status. In non-interactive, use
+`MINDDY_SECURITY_REVIEW_REF`, `MINDDY_RESIDUAL_RISKS` and
+`MINDDY_PENTEST_STATUS` as described by the checklist. The workflow
+`Promote production` refuses an outdated checklist, missing proof or a
+pentest required but not completed before opening approval gate.
 
-Le poste ne charge jamais `.env` et ne fabrique aucun artefact de confiance. Il
-ne fait qu'un test rapide des scripts de release avant de préparer la demande ;
-les lint, typecheck, tests, audit, build web, artefacts, signature et notarisation
-tournent dans des runners jetables. Les secrets de production restent dans les
-environnements GitHub ou dans l'intégration Vercel de l'organisation.
+The workstation never loads `.env` and does not create any trust artifacts. He
+only does a quick test of the release scripts before preparing the request;
+lint, typecheck, tests, audit, web build, artifacts, signature and notarization
+spin in disposable runners. Production secrets remain in the
+GitHub environments or in the organization's Vercel integration.
 
-En interne, `scripts/prepare-release.mjs` refuse une version non SemVer, un tag
-existant ou un `Unreleased` vide. Le workflow public refait la barrière du dépôt,
-l'installation figée, lint, typecheck, bundle desktop, tests, audit et un vrai
-`next build` sans secret. Il génère et atteste les artefacts avant de créer le
-tag : une erreur ne laisse donc pas de demi-release.
+Internally, `scripts/prepare-release.mjs` refuses a non-SemVer version, a tag
+existing or an empty `Unreleased`. The public workflow redoes the deposit barrier,
+frozen installation, lint, typecheck, desktop bundle, tests, audit and a real
+`next build` without secrets. It generates and attests the artifacts before creating the
+tag: an error therefore does not leave a half-release.
 
-## Artefacts du cœur
+## Artifacts of the heart
 
-`scripts/build-release-artifacts.mjs` fabrique dans `.release/` :
+`scripts/build-release-artifacts.mjs` makes in `.release/`:
 
-- `minddy-vX.Y.Z-source.tar.gz`, archive déterministe du commit ;
-- `minddy-vX.Y.Z-migrations.tar.gz`, migrations, bootstrap et runbooks utiles à
-  l'installation ou à la mise à jour ;
-- `release-manifest.json`, qui lie version, tag, SHA, release précédente,
-  migrations ajoutées et hashes des archives ;
-- `UPDATE.md` et les notes extraites du changelog ;
+- `minddy-vX.Y.Z-source.tar.gz`, deterministic commit archive;
+- `minddy-vX.Y.Z-migrations.tar.gz`, migrations, bootstrap and runbooks useful for
+  installation or update;
+- `release-manifest.json`, which links version, tag, SHA, previous release,
+  added migrations and archive hashes;
+- `UPDATE.md` and notes extracted from the changelog;
 - `SHA256SUMS`.
 
-GitHub fournit aussi ses archives automatiques du tag. Le workflow ajoute une
-attestation de provenance sans clé longue durée grâce à l'identité OIDC du
-runner. Après téléchargement :
+GitHub also provides its automatic tag archives. The workflow adds a
+long-term keyless certificate of provenance thanks to the OIDC identity of the
+runner. After downloading:
 
 ```bash
 shasum -a 256 -c SHA256SUMS
 gh attestation verify minddy-v0.10.0-source.tar.gz --repo mangue-dev/minddy-issues
 ```
 
-Un « build reproductible » signifie ici que la recette, les versions Node/pnpm,
-le lockfile et les contrôles vivent dans GitHub Actions et tournent dans un
-runner vierge. Les archives source sont bit-à-bit reproductibles pour un même
-commit (`git archive` + `gzip -n`). Le build Next vérifie l'application web ; le
-binaire déployé reste propre à l'environnement, car les variables
-`NEXT_PUBLIC_*` font partie du build. Minddy Cloud enregistre donc son SHA et
-son identifiant Vercel au lieu de présenter son build configuré comme un
-artefact générique auto-hébergeable.
+A “reproducible build” here means that the recipe, Node/pnpm versions,
+the lockfile and controls live in GitHub Actions and run in a
+blank runner. The source archives are bit-for-bit reproducible for the same
+commit(`git archive` + `gzip -n`). The Next build verifies the web application; the
+deployed binary remains specific to the environment, because the variables
+`NEXT_PUBLIC_*` are part of the build. Minddy Cloud therefore registers its SHA and
+its Vercel identifier instead of presenting its build configured as a
+Generic self-hosting artifact.
 
-Après chaque déploiement Cloud réussi, l'opérateur enregistre dans le dépôt
-privé `mangue-dev/minddy-cloud-ops` un manifeste de provenance immuable : SHA et
-version de ce cœur, arbre et tête des migrations, SHA de configuration privée,
-empreintes du contrat/configuration, identifiant du déploiement Vercel et projet
-Supabase. Le manifeste ne contient ni valeur d'environnement ni donnée client.
-Le workflow public s'arrête au verdict Vercel et ne clone jamais le dépôt privé :
-ce journal complète la preuve d'exploitation sans devenir une dépendance du cœur.
+After each successful Cloud deployment, the operator saves in the repository
+private `mangue-dev/minddy-cloud-ops` an immutable provenance manifest: SHA and
+version of this core, tree and head of migrations, private configuration SHA,
+contract/configuration fingerprints, Vercel deployment identifier and project
+Supabase. The manifest does not contain any environment values ​​or client data.
+The public workflow stops at the Vercel verdict and never clones the private repository:
+this log supplements proof of exploitation without becoming a dependency of the heart.
 
-## Migrations, mise à jour et rollback
+## Migrations, updates and rollbacks
 
-Le manifeste et `UPDATE.md` énumèrent le diff de migrations depuis le tag
-précédent. L'archive livre aussi l'historique complet, nécessaire au bootstrap.
-La procédure opérationnelle de référence reste
-[`self-hosting-operations.md`](self-hosting-operations.md) : sauvegarde
-coordonnée Postgres + Storage, arrêt des écritures, migrations avant nouvelle
-application, vérification, puis réouverture.
+The manifest and `UPDATE.md` list the migration diff from the tag
+previous. The archive also provides the complete history, necessary for bootstrapping.
+The reference operational procedure remains
+[`self-hosting-operations.md`](self-hosting-operations.md): backup
+Postgres + Storage coordinate, stop of writes, migrations before new
+application, verification, then reopening.
 
-Les migrations sont forward-only. Avant leur application, revenir au tag
-précédent suffit. Après une migration déclarée compatible en arrière, l'ancien
-code peut être redémarré pendant la fenêtre documentée. Dans tous les autres
-cas, le rollback est la restauration **du même ensemble** Postgres, Storage,
-configuration et version applicative. Ne jamais inventer un `down.sql` pendant
-l'incident.
+Migrations are forward-only. Before their application, return to the tag
+previous one is enough. After a migration declared compatible backwards, the old
+code can be restarted during the documented window. In all the others
+case, the rollback is the restoration **of the same set** Postgres, Storage,
+configuration and application version. Never invent a `down.sql` during
+the incident.
 
 ### Hotfix Cloud
 
-Une urgence suit le même chemin simple que toute correction Cloud :
+An emergency follows the same simple path as any Cloud patch:
 
-1. créer la correction depuis la tête de `main`, avec test de non-régression ;
-2. committer la correction sur `main`, puis lancer `npm run deploy` ;
-3. vérifier le SHA de `production` et le déploiement Vercel associé.
+1. create the correction from the `main` head, with non-regression test;
+2. commit the correction to `main`, then run `npm run deploy`;
+3. check the SHA of `production` and the associated Vercel deployment.
 
-Ne jamais corriger uniquement `production`, même temporairement : le prochain
-fast-forward perdrait le correctif et rendrait l'état servi impossible à
-reproduire depuis `main`.
+Never correct only `production`, even temporarily: the next
+fast-forward would lose the fix and make the served state impossible to
+reproduce from `main`.
 
-### Rollback Cloud sans réécriture
+### Rollback Cloud without rewriting
 
-Retrouver le `STABLE_SHA` dans le dernier déploiement Vercel réussi. Ne pas
-forcer `production` vers cet ancien commit. Restaurer son arbre sur le `main`
-courant, puis produire un **nouveau** commit de rollback :
+Find the `STABLE_SHA` in the last successful Vercel deployment. Don't
+force `production` to this old commit. Restore your tree on `main`
+current, then produce a **new** rollback commit:
 
 ```bash
 git fetch origin main
@@ -203,63 +203,63 @@ git commit -s -m "revert(cloud): restore $STABLE_SHA"
 npm run deploy -- custom
 ```
 
-Vérifier avant déploiement la compatibilité avec les migrations déjà appliquées :
-elles restent forward-only et ne sont jamais annulées par cette restauration de
-code. Dans le menu, sélectionner uniquement le web Cloud. Le nouveau commit est
-poussé sur `main`, testé, puis `production` pointe sur ce même SHA par
-fast-forward. Son arbre applicatif restaure la version stable sans réécrire
-l'historique. La correction de fond part ensuite de ce `main` restauré et reçoit
-un nouveau déploiement ; elle ne vit jamais seulement sur `production`.
+Before deployment, check compatibility with migrations already applied:
+they remain forward-only and are never canceled by this restoration of
+code. In the menu, select only the web Cloud. The new commit is
+pushed to `main`, tested, then `production` points to this same SHA by
+fast-forward. Its application tree restores the stable version without rewriting
+the history. The background correction then starts from this restored `main` and receives
+a new deployment; she never lives only on `production`.
 
 ## App macOS publique
 
-Le desktop ne reçoit pas automatiquement chaque version du cœur : c'est une
-fenêtre sur le web, et une modification web ne change pas la coquille. Quand
-`npm run desktop:check` montre une empreinte différente, lancer **Public macOS
-release** avec une version du cœur déjà publiée. Le workflow reconstruit sur
-`macos-26`, signe, notarise, agrafe le ticket, vérifie le flux de mise à jour,
-ajoute ses checksums et attestations, puis attache `.dmg`, `.zip`, blockmaps et
-`latest-mac.yml` à la release existante.
+The desktop does not automatically receive each version of the core: it is a
+window on the web, and a web modification does not change the shell. When
+`npm run desktop:check` shows a different fingerprint, launch **macOS public
+release** with a core version already released. The workflow rebuilt on
+`macos-26`, signs, notarizes, staples the ticket, checks the update flow,
+adds its checksums and attestations, then attaches `.dmg`, `.zip`, blockmaps and
+`latest-mac.yml` to the existing release.
 
-Les secrets suivants appartiennent à l'environnement GitHub
-`public-release`, pas à un compte ou un trousseau personnel :
+The following secrets belong to the GitHub environment
+`public-release`, not to an account or a personal keychain:
 
-- `MACOS_CERTIFICATE_P12_BASE64` et `MACOS_CERTIFICATE_PASSWORD` ;
-- `APPLE_API_KEY_P8`, `APPLE_API_KEY_ID` et `APPLE_API_ISSUER` ;
-- `PUBLIC_DESKTOP_FEED_URL` et `PUBLIC_DESKTOP_BLOB_READ_WRITE_TOKEN` pour le
-  flux générique stable d'electron-updater.
+- `MACOS_CERTIFICATE_P12_BASE64` and `MACOS_CERTIFICATE_PASSWORD` ;
+- `APPLE_API_KEY_P8`, `APPLE_API_KEY_ID` and `APPLE_API_ISSUER`;
+- `PUBLIC_DESKTOP_FEED_URL` and `PUBLIC_DESKTOP_BLOB_READ_WRITE_TOKEN` for the
+  Generic stable electron-updater flow.
 
-Le rôle doit être transmissible à un autre mainteneur et les secrets doivent
-être rotatifs. Le workflow attache les binaires immuables à GitHub Releases et
-met à jour le manifeste du flux générique **en dernier**, après les binaires.
-Le stockage peut être Vercel Blob comme dans
-[`desktop-release.md`](desktop-release.md), mais ses identifiants sont ceux de
-l'organisation et la publication est exécutée par la CI.
+The role must be transferable to another maintainer and the secrets must
+be rotary. The workflow attaches immutable binaries to GitHub Releases and
+updates the generic stream manifest **last**, after the binaries.
+Storage can be Vercel Blob as in
+[`desktop-release.md`](desktop-release.md), but its identifiers are those of
+organization and publication is carried out by the CI.
 
-## Approbations et réglages GitHub
+## GitHub approvals and settings
 
-- `cloud-production` protège `Promote production` avec les mainteneurs requis ;
-  lui seul peut avancer `production` avec le `GITHUB_TOKEN` éphémère ;
-- `public-release` protège le tag, GitHub Release et les secrets Apple ;
-- `production` interdit force-push et suppression. Son seul acteur d'écriture
-  autorisé est le workflow de promotion ;
-- l'intégration Git Vercel doit publier un GitHub Deployment nommé exactement
-  `Production`, faute de quoi la promotion finit en échec même si la branche a
-  avancé. Après relance du déploiement Vercel, rejouer la commande vérifie le
-  même SHA et reprend l'attente.
+- `cloud-production` protects `Promote production` with required maintainers;
+  only he can advance `production` with the ephemeral `GITHUB_TOKEN`;
+- `public-release` protects the tag, GitHub Release and Apple secrets;
+- `production` prohibits force-push and delete. His only writing actor
+  authorized is the promotion workflow;
+- Git Vercel integration must publish an exactly named GitHub Deployment
+  `Production`, otherwise the promotion ends in failure even if the branch has
+  advanced. After restarting the Vercel deployment, rerunning the command verifies the
+  same SHA and resumes waiting.
 
-L'approbation explicite se fait dans l'interface GitHub pendant que
-`npm run deploy` attend. Elle est journalisée avec le run, le SHA demandé et le
-verdict Vercel. Les réglages reproductibles sont listés dans
+Explicit approval is done in the GitHub interface while
+`npm run deploy` is waiting. It is logged with the run, the requested SHA and the
+Vercel verdict. Reproducible settings are listed in
 `.github/REPOSITORY_SETTINGS.md`.
 
-## Échec et reprise
+## Failure and recovery
 
-- Avant création du tag : corriger le commit ou la configuration, puis relancer.
-- Tag poussé mais release absente : ne pas déplacer le tag ; créer la release à
-  partir des artefacts conservés par le workflow, ou publier un patch si le
-  contenu est faux.
-- Release publiée : elle est immuable. Une correction donne une nouvelle
-  version ; les assets ne sont pas remplacés silencieusement.
-- Déploiement Cloud en échec : suivre le rollback Vercel/base du runbook. Ne pas
-  supprimer une release publique correcte pour refléter un incident Cloud.
+- Before creating the tag: correct the commit or configuration, then restart.
+- Tag pushed but release absent: do not move the tag; create the release at
+  from the artifacts preserved by the workflow, or publish a patch if the
+  content is false.
+- Release published: it is immutable. A correction gives a new
+  version ; assets are not replaced silently.
+- Failed Cloud deployment: follow the Vercel/runbook base rollback. Don't
+  remove a correct public release to reflect a Cloud incident.

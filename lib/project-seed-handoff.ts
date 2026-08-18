@@ -1,26 +1,26 @@
 "use client";
 
 /**
- * Ce que le wizard de création tend au board qu'il vient d'ouvrir (MIN-171).
+ * What the creation wizard hands to the board he has just opened (MIN-171).
  *
- * L'amorce se joue APRÈS la création : le wizard finit sur
- * `/projects/{id}?setup=numo|import`, et la surface qui s'y ouvre a besoin de
- * ce qui a été saisi une étape plus tôt — le brief collé, le CSV déposé.
+ * The beginning is played AFTER creation: the wizard ends on
+ * `/projects/{id}?setup=numo|import`, and the surface that opens there needs
+ * what was entered one step earlier — the brief pasted, the CSV submitted.
  *
- * En mémoire, pas en sessionStorage : un `File` ne se sérialise pas, et la
- * navigation est un `router.push` côté client, donc le même contexte JS. Une
- * relance complète (rechargement, lien rouvert plus tard) perd la remise et la
- * surface s'ouvre vide — ce qui est exactement ce qu'elle doit faire quand elle
- * n'a rien reçu (Numo ouvre alors sur ses questions, l'import sur sa zone de
- * dépôt).
+ * In memory, not in sessionStorage: a `File` is not serialized, and the
+ * navigation is a client-side `router.push`, so the same JS context. A
+ * complete restart (reload, link reopened later) loses the discount and the
+ * surface opens empty — which is exactly what it should do when it
+ * has not received anything (Numo then opens his questions, the import to his zone of
+ * deposit).
  *
- * La remise est à USAGE UNIQUE : le board la prend, elle disparaît. Sinon le
- * même brief se re-proposerait au prochain passage sur ce board.
+ * The shed is for SINGLE USE: the board takes it, it disappears. Otherwise the
+ * The same brief would be re-proposed the next time I visit this board.
  */
 
 export type SeedHandoff =
-  /** Le brief devient le PREMIER MESSAGE d'une conversation avec Numo
-   *  (MIN-173) ; `null` quand l'utilisateur a préféré partir de ses questions. */
+  /** The brief becomes the FIRST MESSAGE of a conversation with Numo
+   * (MIN-173); `null` when the user preferred to start with their questions. */
   | { kind: "numo"; brief: string | null }
   | { kind: "import"; file: File };
 
@@ -30,7 +30,7 @@ export function putSeedHandoff(handoff: SeedHandoff): void {
   pending = handoff;
 }
 
-/** La remise en attente, consommée : le prochain appel rend `null`. */
+/** The put back on hold, consumed: the next call returns `null`. */
 export function takeSeedHandoff(): SeedHandoff | null {
   const handoff = pending;
   pending = null;

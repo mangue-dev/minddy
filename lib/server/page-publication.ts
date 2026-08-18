@@ -11,32 +11,32 @@ import {
 } from "@/lib/server/view-shares";
 
 /**
- * Ce qu'une PAGE PUBLIÉE donne à voir à quelqu'un qui n'a pas de compte
- * (MIN-283) — et, tout aussi important, ce qu'elle ne donne pas.
+ * What a PUBLISHED PAGE shows to someone who doesn't have an account
+ * (MIN-283) — and, just as importantly, what it doesn't show.
  *
- * Le rendu public n'est pas une seconde vue de la page : c'est la MÊME surface
- * (l'éditeur monté en lecture seule), nourrie d'un document dont on a retiré
- * tout ce qui mènerait ailleurs. Ce module est cet endroit-là, et il est le
- * seul :
+ * Making the page public is not a second view of the page: it's the SAME surface
+ * (the editor set up as read-only), fed by a document from which we have removed
+ * everything that would lead elsewhere. This module is that place, and it is the
+ * alone:
  *
- *  - les SOUS-PAGES ne sont résolues que dans l'ENSEMBLE PUBLIÉ (la page seule,
- *    ou sa branche quand `include_children`). Une sous-page hors de cet
- *    ensemble n'est pas « masquée » : son titre ne sort tout simplement pas
- *    d'ici, et le bloc se rend inerte côté client faute de savoir quoi en dire.
- *    Un bloc qui affiche « Spécification tarifs 2027 » barré est déjà une fuite ;
- *  - les FICHIERS et les IMAGES (MIN-280) sont servis par des URL signées
- *    posées ICI, au rendu, et seulement pour les fichiers des pages publiées.
- *    Le bucket reste privé et la route d'application (`/api/projects/…`), elle,
- *    reste fermée aux visiteurs anonymes : c'est le document qui voyage avec
- *    ses adresses, pas la porte qui s'ouvre ;
- *  - les MENTIONS n'ont rien à neutraliser, et c'est le modèle qui l'offre :
- *    une mention est du TEXTE dans le document, la pilule n'étant reposée qu'à
- *    la lecture par la surface qui en a les sources (MIN-269). Le rendu public
- *    ne les lui donne pas, donc « @Clément » reste « @Clément » — sans avatar,
- *    sans lien, sans rien apprendre du projet.
+ * - SUBPAGES are only resolved in the PUBLISHED SET (the single page,
+ * or its branch when `include_children`). A subpage outside this
+ * set is not "hidden": its title simply does not come out
+ * from here, and the block becomes inert on the client side for lack of knowing what to say about it.
+ * A block which displays "2027 price specification" crossed out is already a leak;
+ * - the FILES and IMAGES (MIN-280) are served by signed URLs
+ * placed HERE, when rendered, and only for files on published pages.
+ * The bucket remains private and the application route (`/api/projects/…`), it,
+ * remains closed to anonymous visitors: it is the document that travels with
+ * its addresses, not the door that opens;
+ * - the MENTIONS have nothing to neutralize, and it is the model which offers it:
+ * a mention is TEXT in the document, the pill not being put back until
+ * reading by the surface which has the sources (MIN-269). Making it public
+ * does not give them to him, so “@Clément” remains “@Clément” — without avatar,
+ * without link, without learning anything from the project.
  */
 
-/** Une page de l'ensemble publié, telle que le rendu la nomme. */
+/** A page from the published set, as the renderer calls it. */
 export interface PublicPageNode {
   id: string;
   parent_id: string | null;
@@ -47,35 +47,34 @@ export interface PublicPageNode {
 export interface PublicPageBundle {
   share: PublicPageShareContext["share"];
   project: PublicPageShareContext["project"];
-  /** La page RACINE de la publication — celle que le token désigne. */
+  /** The ROOT page of the publication — the one that the token designates. */
   root: PublicPageNode;
-  /** La page effectivement rendue (la racine, ou une page de sa branche). */
+  /** The page actually rendered (the root, or a page from its branch). */
   page: PublicPageNode & { updated_at: string };
-  /** Le corps, adresses de fichiers déjà signées. */
+  /** The body, file addresses already signed. */
   content: unknown;
-  /** Tout l'ensemble publié : ce que les blocs sous-page ont le droit de nommer. */
+  /** The entire published set: what the subpage blocks have the right to name. */
   pages: PublicPageNode[];
-  /** Le chemin depuis la racine publiée jusqu'à la page rendue (exclue). */
+  /** The path from the published root to the rendered page (excluded). */
   trail: PublicPageNode[];
 }
 
-/** Durée de vie des URL signées d'une page publiée.
+/** Lifespan of the signed URLs of a published page.
  *
- * Bien plus longue que les dix minutes de la porte d'application : ces URL sont
- * posées dans un document qu'on lit d'une traite, qu'on imprime en PDF, et
- * qu'un onglet peut garder ouvert une journée. Bien plus courte, en revanche,
- * qu'« indéfiniment » — une URL signée qui fuit hors de la page publiée doit
- * finir par ne plus rien servir. Vingt-quatre heures est le compromis, et le
- * rendu étant fait à chaque requête, un rechargement en pose de neuves. */
+ * Much longer than the ten minutes of the application gate: these URLs are
+ * placed in a document that is read in one go, that is printed in PDF, and
+ * that a tab can keep open for a day. Much shorter, however,
+ * than "indefinitely" — a signed URL that leaks outside the published page should eventually become of no use. Twenty-four hours is the compromise, and the
+ * rendering is made for each request, a reload when installing new ones. */
 const PUBLIC_FILE_URL_TTL_SECONDS = 24 * 3600;
 
 /**
- * Le bundle d'une page publiée, ou `null` (→ 404).
+ * The bundle of a published page, or `null` (→ 404).
  *
- * `pageId` désigne une page de la BRANCHE publiée : c'est ainsi qu'on navigue
- * d'une page publiée à ses sous-pages sans jamais forger de second token. Une
- * page hors de la branche — ou une branche non publiée — rend `null`, comme un
- * token inconnu : le visiteur n'apprend pas qu'elle existe.
+ * `pageId` designates a page of the published BRANCH: this is how we navigate
+ * from a published page to its subpages without never forge a second token. A
+ * page outside the branch — or an unpublished branch — returns `null`, like a
+ * unknown token: the visitor does not learn that it exists.
  */
 export async function getPublicPageBundle(
   token: string,
@@ -92,8 +91,8 @@ export async function getPublicPageBundle(
     icon: ctx.page.icon,
   };
 
-  // L'ensemble publié. Sans `include_children`, il tient en une page — et c'est
-  // la garantie qui compte : aucun titre d'enfant n'est même LU.
+  // All published. Without `include_children`, it fits on one page — and that's
+  // the guarantee that counts: no child's title is even READ.
   let pages: PublicPageNode[] = [root];
   if (ctx.share.include_children) {
     const { data } = await service
@@ -143,10 +142,10 @@ export async function getPublicPageBundle(
 }
 
 /**
- * Le chemin de la racine publiée jusqu'à `pageId`, la page rendue exclue.
+ * The path from the published root to `pageId`, the rendered page excluded.
  *
- * Il ne remonte JAMAIS au-dessus de la racine : le fil d'Ariane d'une page
- * publiée ne dit rien de l'endroit du wiki d'où elle vient.
+ * It NEVER goes back above the root: the breadcrumbs of a published page
+ * say nothing about where in the wiki it came from comes.
  */
 function trailWithin(
   pages: PublicPageNode[],
@@ -167,16 +166,16 @@ function trailWithin(
 }
 
 /**
- * Les `src` de fichiers du corps, remplacés par des URL signées.
+ * The `src` of body files, replaced with signed URLs.
  *
- * La traversée est aveugle au type de nœud, comme `pageFileIdsInBody` : tout
- * attribut qui ressemble à l'adresse d'un fichier de page compte, et un bloc de
- * plus qui en porterait un est couvert d'avance.
+ * Traversal is blind to node type, like `pageFileIdsInBody`: any
+ * attribute that looks like the address of a page file counts, and a block de
+ * more who would carry one is covered in advance.
  *
- * Un fichier dont la page N'EST PAS publiée voit son `src` retiré plutôt que
- * laissé tel quel : l'URL d'application ne répondrait de toute façon pas à un
- * visiteur anonyme, mais elle dirait le projet et l'identifiant du fichier.
- * Le bloc se rend alors « indisponible », ce qu'il sait déjà faire.
+ * A file whose page is NOT published has its `src` removed rather than
+ * left as is: the application URL would not respond to an
+ * anonymous visitor anyway, but it would say the project and the file identifier.
+ * The block then makes itself "unavailable", which it already knows how to do.
  */
 export async function signPublicFileUrls(
   content: unknown,
@@ -209,14 +208,14 @@ export async function signPublicFileUrls(
       if (!publishedPageIds.has(row.page_id)) return;
       const url = await signedAttachmentUrl(service, row.storage_path, {
         expiresIn: PUBLIC_FILE_URL_TTL_SECONDS,
-        // Une IMAGE doit s'afficher dans le document ; tout le reste est un
-        // fichier qu'on vient chercher, et son bloc est un bouton de
-        // téléchargement (blocks/file-view.tsx). La disposition se décide à la
-        // SIGNATURE : l'ajouter en paramètre après coup ne signerait rien.
+        // An IMAGE must be displayed in the document; everything else is one
+        // file that we are looking for, and its block is a button
+        // download (blocks/file-view.tsx). The arrangement is decided upon
+        // SIGNATURE: adding it as a parameter afterwards would not sign anything.
         //
-        // « Image » au sens de l'allowlist et non du préfixe `image/` : une page
-        // publiée est lisible par n'importe qui, et un `image/svg+xml` est un
-        // document exécutable, pas une image (MIN-340).
+        // “Image” in the sense of the allowlist and not of the `image/` prefix: a page
+        // published is readable by anyone, and a `image/svg+xml` is a
+        // executable document, not an image (MIN-340).
         download: isInlineSafeMimeType(row.mime_type) ? false : row.file_name,
         mimeType: row.mime_type,
       });
@@ -232,11 +231,10 @@ export async function signPublicFileUrls(
 }
 
 /**
- * Recopie le document en remplaçant les chaînes que `map` réécrit — `undefined`
- * laisse la valeur en place, `null` retire l'attribut.
+ * Copies the document replacing the strings that `map` rewrites — `undefined`
+ * leaves the value in place, `null` removes the attribute.
  *
- * Une COPIE et pas une mutation : le document vient d'une lecture, et rien ne
- * dit qu'il n'est pas partagé avec un cache de requête.
+ * A COPY and not a mutation: the document comes from a reading, and nothing says it's not shared with a query cache.
  */
 function walkSrc(
   node: unknown,

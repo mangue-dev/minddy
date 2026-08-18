@@ -57,11 +57,11 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Liste du board public (MIN-37) — structure type UserJot : barre de filtres
- * par statut + tri, lignes auteur/titre/extrait avec vote en pill, sidebar
- * « Partager un retour » (composeur en dialog avec suggestion live « existe
- * peut-être déjà »). Toute action nécessitant une identité passe par la porte
- * OTP puis se rejoue automatiquement.
+ * Public board list (MIN-37) — UserJot-style structure: filter bar
+ * by status + sorting, author/title/excerpt lines with vote in pill, sidebar
+ * “Share feedback” (dialog composer with live suggestion “exists
+ * maybe already). Any action requiring an identity goes through the door
+ * OTP, then automatically replays the action.
  */
 
 const SIMILAR_DEBOUNCE_MS = 1000;
@@ -79,15 +79,15 @@ export function FeedbackBoardClient({
   ssoError,
 }: {
   token: string;
-  /** Préfixe public des liens : /f/<token>, ou "" sur domaine personnalisé. */
+  /** Public prefix of links: /f/<token>, or "" on custom domain. */
   basePath: string;
-  /** Le produit : nom (infobulles d'état) et icône (badge « L'équipe a répondu »). */
+  /** The product: name (status tooltips) and icon (“Team responded” badge). */
   project: PublicProject;
   posts: PublicPost[];
   sort: "top" | "recent";
-  /** null = le défaut du board : les retours encore vivants. */
+  /** null = the board's fault: the returns still alive. */
   filter: PublicStatusFilter;
-  /** Aucun retour public, filtre à part — départage les deux états vides. */
+  /** No public feedback, separate filter — separates the two empty states. */
   boardEmpty: boolean;
   identity: PublicIdentity | null;
   ssoError: boolean;
@@ -107,9 +107,9 @@ export function FeedbackBoardClient({
     }
   };
 
-  // La recherche travaille sur la page déjà chargée, en place et sans aller-
-  // retour — le même geste que les filtres de sidebar de l'app, et la même
-  // fonction de correspondance (mots, sans accents, titre ET corps).
+  // The search works on the already loaded page, in place and without going-
+  // return — the same gesture as the app's sidebar filters, and the same
+  // match function (words, without accents, title AND body).
   const query = search.trim();
   const visible = query
     ? posts.filter((post) => matchesFilter(query, [post.title, post.body]))
@@ -135,16 +135,16 @@ export function FeedbackBoardClient({
           filter={filter}
           search={search}
           onSearchChange={setSearch}
-          // Un board sans le moindre retour public n'a rien à chercher : le
-          // champ y promettrait une liste qui n'existe pas.
+          // A board without the slightest public feedback has nothing to look for: the
+          // field there would promise a list that does not exist.
           searchable={!boardEmpty}
         />
 
         {visible.length === 0 ? (
           query ? (
-            /* Le vide de la RECHERCHE, pas celui du filtre : il nomme les mots
-               tapés, et la sortie qu'il propose est de les effacer — pas
-               d'élargir le filtre, qui n'est pas ce qui vient de vider la
+            /* The void of SEARCH, not that of the filter: it names the words
+               typed, and the output it suggests is to erase them — not
+               to widen the filter, which is not what has just emptied the
                liste. */
             <EmptyScene icon={Search} title={t("emptySearch", { query })}>
               <Button variant="outline" onClick={() => setSearch("")}>
@@ -152,17 +152,17 @@ export function FeedbackBoardClient({
               </Button>
             </EmptyScene>
           ) : (
-            /* Le vide se NOMME : « aucun retour ouvert » dit à la fois ce qui
-               manque et sous quel filtre on regarde, là où « rien ne correspond »
-               laissait chercher lequel. Et le board par défaut ne montre que les
-               retours vivants : vide ici ne veut pas dire vide tout court, c'est
-               le serveur qui tranche (`boardEmpty`), pas le filtre. */
+            /* The void is NAMED: “no open return” says both what
+               missing and under what filter we look, where “nothing matches”
+               let's figure out which one. And the default board only shows the
+               living returns: empty here does not mean empty quite simply, it is
+               the server that decides (`boardEmpty`), not the filter. */
             <EmptyScene
               icon={MessagesSquare}
               title={
                 boardEmpty || filter === "all"
                   ? t("empty")
-                  : // Clé assemblée à l'exécution (lib/i18n-keys.ts).
+                  : // Key assembled at runtime (lib/i18n-keys.ts).
                     t(`emptyStatus.${filter ?? "open"}` as MessageKey<"PublicFeedback">)
               }
             >
@@ -172,9 +172,9 @@ export function FeedbackBoardClient({
                   {t("composerTitle")}
                 </Button>
               ) : (
-                /* La sortie du filtre, sous la phrase qui vient de le nommer : le
-                   combobox est une pastille de 20 px en haut de page, et c'est ici
-                   qu'on se demande où sont passés les autres retours. */
+                /* The output of the filter, under the sentence which has just named it: the
+                   combobox is a 20 px dot at the top of the page, and it's here
+                   that we wonder where the other returns have gone. */
                 <Button variant="outline" asChild>
                   <Link href={buildHref(basePath, sort, "all")}>{t("emptySeeAll")}</Link>
                 </Button>
@@ -183,9 +183,9 @@ export function FeedbackBoardClient({
           )
         ) : (
           <>
-            {/* Des cartes, donc de l'air entre elles : le filet qui les séparait
-                collait deux retours l'un à l'autre, et un fond de survol arrêté
-                net sur ce filet se lisait comme une erreur de rendu. */}
+            {/* Cards, therefore air between them: the net that separated them
+                stuck two returns together, and a stopped hover background
+                net on this net read like a rendering error. */}
             <ul className="-mx-3 flex flex-col gap-0.5">
               {visible.map((post) => (
                 <FeedbackPostRow
@@ -204,12 +204,12 @@ export function FeedbackBoardClient({
       </div>
 
       <aside className="hidden w-64 shrink-0 desktop:block">
-        {/* Le bouton se CENTRE sur la bande du header, comme les déclencheurs de
-            filtre s'y centrent — pas sur le haut de la colonne, ni sur le filet.
-            La bande fait 24 px (`h-6`, la même que celle de FilterBar) ; le
-            bouton en fait 36 (`h-9`) et déborde donc de 6 px de part et d'autre,
-            symétriquement. Hauteur FIXE, sinon la boîte s'étire à la taille du
-            bouton et « centrer » ne veut plus rien dire (MIN-255). */}
+        {/* The button is CENTERED on the header strip, like the triggers of
+            filter centers there — not on the top of the column, nor on the net.
+            The strip is 24 px (`h-6`, the same as that of FilterBar); THE
+            button makes 36 (`h-9`) and therefore overflows by 6 px on both sides,
+            symmetrically. FIXED height, otherwise the box stretches to the size of the
+            button and “center” no longer means anything (MIN-255). */}
         <div className="flex h-6 items-center">
           <Button className="w-full" onClick={() => setComposerOpen(true)}>
             <Megaphone />
@@ -249,22 +249,22 @@ function buildHref(
 ): string {
   const params = new URLSearchParams();
   if (sort === "recent") params.set("sort", "recent");
-  // Le défaut est l'ABSENCE de paramètre : l'URL du board reste l'URL du board.
+  // The default is the ABSENCE of a parameter: the board URL remains the board URL.
   if (filter) params.set("status", filter);
   const query = params.toString();
-  // basePath "" (domaine personnalisé) : la racine du board est "/".
+  // basePath "" (custom domain): the root of the board is "/".
   return `${basePath || "/"}${query ? `?${query}` : ""}`;
 }
 
 /**
- * Le filtre d'état, en UN déclencheur.
+ * The state filter, in ONE trigger.
  *
- * C'était six pastilles en ligne, qui débordaient sur mobile et donnaient le
- * même poids visuel à « Ouvert » qu'à « Décliné » — alors que l'un est ce qu'on
- * vient voir et l'autre ce qu'on vient rarement chercher. Le même combobox
- * cherchable que le dashboard le replie : « Ouverts » d'abord, qui est le point
- * de départ et groupe les trois états vivants, les états exacts ensuite, « tous »
- * en dernier pour qui veut l'archive.
+ * It was six tablets online, which spilled over onto mobile and gave the
+ * same visual weight to “Open” as to “Declined” — while one is what we
+ * comes to see and the other what we rarely come to look for. The same combo box
+ * searchable that the dashboard folds it: “Open” first, which is the point
+ * starting point and groups the three living states, the exact states then, “all”
+ * last for those who want the archive.
  */
 function StatusFilterMenu({
   basePath,
@@ -309,10 +309,10 @@ function StatusFilterMenu({
       }
     >
       <CommandGroup>
-        {/* Les `value` de cmdk sont l'IDENTITÉ des lignes, pas une étiquette :
-            le groupe « Ouverts » et le statut `open` partageaient
-            « filter-open », et cmdk allumait donc les deux d'un coup. Deux
-            préfixes distincts, et la question ne se repose plus. */}
+        {/* The cmdk `value` is the IDENTITY of the lines, not a label:
+            the “Open” group and the `open` status shared
+            “filter-open”, and cmdk therefore turned on both at once. Two
+            distinct prefixes, and the question no longer arises. */}
         <CommandItem
           value="group-open"
           keywords={[t("filterOpen")]}
@@ -353,17 +353,17 @@ function StatusFilterMenu({
 }
 
 /**
- * La barre de tête du board : chercher, filtrer, trier — dans cet ordre.
+ * The header bar of the board: search, filter, sort — in that order.
  *
- * L'ordre est celui de la question qu'on se pose : « est-ce que mon besoin est
- * déjà là ? » d'abord, et seulement ensuite « montre-moi ce qui est prévu » ou
- * « les plus votés ». La recherche prend la place, les deux déclencheurs se
- * rangent à droite, côte à côte, parce qu'ils font la même chose — restreindre
- * puis ordonner la même liste.
+ * The order is that of the question we ask ourselves: “is my need
+ * already there? » first, and only then “show me what is planned” or
+ * “most voted”. The search takes its place, the two triggers are
+ * row to the right, side by side, because they do the same thing — restrict
+ * then order the same list.
  *
- * Le champ est celui des sidebars (`SidebarFilterField`) : ni bordure ni fond,
- * la grammaire discrète des filtres de l'app. Une vraie boîte de recherche
- * bordée, en haut d'une page publique, se lirait comme la recherche du SITE.
+ * The field is that of sidebars (`SidebarFilterField`): neither border nor background,
+ * the discrete grammar of the app's filters. A real search box
+ * lined, at the top of a public page, would read like the SITE search.
  */
 function FilterBar({
   basePath,
@@ -383,9 +383,9 @@ function FilterBar({
   const t = useTranslations("PublicFeedback");
   const router = useRouter();
   return (
-    // `min-h-6` fige la hauteur de la bande à 24 px — celle des déclencheurs de
-    // filtre. C'est sur cette bande, et non sur le filet, que se centre le
-    // bouton « Partager un retour » de la colonne de droite.
+    // `min-h-6` freezes the height of the strip at 24 px — that of the triggers
+    // filtered. It is on this strip, and not on the net, that the
+    // “Share Feedback” button in the right column.
     <div className="flex min-h-6 items-center gap-3 border-b border-border/60 pb-3">
       {searchable ? (
         <SidebarFilterField
@@ -426,13 +426,13 @@ function FilterBar({
 }
 
 /**
- * La fin de la liste, DITE.
+ * The end of the list, SAY.
  *
- * Un board se termine sans rien : la page s'arrête, et rien ne dit si on a tout
- * vu ou si le chargement s'est arrêté là. La ligne ferme la liste — et elle
- * nomme ce dont c'est la fin, parce que ce n'est presque jamais « tous les
- * retours » : le board s'ouvre sur les vivants, et les résolus, eux, sont
- * derrière un filtre qu'on n'a pas encore ouvert.
+ * A board ends with nothing: the page stops, and nothing says if we have everything
+ * seen or if the loading stopped there. The line closes the list — and it
+ * name what it is the end of, because it is almost never "all
+ * returns”: the board opens onto the living, and the resolute ones are
+ * behind a filter that we haven't opened yet.
  */
 function EndOfList({ filter, query }: { filter: PublicStatusFilter; query: string }) {
   const t = useTranslations("PublicFeedback");
@@ -440,9 +440,9 @@ function EndOfList({ filter, query }: { filter: PublicStatusFilter; query: strin
     <p className="pt-2 text-center text-xs text-muted-foreground">
       {query
         ? t("endOfSearch")
-        : // Clé assemblée à l'exécution (lib/i18n-keys.ts) : « all » et les
-          // statuts exacts sont des clés à part entière, `null` retombe sur
-          // « ouverts » comme le fait déjà l'état vide.
+        : // Key assembled at runtime (lib/i18n-keys.ts): “all” and the
+          // exact statuses are keys in their own right, `null` falls on
+          // “open” as the empty state already does.
           t(`endOfList.${filter ?? "open"}` as MessageKey<"PublicFeedback">)}
     </p>
   );
@@ -460,7 +460,7 @@ function ComposerDialog({
 }: {
   token: string;
   basePath: string;
-  /** Le visiteur a passé la porte OTP — seule condition pour ouvrir le micro. */
+  /** The visitor has passed the OTP door — the only condition for opening the microphone. */
   identified: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -470,22 +470,22 @@ function ComposerDialog({
   const tDictate = useTranslations("Dictate");
   const router = useRouter();
   const [title, setTitle] = useState("");
-  // Coché par défaut : publier sur le board. Décoché = retour privé à l'équipe.
+  // Checked by default: publish on the board. Unchecked = private return to the team.
   const [isPublic, setIsPublic] = useState(true);
   const [similar, setSimilar] = useState<SimilarPost[]>([]);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Le MarkdownEditor ne committe qu'au blur — la ref porte toujours la
-  // dernière valeur commitée, et submit() force le blur avant de lire.
+  // The MarkdownEditor only commits to blur — the ref always carries the
+  // last committed value, and submit() forces the blur before reading.
   const bodyRef = useRef("");
   const [initialBody, setInitialBody] = useState("");
   const [editorKey, setEditorKey] = useState(0);
 
-  // Brouillon en localStorage : si le modal se ferme (vérification email qui
-  // tourne mal, fausse manip), le retour en cours d'écriture est récupéré à la
-  // réouverture. Effacé seulement après publication.
+  // Draft in localStorage: if the modal closes (email verification which
+  // goes wrong, wrong manipulation), the return being written is retrieved at the
+  // reopening. Deleted only after publication.
   const draftKey = `mdy-feedback-draft:${token}`;
   const persistDraft = (nextTitle: string, nextBody: string) => {
     try {
@@ -495,7 +495,7 @@ function ComposerDialog({
         localStorage.setItem(draftKey, JSON.stringify({ title: nextTitle, body: nextBody }));
       }
     } catch {
-      // localStorage indisponible — tant pis pour le brouillon
+      // localStorage unavailable — too bad for the draft
     }
   };
 
@@ -512,15 +512,15 @@ function ComposerDialog({
         setEditorKey((k) => k + 1);
       }
     } catch {
-      // brouillon illisible — on repart de zéro
+      // illegible draft — we start from scratch
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Suggestion live « ce post existe peut-être déjà » — titre seul, debounce.
-  // Réservée aux visiteurs identifiés : l'embedding est facturé au propriétaire
-  // du board (MIN-342), et l'action le refuserait de toute façon — autant ne
-  // pas afficher un « recherche… » qui ne trouvera jamais rien.
+  // Live suggestion “this post may already exist” — title only, debounce.
+  // Reserved for identified visitors: embedding is billed to the owner
+  // of the board (MIN-342), and the action would refuse it anyway - we might as well
+  // not show a “searching…” state that can never find anything.
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const trimmed = title.trim();
@@ -529,7 +529,7 @@ function ComposerDialog({
       return;
     }
     debounceRef.current = setTimeout(() => {
-      // L'état « recherche… » rend le système visible même sans résultat.
+      // The “search…” state makes the system visible even without results.
       setChecking(true);
       void findSimilarPostsAction(token, trimmed)
         .then(setSimilar)
@@ -541,15 +541,15 @@ function ComposerDialog({
     };
   }, [title, token, open, identified]);
 
-  // ── Dictée (MIN-37) ────────────────────────────────────────────────────────
-  // Une prise = deux étapes visibles : l'écoute (le micro passe en spinner),
-  // puis Numo qui range (son visage remplace le micro, et le liseré souligne le
-  // modal). Le transport diffère du dashboard, la mécanique non — d'où le hook.
+  // ── Dictation (MIN-37) ──────────────────────────── ────────────────────────────
+  // One take = two visible stages: listening (the microphone switches to a spinner),
+  // then Numo who tidies up (his face replaces the microphone, and the border highlights the
+  // modal). The transport differs from the dashboard, the mechanics do not — hence the hook.
 
   const [transcribing, setTranscribing] = useState(false);
 
-  /** Remplace le titre / le corps par ce que Numo vient d'écrire. Le corps est
-      un éditeur riche : le remonter est la seule façon d'y poser du texte. */
+  /** Replace the title/body with what Numo just wrote. The body is
+      a rich editor: remounting it is the only way to add text to it. */
   const applyPatch = (patch: { title?: string; body?: string }) => {
     const nextTitle = patch.title ?? title;
     const nextBody = patch.body ?? bodyRef.current;
@@ -579,8 +579,8 @@ function ComposerDialog({
       });
       if (result.ok) return { ok: true, patch: result.patch, reply: result.reply };
       if (result.error === "notAuthenticated") {
-        // La session a expiré entre l'écoute et le rangement : on renvoie à la
-        // porte, la prise est perdue mais le texte déjà écrit reste.
+        // The session expired between listening and storage: we return to the
+        // door, the catch is lost but the already written text remains.
         onNeedAuth(() => {});
         return { ok: false, handled: true };
       }
@@ -596,7 +596,7 @@ function ComposerDialog({
     },
   });
 
-  /** L'écoute : la prise part au board, qui la transcrit et rend le run. */
+  /** Listening: the take goes to the board, which transcribes it and returns the run. */
   const uploadAudio = async (blob: Blob): Promise<string | null> => {
     const form = new FormData();
     form.append(
@@ -641,7 +641,7 @@ function ComposerDialog({
     setError(null);
     startTransition(async () => {
       try {
-        // Committe le contenu markdown en cours d'édition avant lecture.
+        // Commits currently edited markdown content before reading.
         (document.activeElement as HTMLElement | null)?.blur();
         await new Promise((resolve) => setTimeout(resolve, 0));
         const result = await createPostAction(token, {
@@ -664,9 +664,9 @@ function ComposerDialog({
         }
         reset();
         onOpenChange(false);
-        // Revue avant publication (MIN-54) : un retour public passe d'abord par la
-        // vérification IA (catégorisation + modération) avant d'apparaître ; un
-        // retour privé part directement à l'équipe.
+        // Review before publication (MIN-54): public feedback first goes through
+        // AI verification (categorization + moderation) before appearing; A
+        // private return leaves directly to the team.
         toast.success(isPublic ? t("submittedPublic") : t("submittedPrivate"));
         router.refresh();
       } catch {
@@ -679,8 +679,8 @@ function ComposerDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        // Une dictée en vol travaille SUR ce formulaire : le transcript, puis
-        // le texte de Numo, vont y atterrir. Fermer maintenant les jetterait.
+        // An in-flight dictation works ON this form: the transcript, then
+        // the text of Numo, will land there. Closing now would throw them away.
         if (!next && (transcribing || numoBusy)) {
           toast.info(tDictate("inFlight"), { id: "dictation-in-flight" });
           return;
@@ -689,11 +689,11 @@ function ComposerDialog({
         onOpenChange(next);
       }}
     >
-      {/* ⌘/Ctrl+Entrée envoie depuis N'IMPORTE QUEL champ du modal — le titre
-          comme le corps. Le raccourci est posé ici plutôt que sur chaque champ
-          parce que le corps est un éditeur riche : la touche y remonte par
-          bouillonnement. `defaultPrevented` laisse la priorité à l'éditeur quand
-          il s'en sert lui-même (sortir d'un bloc de code). */}
+      {/* ⌘/Ctrl+Enter sends from ANY field in the modal — the title
+          like the body. The shortcut is placed here rather than on each field
+          because the body is a rich editor: the key goes back to it through
+          bubbling. `defaultPrevented` leaves priority to the editor when
+          he uses it himself (exiting a block of code). */}
       <DialogContent
         className="top-24 translate-y-0 gap-0 sm:max-w-xl"
         onKeyDown={(e) => {
@@ -702,8 +702,8 @@ function ComposerDialog({
           if (title.trim() && !pending && !numoBusy) submit();
         }}
       >
-        {/* Style « modal de création d'issue » : titre et description sont des
-            surfaces d'écriture libres, sans containers. */}
+        {/* “Issue creation modal” style: title and description are
+            free writing surfaces, without containers. */}
         <DialogTitle className="sr-only">{t("composerTitle")}</DialogTitle>
         <AutoTextarea
           autoFocus
@@ -757,14 +757,14 @@ function ComposerDialog({
         )}
         {error && (
           <p className="mt-3 text-sm text-destructive">
-            {/* Code d'erreur serveur : clé assemblée à l'exécution. */}
+            {/* Server error code: key assembled at runtime. */}
             {t(`errors.${error}` as MessageKey<"PublicFeedback">)}
           </p>
         )}
         <div className="mt-4 flex items-center justify-between gap-4 rounded-lg border px-3 py-2.5">
-          {/* Le ⓘ vit HORS du <label> : dedans, l'ouvrir basculerait aussi
-              l'interrupteur — lire l'explication rendrait public le retour
-              qu'on hésitait justement à publier. */}
+          {/* The ⓘ lives OUTSIDE the <label>: inside, opening it would also switch
+              the switch — reading the explanation would make the return public
+              which we were reluctant to publish. */}
           <div className="flex min-w-0 flex-col">
             <div className="flex items-center gap-1.5">
               <label
@@ -790,9 +790,9 @@ function ComposerDialog({
             onCheckedChange={setIsPublic}
           />
         </div>
-        {/* Barre du bas : la voix à gauche, l'envoi à droite — la même que le
-            modal de création de ticket, parce que c'est le même geste. Pendant
-            que Numo range, son visage prend la place du micro. */}
+        {/* Bottom bar: voice on the left, send on the right — the same as
+            ticket creation modal, because it is the same gesture. During
+            that Numo puts away, his face takes the place of the microphone. */}
         <div className="mt-3 flex items-center justify-between gap-4 border-t pt-3">
           {numoBusy ? (
             <span
@@ -805,10 +805,10 @@ function ComposerDialog({
               />
             </span>
           ) : identified ? (
-            /* L'infobulle dit ce que le micro FAIT, pas comment il s'appelle :
-               un visiteur ne vient pas ici chercher une dictée, et « Dictée
-               vocale » ne lui apprend rien. Elle promet le résultat — parler,
-               et trouver le retour écrit. */
+            /* The tooltip says what the mic DOES, not what it's called:
+               a visitor does not come here to look for a dictation, and “Dictation
+               vocal” doesn’t teach him anything. She promises the result — to speak,
+               and find the written return. */
             <DictateButton
               onTranscription={onTranscript}
               uploadAudio={uploadAudio}
@@ -818,11 +818,11 @@ function ComposerDialog({
               className="-ml-2"
             />
           ) : (
-            /* Pas encore identifié : le micro EXISTE, il demande d'abord qui
-               parle. Le cacher ferait apparaître un bouton de nulle part une
-               fois l'email vérifié — et dicter fait dépenser l'équipe, donc on
-               sait toujours qui a parlé. Même promesse en infobulle : la porte
-               ne se justifie que si on sait déjà ce qu'il y a derrière. */
+            /* Not yet identified: the microphone EXISTS, it first asks who
+               speak. Hiding it would make a button appear out of nowhere
+               once the email is verified — and dictating makes the team spend, so we
+               always knows who spoke. Same promise in tooltip: the door
+               can only be justified if we already know what is behind it. */
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -855,8 +855,8 @@ function ComposerDialog({
           </SendShortcutTooltip>
         </div>
 
-        {/* Numo reprend la dictée : le liseré souligne le bord du modal pendant
-            qu'il travaille — même signal que son visage, plus haut. */}
+        {/* Numo takes over the dictation: the border highlights the edge of the modal during
+            that he is working — same signal as his face, higher up. */}
         <AgentBeamOverlay active={numoBusy} />
       </DialogContent>
     </Dialog>

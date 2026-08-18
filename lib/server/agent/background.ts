@@ -2,61 +2,61 @@ import { checkCommand, FORBIDDEN_COMMAND_REASON, type CommandScope } from "./com
 import { headTail } from "./prune";
 
 /**
- * Jobs de FOND de l'agent (MIN-114). `run_command` est BLOQUANT : il attend la fin
- * de la commande, puis la tue. L'agent ne pouvait donc pas lancer un serveur de
- * dev — donc jamais vérifier qu'une page rend ou qu'une route répond. Il vérifiait
- * ce qui tient dans un `exit 0`, ou rien.
+ * Agent BACKGROUND jobs (MIN-114). `run_command` is BLOCKING: it waits for
+ * to finish the command, then kills it. The agent could therefore not launch a de
+ * dev server — therefore never check that a page renders or that a route responds. It checked
+ * what fits in a `exit 0`, or nothing.
  *
- * On prend les 20 % qui portent la capacité — **démarrer, sonder, arrêter** — et
- * pas le shell à sessions PTY de Codex : une session interactive ne survivrait ni
- * au suspend/resume ni à l'arrêt de la microVM par le reaper, et l'interactivité
- * ne sert qu'un humain devant un terminal.
+ * We take the 20% which carries the capacity — **start, probe, stop** — and
+ * not the Codex PTY session shell: an interactive session would not survive neither
+ * to suspend/resume nor to stop the microVM by the reaper, and the interactivity
+ * only serves a human in front of a terminal.
  *
- * Ce module est PUR (comme `command-guard` / `command-output`) : la POLITIQUE —
- * plafond de jobs, garde-fou git, offsets, mise en forme — est ici, testable sans
- * microVM ; les mains dans la sandbox sont derrière `BackgroundJobRunner`, câblé
- * dans `execute.ts`. Le registre vit le temps d'UN chunk : un job ne survit pas à
- * un suspend, et la fin de tour les tue tous (`stopAll`).
+ * This module is PURE (like `command-guard` / `command-output`): the POLICY —
+ * job ceiling, git guardrail, offsets, formatting — is here, testable without
+ * microVM; hands in the sandbox are behind `BackgroundJobRunner`, hardwired
+ * into `execute.ts`. The register lives for ONE chunk: a job does not survive
+ * one suspends, and the end of the round kills them all (`stopAll`).
  */
 
-/** Jobs VIVANTS simultanés. Au-delà, `start` refuse — un agent qui empile les
- *  serveurs a perdu le fil, et la microVM est petite. */
+/** Concurrent LIVE jobs. Beyond that, `start` refuses — an agent that stacks the
+ * servers has lost track, and the microVM is small. */
 export const MAX_BACKGROUND_JOBS = 3;
 
-/** Octets tirés de la microVM à chaque `check` (la QUEUE de l'incrément). Au-delà,
- *  le milieu manquant reste lisible dans le log, sur disque. */
+/** Bytes taken from the microVM at each `check` (the TAIL of the increment). Beyond that,
+ * the missing middle remains readable in the log, on disk. */
 export const BACKGROUND_FETCH_BYTES = 32_000;
 
-/** Caractères de sortie renvoyés au modèle par `check` (tête + queue). */
+/** Output characters returned to the model by `check` (head + tail). */
 export const BACKGROUND_OUTPUT_CAP = 3000;
 
 /**
- * OÙ EST LE LOG COMPLET, ET COMMENT LE LIRE — la seule phrase de ce module qui
- * dépende du moteur (MIN-286, lot 3).
+ * WHERE IS THE COMPLETE LOG, AND HOW TO READ IT — the only sentence in this module which
+ * depends on the engine (MIN-286, batch 3).
  *
- * Le log vit dans `TOOL_OUTPUT_DIR`, donc **hors du dépôt** (le `git add -A` de
- * fin de tour ne doit jamais le voir). Chez la boucle maison, `read_file` et
- * `grep` y vont : ce sont nos tools, et ils lisent ce qu'on leur dit. Chez
- * opencode, non — une lecture hors dépôt publie `external_directory`, que le
- * harness REFUSE ([opencode-permissions.ts](vm/opencode-permissions.ts)). Y
- * envoyer le modèle serait l'envoyer contre un mur qu'on tient nous-mêmes ; son
- * shell, lui, y va.
+ * The log lives in `TOOL_OUTPUT_DIR`, therefore **outside the repository** (the `git add -A` of
+ * end of turn must never see it). At the house loop, `read_file` and
+ * `grep` go there: they are our tools, and they read what we tell them. At
+ * opencode, no — a non-repository read publishes `external_directory`, which the
+ * harness DENYS ([opencode-permissions.ts](vm/opencode-permissions.ts)). Y
+ * sending the model would be sending it against a wall that we hold ourselves; his
+ * shell goes there.
  */
 export interface BackgroundLogNotes {
-  /** La phrase de la note de démarrage. */
+  /** The starting note phrase. */
   full(logPath: string): string;
-  /** Celle de la note d'élision : lire le fichier plutôt que resonder. */
+  /** That of the elision note: read the file rather than resound. */
   insteadOfPolling(logPath: string): string;
 }
 
-/** Les tools de la boucle maison — le texte d'origine, au mot près. */
+/** Home loop tools — the original text, to the word. */
 export const LOOP_BACKGROUND_LOG_NOTES: BackgroundLogNotes = {
   full: (p) => `The complete log is at ${p} (readable with read_file and grep)`,
   insteadOfPolling: (p) =>
     `The complete log is at ${p} — grep it or read_file it with offset/limit instead of polling again.`,
 };
 
-/** Chez opencode : le fichier est hors du dépôt, donc c'est le SHELL qui le lit. */
+/** At opencode: the file is outside the repository, so it is the SHELL that reads it. */
 export const OPENCODE_BACKGROUND_LOG_NOTES: BackgroundLogNotes = {
   full: (p) =>
     `The complete log is at ${p} — it is outside the repository, so read it with bash (\`tail -n 200 ${p}\`, \`grep -n <pattern> ${p}\`) rather than with read`,
@@ -64,74 +64,75 @@ export const OPENCODE_BACKGROUND_LOG_NOTES: BackgroundLogNotes = {
     `The complete log is at ${p} — it is outside the repository: read it with bash (\`grep -n <pattern> ${p}\`, \`tail -n 200 ${p}\`) instead of polling again.`,
 };
 
-/** Ce que la sandbox renvoie au démarrage d'un job. */
+/** What the sandbox returns when starting a job. */
 export interface BackgroundStarted {
   pid: number;
   logPath: string;
 }
 
-/** Ce que la sandbox renvoie à chaque sonde. */
+/** What the sandbox returns to each probe. */
 export interface BackgroundChunk {
-  /** Octets écrits depuis `offset` (au plus `BACKGROUND_FETCH_BYTES`, pris à la fin). */
+  /** Bytes written from `offset` (at most `BACKGROUND_FETCH_BYTES`, taken at the end). */
   chunk: string;
-  /** Nouvel offset = taille du log (on saute ce qu'on n'a pas tiré). */
+  /** New offset = size of the log (we skip what we didn't draw). */
   nextOffset: number;
   running: boolean;
-  /** Code de sortie si le processus est terminé, sinon null. */
+  /** Exit code if the process is terminated, otherwise null. */
   exitCode: number | null;
-  /** Octets de l'incrément non tirés (trop gros) — ils restent dans le log. */
+  /** Increment bytes not drawn (too large) — they remain in the log. */
   skippedBytes: number;
 }
 
-// ── Le shell d'un job (PUR : c'est la partie risquée, elle doit être lisible) ──
+// ── The shell of a job (PUR: this is the risky part, it must be readable) ──
 
-/** Les trois fichiers d'un job dans la microVM (chemins calculés par `sandbox.ts`). */
+/** The three files of a job in the microVM (paths calculated by `sandbox.ts`). */
 export interface BackgroundPaths {
-  /** stdout + stderr du job. */
+  /** Job stdout + stderr. */
   log: string;
-  /** PID, écrit par le job lui-même. */
+  /** PID, written by the job itself. */
   pid: string;
-  /** Code de sortie, écrit quand la commande rend la main. */
+  /** Exit code, written when the command returns. */
   exit: string;
 }
 
-/** En-tête de la sonde : première ligne de sa sortie, le reste est le log. */
+/** Probe header: first line of its output, the rest is the log. */
 export const BACKGROUND_PROBE_HEADER = "__MDY_BG__";
 
-/** Quote sûre pour insérer une valeur dans une commande `sh -c` (jumelle de
- *  celle de `sandbox.ts` — ce module reste pur, il n'importe rien du serveur). */
+/** Safe quote to insert a value in a `sh -c` command (twin of
+ * that of `sandbox.ts` — this module remains pure, it does not import anything from the server). */
 function sq(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
 /**
- * Test de vie d'un job, par l'ÉTAT du processus et non par `kill -0` : le PID 1 de
- * la microVM ne moissonne pas ses orphelins, donc un job mort y reste ZOMBIE — et
- * `kill -0` réussit sur un zombie. Mesuré : sans ça, un serveur qui vient de
- * planter était rapporté « still running » pour toujours, c'est-à-dire l'exact
- * contraire du signal utile.
+ * Test whether a job is alive by the process STATE rather than `kill -0`: PID 1
+ * in the microVM does not reap its orphans, so a dead job remains a ZOMBIE — and
+ * `kill -0` succeeds for a zombie. Measured: without this, a server that had
+ * just crashed was reported as “still running” forever, the exact opposite of
+ * a useful signal.
  */
 function aliveFn(pid: number): string {
   return `bg_alive() { s=$(ps -o stat= -p ${pid} 2>/dev/null | tr -d ' '); case "$s" in ""|Z*) return 1;; *) return 0;; esac; }`;
 }
 
 /**
- * Script de LANCEMENT. Trois précautions font tenir l'ensemble :
- *  - `setsid` : le job devient chef de sa propre SESSION, donc son PID est aussi
- *    son PGID. Il survit au shell qui l'a lancé, et l'arrêt peut viser le GROUPE
- *    (un `npm run dev` lance un enfant ; tuer le père seul laisserait le port pris).
- *  - redirections : stdout/stderr vont dans le log, stdin vient de /dev/null —
- *    sinon le job garderait les tuyaux du lanceur ouverts et l'appel attendrait sa
- *    fin, c'est-à-dire exactement ce qu'on essaie d'éviter.
- *  - le PID est écrit PAR le job (`echo $$`), pas lu depuis `$!` : selon que
- *    `setsid` fork ou non, `$!` désigne l'un ou l'autre processus.
+ * LAUNCH script. Three precautions make the whole setup work:
+ *  - `setsid`: the job becomes the leader of its own SESSION, so its PID is also
+ *    its PGID. It survives the shell that launched it, and stopping can target
+ *    the GROUP (an `npm run dev` launches a child; killing only the parent would
+ *    leave the port occupied).
+ *  - redirections: stdout/stderr go to the log, and stdin comes from /dev/null —
+ *    otherwise the job would keep the launcher's pipes open and the call would
+ *    wait for it to finish, exactly what we are trying to avoid.
+ *  - the PID is written BY the job (`echo $$`), not read from `$!`: depending on
+ *    whether `setsid` forks, `$!` refers to one process or the other.
  */
 export function backgroundStartScript(p: BackgroundPaths, command: string, dir: string): string {
-  // Le corps du job : son PID, la commande, puis son code de sortie. Pas d'`exec` :
-  // le shell reste père de la commande — c'est lui que la sonde suit, et c'est lui
-  // qui écrit le code de sortie. La commande tourne dans un SOUS-SHELL : sans les
-  // parenthèses, un `exit 3` (ou un `set -e` qui claque) quitterait le shell du job
-  // avant la ligne du code de sortie, qu'on ne verrait alors jamais.
+  // The job body: its PID, the command, then its exit code. No `exec`: the shell
+  // remains the command's parent — the probe follows it, and it writes the exit
+  // code. The command runs in a SUBSHELL: without the parentheses, an `exit 3`
+  // (or a failing `set -e`) would exit the job shell before the exit-code line,
+  // which we would then never see.
   const inner = [`echo $$ > ${sq(p.pid)}`, `( ${command}\n)`, `echo $? > ${sq(p.exit)}`].join("\n");
   return [
     `mkdir -p ${sq(dir)}`,
@@ -142,7 +143,7 @@ export function backgroundStartScript(p: BackgroundPaths, command: string, dir: 
     `else`,
     `  sh -c ${sq(inner)} > ${sq(p.log)} 2>&1 < /dev/null &`,
     `fi`,
-    // Le job écrit son PID à sa première ligne : quelques dixièmes suffisent.
+    // The job writes its PID on its first line: a few tenths of a second is enough.
     `i=0`,
     `while [ "$i" -lt 50 ] && [ ! -s ${sq(p.pid)} ]; do sleep 0.1; i=$((i+1)); done`,
     `cat ${sq(p.pid)} 2>/dev/null`,
@@ -150,10 +151,10 @@ export function backgroundStartScript(p: BackgroundPaths, command: string, dir: 
 }
 
 /**
- * Script de SONDE : un en-tête (taille du log, vivant ?, code de sortie) puis les
- * octets écrits depuis `offset`, bornés à `maxBytes` pris à la FIN — un watcher
- * bavard ne doit pas ramener 40 Mo par sonde. `wc -c` fixe la taille AVANT la
- * lecture pour que l'offset renvoyé corresponde exactement à ce qui a été coupé.
+ * PROBE script: a header (log size, alive?, exit code), followed by the bytes
+ * written since `offset`, capped at `maxBytes` taken from the END — a chatty
+ * watcher must not return 40 MB per probe. `wc -c` fixes the size BEFORE reading
+ * so that the returned offset corresponds exactly to what was truncated.
  */
 export function backgroundProbeScript(
   p: BackgroundPaths,
@@ -178,10 +179,10 @@ export function backgroundProbeScript(
 }
 
 /**
- * Script d'ARRÊT : SIGTERM, délai de grâce, puis SIGKILL. Vise le GROUPE de
- * processus quand le PID en est bien le chef (cas normal, cf. `setsid`) — sinon un
- * `npm run dev` laisserait son enfant, et son port, derrière lui. Sort toujours 0 :
- * un processus déjà mort n'est pas une erreur.
+ * STOP script: SIGTERM, a grace period, then SIGKILL. Targets the process GROUP
+ * when the PID is its leader (the normal case; see `setsid`) — otherwise an
+ * `npm run dev` would leave its child, and its port, behind. Always exits 0: an
+ * already-dead process is not an error.
  */
 export function backgroundStopScript(pid: number): string {
   return [
@@ -197,8 +198,8 @@ export function backgroundStopScript(pid: number): string {
 }
 
 /**
- * Lit la sortie de la sonde. La première ligne est l'en-tête, tout le reste est le
- * log — un log qui contiendrait lui-même l'en-tête ne trompe donc personne.
+ * Reads the probe output. The first line is the header, and everything else is
+ * the log — a log containing the header itself therefore fools nobody.
  */
 export function parseBackgroundProbe(
   stdout: string,
@@ -217,13 +218,13 @@ export function parseBackgroundProbe(
     chunk: nl >= 0 ? stdout.slice(nl + 1) : "",
     nextOffset,
     running,
-    // Un job vivant n'a pas de code ; un job tué au SIGKILL n'en a pas non plus.
+    // A live job has no exit code; a job killed by SIGKILL has none either.
     exitCode: running || !Number.isInteger(exitCode) ? null : exitCode,
     skippedBytes: Math.max(0, nextOffset - opts.offset - opts.maxBytes),
   };
 }
 
-/** Les mains dans la microVM (implémentées par `sandbox.ts`, câblées par `execute.ts`). */
+/** The microVM hands (implemented by `sandbox.ts`, wired by `execute.ts`). */
 export interface BackgroundJobRunner {
   start(opts: { jobId: string; command: string; workdir?: string }): Promise<BackgroundStarted>;
   read(opts: { jobId: string; pid: number; offset: number }): Promise<BackgroundChunk>;
@@ -235,14 +236,14 @@ interface Job {
   command: string;
   pid: number;
   logPath: string;
-  /** Octets déjà renvoyés au modèle (ou sautés) : `check` renvoie l'INCRÉMENT. */
+  /** Bytes already returned to the model (or skipped): `check` returns the INCREMENT. */
   offset: number;
-  /** Le processus est-il terminé (constaté par une sonde) ? */
+  /** Has the process exited (as observed by a probe)? */
   exited: boolean;
   exitCode: number | null;
 }
 
-/** Forme d'un résultat de tool (identique au contrat de `ExecuteAgentTool`). */
+/** Shape of a tool result (identical to the `ExecuteAgentTool` contract). */
 interface ToolOutcome {
   result: unknown;
   success: boolean;
@@ -253,7 +254,7 @@ function fail(error: string, reason?: string): ToolOutcome {
   return { result: { error }, success: false, ...(reason ? { reason } : {}) };
 }
 
-/** Le job est-il encore susceptible de consommer la microVM ? */
+/** Could the job still consume the microVM? */
 function isLive(job: Job): boolean {
   return !job.exited;
 }
@@ -263,27 +264,27 @@ export class BackgroundJobs {
   private seq = 0;
 
   /**
-   * @param runner  les mains dans la microVM
-   * @param seqBase base des numéros de job, tranchée par continuation (comme les
-   *                autres compteurs de run) : deux chunks ne réutilisent pas le
-   *                même nom de fichier de log.
+   * @param runner  the microVM hands
+   * @param seqBase base for job numbers, partitioned by continuation (like the
+   *                other run counters): two chunks do not reuse the same log
+   *                filename.
    */
   constructor(
     private readonly runner: BackgroundJobRunner,
     private readonly seqBase = 0,
-    /** Comment DIRE au modèle d'aller lire le log complet — cf. `BackgroundLogNotes`. */
+    /** How to TELL the model to read the complete log — see `BackgroundLogNotes`. */
     private readonly notes: BackgroundLogNotes = LOOP_BACKGROUND_LOG_NOTES,
     /**
-     * LE MONDE OÙ LE JOB TOURNE, passé tel quel à `checkCommand` (MIN-364). Sans
-     * lui, un `git commit` de fond serait refusé sur la machine de l'utilisateur
-     * là où le même `git commit` de premier plan passe — deux verdicts pour la
-     * même commande, à un tool près.
+     * THE WORLD WHERE THE JOB RUNS, passed unchanged to `checkCommand` (MIN-364).
+     * Without it, a background `git commit` would be rejected on the user's
+     * machine while the same foreground `git commit` succeeds — two verdicts for
+     * the same command, differing only by the tool used.
      */
     private readonly scope: CommandScope = {},
   ) {}
 
-  /** Exécute un appel `run_background`. Ne lève jamais : tout revient au modèle
-   *  comme un résultat de tool, réussi ou en erreur. */
+  /** Executes a `run_background` call. Never throws: everything returns to the
+   *  model as a tool result, whether successful or an error. */
   async handle(args: Record<string, unknown>): Promise<ToolOutcome> {
     const action = String(args.action ?? "").trim();
     switch (action) {
@@ -298,9 +299,9 @@ export class BackgroundJobs {
     }
   }
 
-  /** Tue tous les jobs vivants. Best-effort, ne lève jamais. Appelé avant chaque
-   *  push (un watcher qui écrit pendant le `git add -A` commiterait n'importe quoi)
-   *  et en fin de chunk. Renvoie le nombre de jobs tués. */
+  /** Kills all live jobs. Best effort, never throws. Called before each push (a
+   *  watcher writing during `git add -A` would commit anything at all) and at the
+   *  end of the chunk. Returns the number of killed jobs. */
   async stopAll(): Promise<number> {
     const live = [...this.jobs.values()].filter(isLive);
     await Promise.all(
@@ -312,7 +313,7 @@ export class BackgroundJobs {
     return live.length;
   }
 
-  /** Jobs encore vivants (diagnostic / fin de tour). */
+  /** Jobs still alive (diagnostics / end of turn). */
   liveCount(): number {
     return [...this.jobs.values()].filter(isLive).length;
   }
@@ -321,8 +322,8 @@ export class BackgroundJobs {
     const command = String(args.command ?? "").trim();
     if (!command) return fail("command is required to start a background job.");
 
-    // Le garde-fou git de MIN-108 vaut ICI AUSSI : sans lui, `run_background`
-    // serait une porte dérobée sur `git push` & consorts.
+    // The MIN-108 git guard applies HERE TOO: without it, `run_background` would
+    // be a backdoor to `git push` and the like.
     const verdict = checkCommand(command, this.scope);
     if (!verdict.allowed) return fail(verdict.reason, FORBIDDEN_COMMAND_REASON);
 
@@ -335,8 +336,8 @@ export class BackgroundJobs {
     }
 
     const jobId = `bg-${this.seqBase + ++this.seq}`;
-    // Réservation AVANT l'await : les tool-calls d'un round partent en parallèle,
-    // deux `start` simultanés passeraient sinon tous les deux sous le plafond.
+    // Reserve BEFORE the await: tool calls in a round run in parallel, so two
+    // simultaneous `start` calls would otherwise both pass under the ceiling.
     const job: Job = {
       jobId,
       command,
@@ -381,8 +382,8 @@ export class BackgroundJobs {
     const job = this.jobs.get(String(args.job_id ?? "").trim());
     if (!job) return fail(this.unknownJob(String(args.job_id ?? "")));
 
-    // On sonde même un job déjà constaté mort : sa dernière sortie (le stack trace
-    // qui l'a tué) n'a pas forcément été lue.
+    // Probe even a job already known to be dead: its final output (the stack trace
+    // that killed it) may not have been read yet.
     let read: BackgroundChunk;
     try {
       read = await this.runner.read({ jobId: job.jobId, pid: job.pid, offset: job.offset });
@@ -412,7 +413,7 @@ export class BackgroundJobs {
             }
           : {}),
       },
-      // Même règle que `run_command` : un job mort d'un code non nul est un échec.
+      // Same rule as `run_command`: a dead job with a nonzero exit code is a failure.
       success: read.exitCode == null || read.exitCode === 0,
     };
   }
@@ -447,8 +448,8 @@ export class BackgroundJobs {
     };
   }
 
-  /** Message d'un `job_id` inconnu : la cause la plus fréquente est un tour
-   *  précédent — les jobs ne survivent pas à un tour, et le modèle doit le lire. */
+  /** Message for an unknown `job_id`: the most common cause is a previous turn —
+   *  jobs do not survive a turn, and the model must read this. */
   private unknownJob(jobId: string): string {
     const live = [...this.jobs.values()].filter(isLive).map((j) => j.jobId);
     return (

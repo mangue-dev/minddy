@@ -20,31 +20,31 @@ import { parseResourcesInput } from "@/lib/server/attachments";
 import { promptWithAttachments } from "@/lib/server/agent/prompt-attachments";
 import type { AttachmentInput } from "@/lib/types";
 
-/** Les colonnes de `RUN_COLUMNS` dont ce fichier a besoin pour trancher. */
+/** The `RUN_COLUMNS` columns this file needs to slice. */
 type RunRow = RunAnchors & {
   created_by: string | null;
   conversation: Pick<ConversationAccessRecord, "owner_id" | "visibility"> | null;
 } & Record<string, unknown>;
 
 /**
- * Runs de l'agent de code d'une issue (MIN-46).
- *  GET  → liste les runs de l'issue VISIBLES PAR L'APPELANT + sa pull request.
- *  POST → lance un run { prompt?, model? } (bouton « Lancer un agent »).
- * L'accès à l'issue est vérifié via le cookie client (RLS) ; `launchAgentRun`
- * fait ensuite les pré-checks (dépôt lié, quota/BYOK, run déjà actif).
+ * Code Agent Runs from an issue (MIN-46).
+ * GET → lists the runs of the issue VISIBLE BY THE CALLER + his pull request.
+ * POST → launches a run { prompt?, model? } (“Launch an agent” button).
+ * Access to the issue is verified via the client cookie (RLS); `launchAgentRun`
+ * then does the pre-checks (linked deposit, quota/BYOK, run already active).
  */
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// Le kick de launch draine le premier chunk dans after() : il faut la même
-// fenêtre que la route cron (270s de budget) sinon la fonction est tuée en plein
-// round et le run reste bloqué en 'running'.
+// The launch kick drains the first chunk in after(): you need the same
+// window as the cron route (270s budget) otherwise the function is killed in full
+// round and the run remains stuck in 'running'.
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-// `created_by`, `chain_id` et `routine_id` ne sont pas là pour être affichés :
-// ce sont les trois colonnes dont dépend la règle de visibilité (MIN-332), et
-// cette lecture se fait en clé service — sans elles, on ne pourrait pas trier.
+// `created_by`, `chain_id` and `routine_id` are not there to be displayed:
+// these are the three columns on which the visibility rule (MIN-332) depends, and
+// this reading is done using a service key — without them, we would not be able to sort.
 const RUN_COLUMNS =
   "id, conversation_id, status, model, model_forced, reasoning_level, key_mode, triggered_by, prompt, prompt_mentions, pull_request_id, created_by, chain_id, routine_id, base_branch, branch_name, pr_number, pr_url, pr_state, continuations, cost_usd, outcome, error_message, created_at, updated_at, completed_at, awaiting_input, local_exec, local_worktree, conversation:agent_conversations(owner_id, visibility)";
 
@@ -53,15 +53,15 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  // RLS : l'appelant doit pouvoir voir l'issue.
+  // RLS: the caller must be able to see the issue.
   const { data: issue } = await auth.supabase.from("issues").select("id").eq("id", id).maybeSingle();
   if (!issue) return NextResponse.json({ error: "Issue not found" }, { status: 404 });
 
   const service = getServiceClient();
-  // La PR du ticket voyage avec les runs : le panneau latéral la lit ici, et non
-  // plus sur `agent_runs` (MIN-163). Un ticket peut porter une PR sans qu'aucun
-  // run ne l'ait ouverte — PR humaine rattachée par convention, ou rattachée à
-  // la main depuis le header de la PR — et le panneau la taisait alors.
+  // The PR of the ticket travels with the runs: the side panel reads it here, not
+  // more about `agent_runs` (MIN-163). A ticket can carry a PR without any
+  // run has opened it — human PR attached by convention, or attached to
+  // the hand from the PR header — and the panel then shut it up.
   const [{ data }, { data: prs }] = await Promise.all([
     service
       .from("agent_runs")
@@ -76,11 +76,11 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   ]);
   const pullRequest =
     pickIssuePullRequests((prs ?? []) as IssuePrRow[])[id] ?? null;
-  // Le ticket est public, ses conversations ne le sont pas (MIN-332) : le panneau
-  // ne montre que MES runs, plus ceux que le projet a déclenchés (automatisation,
-  // routine) ou qui portent sur une PR. Le tri est ici parce que la lecture est
-  // en clé service — la policy `agent_runs_select`, qu'elle contourne, dit la
-  // même chose. Les trois colonnes de visibilité ressortent du payload aussitôt.
+  // The ticket is public, its conversations are not (MIN-332): the panel
+  // only shows MY runs, plus those that the project triggered (automation,
+  // routine) or which relate to RA. Sorting is here because reading is
+  // in service key — the `agent_runs_select` policy, which it bypasses, says the
+  // same thing. The three visibility columns appear immediately in the payload.
   const runs = ((data ?? []) as unknown as RunRow[])
     .filter(
       (run) =>
@@ -92,8 +92,8 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   return NextResponse.json({ runs, pullRequest });
 }
 
-// Bornes de longueur (MIN-118) : la consigne est persistée telle quelle dans
-// agent_runs ; modèle et branche sont des identifiants courts. Au-delà on tronque.
+// Length terminals (MIN-118): the setpoint is persisted as is in
+// agent_runs; model and branch are short identifiers. Beyond that we truncate.
 const MAX_PROMPT_LENGTH = 20_000;
 const MAX_MODEL_LENGTH = 200;
 const MAX_BRANCH_LENGTH = 255;
@@ -141,19 +141,19 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     intent?: AgentLaunchIntent;
     mentions?: unknown;
     attachments?: unknown;
-    /** La conversation démarre sur la MACHINE de l'utilisateur (MIN-359). Une
-     *  demande, que `localExecRequested` valide côté serveur. */
+    /** The conversation starts on the user's MACHINE (MIN-359). A
+     * request, which `localExecRequested` validates on the server side. */
     localExec?: unknown;
     localWorktree?: unknown;
   };
   let body: LaunchBody = {};
   try {
-    // `null` est du JSON valide : l'affecter ferait un 500 sur `body.model`
-    // deux lignes plus bas. Même garde que POST /api/agent-runs (MIN-118).
+    // `null` is valid JSON: assigning it would do a 500 on `body.model`
+    // two lines below. Same guard as POST /api/agent-runs (MIN-118).
     const parsed: unknown = await request.json();
     if (parsed && typeof parsed === "object") body = parsed as LaunchBody;
   } catch {
-    // corps vide accepté
+    // empty body accepted
   }
   const model =
     typeof body.model === "string" && body.model.trim()
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     typeof body.baseBranch === "string" && body.baseBranch.trim()
       ? body.baseBranch.trim().slice(0, MAX_BRANCH_LENGTH)
       : undefined;
-  // Niveau inconnu ignoré : le lancement retombe alors sur le défaut perso.
+  // Unknown level ignored: the launch then falls back to the personal default.
   const reasoningLevel = isReasoningLevel(body.reasoningLevel) ? body.reasoningLevel : undefined;
   const resources = parseResourcesInput(body.attachments, `chat/${auth.user.id}/`, 5);
   if (resources === null) {
@@ -187,9 +187,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     forced: !!model,
     baseBranch,
     reasoningLevel,
-    // Cadrage (« Générer un plan » / « Vérifier le plan »), contrôle
-    // (« Vérifier l'implémentation ») et consigne libre (« Personnalisé ») : le
-    // lancement ne déplace pas le ticket. Tout le reste vaut « implémenter ».
+    // Framing (“Generate a plan” / “Check the plan”), control
+    // (“Check implementation”) and free instruction (“Custom”): the
+    // launch does not move the ticket. Everything else is worth “implementing”.
     intent:
       body.intent === "plan" || body.intent === "verify" || body.intent === "custom"
         ? body.intent

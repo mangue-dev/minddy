@@ -14,36 +14,36 @@ import { resolveWithin, resolveReadable, assertNotGit } from "./repo-path";
 import type { HarnessLayout } from "./harness-layout";
 
 /**
- * Les MAINS de l'agent sur le dépôt — clone, lecture, édition, recherche, jobs de
- * fond, commit et push. Tout ce que le harness fait au disque de la microVM.
+ * Agent's HANDS on the repository — clone, read, edit, search, jobs
+ * background, commit and push. Everything the harness does to the microVM disk.
  *
- * POURQUOI CE MODULE EXISTE, et c'est le pivot de MIN-224. Ces gestes étaient
- * écrits contre l'objet `Sandbox` du SDK Vercel, donc contre un aller-retour RPC :
- * `runShell(sandbox, "git status")` part de la fonction, traverse l'Atlantique,
- * revient. Quand la boucle descend DANS la microVM, ce sont exactement les mêmes
- * gestes — mais sur le disque local, par `child_process` et `fs`.
+ * WHY THIS MODULE EXISTS, and it is the pivot of MIN-224. These gestures were
+ * written against the `Sandbox` object of the Vercel SDK, therefore against an RPC round trip:
+ * `runShell(sandbox, "git status")` leaves the function, crosses the Atlantic,
+ * returns. When the loop goes INTO the microVM, they are exactly the same
+ * gestures — but on the local disk, by `child_process` and `fs`.
  *
- * Rien de tout ce qui est écrit ici ne dépend du transport. Un `git grep` reste un
- * `git grep`, `resolveWithin` refuse le même `../..` de part et d'autre. D'où la
- * forme : **quatre primitives** (`exec`, `readFile`, `writeFile`, `mkdir`), et
- * toute la logique au-dessus, écrite UNE fois pour les deux mondes.
+ * Nothing written here is transportation dependent. A `git grep` remains a
+ * `git grep`, `resolveWithin` refuses the same `../..` on both sides. Hence the
+ * form: **four primitives** (`exec`, `readFile`, `writeFile`, `mkdir`), and
+ * all the logic above, written ONE time for both worlds.
  *
- * - l'adaptateur RPC vit dans [sandbox.ts](sandbox.ts) (`sandboxHost`) ;
- * - l'adaptateur local vit dans [vm/local-host.ts](vm/local-host.ts), et n'est
- *   chargé QUE dans la VM.
+ * - the RPC adapter lives in [sandbox.ts](sandbox.ts) (`sandboxHost`);
+ * - the local adapter lives in [vm/local-host.ts](vm/local-host.ts), and is not
+ * loaded ONLY in the VM.
  *
- * Ce fichier n'importe donc AUCUN SDK, et c'est un invariant tenu par
- * `vm-bundle-secrets.test.ts` : il part dans le bundle de la microVM.
+ * This file therefore imports NO SDK, and it is an invariant held by
+ * `vm-bundle-secrets.test.ts`: it goes into the microVM bundle.
  */
 
-/** Runtime de la microVM. */
+/** microVM runtime. */
 export const SANDBOX_RUNTIME = "node24";
 
 /**
- * Dossiers LISIBLES hors dépôt (read_file / grep / list_dir). Jamais writables.
+ * READABLE folders outside repository (read_file / grep / list_dir). Never writable.
  *
- * Une FONCTION du layout depuis MIN-354, et plus une constante : ces dossiers
- * sont ceux DU RUN, et deux runs sur une même machine n'ont pas les mêmes.
+ * A FUNCTION of the layout since MIN-354, and no longer a constant: these folders
+ * are those OF THE RUN, and two runs on the same machine are not the same.
  */
 function readableDirs(layout: HarnessLayout): string[] {
   return [layout.toolOutputDir];
@@ -63,100 +63,99 @@ export interface ShellOptions {
 }
 
 /**
- * Les quatre primitives, et rien d'autre. Tout ce que ce module fait au dépôt
- * passe par là — c'est ce qui rend le reste du fichier indépendant du transport.
+ * The four primitives, and nothing else. Everything this module does at the repository
+ * passes through there — that's what makes the rest of the file transport-independent.
  */
 export interface RepoHost {
   /**
-   * OÙ CE HOST TRAVAILLE (MIN-354). Un host, c'est un disque — et depuis que ce
-   * disque peut être celui d'un Mac partagé par deux runs, son adresse est une
-   * VALEUR du run et non plus une constante de module.
+   * WHERE THIS HOST WORKS (MIN-354). A host is a disk — and since that
+   * disk can be that of a Mac shared by two runs, its address is a
+   * VALUE of the run and no longer a module constant.
    *
-   * Elle voyage ici plutôt qu'en argument des trente fonctions ci-dessous, qui
-   * prennent déjà le host en premier paramètre : c'est le même fait, dit une
-   * fois. `layout.repoDir` est en particulier la racine de sécurité que
-   * `resolveWithin` et `assertNotGit` comparent.
+   * It travels here rather than in argument of the thirty functions below, which
+   * already take the host as the first parameter: it's the same fact, says one
+   * times. `layout.repoDir` is in particular the security root that
+   * `resolveWithin` and `assertNotGit` compare.
    */
   readonly layout: HarnessLayout;
-  /** `sh -c <command>`. `cwd` vaut `layout.repoDir` par défaut (les tools opèrent dans le dépôt). */
+  /** `sh -c <command>`. `cwd` is `layout.repoDir` by default (the tools operate in the repository). */
   exec(command: string, opts?: ShellOptions): Promise<ShellResult>;
-  /** Contenu utf8, ou null si le fichier n'existe pas. */
+  /** UTF8 content, or null if the file does not exist. */
   readFile(absPath: string): Promise<string | null>;
-  /** Crée ou écrase. Les dossiers parents sont supposés exister (cf. `mkdir`). */
+  /** Create or overwrite. The parent folders are assumed to exist (see `mkdir`). */
   writeFile(absPath: string, content: string): Promise<void>;
-  /** `mkdir -p`. Ne lève pas si le dossier existe déjà. */
+  /** `mkdir -p`. Don't throw if the folder already exists. */
   mkdir(absPath: string): Promise<void>;
 }
 
-/** Quote sûre pour insérer une valeur dans une commande `sh -c`. */
+/** Safe quote to insert a value into a `sh -c` command. */
 export function sq(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
 /**
- * L'IDENTITÉ GIT, POSÉE PAR COMMANDE ET JAMAIS PERSISTÉE (MIN-358).
+ * GIT IDENTITY, SET PER COMMAND AND NEVER PERSISTED (MIN-358).
  *
- * `git config user.email` écrit dans `.git/config`. Dans un clone jetable c'est
- * sans conséquence ; dans le dépôt de l'utilisateur — le mode dépôt courant —
- * c'est SON identité qu'on réécrit, durablement, pour tous ses commits suivants
- * (mesuré). `git -c` fait la même chose pour la seule commande qui suit, et rend
- * donc la question sans objet des deux côtés.
+ * `git config user.email` writes to `.git/config`. In a disposable clone this
+ * has no consequence; in the user's repository — local-repository mode — it
+ * permanently rewrites THEIR identity for all subsequent commits (measured).
+ * `git -c` does the same for only the following command, making the question
+ * irrelevant in both modes.
  *
- * Un fragment de commande, et non un environnement : c'est ce que `RepoHost.exec`
- * sait transporter.
+ * A command fragment, rather than an environment: that is what `RepoHost.exec`
+ * can transport.
  */
 export function gitIdentityFlags(committer: { name: string; email: string }): string {
   return `-c ${sq(`user.email=${committer.email}`)} -c ${sq(`user.name=${committer.name}`)}`;
 }
 
 /**
- * FENÊTRE D'HISTORIQUE du clone de travail, en jours (MIN-267).
+ * WORKING-CLONE HISTORY WINDOW, in days (MIN-267).
  *
- * Le clone était à `--depth 1` : UN commit, greffé, sans parent. Suffisant pour
- * éditer et differ contre la base — mais un run dont le travail EST l'historique
- * (« audite ce qui a changé depuis le dernier rapport », « relis les commits de
- * la semaine ») n'avait rien à lire, et rendait un rapport vide en croyant que
- * le dépôt était vide. C'est arrivé sur la routine d'audit de sécurité.
+ * The clone used to be `--depth 1`: ONE grafted commit, with no parent. Enough
+ * to edit and diff against the base — but a run whose work IS the history
+ * ("audit what changed since the last report", "review the week's commits")
+ * had nothing to read, and returned an empty report while believing the
+ * repository was empty. This happened in the security-audit routine.
  *
- * D'où une fenêtre de temps plutôt qu'une profondeur : `--shallow-since` borne
- * le clone par ce qui s'est PASSÉ, pas par un nombre de commits. Sur ce dépôt,
- * 50 commits ne couvrent que deux jours ; six mois couvrent tout ce dont une
- * routine mensuelle a besoin, et le coût reste borné par l'activité de la
- * fenêtre — pas par la taille totale du dépôt, qui, lui, ne cesse de croître.
+ * Hence a time window rather than a depth: `--shallow-since` bounds the clone
+ * by what HAS HAPPENED, not by a number of commits. In this repository, 50
+ * commits cover only two days; six months cover everything a monthly routine
+ * needs, and the cost remains bounded by activity in the window — not by the
+ * total repository size, which keeps growing.
  *
- * Ce que ça coûte, mesuré sur ce dépôt (682 commits, tous dans la fenêtre, donc
- * le pire cas : le clone est alors COMPLET) : 33 Mo → 97 Mo, et 1,5 s → 4 s. Ce
- * n'est payé qu'à la création d'une microVM neuve — un réveil de snapshot ne
- * re-clone pas.
+ * Measured cost in this repository (682 commits, all within the window, so the
+ * worst case is a COMPLETE clone): 33 MB → 97 MB, and 1.5 s → 4 s. This is paid
+ * only when creating a new microVM — waking a snapshot does not re-clone.
  */
 export const HISTORY_WINDOW_DAYS = 180;
 
-/** Borne `--shallow-since` du clone, en date ISO courte (UTC). */
+/** Clone's `--shallow-since` bound, as a short ISO date (UTC). */
 export function historySince(now: Date = new Date()): string {
   const since = new Date(now.getTime() - HISTORY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
   return since.toISOString().slice(0, 10);
 }
 
 /**
- * Clone le dépôt (shallow) sur `baseBranch` dans le dépôt du layout puis se place sur
- * `workBranch` : reprise de la branche distante si elle existe déjà (le run a
- * poussé du WIP à un chunk précédent), sinon création depuis la base. `authUrl`
- * porte un token d'installation éphémère — jamais persisté hors de la microVM.
+ * Clone the repository (shallow) on `baseBranch` into the layout repository,
+ * then check out `workBranch`: resume the remote branch if it already exists
+ * (the run pushed WIP in a previous chunk), otherwise create it from the base.
+ * `authUrl` carries an ephemeral installation token — never persisted outside
+ * the microVM.
  *
- * Le clone porte la fenêtre d'historique décrite ci-dessus, et `--single-branch`
- * y est EXPLICITE : `--depth` l'impliquait, `--shallow-since` aussi en pratique,
- * mais `resolveBaseRef` ([working-diff.ts](working-diff.ts)) s'appuie sur le fait
- * qu'il n'y a QU'UNE ref distante — ça se dit dans la commande, pas dans un
- * effet de bord. La reprise de la branche de travail utilise la MÊME borne : un
- * `--depth 1` y poserait une greffe sur son tip et re-couperait la marche
- * arrière, alors même que la base, elle, est profonde.
+ * The clone uses the history window described above, and `--single-branch` is
+ * EXPLICIT: `--depth` implied it, and `--shallow-since` does so in practice,
+ * but `resolveBaseRef` ([working-diff.ts](working-diff.ts)) relies on there
+ * being only ONE remote ref — this belongs in the command, not as a side
+ * effect. Resuming the work branch uses the SAME bound: `--depth 1` would graft
+ * onto its tip and cut off the history again, while the base itself is deep.
  *
- * L'IDENTITÉ N'EST PLUS ÉCRITE DANS `.git/config` (MIN-358). Elle voyage jusqu'au
- * commit, où `commitAndPush` la pose par `git -c`. Ici, dans un clone jetable, la
- * persister était sans conséquence ; le geste, lui, était le même que celui qui,
- * dans le dépôt de l'utilisateur, réécrit SON identité pour tous ses commits
- * suivants (mesuré). Un geste qu'on n'a qu'à un seul endroit ne peut pas fuir
- * dans l'autre mode.
+ * GIT IDENTITY IS NO LONGER WRITTEN TO `.git/config` (MIN-358). It travels to
+ * the commit, where `commitAndPush` sets it with `git -c`. In a disposable
+ * clone, persisting it had no consequence; the operation was nevertheless the
+ * same one that, in the user's repository, rewrites THEIR identity for all
+ * subsequent commits (measured). An operation kept in one place cannot leak
+ * into the other mode.
  */
 export async function cloneRepo(
   host: RepoHost,
@@ -167,8 +166,8 @@ export async function cloneRepo(
   },
 ): Promise<void> {
   const { root, repoDir } = host.layout;
-  // La racine du run est créée ici, et pas seulement nettoyée : sur une microVM
-  // elle existe déjà (c'est le home du Sandbox), sur une machine ordinaire non.
+  // The run root is created here, not merely cleaned: in a microVM it already
+  // exists (it is the Sandbox home), but on an ordinary machine it does not.
   await host.mkdir(root).catch(() => {});
   const wipe = await host.exec(`rm -rf ${sq(repoDir)}`, { cwd: root });
   if (wipe.exitCode !== 0) throw new Error(`cleanup failed: ${wipe.stderr || wipe.stdout}`);
@@ -195,55 +194,55 @@ export async function cloneRepo(
 }
 
 /**
- * Clone le dépôt pour RELIRE une pull request (MIN-168) : base d'abord, puis la
- * tête de la PR, en LECTURE SEULE — aucune branche de travail n'est créée, rien
- * ne sera commité ni poussé depuis cette microVM.
+ * Clone the repository to REVIEW a pull request (MIN-168): base first, then
+ * the PR head, READ-ONLY — no work branch is created, and nothing is committed
+ * or pushed from this microVM.
  *
- * La tête est cherchée par sa **ref serveur** (`refs/pull/<n>/head` chez GitHub,
- * `refs/merge-requests/<iid>/head` chez GitLab) et non par le nom de branche : sur
- * une PR de FORK, `head_branch` n'existe pas dans le dépôt de base, et un fetch
- * dessus ne trouverait rien — l'agent se retrouverait sur la base, sans diff, à
- * relire du vide en croyant relire la PR. La ref serveur, elle, pointe le commit
- * de tête d'où qu'il vienne.
+ * The head is found by its **server ref** (`refs/pull/<n>/head` on GitHub,
+ * `refs/merge-requests/<iid>/head` on GitLab), not by branch name: for a FORK
+ * PR, `head_branch` does not exist in the base repository, and fetching it
+ * would find nothing — the agent would land on the base, with no diff, and
+ * review emptiness while believing it was reviewing the PR. The server ref
+ * points to the head commit wherever it comes from.
  *
- * Repli sur le nom de branche quand la ref n'existe pas (dépôt miroir, instance
- * qui ne la publie pas) ; échec explicite si les deux manquent, plutôt qu'une
- * session muette sur la mauvaise référence.
+ * Fall back to the branch name when the ref does not exist (mirror repository,
+ * instance that does not publish it); fail explicitly if both are missing,
+ * rather than running a silent session on the wrong reference.
  *
- * Le clone reste shallow : `git diff <base>` marche (c'est un diff d'arbres), les
- * diffs à trois points et un `git log` profond n'ont pas d'historique commun à
- * parcourir — le prompt le dit à l'agent.
+ * The clone remains shallow: `git diff <base>` works (it is a tree diff), but
+ * three-dot diffs and a deep `git log` have no common history to traverse — the
+ * prompt tells the agent so.
  *
- * D'où `baseSha` (MIN-258), et c'est ce qui rend le diff JUSTE. Sans lui il ne
- * reste que `git diff origin/<base>`, qui compare au tip VIVANT de la base : un
- * commit fusionné dans la base depuis l'ouverture de la PR y apparaît INVERSÉ,
- * comme si la pull request l'avait annulé — et une relecture pose alors des
- * remarques publiques sur du code que la PR ne touche pas. `baseSha` est la base
- * du diff que la FORGE sert (`getMergeBaseSha` : merge base vivant chez GitHub,
- * `diff_refs.base_sha` chez GitLab) : on l'amène dans le clone à profondeur 1 —
- * un commit, moins d'une seconde — et on le marque du tag `PR_BASE_TAG`. À partir
- * de là `git diff pr-base` EST le changement de la pull request, et il compte
- * exactement les mêmes fichiers que la liste « Files changed » de l'amorce.
+ * Hence `baseSha` (MIN-258), which makes the diff CORRECT. Without it, only
+ * `git diff origin/<base>` remains, comparing against the LIVE base tip: a
+ * commit merged into the base since the PR opened appears REVERSED, as if the
+ * pull request had reverted it — and a review then posts public remarks on code
+ * untouched by the PR. `baseSha` is the base of the diff served by the FORGE
+ * (`getMergeBaseSha`: the live merge base on GitHub, `diff_refs.base_sha` on
+ * GitLab): we fetch it into the clone at depth 1 — one commit, under a second —
+ * and mark it with the `PR_BASE_TAG` tag. From then on, `git diff pr-base` IS the
+ * pull request's change, and counts exactly the same files as the bootstrap's
+ * "Files changed" list.
  *
- * Best-effort, délibérément : ce fetch n'est pas une condition du clone. S'il
- * échoue (sha injoignable, instance qui refuse un `want` par sha), la session
- * tourne quand même — le prompt décrit alors le repli `origin/<base>` et ce qu'il
- * vaut. Une relecture qui ne démarre pas coûte plus qu'une relecture prudente.
+ * Best-effort, deliberately: this fetch is not a clone prerequisite. If it
+ * fails (unreachable SHA, instance refusing a SHA-based `want`), the session
+ * still runs — the prompt then describes the `origin/<base>` fallback and what
+ * it means. A review that does not start costs more than a cautious review.
  */
-/** Tag qui marque, dans le clone de relecture, la base du diff servi par la forge. */
+/** Tag marking the base of the forge-served diff in the review clone. */
 export const PR_BASE_TAG = "pr-base";
 export async function clonePullRequest(
   host: RepoHost,
   opts: {
     authUrl: string;
     baseBranch: string;
-    /** Ref serveur de la tête (cf. `pullRequestHeadRef`). */
+    /** Server ref for the head (see `pullRequestHeadRef`). */
     headRef: string;
-    /** Nom de branche de tête, quand on le connaît : le repli. */
+    /** Head branch name, when known: the fallback. */
     headBranch: string | null;
-    /** Nom local sous lequel la tête est checkoutée. */
+    /** Local name under which the head is checked out. */
     localBranch: string;
-    /** Base du diff servi par la forge, à marquer `pr-base` (cf. en-tête). */
+    /** Base of the diff served by the forge, to mark as `pr-base` (see header). */
     baseSha?: string | null;
   },
 ): Promise<void> {
@@ -266,11 +265,11 @@ export async function clonePullRequest(
     : [`  exit 1`];
   const setup = [
     `set -e`,
-    // AUCUNE IDENTITÉ N'EST POSÉE ICI (MIN-358). Il y en avait une, « neutre »,
-    // au motif que git refuserait certaines opérations d'index sans elle : mesuré
-    // faux — sur un dépôt sans la moindre identité (ni locale, ni globale, ni
-    // système), `fetch`, `checkout`, `tag -f` et `show` passent tous. Et rien ne
-    // commite ici, par construction.
+    // NO IDENTITY IS SET HERE (MIN-358). There used to be a “neutral” one,
+    // based on the claim that git would refuse some index operations without it:
+    // measured false — in a repository with no identity at all (local, global,
+    // or system), `fetch`, `checkout`, `tag -f`, and `show` all work. And nothing
+    // is committed here, by construction.
     `if git fetch --depth 1 ${sq(opts.authUrl)} ${sq(`${opts.headRef}:${opts.localBranch}`)} 2>/dev/null; then`,
     `  :`,
     `else`,
@@ -283,9 +282,9 @@ export async function clonePullRequest(
     throw new Error(`pull request checkout failed: ${head.stderr || head.stdout}`);
   }
 
-  // Sha VALIDÉ avant de partir dans un shell : il vient d'une API de forge, et
-  // `sq` seul suffirait, mais un ref qui n'est pas un sha n'a de toute façon rien
-  // à faire ici — un nom de branche donnerait un tag qui bouge sous l'agent.
+  // SHA VALIDATED before entering a shell: it comes from a forge API, and `sq`
+  // alone would be enough, but a ref that is not a SHA has no place here anyway
+  // — a branch name would produce a tag that moves under the agent.
   const baseSha = opts.baseSha?.trim() ?? "";
   if (!/^[0-9a-f]{7,64}$/i.test(baseSha)) return;
   const anchor = await host.exec(
@@ -297,8 +296,8 @@ export async function clonePullRequest(
     { timeoutMs: 120_000 },
   );
   if (anchor.exitCode !== 0) {
-    // Pas une panne de session : le prompt sait décrire le repli. Mais ça se dit,
-    // sinon une relecture dégradée est indiscernable d'une relecture exacte.
+    // Not a session failure: the prompt can describe the fallback. But say so,
+    // otherwise a degraded review is indistinguishable from an exact one.
     console.error(
       `[agent] pr base anchor unavailable (${baseSha}): ${anchor.stderr || anchor.stdout}`,
     );
@@ -306,13 +305,13 @@ export async function clonePullRequest(
 }
 
 /**
- * Sha du tip de la BASE tel que le clone l'a rapporté (`refs/remotes/origin/<base>`,
- * créé par `git clone --branch <base>` et intact après la reprise d'une branche de
- * travail). C'est le point de comparaison du détecteur de travail ci-dessous.
+ * SHA of the BASE tip as reported by the clone (`refs/remotes/origin/<base>`,
+ * created by `git clone --branch <base>` and unchanged after resuming a work
+ * branch). This is the comparison point for the work detector below.
  *
- * Renvoie "" si le ref est illisible (clone d'une forme inattendue) : l'appelant
- * pousse alors comme avant — en cas de doute, on ne prend jamais le risque de
- * garder du travail hors du remote.
+ * Returns "" if the ref cannot be read (unexpected clone shape): the caller
+ * then pushes as before — when in doubt, we never risk keeping work off the
+ * remote.
  */
 async function baseTipSha(host: RepoHost, baseBranch: string): Promise<string> {
   try {
@@ -324,28 +323,27 @@ async function baseTipSha(host: RepoHost, baseBranch: string): Promise<string> {
 }
 
 /**
- * Stage tout, commit s'il y a des changements, puis push HEAD → workBranch. À
- * appeler à chaque suspend et à la fin (l'état du repo devient durable dans git).
- * `authUrl` doit porter un token FRAIS (l'appelant le re-résout avant l'appel).
+ * Stage everything, commit if there are changes, then push HEAD → workBranch.
+ * Call on every suspend and at the end (the repository state becomes durable in
+ * git). `authUrl` must carry a FRESH token (the caller resolves it again first).
  *
- * PAS DE BRANCHE POUR RIEN (MIN-123) : `git push HEAD:refs/heads/<branche>` CRÉE la
- * branche distante même quand l'arbre est propre — au sha de la base. Une session
- * qui ne touche à aucun fichier (question, plan, vérification) laissait donc une
- * branche vide sur le dépôt de l'utilisateur. D'où le détecteur : si, commit
- * conditionnel fait, HEAD est ENCORE au tip de la base, la branche n'a rien à dire
- * et on ne pousse pas du tout (`pushed: false`). Dès qu'un commit existe — c'est
- * le seul signal de « du code a changé », `git add -A` ne voyant que du suivi — on
- * pousse comme avant : le WIP poussé reste le filet durable au-delà du snapshot de
- * la microVM.
+ * NO BRANCH FOR NOTHING (MIN-123): `git push HEAD:refs/heads/<branch>` CREATES
+ * the remote branch even when the tree is clean — at the base SHA. A session
+ * that touches no files (question, plan, verification) therefore left an empty
+ * branch in the user's repository. Hence the detector: if, after the conditional
+ * commit, HEAD is STILL at the base tip, the branch has nothing to say and we do
+ * not push at all (`pushed: false`). As soon as a commit exists — the only signal
+ * that “code changed”, since `git add -A` sees only tracked content — we push as
+ * before: pushed WIP remains the durable safety net beyond the microVM snapshot.
  *
- * Renvoie le sha de HEAD, si un commit a été créé, si un push a eu lieu, et surtout
- * `remoteUpdated` : le push a-t-il fait AVANCER la branche distante ? C'est LE
- * signal « du vrai travail vient d'arriver sur le remote » — plus fiable que
- * `committed`, qui ne voit que l'appel courant : un commit posé par un appel
- * précédent dont le push avait échoué (5xx transitoire) part avec un arbre PROPRE
- * au push suivant (committed=false), et inversement un tour purement conversationnel
- * pousse un no-op (remote déjà à jour). Les décisions du type « rouvrir la PR
- * refusée » doivent se prendre sur `remoteUpdated`.
+ * Returns the HEAD SHA, whether a commit was created, whether a push happened,
+ * and especially `remoteUpdated`: did the push ADVANCE the remote branch? This
+ * is THE signal that “real work just arrived on the remote” — more reliable than
+ * `committed`, which sees only the current call: a commit from an earlier call
+ * whose push failed (transient 5xx) has a CLEAN tree on the next push
+ * (`committed=false`), while a purely conversational turn pushes a no-op (the
+ * remote is already current). Decisions such as “reopen the rejected PR” must
+ * use `remoteUpdated`.
  */
 export async function commitAndPush(
   host: RepoHost,
@@ -355,10 +353,10 @@ export async function commitAndPush(
     baseBranch: string;
     message: string;
     /**
-     * Identité git des commits de l'agent, posée PAR COMMANDE (MIN-358) plutôt
-     * qu'écrite dans `.git/config` au clonage. Doit être rattachable à un vrai
-     * compte du forge (bot de l'App côté GitHub) : sinon Vercel bloque le
-     * déploiement.
+     * Git identity for the agent's commits, set PER COMMAND (MIN-358) rather
+     * than written to `.git/config` during cloning. It must be attributable to a
+     * real forge account (the App's bot on GitHub), otherwise Vercel blocks the
+     * deployment.
      */
     committer: { name: string; email: string };
   },
@@ -378,18 +376,18 @@ export async function commitAndPush(
   const head = await host.exec(`git rev-parse HEAD`);
   const headSha = head.stdout.trim();
 
-  // Rien de commité par-dessus la base : aucune branche à créer sur le remote.
-  // `!dirty` est redondant (un commit fait forcément avancer HEAD) mais tenu
-  // explicitement : ce chemin ne doit JAMAIS pouvoir garder un commit au chaud.
+  // Nothing committed above the base: no branch to create on the remote.
+  // `!dirty` is redundant (a commit necessarily advances HEAD) but kept
+  // explicitly: this path must NEVER be able to stash a commit.
   const baseSha = await baseTipSha(host, opts.baseBranch);
   if (!dirty && baseSha && baseSha === headSha) {
     return { committed: false, remoteUpdated: false, headSha, pushed: false };
   }
 
-  // Sha actuel de la branche distante (vide si elle n'existe pas encore). Best-
-  // effort : si ls-remote échoue, on suppose le remote en retard (remoteUpdated
-  // sera true si le push passe) — mieux vaut un reopen de trop qu'un travail
-  // poussé sans réouverture de sa PR refusée.
+  // Current SHA of the remote branch (empty if it does not exist yet). Best-
+  // effort: if ls-remote fails, assume the remote is behind (remoteUpdated will
+  // be true if the push succeeds) — an extra reopen is better than pushed work
+  // without reopening its rejected PR.
   const remote = await host.exec(
     `git ls-remote ${sq(opts.authUrl)} ${sq(`refs/heads/${opts.workBranch}`)}`,
     { timeoutMs: 60_000 },
@@ -405,39 +403,39 @@ export async function commitAndPush(
   return { committed: dirty, remoteUpdated: remoteSha !== headSha, headSha, pushed: true };
 }
 
-// ── Diff par tour (event `files_changed`, MIN-46) ────────────────────────────
+// ── Per-turn diff (event `files_changed`, MIN-46) ────────────────────────────
 
 /**
- * LE PÉRIMÈTRE D'UN TOUR, QUAND LE DÉPÔT N'EST PAS À NOUS (MIN-358).
+ * THE SCOPE OF A TURN WHEN THE REPOSITORY IS NOT OURS (MIN-358).
  *
- * Les trois lectures ci-dessous comparent une référence à l'ARBRE DE TRAVAIL. En
- * microVM, cet arbre ne contient que le travail de l'agent, et la question ne se
- * pose pas. Dans le checkout de l'utilisateur, il contient aussi le SIEN : sans
- * borne, l'auto-relecture de fin de tour lui rend son propre WIP comme s'il
- * venait du modèle, et la portée ciblée des tests part sur ses fichiers à lui.
+ * The three reads below compare a ref with the WORKING TREE. In a microVM, this
+ * tree contains only the agent's work, so the issue does not arise. In the user's
+ * checkout, it also contains THEIRS: without a bound, end-of-turn self-review
+ * returns their own WIP as if it came from the model, and targeted tests run on
+ * their files.
  *
- * `undefined` = pas de borne, exactement le comportement d'avant. Une liste
- * VIDE, elle, borne à rien du tout — et c'est le bon sens : un tour qui n'a
- * touché à aucun fichier n'a pas de diff, quoi qu'il y ait dans l'arbre.
+ * `undefined` = no bound, exactly the previous behavior. An EMPTY list, on the
+ * other hand, bounds to nothing at all — which is correct: a turn that touched
+ * no files has no diff, whatever else is in the tree.
  */
 export type TurnScope = readonly string[] | undefined;
 
-/** Le `-- <chemins>` d'une commande git, ou "" quand rien ne borne. `:(literal)`
- *  n'y est pas utile : ces chemins viennent de git lui-même, pas du modèle. */
+/** The `-- <paths>` part of a git command, or "" when nothing bounds it.
+ * `:(literal)` is not needed: these paths come from git itself, not the model. */
 function pathspec(scope: TurnScope): string {
   if (scope === undefined) return "";
-  // Un pathspec impossible plutôt qu'aucun pathspec : `-- ` seul serait lu comme
-  // « tout », c'est-à-dire l'inverse de ce qu'une liste vide demande.
+  // An impossible pathspec rather than no pathspec: `-- ` alone would be read as
+  // “everything”, the opposite of what an empty list requests.
   if (scope.length === 0) return ` -- ${sq(":(exclude)*")}`;
   return ` -- ${scope.map(sq).join(" ")}`;
 }
 
-/** Nombre max de fichiers listés dans un event `files_changed` (gros tour borné). */
+/** Maximum number of files listed in a `files_changed` event (bounded large turn). */
 export const CHANGED_FILES_CAP = 100;
 
-/** Un fichier changé sur un intervalle git. Défini ICI : ce module (serveur ET
-    microVM) ne dépend pas de la couche client `lib/agent-api.ts` (« use client »).
-    Même forme. */
+/** A file changed over a git interval. Defined HERE: this module (server AND
+    microVM) does not depend on the client layer `lib/agent-api.ts` ("use client").
+    Same shape. */
 export interface ChangedFile {
   path: string;
   status: "added" | "modified" | "deleted" | "renamed";
@@ -446,7 +444,7 @@ export interface ChangedFile {
   previousPath?: string;
 }
 
-/** HEAD courant du dépôt (sha), ou "" si indéterminable. Best-effort — ne lève pas. */
+/** Current repository HEAD (SHA), or "" if indeterminate. Best-effort — never throws. */
 export async function revParseHead(host: RepoHost): Promise<string> {
   try {
     const res = await host.exec(`git rev-parse HEAD`);
@@ -457,10 +455,9 @@ export async function revParseHead(host: RepoHost): Promise<string> {
 }
 
 /**
- * Résout le chemin APRÈS d'un champ path de `git diff --numstat`, qui compacte les
- * renommages (`a => b`, `{a => b}`, `pre/{a => b}/post`) — là où `--name-status`
- * donne des chemins propres tab-séparés. On ne s'en sert que pour indexer les
- * compteurs par chemin final.
+ * Resolves the FINAL path from a `git diff --numstat` path field, which compacts
+ * renames (`a => b`, `{a => b}`, `pre/{a => b}/post`) — whereas `--name-status`
+ * gives clean tab-separated paths. Used only to index counters by final path.
  */
 function numstatNewPath(field: string): string {
   const brace = field.match(/^(.*)\{(.*) => (.*)\}(.*)$/);
@@ -473,18 +470,17 @@ function numstatNewPath(field: string): string {
 }
 
 /**
- * Le diff TEXTUEL du tour, pour l'auto-relecture de fin de tour (self-review.ts) :
- * le patch depuis `fromSha` jusqu'à l'arbre de travail — donc le travail déjà
- * poussé en WIP au milieu du chunk ET ce qui n'est pas encore committé — plus la
- * sortie brute de `git status --porcelain`, d'où se lisent les fichiers ajoutés
- * (que `git diff` ignore tant qu'ils ne sont pas suivis).
+ * The turn's TEXT diff, for end-of-turn self-review (self-review.ts): the patch
+ * from `fromSha` to the working tree — both work already pushed as WIP midway
+ * through the chunk AND work not yet committed — plus raw `git status --porcelain`
+ * output, which reveals added files (ignored by `git diff` until tracked).
  *
- * LECTURE SEULE : ni `add`, ni `add -N`. L'index appartient à la fin de tour, qui
- * stage et committe seule — une intention d'ajout posée ici se retrouverait dans
- * le commit de quelqu'un d'autre.
+ * READ-ONLY: neither `add` nor `add -N`. The index belongs to the end of the
+ * turn, which stages and commits alone — an add intent placed here would end up
+ * in someone else's commit.
  *
- * Best-effort, comme `changedFiles` : toute erreur rend des chaînes vides plutôt
- * que d'empêcher un tour de se terminer.
+ * Best-effort, like `changedFiles`: any error returns empty strings rather than
+ * preventing a turn from finishing.
  */
 export async function turnDiff(
   host: RepoHost,
@@ -508,20 +504,20 @@ export async function turnDiff(
 }
 
 /**
- * LA TAILLE DU TOUR, POUR DIMENSIONNER SES CONTRÔLES (MIN-262) — pas son contenu :
- * on ne rend ici ni patch ni statut, juste de quoi répondre à « ce tour est-il
- * assez petit pour qu'un passage de tests CIBLÉ suffise ? ».
+ * THE TURN'S SIZE, TO SIZE ITS CHECKS (MIN-262) — not its content: this returns
+ * neither a patch nor status, only enough to answer “is this turn small enough
+ * for one pass of TARGETED tests?”
  *
- * `files` ne porte QUE les fichiers qui existent encore (`--diff-filter=d`) : c'est
- * la liste qu'on passe à `vitest related`, et un chemin supprimé n'y a pas de sens.
- * `lines` compte tout, suppressions comprises — c'est le poids du changement.
+ * `files` contains ONLY files that still exist (`--diff-filter=d`): this is the
+ * list passed to `vitest related`, and a deleted path has no meaning there.
+ * `lines` counts everything, including deletions — this is the change's weight.
  *
- * `untracked` est rendu à part et pèse lourd chez l'appelant : un fichier NEUF est
- * du comportement neuf, celui-là même dont aucun test existant ne parle (MIN-251).
- * Un tour qui en crée n'est jamais « petit », quelle que soit sa taille en lignes.
+ * `untracked` is returned separately and weighs heavily for the caller: a NEW
+ * file is new behavior, precisely what no existing test covers (MIN-251). A
+ * turn that creates one is never “small”, whatever its line count.
  *
- * Best-effort comme `turnDiff` : toute erreur rend un tour de taille INCONNUE
- * (`null`), et l'appelant retombe alors sur le contrôle complet.
+ * Best-effort like `turnDiff`: any error returns an UNKNOWN turn size (`null`),
+ * and the caller falls back to the full check.
  */
 export async function turnDiffStat(
   host: RepoHost,
@@ -541,8 +537,8 @@ export async function turnDiffStat(
     for (const line of numstat.stdout.split("\n")) {
       const m = /^(\d+|-)\t(\d+|-)\t/.exec(line);
       if (!m) continue;
-      // `-` : fichier binaire. Il ne se compte pas en lignes, mais il compte comme
-      // un changement — un `0` le rendrait invisible.
+      // `-`: binary file. It has no line count, but it counts as a change — a `0`
+      // would make it invisible.
       lines += m[1] === "-" || m[2] === "-" ? 1 : Number(m[1]) + Number(m[2]);
     }
     const files = names.stdout.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -557,17 +553,15 @@ export async function turnDiffStat(
 }
 
 /**
- * TOUS LES CHEMINS QUE LE TOUR A REMUÉS, suppressions et fichiers neufs compris
- * (MIN-286).
+ * ALL PATHS TOUCHED BY THE TURN, including deletions and new files (MIN-286).
  *
- * `turnDiffStat` sert à DIMENSIONNER un tour : sa liste est celle qu'on passe à
- * `vitest related`, donc elle exclut ce qui n'existe plus (`--diff-filter=d`) et
- * ne compte les fichiers neufs qu'en nombre. Ici on veut l'inverse — savoir CE
- * QUI a bougé, pour que le type-check de fin de tour ait quelque chose à
- * regarder quand le modèle n'a fait que supprimer ou créer par le shell (sous
- * opencode, `rm`/`mv` ne passent par aucun tool d'écriture).
+ * `turnDiffStat` sizes a turn: its list is passed to `vitest related`, so it
+ * excludes what no longer exists (`--diff-filter=d`) and counts new files only
+ * by number. Here we want the opposite — to know WHAT moved, so end-of-turn
+ * type-checking has something to inspect when the model only deleted or created
+ * through the shell (under opencode, `rm`/`mv` use no write tool).
  *
- * Best-effort comme ses voisines : toute erreur rend une liste vide.
+ * Best-effort like its neighbors: any error returns an empty list.
  */
 export async function turnTouchedPaths(
   host: RepoHost,
@@ -602,11 +596,11 @@ export async function turnTouchedPaths(
 }
 
 /**
- * Fichiers changés entre deux shas (le « diff par tour »). Deux passes git :
- * `--name-status` (statut + chemins propres, renommages compris) pour la liste, et
- * `--numstat` pour les compteurs +/− (fichier binaire → 0/0). Forme deux-points
- * seulement — le clone est shallow (depth 1). Best-effort : toute erreur (ou un sha
- * hors de l'historique shallow) renvoie une liste vide, ne casse jamais un tour.
+ * Files changed between two SHAs (the “per-turn diff”). Two git passes:
+ * `--name-status` (status + clean paths, including renames) for the list, and
+ * `--numstat` for the +/- counters (binary file → 0/0). Two-point form only —
+ * the clone is shallow (depth 1). Best-effort: any error (or a SHA outside the
+ * shallow history) returns an empty list and never breaks a turn.
  */
 export async function changedFiles(
   host: RepoHost,
@@ -618,16 +612,16 @@ export async function changedFiles(
 }
 
 /**
- * LES MÊMES FICHIERS CHANGÉS, MAIS DANS L'ARBRE DE TRAVAIL (MIN-293).
+ * THE SAME CHANGED FILES, BUT IN THE WORKING TREE (MIN-293).
  *
- * En mode dépôt courant, **le tour ne commite plus** : son livrable est ce qu'il
- * a laissé sur le disque de l'utilisateur (décision D2bis-B). Il n'y a donc pas
- * de second sha à differ — on compare la baseline du tour à l'arbre, et on
- * ajoute les fichiers NON SUIVIS, que `git diff` ne voit pas et qui sont
- * pourtant le cas le plus courant d'un agent qui crée un fichier.
+ * In local-repository mode, **the turn no longer commits**: its deliverable is
+ * what it left on the user's disk (decision D2bis-B). There is therefore no
+ * second SHA to diff — compare the turn baseline with the tree, and add UNTRACKED
+ * files, which `git diff` cannot see and which are nevertheless the most common
+ * case when an agent creates a file.
  *
- * `scope` borne aux chemins du tour : sans lui, les 20 fichiers sales de
- * l'utilisateur remonteraient dans le fil comme si l'agent les avait touchés.
+ * `scope` bounds the turn's paths: without it, the user's 20 dirty files would
+ * appear in the thread as if the agent had touched them.
  */
 export async function workingTreeChangedFiles(
   host: RepoHost,
@@ -638,8 +632,8 @@ export async function workingTreeChangedFiles(
   const only = pathspec(scope);
   const tracked = await diffToChangedFiles(host, fromSha, "", only);
 
-  // Les non-suivis, que `git diff` ignore par construction. `--porcelain` les
-  // marque `??`, et ils comptent tous pour « ajouté ».
+    // Untracked files, which `git diff` ignores by construction. `--porcelain`
+    // marks them `??`, and they all count as “added”.
   let untracked: string[] = [];
   try {
     const status = await host.exec(`git status --porcelain --untracked-files=all${only}`, {
@@ -653,8 +647,8 @@ export async function workingTreeChangedFiles(
         .filter(Boolean);
     }
   } catch {
-    // Best-effort, comme tout ce fichier : un `git status` qui échoue ne doit pas
-    // faire tomber un tour abouti.
+    // Best-effort, like this entire file: a failing `git status` must not bring
+    // down a completed turn.
   }
 
   const seen = new Set(tracked.files.map((f) => f.path));
@@ -669,7 +663,7 @@ export async function workingTreeChangedFiles(
   return { files: truncated ? files.slice(0, CHANGED_FILES_CAP) : files, truncated };
 }
 
-/** Le corps commun : deux passes `git diff`, une liste de `ChangedFile`. */
+/** Shared body: two `git diff` passes, producing a `ChangedFile` list. */
 async function diffToChangedFiles(
   host: RepoHost,
   fromSha: string,
@@ -684,7 +678,7 @@ async function diffToChangedFiles(
     ]);
     if (nameStatus.exitCode !== 0) return { files: [], truncated: false };
 
-    // Compteurs indexés par chemin APRÈS.
+    // Counters indexed by the FINAL path.
     const counts = new Map<string, { additions: number; deletions: number }>();
     for (const line of numstat.stdout.split("\n")) {
       if (!line.trim()) continue;
@@ -708,7 +702,7 @@ async function diffToChangedFiles(
         previousPath = parts[1] ?? "";
         path = parts[2] ?? previousPath;
       } else if (code === "A" || code === "C") {
-        // Copie (C) = nouveau fichier côté cible → « ajouté » du point de vue lecteur.
+        // Copy (C) = new file on the target side → “added” from the reader's perspective.
         status = "added";
         path = parts[1] ?? "";
       } else if (code === "D") {
@@ -737,48 +731,48 @@ async function diffToChangedFiles(
   }
 }
 
-// ── Helpers fichiers (utilisés par les tools de l'agent) ─────────────────────
+// ── File helpers (used by the agent's tools) ─────────────────────────────────
 
-/** Nombre max de lignes renvoyées par un `read_file` sans offset/limit. */
+/** Maximum lines returned by `read_file` without an offset/limit. */
 export const READ_MAX_LINES = 2000;
-/** Longueur max d'une ligne renvoyée (au-delà, tronquée). */
+/** Maximum length of a returned line (truncated beyond this). */
 export const READ_MAX_LINE_CHARS = 2000;
-/** Taille max d'un fichier lu (au-delà, on lit quand même mais on borne les lignes). */
+/** Maximum size of a read file (still read beyond this, but lines are bounded). */
 export const READ_MAX_BYTES = 250_000;
-/** Nombre max de fichiers renvoyés par `glob`. */
+/** Maximum files returned by `glob`. */
 export const GLOB_MAX_FILES = 100;
 
 /**
- * Chemin absolu et VALIDÉ d'un fichier du dépôt. Résout `..` et rejette toute
- * sortie du dépôt du run.
+ * Absolute, VALIDATED path for a repository file. Resolves `..` and rejects any
+ * path outside the run repository.
  *
- * DÉFENSE EN PROFONDEUR, et elle garde exactement le même sens depuis MIN-224 :
- * c'est une fonction de CHEMIN, appliquée aux arguments du modèle avant de
- * toucher le disque. Que le harness tourne dans la machine qu'il garde ne change
- * rien à ce qu'elle refuse — la microVM reste la vraie frontière, mais un
- * `../../x` ne doit jamais y toucher autre chose que le dépôt.
+ * DEFENSE IN DEPTH, with exactly the same meaning since MIN-224: this is a PATH
+ * function applied to model arguments before touching disk. Whether the harness
+ * runs on the machine it protects changes nothing about what it rejects — the
+ * microVM remains the real boundary, but `../../x` must never touch anything
+ * there other than the repository.
  *
- * La racine vient du host depuis MIN-354, et c'est le seul changement : sur une
- * machine où le dépôt n'est plus sous `/vercel`, une racine en dur ne refusait
- * pas trop peu — elle refusait TOUT, chaque chemin réel sortant d'une racine
- * qui n'existe pas.
+ * The root has come from the host since MIN-354, and that is the only change: on
+ * a machine where the repository is no longer under `/vercel`, a hard-coded root
+ * did not reject too little — it rejected EVERYTHING, every real path outside a
+ * root that does not exist.
  */
 function repoPath(host: RepoHost, relPath: string): string {
   return resolveWithin(host.layout.repoDir, relPath);
 }
 
 /**
- * Chemin de LECTURE : le dépôt, plus les dossiers lisibles du run (sorties
- * de tools déposées, MIN-107). Réservé aux tools qui LISENT — les écritures
- * passent par `writablePath` et restent enfermées dans le dépôt.
+ * READ path: the repository, plus readable run directories (stored tool output,
+ * MIN-107). Reserved for tools that READ — writes go through `writablePath` and
+ * remain confined to the repository.
  */
 function readablePath(host: RepoHost, path: string): string {
   return resolveReadable(host.layout.repoDir, readableDirs(host.layout), path);
 }
 
 /**
- * Comme repoPath mais pour les ÉCRITURES : refuse en plus `.git/` (écrire un hook
- * ou config = escalade possible — exfiltration du token d'installation, backdoor).
+ * Like repoPath but for WRITES: additionally rejects `.git/` (writing a hook or
+ * config enables escalation — installation-token exfiltration, backdoor).
  */
 function writablePath(host: RepoHost, relPath: string): string {
   const abs = repoPath(host, relPath);
@@ -786,36 +780,36 @@ function writablePath(host: RepoHost, relPath: string): string {
   return abs;
 }
 
-/** Lit le contenu BRUT d'un fichier du dépôt (utf8), ou null s'il n'existe pas.
-    Sert à l'édition (`edit_file`), qui a besoin du contenu exact non annoté. */
+/** Reads the RAW content of a repository file (utf8), or null if it does not exist.
+    Used by editing (`edit_file`), which needs the exact unannotated content. */
 export async function readWorkFile(host: RepoHost, relPath: string): Promise<string | null> {
   return host.readFile(repoPath(host, relPath));
 }
 
 /**
- * Le même fichier, mais tel qu'il est À UNE RÉFÉRENCE GIT — pas dans l'arbre de
- * travail (MIN-328).
+ * The same file, but as it exists AT A GIT REF — not in the working tree
+ * (MIN-328).
  *
- * Une session de RELECTURE est checkoutée sur la TÊTE de la pull request, qui sur
- * un fork appartient à l'auteur de la PR — c'est-à-dire, sur un dépôt public, à
- * n'importe qui. Lire les instructions du dépôt là-dedans revenait à laisser un
- * inconnu écrire dans le prompt système de la session. Seule la BASE fait
- * autorité, et c'est ce que le tag `pr-base` désigne.
+ * A REVIEW session is checked out at the pull request HEAD, which on a fork
+ * belongs to the PR author — that is, on a public repository, to anyone. Reading
+ * repository instructions there would let a stranger write into the session's
+ * system prompt. Only the BASE is authoritative, and that is what the `pr-base`
+ * tag designates.
  *
- * `git show` plutôt qu'un checkout : rien ne bouge dans l'arbre, donc le
- * `git diff pr-base` de la relecture reste exactement le changement de la PR.
- * Rend null si la ref ou le chemin n'existe pas — c'est le cas normal (pas
- * d'`AGENTS.md`, ou ancrage de base non ramené), et il vaut mieux une relecture
- * sans conventions qu'une relecture aux conventions de l'attaquant.
+ * `git show` rather than a checkout: nothing moves in the tree, so the review's
+ * `git diff pr-base` remains exactly the PR change. Returns null if the ref or
+ * path does not exist — a normal case (no `AGENTS.md`, or the base anchor was not
+ * fetched), and a review without conventions is better than one using the
+ * attacker's conventions.
  */
 export async function readFileAtRef(
   host: RepoHost,
   ref: string,
   relPath: string,
 ): Promise<string | null> {
-  // La ref vient de nous (`PR_BASE_TAG`), le chemin vient d'un nom de fichier
-  // d'instructions calculé par `instructionFilesFor` — les deux passent quand
-  // même par `sq`, comme tout ce qui entre dans un shell ici.
+  // The ref comes from us (`PR_BASE_TAG`), and the path comes from an instruction
+  // filename computed by `instructionFilesFor` — both still go through `sq`, as
+  // does everything that enters a shell here.
   const cleaned = relPath.trim().replace(/^\.\//, "");
   if (!cleaned || cleaned.startsWith("/") || cleaned.split("/").includes("..")) return null;
   try {
@@ -827,10 +821,10 @@ export async function readFileAtRef(
 }
 
 /**
- * Dépose une sortie de tool trop longue dans le dossier de sorties du run et
- * renvoie son chemin ABSOLU (celui que le modèle repassera à `read_file`/`grep`).
- * Ne passe PAS par `writablePath` : on écrit volontairement hors du dépôt, et
- * `name` est un simple nom de fichier (tout séparateur est neutralisé ici).
+ * Stores tool output that is too long in the run output directory and returns its
+ * ABSOLUTE path (the model will pass it back to `read_file`/`grep`). Does NOT go
+ * through `writablePath`: we intentionally write outside the repository, and
+ * `name` is a simple filename (all separators are neutralized here).
  */
 export async function writeToolOutput(
   host: RepoHost,
@@ -845,18 +839,18 @@ export async function writeToolOutput(
   return abs;
 }
 
-// ── Jobs de fond (MIN-114) ───────────────────────────────────────────────────
+// ── Background jobs (MIN-114) ────────────────────────────────────────────────
 
-/** Timeout du lancement d'un job (on n'attend que son PID, pas sa fin). */
+/** Timeout for starting a job (wait only for its PID, not its completion). */
 const BACKGROUND_START_TIMEOUT_MS = 20_000;
-/** Timeout d'une sonde / d'un arrêt. */
+/** Timeout for probing / stopping. */
 const BACKGROUND_PROBE_TIMEOUT_MS = 30_000;
 
 /**
- * Les trois fichiers d'un job, dans le dossier de sorties du run — donc HORS du
- * dépôt (le `git add -A` de fin de tour ne les voit jamais) et dans un dossier
- * LISIBLE par `read_file`/`grep` : le log complet d'un serveur reste consultable
- * même quand la sonde n'en a renvoyé que la queue (MIN-107).
+ * The three files for a job, in the run output directory — therefore OUTSIDE the
+ * repository (`git add -A` at the end of a turn never sees them) and in a
+ * directory READABLE by `read_file`/`grep`: a server's full log remains
+ * accessible even when the probe returned only its tail (MIN-107).
  */
 function backgroundPaths(layout: HarnessLayout, jobId: string): BackgroundPaths {
   const safe = jobId.replace(/[^A-Za-z0-9._-]/g, "-") || "job";
@@ -868,8 +862,8 @@ function backgroundPaths(layout: HarnessLayout, jobId: string): BackgroundPaths 
 }
 
 /**
- * Lance une commande EN FOND et renvoie son PID (le script lui-même, et pourquoi
- * il est écrit ainsi, sont dans `background.ts` — module pur).
+ * Starts a command IN THE BACKGROUND and returns its PID (the script itself, and
+ * why it is written this way, are in `background.ts` — a pure module).
  */
 export async function startBackground(
   host: RepoHost,
@@ -891,10 +885,10 @@ export async function startBackground(
 }
 
 /**
- * Sonde un job : ce qui a été écrit DEPUIS `offset`, plus son état. L'incrément est
- * borné à `maxBytes` pris à la FIN (un watcher bavard ne doit pas ramener 40 Mo par
- * sonde) ; l'offset avance quand même jusqu'à la taille réelle du log, et ce qui a
- * été sauté reste dans le fichier, lisible avec `grep`/`read_file`.
+ * Probes a job: what was written SINCE `offset`, plus its state. The increment is
+ * bounded to `maxBytes` taken from the END (a chatty watcher must not bring back
+ * 40 MB per probe); the offset still advances to the log's real size, and skipped
+ * content remains in the file, readable with `grep`/`read_file`.
  */
 export async function readBackgroundSince(
   host: RepoHost,
@@ -916,35 +910,35 @@ export async function readBackgroundSince(
 }
 
 /**
- * Arrête un job : SIGTERM, délai de grâce, puis SIGKILL (script dans
- * `background.ts`). Ne lève jamais sur un processus déjà mort.
+ * Stops a job: SIGTERM, grace period, then SIGKILL (script in `background.ts`).
+ * Never throws for a process that is already dead.
  */
 export async function stopBackground(host: RepoHost, pid: number): Promise<void> {
   await host.exec(backgroundStopScript(pid), { timeoutMs: BACKGROUND_PROBE_TIMEOUT_MS });
 }
 
 export interface ReadWindow {
-  /** Contenu annoté : une ligne `<n>\t<contenu>` par ligne source (1-based). */
+  /** Annotated content: one `<n>\t<content>` line per source line (1-based). */
   content: string;
-  /** Nombre total de lignes du fichier. */
+  /** Total number of lines in the file. */
   totalLines: number;
-  /** Index (1-based) de la première ligne renvoyée. */
+  /** (1-based) index of the first returned line. */
   startLine: number;
-  /** Nombre de lignes renvoyées. */
+  /** Number of returned lines. */
   returnedLines: number;
-  /** true si des lignes ont été omises (fenêtre plus petite que le fichier). */
+  /** true if lines were omitted (window smaller than the file). */
   truncated: boolean;
 }
 
 /**
- * Lit une FENÊTRE d'un fichier avec numéros de ligne (format `cat -n` : `n\t…`),
- * ce qui rend les éditions ciblables et borne le contexte. `offset` (1-based) et
- * `limit` fenêtrent ; par défaut les `READ_MAX_LINES` premières lignes. Les
- * lignes très longues sont tronquées. Renvoie null si le fichier n'existe pas.
+ * Reads a WINDOW of a file with line numbers (`cat -n` format: `n\t…`), making
+ * edits targetable and bounding context. `offset` (1-based) and `limit` define
+ * the window; by default the first `READ_MAX_LINES` lines. Very long lines are
+ * truncated. Returns null if the file does not exist.
  *
- * Accepte, en plus des chemins du dépôt, les sorties de tools déposées dans le
- * dossier de sorties du run (MIN-107) : c'est ainsi que le modèle relit la sortie
- * complète d'un `run_command` trop long.
+ * In addition to repository paths, accepts tool output stored in the run output
+ * directory (MIN-107): this is how the model rereads the complete output of an
+ * overlong `run_command`.
  */
 export async function readWorkFileWindow(
   host: RepoHost,
@@ -955,8 +949,8 @@ export async function readWorkFileWindow(
   if (raw === null) return null;
 
   const lines = raw.split("\n");
-  // Un fichier finissant par `\n` (le cas courant) produit un dernier élément vide :
-  // on le retire pour ne pas afficher une ligne numérotée fantôme (sémantique `cat -n`).
+  // A file ending in `\n` (the common case) produces a final empty element: remove
+  // it so we do not display a phantom numbered line (`cat -n` semantics).
   if (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
   const totalLines = lines.length;
   const startLine = Math.max(1, Math.floor(opts?.offset ?? 1));
@@ -979,8 +973,8 @@ export async function readWorkFileWindow(
   };
 }
 
-/** Écrit (crée/écrase) un fichier du dépôt. Crée les dossiers parents si besoin.
-    Rejette les écritures hors dépôt ou dans `.git/`. */
+/** Writes (creates/overwrites) a repository file. Creates parent directories as needed.
+    Rejects writes outside the repository or in `.git/`. */
 export async function writeWorkFile(
   host: RepoHost,
   relPath: string,
@@ -993,9 +987,9 @@ export async function writeWorkFile(
 }
 
 /**
- * Déplace/renomme un fichier suivi (git mv). Refuse la sortie du dépôt / `.git/`
- * des deux côtés, et l'écrasement d'une destination existante. Passe par git pour
- * que le commit/PR capture le renommage.
+ * Moves/renames a tracked file (`git mv`). Rejects leaving the repository / `.git/`
+ * on either side, and overwriting an existing destination. Uses git so the
+ * commit/PR captures the rename.
  */
 export async function moveWorkFile(host: RepoHost, from: string, to: string): Promise<void> {
   const src = writablePath(host, from);
@@ -1006,14 +1000,14 @@ export async function moveWorkFile(host: RepoHost, from: string, to: string): Pr
     `test -e ${sq(src)} || { echo "source not found" >&2; exit 3; }`,
     `test -e ${sq(dst)} && { echo "destination exists" >&2; exit 4; }`,
     dstDir ? `mkdir -p ${sq(dstDir)}` : `:`,
-    // git mv si le fichier est suivi, sinon mv simple (fichier neuf non commité).
+    // git mv if the file is tracked, otherwise plain mv (new, uncommitted file).
     `git mv ${sq(src)} ${sq(dst)} 2>/dev/null || mv ${sq(src)} ${sq(dst)}`,
   ].join("\n");
   const res = await host.exec(cmd);
   if (res.exitCode !== 0) throw new Error(res.stderr.trim() || res.stdout.trim() || "move failed");
 }
 
-/** Supprime un fichier suivi (git rm) ou neuf. Refuse hors dépôt / `.git/`. */
+/** Deletes a tracked or new file (`git rm`). Rejects paths outside the repository / `.git/`. */
 export async function deleteWorkFile(host: RepoHost, relPath: string): Promise<void> {
   const abs = writablePath(host, relPath);
   const cmd = [
@@ -1024,14 +1018,14 @@ export async function deleteWorkFile(host: RepoHost, relPath: string): Promise<v
   if (res.exitCode !== 0) throw new Error(res.stderr.trim() || res.stdout.trim() || "delete failed");
 }
 
-/** Liste le contenu d'un dossier du dépôt — ou du dossier de sorties du run, pour
-    retrouver les sorties déposées (noms, dossiers suffixés `/`). */
+/** Lists a repository directory — or the run output directory, to find stored
+    output (names, directories with a trailing `/`). */
 /**
- * Contenu d'un dossier, ou `null` s'il n'a pas pu être LU (chemin absent, pas un
- * dossier, droits) — MIN-226, même règle que `grep` : un échec ne se rend pas
- * comme un résultat vide. « (empty) » sur un dossier qui n'existe pas affirme
- * qu'il existe et qu'il est vide, ce qui est deux fois faux, et le modèle en tire
- * la conclusion qu'il n'y a rien à y chercher.
+ * Directory contents, or `null` if it could not be READ (missing path, not a
+ * directory, permissions) — MIN-226, same rule as `grep`: a failure is not
+ * returned as an empty result. “(empty)” for a directory that does not exist
+ * claims that it exists and is empty, which is doubly false, and the model would
+ * conclude there is nothing to look for there.
  */
 export async function listDir(host: RepoHost, relPath = "."): Promise<string | null> {
   const res = await host.exec(`ls -1Ap ${sq(readablePath(host, relPath))}`);
@@ -1041,71 +1035,71 @@ export async function listDir(host: RepoHost, relPath = "."): Promise<string | n
 export type GrepOutputMode = "content" | "files_with_matches" | "count";
 
 export interface GrepOptions {
-  /** Motif (regex étendue POSIX). */
+  /** Pattern (extended POSIX regex). */
   pattern: string;
-  /** Sous-arbre à limiter (pathspec). */
+  /** Subtree to limit (pathspec). */
   path?: string;
-  /** Glob de fichiers, ex. `**\/*.ts` (pathspec `:(glob)`). */
+  /** File glob, e.g. `**\/*.ts` (pathspec `:(glob)`). */
   glob?: string;
   outputMode?: GrepOutputMode;
-  /** Insensible à la casse. */
+  /** Case insensitive. */
   ignoreCase?: boolean;
-  /** Lignes de contexte autour de chaque match (mode `content`). */
+  /** Context lines around each match (`content` mode). */
   context?: number;
-  /** Cap de lignes renvoyées. */
+  /** Cap of rows returned. */
   headLimit?: number;
-  /** Cherche le motif comme une chaîne LITTÉRALE (`-F`), sans le lire comme une regex. */
+  /** Looks for the pattern as a LITERAL string (`-F`), without reading it as a regex. */
   fixedStrings?: boolean;
 }
 
 export interface GrepResult {
-  /** Lignes de sortie (peut être vide = aucun match). */
+  /** Output lines (may be empty = no match). */
   output: string;
-  /** false → git grep a ÉCHOUÉ (regex/option invalide) — pas « aucun match ». */
+  /** false → git grep FAILED (invalid regex/option) — not “no match”. */
   ok: boolean;
-  /** Message d'erreur si ok=false. */
+  /** Error message if ok=false. */
   error?: string;
-  /** Le motif n'était pas une regex valide : relancé en littéral (MIN-109). */
+  /** The pattern was not a valid regex: rerun as literal (MIN-109). */
   retriedAsLiteral?: boolean;
   /**
-   * L'inverse (MIN-238) : `fixed_strings` posé sur une ALTERNATION, donc un `|`
-   * cherché comme un caractère et des alternatives jamais cherchées du tout.
-   * Relancé en regex — ce sont ces résultats-là qui sont rendus.
+   * The opposite (MIN-238): `fixed_strings` placed on an ALTERNATION, therefore a `|`
+   * searched for as a character and alternatives never searched at all.
+   * Rerun in regex — these are the results that are returned.
    *
-   * Même famille que `noFilesInScope` : la recherche a bien tourné, elle n'a
-   * simplement pas cherché ce que le modèle croyait. La différence est qu'ici on
-   * peut la refaire correctement, comme MIN-109 le fait dans l'autre sens.
+   * Same family as `noFilesInScope`: the search went well, it did not
+   * simply didn't look for what the model believed. The difference is that here we
+   * can do it again correctly, like MIN-109 does it the other way around.
    */
   retriedAsRegex?: boolean;
   /**
-   * Aucun match ET aucun fichier dans le périmètre : `path`/`glob` n'ont
-   * sélectionné AUCUN fichier, donc la recherche n'a rien lu (MIN-226).
+   * No matches AND no files in the scope: `path`/`glob` have
+   * selected NO files, so search read nothing (MIN-226).
    *
-   * C'est la distinction qui manquait. « Aucune correspondance » se lit comme un
-   * fait vérifié sur le code — le modèle en tire une conclusion et passe à la
-   * suite — alors qu'un périmètre vide ne dit rien du tout, sinon que le filtre
-   * était faux. Les deux sortaient par la même phrase, et un filtre malformé
-   * mentait donc en silence, indiscernable d'une vraie absence : c'est comme ça
-   * que le plan de MIN-226 a « vérifié » qu'un fichier n'appelait pas ce qu'il
-   * appelait. Une correction de forme (accolades en MIN-116, `path` de fichier
-   * en MIN-226) referme UNE porte ; celle-ci referme la classe.
+   * This is the distinction that was missing. “No matches” reads like a
+   * fact checked on the code — the model draws a conclusion and moves on to the
+   * continued — while an empty perimeter says nothing at all, except that the filter
+   * was false. Both came out with the same sentence, and a malformed filter
+   * therefore lied in silence, indistinguishable from a real absence: that's like that
+   * that the MIN-226 plan "verified" that a file did not call what it
+   * called. A form correction (braces in MIN-116, file `path`
+   * in MIN-226) closes ONE door; this closes the class.
    */
   noFilesInScope?: boolean;
 }
 
 /**
- * Recherche via `git grep` : gitignore-aware (fichiers suivis + non suivis, hors
- * ignorés), rapide, sans dépendance à installer. `content` → `fichier:ligne:…`,
- * `files_with_matches` → chemins, `count` → `fichier:compte`. `path` et `glob`
- * s'INTERSECTENT (glob dans path). Les erreurs git (regex invalide, option
- * invalide) NE sont PAS masquées : on lit l'exit code (≥2 = erreur) au lieu de
- * `|| true`/`| head` qui les avaleraient — le cap de lignes se fait en JS.
- * Seule exception (MIN-109) : un motif refusé comme regex est relancé en littéral
- * (`-F`), et le retour le DIT (`retriedAsLiteral`).
+ * Search via `git grep`: gitignore-aware (tracked + untracked files, excluding
+ * ignored), fast, with no dependency to install. `content` → `file:line:…`,
+ * `files_with_matches` → paths, `count` → `file:count`. `path` and `glob`
+ * INTERSECT (glob in path). Git errors (invalid regex, option
+ * invalid) are NOT hidden: we read the exit code (≥2 = error) instead of
+ * `|| true`/`| head` which would swallow them — the line cap is done in JS.
+ * Only exception (MIN-109): a pattern refused as regex is re-run in literal
+ * (`-F`), and the return SAYS (`retriedAsLiteral`).
  */
 export async function grepRepo(host: RepoHost, opts: GrepOptions): Promise<GrepResult> {
-  // Le `path` vise-t-il un dossier lisible HORS dépôt (une sortie de tool déposée,
-  // MIN-107) ? git grep n'y voit rien — on passe au grep du système.
+  // Does the `path` target a file readable OUTSIDE the repository (a tool output filed,
+  // MIN-107) ? git grep sees nothing there — we move on to system grep.
   const outside = opts.path ? readableOutsideRepo(host, opts.path) : null;
   if (outside) return grepOutside(host, opts, outside);
 
@@ -1127,13 +1121,13 @@ export async function grepRepo(host: RepoHost, opts: GrepOptions): Promise<GrepR
     opts,
   );
 
-  // git grep : 0 = matchs, 1 = aucun match, ≥2 = ERREUR (regex/option invalide…).
+  // git grep: 0 = matches, 1 = no matches, ≥2 = ERROR (invalid regex/option…).
   if (res.exitCode >= 2) {
     return { output: "", ok: false, error: (res.stderr || res.stdout).trim().slice(0, 500) };
   }
   if (res.exitCode === 1 && specs.length > 0) {
-    // Rien trouvé SOUS UN FILTRE : le filtre a-t-il seulement retenu un fichier ?
-    // Une seule commande, sur le seul chemin où la question se pose.
+    // Nothing found UNDER A FILTER: did the filter only retain one file?
+    // A single command, on the only path where the question arises.
     const listed = await host.exec(
       `git ls-files --cached --others --exclude-standard -- ${specs.join(" ")}`,
     );
@@ -1150,10 +1144,10 @@ export async function grepRepo(host: RepoHost, opts: GrepOptions): Promise<GrepR
 }
 
 /**
- * Lance la recherche, et si le moteur a refusé le MOTIF (pas une regex valide),
- * la relance en littéral (`-F`) — le cas de loin le plus courant (MIN-109) : le
- * modèle colle un bout de code (`onUpdateIssue={`) en croyant chercher du texte.
- * Toute autre erreur (option, pathspec) remonte telle quelle.
+ * Launch the search, and if the engine refused the PATTERN (not a valid regex),
+ * the literal restart (`-F`) — by far the most common case (MIN-109): the
+ * model pastes a piece of code (`onUpdateIssue={`) thinking it is looking for text.
+ * Any other error (option, pathspec) returns as is.
  */
 async function runGrepWithLiteralFallback(
   host: RepoHost,
@@ -1163,15 +1157,15 @@ async function runGrepWithLiteralFallback(
   const literal = opts.fixedStrings === true;
   const res = await host.exec(build(literal));
   if (literal) {
-    // Le repli SYMÉTRIQUE (MIN-238) : `fixed_strings` sur une alternation a
-    // cherché la barre au pied de la lettre, donc les alternatives n'ont jamais
-    // été cherchées. Rien trouvé ici ne veut rien dire — on relance en regex.
-    // Conditionné à l'absence de match : un littéral qui TROUVE est ce qu'on
-    // voulait, et le relancer changerait une réponse juste.
+    // The SYMMETRIC fold (MIN-238): `fixed_strings` on an alternation a
+    // sought the bar literally, so the alternatives never
+    // been sought. Nothing found here means nothing — we restart in regex.
+    // Conditioned on the absence of a match: a literal one that FINDS is what we
+    // wanted, and restarting it would change a fair response.
     if (res.exitCode === 1 && looksLikeIntendedAlternation(opts.pattern)) {
       const retry = await host.exec(build(false));
-      // Une regex refusée ne vaut pas mieux que le littéral : on garde le
-      // premier résultat plutôt que d'échanger « rien trouvé » contre une erreur.
+      // A refused regex is no better than the literal: we keep the
+      // first result rather than trading “nothing found” for an error.
       if (retry.exitCode < 2) return { res: retry, retriedAsLiteral: false, retriedAsRegex: true };
     }
     return { res, retriedAsLiteral: false };
@@ -1182,7 +1176,7 @@ async function runGrepWithLiteralFallback(
   return { res: await host.exec(build(true)), retriedAsLiteral: true };
 }
 
-/** Drapeaux partagés par les deux moteurs (casse, mode de sortie, contexte). */
+/** Flags shared by both engines (case, output mode, context). */
 function grepModeFlags(opts: GrepOptions): string[] {
   const flags: string[] = [];
   if (opts.ignoreCase) flags.push("-i");
@@ -1197,14 +1191,14 @@ function grepModeFlags(opts: GrepOptions): string[] {
   return flags;
 }
 
-/** Cap de lignes appliqué en JS (jamais `| head`, qui masquerait l'exit code). */
+/** Line cap applied in JS (never `| head`, which would hide the exit code). */
 function capGrepLines(output: string, headLimit?: number): string {
   if (headLimit == null || headLimit <= 0) return output;
   return output.split("\n").slice(0, Math.floor(headLimit)).join("\n");
 }
 
-/** Chemin absolu validé s'il vise un dossier lisible hors dépôt, sinon null.
-    Lève si un `..` tentait d'en sortir. */
+/** Absolute path validated if it targets a file readable outside the repository, otherwise null.
+    Raised if a `..` tried to exit. */
 function readableOutsideRepo(host: RepoHost, path: string): string | null {
   const dirs = readableDirs(host.layout);
   if (!dirs.some((dir) => path === dir || path.startsWith(`${dir}/`))) return null;
@@ -1212,18 +1206,18 @@ function readableOutsideRepo(host: RepoHost, path: string): string | null {
 }
 
 /**
- * Recherche dans un dossier lisible hors dépôt (sorties de tools déposées) avec le
- * grep du système : `-r` pour un dossier, `-H` pour toujours préfixer le chemin
- * (le modèle doit pouvoir le repasser à `read_file`). Mêmes codes de sortie que
- * git grep (0 match, 1 rien, ≥2 erreur), donc même contrat de retour.
+ * Search in a readable folder outside the repository (deposited tool outputs) with the
+ * system grep: `-r` for a folder, `-H` to always prefix the path
+ * (the model must be able to change it back to `read_file`). Same exit codes as
+ * git grep (0 matches, 1 nothing, ≥2 errors), so same return contract.
  */
 async function grepOutside(
   host: RepoHost,
   opts: GrepOptions,
   absPath: string,
 ): Promise<GrepResult> {
-  // `--include` de GNU grep ne développe pas les accolades non plus : une
-  // alternative = un `--include` (ils s'unissent), comme les pathspecs git.
+  // `--include` of GNU grep does not expand the braces either: a
+  // alternative = a `--include` (they unite), like git pathspecs.
   const includes = opts.glob
     ? expandBraces(opts.glob).map((alt) => `--include=${sq(alt)}`)
     : [];
@@ -1248,9 +1242,9 @@ async function grepOutside(
     return { output: "", ok: false, error: (res.stderr || res.stdout).trim().slice(0, 500) };
   }
   if (res.exitCode === 1 && includes.length > 0) {
-    // Même question que côté dépôt, posée avec le MÊME filtre : un motif qui
-    // matche n'importe quelle ligne non vide. Ce qui reste est exactement le
-    // périmètre, sans avoir à réinventer la sémantique de `--include`.
+    // Same question as on the deposit side, asked with the SAME filter: a reason which
+    // matches any non-blank line. What remains is exactly the
+    // perimeter, without having to reinvent the semantics of `--include`.
     const probe = await host.exec(
       `grep --color=never -I -r -l -E ${includes.join(" ")} -e ${sq(".")} -- ${sq(absPath)}`,
     );
@@ -1270,19 +1264,19 @@ export interface GlobResult {
   files: string[];
   truncated: boolean;
   /**
-   * false → `git ls-files` a ÉCHOUÉ (pathspec malformé, magie non fermée) —
-   * pas « aucun fichier » (MIN-226). L'échec sortait par la liste vide, donc un
-   * motif mal écrit répondait « ce dépôt ne contient aucun fichier de ce genre ».
-   * Même mensonge que le `grep`, dans le tool d'à côté.
+   * false → `git ls-files` FAILED (malformed pathspec, unclosed magic) —
+   * not “no files” (MIN-226). The failure exited via the empty list, so a
+   * poorly written pattern responded "this repository does not contain any such files".
+   * Same lie as `grep`, in the next tool.
    */
   ok: boolean;
 }
 
 /**
- * Liste les fichiers du dépôt correspondant à un glob (pathspec `:(glob)`),
- * gitignore-aware (suivis + non suivis, hors ignorés). `path` et `pattern`
- * s'INTERSECTENT (glob dans path). Tri + cap (`GLOB_MAX_FILES`) faits en JS pour
- * ne pas masquer l'exit code de git derrière un pipe.
+ * Lists the files in the repository corresponding to a glob (pathspec `:(glob)`),
+ * gitignore-aware (followed + unfollowed, excluding ignored). `path` and `pattern`
+ * INTERSECT (glob in path). Sort + cap (`GLOB_MAX_FILES`) done in JS for
+ * do not hide the git exit code behind a pipe.
  */
 export async function globRepo(
   host: RepoHost,
@@ -1292,8 +1286,8 @@ export async function globRepo(
   const specs = globPathspecs(pattern, path).map(sq).join(" ");
   const cmd = `git ls-files --cached --others --exclude-standard -- ${specs}`;
   const res = await host.exec(cmd);
-  // Pathspec malformé : une ERREUR, et elle se dit. Un motif que git refuse et un
-  // motif qui ne matche rien ne sont pas la même nouvelle.
+  // Malformed Pathspec: an ERROR, and it says itself. A reason that git refuses and a
+  // pattern that doesn't match anything are not the same news.
   if (res.exitCode !== 0) return { files: [], truncated: false, ok: false };
 
   const all = res.stdout
@@ -1309,14 +1303,14 @@ export async function globRepo(
 }
 
 /**
- * Les mains de `run_background` (MIN-114) sur LE dépôt : la politique (plafond,
- * garde-fou git, offsets, mise en forme) vit dans le module pur `background.ts`,
- * ce runner ne fait que la poser sur l'hôte. `workdir` passe par `resolveWithin` —
- * un `../..` revient au modèle en erreur de tool.
+ * The hands of `run_background` (MIN-114) on THE deposit: the policy (ceiling,
+ * git guardrail, offsets, formatting) lives in the pure module `background.ts`,
+ * this runner only places it on the host. `workdir` goes through `resolveWithin` —
+ * a `../..` returns to the tool error model.
  *
- * Il vit ICI, et non plus dans `exec-tool.ts`, depuis que les DEUX moteurs s'en
- * servent (MIN-286, lot 3) : le superviseur d'opencode n'a rien à emprunter à
- * l'exécuteur de tools de la boucle maison, que le lot 3 finit par supprimer.
+ * It lives HERE, and no longer in `exec-tool.ts`, since BOTH engines moved there.
+ * serve (MIN-286, batch 3): the opencode supervisor has nothing to borrow from
+ * the home loop's tools executor, which batch 3 eventually removes.
  */
 export function repoBackgroundRunner(host: RepoHost): BackgroundJobRunner {
   return {

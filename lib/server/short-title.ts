@@ -6,54 +6,53 @@ import { forcedToolCall } from "@/lib/server/feedback/forced-tool-call";
 import type { AiFeature } from "@/lib/server/ai-usage";
 
 /**
- * Le titreur de Numo : une étiquette de deux à six mots — jamais plus — à partir
- * de ce que l'utilisateur a écrit. Deux sidebars s'en servent, pour le même défaut —
- * afficher le texte d'entrée tronqué à la place d'un titre :
- *   • une conversation de chat (`conversations.title`, premier message) ;
- *   • une conversation d'agent (`agent_runs.title`) — la note lancée, et pour une
- *     conversation de ticket le titre du ticket suivi de la consigne : un run vaut
- *     une conversation, si bien que le seul titre du ticket les nommerait toutes
- *     pareil.
+ * Numo's titler: a two- to six-word label — never more — based on
+ * what the user has written. Two sidebars use it, for the same default —
+ * display the truncated input text instead of a title:
+ * • a chat conversation (`conversations.title`, first message);
+ * • an agent conversation (`agent_runs.title`) — the launched task, and for a
+ * ticket conversation, the ticket title followed by the instruction. One run is
+ * one conversation, so the ticket title alone would give them all the same name.
  *
- * Un PETIT modèle suffit, et il est réglable sans redéploiement par la clé admin
- * `conversation_title_model`. L'appel ne lève jamais : au moindre échec il rend
- * `null` et l'appelant garde son repli (le texte tronqué).
+ * A SMALL model is enough, and it can be changed without redeployment through the
+ * `conversation_title_model` admin key. The call never throws: on any failure it
+ * returns `null`, and the caller keeps its fallback (the truncated text).
  *
- * Ce que l'utilisateur a écrit est de la DONNÉE à étiqueter, pas des consignes :
- * la sortie forcée (un seul tool call) borne ce qu'une injection peut obtenir à
- * un titre saugrenu.
+ * What the user has written is DATA to label, not instructions: the forced tool
+ * call (exactly one tool call) limits what an injection can turn it into — at most
+ * an absurd title.
  */
 
-/** Clé `app_config` du modèle qui écrit les titres. */
+/** `app_config` key of the model that writes the titles. */
 export const SHORT_TITLE_MODEL_KEY = "conversation_title_model";
 
-/** Au-delà, un titre cesse d'être un titre. */
+/** Beyond that, a title ceases to be a title. */
 const MAX_TITLE_CHARS = 60;
 /**
- * Le plafond qui compte vraiment : une ligne de la colonne des conversations
- * fait 320 px, et un titre s'y lit d'un coup d'œil ou pas du tout. La consigne
- * demande DEUX OU TROIS mots ; ce plafond-ci n'est que le garde-fou du cas où le
- * modèle rend la phrase entière malgré tout.
+ * The ceiling that really matters: a row in the conversations column
+ * is 320 px, and a title can be read at a glance or not at all. The instruction
+ * requires TWO OR THREE words; this ceiling is only a safeguard for the case where
+ * the model returns the whole sentence anyway.
  *
- * Il coupe, il ne réécrit pas : « Migration de la base vers le nouveau schéma
- * MCP » devient « Migration de la base », pas « Migration MCP » — ça, seul le
- * modèle sait le faire, et c'est pour ça que le prompt porte l'exemple. Un titre
- * coupé est un titre raté qu'on rend seulement lisible.
+ * It cuts; it does not rewrite: “Migration of the base towards the new schema
+ * MCP” becomes “Migration of the base”, not “MCP Migration” — only the model can
+ * do that, which is why the prompt includes the example. A cut title is a failed
+ * title that has merely been made readable.
  */
 const MAX_TITLE_WORDS = 6;
-/** Au-delà, le texte n'apprend plus rien de plus sur son sujet. */
+/** Beyond this point, the text reveals nothing more about its subject. */
 const MAX_INPUT_CHARS = 2_000;
 
-/** Repli déterministe : le début du texte, comme avant. Toujours non vide. */
+/** Deterministic fallback: the beginning of the text, as before. Never empty. */
 export function fallbackShortTitle(text: string): string {
   return text.trim().slice(0, 100);
 }
 
 /**
- * Les mots qui ne peuvent pas FINIR un titre : ils annoncent la suite. Coupé au
- * sixième mot, un titre en garde souvent un (« Migration de la base vers »), et
- * il se lit alors comme une phrase amputée plutôt que comme une étiquette.
- * Français et anglais dans la même liste — le titreur écrit dans les deux.
+ * Words that cannot FINISH a title: they announce the sequel. Cut at the
+ * sixth word, a title often keeps one ("Baseline migration to"), and
+ * it then reads like an amputated sentence rather than a label.
+ * French and English in the same list — the titler writes in both.
  */
 const TRAILING_GLUE = new Set([
   "de", "du", "des", "d", "le", "la", "les", "l", "un", "une", "au", "aux",
@@ -62,7 +61,7 @@ const TRAILING_GLUE = new Set([
   "for", "with", "and", "or", "from", "into", "that", "when", "at", "as", "by",
 ]);
 
-/** Retire les mots-outils de la fin : « Refonte de la barre de » → « … barre ». */
+/** Remove tool words from the end: “Redesign of the bar” → “…bar”. */
 function trimTrailingGlue(words: string[]): string[] {
   const kept = [...words];
   while (kept.length > 1) {
@@ -74,9 +73,9 @@ function trimTrailingGlue(words: string[]): string[] {
 }
 
 /**
- * Nettoie ce que le modèle a rendu : les petits modèles ajoutent volontiers des
- * guillemets, un point final ou un préfixe « Titre : » — et dépassent la longueur
- * demandée. Exportée pour son test : c'est ici que la règle « six mots » TIENT.
+ * Cleans up the model's output: small models readily add quotes, final punctuation,
+ * or a “Title:” prefix — and exceed the requested length. Exported for its test:
+ * this is where the “six words” rule HOLDS.
  */
 export function cleanTitle(raw: string): string | null {
   const cleaned = raw
@@ -88,7 +87,7 @@ export function cleanTitle(raw: string): string | null {
     .trim();
   if (!cleaned) return null;
 
-  // Six mots, quoi qu'ait répondu le modèle.
+  // Six words, regardless of what the model returned.
   const words = cleaned.split(" ");
   const capped =
     words.length > MAX_TITLE_WORDS
@@ -96,44 +95,43 @@ export function cleanTitle(raw: string): string | null {
       : cleaned;
 
   if (capped.length <= MAX_TITLE_CHARS) return capped;
-  // Garde-fou de longueur (six mots à rallonge) : coupé au dernier mot entier.
+  // Length guardrail (six words can still be long): cut at the last whole word.
   const cut = capped.slice(0, MAX_TITLE_CHARS);
   const lastSpace = cut.lastIndexOf(" ");
   return lastSpace > 0 ? cut.slice(0, lastSpace) : cut;
 }
 
-/** Ce que le titre nomme — ce n'est pas la même chose qu'on résume. */
+/** What the title names — not the same thing as what gets summarized. */
 export type ShortTitleKind = "conversation" | "note";
 
 /**
- * Imputation de l'appel au ledger. `null` = passe de maintenance (rattrapage
- * historique) : hors ledger, parce que personne ne l'a déclenchée. Explicite
- * plutôt qu'optionnel, pour qu'un appel utilisateur ne sorte jamais du compteur
- * par simple oubli.
+ * Allocation of the call to the ledger. `null` means a maintenance pass (historical
+ * catch-up): it is outside the ledger because no user triggered it. Explicit rather
+ * than optional, so a user call can never escape the counter by being omitted.
  */
 export interface ShortTitleUsage {
-  /** Segment d'usage : `numo_chat` pour le chat, `agent_code` pour une session. */
+  /** Usage segment: `numo_chat` for chat and `agent_code` for an agent session. */
   feature: AiFeature;
-  /** Qui paye : celui qui a écrit le texte. */
+  /** Who pays: the person who wrote the text. */
   userId: string;
   projectId?: string | null;
   conversationId?: string | null;
 }
 
 export interface ShortTitleInput {
-  /** Le texte à résumer, déjà sanitisé. */
+  /** The text to summarize, already sanitized. */
   text: string;
   kind: ShortTitleKind;
   /**
-   * Langue du titre — celle des réponses de Numo. `"auto"` la laisse au modèle,
-   * qui prend celle du texte : c'est le seul choix possible en rattrapage, où la
-   * locale de l'époque n'est nulle part.
-   */
+ * Title language — the language of Numo's answers. `"auto"` leaves it to the model,
+ * which uses the text's language. This is the only possible choice during catch-up,
+ * when the historical locale is unavailable.
+ */
   locale: string;
   usage: ShortTitleUsage | null;
 }
 
-/** Ce que le modèle regarde, selon ce qu'on lui demande de nommer. */
+/** What the model examines, depending on what it is asked to name. */
 const SUBJECT: Record<ShortTitleKind, string> = {
   conversation:
     "the first message a user sent to Numo, the in-app assistant. Call set_title with a title for that conversation",
@@ -142,8 +140,8 @@ const SUBJECT: Record<ShortTitleKind, string> = {
 };
 
 /**
- * Génère le titre, ou `null` si l'appel n'a rien donné d'utilisable (clé absente,
- * HTTP en erreur, timeout, réponse vide).
+ * Generates the title, or `null` if the call produces nothing usable (missing key,
+ * HTTP error, timeout, or empty response).
  */
 export async function generateShortTitle({
   text,
@@ -195,13 +193,13 @@ Two or three words each. Nothing was lost that a reader needed.`;
       properties: {
         title: {
           type: "string",
-          // Répété ici : un petit modèle lit la description du champ de plus
-          // près que le système, et c'est la contrainte qu'il relâche en premier.
+          // Repeated here: a small model reads the field description almost as closely
+          // as the system prompt, and this is the constraint it relaxes first.
           description:
             "The title. TWO OR THREE WORDS, six at the very most. No final punctuation.",
         },
       },
-      // Un petit modèle ne répond tout simplement pas un champ hors `required`.
+      // A small model simply does not return a field outside `required`.
       required: ["title"],
       additionalProperties: false,
     },

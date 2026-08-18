@@ -14,7 +14,7 @@ const version = assertVersion(process.env.RELEASE_VERSION ?? pkg.version);
 const tag = `v${version}`;
 
 if (pkg.version !== version || desktopPkg.version !== version) {
-  throw new Error(`package.json (${pkg.version}), desktop/package.json (${desktopPkg.version}) et release (${version}) doivent correspondre`);
+  throw new Error(`package.json (${pkg.version}), desktop/package.json (${desktopPkg.version}), and release (${version}) must match`);
 }
 
 function git(args, options = {}) {
@@ -55,14 +55,14 @@ await writeFile(path.join(output, migrationsName), gzip(migrationsTar));
 
 const migrationLines = migrations.length
   ? migrations.map((file) => `- \`${file}\``).join("\n")
-  : "- Aucune nouvelle migration SQL depuis la release précédente.";
-const update = `# Mise à jour vers minddy ${tag}\n\n` +
-  `Depuis : ${previousTag ?? "installation initiale"}\n\n` +
-  `## Migrations incluses\n\n${migrationLines}\n\n` +
-  "Créez une sauvegarde coordonnée Postgres + Storage avant toute migration. " +
-  "Suivez `docs/self-hosting-operations.md`, appliquez les migrations avant de démarrer le nouveau code, " +
-  "puis exécutez les smoke tests du runbook. Les migrations sont forward-only : après une migration " +
-  "incompatible, le rollback exige la restauration de la sauvegarde complète.\n";
+  : "- No new SQL migrations since the previous release.";
+const update = `# Update to minddy ${tag}\n\n` +
+  `From: ${previousTag ?? "initial installation"}\n\n` +
+  `## Included migrations\n\n${migrationLines}\n\n` +
+  "Create a coordinated Postgres + Storage backup before any migration. " +
+  "Follow `docs/self-hosting-operations.md`, apply migrations before starting the new code, " +
+  "then run the runbook smoke tests. Migrations are forward-only: after an incompatible migration, " +
+  "rollback requires restoring the complete backup.\n";
 await writeFile(path.join(output, "UPDATE.md"), update);
 await writeFile(path.join(output, "RELEASE_NOTES.md"), `# minddy ${tag}\n\n${notes}\n`);
 
@@ -83,6 +83,6 @@ const checksums = [];
 for (const name of checksumFiles) checksums.push(`${await sha256(path.join(output, name))}  ${name}`);
 await writeFile(path.join(output, "SHA256SUMS"), `${checksums.join("\n")}\n`);
 
-console.log(`Artefacts ${tag} créés dans ${output}`);
-console.log(`Commit : ${commit}`);
-console.log(`Migrations depuis ${previousTag ?? "le début"} : ${migrations.length}`);
+console.log(`Artifacts ${tag} created in ${output}`);
+console.log(`Commit: ${commit}`);
+console.log(`Migrations since ${previousTag ?? "the beginning"}: ${migrations.length}`);

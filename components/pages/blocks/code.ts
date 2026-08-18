@@ -2,9 +2,7 @@ import { CodeBlock } from "@tiptap/extension-code-block";
 import { Code2 } from "lucide-react";
 import type { PageBlock } from "@/components/pages/blocks/types";
 
-/** Pas de coloration syntaxique en v1 (elle demanderait lowlight/shiki dans le
-    bundle de l'éditeur) : le bloc garde sa langue en attribut, donc l'ajouter
-    plus tard ne touchera ni le stockage ni le markdown. */
+/** No syntax highlighting in v1 (it would require lowlight/shiki in the editor bundle): the block keeps its language as an attribute, so adding it later will not affect storage or markdown. */
 export const codeBlock: PageBlock = {
   id: "codeBlock",
   nodeName: "codeBlock",

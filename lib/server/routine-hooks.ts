@@ -4,28 +4,27 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { insertNotifications } from "@/lib/server/notifications";
 
 /**
- * Le crochet de FIN DE PASSAGE d'une routine (MIN-185).
+ * The END OF PASS hook of a routine (MIN-185).
  *
- * Module à part — et pas dans `lib/server/routines.ts` — pour que
- * `lib/server/agent/runs.ts` puisse l'appeler sans traîner derrière lui la
- * fabrique, son plafond de modèle et son quota. Même découpage que les crochets
- * d'automatisation (`lib/server/automations/hooks.ts`), et pour la même raison :
- * le point d'appel est au plus bas de la pile.
+ * Module separately — and not in `lib/server/routines.ts` — so that
+ * `lib/server/agent/runs.ts` can call it without dragging the
+ behind it * manufactures, its model ceiling and its quota. Same division as the hooks
+ * for automation (`lib/server/automations/hooks.ts`), and for the same reason:
+ * the call point is at the lowest of the stack.
  *
- * **Toute fin de passage se dit**, avec le mot qui lui revient : une pull request
- * ouverte (`agent_done`), un passage en échec (`agent_failed`), et sinon le
- * passage terminé lui-même (`routine_done`). Ce dernier manquait, et son absence
- * ne se voyait pas : une routine qui tourne bien sans rien pousser était
- * indiscernable d'une routine morte — il fallait ouvrir son écran pour le
- * savoir.
+ * **All end of passage is said**, with the word that corresponds to it: a pull open request
+ * (`agent_done`), a failed pass (`agent_failed`), and otherwise the
+ * completed pass itself (`routine_done`). The latter was missing, and its absence
+ * was not visible: a routine that ran well without pushing anything was
+ * indistinguishable from a dead routine — you had to open your screen to see it
+ * know.
  *
- * Ce qui garde ça vivable, c'est `replaceUnread` : les quatre types se
- * déplacent l'un l'autre, donc une routine quotidienne laisse UNE ligne non lue,
- * pas une par matin. Le détail de chaque passage, lui, reste dans « Exécutions
- * précédentes », qui est fait pour ça.
+ * What keeps it liveable is `replaceUnread`: all four types move each other, so a daily routine leaves ONE line unread,
+ * not one per morning. The details of each passage remain in “Previous Executions
+ *”, which is made for that.
  *
- * Un passage ANNULÉ ne dit rien : il n'a pas fini, et l'annoncer « terminé »
- * serait faux. S'il a quand même laissé une pull request, celle-ci parle.
+ * A CANCELED passage says nothing: it has not finished, and announcing it “finished”
+ * would be false. If he still left a pull request, this one speaks.
  */
 export async function notifyRoutineOfRunEnd(run: {
   id: string;
@@ -45,9 +44,9 @@ export async function notifyRoutineOfRunEnd(run: {
     const { data } = await service
       .from("agent_routines")
       .select("id, owner_id")
-      // Corbeillée en cours de passage (MIN-201) : la ligne d'inbox mènerait à
-      // un écran qui répond 404, et annoncerait le travail d'une routine que son
-      // propriétaire vient de supprimer.
+      // Trash being passed (MIN-201): the inbox line would lead to
+      // a screen which responds 404, and would announce the work of a routine that its
+      // owner just deleted.
       .is("deleted_at", null)
       .eq("id", run.routine_id)
       .maybeSingle();
@@ -62,15 +61,15 @@ export async function notifyRoutineOfRunEnd(run: {
           project_id: run.project_id,
           type: failed ? "agent_failed" : openedPr ? "agent_done" : "routine_done",
           issue_id: null,
-          // La cible est la ROUTINE : c'est là que ses exécutions se lisent, et
-          // nulle part ailleurs. Sans ce champ, la ligne d'inbox ne mènerait
-          // nulle part et serait écartée à l'affichage.
+          // The target is the ROUTINE: this is where its executions are read, and
+          // nowhere else. Without this field, the inbox line would not lead
+          // nowhere and would be discarded when displayed.
           routine_id: run.routine_id,
           actor_id: null,
         },
       ],
-      // Une seule notification agent VIVANTE par routine : trois échecs
-      // d'affilée font une ligne, pas trois — c'est le même problème.
+      // Only one VIVATE agent notification per routine: three failures
+      // in a row make one line, not three — it's the same problem.
       { replaceUnread: true },
     );
   } catch (err) {
@@ -79,10 +78,10 @@ export async function notifyRoutineOfRunEnd(run: {
 }
 
 /**
- * Écrit sur la routine ce que son dernier passage a donné. Appelé depuis le même
- * passage obligé que la notification : `last_error` à `null` quand le run
- * aboutit — l'alerte de l'écran doit s'éteindre toute seule dès que la routine
- * repart —, au code `launchFailed` quand il échoue.
+ * Writes on the routine what its last pass gave. Called from the same
+ * obligatory passage as the notification: `last_error` to `null` when the run
+ * succeeds — the screen alert must turn off by itself as soon as the routine
+ * starts again —, to the code `launchFailed` when it fails.
  */
 export async function stampRoutineRunEnd(run: {
   routine_id: string | null;

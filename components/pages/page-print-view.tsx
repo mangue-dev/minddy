@@ -14,20 +14,20 @@ import { PageEditor } from "@/components/pages/page-editor";
 import type { PagesLookup } from "@/components/pages/pages-lookup";
 
 /**
- * Le PDF d'une page, et c'est l'IMPRESSION du navigateur qui le fabrique
+ * The PDF of a page, and it's the PRINT of the browser that makes it
  * (MIN-283).
  *
- * Pas de moteur PDF côté serveur, et ce n'est pas une économie de paresse : un
- * moteur de rendu dans une fonction, c'est plusieurs centaines de mégaoctets de
- * paquet, un démarrage à froid, et surtout une SECONDE définition de la mise en
- * page à tenir en accord avec la première. Le navigateur, lui, a déjà le
- * document, les polices et la pagination ; il ne lui manquait qu'une feuille
- * `@media print`, qui vit dans app/globals.css.
+ * No PDF engine on the server side, and it's not a laziness saving: a
+ * rendering engine in a function, it's several hundred of megabytes of
+ * package, a cold start, and above all a SECOND definition of the setting in
+ * page to be kept in accordance with the first. The browser already has the
+ * document, fonts and pagination; all it was missing was a sheet
+ * `@media print`, which lives in app/globals.css.
  *
- * La surface est le même éditeur en lecture seule que partout ailleurs — l'aperçu
- * d'une version, la page publiée. Une page par feuille, un saut de page entre
- * chacune : c'est ce qui distingue « imprimer une branche » de « coller trois
- * documents à la suite ».
+ * The Surface is the same read-only editor as everywhere else — the preview
+ * of a version, the published page. One page per sheet, a page break between
+ * each: this is what distinguishes “printing a branch” from “pasting three
+ * documents in a row”.
  */
 export function PagePrintView({
   projectId,
@@ -36,7 +36,7 @@ export function PagePrintView({
 }: {
   projectId: string;
   pageId: string;
-  /** La page ET ses sous-pages, dans l'ordre de l'arbre. */
+  /** The page AND its subpages, in tree order. */
   branch: boolean;
 }) {
   const t = useTranslations("Pages");
@@ -44,8 +44,8 @@ export function PagePrintView({
 
   const ids = useMemo(() => {
     if (!branch) return [pageId];
-    // L'ordre de l'ARBRE, pas celui de la requête : on imprime un document,
-    // donc les sous-pages suivent leur parent.
+    // The order of the TREE, not that of the query: we print a document,
+    // so subpages follow their parent.
     return [pageId, ...descendantIds(pages, pageId)];
   }, [branch, pageId, pages]);
 
@@ -64,17 +64,17 @@ export function PagePrintView({
         const row = byId.get(id);
         return row ? { id: row.id, title: row.title, icon: row.icon } : undefined;
       },
-      // Ni lien ni navigation : sur du papier, une ancre ne mène nulle part, et
-      // dans un PDF elle mènerait à un écran auquel le lecteur n'a pas accès.
+      // Neither link nor navigation: on paper, an anchor leads nowhere, and
+      // in a PDF it would lead to a screen to which the reader does not have access.
     }),
     [byId, loading]
   );
 
-  /* ── L'impression, et la marque qui découpe la page ────────────────────── */
+  /* ── Printing, and the mark that cuts the page ────────────────────── */
   //
-  // `data-print-mode` sur `<html>` : la feuille d'impression s'en sert pour
-  // masquer tout ce qui n'est pas ce document (app/globals.css). Sans elle, le
-  // reste du chrome de l'application partirait à l'imprimante avec.
+  // `data-print-mode` on `<html>`: the print sheet uses it to
+  // hide everything that is not this document (app/globals.css). Without her, the
+  // rest of the application's chrome would go to the printer with.
   useEffect(() => {
     document.documentElement.dataset.printMode = "1";
     return () => {
@@ -84,8 +84,8 @@ export function PagePrintView({
 
   useEffect(() => {
     if (!ready) return;
-    // Après la peinture : `print()` fige le rendu tel quel, et un document dont
-    // les blocs ne sont pas montés s'imprimerait à moitié vide.
+    // After painting: `print()` freezes the rendering as is, and a document whose
+    // blocks are not mounted would print half empty.
     const handle = requestAnimationFrame(() => {
       requestAnimationFrame(() => window.print());
     });
@@ -108,7 +108,7 @@ export function PagePrintView({
         return (
           <article
             key={page.id}
-            // Une page par feuille : la suivante commence sur une nouvelle.
+            // One page per sheet: the next one starts on a new one.
             className={index > 0 ? "break-before-page pt-10 print:pt-0" : undefined}
           >
             <h1 className="flex items-start gap-3 text-3xl leading-tight font-bold tracking-tight">

@@ -1,51 +1,50 @@
 /**
- * Le PLAFOND DE DÉPENSE d'un passage de routine — le réglage, partagé entre le
- * serveur (qui le valide et le rend exécutoire) et l'écran (qui le propose).
+ * The SPENDING CEILING of a routine passage — the setting, shared between the
+ * server (which validates it and makes it enforceable) and the screen (which suggests it).
  *
- * Il se dit en POURCENTAGE du budget d'usage mensuel du plan, jamais en
- * dollars : c'est l'unité dans laquelle l'usage se lit partout dans minddy (la
- * barre du header, la page facturation, la carte de budget épuisé), la seule
- * que l'utilisateur ait jamais vue — et la seule qui SUIVE le plan, sans rien à
- * recalculer le jour où l'abonnement change.
+ * It is expressed as a PERCENTAGE of the plan's monthly usage budget, never en
+ * dollars: this is the unit in which the usage is read everywhere in minddy (the
+ * header bar, the billing page, the exhausted budget card), the only
+ * that the user has ever seen — and the only one that FOLLOWS the plan, without anything to
+ * recalculate the day on which the subscription change.
  *
- * Ce module ne dépend de rien : il est importé côté serveur (`lib/server/routines.ts`)
- * comme côté navigateur (le wizard, l'éditeur du volet de détail, le suivi
- * d'usage). Un défaut recopié des deux côtés aurait fini par diverger.
+ * This module does not depend on anything: it is imported on the server side (`lib/server/routines.ts`)
+ * as well as on the browser side (the wizard, the detail pane editor, the usual tracking
+ *). A fault copied from both sides would have ended up diverging.
  */
 
 /**
- * Ce qu'un passage peut dépenser par défaut : 15 % du budget du mois.
+ * What a passage can spend by default: 15% of the month's budget.
  *
- * Le défaut protège le MOIS, pas seulement le pire passage. Une routine part
- * toute seule, plusieurs fois par mois, sans que personne ne regarde sa barre
- * d'usage : ce qui compte n'est donc pas qu'un passage isolé s'arrête avant la
- * fin du budget, c'est qu'une routine hebdomadaire tienne son mois et laisse
- * l'essentiel au travail à la main. À 15 %, six passages tiennent dans le
- * budget ; à 90 %, un seul suffisait à tout prendre — et c'est arrivé.
+ * The default protects the MONTH, not just the worst passage. A routine starts
+ * all by itself, several times a month, without anyone looking at its usual bar
+ *: what counts is therefore not that an isolated passage stops before the
+ * end of the budget, it is that a weekly routine lasts its month and leaves
+ * the essentials to the work by hand. At 15%, six passages fit within the
+ * budget; at 90%, just one was enough to take everything — and it happened.
  *
- * Il se MONTE, routine par routine, quand on sait laquelle mérite d'aller plus
- * loin. C'est le sens de la marche : un plafond bas par défaut se relève sur
- * décision, là où un plafond haut ne se baisse qu'après la facture.
+ * It comes together, routine by routine, when you know which one deserves to go further
+ * further. This is the direction of action: a low ceiling by default is raised upon
+ * decision, where a high ceiling is only lowered after the invoice.
  */
 export const DEFAULT_MAX_SPEND_PERCENT = 15;
 
-/** 100 % = pas de plafond propre : seul le quota du compte borne le passage. */
+/** 100% = no specific ceiling: only the account quota limits the passage. */
 export const NO_SPEND_CAP_PERCENT = 100;
 
 /**
- * Les paliers proposés à l'écran. Un champ libre demanderait de choisir un
- * nombre exact là où personne n'a d'avis au pourcent près ; ces cinq-là
- * couvrent les intentions réelles — « une routine quotidienne parmi d'autres »
- * (5 %), le défaut, « celle-ci compte » (25 %), « la moitié de mon mois »
- * (50 %), et « sans plafond ».
+ * The levels proposed on the screen. A free field would require choosing an exact number where no one has an opinion to the nearest percent; these five
+ * cover real intentions — “one daily routine among others”
+ * (5%), default, “this one counts” (25%), “half my month”
+ * (50%), and “no cap”.
  */
 export const SPEND_CAP_CHOICES = [5, DEFAULT_MAX_SPEND_PERCENT, 25, 50, NO_SPEND_CAP_PERCENT];
 
 /**
- * Le plafond ramené dans ses bornes (1–100, entier). Une valeur absurde vaut le
- * défaut plutôt qu'un refus : le CHECK de la base, lui, ne pardonnerait pas, et
- * une routine ne doit pas se refuser sur un pourcentage mal écrit par une des
- * quatre portes.
+ * The ceiling returned to its limits (1–100, integer). An absurd value is worth the
+ * default rather than a refusal: the CHECK of the base would not forgive, and
+ * a routine must not refuse on a percentage poorly written by one of the
+ * four doors.
  */
 export function clampSpendPercent(value: unknown): number {
   const n = typeof value === "number" && Number.isFinite(value) ? Math.round(value) : NaN;

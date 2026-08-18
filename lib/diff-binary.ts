@@ -1,17 +1,16 @@
 /**
- * Ce qu'un fichier SANS patch est vraiment (MIN-66).
+ * What a file WITHOUT a patch really is (MIN-66).
  *
- * GitHub comme GitLab omettent le patch dans deux cas très différents : le
- * fichier est binaire (il n'y a pas de diff textuel à faire), ou il est trop
- * volumineux (il y en aurait un, la forge refuse de l'envoyer). La vue diff les
- * disait d'un seul message — « binaire ou trop volumineux » —, ce qui ne
- * renseigne sur ni l'un ni l'autre.
+ * Both GitHub and GitLab omit the patch in two very different cases: the
+ * file is binary (there is no textual diff to do), or it is too
+ * large (there might be one, the forge refuses to send it). The diff view
+ * said of a single message — “binary or too large” —, which does not provide information on either one nor the other.
  *
- * On tranche à l'extension, seul indice qu'on ait : la liste des fichiers ne
- * porte ni type MIME ni drapeau binaire.
+ * We decide on the extension, the only clue we have: the list of files does not have __
+ * carries neither MIME type nor flag binary.
  */
 
-/** Extensions rendues côte à côte, avec leur type MIME servi par le proxy. */
+/** Extensions rendered side by side, with their MIME type served by the proxy. */
 const IMAGE_TYPES: Record<string, string> = {
   png: "image/png",
   jpg: "image/jpeg",
@@ -21,19 +20,17 @@ const IMAGE_TYPES: Record<string, string> = {
   avif: "image/avif",
   bmp: "image/bmp",
   ico: "image/x-icon",
-  // SVG est du texte : la forge en envoie donc le patch, et on ne passe ici que
-  // s'il est trop gros pour ça. Servi en `image/svg+xml`, il est rendu par le
-  // navigateur DANS une balise <img> — donc sans script ni requête externe
-  // possible, contrairement à une insertion en ligne dans le document.
+  // SVG is text: the forge therefore sends the patch, and we only pass here
+  // if it's too big for that. Served in `image/svg+xml`, it is returned by the
+  // browser IN a <img> tag — therefore without script or external request
+  // possible, unlike an inline insertion in the document.
   svg: "image/svg+xml",
 };
 
 /**
- * Extensions binaires connues qu'on ne sait pas MONTRER — l'affichage s'arrête
- * au constat, mais il le dit juste. Hors de cette liste et hors des images, un
- * fichier sans patch est réputé « trop volumineux » : c'est le cas le plus
- * fréquent (lockfiles, gros JSON, données), et le seul où « voir sur GitHub »
- * apprend vraiment quelque chose.
+ * Known binary extensions that we don't know how to SHOW — the display stops
+ * upon finding, but it just says it. Outside of this list and outside of the images, an unpatched file is considered "too large": this is the most frequent case (lockfiles, large JSON, data), and the only one where "see on GitHub"
+ * really learns something.
  */
 const BINARY_EXTENSIONS = new Set([
   "pdf", "zip", "gz", "tgz", "bz2", "xz", "7z", "rar", "tar",
@@ -53,15 +50,15 @@ function extensionOf(filename: string): string {
 }
 
 /**
- * Ce qu'on affiche à la place du diff, pour un fichier que la forge n'a pas
- * patché.
+ * What we display instead of the diff, for a file that the forge has not
+ * patched.
  *
- * L'ordre compte. L'extension d'abord : un binaire est annoncé 0 ajout / 0
- * retrait par les deux forges, il tomberait sinon dans le cas « sans changement
- * de contenu » ci-dessous. Ensuite seulement le compte de lignes — 0/0 sur un
- * fichier texte veut dire qu'il n'y a RIEN à differ (renommage pur, changement
- * de mode), pas que la forge a renoncé faute de place. C'est le cas d'un
- * renommage à 100 % de similarité, qui s'annonçait « trop volumineux ».
+ * The order matters. The extension first: a binary is announced 0 addition / 0
+ * removal by the two forges, it would otherwise fall into the “no change
+ * content” case below. Then only the line count — 0/0 on a
+ * text file means that there is NOTHING to differ (pure renaming, change
+ * of mode), not that the forge gave up for lack of space. This is the case of a
+ * renaming with 100% similarity, which promised to be "too bulky".
  */
 export function noPatchKind(file: {
   filename: string;
@@ -75,10 +72,10 @@ export function noPatchKind(file: {
 }
 
 /**
- * Type MIME servi par le proxy d'octets. Déduit de l'extension, JAMAIS repris de
- * la forge : le contenu vient d'un dépôt tiers, et le renvoyer sous le type
- * qu'il s'attribue reviendrait à laisser un dépôt choisir ce que le navigateur
- * exécute sur notre origine. Une extension hors liste n'est pas servie du tout.
+ * MIME type served by the byte proxy. Deduced from the extension, NEVER taken from
+ * the forge: the content comes from a third-party repository, and returning it under the type
+ * that it assigns to itself would be like letting a repository choose what the browser
+ * executes on our origin. An unlisted extension is not served at all.
  */
 export function imageMimeType(filename: string): string | null {
   return IMAGE_TYPES[extensionOf(filename)] ?? null;

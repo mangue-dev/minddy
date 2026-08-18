@@ -26,92 +26,91 @@ import type { PrTimelineEvent } from "@/lib/pr-timeline";
 import type { ChecksSummary } from "./checks-core";
 
 /**
- * Abstraction provider des opérations PR/MR de l'agent (MIN-69). Chaque provider
- * expose la MÊME surface (les signatures de `pr.ts`, types neutres compris) ; les
- * appelants résolvent le client via `forgeFor(target.provider)` au lieu d'importer
- * `pr.ts` en direct. « PR » reste le vocabulaire neutre côté code — une merge
- * request GitLab est présentée sous les mêmes types (numéro = `iid`).
+ * Provider abstraction of agent PR/MR operations (MIN-69). Each provider
+ * exposes the SAME surface (the signatures of `pr.ts`, including neutral types);
+ * callers resolve the client via `forgeFor(target.provider)` instead of importing
+ * `pr.ts` live. “PR” remains the neutral vocabulary on the code side — a merge
+ * GitLab request is presented under the same types (number = `iid`).
  *
- * Les modules concrets gardent chacun leur classe d'erreur (`GithubApiError` /
- * `GitlabApiError`, toutes deux porteuses d'un `status` HTTP) : `isForgeApiError`
- * est le test commun des routes. Pas de classe mère partagée — elle créerait un
- * cycle d'import (forge → pr → forge) piégeux à l'évaluation des modules.
+ * The concrete modules each keep their error class (`GithubApiError` /
+ * `GitlabApiError`, both carrying an HTTP `status`): `isForgeApiError`
+ * is the common route test. No shared parent class — it would create a tricky
+ * import cycle (forge → pr → forge) when evaluating modules.
  */
 
-/** Erreur d'API provider (GitHub ou GitLab), toujours porteuse du status HTTP. */
+/** API provider error (GitHub or GitLab), still carrying HTTP status. */
 export type ForgeApiError = GithubApiError | GitlabApiError;
 
 export function isForgeApiError(err: unknown): err is ForgeApiError {
   return err instanceof GithubApiError || err instanceof GitlabApiError;
 }
 
-/** Méthodes de merge offertes par une forge (MIN-138). */
+/** Merge methods offered by a forge (MIN-138). */
 export type MergeMethod = "merge" | "squash" | "rebase";
 
 /**
- * Surface commune des opérations PR/MR. Volontairement PLUS ÉTROITE que les
- * modules concrets : pas de `commitId` (chaque provider résout sa propre ancre
- * de review), pas de commentaire multi-lignes (option GitHub que GitLab
- * ignorerait en silence), pas de `findOpen*` (détail interne des `ensure*`).
- * N'élargir qu'avec une implémentation réelle des deux côtés.
+ * Common surface for PR/MR operations. Deliberately NARROWER than the
+ * concrete modules: no `commitId` * (each provider resolves its own review anchor), no multi-line comment (GitHub option that GitLab
+ * would silently ignore), no `findOpen*` (internal detail of `ensure*`).
+ * Expand only with a real implementation on both sides.
  *
- * La méthode de merge, elle, a rejoint la surface (MIN-138) : elle a désormais
- * une implémentation réelle des deux côtés — mais pas le même MENU, d'où
- * `mergeMethods`, que l'UI lit pour ne proposer que ce que la forge sait faire.
+ * The merge method has joined the surface (MIN-138): it now has
+ * a real implementation on both sides — but not the same MENU, hence
+ * `mergeMethods`, which the UI reads to only offer what the forge knows how to do.
  *
- * ## Qui signe quoi (MIN-144, MIN-145)
+ * ## Who signs what (MIN-144, MIN-145)
  *
- * **Un geste d'humain porte le nom de l'humain, un geste automatisé de minddy
- * porte le nom de minddy.** La forge ne tranche pas : elle écrit sous le `token`
- * qu'on lui passe. C'est donc l'APPELANT qui porte la règle, et cette table dit
- * laquelle des deux identités chaque geste doit lui donner — le garde-fou qui
- * manquait quand la réaction emoji est restée un an sur le mauvais compte.
+ * **A human gesture bears the name of the human, an automated gesture by minddy
+ * bears the name of minddy.** The forge does not decide: it writes under the `token`
+ * which is passed to it. It is therefore the CALLER who carries the rule, and this table says
+ * which of the two identities each gesture must give him — the safeguard which
+ * was missing when the emoji reaction remained for a year on the wrong account.
  *
- * | Geste | Identité | Porteur |
+ * | Gesture | Identity | Bearer |
  * | --- | --- | --- |
  * | `ensurePullRequest`, `reopenPullRequest` (execute.ts) | agent | `target.token` |
  * | `deleteBranch` (branch-cleanup.ts) | agent | `target.token` |
- * | commentaires de la relecture de Numo (pr-tools.ts) | agent | token du run |
- * | `mergePullRequest`, `closePullRequest`, `markReadyForReview` | humain | `actorCall` |
- * | `submitReview` (le verdict de la personne) | humain | `actorCall` |
- * | `createPullRequestComment`, `createPullRequestReviewComment`, `replyToPullRequestReviewComment` depuis l'UI PR | humain | `actorCall` |
- * | `setReviewThreadResolved` | humain | `actorCall` |
- * | `setReviewCommentReaction`, `setConversationReaction` | humain | `actorCall` + `login` |
+ * | Numo review comments (pr-tools.ts) | agent | run token |
+ * | `mergePullRequest`, `closePullRequest`, `markReadyForReview` | human | `actorCall` |
+ * | `submitReview` (the person's verdict) | human | `actorCall` |
+ * | `createPullRequestComment`, `createPullRequestReviewComment`, `replyToPullRequestReviewComment` from UI PR | human | `actorCall` |
+ * | `setReviewThreadResolved` | human | `actorCall` |
+ * | `setReviewCommentReaction`, `setConversationReaction` | human | `actorCall` + `login` |
  *
- * Les trois méthodes de commentaire servent les DEUX identités : c'est le geste
- * qui décide, pas la méthode. Numo relit sous le bot ; la même méthode, appelée
- * depuis le panneau PR, part du compte de la personne.
+ * The three comment methods serve BOTH identities: it is the gesture
+ * that decides, not the method. Numo rereads under the bot; the same method, called
+ * from the PR panel, starts from the person's account.
  *
- * Les LECTURES, elles, restent toutes sur le token d'installation : tout membre
- * du projet minddy doit voir la PR sans compte git connecté. La seule exception
- * est `listReviewCommentReactions`, dont le résultat dépend de qui regarde.
+ * READS all remain on the installation token: any member
+ * of the minddy project must see the PR without a connected git account. The only exception
+ * is `listReviewCommentReactions`, the outcome of which depends on who is looking.
  */
 export interface Forge {
   provider: RepoProviderId;
-  /** Méthodes de merge réellement offertes — GitLab fixe sa stratégie au niveau
-      du projet, seul `squash` y est un paramètre de l'appel merge. */
+  /** Merge methods actually offered — GitLab sets its strategy at the
+ level of the project, only `squash` is a parameter of the merge call. */
   mergeMethods: readonly MergeMethod[];
-  /** Noms des branches du dépôt (picker de branche de base au lancement). */
+  /** Names of the repository branches (basic branch picker at launch). */
   listBranches(opts: { token: string; repoFullName: string }): Promise<string[]>;
   /**
-   * Les comptes de la FORGE qu'on peut mentionner sur ce dépôt (MIN-162) — pas
-   * les membres minddy : un `@` dans un commentaire de PR finit chez la forge,
-   * où il ne notifie que si c'est un compte de là-bas.
-   *
-   * Collaborateurs (`affiliation=all`) côté GitHub, membres du projet ET du
-   * groupe parent (`members/all`) côté GitLab : dans les deux cas, ce que la
-   * forge propose elle-même sous une arobase.
-   */
+ * The FORGE accounts that can be mentioned on this repository (MIN-162) — not
+ * minddy members: a `@` in a PR comment ends up at the forge,
+ * where it only notifies if it's an account from there.
+ *
+ * Collaborators (`affiliation=all`) on the GitHub side, members of the project AND of the
+ * parent group (`members/all`) on the GitLab side: in both cases, what the
+ * forge itself offers under an at sign.
+ */
   listRepoMembers(opts: { token: string; repoFullName: string }): Promise<RepoMember[]>;
-  /** TOUTES les PR/MR du dépôt, tous états — le ménage des branches d'agent
-      (MIN-102) a besoin des fermées pour choisir ET des ouvertes pour protéger.
-      `truncated` : la pagination a été coupée, la liste n'est pas exhaustive. */
+  /** ALL PR/MRs in the repository, all states — agent branch cleaning
+ (MIN-102) needs closed ones to choose AND open ones to protect.
+ `truncated`: pagination has been cut, the list is not exhaustive. */
   listPullRequests(opts: {
     token: string;
     repoFullName: string;
   }): Promise<{ pulls: PullRequestRef[]; truncated: boolean }>;
-  /** Supprime une branche distante. `"already-gone"` (et non une erreur) quand
-      la référence n'existe déjà plus : rejouer un ménage n'est pas une panne. */
+  /** Delete a remote branch. `"already-gone"` (and not an error) when
+ the reference no longer exists: replaying a household is not a failure. */
   deleteBranch(opts: {
     token: string;
     repoFullName: string;
@@ -130,61 +129,61 @@ export interface Forge {
     repoFullName: string;
     number: number;
   }): Promise<PullRequestRef>;
-  /** Fichiers du diff, avec leurs patches. PAGINÉ et BORNÉ (MIN-168) :
-      `truncated` dit que la liste s'arrête au plafond — une PR de 300 fichiers
-      dont on n'en montrait 100 sans le dire faisait conclure sur un tiers du
-      changement. */
+  /** Diff files, with their patches. PAGINED and BOUNDED (MIN-168):
+ `truncated` says that the list stops at the ceiling - a PR of 300 files
+ of which 100 were only shown without saying it led to the conclusion that it was a third of the
+ change. */
   listPullRequestFiles(opts: {
     token: string;
     repoFullName: string;
     number: number;
   }): Promise<{ files: PullRequestFile[]; truncated: boolean }>;
-  /** Les commits qui composent la PR, du plus ANCIEN au plus récent (l'ordre de
-      GitHub, normalisé côté GitLab). `truncated` : la pagination a été coupée —
-      la liste s'arrête aux 300 premiers, le reste se lit chez la forge.
-      Les champs que la forge ne sait pas remplir valent `null` (compte de
-      l'auteur et signature côté GitLab), jamais une valeur inventée. */
+  /** The commits that make up the PR, from the OLDEST to the most recent (the order of
+ GitHub, standardized on the GitLab side). `truncated`: the pagination has been cut —
+ the list stops at the first 300, the rest can be read at the forge.
+ The fields that the forge cannot fill are worth `null` (account of
+ the author and signature on the GitLab side), never an invented value. */
   listPullRequestCommits(opts: {
     token: string;
     repoFullName: string;
     number: number;
   }): Promise<{ commits: PullRequestCommit[]; truncated: boolean }>;
-  /** Le poids (+/− lignes) de chaque commit, indexé par SHA — À PART de la
-      liste, parce qu'aucune des deux forges ne le sert avec : GitHub le rend
-      d'un coup en GraphQL, GitLab commit par commit (donc borné). Best-effort
-      chez l'appelant : sans stats, seul l'indicateur +/− manque. */
+  /** The weight (+/− lines) of each commit, indexed by SHA — Aside from the
+ list, because neither of the two forges serves it with: GitHub makes it
+ all at once in GraphQL, GitLab commit by commit (therefore bounded). Best-effort
+ for the caller: without stats, only the +/− indicator is missing. */
   listPullRequestCommitExtras(opts: {
     token: string;
     repoFullName: string;
     number: number;
   }): Promise<Map<string, CommitExtras>>;
-  /** Le diff d'UN commit contre son premier parent, aux mêmes types que le diff
-      de la PR entière — la vue « ce que ce commit-là change ». */
+  /** The diff of ONE commit against its first parent, to the same types as the diff
+ of the entire PR — the “what this commit changes” view. */
   getCommitDiff(opts: {
     token: string;
     repoFullName: string;
     sha: string;
   }): Promise<CommitDiff>;
-  /** Diff CUMULÉ de la branche de travail contre sa base — la vue diff d'une
-      session SANS PR (mêmes fichiers/patches que listPullRequestFiles, depuis le
-      merge base). 404 provider si la branche n'a pas (encore) été poussée.
-      `url` : la page compare web du provider (liens « voir sur … »). */
+  /** CUMULATIVE diff of the working branch against its base — the diff view of a
+ session WITHOUT PR (same files/patches as listPullRequestFiles, from the
+ merge base). 404 provider if the branch has not (yet) been pushed.
+ `url`: the compare web page of the provider (“see on…” links). */
   compareBranches(opts: {
     token: string;
     repoFullName: string;
     base: string;
     head: string;
   }): Promise<{ files: PullRequestFile[]; url: string | null }>;
-  /** Merge base de deux BRANCHES — le pendant sans PR de getMergeBaseSha, base
-      du dépliage de contexte de la vue diff d'une session sans PR. */
+  /** Base merge of two BRANCHES — the PR-free counterpart of getMergeBaseSha, base
+ of the context unfolding of the diff view of a PR-free session. */
   getBranchesMergeBaseSha(opts: {
     token: string;
     repoFullName: string;
     base: string;
     head: string;
   }): Promise<string>;
-  /** Base du diff servi : merge base VIVANT (GitHub, diff recalculé à la volée)
-      ou `diff_refs.base_sha` PERSISTÉ (GitLab, diff figé au dernier push). */
+  /** Base of the diff served: merge base ALIVE (GitHub, diff recalculated on the fly)
+ or `diff_refs.base_sha` PERSISTED (GitLab, diff frozen at the last push). */
   getMergeBaseSha(opts: {
     token: string;
     repoFullName: string;
@@ -198,7 +197,7 @@ export interface Forge {
     path: string;
     ref: string;
   }): Promise<string | null>;
-  /** Mêmes octets sans décodage UTF-8 — la vue côte à côte des images du diff. */
+  /** Same bytes without UTF-8 decoding — the side-by-side view of the images in the diff. */
   getFileBytesAtRef(opts: {
     token: string;
     repoFullName: string;
@@ -209,20 +208,20 @@ export interface Forge {
     token: string;
     repoFullName: string;
     number: number;
-    /** Doit appartenir à `mergeMethods` — l'appelant valide, la forge n'invente pas. */
+    /** Must belong to `mergeMethods` — valid caller, forge not inventing. */
     method?: MergeMethod;
   }): Promise<void>;
   /**
-   * Soumet une review formelle. `published: "comment"` en retour = la forge a
-   * refusé de publier le verdict (auto-review) et il est parti en commentaire :
-   * l'appelant doit le dire à l'utilisateur, et enregistrer le verdict RÉEL de
-   * son côté. C'est le cas normal des PR de Numo, pas un cas dégradé.
-   *
-   * Un texte SANS verdict à porter — le verdict « commenter », ou le repli
-   * ci-dessus — atterrit dans le FIL de la PR chez les deux providers, jamais
-   * dans un événement de review : c'est le seul endroit que `listPullRequestComments`
-   * relit, donc le seul où minddy saura le montrer (cf. `submitPullRequestReview`).
-   */
+ * Submits a formal review. `published: "comment"` in return = the forge has
+ * refused to publish the verdict (self-review) and it left in comment:
+ * the caller must tell the user, and record the ACTUAL verdict of
+ * his side. This is the normal case of Numo PR, not a degraded case.
+ *
+ * A text WITHOUT a verdict to make — the “comment” verdict, or the fallback
+ * above — lands in the PR FEED at both providers, never
+ * in a review event: this is the only place that `listPullRequestComments`
+ * rereads, so the only one where minddy will be able to show it (see `submitPullRequestReview`).
+ */
   submitReview(opts: {
     token: string;
     repoFullName: string;
@@ -230,35 +229,35 @@ export interface Forge {
     verdict: ReviewVerdict;
     body: string;
   }): Promise<ReviewSubmission>;
-  /** Décompte d'approbations, déjà réduit : la règle « dernier verdict par
-      utilisateur » est un détail GitHub (GitLab tient la liste courante), elle
-      n'a pas à remonter jusqu'aux appelants. */
+  /** Approval count, already reduced: the rule "last verdict by
+ user" is a GitHub detail (GitLab maintains the current list), it
+ does not have to go back to the callers. */
   listReviews(opts: {
     token: string;
     repoFullName: string;
     number: number;
   }): Promise<PullRequestReviewSummary>;
-  /** Le TEXTE des reviews déjà soumises (MIN-141) — ce que le décompte ne dit
-      pas, et que le fil de la PR ne porte pas (`pulls/{n}/reviews`). Vide côté
-      GitLab, où il n'existe pas d'objet review : tout ce qui s'y écrit est une
-      note, déjà servie par `listPullRequestComments`. */
+  /** The TEXT of the reviews already submitted (MIN-141) — what the count does not say
+, and which the PR thread does not carry (`pulls/{n}/reviews`). Empty side
+ GitLab, where there is no review object: everything written there is a
+ note, already served by `listPullRequestComments`. */
   listReviewMessages(opts: {
     token: string;
     repoFullName: string;
     number: number;
   }): Promise<PullRequestReviewMessage[]>;
-  /** Checks CI. `number` ET `sha` sont demandés parce que les deux forges
-      n'adressent pas la même chose : GitHub interroge le COMMIT de tête, GitLab
-      les pipelines de la MR. Chaque implémentation ignore le champ qu'elle
-      n'utilise pas (même arrangement que `getBranchesMergeBaseSha`). */
+  /** CI checks. `number` AND `sha` are requested because the two forges
+ do not address the same thing: GitHub queries the head COMMIT, GitLab
+ the MR pipelines. Each implementation ignores the field that it
+ does not use (same arrangement as `getBranchesMergeBaseSha`). */
   listChecks(opts: {
     token: string;
     repoFullName: string;
     number: number;
     sha: string;
   }): Promise<ChecksSummary>;
-  /** Brouillon → prêt pour la review. `nodeId` n'est lu que par GitHub (clé de
-      la mutation GraphQL) ; GitLab retire le préfixe `Draft:` du titre. */
+  /** Draft → ready for review. `nodeId` is only read by GitHub (key from
+ GraphQL mutation); GitLab removes the `Draft:` prefix from the title. */
   markReadyForReview(opts: {
     token: string;
     repoFullName: string;
@@ -281,19 +280,19 @@ export interface Forge {
     number: number;
   }): Promise<PullRequestComment[]>;
   /**
-   * L'ACTIVITÉ de la PR (MIN-159) : tout ce qui lui est arrivé et qui n'est pas
-   * un message — reviews soumises (avec leur corps), commits poussés, labels,
-   * assignations, demandes de review, renommages, brouillon ↔ prête, fermeture,
-   * réouverture, merge.
-   *
-   * À PART des commentaires, comme chez les deux forges : GitHub sert un flux
-   * d'événements typés (`issues/{n}/timeline`), GitLab des notes système en
-   * anglais mêlées aux messages. Le vocabulaire commun est celui de
-   * `lib/pr-timeline` — et l'appelant fusionne les deux listes par date.
-   *
-   * Best-effort chez l'appelant : sans activité, le fil rend ce qu'il rendait
-   * avant, jamais une erreur.
-   */
+ * PR ACTIVITY (MIN-159): everything that happened to it that is not
+ * a message — reviews submitted (with their body), commits pushed, labels,
+ * assignments, review requests, renames, draft ↔ ready, closing,
+ * reopening, merge.
+ *
+ * Aside from comments, as with the two forges: GitHub serves a feed
+ * of typed events (`issues/{n}/timeline`), GitLab system notes in
+ * English mixed with messages. The common vocabulary is
+ * `lib/pr-timeline` — and the caller merges the two lists by date.
+ *
+ * Best-effort on the caller: without activity, the thread renders what it rendered
+ * before, never an error.
+ */
   listTimeline(opts: {
     token: string;
     repoFullName: string;
@@ -306,18 +305,18 @@ export interface Forge {
     body: string;
   }): Promise<PullRequestComment>;
   /**
-   * Les images collées dans la PR — son corps, son fil, ses remarques de ligne —
-   * indexées par identifiant d'asset, chacune sous une URL RÉELLEMENT servable
-   * (MIN-162). C'est ce que le corps markdown ne donne pas : l'URL qu'il porte
-   * répond 404 à tout ce que minddy détient. Le détail est dans
-   * `lib/forge-image-assets` ; la route `/image` s'en sert pour proxifier.
-   *
-   * Table VIDE côté GitLab, et c'est un manque assumé, pas une équivalence :
-   * une image de note GitLab s'écrit `/uploads/<hash>/<fichier>`, un chemin
-   * RELATIF au projet — un autre mécanisme, qu'aucune mesure contre une vraie
-   * instance n'est venue confirmer ici. Une table vide rend la PR telle qu'elle
-   * se rendait avant ; l'inventer aurait rendu des liens morts.
-   */
+ * The images pasted into the PR — its body, its feed, its line remarks —
+ * indexed by asset ID, each under an ACTUALLY serverable URL
+ * (MIN-162). This is what the markdown body doesn't give: the URL it carries
+ * responds 404 to everything minddy holds. The detail is in
+ * `lib/forge-image-assets` ; the `/image` route uses it to proxify.
+ *
+ * EMPTY table on the GitLab side, and this is an assumed lack, not an equivalence:
+ * a GitLab note image is written `/uploads/<hash>/<fichier>`, a path
+ * RELATED to the project — another mechanism, which no measure against a real
+ * instance has confirmed here. An empty table makes the PR as it
+ * was rendering before; inventing it would have made links dead.
+ */
   listImageAssets(opts: {
     token: string;
     repoFullName: string;
@@ -328,11 +327,11 @@ export interface Forge {
     repoFullName: string;
     number: number;
   }): Promise<PullRequestReviewComment[]>;
-  /** Ancre résolue PAR le provider : tête de PR relue à chaud (GitHub) ou
-      diff_refs (GitLab). Ligne hors diff → erreur 422 (« lineNotInDiff »).
-      `startLine`/`startSide` décrivent une PLAGE (`line` en est la dernière
-      ligne) : GitHub seul les honore — côté GitLab une note s'ancre sur une
-      ligne, et l'UI n'offre donc la plage que sur GitHub (MIN-181). */
+  /** Anchor resolved BY the provider: hot-read PR header (GitHub) or
+ diff_refs (GitLab). Line out of diff → error 422 (“lineNotInDiff”).
+ `startLine`/`startSide` describe a RANGE (`line` is the last
+ line): GitHub only honors them — on the GitLab side a note is anchored on a
+ line, and the UI therefore only offers the range on GitHub (MIN-181). */
   createPullRequestReviewComment(opts: {
     token: string;
     repoFullName: string;
@@ -352,23 +351,23 @@ export interface Forge {
     body: string;
   }): Promise<PullRequestReviewComment>;
   /**
-   * État des FILS de review (MIN-139), à part de leurs commentaires parce que
-   * les deux forges le servent ailleurs : GraphQL côté GitHub (la REST des
-   * commentaires ignore jusqu'à l'existence du fil), les discussions déjà lues
-   * côté GitLab. L'appariement se fait par `rootCommentId`, la clé de
-   * `groupReviewThreads` — aucun appelant n'a à connaître ces chemins.
-   *
-   * Un appelant qui ne lit que les commentaires reste valide : les fils sont
-   * alors d'état INCONNU, et l'UI n'y propose rien plutôt que d'annoncer
-   * « ouvert » sans le savoir.
-   */
+ * State of the review THREADS (MIN-139), apart from their comments because
+ * the two forges serve it elsewhere: GraphQL on the GitHub side (the REST of the
+ * comments ignores the existence of the thread), the already read discussions
+ * on the GitLab side. The pairing is done by `rootCommentId`, the key of
+ * `groupReviewThreads` — no caller has to know these paths.
+ *
+ * A caller who only reads the comments remains valid: the threads are
+ * then in UNKNOWN state, and the UI does not offer anything rather than announcing
+ * “open” without knowing it.
+ */
   listReviewThreads(opts: {
     token: string;
     repoFullName: string;
     number: number;
   }): Promise<ReviewThreadState[]>;
-  /** Résout / rouvre un fil. `threadId` vient de `listReviewThreads` et n'est
-      lisible que par la forge qui l'a émis (node id GraphQL / id de discussion). */
+  /** Resolves/reopens a thread. `threadId` comes from `listReviewThreads` and is
+ readable only by the forge that issued it (GraphQL node id / discussion id). */
   setReviewThreadResolved(opts: {
     token: string;
     repoFullName: string;
@@ -377,40 +376,40 @@ export interface Forge {
     resolved: boolean;
   }): Promise<void>;
   /**
-   * Réactions emoji des commentaires de review (MIN-139), à part elles aussi :
-   * GitHub les rend pour toute la PR d'un coup (GraphQL `reactionGroups`, avec le
-   * « ai-je déjà réagi » que la REST tait), GitLab seulement note par note.
-   *
-   * D'où `commentIds`, que **GitHub ignore** : c'est GitLab qui en a besoin, et
-   * l'appelant les a déjà sous la main puisqu'il vient de lire les commentaires.
-   * Les lui redemander évite à l'implémentation GitLab une troisième traversée
-   * des discussions.
-   *
-   * C'est la seule LECTURE dont le résultat dépend de qui regarde (MIN-145) :
-   * `mine` veut dire « MOI, l'humain connecté, j'ai réagi » des deux côtés. Il ne
-   * se lit pas dans les données, il se déduit du token qui lit — d'où
-   * `viewerIsActor`, que l'appelant met à faux quand il retombe sur le token
-   * d'installation. `mine` vaut alors false partout : le « viewer » est le bot,
-   * et allumer ses chips ferait croire à chacun qu'il a posé une réaction que
-   * personne n'a posée. Les COMPTES, eux, restent justes dans les deux cas.
-   */
+ * Emoji reactions of review comments (MIN-139), apart from them too:
+ * GitHub renders them for the whole PR at once (GraphQL `reactionGroups`, with the
+ * “have I already reacted” that the REST is silent), GitLab only notes by note.
+ *
+ * Hence `commentIds`, which **GitHub ignores**: it is GitLab which needs them, and
+ * the caller already has them on hand since he has just read the comments.
+ * Asking for them again avoids the GitLab implementation a third crossing
+ * discussions.
+ *
+ * This is the only READING whose result depends on who is looking (MIN-145):
+ * `mine` means “I, the connected human, reacted” on both sides. It does not read
+ * in the data, it is deduced from the token that reads — hence
+ * `viewerIsActor`, which the caller sets to false when it falls back on the installation token
+ *. `mine` is then false everywhere: the “viewer” is the bot,
+ * and lighting its chips would make everyone believe that they have performed a reaction that
+ * no one has performed. The ACCOUNTS remain correct in both cases.
+ */
   listReviewCommentReactions(opts: {
     token: string;
     repoFullName: string;
     number: number;
     commentIds: number[];
-    /** Le `token` ci-dessus est-il celui de l'acteur humain ? Sinon, `mine: false`. */
+    /** Is the `token` above that of the human actor? Otherwise, `mine: false`. */
     viewerIsActor: boolean;
   }): Promise<ReviewCommentReaction[]>;
   /**
-   * Pose (`on`) ou retire une réaction sur UN commentaire de review — geste
-   * HUMAIN, donc token de l'acteur (cf. la table d'identité plus haut).
-   *
-   * `login` est le compte de cet acteur, et **GitLab l'ignore** : le retrait
-   * GitHub doit retrouver LA réaction à supprimer parmi celles du commentaire
-   * (la REST ne sait pas retirer « la mienne »), là où GitLab dérive la sienne du
-   * token. Même arrangement que `commentIds`, que GitHub ignore.
-   */
+ * Place (`on`) or remove a reaction on ONE review comment — gesture
+ * HUMAN, therefore the actor's token (see the identity table above).
+ *
+ * `login` is the account of this actor, and **GitLab ignores it**: withdrawal
+ * GitHub must find THE reaction to delete among those of the comment
+ * (REST does not know how to remove “mine”), where GitLab derives its own from the
+ * token. Same arrangement as `commentIds`, which GitHub ignores.
+ */
   setReviewCommentReaction(opts: {
     token: string;
     repoFullName: string;
@@ -421,15 +420,15 @@ export interface Forge {
     login: string | null;
   }): Promise<void>;
   /**
-   * Réactions du FIL de conversation (MIN-147) : le corps de la PR — sous
-   * `PR_BODY_COMMENT_ID` — et tous ses commentaires. Le pendant exact des deux
-   * méthodes de review ci-dessus, sur l'autre surface : chez GitHub une PR est
-   * une issue, et ni ses messages ni son corps ne vivent là où vivent les
-   * commentaires de review.
-   *
-   * Côté GitLab il n'y a qu'une sorte de note, et les awards s'y adressent
-   * pareil : les deux paires y sont littéralement la même implémentation.
-   */
+ * Conversation THREAD reactions (MIN-147): the body of the PR — sub
+ * `PR_BODY_COMMENT_ID` — and all its comments. The exact counterpart of the two
+ * review methods above, on the other surface: at GitHub a PR is
+ * an issue, and neither its messages nor its body live where the
+ * review comments live.
+ *
+ * On the GitLab side there is only one kind of note, and the awards are addressed to
+ * the same: the two pairs are literally the same implementation.
+ */
   listConversationReactions(opts: {
     token: string;
     repoFullName: string;
@@ -462,8 +461,8 @@ const githubForge: Forge = {
   listPullRequestCommitExtras: github.listPullRequestCommitExtras,
   getCommitDiff: github.getCommitDiff,
   compareBranches: github.compareBranches,
-  // Le compare GitHub est déjà branche-à-branche : la même fonction sert les
-  // deux surfaces (le `number` de l'interface n'y est pas utilisé).
+  // The GitHub comparison is already branch-to-branch: the same function serves the
+  // two surfaces (the `number` of the interface is not used there).
   getBranchesMergeBaseSha: github.getMergeBaseSha,
   getMergeBaseSha: github.getMergeBaseSha,
   getFileAtRef: github.getFileAtRef,
@@ -473,9 +472,9 @@ const githubForge: Forge = {
   listReviews: github.listPullRequestReviews,
   listReviewMessages: github.listPullRequestReviewMessages,
   listChecks: github.listPullRequestChecks,
-  // La mutation GraphQL n'adresse la PR que par son `node_id` : sans lui (une PR
-  // lue par l'endpoint *list*, qui ne le sert pas), on refuse net plutôt que de
-  // laisser GitHub répondre une erreur GraphQL opaque.
+  // The GraphQL mutation only addresses the PR by its `node_id`: without it (a PR
+  // read by the *list* endpoint, which does not serve it), we refuse outright rather than
+  // let GitHub respond to an opaque GraphQL error.
   markReadyForReview: async (opts) => {
     if (!opts.nodeId) {
       throw new GithubApiError("Pull request has no GraphQL id", 409);
@@ -489,8 +488,8 @@ const githubForge: Forge = {
   createPullRequestComment: github.createPullRequestComment,
   listImageAssets: github.listPullRequestImageAssets,
   listPullRequestReviewComments: github.listPullRequestReviewComments,
-  // GitHub exige `commit_id` = la TÊTE de la PR, relue à chaud à chaque envoi
-  // (entre l'ouverture de la vue et l'envoi, l'agent a pu pousser — cf. pr.ts).
+  // GitHub requires `commit_id` = the HEAD of the PR, read on the spot with each sending
+  // (between opening the view and sending, the agent was able to push — cf. pr.ts).
   createPullRequestReviewComment: async (opts) => {
     const pr = await github.getPullRequest({
       token: opts.token,
@@ -504,15 +503,15 @@ const githubForge: Forge = {
   },
   replyToPullRequestReviewComment: github.replyToPullRequestReviewComment,
   listReviewThreads: github.listPullRequestReviewThreads,
-  // Le fil s'adresse par son node id GraphQL, qui porte à lui seul le dépôt et
-  // la PR : le triplet de l'interface n'a rien à y faire.
+  // The thread is addressed by its GraphQL node id, which alone carries the repository and
+  // the PR: the interface triplet has nothing to do there.
   setReviewThreadResolved: (opts) =>
     github.setPullRequestReviewThreadResolved({
       token: opts.token,
       threadId: opts.threadId,
       resolved: opts.resolved,
     }),
-  // La requête part de la PR : les ids de commentaires ne lui servent à rien.
+  // The request starts from the PR: the comment ids are of no use to it.
   listReviewCommentReactions: github.listPullRequestReviewCommentReactions,
   setReviewCommentReaction: (opts) =>
     github.setPullRequestReviewCommentReaction({
@@ -523,15 +522,15 @@ const githubForge: Forge = {
       on: opts.on,
       login: opts.login,
     }),
-  // Une requête pour tout le fil, corps compris : les ids ne lui servent à rien.
+  // A query for the entire thread, including the body: the ids are of no use to it.
   listConversationReactions: github.listPullRequestConversationReactions,
   setConversationReaction: github.setPullRequestConversationReaction,
 };
 
 const gitlabForge: Forge = {
   provider: "gitlab",
-  // Pas de `rebase` : GitLab règle la stratégie au niveau du projet, seul le
-  // squash est un paramètre de l'appel merge.
+  // No `rebase`: GitLab sets the strategy at the project level, only the
+  // squash is a parameter to the merge call.
   mergeMethods: ["squash", "merge"],
   listBranches: gitlab.listBranches,
   listRepoMembers: gitlab.listRepoMembers,
@@ -559,15 +558,15 @@ const gitlabForge: Forge = {
   listPullRequestComments: gitlab.listMergeRequestNotes,
   listTimeline: gitlab.listMergeRequestTimeline,
   createPullRequestComment: gitlab.createMergeRequestNote,
-  // Cf. la doc de `listImageAssets` : le mécanisme d'image de GitLab est un
-  // chemin relatif au projet, pas un asset signé. Rien de mesuré, donc rien
-  // d'inventé — la MR se rend comme avant.
+  // See the `listImageAssets` doc: the GitLab image mechanism is a
+  // path relative to the project, not a signed asset. Nothing measured, therefore nothing
+  // invented — the MR returns as before.
   listImageAssets: async () => new Map<string, string>(),
   listPullRequestReviewComments: gitlab.listMergeRequestDiffComments,
-  // `startLine`/`startSide` sont laissés de côté, explicitement : une note
-  // GitLab s'ancre sur UNE ligne (`old_line`/`new_line`). Les passer en douce
-  // les perdrait en silence — l'UI ne propose donc pas la plage sur GitLab, et
-  // ce filtre est la seconde garde (MIN-181).
+  // `startLine`/`startSide` are left out, explicitly: a note
+  // GitLab anchors to ONE line (`old_line`/`new_line`). Sneak them through
+  // would lose them silently — the UI therefore does not offer the range on GitLab, and
+  // this filter is the second guard (MIN-181).
   createPullRequestReviewComment: ({ startLine: _s, startSide: _ss, ...opts }) =>
     gitlab.createMergeRequestDiffComment(opts),
   replyToPullRequestReviewComment: gitlab.replyToMergeRequestDiffComment,
@@ -575,13 +574,13 @@ const gitlabForge: Forge = {
   setReviewThreadResolved: gitlab.setMergeRequestDiscussionResolved,
   listReviewCommentReactions: gitlab.listMergeRequestNoteAwards,
   setReviewCommentReaction: gitlab.setMergeRequestNoteAward,
-  // Une note est une note : le fil de conversation et la review passent par les
-  // MÊMES appels, `awardsUrl` faisant seule la part du corps de la MR.
+  // A note is a note: the conversation thread and the review go through the
+  // SAME calls, `awardsUrl` doing the part of the MR body alone.
   listConversationReactions: gitlab.listMergeRequestNoteAwards,
   setConversationReaction: gitlab.setMergeRequestNoteAward,
 };
 
-/** Client du provider — la valeur vient de `RepoCloneTarget.provider` (DB). */
+/** Client of the provider — the value comes from `RepoCloneTarget.provider` (DB). */
 export function forgeFor(provider: RepoProviderId): Forge {
   return provider === "gitlab" ? gitlabForge : githubForge;
 }

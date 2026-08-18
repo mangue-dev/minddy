@@ -1,34 +1,34 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 /**
- * Vérification du JWT SSO du board de feedback (MIN-37). Le backend du client
- * signe un HS256 court (exp ≤ 10 min) avec le sso_secret du board (distinct des
- * clés mdy_) et redirige l'utilisateur vers /f/<token>?sso=<jwt>.
+ * Verification of the JWT SSO of the feedback board (MIN-37). The client backend
+ * signs a short HS256 (exp ≤ 10 min) with the sso_secret of the board (distinct from
+ * mdy_ keys) and redirects the user to /f/<token>?sso=<jwt>.
  * Claims : sub = external_id (obligatoire), email?, name?.
  *
- * Implémentation pure node:crypto (pas de dépendance jose) : seul HS256 est
- * accepté (aucune confusion d'algorithme possible), comparaison en temps
+ * Pure node:crypto implementation (no jose dependency): only HS256 is
+ * accepted (no possible algorithm confusion), time comparison
  * constant, exp obligatoire.
  *
- * ## Deux garde-fous qui ne vivaient que dans le signeur (MIN-345)
+ * ## Two guardrails who only lived in the signer (MIN-345)
  *
- * **Le plafond de durée de vie.** `SSO_MAX_TTL_SECONDS` était appliqué par
- * `signFeedbackSsoJwt`, c'est-à-dire par du code que le client N'EXÉCUTE PAS :
- * c'est SON backend qui signe, avec la bibliothèque JWT de son choix. Un `exp`
- * à un an était donc parfaitement accepté ici — et un jeton SSO est un
- * porteur d'identité complet, qui traverse une URL, des journaux et un
- * historique de navigation. Le plafond est désormais imposé à la VÉRIFICATION,
+ * **The lifetime cap.** `SSO_MAX_TTL_SECONDS` was applied by
+ * `signFeedbackSsoJwt`, that is to say by code that the client DOES NOT EXECUTE:
+ * it is HIS backend which signs, with the JWT library of his choice. A `exp`
+ * to one year was therefore perfectly accepted here — and an SSO token is a
+ * full identity bearer, which traverses a URL, logs and a
+ * browsing history. The ceiling is now imposed on VERIFICATION,
  * seul endroit qui tourne chez nous.
  *
- * **La consommation.** Un jeton restait rejouable pendant toute sa fenêtre :
- * l'URL fuitée (Referer, historique partagé, journal de proxy) ouvrait une
- * session de board. `tokenId` est l'identifiant unique à consommer — voir
- * `consumeSsoToken` (lib/server/feedback/sso-replay.ts), appelé par la route.
- * Il dérive de la SIGNATURE, pas d'un claim déclaré : la signature est déjà
- * unique par jeton et infalsifiable sans le secret, donc rien à exiger du
- * client. Le `jti` que pose notre signeur ne sert qu'à écarter la collision du
- * double-clic — deux jetons aux mêmes claims signés dans la même seconde
- * seraient sinon le MÊME jeton, et le second passerait pour un rejeu.
+ * **Consumption.** A token remained replayable throughout its window:
+ * the leaked URL (Referer, shared history, proxy log) opened a
+ * board session. `tokenId` is the unique identifier to consume — see
+ * `consumeSsoToken` (lib/server/feedback/sso-replay.ts), called by route.
+ * It derives from the SIGNATURE, not from a declared claim: the signature is already
+ * unique per token and unfalsifiable without the secret, therefore nothing to require from the
+ * customer. The `jti` that our signer poses only serves to avoid the collision of the
+ * double-click — two tokens to the same claims signed in the same second
+ * would otherwise be the SAME token, and the second would be considered a replay.
  */
 
 export interface FeedbackSsoClaims {
@@ -41,9 +41,9 @@ export type SsoVerifyResult =
   | {
       ok: true;
       claims: FeedbackSsoClaims;
-      /** À consommer une seule fois, par board. Dérivé de la signature. */
+      /** To be consumed only once, per board. Derived from the signature. */
       tokenId: string;
-      /** `exp` du jeton — borne la rétention de la trace de consommation. */
+      /** `exp` of the token — limits the retention of the consumption trace. */
       expiresAt: number;
     }
   | {
@@ -100,9 +100,9 @@ export function verifyFeedbackSsoJwt(
   const exp = payload.exp;
   if (typeof exp !== "number" || !Number.isFinite(exp)) return { ok: false, error: "expired" };
   if (exp <= nowSeconds) return { ok: false, error: "expired" };
-  // Le plafond, côté vérification (MIN-345). La tolérance couvre l'horloge du
-  // signeur, qui n'est pas la nôtre : sans elle, un backend en avance de
-  // quelques secondes verrait ses jetons parfaitement légitimes refusés.
+  // The ceiling, verification side (MIN-345). The tolerance covers the clock of
+  // signer, which is not ours: without it, a backend in advance of
+  // a few seconds would see his perfectly legitimate tokens refused.
   if (exp > nowSeconds + SSO_MAX_TTL_SECONDS + SSO_CLOCK_SKEW_SECONDS) {
     return { ok: false, error: "ttl_too_long" };
   }
@@ -125,18 +125,18 @@ export function verifyFeedbackSsoJwt(
   };
 }
 
-/** Durée de vie maximale du JWT SSO : il ne sert qu'à la redirection immédiate. */
+/** Maximum lifetime of JWT SSO: it is only used for immediate redirection. */
 export const SSO_MAX_TTL_SECONDS = 600;
 
-/** Écart d'horloge toléré entre le backend qui signe et nous, à la vérification. */
+/** Clock deviation tolerated between the signing backend and us, upon verification. */
 export const SSO_CLOCK_SKEW_SECONDS = 60;
 
 export interface SignFeedbackSsoInput {
-  /** Identifiant stable de l'utilisateur chez le client → claim `sub` (requis). */
+  /** Stable user identifier at the client → claim `sub` (required). */
   sub: string;
   email?: string | null;
   name?: string | null;
-  /** Durée de vie en secondes ; bornée à {@link SSO_MAX_TTL_SECONDS} (10 min). */
+  /** Lifespan in seconds; limited to {@link SSO_MAX_TTL_SECONDS} (10 min). */
   ttlSeconds?: number;
 }
 
@@ -145,9 +145,9 @@ function encodeSegment(value: Record<string, unknown>): string {
 }
 
 /**
- * Signe le JWT SSO (côté client du board) : HS256, `sub`/`email`/`name` + `exp`
- * court. Miroir de {@link verifyFeedbackSsoJwt} — même format, même algo, pas de
- * dépendance jose. Le résultat va dans `/f/<token>?sso=<jwt>`.
+ * Sign the JWT SSO (client side of the board): HS256, `sub`/`email`/`name` + `exp`
+ * short. Mirror of {@link verifyFeedbackSsoJwt} — same format, same algorithm, no
+ * dependency jose. The result goes to `/f/<token>?sso=<jwt>`.
  */
 export function signFeedbackSsoJwt(
   input: SignFeedbackSsoInput,
@@ -161,10 +161,10 @@ export function signFeedbackSsoJwt(
   const headerB64 = encodeSegment({ alg: "HS256", typ: "JWT" });
   const payload: Record<string, unknown> = {
     sub: input.sub,
-    // Le seul rôle du `jti` : rendre deux jetons aux mêmes claims, signés dans
-    // la même seconde, DIFFÉRENTS. Sans lui, un double-clic sur « Partager un
-    // retour » produit deux fois le même jeton, et la consommation prend le
-    // second pour un rejeu (MIN-345).
+    // The only role of `jti`: return two tokens to the same claims, signed in
+    // the same second, DIFFERENT. Without it, double-clicking on “Share a
+    // return” produces the same token twice, and consumption takes the
+    // second for a replay (MIN-345).
     jti: randomBytes(12).toString("base64url"),
     iat: nowSeconds,
     exp: nowSeconds + ttl,

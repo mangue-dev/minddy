@@ -9,14 +9,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-// Échelle d'intensité (5 niveaux) façon GitHub, teinte "done" (emerald — la
-// couleur du statut Terminé partout dans l'app). Classes littérales complètes :
-// Tailwind ne génère pas les noms construits dynamiquement.
+// Intensity scale (5 levels) GitHub style, “done” shade (emerald — the
+// color of the Completed status everywhere in the app). Complete literal classes:
+// Tailwind does not generate dynamically constructed names.
 //
-// Le niveau 0 (jour sans rien) ne peut PAS être `bg-muted` : en thème sombre,
-// --muted (L 0.200) est plus sombre que --card (L 0.214), donc les cases vides
-// disparaissent dans la carte et la grille perd sa forme. Une teinte dérivée du
-// texte, elle, contraste dans les deux thèmes.
+// Level 0 (day with nothing) can NOT be `bg-muted`: in dark theme,
+// --muted (L 0.200) is darker than --card (L 0.214), so empty boxes
+// disappear in the map and the grid loses its shape. A shade derived from
+// text, it contrasts in the two themes.
 const LEVEL_CLASSES = [
   "bg-foreground/[0.07] dark:bg-foreground/[0.13]",
   "bg-emerald-200 dark:bg-emerald-900",
@@ -25,17 +25,17 @@ const LEVEL_CLASSES = [
   "bg-emerald-700 dark:bg-emerald-300",
 ] as const;
 
-// Le jour d'inscription est un REPÈRE, pas une intensité : sa case garde
-// l'orange même si des tickets ont été terminés ce jour-là (c'est le seul
-// point fixe de la grille, on ne veut pas qu'il se noie dans l'échelle verte).
+// The registration day is a LANDMARK, not an intensity: its guardrail
+// orange even if tickets were completed that day (this is the only
+// fixed point of the grid, we don't want it to drown in the green scale).
 const JOINED_CLASS = "bg-orange-500 dark:bg-orange-400";
 
-// Géométrie de la grille : une case de 12px + 4px de gouttière = un pas de
-// 16px, partagé par les cases, les libellés de mois et la colonne de jours —
-// c'est ce qui garantit que « mars » tombe bien au-dessus de sa semaine.
+// Grid geometry: a 12px box + 4px gutter = one step
+// 16px, shared by the boxes, month labels and days column —
+// this is what ensures that “March” falls well above its week.
 const CELL = "size-3 rounded-[3px]";
 
-/** Lignes portant un libellé de jour (la grille démarre un dimanche). */
+/** Rows with a day label (the grid starts on a Sunday). */
 const LABELLED_ROWS = new Set([1, 3, 5]); // lundi, mercredi, vendredi
 
 function levelOf(count: number, max: number): number {
@@ -50,15 +50,15 @@ function levelOf(count: number, max: number): number {
 
 const parseYmd = (d: string) => new Date(`${d}T00:00:00Z`);
 
-/** Découpe la série dense (start = dimanche) en semaines de 7 jours (colonnes). */
+/** Cuts the dense series (start = Sunday) into weeks of 7 days (columns). */
 function toWeeks(days: HeatmapDay[]): HeatmapDay[][] {
   const weeks: HeatmapDay[][] = [];
   for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
   return weeks;
 }
 
-/** Une ligne du détail : pastille de la même famille que les cases, valeur en
- *  avant, unité en retrait — on lit le nombre avant de lire ce qu'il compte. */
+/** A detail line: pastille of the same family as the boxes, value en
+ * before, unit indented — we read the number before reading what it counts. */
 function DetailRow({ swatch, value, unit }: { swatch: string; value: number; unit: string }) {
   return (
     <div className="flex items-center gap-1.5">
@@ -69,18 +69,18 @@ function DetailRow({ swatch, value, unit }: { swatch: string; value: number; uni
   );
 }
 
-/** Contenu de l'infobulle d'un jour : la date en tête, puis le détail de ce qui
- *  a été terminé — les tâches n'apparaissent que s'il y en a. Le jour
- *  d'inscription porte en plus sa ligne dédiée, qui explique sa case orange. */
+/** Content of the tooltip for a day: the date at the top, then the details of what
+ * was completed — tasks only appear if there are any. The day
+ * of registration also has its dedicated line, which explains its orange box. */
 function DayDetail({ day, joined }: { day: HeatmapDay; joined: boolean }) {
   const t = useTranslations("Stats");
   const format = useFormatter();
 
   return (
     <div className="flex flex-col gap-1.5 text-left">
-      {/* `first-letter` et non `capitalize` : en français, jours et mois sont en
-          minuscules — « jeudi 28 août », pas « Jeudi 28 Août ». Seule l'initiale
-          de la ligne se met en majuscule (sans effet en anglais, déjà capitalisé). */}
+      {/* `first-letter` and not `capitalize`: in French, days and months are lowercase
+ — “Thursday August 28”, not “Thursday August 28”. Only the initial
+ of the line is capitalized (without effect in English, already capitalized). */}
       <div className="font-medium first-letter:uppercase">
         {format.dateTime(parseYmd(day.date), {
           weekday: "long",
@@ -110,8 +110,7 @@ function DayDetail({ day, joined }: { day: HeatmapDay; joined: boolean }) {
             unit={t("dayTasksUnit", { count: day.tasks })}
           />
         ) : null}
-        {/* « Rien de terminé » n'a de sens que si la case n'a rien d'autre à
-            dire — le jour d'inscription, lui, porte déjà son repère. */}
+        {/* “Nothing finished” only makes sense if the box has nothing else to say — the day of registration already has its mark. */}
         {day.count === 0 && !joined ? (
           <div className="text-background/65">{t("dayNone")}</div>
         ) : null}
@@ -121,25 +120,25 @@ function DayDetail({ day, joined }: { day: HeatmapDay; joined: boolean }) {
 }
 
 /**
- * Grille de contributions sur 53 semaines (MIN-85).
+ * 53-week contribution grid (MIN-85).
  *
- * Colonnes = semaines, lignes = jours (dimanche → samedi). Par rapport à la
- * version précédente : une gouttière de labels de jours à gauche, et une vraie
- * infobulle structurée au lieu de l'attribut `title` natif (lent à s'ouvrir,
- * non stylable, et qui aplatissait tout en une phrase).
+ * Columns = weeks, rows = days (Sunday → Saturday). Compared to the
+ * previous version: a gutter of day labels on the left, and a real
+ * structured tooltip instead of the native `title` attribute (slow to open,
+ * not styleable, and which flattened everything into a sentence).
  *
- * UNE seule infobulle pour les 371 cases, et non une par case : un ancrage
- * invisible se déplace sur la case survolée (via délégation d'événement), ce
- * qui évite de monter 371 racines Radix. Chaque case garde son `aria-label` —
- * l'infobulle est un confort visuel, pas le seul porteur de l'information.
+ * Only ONE tooltip for the 371 boxes, and not one per box: an invisible anchor
+ * moves to the hovered box (via event delegation), this
+ * which avoids mounting 371 Radix roots. Each box keeps its `aria-label` —
+ * the tooltip is a visual comfort, not the only one carrying the information.
  */
 export function ActivityHeatmap({
   heatmap,
   joinedDate,
 }: {
   heatmap: StatsHeatmap;
-  /** Jour d'inscription (YYYY-MM-DD, dans `heatmap.tz`), ou null s'il est
-   *  inconnu ou antérieur à la fenêtre — la case correspondante est marquée. */
+  /** Registration day (YYYY-MM-DD, in `heatmap.tz`), or null if it is
+ * unknown or before the window — the corresponding box is marked. */
   joinedDate?: string | null;
 }) {
   const t = useTranslations("Stats");
@@ -153,7 +152,7 @@ export function ActivityHeatmap({
 
   const weeks = useMemo(() => toWeeks(heatmap.days), [heatmap.days]);
 
-  // Un label de mois au-dessus de la colonne où un nouveau mois commence.
+  // A month label above the column where a new month begins.
   const monthLabels = useMemo(
     () =>
       weeks.map((week, i) => {
@@ -169,8 +168,8 @@ export function ActivityHeatmap({
     [weeks, format],
   );
 
-  // Noms de jours localisés, lus sur la première semaine réelle : `start` est
-  // garanti dimanche, donc l'index de ligne = le jour de la semaine.
+  // Localized day names, read on the first real week: `start` is
+  // guaranteed Sunday, so row index = day of the week.
   const weekdayLabels = useMemo(() => {
     const first = weeks[0];
     if (!first) return [] as string[];
@@ -183,8 +182,8 @@ export function ActivityHeatmap({
     });
   }, [weeks, format]);
 
-  // `offsetLeft/offsetTop` sont relatifs à la grille (positionnée), donc
-  // l'ancrage se place sans mesure coûteuse et suit le défilement horizontal.
+  // `offsetLeft/offsetTop` are relative to the (positioned) grid, so
+  // the anchor is placed without costly measures and follows the horizontal scrolling.
   const onPointerMove = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       const cell = (event.target as HTMLElement).closest<HTMLElement>(
@@ -206,9 +205,9 @@ export function ActivityHeatmap({
     <div className="flex flex-col gap-1.5">
       <div className="overflow-x-auto pb-1">
         <div className="inline-flex gap-2">
-          {/* Gouttière des jours. Le décalage haut (mt-4 = 16px) reproduit la
-              ligne des mois (10px de texte) + la gouttière de 6px qui la sépare
-              de la grille, pour que les lignes se répondent exactement. */}
+          {/* Gutter of days. The top offset (mt-4 = 16px) reproduces the
+ month line (10px of text) + the 6px gutter which separates it
+ from the grid, so that the lines match each other exactly. */}
           <div
             aria-hidden
             className="mt-4 grid grid-rows-7 gap-1 text-[10px] leading-none text-muted-foreground"
@@ -224,7 +223,7 @@ export function ActivityHeatmap({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            {/* Labels de mois — une piste de 12px par semaine, débordement à droite */}
+            {/* Month labels — one 12px track per week, right overflow */}
             <div className="grid grid-flow-col auto-cols-[12px] gap-1 text-[10px] leading-none text-muted-foreground">
               {monthLabels.map((label, i) => (
                 <div key={i} className="overflow-visible whitespace-nowrap">
@@ -241,8 +240,8 @@ export function ActivityHeatmap({
             >
               {heatmap.days.map((day, i) => {
                 const joined = day.date === joinedDate;
-                // « 3 tickets · 2 tâches · 12 mars » — l'équivalent textuel du
-                // détail de l'infobulle, pour les lecteurs d'écran.
+                // “3 tickets · 2 tasks · March 12” — the textual equivalent of
+                // tooltip detail, for screen readers.
                 const parts: string[] = [];
                 if (joined) parts.push(t("dayJoined"));
                 if (day.issues > 0) parts.push(t("dayIssues", { count: day.issues }));
@@ -266,9 +265,9 @@ export function ActivityHeatmap({
                 );
               })}
 
-              {/* Ancrage invisible de l'infobulle, déplacé sur la case survolée.
-                  `key` sur le contenu : le remontage force Radix à recalculer sa
-                  position quand on glisse d'une case à l'autre. */}
+              {/* Invisible anchoring of the tooltip, moved to the hovered box.
+ `key` on the content: remounting forces Radix to recalculate its
+ position when sliding from one box to another. */}
               <Tooltip open={hovered !== null}>
                 <TooltipTrigger asChild>
                   <span
@@ -294,7 +293,7 @@ export function ActivityHeatmap({
         </div>
       </div>
 
-      {/* Légende */}
+      {/* Legend */}
       <div className="flex items-center justify-end gap-1.5 text-[10px] text-muted-foreground">
         <span>{t("less")}</span>
         {LEVEL_CLASSES.map((cls, i) => (

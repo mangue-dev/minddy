@@ -20,31 +20,31 @@ import { HomeTip } from "@/components/home/home-tip";
     never the raw email — mirrors the sidebar account button. */
 type AuthMeta = { display_name?: string; full_name?: string; name?: string };
 
-/** La colonne du bloc d'accueil : bien plus étroite que la page. Le composer est
-    une phrase qu'on tape, pas un tableau — étalé sur toute la largeur du contenu,
-    il perdait son centre de gravité et le salut flottait au-dessus de rien. */
+/** The column of the home block: much narrower than the page. Composing it is
+    a sentence that we type, not a table — spread over the entire width of the content,
+    he lost his center of gravity and salvation floated above nothing. */
 const HERO_COLUMN = "mx-auto w-full max-w-xl";
 
-/** Hauteur du header du shell (`<Header/>` de mangue-ui, `h-[60px]`). La zone de
+/** Height of the shell header (`<Header/>` of mango-ui, `h-[60px]`). The area of
     contenu commence sous lui : ce qu'on y centre tombe 30 px trop bas par rapport
-    à la FENÊTRE. Une gouttière basse de cette hauteur remonte le bloc d'exactement
-    la moitié — c'est tout ce qui sépare les deux centres.
+    at the WINDOW. A low gutter of this height raises the block exactly
+    half — that's all that separates the two centers.
 
-    Desktop seulement : en dessous, le shell réserve déjà de quoi dégager la barre
-    de navigation flottante (`--mobile-nav-clearance`, globals.css), et cette
-    réserve remonte le bloc plus que le header ne l'avait descendu. */
+    Desktop only: below, the shell already reserves enough to clear the bar
+    floating navigation (`--mobile-nav-clearance`, globals.css), and this
+    reserve goes up the block more than the header had gone down. */
 const HEADER_OFFSET = "desktop:pb-[60px]";
 
 /**
- * Le titre de l'accueil : « Bonjour » à la première visite, autre chose aux
- * suivantes. Le vivier dépend de l'heure LOCALE et du jour (lib/home-greeting.ts),
- * deux choses que le rendu serveur ne connaît pas — il est en UTC, et le tirage
- * au sort donnerait de toute façon deux phrases différentes de part et d'autre
- * de l'hydratation. La graine ne se pose donc qu'au montage : jusque-là le titre
- * reste le « Bonjour » neutre, qui est aussi ce que le serveur a rendu.
+ * The title of the welcome: “Hello” on the first visit, something else on
+ * following. The pool depends on LOCAL time and day (lib/home-greeting.ts),
+ * two things that server rendering doesn't know about — it's in UTC, and the draw
+ * lot would in any case give two different sentences on both sides
+ * hydration. The seed therefore only arises during editing: until then the title
+ * remains the neutral “Hello”, which is also what the server rendered.
  *
- * Une seule graine pour toute la vie de la page : la phrase ne doit pas changer
- * sous les yeux parce que le nom vient d'arriver ou qu'un cache s'est rafraîchi.
+ * A single seed for the entire life of the page: the sentence must not change
+ * in front of you because the name has just arrived or a cache has been refreshed.
  */
 function useGreeting(name: string): string {
   const t = useTranslations("Home");
@@ -61,17 +61,17 @@ function useGreeting(name: string): string {
 export default function HomePage() {
   const t = useTranslations("Home");
   const { user } = useAuth();
-  // Mode zen (MIN-134) : sans header, la zone de contenu EST la fenêtre — le
-  // décalage qui les sépare n'a plus lieu d'être.
+  // Zen mode (MIN-134): without a header, the content area IS the window — the
+  // gap that separates them no longer exists.
   const { zen } = useZenMode();
-  // Onboarding (MIN-74) : tant qu'il n'est pas terminé ni passé, il prend la
-  // place du bloc d'accueil — un compte neuf n'a rien à demander à Numo avant
-  // d'avoir un projet.
+  // Onboarding (MIN-74): as long as it is not completed or passed, it takes
+  // place of the reception block — a new account does not have to ask anything from Numo before
+  // to have a project.
   const onboarding = useOnboarding();
 
   const meta = user?.user_metadata as AuthMeta | undefined;
-  // Repli vide : sans nom ni e-mail, on salue sans prénom plutôt que d'injecter
-  // un mot bouche-trou dans la phrase.
+  // Empty fallback: without name or e-mail, we greet without first name rather than injecting
+  // a filler word in the sentence.
   const name = displayName(
     {
       full_name: meta?.display_name || meta?.full_name || meta?.name || null,
@@ -83,32 +83,32 @@ export default function HomePage() {
   const greeting = useGreeting(name);
 
   /**
-   * La page tient en UN écran, et rien en dessous. Il y avait là une colonne de
-   * files — en attente, échéances, à trier, le cycle, le carnet : un tableau de
-   * bord sous la ligne de flottaison, qui redisait ce que la sidebar, le board
-   * global et le carnet montrent déjà en entier, chacun chez lui. L'accueil ne
-   * garde donc que ce qu'on vient y chercher : à qui l'on parle (le salut), par
-   * où on lui parle (le composer), et ce qui attend une réponse de moi seul (une
+   * The page fits on ONE screen, and nothing below. There was a column of
+   * queues — pending, deadlines, to sort, the cycle, the notebook: a table of
+   * edge below the waterline, which reiterated what the sidebar, the board
+   * global and the notebook already show in full, each at home. The reception does not
+   * therefore keep that what we come to seek there: to whom we speak (salvation), by
+   * where we speak to him (compose him), and what awaits a response from me alone (a
    * invitation, l'avis de Smart Assign).
    */
   return onboarding.showCard ? (
     /**
-     * L'onboarding, lui, se centre dans la ZONE DE CONTENU : c'est une carte
-     * à lire de haut en bas, pas une invite à taper, et elle garde donc le
-     * décalage du header plutôt que de remonter de trente pixels. Le salut
-     * accueille au lieu de dire bonjour (c'est une première visite), reste au
-     * bord gauche comme la carte, et le composer garde la largeur de la
-     * colonne — l'étroitesse est le geste du bloc d'accueil, pas celui-ci.
+     * Onboarding is centered in the CONTENT AREA: it is a map
+     * to read from top to bottom, not a prompt to type, and so it keeps the
+     * offset of the header rather than going up thirty pixels. Salvation
+     * welcome instead of saying hello (it's a first visit), stay at
+     * left edge like the map, and the compositing keeps the width of the
+     * column — narrowness is the gesture of the reception block, not this one.
      */
     <section className="flex min-h-full flex-col justify-center px-6 py-10">
       <div className="mx-auto w-full max-w-5xl">
         <h1 className="font-display text-2xl font-semibold tracking-tight">
           {name ? t("welcome", { name }) : t("welcomeNoName")}
         </h1>
-        {/* Le nombre d'étapes vient de l'état, pas de la traduction : il était
-            écrit en toutes lettres (« Quatre étapes ») et démentait
-            l'indicateur « Étape 4 sur 5 » de la carte juste en dessous dès
-            qu'une étape s'ajoutait (MIN-149). */}
+        {/* The number of steps comes from the state, not from the translation: it was
+            written in full (“Four Steps”) and denied
+            the “Step 4 of 5” indicator on the map just below as soon as
+            that a step was added (MIN-149). */}
         <p className="mt-1 text-sm text-muted-foreground">
           {t("onboardingSubtitle", { n: onboarding.totalCount })}
         </p>
@@ -126,15 +126,15 @@ export default function HomePage() {
     </section>
   ) : (
     /**
-     * Le bloc d'accueil hors onboarding : le salut, le composer, puis ce qui
-     * attend une réponse (les invitations, l'avis de Smart Assign). Trois
-     * rangées `1fr / auto / 1fr` — les deux extrêmes se partagent l'espace
-     * libre à parts égales, ce qui pose le COMPOSER au centre exact, et non le
-     * bloc entier : c'est lui qu'on vient chercher, le salut se lit au-dessus.
+     * The reception block outside of onboarding: greeting, composing it, then what
+     * waits for a response (the invitations, the Smart Assign notice). Three
+     * rows `1fr / auto / 1fr` — the two extremes share space
+     * free in equal parts, which places the COMPOSER in the exact center, and not the
+     * entire block: he is the one we are looking for, the greeting is written above.
      *
-     * `min-h-full` et pas `100dvh` : la hauteur de référence est celle du
-     * <main> du shell, qui n'est la fenêtre entière ni sous le header, ni sur
-     * ultrawide où l'application devient une carte bornée.
+     * `min-h-full` and not `100dvh`: the reference height is that of the
+     * <main> of the shell, which is not the entire window neither under the header nor on
+     * ultrawide where the application becomes a bounded map.
      */
     <section
       className={cn(
@@ -153,37 +153,37 @@ export default function HomePage() {
         <HomeNumoComposer />
       </div>
 
-      {/* Sous l'input, et pas en tête de page : une invitation à un projet
-          est une réponse à donner, pas un bandeau à repousser du regard pour
-          atteindre le salut. Même place pour l'avis de Smart Assign — et les
-          garder dans le bloc, plutôt qu'au-dessus, est aussi ce qui laisse le
-          composer au centre de la fenêtre quoi qu'ils portent.
+      {/* Under the entry, and not at the head of the page: an invitation to a project
+          is an answer to give, not a blindfold to be pushed away from the gaze in order to
+          achieve salvation. Same place for the Smart Assign opinion — and the
+          keeping in the block, rather than above it, is also what leaves the
+          compose in the center of the window whatever they are wearing.
 
-          L'ordre est celui de l'urgence : quelqu'un qui m'attend, puis un
-          réglage qui trie mal, puis ce qui s'est empilé dans mes projets. Ces
-          dernières lignes sont là presque tout le temps, les deux premières
-          presque jamais — les mettre en dernier, c'est laisser la place du
-          dessus à ce qui, quand il paraît, mérite d'être lu en premier. */}
+          The order is that of urgency: someone waiting for me, then a
+          setting that sorts poorly, then what piled up in my projects. These
+          last lines are there almost all the time, the first two
+          almost never — putting them last is leaving room for
+          above what, when it appears, is worth reading first. */}
       <div className={cn(HERO_COLUMN, "flex flex-col gap-3 pb-10 pt-3")}>
         <PendingInvitationsBanner />
         <HomeSmartAssignWarning />
-        {/* Rien pendant l'onboarding : cette branche ne s'affiche pas tant que
-            la carte est là, et c'est tout ce qu'il faut — un compte qui monte
-            son premier projet n'a pas à s'entendre dire ce qu'il y a à trier
+        {/* Nothing during onboarding: this branch is not displayed while
+            the card is there, and that's all it takes — a growing account
+            your first project does not have to be told what to sort
             dedans. */}
         <HomeProjectSignals />
-        {/* EN DERNIER, et pour la même raison d'urgence que l'ordre ci-dessus :
-            c'est la seule ligne du bloc qui n'attend aucune réponse. Elle est
-            aussi la seule à ne paraître qu'une fois dans la vie du compte — et
-            elle ne paraît pas du tout pendant l'onboarding, cette branche ne
-            s'affichant qu'après (MIN-292). */}
+        {/* LAST, and for the same reason of urgency as the order above:
+            this is the only line in the block that expects no response. She is
+            also the only one to appear only once in the life of the account — and
+            it does not appear at all during onboarding, this branch does not
+            displayed only after (MIN-292). */}
         <DesktopInstallBanner />
-        {/* TOUT EN BAS, collée au pied de la page : l'astuce du jour. Elle
-            n'appartient pas à la file au-dessus — rien ne l'attend, rien ne s'y
-            répond, et c'est justement pour ça qu'elle peut rester là tous les
-            jours sans peser. Elle apprend un geste de l'app à qui n'a rien
-            demandé ; la seule place honnête pour ça est celle qu'on ne regarde
-            qu'une fois le reste lu. */}
+        {/* AT THE ENTIRE BOTTOM, stuck at the foot of the page: the tip of the day. She
+            does not belong to the line above — nothing awaits it, nothing is there
+            answers, and that's precisely why she can stay there all the time
+            days without weighing. She learns a gesture from the app to someone who has nothing
+            request ; the only honest place for that is the one we don't look at
+            only after reading the rest. */}
         <HomeTip />
       </div>
     </section>

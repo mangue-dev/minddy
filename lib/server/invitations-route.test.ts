@@ -1,20 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-325 — accepter une invitation, c'est se faire inscrire quelque part.
+ * MIN-325 — to accept an invitation is to register somewhere.
  *
- * La route lisait la ligne d'invitation et inscrivait l'appelant sur le
- * `project_id` TEL QU'IL EST EN BASE, en ne vérifiant que `invited_user_id`.
- * Or la ligne était modifiable par son invité (policy
- * `project_invitations_update_invitee`, supprimée par 20261215090000) : poser
- * son propre `project_id` sur le projet d'un autre suffisait à s'y inscrire.
+ * The route read the invitation line and registered the caller on the
+ * `project_id` AS IT IS IN BASIC, checking only `invited_user_id`.
+ * But the line was modifiable by its guest (policy
+ * `project_invitations_update_invitee`, deleted by 20261215090000): placing
+ * its own `project_id` on another's project was enough to do so. register.
  *
- * La policy est partie, mais une policy se réintroduit par distraction. Ce que
- * ces tests épinglent est donc la garde en profondeur, celle qui reste vraie
- * même si la base redevient permissive : une invitation acceptable est une
- * invitation COHÉRENTE — son adresse est celle du compte, et qui l'a émise
- * possède le projet vers lequel elle mène. Les deux divergences ne se produisent
- * pas à l'usage normal ; elles ne signent qu'une ligne trafiquée.
+ * The policy is gone, but a policy is reintroduced by distraction. What
+ * these tests pinpoint is therefore the in-depth guard, the one which remains true
+ * even if the base becomes permissive again: an acceptable invitation is a
+ * CONSISTENT invitation — its address is that of the account, and who issued it
+ * owns the project to which it leads. Both discrepancies do not occur in normal usage; they only sign a doctored line.
  */
 
 const getAuthedUser = vi.fn();
@@ -30,7 +29,7 @@ vi.mock("next-intl/server", () => ({
 vi.mock("@/lib/server/api-auth", () => ({
   getAuthedUser: (...args: unknown[]) => getAuthedUser(...args),
 }));
-// La route importe le rattrapage des invitations pour son GET ; il tire tout
+// The route imports the invitation catch-up for its GET; he pulls everything
 // `members.ts` (mails, push, entitlements) dont ce test n'a que faire.
 vi.mock("@/lib/server/members", () => ({
   claimPendingInvitationsLate: async () => false,
@@ -136,9 +135,9 @@ describe("PATCH /api/projects/invitations", () => {
   });
 
   it("refuse une invitation redirigée vers le projet d'un autre", async () => {
-    // L'attaque de MIN-325 : la ligne est bien la mienne, l'adresse aussi,
-    // mais son `project_id` a été déplacé vers un projet que celui qui a émis
-    // l'invitation ne possède pas.
+    // The attack on MIN-325: the line is mine, the address too,
+    // but its `project_id` was moved to a project that issued
+    // the invitation does not have.
     project = { owner_id: "22222222-2222-4222-8222-222222222222" };
     const response = await PATCH(request("accept"));
     expect(response.status).toBe(403);

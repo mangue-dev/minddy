@@ -12,9 +12,9 @@ import {
 } from "./edit";
 
 /**
- * Tests du moteur d'édition (cascade de replacers portée d'opencode). On vérifie
- * surtout la TOLÉRANCE (le modèle dérive d'un espace / d'une indentation) ET la
- * sûreté (échec bruyant : jamais de corruption silencieuse).
+ * Tests of the editing engine (cascade of opencode scoped replacers). We check
+ * especially the TOLERANCE (the model derives from a space / an indentation) AND the
+ * safety (noisy failure: never silent corruption).
  */
 
 describe("replace — matching exact", () => {
@@ -32,14 +32,14 @@ describe("replace — matching exact", () => {
 describe("replace — tolérance", () => {
   it("matche malgré une indentation différente (LineTrimmed/IndentationFlexible)", () => {
     const content = "function f() {\n    return 1;\n}\n";
-    // Le modèle a oublié l'indentation exacte de la ligne interne.
+    // The model forgot the exact indentation of the internal line.
     const out = replace(content, "return 1;", "return 2;");
     expect(out).toBe("function f() {\n    return 2;\n}\n");
   });
 
   it("matche un bloc multi-lignes dont l'indentation globale diffère", () => {
     const content = ["class C {", "  method() {", "    doThing();", "  }", "}"].join("\n");
-    const old = ["method() {", "  doThing();", "}"].join("\n"); // désindenté
+    const old = ["method() {", "  doThing();", "}"].join("\n"); // unindented
     const out = replace(content, old, ["method() {", "  doOther();", "}"].join("\n"));
     expect(out).toContain("doOther();");
     expect(out).not.toContain("doThing();");
@@ -56,19 +56,19 @@ describe("replace — tolérance", () => {
 
 describe("replace — pas de ligne vide parasite (frontière \\n)", () => {
   it("n'insère pas de ligne vide quand un replacer tolérant matche et que old/new finissent par \\n", () => {
-    // Ligne 1 avec espaces de fin (dérive whitespace) → SimpleReplacer échoue,
-    // LineTrimmedReplacer matche (span sans le \n final).
+    // Line 1 with trailing spaces (whitespace drift) → SimpleReplacer fails,
+    // LineTrimmedReplacer match (span without the final \n).
     const original = "  const a = 1;  \n  const b = 2;\n  return a + b;\n";
     const oldStr = "  const a = 1;\n  const b = 2;\n"; // finit par \n
     const newStr = "  const a = 1;\n  const b = 3;\n"; // finit par \n
     const out = replace(original, oldStr, newStr);
     expect(out).toBe("  const a = 1;\n  const b = 3;\n  return a + b;\n");
-    expect(out).not.toContain("\n\n"); // aucune ligne vide insérée
+    expect(out).not.toContain("\n\n"); // no empty lines inserted
   });
 
   it("ne fusionne pas les lignes quand new_string ne finit pas par \\n", () => {
     const original = "  const a = 1;  \n  const b = 2;\n  return a + b;\n";
-    // new_string sans \n final → l'ancien comportement (correct) doit être préservé.
+    // new_string without final \n → old (correct) behavior should be preserved.
     const out = replace(original, "  const a = 1;\n  const b = 2;", "  const a = 1;\n  const b = 3;");
     expect(out).toBe("  const a = 1;\n  const b = 3;\n  return a + b;\n");
   });
@@ -77,8 +77,8 @@ describe("replace — pas de ligne vide parasite (frontière \\n)", () => {
     const original = "  const a = 1;  \n  const b = 2;\n  return a + b;\n";
     const res = applyEdit("f.ts", original, "  const a = 1;\n  const b = 2;\n", "  const a = 1;\n  const b = 3;\n");
     expect(res.content).toBe("  const a = 1;\n  const b = 3;\n  return a + b;\n");
-    // La dérive whitespace normalise aussi la ligne 1 (2 lignes changées), mais
-    // AUCUNE ligne vide ne s'ajoute → le bug gonflait à additions=3.
+    // The whitespace drift also normalizes line 1 (2 lines changed), but
+    // NO empty lines are added → the bug increased to additions=3.
     expect(res.additions).toBe(2);
     expect(res.deletions).toBe(2);
   });
@@ -87,7 +87,7 @@ describe("replace — pas de ligne vide parasite (frontière \\n)", () => {
 describe("replace — normalisation unicode", () => {
   it("matche malgré em-dash / quotes courbes là où le fichier est ASCII", () => {
     const original = 'const label = "hello - world";\n';
-    // old_string avec guillemets courbes + em-dash (dérive typographique du modèle).
+    // old_string with curved quotes + em-dash (typographical drift of the template).
     const oldStr = 'const label = “hello — world”;';
     const out = replace(original, oldStr, 'const label = "bye";');
     expect(out).toBe('const label = "bye";\n');
@@ -104,12 +104,12 @@ describe("replace — replaceAll", () => {
   });
 
   it("ne double pas le \\n de frontière sur un match tolérant (régression)", () => {
-    // Deux blocs identiquement indentés ; old_string dé-indenté → LineTrimmed matche
-    // et yield un span sans le \n final. new_string finit par \n.
+    // Two identically indented blocks; old_string de-indented → LineTrimmed match
+    // and yield a span without the final \n. new_string ends with \n.
     const original = "if (x) {\n  do()\n}\nif (x) {\n  do()\n}\n";
     const out = replace(original, "if (x) {\ndo()\n}", "if (y) {\n  do()\n}\n", true);
     expect(out).toBe("if (y) {\n  do()\n}\nif (y) {\n  do()\n}\n");
-    expect(out).not.toContain("}\n\n"); // aucune ligne vide parasite
+    expect(out).not.toContain("}\n\n"); // no extraneous empty lines
   });
 });
 
@@ -127,10 +127,10 @@ describe("replace — échecs bruyants", () => {
   });
 
   it("refuse un match disproportionné", () => {
-    // Un `find` d'une ligne qui, via un replacer tolérant, matcherait un bloc énorme.
+    // A one-line `find` which, via a tolerant replacer, would match a huge block.
     const content = "x\n" + Array.from({ length: 40 }, (_, i) => `line ${i}`).join("\n");
-    // Impossible ici de fabriquer un vrai over-match trivialement ; on vérifie au
-    // moins que l'exact fonctionne et ne déclenche pas la garde.
+    // Impossible here to make a real over-match trivially; we check at
+    // unless the exact one works and doesn't trigger the guard.
     expect(replace(content, "line 0", "LINE 0")).toContain("LINE 0");
   });
 });
@@ -155,8 +155,8 @@ describe("applyEdit — diff & comptage", () => {
 });
 
 /**
- * MIN-246 — la cascade se MESURE. Ces tests ne défendent pas un seuil (aucun
- * arbitrage n'est pris ici) : ils défendent le fait que le relevé dise la vérité.
+ * MIN-246 — the waterfall is MEASURED. These tests do not defend a threshold (no
+ * arbitration is taken here): they defend the fact that the reading tells the truth.
  */
 describe("replaceTraced — la trace de la cascade", () => {
   it("nomme le replacer et son rang sur un match exact", () => {
@@ -164,13 +164,13 @@ describe("replaceTraced — la trace de la cascade", () => {
     expect(trace.replacer).toBe("simple");
     expect(trace.rank).toBe(1);
     expect(trace.candidates).toBe(1);
-    expect(trace.similarity).toBeUndefined(); // un exact ne calcule aucune similarité
+    expect(trace.similarity).toBeUndefined(); // an exact does not calculate any similarity
   });
 
   it("rend la similarité du bloc quand c'est l'ancrage qui résout", () => {
     const content = ["function f() {", "  const total = items.length;", "  return total;", "}", ""].join("\n");
-    // Le modèle a mal recopié la ligne du milieu : seul BlockAnchorReplacer (rang 3)
-    // peut encore ancrer le bloc sur ses première et dernière lignes.
+    // The model copied the middle line incorrectly: only BlockAnchorReplacer (rank 3)
+    // can still anchor the block on its first and last lines.
     const find = ["function f() {", "  const total = item.length;", "  return total;", "}"].join("\n");
     const { content: out, trace } = replaceTraced(content, find, "function f() {\n  return 0;\n}");
     expect(out).toContain("return 0;");
@@ -195,15 +195,15 @@ describe("replaceTraced — la trace de la cascade", () => {
 
 describe("replace — un span disproportionné n'emporte plus la cascade (MIN-246)", () => {
   /**
-   * Deux blocs identiques au détail près : le premier est noyé sous 600 espaces
-   * d'indentation (les replacers tolérants le trouvent, mais son étendue est sans
-   * commune mesure avec `old_string`), le second ne diffère que par un tiret
-   * typographique — c'est celui que le modèle vise, et seul le replacer unicode
-   * (rang 6) sait le voir.
-   *
-   * Avant le correctif, le premier candidat LEVAIT depuis l'intérieur de la double
-   * boucle : l'édition échouait et le round était brûlé.
-   */
+ * Two identical blocks down to the last detail: the first is buried under 600 spaces
+ * of indentation (tolerant replacers find it, but its extent is without
+ * in common with `old_string`), the second differs only by a hyphen
+ * typographical — it is the that the model is aiming for, and only the unicode replacer
+ * (rank 6) knows how to see it.
+ *
+ * Before the fix, the first candidate RISED from inside the double
+ * loop: the edit failed and the round was burned.
+ */
   const pad = " ".repeat(600);
   const find = ['if (x) {', '  send("a-b");', "}"].join("\n");
   const wide = [`${pad}if (x) {`, `${pad}  send("a-b");`, `${pad}}`].join("\n");
@@ -213,14 +213,14 @@ describe("replace — un span disproportionné n'emporte plus la cascade (MIN-24
   it("écarte le candidat trop large et laisse un replacer plus bas résoudre", () => {
     const { content: out, trace } = replaceTraced(content, find, 'if (x) {\n  send("ok");\n}');
     expect(out).toContain('send("ok");');
-    expect(out).toContain(pad); // le bloc trop large n'a pas été touché
+    expect(out).toContain(pad); // the block too large was not touched
     expect(trace.replacer).toBe("unicode_normalized");
     expect(trace.rank).toBe(6);
     expect(trace.rejectedDisproportionate).toBeGreaterThan(0);
   });
 
   it("garde le refus bruyant quand AUCUN candidat ne convient", () => {
-    // Le même bloc trop large, seul dans le fichier : plus rien à résoudre en dessous.
+    // The same block too large, alone in the file: nothing more to resolve below.
     try {
       replace(`${wide}\n`, find, 'if (x) {\n  send("ok");\n}');
       expect.unreachable("replace aurait dû lever");
@@ -295,11 +295,11 @@ describe("trimDiff", () => {
       "+    const y = 3;",
     ].join("\n");
     const out = trimDiff(diff);
-    // Les préfixes +/-/espace restent, mais l'indentation commune (4) est retirée.
+    // The +/-/space prefixes remain, but the common indentation (4) is removed.
     expect(out).toContain("-const y = 2;");
     expect(out).toContain("+const y = 3;");
     expect(out).toContain(" const x = 1;");
-    // En-têtes intacts.
+    // Headers intact.
     expect(out).toContain("--- a");
     expect(out).toContain("+++ b");
   });

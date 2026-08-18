@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { appPageMetadata } from "@/lib/app-metadata";
 import { projectName } from "@/lib/server/project-meta";
 
-// « Feedback · Acme · minddy » : sans le nom du projet, deux onglets ouverts
-// sur deux projets portaient exactement le même titre. La lecture du nom est
-// mise en cache et partagée avec le `generateMetadata` du layout parent.
+// “Feedback · Acme · minddy”: without the project name, two tabs open
+// on two projects had exactly the same title. Reading the name is
+// cached and shared with the `generateMetadata` of the parent layout.
 export async function generateMetadata({
   params,
 }: {

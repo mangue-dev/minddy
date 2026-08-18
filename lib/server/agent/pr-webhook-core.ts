@@ -2,25 +2,25 @@ import type { PrActionEventType } from "@/lib/pr-events";
 import type { PullRequestState } from "./pull-requests";
 
 /**
- * Les règles PURES qui disent, d'un événement de forge, quel ÉTAT il décrit et
- * quelle ligne d'ACTIVITÉ il devient. Elles vivent ici, et pas dans les
+ * The PURE rules which say, of a forging event, what STATE it describes and
+ * what line of ACTIVITY it becomes. They live here, and not in the
  * `route.ts` : un fichier de route Next.js ne peut exporter que ses handlers,
- * donc rien de ce qu'il contient n'est testable — or c'est exactement le genre
- * de table de correspondance qui se trompe en silence (une action mal
- * orthographiée ne lève rien, elle ne trace simplement jamais rien).
+ * therefore nothing it contains is testable - but it is exactly the type
+ * of correspondence table which makes a mistake silently (a wrong action
+ * spelled doesn't raise anything, it simply never traces anything).
  *
- * Ce qui reste dans les routes : la vérification de signature, la résolution des
- * runs et l'écriture. Ici, uniquement des fonctions sans effet de bord.
+ * What remains on the roads: signature verification, resolution of
+ * runs and writing. Here, only functions without side effects.
  *
- * L'ÉTAT s'y est ajouté par MIN-164, et pour la même raison : chaque récepteur
- * traduisait « ce que la forge dit » en état minddy à sa façon, et deux de ces
- * traductions oubliaient le brouillon. Une PR est dans UN état ; il ne peut y
- * avoir qu'une seule fonction pour le dire, par forge.
+ * STATE was added to it by MIN-164, and for the same reason: each receiver
+ * translated “what the forge says” into minddy state in its own way, and two of these
+ * translations forgot the draft. A PR is in ONE state; he cannot
+ * have only one function to say it, by forge.
  */
 
 // ── GitHub ───────────────────────────────────────────────────────────────────
 
-/** Ce que la règle d'état lit d'une pull request GitHub. */
+/** What the status rule reads from a GitHub pull request. */
 export interface GithubPrStateInput {
   state?: string;
   draft?: boolean;
@@ -29,15 +29,15 @@ export interface GithubPrStateInput {
 }
 
 /**
- * État minddy d'une pull request GitHub, tel que le payload la décrit.
+ * Minddy state of a GitHub pull request, as the payload describes it.
  *
- * L'ordre porte tout : GitHub FERME une PR en la fusionnant (`state: "closed"`
- * + `merged: true`), donc fusionnée l'emporte ; et un brouillon n'est un
- * brouillon que tant qu'il est ouvert — GitHub garde `draft: true` sur une PR
- * brouillon fermée, et l'annoncer « brouillon » cacherait qu'elle est morte.
+ * The order carries everything: GitHub CLOSES a PR by merging it (`state: "closed"`
+ * + `merged: true`), so merged wins; and a draft is not a
+ * draft only as long as it is open — GitHub keeps `draft: true` on a PR
+ * draft closed, and announcing it “draft” would hide that it is dead.
  *
  * `merged_at` sert de repli : l'endpoint *list* de l'API ne renvoie pas `merged`
- * (cf. `toRef` dans `pr.ts`), et certains payloads de webhook non plus.
+ * (see `toRef` in `pr.ts`), and some webhook payloads either.
  */
 export function githubPrState(pr: GithubPrStateInput): PullRequestState {
   if (pr.merged || pr.merged_at) return "merged";
@@ -46,15 +46,15 @@ export function githubPrState(pr: GithubPrStateInput): PullRequestState {
 }
 
 /**
- * Actions `pull_request` dont l'état PILOTE le cycle de vie du run et du ticket
- * — plus étroit que les actions simplement INGÉRÉES (`edited`, `synchronize` :
- * la PR change, son état non).
+ * `pull_request` actions whose state DRIVES the life cycle of the run and the ticket
+ * — narrower than simply INGESTED actions (`edited`, `synchronize`:
+ * the RA changes, its state does not).
  *
- * `opened` en fait partie : une PR humaine qui cite un ticket doit le mettre en
- * revue comme le ferait Numo, et comme le fait déjà le récepteur GitLab avec son
- * action `open`. Sans elle, ouvrir une PR n'avait d'effet que sur GitLab alors
- * que la fusionner en avait des deux côtés (MIN-143) — le même geste, deux
- * comportements selon la forge.
+ * `opened` is one of them: a human PR who cites a ticket must put it in
+ * reviewed as would Numo, and as the GitLab receiver already does with its
+ * action `open`. Without it, opening a PR only had an effect on GitLab so
+ * that the merger had it on both sides (MIN-143) — the same gesture, two
+ * behaviors according to the forge.
  */
 const STATE_DRIVING_PR_ACTIONS = new Set([
   "opened",
@@ -65,13 +65,13 @@ const STATE_DRIVING_PR_ACTIONS = new Set([
 ]);
 
 /**
- * action `pull_request` + payload → état à écrire, ou null (action qui ne décrit
- * aucun changement d'état).
+ * action `pull_request` + payload → state to write, or null (action which does not describe
+ * no change of state).
  *
- * L'état vient du PAYLOAD, jamais de l'action seule : GitHub laisse rouvrir une
- * PR restée brouillon, et `reopened` valait « ouverte » en dur — le ticket
- * partait alors en revue pour un travail que personne n'a proposé, ce que
- * MIN-138 avait justement tranché.
+ * The state comes from PAYLOAD, never from the action alone: ​​GitHub lets reopen a
+ * PR remained messy, and `reopened` was “open” in hard copy — the ticket
+ * then left for a review for a job that no one offered, which
+ * MIN-138 had rightly decided.
  */
 export function githubPrStateForAction(
   action: string,
@@ -81,18 +81,18 @@ export function githubPrStateForAction(
 }
 
 /**
- * action `pull_request` → événement d'activité (null = action non tracée).
+ * action `pull_request` → activity event (null = action not traced).
  *
- * `synchronize` est le nom GitHub d'un PUSH sur la branche de la PR : c'est le
- * seul signal de « quelqu'un a commité là-dessus » — le payload ne porte que les
- * sha avant/après, jamais le nombre de commits, d'où une phrase qui ne compte
- * rien. Les autres actions (`edited`, `labeled`, `assigned`…) sont du bruit de
+ * `synchronize` is the GitHub name of a PUSH on the PR branch: it is the
+ * only signal of “someone committed to this” — the payload only carries the
+ * sha before/after, never the number of commits, hence a sentence that doesn't count
+ * Nothing. The other actions (`edited`, `labeled`, `assigned`…) are noise of
  * forge, pas des faits du ticket.
  *
- * `converted_to_draft` / `ready_for_review` restent dehors : ils changent l'ÉTAT
- * (et donc le statut du ticket, qui se raconte tout seul), mais minddy n'a pas
- * d'événement pour la bascule brouillon — la PR, elle, la montre dans sa propre
- * activité (`pr-timeline`).
+ * `converted_to_draft` / `ready_for_review` remain outside: they change the STATE
+ * (and therefore the status of the ticket, which tells itself), but minddy does not have
+ * event for the draft toggle — the PR shows it in its own
+ * activity (`pr-timeline`).
  */
 export function prActionForPullRequest(
   action: string,
@@ -113,15 +113,15 @@ export function prActionForPullRequest(
 }
 
 /**
- * state d'une review soumise → événement d'activité (null = ignoré).
+ * status of a submitted review → activity event (null = ignored).
  *
- * Une review « commented » n'est un MESSAGE que si elle en porte un : soumise
- * sans corps, elle n'est que l'enveloppe des remarques de ligne, déjà tracées
- * une à une par `pull_request_review_comment`. La tracer quand même ajouterait
- * une ligne « a commenté » qui ne renvoie à aucun texte.
+ * A “commented” review is only a MESSAGE if it carries one: submitted
+ * without body, it is only the envelope of the line remarks, already traced
+ * one by one by `pull_request_review_comment`. Tracing it anyway would add
+ * a “commented” line that does not refer to any text.
  *
- * `dismissed` reste dehors : retirer une review n'a pas d'équivalent GitLab, et
- * minddy n'a pas d'événement pour l'annulation d'un geste.
+ * `dismissed` stays out: removing a review has no GitLab equivalent, and
+ * minddy has no event for canceling a gesture.
  */
 export function prActionForReview(review: {
   state?: string;
@@ -140,11 +140,11 @@ export function prActionForReview(review: {
 }
 
 /**
- * Un event `issue_comment` porte-t-il un commentaire de PULL REQUEST à tracer ?
- * GitHub sert les commentaires de fil des issues ET des PR sur le même event ;
- * seule la présence de `issue.pull_request` les distingue. Les commentaires
- * d'issue distante ne sont pas de notre ressort (la synchro MIN-97 est à sens
- * unique et ne porte que l'ouverture/fermeture).
+ * Does a `issue_comment` event carry a PULL REQUEST comment to trace?
+ * GitHub serves thread comments from issues AND PRs on the same event;
+ * only the presence of `issue.pull_request` distinguishes them. Comments
+ * remote output are not within our control (the MIN-97 sync is one way
+ * unique and only carries the opening/closing).
  */
 export function isPullRequestComment(payload: {
   action?: string;
@@ -155,24 +155,24 @@ export function isPullRequestComment(payload: {
 
 // ── GitLab ───────────────────────────────────────────────────────────────────
 
-/** Ce que la règle d'état lit d'un `object_attributes` de merge request. */
+/** What the status rule reads from a merge request `object_attributes`. */
 export interface GitlabMrStateInput {
   state?: string;
-  /** MR brouillon — GitLab le dérive du préfixe `Draft:` du titre. */
+  /** MR draft — GitLab derives it from the `Draft:` prefix of the title. */
   draft?: boolean;
-  /** Le nom du brouillon avant GitLab 14 : encore servi par les instances auto-hébergées. */
+  /** The name of the draft before GitLab 14: still served by self-hosted instances. */
   work_in_progress?: boolean;
 }
 
 /**
- * État minddy d'une merge request GitLab, tel que le payload la décrit.
+ * Minddy state of a GitLab merge request, as the payload describes it.
  *
- * `locked` est un état TRANSITOIRE (une fusion en cours), pas un quatrième
- * état de vie : il tombe donc du côté ouvert, comme dans `toRef` (`mr.ts`).
+ * `locked` is a TRANSIENT state (a merger in progress), not a fourth
+ * state of life: it therefore falls on the open side, as in `toRef` (`mr.ts`).
  *
- * Les DEUX noms du brouillon sont lus : GitLab a renommé `work_in_progress` en
- * `draft` en 14.0, et une instance auto-hébergée plus ancienne n'envoie que
- * l'ancien. N'en lire qu'un rendait le brouillon invisible sur ces instances.
+ * BOTH names in the draft are read: GitLab renamed `work_in_progress` to
+ * `draft` in 14.0, and an older self-hosted instance only sends
+ * the old one. Reading only one made the draft invisible on those instances.
  */
 export function gitlabMrState(attrs: GitlabMrStateInput): PullRequestState {
   if (attrs.state === "merged") return "merged";
@@ -180,23 +180,23 @@ export function gitlabMrState(attrs: GitlabMrStateInput): PullRequestState {
   return attrs.draft || attrs.work_in_progress ? "draft" : "open";
 }
 
-/** Ce que la règle d'état lit d'un événement `merge_request` complet. */
+/** What the status rule reads from a complete `merge_request` event. */
 export interface GitlabMrStateEvent {
   object_attributes?: GitlabMrStateInput & { action?: string };
-  /** Champs modifiés par un `update` (présents seulement sur cette action). */
+  /** Fields modified by a `update` (present only on this action). */
   changes?: { title?: unknown; draft?: unknown };
 }
 
 /**
- * action `merge_request` + payload → état à écrire, ou null.
+ * action `merge_request` + payload → state to write, or null.
  *
- * Le BROUILLON n'a pas d'action dédiée chez GitLab, contrairement aux
- * `converted_to_draft` / `ready_for_review` de GitHub : il est porté par le
- * préfixe `Draft:` du titre, et sa bascule arrive en `action: "update"` — la
- * même action qu'un changement de description ou d'étiquette. On ne relit donc
- * l'état sur un `update` que s'il TOUCHE au titre ou au brouillon, sinon une
- * simple retouche de description réécrirait l'état (et, en cascade, le statut du
- * ticket) à chaque édition.
+ * The DRAFT does not have a dedicated action at GitLab, unlike the
+ * `converted_to_draft` / `ready_for_review` from GitHub: it is supported by the
+ * prefix `Draft:` of the title, and its switch arrives at `action: "update"` — the
+ * same action as a change of description or label. We therefore do not reread
+ * the state on a `update` only if it TOUCHES the title or the draft, otherwise a
+ * simple retouching of description would rewrite the state (and, in cascade, the status of the
+ * ticket) at each edition.
  */
 export function gitlabMrStateForAction(
   payload: GitlabMrStateEvent,
@@ -211,8 +211,8 @@ export function gitlabMrStateForAction(
     case "update": {
       const changes = payload.changes ?? {};
       if (changes.draft === undefined && changes.title === undefined) return null;
-      // Une MR déjà fermée ou fusionnée dont on retouche le titre reste ce
-      // qu'elle est : seule une MR VIVANTE bascule en brouillon.
+      // An MR already closed or merged whose title is retouched remains this
+      // that it is: only a LIVING MR switches to draft.
       if (attrs.state !== "opened" && attrs.state !== "locked") return null;
       return gitlabMrState(attrs);
     }
@@ -221,22 +221,22 @@ export function gitlabMrStateForAction(
   }
 }
 
-/** Ce que la règle GitLab lit d'un `object_attributes` de merge request. */
+/** What the GitLab rule reads from a merge request `object_attributes`. */
 export interface GitlabMrActionInput {
   action?: string;
-  /** Ancienne tête : GitLab ne la met QUE sur un `update` qui porte un push. */
+  /** Old header: GitLab ONLY puts it on a `update` which carries a push. */
   oldrev?: string;
 }
 
 /**
- * action `merge_request` → événement d'activité (null = action non tracée).
+ * action `merge_request` → activity event (null = action not traced).
  *
- * GitLab n'a pas d'action « push » : un nouveau commit arrive en `update`, la
- * même action que le changement de titre, de description ou d'étiquette. Ce qui
- * les sépare est `oldrev`, présent uniquement quand la tête a bougé.
+ * GitLab does not have a “push” action: a new commit arrives at `update`, the
+ * same action as changing title, description or label. What
+ * separates them is `oldrev`, present only when the head has moved.
  *
- * `unapproved` / `unapproval` restent dehors, pour la raison d'origine : retirer
- * une approbation n'est pas un geste tracé, et GitHub n'a pas d'équivalent.
+ * `unapproved` / `unapproval` remain outside, for the original reason: remove
+ * an approval is not a mapped out gesture, and GitHub has no equivalent.
  */
 export function prActionForMergeRequest(
   attrs: GitlabMrActionInput,
@@ -250,9 +250,9 @@ export function prActionForMergeRequest(
       return "pr_accepted";
     case "close":
       return "pr_rejected";
-    // `approved` = la MR devient entièrement approuvée ; `approval` = une
-    // approbation individuelle quand plusieurs sont requises. Mutuellement
-    // exclusifs par événement → pas de double trace.
+    // `approved` = the MR becomes fully approved; `approval` = one
+    // individual approval when several are required. Mutually
+    // exclusive by event → no double trace.
     case "approved":
     case "approval":
       return "pr_approved";
@@ -263,20 +263,20 @@ export function prActionForMergeRequest(
   }
 }
 
-/** Ce que la règle GitLab lit d'un `object_attributes` de note. */
+/** What the GitLab rule reads from a note `object_attributes`. */
 export interface GitlabNoteInput {
   noteable_type?: string;
-  /** Ancrage dans le diff : présent seulement sur une remarque de ligne. */
+  /** Anchoring in the diff: present only on a line remark. */
   position?: unknown;
 }
 
 /**
- * Note GitLab → événement d'activité (null = note hors merge request).
+ * GitLab note → activity event (null = note excluding merge request).
  *
- * Un `Note Hook` couvre les commentaires de tout ce qui se commente chez GitLab
- * (issue, commit, extrait, merge request) : `noteable_type` est le seul filtre.
- * L'ancrage `position` sépare ensuite la remarque de code du message de fil —
- * c'est le pendant exact du couple `pull_request_review_comment` / `issue_comment`
+ * A `Note Hook` covers the comments of everything that is commented on at GitLab
+ * (issue, commit, extract, merge request): `noteable_type` is the only filter.
+ * The `position` anchor then separates the code remark from the thread message —
+ * it is the exact counterpart of the couple `pull_request_review_comment` / `issue_comment`
  * de GitHub.
  */
 export function prActionForNote(attrs: GitlabNoteInput): PrActionEventType | null {
@@ -285,13 +285,13 @@ export function prActionForNote(attrs: GitlabNoteInput): PrActionEventType | nul
 }
 
 /**
- * Gestes que minddy fait AVEC le token du compte connecté au dépôt GitLab : leur
- * écho webhook porte ce compte, et la trace existe déjà côté route ou agent.
+ * Gestures that minddy makes WITH the token of the account connected to the GitLab repository: their
+ * echo webhook carries this account, and the trace already exists on the route or agent side.
  *
- * Les COMMENTAIRES n'en sont pas : personne ne les poste sous ce token — un
- * commentaire in-app part du compte git de la personne, et se reconnaît par
- * `isPrActionEcho`. Les y mettre reviendrait à rendre muets, définitivement, les
- * commentaires de celui qui a lié le dépôt.
+ * COMMENTS are not: no one posts them under this token — a
+ * in-app comment comes from the person's git account, and is recognized by
+ * `isPrActionEcho`. Putting them there would amount to permanently mute the
+ * comments from whoever linked the repository.
  */
 export function isServiceAccountGesture(type: PrActionEventType): boolean {
   return (

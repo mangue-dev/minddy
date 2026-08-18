@@ -4,14 +4,13 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { captureServerEvent } from "@/lib/server/posthog";
 
 /**
- * Votes (MIN-37) — 1 identité = 1 voix sur un post. Les compteurs dénormalisés
- * sont maintenus par triggers SQL ; ici on ne touche que les lignes de votes.
+ * Votes (MIN-37) — 1 identity = 1 vote on a post. Denormalized counters
+ * are maintained by SQL triggers; here we only touch the voting lines.
  *
- * `projectId` n'est pas optionnel, et c'est le point (MIN-342) : une identité
- * de visiteur est PAR PROJET (`feedback_users.project_id`), donc un post ne se
- * résout jamais par son seul id — il se résout DANS le projet du visiteur.
- * Sans ce filtre, un visiteur identifié sur un board vote sur les retours de
- * n'importe quel autre.
+ * `projectId` is not optional, and that's the point (MIN-342): a visitor identity
+ * is BY PROJECT (`feedback_users.project_id`), so a post is never resolved by its own id — it resolves IN the visitor's project.
+ * Without this filter, a visitor identified on a board votes on the feedback from
+ * any other.
  */
 
 export async function votePost(params: {
@@ -45,9 +44,9 @@ export async function votePost(params: {
   return !error;
 }
 
-/** Retirer sa voix. Pas de `projectId` ici, et ce n'est pas un oubli : la
-    suppression est filtrée sur `user_id`, une identité qui n'existe QUE dans
-    son projet — sur un post d'ailleurs, elle ne matche aucune ligne. */
+/** Withdraw your voice. No `projectId` here, and this is not an oversight: the
+ deletion is filtered on `user_id`, an identity that ONLY exists in
+ his project — on one post moreover, it does not match any lines. */
 export async function unvotePost(params: { postId: string; userId: string }): Promise<boolean> {
   const service = getServiceClient();
   const { error } = await service

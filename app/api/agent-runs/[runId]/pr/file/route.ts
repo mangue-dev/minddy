@@ -11,21 +11,21 @@ import {
 } from "@/lib/server/agent/pr-actions";
 
 /**
- * Version BASE d'un fichier du diff d'un run — la source dont la vue diff a
- * besoin pour déplier le contexte masqué autour des hunks (façon GitHub).
- *  GET ?path=… → { content } (texte brut du fichier au merge base).
+ * BASE version of a run diff file — the source whose diff view has
+ * need to unfold the hidden context around the hunks (GitHub style).
+ *  GET ?path=… → { content } (raw file text at the merge base).
  *
- * Deux sources, selon l'état du run. Avec une PR, c'est une FAÇADE (MIN-143) de
- * `/api/pull-requests/[prId]/file`. SANS PR, c'est le compare base…branche de
- * travail — la vue diff DANS la conversation, avant toute pull request : elle
- * n'a aucune PR à adresser, et reste donc servie ici, indexée par le run.
+ * Two sources, depending on run status. With a PR, it is a FACADE (MIN-143) of
+ * `/api/pull-requests/[prId]/file`. WITHOUT PR, it is the base compare…branch of
+ * work — the diff view IN the conversation, before any pull request: it
+ * has no PR to address, and therefore remains served here, indexed by the run.
  */
 
 type RouteContext = { params: Promise<{ runId: string }> };
 
 export const maxDuration = 60;
 
-/** Chemin qui adresse la version de base : l'ancien nom si le fichier a été renommé. */
+/** Path that addresses the base version: the old name if the file has been renamed. */
 function basePathOf(file: { filename: string; previous_filename?: string }): string {
   return file.previous_filename ?? file.filename;
 }
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (auth.ok) return prFileSourceResponse(auth.scope, path);
   if (!("noPr" in auth)) return auth.response;
 
-  // ── Run sans PR : le diff est le compare base…branche de travail ──────────
+  // ── Run without PR: the diff is the compare base…branch of work ──────────
   const user = await getAuthedUser(request);
   if (!user.ok) return user.response;
 
@@ -68,8 +68,8 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       head,
     });
 
-    // Le chemin doit être celui d'un fichier du diff, côté base. Un fichier
-    // ajouté n'a pas de version de base : son patch EST déjà le fichier entier.
+    // The path must be that of a diff file, on the base side. A file
+    // added has no base version: its patch IS already the entire file.
     const file = compared.files.find((f) => basePathOf(f) === path);
     if (!file || file.status === "added") {
       return NextResponse.json({ error: "File not found in this diff" }, { status: 404 });

@@ -46,51 +46,51 @@ import {
 } from "@/lib/ai-chat";
 
 /**
- * La dictée, jouable sans compte (MIN-150).
+ * Dictation, playable without an account (MIN-150).
  *
- * Le seul endpoint IA de minddy ouvert à un visiteur ANONYME. Il existe parce
- * que la valeur du produit n'était démontrable qu'après inscription : on lâche
- * une phrase, tous les champs se rangent — et aucune capture d'écran ne fait
- * ressentir ça.
+ * Minddy's only AI endpoint open to an ANONYMOUS visitor. It exists because
+ * that the value of the product was only demonstrable after registration: we let go
+ * a sentence, all the fields are sorted — and no screenshot is
+ * feel that.
  *
- * Ce qu'il fait, et rien d'autre : transcrire une prise de quelques secondes
- * (ou relire une phrase d'exemple), puis la ranger dans les champs d'un ticket
- * FICTIF (`lib/demo-dictation.ts`). Il ne lit aucun projet, n'écrit aucun
- * ticket, ne touche à la base que pour deux choses : lire la configuration IA,
- * et inscrire la dépense au ledger — en `platform`, parce qu'elle est offerte.
+ * What it does, and nothing else: transcribe a take of a few seconds
+ * (or reread an example sentence), then store it in the fields of a ticket
+ * FICTITIOUS (`lib/demo-dictation.ts`). He reads no projects, writes no
+ * ticket, only touches the base for two things: reading the AI ​​configuration,
+ * and enter the expense in the ledger — in `platform`, because it is free.
  *
- * ## Ce qui le protège
+ * ## What protects him
  *
- * Quatre garde-fous, du moins cher au plus cher (les trois premiers sont dans
- * `lib/server/demo-dictation.ts`, exercés par son test) :
+ * Four safeguards, from least expensive to most expensive (the first three are in
+ * `lib/server/demo-dictation.ts`, exercised by its test):
  *
- *  1. **Même origine** — le filtre à coût nul contre le script qui voudrait une
+ * 1. **Same origin** — the zero-cost filter against the script that wants a
  *     API de transcription gratuite.
  *  2. **Par IP** — dix passages par heure. Un visiteur curieux en joue trois ou
- *     quatre ; au-delà, ce n'est plus une visite.
- *  3. **Plafond global journalier**, par instance : la dépense d'une journée est
- *     bornée quoi qu'il arrive, y compris sur adresses tournantes.
- *  4. **Interrupteur `demo_dictation_enabled`** dans `/admin` : la démo se coupe
- *     sans déploiement.
+ * four ; beyond that, it is no longer a visit.
+ * 3. **Overall daily ceiling**, per instance: the expense of one day is
+ * limited whatever happens, including on rotating addresses.
+ * 4. **`demo_dictation_enabled`** switch in `/admin`: the demo cuts out
+ * without deployment.
  *
- * S'il fallait aller plus loin, ce serait une détection de bot devant la page —
- * mais ça se paye en poids sur la landing, et le passage coûte 0,0003 $ (mesuré
- * au ledger : 0,0001 $ de transcription + 0,0002 $ de rangement). Le plafond
- * journalier borne donc la dépense à ~0,15 $ par jour et par instance : très en
- * dessous de ce que coûterait ce poids-là.
+ * If we had to go further, it would be bot detection in front of the page —
+ * but it is paid by weight on the landing, and the passage costs $0.0003 (measured
+ * to the ledger: $0.0001 transcription + $0.0002 storage). The ceiling
+ * daily therefore limits the expense to ~$0.15 per day and per instance: very
+ * below what that weight would cost.
  *
- * ## Aucune entrée en texte libre
+ * ## No free text input
  *
- * Le modèle ne voit que deux choses : la transcription de la voix du visiteur,
- * ou une phrase d'exemple que le SERVEUR relit dans son propre catalogue à
- * partir d'un identifiant (`stripe`, `export`, `onboarding`). Le client n'envoie
- * jamais de texte, et tout ce que le modèle renvoie est re-validé
- * (`sanitizeDemoTicket`) avant de sortir d'ici.
+ * The model only sees two things: the transcription of the visitor's voice,
+ * or an example sentence that the SERVER rereads in its own catalog to
+ * from an identifier (`stripe`, `export`, `onboarding`). The customer does not send
+ * never text, and everything the model returns is re-validated
+ * (`sanitizeDemoTicket`) before leaving here.
  */
 
 export const runtime = "nodejs";
-// Une prise de démo fait 15 s au plus : transcription courte, petit modèle pour
-// le rangement. Rien à voir avec les 300 s de /api/transcribe.
+// A demo take takes 15 seconds at most: short transcription, small model for
+// storage. Nothing to do with the 300 s of /api/transcribe.
 export const maxDuration = 60;
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "unavailable" }, { status: 503 });
   }
 
-  // ── L'entrée : une prise au micro, ou une phrase d'exemple ──────────────
+  // ── The entrance: a microphone, or an example sentence ──────────────
   const runId = newRunId();
   const usageRows: AiUsageInput[] = [];
   let transcript = "";
@@ -177,8 +177,8 @@ export async function POST(request: NextRequest) {
     }
 
     const model = resolveFromValues("transcription_model", cfg).model;
-    // Le modèle RÉELLEMENT appelé : le repli du raccourci de routage (MIN-263)
-    // peut retirer le suffixe, et c'est cette valeur-là qui va au ledger.
+    // The Model ACTUALLY Called: Routing Shortcut Fallback (MIN-263)
+    // can remove the suffix, and it is this value which goes to the ledger.
     let usedModel = model;
     try {
       const audioBase64 = Buffer.from(await audio.arrayBuffer()).toString("base64");
@@ -194,10 +194,10 @@ export async function POST(request: NextRequest) {
         { logPrefix: "[api/demo/dictate]" },
       );
       transcript = result.text.trim();
-      // Les deux appels d'un passage partagent `runId` et la feature
-      // `landing_demo` : le tableau admin en fait UNE ligne (« la démo »), et
-      // son coût par run est le prix d'un passage. Le `seq` et le modèle
-      // distinguent la transcription du rangement dans le détail du run.
+      // The two calls of a passage share `runId` and the feature
+      // `landing_demo`: the admin table makes ONE line (“the demo”), and
+      // its cost per run is the price of a passage. The `seq` and the model
+      // distinguish the transcription from the storage in the detail of the run.
       usageRows.push({
         runId,
         seq: 0,
@@ -212,8 +212,8 @@ export async function POST(request: NextRequest) {
       console.error("[api/demo/dictate] transcription failed:", (err as Error).message);
       return NextResponse.json({ error: "failed" }, { status: 502 });
     }
-    // Whisper meuble le silence ("...", "♪") : sans lettre ni chiffre il n'a
-    // rien entendu, et le dire coûte moins cher qu'un ticket inventé.
+    // Whisper fills the silence ("...", "♪"): without letters or numbers it has
+    // heard nothing, and saying it costs less than a made-up ticket.
     if (!/[\p{L}\p{N}]/u.test(transcript)) {
       after(() => recordAiUsage(usageRows));
       return NextResponse.json({ error: "empty" }, { status: 422 });
@@ -234,7 +234,7 @@ export async function POST(request: NextRequest) {
     transcript = t(DEMO_SAMPLE_KEYS[body.sample]);
   }
 
-  // ── Le décor fictif, dans la langue du visiteur ────────────────────────
+  // ── The fictional setting, in the visitor's language ────────────────────────
   const t = await getTranslations({ locale, namespace: "Landing" });
   const members = DEMO_MEMBER_IDS.map((id) => ({ id, name: t(DEMO_MEMBER_KEYS[id]) }));
   const categories = DEMO_CATEGORY_IDS.map((id) => ({
@@ -243,7 +243,7 @@ export async function POST(request: NextRequest) {
   }));
   const today = todayIn(timeZone);
 
-  // ── Le rangement : un seul appel, un seul outil, forcé ─────────────────
+  // ── Tidying up: one call, one tool, forced ─────────────────
   const model = resolveFromValues("dictate_model", cfg).model;
   let ticket: DemoTicket;
   try {
@@ -323,7 +323,7 @@ export async function POST(request: NextRequest) {
   after(() => recordAiUsage(usageRows));
   return NextResponse.json(
     { transcript: transcript.slice(0, 600), ticket },
-    // Une réponse personnelle et jetable : rien à mettre en cache nulle part.
+    // A personal, throwaway answer: nothing to cache anywhere.
     { headers: { "Cache-Control": "no-store" } },
   );
 }

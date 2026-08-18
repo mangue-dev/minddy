@@ -4,21 +4,21 @@ import { Reveal, RevealHeading } from "./reveal";
 import { IsoTile, type IsoTileName } from "./iso-tile";
 
 /**
- * §2 — « Et dessous, c'est un vrai tracker ». Ex-`#features`.
+ * §2 — “And underneath, it’s a real tracker”. Ex-`#features`.
  *
- * ELLE RASSURE, ELLE NE CONVAINC PAS (MIN-148). Le hero vend la boucle agent —
- * la seule vraie raison de changer d'outil. Ce qui suit répond à la question
- * qu'on se pose juste après : « oui, mais est-ce que ça tient comme tracker ? »
- * D'où l'ordre (elle vient tout de suite), le format (une capture, six cartes,
- * on ne s'attarde pas) et le titre, qui ne cherche plus à emporter la décision.
+ * SHE REASSURES, SHE DOES NOT CONVINCE (MIN-148). The hero sells the agent loop —
+ * the only real reason to change tools. The following answers the question
+ * We then ask ourselves: “yes, but does it work as a tracker? »
+ * Hence the order (it comes straight away), the format (one capture, six cards,
+ * we don't linger) and the title, which no longer seeks to carry the decision.
  *
- * C'est aussi ici qu'a atterri la capture du board, chassée du hero : un board
- * ressemble forcément à un board, ce qui en fait une mauvaise première image et
- * une bonne preuve de sérieux.
+ * This is also where the capture of the board landed, chased away from the hero: a board
+ * necessarily looks like a board, which makes it a bad first image and
+ * a good proof of seriousness.
  *
- * La palette ⌘K n'est plus ici : elle ouvre `<SectionSpeed>`, avec sa capture.
- * Ce qui reste est bien le tracker — les écrans où l'on regarde les tickets,
- * pas les gestes pour les manipuler.
+ * The ⌘K palette is no longer here: it opens `<SectionSpeed>`, with its capture.
+ * What remains is the tracker — the screens where we look at the tickets,
+ * not the gestures to manipulate them.
  */
 
 const FEATURES = [
@@ -50,13 +50,13 @@ export async function SectionTracker() {
           </Reveal>
         </header>
 
-        {/* Une seule capture depuis que la palette est partie : elle prend donc
-            toute la largeur utile plutôt que la moitié d'une grille à deux
-            colonnes, où elle serait restée seule à côté d'un vide.
+        {/* Only one capture since the palette left: it therefore takes
+            the entire useful width rather than half of a two-grid
+            columns, where she would have remained alone next to a void.
 
-            Le board plutôt que le cycle : c'est l'écran que tout le monde sait
-            lire, donc celui qui prouve le plus vite qu'il y a bien un tracker
-            là-dessous. Le cycle, lui, est dit par sa carte juste en dessous. */}
+            The board rather than the cycle: it’s the screen that everyone knows
+            read, so the one who proves the fastest that there is indeed a tracker
+            below. The cycle is told by its card just below. */}
         <Reveal as="figure" className="mx-auto mb-12 flex max-w-4xl flex-col gap-3 sm:mb-16">
           <ScreenshotSlot id="heroBoard" />
           <figcaption className="text-center text-sm text-muted-foreground">
@@ -64,8 +64,8 @@ export async function SectionTracker() {
           </figcaption>
         </Reveal>
 
-        {/* Grille à filets : entrée d'un bloc — masquer les cartes une à une
-            découvrirait le fond `bg-border` du conteneur. */}
+        {/* Mesh grid: entry to a block — hide cards one by one
+            would discover the bottom `bg-border` of the container. */}
         <Reveal
           as="ul"
           className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2"

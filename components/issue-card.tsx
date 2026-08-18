@@ -131,10 +131,10 @@ import {
 /**
  * Strip common markdown so the description preview reads as plain text.
  *
- * ⚠ Appelé sur une TRANCHE de la description, jamais sur elle entière
- * (MIN-316) : huit expressions régulières dont une non ancrée
- * (```` ```[\s\S]*?``` ````) sur un corps de plusieurs kilo-octets, à chaque
- * rendu de chaque carte — pour un aperçu rendu en `line-clamp-3`.
+ * ⚠ Called on a SLICE of the description, never on the entire description
+ * (MIN-316): eight regular expressions including one not anchored
+ * (```` ```[\s\S]*?``` ````) on a body of several kilobytes, each
+ * rendering of each card — for a preview rendered in `line-clamp-3`.
  */
 function plainPreview(md: string): string {
   return md
@@ -164,7 +164,7 @@ const TRIGGER_CLASS_LG =
 
 const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
-/** Menu fermé : identité stable, pour ne pas rendre un tableau neuf par rendu. */
+/** Closed menu: stable identity, so a new array is not created on every render. */
 const NO_ACTIONS: ContextMenuAction[] = [];
 
 function StatusPick({
@@ -295,10 +295,10 @@ function EffortPick({
   );
 }
 
-/** Les pastilles telles qu'elles se lisent sur la carte — sans menu. C'est tout
- *  ce que le board PUBLIC rend (aucun callback), et il n'a ni react-query ni
- *  dialogs de création : le menu, avec ses hooks, vit dans le composant d'à
- *  côté, qu'on ne monte que quand la carte est modifiable. */
+/** The pills as they appear on the card — without a menu. This is all the
+ *  PUBLIC board renders (no callbacks), and it has neither react-query nor
+ *  creation dialogs: the menu, with its hooks, lives in the sibling component
+ *  and is mounted only when the card is editable. */
 function CategoryDisplay({
   categories,
   selectedIds,
@@ -334,7 +334,7 @@ function CategoryPick({
   categories: IssueCardCategory[];
   selectedIds: string[];
   onChange?: (ids: string[]) => void;
-  /** Projet de la carte — ce que l'ajout rapide crée lui appartient. */
+  /** Card project — anything quick-add creates belongs to it. */
   projectId?: string | null;
 }) {
   const display = (
@@ -588,13 +588,13 @@ function PlanPick({
   );
 }
 
-/** La pull request sur l'en-tête de la carte, à la place du plan. Cliquer ouvre
-    sa review. Read-only (span sans handler) dans le drag overlay / board public.
+/** The pull request in the card header, in place of the plan. Clicking opens
+    its review. Read-only (a span without a handler) in the drag overlay / public board.
 
-    Les couleurs sont celles de GitHub, comme partout ailleurs : VERT ouverte,
-    VIOLET fusionnée. Le chip était vert quel que soit l'état — il annonçait donc
-    « PR disponible » en vert sur un travail déjà livré, là où le chip du panneau
-    latéral disait « PR fusionnée » en violet à un clic de distance. */
+    The colors are GitHub's, as everywhere else: GREEN when open,
+    PURPLE when merged. The chip used to be green in every state — announcing
+    “PR available” in green for work already delivered, while the side-panel
+    chip said “PR merged” in purple one click away. */
 function PrPick({
   state,
   onOpen,
@@ -653,11 +653,10 @@ function PrPick({
 
 /** Presentational card body — shared by the sortable card and the drag overlay. */
 /**
- * ⚠ Mémoïsé (MIN-316). La carte exécute une quinzaine de crochets, et le board
- * en rend N : sans `memo`, un seul rendu de provider ou un franchissement de
- * seuil de scroll les rejouait toutes. **Pour que ça morde, les props doivent
- * être stables** — c'est tout l'objet des callbacks à argument-ticket et du menu
- * paresseux ci-dessous.
+ * ⚠ Memoized (MIN-316). The card runs about fifteen hooks, and the board
+ * renders N of them: without `memo`, one provider render or crossing a scroll
+ * threshold would replay them all. **For this to matter, props must be stable**
+ * — that is the purpose of the ticket-argument callbacks and the lazy menu below.
  */
 export const IssueCardBody = memo(function IssueCardBody({
   issue,
@@ -679,9 +678,9 @@ export const IssueCardBody = memo(function IssueCardBody({
   pr,
   onOpenPr,
 }: {
-  /** La carte déclare ce qu'elle lit, pas ce qu'un ticket contient (MIN-342) :
-      un `Issue` complet reste assignable, et une surface publique peut n'en
-      passer qu'une projection sans que rien d'autre parte dans le HTML. */
+  /** The card declares what it reads, not what a ticket contains (MIN-342):
+      a complete `Issue` remains assignable, and a public surface can pass only
+      a projection without sending anything else into the HTML. */
   issue: IssueCardIssue;
   projectKey: string;
   /** On the cross-project (global) boards, the issue's project — renders an
@@ -703,12 +702,12 @@ export const IssueCardBody = memo(function IssueCardBody({
   onOpenRelated?: (issueId: string) => void;
   /** Opens this issue's side panel on the plan tab (clicking the plan indicator). */
   onOpenPlan?: () => void;
-  /** La PR du ticket, tous états confondus. Le chip « PR disponible » ne s'affiche
-      (À LA PLACE du plan) que si elle appelle encore quelque chose — une PR
-      REFUSÉE n'appelle rien, et masquer l'avancement du plan pour elle serait
-      perdre l'information utile. Le menu, lui, y mène quel que soit son état. */
+  /** The ticket's PR, in any state. The “PR available” chip is shown
+      (IN PLACE of the plan) only if it still calls for action — a
+      REJECTED PR calls for nothing, and hiding the plan's progress for it would
+      lose useful information. The menu still leads to it in every state. */
   pr?: IssuePr | null;
-  /** Ouvre la review de la pull request (clic sur le chip « PR disponible »). */
+  /** Opens the pull request review (clicking the “PR available” chip). */
   onOpenPr?: () => void;
   /** When set, the status/priority/effort/assignee/due indicators become pickers. */
   onUpdate?: (patch: IssueUpdateInput) => void;
@@ -731,11 +730,11 @@ export const IssueCardBody = memo(function IssueCardBody({
     issue.objective_id && objectiveMap
       ? objectiveMap.get(issue.objective_id) ?? null
       : null;
-  // Mémoïsé, et sur les 400 premiers caractères : trois lignes tronquées n'en
-  // demandent pas plus, et le reste du corps ne sera jamais lu (MIN-316).
-  // Les listes des pickers, mémoïsées (MIN-316) : `[...map.values()]` est un
-  // tableau neuf à chaque rendu, donc un `options` neuf pour chaque picker, donc
-  // toutes leurs icônes JSX refabriquées — pour des menus FERMÉS.
+  // Memoized, and limited to the first 400 characters: three truncated lines
+  // need no more, and the rest of the body is never read (MIN-316).
+  // Picker lists are memoized (MIN-316): `[...map.values()]` is a new array on
+  // every render, which creates new `options` for every picker and rebuilds all
+  // their JSX icons — even for CLOSED menus.
   const memberList = useMemo(() => [...memberMap.values()], [memberMap]);
   const categoryList = useMemo(() => [...categoryMap.values()], [categoryMap]);
 
@@ -759,7 +758,7 @@ export const IssueCardBody = memo(function IssueCardBody({
   const setDueDate = onUpdate
     ? (date: string | null) => onUpdate({ due_date: date })
     : undefined;
-  // Récurrence et échéance partent ensemble, en une seule écriture (MIN-136).
+  // Recurrence and due date are sent together in one write (MIN-136).
   const setRecurrence = onUpdate
     ? (next: { due_date: string | null; recurrence: RecurrenceCadence | null }) =>
         onUpdate(next)
@@ -768,11 +767,11 @@ export const IssueCardBody = memo(function IssueCardBody({
   return (
     <div
       className={cn(
-        // Les cartes sont posées sur la colonne : en light mode, un contour et
-        // un shadow noirs autour d'un contenu blanc formaient une bande trop
-        // présente. Le contraste actuel reste utile sur le fond sombre.
+        // Cards sit on the column: in light mode, a border and black shadow
+        // around white content created an overly prominent band. The current
+        // contrast remains useful on a dark background.
         "flex flex-col gap-2 rounded-xl border border-border/60 p-3 text-left shadow-none dark:border-border dark:shadow-xs",
-        // Sélection groupée (MIN-75) : fond bleuté plutôt qu'un liseré.
+        // Bulk selection (MIN-75): blue-tinted background instead of an outline.
         selected ? "bg-primary/10" : "bg-card",
         dragging && "cursor-grabbing shadow-lg"
       )}
@@ -785,7 +784,7 @@ export const IssueCardBody = memo(function IssueCardBody({
         </div>
       )}
 
-      {/* Identifier (préfixé des icônes cycle / intégration le cas échéant) + assignee */}
+      {/* Identifier (prefixed by cycle / integration icons when applicable) + assignee */}
       <div className="flex items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-1 font-mono text-[11px] text-muted-foreground">
           {inCurrentCycle && (
@@ -819,8 +818,8 @@ export const IssueCardBody = memo(function IssueCardBody({
             ) : (
               <span>{issueIdentifier(projectKey, parentNumber)}</span>
             ))}
-          {/* Le chevron seul ne dit pas ce qu'est le préfixe : sur un sous-ticket,
-              survoler « › MIN-42 » nomme la relation — « Sous-ticket de MIN-12 ». */}
+          {/* The chevron alone does not explain the prefix: on a sub-issue,
+              hovering “› MIN-42” names the relation — “Sub-issue of MIN-12”. */}
           {parentNumber == null ? (
             <span className="truncate">{issueIdentifier(projectKey, issue.number)}</span>
           ) : (
@@ -944,10 +943,10 @@ export const IssueCard = memo(function IssueCard({
   memberMap: Map<string, Member>;
   categoryMap: Map<string, Category>;
   objectiveMap?: Map<string, Objective>;
-  /** Le ticket PARENT, quand celui-ci est un sous-ticket : la carte affiche son
-      identifiant et un chevron avant le sien, et le clic l'ouvre. L'objet
-      plutôt que son seul numéro — c'est ce qui permet de lier `onOpenIssue`
-      DANS la carte, donc de garder les props stables (MIN-316). */
+  /** The PARENT ticket, when this is a sub-issue: the card shows its
+      identifier and a chevron before its own, and clicking opens it. The object
+      rather than only its number is what lets `onOpenIssue` be bound INSIDE the
+      card while keeping props stable (MIN-316). */
   parent?: Issue | null;
   relations?: ChipRelation[];
   /** All project issues — candidates for the "add relation" picker. */
@@ -961,24 +960,24 @@ export const IssueCard = memo(function IssueCard({
     targetId: string
   ) => void;
   onOpenPlan?: (issue: Issue) => void;
-  /** Ouvre le panneau du ticket. **Prend le ticket en argument**, comme
-      `onUpdateIssue` le fait déjà : une fléchée liée par la colonne serait neuve
-      à chaque rendu et traverserait `memo` sans le voir (MIN-316). */
+  /** Opens the ticket panel. **Takes the ticket as an argument**, as
+      `onUpdateIssue` already does: an arrow function bound by the column would
+      be new on every render and bypass `memo` (MIN-316). */
   onOpenIssue: (issue: Issue) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
   onSetCategories: (issueId: string, ids: string[]) => void;
-  /** Corbeille : quand le board le câble, le clic droit gagne « Déplacer vers
-      la corbeille » (confirmation avant, comme dans le panneau d'issue). */
+  /** Trash: when wired by the board, right-click gains “Move to trash”
+      (with confirmation first, as in the issue panel). */
   onDelete?: (issueId: string) => Promise<void>;
-  /** Actions de clic droit fournies par le board (ajout/retrait de cycle —
-      MIN-32). **Une fabrique, pas un tableau** : elle n'est appelée qu'à
-      l'OUVERTURE du menu (MIN-316). */
+  /** Right-click actions supplied by the board (add/remove from cycle —
+      MIN-32). **A factory, not an array**: it is called only when the menu
+      OPENS (MIN-316). */
   buildMenuActions?: (issue: Issue) => ContextMenuAction[];
   /** The issue belongs to MY current cycle — forwarded to the card body. */
   inCurrentCycle?: boolean;
   selected?: boolean;
-  /** La carte part avec le glisser en cours sans être celle qu'on tient : c'est
-      le cas des autres tickets sélectionnés, qui s'estompent avec elle. */
+  /** The card moves with the active drag without being the one held: this is
+      the case for other selected tickets, which fade with it. */
   dragging?: boolean;
   onSelect?: (issueId: string) => void;
 }) {
@@ -990,42 +989,42 @@ export const IssueCard = memo(function IssueCard({
   const tCommon = useTranslations("Common");
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  // Le sortable ne sert plus qu'à DEUX choses : saisir la carte, et être une
-  // cible de survol. Il n'anime plus rien — ni décalage pendant le glisser
-  // (`NO_SHIFT_STRATEGY`), ni FLIP après le dépôt (`animateLayoutChanges`).
-  // Ce FLIP était le doublon : le cache optimiste replace déjà la carte à son
-  // arrivée, et dnd-kit rejouait par-dessus le trajet depuis l'ancienne place —
-  // deux animations pour un déplacement, d'où le sursaut au lâcher.
-  // `columnStatus` est ce que la détection de collision lit pour rattacher une
-  // carte à sa colonne (lib/board-dnd.ts).
+  // The sortable now serves only TWO purposes: grabbing the card and acting as
+  // a hover target. It no longer animates anything — neither the shift during
+  // dragging (`NO_SHIFT_STRATEGY`) nor the FLIP after dropping (`animateLayoutChanges`).
+  // That FLIP was redundant: the optimistic cache already moves the card on
+  // arrival, and dnd-kit replayed the path from the old position on top of it —
+  // two animations for one move, hence the jump on release.
+  // `columnStatus` is what collision detection reads to attach a card to its
+  // column (lib/board-dnd.ts).
   const { attributes, listeners, setNodeRef, isDragging } = useSortable({
     id: issue.id,
     data: { columnStatus: issue.status } satisfies CardDragData,
     animateLayoutChanges: NO_LAYOUT_ANIMATION,
   });
   const agentActive = useAgentActive(issue.id);
-  // Une run d'agent est ACTIVE sur l'issue → l'action OUVRE sa conversation. Sinon
-  // (aucune run, ou toutes terminées) elle en LANCE une nouvelle, à froid (MIN-68).
+  // An agent run is ACTIVE on the issue → the action OPENS its conversation.
+  // Otherwise (no run, or all completed), it LAUNCHES a new one from scratch (MIN-68).
   const agentHasSession = useAgentHasSession(issue.id);
   const { agentsAllowed } = usePlanGates();
-  // Agent + PR indisponibles sans dépôt lié (MIN-80) : le serveur rejette de toute
-  // façon un lancement `noRepo`, on retire donc l'option en amont. Permissif tant
-  // que la requête charge → aucun flash sur le cas courant (projet AVEC dépôt).
+  // Agent + PR are unavailable without a linked repository (MIN-80): the server
+  // rejects a `noRepo` launch anyway, so remove the option early. Stay permissive
+  // while the query loads → no flash in the common case (project WITH a repository).
   const { link: repoLink, loading: repoLinkLoading } = useProjectGitLinkQuery(
     issue.project_id
   );
   const agentsEnabled = agentsAllowed && (repoLinkLoading || repoLink != null);
-  // La PR du ticket → chip sur la carte (si elle appelle encore une action) et
-  // entrée « Voir la pull request » dans le menu (quel que soit son état).
-  // `?pr=` et non `?run=` : le lien doit marcher aussi pour une PR qu'aucun run
-  // n'a ouverte — une PR humaine, ou une PR rattachée à la main (MIN-163).
+  // The ticket's PR → chip on the card (if it still calls for action) and
+  // “View pull request” in the menu (whatever its state).
+  // `?pr=` rather than `?run=`: the link must also work for a PR that no run
+  // has opened — a human PR, or a PR linked manually (MIN-163).
   const pr = useIssuePr(issue.id);
   const router = useRouter();
 
-  // Les liaisons de la carte, faites ICI plutôt que par la colonne (MIN-316).
-  // Les props reçues prennent le ticket en argument et sont donc stables d'un
-  // rendu à l'autre ; ce sont ces crochets-là qui les referment sur `issue` sans
-  // casser la mémoïsation de la carte.
+  // Card bindings are made HERE rather than by the column (MIN-316).
+  // The received props take the ticket as an argument and are therefore stable
+  // between renders; these callbacks close over `issue` without breaking the
+  // card's memoization.
   const openIssue = useCallback(() => onOpenIssue(issue), [onOpenIssue, issue]);
 
   // Idem pour le menu de raccourcis (MIN-316) : trois tableaux neufs par rendu.
@@ -1050,9 +1049,9 @@ export const IssueCard = memo(function IssueCard({
     ? () => router.push(`/pull-requests?pr=${pr.prId}`)
     : undefined;
 
-  // Drop de fichiers depuis l'OS directement sur la carte (MIN-24) — chaque
-  // fichier est enregistré sur l'issue dès que son upload aboutit. Distinct du
-  // drag dnd-kit (pointer events) : aucun conflit.
+  // Drop files from the OS directly onto the card (MIN-24) — each file is
+  // recorded on the issue once its upload completes. Distinct from dnd-kit
+  // drag (pointer events): no conflict.
   const identifier = issueIdentifier(projectKey, issue.number);
   const uploads = useAttachmentUploads(() => `projects/${issue.project_id}`, {
     onUploaded: (input, localId) => {
@@ -1068,26 +1067,26 @@ export const IssueCard = memo(function IssueCard({
     },
   });
   const drop = useFileDrop(uploads.addFiles);
-  // Menu contextuel (clic droit) — position viewport du pointeur, null = fermé.
+  // Context menu (right-click) — pointer viewport position, null = closed.
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(
     null
   );
-  // Position mémorisée du dernier clic droit : le picker de relation s'ouvre au
-  // même endroit que le menu qui vient de se fermer.
+  // Remembered position of the last right-click: the relation picker opens in
+  // the same place as the menu that just closed.
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
-  // Relation en cours d'ajout (type choisi) → ouvre le picker de cible.
+  // Relation being added (type chosen) → opens the target picker.
   const [relationType, setRelationType] = useState<IssueRelationType | null>(null);
-  // Confirmation avant la corbeille (entrée « Déplacer vers la corbeille »).
+  // Confirmation before trash (the “Move to trash” entry).
   const [confirmDelete, setConfirmDelete] = useState(false);
-  // « Personnalisé » : le dialog de consigne libre, ouvert soit pour copier le
-  // prompt, soit pour lancer l'agent (`null` = fermé).
+  // “Custom”: the free-form prompt dialog, opened either to copy the prompt or
+  // launch the agent (`null` = closed).
   const [customTarget, setCustomTarget] = useState<CustomPromptTarget | null>(null);
-  // Agent de code sur ce ticket (MIN-46) — menu clic droit + raccourci ⇧A. Redirige
-  // vers la page Agents plutôt que d'ouvrir une modal. Deux points d'entrée :
+  // Code agent for this ticket (MIN-46) — right-click menu + ⇧A shortcut. Redirects
+  // to the Agents page rather than opening a modal. Two entry points:
   //  • openAgentSession — rouvre la session existante (sa run la plus active, `?issue=`) ;
   //  • startNewAgentSession — pose un brouillon de composition optimiste et ouvre son
-  //    composer (`?compose=`), lançant une session NEUVE même si le ticket en a déjà
-  //    une (nouvelle run sur le ticket), exactement comme le bouton du panneau d'issue.
+  //    composer (`?compose=`), launching a NEW session even if the ticket already has
+  //    one (a new run on the ticket), exactly like the issue-panel button.
   const openAgentSession = () => {
     router.push(`/agents?issue=${issue.id}`);
   };
@@ -1108,49 +1107,49 @@ export const IssueCard = memo(function IssueCard({
     router.push(`/agents?compose=${issue.id}`);
   };
   const startNewAgentSession = () => {
-    // « Implémenter le ticket » arrive TOUJOURS avec sa consigne pré-écrite
-    // (contexte du ticket, adaptée à son plan / effort) — comme les trois autres
-    // façons de travailler du même sous-menu. Elle partait vide quand le ticket
-    // avait déjà une session, au motif que le contexte était hérité : de la place
-    // de l'utilisateur, la même entrée de menu remplissait le composer une fois
-    // sur deux, sans que rien n'annonce la différence.
+    // “Implement the ticket” ALWAYS arrives with its pre-written prompt
+    // (ticket context, adapted to its plan / effort) — like the other three
+    // ways of working in the same submenu. It used to be empty when the ticket
+    // already had a session, on the assumption that the context was inherited:
+    // from the user's perspective, the same menu entry filled the composer only
+    // every other time, without explaining the difference.
     composeAgentSession(
       `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`
     );
   };
-  // Un plan existe déjà → les entrées « plan » (menu ⋯, prompt copié, agent)
-  // basculent de « générer » à « vérifier ».
+  // A plan already exists → the “plan” entries (⋯ menu, copied prompt, agent)
+  // switch from “generate” to “verify”.
   const issueHasPlan = hasPlanTasks(issue.plan);
-  // « Générer un plan » / « Vérifier le plan » : session neuve dont la consigne
-  // est de CADRER le ticket — écrire le plan s'il n'en a pas, le relire point
-  // par point s'il en a déjà un, puis s'arrêter avant d'implémenter. `intent:
-  // "plan"` : le ticket ne passe pas « en cours », cadrer n'est pas commencer.
+  // “Generate a plan” / “Verify the plan”: a new session whose prompt is to
+  // FRAME the ticket — write the plan if it has none, review it point by point
+  // if it already has one, then stop before implementing. `intent:
+  // "plan"`: the ticket does not go "in progress", framing is not starting.
   const writePlanWithAgent = () => {
     composeAgentSession(
       `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentPlanPromptVariant(issue)}`)}`,
       "plan"
     );
   };
-  // « Vérifier l'implémentation » : session neuve qui relit le travail DÉJÀ fait
-  // face au plan et aux commentaires du ticket, puis corrige les bugs prouvés.
-  // `intent: "verify"` : le ticket ne bouge pas — contrôler du travail fait
-  // n'est pas le commencer, et un ticket en revue doit y rester.
+  // “Check implementation”: new session that rereads the work ALREADY done
+  // facing the plan and the ticket comments, then fixes the proven bugs.
+  // `intent: "verify"`: the ticket does not move — check the work done
+  // is not the start, and a review ticket must remain there.
   const verifyWithAgent = () => {
     composeAgentSession(
       `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent("launchPrompt.verifyImplementation")}`,
       "verify"
     );
   };
-  // ⇧A : ticket déjà pourvu d'une session → on l'ouvre ; sinon on en démarre une neuve.
-  // Plan sans agents (MIN-72) : le raccourci est inerte, les entrées de menu absentes.
+  // ⇧A: ticket already with a session → we open it; otherwise we start a new one.
+  // Plan without agents (MIN-72): the shortcut is inert, the menu entries absent.
   const launchAgent = () => {
     if (!agentsEnabled) return;
     if (agentHasSession) openAgentSession();
     else startNewAgentSession();
   };
 
-  // Candidats du picker : les autres issues OUVERTES du projet, hors celles
-  // déjà liées — lier à du travail terminé/annulé n'a pas de sens (un bloqueur
+  // Picker candidates: the other OPEN issues of the project, excluding those
+  // already linked — linking to completed/canceled work makes no sense (a blocker
   // clos ne bloque plus).
   const relationCandidates = useMemo(() => {
     if (!candidateIssues) return [];
@@ -1159,12 +1158,12 @@ export const IssueCard = memo(function IssueCard({
       (i) => i.id !== issue.id && !linked.has(i.id) && !isClosedStatus(i.status)
     );
   }, [candidateIssues, relations, issue.id]);
-  // Contexte commun aux deux prompts copiables (implémenter le ticket, écrire
-  // son plan) : relations et catégories, résolues en noms lisibles.
+  // Context common to the two copyable prompts (implement the ticket, write
+  // its plan): relations and categories, resolved into readable names.
   const promptContext = () => {
-    // Relations de l'issue (type + identifiant + titre de l'autre issue) — le
-    // titre est résolu depuis candidateIssues (la liste complète du projet),
-    // qui n'existe que dans l'app authentifiée : aucune fuite côté board public.
+    // Relationships of the issue (type + identifier + title of the other issue) — the
+    // title is resolved from candidateIssues (the complete list of the project),
+    // which only exists in the authenticated app: no leak on the public board side.
     const titleById = new Map((candidateIssues ?? []).map((i) => [i.id, i.title]));
     return {
       relations: (relations ?? []).map((r) => ({
@@ -1172,7 +1171,7 @@ export const IssueCard = memo(function IssueCard({
         identifier: issueIdentifier(projectKey, r.otherNumber),
         title: titleById.get(r.otherId) ?? "",
       })),
-      // Noms des catégories (les IDs vivent sur l'issue, les noms dans categoryMap).
+      // Category names (IDs live on the issue, names in categoryMap).
       categories: issue.category_ids
         .map((cid) => categoryMap.get(cid)?.name)
         .filter((name): name is string => !!name),
@@ -1180,18 +1179,18 @@ export const IssueCard = memo(function IssueCard({
   };
 
   const copyPrompt = async () => {
-    // Copier un prompt, c'est confier le travail à quelqu'un d'autre : la chaîne
-    // qui attendait ce ticket en sursis s'annule (MIN-147). Dans le callback et
-    // pas dans le menu — ⇧P l'appelle directement.
+    // Copying a prompt means entrusting the work to someone else: the channel
+    // who was waiting for this suspended ticket is canceled (MIN-147). In the callback and
+    // not in the menu — ⇧P calls it directly.
     handOffIssueApi(issue.id);
-    // MIN-20 : copier le prompt démarre le ticket (option activée par défaut,
-    // désactivable dans Compte → Préférences). On n'avance que les statuts
-    // pré-travail, et le toast ne signale le déplacement que s'il a eu lieu.
+    // MIN-20: copy the prompt starts the ticket (option enabled by default,
+    // can be deactivated in Account → Preferences). We only advance the statutes
+    // pre-work, and the toast only signals the trip if it has taken place.
     const autoStart =
       resolvePromptCopyAutoStart(user?.user_metadata) &&
       shouldAutoStartOnPromptCopy(issue.status);
-    // Le XML copié doit refléter l'état RÉEL après déplacement : si on passe le
-    // ticket « En cours », le prompt le décrit déjà `in_progress`, pas l'ancien.
+    // The copied XML must reflect the REAL state after movement: if we pass the
+    // “In progress” ticket, the prompt already describes it `in_progress`, not the old one.
     const promptIssue = autoStart
       ? { ...issue, status: "in_progress" as const }
       : issue;
@@ -1211,12 +1210,12 @@ export const IssueCard = memo(function IssueCard({
     }
   };
 
-  // « Générer un plan » / « Vérifier le plan » côté prompt : la consigne de
-  // cadrage, pour un agent externe — `buildIssuePlanPrompt` bascule seul sur la
-  // relecture quand le plan existe. Pas de démarrage automatique : planifier
-  // n'est pas commencer.
+  // “Generate a plan” / “Check the plan” on the prompt side: the instruction
+  // framing, for an external agent — `buildIssuePlanPrompt` switches alone to the
+  // rereading when the plan exists. No automatic start: schedule
+  // is not starting.
   const copyPlanPrompt = async () => {
-    // Prise en main : la chaîne en sursis s'annule (MIN-147).
+    // Getting started: the suspended chain is canceled (MIN-147).
     handOffIssueApi(issue.id);
     await navigator.clipboard.writeText(
       buildIssuePlanPrompt({
@@ -1232,11 +1231,11 @@ export const IssueCard = memo(function IssueCard({
     );
   };
 
-  // « Vérifier l'implémentation » côté prompt copié. Pas de démarrage
-  // automatique : on relit du travail déjà fait, on ne le commence pas — et un
-  // ticket resté en amont ne doit pas avancer parce qu'on demande un contrôle.
+  // “Check implementation” prompt side copied. No start
+  // automatic: we reread work already done, we don’t start it — and a
+  // Ticket remaining upstream must not advance because a check is requested.
   const copyVerifyPrompt = async () => {
-    // Prise en main : la chaîne en sursis s'annule (MIN-147).
+    // Getting started: the suspended chain is canceled (MIN-147).
     handOffIssueApi(issue.id);
     await navigator.clipboard.writeText(
       buildIssueVerifyPrompt({
@@ -1250,10 +1249,10 @@ export const IssueCard = memo(function IssueCard({
     toast.success(t("verifyPromptCopied"));
   };
 
-  // « Personnalisé » : la consigne saisie dans le dialog remplace la consigne
-  // toute faite — le contexte du ticket, lui, reste fourni par minddy (bloc
-  // <issue> du prompt copié ; contexte de session côté agent Numo). Aucun
-  // démarrage automatique : on ne sait pas si cette consigne est du travail.
+  // “Customized”: the instruction entered in the dialog replaces the instruction
+  // ready made — the context of the ticket remains provided by minddy (block
+  // <issue> of the copied prompt; session context on the Numo agent side). None
+  // automatic start: we do not know if this instruction is work.
   const runCustomPrompt = async (
     instructions: string,
     target: CustomPromptTarget
@@ -1280,13 +1279,13 @@ export const IssueCard = memo(function IssueCard({
     toast.success(t("promptCopied"));
   };
 
-  // ⚠ Des enveloppes STABLES, pas les handlers eux-mêmes (MIN-316).
+  // ⚠ STABLE envelopes, not the handlers themselves (MIN-316).
   //
-  // `useAgentMenuActions` a ses onze paramètres en dépendances de son `useMemo`.
-  // Les handlers ci-dessus sont fabriqués dans le corps du composant : passés
-  // tels quels, le mémo ne tombait jamais juste et refabriquait ~20 objets
-  // d'action et ~16 icônes JSX par carte et par rendu — pour un menu FERMÉ.
-  // `useStableCallback` fige leur identité sans figer ce qu'ils font.
+  // `useAgentMenuActions` has its eleven parameters as dependencies of its `useMemo`.
+  // The handlers above are made in the component body: passed
+  // as is, the memo never got right and remanufactured ~20 objects
+  // action and ~16 JSX icons per card per render — for a CLOSED menu.
+  // `useStableCallback` freezes their identity without freezing what they do.
   const agentActions = useAgentMenuActions({
     agentsEnabled,
     hasSession: agentHasSession,
@@ -1302,11 +1301,11 @@ export const IssueCard = memo(function IssueCard({
     onOpenSession: useStableCallback(() => openAgentSession()),
   });
 
-  // Raccourcis clavier au survol : S/P/E/A/L/D/O ouvrent le picker au curseur,
-  // Espace ouvre le ticket (comme un clic), Shift+P copie le prompt, Shift+A
-  // ouvre l'agent (la dernière conversation du ticket, ou un composer vierge).
-  // Le dialog « Personnalisé » les suspend : il couvre la carte, et une touche
-  // frappée là-dedans ne doit pas ouvrir un picker sur le ticket en dessous.
+  // Keyboard shortcuts on hover: S/P/E/A/L/D/O open the picker on cursor,
+  // Space opens the ticket (like a click), Shift+P copies the prompt, Shift+A
+  // opens the agent (the last conversation of the ticket, or a blank dialer).
+  // The “Custom” dialog suspends them: it covers the card, and a key
+  // hit in there should not open a picker on the ticket below.
   const { containerProps, menuState, openField, closeMenu } =
     useIssueFieldShortcuts(!isDragging && !customTarget, {
       " ": openIssue,
@@ -1315,8 +1314,8 @@ export const IssueCard = memo(function IssueCard({
     });
   const { ref: shortcutsRef, ...hoverProps } = containerProps;
 
-  // Ouvre le picker d'un champ au point du dernier clic droit — là où le menu
-  // qui vient de le proposer était affiché, comme pour le picker de relation.
+  // Opens the picker of a field at the point of the last right click — where the menu
+  // who just proposed it was displayed, as for the relationship picker.
   const openFieldAtPointer = (field: ShortcutField) => {
     const at = pointerRef.current;
     if (at) openField(field, at);
@@ -1332,14 +1331,14 @@ export const IssueCard = memo(function IssueCard({
     }
   };
 
-  // « @ » (MIN-105) : la carte s'inscrit auprès du board, qui écoute la touche
-  // et retrouve au moment de la frappe celle qui est sous le pointeur.
+  // “@” (MIN-105): the card registers with the board, which listens to the key
+  // and finds at the time of typing the one which is under the pointer.
   const askNumoRef = useAskNumoTarget(issue);
 
-  // dnd-kit, les raccourcis de champ et « @ » veulent tous les trois la div
-  // racine. Fusion mémoïsée (les trois refs sont stables) : une nouvelle
-  // identité à chaque rendu ferait détacher puis rattacher les trois. Ne rien
-  // renvoyer, pour que React reste sur le rappel `null` au démontage.
+  // dnd-kit, field shortcuts and '@' all three want the div
+  // root. Merger memorized (the three refs are stable): a new
+  // identity with each rendering would cause the three to be detached and then reattached. Do nothing
+  // return, so that React stays on the `null` callback on unmount.
   const setCardRef = useCallback(
     (el: HTMLDivElement | null) => {
       setNodeRef(el);
@@ -1350,28 +1349,28 @@ export const IssueCard = memo(function IssueCard({
   );
 
   /**
-   * Le menu du clic droit, construit SEULEMENT quand il s'ouvre (MIN-316).
+   * The right-click menu, builds ONLY when it opens (MIN-316).
    *
-   * Il coûte une vingtaine d'objets d'action, autant d'icônes JSX et une
-   * douzaine d'appels de traduction — par carte, et il était refait à chaque
-   * rendu de chaque carte du board, alors qu'un menu fermé ne rend rien du tout
-   * (`IssueContextMenu` sort sur `position === null`).
+   * It costs around twenty action items, as many JSX icons and one
+   * dozen translation calls — by card, and it was redone each time
+   * rendering of each card on the board, while a closed menu renders nothing at all
+   * (`IssueContextMenu` exits on `position === null`).
    */
   const lastMenuActions = useRef<ContextMenuAction[]>(NO_ACTIONS);
   const menuActions = useMemo<ContextMenuAction[]>(() => {
-    // ⚠ Fermé, on rend la DERNIÈRE liste construite, pas un tableau vide.
-    // `IssueContextMenu` ne démonte pas son contenu à la fermeture — Radix le
-    // garde monté le temps de son animation de sortie (`data-closed:animate-out`
-    // dans mangue-ui) —, donc le vider ici viderait le menu À L'ÉCRAN avant
-    // qu'il ne disparaisse. Avant la première ouverture, la liste est vide et
-    // rien n'a jamais été rendu : c'est là que l'économie se fait.
+    // ⚠ Closed, we return the LAST constructed list, not an empty array.
+    // `IssueContextMenu` does not unmount its contents when closed — Radix
+    // keeps mounted for the duration of its exit animation (`data-closed:animate-out`
+    // in mango-ui) —, so emptying it here would empty the ON-SCREEN menu before
+    // that it does not disappear. Before the first opening, the list is empty and
+    // nothing has ever been returned: that’s where the economy happens.
     if (!menuPosition) return lastMenuActions.current;
     return [
-    // Prompt et agent : deux sous-menus « Générer un plan » / « Implémenter le
-    // ticket », partagés avec le panneau latéral. L'agent de code travaille sur
-    // la PAGE Agents ; ⇧P et ⇧A restent sur la branche « implémenter ».
+    // Prompt and agent: two submenus “Generate a plan” / “Implement the
+    // ticket”, shared with the side panel. The code officer is working on
+    // the Agents PAGE; ⇧P and ⇧A remain on the “implement” branch.
     ...agentActions,
-    // Ouvrir la pull request — proposé uniquement quand une PR existe pour le ticket.
+    // Open pull request — only offered when a PR exists for the ticket.
     ...(agentsEnabled && pr && openPr
       ? [
           {
@@ -1403,9 +1402,9 @@ export const IssueCard = memo(function IssueCard({
           },
         ]
       : []),
-    // Objectif et échéance ne s'affichent sur la carte QUE lorsqu'ils sont
-    // posés : sans eux, la carte n'offre aucune prise pour les poser. Le menu
-    // rouvre alors le picker au pointeur — exactement ce que font O et D.
+    // Goal and deadline are ONLY displayed on the map when they are
+    // placed: without them, the card offers no socket for placing them. The menu
+    // then reopens the picker at the pointer — exactly what O and D do.
     ...(!issue.objective_id && objectiveMap && objectiveMap.size > 0
       ? [
           {
@@ -1482,8 +1481,8 @@ export const IssueCard = memo(function IssueCard({
   return (
     <div
       ref={setCardRef}
-      // Ce que le lasso du board cherche dans le DOM, et ce qu'il évite comme
-      // point de départ — une carte n'est pas du fond (cf. marquee-selection).
+      // What the board lasso looks for in the DOM, and what it avoids like
+      // starting point — a card is not from the background (see marquee-selection).
       data-issue-id={issue.id}
       {...attributes}
       {...listeners}
@@ -1543,17 +1542,17 @@ export const IssueCard = memo(function IssueCard({
             selected={selected}
           />
         );
-        // Agent en cours : liseré animé qui parcourt le bord (wrapper `AgentBeam`
-        // partagé). Le wrapper a `overflow: hidden` → on lui reporte l'ombre de
-        // la carte, qu'il rognerait sinon. À garder alignée sur celle du corps.
+        // Current agent: animated border that runs along the edge (wrapper `AgentBeam`
+        // sharing). The wrapper has `overflow: hidden` → we transfer the shadow of
+        // the card, which he would otherwise trim. To be kept aligned with that of the body.
         //
-        // `keepMounted` n'est PAS décoratif ici (MIN-302) : sans lui, le type de
-        // l'élément rendu à cette position change avec `agentActive`, et React
-        // ne réconcilie pas deux types différents — il démonte le sous-arbre et
-        // en monte un neuf. Or ce sous-arbre est le corps entier de la carte et
-        // ses six pickers : à chaque bascule du halo, leurs états locaux
-        // meurent, un picker ouvert s'efface sans animation de sortie, et le
-        // focus retombe sur <body>.
+        // `keepMounted` is NOT decorative here (MIN-302): without it, the type of
+        // the element rendered at this position changes with `agentActive`, and React
+        // does not reconcile two different types — it unmounts the subtree and
+        // get a new one. Now this subtree is the entire body of the map and
+        // its six pickers: at each shift of the halo, their local states
+        // die, an open picker clears without exit animation, and the
+        // focus falls back to <body>.
         return (
           <AgentBeam
             active={agentActive}
@@ -1587,9 +1586,9 @@ export const IssueCard = memo(function IssueCard({
           void runCustomPrompt(instructions, target);
         }}
       />
-      {/* Portalisé lui aussi, donc rendu dans l'arbre React de la carte : le
-          wrapper stoppe les événements qui, sans lui, remonteraient jusqu'au
-          clic (ouvrir le ticket) et au capteur de drag. */}
+      {/* Portalized too, therefore rendered in the React tree of the map: the
+          wrapper stops events which, without it, would go back to the
+          click (open the ticket) and the drag sensor. */}
       <div onClick={stop} onMouseDown={stop} onContextMenu={stop}>
         <ConfirmDeleteDialog
           open={confirmDelete}

@@ -6,13 +6,13 @@ import { resolveSendMode } from "@/lib/keyboard/send-shortcut";
 import { SendModeProvider } from "@/lib/keyboard/use-send-mode";
 
 /**
- * Le seul endroit qui relie le COMPTE au raccourci d'envoi.
+ * The only place that connects the ACCOUNT to the sending shortcut.
  *
- * Les composers lisent le contexte de [use-send-mode](@/lib/keyboard/use-send-mode) ;
- * eux ne connaissent pas Supabase, et c'est voulu (le board public monte les
- * mêmes champs sans compte). La lecture du `user_metadata` vit donc ici, dans la
- * coquille applicative — dessous, tout le monde a la préférence ; ailleurs, tout
- * le monde a le défaut.
+ * Composers read the context of [use-send-mode](@/lib/keyboard/use-send-mode);
+ * they don't know Supabase, and that's intentional (the public board raises the
+ * same fields without account). The reading of `user_metadata` therefore lives here, in the
+ * application shell — underneath, everyone has the preference; elsewhere, everything
+ * the world is flawed.
  */
 export function SendModeBoundary({ children }: { children: ReactNode }) {
   const { user } = useAuth();

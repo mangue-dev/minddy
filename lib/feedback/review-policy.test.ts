@@ -41,14 +41,14 @@ function decide(v: FeedbackReviewVerdict, p: FeedbackReviewSubject) {
   });
 }
 
-describe("resolveFeedbackReviewMode — les deux réglages projet", () => {
+describe("resolveFeedbackReviewMode — the two project settings", () => {
   const mode = (
     reviewEnabled: boolean,
     hasBudget: boolean,
     skipOverBudget: boolean
   ) => resolveFeedbackReviewMode({ reviewEnabled, hasBudget, skipOverBudget });
 
-  it("revoit par défaut : revue armée et budget disponible", () => {
+  it("reviews by default: review enabled and budget available", () => {
     expect(mode(true, true, false)).toBe("review");
   });
 
@@ -56,11 +56,11 @@ describe("resolveFeedbackReviewMode — les deux réglages projet", () => {
     expect(mode(false, true, false)).toBe("publish");
   });
 
-  it("retient quand le budget est épuisé et que la bascule n'est pas demandée", () => {
+  it("keeps the review when the budget is exhausted and switching is not requested", () => {
     expect(mode(true, false, false)).toBe("hold");
   });
 
-  it("publie sans revue quand le budget est épuisé et la bascule demandée", () => {
+  it("publishes without a review when the budget is exhausted and switching is requested", () => {
     expect(mode(true, false, true)).toBe("publish");
   });
 
@@ -68,7 +68,7 @@ describe("resolveFeedbackReviewMode — les deux réglages projet", () => {
     expect(mode(true, true, true)).toBe("review");
   });
 
-  it("revue désarmée : le budget ne change plus rien", () => {
+  it("review disabled: the budget no longer changes anything", () => {
     expect(mode(false, false, false)).toBe("publish");
     expect(mode(false, false, true)).toBe("publish");
   });
@@ -82,7 +82,7 @@ describe("decideFeedbackReview — publication", () => {
     expect(d.sensitivity).toBeNull();
   });
 
-  it("ne rétrograde pas un post déjà publié par l'équipe", () => {
+  it("does not downgrade a post already published by the team", () => {
     const d = decide(verdict({ isJunk: true }), subject({ reviewState: "published" }));
     expect(d.reviewState).toBe("published");
     expect(d.markSpam).toBe(false);
@@ -93,8 +93,8 @@ describe("decideFeedbackReview — publication", () => {
       verdict({ duplicateOf: "canonical", confidence: 0.99, categoryIds: ["cat-1"] }),
       subject({ status: "spam" })
     );
-    // Il sort de la file d'attente — sa revue est passée — mais n'est ni
-    // catégorisé, ni fusionné dans un vrai retour.
+    // He leaves the queue - his review has passed - but is neither
+    // categorized, nor merged into a real return.
     expect(d.reviewState).toBe("published");
     expect(d.mergeTargetId).toBeNull();
     expect(d.suggestTargetId).toBeNull();
@@ -106,12 +106,12 @@ describe("decideFeedbackReview — junk", () => {
   it("classe en spam un junk en attente", () => {
     const d = decide(verdict({ isJunk: true, reason: "spam publicitaire" }), subject());
     expect(d.markSpam).toBe(true);
-    // Sa revue a bien eu lieu : il quitte la file d'attente au passage.
+    // His review has taken place: he leaves the queue in the process.
     expect(d.reviewState).toBe("published");
     expect(d.moderationReason).toBe("spam publicitaire");
   });
 
-  it("ne fusionne jamais un junk, même très proche d'un post existant", () => {
+  it("never merges junk, even when very close to an existing post", () => {
     const d = decide(
       verdict({ isJunk: true, duplicateOf: "canonical", confidence: 0.99 }),
       subject()
@@ -120,14 +120,14 @@ describe("decideFeedbackReview — junk", () => {
     expect(d.suggestTargetId).toBeNull();
   });
 
-  it("ne catégorise pas un junk", () => {
+  it("does not categorize junk", () => {
     const d = decide(verdict({ isJunk: true, categoryIds: ["cat-1"] }), subject());
     expect(d.categoryIds).toEqual([]);
   });
 });
 
 describe("decideFeedbackReview — contenu sensible", () => {
-  it("force en privé un post public sensible et retient sa nature", () => {
+  it("makes a sensitive public post private and keeps its nature", () => {
     const d = decide(
       verdict({ isSensitive: true, sensitivityKind: "security", reason: "XSS exploitable" }),
       subject()
@@ -137,15 +137,15 @@ describe("decideFeedbackReview — contenu sensible", () => {
     expect(d.moderationReason).toBe("XSS exploitable");
   });
 
-  it("retombe sur `other` quand le modèle ne qualifie pas la sensibilité", () => {
+  it("falls back to `other` when the model does not classify sensitivity", () => {
     const d = decide(verdict({ isSensitive: true, sensitivityKind: null }), subject());
     expect(d.sensitivity).toBe("other");
   });
 
   it("privatise aussi la saisie interne", () => {
-    // Ce qu'un membre saisit n'est pas ce qu'il a écrit : c'est le retour d'un
-    // utilisateur, recopié à la main. Les données personnelles passent par là
-    // aussi, et l'exemption d'autrefois les publiait sans filet.
+    // What a member enters is not what he wrote: it is the return of a
+    // user, copied by hand. Personal data goes through there
+    // also, and the exemption of the past published them without a net.
     const d = decide(
       verdict({ isSensitive: true, sensitivityKind: "legal" }),
       subject({ source: "internal", reviewState: "published" })
@@ -154,12 +154,12 @@ describe("decideFeedbackReview — contenu sensible", () => {
     expect(d.sensitivity).toBe("legal");
   });
 
-  it("ne re-privatise pas un post déjà privé", () => {
+  it("does not make an already private post private again", () => {
     const d = decide(verdict({ isSensitive: true }), subject({ isPublic: false }));
     expect(d.forcePrivate).toBe(false);
   });
 
-  it("dégrade une fusion certaine en simple suggestion", () => {
+  it("downgrades a certain merge to a simple suggestion", () => {
     const d = decide(
       verdict({ isSensitive: true, duplicateOf: "canonical", confidence: 0.98 }),
       subject()
@@ -177,7 +177,7 @@ describe("decideFeedbackReview — doublons", () => {
     expect(d.suggestTargetId).toBeNull();
   });
 
-  it("suggère entre le plancher et le seuil", () => {
+  it("suggests between the floor and the threshold", () => {
     const d = decide(verdict({ duplicateOf: "canonical", confidence: 0.75 }), subject());
     expect(d.mergeTargetId).toBeNull();
     expect(d.suggestTargetId).toBe("canonical");
@@ -190,7 +190,7 @@ describe("decideFeedbackReview — doublons", () => {
     expect(d.suggestTargetId).toBeNull();
   });
 
-  it("ne catégorise pas un post qui part en fusion", () => {
+  it("does not categorize a post that is being merged", () => {
     const d = decide(
       verdict({ duplicateOf: "canonical", confidence: 0.97, categoryIds: ["cat-1"] }),
       subject()
@@ -199,7 +199,7 @@ describe("decideFeedbackReview — doublons", () => {
     expect(d.categoryIds).toEqual([]);
   });
 
-  it("catégorise un post seulement suggéré", () => {
+  it("categorizes a merely suggested post", () => {
     const d = decide(
       verdict({ duplicateOf: "canonical", confidence: 0.7, categoryIds: ["cat-1"] }),
       subject()

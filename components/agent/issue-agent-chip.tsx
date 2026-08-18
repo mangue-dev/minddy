@@ -12,13 +12,13 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * L'état de l'agent de code sur l'en-tête du panneau d'issue, en un chip — le
- * pendant panneau des indicateurs de la carte (MIN-46 / MIN-68). Il ne montre que
- * ce qui appelle une action :
- *   • l'agent TRAVAILLE → visage Numo animé, clic = ouvrir la conversation ;
- *   • sinon, une PR vivante (ouverte, brouillon) ou livrée (fusionnée) → clic = la review.
- * Rien à dire (aucune run, PR fermée) → rien affiché. Tout le reste — lancer,
- * nouvelle session, ouvrir — vit dans le menu « ⋯ » à droite de l'en-tête.
+ * The agent status code on the exit panel header, in a chip — the
+ * during board indicator panel (MIN-46 / MIN-68). It only shows
+ * what calls for action:
+ * • the agent is WORKING → animated Numo face, click = open the conversation;
+ * • otherwise, a live PR (open, draft) or delivered (merged) → click = the review.
+ * Nothing to say (no run, PR closed) → nothing displayed. Everything else — throw,
+ * new session, open — lives in the “⋯” menu to the right of the header.
  */
 export function IssueAgentChip({
   working,
@@ -26,17 +26,17 @@ export function IssueAgentChip({
   onOpenConversation,
   onOpenPr,
 }: {
-  /** Une run de l'issue est queued/running. */
+  /** A run of the issue is queued/running. */
   working: boolean;
-  /** La PR du ticket, tous états confondus — le chip écarte lui-même `closed`. */
+  /** The PR of the ticket, all states combined — the chip itself discards `closed`. */
   pr: IssuePr | null;
   onOpenConversation: () => void;
   onOpenPr: () => void;
 }) {
   const t = useTranslations("Agent");
 
-  // Au travail : l'agent EST l'information. La PR, s'il y en a une, reste
-  // atteignable par le menu « ⋯ ».
+  // At work: the agent IS the information. RA, if there is one, remains
+  // accessible via the “⋯” menu.
   if (working) {
     return (
       <Tooltip>
@@ -55,8 +55,8 @@ export function IssueAgentChip({
     );
   }
 
-  // Une PR REFUSÉE n'appelle plus rien : le chip se tait. Le menu « ⋯ », lui, y
-  // mène quand même — c'est ce qui s'est passé sur ce ticket.
+  // A REFUSED PR no longer calls for anything: the chip remains silent. The “⋯” menu, there
+  // leads anyway — that's what happened on this ticket.
   if (!isPrWorthShowing(pr)) return null;
   const merged = pr?.state === "merged";
 

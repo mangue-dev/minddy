@@ -22,12 +22,12 @@ import type { ProjectDraft } from "./project-draft";
 interface ProjectsContextValue extends UseProjectsResult {
   /** Opens the shared "new project" wizard (mounted once here). */
   openCreateProject: () => void;
-  /** Mes brouillons de création, du plus récent au plus ancien. Ils prennent une
-      ligne dans la barre latérale, à la place du projet qu'ils deviendront. */
+  /** My creative drafts, from newest to oldest. They take a
+ line in the sidebar, in place of the project they will become. */
   projectDrafts: ProjectDraft[];
   saveProjectDraft: UseProjectDraftsResult["saveDraft"];
   deleteProjectDraft: UseProjectDraftsResult["deleteDraft"];
-  /** Rouvre le wizard sur un brouillon, à l'étape où il s'était arrêté. */
+  /** Reopens the wizard on a draft, at the stage where it left off. */
   openProjectDraft: (draft: ProjectDraft) => void;
   /** Reopens the wizard at the git step from a saved draft — used when a
       provider install/OAuth redirect comes back (`?setup=git`, MIN-62). */
@@ -47,7 +47,7 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
     if (!open) setResume(null);
   };
 
-  // Stable : `ProjectDraftResume` l'a en dépendance d'effet.
+  // Stable: `ProjectDraftResume` has it as an effect dependency.
   const resumeProjectDraft = useCallback(
     (draft: ProjectDraft, connectionId: string | null) => {
       setResume({ draft, connectionId, fromGit: true });
@@ -56,29 +56,29 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
     []
   );
 
-  // Objet neuf à chaque fois, y compris sur le même brouillon : c'est ce qui
-  // redéclenche l'initialisation du wizard (rouvrir deux fois le même brouillon
-  // doit le remettre à son étape, pas laisser l'état de la fois précédente).
+  // New object every time, including on the same draft: this is what
+  // retriggers the initialization of the wizard (reopen the same draft twice
+  // must return it to its stage, not leave the state of the previous time).
   const openProjectDraft = useCallback((draft: ProjectDraft) => {
     setResume({ draft, connectionId: null });
     setCreateOpen(true);
   }, []);
 
   /**
-   * ⚠ Stable, et pas une fléchée inline (MIN-315).
-   *
-   * Son identité est dans les dépendances de `commandGroups` ET de `sections`
-   * dans components/app-shell-chrome.tsx, donc de `paletteGroups` : une fléchée
-   * neuve à chaque rendu refabrique les trois. C'est le piège que
-   * components/mobile-account.tsx documente déjà mot pour mot.
-   */
+ * ⚠ Stable, and not an inline arrow (MIN-315).
+ *
+ * Its identity is in the dependencies of `commandGroups` AND `sections`
+ * in components/app-shell-chrome.tsx, so `paletteGroups`: a new arrow
+ * each time it is rendered rebuilds all three. This is the trap that
+ * components/mobile-account.tsx already documents verbatim.
+ */
   const openCreateProject = useCallback(() => {
     setResume(null);
     setCreateOpen(true);
   }, []);
 
-  // Value mémoïsée : un littéral re-rendrait tous les consommateurs à chaque
-  // rendu, et ce provider est re-rendu par `AuthProvider` au-dessus de lui.
+  // Stored Value: a literal would re-render all the consumers each time
+  // rendered, and this provider is re-rendered by `AuthProvider` above it.
   const value = useMemo(
     () => ({
       ...projects,

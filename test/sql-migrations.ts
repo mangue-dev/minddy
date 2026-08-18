@@ -28,11 +28,11 @@ export function readBaseline(): string {
   return readMigration(BASELINE_MIGRATION);
 }
 
-/** Ramène le dump pg_dump quoté à une forme stable pour tester sa sémantique. */
+/** Returns the quoted pg_dump dump to a stable form to test its semantics. */
 export function canonicalSql(sql: string): string {
   return sql
-    // Un dump peut aussi contenir un `"` dans une chaîne SQL (options ts_headline,
-    // par exemple). Ne déquote donc que les identifiants PostgreSQL ordinaires.
+    // A dump can also contain a `"` in an SQL string (options ts_headline,
+    // For example). So only unquote ordinary PostgreSQL identifiers.
     .replace(/"([A-Za-z_][A-Za-z0-9_ ]*)"/g, "$1")
     .replace(/\s+/g, " ")
     .trim()

@@ -49,9 +49,9 @@ export function useAccountActions(): {
   const { theme, setTheme } = useTheme();
   const isAdmin = useIsAdmin();
 
-  // Mémoïsé : le groupe « compte » est concaténé aux groupes de la palette, et
-  // une nouvelle identité à chaque rendu ferait reconstruire toutes les lignes
-  // de la palette (des milliers depuis MIN-91) à chaque rendu du shell.
+  // Memorized: the “count” group is concatenated to the palette groups, and
+  // a new identity on each rendering would rebuild all the lines
+  // of the palette (thousands since MIN-91) each time the shell renders.
   return useMemo(() => {
     const menuSections: AppNavSection[] = [
       {
@@ -119,9 +119,9 @@ export function useAccountActions(): {
             },
           ]
         : []),
-      // Copie dans le presse-papiers le prompt de synchronisation git (localisé
-      // FR/EN) prêt à coller dans un agent de code — pas de navigation, juste un
-      // writeText + toast, comme l'action « Copier le prompt » d'un ticket.
+      // Copy the git sync prompt to the clipboard (located
+      // FR/EN) ready to paste into a code agent — no navigation, just a
+      // writeText + toast, like the “Copy prompt” action of a ticket.
       {
         key: "cmd-git-sync-prompt",
         label: t("syncPrompt"),

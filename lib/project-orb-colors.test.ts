@@ -8,39 +8,36 @@ import {
 } from "./project-orb-colors";
 
 /**
- * La graine de l'orbe. Ce qui compte ici tient en une phrase : un projet qui n'a
- * jamais relancé son tirage garde la couleur qu'il avait — la colonne est
- * nullable pour ça, et une régression repeindrait tous les projets du jour au
- * lendemain, orbe, pilules de mention et mails d'invitation compris.
- */
+ * The seed of the orb. What matters here is in one sentence: a project that has never restarted its draw keeps the color it had — the column is nullable for that, and a regression would repaint all the projects from day to day.
+ * the next day, including orbs, mention pills and invitation emails.
 describe("projectOrbSeed", () => {
   const id = "11111111-1111-4111-8111-111111111111";
   const seed = "22222222-2222-4222-8222-222222222222";
 
-  it("retombe sur l'id tant que le tirage n'a pas été relancé", () => {
+  it("falls back to the id until the draw has been restarted", () => {
     expect(projectOrbSeed({ id, orb_seed: null })).toBe(id);
   });
 
-  it("prend la graine relancée quand il y en a une", () => {
+  it("takes the restarted seed when there is one", () => {
     expect(projectOrbSeed({ id, orb_seed: seed })).toBe(seed);
   });
 
-  it("traite une graine vide comme absente", () => {
+  it("treats an empty seed as absent", () => {
     expect(projectOrbSeed({ id, orb_seed: "" })).toBe(id);
   });
 
-  it("dit la même chose que `orbSeedOr`, camelCase compris", () => {
+  it("says the same thing as `orbSeedOr`, including camelCase", () => {
     expect(orbSeedOr(id, seed)).toBe(projectOrbSeed({ id, orb_seed: seed }));
     expect(orbSeedOr(id, undefined)).toBe(id);
   });
 
-  it("change le dessin — l'orbe, la pilule et le mail suivent la graine", () => {
+  it("changes the design — the orb, pill and mail follow the seed", () => {
     expect(projectOrbStyle(seed).hue).not.toBe(projectOrbStyle(id).hue);
     expect(projectOrbGradient(seed).base).not.toBe(projectOrbGradient(id).base);
   });
 });
 
-/** Des uuid v4 déterministes : un tirage aléatoire rendrait le test instable. */
+/** Deterministic v4 uuids: a random draw would make the test unstable. */
 function uuidFrom(n: number): string {
   const chunk = (x: number) => {
     let v = x >>> 0;
@@ -60,7 +57,7 @@ function uuidFrom(n: number): string {
   ].join("-");
 }
 
-/** Écart de teinte sur la roue, dans [0,180]. */
+/** Hue difference on the wheel, in [0.180]. */
 function hueGap(a: number, b: number): number {
   const d = Math.abs(a - b) % 360;
   return d > 180 ? 360 - d : d;
@@ -68,8 +65,8 @@ function hueGap(a: number, b: number): number {
 
 describe("projectOrbStyle", () => {
   it("rend toujours le même dessin pour la même graine", () => {
-    // Le contrat de base : l'orbe est une IDENTITÉ. Un tirage qui bougerait au
-    // rechargement ne serait plus l'icône de personne.
+    // The basic contract: the orb is an IDENTITY. A draw that would move
+    // reloading would no longer be anyone's icon.
     const seed = uuidFrom(42);
     expect(projectOrbStyle(seed)).toEqual(projectOrbStyle(seed));
     expect(projectOrbBaseColor(seed)).toBe(projectOrbBaseColor(seed));
@@ -84,18 +81,18 @@ describe("projectOrbStyle", () => {
       expect(s.hue2).toBeLessThan(360);
       expect(s.chroma).toBeGreaterThanOrEqual(0.1);
       expect(s.chroma).toBeLessThanOrEqual(0.185);
-      // La bande de clarté qui se lit sur fond clair COMME sur fond sombre, une
-      // fois les ±0,07 du dégradé pris en compte.
+      // The clarity band which can be read on a light background AS on a dark background, a
+      // times the ±0.07 of the gradient taken into account.
       expect(s.lightness).toBeGreaterThanOrEqual(0.56);
       expect(s.lightness).toBeLessThanOrEqual(0.74);
     }
   });
 
   it("tire ses sept traits indépendamment les uns des autres", () => {
-    // Le piège que le hachage salé évite : une teinte et une saturation qui
-    // montent ensemble redonneraient une seule dimension de variation, donc le
-    // problème qu'on vient de corriger. On le mesure par la corrélation de rang
-    // entre deux traits — nulle si les sels font leur travail.
+    // The pitfall that salty hashing avoids: a hue and saturation that
+    // go up together would give back a single dimension of variation, so the
+    // problem that we have just corrected. It is measured by the rank correlation
+    // between two lines — zero if the salts are doing their job.
     const n = 2000;
     const styles = Array.from({ length: n }, (_, i) => projectOrbStyle(uuidFrom(i)));
     const rank = (values: number[]) => {
@@ -125,7 +122,7 @@ describe("projectOrbStyle", () => {
     for (let i = 0; i < n; i++) {
       buckets[Math.floor(projectOrbStyle(uuidFrom(i)).hue / 30)]++;
     }
-    // 8,3 % attendus par secteur de 30° ; on laisse une marge large, c'est un
+    // 8.3% expected per 30° sector; we leave a wide margin, it is a
     // garde-fou contre un hachage qui s'effondrerait, pas un test de χ².
     for (const count of buckets) {
       expect(count / n).toBeGreaterThan(0.05);
@@ -134,11 +131,11 @@ describe("projectOrbStyle", () => {
   });
 
   it("ne retombe presque jamais sur la même orbe d'une relance à l'autre", () => {
-    // LE test de cette passe. La version d'origine ne tirait que la teinte, et
-    // l'œil ne sépare pas deux teintes à moins d'une soixantaine de degrés :
-    // une relance sur trois (34 % mesurés) rendait quelque chose de très
-    // proche. Deux orbes ne comptent ici comme « la même » que si les QUATRE
-    // traits qui portent la couleur sont voisins à la fois.
+    // THE test of this pass. The original version only pulled the tint, and
+    // the eye does not separate two shades at less than sixty degrees:
+    // one raise in three (34% measured) made something very
+    // close. Two orbs only count as "the same" here if all FOUR
+    // traits that carry color are neighbors at the same time.
     const pairs = 3000;
     let close = 0;
     for (let i = 0; i < pairs; i++) {
@@ -153,16 +150,16 @@ describe("projectOrbStyle", () => {
         close++;
       }
     }
-    // Mesuré à 3,8 % ; le seuil laisse de la place au bruit sans laisser passer
-    // un retour au tirage à une seule dimension.
+    // Measured at 3.8%; the threshold leaves room for noise without letting it pass
+    // a return to single-dimensional printing.
     expect(close / pairs).toBeLessThan(0.08);
   });
 });
 
 describe("projectOrbGradient", () => {
   it("rend trois couleurs sRGB valides, celles de l'orbe", () => {
-    // Le mail ne lit pas l'OKLCH : ces trois hexadécimaux SONT l'orbe, pour
-    // Outlook comme pour le reste. Un canal hors gamme sortirait `NaN`.
+    // The email does not read the OKLCH: these three hexadecimals ARE the orb, for
+    // Outlook as for the rest. An out-of-range channel would output `NaN`.
     for (let i = 0; i < 500; i++) {
       const { base, from, to } = projectOrbGradient(uuidFrom(i));
       for (const hex of [base, from, to]) {

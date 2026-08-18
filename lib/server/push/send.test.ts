@@ -4,17 +4,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PushPayload } from "./payload";
 
 /**
- * MIN-183 — l'entretien du parc d'abonnements.
+ * MIN-183 — maintenance of the subscription base.
  *
- * C'est la partie qu'on ne peut PAS voir en essayant l'app : un abonnement
- * meurt sans prévenir (PWA désinstallée, permission révoquée, données du site
- * effacées), et le service de push le dit une seule fois, par un code de statut,
- * au moment de l'envoi. Se tromper de politique ne se remarque jamais tout de
- * suite — soit la table se remplit de lignes mortes que la carte présente comme
- * des appareils actifs, soit on supprime des abonnements parfaitement vivants
- * sur un incident passager, et les gens cessent d'être notifiés sans le savoir.
+ * This is the part that you CANNOT see when trying the app: a subscription
+ * dies without warning (PWA uninstalled, permission revoked, site data
+ * deleted), and the push service says it only once, by a status code,
+ * at the time of sending. Getting the policy wrong is never noticed right away — either the table fills up with dead rows that the map presents as
+ * active devices, or we delete perfectly alive subscriptions
+ * on a passing incident, and people stop being notified without knowing it.
  *
- * Les quatre cas ci-dessous SONT cette politique.
+ * The four cases below ARE this policy.
  */
 
 const H = vi.hoisted(() => ({
@@ -29,7 +28,7 @@ vi.mock("./apns", () => ({ sendApnsNotification: H.sendApns }));
 
 const { sendPushToUser } = await import("./send");
 
-/** Erreur telle que `web-push` la lève : un `statusCode` sur l'objet. */
+/** Error such as `web-push` raises: a `statusCode` on the object. */
 const webPushError = (statusCode: number) =>
   Object.assign(new Error(`push failed: ${statusCode}`), { statusCode });
 
@@ -42,7 +41,7 @@ const PAYLOAD: PushPayload = {
 
 type Op = { table: string; op: string; args: unknown };
 
-/** Client Supabase minimal : enregistre chaque écriture pour qu'on la relise. */
+/** Minimal Supabase client: saves each writing for rereading. */
 function stubService(subs: Record<string, unknown>[]) {
   const ops: Op[] = [];
   const from = (table: string) => {
@@ -63,7 +62,7 @@ function stubService(subs: Record<string, unknown>[]) {
     };
     return chain;
   };
-  // La relecture de `failure_count` avant incrément.
+  // Rereading `failure_count` before increment.
   let current: Record<string, unknown> | null = { failure_count: 2 };
   return {
     service: { from } as unknown as SupabaseClient,
@@ -96,7 +95,7 @@ describe("sendPushToUser", () => {
 
     expect(tally).toEqual({ sent: 1, gone: 0, failed: 0 });
     expect(H.send).toHaveBeenCalledTimes(1);
-    // La charge utile part en JSON — c'est ce que `public/sw.js` parse.
+    // The payload leaves as JSON — that's what `public/sw.js` parses.
     expect(JSON.parse(H.send.mock.calls[0][1])).toEqual(PAYLOAD);
     expect(H.send.mock.calls[0][2]).toMatchObject({ urgency: "normal" });
     expect(ops).toEqual([
@@ -154,8 +153,8 @@ describe("sendPushToUser", () => {
     expect(ops).toEqual([{ table: "push_subscriptions", op: "delete", args: null }]);
   });
 
-  // 404/410 : le service de push nous dit que l'abonnement n'existe plus. C'est
-  // définitif — la ligne ne désignera plus jamais un appareil joignable.
+  // 404/410: the push service tells us that the subscription no longer exists. It is
+  // permanent — the line will never again designate a reachable device.
   it.each([404, 410])("PURGE la ligne sur un %i", async (status) => {
     H.send.mockRejectedValue(webPushError(status));
     const { service, ops } = stubService(ONE_DEVICE);
@@ -166,9 +165,9 @@ describe("sendPushToUser", () => {
     expect(ops).toEqual([{ table: "push_subscriptions", op: "delete", args: null }]);
   });
 
-  // 403 : c'est la SIGNATURE qui est refusée — nos clés VAPID ont changé sous
-  // les pieds des abonnements. L'appareil est vivant ; supprimer effacerait la
-  // preuve du problème et forcerait tout le monde à se réabonner.
+  // 403: it is the SIGNATURE which is refused — our VAPID keys have changed under
+  // subscription feet. The device is alive; deleting would erase the
+  // proof of the problem and would force everyone to resubscribe.
   it("GARDE la ligne sur un 403", async () => {
     H.send.mockRejectedValue(webPushError(403));
     const { service, ops } = stubService(ONE_DEVICE);
@@ -199,8 +198,8 @@ describe("sendPushToUser", () => {
       { id: "d2", endpoint: "https://push.example/2", p256dh: "k", auth: "a", locale: "fr-FR" },
       { id: "d3", endpoint: "https://push.example/3", p256dh: "k", auth: "a", locale: "en" },
     ]);
-    // Signature explicite : sans elle, `mock.calls` est typé sur un tuple vide
-    // et lire `c[0]` ne compile pas.
+    // Explicit signature: without it, `mock.calls` is typed on an empty tuple
+    // and reading `c[0]` doesn't compile.
     const payloadFor = vi.fn<(locale: "fr" | "en") => PushPayload>(() => PAYLOAD);
 
     const tally = await sendPushToUser(service, "u1", payloadFor);
@@ -234,8 +233,8 @@ describe("sendPushToUser", () => {
     expect(ops).toEqual([]);
   });
 
-  // Sans clés, l'app doit tourner : l'inbox se remplit, rien ne lève, on ne
-  // touche même pas à la base.
+  // Without keys, the app must run: the inbox fills, nothing is raised, we do not
+  // don't even touch the base.
   it("s'éteint proprement sans clés VAPID", async () => {
     vi.stubEnv("VAPID_PRIVATE_KEY", "");
     const { service, ops } = stubService(ONE_DEVICE);

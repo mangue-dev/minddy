@@ -1,40 +1,40 @@
 "use client";
 
-// La PILULE : la petite étiquette « une chose, avec sa figure » de minddy.
+// The PILL: Minddy’s little label “one thing, with its face”.
 //
-// Elle est née dans le contexte de Numo (components/assistant/context-pill.tsx),
-// et les ressources d'un ticket la portaient de leur côté, en copie approchée.
-// Deux copies veut dire deux rendus, et c'est ce qui se voyait : rayons qui ne
-// se répondent pas, croix qui pousse le libellé, figure grise là où l'autre est
-// teintée. Le dessin vit donc ICI, une fois, et les deux surfaces l'habillent.
+// It was born in the context of Numo (components/assistant/context-pill.tsx),
+// and the resources of a ticket carried it on their side, in close copy.
+// Two copies means two renderings, and this is what was visible: rays which do not
+// do not respond to each other, a cross which pushes the wording, a gray figure where the other is
+// tinted. The drawing therefore lives HERE, once, and the two surfaces dress it.
 //
-// Ce que le dessin porte, et qui n'est pas décoratif :
+// What the design is about, and which is not decorative:
 //
-//  • RAYONS CONCENTRIQUES. Le carré d'icône est un ENFANT de la pilule : son
-//    rayon vaut « rayon de la pilule − padding » (4px). En `rounded-md` (14px)
-//    l'icône est à 10px ; en `rounded-full` elle est ronde elle aussi. Un carré
-//    à rayon fixe dans une pilule ronde est exactement l'erreur que ça corrige.
+// • CONCENTRIC RAYS. The square icon is a CHILD of the pill: its
+// radius is “pill radius − padding” (4px). In `rounded-md` (14px)
+// the icon is at 10px; in `rounded-full` it is also round. A square
+// fixed radius in a round pill is exactly the error it corrects.
 //
-//  • LA COMMANDE PAR-DESSUS. Retirer/ignorer se pose en surimpression sur la fin
-//    du libellé, avec un dégradé vers la couleur de la pilule — elle ne prend
-//    pas de place à côté. Lui réserver une gouttière laisserait un vide à droite
-//    de CHAQUE pilule au repos, pour un bouton qu'on ne voit qu'au survol.
+// • CONTROL FROM ABOVE. Remove/Ignore appears superimposed on the end
+// of the wording, with a gradient towards the color of the pill — it does not take
+// no room next to it. Reserving a gutter for it would leave a gap on the right
+// of EACH pill at rest, for a button that you only see on hover.
 
 import type { ReactNode } from "react";
 import { cn } from "mangue-ui";
 
 export type PillRadius = "full" | "md";
 
-/** Rayon intérieur = rayon de la pilule − son padding (4px). */
+/** Inner radius = radius of the pill − its padding (4px). */
 export const PILL_INNER_RADIUS: Record<PillRadius, string> = {
   full: "rounded-full",
   md: "rounded-[10px]",
 };
 
 /**
- * La figure de la pilule : un carré de 20px teinté, au rayon concentrique.
- * `tint` porte fond ET couleur d'icône (`bg-…/12 text-…`) — une teinte à 12 %,
- * parce que c'est un repère qu'on lit du coin de l'œil, pas une pastille.
+ * The figure of the pill: a tinted 20px square, with a concentric radius.
+ * `tint` background AND icon color (`bg-…/12 text-…`) — a 12% tint,
+ * because it's a marker that you read out of the corner of your eye, not a tablet.
  */
 export function PillIcon({
   radius = "full",
@@ -65,15 +65,15 @@ export interface PillAction {
   label: string;
   icon: ReactNode;
   onClick: () => void;
-  /** Visible en permanence plutôt qu'au survol — pour une commande qui est le
-      seul chemin de retour (une pilule éteinte, par exemple). */
+  /** Visible at all times rather than on hover — for a command that is the
+ only return path (an extinct pill, for example). */
   persistent?: boolean;
 }
 
 /**
- * L'enveloppe : bordure, fond, ombre, rayon, et la commande en surimpression.
- * Le CONTENU (figure, libellé, complément) est composé par l'appelant, qui est
- * seul à savoir s'il doit être un lien, un bouton ou du texte inerte.
+ * The envelope: border, background, shadow, radius, and the overprint command.
+ * The CONTENT (figure, wording, complement) is composed by the caller, who is
+ * only you know if it should be a link, a button or inert text.
  */
 export function EntityPill({
   radius = "full",
@@ -84,7 +84,7 @@ export function EntityPill({
   children,
 }: {
   radius?: PillRadius;
-  /** Pilule éteinte : atténuée, mais toujours là. */
+  /** Extinguished Pill: Diminished, but still there. */
   dimmed?: boolean;
   ariaLabel?: string;
   action?: PillAction;
@@ -107,8 +107,8 @@ export function EntityPill({
         <span
           className={cn(
             "pointer-events-none absolute inset-y-0 right-0 flex items-center rounded-[inherit] bg-gradient-to-l from-card via-card to-transparent pl-4 pr-1 transition-opacity",
-            // Au clavier, c'est le focus du bouton qui la révèle — sans quoi on
-            // tabulerait sur un invisible.
+            // On the keyboard, it is the focus of the button which reveals it - otherwise we
+            // would rely on an invisible.
             action.persistent
               ? "opacity-100"
               : "opacity-0 group-hover/pill:opacity-100 has-[:focus-visible]:opacity-100"

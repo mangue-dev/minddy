@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { createSavedView } from "@/lib/server/saved-views";
 
-/** GET /api/me/saved-views — mes vues enregistrées, la plus récente d'abord. */
+/** GET /api/me/saved-views — my saved views, most recent first. */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(data);
 }
 
-/** POST /api/me/saved-views — enregistrer l'écran courant sous un nom. */
+/** POST /api/me/saved-views — save the current screen under a name. */
 export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;

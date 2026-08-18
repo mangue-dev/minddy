@@ -1,18 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-344 — le webhook marquait l'événement TRAITÉ avant de le traiter.
+ * MIN-344 — the webhook marked the event PROCESSED before processing it.
  *
- * La ligne d'idempotence était écrite avec son `processed_at` dès l'arrivée. Une
- * panne transitoire au milieu du traitement (Stripe injoignable pour aller lire
- * l'abonnement, base indisponible une seconde) rendait un 500 ; Stripe rejouait,
- * tombait sur une ligne « déjà traitée » et n'appelait plus rien. L'activation
- * était perdue définitivement : un abonnement payé, un compte resté au plan Free,
- * et rien pour le dire.
+ * The idempotence line was written with its `processed_at` upon arrival. A
+ * transient failure in the middle of processing (Stripe unreachable to read
+ * the subscription, base unavailable for a second) returned a 500; Stripe replayed,
+ * came across an "already processed" line and called nothing more. The activation
+ * was permanently lost: a paid subscription, an account remaining on the Free plan,
+ * and nothing to say so.
  *
- * Ce que ces tests figent : la ligne est une RÉSERVATION, le tampon vient APRÈS
- * le succès, un doublon vraiment traité court-circuite, et une réservation
- * abandonnée finit par se reprendre.
+ * What these tests freeze: the line is a RESERVATION, the buffer comes AFTER
+ * success, a truly processed duplicate short-circuits, and an abandoned reservation
+ * ends up being resumed.
  */
 
 interface EventRow {
@@ -129,10 +129,10 @@ describe("POST /api/stripe/webhook", () => {
     expect(failed.status).toBe(500);
     expect(rows[0].processed_at).toBeNull();
 
-    // Le rejeu immédiat voit une réservation fraîche : on lui dit de repasser.
+    // The immediate replay sees a fresh reservation: he is told to play again.
     expect((await POST(request())).status).toBe(409);
 
-    // Passé le délai d'abandon, la réservation se reprend — et cette fois ça passe.
+    // After the abandonment period, the reservation is resumed — and this time it goes through.
     rows[0].created_at = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     syncThrows = false;
     const retried = await POST(request());

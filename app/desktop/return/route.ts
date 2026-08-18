@@ -3,32 +3,32 @@ import { type NextRequest } from "next/server";
 import { buildDesktopOpenUrl } from "@/lib/desktop/open-link";
 
 /**
- * `GET /desktop/return?next=…` — le rebond du navigateur vers l'app (MIN-293).
+ * `GET /desktop/return?next=…` — bounce from browser to app (MIN-293).
  *
- * Cette page n'est jamais VUE, ou alors une demi-seconde. Elle est l'adresse
- * qu'on donne aux services qui nous renvoient quelque part après un détour par
- * le navigateur — Stripe pour l'instant — parce qu'ils n'acceptent qu'une URL
- * http(s) en retour, jamais un `minddy://`. Elle traduit l'un en l'autre.
+ * This page is never SEEN, or not for half a second. She is the address
+ * that we give to the services which send us somewhere after a detour through
+ * the browser — Stripe for now — because they only accept one URL
+ * http(s) URL in return, never a `minddy://` URL. It translates one into the other.
  *
- * **Pourquoi du HTML et non une redirection 302.** Vers un schéma d'app, la
- * redirection est refusée par une partie des navigateurs (et silencieusement :
- * la page reste blanche). Le geste qui marche partout est un `location.href`
- * depuis la page, avec un lien visible en dessous pour qui l'a bloqué ou n'a
- * pas l'app — d'où les deux, et la phrase qui les accompagne.
+ * **Why HTML and not a 302 redirect.** Towards an app schema, the
+ * redirection is refused by some browsers (and silently:
+ * the page remains blank). The gesture that works everywhere is a `location.href`
+ * from the page, with a link visible below for those who have blocked it or have not
+ * not the app — hence the two, and the sentence that accompanies them.
  *
- * **Aucune session n'est lue ici**, et c'est délibéré : le navigateur qui
- * revient de Stripe n'est pas forcément celui où l'on est connecté. La page ne
- * porte rien de personnel — juste une destination, déjà réduite à un chemin
- * interne par `buildDesktopOpenUrl`. C'est ce qui lui permet d'être publique
- * (proxy.ts, `PUBLIC_ROUTES`) sans rien exposer.
+ * **No sessions are read here**, and this is deliberate: the browser that
+ * returns from Stripe is not necessarily the one where you are connected. The page does not
+ * carries nothing personal — just a destination, already reduced to a path
+ * internal by `buildDesktopOpenUrl`. This is what allows it to be public
+ * (proxy.ts, `PUBLIC_ROUTES`) without exposing anything.
  *
- * `noindex` : une page de plomberie n'a rien à faire dans un index.
+ * `noindex`: a plumbing page has no place in an index.
  */
 export function GET(request: NextRequest) {
   const deepLink = buildDesktopOpenUrl(request.nextUrl.searchParams.get("next") ?? "");
   const escaped = deepLink.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
-  // `fr` dès que la locale du navigateur commence par `fr` : cette page est
-  // servie sans session et sans cookie de langue, il n'y a rien d'autre à lire.
+  // Use `fr` when the browser locale starts with `fr`: this page is served
+  // without a session or language cookie, so there is nothing else to inspect.
   const fr = (request.headers.get("accept-language") ?? "").toLowerCase().startsWith("fr");
 
   const html = `<!doctype html>

@@ -7,8 +7,8 @@ import { fetchAgentPreferencesApi } from "./agent-keys-api";
 export const agentPreferencesQueryKey = ["agent-preferences"] as const;
 
 /**
- * Défauts perso de l'agent : le modèle (null = défaut racine) et le niveau de
- * raisonnement (MIN-122 — null en base = `off`).
+ * Personal defaults of the agent: the model (null = root default) and the level of
+ * reasoning (MIN-122 — null in base = `off`).
  */
 export function useAgentPreferencesQuery() {
   const { data, isPending } = useQuery({

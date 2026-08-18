@@ -1,59 +1,58 @@
 /**
- * Ce que la fenêtre de l'app affiche, et ce qu'elle refuse (MIN-291, MIN-292).
+ * What the app window shows, and what it denies (MIN-291, MIN-292).
  *
- * **La règle tient en une phrase : l'app de bureau ne montre que
- * l'authentification et l'app.** Tout le reste de ce que sert notre origine —
- * l'argumentaire, les tarifs, le serveur MCP, les comparatifs, les nouveautés,
- * les pages légales, la page de téléchargement, et les surfaces publiques à
- * jeton (board de feedback, page publiée, vue partagée) — s'ouvre dans le
- * navigateur système.
+ * **The rule is in one sentence: the desktop app only shows
+ * authentication and the app.** Everything else that our origin does —
+ * sales pitch, prices, MCP server, comparisons, new features,
+ * legal pages, download page, and public areas at
+ * token (feedback board, published page, shared view) — opens in the
+ * system browser.
  *
- * Ce n'est pas une préférence d'ergonomie, c'est une question d'identité. Une
- * fenêtre installée qui affiche « Essayez minddy gratuitement », un bandeau de
- * cookies ou une grille de tarifs s'adresse à quelqu'un qui ne s'est pas encore
- * décidé — cette personne n'existe pas ici : elle a téléchargé, elle a passé le
- * premier lancement, elle veut son travail. Et un board de feedback public dans
- * l'app de bureau, c'est le site web dans une fenêtre.
+ * This is not a usability preference, it is a question of identity. An installed
+ * window which displays “Try minddy for free”, a banner of
+ * cookies or a price list is aimed at someone who has not yet decided to
+ * - this person does not exist here: she downloaded, she passed the
+ * first launch, she wants her job. And a public feedback board in
+ * the desktop app, it's the website in a window.
  *
- * **Trois issues, pas deux**, et la nuance compte :
+ * **Three outcomes, not two**, and the nuance matters:
  *
- * - `allow` — l'app, l'authentification, les routes internes.
- * - `external` — la page part au navigateur. C'est le cas général.
- * - `home` — la LANDING, et elle seule. Elle n'est pas une destination qu'on
- *   demande : on y tombe, par un logo qui pointe vers `/`. Lancer un navigateur
- *   à chaque clic de logo serait un châtiment ; on ramène à l'entrée, qui mène à
- *   l'app ou à la connexion selon la session.
+ * - `allow` — the app, authentication, internal routes.
+ * - `external` — the page goes to the browser. This is the general case.
+ * - `home` — the LANDING, and it alone. It is not a destination that one
+ * asks for: we find it, through a logo which points to `/`. Launching a browser
+ * every time a logo is clicked would be a punishment; we return to the entrance, which leads to
+ * the app or to the connection depending on the session.
  *
- * **La liste se DÉRIVE de [public-routes.ts](../public-routes.ts)**, elle ne se
- * recopie pas : ajouter une page publique la met automatiquement hors de la
- * fenêtre, sans que personne ait à y penser.
+ * **The list DERIVES from [public-routes.ts](../public-routes.ts)**, it is not copied
+ *: adding a public page automatically puts it out of the
+ * window, without anyone having to think about it.
  */
 
 import { PUBLIC_ROUTE_PATHS } from "@/lib/public-routes";
 
 /**
- * Ce qu'il faut faire d'une URL de NOTRE origine.
+ * What to do with a URL from OUR origin.
  *
- * L'origine, elle, est l'affaire de [nav-guard.ts](nav-guard.ts) : ce module-ci
- * ne se prononce que sur des chemins de chez nous.
+ * The origin is the business of [nav-guard.ts](nav-guard.ts): this module
+ * only applies to paths from us.
  */
 export type DesktopRouteDisposition = "allow" | "external" | "home";
 
 /**
- * Les surfaces publiques à JETON. Elles ne sont pas dans `PUBLIC_ROUTES` — leur
- * URL n'est pas une page mais une autorisation — et elles se reconnaissent donc
- * à leur préfixe. Sans elles, il suffisait de coller le lien d'un board de
- * feedback pour ouvrir le site public DANS l'app.
+ * Public TOKEN surfaces. They are not in `PUBLIC_ROUTES` — their
+ * URL is not a page but an authorization — and they are therefore recognized as
+ * by their prefix. Without them, it was enough to paste the link of a feedback board to open the public site IN the app.
  */
 const TOKEN_PREFIXES = ["/f/", "/p/", "/share/"] as const;
 
 /**
- * La landing, dans ses deux langues. Le seul chemin public qu'on ramène à
- * l'entrée au lieu de l'envoyer dehors — voir l'en-tête.
+ * The landing, in both languages. The only public path that we bring back to
+ * the entrance instead of sending it outside — see the header.
  */
 const LANDING_PATHS: ReadonlySet<string> = new Set(["/", "/fr"]);
 
-/** `/pricing/` et `/pricing` sont la même page ; `/` reste `/`. */
+/** `/pricing/` and `/pricing` are the same page; `/` remains `/`. */
 function normalize(pathname: string): string {
   return pathname.length > 1 && pathname.endsWith("/")
     ? pathname.slice(0, -1)
@@ -61,8 +60,8 @@ function normalize(pathname: string): string {
 }
 
 /**
- * Le chemin d'une URL ou d'un chemin — le main process voit passer des URLs, le
- * renderer des chemins. `null` quand ce n'en est ni l'un ni l'autre.
+ * The path of a URL or a path — the main process sees URLs passing, the
+ * renders paths. `null` when it is neither.
  */
 function pathnameOf(pathOrUrl: string): string | null {
   if (pathOrUrl.startsWith("/")) return normalize(new URL(pathOrUrl, "http://x").pathname);
@@ -73,11 +72,11 @@ function pathnameOf(pathOrUrl: string): string | null {
   }
 }
 
-/** Que faire de cette URL ? Le seul point de décision. */
+/** What to do with this URL? The only decision point. */
 export function routeDisposition(pathOrUrl: string): DesktopRouteDisposition {
   const pathname = pathnameOf(pathOrUrl);
-  // Illisible : on ne bloque pas sur une chaîne qu'on n'a pas su lire — la garde
-  // d'origine, elle, a déjà refusé tout ce qui n'est pas chez nous.
+  // Unreadable: we do not block on a channel that we have not been able to read — keep it
+  // originally, she has already refused everything that is not with us.
   if (pathname === null) return "allow";
 
   if (LANDING_PATHS.has(pathname)) return "home";
@@ -86,7 +85,7 @@ export function routeDisposition(pathOrUrl: string): DesktopRouteDisposition {
   return "allow";
 }
 
-/** Cette URL doit-elle quitter la fenêtre, d'une façon ou d'une autre ? */
+/** Should this URL leave the window somehow? */
 export function leavesTheWindow(pathOrUrl: string): boolean {
   return routeDisposition(pathOrUrl) !== "allow";
 }

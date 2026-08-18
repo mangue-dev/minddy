@@ -25,17 +25,17 @@ import { authErrorMessage } from "@/lib/auth-errors";
 import type { InvitationPreview } from "@/lib/types";
 
 /**
- * La connexion, et rien d'autre (MIN-300).
+ * The connection, and nothing else (MIN-300).
  *
- * L'écran portait les deux intentions — se connecter, s'inscrire — dans un même
- * formulaire à bascule, sur une page à deux colonnes dont la moitié gauche était
- * un shader WebGL. Il ne reste que ce qu'on vient y faire : une colonne centrée,
- * deux providers, une adresse, un mot de passe. L'inscription a sa propre route
- * ([signup-wizard.tsx](signup-wizard.tsx)), et le lien du bas y mène en gardant
- * la destination et l'invitation en cours.
+ * The screen carried both intentions — connect, register — in the same
+ * flip form, on a two-column page of which the left half was
+ * a WebGL shader. All that remains is what we come to do there: a centered column,
+ * two providers, an address, a password. Registration has its own route
+ * ([signup-wizard.tsx](signup-wizard.tsx)), and the bottom link leads there keeping
+ * the destination and the current invitation.
  *
- * Le fond animé est parti avec, et rien ne l'a remplacé : voir l'en-tête de
- * `app/(auth)/auth-shell.tsx` pour ce qui a été essayé et pourquoi.
+ * The animated background left with it, and nothing replaced it: see the header of
+ * `app/(auth)/auth-shell.tsx` for what was tried and why.
  */
 export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
   const t = useTranslations("Auth");
@@ -55,16 +55,16 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
   const signUpHref = `/signup${preserveAuthParams(searchParams)}`;
 
   const [email, setEmail] = useState(invite?.invitedEmail ?? "");
-  // L'adresse en cours de saisie voyage jusqu'à l'écran de demande — c'est un
-  // paramètre d'URL, donc calculé au rendu à partir de l'état du champ.
+  // The address being entered travels to the request screen — this is a
+  // URL parameter, therefore calculated when rendered from the state of the field.
   const forgotPasswordHref = `/forgot-password${preserveAuthParams(
     searchParams,
     email.trim() ? { email: email.trim() } : undefined
   )}`;
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  // Provider en cours de redirection — la page part vers Google/GitHub, donc cet
-  // état n'est jamais remis à null en cas de succès (seulement sur erreur).
+  // Provider being redirected — the page is going to Google/GitHub, so this
+  // state is never reset to null on success (only on error).
   const [oauthPending, setOauthPending] = useState<OAuthProvider | null>(null);
   const authErrorMessages: Record<string, string> = {
     auth_callback_failed: t("callbackFailed"),
@@ -77,22 +77,22 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
   );
 
   /**
-   * **Dans l'app de bureau, l'entrée est l'INSCRIPTION** (MIN-292, MIN-300).
+   * **In the desktop app, the entry is REGISTRATION** (MIN-292, MIN-300).
    *
-   * Quelqu'un qui vient de télécharger 120 Mo et de faire glisser une icône dans
-   * Applications n'a, très majoritairement, pas encore de compte. Or la fenêtre
-   * s'ouvre sur `/home`, et le proxy renvoie ici faute de session : sans ce
-   * détour, le premier écran du produit serait un formulaire de connexion, et il
-   * faudrait trouver le lien du bas avant de pouvoir commencer.
+   * Someone who just downloaded 120MB and dragged an icon into
+   * Most applications do not yet have an account. Gold the window
+   * opens on `/home`, and the proxy returns here for lack of session: without this
+   * detour, the first screen of the product would be a login form, and it
+   * You'll have to find the bottom link before you can begin.
    *
-   * `?mode=signin` le désactive, et c'est ce que porte le lien « j'ai déjà un
-   * compte » du wizard : un choix explicite n'a pas à être défait par un défaut.
-   * Un `?error=` le désactive aussi — l'écran a alors quelque chose à DIRE
-   * (« connexion annulée », « ce lien a expiré »), et partir ailleurs
-   * l'emporterait sans que personne l'ait lu.
+   * `?mode=signin` deactivates it, and that's what the "I already have a
+   * account” of the wizard: an explicit choice does not have to be undone by a default.
+   * A `?error=` deactivates it too — the screen then has something to SAY
+   * (“connection canceled”, “this link has expired”), and go elsewhere
+   * would win without anyone reading it.
    *
-   * Le test se fait dans un effet — `window.minddy` n'existe pas côté serveur,
-   * et le supposer ferait diverger l'hydratation.
+   * The test is done in an effect — `window.minddy` does not exist on the server side,
+   * and assuming this would cause the hydration to diverge.
    */
   const modeParam = searchParams.get("mode");
   const errorParam = searchParams.get("error");
@@ -103,19 +103,19 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
     router.replace(signUpHref);
   }, [modeParam, errorParam, router, signUpHref]);
 
-  // Une seule tentative de connexion à la fois (email OU provider).
+  // Only one connection attempt at a time (email OR provider).
   const busy = loading || oauthPending !== null;
 
   /**
-   * Second facteur (MIN-132). `unknown` = on n'a pas encore regardé — donc on
-   * n'affiche ni le formulaire ni le challenge, sinon l'un des deux clignote à
-   * chaque retour de Google. `required` = la session existe mais reste en
-   * `aal1` : c'est le proxy qui nous a renvoyés ici, et cet écran EST la suite.
+   * Second factor (MIN-132). `unknown` = we haven't watched yet — so we
+   * displays neither the form nor the challenge, otherwise one of the two flashes
+   * every return from Google. `required` = the session exists but remains active
+   * `aal1`: This is the proxy that sent us here, and this screen IS what happens next.
    */
   const [mfaStep, setMfaStep] = useState<"unknown" | "none" | "required">("unknown");
 
-  // Already authenticated (e.g. session restored) → leave the auth screen, à
-  // moins qu'il reste un facteur à présenter.
+  // Already authenticated (e.g. session restored) → leave the auth screen,
+  // unless there is still one factor to present.
   useEffect(() => {
     if (!user) {
       setMfaStep("none");
@@ -144,24 +144,24 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
     try {
       await signInWithPassword(email, password);
       track("login_succeeded", { method: "password" });
-      // Mot de passe accepté, mais la session est en `aal1` : le challenge
-      // prend la place du formulaire (MIN-132). Naviguer d'abord ferait un
-      // aller-retour visible par le proxy, qui nous renverrait ici.
+      // Password accepted, but the session is in `aal1`: the challenge
+      // takes the place of the form (MIN-132). Navigating first would make a
+      // round trip visible to the proxy, which would send us back here.
       if (await needsMfaChallenge()) {
         setMfaStep("required");
         return;
       }
       router.push(redirectTo);
     } catch (err) {
-      // Le refus brut dans la console : on n'affiche qu'une phrase, or c'est
-      // le `code` et le statut HTTP qui permettent de diagnostiquer. Sans ça,
-      // un refus qu'on ne sait pas encore traduire ne laisse aucune trace —
-      // l'appel part du navigateur vers Supabase, il n'y a rien côté Vercel.
+      // The raw refusal in the console: we only display one sentence, but it is
+      // the `code` and HTTP status which allow diagnosis. Without that,
+      // a refusal that we do not yet know how to translate leaves no trace —
+      // the call goes from the browser to Supabase, there is nothing on the Vercel side.
       console.error("[login] refus de Supabase Auth:", err);
-      // On envoie une CATÉGORIE, jamais le message : il peut porter l'email.
+      // We send a CATEGORY, never the message: it can carry the email.
       track("login_failed", { method: "password", reason: errorReason(err) });
-      // Traduit quand on sait le faire : « Invalid login credentials » est le
-      // refus le plus fréquent du produit, et il arrivait en anglais.
+      // Translated when you know how to do it: “Invalid login credentials” is the
+      // the most frequent refusal of the product, and it arrived in English.
       setError(authErrorMessage(err, t));
     } finally {
       setLoading(false);
@@ -173,7 +173,7 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
     setOauthPending(provider);
     track("oauth_initiated", { provider, context: "login" });
     try {
-      // Succès = la page navigue vers le provider ; on ne repasse jamais ici.
+      // Success = the page navigates to the provider; we never come back here.
       await signInWithOAuth(provider, redirectTo);
     } catch (err) {
       track("login_failed", { method: provider, reason: errorReason(err) });
@@ -188,9 +188,9 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
         <MfaChallenge
           onVerified={() => router.replace(redirectTo)}
           onRecovered={async () => {
-            // La 2FA vient d'être coupée : rafraîchir le jeton avant de partir,
-            // sinon le proxy lit encore l'ancien drapeau et renvoie ici — une
-            // boucle, juste après avoir brûlé un code.
+            // 2FA has just been cut: refresh the token before leaving,
+            // otherwise the proxy still reads the old flag and returns here — a
+            // loop, just after burning some code.
             await refreshUser();
             toast.success(t("mfaDisabledNotice"));
             router.replace(redirectTo);
@@ -202,9 +202,9 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
         </div>
       ) : (
         <div className="space-y-8">
-          {/* Le bandeau d'invitation (MIN-197). Il ne fait qu'ANNONCER : rien
-              ici ne rattache la personne au projet — c'est l'email vérifié de
-              sa session qui s'en charge, à /auth/callback. */}
+          {/* The invitation banner (MIN-197). He only ANNOUNCES: nothing
+ here attaches the person to the project — it is the verified email of
+ his session which takes care of it, at /auth/callback. */}
           {invite && (
             <div className="flex gap-3 rounded-lg border border-border bg-card p-3.5">
               <UserPlus className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
@@ -267,10 +267,9 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
               />
             </Field>
 
-            {/* Le seul chemin de retour pour un compte sans Google ni GitHub
-                (MIN-297). Sous le champ, aligné à droite : c'est là qu'on le
-                cherche, et c'est le moment où l'on découvre qu'on a oublié.
-                L'adresse déjà tapée le suit, pour ne pas la retaper. */}
+            {/* The only way back for an account without Google or GitHub
+ (MIN-297). Under the field, aligned to the right: this is where we look for it, and this is the moment when we discover that we forgot.
+ The address already typed follows it, so as not to retype it. */}
             <div className="flex justify-end">
               <Link
                 href={forgotPasswordHref}

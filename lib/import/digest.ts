@@ -1,47 +1,47 @@
-// Le résumé d'un fichier tel que le modèle le voit — et la SEULE chose qui
-// quitte le navigateur pour la passe de correspondance.
+// The summary of a file as the model sees it — and the ONLY thing that
+// exits the browser for the match pass.
 //
-// Deux raisons de ne pas envoyer le CSV entier : il pèse jusqu'à 5 Mo, et un
-// modèle n'a de toute façon rien à faire des 900 lignes qui répètent la même
-// forme. Ce qui l'intéresse tient en trois choses par colonne : son en-tête,
-// combien de valeurs distinctes elle porte, et à quoi ces valeurs ressemblent.
-// C'est cette dernière qui fait tout le travail : « Niveau » ne veut rien dire,
-// « Niveau » qui contient Haute/Moyenne/Basse est une colonne de priorité.
+// Two reasons not to send the entire CSV: it weighs up to 5 MB, and one
+// model has nothing to do with 900 lines that repeat the same thing anyway
+// shape. What interests him is three things per column: its header,
+// how many distinct values ​​it carries, and what these values ​​look like.
+// It's the latter that does all the work: "Level" means nothing,
+// “Level” which contains High/Medium/Low is a priority column.
 //
-// S'y ajoute ce que le PROJET D'ARRIVÉE contient : ses membres et ses
-// catégories. Sans eux, le modèle peut dire « cette colonne est un assigné »
-// mais pas « cet assigné-là, c'est Marie », ni « cette étiquette-là, c'est la
-// catégorie Bug que vous avez déjà ». C'est la différence entre reconnaître la
-// forme d'un backlog et le faire vraiment entrer dans le projet.
+// Added to this is what the ARRIVAL PROJECT contains: its members and
+// categories. Without them, the model may say "this column is an assigned"
+// but not “this assigned one is Marie”, nor “this label is the one
+// category Bug you already have”. It's the difference between recognizing the
+// form a backlog and really bring it into the project.
 //
-// Isomorphe : le navigateur le construit, la route le revalide.
+// Isomorphic: the navigator builds it, the route revalidates it.
 
 import type { ImportContext, ImportField, ImportMapping } from "@/lib/import/types";
 import { normalizeToken } from "@/lib/import/normalize";
 import { topValues, type TableStats } from "@/lib/import/stats";
 import { splitLabelValues } from "@/lib/import/mapping";
 
-/** Au-delà, ce n'est plus un backlog exporté mais une feuille de calcul. */
+/** Beyond that, it is no longer an exported backlog but a spreadsheet. */
 export const MAX_DIGEST_COLUMNS = 60;
-/** Assez pour reconnaître une énumération, assez peu pour rester bon marché. */
+/** Enough to recognize an enumeration, little enough to stay cheap. */
 export const MAX_DIGEST_SAMPLES = 12;
-/** Une valeur d'exemple sert à reconnaître une forme, pas à être lue en entier. */
+/** An example value is used to recognize a pattern, not to be read in full. */
 export const MAX_DIGEST_SAMPLE_CHARS = 80;
-/** Un projet à 200 membres ou 200 catégories : on borne, le prompt reste lisible. */
+/** A project with 200 members or 200 categories: we limit it, the prompt remains readable. */
 export const MAX_DIGEST_PROJECT_ITEMS = 100;
 
 export interface CsvDigestColumn {
   index: number;
   header: string;
   distinctCount: number;
-  /** Valeurs les plus fréquentes d'abord — l'ordre qui montre une énumération. */
+  /** Most frequent values ​​first — the order that shows an enumeration. */
   samples: string[];
-  /** Ce que la détection a déjà su placer (`ignore` sinon). */
+  /** What the detection has already been able to place (`ignore` otherwise). */
   field: ImportField;
 }
 
 export interface CsvDigestMember {
-  /** Rang 1-based : un petit modèle recopie un entier, pas un UUID. */
+  /** Rank 1-based: a small model copies an integer, not a UUID. */
   ref: number;
   name: string;
 }
@@ -49,11 +49,11 @@ export interface CsvDigestMember {
 export interface CsvDigest {
   rowCount: number;
   columns: CsvDigestColumn[];
-  /** Membres du projet, ceux à qui un ticket peut revenir. */
+  /** Project members, those to whom a ticket may come. */
   members: CsvDigestMember[];
-  /** Catégories déjà présentes dans le projet. */
+  /** Categories already present in the project. */
   categories: string[];
-  /** Étiquettes du fichier restées sans catégorie existante. */
+  /** Tags in the file left without an existing category. */
   unmatchedLabels: string[];
 }
 
@@ -77,9 +77,9 @@ export function buildCsvDigest(
     });
   }
 
-  // Seules les étiquettes qu'on n'a pas su rapprocher sont soumises : les
-  // autres sont déjà justes, les proposer au modèle ne ferait que l'occasion
-  // d'une erreur.
+  // Only the labels that we have not been able to reconcile are submitted: the
+  // others are already correct, proposing them to the model would only create the opportunity
+  // an error.
   const unmatchedLabels = splitLabelValues(stats, mapping)
     .filter((label) => mapping.labelValues[normalizeToken(label)] === undefined)
     .slice(0, MAX_DIGEST_PROJECT_ITEMS);
@@ -97,9 +97,9 @@ export function buildCsvDigest(
 }
 
 /**
- * Revalidation côté route : le digest vient du navigateur, donc on le retaille
- * aux mêmes bornes avant de le mettre dans un prompt. `null` si ce n'est pas un
- * digest du tout.
+ * Revalidation on the road side: the digest comes from the browser, so we recut it
+ * at the same terminals before putting it in a prompt. `null` if it's not a
+ * digest at all.
  */
 export function sanitizeDigest(raw: unknown): CsvDigest | null {
   if (!raw || typeof raw !== "object") return null;
@@ -127,8 +127,8 @@ export function sanitizeDigest(raw: unknown): CsvDigest | null {
           : "",
       distinctCount: typeof col.distinctCount === "number" ? col.distinctCount : 0,
       samples: strings(col.samples).slice(0, MAX_DIGEST_SAMPLES),
-      // Le champ déjà déduit est une indication pour le modèle, pas une entrée
-      // de confiance : il ne sert qu'à écrire le prompt.
+      // The already inferred field is an indication for the model, not an input
+      // trusted: it is only used to write the prompt.
       field: typeof col.field === "string" ? (col.field as ImportField) : "ignore",
     });
   }
@@ -161,7 +161,7 @@ export function sanitizeDigest(raw: unknown): CsvDigest | null {
   };
 }
 
-/** Le digest en texte, tel qu'il part dans le message utilisateur. */
+/** The digest in text, as it appears in the user message. */
 export function renderDigest(digest: CsvDigest): string {
   const lines = [`## The file (${digest.rowCount} data rows)`, ""];
   for (const col of digest.columns) {

@@ -56,8 +56,8 @@ export function useIssuesQuery(projectId: string | null) {
   // Last flush PUT per issue (never-throwing) — chained into the next window's
   // `settled` so an undo can't overtake a still-in-flight flush.
   const catFlush = useRef(new Map<string, Promise<unknown>>());
-  // Les entrées du registre d'écritures ouvertes par la fenêtre (une par
-  // toggle) et le jeu de catégories d'avant, pour la refermer au flush (MIN-156).
+  // The write register entries opened by the window (one per
+  // toggle) and the set of categories from before, to close it with flush (MIN-156).
   const catHandles = useRef(new Map<string, PendingHandle[]>());
   const catBefore = useRef(new Map<string, string[]>());
 
@@ -98,15 +98,15 @@ export function useIssuesQuery(projectId: string | null) {
     [user]
   );
 
-  // Optimistic: insère une carte immédiatement (le dialog se ferme sans attendre
-  // le POST), remplace par la ligne serveur au succès, retire + toast à l'échec.
-  // Realtime réconcilie les autres clients ; localement pas de refetch.
+  // Optimistic: inserts a card immediately (the dialog closes without waiting
+  // POST), replace with the server line on success, remove + toast on failure.
+  // Realtime reconciles the other clients; locally no refetch.
   const createIssue = useCallback(
     async (input: CreateIssueInput) => {
       const pid = projectId as string;
       const key = issuesKey(pid);
-      // Smart-fill (MIN-260) : le serveur remplit le ticket AVANT d'insérer la
-      // ligne, donc pas de carte optimiste — elle serait vide le temps du
+      // Smart-fill (MIN-260): the server fills the ticket BEFORE inserting the
+      // line, so no optimistic map — it would be empty for the duration of
       // remplissage. Cf. [create-issue-deferred](create-issue-deferred.ts).
       if (input.smart_fill) {
         createIssueDeferred({ queryClient, projectId: pid, input, record });
@@ -118,17 +118,17 @@ export function useIssuesQuery(projectId: string | null) {
         user?.id ?? null,
         queryClient.getQueryData<Issue[]>(key) ?? []
       );
-      // Inscrite au registre AVANT le patch (MIN-156) : une réponse de GET
-      // partie plus tôt ne peut plus faire disparaître la carte à peine créée.
+      // Registered in the register BEFORE the patch (MIN-156): a GET response
+      // played earlier can no longer make the newly created map disappear.
       const handle = issueWrites.begin({ kind: "insert", row: optimistic });
       queryClient.setQueryData<Issue[]>(key, (old) => [...(old ?? []), optimistic]);
-      // Et dans le board agrégé s'il est chargé : sans ça, /all ignorerait la
-      // carte jusqu'à son prochain refetch (l'écho temps réel de notre propre
-      // création ne l'invalide plus — MIN-156).
+      // And in the aggregate board if it is loaded: without that, /all would ignore the
+      // map until its next refetch (the real-time echo of our own
+      // creation no longer invalidates it — MIN-156).
       insertIssueEverywhere(queryClient, pid, optimistic);
-      // L'id de la carte part avec la création : la ligne naît avec, et l'écho
-      // temps réel de notre propre insert est reconnu au lieu d'être adopté à
-      // côté d'elle (le doublon d'une seconde — voir lib/optimistic-issue.ts).
+      // The card id leaves with the creation: the line is born with it, and the echo
+      // real time of our own insert is recognized instead of being adopted at
+      // side of it (the duplicate of a second — see lib/optimistic-issue.ts).
       void createIssueApi(pid, { ...input, id: optimistic.id }).then(
         (issue) => {
           insertIssueEverywhere(queryClient, pid, issue);
@@ -163,16 +163,16 @@ export function useIssuesQuery(projectId: string | null) {
             ?.find((i) => i.id === issueId)
         : undefined;
       const assignee = startAssignee(current, updates.status, "assignee_id" in updates);
-      // Les deux effets de bord serveur, reflétés localement : démarrer un
-      // ticket peut se l'attribuer, et le passer en triage le sort du cycle
-      // (triage et cycle s'excluent — MIN-32).
+      // The two server side effects, reflected locally: start a
+      // ticket can be assigned to oneself, and passed through sorting to get it out of the cycle
+      // (sorting and cycle are mutually exclusive — MIN-32).
       const patch: IssueUpdateInput = {
         ...updates,
         ...(assignee ? { assignee_id: assignee } : {}),
         ...(leavesCycleOnStatus(current, updates.status) ? { cycle_id: null } : {}),
       };
-      // Registre d'abord (MIN-156), patch ensuite : entre les deux, aucune
-      // réponse en vol ne peut se glisser et rejouer l'état d'avant.
+      // Register first (MIN-156), patch then: between the two, none
+      // in-flight response cannot slip and replay the state before.
       const handle = issueWrites.begin({
         kind: "patch",
         id: issueId,
@@ -204,18 +204,18 @@ export function useIssuesQuery(projectId: string | null) {
         : null;
       try {
         const issue = await request;
-        // Réconcilie l'optimiste avec la ligne serveur faisant autorité (assignee
-        // injecté, completed_at, cycle_id…) SANS refetch de tout le projet à
-        // chaque édition de champ. Le realtime propage le changement aux autres
-        // clients ; localement le cache est déjà exact.
+        // Reconcile the optimist with the authoritative server line (assigned
+        // injected, completed_at, cycle_id…) WITHOUT refetching the entire project
+        // each field edition. Realtime spreads change to others
+        // customers; locally the cache is already accurate.
         if (projectId) mergeServerIssue(queryClient, projectId, issue);
         issueWrites.settle(handle, issue);
         return issue;
       } catch (err) {
-        // Rollback CIBLÉ (MIN-156) : seuls les champs que cette écriture a
-        // touchés reviennent en arrière. Restaurer le tableau entier écrasait
-        // aussi les patchs optimistes des autres écritures du même lot — un
-        // seul échec faisait clignoter toute la sélection.
+        // TARGETED Rollback (MIN-156): only the fields that this entry has
+        // touched go back. Restoring the entire array was overwriting
+        // also the optimistic patches of other writes in the same batch — one
+        // single failure caused the entire selection to flash.
         issueWrites.fail(handle);
         rec?.retract();
         if (projectId && before) {
@@ -297,8 +297,8 @@ export function useIssuesQuery(projectId: string | null) {
         .getQueryData<Issue[]>(issuesKey(projectId))
         ?.find((i) => i.id === issueId);
       const assignee = startAssignee(moved, patch.status, false);
-      // Mêmes reflets qu'au-dessus : auto-attribution au démarrage, sortie du
-      // cycle sur un passage en triage.
+      // Same reflections as above: self-attribution at startup, exit from
+      // cycle on a triage passage.
       const write: IssueUpdateInput = {
         ...patch,
         ...(assignee ? { assignee_id: assignee } : {}),
@@ -310,7 +310,7 @@ export function useIssuesQuery(projectId: string | null) {
         patch: write as Partial<Issue>,
       });
       patchIssueEverywhere(queryClient, projectId, issueId, write as Partial<Issue>);
-      // Glisser-déposer : la surface qui dit si le kanban sert vraiment.
+      // Drag and drop: the surface that tells if the kanban is really useful.
       const request = updateIssueApi(issueId, write, {
         surface: "kanban_drag",
         previousStatus: moved?.status ?? null,
@@ -333,8 +333,8 @@ export function useIssuesQuery(projectId: string | null) {
           )
         : null;
       try {
-        // Comme updateIssue : la ligne serveur remplace l'optimiste (position
-        // recalculée, completed_at, assigné injecté) sans refetch.
+        // Like updateIssue: the server line replaces the optimistic (position
+        // recalculated, completed_at, assigned injected) without refetch.
         const issue = await request;
         mergeServerIssue(queryClient, projectId, issue);
         issueWrites.settle(handle, issue);
@@ -369,8 +369,8 @@ export function useIssuesQuery(projectId: string | null) {
         const current = queryClient
           .getQueryData<Issue[]>(issuesKey(projectId))
           ?.find((i) => i.id === issueId);
-        // Le jeu d'avant la fenêtre : c'est là que le cache revient si le PUT
-        // groupé échoue, sans toucher aux autres champs du ticket.
+        // The game before the window: this is where the cache returns if the PUT
+        // grouped fails, without touching the other fields of the ticket.
         catBefore.current.set(issueId, current?.category_ids ?? []);
         let resolve: () => void = () => {};
         const flushed = new Promise<void>((r) => {
@@ -395,9 +395,9 @@ export function useIssuesQuery(projectId: string | null) {
         }
       }
       if (projectId) {
-        // Un toggle = une entrée au registre : elles se fusionnent par `seq`
-        // croissant, donc le dernier état gagne, et le lot entier se referme à
-        // la retombée du PUT groupé.
+        // A toggle = an entry in the register: they are merged by `seq`
+        // ascending, so the last state wins, and the entire batch closes at
+        // the fallout from the grouped PUT.
         const handles = catHandles.current.get(issueId) ?? [];
         handles.push(
           issueWrites.begin({
@@ -448,9 +448,9 @@ export function useIssuesQuery(projectId: string | null) {
                 }
                 held.resolve();
               }
-              // Le PUT ne renvoie pas la ligne : le jeu écrit EST la vérité.
-              // On referme les entrées et on laisse le realtime réconcilier
-              // (invalider ici relancerait le refetch qu'on cherche à éviter).
+              // The PUT does not return the line: the written game IS the truth.
+              // We close the entries and let realtime reconcile
+              // (invalidating here would restart the refetch that we are trying to avoid).
               for (const handle of handles) issueWrites.settle(handle);
             })
             .catch((err) => {

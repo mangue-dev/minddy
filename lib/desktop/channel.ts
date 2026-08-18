@@ -1,36 +1,36 @@
 /**
- * Le CANAL de l'app de bureau (MIN-352) — quelle version de minddy la fenêtre
- * montre.
+ * Desktop app CHANNEL (MIN-352) — what version of minddy the window
+ * shows.
  *
- * ## Ce que c'est, et ce que ce n'est pas
+ * ## What it is, and what it isn't
  *
- * La coquille n'embarque pas d'UI : elle est une fenêtre sur une origine. Le
- * canal ne change donc rien au binaire — il change l'ADRESSE. `stable` charge
- * `www.minddy.app` (la production), `preview` charge `preview.minddy.app` (le
- * dernier commit de `main`, avant promotion).
+ * The shell does not ship of UI: it is a window on an origin. The
+ * channel therefore does not change anything in the binary — it changes the ADDRESS. `stable` loads
+ * `www.minddy.app` (production), `preview` loads `preview.minddy.app` (the
+ * last commit of `main`, before promotion).
  *
- * Les deux servent le **même projet Supabase** : mêmes comptes, mêmes projets,
- * mêmes tickets. Basculer ne duplique rien et ne perd rien. La seule chose qui
- * ne suit pas est la SESSION — les cookies sont par origine, donc le premier
- * passage sur preview demande de se reconnecter une fois. Revenir au stable
- * retrouve la session de production, restée intacte.
+ * Both serve the **same Supabase project**: same accounts, same projects,
+ * same tickets. Switching doesn't duplicate anything or lose anything. The only thing that
+ * doesn't track is the SESSION — cookies are by origin, so the first
+ * pass on preview asks to log in again once. Returning to stable
+ * finds the production session, remaining intact.
  *
- * ## Pourquoi ce module est PUR
+ * ## Why this module is PUR
  *
- * Il est lu des deux côtés du pont : par le main process, qui décide quelle URL
- * charger (`desktop/src/main.ts`) et retient le choix sur disque
- * (`desktop/src/channel-store.ts`), et par la PAGE, qui affiche l'interrupteur
- * (`components/settings/account-preferences-section.tsx`). Aucun `electron`,
- * aucun React, aucune lecture de disque : rien que deux chaînes et la table qui
- * les relie.
+ * It is read from both sides of the bridge: by the main process, which decides which URL
+ * to load (`desktop/src/main.ts`) and retains the choice on disk
+ * (`desktop/src/channel-store.ts`), and by the PAGE, which displays the switch
+ * (`components/settings/account-preferences-section.tsx`). No `electron`,
+ * no React, no disk reading: just two strings and the table that
+ * connects them.
  *
- * ## Le canal ne voyage pas par le pont
+ * ## The channel does not travel over the bridge
  *
- * La page ne DEMANDE pas dans quel canal elle est : elle le lit sur sa propre
- * origine (`desktopChannelForOrigin`). C'est la seule source qui ne puisse pas
- * mentir — un canal recopié dans le pont serait un second état à tenir
- * synchrone avec l'URL réellement chargée, et il finirait par diverger le jour
- * où une bascule échoue. Le pont n'a donc qu'un membre de plus, en écriture.
+ * The page does not ASK which channel it is in: it reads it on its own
+ * origin (`desktopChannelForOrigin`). This is the only source that cannot
+ * lie — a pipe copied into the bridge would be a second state to keep
+ * synchronous with the URL actually loaded, and it would eventually diverge on the day
+ * a toggle fails. The bridge therefore only has one more member, in writing.
  */
 
 import {
@@ -39,31 +39,31 @@ import {
   DESKTOP_STABLE_ORIGIN,
 } from "@/lib/desktop/config";
 
-/** `stable` = production, `preview` = la tête de `main`. */
+/** `stable` = production, `preview` = the head of `main`. */
 export type DesktopChannel = "stable" | "preview";
 
-/** Celui d'une installation neuve, et celui sur lequel on retombe au moindre doute. */
+/** That of a new installation, and the one that we fall back on at the slightest doubt. */
 export const DESKTOP_DEFAULT_CHANNEL: DesktopChannel = "stable";
 
 /**
- * Le canal lu d'une valeur qui vient d'AILLEURS — un fichier JSON écrit par une
- * version précédente, un message du renderer.
+ * The pipe read from a value that comes from ELSEWHERE — a JSON file written by a
+ * previous version, a message from the renderer.
  *
- * Tout ce qui n'est pas exactement `"preview"` retombe sur le stable : un
- * fichier tronqué, une valeur inventée ou un canal retiré d'une version future
- * doivent ramener quelqu'un en production, jamais l'y bloquer ailleurs.
+ * Anything that is not exactly `"preview"` falls back to the stable: a
+ * file truncated, an invented value or a channel removed from a future version
+ * should bring someone back to production, never block them there elsewhere.
  */
 export function parseDesktopChannel(raw: unknown): DesktopChannel {
   return raw === "preview" ? "preview" : DESKTOP_DEFAULT_CHANNEL;
 }
 
 /**
- * L'origine à charger pour ce canal.
+ * The origin to load for this channel.
  *
- * ⚠ **L'origine de dév gagne sur le canal.** Pointée sur `localhost`, la
- * coquille n'a pas deux canaux à offrir : elle a le serveur qu'on est en train
- * de lancer. Sans cette priorité, cocher la case en dév enverrait la fenêtre sur
- * la vraie preview au milieu d'une session de développement.
+ * ⚠ **The dev origin wins on the channel.** Pointed to `localhost`, the
+ * shell does not have two channels to offer: it has the server that we are on train
+ * to cast. Without this priority, checking the box in dev would send the window to
+ * the real preview in the middle of a development session.
  */
 export function desktopOriginForChannel(channel: DesktopChannel): string {
   if (DESKTOP_ORIGIN_OVERRIDE) return DESKTOP_ORIGIN_OVERRIDE;
@@ -71,12 +71,12 @@ export function desktopOriginForChannel(channel: DesktopChannel): string {
 }
 
 /**
- * Le canal d'une origine, ou `null` quand ce n'en est aucun des deux.
+ * The channel of an origin, or `null` when it is neither.
  *
- * `null` n'est pas un détail : c'est le cas du dév (`localhost`), et c'est ce
- * qui dit à l'écran de réglages de **ne pas afficher l'interrupteur du tout**
- * plutôt que d'en montrer un qui ne ferait rien. Une case à cocher qu'on coche
- * et qui reste où elle était est pire que pas de case.
+ * `null` is not a detail: this is the case of dev (`localhost`), and it is this
+ * which tells the settings screen to **not show the switch at all**
+ * rather than showing one which would do nothing. A checkbox that is checked
+ * and remains where it was is worse than no checkbox.
  */
 export function desktopChannelForOrigin(origin: string): DesktopChannel | null {
   if (origin === DESKTOP_PREVIEW_ORIGIN) return "preview";

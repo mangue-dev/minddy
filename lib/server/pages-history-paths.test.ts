@@ -1,42 +1,42 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-// `typescript-api` est un alias vers `typescript@5` (cf. package.json et CLAUDE.md) :
-// depuis MIN-180 le dépôt vérifie avec `typescript@7`, qui ne livre plus l'API
-// du compilateur. Les tests structurels ont donc leur propre TypeScript, en JS.
+// `typescript-api` is an alias to `typescript@5` (see package.json and CLAUDE.md):
+// since MIN-180 the repository checks with `typescript@7`, which no longer ships the API
+// of the compiler. Structural tests therefore have their own TypeScript, in JS.
 import ts from "typescript-api";
 import { describe, expect, it } from "vitest";
 
 /**
- * MIN-277 — une écriture de page porte SON AUTEUR et archive ce qu'elle
+ * MIN-277 — a page writing bears ITS AUTHOR and archives what it
  * recouvre, ou l'historique ment.
  *
- * Le jumeau de `pages-search-paths.test.ts`, et pour la même raison de fond :
- * rien, dans le schéma comme dans les types, n'oblige un chemin d'écriture à
- * poser `updated_by` ni à insérer sa ligne de `page_versions`. Un chemin qui
- * l'oublie ne casse rien de visible — il rend une écriture anonyme et
- * irréversible, ce qui ne se découvre que le jour de l'incident, quand
- * quelqu'un demande « qui a écrit ça » et « remets-moi la version d'avant ».
+ * The twin of `pages-search-paths.test.ts`, and for the same basic reason:
+ * nothing, in the schema or in the types, forces a write path to
+ * ask `updated_by` nor insert its `page_versions` line. A path that
+ * forgetting does not break anything visible — it makes writing anonymous and
+ * irreversible, which is only discovered on the day of the incident, when
+ * someone asks “who wrote that” and “give me the earlier version”.
  *
- * La règle, qui se relit sans retracer les appels : **dans
- * `lib/server/pages.ts`, toute fonction qui écrit `content` appelle `writtenBy`
- * ET `stampPageWrite`.** Un chemin ajouté plus tard sans l'un des deux fait
- * tomber ce test en nommant la fonction fautive.
+ * The rule, which can be reread without tracing the calls: **in
+ * `lib/server/pages.ts`, any function that writes `content` calls `writtenBy`
+ * AND `stampPageWrite`.** A path added later without one of the two does
+ * fail this test by naming the offending function.
  *
- * `stampPageWrite` n'archive rien sur une création (`previous: null`) : le point
- * d'appel y est conservé exprès, pour que la règle n'ait aucune exception à
- * retenir — et pour que ce test reste une lecture, pas une liste de cas.
+ * `stampPageWrite` does not archive anything on a creation (`previous: null`): the point
+ * of appeal is kept there expressly, so that the rule has no exception to
+ * remember — and so that this test remains a reading, not a list of cases.
  *
- * Ce qu'il ne prétend pas couvrir : que l'archivage garde le BON état, ni que la
- * coalescence coalesce. Ça, c'est `pages.test.ts`, qui fait tourner le vrai
- * noyau sur une table en mémoire.
+ * What it does not claim to cover: that the archiving keeps the GOOD state, nor that the
+ * coalescence coalescence. That's `pages.test.ts`, which runs the real thing
+ * kernel on a table in memory.
  *
- * MIN-278 ajoute une troisième obligation, de la même famille et pour la même
- * raison : **un chemin d'écriture ANNONCE ce qu'il fait** (`announcePageWrite`)
- * — sa ligne d'activité, les gens qu'il vient de citer, et le lanceur du run
- * quand c'est l'agent qui écrit. Un chemin qui l'oublie ne casse rien de visible
- * non plus : il rend une page qui change sans que rien ne se passe, ce qui était
- * exactement l'état d'avant.
+ * MIN-278 adds a third obligation, of the same family and for the same
+ * reason: **a write path ANNOUNCES what it does** (`announcePageWrite`)
+ * — his line of activity, the people he just mentioned, and the launcher of the run
+ * when it is the agent who writes. A path that forgets it does not break anything visible
+ * either: it renders a page that changes without anything happening, which was
+ * exactly the state before.
  */
 
 const PAGES_PATH = join(process.cwd(), "lib/server/pages.ts");
@@ -50,7 +50,7 @@ function parsePages(): ts.SourceFile {
   );
 }
 
-/** Le nom de la fonction qui contient ce nœud — ce qu'on nomme dans l'échec. */
+/** The name of the function that contains this node — what we call it in failure. */
 function enclosingFunction(node: ts.Node): string {
   let cursor: ts.Node | undefined = node;
   while (cursor) {
@@ -68,7 +68,7 @@ function enclosingFunction(node: ts.Node): string {
   return "<module>";
 }
 
-/** La ligne écrit-elle un corps ? `{ content: … }` ou `row.content = …`. */
+/** Does the line write a body? `{ content: … }` or `row.content = …`. */
 function mentionsContent(node: ts.Node): boolean {
   let found = false;
   const visit = (n: ts.Node) => {
@@ -88,7 +88,7 @@ function mentionsContent(node: ts.Node): boolean {
   return found;
 }
 
-/** Le nœud de fonction qui contient ce nœud, pour n'inspecter que son corps. */
+/** The function node that contains this node, to only inspect its body. */
 function enclosingNode(node: ts.Node): ts.Node {
   let cursor: ts.Node | undefined = node;
   while (cursor) {
@@ -105,11 +105,11 @@ function enclosingNode(node: ts.Node): ts.Node {
 }
 
 /**
- * La TABLE visée par un `.insert(…)` / `.update(…)` — `service.from("pages")`.
+ * The TABLE targeted by a `.insert(…)` / `.update(…)` — `service.from("pages")`.
  *
- * Sans elle, l'analyse compterait l'insertion d'une ligne d'HISTORIQUE
- * (`page_versions`, qui porte elle aussi une colonne `content`) comme un chemin
- * d'écriture de page, et exigerait de l'archiveur qu'il s'archive lui-même.
+ * Without it, the analysis would include the insertion of a HISTORY line
+ * (`page_versions`, which also has a column `content`) as a path
+ * of page writing, and would require the archiver to archive itself.
  */
 function targetTable(node: ts.CallExpression): string | null {
   let cursor: ts.Expression = node.expression;
@@ -128,12 +128,12 @@ function targetTable(node: ts.CallExpression): string | null {
 }
 
 /**
- * Les fonctions qui ÉCRIVENT le corps, et celles qui signent / archivent.
+ * The functions that WRITE the body, and those that sign/archive.
  *
- * Même analyse que pour la projection de recherche : un `.insert(…)` /
- * `.update(…)` qui porte `content`, dans le littéral qu'on lui passe ou dans une
- * variable construite plus haut (`patch`, `rows`). La corbeille et la
- * restauration écrivent aussi la table mais jamais le corps — elles ne doivent
+ * Same analysis as for the search projection: a `.insert(…)` /
+ * `.update(…)` which carries `content`, in the literal that is passed to it or in a
+ * variable constructed above (`patch`, `rows`). The basket and the
+ * restoration also write the table but never the body — they must not
  * donc rien signer d'autre que ce qu'elles touchent.
  */
 function scan() {
@@ -176,8 +176,8 @@ describe("les chemins d'écriture du corps d'une page", () => {
   it("portent tous leur auteur", () => {
     const { writes, signed } = scan();
 
-    // Le test ne vaut que s'il VOIT les chemins : une refonte qui les rendrait
-    // invisibles à l'analyse le laisserait passer en silence.
+    // The test is only valid if it SEES the paths: a recasting which would make them
+    // invisible to analysis would let it pass in silence.
     expect(writes.size).toBeGreaterThanOrEqual(4);
 
     const missing = [...writes].filter((fn) => !signed.has(fn));
@@ -204,11 +204,11 @@ describe("les chemins d'écriture du corps d'une page", () => {
   });
 
   /**
-   * Le MIROIR (`syncParentBody`) est la seule exception, et elle est nommée ici
-   * plutôt que devinée : il n'est jamais un geste en soi — il accompagne
-   * toujours une corbeille ou une restauration, qui a déjà posé sa ligne. En
-   * poser une seconde ferait lire « X a modifié Dossier » à chaque sous-page
-   * supprimée.
+   * The MIRROR (`syncParentBody`) is the only exception, and it is named here
+   * rather than guessed: it is never a gesture in itself — it accompanies
+   * always a basket or a restoration, which has already placed its line. In
+   * holding for a second would read “X modified Folder” on each subpage
+   * deleted.
    */
   const MIRROR = "syncParentBody";
 
@@ -228,8 +228,8 @@ describe("les chemins d'écriture du corps d'une page", () => {
 
   it("couvrent les quatre gestes connus", () => {
     const { writes } = scan();
-    // Un garde-fou du garde-fou : si l'un de ces noms disparaît, c'est que le
-    // module a bougé, et la règle ci-dessus doit être relue plutôt que crue.
+    // A guardrail of the guardrail: if one of these names disappears, it is because the
+    // module has moved, and the rule above should be reread rather than believed.
     for (const fn of ["createPage", "duplicatePage", "updatePage", "syncParentBody"]) {
       expect(writes.has(fn), `${fn} n'est plus vu comme un chemin d'écriture`).toBe(
         true

@@ -1,31 +1,31 @@
 /**
- * MIN-286 — sonde de PACKAGING : opencode démarre-t-il dans la microVM, et en
- * combien de temps ?
+ * MIN-286 — PACKAGING probe: does opencode start in the microVM, and in
+ * how long?
  *
- * Ne tourne PAS avec `npm test` : `describe.skipIf` la saute tant que
- * `MDY_OPENCODE_PACKAGING_PROBE=1` n'est pas posé. Elle crée une vraie microVM
- * Vercel Sandbox (facturée à la minute) et y télécharge ~144 Mo de binaire — une
- * suite qui la jouerait à chaque commit serait payante et rouge au hasard.
+ * Does NOT run with `npm test`: `describe.skipIf` skips it so much that
+ * `MDY_OPENCODE_PACKAGING_PROBE=1` is not set. It creates a real microVM
+ * Vercel Sandbox (billed by the minute) and downloads ~144 MB of binary into it — a
+ * suite that would play it on each commit would be paid and red at random.
  *
- *   MDY_OPENCODE_PACKAGING_PROBE=1 \
- *   MDY_OPENCODE_PROBE_OUT=/tmp/packaging.json \
- *   npx vitest run lib/server/agent/vm/opencode-packaging.probe.test.ts --testTimeout=1200000
+ * MDY_OPENCODE_PACKAGING_PROBE=1 \
+ * MDY_OPENCODE_PROBE_OUT=/tmp/packaging.json \
+ * npx vitest run lib/server/agent/vm/opencode-packaging.probe.test.ts --testTimeout=1200000
  *
- * Ce qu'elle établit, et qu'aucune lecture ne peut dire :
- *  1. le binaire natif s'installe et démarre dans le runtime `node24` — le même
- *     que le code agent (`SANDBOX_RUNTIME`, repo-host.ts) ;
- *  2. combien coûte ce démarrage, à comparer au `bootstrapMs` d'aujourd'hui ;
- *  3. ce que ça donne À CHAUD, une microVM reprise ayant déjà son `node_modules` ;
- *  4. si le serveur démarre sans aller chercher le catalogue de modèles en ligne
- *     (`OPENCODE_DISABLE_MODELS_FETCH`), ce qui décide de la dépendance d'un run
- *     à models.dev.
+ * What it does establishes, and that no reading can say:
+ * 1. the native binary installs and starts in the `node24` runtime — the same
+ * as the agent code (`SANDBOX_RUNTIME`, repo-host.ts);
+ * 2. how much does this startup cost, compared to `bootstrapMs` of today;
+ * 3. what happens HOT, a resumed microVM already having its `node_modules` ;
+ * 4. if the server starts without fetching the online model catalog
+ * (`OPENCODE_DISABLE_MODELS_FETCH`), which decides to the dependency of a run
+ * on models.dev.
  *
- * PIÈGE, et il coûte deux essais : un `runCommand` attaché dont la sortie n'arrive
- * pas meurt vers 75 s sur `UND_ERR_SOCKET: other side closed`, et l'installation en
- * dure plus. D'où la forme : **un seul script lancé en `detached`**, qui écrit son
- * rapport dans un fichier, et un sondage par commandes courtes jusqu'au marqueur
- * de fin. Le rapport passe par un fichier parce que le reporter de vitest avale
- * les `console.log`.
+ * TRAP, and it costs two tries: an attached `runCommand` whose output does not arrive
+ * dies around 75 s on `UND_ERR_SOCKET: other side closed`, and the installation en
+ * lasts longer. Hence the form: **a single script launched in `detached`**, which writes its
+ * report in a file, and a poll by short commands up to the end marker
+ *. The report goes through a file because the vites reporter swallows
+ * the `console.log`.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -36,7 +36,7 @@ const OPENCODE_VERSION = process.env.MDY_OPENCODE_VERSION ?? "1.18.16";
 const PORT = 4399;
 const DONE = "__PROBE_DONE__";
 
-/** Les creds vivent dans `.env` ; vitest ne le charge pas tout seul. */
+/** Creds live in `.env`; vitest does not load it on its own. */
 function loadEnv(): void {
   const file = path.resolve(process.cwd(), ".env");
   if (!fs.existsSync(file)) return;
@@ -48,12 +48,12 @@ function loadEnv(): void {
 }
 
 /**
- * Un démarrage mesuré. **Rien n'est détaché**, et c'est le cœur de la recette :
- * un `nohup … &` dans un `sh -c` du Sandbox fait tomber la commande RPC (mesuré
- * trois fois, `UND_ERR_SOCKET` en ~25 s, sans une ligne de sortie), alors que le
- * même serveur au premier plan démarre parfaitement. On lit donc la ligne
- * « listening » sur le tube, on chronomètre là, on interroge, et `timeout` rend
- * la main — le tout sous les 75 s au bout desquels la socket RPC se ferme.
+ * A measured startup. **Nothing is detached**, and this is the heart of the
+ * recipe: a `nohup … &` inside a Sandbox `sh -c` makes the RPC command fail
+ * (measured three times, `UND_ERR_SOCKET` after ~25 s, without an output line),
+ * while the same server starts perfectly in the foreground. So we read the
+ * “listening” line from the pipe, time it there, query it, and let `timeout`
+ * return control — all within the 75 s after which the RPC socket closes.
  */
 function bootScript(label: string, extraEnv: string): string {
   return [
@@ -94,7 +94,7 @@ describe.skipIf(!LIVE)("opencode dans la microVM", () => {
 
       const report: string[] = [];
       try {
-        // ── 1. l'installation, en fond : elle dépasse la minute ─────────────
+        // ── 1. the installation, in the background: it exceeds one minute ─────────────
         const install = [
           `mkdir -p /vercel/oc/repo && cd /vercel/oc`,
           `S=$(date +%s%3N)`,
@@ -121,9 +121,9 @@ describe.skipIf(!LIVE)("opencode dans la microVM", () => {
         report.push(out);
         expect(out).toContain("install_code=0");
 
-        // ── 2. le dépôt de sonde, puis les démarrages ───────────────────────
-        // ATTACHÉ : chacun rend en quelques secondes, et une erreur se VOIT —
-        // c'est ce que la version tout-en-fond cachait.
+        // ── 2. probe deposit, then start-ups ───────────────────────
+        // ATTACHED: everyone renders in a few seconds, and an error is SEEN —
+        // this is what the all-in-the-back version was hiding.
         const prep = await sh(
           `cd /vercel/oc/repo && git init -q 2>&1; echo hi > a.txt; ` +
             `git -c user.email=a@b -c user.name=a add -A 2>&1; ` +
@@ -151,8 +151,8 @@ describe.skipIf(!LIVE)("opencode dans la microVM", () => {
         if (outFile) fs.writeFileSync(outFile, out);
       } finally {
         const outFile = process.env.MDY_OPENCODE_PROBE_OUT;
-        // Le rapport est écrit MÊME sur échec : sur une sonde, ce qu'on a mesuré
-        // avant de tomber vaut souvent plus que l'assertion qui tombe.
+        // The report is written EVEN on failure: on a probe, what we measured
+        // before falling is often worth more than the assertion that falls.
         if (outFile && report.length) fs.writeFileSync(outFile, report.join("\n"));
         await sandbox.stop().catch(() => {});
       }

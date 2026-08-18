@@ -23,7 +23,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
 
-  // Actions MCP : résoudre la clé (nom + agent) via le service client.
+  // MCP Actions: Resolve key (name + agent) via customer service.
   const keyActors = await resolveApiKeyActors(
     (data ?? []).map((e) => e.api_key_id as string | null)
   );

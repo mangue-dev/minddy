@@ -3,27 +3,27 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Le plafond de stockage d'un compte, côté serveur (MIN-348).
+ * The storage limit of an account, server side (MIN-348).
  *
- * La VRAIE application du quota est en SQL — dans la policy `attachments
- * insert` (migration 20261229090000), parce que l'envoi d'une pièce jointe part
- * du navigateur droit vers le bucket sans traverser aucune de nos routes.
+ * The REAL application of the quota is in SQL — in the policy `attachments
+ * insert` (migration 20261229090000), because sending an attachment leaves
+ * from the browser straight to the bucket without crossing any of our routes.
  *
- * Ce module sert les écritures qui, elles, passent par le SERVEUR : le fichier
- * de page, la pièce jointe déposée par un agent MCP. Elles utilisent le client
- * de service, qui contourne RLS — donc la policy ne les voit pas, et sans ce
- * relais elles seraient le trou dans le plafond qu'on vient de poser.
+ * This module serves the writes which pass through the SERVER: the file
+ * page, the attachment filed by an MCP agent. They use the client
+ * service, which bypasses RLS — so the policy does not see them, and without this
+ * relay they would be the hole in the ceiling that we have just installed.
  *
- * Une seule définition du verdict pour autant : les deux chemins appellent la
- * MÊME fonction SQL. Ici on ne fait que la demander.
+ * Only one definition of the verdict for all that: both paths call for
+ * SAME SQL function. Here we are just asking for it.
  */
 
 /**
- * `false` quand le propriétaire de ce projet a rempli son quota.
+ * `false` when the owner of this project has filled his quota.
  *
- * En cas d'erreur base, on répond `true` : un incident de lecture ne doit pas
- * bloquer l'écriture d'un utilisateur en règle, et la policy reste le filet
- * pour tout ce qui vient du navigateur.
+ * In the event of a base error, we respond `true`: a reading incident must not
+ * block the writing of a user in good standing, and the policy remains the net
+ * for everything that comes from the browser.
  */
 export async function projectStorageAllowed(
   service: SupabaseClient,

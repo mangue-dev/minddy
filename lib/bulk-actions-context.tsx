@@ -4,7 +4,7 @@
  * Bulk-selection bridge between the boards' floating pill and the global command
  * palette (MIN-75). The kanban boards own the selection; the pill packages it
  * into a {@link BulkActionsRequest} and calls `requestBulkActions`, which the
- * <CommandPalette> reads to build a transient "N tickets sélectionnés" item and
+ * <CommandPalette> reads to build a transient "N tickets selected" item and
  * open its actions popover — so bulk edits live in ⌘K (with the palette's inline
  * submenu forms) instead of a bespoke cmdk dropdown.
  *
@@ -39,8 +39,8 @@ export interface BulkCycleActions {
 export interface BulkActionsRequest {
   /** Number of selected tickets — drives the item title, plurals and confirms. */
   count: number;
-  /** D'où part la sélection, pour l'analytics seule. Par défaut « board » — le
-   *  triage (sa colonne de gauche) se nomme, sinon tout se compterait ensemble. */
+  /** Where does the selection come from, for analytics only. By default “board” — the
+ * triage (its left column) is named, otherwise everything would be counted together. */
   surface?: string;
   /** Assignable members across the selection's projects (already de-duplicated). */
   members: Member[];
@@ -78,9 +78,9 @@ export function BulkActionsProvider({ children }: { children: ReactNode }) {
   const [openSignal, setOpenSignal] = useState(0);
 
   const requestBulkActions = useCallback((next: BulkActionsRequest) => {
-    // MIN-75 : le bouton « Actions » de la pill de sélection. C'est le seul
-    // point de passage vers les actions groupées — la taille de la sélection
-    // dit si la fonction sert à deux tickets ou à trente.
+    // MIN-75: the “Actions” button of the selection pill. It's the only one
+    // waypoint to bulk actions — the size of the selection
+    // says if the function is used for two tickets or thirty.
     trackEvent("bulk_selection_started", {
       surface: next.surface ?? "board",
       count: next.count,

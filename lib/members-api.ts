@@ -24,7 +24,7 @@ export async function fetchMembersApi(projectId: string): Promise<MembersRespons
 }
 
 export async function inviteMemberApi(projectId: string, email: string): Promise<void> {
-  // L'email n'est JAMAIS envoyé — seulement le fait qu'une invitation part.
+  // The email is NEVER sent — only that an invitation goes out.
   trackEvent("project_member_invited", {});
   await parseJson(
     await fetch(`/api/projects/${projectId}/members`, {

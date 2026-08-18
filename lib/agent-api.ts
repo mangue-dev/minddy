@@ -16,22 +16,22 @@ import type { AssistantMention } from "./assistant-types";
 import type { ResourceInput } from "./types";
 
 /**
- * Fetchers client de l'agent de code (MIN-46) : lancer un run sur une issue et
- * lister ses runs. (Le détail live + events + stop d'un run arrivent en Phase 7.)
+ * Code agent client fetchers (MIN-46): launch a run on an issue and
+ * list your runs. (The live + events + stop details of a run arrive in Phase 7.)
  */
 
 /**
- * Erreur d'API qui conserve le `code` métier de la route (ex. `lineNotInDiff`) en
- * plus du message : certains appelants doivent distinguer le cas, pas seulement
- * l'afficher. Reste une `Error` — les appelants qui ne lisent que `.message` sont
- * inchangés.
+ * API error which keeps the `code` business of the route (e.g. `lineNotInDiff`) in
+ * more of the message: some callers must distinguish the case, not only
+ * display it. One `Error` remains — callers who only read `.message` are
+ * unchanged.
  */
 export class ApiError extends Error {
   code?: string;
   /**
-   * Détail structuré que le message brut ne porte pas — aujourd'hui le
-   * `modelLimit` d'un refus `modelAbovePlan` (modèle, multiplicateur, plafond,
-   * plan), dont l'écran a besoin pour dire lequel et jusqu'où.
+   * Structured detail that the raw message does not carry — today the
+   * `modelLimit` of a refusal `modelAbovePlan` (model, multiplier, ceiling,
+   * plan), which the screen needs to tell which one and how far.
    */
   details?: Record<string, unknown>;
   constructor(message: string, code?: string, details?: Record<string, unknown>) {
@@ -67,21 +67,21 @@ export interface AgentRunSummary {
   status: AgentRunStatus;
   model: string | null;
   model_forced: boolean;
-  /** Niveau de raisonnement FIGÉ au lancement (MIN-122) : le sélecteur d'une run
-   *  en cours l'affiche en lecture seule, comme le modèle et la branche. */
+  /** Level of reasoning FROZEN at launch (MIN-122): the selector of a run
+   * current displays it as read-only, such as model and branch. */
   reasoning_level: ReasoningLevel;
   key_mode: "platform" | "byok";
   triggered_by: "button" | "chat" | "mention";
-  /** Prompt de lancement (bulle « originelle » de la conversation). */
+  /** Prompt launch (“original” conversation bubble). */
   prompt: string | null;
   prompt_mentions?: AssistantMention[] | null;
-  /** Non nul = session de RELECTURE (MIN-168) : lecture seule sur le dépôt, donc
-   *  ni branche, ni pull request à ouvrir depuis la conversation. */
+  /** Non-zero = REREAD session (MIN-168): read only on the repository, therefore
+   * neither branch nor pull request to open from the conversation. */
   pull_request_id: string | null;
-  /** Branche COPIÉE au lancement (choisie en compose, sinon le défaut du dépôt).
-      Null tant que le premier chunk ne l'a pas stampée sur une run sans héritage. */
+  /** Branch COPIED at launch (chosen in composition, otherwise the repository default).
+      Null until the first chunk stamps it on a run without inheritance. */
   base_branch: string | null;
-  /** Branche de travail de la lignée (l'héritage des runs froides est indexé dessus). */
+  /** Working branch of the lineage (inheritance of cold runs is indexed to it). */
   branch_name: string | null;
   pr_number: number | null;
   pr_url: string | null;
@@ -93,32 +93,32 @@ export interface AgentRunSummary {
   created_at: string;
   updated_at: string;
   /**
-   * Moment PRÉCIS de la dernière fin d'agent (transition vers `completed`), stampé
-   * par trigger DB — insensible aux heartbeats / webhooks PR. `null` tant que la run
-   * n'a jamais terminé. Pilote la bulle bleue « lu / non-lu » (comparé au dernier
-   * `last_read_at` de la session).
+   * PRECISE moment of the last end of agent (transition to `completed`), stamped
+   * by DB trigger — insensitive to PR heartbeats / webhooks. `null` as long as the run
+   * never finished. Controls the blue “read/unread” bubble (compared to the last
+   * `last_read_at` of the session).
    */
   completed_at: string | null;
-  /** Le dernier tour s'est terminé sur un ask_user : la run ATTEND la réponse de
-   *  l'utilisateur → point JAUNE (mêmes règles de lecture que le non-lu). */
+  /** The last round ended on an ask_user: the run WAITS for the response from
+   * the user → YELLOW point (same reading rules as unread). */
   awaiting_input: boolean;
   /**
-   * La conversation tourne sur la MACHINE de l'utilisateur (MIN-359), et non
-   * dans une microVM. FIGÉ au lancement, comme le modèle, le raisonnement et la
-   * branche : le chip du composer est verrouillé dessus et le fil le dit.
+   * The conversation turns to the user's MACHINE (MIN-359), not
+   * in a microVM. FROZEN at launch, such as the model, reasoning and
+   * branch: the composer chip is locked on it and the wire says so.
    *
-   * Optionnel parce que les runs d'avant MIN-355 n'en portent pas et parce que
-   * les listes légères (page Agents) ne le sélectionnent pas — absent vaut
-   * « dans le cloud », ce qu'ont été tous les runs jusqu'ici.
+   * Optional because runs before MIN-355 do not carry one and because
+   * light lists (Agents page) do not select it — absent is
+   * “in the cloud”, which is what all the runs have been so far.
    */
   local_exec?: boolean;
-  /** Le mode local utilise un checkout Git isolé pour cette conversation. */
+  /** Local mode uses an isolated Git checkout for this conversation. */
   local_worktree?: boolean;
 }
 
 /**
- * Statuts d'un run qui TRAVAILLE (queued/running). Le ticket éventuel n'est
- * qu'un contexte : plusieurs conversations peuvent travailler en parallèle sur
+ * Statuses of a WORKING run (queued/running). The possible ticket is not
+ * than a context: several conversations can work in parallel on
  * des branches distinctes.
  */
 export const ACTIVE_AGENT_STATUSES: AgentRunStatus[] = ["queued", "running"];
@@ -128,45 +128,45 @@ export function isAgentRunActive(status: AgentRunStatus): boolean {
 }
 
 /**
- * L'agent est-il en train de TRAVAILLER ? Pilote le halo animé des cartes, le
- * polling d'events, et l'affichage du bouton « Interrompre » dans la conversation.
- * (Identique à `isAgentRunActive` depuis la fin de `needs_input` — conservé pour
- * la lisibilité des call-sites : « travaille » vs « occupe le ticket ».)
+ * Is the agent WORKING? Controls the animated halo of the cards, the
+ * polling of events, and the display of the “Interrupt” button in the conversation.
+ * (Same as `isAgentRunActive` since the end of `needs_input` — kept for
+ * the readability of call-sites: “works” vs “occupies the ticket”.)
  */
 export function isAgentRunWorking(status: AgentRunStatus): boolean {
   return status === "queued" || status === "running";
 }
 
 /**
- * Ce run précis peut-il être repris à CHAUD (message dans SA conversation) ? Oui
- * même au repos : son checkpoint et sa sandbox sont conservés, on enchaîne un tour
- * de plus dans le même contexte — c'est le geste NORMAL d'une conversation. Seule
- * une erreur d'amorçage (`failed` : pas de dépôt/modèle) n'a rien à reprendre.
- * Rappel : seule la DERNIÈRE run de l'issue est reprennable (les runs partagent la
- * branche) — le serveur refuse les autres (`supersededRun`).
+ * Can this specific run be resumed HOT (message in HIS conversation)? Yes
+ * even when resting: your checkpoint and sandbox are preserved, you continue a round
+ * moreover in the same context — it is the NORMAL gesture of a conversation. Alone
+ * a boot error (`failed`: no repository/model) does not require recovery.
+ * Reminder: only the LAST run of the outcome can be repeated (the runs share the
+ * branch) — the server refuses the others (`supersededRun`).
  */
 export function isAgentRunResumable(status: AgentRunStatus): boolean {
   return status !== "failed";
 }
 
 /**
- * La pull request d'un ticket, telle que les cartes et le panneau la lisent.
+ * The pull request for a ticket, as the cards and sign read it.
  *
- * Elle se lisait sur les runs de Numo — ce qui la rendait invisible dès que
- * personne n'avait lancé d'agent (PR humaine, ou PR rattachée à la main), et dès
- * qu'elle était FERMÉE. Elle vient maintenant de `pull_requests`, tous états
- * confondus : « Voir la pull request » doit mener à une PR fermée comme à une
- * autre. Le chip, lui, se tait sur `closed` — c'est le seul état qui n'appelle
+ * It was read on Numo's runs — which made it invisible as soon as
+ * no one had launched an agent (human PR, or PR attached to the hand), and as soon
+ * that it was CLOSED. It now comes from `pull_requests`, all states
+ * confused: “See the pull request” should lead to a closed PR as well as to a
+ * other. The chip is silent on `closed` — this is the only state that does not call
  * plus rien.
  */
 export interface IssuePr {
-  /** Id minddy — `?pr=` ouvre la PR quel que soit son état (la page l'épingle). */
+  /** Id minddy — `?pr=` opens the PR whatever its state (the page pins it). */
   prId: string;
   prNumber: number;
   state: "draft" | "open" | "merged" | "closed";
 }
 
-/** Une PR encore vivante ou livrée : tout sauf refusée. */
+/** A PR still alive or delivered: everything but refused. */
 export function isPrWorthShowing(pr: IssuePr | null): boolean {
   return !!pr && pr.state !== "closed";
 }
@@ -177,10 +177,10 @@ export async function fetchIssueAgentRunsApi(
   return parseJson(await fetch(`/api/issues/${issueId}/agent`));
 }
 
-/** État de la chaîne d'automatisation d'un ticket (MIN-147), vue client.
-    JAMAIS d'USD : `estimate.shareOfMonthlyBudget` est une part du budget mensuel
-    du plan. Une chaîne n'a plus de plafond propre — elle ne s'interrompt pas sur
-    la dépense, seul le quota du compte borne (cf. lib/automations). */
+/** Status of the automation chain of a ticket (MIN-147), customer view.
+    NEVER USD: `estimate.shareOfMonthlyBudget` is a part of the monthly budget
+    of the plan. A channel no longer has its own cap — it does not interrupt on
+    the expenditure, only the account quota limits (see lib/automations). */
 export interface IssueChainState {
   id: string;
   status: "pending" | "running" | "awaiting_human" | "stopped" | "completed" | "failed";
@@ -188,7 +188,7 @@ export interface IssueChainState {
   step: number;
   retries: number;
   stopReason: string | null;
-  /** Chaîne EN SURSIS : l'heure d'amorçage, pour le compte à rebours. */
+  /** RESPONSE channel: the start time, for the countdown. */
   notBefore: string | null;
   createdAt: string;
   updatedAt: string;
@@ -197,7 +197,7 @@ export interface IssueChainState {
 export interface IssueAutomationState {
   enabled: boolean;
   chain: IssueChainState | null;
-  /** Les étapes que les règles joueraient sur ce ticket, dans l'ordre. */
+  /** The steps that the rules would play on this ticket, in order. */
   plannedModes: ("plan" | "implement" | "verify" | "custom")[];
   estimate: { shareOfMonthlyBudget: number; fromHistory: boolean } | null;
 }
@@ -209,15 +209,15 @@ export async function fetchIssueAutomationApi(
 }
 
 /**
- * « Je prends ce ticket en main » — annule la chaîne qui l'attendait EN SURSIS.
+ * “I'll take this ticket in hand” — cancels the chain that was waiting for him IN REPRISED.
  *
- * À tirer sur les gestes manuels qui ne déplacent PAS le ticket : copier le
- * prompt de plan, de vérification ou une consigne libre. Le prompt
- * d'IMPLÉMENTATION, lui, avance déjà le ticket en « en cours » et annule le
- * sursis par ce seul fait ; les LANCEMENTS, eux, sont couverts côté serveur.
+ * To draw on manual gestures that do NOT move the ticket: copy the
+ * prompt for plan, verification or a free instruction. The prompt
+ * of IMPLEMENTATION, he already advances the ticket to “in progress” and cancels the
+ * reprieved by this fact alone; LAUNCHS are covered on the server side.
  *
- * Silencieux de bout en bout : aucune attente, aucune erreur remontée. Copier un
- * prompt doit rester instantané, et l'échec de ce signal ne vaut pas un toast.
+ * Silent from start to finish: no waiting, no errors reported. Copy one
+ * prompt must remain instantaneous, and the failure of this signal is not worth a toast.
  */
 export function handOffIssueApi(issueId: string): void {
   void fetch(`/api/issues/${issueId}/automation`, {
@@ -246,22 +246,22 @@ export async function launchAgentRunApi(
     prompt?: string;
     model?: string;
     baseBranch?: string;
-    /** Niveau de raisonnement choisi au lancement (MIN-122). Absent = défaut perso. */
+    /** Level of reasoning chosen at launch (MIN-122). Absent = personal default. */
     reasoningLevel?: ReasoningLevel;
-    /** `plan` (cadrer), `verify` (contrôler du travail fait) et `custom`
-     *  (consigne libre de l'utilisateur) laissent l'issue où elle est : seul
-     *  `implement` la passe « en cours » côté serveur. */
+    /** `plan` (supervise), `verify` (check the work done) and `custom`
+     * (free instructions from the user) leave the exit where it is: alone
+     * `implement` the “in progress” pass on the server side. */
     intent?: "implement" | "plan" | "verify" | "custom";
     mentions?: AssistantMention[];
     attachments?: ResourceInput[];
-    /** La conversation démarre sur la MACHINE (MIN-359) : choisi au premier
-     *  message, figé ensuite. Le serveur revalide (`localExecRequested`). */
+    /** The conversation starts on the MACHINE (MIN-359): chosen first
+     * message, then frozen. The server revalidates (`localExecRequested`). */
     localExec?: boolean;
-    /** Crée un worktree isolé sur la machine locale. */
+    /** Creates an isolated worktree on the local machine. */
     localWorktree?: boolean;
   },
 ): Promise<{ run: AgentRunSummary }> {
-  // Le prompt n'est JAMAIS envoyé — seulement sa présence et sa longueur.
+  // The prompt is NEVER sent — only its presence and length.
   trackEvent("agent_launched", {
     model: body.model ?? "default",
     reasoning_level: body.reasoningLevel ?? "default",
@@ -270,8 +270,8 @@ export async function launchAgentRunApi(
     scope: "issue_context",
     has_prompt: !!body.prompt,
     prompt_length_bucket: lengthBucket(body.prompt),
-    // Où le tour part (MIN-359). Le chemin, lui, ne sort JAMAIS du poste : c'est
-    // un booléen, comme le reste de ce qu'on mesure ici.
+    // Where the tour leaves (MIN-359). The path NEVER leaves the post: it is
+    // a Boolean, like the rest of what we measure here.
     local_exec: !!body.localExec,
   });
   return parseJson(
@@ -284,8 +284,8 @@ export async function launchAgentRunApi(
 }
 
 /**
- * Branches du dépôt lié au projet de l'issue (picker de branche de base en phase
- * compose). `defaultBranch` en tête de liste.
+ * Branches from the repository linked to the issue project (basic branch picker in phase
+ * compound). `defaultBranch` at the top of the list.
  */
 export async function fetchIssueRepoBranchesApi(
   issueId: string,
@@ -293,16 +293,16 @@ export async function fetchIssueRepoBranchesApi(
   return parseJson(await fetch(`/api/issues/${issueId}/agent/branches`));
 }
 
-// ── Runs SANS TICKET (MIN-84) : sujet libre, ancré à un projet ───────────────
+// ── Runs WITHOUT TICKET (MIN-84): free subject, anchored to a project ───────────────
 
 /**
- * Lance un run SANS TICKET : ancré à un projet (le dépôt à cloner) + un texte
- * libre comme instruction. Chaque lancement est une conversation autonome.
+ * Launch a run WITHOUT TICKET: anchored to a project (the repository to be cloned) + a text
+ * free as instruction. Each launch is a self-contained conversation.
  *
- * Dit « carnet » (notebook) partout côté serveur : le carnet en fut le premier
- * point d'entrée (MIN-84). Ils viennent aujourd'hui d'un peu partout — la
- * conversation vierge de la page Agents, les wizards d'intégration — et le sujet
- * est libre : seul le projet est obligatoire.
+ * Called “notebook” everywhere on the server side: the notebook was the first
+ * point of entry (MIN-84). Today they come from almost everywhere — the
+ * blank conversation from the Agents page, the integration wizards — and the subject
+ * is free: only the project is obligatory.
  */
 export async function launchNotebookAgentApi(body: {
   projectId: string;
@@ -310,13 +310,13 @@ export async function launchNotebookAgentApi(body: {
   mentions?: AssistantMention[];
   attachments?: ResourceInput[];
   model?: string;
-  /** Niveau de raisonnement choisi au lancement (MIN-122). Absent = défaut perso. */
+  /** Level of reasoning chosen at launch (MIN-122). Absent = personal default. */
   reasoningLevel?: ReasoningLevel;
   baseBranch?: string;
-  /** La conversation démarre sur la MACHINE (MIN-359) : choisi au premier
-   *  message, figé ensuite. Le serveur revalide (`localExecRequested`). */
+  /** The conversation starts on the MACHINE (MIN-359): chosen first
+   * message, then frozen. The server revalidates (`localExecRequested`). */
   localExec?: boolean;
-  /** Crée un worktree isolé sur la machine locale. */
+  /** Creates an isolated worktree on the local machine. */
   localWorktree?: boolean;
 }): Promise<{ run: AgentRunSummary }> {
   trackEvent("agent_launched", {
@@ -338,17 +338,17 @@ export async function launchNotebookAgentApi(body: {
   );
 }
 
-/** Nom de domaine actuel ; l'ancien export reste disponible pour compatibilite. */
+/** Current domain name; the old export remains available for compatibility. */
 export const launchGeneralAgentApi = launchNotebookAgentApi;
 
-/** Branches du dépôt lié à un PROJET (compose d'un run carnet). */
+/** Branches of the repository linked to a PROJECT (composed of a run notebook). */
 export async function fetchProjectRepoBranchesApi(
   projectId: string,
 ): Promise<{ branches: string[]; defaultBranch: string }> {
   return parseJson(await fetch(`/api/projects/${projectId}/agent/branches`));
 }
 
-/** Détail (client-safe) d'un run — la conversation d'une session carnet. */
+/** Detail (client-safe) of a run — the conversation of a notebook session. */
 export async function fetchAgentRunApi(
   runId: string,
 ): Promise<{ run: AgentRunSummary }> {
@@ -356,10 +356,10 @@ export async function fetchAgentRunApi(
 }
 
 /**
- * RENOMME une conversation. Écrit `agent_runs.title`, c'est-à-dire la première
- * marche de la cascade d'affichage (`lib/agent-session-title.ts`) : le nom change
- * partout d'un coup. Un titre vide EFFACE le sien — la conversation retombe alors
- * sur le titre de son ticket, et c'est le chemin de retour d'un renommage
+ * RENAME a conversation. Written `agent_runs.title`, that is to say the first
+ * operation of the display cascade (`lib/agent-session-title.ts`): the name changes
+ * everywhere at once. An empty title DELETES its own — the conversation then falls away
+ * on the title of his ticket, and it's the way back from a renaming
  * malheureux.
  */
 export async function renameAgentRunApi(
@@ -375,7 +375,7 @@ export async function renameAgentRunApi(
   );
 }
 
-/** Épingle ou désépingle la conversation pour l'utilisateur courant. */
+/** Pin or unpin the conversation for the current user. */
 export async function setAgentConversationPinnedApi(
   runId: string,
   pinned: boolean,
@@ -390,16 +390,16 @@ export async function setAgentConversationPinnedApi(
 }
 
 /**
- * SUPPRIME une conversation, quel que soit son état. Le serveur coupe d'abord la
- * microVM et révoque la clé du run : sans ça, une conversation supprimée en plein
- * travail continuerait de tourner et de coûter, sans plus rien en base pour dire
+ * DELETE a conversation, regardless of its status. The server first cuts the
+ * microVM and revokes the run key: otherwise, a conversation deleted in full
+ * work would continue to run and cost, without anything left to say
  * laquelle.
  */
 export async function deleteAgentRunApi(runId: string): Promise<{ ok: true }> {
   return parseJson(await fetch(`/api/agent-runs/${runId}`, { method: "DELETE" }));
 }
 
-// ── Run détail / events / stop / PR ──────────────────────────────────────────
+// ── Run detail / events / stop / PR ───────────────────── ─────────────────────
 
 export type AgentEventType =
   | "status"
@@ -414,8 +414,8 @@ export type AgentEventType =
   | "plan_update"
   | "files_changed"
   | "question"
-  /** Budget d'usage mensuel épuisé en cours de run : le fil rend la carte qui dit
-   *  où en est le budget et ce qu'on peut faire (monter de plan, attendre, BYOK). */
+  /** Monthly usage budget exhausted during the run: the wire returns the card which says
+   * where the budget is and what we can do (make plans, wait, BYOK). */
   | "quota_exhausted";
 
 export interface AgentRunEvent {
@@ -430,12 +430,12 @@ export interface AgentRunEvent {
 export type AgentFileChangeStatus = "added" | "modified" | "deleted" | "renamed";
 
 /**
- * Un fichier changé pendant un tour de l'agent (MIN-46, note « diff par tour »).
- * Émis dans l'event `files_changed` en fin de tour, calculé côté serveur par un
- * `git diff --numstat --name-status <shaAvant> <shaAprès>` dans la sandbox (source
- * de vérité — les tool-calls ne suffisent pas : `apply_edits` et `run_command`
- * changent des fichiers hors de leur payload). `previousPath` n'est présent que
- * pour un renommage (chemin AVANT — celui qui adresse la version de base).
+ * A file changed during an agent turn (MIN-46, note “diff per turn”).
+ * Emitted in the `files_changed` event at the end of the round, calculated on the server side by a
+ * `git diff --numstat --name-status <previousSha> <currentSha>` in the sandbox (source
+ * of truth — tool-calls are not enough: `apply_edits` and `run_command`
+ * change files outside of their payload). `previousPath` is only present
+ * for a rename (BEFORE path — the one that addresses the base version).
  */
 export interface AgentFileChange {
   path: string;
@@ -445,13 +445,13 @@ export interface AgentFileChange {
   previousPath?: string;
 }
 
-/** Résultat parsé d'un event `files_changed`. `truncated` : la liste a été bornée (gros tour). */
+/** Result parsed with an event `files_changed`. `truncated`: the list has been limited (big turn). */
 export interface AgentFilesChangedPayload {
   files: AgentFileChange[];
   truncated: boolean;
 }
 
-/** Lit le payload d'un event `files_changed` en tolérant les formes partielles. */
+/** Reads the payload of an event `files_changed` while tolerating partial forms. */
 export function parseFilesChangedPayload(
   payload: Record<string, unknown> | null,
 ): AgentFilesChangedPayload {
@@ -486,10 +486,10 @@ export async function fetchAgentRunEventsApi(
 }
 
 /**
- * « Interrompre la réponse en cours » : demande au chunk qui tourne de suspendre
- * proprement l'appel LLM en cours et de revenir au repos. N'annule PAS la session,
- * n'efface PAS le contexte, n'arrête PAS la sandbox — tout reste reprennable.
- * (L'endpoint reste /stop côté serveur.)
+ * “Interrupt the current response”: asks the running chunk to suspend
+ * cleanly the current LLM call and return to rest. DO NOT cancel the session,
+ * does NOT clear the context, does NOT stop the sandbox — everything remains resumable.
+ * (The endpoint remains /stop on the server side.)
  */
 export async function interruptAgentRunApi(runId: string): Promise<void> {
   trackEvent("agent_stopped", {});
@@ -497,21 +497,21 @@ export async function interruptAgentRunApi(runId: string): Promise<void> {
 }
 
 /**
- * Heartbeat : rafraîchit l'horloge d'inactivité du run tant que la conversation
- * est ouverte, pour que la sandbox ne soit pas coupée pendant que l'utilisateur
- * lit ou écrit. Best-effort (ignore les erreurs réseau).
+ * Heartbeat: refreshes the run's inactivity clock as long as the conversation
+ * is open, so that the sandbox is not cut off while the user
+ * reads or writes. Best-effort (ignores network errors).
  */
 export async function heartbeatAgentRunApi(runId: string): Promise<void> {
   try {
     await fetch(`/api/agent-runs/${runId}/heartbeat`, { method: "POST" });
   } catch {
-    // best-effort : le prochain heartbeat rattrapera.
+    // best effort: the next heartbeat will catch up.
   }
 }
 
 /**
- * Message à une session (MIN-46) : oriente l'agent à chaud s'il travaille, ou
- * poursuit la conversation (nouveau tour) si la session est au repos.
+ * Message to a session (MIN-46): directs the agent directly if it is working, or
+ * continues the conversation (new turn) if the session is at rest.
  */
 export async function steerAgentRunApi(
   runId: string,
@@ -543,51 +543,51 @@ export interface PullRequestRef {
   body?: string | null;
   head?: string;
   base?: string;
-  /** SHA de tête — le diff EXACT servi. Comparé au SHA qu'a relu la dernière
-   *  review de Numo pour savoir si relancer aurait quelque chose de neuf à lire. */
+  /** Head SHA — the EXACT diff served. Compared to the SHA that was reread by the last
+   * Numo review to see if relaunch would have anything new to read. */
   headSha?: string;
-  /** Combien de commits la PR porte, d'après la forge. GitHub le compte lui-même ;
-      GitLab ne le sert pas et laisse le champ absent (l'appelant retombe alors sur
-      la longueur de la liste de commits, tant qu'elle n'est pas tronquée). */
+  /** How many commits the PR carries, according to the forge. GitHub itself counts it;
+      GitLab does not serve it and leaves the field absent (the caller then falls back to
+      the length of the commit list, as long as it is not truncated). */
   commitCount?: number;
-  /** Auteur et date d'ouverture : le `body` ouvre le fil de conversation comme un commentaire. */
+  /** Author and opening date: `body` opens the conversation thread as a comment. */
   user?: { login: string; avatar_url: string | null } | null;
   createdAt?: string;
-  /** `null`/absent = fusionnabilité INCONNUE (les forges la calculent en
-      asynchrone), à ne jamais afficher comme « bloqué » — MIN-138. */
+  /** `null`/absent = UNKNOWN fusionability (forges calculate it using
+      asynchronous), never display as “blocked” — MIN-138. */
   mergeable?: boolean | null;
-  /** `clean` · `blocked` (le dépôt exige approbations/checks) · `dirty` (conflit)
-      · `unstable` (checks non requis en échec) · `unknown`. */
+  /** `clean` · `blocked` (repository requires approvals/checks) · `dirty` (conflict)
+      · `unstable` (checks not required in failure) · `unknown`. */
   mergeableState?: string | null;
 }
 
-/** État normalisé d'un check CI (MIN-138) — miroir de `lib/server/agent/checks-core.ts`. */
+/** Normalized status of a CI check (MIN-138) — mirror of `lib/server/agent/checks-core.ts`. */
 export type CheckState = "pending" | "success" | "failure" | "neutral";
 
 export interface PullRequestCheck {
   name: string;
   state: CheckState;
   url: string | null;
-  /** L'intégration qui a produit le check (« GitHub Actions », « Vercel »…),
-      quand le nom du check ne la porte pas déjà. */
+  /** The integration that produced the check (“GitHub Actions”, “Vercel”…),
+      when the check name does not already have it. */
   appName: string | null;
-  /** Son logo chez la forge. `null` → l'UI retombe sur l'icône de la forge. */
+  /** Its logo at the forge. `null` → the UI falls back to the forge icon. */
   appAvatarUrl: string | null;
-  /** Le résultat en une ligne, tel que la forge le formule. */
+  /** The result in one line, as the forge formulates it. */
   description: string | null;
   durationMs: number | null;
 }
 
 export interface ChecksSummary {
   checks: PullRequestCheck[];
-  /** Agrégat : un échec l'emporte, puis « en cours ». `null` = aucun check. */
+  /** Aggregate: failure wins, then “in progress”. `null` = no check. */
   state: CheckState | null;
-  /** Checks non bloquants (réussis ou neutres) — le `n` de « n/m réussis ». */
+  /** Non-blocking checks (successful or neutral) — the `n` of “n/m passed”. */
   passing: number;
   total: number;
 }
 
-/** Méthodes de merge offertes par la forge du dépôt lié. */
+/** Merge methods offered by the forge of the linked repository. */
 export type MergeMethod = "merge" | "squash" | "rebase";
 
 export interface PullRequestReviewSummary {
@@ -596,32 +596,32 @@ export interface PullRequestReviewSummary {
 }
 
 /**
- * Réponse du GET de la PR d'un run. Deux nuances de « pas de checks » :
+ * Response from the GET of the PR of a run. Two nuances of “no checks”:
  * `checks: null` = on n'a pas pu lire (`checksError` dit pourquoi — `forbidden`
- * = permission GitHub que l'installation n'a pas acceptée), `checks.total === 0`
- * = le dépôt n'a pas de CI. Même chose pour `reviews: null`.
+ * = GitHub permission that the installation did not accept), `checks.total === 0`
+ * = the repository has no CI. Same thing for `reviews: null`.
  */
 /**
- * Ce que l'utilisateur courant peut faire sur cette PR (MIN-144). Sur GitHub
- * comme sur GitLab, un geste humain part de SON compte git : sans compte
- * connecté, ou sans droit sur le dépôt, minddy le dit au lieu d'offrir un bouton
- * qui mentirait sur l'auteur.
+ * What the current user can do on this PR (MIN-144). On GitHub
+ * like on GitLab, a human gesture starts from HIS Git account: without account
+ * connected, or without rights to the deposit, minddy says it instead of offering a button
+ * who would lie about the author.
  */
 export interface PrViewer {
   provider: RepoProviderId;
-  /** Le provider a-t-il de quoi autoriser un compte (self-host sans env) ? */
+  /** Does the provider have the means to authorize an account (self-host without env)? */
   configured: boolean;
   connected: boolean;
-  /** Un compte est connecté mais la forge REFUSE son token : à réautoriser.
-      Absent sur un onglet resté ouvert depuis une version d'avant ce champ. */
+  /** An account is connected but the forge REFUSES its token: to be reauthorized.
+      Absent on a tab that remained open since a version before this field. */
   expired?: boolean;
   login: string | null;
-  /** `write` = merger/résoudre, `read` = reviewer/commenter, `none` = rien. */
+  /** `write` = merge/resolve, `read` = reviewer/comment, `none` = nothing. */
   capability: "write" | "read" | "none";
-  /** Le compte sous lequel Numo écrit chez la forge — de quoi reconnaître SES
-      messages dans le fil (MIN-162). `null` côté GitLab, où rien ne les
-      distingue (MIN-146), et sur un onglet resté ouvert depuis une version
-      d'avant ce champ. */
+  /** The account under which Numo writes at the forge – enough to recognize SES
+      messages in the thread (MIN-162). `null` on the GitLab side, where nothing
+      distinguishes (MIN-146), and on a tab that has remained open since a version
+      before this field. */
   numoLogin?: string | null;
 }
 
@@ -642,7 +642,7 @@ export interface PullRequestFile {
   additions: number;
   deletions: number;
   patch?: string;
-  /** Chemin AVANT la PR si le fichier a été renommé — c'est lui qui adresse la version de base. */
+  /** Path BEFORE the PR if the file has been renamed — it addresses the base version. */
   previous_filename?: string;
 }
 
@@ -651,17 +651,17 @@ export async function fetchPullRequestApi(prId: string): Promise<AgentRunPrRespo
 }
 
 /**
- * Diff VIVANT d'un run — la vue diff DANS la conversation, sans attendre la PR.
- * Deux sources selon ce que le run fait : pendant le tour, `git diff` lu dans la
- * microVM (le travail non encore poussé compris) ; au repos, la PR quand elle
- * existe, sinon le compare base...branche.
+ * Diff ALIVE of a run — the diff view IN the conversation, without waiting for the PR.
+ * Two sources depending on what the run does: during the round, `git diff` read in the
+ * microVM (including work not yet pushed); at rest, RA when it
+ * exists, otherwise compares base...branch.
  *
- * `live` dit que la réponse vient de la sandbox : ce diff-là contient du travail
- * qui n'est pas encore sur la forge, et ça se dit à l'écran.
- * `url` : la PR ou la page compare du provider (liens « voir sur … »).
+ * `live` says the response comes from the sandbox: this diff contains work
+ * which is not yet on the forge, and it is said on the screen.
+ * `url`: the PR or the comparison page of the provider (“see on…” links).
  *
- * `stat` demande les mêmes fichiers SANS leurs patches — de quoi afficher deux
- * nombres dans l'en-tête sans faire transiter le diff entier toutes les
+ * `stat` requests the same files WITHOUT their patches — enough to display two
+ * numbers in the header without passing the entire diff every
  * quelques secondes.
  */
 export async function fetchAgentRunDiffApi(
@@ -679,11 +679,11 @@ export async function fetchAgentRunDiffApi(
 }
 
 /**
- * Base des routes d'une pull request (MIN-143). Deux familles servent les mêmes
- * gestes : celle indexée par la PR — la page Pull Requests, qui montre aussi les
- * PR humaines — et la façade indexée par le run, que la vue diff de la
- * conversation d'agent est seule à utiliser (elle n'a qu'un run à donner, sa
- * session n'ayant parfois aucune PR).
+ * Basis of routes for a pull request (MIN-143). Two families serve the same
+ * gestures: the one indexed by the PR — the Pull Requests page, which also shows the
+ * Human PR — and the facade indexed by the run, that the view diff from the
+ * agent conversation is the only one to use (it only has one run to give, its
+ * session sometimes having no PR).
  */
 export type PrEndpoint = string;
 
@@ -696,8 +696,8 @@ export function runPrEndpoint(runId: string): PrEndpoint {
 }
 
 /**
- * Version base d'un fichier de la PR (texte brut au merge base) — la source du
- * dépliage de contexte dans la vue diff. `path` = chemin côté base.
+ * Base version of a PR file (plain text at merge base) — the source of the
+ * context unfolding in diff view. `path` = base side path.
  */
 export async function fetchPrFileSourceApi(
   endpoint: PrEndpoint,
@@ -707,9 +707,9 @@ export async function fetchPrFileSourceApi(
 }
 
 /**
- * URL du proxy d'octets d'un fichier du diff — la source des `<img>` de la vue
- * côte à côte des images (MIN-66). `path` = le chemin tel que le diff le nomme
- * (le serveur en déduit lui-même la version base d'un fichier renommé).
+ * Byte proxy URL of a diff file — the source of the view's `<img>`
+ * side by side images (MIN-66). `path` = the path as the diff names it
+ * (the server itself deduces the base version of a renamed file).
  */
 export function prFileRawUrl(
   endpoint: PrEndpoint,
@@ -735,11 +735,11 @@ export async function actOnPullRequestApi(
 }
 
 /**
- * Rattache un ticket à une PR qui n'en a pas (MIN-163). DÉFINITIF : le serveur
- * refuse une PR déjà rattachée, comme un ticket qui porte déjà une PR vivante —
- * l'appelant montre donc son `error` tel quel (il est traduit côté serveur).
+ * Attaches a ticket to a PR that does not have one (MIN-163). DEFINITIVE: the server
+ * rejects an already attached PR, like a ticket that already has a living PR —
+ * the caller therefore shows its `error` as is (it is translated on the server side).
  *
- * Rend le statut que le ticket vient de prendre, aligné sur l'état de la PR.
+ * Makes the status that the ticket just took aligned with the status of the PR.
  */
 export async function linkPullRequestIssueApi(
   prId: string,
@@ -760,17 +760,17 @@ export async function linkPullRequestIssueApi(
   );
 }
 
-/** Verdict d'une review soumise depuis minddy (MIN-138). */
+/** Verdict of a review submitted from minddy (MIN-138). */
 export type ReviewVerdict = "approve" | "request_changes" | "comment";
 
 /**
- * Soumet une review sur la PR (MIN-138). `relaunch` (sur `request_changes`
- * seulement) lance EN PLUS une run froide de Numo qui itère sur cette même PR,
- * avec son propre modèle (MIN-68).
+ * Submits a review on PR (MIN-138). `relaunch` (on `request_changes`
+ * only) launches IN ADDITION a cold run of Numo which iterates on this same PR,
+ * with its own model (MIN-68).
  *
- * `published: "comment"` en retour = la forge a refusé de publier le verdict —
- * une App ne peut pas approuver sa propre pull request. Le verdict est enregistré
- * côté minddy quand même ; l'appelant doit le dire à l'utilisateur.
+ * `published: "comment"` in return = the forge refused to publish the verdict —
+ * An App cannot approve its own pull request. The verdict is recorded
+ * minddy side anyway; the caller must tell the user.
  */
 export async function submitPullRequestReviewApi(
   prId: string,
@@ -778,21 +778,21 @@ export async function submitPullRequestReviewApi(
     verdict: ReviewVerdict;
     message: string;
     relaunch?: boolean;
-    /** `false` = ne rien publier au nom de la personne : le message est une
-     *  consigne pour Numo, pas un verdict (mode « corriger les remarques »).
-     *  Défaut `true` — le geste historique. */
+    /** `false` = do not publish anything in the name of the person: the message is a
+     * instruction for Numo, not a verdict (“correct comments” mode).
+     * Default `true` — the historic gesture. */
     postVerdict?: boolean;
     model?: string;
     reasoningLevel?: ReasoningLevel;
-    /** Demande un lancement sur le dépôt local attaché à ce projet. */
+    /** Request a launch on the local repository attached to this project. */
     localExec?: boolean;
-    /** Isole ce lancement local dans son worktree. */
+    /** Isolate this local launch in its worktree. */
     localWorktree?: boolean;
   },
 ): Promise<{
   ok: true;
-  /** `none` = aucun verdict n'a été donné (voulu), `comment` = la forge l'a
-   *  replié faute de pouvoir le porter (auto-review). */
+  /** `none` = no verdict was given (desired), `comment` = the forge has it
+   * folded up due to not being able to carry it (self-review). */
   published: "review" | "comment" | "none";
   run?: { id: string };
 }> {
@@ -807,19 +807,19 @@ export async function submitPullRequestReviewApi(
 }
 
 /**
- * « Faire vérifier par Numo » (MIN-141) : une passe de review sur le diff, qui
- * dépose une synthèse et jusqu'à cinq commentaires de ligne sur la PR.
+ * “Have it checked by Numo” (MIN-141): a review pass on the diff, which
+ * files a summary and up to five line comments on the PR.
  *
- * Disponible sur TOUTE pull request — relire ne demande rien d'autre qu'un diff,
- * contrairement à « relancer Numo », qui a besoin d'une branche à hériter.
- * Manuel par construction : rien ne le déclenche à l'ouverture d'une PR.
+ * Available on ANY pull request — proofreading requires nothing other than a diff,
+ * unlike "relaunch Numo", which needs a branch to inherit.
+ * Manual by construction: nothing triggers it when opening a PR.
  *
- * Rend la SESSION, pas le résultat : la passe se joue en tâche de fond et se
- * regarde dans le panneau de review (`usePrReviewSession`). Si une passe tourne
- * déjà sur cette PR, c'est la sienne qui revient — on n'en ouvre pas deux.
+ * Returns the SESSION, not the result: the pass is played in the background and is
+ * look in the review panel (`usePrReviewSession`). If a pass turns
+ * already on this PR, it's his that comes back - we don't open two.
  *
- * `model` : l'id choisi dans le picker, `""` pour revenir au défaut de minddy,
- * `undefined` pour ne rien changer au choix retenu.
+ * `model`: the id chosen in the picker, `""` to return to the minddy default,
+ * `undefined` to not change anything in the choice made.
  */
 export async function requestPullRequestAiReviewApi(
   prId: string,
@@ -846,21 +846,21 @@ export async function fetchPullRequestAiReviewApi(prId: string): Promise<PrRevie
   return parseJson(await fetch(`${prEndpoint(prId)}/ai-review`));
 }
 
-// ── Page Pull Requests globale (MIN-66, élargie par MIN-143) ─────────────────
+// ── Global Pull Requests page (MIN-66, expanded by MIN-143) ─────────────────
 
-/** État de filtrage de la liste — servi par le SERVEUR (`?state=`). */
+/** List filtering state — served by the SERVER (`?state=`). */
 export type PullRequestStateFilter = "open" | "merged" | "closed" | "all";
 
 export interface PullRequestListItem {
-  /** L'item EST la PR. Le run n'en est plus le porteur, juste une décoration. */
+  /** The item IS the PR. The run is no longer the carrier, just a decoration. */
   prId: string;
   pr_number: number;
   pr_url: string | null;
   pr_state: "draft" | "open" | "merged" | "closed";
-  /** Provider du dépôt lié — pilote le vocabulaire PR/MR et les liens (MIN-69). */
+  /** Linked Repository Provider — controls PR/MR vocabulary and links (MIN-69). */
   provider: RepoProviderId;
   title: string | null;
-  /** Qui l'a ouverte — ce qui distingue une PR de Numo d'une PR humaine. */
+  /** Who opened it — what distinguishes a Numo PR from a human PR. */
   author: { login: string; avatar_url: string | null } | null;
   head_branch: string | null;
   created_at: string;
@@ -873,13 +873,13 @@ export interface PullRequestListItem {
     icon_url: string | null;
     orb_seed: string | null;
   } | null;
-  /** Run canonique de la PR, ou null : une PR humaine n'en a aucun. */
+  /** PR canonical run, or null: a human PR has none. */
   runId: string | null;
-  /** Un run TRAVAILLE sur cette PR (queued/running) = « Numo retravaille ». */
+  /** A run WORKS on this PR (queued/running) = “Numo is working again”. */
   activeRunId: string | null;
   /** Un run ACTIF occupe l'issue → « demander des changements » indisponible (MIN-68). */
   busyRunId: string | null;
-  /** Tous les runs portant cette PR — un deep-link `?run=` matche n'importe lequel. */
+  /** All runs carrying this PR — a deep-link `?run=` matches any. */
   runIds: string[];
 }
 
@@ -893,24 +893,24 @@ export interface PullRequestComment {
 
 export interface PullRequestListResponse {
   pullRequests: PullRequestListItem[];
-  /** Il en reste au-delà de `limit` — le bouton « en voir plus » de la page. */
+  /** There are more beyond `limit` — the “see more” button on the page. */
   hasMore: boolean;
-  /** La pagination d'une forge a été coupée : la liste n'est pas exhaustive. */
+  /** The pagination of a forge has been cut: the list is not exhaustive. */
   truncated: boolean;
-  /** Dépôts liés visibles par ce compte, tous projets confondus. 0 = il n'y a
-   *  rien à afficher ici tant qu'un dépôt n'est pas lié quelque part. */
+  /** Linked deposits visible by this account, all projects combined. 0 = there is
+   * nothing to show here until a repository is linked somewhere. */
   repoCount: number;
-  /** Existe-t-il UNE pull request, tous états confondus ? Une liste vide sur le
-   *  filtre « ouvertes » ne dit pas la même chose qu'un compte qui n'en a
-   *  jamais eu — seul le second mérite un écran d'accueil. */
+  /** Is there ONE pull request, all states combined? An empty list on the
+   * “open” filter does not say the same thing as an account that does not have any
+   * never had — only the second deserves a home screen. */
   anyPr: boolean;
 }
 
 /**
- * `pin` ÉPINGLE une PR dans la réponse même si elle tombe hors de la page — un
- * deep-link vers une vieille PR ne doit pas dépendre de la profondeur du
- * défilement. `{ pr }` pour un lien direct, `{ run }` pour les liens historiques
- * de l'app (la sidebar d'issue et /agents parlent en run).
+ * `pin` PIN a PR in the answer even if it falls off the page — a
+ * deep-link to an old PR should not depend on the depth of the
+ * scrolling. `{ pr }` for a direct link, `{ run }` for historical links
+ * of the app (the issue sidebar and /agents speak in run).
  */
 export async function fetchAllPullRequestsApi(input: {
   state: PullRequestStateFilter;
@@ -924,15 +924,15 @@ export async function fetchAllPullRequestsApi(input: {
 }
 
 /**
- * Le fil de conversation : messages, ACTIVITÉ de la PR (MIN-159) et réactions,
- * servis ensemble — tout ça se rend dans un seul fil ordonné par date.
+ * The conversation thread: messages, PR ACTIVITY (MIN-159) and reactions,
+ * served together — it all goes into one thread ordered by date.
  *
- * `reactions` porte AUSSI celles du corps de la PR, sous `PR_BODY_COMMENT_ID` :
- * le message qui ouvre le fil se réagit comme les autres.
+ * `reactions` ALSO carries those of the body of the PR, under `PR_BODY_COMMENT_ID`:
+ * the message that opens the thread is reacted like the others.
  *
- * `timeline` est best-effort côté serveur : une liste vide veut dire « la forge
- * n'a pas su la donner » autant que « il ne s'est rien passé ». Le fil rend alors
- * ses messages, comme avant.
+ * `timeline` is best-effort on the server side: an empty list means “the forge
+ * did not know how to give it” as much as “nothing happened”. The thread then makes
+ * his messages, as before.
  */
 export async function fetchPullRequestCommentsApi(prId: string): Promise<{
   comments: PullRequestComment[];
@@ -943,48 +943,48 @@ export async function fetchPullRequestCommentsApi(prId: string): Promise<{
 }
 
 /**
- * Un commit de la PR. DEUX auteurs, et ils ne disent pas la même chose :
- * `author` est le COMPTE de la forge (avatar + login), quand elle a su rattacher
- * l'email du commit ; `authorName` est le nom écrit DANS le commit, que git a
- * toujours. Côté GitLab, dont l'API ne sert aucun compte sur cet endpoint, il
- * n'y a jamais que le second — d'où le repli du rendu sur lui.
+ * A PR commit. TWO authors, and they do not say the same thing:
+ * `author` is the ACCOUNT of the forge (avatar + login), when it was able to attach
+ * the commit email; `authorName` is the name written IN the commit, which git has
+ * always. On the GitLab side, whose API does not serve any account on this endpoint, it
+ * There is only ever the second - hence the fallback of the rendering on it.
  */
 export interface PullRequestCommit {
   sha: string;
-  /** Message COMPLET : première ligne = titre, le reste = corps. */
+  /** FULL message: first line = title, the rest = body. */
   message: string;
   author: { login: string; avatar_url: string | null } | null;
   authorName: string | null;
-  /** Email de l'auteur — la clé de dédoublonnage avec les co-signataires. */
+  /** Author email — the deduplication key with co-signers. */
   authorEmail: string | null;
   authoredAt: string | null;
   url: string | null;
-  /** Signature vérifiée. `null` = INCONNU (GitLab ne le sert pas), pas « non ». */
+  /** Signature verified. `null` = UNKNOWN (GitLab doesn't serve it), not "no". */
   verified: boolean | null;
-  /** Premier parent — le côté « avant » du diff de ce commit. */
+  /** First parent — the "before" side of this commit's diff. */
   parentSha: string | null;
-  /** Lignes ajoutées / retirées PAR CE COMMIT. `null` = la forge n'a pas su les
-      donner (GraphQL en échec, ou MR trop longue côté GitLab) : l'indicateur
-      +/− disparaît alors, mais le diff du commit reste ouvrable. */
+  /** Lines added/removed BY THIS COMMIT. `null` = the forge did not know the
+      give (GraphQL failed, or MR too long on the GitLab side): the indicator
+      +/− then disappears, but the commit diff remains open. */
   additions: number | null;
   deletions: number | null;
   /**
-   * TOUS ses auteurs, principal en tête (MIN-159). Un commit co-signé
-   * (`Co-authored-by:`) en a plusieurs — le cas courant dès qu'un agent a tenu
-   * le clavier — et l'écran en empile les avatars, comme la forge.
+   * ALL its authors, principal at the head (MIN-159). A co-signed commit
+   * (`Co-authored-by:`) has several — the common case as soon as an agent has held
+   * the keyboard — and the screen stacks avatars, like the forge.
    *
-   * OPTIONNEL bien que la route le remplisse toujours : un onglet resté ouvert
-   * pendant un déploiement garde en cache la réponse de la version d'avant, qui
-   * n'avait pas ce champ. Le type le dit, pour que chaque lecture le garde —
-   * sans quoi la page entière tombe sur un `.length` d'`undefined`.
+   * OPTIONAL although the road always fills it: a tab remained open
+   * during a deployment keeps in cache the response of the previous version, which
+   * did not have this field. The guy says it, so that every reading keeps it —
+   * otherwise the entire page falls on a `.length` of `undefined`.
    */
   authors?: CommitAuthor[];
 }
 
 /**
- * Les commits qui composent la PR, du plus ancien au plus récent côté forge —
- * l'onglet Commits les affiche ensuite du plus récent au plus ancien.
- * `truncated` : la PR en a plus que ce que minddy liste d'un coup.
+ * The commits that make up the PR, from oldest to newest on the forge side —
+ * the Commits tab then displays them from newest to oldest.
+ * `truncated`: PR has more than Minddy lists at once.
  */
 export async function fetchPullRequestCommitsApi(
   prId: string,
@@ -992,7 +992,7 @@ export async function fetchPullRequestCommitsApi(
   return parseJson(await fetch(`${prEndpoint(prId)}/commits`));
 }
 
-/** Un compte de la forge, tel que le composer de commentaire le propose. */
+/** An account of the forge, as the commentary composer suggests. */
 export interface RepoMember {
   login: string;
   avatar_url: string | null;
@@ -1000,9 +1000,9 @@ export interface RepoMember {
 }
 
 /**
- * Les comptes de la forge mentionnables sur cette PR (MIN-162). Jamais en
- * erreur côté serveur : au pire une liste vide, et le composer n'en propose
- * simplement aucune.
+ * The forge accounts mentionable on this PR (MIN-162). Never in
+ * server side error: at worst an empty list, and the composer does not offer any
+ * simply none.
  */
 export async function fetchPullRequestMembersApi(
   endpoint: PrEndpoint,
@@ -1010,7 +1010,7 @@ export async function fetchPullRequestMembersApi(
   return parseJson(await fetch(`${endpoint}/members`));
 }
 
-/** Base des routes d'UN commit : son diff, et — comme une PR — ses fichiers. */
+/** Base of ONE commit routes: its diff, and — like a PR — its files. */
 export function prCommitEndpoint(prId: string, sha: string): PrEndpoint {
   return `${prEndpoint(prId)}/commits/${sha}`;
 }
@@ -1029,9 +1029,9 @@ export interface PrCommitDiff {
 }
 
 /**
- * Le diff d'UN commit de la PR, contre son parent. Sert la vue « ce que ce
- * commit change » — mêmes fichiers/patches que le diff de la PR, donc le même
- * composant de rendu, à ceci près que le dépliage de contexte y résout le
+ * The diff of ONE PR commit, against its parent. Serves the view “what this
+ * commit change” — same files/patches as the PR diff, so the same
+ * rendering component, except that context unfolding resolves the problem there.
  * PARENT du commit (cf. `prCommitEndpoint`).
  */
 export async function fetchPrCommitDiffApi(
@@ -1042,9 +1042,9 @@ export async function fetchPrCommitDiffApi(
 }
 
 /**
- * Pose ou retire une réaction sur un message du fil de conversation, ou sur le
- * corps de la PR (`commentId: PR_BODY_COMMENT_ID`). `on` porte l'état VOULU, pas
- * une bascule — même contrat que côté review.
+ * Post or remove a reaction on a message in the conversation thread, or on the
+ * PR body (`commentId: PR_BODY_COMMENT_ID`). `on` has the DESIRED state, not
+ * a switch — same contract as on the review side.
  */
 export async function setPrCommentReactionApi(
   endpoint: PrEndpoint,
@@ -1064,12 +1064,12 @@ export async function setPrCommentReactionApi(
 }
 
 /**
- * Commentaire de review : ancré à une ligne du diff, contrairement à
- * `PullRequestComment` qui vit dans le fil plat de la conversation.
+ * Review comment: anchored to a line in the diff, unlike
+ * `PullRequestComment` which lives in the flat thread of the conversation.
  *
- * `line` non nul ne veut PAS dire « la ligne est dans le diff » : GitHub le
- * conserve tant qu'il sait retrouver la ligne dans la tête, même si le diff s'est
- * déplacé ailleurs. C'est la résolution dans les hunks rendus qui décide de
+ * `line` non-zero does NOT mean “the line is in the diff”: GitHub
+ * keeps as long as he knows how to find the line in his head, even if the diff has
+ * moved elsewhere. It is the resolution in the rendered hunks that decides
  * l'affichage inline — voir `pr-diff`.
  */
 export interface PullRequestReviewComment {
@@ -1079,15 +1079,15 @@ export interface PullRequestReviewComment {
   line: number | null;
   original_line: number | null;
   side: "LEFT" | "RIGHT";
-  /** Première ligne d'une remarque MULTI-LIGNES (MIN-181) — `line` en est alors
-      la dernière. `null` pour une remarque sur une seule ligne, et toujours
-      `null` côté GitLab, où une note s'ancre sur une ligne. */
+  /** First line of a MULTI-LINE remark (MIN-181) — `line` is then
+      the last. `null` for a single-line remark, and always
+      `null` on the GitLab side, where a note is anchored on a line. */
   start_line: number | null;
   start_side: "LEFT" | "RIGHT" | null;
-  /** Racine du fil, ou null si ce commentaire EST la racine. */
+  /** Root of the thread, or null if this comment IS the root. */
   in_reply_to_id: number | null;
-  /** Review qui porte ce commentaire (MIN-159) — le fil de conversation range
-      les points d'une review SOUS elle. `null` côté GitLab, sans objet review. */
+  /** Review that carries this comment (MIN-159) — the conversation thread ranges
+      the points of a review UNDER it. `null` on the GitLab side, without review purpose. */
   review_id: number | null;
   diff_hunk: string;
   user: { login: string; avatar_url: string | null } | null;
@@ -1096,10 +1096,10 @@ export interface PullRequestReviewComment {
 }
 
 /**
- * Commentaires de review ET état de leurs fils (MIN-139), servis ensemble : un
- * fil se rend avec les deux. `threads` peut être vide alors que des commentaires
- * existent — la forge n'a pas su dire l'état, et l'UI n'offre alors pas de
- * bouton « Résoudre » plutôt que d'annoncer « ouvert » à l'aveugle.
+ * Review comments AND condition of their sons (MIN-139), served together: one
+ * thread goes with both. `threads` can be empty while comments
+ * exist — the forge was unable to tell the state, and the UI then does not offer
+ * “Resolve” button rather than announcing “open” blindly.
  */
 export async function fetchPrReviewCommentsApi(
   endpoint: PrEndpoint,
@@ -1112,9 +1112,9 @@ export async function fetchPrReviewCommentsApi(
 }
 
 /**
- * Pose ou retire une réaction sur un commentaire de review. `on` porte l'état
- * VOULU, pas une bascule : deux clics concurrents convergent au lieu de
- * s'annuler, et un renvoi après échec réseau ne défait pas ce qui avait abouti.
+ * Post or remove a reaction to a review comment. `on` carries the state
+ * WANTED, not a switch: two competing clicks converge instead of
+ * cancels itself, and a resend after network failure does not undo what had succeeded.
  */
 export async function setPrReviewCommentReactionApi(
   endpoint: PrEndpoint,
@@ -1133,7 +1133,7 @@ export async function setPrReviewCommentReactionApi(
   );
 }
 
-/** Résout / rouvre un fil de review (`threadId` vient de `threads` ci-dessus). */
+/** Resolves/reopens a review thread (`threadId` comes from `threads` above). */
 export async function setPrReviewThreadResolvedApi(
   endpoint: PrEndpoint,
   input: { threadId: string; resolved: boolean },
@@ -1148,10 +1148,10 @@ export async function setPrReviewThreadResolvedApi(
 }
 
 /**
- * Poste un commentaire sur une ligne du diff — ou sur une PLAGE de lignes, en
- * passant `startLine` (`line` est alors la DERNIÈRE ligne visée, comme GitHub
- * l'attend). Part immédiatement sur GitHub. Lève une `ApiError` de code
- * `lineNotInDiff` si GitHub refuse d'ancrer la ligne.
+ * Post a comment on a line in the diff — or on a RANGE of lines, in
+ * passing `startLine` (`line` is then the LAST line referred to, like GitHub
+ * waiting for it). Share immediately on GitHub. Raise a code `ApiError`
+ * `lineNotInDiff` if GitHub refuses to anchor the line.
  */
 export async function postPrReviewCommentApi(
   endpoint: PrEndpoint,
@@ -1177,7 +1177,7 @@ export async function postPrReviewCommentApi(
   );
 }
 
-/** Répond dans un fil de review (`inReplyTo` = n'importe quel id du fil). */
+/** Reply in a review thread (`inReplyTo` = any thread id). */
 export async function replyPrReviewCommentApi(
   endpoint: PrEndpoint,
   input: { body: string; inReplyTo: number },
@@ -1194,21 +1194,21 @@ export async function replyPrReviewCommentApi(
 // ── Page Agents (liste globale des sessions) ─────────────────────────────────
 
 /**
- * Une CONVERSATION de l'agent = UN run, ticket ou pas : les runs successifs d'un
- * même ticket sont des conversations distinctes, listées côte à côte (il n'y a
- * plus de session qui les regroupe, ni de sélecteur pour passer de l'une à
- * l'autre). Leur titre vient du titreur, écrit au lancement.
+ * A CONVERSATION of the agent = ONE run, ticket or not: the successive runs of a
+ * same ticket are separate conversations, listed side by side (there is no
+ * no more session which groups them together, nor selector to go from one to
+ * the other). Their title comes from the titler, written at launch.
  */
 export interface AgentSessionListItem {
-  /** Identite durable de la conversation. */
+  /** Durable identity of the conversation. */
   conversationId: string;
-  /** Execution courante, utilisee par le plan de controle. */
+  /** Current execution, used by the control plan. */
   runId: string;
   status: AgentRunStatus;
   model: string | null;
   triggered_by: "button" | "chat" | "mention";
-  /** Titre écrit au lancement (titre de la PR pour une relecture). `null` quand
-   *  il manque — cf. `agentSessionTitle` pour les replis. */
+  /** Title written at launch (PR title for proofreading). `null` when
+   * it is missing — cf. `agentSessionTitle` for fallbacks. */
   title: string | null;
   pr_number: number | null;
   pr_url: string | null;
@@ -1217,8 +1217,8 @@ export interface AgentSessionListItem {
   updated_at: string;
   /** Null = conversation CARNET (MIN-84) ou de RELECTURE (MIN-168). */
   issue: { id: string; number: number; title: string } | null;
-  /** La pull request que cette conversation RELIT (MIN-168) — badge « Analyse de
-   *  PR ». Distinct de `pr_number`, qui est la PR qu'un run de code a OUVERTE. */
+  /** The pull request that this conversation RELITS (MIN-168) — badge “Analysis of
+   * PR.” Distinct from `pr_number`, which is the PR that a code run has OPENED. */
   pullRequest: { id: string; number: number; title: string | null; url: string | null } | null;
   project: {
     id: string;
@@ -1229,14 +1229,14 @@ export interface AgentSessionListItem {
   } | null;
   /** CE run TRAVAILLE (queued/running) → spinner « Numo travaille ». */
   working: boolean;
-  /** Cette conversation est épinglée par l'utilisateur courant. */
+  /** This conversation is pinned by the current user. */
   pinned: boolean;
   /**
-   * Fin d'agent de ce run, ou `null` s'il n'a jamais terminé. Comparé au
-   * `last_read_at` de l'utilisateur → bulle bleue « terminé, non lu ».
+   * Agent end of this run, or `null` if it never finished. Compared to
+   * `last_read_at` of the user → blue bubble “finished, unread”.
    */
   lastCompletedAt: string | null;
-  /** Ce run attend une réponse (ask_user) → point JAUNE. */
+  /** This run is waiting for a response (ask_user) → YELLOW point. */
   awaitingInput: boolean;
 }
 
@@ -1246,12 +1246,12 @@ export async function fetchAgentSessionsApi(): Promise<{
   return parseJson(await fetch(`/api/agent-runs`));
 }
 
-// ── État « lu » des sessions d'agent (bulle bleue « terminé, non lu ») ────────
+// ── “Read” status of agent sessions (blue “completed, unread” bubble) ────────
 
 /**
- * Carte { conversationId → last_read_at } des conversations consultées. Une
- * session est NON LUE quand sa dernière run terminée (`lastCompletedAt`) est
- * postérieure à ce timestamp (ou absente de la carte = jamais consultée).
+ * Map { conversationId → last_read_at } of viewed conversations. A
+ * session is UNREAD when its last completed run (`lastCompletedAt`) is
+ * later than this timestamp (or absent from the card = never consulted).
  */
 export async function fetchAgentReadsApi(): Promise<{
   reads: Record<string, string>;
@@ -1259,7 +1259,7 @@ export async function fetchAgentReadsApi(): Promise<{
   return parseJson(await fetch(`/api/agent-reads`));
 }
 
-/** Marque une conversation comme lue MAINTENANT. */
+/** Mark a conversation as read NOW. */
 export async function markAgentSessionReadApi(conversationId: string): Promise<void> {
   await parseJson(
     await fetch(`/api/agent-reads`, {
@@ -1271,10 +1271,10 @@ export async function markAgentSessionReadApi(conversationId: string): Promise<v
 }
 
 /**
- * Une session est NON LUE quand sa dernière fin d'agent (`lastCompletedAt`) est
- * postérieure au dernier `last_read_at` de l'utilisateur (ou jamais consultée), ET
- * qu'aucun run ne TRAVAILLE : pendant le travail c'est le halo/spinner qui prime, la
- * bulle « terminé » n'apparaît qu'une fois l'agent au repos.
+ * A session is UNREAD when its last agent end (`lastCompletedAt`) is
+ * after the last `last_read_at` of the user (or never consulted), AND
+ * that no run WORKS: during work it is the halo/spinner which takes precedence, the
+ * “Done” bubble only appears once the agent is at rest.
  */
 export function isAgentSessionUnread(
   session: Pick<AgentSessionListItem, "conversationId" | "working" | "lastCompletedAt">,
@@ -1282,31 +1282,31 @@ export function isAgentSessionUnread(
 ): boolean {
   if (session.working || !session.lastCompletedAt) return false;
   const lastRead = reads[session.conversationId];
-  // Comparaison NUMÉRIQUE : `completed_at` (Postgres, `…+00:00`) et `last_read_at`
-  // (client, `…Z`) n'ont pas le même format string → un `>` lexical serait faux.
+  // NUMERICAL comparison: `completed_at` (Postgres, `…+00:00`) and `last_read_at`
+  // (client, `…Z`) do not have the same string format → a lexical `>` would be false.
   if (!lastRead) return true;
   return new Date(session.lastCompletedAt).getTime() > new Date(lastRead).getTime();
 }
 
 /**
- * Un run précis est NON LU : il a terminé (`completed_at`) après le dernier
- * `last_read_at` de la session (ou jamais consultée). Pilote la bulle dans le
- * sélecteur de sessions (chaque run = « Session N »).
+ * A specific run is UNREAD: it finished (`completed_at`) after the last one
+ * `last_read_at` of the session (or never consulted). Pilot the bubble in the
+ * session selector (each run = “Session N”).
  */
 export function isAgentRunUnread(
   run: Pick<AgentRunSummary, "completed_at">,
   lastReadAt: string | null | undefined,
 ): boolean {
   if (!run.completed_at) return false;
-  // Comparaison NUMÉRIQUE (formats de date hétérogènes — cf. isAgentSessionUnread).
+  // NUMERIC comparison (heterogeneous date formats — see isAgentSessionUnread).
   if (!lastReadAt) return true;
   return new Date(run.completed_at).getTime() > new Date(lastReadAt).getTime();
 }
 
 /**
- * La run est AU REPOS EN ATTENTE d'une réponse de l'utilisateur (tour terminé
- * sur ask_user, MIN-86) : les points « non lu » passent au JAUNE — la
- * conversation est bloquée tant que l'utilisateur n'a pas répondu.
+ * The run is AT REST WAITING for a response from the user (round completed
+ * on ask_user, MIN-86): the “unread” points turn YELLOW — the
+ * conversation is blocked until the user responds.
  */
 export function isAgentRunAwaitingInput(
   run: Pick<AgentRunSummary, "status" | "awaiting_input">,
@@ -1315,12 +1315,12 @@ export function isAgentRunAwaitingInput(
 }
 
 /**
- * Publie un message dans le fil de la PR.
+ * Post a message in the PR thread.
  *
- * `review` accompagne la réponse quand le message MENTIONNAIT `@numo`
- * (MIN-162) : la passe est déjà ouverte côté serveur quand celle-ci revient, et
- * c'est ce champ qui permet à l'écran de la montrer TOUT DE SUITE. Sans lui, il
- * ne la découvrirait qu'au prochain rafraîchissement fortuit.
+ * `review` accompanies the response when the message MENTIONED `@numo`
+ * (MIN-162): the pass is already open on the server side when it returns, and
+ * it is this field that allows the screen to show it RIGHT AWAY. Without him, he
+ * would only discover it at the next fortuitous refresh.
  */
 export async function postPullRequestCommentApi(
   prId: string,

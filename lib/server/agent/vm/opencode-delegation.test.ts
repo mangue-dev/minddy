@@ -10,22 +10,22 @@ import { subagentUsageSeq } from "../subagent-config";
 import { cloudLayout } from "../harness-layout";
 
 /**
- * MIN-286 lot 2, tâche 12 — LA DÉLÉGATION, jouée sur un tour réellement capturé.
+ * MIN-286 batch 2, task 12 — THE DELEGATION, played on an actually captured turn.
  *
- * La fixture ([fixtures/opencode-delegation.ndjson](fixtures/opencode-delegation.ndjson))
- * est le flux `/event` d'un vrai serveur `opencode-ai@1.18.16` pendant un tour où
- * le modèle a délégué : demande de permission, naissance de la fille, son round
- * sur un AUTRE modèle, son `session.idle`, puis la fin du tour de la mère. Un
- * faux fournisseur local scriptait les appels — coût nul, et c'est ce qui permet
- * de rejouer ce fichier sans jamais dépenser un modèle.
+ * The fixture ([fixtures/opencode-delegation.ndjson](fixtures/opencode-delegation.ndjson))
+ * is the stream `/event` from a real server `opencode-ai@1.18.16` during a round where
+ * the model delegated: request for permission, birth of the daughter, her round
+ * to ANOTHER model, her `session.idle`, then the end of the mother's turn. A
+ * fake local provider scripted the calls — zero cost, and this is what allows
+ * to replay this file without ever spending a model.
  *
- * Ce qu'elle garde, et qu'aucun test sur des événements inventés ne garderait :
+ * What it keeps, and which no test on invented events would keep:
  *
- *  - `permission.asked` porte le `subagent_type` DEMANDÉ, avant qu'opencode ne le
- *    résolve — le seul point d'où tenir le plafond de simultané ;
- *  - le rattachement fille → appel de `task` ne vit que dans la `metadata` du part
- *    du tool, et le PREMIER `running` ne la porte pas (`metadata: null`) ;
- *  - un `session.idle` de fille arrive au milieu du tour de la mère.
+ * - `permission.asked` carries the REQUESTED `subagent_type`, before opencode resolves it
+ * - the only point from which to hold the concurrent cap;
+ * - the daughter attachment → call of `task` only lives in the `metadata` from
+ * of the tool, and the FIRST `running` does not carry it (`metadata: null`);
+ * - a daughter's `session.idle` arrives in the middle of the mother's turn.
  */
 
 const FIXTURE = join(__dirname, "fixtures", "opencode-delegation.ndjson");
@@ -37,11 +37,11 @@ function fixtureEvents(): OpencodeEvent[] {
     .map((line) => JSON.parse(line) as OpencodeEvent);
 }
 
-/** La session de la mère : la première créée du flux. */
+/** The parent session: the first created in the flow. */
 const PARENT = "ses_00956f6a1ffeop0VskYrTe4TmL";
 const CHILD = "ses_00956f473ffdm7mJnLA7qau6mY";
 
-/** Le tour rejoué comme le superviseur le joue, mais sans serveur ni réseau. */
+/** The round replayed as the supervisor plays it, but without a server or network. */
 function replay() {
   const state = newTurnStreamState();
   const table = new Map([
@@ -96,7 +96,7 @@ describe("la demande de délégation", () => {
     expect(asks).toHaveLength(1);
     expect(asks[0]!.permission).toBe("task");
     expect(asks[0]!.subagentType).toBe("explore-cheap");
-    // Rien ne tournait encore : c'est bien la demande qui précède la naissance.
+    // Nothing was happening yet: it is indeed the request which precedes birth.
     expect(replay().runningAtAsk).toBe(0);
   });
 
@@ -113,8 +113,8 @@ describe("le rattachement de la fille", () => {
     const children = fixtureEvents()
       .map((raw) => translateEvent(raw, state).child)
       .filter(Boolean);
-    // Le `pending` et le premier `running` n'ont rien à dire : mesuré,
-    // `metadata: null` tant que la fille n'est pas créée.
+    // The `pending` and the first `running` have nothing to say: measured,
+    // `metadata: null` until the child is created.
     expect(children.length).toBeGreaterThan(0);
     expect(children[0]).toEqual({
       sessionId: CHILD,
@@ -128,8 +128,8 @@ describe("le rattachement de la fille", () => {
     const { registry } = replay();
     expect(registry.entry(CHILD)?.id).toBe("sub-1");
     expect(registry.entry(CHILD)?.mode).toBe("explore");
-    // La place se libère : sans ça, le plafond de simultané se refermerait pour
-    // le reste du tour sur des filles qui ont déjà rapporté.
+    // Space frees up: without that, the simultaneous ceiling would close for
+    // the rest of the round on girls who have already reported.
     expect(registry.running).toBe(0);
   });
 });
@@ -146,9 +146,9 @@ describe("ce que le fil raconte", () => {
   });
 
   it("rend au `spawn_agent` le mode et le modèle, que le nom d'agent seul cachait", () => {
-    // Le fil affiche `mode` et `model` depuis MIN-112 ; opencode, lui, ne connaît
-    // que `explore-cheap`. La relecture d'un run doit dire la même chose des deux
-    // moteurs — c'est le critère de bascule du lot 3.
+    // Thread shows `mode` and `model` since MIN-112; opencode does not know
+    // that `explore-cheap`. Replaying a run should say the same thing about both
+    // motors — this is the changeover criterion for lot 3.
     const spawn = replay().emitted.find(
       (e) => e.type === "tool_call" && e.payload.name === "spawn_agent",
     );
@@ -158,7 +158,7 @@ describe("ce que le fil raconte", () => {
   });
 
   it("préfixe les ids de tool-call d'une fille", () => {
-    // Deux modèles peuvent rendre le même `call_1`, et le fil apparie par id.
+    // Two models can render the same `call_1`, and the thread matches by id.
     const marked = markChildPayload(
       { id: "call_1", name: "read_file" },
       { id: "sub-2", callId: "call_task_9", mode: "implement" },
@@ -172,10 +172,10 @@ describe("ce que la fille coûte", () => {
     const { usage } = replay();
     const child = usage.filter((u) => u.sessionId === CHILD);
     expect(child).toHaveLength(1);
-    // Le modèle de la fille est bien l'autre : c'est `agent.<id>.model` qui l'a
-    // décidé, puisque le tool `task` n'a pas de champ `model`.
+    // The girl's model is indeed the other: it's `agent.<id>.model` who has it
+    // decided, since the tool `task` does not have a `model` field.
     expect(child[0].model).toBe("cheap");
-    // Et il n'est pas gratuit : un modèle déclaré sans prix rendrait `cost: 0`.
+    // And it is not free: a model declared without price would make `cost: 0`.
     expect(child[0].costUsd).toBeGreaterThan(0);
     expect(usage.some((u) => u.sessionId === PARENT && u.costUsd > 0)).toBe(true);
   });
@@ -184,8 +184,8 @@ describe("ce que la fille coûte", () => {
     const registry = new SubagentRegistry(new Map());
     expect(subagentUsageSeq(registry.slotOf("ses_a"))).toBe(subagentUsageSeq(0));
     expect(subagentUsageSeq(registry.slotOf("ses_b"))).toBe(subagentUsageSeq(1));
-    // Une session qu'aucun `task` n'a rattachée obtient quand même sa bande :
-    // une dépense qu'on ne sait pas rattacher vaut mieux rangée que perdue.
+    // A session that no `task` has attached still obtains its tape:
+    // an expense that you don't know how to relate is better stored than lost.
     expect(registry.entry("ses_a")?.id).toBe("sub-1");
   });
 });
@@ -197,7 +197,7 @@ describe("le nom d'un sous-agent", () => {
     expect(subagentAgentName("explore", "anthropic/claude-haiku-4.5")).toBe(
       "explore-anthropic-claude-haiku-4-5",
     );
-    // Ni joker ni séparateur : le nom sert de patron dans `permission.task`.
+    // Neither wildcard nor separator: the name serves as a pattern in `permission.task`.
     expect(subagentAgentName("implement", "x_y*z/w")).toMatch(/^[a-z0-9-]+$/);
   });
 });

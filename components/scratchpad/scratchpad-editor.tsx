@@ -71,10 +71,10 @@ const PROSE = cn(
 );
 
 /**
- * Les réglages de la vue ProseMirror — figés au niveau du module, et c'est la
- * moitié d'une règle qui vaut pour TOUTES les options de `useEditor` (cf. le
- * commentaire au-dessus de l'appel) : tiptap les relit à chaque rendu et
- * réapplique tout ce qui a changé d'identité, depuis son effet.
+ * The ProseMirror view settings — fixed at the module level, and this is the
+ * half of a rule that applies to ALL `useEditor` options (see the
+ * comment above the call): tiptap rereads them each time it is rendered and
+ * reapplies anything that has changed identity, since its effect.
  */
 const EDITOR_PROPS = {
   attributes: { class: PROSE },
@@ -84,13 +84,13 @@ const EDITOR_PROPS = {
   // (the trailing space below is the wrapper's pb-[40vh]).
   scrollMargin: { top: 0, right: 0, bottom: 160, left: 0 },
   scrollThreshold: { top: 0, right: 0, bottom: 160, left: 0 },
-  // Écrire périme le pointeur : tant qu'on n'a pas redéplacé la souris, la
-  // tâche qu'elle survole ne prend plus ⇧A/⇧P (cf. hover-keys.ts). Le
-  // signal est la FRAPPE, pas le changement de document : les flèches et
-  // les retours arrière sont de l'écriture eux aussi, et une insertion
-  // programmée (dictée, « tout démarrer ») n'en est pas. ProseMirror ne
-  // voit ici que les frappes tombées jusqu'à lui — un raccourci de survol
-  // qui a fait son office les arrête avant.
+  // Writing expires the pointer: as long as you have not moved the mouse again, the
+  // task that it hovers no longer takes ⇧A/⇧P (see hover-keys.ts). THE
+  // signal is the TYPE, not the document change: the arrows and
+  // backspaces are writing too, and an insertion
+  // programmed (dictation, “start everything”) is not. ProseMirror does not
+  // see here that the strikes fell to him — a hover shortcut
+  // who has done his job stops them first.
   handleKeyDown: () => {
     noteTyping();
     return false;
@@ -110,10 +110,10 @@ function getMarkdown(editor: Editor): string {
 }
 
 /**
- * L'intervalle [from, to) du document couvert par le `index`-ième titre — le
- * même index que celui posé sur les boutons de survol (section-copy-extension,
- * titres de premier niveau), et la même portée que `scratchpadSectionSubtree` :
- * SOUS-SECTIONS COMPRISES, jusqu'au prochain titre de rang égal ou supérieur.
+ * The interval [from, to) of the document covered by the `index`-th title — the
+ * same index as that placed on the hover buttons (section-copy-extension,
+ * first-level titles), and the same scope as `scratchpadSectionSubtree` :
+ * SUBSECTIONS INCLUDED, until the next title of equal or higher rank.
  */
 function sectionRange(
   editor: Editor,
@@ -160,13 +160,13 @@ export function ScratchpadEditor({
 }: {
   initialValue: string;
   onChange: (markdown: string) => void;
-  /** « Copier la section » — `moved` = tâches passées « en cours » au passage. */
+  /** “Copy section” — `moved` = tasks passed “in progress” by the way. */
   onCopySection: (markdown: string, moved: number) => void;
-  /** « Lancer un agent » sur la section survolée (MIN-84) — markdown de la section. */
+  /** “Launch an agent” on the hovered section (MIN-84) — markdown of the section. */
   onLaunchSection: (markdown: string) => void;
-  /** L'option de compte « copier le prompt démarre le travail » (MIN-20) : elle
-      commande le geste de copie, à la ligne comme à la section. Lancer un agent,
-      lui, démarre toujours (MIN-46) — rien à régler. */
+  /** The account option “copy prompt starts the job” (MIN-20): it
+ controls the copy gesture, both at the line and at the section. Launching an agent,
+, always starts (MIN-46) — nothing to adjust. */
   startOnCopy: boolean;
   placeholder: string;
   copySectionLabel: string;
@@ -184,9 +184,7 @@ export function ScratchpadEditor({
   /** Populated with an action that drops completed tasks from the live editor
       (returns how many were removed) — driven by the modal's toolbar button. */
   removeSettledRef?: MutableRefObject<(() => number) | null>;
-  /** Populated with an action qui passe « en cours » toutes les tâches encore à
-      faire du carnet (retourne combien) — les gestes d'en-tête, qui portent sur
-      la note entière. */
+  /** Populated with an action that sets all tasks yet to be done in the notebook to "in progress" (returns how many) — the header gestures, which carry over the entire note. */
   startAllRef?: MutableRefObject<(() => number) | null>;
 }) {
   const t = useTranslations("Scratchpad");
@@ -335,7 +333,7 @@ export function ScratchpadEditor({
   const removeSettledFnRef = useRef(removeSettled);
   removeSettledFnRef.current = removeSettled;
 
-  // Passer tout le carnet « en cours » — la portée des boutons d'en-tête.
+  // Skip the entire notebook to “current” — the scope of the header buttons.
   const startAll = () => {
     const ed = editorRef.current;
     if (!ed || ed.isDestroyed) return 0;
@@ -344,14 +342,14 @@ export function ScratchpadEditor({
   const startAllFnRef = useRef(startAll);
   startAllFnRef.current = startAll;
 
-  // Le geste porté par les boutons de survol d'un titre : la section part avec
-  // TOUT ce qu'elle contient (sous-sections comprises), et `start` en démarre
-  // les tâches encore à faire.
+  // The gesture carried by the hover buttons of a title: the section starts with
+  // EVERYTHING it contains (including subsections), and `start` starts from it
+  // tasks still to be done.
   //
-  // Le markdown est relu APRÈS le déplacement : la section sort avec ses
-  // marqueurs d'après-geste, exactement comme la ligne d'une tâche copiée
-  // (scratchpad-task.tsx) — sans quoi le prompt décrirait comme « à faire » un
-  // travail que le carnet dit déjà en cours.
+  // The markdown is reread AFTER the move: the section exits with its
+  // post-gesture markers, exactly like the line of a copied task
+  // (scratchpad-task.tsx) — otherwise the prompt would describe a “to do”
+  // work that the notebook says is already in progress.
   const sectionGesture = (
     headingIndex: number,
     start: boolean
@@ -367,8 +365,8 @@ export function ScratchpadEditor({
     )?.markdown;
     return markdown?.trim() ? { markdown, moved } : null;
   };
-  // Réassignées à chaque rendu (SectionCopy ne lit ses options qu'une fois, à la
-  // création du plugin, mais appelle la ref au moment du clic).
+  // Reassigned each time it is rendered (SectionCopy only reads its options once, at
+  // creation of the plugin, but calls the ref at the time of clicking).
   const copySectionRef = useRef<(headingIndex: number) => void>(() => {});
   copySectionRef.current = (headingIndex: number) => {
     const done = sectionGesture(headingIndex, startOnCopy);
@@ -376,9 +374,9 @@ export function ScratchpadEditor({
   };
   const launchSectionRef = useRef<(headingIndex: number) => void>(() => {});
   launchSectionRef.current = (headingIndex: number) => {
-    // Comme sur une tâche : lancer un agent démarre toujours le travail, et le
-    // déplacement précède `onLaunchSection` — c'est lui qui ferme le carnet, et
-    // ce démontage flushe l'autosave.
+    // As with a task: launching an agent always starts the job, and the
+    // move precedes `onLaunchSection` — it is he who closes the notebook, and
+    // this disassembly flushes the autosave.
     const done = sectionGesture(headingIndex, true);
     if (done) onLaunchSectionRef.current(done.markdown);
   };
@@ -404,8 +402,8 @@ export function ScratchpadEditor({
           transformPastedText: true,
           transformCopiedText: true,
         }),
-        // APRÈS Markdown : elle emprunte son parseur pour relire un collage que
-        // le HTML du presse-papier aurait autrement emporté (paste-markdown.ts).
+        // AFTER Markdown: she borrows her parser to reread a collage that
+        // the clipboard HTML would have otherwise taken away (paste-markdown.ts).
         PasteMarkdownTasks,
         // Placeholder on the current empty line (follows the cursor), so every
         // new line invites input — not just the empty document.
@@ -421,22 +419,22 @@ export function ScratchpadEditor({
     [placeholder, copySectionLabel, launchSectionLabel, slashItems]
   );
 
-  // Le contenu de départ, figé au montage. tiptap ne lit `content` qu'à la
-  // CRÉATION de l'éditeur, alors que la prop, elle, change à chaque sauvegarde
-  // (le cache de la requête est réécrit) — la passer telle quelle ferait donc
-  // voir une option modifiée à chaque frappe. Cf. la règle ci-dessous.
+  // The initial content, frozen during editing. tiptap only reads `content`
+  // CREATION of the editor, while the prop changes with each save
+  // (the request cache is rewritten) — passing it as is would therefore
+  // see an option changed with each keystroke. See the rule below.
   const initialContentRef = useRef(initialValue);
 
-  // ⚠️ Les options passées ici sont relues à CHAQUE rendu par tiptap, qui
-  // réapplique d'un `editor.setOptions()` tout ce qui a changé d'identité —
-  // depuis son propre effet, donc en pleine phase de commit React. Or la
-  // moindre vue de nœud remontée au passage (nos tâches sont des composants
-  // React) se monte en `flushSync`, que React refuse là : « flushSync was
-  // called from inside a lifecycle method », et le carnet se redessine au
-  // petit bonheur en pleine frappe. D'où extensions mémoïsées, `editorProps`
-  // sorti du composant et contenu figé : plus rien ne bouge d'un rendu à
-  // l'autre, plus rien n'est réappliqué. Toute option ajoutée ici doit tenir
-  // la même règle.
+  // ⚠️ The options passed here are reread EACH rendering by tiptap, which
+  // reapply a `editor.setOptions()` to everything that has changed identity —
+  // from its own effect, therefore in the middle of the React commit phase. But the
+  // least node view brought up in passing (our tasks are components
+  // React) mounts as `flushSync`, which React refuses there: “flushSync was
+  // called from inside a lifecycle method", and the notebook is redesigned
+  // little joy in full typing. Hence memorized extensions, `editorProps`
+  // taken out of the component and frozen content: nothing moves from one rendering to another
+  // the other, nothing is reapplied. Any option added here must fit
+  // the same rule.
   const editor = useEditor({
     immediatelyRender: false,
     autofocus: "end",
@@ -477,9 +475,9 @@ export function ScratchpadEditor({
     []
   );
 
-  // L'autre moitié de la règle ci-dessus : bouger le pointeur le rafraîchit,
-  // et le carnet est le seul endroit qui s'en sert — l'écouteur vit donc le
-  // temps qu'il est ouvert.
+  // The other half of the rule above: moving the pointer refreshes it,
+  // and the notebook is the only place that uses it — the listener therefore experiences the
+  // time it is open.
   useEffect(() => trackPointerFreshness(), []);
 
   // ⌘S / Ctrl+S saves now (autosave already runs; this is the explicit gesture
@@ -525,10 +523,10 @@ export function ScratchpadEditor({
   // grows to the bottom isn't pinned against the edge. It sits on the editor
   // wrapper rather than the modal's scroll container so that empty space stays
   // click-to-write (the mousedown below drops the caret at the end).
-  // La surface qui dit ce que « confier une tâche » veut dire ICI : le
-  // carnet se ferme en partant, et son démontage flushe l'autosave
-  // (cf. scratchpad-task.tsx). Elle enveloppe l'éditeur parce que les vues
-  // de nœud sont rendues, en portails, dans le sous-arbre d'EditorContent.
+  // The surface that says what “entrust a task” means HERE: the
+  // notebook closes when leaving, and dismantling flushes the autosave
+  // (see scratchpad-task.tsx). It wraps the editor because the views
+  // of nodes are rendered, as portals, in the EditorContent subtree.
   return (
     <ScratchpadTaskSurface>
       <div
@@ -541,12 +539,12 @@ export function ScratchpadEditor({
 
         {dictating && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm">
-            {/* Le liseré n'accompagne QUE « Numo met au propre » : l'étape
-                `processing` juste avant, c'est la transcription de l'audio, pas
-                Numo. Le wrapper est en `overflow: hidden`, d'où le `shadow-xl`
-                qui passe de la carte à lui ; `keepMounted` garde la carte — et
-                le canvas de la waveform — montée d'un bout à l'autre de la
-                dictée, au lieu de la remonter quand le liseré s'allume. */}
+            {/* The border ONLY accompanies “Numo cleans up”: the step
+ `processing` just before, it is the transcription of the audio, not
+ Numo. The wrapper is in `overflow: hidden`, hence the `shadow-xl`
+ which passes from the card to it; `keepMounted` keeps the card — and
+ the waveform canvas — raised from one end to the other of the dictated
+, instead of raising it when the border lights up. */}
             <AgentBeam
               active={dictation.status === "polishing"}
               keepMounted

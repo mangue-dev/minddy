@@ -12,22 +12,22 @@ import { BILLING_PLANS, DEFAULT_BILLING_PLAN_ID } from "@/lib/billing-plans";
 import type { AdminOverview, AdminOverviewDay } from "@/lib/types";
 
 /**
- * `/admin` → onglet « Vue d'ensemble » (MIN-90). Gate identique aux autres
+ * `/admin` → “Overview” tab (MIN-90). Gate identical to the others
  * endpoints admin : JWT via getClaims + isAdminUser.
  *
- * GET ?tz=<IANA> → les totaux de l'app (comptes, actifs, projets, tickets), la
- * série d'activité sur 30 jours, la répartition des plans effectifs et
+ * GET ?tz=<IANA> → app totals (accounts, assets, projects, tickets), the
+ * series of activities over 30 days, the distribution of effective plans and
  * l'entonnoir d'onboarding.
  *
- * Les compteurs viennent de la RPC `get_admin_user_totals` ; la répartition des
- * plans et l'entonnoir se calculent ICI, avec les mêmes résolveurs que le reste
+ * Counters come from PRC `get_admin_user_totals`; the distribution of
+ * plans and the funnel are calculated HERE, with the same resolvers as the rest
  * de l'app (`resolvePlanFromBillingAccount`, `resolveOnboardingState` via
- * `onboardingOf`) — dupliquer ces règles en SQL les ferait diverger au premier
+ * `onboardingOf`) — duplicating these rules in SQL would cause them to diverge at the first
  * changement de produit.
  */
 
-/** Le compte de comptes reste petit ; au-delà la vue n'a plus de sens de toute
- *  façon (il faudrait des agrégats dédiés, pas un scan). */
+/** The account count remains small; beyond that the view no longer has any meaning at all
+ * way (dedicated aggregates would be needed, not a scan). */
 const FUNNEL_SCAN_LIMIT = 5_000;
 
 const IANA_TZ = /^[A-Za-z][A-Za-z0-9_+-]*(?:\/[A-Za-z0-9_+-]+)*$/;
@@ -73,15 +73,15 @@ export async function GET(request: NextRequest) {
   }
   const totals = (totalsRes.data ?? {}) as Partial<TotalsPayload>;
 
-  // Les comptes internes ne comptent NULLE PART : la RPC les a déjà retirés de
-  // ses totaux, il reste à les retirer des deux agrégats calculés ici.
+  // Internal accounts count NOWHERE: the PRC has already removed them from
+  // its totals, it remains to remove them from the two aggregates calculated here.
   const internalIds = new Set(
     page.rows.filter((row) => row.is_internal).map((row) => row.user_id),
   );
 
-  // Répartition des plans : un compte sans ligne `billing_accounts` est sur le
-  // plan par défaut, donc on part de zéro pour tous les plans et on ne compte
-  // que ce que les lignes existantes changent.
+  // Distribution of plans: an account without line `billing_accounts` is on the
+  // default plan, so we start from zero for all plans and we do not count
+  // as existing lines change.
   const counts = new Map(BILLING_PLANS.map((plan) => [plan.id, 0]));
   const accounts = (accountsRes.data ?? []) as Array<Partial<BillingAccount>>;
   let withAccount = 0;
@@ -98,8 +98,8 @@ export async function GET(request: NextRequest) {
       Math.max(totalUsers - withAccount, 0),
   );
 
-  // Entonnoir : parmi les comptes à qui l'onboarding a été présenté, combien
-  // l'ont terminé, combien l'ont passé.
+  // Funnel: among the accounts to which onboarding was presented, how many
+  // completed it, how many passed it.
   const funnel = { started: 0, completed: 0, dismissed: 0 };
   for (const row of page.rows) {
     if (row.is_internal) continue;

@@ -1,10 +1,10 @@
 /**
- * Le tracé du brandmark minddy, source unique (MIN-73).
+ * The layout of the minddy brandmark, unique source (MIN-73).
  *
- * Il était jusqu'ici recopié dans `components/minddy-logo.tsx` et dans
- * `app/icon.tsx` ; l'image OpenGraph en avait besoin à son tour, d'où
- * l'extraction. Le viewBox fait partie du contrat : le tracé n'est pas cadré
- * sur l'origine.
+ * It was until now copied in `components/minddy-logo.tsx` and in
+ * `app/icon.tsx` ; the OpenGraph image in turn needed it, hence
+ * the extraction. The viewBox is part of the contract: the plot is not framed
+ * on the origin.
  */
 
 export const MINDDY_LOGO_VIEWBOX = "28 35 104 96";

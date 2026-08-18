@@ -4,22 +4,22 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { afterOrNow } from "@/lib/server/after-safe";
 
 /**
- * Consommation du jeton SSO d'un board (MIN-345).
+ * Consumption of a board's SSO token (MIN-345).
  *
- * Le jeton voyage dans une URL, et une URL se recopie : `Referer`, historique,
- * journal de proxy, capture d'écran d'un ticket de support. Sans consommation,
- * la rejouer rouvrait une session de board sous l'identité de sa victime
- * pendant toute la fenêtre du jeton — dix minutes, mais dix minutes pendant
- * lesquelles n'importe qui la vole.
+ * The token travels in a URL, and a URL copies itself: `Referer`, history,
+ * proxy log, screenshot of a support ticket. Without consumption,
+ * replaying it reopened a board session under the identity of its victim
+ * for the entire token window — ten minutes, but ten minutes during
+ * which anyone steals it.
  *
- * L'insert EST le verrou : la clé primaire `(board_id, token_id)` fait le refus
- * du second passage, en une seule requête et sans course entre deux invocations
- * concurrentes. Un `select` puis un `insert` auraient laissé passer les deux.
+ * The insert IS the lock: the primary key `(board_id, token_id)` refuses
+ * the second pass, in a single request and without a race between two competing invocations
+ *. A `select` then a `insert` would have let both pass.
  */
 export async function consumeSsoToken(params: {
   boardId: string;
   tokenId: string;
-  /** `exp` du jeton, en secondes — borne la rétention de la trace. */
+  /** `exp` of the token, in seconds — limits the retention of the trace. */
   expiresAt: number;
 }): Promise<boolean> {
   const service = getServiceClient();
@@ -29,12 +29,12 @@ export async function consumeSsoToken(params: {
     expires_at: new Date(params.expiresAt * 1000).toISOString(),
   });
 
-  // 23505 = clé primaire déjà prise : ce jeton a déjà servi.
+  // 23505 = primary key already taken: this token has already been used.
   if (error?.code === "23505") return false;
   if (error) {
-    // Base injoignable : on refuse. Laisser passer ferait de la panne le moyen
-    // de rejouer, et il n'y a pas de dégât à refuser une redirection SSO — le
-    // visiteur retombe sur le board, où la vérification par email l'attend.
+    // Base unreachable: we refuse. Letting it go would make the breakdown the means
+    // to play again, and there is no harm in refusing an SSO redirection — the
+    // visitor lands on the board, where the email verification awaits him.
     console.error("[feedback-sso] replay guard failed:", error.message);
     return false;
   }
@@ -44,9 +44,9 @@ export async function consumeSsoToken(params: {
 }
 
 /**
- * Les traces dont le jeton est de toute façon périmé. Opportuniste et après la
- * réponse — mais par `afterOrNow`, jamais détachée : une promesse détachée meurt
- * au gel de l'invocation, et la table grossirait sans que rien ne le dise.
+ * Traces whose token is expired anyway. Opportunistic and after the
+ * response — but by `afterOrNow`, never detached: a detached promise dies
+ * when the invocation freezes, and the table would grow without anything saying so.
  */
 function purgeExpired(): void {
   afterOrNow(async () => {

@@ -5,25 +5,25 @@ import { AuthProvider } from "@/lib/auth-context";
 import { DesktopAuthBridge } from "@/components/desktop-auth-bridge";
 
 /**
- * La coquille des écrans d'auth : un fond uni, et rien d'autre (MIN-300).
+ * The shell of the auth screens: a plain background, and nothing else (MIN-300).
  *
- * Ce fond a une histoire, qui tient en une leçon. Il a été le shader « grain
- * gradient » de Paper sur la moitié gauche d'une page à deux colonnes ; puis,
- * la colonne disparue, des dégradés CSS teintés par intention ; puis le shader
- * de nouveau, en pleine page, puis en bande haute, avec une hauteur MESURÉE sur
- * le sommet du formulaire pour ne jamais le toucher.
+ * This background has a story, which is a lesson. It was the “grain” shader
+ * gradient” of Paper on the left half of a two-column page; Then,
+ * the column disappeared, CSS gradients tinted by intention; then the shader
+ * again, in full page, then in high band, with a height MEASURED on
+ * the top of the form so you never touch it.
  *
- * Chaque étape corrigeait bien le défaut de la précédente, et chacune ajoutait
- * une contrainte : ne pas passer sous le texte, ne pas déborder, se recalculer
- * quand la colonne grandit. Un décor qui demande un `ResizeObserver` pour ne pas
- * gêner ce qu'on est venu lire n'est plus un décor. Il est retiré.
+ * Each step corrected the defect of the previous one, and each added
+ * a constraint: do not go under the text, do not overflow, recalculate
+ * when the column grows. A setting that requires a `ResizeObserver` so as not to
+ * hindering what we came to read is no longer a decoration. It is withdrawn.
  *
- * **Avant d'en remettre un** : c'est une page où l'on tape un mot de passe. Le
- * fond doit pouvoir rester immobile derrière un formulaire centré verticalement
- * dont la hauteur change à chaque étape — sans le masquer, et sans avoir à le
+ * **Before submitting one**: this is a page where you type a password. THE
+ * background must be able to remain stationary behind a vertically centered form
+ * whose height changes at each step — without hiding it, and without having to
  * mesurer.
  */
-/** Les écrans qui portent leur propre colonne pleine hauteur (`AuthColumn`). */
+/** Screens that carry their own full-height column (`AuthColumn`). */
 const FULL_BLEED_ROUTES = new Set([
   "/login",
   "/signup",
@@ -33,20 +33,20 @@ const FULL_BLEED_ROUTES = new Set([
 
 export function AuthShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  // Connexion, inscription et les deux écrans de mot de passe oublié (MIN-297)
-  // posent eux-mêmes leur colonne : la marque en haut à gauche de la FENÊTRE, le
-  // contenu au centre. Les écrans OAuth (consentement / succès) sont de simples
-  // cartes centrées.
+  // Login, Registration and the two Forgotten Password screens (MIN-297)
+  // place their column themselves: the mark at the top left of the WINDOW, the
+  // content in the center. The OAuth (consent/success) screens are simple
+  // centered maps.
   const fullBleed = FULL_BLEED_ROUTES.has(pathname);
 
   return (
     <AuthProvider>
-      {/* Le retour du navigateur système, dans l'app de bureau (MIN-291). Ne
-          rend rien hors de l'app, et rien tant qu'aucun lien n'arrive. */}
+      {/* Return of the system browser, in the desktop app (MIN-291). Born
+ renders nothing outside the app, and nothing until a link arrives. */}
       <DesktopAuthBridge />
-      {/* La bande de déplacement de la fenêtre ne vit plus ici : elle est dans
-          le layout racine, donc sur TOUS les écrans (MIN-292). Ces écrans-là
-          n'étaient qu'un des cinq qui en manquaient. */}
+      {/* The window moving strip no longer lives here: it is in
+ the root layout, therefore on ALL screens (MIN-292). These screens
+ were just one of five that were missing. */}
       <div className="auth-shell min-h-[100dvh] bg-background">
         {fullBleed ? (
           children

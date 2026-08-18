@@ -1,30 +1,30 @@
 import { cn } from "mangue-ui/lib/utils";
 
-/** Une marque tierce porte son logo et, quand il est monochrome, sa variante
-    pour fond sombre. Les deux registres qui en ont un — les agents MCP
-    (`lib/mcp-agents.ts`) et les outils dont on importe un backlog
-    (`lib/import-guides.ts`) — satisfont cette forme. */
+/** A third-party brand bears its logo and, when it is monochrome, its variant
+ for dark background. The two registers that have one — the MCP
+ (`lib/mcp-agents.ts`) agents and the tools from which a backlog is imported
+ (`lib/import-guides.ts`) — satisfy this form. */
 export interface BrandMark {
-  /** Logo pour thème clair (public/). */
+  /** Logo for light theme (public/). */
   logo: string;
-  /** Variante thème sombre, pour les marques monochromes. */
+  /** Dark theme variant, for monochrome brands. */
   logoDark?: string;
 }
 
-/** Logo d'une marque tierce, avec bascule light/dark quand une variante existe.
-    Volontairement SANS "use client" : utilisé aussi bien dans des server
-    components (pages OAuth) que dans des client components (réglages) — et
-    l'objet McpAgent porte une fonction build() non sérialisable à la frontière
-    RSC, donc seul le strict nécessaire traverse.
+/** Logo of a third party brand, with light/dark toggle when a variant exists.
+ Deliberately WITHOUT "use client": used both in server
+ components (OAuth pages) and in client components (settings) — and
+ the McpAgent object carries a non-serializable build() function border
+ RSC, so only the bare essentials cross.
 
-    `loading="lazy"`, et ce n'est pas un détail de confort (MIN-100). React 19
-    PRÉCHARGE depuis l'en-tête toute `<img>` rencontrée au rendu serveur qui n'est
-    pas paresseuse : la vitrine des agents de la landing — neuf logos, en double
-    quand il existe une variante sombre — posait donc dix-huit
-    `<link rel="preload" as="image">` dans le `<head>`, tous devant la capture du
-    hero, qui est l'élément LCP. Aucun de ces logos n'est au premier écran ; un
-    logo dans le viewport (page OAuth, réglages) se charge de toute façon
-    immédiatement, `lazy` ou pas. */
+ `loading="lazy"`, and this is not a comfort detail (MIN-100). React 19
+ PRELOAD from the header any `<img>` encountered in server rendering which is
+ not lazy: the window of the landing agents — nine logos, duplicate
+ when there is a dark variant — therefore posed eighteen
+ `<link rel="preload" as="image">` in the `<head>`, all ahead of the capture of the
+ hero, which is the LCP element. None of these logos are on the first screen; a
+ logo in the viewport (OAuth page, settings) loads
+ immediately anyway, `lazy` or not. */
 export function BrandLogo({ brand, className }: { brand: BrandMark; className?: string }) {
   if (!brand.logoDark) {
     // eslint-disable-next-line @next/next/no-img-element

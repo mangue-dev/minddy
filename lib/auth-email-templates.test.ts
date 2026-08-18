@@ -3,14 +3,14 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * Les deux e-mails d'authentification ne parlent QU'UNE langue par envoi.
+ * The two authentication emails only speak ONE language per sending.
  *
- * Ils vivent hors de tout code : ce sont des templates Go rendus par GoTrue,
- * dont la copie versionnée est `supabase/email-templates/`. Rien dans le dépôt
- * ne les exécute — donc rien ne dirait qu'une phrase est repassée hors de sa
- * branche, ou qu'une branche a perdu son `{{ end }}`. D'où ce test : il rend
- * les deux langues avec un évaluateur minuscule (le seul motif que ces fichiers
- * utilisent) et vérifie ce qui sort.
+ * They live outside of any code: they are Go templates rendered by GoTrue,
+ * whose versioned copy is `supabase/email-templates/`. Nothing in the
+ * repository executes them — so nothing would say that a sentence has moved out of its
+ * branch, or that a branch has lost its `{{ end }}`. Hence this test: it renders
+ * both languages ​​with a lowercase evaluator (the only pattern these files
+ * use) and checks what comes out.
  */
 
 const TEMPLATES = ["confirm-signup.html", "reset-password.html"] as const;
@@ -40,7 +40,7 @@ function read(name: string): string {
   );
 }
 
-/** `{{ if $fr }}A{{ else }}B{{ end }}` → A ou B. Pas de branche imbriquée ici. */
+/** `{{ if $fr }}A{{ else }}B{{ end }}` → A or B. No nested branch here. */
 function render(template: string, fr: boolean): string {
   return template.replace(
     /\{\{ if \$fr \}\}([\s\S]*?)\{\{ else \}\}([\s\S]*?)\{\{ end \}\}/g,
@@ -50,14 +50,14 @@ function render(template: string, fr: boolean): string {
 
 describe.each(TEMPLATES)("%s", (name) => {
   const template = read(name);
-  // Le commentaire d'en-tête porte le sujet, lui aussi branché, et des exemples
-  // de code — il n'a pas à passer les assertions de langue.
+  // The header comment carries the subject, also connected, and examples
+  // code — it doesn't have to pass language assertions.
   const body = template.slice(template.indexOf("-->") + 3);
 
   it("branche sur la langue du compte, sans planter sur un compte sans langue", () => {
-    // `printf "%v"` n'est pas cosmétique : `eq nil "fr"` fait ÉCHOUER le rendu
-    // d'un template Go, donc l'e-mail entier, pour tout compte dont les
-    // métadonnées n'ont pas encore ce champ.
+    // `printf "%v"` is not cosmetic: `eq nil "fr"` causes rendering to FAIL
+    // a Go template, therefore the entire email, for any account whose
+    // metadata does not have this field yet.
     expect(template).toContain(
       '{{ $fr := eq (printf "%v" (index .Data "locale")) "fr" }}'
     );
@@ -91,8 +91,8 @@ describe.each(TEMPLATES)("%s", (name) => {
     expect(ENGLISH_MARKERS.some((m) => rendered.includes(m))).toBe(true);
   });
 
-  // Le lien est la seule chose que l'e-mail ait à faire : il doit survivre à
-  // la bascule de langue, à l'identique dans les deux rendus.
+  // The link is the only thing the email has to do: it must survive
+  // the language switch, identical in both renderings.
   it("garde le lien à jeton dans les deux langues", () => {
     for (const fr of [true, false]) {
       const rendered = render(body, fr);

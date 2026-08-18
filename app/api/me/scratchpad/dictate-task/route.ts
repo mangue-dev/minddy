@@ -21,38 +21,38 @@ import { cleanDictatedTaskLine } from "@/lib/scratchpad";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-// Étape IA de la dictée du CARNET (« Dicter une tâche ») : le pendant de
-// /api/projects/[id]/dictate-issue, en beaucoup plus petit. Whisper rend une
-// parole telle quelle — hésitations, ponctuation posée au hasard, accords
-// cassés — et cette prise brute atterrissait telle quelle dans le carnet. Ici
-// un seul appel, un seul outil : le transcript devient une (ou plusieurs)
-// tâches propres, fidèles à ce qui a été dit. La route n'écrit RIEN : elle rend
-// le texte, le client l'insère dans l'éditeur.
+// Stage IA of NOTEBOOK dictation (“Dictate a task”): the counterpart of
+// /api/projects/[id]/dictate-issue, much smaller. Whisper makes a
+// speech as it is — hesitations, random punctuation, agreements
+// broken — and this raw take landed as is in the notebook. Here
+// a single call, a single tool: the transcript becomes one (or more)
+// own tasks, faithful to what has been said. The road writes NOTHING: it makes
+// the text, the client inserts it into the editor.
 //
-// Le prompt tient sur une politique d'ÉDITION MINIMALE, et c'est le point
-// délicat : ici le modèle n'est pas un rédacteur, c'est un correcteur. Une
-// première version lui demandait d'écrire « ce que l'utilisateur VOULAIT dire »,
-// en une ou deux phrases — et il faisait exactement ça : reformulation propre,
-// plus courte, plus « pro », où le sens glissait et où les nuances (une raison,
-// un exemple, un « au ressenti ») disparaissaient. Le carnet, lui, veut la note
-// telle qu'elle a été pensée : maladroite et fidèle plutôt que lisse et
-// approximative. D'où l'interdiction explicite de raccourcir, de reformuler et
-// de trancher entre deux lectures, plus le contre-exemple en fin de prompt.
+// The prompt is based on a policy of MINIMAL EDITING, and that is the point
+// delicate: here the model is not a writer, he is a proofreader. A
+// first version asked him to write "what the user WANTED to say",
+// in one or two sentences — and he did exactly that: clean reformulation,
+// shorter, more “professional”, where the meaning slipped and where the nuances (a reason,
+// an example, a “feeling”) disappeared. The notebook wants the note
+// as it was conceived: clumsy and faithful rather than smooth and
+// approximate. Hence the explicit prohibition of shortening, reformulating and
+// to decide between two readings, plus the counterexample at the end of the prompt.
 
-// Même modèle que la dictée de ticket (clé app_config `dictate_model`) : c'est
-// le même geste, la même exigence de latence.
+// Same model as ticket dictation (app_config key `dictate_model`): it is
+// the same gesture, the same latency requirement.
 const RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 } as const;
-// Une prise n'a pas de limite de durée ; sanitizeAssistantMessageContent plafonne
-// déjà à 12k, ce qui vaut ~1h30 de parole.
+// A hold has no duration limit; sanitizeAssistantMessageContent caps
+// already at 12k, which is worth ~1h30 of talking.
 const MAX_TRANSCRIPT_CHARS = 12_000;
-// Échantillon du carnet joint au prompt : sert de glossaire (noms propres,
-// identifiants de tickets, vocabulaire du produit), pas de contexte de travail.
-// On prend la FIN, là où vivent les ajouts récents.
+// Sample of the notebook attached to the prompt: serves as a glossary (proper names,
+// ticket identifiers, product vocabulary), with no work context.
+// We take the END, where the recent additions live.
 const NOTE_SAMPLE_CHARS = 3000;
 const MAX_TASKS = 20;
-// Le prompt interdit de résumer : une entrée fait la longueur de ce qui a été
-// dit, et le plafond n'est qu'un garde-fou (il coupe au caractère près, donc il
-// doit rester hors de portée d'une dictée normale — 2 000 ≈ 2 min de parole).
+// The prompt prohibits summarizing: an entry is the length of what has been
+// said, and the ceiling is only a safeguard (it cuts to the nearest character, so it
+// must remain out of range of normal dictation — 2,000 ≈ 2 min of speaking).
 const MAX_TASK_CHARS = 2000;
 
 const WRITE_TASKS_TOOL = {
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  // Budget d'usage du plan (MIN-72) — pré-vol avant l'appel.
+  // Plan usage budget (MIN-72) — pre-flight before call.
   try {
     await ensureUsageBudget(auth.user.id, "voice");
   } catch (err) {
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
 
   let body: { transcript?: unknown; note?: unknown };
   try {
-    // Corps non-objet (null, chaîne…) : refusé ici plutôt que de crasher plus bas.
+    // Non-object body (null, string…): refused here rather than crashing further down.
     const parsed: unknown = await request.json();
     if (!parsed || typeof parsed !== "object") throw new Error("not an object");
     body = parsed as { transcript?: unknown; note?: unknown };
@@ -166,9 +166,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "transcript is required" }, { status: 400 });
   }
 
-  // Le carnet est le texte de l'utilisateur lui-même, et il ne sert qu'à
-  // orthographier : on découpe la queue AVANT d'assainir (le nettoyage plafonne
-  // par le début, ce qui donnerait le milieu du carnet).
+  // The notebook is the user's own text, and it is only used to
+  // spell: we cut the tail BEFORE cleaning (cleaning peaks
+  // from the beginning, which would give the middle of the notebook).
   const note =
     typeof body.note === "string"
       ? sanitizeAssistantMessageContent(body.note.slice(-NOTE_SAMPLE_CHARS)).trim()
@@ -240,14 +240,14 @@ export async function POST(request: NextRequest) {
     tasks = args.tasks
       .filter((v): v is string => typeof v === "string")
       .map((v) => cleanDictatedTaskLine(v, MAX_TASK_CHARS))
-      // Une entrée sans lettre ni chiffre n'est pas une tâche.
+      // Entry without letters or numbers is not a task.
       .filter((v) => /[\p{L}\p{N}]/u.test(v))
       .slice(0, MAX_TASKS);
     if (tasks.length === 0) throw new Error("Empty task list");
   } catch (err) {
     console.error("[api/me/scratchpad/dictate-task] failed:", err);
     if (usageRows.length > 0) after(() => recordAiUsage(usageRows));
-    // Le client retombe sur le transcript brut : la prise n'est jamais perdue.
+    // The client falls back on the raw transcript: the take is never lost.
     return NextResponse.json({ error: "Dictation processing failed" }, { status: 502 });
   }
 

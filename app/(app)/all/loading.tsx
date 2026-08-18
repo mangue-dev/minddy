@@ -1,6 +1,6 @@
 import { BoardSkeleton } from "@/components/route-skeletons";
 
-// Board agrégé cross-projet — même gabarit que le board d'un projet.
+// Cross-project aggregate board — same template as a project board.
 export default function AllLoading() {
   return <BoardSkeleton />;
 }

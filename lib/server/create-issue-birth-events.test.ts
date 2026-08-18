@@ -1,28 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * LA NAISSANCE D'UN TICKET EST ÉCRITE AVANT LA RÉPONSE.
+ * THE BIRTH OF A TICKET IS WRITTEN BEFORE THE RESPONSE.
  *
- * Ce fichier ne tient qu'une règle, et elle a coûté deux symptômes en prod :
+ * This file only has one rule, and it cost two symptoms in production:
  *
- *  - « a créé le ticket » arrivait APRÈS « a assigné » ou « a lié » dans la
- *    timeline — parce que ces écritures-là, elles, se font avant la réponse ;
- *  - et parfois n'arrivait pas du tout : une écriture d'après la réponse est
- *    best-effort, et quand elle tombe, le ticket n'a plus AUCUNE activité.
+ * - “created the ticket” came AFTER “assigned” or “ linked" in the
+ * timeline — because these writes are done before the response;
+ * - and sometimes did not happen at all: a write after the response is
+ * best-effort, and when it falls, the ticket no longer has ANY activity.
  *
- * Les deux se corrigent au même endroit : l'événement `created` s'écrit sur le
- * chemin synchrone. D'où la forme des assertions — on n'exécute JAMAIS les
- * rappels d'`after()` ici. Tout ce que le test voit dans `issue_events` a donc,
- * par construction, été écrit avant que la fonction ne rende la main.
+ * Both are correct in the same place: the `created` event is written on the
+ * synchronous path. Hence the form of the assertions — we NEVER execute the
+ * callbacks of `after()` here. Everything that the test sees in `issue_events` has therefore,
+ * by construction, been written before the function returns.
  */
 
 interface Row extends Record<string, unknown> {}
 
 let eventRows: Row[] = [];
 let categoryLinkRows: Row[] = [];
-/** L'ordre des écritures, tel qu'il aboutit dans la timeline. */
+/** The order of writes, as they end up in the timeline. */
 let writeLog: string[] = [];
-/** Rappels programmés par `after()` — capturés, jamais joués. */
+/** Reminders scheduled by `after()` — captured, never played. */
 let afterCallbacks: (() => unknown)[] = [];
 
 vi.mock("next/server", () => ({
@@ -60,7 +60,7 @@ function table(name: string) {
     }
     return query;
   };
-  // Le parent d'un sous-ticket : la seule lecture de `issues` du chemin testé.
+  // The parent of a subticket: the only reading of `issues` of the tested path.
   query.maybeSingle = async () => ({
     data:
       name === "issues"
@@ -91,7 +91,7 @@ vi.mock("@/lib/server/attachments", () => ({
   copyResourcesToProject: async () => [],
   insertAttachments: async () => {},
 }));
-/** Ce que Smart-fill répond, quand un test l'appelle. */
+/** What Smart-fill responds to, when a test calls it. */
 let smartFillPatch: Record<string, unknown> = {};
 vi.mock("@/lib/server/smart-fill", () => ({ runSmartFill: async () => smartFillPatch }));
 vi.mock("@/lib/server/notifications", () => ({ insertNotifications: async () => {} }));
@@ -100,12 +100,12 @@ vi.mock("@/lib/server/description-mentions", () => ({
   notifyDescriptionMentions: async () => {},
 }));
 vi.mock("@/lib/server/posthog", () => ({ captureServerEvent: () => {} }));
-// Les webhooks partent dans leur propre `after()` — hors sujet ici.
+// Webhooks go into their own `after()` — off topic here.
 vi.mock("@/lib/server/webhooks", () => ({ dispatchWebhooksForEvents: () => {} }));
 
-// Smart Assign écrit AVANT la réponse (cas déterministe) : c'est contre lui que
-// se mesure l'ordre. Il ne s'exécute que sur un ticket né sans assigné, hors
-// triage — ce que fait le cas nominal ci-dessous.
+// Smart Assign writes BEFORE the response (deterministic case): it is against him that
+// order is measured. It only runs on a ticket born without an assignee, excluding
+// sorting — what the nominal case below does.
 vi.mock("@/lib/server/smart-assign", () => ({
   isSmartAssignEligibleStatus: () => true,
   applySmartAssign: async () => {
@@ -136,7 +136,7 @@ describe("createIssueForProject — activité de naissance", () => {
     const result = await create();
 
     expect(result.ok).toBe(true);
-    // Rien d'après-réponse n'a encore tourné : ce qui est là a été écrit à temps.
+    // Nothing post-response has turned out yet: what is there was written in time.
     expect(afterCallbacks.length).toBeGreaterThan(0);
     expect(eventRows).toHaveLength(1);
     expect(eventRows[0]).toMatchObject({
@@ -162,7 +162,7 @@ describe("createIssueForProject — activité de naissance", () => {
   });
 
   it("dit ce que Smart-fill a posé, après la création", async () => {
-    // Smart-fill remplit un champ laissé vide — l'événement suit le `created`.
+    // Smart-fill fills a field left empty — the event follows the `created`.
     smartFillPatch = { priority: "high" };
 
     await create({ smart_fill: true });

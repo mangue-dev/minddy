@@ -12,23 +12,23 @@ describe("shouldCatchUpOnResume", () => {
     expect(shouldCatchUpOnResume({ hiddenForMs: 2_000 })).toBe(false);
   });
 
-  it("rattrape passé le seuil, une socket ouverte pouvant être morte", () => {
+  it("catches up after the threshold because an open socket may be dead", () => {
     expect(
       shouldCatchUpOnResume({ hiddenForMs: RESUME_AFTER_HIDDEN_MS })
     ).toBe(true);
   });
 
-  // MIN-306 : le plancher vaut aussi quand la socket est tombée. Sur macOS, une
-  // fenêtre recouverte une demi-seconde émet un `visibilitychange` ; si la socket
-  // se trouve en backoff à cet instant, l'ancienne branche « socket déconnectée →
-  // oui sans condition » rattrapait TOUS les périmètres pendant que l'utilisateur
-  // travaille. Le canal tombé rattrape déjà le sien à la re-souscription.
-  it("ne rattrape pas une occlusion d'une demi-seconde, socket en backoff", () => {
+  // MIN-306: the floor is also valid when the socket has fallen. On macOS, a
+  // window covered for half a second emits a `visibilitychange`; if the socket
+  // is in backoff at this moment, the old branch “socket disconnected →
+  // yes unconditionally" catches ALL perimeters while the user
+  // work. The fallen channel is already catching up with its own upon re-subscription.
+  it("does not catch up after a half-second occlusion while the socket is backing off", () => {
     expect(shouldCatchUpOnResume({ hiddenForMs: 500 })).toBe(false);
   });
 });
 
-/** Faux client realtime : compte les gestes, ne simule pas phoenix. */
+/** Fake realtime client: counts gestures, does not simulate phoenix. */
 function fakeRealtime(
   overrides: Partial<WakeableRealtime> & { connected: boolean }
 ) {
@@ -54,24 +54,24 @@ describe("wakeRealtime", () => {
     vi.useRealTimers();
   });
 
-  it("reconnecte une socket fermée, sans sonde", () => {
+  it("reconnects a closed socket without a probe", () => {
     const { realtime, calls } = fakeRealtime({ connected: false });
     expect(wakeRealtime(realtime)).toBeNull();
     expect(calls.connect).toBe(1);
     expect(calls.heartbeats).toBe(0);
   });
 
-  it("repousse le jeton à chaque réveil — il a pu expirer pendant la veille", () => {
+  it("refreshes the token on every wake-up — it may have expired while asleep", () => {
     const { realtime, calls } = fakeRealtime({ connected: false });
     wakeRealtime(realtime);
     expect(calls.setAuth).toBe(1);
   });
 
-  it("conclut à la mort quand le battement reste sans réponse", () => {
+  it("concludes the socket is dead when the heartbeat remains unanswered", () => {
     vi.useFakeTimers();
-    // `pendingHeartbeatRef` toujours posé à l'heure de la sonde : la socket ne
-    // répond plus. Le second battement déclenche le timeout de phoenix, donc le
-    // démontage et la reconnexion immédiate.
+    // `pendingHeartbeatRef` always set at the time of the probe: the socket does not
+    // no longer responds. The second beat triggers the phoenix timeout, so the
+    // disassembly and immediate reconnection.
     const { realtime, calls } = fakeRealtime({
       connected: true,
       pendingHeartbeatRef: "42",
@@ -83,7 +83,7 @@ describe("wakeRealtime", () => {
     expect(calls.heartbeats).toBe(2);
   });
 
-  it("laisse tranquille une socket qui a répondu", () => {
+  it("leaves a socket that responded alone", () => {
     vi.useFakeTimers();
     const { realtime, calls } = fakeRealtime({
       connected: true,

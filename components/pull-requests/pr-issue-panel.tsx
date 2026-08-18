@@ -12,11 +12,11 @@ import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import type { Issue, IssueRelationType } from "@/lib/types";
 
 /**
- * Ouvre l'issue liée à une PR dans le panneau latéral, PAR-DESSUS la page Pull
- * Requests, sans naviguer vers le board (MIN-66). La page étant cross-projet, on
- * charge à la volée les données du projet de la PR (membres, catégories,
- * objectifs, issues, relations) et on branche les mutations comme le board.
- * Monté avec `key={projectId}:{issueId}` → hooks refetchés au changement de projet.
+ * Opens the issue linked to a PR in the side panel, ABOVE the Pull
+ * Requests page, without navigating to the board (MIN-66). The page being cross-project, on
+ * loads the project data from the PR on the fly (members, categories,
+ * objectives, issues, relationships) and we plug in the mutations like the board.
+ * Mounted with `key={projectId}:{issueId}` → hooks refetched when the project changes.
  */
 export function PrIssuePanel({
   projectId,
@@ -37,7 +37,7 @@ export function PrIssuePanel({
   const { categories } = useCategoriesQuery(projectId);
   const { objectives } = useObjectivesQuery(projectId);
 
-  // Issue affichée (peut changer via les relations/parent dans le panneau).
+  // Issue displayed (can change via relationships/parent in the panel).
   const [openId, setOpenId] = useState(issueId);
   const issue: Issue | null = issues.find((i) => i.id === openId) ?? null;
 

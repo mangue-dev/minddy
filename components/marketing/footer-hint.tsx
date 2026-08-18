@@ -8,20 +8,19 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * L'infobulle des deux gestes de l'adresse de contact du pied de page : copier,
- * écrire.
+ * The tooltip for the two footer contact address gestures: copy,
+ * write.
  *
- * Elle vit dans SON fichier pour une seule raison : une infobulle Radix tire le
- * positionneur flottant, et le pied de page est rendu par les SIX pages
- * publiques. Importée depuis [marketing-footer.tsx](marketing-footer.tsx), elle
- * partirait dans leur bundle initial à toutes — exactement ce que MIN-100 a
- * passé son temps à en retirer. Isolée ici, elle devient un `dynamic()` que le
- * pied de page ne monte qu'à son approche, comme le sélecteur de langue.
+ * It lives in ITS file for one reason only: a Radix tooltip draws the
+ * floating positioner, and the footer is rendered by the SIX pages
+ * public. Imported from [marketing-footer.tsx](marketing-footer.tsx), it
+ * would go into everyone's initial bundle — exactly what MIN-100 spent his time removing. Isolated here, it becomes a `dynamic()` that the
+ * footer only rises when approached, like the language selector.
  *
- * D'où la forme « enveloppe » plutôt qu'un composant complet : l'élément
- * enveloppé — le lien `mailto:` — reste écrit dans le pied de page, donc rendu
- * côté serveur et lisible sans JavaScript. L'infobulle ne fait que se poser
- * dessus quand elle arrive.
+ * Hence the “envelope” form rather than a complete component: the wrapped
+ * element — the link `mailto:` — remains written in the footer, therefore rendered
+ * on the server side and readable without JavaScript. The tooltip just lands
+ * on it when it arrives.
  */
 export function FooterHint({ label, children }: { label: string; children: ReactElement }) {
   return (

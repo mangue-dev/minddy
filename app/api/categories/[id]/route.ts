@@ -5,7 +5,7 @@ import { isValidColor } from "@/lib/category-colors";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// Borne de longueur du nom (MIN-118) — même plafond que lib/server/categories.ts.
+// Name length bound (MIN-118) — same cap as lib/server/categories.ts.
 const MAX_NAME_LENGTH = 200;
 
 /** PATCH /api/categories/[id] — rename / recolor (RLS: project access). */

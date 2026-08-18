@@ -18,17 +18,16 @@ export interface ProjectAccess {
  *   isMember = owner OR a row in project_members  (can_access_project())
  */
 /**
- * Parmi ces projets, ceux auxquels l'utilisateur a ENCORE accès (MIN-351).
+ * Among these projects, those to which the user STILL has access (MIN-351).
  *
- * `getProjectAccess` répond pour un projet et rend la ligne ; celle-ci répond
- * pour un lot et ne rend que des ids. C'est ce dont a besoin une surface qui
- * réhydrate en clé service un ensemble de lignes déjà écrites — l'inbox — et
- * qui doit reposer la question de l'accès au moment de la LECTURE : une
- * notification est un fait passé, l'appartenance au projet ne l'est pas.
+ * `getProjectAccess` responds for a project and returns the line; this one responds
+ * for a batch and only returns ids. This is what a surface needs which
+ * rehydrates into a service key a set of lines already written - the inbox - and
+ * which must raise the question of access at the time of READING: a
+ * notification is a past fact, membership in the project is not.
  *
- * La corbeille du projet ne compte pas comme une perte d'accès : c'est
- * `getProjectAccess` qui l'écarte, pour une navigation vers un projet qui n'est
- * plus là. Ici on ne fait que décider ce qu'on a le droit de relire.
+ * The project trash does not count as a loss of access: it is
+ * `getProjectAccess` that removes it, for navigation to a project that is no longer there. Here we just decide what we have the right to reread.
  */
 export async function accessibleProjectIds(
   userId: string,

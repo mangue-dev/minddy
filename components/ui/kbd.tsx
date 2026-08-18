@@ -4,19 +4,19 @@ import * as React from "react";
 import { cn } from "mangue-ui";
 
 /**
- * `Kbd` / `KbdSequence` — DOUBLON TEMPORAIRE de `mangue-ui`, comme la couche
- * réglages avant elle.
+ * `Kbd` / `KbdSequence` — TEMPORARY DUPLICATION of `mangue-ui`, like the layer
+ * settings before it.
  *
- * La correction (une touche est carrée quand elle tient en un glyphe) vit dans
- * `~/Projets/mangue-ui/packages/mangue-ui/src/components/ui/kbd.tsx`, en 0.4.0
- * — non publiée. minddy consomme la 0.3.0 depuis npm : sans cette copie, le
- * correctif serait invisible ici jusqu'à la prochaine publication, et un bump
- * de mangue-ui n'est pas anodin (il peut dupliquer framer-motion et noyer le
- * typecheck sous des erreurs d'identité de types).
+ * The fix (a key is square when it fits into a glyph) lives in
+ * `~/Projets/mangue-ui/packages/mangue-ui/src/components/ui/kbd.tsx`, in 0.4.0
+ * — unpublished. minddy consumes 0.3.0 from npm: without this copy, the
+ * patch would be invisible here until the next release, and a bump
+ * from mango-ui is not trivial (it can duplicate framer-motion and drown the
+ * typecheck under type identity errors).
  *
- * À RETIRER dès que minddy passe sur mangue-ui ≥ 0.4.0 : remplacer les imports
- * `@/components/ui/kbd` par `mangue-ui` et supprimer ce fichier. Ce n'est pas
- * une divergence — le contenu doit rester IDENTIQUE à l'amont.
+ * TO REMOVE as soon as minddy switches to mango-ui ≥ 0.4.0: replace imports
+ * `@/components/ui/kbd` by `mangue-ui` and delete this file. This is not
+ * a divergence — the content must remain IDENTICAL upstream.
  */
 
 export type KbdProps = React.ComponentProps<"kbd"> & {
@@ -24,23 +24,23 @@ export type KbdProps = React.ComponentProps<"kbd"> & {
 };
 
 /**
- * Une touche est CARRÉE quand elle tient en un seul glyphe — une lettre, ⌘, ⇧,
- * →, ou une icône — et large seulement quand c'est un mot : Ctrl, Space, Esc,
- * Tab. C'est la forme d'un vrai clavier, où seuls les modificateurs écrits en
- * toutes lettres débordent.
+ * A key is SQUARE when it fits into a single glyph — a letter, ⌘, ⇧,
+ * →, or an icon — and wide only when it is a word: Ctrl, Space, Esc,
+ * Tab. This is the shape of a real keyboard, where only modifiers written in
+ * all letters overflow.
  *
- * Sans cette règle, `px-1.5` s'appliquait à tout : un « ⌘ » sortait plus large
- * que le « K » posé à côté, et deux touches censées être jumelles ne l'étaient
- * pas. Le cas se voit partout où un raccourci se rend en plusieurs pastilles
- * (cheat sheet, pill de recherche), c'est-à-dire partout.
+ * Without this rule, `px-1.5` applied to everything: a “⌘” came out wider
+ * than the “K” placed next to it, and two keys supposed to be twins were
+ * not. The case is seen wherever a shortcut is made into several pellets
+ * (cheat sheet, search pill), that is to say everywhere.
  */
 function isSingleGlyph(children: React.ReactNode): boolean {
-  // Une icône occupe la pastille entière : carrée, comme une lettre.
+  // An icon occupies the entire pad: square, like a letter.
   if (React.isValidElement(children)) return true;
   const text = typeof children === "number" ? String(children) : children;
   if (typeof text !== "string") return false;
-  // Points de code, pas unités UTF-16 : une flèche composée ou un emoji pèsent
-  // deux unités et ne sont pas moins une seule touche.
+  // Code points, not UTF-16 units: a compound arrow or emoji weighs
+  // two units and are not less than a single key.
   return [...text.trim()].length === 1;
 }
 

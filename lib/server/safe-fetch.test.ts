@@ -2,11 +2,11 @@ import { Readable } from "node:stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-336 — le filtre d'adresses est la moitié du garde-fou anti-SSRF (l'autre
- * étant l'épinglage de la connexion, voir [pinned-request.ts](./pinned-request.ts)).
- * Ce qui le met en défaut n'est presque jamais `10.0.0.1` : ce sont les formes
- * qui rhabillent une adresse privée — IPv4 mappée en hexadécimal, 6to4, NAT64 —
- * et les plages non routables qu'on oublie d'écrire.
+ * MIN-336 — the address filter is half of the anti-SSRF safeguard (the other
+ * being connection pinning, see [pinned-request.ts](./pinned-request.ts)).
+ * What faults it is almost never `10.0.0.1`: these are the forms
+ * which dress up a private address — IPv4 mapped in hexadecimal, 6to4, NAT64 —
+ * and the non-routable ranges which we forget to write.
  */
 
 const pinnedRequest = vi.hoisted(() => vi.fn());
@@ -49,7 +49,7 @@ describe("isPrivateAddress — refusé", () => {
     ["64:ff9b::a00:1", "NAT64 — 10.0.0.1"],
     ["2002:a9fe:a9fe::1", "6to4 — 169.254.169.254"],
     ["fe80::1%eth0", "lien-local avec sa zone"],
-    // MIN-341 — les plages oubliées, et les écritures anciennes d'une IPv4.
+    // MIN-341 — the forgotten ranges, and the old writings of an IPv4.
     ["192.31.196.1", "AS112"],
     ["192.52.193.1", "AMT"],
     ["192.175.48.1", "AS112, délégation directe"],
@@ -89,10 +89,10 @@ describe("isPrivateAddress — accepté", () => {
 });
 
 /**
- * MIN-341 — le webhook sortant est le premier appelant à POSTER par ce chemin.
- * Ce qui compte alors : la charge part une fois, à la destination validée, et
- * une redirection ne la fait pas partir ailleurs — un 302 signé rejoué vers un
- * hôte que l'owner n'a pas choisi serait exactement la fuite qu'on ferme.
+ * MIN-341 — the outgoing webhook is the first caller to POST via this path.
+ * What matters then: the payload leaves once, at the validated destination, and
+ * a redirect does not make it go elsewhere — a signed 302 replayed to a
+ * host that the owner does not have not chosen would be exactly the leak that we close.
  */
 describe("safeFetch — POST", () => {
   const stream = () => Readable.from([Buffer.from("")]);
@@ -117,7 +117,7 @@ describe("safeFetch — POST", () => {
     const [, options] = pinnedRequest.mock.calls[0];
     expect(options.method).toBe("POST");
     expect(options.body).toBe('{"événement":"issue.created"}');
-    // Des octets, pas des caractères : « événement » en pèse deux de plus.
+    // Bytes, not characters: “event” weighs two more.
     expect(options.headers["content-length"]).toBe("31");
   });
 

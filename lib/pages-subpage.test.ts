@@ -1,29 +1,29 @@
 // @vitest-environment jsdom
 //
-// MIN-272 — les SOUS-PAGES vues depuis le document.
+// MIN-272 — SUBPAGES seen from the document.
 //
-// La même information est portée à deux endroits — la colonne `parent_id` et le
-// bloc `subpage` dans le corps du parent — et c'est là que sont tous les pièges.
-// Ce fichier tient le côté DOCUMENT ; le côté base (retirer le bloc du corps du
-// parent en corbeillant, le remettre en restaurant, ne pas en inventer un pour
-// une page née dans la sidebar) est dans lib/server/pages.test.ts, au-dessus du
-// faux PostgREST qui y vit déjà.
+// The same information is carried in two places — the `parent_id` column and the
+// `subpage` block in the parent's body — and that's where all the pitfalls are.
+// This file holds the DOCUMENT side; the base side (remove the block from the body of the
+// parent in basket, put it back in the restaurant, do not invent one to
+// a page born in the sidebar) is in lib/server/pages.test.ts, above the
+// fake PostgREST that already lives there.
 //
-// Ce qui est épinglé ici, et qu'aucun type ne voit :
+// What's pinned here, and that no one sees:
 //
-//  - la lecture est RÉCURSIVE. Un bloc sous-page posé dans un dépliant ou un
+// - reading is RECURSIVE. A sub-page block placed in a leaflet or a
 //    item de liste compte autant qu'un bloc de premier niveau. Ne regarder que
-//    le premier niveau laisserait derrière un bloc pointant vers le vide —
-//    précisément ce que ce ticket existe pour empêcher ;
-//  - supprimer le bloc, PAR N'IMPORTE QUEL GESTE, annonce la page. C'est le
-//    comportement destructeur de Notion, tenable seulement parce que la
-//    corbeille existe, et il n'a pas le droit de rater un chemin ;
-//  - un DÉPLACEMENT de bloc n'est pas une suppression. Sortir et rentrer le
-//    nœud dans la même transaction ne doit rien corbeiller ;
-//  - et surtout : adopter un document fusionné (MIN-271) ne doit RIEN annoncer.
-//    C'est le pire des faux positifs — la fusion retire justement le bloc quand
-//    le serveur vient de le retirer, et le lire comme un geste de
-//    l'utilisateur corbeillerait la page une seconde fois, en boucle.
+// the first level would leave behind a block pointing towards the void —
+// precisely what this ticket exists to prevent;
+// - delete the block, BY ANY GESTURE, announces the page. This is the
+// destructive behavior of Notion, tenable only because the
+// basket exists, and it does not have the right to miss a path;
+// - a block MOVE is not a deletion. Going out and coming in
+// node in the same transaction must not trash anything;
+// - and above all: adopting a merged document (MIN-271) must not announce ANYTHING.
+// This is the worst false positive — the merge removes the block when
+// the server just removed it, and read it as a gesture of
+// the user would trash the page a second time, in a loop.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Editor, type JSONContent } from "@tiptap/core";
@@ -56,7 +56,7 @@ const para = (text: string): JSONContent => ({
 const doc = (...content: JSONContent[]) =>
   ({ type: "doc", content }) as JSONContent & PageDocJSON;
 
-/* ─── La lecture du document ───────────────────────────────────────────────── */
+/* ─── Reading the document ──────────────────────── ───────────────────────── */
 
 describe("subpageIdsIn", () => {
   it("trouve les blocs IMBRIQUÉS, pas seulement ceux du premier niveau", () => {
@@ -77,8 +77,8 @@ describe("subpageIdsIn", () => {
   });
 
   it("ignore un bloc sans page cible, et ne compte pas deux fois la même", () => {
-    // Un bloc sans `pageId` est celui d'une création qui n'a pas abouti : il ne
-    // pointe vers rien, il n'y a rien à corbeiller.
+    // A block without `pageId` is that of a creation which was not successful: it
+    // points to nothing, there is nothing to trash.
     const twice = doc(subpage(A), { type: "subpage", attrs: { pageId: null } }, subpage(A));
     expect(subpageIdsIn(twice)).toEqual([A]);
   });
@@ -103,7 +103,7 @@ describe("removeSubpages", () => {
 
     expect(removed).toBe(2);
     expect(subpageIdsIn(after)).toEqual([]);
-    // Le reste du document ne bouge pas : on retire un lien, pas un chapitre.
+    // The rest of the document does not move: we remove a link, not a chapter.
     expect((after as PageDocJSON).content).toHaveLength(2);
   });
 
@@ -113,8 +113,8 @@ describe("removeSubpages", () => {
   });
 
   it("rend l'objet d'entrée quand il n'y a rien à retirer", () => {
-    // C'est ce qui permet à l'appelant de décider s'il ÉCRIT : une écriture
-    // pour rien incrémenterait la version et enverrait tout le monde en fusion.
+    // This is what allows the caller to decide if he WRITE: a writing
+    // for nothing would increment the version and send everyone into meltdown.
     const before = doc(para("intro"));
     const { doc: after, removed } = removeSubpages(before, [A]);
     expect(removed).toBe(0);
@@ -142,17 +142,17 @@ describe("appendSubpage", () => {
   });
 });
 
-/* ─── La détection, sur un VRAI éditeur ────────────────────────────────────── */
+/* ─── Detection, on a REAL editor ─────────────────────────────── */
 
 /**
- * Les éditeurs ouverts par le fichier. Un `Editor` TipTap monte un `DOMObserver`
- * de ProseMirror qui se replanifie par `setTimeout` : sans `destroy()`, ce
- * minuteur survit au fichier et se réveille une fois le `document` de jsdom
- * démonté — `ReferenceError: document is not defined`, remonté par vitest comme
- * une erreur non gérée de la SUITE, attribuée au fichier qui tournait à cet
- * instant. Il faut assez de charge pour que le minuteur rate sa fenêtre, d'où
- * une erreur qui n'apparaissait qu'un jour sur deux. C'est le fichier qui ouvre
- * qui ferme.
+ * Editors opened by the file. A `Editor` TipTap mounts a `DOMObserver`
+ * from ProseMirror which is rescheduled by `setTimeout`: without `destroy()`, this
+ * timer survives the file and wakes up once the `document` from jsdom
+ * unmounted — `ReferenceError: document is not defined`, remounted by vitest as
+ * an unhandled error from the SUITE, attributed to the file that was running at this
+ * moment. It takes enough charge for the timer to miss its window, hence
+ * an error that only appeared every other day. This is the file that opens
+ * which closes.
  */
 const openEditors: Editor[] = [];
 
@@ -160,7 +160,7 @@ afterEach(() => {
   for (const editor of openEditors.splice(0)) editor.destroy();
 });
 
-/** L'éditeur d'une page, monté sur le vrai registre, sans une ligne de React. */
+/** The one-page editor, mounted on the real registry, without a line of React. */
 function makeEditor(content: JSONContent) {
   const removed = vi.fn<(ids: string[]) => void>();
   const editor = new Editor({
@@ -173,7 +173,7 @@ function makeEditor(content: JSONContent) {
   return { editor, removed };
 }
 
-/** La position du bloc sous-page qui pointe vers `pageId`. */
+/** The position of the subpage block that points to `pageId`. */
 function posOf(editor: Editor, pageId: string): number {
   let found = -1;
   editor.state.doc.descendants((node, pos) => {
@@ -200,8 +200,8 @@ describe("la disparition d'un bloc sous-page", () => {
   });
 
   it("annonce toutes les pages d'un coup quand on efface plusieurs blocs", () => {
-    // Tout sélectionner puis supprimer : le chemin par lequel on emporte le
-    // plus de pages sans y penser, et celui qui doit annoncer le compte juste.
+    // Select all then delete: the path by which we take the
+    // more pages without thinking about it, and the one who must announce the correct account.
     const { editor, removed } = makeEditor(doc(subpage(A), para("x"), subpage(B)));
 
     editor.commands.selectAll();
@@ -229,9 +229,9 @@ describe("la disparition d'un bloc sous-page", () => {
   });
 
   it("ne dit RIEN d'un bloc simplement DÉPLACÉ", () => {
-    // Sortir et rentrer le nœud dans la même transaction est ce que fait un
-    // glisser-déposer. Le lire comme une suppression corbeillerait une page
-    // pour un geste de mise en page.
+    // Exiting and reentering the node in the same transaction is what a
+    // drag and drop. Reading it as a deletion would trash a page
+    // for a layout gesture.
     const { editor, removed } = makeEditor(doc(para("intro"), subpage(A), para("fin")));
     const pos = posOf(editor, A);
 
@@ -246,11 +246,11 @@ describe("la disparition d'un bloc sous-page", () => {
   });
 
   it("ne dit RIEN quand on ADOPTE un document venu du serveur", () => {
-    // Le faux positif qui coûterait le plus cher : la fusion de MIN-271 retire
-    // le bloc parce que le SERVEUR vient de le retirer (la page est déjà à la
-    // corbeille). Le lire comme un geste de l'utilisateur relancerait une mise
-    // à la corbeille sur une page qui y est déjà — et la boîte de confirmation
-    // s'ouvrirait toute seule au milieu de la lecture.
+    // The false positive that would cost the most: the MIN-271 merger removes
+    // the block because the SERVER has just removed it (the page is already at the
+    // trash). Reading it as a user gesture would restart a bet
+    // to the trash on a page that is already there — and the confirmation box
+    // would open by itself in the middle of reading.
     const { editor, removed } = makeEditor(doc(para("intro"), subpage(A)));
 
     editor.commands.setContent(doc(para("intro")) as JSONContent, {
@@ -287,9 +287,9 @@ describe("remapSubpages", () => {
   });
 
   it("ne touche PAS une citation hors de la table", () => {
-    // Le point qui fait la différence entre copier une branche et copier le
-    // monde autour : un lien vers une page qui n'est pas de la copie doit
-    // continuer de pointer là où il pointait.
+    // The point that makes the difference between copying a branch and copying the
+    // world around: a link to a page that is not copy must
+    // continue pointing where he was pointing.
     const after = remapSubpages(doc(subpage(A), subpage(B)), new Map([[A, "copie-a"]]));
     expect(subpageIdsIn(after)).toEqual(["copie-a", B]);
   });
@@ -303,8 +303,8 @@ describe("remapSubpages", () => {
 
 describe("selectedSubpageId", () => {
   it("rend la page quand la sélection est CE bloc, et rien d'autre", () => {
-    // C'est ce qui fait basculer le menu ⋯ d'un vocabulaire de bloc à un
-    // vocabulaire de page : dupliquer copie la page, supprimer la corbeille.
+    // This is what switches the menu ⋯ from a block vocabulary to a
+    // page vocabulary: duplicate copy page, delete trash.
     const { editor } = makeEditor(doc(para("intro"), subpage(A)));
 
     expect(selectBlockAt(editor, posOf(editor, A))).toBe(true);
@@ -318,8 +318,8 @@ describe("selectedSubpageId", () => {
   });
 
   it("rend null dès que la sélection porte sur PLUSIEURS blocs", () => {
-    // Une sélection mêlée retombe sur le menu ordinaire : deux vocabulaires
-    // dans un même menu, c'est un menu qui ment sur la moitié de ce qu'il
+    // A mixed selection falls on the ordinary menu: two vocabularies
+    // in the same menu, it's a menu that lies about half of what it says
     // propose.
     const { editor } = makeEditor(doc(para("intro"), subpage(A)));
     editor.commands.selectAll();

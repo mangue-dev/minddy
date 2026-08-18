@@ -7,18 +7,18 @@ import {
 import type { FileStatus } from "./pr-file-tree";
 
 /**
- * Dérivations « fichiers changés » d'un run d'agent (MIN-46, note « diff par tour »),
- * partagées entre le fil (bloc SETTLED sous la réponse d'un tour) et la barre
- * au-dessus du composer (bloc LIVE du tour en cours + bouton « créer la PR »).
+ * Derivations "changed files" of an agent run (MIN-46, note "diff per round"),
+ * shared between the thread (SETTLED block under the response of a round) and the bar
+ * above the composer (LIVE block of the current round + "create PR" button ".
  *
- * Deux sources, deux fidélités :
- *  • AUTORITAIRE — les events `files_changed`, émis en fin de tour, calculés par git
- *    dans la sandbox (statut + compteurs exacts). C'est la vérité, mais elle n'arrive
- *    qu'une fois le tour terminé.
- *  • APPROXIMATIVE (live) — reconstruite des `tool_call` d'édition du tour EN COURS,
- *    pour montrer « en direct » ce que l'agent touche pendant qu'il travaille (avant
- *    que git n'ait committé). Sans compteurs, statut deviné du tool — `run_command`
- *    peut changer des fichiers hors de cette liste : c'est un indice, pas un décompte.
+ * Two sources, two loyalties:
+ * • AUTHORITY — the `files_changed` events, emitted at the end of the round, calculated by git
+ * in the sandbox (status + exact counters). This is the truth, but it only happens
+ * once the turn is finished.
+ * • APPROXIMATE (live) — reconstructed from the `tool_call` editing of the CURRENT turn,
+ * to show "live" what the agent is touching while working (before
+ * that git has not committed). Without counters, guessed tool status — `run_command`
+ * can change files outside this list: it's a hint, not a count.
  */
 
 /** Ordre d'affichage stable des statuts (ajouts d'abord, suppressions ensuite). */
@@ -35,10 +35,10 @@ function byStatusThenPath(a: AgentFileChange, b: AgentFileChange): number {
 }
 
 /**
- * Union des events `files_changed` d'un run → état CUMULÉ de la branche (dernier
- * statut connu par chemin, compteurs du dernier event qui l'a touché). Sert la barre
- * au repos : « N fichiers modifiés · créer une pull request ». `truncated` remonte si
- * un event a été borné (gros tour).
+ * Union of `files_changed` events of a run → CUMULATIVE state of the branch (last
+ * status known by path, counters of the last event which touched it). Serves the bar
+ * at rest: “N files modified · create a pull request”. `truncated` goes up if
+ * an event has been limited (big turn).
  */
 export function cumulativeBranchFiles(events: AgentRunEvent[]): {
   files: AgentFileChange[];
@@ -55,25 +55,25 @@ export function cumulativeBranchFiles(events: AgentRunEvent[]): {
   return { files: [...byPath.values()].sort(byStatusThenPath), truncated };
 }
 
-/** A-t-on au moins un event `files_changed` ? (⇒ le run a committé du code.) */
+/** Do we have at least one `files_changed` event? (⇒ the run has committed code.) */
 export function hasCommittedChanges(events: AgentRunEvent[]): boolean {
   return events.some((e) => e.type === "files_changed");
 }
 
 /**
- * Le statut d'un fichier dans le vocabulaire des diffs de PR, pour que le bloc
- * d'un tour d'agent porte les mêmes marques qu'eux (icône, couleur, mot). Le
- * seul écart entre les deux nomenclatures : git dit `deleted`, la forge dit
+ * The status of a file in the PR diffs vocabulary, so that the block
+ * of an agent turn has the same marks as them (icon, color, word). The
+ * only difference between the two nomenclatures: git says `deleted`, the forge says
  * `removed`.
  */
 export function prFileStatus(status: AgentFileChangeStatus): FileStatus {
   return status === "deleted" ? "removed" : status;
 }
 
-/** Totaux +/− d'une liste (0 quand inconnus — vue live). Prend toute liste qui
- *  PORTE ces deux nombres : la même somme sert les fichiers d'un event
- *  `files_changed` et ceux du diff lu dans la microVM, qui parlent la langue des
- *  diffs de forge (`filename`) et pas celle de git (`path`). */
+/** Totals +/− of a list (0 when unknown — live view). Takes any list which
+ * HAS these two numbers: the same sum serves the files of an event
+ * `files_changed` and those of the diff read in the microVM, which speak the language of
+ * diffs of forge (`filename`) and not that of git (`path`). */
 export function changeTotals(
   files: { additions: number; deletions: number }[],
 ): { additions: number; deletions: number } {
@@ -83,7 +83,7 @@ export function changeTotals(
   );
 }
 
-/** Statistiques d'un fichier renvoyées par la route du diff (forme forge). */
+/** Statistics of a file returned by the diff route (forge form). */
 export interface LiveDiffStat {
   filename: string;
   additions: number;
@@ -92,10 +92,9 @@ export interface LiveDiffStat {
 }
 
 /**
- * Ajoute aux fichiers provisoires du tour les compteurs exacts du diff Git
- * vivant. La liste provisoire reste la source de la portée du tour : le diff
- * vivant couvre aussi les tours précédents de la branche, donc on ne doit pas
- * le rendre directement dans le fil.
+ * Adds the exact counters of the Git
+ * live diff to the tour's provisional files. The provisional list remains the source of the scope of the round: the live diff
+ * also covers the previous rounds of the branch, so we should not make it directly in the thread.
  */
 export function mergeLiveFileStats(
   liveFiles: AgentFileChange[],

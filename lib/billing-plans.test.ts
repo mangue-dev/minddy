@@ -9,9 +9,9 @@ import {
 } from "./billing-plans";
 
 /**
- * L'échelle des plans, du point de vue de « que proposer à quelqu'un qui a épuisé
- * son budget ? ». Ce qui compte : ne jamais proposer une impasse — un plan qui
- * n'existe pas, ou qui ne donnerait pas plus de budget.
+ * The scale of the plans, from the point of view of "what to offer to someone who has exhausted
+ * their budget?" ". What matters: never propose a dead end — a plan that
+ * doesn't exist, or that wouldn't result in more budget.
  */
 
 describe("nextBillingPlanId", () => {
@@ -21,7 +21,7 @@ describe("nextBillingPlanId", () => {
   });
 
   it("ne propose RIEN au sommet de l'échelle", () => {
-    // Sans ça, la carte de budget épuisé offrirait un upgrade inexistant.
+    // Without it, the exhausted budget card would offer a non-existent upgrade.
     const top = BILLING_PLANS[BILLING_PLANS.length - 1];
     expect(nextBillingPlanId(top.id)).toBeNull();
   });
@@ -38,11 +38,11 @@ describe("nextBillingPlanId", () => {
 });
 
 /**
- * L'invariant qui attrape tout seul la feature oubliée (MIN-185). Une feature
- * hors segment n'est refusée par rien : `segmentizeUsage` l'ignore (la barre
- * sous-compte face au total affiché) et `segmentForFeature` retombe sur
- * « Numo » (l'historique la range sous le mauvais nom). Les deux se découvrent
- * sur une facture, des semaines plus tard.
+ * The invariant which catches the forgotten feature by itself (MIN-185). A feature
+ * outside the segment is not refused by anything: `segmentizeUsage` ignores it (the bar
+ * subcounts against the total displayed) and `segmentForFeature` falls on
+ * “Numo” (the history puts it under the wrong name). The two discover each other
+ * on an invoice, weeks later.
  */
 describe("USAGE_SEGMENTS", () => {
   it("range CHAQUE feature facturable dans exactement un segment", () => {
@@ -55,8 +55,8 @@ describe("USAGE_SEGMENTS", () => {
   });
 
   it("ne liste aucune feature qui n'existe pas", () => {
-    // Le sens inverse : un segment qui garde le nom d'une feature retirée
-    // compterait zéro pour toujours, sans que rien ne le dise.
+    // The opposite direction: a segment which keeps the name of a removed feature
+    // would count zero forever, without anything saying so.
     for (const segment of USAGE_SEGMENTS) {
       for (const feature of segment.features) {
         expect(BILLABLE_FEATURES, `segment ${segment.id}`).toContain(feature);
@@ -72,16 +72,16 @@ describe("USAGE_SEGMENTS", () => {
 
 describe("maxModelMultiplier", () => {
   it("laisse toujours passer le modèle par défaut de minddy", () => {
-    // Le baseline vaut ×1 par construction : un plafond en dessous fermerait
-    // l'agent à ce plan-là, y compris sur le modèle que minddy résout tout seul.
+    // The baseline is worth ×1 by construction: a ceiling below would close
+    // the agent on this plan, including on the model that Minddy solves on her own.
     for (const plan of BILLING_PLANS) {
       expect(plan.maxModelMultiplier).toBeGreaterThanOrEqual(1);
     }
   });
 
   it("monte avec le budget d'usage", () => {
-    // L'ordre des deux échelles doit rester le même : un plan qui donnerait plus
-    // de budget mais moins de choix de modèle serait un downgrade déguisé.
+    // The order of the two scales must remain the same: a plan which would give more
+    // budget but fewer model choices would be a disguised downgrade.
     for (let i = 1; i < BILLING_PLANS.length; i++) {
       const prev = BILLING_PLANS[i - 1];
       const plan = BILLING_PLANS[i];
@@ -92,10 +92,10 @@ describe("maxModelMultiplier", () => {
 });
 
 /**
- * MIN-348 — le plafond de stockage est le seul champ de plan que TypeScript
- * n'applique pas : l'envoi part du navigateur droit vers le bucket, et c'est la
- * policy SQL qui le refuse, en lisant `plan_storage_quotas`. Deux endroits pour
- * un même nombre, donc, et une seule façon de les tenir d'accord : les comparer.
+ * MIN-348 — the storage cap is the only plan field that TypeScript
+ * does not apply: the sending goes from the right browser to the bucket, and it is the
+ * SQL policy that refuses it, reading `plan_storage_quotas`. Two places for
+ * the same number, therefore, and only one way to keep them in agreement: compare them.
  */
 describe("maxStorageBytes", () => {
   const sql = readMigration(INITIAL_DATA_MIGRATION);

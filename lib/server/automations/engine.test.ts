@@ -1,24 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-147 — la FIN d'une chaîne, et les deux façons très différentes d'y arriver.
+ * MIN-147 — the END of a string, and the two very different ways to get there.
  *
- * Quand plus aucune règle ne matche, le moteur conclut. Mais « plus rien à
- * jouer » recouvre deux situations opposées : la chaîne est allée au bout de son
- * parcours, ou le run qui vient de finir a ÉCHOUÉ — et aucune règle ne réagit à
- * un échec, puisque les préréglages guettent tous `outcome: "ok"`.
+ * When no more rules match, the engine concludes. But “nothing left to play” covers two opposite situations: the chain has reached the end of its run, or the run that has just finished has FAILED — and no rule reacts to a failure, since the presets are all waiting for `outcome: "ok"`.
  *
- * Les confondre coûte cher : la chaîne poste « la chaîne est allée au bout » sur
- * un ticket dont l'implémentation vient de mourir, et l'analytics compte un
- * `outcome: "completed"`. C'est exactement ce que le motif `run_failed` de
- * `STOP_REASONS` attendait, et ce que le routage de `requeueStuckRuns` vers
- * `stampRun` promettait — « un run abandonné par le balayeur ARRÊTE sa chaîne ».
+ * Confusing them is expensive: the chain posts "the chain went to the end" on
+ * a ticket whose implementation has just died, and the analytics counts a
+ * `outcome: "completed"`. This is exactly what the `run_failed` pattern from
+ * `STOP_REASONS` expected, and what routing from `requeueStuckRuns` to
+ * `stampRun` promised — “a run aborted by the sweeper STOPs its chain .
  */
 
 const h = vi.hoisted(() => ({
   /** Lignes rendues par `maybeSingle()`, table par table. */
   single: {} as Record<string, unknown>,
-  /** Lignes rendues quand le builder est awaité tel quel (embed/liste). */
+  /** Lines rendered when the builder is awaited as is (embed/list). */
   many: {} as Record<string, unknown[]>,
   ownerMeta: null as Record<string, unknown> | null,
   chain: null as Record<string, unknown> | null,
@@ -26,7 +23,7 @@ const h = vi.hoisted(() => ({
   verdict: null as { ok: boolean; summary: string; blockers: string[] } | null,
 }));
 
-/** Double de chaîne PostgREST : tout renvoie `this`, seules les fins résolvent. */
+/** PostgREST string double: everything returns `this`, only endings resolve. */
 function builder(table: string) {
   const query: Record<string, unknown> = {};
   const self = () => query;
@@ -86,7 +83,7 @@ vi.mock("./chain", () => ({
     step: chain.step + 1,
     played_rule_ids: [...chain.played_rule_ids, ruleId],
   })),
-  // Pas de chaîne existante → on en ouvre une neuve, à l'étape 0.
+  // No existing channel → we open a new one, at step 0.
   openChain: vi.fn(async () => ({
     id: "chain-new",
     project_id: "p1",
@@ -132,7 +129,7 @@ const updateIssue = await import("@/lib/server/update-issue");
 const chainMod = await import("./chain");
 const runsMod = await import("@/lib/server/agent/runs");
 
-/** Une chaîne vivante qui a déjà joué son unique étape d'implémentation. */
+/** A living string that has already played its single implementation step. */
 function livingChain() {
   return {
     id: "chain-1",
@@ -175,8 +172,8 @@ beforeEach(() => {
     automation_override: null,
   };
   h.many.issue_categories = [];
-  // Le préréglage du propriétaire gouverne : une seule règle, déjà jouée — donc
-  // plus rien ne matche, quel que soit le sort du run.
+  // The owner's preset governs: only one rule, already played — so
+  // nothing matches anymore, whatever the fate of the run.
   h.ownerMeta = { automation_preset: "implement-only" };
   h.chain = livingChain();
   h.activeRun = null;
@@ -199,7 +196,7 @@ describe("runAutomations — conclure une chaîne", () => {
       "run_failed",
     );
     expect(report.finishChain).not.toHaveBeenCalled();
-    // Et surtout : rien n'est relancé sur un travail qui vient de mourir.
+    // And above all: nothing is restarted on a job that has just died.
     expect(actions.runAction).not.toHaveBeenCalled();
   });
 
@@ -210,8 +207,8 @@ describe("runAutomations — conclure une chaîne", () => {
   });
 
   it("un run en échec qu'une règle PRÉVOIT joue cette règle, sans arrêt", async () => {
-    // Une règle écrite à la main (API/MCP) peut réagir à l'échec : c'est le sens
-    // de `outcome` sur le déclencheur, et l'arrêt ne doit pas le court-circuiter.
+    // A hand-written rule (API/MCP) can react to failure: this is the meaning
+    // of `outcome` on the trigger, and stopping should not short it.
     h.single.projects = {
       ...(h.single.projects as Record<string, unknown>),
       automations: [
@@ -230,10 +227,10 @@ describe("runAutomations — conclure une chaîne", () => {
   });
 
   it("la reprise après vérification en échec garde le modèle de la TAILLE", async () => {
-    // Une reprise est une étape de la MÊME chaîne sur le MÊME ticket : la
-    // relancer avec un autre modèle que celui réglé pour cette taille n'aurait
-    // aucune raison d'être — et le réglage de compte est justement celui que
-    // l'utilisateur voit et manipule.
+    // A restart is a step in the SAME chain on the SAME ticket: the
+    // restart with another model than the one set for this size would not have
+    // no reason to exist — and the account setting is precisely what
+    // the user sees and manipulates.
     h.ownerMeta = {
       automation_preset: "loop-by-effort",
       automation_models: { m: "vendor/m" },
@@ -267,15 +264,15 @@ describe("runAutomations — conclure une chaîne", () => {
   });
 
   it("la remise en triage est signée par l'AUTOMATISATION, pas par l'assigné", async () => {
-    // Sans `viaAutomation`, la timeline écrit « Numo a changé le statut » —
-    // indiscernable d'un run lancé à la main, alors que personne n'a cliqué.
+    // Without `viaAutomation`, the timeline writes “Numo has changed the status” —
+    // indistinguishable from a run launched by hand, when no one clicked.
     h.ownerMeta = { automation_preset: "loop-by-effort" };
     h.verdict = { ok: false, summary: "Toujours pas.", blockers: [] };
     h.chain = {
       ...livingChain(),
       preset: "loop-by-effort",
       step: 5,
-      retries: 1, // reprise déjà consommée → deuxième échec = arrêt + triage
+      retries: 1, // recovery already consumed → second failure = stop + triage
       played_rule_ids: ["loop-by-effort:medium-verify"],
     };
 
@@ -301,11 +298,11 @@ describe("runAutomations — conclure une chaîne", () => {
   });
 
   it("l'ORIGINE du changement de statut arrive jusqu'aux règles", async () => {
-    // Le câblage complet : `updateIssueFields` → `scheduleStatusAutomations` →
-    // l'événement → `nextRule`. Sans lui, la condition d'origine serait écrite
-    // dans les préréglages mais jamais évaluée.
+    // The complete wiring: `updateIssueFields` → `scheduleStatusAutomations` →
+    // the event → `nextRule`. Without it, the original condition would be written
+    // in the presets but never evaluated.
     h.chain = null;
-    // Sursis à zéro : ce test-ci porte sur l'ORIGINE, pas sur le délai.
+    // Reprieve at zero: this test concerns the ORIGIN, not the delay.
     h.ownerMeta = { automation_preset: "loop-by-effort", automation_start_delay_min: 0 };
     const enterTodo = (source: "web" | "mcp") =>
       runAutomations({
@@ -314,12 +311,12 @@ describe("runAutomations — conclure une chaîne", () => {
         event: { type: "status_changed", from: "backlog", to: "todo", source },
       });
 
-    // Mon agent MCP range son ticket : il décrit son propre travail, il ne
-    // demande pas qu'on en lance un deuxième dessus.
+    // My MCP agent puts away his ticket: he describes his own work, he does not
+    // don't ask for a second one to be thrown at it.
     await enterTodo("mcp");
     expect(actions.runAction).not.toHaveBeenCalled();
 
-    // Moi qui déplace la carte : là, oui.
+    // Me moving the card: there, yes.
     await enterTodo("web");
     expect(actions.runAction).toHaveBeenCalledTimes(1);
     expect(vi.mocked(actions.runAction).mock.calls[0][0].action).toMatchObject({
@@ -330,29 +327,29 @@ describe("runAutomations — conclure une chaîne", () => {
 
   it("le SURSIS ouvre la chaîne en attente, sans rien lancer", async () => {
     h.chain = null;
-    h.ownerMeta = { automation_preset: "loop-by-effort" }; // 5 min par défaut
+    h.ownerMeta = { automation_preset: "loop-by-effort" }; // 5 min by default
     await runAutomations({
       issueId: "i1",
       projectId: "p1",
       event: { type: "status_changed", from: "backlog", to: "todo", source: "web" },
     });
 
-    // Rien n'est lancé, rien n'est dépensé : la chaîne attend.
+    // Nothing is launched, nothing is spent: the chain waits.
     expect(actions.runAction).not.toHaveBeenCalled();
     const opened = vi.mocked(chainMod.openChain).mock.calls[0][0];
     expect(opened.notBefore).toBeTruthy();
     expect(Date.parse(opened.notBefore as string)).toBeGreaterThan(Date.now());
-    // L'événement est mis de côté : c'est lui qu'on rejouera, et son `to` sert
+    // The event is set aside: it will be played again, and its `to` is used
     // de condition de survie.
     expect(opened.pendingEvent).toEqual({ to: "todo", source: "web" });
-    // L'analytique d'ouverture n'est PAS émise : rien n'a commencé.
+    // The opening analytics is NOT issued: nothing has started.
     expect(report.captureChainStarted).not.toHaveBeenCalled();
   });
 
   it("la fin d'un run n'attend JAMAIS — on est déjà engagé", async () => {
-    // Le sursis protège l'AMORÇAGE. Une fois la chaîne partie, faire patienter
-    // l'étape suivante ne protégerait plus rien : la dépense est déjà faite.
-    h.ownerMeta = { automation_preset: "implement-only" }; // 5 min par défaut
+    // The reprieve protects the BOOT. Once the chain is gone, wait
+    // the next step would no longer protect anything: the expense has already been made.
+    h.ownerMeta = { automation_preset: "implement-only" }; // 5 min by default
     h.chain = { ...livingChain(), played_rule_ids: [] };
     await runAutomations({
       issueId: "i1",
@@ -360,15 +357,15 @@ describe("runAutomations — conclure une chaîne", () => {
       chainId: "chain-1",
       event: { type: "run_finished", intent: "plan", outcome: "ok" },
     });
-    // `implement-only` ne réagit pas à `run_finished` → rien à jouer, mais le
-    // point est ailleurs : aucune chaîne n'a été mise en sursis.
+    // `implement-only` does not react to `run_finished` → nothing to play, but the
+    // point is elsewhere: no channel has been suspended.
     expect(vi.mocked(chainMod.openChain)).not.toHaveBeenCalled();
   });
 
   it("le ticket parti ailleurs pendant le sursis annule la chaîne EN SILENCE", async () => {
-    // Le cas « j'ai copié le prompt pour le faire moi-même » : la copie déplace
-    // le ticket en `in_progress`, donc il n'est plus dans le statut qui avait
-    // ouvert la chaîne. Aucun commentaire, aucune notification : rien n'a tourné.
+    // The case “I copied the prompt to do it myself”: the copy moves
+    // the ticket in `in_progress`, so it is no longer in the status which had
+    // open the channel. No comments, no notifications: nothing happened.
     h.ownerMeta = { automation_preset: "loop-by-effort" };
     h.chain = {
       ...livingChain(),
@@ -418,13 +415,13 @@ describe("runAutomations — conclure une chaîne", () => {
     expect(chainMod.startPendingChain).toHaveBeenCalledWith("chain-1");
     expect(chainMod.cancelPendingChain).not.toHaveBeenCalled();
     expect(actions.runAction).toHaveBeenCalledTimes(1);
-    // L'analytique d'ouverture part ICI, au vrai démarrage.
+    // The opening analytics starts HERE, at the real start.
     expect(report.captureChainStarted).toHaveBeenCalled();
   });
 
   it("une conversation indépendante ne bloque pas le réveil de la chaîne", async () => {
-    // Le ticket n'est plus l'identité d'exécution : une conversation manuelle et
-    // la chaîne ont chacune leur workspace et peuvent progresser en parallèle.
+    // The ticket is no longer the execution identity: a manual conversation and
+    // the chain each have their own workspace and can progress in parallel.
     h.ownerMeta = { automation_preset: "loop-by-effort" };
     h.activeRun = { id: "run-manuel" };
     h.chain = {
@@ -450,11 +447,11 @@ describe("runAutomations — conclure une chaîne", () => {
   });
 
   it("un humain qui RANGE le ticket retire la chaîne, même en plein run", async () => {
-    // La garde centrale. Une chaîne engagée ne regardait plus jamais son ticket :
-    // ses déclencheurs `run_finished` n'ont aucune condition de statut, et le
-    // crochet de statut sortait tôt dès qu'un run travaillait. On annulait un
-    // ticket, l'étape suivante partait quand même, et le lancement ÉCRASAIT
-    // l'annulation en repassant le ticket « en cours ».
+    // The central guard. A committed channel never looked at their ticket again:
+    // its `run_finished` triggers have no status conditions, and the
+    // status hook exited early as soon as a run was working. We canceled a
+    // ticket, the next step still started, and the launch CRASHED
+    // cancellation by re-entering the “in progress” ticket.
     h.ownerMeta = { automation_preset: "loop-by-effort" };
     h.chain = { ...livingChain(), preset: "loop-by-effort" };
     h.activeRun = { id: "run-chaine", chain_id: "chain-1" };
@@ -470,8 +467,8 @@ describe("runAutomations — conclure une chaîne", () => {
         expect.objectContaining({ id: "chain-1" }),
         "taken_over",
       );
-      // Le run de la chaîne part avec elle : le laisser finir, c'est dépenser
-      // sur un ticket que son propriétaire vient de ranger.
+      // The run of the chain leaves with it: letting it finish means spending
+      // on a ticket that its owner has just put away.
       expect(runsMod.requestInterrupt).toHaveBeenCalledWith("run-chaine");
       expect(actions.runAction).not.toHaveBeenCalled();
     }
@@ -495,8 +492,8 @@ describe("runAutomations — conclure une chaîne", () => {
   });
 
   it("…ni quand c'est le CYCLE DE VIE d'un run qui écrit le statut", async () => {
-    // Une PR fusionnée passe le ticket en `done` avec l'origine `agent` : c'est
-    // la réussite de la chaîne, pas quelqu'un qui la lui retire.
+    // A merged PR passes the ticket to `done` with the origin `agent`: this is
+    // the success of the channel, not someone who takes it away.
     h.ownerMeta = { automation_preset: "loop-by-effort" };
     h.chain = { ...livingChain(), preset: "loop-by-effort" };
     h.activeRun = { id: "run-chaine", chain_id: "chain-1" };
@@ -510,8 +507,8 @@ describe("runAutomations — conclure une chaîne", () => {
   });
 
   it("le ticket ou le projet supprimé ÉTEINT la chaîne au lieu de l'abandonner", async () => {
-    // Abandonnée, elle restait vivante à jamais — et en tête de la file du
-    // balayeur, où une poignée suffisait à affamer toute la plateforme.
+    // Abandoned, she remained alive forever — and at the head of the queue
+    // sweeper, where a handful was enough to starve the entire platform.
     h.chain = livingChain();
     h.single.issues = null;
     await runAutomations({
@@ -526,8 +523,8 @@ describe("runAutomations — conclure une chaîne", () => {
   });
 
   it("désarmer le projet éteint aussi une chaîne GARÉE", async () => {
-    // `shutDownChain` ne couvrait que `pending` et `running` : une chaîne au
-    // point d'arrêt humain restait garée pour toujours, index unique compris.
+    // `shutDownChain` only covered `pending` and `running`: a string at
+    // human stopping point remained parked forever, including unique index.
     h.chain = { ...livingChain(), status: "awaiting_human" };
     h.single.projects = {
       ...(h.single.projects as Record<string, unknown>),

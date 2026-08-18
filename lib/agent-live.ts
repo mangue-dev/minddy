@@ -5,38 +5,38 @@ import {
 } from "./agent-api";
 
 /**
- * CE QUE LE FIL AFFICHE DU ROUND EN COURS, et les deux règles qui le font changer.
+ * WHAT THE THREAD SHOWS OF THE CURRENT ROUND, and the two rules that make it change.
  *
- * À part de [use-agent-run-live.ts](use-agent-run-live.ts), qui garde le canal, le
- * cache et l'ordonnancement : ce qui reste ici est PUR, donc exerçable. La suite
- * n'a pas de rendu React, et c'est précisément ce qui a laissé passer la première
- * version de MIN-248 bis — la moitié client de la feature n'avait aucun test.
+ * Aside from [use-agent-run-live.ts](use-agent-run-live.ts), which keeps the channel, the
+ * cache and ordering: what's left here is PURE, therefore exercisable. The sequel
+ * does not have a React rendering, and this is precisely what failed the first
+ * version of MIN-248 bis — the client half of the feature had no tests.
  */
 
 export interface AgentRunLive {
-  /** Réponse du modèle telle qu'écrite jusqu'ici. */
+  /** Model response as written so far. */
   text: string;
-  /** Appels d'outils déjà amorcés dans ce round : >0 ⇒ narration, le tour continue. */
+  /** Tool calls already started in this round: >0 ⇒ narration, the round continues. */
   tools: number;
-  /** Le modèle raisonne EN CE MOMENT (MIN-122) → indicateur + compteur dans le fil.
-   *  Le TEXTE du raisonnement n'est PAS streamé : il arrive persisté en fin de round. */
+  /** The model is reasoning AT THIS MOMENT (MIN-122) → indicator + counter in the thread.
+ * The TEXT of the reasoning is NOT streamed: it arrives persisted at the end of the round. */
   reasoningActive: boolean;
-  /** Millisecondes de réflexion de ce round, mesurées côté serveur (le compteur). */
+  /** Milliseconds of reflection for this round, measured on the server side (the counter). */
   reasoningMs: number;
-  /** ISO — premier instant où ce round a écrit quelque chose (chrono du tour). */
+  /** ISO — first moment this round wrote something (round timeline). */
   startedAt: string;
   /**
-   * Fichiers touchés jusqu'ici par le tour, PROVISOIRES : le serveur en renvoie la
-   * liste ENTIÈRE à chaque charge, donc celle-ci fait foi sans qu'on ait à fusionner.
-   * `additions`/`deletions` y valent 0 — le direct ne fait que signaler les chemins.
-   * Le fil les enrichit avec le diff statistique Git vivant quand il est disponible,
-   * et un compteur encore à zéro se tait (`hideEmpty`) plutôt que de se lire comme
-   * une mesure.
-   */
+ * Files touched so far by the round, PROVISIONAL: the server returns the
+ * ENTIRE list on each load, so this is authentic without having to merge.
+ * `additions`/`deletions` are worth 0 — the direct only signals the paths.
+ * The thread enriches them with the live Git statistic diff when available,
+ * and a counter still at zero goes silent (`hideEmpty`) rather than reading as
+ * a measurement.
+ */
   files: AgentFileChange[];
-  /** La liste a été bornée côté serveur (gros tour). */
+  /** The list has been limited on the server side (big trick). */
   filesTruncated: boolean;
-  /** Compteurs Git exacts du tour quand ils remontent de l'exécuteur local. */
+  /** Round-exact Git counters when coming back from the local executor. */
   fileStats: AgentFileChange[];
 }
 
@@ -56,11 +56,11 @@ function str(v: unknown): string {
 }
 
 /**
- * Une charge de direct appliquée à l'état du fil. `null` = plus rien à montrer.
+ * A direct charge applied to the wire state. `null` = nothing left to show.
  *
- * Une charge est un INSTANTANÉ complet du round : ce qu'elle tait, on l'efface.
- * Rien n'est fusionné avec `prev` sauf le chrono, qui date du PREMIER signe de vie
- * du round et pas du dernier.
+ * A charge is a complete SNAPSHOT of the round: what it hides, we erase.
+ * Nothing is merged with `prev` except the timer, which dates from the FIRST sign of life
+ * of round and not the last.
  */
 export function liveFromStream(
   prev: AgentRunLive | null,
@@ -71,23 +71,23 @@ export function liveFromStream(
   const tools = typeof payload.tools === "number" ? payload.tools : 0;
   const reasoningActive = payload.reasoningActive === true;
   const reasoningMs = typeof payload.reasoningMs === "number" ? payload.reasoningMs : 0;
-  // La MÊME lecture que celle de l'event `files_changed` (`agent-api`) : deux
-  // parseurs pour un même payload finissent toujours par diverger, et le second
-  // perdait déjà les statuts et les compteurs du premier.
+  // The SAME reading as that of the `files_changed` (`agent-api`) event: two
+  // parsers for the same payload always end up diverging, and the second
+  // already lost the statuses and counters of the first one.
   const { files: announcedFiles, truncated } = parseFilesChangedPayload({
     files: payload.files,
     truncated: payload.filesTruncated,
   });
   const { files: fileStats } = parseFilesChangedPayload({ files: payload.fileStats });
-  // L'outil intégré annonce son chemin dès que l'écriture est autorisée. Le
-  // relevé Git arrive un peu après, une fois l'écriture réellement posée ; il
-  // attrape aussi les modifications faites par une commande shell.
+  // The built-in tool announces its path as soon as writing is authorized. THE
+  // statement Git arrives a little later, once the writing is really done; he
+  // also catch modifications made by a shell command.
   const files = announcedFiles.length > 0 ? announcedFiles : fileStats;
-  // Envoi À VIDE : les vrais events du round sont posés, ils prennent le relais à
-  // l'écran. Une phase de PURE réflexion n'écrit ni texte ni outil — sans
-  // `reasoningActive` dans ce test, l'indicateur disparaîtrait au lieu de
-  // s'afficher. Les fichiers comptent comme un signe de vie : la charge qui les
-  // porte est justement celle d'un round au repos.
+  // Sending EMPTY: the real events of the round are set, they take over
+  // the screen. A phase of PURE reflection does not write a text or a tool — without
+  // `reasoningActive` in this test the flag would disappear instead of
+  // display. Files count as a sign of life: the load that carries them
+  // door is precisely that of a round at rest.
   if (!text && !tools && !reasoningActive && files.length === 0 && fileStats.length === 0) return null;
   return {
     text,
@@ -102,27 +102,26 @@ export function liveFromStream(
 }
 
 /**
- * L'état du fil quand un event est POSÉ. Le provisoire s'efface : le vrai message
- * arrive, et sans ça les deux se superposeraient le temps que le serveur envoie sa
- * purge (un insert plus tard).
+ * The state of the thread when an event is SET. The provisional is erased: the real message
+ * arrives, and without that the two would overlap while the server sends its
+ * purge (an insert later).
  *
- * Les FICHIERS, eux, restent. Aucun event posé ne les remplace avant le
- * `files_changed` de fin de tour : les effacer à chaque `tool_call` les faisait
- * disparaître pendant toute la phase d'outils, celle-là même où l'agent édite et
- * où on veut les voir.
+ * The FILES remain. No event placed replaces them before the
+ * `files_changed` end of turn: clearing them at each `tool_call` made them
+ * disappear during the entire tools phase, the same one where the agent edits and
+ * where we want to see them.
  *
- * Sauf `files_changed`, justement — c'est LUI l'autorité, et son arrivée est le
- * passage de relais. Le déclarer ICI plutôt que d'attendre une charge de purge,
- * parce qu'il n'en vient pas toujours une : quand la boucle tourne dans la microVM,
- * l'event est posé par la fonction APRÈS que le tour a rendu son rapport, et il n'y
- * a plus personne dans la VM pour diffuser l'oubli. Les deux listes se seraient
- * superposées jusqu'à la fin du run.
+ * Except `files_changed`, precisely — HE is the authority, and his arrival is the
+ * handover. Declare it HERE rather than waiting for a purge charge,
+ * because one does not always come: when the loop is running in the microVM,
+ * the event is set by the function AFTER the round has returned its report, and there is no one left in the VM to broadcast the omission. The two lists would have
+ * superimposed until the end of the run.
  *
- * Et sauf ce qui CLÔT LE TOUR (`summary`, `quota_exhausted`) : la liste vivante
- * appartient au tour en cours, elle ne lui survit pas. Elle le faisait, le temps que
- * le `files_changed` de fin de tour arrive — et le fil, qui range ce qui suit une
- * réponse dans un tour NEUF, ouvrait un second accordéon sous celle-ci, chrono
- * compris : le tour se lisait en double.
+ * And except what ENDS THE TURN (`summary`, `quota_exhausted`): the living list
+ * belongs to the current round, it does not survive it. She did it, by the time that
+ * the `files_changed` at the end of the round arrived — and the thread, which puts what follows a
+ * answer in a NEW round, opened a second accordion under it, chrono
+ * understood: the round was read in double.
  */
 const CLOSES_TURN: ReadonlySet<AgentEventType> = new Set<AgentEventType>([
   "files_changed",

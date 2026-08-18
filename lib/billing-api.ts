@@ -54,7 +54,7 @@ export async function fetchUsageHistoryApi(params: {
   );
 }
 
-/** Démarre un checkout Stripe → URL de redirection. */
+/** Starts a Stripe checkout → Redirect URL. */
 export async function createCheckoutApi(
   planId: BillingPlanId,
   interval: BillingInterval = "month"
@@ -64,10 +64,10 @@ export async function createCheckoutApi(
     await fetch("/api/billing/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // `desktop` : Stripe s'ouvre dans le navigateur système dans les deux cas,
-      // mais il doit RENVOYER dans l'app quand c'est d'elle qu'on est parti
-      // (MIN-293). Seule la page peut le constater — le serveur ne verrait qu'un
-      // user agent, et un user agent ne décide de rien ici.
+      // `desktop`: Stripe opens in the system browser in both cases,
+      // but it must RETURN in the app when it is from it that we left
+      // (MIN-293). Only the page can see this — the server would only see a
+      // user agent, and a user agent doesn't decide anything here.
       body: JSON.stringify({ planId, interval, desktop: isDesktop() }),
     })
   );
@@ -76,9 +76,9 @@ export async function createCheckoutApi(
 }
 
 /**
- * Résilie l'abonnement à la fin de la période, ou le reprend (MIN-296) — sans
- * quitter l'app : c'est ce qui met la résiliation au même nombre de gestes que
- * la souscription.
+ * Cancels the subscription at the end of the period, or resumes it (MIN-296) — without
+ * leaving the app: this is what puts termination at the same number of gestures as
+ * subscription.
  */
 export async function setCancelAtPeriodEndApi(
   cancel: boolean
@@ -94,14 +94,14 @@ export async function setCancelAtPeriodEndApi(
   return cancelAtPeriodEnd;
 }
 
-/** Ouvre le portal Stripe (gérer / changer / annuler) → URL de redirection. */
+/** Opens the Stripe portal (manage / change / cancel) → Redirect URL. */
 export async function createPortalApi(): Promise<string> {
   trackEvent("billing_portal_opened", { current_plan_id: "unknown" });
   const { url } = await parseJson<{ url: string }>(
     await fetch("/api/billing/portal", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // Le bouton « Retour » du portal Stripe, même histoire que le checkout.
+      // The “Return” button of the Stripe portal, same story as the checkout.
       body: JSON.stringify({ desktop: isDesktop() }),
     })
   );

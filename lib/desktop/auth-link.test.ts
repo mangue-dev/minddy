@@ -6,7 +6,7 @@ import {
   type DesktopAuthLink,
 } from "./auth-link";
 
-/** L'aller-retour complet : ce que le serveur émet, ce que l'app relit. */
+/** The complete round trip: what the server sends, what the app reads back. */
 function roundTrip(link: DesktopAuthLink): DesktopAuthLink | null {
   return parseDesktopAuthLink(buildDesktopAuthUrl(link));
 }
@@ -112,8 +112,8 @@ describe("aller-retour serveur → app", () => {
 });
 
 /**
- * MIN-345 — le nonce du tour. Il n'a de valeur que s'il traverse INTACT les
- * trois écritures d'URL qui séparent la demande de l'app du lien qu'elle reçoit.
+ * MIN-345 — the nonce of the round. It only has value if it passes through INTACT the
+ * three URL writes that separate the app request from the link it receives.
  */
 describe("nonce du tour", () => {
   it("rapporte le nonce posé dans le redirectTo", () => {

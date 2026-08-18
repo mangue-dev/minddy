@@ -15,13 +15,13 @@ import {
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * Icône de projet (MIN-62) — owner uniquement.
- *  - POST multipart `file` → compresse et stocke l'image envoyée.
- *  - POST { site_url } → importe le favicon du site live.
- *  - DELETE → retire l'icône (retour à l'orbe générée).
+ * Project icon (MIN-62) — owner only.
+ * - POST multipart `file` → compresses and stores the sent image.
+ * - POST { site_url } → imports the favicon of the live site.
+ * - DELETE → removes the icon (return to the generated orb).
  *
- * Deux sources pour une même ressource — « l'icône du projet » — donc une seule
- * route, qui se branche sur le content-type et répond toujours { icon_url }.
+ * Two sources for the same resource — “the project icon” — therefore only one
+ * route, which plugs into the content-type and always responds to { icon_url }.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -42,9 +42,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   );
 
   if (isUpload) {
-    // La branche d'import est limitée depuis MIN-341 pour ses requêtes
-    // sortantes ; celle-ci l'est pour son CPU — 25 Mo décodés puis recompressés
-    // en WebP par appel, dans une fonction qui n'en fait rien d'autre (MIN-348).
+    // The import branch is limited since MIN-341 for its requests
+    // outgoing; this one is for its CPU — 25 MB decoded then recompressed
+    // in WebP by call, in a function that does nothing else (MIN-348).
     const refused = rateLimitRefusal(auth.user.id, "icon-upload", { limit: 20 });
     if (refused) return refused;
 
@@ -90,9 +90,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("iconInvalidUrl") }, { status: 400 });
   }
 
-  // Importer un favicon fait SORTIR une requête, et même plusieurs : la page,
-  // puis chacune des icônes qu'elle déclare. La route est donc limitée en débit
-  // comme link-preview, sur le même motif (MIN-341).
+  // Importing a favicon brings out a request, and even several: the page,
+  // then each of the icons it declares. The road is therefore limited in flow
+  // like link-preview, on the same pattern (MIN-341).
   const refusedImport = rateLimitRefusal(auth.user.id, "icon-import", { limit: 10 });
   if (refusedImport) return refusedImport;
 

@@ -24,8 +24,8 @@ describe("reduceUpdateStatus", () => {
   });
 
   it("ne fait pas retomber en téléchargement une version déjà prête", () => {
-    // La vérification des six heures réannonce ce qu'elle trouve, téléchargé ou
-    // non. Sans cette garde la ligne repassait en « téléchargement… » sans plus
+    // The six hour check re-announces what it finds, downloaded or
+    // No. Without this guard the line went back to “download…” without more
     // jamais en sortir.
     expect(reduceUpdateStatus(READY, { kind: "available", version: "0.9.5" })).toBe(
       READY
@@ -39,8 +39,8 @@ describe("reduceUpdateStatus", () => {
   });
 
   it("garde ce qui est prêt quand la vérification suivante échoue", () => {
-    // Le fichier est sur le disque : un réseau coupé ne l'en retire pas, et
-    // retirer la ligne effacerait le seul moyen d'installer.
+    // The file is on the disk: a cut network does not remove it, and
+    // removing the line would erase the only way to install.
     expect(reduceUpdateStatus(READY, { kind: "error" })).toBe(READY);
   });
 

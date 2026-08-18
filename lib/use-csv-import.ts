@@ -24,33 +24,31 @@ import {
 } from "@/lib/import-api";
 import { ISSUE_STATUSES } from "@/lib/issue-validation";
 
-/** Le fichier déposé, tel que l'aperçu le tient : lu une fois, relu jamais. */
+/** The dropped file, as the preview holds it: read once, reread never. */
 export interface PreparedCsv {
   fileName: string;
   csvText: string;
   table: CsvTable;
-  /** Le comptage des colonnes — recalculer à chaque retouche du tableau de
-   *  correspondance se verrait à l'écran sur un fichier de 2 000 lignes. */
+  /** The column count - recalculate each time the table of
+ * is retouched, the correspondence would be seen on the screen on a file of 2,000 lines. */
   stats: TableStats;
   source: ImportSource;
-  /** Le plan de départ — ce vers quoi « réinitialiser » ramène. */
+  /** The original plan — what “reset” leads back to. */
   baseMapping: ImportMapping;
 }
 
 /**
- * Le geste d'import (MIN-45), sans son écran : lire le fichier, en tirer un
- * plan de lecture, laisser le modèle combler les trous, redéduire l'aperçu à
- * chaque retouche, commiter.
+ * The import gesture (MIN-45), without its screen: read the file, draw a
+ * reading plan, let the model fill in the gaps, reduce the preview to
+ * each retouch, commit.
  *
- * Extrait du panneau des réglages parce qu'il a maintenant DEUX surfaces — le
- * panneau inline et le wizard d'import (`import-wizard-dialog.tsx`) — et
- * qu'aucune des deux ne doit pouvoir dériver de l'autre : c'est le même
- * `ImportMapping` qu'on montre et qu'on envoie, quel que soit l'écran.
+ * Taken from the settings panel because it now has TWO surfaces — the
+ * inline panel and the import wizard (`import-wizard-dialog.tsx`) — and
+ * that neither of the two should be able to derive from the other: it is the same
+ * `ImportMapping` that we show and send, whatever the screen.
  *
- * L'aperçu est vivant : le plan (`ImportMapping`) est de l'état, et les tickets
- * s'en déduisent. Trois mains l'écrivent — la détection par en-têtes, la
- * proposition du modèle, les corrections de l'utilisateur — et c'est ce même
- * objet qui part au serveur. Ce qu'on a vu est ce qui est importé.
+ * The preview is alive: the plan (`ImportMapping`) is in the state, and the tickets
+ * are deduced from it. Three hands write it — header detection, model proposal, user corrections — and it's this same object that goes to the server. What we saw is what is imported.
  */
 export function useCsvImport({
   projectId,
@@ -59,12 +57,12 @@ export function useCsvImport({
   onPrepared,
 }: {
   projectId: string;
-  /** Fichier déjà tenu par l'appelant — l'onboarding accepte le dépôt sur toute
-   *  sa carte et ouvre le dialog avec le CSV en main. Analysé comme s'il venait
-   *  de la zone de dépôt : un seul chemin de lecture. */
+  /** File already held by the caller — onboarding accepts the deposit on any
+ * his card and opens the dialog with the CSV in hand. Parsed as if it came
+ * from the drop zone: a single reading path. */
   initialFile?: File | null;
   onImported?: (result: ImportCommitResponse) => void;
-  /** Un fichier vient d'être analysé — le wizard avance d'une étape. */
+  /** A file has just been analyzed — the wizard advances one step. */
   onPrepared?: () => void;
 }) {
   const t = useTranslations("Settings");
@@ -72,9 +70,9 @@ export function useCsvImport({
   const { categories } = useCategoriesQuery(projectId);
   const { members } = useMembersQuery(projectId, true);
 
-  // Ce que le projet apporte au rapprochement. Recalculé quand les membres ou
-  // les catégories arrivent, mais le fichier n'est PAS relu pour autant : c'est
-  // le plan de départ d'un prochain dépôt.
+  // What the project brings to the rapprochement. Recalculated when members or
+  // the categories arrive, but the file is NOT read again: it is
+  // the starting plan for a future repository.
   const context = useMemo<ImportContext>(
     () => ({
       members: members.map((m) => ({
@@ -96,12 +94,12 @@ export function useCsvImport({
   const [aiPending, setAiPending] = useState(false);
   const [importing, setImporting] = useState(false);
 
-  // Une proposition qui revient après que l'utilisateur a changé de fichier (ou
-  // touché au tableau) ne doit rien écraser : on la jette.
+  // A proposal that returns after the user has changed files (or
+  // touched on the board) must not crush anything: we throw it away.
   const planRequestRef = useRef(0);
 
-  // Le crochet d'avancement change à chaque rendu de l'appelant : le garder
-  // dans une ref évite de refabriquer `handleFile`, dont l'identité pilote
+  // The advancement hook changes each time the caller renders: keep it
+  // in a ref avoids remanufacturing `handleFile`, whose pilot identity
   // l'effet de lecture du fichier initial.
   const onPreparedRef = useRef(onPrepared);
   onPreparedRef.current = onPrepared;
@@ -144,10 +142,10 @@ export function useCsvImport({
       setAiApplied(false);
       onPreparedRef.current?.();
 
-      // La passe du modèle n'a lieu que s'il reste quelque chose à gagner : une
-      // colonne qu'on n'a pas su placer, une valeur qu'on n'a pas su traduire,
-      // une personne qu'on n'a pas reconnue. Un export Linear propre d'un
-      // projet dont on connaît déjà les gens n'en déclenche aucune.
+      // The model only passes if there is something left to gain: a
+      // column that we did not know how to place, a value that we did not know how to translate,
+      // a person we didn't recognize. A clean Linear export of a
+      // project whose people we already know does not trigger any.
       if (!mappingHasGaps(stats, base, source)) return;
 
       const request = ++planRequestRef.current;
@@ -162,9 +160,9 @@ export function useCsvImport({
 
       setMapping(
         mergeMapping(base, proposed, {
-          // Sur un export Linear ou Jira, les en-têtes sont ceux, exacts, d'un
-          // format connu : le modèle ne comble que les trous. Sur un CSV
-          // quelconque il tranche, parce qu'il a lu les valeurs.
+          // On a Linear or Jira export, the headers are those, exactly, of a
+          // known format: the model only fills the holes. On a CSV
+          // whatever it decides, because it has read the values.
           columnsWin: source === "csv",
         })
       );
@@ -173,9 +171,9 @@ export function useCsvImport({
     [projectId, t]
   );
 
-  // Un fichier confié par l'appelant est analysé une fois, à l'identité de
-  // l'objet `File` : sans la marque, chaque rendu relancerait la lecture et
-  // effacerait l'aperçu qu'on vient d'obtenir.
+  // A file entrusted by the caller is analyzed once, to the identity of
+  // the `File` object: without the mark, each rendering would restart reading and
+  // would erase the preview we just obtained.
   const handledFileRef = useRef<File | null>(null);
   useEffect(() => {
     if (!initialFile || handledFileRef.current === initialFile) return;
@@ -183,16 +181,16 @@ export function useCsvImport({
     void handleFile(initialFile);
   }, [initialFile, handleFile]);
 
-  // Les tickets se REDÉDUISENT du plan : chaque retouche du tableau de
-  // correspondance met à jour les comptes, les avertissements et le bouton.
+  // The tickets are REDUCED from the plan: each retouching of the table of
+  // match updates counts, warnings and button.
   const preview = useMemo(() => {
     if (!prepared || !mapping) return null;
     return issuesFromMapping(prepared.table, mapping);
   }, [prepared, mapping]);
 
   const changeMapping = useCallback((next: ImportMapping) => {
-    // Une correction à la main clôt la partie : la proposition en vol ne doit
-    // plus rien écraser.
+    // A correction by hand closes the game: the proposition in flight must not
+    // nothing overwrite anymore.
     planRequestRef.current += 1;
     setAiPending(false);
     setMapping(next);
@@ -261,9 +259,9 @@ export function useCsvImport({
     importing,
     statusCounts,
     newCategoryCount,
-    /** Sans colonne de titre, il n'y a pas de ticket à fabriquer. */
+    /** Without a title column, there is no ticket to create. */
     hasTitleColumn: mapping?.columns.includes("title") ?? false,
-    /** Le plan affiché n'est plus celui de la détection : « réinitialiser » a un sens. */
+    /** The plan displayed is no longer that of detection: “reset” makes sense. */
     mappingTouched: !!prepared && mapping !== prepared.baseMapping,
     handleFile,
     reset,

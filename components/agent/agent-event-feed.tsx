@@ -44,15 +44,15 @@ import type { AssistantMessage, AssistantToolCall, AssistantMention } from "@/li
 import type { AttachmentInput } from "@/lib/types";
 
 /**
- * Flux d'activité d'un run d'agent (MIN-46), rendu en PARITÉ EXACTE avec le chat
- * Numo : on reconstruit les events (`thinking`/`summary`/`tool_call`/`tool_result`)
- * au format `AssistantMessage[]` puis on les rend avec le MÊME `<ChatMessage>`.
+ * Activity flow of an agent run (MIN-46), rendered in EXACT PARITY with the chat
+ * Numo: we rebuild the events (`thinking`/`summary`/`tool_call`/`tool_result`)
+ * in `AssistantMessage[]` format then we return them with the SAME `<ChatMessage>`.
  *
- * À la Codex : dès qu'un TOUR se termine (l'agent émet sa réponse finale, event
- * `summary`), tout son déroulé (réflexions, tool-calls, updates de plan) se replie
- * dans un accordéon « A travaillé pendant X min Y s » — seule la réponse reste
- * visible en dessous. Les messages de l'utilisateur séparent les tours et restent
- * visibles ; le tour EN COURS reste déplié.
+ * Codex style: as soon as a TURN ends (the agent issues its final response, event
+ * `summary`), its entire process (reflections, tool-calls, plan updates) folds
+ * in an accordion “Worked for X min Y s” — only the answer remains
+ * visible below. User messages separate rounds and remain
+ * visible; the CURRENT round remains unfolded.
  */
 
 type ToolResult = { status: "running" | "complete"; result?: unknown; success?: boolean };
@@ -60,18 +60,18 @@ type ToolResult = { status: "running" | "complete"; result?: unknown; success?: 
 export type MessageItem = {
   kind: "message";
   message: AssistantMessage;
-  /** created_at de l'event qui a ouvert ce message (début de tour). */
+  /** created_at of the event which opened this message (start of round). */
   createdAt: string;
-  /** Ce message est le résumé final d'un tour (clôt le tour, sort de l'accordéon). */
+  /** This message is the final summary of a round (ends the round, exits the accordion). */
   isSummary?: boolean;
-  /** Pour un summary : created_at de l'event `summary` (fin de tour → durée). */
+  /** For a summary: created_at the event `summary` (end of turn → duration). */
   endedAt?: string;
-  /** Texte EN COURS d'écriture qui pourrait être la réponse du tour (aucun outil
-      appelé dans ce round) : rendu SOUS l'accordéon, là où le message final
-      restera — sinon il sauterait du déroulé au dehors une fois l'event posé. */
+  /** Text BEING written which could be the answer of the trick (no tools
+ called in this round): rendered UNDER the accordion, where the final message
+ will remain — otherwise it would jump from the unfolding to the outside once the event has been set. */
   isLiveAnswer?: boolean;
-  /** Réponse de l'utilisateur aux questions ask_user de ce message (le
-      user_message qui suit, absorbé — pas de bulle, détails de la ligne). */
+  /** User response to the ask_user questions in this post (the
+ user_message that follows, absorbed — no bubble, line details). */
   askUserAnswer?: string;
 };
 
@@ -87,34 +87,34 @@ export type FeedItem =
         | "providerRetry"
         | "localDeclined"
         | "currentRepoOverlap";
-      /** Motif NOMMÉ d'une erreur du harness (`turnTooLong`…), traduit à l'affichage.
-       *  Absent sur une erreur de modèle, qui n'a que son texte. Porte aussi le
-       *  motif d'un run gardé dans le cloud (`byok`, `no_mint` — MIN-357). */
+      /** NAMED reason for a harness error (`turnTooLong`…), translated on the display.
+       * Absent on a model error, which only has its text. Also wears the
+       * reason for a run kept in the cloud (`byok`, `no_mint` — MIN-357). */
       code?: string;
-      /** Combien de fichiers la note compte (MIN-358 : ceux que le commit a
-       *  emportés à l'utilisateur). Le message se décline au pluriel. */
+      /** How many files are in the note (MIN-358: those that the commit has
+       * taken to the user). The message is expressed in the plural. */
       count?: number;
       text: string;
       createdAt: string;
     }
-  /** Budget d'usage épuisé en cours de run : carte de CLÔTURE du tour (le travail
-   *  est poussé, la session reprendra quand le budget revient). */
+  /** Usage budget exhausted during the run: CLOSING card of the tour (the work
+   * is pushed, the session will resume when the budget returns). */
   | {
       kind: "quota";
       id: string;
-      // `spent`/`cap` du payload ne sont PAS repris : l'usage se dit en pourcentage
-      // à l'utilisateur, jamais en dollars (ils restent dans l'event, pour la trace).
+      // `spent`/`cap` of the payload are NOT included: usage is expressed as a percentage
+      // to the user, never in dollars (they remain in the event, for the record).
       resetsAt: string | null;
       nextPlanId: BillingPlanId | null;
       byok: boolean;
-      /** `run_cap` = c'est le plafond de CE passage qui a mordu, pas le compte. */
+      /** `run_cap` = it was the ceiling of THIS passage that bit, not the count. */
       cause: "account" | "run_cap";
-      /** Ce plafond, en % du budget mensuel — null quand la cause est le compte. */
+      /** This ceiling, as a % of the monthly budget — null when the cause is the account. */
       capPercent: number | null;
       createdAt: string;
     }
-  /** Phase de réflexion du modèle (MIN-122) : ligne compacte + compteur, jamais
-   *  le texte en direct. `active` tant que le round n'a pas rendu la main. */
+  /** Model reflection phase (MIN-122): compact line + counter, never
+   * live text. `active` until the round has given up. */
   | {
       kind: "reasoning";
       id: string;
@@ -129,36 +129,36 @@ export type FeedItem =
       files: AgentFileChange[];
       truncated: boolean;
       createdAt: string;
-      /** Liste PROVISOIRE du tour en cours (direct), pas la liste de git. */
+      /** PROVISIONAL list of the current round (direct), not the git list. */
       live?: boolean;
     }
   /**
-   * UN sous-agent (MIN-112), replié. Tous les events qui portent son `subagent_id`
-   * sont AGRÉGÉS ici plutôt que rendus un par un : une fille produit autant d'events
-   * qu'un tour entier, et les laisser dans le flux rendrait illisible le tour qui a
-   * délégué — c'est le risque principal identifié en R9.
+   * A sub-agent (MIN-112), folded. All events that carry its `subagent_id`
+   * are AGGREGATE here rather than rendered one by one: a girl produces as many events
+   * than an entire turn, and leaving them in the flow would make the turn that took place unreadable.
+   * delegate — this is the main risk identified in R9.
    */
   | {
       kind: "subagent";
       id: string;
-      /** Id lisible du sous-agent (`sub-1`), tel que le parent le manipule. */
+      /** Readable id of the subagent (`sub-1`), as the parent manipulates it. */
       subagentId: string;
       mode: "explore" | "implement" | null;
-      /** Tool-calls de la fille : le seul compteur d'avancement que le fil voit. */
+      /** Girl's tool-calls: the only progress counter the thread sees. */
       steps: number;
-      /** Rapport final (event `summary` de la fille). */
+      /** Final report (daughter's `summary` event). */
       report: string;
-      /** Message d'erreur si sa boucle a échoué. */
+      /** Error message if its loop failed. */
       error: string;
-      /** Son rapport a été livré au parent (event `status` du parent). */
+      /** His report has been delivered to the parent (parent's `status` event). */
       delivered: boolean;
-      /** Livré PARTIEL : la fille a été coupée avant d'avoir conclu. */
+      /** Delivered PARTIAL: the girl was cut off before concluding. */
       partial: boolean;
       createdAt: string;
-      /** Instant où la fille a rendu la main (résumé, erreur, ou livraison du
-       *  rapport par le parent), ou null tant qu'elle tourne : c'est ce qui FIGE
-       *  son chrono. Sans ça, une session relue trois jours plus tard afficherait
-       *  un sous-agent « lancé depuis 72 heures ». */
+      /** Moment when the girl gave back the hand (summary, error, or delivery of the
+       * report by the parent), or null as long as it is running: this is what FREEZES
+       * his time. Without that, a session replayed three days later would show
+       * a subagent “launched 72 hours ago”. */
       endedAt: string | null;
     };
 
@@ -263,13 +263,13 @@ function displayUserMessage(content: string): {
   };
 }
 
-/** Args du tool_call reconstruits en chaîne JSON (ce qu'attend ToolCallList). */
+/** Tool_call args reconstructed as a JSON string (what ToolCallList expects). */
 function toolArguments(payload: Record<string, unknown>): string {
-  // Ancien format d'event (runs existants) : arguments COMPLETS sérialisés sous la
-  // clé `args`. On la renvoie telle quelle → `args.command` / `args.pattern` sont
-  // à nouveau lisibles (rétro-compatible avec les runs déjà enregistrés).
+  // Old event format (existing runs): COMPLETE arguments serialized under the
+  // key `args`. We return it as is → `args.command` / `args.pattern` are
+  // readable again (backwards compatible with already recorded runs).
   if (typeof payload.args === "string") return payload.args;
-  // Format actuel : résumé d'args à plat (command, pattern, path…).
+  // Current format: flat arg summary (command, pattern, path…).
   const rest: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(payload)) {
     if (k === "id" || k === "name") continue;
@@ -283,10 +283,10 @@ function str(v: unknown): string {
 }
 
 /**
- * Regroupe le flux plat d'events en messages assistant (un `thinking`/`summary`
- * ouvre une bulle ; les `tool_call` suivants s'y rattachent, comme un tour Numo)
- * + une Map des résultats de tools (running/complete/succès). Chaque item porte le
- * `created_at` de son event ; le message `summary` est marqué `isSummary`.
+ * Groups the flat flow of events into helper messages (a `thinking`/`summary`
+ * opens a bubble; the following `tool_call` attach to it, like a Numo trick)
+ * + a Map of tools results (running/complete/success). Each item bears the
+ * `created_at` of its event; the `summary` message is marked `isSummary`.
  */
 function buildFeed(
   events: AgentRunEvent[],
@@ -301,25 +301,25 @@ function buildFeed(
   const ordered = [...events].sort((a, b) => a.seq - b.seq);
   const items: FeedItem[] = [];
   const results = new Map<string, ToolResult>();
-  // Où en est la MACHINE du chunk en cours ? Chaque chunk ouvre par un
-  // `status: running` puis, une fois la microVM réveillée et le dépôt là, un
-  // `phase: sandbox_ready`. Le second après le premier ⇒ la sandbox est ouverte.
-  // (Comparés par `seq` : un run enchaîne les chunks, seul le dernier compte.)
+  // Where is the MACHINE of the current chunk? Each chunk opens with a
+  // `status: running` then, once the microVM is woken up and the repository there, a
+  // `phase: sandbox_ready`. The second after the first ⇒ the sandbox is open.
+  // (Compared by `seq`: a run connects chunks, only the last one counts.)
   let runningSeq = -1;
   let sandboxSeq = -1;
-  // TOUS les textes user reçus (bulles ET réponses absorbées par une question) —
-  // sert au dédoublonnage des bulles optimistes, qui ne peut plus se lire depuis
-  // les items seuls.
+  // ALL user texts received (bubbles AND answers absorbed by a question) —
+  // is used to deduplication of optimistic bubbles, which can no longer be read since
+  // the items alone.
   const userTexts: string[] = [];
   let current: MessageItem | null = null;
-  // Dernière question ask_user en attente : le prochain user_message est sa
-  // réponse (absorbée dans la ligne, pas de bulle).
+  // Last pending ask_user question: next user_message is his
+  // response (absorbed in the line, no bubble).
   let lastQuestion: MessageItem | null = null;
 
-  // Bulle « originelle » : le prompt de lancement n'est PAS dans le flux d'events
-  // (il alimente le message de tâche du LLM). On l'affiche en tête comme 1re bulle
-  // utilisateur, à parité avec le chat Numo. Les messages de STEERING, eux, sont déjà
-  // émis en events `user_message` et rendus par la boucle ci-dessous.
+  // “Original” bubble: the launch prompt is NOT in the event flow
+  // (it feeds the LLM task message). It is displayed at the top as the 1st bubble
+  // user, on par with Numo chat. The STEERING messages are already
+  // emitted in events `user_message` and rendered by the loop below.
   const prompt = (initialPrompt ?? "").trim();
   if (prompt) {
     const displayed = displayUserMessage(prompt);
@@ -342,9 +342,9 @@ function buildFeed(
     current = item;
   };
 
-  // Sous-agents rencontrés (MIN-112) : un bloc replié par fille, créé à son PREMIER
-  // event — donc juste après la ligne `spawn_agent` qui l'a lancée, puisque celle-ci
-  // précède forcément. Les events suivants de la même fille viennent s'y agréger.
+  // Subagents encountered (MIN-112): one folded block per girl, created on her FIRST
+  // event — so just after the `spawn_agent` line which launched it, since this one
+  // necessarily precedes. The following events of the same girl are added to it.
   const subagentBlocks = new Map<string, Extract<FeedItem, { kind: "subagent" }>>();
   const subagentBlock = (
     subagentId: string,
@@ -375,9 +375,9 @@ function buildFeed(
 
   for (const e of ordered) {
     const p = e.payload ?? {};
-    // Event d'un SOUS-AGENT : il ne traverse pas le flux du parent. Sans ce détour,
-    // chaque `thinking` de la fille ouvrirait une bulle et chaque `tool_call` se
-    // rattacherait au message du parent, mélangeant deux sessions dans une seule
+    // Event of a SUBAGENT: it does not cross the parent flow. Without this detour,
+    // each `thinking` of the girl would open a bubble and each `tool_call` would
+    // would tie into the parent's message, mixing two sessions into one
     // ligne de lecture.
     if (typeof p.subagent_id === "string" && p.subagent_id) {
       const block = subagentBlock(p.subagent_id, e, p);
@@ -391,41 +391,41 @@ function buildFeed(
       }
       continue;
     }
-    // Le parent annonce qu'un rapport lui a été remis : c'est ce qui distingue une
-    // fille COUPÉE (livrée sans rapport) d'une fille encore au travail.
+    // The parent announces that a report has been given to him: this is what distinguishes a
+    // daughter CUT (delivered unrelated) from a girl still at work.
     if (e.type === "status" && p.phase === "subagent_report" && typeof p.id === "string") {
       const block = subagentBlocks.get(p.id);
       if (block) {
         block.delivered = true;
         block.partial = p.partial === true;
-        // Filet du chrono : une fille COUPÉE n'émet ni résumé ni erreur, donc c'est
-        // cette livraison-là qui est son seul instant de fin.
+        // Timer net: a CUT girl emits neither summary nor error, so it is
+        // this delivery which is its only moment of end.
         block.endedAt ??= e.created_at;
       }
       continue;
     }
-    // La fenêtre « le prochain user_message répond à la question » ne survit
-    // qu'aux events neutres — tout event de contenu (nouveau tour) la referme.
+    // “The next user_message answers the question” window does not survive
+    // only to neutral events — any content event (new turn) closes it.
     if (!["user_message", "question", "tool_result", "status"].includes(e.type)) {
       lastQuestion = null;
     }
     switch (e.type) {
       case "thinking": {
         const text = str(p.text);
-        // Deux `thinking` distincts sous le même type d'event : la RÉFLEXION du
-        // modèle (marquée `kind`, rendue en ligne compacte repliée) et sa
-        // NARRATION (du texte, rendue en bulle). Sans le marqueur, le comportement
-        // d'avant MIN-122 est inchangé.
+        // Two distinct `thinking` under the same type of event: the REFLECTION of the
+        // model (marked `kind`, rendered as a folded compact line) and its
+        // NARRATION (text, rendered in bubble). Without the marker, the behavior
+        // from before MIN-122 is unchanged.
         if (p.kind === "reasoning") {
-          // La réflexion FERME la bulle en cours sans en ouvrir une (une ligne de
-          // réflexion n'accueille pas de tool-call) : les actions du round qui suit
-          // s'attachent donc à une bulle NEUVE, rendue SOUS cette ligne.
+          // Reflection CLOSES the current bubble without opening one (a line of
+          // reflection does not welcome a tool-call): the actions of the following round
+          // therefore attach to a NEW bubble, rendered UNDER this line.
           //
-          // Sans ça, tous les tool-calls d'un tour s'empilaient dans le groupe
-          // d'actions du premier round — celui ouvert avant la première réflexion —
-          // pendant que les lignes de réflexion se rangeaient à la queue. Le fil
-          // racontait alors un agent qui agit d'un trait puis réfléchit trois fois,
-          // soit l'inverse de ce qui s'est passé : il réfléchit ENTRE ses actions.
+          // Without that, all the tool-calls of a turn would pile up in the group
+          // of actions of the first round — the one opened before the first reflection —
+          // while the reflection lines fell into line. The thread
+          // then recounted an agent who acted in one go then thought three times,
+          // or the opposite of what happened: he reflects BETWEEN his actions.
           current = null;
           items.push({
             kind: "reasoning",
@@ -444,8 +444,8 @@ function buildFeed(
       case "summary": {
         const text = str(p.text);
         if (!text.trim()) break;
-        // Le round terminal émet souvent thinking PUIS summary avec le même texte :
-        // on ne duplique pas, on MARQUE la dernière bulle comme résumé final.
+        // The round terminal often emits thinking THEN summary with the same text:
+        // we do not duplicate, we MARK the last bubble as the final summary.
         const last = items[items.length - 1];
         if (last?.kind === "message" && (last.message.content ?? "").trim() === text.trim()) {
           last.isSummary = true;
@@ -472,14 +472,14 @@ function buildFeed(
           : undefined;
         userTexts.push(text.trim());
         current = null;
-        // Réponse à un ask_user : ABSORBÉE par la ligne de la question (détails
-        // au clic) — pas de bulle, le flow de lecture reste propre.
+        // Response to an ask_user: ABSORBED by the question line (details
+        // on click) — no bubbles, the reading flow remains clean.
         if (lastQuestion) {
           lastQuestion.askUserAnswer = text;
           lastQuestion = null;
           break;
         }
-        // Message de steering de l'utilisateur : bulle user, ne rattache pas les
+        // User steering message: user bubble, do not attach the
         // tool-calls suivants (ils appartiennent au prochain tour de l'agent).
         items.push({
           kind: "message",
@@ -510,10 +510,10 @@ function buildFeed(
         break;
       }
       case "question": {
-        // ask_user (MIN-86) : l'agent pose des questions structurées et le tour se
-        // termine. Rendu comme un message de CLÔTURE de tour (isSummary → le
-        // déroulé se replie) portant un tool_call ask_user complet — le ChatMessage
-        // partagé le rend en carte de questions, à parité avec Numo.
+        // ask_user (MIN-86): the agent asks structured questions and the turn
+        // finished. Rendered as a turn CLOSING message (isSummary → the
+        // unfolded folds) carrying a complete tool_call ask_user — the ChatMessage
+        // shared makes it a question card, on par with Numo.
         const id = str(p.id) || e.id;
         const questions = Array.isArray(p.questions) ? p.questions : [];
         if (questions.length === 0) break;
@@ -534,14 +534,14 @@ function buildFeed(
           endedAt: e.created_at,
         };
         items.push(questionItem);
-        // Le prochain user_message est la réponse à cette question.
+        // The next user_message is the answer to this question.
         lastQuestion = questionItem;
         current = null;
         break;
       }
       case "pr_opened": {
-        // La PR est accessible depuis l'en-tête de la conversation (bouton /
-        // lien selon son état) → pas de chip redondant dans le fil.
+        // The PR is accessible from the conversation header (button /
+        // link depending on its state) → no redundant chip in the wire.
         current = null;
         break;
       }
@@ -551,8 +551,8 @@ function buildFeed(
         break;
       }
       case "files_changed": {
-        // Émis en fin de tour (après le `summary`) : la liste autoritaire des fichiers
-        // que le tour a changés. Rattachée au tour et rendue sous sa réponse (buildBlocks).
+        // Issued at the end of the round (after `summary`): the authoritative list of files
+        // that the trick has changed. Attached to the round and rendered under its response (buildBlocks).
         const { files, truncated } = parseFilesChangedPayload(p);
         current = null;
         if (files.length > 0) {
@@ -561,15 +561,15 @@ function buildFeed(
         break;
       }
       case "plan_update": {
-        // Rien à rendre ICI : la checklist vit au-dessus du composer
-        // ([plan-activity-bar](./plan-activity-bar.tsx)), où elle reste sous les
-        // yeux au lieu de remonter avec le fil. Elle ne coupe pas le tour non
-        // plus — cocher une étape n'est pas une prise de parole.
+        // Nothing to return HERE: the checklist lives above the composer
+        // ([plan-activity-bar](./plan-activity-bar.tsx)), where it remains under the
+        // eyes instead of going up with the thread. She doesn't cut the trick no
+        // more — checking a step is not speaking out.
         break;
       }
       case "quota_exhausted": {
-        // Clôt le tour : plus rien ne s'y rattache, et le déroulé se replie comme
-        // sur un `summary`.
+        // Closes the turn: nothing is attached to it anymore, and the unfolding folds up like
+        // on a `summary`.
         current = null;
         items.push({
           kind: "quota",
@@ -577,8 +577,8 @@ function buildFeed(
           resetsAt: typeof p.resetsAt === "string" ? p.resetsAt : null,
           nextPlanId: coerceBillingPlanId(p.nextPlanId),
           byok: p.byok === true,
-          // Les events d'avant le plafond par passage n'ont pas de `cause` : ils
-          // parlent tous du budget du compte, la seule frontière qui existait.
+          // Events before the ceiling per pass do not have `cause`: they
+          // all talk about the account budget, the only boundary that existed.
           cause: p.cause === "run_cap" ? "run_cap" : "account",
           capPercent: typeof p.capPercent === "number" ? p.capPercent : null,
           createdAt: e.created_at,
@@ -586,13 +586,13 @@ function buildFeed(
         break;
       }
       case "status": {
-        // Marqueurs de la MACHINE — rien à rendre, ils disent seulement où en est
-        // le chunk (cf. `sandboxReady`).
+        // MACHINE markers — nothing to return, they only say where it is
+        // the chunk (see `sandboxReady`).
         if (p.phase === "sandbox_ready") sandboxSeq = e.seq;
         else if (p.status === "running") runningSeq = e.seq;
-        // Les deux `status` rendus. Le provider a REFUSÉ le niveau de raisonnement
-        // demandé (MIN-122) : sans cette ligne, le niveau choisi resterait affiché
-        // dans le composer alors qu'il n'a plus aucun effet — silencieusement.
+        // Both `status` returned. The provider REFUSED the level of reasoning
+        // requested (MIN-122): without this line, the chosen level would remain displayed
+        // in the composition while it no longer has any effect — silently.
         if (p.phase === "reasoning_unsupported") {
           items.push({
             kind: "note",
@@ -603,11 +603,11 @@ function buildFeed(
           });
         }
         /**
-         * MIN-357 : le run était demandé sur la machine de l'utilisateur, et il
-         * est parti dans le cloud. La bascule est la bonne conduite (ce qui
-         * manque en local, c'est un PLAFOND, et le cloud en a un) — mais une
+         * MIN-357: the run was requested on the user's machine, and it
+         * went to the cloud. The seesaw is good behavior (which
+         * lack locally, it's a CEILING, and the cloud has one) — but a
          * bascule muette laisserait quelqu'un croire que son agent tourne chez
-         * lui, sur son dépôt, alors qu'il tourne dans une microVM.
+         * him, on his repository, while he is running in a microVM.
          */
         if (p.phase === "local_exec_declined") {
           items.push({
@@ -620,13 +620,13 @@ function buildFeed(
           });
         }
         /**
-         * MIN-358 : l'agent travaillait dans le dépôt que l'utilisateur a sur
-         * son disque, et son commit a emporté des fichiers que celui-ci avait
-         * lui aussi modifiés — donc du travail à lui part dans la pull request.
+         * MIN-358: The agent was working in the repository that the user has on
+         * its disk, and its commit took away files that it had
+         * also modified — so some work of his own goes into the pull request.
          *
-         * Aucune astuce ne referme ce cas : deux mains dans le même fichier ne
-         * se démêlent pas après coup. Ce qu'on peut faire, et qui est le
-         * minimum, c'est le DIRE au lieu de trancher en silence.
+         * No trick closes this case: two hands in the same file
+         * do not unravel afterwards. What we can do, and who is
+         * minimum, it's SAYING it instead of deciding in silence.
          */
         if (p.phase === "current_repo_overlap") {
           const files = typeof p.files === "number" ? p.files : 0;
@@ -641,9 +641,9 @@ function buildFeed(
             });
           }
         }
-        // Le fournisseur est tombé (MIN-219) : le tour attend avant de retenter,
-        // et l'attente peut durer plusieurs minutes. L'event existait déjà, il
-        // n'avait aucun lecteur — l'agent se taisait sans que rien ne dise pourquoi.
+        // The supplier has fallen (MIN-219): the turn waits before trying again,
+        // and the wait can last several minutes. The event already existed, it
+        // had no reader — the agent kept silent without anything saying why.
         if (p.phase === "transient_error") {
           items.push({
             kind: "note",
@@ -658,8 +658,8 @@ function buildFeed(
       case "error": {
         current = null;
         const msg = str(p.message) || str(p.text);
-        // Un CODE prime sur le texte : c'est le fil qui traduit. Le `message` du
-        // payload reste le repli — une erreur de modèle, elle, n'a que ça.
+        // A CODE takes precedence over the text: it is the thread that translates. The `message` of
+        // payload remains the fallback — a model error is just that.
         const code = str(p.code);
         if (code || msg.trim()) {
           items.push({
@@ -685,14 +685,14 @@ function buildFeed(
 interface RenderContext {
   results: Map<string, ToolResult>;
   copyableIds: Set<string>;
-  /** Compteurs exacts du diff Git vivant, couvrant toute la branche. */
+  /** Exact counters of the live Git diff, covering the entire branch. */
   liveDiffFiles: LiveDiffStat[];
-  /** Ouvre la vue diff de la session (dans la conversation) → lignes cliquables. */
+  /** Opens session diff view (in conversation) → clickable lines. */
   onOpenFile?: (path: string) => void;
-  /** Ouvre la vue diff complète de la session depuis la carte finale. */
+  /** Opens the full session diff view from the final map. */
   onOpenDiff?: () => void;
-  /** Event `question` ACTIF, rendu par la conversation à la place du composer →
-      son item du fil est masqué (les questions passées restent, inertes). */
+  /** Event `question` ACTIVE, made by the conversation instead of the composer →
+ its thread item is hidden (past questions remain inert). */
   hiddenQuestionEventId?: string | null;
 }
 
@@ -707,9 +707,9 @@ function FilesRow({
   onOpenFile?: (path: string) => void;
   onOpenDiff?: () => void;
 }) {
-  // Le bloc du tour EN COURS garde sa liste provisoire, mais ses compteurs sont
-  // enrichis par le diff Git vivant dès que celui-ci répond. Il mène au diff
-  // VIVANT, pas à l'état poussé ; le libellé et le shimmer le signalent.
+  // The CURRENT turn block keeps its provisional list, but its counters are
+  // enriched by the live Git diff as soon as it responds. It leads to diff
+  // ALIVE, not in an advanced state; the wording and shimmer indicate this.
   const files = item.live ? mergeLiveFileStats(item.files, liveDiffFiles) : item.files;
   return (
     <ChangedFilesBlock
@@ -723,7 +723,7 @@ function FilesRow({
 
 function renderItem(it: FeedItem, ctx: RenderContext, afterContent?: ReactNode): ReactNode {
   if (it.kind === "message") {
-    // Question ACTIVE : la carte vivante est affichée par la conversation à la
+    // ACTIVE question: the live map is displayed by the conversation at the
     // place du composer — sa bulle du fil ne se rend pas du tout.
     if (it.message.id === ctx.hiddenQuestionEventId) return null;
     return (
@@ -738,9 +738,9 @@ function renderItem(it: FeedItem, ctx: RenderContext, afterContent?: ReactNode):
     );
   }
   if (it.kind === "files") {
-    // Le résumé live est déjà visible dans la pilule au-dessus du composer.
-    // Garder ici la liste complète pendant que l'agent travaille dupliquerait
-    // l'indicateur et ferait descendre inutilement la réponse en cours.
+    // The live summary is already visible in the pill above the composer.
+    // Keeping the full list here while the agent works would duplicate
+    // the indicator and would unnecessarily lower the current response.
     if (it.live) return null;
     return (
       <FilesRow
@@ -752,8 +752,8 @@ function renderItem(it: FeedItem, ctx: RenderContext, afterContent?: ReactNode):
       />
     );
   }
-  // Avant le repli en note : `renderItem` se termine par un NoteRow fourre-tout,
-  // sans cette branche une ligne de réflexion s'y rendrait.
+  // Before folding into a note: `renderItem` ends with a catch-all NoteRow,
+  // without this branch a line of reflection would go there.
   if (it.kind === "reasoning") {
     return (
       <ReasoningBlock key={it.id} active={it.active} durationMs={it.durationMs} text={it.text} />
@@ -791,8 +791,8 @@ function renderItem(it: FeedItem, ctx: RenderContext, afterContent?: ReactNode):
 }
 
 /**
- * Un tour : accordéon du déroulé (ouvert en direct pendant le travail, refermé tout
- * seul une fois terminé — voir `WorkAccordion`, partagé avec le chat Numo) + résumé
+ * A turn: accordion of the unfolding (opened directly during work, closed all
+ * alone when finished — see `WorkAccordion`, shared with Numo chat) + summary
  * final visible dessous.
  */
 function TurnGroup({
@@ -828,7 +828,7 @@ function TurnGroup({
         {work.map((it) => renderItem(it, ctx))}
       </WorkAccordion>
       {summary ? renderItem(summary, ctx, attachFilesToSummary || undefined) : null}
-      {/* Fichiers changés du tour : sous la réponse, hors de l'accordéon de travail. */}
+      {/* Files changed from round: under the response, outside the working accordion. */}
       {!attachFilesToSummary ? filesContent : null}
       {interrupted ? <InterruptedRow /> : null}
     </div>
@@ -836,9 +836,9 @@ function TurnGroup({
 }
 
 /**
- * Le tour s'est arrêté sans répondre. Sans cette ligne, un tour interrompu se
- * replie exactement comme un tour qui a conclu, et rien ne dit que la réponse
- * manque parce qu'on l'a coupée — on la cherche sous l'accordéon.
+ * The tour stopped without responding. Without this line, an interrupted turn occurs
+ * folds exactly like a round which has concluded, and nothing says that the answer
+ * missing because it was cut - we look for it under the accordion.
  */
 function InterruptedRow() {
   const t = useTranslations("Agent");
@@ -851,9 +851,9 @@ function InterruptedRow() {
 }
 
 /**
- * Motifs d'arrêt NOMMÉS par le harness → la phrase que l'utilisateur lit. Tout
- * ce qui n'est pas dans cette table garde son texte : une erreur de modèle vient
- * du provider, on ne la traduit pas, on la montre.
+ * Shutdown reasons NAMED by the harness → the sentence the user reads. All
+ * what is not in this table keeps its text: a model error comes
+ * from the provider, we don't translate it, we show it.
  */
 const ERROR_CODE_KEYS: Record<string, MessageKey<"Agent">> = {
   turnTooLong: "errorTurnTooLong",
@@ -861,27 +861,27 @@ const ERROR_CODE_KEYS: Record<string, MessageKey<"Agent">> = {
   turnHistoryReset: "errorTurnHistoryReset",
   replyIncomplete: "errorReplyIncomplete",
   providerUnavailable: "errorProviderUnavailable",
-  // MIN-224 : le process de boucle de la microVM est mort avant d'avoir conclu.
-  // C'est le chien de garde qui l'a constaté (`reapDeadVmRuns`), et la session a
-  // repris sur sa dernière sauvegarde périodique — pas sur rien.
+  // MIN-224: the microVM loop process died before concluding.
+  // This was noticed by the watchdog (`reapDeadVmRuns`), and the session
+  // taken from its last periodic backup — not from anything.
   turnLost: "errorTurnLost",
-  // MIN-243 : le même appel, les mêmes arguments et le même résultat, quatre fois
-  // dans les dix derniers. Le tour est coupé avant que le budget ne le fasse.
+  // MIN-243: the same call, the same arguments and the same result, four times
+  // in the last ten. The ride is cut before the budget does.
   toolLoop: "errorToolLoop",
-  // MIN-286 : la base a refusé la mémoire du tour (un octet nul dans la sortie
-  // d'une commande). Le travail, lui, est poussé sur la branche.
+  // MIN-286: the base refused the memory of the tour (a null byte in the output
+  // of an order). Work is pushed to the branch.
   checkpointRefused: "errorCheckpointRefused",
-  // MIN-329 : la microVM a annoncé une dépense impossible (montant négatif, hors
-  // bornes). La ligne n'est pas écrite, et le fil le dit plutôt que de laisser un
-  // trou muet dans les compteurs.
+  // MIN-329: the microVM announced an impossible expense (negative amount, excluding
+  // terminals). The line is not written, and the thread says so rather than leaving a
+  // Dumb hole in the meters.
   usageRejected: "errorUsageRejected",
 };
 
 /**
- * Pourquoi ce run n'a pas pu jouer sur la machine (MIN-357) → ce que
- * l'utilisateur lit. Les deux motifs viennent d'`admitLocalRun`
+ * Why this run could not play on the machine (MIN-357) → what
+ * the user reads. Both patterns come from `admitLocalRun`
  * ([lib/server/agent/local-exec.ts](../../lib/server/agent/local-exec.ts)) ; un
- * motif inconnu retombe sur la phrase générique plutôt que sur rien.
+ * unknown pattern falls back on the generic phrase rather than nothing.
  */
 const LOCAL_DECLINED_KEYS: Record<string, MessageKey<"Agent">> = {
   no_mint: "localDeclinedNoMint",
@@ -954,74 +954,74 @@ export function AgentEventFeed({
   localExec = false,
 }: {
   /**
-   * Session à suivre, ou `null` quand elle n'existe pas ENCORE : le POST de
-   * lancement est en vol. Le fil n'a alors rien à interroger et se contente
-   * d'afficher la bulle optimiste du 1er message — même composant, même mise en
-   * page, donc aucun saut visuel quand la vraie session prend le relais.
+   * Session to follow, or `null` when it does not YET exist: the POST of
+   * launch is in flight. The thread then has nothing to query and just
+   * to display the optimistic bubble of the 1st message — same component, same layout
+   * page, so no visual jump when the real session takes over.
    */
   runId: string | null;
   status: AgentRunStatus;
   /**
-   * L'utilisateur vient de demander l'arrêt. Le serveur, lui, ne rend la main
-   * qu'à la frontière du round : le fil s'arrête donc TOUT DE SUITE — le tour en
-   * cours se replie sur sa durée — alors que le POLLING, lui, continue sur le
-   * vrai statut, puisque les derniers events du tour doivent encore arriver.
+   * The user has just requested a shutdown. The waiter does not return his hand
+   * that at the border of the round: the thread therefore stops IMMEDIATELY - the round in
+   * course falls back over its duration - while POLLING continues over the
+   * true status, since the last events of the tour have yet to arrive.
    */
   stopping?: boolean;
-  /** Prompt de lancement, affiché en tête comme 1re bulle utilisateur. */
+  /** Prompt launch, displayed at the top as 1st user bubble. */
   prompt?: string | null;
   promptMentions?: AssistantMention[] | null;
   className?: string;
-  /** Rend cliquables les fichiers des blocs de diff (ouvre la vue diff de la session). */
+  /** Makes diff block files clickable (opens the session diff view). */
   onOpenFile?: (path: string) => void;
-  /** Ouvre la vue diff complète depuis le bouton Review de la carte finale. */
+  /** Opens the full diff view from the Review button on the final map. */
   onOpenDiff?: () => void;
-  /** Compteurs exacts du diff vivant, utilisés par le bloc de fichiers du tour actif. */
+  /** Exact live diff counters, used by the active round's file block. */
   liveDiffFiles?: LiveDiffStat[];
   /**
-   * Event `question` ACTIF (MIN-86) : sa carte vivante est rendue par la
-   * conversation à la place du composer → son item du fil est masqué ici.
+   * Event `question` ACTIVE (MIN-86): its living card is returned by the
+   * conversation instead of the composer → its thread item is hidden here.
    */
   hiddenQuestionEventId?: string | null;
   /**
-   * Ce run tourne sur la MACHINE de l'utilisateur (MIN-359).
+   * This run runs on the user's MACHINE (MIN-359).
    *
-   * Le fil le dit en tête, une fois, avant le premier message : **un run local
-   * n'est pas un run cloud avec un autre disque.** Il ouvre un vrai dossier, il
-   * n'a pas de diff en direct (la route lit la microVM par RPC), et ce que
-   * l'agent y lit remonte dans ce fil-là. Une bascule d'environnement qui ne se
-   * lirait qu'en survolant un chip du composer serait une bascule que personne
+   * The thread says it in the head, once, before the first message: **a local run
+   * is not a run cloud with another disk.** It opens a real folder, it
+   * does not have a live diff (the route reads the microVM via RPC), and what
+   * the agent reads it goes back in this thread. An environment toggle that does not
+   * would read that by hovering over a chip of the composer would be a toggle that no one
    * ne voit.
    */
   localExec?: boolean;
   /**
-   * Messages que l'utilisateur vient d'envoyer, pas encore revenus du serveur.
-   * Un message de steering ne devient un event `user_message` que lorsque la BOUCLE
-   * le draine — réveil de sandbox compris, soit plusieurs secondes. Sans eux, on
-   * taperait dans le vide : la bulle n'apparaîtrait qu'une fois l'agent reparti.
+   * Messages that the user just sent, not yet returned from the server.
+   * A steering message only becomes a `user_message` event when the LOOP
+   * drains it — sandbox wake-up included, i.e. several seconds. Without them, we
+   * would hit the void: the bubble would only appear once the agent had left.
    */
   pendingUserMessages?: Array<{ text: string; mentions?: AssistantMention[] }>;
 }) {
   const t = useTranslations("Agent");
   const tc = useTranslations("Common");
-  // Deux vérités, et elles ne coïncident que hors interruption :
-  //  • `polling` — ce que le SERVEUR fait : tant qu'il travaille, on interroge le
-  //    fil et on reste abonné au direct. Un arrêt demandé n'y change rien, c'est
-  //    même là que les derniers events du tour arrivent.
-  //  • `active`  — ce que l'INTERFACE raconte : au clic sur « stopper », elle
-  //    s'arrête sans attendre le serveur (le tour se replie, l'indicateur
+  // Two truths, and they only coincide without interruption:
+  // • `polling` — what the SERVER does: as long as it is working, we query the
+  // wire and we remain subscribed to the live. A requested stop changes nothing, it is
+  // even there as the final events of the tour arrive.
+  // • `active` — what the INTERFACE says: when you click on “stop”, it
+  // stops without waiting for the server (the tower folds, the indicator
   //    « travaille » s'efface).
   const polling = isAgentRunWorking(status);
   const active = polling && !stopping;
   const { events, loading } = useAgentRunEventsQuery(runId, polling);
-  // Direct : le texte du round pendant que le modèle l'écrit, plus les events
-  // poussés dans le cache du fil dès leur insertion (lib/use-agent-run-live).
+  // Direct: the text of the round while the model writes it, plus the events
+  // pushed into the thread cache as soon as they are inserted (lib/use-agent-run-live).
   const live = useAgentRunLive(runId, polling);
   const feedRef = useRef<HTMLDivElement>(null);
-  // Fade doux en haut/bas du fil (même pattern que les colonnes Kanban) → on voit
-  // qu'il reste du contenu au-dessus / en dessous. On fusionne son ref avec le nôtre.
-  // `edges.end` (« il reste du contenu en dessous ») commande aussi le bouton de
-  // retour en bas : même mesure, donc jamais de désaccord entre le fondu et lui.
+  // Soft fade at the top/bottom of the thread (same pattern as the Kanban columns) → we see
+  // that there is still content above/below. We merge his ref with ours.
+  // `edges.end` (“there remains content below”) also controls the button
+  // return to bottom: same measure, so never any disagreement between the fade and him.
   const { ref: fadeRef, scrollProps, edges } = useScrollFade<HTMLDivElement>();
   const setScrollNode = useCallback(
     (node: HTMLDivElement | null) => {
@@ -1040,12 +1040,12 @@ export function AgentEventFeed({
     [events, prompt, promptMentions],
   );
 
-  // Bulles optimistes encore à afficher : dédoublonnées contre TOUS les textes
-  // user reçus (bulles ET réponses absorbées par une ligne de question).
+  // Optimistic bubbles still to be displayed: duplicated against ALL texts
+  // user received (bubbles AND answers absorbed by a question line).
   const stillPending = unechoedMessages(pendingUserMessages, userTexts);
 
-  // Réponse EN VOL à la dernière question (optimiste) : rattachée tout de suite
-  // à sa ligne plutôt qu'affichée en bulle temporaire qui disparaîtrait à l'écho.
+  // IN-FLIGHT response to the last question (optimistic): attached immediately
+  // to its line rather than displayed in a temporary bubble which would disappear when echoed.
   let displayItems = items;
   let displayPending = stillPending;
   if (stillPending.length > 0) {
@@ -1064,19 +1064,19 @@ export function AgentEventFeed({
     }
   }
 
-  // Queue VIVANTE du round en cours, ajoutée en fin de fil : l'indicateur de
-  // réflexion et le texte tel qu'il s'écrit, dans l'ordre où leurs vrais events se
-  // poseront (réflexion d'abord, réponse ensuite) — la bascule du provisoire au
-  // définitif ne déplace donc rien à l'écran.
+  // LIVE tail of the current round, added at the end of the thread: the indicator of
+  // reflection and the text as it is written, in the order in which their true events occur
+  // will pose (reflection first, response then) — the shift from provisional to
+  // definitive therefore does not move anything on the screen.
   const liveItems = useMemo((): FeedItem[] => {
-    // Arrêt demandé : la queue vivante disparaît avec le reste des signes de
-    // travail. Elle continuerait sinon d'écrire pendant deux ou trois secondes
-    // sous un tour qui se dit terminé.
+    // Stop requested: the live tail disappears with the rest of the signs of
+    // work. Otherwise it would continue writing for two or three seconds
+    // under a turn which is said to be finished.
     if (!live || stopping) return [];
     const out: FeedItem[] = [];
     if (live.reasoningActive) {
-      // Ligne compacte + compteur, PAS le texte du raisonnement : il n'est pas
-      // streamé. Sa trace arrive avec l'event de fin de round, repliée.
+      // Compact line + counter, NOT the text of the reasoning: it is not
+      // streamed. Its trace arrives with the end of round event, folded.
       out.push({
         kind: "reasoning",
         id: "live-reasoning",
@@ -1091,14 +1091,14 @@ export function AgentEventFeed({
         kind: "message",
         message: makeMessage("live-text", live.text),
         createdAt: live.startedAt,
-        // Un outil déjà amorcé dans ce round ⇒ ce texte est de la narration, il
-        // reste dans le déroulé. Sinon il vise la place de la réponse finale.
+        // A tool already initiated in this round ⇒ this text is narration, it
+        // remains in progress. Otherwise it aims for the place of the final answer.
         isLiveAnswer: live.tools === 0,
       });
     }
-    // Fichiers du tour EN COURS, tels que les tools les ont touchés — provisoires
-    // jusqu'au `files_changed` de fin de tour, qui les remplace avec les compteurs
-    // de git. Le serveur retire la liste au moment du relais : les deux blocs ne se
+    // Files from the CURRENT tour, as the tools touched them — provisional
+    // until the end of turn `files_changed`, which replaces them with the counters
+    // from git. The server removes the list at the time of relay: the two blocks do not
     // superposent pas.
     if (live.files.length > 0) {
       out.push({
@@ -1118,15 +1118,15 @@ export function AgentEventFeed({
     [displayItems, liveItems, active],
   );
 
-  // Bouton copy sous la RÉPONSE DE CHAQUE TOUR (le résumé qui le clôt), pas sous le
-  // seul dernier message de la session : une session en compte plusieurs et chacune
-  // de ces réponses se copie. Les messages intermédiaires (déroulé du travail) n'en
-  // ont pas — ils ne sont pas des réponses.
+  // Copy button under the RESPONSE OF EACH ROUND (the summary which closes it), not under the
+  // only last message of the session: a session has several and each
+  // of these answers is copied. Intermediate messages (work progress) do not
+  // have not — they are not answers.
   //
-  // Tant que l'agent TRAVAILLE, sa tête vivante n'en porte pas non plus : ce n'est
-  // que la narration du moment, et le bouton sautait de message en message au fil
-  // du travail. Le repli sur le dernier message ne sert qu'aux tours SANS résumé
-  // (run interrompu, erreur) : là, ce message EST la fin de la réponse.
+  // As long as the agent WORKS, his living head does not carry any either: it is not
+  // that the narration of the moment, and the button jumped from message to message over the
+  // of work. Falling back on the last message is only used for rounds WITHOUT summary
+  // (interrupted run, error): this message IS the end of the response.
   const copyableIds = useMemo(() => {
     const ids = new Set<string>();
     let lastAssistant: string | null = null;
@@ -1139,17 +1139,17 @@ export function AgentEventFeed({
     return ids;
   }, [items, active]);
 
-  // Le fil se cale en bas à l'OUVERTURE de la session (et à chaque changement de
-  // session) : on arrive là où le travail se passe. useLayoutEffect → pas de flash
-  // « scroll depuis le haut » avant peinture. On attend que les events de la session
-  // soient LÀ : le prompt de lancement, lui, s'affiche dès le changement de session
-  // (il vient de la prop) — ancrer sur cette seule bulle laisserait le fil en haut
-  // du déroulé une seconde plus tard.
+  // The thread settles at the bottom when the session OPENS (and each time the session changes).
+  // session): we arrive where the work happens. useLayoutEffect → no flash
+  // “scroll from the top” before painting. We wait for the events of the session
+  // are THERE: the launch prompt is displayed as soon as the session changes
+  // (it comes from the prop) — anchoring on this bubble alone would leave the thread at the top
+  // unfolded a second later.
   //
-  // Ensuite, plus rien ne bouge tout seul. Le fil suivait auparavant chaque event et
-  // chaque poussée du texte en direct : impossible de relire un pas de travail, le
-  // suivant arrachait la vue vers le bas. Pendant que l'agent travaille, la vue reste
-  // donc où l'utilisateur l'a laissée, et le contenu grandit dessous.
+  // Then, nothing moves on its own. The thread previously followed each event and
+  // each push of the live text: impossible to reread a step of work, the
+  // next tore the view down. While the agent works, the view remains
+  // so where the user left it, and the content grows underneath.
   const anchoredRunRef = useRef<string | null | undefined>(undefined);
   useLayoutEffect(() => {
     const node = feedRef.current;
@@ -1159,8 +1159,8 @@ export function AgentEventFeed({
     anchoredRunRef.current = runId;
   }, [runId, loading, items.length]);
 
-  // Un message de l'utilisateur, LUI, se suit : c'est son geste, et sa bulle doit
-  // être sous ses yeux. Le compte des messages en vol ne monte qu'à l'envoi.
+  // A message from the user, HIM, follows: it is his gesture, and his bubble must
+  // to be before his eyes. The in-flight message count only goes up when sent.
   const pendingCount = pendingUserMessages.length;
   const lastPendingCountRef = useRef(pendingCount);
   useLayoutEffect(() => {
@@ -1174,10 +1174,10 @@ export function AgentEventFeed({
   const ctx: RenderContext = {
     results,
     copyableIds,
-    // Sur un run local, le serveur ne peut pas ouvrir le dépôt pour sa requête
-    // de diff. Le harnais publie alors ses propres compteurs Git dans le direct ;
-    // ils sont plus frais que le repli HTTP et font apparaître les `+ / −` dans
-    // le bloc du tour dès l'édition.
+    // On a local run, the server cannot open the repository for its request
+    // of diff. The harness then publishes its own Git counters directly;
+    // they are cooler than HTTP fallback and cause `+ / −` to appear in
+    // the block of the tour from the edition.
     liveDiffFiles:
       live?.fileStats.length
         ? live.fileStats.map((file) => ({
@@ -1191,35 +1191,35 @@ export function AgentEventFeed({
     onOpenDiff,
     hiddenQuestionEventId,
   };
-  // Le tour actif (accordéon ouvert « Travaille depuis X ») porte déjà le signal
+  // The active turn (open accordion “Work from X”) already carries the signal
   // « travaille » → on ne montre l'indicateur du bas que sans tour actif encore.
   const hasActiveTurn = blocks.some((b) => b.type === "turn" && b.active);
-  // Dès que l'agent émet du texte, l'interface a déjà quelque chose de plus
-  // juste à montrer que « travaille ». On ne se limite PAS à `isLiveAnswer` :
-  // après un appel d'outil, le texte final garde la trace de cet outil et n'est
-  // donc pas marqué comme une réponse finale par le regroupement du fil.
+  // As soon as the agent emits text, the interface already has something more
+  // just to show that “works”. We are NOT limited to `isLiveAnswer`:
+  // after a tool call, the final text keeps track of this tool and is not
+  // so not marked as a final answer by thread grouping.
   const agentTextStreaming = liveItems.some((item) => item.kind === "message");
   /**
-   * L'agent est parti mais rien n'est encore visible de lui. Deux moments très
-   * différents sous cette même apparence, et c'est l'event `sandbox_ready` qui les
-   * sépare :
-   *  • AVANT — la microVM se réveille et le dépôt se restaure : personne ne
-   *    travaille encore, on ouvre la sandbox (plusieurs secondes) ;
-   *  • APRÈS — la machine est là et l'agent réfléchit ; son premier pas n'est
-   *    simplement pas encore posé (un tour peut ne rien émettre jusqu'à sa
-   *    réponse finale). Là, « travaille » est la vérité.
-   * Dès qu'un pas paraît, le tour actif prend le relais et porte le chrono.
+   * The agent has left but nothing is visible of him yet. Two very moments
+   * different under this same appearance, and it is the `sandbox_ready` event which
+   * separated :
+   * • BEFORE — the microVM wakes up and the repository restores: no one
+   * still working, we open the sandbox (several seconds);
+   * • AFTER — the machine is there and the agent is thinking; his first step is not
+   * simply not yet installed (a turn may not emit anything until it is
+   * final answer). There, “works” is the truth.
+   * As soon as a step appears, the active lap takes over and keeps the clock running.
    */
-  // En local il n'existe aucune sandbox à attendre : dès l'envoi, la requête et
-  // les pré-vols du processus Mac font déjà partie du travail du tour. Garder
-  // « démarrage de la session » jusqu'au premier delta du modèle faisait passer
-  // son temps de réflexion (et les premiers deltas non affichables) pour du boot.
-  // Le cloud conserve, lui, sa vraie frontière explicite `sandbox_ready`.
+  // Locally there is no sandbox to wait for: upon sending, the request and
+  // pre-flights of the Mac process are already part of the tour work. Keep
+  // “session start” until the first delta of the model passed
+  // its reflection time (and the first non-displayable deltas) for booting.
+  // The cloud retains its real explicit boundary `sandbox_ready`.
   const runtimeReady = sandboxReady || localExec;
   const startingSandbox = active && !hasActiveTurn && !runtimeReady;
   const workingSilently =
     active && !hasActiveTurn && !agentTextStreaming && runtimeReady;
-  // Rien du tout, et personne au travail : la session n'a rien à raconter.
+  // Nothing at all, and no one at work: the session has nothing to say.
   const emptyAtRest =
     !active && blocks.length === 0 && displayPending.length === 0 && !loading;
 
@@ -1229,14 +1229,13 @@ export function AgentEventFeed({
       {...scrollProps}
       className={cn("flex flex-col overflow-y-auto overscroll-contain", className)}
     >
-      {/* Le fil part du HAUT, sous l'en-tête de la conversation, et descend vers
-          l'input — comme une page qui se remplit.
-          Il était collé en BAS (`mt-auto`) tant qu'il était court : chaque bloc qui
-          arrivait poussait alors tout le fil vers le haut, et le lancement d'une
-          session — où la sandbox, le premier pas et la première réponse tombent en
-          quelques secondes — se voyait comme une suite de sauts.
-          Largeur bornée + centrée, avec le MÊME retrait horizontal (px-3) que le
-          composer `ChatInput` → messages et input strictement à la même largeur. */}
+      {/* The thread starts from the TOP, under the conversation header, and goes down to
+ the input — like a page that fills up.
+ It was stuck at the BOTTOM (`mt-auto`) as long as it was short: each block that arrived then pushed the whole thread up, and the launch of a
+ session — where the sandbox, the first step and the first response fall in
+ a few seconds — was seen as a series of jumps.
+ Width bounded + centered, with the SAME horizontal indent (px-3) as the
+ compose `ChatInput` → messages and input strictly at the same width. */}
       <div className="mx-auto flex w-full max-w-[800px] flex-col gap-3 px-3">
         {blocks.map((block) =>
           block.type === "turn" ? (
@@ -1255,33 +1254,32 @@ export function AgentEventFeed({
             renderItem(block.item, ctx)
           ),
         )}
-        {/* Envoyés, pas encore revenus du serveur. Rendus APRÈS les blocs (et non
-            injectés dans `items`) : un message user referme le tour en cours, donc
-            les glisser dans le flux replierait l'accordéon du travail en direct. */}
+        {/* Sent, not yet back from server. Rendered AFTER the blocks (and not
+ injected into `items`): a user message closes the current round, so
+ slipping them into the flow would fold the live work accordion. */}
         {displayPending.map((pending, i) => (
           <ChatMessage
             key={`pending-${i}-${pending.text}`}
-            /* Les mentions viennent de CE message, pas d'un homonyme : deux
-               « ok » à la suite dont un seul cite un ticket ne doivent pas
-               échanger leurs pilules. */
+            /* The mentions come from THIS post, not from a namesake: two
+ “ok” following which only one cites a ticket should not
+ exchange their pills. */
             message={makeMessage(`pending-${i}`, pending.text, "user", pending.mentions)}
             toolCallResults={results}
           />
         ))}
-        {/* Ces deux lignes tiennent la place du premier bloc à venir : elles sont
-            DANS le fil, à sa largeur et à son ancrage. L'ouverture de la sandbox
-            s'affiche donc exactement là où le travail s'écrira, et la relève ne
-            déplace rien. */}
+        {/* These two lines take the place of the first block to come: they are
+ IN the thread, at its width and at its anchor. Opening the sandbox
+ is therefore displayed exactly where the work will be written, and the succession does not move anything. */}
         {startingSandbox || workingSilently ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <NumoIcon state="thinking" className="size-4 shrink-0 text-muted-foreground" />
             <span className="text-shimmer">
               {startingSandbox
-                ? // Un tour local n'ouvre AUCUNE sandbox (MIN-293) : entre le
-                  // lancement et le premier pas, ce qui se passe est le
-                  // téléchargement du harness et l'ouverture du dépôt sur la
-                  // machine. Dire « sandbox » ici serait faux, et ce serait la
-                  // première chose que l'utilisateur lit d'un run local.
+                ? // A local turn does not open ANY sandbox (MIN-293): between the
+                  // launch and the first step, what happens is the
+                  // downloading the harness and opening the deposit on the
+                  // machine. To say “sandbox” here would be wrong, and that would be the
+                  // first thing the user reads from a local run.
                   t(localExec ? "openingLocalTurn" : "openingSandbox")
                 : t("working")}
             </span>
@@ -1290,13 +1288,10 @@ export function AgentEventFeed({
           <p className="text-sm text-muted-foreground">{t("noActivity")}</p>
         ) : null}
       </div>
-      {/* Retour en bas, à parité avec le fil de Numo : le fil ne suit plus l'agent,
-          ce bouton est donc le raccourci pour rattraper la fin. `sticky` sur une
-          boîte de hauteur NULLE → il flotte au-dessus du bas du cadre sans réserver
-          de place, donc son apparition ne pousse rien (`min-h-0` avec `h-0` : sans
-          lui, la taille minimale automatique d'un item flex en colonne rendrait au
-          bloc la hauteur de son bouton). Et il se tient au-dessus des 2 rem du fondu
-          de bas de fil, qui le délaverait s'il descendait dedans. */}
+      {/* Back to the bottom, on par with Numo's thread: the thread no longer follows the agent,
+ this button is therefore the shortcut to catch up at the end. __keep au
+ blocks the height of its button). And he stands above the 2 rem of the fade
+ of bottom wire, which would wash him out if he went down into it. */}
       {edges.end ? (
         <div className="sticky bottom-10 z-10 flex h-0 min-h-0 items-end justify-center">
           <Button

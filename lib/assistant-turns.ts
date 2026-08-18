@@ -1,33 +1,33 @@
 import type { AssistantMessage } from "./assistant-types";
 
 /**
- * Découpage du fil Numo en TOURS, à parité avec le fil de l'agent de code
- * (components/agent/agent-event-feed.tsx) : tout ce que Numo a fait AVANT sa
- * réponse (narration intermédiaire, appels d'outils) se replie dans un accordéon
- * « Travaille depuis X » / « A travaillé pendant X », et seule la réponse finale
- * reste visible dessous. L'utilisateur suit le travail en cours, puis lit la
- * réponse — au lieu de recevoir tout le tour d'un bloc.
+ * Breaking the Numo feed into TURN, on parity with the code agent feed
+ * (components/agent/agent-event-feed.tsx): everything Numo did BEFORE his
+ * response (intermediate narration, tool calls) folds into an accordion
+ * “Worked since X” / “Worked for X”, and only the final response
+ * remains visible below. The user tracks the work in progress, then reads the
+ * response — instead of receiving the entire turn of a block.
  *
- * Un TOUR = un message utilisateur, puis tout ce que Numo produit jusqu'à sa
- * réponse. Les messages utilisateur restent toujours visibles et séparent les tours.
+ * One TURN = a user message, then everything Numo produces up to its
+ * response. User messages always remain visible and separate turns.
  */
 
 export type AssistantTurn = {
   kind: "turn";
   /**
-   * Clé stable sur toute la vie du tour (dérivée du message utilisateur qui
-   * l'ouvre) → la MÊME instance d'accordéon persiste du travail à la réponse,
-   * d'où l'animation de fermeture automatique en fin de tour. Préfixée : le
-   * message qui l'ouvre est rendu en bloc FRÈRE, avec son propre id pour clé.
-   */
+ * Stable key throughout the life of the round (derived from the user message that
+ * opens it) → the SAME accordion instance persists from work to response,
+ * hence the automatic closing animation at the end of the round. Prefixed: the
+ * message which opens it is rendered in BROTHER block, with its own id for key.
+ */
   key: string;
-  /** Déroulé à replier : les messages intermédiaires du tour. */
+  /** Unfolded to fold: the intermediate messages of the round. */
   work: AssistantMessage[];
-  /** Réponse qui clôt le tour, rendue SOUS l'accordéon (`null` = pas encore là). */
+  /** Response which ends the round, delivered UNDER the accordion (`null` = not there yet). */
   summary: AssistantMessage | null;
-  /** ISO — début du tour (l'envoi de l'utilisateur, pas le 1er pas produit). */
+  /** ISO — start of the round (the user's submission, not the 1st step produced). */
   startedAt: string;
-  /** ISO, ou `null` tant que le tour travaille (chrono en direct). */
+  /** ISO, or `null` as long as the trick is working (live clock). */
   endedAt: string | null;
   active: boolean;
 };
@@ -36,17 +36,17 @@ export type AssistantBlock =
   | { kind: "message"; message: AssistantMessage }
   | AssistantTurn;
 
-/** Messages que le fil ne rend pas : ni travail, ni réponse. */
+/** Messages that the thread does not return: neither work nor response. */
 function isHidden(m: AssistantMessage): boolean {
   return m.role === "tool" || m.role === "system";
 }
 
 /**
- * Message qui clôt un tour : du texte (la réponse), ou quelque chose qui rend
- * la main à l'utilisateur — un `ask_user` termine le tour, la boucle attend la
- * réponse, et une proposition d'amorce (`propose_backlog`, MIN-173) attend de
- * même le geste qui crée les tickets. Ce qui se répond ne se replie pas dans le
- * déroulé : ça reste à l'écran, sous l'accordéon.
+ * Message that ends a round: text (the response), or something that returns
+ * to the user — a `ask_user` ends the round, the loop waits for the
+ * response, and a seed suggestion (`propose_backlog`, MIN-173) waits de
+ * even the gesture that creates the tickets. What is answered does not fold into the unrolled
+ *: it remains on the screen, under the accordion.
  */
 const HANDS_BACK = new Set(["ask_user", "propose_backlog"]);
 
@@ -57,17 +57,14 @@ function closesTurn(m: AssistantMessage): boolean {
 }
 
 /**
- * Ids des messages qui portent un bouton « Copier » : la RÉPONSE du tour — celle
- * qui reste seule sous l'accordéon une fois replié en « A travaillé pendant X » —
- * et les réponses directes, qui n'ont rien à replier (même message final, sans
- * accordéon au-dessus). Tout ce qui est PLIÉ dans le déroulé n'en a pas : c'est
- * du travail intermédiaire, pas une réponse à emporter.
+ * Ids of messages which carry a "Copy" button: the RESPONSE of the round - the one
+ * which remains alone under the accordion once folded into "Worked for Everything that is FOLDED in the unfolding has none: it is
+ * intermediate work, not a takeaway answer.
  *
- * Un tour ACTIF n'en porte AUCUN, pas même sous sa queue : entre deux rounds (le
- * temps que les outils tournent) le dernier texte reçu se retrouve provisoirement
- * en position de réponse, alors qu'il n'est que la narration du moment. Le bouton
- * y clignotait de message en message pendant tout le travail de Numo, puis se
- * posait sur la vraie réponse. Il n'apparaît donc qu'une fois le tour terminé.
+ * An ACTIVE turn carries NONE, not even under its tail: between two rounds (the
+ * while the tools are turning) the last text received is found temporarily
+ * in response position, while it is only the narration of the moment. The
+ * button flashed from message to message while Numo was working, then landed on the real answer. It therefore only appears once the round is over.
  */
 export function copyableMessageIds(blocks: AssistantBlock[]): Set<string> {
   const ids = new Set<string>();
@@ -85,22 +82,22 @@ export function copyableMessageIds(blocks: AssistantBlock[]): Set<string> {
 export function buildAssistantBlocks(
   messages: AssistantMessage[],
   options: {
-    /** Numo travaille → le dernier tour est ACTIF (accordéon ouvert, chrono live). */
+    /** Numo is working → the last lap is ACTIVE (accordion open, live timer). */
     active?: boolean;
     /**
-     * Le round EN VOL a déjà produit quelque chose (texte en train de s'écrire ou
-     * appel d'outil parti). Le dernier message reçu n'est alors plus la queue du
-     * tour : son texte redevient de la narration et repart dans le déroulé, sinon
-     * il resterait affiché SOUS un travail plus récent que lui.
-     */
+ * The IN FLIGHT round has already produced something (text being written or
+ * tool call gone). The last message received is then no longer the queue of the
+ * turn: its text becomes the narration again and returns to the sequence, otherwise
+ * it would remain displayed UNDER a work more recent than it.
+ */
     pendingWork?: boolean;
   } = {},
 ): AssistantBlock[] {
   const { active = false, pendingWork = false } = options;
   const blocks: AssistantBlock[] = [];
   let work: AssistantMessage[] = [];
-  // Message utilisateur qui a ouvert le tour en cours : porte sa clé et l'instant
-  // où le chrono démarre (l'envoi — c'est là que l'attente commence).
+  // User message who opened the current round: carry their key and now
+  // where the timer starts (sending — this is where the waiting begins).
   let opener: AssistantMessage | null = null;
 
   const flush = (isActive: boolean) => {
@@ -109,9 +106,9 @@ export function buildAssistantBlocks(
       last && closesTurn(last) && !(isActive && pendingWork) ? last : null;
     const folded = summary ? work.slice(0, -1) : work;
 
-    // Rien à replier (réponse directe sans travail, ou tour vide) → messages tels
-    // quels : un accordéon vide n'apprendrait rien. Le tour ACTIF garde en
-    // revanche son bloc, qui accueille le chrono du travail en cours.
+    // Nothing to fold (direct response without work, or empty turn) → messages such
+    // what: an empty accordion would learn nothing. The ACTIVE tour keeps
+    // on the other hand, its block, which houses the timer for the work in progress.
     if (!isActive && folded.length === 0) {
       for (const m of work) blocks.push({ kind: "message", message: m });
       work = [];
@@ -135,8 +132,8 @@ export function buildAssistantBlocks(
   for (const m of messages) {
     if (isHidden(m)) continue;
     if (m.role === "user") {
-      // Un message utilisateur clôt le tour précédent (terminé, ou interrompu
-      // sans réponse — son travail s'affiche alors tel quel) et ouvre le suivant.
+      // A user message closes the previous round (finished, or interrupted
+      // without response — his work is then displayed as is) and opens the next one.
       flush(false);
       blocks.push({ kind: "message", message: m });
       opener = m;

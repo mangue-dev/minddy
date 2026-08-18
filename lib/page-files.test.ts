@@ -12,31 +12,31 @@ import {
 } from "@/lib/page-files";
 
 /**
- * MIN-280 — l'adresse d'un fichier de page est un CONTRAT entre quatre endroits.
+ * MIN-280 — the address of a page file is a CONTRACT between four places.
  *
- * Le nœud du bloc l'écrit, la projection markdown la recopie, la route la relit
- * pour servir les octets, et le ménage la cherche dans les corps pour savoir ce
- * qui est encore vivant. Aucun de ces quatre ne peut vérifier les trois autres :
- * si la forme change d'un côté, la seule chose qui se passe est qu'un balayage
- * nocturne cesse de reconnaître des fichiers vivants — et les supprime.
+ * The block node writes it, the markdown projection copies it, the route reads it again
+ * to serve the bytes, and housekeeping looks for it in the bodies to know this
+ * which is still alive. None of these four can check the other three:
+ * if the shape changes on one side, the only thing that happens is that a nightly scan
+ * stops recognizing live files — and deletes them.
  *
- * C'est le pire défaut possible de ce sujet, et il est silencieux. D'où ce test,
- * qui joue les deux sens sur la MÊME forme.
+ * This is the worst possible flaw in this topic, and it is silent. Hence this test,
+ * which plays both ways on the SAME form.
  */
 
 const PROJECT = "07b14964-0def-4941-8ddf-686572d6345d";
 const FILE = "11111111-1111-4111-8111-111111111111";
 
 describe("l'adresse d'un fichier de page", () => {
-  it("se relit dans les deux sens", () => {
+  it("round-trips in both directions", () => {
     const url = pageFileUrl(PROJECT, FILE);
     expect(pageFileIdFromSrc(url)).toBe(FILE);
     expect(pageFileProjectFromSrc(url)).toBe(PROJECT);
   });
 
-  it("ne reconnaît pas une adresse qui n'est pas la sienne", () => {
-    // Une image EXTERNE est un cas normal, pas une erreur : elle ne coûte rien
-    // au bucket, donc elle n'a rien à faire dans le ménage.
+  it("does not recognize an address that is not its own", () => {
+    // An EXTERNAL image is a normal case, not an error: it costs nothing
+    // to the bucket, so she has nothing to do in the household.
     for (const src of [
       "https://exemple.org/capture.png",
       "/api/attachments/file?path=projects/x/y/f.png",
@@ -49,12 +49,12 @@ describe("l'adresse d'un fichier de page", () => {
     }
   });
 
-  it("se reconnaît même affublée d'une ORIGINE", () => {
-    // Le cas vécu (MIN-284) : copier-coller un bloc image passe par le
-    // presse-papiers, qui porte du HTML, et Chrome y absolutise les `src`. Le
+  it("recognizes itself even when given an ORIGIN", () => {
+    // The real case (MIN-284): copying and pasting an image block goes through the
+    // clipboard, which carries HTML, and Chrome absolutizes the `src` there. THE
     // corps rangeait `http://localhost:3000/api/…` — l'image ne chargeait plus
-    // hors du poste qui avait collé, et le balayage, qui ne la reconnaissait
-    // plus, s'apprêtait à effacer le fichier qu'elle nommait.
+    // out of the post which had stuck, and the scanning, which did not recognize it
+    // more, was about to delete the file she named.
     for (const origin of ["http://localhost:3000", "https://www.minddy.app"]) {
       const absolute = `${origin}${pageFileUrl(PROJECT, FILE)}`;
       expect(pageFileIdFromSrc(absolute)).toBe(FILE);
@@ -62,8 +62,8 @@ describe("l'adresse d'un fichier de page", () => {
       expect(pageFileIdsInBody({ attrs: { src: absolute } })).toEqual(
         new Set([FILE])
       );
-      // Et la porte d'entrée la rend à sa forme relative, pour qu'elle cesse
-      // d'être écrite ainsi.
+      // And the front door returns it to its relative form, so that it ceases
+      // to be written like this.
       expect(normalizePageFileSrc(absolute)).toBe(pageFileUrl(PROJECT, FILE));
       expect(fileDownloadHref(absolute)).toBe(
         `${pageFileUrl(PROJECT, FILE)}?download=1`
@@ -71,8 +71,8 @@ describe("l'adresse d'un fichier de page", () => {
     }
   });
 
-  it("laisse passer INTACTE une adresse qui n'est pas la nôtre", () => {
-    // La normalisation n'est pas un filtre : une image externe est légitime.
+  it("passes through an address that is not ours INTACT", () => {
+    // Normalization is not a filter: an external image is legitimate.
     expect(normalizePageFileSrc("https://exemple.org/capture.png")).toBe(
       "https://exemple.org/capture.png"
     );
@@ -80,17 +80,17 @@ describe("l'adresse d'un fichier de page", () => {
     expect(normalizePageFileSrc(null)).toBeNull();
   });
 
-  it("range les octets sous le préfixe du PROJET", () => {
-    // Et non sous un préfixe `pages/` à la racine : c'est ce qui fait que la
-    // politique d'insertion du storage et la porte de lecture des ressources
-    // valent déjà, sans une branche de plus (cf. la migration).
+  it("stores bytes under the PROJECT prefix", () => {
+    // And not under a `pages/` prefix at the root: this is what makes the
+    // storage insertion policy and resource reading gate
+    // are already valid, without one more branch (see migration).
     expect(pageFileStoragePrefix(PROJECT, "page-1")).toBe(
       `projects/${PROJECT}/pages/page-1`
     );
   });
 });
 
-describe("les fichiers cités par un corps", () => {
+describe("files cited by a body", () => {
   const body = {
     type: "doc",
     content: [
@@ -117,28 +117,28 @@ describe("les fichiers cités par un corps", () => {
     ],
   };
 
-  it("les trouve, y compris IMBRIQUÉS dans un autre bloc", () => {
-    // Un fichier posé dans un dépliant est le cas qui casse une lecture au
-    // premier niveau — et c'est exactement le fichier que le ménage effacerait.
+  it("finds them, including when NESTED in another block", () => {
+    // A file placed in a leaflet is the case which breaks reading at
+    // first level — and this is exactly the file that housekeeping would delete.
     expect([...pageFileIdsInBody(body)].sort()).toEqual([
       "11111111-1111-4111-8111-111111111111",
       "22222222-2222-4222-8222-222222222222",
     ]);
   });
 
-  it("ne voit rien dans un corps vide ou absent", () => {
+  it("finds nothing in an empty or missing body", () => {
     expect(pageFileIdsInBody(null).size).toBe(0);
     expect(pageFileIdsInBody({ type: "doc", content: [] }).size).toBe(0);
   });
 });
 
-describe("le poids affiché", () => {
+describe("displayed size", () => {
   it("se lit d'un coup d'œil", () => {
     expect(formatFileSize(0)).toBe("");
     expect(formatFileSize(820)).toBe("820 B");
     expect(formatFileSize(1_400)).toBe("1.4 kB");
     expect(formatFileSize(2_400_000)).toBe("2.4 MB");
-    // Au-delà de dix unités, la décimale n'apprend plus rien.
+    // Beyond ten units, the decimal no longer learns anything.
     expect(formatFileSize(24_000_000)).toBe("24 MB");
   });
 });
@@ -149,12 +149,12 @@ describe("fileDownloadHref", () => {
     "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
   );
 
-  it("demande la pièce jointe à l'adresse d'application", () => {
+  it("requests the attachment from the application address", () => {
     expect(fileDownloadHref(url)).toBe(`${url}?download=1`);
   });
 
-  it("laisse INTACTE une URL signée (MIN-283)", () => {
-    // Elle porte déjà sa disposition : un second `download` fait répondre 400
+  it("leaves a signed URL INTACT (MIN-283)", () => {
+    // It already has its disposition: a second `download` responds 400
     // au storage — « querystring/download must be string ».
     const signed = "https://xyz.supabase.co/storage/v1/object/sign/a.pdf?token=abc&download=rapport.pdf";
     expect(fileDownloadHref(signed)).toBe(signed);

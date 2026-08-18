@@ -4,10 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchIssueRepoBranchesApi, fetchProjectRepoBranchesApi } from "@/lib/agent-api";
 
 /**
- * Branches du dépôt lié au projet de l'issue, pour le picker de branche de base
- * du composer d'agent. Passer `null` tant que le picker n'est pas visible (phase
- * live) évite l'appel provider. Erreur (pas de dépôt lié, provider en panne) →
- * liste vide, le picker retombe sur son libellé de défaut.
+ * Branches from the repository linked to the issue's project, for the base branch picker
+ * of the agent composer. Passing `null` while the picker is not visible (phase
+ * live) avoids the provider call. Error (no linked repository, provider down) →
+ * empty list, the picker falls back to its default label.
  */
 
 export const issueRepoBranchesQueryKey = (issueId: string) =>
@@ -41,7 +41,7 @@ export function useIssueRepoBranchesQuery(issueId: string | null) {
   };
 }
 
-/** Variante ancrée PROJET (compose d'un run carnet, MIN-84) — mêmes garanties. */
+/** PROJECT anchored variant (composed of a run notebook, MIN-84) — same guarantees. */
 export const projectRepoBranchesQueryKey = (projectId: string) =>
   ["project-repo-branches", projectId] as const;
 

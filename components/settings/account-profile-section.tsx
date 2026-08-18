@@ -42,7 +42,7 @@ export function AccountProfileSection() {
     "";
   const seed = useMyAvatarSeed();
   const { track } = useAnalytics();
-  // Lu APRÈS le montage : `window.minddy` n'existe pas au rendu serveur, et le
+  // Read AFTER editing: `window.minddy` does not exist in server rendering, and the
   // supposer ferait diverger l'hydratation.
   const [inDesktopApp, setInDesktopApp] = useState(false);
   useEffect(() => setInDesktopApp(isDesktop()), []);
@@ -101,8 +101,8 @@ export function AccountProfileSection() {
         </Button>
       }
     >
-      {/* L'avatar ne se choisit pas : il se retire. Le portrait tient donc lieu
-          de valeur, et le bouton est le geste — comme partout ailleurs. */}
+      {/* The avatar does not choose itself: it withdraws. The portrait therefore takes the place
+ of value, and the button is the gesture — like everywhere else. */}
       <SettingsRow
         label={t("avatarLabel")}
         hint={t("avatarHint")}
@@ -136,8 +136,8 @@ export function AccountProfileSection() {
         }
       />
 
-      {/* L'e-mail ne se modifie pas : le montrer dans un champ grisé promettait
-          une saisie qui n'existe pas. C'est une valeur, elle se lit. */}
+      {/* The email does not change: showing it in a gray field promised
+ an entry that does not exist. It’s a value, it can be read. */}
       {user?.email && (
         <SettingsRow
           label={ta("emailLabel")}
@@ -148,16 +148,15 @@ export function AccountProfileSection() {
         />
       )}
 
-      {/* L'app de bureau (MIN-292) — FIXE, sans bouton pour l'écarter.
-          Contrairement au bandeau de l'accueil, qui ne paraît qu'une fois dans
-          la vie du compte, celle-ci est l'endroit où l'on revient chercher ce
-          qu'on avait écarté. Une ligne qu'on peut faire disparaître d'un réglage
-          n'est plus un réglage.
+      {/* The desktop app (MIN-292) — FIXED, without a button to dismiss it.
+ Unlike the welcome banner, which only appears once in the life of the account, this is the place where you come back to find the __
+ that you had dismissed. A line that can be removed from a setting
+ is no longer a setting.
 
-          Absente DANS l'app : proposer de l'installer à qui l'a ouverte est du
-          bruit. Elle reste en revanche visible sous Windows et Linux, où son
-          libellé dit que c'est macOS — c'est une information, pas une promesse,
-          et la taire ferait croire que l'app n'existe pas. */}
+ Absent IN the app: offering to install it to whoever opened it is
+ noise. However, it remains visible under Windows and Linux, where its
+ label says that it is macOS — it is information, not a promise,
+ and leaving it alone would make people believe that the app does not exist. */}
       {!inDesktopApp && (
         <SettingsRow
           label={ta("desktopAppLabel")}

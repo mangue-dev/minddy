@@ -6,8 +6,8 @@ import { SettingsGroup } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { McpConnectPanel } from "@/components/settings/mcp-connect-panel";
 
-/** Réglages du compte → MCP : le panneau « Connecter un agent », partagé avec
-    l'étape MCP de l'onboarding (MIN-74) — il ne change pas, seul son cadre. */
+/** Account settings → MCP: the “Connect an agent” panel, shared with
+ the MCP stage of onboarding (MIN-74) — it does not change, only its frame. */
 export function AccountMcpSection() {
   const t = useTranslations("Account");
 

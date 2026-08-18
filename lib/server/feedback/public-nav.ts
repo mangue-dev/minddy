@@ -6,33 +6,33 @@ import type { DomainTarget } from "@/lib/custom-domain-lookup";
 import type { PublicSiteTab } from "@/lib/feedback/types";
 
 /**
- * Navigation du site public d'un projet (MIN-37) : le board de feedback et les
- * vues partagées forment un seul « site » avec des onglets — « Feedback »
- * (le board) puis un onglet par vue partagée, nommé d'après la vue. Utilisé
- * par /f/[token] ET /share/[token] pour que la navigation soit symétrique.
+ * Navigation of the public site of a project (MIN-37): the feedback board and the
+ * shared views form a single “site” with tabs — “Feedback”
+ * (the board) then one tab per shared view, named after the view. Used
+ * by /f/[token] AND /share/[token] to make navigation symmetrical.
  */
 
 export async function getPublicSiteTabs(params: {
   projectId: string;
-  /** Libellé de l'onglet board (i18n côté appelant). */
+  /** Label of the board tab (i18n on the calling side). */
   feedbackLabel: string;
-  /** Page courante : le token du board ou celui d'une vue partagée. */
+  /** Current page: the board token or that of a shared view. */
   current: { kind: "feedback" } | { kind: "view"; shareToken: string };
-  /** Cible mappée sur le host courant (MIN-36) : son onglet pointe sur "/",
-      les autres gardent leur path token (servis en pass-through). */
+  /** Target mapped to the current host (MIN-36): its tab points to "/",
+ the others keep their path token (served in pass-through). */
   domainTarget?: DomainTarget | null;
 }): Promise<PublicSiteTab[]> {
   const service = getServiceClient();
 
   const board = await getBoardForProject(params.projectId);
   // Couplage opt-in (settings du feedback) : sans lui, chaque page publique
-  // reste isolée — pas d'onglets sur le board, pas de lien depuis les vues.
+  // remains isolated — no tabs on the board, no links from views.
   if (!board?.enabled || !board.show_views) return [];
 
-  // `level = public` seulement (MIN-342) : une vue protégée par mot de passe ne
-  // dit rien d'elle-même sur sa propre page — pas même son nom — et l'annoncer
-  // ici, avec son token, rendrait cette discrétion sans objet. Elle reste
-  // atteignable par son lien, ce qui est le seul chemin qu'on lui connaît.
+  // `level = public` only (MIN-342): a password-protected view cannot
+  // says nothing about herself on her own page — not even her name — and announce it
+  // here, with its token, would make this discretion irrelevant. She remains
+  // reachable through his link, which is the only path known to him.
   const sharesRes = await service
     .from("view_shares")
     .select("token, views!inner (id, name, project_id)")
@@ -53,7 +53,7 @@ export async function getPublicSiteTabs(params: {
   const visible = new Set(board.visible_view_ids);
   for (const row of sharesRes.data ?? []) {
     const view = row.views as unknown as { id: string; name: string } | null;
-    // Chaque vue est opt-in : seules celles cochées dans les settings sortent.
+    // Each view is opt-in: only those checked in the settings come out.
     if (!view || !visible.has(view.id)) continue;
     const shareToken = row.token as string;
     const mapped = target?.kind === "share" && target.token === shareToken;
@@ -64,6 +64,6 @@ export async function getPublicSiteTabs(params: {
     });
   }
 
-  // Un seul onglet = pas de navigation à montrer.
+  // Single tab = no navigation to show.
   return tabs.length > 1 ? tabs : [];
 }

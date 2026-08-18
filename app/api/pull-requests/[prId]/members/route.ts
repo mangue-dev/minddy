@@ -3,12 +3,12 @@ import type { NextRequest } from "next/server";
 import { authorizePrRequest, prMembersResponse } from "@/lib/server/agent/pr-actions";
 
 /**
- * GET /api/pull-requests/[prId]/members — les comptes de la forge qu'on peut
- * mentionner sur cette PR (MIN-162).
+ * GET /api/pull-requests/[prId]/members — the forge accounts we can
+ * mention on this PR (MIN-162).
  *
- * À PART du détail, et chargée à la demande (au premier `@` tapé) : ouvrir une
- * PR ne doit pas coûter un aller-retour de plus pour une liste dont on ne se
- * sert que si l'on écrit.
+ * EXCEPT from the detail, and loaded on demand (at the first `@` typed): open a
+ * PR should not cost an extra round trip for a list that we don't care about.
+ * only useful if you write.
  */
 
 type RouteContext = { params: Promise<{ prId: string }> };

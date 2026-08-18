@@ -11,11 +11,11 @@ import {
 } from "@/lib/seed/types";
 
 /**
- * La porte de l'amorce par brief : ce qui vient du navigateur n'est jamais cru.
+ * The door to the primer by brief: what comes from the browser is never believed.
  *
- * L'aperçu est modifiable, donc le corps du commit est fabriqué par un onglet
- * qu'on ne contrôle pas. Ces tests décrivent ce qui passe et ce qui tombe —
- * une entrée mal formée est écartée SEULE, jamais au prix du lot.
+ * The preview is modifiable, so the body of the commit is made by a tab
+ * that we do not control. These tests describe what passes and what falls —
+ * a malformed entry is discarded ALONE, never at the batch price.
  */
 
 const issue = (over: Record<string, unknown> = {}) => ({
@@ -147,9 +147,9 @@ describe("sanitizeSeedProposal", () => {
   });
 
   it("ne garde du lot que les étiquettes les plus portées", () => {
-    // Trois étiquettes partagées par tous, huit portées une seule fois : c'est
-    // la forme mesurée sur un vrai brief, et ce sont ces huit-là qui feraient
-    // d'un projet neuf un projet déjà encombré.
+    // Three labels shared by everyone, eight worn only once: that’s
+    // the form measured on a real brief, and it is these eight which would
+    // from a new project to an already cluttered project.
     const shared = ["auth", "schema", "parents"];
     const { issues } = sanitizeSeedProposal({
       objectives: [],
@@ -159,8 +159,8 @@ describe("sanitizeSeedProposal", () => {
     });
     const distinct = [...new Set(issues.flatMap((i) => i.labels))];
     expect(distinct).toHaveLength(MAX_SEED_DISTINCT_LABELS);
-    // Les partagées passent d'abord — les rescapées uniques suivent l'ordre
-    // d'apparition, donc le résultat est stable.
+    // Shared ones go first — unique survivors follow order
+    // appearance, so the result is stable.
     expect(distinct.slice(0, 3).sort()).toEqual([...shared].sort());
   });
 
@@ -207,7 +207,7 @@ describe("seedProposalToImportedIssues", () => {
       externalKeys: ["T2"],
       parentExternalKey: "T1",
       labels: ["infra"],
-      // Ce ticket-là ne cite aucun chantier : il existe sans objectif.
+      // This ticket does not cite any construction site: it exists without an objective.
       objectiveId: null,
     });
   });

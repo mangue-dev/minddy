@@ -14,14 +14,14 @@ import { canonicalAppOrigin } from "@/lib/server/app-origin";
 /**
  * GET /api/git/gitlab/callback — callback OAuth GitLab (MIN-47).
  *
- * GitLab redirige ici avec `code` + notre `state` signé. On échange le code
- * contre un jeu de tokens (access+refresh), on identifie le compte, on enregistre
- * la connexion (tokens chiffrés) au niveau compte, puis on renvoie l'utilisateur
- * vers les paramètres du projet pour choisir un dépôt.
+ * GitLab redirects here with `code` + our signed `state`. We exchange the code
+ * against a set of tokens (access+refresh), we identify the account, we save
+ * the connection (encrypted tokens) at the account level, then we return the user
+ * Go to the project settings to choose a repository.
  *
- * Comme du côté GitHub, le `state` dit où revenir et la SESSION dit qui revient
- * (MIN-324 — cf. callback-session.ts) : sans elle, un `state` envoyé par lien
- * déposerait le jeton GitLab de la victime dans le compte de l'attaquant.
+ * Like on the GitHub side, the `state` tells where to return and the SESSION says who returns
+ * (MIN-324 — cf. callback-session.ts): without it, a `state` sent by link
+ * would deposit the victim's GitLab token into the attacker's account.
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -38,11 +38,11 @@ export async function GET(request: NextRequest) {
   }
 
   const isAccount = state.projectId === ACCOUNT_CONNECT_PROJECT;
-  // Une autorisation initiée depuis le wizard de création (MIN-62) revient sur
-  // /home : à ce stade le projet n'existe pas encore, c'est le brouillon en
-  // session qui rouvre le wizard là où il en était. Depuis le panneau d'une PR
-  // (MIN-144), retour à la page Pull requests. Sinon, paramètres git du projet
-  // (ou du compte).
+  // An authorization initiated from the creation wizard (MIN-62) returns to
+  // /home: at this stage the project does not yet exist, it is the draft in
+  // session which reopens the wizard where it left off. From the panel of a PR
+  // (MIN-144), return to the Pull requests page. Otherwise, project git settings
+  // (or the account).
   const isWizard = isAccount && state.origin === "wizard";
   const base = isWizard
     ? "/home?setup=git"
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
         ? "/settings?tab=git"
         : `/projects/${state.projectId}/settings?tab=git`;
 
-  // Avant l'échange du `code` : inutile de brûler celui de la victime.
+  // Before exchanging the `code`: no need to burn the victim's.
   if (!sessionMatchesState(sessionUserId, state.userId)) {
     return applyCookies(
       NextResponse.redirect(new URL(`${base}&git=error`, origin)),
@@ -72,14 +72,14 @@ export async function GET(request: NextRequest) {
     });
     const user = await getGitlabUser(tokens.accessToken);
     const connectionId = await upsertGitlabConnection({
-      // Égal à `sessionUserId` par la garde ci-dessus, et typé `string`.
+      // Equal to `sessionUserId` by the guard above, and typed `string`.
       userId: state.userId,
       providerAccountId: String(user.id),
       accountLogin: user.username || null,
       tokens,
     });
-    // Le wizard a besoin de l'id de connexion pour ouvrir le sélecteur de dépôt
-    // au retour ; les paramètres du compte, eux, n'en font rien.
+    // The wizard needs the login id to open the repository selector
+    // on the return; the account settings don't do anything about it.
     const suffix =
       isAccount && !isWizard
         ? "&git=connected"

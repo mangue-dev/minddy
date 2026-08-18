@@ -3,10 +3,10 @@
 import { useDesktopNotifications } from "@/lib/use-desktop-notifications";
 
 /**
- * L'hôte des notifications natives de l'app de bureau (MIN-291). Aucun rendu :
- * ce composant n'existe que pour son effet, à côté de `<PushServiceWorker />`
- * dans les providers de l'app — les deux surfaces du même besoin, chacune sur
- * la plateforme où elle marche.
+ * The desktop app's native notifications host (MIN-291). No rendering:
+ * this component only exists for its effect, next to `<PushServiceWorker />`
+ * in the app providers — the two surfaces of the same need, each on
+ * the platform where she walks.
  */
 export function DesktopNotifications() {
   useDesktopNotifications();

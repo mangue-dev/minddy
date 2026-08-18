@@ -2,8 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getTabOrder, setTabOrder } from "@/lib/server/tab-orders";
 
-// Bornes (MIN-118) : le scope est "global" ou un id de projet, une clé est un id
-// de vue ou la sentinelle "cycle" — tout est court, et la liste reste petite.
+// Terminals (MIN-118): the scope is "global" or a project id, a key is an id
+// view or the “cycle” sentinel — everything is short, and the list remains small.
 const MAX_SCOPE_LENGTH = 100;
 const MAX_KEYS = 100;
 const MAX_KEY_LENGTH = 100;

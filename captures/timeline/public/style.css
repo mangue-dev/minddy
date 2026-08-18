@@ -305,7 +305,7 @@ h2 {
   background: color-mix(in srgb, var(--bad) 12%, transparent);
 }
 
-/* Le retard, en intensité plutôt qu'en chiffre nu. */
+/* The delay, in intensity rather than in naked numbers. */
 .behind {
   font-variant-numeric: tabular-nums;
 }
@@ -335,7 +335,7 @@ h2 {
   font-style: normal;
 }
 
-/* ---------------------------------------------------------------- détail */
+/* ---------------------------------------------------------------- detail */
 
 .detail-head {
   display: flex;

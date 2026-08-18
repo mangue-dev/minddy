@@ -1,6 +1,6 @@
 "use client";
 
-// Local undo/redo history à la Linear (MIN-35). ⌘Z / ⌘⇧Z replay the last
+// Local undo/redo history a la Linear (MIN-35). ⌘Z / ⌘⇧Z replay the last
 // user-initiated issue mutation in reverse / forward. The history lives in
 // memory (per tab, never persisted or synced).
 //
@@ -88,9 +88,9 @@ export function useUndoHistory(): UndoHistory {
 }
 
 /** i18n key under `Undo.actions` for each entry kind. */
-/** Clés COMPLÈTES (`actions.*`) plutôt que des suffixes recollés au point
- *  d'appel : c'est ce qui permet à TypeScript de les vérifier contre le
- *  catalogue — un `actions.` + suffixe n'est qu'une chaîne pour lui. */
+/** FULL keys (`actions.*`) rather than suffixes glued back to the
+ * calling point: this is what allows TypeScript to check them against the
+ * catalog — a `actions.` + suffix is ​​just a string to it. */
 const ACTION_KEYS: Record<UndoEntry["kind"], MessageKey<"Undo">> = {
   update: "actions.update",
   categories: "actions.categories",
@@ -134,9 +134,9 @@ export function UndoProvider({ children }: { children: ReactNode }) {
 
   // ── Optimistic cache patches (both boards) — replays feel instant ────────
   //
-  // Les patchs eux-mêmes vivent dans lib/optimistic/issue-writes.ts, partagés
-  // avec les hooks d'écriture ; ici on ne fait qu'ouvrir l'entrée du registre
-  // qui les protège d'une réponse en retard, et la refermer au rejouage.
+  // The patches themselves live in lib/optimistic/issue-writes.ts, shared
+  // with write hooks; here we just open the registry entry
+  // which protects them from a late response, and close it on replay.
 
   const patchIssueCaches = useCallback(
     (projectId: string, issueId: string, patch: Partial<Issue>) =>
@@ -170,13 +170,13 @@ export function UndoProvider({ children }: { children: ReactNode }) {
   );
 
   /** What can be shown before the server confirms. Re-creations and relation
-      re-adds need server-assigned ids, so they reconcile via invalidation.
-      Renvoie l'entrée du registre d'écritures ouverte par CE rejouage : elle
-      appartient au rejouage, pas à l'entrée d'historique. Un ⌘Z suivi d'un ⌘⇧Z
-      avant que le premier n'ait atteint le serveur en ouvre deux, et chacune
-      doit être refermée par son propre tour de file — la garder sur l'entrée
-      faisait perdre la première, qui restait alors « en vol » à jamais et
-      rejouait son patch sur toutes les réponses suivantes (MIN-156). */
+ re-adds need server-assigned ids, so they reconcile via invalidation.
+ Returns the write register entry opened by THIS replay: it
+ belongs to the replay, not the history entry. A ⌘Z followed by a ⌘⇧Z
+ before the first one has reached the server opens two, and each
+ must be closed by its own turn - keeping it on the entry
+ lost the first one, which then remained "in flight" forever and
+ replayed its patch on all subsequent responses (MIN-156). */
   const applyOptimistic = useCallback(
     (entry: UndoEntry, direction: "undo" | "redo"): PendingHandle | null => {
       const alias = aliasRef.current;
@@ -230,9 +230,9 @@ export function UndoProvider({ children }: { children: ReactNode }) {
     [patchIssueCaches, removeIssueFromCaches, removeRelationFromCaches]
   );
 
-  /** Referme l'entrée du registre ouverte par le rejouage : `settled` quand
-      l'écriture a abouti (les réponses parties après elle font foi), oubliée
-      quand elle a échoué (l'invalidation qui suit rétablit la vérité). */
+  /** Closes the register entry opened by the replay: `settled` when
+ the writing was successful (the responses left after it are authentic), forgotten
+ when it failed (the invalidation which follows restores the truth). */
   const closePending = useCallback(
     (pending: PendingHandle | null, outcome: "settled" | "failed") => {
       if (!pending) return;
@@ -357,12 +357,12 @@ export function UndoProvider({ children }: { children: ReactNode }) {
           break;
         case "delete":
           if (direction === "undo") {
-            // Depuis MIN-133, supprimer met à la corbeille : annuler, c'est
-            // restaurer LA MÊME ligne — son numéro, ses commentaires, ses
-            // pièces jointes et son historique reviennent avec elle. La
-            // re-création d'avant en fabriquait une copie appauvrie ET laissait
-            // l'originale dans la corbeille, en double. Elle reste en secours
-            // pour la ligne déjà purgée à la main entre-temps (404).
+            // Since MIN-133, delete puts in trash: cancel, it's
+            // restore THE SAME line — its number, its comments, its
+            // attachments and its history return with it. There
+            // re-creation of before made an impoverished copy AND left
+            // the original in the trash, in duplicate. She remains in rescue
+            // for the line already purged by hand in the meantime (404).
             try {
               await restoreTrashItemApi("issue", resolveAliased(alias, entry.issueId));
             } catch {
@@ -430,9 +430,9 @@ export function UndoProvider({ children }: { children: ReactNode }) {
           // Never overtake the mutation being replayed (it may still be in flight).
           if (queued.settled) await queued.settled;
           await applyServer(queued, direction);
-          // Refermée APRÈS l'invalidation d'`applyServer` : un refetch parti
-          // avant ce point garde l'overlay, donc ne peut pas rejouer l'état
-          // d'avant le rejouage.
+          // Closed AFTER the invalidation of `applyServer`: a refetch left
+          // before this point keeps the overlay, so cannot replay the state
+          // before replay.
           closePending(pending, "settled");
         } catch (err) {
           // Entry dropped: it no longer applies (e.g. deleted elsewhere) and

@@ -1,11 +1,11 @@
 "use client";
 
-// Ce que le CARNET ajoute à la tâche partagée : son nœud, et sa surface.
+// What the NOTEBOOK adds to the shared task: its node, and its surface.
 //
-// La vue elle-même n'est plus ici — elle est la même dans une page depuis
-// MIN-274 (task-item-view.tsx). Ne restent que les deux choses qui sont
-// vraiment du carnet : greffer la vue sur le nœud, et dire ce que « confier une
-// tâche » veut dire quand elle sort d'un carnet plutôt que d'un document.
+// The view itself is no longer here — it's the same in a page since
+// MIN-274 (task-item-view.tsx). Only the two things remain which are
+// really from the notebook: graft the view onto the node, and say what “entrust a
+// task” means when it comes out of a notebook rather than a document.
 
 import { useMemo, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
@@ -24,13 +24,13 @@ import {
 } from "@/components/scratchpad/task-nodes";
 
 /**
- * La surface « carnet » : ce qui entoure le geste quand la tâche part d'ici.
+ * The “notebook” surface: what surrounds the gesture when the task leaves here.
  *
- * Les trois gestes se ferment sur le carnet AVANT d'ouvrir autre chose, et ce
- * n'est pas de la politesse : son démontage est ce qui flushe l'autosave
- * (scratchpad-editor.tsx), donc ce qui rend durable l'état posé juste avant par
- * la passation. `useLaunchAgentNote` s'en charge pour l'agent ; la promotion le
- * fait à la main, pour laisser la place au panneau de Numo.
+ * The three gestures close on the notebook BEFORE opening anything else, and this
+ * is not polite: its dismantling is what flushes the autosave
+ * (scratchpad-editor.tsx), therefore which makes the state set just before by
+ * sustainable. `useLaunchAgentNote` takes care of this for the agent; the promotion
+ * handmade, to make room for the Numo panel.
  */
 export function ScratchpadTaskSurface({ children }: { children: ReactNode }) {
   const t = useTranslations("Scratchpad");
@@ -43,12 +43,12 @@ export function ScratchpadTaskSurface({ children }: { children: ReactNode }) {
       copyPrompt: (markdown) =>
         buildScratchpadPrompt(markdown, { section: true }),
       launchAgent: (markdown) => launchNote(markdown, { section: true }),
-      // Le projet de la ROUTE, donc le projet courant si on en consulte un, et
-      // le mode global sinon — où Numo demande lequel. Le carnet est
-      // cross-projet, il n'en impose aucun de son côté.
+      // The ROUTE project, therefore the current project if we consult one, and
+      // the global mode otherwise — where Numo asks which one. The notebook is
+      // cross-project, it does not impose any on its side.
       //
-      // Passé explicitement depuis MIN-353 : omettre `projectId` ne veut plus
-      // dire « suis la route », mais « ne touche pas à la conversation ouverte ».
+      // Passed explicitly from MIN-353: omit `projectId` no longer wanted
+      // say “follow the way”, but “don’t touch the open conversation”.
       promote: (note) => {
         close();
         openAssistant({
@@ -63,8 +63,8 @@ export function ScratchpadTaskSurface({ children }: { children: ReactNode }) {
   return <TaskSurfaceProvider value={surface}>{children}</TaskSurfaceProvider>;
 }
 
-/** Le nœud tâche du carnet (task-nodes.ts) + la vue partagée. Le schéma et le
- *  round-trip markdown vivent à part pour rester testables sans React. */
+/** The notebook task node (task-nodes.ts) + the shared view. The schema and the
+ * round-trip markdown live separately to remain testable without React. */
 export const ScratchpadTaskItem = ScratchpadTaskItemBase.extend({
   addNodeView() {
     return taskItemNodeView();

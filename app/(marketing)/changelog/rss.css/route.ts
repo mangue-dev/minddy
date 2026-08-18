@@ -3,30 +3,30 @@ import { getTranslations } from "next-intl/server";
 import { defaultLocale, locales, type Locale } from "@/i18n/config";
 
 /**
- * La feuille de style du flux RSS (MIN-93) — pour que « Suivre en RSS » n'ouvre
- * pas un mur de XML.
+ * The RSS feed style sheet (MIN-93) — so that “Follow in RSS” does not open
+ * not a wall of XML.
  *
- * ## Pourquoi du CSS et pas du XSLT
+ * ## Why CSS and not XSLT
  *
- * L'habillage d'un flux se fait traditionnellement en XSLT, et c'est ce que font
- * la plupart des blogs. Sauf que Chrome a annoncé en octobre 2025 la SUPPRESSION
- * de XSLT : dépréciation en Chrome 143, arrêt sur les versions stables au
- * 17 novembre 2026 — Firefox et WebKit ont dit qu'ils suivraient. Écrire une
- * feuille XSLT aujourd'hui, c'est écrire quelque chose qui casse dans quelques
+ * Dressing a flow is traditionally done in XSLT, and that's what
+ * most blogs. Except that Chrome announced in October 2025 the DELETION
+ * of XSLT: depreciation in Chrome 143, stop on stable versions at
+ * November 17, 2026 — Firefox and WebKit said they would follow. Write a
+ * XSLT sheet today is writing something that breaks in a few
  * mois.
  *
- * Le CSS appliqué à un document XML, lui, n'est pas concerné : c'est un autre
- * mécanisme (on style l'arbre XML tel quel, sans moteur de transformation).
+ * The CSS applied to an XML document is not concerned: it is another
+ * mechanism (we style the XML tree as is, without a transformation engine).
  *
- * ## Ce que ça permet, et ce que ça ne permet pas
+ * ## What it allows, and what it does not allow
  *
- * On PEUT masquer, réordonner visuellement, typographier, et poser du texte en
- * `::before`. On ne PEUT PAS transformer l'arbre ni rendre un `<link>` RSS
- * cliquable : dans un flux c'est un nœud texte, pas une ancre HTML. D'où le
- * bandeau qui explique quoi faire de l'adresse plutôt qu'un bouton.
+ * We CAN hide, visually reorder, type, and place text in
+ * `::before`. We CANNOT transform the tree or make an RSS `<link>`
+ * clickable: in a flow it is a text node, not an HTML anchor. Hence the
+ * banner that explains what to do with the address rather than a button.
  *
- * Le flux reste un flux : un lecteur ignore purement et simplement
- * l'instruction de traitement qui pointe ici.
+ * The flow remains a flow: a reader simply ignores
+ * clickable: in a feed it is a processing instruction pointing here.
  */
 
 export async function GET(request: NextRequest): Promise<Response> {
@@ -34,11 +34,11 @@ export async function GET(request: NextRequest): Promise<Response> {
   const locale = ((locales as readonly string[]).includes(raw) ? raw : defaultLocale) as Locale;
   const t = await getTranslations({ locale, namespace: "Changelog" });
 
-  const body = `/* minddy · habillage du flux du changelog. */
+  const body = `/* minddy · changelog feed styling. */
 
-/* Tout est masqué par défaut : un flux porte des nœuds qui n'ont aucun sens à
-   l'écran (guid, langue, date de build, le lien atom vers lui-même), et les
-   énumérer un par un obligerait à revenir ici au moindre champ ajouté. */
+/* Everything is hidden by default: a feed carries nodes that make no sense on
+   screen (guid, locale, build date, the Atom link to itself), and listing them
+   one by one would require coming back here whenever a field is added. */
 * {
   display: none;
 }
@@ -78,9 +78,9 @@ channel {
   padding: 3rem 1.25rem 4rem;
 }
 
-/* Le bandeau : la seule chose qu'un visiteur arrivé ici par curiosité a besoin
-   de lire. Posé en ::before parce qu'il n'existe dans aucun nœud du flux, et
-   il ne doit pas y exister, ce serait du bruit pour les lecteurs. */
+/* The banner: the only thing a curious visitor who arrives here needs to read.
+   It is placed in ::before because it does not exist in any feed node, and it
+   must not exist there: it would be noise for feed readers. */
 channel::before {
   content: ${cssString(t("feedBannerTitle"))} "\\A" ${cssString(t("feedBannerBody"))};
   white-space: pre-line;
@@ -144,9 +144,9 @@ item > description {
 }
 
 /**
- * Une chaîne CSS entre guillemets. Le texte vient du catalogue de traduction :
- * un guillemet droit ou un antislash y suffirait à casser la règle, et une
- * règle cassée ne se voit pas — elle est simplement ignorée.
+ * A CSS string enclosed in quotes. The text comes from the translation catalog:
+ * a straight quote or a backslash would be enough to break the rule, and a
+ * Broken rule is not visible — it is simply ignored.
  */
 function cssString(value: string): string {
   return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;

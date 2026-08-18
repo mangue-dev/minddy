@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Questions et entraide communautaire
+  - name: Community questions and support
     url: https://github.com/mangue-dev/minddy-issues/discussions
-    about: Demander de l'aide pour installer, configurer ou utiliser minddy.
-  - name: Signaler une vulnérabilité
+    about: Ask for help installing, configuring or using minddy.
+  - name: Report a vulnerability
     url: https://github.com/mangue-dev/minddy-issues/security/policy
-    about: Lire la procédure privée ; ne publiez aucun détail sensible dans une issue.
-  - name: Support du service managé et demandes commerciales
+    about: Read the private procedure; do not post any sensitive details in an issue.
+  - name: Managed-service support and sales inquiries
     url: https://github.com/mangue-dev/minddy-issues/blob/main/SUPPORT.md#offre-commerciale
-    about: Facturation, compte hébergé, SLA, migration, formation et prestations.
+    about: Billing, hosted account, SLA, migration, training and services.

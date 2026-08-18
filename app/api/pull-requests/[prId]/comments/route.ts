@@ -7,11 +7,11 @@ import {
 } from "@/lib/server/agent/pr-actions";
 
 /**
- * Fil de conversation d'une pull request (MIN-143), servi par l'API de la forge
- * via un token frais.
- *  GET  → commentaires de la PR.
- *  POST → { body } ajoute un commentaire (auteur = la GitHub App minddy, ou le
- *         compte GitLab connecté).
+ * Pull request thread (MIN-143), served by the forge API
+ * through a fresh token.
+ * GET → PR comments.
+ * POST → { body } add a comment (author = the GitHub App minddy, or the
+ * GitLab account connected).
  */
 
 type RouteContext = { params: Promise<{ prId: string }> };
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  // `?.` : un corps JSON `null` est valide côté parseur mais n'a pas de champs.
+  // `?.`: a JSON body `null` is valid on the parser side but has no fields.
   const body = typeof payload?.body === "string" ? payload.body.trim() : "";
   if (!body) return NextResponse.json({ error: "Comment required" }, { status: 400 });
 

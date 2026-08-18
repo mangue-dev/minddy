@@ -10,13 +10,13 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Badge d'un modèle IA (MIN-46) : vrai logo du provider (`ModelLogo`) + nom
- * complet lisible ("DeepSeek V4 Flash").
+ * Badge of an AI model (MIN-46): real logo of the provider (`ModelLogo`) + name
+ * complete readable ("DeepSeek V4 Flash").
  *
- * Par défaut, l'id brut OpenRouter reste accessible au survol — c'est ce qu'on
- * copie dans une config ou qu'on cherche dans un log, mais ce n'est pas ce
- * qu'on lit. Là où le badge n'est PAS une donnée technique à recopier mais un
- * réglage à comprendre, `tooltip` remplace cet id par une phrase.
+ * By default, the raw OpenRouter id remains accessible on hover — this is what that we
+ * copy into a config or that we look in a log, but it is not what
+ * that we read. Where the badge is NOT technical data to copy but a
+ * setting to understand, `tooltip` replaces this id with a sentence.
  */
 export function ModelBadge({
   model,
@@ -29,17 +29,17 @@ export function ModelBadge({
   className?: string;
   size?: number;
   /**
-   * Ce que le badge dit quand AUCUN modèle n'est fixé — une routine qui suit le
-   * défaut de son propriétaire (MIN-185). Sans lui, le badge disparaît : c'est
-   * le bon choix là où le modèle est une donnée du run (il y en a toujours un),
-   * et le mauvais là où son absence EST l'information.
-   */
+ * What the badge says when NO pattern is set — a routine that follows the
+ * default of its owner (MIN-185). Without it, the badge disappears: it is
+ * the good choice where the model is a piece of data of the run (there is always one),
+ * and the bad one where its absence IS the information.
+ */
   fallbackLabel?: string;
   /**
-   * Remplace l'id brut au survol par une phrase qui dit ce que ce badge EST.
-   * C'est aussi la seule façon d'avoir une infobulle sur le badge de repli :
-   * sans modèle fixé, il n'y a aucun id à révéler.
-   */
+ * Replaces the raw id on hover with a phrase that says what this badge IS.
+ * This is also the only way to have a tooltip on the fallback badge:
+ * without a set template, there are no ids to reveal.
+ */
   tooltip?: string;
 }) {
   const chip = cn(
@@ -57,15 +57,15 @@ export function ModelBadge({
     </span>
   );
 
-  // Rien à survoler quand il n'y a ni phrase fournie ni id à révéler.
+  // Nothing to hover over when there is neither sentence provided nor id to reveal.
   const content = tooltip ?? model;
   if (!content) return badge;
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>{badge}</TooltipTrigger>
-      {/* La fonte à chasse fixe est celle d'un id qu'on recopie ; une phrase se
-          lit dans la fonte du produit. */}
+      {/* The monospaced font is that of an id that is copied; a phrase reads
+ in the product font. */}
       <TooltipContent className={tooltip ? undefined : "font-mono"}>
         {content}
       </TooltipContent>

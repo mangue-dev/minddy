@@ -1,91 +1,90 @@
 /**
- * Les PAGES d'un projet (MIN-266) — la logique pure de l'arbre.
+ * The PAGES of a project (MIN-266) — the pure logic of the tree.
  *
- * Aucune IO ici : tout ce module travaille sur la LISTE À PLAT que le serveur
- * rend en une requête. C'est le cœur du modèle — l'imbrication n'est qu'une
- * colonne `parent_id`, donc l'arbre se reconstruit chez l'appelant (sidebar,
- * fil d'Ariane, sélecteur de parent) sans CTE récursive et sans N+1, et la
- * profondeur peut rester illimitée sans que ça coûte quoi que ce soit.
+ * No IO here: this whole module works on the FLAT LIST that the server
+ * renders in a request. This is the heart of the model — nesting is just one
+ * `parent_id` column, so the tree is rebuilt at the caller (sidebar,
+ * breadcrumbs, parent selector) without recursive CTE and without N+1, and the
+ * depth can remain unlimited at no cost whatever. it is.
  *
- * Ce que ça impose en retour : rien n'interdit un CYCLE. Reparenter librement
- * une page sous une autre peut fermer une boucle (A → B → C → A), et toute
- * fonction qui descend l'arbre part alors en récursion infinie — écran blanc.
- * `wouldCreateCycle` est la garde, appelée AVANT l'écriture par
- * `lib/server/pages.ts` ; l'UI peut la rappeler pour griser un choix, mais elle
- * n'en est jamais le seul porteur.
+ * What this imposes in return: nothing prohibits a CYCLE. Freely reparent
+ * a page under another can close a loop (A → B → C → A), and any
+ * function that goes down the tree then goes into infinite recursion — white screen.
+ * `wouldCreateCycle` is the guard, called BEFORE writing by
+ * `lib/server/pages.ts` ; the UI can recall it to gray out a choice, but it
+ * is never the only bearer.
  */
 
 /**
- * La NATURE d'une écriture de page (MIN-277) : un humain, ou l'agent.
+ * The NATURE of a page entry (MIN-277): a human, or the agent.
  *
- * Elle ne se déduit pas de l'acteur — un geste de Numo, du MCP ou de l'agent de
- * code porte l'id du compte qui l'a permis. Elle se transporte donc avec
- * l'écriture, depuis la surface qui la déclenche jusqu'à la ligne d'historique.
+ * It is not deduced from the actor - a gesture from Numo, the MCP or the agent of
+ * code carries the id of the account which authorized it. It is therefore transported with
+ * the writing, from the surface which triggers it to the history line.
  */
 export type PageWriteKind = "human" | "agent";
 
-/** Une page, telle qu'elle sort de la table (colonnes brutes). */
+/** A page, as it comes out of the table (raw columns). */
 export interface Page {
   id: string;
   project_id: string;
   parent_id: string | null;
   title: string;
-  /** Emoji, ou null quand la page prend l'icône par défaut. */
+  /** Emoji, or null when the page takes the default icon. */
   icon: string | null;
-  /** Document ProseMirror. `null` quand la lecture ne l'a pas demandé. */
+  /** ProseMirror document. `null` when reading has not requested it. */
   content: unknown;
   version: number;
-  /** Index fractionnaire : le tri des fratries est lexicographique. */
+  /** Fractional index: sorting of siblings is lexicographic. */
   position: string;
   created_by: string | null;
   /**
-   * L'auteur de la DERNIÈRE écriture (MIN-277), et la nature de son geste.
-   *
-   * Les deux vont ensemble : six outils d'écriture sont ouverts à Numo, au MCP
-   * et à l'agent de code, et tous écrivent sous l'id d'un compte humain. Sans
-   * `updated_kind`, une page réécrite par l'agent s'afficherait « modifiée par
-   * Clément » — l'inverse exact de la règle d'identité de minddy.
-   *
-   * `null` sur une page que personne n'a réécrite depuis sa création : c'est
-   * alors `created_by` qui nomme son auteur.
-   */
+ * The author of the LAST writing (MIN-277), and the nature of his action.
+ *
+ * The two go together: six writing tools are open to Numo, the MCP
+ * and the code agent, and all write under the id of a human account. Without
+ * `updated_kind`, a page rewritten by the agent would show "modified by
+ * Clement" — the exact opposite of minddy's identity rule.
+ *
+ * `null` on a page that no one has rewritten since its creation: it's
+ * then `created_by` which names its author.
+ */
   updated_by: string | null;
   updated_kind: PageWriteKind;
-  /** La clé MCP derrière la dernière écriture, quand elle vient d'un agent de
-      clé (MIN-282) : c'est elle qui distingue « Claude Code » de Numo, que
-      `updated_kind: "agent"` recouvre tous les deux. */
+  /** The MCP key behind the last writing, when it comes from an agent of
+ key (MIN-282): it is this which distinguishes “Claude Code” from Numo, which
+ `updated_kind: "agent"` covers both. */
   updated_api_key_id?: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
   deleted_by: string | null;
-  /** La page par laquelle la suppression est arrivée (null sur la racine). */
+  /** The page through which the deletion occurred (null on the root). */
   deleted_root_id: string | null;
   /**
-   * Le corps du parent citait cette page, et son bloc en a été retiré au moment
-   * de la mise à la corbeille (MIN-272). C'est ce qui permet à la restauration
-   * de remettre le bloc **là où il y en avait un** — et nulle part ailleurs :
-   * une page née dans la sidebar n'a jamais eu de bloc chez son parent.
-   */
+ * The parent's body cited this page, and its block was removed when
+ * was trashed (MIN-272). This is what allows the restoration
+ * to put the block back **where there was one** — and nowhere else:
+ * a page born in the sidebar has never had a block in its parent.
+ */
   parent_block_removed: boolean;
   /**
-   * Épinglée en tête de la barre secondaire — PARTAGÉ par le projet, pas propre
-   * à qui la regarde (cf. la migration `pages_favorite`).
-   *
-   * Une sous-page favorite se lit alors DEUX fois dans la barre : une fois en
-   * tête, à plat, et une fois à sa place dans l'arbre. C'est voulu — le favori
-   * est un raccourci vers une page, pas un déménagement, et la voir sortir de
-   * sous son parent ferait croire à un reparentage.
-   */
+ * Pinned to the head of the secondary bar — SHARED by the project, not own
+ * to whoever looks at it (see the `pages_favorite` migration).
+ *
+ * A favorite subpage is then read TWICE in the bar: once at the head, flat, and once in its place in the tree. This is by design — the favorite
+ * is a shortcut to a page, not a move, and seeing it move out of
+ * under its parent would make it seem like a reparent.
+ */
   favorite: boolean;
 }
 
 /**
- * Un ÉTAT ANTÉRIEUR d'une page (MIN-277), tel que l'historique le rend.
+ * A 1-page PREVIOUS STATE (MIN-277), as the history renders it.
  *
- * Le corps n'est là que sur l'aperçu d'UNE version : la liste ne le porte
- * jamais — vingt documents ProseMirror pour une liste de dates serait la
- * requête la plus lourde de l'écran pour un contenu que personne n'affiche.
+ * The body is only there on the preview of ONE version: the list carries it
+ * never — twenty ProseMirror documents for a list of dates would be the
+ * heaviest request on the screen for content that no one displays.
  */
 export interface PageVersion {
   id: string;
@@ -93,32 +92,32 @@ export interface PageVersion {
   version: number;
   title: string;
   icon: string | null;
-  /** Document ProseMirror — absent de la liste, présent sur l'aperçu. */
+  /** ProseMirror document — missing from the list, present on the preview. */
   content?: unknown;
   author_id: string | null;
   author_kind: PageWriteKind;
-  /** Le nom à afficher, résolu côté serveur. « minddy » sur un geste d'agent. */
+  /** The name to display, resolved on the server side. “minddy” on an agent gesture. */
   author_name: string;
   /**
-   * L'AGENT derrière une écriture de clé MCP, résolu côté serveur — l'id
-   * canonique que lit `McpAvatar` (« claude-code », « cursor »…). Null quand
-   * l'écriture est humaine, ou qu'elle vient de Numo.
-   *
-   * Le NOM reste « minddy » dans les deux cas d'agent (règle d'identité) ; ce
-   * champ ne décide que du visage.
-   */
+ * The AGENT behind an MCP key write, resolved server-side — the canonical id
+ * that `McpAvatar` reads (“claude-code”, “cursor”…). Null when
+ * the writing is human, or comes from Numo.
+ *
+ * The NAME remains “minddy” in both agent cases (identity rule); this
+ * field only decides the face.
+ */
   author_agent?: string | null;
   created_at: string;
 }
 
 /**
- * Ce que l'ARBRE lit d'une page, et rien de plus.
+ * What the TREE reads from a page, and nothing more.
  *
- * La liste à plat que rend le serveur ne porte pas le corps des documents : ses
- * lignes ne sont donc PAS des `Page`. Tout ce module travaille sur ce minimum
- * commun et reste générique sur le reste — c'est ce qui permet à la sidebar de
- * bâtir son arbre avec des lignes sans corps, et aux tests de le bâtir avec des
- * pages entières, sans deux jeux de fonctions.
+ * The flat list that the server renders does not carry the body of the documents: its
+ * lines are therefore NOT `Page`. This entire module works on this common minimum
+ * and remains generic on the rest — this is what allows the sidebar to
+ * to build its tree with lines without bodies, and to the tests to build it with
+ * whole pages, without two sets of functions.
  */
 export interface PageRow {
   id: string;
@@ -127,27 +126,27 @@ export interface PageRow {
   position: string;
 }
 
-/** La même page, une fois l'arbre reconstruit. */
+/** The same page, once the tree has been rebuilt. */
 export type PageTreeNode<T extends PageRow> = T & {
   children: PageTreeNode<T>[];
-  /** 0 pour une page racine. */
+  /** 0 for a root page. */
   depth: number;
 };
 
-/** L'arbre d'une page entière — le cas courant côté serveur et dans les tests. */
+/** The entire page tree — the common case on the server side and in tests. */
 export type PageNode = PageTreeNode<Page>;
 
 /* ─── L'arbre ──────────────────────────────────────────────────────────────── */
 
 /**
- * Reconstruit l'arbre depuis la liste à plat, fratries triées par `position`.
+ * Reconstructs the tree from the flat list, siblings sorted by `position`.
  *
- * Deux cas qui ne sont pas des erreurs et ne doivent rien faire disparaître :
- * une page dont le parent n'est PAS dans la liste (parent à la corbeille, ou
- * lecture partielle) remonte à la racine plutôt que de sortir de l'arbre — une
- * page invisible est pire qu'une page mal placée ; et un cycle éventuellement
- * présent en base (garde contournée, écriture directe) est rompu ici, ses
- * membres traités comme des racines, pour qu'un rendu reste possible.
+ * Two cases which are not errors and should not cause anything to disappear:
+ * a page whose parent is NOT in the list (parent in the trash, or
+ * partial read) goes back to the root rather than out of the tree — an invisible
+ * page is worse than a misplaced page; and a cycle possibly
+ * present in the base (bypassed guard, direct write) is broken here, its
+ * members treated as roots, so that rendering remains possible.
  */
 export function buildPageTree<T extends PageRow>(
   pages: readonly T[]
@@ -179,7 +178,7 @@ export function buildPageTree<T extends PageRow>(
   return roots;
 }
 
-/** `a` descend-il de `ancestorId` ? Borné par le nombre de pages. */
+/** Is `a` descended from `ancestorId`? Bounded by the number of pages. */
 function descends<T extends PageRow>(
   byId: Map<string, PageTreeNode<T>>,
   from: PageTreeNode<T>,
@@ -189,7 +188,7 @@ function descends<T extends PageRow>(
   let current: PageTreeNode<T> | undefined = from;
   while (current) {
     if (current.id === ancestorId) return true;
-    if (seen.has(current.id)) return false; // cycle déjà présent : on s'arrête
+    if (seen.has(current.id)) return false; // cycle already present: we stop
     seen.add(current.id);
     current = current.parent_id ? byId.get(current.parent_id) : undefined;
   }
@@ -197,10 +196,10 @@ function descends<T extends PageRow>(
 }
 
 /**
- * Ordre d'une fratrie : la position d'abord (index fractionnaire, comparaison
- * lexicographique), le titre ensuite quand deux positions sont identiques —
- * possible après un import ou une écriture concurrente —, et l'id en dernier
- * recours pour que l'ordre soit total et donc stable d'un rendu à l'autre.
+ * Order of a sibling: the position first (fractional index, comparison
+ * lexicographic), the title then when two positions are identical —
+ * possible after an import or a concurrent writing —, and the id last
+ * recourse so that the order is total and therefore stable from one rendering to the other.
  */
 export function byPosition(a: PageRow, b: PageRow): number {
   if (a.position !== b.position) return a.position < b.position ? -1 : 1;
@@ -208,7 +207,7 @@ export function byPosition(a: PageRow, b: PageRow): number {
   return a.id < b.id ? -1 : 1;
 }
 
-/** Aplatit un arbre dans l'ordre d'affichage (parent, puis ses descendants). */
+/** Flattens a tree in display order (parent, then its descendants). */
 export function flattenPageTree<T extends PageRow>(
   nodes: readonly PageTreeNode<T>[]
 ): PageTreeNode<T>[] {
@@ -224,20 +223,20 @@ export function flattenPageTree<T extends PageRow>(
 }
 
 /**
- * Les pages ÉPINGLÉES, dans l'ordre de l'arbre.
+ * The PINLED pages, in the order of the tree.
  *
- * L'ordre est celui du parcours en profondeur, et non celui des mises en
- * favori : c'est le seul que l'œil retrouve d'une visite à l'autre, et il ne
- * réarrange pas le bloc quand on en épingle une quatrième.
+ * The order is that of the in-depth search, and not that of the postings
+ * favorite: it is the only one that the eye finds from one visit to the next, and it does not
+ * does not rearrange the block when a fourth is pinned.
  *
- * Elle part de l'ARBRE et non de la liste à plat, ce qui règle deux cas d'un
- * coup : une page dont le parent est à la corbeille a été remontée à la racine
- * par `buildPageTree` et reste donc épinglée, et chaque fratrie est déjà triée
- * par `position`.
+ * It starts from the TREE and not from the flat list, which solves two cases of one
+ * suddenly: a page whose parent is in the trash has been moved up to the root
+ * by `buildPageTree` and therefore remains pinned, and each sibling is already sorted
+ * by `position`.
  *
- * Ce qu'elle ne fait PAS : retirer la page de l'arbre. Une sous-page favorite
- * se lit deux fois dans la barre — épingler est un raccourci, pas un
- * déménagement.
+ * What it does NOT do: remove the page from the tree. A favorite subpage
+ * reads twice in the bar — pinning is a shortcut, not a
+ * move.
  */
 export function favoritePages<T extends PageRow & { favorite: boolean }>(
   tree: readonly PageTreeNode<T>[]
@@ -246,10 +245,10 @@ export function favoritePages<T extends PageRow & { favorite: boolean }>(
 }
 
 /**
- * Les ids de tous les descendants d'une page, la page NON comprise.
+ * The ids of all descendants of a page, NOT including the page.
  *
- * C'est ce que la corbeille met à la corbeille avec elle (suppression
- * récursive), et ce que la purge finit par effacer.
+ * This is what the recycle bin trashes with it (recursive delete
+ *), and what the purge ends up clearing.
  */
 export function descendantIds(
   pages: readonly { id: string; parent_id: string | null }[],
@@ -278,7 +277,7 @@ export function descendantIds(
   return out;
 }
 
-/** Les ancêtres d'une page, du plus proche à la racine (fil d'Ariane inversé). */
+/** The ancestors of a page, from the closest to the root (reverse breadcrumbs). */
 export function ancestorsOf<T extends { id: string; parent_id: string | null }>(
   pages: readonly T[],
   pageId: string
@@ -298,24 +297,24 @@ export function ancestorsOf<T extends { id: string; parent_id: string | null }>(
 }
 
 /**
- * Au-delà de ce nombre de niveaux, le fil d'Ariane replie son MILIEU.
+ * Beyond this number of levels, the breadcrumb folds its MIDDLE.
  *
- * Trois, parce que c'est le point où replier fait gagner de la place : à trois
- * niveaux, un « … » remplacerait un seul élément par un autre de largeur
- * comparable, en coûtant un clic.
+ * Three, because this is the point where folding saves space: at three
+ * levels, a “…” would replace a single element with another of width
+ * comparable, costing one click.
  */
 const MAX_PATH_LEVELS = 3;
 
 /**
- * Découpe un chemin en ce qu'on montre et ce qu'on replie (MIN-272).
+ * Cuts out a path into what we show and what we fold (MIN-272).
  *
- * Ce sont les niveaux du MILIEU qui s'effacent, jamais les deux bouts : la
- * racine dit dans quel document on est, le dernier dit d'où l'on vient, et ce
- * sont les deux seuls qu'on lit sans réfléchir. Replier par la fin ferait
- * disparaître le parent direct, c'est-à-dire le seul lien dont on se sert
- * vraiment.
+ * It is the MIDDLE levels that are erased, never the two ends: the
+ * root says which document we are in, the last says where we come from, and ce
+ * are the only two that we read without thinking. Folding at the end would make
+ * disappear the direct parent, that is to say the only link we use
+ * really.
  *
- * `trail` va de la RACINE vers le parent direct — l'inverse d'`ancestorsOf`.
+ * `trail` goes from the ROOT to the direct parent — the opposite d'`ancestorsOf`.
  */
 export function foldPath<T>(
   trail: readonly T[],
@@ -332,19 +331,18 @@ export function foldPath<T>(
   };
 }
 
-/* ─── La garde ─────────────────────────────────────────────────────────────── */
+/* ─── The guard ─────────────────────────────── ──────────────────────────────── */
 
 /**
- * Ce déplacement fermerait-il une boucle ?
+ * Would this move close a loop?
  *
- * Vrai dans deux cas : la page devient son propre parent, ou elle devient
- * enfant d'un de ses propres descendants. Le serveur répond 409 dans ce cas —
- * la garde est là parce que la profondeur est illimitée : sans plafond, le seul
- * rempart contre la récursion infinie de la sidebar est de refuser l'écriture
- * qui la rendrait possible.
+ * True in two cases: the page becomes its own parent, or it becomes
+ * child of one of its own descendants. The server responds 409 in this case —
+ * the guard is there because the depth is unlimited: without a ceiling, the only defense against the infinite recursion of the sidebar is to refuse the write
+ * which would make it possible.
  *
- * Un `nextParentId` qui ne désigne aucune page connue n'est PAS un cycle : la
- * validation de l'existence du parent est un autre contrôle, ailleurs.
+ * A `nextParentId` which does not designate any known page is NOT a cycle: the
+ * validation of the existence of the parent is another check, elsewhere.
  */
 export function wouldCreateCycle(
   pages: readonly { id: string; parent_id: string | null }[],
@@ -359,31 +357,31 @@ export function wouldCreateCycle(
   let current: string | null = nextParentId;
   while (current) {
     if (current === pageId) return true;
-    if (seen.has(current)) return false; // cycle préexistant, sans la page
+    if (seen.has(current)) return false; // preexisting cycle, without the page
     seen.add(current);
     current = byId.get(current)?.parent_id ?? null;
   }
   return false;
 }
 
-/* ─── Les positions ────────────────────────────────────────────────────────── */
+/* ─── Positions ───────────────────────────── ───────────────────────────── */
 
 /**
- * Index fractionnaire, alphabet de 62 chiffres dont l'ordre ASCII coïncide avec
- * l'ordre des valeurs : une clé se compare comme une chaîne, en base et en JS,
- * sans conversion. Une clé est la partie fractionnaire d'un nombre — « V » vaut
- * ~0,5, « V5 » un peu plus.
+ * Fractional index, alphabet of 62 digits whose ASCII order coincides with
+ * the order of values: a key is compared like a string, in base and in JS,
+ * without conversion. A key is the fractional part of a number — “V” is worth
+ * ~0.5, “V5” a little more.
  *
- * L'intérêt sur un entier : insérer entre deux voisins n'écrit QUE la ligne
- * déplacée. Réordonner une fratrie de trente sous-pages par glisser-déposer
- * coûte un update, pas trente.
+ * The interest on an integer: inserting between two neighbors ONLY writes the line
+ * moved. Reorder a sibling of thirty subpages by drag and drop
+ * costs one update, not thirty.
  */
 const DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 /**
- * Une position valide : au moins un chiffre, et rien que des chiffres de
- * l'alphabet. C'est ce que le serveur exige d'une position venue du client
- * (glisser-déposer) — une chaîne hors alphabet trierait n'importe où.
+ * A valid position: at least one digit, and only digits of
+ * the alphabet. This is what the server requires from a position coming from the client
+ * (drag and drop) — a non-alphabet string would sort anywhere.
  */
 export function isPosition(value: unknown): value is string {
   if (typeof value !== "string" || value.length === 0) return false;
@@ -393,8 +391,8 @@ export function isPosition(value: unknown): value is string {
   return !value.endsWith("0");
 }
 
-/** Une clé ne finit jamais par le chiffre zéro : sinon aucune clé ne tient
-    entre elle et la précédente. Une valeur venue d'ailleurs est rattrapée. */
+/** A key never ends with the number zero: otherwise no key holds
+ between it and the previous one. A value coming from elsewhere is caught up. */
 function sanitize(key: string | null | undefined): string | null {
   if (!key) return null;
   for (const char of key) {
@@ -403,7 +401,7 @@ function sanitize(key: string | null | undefined): string | null {
   return key.endsWith("0") ? `${key}V` : key;
 }
 
-/** Milieu de `a` et `b`, deux fractions, avec `a < b` (b null = 1). */
+/** Middle of `a` and `b`, two fractions, with `a < b` (b null = 1). */
 function midpoint(a: string, b: string | null): string {
   if (b !== null) {
     let common = 0;
@@ -419,20 +417,20 @@ function midpoint(a: string, b: string | null): string {
   if (digitB - digitA > 1) {
     return DIGITS[Math.round(0.5 * (digitA + digitB))];
   }
-  // Chiffres consécutifs : on descend d'un cran.
+  // Consecutive digits: we go down a notch.
   if (b !== null && b.length > 1) return b.slice(0, 1);
   return DIGITS[digitA] + midpoint(a.slice(1), null);
 }
 
 /**
- * Une position entre deux voisins. `before`/`after` sont les positions des
- * pages qui encadrent la place visée, `null` pour un bord de fratrie :
- * `positionBetween(null, null)` donne la toute première page,
- * `positionBetween(dernière, null)` ajoute en fin de fratrie.
+ * A position between two neighbors. `before`/`after` are the positions of the
+ * pages which surround the target place, `null` for a sibling edge:
+ * `positionBetween(null, null)` gives the very first page,
+ * `positionBetween(last, null)` adds at the end of the siblings.
  *
- * Un couple incohérent (before ≥ after, valeurs corrompues) ne lève pas : on
- * retombe sur un bord. Refuser ici bloquerait un déplacement pour une donnée
- * douteuse, là où le pire qui puisse arriver est un ordre inattendu.
+ * An inconsistent pair (before ≥ after, corrupted values) does not raise: on
+ * falls back on an edge. Refusing here would block a move for questionable
+ * data, where the worst that could happen is an unexpected order.
  */
 export function positionBetween(
   before: string | null | undefined,
@@ -441,7 +439,7 @@ export function positionBetween(
   let a = sanitize(before);
   let b = sanitize(after);
   if (a !== null && b !== null && a >= b) {
-    // Ordre incohérent : on ne garde que la borne basse.
+    // Inconsistent order: we only keep the lower limit.
     b = null;
   }
   if (a === null && b === null) return midpoint("", null);
@@ -449,7 +447,7 @@ export function positionBetween(
   return midpoint(a, b);
 }
 
-/** La position d'une nouvelle page, en fin de la fratrie donnée. */
+/** The position of a new page, at the end of the given sibling. */
 export function positionAtEnd(
   siblings: readonly { position: string }[]
 ): string {

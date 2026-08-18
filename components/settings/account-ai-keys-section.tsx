@@ -29,14 +29,14 @@ import { AI_SURFACE_DEFINITIONS, type AiSurface, type ByokModelKey } from "@/lib
 import { isLocalAgentProvider } from "@/lib/agent-providers";
 
 /**
- * Section « Agent de code » des paramètres du compte (MIN-46) : le provider et
- * la clé d'abord, le modèle par défaut ensuite, le raisonnement en dernier.
- * Chaque provider a un défaut frontier ; OpenRouter BYOK reprend le défaut du
- * quota minddy (même endpoint).
+ * “Code agent” section of account settings (MIN-46): the provider and
+ * key first, default model second, reasoning last.
+ * Each provider has a border fault; OpenRouter BYOK takes over the default of
+ * minddy quota (same endpoint).
  *
- * Le premier bloc vit dans `ByokConnectPanel` depuis MIN-149 : l'onboarding
- * propose la même chose à l'étape « clé », et deux formulaires de clé auraient
- * divergé au premier provider ajouté.
+ * The first block lives in `ByokConnectPanel` since MIN-149: onboarding
+ * proposes the same thing at the "key" stage, and two key forms would have
+ * diverged at the first provider added.
  */
 export function AccountAiKeysSection() {
   const t = useTranslations("Account");
@@ -72,7 +72,7 @@ export function AccountAiKeysSection() {
   return (
     <>
       {/* ── Provider (quota minddy ou BYOK), EN PREMIER ─────────────────────── */}
-      {/* `ByokConnectPanel` est un assistant partagé avec l'onboarding : seul son
+      {/* `ByokConnectPanel` is an assistant shared with onboarding: only its
           cadre change, jamais son contenu. */}
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountAiProvider}
@@ -97,8 +97,8 @@ export function AccountAiKeysSection() {
         />
       ) : null}
 
-      {/* Sans BYOK, les préférences de l'agent gardent leur carte. Dès qu'une
-          clé existe, elles vivent dans la ligne Agent Numo du tableau ci-dessus. */}
+      {/* Without BYOK, agent preferences keep their card. As soon as a
+          key exists, they live in the Agent Numo row of the table above. */}
       {!keysLoading && !byokKey ? (
         <SettingsGroup
           anchor={SETTINGS_SECTIONS.accountAgent}
@@ -122,7 +122,7 @@ export function AccountAiKeysSection() {
   );
 }
 
-/** Surfaces couvertes par la clé et modèle explicite de chaque type d'appel. */
+/** Areas covered by the key and explicit model of each type of call. */
 function ByokSurfacePreferences({
   aiKey: key,
   defaultModel,

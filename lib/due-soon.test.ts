@@ -13,8 +13,8 @@ import type { IssueEffort, IssueStatus } from "./issue-constants";
 
 const TODAY = "2026-07-27";
 
-/** Une échéance datée à midi UTC : loin des bords de journée, donc le jour
-    calendaire ne bascule pas d'un fuseau à l'autre (sauf test dédié). */
+/** A deadline dated at noon UTC: far from the edges of the day, so the calendar day
+ does not switch from one time zone to another (except dedicated test). */
 const at = (day: string) => `${day}T12:00:00.000Z`;
 
 function issue(
@@ -42,12 +42,12 @@ describe("daysBetweenDays", () => {
   it("franchit les mois et les années", () => {
     expect(daysBetweenDays("2026-01-31", "2026-02-01")).toBe(1);
     expect(daysBetweenDays("2026-12-31", "2027-01-01")).toBe(1);
-    // 2028 est bissextile : 29 février existe.
+    // 2028 is a leap year: February 29 exists.
     expect(daysBetweenDays("2028-02-28", "2028-03-01")).toBe(2);
   });
 
   it("traverse un changement d'heure sans perdre ni gagner de jour", () => {
-    // Dernier dimanche de mars : l'Europe passe à l'heure d'été.
+    // Last Sunday in March: Europe switches to summer time.
     expect(daysBetweenDays("2026-03-28", "2026-03-30")).toBe(2);
   });
 
@@ -66,7 +66,7 @@ describe("addDays", () => {
 
 describe("calendarDayInTz", () => {
   it("rend le jour du fuseau, pas celui d'UTC", () => {
-    // 23 h UTC = déjà le lendemain à Paris, encore la veille à New York.
+    // 11 p.m. UTC = already the next day in Paris, again the day before in New York.
     const instant = new Date("2026-07-27T23:00:00.000Z");
     expect(calendarDayInTz(instant, "Europe/Paris")).toBe("2026-07-28");
     expect(calendarDayInTz(instant, "America/New_York")).toBe("2026-07-27");
@@ -82,13 +82,13 @@ describe("calendarDayInTz", () => {
 
 describe("dueDateCalendarDay", () => {
   it("laisse une valeur héritée « YYYY-MM-DD » telle quelle", () => {
-    // Colonne `date` d'avant la migration timestamptz : la passer par un fuseau
-    // la reculerait d'un jour.
+    // `date` column before the timestamptz migration: pass it through a time zone
+    // would move it back a day.
     expect(dueDateCalendarDay("2026-07-28", "America/New_York")).toBe("2026-07-28");
   });
 
   it("ramène un timestamptz au jour du fuseau", () => {
-    // Minuit UTC, c'est encore la veille au soir à New York.
+    // Midnight UTC is still the night before in New York.
     expect(dueDateCalendarDay("2026-07-28T00:00:00.000Z", "America/New_York")).toBe(
       "2026-07-27",
     );
@@ -111,7 +111,7 @@ describe("daysUntilDue", () => {
 });
 
 describe("isDueSoon", () => {
-  // La table de la spec : la fenêtre EST le poids Fibonacci de l'effort.
+  // The spec table: the window IS the Fibonacci weight of the effort.
   const WINDOWS: [IssueEffort | null, number][] = [
     ["xs", 1],
     ["s", 2],
@@ -146,7 +146,7 @@ describe("isDueSoon", () => {
         false,
       );
     }
-    // Triage n'est pas clos : un ticket daté y compte comme ailleurs.
+    // Triage is not closed: a dated ticket counts there as elsewhere.
     expect(
       isDueSoon(issue({ effort: "xs", due_date: tomorrow, status: "triage" }), TODAY, "UTC"),
     ).toBe(true);
@@ -158,8 +158,8 @@ describe("isDueSoon", () => {
   });
 
   it("tranche dans le fuseau de l'utilisateur", () => {
-    // Échéance à minuit UTC le 29 : c'est encore le 28 à New York (J+1, dans la
-    // fenêtre d'un XS) mais bien le 29 à Paris (J+2, hors fenêtre).
+    // Deadline at midnight UTC on the 29th: it's still the 28th in New York (D+1, in the
+    // window of an XS) but on the 29th in Paris (D+2, excluding window).
     const midnight = issue({ effort: "xs", due_date: "2026-07-29T00:00:00.000Z" });
     expect(isDueSoon(midnight, TODAY, "America/New_York")).toBe(true);
     expect(isDueSoon(midnight, TODAY, "Europe/Paris")).toBe(false);
@@ -170,8 +170,8 @@ describe("dueSoonUpperBound", () => {
   it("dépasse le dernier jour retenu, avec la marge des fuseaux", () => {
     const bound = dueSoonUpperBound(TODAY);
     expect(bound).toBe("2026-08-06T00:00:00.000Z");
-    // Le dernier jour possiblement retenu (XL) reste sous la borne, quel que
-    // soit le fuseau : minuit à Kiritimati (UTC+14) le jour J+8.
+    // The last day possibly retained (XL) remains below the limit, whatever
+    // or the time zone: midnight in Kiritimati (UTC+14) on day D+8.
     const lastDay = addDays(TODAY, DUE_SOON_MAX_DAYS);
     expect(`${lastDay}T23:59:59.999Z` < bound).toBe(true);
   });

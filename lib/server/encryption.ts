@@ -3,14 +3,14 @@ import "server-only";
 import crypto from "node:crypto";
 
 /**
- * Chiffrement au repos (AES-256-GCM) — porté de l'enveloppe d'AutoKap
- * (src/capture-encryption.ts). Utilisé pour stocker les tokens OAuth GitLab
- * (git_connections.access_token_encrypted / refresh_token_encrypted) que le
- * modèle GitHub App n'a pas besoin de stocker (tokens mintés à la volée).
+ * Encryption at rest (AES-256-GCM) — carried from the AutoKap
+ * wrapper (src/capture-encryption.ts). Used to store OAuth GitLab
+ * tokens (git_connections.access_token_encrypted / refresh_token_encrypted) that the
+ * GitHub App model does not need to store (minted tokens on the fly).
  *
- * L'enveloppe est auto-descriptive et sérialisée en JSON dans une colonne text.
- * La clé est dérivée par scrypt à partir d'un secret d'env + un sel aléatoire
- * par message ; IV et tag GCM aléatoires. Aucune dépendance externe (node:crypto).
+ * The wrapper is self-describing and serialized to JSON in a text column.
+ * The key is derived by scrypt from a secret of env + a random salt
+ * per message; Random IV and GCM tag. No external dependencies (node:crypto).
  */
 export interface EncryptedEnvelope {
   __encrypted: true;

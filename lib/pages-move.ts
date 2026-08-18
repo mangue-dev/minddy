@@ -1,22 +1,22 @@
 /**
- * Le GLISSER-DÉPOSER de l'arbre des pages (MIN-270), en logique pure.
+ * DRAG-DROP the page tree (MIN-270), in pure logic.
  *
- * Une ligne survolée offre trois cibles, et pas une de plus : au-dessus d'elle,
- * en dessous d'elle, ou DEDANS. C'est la grammaire de Notion, et c'est la seule
- * qui permette de réordonner et de reparenter avec le même geste — un arbre où
- * le déplacement ne fait que réordonner oblige à un second geste (« déplacer
- * vers… ») pour ce qui est l'action la plus fréquente.
+ * A hovered line offers three targets, and not one more: above it,
+ * below it, or IN. This is the grammar of Notion, and it is the only one
+ * that allows you to reorder and reparent with the same gesture — a tree where
+ * moving only reorders requires a second gesture ("move
+ * to...") for what is the most frequent action.
  *
- * Rien ici ne touche au réseau : la fonction rend le couple `parent_id` /
- * `position` que le PATCH enverra, ou `null` quand le geste n'a pas de sens.
- * `null` n'est pas une erreur — c'est ce qui empêche l'indicateur de dépôt de
- * s'allumer sous le curseur, avant même qu'un clic ne parte au serveur.
+ * Nothing here affects the network: the function returns the pair `parent_id` /
+ * `position` that the PATCH will send, or `null` when the gesture makes no sense.
+ * `null` is not an error — that's what prevents the deposit indicator of
+ * lights up under the cursor, even before a click is sent to the server.
  *
- * La garde de CYCLE est rejouée ici, alors que le serveur la porte déjà : sans
- * elle, on laisserait l'utilisateur lâcher une page dans sa propre descendance
- * pour lui répondre par un toast d'échec une demi-seconde plus tard. Le serveur
- * reste l'autorité (un autre onglet a pu déplacer la page entre-temps) ; celle-ci
- * n'est là que pour ne pas proposer un geste dont on sait qu'il sera refusé.
+ * The guard of CYCLE is replayed here, while the server is already carrying it: without
+ * it, we would let the user drop a page in his own descendant
+ * only to respond with a toast of failure half a second later. The server
+ * remains the authority (another tab may have moved the page in the meantime); this one
+ * is only there to avoid proposing a gesture which we know will be refused.
  */
 
 import {
@@ -26,7 +26,7 @@ import {
   type PageRow,
 } from "./pages";
 
-/** Où la page tombe par rapport à la ligne survolée. */
+/** Where the page falls relative to the hovered line. */
 export type PageDropMode = "before" | "after" | "inside";
 
 export interface PageMove {
@@ -35,11 +35,8 @@ export interface PageMove {
 }
 
 /**
- * Le tiers HAUT d'une ligne dépose avant, le tiers BAS dépose après, le milieu
- * dépose dedans. Un tiers et pas un quart : la zone « dedans » est celle qui
- * change la structure, et c'est aussi la plus difficile à viser — lui donner
- * plus de place qu'aux deux autres la rendrait au contraire trop facile à
- * déclencher par accident en cherchant à réordonner.
+ * The HIGH third of a line deposits before, the LOWER third deposits after, the middle
+ * deposits inside. A third and not a quarter: the “inside” zone is the one that changes the structure, and it is also the hardest to target — giving it more space than the other two would instead make it too easy to trigger by accident when trying to reorder.
  */
 export function dropModeAt(offsetY: number, height: number): PageDropMode {
   if (height <= 0) return "inside";
@@ -50,13 +47,13 @@ export function dropModeAt(offsetY: number, height: number): PageDropMode {
 }
 
 /**
- * Le déplacement à écrire, ou `null` si le geste n'a pas de sens : lâcher une
- * page sur elle-même, ou la lâcher dans sa propre descendance.
+ * The move to write, or `null` if the gesture does not make sense: drop a
+ * page on itself, or drop it in its own descendants.
  *
- * `pages` est la liste À PLAT, telle qu'elle est en cache : la fratrie visée en
- * est extraite et triée ici, la page déplacée retirée du compte — sinon
- * « déposer après mon voisin du dessous » calculerait une position entre lui et
- * moi, c'est-à-dire au même endroit qu'avant.
+ * `pages` is the FLAT list, as it is in the cache : the siblings referred to in
+ * are extracted and sorted here, the moved page removed from the account — otherwise
+ * "drop after my neighbor downstairs" would calculate a position between him and
+ * me, that is to say in the same place as before.
  */
 export function computePageMove(
   pages: readonly PageRow[],
@@ -79,16 +76,16 @@ export function computePageMove(
     .sort(byPosition);
 
   if (mode === "inside") {
-    // En FIN des sous-pages : c'est là qu'on lit une page qu'on vient de
-    // ranger, et c'est aussi ce que fait la création d'une sous-page.
+    // At the END of the subpages: this is where we read a page that we have just
+    // tidy up, and this is also what creating a subpage does.
     const last = siblings[siblings.length - 1];
     return { parent_id: parentId, position: positionBetween(last?.position, null) };
   }
 
   const index = siblings.findIndex((page) => page.id === targetId);
   if (index === -1) {
-    // La cible n'est plus dans sa propre fratrie (cache décalé) : on tombe en
-    // fin de liste plutôt que de refuser un geste que l'utilisateur a fait.
+    // The target is no longer in its own sibling group (offset cache): we fall into
+    // end of list rather than refusing a gesture that the user has made.
     const last = siblings[siblings.length - 1];
     return { parent_id: parentId, position: positionBetween(last?.position, null) };
   }

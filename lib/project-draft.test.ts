@@ -29,24 +29,24 @@ const draft: ProjectDraftInput = {
   autoAssignEnabled: true,
 };
 
-/** Ce que la route renvoie pour ce brouillon-là. */
+/** What the route returns for this draft. */
 const rowFor = (input: ProjectDraftInput) => ({
   ...projectDraftToRow(input),
   updated_at: "2026-08-04T10:00:00Z",
 });
 
 describe("projectDraftFromRow / projectDraftToRow", () => {
-  it("rend exactement ce qui a été enregistré", () => {
-    // Le contrat de la table : deux colonnes lues (name, step), tout le reste en
-    // jsonb. Un champ qui n'y entre pas est un champ que la reprise perd — sans
-    // rien signaler, puisque le wizard rouvre quand même.
+  it("returns exactly what was stored", () => {
+    // The table contract: two columns read (name, step), everything else in
+    // jsonb. A field that does not enter is a field that the recovery loses — without
+    // report nothing, since the wizard reopens anyway.
     const back = projectDraftFromRow(rowFor(draft));
     expect(back).toEqual({ ...draft, updatedAt: "2026-08-04T10:00:00Z" });
   });
 
-  it("retombe sur des défauts tenables quand `data` est vide", () => {
-    // Un brouillon écrit par une version précédente du wizard : le projet vaut
-    // mieux sans icône ni amorce qu'un wizard qui plante en le rouvrant.
+  it("falls back to safe defaults when `data` is empty", () => {
+    // A draft written by a previous version of the wizard: the project is worth
+    // better without an icon or primer than a wizard which crashes when reopening it.
     const back = projectDraftFromRow({
       id: draft.id,
       name: "Comète",
@@ -59,16 +59,16 @@ describe("projectDraftFromRow / projectDraftToRow", () => {
     expect(back.seed).toBeNull();
     expect(back.icon).toEqual({ kind: "none" });
     expect(back.repo).toBeNull();
-    // Jamais relancée : l'orbe du brouillon reste celle de son id, et le projet
-    // créé gardera la même — c'est l'aperçu du wizard qui l'a promis.
+    // Never restarted: the draft orb remains that of its id, and the project
+    // created will keep the same — it's the wizard preview that promised it.
     expect(back.orbSeed).toBeNull();
-    // Smart Assign est proposé ACTIVÉ par le wizard : un brouillon muet doit
-    // retomber sur ce défaut-là, pas sur `false`.
+    // Smart Assign is proposed ACTIVATED by the wizard: a silent draft must
+    // fall back on this default, not on `false`.
     expect(back.smartAssignEnabled).toBe(true);
     expect(back.autoAssignEnabled).toBe(false);
   });
 
-  it("refuse une étape qu'elle ne connaît pas", () => {
+  it("rejects a step it does not know", () => {
     const back = projectDraftFromRow({
       ...rowFor(draft),
       step: "une-étape-supprimée-depuis",
@@ -76,9 +76,9 @@ describe("projectDraftFromRow / projectDraftToRow", () => {
     expect(back.step).toBe("project");
   });
 
-  it("jette un dépôt à moitié écrit plutôt que de le rejouer", () => {
-    // Un `repo` incomplet mènerait à un `bindGitRepoApi` sans id de connexion,
-    // après la création du projet — l'endroit exact où l'on ne veut pas d'échec.
+  it("rejects a half-written draft instead of replaying it", () => {
+    // An incomplete `repo` would lead to a `bindGitRepoApi` without a connection id,
+    // after project creation — the exact place where we don't want failure.
     const back = projectDraftFromRow({
       ...rowFor(draft),
       data: { ...projectDraftToRow(draft).data, repo: { fullName: "x/y" } },
@@ -88,15 +88,15 @@ describe("projectDraftFromRow / projectDraftToRow", () => {
 });
 
 describe("stepIndexOf", () => {
-  it("rouvre à l'étape enregistrée", () => {
+  it("reopens at the stored step", () => {
     expect(stepIndexOf({ ...draft, step: "seed", updatedAt: "" })).toBe(
       stepsFor("new").indexOf("seed"),
     );
   });
 
-  it("retombe au début quand l'étape n'est pas dans ce parcours", () => {
-    // Sans origine, l'amorce n'existe pas : un `indexOf` nu rendrait -1, et le
-    // wizard rouvrirait sur la dernière étape (borne haute de `WizardDialog`).
+  it("falls back to the beginning when the step is not in this flow", () => {
+    // Without an origin, the seed does not exist: a bare `indexOf` would return -1, and the
+    // wizard would reopen on the last step (upper limit of `WizardDialog`).
     expect(stepIndexOf({ ...draft, origin: null, step: "seed", updatedAt: "" })).toBe(0);
   });
 });
@@ -111,14 +111,14 @@ describe("draftIconUrl", () => {
 });
 
 describe("draftOrbSeed", () => {
-  it("retombe sur l'id du brouillon tant que le tirage n'a pas été relancé", () => {
+  it("falls back to the draft id until the seed has been rerun", () => {
     expect(draftOrbSeed({ ...draft, updatedAt: "" })).toBe(draft.id);
   });
 
-  it("prend la graine relancée, et la fait survivre à un aller-retour en base", () => {
-    // Le point du test : le wizard montre une orbe AVANT que le projet existe.
-    // Si la graine ne traverse pas la table des brouillons, reprendre le
-    // brouillon rendrait une autre couleur que celle qu'on avait choisie.
+  it("uses the rerun seed and preserves it through a database round trip", () => {
+    // The point of the test: the wizard shows an orb BEFORE the project exists.
+    // If the seed does not cross the draft table, resume the
+    // draft would render a color other than the one we had chosen.
     const rerolled = { ...draft, orbSeed: "33333333-3333-4333-8333-333333333333" };
     expect(draftOrbSeed({ ...rerolled, updatedAt: "" })).toBe(rerolled.orbSeed);
     expect(projectDraftFromRow(rowFor(rerolled)).orbSeed).toBe(rerolled.orbSeed);

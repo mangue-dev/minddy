@@ -2,52 +2,51 @@ import type { CookieOptions } from "@supabase/ssr";
 import type { NextResponse } from "next/server";
 
 /**
- * Les options des cookies de SESSION Supabase (MIN-351).
+ * Cookie options for SESSION Supabase (MIN-351).
  *
- * `@supabase/ssr` écrit ses cookies avec ses propres défauts —
- * `{ path: "/", sameSite: "lax", httpOnly: false, maxAge: 400j }` — et il n'y a
- * PAS de `secure` dedans (voir `DEFAULT_COOKIE_OPTIONS` du paquet). Les cookies
- * qui portent la session étaient donc les seuls du dépôt à partir sans lui : les
- * trois écrits à la main (jeton d'attente d'OTP, déverrouillage de vue partagée,
- * identité du board public) le posent tous.
+ * `@supabase/ssr` writes its cookies with its own defaults —
+ * `{ path: "/", sameSite: "lax", httpOnly: false, maxAge: 400j }` — and there are
+ * NO `secure` in it (see `DEFAULT_COOKIE_OPTIONS` in the package). The cookies
+ * which carry the session were therefore the only ones in the repository to leave without it: the
+ * three handwritten ones (OTP waiting token, shared view unlocking,
+ * identity of the public board) all leave it.
  *
- * Sans `Secure`, le navigateur consent à renvoyer le cookie sur `http://` — il
- * suffit d'amener la victime sur un lien en clair vers le domaine pour lire le
- * jeton d'accès en transit. HSTS couvre le cas en production, mais HSTS est une
- * politique du navigateur qui a besoin d'une première visite pour s'installer :
- * le drapeau, lui, est porté par le cookie lui-même.
+ * Without `Secure`, the browser agrees to send the cookie back to `http://` — it's enough to take the victim to a clear link to the domain to read the
+ * access token in transit. HSTS covers the case in production, but HSTS is a
+ * browser policy that needs a first visit to install:
+ * the flag is carried by the cookie itself.
  *
- * Conditionné à `NODE_ENV` — la même règle que les trois autres — parce que le
- * développement local est en HTTP nu : un `Secure` inconditionnel y ferait
- * simplement disparaître la session à chaque navigation. Next inline la
- * constante dans le bundle client, donc le client du navigateur la lit aussi.
+ * Conditioned to `NODE_ENV` — the same rule as the other three — because the
+ * local development is in bare HTTP: an unconditional `Secure` would make
+ * simply disappear the session on each navigation. Next inline the
+ * constant in the client bundle, so the browser client reads it too.
  *
- * `httpOnly` reste FAUX, et ce n'est pas un oubli : le client du navigateur lit
- * ces cookies en JavaScript pour reconstruire la session. Les rendre `httpOnly`
- * déconnecterait l'app à chaque rechargement.
+ * `httpOnly` remains FALSE, and this is not an oversight: the browser client reads
+ * these cookies in JavaScript to rebuild the session. Making them `httpOnly`
+ * would disconnect the app on each reload.
  */
 export const SESSION_COOKIE_OPTIONS = {
   secure: process.env.NODE_ENV === "production",
 } as const;
 
 /**
- * Ce que `@supabase/ssr` donne à écrire, gardé de côté puis reporté sur la
- * réponse rendue (MIN-293).
+ * What `@supabase/ssr` gives to write, kept aside then reported on the
+ * response returned (MIN-293).
  *
- * Lire une session peut la RENOUVELER : quand le jeton d'accès a expiré,
- * GoTrue rend un couple neuf et **fait tourner** le jeton de rafraîchissement au
- * passage. Un adaptateur qui jette ce qu'on lui donne à écrire transforme donc
- * une lecture en destruction de session — le serveur a dépensé le jeton, le
- * navigateur garde l'ancien, et le rafraîchissement suivant échoue en
+ * Reading a session can RENEW it: when the access token has expired,
+ * GoTrue makes a new couple and **spins** the refresh token at the
+ * passage. An adapter that throws away what it is given to write therefore transforms
+ * a read into session destruction — the server has spent the token, the
+ * browser keeps the old one, and the next refresh fails in
  * `refresh_token_not_found`.
  *
- * Séparé de Supabase pour être tenu par un test : c'est le maillon qui manquait,
- * et un maillon qu'on ne peut pas exercer est un maillon qui recassera.
+ * Separated from Supabase to be held by a test: it is the link that was missing,
+ * and a link that cannot be exercised is a link that will break again.
  */
 export interface CookieSink {
-  /** Ce que `@supabase/ssr` appelle pour écrire — son `cookies.setAll`. */
+  /** What `@supabase/ssr` calls to write — its `cookies.setAll`. */
   collect: (cookies: { name: string; value: string; options: CookieOptions }[]) => void;
-  /** À appeler sur la réponse rendue — y compris une redirection. */
+  /** To call on the rendered response — including a redirect. */
   applyCookies: <T extends NextResponse>(response: T) => T;
 }
 

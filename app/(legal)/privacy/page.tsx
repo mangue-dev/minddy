@@ -25,10 +25,10 @@ export default async function PrivacyPage() {
     { term: t("dataAccount"), desc: t("dataAccountDesc") },
     { term: t("dataContent"), desc: t("dataContentDesc") },
     { term: t("dataUsage"), desc: t("dataUsageDesc") },
-    // MIN-296 — le service de push de l'éditeur du navigateur est un
-    // destinataire à part entière (il reçoit l'adresse d'abonnement), et il
-    // n'était nommé nulle part. Le contenu, lui, lui est illisible : la charge
-    // utile est chiffrée avec les clés de l'appareil (RFC 8291).
+    // MIN-296 — browser editor push service is a
+    // full recipient (he receives the subscription address), and he
+    // was not named anywhere. The content is illegible: the load
+    // useful is encrypted with the device keys (RFC 8291).
     { term: t("dataPush"), desc: t("dataPushDesc") },
     { term: t("dataAI"), desc: t("dataAIDesc") },
     { term: t("dataGit"), desc: t("dataGitDesc") },
@@ -110,12 +110,11 @@ export default async function PrivacyPage() {
       <Section title={t("processorTitle")}>
         <P>{t("processorP1")}</P>
         <P>{t("processorP2")}</P>
-        {/* MIN-119 — chaque retour déposé sur un board passe par un modèle
-            (modération, catégorisation, traduction), et une dictée y ajoute
-            l'audio. Le taire revenait à ne pas déclarer un destinataire, pour des
-            gens qui n'ont même pas de compte chez nous. Et ce sont les mêmes
-            fournisseurs que ceux de la section suivante : ce qu'on ne peut pas
-            garantir là-bas, on ne peut pas le garantir ici non plus. */}
+        {/* MIN-119 — each return placed on a board goes through a model
+ (moderation, categorization, translation), and a dictation adds
+ the audio. Keeping it quiet was tantamount to not declaring a recipient, for people who don't even have an account with us. And these are the same
+ suppliers as those in the next section: what we cannot
+ guarantee there, we cannot guarantee here either. */}
         <P>{t("processorP3")}</P>
       </Section>
 
@@ -123,21 +122,21 @@ export default async function PrivacyPage() {
         <P>{t("agentText")}</P>
       </Section>
 
-      {/* MIN-119 — le destinataire final n'est pas OpenRouter mais le
-          fournisseur du modèle retenu, et sa politique de conservation varie.
-          Dire « transmis à OpenRouter » et s'arrêter là nommait la passerelle en
-          taisant le destinataire ; l'article 13 demande l'inverse. On ne promet
-          donc rien sur cette étape — on la décrit. */}
+      {/* MIN-119 — the final recipient is not OpenRouter but the
+ provider of the selected model, and its retention policy varies.
+ Saying “transmitted to OpenRouter” and stopping there named the gateway in
+ leaving the recipient silent; Article 13 demands the opposite. We don't promise
+ so nothing about this step — we describe it. */}
       <Section title={t("aiProvidersTitle")}>
         <P>{t("aiProvidersGateway")}</P>
         <P>{t("aiProvidersRetention")}</P>
         <P>{t("aiProvidersChoice")}</P>
       </Section>
 
-      {/* Mesure d'audience (MIN-78). Section dédiée plutôt qu'une ligne dans le
-          tableau des données : la collecte a trois régimes selon le choix fait
-          sur le bandeau, et « avant tout choix » est le cas que personne
-          n'explique jamais alors que c'est le plus fréquent. */}
+      {/* Audience measurement (MIN-78). Dedicated section rather than a line in the
+ data table: the collection has three regimes depending on the choice made
+ on the banner, and "before any choice" is the case that no one
+ ever explains even though it is the most common. */}
       <Section title={t("analyticsTitle")}>
         <Intro>{t("analyticsIntro")}</Intro>
         <P>{t("analyticsAnonymous")}</P>
@@ -169,11 +168,11 @@ export default async function PrivacyPage() {
         </P>
       </Section>
 
-      {/* Accès et effacement en libre-service (MIN-119). Section à part du bloc
-          « Vos droits » : celui-ci énumère ce que la loi accorde, celle-ci dit
-          où cliquer. L'avertissement sur les projets possédés y est en toutes
-          lettres — c'est la conséquence que « supprimer mon compte » ne laisse
-          pas deviner. */}
+      {/* Self-service access and erasure (MIN-119). Section apart from the block
+ “Your rights”: this one lists what the law grants, this one says
+ where to click. The warning about owned projects is there in all
+ letters — this is the consequence that "delete my account" does not leave
+ guessing. */}
       <Section title={t("selfServiceTitle")}>
         <Intro>{t("selfServiceIntro")}</Intro>
         <List>

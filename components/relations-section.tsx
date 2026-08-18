@@ -55,10 +55,10 @@ export function RelationsSection({
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  // Chargé ICI plutôt que passé en prop : le panneau s'ouvre sur un ticket à la
-  // fois, et faire descendre ces zéro à trois lignes depuis la page obligerait
-  // chaque écran qui monte un panneau (tableau, liste, cycle, vue globale) à
-  // les charger pour tous ses tickets d'abord.
+  // Loaded HERE rather than passed as prop: the panel opens on a ticket at the
+  // times, and moving these zeros down to three lines from the page would require
+  // each screen that displays a panel (table, list, cycle, global view) to
+  // load them for all his tickets first.
   const { data: feedbackData } = useQuery({
     queryKey: ["issue-feedback", issue.id],
     queryFn: async (): Promise<{ feedback: IssueLinkedFeedback[] }> => {
@@ -68,10 +68,10 @@ export function RelationsSection({
     },
   });
   const feedback = feedbackData?.feedback ?? [];
-  // Étape courante du popover : null = choisir le type, sinon = choisir la cible
-  // de ce type. La recherche est contrôlée pour repartir vide à chaque étape —
-  // sans quoi « bloc » (tapé pour filtrer les types) filtrerait ensuite les
-  // tickets et n'en montrerait aucun.
+  // Current step of the popover: null = choose the type, otherwise = choose the target
+  // of this type. The search is controlled to come up empty at each step —
+  // otherwise “block” (typed to filter the types) would then filter the
+  // tickets and would not show any.
   const [step, setStep] = useState<IssueRelationType | null>(null);
   const [query, setQuery] = useState("");
 
@@ -122,8 +122,8 @@ export function RelationsSection({
           searchValue={query}
           onSearchValueChange={setQuery}
           searchPlaceholder={step ? t("searchIssue") : undefined}
-          // Plus large que le w-60 par défaut : à l'étape 2 on choisit un ticket
-          // par son titre, et 240px le coupaient au tiers. Reste dans le panneau.
+          // Wider than the default w-60: in step 2 we choose a ticket
+          // by its title, and 240px cut it by a third. Stay in the panel.
           contentClassName="w-80"
           trigger={
             <button
@@ -136,12 +136,12 @@ export function RelationsSection({
           }
         >
           {step === null ? (
-            // Libellés COURTS (« Bloque », « Bloqué par », « Lié à ») : ceux de
-            // la section, et ceux des en-têtes de groupes juste dessous. La
-            // formulation « Marquer comme bloquant… » est celle du clic droit
-            // d'une carte, où l'entrée doit s'annoncer comme une action ; ici
-            // l'en-tête dit déjà « Relations », et l'étape suivante enchaîne sur
-            // « Bloque quel ticket ? ». Elle reste cherchable via les keywords.
+            // SHORT labels (“Block”, “Blocked by”, “Linked to”): those of
+            // the section, and those of the group headers just below. There
+            // “Mark as blocking…” formulation is that of the right click
+            // a card, where the entry must be announced as an action; here
+            // the header already says "Relationships", and the next step continues on
+            // “Block which ticket?” ". It remains searchable via keywords.
             <CommandGroup heading={t("relations")}>
               {RELATION_TYPES.map((type) => (
                 <CommandItem
@@ -253,12 +253,10 @@ export function RelationsSection({
         </div>
       )}
 
-      {/* Les retours du board que ce ticket met en œuvre (MIN-196).
-          Ils vivent dans « Relations » parce que c'en est une — mais dans son
-          propre groupe, et SANS croix : le lien se défait depuis le retour,
-          jamais d'ici. Un ticket ne sait pas combien de demandes il porte, et
-          les détacher de cet écran retirerait à quelqu'un le suivi de la sienne
-          sans que l'écran qui le lui montre soit sous les yeux. */}
+      {/* The feedback from the board that this ticket implements (MIN-196).
+ They live in “Relations” because it is one — but in its
+ own group, and WITHOUT a cross: the link is undone since the return,
+ never from here. A ticket doesn't know how many requests it has, and detaching them from this screen would remove someone from tracking theirs without the screen showing it being in front of them. */}
       {feedback.length > 0 && (
         <div className="flex flex-col pb-2">
           <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -271,9 +269,9 @@ export function RelationsSection({
                 key={post.id}
                 type="button"
                 onClick={() =>
-                  // Le retour se traite dans l'onglet Retours, jamais dans ce
-                  // panneau : c'est là que vivent son fil, sa modération et sa
-                  // promotion. Le panneau dit qu'il existe et y conduit.
+                  // The return is processed in the Returns tab, never in this
+                  // panel: this is where his thread, his moderation and his
+                  // promotion. The sign says it exists and leads to it.
                   router.push(
                     `/projects/${issue.project_id}/feedback?post=${post.id}`
                   )
@@ -284,8 +282,8 @@ export function RelationsSection({
                   status={FEEDBACK_TO_ISSUE_STATUS[post.status]}
                   className="size-4 shrink-0"
                 />
-                {/* Les voix à la place de l'identifiant : un retour n'en a pas,
-                    et c'est son poids qui dit s'il faut aller le lire. */}
+                {/* The voices in place of the identifier: a return does not have one,
+ and it is its weight which determines whether it should be read. */}
                 <span className="w-14 shrink-0 font-mono text-xs text-muted-foreground">
                   {t("votes", { count: post.vote_count })}
                 </span>
@@ -296,8 +294,8 @@ export function RelationsSection({
                     {post.comment_count}
                   </span>
                 )}
-                {/* Un retour privé n'est pas sur le board : le dire ici évite
-                    d'aller chercher sur une page publique ce qui n'y est pas. */}
+                {/* A private return is not on the board: saying it here avoids
+ having to look for something on a public page that is not there. */}
                 {!post.is_public && (
                   <span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
                     {t("feedbackPrivate")}

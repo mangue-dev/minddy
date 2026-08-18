@@ -24,20 +24,20 @@ import type { Invitation } from "@/lib/types";
 
 /**
  * Shared project-membership cores, used by /api/projects/[id]/members and the
- * assistant's member tools. Writes go through the service client (RLS bypassed),
- * so access is enforced HERE: inviting, cancelling an invitation and removing
+ * assistant's member tools. Writes go through the customer service (RLS bypassed),
+ * so access is enforced HERE: inviting, canceling an invitation and removing
  * another member are owner-only; a member may remove only themselves (leave).
  *
- * **On invite une ADRESSE, pas un compte** (MIN-197). L'invitation est une ligne
- * `project_invitations` que l'invité accepte depuis son inbox ; elle peut naître
- * sans `invited_user_id` quand l'adresse n'a pas encore de compte minddy, et se
- * rattache à un compte plus tard — à la première session dont l'email vérifié
- * correspond (`attachPendingInvitations`, appelé par /auth/callback). Un email
- * part dans les deux cas : c'est le seul canal qui atteigne quelqu'un qui ne
- * revient pas de lui-même.
+ * **We invite an ADDRESS, not an account** (MIN-197). The invitation is a line
+ * `project_invitations` that the guest accepts from his inbox; it can be born
+ * without `invited_user_id` when the address does not yet have a minddy account, and gets
+ * attached to an account later — at the first session whose verified email
+ * matches (`attachPendingInvitations`, called by /auth/callback). An email
+ * leaves in both cases: it is the only channel that reaches someone who does not
+ * return on its own.
  *
- * On ne fait JAMAIS rejoindre automatiquement : l'acceptation reste un geste de
- * l'invité (PATCH /api/projects/invitations).
+ * We NEVER join automatically: acceptance remains a gesture from
+ * the guest (PATCH /api/projects/invitations).
  */
 
 type InviteError =
@@ -61,10 +61,10 @@ export async function inviteMember({
   projectId: string;
   actorId: string;
   email: unknown;
-  /** Origine du déploiement, pour le lien du mail. Défaut : l'URL canonique. */
+  /** Origin of the deployment, for the email link. Default: the canonical URL. */
   origin?: string;
-  /** Langue du mail. On ne connaît pas celle de l'invité — on prend celle de
-      l'invitant, qui est la personne dont l'invité attend le message. */
+  /** Email language. We do not know that of the guest — we take that of
+ the inviter, who is the person from whom the guest is waiting for the message. */
   locale?: "fr" | "en";
 }): Promise<
   | { ok: true; invitation: Invitation }
@@ -72,7 +72,7 @@ export async function inviteMember({
       ok: false;
       status: number;
       errorKey: InviteError;
-      /** Valeurs du message quand sa clé porte un placeholder (`{limit}`). */
+      /** Values ​​of the message when its key carries a placeholder (`{limit}`). */
       errorParams?: Record<string, string | number>;
     }
 > {
@@ -82,8 +82,8 @@ export async function inviteMember({
     return { ok: false, status: 403, errorKey: "ownerOnlyInvite" };
   }
 
-  // Le plafond d'invités du plan, membres + invitations en attente (MIN-199).
-  // L'acteur EST le owner : la branche `isOwner` ci-dessus l'a déjà établi.
+  // The plan's guest cap, members + pending invitations (MIN-199).
+  // The actor IS the owner: the `isOwner` branch above has already established this.
   try {
     await ensureMemberSlotAvailable(actorId, projectId);
   } catch (err) {
@@ -100,8 +100,8 @@ export async function inviteMember({
 
   const normalized =
     typeof email === "string" ? email.trim().toLowerCase() : "";
-  // 254 = longueur maximale d'une adresse (RFC 5321) — au-delà, ce n'est pas
-  // un email, inutile d'interroger Supabase Auth avec.
+  // 254 = maximum length of an address (RFC 5321) — beyond that, it is not
+  // an email, no need to query Supabase Auth with it.
   if (!normalized || normalized.length > 254 || !normalized.includes("@")) {
     return { ok: false, status: 400, errorKey: "invalidEmail" };
   }
@@ -109,8 +109,8 @@ export async function inviteMember({
   const service = getServiceClient();
 
   // Resolve the email to an existing minddy account — live, via Supabase Auth.
-  // `null` n'est plus une fin de non-recevoir (MIN-197) : l'invitation part
-  // quand même, sans `invited_user_id`, et le mail fait le reste.
+  // `null` is no longer a rejection (MIN-197): the invitation goes out
+  // anyway, without `invited_user_id`, and the email does the rest.
   const memberUser = await findAuthUserByEmail(service, normalized);
   if (memberUser) {
     if (memberUser.id === access.project.owner_id) {
@@ -128,11 +128,11 @@ export async function inviteMember({
     }
   }
 
-  // Un compte existant recevra l'invitation dans son inbox, même sans courrier.
-  // Pour une adresse inconnue, en revanche, le mail est l'unique canal : créer
-  // une ligne et annoncer le succès quand Resend est absent fabrique une
-  // invitation que personne ne peut découvrir. Le mode console reste un vrai
-  // transport de développement, mais n'est jamais accepté en production.
+  // An existing account will receive the invitation in its inbox, even without mail.
+  // For an unknown address, on the other hand, email is the only channel: create
+  // a line and announce success when Resend is absent makes a
+  // invitation that no one can discover. Console mode remains a real
+  // development transport, but is never accepted in production.
   const consoleEmail =
     process.env.EMAIL_PROVIDER?.trim() === "console" &&
     process.env.NODE_ENV !== "production";
@@ -144,14 +144,14 @@ export async function inviteMember({
     return { ok: false, status: 503, errorKey: "invitationEmailUnavailable" };
   }
 
-  // Une invitation périmée pour cette adresse tient encore la place dans l'index
+  // An outdated invitation for this address still holds its place in the index
   // unique partiel `(project_id, invited_email) where status = 'pending'` : sans
-  // ce ménage, l'insertion ci-dessous rendrait 409 « invitation déjà en attente »
-  // pour une invitation que plus personne ne peut ni voir ni accepter — l'adresse
-  // serait bannie du projet jusqu'à la purge des 90 jours (`retention.ts`).
-  // Supprimée plutôt que passée à `cancelled` : la ligne n'a plus de lecteur, et
-  // `RETENTION_DAYS.pendingInvitations` dit déjà qu'une adresse qui n'a jamais
-  // rejoint ne se garde pas « sans finalité ».
+  //this household, inserting below would make 409 “invitation already pending”
+  // for an invitation that no one can see or accept anymore — the address
+  // would be banned from the project until the 90 day purge (`retention.ts`).
+  // Deleted rather than passed to `cancelled`: the line no longer has a reader, and
+  // `RETENTION_DAYS.pendingInvitations` already says that an address which has never
+  // joined is not kept “without purpose”.
   await service
     .from("project_invitations")
     .delete()
@@ -180,22 +180,22 @@ export async function inviteMember({
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
 
-  // Une invitation atterrit dans l'inbox SANS passer par `notifications` : elle
-  // vit dans sa table, se répond au lieu de se lire, et disparaît une fois
-  // répondue. Elle échappe donc au branchement push d'`insertNotifications`, et
-  // c'est justement la ligne d'inbox qui attend le plus une notification — on
-  // la pousse ici, à la main (MIN-183).
+  // An invitation lands in the inbox WITHOUT going through `notifications`: it
+  // lives in his table, responds instead of reading himself, and disappears once
+  // answered. It therefore escapes the push connection of `insertNotifications`, and
+  // it’s precisely the inbox line that most expects a notification — we
+  // push it here, by hand (MIN-183).
   if (memberUser) pushInvitation(memberUser.id, actorId);
 
-  // Le mail part APRÈS la réponse, mais par `afterOrNow` : une promesse
-  // détachée serait gelée avec l'invocation et mourrait en vol (CLAUDE.md).
+  // The email goes AFTER the response, but by `afterOrNow`: a promise
+  // detached would be frozen with the summon and die in flight (CLAUDE.md).
   //
-  // La ligne rendue est RECOMPOSÉE champ par champ, et pas obtenue en soustrayant
-  // le token d'un `...row` : deux colonnes n'ont rien à faire dans la réponse —
-  // le `token`, secret de l'email, et `invited_user_id`, qui dirait si l'adresse
-  // a un compte minddy. Une liste blanche les retient toutes les deux, y compris
-  // les colonnes que la table gagnera plus tard ; un `select` restrictif, lui,
-  // se laisse élargir d'un mot sans que rien ne le signale.
+  // The rendered line is RECOMPOSED field by field, and not obtained by subtracting
+  // the token of a `...row`: two columns have nothing to do in the response —
+  // the `token`, secret of the email, and `invited_user_id`, which would say if the address
+  // has a minddy account. A whitelist keeps them both, including
+  // the columns that the table will gain later; a restrictive `select`, he
+  // allows itself to be expanded by a word without anything indicating it.
   const raw = invitation as Invitation & { token: string };
   const row: Invitation = {
     id: raw.id,
@@ -221,17 +221,17 @@ export async function inviteMember({
     });
   });
 
-  // Le token ne ressort PAS de la fonction : l'appelant le rendrait en JSON à
-  // qui invite, et il n'a rien à y faire — c'est un secret de l'email.
+  // The token does NOT come out of the function: the caller would return it in JSON to
+  // who invites, and he has nothing to do about it — it's a secret of the email.
   return { ok: true, invitation: row };
 }
 
 /**
- * Rattache à un compte les invitations laissées en attente sur son adresse
- * (MIN-197). Appelé à l'arrivée d'une session (/auth/callback), où l'email est
- * VÉRIFIÉ par Supabase — et c'est l'email, pas le token du lien, qui fait foi.
- * Best-effort de bout en bout : l'invitant ne saura rien d'un échec, et l'invité
- * retentera à sa prochaine session (`claimPendingInvitationsLate`).
+ * Attaches invitations left pending on its address
+ * to an account (MIN-197). Called at the arrival of a session (/auth/callback), where the email is
+ * VERIFIED by Supabase — and it is the email, not the link token, which is authentic.
+ * Best-effort end-to-end: the inviter will know nothing of a failure, and the invitee
+ * will try again the next time session (`claimPendingInvitationsLate`).
  */
 export async function attachPendingInvitations(user: {
   id: string;
@@ -239,9 +239,9 @@ export async function attachPendingInvitations(user: {
   email_confirmed_at?: string | null;
 }): Promise<void> {
   const email = user.email?.trim().toLowerCase();
-  // Un email non confirmé n'établit rien : sans cette garde, il suffirait de
-  // s'inscrire avec l'adresse de quelqu'un d'autre pour récupérer ses
-  // invitations. OAuth (Google/GitHub) rend un email déjà confirmé.
+  // An unconfirmed email establishes nothing: without this guard, it would be enough to
+  // register with someone else's address to retrieve their
+  // invitations. OAuth (Google/GitHub) returns an already confirmed email.
   if (!email || !user.email_confirmed_at) return;
 
   const service = getServiceClient();
@@ -264,28 +264,27 @@ export async function attachPendingInvitations(user: {
 }
 
 /**
- * Le rattrapage (MIN-197). `/auth/callback` n'est PAS traversé par toute session :
- * une connexion par mot de passe n'y passe jamais. Le cas se produit pour de bon —
- * l'antivirus de messagerie du destinataire visite le lien de confirmation avant
- * lui, GoTrue confirme le compte, la personne se retrouve sur /login avec
- * `confirmation_failed` (MIN-117) et se connecte par mot de passe. Son invitation
- * n'est alors jamais réclamée : elle meurt à 30 jours sans que personne ne la voie.
+ * Catch-up (MIN-197). `/auth/callback` is NOT traversed by any session:
+ * a password connection never passes through it. The case happens for real —
+ * the recipient's email antivirus visits the confirmation link before
+ * him, GoTrue confirms the account, the person ends up on /login with
+ * `confirmation_failed` (MIN-117) and logs in by password. Her invitation
+ * is then never claimed: she dies at 30 days old without anyone seeing her.
  *
- * Appelé sur la lecture des invitations de quelqu'un — le seul endroit où
- * l'absence de rattachement se voit.
+ * Called upon reading someone's invitations — the only place where
+ * the lack of attachment is visible.
  *
- * **La vérification de l'email se refait ici, côté service.** Le `user` que
- * `getAuthedUser` rend est reconstruit depuis les claims du JWT et ne porte pas
- * `email_confirmed_at` ; quant à `user_metadata.email_verified`, il est
- * MODIFIABLE par le compte lui-même (`auth.updateUser({ data })`) et ne prouve
- * donc rien. On relit le compte par l'API admin, dont `fetchAuthUsersById` sert
- * un cache de 60 s — sans quoi la garde d'`attachPendingInvitations` serait un
- * no-op silencieux, ou pire, une garde qu'on croit tenue.
+ * **The email verification is repeated here, on the service side.** The `user` that
+ * `getAuthedUser` renders is reconstructed from the JWT claims and does not carry
+ * `email_confirmed_at`; as for `user_metadata.email_verified`, it is
+ * MODIFIABLE by the account itself (`auth.updateUser({ data })`) and does not prove
+ * therefore nothing. We reread the account using the admin API, of which `fetchAuthUsersById` serves
+ * a 60 s cache — otherwise the guard of `attachPendingInvitations` would be a silent no-op, or worse, a guard that we believe is held.
  *
- * Une sonde en lecture d'abord, pour ne payer ni l'aller-retour admin ni un
- * UPDATE dans le cas courant, qui est « il n'y a rien à réclamer ».
+ * A read probe first, so as not to pay for either the admin round trip or a
+ * UPDATE in the common case, which is "there is nothing to claim."
  *
- * @returns `true` si quelque chose a pu être rattaché — l'appelant relit alors.
+ * @returns `true` if something could be attached — the caller rereads then.
  */
 export async function claimPendingInvitationsLate(user: {
   id: string;
@@ -316,7 +315,7 @@ export async function claimPendingInvitationsLate(user: {
   return true;
 }
 
-/** La notification système d'une invitation. Best-effort de bout en bout. */
+/** The system notification of an invitation. Best-effort from start to finish. */
 function pushInvitation(inviteeId: string, inviterId: string): void {
   if (!isPushConfigured() && !isApnsConfigured()) return;
   afterOrNow(async () => {
@@ -328,9 +327,9 @@ function pushInvitation(inviteeId: string, inviterId: string): void {
       const messages = locale === "fr" ? (fr as typeof en) : en;
       const t = createTranslator({ locale, messages, namespace: "Inbox" });
       return {
-        // Le titre est le NOM DE LA CHOSE partout ailleurs (le ticket, le
-        // retour) ; pour une invitation, la chose est l'inbox elle-même, où la
-        // réponse se donne.
+        // The title is the NAME OF THE THING everywhere else (the ticket, the
+        // back) ; for an invitation, the thing is the inbox itself, where the
+        // response is given.
         title: t("groupInvitations"),
         body: t("lineInvitation", { actor: inviterName || t("someone") }),
         url: "/inbox",
@@ -418,9 +417,9 @@ export async function cancelInvitation({
   return { ok: true };
 }
 
-/** Pending invitations of a project (for the assistant's member reads). Les
-    périmées n'en font pas partie : `status = 'pending'` ne suffit pas à dire
-    qu'une invitation est vivante (MIN-197). */
+/** Pending invitations of a project (for the assistant's member reads). Expired
+ are not part of this: `status = 'pending'` is not enough to say
+ that an invitation is alive (MIN-197). */
 export async function listPendingInvitations(
   projectId: string
 ): Promise<Array<{ id: string; email: string; created_at: string }>> {

@@ -12,66 +12,66 @@ import {
 import type { HarnessLayout } from "./harness-layout";
 
 /**
- * Couche Vercel Sandbox de l'agent de code (MIN-46) — la microVM elle-même : sa
- * création, son réveil, sa politique réseau, son arrêt.
+ * Code Agent Vercel Sandbox Layer (MIN-46) — the microVM itself: its
+ * creation, its awakening, its network policy, its shutdown.
  *
- * CE QUI EST PARTI D'ICI (MIN-224). Tous les gestes sur le DÉPÔT — clone,
- * lecture, édition, grep, jobs de fond, commit, push — vivent désormais dans
- * [repo-host.ts](repo-host.ts), écrits contre quatre primitives plutôt que contre
- * le SDK. Ce fichier n'en garde que l'adaptateur RPC (`sandboxHost`) : la même
- * logique tourne, à l'identique, sur le disque local quand la boucle vit DANS la
- * microVM. Ce qui reste ici est ce qui n'a de sens que depuis la fonction — on ne
- * crée pas la machine depuis la machine.
+ * WHAT GONE FROM HERE (MIN-224). All gestures on the DEPOSIT — clone,
+ * reading, editing, grep, background jobs, commit, push — now live in
+ * [repo-host.ts](repo-host.ts), written against four primitives rather than against
+ * the SDK. This file only keeps the RPC adapter (`sandboxHost`): the same
+ * logic runs, identically, on the local disk when the loop lives IN the
+ * microVM. What remains here is what only makes sense from the function — we don't
+ * not create the machine from the machine.
  *
- * IDENTITÉ & REPRISE : un Sandbox est identifié par un `name` DÉTERMINISTE
- * (`agent-<run.id>`, persisté dans agent_runs.sandbox_id). `getOrCreateAgentSandbox`
- * est idempotent : si la microVM (ou son SNAPSHOT persistant) existe encore, elle
- * est RÉVEILLÉE avec son filesystem restauré (reprise rapide, pas de re-clone) ;
- * sinon `onCreate` clone la branche de travail sur une VM neuve. `persistent: true`
- * (restauration automatique du FS entre sessions via snapshots) est le DÉFAUT du SDK
- * depuis sa v2 — on le pose quand même, explicitement : c'est de lui que dépend toute
- * la reprise, il n'a pas à disparaître dans un défaut. `snapshotExpiration` et
- * `keepLastSnapshots`, eux, ne redisent pas un défaut : ils en RESSERRENT deux qui
- * coûtent (voir plus bas). Le git (branche WIP poussée à chaque pause) reste le
- * filet durable au-delà de l'expiration du snapshot. AUTH : réutilise
- * VERCEL_TOKEN/TEAM_ID/PROJECT_ID (comme les domaines custom, MIN-36) ; sur Vercel
+ * IDENTITY & RECOVERY: a Sandbox is identified by a DETERMINIST `name`
+ * (`agent-<run.id>`, persisted in agent_runs.sandbox_id). `getOrCreateAgentSandbox`
+ * is idempotent: if the microVM (or its persistent SNAPSHOT) still exists, it
+ * is AWAKENED with its filesystem restored (quick recovery, no re-clone);
+ * otherwise `onCreate` clones the working branch on a new VM. `persistent: true`
+ * (automatic restoration of FS between sessions via snapshots) is the DEFAULT of the SDK
+ * since its v2 - we still ask it, explicitly: it is on him that all depends
+ * recovery, it does not have to disappear in a default. `snapshotExpiration` and
+ * `keepLastSnapshots`, they do not repeat a defect: they TIGHTEN two which
+ * cost (see below). The git (WIP branch pushed on each break) remains the
+ * durable net beyond snapshot expiration. AUTH: reuses
+ * VERCEL_TOKEN/TEAM_ID/PROJECT_ID (like custom domains, MIN-36); on Vercel
  * l'OIDC suffit.
  */
 
 /**
- * Durée de vie max d'une SESSION de la microVM (elle survit au gap entre deux chunks).
- * C'est le plafond du PLAN — 24 h sur Pro ; les 45 min qu'on portait ici étaient le
- * palier Hobby, donc notre plafond et pas celui de la plateforme. L'API le fait
+ * Maximum lifespan of a SESSION of the microVM (it survives the gap between two chunks).
+ * This is the ceiling of the PLAN — 24 hours on Pro; the 45 minutes that we wore here were the
+ * Hobby landing, therefore our ceiling and not that of the platform. The API does it
  * respecter : 24 h passe, 25 h repart en 400.
  *
- * Ce n'est PAS le gouverneur de la dépense. Une VM au repos est coupée après ~5 min
- * par le reaper d'inactivité (`drain.ts`), et ce chiffre ne se lit que dans deux cas :
- * un tour qui travaille plus longtemps que ça sans jamais se reposer (il perdait sa VM
- * chaude en plein travail et repayait un démarrage à froid), et une microVM que le
- * reaper n'a pas su couper (`stopSandboxByName` avale ses erreurs après avoir posé
- * `sandbox_stopped_at`, donc il ne repassera pas) — celle-là vivra désormais bien plus
- * longtemps avant de s'éteindre seule. Fuite rare, coût borné, et c'est le prérequis
- * matériel d'un orchestrateur qui vit DANS la VM : la VM doit tenir aussi longtemps
- * que le tour.
+ * He is NOT the governor of spending. An idle VM is shut down after ~5 min
+ * by the inactivity reaper (`drain.ts`), and this number is only read in two cases:
+ * a lathe that works longer than that without ever resting (he lost his VM
+ * hot in full work and repaid a cold start), and a microVM that the
+ * reaper did not know how to cut (`stopSandboxByName` swallows its errors after having posed
+ * `sandbox_stopped_at`, so it will not come back) — this one will now live much longer
+ * a long time before dying out on its own. Rare leak, limited cost, and this is the prerequisite
+ * hardware of an orchestrator that lives IN the VM: the VM must last as long
+ * that the turn.
  */
 const SANDBOX_TIMEOUT_MS = 24 * 60 * 60_000;
-/** Rétention des snapshots persistants (reprise rapide) : resserre le défaut du SDK,
- *  qui est de 30 JOURS. Au-delà, on retombe sur le re-clone de la branche git
- *  (durable pour toujours). */
+/** Retention of persistent snapshots (fast recovery): tightens the SDK default,
+ * which is 30 DAYS. Beyond that, we fall back on the re-clone of the git branch
+ * (lasts forever). */
 const SANDBOX_SNAPSHOT_EXPIRATION_MS = 7 * 24 * 60 * 60_000;
 
 export type { Sandbox };
 
 /**
- * Tout ce que `repo-host.ts` fait au dépôt, rendu par des allers-retours RPC vers
- * la microVM. C'est le chemin de l'ANCIENNE forme (la boucle dans la fonction) et
- * celui de la fonction quand elle amorce un run de la nouvelle : un clone, un
- * `writeFiles`, une lecture d'`AGENTS.md`.
+ * Everything `repo-host.ts` does to the repository, rendered by RPC round trips to
+ * the microVM. This is the path of the OLD form (the loop in the function) and
+ * that of the function when it begins a run of the new one: a clone, a
+ * `writeFiles`, a reading of `AGENTS.md`.
  *
- * `layout` est EXPLICITE depuis MIN-354, même s'il vaut toujours `cloudLayout()`
- * ici : ce chemin-là parle à une microVM, et une microVM a toujours le layout du
- * cloud. Le passer plutôt que le supposer est ce qui fait que le jour où un host
- * parle à autre chose, il n'y a rien à retrouver dans ce fichier.
+ * `layout` is EXPLICIT since MIN-354, even if it is always `cloudLayout()`
+ * here: this path speaks to a microVM, and a microVM always has the layout of the
+ * cloud. Passing it rather than assuming it is what makes the day when a host
+ * is talking to something else, there is nothing to find in this file.
  */
 export function sandboxHost(sandbox: Sandbox, layout: HarnessLayout): RepoHost {
   return {
@@ -102,8 +102,8 @@ export function sandboxHost(sandbox: Sandbox, layout: HarnessLayout): RepoHost {
 }
 
 /**
- * Credentials Sandbox explicites (dev / hors-Vercel). Vides sur Vercel → l'OIDC
- * prend le relais automatiquement.
+ * Explicit Sandbox credentials (dev / non-Vercel). Empties on Vercel → OIDC
+ * takes over automatically.
  */
 function sandboxCredentials(): { token: string; teamId: string; projectId: string } | Record<string, never> {
   const token = process.env.VERCEL_TOKEN?.trim();
@@ -114,39 +114,39 @@ function sandboxCredentials(): { token: string; teamId: string; projectId: strin
 }
 
 /**
- * Récupère la microVM nommée `name` en RÉVEILLANT sa session (filesystem restauré
- * depuis le snapshot persistant → reprise rapide, `onCreate` NON appelé), sinon en
- * crée une neuve et appelle `onCreate` (qui clone la branche de travail). Un snapshot
- * expiré est traité comme « introuvable » → recrée + `onCreate`. Boot optionnel
- * depuis AGENT_SANDBOX_SNAPSHOT_ID (image pré-chauffée) pour la création fraîche.
+ * Recovers the microVM named `name` by WAKE UP its session (filesystem restored
+ * from the persistent snapshot → fast recovery, `onCreate` NOT called), otherwise in
+ * creates a new one and calls `onCreate` (which clones the working branch). A snapshot
+ * expired is treated as "not found" → recreates + `onCreate`. Optional boot
+ * from AGENT_SANDBOX_SNAPSHOT_ID (pre-heated image) for fresh creation.
  *
- * POLITIQUE RÉSEAU (MIN-223) — `networkPolicy` est posée à la création ET **reposée
- * à chaque réveil**, et ce n'est pas de la ceinture-bretelles :
+ * NETWORK POLICY (MIN-223) — `networkPolicy` is set at creation AND **reset
+ * every time you wake up**, and it’s not a suspender belt:
  *
- * - la politique SURVIT bien à une reprise de session — mesuré le 2026-08-07 : une
+ * - the policy SURVIVES a resumption of session — measured on 2026-08-07: one
  *   session reprise sans qu'on lui repasse quoi que ce soit rendait toujours 200
- *   sur la complétion avec le placeholder, et forwardait toujours le plan de
- *   contrôle. Ce n'était pas à supposer, c'est fait ;
- * - mais elle survit avec **la clé d'hier dedans**. La clé de run est révoquée
- *   quand la VM est mise au repos (`run-key.ts`), donc une session réveillée sans
- *   nouvelle politique repartirait avec un `transform` qui injecte une clé morte —
- *   des 401 à la première complétion, et rien pour le dire.
+ * on the completion with the placeholder, and always forwarded the plan of
+ * control. It was not to be assumed, it is done;
+ * - but she survives with **yesterday's key inside**. The run key is revoked
+ * when the VM is put to rest (`run-key.ts`), therefore a session woken up without
+ * new policy would leave with a `transform` which injects a dead key —
+ * 401s on first completion, and nothing to tell.
  *
- * D'où `updateNetworkPolicy` sur le chemin de réveil : il ne redit pas un défaut,
- * il re-pose le secret du jour. On ne le fait PAS sur le chemin de création (la
- * politique y est déjà passée en argument), et l'échec ne fait pas tomber le tour —
- * il vaut mieux un tour qui démarre sur l'ancienne politique, et le dit, qu'un tour
+ * Hence `updateNetworkPolicy` on the wake-up path: it does not repeat a fault,
+ * he re-poses the secret of the day. We do NOT do it on the path of creation (the
+ * politics has already been used as an argument), and failure does not bring down the trick —
+ * it is better a round which starts with the old policy, and says so, than a round which
  * qui n'existe pas.
  */
 export async function getOrCreateAgentSandbox(opts: {
   name: string;
   onCreate: (sandbox: Sandbox) => Promise<void>;
-  /** Politique de MIN-223. Absente = comportement d'avant (réseau ouvert, aucune
-   *  injection) — le temps que les appelants la câblent. */
+  /** Policy of MIN-223. Absent = previous behavior (open network, no
+   * injection) — while the callers wire it. */
   networkPolicy?: NetworkPolicy;
 }): Promise<{ sandbox: Sandbox; created: boolean }> {
-  // L'import du SDK est inerte, mais toute opération de compute doit être un
-  // choix explicite. Sans backend Vercel configuré, on s'arrête avant le SDK.
+  // SDK import is inert, but any compute operation must be a
+  // explicit choice. Without a Vercel backend configured, we stop short of the SDK.
   requireCapability("vercelSandbox");
   const creds = sandboxCredentials();
   const snapshotId = process.env.AGENT_SANDBOX_SNAPSHOT_ID?.trim();
@@ -157,11 +157,11 @@ export async function getOrCreateAgentSandbox(opts: {
     timeout: SANDBOX_TIMEOUT_MS,
     persistent: true,
     snapshotExpiration: SANDBOX_SNAPSHOT_EXPIRATION_MS,
-    // Chaque arrêt de session crée un snapshot DE PLUS, tous vivants 7 jours, alors
-    // qu'un seul sert jamais à la reprise : le stockage facturé suivait le nombre de
-    // pauses du run, pas sa taille. On ne garde que le dernier — les évincés partent
-    // tout de suite (`deleteEvicted` est vrai par défaut), et rien ici ne revient
-    // jamais sur un snapshot antérieur (aucun `currentSnapshotId` dans le dépôt).
+    // Each session shutdown creates an ADDITIONAL snapshot, all alive for 7 days, so
+    // that only one is ever used for recovery: the storage billed followed the number of
+    // breaks in the run, not its size. We only keep the last one - the ousted leave
+    // right away (`deleteEvicted` is true by default), and nothing here returns
+    // never on a previous snapshot (no `currentSnapshotId` in the repository).
     keepLastSnapshots: { count: 1 },
     resume: true,
     ...(opts.networkPolicy ? { networkPolicy: opts.networkPolicy } : {}),
@@ -182,16 +182,16 @@ export async function getOrCreateAgentSandbox(opts: {
   return { sandbox, created };
 }
 
-/** Nom stable de la microVM à persister dans agent_runs.sandbox_id. */
+/** Stable name of the microVM to persist in agent_runs.sandbox_id. */
 export function sandboxName(sandbox: Sandbox): string {
   return sandbox.name;
 }
 
 /**
- * Arrête une microVM par son NOM sans la réveiller (`resume: false`), pour le reaper
- * d'inactivité : on coupe la VM au repos tout en gardant son snapshot persistant, de
- * sorte que la session reste reprennable (réveil rapide au prochain message).
- * Best-effort — ne lève jamais (déjà arrêtée / expirée / introuvable).
+ * Stops a microVM by its NAME without waking it up (`resume: false`), to reap it
+ * of inactivity: we cut the VM to rest while keeping its persistent snapshot,
+ * so that the session remains resumable (quick wake-up to the next message).
+ * Best-effort — never raises (already stopped/expired/not found).
  */
 export async function stopSandboxByName(name: string): Promise<void> {
   if (!requireSandboxCapability()) return;
@@ -205,15 +205,15 @@ export async function stopSandboxByName(name: string): Promise<void> {
 }
 
 /**
- * La microVM d'un run, par son nom, SANS la réveiller — pour la LIRE pendant que
- * son tour tourne (le diff en cours, MIN-266). `null` quand il n'y a rien à
- * lire : session expirée, VM endormie par le reaper, API en panne.
+ * The microVM of a run, by name, WITHOUT waking it up — to READ it while
+ * his turn turns (the current diff, MIN-266). `null` when there is nothing to
+ * read: session expired, VM asleep by reaper, API down.
  *
- * `resume: false` pour la même raison que `isLoopCommandAlive` juste dessous, et
- * elle compte double ici : cette lecture part d'un geste d'interface (ouvrir la
- * vue diff), pas d'un cron. Réveiller la microVM d'un run au repos pour peindre
- * un diff relancerait sa facturation compute sur un clic — et le diff d'un run au
- * repos, lui, est déjà servi par la forge, qui ne coûte rien.
+ * `resume: false` for the same reason as `isLoopCommandAlive` just below, and
+ * it counts double here: this reading starts from an interface gesture (open the
+ * diff view), not a cron. Wake up the microVM from an idle run to paint
+ * a diff would restart its compute billing on a click — and the diff of a run at
+ * rest is already served by the forge, which costs nothing.
  */
 export async function getAgentSandboxByName(name: string): Promise<Sandbox | null> {
   if (!requireSandboxCapability()) return null;
@@ -235,44 +235,44 @@ function requireSandboxCapability(): boolean {
 }
 
 /**
- * Combien de temps on laisse `wait()` répondre avant de conclure « il vit ».
+ * How long do we let `wait()` answer before concluding “he lives”.
  *
- * MESURÉ (2026-08-07, vraie microVM) : sur un process déjà mort, `wait()` rend en
- * **270 ms**. Cinq secondes sont donc très au-dessus du besoin — la marge est
- * pour la latence transatlantique, pas pour le verdict. Sur un process vivant,
- * `wait()` ne rend pas du tout : c'est le délai lui-même qui fait la réponse.
+ * MEASURED (2026-08-07, real microVM): on a process already dead, `wait()` renders
+ * **270ms**. Five seconds are therefore well above the need — the margin is
+ * for transatlantic latency, not for the verdict. On a living process,
+ * `wait()` does not return at all: it is the delay itself which makes the response.
  */
 const LOOP_COMMAND_WAIT_MS = 5_000;
 
 /**
- * Le process de boucle d'un run `loop_in_vm` (MIN-224) vit-il encore ?
+ * Is the loop process of a `loop_in_vm` (MIN-224) run still alive?
  *
- * `null` = on ne sait pas — microVM introuvable, session expirée, API en panne.
- * L'appelant doit alors NE RIEN FAIRE : le chien de garde ne conclut que sur un
- * fait, jamais sur un silence. `false` = le process a rendu, et c'est un constat
- * de décès exact.
+ * `null` = unknown — microVM not found, session expired, API down.
+ * The caller must then DO NOTHING: the watchdog only concludes with a
+ * done, never on a silence. `false` = the process has rendered, and this is an observation
+ * exact death.
  *
- * IL FAUT `wait()`, ET C'EST TOUT LE FICHIER. Une commande lancée en
- * `detached: true` ne voit **jamais** son `exitCode` réconcilié tant que personne
- * ne l'attend : mesuré sur une vraie microVM, un process tué depuis huit minutes
- * — absent de `ps`, plus un event dans le fil — rendait encore `exitCode: null`.
- * Lire ce champ seul faisait donc répondre « vivant » à ce chien de garde sur
- * TOUS les décès, et un run dont la boucle meurt restait `running` pour toujours :
- * le balayeur d'inactivité ne ramasse que
- * les runs au repos, et la microVM tournait jusqu'aux 24 h de la session.
+ * IT NEEDS `wait()`, AND THAT’S THE WHOLE FILE. An order issued in
+ * `detached: true` **never** sees his `exitCode` reconciled as a person
+ * does not expect it: measured on a real microVM, a process killed for eight minutes
+ * — absent from `ps`, no longer an event in the thread — still returned `exitCode: null`.
+ * Reading this field alone therefore caused this watchdog to respond “alive” on
+ * ALL deaths, and one run whose loop dies remained `running` forever:
+ * the idle sweeper only picks up
+ * the runs at rest, and the microVM was running until 24 hours into the session.
  *
- * `wait()` borné rend les trois réponses sans en inventer aucune :
+ * `wait()` limited gives the three answers without inventing any:
  *
- * - il REND ⇒ le process a fini, quel que soit son code (137 pour un SIGKILL) ;
- * - il n'a pas rendu dans le délai ⇒ le process travaille encore ;
- * - il lève autre chose ⇒ on ne sait pas, et on se tait.
+ * - it RETURNS ⇒ the process has finished, whatever its code (137 for a SIGKILL);
+ * - he did not return the deadline ⇒ the process is still working;
+ * - he brings up something else ⇒ we don’t know, and we keep quiet.
  *
- * Le drapeau `timedOut` plutôt que le nom de l'exception : c'est NOTRE horloge
- * qui décide, pas la façon dont le SDK habille un abandon.
+ * The `timedOut` flag rather than the exception name: it's OUR clock
+ * who decides, not how the SDK dresses up an abandonment.
  *
- * `resume: false` DÉLIBÉRÉMENT : interroger l'état d'une commande ne doit jamais
- * réveiller une microVM que le reaper vient d'endormir — ça relancerait la
- * facturation compute d'un run au repos, à chaque passage du cron.
+ * `resume: false` DELIBERATELY: querying the status of an order should never
+ * wake up a microVM that the reaper has just put to sleep — this would restart the
+ * compute billing of a run at rest, each time the cron passes.
  */
 export async function isLoopCommandAlive(
   sandboxId: string,
@@ -284,8 +284,8 @@ export async function isLoopCommandAlive(
     const sandbox = await Sandbox.get({ ...creds, name: sandboxId, resume: false });
     const command = await sandbox.getCommand(commandId);
     if (!command) return null;
-    // Déjà réconcilié (commande non détachée, ou quelqu'un l'a attendue avant
-    // nous) : rien à demander de plus.
+    // Already reconciled (order not detached, or someone waited for it before
+    // us): nothing more to ask.
     if (command.exitCode != null) return false;
 
     const abort = new AbortController();

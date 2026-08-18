@@ -3,9 +3,9 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
 
-// Les FORMES vivent à part depuis MIN-224 (cf. `ai-usage-shape.ts`) : la boucle
-// d'agent en a besoin dans la microVM, où ce module-ci — qui écrit en clé de
-// service — n'a rien à faire. Ré-exportées ici pour que rien n'ait à changer
+// FORMES have lived apart since MIN-224 (see `ai-usage-shape.ts`): the loop
+// agent needs it in the microVM, where this module — which writes in the key of
+// service — has nothing to do. Re-exported here so nothing has to change
 // d'import.
 import {
   type AiFeature,
@@ -21,42 +21,40 @@ export type {
 export { OPENROUTER_USAGE_INCLUDE, parseOpenRouterUsage } from "./ai-usage-shape";
 
 /**
- * Suivi des coûts LLM — le point d'enregistrement UNIQUE de tous les appels IA.
+ * LLM Cost Tracker — the SINGLE recording point for all IA calls.
  *
- * Chaque appel LLM écrit une ligne dans `ai_usage`. Les appels d'une même action
- * agentique partagent un `runId` (voir `newRunId`) → on peut agréger par appel,
- * par run et par type (`feature`). Le coût vient de l'usage rapporté par
- * OpenRouter quand on ajoute `usage: { include: true }` au corps de la requête.
+ * Each LLM call writes a line to `ai_usage`. Calls of the same agentic
+ * action share a `runId` (see `newRunId`) → we can aggregate by call,
+ * by run and by type (`feature`). The cost comes from the usage reported by
+ * OpenRouter when adding `usage: { include: true }` to the request body.
  *
- * RÈGLE : `recordAiUsage` ne throw JAMAIS — le suivi de coût ne doit jamais faire
- * échouer la feature IA qui l'appelle (best-effort, à l'image de `insertStatEvents`).
+ * RULE: `recordAiUsage` NEVER throw — cost tracking must never make
+ * fail the AI feature who calls it (best effort, like `insertStatEvents`).
  */
 
-/** Un run_id frais : à générer une fois par action user (partagé par ses appels). */
+/** A fresh run_id: to be generated once per user action (shared by its calls). */
 export function newRunId(): string {
   return randomUUID();
 }
 
 /**
- * Ce qu'un run a dépensé, LU AU LEDGER (MIN-215) — toutes features confondues,
- * `sandbox_compute` comprise.
+ * What a run spent, READ AT THE LEDGER (MIN-215) — all features combined,
+ * `sandbox_compute` included.
  *
- * À préférer à `agent_runs.cost_usd` partout où la réponse doit être vraie même
- * quand un chunk est mort : la colonne n'est écrite que par les chemins de sortie
- * sains de `executeAgentRun`, donc un chunk qui lève au milieu — ou dont
- * l'invocation est tuée à la limite de durée — n'y porte JAMAIS sa dépense. Les
- * lignes du ledger, elles, sont écrites appel par appel, avant l'accident.
+ * To be preferred to `agent_runs.cost_usd` wherever the answer must be true even
+ * when a chunk is dead: the column is only written by healthy `executeAgentRun` * output paths, so a chunk that raises in the middle — or whose invocation is killed at the duration limit — NEVER bears its expense there. The
+ * lines of the ledger are written call by call, before the accident.
  *
- * Rend `null` quand la lecture échoue, jamais 0 : un zéro se confondrait avec
- * « ce run n'a rien dépensé » et rechargerait le plafond qu'on cherche à tenir.
- * L'appelant retombe alors sur ce qu'il a — au pire le comportement d'avant.
+ * Returns `null` when the reading fails, never 0: a zero would be confused with
+ * "this run has spent nothing" and would recharge the ceiling that we are trying to achieve hold.
+ * The caller then falls back on what he has — at worst the behavior from before.
  */
 export async function spentFromLedger(runId: string): Promise<number | null> {
   try {
     const service = getServiceClient();
-    // Somme faite EN BASE (`get_ai_run_spend`) : une lecture de lignes serait
-    // plafonnée par PostgREST (1 000 par défaut) et rendrait, sur un run bavard,
-    // une somme silencieusement basse.
+    // Sum made IN BASE (`get_ai_run_spend`): a reading of lines would be
+    // capped by PostgREST (1,000 by default) and would render, on a chatty run,
+    // a silently low sum.
     const { data, error } = await service.rpc("get_ai_run_spend", { p_run_id: runId });
     if (error) {
       console.error("[ai-usage] get_ai_run_spend failed:", error.message);
@@ -72,41 +70,41 @@ export async function spentFromLedger(runId: string): Promise<number | null> {
 
 export interface AiUsageInput {
   runId: string;
-  /** Index de l'appel dans le run (0 pour un appel unique). */
+  /** Index of the call in the run (0 for a single call). */
   seq?: number;
   feature: AiFeature;
-  /** Qui paye, et à quel titre. Voir `AiUsageBillTo`. */
+  /** Who pays, and in what capacity. See `AiUsageBillTo`. */
   billTo: AiUsageBillTo;
   model?: string | null;
-  /** Défaut DB : 'openrouter'. Poser 'vercel' pour le compute sandbox. */
+  /** DB default: 'openrouter'. Add 'vercel' for the compute sandbox. */
   provider?: string;
-  /** Qui a payé l'appel LLM. Le quota utilisateur ne somme que `platform`. */
+  /** Who paid for the LLM call. The user quota is only `platform`. */
   keyMode?: "platform" | "byok";
   generationId?: string | null;
   promptTokens?: number | null;
   completionTokens?: number | null;
   totalTokens?: number | null;
   /**
-   * Prompt caching (MIN-242) : tokens RELUS au cache du fournisseur, et tokens
-   * qu'il vient d'y écrire. `undefined`/`null` = le fournisseur n'en dit rien,
-   * ce qui ne se lit pas comme un cache qui n'a pas mordu.
-   */
+ * Prompt caching (MIN-242): tokens RELEASED to the provider's cache, and tokens
+ * that he has just written there. `undefined`/`null` = the vendor doesn't say anything about it,
+ * which doesn't read like a cache that didn't bite.
+ */
   cachedTokens?: number | null;
   cacheWriteTokens?: number | null;
   cost?: number | null;
   /**
-   * Le coût est CALCULÉ, pas rapporté par le fournisseur (MIN-216) — un essai de
-   * stream abandonné (interruption, coupure, reprise) est facturé sans que
-   * l'objet `usage` ne soit jamais arrivé. La ligne compte quand même : c'est le
-   * seul moyen que la dépense entre dans les compteurs. Mais elle se distingue,
-   * sinon l'admin finance comparerait sa marge à des dollars jamais relevés.
-   */
+ * Cost is CALCULATED, not reported by the provider (MIN-216) — an attempt to
+ * abandoned stream (interrupt, cut, resume) is charged without
+ * the `usage` object ever arriving. The line still counts: it's the
+ * only way for the expense to enter the counters. But it stands out,
+ * otherwise the finance admin would compare its margin to dollars never recorded.
+ */
   estimated?: boolean;
   projectId?: string | null;
   conversationId?: string | null;
 }
 
-/** Motif d'imputation écrit en base — 1:1 avec le check de la migration. */
+/** Imputation reason written in base — 1:1 with the migration check. */
 type BilledReason = "trigger" | "project_owner" | "platform" | "unattributed";
 
 function toRow(input: AiUsageInput) {
@@ -121,16 +119,16 @@ function toRow(input: AiUsageInput) {
     prompt_tokens: input.promptTokens ?? null,
     completion_tokens: input.completionTokens ?? null,
     total_tokens: input.totalTokens ?? null,
-    // Omises quand le fournisseur n'en dit rien (MIN-242) : même précaution que
-    // `estimated` juste en dessous — un déploiement qui précéderait sa migration
-    // ne perdrait que le détail du cache, jamais la ligne.
+    // Omitted when the supplier says nothing (MIN-242): same precaution as
+    // `estimated` just below — a deployment that would precede its migration
+    // would only lose the cache detail, never the line.
     ...(input.cachedTokens != null ? { cached_tokens: input.cachedTokens } : {}),
     ...(input.cacheWriteTokens != null ? { cache_write_tokens: input.cacheWriteTokens } : {}),
     cost: input.cost ?? null,
-    // Omise quand elle est fausse : la colonne a un défaut en base, et une ligne
-    // ordinaire ne doit RIEN devoir à une migration. Si le code partait en prod
-    // avant elle, seules les lignes estimées seraient refusées — pas le ledger
-    // entier, ce qu'un champ toujours présent aurait provoqué.
+    // Omitted when it is false: the column has a base default, and a row
+    // ordinary should owe NOTHING to a migration. If the code went to production
+    // before it, only the estimated lines would be refused — not the ledger
+    // integer, what an always-present field would have caused.
     ...(input.estimated ? { estimated: true } : {}),
     user_id: null as string | null,
     billed_reason: "unattributed" as BilledReason,
@@ -140,15 +138,15 @@ function toRow(input: AiUsageInput) {
 }
 
 /**
- * Imputation des jobs de fond (MIN-87) — cache court des owners de projet.
+ * Imputation of background jobs (MIN-87) — short cache of project owners.
  *
- * Le budget d'usage est compté PAR USER (`get_user_usage_since` filtre sur
- * `user_id`) : une ligne sans `user_id` n'entre donc dans le compteur de
- * personne. Or les passes de fond (revue du feedback, smart-assign, embeddings
- * du board public) sont AUTORISÉES par le budget du owner du projet
- * (`ownerHasUsageBudget`) — les laisser hors compteur revenait à ouvrir une
- * consommation illimitée à côté de la porte qui la garde. D'où `projectOwner` :
- * ce que MIN-131 a retiré, c'est l'automatisme, pas le repli lui-même.
+ * The usage budget is counted BY USER (`get_user_usage_since` filter on
+ * `user_id`): a line without `user_id` therefore does not enter the counter of
+ * anyone. However, the background passes (feedback review, smart-assign, embeddings
+ * from the public board) are AUTHORIZED by the budget of the project owner
+ * (`ownerHasUsageBudget`) — leaving them off the meter was tantamount to opening a
+ * unlimited consumption next to the door that guards it. Hence `projectOwner`:
+ * what MIN-131 removed was the automation, not the fallback itself.
  */
 const OWNER_CACHE_TTL_MS = 60_000;
 const ownerCache = new Map<string, { ownerId: string | null; expiresAt: number }>();
@@ -170,7 +168,7 @@ async function resolveProjectOwners(projectIds: string[]): Promise<Map<string, s
     resolved.set(row.id, row.owner_id);
     ownerCache.set(row.id, { ownerId: row.owner_id, expiresAt: now + OWNER_CACHE_TTL_MS });
   }
-  // Projet introuvable : on mémorise l'absence pour ne pas re-interroger en boucle.
+  // Project not found: we memorize the absence so as not to re-query in a loop.
   for (const id of missing) {
     if (!resolved.has(id)) {
       resolved.set(id, null);
@@ -181,14 +179,14 @@ async function resolveProjectOwners(projectIds: string[]): Promise<Map<string, s
 }
 
 /**
- * Enregistre un (ou plusieurs) appel(s) IA dans le ledger `ai_usage`. Best-effort :
- * log l'erreur et l'avale — n'interrompt jamais l'appelant.
+ * Records one (or more) AI call(s) in the `ai_usage` ledger. Best-effort:
+ * logs the error and swallows it — never interrupts the caller.
  *
- * L'imputation vient de `billTo` et de nulle part ailleurs (MIN-131) : un appel
- * avec déclencheur paye au déclencheur, un appel sans déclencheur nommable doit
- * demander le owner du projet, un appel offert à un visiteur sans compte
- * s'annonce `platform`, et tout ce qui n'entre dans aucun des trois s'écrit
- * `unattributed` — compté pour personne, mais journalisé en erreur.
+ * The charge comes from `billTo` and nowhere else (MIN-131): a call
+ * with trigger pays to trigger, a call without a nameable trigger must
+ * ask the project owner, a call offered to a visitor without an account
+ * is announced as `platform`, and anything that does not fall into any of the three is written as
+ * `unattributed` — counted as no one, but logged in error.
  */
 export async function recordAiUsage(
   input: AiUsageInput | AiUsageInput[]
@@ -197,7 +195,7 @@ export async function recordAiUsage(
   const rows = inputs.map(toRow);
   if (rows.length === 0) return;
   try {
-    // Les owners des lignes qui les demandent, en une seule requête (cache court).
+    // The owners of the lines that request them, in a single request (short cache).
     const ownerRequests = inputs
       .map((i) => ("projectOwner" in i.billTo ? i.billTo.projectOwner : null))
       .filter((id): id is string => Boolean(id));
@@ -216,14 +214,14 @@ export async function recordAiUsage(
         row.user_id = ownerId;
         row.billed_reason = ownerId ? "project_owner" : "unattributed";
         if (!ownerId) {
-          // Le repli a été demandé mais n'a personne à qui aller : la dépense
-          // sort de tous les compteurs. Ça se dit, sinon ça ne se voit jamais.
+          // The fallback has been requested but there is no one to go to: the expense
+          // output all counters. It's said, otherwise it's never seen.
           console.error(
             `[ai-usage] ${row.feature}: owner introuvable pour le projet ${billTo.projectOwner} — ligne non imputée`
           );
         }
       } else if ("platform" in billTo) {
-        // Dépense offerte, décidée : rien à imputer, et rien à signaler.
+        // Expense offered, decided: nothing to charge, and nothing to report.
         row.billed_reason = "platform";
       } else {
         const reason =

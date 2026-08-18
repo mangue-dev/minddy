@@ -12,7 +12,7 @@ import {
   watchPlanWrites,
 } from "./plan-closure";
 
-/** Le plan fondateur : celui de MIN-226, qui nommait deux des quatre fichiers. */
+/** The founding plan: that of MIN-226, which named two of the four files. */
 const PLAN = `## Contexte
 
 Supprimer \`ObjectiveSidePanel\` et replier son contenu dans la page.
@@ -53,7 +53,7 @@ describe("planNeedles", () => {
 
   it("ignore un chemin dont le basename est un mot, pas un nom", () => {
     // `page`/`route` : conventions Next.js. `execute`/`turn` : deux mots anglais qui
-    // ramenaient plus de cent fichiers chacun sur ce dépôt, et mangeaient deux places.
+    // brought back more than a hundred files each to this repository, and took up two places.
     expect(
       planNeedles("`app/objectives/page.tsx`, `lib/route.ts`, `lib/server/agent/execute.ts`, `lib/server/agent/vm/turn.ts`"),
     ).toEqual([]);
@@ -92,9 +92,9 @@ describe("buildClosureCommand / parseClosureOutput", () => {
     expect(cmd.match(/git grep/g)).toHaveLength(2);
     expect(cmd).toContain("'@@needle ObjectiveSidePanel'");
     expect(cmd).toContain("-e 'objective-side-panel'");
-    // `git grep` sort en 1 quand il ne trouve rien : c'est un résultat, pas une panne.
+    // `git grep` exits as 1 when it finds nothing: this is a result, not a failure.
     expect(cmd).toContain("|| true");
-    // Une ligne de plus que le cap : assez pour savoir qu'on est au-dessus.
+    // One line more than the cape: enough to know that we are above it.
     expect(cmd).toContain(`head -n ${MAX_FILES_PER_NEEDLE + 1}`);
   });
 
@@ -149,7 +149,7 @@ describe("formatPlanClosure", () => {
     const block = formatPlanClosure({ plan: PLAN, hits });
     expect(block).toContain("objective-list.tsx");
     expect(block).toContain("objective-header.tsx");
-    // Les deux que le plan nomme déjà ne reviennent pas.
+    // The two that the plan already names are not coming back.
     expect(block).not.toContain("- app/objectives/page.tsx");
     expect(block).not.toContain("- components/objectives/objective-side-panel.tsx");
     expect(block).toContain("2 files");
@@ -241,7 +241,7 @@ describe("watchPlanWrites", () => {
       old_string: "- [ ] app/objectives/page.tsx — retirer l'import et le rendu.",
       new_string: "- [ ] app/objectives/page.tsx et `objective-list.tsx` — retirer l'import.",
     });
-    // Sans le rejeu, la clôture rapporterait comme oublié un fichier que le modèle
+    // Without the replay, the closure would report as forgotten a file that the model
     // vient tout juste de nommer.
     expect(planNamesFile(sink.markdown, "components/objectives/objective-list.tsx")).toBe(true);
   });
@@ -250,13 +250,13 @@ describe("watchPlanWrites", () => {
     const sink = newPlanWriteSink();
     const watched = watchPlanWrites(ok, sink);
     await watched("write_issue_plan", { plan: PLAN });
-    // Le serveur a pu appliquer le patch sur une version plus large que la nôtre.
+    // The server was able to apply the patch to a version larger than ours.
     await watched("edit_issue_text", {
       field: "plan",
       old_string: "une phrase écrite à un tour précédent",
       new_string: "autre chose",
     });
-    // Et une édition de la DESCRIPTION n'a rien à voir avec le plan.
+    // And an edit of the DESCRIPTION has nothing to do with the plan.
     await watched("edit_issue_text", {
       field: "description",
       old_string: "Supprimer",

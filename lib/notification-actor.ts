@@ -1,36 +1,36 @@
-// QUI a agi, tel qu'une notification le dira — le pendant « acteur » de
-// notification-target.ts, et pour la même raison qu'elle : une notification se
-// lit sur DEUX surfaces, et les deux doivent nommer la même personne.
+// WHO acted, as a notification will say — the “actor” counterpart of
+// notification-target.ts, and for the same reason: a notification is
+// reads on TWO surfaces, and both must name the same person.
 //
 // Module PUR (pas de `server-only`) : il ne fait que trancher entre trois
-// drapeaux, et il vit à côté de la phrase et de la destination.
+// flags, and it lives next to the phrase and the destination.
 
 import type { NotificationRow } from "./server/notifications";
 
 /**
- * Le petit bout de `NotificationRow` que tout producteur d'un geste
- * possiblement automatisé doit poser.
+ * The little bit of `NotificationRow` that any producer of a possibly automated
+ * gesture must make.
  *
- * `actor_id` reste le compte sous lequel l'écriture est passée — il faut bien un
- * id, et c'est lui qui porte les droits —, mais quand le geste est celui d'un
- * AGENT c'est l'agent que les deux surfaces nomment : la clé MCP quand il y en a
- * une (« Claude Code (mcp) »), Numo sinon (le chat, l'agent de code).
+ * `actor_id` remains the account under which the entry is made — you need a
+ * id, and it is he who carries the rights -, but when the gesture is that of a
+ * AGENT it is the agent that the two surfaces name: the MCP key when there is
+ * one ("Claude Code (mcp)"), Numo otherwise (the cat, the code agent).
  *
- * **Les deux surfaces**, et c'est toute la raison d'être de ce helper. L'inbox
- * pouvait s'en passer pour un COMMENTAIRE : elle retombe sur le drapeau de la
- * ligne de commentaire (`comments.via_assistant`, app/api/notifications/route.ts).
- * La notification POUSSÉE, elle, ne lit que la ligne de notification
- * (lib/server/push/payload.ts) — sans ces champs, la bannière système annonce le
- * compte porteur là où l'inbox annonce l'agent. Concrètement : une réponse de
- * Numo à ma propre demande arrivait sur mon téléphone en « Clément a
- * commenté » — une notification de moi-même, pour un texte que je n'ai pas
- * écrit. Une description ou un ticket écrits par Numo avaient le même défaut,
- * et eux SANS le rattrapage de l'inbox : aucune ligne de commentaire derrière
- * où lire le drapeau.
+ * **Both surfaces**, and that's the whole reason for this helper. The inbox
+ * could do without it for a COMMENT: it falls on the flag of the
+ * comment line (`comments.via_assistant`, app/api/notifications/route.ts).
+ * The PUSHED notification only reads the notification line
+ * (lib/server/push/payload.ts) — without these fields, the system banner announces the
+ * bearer account where the inbox announces the agent. Concretely: a response from
+ * Numo to my own request arrived on my phone as “Clément has
+ * commented” — a notification from myself, for a text that I did not
+ * write. A description or a ticket written by Numo had the same fault,
+ * and them WITHOUT the inbox catch-up: no comment line behind
+ * where to read the flag.
  *
- * Les deux drapeaux ne se cumulent JAMAIS : l'affichage teste `via_assistant`
- * avant `via_mcp` (comme la timeline), donc les porter tous les deux ferait dire
- * « Numo » d'un geste dont on connaît l'agent par son nom.
+ * The two flags NEVER accumulate: the display tests `via_assistant`
+ * before `via_mcp` (like the timeline), so carrying them both would say
+ * “Numo” with a gesture where we know the agent by name.
  */
 export function notificationActorSource(params: {
   viaAssistant?: boolean;

@@ -12,30 +12,29 @@ import {
 } from "./agent-reasoning";
 
 /**
- * Tests du niveau de raisonnement (MIN-122). Ce qui compte ici : rien n'est
- * envoyé tant qu'on ne l'a pas explicitement demandé ET que le provider ne l'a
- * pas déclaré au registre — un champ inconnu revient en 400 et tue le round.
+ * Reasoning level tests (MIN-122). What matters here: nothing is
+ * sent until it is explicitly requested AND the provider has not declared it to the registry — an unknown field returns as 400 and kills the round.
  */
 
 describe("isReasoningLevel / toReasoningLevel", () => {
   it("accepte tout le vocabulaire et rien d'autre", () => {
     for (const level of REASONING_LEVELS) expect(isReasoningLevel(level)).toBe(true);
     expect(isReasoningLevel("maximum")).toBe(false);
-    // `none` est le mot d'OpenRouter ; le nôtre est `off`, et il dit un peu plus
-    // (n'envoyer AUCUN champ). La traduction se fait à la lecture de l'index.
+    // `none` is the OpenRouter word; ours is `off`, and it says a little more
+    // (do not send ANY fields). The translation is done by reading the index.
     expect(isReasoningLevel("none")).toBe(false);
     expect(isReasoningLevel("")).toBe(false);
     expect(isReasoningLevel(null)).toBe(false);
     expect(isReasoningLevel(2)).toBe(false);
   });
 
-  it("normalise tout le reste au défaut", () => {
+  it("normalizes everything else to the default", () => {
     expect(toReasoningLevel("high")).toBe("high");
     expect(toReasoningLevel("nope")).toBe(DEFAULT_REASONING_LEVEL);
     expect(toReasoningLevel(undefined)).toBe(DEFAULT_REASONING_LEVEL);
   });
 
-  it("le défaut est `medium` — l'agent réfléchit un peu, sauf choix contraire", () => {
+  it("the default is `medium` — the agent reasons a little unless told otherwise", () => {
     expect(DEFAULT_REASONING_LEVEL).toBe("medium");
   });
 });
@@ -53,17 +52,17 @@ describe("reasoningRequestFields", () => {
   });
 
   it("n'envoie RIEN au provider générique, même à `high`", () => {
-    // Base URL inconnue : un serveur OpenAI-compatible strict rejette le champ.
+    // Unknown URL base: a strict OpenAI-compatible server rejects the field.
     expect(reasoningRequestFields("high", "generic")).toEqual({});
   });
 
-  it("forme IMBRIQUÉE sur OpenRouter, trace demandée", () => {
+  it("uses the NESTED form on OpenRouter when tracing is requested", () => {
     expect(reasoningRequestFields("medium", "openrouter")).toEqual({
       reasoning: { effort: "medium", exclude: false },
     });
   });
 
-  it("forme PLATE sur OpenAI et Gemini ; Anthropic attend le modèle", () => {
+  it("uses the FLAT form on OpenAI and Gemini; Anthropic expects the model", () => {
     expect(reasoningRequestFields("low", "openai")).toEqual({ reasoning_effort: "low" });
     expect(reasoningRequestFields("high", "anthropic")).toEqual({});
     expect(reasoningRequestFields("medium", "google")).toEqual({ reasoning_effort: "medium" });
@@ -79,15 +78,15 @@ describe("reasoningRequestFields", () => {
     });
   });
 
-  it("mais les RABAT sur les couches compat, qui ne les connaissent pas", () => {
-    // OpenRouter rabat lui-même sur ce que le modèle accepte ; envoyés en direct,
-    // ces deux-là reviennent en 400 et tuent le round. Perdre un cran de
-    // réflexion vaut mieux que perdre le tour.
+  it("but FALLS BACK on compatibility layers that do not know them", () => {
+    // OpenRouter itself falls back on what the model accepts; sent directly,
+    // these two come back to 400 and kill the round. Lose a notch
+    // thinking is better than losing the turn.
     expect(reasoningRequestFields("xhigh", "openai")).toEqual({ reasoning_effort: "high" });
     expect(reasoningRequestFields("max", "anthropic")).toEqual({});
   });
 
-  it("la fonction sans modèle n'émet jamais un contrat Anthropic au hasard", () => {
+  it("the model-less function never emits a random Anthropic contract", () => {
     for (const provider of ["openrouter", "openai", "anthropic", "google", "generic"] as const) {
       const body = JSON.stringify(reasoningRequestFields("high", provider));
       expect(body).not.toContain("budget_tokens");
@@ -98,12 +97,12 @@ describe("reasoningRequestFields", () => {
 });
 
 describe("reasoningMaxTokens", () => {
-  it("laisse le plafond intact à `off` ou sur un niveau invalide", () => {
+  it("leaves the cap intact at `off` or for an invalid level", () => {
     expect(reasoningMaxTokens(8192, "off")).toBe(8192);
     expect(reasoningMaxTokens(8192, null)).toBe(8192);
   });
 
-  it("relève le plafond, et de plus en plus haut avec le niveau", () => {
+  it("raises the cap higher and higher with the level", () => {
     const off = reasoningMaxTokens(8192, "off")!;
     const low = reasoningMaxTokens(8192, "low")!;
     const medium = reasoningMaxTokens(8192, "medium")!;
@@ -118,31 +117,31 @@ describe("reasoningMaxTokens", () => {
   });
 });
 
-describe("reasoningLevelsFor — ce que le sélecteur propose", () => {
-  it("sans métadonnées, les quatre historiques", () => {
-    // Un BYOK direct, un modèle hors index : on ne sait rien, on ne promet rien
-    // de plus que ce qui marchait avant.
+describe("reasoningLevelsFor — what the selector offers", () => {
+  it("without metadata, the four historical levels", () => {
+    // A direct BYOK, a non-index model: we know nothing, we promise nothing
+    // more than what worked before.
     expect(reasoningLevelsFor(null)).toEqual(GENERIC_REASONING_LEVELS);
     expect(reasoningLevelsFor(undefined)).toEqual(GENERIC_REASONING_LEVELS);
   });
 
-  it("les paliers PUBLIÉS par le modèle, précédés de « sans raisonnement »", () => {
+  it("the levels PUBLISHED by the model, preceded by « no reasoning »", () => {
     // `openai/gpt-5.1-codex-max` en vrai : xhigh|high|medium|low, non obligatoire.
     expect(
       reasoningLevelsFor({ efforts: ["low", "medium", "high", "xhigh"], mandatory: false }),
     ).toEqual(["off", "low", "medium", "high", "xhigh"]);
   });
 
-  it("un modèle qui raisonne TOUJOURS n'a pas de « sans raisonnement »", () => {
+  it("a model that ALWAYS reasons has no « no reasoning » level", () => {
     // `google/gemini-3.6-flash` en vrai : mandatory, minimal|low|medium|high. Lui
-    // envoyer `none` casse l'appel — l'option ne doit donc pas exister à l'écran.
+    // sending `none` breaks the call — so the option should not exist on the screen.
     expect(
       reasoningLevelsFor({ efforts: ["minimal", "low", "medium", "high"], mandatory: true }),
     ).toEqual(["minimal", "low", "medium", "high"]);
   });
 
-  it("un modèle qui raisonne sans publier d'énumération retombe sur les génériques", () => {
-    // Les Claude : `{ mandatory: false }`, et rien d'autre.
+  it("a model that reasons without publishing an enumeration falls back to the generic levels", () => {
+    // Les Claude: `{ mandatory: false }`, and nothing else.
     expect(reasoningLevelsFor({ efforts: [], mandatory: false })).toEqual(
       GENERIC_REASONING_LEVELS,
     );
@@ -150,7 +149,7 @@ describe("reasoningLevelsFor — ce que le sélecteur propose", () => {
 });
 
 describe("nearestReasoningLevel", () => {
-  it("garde le niveau quand le modèle l'accepte", () => {
+  it("keeps the level when the model accepts it", () => {
     expect(nearestReasoningLevel("high", ["low", "medium", "high"])).toBe("high");
   });
 
@@ -159,9 +158,9 @@ describe("nearestReasoningLevel", () => {
     expect(nearestReasoningLevel("medium", ["off", "low"])).toBe("low");
   });
 
-  it("mais remonte quand le modèle n'a rien de moins cher", () => {
-    // Un modèle qui n'accepte que `high` doit recevoir `high`, même sur un défaut
-    // perso à `low` : le sélecteur ne peut pas afficher un palier qu'il ne liste pas.
+  it("but moves back up when the model has nothing cheaper", () => {
+    // A model that only accepts `high` must receive `high`, even on a default
+    // personal to `low`: the selector cannot display a level that it does not list.
     expect(nearestReasoningLevel("low", ["high"])).toBe("high");
   });
 
@@ -169,9 +168,9 @@ describe("nearestReasoningLevel", () => {
     expect(nearestReasoningLevel("xhigh", [])).toBe("xhigh");
   });
 
-  it("tout le vocabulaire est ordonné du moins cher au plus cher", () => {
-    // Le rang de `REASONING_LEVELS` EST l'échelle que `nearestReasoningLevel`
-    // descend : les mettre dans le désordre ferait rabattre `max` sur `minimal`.
+  it("the entire vocabulary is ordered from cheapest to most expensive", () => {
+    // The rank of `REASONING_LEVELS` IS the scale that `nearestReasoningLevel`
+    // goes down: putting them out of order would collapse `max` to `minimal`.
     expect(REASONING_LEVELS).toEqual([
       "off",
       "minimal",

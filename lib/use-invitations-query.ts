@@ -43,9 +43,9 @@ export function useMyInvitations() {
 }
 
 /**
- * Les invitations en attente ET le geste d'y répondre — état occupé et toasts
- * compris. Trois endroits l'offrent (la bannière de la home, l'inbox, l'étape 1
- * de l'onboarding) : ils disent la même chose avec les mêmes mots.
+ * Pending invitations AND the gesture to respond to them — including busy state and toasts
+ *. Three places offer it (the home banner, the inbox, step 1
+ * of onboarding): they say the same thing with the same words.
  */
 export function useInvitationResponder() {
   const t = useTranslations("Projects");

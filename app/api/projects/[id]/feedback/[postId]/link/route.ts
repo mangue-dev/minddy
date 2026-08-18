@@ -8,8 +8,8 @@ import { linkFeedbackIssue, unlinkFeedbackIssue } from "@/lib/server/feedback/pr
 
 type RouteContext = { params: Promise<{ id: string; postId: string }> };
 
-/** POST { issue_id } — lie le post à une issue existante du projet (le pendant
-    de la promotion quand le travail est déjà tracké). */
+/** POST { issue_id } — links the post to an existing project issue (the counterpart
+ of the promotion when the work is already tracked). */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id, postId } = await params;
   const guard = await requireProjectMember(request, id);
@@ -30,11 +30,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  // `null` est du JSON valide : lire body.issue_id dessus ferait un 500.
+  // `null` is valid JSON: reading body.issue_id on it would make a 500.
   if (!body || typeof body !== "object") {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
-  // Un uuid fait 36 caractères — au-delà de 64, ce n'est pas un id.
+  // A uuid is 36 characters long — beyond 64, it is not an id.
   const issueId =
     typeof body.issue_id === "string" && body.issue_id.length <= 64
       ? body.issue_id
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   return NextResponse.json({ ok: true });
 }
 
-/** DELETE — délie l'issue (le post garde son dernier statut public). */
+/** DELETE — unbinds the issue (the post keeps its last public status). */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id, postId } = await params;
   const guard = await requireProjectMember(request, id);

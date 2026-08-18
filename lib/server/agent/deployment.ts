@@ -1,35 +1,34 @@
 /**
- * Affinité de déploiement des runs de l'agent (MIN-165). PUR et testable — comme
- * `command-guard` : la politique ici, les mains dans `drain.ts` et la route cron.
+ * Agent runs deployment affinity (MIN-165). PURE and testable — like
+ * `command-guard`: the policy here, hands in `drain.ts` and the cron route.
  *
- * Preview et production partagent une seule base, donc une seule file de runs. Le
- * drain claim n'importe quel run `queued` et le cron ne tourne qu'en prod : un run
- * lancé depuis un preview repart, à la première frontière de chunk, sur le code de
- * la prod — même checkpoint, même microVM, jeu de tools différent. Le remède est
- * un TAMPON posé à la création : chaque drain ne claim que son propre périmètre,
- * et le cron de prod se contente de réveiller les déploiements qui ont du travail.
+ * Preview and production share a single database, hence a single queue of runs. The
+ * drain claim any run `queued` and the cron only runs in prod: a run
+ * launched from a preview leaves, at the first chunk boundary, on the code of
+ * the prod — same checkpoint, same microVM, different set of tools. The remedy is
+ * a BUFFER set at creation: each drain only claims its own perimeter,
+ * and the prod cron just wakes up the deployments that have work to do.
  */
 
-/** Nombre de déploiements preview réveillés par tick de cron. Le reliquat attend
- *  le tick suivant (2 min) — le nombre de previews qui drainent EN MÊME TEMPS se
- *  compte sur une main, et le plafond garde le répartiteur borné. */
+/** Number of preview deployments woken up per cron tick. The remainder waits for
+ * the next tick (2 min) — the number of previews that drain AT THE SAME TIME is counted on one hand, and the cap keeps the distributor bounded. */
 export const PREVIEW_KICK_MAX_TARGETS = 5;
 
-/** Au-delà, un run preview dû et jamais repris est déclaré orphelin : son
- *  déploiement a été supprimé, ou ne répond plus. Large devant les 2 min du cron
- *  et devant un chunk de 13 min qui aurait raté son propre chaînage. */
+/** Beyond that, a run preview due and never resumed is declared an orphan: its
+ * deployment has been deleted, or no longer responds. Large in front of the 2 min of the cron
+ * and in front of a chunk of 13 min which would have missed its own chaining. */
 export const PREVIEW_STALE_AFTER_MS = 15 * 60_000;
 
 /**
- * Périmètre de drain du déploiement décrit par `env`.
+ * Deployment drain scope described by `env`.
  *
- * `null` = la file commune, drainée par le cron de prod : la production, et le
- * local (pas de `VERCEL_ENV`), dont le drain lancé depuis le poste doit continuer
- * de reprendre les runs de prod — c'est la recette de lancement en vigueur.
+ * `null` = the common queue, drained by the prod cron: production, and the local
+ * (no `VERCEL_ENV`), whose drain launched from the workstation must continue
+ * to resume prod runs — this is the launch recipe in effect.
  *
- * Sinon l'URL du déploiement EXACT (`VERCEL_URL`) et pas celle de la branche : un
- * run continue avec le code qui l'a lancé, même si on repousse la branche entre
- * deux chunks.
+ * Otherwise the URL of the EXACT deployment (`VERCEL_URL`) and not that of the branch: a
+ * run continues with the code that launched it, even if the branch is pushed back between
+ * two chunks.
  */
 export function deploymentScopeFromEnv(
   env: Record<string, string | undefined>,
@@ -39,12 +38,12 @@ export function deploymentScopeFromEnv(
   return env.VERCEL_URL?.trim() || null;
 }
 
-/** `deploymentScopeFromEnv` appliqué au processus courant. */
+/** `deploymentScopeFromEnv` applied to the current process. */
 export function currentDeploymentScope(): string | null {
   return deploymentScopeFromEnv(process.env);
 }
 
-/** Ligne de file lue par le répartiteur (cf. la route cron). */
+/** Queue line read by the dispatcher (see the cron route). */
 export interface QueuedRunRow {
   id: string;
   deployment_url: string | null;
@@ -52,12 +51,12 @@ export interface QueuedRunRow {
 }
 
 /**
- * Répartition d'un tick de cron de prod : les déploiements à réveiller, et les
- * runs dont le déploiement ne répond plus.
+ * Distribution of a prod cron tick: the deployments to wake up, and the
+ * runs whose deployment is no longer responding.
  *
- * Un run orphelin ne compte PAS pour son URL : réveiller un déploiement supprimé
- * n'aboutit à rien. Un autre run récent sur la même URL, lui, sera bien kické —
- * c'est ce qui distingue un déploiement mort d'un run isolé qui a raté son tour.
+ * An orphaned run does NOT count for its URL: waking up a deleted deployment
+ * achieves nothing. Another recent run on the same URL will be kicked —
+ * this is what distinguishes a dead deployment from an isolated run that missed its turn.
  */
 export function previewKickTargets(
   rows: QueuedRunRow[],
@@ -68,10 +67,10 @@ export function previewKickTargets(
   const stalledRunIds: string[] = [];
   for (const row of rows) {
     const url = row.deployment_url?.trim();
-    if (!url) continue; // run de la file commune — la prod vient de le drainer
+    if (!url) continue; // run of the common queue — the prod has just drained it
     const dueAt = Date.parse(row.not_before);
-    // `not_before` illisible : on réveille, on ne condamne pas. Déclarer orphelin
-    // détruit un run ; se tromper dans ce sens-là ne coûte qu'un POST.
+    // `not_before` illegible: we wake up, we do not condemn. Declare an orphan
+    // destroy a run; getting it wrong only costs one POST.
     if (Number.isFinite(dueAt) && opts.now - dueAt > opts.staleAfterMs) {
       stalledRunIds.push(row.id);
       continue;

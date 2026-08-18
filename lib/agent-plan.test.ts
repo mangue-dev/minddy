@@ -3,14 +3,14 @@ import { livePlan } from "./agent-plan";
 import type { AgentRunEvent } from "./agent-api";
 
 /**
- * Ce que la carte de plan au-dessus du composer lit.
+ * What the outline card above the composer reads.
  *
- * Deux points portent tout. `update_plan` renvoie le plan ENTIER à chaque appel,
- * donc le dernier event gagne — y compris quand il est VIDE : cumuler les étapes
- * ferait grossir la checklist à chaque coche, et une étape supprimée par l'agent
- * resterait affichée pour toujours. Et la fenêtre est le TOUR : un plan du tour
- * précédent décrit un travail rendu, et le rafficher au-dessus de l'input où l'on
- * tape la question suivante ferait passer une checklist morte pour vivante.
+ * Two dots carry everything. `update_plan` returns the ENTIRE plan on each call,
+ * so the last event wins — including when it is EMPTY: accumulating the steps
+ * would make the checklist grow with each check, and a step deleted by the agent
+ * would remain displayed forever. And the window is the TOUR: a plan of the previous tour
+ * describes a completed work, and displaying it again above the input where one
+ * types the next question would make a dead checklist appear alive.
  */
 
 let seq = 0;

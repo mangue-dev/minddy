@@ -3,23 +3,23 @@ import { describe, expect, it } from "vitest";
 import { pageBacklinks, type BacklinkQueryable } from "./page-backlinks";
 
 /**
- * MIN-279 — la LECTURE des rétroliens, par-dessus quatre tables en mémoire.
+ * MIN-279 — READ trackbacks, over four tables in memory.
  *
- * `page-links.test.ts` couvre la dérivation ; ici c'est l'autre moitié, celle
- * qui fond les deux origines en une liste. Trois règles y tiennent tout, et
- * aucune ne se voit dans le type de retour :
+ * `page-links.test.ts` covers derivation; here it is the other half, that
+ * which combines the two origins into a list. Three rules hold everything there, and
+ * none are seen in the return type:
  *
- *  - une source qui cite la page des DEUX façons (une pilule de ressource ET
- *    une mention dans son texte) est UNE ligne, datée du premier des deux
- *    gestes — attacher la ressource d'un ticket qui mentionnait déjà la page ne
- *    doit pas la faire remonter en tête comme une nouveauté ;
- *  - une source qu'on ne peut plus nommer — corbeillée, ou purgée en laissant sa
- *    ligne derrière elle, `source_id` ne portant pas de clé étrangère — sort en
- *    silence ;
- *  - l'ordre est le genre d'abord (ticket, objectif, page), la date ensuite.
+ * - a source which cites the page in BOTH ways (a resource pill AND
+ * a mention in its text) is ONE line, dated the first of the two
+ * gestures — attach the resource of a ticket which already mentioned the page ne
+ * should not bring it to the top as something new;
+ * - a source that can no longer be named — trashed, or purged leaving its
+ * line behind it, `source_id` not carrying a foreign key — exits as
+ * silence ;
+ * - order is gender first (ticket, goal, page), date second.
  *
- * Le client est décrit à la main : `pageBacklinks` ne demande que quatre
- * `select` à filtre unique, c'est exactement ce que la fausse table rend.
+ * The client is described by hand: `pageBacklinks` only requests four single-filter
+ * `select`, that's exactly what the false table render.
  */
 
 interface Tables {
@@ -109,8 +109,8 @@ describe("pageBacklinks", () => {
           deleted_at: "2026-08-03T00:00:00Z",
         },
       ],
-      // `gone` n'a plus de ligne : la source a été purgée, le rétrolien a
-      // survécu, et c'est ici qu'il cesse d'exister.
+      // `gone` no longer has a line: the source has been purged, the trackback has
+      // survived, and this is where it ceases to exist.
       objectives: [],
     });
 
@@ -136,7 +136,7 @@ describe("pageBacklinks", () => {
 
     expect(found.map((row) => row.id)).toEqual(["i2", "i1", "o1", "pg"]);
     // Chaque genre se nomme comme il se nomme partout ailleurs : un identifiant
-    // pour un ticket, sa couleur pour un objectif, son émoji pour une page.
+    // for a ticket, its color for a goal, its emoji for a page.
     expect(found[1].identifier).toBe("MIN-1");
     expect(found[2]).toMatchObject({ title: "L'objectif", color: "amber" });
     expect(found[3]).toMatchObject({ title: "L'autre page", icon: "📘" });

@@ -6,99 +6,99 @@ import {
 } from "@/lib/server/agent/harness-layout";
 
 /**
- * UN TOUR QUI JOUE SUR CETTE MACHINE (MIN-293) — la moitié qui se décide sans
- * disque.
+ * A ROUND THAT PLAYS ON THIS MACHINE (MIN-293) — the half that is decided without
+ * disk.
  *
- * ## L'invariant de partage, et tout ce fichier en découle
+ * ## The sharing invariant, and all this file results from it
  *
- * **Le serveur possède tout ce qui concerne le RUN ; la machine possède tout ce
- * qui concerne le DISQUE.** Le serveur ne connaît aucun chemin de cet
- * ordinateur — un chemin de home ne veut rien dire ailleurs que sur la machine
- * qui le porte, et le ranger côté base le publierait, faux, à tous les membres du
- * projet ([local-repo.ts](local-repo.ts)). L'app, symétriquement, ne fabrique
- * aucun champ de job : le modèle, l'ancrage, le budget, l'`authUrl`, le journal
- * d'opencode et le bail sont des décisions qu'elle n'a pas les moyens de prendre.
+ * **The server has everything related to RUN; the machine has everything that
+ * which concerns the DISK.** The server does not know any path of this
+ * computer - a home path means nothing other than on the machine
+ * which carries it, and storing it on the base side would publish it, falsely, to all members of the
+ * project ([local-repo.ts](local-repo.ts)). The app, symmetrically, does not manufacture
+ * any job fields: the model, the anchor, the budget, the `authUrl`, the opencode journal
+ * and the lease are decisions that it does not have the means to make.
  *
- * Le contrat qui les relie est donc exactement un `VmJob` **amputé de son
- * `layout`** — le seul champ qui parle de disque — et de son `bootstrapMs`, qui
- * mesure un compute de microVM qui n'existe pas ici.
+ * The contract which connects them is therefore exactly one `VmJob` **amputated from its
+ * `layout`** — the only field that talks about disk — and from its `bootstrapMs`, which
+ * measures a microVM compute which does not exist here.
  *
- * ## Quatre champs que la machine pose, et deux qu'elle RÉÉCRIT
+ * ## Four fields that the machine sets, and two that it REWRITE
  *
- * `layout` et `bootstrapMs` sont les siens par construction. Les deux autres sont
- * des valeurs que le serveur a mises et qu'elle remplace, et ce ne sont pas des
- * exceptions à l'invariant — ce sont des faits de disque déguisés en champs de run :
+ * `layout` and `bootstrapMs` are its own by construction. The other two are
+ * values that the server has set and which it replaces, and these are not
+ * exceptions to the invariant — they are disk facts disguised as run fields:
  *
- * - **`appOrigin`** : le serveur le résout par `agentControlOrigin()`, qui
- *   retombe sur la production hors Vercel. Une coquille en preview ou en dév
- *   parlerait alors à `www.minddy.app` avec un bail signé ailleurs. La règle est
- *   plus simple que n'importe quel arbitrage : **la machine ne parle qu'à
- *   l'origine qui lui a donné son travail.** Elle sait laquelle, c'est celle du
- *   canal actif ; le serveur, lui, ne sait pas d'où on l'appelle.
- * - **`repoMode`** : le serveur ne sait produire qu'un `clone` — c'est lui qui
- *   crée la microVM et clone dedans. Le mode `current` (décision D2 : l'agent
- *   travaille dans le dépôt que l'humain a déjà) appartient à qui OUVRE ce dépôt,
- *   et c'est la machine. Posé en VALEUR, jamais déduit : un job muet joué comme
- *   un clone ferait un `git add -A` et un `git checkout -b` dans le checkout de
- *   quelqu'un.
+ * - **`appOrigin`**: the server resolves it by `agentControlOrigin()`, which
+ * falls on production outside Vercel. A typo in preview or dev
+ * would then speak to `www.minddy.app` with a lease signed elsewhere. The rule is
+ * simpler than any arbitration: **the machine only speaks to
+ * the origin which gave it its work.** It knows which one, it is that of the
+ * active channel; the server does not know where it is called from.
+ * - **`repoMode`**: the server only knows how to produce one `clone` — it is he who
+ * creates the microVM and clones it into it. The `current` mode (D2 decision: the agent
+ * works in the repository that the human already has) belongs to who OPENS this repository,
+ * and it is the machine. Set as VALUE, never deducted: a silent job played like
+ * a clone would do a `git add -A` and a `git checkout -b` in the checkout of
+ * someone.
  *
- * Et `bootstrapMs` vaut zéro, pas « ce que le téléchargement a coûté » :
- * `billableSandboxMs` ([vm-rest.ts](../server/agent/vm-rest.ts)) borne déjà côté
- * serveur, et facturer des minutes de Mac reviendrait à faire payer une machine
- * que l'utilisateur a lui-même fournie.
+ * And `bootstrapMs` is worth zero, not "what the download cost":
+ * `billableSandboxMs` ([vm-rest.ts](../server/agent/vm-rest.ts)) terminal already on the side
+ * server, and charging for Mac minutes would amount to charging for a machine
+ * that the user has himself provided.
  *
- * ## Le layout : le dépôt est ailleurs, tout le reste est sous la racine du run
+ * ## The layout: the repository is elsewhere, everything else is under the root of the run
  *
  * `layoutForCurrentRepo` ([harness-layout.ts](../server/agent/harness-layout.ts))
- * dit la règle : le harness, ses sorties de tools et son `.tsbuildinfo` ne sont
- * JAMAIS dans le dépôt — sinon ils apparaîtraient dans le `git status` de
- * l'utilisateur et dans le périmètre du tour. La racine du run, elle, est un
- * dossier par identifiant : deux tickets lancés à la suite sur le même poste
- * partageraient sinon le job, la base SQLite d'opencode et les sorties de tools.
+ * says the rule: the harness, its tools outputs and its `.tsbuildinfo` are
+ * NEVER in the repository — otherwise they would appear in the `git status` of
+ * the user and within the perimeter of the tour. The root of the run is a
+ * folder by identifier: two tickets launched in succession on the same workstation
+ * would otherwise share the job, the opencode SQLite base and the tools output.
  *
- * ## Pourquoi le job n'est PAS typé `VmJob` ici
+ * ## Why the job is NOT typed `VmJob` here
  *
- * On aimerait l'importer — c'est le contrat, il est vérifié par le compilateur,
- * et c'est toute la valeur de [vm/protocol.ts](../server/agent/vm/protocol.ts).
- * Mais ce fichier-là type-importe `../runs`, qui est `server-only` : le suivre
- * ferait entrer la moitié du serveur dans le type-check de la coquille, qui n'a
- * ni `global.d.ts` ni les mêmes réglages, et qui tombe alors sur une quarantaine
- * de fichiers n'ayant rien à voir avec elle (mesuré).
+ * We would like to import it — it is the contract, it is checked by the compiler,
+ * and it is the whole value of [vm/protocol.ts](../server/agent/vm/protocol.ts).
+ * But this file type-imports `../runs`, which is `server-only`: following it
+ * would bring half of the server into the type-check of the shell, which has
+ * neither `global.d.ts` nor the same settings, and which would then come across around forty
+ * files having nothing to see with it (measured).
  *
- * La coquille ne LIT donc du job que les quatre champs dont elle se sert, et
- * **fait suivre le reste sans y toucher** — ce qui est exactement l'invariant
- * ci-dessus, écrit une seconde fois par les types. La vérification de contrat,
- * elle, n'est pas perdue : elle vit dans
- * [local-turn.test.ts](local-turn.test.ts), qui tourne sous le tsconfig racine et
- * affirme que ce que `assignmentToJob` produit satisfait bien `VmJob`. C'est le
- * seul endroit où les deux graphes ont le droit de se rencontrer.
+ * The shell therefore only READS from the job the four fields it uses, and
+ * **follows the rest without touching it** — which is exactly the invariant
+ * above, written a second time by the types. The contract verification,
+ * is not lost: it lives in
+ * [local-turn.test.ts](local-turn.test.ts), which runs under the root tsconfig and
+ * asserts that what `assignmentToJob` produces satisfies `VmJob`. This is the
+ * only place where the two graphs are allowed to meet.
  *
- * Décisions ici, `fork` et `fs` dans
+ * Decisions here, `fork` and `fs` in
  * [desktop/src/launcher.ts](../../desktop/src/launcher.ts).
  */
 
 /**
- * CE QUE LA MACHINE LIT DU JOB — quatre champs, et le reste voyage tel quel.
+ * WHAT THE MACHINE READS FROM THE JOB — four fields, and the rest travels as is.
  *
- * L'index signature n'est pas un renoncement : elle DIT que tout le reste du job
- * est opaque pour la coquille, et elle refuse par construction qu'un champ de plus
- * y soit lu sans être déclaré ici.
+ * The signature index is not a waiver: it SAYS that everything else in the job
+ * is opaque to the shell, and it refuses by construction just one more field
+ * be read there without being declared here.
  */
 export interface AssignedJob {
-  /** Doit être celui du harness qu'on va exécuter (cf. `bundleDecision`). */
+  /** Must be that of the harness that we are going to execute (see `bundleDecision`). */
   readonly protocolVersion: number;
   readonly runId: string;
-  /** Le bail. Sa présence EST ce qui fait d'un job un job local (`isLocalJob`). */
+  /** The lease. Its presence IS what makes a job a local job (`isLocalJob`). */
   readonly controlToken: string;
   /** L'URL de push, token de forge compris — un secret du journal. */
   readonly authUrl?: string;
-  /** Référence lisible du run (`MIN-293`), pour nommer le tour dans la boîte du ⌘Q. */
+  /** Readable run reference (`MIN-293`), to name the turn in the ⌘Q box. */
   readonly commitRef?: string;
   readonly [key: string]: unknown;
 }
 
-/** Le job COMPLET, tel que le harness le lira. Les trois champs de la machine
- *  s'ajoutent aux siens ; le reste est intact. */
+/** The FULL job, as the harness will read it. The three fields of the machine
+ * are added to its own; the rest is intact. */
 export interface LocalJob extends AssignedJob {
   readonly layout: HarnessLayout;
   readonly appOrigin: string;
@@ -107,115 +107,115 @@ export interface LocalJob extends AssignedJob {
   readonly bootstrapMs: 0;
 }
 
-/** Le dossier des runs, sous `userData`. */
+/** The runs folder, under `userData`. */
 export const LOCAL_RUNS_DIR_NAME = "agent-runs";
 
-/** Et celui où opencode est installé — propre à la MACHINE, pas au run. */
+/** And the one where opencode is installed — specific to the MACHINE, not to the run. */
 export const LOCAL_OPENCODE_DIR_NAME = "opencode";
 
 /**
- * CE QUE LE SERVEUR REMET À LA MACHINE.
+ * WHAT THE SERVER DELIVERS TO THE MACHINE.
  *
- * `job` porte déjà le bail (`controlToken`) : un job local est, par définition,
- * un job qui porte un jeton — c'est ce que dit `isLocalJob`, et un drapeau de
- * plus à côté serait une seconde vérité sur le même fait.
+ * `job` already carries the lease (`controlToken`): a local job is, by definition,
+ * a job that carries a token — that's what it says `isLocalJob`, and a flag of
+ * further next to it would be a second truth about the same fact.
  */
 export interface LocalTurnAssignment {
   readonly runId: string;
   readonly projectId: string;
   /**
-   * Le `owner/repo` du projet, pour revalider le dossier attaché **au moment du
-   * tour**. L'attachement a pu être fait il y a un mois, le dépôt déplacé, le
-   * disque démonté, le projet re-lié ailleurs : répondre sur la foi du fichier de
-   * réglages ferait partir un run vers un dossier qui n'existe plus.
-   */
+ * The `owner/repo` of the project, to revalidate the attached folder **at the time of the
+ * round**. The attachment could have been made a month ago, the repository moved, the
+ * disk unmounted, the project re-linked elsewhere: responding based on the file de
+ * settings would send a run to a folder that no longer exists.
+ */
   readonly repoFullName: string;
-  /** Le checkout isolé est une décision figée au lancement de la session. */
+  /** The isolated checkout is a decision fixed at the start of the session. */
   readonly localWorktree: boolean;
   /**
-   * Les projets que le lanceur peut lire. Le serveur ne met ici AUCUN chemin :
-   * la coquille les rejoint avec ses propres attachements locaux avant de poser
-   * le job. Cette liste sert à ce qu'un agent local puisse résoudre « le projet
-   * X » sans demander où il se trouve sur le Mac.
+   * Projects that the launcher can read. The server does not put ANY path here:
+   * the shell joins them with its own local attachments before placing the job.
+   * This list lets a local agent resolve "project X" without asking where it is
+   * located on the Mac.
    */
   readonly projects: readonly LocalTurnProject[];
-  /** Le job, moins les trois champs que seule la machine peut remplir. */
+  /** The job, minus the three fields that only the machine can fill. */
   readonly job: AssignedJob;
 }
 
-/** Identité non sensible d'un projet, transmise par le serveur à la machine. */
+/** Non-sensitive identity of a project, transmitted by the server to the machine. */
 export interface LocalTurnProject {
   readonly id: string;
   readonly name: string;
   readonly key: string;
-  /** Nécessaire pour revalider le dossier que la machine a retenu. */
+  /** Necessary to revalidate the file that the machine has retained. */
   readonly repoFullName: string | null;
 }
 
-/** Projet remis au harness local ; seul ce type peut porter un chemin de disque. */
+/** Project handed over to local harness; only this type can carry a disk path. */
 export interface LocalProject extends LocalTurnProject {
   readonly localPath: string | null;
 }
 
 /**
- * Pourquoi un tour ne peut pas partir sur cette machine.
+ * Why a turn cannot go on this machine.
  *
- * Aucune n'est une erreur de l'utilisateur au sens où il n'y aurait rien à faire :
- * chacune a un geste de réparation, et c'est ce qui les rend utiles dans un
- * journal. `bundle` et `opencode` portent leur propre motif, plus précis
+ * None are user errors in the sense that there would be nothing to do:
+ * each has a repair gesture, and that's what makes them useful in a
+ * log. `bundle` and `opencode` carry their own, more precise pattern
  * ([harness-bundle.ts](harness-bundle.ts), [opencode-install.ts](opencode-install.ts)).
  */
 export type LocalTurnRefusal =
-  /** L'affectation n'a pas la forme attendue, ou parle un autre protocole. */
+  /** The assignment does not have the expected form, or speaks another protocol. */
   | "assignment_invalid"
-  /** Aucun dossier attaché à ce projet sur cette machine. */
+  /** No folders attached to this project on this machine. */
   | "no_repo"
-  /** Un dossier attaché, mais qui n'est plus le dépôt du projet. */
+  /** An attached folder, but which is no longer the project repository. */
   | "repo_invalid"
-  /** Le harness n'a pas pu être obtenu ou vérifié. */
+  /** The harness could not be obtained or verified. */
   | "bundle"
-  /** Le binaire opencode manque et ne peut pas être installé. */
+  /** The opencode binary is missing and cannot be installed. */
   | "opencode"
-  /** Un tour de ce run tourne DÉJÀ ici. */
+  /** One lap of this run is ALREADY running here. */
   | "already_running";
 
 /**
- * L'affectation relue de ce que l'origine a répondu — ou `null`.
+ * The assignment read back from what the origin responded — or `null`.
  *
- * Le protocole est vérifié ICI, avant tout, et c'est délibéré : le harness le
- * refuserait aussi (`parseVmJob`), mais après le fork, quand il ne reste plus
- * qu'un journal pour en parler. Le reste des champs n'est pas revalidé un par
- * un — ils viennent de notre propre serveur, sur notre propre origine, et les
- * revérifier ici reviendrait à tenir une seconde copie du contrat qui finirait
- * par diverger de `protocol.ts`. Ce qu'on vérifie, c'est ce dont la MACHINE se
- * sert : l'identité du run, le dépôt à valider, et le bail sans lequel le tour ne
- * pourrait rien dire.
+ * The protocol is checked HERE, first of all, and this is deliberate: the harness le
+ * would also refuse (`parseVmJob`), but after the fork, when it does not remains more
+ * than a newspaper to talk about it. The rest of the fields are not revalidated one by
+ * one — they come from our own server, on our own origin, and the
+ * rechecking here would mean holding a second copy of the contract which would end up
+ * diverging from `protocol.ts`. What we check is what the MACHINE uses
+ *: the identity of the run, the deposit to validate, and the lease without which the round would not
+ * could mean anything.
  */
 export function parseLocalTurnAssignment(raw: unknown): LocalTurnAssignment | null {
   if (typeof raw !== "object" || raw === null) return null;
   const { runId, projectId, repoFullName, localWorktree, projects, job } = raw as Record<string, unknown>;
   if (!isNonEmptyString(runId) || !isNonEmptyString(projectId)) return null;
   if (!isRepoFullName(repoFullName)) return null;
-  // Un serveur déployé juste avant la migration ne connaît pas encore ce champ.
-  // Son absence retombe sur le comportement historique, sûr (checkout courant) ;
-  // seule une valeur présente mais mal formée est un contrat incohérent.
+  // A server deployed just before migration does not yet know this field.
+  // Its absence falls on historical, safe behavior (current checkout);
+  // only a value present but poorly formed is an inconsistent contract.
   if (localWorktree !== undefined && typeof localWorktree !== "boolean") return null;
   if (typeof job !== "object" || job === null) return null;
 
   const typed = job as Partial<AssignedJob>;
-  // La version est LUE ici et confrontée au harness qu'on va exécuter, pas à une
-  // constante compilée dans l'app : la coquille ne parle pas le protocole, elle
-  // le relaie (cf. `bundleDecision`).
+  // The version is READ here and compared to the harness that we are going to execute, not to a
+  // constant compiled in the app: the shell does not speak the protocol, it
+  // relays it (see `bundleDecision`).
   if (typeof typed.protocolVersion !== "number" || !Number.isInteger(typed.protocolVersion)) {
     return null;
   }
-  // Le bail : sans lui, le tour ne peut pas parler au plan de contrôle, donc il
-  // ne peut pas rendre son rapport — et un run resterait `running` jusqu'à ce que
-  // le chien de garde le constate, deux heures plus tard.
+  // The lease: without it, the tower cannot talk to the control plane, so it
+  // cannot report — and a run would remain `running` until
+  // the guard dog notices it, two hours later.
   if (!isNonEmptyString(typed.controlToken)) return null;
-  // `layout` n'est PAS une valeur que le serveur a le droit de poser : il ne
-  // connaît aucun chemin de cette machine, et un layout venu d'ailleurs
-  // désignerait un dossier que personne n'a choisi.
+  // `layout` is NOT a value that the server has the right to set: it does not
+  // knows no path to this machine, and a layout from elsewhere
+  // would designate a folder that no one has chosen.
   if ("layout" in (job as object)) return null;
   if (typed.runId !== runId) return null;
 
@@ -233,8 +233,8 @@ export function parseLocalTurnAssignment(raw: unknown): LocalTurnAssignment | nu
 }
 
 function parseLocalTurnProjects(value: unknown): readonly LocalTurnProject[] | null {
-  // Une app plus ancienne peut encore parler à un serveur qui ne renvoie pas le
-  // catalogue : le run reste utilisable, seulement sans cet outil de découverte.
+  // An older app can still talk to a server that doesn't return the
+  // catalog: the run remains usable, only without this discovery tool.
   if (value === undefined) return [];
   if (!Array.isArray(value)) return null;
   const projects: LocalTurnProject[] = [];
@@ -255,29 +255,29 @@ function parseLocalTurnProjects(value: unknown): readonly LocalTurnProject[] | n
   return projects;
 }
 
-/** Le dossier qui porte les racines de run — le seul que le ménage parcourt. */
+/** The folder that has the roots of run — the only one the household browses. */
 export function localRunsDir(userDataPath: string): string {
   return `${trimSlashes(userDataPath)}/${LOCAL_RUNS_DIR_NAME}`;
 }
 
-/** La racine du run sur cette machine : un dossier par identifiant. */
+/** The root of the run on this machine: one folder per identifier. */
 export function localRunRoot(userDataPath: string, runId: string): string {
   return runScopedRoot(localRunsDir(userDataPath), runId);
 }
 
-/** Où opencode est installé sur cette machine — partagé par tous les runs. */
+/** Where opencode is installed on this machine — shared by all runs. */
 export function localOpencodeDir(userDataPath: string): string {
   return `${trimSlashes(userDataPath)}/${LOCAL_OPENCODE_DIR_NAME}`;
 }
 
 /**
- * Le layout de ce tour. `repoDir` est le dossier que l'humain a attaché ; tout le
- * reste vit sous la racine du run, hors du dépôt.
+ * The layout of this round. `repoDir` is the folder that the human attached; everything
+ * remains lives under the run root, outside the repository.
  *
- * LÈVE si le layout est inutilisable (`assertUsableLayout`, appelé par
- * `layoutForCurrentRepo` via le harness) — un chemin relatif ou un slash final
- * rendrait `resolveWithin` et `absoluteInRepo` muets plutôt que faux, et c'est
- * `repoDir` qui est la racine de sécurité de toutes les écritures du modèle.
+ * RISK if the layout is unusable (`assertUsableLayout`, called by
+ * `layoutForCurrentRepo` via the harness) — a relative path or a trailing slash
+ * would make `resolveWithin` and `absoluteInRepo` silent rather than false, and it is
+ * `repoDir` which is the security root of all writes to the model.
  */
 export function localLayout(opts: {
   userDataPath: string;
@@ -295,15 +295,15 @@ export function localLayout(opts: {
 }
 
 /**
- * LE JOB, COMPLET — la seule fabrique, et le seul endroit où les trois champs de
- * la machine sont posés.
+ * THE JOB, COMPLETE — the only factory, and the only place where the three fields of
+ * the machine are set.
  *
- * `repoMode: "current"` n'est pas déduit : c'est une VALEUR, et le serveur ne la
- * pose pas. La décision D2 en fait le défaut d'une conversation locale (l'agent
- * travaille dans le dépôt courant, le worktree dédié est une option), mais elle
- * appartient à la machine parce que c'est elle qui sait quel dépôt elle ouvre.
- * L'écrire ici plutôt que côté serveur ferme le cas où un job muet serait joué
- * comme un clone dans le checkout de quelqu'un.
+ * `repoMode: "current"` is not deduced: it is a VALUE, and the server does not set it
+ * not. Decision D2 makes it the default of a local conversation (the agent
+ * works in the current repository, the dedicated worktree is an option), but it
+ * belongs to the machine because it knows which repository it opens.
+ * Writing it here rather than on the server side closes the case where a silent job would be played
+ * as a clone in the someone's checkout.
  */
 export function assignmentToJob(
   assignment: LocalTurnAssignment,
@@ -317,53 +317,52 @@ export function assignmentToJob(
   return {
     ...assignment.job,
     layout: machine.layout,
-    // La machine ne parle qu'à l'origine qui lui a donné son travail (cf. en-tête).
+    // The machine only speaks to the origin that gave it its work (see header).
     appOrigin: machine.appOrigin,
-    // `clone` veut dire « checkout appartenant au tour ». Un worktree local est
-    // exactement cela : il n'est pas un clone réseau, mais le harnais peut y
-    // committer et pousser sans emporter le WIP du checkout attaché.
+    // `clone` means “checkout belonging to the round”. A local worktree is
+    // exactly that: it is not a network clone, but the harness can
+    // commit and push without carrying the WIP of the attached checkout.
     repoMode: machine.isolated ? "clone" : "current",
-    // Les chemins viennent exclusivement de l'app de bureau. Ils ne remontent
-    // jamais au serveur et ne sont donc jamais partagés avec l'équipe.
+    // Paths come exclusively from the desktop app. They don't go back
+    // never to the server and are therefore never shared with the team.
     ...(machine.localProjects?.length ? { localProjects: machine.localProjects } : {}),
-    // Pas de microVM, donc pas de compute d'amorçage à facturer (cf. en-tête).
+    // No microVM, therefore no boot compute to charge (see header).
     bootstrapMs: 0,
   };
 }
 
-/** Les secrets que le journal de ce tour ne doit pas garder. */
+/** Secrets that this round's journal should not keep. */
 export function localTurnSecrets(job: AssignedJob): string[] {
   const secrets = [job.controlToken, job.authUrl];
   return secrets.filter((value): value is string => typeof value === "string" && value.length > 0);
 }
 
 /**
- * Combien de temps la racine d'un run survit à son dernier tour.
+ * How long the root of a run survives its last turn.
  *
- * Elle n'est PAS jetable à la fin d'un tour : `typecheckDir` porte le
- * `.tsbuildinfo` qui fait passer les tours suivants de 22 s à 11 s
- * ([harness-layout.ts](../server/agent/harness-layout.ts)), et une conversation
- * reprend des jours après. Sept jours, c'est plus long que la vie utile d'une
- * conversation d'agent et assez court pour qu'un disque ne se remplisse pas.
+ * It is NOT disposable at the end of a turn: `typecheckDir` carries the
+ * `.tsbuildinfo` which reduces the following turns from 22 s to 11 s
+ * ([harness-layout.ts](../server/agent/harness-layout.ts)), and a conversation
+ * resumes days later. Seven days is longer than the useful life of an agent conversation and short enough that a disk won't fill up.
  */
 export const RUN_ROOT_KEEP_DAYS = 7;
 
-/** Une racine de run trouvée sur le disque, telle que le ménage la voit. */
+/** A run root found on disk, as household sees it. */
 export interface RunRootEntry {
   readonly name: string;
-  /** Dernière écriture, en millisecondes epoch. */
+  /** Last written, in epoch milliseconds. */
   readonly modifiedMs: number;
 }
 
 /**
- * LES RACINES DE RUN À SUPPRIMER — la fonction ne touche à rien, elle nomme
- * (même patron que `pruneRunLogs` et `staleBundles`).
+ * THE RUN ROOTS TO BE DELETED — the function does not touch anything, it names
+ * (same pattern as `pruneRunLogs` and `staleBundles`).
  *
- * `live` est l'ensemble des runs qui tournent EN CE MOMENT sur cette machine, et
- * ce n'est pas une précaution théorique : le ménage tourne au démarrage de l'app
- * ET à la fin de chaque tour, or un second tour peut très bien être en vol.
- * Supprimer sa racine lui retirerait son job, ses sorties de tools et la base
- * SQLite d'opencode sous les pieds.
+ * `live` is the set of runs which run EN THIS MOMENT on this machine, and
+ * this is not a theoretical precaution: the housework runs at the start of the app
+ * AND at the end of each round, or a second round may very well be in flight.
+ * Deleting its root would take away its job, its tools outputs and the base
+ * Opencode SQLite under the feet.
  */
 export function staleRunRoots(
   entries: readonly RunRootEntry[],
@@ -373,16 +372,15 @@ export function staleRunRoots(
   const live = opts.live ?? new Set<string>();
   return entries
     .filter((entry) => !live.has(entry.name))
-    // Une date illisible ne supprime RIEN : on ne conclut pas sur une ignorance,
-    // surtout du côté qui efface.
+    // An illegible date does not delete ANYTHING: we do not conclude on ignorance,
+    // especially on the side that erases.
     .filter((entry) => Number.isFinite(entry.modifiedMs) && entry.modifiedMs < cutoff)
     .map((entry) => entry.name);
 }
 
 /**
- * La phrase du journal pour un refus d'avant-fork. En anglais, comme le menu et
- * le rapport de diagnostic — c'est le même texte, et il finit collé dans un fil
- * de support.
+ * The log phrase for pre-fork denial. In English, like the menu and
+ * the diagnostic report — it's the same text, and it ends up pasted into a support thread.
  */
 export function localTurnRefusalMessage(reason: LocalTurnRefusal, repoFullName: string): string {
   switch (reason) {
@@ -405,7 +403,7 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-/** Un `owner/repo` (ou chemin GitLab) n'est jamais un chemin absolu de Mac. */
+/** A `owner/repo` (or GitLab path) is never an absolute Mac path. */
 function isRepoFullName(value: unknown): value is string {
   if (!isNonEmptyString(value)) return false;
   const trimmed = value.trim();

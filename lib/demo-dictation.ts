@@ -2,50 +2,50 @@ import type { MessageKey } from "@/lib/i18n-keys";
 import type { IssuePriorityValue } from "@/lib/issue-validation";
 
 /**
- * Le monde de la démo de dictée publique (MIN-150).
+ * The world of public dictation demo (MIN-150).
  *
- * La landing laisse un visiteur SANS COMPTE parler cinq secondes et voir le
- * ticket se remplir. Le ticket produit est jetable : rien n'est écrit en base,
- * aucun projet réel n'est lu. Il faut pourtant un décor — un ticket sans
- * membres à qui l'assigner ni catégories à choisir ne démontre que la moitié de
- * l'argument (« tous les champs se remplissent », pas seulement le titre).
+ * The landing lets a visitor WITHOUT COUNT speak for five seconds and watch the
+ * ticket fill up. The ticket produced is disposable: nothing is written in base,
+ * no real project is read. However, you need a setting — a ticket without
+ * members to assign it to or categories to choose from only demonstrates half of
+ * the argument ("all fields fill in", not just the title).
  *
- * Ce décor est ici, et il est FICTIF : trois membres, trois catégories, écrits
- * en dur. Le module est partagé client/serveur (aucun import server-only) :
- *   - la route `/api/demo/dictate` en construit le prompt et re-valide contre
- *     lui tout ce que le modèle renvoie ;
- *   - le bloc `components/marketing/voice-demo.tsx` affiche les mêmes phrases
- *     d'exemple.
+ * This setting is here, and it is FICTITIOUS: three members, three categories, written
+ * in hard. The module is shared client/server (no server-only import):
+ * - the `/api/demo/dictate` route constructs the prompt and re-validates against
+ * everything that the model returns;
+ * - the `components/marketing/voice-demo.tsx` block displays the same sentences
+ * example.
  *
- * LES CHAÎNES NE SONT PAS ICI, seulement leurs clés : noms des membres, noms
- * des catégories et phrases d'exemple sont des chaînes visibles, donc elles
- * vivent dans `messages/{fr,en}.json` sous `Landing`, comme le reste de la
- * page. Le serveur les relit avec `getTranslations`, le client avec
- * `useTranslations` — une seule source, et le test de contrat i18n la garde.
+ * STRINGS ARE NOT HERE, only their keys: member names, names
+ * categories and example sentences are visible strings, so they
+ * live in `messages/{fr,en}.json` under `Landing`, like the rest of the
+ * page. The server reads them back with `getTranslations`, the client with
+ * `useTranslations` — a single source, and the i18n contract test keeps it.
  *
- * POURQUOI DES IDENTIFIANTS DE PHRASE plutôt que le texte : le visiteur qui
- * clique « essayez une phrase » n'envoie qu'un id (`stripe`), jamais du texte.
- * L'endpoint est ouvert ; il n'a donc aucune entrée en texte libre vers le
- * modèle, et le seul chemin qui en produit passe par une transcription de sa
- * propre voix.
+ * WHY PHRASE IDENTIFIERS rather than text: the visitor who
+ * clicks "try a phrase" only sends an id (`stripe`), never text.
+ * The endpoint is open; so he has no free text input to the
+ * model, and the only path to one is through a transcription of his
+ * own voice.
  */
 
-/** Les phrases d'exemple, jouables sans micro. */
+/** Example sentences, playable without microphone. */
 export const DEMO_SAMPLE_IDS = ["stripe", "export", "onboarding"] as const;
 export type DemoSampleId = (typeof DEMO_SAMPLE_IDS)[number];
 
 export const isDemoSampleId = (v: unknown): v is DemoSampleId =>
   typeof v === "string" && (DEMO_SAMPLE_IDS as readonly string[]).includes(v);
 
-/** Les trois membres du projet de démo. `avatarSeed` alimente le portrait. */
+/** The three members of the demo project. `avatarSeed` powers the portrait. */
 export const DEMO_MEMBER_IDS = ["lea", "thomas", "sofia"] as const;
 export type DemoMemberId = (typeof DEMO_MEMBER_IDS)[number];
 
-/** Les trois catégories du projet de démo. */
+/** The three categories of the demo project. */
 export const DEMO_CATEGORY_IDS = ["bug", "feature", "design"] as const;
 export type DemoCategoryId = (typeof DEMO_CATEGORY_IDS)[number];
 
-/** Clés i18n du décor et des exemples, typées : une faute ne compile pas. */
+/** i18n keys of the decor and examples, typed: a mistake does not compile. */
 export const DEMO_SAMPLE_KEYS: Record<DemoSampleId, MessageKey<"Landing">> = {
   stripe: "voiceDemoSample_stripe",
   export: "voiceDemoSample_export",
@@ -65,16 +65,16 @@ export const DEMO_CATEGORY_KEYS: Record<DemoCategoryId, MessageKey<"Landing">> =
 };
 
 /**
- * Le ticket que la démo renvoie. Volontairement plus court que le vrai
- * formulaire : titre, description, et les quatre champs qui font sentir que la
- * phrase a été RANGÉE. L'effort n'y est pas — une taille de t-shirt demande
- * d'être expliquée, et la landing n'explique pas.
+ * The ticket that the demo returns. Deliberately shorter than the real
+ * form: title, description, and the four fields which make it appear that the
+ * sentence has been STORED. The effort is not there — a t-shirt size requires
+ * to be explained, and the landing does not explain.
  */
 export interface DemoTicket {
   title: string;
   description: string;
   priority: IssuePriorityValue;
-  /** Date ISO courte ("2026-08-07"), formatée par le client dans sa langue. */
+  /** Short ISO date ("2026-08-07"), formatted by the customer in their language. */
   dueDate: string | null;
   assignee: { id: DemoMemberId; name: string; avatar: string } | null;
   category: { id: DemoCategoryId; name: string } | null;
@@ -82,19 +82,19 @@ export interface DemoTicket {
 
 /** Ce que renvoie `POST /api/demo/dictate`. */
 export interface DemoDictationResult {
-  /** Ce qui a été entendu (ou la phrase d'exemple jouée). */
+  /** What was heard (or the example phrase played). */
   transcript: string;
   ticket: DemoTicket;
 }
 
 /**
- * Bornes de la prise côté client. La démo n'est pas la dictée du produit : là
- * où l'app laisse parler aussi longtemps qu'on veut, ici on s'arrête tout seul
- * — une démo publique se paye à chaque seconde d'audio, et une phrase suffit à
- * la démonstration.
+ * Customer side socket terminals. The demo is not the dictation of the product: there
+ * where the app lets you talk as long as you want, here you stop on your own
+ * — a public demo is paid for by each second of audio, and one sentence is enough to
+ * the demonstration.
  */
 export const DEMO_MAX_RECORDING_MS = 15_000;
-/** Débit épinglé du produit (`DictateButton`) : ~6 Ko/s. */
+/** Product pinned throughput (`DictateButton`): ~6 KB/s. */
 export const DEMO_AUDIO_BITS_PER_SECOND = 48_000;
-/** Plafond de charge utile accepté par la route (~1 min de parole). */
+/** Payload ceiling accepted by the road (~1 min of speech). */
 export const DEMO_MAX_AUDIO_BYTES = 400 * 1024;

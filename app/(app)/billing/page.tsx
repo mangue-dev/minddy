@@ -15,9 +15,9 @@ import {
 } from "@/lib/use-billing-query";
 
 /**
- * Page facturation dédiée (MIN-72, retours — comme AutoKap /billing) :
- * usage de la fenêtre courante, cartes de plans, historique typé. Les CTA
- * checkout/portal Stripe reviennent ici (`?billing=success|cancelled`).
+ * Dedicated billing page (MIN-72, returns — like AutoKap /billing):
+ * use of the current window, plan maps, typed history. CTAs for
+ * Stripe checkout/portal return here (`?billing=success|cancelled`).
  */
 export default function BillingPage() {
   const t = useTranslations("Billing");
@@ -64,7 +64,7 @@ export default function BillingPage() {
           <PlanSection />
         </section>
 
-        {/* L'accordéon porte son propre en-tête (titre + sous-titre). */}
+        {/* The accordion has its own header (title + subtitle). */}
         <section>
           <UsageHistorySection />
         </section>
@@ -73,7 +73,7 @@ export default function BillingPage() {
   );
 }
 
-/** Retour de Checkout : toast une seule fois, refetch, nettoyage de l'URL. */
+/** Checkout return: toast once, refetch, URL cleaning. */
 function CheckoutReturnToast() {
   const t = useTranslations("Billing");
   const router = useRouter();

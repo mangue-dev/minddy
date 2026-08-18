@@ -6,22 +6,22 @@ import { getInstancePrReviewModel } from "@/lib/server/agent/model";
 import { capability } from "@/lib/server/capabilities";
 
 /**
- * Catalogue du picker « faire vérifier par Numo ».
+ * Picker's catalog "have verified by Numo".
  *
- * C'est celui de la clé PLATEFORME OpenRouter, et pas celui du provider actif du
- * compte (`/api/agent/models`) : la review tourne sur la clé plateforme, y
- * compris pour un compte en BYOK — lui proposer ses ids natifs (`gpt-…`,
- * `claude-…`) ferait choisir un modèle non routable, qui échouerait au premier
- * appel. Le filtre tool-calling de `getPlatformModelCatalog` est exactement ce
- * qu'il faut ici : la review est un tool call forcé.
+ * It is that of the OpenRouter PLATFORM key, and not that of the active provider of the
+ * account (`/api/agent/models`): the review runs on the platform key, including
+ * included for a BYOK account — offer them their native IDs (`gpt-…`,
+ * `claude-…`) would cause a non-routable model to be chosen, which would fail at first
+ * call. The tool-calling filter of `getPlatformModelCatalog` is exactly this
+ * what is needed here: the review is a forced tool call.
  *
- * `defaultModel` est le réglage d'instance (`pr_review_model`, /admin) : ce vers
- * quoi pointe l'option « défaut » du picker.
+ * `defaultModel` is the instance setting (`pr_review_model`, /admin): this verse
+ * what the “default” option of the picker points to.
  *
- * Le plafond de modèle du plan est joint ici pour TOUT LE MONDE, BYOK compris :
- * la review se paye sur la clé plateforme, donc sur le quota minddy. Le défaut
- * d'instance, lui, échappe au plafond (cf. `resolvePrReviewModel`) — il est
- * délibérément cher, et le refuser fermerait la review aux petits plans.
+ * The model ceiling of the plan is attached here for EVERYONE, including BYOK:
+ * the review is paid for on the platform key, therefore on the minddy quota. The defect
+ * instance, he escapes the ceiling (see `resolvePrReviewModel`) — he is
+ * deliberately expensive, and refusing it would close the review to small plans.
  */
 
 export const runtime = "nodejs";

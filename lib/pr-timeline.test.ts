@@ -11,13 +11,13 @@ import {
 } from "@/lib/pr-timeline";
 
 /**
- * Les formes ci-dessous sont celles que les deux forges renvoient RÉELLEMENT
- * (relevées contre `issues/{n}/timeline` et `merge_requests/{iid}/notes`) : c'est
- * ce qui arrive sur le fil, pas une intuition de ce qu'une timeline devrait être.
+ * The shapes below are what the two forges ACTUALLY return
+ * (taken against `issues/{n}/timeline` and `merge_requests/{iid}/notes`): this is
+ * what happens on the thread, not an intuition of what a timeline should be.
  */
 
 describe("fromGithubTimeline", () => {
-  it("garde une review avec son verdict, son corps et l'id qui porte ses points", () => {
+  it("keeps a review with its verdict, body, and the id carrying its points", () => {
     const [event] = fromGithubTimeline([
       {
         id: 987,
@@ -68,7 +68,7 @@ describe("fromGithubTimeline", () => {
     });
   });
 
-  it("remplit le détail propre à chaque fait", () => {
+  it("fills in the details specific to each event", () => {
     const events = fromGithubTimeline([
       { id: 1, event: "labeled", label: { name: "bug", color: "d73a4a" }, actor: { login: "a" } },
       { id: 2, event: "assigned", assignee: { login: "carol" }, actor: { login: "a" } },
@@ -102,11 +102,11 @@ describe("fromGithubTimeline", () => {
     expect(events[5].reference).toBe("#42");
   });
 
-  it("jette le bruit que GitHub lui-même n'affiche pas, et les événements inconnus", () => {
+  it("drops noise that GitHub itself does not display and unknown events", () => {
     const events = fromGithubTimeline([
       { id: 1, event: "subscribed", actor: { login: "a" } },
       { id: 2, event: "mentioned", actor: { login: "a" } },
-      // Déjà servi par le fil des messages : le rendre ici le compterait deux fois.
+      // Already served by the message thread: putting it here would count it twice.
       { id: 3, event: "commented", actor: { login: "a" } },
       { id: 4, event: "added_to_project", actor: { login: "a" } },
       { id: 5, event: "merged", actor: { login: "a" } },
@@ -125,7 +125,7 @@ describe("fromGitlabSystemNotes", () => {
     created_at: "2026-08-01T10:00:00Z",
   });
 
-  it("ne lit QUE les notes système — les messages sont servis par le fil", () => {
+  it("reads only system notes — messages are served by the thread", () => {
     const events = fromGitlabSystemNotes(
       [note(1, "un vrai commentaire", false), note(2, "merged")],
       url,
@@ -134,7 +134,7 @@ describe("fromGitlabSystemNotes", () => {
     expect(events[0].kind).toBe("merged");
   });
 
-  it("traduit les phrases de GitLab dans le vocabulaire commun", () => {
+  it("translates GitLab sentences into the shared vocabulary", () => {
     const cases: Array<[string, PrTimelineEvent["kind"]]> = [
       ["approved this merge request", "reviewed"],
       ["unapproved this merge request", "review_dismissed"],
@@ -185,8 +185,8 @@ describe("fromGitlabSystemNotes", () => {
 });
 
 describe("resolveCommitActors", () => {
-  /** Le cas réel : `user.name` local ≠ login GitHub, et l'avatar n'existe que
-      dans la liste des commits. */
+  /** The real case: `user.name` local ≠ GitHub login, and the avatar only exists
+ in the commits list. */
   const committed: PrTimelineEvent = {
     id: "commit:abc",
     kind: "committed",
@@ -207,10 +207,10 @@ describe("resolveCommitActors", () => {
     });
   });
 
-  it("porte TOUS les auteurs d'un commit co-signé, principal en tête", () => {
+  it("carries ALL authors of a co-signed commit, with the primary author first", () => {
     const [event] = resolveCommitActors([committed], [{ sha: "abc", authors: [dev, claude] }]);
     expect(event.actors).toEqual([dev, claude]);
-    // `actor` reste le premier : les rendus qui n'empilent pas continuent.
+    // `actor` remains first: renderings that do not stack continue.
     expect(event.actor?.login).toBe("mangue-dev");
   });
 
@@ -220,7 +220,7 @@ describe("resolveCommitActors", () => {
       avatar_url: null,
     });
     expect(resolveCommitActors([committed], [])[0].actor?.login).toBe("mangue");
-    // Liste plafonnée : un commit hors des 250 premiers reste sous son nom git.
+    // Capped list: a commit outside the first 250 remains under its git name.
     expect(
       resolveCommitActors([committed], [{ sha: "zzz", authors: [dev] }])[0].actor?.login,
     ).toBe("mangue");
@@ -234,7 +234,7 @@ describe("resolveCommitActors", () => {
     expect(event.actor).toEqual({ login: "Claude", avatar_url: null });
   });
 
-  it("ne touche à rien d'autre que les commits", () => {
+  it("does not touch anything other than commits", () => {
     const merged: PrTimelineEvent = {
       id: "event:1",
       kind: "merged",
@@ -246,7 +246,7 @@ describe("resolveCommitActors", () => {
     expect(event.actor?.login).toBe("alice");
   });
 
-  it("laisse ensuite le regroupement se faire sur le COMPTE, pas sur deux noms git", () => {
+  it("then groups by ACCOUNT, not by two git names", () => {
     const second: PrTimelineEvent = { ...committed, id: "commit:def", sha: "def" };
     const resolved = resolveCommitActors(
       [committed, second],
@@ -257,7 +257,7 @@ describe("resolveCommitActors", () => {
     );
     const [group] = groupTimelineCommits(resolved);
     expect(group.commitCount).toBe(2);
-    // La poussée est signée de tous ceux qui ont écrit ses commits.
+    // The push is signed by everyone who wrote its commits.
     expect(group.actors).toEqual([dev, claude]);
   });
 });
@@ -272,7 +272,7 @@ describe("groupTimelineCommits", () => {
     commitCount: 1,
   });
 
-  it("replie les commits consécutifs du même auteur en un seul fait", () => {
+  it("collapses consecutive commits by the same author into one event", () => {
     const grouped = groupTimelineCommits([
       commit("a", "clem", "2026-08-01T10:00:00Z"),
       commit("b", "clem", "2026-08-01T10:05:00Z"),
@@ -280,12 +280,12 @@ describe("groupTimelineCommits", () => {
     ]);
     expect(grouped).toHaveLength(1);
     expect(grouped[0].commitCount).toBe(3);
-    // Le groupe se date de sa FIN et pointe son dernier commit.
+    // The group dates its END and points to its last commit.
     expect(grouped[0].sha).toBe("c");
     expect(grouped[0].createdAt).toBe("2026-08-01T10:10:00Z");
   });
 
-  it("ne replie pas deux auteurs, ni deux poussées séparées par un autre fait", () => {
+  it("does not collapse two authors or two pushes separated by another event", () => {
     const merged: PrTimelineEvent = {
       id: "event:1",
       kind: "merged",
@@ -318,18 +318,18 @@ describe("groupTimelineReviews", () => {
     ...(body ? { body } : {}),
   });
 
-  it("replie les points posés un par un — MESURÉ : trois POST = trois reviews vides", () => {
+  it("collapses points added one by one — MEASURED: three POSTs = three empty reviews", () => {
     const grouped = groupTimelineReviews([
       review(1, "minddy-app[bot]", "2026-08-01T20:13:50Z"),
       review(2, "minddy-app[bot]", "2026-08-01T20:13:50Z"),
       review(3, "minddy-app[bot]", "2026-08-01T20:13:51Z"),
     ]);
     expect(grouped).toHaveLength(1);
-    // Les trois ids voyagent : c'est par eux que l'appelant ramasse les points.
+    // The three ids travel: it is through them that the caller collects the points.
     expect(grouped[0].reviewIds).toEqual([1, 2, 3]);
   });
 
-  it("ne fond jamais une review qui a un corps : son texte disparaîtrait", () => {
+  it("never merges a review with a body: its text would disappear", () => {
     const grouped = groupTimelineReviews([
       review(1, "alice", "2026-08-01T10:00:00Z"),
       review(2, "alice", "2026-08-01T10:00:01Z", "voilà ce que j'en pense"),
@@ -338,7 +338,7 @@ describe("groupTimelineReviews", () => {
     expect(grouped.map((e) => e.reviewIds)).toEqual([[1], [2], [3]]);
   });
 
-  it("ne fond ni deux auteurs, ni deux verdicts différents", () => {
+  it("merges neither two authors nor two different verdicts", () => {
     const approved: PrTimelineEvent = {
       ...review(2, "alice", "2026-08-01T10:00:01Z"),
       reviewState: "approved",
@@ -369,7 +369,7 @@ describe("groupTimelineReviews", () => {
 });
 
 describe("sortTimelineOlderFirst", () => {
-  it("range du plus ancien au plus récent, et met les faits sans date à la fin", () => {
+  it("orders from oldest to newest and puts undated events last", () => {
     const sorted = sortTimelineOlderFirst([
       { id: "b", createdAt: "2026-08-01T12:00:00Z" },
       { id: "z", createdAt: null },
@@ -380,7 +380,7 @@ describe("sortTimelineOlderFirst", () => {
 });
 
 describe("toReviewState", () => {
-  it("retombe sur « commenté » pour tout verdict qui ne tranche pas", () => {
+  it("falls back to « commented » for any non-decisive verdict", () => {
     expect(toReviewState("APPROVED")).toBe("approved");
     expect(toReviewState("CHANGES_REQUESTED")).toBe("changes_requested");
     expect(toReviewState("DISMISSED")).toBe("dismissed");

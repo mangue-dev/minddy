@@ -8,36 +8,36 @@ import { Markdown } from "@/components/markdown";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
- * UN sous-agent, replié (MIN-112). Ligne compacte au gabarit de `ReasoningBlock` et
- * de `ToolCallRow` : une étape du déroulé du tour, pas un message.
+ * A sub-agent, folded (MIN-112). Compact line with a template of `ReasoningBlock` and
+ * of `ToolCallRow`: a step in the tour, not a message.
  *
- * Pourquoi replier plutôt que rendre les events de la fille dans le flux : un
- * sous-agent produit autant d'events qu'un tour entier (réflexions, tool-calls,
- * résultats). Les laisser passer mélangerait deux sessions dans une seule ligne de
- * lecture, et le tour qui a délégué deviendrait le plus illisible de la
- * conversation — l'inverse exact de ce que la délégation apporte.
+ * Why fold rather than render the girl's events in the flow: a
+ * sub-agent produces as many events as an entire turn (reflections, tool-calls,
+ * results). Letting them pass would mix two sessions into a single row of
+ * reading, and the turn which delegated would become the most illegible of the
+ * conversation — the exact opposite of what delegation brings.
  *
- * Ce que la ligne dit, et pourquoi elle ne dit pas plus : l'utilisateur veut savoir
- * QUEL type d'agent tourne et S'IL tourne encore. Ni son identifiant technique
- * (`sub-1` ne lui apprend rien — il reste dans le rapport déplié, où il sert à
- * rapprocher la ligne des mentions qu'en fait l'agent parent), ni sa tâche (elle
- * est déjà sur la ligne `spawn_agent` juste au-dessus).
+ * What the line says, and why it doesn't say more: the user wants to know
+ * WHAT type of agent is running and IF IT is still running. Nor its technical identifier
+ * (`sub-1` does not teach it anything — it remains in the unfolded report, where it is used to
+ * bring the line closer to the mentions made of it by the parent agent), nor its task (it
+ * is already on the `spawn_agent` line just above).
  *
- * À droite, une seule valeur à la fois, comme `ReasoningBlock` :
- *  - PENDANT le travail, un chrono qui tourne — c'est le signal de vie. Le compte
- *    d'étapes, lui, peut rester figé plusieurs dizaines de secondes pendant que la
- *    fille réfléchit ou lit un gros fichier, et un compteur figé ressemble à un
+ * On the right, only one value at a time, like `ReasoningBlock`:
+ * - DURING work, a ticking clock — it’s the signal of life. The account
+ * of steps, it can remain frozen for several tens of seconds while the
+ * girl is thinking or reading a large file, and a frozen counter looks like a
  *    agent mort.
- *  - UNE FOIS FINI, le nombre d'étapes : la durée n'apprend plus rien, l'effort si.
+ * - ONCE FINISHED, the number of steps: duration no longer teaches anything, effort does.
  */
 export function SubagentBlock({
   mode,
   /**
-   * Tool-calls de la fille — le seul signal d'avancement que le fil voit passer, et
-   * ce que le libellé appelle « étapes ». À ne pas confondre avec les `rounds` que
-   * `agent_status` / `list_agents` rapportent au parent : ceux-là viennent de la
-   * boucle fille et sont plus petits (un round peut porter plusieurs tool-calls).
-   * Deux mesures, deux mots — jamais le même nombre présenté deux fois.
+   * Tool-calls from the girl — the only signal of progress that the thread sees, and
+   * what the wording calls “steps”. Not to be confused with the `rounds` that
+   * `agent_status` / `list_agents` report to the parent: these come from the
+   * daughter loop and are smaller (a round can carry several tool-calls).
+   * Two measures, two words — never the same number presented twice.
    */
   steps,
   subagentId,
@@ -45,7 +45,7 @@ export function SubagentBlock({
   error,
   delivered,
   partial,
-  /** `created_at` du PREMIER event de la fille : le début de son chrono. */
+  /** `created_at` of the girl's FIRST event: the start of her timer. */
   startedAt,
   /** `created_at` de l'event qui l'a close, ou null tant qu'elle tourne. */
   endedAt,
@@ -64,10 +64,10 @@ export function SubagentBlock({
   const [open, setOpen] = useState(false);
 
   const trace = (report || error).trim();
-  // « Interrompu » ne se lit pas dans les events de la fille (une boucle suspendue
-  // n'émet ni résumé ni erreur) : c'est le PARENT qui l'annonce, en livrant un
-  // rapport marqué partiel. Sans ce signal, une fille coupée resterait « lancée »
-  // pour toujours dans un fil relu.
+  // “Interrupted” does not read in the girl's events (a suspended loop
+  // does not issue a summary or error): it is the PARENT who announces it, by delivering a
+  // report marked partial. Without this signal, a cut girl would remain “launched”
+  // forever in a reread thread.
   const state = error
     ? "Failed"
     : report
@@ -78,20 +78,20 @@ export function SubagentBlock({
           : "Done"
         : "Running";
   const running = state === "Running";
-  // `mode` ne peut être null que sur un event antérieur au marquage (aucun en base) —
-  // on retombe alors sur la formulation d'exploration, la moins engageante.
+  // `mode` can only be null on an event prior to marking (none in base) —
+  // we then fall back on the exploration formulation, the least engaging.
   const family = mode === "implement" ? "Implement" : "Explore";
 
-  // Clé assemblée à l'exécution : castée explicitement en `MessageKey<"Agent">`
-  // (convention de lib/i18n-keys.ts) — c'est le point précis où le compilateur
-  // cesse de vérifier, et les huit combinaisons existent bien aux deux catalogues.
+  // Key assembled at runtime: explicitly cast to `MessageKey<"Agent">`
+  // (lib/i18n-keys.ts convention) — this is the precise point where the compiler
+  // stop checking, and the eight combinations do indeed exist in both catalogs.
   const label = t(`subagent${family}${state}` as MessageKey<"Agent">);
 
-  // Chrono en direct tant que ça tourne, figé ensuite — même mécanique que
-  // `WorkAccordion` (`useNow`), et non l'approche de `ReasoningBlock` : celle-ci
-  // s'appuie sur une durée MESURÉE côté serveur et rediffusée, or une fille n'émet
-  // aucun battement de ce genre. Ici l'horloge locale est le seul moyen de montrer
-  // qu'elle est vivante, et elle s'arrête sur un instant réel (`endedAt`).
+  // Live chrono while it's running, frozen afterwards - same mechanics as
+  // `WorkAccordion` (`useNow`), not the `ReasoningBlock` approach: this one
+  // is based on a MEASURED duration on the server side and rebroadcast, but a girl does not emit
+  // no such beat. Here the local clock is the only way to show
+  // that it is alive, and it stops on a real moment (`endedAt`).
   const now = useNow({ updateInterval: running ? 1000 : undefined });
   const startMs = Date.parse(startedAt);
   const safeStart = Number.isNaN(startMs) ? now.getTime() : startMs;
@@ -110,14 +110,14 @@ export function SubagentBlock({
     <div className="flex items-center gap-2 py-0.5 text-xs text-muted-foreground">
       <Bot className={cn("size-3 shrink-0", state === "Failed" && "text-destructive")} />
       <span className={cn("flex-1 truncate text-left", running && "text-shimmer")}>{label}</span>
-      {/* Tabulaire : le compteur ne doit pas danser en changeant de chiffre. */}
+      {/* Tabular: the counter must not dance while changing digits. */}
       <span className="shrink-0 tabular-nums">{counter}</span>
     </div>
   );
 
-  // Rien à déplier tant qu'elle travaille : son rapport n'existe pas encore, et son
-  // texte n'est pas streamé (cf. le runner — un enfant qui streamerait écraserait la
-  // bulle en cours d'écriture du parent, ils partagent le topic du run).
+  // Nothing to unfold as long as she works: her report does not yet exist, and her
+  // text is not streamed (see the runner — a child streaming would overwrite the
+  // bubble being written by the parent, they share the topic of the run).
   if (running) return row;
 
   return (
@@ -129,14 +129,14 @@ export function SubagentBlock({
         <div className="ml-5 py-1 text-xs text-muted-foreground">
           <p className="mb-1 flex items-center gap-1.5 font-medium">
             {t("subagentReportLabel")}
-            {/* L'identifiant vit ICI : l'agent parent y fait référence dans sa
-                réponse (« le rapport de sub-1 »), et c'est le seul endroit où il
-                aide à rapprocher les deux. */}
+            {/* The identifier lives HERE: the parent agent refers to it in its
+ answer ("the sub-1 report"), and this is the only place where it
+ helps bridge the two. */}
             <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">{subagentId}</code>
           </p>
-          {/* Le rapport est du MARKDOWN : une fille écrit des titres, des listes et
-              des chemins en `code`. Rendu en texte brut, on lisait « ## Fichiers à la
-              racine » et des « --- » à l'écran. */}
+          {/* The report is MARKDOWN: a girl writes titles, lists and
+ paths in `code`. Rendered in plain text, it read “## Files at the
+ root” and “---” on the screen. */}
           {trace ? (
             <Markdown className="text-xs">{trace}</Markdown>
           ) : (

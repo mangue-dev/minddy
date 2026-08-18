@@ -50,9 +50,9 @@ export default function ProjectSettingsPage() {
   const { projects, loading: projectsLoading, deleteProject } = useProjects();
   const project = projects.find((p) => p.id === id);
 
-  // Même clé de cache que la section Smart Assign et l'onglet Membres : la
-  // liste est lue ici uniquement pour savoir si un onglet mérite sa pastille,
-  // et seulement quand Smart Assign est actif — sinon rien à signaler.
+  // Same cache key as the Smart Assign section and the Members tab: the
+  // list is read here only to know if a tab deserves its badge,
+  // and only when Smart Assign is active — otherwise nothing to report.
   const { members } = useMembersQuery(id, project?.smart_assign_enabled === true);
   const smartAssignIncomplete =
     members.length > 1 &&
@@ -63,8 +63,8 @@ export default function ProjectSettingsPage() {
 
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Le MÊME gabarit que `loading.tsx` : il monte une sidebar secondaire, donc la
-  // barre primaire reste au rail et rien ne se déplace quand l'écran arrive.
+  // The SAME template as `loading.tsx`: it mounts a secondary sidebar, therefore the
+  // Primary bar stays at the rail and nothing moves when the screen arrives.
   if (projectsLoading && !project) {
     return <SettingsPageSkeleton />;
   }
@@ -161,8 +161,8 @@ export default function ProjectSettingsPage() {
       value: "feedback",
       label: t("feedbackTab"),
       icon: MessagesSquare,
-      // Pas d'enveloppe : cet onglet rend DÉJÀ ses propres groupes (un par
-      // canal). L'envelopper dessinerait une carte dans une carte.
+      // No envelope: this tab ALREADY renders its own groups (one per
+      // channel). Wrapping it would draw a map within a map.
       content: <ProjectFeedbackSettings projectId={project.id} isOwner={isOwner} />,
     },
     {
@@ -172,9 +172,7 @@ export default function ProjectSettingsPage() {
       content: (
         <>
           <ProjectGitSection projectId={project.id} />
-          {/* Le dossier de CETTE machine (MIN-359) : sous le dépôt lié, parce
-              qu'il n'a de sens qu'une fois le dépôt choisi — et invisible hors
-              de l'app de bureau, où il n'y aurait rien à attacher. */}
+          {/* The file for THIS machine (MIN-359): under the linked repository, because it only makes sense once the repository is chosen — and invisible outside the desktop app, where there would be nothing to attach. */}
           <ProjectLocalRepoSection projectId={project.id} />
         </>
       ),
@@ -191,9 +189,9 @@ export default function ProjectSettingsPage() {
       value: "integrations",
       label: t("integrationsTab"),
       icon: Plug,
-      // Pas d'enveloppe : la section rend sa PROPRE carte, parce que « Nouvelle
-      // intégration » vit dans l'en-tête du groupe et que l'état du bouton
-      // dépend de la liste, que seule la section connaît.
+      // No envelope: the section returns its OWN card, because “New
+      // integration" lives in the group header and that button state
+      // depends on the list, which only the section knows.
       content: <ProjectIntegrations projectId={project.id} isOwner={isOwner} />,
     },
   ];
@@ -205,8 +203,8 @@ export default function ProjectSettingsPage() {
         defaultTab={PROJECT_SETTINGS_DEFAULT_TAB}
         tabs={tabs}
         filterPlaceholder={(count) => t("filterPlaceholder", { count })}
-        // « Zone sensible » et « Quitter le projet » partagent l'onglet Général
-        // et s'excluent : la recherche ne doit proposer que celle qui est rendue.
+        // “Hotspot” and “Exit Project” share the General tab
+        // and exclude each other: the research must only propose that which is rendered.
         audience={isOwner ? "owner" : "member"}
         topSlot={
           <SettingsAssistantPrompt

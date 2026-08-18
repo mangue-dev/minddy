@@ -5,35 +5,35 @@ import type { KeyboardEvent } from "react";
 import { planSubmitShortcut } from "@/lib/keyboard/submit-shortcut";
 
 /**
- * Branche ⌘/Ctrl + Entrée sur le bouton principal d'un formulaire.
+ * Branch ⌘/Ctrl + Enter on the main button of a form.
  *
  * ```tsx
  * const submitShortcut = useSubmitShortcut();
  * <form {...submitShortcut} onSubmit={…}>…</form>
  * ```
  *
- * La règle est dans [submit-shortcut.ts] ; il ne reste ici que le DOM.
+ * The rule is in [submit-shortcut.ts]; only the DOM remains here.
  *
- * Deux détails de câblage, tous deux voulus :
+ * Two wiring details, both desired:
  *
- * - l'écoute est en **capture**. tiptap lie `Mod-Entrée` au saut de ligne dur
- *   sur sa propre surface : à la remontée, la ligne serait déjà insérée. React
- *   dispatche ses écouteurs de capture depuis la racine, donc avant que
- *   l'événement n'atteigne l'éditeur — c'est le seul endroit d'où on peut le
+ * - listening is in **capture**. tiptap binds `Mod-Enter` to hard newline
+ * on its own surface: when going up, the line would already be inserted. React
+ * dispatches its capture listeners from the root, so before
+ * the event does not reach the editor — this is the only place from which it can be
  *   lui reprendre ;
  * - on `stopPropagation()` en plus du `preventDefault()`, ce qui coupe aussi
- *   l'événement natif : sans ça, le champ de titre (qui soumet sur Entrée)
- *   soumettrait une seconde fois.
+ * the native event: without that, the title field (which submits on Enter)
+ * would submit a second time.
  */
 export function useSubmitShortcut({
   /**
-   * Comment reconnaître le bouton principal. Par défaut le premier bouton de
-   * soumission du formulaire — le second, quand il y en a un (le chevron d'un
-   * `SplitButton`), est un `type="button"` que ce sélecteur ne voit pas.
+   * How to recognize the home button. By default the first button
+   * submission of the form — the second, when there is one (the chevron of a
+   * `SplitButton`), is a `type="button"` that this selector does not see.
    *
-   * À préciser quand le formulaire accueille du contenu qu'il ne choisit pas
-   * (les étapes d'un wizard) : un `<button>` sans `type` y est un bouton de
-   * soumission aux yeux du navigateur, et serait pris pour le CTA.
+   * To specify when the form accepts content that it does not choose
+   * (the steps of a wizard): a `<button>` without `type` is a button
+   * submission in the eyes of the browser, and would be mistaken for the CTA.
    */
   selector = 'button[type="submit"]',
 }: { selector?: string } = {}) {
@@ -56,8 +56,8 @@ export function useSubmitShortcut({
       button.click();
       return;
     }
-    // Sortir de l'éditeur remonte son markdown ; le clic attend le tour
-    // suivant, quand React a rendu le formulaire avec ce texte-là.
+    // Exiting the editor raises your markdown; the click waits for the turn
+    // next, when React rendered the form with this text.
     active?.blur();
     window.setTimeout(() => {
       if (!button.disabled) button.click();

@@ -44,7 +44,7 @@ describe("parseGitConfigRemotes", () => {
     ]);
   });
 
-  it("ignore commentaires, lignes vides et clés voisines", () => {
+  it("ignores comments, blank lines, and neighboring keys", () => {
     const text = `# un commentaire
 [remote "origin"]
 ; autre commentaire
@@ -56,19 +56,19 @@ describe("parseGitConfigRemotes", () => {
     ]);
   });
 
-  it("rend une liste vide sur un config sans remote", () => {
+  it("returns an empty list for a config without a remote", () => {
     expect(parseGitConfigRemotes("[core]\n\tbare = false\n")).toEqual([]);
   });
 });
 
 describe("remoteRepoPath", () => {
-  it("reconnaît la forme SCP de GitHub", () => {
+  it("recognizes GitHub's SCP form", () => {
     expect(remoteRepoPath("git@github.com:mangue-dev/minddy.git")).toBe(
       "mangue-dev/minddy",
     );
   });
 
-  it("reconnaît https, avec et sans .git", () => {
+  it("recognizes https, with and without .git", () => {
     expect(remoteRepoPath("https://github.com/mangue-dev/minddy.git")).toBe(
       "mangue-dev/minddy",
     );
@@ -77,7 +77,7 @@ describe("remoteRepoPath", () => {
     );
   });
 
-  it("reconnaît ssh:// et les identifiants dans l'URL", () => {
+  it("recognizes ssh:// and credentials in the URL", () => {
     expect(remoteRepoPath("ssh://git@github.com/a/b.git")).toBe("a/b");
     expect(remoteRepoPath("https://jeton@gitlab.example.com/a/b.git")).toBe("a/b");
   });
@@ -91,7 +91,7 @@ describe("remoteRepoPath", () => {
   it("refuse ce qui n'est pas une URL de dépôt", () => {
     expect(remoteRepoPath("")).toBeNull();
     expect(remoteRepoPath("pas une url")).toBeNull();
-    // Un chemin sans `/` ne désigne pas un `owner/repo`.
+    // A path without `/` does not designate a `owner/repo`.
     expect(remoteRepoPath("https://github.com/seul")).toBeNull();
   });
 });
@@ -99,7 +99,7 @@ describe("remoteRepoPath", () => {
 describe("remoteMatchesRepo", () => {
   const expected = { fullName: "mangue-dev/minddy" };
 
-  it("accepte le même dépôt quelle que soit la forme de l'URL", () => {
+  it("accepts the same repository regardless of URL form", () => {
     expect(remoteMatchesRepo("git@github.com:mangue-dev/minddy.git", expected)).toBe(true);
     expect(remoteMatchesRepo("https://github.com/mangue-dev/minddy", expected)).toBe(true);
   });
@@ -108,19 +108,19 @@ describe("remoteMatchesRepo", () => {
     expect(remoteMatchesRepo("git@github.com:Mangue-Dev/Minddy.git", expected)).toBe(true);
   });
 
-  it("accepte un autre HÔTE pour le même dépôt (miroir, forge auto-hébergée)", () => {
-    // Décision documentée dans le module : on compare `owner/repo`, pas l'hôte.
+  it("accepts another HOST for the same repository (mirror, self-hosted forge)", () => {
+    // Decision documented in the module: we compare `owner/repo`, not the host.
     expect(
       remoteMatchesRepo("git@github.entreprise.local:mangue-dev/minddy.git", expected),
     ).toBe(true);
   });
 
-  it("refuse un autre dépôt", () => {
+  it("rejects another repository", () => {
     expect(remoteMatchesRepo("git@github.com:mangue-dev/autre.git", expected)).toBe(false);
     expect(remoteMatchesRepo("git@github.com:autre/minddy.git", expected)).toBe(false);
   });
 
-  it("refuse quand le dépôt attendu est vide", () => {
+  it("rejects when the expected repository is empty", () => {
     expect(remoteMatchesRepo("git@github.com:a/b.git", { fullName: "  " })).toBe(false);
   });
 });
@@ -128,7 +128,7 @@ describe("remoteMatchesRepo", () => {
 describe("localRepoVerdict", () => {
   const expected = { fullName: "mangue-dev/minddy" };
 
-  it("accepte un dépôt dont un remote correspond", () => {
+  it("accepts a repository with a matching remote", () => {
     expect(localRepoVerdict({ isDirectory: true, gitConfig: CONFIG }, expected)).toEqual({
       ok: true,
     });
@@ -185,7 +185,7 @@ describe("parseGitDirPointer", () => {
     expect(parseGitDirPointer("gitdir: ../.git/modules/lib\n")).toBe("../.git/modules/lib");
   });
 
-  it("rend null sur autre chose", () => {
+  it("returns null for anything else", () => {
     expect(parseGitDirPointer("")).toBeNull();
     expect(parseGitDirPointer("ref: refs/heads/main\n")).toBeNull();
   });
@@ -197,14 +197,14 @@ describe("parseLocalRepoStore", () => {
     expect(parseLocalRepoStore(JSON.parse(serializeLocalRepoStore(store)))).toEqual(store);
   });
 
-  it("retombe sur vide sur toute forme inattendue", () => {
+  it("falls back to empty for every unexpected form", () => {
     expect(parseLocalRepoStore(null)).toEqual({});
     expect(parseLocalRepoStore("{}")).toEqual({});
     expect(parseLocalRepoStore({})).toEqual({});
     expect(parseLocalRepoStore({ projects: "non" })).toEqual({});
   });
 
-  it("jette les entrées qui ne sont pas des chemins absolus", () => {
+  it("discards entries that are not absolute paths", () => {
     expect(
       parseLocalRepoStore({
         projects: {

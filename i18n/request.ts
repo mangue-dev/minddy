@@ -4,34 +4,34 @@ import { detectFromAcceptLanguage } from "../lib/accept-language";
 import { defaultLocale, locales, type Locale } from "./config";
 
 /**
- * Ordre de résolution : locale demandée explicitement → en-tête
+ * Resolution order: locale explicitly requested → header
  * `x-minddy-locale` → cookie `NEXT_LOCALE` → `Accept-Language` →
  * `defaultLocale`.
  *
- * **La demande explicite d'abord** (MIN-93). next-intl passe ici le `locale`
- * donné à `getTranslations({ locale: "fr" })` ; ce fichier l'ignorait, donc
- * l'appel ne servait à rien : la langue restait celle de la REQUÊTE. Invisible
- * jusqu'ici, parce que les seuls appelants explicites (`/md`, `/og`) sont
- * atteints par une réécriture du proxy qui pose déjà l'en-tête — mais le flux
- * RSS du changelog, lui, est demandé en direct (`/changelog/rss.xml?locale=fr`)
- * et renvoyait un flux annoncé `fr-fr` rempli de titres anglais.
+ * **Explicit request first** (MIN-93). next-intl passes here the `locale`
+ * given to `getTranslations({ locale: "fr" })`; this file ignored it, so
+ * the call was of no use: the language remained that of the REQUEST. Invisible
+ * so far, because the only explicit callers (`/md`, `/og`) are
+ * reached by a rewrite of the proxy which already sets the header — but the feed
+ * RSS from the changelog is requested live (`/changelog/rss.xml?locale=fr`)
+ * and returned an advertised feed `fr-fr` filled with English titles.
  *
- * Le paramètre est `undefined` partout ailleurs : sur un rendu de page normal,
- * la chaîne ci-dessous est inchangée.
+ * The parameter is `undefined` everywhere else: on a normal page rendering,
+ * the string below is unchanged.
  *
- * L'en-tête vient EN PREMIER et il est posé par le proxy sur les six pages
- * publiques (MIN-88) : c'est l'URL qui décide de la langue d'une page indexable
- * (`/fr/tarifs` est française, quoi qu'en dise le cookie du visiteur), pas une
- * préférence stockée. Sans cette priorité, un visiteur dont le cookie dit « en »
- * verrait `/fr` en anglais — et Google indexerait deux URLs au contenu
- * identique.
+ * The header comes FIRST and is placed by the proxy on the six public pages
+ * (MIN-88): it is the URL which decides the language of an indexable page
+ * (`/fr/tarifs` is French, whatever anyone says the visitor's cookie), not a
+ * stored preference. Without this priority, a visitor whose cookie says "in"
+ * would see `/fr` in English — and Google would index two URLs with identical content
+ *.
  *
- * Le cookie reprend la main partout ailleurs : c'est la langue de l'app
- * interne, qui n'a pas d'URL localisée et n'a pas à en avoir.
+ * The cookie takes over everywhere else: it is the language of the internal app
+ *, which does not have a localized URL and does not need to have one.
  *
- * Un seul point de résolution aligne d'un coup les Server Components
- * (`getTranslations`), le `NextIntlClientProvider` du root layout, les
- * composants clients (`useLocale`) et l'attribut `<html lang>`.
+ * A single resolution point aligns at once the Server Components
+ * (`getTranslations`), the `NextIntlClientProvider` of the root layout, the
+ * client components (`useLocale`) and the `<html lang>`.
  */
 export default getRequestConfig(async ({ locale: requested }) => {
   const [cookieStore, headerStore] = await Promise.all([cookies(), headers()]);

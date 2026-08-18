@@ -3,19 +3,18 @@ import { describe, expect, it } from "vitest";
 import { extractMetaContent, extractTitleText, parseAttributes, scanTags } from "./html-meta";
 
 /**
- * MIN-336 — ce module lit du HTML fourni par un utilisateur. Deux choses à
- * tenir, et la seconde est celle qui a manqué :
+ * MIN-336 — this module reads HTML provided by a user. Two things to hold, and the second is the one that missed:
  *
- *  1. Lire correctement un `<head>` ordinaire.
- *  2. **Ne pas exploser sur une entrée choisie pour le faire exploser.** Les
- *     trois entrées mesurées ici coûtaient 66 s, 25 s et 21 s d'event loop aux
- *     regex d'avant — un déni de service sur toute l'instance, déclenché par un
- *     seul lien collé. Le test MESURE ; il ne suppose pas.
+ * 1. Correctly read a regular `<head>` *.
+ * 2. **Don't explode on a chosen entry to make it explode.** The
+ * three entries measured here cost 66 s, 25 s and 21 s event loop aux
+ * regex from before — a denial of service on the entire instance, triggered by a single
+ * pasted link. The MEASUREMENT test; it doesn't assume.
  */
 
-/** Large : sur une machine chargée le seuil ne doit pas devenir instable. Ce
-    qu'on veut prouver n'est pas « c'est rapide » mais « ce n'est plus quadratique » —
-    les mêmes entrées prenaient des dizaines de SECONDES. */
+/** Wide: on a loaded machine the threshold must not become unstable. This
+ that we want to prove is not “it's fast” but “it's no longer quadratic” —
+ the same entries took tens of SECONDS. */
 const BUDGET_MS = 1_000;
 
 function millis(work: () => void): number {

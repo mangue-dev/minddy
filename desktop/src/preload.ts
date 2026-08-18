@@ -6,31 +6,31 @@ import type { DesktopChannel } from "@/lib/desktop/channel";
 import type { DesktopUpdateStatus } from "@/lib/desktop/update-status";
 
 /**
- * LA SURFACE, en entier (MIN-291, APNs ajouté en MIN-356).
+ * THE SURFACE, in full (MIN-291, APNs added in MIN-356).
  *
- * Le renderer charge du code DISTANT. Ce fichier est la seule chose qu'il peut
- * atteindre au-delà du web, et il doit se lire en trente secondes : dix
- * membres nommés, aucun qui rende un objet Node, aucun qui prenne un chemin de fichier,
- * aucun qui exécute quoi que ce soit. Tout passe par un message au main process,
- * qui reste libre de refuser — `openExternal` en particulier ne fait rien tant
- * que l'URL n'a pas passé la garde de navigation.
+ * The renderer loads REMOTE code. This file is the only thing he can
+ * reach beyond the web, and it must be read in thirty seconds: ten
+ * named members, none that render a Node object, none that take a file path,
+ * none that execute anything. Everything goes through a message to the main process,
+ * which remains free to refuse — `openExternal` in particular does nothing while
+ * that the URL did not pass navigation guard.
  *
- * Le type est celui que la page compile contre (`lib/desktop/bridge.ts`) :
- * l'annotation ci-dessous est ce qui empêche cet objet de dériver du contrat.
+ * The type is the one that the page compiles against (`lib/desktop/bridge.ts`):
+ * the annotation below is what prevents this object from deriving from the contract.
  */
 
 /**
- * La version, lue sur la ligne de commande du renderer (MIN-322).
+ * The version, read on the renderer command line (MIN-322).
  *
- * Elle DOIT être là avant le premier rendu — le pont est un objet figé, pas une
- * promesse —, et un preload en `sandbox: true` n'a pas d'environnement à lire.
- * Elle passait donc par un `ipcRenderer.sendSync`, qui arrête le renderer le
- * temps de l'aller-retour, au démarrage. `additionalArguments` la met dans
- * `process.argv` (cf. `webPreferences` dans main.ts) : elle est déjà là quand ce
- * fichier s'exécute, sans un seul aller-retour.
+ * It MUST be there before the first render — the bridge is a fixed object, not a
+ * promise —, and a preload in `sandbox: true` has no environment to read.
+ * It therefore went through a `ipcRenderer.sendSync`, which stops the renderer on
+ * round trip time, at startup. `additionalArguments` puts it in
+ * `process.argv` (cf. `webPreferences` in main.ts): it is already there when this
+ * file executes, without a single round trip.
  *
- * Le `sendSync` reste en secours, et lui seul : si le drapeau manque, une
- * version vide s'afficherait dans les réglages sans que rien ne le dise.
+ * The `sendSync` remains as backup, and it alone: ​​if the flag is missing, a
+ * empty version would be displayed in the settings without anything saying so.
  */
 const VERSION_FLAG = "--minddy-version=";
 
@@ -50,10 +50,10 @@ const bridge: DesktopBridge = {
   onAuthLink(handler: (link: DesktopAuthLink) => void) {
     const listener = (_event: unknown, link: DesktopAuthLink) => handler(link);
     ipcRenderer.on("minddy:auth-link", listener);
-    // Le lien peut être arrivé AVANT que React ne soit monté : macOS lance
-    // souvent l'app avec son `open-url` en poche. Le main process le garde et le
-    // rejoue à cet appel — sans quoi la toute première connexion, celle qui
-    // ouvre l'app, serait la seule à ne pas marcher.
+    // The link may have arrived BEFORE React is mounted: macOS launches
+    // often the app with its `open-url` in your pocket. The main process keeps it and
+    // plays this call again — otherwise the very first connection, the one that
+    // opens the app, would be the only one not to work.
     ipcRenderer.send("minddy:auth-link-ready");
     return () => {
       ipcRenderer.removeListener("minddy:auth-link", listener);
@@ -85,9 +85,9 @@ const bridge: DesktopBridge = {
   onWindowButtons(handler: (visible: boolean) => void) {
     const listener = (_event: unknown, visible: boolean) => handler(visible);
     ipcRenderer.on("minddy:window-buttons-state", listener);
-    // Même raison que pour le deep link : l'état existe avant l'abonnement (la
-    // fenêtre peut être en plein écran au chargement). Le main process le
-    // rejoue plutôt que de laisser la page partir sur une supposition.
+    // Same reason as for the deep link: the state exists before the subscription (the
+    // window may be full screen upon loading). The main process
+    // play again rather than letting the page go on a guess.
     ipcRenderer.send("minddy:window-buttons-ready");
     return () => {
       ipcRenderer.removeListener("minddy:window-buttons-state", listener);
@@ -106,9 +106,9 @@ const bridge: DesktopBridge = {
     const listener = (_event: unknown, status: DesktopUpdateStatus) =>
       handler(status);
     ipcRenderer.on("minddy:update-status", listener);
-    // Même raison que pour les boutons macOS : le téléchargement a pu se
-    // terminer avant que cette page existe — elle se recharge à chaque bascule
-    // de canal, et la coquille vit des semaines. Le main process rejoue.
+    // Same reason as for the macOS buttons: the download was able to complete
+    // finish before this page exists — it reloads on each toggle
+    // channel, and the shell lives for weeks. The main process replays.
     ipcRenderer.send("minddy:update-status-ready");
     return () => {
       ipcRenderer.removeListener("minddy:update-status", listener);
@@ -119,12 +119,12 @@ const bridge: DesktopBridge = {
     ipcRenderer.send("minddy:install-update");
   },
 
-  // LE DOSSIER LOCAL (MIN-359). Les trois seuls membres qui ATTENDENT une
-  // réponse, d'où `invoke` là où tout le reste `send` : lire un attachement,
-  // c'est relire le disque, et la page ne peut rien afficher avant.
+  // THE LOCAL FILE (MIN-359). The only three members who WAIT for a
+  // response, hence `invoke` where all the rest `send`: read an attachment,
+  // it's rereading the disc, and the page can't display anything before.
   //
-  // Aucun ne prend de chemin : `chooseLocalRepo` ouvre le panneau système, et
-  // c'est le seul endroit d'où un chemin entre dans l'app.
+  // None take a path: `chooseLocalRepo` opens the system panel, and
+  // This is the only place where a path enters the app.
   localRepo(input) {
     return ipcRenderer.invoke("minddy:local-repo:read", input) as Promise<
       Awaited<ReturnType<DesktopBridge["localRepo"]>>

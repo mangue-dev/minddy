@@ -1,7 +1,7 @@
-// MIN-158 : un raccourci au survol doit toujours partir sur l'élément
-// ACTUELLEMENT sous le pointeur. Ce que ces tests tiennent, c'est la règle qui
-// remplace l'ancien état de survol mémorisé : la cible se relit dans le DOM à
-// chaque frappe, et le plus intérieur des survolés gagne.
+// MIN-158: a shortcut on hover must always start on the element
+// CURRENTLY under the pointer. What these tests hold is the rule that
+// replaces the old stored hover state: the target is read again in the DOM at
+// every strike, and the innermost hover wins.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -18,8 +18,8 @@ interface FakeElement extends Element {
 }
 
 /**
- * Élément factice : juste ce que la résolution touche du DOM — l'état `:hover`
- * et la parenté. `hovered` se pose à la main, comme le navigateur le ferait.
+ * Dummy element: just what the resolution touches in the DOM — `:hover`
+ * state and parentage. `hovered` is placed by hand, as the browser would do.
  */
 function el(name: string, parent?: FakeElement): FakeElement {
   const node: FakeElement = {
@@ -48,13 +48,13 @@ describe("innermostHovered", () => {
       [child, "child"],
     ]);
 
-    // Entrer dans la sous-tâche ne fait pas sortir de la parente : les deux
-    // sont survolées, et c'est l'intérieure que l'utilisateur vise.
+    // Entering the subtask does not exit the parent: both
+    // are hovered over, and it is the interior that the user is aiming for.
     parent.hovered = true;
     child.hovered = true;
     expect(innermostHovered(registry)).toBe("child");
 
-    // Ressorti dans la parente seule.
+    // Released to the parent alone.
     child.hovered = false;
     expect(innermostHovered(registry)).toBe("parent");
   });
@@ -84,12 +84,12 @@ describe("innermostHovered", () => {
   });
 });
 
-// Sur le carnet, tout est éditable et l'éditeur prend le focus à l'ouverture :
-// « suis-je en train d'écrire ? » ne se lit donc pas sur le focus, mais sur
-// l'ordre des deux derniers gestes — écrire périme le pointeur, le bouger le
-// rafraîchit.
+// On the notebook, everything is editable and the editor takes focus when opened:
+// “am I writing?” » is therefore not read on the focus, but on
+// the order of the last two gestures — writing expires the pointer, moving it expires
+// refresh.
 describe("fraîcheur du pointeur", () => {
-  /** Fenêtre factice ; rend de quoi déclencher un `pointermove`. */
+  /** Dummy window; makes it enough to trigger a `pointermove`. */
   function stubWindow() {
     const moves = new Set<() => void>();
     vi.stubGlobal("window", {
@@ -107,19 +107,19 @@ describe("fraîcheur du pointeur", () => {
     const dom = stubWindow();
     const stop = trackPointerFreshness();
 
-    // Carnet ouvert, rien d'écrit : la tâche survolée prend bien ⇧A/⇧P.
+    // Open notebook, nothing written: the hovered task takes ⇧A/⇧P.
     expect(pointerIsStale()).toBe(false);
 
-    // On écrit sur une autre ligne, la souris restée sur celle-ci.
+    // We write on another line, the mouse remains on this one.
     noteTyping();
     expect(pointerIsStale()).toBe(true);
-    // Et toujours après la frappe suivante : seul l'ordre des gestes compte,
-    // jamais le temps écoulé — une pause au milieu d'une phrase n'ouvre pas de
-    // fenêtre où la lettre partirait en raccourci.
+    // And always after the next keystroke: only the order of the gestures counts,
+    // never the time elapsed — a pause in the middle of a sentence does not open
+    // window where the letter would be shortcut.
     noteTyping();
     expect(pointerIsStale()).toBe(true);
 
-    // Viser à nouveau une tâche, même d'un frémissement, la remet en jeu.
+    // Aiming for a task again, even with a shudder, puts it back into play.
     dom.move();
     expect(pointerIsStale()).toBe(false);
 
@@ -136,13 +136,13 @@ describe("fraîcheur du pointeur", () => {
     expect(dom.moves.size).toBe(1);
     stopB();
     expect(dom.moves.size).toBe(0);
-    // Arrêter deux fois ne doit ni jeter ni fausser le compte — sinon le suivi
-    // suivant n'ouvrirait plus d'écouteur, et le pointeur ne se rafraîchirait
+    // Stopping twice should neither throw away nor distort the count — otherwise follow-up
+    // next would no longer open a listener, and the pointer would not refresh
     // plus jamais.
     stopB();
     expect(dom.moves.size).toBe(0);
 
-    // Un carnet fermé sur une frappe ne rouvre pas avec un pointeur périmé.
+    // A notebook closed on a keystroke does not reopen with an expired pointer.
     noteTyping();
     const stop = trackPointerFreshness();
     expect(pointerIsStale()).toBe(false);
@@ -152,7 +152,7 @@ describe("fraîcheur du pointeur", () => {
 });
 
 describe("registerHoverKeys", () => {
-  /** Fenêtre factice ; rend de quoi déclencher un keydown sur l'écouteur posé. */
+  /** Dummy window; enough to trigger a keydown on the earphone placed. */
   function stubWindow() {
     const listeners = new Set<(e: KeyboardEvent) => void>();
     vi.stubGlobal("window", {
@@ -171,16 +171,16 @@ describe("registerHoverKeys", () => {
 
   it("n'envoie la touche qu'à la carte sous le pointeur, pas à la précédente", () => {
     const dom = stubWindow();
-    // La carte précédente reste montée et inscrite, comme sur un board ; seule
-    // la carte courante est survolée au moment de la frappe.
+    // The previous card remains mounted and written, like on a board; alone
+    // the current map is hovered over when typing.
     const previous = el("carte précédente");
     const current = el("carte courante");
     current.hovered = true;
     const onPrevious = vi.fn();
     const onCurrent = vi.fn();
 
-    // La précédente s'inscrit EN PREMIER : l'ordre d'abonnement ne doit rien
-    // décider — c'est lui qui décidait quand chaque carte posait son écouteur.
+    // The previous one is registered FIRST: the subscription order owes nothing
+    // decide — he was the one who decided when each card placed its earpiece.
     const offPrevious = registerHoverKeys(previous, onPrevious);
     const offCurrent = registerHoverKeys(current, onCurrent);
 
@@ -203,7 +203,7 @@ describe("registerHoverKeys", () => {
     expect(dom.listeners.size).toBe(1);
     offB();
     expect(dom.listeners.size).toBe(0);
-    // Désinscrire deux fois ne doit ni jeter ni rouvrir l'écouteur.
+    // Unregister twice should neither throw nor reopen the listener.
     offB();
     expect(dom.listeners.size).toBe(0);
   });

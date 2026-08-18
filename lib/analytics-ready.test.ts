@@ -1,17 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * File d'attente de l'init différée (MIN-78).
+ * Delayed init queue (MIN-78).
  *
- * Régression réelle : PostHog s'initialise dans `requestIdleCallback` (jusqu'à
- * 800 ms) alors que Supabase émet `INITIAL_SESSION` dès le montage. `identify()`
- * partait donc sur un client non initialisé et se perdait — l'utilisateur
- * restait anonyme toute la session et aucun entonnoir par compte n'était
- * calculable. Ces tests verrouillent le rejeu.
+ * Actual regression: PostHog initializes in `requestIdleCallback` (until
+ * 800 ms) while Supabase issues `INITIAL_SESSION` as soon as assembly. `identify()`
+ * therefore left on an uninitialized client and got lost — the user
+ * remained anonymous throughout the session and no funnel per account was
+ * calculable. These tests lock replay.
  */
 
-// Le module garde un état de module (drapeau + file) : il faut le réimporter
-// à neuf entre les tests, d'où l'import dynamique après `resetModules`.
+// The module keeps a module state (flag + file): it must be re-imported
+// to new between tests, hence the dynamic import after `resetModules`.
 async function freshModule() {
   vi.resetModules();
   return import("./analytics");
@@ -82,19 +82,19 @@ describe("onAnalyticsReady", () => {
     onAnalyticsReady(() => onAnalyticsReady(nested));
     markAnalyticsReady();
 
-    // Le second s'exécute tout de suite : le drapeau est déjà levé.
+    // The second executes immediately: the flag is already raised.
     expect(nested).toHaveBeenCalledTimes(1);
   });
 });
 
 /**
- * MIN-150 — la file d'attente des ÉVÉNEMENTS.
+ * MIN-150 — the EVENT queue.
  *
- * Régression réelle, et invisible : `landing_viewed` est émis au montage de
- * chaque visite de la landing, et PostHog n'en avait pas reçu UN SEUL en
- * 180 jours, quand les événements de clic de la même page arrivaient bien. Un
- * effet de montage passe toujours avant le `requestIdleCallback` de l'init ;
- * les jeter revenait donc à ne jamais mesurer aucun « vu ».
+ * Real, invisible regression: `landing_viewed` is emitted when mounting
+ * every visit to the landing, and PostHog had not received ONE SINGLE one en
+ * 180 days, when click events on the same page were arriving successfully. A
+ * mounting effect always comes before the `requestIdleCallback` of the init;
+ * throwing them away therefore meant never measuring any "seen".
  */
 describe("file d'attente des événements", () => {
   beforeEach(() => {
@@ -191,11 +191,11 @@ describe("file d'attente des événements", () => {
     const mod = await freshModule();
 
     mod.trackEvent("landing_viewed", {});
-    // Pas de client déposé : c'est le cas « pas de clé » / « hôte local », où
-    // `PostHogInit` appelle quand même `markAnalyticsReady`.
+    // No client filed: this is the case “no key” / “local host”, where
+    // `PostHogInit` still calls `markAnalyticsReady`.
     expect(() => mod.markAnalyticsReady()).not.toThrow();
 
-    // Et la file est bien vidée : un client déposé plus tard ne reçoit rien.
+    // And the queue is completely empty: a customer who drops off later receives nothing.
     const { calls, client } = stubClient();
     mod.setAnalyticsClient(client);
     mod.markAnalyticsReady();

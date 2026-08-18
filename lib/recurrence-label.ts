@@ -1,11 +1,11 @@
-// Mettre une récurrence en mots (MIN-136).
+// Put a recurrence in words (MIN-136).
 //
-// « Toutes les semaines » ne dit pas grand-chose : ce qu'on veut lire, c'est
-// « tous les lundis », « tous les 4 du mois », « tous les 31 juillet ». La
-// cadence seule ne suffit donc pas — c'est l'ÉCHÉANCE qui porte le jour, et les
-// deux se lisent ensemble. Les libellés génériques (namespace `Recurrence`,
-// clés `daily`/`weekly`/…) restent pour le journal d'activité, seul endroit où
-// la date n'est pas sous la main.
+// “Every week” doesn’t say much: what we want to read is
+// “every Monday”, “every 4th of the month”, “every July 31st”. There
+// cadence alone is therefore not enough - it is the DEADLINE which brings the day, and the
+// two are read together. Generic labels (namespace `Recurrence`,
+// keys `daily`/`weekly`/…) remain for the activity log, the only place where
+// the date is not at hand.
 
 import type { useFormatter, useTranslations } from "next-intl";
 import { dueDateHasTime } from "./due-date";
@@ -15,9 +15,9 @@ type RecurrenceT = ReturnType<typeof useTranslations<"Recurrence">>;
 type Formatter = ReturnType<typeof useFormatter>;
 
 /**
- * Le quantième tel qu'on l'écrit dans la langue : « 4 » et « 1er » en français,
- * « 4th » et « 1st » en anglais. `Intl.PluralRules` en mode ordinal donne la
- * règle anglaise sans table à maintenir.
+ * The date as it is written in the language: “4” and “1er” in French,
+ * “4th” and “1st” in English. `Intl.PluralRules` in ordinal mode gives the
+ * English rule without a table to maintain.
  */
 function ordinalDay(day: number, locale: string): string {
   if (locale.startsWith("fr")) return day === 1 ? "1er" : String(day);
@@ -27,11 +27,11 @@ function ordinalDay(day: number, locale: string): string {
 }
 
 /**
- * La phrase d'une récurrence, telle qu'elle s'affiche dans le sélecteur de
- * cadence, sur la page « Récurrences » et au survol d'une échéance.
+ * The phrase of a recurrence, as it is displayed in the
+ * cadence selector, on the “Recurrences” page and when hovering over a deadline.
  *
- * L'heure s'ajoute quand l'échéance en porte une — c'est elle qui distingue
- * « tous les lundis » de « tous les lundis à 09:00 ».
+ * The time is added when the deadline has one — it is this which distinguishes
+ * “every Monday” from “every Monday at 09:00”.
  */
 export function recurrenceLabel(
   cadence: RecurrenceCadence,
@@ -40,7 +40,7 @@ export function recurrenceLabel(
   format: Formatter,
   locale: string,
 ): string {
-  // Sans échéance il n'y a pas de jour à nommer : le libellé générique fait foi.
+  // Without a deadline there is no day to name: the generic wording prevails.
   if (!due) return t(cadence);
 
   let label: string;

@@ -24,21 +24,20 @@ import { usesByokForSurface } from "@/lib/server/ai-runtime";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 
 /**
- * Budget d'usage (MIN-72) — le dépensé d'un user sur la fenêtre courante,
- * agrégé depuis le ledger `ai_usage` (coût brut USD, ventilé par feature).
+ * Usage budget (MIN-72) — the amount spent by a user in the current window,
+ * aggregated from the ledger `ai_usage` (gross cost USD, broken down by feature).
  *
- * Fenêtre : le cycle de facturation Stripe pour les abonnés (annuel → sous-cycle
- * MENSUEL, l'usage se réinitialise chaque mois même en paiement annuel), sinon
- * le mois calendaire UTC ; bornée par le filigrane `agent_quota_resets` (remise
- * à zéro admin — s'applique au budget entier, plus seulement aux agents). Ce
- * filigrane est un REGISTRE : plusieurs remises à zéro peuvent coexister sur une
- * même période, et c'est la PLUS RÉCENTE qui borne la fenêtre.
+ * Window: the Stripe billing cycle for subscribers (annual → subcycle
+ * MONTHLY, usage resets each month even in annual payment), otherwise
+ * the calendar month UTC; bounded by the watermark `agent_quota_resets` (reset
+ * to zero admin — applies to the entire budget, not just agents). This
+ * watermark is a REGISTER: several resets can coexist over the same period, and it is the MOST RECENT one which limits the window.
  *
- * Enforcement : `ensureUsageBudget` en PRÉ-VOL avant chaque action coûtante ;
- * l'enregistrement reste post-hoc best-effort (`recordAiUsage` ne throw
- * jamais) — un léger dépassement sur la dernière action est assumé, comme chez
- * Claude/ChatGPT. Pas de fenêtre 5 h / hebdo en v1 (les rate-limits de session
- * restent la garde anti-rafale).
+ * Enforcement: `ensureUsageBudget` in PRE-FLIGHT before each costing action ;
+ * the recording remains post-hoc best-effort (`recordAiUsage` never throw
+ *) — a slight overrun on the last action is assumed, as in
+ * Claude/ChatGPT. No 5 h/week window in v1 (session rate limits
+ * remain anti-burst guard).
  */
 
 export interface UsagePeriod {
@@ -60,16 +59,16 @@ function monthWindow(now = new Date()): UsagePeriod {
 }
 
 /**
- * La PÉRIODE DE FACTURATION de ce user, avant tout filigrane — c'est elle qui
- * borne le registre des remises à zéro (« combien en a-t-on déjà offert sur
- * cette période ? »), là où `getUsagePeriod` répond à « depuis quand compte-t-on
- * vraiment ? ».
+ * The BILLING PERIOD of this user, before any watermark - it is this which
+ * limits the register of resets ("how many have we already offered on
+ * this period?"), where `getUsagePeriod` responds to "since when have we counted
+ *really? ".
  *
- * Cycle Stripe dès qu'un abonnement ACTIF porte ses dates, indépendamment de la
- * source du plan effectif : un override admin peut coexister avec un vrai
- * abonnement, et c'est alors le cycle (pas le mois calendaire) qui borne
- * l'usage. Annuel → sous-cycle MENSUEL : l'usage se réinitialise chaque mois
- * même quand le paiement est annuel.
+ * Stripe cycle as soon as an ACTIVE subscription has its dates, independently of the
+ * source of the effective plan: an admin override can coexist with a real
+ * subscription, and it is then the cycle (not the calendar month) which limits
+ * usage. Annual → MONTHLY subcycle: usage resets each month
+ * even when payment is annual.
  */
 export function getBillingWindow(billing: ResolvedBilling): UsagePeriod {
   const account = billing.account;
@@ -88,12 +87,11 @@ export function getBillingWindow(billing: ResolvedBilling): UsagePeriod {
 }
 
 /**
- * Le dernier filigrane posé sur ce compte.
+ * The last watermark placed on this account.
  *
- * `agent_quota_resets` est un REGISTRE : un admin peut en poser plusieurs sur
- * une même période, et c'est la remise à zéro la PLUS RÉCENTE qui fixe le début
- * de la fenêtre comptée — les précédentes sont déjà derrière elle, elles ne
- * peuvent plus rien libérer.
+ * `agent_quota_resets` is a REGISTER: an admin can place several on
+ * the same period, and it is the MOST RECENT reset which sets the start
+ * of the window counted — the previous ones are already behind it, they can no longer release anything.
  */
 export async function latestQuotaResetAt(userId: string): Promise<string | null> {
   const service = getServiceClient();
@@ -107,7 +105,7 @@ export async function latestQuotaResetAt(userId: string): Promise<string | null>
   return (data as { reset_at?: string } | null)?.reset_at ?? null;
 }
 
-/** La fenêtre comptée par le budget de ce user. */
+/** The window counted by this user's budget. */
 export async function getUsagePeriod(
   userId: string,
   billing: ResolvedBilling
@@ -128,7 +126,7 @@ function roundUsd(value: number): number {
   return Math.round(value * 1e6) / 1e6;
 }
 
-/** Dépensé + ventilation par feature du user sur sa fenêtre courante. */
+/** Spent + breakdown by user feature on their current window. */
 export async function getUserUsage(userId: string): Promise<UserUsage> {
   const billing = await getResolvedBilling(userId);
   const period = await getUsagePeriod(userId, billing);
@@ -157,7 +155,7 @@ export async function getUserUsage(userId: string): Promise<UserUsage> {
   };
 }
 
-/** Ventile `byFeature` sur les segments d'affichage, dans l'ordre de la barre. */
+/** Breaks `byFeature` across the display segments, in bar order. */
 export function segmentizeUsage(
   byFeature: Partial<Record<BillableFeature, number>>
 ): Array<{ id: UsageSegmentId; usd: number }> {
@@ -170,8 +168,8 @@ export function segmentizeUsage(
 }
 
 /**
- * Check pré-vol : budget restant → l'usage courant ; épuisé → 403
- * `usage_budget_exceeded`. Retourne l'usage pour éviter un second fetch.
+ * Pre-flight check: remaining budget → current usage; exhausted → 403
+ * `usage_budget_exceeded`. Returns usage to avoid a second fetch.
  */
 export async function ensureUsageBudget(
   userId: string,
@@ -190,7 +188,7 @@ export async function ensureUsageBudget(
   return usage;
 }
 
-/** Variante booléenne pour les jobs de fond (cron feedback, smart assign). */
+/** Boolean variant for background jobs (cron feedback, smart assign). */
 export async function hasUsageBudget(userId: string, surface?: AiSurface): Promise<boolean> {
   try {
     if (!isManagedAiEnabled()) return true;
@@ -198,16 +196,16 @@ export async function hasUsageBudget(userId: string, surface?: AiSurface): Promi
     const usage = await getUserUsage(userId);
     return usage.usedUsd < usage.billing.plan.includedUsageUsd;
   } catch (err) {
-    // Best-effort : un échec de lecture ne doit pas éteindre les jobs de fond.
+    // Best-effort: a read failure should not shut down background jobs.
     console.error("[usage] budget check failed:", (err as Error).message);
     return true;
   }
 }
 
 /**
- * Budget du OWNER d'un projet — pour l'IA du feedback board (cron, posts
- * publics) : c'est le owner qui paye, pas le visiteur. Best-effort (true si
- * le projet est introuvable) : ne jamais casser un flux public sur un doute.
+ * Budget of the OWNER of a project — for the feedback board AI (cron, posts
+ * public): it is the owner who pays, not the visitor. Best-effort (true if
+ * the project is not found): never break a public flow on a doubt.
  */
 export async function ownerHasUsageBudget(
   projectId: string,
@@ -230,14 +228,14 @@ export async function ownerHasUsageBudget(
 }
 
 /**
- * Métrage du compute Vercel Sandbox d'un run agent : wall-clock × $/min, une
- * ligne au ledger (provider 'vercel'). `seq` doit être unique dans le run côté
- * appelant (une ligne par tranche de drain).
+ * Vercel Sandbox compute metering of a run agent: wall-clock × $/min, one
+ * line in the ledger (provider 'vercel'). `seq` must be unique in the calling side
+ * run (one line per drain slice).
  *
- * `feature` distingue la microVM d'un run d'agent (`sandbox_compute`, le
- * défaut) de celle d'un passage de ROUTINE (`routine_compute`, MIN-185) — les
- * deux moitiés d'une dépense de routine, tokens et minutes, se rangent sous le
- * même segment ou la séparation ne veut rien dire.
+ * `feature` distinguishes the microVM of an agent run (`sandbox_compute`, the
+ * default) from that of a run pass. ROUTINE (`routine_compute`, MIN-185) — the
+ * two halves of a routine expense, tokens and minutes, fit under the
+ * same segment or the separation means nothing.
  */
 export async function recordSandboxUsage(params: {
   runId: string;

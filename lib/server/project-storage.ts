@@ -5,27 +5,27 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { FORGE_ATTACHMENTS_BUCKET } from "@/lib/forge-image-assets";
 
 /**
- * Les objets d'un projet qui ne vivent PAS dans le bucket `attachments`
+ * Objects in a project that do NOT live in the bucket `attachments`
  * (MIN-296).
  *
- * Trois buckets portent des données de projet, et deux d'entre eux sont publics
- * en lecture : `project-icons` (l'icône téléversée) et `forge-attachments` (les
- * fichiers joints aux commentaires de pull request). Aucun des deux ne cascade,
- * et aucun n'était balayé — ni à la purge d'un projet, ni à la suppression d'un
- * compte. Un projet effacé laissait donc son icône et les images de ses PR
- * servies par leur URL, sans plus rien en base pour les désigner : exactement le
- * « fichier promis supprimé, toujours en stockage » que l'audit traque.
+ * Three buckets carry project data, and two of them are public
+ * for reading: `project-icons` (the uploaded icon) and `forge-attachments` (the
+ * files attached to the pull request comments). Neither cascaded,
+ * and neither was swept — neither when purging a project, nor when deleting an
+ * account. A deleted project therefore left its icon and the images of its PR
+ * served by their URL, with nothing left in the base to designate them: exactly the
+ * "promised file deleted, still in storage" that the audit tracks.
  *
- * Les chemins se relèvent AVANT le delete — après, la cascade a emporté les
- * lignes qui disent où ils sont.
+ * The paths are recovered BEFORE the delete — afterward, the cascade has taken over the
+ * lines that say where they are.
  */
 
-/** Ce qu'une page de `list()` ramène au plus (plafond de l'API Storage). */
+/** What a page of `list()` brings to the maximum (Storage API ceiling). */
 const LIST_PAGE = 1000;
 
 /**
- * Liste récursivement les objets d'un préfixe (l'API Storage ne descend pas), en
- * PAGINANT : `list()` s'arrête à mille entrées sans dire qu'il en reste.
+ * Recursively lists objects of a prefix (Storage API does not descend), en
+ * PAGINING: `list()` stops at a thousand entries without saying there are any left.
  */
 export async function listStoragePrefix(
   service: SupabaseClient,
@@ -33,8 +33,8 @@ export async function listStoragePrefix(
   prefix: string,
   depth = 0
 ): Promise<string[]> {
-  // Garde-fou : les arborescences visées font quatre niveaux au plus. Plus
-  // profond n'aurait ici qu'une cause — une boucle.
+  // Safeguard: the targeted trees are four levels at most. More
+  // deep would have only one cause here — a loop.
   if (depth > 4) return [];
 
   const paths: string[] = [];
@@ -46,7 +46,7 @@ export async function listStoragePrefix(
 
     for (const entry of data) {
       const full = prefix ? `${prefix}/${entry.name}` : entry.name;
-      // Un « dossier » Storage est une entrée sans métadonnées.
+      // A Storage “folder” is an entry without metadata.
       if (entry.id === null || entry.metadata === null) {
         paths.push(...(await listStoragePrefix(service, bucket, full, depth + 1)));
       } else {
@@ -58,8 +58,8 @@ export async function listStoragePrefix(
   }
 }
 
-/** Les icônes téléversées des projets donnés — une par projet, extension
-    inconnue (d'où le listage du préfixe plutôt qu'un chemin déduit). */
+/** The uploaded icons of the given projects — one per project, extension
+ unknown (hence the listing of the prefix rather than an inferred path). */
 export async function projectIconPaths(
   service: SupabaseClient,
   projectIds: string[]
@@ -72,16 +72,16 @@ export async function projectIconPaths(
 }
 
 /**
- * Les objets `forge-attachments` des projets donnés.
+ * The `forge-attachments` objects of the given projects.
  *
- * Le chemin d'une pièce jointe de commentaire de PR est `{pr_id}/{uuid}/{nom}`
- * (MIN-162) : il ne dit pas le projet. On redescend donc la chaîne qui l'y
- * rattache — projets → dépôts liés (`project_git_links`) → PR de ces dépôts.
+ * The path for a PR comment attachment is `{pr_id}/{uuid}/{nom}`
+ * (MIN-162): it doesn't say the project. We therefore go back down the chain which links it to
+ * — projects → linked repositories (`project_git_links`) → PR of these repositories.
  *
- * Une PR appartient à un DÉPÔT, pas à un projet, et deux projets peuvent lier le
- * même : on n'efface que si aucun projet survivant ne le lie encore. Sans ce
- * filtre, purger un projet emporterait les images des commentaires d'une équipe
- * qui, elle, reste.
+ * A PR belongs to a DEPOSIT, not to a project, and two projects can link the
+ * same: we do not delete only if no surviving project still binds it. Without this
+ * filter, purging a project would take away the images of comments from a team
+ * which remains.
  */
 export async function forgeAttachmentPathsForProjects(
   service: SupabaseClient,
@@ -126,9 +126,9 @@ export async function forgeAttachmentPathsForProjects(
 }
 
 /**
- * Efface un lot d'objets d'un bucket. Ne lève JAMAIS : un ménage raté ne doit
- * pas faire échouer la purge ou l'effacement de compte qui l'a déclenché — il
- * rend ce qu'il n'a pas pu faire, à l'appelant d'en faire un avertissement.
+ * Deletes a batch of objects from a bucket. NEVER raises: a failed cleaning must
+ * not cause the purge or account wipe that triggered it to fail — it
+ * returns what it could not do, up to the caller to make it a warning.
  */
 export async function removeBucketObjects(
   service: SupabaseClient,
@@ -137,7 +137,7 @@ export async function removeBucketObjects(
 ): Promise<{ removed: number; errors: string[] }> {
   const errors: string[] = [];
   let removed = 0;
-  // Storage plafonne un `remove` : on découpe.
+  // Storage caps a `remove`: we cut it.
   for (let i = 0; i < paths.length; i += 100) {
     const chunk = paths.slice(i, i + 100);
     try {
@@ -152,11 +152,11 @@ export async function removeBucketObjects(
 }
 
 /**
- * Le ménage des deux buckets publics pour un lot de projets qui disparaissent :
- * relève les chemins, efface, rend les avertissements. Appelé APRÈS le delete
- * des lignes quand les chemins ont été relevés avant (purge de la corbeille), ou
- * de bout en bout quand la cascade n'a pas encore eu lieu (suppression de
- * compte).
+ * Cleaning the two public buckets for a batch of disappearing projects:
+ * notes the paths, deletes, returns the warnings. Called AFTER the delete
+ * lines when the paths were cleared before (purging the trash), or
+ * end-to-end when the cascade has not yet occurred (deleting
+ * count).
  */
 export async function removeProjectSideBuckets(
   service: SupabaseClient,

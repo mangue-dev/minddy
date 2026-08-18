@@ -9,13 +9,13 @@ import {
 } from "./pages-api";
 
 /**
- * MIN-270 — le client HTTP des pages, et ce qu'il fait d'un REFUS.
+ * MIN-270 — the HTTP client for pages, and what it does with a REFUSAL.
  *
- * Le point qui compte : un 409 (déplacement qui fermerait une boucle) doit
- * rester reconnaissable côté arbre. Son message est traduit par le serveur, donc
- * illisible pour du code — sans le CODE porté par l'erreur, l'arbre ne pourrait
- * pas dire « une page ne peut pas aller dans sa propre sous-page » et retomberait
- * sur un « échec » générique pour le seul refus qui ait une explication.
+ * The point that matters: a 409 (a move that would close a loop) must
+ * remain recognizable on the tree side. Its message is translated by the server, so
+ * unreadable for code — without the CODE carried by the error, the tree could
+ * not say "a page cannot go to its own subpage" and would fall
+ * to a generic "failure" for the only refusal that has an explanation.
  */
 
 function mockFetch(response: {
@@ -38,12 +38,12 @@ afterEach(() => {
 });
 
 describe("pages-api", () => {
-  it("rend la liste à plat telle quelle", async () => {
+  it("returns the flat list as-is", async () => {
     mockFetch({ ok: true, status: 200, body: [{ id: "p1" }] });
     await expect(fetchPagesApi("proj")).resolves.toEqual([{ id: "p1" }]);
   });
 
-  it("reconnaît le refus de cycle, et lui seul", async () => {
+  it("recognizes the cycle refusal and only that", async () => {
     mockFetch({ ok: false, status: 409, body: { error: "Boucle" } });
     const cycle = await updatePageApi("proj", "p1", { parent_id: "p2" }).catch(
       (err: unknown) => err
@@ -60,7 +60,7 @@ describe("pages-api", () => {
     expect(isPageCycleError(boom)).toBe(false);
   });
 
-  it("retombe sur un message par défaut quand le corps n'en porte pas", async () => {
+  it("falls back to a default message when the body has none", async () => {
     mockFetch({ ok: false, status: 500, body: {} });
     await expect(updatePageApi("proj", "p1", { title: "x" })).rejects.toThrow(
       "Update failed"
@@ -73,12 +73,10 @@ describe("pages-api", () => {
   });
 
   /**
-   * MIN-271 — les deux 409 ne se rattrapent pas de la même façon. Celui de la
-   * VERSION porte la page du serveur (corps compris) : c'est ce qui permet de
-   * fusionner sans un aller-retour de plus. Et il ne doit surtout pas se faire
-   * passer pour un refus de cycle, sans quoi l'arbre dirait « une page ne peut
-   * pas aller dans sa propre sous-page » à quelqu'un qui vient d'être doublé.
-   */
+ * MIN-271 — the two 409s do not catch up in the same way. That of the
+ * VERSION carries the server page (body included): this is what allows
+ * to merge without an additional round trip. And above all it must not pass as a cycle refusal, otherwise the tree would say "a page cannot go to its own subpage" to someone who has just been overtaken.
+ */
   it("distingue le refus de VERSION, et lui donne la page du serveur", async () => {
     const server = { id: "p1", version: 7, content: { type: "doc" } };
     mockFetch({

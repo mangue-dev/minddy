@@ -7,7 +7,7 @@ import {
 } from "@/lib/password-policy";
 
 describe("politique de mot de passe", () => {
-  it("porte les quatre règles du projet Supabase, dans l'ordre d'affichage", () => {
+  it("contains the four Supabase project rules in display order", () => {
     expect(PASSWORD_RULES.map((r) => r.id)).toEqual([
       "passwordRuleLength",
       "passwordRuleLower",
@@ -30,18 +30,18 @@ describe("politique de mot de passe", () => {
   it.each([
     ["Correct1horse", true],
     ["Ab3defgh", true],
-    ["Ab3defg", false], // sept caractères
-    ["abcdefg1", false], // pas de majuscule
-    ["ABCDEFG1", false], // pas de minuscule
-    ["Abcdefgh", false], // pas de chiffre
+    ["Ab3defg", false], // seven characters
+    ["abcdefg1", false], // no uppercase letter
+    ["ABCDEFG1", false], // no lowercase letter
+    ["Abcdefgh", false], // no digit
     ["", false],
   ])("%s → %s", (password, expected) => {
     expect(passwordMeetsPolicy(password)).toBe(expected);
   });
 
   it("compte les majuscules comme GoTrue : en ASCII", () => {
-    // « É » n'est pas `[A-Z]` côté serveur. Une liste qui la validerait ferait
-    // cocher la règle à l'écran puis refuser à l'envoi.
+    // “É” is not `[A-Z]` on the server side. A list that would validate it would
+    // check the rule on the screen then refuse sending.
     expect(passwordMeetsPolicy("Étrange1x")).toBe(false);
     expect(passwordMeetsPolicy("Étrange1X")).toBe(true);
   });

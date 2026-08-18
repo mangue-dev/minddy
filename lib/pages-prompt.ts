@@ -1,51 +1,49 @@
-// « Copier le prompt » / « lancer un agent » depuis une TÂCHE DE PAGE (MIN-274)
-// — le pendant de lib/scratchpad-prompt.ts, pour l'autre surface qui porte des
-// tâches.
+// “Copy prompt” / “launch an agent” from a PAGE TASK (MIN-274)
+// — the counterpart of lib/scratchpad-prompt.ts, for the other surface which carries
+// tasks.
 //
-// Le squelette est le même, et il le reste volontairement : une tâche est le
-// même objet des deux côtés, et son prompt doit se lire pareil. Trois choses
-// seulement changent, et ce sont les trois que la page sait et que le carnet
+// The skeleton is the same, and it remains that way voluntarily: a task is the
+// same object on both sides, and its prompt should read the same. Three things
+// only change, and these are the three that the page knows and that the notebook
 // ignore :
 //
-//  - le document a un NOM, et le nom est du contexte : « relancer le cron »
-//    dans « Post-mortem du 3 mars » n'est pas la même tâche que dans
-//    « Idées » ;
-//  - une page n'est pas un brouillon personnel. Le cadrage du carnet
-//    (« notes floues, demande plutôt que deviner ») dirait faux ici : une page
-//    de projet est écrite pour être lue ;
-//  - les outils MCP ne sont pas les mêmes — `minddy_get_page` et
+// - the document has a NAME, and the name is in context: “restart cron”
+// in “Post-mortem of March 3” is not the same task as in
+// “Ideas”;
+// - a page is not a personal draft. The framing of the notebook
+// (“fuzzy notes, ask rather than guess”) would say wrong here: a page
+// project is written to be read;
+// - MCP tools are not the same — `minddy_get_page` and
 //    `minddy_edit_page_text` (MIN-273), pas `minddy_get_scratchpad`.
 //
-// L'OUVERTURE, elle, est identique au carnet (« Work through … » puis le bloc
-// `<notes>`), et ce n'est pas cosmétique : c'est la signature que lit
-// `isScratchpadPrompt`, donc ce qui empêche le serveur d'emballer une seconde
-// fois un prompt déjà emballé quand il part par le composer de la page Agents.
+// THE OPENING is identical to the notebook (“Work through…” then the block
+// `<notes>`), and it's not cosmetic: it's the signature that reads
+// `isScratchpadPrompt`, so what prevents the server from packing a second
+// once a prompt is already packaged when it leaves by composing it from the Agents page.
 
 import { isScratchpadPrompt, splitTaskSection } from "@/lib/scratchpad-prompt";
 
 export interface PageTaskPromptOptions {
-  /** Le titre de la page d'où sort la tâche. */
+  /** The title of the page from which the task comes. */
   page: string;
-  /** Le bloc MCP. `false` pour le run Numo, qui a déjà ses outils de page. */
+  /** The MCP block. `false` for the Numo run, which already has its page tools. */
   mcp?: boolean;
 }
 
 /**
- * Le prompt d'une tâche de page — prêt à coller dans n'importe quel agent, et
- * TOUJOURS en anglais quelle que soit la locale de l'UI (même règle que
- * lib/issue-prompt.ts et lib/scratchpad-prompt.ts).
+ * The prompt of a page task — ready to paste into any agent, and
+ * ALWAYS in English regardless of the UI locale (same rule as
+ * lib/issue-prompt.ts and lib/scratchpad-prompt.ts).
  *
- * `markdown` est ce que porte la tâche quand elle sort de la page : les titres
- * des sections qui la contiennent, puis la tâche et ses sous-tâches. On les
- * redécoupe avec `splitTaskSection` pour sortir la section du bloc `<notes>` et
- * la nommer en clair — un titre de section n'est pas du travail à faire.
+ * `markdown` is what the task carries when it leaves the page: the titles
+ * of the sections that contain it, then the task and its subtasks. We recut them with `splitTaskSection` to remove the section from the block `<notes>` and name it in plain text — a section title is not work to be done.
  */
 export function buildPageTaskPrompt(
   markdown: string,
   opts: PageTaskPromptOptions
 ): string {
-  // Emballer un prompt déjà emballé n'ajoute rien et brouille tout : on rend le
-  // texte tel quel, comme le fait `buildScratchpadPrompt`.
+  // Wrapping an already wrapped prompt adds nothing and confuses everything: we return the
+  // text as is, like `buildScratchpadPrompt` does.
   if (isScratchpadPrompt(markdown)) return markdown.trim();
 
   const page = opts.page.trim();
@@ -56,8 +54,8 @@ export function buildPageTaskPrompt(
   const target = isTask
     ? `the following task${from} of my project`
     : `the following excerpt${from} of my project`;
-  // La section n'est PAS laissée dans <notes> : le bloc reste la tâche seule, et
-  // son appartenance est dite en clair juste après.
+  // The section is NOT left in <notes>: the block remains the task alone, and
+  // its membership is clearly stated immediately after.
   const sectionNote = section
     ? `\nThis task is under the heading "${section}" of that page.\n`
     : "";

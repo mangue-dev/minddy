@@ -1,18 +1,18 @@
 "use client";
 
-// L'onglet PAGES d'un projet (MIN-270) : la barre secondaire et son arbre.
+// The PAGES tab of a project (MIN-270): the secondary bar and its tree.
 //
-// Il vit dans le LAYOUT du segment, pas dans chacune de ses pages. Deux raisons,
-// et la seconde suffit : l'arbre ne se remonte pas d'une page à l'autre (état
-// d'ouverture, position de défilement, requête), et la barre secondaire ne
-// disparaît donc jamais le temps d'une navigation — c'est elle qui tient la
+// It lives in the LAYOUT of the segment, not in each of its pages. Two reasons,
+// and the second is enough: the tree does not go back from one page to another (state
+// opening, scroll position, query), and the secondary bar does not
+// therefore never disappears for the duration of a navigation - it is she who holds the
 // sidebar primaire au rail.
 //
-// Ce qu'il n'y a PAS au bas de l'arbre : une entrée « Corbeille ». Le plan en
-// prévoyait une ; c'était un doublon. La corbeille de l'application (/trash)
-// recueille déjà les pages supprimées, avec leur projet et leur délai de purge,
-// à côté des tickets et des objectifs — un second chemin vers la même liste
-// oblige surtout à se demander lequel des deux dit vrai.
+// What is NOT at the bottom of the tree: a “Trash” entry. The plan in
+// anticipated a ; it was a duplicate. The application trash (/trash)
+// already collects deleted pages, with their project and purge time,
+// next to tickets and objectives — a second path to the same list
+// above all, we have to ask ourselves which of the two is telling the truth.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
@@ -58,10 +58,10 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
     usePagesQuery(projectId);
   const [query, setQuery] = useState("");
 
-  // La page ouverte est retenue ICI plutôt que dans `PageView` : la coquille
-  // traverse les navigations, donc elle voit le DERNIER état de l'onglet, y
-  // compris le retour à la liste après une mise à la corbeille. C'est
-  // `app/(app)/projects/[id]/pages/page.tsx` qui la relit à l'ouverture.
+  // The open page is retained HERE rather than in `PageView`: the shell
+  // crosses navigations, so it sees the LAST state of the tab, y
+  // included returning to the list after trashing. It is
+  // `app/(app)/projects/[id]/pages/page.tsx` which rereads it when opened.
   useEffect(() => {
     if (activePageId) rememberLastPage(projectId, activePageId);
   }, [projectId, activePageId]);
@@ -69,12 +69,12 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
   const create = useCallback(
     async (parentId: string | null) => {
       try {
-        // La position est calculée par le SERVEUR (fin de la fratrie) : il est
-        // le seul à voir les pages que ce client n'a pas encore.
+        // The position is calculated by the SERVER (end of siblings): it is
+        // the only one to see the pages that this client does not yet have.
         const page = await createPage({ parent_id: parentId });
-        // Elle est en base, mais elle n'est pas encore acquise : quitter sans y
-        // écrire une lettre la détruit (lib/pages-draft.ts). Créer une page
-        // n'est pas la sauvegarder.
+        // It is in base, but it is not yet acquired: exit without it
+        // writing a letter destroys it (lib/pages-draft.ts). Create a page
+        // is not saving it.
         markDraftPage(page.id);
         router.push(`${base}/${page.id}`);
       } catch (err) {
@@ -87,12 +87,12 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
   const move = useCallback(
     (dragId: string, targetId: string, mode: PageDropMode) => {
       const patch = computePageMove(pages, dragId, targetId, mode);
-      // `null` = geste sans effet (sur soi-même) ou boucle : rien à dire, rien
-      // n'a bougé à l'écran non plus.
+      // `null` = gesture without effect (on oneself) or loop: nothing to say, nothing
+      // didn't move on the screen either.
       if (!patch) return;
       void updatePage(dragId, patch).catch((err: unknown) => {
-        // L'arbre est déjà revenu en place (le cache a été rejoué à l'envers) ;
-        // il reste à DIRE pourquoi, sinon le geste semble n'avoir servi à rien.
+        // The tree is already back in place (the cache was replayed in reverse);
+        // it remains to SAY why, otherwise the gesture seems to have served no purpose.
         toast.error(
           isPageCycleError(err)
             ? t("moveCycle")
@@ -106,13 +106,13 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
   );
 
   /**
-   * Épingler / désépingler, depuis le menu ⋯ d'une ligne de l'arbre.
-   *
-   * L'écriture est optimiste comme le déplacement (`usePagesQuery`) : la ligne
-   * saute en tête de la barre à la seconde du clic. Un favori qui attendrait le
-   * serveur donnerait un menu qui se referme sur rien — le geste est trop petit
-   * pour qu'on lui accorde une attente.
-   */
+ * Pin/unpin, from the menu ⋯ of a line in the tree.
+ *
+ * The writing is optimistic like the movement (`usePagesQuery`): the line
+ * jumps to the top of the bar at the second of the click. A favorite that waits for the
+ * server would give a menu that closes on nothing — the gesture is too small
+ * to be granted a wait.
+ */
   const toggleFavorite = useCallback(
     (page: PageSummary) => {
       void updatePage(page.id, { favorite: !page.favorite }).catch(
@@ -131,15 +131,15 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
       void (async () => {
         try {
           const trashed = await trashPage(page.id);
-          // Ouvert sur une page qui vient de partir à la corbeille : on remonte
-          // à la liste plutôt que de laisser un document fantôme à l'écran.
+          // Open on a page that has just gone to the trash: we go back
+          // to the list rather than leaving a ghost document on the screen.
           if (activePageId === page.id) router.push(base);
-          // Un toast NU, comme partout ailleurs dans l'app. Il portait un
-          // bouton « Annuler » — le seul du dépôt, et sonner l'habille de son
-          // bouton par défaut : au milieu des autres notifications, il ne
-          // ressemblait à rien de connu. Le retour en arrière n'est pas perdu
-          // pour autant : la Corbeille apparaît au bas de l'arbre à la seconde
-          // où la page en part, et restaurer y tient en un clic.
+          // A NU toast, like everywhere else in the app. He wore a
+          // “Cancel” button — the only one in the repository, and ringing sets it up
+          // default button: among the other notifications, it does not
+          // looked like nothing known. The return is not lost
+          // however: the Recycle Bin appears at the bottom of the tree every second
+          // where the page leaves, and restore is there in one click.
           toast.success(
             trashed > 1
               ? t("trashedWithChildren", { count: trashed })
@@ -153,21 +153,21 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
     [trashPage, activePageId, router, base, t]
   );
 
-  // Un projet SANS AUCUNE page n'a pas d'arbre à montrer, et une barre
-  // secondaire vide n'est pas un état neutre : c'est un meuble qui prend un
-  // quart de l'écran pour dire qu'il ne contient rien, à côté d'un panneau qui
-  // le dit déjà. La barre n'apparaît donc qu'à la première page — et l'écran
-  // d'accueil de l'onglet (app/(app)/projects/[id]/pages/page.tsx) occupe alors
-  // toute la largeur, avec son unique bouton.
+  // A project WITHOUT ANY pages has no tree to show, and a bar
+  // secondary empty is not a neutral state: it is a piece of furniture which takes a
+  // quarter of the screen to say that it contains nothing, next to a panel which
+  // already says it. The bar therefore only appears on the first page — and the screen
+  // home tab (app/(app)/projects/[id]/pages/page.tsx) then occupies
+  // full width, with its single button.
   //
-  // Pendant le CHARGEMENT, on garde la barre (et ses squelettes) : la retirer
-  // pour la remettre une fraction de seconde plus tard ferait sauter la mise en
-  // page à chaque arrivée dans l'onglet, sur la quasi-totalité des projets.
+  // During LOADING, we keep the bar (and its skeletons): remove it
+  // to put it back a fraction of a second later would skip the setting
+  // page each time you arrive in the tab, on almost all projects.
   const bare = !loading && pages.length === 0;
 
   return (
-    // La PRÉSENCE est ouverte ici, et pas dans la page : la coquille traverse
-    // les navigations, la page ouverte non (MIN-271).
+    // The PRESENCE is open here, and not in the page: the shell crosses
+    // navigations, open page no (MIN-271).
     <PagePresenceProvider projectId={projectId} pageId={activePageId}>
     <div className="flex h-full min-h-0">
       {bare ? null : (
@@ -204,9 +204,9 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
             ))}
           </div>
         ) : pages.length === 0 ? (
-          // Atteignable seulement le temps d'un chargement qui vient de finir à
-          // vide, avant que `bare` ne retire la barre : le filtre, lui, peut
-          // aussi vider l'ARBRE sans vider le projet, et c'est `PageTree` qui le
+          // Reachable only for the duration of a loading which has just finished
+          // empty, before `bare` removes the bar: the filter can
+          // also empty the TREE without emptying the project, and it is `PageTree` which
           // dit.
           <p className="px-4 py-6 text-center text-sm text-muted-foreground">
             {t("sidebarEmpty")}
@@ -230,8 +230,8 @@ export function PagesShell({ children }: { children: React.ReactNode }) {
       <div
         className={cn(
           "min-h-0 min-w-0 flex-1 flex-col md:flex",
-          // Sans barre secondaire, il n'y a plus de « liste à gauche » à
-          // laisser seule sur mobile : ce panneau EST l'onglet.
+          // Without secondary bar, there is no longer a “list on the left”
+          // leave alone on mobile: this panel IS the tab.
           bare || pathname !== base ? "flex" : "hidden"
         )}
       >

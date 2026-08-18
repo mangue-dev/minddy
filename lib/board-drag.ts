@@ -1,30 +1,30 @@
 /**
- * Ce qu'un glisser-déposer déplace sur un board, quand une sélection est en cours.
+ * What a drag and drop moves on a board, when a selection is in progress.
  *
- * Deux règles, et elles tiennent en une phrase chacune :
+ * Two rules, and they fit in one sentence each:
  *
- * - **On embarque la sélection** dès que la carte saisie en fait partie. Saisir
- *   une carte HORS sélection ne déplace qu'elle — la sélection reste où elle est,
- *   comme sur un bureau : on ne perd pas trente tickets triés parce qu'on a
- *   attrapé le trente-et-unième.
+ * - **We ship the selection** as soon as the card entered is part of it. Enter
+ * a card OUTSIDE the selection moves only it — the selection stays where it is,
+ * like on a desk: we do not lose thirty sorted tickets because we have
+ * grabbed the thirty-first.
  *
- * - **Le paquet garde son ordre de lecture.** Les tickets atterrissent dans
- *   l'ordre où ils étaient à l'écran (colonnes de gauche à droite, cartes de haut
- *   en bas), pas dans l'ordre où le `Set` de sélection les a rencontrés — qui,
- *   lui, dépend de l'ordre des ⇧-clics et ne veut rien dire.
+ * - **The deck keeps its reading order.** The tickets land in
+ * the order in which they were on the screen (columns from left to right, cards from top
+ * to bottom), not in the order in which the selection `Set` encountered them — which,
+ * depends on the order of ⇧-clicks and wants nothing say.
  *
- * Les positions se calculent une seule fois pour tout le paquet : on découpe
- * l'intervalle entre les deux voisins du point de dépôt en autant de parts qu'il
- * y a de tickets. Les faire passer un par un par le calcul à deux voisins les
- * empilerait tous sur la même valeur.
+ * The positions are calculated only once for the entire packet: we divide
+ * the interval between the two neighbors of the drop-off point into as many parts as there are
+ * tickets. Passing them one by one through the calculation to two neighbors the
+ * would all stack on the same value.
  *
- * Et une troisième, qui n'est pas du calcul de position mais son pendant à
- * l'écran : **on montre le point d'arrivée, on ne le devine pas.** `previewBoardMove`
- * dérive le repère de dépôt des déplacements DÉJÀ planifiés, puis rejoue le tri
- * d'affichage de la colonne cible. Le trait qu'on voit pendant le glisser est donc
- * calculé par le même code que l'écriture qui suit — y compris quand la colonne
- * est triée par priorité ou par date, où la carte n'atterrit pas sous le curseur
- * mais là où le tri la met.
+ * And a third, which is not position calculation but its counterpart to
+ * the screen: **we show the arrival point, we cannot guess it.** `previewBoardMove`
+ * derives the drop mark from ALREADY planned moves, then replays the sort
+ * display of the target column. The line we see while dragging is therefore
+ * calculated by the same code as the writing that follows — including when the column
+ * is sorted by priority or by date, where the card does not land under the cursor
+ * but where the sort puts it.
  */
 
 import { STATUSES, type IssueStatus } from "@/lib/issue-constants";
@@ -32,7 +32,7 @@ import type { Issue } from "@/lib/types";
 
 const STATUS_IDS = new Set<string>(STATUSES.map((s) => s.value));
 
-/** Rang d'affichage de chaque ticket sur le board (colonnes puis cartes). */
+/** Display rank of each ticket on the board (columns then cards). */
 export function displayRank(columns: { items: Issue[] }[]): Map<string, number> {
   const rank = new Map<string, number>();
   let n = 0;
@@ -43,8 +43,7 @@ export function displayRank(columns: { items: Issue[] }[]): Map<string, number> 
 }
 
 /**
- * Les tickets qu'un glisser embarque : la sélection si la carte saisie en fait
- * partie, cette carte seule sinon. Rendus dans l'ordre d'affichage du board.
+ * The tickets that a swipe carries: the selection if the card entered is part of it, this card alone otherwise. Rendered in board display order.
  */
 export function dragBundle(
   activeId: string,
@@ -63,32 +62,31 @@ export function dragBundle(
   );
 }
 
-/** Le rectangle d'un élément du glisser, réduit à ce que le point d'insertion lit. */
+/** The rectangle of a drag item, collapsed to whatever the insertion point reads. */
 export interface DragRect {
   top: number;
   height: number;
 }
 
-/** Où le dépôt atterrirait, tel que le geste en cours le désigne. */
+/** Where the deposit would land, as the current gesture designates. */
 export interface DropTarget {
   status: IssueStatus;
-  /** La carte survolée, `null` quand c'est le fond de la colonne. */
+  /** The hovered card, `null` when it is the bottom of the column. */
   overIssueId: string | null;
-  /** Le point d'insertion est APRÈS la carte survolée, et non avant. */
+  /** The insertion point is AFTER the hovered map, not before. */
   after: boolean;
 }
 
 /**
- * Ce que le geste désigne : une colonne, une carte, et de quel côté de cette
- * carte.
+ * What the gesture designates: a column, a card, and which side of it
+ * card.
  *
- * **Le côté est la moitié qui manquait.** Sans lui, survoler une carte veut
- * toujours dire « avant elle » — la dernière place d'une colonne devient
- * inatteignable autrement qu'en visant le vide sous la dernière carte, et le
- * repère de dépôt saute d'un cran par rapport à ce que la main vise. On compare
- * donc les CENTRES : celui de la carte tenue (le rectangle d'origine translaté
- * par le glisser, ce que dnd-kit appelle `active.rect.current.translated`) contre
- * celui de la carte survolée.
+ * **The side is the half that was missing.** Without it, hovering over a card would always say "before it" — the last place in a column becomes
+ * unattainable other than by aiming at the gap under the last card, and the
+ * deposit marker jumps a notch from what the hand is aiming for. We compare
+ * therefore the CENTERS: that of the held card (the original rectangle translated
+ * by dragging, what dnd-kit calls `active.rect.current.translated`) against
+ * that of the hovered card.
  */
 export function readDropTarget({
   overId,
@@ -115,7 +113,7 @@ export function readDropTarget({
   return { status: over.status, overIssueId: over.id, after };
 }
 
-/** `count` positions réparties entre les deux voisins du point d'insertion. */
+/** `count` positions distributed between the two neighbors of the insertion point. */
 function spreadPositions(
   before: Issue | undefined,
   after: Issue | undefined,
@@ -134,8 +132,8 @@ export interface PlannedMove {
 }
 
 /**
- * Le déplacement à écrire pour chaque ticket du paquet. Vide = rien à faire
- * (dépôt sans effet), auquel cas l'appelant n'écrit rien du tout.
+ * The move to write for each ticket in the package. Blank = nothing to do
+ * (deposit without effect), in which case the caller writes nothing at all.
  */
 export function planBoardMove({
   bundle,
@@ -146,25 +144,25 @@ export function planBoardMove({
   manual,
   now,
 }: {
-  /** Le paquet glissé, dans l'ordre où il doit atterrir. */
+  /** The slipped packet, in the order it should land. */
   bundle: Issue[];
   targetStatus: IssueStatus;
-  /** La carte survolée au dépôt, `null` si on a lâché sur le fond de la colonne. */
+  /** The card hovered over the deposit, `null` if dropped at the bottom of the column. */
   overIssueId: string | null;
-  /** Le dépôt vise la moitié BASSE de la carte survolée : on insère après elle
-      (cf. `readDropTarget`). Sans ça, la fin d'une colonne est inatteignable. */
+  /** The deposit targets the LOWER half of the hovered card: we insert
+ after it (see `readDropTarget`). Without it, the end of a column is unattainable. */
   dropAfter?: boolean;
-  /** La colonne cible entière, triée par position — le paquet inclus. */
+  /** The entire target column, sorted by position — including the package. */
   columnItems: Issue[];
-  /** Tri manuel : seul cas où l'ordre dans une colonne se réordonne. */
+  /** Manual sorting: only case where the order in a column is reordered. */
   manual: boolean;
-  /** Horodatage de base pour les tris par champ (la position y est cosmétique). */
+  /** Base timestamp for sorting by field (position there is cosmetic). */
   now: number;
 }): PlannedMove[] {
   const moving = manual
     ? bundle
-    : // Hors tri manuel, l'ordre d'une colonne est dérivé d'un champ : un ticket
-      // déjà dans la colonne cible n'a rien à changer.
+    : // Except for manual sorting, the order of a column is derived from a field: a ticket
+      // already in the target column has nothing to change.
       bundle.filter((issue) => issue.status !== targetStatus);
   if (moving.length === 0) return [];
 
@@ -177,8 +175,8 @@ export function planBoardMove({
 
   const movingIds = new Set(moving.map((i) => i.id));
   const rest = columnItems.filter((i) => !movingIds.has(i.id));
-  // Le point d'insertion se lit sur la colonne COMPLÈTE (la carte survolée peut
-  // faire partie du paquet), puis se traduit en index parmi les tickets restants.
+  // The insertion point is read on the COMPLETE column (the hovered map can
+  // be part of the package), then translates into an index among the remaining tickets.
   const overIndex = overIssueId
     ? columnItems.findIndex((i) => i.id === overIssueId)
     : -1;
@@ -189,8 +187,8 @@ export function planBoardMove({
     const before = columnItems
       .slice(0, overIndex)
       .filter((i) => !movingIds.has(i.id)).length;
-    // « Après » n'a de sens que si la carte survolée reste en place : une carte
-    // du paquet ne compte pas comme voisine, elle part avec lui.
+    // “After” only makes sense if the hovered card remains in place: a card
+    // of the package does not count as a neighbor, she leaves with it.
     index = before + (dropAfter && !movingIds.has(overIssueId!) ? 1 : 0);
   }
 
@@ -204,48 +202,48 @@ export function planBoardMove({
   }));
 }
 
-/** Le repère de dépôt à dessiner : un trait, dans une colonne, à une place. */
+/** The deposit mark to draw: a line, in a column, in a place. */
 export interface DropPreview {
   status: IssueStatus;
-  /** Le trait se dessine AVANT cette carte ; `null` = en fin de colonne. */
+  /** The line is drawn BEFORE this card; `null` = at the end of the column. */
   beforeIssueId: string | null;
-  /** Combien de tickets atterriront là (le paquet). */
+  /** How many tickets will land there (the packet). */
   count: number;
 }
 
 /**
- * Où le paquet va se poser, tel que la colonne l'AFFICHERA.
+ * Where the package will land, such that the column WILL DISPLAY it.
  *
- * On ne redéduit rien du curseur : on applique les patchs déjà planifiés à une
- * copie de la colonne cible, on rejoue son tri d'affichage, et on lit la place
- * obtenue. C'est ce qui rend le repère juste dans une colonne triée par priorité
- * ou par date, où le point de chute ne doit rien au curseur — le ticket y tombe
- * là où le champ le range, parfois à dix cartes du point visé.
+ * We do not rededuce anything from the cursor: we apply the already planned patches to a
+ * copy of the target column, we replay its display sort, and we read the place
+ * obtained. This is what makes the mark fair in a column sorted by priority
+ * or by date, where the drop point owes nothing to the cursor — the ticket falls there
+ * where the field stores it, sometimes ten cards from the targeted point.
  *
- * Le trait s'ancre sur une carte QUI RESTE : sous tri manuel, le paquet est
- * encore affiché dans la colonne pendant le glisser, et s'ancrer sur lui ferait
- * courir le repère derrière sa propre cible.
+ * The line is anchored on a card THAT REMAINS: under manual sorting, the deck is
+ * still displayed in the column while dragging, and anchoring to it would cause
+ * to run the marker behind its own target.
  *
- * `null` = rien à montrer, parce qu'il n'y a rien à écrire (dépôt sans effet).
+ * `null` = nothing to show, because there is nothing to write (drop without effect).
  */
 export function previewBoardMove({
   moves,
   displayItems,
   comparator,
 }: {
-  /** Les déplacements planifiés par `planBoardMove` — vides, il n'y a pas de repère. */
+  /** Moves planned by `planBoardMove` — empty, there is no marker. */
   moves: PlannedMove[];
-  /** La colonne cible telle qu'elle est affichée (donc déjà triée pour l'écran). */
+  /** The target column as it is displayed (so already sorted for the screen). */
   displayItems: Issue[];
-  /** Le tri d'affichage de cette colonne. */
+  /** The display sort of this column. */
   comparator: (a: Issue, b: Issue) => number;
 }): DropPreview | null {
   if (moves.length === 0) return null;
   const movingIds = new Set(moves.map((m) => m.issue.id));
   const status = moves[0].patch.status ?? moves[0].issue.status;
   const rest = displayItems.filter((i) => !movingIds.has(i.id));
-  // Le tri est stable : à valeur égale, une carte en place garde le pas sur une
-  // carte qui arrive — le repère se pose donc APRÈS ses ex æquo, comme le tri.
+  // The sorting is stable: for equal value, a card in place keeps pace with one
+  // card that arrives — the marker is therefore placed AFTER its ties, like sorting.
   const projected = [
     ...rest,
     ...moves.map((m) => ({ ...m.issue, ...m.patch }) as Issue),
@@ -263,7 +261,7 @@ export function previewBoardMove({
   };
 }
 
-/** Deux repères identiques — pour ne re-rendre le board que quand il bouge. */
+/** Two identical marks — to only re-set the board when it moves. */
 export function sameDropPreview(
   a: DropPreview | null,
   b: DropPreview | null

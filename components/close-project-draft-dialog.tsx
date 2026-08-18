@@ -13,20 +13,20 @@ import {
 } from "mangue-ui";
 
 /**
- * Ce qu'on demande quand le wizard de création de projet se ferme en route.
+ * What we ask when the project creation wizard closes en route.
  *
- * Trois sorties, parce qu'il y a trois intentions et qu'aucune ne doit coûter
- * deux gestes : revenir au wizard, garder la saisie pour plus tard, ou renoncer.
- * Sans le « Abandonner », renoncer voudrait dire enregistrer un brouillon puis
- * aller le supprimer dans la barre latérale — la sortie la plus simple serait la
+ * Three exits, because there are three intentions and none should cost
+ * two gestures: return to the wizard, save the entry for later, or give up.
+ * Without “Aborting”, abandoning would mean saving a draft and then
+ * go and delete it in the sidebar — the simplest exit would be
  * plus longue.
  *
- * Le cousin `CloseDraftDialog` (dialogues de création de ticket et d'objectif,
- * MIN-41) pose exactement la même question, avec les mêmes mots : seul ce qu'il
- * dit du rangement change — la rangée de reprise du dialogue là-bas, la barre
- * latérale ici. Deux composants et non un seul parce que les deux brouillons ne
- * vivent pas au même endroit (localStorage contre table), pas parce que le
- * dessin diffère : le faire diverger serait la faute à éviter.
+ * The `CloseDraftDialog` cousin (ticket and goal creation dialogs,
+ * MIN-41) asks exactly the same question, with the same words: only what he
+ * said storage changes — the row of dialogue resumption over there, the bar
+ * side here. Two components and not just one because the two drafts do not
+ * do not live in the same place (localStorage versus table), not because the
+ * drawing differs: making it diverge would be the mistake to avoid.
  */
 export function CloseProjectDraftDialog({
   open,
@@ -49,19 +49,18 @@ export function CloseProjectDraftDialog({
             {t("draftCloseDescription")}
           </AlertDialogDescription>
         </AlertDialogHeader>
-        {/* Trois boutons dans une modale calibrée pour deux (`max-w-sm`) : ils
-            tiennent parce que les libellés sont courts, et `flex-wrap` est la
-            ceinture — une traduction qui s'allonge passe à la ligne DANS la
-            boîte au lieu d'en déborder.
-            L'ordre du DOM est celui de la pile mobile lue de bas en haut
-            (`flex-col-reverse`) ; en ligne, « Abandonner » repart à gauche pour
-            laisser à droite la paire qu'on choisit vraiment. */}
+        {/* Three buttons in a modal calibrated for two (`max-w-sm`): they
+ fit because the labels are short, and `flex-wrap` is the
+ belt — a translation that gets longer goes to the line IN the
+ box instead of overflowing it.
+ The order of the DOM is that of the moving stack read from bottom to top
+ (`flex-col-reverse`); online, “Abandon” goes back to the left to leave the pair you really choose on the right. */}
         <AlertDialogFooter className="sm:flex-wrap">
           <AlertDialogCancel>{t("draftCloseCancel")}</AlertDialogCancel>
-          {/* `variant`, et non un `className` de couleur : `AlertDialogAction`
-              pose les classes du bouton sur un Slot parent, donc une couleur
-              écrite ici ne passe pas par tailwind-merge et perd contre celle du
-              variant — le bouton restait bleu. */}
+          {/* `variant`, not a colored `className`: `AlertDialogAction`
+ places the button classes on a parent Slot, so a color
+ written here does not pass through tailwind-merge and loses against that of the
+ variant — the button remained blue. */}
           <AlertDialogAction
             variant="destructive"
             onClick={onDiscard}

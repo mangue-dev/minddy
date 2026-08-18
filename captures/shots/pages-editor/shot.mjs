@@ -1,14 +1,14 @@
 /**
- * pagesEditor — la page « Release process » du wiki d'Aurora, telle qu'on la lit.
+ * pagesEditor — the “Release process” page of the Aurora wiki, as it is read.
  *
  * Voir `intent.md`. Deux points qui ne s'improvisent pas :
  *
- *  - la cible est l'env de PREVIEW (les pages ne sont pas encore en
- *    production), d'où `CAPTURE_BASE_URL` ci-dessous et une session prise sur
- *    le même hôte ;
- *  - la souris est écartée du corps avant la prise : le survol d'un bloc pose
- *    une poignée dans sa marge, et l'intention exige une page qu'on lit, pas un
- *    éditeur qu'on manipule.
+ * - the target is the PREVIEW environment (the pages are not yet in
+ * production), hence `CAPTURE_BASE_URL` below and a session taken on
+ * the same host;
+ * - the mouse is moved away from the body before taking it: hovering over a block poses
+ * a handful in its margin, and the intention requires a page to be read, not a
+ * editor that we manipulate.
  *
  *   CAPTURE_BASE_URL=https://preview.minddy.app node captures/lib/session.mjs
  *   CAPTURE_BASE_URL=https://preview.minddy.app node captures/shots/pages-editor/shot.mjs
@@ -23,11 +23,11 @@ const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";
 /** « Release process », sous « Product handbook » — 014-pages-aurora.mjs. */
 const PAGE = "cd3ee91e-ad73-423c-bb99-9f81722f8912";
 
-/** 16/10, comme les autres emplacements de ce rapport. */
+/** 16/10, like the other locations in this report. */
 const VIEWPORT = { width: 1736, height: 1085 };
 
-/** Les titres de pages et le ticket cité sont des DONNÉES : anglais dans les
-    quatre variantes, et donc utilisables comme ancres de contrôle. */
+/** Page titles and cited ticket are DATA: English in the
+ four variants, and therefore usable as control anchors. */
 const SUBPAGES = ["Release process", "Design principles", "Support playbook"];
 const MENTION = "AUR-2";
 const TASK_COUNT = 5;
@@ -48,21 +48,21 @@ async function capture({ locale, theme }) {
       waitUntil: "domcontentloaded",
     });
 
-    // L'ancre est la PILULE, pas le titre : le titre est rendu par le serveur,
-    // la pilule ne l'est qu'une fois le corps monté dans l'éditeur. Attendre le
+    // The anchor is the PILL, not the title: the title is rendered by the server,
+    // the pill is only added once the body is mounted in the editor. Wait for it
     // titre laisserait photographier un document encore vide.
     await settle(page, { expect: `a:has-text("${MENTION}")` });
 
-    // La souris part dans un coin haut, hors de l'arbre comme du corps : la
-    // position par défaut (0,0) est déjà hors du texte, mais un survol résiduel
-    // d'un run précédent ne se nettoie pas tout seul.
+    // The mouse goes to a high corner, outside the tree and the body: the
+    // default position (0,0) is already out of the text, but a residual hover
+    // from a previous run does not clean itself.
     await page.mouse.move(VIEWPORT.width - 4, 4);
 
     const check = await page.evaluate(
       ({ subpages, mention, expected }) => {
         const main = document.querySelector("main");
-        // `li[data-type="taskItem"]` et pas `li` : la page porte aussi une
-        // liste à puces, et compter tous les `li` mêlerait les deux.
+        // `li[data-type="taskItem"]` and not `li`: the page also carries a
+        // bulleted list, and counting all `li` would mix the two.
         const items = [...(main?.querySelectorAll('li[data-type="taskItem"]') || [])];
         const struck = items.filter((el) =>
           [el, ...el.querySelectorAll("*")].some((n) =>
@@ -76,12 +76,12 @@ async function capture({ locale, theme }) {
           struck,
           expected,
           missingSubpages: subpages.filter((t) => !treeText.includes(t)),
-          // La pilule est une ANCRE vers le ticket : du texte brut voudrait dire
-          // que la mention a été stockée en texte, pas en nœud.
+          // The pill is an ANCHOR to the ticket: plain text would mean
+          // that the mention was stored as text, not as a node.
           pill: [...document.querySelectorAll("main a")].some(
             (a) => (a.textContent || "").trim() === mention,
           ),
-          // Rien d'ouvert : ni menu, ni infobulle, ni poignée de bloc.
+          // Nothing open: no menu, no tooltip, no block handle.
           open: document.querySelectorAll(
             '[role="menu"], [role="dialog"], [data-radix-popper-content-wrapper]',
           ).length,

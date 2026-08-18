@@ -6,17 +6,17 @@ import {
 } from "./custom-domain-lookup";
 
 /**
- * LE LOOKUP QUI DÉCIDE CE QU'UN DOMAINE CLIENT A LE DROIT DE SERVIR (MIN-337).
+ * THE LOOKUP THAT DECIDES WHAT A CLIENT DOMAIN HAS THE RIGHT TO SERVE (MIN-337).
  *
- * Deux garanties qu'aucun type ne porte :
- *   - un domaine dont la propriété n'est PAS vérifiée n'est pas routé — la ligne
- *     existait dès la saisie du domaine, et rien ne vérifiait qu'on le possédait ;
- *   - le lookup rend le PROJET du domaine, sans quoi le proxy ne peut pas
- *     distinguer un token maison d'un token étranger.
+ * Two guarantees that no type carries:
+ * - a domain whose ownership is NOT verified is not routed — the line
+ * existed as soon as the domain was entered, and nothing verified that we owned it;
+ * - the lookup returns the PROJECT of the domain, without which the proxy cannot
+ * distinguish a house token from a foreign token.
  *
- * Le cache est aussi testé pour lui-même : c'est un état global de module, et
- * la seule chose qui le remplit est la réponse à une requête portant le host
- * demandé — un `Host:` fabriqué ne peut pas peupler l'entrée d'un autre.
+ * The cache is also tested for itself: this is a global module state, and
+ * the only thing that fills it is the response to a request carrying the requested host
+ * — a crafted `Host:` cannot populate the entry of another.
  */
 
 const ENV = {
@@ -100,10 +100,10 @@ describe("lookupCustomDomain", () => {
     respond([]);
 
     const first = await lookupCustomDomain("feedback.acme.com");
-    // Deuxième visite du MÊME host : servie par le cache, pas de requête de plus.
+    // Second visit to the SAME host: served by the cache, no further requests.
     expect(await lookupCustomDomain("feedback.acme.com")).toEqual(first);
-    // Un host fabriqué ne lit pas l'entrée du voisin : il paie sa propre requête,
-    // et n'obtient que ce que la base répond POUR LUI.
+    // A manufactured host does not read the neighbor's entry: it pays its own request,
+    // and only gets what the base responds FOR HIM.
     expect(await lookupCustomDomain("feedback.acme.com.evil.test")).toBeNull();
 
     expect(fetchMock).toHaveBeenCalledTimes(2);

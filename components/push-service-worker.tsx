@@ -6,50 +6,46 @@ import { useLocale } from "next-intl";
 import { refreshThisDeviceSubscription } from "@/lib/push/client";
 
 /**
- * Monte le transport des notifications push (Web Push en MIN-183, APNs natif
- * en MIN-356). Aucun rendu : ce
- * composant n'existe que pour son effet, à côté de `<NewVersionBanner />` dans
- * les providers de l'app.
+ * Mounts the push notification transport (Web Push in MIN-183, native APNs
+ * in MIN-356). No rendering: this
+ * component only exists for its effect, next to `<NewVersionBanner />` in
+ * app providers.
  *
- * ## Il ne s'enregistre QUE si la permission est déjà accordée
+ * ## It ONLY registers if permission is already granted
  *
- * Un service worker est un objet persistant, à l'échelle de l'origine, que
- * l'utilisateur ne voit pas et ne peut pas retirer autrement qu'en fouillant
- * les outils de développement. Quelqu'un qui n'a jamais demandé de
- * notifications n'a aucune raison d'en hériter un : il ne lui servirait à rien
- * (sans permission, aucun push n'arrivera jamais) et il survivrait à la
- * fermeture de l'onglet.
+ * A service worker is a persistent, origin-wide object that the user does not see and cannot remove other than by digging through the developer tools. Someone who has never requested a
+ * notification has no reason to inherit one: it would be of no use to him
+ * (without permission, no push will ever happen) and it would survive the closing of the tab.
  *
- * Sur le web, l'abonnement naît dans le geste de l'interrupteur des réglages, où la
- * permission se demande. Ici on ne fait que remonter le worker pour les
- * appareils DÉJÀ abonnés — sinon le navigateur, qui décharge un worker inactif,
- * n'aurait plus personne pour recevoir l'événement `push`.
+ * On the web, the subscription is born in the gesture of the settings switch, where the
+ * permission is asked. Here we only raise the worker for the
+ * devices ALREADY subscribed — otherwise the browser, which unloads an inactive worker,
+ * would no longer have anyone to receive the event `push`.
  *
- * ## Et on remet l'abonnement d'aplomb
+ * ## And we reset the subscription plumb
  *
- * Deux dérives se rattrapent au chargement, et aucune ne se signale d'elle-même :
+ * Two drifts catch up when loading, and neither signals itself:
  *
- *   • l'ENDPOINT a tourné sans passer par `pushsubscriptionchange` (le worker
- *     n'était pas actif, l'événement s'est perdu). La ligne en base pointerait
- *     sur un endpoint mort ;
- *   • l'abonnement en place porte une AUTRE clé publique que la nôtre. Sur
- *     `localhost`, l'origine est partagée entre tous les projets de la machine
- *     et l'abonnement d'un voisin est visible d'ici ; en production, c'est ce
- *     qu'une rotation de la paire VAPID laisse derrière elle. Le service de push
- *     répond alors 403 à chaque envoi, éternellement.
+ * • the ENDPOINT turned without passing through `pushsubscriptionchange` (the worker
+ * was not active, the event was lost). The base line would point
+ * to a dead point;
+ * • the subscription in place carries an OTHER public key than ours. On
+ * `localhost`, the origin is shared between all projects on the machine
+ * and a neighbor's subscription is visible from here; in production, this is what a rotation of the VAPID pair leaves behind. The push
+ * service then responds 403 to each send, forever.
  *
- * `refreshThisDeviceSubscription` traite les deux. Dans l'app macOS récente,
- * la même fonction demande au pont son token APNs courant et l'associe à la
- * session authentifiée ; aucun service worker n'est alors enregistré. L'upsert porte sur
- * `endpoint`, donc c'est sans effet quand rien n'a bougé, et l'ancienne ligne
- * part avec `oldEndpoint` quand il a fallu se réabonner.
+ * `refreshThisDeviceSubscription` processes both. In the recent macOS app,
+ * the same function asks the bridge for its current APNs token and associates it with the
+ * authenticated session; no service worker is then registered. The upsert concerns
+ * `endpoint`, so it has no effect when nothing has changed, and the old line
+ * leaves with `oldEndpoint` when it was necessary to resubscribe.
  */
 export function PushServiceWorker() {
   const locale = useLocale();
 
   useEffect(() => {
     void refreshThisDeviceSubscription(locale).catch((e) => {
-      // Best-effort de bout en bout : l'app n'a pas à broncher parce qu'un
+      // Best effort from end to end: the app doesn't have to flinch because a
       // service worker n'a pas voulu s'enregistrer.
       console.error("[push] remise d'aplomb de l'abonnement échouée:", e);
     });

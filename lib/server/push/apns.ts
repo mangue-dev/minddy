@@ -36,7 +36,7 @@ const base64url = (value: string | Buffer): string =>
 
 let cachedToken: { value: string; createdAt: number; identity: string } | null = null;
 
-/** JWT ES256 provider, renouvelé bien avant la limite APNs d'une heure. */
+/** JWT ES256 provider, renewed well before the one-hour APNs limit. */
 export function apnsProviderToken(now = Date.now()): string | null {
   if (!isApnsConfigured()) return null;
   const teamId = process.env.APNS_TEAM_ID!.trim();
@@ -71,7 +71,7 @@ export function apnsProviderToken(now = Date.now()): string | null {
   }
 }
 
-/** Un POST HTTP/2 isolé. Le contrat de l'appelant reste « jamais de throw ». */
+/** An isolated HTTP/2 POST. The appellant's contract remains "never throw." */
 export async function sendApnsNotification(
   endpoint: string,
   payload: PushPayload
@@ -129,7 +129,7 @@ export async function sendApnsNotification(
           const parsed = JSON.parse(responseBody) as { reason?: unknown };
           if (typeof parsed.reason === "string") reason = parsed.reason;
         } catch {
-          // Une réponse 200 est vide ; un corps non JSON n'ajoute rien au statut.
+          // A 200 response is empty; a non-JSON body adds nothing to the status.
         }
         finish({ status, reason });
       });
@@ -144,9 +144,9 @@ export async function sendApnsNotification(
       request.end(body);
     });
   } catch (error) {
-    // `connect` ou `request` peuvent aussi lever synchroniquement (en-tête ou
-    // configuration locale invalide). Le push ne remonte jamais à l'action qui
-    // a créé la notification d'inbox.
+    // `connect` or `request` can also raise synchronously (header or
+    // invalid local configuration). The push never goes back to the action which
+    // created the inbox notification.
     console.error("[push/apns] préparation échouée:", (error as Error).message);
     return { status: 0, reason: (error as Error).message };
   }

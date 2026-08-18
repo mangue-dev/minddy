@@ -179,13 +179,13 @@ export async function uploadAttachment(
     data: Buffer;
   }
 ): Promise<Attachment> {
-  // Le type est déduit des OCTETS, pas de ce que l'appelant annonce (MIN-340) :
-  // ici on tient le contenu, donc on n'a aucune raison de le croire sur parole.
-  // C'est ce type-là qui part dans l'entête de l'objet ET dans la ligne, pour
-  // que les deux disent la même chose au moment de servir.
+  // The type is inferred from BYTES, not from what the caller announces (MIN-340):
+  // here we hold the content, so we have no reason to take his word for it.
+  // It is this type which goes into the header of the object AND into the line, to
+  // that both say the same thing when serving.
   const mime = resolveUploadedMimeType(args.mimeType, args.data).slice(0, 120);
-  // Le quota du compte (MIN-348) : cet envoi-ci part du client de SERVICE, qui
-  // ne voit pas la policy où le plafond est posé.
+  // The account quota (MIN-348): this sending comes from the SERVICE client, who
+  // does not see the policy where the ceiling is placed.
   if (!(await projectStorageAllowed(service, args.projectId))) {
     throw new Error("attachment upload refused: storage quota exceeded");
   }
@@ -409,28 +409,24 @@ async function assertPagesInProject(
 }
 
 /**
- * QUI A TÉLÉVERSÉ L'OBJET (MIN-343).
+ * WHO UPLOADED THE OBJECT (MIN-343).
  *
- * `parseResourcesInput` ne contrôle que le PRÉFIXE du chemin (`projects/{id}/`) :
- * il dit dans quel projet le fichier vit, jamais à qui il appartient. Un membre
- * pouvait donc enregistrer une ressource pointant sur le fichier d'un collègue —
- * et la suppression, qui filtre bien sur `created_by`, effaçait alors l'objet
- * d'un autre en croyant n'effacer que sa propre ligne.
+ * `parseResourcesInput` only controls the PREFIX of the path (`projects/{id}/`):
+ * it says in which project the file lives, never who it belongs to. A member
+ * could therefore save a resource pointing to a colleague's file —
+ * and the deletion, which filters of course on `created_by`, then deleted the object
+ * of another while believing that it was only deleting its own line.
  *
- * Le téléverseur, c'est le storage qui le sait : un envoi direct depuis le
- * navigateur porte le JWT de son auteur, et `storage.objects.owner_id` le garde.
- * Le schéma `storage` n'est pas exposé par PostgREST, d'où la fonction
- * `attachment_object_owners` (SECURITY DEFINER, EXECUTE au seul rôle de service).
- *
- * Deux tolérances, dites plutôt que subies :
- *
- *  - **owner nul** — l'objet a été créé par minddy lui-même (envoi côté serveur
- *    du MCP, copie inter-projets). Ces objets-là sont créés à côté de leur ligne,
- *    et le vrai dégât — la destruction — est fermé de l'autre bout par
- *    {@link removeStorageObjects}, qui ne retire plus un objet encore référencé.
- *  - **objet absent** — une ligne qui nomme un objet inexistant ne sert rien et
- *    ne détruit rien ; la refuser ferait tomber en silence des enregistrements
- *    légitimes le jour où le storage répond avec un temps de retard.
+ * The uploader, it is the storage which knows: a direct sending from the
+ * browser carries the JWT of its author, and `storage.objects.owner_id` keeps it.
+ * The `storage` schema is not exposed by PostgREST, hence the function
+ * __keep server
+ * of the MCP, cross-project copy). These objects are created next to their line,
+ * and the real damage - destruction - is closed at the other end by
+ * {@link removeStorageObjects}, which no longer removes an object still referenced.
+ * - **absent object** — a line which names a non-existent object is useless and
+ * does not destroy anything; refusing it would silently drop legitimate records
+ * on the day the storage responds with a delay.
  */
 async function assertUploadedByActor(
   service: SupabaseClient,
@@ -507,9 +503,9 @@ export async function insertAttachmentsFor(
   for (const [projectId, resources] of byProject) {
     await assertPagesInProject(service, projectId, resources);
   }
-  // Même garde qu'à l'unité, groupée par téléverseur : l'import n'écrit que des
-  // liens aujourd'hui, et c'est exactement le genre d'appelant qui recevrait des
-  // fichiers demain sans que personne pense à la garde.
+  // Same guard as for the unit, grouped by uploader: the import only writes
+  // links today, and this is exactly the kind of caller who would receive
+  // files tomorrow without anyone thinking about custody.
   const byActor = new Map<string | null, ResourceInput[]>();
   for (const e of entries) {
     const list = byActor.get(e.parent.createdBy) ?? [];
@@ -526,14 +522,14 @@ export async function insertAttachmentsFor(
 }
 
 /**
- * Le type MIME que le BUCKET servira pour cet objet — celui posé à l'envoi, et
- * donc la seule vérité sur ce que le navigateur recevra.
+ * The MIME type that the BUCKET will serve for this object — the one set when sending, and
+ * therefore the only truth about what the browser will receive.
  *
- * Il est demandé au storage et non lu sur la ligne : le `mime_type` d'une ligne
- * est ce que le client a DÉCLARÉ au moment de l'enregistrement, sans rapport
- * obligé avec l'entête que l'objet porte (une ressource de ticket monte
- * directement du navigateur au bucket, l'entête comprise). Rendre `""` en cas
- * d'échec ferme la porte : hors allowlist, donc `attachment`.
+ * It is requested in storage and not read on the line: the `mime_type` of a line
+ * is what the client DECLARED at the time of registration, unrelated
+ * required with the header that the object carries (a ticket resource rises
+ * directly from the browser to the bucket, including the header). Returning `""` in case
+ * of failure closes the door: outside allowlist, so `attachment`.
  */
 async function storedContentType(
   service: SupabaseClient,
@@ -551,16 +547,16 @@ async function storedContentType(
  * Short-lived signed URL on the private bucket (service role bypasses the
  * absence of a storage select policy). Null when the object is missing.
  *
- * Le SEUL goulot par lequel un fichier privé devient une URL — d'où la garde
- * `inline` ici et non chez les cinq appelants (MIN-340) : ce qui n'est pas dans
- * l'allowlist ({@link isInlineSafeMimeType}) repart en `attachment`, quoi qu'ait
- * demandé l'appelant. Une disposition « pièce jointe » ne rend jamais rien, donc
- * n'exécute jamais rien, et elle laisse l'image s'afficher dans un `<img>` — la
- * disposition ne gouverne que la navigation.
+ * The ONLY neck by which a private file becomes a URL — hence the keeping
+ * `inline` here and not in the five callers (MIN-340): which is not in
+ * the allowlist ({@link isInlineSafeMimeType}) returns to `attachment`, whatever
+ * requested by the caller. An "attachment" layout never renders anything, so
+ * never executes anything, and it leaves the image displayed in a `<img>` — the
+ * layout only governs navigation.
  *
- * `mimeType` est le type que l'appelant tient DÉJÀ pour ce fichier (la ligne
- * `page_files`, dont le type est sniffé à l'envoi) : le passer évite l'aller-
- * retour `info()`. Sans lui, on va le demander au storage.
+ * `mimeType` is the type that the caller ALREADY holds for this file (the line
+ * `page_files`, whose type is sniffed when sending): passing it avoids the forward-
+ * return `info()`. Without it, we will request it from storage.
  */
 export async function signedAttachmentUrl(
   service: SupabaseClient,
@@ -603,26 +599,26 @@ export async function downloadAttachment(
 }
 
 /**
- * Les chemins d'un lot que PLUS AUCUNE ligne ne nomme (MIN-343) — les seuls dont
- * les octets peuvent partir.
+ * The paths of a batch that NO MORE lines name (MIN-343) — the only ones from which
+ * the bytes can leave.
  *
- * Un même objet peut être cité par deux lignes : deux tables le référencent
- * (`attachments`, `page_files`), et rien n'empêche deux lignes de la même table
- * de nommer le même chemin. Supprimer une ligne suffisait alors à emporter
- * l'objet des autres — la ligne survivante devenait une pièce jointe morte, et
- * dans le cas qui a ouvert ce ticket c'était le fichier d'un collègue.
+ * The same object can be cited by two lines: two tables reference it
+ * (`attachments`, `page_files`), and nothing prevents two rows in the same table
+ * from naming the same path. Deleting one line was then enough to take away
+ * the object of the others — the surviving line became a dead attachment, and
+ * in the case which opened this ticket it was a colleague's file.
  *
- * Appelé au goulot ci-dessous, donc valable pour les huit endroits qui font le
- * ménage, et pas seulement pour celui où on a vu le défaut. L'ordre attendu est
- * celui que tous respectent déjà : la LIGNE d'abord, les octets ensuite.
+ * Called at the bottleneck below, therefore valid for the eight places which do the
+ * household, and not only for the one where we saw the defect. The expected order is
+ * the one that everyone already respects: the LINE first, the bytes then.
  */
 async function unreferencedPaths(
   service: SupabaseClient,
   paths: string[]
 ): Promise<string[]> {
   const held = new Set<string>();
-  // Par tranches : un vidage de corbeille ou une purge de rétention en apporte
-  // des centaines, et une clause `in` illimitée finit par dépasser l'URL.
+  // In installments: an emptying of the trash or a retention purge brings some
+  // hundreds, and an unlimited `in` clause ends up overtaking the URL.
   const CHUNK = 100;
   for (let i = 0; i < paths.length; i += CHUNK) {
     const slice = paths.slice(i, i + CHUNK);
@@ -632,9 +628,9 @@ async function unreferencedPaths(
         .select("storage_path")
         .in("storage_path", slice);
       if (error) {
-        // On ne sait plus qui référence quoi : on ne supprime rien de cette
-        // tranche. Un orphelin coûte des octets, une suppression de trop coûte
-        // le fichier de quelqu'un.
+        // We no longer know who references what: we do not delete anything from this
+        // slice. An orphan costs bytes, too much deletion costs
+        // someone's file.
         console.error(`[attachments] reference check failed (${table}):`, error.message);
         slice.forEach((p) => held.add(p));
         continue;
@@ -651,16 +647,16 @@ async function unreferencedPaths(
  * Best-effort storage cleanup — a failure must never fail the business write
  * (the leftover is an orphan object, same class as an abandoned upload).
  *
- * Ne retire QUE les objets que plus aucune ligne ne nomme ({@link unreferencedPaths}).
+ * ONLY removes objects that are no longer named in any line ({@link unreferencedPaths}).
  *
- * Les chemins vides sont écartés ICI, au goulot, parce qu'un seul null empoisonne
- * le LOT ENTIER : `storage.remove()` poste `{ prefixes: [...] }` et le service
- * refuse la requête complète si un élément n'est pas une chaîne — donc plus rien
- * n'est effacé, silencieusement (l'erreur n'est que journalisée). Depuis MIN-184
- * une ressource peut être un LIEN, sans objet dans le bucket : le `storage_path`
- * nul est devenu une valeur ordinaire, et chaque appelant qui ramasse des chemins
- * doit déjà la filtrer. Ce garde-fou est la deuxième ceinture, pour celui qui
- * l'oubliera.
+ * Empty paths are discarded HERE, at the bottleneck, because a single null poisons
+ * the ENTIRE BATCH: `storage.remove()` posts `{ prefixes: [...] }` and the service
+ * refuses the entire query if an element is not a string — so no more nothing
+ * is erased, silently (the error is only logged). Since MIN-184
+ * a resource can be a LINK, without an object in the bucket: the `storage_path`
+ * null has become an ordinary value, and each caller that picks up paths
+ * must already filter it. This guardrail is the second belt, for those who
+ * forget it.
  */
 export async function removeStorageObjects(
   service: SupabaseClient,
@@ -680,28 +676,26 @@ export async function removeStorageObjects(
   }
 }
 
-/** Le délai de grâce d'un objet orphelin du bucket `attachments` (MIN-348).
-    Aligné sur celui des fichiers de page (ORPHAN_PAGE_FILE_DAYS) : c'est le même
-    genre d'accident — un envoi qui a réussi et une ligne qui n'est jamais
-    venue — et deux délais différents pour un même phénomène seraient deux
-    choses à retenir au lieu d'une. */
+/** The grace period for an orphaned object in the `attachments` bucket (MIN-348).
+ Aligned with that of page files (ORPHAN_PAGE_FILE_DAYS): this is the same
+ kind of accident — a successful send and a line that never came — and two different deadlines for a same phenomenon would be two
+ things to remember instead of one. */
 export const ORPHAN_ATTACHMENT_DAYS = 7;
 
 /**
- * Les objets du bucket que plus aucune ligne ne désigne, passé le délai.
+ * Objects in the bucket that are no longer designated by any line, after the timeout.
  *
- * L'envoi d'une pièce jointe est DIRECT-TO-STORAGE : les octets partent du
- * navigateur avant que la ressource soit enregistrée, et tout ce qui se passe
- * entre les deux — un composeur fermé, un onglet perdu, une création annulée —
- * laisse l'objet seul dans le bucket. Personne ne le montrait plus, personne ne
- * le comptait, et rien ne le supprimait.
+ * Sending an attachment is DIRECT-TO-STORAGE: the bytes leave the
+ * browser before the resource is saved, and everything that happens
+ * in between — a composer closed, a tab lost, a creation canceled —
+ * leaves the object alone in the bucket. Nobody showed it anymore, nobody counted it, and nothing deleted it.
  *
- * Le tri est en SQL (`orphan_attachment_objects`) : la table des objets vit dans
- * le schéma `storage`, que PostgREST n'expose pas, et « ce chemin n'est cité
- * nulle part » est exactement ce qu'un anti-jointure sait faire et pas nous.
+ * Sorting is in SQL (`orphan_attachment_objects`): the object table lives in
+ * the `storage` schema, which PostgREST does not expose, and "this path is cited
+ * nowhere” is exactly what an anti-join can do and we can't.
  *
- * Lot borné comme les autres purges du balayage nocturne ; le lendemain reprend
- * la suite. Rend le nombre d'objets réellement effacés.
+ * Bounded batch like other nightly sweep purges; the next day resumes
+ * the rest. Returns the number of objects actually deleted.
  */
 export async function sweepOrphanAttachments(
   service: SupabaseClient,
@@ -717,9 +711,9 @@ export async function sweepOrphanAttachments(
   const paths = ((data ?? []) as { name: string }[]).map((row) => row.name);
   if (paths.length === 0) return 0;
 
-  // Pas `removeStorageObjects` : sa relecture « ce chemin est-il encore cité ? »
-  // vient d'être faite par la requête ci-dessus, sur les deux tables et en une
-  // fois. La refaire chemin par chemin coûterait la moitié du balayage.
+  // Not `removeStorageObjects`: its rereading “is this path still mentioned? »
+  // just made by the query above, on both tables and in one
+  // times. Redoing it path by path would cost half the sweep.
   let removed = 0;
   for (let i = 0; i < paths.length; i += 100) {
     const chunk = paths.slice(i, i + 100);

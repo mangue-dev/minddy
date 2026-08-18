@@ -7,20 +7,20 @@ import { trackEvent } from "./analytics";
 export interface ExportIssuesResult {
   fileName: string;
   count: number;
-  /** Le plafond de la route a coupé : le dialogue le dit plutôt que de laisser
-   *  croire à un export complet. */
+  /** The road cap has cut: the dialogue says this rather than letting
+ * believe in a full export. */
   truncated: boolean;
 }
 
 /**
- * Télécharge l'export CSV de mes tickets.
+ * Downloads the CSV export of my tickets.
  *
- * Le fichier passe par `fetch` plutôt que par une simple navigation vers la
- * route : une erreur serveur reste alors une erreur (un toast), là où un lien
- * de téléchargement aurait affiché le JSON d'erreur dans l'onglet. C'est le
- * même chemin que l'export de compte (`account-data-section.tsx`).
+ * The file goes through `fetch` rather than a simple navigation to the
+ * route: a server error then remains an error (a toast), where a download link
+ * would have displayed the JSON error in the tab. This is the
+ * same path as the account export (`account-data-section.tsx`).
  *
- * `projectId` à `null` = tous mes projets. `statuses` vide = tous les statuts.
+ * `projectId` to `null` = all my projects. `statuses` empty = all statuses.
  */
 export async function exportIssuesApi(
   projectId: string | null,
@@ -62,7 +62,7 @@ export async function exportIssuesApi(
   return { fileName, count, truncated };
 }
 
-/** `attachment; filename="minddy-issues-min-2026-08-04.csv"` → le nom. */
+/** `attachment; filename="minddy-issues-min-2026-08-04.csv"` → the name. */
 function fileNameFromDisposition(header: string | null): string | null {
   const match = header?.match(/filename="([^"]+)"/);
   return match?.[1] ?? null;

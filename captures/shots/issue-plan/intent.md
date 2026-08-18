@@ -1,98 +1,98 @@
-# Le ticket et son plan d'implémentation
+# The ticket and its implementation plan
 
-> **Cette capture n'est plus branchée sur la landing.** Depuis le 2026-07-26,
-> l'emplacement `workflowIssue` est servi par `shots/issue-create` : le premier
-> temps s'appelle « Vous décrivez » et montre désormais le geste de
-> l'utilisateur — la modale de création — au lieu du plan écrit par l'agent.
+> **This capture is no longer connected to the landing.** Since 2026-07-26,
+> location `workflowIssue` is served by `shots/issue-create`: the first
+> time is called “You describe” and now shows the gesture of
+> the user — the creation modal — instead of the plan written by the agent.
 >
-> Le dossier est gardé tel quel : le script marche, l'intention est juste, et le
-> plan reste la meilleure preuve en image que les tâches sont une donnée suivie.
-> S'il fallait le remontrer, sa place serait le DEUXIÈME temps (« L'agent Numo
-> exécute »), dont le texte dit maintenant « il écrit son plan ». Il faudrait
-> alors un emplacement à lui, `workflowAgent` étant pris par le run.
+> The file is kept as is: the script works, the intention is correct, and the
+> plan remains the best visual proof that tasks are monitored data.
+> If he had to be shown again, his place would be SECOND time (“Agent Numo
+> executes"), the text of which now says "he writes his plan". It would be necessary
+> then a location of its own, `workflowAgent` being taken by the run.
 
-Emplacement de landing (historique) : `workflowIssue`, premier des trois temps de la section
-« Du ticket à la pull request ». Le texte à côté de l'image dit : *« L'agent
-transforme la description en plan d'implémentation : des tâches ordonnées qui
-nomment les fichiers à toucher, stockées sur le ticket lui-même. »* C'est cette
+Landing location (historical): `workflowIssue`, first of three stages of the section
+“From ticket to pull request”. The text next to the image says: *“The agent
+transforms the description into an implementation plan: ordered tasks that
+name the files to touch, stored on the ticket itself. »* It is this
 phrase que l'image doit prouver.
 
 ## Ce que l'image doit montrer
 
-- Le ticket **AUR-2** ouvert : son identifiant, son titre.
-- L'onglet **Plan** sélectionné, avec son compteur `2/6` et la barre de
-  progression — la preuve que les tâches sont une donnée suivie, pas un
+- The open **AUR-2** ticket: its identifier, its title.
+- The **Plan** tab selected, with its `2/6` counter and the bar
+progress — proof that tasks are tracked data, not a
   paragraphe.
-- Les **six tâches** dans trois états visibles d'un coup d'œil : deux cochées et
-  barrées, une en cours (case pleine, texte en gras), trois à faire.
-- Des **chemins de fichiers réels** dans les tâches (`lib/palette/actions.ts`,
-  `components/palette/row.tsx`, `components/palette/provider.tsx`) : c'est
-  littéralement ce que la phrase de la landing promet.
-- Le board du projet derrière, flouté par le voile du panneau — le ticket est
-  ouvert *dans* l'application, pas dans une page isolée.
+- The **six tasks** in three states visible at a glance: two checked and
+crossed out, one in progress (full box, bold text), three to do.
+- **real file paths** in tasks (`lib/palette/actions.ts`,
+`components/palette/row.tsx`, `components/palette/provider.tsx`): this is
+literally what the landing sentence promises.
+- The project board behind, blurred by the veil of the panel — the ticket is
+opened *in* the application, not in an isolated page.
 
-## Où
+## Or
 
-`/projects/6cd36606-c297-4920-8ce3-31b5f3697be8` sur `https://www.minddy.app`,
-connecté en Camille Roy, carte AUR-2 cliquée puis onglet Plan.
+`/projects/6cd36606-c297-4920-8ce3-31b5f3697be8` on `https://www.minddy.app`,
+connected to Camille Roy, AUR-2 card clicked then Plan tab.
 
-## La consigne du catalogue est fausse, et sur deux points
+## The instruction in the catalog is false, and on two points
 
-`screenshot-slots.ts` demande « le détail d'une issue avec sa description **ET**
-son plan d'implémentation visible », à la route
+`screenshot-slots.ts` asks for “the details of an issue with its description **AND**
+its visible implementation plan", on the road
 `/projects/<id>/issues/<identifier>`.
 
-1. **Cette route n'existe pas.** Il n'y a pas de page de détail : un ticket
-   s'ouvre dans un panneau latéral posé sur le board (`IssueSidePanel`), et le
-   lien profond est `?issue=<uuid>`.
-2. **Description et plan sont deux onglets**, donc mutuellement exclusifs
-   (`Tabs value={tab}` dans `issue-side-panel.tsx`). Les montrer ensemble
-   demanderait de modifier le produit.
+1. **This route does not exist.** There is no detail page: a ticket
+opens in a side panel placed on the board (`IssueSidePanel`), and the
+deep link is `?issue=<uuid>`.
+2. **Description and plan are two tabs**, therefore mutually exclusive
+(`Tabs value={tab}` in `issue-side-panel.tsx`). Show them together
+would require modification of the product.
 
-L'intention suit le produit : c'est l'onglet **Plan** qu'on photographie. C'est
-aussi celui que la landing décrit — la description tient en deux phrases qu'on
-lit déjà dans le texte de la section, le plan est ce qu'on ne peut montrer
+The intention follows the product: it is the **Plan** tab that we photograph. It is
+also the one that the landing describes — the description is in two sentences that we
+already reads in the text of the section, the plan is what cannot be shown
 qu'en image.
 
-## Cadrage — pourquoi 1447 × 1085 et pas 1736 × 1085
+## Framing — why 1447 × 1085 and not 1736 × 1085
 
-Le cadre de cet emplacement est **4/3**, et `<ScreenshotSlot>` rend l'image en
-`object-cover`. Une capture 16/10 y perdrait 17 % de sa largeur, rognée à parts
-égales des deux côtés — soit ~145 px sur la droite, là où se trouve justement
-le panneau. L'image serait tranchée en plein dans le plan.
+The frame of this location is **4/3**, and `<ScreenshotSlot>` renders the image in
+`object-cover`. A 16/10 capture would lose 17% of its width, cropped separately
+equal on both sides — i.e. ~145 px on the right, where the
+the panel. The image would be cut right into the shot.
 
-On garde donc la **hauteur commune de 1085 px** et on réduit la largeur à
-**1447** (= 1085 × 4/3). Deux effets, tous deux voulus :
+We therefore keep the **common height of 1085 px** and reduce the width to
+**1447** (= 1085 × 4/3). Two effects, both intended:
 
-- la composition verticale reste celle des captures déjà publiées — même
-  en-tête, même hauteur de colonnes, même quantité de vide en bas ;
-- le panneau occupe 32 % de la largeur au lieu de 26 %, et le plan reste
-  lisible dans un cadre affiché autour de 530 px sur la landing.
+- the vertical composition remains that of the captures already published — even
+header, same height of columns, same amount of empty space at the bottom;
+- the panel occupies 32% of the width instead of 26%, and the plan remains
+readable in a frame displayed around 530 px on the landing.
 
-L'échelle monte de 20 % par rapport aux captures 16/10. C'est le prix assumé :
-allonger la fenêtre à 1302 px aurait tenu l'échelle à l'identique mais laissé
-un tiers de l'image en gris vide, le board comme le panneau s'arrêtant bien
-avant le bas du cadre.
+The scale increases by 20% compared to 16/10 captures. This is the assumed price:
+extending the window to 1302 px would have kept the scale the same but left
+a third of the image in empty gray, the board like the panel stopping well
+before the bottom of the frame.
 
-**C'est la règle des cinq emplacements en cadre 4/3** — `workflowIssue`,
-`workflowAgent`, `workflowPr`, `numoPanel`, `scratchpad`. Les emplacements
+**This is the rule of five slots in 4/3 frame** — `workflowIssue`,
+`workflowAgent`, `workflowPr`, `numoPanel`, `scratchpad`. Locations
 16/10 gardent 1736 × 1085.
 
-## Déclinaisons
+## Variations
 
 fr/light, fr/dark, en/light, en/dark
 
-## Pièges connus
+## Known pitfalls
 
-- **L'onglet Plan se désigne par son rang, pas par son libellé.** Le libellé
-  vaut « Plan » dans les deux langues aujourd'hui, mais le compteur `2/6` y est
-  collé (`Plan2/6` dans l'arbre d'accessibilité) : une correspondance exacte sur
-  le texte casserait au premier ticket dont le plan change de taille.
-- **Le panneau s'ouvre toujours sur Description** (`initialTab = "description"`,
-  et le lien profond `?issue=` le force). Il faut cliquer l'onglet.
-- **Vérifier le contenu par les chemins de fichiers.** `lib/palette/actions.ts`
-  est une donnée, identique en FR et en EN : c'est l'ancre de contrôle. Un
-  contrôle sur « À faire » ou « terminée » casserait une variante sur deux.
-- **La barre d'onglets du board arrive après les tickets** (requête séparée) :
-  elle est floutée derrière le panneau, mais son absence se verrait. On attend
-  l'onglet de la vue par défaut avant d'ouvrir le ticket, comme pour la palette.
+- **The Plan tab is designated by its rank, not by its label.** The label
+is “Plan” in both languages ​​today, but the `2/6` counter is there
+pasted (`Plan2/6` in accessibility tree): an exact match on
+the text would break on the first ticket whose plan changes size.
+- **The panel always opens to Description** (`initialTab = "description"`,
+and deep link `?issue=` forces it). You have to click on the tab.
+- **Check contents by file paths.** `lib/palette/actions.ts`
+is a piece of data, identical in FR and EN: it is the control anchor. A
+checking “To do” or “finished” would break every other variation.
+- **The board tab bar arrives after the tickets** (separate request):
+she is blurred behind the panel, but her absence would be noticeable. We wait
+the default view tab before opening the ticket, as for the palette.

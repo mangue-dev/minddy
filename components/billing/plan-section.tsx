@@ -34,19 +34,19 @@ import {
 } from "@/lib/billing-api";
 
 /**
- * Les cartes de plans de la page billing (MIN-72, retours) — design calqué sur
- * AutoKap : carte mise en avant teintée + ring, badge « Plan actuel » flottant,
+ * The billing page plan cards (MIN-72, returns) — design modeled on
+ * AutoKap: tinted highlighted map + ring, floating “Current Plan” badge,
  * prix / description / features en check-list, CTA pleine largeur. L'usage se
- * dit en MULTIPLES de Free (« 10× plus d'usage »), jamais en montants.
+ * stated as MULTIPLES of Free (“10× more usage”), never as amounts.
  *
- * Bascule mensuel / annuel (2 mois offerts) : n'affecte que le CHECKOUT (nouvel
- * abonnement). Un abonné actif change de formule/cadence via le Customer Portal.
+ * Monthly/annual switch (2 months free): only affects CHECKOUT (new
+ * subscription). An active subscriber changes plan/cademia via the Customer Portal.
  *
- * La RÉSILIATION, elle, ne passe plus par le portail (MIN-296) : « click-to-cancel »
- * demande qu'elle ne coûte pas plus de gestes que la souscription, et souscrire
- * tient en un bouton. Elle se fait donc ici, un bouton et une confirmation, à la
- * fin de la période — et la même carte propose de revenir en arrière tant que
- * cette date n'est pas passée.
+ * TERMINATION no longer goes through the portal (MIN-296): “click-to-cancel”
+ * asks that it does not cost more gestures than the subscription, and subscribe
+ * fits with a button. It is therefore done here, a button and a confirmation, at the
+ * end of the period — and the same card suggests going back as long as
+ * this date has not passed.
  */
 
 const PLAN_LABEL_KEYS: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> = {
@@ -92,7 +92,7 @@ export function PlanSection() {
     }
   }, []);
 
-  /** Résilier / reprendre, sans quitter l'app. */
+  /** Cancel / resume, without leaving the app. */
   const setCancel = useCallback(
     async (cancel: boolean) => {
       setSubmittingPlanId("free");
@@ -123,9 +123,9 @@ export function PlanSection() {
     []
   );
 
-  // L'édition auto-hébergée n'a aucun produit Stripe à proposer. Ne pas rendre
-  // des cartes désactivées : elles feraient croire à un achat requis pour le
-  // cœur alors que seules les capacités cloud sont optionnelles.
+  // The self-hosted edition does not have any Stripe products to offer. Do not return
+  // deactivated cards: they would make it appear as if a purchase was required for the
+  // core while only cloud capabilities are optional.
   if (!loading && !status?.managedBilling) return null;
 
   return (
@@ -163,8 +163,8 @@ export function PlanSection() {
         </div>
       </div>
 
-      {/* Résiliation en cours : la date compte plus que le mot, c'est elle qui
-          dit ce qui reste dû et jusqu'à quand l'accès tient. */}
+      {/* Termination in progress: the date counts more than the word, it is this which
+ says what remains due and until when access holds. */}
       {cancelPending && periodEnd && (
         <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-center text-xs text-muted-foreground">
           {t("cancelScheduled", {
@@ -192,8 +192,8 @@ export function PlanSection() {
             ctaLabel = isFreeCard ? t("currentPlanBadge") : t("manageSubscription");
             if (!isFreeCard && hasSubscription) onAction = () => void openPortal(plan.id);
           } else if (isFreeCard) {
-            // Revenir à Free = résilier. Deux gestes, ici, sans passer par
-            // Stripe (MIN-296) ; et si c'est déjà fait, le bouton défait.
+            // Return to Free = cancel. Two gestures, here, without going through
+            // Stripe (MIN-296); and if it's already done, undo the button.
             ctaLabel = cancelPending ? t("resumeSubscription") : t("cancelSubscription");
             if (hasSubscription) {
               onAction = cancelPending

@@ -28,33 +28,32 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Icône du projet (MIN-62) : image envoyée par l'utilisateur, favicon du site
- * live, ou retour à l'orbe générée. Partagé entre l'étape « Icône » du wizard de
- * création (`centered`, grande vignette au-dessus du champ) et l'onglet général
- * des paramètres (rangée compacte). Contrôlé : le parent fournit `iconUrl` et
- * reçoit le nouveau choix via `onChanged`.
+ * Project icon (MIN-62): user-submitted image, site favicon
+ * live, or return to generated orb. Shared between the “Icon” step of the
+ * creation wizard (`centered`, large thumbnail above the field) and the general
+ * settings tab (compact row). Checked: the parent provides `iconUrl` and
+ * receives the new choice via `onChanged`.
  *
- * `projectId: null` = mode BROUILLON (wizard) : le projet n'existe pas encore,
- * donc rien n'est stocké — on ne fait que résoudre le favicon ou compresser le
- * fichier pour l'aperçu, et `onChanged` rend de quoi rejouer le vrai import une
- * fois le projet créé (voir {@link ProjectIconChoice}).
+ * `projectId: null` = DRAFT mode (wizard): the project does not exist yet,
+ * so nothing is stored — we only resolve the favicon or compress the
+ * file for the preview, and `onChanged` provides enough to replay the real import once the project is created (see {@link ProjectIconChoice}).
  *
- * Sans icône importée, c'est l'orbe qu'on voit, et la seule prise qu'on a sur
- * elle est de relancer son tirage — le bouton prend alors la place de
- * « Retirer », qui n'aurait rien à retirer.
+ * Without an imported icon, it's the orb that we see, and the only way we have on
+ * is to restart its draw - the button then takes the place of
+ * "Withdraw", which would have nothing to withdraw.
  *
- * L'envoi de fichier ne s'annonce pas : c'est l'APERÇU qui est le bouton. Au
- * survol il se couvre d'un voile et d'une icône, et le picker entier accepte le
- * glisser-déposer. Une icône est une chose qu'on remplace deux fois dans la vie
- * d'un projet — lui donner un champ et un bouton de plus alourdirait deux écrans
- * en permanence pour un geste rare.
+ * The file sending is not announced: it's the PREVIEW that is the button. On
+ * hover it is covered with a veil and an icon, and the whole picker accepts the
+ * drag and drop. An icon is something that is replaced twice in the life
+ * of a project — giving it one more field and one more button would weigh down two screens
+ * permanently for a rare gesture.
  */
 
-/** Ce que le parent doit retenir du choix — et rejouer, s'il n'y a pas encore de projet. */
+/** What the parent should remember from the choice — and play again, if there is no plan yet. */
 export type ProjectIconChoice =
-  /** Favicon d'un site : c'est le SITE qu'on garde, l'import le re-résoudra. */
+  /** Favicon of a site: this is the SITE that we keep, the import will re-resolve it. */
   | { kind: "site"; previewUrl: string; siteUrl: string }
-  /** Fichier envoyé : `previewUrl` est l'image déjà compressée (data URL en brouillon). */
+  /** File sent: `previewUrl` is the image already compressed (data URL in draft). */
   | { kind: "file"; previewUrl: string }
   | { kind: "none" };
 
@@ -67,16 +66,16 @@ export function ProjectIconPicker({
   centered = false,
 }: {
   projectId: string | null;
-  /** Graine de l'orbe générée — `projectOrbSeed(project)`, ou l'id du brouillon. */
+  /** Generated orb seed — `projectOrbSeed(project)`, or the draft id. */
   seed: string;
   iconUrl: string | null;
   onChanged: (choice: ProjectIconChoice) => void;
   /**
-   * Le tirage a été relancé. Le projet existant n'en a pas besoin — le cache
-   * `projects` rafraîchi lui redescend la nouvelle graine — mais le BROUILLON
-   * si : rien n'est stocké tant que le projet n'existe pas, c'est au wizard de
-   * la retenir et de la poser à la création.
-   */
+ * The draw has been restarted. The existing project does not need it - the cache
+ * `projects` refreshed sends the new seed back to it - but the DRAFT
+ * if: nothing is stored as long as the project does not exist, it is up to the wizard of
+ * to remember it and put it on creation.
+ */
   onSeedChanged?: (seed: string) => void;
   centered?: boolean;
 }) {
@@ -117,10 +116,10 @@ export function ProjectIconPicker({
   };
 
   /**
-   * Aucun plafond de taille ni de dimensions ici : le serveur ramène l'image à
-   * un carré WebP. On ne barre que ce qui n'est manifestement pas une image —
-   * un type MIME vide (extension inconnue) passe, c'est libvips qui tranchera.
-   */
+ * No size or dimension cap here: the server returns the image to
+ * a WebP square. We only cross out what is clearly not an image —
+ * an empty MIME type (unknown extension) passes, libvips will decide.
+ */
   const handleFile = async (file: File | null | undefined) => {
     if (!file || busy) return;
     if (file.type && !file.type.startsWith("image/")) {
@@ -147,7 +146,7 @@ export function ProjectIconPicker({
 
   const handleRemove = async () => {
     if (busy) return;
-    // Brouillon : rien n'a été stocké, retirer c'est oublier.
+    // Draft: nothing has been stored, removing is forgetting.
     if (projectId === null) {
       onChanged({ kind: "none" });
       return;
@@ -166,11 +165,11 @@ export function ProjectIconPicker({
   };
 
   /**
-   * Relance le tirage de l'orbe. Sans projet, le tirage se fait ici et le
-   * wizard le garde ; avec un projet, c'est le serveur qui tire et qui écrit —
-   * une graine posée par le client serait une couleur que personne d'autre ne
-   * verrait tant que le cache n'a pas tourné.
-   */
+ * Restarts drawing the orb. Without a project, the draw is done here and the
+ * wizard keeps it; with a project, it's the server that pulls and writes —
+ * a seed placed by the client would be a color that no one else would
+ * see until the cache has run.
+ */
   const handleReroll = async () => {
     if (busy) return;
     if (projectId === null) {
@@ -199,13 +198,13 @@ export function ProjectIconPicker({
       className="hidden"
       onChange={(e) => {
         void handleFile(e.target.files?.[0]);
-        // Remis à zéro : re-choisir LE MÊME fichier doit relancer un envoi.
+        // Reset: re-choosing THE SAME file should restart a sending.
         e.target.value = "";
       }}
     />
   );
 
-  /** L'aperçu EST le bouton d'import de fichier — voile + icône au survol. */
+  /** The preview IS the file import button — sail + icon on hover. */
   const preview = (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -225,9 +224,9 @@ export function ProjectIconPicker({
             iconUrl={iconUrl}
             className="size-full rounded-[inherit]"
           />
-          {/* Voile noir fixe, pas `bg-foreground/60` : en thème sombre celui-ci
-              délave l'aperçu au lieu de le couvrir, et l'icône y perd son
-              contraste. Un assombrissement se lit pareil dans les deux thèmes. */}
+          {/* Fixed black veil, not `bg-foreground/60`: in dark theme this
+ washes out the preview instead of covering it, and the icon loses its
+ contrast. A darkening can be read in the same way in both themes. */}
           <span
             aria-hidden
             className={cn(
@@ -277,9 +276,9 @@ export function ProjectIconPicker({
     </Button>
   );
 
-  /** Relancer l'orbe : proposé SEULEMENT quand c'est elle qu'on voit. Avec une
-   *  icône importée par-dessus, le bouton promettrait un changement invisible.
-   *  Un geste, donc une icône — comme son voisin « Retirer ». */
+  /** Recast the orb: ONLY offered when it's her we see. With a
+ * icon imported on top, the button would promise an invisible change.
+ * A gesture, therefore an icon — like its neighbor “Remove”. */
   const rerollButton = (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -299,9 +298,9 @@ export function ProjectIconPicker({
     </Tooltip>
   );
 
-  /** Retirer l'icône : un geste, pas un réglage — donc une icône, à côté de son
-   *  voisin « Importer », et seulement quand il y a quelque chose à retirer.
-   *  Le libellé passe en tooltip et en `aria-label`. */
+  /** Remove icon: a gesture, not a setting — so an icon, next to its
+ * neighbor "Import", and only when there is something to remove.
+ * The label changes to tooltip and `aria-label`. */
   const removeButton = (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -321,9 +320,9 @@ export function ProjectIconPicker({
     </Tooltip>
   );
 
-  // Fond quasi opaque : la zone de dépôt couvre l'aperçu, et sans lui le libellé
-  // se poserait en travers de l'orbe. Pendant un glisser, c'est la cible qu'on
-  // doit lire, pas ce qu'elle remplacera.
+  // Almost opaque background: the drop zone covers the preview, and without it the label
+  // would land across the orb. During a drag, it is the target that we
+  // is what should be read, not what it replaces.
   const dropOverlay = (
     <DropOverlay
       show={dragging}
@@ -333,7 +332,7 @@ export function ProjectIconPicker({
     />
   );
 
-  // Wizard : grande vignette centrée au-dessus du champ, à la AutoKap.
+  // Wizard: large thumbnail centered above the field, like AutoKap.
   if (centered) {
     return (
       <div
@@ -352,7 +351,7 @@ export function ProjectIconPicker({
     );
   }
 
-  // Paramètres : une seule rangée — aperçu, champ, importer, retirer.
+  // Settings: single row — preview, field, import, remove.
   return (
     <div {...handlers} className="relative flex items-center gap-2 rounded-xl">
       {fileInput}

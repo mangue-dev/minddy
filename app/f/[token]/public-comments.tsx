@@ -26,30 +26,30 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Le fil PUBLIC d'un retour (MIN-196).
+ * The PUBLIC thread of a return (MIN-196).
  *
- * Il remplace l'encart « réponse d'équipe » : la même parole descendante, mais
- * dans une conversation où l'on peut lui répondre. La réponse de l'équipe n'est
- * donc plus un bloc à part, c'est un message du fil — signé par l'orbe du projet
- * et le nom du produit, comme avant.
+ * It replaces the “team response” insert: the same descending speech, but
+ * in a conversation where we can respond to him. The team's response is not
+ * so no longer a separate block, it's a message from the thread — signed by the project orb
+ * and the product name, as before.
  *
- * Les visiteurs, eux, sont ANONYMES : un avatar semé sur leur pseudonyme, et
- * rien d'autre. Deux messages de la même personne portent le même visage, ce qui
- * suffit à suivre un échange ; aucun nom ne se remonte jusqu'à quelqu'un. Se
- * connecter est nécessaire pour écrire — c'est ce qui donne à l'équipe de quoi
- * modérer — mais ça ne se lit nulle part sur la page.
+ * The visitors are ANONYMOUS: an avatar sown on their pseudonym, and
+ * nothing else. Two messages from the same person have the same face, which
+ * is enough to follow an exchange; no name can be traced back to anyone. Se
+ * connecting is necessary to write — it's what gives the team something to
+ * moderate — but it doesn't read anywhere on the page.
  *
- * Profondeur ≤ 1 : on répond à un fil, jamais à une réponse. Un board de
- * retours n'est pas un forum, et l'arbre coûterait une navigation à des gens
- * venus dire une chose et voter.
+ * Depth ≤ 1: we respond to a thread, never to a response. A board of
+ * feedback is not a forum, and the tree would cost people a navigation
+ * came to say one thing and vote.
  */
 export function PublicComments({
   token,
   project,
   postId,
   comments,
-  /** Le réglage du board. Faux = lecture seule : ce qui est écrit reste, le
-      composeur disparaît. */
+  /** Board adjustment. False = read only: what is written remains, the
+ composer disappears. */
   allowComments,
   identity,
   onNeedAuth,
@@ -60,18 +60,18 @@ export function PublicComments({
   comments: PublicComment[];
   allowComments: boolean;
   identity: PublicIdentity | null;
-  /** Ouvre la porte OTP puis rejoue l'envoi (le patron du vote). */
+  /** Opens the OTP gate then replays the sending (the voting pattern). */
   onNeedAuth: (run: () => void) => void;
 }) {
   const t = useTranslations("PublicFeedback");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  /** Le fil dont la zone de réponse est ouverte (id de sa racine). */
+  /** The thread whose response zone is open (id of its root). */
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
 
-  // Le serveur rend le fil à plat, du plus ancien au plus récent ; on le
-  // regroupe ici, comme `useFeedbackTimeline` le fait côté équipe — une seule
-  // convention de threading dans le dépôt, à relire au même endroit.
+  // The server renders the thread flat, from oldest to newest; we
+  // groups here, as `useFeedbackTimeline` does on the team side — only one
+  // threading convention in the repository, to be reread in the same place.
   const threads = useMemo(() => {
     const roots = comments.filter((c) => c.parentId === null);
     const rootIds = new Set(roots.map((r) => r.id));
@@ -97,8 +97,8 @@ export function PublicComments({
           return;
         }
         if (result.error === "notAuthenticated") {
-          // La porte OTP, puis le MÊME texte : personne ne réécrit son message
-          // parce qu'on lui a demandé son email au moment de l'envoyer.
+          // The OTP door, then the SAME text: no one rewrites their message
+          // because he was asked for his email when sending it.
           onNeedAuth(() => void post(body, parentId, onDone));
           resolve(null);
           return;
@@ -114,9 +114,9 @@ export function PublicComments({
     });
   };
 
-  // Rien à lire et rien à écrire : la section entière disparaît. Un titre
-  // « Commentaires » suivi d'un vide au-dessus d'un mot qui dit qu'ils sont
-  // fermés, c'est trois lignes pour annoncer qu'il n'y a rien.
+  // Nothing to read and nothing to write: the entire section disappears. A title
+  // “Comments” followed by a blank above a word that says they are
+  // closed, it's three lines to announce that there is nothing.
   if (comments.length === 0 && !allowComments) return null;
 
   return (
@@ -132,8 +132,8 @@ export function PublicComments({
               <PublicCommentRow
                 comment={root}
                 project={project}
-                // Une racine à laquelle on a répondu ne se supprime plus : la
-                // suppression emporte le fil, réponse de l'équipe comprise.
+                // A root that has been answered can no longer be deleted: the
+                // deletion takes away the thread, including the team's response.
                 onDelete={
                   pending || replies.length > 0 ? undefined : () => remove(root.id)
                 }
@@ -143,9 +143,9 @@ export function PublicComments({
               />
 
               {(replies.length > 0 || replyingTo === root.id) && (
-                /* Le filet vertical dit l'appartenance mieux qu'un simple
-                   retrait : à deux niveaux, l'œil suit une ligne, pas une
-                   marge. */
+                /* The vertical net says belonging better than a simple
+ indent: at two levels, the eye follows a line, not a
+ margin. */
                 <ul className="ml-3 flex flex-col gap-4 border-l pl-4 desktop:ml-4 desktop:pl-5">
                   {replies.map((reply) => (
                     <li key={reply.id}>
@@ -198,11 +198,11 @@ export function PublicComments({
 }
 
 /**
- * La zone d'écriture — la même pour un nouveau message et pour une réponse.
+ * The writing area — the same for a new message and for a reply.
  *
- * `onSubmit` rend le CODE d'erreur, ou null si c'est parti (ou si la porte
- * d'identité a pris la main) : le composeur garde alors son texte, et celui qui
- * vient d'écrire trois phrases ne les perd pas sur un échec réseau.
+ * `onSubmit` returns the error CODE, or null if it's gone (or if the door
+ * identity has taken control): the composer then keeps his text, and the one who
+ * just wrote three sentences don't lose them on a network failure.
  */
 function Composer({
   pending,
@@ -216,9 +216,9 @@ function Composer({
   pending: boolean;
   label: string;
   placeholder: string;
-  /** La ligne « votre commentaire n'affiche aucun nom » — sur le composeur
-      principal seulement : la redire sous chaque réponse en ferait un
-      avertissement, alors que c'est une information donnée une fois. */
+  /** The line “your comment does not display any names” — on the main dialer
+ only: repeating it under each response would make it a
+ warning, even though it is information given once. */
   notice?: string;
   autoFocus?: boolean;
   onCancel?: () => void;
@@ -226,9 +226,9 @@ function Composer({
 }) {
   const t = useTranslations("PublicFeedback");
   const tCommon = useTranslations("Common");
-  // Board public : le visiteur n'a pas de compte, `useIsSendShortcut` retombe
-  // donc sur ⌘/Ctrl+Entrée. Le membre qui répond depuis son compte, lui, garde
-  // le réglage qu'il a choisi ailleurs dans l'app.
+  // Public board: the visitor does not have an account, `useIsSendShortcut` falls back
+  // so on ⌘/Ctrl+Enter. The member who responds from his account keeps
+  // the setting he chose elsewhere in the app.
   const isSend = useIsSendShortcut();
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -268,10 +268,10 @@ function Composer({
         </p>
       )}
       <div className="flex items-center justify-between gap-3">
-        {/* Dit AVANT d'écrire ce que la publication engage — c'est-à-dire rien
-            de nominatif. Sans cette ligne, quelqu'un qui vient de donner son
-            email pour voter n'a aucune raison de croire que son commentaire,
-            lui, ne portera pas son nom. */}
+        {/* Said BEFORE writing what the publication commits to — that is, nothing
+ of nominative. Without this line, someone who has just given their
+ email to vote has no reason to believe that their comment,
+, will not bear their name. */}
         <p className="text-xs leading-relaxed text-muted-foreground">{notice ?? ""}</p>
         <div className="flex shrink-0 items-center gap-2">
           {onCancel && (
@@ -297,14 +297,14 @@ function Composer({
 }
 
 /**
- * Un message du fil. Le gabarit est celui d'un commentaire de l'app — avatar,
- * signature, date, puis le texte — et c'est exactement celui que portait la
- * réponse d'équipe avant de devenir un message parmi d'autres.
+ * A message from the thread. The template is that of an app comment — avatar,
+ * signature, date, then the text — and that is exactly what the letter bore.
+ * team response before becoming one message among others.
  *
- * Deux voix, une seule forme : l'équipe se nomme (« Équipe <projet> », l'orbe
- * du produit en guise de visage), un visiteur ne se nomme pas du tout. Le
- * contraste EST l'information : sur ce fil, une seule des deux parties parle
- * au nom de quelque chose.
+ * Two voices, one shape: the team is called (“Team <project>”, the orb
+ * of the product as a face), a visitor does not have their name at all. THE
+ * contrast IS the information: on this thread, only one of the two parties speaks
+ * in the name of something.
  */
 function PublicCommentRow({
   comment,
@@ -315,7 +315,7 @@ function PublicCommentRow({
   comment: PublicComment;
   project: PublicProject;
   onDelete?: () => void;
-  /** Absent sur les réponses : la profondeur s'arrête à un cran. */
+  /** Absent on the answers: the depth stops at one notch. */
   onReply?: () => void;
 }) {
   const t = useTranslations("PublicFeedback");
@@ -351,8 +351,8 @@ function PublicCommentRow({
           </IconAction>
         )}
       </div>
-      {/* Le champ accepte du texte brut, puis le message est rendu en markdown.
-          Le HTML collé reste du texte et ne devient jamais un nœud exécutable. */}
+      {/* The field accepts plain text, then the message is rendered in markdown.
+ Pasted HTML remains text and never becomes an executable node. */}
       <Markdown className="text-sm" allowRawHtml={false}>
         {comment.body}
       </Markdown>
@@ -370,7 +370,7 @@ function PublicCommentRow({
   );
 }
 
-/** Bouton d'icône qui n'apparaît qu'au survol de son message (ou au clavier). */
+/** Icon button that only appears when hovering over its message (or on the keyboard). */
 function IconAction({
   label,
   onClick,

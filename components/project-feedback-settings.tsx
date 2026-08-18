@@ -52,28 +52,28 @@ import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 
 /**
- * Onglet Feedback des settings (MIN-37). Deux canaux publics cumulables — le
- * board de votes et l'API serveur-à-serveur (la saisie interne par l'équipe est
- * toujours active). Chaque réglage tient sur une rangée : libellé + contrôle,
- * et les explications longues (SSO, payload API) vivent derrière une icône ⓘ ou
- * un repli, pour que la config reste lisible d'un coup d'œil.
+ * Feedback tab of settings (MIN-37). Two cumulative public channels — the
+ * voting board and the server-to-server API (internal input by the team is
+ * always active). Each setting fits in one row: label + control,
+ * and long explanations (SSO, payload API) live behind an icon ⓘ or
+ * a fallback, so that the config remains readable at a glance.
  *
- * C'est ici qu'a été inventé le patron carte + rangée que tous les écrans de
- * réglages emploient depuis MIN-167. Ses `Channel` et `Row` locaux ont donc été
- * SUPPRIMÉS au profit de `SettingsGroup` / `SettingsRow` : la source du patron
- * doit en être un consommateur, sinon les deux redivergent au premier ajustement.
+ * This is where the card + row pattern that all screens of
+ * settings used since MIN-167. Its local `Channel` and `Row` were therefore
+ * DELETED in favor of `SettingsGroup` / `SettingsRow`: the source of the pattern
+ * must be a consumer, otherwise the two diverge again at the first adjustment.
  *
- * **La page n'est plus la porte d'entrée** : le wizard de configuration l'est
+ * **The page is no longer the entry point**: the configuration wizard is
  * ([feedback-setup-wizard.tsx](feedback/feedback-setup-wizard.tsx)). Tant
- * qu'aucun canal n'est ouvert, l'onglet ne montre QUE lui — une liste
- * d'interrupteurs éteints ne dit pas par où commencer, et le premier réglage à
- * prendre (comment les retours arrivent) commande tous les autres. Une fois un
- * canal en place, les cartes reviennent : on retouche un détail sans refaire le
+ * no channel is open, the tab ONLY shows them — a list
+ * of switches off doesn't say where to start, and the first setting to
+ * take (how returns arrive) orders all others. Once a
+ * channel in place, the cards come back: we touch up a detail without redoing the
  * parcours.
  *
- * Les rangées et les cartes sont partagées avec le wizard
- * ([feedback-settings-shared.tsx](feedback/feedback-settings-shared.tsx)) : les
- * deux surfaces montrent le même interrupteur et écrivent par la même route.
+ * Rows and cards are shared with the wizard
+ * ([feedback-settings-shared.tsx](feedback/feedback-settings-shared.tsx)): the
+ * two surfaces show the same switch and write by the same route.
  */
 
 export function ProjectFeedbackSettings({
@@ -88,8 +88,8 @@ export function ProjectFeedbackSettings({
   const { board, sharedViews, isPending, busy, patchBoard, patchBoardDebounced, post } =
     useFeedbackBoardSettings(projectId);
 
-  // Domaine personnalisé (MIN-36) — même query que la CustomDomainSection
-  // (dédupliquée par React Query) pour préférer le domaine vérifié dans l'URL.
+  // Custom domain (MIN-36) — same query as CustomDomainSection
+  // (deduplicated by React Query) to prefer the verified domain in the URL.
   const domainPath = `/api/projects/${projectId}/feedback/domain`;
   const { data: domainData } = useQuery({
     queryKey: feedbackDomainKey(projectId),
@@ -115,34 +115,34 @@ export function ProjectFeedbackSettings({
   }
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  // Le domaine personnalisé vérifié devient l'URL de référence du board.
+  // The verified custom domain becomes the board's referring URL.
   const publicUrl = verifiedDomain
     ? `https://${verifiedDomain}`
     : board
       ? `${origin}/f/${board.token}`
       : null;
   /**
-   * Le même board, servi par l'environnement qu'on regarde.
+   * The same board, served by the environment we are looking at.
    *
-   * Un domaine personnalisé est un enregistrement DNS : il pointe sur la
-   * production, et ignore qu'il existe un localhost et une préversion. Depuis
-   * l'un des deux, le lien ci-dessus emmène donc voir le board de PROD — jamais
-   * celui qu'on est en train de modifier.
+   * A custom domain is a DNS record: it points to the
+   * production, and ignores that there is a localhost and a preview version. From
+   * one of the two, the link above therefore takes you to see the PROD board — never
+   * the one we are currently modifying.
    *
-   * La ligne n'existe qu'ici, hors production : en prod les deux URLs mèneraient
-   * au même endroit, et une deuxième adresse à côté de la bonne ne ferait
-   * qu'encombrer l'écran de quiconque n'a rien à déboguer.
+   * The line only exists here, outside production: in production the two URLs would lead
+   * in the same place, and a second address next to the correct one would not
+   * than cluttering the screen of anyone who has nothing to debug.
    */
   const envUrl =
     verifiedDomain && board && getAppEnv() !== "production"
       ? `${origin}/f/${board.token}`
       : null;
   const boardOn = board?.enabled ?? false;
-  /** Un canal ouvert quelque part : c'est ce qui fait exister la configuration. */
+  /** An open channel somewhere: this is what makes the configuration exist. */
   const configured = boardOn || feedbackKeyCount > 0;
 
-  // Rien d'ouvert : la scène, et rien d'autre. Le geste est le wizard — un
-  // membre qui n'y a pas droit lit la scène et sait quoi demander au owner.
+  // Nothing open: the stage, and nothing else. The gesture is the wizard — a
+  // member who is not entitled to it reads the scene and knows what to ask the owner.
   if (!configured) {
     return (
       <div className="flex flex-col gap-6">
@@ -165,10 +165,10 @@ export function ProjectFeedbackSettings({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* La MÊME place dans l'arbre que dans la branche « rien d'ouvert »
-          au-dessus : allumer le board à la première étape fait basculer la page
-          d'une branche à l'autre, et un wizard remonté à ce moment-là repartirait
-          de son étape 1 sous les doigts de l'utilisateur. */}
+      {/* The SAME place in the tree as in the “nothing open” branch
+          above: turning on the board at the first step flips the page
+          from one branch to another, and a wizard reassembled at that moment would leave again
+          of its step 1 under the user's fingers. */}
       <FeedbackWizardMount
         projectId={projectId}
         isOwner={isOwner}
@@ -176,7 +176,7 @@ export function ProjectFeedbackSettings({
         onOpenChange={setWizardOpen}
       />
 
-      {/* ── Le parcours complet, en tête : c'est par lui qu'on configure ── */}
+      {/* ── The complete route, in mind: it is through this that we configure ── */}
       {isOwner && (
         <div className="flex items-start justify-between gap-4 rounded-lg border border-brand/25 bg-brand/5 p-4">
           <div className="flex min-w-0 flex-col gap-0.5">
@@ -219,9 +219,9 @@ export function ProjectFeedbackSettings({
       >
         {boardOn && board && (
           <>
-            {/* Lien public + domaine personnalisé (MIN-36) fusionnés : le lien
-                affiche déjà le domaine vérifié, donc `primaryUrlShown` évite de
-                le répéter. La section domaine se masque seule sans env VERCEL_*. */}
+            {/* Public link + custom domain (MIN-36) merged: the link
+                already shows the verified domain, so `primaryUrlShown` avoids
+                repeat it. The domain section is hidden alone without env VERCEL_*. */}
             <div className="flex flex-col gap-3 py-3.5">
               {publicUrl && (
                 <div className="flex flex-col gap-1.5">
@@ -245,7 +245,7 @@ export function ProjectFeedbackSettings({
               />
             </div>
 
-            {/* Identité des visiteurs */}
+            {/* Visitor identity */}
             <SettingsRow
               label={t("feedbackIdentityTitle")}
               help={t("feedbackIdentityHelp")}
@@ -273,8 +273,8 @@ export function ProjectFeedbackSettings({
               )}
             </SettingsRow>
 
-            {/* Commentaires publics, onglets de vues, catégories — les mêmes
-                rangées que l'étape « Ce que voit le public » du wizard. */}
+            {/* Public comments, views tabs, categories — the same
+                rows as the “What the public sees” step of the wizard. */}
             <BoardVisibilityRows
               board={board}
               sharedViews={sharedViews}
@@ -282,8 +282,8 @@ export function ProjectFeedbackSettings({
               onPatch={patchBoard}
             />
 
-            {/* Couleur d'accent du board public (MIN-59) — optionnelle, une par
-                thème ; off par défaut = bleu minddy. */}
+            {/* Public board accent color (MIN-59) — optional, one per
+                theme ; default off = minddy blue. */}
             <BoardAccentRow
               board={board}
               isOwner={isOwner}
@@ -294,15 +294,15 @@ export function ProjectFeedbackSettings({
         )}
       </SettingsGroup>
 
-      {/* ── Canal 2 : les clés que porte votre backend ──────────────────── */}
+      {/* ── Channel 2: the keys your backend carries ──────────────────── */}
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.projectFeedbackApi}
         icon={Code2}
         title={t("feedbackChannelApiTitle")}
         description={t("feedbackChannelApiDesc")}
         help={t("feedbackChannelApiHelp")}
-        /* Le geste vit en bout de titre ; sans clé active il descend dans la
-           scène et n'est pas montré deux fois — comme l'onglet Intégrations. */
+        /* The gesture lives at the end of the title; without an active key it goes down into the
+           scene and is not shown twice — like the Integrations tab. */
         action={
           feedbackKeyCount > 0 ? (
             <>
@@ -313,8 +313,8 @@ export function ProjectFeedbackSettings({
         }
       >
         {feedbackKeyCount === 0 ? (
-          // Le libellé « aucune » du pluriel EST la phrase de la scène : la
-          // dire deux fois, c'est la voir diverger.
+          // The wording “none” in the plural IS the sentence in the scene: the
+          // to say it twice is to see it diverge.
           <EmptyScene
             size="compact"
             icon={Code2}
@@ -336,26 +336,26 @@ export function ProjectFeedbackSettings({
         anchor={SETTINGS_SECTIONS.projectFeedbackReview}
       />
 
-      {/* ── Traduction : une étape de la même passe ─────────────────────── */}
+      {/* ── Translation: one step of the same pass ─────────────────────── */}
       <FeedbackTranslationGroup
         projectId={projectId}
         isOwner={isOwner}
         anchor={SETTINGS_SECTIONS.projectFeedbackTranslation}
       />
 
-      {/* ── Effacer un participant : le droit à l'oubli, outillé (MIN-119) ─
-          Après les trois canaux, parce que ça ne se règle pas — ça s'exerce,
-          une fois, quand quelqu'un le demande. */}
+      {/* ── Delete a participant: the right to be forgotten, equipped (MIN-119) ─
+          After the three channels, because it can't be fixed - it needs to be practiced,
+          once, when someone asks. */}
       <FeedbackParticipantsGroup projectId={projectId} />
     </div>
   );
 }
 
 /**
- * Le wizard, monté au même endroit dans les deux états de la page — et
- * seulement pour le owner, qui est le seul à pouvoir provisionner un board ou
- * fabriquer une clé. Le nommer plutôt que de recopier ses quatre props aux deux
- * endroits, c'est ce qui garantit qu'il reste UNE seule place dans l'arbre.
+ * The wizard, mounted in the same place in both states of the page — and
+ * only for the owner, who is the only one who can provision a board or
+ * make a key. Name it rather than copying its four props to both
+ * places, this is what guarantees that there is only ONE place left in the tree.
  */
 function FeedbackWizardMount({
   projectId,
@@ -379,8 +379,8 @@ function FeedbackWizardMount({
   );
 }
 
-/** Le renvoi vers l'onglet Intégrations, où les clés se créent et se révoquent —
- *  en-tête de carte quand il y en a, dans la scène vide quand il n'y en a pas. */
+/** Referral to the Integrations tab, where keys are created and revoked —
+ * card header when there is one, in the empty scene when there is none. */
 function ManageKeysButton({ projectId }: { projectId: string }) {
   const t = useTranslations("Settings");
   return (
@@ -392,14 +392,14 @@ function ManageKeysButton({ projectId }: { projectId: string }) {
   );
 }
 
-/** Bloc SSO (owner). Non configuré → bouton d'activation + « Recommandé ».
- *  Configuré → secret copiable, détails techniques repliés, régénérer/désactiver.
+/** SSO block (owner). Not configured → activation button + “Recommended”.
+ * Configured → secret copyable, technical details collapsed, refresh/disable.
  *
- *  Le secret s'affiche et se copie sous forme de LIGNE D'ENVIRONNEMENT
- *  (`MINDDY_SSO_SECRET=…`), pas de clé nue : c'est la seule chose qu'on en fasse,
- *  et le prompt d'intégration ne transporte plus le secret — il nomme cette
- *  variable et compte sur elle. Coller la clé seule dans un `.env` ne marcherait
- *  pas ; ce qui est montré est donc exactement ce qui est attendu là-bas. */
+ * The secret is displayed and copied as an ENVIRONMENT LINE
+ * (`MINDDY_SSO_SECRET=…`), no bare key: that's the only thing we do with it,
+ * and the integration prompt no longer carries the secret — it names this
+ * variable and rely on it. Pasting the key alone in a `.env` would not work
+ * not ; so what is shown is exactly what is expected there. */
 function SsoSetup({
   board,
   busy,
@@ -515,8 +515,8 @@ function SsoSetup({
   );
 }
 
-/** URL publique du board rendue comme un vrai lien (ouvre un onglet) + copier —
- *  remplace l'ancien champ en lecture seule. */
+/** Public board URL rendered as a real link (opens a tab) + copy —
+ *  replaces the former read-only field. */
 function PublicUrlLink({ url }: { url: string }) {
   const display = url.replace(/^https?:\/\//, "");
   return (

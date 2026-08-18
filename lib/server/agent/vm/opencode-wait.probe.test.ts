@@ -19,52 +19,47 @@ import {
 } from "./opencode-probe-rig";
 
 /**
- * MIN-362 — sonde de L'ATTENTE : ce qui se passe quand personne ne répond.
+ * MIN-362 — WAIT probe: what happens when no one responds.
  *
- * Ne tourne PAS avec `npm test` : `describe.skipIf` la saute tant que
- * `MDY_OPENCODE_WAIT_PROBE=1` n'est pas posé. Elle est SÉPARÉE de
- * [opencode-permissions.probe.test.ts](opencode-permissions.probe.test.ts) parce
- * qu'elle ne coûte pas la même chose : ici on paie du temps de mur — l'attente
- * EST la mesure — et, sur son dernier cas, un vrai round de modèle.
+ * Does NOT run with `npm test`: `describe.skipIf` skips it until
+ * `MDY_OPENCODE_WAIT_PROBE=1` is not posed. It is SEPARATE from
+ * [opencode-permissions.probe.test.ts](opencode-permissions.probe.test.ts) because
+ * it does not cost the same thing: here we pay for wall time — the wait
+ * IS the measure — and, in its last case, a real round of model.
  *
- *   MDY_OPENCODE_WAIT_PROBE=1 npx vitest run \
- *     lib/server/agent/vm/opencode-wait.probe.test.ts --testTimeout=900000
+ * MDY_OPENCODE_WAIT_PROBE=1 npx vitest run \
+ * lib/server/agent/vm/opencode-wait.probe.test.ts --testTimeout=900000
  *
- *   # le cas à vrai fournisseur (~0,003 $, ~2 min), en plus :
- *   MDY_OPENCODE_WAIT_PROBE=1 MDY_OPENCODE_WAIT_LIVE=1 npx vitest run …
+ * # the case with real provider (~$0.003, ~2 min), in addition:
+ * MDY_OPENCODE_WAIT_PROBE=1 MDY_OPENCODE_WAIT_LIVE=1 npx vitest run …
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * RELEVÉ DU 2026-08-15 sur `opencode-ai@1.18.16`
+ * ─────────────────────── ──────────────────────── ──────────────────────────────
+ * REPORTED FROM 2026-08-15 on `opencode-ai@1.18.16`
  *
- * 1. **Aucun timeout côté opencode.** Une demande de permission reste pendante
- *    sans fin — relevé toutes les 5 s : demande listée, part de tool `running`,
- *    session `busy`, et `session.idle` qui n'arrive JAMAIS. L'audit l'a tenu
- *    303 s ; la sonde tient une fenêtre plus courte (`MDY_OPENCODE_WAIT_MS`,
- *    30 s par défaut), parce que ce qui se démontre est l'ABSENCE de dénouement,
- *    pas sa durée. Le seul plafond est donc le nôtre — et tout ce que le
- *    superviseur fait au `session.idle` est suspendu avec elle.
- * 2. **Tuer le process pendant l'attente est IRRÉVERSIBLE.** Au redémarrage la
- *    session est retrouvée, `GET /permission` rend `[]` — la demande n'existe
- *    plus — et la part de tool reste figée à `running` pour toujours. Rien ne la
- *    ressuscite : un tour local dont l'app de bureau meurt pendant une carte
- *    d'approbation ne se reprend pas, il se refait.
- * 3. **`POST /question/:id/reply` fonctionne, bloque sans timeout, et ne termine
- *    PAS le tour** : le tool `question` revient `completed` avec « User has
- *    answered your questions », et le round REPART vers le modèle. « `ask_user`
- *    est terminal » est donc un choix de minddy, pas une contrainte du moteur —
- *    et le motif de ce choix (une microVM ouverte qui coûte) tombe sur la
- *    machine de l'utilisateur.
- * 4. **Avec un VRAI fournisseur, l'attente survit** (le cas gardé par
- *    `MDY_OPENCODE_WAIT_LIVE`). C'est ce que le faux fournisseur ne pouvait pas
- *    dire : il a fini son flux avant l'exécution du tool, là où un vrai modèle
- *    tient une connexion ouverte pendant tout ce temps.
+ * 1. **No timeout on the opencode side.** A permission request remains pending
+ * endless — recorded every 5 s: request listed, part of tool `running`,
+ * session `busy`, and `session.idle` which NEVER happens. The audit held it
+ * 303 s; the probe holds a shorter window (`MDY_OPENCODE_WAIT_MS`,
+ * 30 s by default), because what is demonstrated is the ABSENCE of outcome,
+ * not its duration. The only ceiling is therefore ours — and everything that the supervisor does to the `session.idle` is suspended with it. `[]` — the request no longer exists — and the tool share remains fixed at `running` forever. Nothing does it
+ * resurrects: a local round whose desktop app dies during an approval card
+ * does not resume, it redoes.
+ * 3. **`POST /question/:id/reply` works, blocks without timeout, and does not end
+ * NOT the round**: the tool `question` returns `completed` with “User has
+ * answered your questions”, and the round STARTS back to the model. "`ask_user`
+ * is terminal" is therefore a minddy choice, not a constraint of the engine —
+ * and the reason for this choice (an open microVM that costs) falls on the user's machine.
+ * 4. **With a REAL provider, the wait survives** (the case kept by
+ * `MDY_OPENCODE_WAIT_LIVE`). This is what the fake provider couldn't
+ * say: it finished its flow before the tool executed, where a real model
+ * keeps a connection open the whole time.
  */
 
 const LIVE = process.env.MDY_OPENCODE_WAIT_PROBE === "1";
 const WITH_PROVIDER = LIVE && process.env.MDY_OPENCODE_WAIT_LIVE === "1";
-/** La fenêtre d'attente. Assez pour qu'un timeout du moteur se soit déclenché. */
+/** The waiting window. Enough that a motor timeout was triggered. */
 const WAIT_MS = Number(process.env.MDY_OPENCODE_WAIT_MS ?? 30_000);
-/** L'attente du cas à vrai fournisseur : plus longue que tout keep-alive usuel. */
+/** The wait for the real provider case: longer than any usual keep-alive. */
 const LIVE_WAIT_MS = Number(process.env.MDY_OPENCODE_WAIT_LIVE_MS ?? 120_000);
 const LIVE_MODEL = process.env.MDY_OPENCODE_WAIT_MODEL ?? "anthropic/claude-haiku-4.5";
 
@@ -121,7 +116,7 @@ describe.skipIf(!LIVE)("une demande à laquelle personne ne répond", () => {
         });
       }
 
-      // Chaque relevé dit la même chose : c'est ÇA, l'absence de timeout.
+      // Each reading says the same thing: THIS is the absence of timeout.
       expect(releves.length).toBeGreaterThanOrEqual(3);
       for (const releve of releves) {
         expect(releve.pendantes, `à ${releve.s} s, la demande n'était plus pendante`).toBe(1);
@@ -161,14 +156,14 @@ describe.skipIf(!LIVE)("une demande à laquelle personne ne répond", () => {
       });
       running.push(repris);
 
-      // La session est retrouvée…
+      // The session is found…
       expect((await repris.get(`/session/${session}`)).status).toBe(200);
-      // …mais la demande a disparu…
+      // …but the request has disappeared…
       expect(
         (await repris.get("/permission")).body,
         "la demande a survécu au redémarrage : la reprise d'un tour interrompu redevient possible",
       ).toEqual([]);
-      // …et l'appel de tool reste figé, sans personne pour le dénouer.
+      // …and the tool call remains frozen, with no one to resolve it.
       const messages = (await repris.get(`/session/${session}/message`)).body as Array<{
         parts?: Array<Record<string, any>>;
       }>;
@@ -222,7 +217,7 @@ describe.skipIf(!LIVE)("une demande à laquelle personne ne répond", () => {
       expect(asked.id).toMatch(/^que_/);
       expect(((await server.get("/question")).body as unknown[]).length).toBe(1);
 
-      // Elle BLOQUE : rien ne bouge tant que personne ne répond.
+      // She BLOCKS: nothing moves until no one responds.
       await sleep(8_000);
       expect(((await server.get("/question")).body as unknown[]).length).toBe(1);
       expect(provider.seen.length, "le tour a repris tout seul").toBe(1);
@@ -252,8 +247,8 @@ describe.skipIf(!WITH_PROVIDER)("la même attente, avec un VRAI fournisseur", ()
       const key = process.env.OPENROUTER_API_KEY;
       expect(key, "OPENROUTER_API_KEY").toBeTruthy();
 
-      // Le VRAI proxy du superviseur, comme dans opencode-abort.probe.test.ts :
-      // la clé est posée dans sa config amont, jamais dans celle d'opencode.
+      // The REAL supervisor proxy, as in opencode-abort.probe.test.ts:
+      // the key is placed in its upstream config, never in that of opencode.
       proxy = await startLlmProxy({
         job: { baseUrl: "https://openrouter.ai/api/v1", provider: "openrouter", reasoningLevel: "off" },
         fetchImpl: ((input: RequestInfo | URL, init?: RequestInit) =>
@@ -291,7 +286,7 @@ describe.skipIf(!WITH_PROVIDER)("la même attente, avec un VRAI fournisseur", ()
       const asked = await waitFor(() => server.asks(session).length > 0, 120_000);
       expect(asked, "le modèle n'a pas appelé `bash` — la sonde ne mesure rien").toBe(true);
 
-      // L'ATTENTE : c'est ici que le faux fournisseur ne pouvait plus rien dire.
+      // THE WAIT: this is where the fake supplier could no longer say anything.
       const started = Date.now();
       while (Date.now() - started < LIVE_WAIT_MS) {
         await sleep(15_000);
@@ -305,7 +300,7 @@ describe.skipIf(!WITH_PROVIDER)("la même attente, avec un VRAI fournisseur", ()
       const [ask] = server.asks(session);
       await server.post(`/permission/${ask.id}/reply`, { reply: "once" });
 
-      // Le tour REPART : le tool s'exécute et le modèle rend sa réponse.
+      // The turn STARTS: the tool executes and the model returns its response.
       const fini = await waitFor(
         () => server.toolParts().some((p) => p.status === "completed") && server.sawIdle(),
         180_000,

@@ -3,67 +3,67 @@ import "server-only";
 import type { AgentLiveEdit, AgentLiveFileStat } from "./agent-contract";
 
 /**
- * Diffusion EN DIRECT d'une session de l'agent de code, sur le topic privé
+ * LIVE broadcast of a Code Agent session, on the private topic
  * `agent-run:{runId}` (migration 20260908090000_agent_live_stream).
  *
- * Deux messages, tous deux ÉPHÉMÈRES — rien n'est écrit en base par ce module :
+ * Two messages, both EPHEMERAL — nothing is written in base by this module:
  *
- *   `stream` — le texte du round en cours, ré-émis pendant que le modèle écrit.
- *              C'est ce qui donne au fil de l'agent le rendu streamé de Numo.
- *   `event`  — la ligne `agent_run_events` qui vient d'être insérée, poussée
- *              telle quelle (appendEvent) pour que le fil l'affiche tout de
- *              suite au lieu d'attendre son poll.
+ * `stream` — the text of the current round, re-emitted while the model writes.
+ * This is what gives the agent thread the streamed rendering of Numo.
+ * `event` — the line `agent_run_events` which has just been inserted, pushed
+ * as is (appendEvent) so that the thread displays it immediately
+ * instead of waiting for its poll.
  *
- * On tape l'endpoint HTTP de Realtime plutôt que d'ouvrir un websocket : la
- * boucle tourne dans une fonction serverless qui peut être coupée à tout moment,
- * et un POST sans état s'y prête mieux qu'une connexion à maintenir. La clé de
- * service autorise la diffusion sur un topic privé.
+ * We type the Realtime HTTP endpoint rather than opening a websocket: the
+ * loop runs in a serverless function that can be cut at any time,
+ * and a stateless POST lends itself to this better than a maintainable connection. The key of
+ * service authorizes broadcast on a private topic.
  *
- * TOUT est best-effort : une diffusion ratée ne doit jamais faire échouer un run
- * (le polling du fil rattrape ce qui manque).
+ * EVERYTHING is best-effort: a failed broadcast should never cause a run
+ * to fail (polling the thread makes up for what is missing).
  */
 
 export function agentRunTopic(runId: string): string {
   return `agent-run:${runId}`;
 }
 
-/** Charge utile du direct : l'état COMPLET du round en cours, pas un delta —
- *  un message perdu se rattrape donc au suivant, sans trou dans le texte. */
+/** Live payload: the COMPLETE state of the current round, not a delta —
+ * a lost message is therefore made up for in the next one, without a gap in the text. */
 export interface AgentLiveStream {
-  /** Réponse du modèle telle qu'écrite jusqu'ici. */
+  /** Model response as written so far. */
   text: string;
-  /** Nombre d'appels d'outils déjà amorcés dans ce round : >0 ⇒ ce texte est de
-   *  la narration (le tour continue), 0 ⇒ c'est peut-être la réponse finale. */
+  /** Number of tool calls already initiated in this round: >0 ⇒ this text is from
+ * the narration (the round continues), 0 ⇒ this is perhaps the final answer. */
   tools: number;
-  /** Le modèle raisonne EN CE MOMENT (MIN-122) → indicateur + compteur dans le fil.
-   *  Le TEXTE du raisonnement ne passe pas par ici : il n'est pas streamé, il est
-   *  persisté replié en fin de round. */
+  /** The model is reasoning AT THIS MOMENT (MIN-122) → indicator + counter in the thread.
+ * The TEXT of the reasoning does not go through here: it is not streamed, it is
+ * persisted folded at the end of the round. */
   reasoningActive: boolean;
-  /** Millisecondes de réflexion accumulées dans ce round (alimente le compteur). */
+  /** Milliseconds of reflection accumulated in this round (feeds the counter). */
   reasoningMs: number;
-  /** Horodatage d'émission (ms). Le client jette ce qui arrive dans le désordre.
-   *  Un compteur ne conviendrait pas : un run repris repart d'une autre
-   *  invocation, donc d'un compteur remis à zéro. */
+  /** Transmission timestamp (ms). The client throws what arrives out of order.
+ * A counter would not be suitable: a restarted run starts again from another
+ * invocation, therefore from a counter reset to zero. */
   at: number;
-  /** Fichiers touchés jusqu'ici par le tour, provisoires : portés par CHAQUE
-   *  charge, sans quoi le fil les efface dès la charge suivante. */
+  /** Files touched so far by the round, provisional: carried by EACH
+ * load, otherwise the thread erases them on the next load. */
   files?: AgentLiveEdit[];
-  /** La liste a été bornée à `CHANGED_FILES_CAP`. */
+  /** The list has been limited to `CHANGED_FILES_CAP`. */
   filesTruncated?: boolean;
-  /** Compteurs Git exacts du tour en cours (notamment pour les runs locaux). */
+  /** Exact Git counters for the current round (especially for local runs). */
   fileStats?: AgentLiveFileStat[];
 }
 
 /**
- * Envoi brut sur un topic privé. Sorti de la fonction ci-dessous pour servir
- * aussi la review d'une PR (`pr-review:{id}`), qui diffuse la même paire
- * `stream`/`event` sur son propre topic : le transport ne dépend pas de ce qui
- * est diffusé, seul le topic change.
+ * Raw sending to a private topic. Taken out of the function below to serve
+ * also the review of a PR (`pr-review:{id}`), which broadcasts the same pair
+ * `stream`/`event` on its own topic: the transport does not depend on what
+ * is broadcast, only the topic change.
  *
- * `changed` est le troisième, pour le direct d'une pull request
- * (`pull-request:{id}`, MIN-161) : il ne transporte pas de contenu, seulement
- * les parties qui ont bougé — le contenu d'une PR se lit chez la forge, avec le
- * token de CELUI QUI REGARDE (cf. lib/pr-live.ts).
+ * `changed` is the third, for the direct pull request
+ * (`pull-request:{id}`, MIN-161): it does not transport content, only
+ * the parts which have moved — the content of a PR is read at the forge, with the
+ * token of HE WHO WATCHES (see lib/pr-live.ts).
  */
 export async function broadcastToTopic(
   topic: string,
@@ -86,7 +86,7 @@ export async function broadcastToTopic(
       }),
     });
   } catch {
-    // Le fil poll toutes les 2 s : au pire, l'écran a un temps de retard.
+    // The thread polls every 2 s: at worst, the screen has a delay.
   }
 }
 
@@ -98,12 +98,12 @@ async function broadcast(
   await broadcastToTopic(agentRunTopic(runId), event, payload);
 }
 
-/** Texte du round en cours. Appelé à la cadence du stream LLM (throttlé en amont). */
+/** Text of the current round. Called at the rate of the LLM stream (throttled upstream). */
 export function broadcastRunStream(runId: string, live: AgentLiveStream): void {
   void broadcast(runId, "stream", { ...live });
 }
 
-/** Ligne d'event fraîchement insérée, poussée telle quelle au fil ouvert. */
+/** Freshly inserted vent line, pushed as is to the open wire. */
 export function broadcastRunEvent(
   runId: string,
   row: { id: string; seq: number; type: string; payload: unknown; created_at: string },

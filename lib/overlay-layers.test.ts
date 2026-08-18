@@ -5,12 +5,12 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { hasOpenDismissibleLayer, isInOverlayLayer } from "@/lib/overlay-layers";
 
 /**
- * MIN-284 — « impossible de supprimer un commentaire ».
+ * MIN-284 — "unable to delete comment".
  *
- * Le décor est le DOM tel que Radix le laisse : le panneau du fil est un nœud
- * ordinaire, le menu « ⋯ » et le dialogue de confirmation sont des FRÈRES en fin
- * de `body`. C'est cette forme-là, et pas le composant, qui portait le défaut :
- * pour un test `contains()`, un clic dans le dialogue est un clic hors panneau.
+ * The setting is the DOM as Radix leaves it: the thread panel is an ordinary node
+ *, the "⋯" menu and confirmation dialog are BROTHERS at the end
+ * of `body`. It is this form, and not the component, which carried the defect:
+ * for a `contains()` test, a click in the dialog is a click outside the panel.
  */
 
 function mount(html: string): void {
@@ -42,8 +42,8 @@ describe("isInOverlayLayer", () => {
   it("ne reconnaît RIEN dans le document ordinaire", () => {
     mount(`${PANEL}<p id="ailleurs">un paragraphe de la page</p>`);
     expect(isInOverlayLayer(document.getElementById("ailleurs"))).toBe(false);
-    // Le panneau lui-même n'est pas un calque : c'est son propre `contains`
-    // qui le couvre, et le confondre ici le rendrait impossible à fermer.
+    // The panel itself is not a layer: it is its own `contains`
+    // which covers it, and confusing it here would make it impossible to close.
     expect(isInOverlayLayer(document.getElementById("close"))).toBe(false);
     expect(isInOverlayLayer(null)).toBe(false);
   });
@@ -58,7 +58,7 @@ describe("hasOpenDismissibleLayer", () => {
   });
 
   it("ne compte PAS une infobulle : elle ne prend pas ÉCHAP", () => {
-    // Survoler un bouton du panneau ne doit pas le rendre infermable au clavier.
+    // Hovering over a panel button should not make it closable with the keyboard.
     mount(`${PANEL}<div data-radix-popper-content-wrapper role="tooltip"></div>`);
     expect(hasOpenDismissibleLayer(document)).toBe(false);
   });

@@ -158,7 +158,7 @@ export function KanbanBoard({
     [issues, statuses, comparator]
   );
 
-  // L'ordre de lecture du board — l'ordre dans lequel un paquet glissé atterrit.
+  // Board reading order — the order in which a swiped packet lands.
   const rank = useMemo(() => displayRank(columns), [columns]);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -181,9 +181,9 @@ export function KanbanBoard({
     [onUpdateIssue, selectedIssues]
   );
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
-  // Lasso sur le fond du board : même sélection, un geste de moins que trente
-  // ⇧-clics. Le conteneur de colonnes lui sert à la fois de surface de départ,
-  // de limite et de défilement automatique.
+  // Lasso on the bottom of the board: same selection, one gesture less than thirty
+  // ⇧-clicks. The column container serves as both a starting surface,
+  // limit and autoscroll.
   const {
     ref: marqueeRef,
     onPointerDown: onMarqueePointerDown,
@@ -192,8 +192,8 @@ export function KanbanBoard({
     selected: selectedIds,
     onChange: setSelectedIds,
   });
-  // Déplacements de cycle sur la sélection : un ticket déjà dedans peut en
-  // sortir, un ticket vivant peut y entrer — une sélection mixte offre les deux.
+  // Cycle movements on the selection: a ticket already in it can
+  // exit, a living ticket can enter — a mixed selection offers both.
   const bulkCycle = useMemo(() => {
     if (!currentCycleId || !onSetCycle) return undefined;
     const { addable, removable } = splitCycleSelection(
@@ -208,7 +208,7 @@ export function KanbanBoard({
       onRemove: () => removable.forEach((issue) => onSetCycle(issue, null)),
     };
   }, [currentCycleId, onSetCycle, selectedIssues]);
-  // Une relation a exactement deux bouts : l'action n'existe qu'à deux tickets.
+  // A relationship has exactly two ends: the action only exists on two tickets.
   const bulkLink = useMemo(() => {
     if (selectedIssues.length !== 2) return undefined;
     const [first, second] = selectedIssues;
@@ -217,8 +217,8 @@ export function KanbanBoard({
       clearSelection();
     };
   }, [selectedIssues, onAddRelation, clearSelection]);
-  // Le glisser : le paquet embarqué, le repère de dépôt, et le plan d'écriture
-  // — tous trois issus du même calcul (cf. lib/use-board-drop.ts).
+  // Drag it: the embedded package, the deposit marker, and the writing plan
+  // — all three come from the same calculation (see lib/use-board-drop.ts).
   const drop = useBoardDrop({
     columns,
     comparator,
@@ -258,13 +258,13 @@ export function KanbanBoard({
 
   const updateActiveColumn = useCallback(
     (el: HTMLDivElement) => {
-      // Les pastilles sont `sm:hidden` (cf. `ColumnDots`) : au-dessus de 640 px
-      // il n'y a rien à montrer, et surtout rien à mettre en ÉTAT —
-      // `setActiveColumn` re-rend tout le board, donc toutes ses cartes, à
-      // chaque franchissement de seuil de colonne pendant le défilement
-      // horizontal (MIN-317). Le voisin immédiat a déjà été corrigé pour ce
-      // motif exact : `scrollProps.onScroll` (lib/use-scroll-fade.ts), dont le
-      // commentaire dit que ça « faisait sauter toute l'interface ».
+      // The pastilles are `sm:hidden` (see `ColumnDots`): above 640 px
+      // there is nothing to show, and above all nothing to put into STATUS —
+      // `setActiveColumn` re-returns the entire board, therefore all its cards, to
+      // each column threshold crossing during scrolling
+      // horizontal (MIN-317). The immediate neighbor has already been fixed for this
+      // exact pattern: `scrollProps.onScroll` (lib/use-scroll-fade.ts), whose
+      // comment says it "blew the whole interface".
       if (window.innerWidth >= 640) {
         setActiveColumn((prev) => (prev === 0 ? prev : 0));
         return;
@@ -295,8 +295,8 @@ export function KanbanBoard({
   const handleDragMove = (event: DragMoveEvent) => drop.track(event);
 
   const handleDragEnd = (event: DragEndEvent) => {
-    // Le repère montrait déjà CE plan-là : on l'écrit tel quel (MIN-75 pour le
-    // paquet, `previewBoardMove` pour la place).
+    // The marker already showed THIS plan: we write it as is (MIN-75 for the
+    // package, `previewBoardMove` for place).
     const planned = drop.plan(event);
     drop.end();
     if (!planned) return;
@@ -308,16 +308,16 @@ export function KanbanBoard({
 
   return (
     <AgentActivityProvider projectId={projectId}>
-    {/* « @ » au survol d'une carte (ou sur la sélection) ouvre Numo — même
-        contexte que le bouton Numo de la pilule de sélection (MIN-105). */}
+    {/* “@” on hovering over a card (or on selection) opens Numo — same
+ context as the Numo button on the selection pill (MIN-105). */}
     <AskNumoProvider selectedIssues={selectedIssues} onAskNumo={onAskNumo}>
     <DndContext
       sensors={sensors}
       collisionDetection={boardCollision}
       onDragStart={handleDragStart}
-      // `onDragMove` et pas seulement `onDragOver` : le côté du dépôt (avant ou
-      // après la carte survolée) change SANS que la cible change, et c'est
-      // justement ce que le repère doit suivre.
+      // `onDragMove` and not only `onDragOver`: the side of the deposit (before or
+      // after the hovered map) changes WITHOUT the target changing, and it is
+      // exactly what the marker should follow.
       onDragMove={handleDragMove}
       onDragOver={handleDragMove}
       onDragEnd={handleDragEnd}
@@ -337,8 +337,8 @@ export function KanbanBoard({
             onClear={clearSelection}
             onAskNumo={() => onAskNumo(selectedIssues)}
             cycle={bulkCycle}
-            // Board de projet : la sélection est mono-projet par construction,
-            // donc tous ses objectifs sont proposables.
+            // Project board: the selection is single-project per construction,
+            // therefore all its objectives are proposed.
             objectives={objectives}
             onLink={bulkLink}
           />
@@ -348,11 +348,11 @@ export function KanbanBoard({
           active={activeColumn}
           onSelect={scrollToColumn}
         />
-        {/* Le fondu de bord est dessiné À CÔTÉ du scroller (MIN-319) : un
-            `mask-image` posé dessus le fait re-compositer à chaque image de
-            défilement — et c'était ici un masque À L'INTÉRIEUR d'un masque,
-            puisque chaque colonne en portait un aussi. D'où ce parent
-            `relative`, et l'absence de `scrollProps.style` sur le défileur. */}
+        {/* The edge fade is drawn NEXT to the scroller (MIN-319): a
+ `mask-image` placed on top makes it re-composite with each frame of
+ scrolling — and here it was a mask INSIDE a mask,
+ since each column carried one too. Hence this parent
+ `relative`, and the absence of `scrollProps.style` on the scroller. */}
         <div className="relative flex min-h-0 flex-1 flex-col">
           <div
             ref={setScrollerRef}
@@ -409,7 +409,7 @@ export function KanbanBoard({
       <DragOverlay dropAnimation={null}>
         {activeIssue ? (
           <div className="relative w-[21rem]">
-            {/* Le paquet ne se voit pas au curseur : le compte le dit. */}
+            {/* The package is not visible in the cursor: the account says so. */}
             {draggingIds.size > 1 && (
               <span className="absolute -right-2 -top-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground shadow-md">
                 {draggingIds.size}
@@ -442,12 +442,11 @@ export function KanbanBoard({
  * the active one widened. Tapping a dot scrolls that column into view. Hidden
  * when there's only one column.
  *
- * `sm:hidden` et non `desktop:hidden` (MIN-293) : ces points comptent des PAGES,
- * et il n'y a une page par colonne qu'en dessous de 640 px, là où une colonne
- * remplit la fenêtre (`BOARD_COLUMN_CLASS`). Au-dessus, deux ou trois colonnes
- * tiennent ensemble, une page n'est plus une colonne — les points se mettraient
- * à compter faux, et les derniers seraient inatteignables. Ce qui reste hors
- * champ se lit alors au fondu des bords (`useScrollFade`).
+ * `sm:hidden` and not `desktop:hidden` (MIN-293): these points count PAGES,
+ * and there is only one page per column below 640 px, where one column
+ * fills the window (`BOARD_COLUMN_CLASS`). Above, two or three columns
+ * hold together, a page is no longer a column — the points would start counting wrong, and the last ones would be unreachable. What remains outside
+ * field is then read at the faded edges (`useScrollFade`).
  */
 function ColumnDots({
   statuses,

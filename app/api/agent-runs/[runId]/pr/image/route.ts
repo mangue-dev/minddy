@@ -6,10 +6,10 @@ import {
 } from "@/lib/server/agent/pr-actions";
 
 /**
- * FAÇADE (MIN-162) du proxy d'image de commentaire — la route par PR est
- * `/api/pull-requests/[prId]/image`. Sans elle, une capture collée dans une
- * remarque de ligne resterait cassée dans la vue diff d'une session d'agent,
- * alors qu'elle s'affiche dans le panneau PR : le même bug à deux endroits.
+ * FACADE (MIN-162) of Comment Image Proxy — route through PR is
+ * `/api/pull-requests/[prId]/image`. Without it, a capture stuck in a
+ * line remark would remain broken in the diff view of an agent session,
+ * while it is displayed in the PR panel: the same bug in two places.
  */
 
 type RouteContext = { params: Promise<{ runId: string }> };

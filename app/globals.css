@@ -2,31 +2,31 @@
 @import "mangue-ui/tokens.css";
 @import "streamdown/styles.css";
 @source "../node_modules/mangue-ui/src";
-/* Streamdown (rendu markdown de Numo) : sans ces @source, Tailwind ne génère pas
-   les classes utilisées par les composants et tout rend en boîtes sans style. */
+/* Streamdown (Numo markdown rendering): without these @sources, Tailwind does not generate
+   classes used by components and everything renders in unstyled boxes. */
 @source "../node_modules/streamdown/dist/*.js";
 @source "../node_modules/@streamdown/code/dist/*.js";
 
-/* Le shell reste une application de bureau dès 768 px : header complet, palette
-   de recherche et navigation latérale. Sous ce seuil seulement, la pilule de
-   navigation mobile prend le relais. Les écrans 768–1199 px utilisent le
-   panneau latéral escamoté (voir AppShellChrome), plutôt que l'interface mobile.
-   Cette redéfinition, après les tokens de mangue-ui, aligne `desktop:` et
-   `max-desktop:` sur le même seuil. */
+/* The shell remains a desktop application from 768 px: complete header, palette
+   search and side navigation. Below this threshold only, the pill
+   mobile navigation takes over. 768–1199 px displays use the
+   retracted side panel (see AppShellChrome), rather than the mobile interface.
+   This redefinition, after the mango-ui tokens, aligns `desktop:` and
+   `max-desktop:` on the same threshold. */
 @theme {
   --breakpoint-desktop: 768px;
   --breakpoint-wide: 1200px;
 }
 
-/* `mangue-ui` est aussi compilé par Turbopack comme une dépendance : selon le
-   cache de développement, ses utilitaires `desktop:` peuvent conserver le
-   seuil publié (1200 px) alors que ceux de l'application ont déjà lu le thème
-   ci-dessus. Le shell ne peut pas se retrouver coupé en deux : cette couche
-   force les trois primitives du chrome dans la tranche intermédiaire, avec une
-   spécificité supérieure aux utilitaires de la bibliothèque.
+/* `mangue-ui` is also compiled by Turbopack as a dependency: according to the
+   development cache, its `desktop:` utilities can keep the
+   published threshold (1200 px) while those in the application have already read the theme
+   above. The shell cannot be cut in two: this layer
+   forces the three primitives of chromium in the intermediate slice, with a
+   higher specificity than library utilities.
 
-   Elle est volontairement limitée à `.app-shell` : les pages publiques gardent
-   leurs propres adaptations, et cette règle n'élargit pas arbitrairement toute
+   It is voluntarily limited to `.app-shell`: public pages keep
+   their own adaptations, and this rule does not arbitrarily expand any
    l'interface. */
 @media (768px <= width < 1200px) {
   .app-shell .desktop\:flex {
@@ -37,28 +37,28 @@
     display: none !important;
   }
 
-  /* Le conteneur de sidebar est lui-même enfant direct du shell : il n'est pas
-     couvert par le sélecteur descendant ci-dessus. */
+  /* The sidebar container is itself a direct child of the shell: it is not
+     covered by the descending selector above. */
   .app-shell > .desktop\:flex {
     display: flex !important;
   }
 }
 
-/* Dans l'app Electron, la bande fixe qui permet de déplacer la fenêtre couvre
-   les 60 premiers pixels (dont le bord gauche du header). Quand le panneau de
-   navigation compact est rangé, sa lisière doit passer AU-DESSUS de cette bande
-   et redevenir une zone web ; autrement un survol du coin haut-gauche ne peut
-   jamais rappeler la navigation. Une fois ouverte, elle repasse sous le panneau
-   lui-même et ne bloque aucun contrôle. */
+/* In the Electron app, the fixed strip that allows you to move the window covers
+   the first 60 pixels (including the left edge of the header). When the panel
+   navigation compact is stored, its edge must pass ABOVE this strip
+   and become a web zone again; otherwise a hover of the top-left corner cannot
+   never recall navigation. Once opened, it goes back under the panel
+   itself and does not block any controls. */
 html[data-desktop-app] .zen-nav-hotzone {
   -webkit-app-region: no-drag;
 }
 
-/* mangue-ui donne aux options de menu une cible tactile plus haute jusqu'à
-   1199 px (`max-[1199px]:py-2.5`). L'application reste cependant desktop dès
-   768 px : dans cette tranche, les menus doivent retrouver leur densité de
-   bureau (le `py-1.5` d'origine). La règle est hors layer et `!important` pour
-   couvrir aussi les utilitaires déjà compilés dans la dépendance. */
+/* mango-ui gives menu options a higher touch target up to
+   1199 px (`max-[1199px]:py-2.5`). However, the application remains desktop from
+   768 px: in this section, the menus must regain their density of
+   desktop (the original `py-1.5`). The rule is outside layer and `!important` for
+   also cover utilities already compiled in the dependency. */
 @media (width >= 768px) {
   [data-slot="dropdown-menu-item"],
   [data-slot="dropdown-menu-checkbox-item"],
@@ -68,36 +68,36 @@ html[data-desktop-app] .zen-nav-hotzone {
   }
 }
 
-/* ── Les flèches d'Inter, que Google ne sert pas ──────────────────────────────
-   `next/font/google` ne charge d'Inter que les sous-ensembles publiés par
-   Google, et AUCUN ne couvre le bloc des flèches : la plage latine y met « ↑ »
-   (U+2191) et « ↓ » (U+2193), mais pas « → » (U+2192) ni « ↔ » (U+2194). Le
-   maillon suivant de la pile est « Inter Fallback », que next/font définit comme
-   `local(Arial)` avec un `size-adjust: 107.12%` — chaque flèche était donc
-   dessinée par Arial, agrandie de 7 % : 0,99 em de trait, contre 0,73 em pour la
-   vraie flèche d'Inter. D'où la flèche trop longue, et étrangère au texte qui
-   l'entoure : celle que pose « -> » dans les éditeurs
-   (components/editor-arrows.ts) comme celles écrites en dur dans l'UI.
-   Mesuré au navigateur, à 16 px : 17,14 px d'avance avant, 15,22 px après.
+/* ── Inter arrows, which Google does not serve ──────────────────────────────
+   `next/font/google` only loads from Inter the subsets published by
+   Google, and NONE covers the arrow block: the Latin range puts “↑” there
+   (U+2191) and “↓” (U+2193), but not “→” (U+2192) or “↔” (U+2194). THE
+   next link in the stack is "Inter Fallback", which next/font defines as
+   `local(Arial)` with a `size-adjust: 107.12%` — each arrow was therefore
+   drawn by Arial, enlarged by 7%: 0.99 em of line, compared to 0.73 em for the
+   real arrow of Inter. Hence the arrow which is too long and foreign to the text which
+   surrounds it: that which poses “->” in the editors
+   (components/editor-arrows.ts) like those written hard in the UI.
+   Measured in the browser, at 16 px: 17.14 px in advance before, 15.22 px after.
 
-   Ce @font-face porte le MÊME nom de famille que celui de next/font — `Inter`,
-   nom réel et non haché, puisque c'est une police Google. Les faces d'une même
-   famille s'additionnent par plage de caractères : il comble le trou sans
-   qu'aucune pile de polices ait à bouger, et l'héritage du body comme les
+   This @font-face has the SAME last name as next/font — `Inter`,
+   real name and not hashed, since it is a Google font. Faces of the same
+   family are added by character range: it fills the gap without
+   that no font stack has to move, and the inheritance of the body like the
    utilitaires `font-sans` / `font-display` / `font-mono` en profitent d'un coup.
 
-   Le fichier est un sous-ensemble d'InterVariable 4.001 (rsms.me/inter, licence
-   OFL dans app/fonts/), réduit aux deux plages de flèches — 8 Ko, 34 signes :
+   The file is a subset of InterVariable 4.001 (rsms.me/inter, license
+   OFL in app/fonts/), reduced to the two arrow ranges — 8 KB, 34 characters:
 
      pyftsubset InterVariable.woff2 --unicodes="U+2190-21FF,U+27F0-27FF" \
        --flavor=woff2 --layout-features='' --no-hinting \
        --output-file=app/fonts/inter-arrows.woff2
 
-   Il couvre plus large que le seul « → », et c'est le même défaut partout :
-   « ↗ ↳ ↵ ⇒ ⇧ ⟷ » n'étaient dans AUCUNE face d'Inter et tombaient jusqu'à la
-   police du système (SF ici, Segoe UI Symbol sous Windows) — les pastilles de
-   raccourci de la palette en font partie. Ce qu'Inter ne dessine pas non plus
-   (« ⇄ », U+21C4) retombe comme avant. */
+   It covers wider than just the “→”, and it is the same fault everywhere:
+   “↗ ↳ ↵ ⇒ ⇧ ⟷” were not in ANY Inter side and fell to the
+   system font (SF here, Segoe UI Symbol on Windows) — the system fonts
+   palette shortcut are one of them. What Inter doesn't draw either
+   (“⇄”, U+21C4) falls as before. */
 @font-face {
   font-family: "Inter";
   font-style: normal;
@@ -112,36 +112,36 @@ html[data-desktop-app] .zen-nav-hotzone {
    cascade (they come after the @import). The whole library recolors from
    --primary, and your own `bg-primary` / `text-foreground` utilities use the
    same variables. Change or delete the block below to make it your own. */
-:root { --primary: oklch(0.21 0.012 265); }                          /* encre, texte blanc dessus */
+:root { --primary: oklch(0.21 0.012 265); }                          /* ink, white text on top */
 .dark { --primary: oklch(0.97 0.004 265); --primary-foreground: oklch(0.18 0.01 265); }
 
-/* ── La pilule de mention (components/mention-chip.tsx) ───────────────────────
-   Elle est TEINTÉE PAR TYPE : le fond et le texte sont la même couleur reposée
-   à deux clartés, celle qui s'enfonce dans la page et celle qui se lit dessus.
-   La pilule dérive les trois variables ci-dessous de SA teinte, en syntaxe de
-   couleur relative — d'où des CLARTÉS et des OPACITÉS ici, et pas des couleurs :
-   la teinte, elle, vient du type (`mentionTone`), et pour un objectif ou un
-   projet c'est une couleur qu'aucune feuille de style ne connaît d'avance.
+/* ── The Mention Pill (components/mention-chip.tsx) ───────────────────────
+   It is TINTED BY TYPE: the background and the text are the same rested color
+   with two lights, the one that sinks into the page and the one that can be read on it.
+   The pill derives the three variables below from ITS hue, in syntax of
+   relative color — hence CLARITIES and OPACITIES here, and not colors:
+   the color comes from the type (`mentionTone`), and for an objective or a
+   project it is a color that no style sheet knows in advance.
 
-   Ces clartés ne peuvent pas se déduire l'une de l'autre d'un thème à l'autre :
-   sur fond clair une pilule s'assombrit pour se lire, sur fond sombre elle
-   s'éclaircit. Deux jeux, donc, et sans rapport arithmétique.
+   These clarity cannot be deduced from one another from one theme to another:
+   on a light background a pill darkens to read, on a dark background it
+   clears up. Two games, therefore, and without arithmetical connection.
 
-   Le fond reste TRANSLUCIDE des deux côtés, et pas une couleur pleine : la
-   pilule se pose aussi bien sur une carte de commentaire que sur une ligne
-   survolée ou sur la surface du composer de Numo, et doit prendre la nuance de
-   ce qui la porte. Une seule variable par rôle, donc une seule classe `bg-*` /
-   `text-*` : un appelant qui repeint la pilule (la bulle sombre du chat) la
+   The background remains TRANSLUCENT on both sides, and not a solid color: the
+   pill can be placed on a comment card as well as on a line
+   hovered over or on the surface of the Numo composer, and must take the shade of
+   what carries it. Only one variable per role, therefore only one class `bg-*` /
+   `text-*`: a caller who repaints the pill (the cat's dark bubble)
    remplace proprement via tailwind-merge.
 
-   La variante `-hover` sert aux pilules qui MÈNENT quelque part (un ticket, un
-   objectif, une page — jamais une personne, cf. lib/mention-target.ts) : le même
-   fond, appuyé d'un cran, pour que le survol dise « ceci se clique » sans que la
+   The `-hover` variant is for pills that LEAD somewhere (a ticket, a
+   objective, a page — never a person, cf. lib/mention-target.ts): the same
+   bottom, pressed a notch, so that the hover says “this clicks” without the
    pilule change de nature.
 
-   Les valeurs de `--mention-chip` et `--mention-chip-hover` posées ici servent
-   de REPLI : elles peignent ce qui emprunte la géométrie de la pilule sans en
-   être une — la pilule d'une commande « / » du composer de Numo. */
+   The values ​​of `--mention-chip` and `--mention-chip-hover` set here are used
+   of REPLI: they paint what borrows the geometry of the pill without
+   be a — the pill of a command “/” from the Numo composer. */
 :root {
   --mention-chip: oklch(0.21 0.012 265 / 6%); --mention-chip-hover: oklch(0.21 0.012 265 / 12%);
   --mention-chip-l: 0.62; --mention-chip-a: 13%; --mention-chip-a-hover: 22%; --mention-chip-ink-l: 0.47;
@@ -151,13 +151,13 @@ html[data-desktop-app] .zen-nav-hotzone {
   --mention-chip-l: 0.72; --mention-chip-a: 18%; --mention-chip-a-hover: 28%; --mention-chip-ink-l: 0.84;
 }
 
-/* Une pilule posée sur une surface D'ENCRE plutôt que sur la page : la bulle
-   d'un message envoyé, dans le composer de Numo comme dans le fil de l'agent.
-   Elle garde SA teinte — c'est bien le même ticket, la même personne qu'ailleurs
-   — mais la reprend aux clartés de l'autre thème : la bulle est en --foreground,
-   donc sombre quand la page est claire, et claire quand la page est sombre.
-   D'où l'inversion, et non un jeu de valeurs à part. À poser sur la SURFACE,
-   pas sur la pilule : elle vaut pour toutes celles qu'elle porte. */
+/* A pill placed on an INK surface rather than on the page: the bubble
+   of a message sent, in the Numo composer as in the agent's thread.
+   It keeps ITS color - it is indeed the same ticket, the same person as elsewhere
+   — but takes it back to the clarity of the other theme: the bubble is in --foreground,
+   so dark when the page is light, and light when the page is dark.
+   Hence the inversion, and not a separate set of values. To place on the SURFACE,
+   not on the pill: it applies to all those it carries. */
 .mention-on-ink {
   --mention-chip-l: 0.8; --mention-chip-a: 22%; --mention-chip-a-hover: 32%; --mention-chip-ink-l: 0.88;
 }
@@ -165,75 +165,75 @@ html[data-desktop-app] .zen-nav-hotzone {
   --mention-chip-l: 0.58; --mention-chip-a: 16%; --mention-chip-a-hover: 26%; --mention-chip-ink-l: 0.45;
 }
 
-/* Les teintes fixes des mentions. Un objectif et un projet n'en ont pas ici :
-   ils portent la leur (la couleur de l'objectif, celle de l'orbe du projet).
-   Bleu et indigo sont ceux qu'avaient les pastilles du ticket et de la page ;
-   le violet est celui des personnes, et Numo prend --brand. */
+/* Fixed shades of mentions. An objective and a project do not have one here:
+   they wear their own (the color of the objective, that of the project orb).
+   Blue and indigo are those that the pastilles on the ticket and the page had;
+   purple is people, and Numo takes --brand. */
 :root {
   --mention-person: oklch(0.55 0.2 305);
   --mention-issue: oklch(0.55 0.2 258);
   --mention-page: oklch(0.55 0.2 277);
 }
 
-/* ── Le pouce d'un interrupteur coché (mangue-ui Switch) ──────────────────────
-   Même cause que la pilule ci-dessus, et c'est le prix de notre --primary
-   d'encre. La piste cochée est en --primary ; mangue-ui peint le pouce en
-   --card en clair et en --foreground en SOMBRE, ce qui marche avec sa teinte de
-   marque mais pas ici : en sombre notre encre est presque blanche, donc pouce
-   blanc sur piste blanche — l'interrupteur coché n'était plus qu'une barre
+/* ── The thumb of a checked switch (mango-ui Switch) ──────────────────────
+   Same cause as the pill above, and this is the price of our --primary
+   of ink. The checked track is in --primary; mango-ui painted the thumb in
+   --card in light and --foreground in DARK, which works with its shade of
+   mark but not here: in dark our ink is almost white, so thumb
+   white on white track — the switched switch was only a bar
    pleine, sans rien qui bouge dedans.
 
-   Ce qui se pose SUR --primary a une couleur prévue pour ça : --primary-
-   foreground. Elle vaut dans les deux thèmes (blanc sur l'encre claire, encre
-   sur le blanc sombre), donc la règle n'est pas conditionnée au thème. Elle ne
-   touche que l'état coché : décoché, la piste est neutre et le pouce clair
-   d'origine est le bon. */
+   What lands ON --primary has a color intended for that: --primary-
+   foreground. It applies to both themes (white on light ink, ink
+   on dark white), so the rule is not conditioned by the theme. She doesn't
+   key only in checked state: unchecked, the track is neutral and the thumb clear
+   original is the correct one. */
 [data-slot="switch"][data-state="checked"] [data-slot="switch-thumb"] {
   background-color: var(--primary-foreground);
 }
 
 
 
-/* ── Vue diff des Pull Requests (MIN-66, MIN-181) ─────────────────────────────
-   `@pierre/diffs` rend le diff dans un Shadow DOM. On n'y injecte rien : les
-   PROPRIÉTÉS PERSONNALISÉES traversent la frontière d'ombre par héritage, et
-   la lib lit ses ~50 variables `--diffs-*` dans son `:host`. Poser les nôtres
-   ici suffit donc à l'habiller — c'est aussi pourquoi elles vivent avec les
-   autres jetons du dépôt plutôt que dans un objet JavaScript.
+/* ── Diff view of Pull Requests (MIN-66, MIN-181) ─────────────────────────────
+   `@pierre/diffs` renders the diff in a Shadow DOM. Nothing is injected into it: the
+   CUSTOM PROPERTIES cross the shadow border by inheritance, and
+   the lib reads its ~50 `--diffs-*` variables into its `:host`. Ask ours
+   here is enough to dress it - this is also why they live with the
+   other tokens in the repository rather than in a JavaScript object.
 
-   Attention : seules les variables que la lib ne DÉCLARE pas elle-même dans son
-   `:host` sont héritables (une déclaration sur l'hôte l'emporte sur ce qui lui
-   vient de son parent). D'où le couple `--diffs-light-*` / `--diffs-dark-*`,
-   qui n'existe que pour être fourni de l'extérieur.
+   Warning: only variables that the lib does not DECLARE itself in its
+   `:host` are inheritable (a declaration on the host takes precedence over what it
+   comes from his parent). Hence the couple `--diffs-light-*` / `--diffs-dark-*`,
+   which exists only to be supplied from the outside.
 
-   Les deux moitiés de chaque couple portent la MÊME valeur, et ce n'est pas une
-   étourderie : nos jetons sont déjà pris dans le bon thème (`.dark` les
-   redéfinit), et le composant force `color-scheme` d'après le thème résolu de
-   minddy. La branche que choisit `light-dark()` est donc déjà la bonne. */
+   Both halves of each pair carry the SAME value, and it is not a
+   thoughtlessness: our tokens are already taken in the right theme (`.dark` the
+   redefines), and the force component `color-scheme` according to the resolved theme of
+   minddy. The branch that `light-dark()` chooses is therefore already the right one. */
 .pr-diff-view {
   --diffs-font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --diffs-font-size: 13px;
   --diffs-line-height: 20px;
 
-  /* Fond et texte : ceux de la carte qui porte le diff, pas un blanc/noir à
-     part — le diff est DANS la carte du fichier. */
+  /* Background and text: those of the card which bears the diff, not a white/black one
+     part — the diff is IN the file map. */
   --diffs-light-bg: var(--card);
   --diffs-dark-bg: var(--card);
   --diffs-light: var(--foreground);
   --diffs-dark: var(--foreground);
 
-  /* Numéros de ligne et barres de dépliage : le gris des textes secondaires et
-     le fond neutre du reste de l'app, pour que la gouttière du diff se lise
-     comme les autres colonnes. Le reste (fond des lignes de contexte, aplats
-     vert/rouge, surlignage mot-à-mot) est DÉRIVÉ par la lib des trois couleurs
-     ci-dessous : on ne les fixe pas une à une. */
+  /* Line numbers and unfolding bars: the gray of secondary texts and
+     the neutral background of the rest of the app, so that the diff gutter reads
+     like the other columns. The rest (background of the context lines, flat areas
+     green/red, word-for-word highlighting) is DERIVED by the three-color lib
+     below: we do not fix them one by one. */
   --diffs-fg-number-override: var(--muted-foreground);
   --diffs-bg-separator-override: var(--muted);
 
-  /* Vert ajouté, rouge supprimé, bleu de marque pour la sélection et le « + » de
-     commentaire. Les deux premiers sont les valeurs déjà éprouvées de la vue
-     d'avant : elles gardent leur contraste posées sur le fond des cartes, dans
-     les deux thèmes. */
+  /* Green added, red removed, blue mark for selection and “+” for
+     comment. The first two are the already proven values ​​of sight
+     from before: they keep their contrast placed on the background of the cards, in
+     both themes. */
   --diffs-light-addition-color: rgb(35 178 62);
   --diffs-dark-addition-color: rgb(57 208 78);
   --diffs-light-deletion-color: rgb(255 65 55);
@@ -242,18 +242,18 @@ html[data-desktop-app] .zen-nav-hotzone {
   --diffs-dark-modified-color: var(--brand);
 }
 
-/* Un extrait de code posé DANS une carte plutôt que dans la carte d'un fichier :
-   le hunk d'un commentaire de review, dans le fil d'activité. Le bloc qui le
-   porte y est en `bg-background` — c'est ce qui le détache de la carte de review
-   autour — et le diff doit prendre ce fond-là, sinon il s'y rend en blanc sur
-   gris. Une variable, le reste vient de `.pr-diff-view`, qu'on porte avec. */
+/* A snippet of code placed IN a map rather than in the map of a file:
+   the hunk of a review comment, in the activity feed. The block that
+   door y is in `bg-background` — this is what detaches it from the review card
+   around — and the diff must take this background, otherwise it goes there blank on
+   gray. A variable, the rest comes from `.pr-diff-view`, which we carry with it. */
 .pr-diff-view-inset {
   --diffs-light-bg: var(--background);
   --diffs-dark-bg: var(--background);
 }
 
-/* Damier des panneaux d'image du diff : une image transparente doit se voir
-   COMME transparente, pas se confondre avec le fond de la carte. */
+/* Checkerboard of the diff image panels: a transparent image must be seen
+   AS transparent, not blending in with the background of the card. */
 .pr-image-checker {
   --checker: color-mix(in oklch, var(--foreground) 7%, transparent);
   background-image:
@@ -284,33 +284,33 @@ html[data-desktop-app] .zen-nav-hotzone {
   --popover: oklch(0.214 0.005 264);
   --sidebar-border: oklch(0.27 0.006 264);
 
-  /* Remonter la surface sombre oblige à remonter TOUT ce qui se pose dessus.
-     mangue-ui calibre son échelle sombre sur --card à 0.170 : --muted 0.200,
-     --secondary 0.220, --accent 0.230, chacun un cran plus CLAIR que la carte.
-     En passant la carte à 0.214 on est repassé au-dessus d'eux, et l'échelle
-     s'est inversée : un `hover:bg-muted` posé dans une carte l'assombrissait,
-     et l'item actif de la sidebar (bg-sidebar-accent) se peignait plus sombre
-     que la sidebar — le contraire du sens voulu, et 0.014 d'écart, donc à peine
-     visible. En clair l'échelle tenait toujours (blanc → 0.935 pour --muted),
-     d'où un défaut qui n'existait qu'en sombre.
+  /* Removing the dark surface requires reassembling EVERYTHING that lands on it.
+     mango-ui calibrates its dark scale on --card to 0.170: --muted 0.200,
+     --secondary 0.220, --accent 0.230, each one notch LIGHTER than the card.
+     By passing the map to 0.214 we went back above them, and the scale
+     was reversed: a `hover:bg-muted` placed in a card darkened it,
+     and the active item of the sidebar (bg-sidebar-accent) appeared darker
+     that the sidebar — the opposite of the intended direction, and 0.014 difference, so barely
+     visible. Clearly the scale still held (white → 0.935 for --muted),
+     hence a defect that only existed in dark.
 
-     On la refait donc depuis 0.214, dans l'ordre d'origine (muted < secondary <
-     accent) et avec des pas d'environ 0.04 — ceux du thème clair, là où les
-     0.030 de mangue-ui ne se sentaient déjà pas. Teinte alignée sur 264 comme
-     les surfaces au-dessus plutôt que les 250 hérités : ce qui recouvre une
-     carte doit en prendre la nuance, pas en introduire une deuxième. */
-  --muted: oklch(0.255 0.005 264);          /* survols et aplats sur une carte */
-  --sidebar-accent: oklch(0.255 0.005 264); /* item actif / survolé de la sidebar */
+     We therefore redo it from 0.214, in the original order (muted < secondary <
+     accent) and with steps of around 0.04 — those of the light theme, where the
+     0.030 mango-ui already did not feel. Hue aligned to 264 as
+     the surfaces above rather than the 250 inherited: which covers a
+     The card must take its nuance, not introduce a second one. */
+  --muted: oklch(0.255 0.005 264);          /* flyovers and flat areas on a map */
+  --sidebar-accent: oklch(0.255 0.005 264); /* active item / hovered over the sidebar */
   --secondary: oklch(0.268 0.005 264);
   --accent: oklch(0.276 0.005 264);
 
-  /* --control manquait à cette liste : tant qu'il ne portait que les champs de
-     formulaire, sa bordure marquée (--input) suffisait à les détacher malgré un
-     0.215 confondu avec la carte. Depuis mangue-ui 0.5.0 il porte aussi les
+  /* --control was missing from this list: as long as it only carried the fields of
+     form, its border marked (--input) was enough to detach them despite a
+     0.215 confused with the map. Since mango-ui 0.5.0 it also carries the
      pastilles neutres (Badge secondary, StatusChip, ModelBadge, CategoryPill),
-     qui n'ont qu'un liseré — un aplat à la couleur exacte du fond les faisait
-     disparaître. Mêmes écarts à la carte que la lib (+0.045 et +0.075), teinte
-     alignée sur 264 comme les tokens ci-dessus. */
+     which only have a border - a solid color in the exact color of the background made them
+     disappear. Same deviations on the map as the lib (+0.045 and +0.075), color
+     aligned to 264 like the tokens above. */
   --control: oklch(0.259 0.005 264);
   --control-hover: oklch(0.289 0.005 264);
 }
@@ -326,31 +326,31 @@ html[data-desktop-app] .zen-nav-hotzone {
   --ticket-urgent: oklch(0.62 0.24 25);
 }
 
-/* ─── Barres de défilement ──────────────────────────────────────────────
+/* ─── Scrollbars ─────────────────────── ───────────────────────
 
-   Celle du navigateur ne paraît PLUS NULLE PART : partout un rail transparent
-   et un pouce fin, arrondi, qui se teinte au survol. Une seule règle, sur le
-   sélecteur universel, pour que rien n'y échappe — un écran qui garde la barre
-   grise du système au milieu d'une app qui n'en a plus se voit tout de suite.
+   That of the browser no longer appears ANYWHERE: everywhere a transparent rail
+   and a thin, rounded thumb, which becomes tinted when hovered over it. Only one rule, on the
+   universal selector, so that nothing escapes — a screen that keeps the bar
+   gray of the system in the middle of an app which no longer has one is visible immediately.
 
-   Le pouce est peint en ALPHA, noir en clair et blanc en sombre : il se pose
-   aussi bien sur une carte que sur la barre latérale ou le fond du contenu,
-   sans avoir à décliner un ton par surface.
+   The thumb is painted in ALPHA, black in light and white in dark: it is placed
+   both on a card and on the sidebar or the bottom of the content,
+   without having to vary one tone per surface.
 
-   Une piste large de 10 px pour une cible de pointeur confortable, et un pouce
-   qui n'en occupe que 4 : la bordure transparente de 3 px l'amincit sans
-   rétrécir la zone qu'on peut attraper (`background-clip: content-box`).
+   A 10 px wide track for a comfortable pointer target, and a thumb
+   which only occupies 4: the transparent border of 3 px thins it without
+   shrink the area that can be caught (`background-clip: content-box`).
 
-   À SAVOIR : styler une barre de défilement lui fait perdre son mode SUPERPOSÉ.
-   Sur macOS, où elle flottait au-dessus du contenu sans rien lui prendre, elle
-   réserve désormais ses 10 px dès qu'il y a de quoi défiler. C'est le prix d'une
-   barre qui nous appartient ; `no-scrollbar` (mangue-ui) reste là où on préfère
-   n'avoir rien du tout, comme les colonnes du board.
+   PLEASE NOTE: styling a scrollbar causes it to lose its OVERLAY mode.
+   On macOS, where it floated above the content without taking anything from it, it
+   now reserves its 10 px as soon as there is something to scroll. This is the price of one
+   bar that belongs to us; `no-scrollbar` (mango-ui) stays where we prefer
+   have nothing at all, like the columns of the board.
 
-   Le pouce (`--scrollbar-thumb`, `--scrollbar-thumb-hover`) et l'utilitaire
-   `scrollbar-quiet` viennent de mangue-ui depuis la 0.5.0. Ce qui reste ici est
-   la seule chose que la librairie laisse à l'app : la décision d'appliquer cette
-   barre à TOUTES les surfaces, via le sélecteur universel. */
+   The thumb (`--scrollbar-thumb`, `--scrollbar-thumb-hover`) and the utility
+   `scrollbar-quiet` come from mango-ui since 0.5.0. What remains here is
+   the only thing that the library leaves to the app: the decision to apply this
+   bar on ALL surfaces, via the universal selector. */
 @layer base {
   /* Standard (Firefox, Chrome 121+, Safari 18.2+). */
   * {
@@ -358,9 +358,9 @@ html[data-desktop-app] .zen-nav-hotzone {
     scrollbar-color: var(--scrollbar-thumb) transparent;
   }
 
-  /* WebKit/Blink, pour les versions qui ne lisent pas encore les deux ci-dessus.
-     Dans @layer base, donc n'importe quel utilitaire les couvre — c'est ce qui
-     laisse `no-scrollbar` et `scrollbar-quiet` reprendre la main. */
+  /* WebKit/Blink, for versions that don't yet read the two above.
+     In @layer base, so any utility covers them — that's what
+     lets `no-scrollbar` and `scrollbar-quiet` take control again. */
   *::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -396,29 +396,29 @@ html[data-desktop-app] .zen-nav-hotzone {
     transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  /* Sur ultrawide (≥2200px) le shell devient une carte centrée (mangue-ui
-     AppShell pose `.ultrawide-canvas` sur le body), donc on ré-ancre le FAB
-     Numo et son panneau compact — tous deux en `fixed` — au coin bas-droit du
-     shell plutôt qu'au bord du viewport. Offset = marge de centrage du shell
-     + 8px : pour le FAB de 44px, ce 8px garde son rayon de 22px concentrique
-     au coin de 30px du shell (30 − 8 = 22) ; le panneau partage exactement le
-     même coin pour s'ouvrir là où se trouve le FAB.
+  /* On ultrawide (≥2200px) the shell becomes a centered map (mango-ui
+     AppShell places `.ultrawide-canvas` on the body), so we re-anchor the FAB
+     Numo and its compact panel — both in `fixed` — at the bottom right corner of the
+     shell rather than at the edge of the viewport. Offset = shell centering margin
+     + 8px: for the FAB of 44px, this 8px keeps its radius of 22px concentric
+     at 30px corner of shell (30 − 8 = 22); the panel shares exactly the
+     same corner to open where the FAB is.
 
-     Pourquoi @layer utilities + !important : le panneau se positionne avec des
-     utilitaires Tailwind !important (md:!right-4 …) qui vivent dans ce layer.
-     Pour les déclarations !important l'ordre des cascade layers s'inverse, donc
-     un !important layerisé bat un non-layerisé quelle que soit la spécificité —
-     une règle hors layer perdrait silencieusement. Déclarée dans @layer
-     utilities, c'est la spécificité qui tranche (0,2,0 bat le 0,1,0 du md:). */
+     Why @layer utilities + !important: the panel is positioned with
+     !important Tailwind utilities (md:!right-4 …) that live in this layer.
+     For !important declarations the order of the cascade layers is reversed, so
+     a layered !important beats a non-layered one regardless of specificity —
+     an off-layer rule would silently lose. Declared in @layer
+     utilities, it's the specificity that decides (0,2,0 beats the 0,1,0 of md:). */
   .ultrawide-canvas .assistant-fab-anchor,
   .ultrawide-canvas .assistant-panel-anchor {
     right: calc((100dvw - var(--spacing-app-max-w)) / 2 + 8px) !important;
     bottom: calc(max(0px, (100dvh - var(--spacing-app-max-h)) / 2) + 8px) !important;
   }
 
-  /* Même ré-ancrage pour le bandeau « nouvelle version » (MIN-157), qui vit au
-     même coin : mêmes `right`, et un `bottom` décalé de 4.5rem pour rester
-     empilé AU-DESSUS du FAB plutôt que par-dessus lui. */
+  /* Same re-anchoring for the “new version” headband (MIN-157), which lives at
+     same corner: same `right`, and a `bottom` shifted by 4.5rem to remain
+     stacked ABOVE the FAB rather than on top of it. */
   .ultrawide-canvas .new-version-anchor {
     right: calc((100dvw - var(--spacing-app-max-w)) / 2 + 8px) !important;
     bottom: calc(
@@ -426,25 +426,25 @@ html[data-desktop-app] .zen-nav-hotzone {
     ) !important;
   }
 
-  /* Chaîne de rayons concentriques sur ultrawide : le panneau compact se niche
-     dans le coin de 30px du shell avec le même gap de 8px que le FAB, donc son
-     coin descend à 22px (30 − 8). Le ChatInput garde son gap de 6px au bord du
-     panneau (px-1.5/pb-1.5) et est déjà en rounded-2xl (16px = 22 − 6) : les
+  /* Chain of concentric rays on ultrawide: the compact panel nestles
+     in the 30px corner of the shell with the same 8px gap as the FAB, so its
+     corner goes down to 22px (30 − 8). The ChatInput keeps its gap of 6px at the edge of
+     panel (px-1.5/pb-1.5) and is already in rounded-2xl (16px = 22 − 6): the
      coins bas restent concentriques, shell 30 → panneau 22 → input 16. Pas
-     d'!important nécessaire : bat les utilitaires `rounded-*` à la spécificité
-     dans @layer utilities (contrairement à la position ci-dessus). */
+     !important necessary: ​​beats `rounded-*` utilities at specificity
+     in @layer utilities (unlike position above). */
   .ultrawide-canvas .assistant-panel-anchor {
     border-radius: 22px;
   }
 }
 
-/* Liseré agent (AgentBeam) monté en permanence (`keepMounted`, ex. le composer
-   Numo) : au repos son wrapper doit être totalement inerte. BorderBeam pose un
-   `overflow: hidden` — utile pour le liseré, mais il rognerait alors le halo de
-   focus (ring-2) de la surface enveloppée. On ne le rétablit qu'à l'allumage et
-   pendant le fondu de sortie ([data-active] / [data-fading]).
-   Hors @layer et par spécificité (0,3,0) pour battre le `<style>` non layerisé
-   qu'injecte BorderBeam — un utilitaire Tailwind, lui, est dans @layer et
+/* Agent edging (AgentBeam) permanently mounted (`keepMounted`, e.g. dial it
+   Numo): when at rest, its wrapper must be completely inert. BorderBeam poses a
+   `overflow: hidden` — useful for the border, but it would then crop the halo of
+   focus (ring-2) of the wrapped surface. It is only restored when switched on and
+   during fade-out ([data-active] / [data-fading]).
+   Excluding @layer and by specificity (0,3,0) to beat the non-layered `<style>`
+   that BorderBeam injects — a Tailwind utility is in @layer and
    perdrait. */
 [data-beam]:not([data-active]):not([data-fading]) {
   overflow: visible;
@@ -497,88 +497,88 @@ nav[aria-label="Navigation"]
   display: none;
 }
 
-/* ─── Le dégagement de la barre de navigation mobile ──────────────────────────
-   mangue-ui réserve 6 rem au bas du contenu (AppShell : `max-desktop:pb-[calc(
-   6rem+env(safe-area-inset-bottom))]`) pour que rien ne passe sous la pilule
-   flottante. Or la pilule ne mesure que 3 rem de boutons plus son ancrage bas :
-   la réserve dégage une fois et demie ce qu'il fallait, et sur mobile ce
-   surplus se paie partout — la fin d'une liste, la dernière colonne d'un board,
-   et surtout les écrans qui ANCRENT un champ en pied (le composer d'une pull
-   request, celui d'une session d'agent). Là, l'écart ne se rattrape pas au
-   défilement : il RESTE à l'écran, une quarantaine de pixels de vide entre la
-   barre et le champ, sur la surface la plus étroite du produit.
+/* ─── Clearing the mobile navigation bar ──────────────────────────
+   mango-ui reserves 6 rem at the bottom of the content (AppShell: `max-desktop:pb-[calc(
+   6rem+env(safe-area-inset-bottom))]`) so that nothing goes unnoticed
+   floating. However, the pill only measures 3 rem of buttons plus its low anchor:
+   the reserve releases one and a half times what was needed, and on mobile this
+   surplus is paid for everywhere — the end of a list, the last column of a board,
+   and especially the screens which ANCHOR a field at the foot (composing it with a pull
+   request, that of an agent session). There, the gap is not made up for
+   scrolling: there REMAINS on the screen, around forty pixels of space between the
+   bar and field, on the narrowest surface of the product.
 
-   On repose donc la réserve sur ce que la pilule mesure vraiment, plus un filet
-   d'air — une seule règle, donc toutes les pages d'un coup. Elle vise le <main>
-   du shell (le seul de l'app, cf. la classe posée sur l'AppShell dans
-   components/app-shell-chrome.tsx) et l'emporte sans `!important` : un
-   utilitaire Tailwind vit dans @layer, et une règle hors layer bat tout ce qui
-   est layerisé, quelle que soit la spécificité.
+   We therefore base the reservation on what the pill really measures, plus a net
+   of air — only one rule, so all the pages at once. It targets <main>
+   of the shell (the only one of the app, cf. the class placed on the AppShell in
+   components/app-shell-chrome.tsx) and wins without `!important`: a
+   Tailwind utility lives in @layer, and an out-of-layer rule beats anything that
+   is layered, regardless of the specificity.
 
-   À TENIR À JOUR AVEC mangue-ui : les deux mesures ci-dessous recopient sa
-   géométrie, et `lib/mobile-nav-clearance.test.ts` échoue si elle bouge. */
+   TO KEEP UPDATED WITH mangue-ui: the two measurements below copy its
+   geometry, and `lib/mobile-nav-clearance.test.ts` fails if it moves. */
 :root {
-  /* La pilule : 3 rem de boutons (MobileNavItem, `h-12`) + son ancrage bas
+  /* The pill: 3 rem of buttons (MobileNavItem, `h-12`) + its bottom anchor
      (MobileNav : `pb-[max(1rem,env(safe-area-inset-bottom))]`). */
   --mobile-nav-height: calc(3rem + max(1rem, env(safe-area-inset-bottom)));
-  /* Ce qu'on garde libre sous le contenu : la pilule et un filet d'air. */
+  /* What we keep free under the content: the pill and a trickle of air. */
   --mobile-nav-clearance: calc(var(--mobile-nav-height) + 0.75rem);
 }
 
-/* 768px = `--breakpoint-desktop`, le point où la pilule apparaît. */
+/* 768px = `--breakpoint-desktop`, the point where the pill appears. */
 @media (width < 768px) {
   .app-shell main {
     padding-bottom: var(--mobile-nav-clearance);
   }
 
-  /* Un pied de page ANCRÉ (composer de pull request, de session d'agent) se
-     pose désormais juste au-dessus de la pilule — donc DANS le dégradé de 8 rem
-     qu'elle projette pour faire fondre ce qui défile dessous. Un champ n'a pas
-     à s'estomper, et son bouton d'envoi encore moins : cette classe l'en sort.
-     41 et pas 50 : au-dessus de la barre (z-40), sous les modales et les menus. */
+  /* An ANCHORED footer (consisting of pull request, agent session) is
+     now poses just above the pill - therefore IN the gradient of 8 rem
+     which it projects to melt what passes beneath. A field does not have
+     to fade, and its send button even less: this class takes it out.
+     41 and not 50: above the bar (z-40), below the modals and menus. */
   .dock-above-nav {
     position: relative;
     z-index: 41;
   }
 }
 
-/* ─── Zones de sécurité : ce que `viewport-fit=cover` met à découvert ─────────
-   L'export `viewport` du root layout (app/layout.tsx) rend la page à fond perdu,
-   ce qui donne enfin une valeur aux `env(safe-area-inset-*)` déjà écrits dans le
-   dépôt. La contrepartie est immédiate : ce qui touchait un bord de l'écran
-   touche maintenant l'encoche ou la barre d'indicateur d'accueil. Ce bloc paie
-   cette contrepartie pour les surfaces qui viennent de mangue-ui — on ne patche
-   pas node_modules, on vise ses `data-slot`, exactement comme le fait le
-   dégagement de la barre mobile juste au-dessus.
+/* ─── Security zones: what `viewport-fit=cover` reveals ─────────
+   Exporting `viewport` from the root layout (app/layout.tsx) renders the page with full bleed,
+   which finally gives a value to the `env(safe-area-inset-*)` already written in the
+   deposit. The counterpart is immediate: what touched an edge of the screen
+   Now touch the notch or the home indicator bar. This block pays
+   this counterpart for the surfaces which come from mango-ui — we do not patch
+   not node_modules, we aim for its `data-slot`, exactly as does the
+   release of the movable bar just above.
 
-   `display: standalone` dans app/manifest.json : minddy s'installe. C'est là que
-   l'inset du HAUT existe — dans un onglet Safari, la barre d'URL occupe déjà la
-   place et l'inset vaut 0. Ces règles ne changent donc rien au navigateur, et
-   tout à l'app installée. Les insets latéraux, eux, se réveillent en paysage.
+   `display: standalone` in app/manifest.json: minddy is installing. This is where
+   the TOP inset exists — in a Safari tab, the URL bar already occupies the
+   place and the inset is 0. These rules therefore do not change anything in the browser, and
+   all to the installed app. The lateral insets wake up in landscape.
 
-   Le shell d'abord. Il est en `h-dvh` (donc plein écran à fond perdu) avec un
-   en-tête `sticky top-0` : sans ces marges, le fil d'Ariane passe sous l'heure
-   et la batterie. `box-sizing: border-box` est global chez Tailwind, donc ce
-   padding se prend DANS les 100 dvh au lieu de déborder. Rien pour le bas : le
-   <main> réserve déjà `--mobile-nav-clearance`, qui contient l'inset. */
+   The shell first. It is in `h-dvh` (so full screen with full bleed) with a
+   header `sticky top-0`: without these margins, the breadcrumbs go under the hour
+   and the battery. `box-sizing: border-box` is global at Tailwind, so this
+   padding is taken WITHIN 100 dvh instead of overflowing. Nothing for the bottom: the
+   <main> already reserves `--mobile-nav-clearance`, which contains the inset. */
 .app-shell {
   padding-top: env(safe-area-inset-top);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
 }
 
-/* Les boîtes de dialogue de mangue-ui sont centrées et plafonnées à
-   `max-h-[calc(100dvh-2rem)]`. Une fois les 100 dvh étendus sous l'encoche, une
-   boîte HAUTE — celle qui atteint son plafond — se termine à 1 rem d'un bord qui
-   n'est plus le bord utile : sa dernière rangée de boutons se retrouve sous la
-   barre d'indicateur d'accueil, là où le doigt ne peut plus rien.
+/* mango-ui dialogs are centered and capped at
+   `max-h-[calc(100dvh-2rem)]`. Once the 100 dvh is extended under the notch, a
+   HIGH box — the one that reaches its ceiling — ends 1 rem from an edge that
+   is no longer the useful edge: its last row of buttons is found under the
+   home indicator bar, where the finger can do nothing more.
 
-   On retranche les deux insets du plafond, et RIEN D'AUTRE. La boîte reste
-   centrée dans la fenêtre entière : réduire sa hauteur de (haut + bas) écarte ses
-   deux bords de la moitié de cette somme, ce qui dégage largement chaque inset
-   pris séparément. Surtout, on ne touche pas au `translate` : Tailwind v4 y
-   compile `-translate-x-1/2 -translate-y-1/2`, et le réécrire ici décentrerait
-   la boîte au lieu de la décaler. */
+   We remove the two insets from the ceiling, and NOTHING ELSE. The box remains
+   centered in the entire window: reducing its height by (top + bottom) spreads its
+   two edges of half of this sum, which largely clears each inset
+   taken separately. Above all, we do not touch the `translate`: Tailwind v4 y
+   compiles `-translate-x-1/2 -translate-y-1/2`, and rewriting it here would decenter
+   the box instead of shifting it. */
 [data-slot="dialog-content"],
 [data-slot="alert-dialog-content"] {
   max-height: calc(
@@ -586,9 +586,9 @@ nav[aria-label="Navigation"]
   );
 }
 
-/* Les tiroirs, eux, sont COLLÉS à leur bord — `inset-y-0 h-full` à gauche et à
-   droite, `bottom-0` en bas — donc rien ne les écarte de quoi que ce soit. Un
-   padding, pas une marge : le fond du tiroir doit continuer de courir jusqu'au
+/* The drawers are GLUED to their edge — `inset-y-0 h-full` on the left and
+   right, `bottom-0` at the bottom — so nothing separates them from anything. A
+   padding, not a margin: the bottom of the drawer must continue to run until the
    bord, seul son contenu recule. */
 [data-slot="sheet-content"][data-side="bottom"] {
   padding-bottom: env(safe-area-inset-bottom);
@@ -607,44 +607,44 @@ nav[aria-label="Navigation"]
   padding-right: env(safe-area-inset-right);
 }
 
-/* ─── Le doigt : cibles de 44 px et retour à l'appui ──────────────────────────
-   Deux défauts que le poste de dev ne montre jamais, parce qu'ils n'existent
-   qu'au doigt. Tout ce bloc est sous `pointer: coarse` : le ressenti à la souris
+/* ─── Finger: 44 px targets and return to press ──────────────────────────
+   Two defects that the dev station never shows, because they don't exist
+   than on the finger. This entire block is under `pointer: coarse`: the mouse feeling
    ne bouge pas d'un pixel.
 
-   D'abord la TAILLE. Les boutons de mangue-ui mesurent 32 px (`sm`, `icon-sm`),
-   36 px (`default`, `icon`) ou 40 px (`lg`, `icon-lg`) — aucun n'atteint les
-   44 px que réclament les recommandations d'Apple comme celles de Google, et
-   c'est la ronde d'icônes des barres d'outils qui en souffre le plus : une croix
-   de 32 px, on la rate. On ne peut pas simplement les agrandir — mangue-ui vit
-   dans node_modules, et surtout minddy est une interface DENSE : passer chaque
-   bouton à 44 px reflowerait chaque barre d'outils de l'app.
+   First the SIZE. Mango-ui buttons are 32 px (`sm`, `icon-sm`),
+   36 px (`default`, `icon`) or 40 px (`lg`, `icon-lg`) — neither reaches the
+   44 px that Apple's recommendations like those of Google require, and
+   it is the round of toolbar icons that suffers the most: a cross
+   of 32 px, we miss it. You can't just make them bigger — mango-ui lives
+   in node_modules, and especially minddy is a DENSE interface: pass each
+   button at 44 px reflowered each toolbar in the app.
 
-   D'où le pseudo-élément : la cible grandit, le dessin ne bouge pas. `max()`
-   fait le tri tout seul — un bouton déjà plus large que 44 px garde sa largeur,
-   un bouton plus petit est porté à 44. Aucune taille n'est écrite en dur ici,
-   donc rien à retoucher si mangue-ui change ses hauteurs.
+   Hence the pseudo-element: the target grows, the drawing does not move. `max()`
+   does the sorting by itself — a button already wider than 44 px keeps its width,
+   a smaller button is taken to 44. No size is written in hard copy here,
+   so nothing to retouch if mango-ui changes its heights.
 
-   La contrepartie est connue et assumée : deux boutons voisins et serrés voient
-   leurs cibles se chevaucher, et c'est le dernier dans l'ordre du DOM qui prend
-   le recouvrement. 44 px qui se marchent un peu dessus valent mieux que 32 px
-   qu'on rate — mais c'est la raison pour laquelle on ne l'étend pas aux liens en
-   ligne (`data-variant="link"`), dont la cible déborderait sur son paragraphe.
+   The counterpart is known and assumed: two neighboring and tight buttons see
+   their targets overlap, and it is the last one in the DOM order that takes
+   recovery. 44 px that step on a little is better than 32 px
+   that we miss - but this is the reason why we do not extend it to links in
+   line (`data-variant="link"`), whose target would overflow its paragraph.
 
-   `position: relative` est posé en `@layer base` À DESSEIN, et pas ici : un
-   bouton positionné par un utilitaire Tailwind (`absolute`, `fixed`, `sticky` —
-   la flèche « revenir en bas » du fil de conversation, la croix de fermeture
-   d'un tiroir) doit garder SON positionnement. Un utilitaire vit dans
-   @layer utilities et bat donc @layer base ; il l'emporte, et l'ancrage du
-   pseudo-élément est sauf de toute façon, puisqu'un élément positionné est déjà
-   un bloc conteneur. Une règle hors layer, elle, aurait écrasé les deux. */
+   `position: relative` is placed in `@layer base` ON PURPOSE, and not here: a
+   button positioned by a Tailwind utility (`absolute`, `fixed`, `sticky` —
+   the “go back to the bottom” arrow of the conversation thread, the closing cross
+   of a drawer) must keep ITS positioning. A utility lives in
+   @layer utilities and therefore beats @layer base; he wins, and the anchoring of the
+   pseudo-element is safe anyway, since a positioned element is already
+   a container block. A non-layer rule would have overwritten both. */
 @layer base {
   [data-slot="button"] {
     position: relative;
   }
 
-  /* Le halo gris que WebKit et Chrome Android peignent sur tout élément tapé.
-     Il arrive en retard, il déborde du rayon de bordure, et il n'a plus rien à
+  /* The gray halo that WebKit and Chrome Android paints over anything you type.
+     He arrives late, he overflows the border radius, and he has nothing left to
      dire maintenant que l'appui a son propre retour (plus bas). */
   html {
     -webkit-tap-highlight-color: transparent;
@@ -662,16 +662,16 @@ nav[aria-label="Navigation"]
     height: max(100%, 44px);
   }
 
-  /* Ensuite le RETOUR. Sans lui, un bouton tapé ne répond rien tant que l'écran
-     n'a pas changé : le survol n'existe pas au doigt, et l'app paraît sourde.
-     Un enfoncement de 3 % suffit — c'est la fourchette où l'œil enregistre le
-     geste sans le voir. `Button` porte déjà `transition-all`, donc il n'y a rien
-     à ajouter côté transition, et `scale` (la propriété, pas la fonction) ne
-     touche pas au `transform` que Tailwind écrit par ailleurs.
+  /* Then the RETURN. Without it, a pressed button responds nothing as long as the screen
+     has not changed: hovering does not exist with your finger, and the app seems dull.
+     A depression of 3% is enough — this is the range where the eye registers the
+     gesture without seeing it. `Button` already carries `transition-all`, so there is nothing
+     to add on the transition side, and `scale` (the property, not the function) does not
+     Don't touch the `transform` that Tailwind writes elsewhere.
 
      `:disabled` porte `pointer-events: none`, mais un bouton rendu par `asChild`
-     sur une balise <a> ne peut pas être `:disabled` — il porte `aria-disabled`.
-     Les deux sont donc exclus. */
+     on a tag <a> cannot be `:disabled` — it has `aria-disabled`.
+     Both are therefore excluded. */
   @media (prefers-reduced-motion: no-preference) {
     [data-slot="button"]:not(
         [data-variant="link"],
@@ -682,17 +682,17 @@ nav[aria-label="Navigation"]
     }
   }
 
-  /* Ce qui se tape et n'est pas un bouton. Deux familles, deux traitements —
-     et c'est la géométrie qui tranche, pas le goût.
+  /* What hits and isn't a button. Two families, two treatments —
+     and it’s geometry that decides, not taste.
 
-     Les COMMANDES ISOLÉES s'agrandissent par pseudo-élément, comme les boutons :
-     rien autour d'elles ne se tape, donc le débordement ne coûte rien.
-     mangue-ui en étend déjà deux, mais pas assez loin (16 px + 2×8 pour la case
-     à cocher, 12 px + 2×8 pour le pouce du curseur) : on reprend le SIEN plutôt
-     que d'en poser un second — une règle hors layer bat l'utilitaire `after:`
-     qui l'a écrit. L'interrupteur, lui, n'en a pas ; il en reçoit un, en
-     `absolute` pour ne pas devenir un élément de son propre flex et pousser son
-     pouce. 20 px de haut sur 36, c'est la plus petite cible du produit. */
+     ISOLATED COMMANDS expand by pseudo-element, like buttons:
+     nothing around them hits, so overflow costs nothing.
+     mango-ui already extends two, but not far enough (16 px + 2×8 for the box
+     to check, 12 px + 2×8 for the thumb of the cursor): we take HIS instead
+     than to install a second one — an off-layer rule beats the `after:` utility
+     who wrote it. The switch does not have one; he receives one, in
+     `absolute` so as not to become an element of its own flex and push its
+     thumb. 20 px high by 36, this is the smallest target of the product. */
   [data-slot="checkbox"]::after {
     inset: -14px; /* 16 + 2×14 = 44 */
   }
@@ -712,12 +712,12 @@ nav[aria-label="Navigation"]
     height: max(100%, 44px);
   }
 
-  /* Un onglet est large mais bas. On ne l'étend donc qu'en HAUTEUR, et par
-     `::before` : le `::after` du déclencheur est réservé au trait de l'onglet
-     actif. Depuis mangue-ui 0.6.0 ce trait vit sur un indicateur glissant à
-     côté et non plus sur le déclencheur — on garde `::before` quand même, pour
-     rester indifférents au jour où il lui reviendra. Les onglets étant côte à
-     côte, cette bande verticale ne recouvre aucun voisin. */
+  /* A tab is wide but low. We therefore only extend it HEIGHT, and by
+     `::before`: the `::after` of the trigger is reserved for the tab line
+     active. Since mango-ui 0.6.0 this trait lives on a sliding indicator at
+     side and no longer on the trigger — we keep `::before` anyway, to
+     remain indifferent to the day he returns to him. With the tabs side by side
+     coast, this vertical strip does not cover any neighbors. */
   [data-slot="tabs-trigger"]::before {
     content: "";
     position: absolute;
@@ -726,12 +726,12 @@ nav[aria-label="Navigation"]
     margin-block: -22px;
   }
 
-  /* Les RANGÉES DE LISTE, elles, ne peuvent pas déborder : deux lignes voisines
-     qui se recouvrent, c'est la ligne d'à côté qu'on ouvre. Là, on grandit pour
-     de vrai. Une liste défile — quelques pixels de plus par ligne ne coûtent
-     rien, contrairement à une barre d'outils, et c'est bien pourquoi les boutons
-     n'ont pas eu ce traitement. Ça couvre les menus, les sélecteurs, et la
-     feuille de recherche plein écran de la barre mobile (cmdk). */
+  /* LIST ROWS cannot overflow: two neighboring lines
+     which overlap, it is the line next to us that we open. There, we grow up to
+     for real. A list scrolls — a few more pixels per line doesn't cost
+     nothing, unlike a toolbar, and that's why the buttons
+     did not have this treatment. This covers menus, selectors, and
+     mobile bar full screen search sheet (cmdk). */
   [data-slot="dropdown-menu-item"],
   [data-slot="dropdown-menu-checkbox-item"],
   [data-slot="dropdown-menu-radio-item"],
@@ -741,13 +741,13 @@ nav[aria-label="Navigation"]
     min-height: 44px;
   }
 
-  /* Le délai de 300 ms. Un navigateur tactile attend, après un appui, de voir
-     si un second arrive — un double-tap zoome. Sur une cible qui ne zoome pas,
-     cette attente est du retard pur : le bouton s'enfonce, et l'app ne répond
-     qu'un tiers de seconde plus tard. `manipulation` garde le défilement et le
-     pincement, et abandonne le double-tap. Posé sur ce qui se tape, pas sur la
-     page : le double-tap-pour-zoomer reste disponible sur le contenu, où il
-     rend service (une capture, un tableau, un bloc de code). */
+  /* The delay of 300 ms. A touch browser waits, after a press, to see
+     if a second one arrives — a double-tap zooms in. On a target that does not zoom,
+     this wait is pure delay: the button is pressed, and the app does not respond
+     only a third of a second later. `manipulation` keeps scrolling and
+     pinch, and abandons the double-tap. Focused on what is happening, not on the
+     page: double-tap-to-zoom remains available on the content, where it
+     provides a service (a capture, a table, a block of code). */
   [data-slot="button"],
   [data-slot="switch"],
   [data-slot="checkbox"],
@@ -762,17 +762,17 @@ nav[aria-label="Navigation"]
     touch-action: manipulation;
   }
 
-  /* Le zoom à la mise au point. iOS zoome dans TOUT champ dont la police est
-     sous 16 px — et il ne dézoome pas en sortant : la page reste de travers,
-     l'utilisateur doit pincer pour revenir. mangue-ui l'a compris (ses champs
-     sont en `text-base md:text-sm`, donc 16 px sur mobile), mais les champs
-     écrits à la main du produit, eux, sont en `text-sm` — le titre d'un cycle,
-     le titre d'un brief, les heures du sélecteur de date.
+  /* Zoom to focus. iOS zooms into ANY field whose font is
+     under 16 px — and it does not zoom out when exiting: the page remains crooked,
+     the user must pinch to return. mango-ui understood it (his fields
+     are in `text-base md:text-sm`, therefore 16 px on mobile), but the fields
+     handwritten on the product, they are in `text-sm` — the title of a cycle,
+     the title of a brief, the times of the date picker.
 
-     Une règle plutôt que trois correctifs : elle vaut aussi pour le prochain
-     champ écrit à la main, qui autrement recommencera. On ne vise QUE ce qui se
-     saisit — une case à cocher ou un curseur n'a pas de texte, et un bouton
-     `<input type="submit">` n'a pas à grossir. */
+     One rule rather than three fixes: it also applies to the next one
+     handwritten field, which will otherwise start again. We ONLY aim for what is
+     enters — a checkbox or slider has no text, and a button
+     `<input type="submit">` does not have to grow. */
   input:not(
       [type="checkbox"],
       [type="radio"],
@@ -790,32 +790,32 @@ nav[aria-label="Navigation"]
   }
 }
 
-/* ─── Le défilement qui part ailleurs ─────────────────────────────────────────
-   Arrivé en bout de course, un conteneur qui défile passe le geste à son parent
-   — et de proche en proche au document, qui déclenche le tirer-pour-rafraîchir.
-   Dans une app, ce n'est jamais ce qu'on voulait : on lisait une liste, elle
-   arrive au bout, et le doigt recharge la page.
+/* ─── The scroll that goes elsewhere ──────────────────── ─────────────────────
+   Arriving at the end of its journey, a container passing by passes the gesture to its parent
+   — and step by step to the document, which triggers the pull-to-refresh.
+   In an app, this is never what we wanted: we read a list, it
+   reaches the end, and the finger reloads the page.
 
-   `contain` (et pas `none`) : on coupe la PROPAGATION, on garde le rebond
-   élastique d'iOS, qui est un repère utile — il dit qu'on est en bout de liste.
-   Et c'est posé sur le <main> du shell, pas sur `html, body` : sur la landing et
-   le board public, le tirer-pour-rafraîchir est le comportement attendu du
-   navigateur, et le supprimer là serait le prendre à l'utilisateur. */
+   `contain` (and not `none`): we cut the PROPAGATION, we keep the rebound
+   elastic of iOS, which is a useful benchmark — it says that we are at the end of the list.
+   And it is placed on the <main> of the shell, not on `html, body`: on the landing and
+   the public board, pull-to-refresh is the expected behavior of the
+   browser, and deleting it there would take it from the user. */
 .app-shell main {
   overscroll-behavior: contain;
 }
 
-/* ─── Le survol qui reste collé ───────────────────────────────────────────────
-   Au doigt il n'y a pas de survol : le navigateur en simule un à l'appui, et il
-   RESTE jusqu'au prochain tap ailleurs. Un bouton tapé garde donc son fond de
-   survol, ce qui le fait passer pour sélectionné.
+/* ─── The hover that gets stuck ─────────────────────── ────────────────────────
+   There is no hovering with your finger: the browser simulates one when pressed, and it
+   STAY until the next tap elsewhere. A pressed button therefore keeps its background
+   hovering over it, making it appear selected.
 
-   Les utilitaires `hover:` de Tailwind v4 sont déjà à l'abri — il les compile
-   sous `@media (hover: hover)`, vérifié dans la feuille générée. Restent les
-   quelques `:hover` écrits à la main dans ce fichier, qui n'ont pas ce filet.
-   Un `@media` ne pouvant pas envelopper des règles déjà écrites plus haut, on
-   les neutralise ici pour le tactile — le `:focus-visible` qui accompagne les
-   deux premières continue, lui, de faire le travail au clavier. */
+   Tailwind v4's `hover:` utilities are already safe — it compiles them
+   under `@media (hover: hover)`, checked in the generated sheet. There remain
+   some `:hover` written by hand in this file, which do not have this rule.
+   A `@media` not being able to wrap rules already written above, we
+   neutralizes them here for touch — the `:focus-visible` which accompanies the
+   The first two continue to do the work on the keyboard. */
 @media (hover: none) {
   .scratchpad-editor .ProseMirror .scratchpad-section-copy:hover,
   .scratchpad-editor .ProseMirror .scratchpad-section-launch:hover {
@@ -840,13 +840,13 @@ nav[aria-label="Navigation"]
   max-height: none !important;
 }
 
-/* ─── Sélection du texte des bulles de conversation (agent + Numo) ────────
-   Deux règles empêchent la sélection : le reset global `user-select: none` de
-   mangue-ui, ET — surtout — Streamdown (rendu markdown de l'assistant) qui pose
-   `style="user-select:none"` EN INLINE sur son contenu. Un style inline bat toute
-   règle CSS non-`!important` (peu importe la spécificité), d'où l'`!important` ici :
-   c'est la seule façon de ré-autoriser la sélection sur les bulles `.chat-selectable`
-   et leurs descendants. On garde le reset général intact partout ailleurs. */
+/* ─── Selection of chat bubble text (agent + Numo) ────────
+   Two rules prevent selection: the global reset `user-select: none` of
+   mango-ui, AND — above all — Streamdown (markdown rendering of the wizard) which poses
+   `style="user-select:none"` INLINE on its content. An inline style beats all
+   non-`!important` CSS rule (no matter how specific), hence the `!important` here:
+   this is the only way to re-authorize the selection on the bubbles `.chat-selectable`
+   and their descendants. We keep the general reset intact everywhere else. */
 .chat-selectable,
 .chat-selectable
   *:not(input):not(textarea):not([contenteditable="true"]):not(pre):not(code) {
@@ -854,21 +854,21 @@ nav[aria-label="Navigation"]
   -webkit-user-select: text !important;
 }
 
-/* ─── Scratchpad (Notes) — surface WYSIWYG toujours éditable ──────────────
-   Les cases à cocher (TaskList/TaskItem) et le bouton « copier la section »
-   (décoration ProseMirror posée sur chaque titre) n'ont pas de style fourni par
-   les extensions : on les habille ici, scopé à `.scratchpad-editor`. */
+/* ─── Scratchpad (Notes) — always editable WYSIWYG surface ──────────────
+   Check boxes (TaskList/TaskItem) and the “copy section” button
+   (ProseMirror decoration placed on each title) do not have a style provided by
+   the extensions: we dress them here, scoped at `.scratchpad-editor`. */
 .scratchpad-editor .ProseMirror {
   outline: none;
-  /* Above the section-highlight box (posé derrière, z-index: 0) — le texte reste
-     lisible par-dessus la teinte. */
+  /* Above the section-highlight box (placed behind, z-index: 0) — the text remains
+     readable over the tint. */
   position: relative;
   z-index: 1;
 }
 
-/* Bloc teinté posé DERRIÈRE la section survolée via le bouton « copier la
+/* Tinted block placed BEHIND the section hovered over via the “copy the” button
    section » (components/scratchpad/section-copy-extension.ts) — identifie
-   exactement ce qui sera copié. */
+   exactly what will be copied. */
 .scratchpad-editor .scratchpad-section-box {
   position: absolute;
   left: -0.5rem;
@@ -884,8 +884,8 @@ nav[aria-label="Navigation"]
   opacity: 1;
 }
 
-/* Tooltip stylé du bouton « copier la section » (remplace le title natif) —
-   même habillage que <TooltipContent> de mangue-ui (bulle foncée + flèche). */
+/* Stylish tooltip of the “copy section” button (replaces the native title) —
+   same skin as <TooltipContent> of mango-ui (dark bubble + arrow). */
 .scratchpad-editor .scratchpad-section-tip {
   position: absolute;
   z-index: 60;
@@ -914,8 +914,8 @@ nav[aria-label="Navigation"]
   border-top-color: var(--foreground);
 }
 
-/* Placeholder posé par l'extension Placeholder sur la ligne vide courante
-   (is-empty) et sur le document vide (is-editor-empty) — un indice par ligne. */
+/* Placeholder placed by the Placeholder extension on the current empty line
+   (is-empty) and on the empty document (is-editor-empty) — one index per line. */
 .scratchpad-editor .ProseMirror .is-empty::before,
 .scratchpad-editor .ProseMirror .is-editor-empty::before {
   content: attr(data-placeholder);
@@ -926,9 +926,9 @@ nav[aria-label="Navigation"]
   opacity: 0.5;
 }
 
-/* La case à cocher, la ligne barrée et le menu ⋯ sont rendus par le NodeView
+/* The checkbox, the crossed out line and the menu ⋯ are rendered by the NodeView
    React (components/scratchpad/scratchpad-task.tsx) en classes Tailwind — ici,
-   juste le reset de la liste et l'indentation des sous-tâches. */
+   just resetting the list and indenting the subtasks. */
 .scratchpad-editor .ProseMirror ul[data-type="taskList"] {
   list-style: none;
   margin: 0.5rem 0;
@@ -937,8 +937,8 @@ nav[aria-label="Navigation"]
 .scratchpad-editor .ProseMirror ul[data-type="taskList"] li[data-type="taskItem"] {
   margin: 0.125rem 0;
 }
-/* Le paragraphe d'une tâche hérite sinon du `[&_p]:my-2` de l'éditeur, ce qui
-   décale le texte vers le bas et désaligne la case + le ⋯. */
+/* The paragraph of a task otherwise inherits the `[&_p]:my-2` from the editor, which
+   shifts the text down and unaligns the box + the ⋯. */
 .scratchpad-editor .ProseMirror li[data-type="taskItem"] p {
   margin: 0;
 }
@@ -970,7 +970,7 @@ nav[aria-label="Navigation"]
   transition: opacity 0.12s, color 0.12s;
   cursor: pointer;
 }
-/* « Lancer un agent » sur la section (MIN-84) — à gauche du bouton copier. */
+/* “Launch an agent” on the section (MIN-84) — to the left of the copy button. */
 .scratchpad-editor .ProseMirror .scratchpad-section-launch {
   right: 1.75rem;
 }
@@ -985,26 +985,26 @@ nav[aria-label="Navigation"]
   color: var(--foreground);
 }
 
-/* ─── Landing : entrée du hero et apparitions au scroll ───────────────────
-   Tout est en CSS pur : les sections de la landing sont des Server Components
-   et doivent le rester. Le seul JavaScript est un IntersectionObserver par bloc
-   (components/marketing/reveal.tsx) qui pose `data-revealed` — aucune librairie
-   d'animation n'entre dans le bundle du site public.
+/* ─── Landing: hero entrance and scroll appearances ───────────────────
+   Everything is pure CSS: the sections of the landing are Server Components
+   and must remain so. The only JavaScript is one IntersectionObserver per block
+   (components/marketing/reveal.tsx) which sets `data-revealed` — no library
+   animation does not enter the public site bundle.
 
-   Courbe commune : cubic-bezier(0.16, 1, 0.3, 1) — un « ease-out » très
-   prononcé qui démarre vite et s'arrête en douceur. C'est ce qui fait qu'une
-   apparition se remarque sans qu'on l'attende. */
+   Common curve: cubic-bezier(0.16, 1, 0.3, 1) — a very “ease-out”
+   pronounced that starts quickly and stops smoothly. This is what makes a
+   appearance is noticeable without making the visitor wait for it. */
 
-/* ─── Hero : cascade au chargement, sans JS ──────────────────────────────
-   Au-dessus de la ligne de flottaison, donc joué à l'affichage et non au
-   scroll : le hero est déjà visible quand la page arrive, un observer
-   n'ajouterait qu'une latence d'hydratation.
+/* ─── Hero: load-time cascade, no JS ─────────────────────────────────────
+   Above the fold, so played on display and not on
+   scroll: the hero is already visible when the page arrives, an observer
+   would only add hydration latency.
 
-   Détail non cosmétique du keyframe : le titre part d'`opacity: 0.1`, PAS de 0.
-   Chrome exclut les éléments à opacité nulle du calcul du LCP et repousserait
-   donc le LCP à la FIN du décalage mot à mot. Un plancher à 0.1 combiné au flou
-   reste imperceptible à l'œil mais garde le <h1> éligible dès la première
-   frame. Les éléments secondaires (pas le LCP) partent bien de 0. */
+   Non-cosmetic detail of the keyframe: the title starts from `opacity: 0.1`, NOT 0.
+   Chrome excludes elements with zero opacity from the LCP calculation and would push back
+   therefore the LCP at the END of the word-for-word shift. A floor at 0.1 combined with blur
+   remains imperceptible to the eye but keeps the <h1> eligible from the first
+   frame. The secondary elements (not the LCP) start from 0. */
 @keyframes hero-word-in {
   from {
     opacity: 0.1;
@@ -1033,16 +1033,16 @@ nav[aria-label="Navigation"]
     transform: none;
   }
 }
-/* Cascade qui prolonge le mot à mot du titre : la ligne suivante démarre avant
-   que la précédente ne soit posée, sinon l'ensemble traîne. */
+/* Cascade which extends the word for word of the title: the next line starts before
+   until the previous one is placed, otherwise the whole thing is lying around. */
 .hero-reveal {
   animation: hero-fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
   animation-delay: calc(var(--hero-d, 0) * 1s);
 }
 
-/* La capture du hero est le second candidat LCP (le premier dès qu'une vraie
-   image remplace le gabarit) : elle repart donc du même plancher d'opacité que
-   le titre, sinon son retard dans la cascade deviendrait le score LCP. */
+/* The capture of the hero is the second LCP candidate (the first as soon as a real
+   image replaces the template): it therefore starts from the same opacity floor as
+   the title, otherwise his delay in the cascade would become the LCP score. */
 @keyframes hero-fade-up-media {
   from {
     opacity: 0.1;
@@ -1058,19 +1058,19 @@ nav[aria-label="Navigation"]
   animation-name: hero-fade-up-media;
 }
 
-/* ─── Figure de la boucle agent (hero) ───────────────────────────────────
-   `components/marketing/agent-loop-figure.tsx` : le ticket arrive, l'agent
-   écrit son plan, les cases se cochent, la pull request se rattache. Quatre
-   temps qui se suivent, joués au CHARGEMENT — la figure est au-dessus de la
-   ligne de flottaison, un observer n'ajouterait qu'une latence d'hydratation.
+/* ─── Figure of the agent loop (hero) ───────────────────────────────────
+   `components/marketing/agent-loop-figure.tsx`: the ticket arrives, the agent
+   writes your plan, the boxes are checked, the pull request is attached. Four
+   consecutive beats, played at LOADING — the figure is above the
+   waterline, an observer would only add hydration latency.
 
-   TOUT EST EN `backwards`, jamais en `forwards`, et ce n'est pas un détail de
-   style : l'état d'arrivée de chaque animation EST l'état de base de l'élément
-   (case cochée, trait tiré, rail déployé). Le remplissage n'a donc qu'un seul
-   travail — tenir l'état de DÉPART pendant le délai d'attente — et l'animation
-   lâche l'élément à la fin au lieu d'en figer une couche composée (voir le
-   commentaire de `reveal-in` plus bas, même piège). Corollaire utile : sans JS,
-   sans CSS ou en mouvement réduit, la figure s'affiche déjà terminée. */
+   EVERYTHING IS IN `backwards`, never in `forwards`, and this is not a detail of
+   style: the arrival state of each animation IS the base state of the element
+   (box checked, line drawn, rail deployed). The filling therefore has only one
+   work — hold START state during timeout — and animation
+   drops the element at the end instead of freezing a composite layer of it (see the
+   comment from `reveal-in` below, same trap). Useful corollary: without JS,
+   without CSS or reduced movement, the figure appears already completed. */
 @keyframes loop-step-in {
   from {
     opacity: 0;
@@ -1082,9 +1082,9 @@ nav[aria-label="Navigation"]
   animation-delay: calc(var(--loop-i, 0) * 0.3s + 0.4s);
 }
 
-/* Le trait du rail se déploie vers le bas : il annonce le temps suivant juste
-   avant qu'il n'arrive, ce qui fait lire la figure comme une suite et non comme
-   quatre blocs empilés. */
+/* The line of the rail extends downwards: it announces the next time just
+   before he arrives, which makes the figure read as a sequence and not as
+   four stacked blocks. */
 @keyframes loop-rail-in {
   from {
     transform: scaleY(0);
@@ -1096,9 +1096,9 @@ nav[aria-label="Navigation"]
   animation-delay: calc(var(--loop-i, 0) * 0.3s + 0.75s);
 }
 
-/* La case cochée : elle part vide (bordure grise, fond transparent, coche
-   invisible) et se remplit. Aucun `to` — le 100 % implicite reprend le style de
-   base, c'est-à-dire la case cochée en `primary` du vrai `TaskRow`. */
+/* The checked box: it leaves empty (gray border, transparent background, check mark
+   invisible) and fills. None `to` — the implicit 100% takes the style of
+   base, that is to say the box checked in `primary` of the real `TaskRow`. */
 @keyframes loop-check-in {
   from {
     background-color: transparent;
@@ -1111,8 +1111,8 @@ nav[aria-label="Navigation"]
   animation-delay: calc(var(--loop-i, 0) * 0.22s + 1.35s);
 }
 
-/* La barre sur une tâche faite. `text-decoration` ne s'anime pas : c'est donc
-   un trait dessiné, tiré de gauche à droite juste après que la case se coche. */
+/* The bar on a task done. `text-decoration` does not animate: it is therefore
+   a drawn line, drawn from left to right just after the box is checked. */
 @keyframes loop-strike-in {
   from {
     transform: scaleX(0);
@@ -1131,23 +1131,23 @@ nav[aria-label="Navigation"]
 }
 
 /* ─── Blocs qui apparaissent au scroll (<Reveal>, <RevealGroup>) ─────────
-   Sans JS et au rendu serveur, rien n'est masqué : `.reveal-ready` n'est posé
-   qu'au montage, donc la landing reste entièrement lisible si le script ne
-   part pas. `[data-revealed]` est posé par l'observer au premier passage.
+   Without JS and in server rendering, nothing is hidden: `.reveal-ready` is not set
+   only during editing, so the landing remains entirely readable if the script does not
+   don't leave. `[data-revealed]` is set by the observer on the first pass.
 
-   REMPLISSAGE `backwards`, PAS `both` — ici comme dans le hero. Une animation
-   en `both` retient son état d'arrivée : la landing gardait ainsi 114 éléments
-   (dont 51 mots de titres) sous `filter: blur(0px)` une fois le scroll passé.
-   `blur(0)` n'est pas `none` : chaque élément filtré reste une couche que le
-   navigateur rasterise à part, et un changement de zoom les refait toutes d'un
-   coup — d'où l'effondrement de fluidité au zoom après avoir scrollé.
+   FILLING `backwards`, NOT `both` — here as in the hero. An animation
+   in `both` retains its arrival state: the landing thus kept 114 elements
+   (including 51 title words) under `filter: blur(0px)` once the scroll has passed.
+   `blur(0)` is not `none`: each filtered element remains a layer that the
+   browser rasterizes separately, and a change of zoom redoes them all at once
+   suddenly — hence the collapse in fluidity when zooming after scrolling.
 
-   Retirer `filter` du dernier keyframe NE SUFFIT PAS : le navigateur génère
-   alors un keyframe implicite depuis la valeur de base, et l'interpolation vers
+   Removing `filter` from the last keyframe IS NOT ENOUGH: the browser generates
+   then an implicit keyframe from the base value, and interpolation to
    `none` calcule justement `blur(0px)`, que `both` fige. Il faut donc que
-   l'animation LÂCHE l'élément à la fin. `backwards` ne remplit que le délai
-   d'attente ; l'état final est porté par le style de base (`opacity: 1`), qui
-   ne déclare aucun filtre. */
+   the animation DROPS the element at the end. `backwards` only fills the deadline
+   waiting; the final state is carried by the base style (`opacity: 1`), which
+   does not declare any filter. */
 @keyframes reveal-in {
   from {
     opacity: 0;
@@ -1169,10 +1169,10 @@ nav[aria-label="Navigation"]
   animation-delay: calc(var(--reveal-d, 0) * 1s);
 }
 
-/* Groupe : un seul observer pour le conteneur, les enfants directs entrent en
-   cascade. Le décalage vit dans `--reveal-i` posé par nth-child, ce qui évite
-   d'envelopper chaque carte d'une grille dans son propre composant client (et
-   donc d'ajouter un <div> qui casserait la grille). */
+/* Group: only one observe for the container, direct children enter
+   cascade. The offset lives in `--reveal-i` set by nth-child, which avoids
+   to wrap each map of a grid in its own client component (and
+   therefore to add a <div> which would break the grid). */
 .reveal-group.reveal-ready > * {
   opacity: 0;
 }
@@ -1188,14 +1188,14 @@ nav[aria-label="Navigation"]
 .reveal-group > *:nth-child(4) { --reveal-i: 3; }
 .reveal-group > *:nth-child(5) { --reveal-i: 4; }
 .reveal-group > *:nth-child(6) { --reveal-i: 5; }
-/* Au-delà de six, le décalage est plafonné : une liste longue ne doit pas
-   finir par attendre une seconde après le premier élément. */
+/* Beyond six, the offset is capped: a long list must not
+   end up waiting a second after the first element. */
 .reveal-group > *:nth-child(n + 7) { --reveal-i: 6; }
 
-/* ─── Titres de section, mot à mot (<RevealHeading>) ─────────────────────
-   Même principe : un observer sur le titre, le décalage par mot en CSS via
-   `--reveal-i` posé en inline. Le texte lisible est porté par aria-label, la
-   découpe en <span> est masquée aux lecteurs d'écran. */
+/* ─── Section titles, verbatim (<RevealHeading>) ─────────────────────
+   Same principle: observe on the title, the offset per word in CSS via
+   `--reveal-i` placed inline. The readable text is carried by aria-label, the
+   cutout in <span> is hidden from screen readers. */
 .reveal-word {
   display: inline-block;
 }
@@ -1219,40 +1219,40 @@ nav[aria-label="Navigation"]
   }
 }
 
-/* ─── FAQ : replier une réponse que `forceMount` garde montée ────────────
-   Les réponses de la FAQ sont rendues avec `forceMount` pour exister dans le
-   HTML même repliées — sans quoi aucun crawler ne les lit (MIN-88, voir
+/* ─── FAQ: collapse an answer that `forceMount` keeps mounted ────────────
+   FAQ answers are rendered with `forceMount` to exist in the
+   HTML even when folded — otherwise no crawler will read them (MIN-88, see
    `components/marketing/faq-accordion.tsx`).
 
-   Mais `forceMount` force aussi la PRÉSENCE au sens de Radix, donc Radix ne
-   pose plus son attribut `hidden` : plus rien ne repliait les réponses.
-   L'animation `accordion-up` joue une fois, sans `fill-mode`, et le contenu
-   revient à sa hauteur naturelle 0,25 s plus tard — les douze réponses
-   s'affichaient dépliées au chargement (MIN-93).
+   But `forceMount` also forces PRESENCE in the sense of Radix, so Radix does not
+   no longer sets its `hidden` attribute: nothing replicates the responses anymore.
+   The animation `accordion-up` plays once, without `fill-mode`, and the content
+   returns to its natural height 0.25 s later — all twelve answers
+   displayed unfolded when loading (MIN-93).
 
-   `display: none` ne retire rien du document : le texte reste exactement là où
-   les crawlers le lisent, il cesse seulement d'être peint. Écrit ici et non en
+   `display: none` does not remove anything from the document: the text remains exactly where
+   the crawlers read it, it only ceases to be painted. Written here and not in
    variante Tailwind arbitraire (`[[data-state=closed]_&]`) : celle-ci ne
-   produisait aucune règle, la classe partait dans le HTML sans rien derrière.
+   produced no rules, the class left in the HTML with nothing behind.
 
-   Portée à la FAQ seule : ailleurs dans l'app, l'accordéon n'est pas monté de
-   force et Radix gère le repli lui-même, animation de fermeture comprise. */
+   Scope to the FAQ alone: ​​elsewhere in the app, the accordion is not mounted
+   force and Radix handles the collapse itself, including the closing animation. */
 .faq-accordion [data-slot="accordion-content"][data-state="closed"] {
   display: none;
 }
 
-/* ─── Section de réglages ouverte depuis ⌘K ──────────────────────────────
-   La palette emmène sur la bonne page ET le bon onglet, mais un onglet de
-   réglages est une colonne de cartes qui se ressemblent : y arriver ne dit pas
-   encore LAQUELLE on venait chercher. L'anneau la nomme le temps d'un regard,
+/* ─── Settings section opened from ⌘K ──────────────────────────────
+   The palette takes you to the right page AND the right tab, but a tab of
+   settings is a column of cards that look similar: getting there doesn't say
+   again WHICH we came to look for. The ring names it for the duration of a glance,
    puis `components/settings-shell.tsx` retire l'attribut.
 
-   `box-shadow` plutôt qu'`outline` : il suit le rayon de la carte et s'estompe
-   en une seule propriété, et il ne pousse rien — la colonne ne bouge pas d'un
-   pixel pendant les deux secondes.
+   `box-shadow` rather than `outline`: it follows the radius of the card and fades
+   in a single property, and it does not push anything — the column does not move one
+   pixel for two seconds.
 
-   Pas de `fill-mode` : l'image d'arrivée est déjà transparente, et une ombre
-   figée resterait une couche composée pour rien. */
+   No `fill-mode`: the arrival image is already transparent, and a shadow
+   frozen would remain a layer composed for nothing. */
 @keyframes settings-section-focus {
   0% {
     box-shadow:
@@ -1274,9 +1274,9 @@ nav[aria-label="Navigation"]
   animation: settings-section-focus 2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* « Moins d'animation » : on ne raccourcit pas, on retire. Une durée quasi
-   nulle laisserait quand même le remplissage `both` appliquer le flou pendant
-   le délai de chaque mot — donc un titre flou tant qu'il n'a pas démarré. */
+/* “Less animation”: we don’t shorten it, we remove it. A duration almost
+   null would still let the `both` fill apply the blur for
+   the delay of each word — so a vague title until it starts. */
 @media (prefers-reduced-motion: reduce) {
   .hero-word,
   .hero-reveal,
@@ -1294,8 +1294,8 @@ nav[aria-label="Navigation"]
     transform: none;
     animation: none !important;
   }
-  /* L'anneau, lui, RESTE : il ne décore pas, il désigne. On lui retire son
-     estompage — le shell l'efface au bout des deux mêmes secondes. */
+  /* The ring REMAINS: it does not decorate, it designates. We take away his
+     fading — the shell erases it after the same two seconds. */
   [data-settings-focus] {
     animation: none;
     box-shadow:
@@ -1304,43 +1304,43 @@ nav[aria-label="Navigation"]
   }
 }
 
-/* ─── Le shimmer balaie dans le sens de la lecture ────────────────────────────
-   `text-shimmer` (mangue-ui) est le signal « ça tourne » des surfaces de Numo :
-   l'action en vol d'un appel d'outil, l'en-tête d'un accordéon de travail, le
-   titre d'un bloc de raisonnement, la ligne d'une relecture de PR. Une bande
-   claire traverse un texte éteint — et jusqu'ici elle le traversait de DROITE à
-   GAUCHE, à rebours de la lecture.
+/* ─── The shimmer sweeps in the direction of playback ────────────────────────────
+   `text-shimmer` (mango-ui) is the “it’s running” signal from Numo surfaces:
+   the flying action of a tool call, the header of a working accordion, the
+   title of a block of reasoning, the line of a PR rereading. A band
+   clear crosses an extinguished text - and until now she crossed it from RIGHT to
+   LEFT, backwards reading.
 
-   La cause est un signe, pas une durée. Avec `background-size: 300%`, un
-   `background-position` de X% décale l'image de (largeur − 3×largeur)·X, donc
-   vers la GAUCHE à mesure que X grandit : à 0% la bande (au milieu du dégradé)
-   est à 1,5 largeur À DROITE du texte, à 100% elle est à 0,5 largeur à gauche.
-   Balayer avec le texte, c'est donc aller de 100% à 0%.
+   The cause is a sign, not a duration. With `background-size: 300%`, a
+   `background-position` of X% shifts the image by (width − 3×width)·X, so
+   towards the LEFT as X grows: at 0% the band (in the middle of the gradient)
+   is 1.5 widths TO THE RIGHT of the text, at 100% it is 0.5 widths to the left.
+   Swiping with the text therefore means going from 100% to 0%.
 
-   Échanger les deux bornes suffit, et il ne faut toucher qu'à elles : c'est
-   parce que la bande est hors du texte AUX DEUX bouts que les extrêmes sont
-   identiques et que la boucle n'a pas de couture. On redéfinit les seules
-   images-clés, pas l'utilitaire — mangue-ui arrive par l'@import du haut, cette
-   règle est plus bas, elle gagne. À retirer quand mangue-ui > 0.5.0 la porte. */
+   Swapping the two terminals is enough, and you only need to touch them: this is
+   because the tape is outside the text AT BOTH ends the extremes are
+   identical and the loop has no seam. We redefine the only
+   keyframes, not the utility — mango-ui arrives via the @import at the top, this
+   rule is lower, she wins. To be removed when mango-ui > 0.5.0 the door. */
 @keyframes text-shimmer {
   from { background-position: 100% center; }
   to { background-position: 0% center; }
 }
 
-/* ─── Couleurs de texte et de fond des pages (MIN-268) ────────────────────
-   Le document ne stocke QUE le nom de la couleur (cf.
-   components/pages/blocks/color.ts) : c'est ici, et seulement ici, qu'un nom
-   devient une valeur — donc une valeur par thème, et un changement de thème
-   qui recolore la page sans la réécrire.
+/* ─── Text and background colors of pages (MIN-268) ────────────────────
+   The document ONLY stores the name of the color (cf.
+   components/pages/blocks/color.ts): here, and only here, is a name
+   becomes a value — therefore a value per theme, and a change of theme
+   which recolors the page without rewriting it.
 
-   Les dix teintes sources sont celles des étiquettes de catégorie
-   (`CATEGORY_COLORS`, lib/category-colors.ts) : minddy n'a qu'une palette.
-   `lib/pages-color.test.ts` échoue si les deux divergent — c'est le seul lien
-   entre un fichier TS et une feuille de style, il ne peut pas être typé.
+   The ten source shades are those of the category labels
+   (`CATEGORY_COLORS`, lib/category-colors.ts): minddy only has one palette.
+   `lib/pages-color.test.ts` fails if the two diverge — it's the only link
+   between a TS file and a style sheet, it cannot be typed.
 
-   En sombre, on ne repose pas une seconde palette : on éclaircit la première
-   d'un même geste (`color-mix` vers le blanc), pour retrouver le contraste que
-   les teintes pleines perdent sur fond noir. */
+   In dark, you don't put down a second palette: you lighten the first
+   with the same gesture (`color-mix` towards white), to find the contrast that
+   full tones lose on a black background. */
 :root {
   --page-ink-red: #ef4444;
   --page-ink-orange: #f97316;
@@ -1400,9 +1400,9 @@ nav[aria-label="Navigation"]
 [data-page-back="pink"] { --page-tint: var(--page-color-pink); }
 [data-page-back="gray"] { --page-tint: var(--page-color-gray); }
 
-/* Un fond, pas un surligneur : une teinte très diluée, un rayon, et
-   `box-decoration-break` pour qu'un passage qui court sur deux lignes garde ses
-   coins arrondis aux DEUX bouts plutôt qu'au milieu. */
+/* A background, not a highlighter: a very diluted shade, a radius, and
+   `box-decoration-break` so that a passage that runs on two lines keeps its
+   rounded corners on BOTH ends rather than in the middle. */
 [data-page-back] {
   background-color: color-mix(in oklab, var(--page-tint) 16%, transparent);
   border-radius: 0.25rem;
@@ -1415,42 +1415,42 @@ nav[aria-label="Navigation"]
   background-color: color-mix(in oklab, var(--page-tint) 24%, transparent);
 }
 
-/* Le paragraphe d'une tâche hérite sinon du `[&_p]:my-2` du corps de page, ce
-   qui pousse le TEXTE vers le bas et laisse la case à cocher toute seule en
-   haut. Le carnet a la même règle, pour la même raison. */
+/* The paragraph of a task otherwise inherits the `[&_p]:my-2` of the body of the page, this
+   which pushes the TEXT down and leaves the checkbox alone in
+   high. The notebook has the same rule, for the same reason. */
 .page-editor .ProseMirror li[data-type="taskItem"] p {
   margin: 0;
 }
 
-/* ─── La GOUTTIÈRE se survole ELLE-MÊME ───────────────────────────────────
-   Le chrome d'un bloc (la poignée et le `+`) apparaît au survol du bloc, et
-   pas au survol de la bande vide à sa gauche — alors que c'est LÀ qu'on va
-   chercher la poignée. Le geste appris ailleurs est pourtant : viser la marge,
-   les boutons apparaissent. Il fallait donc traverser la colonne de texte
-   d'abord, puis revenir en arrière.
+/* ─── The GUTTER flies over ITSELF ───────────────────────────────────
+   The chrome of a block (the handle and the `+`) appears when hovering over the block, and
+   not when hovering over the empty strip to your left — even though that's THERE we're going
+   look for the handle. The gesture learned elsewhere is however: aim for the margin,
+   the buttons appear. So it was necessary to cross the column of text
+   first, then go back.
 
-   La cause est en un mot : l'extension écoute le `mousemove` de la VUE
-   ProseMirror (`handleDOMEvents`), et la gouttière est en dehors de cette
-   boîte — aucun événement n'y naît. Elle sait pourtant déjà quoi faire d'un
-   pointeur hors colonne : elle rabat les coordonnées dans le contenu avant de
-   chercher le bloc (`clampToContent`), donc un survol à hauteur d'un bloc mais
-   à gauche de lui désigne bien ce bloc.
+   The cause is in a nutshell: the extension listens to the `mousemove` of the VIEW
+   ProseMirror (`handleDOMEvents`), and the gutter is outside of this
+   box — no event is born there. However, she already knows what to do with a
+   pointer outside the column: it folds the coordinates into the content before
+   look for the block (`clampToContent`), so hover at the height of a block but
+   to the left of him clearly indicates this block.
 
-   Il suffit donc que la boîte de la vue ARRIVE jusque-là. Un rembourrage à
-   gauche l'étend sous la gouttière ; la marge négative exactement opposée
-   remet le texte où il était. Rien ne bouge à l'écran, et la bande vide fait
-   maintenant partie de la surface qui écoute.
+   It is therefore enough for the view box to ARRIVE there. A padding to
+   left extends it under the gutter; the exact opposite negative margin
+   put the text back where it was. Nothing moves on the screen, and the empty tape is
+   now part of the listening surface.
 
-   Les deux valeurs sont la RÉSERVE de la colonne (`GUTTER_HOVER`,
-   components/pages/block-actions.ts), pas la largeur des boutons : ceux-ci ne
-   tiennent que les 54 px collés au texte, mais la gouttière qu'on voit — et
-   qu'on vise — est la marge entière. La première version s'arrêtait aux
-   boutons, et laissait 42 px morts au bord gauche, là où la souris arrive
-   quand elle vient de la sidebar. Pas un pixel de plus non plus : au-delà, la
-   boîte sortirait de la colonne.
+   The two values ​​are the RESERVE column (`GUTTER_HOVER`,
+   components/pages/block-actions.ts), not the width of the buttons: these do not
+   hold only the 54 px stuck to the text, but the gutter that we see — and
+   that we aim for — is the entire margin. The first version stopped at
+   buttons, and left 42 dead px at the left edge, where the mouse arrives
+   when it comes from the sidebar. Not a pixel more either: beyond that, the
+   box would come out of the column.
 
-   Sous `md`, la colonne n'a que 24 px de retrait : la boîte étendue déborderait
-   du conteneur qui défile. Et il n'y a pas de survol sur un écran tactile. */
+   Under `md`, the column is only 24 px indented: the extended box would overflow
+   of the container that passes by. And there's no hovering on a touchscreen. */
 @media (min-width: 768px) {
   .page-editor[data-gutter] .ProseMirror {
     padding-left: 96px;
@@ -1458,17 +1458,17 @@ nav[aria-label="Navigation"]
   }
 }
 
-/* ─── Le DÉPLIANT (MIN-270) ───────────────────────────────────────────────
-   Ce bloc n'a AUCUN style par défaut, et c'est ce qui le rendait
-   incompréhensible : `@tiptap/extension-details` ne rend pas un `<details>`
-   HTML mais trois `div[data-type]`, et son bouton de repli arrive vide, sans
-   dimension. À l'écran : deux paragraphes empilés dont l'un disparaît parfois,
-   sans rien à cliquer. Les règles Tailwind du corps de page visaient, elles,
-   les vraies balises `<details>`/`<summary>` — elles ne s'appliquaient donc à
+/* ─── The FLYER (MIN-270) ─────────────────────── ────────────────────────
+   This block has NO style by default, and that's what made it
+   incomprehensible: `@tiptap/extension-details` does not return a `<details>`
+   HTML but three `div[data-type]`, and its fallback button arrives empty, without
+   dimension. On the screen: two stacked paragraphs, one of which sometimes disappears,
+   without anything to click. The Tailwind rules of the body of the page aimed to
+   the real `<details>`/`<summary>` tags — so they only applied to
    rien.
 
-   La forme retenue est celle de Notion : un chevron dans la marge, le résumé en
-   gras à côté, le corps en retrait sous les deux et aligné sur le résumé. */
+   The form chosen is that of Notion: a chevron in the margin, the summary in
+   bold next to it, the body indented below both and aligned with the summary. */
 .page-editor [data-type="details"] {
   display: grid;
   grid-template-columns: 1.25rem 1fr;
@@ -1477,15 +1477,15 @@ nav[aria-label="Navigation"]
   margin: 0.5rem 0;
 }
 
-/* Le bouton vit dans la première colonne, le reste du bloc dans la seconde. */
+/* The button lives in the first column, the rest of the block in the second. */
 .page-editor .page-details-toggle {
   grid-column: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 1.25rem;
-  /* La hauteur d'une ligne de texte : le chevron se centre sur le résumé, pas
-     sur le haut du bloc. */
+  /* The height of a line of text: the chevron centers on the summary, not
+     on the top of the block. */
   height: 1.75rem;
   border-radius: 0.25rem;
   color: var(--muted-foreground);
@@ -1512,8 +1512,8 @@ nav[aria-label="Navigation"]
   font-weight: 500;
   line-height: 1.75rem;
 }
-/* Le corps replié est masqué par l'attribut `hidden` que pose le node view ;
-   déplié, il respire un peu sous son résumé. */
+/* The folded body is hidden by the `hidden` attribute that the node view sets;
+   unfolded, it breathes a little under its summary. */
 .page-editor [data-type="detailsContent"] > :first-child {
   margin-top: 0.25rem;
 }
@@ -1524,11 +1524,11 @@ nav[aria-label="Navigation"]
   }
 }
 
-/* Le placeholder d'un bloc vide (MIN-270). Le plugin
-   (components/pages/block-placeholder.ts) pose `data-placeholder` et la classe
-   `is-empty` sur le bloc du curseur — il ne peint rien lui-même. Le carnet a sa
-   règle jumelle quelques centaines de lignes plus haut ; les deux surfaces sont
-   scopées séparément pour que la typographie de l'une ne déborde pas sur
+/* The placeholder of an empty block (MIN-270). The plugin
+   (components/pages/block-placeholder.ts) sets `data-placeholder` and class
+   `is-empty` on the cursor block — it doesn't paint anything itself. The notebook has its
+   twin ruler a few hundred lines higher; the two surfaces are
+   scoped separately so that the typography of one does not overflow
    l'autre. */
 .page-editor .is-empty::before {
   content: attr(data-placeholder);
@@ -1539,37 +1539,37 @@ nav[aria-label="Navigation"]
   opacity: 0.5;
 }
 
-/* ─── Le clignement d'un bloc (MIN-270) ───────────────────────────────────
-   Deux surfaces s'en servent, et pour la même raison : après un défilement,
-   rien ne distingue le bloc qu'on a DEMANDÉ de ses voisins arrivés à l'écran
-   en même temps. L'ancre d'un lien « copier le lien du bloc » l'allume à
-   l'ouverture de la page ; la table des matières l'allume au clic.
+/* ─── The blink of a block (MIN-270) ───────────────────────────────────
+   Two surfaces use it, and for the same reason: after scrolling,
+   nothing distinguishes the block we REQUESTED from its neighbors arriving on the screen
+   at the same time. The anchor of a link “copy block link” turns it on
+   opening the page; the table of contents turns it on when clicked.
 
-   C'est un CLIGNEMENT, pas une sélection : il s'efface tout seul, sinon on
-   croirait le bloc mis en surbrillance pour de bon, et il déborde du texte
-   (`box-shadow`) pour désigner le bloc entier, pas ses mots.
+   It's a BLINK, not a selection: it erases itself, otherwise we
+   would believe the highlighted block for real, and it overflows text
+   (`box-shadow`) to designate the entire block, not its words.
 
-   La couleur ne vient PAS de --primary, et c'est ce qui manquait : dans ce
-   produit --primary est l'ENCRE — presque noire en clair, presque blanche en
-   sombre. Un fond d'encre à 18 % est un gris pâle qui, le temps d'un
-   défilement, ne se voit pas passer ; le clignement était bien là et ne
-   désignait rien. Il lui faut une teinte d'ATTENTION, qui ne ressemble ni au
-   texte ni à une sélection : le bleu du registre des couleurs de bloc, dilué
-   assez pour rester doux, et déjà décliné dans les deux thèmes.
+   The color does NOT come from --primary, and that's what was missing: in this
+   --primary product is INK — almost black in light, almost white in
+   dark. An 18% ink background is a pale gray which, over a period of time,
+   scrolling, cannot be seen passing; the blink was there and did not
+   meant nothing. It needs a shade of ATTENTION, which neither resembles the
+   text nor to a selection: the blue of the block color register, diluted
+   enough to remain soft, and already available in both themes.
 
-   Un PULSE plutôt qu'un fond posé : deux battements valent mieux qu'un aplat,
-   parce que c'est le CHANGEMENT que l'œil attrape — surtout quand le
-   défilement vient de bouger toute la page sous lui.
+   A PULSE rather than a solid background: two beats are better than a solid,
+   because it is CHANGE that the eye catches — especially when the
+   scroll just moved the whole page under it.
 
-   Sous `prefers-reduced-motion`, on ne réduit pas la durée à néant (c'est ce
-   qui rendait l'ancienne version invisible chez qui a coché la case) : on
-   retire le battement et on TIENT le fond. C'est `flashBlock`
-   (components/pages/block-actions.ts) qui pose la classe et la retire. */
-/* Le LISERÉ d'un bloc COMMENTÉ (MIN-282) — « il y a une discussion ici ».
-   Posé par une décoration ProseMirror (components/pages/block-comments.ts), pas
-   par une mark : ce n'est pas du contenu, ça ne part ni en base ni dans la
-   projection markdown. Un trait à gauche, dans le retrait du texte plutôt que
-   dans la gouttière, déjà prise par la poignée et le `+`. */
+   Under `prefers-reduced-motion`, we do not reduce the duration to zero (this is
+   which made the old version invisible to those who checked the box): we
+   remove the beat and HOLD the bottom. It's `flashBlock`
+   (components/pages/block-actions.ts) which sets the class and removes it. */
+/* The EDGE of a COMMENTED block (MIN-282) — “there is a discussion here”.
+   Placed by a ProseMirror decoration (components/pages/block-comments.ts), not
+   by a mark: it is not content, it does not start either in the base or in the
+   markdown projection. A line to the left, indenting the text rather than
+   in the gutter, already taken by the handle and the `+`. */
 .page-block-commented {
   position: relative;
 }
@@ -1585,15 +1585,15 @@ nav[aria-label="Navigation"]
   background-color: color-mix(in oklab, var(--page-color-teal) 70%, transparent);
 }
 
-/* La PASTILLE d'un bloc commenté : le compte, et le bouton qui ouvre le fil.
-   Hors flux, dans la marge DROITE — la gauche est prise par la poignée et le
-   `+`. Elle ne pousse donc rien : un bloc commenté a exactement la même mise en
-   page que ses voisins, et c'est ce qui permet de la poser sur tous les blocs
-   sans déformer le document. */
+/* The PASTILLE of a commented block: the count, and the button that opens the thread.
+   Out of flow, in the RIGHT margin — the left is taken by the handle and the
+   `+`. It therefore does not push anything: a commented block has exactly the same layout.
+   page than its neighbors, and this is what allows it to be placed on all blocks
+   without distorting the document. */
 .page-block-comment-badge {
   position: absolute;
-  /* Dans la RÉSERVE de droite de la colonne (`md:pr-10`, 2,5 rem), pas
-     au-delà : plus loin, la pastille dépasserait du conteneur qui défile. */
+  /* In the RESERVE on the right of the column (`md:pr-10`, 2.5 rem), no
+     beyond: further, the pellet would protrude from the moving container. */
   right: -1.75rem;
   display: inline-flex;
   align-items: center;
@@ -1619,9 +1619,9 @@ nav[aria-label="Navigation"]
   height: 0.875rem;
 }
 
-/* Sous la largeur où la marge droite existe, la pastille revient DANS le flux,
-   en bout de bloc : mieux vaut un décalage d'une ligne qu'un bouton qui sort de
-   l'écran et qu'on ne peut plus cliquer. */
+/* Below the width where the right margin exists, the pad returns INTO the stream,
+   at the end of the block: better a shift of one line than a button that comes out of
+   the screen and you can no longer click. */
 @media (max-width: 48rem) {
   .page-block-comment-badge {
     position: static;
@@ -1664,20 +1664,20 @@ nav[aria-label="Navigation"]
   }
 }
 
-/* ── L'IMPRESSION d'un document (MIN-283) ──────────────────────────────────
-   Le PDF d'une page est ce que le navigateur imprime : pas de moteur PDF
-   serveur, donc pas de seconde définition de la mise en page à tenir. Ce qu'il
-   faut lui donner, c'est le document SEUL — sans le chrome de l'application ni
-   celui de la page publique.
+/* ── PRINTING a document (MIN-283) ─────────────────────────────────────────
+   The PDF of a page is what the browser prints: no PDF engine
+   server, so no second definition of the layout to hold. What he
+   you have to give it, it’s the document ONLY — without the application chrome or
+   that of the public page.
 
-   Le masquage passe par `visibility` et non par `display: none` : un
-   `display: none` sur les ancêtres emporterait le document avec eux, et un
-   conteneur en `position: fixed` ne s'imprimerait que sur la première feuille.
-   `visibility` laisse le flux intact, donc la pagination aussi.
+   Masking goes through `visibility` and not through `display: none`: a
+   `display: none` on the ancestors would take the document with them, and a
+   container in `position: fixed` would only print on the first sheet.
+   `visibility` leaves the flow intact, so the pagination too.
 
-   `data-print-mode` est posé par la vue d'impression (page-print-view.tsx) ;
-   sur une page publiée, il n'y a pas de chrome à masquer et un ⌘P ordinaire
-   suffit — d'où les règles inconditionnelles qui suivent. */
+   `data-print-mode` is set by the print view (page-print-view.tsx);
+   on a published page there is no chrome to hide and a plain ⌘P
+   is enough — hence the unconditional rules that follow. */
 @media print {
   html[data-print-mode] body * {
     visibility: hidden;
@@ -1694,53 +1694,53 @@ nav[aria-label="Navigation"]
     padding: 0;
   }
 
-  /* Un lien reste lisible ; son adresse, elle, ne s'imprime pas — un document
-     criblé d'URL entre parenthèses est illisible, et celles de minddy ne
-     mènent nulle part pour qui reçoit le PDF. */
+  /* A link remains readable; its address is not printed — a document
+     riddled with URLs in parentheses is unreadable, and minddy's are not
+     lead nowhere for whoever receives the PDF. */
   a {
     text-decoration: none;
     color: inherit;
   }
 
-  /* Ni fond ni ombre : l'encre coûte, et un bloc de code sur fond gris sort en
-     aplat sale sur la plupart des imprimantes. */
+  /* No background or shadow: the ink costs, and a block of code on a gray background comes out
+     dirty solid color on most printers. */
   body {
     background: #fff;
   }
 }
 
-/* ── App de bureau : par où se déplace la fenêtre ─────────────────────────────
-   MIN-291. La coquille masque la barre de titre native (`hiddenInset`) pour que
-   minddy n'ait pas une bande grise au-dessus de son propre en-tête. En échange,
-   macOS ne sait plus par où saisir la fenêtre : `-webkit-app-region` est une
-   propriété CSS, donc la réponse ne peut venir que d'ici. Sans ces règles, la
-   fenêtre ne se déplace pas DU TOUT.
+/* ── Desktop app: where the window moves ─────────────────────────────
+   MIN-291. The shell hides the native title bar (`hiddenInset`) so that
+   minddy does not have a gray band above its own header. In exchange,
+   macOS no longer knows where to enter the window: `-webkit-app-region` is a
+   CSS property, so the answer can only come from here. Without these rules, the
+   window does not move AT ALL.
 
-   L'attribut est posé sur <html> par components/desktop-chrome.tsx, uniquement
-   quand le pont existe. Dans un navigateur, rien de ce bloc ne s'applique. */
+   The attribute is set to <html> by components/desktop-chrome.tsx, only
+   when the bridge exists. In a browser, nothing in this block applies. */
 
-/* ── LA BANDE, ET ELLE EST LA SEULE ──────────────────────────────────────────
-   MIN-292. La prise vivait dans l'en-tête du shell et dans la ligne de marque de
-   la barre latérale — c'est-à-dire dans les deux meubles que la moitié des
-   écrans n'ont pas. Un audit en a trouvé SIX sans aucune prise, et la fenêtre y
-   était strictement immobile :
+/* ── THE GAND, AND SHE’S THE ONLY ONE ───────────────────── ─────────────────────
+   MIN-292. The socket lived in the shell header and in the mark line of
+   the sidebar — that is to say in the two pieces of furniture that half of the
+   screens do not have. An audit found SIX without any sockets, and the window there
+   was strictly still:
 
-     mode zen (il retire l'en-tête ET la barre), pages légales lisibles dans
-     l'app, board public `/f/`, page publiée `/p/`, vue partagée `/share/`,
-     et `not-found`.
+     zen mode (it removes the header AND the bar), legal pages readable in
+     the app, public board `/f/`, published page `/p/`, shared view `/share/`,
+     and `not-found`.
 
-   Chercher les écrans un par un pour leur ajouter une bande, c'est signer pour
-   recommencer au prochain. D'où l'inversion : **une seule bande, dans le layout
-   racine, sur tout ce que la fenêtre affiche.**
+   Searching for the screens one by one to add a strip to them means signing for
+   start again at the next one. Hence the inversion: **a single strip, in the layout
+   root, on everything the window displays.**
 
-   Elle fait la hauteur de l'en-tête de l'app (60 px, la ligne horizontale qui
-   traverse minddy — même hauteur que la ligne de marque et que le titre de la
-   barre secondaire). Ce n'est donc pas une bande de plus dans l'app : elle
-   recouvre exactement ce qui était DÉJÀ déplaçable, et ne change quelque chose
-   que là où il n'y avait rien.
+   It is the height of the app header (60 px, the horizontal line which
+   crosses minddy — same height as the mark line and title of the
+   secondary bar). It is therefore not one more band in the app: it
+   covers exactly what was ALREADY movable, and doesn't change anything
+   than where there was nothing.
 
-   Elle part de `top: 0` : les feux de circulation sont dessinés par macOS
-   PAR-DESSUS la vue web et c'est le système qui les sert, pas la page. */
+   It starts from `top: 0`: the traffic lights are drawn by macOS
+   ABOVE the web view and it is the system that serves them, not the page. */
 
 .desktop-drag-band {
   display: none;
@@ -1750,28 +1750,28 @@ html[data-desktop-app] .desktop-drag-band {
   position: fixed;
   inset: 0 0 auto 0;
   height: 60px;
-  /* Sous les voiles de dialogue (50) : une bande qui déplacerait la fenêtre
-     par-dessus une modale ouverte serait une prise là où l'app dit « réponds
+  /* Under the veils of dialogue (50): a strip that would move the window
+     over an open modal would be a hold where the app says "reply
      d'abord ». */
   z-index: 30;
   -webkit-app-region: drag;
 }
 
-/* ⚠ **Une zone `drag` AVALE l'événement**, y compris pour ce qui est dessiné
-   par-dessus : les régions sont des rectangles envoyés au système, résolus
-   avant que la page ne voie quoi que ce soit. Sans cette exception globale, tout
-   ce qui se clique dans les 60 premiers pixels de n'importe quel écran
-   deviendrait une poignée de fenêtre — la palette, le bouton « Nouveau », les
-   onglets d'un board, le lien d'une page légale.
+/* ⚠ **A `drag` zone SWALLOWS the event**, including what is drawn
+   over: regions are rectangles sent to the system, resolved
+   before the page sees anything. Without this global exception, everything
+   what clicks in the first 60 pixels of any screen
+   would become a window handle — the palette, the “New” button, the
+   tabs of a board, the link of a legal page.
 
-   Globale, donc, et non scopée à la bande : `no-drag` sur un élément qui n'est
-   dans aucune région `drag` ne fait rien du tout. Le coût est nul, et la portée
-   est ce qui rend la règle vraie sans avoir à savoir QUI est en haut de l'écran.
+   Global, therefore, and not scoped to the band: `no-drag` on an element which is not
+   in any region `drag` does nothing at all. The cost is zero, and the scope
+   is what makes the rule true without having to know WHO is at the top of the screen.
 
-   Elle est écrite APRÈS la bande, et l'ordre du document compte autant que
-   celui de la feuille : Chromium parcourt l'arbre de mise en page et un
-   `no-drag` creuse le `drag` rencontré avant lui. C'est pourquoi la bande est
-   rendue avant `{children}` dans app/layout.tsx. */
+   It is written AFTER the tape, and the order of the document matters as much as
+   that of the sheet: Chromium traverses the layout tree and a
+   `no-drag` digs the `drag` encountered before it. This is why the band is
+   rendered before `{children}` in app/layout.tsx. */
 html[data-desktop-app]
   :is(
     a,
@@ -1795,12 +1795,12 @@ html[data-desktop-app]
   -webkit-app-region: no-drag;
 }
 
-/* La sidebar secondaire est téléportée dans la gouttière du shell. Sa ligne
-   de titre ne se trouve donc pas dans le même sous-arbre que la bande fixe de
-   déplacement, qui la recouvre sinon avec son z-index. La placer au-dessus de
-   cette bande permet aux boutons Recherche, Filtrer et Ajouter de recevoir
-   leurs événements ; les descendants interactifs restent explicitement hors
-   de la zone de déplacement. */
+/* The secondary sidebar is teleported into the shell gutter. His line
+   of title is therefore not in the same subtree as the fixed band of
+   displacement, which otherwise covers it with its z-index. Place it above
+   this strip allows the Search, Filter and Add buttons to receive
+   their events; interactive descendants explicitly remain out
+   of the travel area. */
 html[data-desktop-app] .secondary-sidebar-header {
   position: relative;
   z-index: 31;
@@ -1830,20 +1830,20 @@ html[data-desktop-app] .secondary-sidebar-header
   -webkit-app-region: no-drag;
 }
 
-/* ⚠ **Les VOILES sont creusés, eux aussi** (MIN-308).
+/* ⚠ **The SAILS are dug, too** (MIN-308).
 
-   Le creusement ci-dessus ne vise que les éléments FOCUSABLES. Le contenu Radix
-   porte `tabindex="-1"`, il est donc pris ; mais les voiles, non — ils ne
-   portent qu'un `data-slot`, et celui de la palette vient de son propre paquet
-   et ne portait rien du tout. Or « cliquer à côté pour fermer » est un clic SUR
-   le voile : dans les 60 premiers pixels, il tombait dans la bande, macOS
-   l'avalait, et la fenêtre se mettait à glisser sous le curseur au lieu que le
-   dialogue se ferme. Déterministe, cent fois sur cent, et seulement au-dessus de
+   The digging above only targets FOCUSABLE elements. Radix content
+   carries `tabindex="-1"`, it is therefore taken; but the sails, no — they don’t
+   only carry a `data-slot`, and the one on the palette comes from its own package
+   and wore nothing at all. But “click next to close” is a click ON
+   the veil: in the first 60 pixels, it fell into the band, macOS
+   swallowed it, and the window began to slide under the cursor instead of the
+   dialog closes. Deterministic, a hundred times out of a hundred, and only above
    60 px.
 
-   Contrepartie assumée : voile ouvert, la bande ne déplace plus la fenêtre.
-   C'est le même choix que celui déjà fait pour la bande elle-même (`z-index: 30`,
-   sous les voiles à 50) — une prise là où l'app dit « réponds d'abord ». */
+   Assumed counterpart: sail open, the strip no longer moves the window.
+   This is the same choice as that already made for the band itself (`z-index: 30`,
+   under sail at 50) — a catch where the app says “answer first”. */
 html[data-desktop-app]
   :is(
     [data-slot="dialog-overlay"],
@@ -1856,68 +1856,68 @@ html[data-desktop-app]
   -webkit-app-region: no-drag;
 }
 
-/* ⚠ **Ni l'en-tête du shell ni la ligne de marque ne portent de prise** (MIN-309).
+/* ⚠ **Neither the shell header nor the mark line carries a socket** (MIN-309).
 
-   Elles en portaient une chacune, et les deux étaient REDONDANTES : la bande
-   ci-dessus est `position: fixed; inset: 0 0 auto 0; height: 60px`, elle couvre
-   déjà exactement la ligne de marque et les 60 premiers pixels de l'en-tête,
-   avec un rectangle qui ne bouge JAMAIS.
+   They each wore one, and both were REDUNDANT: the band
+   above is `position: fixed; inset: 0 0 auto 0; height: 60px`, it covers
+   already exactly the brand line and the first 60 pixels of the header,
+   with a rectangle that NEVER moves.
 
-   Les leurs, si. `.sidebar-brand-row` est enfant de la `motion.aside` dont
-   framer anime la largeur 56 ↔ 256 px à chaque survol de la barre, et l'en-tête
-   se décale avec la gouttière. Or la carte des régions est dérivée du layout :
-   Blink la recollecte en fin de layout et l'envoie au process navigateur, qui
-   seul arbitre si un `mousedown` appartient à la fenêtre ou à la page. Elle
-   était donc reconstruite et réexpédiée à chaque image de l'animation — une
-   trentaine de fois sur ProMotion pour un simple survol —, et pendant qu'elle
-   change elle est PÉRIMÉE : un arbitrage rendu sur une carte d'une image de
-   retard fait consommer par macOS un appui qui visait un contrôle.
+   Theirs, yes. `.sidebar-brand-row` is a child of `motion.aside` whose
+   framer animates the width 56 ↔ 256 px on each hover of the bar, and the header
+   shifts with the gutter. However, the map of regions is derived from the layout:
+   Blink collects it at the end of the layout and sends it to the browser process, which
+   sole arbiter if a `mousedown` belongs to the window or the page. She
+   was therefore reconstructed and resent at each frame of the animation — a
+   thirty times on ProMotion for a simple hover —, and while it
+   changes it is OUTDATED: an arbitration rendered on a card of an image of
+   delay causes macOS to consume support which was intended for control.
 
-   Si un en-tête plus haut que 60 px doit redevenir saisissable un jour, poser la
-   prise sur un pseudo-élément `fixed` — pas sur l'en-tête, dont le rectangle
-   suit la largeur animée. */
+   If a header higher than 60 px should become enterable again one day, set the
+   taken on a pseudo-element `fixed` — not on the header, whose rectangle
+   follows the animated width. */
 
-/* Les feux de circulation sont dessinés PAR-DESSUS la page, en haut à gauche.
-   Plutôt que de descendre la colonne pour leur faire une bande à eux — ce qui
-   pousse toute la barre latérale vers le bas et laisse voir une couture d'une
-   autre couleur au-dessus d'elle —, ils se posent DANS la ligne de marque, à la
-   place de la marque, qui passe à droite. La ligne garde ses 60 px et son fond :
-   rien ne bouge, il n'y a rien de neuf à l'écran, seulement une place échangée.
+/* The traffic lights are drawn ABOVE the page, at the top left.
+   Rather than going down the column to make a band of their own — which
+   pushes the entire sidebar down and reveals a seam of one
+   other color above it —, they arise IN the line of mark, at the
+   place de la marque, which passes to the right. The line keeps its 60 px and its background:
+   nothing moves, there is nothing new on the screen, only a place exchanged.
 
-   `data-window-buttons` est posé par components/app-sidebar.tsx quand les
-   boutons sont là. En mode RAIL ils sont retirés (56 px ne les tiennent pas) et
-   l'attribut disparaît avec eux : la marque revient à gauche, à sa place. Sous
-   768 px la barre n'est plus rendue du tout, et c'est l'en-tête qui leur garde
-   le coin (`HeaderWindowButtonsSlot`, components/desktop-window-buttons.tsx).
+   `data-window-buttons` is set by components/app-sidebar.tsx when the
+   buttons are there. In RAIL mode they are removed (56 px does not hold them) and
+   the attribute disappears with them: the mark returns to the left, in its place. Below
+   768 px the bar is no longer rendered at all, and it's the header that keeps them
+   the corner (`HeaderWindowButtonsSlot`, components/desktop-window-buttons.tsx).
 
-   La place qu'ils occupent — bord gauche à 19, trois pastilles de 14 px au pas
-   de 23, donc un bord droit à 79, plus une marge — est RELEVÉE sur une capture
-   d'écran système plutôt que déduite, et vit dans `WINDOW_BUTTONS_WIDTH`
-   (components/desktop-window-buttons.tsx). Ce bloc-ci n'en a pas besoin : la
-   marque se cale sur le bord droit de la ligne, pas sur eux. */
-/* ── La marque GLISSE, elle ne se téléporte pas ───────────────────────────────
-   MIN-293. La place s'ouvre et se referme en cours de route — on passe en plein
-   écran, macOS emmène les boutons en haut de l'écran, et la ligne n'a plus rien
-   à leur garder ; le rail se replie, idem. La marque sautait alors d'un bord à
-   l'autre, sans transition, ce qui donne à toute la barre l'air de se recharger.
+   The place they occupy — left edge at 19, three 14 px pellets at a step
+   of 23, therefore a straight edge at 79, plus a margin - is NOTICED on a capture
+   system screen rather than inferred, and lives in `WINDOW_BUTTONS_WIDTH`
+   (components/desktop-window-buttons.tsx). This block does not need it: the
+   mark snaps to the right edge of the line, not to them. */
+/* ── The GLISSE brand, it does not teleport ───────────────────────────────
+   MIN-293. The place opens and closes along the way — we pass right through
+   screen, macOS takes the buttons to the top of the screen, and the line no longer has anything
+   to keep for them; the rail folds, same thing. The mark then jumped from one edge to
+   the other, without transition, which makes the whole bar seem to be reloading.
 
-   `justify-content` et `padding` ne s'animent pas (le second, si, mais il
-   pousserait la marque au lieu de la déplacer). D'où la mise en scène : la ligne
-   devient un CONTENEUR de requête, et la marque se translate de la largeur qui
-   reste — `100cqw` est la largeur de contenu de la ligne (hors gouttière), `100%`
-   celle de la marque elle-même. La différence est exactement le trajet, à toute
-   largeur de barre, sans un seul chiffre en dur et sans rien mesurer en JS.
+   `justify-content` and `padding` do not animate (the second, yes, but it
+   would push the mark instead of moving it). Hence the staging: the line
+   becomes a query CONTAINER, and the mark translates by the width that
+   rest — `100cqw` is the content width of the line (excluding gutter), `100%`
+   that of the brand itself. The difference is exactly the journey, at any
+   bar width, without a single hard number and without measuring anything in JS.
 
-   L'animation n'est ARMÉE qu'une fois le premier état de la fenêtre reçu
-   (`data-window-buttons-ready`, posé par components/app-sidebar.tsx) : avant la
-   réponse du pont, la place vaut « fermée » par défaut, et animer ce
-   rattrapage-là ferait démarrer l'app sur un logo qui traverse sa barre.
+   The animation is only ARMED once the first window state is received
+   (`data-window-buttons-ready`, set by components/app-sidebar.tsx): before the
+   response from the bridge, the place is “closed” by default, and animate this
+   catching up there would start the app on a logo crossing its bar.
 
-   ⚠ Et cette ligne ne porte **pas** de prise de fenêtre, par MIN-309 ci-dessus :
-   la bande `fixed` de 60 px la couvre déjà, et l'argument y vaut ici a fortiori
-   — `container-type: inline-size` fait de cette ligne un conteneur dont la
-   largeur s'anime à chaque survol, soit exactement le rectangle mouvant dont
-   MIN-309 explique qu'il périme la carte des régions image après image. */
+   ⚠ And this line does **not** carry a window socket, per MIN-309 above:
+   the `fixed` band of 60 px already covers it, and the argument is valid here a fortiori
+   — `container-type: inline-size` makes this line a container whose
+   width comes to life with each hover, i.e. exactly the moving rectangle of which
+   MIN-309 explains that the map of the regions is outdated image after image. */
 html[data-desktop-app] .sidebar-brand-row {
   container-type: inline-size;
 }
@@ -1926,20 +1926,20 @@ html[data-desktop-app] .sidebar-brand-row[data-window-buttons] .sidebar-brand-ma
   transform: translateX(calc(100cqw - 100%));
 }
 
-/* ⚠ **Pas de transition quand la BARRE s'anime**, et c'est le contraire d'un
-   oubli. `100cqw` suit la largeur de la ligne en temps réel : quand le rail se
-   déplie, la cible du `translateX` bouge déjà, sur la courbe de framer. Poser un
-   assouplissement par-dessus, c'est amortir une valeur qui s'anime déjà — le
-   logo prend du retard sur sa propre barre et lui court après. Vu à l'usage,
-   et c'est exactement ce qu'on ne veut pas : ces deux-là ne font qu'un.
+/* ⚠ **No transition when the BAR comes alive**, and it is the opposite of a
+   oversight. `100cqw` follows the width of the line in real time: when the rail is
+   unfolds, the target of `translateX` is already moving, on the framer curve. Ask a
+   relaxation on top of it is to dampen a value which is already coming to life - the
+   logo falls behind its own bar and runs after it. Seen in use,
+   and that's exactly what we don't want: these two are one.
 
-   Sans transition, la marque colle à la largeur au pixel près, gratuitement.
-   Le mouvement qu'on voulait animer est l'AUTRE — le plein écran, où la place
-   s'ouvre ou se referme sans que la barre bouge d'un pixel, et où rien ne
-   porterait le logo s'il ne glissait pas de lui-même.
+   Without transition, the brand sticks to the width to the pixel, for free.
+   The movement we wanted to animate is the OTHER — the full screen, where the place
+   opens or closes without the bar moving a pixel, and where nothing
+   would carry the logo if it didn't slide off on its own.
 
-   `data-rail` est posé par components/app-sidebar.tsx quand la barre est en
-   mode rail, c'est-à-dire dans le seul état où sa largeur change. */
+   `data-rail` is set by components/app-sidebar.tsx when the bar is in
+   rail mode, that is to say in the only state where its width changes. */
 html[data-desktop-app]
   .sidebar-brand-row[data-window-buttons-ready]:not([data-rail])
   .sidebar-brand-mark {

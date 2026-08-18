@@ -1,15 +1,15 @@
-// Jira CSV export — table d'alias, plus les deux singularités du format.
+// Jira CSV export — alias table, plus the two format singularities.
 //
-// 1. Les champs multi-valués sortent en colonnes RÉPÉTÉES ("Labels", "Labels",
-//    …). Rien à faire ici : un plan assigne les colonnes par index, donc les
-//    trois « Labels » visent le même champ et `applyMapping` les concatène.
-// 2. Une ligne répond À LA FOIS à sa clé (PROJ-12) et à son id numérique, parce
-//    que « Parent » référence l'une ou l'autre selon la version de Jira — d'où
+// 1. Multi-valued fields output in REPEATED columns ("Labels", "Labels",
+// …). Nothing to do here: a plan assigns the columns by index, therefore the
+// three “Labels” target the same field and `applyMapping` concatenates them.
+// 2. A line responds to BOTH its key (PROJ-12) and its numeric id, because
+// that “Parent” references one or the other depending on the Jira version — hence
 //    deux colonnes `externalKey`.
 //
-// Les points d'histoire vivent dans un champ maison dont l'en-tête exact varie
-// (« Custom field (Story Points) », « Story point estimate », …) : impossible à
-// aliaser, on le cherche.
+// Story points live in a house field whose exact header varies
+// (“Custom field (Story Points)”, “Story point estimate”, …): impossible to
+// alias, we are looking for it.
 
 import type { ColumnAliases } from "@/lib/import/types";
 import type { CsvTable } from "@/lib/import/normalize";
@@ -29,7 +29,7 @@ export const JIRA_COLUMN_ALIASES: ColumnAliases = [
   ["parent", ["parent key", "parent", "parent id"]],
 ];
 
-/** Le nom normalisé de la colonne de points, s'il y en a une. */
+/** The standardized name of the points column, if there is one. */
 export function jiraStoryPointsHeader(table: CsvTable): string | null {
   for (const name of table.headerIndex.keys()) {
     if (name.includes("story point")) return name;

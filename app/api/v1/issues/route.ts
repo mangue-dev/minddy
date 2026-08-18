@@ -10,14 +10,14 @@ import { createIssueForProject } from "@/lib/server/create-issue";
 import { isPriority, isEffort } from "@/lib/issue-validation";
 
 /**
- * POST /api/v1/issues — API publique d'intégration (Bearer mdy_…). Crée une
- * issue au statut 'triage' attribuée à l'intégration. Champs acceptés : title
- * (requis), description, priority, effort, categories (ids). Tout le reste est
- * ignoré — la whitelist ci-dessous est le point d'enforcement (pas d'assignee,
- * de parent ni de statut pilotables de l'extérieur).
+ * POST /api/v1/issues — Public integration API (Bearer mdy_…). Create a
+ * outcome with 'triage' status attributed to integration. Accepted fields: title
+ * (required), description, priority, effort, categories (ids). Everything else is
+ * ignored — the whitelist below is the enforcement point (not assigned,
+ * parent or status controllable from the outside).
  */
-// Bornes (MIN-118), alignées sur le cœur de création : au-delà, refus explicite
-// (le cœur tronquerait en silence — mauvaise DX pour un intégrateur externe).
+// Terminals (MIN-118), aligned with the heart of creation: beyond, explicit refusal
+// (the core would truncate silently — bad DX for an external integrator).
 const MAX_TITLE_LENGTH = 500;
 const MAX_DESCRIPTION_LENGTH = 65_536;
 const MAX_CATEGORIES = 50;
@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
 
   let body: Record<string, unknown>;
   try {
-    // Un corps non-objet (`null`, chaîne, tableau) est du JSON valide : refusé
-    // ici plutôt que de crasher sur un accès de champ plus bas.
+    // A non-object body (`null`, string, array) is valid JSON: refused
+    // here rather than crashing on a lower field access.
     const parsed: unknown = await request.json();
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       return publicApiError(400, "invalid_json", "Request body must be a JSON object.");
@@ -50,8 +50,8 @@ export async function POST(request: NextRequest) {
     return publicApiError(400, "invalid_json", "Request body must be valid JSON.");
   }
 
-  // Validation stricte : contrairement au cœur interne (drop silencieux), une
-  // valeur invalide est refusée — meilleure DX pour l'intégrateur externe.
+  // Strict validation: unlike the internal core (silent drop), a
+  // invalid value is refused — better DX for the external integrator.
   const title = typeof body.title === "string" ? body.title.trim() : "";
   if (!title) {
     return publicApiError(422, "title_required", "A non-empty title is required.");
@@ -147,12 +147,12 @@ export async function POST(request: NextRequest) {
   });
 
   if (!result.ok) {
-    // La limite d'issues du plan du owner (MIN-72) n'est PAS une panne : c'est
-    // un refus définitif tant que rien ne change côté compte. La renvoyer en 500
-    // disait « réessaie » à un client qui n'aurait jamais pu réussir — il
-    // retentait sans fin, et personne n'apprenait la vraie cause. Les routes de
-    // l'app la rendent en 403 localisé depuis le début ; ici c'est le même 403,
-    // avec un code stable sur lequel brancher un message ou un CTA.
+    // The owner's plan issue limit (MIN-72) is NOT a failure: it is
+    // a definitive refusal as long as nothing changes on the account side. Send it back in 500
+    // said “try again” to a client who could never have succeeded — he
+    // resounded endlessly, and no one learned the real cause. The roads of
+    // the app renders it in 403 located from the beginning; here it's the same 403,
+    // with stable code to plug a message or CTA into.
     if (result.errorKey === "issueLimitReached") {
       const limit = result.params?.limit;
       return publicApiError(

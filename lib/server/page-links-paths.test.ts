@@ -1,44 +1,42 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-// `typescript-api` est un alias vers `typescript@5` (cf. package.json et CLAUDE.md) :
-// depuis MIN-180 le dépôt vérifie avec `typescript@7`, qui ne livre plus l'API
-// du compilateur. Les tests structurels ont donc leur propre TypeScript, en JS.
+// `typescript-api` is an alias to `typescript@5` (see package.json and CLAUDE.md):
+// since MIN-180 the repository checks with `typescript@7`, which no longer ships the API
+// from the compiler. Structural tests therefore have their own TypeScript, in JS.
 import ts from "typescript-api";
 import { describe, expect, it } from "vitest";
 
 /**
- * MIN-279 — les rétroliens sont écrits par TOUS les chemins d'écriture, ou ils
- * mentent.
+ * MIN-279 — trackbacks are written by ALL write paths, or they
+ * lie.
  *
- * `page_links` est une table DÉRIVÉE, comme `pages.search_text` (MIN-276) et
- * comme l'historique (MIN-277). Rien, ni dans le schéma ni dans les types,
- * n'oblige un chemin d'écriture à la tenir à jour. Et le défaut a ici une
- * propriété désagréable de plus : il est invisible **depuis la surface qu'on
- * vient d'écrire**. Un ticket dont la description cite « @Spec » s'affiche
- * parfaitement ; c'est la page Spec, ailleurs, chez quelqu'un d'autre, qui
- * ignorera pour toujours qu'on s'appuie sur elle.
+ * `page_links` is a DERIVED table, like `pages.search_text` (MIN-276) and
+ * like history (MIN-277). Nothing, neither in the schema nor in the types,
+ * forces a write path to keep it up to date. And the default here has one more unpleasant property: it is invisible **from the surface that we have just written**. A ticket whose description quotes "@Spec" displays
+ * perfectly; it's the Spec page, somewhere else, at someone else's, which
+ * will forever be unaware that it's being relied on.
  *
- * C'est exactement le genre de trou qu'un test de comportement ne trouve pas :
- * il faudrait avoir DEVINÉ le chemin manquant pour écrire le cas qui le couvre.
- * D'où un test STRUCTUREL, qui PARCOURT les fichiers au lieu d'énumérer des
- * scénarios, et qui tient en une règle par famille :
+ * This is exactly the kind of hole that a behavior test doesn't find:
+ * you'd have to have GUESSED the missing path to write the case that does covers.
+ * Hence a STRUCTURAL test, which GOES through the files instead of listing
+ * scenarios, and which contains one rule per family:
  *
- *  • **une DESCRIPTION** — dans create-issue.ts, update-issue.ts et
- *    objectives.ts, toute fonction qui appelle `notifyDescriptionMentions`
- *    appelle `queuePageLinks`. Le marqueur n'est pas arbitraire : c'est déjà le
- *    point de convergence de « une description vient d'être écrite », celui par
- *    lequel passent la route, le MCP (`minddy_edit_issue_text`,
- *    `minddy_update_objective`), Numo et l'agent de code — tous repassent par
- *    `updateIssueFields` / `updateObjective`.
+ * • **a DESCRIPTION** — in create-issue.ts, update-issue.ts and
+ * objectives.ts, any function that calls `notifyDescriptionMentions`
+ * calls `queuePageLinks`. The marker is not arbitrary: it is already the
+ * point of convergence of "a description has just been written", the one by
+ * which the route, the MCP (`minddy_edit_issue_text`,
+ * `minddy_update_objective`), Numo and the code agent pass — all pass again by
+ * `updateIssueFields` / `updateObjective`.
  *
- *  • **un CORPS de page** — dans pages.ts, toute fonction qui appelle
- *    `queueSearchText` appelle `queuePageBodyLinks`. Même marqueur que MIN-276,
- *    pour la même raison : les deux dérivent du même texte, au même instant.
+ * • **a page BODY** — in pages.ts, any function that calls
+ * `queueSearchText` calls `queuePageBodyLinks`. Same marker as MIN-276,
+ * for the same reason: both derive from the same text, at the same time.
  *
- * Ce que le test ne prétend pas couvrir : que la dérivation produise les BONS
- * liens. Ça, c'est `page-links.test.ts`, qui fait tourner le vrai module sur une
- * table en mémoire.
+ * What the test does not claim to cover: that the derivation produces the GOOD
+ * links. This is `page-links.test.ts`, which runs the real module on a
+ * table in memory.
  */
 
 function parse(relative: string): ts.SourceFile {
@@ -51,7 +49,7 @@ function parse(relative: string): ts.SourceFile {
   );
 }
 
-/** Le nom de la fonction qui contient ce nœud — ce qu'on nomme dans l'échec. */
+/** The name of the function that contains this node — what we call it in failure. */
 function enclosingFunction(node: ts.Node): string {
   let cursor: ts.Node | undefined = node;
   while (cursor) {
@@ -70,13 +68,13 @@ function enclosingFunction(node: ts.Node): string {
 }
 
 /**
- * Les fonctions d'un fichier qui appellent cette fonction-là, par leur nom.
+ * The functions of a file which call this function, by their name.
  *
- * La fonction ENGLOBANTE et pas la fonction immédiate : dans create-issue.ts et
- * update-issue.ts, les effets de bord vivent dans une closure `runSideEffects`
- * déclarée à l'intérieur du geste — c'est bien le geste qu'on veut nommer, mais
- * la closure est un nom stable qui le désigne, et les deux marqueurs y tombent
- * ensemble. C'est tout ce que la règle demande : les deux au MÊME endroit.
+ * The ENCLOSING function and not the immediate function: in create-issue.ts and
+ * update-issue.ts, the side effects live in a closure `runSideEffects`
+ * declared inside the gesture — it is indeed the gesture that we want to name, but
+ * the closure is a stable name which designates it, and the two markers fall there
+ * together. That's all the rule asks for: both in the SAME place.
  */
 function callersOf(src: ts.SourceFile, callee: string): Set<string> {
   const found = new Set<string>();
@@ -115,9 +113,9 @@ describe("les chemins d'écriture d'une description", () => {
       }
     }
 
-    // Le test ne vaut que s'il VOIT les chemins : une refonte qui les rendrait
-    // invisibles à l'analyse le laisserait passer en silence. Quatre aujourd'hui
-    // — création et modification, d'un ticket et d'un objectif.
+    // The test is only valid if it SEES the paths: a redesign which would make them
+    // invisible to analysis would let it pass silently. Four today
+    // — creation and modification of a ticket and a goal.
     expect(seen).toBeGreaterThanOrEqual(4);
 
     expect(

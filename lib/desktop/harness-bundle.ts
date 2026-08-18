@@ -1,92 +1,92 @@
 /**
- * LE HARNESS SUR LA MACHINE (MIN-293) — la moitié qui se décide sans disque.
+ * THE HARNESS ON THE MACHINE (MIN-293) — the half that is decided without a disc.
  *
  * ## Ce que ce fichier garde
  *
- * `.agent-vm/main.js` est **le seul code non signé par Apple que l'app de bureau
- * exécute**, et il vit sous `userData`, c'est-à-dire dans un dossier
- * **inscriptible par le modèle sous le même UID** — un tour qui le réécrit
- * capterait, au tour suivant, le bail d'exécution locale, la clé du modèle et
- * l'`authUrl` du dépôt.
+ * `.agent-vm/main.js` is **the only code not signed by Apple that the desktop app
+ * executes**, and it lives under `userData`, that is to say in a folder
+ * **writable by the model under the same UID** — a trick that rewrites it
+ * would capture, in the next round, the local execution lease, the model key and
+ * the `authUrl` of the repository.
  *
- * D'où la règle, et elle n'est pas négociable : **l'empreinte se vérifie sur le
- * fichier du disque, juste avant le fork.** Pas au téléchargement — au
- * téléchargement, TLS a déjà fait le travail et le fichier n'a pas encore eu le
- * temps d'être réécrit. Ce qu'on vérifie n'est pas ce qu'on a reçu, c'est ce
- * qu'on s'apprête à exécuter.
+ * Hence the rule, and it is not negotiable: **the imprint is verified on the
+ * file from the disk, just before the fork.** Not when downloading — at
+ * download, TLS has already done the work and the file has not yet had the
+ * time to be rewritten. What we check is not what we received, it is what
+ * that we are about to execute.
  *
- * ## Pourquoi il est téléchargé et pas embarqué
+ * ## Why is it downloaded and not embedded
  *
- * Le contrat entre le harness et le plan de contrôle est typé et il bouge
- * ([vm/protocol.ts](../server/agent/vm/protocol.ts)). Une app installée il y a
- * deux mois ne doit pas jouer un tour avec un harness de deux mois. Et
- * l'embarquer le ferait entrer dans l'empreinte de republication
+ * The contract between the harness and the control plane is typed and it moves
+ * ([vm/protocol.ts](../server/agent/vm/protocol.ts)). An app installed ago
+ * two months should not play a trick with a two month harness. And
+ * embedding it would bring it into the repost imprint
  * ([desktop-fingerprint.mjs](../../scripts/desktop-fingerprint.mjs)) : un
- * mouvement de `protocol.ts` coûterait une notarisation et 120 Mo téléchargés
- * par tout le monde, pour un fichier de 280 Ko.
+ * movement of `protocol.ts` would cost a notarization and 120 MB downloaded
+ * by everyone, for a 280 KB file.
  *
- * ## Le bundle SUIT L'ORIGINE ACTIVE
+ * ## The bundle FOLLOWS THE ACTIVE ORIGIN
  *
- * Il est demandé à l'origine du canal (`desktopOriginForChannel`), jamais à une
- * constante. Une coquille en preview qui jouerait un tour avec le harness de
- * production ferait diverger le contrat typé **en silence** : les deux
- * fichiers `protocol.ts` ne sont pas le même, et rien dans le job ne le dirait.
- * C'est aussi ce qui fait marcher le développement contre `localhost`.
+ * It is requested at the origin of the channel (`desktopOriginForChannel`), never at a
+ * constant. A shell in preview which would play a trick with the harness of
+ * production would cause the typed contract to diverge **silently**: both
+ * `protocol.ts` files are not the same, and nothing in the job would say so.
+ * This is also what makes development work against `localhost`.
  *
- * ## Le rangement, et ce que le nom du fichier porte
+ * ## Storage, and what the file name means
  *
- * Un fichier par empreinte, sous `<userData>/harness/`. Le nom PORTE l'empreinte,
- * ce qui donne deux propriétés gratuites : deux runs simultanés sur des bundles
- * différents (bascule de canal en plein tour) ne se marchent pas dessus, et le
- * ménage se fait par comparaison de noms, sans lire un octet.
+ * One file per fingerprint, under `<userData>/harness/`. The name BEARS the imprint,
+ * which gives two free properties: two simultaneous runs on bundles
+ * different (channel switch in full turn) do not work on it, and the
+ * housekeeping is done by comparing names, without reading a byte.
  *
- * Décisions ici, `fs` et `fetch` dans [desktop/src/launcher.ts](../../desktop/src/launcher.ts) —
+ * Decisions here, `fs` and `fetch` in [desktop/src/launcher.ts](../../desktop/src/launcher.ts) —
  * `vitest` ne collecte pas `desktop/src/`
  * ([local-surface-coverage.test.ts](../server/agent/local-surface-coverage.test.ts)).
  */
 
-/** Le dossier des bundles, sous `userData`. */
+/** The bundles folder, under `userData`. */
 export const HARNESS_DIR_NAME = "harness";
 
-/** Le chemin, sous `userData`, du manifeste servi par l'origine active. */
+/** The path, under `userData`, of the manifest served by the active origin. */
 export const HARNESS_MANIFEST_PATH = "/api/desktop/harness";
 
-/** Et celui des octets. */
+/** And that of bytes. */
 export const HARNESS_BUNDLE_PATH = "/api/desktop/harness/bundle";
 
 /**
- * Plafond de ce qu'on accepte de télécharger. Le bundle fait ~280 Ko et son
- * propre build refuse au-delà de 4 Mo
- * ([build-agent-vm.mjs](../../scripts/build-agent-vm.mjs)) : au-delà de ce
- * plafond-ci, ce n'est plus notre fichier, et il n'y a rien à en faire.
+ * Ceiling of what we agree to download. The bundle is ~280 KB and its
+ * own build refuses beyond 4 MB
+ * ([build-agent-vm.mjs](../../scripts/build-agent-vm.mjs)): beyond this
+ * ceiling here, it is no longer our file, and there is nothing to do with it.
  */
 export const HARNESS_MAX_BYTES = 8 * 1024 * 1024;
 
-/** Le manifeste, tel que l'origine active le sert. */
+/** The manifest, as the active origin serves. */
 export interface HarnessManifest {
   readonly protocolVersion: number;
   readonly opencodeVersion: string;
-  /** Empreinte hexadécimale minuscule du bundle. */
+  /** Lowercase hexadecimal fingerprint of the bundle. */
   readonly sha256: string;
   readonly bytes: number;
 }
 
 /**
- * Pourquoi la machine ne peut pas exécuter de harness.
+ * Why the machine cannot perform harness.
  *
- * - `manifest_unreachable` — l'origine n'a pas répondu, ou a refusé. C'est aussi
- *   le cas d'une session expirée : le manifeste est authentifié ;
- * - `manifest_invalid` — elle a répondu autre chose qu'un manifeste. Un portail
- *   captif, un proxy d'entreprise, une page d'erreur HTML ;
- * - `protocol_mismatch` — **le seul refus qui ne vient pas d'une panne** : cette
- *   version de l'app connaît un contrat que le déploiement ne sert plus, ou
- *   l'inverse. Il vaut mieux le dire ici que de laisser `parseVmJob` le
- *   découvrir après le fork, où il n'y a plus qu'un journal pour en parler ;
- * - `download_failed` — le manifeste était bon, les octets non ;
- * - `fingerprint_mismatch` — **le refus qui compte.** Les octets sur le disque ne
- *   sont pas ceux que l'origine a annoncés. Sur un téléchargement c'est un
- *   incident réseau ; juste avant un fork, c'est quelqu'un qui a réécrit le
- *   harness, et on ne l'exécute pas.
+ * - `manifest_unreachable` — the originator did not respond, or refused. It is also
+ * the case of an expired session: the manifest is authenticated;
+ * - `manifest_invalid` — she answered something other than a manifesto. A portal
+ * captive, enterprise proxy, HTML error page;
+ * - `protocol_mismatch` — **the only refusal that does not come from a breakdown**: this
+ * version of the app knows a contract that the deployment no longer serves, or
+ * the opposite. It's better to say it here than to let `parseVmJob`
+ * discover after the fork, where there is only one newspaper to talk about it;
+ * - `download_failed` — the manifest was good, the bytes were not;
+ * - `fingerprint_mismatch` — **the refusal that counts.** The bytes on the disk do not
+ * are not those originally announced. On a download it's a
+ * network incident; just before a fork, someone rewrote the
+ * harness, and we don't execute it.
  */
 export type HarnessRefusal =
   | "manifest_unreachable"
@@ -95,19 +95,19 @@ export type HarnessRefusal =
   | "download_failed"
   | "fingerprint_mismatch";
 
-/** Le nom du fichier d'un bundle. L'empreinte EST le nom (cf. en-tête). */
+/** The file name of a bundle. The imprint IS the name (see header). */
 export function harnessBundleFileName(sha256: string): string {
   return `main-${sha256.slice(0, 32)}.js`;
 }
 
 /**
- * Le manifeste relu de ce que l'origine a répondu — ou `null`.
+ * The manifest reread what the origin responded — or `null`.
  *
- * Tout est vérifié, y compris ce qui « ne peut pas » être faux : ce JSON décide
- * du code qu'on va exécuter, et il arrive par le réseau. Une empreinte qui ne
- * serait pas 64 caractères hexadécimaux ne peut pas être comparée à un hash, et
- * la comparer quand même rendrait `false` — c'est-à-dire un refus, mais pour la
- * mauvaise raison, et l'utilisateur lirait « le harness a été modifié ».
+ * Everything is checked, including what “cannot” be false: this JSON decides
+ * of the code that we are going to execute, and it arrives via the network. A footprint that
+ * would not 64 hexadecimal characters cannot be compared to a hash, and
+ * comparing it anyway would make `false` — that is to say a refusal, but for the
+ * wrong reason, and the user would read "the harness has been modified".
  */
 export function parseHarnessManifest(raw: unknown): HarnessManifest | null {
   if (typeof raw !== "object" || raw === null) return null;
@@ -120,9 +120,9 @@ export function parseHarnessManifest(raw: unknown): HarnessManifest | null {
   return { protocolVersion, opencodeVersion, sha256, bytes };
 }
 
-/** Ce que la coquille a trouvé sur le disque pour ce manifeste. */
+/** What the shell found on the disk for this manifest. */
 export interface CachedBundle {
-  /** L'empreinte RECALCULÉE du fichier, jamais celle qu'on avait notée. */
+  /** The RECALCULATED fingerprint of the file, never the one we noted. */
   readonly sha256: string;
   readonly bytes: number;
 }
@@ -133,15 +133,15 @@ export type BundleDecision =
   | { readonly action: "refuse"; readonly reason: HarnessRefusal };
 
 /**
- * FAUT-IL TÉLÉCHARGER CE BUNDLE ?
+ * SHOULD YOU DOWNLOAD THIS BUNDLE?
  *
- * `cached` est ce qu'on a **rehashé** sur le disque, pas ce qu'on croyait y
- * avoir mis. C'est toute la différence : une note prise au téléchargement dirait
- * seulement ce qu'on a écrit, et le fichier a pu être réécrit depuis.
+ * `cached` is what we **rehashed** on the disk, not what we thought
+ * having put. That's all the difference: a note taken when downloading would say
+ * only what we wrote, and the file could have been rewritten since.
  *
- * `expectedProtocol` est le `VM_PROTOCOL_VERSION` que CETTE version de l'app
- * connaît. Elle ne l'utilise pas elle-même — c'est le harness qui refusera un
- * job d'une autre version — mais elle sait le lire, et le refus vaut mieux ici.
+ * `expectedProtocol` is the `VM_PROTOCOL_VERSION` that THIS version of the app
+ * knows. She doesn't use it herself — it's the harness that will refuse a
+ * job from another version — but she knows how to read it, and refusal is better here.
  */
 export function bundleDecision(
   manifest: HarnessManifest,
@@ -158,12 +158,12 @@ export function bundleDecision(
 }
 
 /**
- * LES OCTETS REÇUS SONT-ILS CEUX QU'ON ATTENDAIT ?
+ * ARE THE BYTES RECEIVED THOSE WE EXPECTED?
  *
- * La taille d'abord, et pas par optimisation : une réponse tronquée est le cas
- * ordinaire (réseau coupé, proxy), et son diagnostic n'est pas le même qu'une
- * empreinte qui diverge. Confondre les deux ferait lire « le harness a été
- * modifié » à quelqu'un dont le wifi a lâché.
+ * Size first, not by optimization: a truncated answer is the case
+ * ordinary (network cut, proxy), and its diagnosis is not the same as a
+ * diverging footprint. Confusing the two would read “the harness was
+ * modified” to someone whose wifi has failed.
  */
 export function verifyDownload(
   received: { sha256: string; bytes: number },
@@ -175,13 +175,13 @@ export function verifyDownload(
 }
 
 /**
- * LE DERNIER CONTRÔLE, celui qui a lieu à un cheveu du `fork`.
+ * THE LAST CHECK, the one that takes place a hair's breadth from `fork`.
  *
- * Séparé de `verifyDownload` bien que la comparaison soit la même, parce que ce
- * qu'ils PROUVENT n'est pas la même chose et que leur diagnostic ne doit pas
- * l'être non plus. Ici, une divergence n'est jamais un incident réseau : le
- * fichier a été écrit par nous, vérifié par nous, et quelque chose l'a changé
- * entre-temps. On ne réessaie pas, on ne retélécharge pas — on refuse.
+ * Separated from `verifyDownload` although the comparison is the same, because it
+ * that they PROVE is not the same thing and that their diagnosis should not
+ * neither is being. Here, a divergence is never a network incident: the
+ * file was written by us, checked by us, and something changed it
+ * in the meantime. We don't try again, we don't redownload — we refuse.
  */
 export function verifyBeforeFork(
   onDisk: CachedBundle | null,
@@ -195,28 +195,28 @@ export function verifyBeforeFork(
 }
 
 /**
- * Les bundles à SUPPRIMER : tous sauf celui qu'on vient de retenir.
+ * Bundles to DELETE: all except the one we just selected.
  *
- * La fonction ne touche à rien, elle nomme — même patron que `pruneRunLogs`
- * ([run-log.ts](run-log.ts)). Un bundle par empreinte s'accumulerait autrement à
- * chaque déploiement, et 280 Ko par déploiement finit par se voir.
+ * The function does not touch anything, it names — same pattern as `pruneRunLogs`
+ * ([run-log.ts](run-log.ts)). One bundle per imprint would otherwise accumulate to
+ * every deployment, and 280 KB per deployment ends up being seen.
  *
- * ⚠ **Le ménage se fait APRÈS le fork, jamais avant** : un second tour peut
- * tourner sur un bundle plus ancien (bascule de canal, ou simplement un tour
- * commencé avant le déploiement). Supprimer sous ses pieds le fichier que
- * `utilityProcess` a déjà chargé ne le tuerait pas — le mapping survit à
- * l'`unlink` — mais un redémarrage, lui, n'aurait plus rien à lire.
+ * ⚠ **Cleaning is done AFTER the fork, never before**: a second round can
+ * turn on an older bundle (channel toggle, or simply a turn
+ * started before deployment). Delete under his feet the file that
+ * `utilityProcess` already loaded wouldn't kill it — the mapping survives
+ * the `unlink` — but a restart would have nothing left to read.
  */
 export function staleBundles(files: readonly string[], keep: string): string[] {
   return files.filter((name) => name !== keep && /^main-[0-9a-f]{32}\.js$/.test(name));
 }
 
 /**
- * La phrase du journal, en anglais comme le reste des surfaces natives.
+ * The sentence from the newspaper, in English like the rest of the native surfaces.
  *
- * Elle est ici et pas dans la coquille pour la même raison que tout le fichier :
- * c'est ce que quelqu'un lira dans son rapport de diagnostic quand un tour n'a
- * jamais démarré, et une phrase se relit dans un test.
+ * It's here and not in the shell for the same reason as the whole file:
+ * that's what someone will read in their diagnostic report when a lap has failed
+ * never started, and a sentence is reread in a test.
  */
 export function harnessRefusalMessage(reason: HarnessRefusal, origin: string): string {
   switch (reason) {

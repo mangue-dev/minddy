@@ -11,10 +11,10 @@ export const ISSUE_STATUSES = [
   "canceled",
   "duplicate",
 ] as const;
-// Ordre croissant, comme `PRIORITIES` dans lib/issue-constants.ts : ces listes
-// ne servent pas qu'à valider, elles se RENDENT — le sélecteur de valeurs de
-// l'import (components/settings/import-mapping-editor.tsx) et la réponse de
-// /api/v1/issues/options les déroulent telles quelles.
+// Ascending order, like `PRIORITIES` in lib/issue-constants.ts: these lists
+// are not only used to validate, they RETURN — the value selector of
+// the import (components/settings/import-mapping-editor.tsx) and the response from
+// /api/v1/issues/options unfold them as is.
 export const ISSUE_PRIORITIES = ["none", "low", "medium", "high", "urgent"] as const;
 export const ISSUE_EFFORTS = ["xs", "s", "m", "l", "xl"] as const;
 
@@ -30,7 +30,7 @@ export const isEffort = (v: unknown): v is IssueEffortValue =>
   typeof v === "string" && (ISSUE_EFFORTS as readonly string[]).includes(v);
 
 /** An ISO date ("YYYY-MM-DD") or datetime ("…THH:MM[:SS][Z|±hh:mm]"), or null.
- *  Échéances carry a time now, so plain dates and full timestamps are both ok. */
+ * Deadlines carry a time now, so plain dates and full timestamps are both ok. */
 export const isDateOrNull = (v: unknown): v is string | null =>
   v === null ||
   (typeof v === "string" &&

@@ -1,10 +1,10 @@
 /**
- * Résolution de position dans un unified diff GitLab (MIN-69) — module PUR
- * (sans `server-only`, testable) utilisé par `mr.ts` pour poster un commentaire
- * de review : GitLab exige `new_line` seul pour une ligne ajoutée, `old_line`
- * seul pour une supprimée, et les DEUX pour une ligne de contexte — on marche
- * donc les hunks pour retrouver le pendant. Null si la ligne n'appartient pas
- * au diff (l'appelant en fait un 422, même contrat que GitHub).
+ * Position resolution in a GitLab unified diff (MIN-69) — module PUR
+ * (without `server-only`, testable) used by `mr.ts` to post a review
+ * comment: GitLab requires `new_line` alone for an added line, `old_line`
+ * alone for a deleted one, and BOTH for a context line — we walk
+ * so the hunks to find the counterpart. Null if the line does not belong to
+ * in the diff (actually calling it a 422, same contract as GitHub).
  */
 export function resolveDiffPosition(
   diff: string,
@@ -15,7 +15,7 @@ export function resolveDiffPosition(
   let newN = 0;
   let inHunk = false;
   const lines = diff.split("\n");
-  // Le split laisse un "" final après le dernier \n — pas une ligne de contexte.
+  // Split leaves a final "" after the last \n — not a context line.
   if (lines[lines.length - 1] === "") lines.pop();
   for (const l of lines) {
     const m = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(l);
@@ -34,7 +34,7 @@ export function resolveDiffPosition(
       if (side === "LEFT" && oldN === line) return { oldLine: line, newLine: null };
       oldN++;
     } else {
-      // Ligne de contexte (préfixe espace — ou vide, certains diffs l'émettent).
+      // Context line (space prefix — or empty, some diffs emit it).
       if (side === "RIGHT" && newN === line) return { oldLine: oldN, newLine: line };
       if (side === "LEFT" && oldN === line) return { oldLine: line, newLine: newN };
       oldN++;

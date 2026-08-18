@@ -3,36 +3,36 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * Brouillon « optimiste » de lancement d'agent, posé par un bouton « Lancer un
- * agent » (panneau d'issue, carte — ou le CARNET, MIN-84, ou un wizard
- * d'intégration) puis lu par la page Agents. Il porte juste de quoi OUVRIR le
- * bon volet et amorcer la conversation en compose. Purement UI : si
- * l'utilisateur n'envoie jamais le 1er message, il est effacé sans qu'aucune run
- * n'ait existé — et sans qu'aucune entrée n'ait jamais paru dans la liste, qui
- * ne montre que les conversations réelles.
+ * “Optimistic” draft of agent launch, posed by a “Launch a
+ * agent” button (exit panel, card — or the NOTEBOOK, MIN-84, or an integration wizard
+ *) then read by the Agents page. He carries just enough to OPEN the
+ * good shutter and start the conversation in composition. Purely UI: if
+ * the user never sends the 1st message, it is deleted without any run
+ * having existed — and without any entry having ever appeared in the list, which
+ * only shows actual conversations.
  *
- * Deux formes : `issue` (ancré à un ticket, `?compose=<issueId>`) et `free`
- * (conversation SANS ticket — le projet se choisit dans le composer ou arrive
- * pré-choisi, `?compose=new`). La conversation vierge de la page Agents, elle,
- * ne pose AUCUN brouillon : c'est sa vue par défaut, il n'y a rien à pré-écrire.
+ * Two forms: `issue` (anchored to a ticket, `?compose=<issueId>`) and `free`
+ * (conversation WITHOUT ticket — the project is chosen in the composer or arrives
+ * pre-chosen, `?compose=new`). The blank conversation of the Agents page, it,
+ * poses NO draft: it is its default view, there is nothing to pre-write.
  *
- * Store module-level (pas de contexte) : il n'a qu'un producteur à la fois et
- * un seul consommateur (la page), et doit survivre à la navigation `router.push`
- * entre les deux — ce qu'un état React local ne ferait pas.
+ * Store module-level (no context): it only has one producer at a time and
+ * only one consumer (the page), and must survive to navigate `router.push`
+ * between the two — something a local React state would not do.
  */
 /**
- * Ce qu'on demande à l'agent, du point de vue du TICKET — pas du prompt, que
- * l'utilisateur peut réécrire. Seul `implement` fait DÉMARRER le ticket ; les
- * deux autres le laissent exactement où il est :
- *  • `plan`   — cadrer (écrire ou vérifier le plan) : planifier n'est pas
- *    commencer le travail (même règle que le prompt copié, qui n'auto-démarre
- *    que sur la branche « implémenter ») ;
- *  • `verify` — relire une implémentation déjà faite : le ticket est au-delà du
- *    travail, pas avant. Le repasser « en cours » ferait REGRESSER un ticket en
- *    revue — or on ne fait que le contrôler.
- *  • `custom` — consigne écrite par l'utilisateur : on ne sait pas ce qu'elle
- *    demande (explorer, corriger un détail, relire), donc on ne présume pas que
- *    le travail commence et on laisse le ticket exactement où il est.
+ * What we ask of the agent, from the point of view of the TICKET — not the prompt, which
+ * the user can rewrite. Only `implement` STARTS the ticket; the
+ * two others leave it exactly where it is:
+ * • `plan` — frame (write or check the plan): planning is not
+ * starting the work (same rule as the copied prompt, which only auto-starts
+ * on the “implement” branch) ;
+ * • `verify` — reread an already done implementation: the ticket is beyond
+ * work, not before. Replaying it “in progress” would REGRESS a ticket in
+ * review — but we are only checking it.
+ * • `custom` — instructions written by the user: we do not know what it
+ * is asking (explore, correct a detail, reread), so we do not assume que
+ * the work begins and we leave the ticket exactly where it is.
  */
 export type AgentComposeIntent = "implement" | "plan" | "verify" | "custom";
 
@@ -44,41 +44,41 @@ export interface AgentIssueComposeDraft {
   projectId: string;
   projectKey: string;
   /**
-   * Prompt pré-écrit qui amorce le composer (demande d'implémentation adaptée à
-   * l'effort / au plan de l'issue, DÉJÀ localisé — voir `agentLaunchPromptVariant`).
-   * Éditable avant envoi ; vidé s'il n'est jamais envoyé, comme le reste du brouillon.
-   */
+ * Pre-written prompt that initiates the composer (implementation request tailored to
+ * effort / outcome plan, ALREADY located — see `agentLaunchPromptVariant`).
+ * Editable before sending; emptied if it is never sent, like the rest of the draft.
+ */
   prompt: string;
-  /** Défaut : `implement` (le lancement fait démarrer le ticket). */
+  /** Default: `implement` (launch starts the ticket). */
   intent?: AgentComposeIntent;
 }
 
 export interface AgentFreeComposeDraft {
   kind: "free";
   /**
-   * Texte PRÉ-ÉCRIT du composer, éditable avant envoi : une note du carnet
-   * (MIN-84), un prompt d'intégration. Une conversation qui part de zéro ne pose
-   * pas de brouillon du tout — c'est la vue par défaut de la page Agents.
-   */
+ * PRE-WRITTEN text of the composer, editable before sending: a notebook note
+ * (MIN-84), an integration prompt. A conversation that starts from scratch leaves
+ * no draft at all — this is the default view on the Agents page.
+ */
   prompt: string;
   /**
-   * Projet PRÉ-CHOISI dans le composer, quand le producteur du brouillon sait
-   * déjà quel dépôt est visé — le prompt d'intégration feedback part des
-   * réglages d'UN projet. Absent (le carnet) : le composer laisse choisir. Reste
-   * librement modifiable : c'est un pré-remplissage, pas un verrou.
-   */
+ * PRE-CHOSEN project in the composer, when the draft producer knows
+ * already which repository is targeted — the feedback integration prompt starts from the
+ * settings of ONE project. Absent (the notebook): composing it allows you to choose. Rest
+ * freely editable: it's a prefill, not a lock.
+ */
   projectId?: string;
 }
 
 export type AgentComposeDraft = AgentIssueComposeDraft | AgentFreeComposeDraft;
 
-/** Valeur du paramètre `?compose=` qui désigne un brouillon SANS ticket. */
+/** Value of the `?compose=` parameter which designates a draft WITHOUT a ticket. */
 export const FREE_COMPOSE_PARAM = "new";
 
 let current: AgentComposeDraft | null = null;
 const listeners = new Set<() => void>();
 
-/** Pose (ou efface avec `null`) le brouillon et notifie la page Agents. */
+/** Sets (or deletes with `null`) the draft and notifies the Agents page. */
 export function setAgentComposeDraft(draft: AgentComposeDraft | null): void {
   current = draft;
   for (const listener of listeners) listener();
@@ -95,7 +95,7 @@ function getSnapshot(): AgentComposeDraft | null {
   return current;
 }
 
-/** Brouillon courant, réactif. `null` côté serveur (jamais de brouillon au SSR). */
+/** Current draft, responsive. `null` server side (never draft to SSR). */
 export function useAgentComposeDraft(): AgentComposeDraft | null {
   return useSyncExternalStore(subscribe, getSnapshot, () => null);
 }

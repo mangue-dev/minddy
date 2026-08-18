@@ -7,17 +7,16 @@ import {
 } from "./page-presence";
 
 /**
- * MIN-271 — le CYCLE DE VIE de l'abonnement de présence.
+ * MIN-271 — the LIFE CYCLE of the presence subscription.
  *
- * Ce que ce fichier attrape, et que ni `tsc` ni une relecture n'attrapent : un
- * abonnement qui monte et ne redescend jamais. On l'a déjà livré une fois (la
- * feature de la PR 48) — le code compilait, il se lisait bien, et le canal
- * restait ouvert pour toujours. La seule preuve possible est de monter, de
- * démonter, et de regarder ce qui a été appelé.
+ * What this file catches, and which neither `tsc` nor a replay catches: a
+ * subscription that goes up and never comes down. We already shipped it once (the
+ * feature of PR 48) — the code compiled, it read well, and the
+ * channel remained open forever. The only possible proof is to mount, de
+ * dismount, and look at what was called.
  *
- * Le décor est un faux client Supabase qui GARDE les callbacks passés à
- * `on` et à `subscribe` : c'est le seul moyen de rejouer un `sync` de présence
- * sans socket, comme `compact-path.test.ts` rejoue un flux SSE sans provider.
+ * The setting is a fake Supabase client which KEEP the callbacks passed to
+ * `on` and to `subscribe`: it's the only one way to replay a presence `sync` * without a socket, like `compact-path.test.ts` replays an SSE flow without a provider.
  */
 
 type PresenceEntry = { userId: string; pageId: string };
@@ -67,7 +66,7 @@ function fakeSupabase() {
   return {
     client: client as never,
     calls,
-    /** Rejoue un `sync` de présence avec l'état donné. */
+    /** Replays a presence `sync` with the given state. */
     emit(next: Record<string, PresenceEntry[]>) {
       state = next;
       syncHandler?.();
@@ -87,7 +86,7 @@ describe("openPagePresence", () => {
     });
     await vi.waitFor(() => expect(supabase.calls.channels).toHaveLength(1));
 
-    // Un canal, celui du projet — pas un par page.
+    // One channel, that of the project — not one per page.
     expect(supabase.calls.channels).toEqual([pagePresenceTopic("proj")]);
     expect(supabase.calls.tracked).toEqual([
       { userId: "moi", pageId: "page-1" },
@@ -108,12 +107,12 @@ describe("openPagePresence", () => {
 
     handle.close();
 
-    // Les deux : `untrack` retire l'avatar chez les autres tout de suite,
+    // Both: `untrack` removes the avatar from others immediately,
     // `removeChannel` ferme l'abonnement.
     expect(supabase.calls.untracked).toBe(1);
     expect(supabase.calls.removed).toBe(1);
 
-    // Et fermer deux fois (React monte/démonte deux fois en développement) ne
+    // And close twice (React mounts/unmounts twice in development) doesn't
     // ferme pas deux fois.
     handle.close();
     expect(supabase.calls.removed).toBe(1);
@@ -128,9 +127,9 @@ describe("openPagePresence", () => {
       onChange: () => {},
       client: supabase.client,
     });
-    // Le démontage arrive dans le même tick que l'ouverture : c'est ce que fait
-    // un clic rapide d'une page à l'autre, et c'est le chemin par lequel un
-    // canal fantôme survit à son composant.
+    // The disassembly happens in the same tick as the opening: that's what it does
+    // a quick click from one page to another, and this is the path by which a
+    // ghost channel survives its component.
     handle.close();
 
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -175,8 +174,8 @@ describe("openPagePresence", () => {
 
     supabase.emit({
       a: [{ userId: "moi", pageId: "page-1" }],
-      // Mon deuxième onglet, sur une AUTRE page : la pastille de l'arbre s'y
-      // allumait en face d'une page que personne d'autre ne lisait.
+      // My second tab, on ANOTHER page: the tree pellet is there
+      // lit up in front of a page that no one else was reading.
       b: [{ userId: "moi", pageId: "page-2" }],
       c: [{ userId: "elle", pageId: "page-2" }],
     });
@@ -201,7 +200,7 @@ describe("openPagePresence", () => {
     await vi.waitFor(() => expect(supabase.calls.channels).toHaveLength(1));
 
     supabase.emit({
-      // Deux onglets du même compte sur la même page : un seul avatar.
+      // Two tabs from the same account on the same page: a single avatar.
       a: [{ userId: "elle", pageId: "page-1" }],
       b: [{ userId: "elle", pageId: "page-1" }],
       c: [{ userId: "moi", pageId: "page-1" }],

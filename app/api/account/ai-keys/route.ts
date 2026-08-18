@@ -23,28 +23,28 @@ import { resolveByokFeatureDefaultModel } from "@/lib/server/ai-runtime";
 import type { AgentProviderId } from "@/lib/agent-providers";
 
 /**
- * Clé « BYOK » du compte (MIN-46 / MIN-10). UN seul provider actif : OpenRouter,
- * OpenAI, Anthropic, Google, un endpoint OpenAI-compatible générique ou un
+ * Account “BYOK” key (MIN-46 / MIN-10). ONE active provider: OpenRouter,
+ * OpenAI, Anthropic, Google, a generic OpenAI-compatible endpoint or a
  * endpoint local (OpenAI-compatible / Ollama). Reconfigurer = remplacer (on
- * efface les autres). La clé en clair
- * n'est JAMAIS renvoyée — seulement provider + key_prefix + base_url. Écritures
- * via service client (RLS = lecture-propriétaire) ; clé chiffrée au repos
- * (AES-256-GCM). Changer/retirer le provider réinitialise le modèle par défaut
+ * delete the others). The key in plain language
+ * is NEVER returned — only provider + key_prefix + base_url. Scriptures
+ * via customer service (RLS = read-owner); encrypted key at rest
+ * (AES-256-GCM). Changing/removing the provider resets the default model
  * perso (il appartenait au namespace de l'ancien provider).
  */
 
 const SANITIZED =
   "id, provider, key_prefix, base_url, created_at, last_used_at, validated_at, enabled_surfaces, feature_models";
 
-// Bornes larges : une clé d'API réelle et une base URL tiennent très en dessous.
+// Wide bounds: an actual API key and base URL fit well below.
 const MAX_KEY_LENGTH = 1024;
 const MAX_BASE_URL_LENGTH = 2048;
 
 /**
- * Les endpoints locaux ne sont jamais joints depuis cette route : vérifier leur
- * host par `assertPublicHttpUrl` serait à la fois faux (localhost est voulu) et
- * dangereux (une future sonde serveur deviendrait une SSRF). On valide seulement
- * la forme que le harness local utilisera.
+ * Local endpoints are never reached from this route: check their
+ * host by `assertPublicHttpUrl` would be both false (localhost is intended) and
+ * dangerous (a future server probe would become an SSRF). We only validate
+ * the form that the local harness will use.
  */
 function isHttpEndpointUrl(raw: string): boolean {
   try {
@@ -55,7 +55,7 @@ function isHttpEndpointUrl(raw: string): boolean {
   }
 }
 
-/** Efface le défaut modèle perso (obsolète quand le provider change). */
+/** Clears the personal model default (obsolete when the provider changes). */
 async function clearDefaultModel(service: ReturnType<typeof getServiceClient>, userId: string) {
   await service
     .from("user_agent_preferences")
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
   let body: { key?: string; provider?: string; base_url?: string };
   try {
     const parsed: unknown = await request.json();
-    // Corps non-objet (null, chaîne…) : refusé ici plutôt que de crasher plus bas.
+    // Non-object body (null, string…): refused here rather than crashing further down.
     if (!parsed || typeof parsed !== "object") throw new Error("not an object");
     body = parsed as { key?: string; provider?: string; base_url?: string };
   } catch {
@@ -112,17 +112,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unsupported provider" }, { status: 400 });
   }
   const localProvider = isLocalAgentProvider(provider);
-  // Une installation Ollama ou un serveur OpenAI-compatible local n'a le plus
-  // souvent aucune authentification. Une clé vide est donc valide UNIQUEMENT
-  // pour ces providers : tous les endpoints cloud restent fail-closed.
+  // An Ollama installation or a local OpenAI-compatible server has most
+  // often no authentication. An empty key is therefore ONLY valid
+  // for these providers: all cloud endpoints remain fail-closed.
   if (!key && !localProvider) return NextResponse.json({ error: "Missing key" }, { status: 400 });
   if (key.length > MAX_KEY_LENGTH) {
     return NextResponse.json({ error: "Invalid key" }, { status: 400 });
   }
 
-  // Base URL requise pour le provider générique et les providers locaux. Une URL
-  // cloud reste soumise au garde anti-SSRF ; une URL locale ne sortira JAMAIS de
-  // cette machine et ne doit donc jamais être résolue ni sondée par ce serveur.
+  // Base URL required for the generic provider and local providers. A URL
+  // cloud remains subject to anti-SSRF guard; a local URL will NEVER go outside
+  // this machine and should therefore never be resolved or probed by this server.
   const def = getAgentProvider(provider)!;
   let baseUrl: string | null = null;
   if (def.requiresBaseUrl) {
@@ -140,18 +140,18 @@ export async function POST(request: NextRequest) {
     baseUrl = normalizeBaseUrl(raw);
   }
 
-  // La clé est PRÉSENTÉE au fournisseur avant d'être enregistrée (MIN-344) : sa
-  // seule présence en base levait tout plafond d'usage, y compris celui du
-  // compute de la microVM, que minddy paye. Un refus franc (401/403) est un fait
-  // qu'on rend à l'utilisateur tout de suite — enregistrer une clé morte ne lui
+  // The key is PRESENTED to the supplier before being registered (MIN-344): its
+  // mere presence on base lifted any usage ceiling, including that of
+  // compute of the microVM, which minddy pays for. A frank refusal (401/403) is a fact
+  // which is returned to the user immediately — registering a dead key does not
   // rendrait service ni maintenant ni au premier run. Un verdict `unknown`
-  // (fournisseur injoignable) enregistre la clé SANS date de validation : elle ne
-  // lève rien, et `getUserByok` retentera au premier usage.
+  // (supplier unreachable) saves the key WITHOUT validation date: it does not
+  // raises nothing, and `getUserByok` will try again on first use.
   const effectiveBaseUrl = resolveProviderBaseUrl(provider, baseUrl);
-  // Un endpoint local est volontairement opaque au cloud : aucun listing ni
-  // probe ne doit faire sortir cette requête de l'app de bureau. La clé est
-  // considérée configurée afin que le run local puisse la recevoir ; le premier
-  // appel du proxy rendra une erreur explicite si l'endpoint est indisponible.
+  // A local endpoint is deliberately opaque to the cloud: no listing or
+  // probe should only bring this query out of the desktop app. The key is
+  // considered configured so that the local run can receive it; the first
+  // Calling the proxy will return an explicit error if the endpoint is unavailable.
   const verdict = localProvider
     ? "valid"
     : effectiveBaseUrl
@@ -162,23 +162,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: t("aiKeyRejected") }, { status: 400 });
   }
 
-  // `user_ai_keys.key_encrypted` est NOT NULL sur les instances déjà
-  // déployées. Un endpoint local sans authentification n'a aucun secret à
-  // chiffrer : on persiste donc un marqueur non sensible, compris par
-  // `getUserByok`, plutôt qu'un NULL qui ferait échouer l'enregistrement.
+  // `user_ai_keys.key_encrypted` is NOT NULL on instances already
+  // deployed. A local endpoint without authentication has no secrets
+  // encrypt: persist a non-sensitive marker understood by
+  // `getUserByok`, rather than a NULL which would cause the save to fail.
   let encrypted = LOCAL_ENDPOINT_WITHOUT_API_KEY;
   if (key) {
     try {
       encrypted = encryptUserAiKey(key);
     } catch {
-      // AI_KEY_ENCRYPTION_SECRET manquant → fail-closed (on ne stocke jamais en clair).
+      // Missing AI_KEY_ENCRYPTION_SECRET → fail closed (never store plaintext).
       return NextResponse.json({ error: "BYOK is not configured on the server" }, { status: 503 });
     }
   }
 
   const service = getServiceClient();
 
-  // Provider actif courant (pour savoir s'il faut réinitialiser le défaut modèle).
+  // Current active provider (to know whether to reset the model fault).
   const { data: existing } = await service
     .from("user_ai_keys")
     .select("provider")
@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
   const previousProvider = (existing as { provider: string } | null)?.provider ?? null;
 
-  // Un seul BYOK actif : on efface les autres providers avant l'upsert.
+  // Only one active BYOK: we delete the other providers before the upsert.
   await service
     .from("user_ai_keys")
     .delete()
@@ -225,17 +225,17 @@ export async function DELETE(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const service = getServiceClient();
-  // Single-active : on retire le BYOK (quel que soit le provider) et on remet le
-  // défaut modèle à zéro (il pouvait viser un modèle hors du provider plateforme).
+  // Single-active: we remove the BYOK (whatever the provider) and we put it back
+  // model default to zero (it could target a model outside the platform provider).
   await service.from("user_ai_keys").delete().eq("user_id", auth.user.id);
   await clearDefaultModel(service, auth.user.id);
   return NextResponse.json({ ok: true });
 }
 
 /**
- * Réglages non sensibles du BYOK actif. L'écriture est partielle mais chaque
- * valeur fournie remplace son ensemble complet : c'est ce qui rend possible de
- * décocher toutes les surfaces ou d'effacer tous les overrides modèle.
+ * Non-sensitive active BYOK settings. The writing is partial but each
+ * provided value replaces its complete set: this is what makes it possible to
+ * Uncheck all surfaces or clear all model overrides.
  */
 export async function PATCH(request: NextRequest) {
   const auth = await getAuthedUser(request);

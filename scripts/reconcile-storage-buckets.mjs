@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** MIN-379 — buckets Storage : ils ne figurent pas dans un dump de schéma SQL. */
+/** MIN-379 — Storage buckets: they are not included in a SQL schema dump. */
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -12,7 +12,7 @@ const EXPECTED_BUCKETS = {
 };
 
 function fail(message) {
-  throw new Error(`Configuration Storage impossible : ${message}`);
+  throw new Error(`Storage configuration failed: ${message}`);
 }
 
 export function parseArgs(argv) {
@@ -21,7 +21,7 @@ export function parseArgs(argv) {
     const flag = argv[index];
     const value = () => {
       const next = argv[++index];
-      if (!next || next.startsWith("--")) fail(`${flag} attend une valeur.`);
+      if (!next || next.startsWith("--")) fail(`${flag} expects a value.`);
       return next;
     };
     if (flag === "--db-url") options.dbUrl = value();
@@ -30,7 +30,7 @@ export function parseArgs(argv) {
     else if (flag === "--from-bootstrap-env") options.fromBootstrapEnv = true;
     else if (flag === "--local") options.local = true;
     else if (flag === "--dry-run") options.dryRun = true;
-    else fail(`option inconnue : ${flag}.`);
+    else fail(`unknown option: ${flag}.`);
   }
   if (options.fromBootstrapEnv) {
     options.dbUrl ??= process.env.MDY_BOOTSTRAP_DB_URL;
@@ -38,7 +38,7 @@ export function parseArgs(argv) {
     options.serviceRoleKey ??= process.env.MDY_BOOTSTRAP_SERVICE_ROLE_KEY;
   }
   for (const key of ["supabaseUrl", "serviceRoleKey"]) {
-    if (!options[key]) fail(`${key} est requis.`);
+    if (!options[key]) fail(`${key} is required.`);
   }
   return options;
 }
@@ -54,7 +54,7 @@ async function storageFetch(options, path, init = {}) {
   });
   if (!response.ok) {
     const body = await response.text();
-    fail(`Storage API ${init.method ?? "GET"} ${path} a répondu ${response.status} : ${body || response.statusText}`);
+    fail(`Storage API ${init.method ?? "GET"} ${path} returned ${response.status}: ${body || response.statusText}`);
   }
   return response;
 }
@@ -62,7 +62,7 @@ async function storageFetch(options, path, init = {}) {
 async function listBuckets(options) {
   const response = await storageFetch(options, "/bucket");
   const buckets = await response.json();
-  if (!Array.isArray(buckets)) fail("la réponse de liste des buckets n'est pas une liste.");
+  if (!Array.isArray(buckets)) fail("the bucket list response is not an array.");
   return buckets;
 }
 
@@ -72,7 +72,7 @@ function matches(bucket, expected) {
 
 export async function reconcileBuckets(options) {
   if (options.dryRun) {
-    console.log("→ créerait/configurerait les buckets Storage et supprimerait le bucket avatars hérité s'il est vide.");
+    console.log("→ would create/configure Storage buckets and delete the inherited avatars bucket if empty.");
     return;
   }
   const current = new Map((await listBuckets(options)).map((bucket) => [bucket.id, bucket]));
@@ -85,14 +85,14 @@ export async function reconcileBuckets(options) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ id, name: id, ...expected }),
       });
-      console.log(`→ bucket ${id} créé.`);
+      console.log(`→ bucket ${id} created.`);
     } else if (!matches(bucket, expected)) {
       await storageFetch(options, `/bucket/${encodeURIComponent(id)}`, {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(expected),
       });
-      console.log(`→ bucket ${id} reconfiguré.`);
+      console.log(`→ bucket ${id} reconfigured.`);
     }
   }
 
@@ -100,19 +100,19 @@ export async function reconcileBuckets(options) {
   for (const [id, expected] of Object.entries(EXPECTED_BUCKETS)) {
     const bucket = byId.get(id);
     if (!bucket || !matches(bucket, expected)) {
-      fail(`bucket ${id} absent ou mal configuré après réconciliation.`);
+      fail(`bucket ${id} is missing or misconfigured after reconciliation.`);
     }
   }
 
   if (!byId.has("avatars")) return;
   try {
     await storageFetch(options, "/bucket/avatars", { method: "DELETE" });
-    console.log("→ bucket avatars hérité supprimé (inutile depuis la migration 20260903090000).");
+    console.log("→ inherited avatars bucket deleted (unused since migration 20260903090000).");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail(
-      "le bucket avatars hérité contient probablement encore des objets ; ne le supprimez pas à l'aveugle. " +
-        `Videz/archivez-le via Storage puis relancez. Détail : ${detail}`
+      "the inherited avatars bucket probably still contains objects; do not delete it blindly. " +
+        `Empty/archive it through Storage, then retry. Detail: ${detail}`
     );
   }
 }

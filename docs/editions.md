@@ -1,102 +1,100 @@
-# Éditions et services managés
+# Editions and managed services
 
-## Décision
+## Decision
 
-minddy est un cœur **AGPL-3.0-only** installable et utilisable sans compte
-minddy, Stripe, crédit IA minddy ni appel vers une infrastructure opérée par
-minddy. Une installation est auto-hébergée par défaut. Les services opérés par
-minddy sont des opt-ins explicites : une clé laissée dans l'environnement ne
-les active pas à elle seule.
+minddy is an **AGPL-3.0-only** core that can be installed and used without a
+minddy account, Stripe, minddy AI credits, or calls to infrastructure operated
+by minddy. An installation is self-hosted by default. Services operated by
+minddy are explicit opt-ins: an environment key alone does not activate them.
 
-| Périmètre | Cœur auto-hébergé (AGPL) | Cloud minddy | Éventuel service entreprise |
+| Perimeter | Self-Hosted Core (AGPL) | Cloud minddy | Possible business service |
 | --- | --- | --- | --- |
-| Produit | Application, API, migrations, exports, desktop, MCP et administration | Même cœur, hébergé et opéré par minddy | Aucun module distribué à ce jour |
-| Données et comptes | Instance et Supabase de l'opérateur | Opérés par minddy | Ne peut pas devenir nécessaire au cœur |
-| Paiement | Aucun Stripe requis ; aucune carte ni plan ne bloque le cœur | Stripe, uniquement quand `MINDDY_MANAGED_BILLING=1` et sa configuration est complète | Support, SLA, migration ou exploitation, hors de ce dépôt |
-| IA | BYOK vers un fournisseur choisi, ou endpoint local/modèle auto-hébergé ; la clé et le coût restent chez l'opérateur | Quota minddy seulement quand `MINDDY_MANAGED_AI=1` et OpenRouter est configuré | Peut être opéré comme service séparé, jamais comme verrou du cœur |
-| Limites | Aucune limite commerciale de projets, tickets, membres ou agents | Plans et quotas mesurés dans le ledger, selon le contrat cloud | À redécider après contrôle de chaîne de droits |
+| Product | Application, API, migrations, exports, desktop, MCP and administration | Same heart, hosted and operated by minddy | No modules distributed to date |
+| Data and accounts | Operator Instance and Supabase | Operated by minddy | Cannot become necessary to the heart |
+| Payment | No Stripe required; no map or plan blocks the heart | Stripe, only when `MINDDY_MANAGED_BILLING=1` and its configuration is complete | Support, SLA, migration or exploitation, outside of this repository |
+| AI | BYOK to a chosen provider, or local endpoint/self-hosted model; the key and the cost remain with the operator | Minddy quota only when `MINDDY_MANAGED_AI=1` and OpenRouter is configured | Can be operated as a separate service, never as a heart lock |
+| Limits | No commercial limits on projects, tickets, members or agents | Plans and quotas measured in the ledger, according to the cloud contract | To be re-decided after checking the chain of rights |
 
-## Contrat de configuration
+## Configuration contract
 
-- `MINDDY_MANAGED_BILLING=1` active l'intégration Stripe **si** les secrets et
-  price IDs requis sont présents. Sinon le service est indisponible ; aucune
-  requête Stripe ne part et les routes d'achat renvoient `503`.
-- `MINDDY_MANAGED_AI=1` autorise la clé plateforme OpenRouter. Sans cet opt-in,
-  minddy ne choisit jamais `OPENROUTER_API_KEY` comme repli : un appel IA exige
-  une clé BYOK ou un endpoint local configuré par l'opérateur.
-- Ces deux drapeaux sont l'unique sélection d'édition. Le hostname, Vercel, le
-  nom de branche et un identifiant de client ne peuvent activer ni billing ni
-  quota managé, y compris sur `minddy.app` et sur la branche `production`.
-- L'interface cloud n'affiche achats, portail Stripe, budget ni limites que
-  lorsque les capacités correspondantes sont actives. L'API expose ces
-  capacités pour que les clients ne déduisent jamais un droit d'une clé ou d'un
-  plan par défaut.
-- `AGENT_EXECUTION_BACKEND=vercel` est le seul choix qui autorise la création ou
-  le réveil d'un Vercel Sandbox. Des identifiants Vercel présents pour les
-  domaines ne déclenchent donc jamais de compute. Hors Vercel,
-  `NEXT_PUBLIC_APP_URL` est également requis afin que la sandbox rappelle cette
-  instance plutôt qu'une origine propriétaire implicite.
-- `EMAIL_PROVIDER=resend` est requis avant tout appel à l'API Resend. Les
-  expéditeurs sont obligatoires et propres à l'instance ; aucun domaine minddy
-  n'est choisi par défaut.
-- PostHog est un provider facultatif du cœur public, pas une capacité réservée
-  au Cloud. Chaque surface exige sa paire atomique :
-  `NEXT_PUBLIC_POSTHOG_KEY` + `NEXT_PUBLIC_POSTHOG_HOST` pour le navigateur,
-  `POSTHOG_API_KEY` + `POSTHOG_HOST` pour le serveur. Une paire serveur absente
-  peut réutiliser la paire publique complète ; deux demi-paires ne sont jamais
-  assemblées. L'opérateur choisit ainsi sa destination PostHog, tandis que
-  Minddy Cloud fournit sa propre configuration d'exploitation.
-- Web Push exige un `VAPID_SUBJECT`, et APNs un `APNS_BUNDLE_ID` explicites.
-- Vercel Analytics et Speed Insights ne sont montés sur les pages publiques
-  qu'avec `NEXT_PUBLIC_VERCEL_ANALYTICS=1`.
-- Les providers Git intégrés ciblent `github.com` et `gitlab.com`. Les forges
-  auto-hébergées sont explicitement non supportées tant qu'un provider
-  configurable n'existe pas.
+- `MINDDY_MANAGED_BILLING=1` enables Stripe integration **if** secrets and
+  the required price IDs are present. Otherwise the service is unavailable; no
+  Stripe request is sent and purchase routes return `503`.
+- `MINDDY_MANAGED_AI=1` authorizes the OpenRouter platform key. Without this opt-in,
+  minddy never chooses `OPENROUTER_API_KEY` as a fallback: an AI call requires
+  a BYOK key or a local endpoint configured by the operator.
+- These two flags are the only edition selection. The hostname, Vercel, the
+  branch name and a customer ID cannot activate billing or
+  managed quota, including on `minddy.app` and on the `production` branch.
+- The cloud interface only displays purchases, Stripe portal, budget and limits
+  when the corresponding abilities are active. The API exposes these
+  capabilities so that customers never infer a right from a key or
+  default plan.
+- `AGENT_EXECUTION_BACKEND=vercel` is the only choice that authorizes the creation or
+  the awakening of a Vercel Sandbox. Vercel identifiers present for domains
+  therefore never trigger compute. Outside Vercel,
+  `NEXT_PUBLIC_APP_URL` is also required so that the sandbox remembers this
+  instance rather than an implicit proprietary origin.
+- `EMAIL_PROVIDER=resend` is required before any call to the Resend API. The
+  senders are mandatory and instance-specific; no minddy domain is chosen by
+  default.
+- PostHog is an optional public core provider, not a reserved capacity
+  for the Cloud. Each surface requires its own pair:
+  `NEXT_PUBLIC_POSTHOG_KEY` + `NEXT_PUBLIC_POSTHOG_HOST` for the browser,
+  `POSTHOG_API_KEY` + `POSTHOG_HOST` for the server. A missing server pair
+  can reuse the full public pair; two half pairs are never
+  assembled. The operator therefore chooses the PostHog destination, while
+  Minddy Cloud provides its own operating configuration.
+- Web Push requires an explicit `VAPID_SUBJECT`, and APNs require an explicit `APNS_BUNDLE_ID`.
+- Vercel Analytics and Speed Insights are displayed on public pages only
+  with `NEXT_PUBLIC_VERCEL_ANALYTICS=1`.
+- Built-in Git providers target `github.com` and `gitlab.com`. Self-hosted
+  forges are not supported until a configurable provider exists.
 
-Les anciennes déductions fondées sur le déploiement Vercel ou une origine
-`*.minddy.app` ne sélectionnent plus les services managés. Le déploiement Cloud
-doit fournir les mêmes drapeaux explicites que n'importe quel opérateur.
+Old deductions based on Vercel deployment or origin
+`*.minddy.app` no longer selects managed services. Cloud deployment
+must provide the same explicit flags as any operator.
 
-Le catalogue exécutable de ces décisions vit dans `lib/capabilities.ts`. Il
-classe chaque capacité (`required`, `replaceable`, `optional`), énumère les
-variables absentes et produit le diagnostic utilisé par les gardes serveur.
+The executable catalog of these decisions lives in `lib/capabilities.ts`. It
+classifies each capability (`required`, `replaceable`, `optional`), lists
+missing variables, and produces the diagnosis used by the server guards.
 
-## BYOK, modèles locaux et quota managé
+## BYOK, local models and managed quota
 
-**BYOK** est une clé fournie par l'utilisateur pour un fournisseur distant. Les
-tokens sont alors facturés par ce fournisseur à son titulaire. Un **modèle
-auto-hébergé** est un endpoint local ou privé configuré par l'opérateur ; aucun
-appel ne quitte l'infrastructure désignée par cet endpoint. Le **quota minddy**
-est distinct : il ne s'applique qu'aux tokens et au compute réellement fournis
-par le cloud minddy, et son coût est enregistré dans `ai_usage`.
+**BYOK** is a user-provided key for a remote provider. The
+provider then bills the key holder for the tokens. A **self-hosted model** is a
+local or private endpoint configured by the operator; no call leaves the
+infrastructure designated by that endpoint. The **mindy quota**
+is distinct: it only applies to the tokens and compute actually provided
+by the minddy cloud, and its cost is recorded in `ai_usage`.
 
-Ainsi, une installation auto-hébergée peut volontairement utiliser OpenRouter
-avec sa propre clé en BYOK ; cela ne transforme pas cette instance en client du
-quota minddy. À l'inverse, une instance cloud qui propose la clé plateforme
-continue de mesurer ses appels et son compute avant de les servir.
+So a self-hosted installation can voluntarily use OpenRouter
+with its own BYOK key; this does not transform this instance into a client of the
+quota minddy. Conversely, a cloud instance that offers the platform key
+continues to measure its calls and compute before serving them.
 
-## Matrice CI des éditions
+## CI matrix of editions
 
-Le job `Édition / …` de `.github/workflows/ci.yml` exécute chaque scénario dans
-un job GitHub Actions jetable, sans `secrets.*`. Les valeurs sous
-`test/fixtures/editions/` sont des marqueurs factices qui ne donnent accès à
-aucun fournisseur. Les deux éditions déployables (`self-hosted-minimal` et
-`minddy-cloud`) passent en plus par `next build`, puis un démarrage HTTP réel ;
-les configurations partielles sont testées comme capacités indisponibles.
+The `Édition / …` job of `.github/workflows/ci.yml` executes each scenario in
+a disposable GitHub Actions job, without `secrets.*`. The values under
+`test/fixtures/editions/` are dummy tokens that provide access to no supplier.
+The two deployable editions (`self-hosted-minimal` and
+`minddy-cloud`) also go through `next build`, then a real HTTP start;
+partial configurations are tested as unavailable capacities.
 
-| Fixture | Attendu |
+| Fixture | Expected |
 | --- | --- |
-| `self-hosted-minimal.env` | Le cœur démarre sans Stripe ni IA managée ; aucune garde commerciale ne lit le plan. |
-| `self-hosted-byok.env` | La clé opérateur est le payeur ; aucun quota, ledger ni compte fournisseur minddy n'est consulté. |
-| `minddy-cloud.env` | Billing et IA managés sont prêts ; gardes de plan, webhook Stripe, payeur plateforme et quota sont actifs. |
-| `partial-billing.env` | Billing est annoncé `incomplete`, les variables absentes sont listées et le webhook répond `503`. |
-| `partial-ai.env` | IA managée est annoncée `incomplete` et le runtime refuse tout repli plateforme. |
-| `implicit-identifiers.env` | Domaine `minddy.app`, Vercel, branche `production`, identifiant client et clés présentes restent self-hosted sans opt-in. |
+| `self-hosted-minimal.env` | The core starts without Stripe or managed AI; no commercial guard reads the plan. |
+| `self-hosted-byok.env` | The operator key is the payer; no quota, ledger or Minddy supplier account is consulted. |
+| `minddy-cloud.env` | Billing and managed AI are ready; plan guards, Stripe webhook, platform payer and quota are active. |
+| `partial-billing.env` | Billing is announced `incomplete`, missing variables are listed and the webhook responds `503`. |
+| `partial-ai.env` | Managed AI is announced `incomplete` and the runtime refuses any platform fallback. |
+| `implicit-identifiers.env` | Domain `minddy.app`, Vercel, branch `production`, client identifier and keys present remain self-hosted without opt-in. |
 
-Le test d'intégration couvre ensemble `lib/managed-services.ts`, le catalogue de
-capacités, `lib/server/entitlements.ts`, l'adaptateur et le webhook Stripe,
-`lib/server/ai-runtime.ts` et `lib/server/agent/quota.ts`. Pour rejouer une
-fixture localement depuis la racine du dépôt :
+The integration test covers together `lib/managed-services.ts`, the catalog of
+capabilities, `lib/server/entitlements.ts`, the Stripe adapter and webhook,
+`lib/server/ai-runtime.ts` and `lib/server/agent/quota.ts`. To replay a
+fixture locally from the repository root:
 
 ```bash
 set -a
@@ -105,12 +103,12 @@ set +a
 pnpm exec vitest run lib/server/editions.integration.test.ts
 ```
 
-## Frontière de dépôt
+## Repository boundary
 
-La frontière suit [la politique de licence](licensing.md) : le cœur et tout ce
-qui est nécessaire à son usage normal restent dans ce dépôt AGPL. Facturation,
-support, supervision de flotte, opérations et éventuels engagements entreprise
-vivent dans un service ou dépôt séparé et utilisent des protocoles documentés.
-Il n'existe actuellement ni package Enterprise ni extension propriétaire
-chargeable par le cœur. Toute évolution de cette frontière exige le contrôle de
-chaîne de droits prévu par `docs/licensing.md`.
+The boundary follows the [licensing policy](licensing.md): the core and
+everything necessary for normal use remains in this AGPL repository. Billing,
+support, fleet supervision, operations, and any future business commitments
+live in a separate service or repository and use documented protocols.
+There is currently no Enterprise package or proprietary extension
+chargeable by the core. Any change to this boundary requires the chain-of-rights
+review specified by `docs/licensing.md`.

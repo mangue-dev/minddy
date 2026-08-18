@@ -25,14 +25,13 @@ import {
 } from "./opencode-install";
 
 /**
- * MIN-293 — LE PRÉ-VOL D'OPENCODE.
+ * MIN-293 — OPENCODE PRE-FLIGHT.
  *
- * Deux choses sont tenues ici. La première est l'ÉPINGLE : un test d'existence
- * seul verrait le binaire d'hier et le trouverait très bien, et tous les tours
- * tourneraient sur l'ancien moteur pendant que le dépôt jure le contraire. La
- * seconde est le cas que l'audit n'avait pas nommé — **Electron embarque Node,
- * pas npm** : sur un Mac sans chaîne d'outils, l'installation ne peut pas avoir
- * lieu, et ça doit se dire AVANT le fork, où il y a encore un journal.
+ * Two things are required here. The first is the PIN: an existence test
+ * alone would see yesterday's binary and find it just fine, and all rounds
+ * would run on the old engine while the repository swears otherwise. The
+ * second is the case that the audit had not named — **Electron embeds Node,
+ * not npm**: on a Mac without a toolchain, the installation cannot take place, and this must be said BEFORE the fork, where there is still a log.
  */
 
 const WANTED = "1.18.16";
@@ -48,33 +47,33 @@ function facts(over: Partial<Parameters<typeof opencodeDecision>[0]> = {}) {
 }
 
 describe("opencodeDecision", () => {
-  it("ne fait rien quand la bonne version est là", () => {
+  it("does nothing when the correct version is present", () => {
     expect(opencodeDecision(facts(), WANTED)).toEqual({ action: "ready" });
   });
 
-  it("installe sur une machine neuve", () => {
+  it("installs on a new machine", () => {
     expect(
       opencodeDecision(facts({ installedVersion: null, binaryPresent: false }), WANTED),
     ).toEqual({ action: "install", why: "missing" });
   });
 
-  it("RÉINSTALLE quand l'épingle a bougé, même si le binaire est là", () => {
-    // Le cas qui coûterait cher en silence : le carnet de mesures du dépôt porte
-    // sur CE binaire, pas sur une API publique.
+  it("REINSTALLS when the pin moved, even if the binary is present", () => {
+    // The case that would be costly in silence: the depot measurement book carries
+    // on THIS binary, not on a public API.
     expect(opencodeDecision(facts({ installedVersion: "1.17.0" }), WANTED)).toEqual({
       action: "install",
       why: "version",
     });
   });
 
-  it("réinstalle quand le manifeste dit la bonne version mais que le binaire manque", () => {
+  it("reinstalls when the manifest has the correct version but the binary is missing", () => {
     expect(opencodeDecision(facts({ binaryPresent: false }), WANTED)).toEqual({
       action: "install",
       why: "missing",
     });
   });
 
-  it("installe le runtime des tools une fois s'il manque à une ancienne installation", () => {
+  it("installs the tool runtime once if it is missing from an old installation", () => {
     expect(opencodeDecision(facts({ pluginVersion: null }), WANTED)).toEqual({
       action: "install",
       why: "missing",
@@ -90,9 +89,9 @@ describe("opencodeDecision", () => {
     ).toEqual({ action: "refuse", reason: "no_npm" });
   });
 
-  it("ne refuse PAS pour un npm absent quand tout est déjà installé", () => {
-    // Une machine sans chaîne d'outils qui a reçu opencode une fois continue de
-    // tourner : le refus porte sur l'installation, pas sur l'exécution.
+  it("does NOT reject a missing npm when everything is already installed", () => {
+    // A machine without a toolchain that received opencode once continues to
+    // turn: the refusal concerns the installation, not the execution.
     expect(opencodeDecision(facts({ npmAvailable: false }), WANTED)).toEqual({ action: "ready" });
   });
 
@@ -110,7 +109,7 @@ describe("readOpencodeManifestVersion", () => {
     );
   });
 
-  it("rend null sur un manifeste tronqué, vide ou sans version", () => {
+  it("returns null for a truncated, empty, or versionless manifest", () => {
     for (const raw of ['{"name":"opencode-ai"', "", "{}", '{"version":42}', '{"version":"  "}']) {
       expect(readOpencodeManifestVersion(raw)).toBeNull();
     }
@@ -118,7 +117,7 @@ describe("readOpencodeManifestVersion", () => {
 });
 
 describe("les chemins et la commande", () => {
-  it("répare le PATH minimal d'une app lancée depuis Finder sans perdre le PATH existant", () => {
+  it("repairs the minimal PATH of an app launched from Finder without losing the existing PATH", () => {
     expect(localRuntimePath("/usr/bin:/bin", ["/Users/c/.nvm/versions/node/v24/bin"]))
       .toBe(
         "/usr/bin:/bin:/Users/c/.nvm/versions/node/v24/bin:/opt/homebrew/bin:" +
@@ -134,7 +133,7 @@ describe("les chemins et la commande", () => {
       );
   });
 
-  it("préfère le npm embarqué et le fait exécuter par le Node d'Electron", () => {
+  it("prefers the bundled npm and runs it with Electron's Node", () => {
     expect(
       npmInvocation({
         bundledCli: "/Applications/minddy.app/Contents/Resources/app.asar/node_modules/npm/bin/npm-cli.js",
@@ -148,13 +147,13 @@ describe("les chemins et la commande", () => {
     });
   });
 
-  it("retombe sur le npm système quand l'ancien bundle n'en porte pas", () => {
+  it("falls back to system npm when the old bundle does not contain one", () => {
     expect(
       npmInvocation({ bundledCli: null, electronExecutable: "/minddy", systemNpm: "/usr/local/bin/npm" }),
     ).toEqual({ executable: "/usr/local/bin/npm", argsPrefix: [], extraEnv: {}, source: "system" });
   });
 
-  it("donne au harness le même npm embarqué pour son contrôle autoritaire", () => {
+  it("gives the harness the same bundled npm for its authoritative check", () => {
     expect(
       opencodeNpmProgram({
         [MINDDY_NPM_CLI_ENV]: "/app.asar/node_modules/npm/bin/npm-cli.js",
@@ -172,9 +171,9 @@ describe("les chemins et la commande", () => {
     });
   });
 
-  it("pose le binaire là où le harness ira le chercher", () => {
-    // Deux lecteurs, un seul chemin : si celui-ci diverge, la coquille installe
-    // 144 Mo à côté de ce que le harness cherche, et personne ne le dit.
+  it("places the binary where the harness will look for it", () => {
+    // Two drives, one path: if it diverges, the shell installs
+    // 144 MB next to what the harness is looking for, and no one says it.
     expect(opencodeBin("/data/opencode")).toBe("/data/opencode/node_modules/.bin/opencode");
     expect(opencodePackageManifestPath("/data/opencode")).toBe(
       "/data/opencode/node_modules/opencode-ai/package.json",
@@ -187,7 +186,7 @@ describe("les chemins et la commande", () => {
     );
   });
 
-  it("épingle la version dans la commande", () => {
+  it("pins the version in the command", () => {
     expect(opencodeInstallArgs("/data/opencode", WANTED)).toContain(`opencode-ai@${WANTED}`);
     expect(opencodeInstallArgs("/data/opencode")).toContain(`opencode-ai@${OPENCODE_VERSION}`);
     expect(opencodeInstallArgs("/data/opencode", WANTED)).toContain(
@@ -196,20 +195,20 @@ describe("les chemins et la commande", () => {
   });
 
   /**
-   * ⚠ **LE DÉFAUT QUI A COÛTÉ UN TEST EN VRAI, ET 144 Mo DANS UN HOME.**
-   *
-   * `npm install` avec un `cwd` sur un dossier sans `package.json` **remonte
-   * l'arborescence** jusqu'au premier qu'il trouve et installe dedans, en rendant
-   * **0**. Mesuré : parti de `~/Library/Application Support/minddy-dev/opencode`,
-   * npm est allé jusqu'à `/Users/<moi>/package.json`, a posé 144 Mo dans
-   * `~/node_modules` et s'est ajouté aux dépendances du home. Le dossier
-   * d'installation est resté vide, et le harness a attendu un serveur qui
-   * n'existerait jamais.
-   *
-   * Dans la microVM ça marchait par CHANCE : `/vercel/oc` n'a aucun ancêtre qui
-   * porte un `package.json`. L'hypothèse n'était écrite nulle part.
-   */
-  it("dit à npm OÙ installer, au lieu de le laisser chercher", () => {
+ * ⚠ **THE DEFECT WHICH COSTED A REAL TEST, AND 144 MB IN A HOME.**
+ *
+ * `npm install` with a `cwd` on a folder without `package.json` **backs
+ * the tree** to the first one it finds and installs in it, making
+ * **0**. Measured: started from `~/Library/Application Support/minddy-dev/opencode`,
+ * npm went up to `/Users/<moi>/package.json`, put 144 MB in
+ * `~/node_modules` and added itself to the home dependencies. The installation folder
+ * remained empty, and the harness waited for a server which
+ * would never exist.
+ *
+ * In the microVM it worked by LUCK: `/vercel/oc` has no ancestor which
+ * carries a `package.json`. The hypothesis was not written anywhere.
+ */
+  it("tells npm WHERE to install instead of letting it search", () => {
     const args = opencodeInstallArgs("/data/opencode");
     expect(args).toContain("--prefix");
     expect(args[args.indexOf("--prefix") + 1]).toBe("/data/opencode");
@@ -219,14 +218,14 @@ describe("les chemins et la commande", () => {
     expect(opencodeInstallManifestPath("/data/opencode")).toBe("/data/opencode/package.json");
     const manifest = JSON.parse(OPENCODE_INSTALL_MANIFEST) as Record<string, unknown>;
     expect(manifest.private).toBe(true);
-    // Un humain qui tombe sur ce dossier dans `~/Library/Application Support/`
-    // doit comprendre d'où il vient sans rien ouvrir d'autre.
+    // A human who comes across this folder in `~/Library/Application Support/`
+    // must understand where it comes from without opening anything else.
     expect(String(manifest.description)).toMatch(/minddy/i);
   });
 });
 
 describe("ce que l'utilisateur lit", () => {
-  it("demande de réparer l'app quand son bootstrap et le repli système manquent", () => {
+  it("asks to repair the app when its bootstrap and system fallback are missing", () => {
     const message = opencodeRefusalMessage("no_npm", WANTED);
     expect(message).toMatch(/reinstall or update minddy/i);
     expect(message).toContain(WANTED);

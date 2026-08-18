@@ -1,16 +1,16 @@
 /**
- * Registre des providers BYOK de l'agent de code (MIN-46). Partagé client +
- * serveur (AUCUN import server-only) : le wizard de config (UI), la route
- * ai-keys, la résolution de clé (`lib/server/agent/model.ts`) et la boucle
- * (`agent-loop.ts`) s'appuient tous dessus.
+ * Code Agent BYOK provider register (MIN-46). Shared client +
+ * server (NO import server-only): config wizard (UI), route
+ * ai-keys, key resolution (`lib/server/agent/model.ts`), and loop
+ * (`agent-loop.ts`) all rely on this.
  *
- * Principe : tous les providers sont adressés via l'endpoint OpenAI-compatible
- * `<baseUrl>/chat/completions` avec `Authorization: Bearer <clé>`. Anthropic,
- * OpenAI et Gemini exposent chacun une telle couche ; le provider « generic »
- * couvre n'importe quel serveur OpenAI-compatible via une base URL saisie par
- * l'utilisateur. Les particularités par provider (headers d'attribution,
- * comptage d'usage, version d'API) sont portées par `requestProfile` et
- * appliquées dans la boucle.
+ * Principle: all providers are addressed via the OpenAI-compatible
+ * `<baseUrl>/chat/completions` endpoint with `Authorization: Bearer <apiKey>`. Anthropic,
+ * OpenAI and Gemini each expose such a layer; the “generic” provider
+ * covers any OpenAI-compatible server via a URL base entered by
+ * the user. The particularities per provider (attribution headers,
+ * usage count, API version) are carried by `requestProfile` and
+ * applied in the loop.
  */
 
 export type AgentProviderId =
@@ -24,35 +24,35 @@ export type AgentProviderId =
   /** Ollama, via sa couche OpenAI-compatible `/v1`. */
   | "ollama";
 
-/** Ajustements de la requête chat par provider (compat OpenAI variable). */
+/** Adjustments to the chat request by provider (OpenAI compat variable). */
 export interface ProviderRequestProfile {
-  /** Envoie `usage: { include: true }` (comptage de coût OpenRouter). */
+  /** Sends `usage: { include: true }` (OpenRouter cost count). */
   usageAccounting?: boolean;
-  /** Envoie `stream_options: { include_usage: true }` (tokens dans le stream). */
+  /** Sends `stream_options: { include_usage: true }` (tokens in the stream). */
   streamUsage?: boolean;
-  /** Nom wire du plafond de sortie. Les surfaces, elles, parlent `maxOutputTokens`. */
+  /** Wire name of the output ceiling. Surfaces speak `maxOutputTokens`. */
   outputTokenField: "max_tokens" | "max_completion_tokens";
-  /** Plafond par défaut quand une surface n'en fixe pas un. */
+  /** Default ceiling when a surface does not set one. */
   defaultMaxOutputTokens?: number;
-  /** Ajoute les headers d'attribution OpenRouter (HTTP-Referer / X-Title). */
+  /** Adds OpenRouter attribution headers (HTTP-Referer / X-Title). */
   attribution?: boolean;
   /**
-   * Marque le prompt système d'un cache breakpoint `cache_control:{ephemeral}`.
-   * Réservé aux providers qui l'acceptent : OpenRouter le transmet aux modèles qui
-   * supportent le prompt caching (gros gain sur Claude) et l'ignore sans erreur
-   * ailleurs. À NE PAS activer pour les couches compat OpenAI/Anthropic/Gemini
-   * directes (risque de rejet du champ).
-   */
+ * Marks the system prompt with a cache breakpoint `cache_control:{ephemeral}`.
+ * Reserved for providers who accept it: OpenRouter transmits it to models which
+ * support the caching prompt (big gain on Claude) and ignores it without error
+ * elsewhere. NOT to be activated for direct OpenAI/Anthropic/Gemini
+ * compat layers (risk of field rejection).
+ */
   promptCaching?: boolean;
   /**
-   * Forme du champ de raisonnement acceptée par cet endpoint (MIN-122) : la SEULE
-   * gate de la feature — un provider sans ce champ n'en envoie jamais aucun.
-   *   `reasoning`        → `reasoning: { effort }` (OpenRouter).
-   *   `reasoning_effort` → `reasoning_effort` à plat (OpenAI et Gemini).
-   *   `thinking`         → forme model-aware adaptative/manuelle (Anthropic).
-   * Le générique reste muet : sa base URL est un serveur inconnu, et un champ
-   * refusé revient en 400. Les niveaux et leur traduction : lib/agent-reasoning.ts.
-   */
+ * Form of the reasoning field accepted by this endpoint (MIN-122): the ONLY
+ * gate of the feature — a provider without this field never sends any.
+ * `reasoning` → `reasoning: { effort }` (OpenRouter).
+ * `reasoning_effort` → `reasoning_effort` flat (OpenAI and Gemini).
+ * `thinking` → adaptive/manual model-aware form (Anthropic).
+ * The generic remains silent: its base URL is an unknown server, and a field
+ * refused returns to 400. The levels and their translation: lib/agent-reasoning.ts.
+ */
   reasoningField?: "reasoning" | "reasoning_effort" | "thinking";
 }
 
@@ -61,43 +61,43 @@ export interface AgentProviderDef {
   label: string;
   /** Base URL OpenAI-compatible (sans `/chat/completions`). Absent = base saisie (generic). */
   baseUrl?: string;
-  /** true → l'utilisateur DOIT fournir une base URL (generic). */
+  /** true → the user MUST provide a base URL (generic). */
   requiresBaseUrl?: boolean;
   /**
-   * URL proposée à l'installation d'un endpoint local. C'est un brouillon UI,
-   * jamais un repli côté serveur : une URL explicitement enregistrée reste
-   * requise pour lancer un run.
-   */
+ * URL offered when installing a local endpoint. This is a draft UI,
+ * never a server-side fallback: an explicitly registered URL remains
+ * required to launch a run.
+ */
   localDefaultBaseUrl?: string;
   /**
-   * Modèle par défaut (frontier) de ce provider en BYOK — pré-rempli dans le
-   * sélecteur et utilisé comme fallback de résolution (cf. `resolveAgentModel`).
-   * Absent pour OpenRouter (reprend le défaut racine = quota minddy) et pour le
-   * générique (namespace inconnu → l'utilisateur doit choisir).
-   *
-   * REPLI seulement : un admin le change depuis /admin sans redéploiement (clé
-   * `byok_default_model_<provider>`, cf. `resolveProviderDefaultModel`). Ce qui
-   * tourne vraiment se lit là, pas ici.
-   */
+ * Default model (border) of this provider in BYOK — pre-filled in the
+ * selector and used as a resolution fallback (see `resolveAgentModel`).
+ * Absent for OpenRouter (takes the root default = quota minddy) and for the
+ * generic (namespace unknown → the user must choose).
+ *
+ * FALLBACK only: an admin changes it from /admin without redeployment (key
+ * `byok_default_model_<provider>`, cf. `resolveProviderDefaultModel`). What
+ * really works is read there, not here.
+ */
   defaultModel?: string;
-  /** Placeholder de clé affiché dans le wizard. */
+  /** Key placeholder displayed in the wizard. */
   keyPlaceholder: string;
   /**
-   * Id modèle « échantillon » pour dériver le logo via `providerFromModel`
-   * (réutilise le mapping @lobehub/icons). "" = pas de logo (generic → Cpu).
-   */
+ * “Sample” template id to derive the logo via `providerFromModel`
+ * (reuses @lobehub/icons mapping). "" = no logo (generic → Cpu).
+ */
   logoModel: string;
-  /** Stratégie de listing des modèles (cf. route /api/agent/models). */
+  /** Model listing strategy (see /api/agent/models route). */
   listStrategy: "openrouter" | "openai" | "anthropic" | "generic" | "none";
   /**
-   * L'adresse désigne la machine ou le réseau de l'utilisateur. Elle ne doit
-   * jamais être sondée par le serveur ni être choisie pour une microVM cloud.
-   */
+ * The address designates the user's machine or network. It should
+ * never be probed by the server nor be chosen for a cloud microVM.
+ */
   localOnly?: boolean;
-  /** Segment OpenAI-compatible ajouté quand le serveur local attend une racine. */
+  /** OpenAI-compatible segment added when the local server is waiting for a root. */
   localBaseUrlSuffix?: string;
   requestProfile: ProviderRequestProfile;
-  /** Lien vers la page de génération de clé (aide du wizard). */
+  /** Link to the key generation page (wizard help). */
   keysUrl?: string;
 }
 
@@ -106,8 +106,8 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     id: "openrouter",
     label: "OpenRouter",
     baseUrl: "https://openrouter.ai/api/v1",
-    // Pas de défaut propre : reprend le défaut racine app_config.agent_model,
-    // exactement comme le quota minddy (même endpoint OpenRouter).
+    // No own default: takes over the root default app_config.agent_model,
+    // exactly like the minddy quota (same OpenRouter endpoint).
     keyPlaceholder: "sk-or-v1-…",
     logoModel: "openrouter/x",
     listStrategy: "openrouter",
@@ -145,8 +145,8 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     keyPlaceholder: "sk-ant-…",
     logoModel: "anthropic/x",
     listStrategy: "anthropic",
-    // La couche compat accepte les deux plafonds, mais recommande le contrat
-    // OpenAI récent. Le raisonnement garde en revanche la forme Anthropic.
+    // The compat layer accepts both caps, but recommends the contract
+    // Recent OpenAI. The reasoning, however, keeps the Anthropic form.
     requestProfile: {
       streamUsage: true,
       outputTokenField: "max_completion_tokens",
@@ -177,22 +177,22 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     keyPlaceholder: "sk-…",
     logoModel: "",
     listStrategy: "generic",
-    // Un serveur générique peut n'implémenter que l'ancien contrat Chat
-    // Completions. On n'y envoie aucune extension de provider.
+    // A generic server can only implement the old Chat contract
+    // Completions. No provider extensions are sent there.
     requestProfile: { outputTokenField: "max_tokens" },
   },
   {
     id: "local_openai",
     label: "Endpoint local (OpenAI-compatible)",
     requiresBaseUrl: true,
-    // Port par défaut de LM Studio, l'implémentation OpenAI-compatible locale la
-    // plus répandue. L'utilisateur peut naturellement le remplacer.
+    // Default port of LM Studio, the local OpenAI-compatible implementation
+    // more widespread. The user can of course replace it.
     localDefaultBaseUrl: "http://127.0.0.1:1234/v1",
     keyPlaceholder: "sk-…",
     logoModel: "",
     listStrategy: "none",
     localOnly: true,
-    // Pas de champ optionnel : un endpoint local inconnu est la forme la plus
+    // No optional field: an unknown local endpoint is the most
     // conservatrice du contrat Chat Completions.
     requestProfile: { outputTokenField: "max_tokens" },
   },
@@ -205,21 +205,21 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     logoModel: "",
     listStrategy: "none",
     localOnly: true,
-    // Ollama expose ses Chat Completions sous `/v1`, alors que son URL habituelle
-    // est la racine `http://127.0.0.1:11434`.
+    // Ollama exposes its Chat Completions under `/v1`, while its usual URL
+    // is the root `http://127.0.0.1:11434`.
     localBaseUrlSuffix: "/v1",
     requestProfile: { outputTokenField: "max_tokens" },
   },
 ];
 
-/** Provider par défaut quand aucun BYOK : clé plateforme OpenRouter. */
+/** Default Provider when no BYOK: OpenRouter platform key. */
 export const DEFAULT_AGENT_PROVIDER: AgentProviderId = "openrouter";
 
 /**
- * Option « quota minddy » du sélecteur : mode plateforme (aucun BYOK), l'agent
- * tourne sur la clé OpenRouter de minddy dans la limite du plafond mensuel.
- * PSEUDO-provider réservé à l'UI — n'appartient PAS à `AGENT_PROVIDERS` (ce n'est
- * pas un provider BYOK ; côté serveur, « quota minddy » = absence de clé BYOK).
+ * “mindy quota” option of the selector: platform mode (no BYOK), the agent
+ * runs on minddy's OpenRouter key within the limit of the monthly cap.
+ * PSEUDO-provider reserved for the UI — does NOT belong to `AGENT_PROVIDERS` (it is not
+ * not a BYOK provider on the server side, “quota minddy” = absence of BYOK key).
  */
 export const MINDDY_QUOTA_PROVIDER_ID = "minddy";
 
@@ -228,8 +228,8 @@ export function getAgentProvider(id: string | null | undefined): AgentProviderDe
 }
 
 /**
- * Modèle par défaut (frontier) d'un provider, ou undefined s'il n'en a pas de
- * propre : OpenRouter (reprend le défaut racine = quota minddy) et le générique.
+ * Default model (border) of a provider, or undefined if it does not have its own
+ *: OpenRouter (takes the root default = minddy quota) and the generic.
  */
 export function getProviderDefaultModel(id: string | null | undefined): string | undefined {
   return getAgentProvider(id)?.defaultModel;
@@ -239,12 +239,12 @@ export function isKnownAgentProvider(id: string): id is AgentProviderId {
   return AGENT_PROVIDERS.some((p) => p.id === id);
 }
 
-/** Un endpoint local ne peut être atteint que par le harness de l'app de bureau. */
+/** A local endpoint can only be reached by the desktop app harness. */
 export function isLocalAgentProvider(id: string | null | undefined): boolean {
   return getAgentProvider(id)?.localOnly === true;
 }
 
-/** Normalise une base URL : trim, retire le `/` final et un `/chat/completions` collé. */
+/** Normalizes a URL base: trim, removes the final `/` and a pasted `/chat/completions`. */
 export function normalizeBaseUrl(raw: string): string {
   return raw
     .trim()
@@ -253,8 +253,8 @@ export function normalizeBaseUrl(raw: string): string {
 }
 
 /**
- * Base URL effective d'un provider : celle du registre, ou la custom (generic).
- * Renvoie null si generic sans base URL, ou provider inconnu.
+ * Effective URL base of a provider: that of the registry, or the custom (generic).
+ * Returns null if generic without URL base, or unknown provider.
  */
 export function resolveProviderBaseUrl(
   providerId: string,
@@ -272,7 +272,7 @@ export function resolveProviderBaseUrl(
     : `${normalized}/${suffix}`;
 }
 
-/** URL de complétion chat OpenAI-compatible pour une base donnée. */
+/** OpenAI-compatible chat completion URL for a given database. */
 export function chatCompletionsUrl(baseUrl: string): string {
   return `${normalizeBaseUrl(baseUrl)}/chat/completions`;
 }

@@ -3,34 +3,32 @@ import { Reveal, RevealHeading } from "./reveal";
 import { IsoTile, type IsoTileName } from "./iso-tile";
 
 /**
- * §6 — « Et le reste est déjà là » (nouvelle section).
+ * §6 — “And the rest is already there” (new section).
  *
- * La moitié « tout en un » du positionnement n'était affirmée nulle part : la
- * page démontrait la simplicité et laissait croire qu'elle se payait en
- * fonctionnalités manquantes. Ces trois-là existent, sont vendables, et
- * n'avaient aucune place — trop petites pour une section, trop utiles pour être
- * tues.
+ * The “all-in-one” half of the positioning was not stated anywhere: the
+ * page demonstrated simplicity and led people to believe that it was paid for in
+ * missing features. These three exist, are sellable, and
+ * had no space — too small for a section, too useful to be
+ * killed.
  *
- * LES PAGES N'Y SONT PAS, et y ont figuré un moment (MIN-254). Le wiki par
- * projet manquait à la landing, il est entré ici en une ligne, et c'était deux
- * fois faux : une surface entière du produit ne se dit pas dans une bande de
- * fin d'argumentaire. Il a maintenant sa section (`section-pages.tsx`). Ce qui
- * reste ici est bien de la nature de cette bande — des raccordements.
+ * THE PAGES ARE NOT THERE, and were there for a while (MIN-254). The wiki by
+ * project was missing from the landing, it was entered here in one line, and it was twice
+ * wrong: an entire surface of the product is not said in a strip of
+ * end of argument. It now has its section (`section-pages.tsx`). What
+ * remains here is indeed the nature of this tape - connections.
  *
- * Bande courte et sans capture, DÉLIBÉRÉMENT : c'est ce qui empêche la section
- * de devenir un catalogue et de contredire le titre de §2 (« Rien de plus »).
- * La tension complétude / simplicité se résout dans le sous-titre — tout est là,
- * mais il n'y a qu'une façon de faire chaque chose.
+ * Short tape without capture, DELIBERATELY: this is what prevents the section
+ * from becoming a catalog and contradicting the title of §2 ("Nothing more ).
+ * The completeness/simplicity tension is resolved in the subtitle — everything is there,
+ * but there is only one way to do everything.
  *
- * Ce qui a été laissé dehors sciemment : les statistiques, les sous-tickets et
- * les relations « bloque / bloqué par ». Ils existent aussi ; les ajouter ferait
- * exactement le catalogue qu'on évite.
+ * What was left out knowingly: the statistics, the subtickets and
+ * the relationships « blocks/blocked by”. They also exist; adding them would make
+ * exactly the catalog we are avoiding.
  *
- * Deux entrées ont été retirées. Les WEBHOOKS SORTANTS n'existent pas : les
- * seules routes `app/api/webhooks/*` reçoivent GitHub et GitLab, minddy ne
- * prévient aucun outil tiers. Et les langues et les thèmes ne sont pas un
- * argument de vente : c'est une préférence d'affichage, à sa place dans les
- * réglages du compte, pas dans une page qui promet de la sobriété.
+ * Two entries have been removed. OUTGOING WEBHOOKS do not exist: the
+ * only `app/api/webhooks/*` routes receive GitHub and GitLab, minddy does not
+ * prevent any third-party tools. And languages ​​and themes are not a selling point: it's a display preference, in its place in account settings, not in a page that promises sobriety.
  */
 
 const ITEMS = [
@@ -59,9 +57,7 @@ export async function SectionMore() {
           </Reveal>
         </header>
 
-        {/* Quatre lignes, pas quatre cartes : la bande doit se parcourir d'un
-            coup d'œil et se lire comme une liste de fin d'argumentaire, pas
-            comme une deuxième grille produit. */}
+        {/* Four lines, not four cards: the strip should be read at a glance and read like a list at the end of an argument, not like a second product grid. */}
         <Reveal as="ul" className="mx-auto grid max-w-4xl gap-8 sm:grid-cols-2">
           {ITEMS.map((item) => (
             <li key={item.key} className="flex items-start gap-4">

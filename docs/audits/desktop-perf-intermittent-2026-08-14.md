@@ -1,41 +1,41 @@
-# Deuxième passe — pourquoi le défaut est RARE
+# Second pass — why the defect is RARE
 
-App de bureau minddy (Electron 43 / macOS). Complète, sans la remplacer, `docs/audits/desktop-perf-2026-08-14.md`.
-
----
-
-## 1. Ce que le témoignage a tranché
-
-**« Honnêtement au ressenti les deux sont tout autant fluides » élimine tout coût permanent.** Un impôt payé à chaque frame — un vecteur de régions annotées reconstruit à chaque layout, un `Recalculate Style` sur tout le document à chaque ouverture de menu, un board non mémoïsé — se ressent en continu, et se ressent *plus* là où il est plus lourd. Si le régime permanent est le même dans Chrome et dans la coquille, alors ce qui les sépare n'est pas un coefficient, c'est un **événement**. La thèse centrale de la première passe — le creusement `no-drag` global de `app/globals.css:1710-1731` comme cause principale — est donc **écartée**. Ce qui reste vrai dans ce premier rapport ne bouge pas d'un mot : les règles existent, leur périmètre est bien celui décrit, C1 (20 dropdowns Radix en `modal` écrivant `pointer-events:none` sur `<body>`), C5, C6, C7, P2, P4 et P6 sont des défauts réels et leurs correctifs restent bons. Ils ne sont simplement pas la réponse à *cette* question-ci. Le §5 de ce rapport (la manip DevTools, l'A/B `data-desktop-app`, le budget de 8,3 ms sur ProMotion) reste la meilleure page du document et sert de socle au §3 ci-dessous.
-
-**« Assez rare pour ne pas arriver quand on le cherche » impose trois choses à toute explication.** D'abord une **condition nommée** qui n'est vraie que parfois : un seuil franchi, deux tâches qui courent l'une contre l'autre, un état de fenêtre, une accumulation dans un process qui vit des jours. Ensuite l'**inversion du geste de recherche** : chercher, c'est cliquer lentement, bouger la souris, revenir vite — trois gestes qui consomment ou désarment précisément les mécanismes candidats. Enfin, un mécanisme qui se déclenche **à chaque ouverture de menu est disqualifié d'office**, aussi coûteux soit-il, puisqu'il se reproduirait à la demande. Et deux symptômes distincts, qu'il faut refuser de mélanger : « le rail qui se ferme plus lentement » est une **animation à cadence dégradée** (des frames perdues) ; « un popover qui s'ouvre, se referme et s'ouvre en à peine 100 ms » n'est **pas un problème de rendu** — c'est un démontage/remontage ou une bascule d'état, donc un événement de **logique**. Les mélanger serait la faute la plus coûteuse de ce document ; le §2 les sépare, et le §3 donne l'instrument qui les distingue en une ligne de journal.
-
-Une note de méthode, qui pèse sur la lecture du test A/B : dans l'usage quotidien, la fenêtre de la coquille est celle qu'on **quitte et retrouve** vingt fois par jour (⌘W la cache, `desktop/src/main.ts:323-327`), tandis que l'onglet Chrome du test était ouvert côte à côte, visible, quelques minutes. Les mécanismes gouvernés par un cycle caché→visible sont donc structurellement **absents du test comparatif** tout en étant quotidiens à l'usage. C'est exactement le profil « les deux sont aussi fluides, et pourtant l'app native fait des trucs que le navigateur ne fait pas ».
+minddy desktop app (Electron 43 / macOS). Complete, without replacing it, `docs/audits/desktop-perf-2026-08-14.md`.
 
 ---
 
-## 2. Les mécanismes retenus, par pouvoir explicatif
+## 1. What the testimony decided
 
-### A. « Le rail qui se ferme plus lentement »
+**"Honestly, both are equally fluid" eliminates any permanent cost.** A tax paid at each frame - a vector of annotated regions reconstructed at each layout, a `Recalculate Style` on the entire document at each menu opening, a board not memorized - is felt continuously, and is felt *more* where it is heavier. If the steady state is the same in Chrome and in the shell, then what separates them is not a coefficient, it is an **event**. The central thesis of the first pass — the global `no-drag` digging of `app/globals.css:1710-1731` as the main cause — is therefore **discarded**. What remains true in this first report does not change a word: the rules exist, their scope is indeed that described, C1 (20 Radix dropdowns in `modal` writing `pointer-events:none` on `<body>`), C5, C6, C7, P2, P4 and P6 are real defects and their fixes remain good. They are simply not the answer to *that* question. §5 of this report (the DevTools manipulation, the A/B `data-desktop-app`, the budget of 8.3 ms on ProMotion) remains the best page of the document and serves as the basis for §3 below.
 
-#### A1 — La reprise après absence lâche jusqu'à 600 parcours du cache react-query en une boucle synchrone, à l'instant précis où la fenêtre revient
+**“Rare enough not to arrive when you look for it” imposes three things on any explanation.** First a **named condition** which is only true sometimes: a threshold crossed, two tasks running against each other, a window state, an accumulation in a process which lives for days. Then the **inversion of the search gesture**: searching means clicking slowly, moving the mouse, returning quickly — three gestures which precisely consume or disarm the candidate mechanisms. Finally, a mechanism that is triggered **each time a menu is opened is automatically disqualified**, however costly it may be, since it would reproduce on demand. And two distinct symptoms, which we must refuse to mix: “the rail which closes more slowly” is a **degraded frame rate animation** (lost frames); “a popover that opens, closes and opens in just 100 ms” is **not a rendering problem** — it is an unmount/remount or state toggle, therefore a **logic** event. Mixing them up would be the most costly mistake in this document; §2 separates them, and §3 gives the instrument which distinguishes them in a newspaper line.
 
-**Le mécanisme.** Sur `visibilitychange` → visible, l'effet de reprise appelle `catchUp([...USER_SCOPE_KEYS, ...topicIds.flatMap(projectScopeKeys)])` ([lib/realtime-provider.tsx:749](lib/realtime-provider.tsx)). `catchUp` ([:620-631](lib/realtime-provider.tsx)) est une boucle `for` **synchrone** qui appelle `queryClient.invalidateQueries({ queryKey })` une clé à la fois, sans `refetchType` — donc au défaut `"active"`. Chaque appel fait **deux** balayages complets du cache (`findAll` dans `invalidateQueries`, puis un second dans le `refetchQueries` qu'il enchaîne), pas un. Le compte : 9 clés utilisateur ([:481-491](lib/realtime-provider.tsx)) + 11 clés par projet + 21 préfixes partagés dédoublonnés une fois ([:492-545](lib/realtime-provider.tsx)), plafonné à 25 canaux projet (`MAX_PROJECT_CHANNELS`, [lib/realtime-topics.ts:17](lib/realtime-topics.ts)). Sur un compte à cinq projets : ~85 appels, donc ~170 parcours ; au plafond, ~305 appels et ~610 parcours. Et le cache n'a pas de plafond : `gcTime` vaut 24 h ([lib/query-provider.tsx:45](lib/query-provider.tsx)) et **le document de la coquille n'est jamais rechargé** (pas de `reload` ni de `forceReload` dans le menu, [desktop/src/menu.ts:66-70](desktop/src/menu.ts)), donc N croît toute la journée — un `["comments",id]` et un `["events",id]` par ticket ouvert. Le coût est en O(appels × N), avec N qui monte tout seul.
+A note of method, which weighs on the reading of the A/B test: in daily use, the shell window is the one that we **leave and find** twenty times a day (⌘W the cache, `desktop/src/main.ts:323-327`), while the Chrome tab of the test was open side by side, visible, for a few minutes. The mechanisms governed by a hidden→visible cycle are therefore structurally **absent from the comparative test** while being everyday in use. This is exactly the “both are equally fluid, and yet the native app does things that the browser doesn’t do” profile.
 
-**La condition qui le rend intermittent.** Un seuil, lu dans le code : `shouldCatchUpOnResume` ([lib/realtime-resume.ts:48-57](lib/realtime-resume.ts)) ne rend `true` que si la socket s'est déclarée tombée, **ou** si l'absence dépasse `RESUME_AFTER_HIDDEN_MS = 15_000` ([:35](lib/realtime-resume.ts)). Un aller-retour de trois secondes — le geste exact de quelqu'un qui essaie de reproduire — ne déclenche **rien**. Il faut être parti plus de quinze secondes *et* interagir dans la seconde qui suit le retour. Le coût, lui, dépend de deux variables qu'on ne voit pas en observant : le nombre de projets du compte, et le nombre de requêtes accumulées depuis le dernier lancement. Le même geste coûte 20 ms le matin et 150 ms le soir.
+---
 
-**Pourquoi la coquille change l'issue.** Le chemin n'est pas absent de Chrome — changer d'onglet bascule `visibilityState` de la même façon. Ce que la coquille change est la **fréquence**, et elle la change structurellement : ⌘W et le feu rouge **cachent** la fenêtre au lieu de la détruire ([desktop/src/main.ts:323-327](desktop/src/main.ts), [desktop/src/menu.ts:84-91](desktop/src/menu.ts)), `app.on("activate")` la ramène ([:560-564](desktop/src/main.ts)), et l'app ne quitte jamais sur darwin ([:570-572](desktop/src/main.ts)). Le cycle visible→caché→visible se rejoue donc des dizaines de fois par jour **sur le même document, avec le même cache**, là où un ⌘W dans Chrome détruit l'onglet et où le rechargement suivant repart d'un snapshot borné. Une fenêtre unique est en outre cachée par périodes *longues* (on va dans l'éditeur, dans le terminal) : le seuil de 15 s est franchi presque à chaque fois.
+## 2. The mechanisms retained, by explanatory power
 
-**Le correctif.** Pas celui qu'on croit. Restreindre à `type: "active"` casserait le marquage des requêtes inactives, qui est exactement ce que le commentaire [:614-618](lib/realtime-provider.tsx) décrit et ce qui fait qu'une surface rouverte après l'absence redemande la vérité (avec `staleTime: 5 * 60_000`, [lib/query-provider.tsx:132](lib/query-provider.tsx), elle serait resservie périmée pendant cinq minutes). Borner aux projets à l'écran est pire : les autres alimentent `GLOBAL_BOARD_KEY`, `HOME_SUMMARY_KEY` et `TRIAGE_COUNTS_KEY`, lus par la sidebar sur toutes les pages. Le geste juste est **un seul parcours** :
+### A. “The rail that closes more slowly”
+
+#### A1 — Missing resume drops up to 600 react-query cache scans in a synchronous loop, at the precise moment the window returns
+
+**The mechanism.** On `visibilitychange` → visible, the resume effect calls `catchUp([...USER_SCOPE_KEYS, ...topicIds.flatMap(projectScopeKeys)])` ([lib/realtime-provider.tsx:749](lib/realtime-provider.tsx)). `catchUp` ([:620-631](lib/realtime-provider.tsx)) is a `for` **synchronous** loop that calls `queryClient.invalidateQueries({ queryKey })` one key at a time, without `refetchType` — so defaults to `"active"`. Each call does **two** full cache scans (`findAll` into `invalidateQueries`, then a second into the `refetchQueries` it chains together), not one. The count: 9 user keys ([:481-491](lib/realtime-provider.tsx)) + 11 keys per project + 21 shared prefixes deduplicated once ([:492-545](lib/realtime-provider.tsx)), capped at 25 project channels (`MAX_PROJECT_CHANNELS`, [lib/realtime-topics.ts:17](lib/realtime-topics.ts)). On a five-project account: ~85 calls, therefore ~170 courses; to the ceiling, ~305 calls and ~610 routes. And the cache has no ceiling: `gcTime` is worth 24 h ([lib/query-provider.tsx:45](lib/query-provider.tsx)) and **the shell document is never reloaded** (no `reload` nor `forceReload` in the menu, [desktop/src/menu.ts:66-70](desktop/src/menu.ts)), so N grows all day — one `["comments",id]` and one `["events",id]` per open ticket. The cost is O(calls × N), with N rising on its own.
+
+**The condition that makes it intermittent.** A threshold, read in the code: `shouldCatchUpOnResume` ([lib/realtime-resume.ts:48-57](lib/realtime-resume.ts)) only returns `true` if the socket has declared itself down, **or** if the absence exceeds `RESUME_AFTER_HIDDEN_MS = 15_000` ([:35](lib/realtime-resume.ts)). A three-second back and forth — the exact gesture of someone trying to reproduce — triggers **nothing**. You have to be gone for more than fifteen seconds *and* interact within a second of returning. The cost depends on two variables that we do not see by observing: the number of projects in the account, and the number of requests accumulated since the last launch. The same gesture costs 20 ms in the morning and 150 ms in the evening.
+
+**Why the shell changes the outcome.** The path is not missing from Chrome — switching tabs toggles `visibilityState` the same way. What the shell changes is the **frequency**, and it changes it structurally: ⌘W and the red light **hide** the window instead of destroying it ([desktop/src/main.ts:323-327](desktop/src/main.ts), [desktop/src/menu.ts:84-91](desktop/src/menu.ts)), `app.on("activate")` brings it back ([:560-564](desktop/src/main.ts)), and the app never exits on darwin ([:570-572](desktop/src/main.ts)). The visible→hidden→visible cycle is therefore replayed dozens of times per day **on the same document, with the same cache**, where a ⌘W in Chrome destroys the tab and where the next reload starts from a limited snapshot. A single window is also hidden for *long* periods (we go to the editor, to the terminal): the 15 s threshold is crossed almost every time.
+
+**The fix.** Not what you think. Restricting to `type: "active"` would break the marking of inactive requests, which is exactly what comment [:614-618](lib/realtime-provider.tsx) describes and what makes a surface reopened after absence request the truth again (with `staleTime: 5 * 60_000`, [lib/query-provider.tsx:132](lib/query-provider.tsx), it would be re-served stale for five minutes). Limiting to on-screen projects is worse: the others feed `GLOBAL_BOARD_KEY`, `HOME_SUMMARY_KEY` and `TRIAGE_COUNTS_KEY`, read by the sidebar on all pages. The right gesture is **a single course**:
 
 ```ts
-// lib/realtime-provider.tsx:620 — même couverture (actives ET inactives),
-// un findAll au lieu de plusieurs centaines.
+// lib/realtime-provider.tsx:620 — same coverage (active AND inactive),
+// one findAll instead of several hundred.
 const catchUp = useCallback((keys: QueryKey[]) => {
   const wanted = new Set(keys.map((k) => JSON.stringify(k)));
   void queryClient.invalidateQueries({
     predicate: (q) => {
-      // Une clé matche si l'un de ses préfixes est demandé.
+      // A key matches if one of its prefixes is requested.
       for (let n = q.queryKey.length; n > 0; n--) {
         if (wanted.has(JSON.stringify(q.queryKey.slice(0, n)))) return true;
       }
@@ -45,51 +45,51 @@ const catchUp = useCallback((keys: QueryKey[]) => {
 }, [queryClient]);
 ```
 
-#### A2 — Après une coupure de socket, le rattrapage est rejoué UNE FOIS PAR CANAL, et `wakeRealtime` provoque lui-même la coupure trois secondes après A1
+#### A2 — After a socket cut, the catch-up is replayed ONCE PER CHANNEL, and `wakeRealtime` itself causes the cut three seconds after A1
 
-**Le mécanisme.** Dans `openScope`, le callback de `channel.subscribe` marque `dropped = true` sur `CHANNEL_ERROR`/`TIMED_OUT`/`CLOSED` et rejoue `catchUp(scopeKeys)` à la re-souscription ([lib/realtime-provider.tsx:664-677](lib/realtime-provider.tsx)). Or `dropped` est une variable de **fermeture par canal** ([:644](lib/realtime-provider.tsx)) tandis que le `seen` qui dédoublonne vit **à l'intérieur** de `catchUp` ([:622](lib/realtime-provider.tsx)) : il est neuf à chaque appel. Une coupure ferme *tous* les canaux d'un coup — une seule WebSocket porte les 26 topics, et phoenix propage l'erreur à chacun (`onConnClose` → `triggerChanError`, `@supabase/phoenix/assets/js/phoenix/socket.js:547-579`, remonté en `CHANNEL_ERROR` par `@supabase/realtime-js/dist/main/RealtimeChannel.js:157`). À la reconnexion, chaque canal rappelle `catchUp(32)` : 137 invalidations sur un compte à quatre projets, 809 au plafond, dont la grande majorité rejouent les mêmes 21 préfixes partagés. Et comme les rejoins arrivent au fil des ACK, le travail est **étalé sur plusieurs images consécutives** — c'est-à-dire pile la durée d'une animation de rail (`transitions.shell`, [components/app-sidebar.tsx:795](components/app-sidebar.tsx)).
+**The mechanism.** In `openScope`, the callback of `channel.subscribe` marks `dropped = true` on `CHANNEL_ERROR`/`TIMED_OUT`/`CLOSED` and replays `catchUp(scopeKeys)` on re-subscription ([lib/realtime-provider.tsx:664-677](lib/realtime-provider.tsx)). Now `dropped` is a **closure variable per channel** ([:644](lib/realtime-provider.tsx)) while the `seen` which duplicates lives **inside** `catchUp` ([:622](lib/realtime-provider.tsx)): it is new on each call. An outage closes *all* the channels at once — a single WebSocket carries all 26 topics, and phoenix propagates the error to each one (`onConnClose` → `triggerChanError`, `@supabase/phoenix/assets/js/phoenix/socket.js:547-579`, escalated to `CHANNEL_ERROR` by `@supabase/realtime-js/dist/main/RealtimeChannel.js:157`). Upon reconnection, each channel recalls `catchUp(32)`: 137 invalidations on a four-project account, 809 at the ceiling, the vast majority of which replay the same 21 shared prefixes. And as the joins arrive over the ACKs, the work is **spread over several consecutive images** — that is to say exactly the duration of a rail animation (`transitions.shell`, [components/app-sidebar.tsx:795](components/app-sidebar.tsx)).
 
-**La condition qui le rend intermittent — et c'est le point que la première passe ne pouvait pas voir.** Ce n'est pas seulement « une coupure arrive parfois ». C'est que **A1 fabrique A2**. `resume` appelle `wakeRealtime(realtime)` ([:751](lib/realtime-provider.tsx)) qui, sur une socket qui se dit ouverte, envoie un battement puis, `ZOMBIE_PROBE_MS = 3_000` plus tard, un second **destiné à forcer phoenix à conclure la mort et à tout rejoindre** ([lib/realtime-resume.ts:87-103](lib/realtime-resume.ts)). Autrement dit : toute reprise de plus de quinze secondes déclenche A1 à l'instant du retour, **puis A2 trois secondes après**, si la socket était zombie. Les deux se composent sur un seul geste, et ce geste est celui que la coquille rend quotidien. Le reste du temps — socket vivante, absence courte — rien ne part. La condition est nommée, non commandable, et sa fréquence est une fonction directe du fait que la fenêtre se cache au lieu de mourir. `dropped` est en outre faux à la première souscription : le défaut n'existe pas au lancement de l'app, seulement chez quelqu'un qui la laisse ouverte.
+**The condition that makes it intermittent — and this is the point that the first pass couldn't see.** It's not just "an outage happens sometimes". This is because **A1 makes A2**. `resume` calls `wakeRealtime(realtime)` ([:751](lib/realtime-provider.tsx)) which, on a socket that says it is open, sends a beat then, `ZOMBIE_PROBE_MS = 3_000` later, a second **intended to force phoenix to conclude death and rejoin everything** ([lib/realtime-resume.ts:87-103](lib/realtime-resume.ts)). In other words: any recovery lasting more than fifteen seconds triggers A1 at the moment of return, **then A2 three seconds later**, if the socket was zombie. Both are composed of a single gesture, and this gesture is the one that the shell makes everyday. The rest of the time — living socket, short absence — nothing leaves. The condition is named, uncontrollable, and its frequency is a direct function of whether the window hides instead of dying. `dropped` is also false at the first subscription: the defect does not exist when the app is launched, only for someone who leaves it open.
 
-**Le correctif.** Garder le drapeau par canal — il attrape aussi la chute d'**un seul** canal (join refusé, jeton périmé sur un topic privé), qu'un écouteur au niveau socket ne verrait pas. Ne hisser que la **file** : un `catchUpCoalesced(keys)` au niveau du provider, qui empile dans un `Set<string>` et vide en un seul `invalidateQueries({ predicate })` par tour de boucle. C'est le même correctif que A1, et il rend les deux. ⚠ **File séparée de `timers`** ([:586-612](lib/realtime-provider.tsx)) : cette map-là porte le mode dans son identité de coalescence (`${refetch}:${hash}`, [:598](lib/realtime-provider.tsx)) pour qu'un `"none"` n'avale pas un `"active"` en attente ; la partager réintroduirait ce bug exact.
+**The fix.** Keep the flag per channel — it also catches the drop of **a single** channel (join refused, expired token on a private topic), which a socket-level listener would not see. Hoist only the **queue**: a `catchUpCoalesced(keys)` at the provider level, which stacks in a `Set<string>` and empties into a single `invalidateQueries({ predicate })` per loop turn. It's the same patch as A1, and it renders both. ⚠ **Separate file from `timers`** ([:586-612](lib/realtime-provider.tsx)): this map carries the mode in its coalescence identity (`${refetch}:${hash}`, [:598](lib/realtime-provider.tsx)) so that a `"none"` does not swallow a `"active"` pending; sharing it would reintroduce this exact bug.
 
-#### A3 — La fenêtre cachée part en purge mémoire, et c'est au retour qu'on le paie
+#### A3 — The hidden window goes into memory purge, and we pay for it when we return
 
-**Le mécanisme.** Les deux gestes « fermer » sont recâblés en `hide()` ([desktop/src/main.ts:323-327](desktop/src/main.ts), [desktop/src/menu.ts:88-90](desktop/src/menu.ts)). Comme c'est la seule fenêtre (`setWindowOpenHandler` refuse toute autre, [:216-223](desktop/src/main.ts)), le process renderer se retrouve sans aucune page visible : Chromium le passe en arrière-plan, avec ce que ça implique de purge de tuiles du compositeur et d'images décodées, et macOS lui rétrograde sa QoS. Au `show()` suivant ([:363](desktop/src/main.ts), [:502](desktop/src/main.ts), [:562](desktop/src/main.ts)), tout est à refaire, et le process n'est **jamais renouvelé**.
+**The mechanism.** The two “close” gestures are rewired to `hide()` ([desktop/src/main.ts:323-327](desktop/src/main.ts), [desktop/src/menu.ts:88-90](desktop/src/menu.ts)). As it is the only window (`setWindowOpenHandler` refuses any other, [:216-223](desktop/src/main.ts)), the renderer process finds itself without any visible page: Chromium puts it in the background, with what that implies of purging tiles from the composer and decoded images, and macOS downgrades its QoS. At the following `show()` ([:363](desktop/src/main.ts), [:502](desktop/src/main.ts), [:562](desktop/src/main.ts)), everything has to be redone, and the process is **never renewed**.
 
-**La condition.** Conjonction : la fenêtre doit être restée cachée assez longtemps pour franchir le seuil de purge — minutes, pas secondes — **et** l'utilisateur doit interagir dans la seconde qui suit le retour. Cacher dix secondes et revenir ne coûte rien de visible.
+**The condition.** Conjunction: the window must have remained hidden long enough to pass the purge threshold — minutes, not seconds — **and** the user must interact within 1 second of returning. Hiding for ten seconds and coming back costs nothing visible.
 
-**Honnêteté sur ce constat.** Le mécanisme Chromium invoqué (`MemoryPurgeManager`, rétrogradation de QoS) n'est lisible **nulle part** dans ce dépôt ni dans `node_modules` : c'est une inférence, et rien ne l'a mesuré. Il ne peut par ailleurs expliquer **que** le symptôme (a) : une purge de tuiles se paie en re-rasterisation, elle ne démonte aucun sous-arbre React. Je le garde en troisième position parce qu'il partage sa condition déclenchante avec A1 et A2 — le retour de fenêtre — et que le §3 les instrumente d'un seul coup. **Pas de correctif à l'aveugle ici**, et surtout pas « faire vraiment fermer le feu rouge » : les notifications de bureau sont émises **par le renderer** ([lib/use-desktop-notifications.ts:86-93](lib/use-desktop-notifications.ts)), détruire la fenêtre les supprimerait, sans APNS ni FCM pour rattraper ([:24-26](lib/use-desktop-notifications.ts)). Le commentaire [desktop/src/main.ts:321-322](desktop/src/main.ts) le dit mot pour mot. C'est un choix payé, pas un arbitrage ouvert.
+**Honesty about this observation.** The Chromium mechanism invoked (`MemoryPurgeManager`, QoS downgrade) is not readable **nowhere** in this repository nor in `node_modules`: it is an inference, and nothing has measured it. It can also explain **only** symptom (a): a purge of tiles is paid for in re-rasterization, it does not dismantle any React subtree. I keep it in third position because it shares its triggering condition with A1 and A2 — the window return — and because §3 instruments them at once. **No blind fix here**, and especially not "really turn the red light": desktop notifications are issued **by the renderer** ([lib/use-desktop-notifications.ts:86-93](lib/use-desktop-notifications.ts)), destroying the window would delete them, without APNS or FCM to catch up ([:24-26](lib/use-desktop-notifications.ts)). The comment [desktop/src/main.ts:321-322](desktop/src/main.ts) says it verbatim. It is a paid choice, not open arbitration.
 
 ---
 
-### B. « Le popover qui s'ouvre, se referme et s'ouvre »
+### B. “The popover that opens, closes and opens”
 
-**Dis-le d'abord franchement : rien dans cette passe n'explique ce symptôme avec certitude.** Les trois mécanismes ci-dessous sont les seuls candidats qui produisent littéralement un événement de logique, et aucun ne couvre le cas complet. C'est précisément pourquoi le §3 est le vrai livrable de ce document.
+**First say it straight: nothing in this pass explains this symptom with certainty.** The three mechanisms below are the only candidates that literally produce a logic event, and none cover the full case. This is precisely why §3 is the real deliverable of this document.
 
-#### B1 — La carte des régions `-webkit-app-region` est une géométrie expédiée au process navigateur, et pendant les 300 ms d'animation du rail elle est périmée
+#### B1 — Region map `-webkit-app-region` is geometry sent to the browser process, and during the 300 ms of rail animation it is out of date
 
-**Le mécanisme.** Trois règles se superposent dans les 60 px du haut : la bande fixe ([app/globals.css:1684-1693](app/globals.css)), l'en-tête du shell ([:1739-1740](app/globals.css)) et la ligne de marque ([:1778-1782](app/globals.css)) en `drag`, creusés par la règle globale `no-drag` ([:1710-1731](app/globals.css)). Ces creusements sont **géométriques** : Blink les recollecte en fin de layout et envoie le vecteur de rectangles au process navigateur, qui seul arbitre si un `mousedown` appartient à la fenêtre ou à la page. Or ce qui occupe la bande **bouge** : la `motion.aside` anime sa largeur 56 ↔ 256 px ([components/app-sidebar.tsx:810-815](components/app-sidebar.tsx)) et tout le contenu glisse avec elle ; la marque se translate de `100cqw - 100%` ([app/globals.css:1785-1786](app/globals.css)). Quand une décision d'arbitrage arrive sur une carte d'une image de retard, un appui qui visait un contrôle est consommé par macOS comme prise de fenêtre : **le renderer ne reçoit ni `pointerdown` ni `click`**, donc le `DismissableLayer` de Radix ne ferme pas ce qu'il devrait fermer et le déclencheur ne s'ouvre pas ; à l'inverse un appui que la carte périmée croit `no-drag` arrive à la page pendant que la fenêtre commence à se déplacer.
+**The mechanism.** Three rules overlap in the top 60 px: the fixed strip ([app/globals.css:1684-1693](app/globals.css)), the shell header ([:1739-1740](app/globals.css)) and the mark line ([:1778-1782](app/globals.css)) to `drag`, dug by the global rule `no-drag` ([:1710-1731](app/globals.css)). These hollows are **geometric**: Blink collects them at the end of the layout and sends the vector of rectangles to the browser process, which alone decides whether a `mousedown` belongs to the window or the page. Now what occupies the strip **moves**: the `motion.aside` animates its width 56 ↔ 256 px ([components/app-sidebar.tsx:810-815](components/app-sidebar.tsx)) and all the content slides with it; the mark translates from `100cqw - 100%` ([app/globals.css:1785-1786](app/globals.css)). When an arbitration decision arrives on a map of a delay image, a press which aimed for a control is consumed by macOS as a window hold: **the renderer receives neither `pointerdown` nor `click`**, so Radix's `DismissableLayer` does not close what it should close and the trigger does not open; conversely a press that the expired card believes `no-drag` arrives at the page while the window begins to move.
 
-**La condition qui le rend intermittent.** La carte n'est fausse que **pendant qu'elle change** : les ~300 ms d'animation du rail, ou l'image où la marque commence son glissement. Hors de ces fenêtres — l'immense majorité du temps — elle est exacte. Il faut donc cliquer dans les 60 px du haut dans les quelques centaines de millisecondes qui suivent un frôlement du rail. C'est un geste courant (on frôle la barre en montant vers l'en-tête) mais **jamais celui qu'on refait quand on cherche** : chercher, c'est cliquer lentement, et lentement la carte a eu le temps d'arriver.
+**The condition that makes it intermittent.** The map is only false **while it's changing**: the ~300ms of rail animation, or the frame where the mark begins its slide. Outside of these windows — the vast majority of the time — it is accurate. You must therefore click in the top 60 px in the few hundred milliseconds following brushing against the rail. It's a common gesture (we brush against the bar going up to the header) but **never the one we do again when we're searching**: searching is clicking slowly, and slowly the card has had time to arrive.
 
-**Pourquoi natif seulement.** `-webkit-app-region` n'a de sens que pour une fenêtre sans cadre, et les quatre blocs sont préfixés `html[data-desktop-app]` ([:1684](app/globals.css), [:1710](app/globals.css), [:1739](app/globals.css), [:1778](app/globals.css)). L'attribut n'est posé que par [components/desktop-chrome.tsx:24-26](components/desktop-chrome.tsx), et uniquement si `getDesktopBridge()` est non nul. Dans Chrome il n'y a **aucune** carte, aucun arbitrage, aucun retard possible.
+**Why native only.** `-webkit-app-region` only makes sense for an unframed window, and the four blocks are prefixed `html[data-desktop-app]` ([:1684](app/globals.css), [:1710](app/globals.css), [:1739](app/globals.css), [:1778](app/globals.css)). The attribute is only set by [components/desktop-chrome.tsx:24-26](components/desktop-chrome.tsx), and only if `getDesktopBridge()` is non-zero. In Chrome there are **no** cards, no arbitration, no delays possible.
 
-**Le correctif — et pourquoi il n'est pas à faire à l'aveugle.** Retirer les deux prises `drag` posées sur des rectangles **animés** ([:1739-1740](app/globals.css) et le `-webkit-app-region: drag` de [:1782](app/globals.css), en gardant `container-type: inline-size` qui porte le glissement) : la bande fixe couvre déjà exactement les mêmes 60 px avec un rectangle qui ne bouge jamais. Ça, c'est sûr. Alléger le creusement global, en revanche, défait l'invariant que le commentaire [:1699-1709](app/globals.css) décrit comme la raison d'être de la règle — « rien d'interactif dans les 60 px ne devient une poignée de fenêtre ». Voir le §4.
+**The fix — and why it should not be done blindly.** Remove the two `drag` sockets placed on **animated** rectangles ([:1739-1740](app/globals.css) and the `-webkit-app-region: drag` of [:1782](app/globals.css), keeping `container-type: inline-size` which carries sliding): the fixed strip already covers exactly the same 60 px with a rectangle that never moves. That's for sure. Lightening global digging, on the other hand, undoes the invariant that comment [:1699-1709](app/globals.css) describes as the reason for the rule — "nothing interactive within 60 px becomes a window handle." See §4.
 
-#### B2 — `SidebarRow` change le TYPE de son élément racine avec `collapsed` : chaque bascule du rail détruit et recrée les lignes
+#### B2 — `SidebarRow` changes the TYPE of its root element with `collapsed`: each rail toggle destroys and recreates the lines
 
-**Le mécanisme.** `row` est un `MotionLink` ([components/app-sidebar.tsx:273-286](components/app-sidebar.tsx)) ou un `motion.button` ([:288-300](components/app-sidebar.tsx)), et il est **enveloppé** dans `<Tooltip><TooltipTrigger asChild>…` seulement `if (collapsed || item.shortcut)` ([:303-322](components/app-sidebar.tsx)). Pour toute ligne **sans** `shortcut` — les entrées de projet, les sections — le type de l'élément rendu à cette position passe donc de `MotionLink` à `Tooltip` et retour à chaque bascule du rail. React ne réconcilie pas deux types différents : il démonte le sous-arbre et en monte un neuf. **Le nœud DOM est remplacé, et le focus qu'il portait retombe sur `<body>`.**
+**The mechanism.** `row` is a `MotionLink` ([components/app-sidebar.tsx:273-286](components/app-sidebar.tsx)) or a `motion.button` ([:288-300](components/app-sidebar.tsx)), and it is **wrapped** in `<Tooltip><TooltipTrigger asChild>…` only `if (collapsed || item.shortcut)` ([:303-322](components/app-sidebar.tsx)). For any line **without** `shortcut` — project entries, sections — the type of the element rendered at that position therefore changes from `MotionLink` to `Tooltip` and back at each rail toggle. React does not reconcile two different types: it unmounts the subtree and mounts a new one. **The DOM node is replaced, and its focus falls back to `<body>`.**
 
-**La condition, et sa limite.** Il faut que le rail bascule alors qu'une ligne sans raccourci porte le focus ou une surface. Le cas réel et vérifiable : on **clique** une entrée de projet — `onFocusCapture` ne pose `focusWithin` que sur `:focus-visible` ([:826-839](components/app-sidebar.tsx)), donc la ligne a le focus mais la barre ne le retient pas ; le pointeur part, 150 ms plus tard `hovered` tombe ([:750](components/app-sidebar.tsx)), `collapsed` bascule ([:753](components/app-sidebar.tsx)) et la ligne focalisée est remplacée. La tabulation repart du haut du document.
+**The condition, and its limit.** The rail must tilt while a line without a shortcut carries the focus or a surface. The real and verifiable case: we **click** a project entry — `onFocusCapture` only places `focusWithin` on `:focus-visible` ([:826-839](components/app-sidebar.tsx)), so the line has the focus but the bar does not retain it; the pointer leaves, 150 ms later `hovered` drops ([:750](components/app-sidebar.tsx)), `collapsed` switches ([:753](components/app-sidebar.tsx)) and the focused line is replaced. The tab starts from the top of the document.
 
-**Ce qu'il faut lui retirer.** Le scénario d'oscillation double (le remontage provoquant un `focusout` qui rebascule `collapsed`) **n'est pas atteignable** : tant que `focusWithin` est vrai, `collapsed` est faux ([:753](components/app-sidebar.tsx)), donc le remontage ne peut pas survenir avec le focus retenu ; et quand il survient, `setFocusWithin(false)` est un no-op. Et ce mécanisme **n'est pas natif seulement** : il se produit identiquement dans un navigateur. Ce que la coquille ajoute est un troisième pilote de `collapsed` (`useHoldWindowButtons("rail", wide && collapsed)`, [:780](components/app-sidebar.tsx)) et un rendu supplémentaire de toute la barre une macrotâche plus tard, quand l'IPC répond. Il est ici parce qu'il est **le seul mécanisme vérifié du dépôt qui produise littéralement montage→démontage→montage d'une surface**, et parce que son correctif est gratuit.
+**What needs to be removed from it.** The double oscillation scenario (the winding causing a `focusout` which reverts `collapsed`) **is not achievable**: as long as `focusWithin` is true, `collapsed` is false ([:753](components/app-sidebar.tsx)), so the winding cannot occur with focus retained; and when it occurs, `setFocusWithin(false)` is a no-op. And this mechanism **is not native only**: it occurs identically in a browser. What the shell adds is a third `collapsed` driver (`useHoldWindowButtons("rail", wide && collapsed)`, [:780](components/app-sidebar.tsx)) and additional rendering of the entire bar a macrotask later, when the IPC responds. It is here because it is **the only verified mechanism in the repository that literally produces mounting→unmounting→mounting of a surface**, and because its fix is ​​free.
 
-**Le correctif.** Rendre le `<Tooltip>` inconditionnellement et ne faire varier que son ouverture :
+**The fix.** Return the `<Tooltip>` unconditionally and only vary its opening:
 
 ```tsx
-// components/app-sidebar.tsx:303 — structure stable : le nœud de la ligne
-// n'est plus jamais remplacé, et le focus clavier survit au dépliage.
+// components/app-sidebar.tsx:303 — stable structure: the row node
+// is never replaced again, and keyboard focus survives expansion.
 row = (
   <Tooltip
     delayDuration={TOOLTIP_DELAY_MS}
@@ -102,42 +102,42 @@ row = (
 );
 ```
 
-Et durcir `onBlurCapture` ([:840-848](components/app-sidebar.tsx)) : `if (e.relatedTarget === null) return;` — une perte de focus qui ne désigne aucune nouvelle cible n'est pas une sortie de la barre, c'est aussi ce que produit la désactivation de la fenêtre par la barre de menus macOS.
+And harden `onBlurCapture` ([:840-848](components/app-sidebar.tsx)): `if (e.relatedTarget === null) return;` — a loss of focus which does not designate any new target is not an exit from the bar, this is also what deactivating the window using the macOS menu bar produces.
 
-#### B3 — `settling` est dégelé par n'importe quel message du pont, pas par la réponse qu'il attend
+#### B3 — `settling` is unfrozen by any message from the bridge, not by the response it expects
 
-**Le mécanisme.** `settling` est le drapeau « la fermeture du dialogue est encore digérée par le main process » ([lib/use-window-buttons.ts:281-289](lib/use-window-buttons.ts)), posé pendant le rendu ([:302-305](lib/use-window-buttons.ts)) et effacé en un seul endroit : le gestionnaire d'abonnement, qui fait `setVisible(next); setSettling(false); setStarted(true)` sur **tout** message `minddy:window-buttons-state` ([:319-323](lib/use-window-buttons.ts)), sans vérifier que c'est bien la réponse au relâchement qu'on attend. Or le canal porte **cinq producteurs**, tous asynchrones : la réponse à toute demande ([desktop/src/main.ts:84](desktop/src/main.ts)), la rediffusion du cache sur `minddy:window-buttons-ready` ([:359](desktop/src/main.ts) → [:88-91](desktop/src/main.ts), un `webContents.send` qui arrose **tous** les `ipcRenderer.on` du document, donc les voisins du nouvel abonné), `did-start-navigation` ([:303-307](desktop/src/main.ts)) et les quatre événements plein écran ([:313-320](desktop/src/main.ts)). Un message de trop, arrivé au mauvais moment, dégèle la mise en page un aller-retour trop tôt : `reserved` retombe sur `visible` ([lib/use-window-buttons.ts:348](lib/use-window-buttons.ts)), la place se referme, et l'effet [:310-312](lib/use-window-buttons.ts) empoisonne au passage la valeur gelée.
+**The mechanism.** `settling` is the flag "closing the dialog is still digested by the main process" ([lib/use-window-buttons.ts:281-289](lib/use-window-buttons.ts)), set during rendering ([:302-305](lib/use-window-buttons.ts)) and cleared in one place: the subscription manager, which `setVisible(next); setSettling(false); setStarted(true)` on **all** message `minddy:window-buttons-state` ([:319-323](lib/use-window-buttons.ts)), without checking that it is indeed the response to the release that we expect. Now the channel carries **five producers**, all asynchronous: the response to any request ([desktop/src/main.ts:84](desktop/src/main.ts)), the rebroadcast of the cache on `minddy:window-buttons-ready` ([:359](desktop/src/main.ts) → [:88-91](desktop/src/main.ts), a `webContents.send` which waters **all** the `ipcRenderer.on` of the document, therefore the neighbors of the new subscriber), `did-start-navigation` ([:303-307](desktop/src/main.ts)) and the four full screen events ([:313-320](desktop/src/main.ts)). One message too many, arriving at the wrong time, unfreezes the layout one round trip too early: `reserved` falls back to `visible` ([lib/use-window-buttons.ts:348](lib/use-window-buttons.ts)), the place closes, and the effect [:310-312](lib/use-window-buttons.ts) poisons the frozen value in passing.
 
-**Ce que ce constat ne peut PAS expliquer, et il faut le dire.** Un popover n'entre **pas** dans `MODAL_SELECTOR` ([:136-144](lib/use-window-buttons.ts)), et c'est délibéré : le commentaire [:132-134](lib/use-window-buttons.ts) écarte explicitement `role="dialog"` sans `aria-modal` « et les boutons clignoteraient à chaque menu ouvert ». Un popover ne fait jamais basculer `modal`, donc ne peut pas déclencher ce mécanisme. Il n'explique que le sursaut de la **ligne de marque** — et encore : sur les pages à barre secondaire (celles où le rail existe, donc celles du symptôme (a)), la transition de 320 ms est **désarmée** par `:not([data-rail])` ([app/globals.css:1802-1806](app/globals.css), `data-rail` posé par [components/app-sidebar.tsx:888](components/app-sidebar.tsx)) : la marque se téléporte au lieu de glisser. Et le calage de 68 px de `HeaderWindowButtonsSlot` ([components/desktop-window-buttons.tsx:110-123](components/desktop-window-buttons.tsx)) ne rend **rien du tout** au-dessus de 1200 px, c'est-à-dire jamais sur une fenêtre par défaut de 1280 ([desktop/src/main.ts:228](desktop/src/main.ts)).
+**Which this observation CANNOT explain, and it must be said.** A popover does **not** enter `MODAL_SELECTOR` ([:136-144](lib/use-window-buttons.ts)), and this is deliberate: the comment [:132-134](lib/use-window-buttons.ts) explicitly excludes `role="dialog"` without `aria-modal` “and the buttons would flash with each opened menu”. A popover never toggles `modal`, so cannot trigger this mechanism. It only explains the jump of the **mark line** — and again: on the pages with a secondary bar (those where the rail exists, therefore those of symptom (a)), the 320 ms transition is **disarmed** by `:not([data-rail])` ([app/globals.css:1802-1806](app/globals.css), `data-rail` set by [components/app-sidebar.tsx:888](components/app-sidebar.tsx)): The mark teleports instead of sliding. And the 68 px setting of `HeaderWindowButtonsSlot` ([components/desktop-window-buttons.tsx:110-123](components/desktop-window-buttons.tsx)) renders **nothing at all** above 1200 px, i.e. never on a default window of 1280 ([desktop/src/main.ts:228](desktop/src/main.ts)).
 
-**Ce qui reste, et pourquoi je le garde.** Le trou de conception est authentique : un accusé de réception qui n'identifie pas ce qu'il acquitte, dans un protocole à cinq producteurs. Il a une **deuxième victime, non décorative** : `windowButtons.reserved` est lu par `leavesThroughWindowButtons` ([components/app-sidebar.tsx:719-720](components/app-sidebar.tsx)) ; un `pointerleave` qui tombe dans la fenêtre transitoire voit `reserved === false`, la sortie par le coin haut-gauche n'est plus reconnue, et le rail se referme sous un pointeur qui allait cliquer les feux — le défaut que MIN-291 a fermé, ressuscité par intermittence.
+**What remains, and why I keep it.** The design hole is authentic: an acknowledgment that does not identify what it acknowledges, in a five-producer protocol. It has a **second, non-decorative victim**: `windowButtons.reserved` is read by `leavesThroughWindowButtons` ([components/app-sidebar.tsx:719-720](components/app-sidebar.tsx)); a `pointerleave` that falls into the transient window sees `reserved === false`, the exit from the top left corner is no longer recognized, and the rail closes under a pointer that was going to click the lights - the fault that MIN-291 closed, resurrected intermittently.
 
-**Le correctif.** Un numéro de séquence : un compteur incrémenté à chaque `applyWindowButtons` déclenché par un `minddy:window-buttons`, porté par le message, et `setSettling(false)` **seulement** sur un numéro strictement supérieur à celui de la demande émise par `pushToBridge` ; `setVisible` reste inconditionnel. Et faire de `minddy:window-buttons-ready` une réponse **ciblée** (`event.sender.send(...)` à [desktop/src/main.ts:359](desktop/src/main.ts)) plutôt qu'une diffusion. ⚠ **Ne pas retenir la « variante sans toucher au protocole »** (ne dégeler que sur un message dont la valeur diffère) : elle latche `settling` à `true` dans le cas exact que [lib/use-window-buttons.ts:50-55](lib/use-window-buttons.ts) documente comme réel — rail replié, un dialogue s'ouvre et se ferme, la demande relâchée republie `false`, valeur identique, jamais de dégel. On échangerait une course rare contre un état latché déterministe.
-
----
-
-### C. Trouvé en chemin, n'explique aucun des deux symptômes
-
-**Le document mourant retire les boutons pour le document suivant, qui n'a personne pour les redemander.** `wantsWindowButtons` est une variable du **main** ([desktop/src/main.ts:54](desktop/src/main.ts)) qui survit aux documents ; `holds` est un module de la **page** ([lib/use-window-buttons.ts:29](lib/use-window-buttons.ts)) qui meurt avec elle. `did-start-navigation` remet `wantsWindowButtons = true` et publie ([desktop/src/main.ts:303-307](desktop/src/main.ts)) — mais il tire au **début** de la navigation, donc le message part à l'ancien document, encore vivant. Si une raison y est posée, son `watchContradiction` ([lib/use-window-buttons.ts:110-116](lib/use-window-buttons.ts)) pousse `false` pendant l'aller-retour réseau, et le nouveau document démarre `holds` vide sans jamais rien pousser (`useHoldWindowButtons` sort sur `if (!active) return`, [:73-84](lib/use-window-buttons.ts)). **Les feux macOS restent absents.** Trois portes d'entrée seulement : le `loadURL` de démarrage (pas d'ancien document), `minddy://open?next=…` ([:122](desktop/src/main.ts)) et `goHome` ([:185](desktop/src/main.ts) et [:213](desktop/src/main.ts)) — il n'y a pas de rechargement clavier ([desktop/src/menu.ts:66-70](desktop/src/menu.ts)). Le geste réparateur n'est d'ailleurs pas celui qu'on croit : `goHome` charge `/home` ([lib/desktop/config.ts:33](lib/desktop/config.ts)), une page sans barre secondaire, donc sans mode rail à déplier — ce qui répare est un cycle de raison, en pratique ouvrir puis fermer la palette ⌘K. **Une fenêtre sans feux est une fenêtre qu'on ne peut plus fermer ni réduire à la souris** : à corriger, même si ce n'est pas la question de cette passe. Le correctif est un `pushToBridge()` inconditionnel dans un effet de montage, posé au **layout racine** ou dans [components/desktop-chrome.tsx](components/desktop-chrome.tsx) (pas dans `DesktopWindowButtons`, monté seulement sous [app/(app)/app-providers.tsx:99](<app/(app)/app-providers.tsx>), donc absent de login, `/f/`, `/p/`, not-found).
-
-**Le guetteur de retour de pointeur reste armé sans limite.** `closeRail(e)` ne referme pas quand le pointeur sort par le coin haut-gauche : il appelle `watchPointerReturn()` et retourne ([components/app-sidebar.tsx:744-748](components/app-sidebar.tsx)), lequel pose un `document.addEventListener("pointermove", onMove, { once: true })` et **rien d'autre** — aucun délai, aucune borne ([:730-742](components/app-sidebar.tsx)), et `openRail` ne le désarme pas ([:696-702](components/app-sidebar.tsx)). Le rail peut donc rester déplié par-dessus la barre secondaire pendant une séquence entièrement au clavier, et se refermer au premier mouvement de souris, des minutes plus tard. Le cas le plus net : sortir du rail déplié par le coin haut-gauche, c'est exactement le trajet pour cliquer le feu rouge — qui **cache** la fenêtre ; elle est donc rangée rail déplié, et rouverte telle quelle. Strictement natif : `leavesThroughWindowButtons` exige `windowButtons.reserved`, qui vaut constamment `false` hors coquille (`settling` reste `true` à vie, `frozen.current` n'est jamais écrit — [lib/use-window-buttons.ts:300](lib/use-window-buttons.ts), [:310-312](lib/use-window-buttons.ts), [:348](lib/use-window-buttons.ts)). Mais l'utilisateur aurait décrit ça « la barre reste ouverte », pas « ça stutter ». Correctif : désarmer dans `openRail`, et brancher le repli de secours sur `window.addEventListener("blur")` et sur `visibilitychange` avec `document.hidden` — **pas** sur un minuteur, qui rouvrirait le bug que MIN-291 a fermé.
+**The fix.** A sequence number: a counter incremented with each `applyWindowButtons` triggered by a `minddy:window-buttons`, carried by the message, and `setSettling(false)` **only** on a number strictly greater than that of the request issued by `pushToBridge`; `setVisible` remains unconditional. And make `minddy:window-buttons-ready` a **targeted** response (`event.sender.send(...)` to [desktop/src/main.ts:359](desktop/src/main.ts)) rather than a broadcast. ⚠ **Do not retain the “variant without touching the protocol”** (unfreeze only on a message whose value differs): it releases `settling` to `true` in the exact case that [lib/use-window-buttons.ts:50-55](lib/use-window-buttons.ts) documents as real — folded rail, a dialog opens and closes, the released request republishes `false`, same value, never unfreeze. We would exchange a rare race for a deterministic latched state.
 
 ---
 
-## 3. Comment le prendre sur le fait
+### C. Found along the way, explains neither symptom
 
-Le défaut ne se reproduit pas à la demande. **Une session de profilage ne le trouvera jamais** : le temps d'ouvrir DevTools et d'appuyer sur Enregistrer, il est passé. Il faut donc une instrumentation qui **tourne en permanence, garde une trace, et se fige sur commande** — le geste de l'utilisateur n'étant plus « reproduire » mais « je viens de le voir, dump ».
+**The dying document removes buttons for the next document, which has no one to request them again.** `wantsWindowButtons` is a **main** variable ([desktop/src/main.ts:54](desktop/src/main.ts)) that survives documents; `holds` is a module of the **page** ([lib/use-window-buttons.ts:29](lib/use-window-buttons.ts)) which dies with it. `did-start-navigation` hands over `wantsWindowButtons = true` and publishes ([desktop/src/main.ts:303-307](desktop/src/main.ts)) — but it pulls to the **start** of the navigation, so the message goes to the old, still-living document. If a reason is given, its `watchContradiction` ([lib/use-window-buttons.ts:110-116](lib/use-window-buttons.ts)) pushes `false` during the network round trip, and the new document starts `holds` empty without ever pushing anything (`useHoldWindowButtons` exits on `if (!active) return`, [:73-84](lib/use-window-buttons.ts)). **The macOS lights remain absent.** Only three entry points: the startup `loadURL` (no old document), `minddy://open?next=…` ([:122](desktop/src/main.ts)) and `goHome` ([:185](desktop/src/main.ts) and [:213](desktop/src/main.ts)) — there is no keyboard reload ([desktop/src/menu.ts:66-70](desktop/src/menu.ts)). The repair gesture is not what we think: `goHome` loads `/home` ([lib/desktop/config.ts:33](lib/desktop/config.ts)), a page without secondary bar, therefore without rail mode to unfold — what repairs is a cycle of reason, in practice opening then closing the ⌘K palette. **A window without lights is a window that can no longer be closed or reduced with the mouse**: to be corrected, even if this is not the question of this pass. The fix is an unconditional `pushToBridge()` in a mount effect, placed in **root layout** or in [components/desktop-chrome.tsx](components/desktop-chrome.tsx) (not in `DesktopWindowButtons`, mounted only under [app/(app)/app-providers.tsx:99](<app/(app)/app-providers.tsx>), therefore missing from login, `/f/`, `/p/`, not-found).
 
-### 3.1 Le tampon tournant dans le renderer, vidé au presse-papier par un raccourci
+**The pointer return watcher remains armed without limit.** `closeRail(e)` does not close when the pointer leaves the top-left corner: it calls `watchPointerReturn()` and returns ([components/app-sidebar.tsx:744-748](components/app-sidebar.tsx)), which sets a `document.addEventListener("pointermove", onMove, { once: true })` and **nothing else** — no delay, no limit ([:730-742](components/app-sidebar.tsx)), and `openRail` does not disarm it ([:696-702](components/app-sidebar.tsx)). The rail can therefore remain unfolded over the secondary bar during an entirely keyboard sequence, and close at the first mouse movement, minutes later. The clearest case: exiting the unfolded rail through the top-left corner, this is exactly the route to click the red light — which **hides** the window; it is therefore stored with the rail unfolded, and reopened as is. Strictly native: `leavesThroughWindowButtons` requires `windowButtons.reserved`, which is constantly worth `false` outside the shell (`settling` remains `true` for life, `frozen.current` is never written — [lib/use-window-buttons.ts:300](lib/use-window-buttons.ts), [:310-312](lib/use-window-buttons.ts), [:348](lib/use-window-buttons.ts)). But the user would have described it as “the bar stays open”, not “it stutters”. Fix: disarm in `openRail`, and hook fallback to `window.addEventListener("blur")` and `visibilitychange` with `document.hidden` — **not** to a timer, which would reopen the bug that MIN-291 closed.
 
-C'est l'instrument principal, et il tranche à lui seul entre les deux symptômes : le journal dira si le popover a été **démonté** (React) ou seulement **fermé** (état), et si une frame longue l'a précédé.
+---
 
-Où le mettre : **`lib/desktop/trace.ts`**, monté depuis [components/desktop-chrome.tsx](components/desktop-chrome.tsx) (le composant qui pose déjà `data-desktop-app`, donc celui qui garantit qu'on n'instrumente pas le web). Comment l'éteindre : il ne s'allume que si `localStorage.getItem("minddy.trace") === "1"`, ce qui se met et se retire depuis la console sans redéployer.
+## 3. How to catch him in the act
+
+The fault does not recur on demand. **A profiling session will never find it**: the time to open DevTools and press Save has passed. We therefore need instrumentation that **runs constantly, keeps a trace, and freezes on command** — the user's gesture is no longer "reproducing" but "I just saw it, dump".
+
+### 3.1 The rotating buffer in the renderer, emptied to the clipboard by a shortcut
+
+This is the main instrument, and it alone decides between the two symptoms: the log will tell if the popover was **unmounted** (React) or only **closed** (state), and if a long frame preceded it.
+
+Where to put it: **`lib/desktop/trace.ts`**, mounted from [components/desktop-chrome.tsx](components/desktop-chrome.tsx) (the component which already installs `data-desktop-app`, therefore the one which guarantees that the web is not instrumented). How to turn it off: It only turns on if `localStorage.getItem("minddy.trace") === "1"`, which is put on and off from the console without redeploying.
 
 ```ts
-// lib/desktop/trace.ts — instrument de MIN-29x. Off par défaut.
+// lib/desktop/trace.ts — MIN-29x instrumentation. Off by default.
 // Allumer : localStorage.setItem("minddy.trace","1") puis recharger.
-// Vider   : ⌥⌘0 — les 90 dernières secondes partent au presse-papier.
+// Clear   : ⌥⌘0 — the last 90 seconds are copied to the clipboard.
 export function startDesktopTrace(): () => void {
   if (localStorage.getItem("minddy.trace") !== "1") return () => {};
 
@@ -148,15 +148,15 @@ export function startDesktopTrace(): () => void {
     if (ring.length > 4000) ring.shift();
   };
 
-  // (a) Frames longues. C'est le symptôme (a), mesuré.
+  // (a) Long frames. This is symptom (a), measured.
   const longtask = new PerformanceObserver((l) => {
     for (const e of l.getEntries()) log("longtask", { ms: Math.round(e.duration) });
   });
   longtask.observe({ type: "longtask", buffered: true });
 
-  // (b) Latence d'entrée. Un pointerdown dont le `processingStart` arrive
-  //     100 ms après le geste, c'est une frame perdue AVANT la logique ;
-  //     un pointerdown qui n'apparaît JAMAIS, c'est macOS qui l'a avalé (B1).
+  // (b) Input latency. A pointerdown whose `processingStart` arrives
+  //     100 ms after the gesture is a frame lost BEFORE the logic;
+  //     a pointerdown that NEVER appears means macOS swallowed it (B1).
   const evt = new PerformanceObserver((l) => {
     for (const e of l.getEntries() as PerformanceEventTiming[]) {
       log("event", {
@@ -168,8 +168,8 @@ export function startDesktopTrace(): () => void {
   });
   evt.observe({ type: "event", durationThreshold: 16 });
 
-  // (c) LA question du symptôme (b) : la surface a-t-elle été DÉMONTÉE ?
-  //     Radix portalise ses poppers en enfants directs de <body>.
+  // (c) THE question for symptom (b): was the surface UNMOUNTED?
+  //     Radix portals its poppers as direct children of <body>.
   const SURF = '[data-radix-popper-content-wrapper],[data-slot$="-content"],[cmdk-root]';
   const surfaces = new MutationObserver((records) => {
     for (const r of records) {
@@ -181,7 +181,7 @@ export function startDesktopTrace(): () => void {
   });
   surfaces.observe(document.body, { childList: true });
 
-  // (d) L'état de fenêtre, et la durée de l'absence — la condition de A1/A3.
+  // (d) Window state and absence duration — the condition for A1/A3.
   let hiddenAt = 0;
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) { hiddenAt = performance.now(); log("hidden"); }
@@ -190,8 +190,8 @@ export function startDesktopTrace(): () => void {
   window.addEventListener("blur", () => log("win-blur"));
   window.addEventListener("focus", () => log("win-focus"));
 
-  // (e) Le pont, côté page : ce qu'on demande et ce qui revient.
-  //     À poser DANS pushToBridge et dans l'abonnement de useWindowButtonsSlot
+  // (e) The bridge, on the page side: what we request and what comes back.
+  //     Add this INSIDE pushToBridge and the useWindowButtonsSlot subscription
   //     (lib/use-window-buttons.ts:57-63 et :319-323) via window.__minddyTrace.
   (window as any).__minddyTrace = log;
 
@@ -199,7 +199,7 @@ export function startDesktopTrace(): () => void {
     if (!(e.altKey && e.metaKey && e.code === "Digit0")) return;
     const text = ring.join("\n");
     void navigator.clipboard.writeText(text);   // clipboard-sanitized-write
-    console.log(text);                          // et dans la console, au cas où
+    console.log(text);                          // and in the console, just in case
   };
   window.addEventListener("keydown", dump);
 
@@ -210,112 +210,112 @@ export function startDesktopTrace(): () => void {
 }
 ```
 
-Deux instrumentations d'une ligne à poser en même temps, sinon la trace ne dit pas grand-chose :
+Two one-line instruments to be installed at the same time, otherwise the trace doesn't say much:
 
 ```ts
-// lib/realtime-provider.tsx:620, en tête de catchUp
+// lib/realtime-provider.tsx:620, at the start of catchUp
 (window as any).__minddyTrace?.("catchUp", { n: keys.length, cache: queryClient.getQueryCache().getAll().length });
 
-// lib/use-window-buttons.ts:59 (émission) et :320 (réception)
+// lib/use-window-buttons.ts:59 (send) and :320 (receive)
 (window as any).__minddyTrace?.("bridge>", { visible: holds.size === 0 });
 (window as any).__minddyTrace?.("bridge<", { next, settling, modal });
 ```
 
-**Ce qu'on lit dans le dump.** Le symptôme (b) se lit sur trois lignes consécutives : `surface+` … `surface-` … `surface+` à moins de 200 ms d'écart. Si un `longtask` de plus de 50 ms les sépare, c'est une frame perdue et le symptôme est en fait (a). S'il n'y a **rien** entre les deux, c'est une bascule d'état — et la ligne juste avant dit laquelle (`bridge<`, `catchUp`, `visible`). Le symptôme (a) se lit sur une ligne `catchUp` suivie d'un `longtask` : le champ `cache` dit combien de requêtes ont été parcourues, et sa croissance d'un jour à l'autre est la preuve de A1. Un `event` avec `delay` élevé sans `longtask` en face pointe vers le process navigateur (§3.2). Un `pointerdown` qui manque à l'appel alors qu'on a bien cliqué, c'est B1.
+**What we read in the dump.** Symptom (b) is read on three consecutive lines: `surface+` … `surface-` … `surface+` less than 200 ms apart. If a `longtask` of more than 50 ms separates them, it is a lost frame and the symptom is in fact (a). If there is **nothing** in between, it's a state toggle — and the line just before says which one (`bridge<`, `catchUp`, `visible`). Symptom (a) reads as a line `catchUp` followed by a `longtask`: the `cache` field tells how many queries were searched, and its growth from one day to the next is proof of A1. A `event` with `delay` raised without `longtask` in front points to the browser process (§3.2). A `pointerdown` which is missing even though we clicked correctly is B1.
 
-### 3.2 Le journal du pont côté main, avec les horloges des deux process
+### 3.2 The main side bridge log, with the clocks of the two processes
 
-Le renderer ne voit pas ce que fait le process navigateur. Un `console.log` dans le main sort sur le stdout du terminal qui a lancé la coquille (et dans `Console.app` pour l'app installée) : c'est suffisant, et ça survit à tout.
+The renderer does not see what the browser process is doing. A `console.log` in the main output on the stdout of the terminal which launched the shell (and in `Console.app` for the installed app): it's sufficient, and it survives everything.
 
 ```ts
-// desktop/src/main.ts, en tête de applyWindowButtons (l.59) et de publishWindowButtons (l.88)
+// desktop/src/main.ts, at the start of applyWindowButtons (l.59) and publishWindowButtons (l.88)
 const T0 = Date.now();
 const trace = (kind: string, d: unknown = {}) =>
   process.env.MINDDY_TRACE && console.log(`[trace] ${Date.now() - T0} ${kind}`, d);
 ```
 
-À poser sur quatre points, pas plus : `applyWindowButtons` (avec `wantsWindowButtons` et `isFullScreen()`), `publishWindowButtons` (avec la valeur), `did-start-navigation` ([:303](desktop/src/main.ts)), et les trois `show()` ([:363](desktop/src/main.ts), [:502](desktop/src/main.ts), [:562](desktop/src/main.ts)). Ajouter les deux événements de fenêtre que la page ne peut pas connaître et qui disent l'état d'occlusion et de veille :
+To be asked on four points, no more: `applyWindowButtons` (with `wantsWindowButtons` and `isFullScreen()`), `publishWindowButtons` (with the value), `did-start-navigation` ([:303](desktop/src/main.ts)), and the three `show()` ([:363](desktop/src/main.ts), [:502](desktop/src/main.ts), [:562](desktop/src/main.ts)). Add the two window events that the page cannot know about and which tell the occlusion and sleep state:
 
 ```ts
 window.on("show",  () => trace("win:show",  { visible: window.isVisible() }));
 window.on("hide",  () => trace("win:hide"));
 window.on("blur",  () => trace("win:blur"));
-// La veille et le verrouillage d'écran : la cause la plus fréquente de A2.
+// Sleep and screen locking: the most frequent cause of A2.
 powerMonitor.on("suspend",     () => trace("power:suspend"));
 powerMonitor.on("resume",      () => trace("power:resume"));
 powerMonitor.on("lock-screen", () => trace("power:lock"));
 ```
 
-**La signature de C (les feux perdus)** : deux lignes `applyWindowButtons` à quelques millisecondes l'une de l'autre juste après `did-start-navigation`, la première à `true`, la seconde à `false` — la seconde est le message du document mort. Sans ce journal on ne peut pas la distinguer d'un oubli de la page.
+**The signature of C (lost lights)**: two lines `applyWindowButtons` a few milliseconds apart just after `did-start-navigation`, the first at `true`, the second at `false` — the second is the dead document message. Without this log we cannot distinguish it from an omission of the page.
 
-### 3.3 La démonstration de B3, en trente secondes
+### 3.3 The demonstration of B3, in thirty seconds
 
-Le défaut ne se reproduit pas à la main parce que l'aller-retour IPC vaut 2 à 4 ms au repos. **On élargit la fenêtre de course** : envelopper l'appel `publishWindowButtons(...)` de [desktop/src/main.ts:84](desktop/src/main.ts) dans un `setTimeout(..., 250)`, puis ouvrir et refermer un dialogue rapidement. Si le sursaut devient systématique et disparaît en retirant le `setTimeout`, le mécanisme est démontré. **C'est la démonstration, pas le correctif** — le budget réel à battre est de ~200 ms, pas 100 : `modalOpen` suit la présence du nœud dans le DOM ([lib/use-window-buttons.ts:162-167](lib/use-window-buttons.ts)) et le voile Radix reste monté jusqu'à `animationend` (`duration-100 data-closed:animate-out`, `node_modules/mangue-ui/src/components/ui/dialog.tsx:89`).
+The fault does not reproduce manually because the IPC round trip is 2 to 4 ms at rest. **We widen the run window**: wrap the `publishWindowButtons(...)` call of [desktop/src/main.ts:84](desktop/src/main.ts) in a `setTimeout(..., 250)`, then open and close a dialog quickly. If the startle becomes systematic and disappears by removing the `setTimeout`, the mechanism is demonstrated. **This is the demo, not the fix** — the actual budget to beat is ~200ms, not 100: `modalOpen` tracks the presence of the node in the DOM ([lib/use-window-buttons.ts:162-167](lib/use-window-buttons.ts)) and the Radix veil remains mounted until `animationend` (`duration-100 data-closed:animate-out`, `node_modules/mangue-ui/src/components/ui/dialog.tsx:89`).
 
-### 3.4 L'A/B qui disculpe B1 en une minute
+### 3.4 The A/B that exonerates B1 in one minute
 
-Dans l'inspecteur de la fenêtre Electron (`--remote-debugging-port=9222`, recette au §5 de la première passe), retirer l'attribut `data-desktop-app` de `<html>` : les quatre blocs de [app/globals.css:1684-1810](app/globals.css) tombent d'un coup, la fenêtre devient immobile le temps du test. Refaire alors le geste fautif — frôler le rail d'un bord à l'autre et cliquer immédiatement dans l'en-tête, cent fois — avec le compteur `event` de §3.1 allumé. Si le nombre de `pointerdown` enregistrés rejoint enfin le nombre de clics effectués, B1 est démontré. ⚠ Un seul process lourd à la fois sur ce Mac.
+In the Electron window inspector (`--remote-debugging-port=9222`, recipe in §5 of the first pass), remove the `data-desktop-app` attribute from `<html>`: the four blocks of [app/globals.css:1684-1810](app/globals.css) fall suddenly, the window becomes immobile for the duration of the test. Then repeat the faulty gesture — brush the rail from one side to the other and immediately click in the header, a hundred times — with the `event` counter in §3.1 on. If the number of `pointerdown` recorded finally reaches the number of clicks made, B1 is demonstrated. ⚠ Only one heavy process at a time on this Mac.
 
-### 3.5 La ligne à mesurer avant de croire A1
+### 3.5 The line to measure before believing A1
 
-Une commande dans la console, deux fois : au lancement de l'app, puis le soir.
+A command in the console, twice: when launching the app, then in the evening.
 
 ```js
 queryClient.getQueryCache().getAll().length   // N, le multiplicande
 localStorage.getItem("minddy.query-cache")?.length
 ```
 
-Si N ne bouge pas d'un facteur significatif sur une journée, A1 perd sa moitié « accumulation » et redescend d'un cran.
+If N does not move by a significant factor over a day, A1 loses its “accumulation” half and goes back down a notch.
 
 ---
 
-## 4. Le plan
+## 4. The plan
 
-### (a) À faire à l'aveugle — le correctif est bon de toute façon
+### (a) Do it blind — the fix is ​​good either way
 
-1. **`catchUp` en un seul parcours** ([lib/realtime-provider.tsx:620-631](lib/realtime-provider.tsx)), via `invalidateQueries({ predicate })`. Couverture identique, actives et inactives comprises. Ferme A1 et prépare A2.
-2. **Coalescer les rattrapages par canal** ([:664-677](lib/realtime-provider.tsx)) dans une file au niveau du provider, **séparée** de `timers`. Ferme A2.
-3. **Plancher de durée sur `shouldCatchUpOnResume`** ([lib/realtime-resume.ts:55](lib/realtime-resume.ts)) : une socket momentanément déconnectée pendant un backoff ne justifie pas une invalidation de tous les périmètres. Ça ne creuse aucun trou de fraîcheur — un canal tombé puis rejoint rattrape déjà son propre périmètre ([lib/realtime-provider.tsx:664-669](lib/realtime-provider.tsx)) — mais **l'écrire dans le commentaire**, sinon le prochain lecteur le défera.
-4. **Numéro de séquence sur le protocole des boutons** ([lib/use-window-buttons.ts:319-323](lib/use-window-buttons.ts)) et **réponse ciblée** à `minddy:window-buttons-ready` ([desktop/src/main.ts:359](desktop/src/main.ts)). Ferme B3 et sa deuxième victime.
-5. **`pushToBridge()` inconditionnel au montage**, au niveau du layout racine, plus `appliedButtons = null` dans `did-start-navigation` si l'on fait la déduplication native de C3 (première passe). Ferme C. Vérifiable en une commande : `open 'minddy://open?next=/'` rail replié.
-6. **`SidebarRow` : `<Tooltip>` inconditionnel** ([components/app-sidebar.tsx:303](components/app-sidebar.tsx)) + garde `relatedTarget === null` sur `onBlurCapture` ([:840](components/app-sidebar.tsx)). Ferme B2, et corrige au passage une perte de focus clavier après chaque clic dans la barre.
-7. **Désarmer `watchPointerReturn` dans `openRail`** et brancher le repli de secours sur `blur` / `visibilitychange`, jamais sur un minuteur ([:696-702](components/app-sidebar.tsx), [:730-742](components/app-sidebar.tsx)).
-8. **Les deux prises `drag` posées sur des rectangles animés** ([app/globals.css:1739-1740](app/globals.css) et [:1782](app/globals.css)) : la bande fixe couvre déjà les mêmes 60 px avec un rectangle qui ne bouge jamais. C'est la moitié sûre de B1.
-9. **Poser l'instrumentation du §3**, éteinte par défaut. C'est ce qui rend la suite possible.
+1. **`catchUp` in a single run** ([lib/realtime-provider.tsx:620-631](lib/realtime-provider.tsx)), via `invalidateQueries({ predicate })`. Identical coverage, active and inactive included. Close A1 and prepare A2.
+2. **Coalesce catch-ups per channel** ([:664-677](lib/realtime-provider.tsx)) in a queue at the provider level, **separate** from `timers`. Farm A2.
+3. **Duration floor on `shouldCatchUpOnResume`** ([lib/realtime-resume.ts:55](lib/realtime-resume.ts)): a socket momentarily disconnected during a backoff does not justify an invalidation of all perimeters. It doesn't dig any fresh holes - a channel that fell and then rejoined already catches up with its own perimeter ([lib/realtime-provider.tsx:664-669](lib/realtime-provider.tsx)) - but **write it in the comment**, otherwise the next reader will undo it.
+4. **Sequence number on button protocol** ([lib/use-window-buttons.ts:319-323](lib/use-window-buttons.ts)) and **targeted response** to `minddy:window-buttons-ready` ([desktop/src/main.ts:359](desktop/src/main.ts)). Farm B3 and his second victim.
+5. **`pushToBridge()` unconditional at mount**, at the root layout level, plus `appliedButtons = null` in `did-start-navigation` if we do the native deduplication of C3 (first pass). Closes C. Verifiable in one command: `open 'minddy://open?next=/'` rail folded.
+6. **`SidebarRow`: `<Tooltip>` unconditional** ([components/app-sidebar.tsx:303](components/app-sidebar.tsx)) + keep `relatedTarget === null` on `onBlurCapture` ([:840](components/app-sidebar.tsx)). Closes B2, and fixes a loss of keyboard focus after each click in the bar.
+7. **Disarm `watchPointerReturn` in `openRail`** and connect the fallback to `blur` / `visibilitychange`, never to a timer ([:696-702](components/app-sidebar.tsx), [:730-742](components/app-sidebar.tsx)).
+8. **The two `drag` sockets placed on animated rectangles** ([app/globals.css:1739-1740](app/globals.css) and [:1782](app/globals.css)): the fixed strip already covers the same 60 px with a rectangle that never moves. He is the safe half of B1.
+9. **Install the instrumentation in §3**, off by default. This is what makes the sequel possible.
 
-Chacun est indépendant. Aucun ne demande de mesure préalable. **Aucun n'est garanti fermer le symptôme** — c'est la différence honnête avec la première passe.
+Everyone is independent. None require prior action. **None are guaranteed to close the symptom** — that's the honest difference with the first pass.
 
-### (b) À faire seulement avec une trace
+### (b) To do only with a trace
 
-- **Alléger le creusement `no-drag` global** ([app/globals.css:1710-1731](app/globals.css)) — la seconde moitié de B1. Le correctif change un invariant de sécurité du produit que le commentaire [:1699-1709](app/globals.css) décrit noir sur blanc, et qui a été payé par l'audit de MIN-292 sur six écrans. Il faut d'abord que §3.4 ait montré des `pointerdown` manquants.
-- **A3, la purge de la fenêtre cachée.** Rien à corriger tant que §3.1 (d) n'a pas montré un `longtask` systématiquement plus gros après une absence longue qu'après une absence courte. Et le seul « correctif » évident — faire vraiment fermer le feu rouge — est hors de question : il tuerait les notifications de bureau.
-- **La deuxième pesée de A1** : si §3.5 montre un `N` qui ne croît pas, le geste (a).1 reste bon mais son gain est petit, et la piste se déplace.
+- **Lighten global `no-drag` digging** ([app/globals.css:1710-1731](app/globals.css)) — the second half of B1. The patch changes a product security invariant that comment [:1699-1709](app/globals.css) describes in black and white, and which was paid for by auditing MIN-292 on six screens. First, §3.4 must have shown missing `pointerdown`.
+- **A3, purging the hidden window.** Nothing to correct until §3.1 (d) showed a systematically larger `longtask` after a long absence than after a short absence. And the one obvious "fix" — making the red light actually turn off — is out of the question: it would kill desktop notifications.
+- **The second weighing of A1**: if §3.5 shows a `N` which does not increase, gesture (a).1 remains good but its gain is small, and the track moves.
 
 ---
 
-## 5. Ce qui a été écarté
+## 5. What was discarded
 
-### Faux — le code dit le contraire
+### False — the code says otherwise
 
-- **« `backgroundThrottling` laisse mourir la socket en arrière-plan. »** [desktop/src/main.ts:272-275](desktop/src/main.ts) consigne une sonde (MIN-290) qui a **mesuré** la WebSocket Supabase survivant sept minutes en arrière-plan avec l'étranglement actif. Écrire l'inverse sans nouvelle mesure, c'est défaire un réglage sur une supposition.
-- **« Le rattrapage temps réel fait clignoter des surfaces en basculant des états de chargement. »** `catchUp` invalide des queries qui **ont** leur donnée : en react-query v5, `isPending` reste faux, seul `isFetching` bascule. Et le dépôt **impose** que l'UI de chargement se lise sur `isPending` ([lib/query-loading.test.ts](lib/query-loading.test.ts), qui parcourt `app/`, `components/` et `lib/`). Un grep sur tout le dépôt ne rend que deux usages de `isFetching`, dont un seul en rendu ([components/feedback/feedback-participants-group.tsx:124](components/feedback/feedback-participants-group.tsx)), hors board. Rien ne se démonte par ce chemin. Il reste du travail réseau superflu — un vrai gaspillage, pas le symptôme.
-- **« Le gel/dégel des boutons fait clignoter les popovers. »** Un popover est **délibérément** hors de `MODAL_SELECTOR` ([lib/use-window-buttons.ts:132-144](lib/use-window-buttons.ts)) : il ne pose aucune raison et ne fait jamais basculer `modal`.
-- **« Le repli du rail déplace l'ancre de toute surface flottante. »** En mode overlay — le seul où le rail existe — `flowWidth` reste constant à `COLLAPSED_WIDTH` ([components/app-sidebar.tsx:793](components/app-sidebar.tsx)) et l'`aside` est `absolute … z-40` ([:854](components/app-sidebar.tsx)) : **rien** hors de la barre ne bouge pendant le repli. Le commentaire [:783-792](components/app-sidebar.tsx) le dit déjà.
-- **« La marque part en translation de 320 ms à chaque bascule. »** La règle est `[data-window-buttons-ready]:not([data-rail])` ([app/globals.css:1802-1806](app/globals.css)) et `data-rail` est posé dès que la barre est en mode rail ou en zen ([components/app-sidebar.tsx:888](components/app-sidebar.tsx)) : sur les pages à barre secondaire, la transition est **désarmée**.
-- **Tout ce qui repose sur le calage de 68 px de l'en-tête.** `HeaderWindowButtonsSlot` ne rend quelque chose que **sous** 1200 px ([components/desktop-window-buttons.tsx:110-112](components/desktop-window-buttons.tsx), [lib/use-window-buttons.ts:213](lib/use-window-buttons.ts)). La fenêtre par défaut fait 1280 ([desktop/src/main.ts:228](desktop/src/main.ts)). Sur ce poste, ce chemin est mort.
-- **« Le rail se refermerait deux fois de suite par perte de focus. »** Tant que `focusWithin` est vrai, `collapsed` est faux ([components/app-sidebar.tsx:753](components/app-sidebar.tsx)) : l'oscillation décrite n'est pas atteignable. Le remontage de B2 est réel, sa boucle ne l'est pas.
-- **« Ajouter un `pointerdown` sur `document` pour désarmer le guetteur du rail. »** Les feux sont **natifs** : un clic dessus n'émet aucun `pointerdown` dans la page ([components/app-sidebar.tsx:705-711](components/app-sidebar.tsx) le dit lui-même), et un `pointerdown` ailleurs est toujours précédé d'un `pointermove`. L'écouteur n'ajoute rien.
+- **“`backgroundThrottling` lets the socket die in the background. »** [desktop/src/main.ts:272-275](desktop/src/main.ts) logs a probe (MIN-290) that **measured** the Supabase WebSocket surviving seven minutes in the background with throttling active. Writing the inverse without a new measurement is like undoing an adjustment based on an assumption.
+- **“Real-time catch-up flashes surfaces by toggling loading states. »** `catchUp` invalidates queries which **have** their data: in react-query v5, `isPending` remains false, only `isFetching` switches. And the repository **requires** that the loading UI reads `isPending` ([lib/query-loading.test.ts](lib/query-loading.test.ts), which iterates through `app/`, `components/` and `lib/`). A grep on the entire repository only renders two uses of `isFetching`, only one of which is rendered ([components/feedback/feedback-participants-group.tsx:124](components/feedback/feedback-participants-group.tsx)), off-board. Nothing comes apart this way. There's still unnecessary network work — real waste, not the symptom.
+- **“Freezing/thawing buttons causes popovers to flash. »** A popover is **deliberately** outside of `MODAL_SELECTOR` ([lib/use-window-buttons.ts:132-144](lib/use-window-buttons.ts)): it poses no reason and never toggles `modal`.
+- **“The folding of the rail moves the anchor from any floating surface. »** In overlay mode — the only one where the rail exists — `flowWidth` remains constant at `COLLAPSED_WIDTH` ([components/app-sidebar.tsx:793](components/app-sidebar.tsx)) and the `aside` is `absolute … z-40` ([:854](components/app-sidebar.tsx)): **Nothing** outside the bar moves during collapse. The comment [:783-792](components/app-sidebar.tsx) already says this.
+- **“The mark translates for 320 ms at each switch. »** The rule is `[data-window-buttons-ready]:not([data-rail])` ([app/globals.css:1802-1806](app/globals.css)) and `data-rail` is set as soon as the bar is in rail or zen mode ([components/app-sidebar.tsx:888](components/app-sidebar.tsx)): on the secondary bar pages, the transition is **disabled**.
+- **Anything that relies on the header being 68 px.** `HeaderWindowButtonsSlot` only renders something **under** 1200 px ([components/desktop-window-buttons.tsx:110-112](components/desktop-window-buttons.tsx), [lib/use-window-buttons.ts:213](lib/use-window-buttons.ts)). The default window is 1280 ([desktop/src/main.ts:228](desktop/src/main.ts)). On this post, this path is dead.
+- **“The rail would close twice in a row due to loss of focus. »** As long as `focusWithin` is true, `collapsed` is false ([components/app-sidebar.tsx:753](components/app-sidebar.tsx)): the oscillation described is not achievable. B2's reassembly is real, its loop is not.
+- **“Add a `pointerdown` to `document` to disarm the rail spotter. »** The fires are **native**: clicking on them does not emit any `pointerdown` in the page ([components/app-sidebar.tsx:705-711](components/app-sidebar.tsx) itself says so), and a `pointerdown` elsewhere is always preceded by a `pointermove`. The earpiece adds nothing.
 
-### Vrai, mais **constant** — donc hors sujet ici
+### True, but **constant** — therefore out of scope here
 
-Tous ces défauts existent, tous méritent leur correctif, **aucun** ne peut expliquer un symptôme rare : ils se paient à chaque geste ou à chaque frame, et le témoignage dit que le régime permanent est identique au navigateur.
+All these defects exist, all deserve their correction, **none** can explain a rare symptom: they are paid for with each gesture or each frame, and the testimony says that the permanent mode is identical to the browser.
 
-- **Le creusement `no-drag` global** ([app/globals.css:1710-1731](app/globals.css)) — la thèse principale de la première passe. Un coût proportionnel au nombre d'éléments, payé à chaque layout : il se sentirait tout le temps. Seule sa **fraîcheur** (B1) reste dans la course, et c'est un mécanisme différent.
-- **Les 20 dropdowns Radix laissés en `modal`** (C1) : `body{pointer-events:none}` à chaque ouverture *et* fermeture. Se reproduit à 100 %, à la demande.
-- **Le board non mémoïsé** (P2), **`updateActiveColumn`** (C5), **les trois contextes non mémoïsés** (C6), **les voiles `backdrop-filter`** (P3), **le masque sur les scrollers** (P7), **la boucle du lasso** (P8), **`spellcheck: true`** (P6). Amplificateurs, pas déclencheurs.
-- **`applyWindowButtons` qui repose les boutons sans comparer** (C3, [desktop/src/main.ts:71-78](desktop/src/main.ts)) : coûteux à chaque survol du rail, donc reproductible à volonté. À corriger, mais ce n'est pas ça.
+- **The global `no-drag` dig** ([app/globals.css:1710-1731](app/globals.css)) — the main thesis of the first pass. A cost proportional to the number of elements, paid at each layout: it would be felt all the time. Only his **freshness** (B1) remains in the race, and it's a different mechanism.
+- **The 20 Radix dropdowns left in `modal`** (C1): `body{pointer-events:none}` at each opening *and* closing. Reproduces 100%, on demand.
+- **The board not memorized** (P2), **`updateActiveColumn`** (C5), **the three contexts not memorized** (C6), **the sails `backdrop-filter`** (P3), **the mask on the scrollers** (P7), **the loop of the lasso** (P8), **`spellcheck: true`** (P6). Amplifiers, not triggers.
+- **`applyWindowButtons` which resets the buttons without comparing** (C3, [desktop/src/main.ts:71-78](desktop/src/main.ts)): expensive each time the rail is hovered, therefore reproducible at will. To be corrected, but that's not it.
 
-### Vrai, natif, mais trop rare pour ce symptôme
+### True, native, but too rare for this symptom
 
-- **L'auto-updater** ([desktop/src/updater.ts:51](desktop/src/updater.ts), `autoDownload = true`, contrôle toutes les six heures) : le contrôle est un GET de YAML, négligeable ; le téléchargement bloquerait bien le process navigateur, mais la coquille bouge « deux fois par an » ([:9-10](desktop/src/updater.ts)). Une fréquence de l'ordre de l'année ne produit pas « assez fréquent pour être gênant à l'usage ».
-- **`setBadgeCount`** ([lib/use-desktop-notifications.ts:48-51](lib/use-desktop-notifications.ts)) : un appel AppKit sur le thread UI du process navigateur, mais gardé par `[unreadCount]`, donc uniquement quand le chiffre change réellement.
+- **The auto-updater** ([desktop/src/updater.ts:51](desktop/src/updater.ts), `autoDownload = true`, checks every six hours): the check is a YAML GET, negligible; the download would block the browser process, but the shell moves “twice a year” ([:9-10](desktop/src/updater.ts)). A frequency of the order of a year does not produce “frequent enough to be inconvenient to use”.
+- **`setBadgeCount`** ([lib/use-desktop-notifications.ts:48-51](lib/use-desktop-notifications.ts)): an AppKit call on the UI thread of the browser process, but kept by `[unreadCount]`, so only when the number actually changes.

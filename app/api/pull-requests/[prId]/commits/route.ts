@@ -3,9 +3,9 @@ import { type NextRequest } from "next/server";
 import { authorizePrRequest, prCommitsResponse } from "@/lib/server/agent/pr-actions";
 
 /**
- * Les commits qui composent une pull request, lus chez la forge avec un token
- * frais — l'onglet Commits du panneau PR.
- *  GET → { commits, truncated } (du plus ancien au plus récent).
+ * The commits that make up a pull request, read at the forge with a token
+ * fresh — the Commits tab of the PR panel.
+ * GET → { commits, truncated } (oldest to newest).
  */
 
 type RouteContext = { params: Promise<{ prId: string }> };

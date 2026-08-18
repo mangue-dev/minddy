@@ -1,13 +1,13 @@
 /**
- * La longueur minimale d'un mot de passe de partage (MIN-347) — isomorphe.
+ * The minimum length of a share password (MIN-347) — isomorphic.
  *
- * Le serveur la fait respecter ([lib/server/view-shares.ts](server/view-shares.ts)),
- * les deux dialogues la disent avant d'envoyer. Une seule valeur pour les deux :
- * un formulaire plus permissif que le serveur ne produit qu'un refus qu'on
- * n'avait pas annoncé.
+ * The server enforces it ([lib/server/view-shares.ts](server/view-shares.ts)),
+ * both dialogs say it before sending. A single value for both:
+ * a form more permissive than the server only produces a refusal that one
+ * had not announced.
  *
- * Le texte qui l'accompagne (`passwordMinHint`) porte le chiffre en toutes
- * lettres — un message à placeholder appelé sans ses valeurs affiche le chemin
- * de sa clé, et rien ici ne justifie de courir ce risque pour un 8.
+ * The accompanying text (`passwordMinHint`) carries the number in all
+ * letters — a placeholder message called without its values displays the path
+ * of its key, and nothing here justifies taking this risk for an 8.
  */
 export const MIN_SHARE_PASSWORD_LENGTH = 8;

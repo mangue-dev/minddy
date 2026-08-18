@@ -17,23 +17,23 @@ import { AUTOMATION_PRESET_IDS, type AutomationPresetId } from "@/lib/automation
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
- * Picker de préréglage d'automatisation (MIN-147) — même montage que le picker
- * de niveau de raisonnement du composer d'agent : liste courte et FERMÉE, donc
- * Popover + Command sans champ de recherche, et chaque option porte son titre
- * ET une ligne qui dit ce qu'elle fait.
+ * Automation Preset Picker (MIN-147) — same mounting as picker
+ * level of reasoning of the agent composer: short and CLOSED list, therefore
+ * Popover + Command without search box, and each option has its title
+ * AND a line that says what it does.
  *
- * C'est cette ligne qui compte. Choisir entre « Boucle complète » et « Plan et
- * vérification seulement » sur les seuls titres demande de connaître la feature
- * avant de s'en servir ; avec « Cadre avant, contrôle après. Le code reste à
- * toi. », le choix se fait sans quitter la liste.
+ * It's this line that counts. Choose between “Full Loop” and “Plan and
+ * verification only » on the titles only asks to know the feature
+ * before using it; with “Frame before, control after.” The code remains
+ * You. », the choice is made without leaving the list.
  *
- * Le déclencheur, lui, garde la taille d'un champ de formulaire — le chip rond
- * du composer de chat n'aurait pas de sens dans une page de réglages —, et la
- * description LONGUE du choix courant reste sous le champ : une fois la liste
- * refermée, c'est la seule explication encore visible.
+ * The trigger keeps the size of a form field — the round chip
+ * of composing chat would not make sense in a settings page —, and the
+ * LONG description of the current choice remains below the field: once the list
+ * closed, this is the only explanation still visible.
  */
 
-/** `null` = aucun préréglage, un choix à part entière (rien ne se déclenche). */
+/** `null` = no preset, a choice in its own right (nothing is triggered). */
 type PresetValue = AutomationPresetId | null;
 
 const LABEL_KEYS: Record<AutomationPresetId, MessageKey<"Automations">> = {
@@ -44,7 +44,7 @@ const LABEL_KEYS: Record<AutomationPresetId, MessageKey<"Automations">> = {
   "verify-only": "presetVerifyOnly",
 };
 
-/** La ligne courte de la LISTE — calibrée sur celles du picker de raisonnement. */
+/** The short line of the LIST — calibrated to those of the reasoning picker. */
 const SHORT_KEYS: Record<AutomationPresetId, MessageKey<"Automations">> = {
   "loop-by-effort": "presetLoopByEffortShort",
   "plan-and-verify": "presetPlanAndVerifyShort",
@@ -97,12 +97,10 @@ export function AutomationPresetPicker({
       </PopoverTrigger>
       <PopoverContent className="w-(--radix-popover-trigger-width) min-w-72 p-0" align="start">
         <Command shouldFilter={false}>
-          {/* mt/mb-1.5 + px-1 : mêmes retraits que les autres pickers du produit.
-              `max-h-96` par-dessus le `max-h-72` par défaut : six options à deux
-              lignes le dépassent, et `CommandList` masque sa barre de défilement
-              (`no-scrollbar`) — la dernière option se retrouvait coupée, sans
-              aucun indice qu'il fallait faire défiler. La liste est courte et
-              fermée : elle doit tenir en entier. */}
+          {/* mt/mb-1.5 + px-1: same indents as the other pickers of the product.
+ `max-h-96` over the default `max-h-72`: six two-line options overhang it, and `CommandList` hides its scrollbar
+ (`no-scrollbar`) — the last option was cut off, with no clue to scroll through. The list is short and
+ closed: it must fit in full. */}
           <CommandList className="mt-1.5 mb-1.5 max-h-96 px-1">
             {options.map((option) => (
               <CommandItem

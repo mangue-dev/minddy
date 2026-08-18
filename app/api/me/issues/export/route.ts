@@ -16,21 +16,21 @@ import {
 /**
  * `GET /api/me/issues/export` — mes tickets, en CSV.
  *
- * Deux paramètres, tous deux facultatifs et par défaut « tout » :
- *   • `project` : l'id d'un de mes projets, ou `all` ;
- *   • `statuses` : une liste séparée par des virgules (`todo,in_progress`).
+ * Two parameters, both optional and default “all”:
+ * • `project`: the id of one of my projects, or `all`;
+ * • `statuses`: a comma-separated list (`todo,in_progress`).
  *
- * La portée vient de la SESSION, pas des paramètres : les tickets, objectifs et
- * catégories sont lus par le client de l'utilisateur, donc RLS
- * (`can_access_project`) décide de ce qui sort. Un id de projet qu'on ne peut
- * pas voir ne rend rien plutôt qu'une erreur qui renseignerait sur son
- * existence. Seuls les noms de personnes passent par le client de service —
- * `project_members` n'est pas lisible pour autrui sous RLS (même partage que
+ * The scope comes from the SESSION, not the parameters: the tickets, objectives and
+ * categories are read by the user's client, so RLS
+ * (`can_access_project`) decides what goes out. A project ID that cannot be
+ * not seeing does nothing rather than an error which would provide information on its
+ * existence. Only people's names pass through the service client —
+ * `project_members` is not readable by others under RLS (same sharing as
  * `GET /api/me/search-index`).
  *
- * Le format du fichier lui-même vit dans `lib/export/issues-csv.ts`, qui le
- * publie aussi sur `/llms.txt` et `/llms-full.txt` : cette route ne fait que
- * résoudre les noms et l'ordre.
+ * The file format itself lives in `lib/export/issues-csv.ts`, which
+ * also publishes on `/llms.txt` and `/llms-full.txt`: this route only
+ * resolve names and order.
  */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -63,16 +63,16 @@ export async function GET(request: NextRequest) {
   const scoped = projectId ? projects.filter((p) => p.id === projectId) : projects;
   const projectById = new Map(scoped.map((p) => [p.id, p]));
 
-  // Rien d'accessible sous cette portée : un fichier vide (en-tête seul) plutôt
-  // qu'une erreur — l'utilisateur a demandé un export, il en reçoit un.
+  // Nothing accessible under this scope: an empty file (header only) rather
+  // than an error — the user requested an export, he receives one.
   let issues: IssueRow[] = [];
   if (scoped.length > 0) {
     let query = auth.supabase
       .from("issues")
       .select(ISSUE_COLUMNS)
       .in("status", statuses)
-      // Tri STABLE côté base, pour que le plafond coupe toujours au même
-      // endroit ; la mise en ordre lisible (par nom de projet) se fait ensuite.
+      // STABLE sorting on the base side, so that the ceiling always cuts at the same
+      // place ; the legible ordering (by project name) is then done.
       .order("project_id", { ascending: true })
       .order("number", { ascending: true })
       .limit(MAX_EXPORT_ISSUES);
@@ -86,9 +86,9 @@ export async function GET(request: NextRequest) {
     issues = (data ?? []) as unknown as IssueRow[];
   }
 
-  // Le parent d'un ticket exporté peut être resté dehors (son statut n'était pas
-  // demandé) : son identifiant se lit quand même, pour que la colonne `Parent`
-  // dise la vérité. À la relecture, un parent absent du fichier ramène
+  // The parent of an exported ticket may have remained outside (its status was not
+  // requested): its identifier is read anyway, so that the column `Parent`
+  // tell the truth. When rereading, a parent absent from the file brings back
   // simplement l'enfant au premier niveau (avertissement `parentNotFound`).
   const known = new Map(issues.map((i) => [i.id, i]));
   const orphanParents = [
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
     ((categoriesRes.data ?? []) as { id: string; name: string }[]).map((c) => [c.id, c.name])
   );
 
-  // Les noms de personnes : ceux des membres des projets EXPORTÉS seulement.
+  // Personal names: those of members of EXPORTED projects only.
   const { members } = await buildMembersByProject(getServiceClient(), scoped);
   const memberName = new Map<string, string>();
   for (const list of Object.values(members)) {
@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
   const rows: ExportIssueRow[] = [];
   for (const issue of issues) {
     const project = projectById.get(issue.project_id);
-    if (!project) continue; // projet quitté entre deux requêtes
+    if (!project) continue; // project left between two requests
     rows.push({
       identifier: issueIdentifier(project.key, issue.number),
       title: issue.title,
@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // Ordre du fichier : par projet (par NOM, celui qu'on lit), puis par numéro.
+  // File order: by project (by NAME, the one you read), then by number.
   rows.sort(
     (a, b) =>
       a.project.localeCompare(b.project) ||
@@ -170,8 +170,8 @@ export async function GET(request: NextRequest) {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="${fileName}"`,
-      // Ce que le dialogue annonce en retour — et l'aveu quand le plafond a
-      // coupé, plutôt qu'un fichier tronqué en silence.
+      // What the dialogue announces in return — and the confession when the ceiling has
+      // cut, rather than a silently truncated file.
       "X-Minddy-Issue-Count": String(rows.length),
       ...(issues.length >= MAX_EXPORT_ISSUES ? { "X-Minddy-Truncated": "true" } : {}),
       "Cache-Control": "no-store",
@@ -200,8 +200,8 @@ interface IssueRow {
   issue_categories?: { category_id: string }[];
 }
 
-/** Les statuts demandés, réduits à ceux qui existent. Vide ou illisible = tous :
- *  un paramètre mal formé ne doit pas rendre un fichier vide sans le dire. */
+/** The statuses requested, reduced to those that exist. Empty or illegible = all:
+ * a malformed parameter should not render a file empty without saying so. */
 function parseStatuses(raw: string | null): IssueStatusValue[] {
   if (!raw) return [...ISSUE_STATUSES];
   const asked = raw.split(",").map((s) => s.trim()).filter(isStatus);

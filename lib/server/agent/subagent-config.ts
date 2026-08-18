@@ -3,65 +3,63 @@ import type { FavoriteSubagentModel, SubagentThinkingEffort } from "@/lib/subage
 import type { AgentModelsCatalog } from "./models-catalog";
 
 /**
- * Réglages des sous-agents (MIN-112) : la liste « Favorites for sub-agents » et le
- * plafond de parallélisme.
+ * Subagent settings (MIN-112): the "Favorites for sub-agents" list and the
+ * parallelism cap.
  *
- * Les deux passent par `app_config`, PAS par l'env — même mécanique que
- * `agent_model` (`getAppConfigValue`, cache 60 s) : réglable sans déploiement, comme
- * demandé, et sans variable Vercel de plus. Une config cassée retombe sur le repli
- * écrit en code : un JSON mal formé ne doit pas tuer un run.
+ * Both go through `app_config`, NOT the env — same mechanism as
+ * `agent_model` (`getAppConfigValue`, 60 s cache): adjustable without deployment, as
+ * requested, and without additional Vercel variable. A broken config falls on the fallback
+ * written in code: a malformed JSON must not kill a run.
  *
- * Les favoris s'éditent depuis /admin (registre `lib/ai-model-config.ts`), donc la
- * FORME de la liste — type, repli produit, parseur — vit dans un module partagé
- * client/serveur : `lib/subagent-favorites.ts`.
+ * Favorites are edited from /admin (register `lib/ai-model-config.ts`), therefore the
+ * FORM of the list — type, product fallback, parser — lives in a shared module
+ * client/server: `lib/subagent-favorites.ts`.
  *
- * CE MODULE-CI EST PUR depuis MIN-224 : de l'arithmétique et des tables, rien qui
- * touche la base. Les DEUX lectures d'`app_config` sont parties dans
- * [subagent-app-config.ts](subagent-app-config.ts), et pas par goût du découpage —
- * la boucle d'agent tourne désormais dans la microVM, et ce qu'elle importe ne doit
- * pas pouvoir atteindre `getServiceClient` (cf. `vm-bundle-secrets.test.ts`). Ce
- * qu'elle a besoin de savoir ici — le plafond de rounds d'une fille, le résolveur
- * de modèle — n'a jamais eu besoin de la base ; ce qui l'avait, ce sont les
- * réglages, et ils se lisent AVANT, côté fonction, puis descendent dans le job.
+ * THIS MODULE IS PURE since MIN-224: arithmetic and tables, nothing that touches the base. BOTH `app_config` reads went to
+ * [subagent-app-config.ts](subagent-app-config.ts), and not for the sake of slicing —
+ * the agent loop now runs in the microVM, and whatever it imports must not be able to reach
+ * `getServiceClient` (see `vm-bundle-secrets.test.ts`). What
+ * she needs to know here — a girl's round cap, the model resolver
+ * — never needed the base; what had it were the
+ * settings, and they are read BEFORE, on the function side, then go down to the job.
  */
 
 /**
- * LE VOCABULAIRE DES SESSIONS FILLES (MIN-286) — rapatrié ici quand `subagent.ts`
- * est parti avec la boucle maison.
+ * THE VOCABULARY OF GIRLS SESSIONS (MIN-286) — repatriated here when `subagent.ts`
+ * left with the home loop.
  *
- * Ce qui a disparu, c'est le REGISTRE : le plafond de parallélisme tenu en
- * mémoire, l'exclusivité de l'écrivain, la livraison des rapports. Opencode tient
- * tout cela lui-même — une fille est une session, ouverte par son tool `task`, et
- * son modèle vient du NOM de l'agent (cf. dossier §2.14). Ce qui reste sont les
- * trois mots dont la fonction et le superviseur ont encore besoin : le mode, la
- * forme d'un favori, et la bande de seq où se compte sa dépense.
+ * What disappeared was the REGISTER: the parallelism cap held en
+ * memory, writer's exclusivity, reporting delivery. Opencode holds
+ * all this itself — a girl is a session, opened by its tool `task`, and
+ * its model comes from the NAME of the agent (see file §2.14). What remains are the
+ * three words that the function and the supervisor still need: the mode, the
+ * form of a favorite, and the seq band where its expenditure is counted.
  */
 
-/** Les deux mains d'une fille : lire pour rapporter, ou écrire du code. */
+/** A girl's two hands: reading to report, or writing code. */
 export type SubagentMode = "explore" | "implement";
 
 /**
- * Le niveau de réflexion d'une fille et la forme d'un favori vivent dans
- * `lib/subagent-favorites.ts` : le dashboard admin ÉDITE ces favoris, et le client
- * ne peut pas importer un module serveur. Ré-exportés pour que les appelants
- * serveur gardent un seul point d'entrée.
+ * A girl's thinking level and the shape of a favorite live in
+ * `lib/subagent-favorites.ts`: the admin dashboard EDITS these favorites, and the client
+ * cannot import a server module. Re-exported so that server callers keep a single entry point.
  */
 export type { FavoriteSubagentModel, SubagentThinkingEffort };
 
 /**
- * Base de la bande de seq `ai_usage` des filles — au-dessus de tout ce que le
- * parent peut atteindre, pour que les deux ne s'entrelacent jamais à l'affichage.
+ * Base of the daughters' `ai_usage` seq strip — above whatever the parent
+ * can reach, so the two never interleave on display.
  */
 export const SUBAGENT_USAGE_SEQ_BASE = 2_000_000_000;
 const SUBAGENT_SEQ_SPAN = 1_000;
-/** `ai_usage.seq` est un `integer` Postgres : hors bornes, l'INSERT est REJETÉ. */
+/** `ai_usage.seq` is a Postgres `integer`: out of bounds, the INSERT is REJECTED. */
 const MAX_PG_INT = 2_147_483_647;
 
 /**
- * Seq de départ des lignes d'usage de la fille n° `slot` du run. L'espacement est
- * BORNÉ : au-delà, on retombe sur le dernier slot représentable plutôt que d'écrire
- * un entier hors bornes — deux filles partageraient alors une plage de seq (un
- * ordre d'affichage ambigu), là où un dépassement perdrait la ligne d'usage entière.
+ * Starting seq of the usage lines of the child n° `slot` of the run. The spacing is
+ * BOUNDED: beyond that, we fall back on the last representable slot rather than writing
+ * an integer out of bounds — two girls would then share a seq range (an
+ * ambiguous display order), where an overrun would lose the entire usage line.
  */
 export function subagentUsageSeq(slot: number): number {
   const s = Number.isFinite(slot) ? Math.max(0, Math.floor(slot)) : 0;
@@ -70,56 +68,56 @@ export function subagentUsageSeq(slot: number): number {
 }
 
 /**
- * Plafond de rounds d'une fille, CUMULÉ sur toutes ses reprises — et non par
- * chunk : une fille reprise trois fois n'a pas droit à quarante-cinq rounds.
+ * Round cap for a girl, CUMULATED over all her retakes — and not by
+ * chunk: a girl retaken three times is not entitled to forty-five rounds.
  */
 export const SUBAGENT_MAX_ROUNDS = 15;
 
 /**
- * Ce qu'il reste de rounds à une fille qu'on s'apprête à (re)lancer. **Zéro ou
- * moins veut dire COUPER**, jamais « lui en rendre un ».
+ * What rounds are left for a girl who is about to (re)launch. **Zero or
+ * less means CUT**, never "give one back."
  *
- * Cette nuance a coûté deux passages de routine entiers (07/08/2026). Le
- * lanceur bornait la fille reprise à `Math.max(1, MAX - déjà joués)` : une fois
- * son plafond atteint, elle repartait avec UN round, le jouait, la boucle
- * suspendait aussitôt (`round >= maxRounds`), le parent se garait, le chunk se
- * re-queuait — et ça recommençait au chunk suivant. Dix-neuf chunks de 5 à 20 s
- * pendant lesquels le parent n'a pas dit un mot, chacun payant son réveil de
- * microVM, jusqu'à ce que le garde-fou des 20 continuations tue le tour.
+ * This nuance cost two entire routine runs (08/07/2026). The
+ * launcher limited the girl taken to `Math.max(1, MAX - already played)`: once
+ * her ceiling was reached, she left with ONE round, played it, the loop
+ * immediately suspended (`round >= maxRounds`), the parent parked, the chunk se
+ * re-queued — and that started again with the next chunk. Nineteen chunks of 5 to 20 s
+ * during which the parent didn't say a word, each paying for their wakeup by
+ * microVM, until the 20-continuation guardrail killed the round.
  *
- * Le `max(1, …)` semblait prudent — « au moins un round, sinon la boucle
- * refuserait de tourner ». C'est exactement l'inverse : une boucle qui ne peut
- * pas tourner doit rendre la main, pas tourner à vide.
+ * The `max(1, …)` seemed prudent — “at least one round, otherwise the loop
+ * would refuse to turn”. It's exactly the opposite: a loop that cannot continue
+ * must return, not run empty.
  */
 export function subagentRoundsLeft(roundsSoFar: number | undefined): number {
   return SUBAGENT_MAX_ROUNDS - (roundsSoFar ?? 0);
 }
 
 
-/** Un favori, situé sur l'échelle de coût du run — `undefined` = non situable. */
+/** A favorite, located on the run cost scale — `undefined` = not placeable. */
 export type ScopedFavorite = FavoriteSubagentModel & { multiplier?: number };
 
 /**
- * Ce qu'un run a le droit de donner à ses filles : le catalogue et les favoris
- * PASSÉS AU PLAFOND DE PLAN du compte qui paye.
+ * What a run has the right to give to its girls: the catalog and the favorites
+ * PASSED TO THE PLAN CEILING of the paying account.
  *
- * Sans ce tri, `spawn_agent` était le trou dans la raquette : le picker grise
- * Opus pour un compte Go, mais l'agent parent, lui, se voyait offrir tout le
- * catalogue tool-calling et pouvait déléguer dessus — sur le quota minddy, et
- * sans que personne ne l'ait choisi. Le plafond doit valoir pour tout ce qui
- * dépense, y compris quand c'est un modèle qui décide.
+ * Without this sorting, `spawn_agent` was the hole in the racket: the picker grise
+ * Opus for a Go account, but the parent agent was offered the entire
+ * tool-calling catalog and could delegate to it — on the minddy quota, and
+ * without anyone having chosen it. The ceiling must apply to everything that
+ * spends, including when it is a model that decides.
  *
- * Le plafond ne s'applique évidemment qu'au quota minddy : en BYOK, le catalogue
- * ne porte pas de `maxMultiplier` et rien n'est retiré.
+ * The ceiling obviously only applies to the minddy quota: in BYOK, the catalog
+ * does not carry a `maxMultiplier` and nothing is removed.
  */
 export interface SubagentModelScope {
-  /** Ids que la fille peut vraiment tourner. */
+  /** Ids the girl can really spin. */
   allowedIds: string[];
-  /** Ids connus du catalogue mais au-dessus du plafond : refusés en le DISANT. */
+  /** Ids known from the catalog but above the ceiling: refused by SAYING so. */
   abovePlanIds: string[];
-  /** Favoris qui tiennent dans le plafond — ce que le prompt annonce. */
+  /** Favorites that fit in the ceiling — what the prompt announces. */
   favorites: ScopedFavorite[];
-  /** Plafond du plan, ou null (BYOK) — pour l'expliquer au parent. */
+  /** Plan ceiling, or null (BYOK) — to explain it to the parent. */
   maxMultiplier: number | null;
 }
 
@@ -140,8 +138,8 @@ export function scopeSubagentModels(opts: {
   return {
     allowedIds,
     abovePlanIds,
-    // Un favori que le catalogue ne situe pas reste servi : on ne retire pas une
-    // valeur sûre parce que l'index des prix était illisible ce jour-là.
+    // A favorite that the catalog does not locate remains served: we do not remove a
+    // safe bet because the price index was unreadable that day.
     favorites: opts.favorites
       .filter((f) => within(f.id))
       .map((f) => {
@@ -153,28 +151,28 @@ export function scopeSubagentModels(opts: {
 }
 
 /**
- * Résolveur du champ `model` de `spawn_agent`, construit pour UN run.
+ * Resolver of the `model` field of `spawn_agent`, built for ONE run.
  *
- * Validé contre le catalogue du run (`getAgentModelsForUser`) et NON contre l'index
- * privé de `model.ts` : le catalogue est déjà exporté, caché une heure, ne lève
- * jamais, et surtout il FILTRE sur le support du tool-calling — un sous-agent qui ne
- * sait pas appeler d'outil ne peut rien faire. Les favoris sont acceptés par id ET
- * par libellé (l'agent les lit par leur nom dans son prompt) même si le catalogue
- * n'a pas pu être chargé : un favori curaté est une valeur sûre.
+ * Validated against the run catalog (`getAgentModelsForUser`) and NOT against the index
+ * deprived of `model.ts`: the catalog is already exported, hidden for an hour, never raises
+ *, and above all it FILTERS on tool-calling support — a sub-agent who does not
+ * know how to call a tool cannot do anything. Favorites are accepted by id AND
+ * by label (the agent reads them by name in its prompt) even if the catalog
+ * could not be loaded: a curated favorite is a safe bet.
  *
- * Un id inventé revient en ERREUR DE TOOL avec la liste des favoris, jamais en 400
- * du provider — celui-ci brûlerait un round de la fille pour rien. Un modèle qui
- * existe mais dépasse le plafond du plan se refuse À PART, en le nommant : lui
- * répondre « inconnu du catalogue » serait faux, et l'agent le retenterait sous
- * une autre orthographe au lieu d'en choisir un autre.
+ * An invented id returns as a TOOL ERROR with the list of favorites, never in 400
+ * from the provider — this one would burn a round of the girl for nothing. A model which
+ * exists but exceeds the ceiling of the plan is refused SEPARATEly, by naming it: him
+ * answering “unknown in the catalog” would be wrong, and the agent would try it again under
+ * another spelling instead of choosing another.
  */
 export function makeSubagentModelResolver(opts: {
   favorites: FavoriteSubagentModel[];
-  /** Ids du catalogue du run PASSÉS AU PLAFOND (vide = catalogue indisponible). */
+  /** Catalog ids of the PASSED TO CEILING run (empty = catalog unavailable). */
   catalogIds: string[];
-  /** Ids du catalogue écartés par le plafond du plan. */
+  /** Catalog Ids excluded by the plan ceiling. */
   abovePlanIds?: string[];
-  /** Le plafond lui-même, pour le dire au parent. */
+  /** The ceiling itself, to tell the parent. */
   maxMultiplier?: number | null;
 }): (raw: string) => { ok: true; id: string } | { ok: false; error: string } {
   const catalog = new Set(opts.catalogIds);

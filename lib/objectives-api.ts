@@ -33,9 +33,9 @@ export async function fetchObjectivesApi(
   );
 }
 
-/** La `queryFn` de `["objectives", projectId]` — même contrat que
-    `issuesQueryFn` : instant de départ retenu, réponse passée par l'overlay des
-    écritures en attente (MIN-156). */
+/** The `queryFn` of `["objectives", projectId]` — same contract as
+ `issuesQueryFn`: starting time retained, response passed through the overlay of
+ pending writes (MIN-156). */
 export function objectivesQueryFn(projectId: string) {
   return async ({
     signal,

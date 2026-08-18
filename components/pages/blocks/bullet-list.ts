@@ -2,9 +2,9 @@ import { BulletList, ListItem } from "@tiptap/extension-list";
 import { List } from "lucide-react";
 import type { PageBlock } from "@/components/pages/blocks/types";
 
-/** `ListItem` est apporté ici ET par la liste numérotée : c'est le même nœud
-    pour les deux, et le registre dédoublonne par nom d'extension. Chaque bloc
-    déclare donc de quoi tenir DEBOUT SEUL — retirer l'un ne casse pas l'autre. */
+/** `ListItem` is brought here AND by the numbered list: it is the same node
+ for both, and the register duplicates by extension name. Each
+ block therefore declares enough to stand STANDING ALONE — removing one does not break the other. */
 export const bulletListBlock: PageBlock = {
   id: "bulletList",
   nodeName: "bulletList",

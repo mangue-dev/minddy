@@ -36,7 +36,7 @@ export async function addCommentApi(
   parentId: string | null = null,
   attachments: ResourceInput[] = []
 ): Promise<Comment> {
-  // Seulement des métadonnées : la longueur en tranche, jamais le texte.
+  // Only metadata: slice length, never text.
   trackEvent("comment_added", {
     target: "issue",
     length_bucket: lengthBucket(body),

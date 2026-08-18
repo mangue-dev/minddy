@@ -16,15 +16,15 @@ import { ChangelogEntries } from "@/components/changelog-entries";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 
 /**
- * « Nouveautés » — la page publique `/changelog`, lue sans quitter l'app.
+ * "What's new" — the public page `/changelog`, read without leaving the app.
  *
- * Même contenu, même composant de liste : ce qui est écrit une fois dans
- * `lib/changelog.ts` et le namespace `Changelog` s'affiche aux deux endroits.
- * Le modal reprend la taille du carnet de notes et du wizard de création de
- * projet — c'est la fenêtre de l'app, il n'y en a qu'une.
+ * Same content, same list component: what is written once in
+ * `lib/changelog.ts` and the namespace `Changelog` is displayed in both places.
+ * The modal takes the size of the notebook and the creation wizard of
+ * project — it's the app window, there is only one.
  *
- * Rien à charger : les entrées sont dans le bundle, comme le reste du
- * catalogue. Le modal s'ouvre plein, sans état de chargement.
+ * Nothing to load: the entries are in the bundle, like the rest of the
+ * catalog. The modal opens full, with no loading state.
  */
 export function WhatsNewDialog({
   open,
@@ -37,8 +37,8 @@ export function WhatsNewDialog({
   const tc = useTranslations("Common");
   const locale = useLocale() as Locale;
 
-  // Fondu doux aux bords du défilement, comme le carnet et les colonnes du
-  // board : la liste continue au-delà du bord, et ça se voit.
+  // Soft fade at the edges of the scroll, like the notebook and columns of the
+  // board: the list continues beyond the edge, and it shows.
   const { ref: fadeRef, scrollProps } = useScrollFade<HTMLDivElement>();
 
   return (
@@ -51,9 +51,9 @@ export function WhatsNewDialog({
           {t("metaDescription")}
         </DialogDescription>
 
-        {/* Pas d'infobulle sur cette croix, contrairement au carnet : elle reçoit
-            le focus initial du dialog, donc l'infobulle s'ouvrirait d'elle-même
-            par-dessus le titre — et avalerait le premier Échap. */}
+        {/* No tooltip on this cross, unlike the notebook: it receives
+ the initial focus of the dialog, so the tooltip would open by itself
+ over the title — and would swallow the first Esc. */}
         <div className="absolute top-3.5 right-3.5 z-30">
           <Button
             variant="ghost"

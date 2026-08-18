@@ -9,14 +9,14 @@ import { issueRefFromPr, parseIssueRef } from "./pr-ingest-core";
 import type { PullRequestRef } from "./pr";
 
 /**
- * Accès données de la table `pull_requests` (MIN-143) — le point de passage
- * UNIQUE, en clé de service : l'ingestion est serveur (webhooks + balayages),
- * la table n'a aucune policy d'écriture.
+ * Data access from table `pull_requests` (MIN-143) — the passage point
+ * UNIQUE, in service key: ingestion is server (webhooks + scans),
+ * the table has no write policy.
  *
- * Une PR est identifiée par `(provider, repo_full_name, number)` : c'est un fait
- * du DÉPÔT, pas d'un projet. L'accès se résout à la LECTURE, en joignant
- * `project_git_links` — deux projets qui lient le même dépôt voient la même
- * ligne.
+ * A PR is identified by `(provider, repo_full_name, number)`: it is a fact
+ * of the REPOSITORY, not of a project. Access is resolved on READ, by joining
+ * `project_git_links` — two projects that link the same repository see the same
+ * line.
  */
 
 export type PullRequestState = "draft" | "open" | "merged" | "closed";
@@ -41,21 +41,21 @@ export interface PullRequestRow {
   synced_at: string;
 }
 
-/** Colonnes servies partout (la table n'en a pas d'autre à cacher). */
+/** Columns served everywhere (the table has nothing else to hide). */
 const PR_COLUMNS =
   "id, provider, repo_full_name, number, url, title, state, author_login, author_avatar_url, " +
   "head_branch, base_branch, head_sha, issue_id, opened_at, merged_at, updated_at, synced_at";
 
-/** Provider stocké → id connu, avec repli GitHub (même contrat que `getRepoProvider`). */
+/** Provider stored → known id, with GitHub fallback (same contract as `getRepoProvider`). */
 export function rowProvider(row: { provider: string }): RepoProviderId {
   return isRepoProviderId(row.provider) ? row.provider : "github";
 }
 
 /**
- * État minddy d'une PR lue chez la forge. Les deux forges parlent en
- * `state` + booléens ; minddy n'a que quatre mots, et l'ordre compte : fusionnée
- * l'emporte sur fermée (GitHub ferme une PR en la fusionnant), et un brouillon
- * n'est un brouillon que tant qu'il est ouvert.
+ * Minddy status of a PR read at the forge. Both forges speak in
+ * `state` + booleans; minddy has only four words, and the order matters: merged
+ * trumps closed (GitHub closes a PR by merging it), and a draft
+ * is only a draft as long as it's open.
  */
 export function prStateFromRef(ref: PullRequestRef): PullRequestState {
   if (ref.merged) return "merged";
@@ -77,26 +77,23 @@ export interface PullRequestUpsert {
   headSha?: string | null;
   openedAt?: string | null;
   mergedAt?: string | null;
-  /** Dernière mise à jour CHEZ LA FORGE — le tri de la liste (défaut : maintenant). */
+  /** Last update CHEZ LA FORGE — sorting the list (default: now). */
   updatedAt?: string | null;
   /**
-   * Rattachement au ticket. `undefined` = NE PAS TOUCHER : un webhook qui ne sait
-   * pas résoudre le ticket ne doit pas effacer un rattachement déjà établi (par
-   * un run, ou par un balayage qui avait lu une branche depuis supprimée).
-   */
+ * Attachment to the ticket. `undefined` = DO NOT TOUCH: a webhook that does not resolve the ticket must not delete an already established attachment (by
+ * a run, or by a scan that had read a branch since deleted).
+ */
   issueId?: string | null;
 }
 
 /**
- * Ligne DB d'un upsert. Une clé ABSENTE du payload n'entre pas dans le
- * `ON CONFLICT DO UPDATE SET` de PostgREST : `undefined` veut donc dire « je ne
- * sais pas », et `null` « c'est vide ». La distinction porte tout le poids ici,
- * parce que les webhooks ne charrient pas les mêmes champs que l'API : un
- * `merge_request` GitLab ne dit pas qui est l'auteur, et écraser le login lu par
- * un balayage précédent ferait clignoter la liste à chaque événement.
+ * DB line of an upsert. A key ABSENT from the payload does not enter the PostgREST
+ * `ON CONFLICT DO UPDATE SET`: `undefined` therefore means "I don't know", and `null` "it's empty". The distinction carries all the weight here,
+ * because webhooks don't carry the same fields as the API: a
+ * `merge_request` GitLab doesn't say who the author is, and overwriting the login read by
+ * a previous scan would flash the list on each event.
  *
- * Seul `provider` / `repo_full_name` / `number` (l'identité) et `state` sont
- * obligatoires — on ne met pas une PR à jour sans savoir dans quel état elle est.
+ * Only `provider` / `repo_full_name` / `number` (identity) and `state` * are mandatory — you don't update a PR without knowing what state it is in.
  */
 function toRow(input: PullRequestUpsert): Record<string, unknown> {
   const row: Record<string, unknown> = {
@@ -104,8 +101,8 @@ function toRow(input: PullRequestUpsert): Record<string, unknown> {
     repo_full_name: input.repoFullName,
     number: input.number,
     state: input.state,
-    // La forge donne sa date sur presque tous les chemins ; à défaut, l'écriture
-    // EST l'événement le plus récent qu'on connaisse de cette PR.
+    // The forge gives its date on almost all paths; failing that, writing
+    // IS the most recent event known from this PR.
     updated_at: input.updatedAt ?? new Date().toISOString(),
     synced_at: new Date().toISOString(),
   };
@@ -128,8 +125,8 @@ function toRow(input: PullRequestUpsert): Record<string, unknown> {
 }
 
 /**
- * Crée ou met à jour UNE pull request. Renvoie la ligne à jour, ou null si
- * l'écriture a échoué (best-effort : l'ingestion ne doit jamais faire tomber un
+ * Creates or updates ONE pull request. Returns the current row, or null if
+ * the write failed (best-effort: ingestion should never drop a
  * webhook).
  */
 export async function upsertPullRequest(
@@ -159,7 +156,7 @@ export async function findPullRequest(prId: string): Promise<PullRequestRow | nu
   return (data as PullRequestRow | null) ?? null;
 }
 
-/** Pull request par sa clé naturelle — la résolution run → PR des façades. */
+/** Pull request by its natural key — the resolution run → PR of the facades. */
 export async function findPullRequestByNumber(opts: {
   provider: RepoProviderId;
   repoFullName: string;
@@ -177,13 +174,13 @@ export async function findPullRequestByNumber(opts: {
 }
 
 /**
- * PR d'un dépôt dont la TÊTE est ce commit. Sert le direct de la CI (MIN-161) :
- * un event `status` GitHub ne porte qu'un SHA, jamais un numéro de PR, et le
- * `check_suite` ne liste que les PR dont la base est dans le même dépôt (les
- * forks n'y sont pas). Le SHA, lui, est toujours là.
+ * PR of a repository whose HEAD is this commit. Serves the direct CI (MIN-161):
+ * a `status` GitHub event only carries an SHA, never a PR number, and the
+ * `check_suite` only lists PRs whose base is in the same repository (the
+ * forks are not there). The SHA is still there.
  *
- * Plusieurs lignes possibles : deux PR ouvertes peuvent partager une tête (une
- * même branche proposée sur deux bases).
+ * Several possible lines: two open PRs can share a head (one
+ * same branch proposed on two bases).
  */
 export async function findPullRequestsByHeadSha(opts: {
   provider: RepoProviderId;
@@ -205,8 +202,8 @@ export interface RepoRef {
   repoFullName: string;
 }
 
-/** Ligne de liaison → dépôt, ou null si elle est incomplète (provider inconnu,
-    dépôt jamais choisi : la liaison existe avant que le dépôt soit désigné). */
+/** Connection line → repository, or null if it is incomplete (unknown provider,
+ repository never chosen: the connection exists before the repository is designated). */
 function repoFromLink(data: unknown): RepoRef | null {
   const row = data as { provider: string; repo_full_name: string | null } | null;
   if (!row?.repo_full_name || !isRepoProviderId(row.provider)) return null;
@@ -214,9 +211,9 @@ function repoFromLink(data: unknown): RepoRef | null {
 }
 
 /**
- * Dépôt lié à un projet — au plus UN (`project_git_links.project_id` est
- * unique). L'inverse, lui, est multiple : plusieurs projets peuvent lier le même
- * dépôt, ce que `projectsForRepo` sert.
+ * Project-related repository — at most ONE (`project_git_links.project_id` is
+ * unique). The opposite is multiple: several projects can link the same
+ * repository, which `projectsForRepo` serves.
  */
 export async function repoForProject(projectId: string): Promise<RepoRef | null> {
   const { data } = await getServiceClient()
@@ -227,13 +224,13 @@ export async function repoForProject(projectId: string): Promise<RepoRef | null>
   return repoFromLink(data);
 }
 
-/** Dépôt (provider + nom complet) d'un run, via sa liaison — ou null. */
+/** Deposit (provider + full name) of a run, via its link — or null. */
 export async function repoForRun(run: {
   repo_link_id: string | null;
   project_id: string;
 }): Promise<RepoRef | null> {
-  // `repo_link_id` est ON DELETE SET NULL : après un unlink, le run garde sa PR
-  // mais plus son lien — on retombe alors sur la liaison COURANTE du projet.
+  // `repo_link_id` is ON DELETE SET NULL: after an unlink, the run keeps its PR
+  // but no longer its link — we then fall back on the CURRENT link of the project.
   if (!run.repo_link_id) return repoForProject(run.project_id);
   const { data } = await getServiceClient()
     .from("project_git_links")
@@ -244,13 +241,13 @@ export async function repoForRun(run: {
 }
 
 /**
- * PR d'un run, créée à la volée si elle manque encore.
+ * PR of a run, created on the fly if it is still missing.
  *
- * Le chemin normal la crée à l'ouverture (`registerPr`) puis la tient à jour par
- * webhook. Le rattrapage compte quand même : sans webhook déployé (dev), ou pour
- * un run antérieur à cette table dont le backfill n'a rien pu faire, les façades
- * `agent-runs/[runId]/pr/*` doivent servir la PR quand même — sinon un
- * deep-link `?run=` tomberait sur un 404 pour une PR qui existe.
+ * The normal path creates it on opening (`registerPr`) then keeps it updated by
+ * webhook. The catch-up still counts: without a deployed webhook (dev), or for
+ * a run prior to this table for which the backfill was unable to do anything, the facades
+ * `agent-runs/[runId]/pr/*` must serve the PR all the same — otherwise a
+ * deep-link `?run=` would fall on a 404 for a PR which exists.
  */
 export async function resolvePrForRun(run: {
   repo_link_id: string | null;
@@ -280,17 +277,15 @@ export async function resolvePrForRun(run: {
 }
 
 /**
- * Rattache une PR ENCORE LIBRE à un ticket. Rend faux si elle ne l'était plus.
+ * Attaches a STILL FREE PR to a ticket. Makes false if it was no longer false.
  *
- * Le `is("issue_id", null)` n'est pas une précaution de style : c'est ce qui rend
- * le geste manuel (MIN-163) ATOMIQUE. Le contrôler avant d'écrire laisserait une
- * fenêtre entre la lecture et l'écriture — deux onglets, deux tickets, et la
- * seconde écriture écraserait la première sans que personne ne le voie. La base
- * tranche, l'appelant lit le verdict.
+ * The `is("issue_id", null)` is not a stylistic precaution: it is what makes
+ * the manual gesture (MIN-163) ATOMIC. Checking it before writing would leave a window between the read and the write — two tabs, two tickets, and the second write would overwrite the first without anyone seeing. The base
+ * decides, the caller reads the verdict.
  *
- * Le sens est volontairement UNIQUE : on lie, on ne délie pas. La liaison est
- * définitive côté produit, et un détachement serait de toute façon rétabli au
- * prochain balayage si la branche porte encore la référence au ticket.
+ * The meaning is deliberately UNIQUE: we bind, we do not unbind. The link is
+ * definitive on the product side, and a detachment would in any case be reestablished at the
+ * next scan if the branch still carries the reference to the ticket.
  */
 export async function setPullRequestIssue(
   prId: string,
@@ -312,14 +307,14 @@ export async function setPullRequestIssue(
 }
 
 /**
- * Ce ticket porte-t-il déjà une PR VIVANTE (brouillon ou ouverte) ?
+ * Does this ticket already have a LIVING PR (draft or open)?
  *
- * C'est l'unicité « un ticket, une PR » telle qu'elle tient debout. Un index
- * unique sur `issue_id` serait faux : un ticket enchaîne légitimement plusieurs
- * PR au fil des runs (mesuré — des tickets portent trois PR terminales), et il
- * ferait tomber l'upsert EN LOT du balayage sur un dépôt où deux branches
- * ouvertes citent le même ticket. Ce qui n'a pas de sens, c'est DEUX PR en vol
- * sur un même ticket : c'est ce qu'on refuse au moment du geste manuel.
+ * This is the uniqueness of "one ticket, one PR" such that it stands up. A unique
+ * index on `issue_id` would be wrong: a ticket legitimately chains multiple
+ * PRs over runs (measured — tickets carry three terminal PRs), and it
+ * would cause the scan to BATCH upload to a repository where two open branches
+ * cite the same ticket. What doesn't make sense is TWO PRs in flight
+ * on the same ticket: this is what we refuse at the time of the manual gesture.
  */
 export async function hasLivePullRequest(issueId: string): Promise<boolean> {
   const service = getServiceClient();
@@ -333,16 +328,16 @@ export async function hasLivePullRequest(issueId: string): Promise<boolean> {
 }
 
 /**
- * LA pull request d'un ticket, au sens de « celle dont on parle ».
+ * THE pull request of a ticket, in the sense of "the one we are talking about".
  *
- * Un ticket peut en porter plusieurs au fil des runs (cf. `hasLivePullRequest`),
- * mais une seule est vivante à la fois : c'est elle qu'on veut, et à défaut la
- * plus récemment touchée chez la forge. L'ordre est le même que celui de la page
- * Pull Requests, pour que « cette PR » désigne la même chose des deux côtés.
+ * A ticket can carry several over the runs (see `hasLivePullRequest`),
+ * but only one is alive at a time: that's the one we want, and failing that the
+ * most recently hit at the forge. The order is the same as that of the page
+ * Pull Requests, so that "this PR" means the same thing on both sides.
  *
- * Aucun filtre sur l'origine : une PR humaine, une PR rattachée par convention
- * et une PR ouverte par l'agent sont la même entité depuis MIN-143. L'appelant
- * a déjà vérifié son accès au ticket.
+ * No filter on the origin: a human PR, a PR attached by convention
+ * and a PR opened by the agent are the same entity since MIN-143. The caller
+ * has already verified their access to the ticket.
  */
 export async function findPullRequestForIssue(
   issueId: string,
@@ -364,7 +359,7 @@ export interface RepoProject {
   key: string;
 }
 
-/** Projets (id + clé) qui lient ce dépôt — le périmètre des références valides. */
+/** Projects (id + key) that link to this repository — the scope of valid references. */
 export async function projectsForRepo(
   provider: RepoProviderId,
   repoFullName: string,
@@ -375,18 +370,18 @@ export async function projectsForRepo(
     .select("project:projects(id, key)")
     .eq("provider", provider)
     .eq("repo_full_name", repoFullName);
-  // Relation to-one embarquée : objet au runtime, cast via unknown (cf. Supabase).
+  // Embedded to-one relationship: object at runtime, cast via unknown (see Supabase).
   return ((data ?? []) as unknown as Array<{ project: RepoProject | null }>)
     .map((r) => r.project)
     .filter((p): p is RepoProject => !!p);
 }
 
 /**
- * Ticket qu'une PR déclare porter, résolu en id minddy — ou null.
+ * Ticket that a PR declares to carry, resolved to id minddy — or null.
  *
- * Deux temps : la CONVENTION dit quel identifiant (`pr-ingest-core`, pur et
- * testé), la base dit s'il existe. Un ticket à la corbeille compte comme
- * inexistant : le rattacher ressusciterait une PR déjà disparue de la liste.
+ * Two steps: the CONVENTION says which identifier (`pr-ingest-core`, pure and
+ * tested), the base says if it exists. A ticket in the trash counts as
+ * non-existent: reattaching it would resurrect a PR that has already disappeared from the list.
  */
 export async function resolveIssueForPr(opts: {
   provider: RepoProviderId;
@@ -394,7 +389,7 @@ export async function resolveIssueForPr(opts: {
   branch?: string | null;
   title?: string | null;
   body?: string | null;
-  /** Projets du dépôt, quand l'appelant les a déjà (balayage : une fois pour toutes). */
+  /** Projects from the repository, when the caller already has them (scan: once and for all). */
   projects?: RepoProject[];
 }): Promise<string | null> {
   const projects = opts.projects ?? (await projectsForRepo(opts.provider, opts.repoFullName));
@@ -422,22 +417,22 @@ export async function resolveIssueForPr(opts: {
   return (data as { id: string } | null)?.id ?? null;
 }
 
-// ── Balayage d'un dépôt ──────────────────────────────────────────────────────
+// ── Scanning a repository ─────────────────────────── ───────────────────────────
 
 /**
- * Rejoue, sur UNE PR dont l'état a dérivé, ce que le webhook aurait fait s'il
- * était arrivé (MIN-164) : `agent_runs.pr_state` recalé, statut du ticket aligné.
+ * Replays, on A PR whose state has drifted, what the webhook would have done if it
+ * had arrived (MIN-164): `agent_runs.pr_state` failed, ticket status aligned.
  *
- * Exactement la forme des deux récepteurs — les runs d'abord, la PR humaine
- * ensuite — parce que c'est le même fait qu'on rattrape. Ce qu'on ne rejoue
- * PAS : l'activité et les notifications. On constate un état, on n'a pas vu le
- * geste ; écrire « untel a fusionné » des heures après coup, sans savoir qui ni
- * quand, dirait plus que ce qu'on sait.
+ * Exactly the shape of the two receivers — the runs first, the Human PR
+ * then — because it’s the same fact that we catch up with. What we DO NOT replay
+ * NOT: activity and notifications. We notice a state, we did not see the
+ * gesture; writing “so and so merged” hours after the fact, without knowing who or
+ * when, would say more than what we know.
  *
- * `applyForgePrToIssue` arrive par import DYNAMIQUE : `pr-activity` importe ce
- * module (`findPullRequestByNumber`), et le cycle statique casserait l'ordre
- * d'évaluation. Le balayage n'est pas un chemin chaud — il ne passe qu'au
- * rattrapage.
+ * `applyForgePrToIssue` arrives by DYNAMIC import: `pr-activity` imports this
+ * module (`findPullRequestByNumber`), and the static cycle would break the evaluation
+ * order. Scanning is not a hot path — it only goes to the
+ * catch-up.
  */
 async function reconcileDriftedPr(
   provider: RepoProviderId,
@@ -468,7 +463,7 @@ async function reconcileDriftedPr(
     }
     const { syncIssueStatusFromPr } = await import("./issue-status-sync");
     for (const run of runs) {
-      // `issueId` null = run carnet (MIN-84) : aucune issue à aligner.
+      // `issueId` null = run notebook (MIN-84): no issue to align.
       if (run.createdBy && run.issueId) {
         await syncIssueStatusFromPr({
           issueId: run.issueId,
@@ -483,10 +478,10 @@ async function reconcileDriftedPr(
 }
 
 /**
- * Fenêtre de fraîcheur du balayage paresseux. Un webhook perdu ne doit pas
- * laisser la liste fausse pour toujours ; un cron qui balaierait TOUS les dépôts
- * liés coûterait cher pour ce seul rattrapage. On resynchronise donc à la
- * lecture, et pas plus souvent que ça.
+ * Lazy scan freshness window. A lost webhook should not
+ * leave the list false forever; a cron that would scan ALL related
+ * repositories would be expensive for this one catch-up alone. We therefore resynchronize at the
+ * reading, and not more often than that.
  */
 export const REPO_SYNC_TTL_MS = 15 * 60_000;
 
@@ -497,7 +492,7 @@ export interface RepoSyncState {
   truncated: boolean;
 }
 
-/** État de balayage des dépôts demandés (clé `provider:repo`). */
+/** Scan status of requested repositories (key `provider:repo`). */
 export async function readRepoSyncStates(
   repos: Array<{ provider: RepoProviderId; repoFullName: string }>,
 ): Promise<Map<string, RepoSyncState>> {
@@ -518,16 +513,16 @@ export function repoSyncKey(provider: RepoProviderId, repoFullName: string): str
   return `${provider}:${repoFullName}`;
 }
 
-/** Le dépôt a-t-il besoin d'un rattrapage ? (jamais balayé, ou trop vieux). */
+/** Does the repository need a catch-up? (never swept, or too old). */
 export function needsRepoSync(state: RepoSyncState | undefined): boolean {
   if (!state) return true;
   return Date.now() - Date.parse(state.synced_at) > REPO_SYNC_TTL_MS;
 }
 
 /**
- * Tamponne un balayage sans rien avoir pu lire (forge en panne, token refusé).
- * Sans ce tampon, un dépôt en échec relancerait un balayage à CHAQUE affichage
- * de la page ; avec lui, il réessaie à la fenêtre suivante.
+ * Buffers a scan without being able to read anything (forge failed, token refused).
+ * Without this buffer, a failed deposit would restart a scan on EACH display
+ * of the page; with it, it tries again in the next window.
  */
 export async function stampRepoSync(
   provider: RepoProviderId,
@@ -542,24 +537,23 @@ export async function stampRepoSync(
 }
 
 /**
- * Balaye TOUTES les PR d'un dépôt chez la forge et les met à jour dans minddy.
+ * Scans ALL PRs from a deposit at the forge and updates them in minddy.
  *
- * C'est le rattrapage : à la liaison du dépôt (il faut bien un point de départ)
- * et à la lecture quand `synced_at` est vieux. Il n'y a pas de cron — le webhook
- * est le chemin normal, celui-ci ne répare que ses trous.
+ * This is the catch-up: when linking the deposit (you need a starting point)
+ * and when reading when `synced_at` is old. There is no cron - the webhook
+ * is the normal path, this one only fixes its holes.
  *
- * Le rattachement au ticket n'écrase JAMAIS un lien déjà posé : un run a pu le
- * poser, ou un balayage précédent l'avoir lu sur une branche depuis supprimée.
- * On ne résout donc que les PR qui n'en ont pas.
+ * Attaching to the ticket NEVER overwrites a link already placed: a run could have placed it, or a previous scan may have read it on a branch since deleted.
+ * We therefore only resolve the PRs which do not have one.
  *
- * Il RÉCONCILIE aussi (MIN-164) : jusqu'ici il recalait `pull_requests.state` et
- * s'arrêtait là — un merge dont le webhook s'était perdu laissait le run et le
- * ticket faux POUR TOUJOURS, y compris après le passage du filet censé le
- * réparer. Les états qui ont bougé depuis la dernière lecture repartent donc
- * dans `syncPrState` et le statut du ticket.
+ * It also RECONCILIATES (MIN-164): until now it failed `pull_requests.state` and
+ * stopped there — a merge whose webhook was lost left the run and the
+ * false ticket FOREVER, including after passing the net supposed to repair the
+ *. The states which have moved since the last reading therefore leave
+ * in `syncPrState` and the status of the ticket.
  *
- * Renvoie le nombre de PR vues et si la pagination a été coupée. Best-effort :
- * une forge en panne ne doit pas faire tomber la page.
+ * Returns the number of PRs seen and if the pagination has been cut. Best effort:
+ * a broken forge should not cause the page to fall.
  */
 export async function syncRepoPullRequests(opts: {
   provider: RepoProviderId;
@@ -590,14 +584,14 @@ export async function syncRepoPullRequests(opts: {
 
   const projects = await projectsForRepo(opts.provider, opts.repoFullName);
   const rows: Record<string, unknown>[] = [];
-  /** PR dont l'état a CHANGÉ depuis la dernière lecture — le trou d'un webhook.
-      `at` = sa dernière activité chez la forge, la clé de rejeu (cf. plus bas). */
+  /** PR whose state has CHANGED since the last reading — the hole of a webhook.
+ `at` = its last activity at the forge, the replay key (see below). */
   const drifted: Array<{ number: number; state: PullRequestState; at: number }> = [];
   for (const pull of pulls) {
     const before = knownByNumber.get(pull.number);
     const state = prStateFromRef(pull);
-    // Seulement les lignes DÉJÀ connues : au premier balayage d'un dépôt qu'on
-    // vient de lier, tout est nouveau, et rien de ce qui s'y est passé avant
+    // Only lines ALREADY known: on the first scan of a repository that we
+    // just linked, everything is new, and nothing happened there before
     // minddy ne doit bouger un ticket.
     if (before && before.state !== state) {
       drifted.push({
@@ -655,18 +649,18 @@ export async function syncRepoPullRequests(opts: {
   );
   if (stampError) console.error("[pull-requests] sweep stamp failed:", stampError.message);
 
-  // APRÈS l'écriture des lignes : la réconciliation relit la PR par sa clé
-  // naturelle, et doit y trouver l'état à jour, pas celui qu'on vient de
-  // corriger. Rien à raconter en activité (`actionType: null`) — on répare un
-  // état, on n'a pas vu le geste qui l'a produit.
+  // AFTER writing the lines: reconciliation rereads the PR by its key
+  // natural, and must find the up-to-date state there, not the one we just
+  // to correct. Nothing to report in activity (`actionType: null`) — we repair a
+  // state, we did not see the gesture that produced it.
   //
-  // Du PLUS ANCIEN au plus récent : plusieurs PR d'un MÊME ticket peuvent avoir
-  // dérivé ensemble (un ticket en enchaîne légitimement plusieurs au fil des
-  // runs — cf. `hasLivePullRequest`), et chacune réécrit le statut de ce ticket.
-  // Le dernier rejeu gagne : sans ordre, c'est un hasard, et les deux forges
-  // listent par fraîcheur DÉCROISSANTE — la plus vieille avait donc le dernier
-  // mot, et un ticket dont la dernière PR est fusionnée repartait « à faire »
-  // sur une PR refusée d'avant. On rejoue dans l'ordre où les états ont bougé.
+  // From OLDEST to most recent: several PRs of the SAME ticket can have
+  // derived together (a ticket legitimately chains several over the course of
+  // runs — cf. `hasLivePullRequest`), and each rewrites the status of this ticket.
+  // The last replay wins: without order, it's a coincidence, and the two forges
+  // list by DECREASING freshness — so the oldest had the last
+  // word, and a ticket whose last PR was merged returned to “to do”
+  // on a PR refused before. We play again in the order in which the states moved.
   drifted.sort((a, b) => a.at - b.at);
   for (const { number, state } of drifted) {
     await reconcileDriftedPr(opts.provider, opts.repoFullName, number, state);
@@ -675,9 +669,9 @@ export async function syncRepoPullRequests(opts: {
   return { count: pulls.length, truncated };
 }
 
-// ── Lecture pour l'utilisateur ───────────────────────────────────────────────
+// ── Reading for the user ─────────────────────── ────────────────────────
 
-/** Dépôt lié, vu par un utilisateur — porte le projet qui donne l'accès. */
+/** Linked repository, seen by a user — carries the project that gives access. */
 export interface VisibleRepo {
   provider: RepoProviderId;
   repoFullName: string;
@@ -691,11 +685,11 @@ export interface VisibleRepo {
 }
 
 /**
- * Dépôts que cet utilisateur peut voir, via le client AUTHENTIFIÉ (la RLS de
- * `project_git_links` fait le filtre — aucun filtre projet manuel). Un dépôt lié
- * par plusieurs de ses projets apparaît une fois par projet : c'est l'appelant
- * qui décide lequel afficher, et `resolveRepoCloneTargetForRepo` lequel utiliser
- * pour minter un token.
+ * Repositories that this user can see, via the AUTHENTICATED client (the RLS of
+ * `project_git_links` does the filtering — no manual project filtering). A repository linked
+ * by several of its projects appears once per project: it is the caller
+ * who decides which one to display, and `resolveRepoCloneTargetForRepo` which one to use
+ * to mint a token.
  */
 export async function listVisibleRepos(
   supabase: SupabaseClient,
@@ -714,11 +708,11 @@ export async function listVisibleRepos(
       (r) =>
         !!r.repo_full_name &&
         !!r.project &&
-        // Projet à la CORBEILLE (MIN-133) : sa ligne reste en base, et la policy
-        // `projects_select` ne regarde que l'accès — il revenait donc de la
-        // jointure comme n'importe quel autre. La page listait alors les pull
-        // requests d'un projet que l'utilisateur ne voit plus nulle part
-        // ailleurs, sous un en-tête portant son nom. Le restaurer les ramène.
+        // Project at CORBEILLE (MIN-133): its line remains in base, and the policy
+        // `projects_select` only looks at access — so it came back from the
+        // join like any other. The page then listed the sweaters
+        // requests from a project that the user no longer sees anywhere
+        // elsewhere, under a header bearing his name. Restoring it brings them back.
         !r.project.deleted_at &&
         isRepoProviderId(r.provider),
     )
@@ -729,18 +723,18 @@ export async function listVisibleRepos(
     }));
 }
 
-/** Une PR de la liste, avec son ticket et le projet de ce ticket (jointures RLS). */
+/** A PR of the list, with its ticket and the project of this ticket (RLS joins). */
 export interface PullRequestWithIssue extends PullRequestRow {
   issue: { id: string; number: number; title: string; project_id: string } | null;
 }
 
 /**
- * PR des dépôts `repos`, la plus fraîche en tête, via le client AUTHENTIFIÉ.
+ * PR of the `repos` repositories, the freshest at the top, via the AUTHENTICATED client.
  *
- * Le filtre `(provider, repo_full_name)` est appliqué en DEUX temps : la requête
- * élargit sur les noms de dépôts, puis l'appelant recoupe le couple exact. Un
- * `or()` PostgREST sur des couples serait fragile (les noms de dépôts partent
- * dans la grammaire du filtre) pour n'éviter qu'un cas d'homonymie inter-forges.
+ * The `(provider, repo_full_name)` filter is applied in TWO stages: the query
+ * expands on the repository names, then the caller crosses the pair exact. A
+ * `or()` PostgREST on pairs would be fragile (the repository names leave
+ * in the filter grammar) to only avoid a case of inter-forge homonymy.
  */
 export async function listPullRequestsForUser(
   supabase: SupabaseClient,

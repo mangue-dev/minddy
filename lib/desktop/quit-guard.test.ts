@@ -3,18 +3,18 @@ import { describe, expect, it } from "vitest";
 import { quitDecision, quitLogNote, quitPrompt } from "./quit-guard";
 
 /**
- * MIN-293 — ⌘Q PENDANT QU'UN TOUR TOURNE.
+ * MIN-293 — ⌘Q WHILE A TURN IS TURNING.
  *
- * Le geste existait déjà et ne demandait rien ; ce lot en fait la principale
- * cause de perte d'un tour. Ce qui est tenu ici : on ne demande QUE quand ça
- * compte, on n'offre jamais « laisser tourner », le bouton sûr est le défaut, et
- * la boîte dit où la session repart.
+ * The gesture already existed and did not require anything; this batch makes it the main
+ * cause of loss of a turn. What is required here: we ONLY ask when it
+ * counts, we never offer “let it run”, the safe button is the default, and
+ * the box says where the session starts again.
  */
 
 describe("quitPrompt", () => {
   it("ne demande RIEN quand aucun tour ne tourne", () => {
-    // Une boîte à chaque ⌘Q est une boîte qu'on apprend à cliquer sans lire — et
-    // le jour où elle compte, elle ne compte plus.
+    // A box for each ⌘Q is a box that we learn to click without reading — and
+    // the day it counts, it no longer counts.
     expect(quitPrompt([])).toBeNull();
   });
 
@@ -35,8 +35,8 @@ describe("quitPrompt", () => {
   });
 
   it("n'offre JAMAIS de laisser tourner — deux boutons, et le second reste", () => {
-    // Un harness détaché garderait vivants un token de forge en écriture et une
-    // clé de modèle, sans plus aucune interface pour les arrêter.
+    // A detached harness would keep alive a writing forge token and a
+    // model key, with no more interface to stop them.
     const prompt = quitPrompt([{ runId: "r1" }])!;
     expect(prompt.buttons).toHaveLength(2);
     expect(prompt.buttons.join(" ").toLowerCase()).not.toMatch(/background|keep running|detach/);
@@ -54,7 +54,7 @@ describe("quitPrompt", () => {
     const prompt = quitPrompt([{ runId: "r1" }])!;
     expect(prompt.detail).toMatch(/saved/i);
     expect(prompt.detail).toMatch(/carry on/i);
-    // Et pourquoi le tour ne peut pas continuer sans l'app.
+    // And why the tour cannot continue without the app.
     expect(prompt.detail).toMatch(/token/i);
   });
 });

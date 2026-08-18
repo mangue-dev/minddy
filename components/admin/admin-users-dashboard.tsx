@@ -61,49 +61,49 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * `/admin` → onglet « Utilisateurs » (MIN-90) : LA vue des comptes de l'app.
- * Une ligne par compte — onboarding, projets, tickets, plan, inscription,
- * dernier signe de vie — et un panneau qui rassemble TOUTES les actions
- * d'administration sur ce compte.
+ * `/admin` → “Users” tab (MIN-90): THE view of the app’s accounts.
+ * One line per account — onboarding, projects, tickets, plan, registration,
+ * last sign of life — and a panel that brings together ALL the actions
+ * administration on this account.
  *
- * Ce panneau remplace deux anciens onglets. C'était le vrai défaut du dashboard :
- * « Quotas » ne listait que les comptes ayant consommé de l'IA ce mois-ci, et
- * « Facturation » exigeait de connaître l'email par cœur avant de pouvoir agir.
- * Les deux endpoints (`/api/admin/agent-quota`, `/api/admin/billing`) n'ont pas
- * bougé : ils sont simplement appelés depuis la ligne du compte concerné.
+ * This panel replaces two old tabs. This was the real fault of the dashboard:
+ * “Quotas” only listed accounts that had consumed AI this month, and
+ * “Billing” required knowing the email by heart before you could act.
+ * The two endpoints (`/api/admin/agent-quota`, `/api/admin/billing`) do not have
+ * moved: they are simply called from the line of the account concerned.
  *
- * La remise à zéro conserve sa nuance d'origine, essentielle : elle ne supprime
- * AUCUN coût. Le panneau montre donc les deux montants — ce que le budget compte
- * (fenêtre réelle + filigrane) et la dépense réelle du mois, intacte.
+ * Resetting retains its original, essential nuance: it does not delete
+ * NO cost. The panel therefore shows the two amounts — what the budget counts
+ * (real window + watermark) and the actual expense of the month, intact.
  *
- * Elle s'EMPILE désormais (20261105) : plusieurs par période de facturation, et
- * le panneau en tient le registre. C'est la plus récente qui fixe le début de la
- * fenêtre comptée — les précédentes sont derrière elle et ne libèrent plus rien ;
- * elles disent seulement combien on a déjà offert à ce compte sur la période,
- * qui est exactement ce qu'on veut savoir avant d'en offrir une de plus.
+ * It now STACKS (20261105): several per billing period, and
+ * the panel keeps the register. It is the most recent which sets the start of the
+ * window counted — the previous ones are behind it and no longer release anything;
+ * they only say how much has already been offered to this account over the period,
+ * which is exactly what we want to know before offering one more.
  *
- * Le panneau suit la GRAMMAIRE DES RÉGLAGES (`components/settings/settings-ui`,
- * MIN-167), comme l'onglet « Modèles ». Il ne l'a pas toujours fait, et ça se
- * voyait : six sections toutes en `text-sm font-semibold`, certaines bordées et
- * d'autres nues, chacune suivie de son paragraphe d'explication — rien ne disait
- * ce qui était un titre, un fait ou un geste. La même information tient
- * maintenant en trois cartes de rangées « libellé à gauche · valeur à droite »,
- * et la prose (ce qu'un compte interne cesse d'alimenter, ce qu'une remise à
- * zéro n'efface pas) est passée derrière les ⓘ, où on la lit quand on la
- * cherche. En haut, ce qui identifie le compte : l'avatar, le nom, l'email, puis
- * ses pastilles d'état sur leur propre ligne — accrochées au titre, elles le
- * tronquaient dès qu'un nom était long.
+ * The panel follows the SETTINGS GRAMMAR (`components/settings/settings-ui`,
+ * MIN-167), such as the “Models” tab. He didn't always do it, and that's
+ * saw: six sections all in `text-sm font-semibold`, some lined and
+ * other bare ones, each followed by its explanatory paragraph — nothing said
+ * which was a title, a fact or a gesture. The same information holds
+ * now in three row cards “label on the left · value on the right”,
+ * and prose (what an internal account ceases to feed, what a reset
+ * zero does not erase) has gone behind the ⓘ, where we read it when we
+ * look for. At the top, what identifies the account: avatar, name, email, then
+ * its state dots on their own line — attached to the title, they
+ * truncated as soon as a name was long.
  *
- * Seul écran de l'app où l'email brut s'affiche : c'est l'identifiant avec
- * lequel un admin travaille, et l'accès est verrouillé côté serveur
- * (`app/(app)/admin/layout.tsx` + `isAdminUser` sur chaque route).
+ * Only screen of the app where the raw email is displayed: it is the identifier with
+ * which an admin works, and access is locked on the server side
+ * (`app/(app)/admin/layout.tsx` + `isAdminUser` on each route).
  */
 
 const PAGE_SIZE = 25;
 const NO_OVERRIDE = "none";
-/** Valeur du sélecteur de durée qui n'envoie AUCUNE durée : l'échéance en place
- *  ne bouge pas. Proposée seulement quand un cadeau est déjà en cours — sinon
- *  « ne pas changer » ne changerait rien de rien. */
+/** Duration selector value that sends NO duration: the deadline in place
+ * don't move. Only offered when a gift is already in progress — otherwise
+ *  “do not change” would change nothing at all. */
 const KEEP_DURATION = "keep";
 
 function fmtCost(n: number): string {
@@ -113,10 +113,10 @@ function fmtCost(n: number): string {
   return `$${n.toFixed(2)}`;
 }
 
-/** Avancement de l'onboarding en quatre pastilles — lisible d'un coup d'œil.
- *  Le déclencheur est un `span` (et non le bouton par défaut de Tooltip) :
- *  la pastille vit DANS le bouton de la ligne, et un bouton dans un bouton est
- *  du HTML invalide. `aria-label` porte l'information au clavier. */
+/** Progress of onboarding in four tablets — readable at a glance.
+ * The trigger is a `span` (not the default Tooltip button):
+ * the pellet lives IN the button of the line, and a button within a button is
+ *  invalid HTML. `aria-label` carries the information to the keyboard. */
 function OnboardingPips({ user }: { user: AdminUserRow }) {
   const t = useTranslations("Admin");
   const { completed, total, started, dismissed } = user.onboarding;
@@ -148,7 +148,7 @@ function OnboardingPips({ user }: { user: AdminUserRow }) {
   );
 }
 
-/** Une mesure de ligne : le chiffre au-dessus, son libellé en dessous. */
+/** A line measurement: the number above, its wording below. */
 function Cell({ value, label }: { value: number; label: string }) {
   return (
     <div className="flex w-14 flex-col items-end">
@@ -195,7 +195,7 @@ function PlanBadge({ user }: { user: AdminUserRow }) {
   );
 }
 
-/** Marque « compte interne » : présent dans la liste, absent des statistiques. */
+/** “Internal account” mark: present in the list, absent from the statistics. */
 function InternalBadge() {
   const t = useTranslations("Admin");
   return (
@@ -211,7 +211,7 @@ function InternalBadge() {
   );
 }
 
-/** Panneau d'un compte : sa fiche complète et toutes les actions admin. */
+/** Account panel: its complete profile and all admin actions. */
 function UserSheet({
   user,
   onClose,
@@ -229,20 +229,20 @@ function UserSheet({
   const [savingPlan, setSavingPlan] = useState(false);
   const [busyQuota, setBusyQuota] = useState(false);
   const [savingInternal, setSavingInternal] = useState(false);
-  /** Le registre des remises à zéro de la période — `null` tant qu'il charge. */
+  /** The period reset register — `null` as long as it loads. */
   const [resets, setResets] = useState<AdminQuotaReset[] | null>(null);
 
-  // Le panneau se remplit à chaque ouverture (et à chaque compte suivant).
+  // The panel fills up with each opening (and with each subsequent count).
   useEffect(() => {
     setOverride(user?.billing.override ?? NO_OVERRIDE);
     setNote(user?.billing.overrideNote ?? "");
-    // Cadeau déjà en cours → on ne touche pas à son échéance par défaut ;
-    // sinon la durée courante, « 1 mois ».
+    // Gift already in progress → we do not touch its deadline by default;
+    // otherwise the current duration, “1 month”.
     setDuration(user?.billing.override ? KEEP_DURATION : DEFAULT_GIFT_DURATION);
   }, [user?.userId, user?.billing.override, user?.billing.overrideNote]);
 
-  // Le registre ne voyage pas avec la liste des comptes : il coûterait une
-  // requête de plus par ligne pour une information qu'on ne lit qu'ici.
+  // The register does not travel with the list of accounts: it would cost
+  // one more request per line for information that can only be read here.
   const userId = user?.userId;
   useEffect(() => {
     if (!userId) return;
@@ -255,8 +255,8 @@ function UserSheet({
         const data = (await response.json()) as AdminQuotaResetsResponse;
         if (alive) setResets(data.resets);
       } catch {
-        // Le registre manquant ne doit pas condamner le reste du panneau : on
-        // le montre vide, le geste « Remettre à zéro » reste offert.
+        // The missing register should not condemn the rest of the panel: we
+        // it shows empty, the “Reset” gesture remains available.
         if (alive) setResets([]);
       }
     })();
@@ -267,7 +267,7 @@ function UserSheet({
 
   if (!user) return null;
 
-  /** Un instant : la date ET l'heure — « dernière connexion » se lit à l'heure. */
+  /** One moment: date AND time — “last connected” reads on time. */
   const dt = (iso: string | null) =>
     iso
       ? format.dateTime(new Date(iso), {
@@ -279,8 +279,8 @@ function UserSheet({
         })
       : "—";
 
-  /** Une échéance : la date seule. L'heure d'un cadeau qui finit dans trois mois
-   *  n'apprend rien et allonge la ligne d'un tiers. */
+  /** A deadline: the date alone. Time for a gift that ends in three months
+   * learns nothing and lengthens the line by a third. */
   const day = (iso: string) =>
     format.dateTime(new Date(iso), {
       day: "numeric",
@@ -299,8 +299,8 @@ function UserSheet({
           userId: user.userId,
           planId: override === NO_OVERRIDE ? null : override,
           note: note.trim() || null,
-          // Durée omise = l'échéance en place ne bouge pas (le serveur ne
-          // relance pas le compte à rebours sur une simple correction de note).
+          // Duration omitted = the deadline in place does not move (the server does not
+          // do not restart the countdown on a simple note correction).
           duration: duration === KEEP_DURATION ? null : duration,
         }),
       });
@@ -357,12 +357,12 @@ function UserSheet({
   };
 
   /**
-   * Pose une remise à zéro de plus (`undoId` absent), ou en retire une.
+   * Installs one more reset (`undoId` absent), or removes one.
    *
-   * Le serveur renvoie l'état recalculé dans les deux cas : retirer une remise
-   * à zéro ROUVRE la fenêtre sur des dépenses qui n'étaient plus comptées, et le
-   * nouveau montant ne se devine pas d'ici. La dépense RÉELLE du mois, elle, ne
-   * bouge jamais — c'est tout l'intérêt du filigrane.
+   * The server returns the recalculated state in both cases: remove a discount
+   * to zero REOPENS the window on expenses that were no longer counted, and the
+   * new amount cannot be guessed from here. The REAL expense of the month is not
+   * never moves — that’s the whole point of the watermark.
    */
   const setQuotaReset = async (undoId?: string) => {
     if (busyQuota) return;
@@ -404,9 +404,9 @@ function UserSheet({
       ? Math.min(user.usage.spentUsd / user.usage.budgetUsd, 1)
       : 0;
 
-  // L'onboarding tient en UNE ligne : où il en est, et l'étape en cours quand
-  // elle veut dire quelque chose (un compte à qui l'onboarding n'a jamais été
-  // montré n'a franchi aucune étape et n'en franchira pas).
+  // Onboarding is in ONE line: where it is, and the current stage when
+  // she means something (an account to which onboarding has never been
+  // shown has not taken any steps and will not take any).
   const onboarding = user.onboarding.dismissed
     ? t("users.onboardingDismissed", {
         done: user.onboarding.completed,
@@ -421,15 +421,15 @@ function UserSheet({
   const currentStep =
     user.onboarding.started && user.onboarding.currentStep
       ? t("users.onboardingCurrent", {
-          // L'étape vient de la base : clé assemblée à l'exécution.
+          // The step comes from the base: key assembled at runtime.
           step: t(
             `users.step_${user.onboarding.currentStep}` as MessageKey<"Admin">,
           ),
         })
       : null;
 
-  /** Ce que le bouton « Offrir » va poser : une durée ne dit pas d'elle-même à
-   *  quelle date elle tombe. */
+  /** What the “Offer” button will ask: a duration does not say itself to
+   *  what date it falls on. */
   const preview =
     duration === KEEP_DURATION
       ? user.billing.overrideExpiresAt
@@ -447,11 +447,11 @@ function UserSheet({
         side="right"
         className="flex !w-full flex-col gap-0 sm:!w-[92%] sm:!max-w-[540px]"
       >
-        {/* ── Qui c'est ─────────────────────────────────────────────────── */}
-        {/* En-tête sur la surface de carte du panneau ; le corps, lui, passe en
-            `bg-background` — la convention du shell (fond gris, cartes
-            blanches), sans quoi des cartes `bg-card` sur un panneau `bg-card`
-            ne se détacheraient de rien. */}
+        {/* ── Who is it ───────────────────────── ────────────────────────── */}
+        {/* Header on panel card surface; the body, for its part, passes into
+            `bg-background` — the shell convention (gray background, maps
+            white), otherwise `bg-card` cards on a `bg-card` panel
+            would not come off of anything. */}
         <SheetHeader className="shrink-0 gap-3 border-b border-border pr-12">
           <div className="flex min-w-0 items-center gap-3">
             <UserAvatar seed={user.avatarSeed} className="size-9 shrink-0" />
@@ -462,9 +462,9 @@ function UserSheet({
               </SheetDescription>
             </div>
           </div>
-          {/* L'état du compte, en pastilles : le plan, ce qui le met à part, ce
-              qui le bloque. Sous l'identité, jamais dans son titre — un badge
-              collé au nom est ce qui le tronquait. */}
+          {/* The state of the account, in tablets: the plan, what sets it apart, what
+              which blocks it. Under the identity, never in its title — a badge
+              stuck to the name is what truncated it. */}
           <div className="flex flex-wrap items-center gap-1.5">
             <PlanBadge user={user} />
             {user.internal ? <InternalBadge /> : null}
@@ -477,10 +477,10 @@ function UserSheet({
         </SheetHeader>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-background p-4">
-          {/* ── Le compte en chiffres ─────────────────────────────────── */}
-          {/* Filets à 1 px par `gap-px` sur fond de bordure : les tuiles ne
-              peuvent pas se toucher, et la valeur reste alignée d'une colonne à
-              l'autre même quand un libellé passe à la ligne. */}
+          {/* ── The count in numbers ─────────────────────────────────── */}
+          {/* Nets at 1 px by `gap-px` on border background: the tiles do not
+              cannot touch each other, and the value remains aligned from one column to the next.
+              the other even when a label moves to the line. */}
           <section className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-4">
             {[
               { label: t("users.projects"), value: user.projects },
@@ -502,7 +502,7 @@ function UserSheet({
             ))}
           </section>
 
-          {/* ── Le compte ─────────────────────────────────────────────── */}
+          {/* ── The account ─────────────────────── ──────────────────────── */}
           <SettingsGroup
             icon={UserRound}
             title={t("users.accountTitle")}
@@ -539,14 +539,14 @@ function UserSheet({
               htmlFor="admin-user-internal"
               label={t("users.internalTitle")}
               hint={t("users.internalHint")}
-              // La liste exhaustive de ce qui cesse de compter est vraie et
-              // utile — mais c'est de la prose : elle vit derrière le ⓘ.
+              // The exhaustive list of what stops counting is true and
+              // useful — but it's prose: it lives behind the ⓘ.
               help={t("users.internalSubtitle")}
               control={
                 <>
-                  {/* L'interrupteur reste en place pendant l'écriture : le
-                      remplacer par le spinner ferait pointer le libellé sur un
-                      `id` disparu, et sauter la ligne. */}
+                  {/* The switch remains in place while writing: the
+                      replacing with the spinner would point the label to a
+                      `id` disappeared, and skip the line. */}
                   {savingInternal ? <Spinner /> : null}
                   <Switch
                     id="admin-user-internal"
@@ -565,9 +565,9 @@ function UserSheet({
             title={t("users.usageTitle")}
             description={t("users.usageDescription")}
             help={t("users.usageSubtitle")}
-            // Combien on en a déjà offert sur cette période : c'est la question
-            // qu'on se pose avant d'en offrir une de plus, donc elle est à
-            // gauche du bouton qui le fait.
+            // How much has already been offered over this period: that is the question
+            // that we ask ourselves before offering one more, so it is
+            // left of the button that does it.
             footer={
               <>
                 {resets && resets.length > 0 ? (
@@ -607,16 +607,16 @@ function UserSheet({
                 />
               </div>
             </SettingsRow>
-            {/* La dépense réelle du mois ne bouge JAMAIS d'une remise à zéro :
-                c'est tout l'intérêt de la montrer à côté du compté. */}
+            {/* The actual expense for the month NEVER moves from a reset:
+                that's the whole point of showing it next to the count. */}
             <SettingsRow
               label={t("quotas.realSpend")}
               hint={t("quotas.calls", { count: user.usage.calls })}
               control={<Value>{fmtCost(user.usage.spentMonthUsd)}</Value>}
             />
-            {/* Le registre de la période. Rien à montrer tant qu'aucune remise à
-                zéro n'a été posée : une rangée vide ferait du bruit pour dire
-                qu'il ne s'est rien passé. */}
+            {/* The register of the period. Nothing to show as long as no discount
+                zero has been placed: an empty row would make noise to say
+                that nothing happened. */}
             {resets && resets.length > 0 ? (
               <SettingsRow
                 label={t("quotas.resetsTitle")}
@@ -633,9 +633,9 @@ function UserSheet({
                       <span className="min-w-0 flex-1 truncate text-xs tabular-nums">
                         {dt(entry.at)}
                       </span>
-                      {/* La plus récente est la SEULE qui compte encore : les
-                          autres sont derrière elle, elles ne libèrent plus
-                          rien. Le dire évite de lire la pile comme un cumul. */}
+                      {/* The most recent is the ONLY one that still matters: the
+                          others are behind her, they no longer release
+                          Nothing. Saying this avoids reading the stack as a cumulation. */}
                       {index === 0 ? (
                         <Badge variant="secondary" className="h-5 shrink-0 text-[10px]">
                           {t("quotas.resetActive")}
@@ -658,7 +658,7 @@ function UserSheet({
             ) : null}
           </SettingsGroup>
 
-          {/* ── Plan : offrir, pour un temps ou sans limite ───────────── */}
+          {/* ── Plan: offer, for a time or without limit ───────────── */}
           <SettingsGroup
             icon={Gift}
             title={t("billing.title")}
@@ -736,8 +736,8 @@ function UserSheet({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* « Ne pas changer » n'a de sens que sur un cadeau déjà en
-                        cours — et c'est alors le choix par défaut. */}
+                    {/* “Do not change” only makes sense on a gift already in
+                        course — and this is then the default choice. */}
                     {user.billing.override ? (
                       <SelectItem value={KEEP_DURATION}>
                         {t("billing.durationKeep")}
@@ -745,7 +745,7 @@ function UserSheet({
                     ) : null}
                     {GIFT_DURATIONS.map((id) => (
                       <SelectItem key={id} value={id}>
-                        {/* Clé assemblée depuis la liste des durées. */}
+                        {/* Key assembled from the duration list. */}
                         {t(`billing.duration_${id}` as MessageKey<"Admin">)}
                       </SelectItem>
                     ))}
@@ -774,7 +774,7 @@ function UserSheet({
   );
 }
 
-/** La valeur d'une rangée : un fait, aligné à droite, jamais tronqué au milieu. */
+/** The value of a row: a fact, right-aligned, never truncated in the middle. */
 function Value({
   children,
   className,
@@ -799,11 +799,11 @@ export function AdminUsersDashboard() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  // Le rendu en cours de vol ; une frappe rapide ne doit pas laisser une
-  // réponse tardive écraser une recherche plus récente.
+  // Rendering during flight; a quick keystroke should not leave a
+  // late reply overwrite a newer search.
   const requestRef = useRef(0);
 
-  // Recherche débouncée : le serveur pagine, on ne filtre pas côté client.
+  // Search debunked: the server pages, we do not filter on the client side.
   useEffect(() => {
     const id = setTimeout(() => setQuery(search.trim()), 250);
     return () => clearTimeout(id);
@@ -848,7 +848,7 @@ export function AdminUsersDashboard() {
     [users, selectedId],
   );
 
-  /** Une action du panneau a changé le compte : on rafraîchit SA ligne. */
+  /** An action on the panel changed the account: we refresh ITS line. */
   const applyChange = useCallback(
     (patch: Partial<AdminUserRow> & { userId: string }) => {
       setUsers((prev) =>

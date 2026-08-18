@@ -3,9 +3,9 @@
 import { trackEvent } from "./analytics";
 import type { PushDevice } from "./types";
 
-/** Appels à `/api/account/push-subscriptions` (MIN-183) — même forme que
- *  lib/oauth-grants-api.ts : un fetch par geste, l'erreur du serveur remontée
- *  telle quelle pour que le toast dise ce qui s'est passé. */
+/** Calls to `/api/account/push-subscriptions` (MIN-183) — same form as
+ * lib/oauth-grants-api.ts: one fetch per gesture, server error reported
+ * as is so that the toast says what happened. */
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -35,26 +35,25 @@ export async function fetchPushDevicesApi(): Promise<{
   return parseJson(await fetch("/api/account/push-subscriptions"));
 }
 
-/** La plateforme, pas l'appareil : « MacIntel », « iPhone ». Assez pour savoir
- *  d'où viennent les activations, jamais assez pour reconnaître quelqu'un — le
- *  libellé et le user-agent brut, eux, restent côté serveur. */
+/** The platform, not the device: “MacIntel”, “iPhone”. Enough to know
+ * where the activations come from, never enough to recognize someone — the
+ * label and the raw user-agent remain on the server side. */
 const platformProp = (): string =>
   (typeof navigator !== "undefined" && navigator.platform) || "unknown";
 
 /**
- * Enregistre l'abonnement de cet appareil. `subscription` est le
- * `PushSubscriptionJSON` rendu par `PushSubscription.toJSON()`.
+ * Saves the subscription for this device. `subscription` is the
+ * `PushSubscriptionJSON` rendered by `PushSubscription.toJSON()`.
  *
- * `oldEndpoint` n'est passé que par un ré-abonnement (le navigateur a fait
- * tourner l'endpoint tout seul) : l'ancienne ligne ne désigne plus rien.
+ * `oldEndpoint` only went through a re-subscription (the browser made
+ * run the endpoint by itself): the old line no longer denotes anything.
  *
- * `refresh: true` dit au serveur que PERSONNE n'a demandé cet appel — la remise
- * d'aplomb au chargement de l'app. Il ne doit alors pas toucher à `enabled`,
- * sans quoi chaque chargement de page rallume l'appareil qu'on vient d'éteindre.
+ * `refresh: true` tells the server that NO ONE requested this call — putting
+ * back upright when the app loads. It must then not touch `enabled`,
+ * otherwise each page loading restarts the device that has just been turned off.
  *
- * `track: false` va avec, côté analytics : ce rafraîchissement repasse par ici à
- * chaque visite, et le compter comme une activation gonflerait l'événement d'un
- * facteur cent.
+ * `track: false` goes with it, on the analytics side: this refresh goes back through here to
+ * each visit, and counting it as an activation would inflate the event by a factor of one hundred.
  */
 export async function savePushDeviceApi(
   subscription: PushSubscriptionJSON,
@@ -80,7 +79,7 @@ export async function savePushDeviceApi(
   return device;
 }
 
-/** Associe au compte le token APNs rendu par la coquille macOS signée. */
+/** Associates the APNs token returned by the signed macOS shell with the account. */
 export async function saveNativePushDeviceApi(
   token: string,
   installationId: string,

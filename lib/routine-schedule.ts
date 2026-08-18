@@ -1,21 +1,21 @@
 /**
- * La CADENCE d'une routine (MIN-185) : quand elle repasse, et comment le dire.
+ * The CADENCE of a routine (MIN-185): when it passes again, and how to tell it.
  *
- * Logique PURE, partagée client + serveur (aucun import server-only) : le
- * wizard calcule le premier passage pour le montrer AVANT de créer, la fabrique
- * le calcule pour l'écrire, et le cron le recalcule à chaque réarmement. Une
- * seule fonction pour les trois, sinon l'écran promet une heure que la base ne
- * tient pas.
+ * PURE logic, shared client + server (no import server-only): the
+ * wizard calculates the first pass to show it BEFORE creating, the factory
+ * calculates it to write it, and the cron recalculates it on each reset. A single
+ * function for all three, otherwise the screen promises a time that the base
+ * does not hold.
  *
- * **Structurée, pas une expression cron** : `frequency` + heure + minute + jour
- * + fuseau IANA. Une expression cron serait à écrire par l'utilisateur,
- * illisible dans l'UI, et à traduire quand même pour l'afficher.
+ * **Structured, not a cron expression**: `frequency` + hour + minute + day
+ * + IANA zone. A cron expression would have to be written by the user,
+ * unreadable in the UI, and translated anyway to display it.
  *
- * **Le fuseau est toujours explicite** — « 9 h » n'a pas de sens sans lui — et
- * un fuseau inconnu est REFUSÉ, jamais silencieusement ramené à UTC : une
- * routine qui part trois heures trop tôt tous les matins ne se remarque que sur
- * la facture. C'est l'écart avec `lib/due-soon.ts`, qui retombe sur UTC parce
- * qu'il ne fait que ranger un ticket dans une colonne.
+ * **The time zone is always explicit** — “9 a.m.” has no meaning without it — and
+ * an unknown time zone is DENIED, never silently returned to UTC: a
+ * routine that starts three hours too early every morning is only noticed on
+ * the bill. This is the difference with `lib/due-soon.ts`, which falls back to UTC because
+ * it only puts a ticket in a column.
  */
 
 export type RoutineFrequency = "daily" | "weekly" | "monthly";
@@ -28,29 +28,27 @@ export function isRoutineFrequency(value: unknown): value is RoutineFrequency {
 
 export interface RoutineSchedule {
   frequency: RoutineFrequency;
-  /** 0–23, dans `timezone`. */
+  /** 0–23, in `timezone`. */
   hour: number;
-  /** 0–59, dans `timezone`. */
+  /** 0–59, in `timezone`. */
   minute: number;
   /**
-   * Les jours de semaine retenus, 0 = dimanche … 6 = samedi. `weekly`
-   * seulement, et au moins un — une cadence hebdomadaire sans jour n'a aucune
-   * occurrence. PLUSIEURS : « le lundi et le jeudi » est une cadence aussi
-   * légitime que « le lundi », et la traiter comme un cas à part aurait
-   * dédoublé le calcul du prochain passage.
-   */
+ * The weekdays retained, 0 = Sunday … 6 = Saturday. `weekly`
+ * only, and at least one — a weekly cadence with no days has no
+ * occurrences. SEVERAL: “Monday and Thursday” is as legitimate a cadence as “Monday”, and treating it as a separate case would have doubled the calculation of the next pass.
+ */
   weekdays?: number[] | null;
   /**
-   * Les jours du mois retenus, 1–31. `monthly` seulement, au moins un. Un 31
-   * sur un mois court retombe sur son dernier jour — et si un autre jour de la
-   * liste tombe au même endroit, l'occurrence ne compte qu'une fois.
-   */
+ * The days of the month retained, 1–31. `monthly` only, at least one. A 31
+ * in a short month falls on its last day — and if another day in the
+ * list falls in the same place, the occurrence only counts once.
+ */
   daysOfMonth?: number[] | null;
-  /** Fuseau IANA (« Europe/Paris »). Jamais deviné. */
+  /** IANA zone (“Europe/Paris”). Never guessed. */
   timezone: string;
 }
 
-/** Levée par `nextRunAt` et `assertSchedule` — refus, jamais repli silencieux. */
+/** Lifted by `nextRunAt` and `assertSchedule` — refusal, never silent fallback. */
 export class RoutineScheduleError extends Error {
   constructor(readonly code: RoutineScheduleErrorCode) {
     super(code);
@@ -66,7 +64,7 @@ export type RoutineScheduleErrorCode =
   | "invalidDayOfMonth"
   | "unknownTimezone";
 
-/** Le fuseau est-il connu d'`Intl` ? (Un nom bricolé lève dans le formateur.) */
+/** Is the time zone known to `Intl`? (A tinkered name throws up in the formatter.) */
 export function isKnownTimezone(tz: string): boolean {
   if (!tz || typeof tz !== "string") return false;
   try {
@@ -78,10 +76,10 @@ export function isKnownTimezone(tz: string): boolean {
 }
 
 /**
- * Valide la cadence, et refuse les incohérences de FORME autant que de valeur :
- * un `weekday` sur une cadence mensuelle est une cadence dont personne ne sait
- * dire ce qu'elle veut. C'est un refus et pas un champ ignoré — un champ ignoré
- * fait croire à l'appelant qu'il a été entendu.
+ * Validates the cadence, and refuses inconsistencies in FORM as well as in value:
+ * a `weekday` on a monthly cadence is a cadence that no one knows
+ * to say what they want. This is a denial, not an ignored field — an ignored field
+ * makes the caller think they have been heard.
  */
 export function assertSchedule(schedule: RoutineSchedule): void {
   if (!isRoutineFrequency(schedule.frequency)) {
@@ -120,7 +118,7 @@ export function assertSchedule(schedule: RoutineSchedule): void {
   }
 }
 
-/** Les champs d'un instant, LUS dans un fuseau (le pendant de `getUTC*`). */
+/** The fields of an instant, READ in a time zone (the counterpart of `getUTC*`). */
 interface ZonedParts {
   year: number;
   month: number;
@@ -159,7 +157,7 @@ function zonedParts(at: Date, timeZone: string): ZonedParts {
     year: Number(get("year")),
     month: Number(get("month")),
     day: Number(get("day")),
-    // `hour12: false` rend minuit « 24 » sur certaines ICU : on le ramène à 0.
+    // `hour12: false` makes midnight “24” on certain ICUs: we bring it back to 0.
     hour: Number(get("hour")) % 24,
     minute: Number(get("minute")),
     second: Number(get("second")),
@@ -167,26 +165,26 @@ function zonedParts(at: Date, timeZone: string): ZonedParts {
   };
 }
 
-/** Décalage du fuseau à cet instant, en millisecondes (positif à l'est). */
+/** Time zone offset at this time, in milliseconds (positive east). */
 function offsetMs(at: Date, timeZone: string): number {
   const p = zonedParts(at, timeZone);
   const asUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
-  // La milliseconde ne traverse pas `formatToParts` : on la remet, sinon
-  // l'offset porterait un résidu sous la seconde.
+  // The millisecond does not cross `formatToParts`: we put it back, otherwise
+  // the offset would carry a residue under the second.
   return asUtc - (at.getTime() - at.getMilliseconds());
 }
 
 /**
- * L'instant UTC où l'horloge de `timeZone` affiche cette date et cette heure.
+ * The UTC instant where the `timeZone` clock displays this date and time.
  *
- * Deux passes, et c'est le changement d'heure qui les impose : le décalage à
- * appliquer dépend de l'instant qu'on cherche, qu'on ne connaît pas encore. La
- * première passe donne un candidat, la seconde le corrige avec le décalage
- * VRAI de ce candidat. Aux deux bascules annuelles :
- *  - heure inexistante (le printemps saute 2 h → 3 h) : le résultat retombe
- *    après le saut, soit la première heure qui existe — jamais la veille ;
- *  - heure doublée (l'automne rejoue 2 h → 3 h) : on retient la PREMIÈRE
- *    occurrence, celle que l'horloge affiche en premier.
+ * Two passes, and it is the time change which imposes them: the offset to
+ * applied depends on the instant we are looking for, which we do not yet know. The
+ * first pass gives a candidate, the second passes it with the offset
+ * TRUE of this candidate. At the two annual shifts:
+ * - non-existent hour (spring skips 2 h → 3 h): the result falls
+ * after the jump, i.e. the first hour that exists — never the day before;
+ * - doubled hour (autumn replays 2 h → 3 h): we retain the FIRST
+ * occurrence, the one the clock displays first.
  */
 function zonedTimeToUtc(
   timeZone: string,
@@ -201,21 +199,21 @@ function zonedTimeToUtc(
   return new Date(wanted - offsetMs(firstGuess, timeZone));
 }
 
-/** Nombre de jours du mois (1-indexé) — pour ramener un 31 sur un mois court. */
+/** Number of days of the month (1-indexed) — to return a 31 to a short month. */
 function daysInMonth(year: number, month: number): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
 /**
- * Le PROCHAIN passage, strictement après `from`.
+ * The NEXT pass, strictly after `from`.
  *
- * « Strictement » est la règle : appelée avec `from` exactement sur l'échéance
- * — ce que fait le cron au moment de réarmer — elle AVANCE d'une période. Sans
- * ça, une routine réarmée sur elle-même repartirait en boucle au tour suivant.
+ * "Strictly" is the rule: called with `from` exactly on the deadline
+ * — what the cron does when it's time to reset — it ADVANCES by one period. Without
+ * that, a routine rearmed on itself would restart in a loop on the next round.
  *
- * Le calcul se fait sur l'horloge LOCALE du fuseau, pas en ajoutant des
- * millisecondes : « tous les lundis à 9 h » reste 9 h de part et d'autre du
- * changement d'heure, ce qu'un `+7 × 86 400 000` ne tient pas.
+ * The calculation is done on the LOCAL clock of the time zone, not by adding
+ * milliseconds: "every Monday at 9 a.m." remains 9 h on both sides du
+ * time change, which a `+7 × 86 400 000` does not hold.
  */
 export function nextRunAt(schedule: RoutineSchedule, from: Date): Date {
   assertSchedule(schedule);
@@ -223,7 +221,7 @@ export function nextRunAt(schedule: RoutineSchedule, from: Date): Date {
   const now = zonedParts(from, tz);
 
   if (schedule.frequency === "daily") {
-    // Aujourd'hui à l'heure dite, sinon demain. On repart de la date locale et
+    // Today at the appointed time, otherwise tomorrow. We start from the local date and
     // on ajoute des JOURS de calendrier, jamais 24 h.
     for (let add = 0; add <= 2; add++) {
       const d = new Date(Date.UTC(now.year, now.month - 1, now.day + add));
@@ -237,14 +235,14 @@ export function nextRunAt(schedule: RoutineSchedule, from: Date): Date {
       );
       if (at.getTime() > from.getTime()) return at;
     }
-    // Inatteignable : deux jours d'avance couvrent tous les décalages.
+    // Unattainable: two days in advance covers all delays.
     throw new RoutineScheduleError("invalidFrequency");
   }
 
   if (schedule.frequency === "weekly") {
-    // Plusieurs jours possibles : on regarde CHAQUE jour retenu, on garde la
-    // première occurrence à venir. Deux semaines d'horizon suffisent (le pire
-    // cas est « aujourd'hui, mais l'heure est passée »).
+    // Several days possible: we look at EACH day saved, we keep the
+    // first occurrence to come. Two weeks horizon is enough (the worst
+    // case is “today, but the time has passed”).
     const targets = [...new Set(schedule.weekdays as number[])];
     let best: Date | null = null;
     for (const target of targets) {
@@ -270,11 +268,11 @@ export function nextRunAt(schedule: RoutineSchedule, from: Date): Date {
     return best;
   }
 
-  // Mensuel : chaque jour demandé, ramené au dernier jour des mois plus courts —
-  // « le 31 » sur février veut dire la fin de février, pas « on saute ce mois ».
-  // Deux jours de la liste peuvent donc tomber au MÊME endroit (30 et 31 en
-  // février) : c'est une occurrence, pas deux, et prendre le minimum le règle
-  // sans avoir à dédoublonner.
+  // Monthly: each day requested, reduced to the last day of shorter months —
+  // “the 31st” in February means the end of February, not “we’re skipping this month”.
+  // Two days on the list can therefore fall in the SAME place (30 and 31 in
+  // February): it's one occurrence, not two, and taking the minimum rules it
+  // without having to duplicate.
   const wantedDays = [...new Set(schedule.daysOfMonth as number[])];
   for (let add = 0; add <= 2; add++) {
     const year = now.year + Math.floor((now.month - 1 + add) / 12);
@@ -300,12 +298,12 @@ export function nextRunAt(schedule: RoutineSchedule, from: Date): Date {
 }
 
 /**
- * Traduit une cadence en une phrase, avec le catalogue i18n de l'appelant.
+ * Translates a cadence into a sentence, with the caller's i18n catalog.
  *
- * Elle sert au récapitulatif du wizard ET à l'en-tête de la routine : la MÊME
- * fonction, sinon les deux surfaces finissent par dire deux choses de la même
- * routine. Les trois messages portent des placeholders (`{time}`, `{weekday}`,
- * `{day}`, `{timezone}`) — ils s'appellent donc avec leurs valeurs.
+ * It is used for the wizard summary AND for the routine header: the SAME
+ * function, otherwise the two surfaces end up saying two things of the same
+ * routine. All three messages carry placeholders (`{time}`, `{weekday}`,
+ * `{day}`, `{timezone}`) — so they are called with their values.
  */
 export function describeSchedule(
   schedule: RoutineSchedule,
@@ -323,11 +321,10 @@ export function describeSchedule(
     weekdayLabel?: (weekday: number) => string;
     locale?: string;
     /**
-     * Sans le fuseau — la version de la COLONNE. « (Europe/Paris) » y prend
-     * plus de place que la cadence elle-même, sur une ligne qui doit se
-     * parcourir du regard. Le fuseau se lit dans la routine, où il compte
-     * vraiment : c'est là qu'on vérifie à quelle heure elle part.
-     */
+ * Without the time zone — the COLUMN version. “(Europe/Paris)” takes up
+ * more space than the cadence itself, on a line which must be looked at. The time zone is read in the routine, where it really counts
+ *: this is where we check what time it leaves.
+ */
     omitTimezone?: boolean;
   },
 ): string {
@@ -339,8 +336,8 @@ export function describeSchedule(
       : t("cadenceDaily", { time, timezone: schedule.timezone });
   }
   if (schedule.frequency === "weekly") {
-    // Les jours DANS L'ORDRE de la semaine, quel que soit l'ordre où ils ont
-    // été cochés — « lundi et jeudi », jamais « jeudi et lundi ».
+    // The days IN ORDER of the week, whatever order they are in
+    // been checked — “Monday and Thursday”, never “Thursday and Monday”.
     const days = sortedWeekdays(schedule.weekdays);
     const weekday = joinList(
       days.map((d) => opts?.weekdayLabel?.(d) ?? weekdayName(d, opts?.locale)),
@@ -358,16 +355,16 @@ export function describeSchedule(
 }
 
 /**
- * Les jours de semaine triés dans l'ordre où la SEMAINE les présente — lundi
- * d'abord, dimanche à la fin —, et non dans l'ordre 0–6 d'`Intl`, qui ferait
- * commencer la liste par dimanche.
+ * Weekdays sorted in the order WEEK presents them — Monday
+ * first, Sunday at the end —, not in the 0–6 order of `Intl`, which would make
+ * start the list with Sunday.
  */
 export function sortedWeekdays(weekdays: number[] | null | undefined): number[] {
   const rank = (d: number) => (d + 6) % 7;
   return [...new Set(weekdays ?? [1])].sort((a, b) => rank(a) - rank(b));
 }
 
-/** « lundi, mardi et jeudi » — la conjonction est celle de la langue. */
+/** “Monday, Tuesday and Thursday” — the conjunction is that of the language. */
 function joinList(parts: string[], locale?: string): string {
   if (parts.length <= 1) return parts[0] ?? "";
   try {
@@ -380,10 +377,10 @@ function joinList(parts: string[], locale?: string): string {
   }
 }
 
-/** « 09:00 » / « 9:00 AM » selon la locale — l'heure telle qu'on la lit. */
+/** “09:00” / “9:00 AM” depending on the locale — the time as we read it. */
 export function formatTimeOfDay(hour: number, minute: number, locale?: string): string {
-  // Le 4 janvier 1970 est un dimanche en UTC : n'importe quelle date fait
-  // l'affaire, seule l'heure est formatée.
+  // January 4, 1970 is a Sunday in UTC: any date does
+  // the case, only the time is formatted.
   const at = new Date(Date.UTC(1970, 0, 4, hour, minute));
   return new Intl.DateTimeFormat(locale || "en-US", {
     timeZone: "UTC",
@@ -392,9 +389,9 @@ export function formatTimeOfDay(hour: number, minute: number, locale?: string): 
   }).format(at);
 }
 
-/** Le nom du jour de semaine dans la langue de l'utilisateur. */
+/** The name of the day of the week in the user's language. */
 export function weekdayName(weekday: number, locale?: string): string {
-  // 4 janvier 1970 = dimanche : +weekday donne le bon jour.
+  // January 4, 1970 = Sunday: +weekday gives the correct day.
   const at = new Date(Date.UTC(1970, 0, 4 + (weekday % 7)));
   return new Intl.DateTimeFormat(locale || "en-US", {
     timeZone: "UTC",
@@ -403,17 +400,17 @@ export function weekdayName(weekday: number, locale?: string): string {
 }
 
 /**
- * Le nom du jour, capitale en tête — la forme d'un LIBELLÉ de champ (« Lundi »),
- * qui n'est pas celle d'un mot DANS une phrase (« chaque lundi »). Le français
- * écrit les jours en minuscule au fil du texte : capitaliser partout aurait
- * abîmé la phrase de cadence pour arranger le sélecteur.
+ * The name of the day, capital first — the form of a field LABEL ("Monday"),
+ * which is not that of a word IN a sentence ("every Monday"). French
+ * writes the days in lower case throughout the text: capitalizing everywhere would have
+ * damaged the cadence phrase to arrange the selector.
  */
 export function weekdayLabel(weekday: number, locale?: string): string {
   const name = weekdayName(weekday, locale);
   return name.charAt(0).toLocaleUpperCase(locale || "en-US") + name.slice(1);
 }
 
-/** Le fuseau du navigateur, ou UTC hors navigateur (le wizard le préremplit). */
+/** The browser zone, or UTC outside the browser (the wizard pre-fills it). */
 export function browserTimezone(): string {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";

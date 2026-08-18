@@ -1,73 +1,72 @@
 import type { OpencodeEvent } from "./opencode-events";
 
 /**
- * LE CLIENT DU SERVEUR OPENCODE (MIN-286, lot 1) — l'unique endroit du dépôt qui
- * connaisse ses URLs.
+ * THE OPENCODE SERVER CLIENT (MIN-286, batch 1) — the only place in the repository that
+ * knows its URLs.
  *
- * POURQUOI UN MODULE POUR ÇA, et ce n'est pas de la cérémonie : **le même binaire
- * sert DEUX générations d'API**, `/session/*` (héritée) et `/api/session/*` (v2),
- * et elles n'ont pas les mêmes routes. Une faute d'un segment ne rend pas un 404
- * mais **la page HTML du TUI** — donc un `JSON.parse` qui explose sur `<!doctype`,
- * à trois heures du matin, dans un tour de deux heures. Isoler les deux préfixes
- * ici est ce qui fait que la faute ne se commet qu'une fois.
+ * WHY A MODULE FOR THAT, and it's not a simple matter: **the same binary
+ * serves TWO generations of API**, `/session/*` (legacy) and `/api/session/*` (v2),
+ * and they do not have the same routes. A fault of a segment does not render a 404
+ * but **the HTML page of the TUI** - therefore a `JSON.parse` which explodes on `<!doctype`,
+ * at three o'clock in the morning, in a two-hour round. Isolating the two prefixes
+ * here is what makes the fault only happen once.
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * MESURÉ SUR `opencode-ai@1.18.16` (et deux points corrigent le dossier du lot 0)
+ * ─────────────────────── ──────────────────────── ──────────────────────────────
+ * MEASURED ON `opencode-ai@1.18.16` (and a colon corrects batch 0 record)
  *
- * - **`POST /api/session/:id/wait` répond 503** : « Session wait is not available
- *   yet ». La route existe dans l'OpenAPI, le serveur ne l'implémente pas. Le
- *   dossier la donnait comme la moitié v2 du couple prompt/wait — elle ne l'est
- *   pas. On attend donc la fin d'un tour sur **`session.idle` du flux `/event`**,
- *   qu'on consomme de toute façon, et c'est mieux : aucune requête HTTP ne reste
- *   ouverte pendant des heures.
- * - **La réponse à une permission est `POST /permission/:id/reply`**, corps
- *   `{reply: "once"|"always"|"reject", message?}` — mesuré 200 `true` (lot 2).
- *   `/session/:id/permissions/:permissionID` marche encore mais est `deprecated`
- *   et n'a pas de `message` : c'est ce champ qui porte le motif du refus au
- *   modèle, donc c'est la première route qui compte.
- * - **Une coupure publie `session.error` `MessageAbortedError`** : un `abort`
- *   voulu (plafond, question, deadline) n'est pas une panne
- *   ([opencode-events.ts](opencode-events.ts) le filtre).
- * - `POST /session/:id/prompt_async` rend **204** immédiatement.
- * - `POST /session/:id/abort` rend **200 `true`**, même sur une session au repos.
- * - `POST /session` rend la session complète (`id`, `projectID`, `directory`…).
- * - **`?directory=` est obligatoire** sur les routes héritées : sans lui, le
- *   serveur travaille dans son propre cwd, pas dans le dépôt du run.
+ * - **`POST /api/session/:id/wait` responds 503**: "Session wait is not available
+ * yet". The route exists in the OpenAPI, the server does not implement it. The
+ * file gave her as the v2 half of the prompt/wait couple — she is
+ * not. We therefore wait for the end of a turn on **`session.idle` of the flow `/event`**,
+ * which we consume anyway, and it's better: no HTTP request remains open for hours.
+ * - **The response to a permission is `POST /permission/:id/reply`**, body
+ * `{reply: "once"|"always"|"reject", message?}` — measured 200 `true` (lot 2).
+ * `/session/:id/permissions/:permissionID` still works but is `deprecated`
+ * and has no `message`: it is this field which carries the reason for refusal to the
+ * model, so it is the first route that counts.
+ * - **A cut publishes `session.error` `MessageAbortedError`**: a `abort`
+ * wanted (ceiling, question, deadline) is not a failure
+ * ([opencode-events.ts](opencode-events.ts) the filter).
+ * - `POST /session/:id/prompt_async` returns **204** immediately.
+ * - `POST /session/:id/abort` returns **200 `true`**, even on an idle session.
+ * - `POST /session` makes the session complete (`id`, `projectID`, `directory`…).
+ * - **`?directory=` is mandatory** on legacy routes: without it, the
+ * server works in its own cwd, not in the run repository.
  */
 
-/** Ce qu'une session opencode rend à sa création. */
+/** What an opencode session renders when it is created. */
 export interface OpencodeSession {
   id: string;
   projectID?: string;
   directory?: string;
 }
 
-/** Réponse possible à une demande de permission. */
+/** Possible response to a permission request. */
 export type PermissionResponse = "once" | "always" | "reject";
 
 export interface OpencodeClientOptions {
   /** `http://127.0.0.1:<port>`, sans slash final. */
   baseUrl: string;
-  /** Le dépôt : `?directory=` de toutes les routes héritées. */
+  /** The repository: `?directory=` of all inherited routes. */
   directory: string;
-  /** Injecté pour les tests. Défaut : le `fetch` global. */
+  /** Injected for testing. Default: the global `fetch`. */
   fetchImpl?: typeof fetch;
 }
 
 /**
- * Plafond d'UNE sonde de santé. Le serveur répond en ~20 ms quand il est prêt ;
- * ce qui est borné ici, c'est la connexion acceptée mais laissée sans réponse.
+ * Cap on ONE health probe. The server responds in ~20 ms when it is ready;
+ * what is limited here is the connection accepted but left without response.
  */
 const HEALTH_PROBE_TIMEOUT_MS = 2_000;
 
-/** Cadence des lignes de journal pendant l'attente du démarrage. */
+/** Cadence of log lines while waiting for startup. */
 const HEALTH_PROGRESS_INTERVAL_MS = 15_000;
 
 /**
- * Le process local passe de « connexion refusée » à prêt en moins d'une seconde.
- * À 200 ms, la boucle ajoutait jusqu'à 200 ms de latence pure après ce moment.
- * 50 ms reste dérisoire en nombre de sondes (une vingtaine au pire à froid) et
- * rend le démarrage visiblement plus réactif.
+ * The local process goes from "connection refused" to ready in less than a second.
+ * At 200 ms, the loop added up to 200 ms of pure latency after this moment.
+ * 50 ms remains derisory in number of probes (around twenty at worst cold) and
+ * returns startup visibly more responsive.
  */
 const HEALTH_RETRY_MS = 50;
 
@@ -93,7 +92,7 @@ export class OpencodeClient {
     this.http = opts.fetchImpl ?? fetch;
   }
 
-  /** Une route HÉRITÉE (`/session/…`), toujours avec `?directory=`. */
+  /** An INHERITANCE route (`/session/…`), always with `?directory=`. */
   private legacy(path: string): string {
     const sep = path.includes("?") ? "&" : "?";
     return `${this.base}${path}${sep}directory=${encodeURIComponent(this.directory)}`;
@@ -103,8 +102,8 @@ export class OpencodeClient {
     const res = await this.http(route, init);
     const text = await res.text();
     if (!res.ok) throw new OpencodeHttpError(res.status, route, text);
-    // Une route mal orthographiée rend la page du TUI, pas un 404 : le message
-    // doit dire ÇA, et pas « Unexpected token < in JSON ».
+    // A misspelled route returns the TUI page, not a 404: the message
+    // should say THIS, not “Unexpected token < in JSON”.
     if (text.trimStart().startsWith("<")) {
       throw new OpencodeHttpError(res.status, route, "réponse HTML : la route n'existe pas");
     }
@@ -112,16 +111,16 @@ export class OpencodeClient {
   }
 
   /**
-   * Le serveur répond-il ? Rend `false` plutôt que de lever.
-   *
-   * LA SONDE PORTE SON PROPRE PLAFOND, et c'est ce qui manquait au premier run de
-   * production (2026-08-12) : un serveur qui ACCEPTE la connexion sans répondre
-   * laissait le `fetch` pendre jusqu'au `headersTimeout` d'undici — **300 s** —,
-   * donc bien après la deadline que `waitHealthy` croit tenir. Le run est mort à
-   * 6 min 30 sur un message qui annonçait 60 s, et rien dans le fil ne pouvait le
-   * dire. Sans ce plafond, la boucle de sondage n'en est pas une : elle fait UNE
-   * requête et attend cinq minutes.
-   */
+ * Is the server responding? Returns `false` rather than raising.
+ *
+ * THE PROBE HAS ITS OWN CEILING, and this is what was missing in the first run of
+ * production (2026-08-12): a server that ACCEPT the connection without responding
+ * left the `fetch` hang until `headersTimeout` of undici — **300 s** —,
+ * therefore well after the deadline that `waitHealthy` believes it will meet. The run died at
+ * 6:30 on a message that said 60 sec, and nothing in the thread could tell
+ * that. Without this cap, the polling loop is not a poll: it makes A
+ * request and waits five minutes.
+ */
   async healthy(timeoutMs = HEALTH_PROBE_TIMEOUT_MS): Promise<boolean> {
     try {
       const body = await this.json<{ healthy?: boolean }>(`${this.base}/global/health`, {
@@ -134,16 +133,16 @@ export class OpencodeClient {
   }
 
   /**
-   * Attend que le serveur soit prêt. Mesuré au lot 0 : ~1,3 s à froid dans la
-   * microVM — mais c'était une microVM DÉJÀ CHAUDE. Sur une VM neuve, le disque
-   * est hydraté paresseusement et le premier exec des 176 Mo de binaire se paie
-   * en minutes : le plafond ne borne donc pas la lenteur normale, il borne le
-   * serveur qui ne démarrera jamais.
-   *
-   * Rend le temps réellement attendu, parce que c'est lui qu'un rapport d'erreur
-   * doit citer : « pas prêt en 60 000 ms » sur une attente de six minutes envoie
-   * chercher la panne au mauvais endroit.
-   */
+ * Waits until the server is ready. Measured at batch 0: ~1.3s cold in the
+ * microVM — but it was an ALREADY HOT microVM. On a new VM, the disk
+ * is lazily hydrated and the first exec of the 176 MB of binary is paid for
+ * in minutes: the ceiling therefore does not limit the normal slowness, it limits the
+ * server which will never start.
+ *
+ * Returns the time actually expected, because it is he who an error report
+ * must quote: "not ready in 60,000 ms" on a six-minute wait sends
+ * looking for the fault in the wrong place.
+ */
   async waitHealthy(timeoutMs: number, sleep = defaultSleep): Promise<boolean> {
     const startedAt = Date.now();
     const deadline = startedAt + timeoutMs;
@@ -151,9 +150,9 @@ export class OpencodeClient {
     while (Date.now() < deadline) {
       if (await this.healthy()) return true;
       const waited = Date.now() - startedAt;
-      // Une ligne toutes les 15 s : de quoi lire, dans les logs de la microVM, si
-      // le serveur a mis du temps ou n'a jamais répondu — les deux se corrigent
-      // ailleurs, et rien d'autre ne les distingue après coup.
+      // One line every 15 s: enough to read, in the microVM logs, if
+      // the server took a long time or never responded — both are corrected
+      // elsewhere, and nothing else distinguishes them afterwards.
       if (waited - announced >= HEALTH_PROGRESS_INTERVAL_MS) {
         announced = waited;
         console.log(`[opencode] still waiting for the server (${Math.round(waited / 1000)} s)`);
@@ -172,14 +171,14 @@ export class OpencodeClient {
   }
 
   /**
-   * Force le chargement du catalogue avant le prompt.
-   *
-   * OpenCode construit sinon les tools, leurs schémas et la configuration du
-   * modèle au premier prompt. Sur le chemin local mesuré, ce travail retardait
-   * le premier appel fournisseur d'environ 800 ms. La route est précisément
-   * celle que l'interface OpenCode utilise pour exposer le catalogue ; lire le
-   * corps jusqu'au bout garantit que le chargement est réellement terminé.
-   */
+ * Forces the catalog to be loaded before the prompt.
+ *
+ * OpenCode otherwise builds the tools, their schemas and the configuration of the
+ * model at the first prompt. On the measured local path, this job delayed
+ * the first provider call by about 800 ms. The route is precisely
+ * the one that the OpenCode interface uses to expose the catalog; reading the
+ * body to the end ensures that the loading is actually complete.
+ */
   async warmTools(model: string, provider = "minddy", agent = "build"): Promise<void> {
     const query = new URLSearchParams({ provider, model, agent });
     const route = this.legacy(`/experimental/tool?${query.toString()}`);
@@ -189,11 +188,10 @@ export class OpencodeClient {
   }
 
   /**
-   * Poste un tour et rend la main TOUT DE SUITE (204). La fin du tour se lit sur
-   * `session.idle` du flux d'events — `/api/session/:id/wait` répond 503 sur
-   * cette version, et une requête bloquante de deux heures serait de toute façon
-   * une mauvaise idée.
-   */
+ * Posts a turn and returns the hand RIGHT AWAY (204). The end of the round reads
+ * `session.idle` from the event stream — `/api/session/:id/wait` responds 503 on
+ * this version, and a two-hour blocking request would be a bad idea anyway.
+ */
   async promptAsync(sessionId: string, text: string): Promise<void> {
     const route = this.legacy(`/session/${sessionId}/prompt_async`);
     const res = await this.http(route, {
@@ -204,22 +202,21 @@ export class OpencodeClient {
     if (!res.ok) throw new OpencodeHttpError(res.status, route, await res.text());
   }
 
-  /** Coupe le tour en vol. Mesuré à 40 ms, et sans effet si rien ne tourne. */
+  /** Cuts the turn in flight. Measured at 40 ms, and without effect if nothing is running. */
   async abort(sessionId: string): Promise<void> {
     const route = this.legacy(`/session/${sessionId}/abort`);
     await this.http(route, { method: "POST" }).catch(() => undefined);
   }
 
   /**
-   * Répond à une demande de permission — c'est ici que le garde-fou du
-   * superviseur s'exerce ([opencode-permissions.ts](opencode-permissions.ts)).
-   *
-   * `POST /permission/:id/reply`, corps `{reply, message?}` — mesuré 200 `true`.
-   * PAS `/session/:id/permissions/:id`, qui existe encore mais est marquée
-   * `deprecated` dans l'OpenAPI **et n'accepte pas de `message`** : c'est ce
-   * champ, et lui seul, qui porte le motif du refus jusqu'au modèle (il le lit
-   * dans l'erreur du tool). Un refus muet lui laisserait deviner pourquoi.
-   */
+ * Responds to a permission request — this is where the supervisor guardrail takes effect ([opencode-permissions.ts](opencode-permissions.ts)).
+ *
+ * `POST /permission/:id/reply`, body `{reply, message?}` — measured 200 `true`.
+ * NOT `/session/:id/permissions/:id`, which still exists but is marked
+ * `deprecated` in the OpenAPI **and does not accept `message`**: it is this
+ * field, and it alone, which carries the reason for refusal to the model (it reads
+ * in the tool error). A silent refusal would let him guess why.
+ */
   async replyPermission(
     permissionId: string,
     reply: PermissionResponse,
@@ -235,20 +232,20 @@ export class OpencodeClient {
   }
 
   /**
-   * RÉPOND à une question du modèle — le chemin de la machine (MIN-364, D7).
-   *
-   * `POST /question/:id/reply`, corps `{answers}` : une liste par question, dans
-   * l'ordre où elles ont été posées, chacune portant les libellés choisis.
-   * Mesuré sur `opencode-ai@1.18.16` ([opencode-wait.probe.test.ts](opencode-wait.probe.test.ts)) :
-   * **200 `true`, l'appel BLOQUE sans timeout tant que personne ne répond, et y
-   * répondre ne termine PAS le tour** — le tool `question` revient `completed`
-   * (« User has answered your questions: … ») et le round repart vers le modèle.
-   *
-   * Le schéma du binaire ne valide pas les libellés contre les options offertes
-   * (`QuestionAnswer = Array(String)`) : une réponse en TEXTE LIBRE — celle que la
-   * carte de questions compose quand l'utilisateur tape « Autre chose… » — voyage
-   * telle quelle jusqu'au modèle.
-   */
+ * ANSWERS a template question — the machine path (MIN-364, D7).
+ *
+ * `POST /question/:id/reply`, body `{answers}`: one list per question, in
+ * the order they were asked, each bearing the chosen labels.
+ * Measured on `opencode-ai@1.18.16` ([opencode-wait.probe.test.ts](opencode-wait.probe.test.ts)):
+ * **200 `true`, the call BLOCKS without timeout as long as no one responds, and y
+ * answering does NOT end the round** — the tool `question` returns `completed`
+ * (“User has answered your questions: …”) and the round returns to the model.
+ *
+ * The binary schema does not validate labels against options offered
+ * (`QuestionAnswer = Array(String)`): a FREE TEXT answer — the one that the
+ * question card composes when the user types “Something else…” — travel
+ * as is up to the model.
+ */
   async replyQuestion(questionId: string, answers: string[][]): Promise<void> {
     const route = this.legacy(`/question/${questionId}/reply`);
     const res = await this.http(route, {
@@ -260,11 +257,11 @@ export class OpencodeClient {
   }
 
   /**
-   * Écarte une question du modèle — le chemin de la MICROVM, et celui de toute
-   * sortie de tour (« Stop », deadline, plafond) qui trouve une question en vol.
-   * Le tool doit être résolu pour que l'historique reste apparié — mesuré : il
-   * revient en `error`, « The user dismissed this question ».
-   */
+ * Removes a question from the model - the path of the MICROVM, and that of any
+ * turn exit ("Stop", deadline, ceiling) which finds a question in flight.
+ * The tool must be resolved for the history to remain matched - measured: it
+ * returns to `error`, "The user dismissed this question”.
+ */
   async rejectQuestion(questionId: string): Promise<void> {
     const route = this.legacy(`/question/${questionId}/reject`);
     await this.http(route, {
@@ -275,13 +272,13 @@ export class OpencodeClient {
   }
 
   /**
-   * L'historique en ÉVÉNEMENTS, pour la reprise sur une autre microVM (sonde du
-   * lot 0). Incrémental : `{aggregateID: dernier_seq}` ne rend que la suite.
-   *
-   * PIÈGE, et il est dans le schéma, pas dans notre code : l'export rend du
-   * **snake_case** (`aggregate_id`) et le replay attend du **camelCase**
-   * (`aggregateID`). D'où `normalizeSyncEvents`.
-   */
+ * The history in EVENTS, for recovery on another microVM (probe du
+ * batch 0). Incremental: `{aggregateID: dernier_seq}` only returns the result.
+ *
+ * TRAP, and it is in the schema, not in our code: the export returns du
+ * **snake_case** (`aggregate_id`) and the replay expects du **camelCase**
+ * (`aggregateID`). Hence `normalizeSyncEvents`.
+ */
   async syncHistory(since: Record<string, number> = {}): Promise<Record<string, unknown>[]> {
     const body = await this.json<{ events?: Record<string, unknown>[] } | Record<string, unknown>[]>(
       this.legacy("/sync/history"),
@@ -292,10 +289,10 @@ export class OpencodeClient {
       },
     );
     const events = Array.isArray(body) ? body : (body.events ?? []);
-    // NORMALISÉ DÈS LA LECTURE, et c'est ce qui a mordu : le curseur d'export se
-    // dérive d'`aggregateID`, que cette réponse-ci n'a pas. Laisser le snake_case
-    // circuler donnait un curseur VIDE — donc un export complet à chaque tour,
-    // qui grossit jusqu'à ne plus passer, sans qu'aucun test ne tombe.
+    // NORMALIZED FROM READING, and that's what bit: the export cursor is
+    // derives from `aggregateID`, which this answer does not have. Leave the snake_case
+    // circulating gave an EMPTY cursor — therefore a complete export each turn,
+    // which grows until it no longer passes, without any test falling.
     return normalizeSyncEvents(events as Record<string, unknown>[]);
   }
 
@@ -309,12 +306,12 @@ export class OpencodeClient {
   }
 
   /**
-   * Le flux `/event`, en itérateur asynchrone. Chaque `data:` est un événement.
-   *
-   * Ce qui n'est PAS ici : la traduction. Elle vit dans un module pur
-   * ([opencode-events.ts](opencode-events.ts)) qu'on teste sur des fixtures
-   * capturées — un flux réseau ne se rejoue pas dans un test unitaire.
-   */
+ * The `/event` stream, in asynchronous iterator. Each `data:` is an event.
+ *
+ * What is NOT here: the translation. It lives in a pure
+ * ([opencode-events.ts](opencode-events.ts)) module that we test on captured
+ * fixtures — a network flow is not replayed in a unit test.
+ */
   async *events(signal?: AbortSignal): AsyncGenerator<OpencodeEvent> {
     const res = await this.http(this.legacy("/event"), { signal });
     if (!res.ok || !res.body) {
@@ -327,8 +324,8 @@ export class OpencodeClient {
       const { done, value } = await reader.read();
       if (done) return;
       buffer += decoder.decode(value, { stream: true });
-      // Les frames SSE sont séparées par une ligne vide ; une frame peut tenir
-      // sur plusieurs lignes `data:`, mais opencode n'en émet qu'une par frame.
+      // SSE frames are separated by an empty line; a frame can hold
+      // on several `data:` lines, but opencode only emits one per frame.
       let index = buffer.indexOf("\n\n");
       while (index !== -1) {
         const frame = buffer.slice(0, index);
@@ -341,7 +338,7 @@ export class OpencodeClient {
   }
 }
 
-/** Une frame SSE → un événement, ou `null` (commentaire, ping, JSON illisible). */
+/** An SSE frame → an event, or `null` (comment, ping, unreadable JSON). */
 export function parseFrame(frame: string): OpencodeEvent | null {
   const data = frame
     .split("\n")
@@ -353,15 +350,15 @@ export function parseFrame(frame: string): OpencodeEvent | null {
     const parsed = JSON.parse(data) as OpencodeEvent;
     return typeof parsed?.type === "string" ? parsed : null;
   } catch {
-    // Un flux tiers qui envoie une frame illisible ne doit pas tuer le tour.
+    // A third-party stream that sends an unreadable frame should not kill the round.
     return null;
   }
 }
 
 /**
- * `aggregate_id` → `aggregateID`. Le piège du §2.2 du dossier, et il est dans le
- * SCHÉMA d'opencode : l'export rend du snake_case, le replay attend du camelCase.
- * Sans ça, la reprise d'une session sur une autre microVM échoue en validation.
+ * `aggregate_id` → `aggregateID`. The trap of §2.2 of the file, and it is in the
+ * Opencode SCHEME: export returns snake_case, replay expects camelCase.
+ * Without that, resuming a session on another microVM fails validation.
  */
 export function normalizeSyncEvents(
   events: Record<string, unknown>[],

@@ -5,10 +5,10 @@ import { canReadAgentRun } from "@/lib/server/agent/run-access";
 import { getRun, bumpRunActivity } from "@/lib/server/agent/runs";
 
 /**
- * Heartbeat d'une session d'agent (MIN-46). Rafraîchit `last_activity_at` tant que
- * la conversation est ouverte côté client (~toutes les 45 s), pour que le reaper ne
- * coupe pas la microVM pendant que l'utilisateur lit ou écrit. Réservé à qui peut
- * lire le run (MIN-332). Léger — juste un bump de timestamp.
+ * Heartbeat of an agent session (MIN-46). Refreshes `last_activity_at` as long as
+ * the conversation is opened on the client side (~every 45 s), so that the reaper does not
+ * does not shut down the microVM while the user is reading or writing. Reserved for who can
+ * read the run (MIN-332). Light — just a timestamp bump.
  */
 
 type RouteContext = { params: Promise<{ runId: string }> };

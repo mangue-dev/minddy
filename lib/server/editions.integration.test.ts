@@ -75,7 +75,7 @@ const { checkAgentQuota } = await import("@/lib/server/agent/quota");
 const matrix = edition ? describe : describe.skip;
 
 matrix(`edition matrix: ${edition ?? "no fixture"}`, () => {
-  it("résout les services et annonce clairement les capacités partielles", () => {
+  it("resolves services and clearly announces partial capabilities", () => {
     expect(managedServices()).toEqual({ billing: expectBilling, ai: expectAi });
 
     const capabilities = resolveCapabilities(process.env);
@@ -108,18 +108,18 @@ matrix(`edition matrix: ${edition ?? "no fixture"}`, () => {
     }
   });
 
-  it("active Stripe et son webhook uniquement avec la configuration Cloud complète", async () => {
+  it("enables Stripe and its webhook only with the complete Cloud configuration", async () => {
     expect(isStripeConfigured()).toBe(expectBilling);
     const response = await stripeWebhook(new Request("http://localhost/api/stripe/webhook", {
       method: "POST",
       body: "{}",
       headers: { "stripe-signature": "invalid" },
     }) as Parameters<typeof stripeWebhook>[0]);
-    // 400 signifie que le webhook actif a contrôlé la signature ; 503 qu'il est indisponible.
+    // 400 means the active webhook checked the signature; 503 that it is unavailable.
     expect(response.status).toBe(expectBilling ? 400 : 503);
   });
 
-  it("choisit le bon payeur IA sans repli vers la clé plateforme", async () => {
+  it("chooses the right AI payer without falling back to the platform key", async () => {
     const runtime = resolveAiRuntime({ userId: "fake-user-id", modelKey: "assistant_model" });
     if (byok) {
       await expect(runtime).resolves.toMatchObject({
@@ -136,7 +136,7 @@ matrix(`edition matrix: ${edition ?? "no fixture"}`, () => {
     }
   });
 
-  it("ne lit le plan et le quota minddy que pour l'IA Cloud", async () => {
+  it("reads the minddy plan and quota only for Cloud AI", async () => {
     getResolvedBilling.mockClear();
     getUserUsage.mockClear();
     const quota = await checkAgentQuota("quota-user-id");

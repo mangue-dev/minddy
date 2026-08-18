@@ -1,11 +1,11 @@
 import type { AgentRunEvent } from "./agent-api";
 
-/** Un sous-agent (MIN-112) du tour en cours, tel que le fil d'events le montre. */
+/** A sub-agent (MIN-112) of the current round, as shown in the events thread. */
 export interface TurnSubagent {
-  /** Id lisible que le parent manipule (`sub-1`). */
+  /** Readable id that the parent is handling (`sub-1`). */
   id: string;
   mode: "explore" | "implement" | null;
-  /** `created_at` de son premier event : le début de son chrono. */
+  /** `created_at` of his first event: the start of his time. */
   startedAt: string;
   /** `created_at` de l'event qui l'a close, ou `null` tant qu'elle tourne. */
   endedAt: string | null;
@@ -22,24 +22,24 @@ function opensNewTurn(type: AgentRunEvent["type"]): boolean {
 }
 
 /**
- * Les sous-agents du TOUR EN COURS, de la plus ancienne à la plus récente, avec
- * celles qui ont déjà rendu leur rapport.
+ * The sub-agents of the CURRENT TOUR, from the oldest to the most recent, with
+ * those who have already submitted their report.
  *
- * Le tour, et pas la session : c'est l'unité à laquelle le fil raconte déjà tout
- * le reste (un accordéon de travail par tour). Les filles d'un tour passé n'ont
- * plus rien à dire — leur rapport est arrivé, le parent a répondu — et les lister
- * ferait grandir la carte à chaque délégation de la conversation.
+ * The turn, and not the session: it is the unit to which the thread already tells everything
+ * the rest (one accordion of work per turn). The girls from a past round did not
+ * nothing more to say — their report has arrived, the parent has responded — and list them
+ * would make the map grow with each delegation of the conversation.
  *
- * Une fille est FINIE dès qu'elle a rendu son résumé, échoué, ou que le parent a
- * annoncé la livraison de son rapport (`status` / `phase: subagent_report`) — ce
- * dernier cas est le seul signal d'une fille COUPÉE, qui n'émet ni l'un ni
- * l'autre. Mêmes règles que l'agrégation du fil (`buildFeed`), qui en tire les
- * blocs repliés.
+ * A girl is FINISHED as soon as she has handed in her summary, failed, or the parent has
+ * announced the delivery of its report (`status` / `phase: subagent_report`) — this
+ * last case is the only signal of a CUT girl, which emits neither one nor
+ * the other. Same rules as the aggregation of the thread (`buildFeed`), which draws the
+ * folded blocks.
  *
- * Pourquoi c'est à part : pendant qu'une fille travaille, le PARENT est bloqué et
- * n'émet rien. Le fil ne bouge donc plus du tout, et la seule chose qui dit que
- * la session est vivante est enterrée dans une ligne repliée, quelque part plus
- * haut. La carte au-dessus du composer la remonte sous les yeux.
+ * Why it's special: while a girl is working, the PARENT is stuck and
+ * emits nothing. The wire no longer moves at all, and the only thing that says that
+ * the session is alive is buried in a folded line, somewhere more
+ * high. The card above the dial brings it up before the eyes.
  */
 export function turnSubagents(events: AgentRunEvent[]): TurnSubagent[] {
   const collected = new Map<string, TurnSubagent>();
@@ -68,16 +68,16 @@ export function turnSubagents(events: AgentRunEvent[]): TurnSubagent[] {
       continue;
     }
 
-    // Le parent annonce qu'un rapport lui a été remis : c'est le seul instant de
-    // fin d'une fille coupée, qui n'émet ni résumé ni erreur.
+    // The parent announces that a report has been given to him: this is the only moment of
+    // end of a cut girl, which emits neither summary nor error.
     if (e.type === "status" && p.phase === "subagent_report" && typeof p.id === "string") {
       const block = collected.get(p.id);
       if (block) block.endedAt ??= e.created_at;
       continue;
     }
 
-    // Le tour se referme (réponse finale, question, budget épuisé) ou un message
-    // de l'utilisateur en ouvre un autre : ce qui précède appartient au tour d'avant.
+    // The round closes (final answer, question, budget exhausted) or a message
+    // of the user opens another: the above belongs to the round before.
     if (opensNewTurn(e.type)) collected.clear();
   }
 

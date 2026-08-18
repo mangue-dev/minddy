@@ -3,17 +3,17 @@
 import { useEffect } from "react";
 
 /**
- * Demande à Supabase si le visiteur a une session, et le dit à la nav (MIN-100).
+ * Asks Supabase if the visitor has a session, and tells the nav (MIN-100).
  *
- * Ne rend rien. Existe uniquement pour que `@supabase/supabase-js` soit derrière
- * un `next/dynamic` — la nav le chargeait déjà par un `import()`, mais Turbopack
- * place la cible d'un `import()` nu dans le groupe de chunks INITIAL du
- * composant : mesuré sur la landing, 18 Ko gzippés du SDK partaient avec le
- * bundle de départ, devant l'image du LCP. Un `next/dynamic` produit, lui, un
- * vrai chunk paresseux (c'est déjà ce que fait `hero-shader.tsx` pour le WebGL).
+ * Returns nothing. Exists only so that `@supabase/supabase-js` is behind
+ * a `next/dynamic` — the nav already loaded it with a `import()`, but Turbopack
+ * places the target of a bare `import()` in the INITIAL chunk group of the
+ * component: measured on the landing, 18 KB gzipped from the SDK left with the
+ * starting bundle, in front of the LCP image. A `next/dynamic` produces a
+ * real lazy chunk (this is already what `hero-shader.tsx` does for WebGL).
  *
- * La nav ne le monte que si un cookie d'auth Supabase est présent : un visiteur
- * anonyme — l'immense majorité sur une landing — ne demande jamais ce chunk.
+ * The nav only mounts it if a Supabase auth cookie is present: an anonymous visitor
+ * — the vast majority on a landing — never ask for this chunk.
  */
 export function SessionProbe({ onChange }: { onChange: (hasSession: boolean) => void }) {
   useEffect(() => {

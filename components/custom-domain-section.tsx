@@ -7,11 +7,11 @@ import { Badge, Button, Input, Spinner, cn, toast } from "mangue-ui";
 import { Check, Copy, ExternalLink, RefreshCw } from "lucide-react";
 
 /**
- * Section « Domaine personnalisé » (MIN-36), partagée entre les réglages du
- * board de feedback et le dialog de partage d'une vue — les deux routes API
- * (endpoint) exposent la même forme { configured, domain }. Invisible quand le
- * déploiement n'a pas les env VERCEL_* (configured=false) ou pour un
- * non-owner sans domaine configuré.
+ * “Custom domain” section (MIN-36), shared between the settings of the
+ * feedback board and the view sharing dialog — both API routes
+ * (endpoint) expose the same form { configured, domain }. Invisible when the
+ * deployment does not have the VERCEL_* env (configured=false) or for a
+ * non-owner with no domain configured.
  */
 
 export interface CustomDomainDns {
@@ -29,7 +29,7 @@ export interface CustomDomainStatus {
 
 export interface CustomDomainPayload {
   configured: boolean;
-  /** Le serveur décide : owner du projet → mutations visibles. */
+  /** The server decides: project owner → visible mutations. */
   can_manage: boolean;
   domain: CustomDomainStatus | null;
 }
@@ -44,7 +44,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-/** Partagé avec les parents qui veulent lire le domaine (même queryKey). */
+/** Shared with parents who want to read the domain (same queryKey). */
 export function fetchCustomDomainApi(endpoint: string): Promise<CustomDomainPayload> {
   return api<CustomDomainPayload>(endpoint);
 }
@@ -58,10 +58,10 @@ export function CustomDomainSection({
   /** Route API GET/PUT/DELETE, ex. /api/projects/<id>/feedback/domain. */
   endpoint: string;
   queryKey: readonly unknown[];
-  /** Appliqué au conteneur — absent du DOM quand la section est masquée. */
+  /** Applied to container — absent from the DOM when the section is hidden. */
   className?: string;
-  /** Le parent affiche déjà le domaine vérifié comme lien public principal :
-   *  on n'en répète donc pas la valeur ici (évite le doublon). */
+  /** The parent already shows the verified domain as the primary public link:
+   * we therefore do not repeat the value here (avoid duplication). */
   primaryUrlShown?: boolean;
 }) {
   const t = useTranslations("CustomDomain");
@@ -76,7 +76,7 @@ export function CustomDomainSection({
 
   if (isPending || !data) return null;
   const { configured, can_manage: canManage, domain } = data;
-  // Déploiement sans env VERCEL_*, ou lecteur sans rien à voir : silence.
+  // Deployment without env VERCEL_*, or reader with nothing to do: silence.
   if (!configured || (!domain && !canManage)) return null;
 
   const mutate = async (fn: () => Promise<CustomDomainPayload>) => {
@@ -106,7 +106,7 @@ export function CustomDomainSection({
 
   return (
     <div className={cn("flex flex-col gap-2.5", className)}>
-      {/* En-tête : titre à gauche, statut aligné à droite. */}
+      {/* Header: title on the left, status aligned on the right. */}
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium">{t("title")}</p>
         {domain &&
@@ -122,14 +122,11 @@ export function CustomDomainSection({
       {!domain ? (
         <>
           <p className="text-xs leading-relaxed text-muted-foreground">{t("description")}</p>
-          {/* Pas de `<form>` ici, et c'est la seule chose à savoir avant d'en
-              remettre un : cette section vit DANS des surfaces qui en sont
-              déjà un — le dialog de partage d'une vue, une étape du wizard de
-              configuration des retours. Un formulaire dans un formulaire est du
-              HTML invalide, que React signale à l'hydratation. D'où la touche
-              Entrée gérée à la main, et le `type="button"` : sans lui, le bouton
-              soumettrait le formulaire du PARENT (l'étape du wizard avancerait,
-              le dialog de partage se fermerait). */}
+          {/* No `<form>` here, and that's the only thing you need to know before you
+ return one: this section lives IN surfaces that are already one — the view sharing dialog, a step in the returns configuration wizard. A form within a form is invalid HTML, which React flags for hydration. Hence the
+ Entry key managed by hand, and the `type="button"`: without it, the
+ button would submit the PARENT's form (the wizard step would advance,
+ the sharing dialog would close). */}
           <div className="flex items-center gap-2">
             <Input
               value={input}
@@ -159,8 +156,8 @@ export function CustomDomainSection({
         </>
       ) : (
         <>
-          {/* La valeur du domaine : lien cliquable si vérifié, sinon texte brut.
-              Masquée si le parent l'affiche déjà comme lien public principal. */}
+          {/* The domain value: clickable link if verified, otherwise plain text.
+ Hidden if the parent already displays it as the primary public link. */}
           {!(primaryUrlShown && verified) &&
             (verified ? (
               <a
@@ -178,9 +175,9 @@ export function CustomDomainSection({
 
           {!verified && (
             <>
-              {/* Le domaine ne sert rien tant qu'il n'est pas vérifié (MIN-337).
-                  Le dire ici, sinon la seule chose que l'utilisateur observe est
-                  un 404 sur un domaine qu'il vient de configurer. */}
+              {/* The domain is of no use until it is verified (MIN-337).
+ Say it here, otherwise the only thing the user observes is
+ a 404 on a domain they have just configured. */}
               <p className="text-xs leading-relaxed text-muted-foreground">
                 {t("pendingNotServing")}
               </p>
@@ -223,8 +220,8 @@ export function CustomDomainSection({
   );
 }
 
-/** Tableau des enregistrements DNS à créer : en-têtes explicites (Type, Nom,
- *  Valeur, TTL) et valeur copiable. Le TTL est libre côté registrar → « Auto ». */
+/** Table of DNS records to create: explicit headers (Type, Name,
+ * Value, TTL) and copyable value. The TTL is free on the registrar side → “Auto”. */
 function DnsTable({ records }: { records: CustomDomainDns[] }) {
   const t = useTranslations("CustomDomain");
   return (
@@ -260,7 +257,7 @@ function DnsTable({ records }: { records: CustomDomainDns[] }) {
   );
 }
 
-/** Cellule DNS : valeur (repliable si longue) + bouton copier. */
+/** DNS cell: value (collapsible when long) + copy button. */
 function DnsValue({ value }: { value: string }) {
   return (
     <div className="flex items-start gap-1.5">

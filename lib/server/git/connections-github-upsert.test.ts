@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-324 — la clé de conflit d'`upsertGithubConnection` est le seul
- * `installation_id`, et son `update` réécrivait `user_id` : un appelant qui
- * énumérait ces identifiants (de petits entiers séquentiels) se réattribuait les
- * installations des autres locataires, donc leurs dépôts privés.
+ * MIN-324 — the conflict key of `upsertGithubConnection` is the only
+ * `installation_id`, and its `update` was rewriting `user_id`: a caller who
+ * was enumerating these identifiers (small integers sequential) reassigned to itself the
+ * installations of other tenants, therefore their private repositories.
  *
- * Ce que ce test tient : une ligne existante ne change plus de main, et elle
- * n'est pas non plus modifiée au passage.
+ * What this test holds: an existing line no longer changes hands, and it
+ * is also not modified in passing.
  */
 
 const updates: { payload: Record<string, unknown>; id: unknown }[] = [];
@@ -69,7 +69,7 @@ describe("upsertGithubConnection", () => {
     expect(id).toBe("conn-1");
     expect(updates).toHaveLength(1);
     expect(updates[0].payload).toMatchObject({ account_login: "acme" });
-    // Et surtout : plus de `user_id` dans le payload, même pour le bon compte.
+    // And above all: no more `user_id` in the payload, even for the correct account.
     expect(updates[0].payload).not.toHaveProperty("user_id");
   });
 

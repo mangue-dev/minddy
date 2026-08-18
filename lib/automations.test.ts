@@ -34,9 +34,9 @@ import type { IssueEffort } from "@/lib/issue-constants";
 import { EFFORT_POINTS, effortToPoints } from "@/lib/cycle";
 
 /**
- * La matrice par effort de MIN-147 est un JEU DE RÈGLES, pas un `switch` : ce
- * qu'on vérifie ici, c'est le parcours qu'elle produit, déroulé état par état,
- * exactement comme le moteur le déroulera.
+ * The effort matrix of MIN-147 is a SET OF RULES, not a `switch`: this
+ * that we check here is the path it produces, unfolded state by state,
+ * exactly as the engine will unfold it.
  */
 
 const facts = (effort: IssueEffort | null, plan: string | null = null): AutomationIssueFacts => ({
@@ -51,9 +51,9 @@ const facts = (effort: IssueEffort | null, plan: string | null = null): Automati
 const enteredTodo: AutomationEvent = { type: "status_changed", from: "backlog", to: "todo" };
 
 /**
- * Nomme les étapes d'un parcours simulé. « Vérifier le plan » n'est pas un mode
- * à part : c'est `mode: plan` sur un ticket qui en a déjà un — on le distingue
- * ici pour que les attentes des tests se lisent comme la matrice de MIN-147.
+ * Names the steps of a simulated route. “Check plan” is not a separate
+ * mode: it's `mode: plan` on a ticket that already has one — we distinguish it
+ * here so that the test expectations read like the MIN-147 matrix.
  */
 function walk(
   rules: AutomationRule[],
@@ -105,7 +105,7 @@ describe("préréglage loop-by-effort — la matrice par effort", () => {
         "implement",
         "verify",
       ]);
-      // Une fois et une seule : la reprise ne redemande pas un second arrêt.
+      // Once and only once: resuming does not require a second stop.
       expect(resumed.filter((s) => s === "await_human")).toHaveLength(1);
     }
   });
@@ -113,7 +113,7 @@ describe("préréglage loop-by-effort — la matrice par effort", () => {
   it("le parcours le plus long, reprise comprise, tient sous le garde-fou", () => {
     const longest = simulateChain(rules, facts("xl"), { throughHumanStop: true });
     expect(longest).toHaveLength(5);
-    // + implémenter/vérifier rejoués une fois après une vérification en échec.
+    // + implement/check replayed once after a failed check.
     expect(longest.length + 2).toBeLessThanOrEqual(MAX_CHAIN_STEPS);
     expect(rulesToReplayOnRetry(rules).length).toBeGreaterThan(0);
   });
@@ -157,8 +157,8 @@ describe("une règle déjà jouée ne rematche pas", () => {
 
 describe("simulateIssueLifetime — ce que ça coûte sur la vie du ticket", () => {
   it("compte les DEUX chaînes d'un préréglage plan + vérification", () => {
-    // Elles sont séparées par le travail d'un humain : une chaîne partie de
-    // « à faire » ne voit jamais l'entrée en revue.
+    // They are separated by the work of a human: a chain part of
+    // “to do” never sees the entry reviewed.
     const rules = presetRules("plan-and-verify");
     expect(simulatedRunModes(simulateChain(rules, facts("m")))).toEqual(["plan"]);
     expect(simulatedRunModes(simulateIssueLifetime(rules, facts("m")))).toEqual([
@@ -280,9 +280,9 @@ describe("origine du changement de statut — ne pas marcher sur le travail manu
     nextRule(rules, { event, issue: at(status), playedRuleIds: [] }) !== null;
 
   it("ÉCRIRE du code ne part que d'une DEMANDE humaine", () => {
-    // Le cas signalé : mon agent MCP range son ticket en « à faire » pour dire
-    // ce qu'IL fait — lui envoyer Numo par-dessus met deux ouvriers sur la même
-    // branche. Idem pour la forge et pour le cycle de vie d'un run.
+    // The case reported: my MCP agent puts his ticket in “to do” to say
+    // what HE does — sending Numo over him puts two workers on the same
+    // branch. Same for the forge and for the life cycle of a run.
     for (const preset of ["loop-by-effort", "plan-only", "implement-only"] as const) {
       const rules = presetRules(preset);
       for (const source of ["web", "numo"] as const) {
@@ -295,22 +295,22 @@ describe("origine du changement de statut — ne pas marcher sur le travail manu
   });
 
   it("demander à Numo de déplacer le ticket AMORCE la boucle — c'est mon geste", () => {
-    // `numo` = l'ASSISTANT relayant une instruction. Seul le clavier change par
-    // rapport à un glisser-déposer : l'intention est la même, donc l'effet aussi.
+    // `numo` = the WIZARD relaying an instruction. Only the keyboard changes
+    // compared to drag and drop: the intention is the same, therefore the effect too.
     const rules = presetRules("loop-by-effort");
     expect(fires(rules, entering("todo", "numo"), "todo")).toBe(true);
     expect(fires(rules, entering("todo", "agent"), "todo")).toBe(false);
   });
 
   it("VÉRIFIER accepte tout ce qui travaille — c'est le meilleur usage de la boucle", () => {
-    // « Claude Code a fini et passe le ticket en revue → minddy relit » : le
-    // scénario le plus fort de la feature. Relire n'écrase le travail de
-    // personne, contrairement à coder.
+    // “Claude Code has finished and is reviewing the ticket → minddy rereads”: the
+    // strongest scenario of the feature. Proofreading does not overwrite the work
+    // person, unlike code.
     const rules = presetRules("verify-only");
     for (const source of ["web", "mcp", "numo", "forge"] as const) {
       expect(fires(rules, entering("in_review", source), "in_review")).toBe(true);
     }
-    // …sauf la boucle elle-même : une chaîne ne réagit pas à sa propre empreinte.
+    // …except the loop itself: a string does not react to its own imprint.
     expect(fires(rules, entering("in_review", "automation"), "in_review")).toBe(false);
   });
 
@@ -321,14 +321,14 @@ describe("origine du changement de statut — ne pas marcher sur le travail manu
   });
 
   it("REFUSER une PR ne relance pas la boucle depuis le début", () => {
-    // `issueStatusForPrState("closed")` renvoie le ticket en « à faire », écrit
-    // par Numo (fermeture in-app) ou par la forge (webhook). C'est une ENTRÉE en
-    // `todo` comme une autre : sans filtre d'origine, refuser la PR rouvrait une
-    // chaîne NEUVE — la précédente étant `completed`, ni `played_rule_ids` ni
-    // `MAX_CHAIN_STEPS` ne protégeaient. Rejeter le travail le faisait donc
-    // recommencer, indéfiniment.
+    // `issueStatusForPrState("closed")` returns the ticket as “to do”, written
+    // by Numo (in-app closure) or by the forge (webhook). It is an ENTRY into
+    // `todo` like any other: without an original filter, refusing the PR reopened a
+    // NEW string — the previous one being `completed`, neither `played_rule_ids` nor
+    // `MAX_CHAIN_STEPS` did not protect. Rejecting work did so
+    // start again, indefinitely.
     //
-    // `agent` = fermeture in-app (le cycle de vie du run) ; `forge` = webhook.
+    // `agent` = in-app closure (the run lifecycle); `forge` = webhook.
     const rules = presetRules("loop-by-effort");
     for (const source of ["agent", "forge"] as const) {
       expect(fires(rules, entering("todo", source), "todo")).toBe(false);
@@ -350,9 +350,9 @@ describe("origine du changement de statut — ne pas marcher sur le travail manu
   });
 
   it("un événement SIMULÉ n'est jamais filtré — l'estimation chiffre le nominal", () => {
-    // `simulateChain` synthétise des événements sans origine : les filtrer
-    // afficherait « 0 étape » sur l'écran dont toute la raison d'être est de
-    // dire ce que ça coûte.
+    // `simulateChain` synthesizes events without origin: filter them
+    // would display “0 steps” on the screen, the whole reason for which is to
+    // say what it costs.
     for (const id of AUTOMATION_PRESET_IDS) {
       const steps = simulateIssueLifetime(presetRules(id), facts("m"));
       expect(steps.length).toBeGreaterThan(0);
@@ -373,11 +373,11 @@ describe("origine du changement de statut — ne pas marcher sur le travail manu
   it("automationSourceOf : la boucle prime, puis le run, l'inconnu tombe en system", () => {
     expect(automationSourceOf({ raw: "web" })).toBe("web");
     expect(automationSourceOf({ raw: "mcp" })).toBe("mcp");
-    // Une écriture de la boucle est `via_assistant` ET `via_automation` : c'est
-    // la seconde qui doit gagner, sinon la chaîne se relance elle-même.
+    // A write of the loop is `via_assistant` AND `via_automation`: it is
+    // the second which must win, otherwise the chain restarts itself.
     expect(automationSourceOf({ raw: "numo", viaAutomation: true })).toBe("automation");
-    // Le nœud du problème : l'ASSISTANT et le CYCLE DE VIE d'un run arrivent ici
-    // tous deux en `numo`. Seul le second est écarté.
+    // The crux of the matter: the WIZARD and LIFE CYCLE of a run arrive here
+    // both in `numo`. Only the second is excluded.
     expect(automationSourceOf({ raw: "numo" })).toBe("numo");
     expect(automationSourceOf({ raw: "numo", viaAgentRun: true })).toBe("agent");
     expect(automationSourceOf({ raw: "martien" })).toBe("system");
@@ -428,8 +428,8 @@ describe("parseAutomations — tolérante par construction", () => {
   });
 
   it("un survol de la base : les préréglages relus par le parseur sont eux-mêmes", () => {
-    // Sur la LISTE, pas sur trois ids écrits en dur : un préréglage ajouté doit
-    // entrer dans ce test tout seul.
+    // On the LIST, not on three hard-written ids: an added preset must
+    // enter this test alone.
     for (const id of AUTOMATION_PRESET_IDS) {
       const rules = presetRules(id);
       expect(parseAutomations(JSON.parse(JSON.stringify(rules)))).toEqual(rules);
@@ -451,7 +451,7 @@ describe("coût d'une étape — la taille du ticket compte autant que l'étape"
   });
 
   it("l'échelle est celle des points du produit, pas une deuxième", () => {
-    // Deux endroits qui pèsent un ticket doivent le peser pareil.
+    // Two places that weigh a ticket must weigh it the same.
     for (const effort of ["xs", "s", "m", "l", "xl"] as const) {
       expect(effortCostFactor(effort)).toBeCloseTo(
         effortToPoints(effort) / EFFORT_POINTS.m,
@@ -474,7 +474,7 @@ describe("coût d'une étape — la taille du ticket compte autant que l'étape"
         (sum, mode) => sum + stepCostUsd(mode, effort),
         0,
       );
-    // Un XS n'implémente que ; un XL joue quatre étapes, chacune plus chère.
+    // An XS only implements; an XL plays four stages, each more expensive.
     expect(total("xl")).toBeGreaterThan(total("xs") * 5);
   });
 });
@@ -511,14 +511,14 @@ describe("personnalisation par taille de ticket", () => {
   });
 
   it("des métadonnées corrompues ne cassent rien", () => {
-    // La CARTE elle-même illisible → on retombe sur les défauts.
+    // The CARD itself is illegible → we come back to the faults.
     for (const junk of [42, "oui", null, []]) {
       expect(isAutomationEffortEnabled({ [AUTOMATION_EFFORTS_META_KEY]: junk }, "xs")).toBe(true);
       expect(automationModelFor({ [AUTOMATION_MODELS_META_KEY]: junk }, "xs")).toBeNull();
     }
-    // Une VALEUR du bon type mais absurde dans une carte lisible : seul ce qui
-    // n'est pas une chaîne non vide est écarté (un id de modèle est du texte
-    // libre — le catalogue tranche à l'usage, pas ici).
+    // A VALUE of the right type but absurd in a readable map: only what
+    // is not a non-empty string is discarded (a model id is text
+    // free — the catalog decides on usage, not here).
     const meta = { [AUTOMATION_MODELS_META_KEY]: { xs: 42, s: "", m: "vendor/model" } };
     expect(automationModelFor(meta, "xs")).toBeNull();
     expect(automationModelFor(meta, "s")).toBeNull();

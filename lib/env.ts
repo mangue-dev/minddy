@@ -19,7 +19,7 @@ export interface AppEnvironment {
   NODE_ENV?: string;
 }
 
-/** Résolution pure : Vercel affine production/preview, Node couvre tout autre hébergeur. */
+/** Pure resolution: Vercel refines production/preview, Node covers any other host. */
 export function resolveAppEnv(env: AppEnvironment): AppEnv {
   const v = env.NEXT_PUBLIC_VERCEL_ENV ?? env.VERCEL_ENV;
   if (v === "production") return "production";

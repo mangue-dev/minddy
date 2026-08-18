@@ -1,39 +1,39 @@
 /**
- * La PROFONDEUR d'une valeur JSON, mesurée sans récursion (MIN-348).
+ * The DEPTH of a JSON value, measured without recursion (MIN-348).
  *
- * Le garde-fou de taille d'un corps de page était `JSON.stringify(value).length`
- * — et c'est le garde-fou lui-même qui tombait le premier : `JSON.stringify`
- * descend l'arbre par la pile d'appels, donc un document de quelques kilo-octets
- * mais imbriqué dix mille fois lève un `RangeError` AVANT d'avoir pu être pesé.
- * La borne à poser en premier n'est donc pas la taille, c'est la profondeur, et
- * elle doit se mesurer autrement que par une descente récursive.
+ * The page body size guardrail was `JSON.stringify(value).length`
+ * — and it was the guardrail itself that fell first: `JSON.stringify`
+ * goes down the tree through the call stack, so a document of a few kilobytes
+ * but nested ten thousand times throws a `RangeError` BEFORE it can be weighed.
+ * The terminal to put first is therefore not the size, it is the depth, and
+ * it must be measured other than by a recursive descent.
  *
- * D'où une pile EXPLICITE. Elle a un second effet, gratuit : un objet cyclique
- * (que `JSON.stringify` refuse, mais après coup) fait croître la profondeur sans
- * fin, donc sort par le plafond au lieu de tourner en rond.
+ * Hence an EXPLICIT stack. It has a second, free effect: a cyclical object
+ * (which `JSON.stringify` refuses, but after the fact) increases the depth without
+ * end, so comes out through the ceiling instead of going in circles.
  *
- * Module pur, sans `server-only` : la même borne sert au client le jour où il
- * veut refuser avant d'envoyer.
+ * Pure module, without `server-only`: the same terminal is used by the customer on the day he
+ * wants to refuse before sending.
  */
 
 /**
- * Le plafond d'un corps de page ProseMirror.
+ * The ceiling of a ProseMirror page body.
  *
- * Large exprès : une liste à puces imbriquée dix fois pèse déjà une trentaine de
- * niveaux (doc → liste → item → paragraphe, par cran), et une citation dans un
- * tableau dans une liste en ajoute autant. Cent niveaux, c'est au-delà de tout
- * document qu'un éditeur rend — mais très en deçà de ce qui casse une pile.
+ * Large on purpose: a bulleted list nested ten times already weighs around thirty
+ * levels (doc → list → item → paragraph, by notch), and a quote in a
+ * array in a list adds that many. A hundred levels is beyond anything
+ * document that an editor returns — but far short of what breaks a pile.
  */
 export const MAX_PAGE_JSON_DEPTH = 100;
 
 /**
- * `true` dès que `value` dépasse `max` niveaux d'imbrication.
+ * `true` as soon as `value` exceeds `max` nesting levels.
  *
- * S'arrête à la première branche fautive : sur une entrée hostile, le coût est
- * celui de la descente jusqu'au plafond, pas celui de l'arbre entier.
+ * Stops at the first faulty branch: on a hostile entry, the cost is
+ * that of the descent to the ceiling, not that of the entire tree.
  */
 export function exceedsJsonDepth(value: unknown, max: number): boolean {
-  // [valeur, profondeur de la valeur]. La racine est au niveau 1.
+  // [value, value depth]. The root is at level 1.
   const stack: [unknown, number][] = [[value, 1]];
 
   while (stack.length > 0) {

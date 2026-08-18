@@ -1,19 +1,19 @@
 /**
- * L'URL publique d'un board de feedback (MIN-106) — partagé client/serveur.
+ * The public URL of a feedback board (MIN-106) — shared client/server.
  *
- * Un board répond sous DEUX hosts : `www.minddy.app/f/<token>` toujours, et le
- * domaine personnalisé du client (MIN-36) quand il en a attaché un. Celui qui
- * fait foi est le domaine du client — c'est son site, pas le nôtre, et c'est
- * l'URL qu'il veut voir dans le code de son app.
+ * A board responds under TWO hosts: `www.minddy.app/f/<token>` always, and the
+ * custom domain of the client (MIN-36) when it has attached one. The authentic one that
+ * is the customer's domain — it's their site, not ours, and it's
+ * the URL they want to see in their app code.
  *
- * Mais seulement une fois VÉRIFIÉ. Un domaine `pending` est une ligne en base
- * dont le DNS ne pointe encore nulle part : le donner à un agent qui code un
- * bouton produirait un lien mort, et la panne n'apparaîtrait qu'en production,
- * chez les utilisateurs. Tant que Vercel n'a pas confirmé, l'URL de référence
- * reste celle en `/f/<token>`, qui, elle, marche toujours.
+ * But only once VERIFIED. A `pending` domain is a line in base
+ * whose DNS does not yet point anywhere: giving it to an agent who codes a
+ * button would produce a dead link, and the failure would only appear in production,
+ * among users. As long as Vercel has not confirmed, the reference URL
+ * remains the one in `/f/<token>`, which still works.
  *
- * La règle vivait jusqu'ici en ligne dans `components/project-feedback-settings.tsx` ;
- * Numo et le serveur MCP la partagent maintenant avec lui.
+ * The rule lived until now online in `components/project-feedback-settings.tsx` ;
+ * Numo and the MCP server share it now with him.
  */
 
 export interface BoardCustomDomain {
@@ -23,7 +23,7 @@ export interface BoardCustomDomain {
 
 export function feedbackBoardUrl(input: {
   token: string;
-  /** Origine du site minddy, sans slash final (`SITE_URL` côté serveur). */
+  /** Origin of the minddy site, without final slash (`SITE_URL` server side). */
   origin: string;
   customDomain?: BoardCustomDomain | null;
 }): string {

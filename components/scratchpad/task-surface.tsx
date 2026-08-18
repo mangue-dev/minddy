@@ -1,48 +1,48 @@
 "use client";
 
-// CE QUE LA VUE D'UNE TÂCHE NE PEUT PAS SAVOIR — et que sa surface, elle, sait.
+// WHAT THE SIGHT OF A TASK CANNOT KNOW — and that its surface knows.
 //
-// Une tâche est le même objet dans le carnet et dans une page (task-nodes.ts) ;
-// sa vue est donc la même (task-item-view.tsx). Ce qui diffère n'est jamais la
-// tâche : c'est ce qu'il faut faire AUTOUR quand on la confie.
+// A task is the same object in the notebook and in a page (task-nodes.ts);
+// its view is therefore the same (task-item-view.tsx). What is different is never the
+// task: this is what needs to be done AROUND when given it.
 //
-//  - QUITTER : le carnet est une modale, et son démontage flushe l'autosave
-//    (scratchpad-editor.tsx) ; une page ne se ferme pas, elle écrit ce qui
-//    traîne avant de laisser la navigation partir.
-//  - LE PROMPT : les notes du carnet se relisent avec `minddy_get_scratchpad`,
-//    une page avec `minddy_get_page` — et une tâche de page vient d'un document
-//    qui a un nom, ce que l'agent doit lire.
-//  - PROMOUVOIR : la formulation adressée à Numo nomme d'où sort la note.
+// - EXIT: the notebook is a modal, and its disassembly flushes the autosave
+// (scratchpad-editor.tsx); a page does not close, it writes what
+// drags before letting the navigation go.
+// - THE PROMPT: the notes in the notebook are reread with `minddy_get_scratchpad`,
+// a page with `minddy_get_page` — and a page task comes from a document
+//    that has a name, what the agent must read.
+// - PROMOTE: the wording addressed to Numo names where the note comes from.
 //
-// D'où ce contexte, et sa forme : trois GESTES déjà décidés, pas trois réglages
-// que la vue aurait à recombiner. La vue appelle `launchAgent(md)` ; ce qu'il
-// advient de la surface, de quel prompt on emballe et de quel projet on parle
-// n'est pas son affaire — c'est exactement ce qui lui permet d'être la même des
-// deux côtés.
+// Hence this context, and its form: three GESTUREs already decided, not three settings
+// that the view would have to recombine. The view calls `launchAgent(md)`; what he
+// what happens to the surface, what prompt we are packing and what project we are talking about
+// is none of its business — this is exactly what allows it to be the same
+// two sides.
 
 import { createContext, useContext, type ReactNode } from "react";
 
 export interface TaskSurface {
   /**
-   * Le prompt à mettre dans le presse-papier pour cette tâche. Reçoit le
-   * markdown porté par la tâche — les titres de sa section, puis la tâche et
-   * ses sous-tâches (cf. task-item-view.tsx).
-   */
+ * The prompt to put on the clipboard for this task. Receives the
+ * markdown carried by the task — the titles of its section, then the task and
+ * its subtasks (see task-item-view.tsx).
+ */
   copyPrompt: (markdown: string) => string;
 
   /**
-   * Confier la tâche à un agent : quitter la surface (en enregistrant ce qui
-   * traîne), amorcer le composer de la page Agents et y naviguer. Reçoit le
-   * même markdown que `copyPrompt`.
-   */
+ * Entrust the task to an agent: leave the surface (by saving what
+ * is lying around), start the agent page and navigate there. Receives the
+ * same markdown as `copyPrompt`.
+ */
   launchAgent: (markdown: string) => void;
 
   /**
-   * Promouvoir la note en ticket : quitter la surface et ouvrir Numo avec la
-   * demande. Reçoit le TEXTE de la tâche (et de ses sous-tâches), pas un
-   * prompt — la formulation appartient à la surface, qui seule sait d'où la
-   * note sort.
-   */
+ * Promote the note to a ticket: leave the surface and open Numo with the
+ * request. Receives the TEXT of the task (and its subtasks), not a
+ * prompt — the wording belongs to the surface, which alone knows where the
+ * note sort.
+ */
   promote: (note: string) => void;
 }
 
@@ -63,10 +63,10 @@ export function TaskSurfaceProvider({
 }
 
 /**
- * La surface qui porte la tâche. `null` hors de tout provider — la vue rend
- * alors la case à cocher seule, sans menu ⋯ ni raccourcis : une tâche reste
- * cochable partout, mais on ne confie rien depuis une surface qui n'a pas dit
- * ce que « confier » veut dire chez elle.
+ * The surface that carries the task. `null` outside of any provider — the view renders
+ * then the checkbox alone, without menu ⋯ or shortcuts: a task remains
+ * checkable everywhere, but nothing is entrusted from a surface which has not said
+ * what “entrust” means at home.
  */
 export function useTaskSurface(): TaskSurface | null {
   return useContext(TaskSurfaceContext);

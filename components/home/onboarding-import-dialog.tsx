@@ -21,19 +21,19 @@ import { useAnalytics } from "@/lib/use-analytics";
 import { ImportWizardDialog } from "@/components/import/import-wizard-dialog";
 
 /**
- * Import d'un backlog existant depuis l'onboarding (MIN-98).
+ * Import an existing backlog from onboarding (MIN-98).
  *
- * Le parcours est celui du wizard d'import (`import-wizard-dialog.tsx`) ; ce
- * fichier n'ajoute que ce qui n'existe que là : dans quel projet importer (les
- * réglages le savent déjà) et le renvoi vers ces mêmes réglages pour plus tard.
- * Les deux voyagent DANS la première étape, avec la question à laquelle ils
- * répondent.
+ * The route is that of the import wizard (`import-wizard-dialog.tsx`); This
+ * file only adds what only exists there: into which project to import (the
+ * settings already know it) and referring to these same settings for later.
+ * The two travel IN the first stage, with the question to which they
+ * respond.
  *
- * `initialFile` est le CSV lâché sur la carte d'onboarding : le wizard s'ouvre
- * alors directement sur la correspondance.
+ * `initialFile` is the CSV dropped on the onboarding card: the wizard opens
+ * then directly on the correspondence.
  *
- * Sans projet à soi, il n'y a nulle part où déposer : on garde une petite
- * modale qui le dit, plutôt qu'un parcours en trois étapes qui ne mènerait à
+ * Without a project of your own, there is nowhere to deposit: we keep a small
+ * modal which says so, rather than a three-step journey which would only lead to
  * rien.
  */
 export function OnboardingImportDialog({
@@ -52,8 +52,8 @@ export function OnboardingImportDialog({
   const { projects } = useProjects();
   const { track } = useAnalytics();
 
-  // Importer écrit dans un projet, et la route est réservée à son propriétaire :
-  // un compte entré par invitation n'a rien où déposer son CSV.
+  // Import written in a project, and the route is reserved for its owner:
+  // an account entered by invitation has nowhere to deposit its CSV.
   const owned = useMemo(
     () => projects.filter((p) => p.owner_id === user?.id),
     [projects, user?.id]
@@ -81,7 +81,7 @@ export function OnboardingImportDialog({
       onOpenChange={onOpenChange}
       projectId={target.id}
       initialFile={initialFile}
-      // La donnée produit qui manquait : de quel outil viennent les comptes.
+      // The product data that was missing: which tool the accounts come from.
       onProviderSelected={(guide) =>
         track("onboarding_import_provider_selected", { provider: guide.id })
       }

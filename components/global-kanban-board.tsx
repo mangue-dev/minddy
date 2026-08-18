@@ -191,7 +191,7 @@ export function GlobalKanbanBoard({
     [issues, statuses, displayComparator]
   );
 
-  // L'ordre de lecture du board — l'ordre dans lequel un paquet glissé atterrit.
+  // Board reading order — the order in which a slipped packet lands.
   const rank = useMemo(() => displayRank(columns), [columns]);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -208,7 +208,7 @@ export function GlobalKanbanBoard({
     selectedIssues.forEach((issue) => onUpdateIssue(issue.id, patch, issue.project_id));
   }, [onUpdateIssue, selectedIssues]);
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
-  // Lasso sur le fond du board — même hook, même sélection que le board de projet.
+  // Lasso on the bottom of the board — same hook, same selection as the project board.
   const {
     ref: marqueeRef,
     onPointerDown: onMarqueePointerDown,
@@ -217,8 +217,8 @@ export function GlobalKanbanBoard({
     selected: selectedIds,
     onChange: setSelectedIds,
   });
-  // Objectifs et relations sont propres à un projet : les actions groupées qui
-  // en dépendent n'existent que si TOUTE la sélection tient dans le même.
+  // Objectives and relationships are specific to a project: grouped actions which
+  // depend on it only exist if ALL the selection fits in the same one.
   const selectionProjectId = useMemo(() => {
     if (selectedIssues.length === 0) return null;
     const first = selectedIssues[0].project_id;
@@ -244,7 +244,7 @@ export function GlobalKanbanBoard({
       onRemove: () => removable.forEach((issue) => onSetCycle(issue, null)),
     };
   }, [cycleTargetId, onSetCycle, selectedIssues]);
-  // Une relation a exactement deux bouts : l'action n'existe qu'à deux tickets.
+  // A relationship has exactly two ends: action only exists at two ends.
   const bulkLink = useMemo(() => {
     if (selectedIssues.length !== 2 || !selectionProjectId || !onAddRelation) {
       return undefined;
@@ -255,8 +255,8 @@ export function GlobalKanbanBoard({
       clearSelection();
     };
   }, [selectedIssues, selectionProjectId, onAddRelation, clearSelection]);
-  // Le glisser : paquet embarqué, repère de dépôt et plan d'écriture, du même
-  // calcul que le board de projet (cf. lib/use-board-drop.ts).
+  // Drag it: embedded package, deposit marker and writing plan, of the same
+  // calculation as the project board (see lib/use-board-drop.ts).
   const drop = useBoardDrop({
     columns,
     comparator: displayComparator,
@@ -264,8 +264,8 @@ export function GlobalKanbanBoard({
     issueMap,
     selectedIds,
     rank,
-    // Vue de cycle : l'ordre de reco est le seul, donc pas de réordonnancement
-    // dans une colonne — seul le changement de statut passe.
+    // Cycle view: the receipt order is the only one, therefore no reordering
+    // in a column — only the status change passes.
     crossColumnOnly: !!comparator,
   });
   const { preview, draggingIds, activeId } = drop;
@@ -289,8 +289,8 @@ export function GlobalKanbanBoard({
   // — same affordance as the project board.
   const { ref: fadeRef, scrollProps, edges } = useScrollFade<HTMLDivElement>("x");
 
-  // Le fondu des bords et le lasso veulent le même nœud. Fusion mémoïsée : une
-  // nouvelle identité à chaque rendu les ferait détacher puis rattacher.
+  // The edge fade and lasso want the same knot. Memorized fusion: one
+  // new identity with each render would cause them to detach and then reattach.
   const setScrollerRef = useCallback(
     (node: HTMLDivElement | null) => {
       fadeRef(node);
@@ -303,7 +303,7 @@ export function GlobalKanbanBoard({
   const handleDragMove = (event: DragMoveEvent) => drop.track(event);
 
   const handleDragEnd = (event: DragEndEvent) => {
-    // Le repère montrait déjà CE plan-là : on l'écrit tel quel.
+    // The marker already showed THIS plan: we write it as is.
     const planned = drop.plan(event);
     drop.end();
     if (!planned) return;
@@ -314,18 +314,18 @@ export function GlobalKanbanBoard({
   };
 
   return (
-    // Halo « agent en cours » sur les cartes cross-projet : provider en mode GLOBAL
-    // (pas de projectId → endpoint /api/agent-activity, borné par la RLS).
+    // Halo “agent in progress” on cross-project maps: provider in GLOBAL mode
+    // (no projectId → endpoint /api/agent-activity, bounded by the RLS).
     <AgentActivityProvider>
-    {/* « @ » au survol d'une carte (ou sur la sélection) ouvre Numo — même
-        contexte que le bouton Numo de la pilule de sélection (MIN-105). */}
+    {/* “@” when hovering over a card (or on selection) opens Numo — even
+ context as the Numo button of the selection pill (MIN-105). */}
     <AskNumoProvider selectedIssues={selectedIssues} onAskNumo={onAskNumo}>
     <DndContext
       sensors={sensors}
       collisionDetection={boardCollision}
       onDragStart={handleDragStart}
-      // Le côté du dépôt change sans que la cible change : c'est `onDragMove`
-      // qui le voit, pas `onDragOver` (cf. KanbanBoard).
+      // The side of the deposit changes without the target changing: this is `onDragMove`
+      // who sees it, not `onDragOver` (see KanbanBoard).
       onDragMove={handleDragMove}
       onDragOver={handleDragMove}
       onDragEnd={handleDragEnd}
@@ -347,7 +347,7 @@ export function GlobalKanbanBoard({
           onLink={bulkLink}
         />
       )}
-      {/* Fondu de bord À CÔTÉ du scroller, pas dessus (MIN-319). */}
+      {/* Edge fade NEXT to the scroller, not on it (MIN-319). */}
       <div className="relative flex h-full min-h-0 flex-col">
         <div
           ref={setScrollerRef}
@@ -394,7 +394,7 @@ export function GlobalKanbanBoard({
       <DragOverlay dropAnimation={null}>
         {activeIssue ? (
           <div className="relative w-[21rem]">
-            {/* Le paquet ne se voit pas au curseur : le compte le dit. */}
+            {/* The package is not visible on the cursor: the account says so. */}
             {draggingIds.size > 1 && (
               <span className="absolute -right-2 -top-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground shadow-md">
                 {draggingIds.size}

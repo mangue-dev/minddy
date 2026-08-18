@@ -10,16 +10,16 @@ import {
 } from "@/lib/server/feedback/sso-crypto";
 
 /**
- * Boards de feedback (MIN-37). Un board par projet, opt-in. Le token est la
- * capability de l'URL publique (/f/<token>), stocké en clair comme les vues
- * partagées (il doit être réaffichable). enabled=false = la page publique 404
- * mais la collecte (API + interne + IA) continue. feedback_boards est RLS
- * deny-all : tout passe par le service client, checks d'accès côté routes.
+ * Feedback boards (MIN-37). One board per project, opt-in. The token is the
+ * capability of the public URL (/f/<token>), stored in plaintext like the shared
+ * views (it must be redisplayable). enabled=false = the public page 404
+ * but the collection (API + internal + AI) continues. feedback_boards is RLS
+ * deny-all: everything goes through customer service, access checks on the road side.
  *
- * Le secret SSO, lui, est chiffré au repos (MIN-119) : ce module est le SEUL
- * endroit qui le voit passer, et il rend toujours du clair à ses appelants —
- * `hydrateBoard` déchiffre à la lecture, `rotateSsoSecret` chiffre à l'écriture.
- * Aucun appelant n'a donc à savoir que la colonne porte une enveloppe.
+ * The SSO secret is encrypted at rest (MIN-119): this module is the ONLY
+ * place that sees it pass, and it always returns clarity to its callers —
+ * `hydrateBoard` decrypts when reading, `rotateSsoSecret` encrypts when writing.
+ * So no caller has to know that the column carries an envelope.
  */
 
 export interface FeedbackBoardRow {
@@ -27,16 +27,16 @@ export interface FeedbackBoardRow {
   project_id: string;
   token: string;
   enabled: boolean;
-  /** Couplage opt-in avec les vues partagées (onglets du site public). */
+  /** Opt-in coupling with shared views (public site tabs). */
   show_views: boolean;
-  /** Les vues (views.id) affichées en onglets — chaque vue est opt-in. */
+  /** Views (views.id) displayed in tabs — each view is opt-in. */
   visible_view_ids: string[];
-  /** Opt-in : afficher les catégories des posts sur le board public (MIN-52). */
+  /** Opt-in: display the post categories on the public board (MIN-52). */
   show_categories: boolean;
-  /** Commentaires publics sur les retours (MIN-196). Faux = lecture seule :
-      le fil déjà écrit reste lisible, plus personne n'y ajoute rien. */
+  /** Public Comments on Returns (MIN-196). False = read only:
+ the thread already written remains readable, no one adds anything to it. */
   allow_comments: boolean;
-  /** Accents optionnels du board public (MIN-59), hex par thème ; null = défaut. */
+  /** Optional public board accents (MIN-59), hex by theme; null = default. */
   accent_light: string | null;
   accent_dark: string | null;
   sso_secret: string | null;
@@ -59,12 +59,12 @@ export interface PublicBoardContext {
 }
 
 /**
- * Rend la ligne telle que le reste du code l'attend : `sso_secret` en clair.
+ * Returns the line as the rest of the code expects: `sso_secret` in plaintext.
  *
- * Un secret encore en clair en base (board d'avant MIN-119) est rescellé au
- * passage, après la réponse. `afterOrNow` et non un `void` détaché : la lecture
- * d'un board se fait en plein rendu de page, et une promesse détachée mourrait
- * au gel de l'invocation — le secret ne serait jamais chiffré, sans rien dire.
+ * A secret still in plaintext in the base (board before MIN-119) is resealed at the
+ * passage, after the response. `afterOrNow` and not a detached `void`: reading
+ * of a board is done in full rendering of the page, and a detached promise would die
+ * when the invocation is frozen — the secret would never be encrypted, without saying anything.
  */
 function hydrateBoard(row: FeedbackBoardRow | null): FeedbackBoardRow | null {
   if (!row) return null;
@@ -77,7 +77,7 @@ function hydrateBoard(row: FeedbackBoardRow | null): FeedbackBoardRow | null {
         .from("feedback_boards")
         .update({ sso_secret: sealed })
         .eq("id", row.id)
-        // Garde anti-écrasement : si une rotation est passée entre la lecture et
+        // Anti-crush guard: if a rotation has passed between reading and
         // ce rescellement, on ne remet pas l'ancien secret en place.
         .eq("sso_secret", row.sso_secret as string);
       if (error) {
@@ -89,8 +89,8 @@ function hydrateBoard(row: FeedbackBoardRow | null): FeedbackBoardRow | null {
   return { ...row, sso_secret: plain };
 }
 
-/** Résolution du token public. Ne filtre PAS sur enabled : la page décide
-    (le SSO landing et l'espace « Mes feedbacks » ont besoin du board row). */
+/** Public token resolution. Do NOT filter on enabled: the page decides
+ (the SSO landing and the “My feedback” space need the board row). */
 export async function getBoardByToken(token: string): Promise<PublicBoardContext | null> {
   if (!token) return null;
   const service = getServiceClient();
@@ -129,7 +129,7 @@ function generateBoardToken(): string {
   return randomBytes(16).toString("base64url");
 }
 
-/** Crée le board (enabled) s'il n'existe pas, sinon le réactive. */
+/** Creates the board (enabled) if it does not exist, otherwise reactivates it. */
 export async function enableBoardForProject(projectId: string): Promise<FeedbackBoardRow | null> {
   const service = getServiceClient();
   const existing = await getBoardForProject(projectId);
@@ -155,7 +155,7 @@ export async function enableBoardForProject(projectId: string): Promise<Feedback
   return hydrateBoard((data as FeedbackBoardRow | null) ?? null);
 }
 
-/** Couplage board ⇄ vues partagées (onglets du site public), opt-in. */
+/** Coupling board ⇄ shared views (public site tabs), opt-in. */
 export async function setBoardShowViews(
   projectId: string,
   showViews: boolean
@@ -168,7 +168,7 @@ export async function setBoardShowViews(
   return !error;
 }
 
-/** Sélection des vues partagées affichées en onglets (remplace la liste). */
+/** Selection of shared views displayed in tabs (replaces the list). */
 export async function setBoardVisibleViews(
   projectId: string,
   viewIds: string[]
@@ -181,7 +181,7 @@ export async function setBoardVisibleViews(
   return !error;
 }
 
-/** Affichage opt-in des catégories des posts sur le board public (MIN-52). */
+/** Opt-in display of post categories on the public board (MIN-52). */
 export async function setBoardShowCategories(
   projectId: string,
   showCategories: boolean
@@ -194,7 +194,7 @@ export async function setBoardShowCategories(
   return !error;
 }
 
-/** Commentaires publics sur les retours du board (MIN-196). */
+/** Public comments on board feedback (MIN-196). */
 export async function setBoardAllowComments(
   projectId: string,
   allowComments: boolean
@@ -207,8 +207,8 @@ export async function setBoardAllowComments(
   return !error;
 }
 
-/** Couleur d'accent du board public (MIN-59). N'écrit que les champs fournis
-    (hex validé en amont, ou null pour revenir au défaut). */
+/** Accent color of the public board (MIN-59). Only writes the fields provided
+ (hex validated upstream, or null to return to the default). */
 export async function setBoardAccent(
   projectId: string,
   patch: { accent_light?: string | null; accent_dark?: string | null }
@@ -234,7 +234,7 @@ export async function disableBoardForProject(projectId: string): Promise<boolean
   return !error;
 }
 
-/** Nouveau token : l'ancienne URL publique meurt immédiatement. */
+/** New token: the old public URL dies immediately. */
 export async function rotateBoardToken(projectId: string): Promise<FeedbackBoardRow | null> {
   const service = getServiceClient();
   const { data } = await service
@@ -247,14 +247,14 @@ export async function rotateBoardToken(projectId: string): Promise<FeedbackBoard
 }
 
 /**
- * Génère/régénère le secret SSO (HS256). Retourne le secret en CLAIR — c'est
- * l'appelant qui l'affiche au propriétaire — mais n'en range en base que
- * l'enveloppe chiffrée (MIN-119).
+ * Generates/regenerates the SSO secret (HS256). Returns the secret in CLEAR — it is
+ * the caller who displays it to the owner — but only stores in base
+ * the encrypted envelope (MIN-119).
  *
- * `null` couvre désormais deux échecs, et l'appelant les traite pareil : refaire
- * la manœuvre. Le second (secret de chiffrement absent de l'environnement) est
- * délibérément bloquant : livrer un secret SSO qu'on ne saurait pas protéger
- * serait pire que ne pas le livrer.
+ * `null` now covers two failures, and the caller treats them the same: redo
+ * the maneuver. The second (encryption secret absent from the environment) is
+ * deliberately blocking: delivering an SSO secret that we cannot protect
+ * would be worse than not delivering it.
  */
 export async function rotateSsoSecret(projectId: string): Promise<string | null> {
   const service = getServiceClient();

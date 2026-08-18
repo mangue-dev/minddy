@@ -46,71 +46,71 @@ import { parseAgentMentions } from "@/lib/agent-mentions";
 import { surfaceForAgentRun } from "@/lib/ai-surfaces";
 
 /**
- * PLAN DE CONTRÔLE de la microVM (MIN-223) — la seule surface par laquelle une
- * boucle qui vit dans la VM touchera la base, le ledger, les tickets et le carnet.
+ * microVM CONTROL PLANE (MIN-223) — the only surface through which a
+ * loop that lives in the VM will touch the base, the ledger, the tickets and the notebook.
  *
- * CE QUI FAIT QUE ÇA TIENT, et c'est une seule idée. La VM ne porte aucun jeton
- * POUR PARLER ICI : le firewall de Vercel Sandbox forwarde ses requêtes vers notre
- * route en y ajoutant un OIDC signé par la plateforme, dont le claim
- * `sandbox_name` vaut `agent-<run.id>`. **Le `runId` est donc un paramètre
- * d'ENTRÉE de ce module, dérivé de ce claim — jamais lu dans le corps de la
- * requête.** Tout le reste en découle :
+ * WHAT MAKES IT STAND, and it's just one idea. The VM does not carry any token
+ * TO TALK HERE: the Vercel Sandbox firewall forwards its requests to our
+ * road by adding an OIDC signed by the platform, whose claim
+ * `sandbox_name` is `agent-<run.id>`. **The `runId` is therefore a parameter
+ * INPUT of this module, derived from this claim — never read in the body of the
+ * query.** Everything else follows from this:
  *
- * - une VM ne peut écrire d'events que sur SON run, pas parce qu'on le vérifie,
- *   parce qu'elle ne peut rien prétendre d'autre ;
- * - le direct diffuse sur le topic DÉRIVÉ du run, jamais sur celui du corps —
- *   une clé Supabase à portée réduite n'aurait pas su l'empêcher, le topic étant
- *   un paramètre ;
- * - le ledger impute au `created_by` de la ligne du run, pas à un `billTo`
- *   envoyé : la VM ne choisit pas qui paye ce qu'elle dépense.
+ * - a VM can only write events on ITS run, not because it is checked,
+ * because it cannot claim anything else;
+ * - the live broadcast on the topic DERIVED from the run, never on that of the body —
+ * a Supabase key with reduced range would not have been able to prevent it, the topic being
+ * a parameter;
+ * - the ledger imputes to the `created_by` of the run line, not to a `billTo`
+ * sent: the VM does not choose who pays for what it spends.
  *
- * SÉPARÉ DE LA ROUTE À DESSEIN. La route
+ * SEPARATE FROM THE ROAD ON PURPOSE. The road
  * ([app/api/agent-vm/[...path]/route.ts](../../../app/api/agent-vm/[...path]/route.ts))
- * ne fait que vérifier l'OIDC et dériver le run ; ce module, lui, est testable
- * sans HTTP, et c'est ici que vivent les invariants qu'un test doit pouvoir
+ * just checks the OIDC and derives the run; this module is testable
+ * without HTTP, and this is where the invariants that a test must be able to live
  * casser.
  *
- * CE QUI S'Y EST AJOUTÉ AVEC LA BOUCLE (MIN-224). Les tools de PULL REQUEST,
- * `create_pr` et `web_search` sont désormais servis : ce qui manquait n'était pas
- * la surface mais ce que la boucle enverrait — le compteur d'ancres posées,
- * l'état de push du tour. Plus `/rest`, la fin de tour, et `/repo-auth`, qui rend
- * un token de forge frais à une VM qui travaille depuis plus longtemps que le
+ * WHAT WAS ADDED WITH THE LOOP (MIN-224). PULL REQUEST tools,
+ * `create_pr` and `web_search` are now served: what was missing was not
+ * the surface but what the loop would send — the counter of anchors placed,
+ * the push state of the round. Plus `/rest`, the end of the turn, and `/repo-auth`, which makes
+ * a fresh forge token to a VM that has been working longer than the
  * sien.
  *
- * LE SEUL SECRET QUE LA VM DÉTIENT, ET IL FAUT LE DIRE (MIN-327). « La microVM ne
- * détient aucun secret » était écrit ici et dans `network-policy.ts`, et c'était
- * faux : le token de forge est dans son `.git/config` depuis le clone, par
- * construction — c'est ce avec quoi elle pousse. La phrase juste est plus étroite :
- * la VM ne détient aucun secret **de minddy** (ni clé LLM, ni clé Supabase, ni
- * jeton d'identité), et le seul qu'elle porte est scopé au dépôt du projet, avec
- * le pouvoir minimal de son ancrage (`RepoTokenAccess` dans `repo-access.ts`).
- * L'affirmation trop large est ce qui a dispensé d'y regarder pendant deux tickets.
+ * THE ONLY SECRET THE VM HOLDS, AND IT MUST BE TOLD (MIN-327). “The microVM does not
+ * holds no secrets" was written here and in `network-policy.ts`, and it was
+ * false: the forge token is in its `.git/config` since the clone, by
+ * construction — that’s what it grows with. The correct sentence is narrower:
+ * the VM does not hold any secrets **from minddy** (neither LLM key, nor Supabase key, nor
+ * identity token), and the only one she carries is scoped at the project submission, with
+ * the minimum power of its anchoring (`RepoTokenAccess` in `repo-access.ts`).
+ * The overly broad statement is what saved me from looking at it for two tickets.
  *
- * ET IL Y A DÉSORMAIS UNE DEUXIÈME VOIE D'ADMISSION (MIN-355). Un tour qui joue
- * sur la machine de l'utilisateur n'a pas de firewall pour signer quoi que ce
- * soit : il PORTE un jeton HS256 que nous avons signé
- * ([local-exec-token.ts](local-exec-token.ts)), et le `runId` reste un paramètre
- * d'entrée de ce module — dérivé d'un claim, comme avant, mais d'un claim à nous.
+ * AND THERE IS NOW A SECOND ADMISSION ROUTE (MIN-355). A trick that plays
+ * on the user's machine does not have a firewall to sign anything
+ * either: it CARRYS an HS256 token that we have signed
+ * ([local-exec-token.ts](local-exec-token.ts)), and the `runId` remains a parameter
+ * input to this module — derived from a claim, as before, but from a claim of ours.
  *
- * Ce que ça change, et il faut le dire dans ces termes : **ce jeton vit sur un
- * disque que le modèle peut lire.** On ne traite donc pas sa confidentialité, on
- * réduit son POUVOIR — `opts.local` plus bas, et les deux refus qu'il déclenche :
- * `/repo-auth`, et `status = 'running'` exigé partout où la ligne du run est lue.
- * Deux et pas trois : le retrait de `set_scratchpad` a été écarté, et le pourquoi
- * est écrit là où il se serait posé (`/tool/`). Ce qui reste ouvert est ce qu'un
- * tour local doit pouvoir faire pour être un tour.
+ * What that changes, and it must be said in these terms: **this token lives on a
+ * disc that the model can read.** We therefore do not treat its confidentiality, we
+ * reduces its POWER — `opts.local` lower, and the two refusals it triggers:
+ * `/repo-auth`, and `status = 'running'` required wherever the run line is read.
+ * Two and not three: the removal of `set_scratchpad` was ruled out, and why
+ * is written where it would have landed (`/tool/`). What remains open is what a
+ * local tour must be able to do to be a tour.
  *
- * ET UNE SURFACE QUI N'EXISTE QUE POUR LUI (MIN-357). Sans firewall, personne ne
- * pose la clé du modèle à la sortie de la machine : `/llm-key` la rend, et elle
- * est le miroir de `/repo-auth` — refusée au cloud comme l'autre est refusée au
- * local. Elle ne rend JAMAIS qu'une clé mintée à plafond dur : ce qui borne le
- * dégât d'un jeton lu par le modèle n'est pas une cachette, c'est ce plafond-là.
+ * AND A SURFACE THAT EXISTS ONLY FOR HIM (MIN-357). Without a firewall, no one
+ * places the key of the model at the exit of the machine: `/llm-key` returns it, and it
+ * is the mirror of `/repo-auth` — refused to the cloud as the other is refused to
+ * local. It NEVER returns more than a minted key with a hard ceiling: which limits the
+ * damage from a token read by the model is not a hiding place, it is this ceiling.
  *
- * LA COUPURE QUI GUIDE TOUT ÇA : la microVM a le DÉPÔT, la fonction a la FORGE et
- * la BASE. `create_pr` est coupé exactement là — la VM pousse, la fonction ouvre.
+ * THE CUT THAT GUIDES IT ALL: the microVM has the DEPOSIT, the function has the FORGE and
+ * the BASIC. `create_pr` is cut exactly there — the VM pushes, the function opens.
  */
 
-/** Ce qu'une surface rend : un statut HTTP et un corps JSON. */
+/** What a surface renders: an HTTP status and a JSON body. */
 export interface ControlPlaneResult {
   status: number;
   body: unknown;
@@ -119,9 +119,9 @@ export interface ControlPlaneResult {
 const ok = (body: unknown = { ok: true }): ControlPlaneResult => ({ status: 200, body });
 const bad = (message: string): ControlPlaneResult => ({ status: 400, body: { error: message } });
 /**
- * CE RUN N'A PAS LE DROIT, et c'est un 403 — jamais un 404 (MIN-326). Le 404 dit
- * « ça n'existe pas », ce qui est faux d'un tool parfaitement vivant sur un autre
- * ancrage : il envoie diagnostiquer un tool manquant là où le refus est la règle.
+ * THIS RUN IS NOT ALLOWED, and it is a 403 — never a 404 (MIN-326). The 404 says
+ * “it doesn’t exist”, which is false from one tool perfectly alive on another
+ * anchoring: it sends to diagnose a missing tool where refusal is the rule.
  */
 const forbidden = (message: string): ControlPlaneResult => ({
   status: 403,
@@ -129,20 +129,20 @@ const forbidden = (message: string): ControlPlaneResult => ({
 });
 
 /**
- * Plafond de corps du plan de contrôle, MESURÉ (2026-08-07) : un POST forwardé
- * passe à 4 Mio et se fait refuser en 413 `FUNCTION_PAYLOAD_TOO_LARGE` dès 4,3 Mio
- * — c'est la limite de 4,5 Mo des fonctions Vercel, que le forward ne relève pas.
+ * Body ceiling of the control plane, MEASURED (2026-08-07): a forwarded POST
+ * goes to 4 MiB and is refused in 413 `FUNCTION_PAYLOAD_TOO_LARGE` from 4.3 MiB
+ * — this is the 4.5 MB limit for Vercel functions, which forward does not cover.
  *
- * Elle est SOUS `MAX_CHECKPOINT_BYTES` (8 Mo, checkpoint-fit.ts) : un checkpoint
- * à son plafond actuel ne passerait pas. On refuse ici, explicitement, plutôt que
- * de laisser la plateforme rendre un 413 en HTML qu'une boucle lirait comme « le
- * checkpoint est écrit ». Le rattrapage — abaisser le plafond, ou sortir le
- * checkpoint de cette route — appartient à MIN-224.
+ * It is UNDER `MAX_CHECKPOINT_BYTES` (8 MB, checkpoint-fit.ts): a checkpoint
+ * to its current ceiling would not pass. We refuse here, explicitly, rather than
+ * to let the platform render a 413 in HTML that a loop would read as “the
+ * checkpoint is written.” Catch-up — lower the ceiling, or take out the
+ * checkpoint of this road — belongs to MIN-224.
  */
 export const CONTROL_PLANE_MAX_BODY_BYTES = 4_000_000;
 
-/** Features de ledger qu'une VM a le droit d'écrire. Fermée : sans elle, une VM
- *  compromise imputerait sa dépense à `numo_chat` et la sortirait des compteurs
+/** Features of ledger that a VM has the right to write. Closed: without it, a VM
+ * compromised would charge its expense to `numo_chat` and remove it from the counters
  *  de l'agent. */
 const VM_ALLOWED_FEATURES = new Set<AiFeature>([
   "agent_code",
@@ -154,16 +154,16 @@ const VM_ALLOWED_FEATURES = new Set<AiFeature>([
 ]);
 
 /**
- * Ce qu'une remise en file peut porter (MIN-329) — les mêmes bornes que la porte
- * d'entrée des messages ([app/api/agent-runs/[runId]/steer/route.ts](../../../app/api/agent-runs/[runId]/steer/route.ts),
- * `MAX_LEN`), puisqu'on n'y remet que ce qui en est venu. Le nombre est large
- * exprès : un tour draine rarement plus de deux ou trois messages, et la borne
- * n'est là que pour qu'il y en ait une.
+ * What a re-queue can carry (MIN-329) — the same terminals as the door
+ * message entry ([app/api/agent-runs/[runId]/steer/route.ts](../../../app/api/agent-runs/[runId]/steer/route.ts),
+ * `MAX_LEN`), since we only put back what came from it. The number is large
+ * on purpose: a turn rarely drains more than two or three messages, and the terminal
+ * is there just so there is one.
  */
 const MAX_MESSAGE_LEN = 4000;
 const MAX_REQUEUED_MESSAGES = 50;
 
-/** Qui paye ce que ce run dépense — SA ligne, pas ce que la VM raconte. */
+/** Who pays for what this run spends — HIS line, not what the VM says. */
 function billToFor(run: AgentRun): AiUsageBillTo {
   return run.created_by
     ? { userId: run.created_by }
@@ -175,11 +175,11 @@ function num(v: unknown): number | null {
 }
 
 /**
- * Un INDEX d'appel, jamais autre chose (MIN-329). `seq` range les lignes d'un run
- * en bandes (les appels du modèle, `web_search`, `sandbox_compute`) : un nombre
- * négatif ou démesuré ne fait pas perdre d'argent, il fait atterrir une ligne
- * dans la bande d'une autre feature — donc un total juste, rangé au mauvais
- * endroit, ce qui est plus difficile à voir qu'une erreur franche.
+ * A CALL INDEX, never anything else (MIN-329). `seq` arranges the lines of a run
+ * in bands (model calls, `web_search`, `sandbox_compute`): a number
+ * negative or excessive does not lose money, it lands a line
+ * in the band of another feature — so a fair total, placed in the wrong
+ * place, which is more difficult to see than a frank error.
  */
 const MAX_SEQ = 100_000;
 function seqField(raw: unknown, max = MAX_SEQ): number {
@@ -189,12 +189,12 @@ function seqField(raw: unknown, max = MAX_SEQ): number {
 }
 
 /**
- * Le tarif du modèle, DEMANDÉ SEULEMENT QUAND IL PEUT CHANGER LA RÉPONSE.
+ * The price of the model, ASKED ONLY WHEN IT CAN CHANGE THE ANSWER.
  *
- * Le plafond calculé ne mord jamais sous `USAGE_COST_FLOOR_USD` (cf.
- * `checkUsageClaim`), et l'écrasante majorité des lignes est à quelques
- * millièmes de dollar. Aller lire l'index OpenRouter pour chacune d'elles serait
- * une requête réseau par round de modèle pour un verdict connu d'avance.
+ * The calculated ceiling never bites under `USAGE_COST_FLOOR_USD` (cf.
+ * `checkUsageClaim`), and the overwhelming majority of lines are within a few
+ * thousandths of a dollar. Going to read the OpenRouter index for each of them would be
+ * one network query per model round for a verdict known in advance.
  */
 async function usagePricingFor(
   model: string | null,
@@ -205,8 +205,8 @@ async function usagePricingFor(
     const { getOpenRouterModelInfo } = await import("./openrouter-index");
     return await getOpenRouterModelInfo(model);
   } catch (err) {
-    // Un index injoignable ne doit pas faire perdre la ligne : sans tarif, seules
-    // les bornes dures s'appliquent — c'est exactement ce que rend `null`.
+    // An unreachable index must not cause the line to be lost: without a tariff, only
+    // hard bounds apply — that's exactly what `null` renders.
     console.error("[agent-control-plane] pricing read failed:", (err as Error).message);
     return null;
   }
@@ -215,9 +215,9 @@ async function usagePricingFor(
 const LIVE_FILE_STATUSES = new Set(["added", "modified", "deleted", "renamed"]);
 
 /**
- * La liste de fichiers d'une charge de direct, ramenée à ce qu'elle prétend être :
- * des chemins non vides, un statut connu, et pas plus que le plafond de la liste
- * autoritaire. Rien de ce que la VM invente ne traverse.
+ * The file list of a live load, reduced to what it claims to be:
+ * non-empty paths, known status, and no more than the list cap
+ * authoritarian. Nothing that the VM invents crosses.
  */
 function liveFiles(
   raw: unknown,
@@ -239,16 +239,16 @@ function liveFiles(
     if (files.length === CHANGED_FILES_CAP) break;
   }
   if (files.length === 0) return {};
-  // L'aveu de troncature est celui des DEUX bornes : celle d'ici (ce que le relais
-  // a coupé) et celle de la VM, qui borne déjà au même plafond avant d'envoyer.
-  // Sans le second terme, une liste coupée EN AMONT arrivait avec `raw.length ===
-  // files.length` — donc sans troncature à déclarer, et le fil lisait une liste
-  // bornée comme une liste complète.
+  // The confession of truncation is that of the TWO terminals: the one here (what the relay
+  // cut) and that of the VM, which already limits to the same ceiling before sending.
+  // Without the second term, a list cut UPSTREAM arrived with `raw.length ===
+  // files.length` — so without truncation to declare, and the thread read a list
+  // bounded as a complete list.
   return { files, filesTruncated: raw.length > files.length || claimedTruncated === true };
 }
 
-/** Compteurs exacts fournis par le harnais local. Ils restent validés et bornés
- * avant de rejoindre le topic temps réel, comme les simples chemins ci-dessus. */
+/** Exact meters provided by local harness. They remain validated and narrow-minded
+ * before joining the real-time topic, like the simple paths above. */
 function liveFileStats(raw: unknown): AgentLiveFileStat[] | undefined {
   if (!Array.isArray(raw)) return undefined;
   const files: AgentLiveFileStat[] = [];
@@ -271,22 +271,22 @@ function liveFileStats(raw: unknown): AgentLiveFileStat[] | undefined {
 }
 
 /**
- * CE QUE CE TOUR A ENCORE LE DROIT DE DÉPENSER, relu MAINTENANT.
+ * WHAT THIS TOUR STILL HAS THE RIGHT TO SPEND, re-read NOW.
  *
- * Le plafond d'un tour est snapshoté à son lancement, et rien ne réserve de
- * budget : deux runs lancés à la même seconde lisent le même restant et le
- * prennent chacun pour plafond — donc ils peuvent dépenser le double. L'ancienne
- * forme s'en tirait par sa forme même, en relisant le quota à chaque chunk (cinq
- * minutes au pire) ; un tour de microVM dure des heures, et son plafond serait
- * aveugle du début à la fin sans cette surface.
+ * The cap of a round is snapshotted at its launch, and nothing reserves
+ * budget: two runs launched at the same second read the same remaining and the
+ * take each as a ceiling — so they can spend double. The old
+ * form was done by its very form, by rereading the quota for each chunk (five
+ * minutes at worst); a round of microVM lasts for hours, and its ceiling would be
+ * blind from start to finish without this surface.
  *
- * Le plus SERRÉ des deux plafonds, comme au lancement : le restant mensuel du
- * compte, et ce qu'il reste du budget posé sur le run (les routines). Les deux
- * partent du LEDGER, pas d'une colonne — c'est ce qui rend la relecture utile,
- * puisque le ledger est écrit appel par appel, y compris par les autres runs.
+ * The TIGHTER of the two ceilings, as at launch: the monthly remainder of the
+ * account, and what remains of the budget placed on the run (the routines). Both
+ * start from the LEDGER, not from a column — this is what makes proofreading useful,
+ * since the ledger is written call by call, including by the other runs.
  *
- * `null` = aucun plafond de compte ni de run, ou lecture en panne. La VM garde
- * alors son plafond d'entrée.
+ * `null` = no account or run cap, or reading out of order. The VM keeps
+ * then its entry ceiling.
  */
 async function turnBudgetRemainingUsd(run: AgentRun): Promise<number | null> {
   try {
@@ -311,33 +311,33 @@ async function turnBudgetRemainingUsd(run: AgentRun): Promise<number | null> {
 }
 
 /**
- * Une requête du plan de contrôle. `runId` vient de l'OIDC ; `surface` est le
+ * A request from the control plane. `runId` comes from OIDC; `surface` is the
  * chemin sous `/api/agent-vm` (`/events`, `/tool/read_issue`…).
  */
 export async function handleControlPlaneRequest(opts: {
   runId: string;
   method: string;
   surface: string;
-  /** Corps JSON déjà parsé. `null` sur un GET. */
+  /** JSON body already parsed. `null` on a GET. */
   body: Record<string, unknown> | null;
   /**
-   * Nom de la microVM appelante, tel que la plateforme l'a signé. Le `runId`
-   * en est déjà dérivé — c'est ici la même chose vue depuis la BASE : la ligne
-   * du run doit reconnaître cette microVM comme la sienne (MIN-331). Aujourd'hui
-   * le nom est déterministe, donc l'égalité tient par construction ; le jour où
-   * elle cesserait de tenir, c'est une VM qui parle pour un run qu'elle
-   * n'exécute pas, et ce n'est pas une divergence à découvrir dans les logs.
+   * Name of the calling microVM, as signed by the platform. The `runId`
+   * is already derived from it — here it is the same thing seen from the BASE: the line
+   * of the run should recognize this microVM as its own (MIN-331). Today
+   * the name is deterministic, so the equality holds by construction; the day when
+   * it would stop holding on, it's a VM that speaks for a run that it
+   * does not execute, and this is not a discrepancy to be discovered in the logs.
    */
   sandboxName?: string;
   /**
-   * LE TOUR JOUE SUR LA MACHINE DE L'UTILISATEUR (MIN-355), et le `runId` ci-dessus
-   * ne vient donc pas d'un OIDC de la plateforme mais d'un jeton que NOUS avons
-   * signé (`admitLocalCaller`, [local-exec-token.ts](local-exec-token.ts)).
+   * THE TOUR PLAYS ON THE USER'S MACHINE (MIN-355), and the `runId` above
+   * therefore does not come from an OIDC of the platform but from a token that WE have
+   * signed (`admitLocalCaller`, [local-exec-token.ts](local-exec-token.ts)).
    *
-   * Présent = le chemin local, avec la génération de bail que le jeton porte. Ce
-   * n'est pas un drapeau d'information : c'est ce qui déclenche les réductions de
-   * pouvoir plus bas — le jeton vit sur un disque que le modèle peut lire, et
-   * prétendre le protéger serait la seule chose qu'on ne puisse pas tenir.
+   * Present = the local path, with the lease generation that the token carries. This
+   * is not an information flag: it is what triggers the reductions in
+   * lower power — the token lives on a disk that the model can read, and
+   * pretending to protect him would be the only thing we couldn't hold.
    */
   local?: { gen: number };
 }): Promise<ControlPlaneResult> {
@@ -345,28 +345,28 @@ export async function handleControlPlaneRequest(opts: {
   const body = opts.body ?? {};
 
   /**
-   * LE DIRECT PASSE AVANT LA LECTURE DU RUN, et c'est la seule surface qui y
-   * échappe. `emitLive` diffuse ~4×/s pendant toute la durée du tour — sur un
-   * tour de deux heures, une lecture de `agent_runs` par tick ferait ~29 000
-   * requêtes en base pour une surface qui n'a besoin que du `runId`, dont elle
-   * dérive son topic. C'était de la charge pure, sur le seul appel chaud du plan
-   * de contrôle.
+   * THE LIVE GOES BEFORE THE PLAYBACK OF THE RUN, and it is the only surface that
+   * escapes. `emitLive` broadcasts ~4×/s for the entire duration of the round — on a
+   * two hour tour, a reading of `agent_runs` per tick would be ~29,000
+   * base queries for a surface which only needs the `runId`, of which it
+   * drifts its topic. It was pure load, on the only hot call of the plan
+   * of control.
    *
-   * Ce qu'on renonce à vérifier ici : qu'il existe encore une ligne pour ce run.
-   * Sans conséquence — le direct n'est persisté nulle part, et diffuser sur le
-   * topic d'un run supprimé n'atteint personne. Les surfaces qui ÉCRIVENT, elles,
-   * gardent la lecture ci-dessous.
+   * What we are not checking here: that there is still a line for this run.
+   * Without consequence - the live is not persisted anywhere, and broadcast on the
+   * topic of a deleted run does not reach anyone. The surfaces that WRITE, they
+   * keep reading below.
    *
-   * LE TOPIC EST DÉRIVÉ DU RUN, jamais reçu. C'est la seule ligne de ce fichier
-   * qui empêche une VM de diffuser sur le fil d'une autre.
+   * THE TOPIC IS DERIVED FROM THE RUN, never received. This is the only line in this file
+   * which prevents one VM from broadcasting to another's thread.
    *
-   * `afterOrNow` et PAS `broadcastRunStream` : celui-ci DÉTACHE son fetch
-   * (`void broadcast(…)`, live.ts). Ça convient à la boucle, qui vit dans une
-   * invocation qui continue derrière — pas ici : la réponse part à la ligne
-   * suivante, la plateforme gèle la fonction, et la requête sortante meurt en vol
-   * (« TypeError: fetch failed », cf. lib/server/after-safe.ts). Le direct n'a
-   * AUCUN repli — rien n'est persisté, contrairement aux events que le fil
-   * rattrape en 2 s au poll : le perdre, c'est perdre le rendu streamé.
+   * `afterOrNow` and NOT `broadcastRunStream`: this DETACHES its fetch
+   * (`void broadcast(…)`, live.ts). It suits the loop, which lives in a
+   * invocation which continues behind - not here: the response goes to the line
+   * next, the platform freezes the function, and the outgoing request dies in flight
+   * (“TypeError: fetch failed”, see lib/server/after-safe.ts). The live
+   * NO fallback — nothing is persisted, unlike events that the thread
+   * catches up in 2 s at the poll: losing it means losing the streamed rendering.
    */
   if (method === "POST" && surface === "/stream") {
     const fileStats = liveFileStats(body.fileStats);
@@ -376,10 +376,10 @@ export async function handleControlPlaneRequest(opts: {
         tools: num(body.tools) ?? 0,
         reasoningActive: body.reasoningActive === true,
         reasoningMs: num(body.reasoningMs) ?? 0,
-        // La VM est du CODE À NOUS, mais elle reste de l'autre côté d'un POST : on
-        // ne rediffuse pas sa liste telle quelle. Bornée comme celle de fin de tour,
-        // et réduite aux deux champs que le fil lit — sinon un payload malformé (ou
-        // simplement gros) partirait tel quel sur le topic de tous les abonnés.
+        // The VM is OWN CODE, but it remains on the other side of a POST: we
+        // do not repost his list as is. Bounded like that at the end of the turn,
+        // and reduced to the two fields that the thread reads — otherwise a malformed payload (or
+        // simply big) would leave as is on the topic of all subscribers.
         ...liveFiles(body.files, body.filesTruncated),
         ...(fileStats ? { fileStats } : {}),
         at: Date.now(),
@@ -388,9 +388,9 @@ export async function handleControlPlaneRequest(opts: {
     return ok();
   }
 
-  // Le diff complet est un message SÉPARÉ du stream texte : le recopier dans
-  // chaque instantané (~4/s) multiplierait inutilement le trafic. Cette surface
-  // n'existe que pour la machine qui possède le dépôt.
+  // The complete diff is a SEPARATE message from the text stream: copy it into
+  // each snapshot (~4/s) would multiply the traffic unnecessarily. This surface
+  // only exists for the machine that owns the repository.
   if (method === "POST" && surface === "/diff") {
     if (!opts.local) return forbidden("local diff requires a local execution token");
     const diff = localDiffPayload(body);
@@ -400,42 +400,42 @@ export async function handleControlPlaneRequest(opts: {
     return ok();
   }
 
-  // La ligne du run est le CONTEXTE, et elle est relue à chaque appel : c'est ce
-  // qui rend la surface sans état, donc sûre à appeler depuis une VM qui peut
-  // mourir entre deux requêtes. Un run supprimé (rétention) ou un nom de sandbox
-  // qui ne correspond à rien tombe ici, pas plus loin.
+  // The line of the run is the CONTEXT, and it is reread at each call: this is what
+  // which makes the surface stateless, therefore safe to call from a VM which can
+  // die between two requests. A deleted run (retention) or sandbox name
+  // which does not correspond to anything falls here, no further.
   const run = await getRun(runId);
   if (!run) return { status: 404, body: { error: "unknown run" } };
 
-  // La microVM du run est nommée une fois pour toutes et persistée : une autre
-  // n'a rien à écrire ici, même signée par la plateforme (MIN-331). `null` =
-  // run dont la VM n'est pas encore enregistrée, on laisse passer.
+  // The microVM of the run is named once and for all and persisted: another
+  // has nothing to write here, even signed by the platform (MIN-331). `null` =
+  // run whose VM is not yet registered, let it pass.
   if (opts.sandboxName && run.sandbox_id && run.sandbox_id !== opts.sandboxName) {
     return { status: 403, body: { error: "sandbox does not run this run" } };
   }
 
   /**
-   * CE QUE LE CHEMIN LOCAL PAIE À CHAQUE APPEL (MIN-355), et pourquoi c'est ici.
+   * WHAT THE LOCAL PATH PAYS FOR EACH CALL (MIN-355), and why it's here.
    *
-   * La ligne du run est déjà lue trois lignes plus haut : ces trois contrôles ne
-   * coûtent donc RIEN de plus, et c'est tout l'argument du jeton auto-porteur.
-   * Un jeton opaque haché aurait été révocable par nature, mais au prix d'un
-   * lookup sur `/stream` — ~29 000 par tour de deux heures, très exactement la
-   * charge que son court-circuit existe pour supprimer.
+   * The run line is already read three lines higher: these three controls do not
+   * therefore cost NOTHING more, and that is the whole argument of the self-supporting token.
+   * A hashed opaque token would have been revocable in nature, but at the cost of
+   * lookup on `/stream` — ~29,000 per two-hour turn, exactly the
+   * load that its short circuit exists to remove.
    *
-   * 1. **La ligne doit se dire locale.** Un jeton signé pour un run de microVM ne
-   *    devrait pas exister ; s'il existe, c'est une faute de chez nous, et elle
-   *    s'arrête là plutôt que d'ouvrir une seconde voie sur un run cloud.
-   * 2. **La génération doit être la courante.** C'est la seule révocation d'un
-   *    jeton qu'on ne peut pas rappeler : émettre le suivant tue le précédent
-   *    (`issueLocalExecToken`), et le refus est instantané ici.
-   * 3. **Le run doit TRAVAILLER.** Sur le chemin cloud, seule `/rest` l'exigeait —
-   *    la microVM d'un run conclu étant coupée par le reaper, la question ne se
-   *    posait pas. Une machine, elle, ne se coupe pas : sans cette ligne, un
-   *    jeton de quinze minutes continuerait de servir des tools et de consommer la
-   *    file de steering d'une conversation terminée. Le 409 est celui que le
-   *    client du plan de contrôle lit déjà comme « arrête-toi »
-   *    (`saveCheckpointQuietly`), et il n'est pas retenté.
+   * 1. **The line must be local.** A signed token for a microVM run does not
+   * should not exist; if it exists, it is a fault of ours, and it
+   * stops there rather than opening a second route on a cloud run.
+   * 2. **The generation must be the current one.** This is the only revocation of a
+   * token that cannot be recalled: issuing the next one kills the previous one
+   * (`issueLocalExecToken`), and the refusal is instantaneous here.
+   * 3. **The run should WORK.** On the cloud path, only `/rest` required it —
+   * the microVM of a concluded run being cut by the reaper, the question does not arise
+   * didn't pose. A machine cannot be cut: without this line, a
+   * fifteen minute token would continue to serve tools and consume the
+   * steering queue of a completed conversation. The 409 is the one that the
+   * control plane client already reads like "stop"
+   * (`saveCheckpointQuietly`), and it is not retried.
    */
   if (opts.local) {
     if (!run.local_exec) return forbidden("this run does not execute locally");
@@ -451,8 +451,8 @@ export async function handleControlPlaneRequest(opts: {
     const type = typeof body.type === "string" ? body.type : "";
     if (!type) return bad("events: missing type");
     const payload = (body.payload ?? {}) as Record<string, unknown>;
-    // `appendEvent` calcule `seq`, retente sur collision et diffuse derrière —
-    // exactement ce que fait la boucle aujourd'hui, au même endroit.
+    // `appendEvent` calculates `seq`, retry on collision and diffuses behind —
+    // exactly what the loop does today, in the same place.
     await appendEvent(runId, type as AgentEventType, payload);
     return ok();
   }
@@ -462,16 +462,16 @@ export async function handleControlPlaneRequest(opts: {
     if (!VM_ALLOWED_FEATURES.has(feature)) return bad(`usage: feature not allowed (${feature})`);
     const model = typeof body.model === "string" ? body.model : run.model;
     /**
-     * LE MONTANT N'EST PAS UNE DÉCLARATION (MIN-329) : borné, puis plafonné par
-     * ce que les tokens rapportés peuvent coûter au tarif du modèle. Un `cost`
-     * négatif remettait la consommation du mois à neuf, pour tout le compte.
+     * THE AMOUNT IS NOT A DECLARATION (MIN-329): limited, then capped by
+     * what the reported tokens may cost at the model price. A `cost`
+     * negative reset the month's consumption to nine, for the entire account.
      */
     const claim = checkUsageClaim(body, await usagePricingFor(model, body.cost));
     if (!claim.ok) {
-      // ÇA SE TRACE, et pas seulement dans les logs : une ligne refusée est une
-      // dépense qui n'entre nulle part, et ce trou-là doit être lisible sur le
-      // run où il s'est fait — c'est ce qui distingue « la VM a menti » d'un
-      // compteur qui dérive sans raison apparente.
+      // THIS IS TRACKED, and not only in the logs: a refused line is a
+      // expense which does not enter anywhere, and this hole must be readable on the
+      // run where it was done — this is what distinguishes “the VM lied” from a
+      // meter that drifts for no apparent reason.
       console.error(`[agent-control-plane] usage refusée sur ${runId} — ${claim.reason}`);
       await appendEvent(runId, "error", { code: "usageRejected", reason: claim.reason });
       return bad(`usage: ${claim.reason}`);
@@ -483,9 +483,9 @@ export async function handleControlPlaneRequest(opts: {
       );
     }
     await recordAiUsage({
-      // Même identifiant de facturation que la boucle d'aujourd'hui : la ligne de
-      // ledger d'un run repris doit tomber sous le même `run_id`, sinon le plafond
-      // du run ne voit plus la moitié de sa dépense.
+      // Same billing identifier as today's loop: the line of
+      // ledger of a resumed run must fall under the same `run_id`, otherwise the ceiling
+      // of the run no longer sees half of its expenditure.
       runId: run.run_id ?? run.id,
       seq: seqField(body.seq),
       feature,
@@ -510,40 +510,40 @@ export async function handleControlPlaneRequest(opts: {
     if (method === "GET") return ok({ checkpoint: run.checkpoint ?? null });
     if (method === "PUT") {
       const checkpoint = (body.checkpoint ?? null) as AgentCheckpoint | null;
-      // La sauvegarde périodique fait aussi office de BATTEMENT DE CŒUR (MIN-224) :
-      // c'est le seul signal régulier qu'un tour qui vit dans la VM produise, et
-      // c'est sur ce champ que le chien de garde décide d'aller interroger la
-      // plateforme. Sans lui, il irait la sonder pour chaque run à chaque passage.
+      // The periodic backup also acts as a HEARTBEAT (MIN-224):
+      // it is the only regular signal that a rook that lives in the VM produces, and
+      // it is on this field that the watchdog decides to go and question the
+      // platform. Without him, he would probe her for every run on every pass.
       const stamped = await stampRunResult(runId, {
         checkpoint,
         last_activity_at: new Date().toISOString(),
       });
       /**
-       * UNE PANNE D'ÉCRITURE N'EST PAS UN RUN CONCLU, et les confondre coûtait le
-       * tour (MIN-286). Le superviseur lit un 409 comme « la conversation n'existe
-       * plus » : il coupe, il ne pousse pas, il rend la main. Une base qui refuse
-       * la ligne — un octet nul dans la sortie d'une commande, une coupure — lui
-       * disait donc d'abandonner un tour parfaitement vivant. C'est un 5xx : le
-       * client du plan de contrôle retente, et le tour continue.
+       * A WRITE BREAK IS NOT A CONCLUDED RUN, and confusing them cost the
+       * tower (MIN-286). The supervisor reads a 409 as "conversation does not exist
+       * more”: he cuts, he does not push, he hands back. A base that refuses
+       * the line — a null byte in the output of a command, a break — him
+       * therefore said to abandon a perfectly alive trick. It's a 5xx: the
+       * Control plane client retries, and the round continues.
        */
       if (stamped.failed) {
         return { status: 503, body: { error: "checkpoint save failed — retry" } };
       }
-      // La garde de `stampRun` (`status in ('running')`) n'a pas matché : le run a
-      // été annulé, ou un autre exécuteur a conclu. Ça se DIT — une VM qui croit
-      // avoir sauvegardé et continue travaille pour une conversation qui est finie.
+      // The guard of `stampRun` (`status in ('running')`) did not match: the run
+      // been canceled, or another executor concluded. It’s SAID — a VM that believes
+      // having saved and continuing works for a conversation that is over.
       if (!stamped.run) return { status: 409, body: { error: "run is no longer running" } };
       return ok();
     }
   }
 
   /**
-   * LE JOURNAL D'OPENCODE, EN APPEND (MIN-286, 2026-08-13).
+   * THE OPENCODE JOURNAL, IN APPEND (MIN-286, 2026-08-13).
    *
-   * La microVM n'envoie que ce que `/sync/history` vient de rendre de NEUF ; la
-   * base garde le reste. C'est ce qui a remplacé « le checkpoint porte tout le
-   * journal », qui ne pouvait pas tenir : la sortie complète de chaque tool y
-   * passe, et le corps du plan de contrôle est plafonné.
+   * The microVM only sends what `/sync/history` has just returned; there
+   * base keeps the rest. This is what replaced “the checkpoint carries all the
+   * journal", which could not hold: the complete output of each tool y
+   * passes, and the body of the control plane is capped.
    */
   if (method === "POST" && surface === "/journal") {
     const sessionId = typeof body.sessionId === "string" ? body.sessionId : "";
@@ -556,24 +556,24 @@ export async function handleControlPlaneRequest(opts: {
   }
 
   if (method === "GET" && surface === "/messages") {
-    // Draine ET consomme, comme la boucle le fait à la frontière de round : un run
-    // n'a qu'UN écrivain à la fois (le claimer), donc pas de double lecture.
+    // Drains AND consumes, as the loop does at the round boundary: a run
+    // has only ONE writer at a time (the claimer), so no double reading.
     return ok({ messages: await pullPendingMessages(runId) });
   }
 
   /**
-   * REMETTRE EN FILE CE QU'ON A DRAINÉ SANS SAVOIR LE JOUER (MIN-286).
+   * PUTTING BACK INTO WHAT YOU HAVE DRAINED WITHOUT KNOWING HOW TO PLAY IT (MIN-286).
    *
-   * `GET /messages` CONSOMME, et le superviseur draine avant de couper le round
-   * pour reposter derrière. Quand le tour sort entre les deux — plafond de
-   * dépense, deadline, run conclu ailleurs, coupure subie —, le message n'a été ni
-   * joué ni gardé : il était consommé en base et vivant dans une variable locale
-   * de la microVM, qui meurt avec elle. L'utilisateur voyait son message accepté
-   * puis ignoré pour toujours, et le run ne se réveillait même pas (c'est la file
-   * qui le re-queue).
+   * `GET /messages` CONSUMES, and the supervisor drains before ending the round
+   * to repost behind. When the turn comes out between the two — ceiling of
+   * expense, deadline, run concluded elsewhere, cut suffered — the message was neither
+   * played nor kept: it was consumed in base and living in a local variable
+   * of the microVM, which dies with it. The user saw their message accepted
+   * then ignored forever, and the run didn't even wake up (it's the queue
+   * which re-tails it).
    *
-   * On le réinsère donc tel quel, sans auteur : il redevient un message en attente,
-   * exactement comme s'il venait d'être écrit.
+   * We therefore reinsert it as it is, without an author: it becomes a waiting message again,
+   * exactly as if it had just been written.
    */
   if (method === "POST" && surface === "/messages") {
     const messages = (Array.isArray(body.messages) ? body.messages : [])
@@ -587,11 +587,11 @@ export async function handleControlPlaneRequest(opts: {
               ? (message as { text: string }).text
               : null;
         if (text === null || text.trim().length === 0) return [];
-        // BORNÉ COMME À L'ÉCRITURE (MIN-329). Ce qu'on remet en file a été écrit
-        // par un humain via `/steer`, qui coupe à `MAX_MESSAGE_LEN` — donc rien
-        // d'honnête ne dépasse ici. Sans la borne, la surface écrivait en base
-        // autant de messages que la VM en envoyait, de la taille qu'elle voulait,
-        // et chacun revenait ensuite dans le prompt du tour suivant.
+        // BOUNDED AS IN WRITING (MIN-329). What we put back in line has been written
+        // by a human via `/steer`, which cuts to `MAX_MESSAGE_LEN` — so nothing
+        // honesty does not exceed here. Without the terminal, the surface was written in base
+        // as many messages as the VM sent, of the size it wanted,
+        // and everyone then returned in the prompt of the next round.
         return [
           {
             text: text.slice(0, MAX_MESSAGE_LEN),
@@ -607,19 +607,19 @@ export async function handleControlPlaneRequest(opts: {
   }
 
   if (method === "GET" && surface === "/messages/pending") {
-    // La même question SANS consommer : c'est la sonde de l'attente d'un
-    // sous-agent (« l'utilisateur a-t-il écrit ? »), polée toutes les 3 s pendant
-    // qu'une fille travaille. Drainer ici avalerait le message — personne ne
-    // l'injecterait dans l'historique, et l'utilisateur n'obtiendrait rien.
+    // The same question WITHOUT consuming: it is the probe of waiting for a
+    // sub-agent (“did the user write?”), popped every 3 s for
+    // that a girl works. Draining here would swallow the message — no one
+    // would inject it into the history, and the user would get nothing.
     return ok({ pending: await hasPendingRunMessages(runId) });
   }
 
   if (surface === "/interrupt") {
     if (method === "GET") return ok({ interrupted: await readInterruptFlag(runId) });
-    // La boucle CONSOMME le drapeau quand le « stop » qu'elle vient de lire
-    // arrivait avec un message : le tour se poursuit alors avec la consigne au
-    // lieu de sortir pour être re-queué par ce message resté en file. C'est le
-    // seul écrivain de ce champ côté VM, et il ne peut l'écrire que sur son run.
+    // The loop CONSUMES the flag when the “stop” it has just read
+    // arrived with a message: the tour then continues with the instruction to
+    // instead of going out to be re-queued by this message left in queue. This is the
+    // only writer of this field on the VM side, and he can only write it on his run.
     if (method === "DELETE") {
       await clearInterrupt(runId);
       return ok();
@@ -631,8 +631,8 @@ export async function handleControlPlaneRequest(opts: {
   }
 
   if (method === "POST" && surface === "/plan-sync") {
-    // Miroir des états du checklist de l'agent vers le plan du ticket lié. Un run
-    // carnet n'a pas d'issue : rien à faire, et ce n'est pas une erreur.
+    // Mirror agent checklist states to the linked ticket plan. A run
+    // notebook has no exit: nothing to do, and it's not an error.
     if (run.issue_id) {
       const { syncIssuePlanStates } = await import("./plan-sync");
       const steps = Array.isArray(body.steps) ? body.steps : [];
@@ -643,51 +643,51 @@ export async function handleControlPlaneRequest(opts: {
 
   if (method === "POST" && surface === "/repo-auth") {
     /**
-     * ET UNE MACHINE LOCALE N'EN REÇOIT PAS DU TOUT (MIN-355).
+     * AND A LOCAL MACHINE DOES NOT RECEIVE ANY AT ALL (MIN-355).
      *
-     * C'est la surface la plus chère du plan de contrôle : elle rend un token
-     * d'installation `repo-write` **à la demande, renouvelable indéfiniment**. Sur
-     * le chemin cloud, ce qui la borne est la microVM — jetable, coupée au repos,
-     * et qui détient déjà ce token dans son `.git/config` (elle ne peut pas cloner
-     * sans). Aucune de ces deux phrases n'est vraie d'un Mac.
+     * It is the most expensive surface of the control plane: it returns a token
+     * installation code `repo-write` **on request, renewable indefinitely**. On
+     * the cloud path, which the terminal is the microVM — disposable, cut off at rest,
+     * and who already holds this token in her `.git/config` (she cannot clone
+     * without). Neither of these two sentences is true of a Mac.
      *
-     * Le renouvellement passe donc par l'APP, qui a la session de l'utilisateur :
-     * une autorité qui sait QUI demande, là où ce jeton-ci ne sait que quel run.
-     * C'est la première des trois réductions de pouvoir, et la seule qui retire
-     * quelque chose à un tour honnête — le prix est assumé.
+     * The renewal therefore goes through the APP, which has the user's session:
+     * an authority who knows WHO is asking, where this token only knows which run.
+     * This is the first of three reductions of power, and the only one that removes
+     * something at an honest turn — the price is assumed.
      */
     if (opts.local) {
       return forbidden("a local run renews its repository token through the app, not here");
     }
-    // Un token de forge FRAIS. C'est la seule raison d'être de cette surface : un
-    // tour qui vit dans la VM peut durer plus longtemps que le token
-    // d'installation qui a cloné le dépôt, et un push qui échoue en 401 à la
-    // troisième heure serait le travail du tour perdu jusqu'au tour suivant.
+    // A FRESH smithing token. This is the only reason for this surface to exist: a
+    // tower that lives in the VM can last longer than the token
+    // installation which cloned the repository, and a push which fails in 401 at the
+    // Third hour would be the round's work lost until the next round.
     /**
-     * ET UNE RELECTURE N'EN REÇOIT PAS (MIN-327).
+     * AND A REVIEW DOES NOT RECEIVE ANY (MIN-327).
      *
-     * La surface délivrait un token neuf à n'importe quelle VM, sans regarder
-     * l'ancrage : une session de relecture — la seule dont tout le contenu vient
-     * d'un fork inconnu — en obtenait un EN ÉCRITURE, qui atterrissait dans son
-     * `.git/config`. Une injection de prompt depuis le fork suffisait à le lire
-     * et à l'exfiltrer.
+     * The surface delivered a new token to any VM, without looking
+     * anchoring: a proofreading session — the only one from which all the content comes
+     * of an unknown fork — got one WRITING, which landed in its
+     * `.git/config`. A prompt injection from the fork was enough to read it
+     * and exfiltrate it.
      *
-     * Or une relecture ne pousse jamais : `writesToRepo` est faux dans
-     * `execute.ts`, et côté VM `repoAuthUrl()` n'est appelé QUE depuis `pushWork`.
-     * Refuser ici ne lui retire donc rien — et son clone, lui, part avec un token
+     * But a reread never pushes: `writesToRepo` is false in
+     * `execute.ts`, and on the VM side `repoAuthUrl()` is ONLY called from `pushWork`.
+     * Refusing here therefore takes nothing away from him — and his clone leaves with a token
      * `repo-read` (cf. `RepoTokenAccess`).
      *
-     * Le refus est BRUYANT plutôt que silencieux : c'est une frontière, elle doit
-     * se voir dans un log. Le client du plan de contrôle le tolère (il retombe
-     * sur l'URL que son job porte).
+     * The refusal is LOUD rather than silent: it is a boundary, it must
+     * see yourself in a log. The client of the control plane tolerates it (it falls
+     * on the URL that his job carries).
      */
     if (anchorForRun(run) === "pr") {
       return forbidden("a review session never pushes, so it gets no repository token");
     }
     const { resolveRepoCloneTarget } = await import("./repo-access");
-    // `repo-write` et non `full` : ce token descend dans la microVM, où `git` est
-    // son seul consommateur. Il clone, il fetch, il pousse — il ne merge pas une
-    // pull request et n'en approuve pas une.
+    // `repo-write` and not `full`: this token goes down into the microVM, where `git` is
+    // its only consumer. It clones, it fetches, it pushes — it does not emerge once
+    // pull request and does not approve one.
     const target = await resolveRepoCloneTarget(run.project_id, "repo-write").catch(() => null);
     if (!target) return { status: 404, body: { error: "no repository linked" } };
     return ok({ authUrl: target.authUrl });
@@ -695,33 +695,33 @@ export async function handleControlPlaneRequest(opts: {
 
   if (method === "POST" && surface === "/llm-key") {
     /**
-     * LA CLÉ DU MODÈLE, ET ELLE NE DESCEND QUE SUR UNE MACHINE (MIN-357) — le
-     * miroir exact de `/repo-auth` ci-dessus : celle-là refuse le local, celle-ci
-     * refuse le cloud.
+     * THE KEY OF THE MODEL, AND IT ONLY GOES ON ONE MACHINE (MIN-357) — the
+     * exact mirror of `/repo-auth` above: this one refuses the premises, this one
+     * refuses the cloud.
      *
-     * POURQUOI LE CLOUD EST REFUSÉ, et ce n'est pas une précaution de style : une
-     * microVM ne détient AUCUNE clé LLM, le firewall la pose après sa sortie
-     * (network-policy.ts). Servir cette surface là-bas ferait entrer le secret
-     * dans le process où le modèle exécute du shell — c'est-à-dire défaire
-     * MIN-223 par une porte qu'on aurait ouverte nous-mêmes.
+     * WHY THE CLOUD IS REFUSED, and this is not a stylistic precaution: a
+     * microVM does not hold ANY LLM key, the firewall installs it after its exit
+     * (network-policy.ts). Serving that surface there would bring in the secret
+     * in the process where the model executes from the shell — i.e. undo
+     * MIN-223 through a door that we opened ourselves.
      *
-     * CE QU'ELLE NE PRÉTEND PAS. Le jeton local vit sur un disque que le modèle
-     * lit : il peut appeler cette surface lui-même, et de toute façon relayer par
-     * le proxy qui écoute sur `127.0.0.1`. Ce qui borne le dégât n'est donc pas
-     * la confidentialité de la réponse — c'est le PLAFOND DUR de la clé rendue,
-     * tenu par OpenRouter, hors de la VM comme hors de notre code.
+     * WHAT SHE DOES NOT CLAIM. The local token lives on a disk that the model
+     * reads: he can call this surface himself, and in any case relay by
+     * the proxy that listens on `127.0.0.1`. What limits the damage is therefore not
+     * the confidentiality of the response — this is the HARD CEILING of the returned key,
+     * held by OpenRouter, outside the VM as well as outside our code.
      *
-     * Deux modes, aucun repli implicite :
+     * Two modes, no implicit fallback:
      *
-     * - **BYOK** : la clé de l'utilisateur est rendue telle quelle. Le local est
-     *   réservé aux lancements interactifs ; routines et autres déclenchements
-     *   sans utilisateur restent dans le cloud ;
-     * - **plateforme** : pas de mint = pas de clé. 503, jamais
-     *   `OPENROUTER_API_KEY` : la clé
-     *   plateforme est NON PLAFONNÉE et partagée avec Numo, la transcription, les
-     *   embeddings et le catalogue. Raisonnable dans une microVM jetable,
-     *   inacceptable sur la machine d'un utilisateur. C'est au LANCEUR de garder
-     *   le run dans le cloud quand le mint n'est pas disponible (`admitLocalRun`,
+     * - **BYOK**: the user's key is returned as is. The premises is
+     * reserved for interactive launches; routines and other triggers
+     * without users remain in the cloud;
+     * - **platform**: no mint = no key. 503, never
+     * `OPENROUTER_API_KEY`: the key
+     * platform is UNCAPPED and shared with Numo, transcription,
+     * embeddings and catalog. Reasonable in a disposable microVM,
+     * unacceptable on a user's machine. It's up to the LAUNCHER to keep
+     * run in the cloud when mint is not available (`admitLocalRun`,
      *   [local-exec.ts](local-exec.ts)) ; ici, on refuse.
      */
     if (!opts.local) {
@@ -733,15 +733,15 @@ export async function handleControlPlaneRequest(opts: {
         allowLocal: true,
         requireByok: true,
       }).catch(() => null);
-      // La clé a pu être retirée après le lancement. Ne jamais substituer alors
-      // la clé plateforme à un run figé BYOK : ce serait changer de payeur et
-      // faire descendre un secret partagé sur une machine utilisateur.
+      // The key could have been removed after launch. Never substitute then
+      // the platform key to a fixed BYOK run: this would mean changing payer and
+      // download a shared secret to a user device.
       if (!endpoint || endpoint.mode !== "byok") {
         return { status: 409, body: { error: "the BYOK credential used by this run is no longer available" } };
       }
-      // Un provider local peut volontairement ne demander aucune clé (Ollama,
-      // LM Studio…). `null` est distinct d'une réponse incomplète : le proxy
-      // enlèvera alors son placeholder au lieu d'inventer un Bearer vide.
+      // A local provider can voluntarily not request any key (Ollama,
+      // LM Studio…). `null` is distinct from an incomplete response: the proxy
+      // will then remove its placeholder instead of inventing an empty Bearer.
       return ok({ key: endpoint.apiKey || null });
     }
     const [{ mintRunKey, revokeRunKey, runKeyCapUsd }, { checkAgentQuota }, { spentFromLedger }] =
@@ -750,10 +750,10 @@ export async function handleControlPlaneRequest(opts: {
         import("./quota"),
         import("@/lib/server/ai-usage"),
       ]);
-    // Même arithmétique qu'au lancement d'un chunk de microVM (`execute.ts`), et
-    // sur les mêmes entrées : le budget du run est un gouverneur, le restant du
-    // compte un plafond dur. La lire ici plutôt que de la faire voyager, c'est ce
-    // qui fait qu'un tour long ne s'appuie pas sur un restant vieux de six heures.
+    // Same arithmetic as when launching a microVM chunk (`execute.ts`), and
+    // on the same entries: the budget of the run is a governor, the remainder of the
+    // has a hard ceiling. Reading it here rather than taking it on a journey is what
+    // which means that a long tour does not rely on a six-hour remaining.
     const [quota, ledgerSpent] = await Promise.all([
       checkAgentQuota(run.created_by ?? "").catch(() => null),
       spentFromLedger(run.run_id ?? run.id).catch(() => null),
@@ -771,10 +771,10 @@ export async function handleControlPlaneRequest(opts: {
       return { status: 503, body: { error: "no capped model key could be minted for this run" } };
     }
     /**
-     * LE HASH AVANT LA RÉPONSE, et la précédente révoquée derrière. C'est ce qui
-     * fait qu'une clé ne survit jamais au tour qui l'a demandée : la fin de tour
-     * (`vm-rest.ts`) et le chien de garde (`drain.ts`) révoquent tous deux
-     * `provider_key_id`, et ils ne peuvent révoquer que ce qu'ils lisent.
+     * THE HASH BEFORE THE RESPONSE, and the previous revoked one behind. This is what
+     * causes a key to never survive the turn that requested it: end of turn
+     * (`vm-rest.ts`) and watchdog (`drain.ts`) both revoke
+     * `provider_key_id`, and they can only revoke what they read.
      */
     const previous = run.provider_key_id;
     await stampRun(run.id, { provider_key_id: minted.hash });
@@ -783,16 +783,16 @@ export async function handleControlPlaneRequest(opts: {
   }
 
   if (method === "POST" && surface === "/rest") {
-    // LA FIN DU TOUR. La VM a poussé son travail et rend la main ; tout ce qui
-    // suit demande la base et la forge, donc la fonction (cf. `vm-rest.ts`).
+    // THE END OF THE TOUR. The VM has carried out its work and gives back; everything that
+    // follows asks for the base and the forge, therefore the function (see `vm-rest.ts`).
     const report = body as unknown as VmTurnReport;
     if (typeof report?.status !== "string") return bad("rest: missing status");
     /**
-     * UNE SEULE FOIS. Le client du plan de contrôle retente sur 5xx : sans cette
-     * garde, un rapport dont la réponse s'est perdue en vol serait rejoué —
-     * events en double dans le fil, et une seconde ligne de compute au ledger.
-     * Le 409 n'est pas retenté (cf. `retryable`), donc la VM s'arrête là, ce qui
-     * est exactement ce qu'on veut : le tour EST conclu.
+     * ONLY ONCE. The control plane client tries again on 5xx: without this
+     * guard, a report whose response was lost in flight would be replayed —
+     * duplicate events in the thread, and a second compute line in the ledger.
+     * The 409 is not retried (see `retryable`), so the VM stops there, which
+     * is exactly what we want: the round IS concluded.
      */
     if (run.status !== "running") {
       return { status: 409, body: { error: "run is no longer running" } };
@@ -804,25 +804,25 @@ export async function handleControlPlaneRequest(opts: {
 
   if (method === "POST" && surface.startsWith("/tool/")) {
     /**
-     * LE JEU DE TOOLS NE CHANGE PAS SUR UNE MACHINE (MIN-355), et c'est une
-     * décision, pas un oubli.
+     * THE TOOLSET DOES NOT CHANGE ON A MACHINE (MIN-355), and this is a
+     * decision, not an oversight.
      *
-     * Le cadrage voulait retirer `set_scratchpad` du chemin local — c'est le seul
-     * tool destructeur de la surface (il réécrit le carnet privé du lanceur en
-     * entier, sans retour). Deux raisons de ne pas le faire, tranchées le
+     * The scope wanted to remove `set_scratchpad` from the local path — it's the only one
+     * tool destructive to the surface (it rewrites the private notebook of the launcher in
+     * whole, without return). Two reasons not to do it, decided on
      * 2026-08-15 :
      *
-     * - **ça ne protégeait pas grand-chose.** `read_scratchpad` reste servi, donc
-     *   un porteur de jeton lit le carnet et son `rev` de toute façon : le
-     *   compare-and-swap n'est une garde que contre l'obsolescence, pas contre
-     *   quelqu'un qui la contourne en lisant d'abord ;
-     * - **ça coûtait un tool qui ne ment pas.** Un refus servi ici sans retrait du
-     *   catalogue (`agentToolsFor`) fait brûler un round au modèle, et le dépôt a
-     *   déjà tranché ce point ailleurs : `ask_user` et `create_routine` sortent du
-     *   JEU DE TOOLS d'une routine, jamais par un 403.
+     * - **It didn't protect much.** `read_scratchpad` remains used, so
+     * a token holder reads the book and its `rev` anyway: the
+     * compare-and-swap is only a guard against obsolescence, not against
+     * someone who gets around it by reading first;
+     * - **it cost a tool that doesn't lie.** A refusal served here without removing the
+     * catalog (`agentToolsFor`) makes the model burn a round, and the depot has
+     * already decided this point elsewhere: `ask_user` and `create_routine` come out of
+     * TOOLS GAME of a routine, never by a 403.
      *
-     * Ce qui reste vrai du pouvoir d'un jeton local est donc porté par les deux
-     * gardes qui, elles, ne coûtent rien au tour honnête : `/repo-auth` et
+     * What remains true of the power of a local token is therefore carried by both
+     * guards which cost nothing in the honest round: `/repo-auth` and
      * `status = 'running'`.
      */
     return await runPlatformTool(run, surface.slice("/tool/".length), body);
@@ -832,21 +832,21 @@ export async function handleControlPlaneRequest(opts: {
 }
 
 /**
- * Rejoue côté fonction un tool de PLATEFORME — ticket ou carnet. Ce sont ceux
- * dont le contexte est ENTIÈREMENT reconstructible depuis la ligne du run : rien
- * à transporter, rien à croire sur parole.
+ * Replays a PLATFORM tool on the function side — ticket or notebook. These are the ones
+ * whose context is ENTIRELY reconstructable from the run line: nothing
+ * to transport, nothing to take your word for.
  *
- * Les tools de FICHIER (`read_file`, `edit_file`, `run_command`…) ne passent
- * délibérément pas par ici : ils s'exécuteront DANS la VM, c'est tout le sujet de
+ * The FILE tools (`read_file`, `edit_file`, `run_command`…) do not pass
+ * deliberately not here: they will run IN the VM, that's the whole point of
  * MIN-224.
  *
- * LE NOM NE SUFFIT PAS À ROUTER (MIN-326). Ce qu'un run a le droit d'appeler est
- * une propriété de SON ANCRAGE, lue sur sa ligne et opposée ici à la table de
- * `platform-tool-names.ts` — la même que celle qui décide de ce qu'on annonce au
- * modèle. Sans ce passage, une session de relecture, dont tout ce qu'elle lit
- * vient d'un fork inconnu, écrivait dans les tickets et le carnet du projet par
- * un simple POST depuis son shell : « relecture = zéro écriture » n'était qu'une
- * phrase de prompt, et une injection suffisait à la franchir.
+ * THE NAME IS NOT ENOUGH TO ROUTE (MIN-326). What a run is allowed to call is
+ * a property of ITS ANCHOR, read on its line and opposed here to the table of
+ * `platform-tool-names.ts` — the same one that decides what is announced on
+ * model. Without this passage, a rereading session, including everything she reads
+ * comes from an unknown fork, written in the tickets and project notebook by
+ * a simple POST from its shell: “rereading = zero writing” was just a
+ * prompt sentence, and one injection was enough to get through it.
  */
 async function runPlatformTool(
   run: AgentRun,
@@ -862,14 +862,14 @@ async function runPlatformTool(
 
   if (SCRATCHPAD_TOOL_NAMES.has(name)) {
     /**
-     * LE CARNET EST PERSONNEL, et il est celui du CRÉATEUR du run. Or n'importe
-     * quel membre du projet peut reprendre un run à chaud (`/steer`) : sans cette
-     * garde, un collègue pilotait un agent branché sur le carnet de quelqu'un
-     * d'autre — il le lisait, et pouvait le réécrire en entier (`set_scratchpad`).
+     * THE NOTEBOOK IS PERSONAL, and it is that of the CREATOR of the run. But no matter
+     * which member of the project can resume a hot run (`/steer`): without this
+     * guard, a colleague was piloting an agent plugged into someone's notebook
+     * else — he read it, and could rewrite it in its entirety (`set_scratchpad`).
      *
-     * La règle porte sur la VIE DU RUN, pas sur le tour : la consigne d'un tiers
-     * reste dans l'historique et gouverne les tours suivants. Un run touché par
-     * un autre que son créateur perd donc son carnet jusqu'au bout.
+     * The rule concerns the LIFE OF THE RUN, not the tour: the instructions of a third party
+     * remains in history and governs subsequent turns. A run hit by
+     * someone other than its creator therefore loses his notebook all the way.
      */
     if (!run.created_by) return forbidden(`${name}: this run has no owner, so it has no notebook`);
     const { runSteeredByOther } = await import("./runs");
@@ -905,22 +905,22 @@ async function runPlatformTool(
   }
 
   /**
-   * Inatteignable par la VM : la table ci-dessus a déjà refusé tout nom qu'elle ne
-   * porte pas. On n'arrive ici qu'en ajoutant un nom à la table sans lui câbler
-   * d'exécuteur — un défaut de NOTRE côté, qui doit se voir comme tel.
+   * Unreachable by the VM: the table above has already refused any name that it does not
+   * don't wear it. We only get here by adding a name to the table without wiring it
+   * of executor — a fault on OUR side, which must be seen as such.
    */
   return { status: 500, body: { error: `platform tool allowed but not routed: ${name}` } };
 }
 
 /**
- * Les trois écritures sur la pull request RELUE (MIN-168), rejouées ici : elles
- * ont besoin du client de forge et de son token, qui n'entrent pas dans la VM.
+ * The three writes on the RELUE pull request (MIN-168), replayed here: they
+ * need the forge client and its token, which do not enter the VM.
  *
- * LE COMPTEUR D'ANCRES fait l'aller-retour, et c'est ce qui rend son plafond
- * juste. « 5 par run » se compte sur la vie du run, pas sur un tour : la VM
- * l'envoie, la fonction l'oppose au plafond puis rend celui qu'elle a atteint.
- * Le lire en base à chaque appel coûterait une requête par commentaire pour la
- * même réponse ; le laisser dans la VM le remettrait à zéro à chaque tour.
+ * THE ANCHOR COUNTER goes back and forth, and that's what makes its ceiling
+ * just. “5 per run” is counted over the life of the run, not over one lap: the VM
+ * sends it, the function opposes it to the ceiling then returns the one it has reached.
+ * Reading it in base at each call would cost one request per comment for the
+ * same answer; leaving it in the VM would reset it to zero every turn.
  */
 async function runPrTool(
   run: AgentRun,
@@ -952,7 +952,7 @@ async function runPrTool(
     {
       forge,
       call,
-      // Paresseux et payé une seule fois par appel : la validation d'ancre en a
+      // Lazy and paid only once per call: anchor validation has it
       // besoin, un commentaire de PR entier n'y touche jamais.
       files: async () => (await forge.listPullRequestFiles(call)).files,
       model: run.model ?? "",
@@ -966,25 +966,25 @@ async function runPrTool(
 }
 
 /**
- * Les pull requests DU PROJET (MIN-267), rejouées ici pour la même raison que
- * celles de la relecture : la forge et son token n'entrent pas dans la VM, et la
+ * The PROJECT pull requests (MIN-267), replayed here for the same reason as
+ * those of the rereading: the forge and its token do not enter the VM, and the
  * liste se lit en base.
  *
- * `pull_request_id` non nul = session de RELECTURE : ces tools ne lui sont ni
- * offerts (`agentToolsFor`) ni câblés (`vm/turn.ts`), et le refus ici est le
- * troisième verrou — celui qui tient même si un checkpoint d'avant rejoue un
+ * `pull_request_id` not null = REREADING session: these tools are neither
+ * offered (`agentToolsFor`) nor wired (`vm/turn.ts`), and the refusal here is the
+ * third lock — the one that holds even if a checkpoint from before replays a
  * appel.
  *
- * Le compteur d'ancres fait le même aller-retour que là-haut, et c'est le MÊME
- * plafond : « 5 par run », toutes pull requests confondues.
+ * The anchor counter makes the same round trip as up there, and it's the SAME
+ * ceiling: “5 per run”, all pull requests combined.
  *
- * CE QUE LE CORPS PEUT DIRE, ET CE QU'IL NE PEUT PAS (audit MIN-326). Le seul
- * identifiant que le modèle choisit est le NUMÉRO de pull request, et il est
- * résolu contre le dépôt du PROJET DU RUN (`repo()` part de `run.project_id`) :
- * une VM ne peut donc pas désigner la pull request d'un autre projet, quel que
- * soit le numéro qu'elle envoie. Reste `prInlineComments`, qui est un COMPTEUR et
- * pas un identifiant : une VM qui le renvoie à zéro s'offre des ancres en plus.
- * C'est le prix assumé de le faire voyager (cf. `tool-bridge.ts`) — le plafond
+ * WHAT THE BODY CAN SAY, AND WHAT IT CANNOT (MIN-326 audit). The only one
+ * identifier that the model chooses is the pull request NUMBER, and it is
+ * resolved against the submission of the RUN PROJECT (`repo()` part of `run.project_id`):
+ * a VM cannot therefore designate the pull request of another project, whatever
+ * or the number she sends. Remains `prInlineComments`, which is a COUNTER and
+ * not an identifier: a VM which returns it to zero offers itself additional anchors.
+ * This is the assumed price of making it travel (see `tool-bridge.ts`) — the ceiling
  * borne du bruit, pas un droit.
  */
 async function runProjectPrTool(
@@ -1006,7 +1006,7 @@ async function runProjectPrTool(
     {
       projectId: run.project_id,
       // Un token FRAIS par appel : un tour de VM dure plus longtemps que celui
-      // qui a cloné le dépôt.
+      // who cloned the repository.
       repo: async () => {
         const target = await resolveRepoCloneTarget(run.project_id).catch(() => null);
         if (!target) return null;
@@ -1027,9 +1027,9 @@ async function runProjectPrTool(
 }
 
 /**
- * `web_search` : la clé du run l'accompagne, et elle ne descend pas dans la VM.
- * Le plafond par tour, lui, reste où il était — dans la boucle, qui compte ses
- * appels. Ici on ne fait que payer et rendre.
+ * `web_search`: the run key accompanies it, and it does not go down into the VM.
+ * The ceiling per turn remains where it was — in the loop, which counts its
+ * calls. Here we just pay and return.
  */
 async function runWebSearch(
   run: AgentRun,
@@ -1038,18 +1038,18 @@ async function runWebSearch(
   const query = String(args.query ?? "").trim();
   if (!query) return bad("web_search: query is required");
   const { runWebSearchTool } = await import("@/lib/server/web-search");
-  // Le lanceur du run, et lui seul : c'est SA clé (BYOK) ou SON quota qui paie
-  // la recherche, exactement comme pour les appels du modèle.
+  // The runner of the run, and him alone: ​​it is HIS key (BYOK) or HIS quota that pays
+  // search, just like for model calls.
   if (!run.created_by) return bad("web_search: this run has no owner");
   const outcome = await runWebSearchTool({
     query,
     userId: run.created_by,
     surface: surfaceForAgentRun(run),
     runId: run.run_id ?? run.id,
-    // La bande de seq des recherches est à elle ; le compteur repart du tour, et
-    // deux recherches d'un même tour ne se marchent pas dessus.
-    // L'index reste DANS sa bande : 99 recherches par tour, et pas de nombre
-    // reçu qui aille se ranger dans la bande d'une autre feature (MIN-329).
+    // The search seq tape is hers; the counter starts again from the round, and
+    // two searches in the same turn do not overlap.
+    // The index stays IN its band: 99 searches per turn, and no number
+    // received which is placed in the band of another feature (MIN-329).
     seq: WEB_SEARCH_SEQ_BASE + run.continuations * 100 + seqField(args.seq, 99),
     billTo: billToFor(run),
     projectId: run.project_id,
@@ -1058,17 +1058,17 @@ async function runWebSearch(
 }
 
 /**
- * `create_pr`, MOITIÉ FORGE. La VM a déjà poussé (elle a le dépôt) ; ce qui reste
- * — PR mergée, PR déjà vivante, PR refusée à rouvrir, création — vit ici, dans
- * l'implémentation partagée avec l'ancienne forme.
+ * `create_pr`, HALF FORGED. The VM has already pushed (it has the repository); what remains
+ * — PR merged, PR already alive, PR refused to reopen, creation — lives here, in
+ * the implementation shared with the old form.
  *
- * CE QUE LE CORPS PEUT DIRE (audit MIN-326) : le dépôt vient de `run.project_id`,
- * la base de `run.base_branch`, le ticket de l'ancrage du run — aucun des trois
- * n'est reçu. La VM ne choisit que la BRANCHE DE TÊTE, et il faut qu'elle la
- * choisisse : `create_pr` EST son premier push, donc `branch_name` est encore nul
- * sur la ligne (MIN-123). Ce qu'elle peut en faire reste borné au dépôt du projet
- * — ouvrir une pull request depuis une autre branche de CE dépôt, ce qu'un `git
- * push` depuis le même shell permettrait de toute façon.
+ * WHAT THE BODY CAN SAY (MIN-326 audit): the deposit comes from `run.project_id`,
+ * the base of `run.base_branch`, the run anchor ticket — none of the three
+ * is not received. The VM only chooses the HEAD BRANCH, and it must
+ * chooses: `create_pr` IS its first push, so `branch_name` is still null
+ * on the line (MIN-123). What it can do with it remains limited to submitting the project
+ * — open a pull request from another branch of THIS repository, which a `git
+ * push` from the same shell would work anyway.
  */
 async function runCreatePr(
   run: AgentRun,
@@ -1091,10 +1091,10 @@ async function runCreatePr(
   const prState = { number: run.pr_number, url: run.pr_url, state: run.pr_state };
   const title = String(args.title ?? "").trim();
   /**
-   * LA BRANCHE DE TÊTE, envoyée par la VM. `agent_runs.branch_name` ne vaut
-   * quelque chose qu'après un premier push RÉEL (MIN-123) — or `create_pr` EST
-   * ce premier push dans le cas normal. Le lire seul ici ouvrait la pull request
-   * sur une tête vide, et stampait `branch_name: ""` au passage.
+   * THE HEAD BRANCH, sent by the VM. `agent_runs.branch_name` is not worth
+   * something only after a first REAL push (MIN-123) — or `create_pr` IS
+   * this first push in the normal case. Reading it alone here opened the pull request
+   * on an empty head, and stamped `branch_name: ""` in passing.
    */
   const workBranch =
     (typeof body.workBranch === "string" ? body.workBranch.trim() : "") || run.branch_name || "";
@@ -1117,8 +1117,8 @@ async function runCreatePr(
       body: typeof args.body === "string" ? args.body : undefined,
       fresh: target,
       jobsNote: typeof body.jobsNote === "string" ? body.jobsNote : "",
-      // La branche existe sur le dépôt dès ce push : c'est ici qu'on
-      // l'enregistre, comme l'ancienne forme le fait à son premier push réel.
+      // The branch exists on the repository as of this push: this is where we
+      // saves it, like the old form does on its first real push.
       noteBranchPushed: async (p) => {
         if (!p.pushed || run.branch_name || !workBranch) return;
         await stampRun(run.id, { branch_name: workBranch }).catch(() => null);
@@ -1128,7 +1128,7 @@ async function runCreatePr(
   return ok(outcome);
 }
 
-/** `MIN-42` du ticket donné, ou null. */
+/** `MIN-42` of the given ticket, or null. */
 async function issueIdentifier(issueId: string): Promise<string | null> {
   const { getServiceClient } = await import("@/lib/supabase-service");
   const { data } = await getServiceClient()
@@ -1141,14 +1141,14 @@ async function issueIdentifier(issueId: string): Promise<string | null> {
 }
 
 /**
- * Le contexte des tools ticket, reconstruit depuis la ligne du run — mêmes
- * champs que ceux que `execute.ts` assemble aujourd'hui, et pour les mêmes
+ * The tools ticket context, reconstructed from the run line — same
+ * fields than those that `execute.ts` assembles today, and for the same
  * raisons.
  *
- * Un seul champ vient du corps : `imageInput`. Ce n'est pas un oubli — il dépend
- * du modèle du run et d'un index de capacités que la VM a déjà en main, il ne
- * décide de rien qu'elle ne puisse déjà faire (au pire elle reçoit une image
- * qu'elle a demandée), et le relire ici coûterait un appel réseau par tool.
+ * Only one field comes from the body: `imageInput`. This is not an oversight — it depends
+ * of the run model and a capacity index that the VM already has in hand, it does not
+ * decides to do nothing that she cannot already do (at worst she receives an image
+ * she asked), and reading it again here would cost one network call per tool.
  */
 async function issueContextFor(
   run: AgentRun,
@@ -1163,8 +1163,8 @@ async function issueContextFor(
     anchorIssueId,
     projectId: run.project_id,
     projectKey,
-    // L'ACTEUR des écritures, et c'est le lanceur du run — pas la VM, qui n'a
-    // pas d'identité propre, et pas le owner du projet.
+    // The ACTOR of the writes, and it is the launcher of the run — not the VM, which has
+    // no own identity, and not the owner of the project.
     actorId: run.created_by,
     numoDefaultStatus: prefs.numoDefaultStatus,
     imageInput: body.imageInput === true,
@@ -1174,18 +1174,18 @@ async function issueContextFor(
 }
 
 /**
- * Le ticket ANCRE — la cible par défaut des tools ticket, et la même que celle
+ * The ANCHOR ticket — the default target for tools ticket, and the same as
  * qu'`execute.ts` assemble.
  *
- * Sur une RELECTURE de pull request, `run.issue_id` est TOUJOURS nul (une session
- * de review n'occupe pas un ticket) : le défaut est alors le ticket que la PR met
- * en œuvre, quand elle en porte un (MIN-143). Sans ce repli, le tool annoncerait
- * un défaut qui n'existe pas et le premier `read_issue` sans argument brûlerait un
- * round — exactement ce que la ligne jumelle d'`execute.ts` existe pour éviter.
+ * On a REPLAY of pull request, `run.issue_id` is ALWAYS null (one session
+ * review does not occupy a ticket): the defect is then the ticket that the PR issues
+ * implemented, when she wears one (MIN-143). Without this fallback, the tool would announce
+ * a default which does not exist and the first `read_issue` without argument would burn a
+ * round — exactly what the twin line of `execute.ts` exists to avoid.
  *
- * La PR se relit par `loadPrRunContext`, le résolveur unique de l'ancrage PR : la
- * relire à la main ici serait la cinquième lecture que ce module-là a été écrit
- * pour supprimer.
+ * The PR is reread by `loadPrRunContext`, the unique resolver of the PR anchor: the
+ * rereading by hand here would be the fifth reading that this module was written
+ * to delete.
  */
 async function anchorIssueIdFor(run: AgentRun): Promise<string | null> {
   if (run.issue_id) return run.issue_id;
@@ -1194,7 +1194,7 @@ async function anchorIssueIdFor(run: AgentRun): Promise<string | null> {
   return (await loadPrRunContext(run.pull_request_id))?.issueId ?? null;
 }
 
-/** Clé du projet du run (préfixe des identifiants de tickets). */
+/** Run project key (ticket identifier prefix). */
 async function projectKeyFor(run: AgentRun): Promise<string> {
   const { getServiceClient } = await import("@/lib/supabase-service");
   const { data } = await getServiceClient()
@@ -1205,8 +1205,8 @@ async function projectKeyFor(run: AgentRun): Promise<string> {
   return (data as { key?: string } | null)?.key ?? "";
 }
 
-/** Statut d'atterrissage d'un ticket créé par l'agent : le réglage du LANCEUR,
- *  jamais un paramètre du modèle (cf. `resolveRunPrefs` dans execute.ts). */
+/** Landing status of a ticket created by the agent: LAUNCHER setting,
+ * never a model parameter (see `resolveRunPrefs` in execute.ts). */
 async function runPrefsFor(run: AgentRun) {
   if (run.created_by) {
     const r = await getAccountSettings({ userId: run.created_by });

@@ -10,35 +10,33 @@ import type { PageSearchHit } from "@/lib/types";
 export type { PageSearchHit };
 
 /**
- * La colonne DÉRIVÉE qui rend le wiki fouillable (MIN-276).
+ * The DERIVED column that makes the wiki searchable (MIN-276).
  *
- * `pages.search_text` est la projection markdown du corps ProseMirror, et
- * `pages.search_tsv` — générée — en tire l'index que Postgres interroge. Le
- * texte sert aussi l'EXTRAIT (`ts_headline`), c'est-à-dire la phrase qui dit
- * pourquoi une page sort ; c'est ce double emploi qui justifie une colonne
- * texte plutôt qu'un seul `tsvector`.
+ * `pages.search_text` is the Markdown projection of the ProseMirror body, and
+ * the generated `pages.search_tsv` index is derived from it for PostgreSQL queries.
+ * The text also powers the EXCERPT (`ts_headline`), the sentence that explains why
+ * a page matched; this dual use is why we keep a text column rather than only a
+ * `tsvector`.
  *
- * Deux règles la tiennent honnête :
+ * Two rules keep it honest:
  *
- * 1. **le client ne l'écrit jamais.** Une colonne dérivée que l'appelant
- *    fournit est une colonne qui ment le jour où un client est vieux, ou celui
- *    où un chemin d'écriture oublie de la remplir. Elle se calcule ici, à
- *    partir de ce qui est EN BASE.
- * 2. **elle est RELUE avant d'être écrite** (`syncPagesSearchText` recharge le
- *    corps). Ça coûte une requête, et ça achète l'idempotence : rejouer la
- *    projection sur une page ne peut pas la faire diverger, quel que soit
- *    l'ordre dans lequel deux écritures concurrentes se rattrapent.
+ * 1. **the client never writes it.** A derived column supplied by the caller
+ * becomes stale when a client is outdated or a write path forgets to fill it.
+ * It is calculated here from what is IN THE DATABASE.
+ * 2. **it is RE-READ before being written** (`syncPagesSearchText` reloads the
+ * body). It costs a query, and it buys idempotence: replaying the
+ * projection on a page cannot make it diverge, whatever
+ * the order in which two concurrent writes catch up.
  *
- * Et elle sort du chemin critique. La sauvegarde de l'éditeur est déjà
- * debouncée à la seconde ; y ajouter le montage d'un tiptap serveur allongerait
- * chaque enregistrement pour un texte que personne n'attend. `afterOrNow` la
- * pousse après la réponse — et retombe sur une exécution immédiate hors
- * requête (le MCP en cascade, un script de rattrapage).
+ * It also stays off the critical path. The editor's save is already debounced by a
+ * second; adding server-side Tiptap setup would slow every save for text no one is
+ * waiting on. `afterOrNow` pushes the work past the response and falls back to
+ * immediate execution outside a request (cascading MCP calls or a catch-up script).
  */
 
 type Service = ReturnType<typeof getServiceClient>;
 
-/** Le texte indexé d'un corps de page : sa projection markdown, rien d'autre. */
+/** The indexed text of a page body: its markdown projection, nothing else. */
 export async function pageSearchText(content: unknown): Promise<string> {
   const markdown = await pageBodyToMarkdownServer(
     (content as JSONContent | null) ?? null
@@ -47,12 +45,12 @@ export async function pageSearchText(content: unknown): Promise<string> {
 }
 
 /**
- * Recalcule `search_text` pour ces pages, depuis leur corps en base.
+ * Recalculates `search_text` for these pages from their database content.
  *
- * L'écriture est CIBLÉE sur la colonne dérivée : ni `content`, ni `version`.
- * Repasser par le corps rejouerait la garde de version de MIN-271 contre
- * elle-même — l'écriture de rattrapage se ferait refuser par celle qu'elle
- * suit, ou pire, écraserait une sauvegarde partie entre les deux.
+ * The write targets only the derived column: neither `content` nor `version`.
+ * Going back through the body would replay the version guard of MIN-271 against
+ * itself — the catch-up write would be rejected by the write it follows, or worse,
+ * would overwrite a save made in between.
  */
 export async function syncPagesSearchText(
   service: Service,
@@ -81,7 +79,7 @@ export async function syncPagesSearchText(
   }
 }
 
-/** La même chose, après la réponse. Le seul appelant des chemins d'écriture. */
+/** The same work, after the response. The only caller used by write paths. */
 export function queueSearchText(service: Service, pageIds: string[]): void {
   if (pageIds.length === 0) return;
   afterOrNow(() => syncPagesSearchText(service, pageIds));
@@ -89,14 +87,14 @@ export function queueSearchText(service: Service, pageIds: string[]): void {
 
 /* ─── Lecture ──────────────────────────────────────────────────────────────── */
 
-/** Ce que rend la fonction SQL, avant nettoyage de l'extrait. */
+/** What the SQL function renders, before cleaning the extract. */
 type RawHit = Omit<PageSearchHit, "excerpt"> & { excerpt: string | null };
 
 /**
- * L'extrait, tel qu'on l'affiche. `ts_headline` travaille sur le MARKDOWN de la
- * page : ses puces, ses dièses et ses retours à la ligne n'ont aucun sens dans
- * une ligne de palette ou dans un résultat d'outil. On les aplatit ici plutôt
- * qu'à l'indexation — le texte indexé, lui, doit rester celui de la page.
+ * The excerpt as displayed. `ts_headline` works on the page's MARKDOWN: its
+ * bullets, hash marks, and newlines have no meaning in a palette row or tool result.
+ * We flatten them here rather than during indexing — the indexed text must remain
+ * the page's original text.
  */
 function cleanExcerpt(raw: string | null): string {
   if (!raw) return "";
@@ -108,28 +106,26 @@ function cleanExcerpt(raw: string | null): string {
 }
 
 /**
- * La recherche, sans contrôle d'accès — il vit chez les appelants.
+ * Search without access control — that belongs to the callers.
  *
- * Deux clients l'appellent, et la différence n'est pas cosmétique : au client de
- * SESSION la fonction est filtrée par `pages_select`, donc par les projets de
- * l'utilisateur (c'est la recherche cross-projet de ⌘K) ; au client SERVICE elle
- * ne l'est pas, et `projectId` est alors obligatoire — la garde a été faite
- * avant, en TypeScript.
+ * Two clients call it, and the difference is substantive: for the SESSION client,
+ * `pages_select` filters the function by the user's projects (this is ⌘K's
+ * cross-project search); for the SERVICE client it does not, so `projectId` is
+ * mandatory — the guard is applied earlier in TypeScript.
  */
 /**
- * Le plafond de la chaîne cherchée (MIN-348).
+ * The maximum length of the search string (MIN-348).
  *
- * Elle part vers `websearch_to_tsquery` PUIS vers `ts_headline`, qui compare
- * chaque lexème de la requête à chaque page candidate : le coût monte avec la
- * longueur de ce qu'on tape, et rien ne bornait ce qu'un client peut envoyer.
- * Deux cents caractères, c'est déjà plus long que toute recherche humaine — on
- * TRONQUE plutôt que de refuser, parce qu'un collage accidentel doit rendre des
- * résultats, pas une erreur.
+ * It goes to `websearch_to_tsquery` and then to `ts_headline`, which compares
+ * every query lexeme with every candidate page. Cost grows with the query length,
+ * and nothing limited what a client could send. Two hundred characters is already
+ * longer than a typical human search, so we TRUNCATE instead of rejecting: an
+ * accidental paste should return results, not an error.
  */
 export const MAX_SEARCH_QUERY_LENGTH = 200;
 
-/** Le plafond du nombre de résultats — c'est le « 1–50 » que l'outil MCP
-    ANNONCE, et que son schéma ne faisait pas respecter (MIN-348). */
+/** The maximum number of results — the “1–50” advertised by the MCP tool
+    whose schema did not previously enforce it (MIN-348). */
 export const MAX_SEARCH_LIMIT = 50;
 
 export async function runPageSearch(

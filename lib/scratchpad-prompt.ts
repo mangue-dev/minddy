@@ -1,43 +1,43 @@
-// « Copier le prompt » pour le scratchpad — même esprit que lib/issue-prompt.ts :
-// un prompt prêt à coller dans n'importe quel agent (Claude Code, Cursor…).
-// TOUJOURS en anglais, quelle que soit la locale de l'UI. Le texte de la note
-// est repris tel quel (format brut assumé) ; tout ce qui l'entoure est en
-// anglais et prévient l'agent que les notes sont floues → demander si besoin.
-// La note est courte : on l'inline directement (contrairement au plan d'issue).
+// “Copy the prompt” for the scratchpad — same spirit as lib/issue-prompt.ts:
+// a prompt ready to paste into any agent (Claude Code, Cursor…).
+// ALWAYS in English, regardless of the UI locale. The text of the note
+// is reproduced as is (raw format assumed); everything around it is
+// English and warns the agent that the notes are unclear → ask if necessary.
+// The note is short: we inline it directly (unlike the issue plan).
 //
-// Même structure pour le run CARNET de numo (MIN-84) : l'amorce de l'agent passe
-// par ce wrapper avec `mcp: false` — le bloc MCP n'a pas de sens pour lui, ses
-// tools natifs (read_scratchpad / update_scratchpad_task) le remplacent, mais le
-// cadrage « ce sont des notes, pas une spec ; demande avant de deviner » est le
-// même que pour un agent externe.
+// Same structure for numo's CARNET run (MIN-84): the agent's boot passes
+// by this wrapper with `mcp: false` — the MCP block has no meaning for it, its
+// native tools (read_scratchpad / update_scratchpad_task) replace it, but
+// framing “these are notes, not a spec; ask before guessing” is the
+// same as for an external agent.
 //
-// Portée UNE TÂCHE : la tâche — et ses sous-tâches, s'il y en a — arrive
-// précédée des titres de sa section (le seul canal pour l'agent, cf.
-// splitTaskSection) ; le prompt les sort du bloc <notes> et les nomme en clair —
-// sans eux, une tâche isolée perd son contexte.
+// Scope A TASK: the task — and its subtasks, if any — arrives
+// preceded by the titles of its section (the only channel for the agent, cf.
+// splitTaskSection); the prompt takes them out of the <notes> block and names them in plain text —
+// without them, an isolated task loses its context.
 
 import { stripScratchpadSpacers } from "@/lib/scratchpad";
 
 const HEADING_LINE = /^ {0,3}(#{1,6})\s+(.*)$/;
 const TASK_LINE = /^\s*[-*+]\s+\[[ xX~-]\]\s+\S/;
 
-/** Ce qui sépare les titres d'une chaîne de sections, une fois nommée en clair. */
+/** What separates the titles of a string of sections, once named in plain text. */
 const SECTION_SEPARATOR = " > ";
 
 /**
- * La chaîne de titres qui CONTIENT une tâche, du plus large au plus étroit, lue
- * dans les titres qui la précèdent (ordre du document, niveau + texte bruts).
- * Retourne des lignes de titre markdown prêtes à précéder la tâche.
+ * The title string that CONTAINS a task, from widest to narrowest, read
+ * in the titles that precede it (document order, level + raw text).
+ * Returns markdown title lines ready to precede the task.
  *
- * Une tâche vit dans sa section ET dans toutes celles qui l'englobent : sortie
- * du carnet avec le seul titre le plus proche, « ## Sidebar » ne dit pas de quoi
- * — « # Pull requests » au-dessus le dit. On remonte donc de titre en titre en
- * ne gardant que ceux de rang STRICTEMENT plus haut que le dernier retenu : un
- * titre de même rang (ou plus profond) est un frère, ou le contenu d'un frère,
- * et n'englobe rien.
+ * A task lives in its section AND in all those that include it: exit
+ * from the notebook with the only closest title, "## Sidebar" does not say what
+ * — "# Pull requests" above says so. We therefore go back from title to title in
+ * keeping only those of rank STRICTLY higher than the last retained: a
+ * title of the same rank (or deeper) is a brother, or the content of a brother,
+ * and does not include anything.
  *
- * Un titre VIDE ne se nomme pas, mais ferme quand même son rang : ce qu'il porte
- * n'a pas de section à ce niveau-là, seulement les titres au-dessus de lui.
+ * An EMPTY title does not does not name himself, but still closes his rank: what he carries
+ * has no section at this level, only the titles above him.
  */
 export function sectionHeadingChain(
   headings: Array<{ level: number; text: string }>
@@ -55,8 +55,8 @@ export function sectionHeadingChain(
   return chain;
 }
 
-/** Largeur d'indentation d'une ligne, tabulation comptée pour quatre colonnes —
- *  la même lecture que `parsePlan` (lib/plan.ts). */
+/** Indent width of a line, tab counted for four columns —
+ * the same reading as `parsePlan` (lib/plan.ts). */
 function indentWidth(line: string): number {
   let cols = 0;
   for (const ch of line) {
@@ -68,28 +68,28 @@ function indentWidth(line: string): number {
 }
 
 /**
- * Une tâche copiée ou lancée depuis le carnet voyage AVEC ses sections : le
- * markdown porté est la chaîne de titres qui la contient (telle quelle, niveaux
- * compris, cf. sectionHeadingChain) suivie de la tâche et de SES SOUS-TÂCHES —
- * voir scratchpad-task.tsx. On la redécoupe ici pour la nommer en clair dans le
- * prompt : « - [ ] relancer le cron » n'est pas la même tâche selon qu'elle vit
- * sous « Déploiement » ou sous « Idées », et « Sidebar » ne veut rien dire sans
- * le « Pull requests » qui l'englobe — d'où le chemin entier, joint par « > ».
+ * A task copied or launched from the travel notebook WITH its sections: the
+ * markdown carried is the title chain which contains it (as is, levels
+ * included, see sectionHeadingChain) followed by the task and ITS SUB-TASKS —
+ * see scratchpad-task.tsx. We redivide it here to name it clearly in the
+ * prompt: "- [ ] restart the cron" is not the same task depending on whether it lives
+ * under "Deployment" or under "Ideas", and "Sidebar" means nothing without
+ * the "Pull requests" which includes it - hence the entire path, joined by " >".
  *
- * C'est le seul canal disponible pour le run CARNET de numo : sa note est un
- * simple texte (éditable dans le composer, stocké en `agent_runs.prompt`), donc
- * la section doit voyager dedans — et le serveur la redécoupe avec cette même
- * fonction. Prompt copié et prompt de l'agent sont ainsi identiques.
+ * This is the only channel available for numo's CARNET run: its note is a
+ * simple text (editable in the composer, stored in `agent_runs.prompt`), so
+ * the section must travel in it — and the server recuts it with this same
+ * function. Copied prompt and agent prompt are thus identical.
  *
- * Les titres de tête doivent s'EMBOÎTER (rangs strictement croissants) : c'est
- * ce que produit une chaîne de sections, et deux titres de même rang décrivent,
- * eux, un vrai bout de note.
+ * The head titles must NEST (strictly increasing ranks): this is
+ * what a chain of sections produces, and two titles of the same rank describe,
+ * them, a real piece of note.
  *
- * Ce qui suit doit être UNE tâche — au sens de la hiérarchie du carnet : une
- * ligne de tâche, plus, éventuellement, ses sous-tâches, toutes indentées PLUS
- * PROFOND qu'elle. Deux tâches de même niveau ne sont pas une tâche, elles sont
- * un bout de note : elles ressortent inchangées, sans section, comme toute autre
- * matière (pas de titre, de la prose).
+ * The following must be ONE task — in the sense of the notebook hierarchy: a
+ * task line, plus, optionally, its subtasks, all indented MORE
+ * DEEP than it. Two tasks of the same level are not a task, they are
+ * a piece of note: they emerge unchanged, without section, like any other
+ * subject (no title, prose).
  */
 export function splitTaskSection(notes: string): {
   section: string | null;
@@ -134,12 +134,12 @@ export function splitTaskSection(notes: string): {
 const BUILT_PROMPT_OPENING = /^Work through [^\n]*\n\n<notes>\n/;
 
 /**
- * Ce texte est-il DÉJÀ un prompt de carnet emballé ? Depuis MIN-84 le composer
- * de la page Agents est pré-rempli avec le prompt COMPLET (et non plus la note
- * brute) : ce qu'on lit avant d'envoyer est exactement ce que l'agent reçoit.
- * Le serveur, lui, emballe toujours la demande d'un run carnet — il doit donc
- * laisser passer ce qui l'est déjà, sinon le prompt se retrouverait emboîté
- * deux fois.
+ * Is this text ALREADY a packed notebook prompt? Since MIN-84 the composer
+ * of the Agents page is pre-filled with the COMPLETE prompt (and no longer the raw
+ * note): what we read before sending is exactly what the agent receives.
+ * The server always packages the request for a run notebook — it must therefore
+ * let it pass which already is, otherwise the prompt would end up nested
+ * twice.
  */
 export function isScratchpadPrompt(text: string): boolean {
   return BUILT_PROMPT_OPENING.test(text.trim());
@@ -149,9 +149,9 @@ export function buildScratchpadPrompt(
   notes: string,
   opts?: { section?: boolean; mcp?: boolean }
 ): string {
-  // Emballer un prompt déjà emballé n'ajoute rien et brouille tout : on rend le
-  // texte tel quel. C'est ce qui rend la fonction sûre à appeler des deux côtés
-  // (composer client ET lib/server/agent/execute.ts) sans se coordonner.
+  // Wrapping an already wrapped prompt adds nothing and confuses everything: we return the
+  // text as is. This is what makes the function safe to call from both sides
+  // (compose client AND lib/server/agent/execute.ts) without coordinating.
   if (isScratchpadPrompt(notes)) return notes.trim();
 
   const isSection = opts?.section === true;
@@ -164,14 +164,14 @@ export function buildScratchpadPrompt(
     : isSection
       ? "the following section of my working notes"
       : "my working notes below";
-  // La section n'est PAS laissée dans <notes> : le bloc reste la tâche seule, et
-  // son appartenance est dite en clair juste après.
+  // The section is NOT left in <notes>: the block remains the task alone, and
+  // its membership is clearly stated immediately after.
   const sectionNote = section
     ? `\nThis task is from the section named "${section}".\n`
     : "";
 
-  // Le MCP est un PLUS, jamais un prérequis. Pour une section, on interdit le
-  // remplacement aveugle (set écrase TOUT le document) : relire d'abord.
+  // The MCP is a PLUS, never a prerequisite. For one section, we prohibit
+  // blind replacement (set overwrites the WHOLE document): reread first.
   const mcpBlock = isSection
     ? `Optionally, if the minddy MCP tools are available in your environment:
 - These notes are one section of a larger personal scratchpad. Read the full, current notes with \`minddy_get_scratchpad\` before changing anything.

@@ -79,8 +79,8 @@ export function StatusIndicator({
         </svg>
       );
     case "in_progress":
-      // Le jaune Figma (#FADB28) est pensé pour le dark ; en light il frôle
-      // l'invisible — même teinte, assombrie, pour tenir ~3:1 sur fond clair.
+      // Figma yellow (#FADB28) is designed for dark; in light it grazes
+      // the invisible — same color, darkened, to hold ~3:1 on a light background.
       return (
         <Pie
           color="currentColor"

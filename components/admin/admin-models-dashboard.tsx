@@ -44,8 +44,8 @@ import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 
 type ConfigValues = Record<string, string | null>;
 
-/** Clé du namespace `Admin`. Sert aux clés assemblées à l'exécution, qui doivent
- *  y être castées explicitement (convention : cf. lib/i18n-keys.ts). */
+/** Key for the `Admin` namespace. Used for keys assembled at runtime, which must
+ * be explicitly cast there (convention: cf. lib/i18n-keys.ts). */
 type AdminKey = MessageKey<"Admin">;
 
 async function patchConfig(key: string, value: string): Promise<void> {
@@ -107,8 +107,8 @@ export function AdminModelsDashboard() {
   }, []);
 
   return (
-    /* Largeur et marges héritées du shell (`admin-dashboard`) — un seul
-       conteneur pour les quatre onglets. */
+    /* Width and margins inherited from shell (`admin-dashboard`) — only one
+ container for all four tabs. */
     <div className="space-y-8">
       <header>
         <h2 className="text-sm font-semibold">{t("title")}</h2>
@@ -120,19 +120,19 @@ export function AdminModelsDashboard() {
           {t("loadError")}
         </div>
       ) : (
-        /* C'est littéralement un écran de réglages : un groupe par famille, un
-           champ par rangée. Même grammaire que /settings (MIN-167). */
+        /* It's literally a settings screen: one group per family, one
+ field per row. Same grammar as /settings (MIN-167). */
         <div className="flex flex-col gap-4">
           {AI_MODEL_CONFIG_GROUPS.map((group) => (
             <SettingsGroup
               key={group}
               title={t(`groups.${group}.title`)}
               // Description optionnelle : certains groupes s'expliquent par
-              // les descriptions de leurs champs.
+              // descriptions of their fields.
               description={
-                // Cast : la clé n'existe que pour certains groupes (2 sur 4),
-                // ce que le type ne sait pas dire — `t.has` est le garde-fou,
-                // à l'exécution.
+                // Cast: the key only exists for certain groups (2 out of 4),
+                // what the guy can't say — `t.has` is the safeguard,
+                // at execution.
                 t.has(`groups.${group}.desc` as AdminKey)
                   ? t(`groups.${group}.desc` as AdminKey)
                   : undefined
@@ -165,16 +165,16 @@ function ConfigRow({
 }: {
   field: AiConfigField;
   value: string | null;
-  /** Suffixe de routage OpenRouter du champ, quand il en accepte un (MIN-263). */
+  /** OpenRouter routing suffix for the field, when it accepts one (MIN-263). */
   suffix: string | null;
   loading: boolean;
   onSaved: (key: string, value: string) => void;
 }) {
   const t = useTranslations("Admin");
-  // Casts : `field.key` vient de la config serveur, donc la clé se construit à
-  // l'exécution et échappe au catalogue typé (cf. lib/i18n-keys.ts).
+  // Casts: `field.key` comes from the server config, so the key is built at
+  // execution and escapes the typed catalog (see lib/i18n-keys.ts).
   const label = field.adminLabel ?? t(`fields.${field.key}.label` as AdminKey);
-  // Description optionnelle : un champ dont le libellé se suffit n'en a pas.
+  // Optional description: a field whose label is sufficient does not have one.
   const descKey = `fields.${field.key}.desc` as AdminKey;
   const desc = field.adminLabel ? null : t.has(descKey) ? t(descKey) : null;
 
@@ -215,22 +215,22 @@ function ConfigRow({
 }
 
 /**
- * Un réglage de modèle. Le contrôle est le picker de l'app (`ModelCombobox`,
- * portée `platform`) : on choisit une MARQUE et un NOM — l'id OpenRouter ne
- * s'affiche nulle part, c'est un détail de transport.
+ * A template setting. The control is the app picker (`ModelCombobox`,
+ * scope `platform`): we choose a BRAND and a NAME — the OpenRouter id does not
+ * is not displayed anywhere, it is a transport detail.
  *
- * Le catalogue vient de la clé plateforme, pas du BYOK de l'admin qui regarde :
- * ces modèles-là tournent sur la plateforme, un id Anthropic écrit ici serait
- * cassé au runtime. La saisie libre reste offerte (un modèle tout juste sorti
- * peut manquer au catalogue), et « modèle par défaut » efface le réglage — il
- * suit alors le défaut produit au lieu d'être figé sur sa valeur du jour.
+ * The catalog comes from the platform key, not from the BYOK of the admin who is viewing:
+ * these models run on the platform, an Anthropic id written here would be
+ * broken at runtime. Free entry remains available (a model just released
+ * may be missing from the catalog), and “default model” clears the setting — it
+ * then follows the fault produced instead of being fixed on its current value.
  *
- * Plus de bouton « Enregistrer » : un choix dans une liste est un acte unique,
- * il s'enregistre à la sélection (comme l'interrupteur de `FlagRow`).
+ * No more “Save” button: a choice in a list is a unique act,
+ * it registers on selection (like the `FlagRow` switch).
  *
- * En dessous, le raccourci de routage OpenRouter (MIN-263) : il ne change PAS
- * de modèle, il ordonne les providers de celui-là. D'où la seconde liste plutôt
- * qu'un id à rallonge dans la première — et « Aucun » par défaut.
+ * Below, the OpenRouter routing shortcut (MIN-263): it does NOT change
+ * model, it orders the providers of that one. Hence the second list rather
+ * only an extended id in the first — and “None” by default.
  */
 function ModelRow({
   field,
@@ -248,8 +248,8 @@ function ModelRow({
   onSaved: (key: string, value: string) => void;
 }) {
   const t = useTranslations("Admin");
-  // Les libellés du picker vivent dans le namespace Agent : c'est le MÊME
-  // composant que celui de l'agent, tous ses points d'usage les partagent.
+  // The picker labels live in the Agent namespace: it’s the SAME
+  // component than that of the agent, all its points of use share them.
   const tAgent = useTranslations("Agent");
   const saved = value ?? "";
   const [busy, setBusy] = useState(false);
@@ -273,11 +273,9 @@ function ModelRow({
       label={label}
       hint={desc ?? undefined}
       control={
-        /* Les deux listes l'une SOUS l'autre : côte à côte, elles poussaient la
-           rangée au-delà de la largeur de la carte (le conteneur de contrôle de
-           `SettingsRow` est `shrink-0`, rien ne cède). Le raccourci est cadré à
-           droite, sous le modèle qu'il accompagne — la lecture reste « ce
-           modèle-ci, servi comme ça ». */
+        /* The two lists one UNDER the other: side by side, they pushed the
+ row beyond the width of the map (the control container of
+ `SettingsRow` is `shrink-0`, nothing gives way). The shortcut is framed to the right, under the model it accompanies — the reading remains “this model, served like that”. */
         <div className="flex min-w-0 flex-col items-stretch gap-2 sm:items-end">
           <div className="flex min-w-0 items-center gap-2">
             <ModelCombobox
@@ -303,10 +301,10 @@ function ModelRow({
   );
 }
 
-/** Valeur du `Select` pour « aucun raccourci » (un item ne peut être vide). */
+/** Value of `Select` for “no shortcut” (an item cannot be empty). */
 const NO_SUFFIX = "__none__";
 
-/** Libellés des raccourcis — table typée, pas de clé assemblée à l'exécution. */
+/** Shortcut labels — typed table, no key assembled at runtime. */
 const SUFFIX_LABEL_KEYS: Record<ModelSuffix, AdminKey> = {
   nitro: "suffix.nitro",
   floor: "suffix.floor",
@@ -314,10 +312,10 @@ const SUFFIX_LABEL_KEYS: Record<ModelSuffix, AdminKey> = {
 };
 
 /**
- * Le raccourci de routage OpenRouter d'un modèle (`:nitro`, `:floor`,
- * `:exacto`). Il s'enregistre sur sa PROPRE clé `app_config` — jamais dans l'id
- * du modèle — pour que le catalogue, l'affichage et le prix continuent de voir
- * un id nu, et pour que le retirer ne touche pas au modèle choisi.
+ * A template's OpenRouter routing shortcut (`:nitro`, `:floor`,
+ * `:exacto`). It registers on its OWN `app_config` key — never in the id
+ * of the model — so that the catalog, display and price continue to see
+ * a bare id, and so that removing it does not affect the chosen model.
  */
 function SuffixSelect({
   field,
@@ -414,11 +412,11 @@ function FlagRow({
 }
 
 /**
- * Un id de modèle SAISI, pas choisi : les défauts frontier des providers BYOK
- * vivent dans le namespace du provider (`claude-sonnet-5`, pas
- * `anthropic/claude-sonnet-5`), donc le picker plateforme — qui liste des ids
- * OpenRouter — y écrirait des valeurs cassées au runtime. Le placeholder montre
- * le défaut produit ; vider le champ y revient.
+ * A model id ENTERED, not chosen: the border defects of BYOK providers
+ * live in the provider namespace (`claude-sonnet-5`, not
+ * `anthropic/claude-sonnet-5`), therefore the platform picker — which lists ids
+ * OpenRouter — would write broken values ​​to it at runtime. The placeholder shows
+ * the product defect; emptying the field returns there.
  */
 function ModelIdRow({
   field,
@@ -484,10 +482,10 @@ function ModelIdRow({
   );
 }
 
-/** Valeur du `Select` pour « pas de niveau conseillé » (un item ne peut être vide). */
+/** Value of `Select` for “no recommended level” (an item cannot be empty). */
 const INHERIT_EFFORT = "__inherit__";
 
-/** Clés des libellés de niveau de réflexion — table typée, pas de clé assemblée. */
+/** Reflection level label keys — typed table, no assembled key. */
 const EFFORT_LABEL_KEYS: Record<SubagentThinkingEffort, AdminKey> = {
   low: "favorites.effortLow",
   medium: "favorites.effortMedium",
@@ -495,16 +493,16 @@ const EFFORT_LABEL_KEYS: Record<SubagentThinkingEffort, AdminKey> = {
 };
 
 /**
- * La liste « Favorites for sub-agents » (MIN-112) : ce que l'agent parent lit dans
- * son prompt pour décider sur quoi lancer une fille.
+ * The “Favorites for sub-agents” list (MIN-112): what the parent agent reads in
+ * its prompt to decide what to start a girl on.
  *
- * Deux choses la distinguent des autres lignes. D'abord elle s'enregistre EN LOT :
- * un favori n'est utile que complet (le modèle sans son conseil d'usage ne dit rien),
- * donc bouton « Enregistrer » plutôt qu'un enregistrement au choix. Ensuite le
- * `use_case` est du PROMPT, pas de l'UI : il part tel quel dans le prompt système du
- * parent — écrit en anglais, et adressé à un modèle qui choisit, pas à un humain qui
- * lit. « Réinitialiser » efface la ligne `app_config` : le réglage suit de nouveau le
- * défaut produit au lieu d'être figé sur sa valeur du jour.
+ * Two things distinguish it from other lines. First it is recorded IN BATCH:
+ * a favorite is only useful when complete (the model without its usage advice says nothing),
+ * therefore “Save” button rather than a recording of your choice. Then the
+ * `use_case` is from the PROMPT, not from the UI: it leaves as is in the system prompt of the
+ * parent — written in English, and addressed to a model who chooses, not to a human who
+ * bed. “Reset” clears the `app_config` line: the setting follows the
+ * defect produced instead of being fixed on its current value.
  */
 function FavoritesRow({
   field,
@@ -522,7 +520,7 @@ function FavoritesRow({
   const t = useTranslations("Admin");
   const tAgent = useTranslations("Agent");
   const saved = (value ?? "").trim();
-  // Le MÊME parseur que le runtime : ce que l'écran montre est ce que l'agent lira.
+  // The SAME parser as the runtime: what the screen shows is what the agent will read.
   const savedList = useMemo(
     () => parseSubagentFavorites(saved) ?? DEFAULT_SUBAGENT_FAVORITES,
     [saved],
@@ -551,13 +549,13 @@ function FavoritesRow({
     }
   };
 
-  // Liste vidée = retour au repli produit : on efface la ligne plutôt que
-  // d'enregistrer un tableau vide, que le runtime remplacerait de toute façon.
+  // Emptied list = return to product fallback: we delete the line rather than
+  // to save an empty array, which the runtime would replace anyway.
   const save = () => void write(list.length > 0 ? JSON.stringify(list) : "");
 
   return (
-    /* La seule rangée verticale du tableau de bord : une LISTE de favoris, avec
-       son propre texte long — elle ne tient pas au bout d'une ligne. */
+    /* The only vertical row on the dashboard: a LIST of favorites, with
+ its own long text — it doesn't fit at the end of one line. */
     <SettingsRow label={label} hint={desc ?? undefined} orientation="vertical">
       <div className="space-y-3">
         {list.map((favorite, index) => (
@@ -678,29 +676,29 @@ function FavoritesRow({
 }
 
 /**
- * La liste des modèles CONSEILLÉS : ce que le picker de l'utilisateur montre à
- * l'ouverture, avant toute frappe (cf. lib/recommended-models.ts).
+ * The list of RECOMMENDED models: what the user's picker shows
+ * opening, before any keystroke (see lib/recommended-models.ts).
  *
- * À ne pas confondre avec les favoris juste au-dessus, malgré la ressemblance de
- * l'écran : les favoris sont du PROMPT, lus par un agent parent qui choisit sur
- * quoi lancer une fille ; ceux-ci sont de l'UI, lus par un humain. D'où la forme
- * plus pauvre — un id suffit, il n'y a ni conseil d'usage à écrire ni niveau de
- * réflexion à régler, le picker sait déjà afficher un nom, un logo et un coût.
+ * Not to be confused with the favorites just above, despite the resemblance of
+ * the screen: the favorites are from PROMPT, read by a parent agent who chooses on
+ * what to throw a girl; these are from the UI, read by a human. Hence the form
+ * poorer — an id is enough, there is neither usage advice to write nor level of
+ * reflection to be resolved, the picker already knows how to display a name, a logo and a cost.
  *
- * Ce qu'on règle ici est un ENSEMBLE, pas une séquence : l'ORDRE est calculé,
- * du moins cher au plus cher, ici comme dans le picker (`resolveRecommended`).
- * C'est le seul ordre qui reste vrai — les prix d'OpenRouter bougent, et une
- * séquence rangée à la main finirait par annoncer une échelle de coût qui
- * n'existe plus. D'où l'absence de flèches, et le multiplicateur en face de
- * chaque ligne : c'est lui qui explique le rang.
+ * What we regulate here is a SET, not a sequence: the ORDER is calculated,
+ * from least expensive to most expensive, here as in the picker (`resolveRecommended`).
+ * This is the only order that remains true — OpenRouter prices move, and a
+ * sequence arranged by hand would end up announcing a cost scale which
+ * no longer exists. Hence the absence of arrows, and the multiplier in front of
+ * each line: it is he who explains the rank.
  *
- * Un modèle dont on ne connaît pas le prix se range en fin de liste, faute de
- * savoir où le mettre — même règle des deux côtés.
+ * A model for which we do not know the price is placed at the end of the list, due to lack of
+ * know where to put it — same rule on both sides.
  *
- * Enregistrement EN LOT comme les favoris, pour la même raison : une liste à
- * moitié réécrite n'est pas un état qu'on veut servir. « Réinitialiser » efface
- * la ligne `app_config` — le réglage suit de nouveau le défaut produit au lieu
- * d'être figé sur la sélection du jour.
+ * BATCH saving like favorites, for the same reason: a list to
+ * half rewritten is not a state we want to serve. “Reset” clears
+ * the `app_config` line — the setting again follows the fault produced instead
+ * to be stuck on the selection of the day.
  */
 function RecommendedRow({
   field,
@@ -718,12 +716,12 @@ function RecommendedRow({
   const t = useTranslations("Admin");
   const tAgent = useTranslations("Agent");
   const locale = useLocale();
-  // Le catalogue plateforme porte les multiplicateurs (cf. getAdminModelCatalog) :
-  // c'est lui qui donne le prix de chaque ligne, donc son rang. Même clé de
-  // query que les pickers de l'écran — aucune requête de plus.
+  // The platform catalog carries the multipliers (see getAdminModelCatalog):
+  // it is he who gives the price of each line, therefore its rank. Same key
+  // query as the screen pickers — no more queries.
   const { models } = useAgentModelsQuery("platform");
   const saved = (value ?? "").trim();
-  // Le MÊME parseur que le runtime : ce que l'écran montre est ce que le picker lira.
+  // The SAME parser as the runtime: what the screen shows is what the picker will read.
   const savedList = useMemo(
     () => parseRecommendedModels(saved) ?? DEFAULT_RECOMMENDED_MODELS,
     [saved],
@@ -738,11 +736,11 @@ function RecommendedRow({
   );
 
   /**
-   * L'ordre d'affichage : le moins cher d'abord, comme le picker le servira.
+   * Display order: least expensive first, as the picker will serve it.
    *
-   * Les lignes VIDES (un « Ajouter » qu'on n'a pas encore rempli) restent en
-   * queue quoi qu'il arrive — les trier par un prix qu'elles n'ont pas les
-   * ferait sauter d'un bout à l'autre de la liste pendant qu'on les remplit.
+   * EMPTY lines (an “Add” that has not yet been filled) remain in effect.
+   * queue whatever happens — sort them by a price they don't have
+   * would jump from one end of the list to the other while filling them out.
    */
   const ordered = useMemo(() => {
     const rank = (id: string) => (id ? (multiplierOf(id) ?? Infinity) : Number.MAX_VALUE);
@@ -751,16 +749,16 @@ function RecommendedRow({
     );
   }, [list, multiplierOf]);
 
-  // Ce qu'on règle est un ENSEMBLE : deux listes qui portent les mêmes modèles
-  // sont la même liste, quel que soit leur ordre — c'est le prix qui le fixe.
-  // Comparer les séquences ferait clignoter « modifié » à chaque réordonnancement
-  // du tri, sans que personne n'ait rien touché.
+  // What we settle is a SET: two lists that have the same models
+  // are the same list, whatever their order — it is the price that fixes it.
+  // Comparing sequences would flash “modified” with each reordering
+  // sorting, without anyone having touched anything.
   const asSet = (ids: string[]) => [...ids].sort().join("\n");
   const dirty = asSet(list) !== asSet(savedList);
   const incomplete = list.some((id) => !id);
-  // Un id en double ne ferait pas deux lignes, il en ferait une qui clignote :
-  // `parseRecommendedModels` déduplique, donc l'enregistrement perdrait
-  // silencieusement une ligne que l'admin voit encore à l'écran.
+  // A duplicate id would not make two lines, it would make one that flashes:
+  // `parseRecommendedModels` deduplicates, so the record would lose
+  // silently a line that the admin still sees on the screen.
   const duplicate = new Set(list.filter(Boolean)).size !== list.filter(Boolean).length;
 
   const write = async (next: string) => {
@@ -777,10 +775,10 @@ function RecommendedRow({
     }
   };
 
-  // Liste vidée = retour au repli produit : on efface la ligne plutôt que
-  // d'enregistrer un tableau vide, que le runtime remplacerait de toute façon.
-  // Enregistré DANS L'ORDRE affiché : le serveur retrie de toute façon, mais une
-  // ligne `app_config` qu'on relit à la main se lit mieux rangée.
+  // Emptied list = return to product fallback: we delete the line rather than
+  // to save an empty array, which the runtime would replace anyway.
+  // Saved IN THE ORDER displayed: the server resorts anyway, but a
+  // line `app_config` that is reread by hand reads more neatly.
   const save = () => void write(ordered.length > 0 ? JSON.stringify(ordered) : "");
 
   return (
@@ -795,8 +793,8 @@ function RecommendedRow({
               <ModelCombobox
                 scope="platform"
                 value={id}
-                // Remplacement par IDENTITÉ, pas par rang : la ligne éditée n'est
-                // pas à l'index `index` de `list`, puisque `ordered` est trié.
+                // Replacement by IDENTITY, not by rank: the edited line is not
+                // not at index `index` of `list`, since `ordered` is sorted.
                 onChange={(next) =>
                   setList((prev) => {
                     const at = prev.indexOf(id);
@@ -811,8 +809,8 @@ function RecommendedRow({
                 freeTextLabel={(query) => tAgent("modelUseCustom", { model: query })}
               />
             </div>
-            {/* Ce qui explique le rang. Muet sur un modèle que le catalogue ne
-                situe pas — celui-là est en queue faute de prix, pas par choix. */}
+            {/* Which explains the rank. Silent on a model that the catalog does not
+ not located — this one is in the queue due to lack of price, not by choice. */}
             <span className="w-12 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
               {multiplierOf(id) != null ? formatMultiplier(multiplierOf(id)!, locale) : null}
             </span>
@@ -840,9 +838,9 @@ function RecommendedRow({
         ) : null}
 
         <div className="flex flex-wrap items-center gap-2 pt-1">
-          {/* Verrouillé tant qu'une ligne est vide : les lignes se repèrent par
-              leur id, et deux lignes vides seraient deux lignes indistinguables
-              — éditer la seconde modifierait la première. */}
+          {/* Locked as long as a line is empty: the lines are marked by
+ their id, and two empty lines would be two indistinguishable lines
+ — editing the second would modify the first. */}
           <Button
             type="button"
             variant="outline"

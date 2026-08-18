@@ -5,39 +5,39 @@ import type { ReactNode } from "react";
 import { DIFF_LINE_DIFF_TYPE, DIFF_THEMES } from "@/lib/diff-theme";
 
 /**
- * Le pool de workers qui colore les diffs (MIN-181).
+ * The pool of workers that colors the diffs (MIN-181).
  *
- * C'est lui qui remplace le plafond de lignes d'avant : la coloration ne se fait
- * plus dans le rendu, ni même sur le fil principal — un lockfile de 20 000
- * lignes ne gèle plus l'onglet, il arrive coloré un peu plus tard.
+ * This is what replaces the line ceiling from before: the coloring is no longer done
+ * in the rendering, nor even on the main thread — a lockfile of 20,000
+ * lines no longer freezes the tab, it arrives colored a little later.
  *
- * **Deux workers**, pas les huit par défaut : une vue de PR colore quelques
- * fichiers à la fois, et chaque worker charge sa propre copie de Shiki. Le pool
- * est un singleton de module côté lib, monté et démonté avec la vue.
+ * **Two workers**, not the default eight: a PR view colors a few
+ * files at a time, and each worker loads its own copy of Shiki. The pool
+ * is a lib-side module singleton, mounted and unmounted with the view.
  *
- * ⚠️ Le pool tranche pour tout le monde. Vérifié dans `DiffHunksRenderer` : dès
- * qu'un pool est présent, ce sont SES options de rendu (thème, style de
- * marquage, longueur max de ligne) qui l'emportent sur celles de chaque
- * composant. Le couple de thèmes et le style de marquage vivent donc dans
- * `lib/diff-theme` et sont passés AUX DEUX endroits — c'est le même réglage, il
- * n'a qu'une seule source.
+ * ⚠️ The pool slices for everyone. Checked in `DiffHunksRenderer`: as soon as
+ * a pool is present, ITS rendering options (theme, style of
+ * marking, max line length) take precedence over those of each
+ * component. The pair of themes and the marking style therefore live in
+ * `lib/diff-theme` and are passed IN BOTH places — it's the same setting, it
+ * has only one source.
  *
- * Le choix clair/sombre, lui, reste par composant (`themeType`) : le pool
- * colore avec LES DEUX thèmes d'un coup, et c'est le `color-scheme` du
- * Shadow DOM qui décide lequel s'affiche.
+ * The light/dark choice remains per component (`themeType`): the pool
+ * colors with BOTH themes at once, and it is the `color-scheme` of the
+ * Shadow DOM which decides which one is displayed.
  */
 export function PrDiffWorkers({ children }: { children: ReactNode }) {
   return (
     <WorkerPoolContextProvider
       poolOptions={{
         poolSize: 2,
-        // La variante **portable**, et pas `worker/worker.js` : vérifié sur le
-        // build de ce dépôt, Turbopack traite `new URL(…, import.meta.url)`
-        // comme un ACTIF — il recopie le fichier tel quel dans `static/media`
-        // sans le passer par l'empaqueteur. `worker.js` y arriverait avec ses
-        // `import … from "shiki/core"` intacts, que le navigateur ne sait pas
-        // résoudre : le worker mourrait au chargement. `worker-portable.js` est
-        // déjà autonome, donc il survit à la recopie.
+        // The **portable** variant, and not `worker/worker.js`: checked on the
+        // build of this repository, Turbopack processes `new URL(…, import.meta.url)`
+        // like an ASSET — it copies the file as is into `static/media`
+        // without passing it through the packager. `worker.js` would achieve this with its
+        // `import … from "shiki/core"` intact, which the browser does not know
+        // resolve: the worker would die on loading. `worker-portable.js` is
+        // already autonomous, so it survives copying.
         workerFactory: () =>
           new Worker(new URL("@pierre/diffs/worker/worker-portable.js", import.meta.url), {
             type: "module",
@@ -46,10 +46,10 @@ export function PrDiffWorkers({ children }: { children: ReactNode }) {
       highlighterOptions={{
         theme: DIFF_THEMES,
         lineDiffType: DIFF_LINE_DIFF_TYPE,
-        // Le moteur JS, pas WebAssembly : le seul `import()` que la variante
-        // portable garde pointe le `.wasm` en RELATIF, et il ne survivrait pas à
-        // la recopie en actif. Dit ici plutôt que laissé au défaut, pour que la
-        // dépendance entre les deux choix soit écrite quelque part.
+        // The JS engine, not WebAssembly: the only `import()` variant
+        // portable keeps pointing the `.wasm` in RELATIVE, and it would not survive
+        // copy it back to active. Said here rather than left at default, so that the
+        // dependency between the two choices is written somewhere.
         preferredHighlighter: "shiki-js",
       }}
     >

@@ -19,104 +19,103 @@ import {
 } from "@/lib/server/page-files";
 
 /**
- * Application des durées de conservation (MIN-119, RGPD art. 5.1.e).
+ * Application of retention periods (MIN-119, RGPD art. 5.1.e).
  *
- * Une politique de confidentialité qui annonce des durées et un code qui ne
- * supprime jamais rien, c'est le manquement le plus banal — et le plus simple à
- * constater lors d'un contrôle. Ce module est le pendant exécutable de la
- * section « Durées de conservation » de la politique : les deux doivent dire la
- * même chose, et c'est ici que la valeur fait foi.
+ * A confidentiality policy which announces durations and a code which never
+ * deletes anything, it is the most banal breach - and the simplest to observe when of a control. This module is the executable counterpart of the
+ * “Retention periods” section of the policy: both must say the
+ * same thing, and this is where the value takes precedence.
  *
- * Le contenu créé par l'utilisateur ne part de lui-même qu'à UNE condition :
- * l'avoir supprimé. Un ticket, un projet, un objectif ou un feedback mis à la
- * corbeille y reste 30 jours, puis le balayage l'efface pour de bon (MIN-133) —
- * c'est le seul cas, et la corbeille l'annonce en clair, jour par jour. Tout le
- * reste de ce qui part ici est *technique* : traces d'exécution, jetons expirés,
- * accusés de lecture, dont la conservation n'a plus d'utilité passé un délai.
- * Ce à quoi l'utilisateur n'a pas touché, lui, ne bouge jamais.
+ * User-created content only leaves on ONE condition:
+ * has it deleted. A ticket, a project, an objective or a feedback placed in the
+ * trash remains there for 30 days, then the scanning erases it for good (MIN-133) —
+ * this is the only case, and the trash announces it in plain text, day by day. All the
+ * remainder of what leaves here is *technical*: execution traces, expired tokens,
+ * read receipts, the retention of which is no longer useful after a period of time.
+ * What the user has not touched, never moves.
  *
- * Appelé une fois par nuit par `app/api/cron/data-retention/route.ts`.
- * Les durées correspondantes sont documentées dans le registre interne des
- * traitements.
+ * Called once a night by `app/api/cron/data-retention/route.ts`.
+ * The corresponding durations are documented in the internal register of
+ * treatments.
  */
 
-/** Durées de conservation, en jours. Source de vérité du produit. */
+/** Retention times, in days. Source of product truth. */
 export const RETENTION_DAYS = {
-  /** Notifications déjà lues — la boîte de réception ne remonte pas si loin. */
+  /** Notifications already read — inbox doesn't go back that far. */
   readNotifications: 180,
   /**
-   * Invitations restées en attente. Passé ce délai, l'adresse d'une personne
-   * qui n'a jamais rejoint le projet est conservée sans finalité.
-   */
+ * Invitations still pending. After this period, the address of a person
+ * who has never joined the project is kept without purpose.
+ */
   pendingInvitations: 90,
   /**
-   * Traces d'exécution de l'agent (événements + messages de pilotage) après
-   * l'état terminal du run. Le `checkpoint` de reprise, lui, est déjà remis à
-   * null à la fin du run (lib/server/agent/runs.ts). Ne restent ensuite que les
-   * métadonnées attachées au ticket : branche, pull request, statut, coût.
-   */
+ * Agent execution traces (events + control messages) after
+ * the terminal state of the run. The recovery `checkpoint` is already set to
+ * null at the end of the run (lib/server/agent/runs.ts). Then only the
+ * metadata attached to the ticket remains: branch, pull request, status, cost.
+ */
   agentRunTrace: 30,
   /**
-   * Charge utile brute des webhooks Stripe. La LIGNE reste au-delà — sa clé
-   * primaire porte la garde d'idempotence, la supprimer rouvrirait la porte au
-   * rejeu d'un événement. Seul le `payload` part.
-   */
+ * Raw payload of Stripe webhooks. The LINE remains beyond — its primary key
+ * carries the idempotence guard, deleting it would reopen the door to the
+ * replay of an event. Only the `payload` part.
+ */
   stripeWebhookPayload: 90,
   /**
-   * Accusés de livraison des webhooks de forge (MIN-333) — l'anti-rejeu de
-   * `forge_webhook_deliveries`. Contrairement à la ligne Stripe, celle-ci part
-   * ENTIÈREMENT : elle ne porte qu'un identifiant opaque, et une forge ne
-   * re-livre jamais au-delà de quelques heures. Sept jours laissent une marge
-   * confortable sans faire enfler une table qui grossit à chaque événement.
-   */
+ * Forge webhooks delivery receipts (MIN-333) — anti-replay of
+ * `forge_webhook_deliveries`. Unlike the Stripe line, this one leaves
+ * FULLY: it only carries an opaque identifier, and a forge never
+ * re-delivers beyond a few hours. Seven days leaves a comfortable margin
+ * without swelling a table which grows with each event.
+ */
   forgeWebhookDeliveries: 7,
   /**
-   * Corbeille (MIN-133). Le seul contenu utilisateur que ce balayage détruit —
-   * et seulement parce que l'utilisateur l'a déjà supprimé une fois. La durée
-   * est celle affichée sur chaque ligne de la corbeille : elle vit dans
-   * `lib/server/trash.ts`, d'où elle est réexportée ici pour que le balayage et
-   * l'écran ne puissent pas diverger.
-   */
+ * Trash (MIN-133). The only user content this sweep destroys —
+ * and only because the user has already deleted it once. The duration
+ * is that displayed on each row of the trash: it lives in
+ * `lib/server/trash.ts`, from where it is re-exported here so that the scan and
+ * the screen cannot diverge.
+ */
   trash: TRASH_RETENTION_DAYS,
   /**
-   * Identités de board qui n'ont RIEN produit : vérifiées par code puis plus
-   * rien — ni retour, ni vote, ni commentaire, ni session vivante. Leur adresse
-   * était conservée sans finalité, ce que l'article 5.1.e n'admet pas.
-   *
-   * 90 jours, soit la durée de vie d'une session de board : en deçà, la purge
-   * courrait après des gens encore connectés. Le tri lui-même est en SQL
-   * (`purge_dormant_feedback_identities`) — six « n'existe pas » que PostgREST
-   * ne sait pas exprimer.
-   */
+ * Board identities that have NOTHING produced: verified by code then more
+ * nothing — no feedback, no vote, no comment, no live session. Their address
+ * was kept without purpose, which article 5.1.e does not allow.
+ *
+ * 90 days, the lifespan of a board session: otherwise, the purge
+ * would chase after people still connected. The sort itself is in SQL
+ * (`purge_dormant_feedback_identities`) — six “does not exist” that PostgREST
+ * cannot express.
+ */
   dormantFeedbackIdentities: 90,
   /**
-   * Historique des pages (MIN-277) : les états antérieurs d'un document.
-   *
-   * Même durée que la corbeille, et c'est délibéré — un second délai serait une
-   * seconde chose à retenir, pour la même promesse (« rien de ce que vous avez
-   * écrit ne disparaît avant trente jours »). Ce qui part ici n'est jamais le
-   * document courant : il vit dans `pages`, et rien ne l'efface tant que
-   * personne ne l'a supprimé.
-   */
+ * Page history (MIN-277): the previous states of a document.
+ *
+ * Same duration as the trash, and this is deliberate — a second delay would be a
+ * second thing to remember, for the same promise ("nothing you have
+ * written disappears before thirty days"). What leaves here is never the
+ * current document: it lives in `pages`, and nothing erases it until
+ * someone deletes it.
+ */
   pageVersions: TRASH_RETENTION_DAYS,
   /**
-   * Fichiers de page ORPHELINS (MIN-280) : plus cités par aucun corps.
-   *
-   * Ce n'est pas une durée de conservation au sens de l'article 5.1.e — le
-   * fichier n'est plus une donnée qu'on garde, c'est un octet que plus rien ne
-   * montre. Le délai est un délai de GRÂCE : une image sort d'un corps par un
-   * retour arrière, et y revient par un `⌘Z` fait le lendemain, par la
-   * restauration d'une version (MIN-277) ou par un passage à la corbeille. Une
-   * semaine couvre tous ces retours ; au-delà, plus personne ne revient.
-   */
+ * ORPHAN page files (MIN-280): no longer cited by any body.
+ *
+ * This is not a retention period within the meaning of article 5.1.e — the
+ * file is no longer data that we keep, it is a byte that is nothing more ne
+ * shows. The delay is a GRACE delay: an image leaves a body by a
+ * backspace, and returns there by a `⌘Z` done the next day, by the
+ * restoration of a version (MIN-277) or by a move to the trash. One
+ * week covers all these returns; beyond that, no one comes back.
+ */
   orphanPageFiles: ORPHAN_PAGE_FILE_DAYS,
   /**
-   * Objets du bucket `attachments` ORPHELINS (MIN-348) : téléversés en direct
-   * par le navigateur, puis jamais enregistrés — un composeur fermé, un onglet
-   * perdu. Même nature et même délai de grâce que les fichiers de page : ce
-   * n'est pas une durée de conservation, c'est le temps qu'on laisse à une
-   * ressource pour être finalement rattachée.
-   */
+ * Objects in bucket `attachments` ORPHANS (MIN-348): uploaded live
+ * by browser, then never saved — one composer closed, one tab
+ * lost. Same nature and same grace period as page files: this
+ * is not a retention period, it is the time we leave for a
+ * resource to finally be attached.
+ */
   orphanAttachments: ORPHAN_ATTACHMENT_DAYS,
 } as const;
 
@@ -124,15 +123,15 @@ export type RetentionKey = keyof typeof RETENTION_DAYS;
 
 const DAY_MS = 86_400_000;
 
-/** Borne ISO en deçà de laquelle une ligne est expirée. */
+/** ISO limit below which a line is expired. */
 export function cutoff(days: number, now: Date = new Date()): string {
   return new Date(now.getTime() - days * DAY_MS).toISOString();
 }
 
 export interface RetentionStep {
-  /** Nom de la purge, tel qu'il apparaît dans le résultat du cron. */
+  /** Name of the purge, as it appears in the cron output. */
   step: string;
-  /** Lignes touchées, ou null si l'étape a échoué. */
+  /** Rows affected, or null if the step failed. */
   deleted: number | null;
   error?: string;
 }
@@ -144,9 +143,9 @@ export interface RetentionSweepResult {
 }
 
 /**
- * Enveloppe une purge : une table qui échoue (colonne renommée, timeout) ne doit
- * pas emporter le balayage entier — les suivantes tournent quand même, et le
- * cron rapporte l'étape fautive.
+ * Wraps a purge: a table that fails (column renamed, timeout) must
+ * not carry the entire scan — the following ones still run, and the
+ * cron reports the faulty step.
  */
 async function step(
   name: string,
@@ -161,7 +160,7 @@ async function step(
 
 type Service = ReturnType<typeof getServiceClient>;
 
-/** Compte les lignes réellement supprimées (`count: "exact"` sur un delete). */
+/** Counts lines actually deleted (`count: "exact"` on a delete). */
 function counted(result: { count: number | null; error: unknown }): number {
   if (result.error) throw result.error as Error;
   return result.count ?? 0;
@@ -178,7 +177,7 @@ async function purgeReadNotifications(service: Service, now: Date) {
   );
 }
 
-/** Invitations jamais acceptées, émises il y a plus de `pendingInvitations`. */
+/** Invitations never accepted, issued more than `pendingInvitations` ago. */
 async function purgePendingInvitations(service: Service, now: Date) {
   return counted(
     await service
@@ -192,14 +191,12 @@ async function purgePendingInvitations(service: Service, now: Date) {
 const TERMINAL_RUN_STATUSES = ["completed", "failed", "canceled"];
 
 /**
- * Traces des runs d'agent terminés depuis plus de `agentRunTrace` jours.
+ * Traces of agent runs completed more than `agentRunTrace` days ago.
  *
- * Trois tables (`agent_run_events`, `agent_run_messages`, `agent_run_journal`)
- * filtrées sur la même
- * liste de runs : PostgREST ne sait pas joindre dans un DELETE, donc on résout
- * d'abord les identifiants. Le lot est borné — un balayage quotidien rattrape
- * le reste le lendemain, et une purge illimitée sur une base qui a accumulé des
- * mois de runs dépasserait la durée de la fonction.
+ * Three tables (`agent_run_events`, `agent_run_messages`, `agent_run_journal`)
+ * filtered on the same
+ * list of runs: PostgREST does not know how to join in a DELETE, so we resolve
+ * the identifiers first. The batch is finite — a daily sweep makes up for the remainder the next day, and an unlimited purge on a base that has accumulated months of runs would exceed the duration of the function.
  */
 async function purgeAgentRunTraces(service: Service, now: Date) {
   const { data, error } = await service
@@ -219,8 +216,8 @@ async function purgeAgentRunTraces(service: Service, now: Date) {
   const messages = counted(
     await service.from("agent_run_messages").delete({ count: "exact" }).in("run_id", ids)
   );
-  // Le journal d'opencode (MIN-286) : c'est de loin le plus lourd des trois — il
-  // porte la sortie complète de chaque tool. Sans cette ligne, il survivrait au
+  // The opencode log (MIN-286): this is by far the heaviest of the three — it
+  // carry the full output of each tool. Without this line, he would survive the
   // fil qu'il accompagne.
   const journal = counted(
     await service.from("agent_run_journal").delete({ count: "exact" }).in("run_id", ids)
@@ -228,7 +225,7 @@ async function purgeAgentRunTraces(service: Service, now: Date) {
   return events + messages + journal;
 }
 
-/** Codes d'autorisation OAuth expirés (usage unique, très court terme). */
+/** Expired OAuth authorization codes (one-time use, very short term). */
 async function purgeExpiredOauthCodes(service: Service, now: Date) {
   return counted(
     await service
@@ -238,7 +235,7 @@ async function purgeExpiredOauthCodes(service: Service, now: Date) {
   );
 }
 
-/** Sessions et codes à usage unique expirés des boards publics de feedback. */
+/** Expired sessions and one-time codes from public feedback boards. */
 async function purgeExpiredFeedbackAuth(service: Service, now: Date) {
   const iso = now.toISOString();
   const sessions = counted(
@@ -251,10 +248,10 @@ async function purgeExpiredFeedbackAuth(service: Service, now: Date) {
 }
 
 /**
- * Identités de board dormantes (MIN-119, art. 5.1.e).
+ * Dormant board identities (MIN-119, art. 5.1.e).
  *
- * Lot borné comme les autres : le balayage du lendemain reprend la suite. La
- * fonction rend le nombre de lignes réellement supprimées.
+ * Batch bound like the others: the next day's sweep continues. The
+ * function returns the number of rows actually deleted.
  */
 async function purgeDormantFeedbackIdentities(service: Service, now: Date) {
   const { data, error } = await service.rpc("purge_dormant_feedback_identities", {
@@ -266,8 +263,8 @@ async function purgeDormantFeedbackIdentities(service: Service, now: Date) {
 }
 
 /**
- * Charge utile des webhooks Stripe au-delà de `stripeWebhookPayload` jours.
- * `update`, pas `delete` : la ligne garde son rôle d'anti-rejeu.
+ * Payload of Stripe webhooks beyond `stripeWebhookPayload` days.
+ * `update`, not `delete`: the line keeps its anti-replay role.
  */
 async function stripPayloads(service: Service, now: Date) {
   const { count, error } = await service
@@ -279,7 +276,7 @@ async function stripPayloads(service: Service, now: Date) {
   return count ?? 0;
 }
 
-/** Accusés de livraison de webhook de forge au-delà de leur fenêtre de rejeu. */
+/** Accused of delivering forge webhook beyond their replay window. */
 async function purgeForgeWebhookDeliveries(service: Service, now: Date) {
   return counted(
     await service
@@ -290,16 +287,16 @@ async function purgeForgeWebhookDeliveries(service: Service, now: Date) {
 }
 
 /**
- * Versions de page expirées (MIN-277).
+ * Expired page versions (MIN-277).
  *
- * Lot borné comme les autres. Le compteur d'une page très écrite peut monter
- * vite (une version par tranche de cinq minutes et par auteur), et une purge
- * illimitée sur un arriéré dépasserait la durée de la fonction ; le balayage du
- * lendemain reprend la suite.
+ * Batch bounded like the others. The counter on a heavily written page can go up
+ * quickly (one version per five minutes per author), and an unlimited purge
+ * on a backlog would exceed the duration of the feature; the scanning of the
+ * next day resumes the rest.
  *
- * La purge DÉFINITIVE d'une page, elle, ne passe pas par ici : ses versions
- * s'en vont par la cascade de `page_versions.page_id` (cf. la migration), au
- * moment même où la ligne part.
+ * The DEFINITIVE purge of a page does not go through here: its versions
+ * go through the cascade of `page_versions.page_id` (see the migration), at the
+ * same moment when the line part.
  */
 async function purgePageVersions(service: Service, now: Date) {
   const { data, error } = await service
@@ -317,19 +314,19 @@ async function purgePageVersions(service: Service, now: Date) {
 }
 
 /**
- * Les tables de la corbeille, et le type qui leur correspond.
+ * The tables in the trash, and the type that corresponds to them.
  *
- * Les PAGES y passent DEUX fois, et l'ordre est le fond de l'affaire : une page
- * corbeillée avec son parent porte `deleted_root_id`, et `parent_id` est
- * `on delete set null` — purger une racine avant ses descendants les laisserait
- * derrière, sans racine, donc réapparus à la corbeille comme des lignes
- * autonomes. Les descendants d'abord, les racines ensuite : le lot borné peut
- * couper où il veut, il ne laisse jamais d'orphelin visible.
+ * The PAGES go through it TWICE, and the order is the bottom line: a page
+ * trashed with its parent carries `deleted_root_id`, and `parent_id` is
+ * `on delete set null` — purging a root before its descendants would leave them
+ * behind, rootless, thus reappearing in the trash as standalone
+ * lines. The descendants first, the roots then: the bounded lot can
+ * cut wherever it wants, it never leaves any visible orphan.
  */
 const TRASH_TABLES: {
   table: string;
   type: TrashType;
-  /** Restreint le lot : `notNull` / `isNull` sur une colonne. */
+  /** Restricts the batch: `notNull` / `isNull` on a column. */
   scope?: { column: string; isNull: boolean };
 }[] = [
   { table: "issues", type: "issue" },
@@ -342,19 +339,19 @@ const TRASH_TABLES: {
 ];
 
 /**
- * Corbeille : les éléments supprimés il y a plus de `trash` jours.
+ * Trash: items deleted more than `trash` days ago.
  *
- * L'ordre compte. Les projets passent en DERNIER : supprimer un projet cascade
- * sur ses tickets, ses objectifs, ses feedbacks et ses routines, et purger un
- * projet d'abord emporterait des lignes qu'on n'aurait pas comptées — le total
- * rapporté au cron mentirait. Les objets du storage ne cascadent pas du tout :
- * leurs chemins sont relevés AVANT le delete, puis effacés une fois les lignes
- * parties. Une routine, elle, n'a pas de fichier mais emporte ses passages
- * (`agent_runs.routine_id` cascade) : c'est ici, et seulement ici, que
- * l'historique d'une routine supprimée disparaît vraiment.
+ * Order matters. The projects go LAST: deleting a cascade
+ * project on its tickets, its objectives, its feedbacks and its routines, and purging a
+ * project first would take away lines that we would not have counted — the total
+ * reported to the cron would lie. The storage objects do not cascade at all:
+ * their paths are noted BEFORE the delete, then deleted once the lines
+ * are gone. A routine does not have a file but carries its passages
+ * (`agent_runs.routine_id` cascade): it is here, and only here, that
+ * the history of a deleted routine really disappears.
  *
- * Lot borné par table : le balayage du lendemain reprend le reste, là où une
- * purge illimitée sur un arriéré dépasserait la durée de la fonction.
+ * Batch bounded by table: the next day's sweep picks up the rest, where a
+ * unlimited purge on a backlog would exceed the duration of the function.
  */
 const TRASH_BATCH = 500;
 
@@ -379,9 +376,9 @@ async function purgeTrash(service: Service, now: Date) {
     if (ids.length === 0) continue;
 
     const paths = await attachmentPaths(service, type, ids);
-    // Un projet porte en plus son icône et les pièces jointes des commentaires
-    // de ses PR, dans deux buckets PUBLICS que rien ne cascade (MIN-296). Même
-    // règle que le reste : relevés avant le delete, effacés après.
+    // A project also carries its icon and comment attachments
+    // of his PR, in two PUBLIC buckets that nothing cascades (MIN-296). Even
+    // rule that the rest: recorded before the delete, deleted after.
     const sideBuckets =
       type === "project"
         ? {
@@ -403,7 +400,7 @@ async function purgeTrash(service: Service, now: Date) {
   return deleted;
 }
 
-/** Exécute toutes les purges et rend le détail par étape. */
+/** Runs all purges and renders the detail in stages. */
 export async function runRetentionSweep(now: Date = new Date()): Promise<RetentionSweepResult> {
   const service = getServiceClient();
 
@@ -421,15 +418,15 @@ export async function runRetentionSweep(now: Date = new Date()): Promise<Retenti
       purgeForgeWebhookDeliveries(service, now)
     ),
     await step("page_versions", () => purgePageVersions(service, now)),
-    // AVANT la corbeille, et l'ordre a une raison : purger une page emporte ses
-    // fichiers elle-même (lib/server/trash.ts). Passer d'abord ici évite de
-    // relire des lignes qui vont partir dans la seconde, et surtout de compter
-    // deux fois les mêmes octets dans le rapport du cron.
+    // BEFORE the trash, and the order has a reason: purging a page takes away its
+    // files itself (lib/server/trash.ts). Going here first avoids
+    // reread lines which will be sent in the second, and above all to count
+    // twice the same bytes in the cron report.
     await step("orphan_page_files", () =>
       sweepOrphanPageFiles(service, cutoff(RETENTION_DAYS.orphanPageFiles, now))
     ),
-    // Comme le balayage des fichiers de page, et pour la même raison : AVANT la
-    // corbeille, qui emporte elle-même les objets des lignes qu'elle purge.
+    // Like scanning page files, and for the same reason: BEFORE the
+    // trash, which itself takes the objects from the lines it purges.
     await step("orphan_attachments", () =>
       sweepOrphanAttachments(service, cutoff(RETENTION_DAYS.orphanAttachments, now))
     ),

@@ -14,24 +14,24 @@ import {
 } from "@/lib/pages-export";
 
 /**
- * L'export d'une page (MIN-283), côté serveur : lire, projeter, empaqueter.
+ * Exporting a page (MIN-283), server side: read, project, package.
  *
- * Rien de neuf n'est écrit ici sur la FORME du markdown — la projection est
- * celle de MIN-269, testée et bidirectionnelle, montée dans une fonction
- * serveur par `lib/server/pages-projection.ts`. Ce module ne fait que la
- * chaîner sur une branche et rendre le tout sous la forme qu'un navigateur sait
- * télécharger.
+ * Nothing new is written here on the FORM of markdown — the projection is
+ * that of MIN-269, tested and bidirectional, mounted in a function
+ * server by `lib/server/pages-projection.ts`. This module only does the
+ * chain on a branch and render everything in the form that a browser knows
+ * download.
  *
- * La BRANCHE est bornée : une page et tous ses descendants, corbeille exclue.
- * Une page corbeillée n'est plus dans le wiki ; l'exporter ferait ressortir
- * dans un fichier ce que la corbeille a retiré de l'écran.
+ * The BRANCH is bounded: a page and all its descendants, trash excluded.
+ * A trashed page is no longer in the wiki; exporting it would bring out
+ * in a file what the recycle bin removed from the screen.
  */
 
 export type PageExportResult =
   | { ok: true; fileName: string; contentType: string; body: Uint8Array }
   | { ok: false; status: number; errorKey: "pageNotFound" | "databaseError" };
 
-/** Combien de corps de page une lecture ramène à la fois (MIN-348). */
+/** How many page bodies a read brings back at once (MIN-348). */
 const BODY_BATCH = 50;
 
 interface PageRow {
@@ -44,12 +44,12 @@ interface PageRow {
 }
 
 /**
- * Une page seule → un `.md`. Une branche → un `.zip`, un fichier par page.
+ * A single page → a `.md`. One branch → one `.zip`, one file per page.
  *
- * Le ZIP est produit SANS compression (`level: 0`) : ce sont des fichiers texte
- * de quelques kilo-octets, l'archive n'existe que pour porter une
- * arborescence, et une compression coûterait du CPU de fonction pour un gain
- * qu'aucun utilisateur ne voit.
+ * The ZIP is produced WITHOUT compression (`level: 0`): these are text files
+ * of a few kilobytes, the archive only exists to carry a
+ * tree structure, and a compression would cost function CPU for a gain
+ * that no user sees.
  */
 export async function exportPage({
   pageId,
@@ -87,12 +87,12 @@ export async function exportPage({
     };
   }
 
-  // Deux lectures, et c'est la borne du sujet (MIN-348). La première ne prend
-  // que le SQUELETTE — de quoi savoir qui descend de qui —, parce que la
-  // branche demandée peut être une page sur mille et qu'il n'y a aucune raison
-  // de faire descendre le corps des neuf cent quatre-vingt-dix-neuf autres. La
-  // seconde ne va chercher les corps que de la branche, et par lots : c'est
-  // aussi ce qui borne la taille d'UNE réponse PostgREST.
+  // Two readings, and this is the limit of the subject (MIN-348). The first does not take
+  // that the SKELETON - enough to know who descends from whom -, because the
+  // requested branch may be one page out of a thousand and there is no reason
+  // to bring down the body of the nine hundred and ninety-nine others. There
+  // second only fetches bodies from the branch, and in batches: this is
+  // also what limits the size of ONE PostgREST response.
   const { data: skeleton, error } = await service
     .from("pages")
     .select("id, parent_id, title, icon, position")
@@ -131,8 +131,8 @@ export async function exportPage({
   for (const page of branchPages) {
     pages.push({
       id: page.id,
-      // La racine de l'ARCHIVE est la page exportée : son parent réel n'a rien
-      // à y faire, et le garder mettrait tous les fichiers un cran trop bas.
+      // The root of the ARCHIVE is the exported page: its real parent has nothing
+      // to do there, and keeping it would put all files one step too low.
       parent_id: page.id === rootRow.id ? null : page.parent_id,
       title: page.title,
       icon: page.icon,
@@ -153,7 +153,7 @@ export async function exportPage({
   };
 }
 
-/** Les fichiers, empaquetés. Isolé pour que le test lise l'archive produite. */
+/** The files, packaged. Isolated so that the test reads the produced archive. */
 export function zipArchive(files: ExportedFile[]): Uint8Array {
   const entries: Record<string, Uint8Array> = {};
   for (const file of files) entries[file.path] = strToU8(file.markdown);

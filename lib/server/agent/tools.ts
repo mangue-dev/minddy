@@ -3,62 +3,62 @@ import {
   CREATE_ROUTINE_DESCRIPTION,
   CREATE_ROUTINE_PARAMETERS,
 } from "@/lib/server/routine-tool-schema";
-// Type SEUL (donc effacé à la compilation) : l'ancrage est déclaré dans le module
-// des prompts, qui est celui qui le décline en texte.
+// Type ONLY (therefore deleted during compilation): the anchor is declared in the module
+// prompts, which is the one that translates it into text.
 import type { AgentAnchor } from "./prompt";
 
 /**
- * Tools de l'agent de code (MIN-46), format function-calling OpenRouter (même
- * forme que lib/server/assistant/tools.ts). Ils opèrent sur le dépôt cloné dans
- * le Sandbox ; leur exécution est câblée dans execute.ts via la couche
+ * Code Agent Tools (MIN-46), OpenRouter function-calling format (same
+ * form as lib/server/assistant/tools.ts). They operate on the cloned repository in
+ * the Sandbox; their execution is hardwired into execute.ts via the layer
  * lib/server/agent/sandbox.ts.
  *
- * Jeu d'un VRAI éditeur de code :
- *  - exploration : read_file (numéroté, fenêtré), list_dir, glob, grep (git grep)
- *  - édition     : edit_file (remplacement de chaîne robuste — cascade opencode,
- *                  cf. edit.ts), write_file (création de fichiers neufs uniquement)
- *                  — REMPLACÉS par apply_patch sur les modèles `gpt-*` (MIN-115,
- *                  cf. `usesApplyPatch` dans patch.ts)
- *  - vérif       : run_command (install/lint/build/tests, git, etc.), run_background
- *                  (serveur de dev / watcher : démarrer, sonder, arrêter — MIN-114)
- *  - livraison   : create_pr (ouvre LA pull request du ticket quand il n'y en a pas)
- *  - tickets     : search_issues, read_issue (état VIVANT d'un ticket : champs,
+ * REAL code editor game:
+ * - exploration: read_file (numbered, windowed), list_dir, glob, grep (git grep)
+ * - edit: edit_file (robust string replacement — opencode cascade,
+ * cf. edit.ts), write_file (creation of new files only)
+ * — REPLACED by apply_patch on `gpt-*` models (MIN-115,
+ * cf. `usesApplyPatch` in patch.ts)
+ * - check: run_command (install/lint/build/tests, git, etc.), run_background
+ * (dev server / watcher: start, probe, stop — MIN-114)
+ * - delivery: create_pr (opens THE ticket pull request when there is none)
+ * - tickets: search_issues, read_issue (ALIVE state of a ticket: fields,
  *                  plan, commentaires, ressources), read_resource,
- *                  update_issue (titre / description / effort — JAMAIS le statut),
- *                  write_issue_plan (écrit le plan SUR DEMANDE, sans l'appliquer),
- *                  append_to_plan et edit_issue_text (MIN-186 : faire GROSSIR ou
- *                  CORRIGER un plan/une description déjà écrits, sans les
- *                  réémettre — write_issue_plan et update_issue remplacent tout),
+ * update_issue (title / description / effort — NEVER the status),
+ * write_issue_plan (writes the plan ON REQUEST, without applying it),
+ * append_to_plan and edit_issue_text (MIN-186: GROW or
+ * CORRECT an already written plan/description, without
+ * reissue — write_issue_plan and update_issue replace everything),
  *                  create_issue, create_routine (MIN-185 : poser un run
- *                  programmé, retiré à un run de routine pour qu'elle ne
- *                  s'auto-réplique pas) — exécutés par
+ * scheduled, removed to a routine run so that it does not
+ * not self-replicating) — executed by
  *                  lib/server/agent/issue-tools.ts.
  *  - objectifs   : list_objectives, read_objective, create_objective,
- *                  update_objective, comment_objective (MIN-287) — le BUT que
- *                  le ticket sert. `create_issue` et `update_issue` prennent en
- *                  plus un `objective` : un ticket hors objectif est hors de
- *                  toute barre de progression et hors du remplissage de cycle.
- *                  Exécutés par lib/server/agent/objective-tools.ts.
+ * update_objective, comment_objective (MIN-287) — the PURPOSE that
+ * the ticket is used. `create_issue` and `update_issue` support
+ * plus a `objective`: an off-target ticket is out of
+ * any progress bar and out of cycle filling.
+ * Executed by lib/server/agent/objective-tools.ts.
  *  - carnet      : read_scratchpad, add_scratchpad_tasks, update_scratchpad_task,
- *                  set_scratchpad — exécutés par lib/server/agent/scratchpad-tools.ts.
- *  - pull requests du PROJET (MIN-267) : list_pull_requests, read_pull_request,
+ * set_scratchpad — executed by lib/server/agent/scratchpad-tools.ts.
+ * - pull requests from the PROJECT (MIN-267): list_pull_requests, read_pull_request,
  *                  comment_pull_request, comment_pull_request_line,
  *                  reply_pull_request_thread, review_pull_request,
- *                  set_pull_request_state — exécutés par
- *                  lib/server/agent/project-pr-tools.ts. À ne pas confondre avec
- *                  `PR_TOOLS` plus bas, qui sont les trois écritures d'une
- *                  session de RELECTURE sur LA pull request qu'elle relit.
+ * set_pull_request_state — executed by
+ * lib/server/agent/project-pr-tools.ts. Not to be confused with
+ * `PR_TOOLS` below, which are the three writings of a
+ * REVIEW session on THE pull request that it is rereading.
  *
- * Les tools minddy sont servis aux DEUX ancrages (MIN-125) : l'ancrage du run
- * ne décide plus que de la CIBLE PAR DÉFAUT des tools ticket (le ticket du run,
- * sinon `issue` est obligatoire) et de la formulation de `create_pr`. D'où deux
- * jeux qui ne diffèrent que par là : `AGENT_TOOLS` (run de ticket) et
+ * Minddy tools are used at BOTH anchors (MIN-125): the run anchor
+ * only decides on the DEFAULT TARGET of the tools ticket (the run ticket,
+ * otherwise `issue` is mandatory) and the formulation of `create_pr`. Hence two
+ * games which only differ in this way: `AGENT_TOOLS` (ticket run) and
  * `NOTEBOOK_AGENT_TOOLS` (run carnet).
  *
- * PAS de tool de fin de tour : le tour se termine quand l'agent répond en texte
- * (fin naturelle, comme une conversation). Les commits sont pilotés par le harnais
- * (commit+push au suspend et à chaque fin de tour) — pas de tool commit exposé,
- * pour garder des commits propres.
+ * NO end of tour tool: the tour ends when the agent responds in text
+ * (natural ending, like a conversation). Commits are harness driven
+ * (commit+push at suspend and at the end of each turn) — no tool commit exposed,
+ * to keep commits clean.
  */
 
 export type AgentToolDef = {
@@ -74,18 +74,18 @@ export type AgentToolDef = {
   };
 };
 
-/** Timeout dur (ms) d'un `run_command`, appliqué côté Sandbox. */
+/** Hard timeout (ms) of a `run_command`, applied on the Sandbox side. */
 export const RUN_COMMAND_TIMEOUT_MS = 180_000;
 
 /**
  * Commentaires de ligne posables par session de relecture (MIN-141, MIN-168).
- * Déclaré ICI plutôt que dans `pr-tools.ts` parce que la DESCRIPTION du tool doit
- * l'annoncer au modèle, et que ce module ne dépend d'aucune plomberie de forge —
- * `pr-tools.ts`, qui l'applique, le lit d'ici.
+ * Declared HERE rather than in `pr-tools.ts` because the DESCRIPTION of the tool must
+ * announce it to the model, and that this module does not depend on any forge plumbing —
+ * `pr-tools.ts`, who applies it, reads it from here.
  */
 export const AI_REVIEW_MAX_INLINE_COMMENTS = 5;
 
-/** Cœur commun aux deux ancrages : exploration, édition, vérification, checklist. */
+/** Common heart to both anchors: exploration, editing, verification, checklist. */
 const CORE_TOOLS: AgentToolDef[] = [
   {
     type: "function",
@@ -172,11 +172,11 @@ const CORE_TOOLS: AgentToolDef[] = [
 ];
 
 /**
- * Description de `read_resource`, en deux versions : un run dont le modèle voit
- * les images ANNONCE qu'il peut regarder une maquette (MIN-111) ; les autres
- * gardent le texte d'avant, au mot près. Promettre une capacité qu'on n'a pas ferait
- * dire au modèle « je regarde la maquette » sur un résultat qui ne porte que des
- * métadonnées. `agentToolsFor` choisit.
+ * Description of `read_resource`, in two versions: a run whose model sees
+ * the images ANNOUNCE that he can look at a model (MIN-111); the others
+ * keep the previous text, to the exact word. Promising a capability you don't have
+ * tell the model “I’m looking at the model” on a result which only bears
+ * metadata. `agentToolsFor` chooses.
  */
 const READ_RESOURCE_DESCRIPTION =
   "Open one resource of the ticket (or of one of its comments) by id — get the id from read_issue. A LINK returns its url and title; there is nothing to download, fetch the page yourself if you need what's on it. A PAGE of the project's wiki returns its page_id and title — read the document itself with read_page. A FILE: text comes back inline (capped); binaries and large files return the metadata plus a short-lived signed download_url — if you need the bytes in the sandbox (a spec to read in full, an asset to add to the repo), download them with run_command (`curl -sL '<download_url>' -o …`), outside the repository unless the file belongs in the commit.";
@@ -184,34 +184,34 @@ const READ_RESOURCE_DESCRIPTION =
 const READ_RESOURCE_DESCRIPTION_WITH_IMAGES =
   "Open one resource of the ticket (or of one of its comments) by id — get the id from read_issue. A LINK returns its url and title; there is nothing to download, fetch the page yourself if you need what's on it. A PAGE of the project's wiki returns its page_id and title — read the document itself with read_page. A FILE that is an IMAGE (png, jpeg, webp, gif) comes back as the image itself, attached to the result: you actually see it. When the ticket carries a mockup, a screenshot or a diagram, open it BEFORE writing the code it describes, and say what you see — a layout you were shown beats a layout you were told about. Text files come back inline (capped); other binaries and oversized files return the metadata plus a short-lived signed download_url — if you need the bytes in the sandbox (a spec to read in full, an asset to add to the repo), download them with run_command (`curl -sL '<download_url>' -o …`), outside the repository unless the file belongs in the commit.";
 
-/** États de tâche du carnet, tels que les tools les acceptent. */
+/** Backlog task states, such as tools accept them. */
 const SCRATCHPAD_TASK_STATES = ["pending", "in_progress", "completed", "cancelled"];
 
-/** Référence de ticket acceptée partout où un tool prend `issue`. */
+/** Ticket reference accepted wherever a tool takes `issue`. */
 const ISSUE_REF_DESCRIPTION =
   "The ticket to act on: a UUID, an identifier like 'MIN-42', or a bare issue number. Resolve it with search_issues when you only know its subject.";
 
-/** Référence d'objectif acceptée partout où un tool prend `objective`. */
+/** Lens reference accepted wherever a tool takes `objective`. */
 const OBJECTIVE_REF_DESCRIPTION =
   "The objective this work belongs to: its id, or its exact name (case-insensitive). Get both from list_objectives — never invent a name, an unknown one is refused. A ticket attached to no objective counts in no progress bar and fills no cycle.";
 
 /**
- * Tools minddy, servis aux DEUX ancrages (MIN-125) : les tickets du projet du run
- * et le carnet de son lanceur. Ce qui reste ancrage-dépendant est ajouté par
- * `agentToolsFor` — la phrase de ciblage des tools qui prennent `issue`, et
- * `create_pr`, déclaré à part parce que sa formulation change.
+ * Minddy Tools, served at BOTH anchors (MIN-125): run project tickets
+ * and his thrower's notebook. What remains anchor-dependent is added by
+ * `agentToolsFor` — the targeting phrase for tools that take `issue`, and
+ * `create_pr`, declared separately because its wording changes.
  */
-/** Ce qu'un corps de page accepte, dit là où le modèle le lit — la même prose que
-    sur les deux autres surfaces : la syntaxe d'un lien de sous-page ne se devine
-    pas, et un bloc inventé retombe en texte brut. */
+/** What a body of page accepts, says where the model reads it — the same prose as
+    on the other two surfaces: the syntax of a subpage link cannot be guessed
+    not, and an invented block falls back to plain text. */
 /**
- * Les IMAGES et les FICHIERS d'une page (MIN-280), dits au modèle en trois
- * phrases parce qu'il ne peut pas les deviner et qu'il en détruirait sans le
- * savoir : `update_page` remplace le corps ENTIER, donc une ligne d'image qu'on
- * n'a pas recopiée est un fichier détaché de son document.
+ * One-page IMAGES and FILES (MIN-280), called the three-page model
+ * sentences because he cannot guess them and would destroy them without
+ * namely: `update_page` replaces the ENTIRE body, therefore an image line that we
+ * has not copied is a file detached from its document.
  *
- * La même prose sur les trois surfaces (MCP, Numo, agent de code), comme le
- * reste du mode d'emploi de la syntaxe.
+ * The same prose on all three surfaces (MCP, Numo, code agent), as the
+ * rest of the syntax instructions.
  */
 const PAGE_FILES_DESCRIPTION =
   "An image reads '![caption](url)' and a file '[name](url)' — those are REAL " +
@@ -414,12 +414,12 @@ const MINDDY_TOOLS: AgentToolDef[] = [
       },
     },
   },
-  // ── Les PAGES du projet : son wiki (MIN-273) ─────────────────────────────
+  // ── PAGES of the project: its wiki (MIN-273) ─────────────────────────────
   //
-  // Un ticket dit quoi faire, une page dit pourquoi c'est comme ça. L'agent de
-  // code lisait le code et les tickets, jamais la doc que l'équipe a écrite —
-  // c'est ce trou-là que ces tools ferment. Ils parlent markdown des deux côtés,
-  // et ils sont les MÊMES que ceux du MCP et du chat (lib/server/page-tools.ts).
+  // A ticket says what to do, a page says why it is like that. The agent of
+  // code read the code and the tickets, never the doc the team wrote —
+  // it is this hole that these tools close. They speak markdown on both sides,
+  // and they are the SAME as those in MCP and chat (lib/server/page-tools.ts).
   {
     type: "function",
     function: {
@@ -569,13 +569,13 @@ const MINDDY_TOOLS: AgentToolDef[] = [
       },
     },
   },
-  // ── Les OBJECTIFS du projet : le but que le ticket sert (MIN-287) ────────
+  // ── Project OBJECTIVES: the purpose the ticket serves (MIN-287) ────────
   //
-  // L'agent lisait un ticket sans jamais savoir à quoi ce ticket sert, et ce
-  // qu'il créait tombait hors de tout objectif — donc hors des barres de
-  // progression et hors du remplissage de cycle. Même doctrine que les
-  // relations : ce qu'on n'a pas rangé, quelqu'un devra le ranger à la main.
-  // Exécutés par lib/server/agent/objective-tools.ts, sur les noyaux du MCP.
+  // The agent read a ticket without ever knowing what this ticket is for, and this
+  // that he created fell outside of any objective - therefore outside the bars of
+  // progression and out of cycle filling. Same doctrine as
+  // relationships: what we don't put away, someone will have to put it away by hand.
+  // Executed by lib/server/agent/objective-tools.ts, on MCP kernels.
   {
     type: "function",
     function: {
@@ -738,9 +738,9 @@ const MINDDY_TOOLS: AgentToolDef[] = [
             description: "One line per thing that must change. Empty array when ok is true.",
           },
         },
-        // Les trois dans `required` À DESSEIN : un champ hors `required` d'un
-        // tool call n'est tout simplement pas répondu par un petit modèle — et
-        // c'est justement un petit modèle qui vérifie un diff.
+        // The three in `required` ON PURPOSE: a field outside `required` of a
+        // tool call is simply not answered by a small model — and
+        // it is precisely a small model which checks a diff.
         required: ["ok", "summary", "blockers"],
       },
     },
@@ -859,8 +859,8 @@ const MINDDY_TOOLS: AgentToolDef[] = [
 ];
 
 /**
- * Les TROIS écritures d'une session de relecture (MIN-168) — tout ce qu'un run
- * ancré à une pull request peut faire sortir de la sandbox. Exécutés par
+ * The THREE writings of a proofreading session (MIN-168) — all that one run
+ * anchored to a pull request can cause it to exit the sandbox. Executed by
  * `lib/server/agent/pr-tools.ts`.
  */
 const PR_TOOLS: AgentToolDef[] = [
@@ -939,14 +939,14 @@ const PR_TOOLS: AgentToolDef[] = [
 ];
 
 /**
- * LES PULL REQUESTS DU PROJET (MIN-267) — servies aux ancrages TICKET et CARNET,
- * jamais à la relecture (qui a `PR_TOOLS` ci-dessus, sur SA pull request).
- * Exécutées par `lib/server/agent/project-pr-tools.ts`.
+ * THE PULL REQUESTS OF THE PROJECT (MIN-267) — served at the TICKET and CARNET anchors,
+ * never on replay (which has `PR_TOOLS` above, on SA pull request).
+ * Executed by `lib/server/agent/project-pr-tools.ts`.
  *
- * Ce jeu-ci VA JUSQU'AU BOUT : verdict de review et fusion comprises. C'est une
- * décision explicite du propriétaire du produit, contraire à la doctrine de
- * MIN-141 qui vaut encore pour la relecture — le pourquoi et ce que ça coûte
- * sont dans l'en-tête de `project-pr-tools.ts`.
+ * This game GOES TO THE END: review verdict and merger included. It's a
+ * explicit decision of the product owner, contrary to the doctrine of
+ * MIN-141 which is still valid for proofreading — why and what it costs
+ * are in the header of `project-pr-tools.ts`.
  */
 const PROJECT_PR_TOOLS: AgentToolDef[] = [
   {
@@ -1123,7 +1123,7 @@ const PROJECT_PR_TOOLS: AgentToolDef[] = [
   },
 ];
 
-/** `create_pr` — même tool, formulé selon l'ancrage (le carnet n'a pas de ticket). */
+/** `create_pr` — same tool, formulated according to the anchor (the notebook has no ticket). */
 const CREATE_PR_TOOL = (anchor: "issue" | "notebook"): AgentToolDef => ({
   type: "function",
   function: {
@@ -1148,9 +1148,9 @@ const CREATE_PR_TOOL = (anchor: "issue" | "notebook"): AgentToolDef => ({
 });
 
 /**
- * Le catalogue appartient à la machine : le serveur ne voit ni ne stocke les
- * chemins. Il n'est donc servi qu'au run local, où le lanceur a pu joindre les
- * projets accessibles avec les dossiers qu'il a validés sur ce Mac.
+ * The catalog belongs to the machine: the server does not see or store the
+ * paths. It is therefore only used in the local run, where the launcher was able to reach the
+ * projects accessible with the folders he validated on this Mac.
  */
 const LIST_LOCAL_PROJECTS_TOOL: AgentToolDef = {
   type: "function",
@@ -1170,7 +1170,7 @@ export const AGENT_TOOLS: AgentToolDef[] = [
   CREATE_PR_TOOL("issue"),
 ];
 
-/** Jeu complet d'un run CARNET (MIN-84) — mêmes tools minddy, `create_pr` sans ticket. */
+/** Complete game of a CARNET run (MIN-84) — same tools minddy, `create_pr` without ticket. */
 export const NOTEBOOK_AGENT_TOOLS: AgentToolDef[] = [
   ...CORE_TOOLS,
   ...MINDDY_TOOLS,
@@ -1178,7 +1178,7 @@ export const NOTEBOOK_AGENT_TOOLS: AgentToolDef[] = [
   CREATE_PR_TOOL("notebook"),
 ];
 
-/** Ce qu'une session de relecture garde du cœur : LIRE, chercher, exécuter. */
+/** What a proofreading session keeps from the heart: READ, research, execute. */
 const PR_REVIEW_CORE_TOOL_NAMES: ReadonlySet<string> = new Set([
   "read_file",
   "list_dir",
@@ -1188,51 +1188,51 @@ const PR_REVIEW_CORE_TOOL_NAMES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Les lecteurs minddy d'une relecture : le ticket que la PR met en œuvre.
+ * Minddy readers of a proofread: the ticket that the PR implements.
  *
  * `read_feedback` en fait partie (MIN-245) parce que `read_issue` PROMET
  * `linked_feedback` — « the user requests from the product's feedback board that
- * this ticket implements ». Sans lui, une relecture lit des identifiants qu'elle
- * n'a aucun moyen d'ouvrir, alors que c'est justement là que se trouve ce que la
- * PR devait résoudre. Il ne lit rien du dépôt et n'écrit nulle part : il ne
- * touche pas à la lecture seule de la session.
+ * this ticket implements”. Without it, a replay reads identifiers that it
+ * has no way of opening, even though that is precisely where the
+ * PR had to resolve. He does not read anything from the deposit and does not write anywhere: he does not
+ * Do not touch the read-only session.
  */
 const PR_REVIEW_MINDDY_TOOL_NAMES: ReadonlySet<string> = new Set([
   "search_issues",
   "read_issue",
   "read_feedback",
   "read_resource",
-  // Le WIKI en lecture (MIN-273) : une relecture qui juge « ça ne respecte pas la
-  // convention » a besoin de pouvoir lire la convention. Les écritures de page
-  // restent dehors, comme celles de ticket — relire n'autorise pas à réécrire.
+  // The WIKI in reading (MIN-273): a rereading which judges “it does not respect the
+  // convention” needs to be able to read the convention. Page entries
+  // remain outside, like those of ticket — rereading does not authorize rewriting.
   "list_pages",
   "read_page",
-  // Les OBJECTIFS en lecture (MIN-287) : « cette PR sert-elle le but du
-  // ticket ? » ne se juge pas sans le but. Les écritures d'objectif restent
-  // dehors, comme celles de ticket et de page.
+  // OBJECTIVES in reading (MIN-287): “does this PR serve the purpose of the
+  // ticket? » cannot be judged without the goal. Goal entries remain
+  // outside, like those of ticket and page.
   "list_objectives",
   "read_objective",
 ]);
 
 /**
- * Jeu complet d'une session de RELECTURE (MIN-168). Ce qui n'y est pas dit ce
- * qu'elle est :
- *  - **aucune édition** (`edit_file`, `apply_edits`, `write_file`, `apply_patch`,
- *    `move_file`, `delete_file`) ni `create_pr` : une review ne touche pas au
- *    dépôt, et la lecture seule est une propriété du JEU DE TOOLS — pas une
- *    phrase de prompt qu'un modèle peut ignorer (même doctrine que le sous-agent
- *    `explore`). Le harnais ne commite ni ne pousse pour elle non plus
- *    (`writesToRepo`, execute.ts) : les deux moitiés de la même garantie ;
- *  - **aucune écriture minddy** (`update_issue`, `write_issue_plan`,
- *    `create_issue`) ni carnet : relire une PR n'autorise pas à réécrire les
- *    tickets de l'équipe ni les notes de quelqu'un ;
- *  - **aucune délégation** ni `run_background` : une review tient dans une
- *    session, et un serveur laissé vivant n'a rien à y faire ;
- *  - **pas d'`update_plan`, pas d'`ask_user`, pas de `report_verdict`** : la
- *    checklist n'a pas de lecteur ici, la question se pose dans le fil de la PR,
- *    et le verdict s'écrit dans le corps de la synthèse (MIN-141).
- * Restent les lecteurs, le shell (type-check, test ciblé), les lecteurs minddy et
- * les trois écritures de PR.
+ * Complete game of a REVIEW session (MIN-168). What is not said there
+ * that she is:
+ * - **no edition** (`edit_file`, `apply_edits`, `write_file`, `apply_patch`,
+ * `move_file`, `delete_file`) nor `create_pr`: a review does not affect the
+ * repository, and read-only is a property of the TOOLSET — not one
+ * prompt phrase that a model can ignore (same doctrine as the subagent
+ * `explore`). The harness doesn't commit or push for her either
+ * (`writesToRepo`, execute.ts): two halves of the same guarantee;
+ * - **no minddy writing** (`update_issue`, `write_issue_plan`,
+ * `create_issue`) nor notebook: rereading a PR does not authorize rewriting the
+ * team tickets or anyone's grades;
+ * - **no delegation** nor `run_background`: a review fits into a
+ * session, and a server left alive has nothing to do there;
+ * - **no `update_plan`, no `ask_user`, no `report_verdict`**: the
+ * checklist has no reader here, the question arises in the PR thread,
+ * and the verdict is written in the body of the summary (MIN-141).
+ * There remain the readers, the shell (type-check, targeted test), the minddy readers and
+ * the three scriptures of PR.
  */
 export const PR_REVIEW_TOOLS: AgentToolDef[] = [
   ...CORE_TOOLS.filter((t) => PR_REVIEW_CORE_TOOL_NAMES.has(t.function.name)),
@@ -1240,19 +1240,19 @@ export const PR_REVIEW_TOOLS: AgentToolDef[] = [
   ...PR_TOOLS,
 ];
 
-/** Les deux interfaces d'édition, mutuellement EXCLUSIVES (MIN-115). */
+/** Both editing interfaces, mutually EXCLUSIVE (MIN-115). */
 
 /**
  * Ce qu'un run SANS INTERLOCUTEUR n'a pas (MIN-185) — cf. `agentToolsFor`, qui
- * documente les deux pourquoi. La liste est ici, à côté des autres exclusions
- * structurelles, pour qu'on la trouve en cherchant « qui retire un tool ? ».
+ * documents both whys. The list is here, alongside other exclusions
+ * structural, so that it can be found by searching for “who removes a tool?” ".
  */
 const NON_INTERACTIVE_FORBIDDEN_TOOLS: ReadonlySet<string> = new Set([
   "ask_user",
   "create_routine",
 ]);
 
-/** Tools qui prennent un `issue` : leur CIBLE PAR DÉFAUT dépend de l'ancrage. */
+/** Tools that take a `issue`: their DEFAULT TARGET depends on the anchor. */
 const TARGETABLE_ISSUE_TOOLS = new Set([
   "read_issue",
   "update_issue",
@@ -1262,16 +1262,16 @@ const TARGETABLE_ISSUE_TOOLS = new Set([
 ]);
 
 /**
- * Phrase de ciblage ajoutée à ces tools selon l'ancrage. Sans elle, un run de
- * carnet lirait « the ticket this session is anchored to » sur une session qui
- * n'en a pas, et un run de ticket croirait devoir passer `issue` à chaque appel.
+ * Targeting phrase added to these tools depending on the anchor. Without it, a run of
+ * notebook would read “the ticket this session is anchored to” on a session which
+ * doesn't have one, and a ticket run would think it had to pass `issue` on every call.
  *
- * Une session de RELECTURE a un défaut CONDITIONNEL : le ticket que la pull
- * request met en œuvre — quand elle en porte un. **Beaucoup n'en portent pas**
- * (une PR humaine, une PR rattachée à rien : c'est l'état normal depuis MIN-143),
- * et la phrase doit donc décrire les deux cas plutôt que d'en promettre un. Elle
- * reste CONSTANTE pour l'ancrage, sans quoi le préfixe système cesserait d'être
- * partagé par le prompt caching.
+ * A REVIEW session has a CONDITIONAL fault: the ticket that the pull
+ * request implements — when it carries one. **Many don't wear one**
+ * (a human PR, a PR attached to nothing: this is the normal state since MIN-143),
+ * and the sentence must therefore describe both cases rather than promising one. She
+ * remains CONSTANT for the anchor, otherwise the system prefix would cease to be
+ * shared by prompt caching.
  */
 const TARGET_SUFFIX: Record<AgentAnchor, string> = {
   issue:
@@ -1282,7 +1282,7 @@ const TARGET_SUFFIX: Record<AgentAnchor, string> = {
     " `issue` defaults to the ticket this pull request implements, when it has one — your context says so at the top. MANY PULL REQUESTS HAVE NO TICKET: there, omitting `issue` is refused, and you must name the ticket you mean (find it with search_issues) or do without one — reviewing a pull request never requires a ticket.",
 };
 
-/** `issue` poussé dans `required`, sans perdre ceux que le tool porte déjà. */
+/** `issue` pushed into `required`, without losing those that the tool already carries. */
 function withRequiredIssue(
   parameters: AgentToolDef["function"]["parameters"],
 ): AgentToolDef["function"]["parameters"] {
@@ -1292,95 +1292,95 @@ function withRequiredIssue(
 }
 
 /**
- * Jeu de tools d'un run, selon son ancrage, son modèle et l'accès au web.
+ * Set of tools for a run, depending on its anchoring, its model and access to the web.
  *
- * `web_search` passe par le plugin d'OpenRouter : il n'est offert que sur un run
- * qui parle à OpenRouter (quota minddy ou BYOK OpenRouter). Un BYOK OpenAI /
- * Anthropic / Google / générique n'a pas d'équivalent utilisable — leurs couches
- * de compatibilité OpenAI n'exposent pas de recherche native (Anthropic ignore
- * les server tools, OpenAI la réserve à ses modèles `*-search*` qui cherchent
- * TOUJOURS, Gemini ne la documente que hors chat) — et faire tourner la
- * recherche sur la clé de minddy reviendrait à payer le web d'un usage par
- * ailleurs illimité. Le tool disparaît alors purement et simplement.
+ * `web_search` goes through the OpenRouter plugin: it is only offered on one run
+ * which talks to OpenRouter (quota minddy or BYOK OpenRouter). An OpenAI BYOK /
+ * Anthropic/Google/generic has no usable equivalent — their layers
+ * OpenAI compatibility issues do not expose native search (Anthropic ignores
+ * server tools, OpenAI reserves it for its `*-search*` models which seek
+ * ALWAYS, Gemini only documents it outside of chat) — and run the
+ * research on minddy's key would amount to paying for the web for use by
+ * otherwise unlimited. The tool then simply disappears.
  *
- * `apply_patch` (MIN-115) obéit à la même logique du tout ou rien : les modèles
- * `gpt-*` le reçoivent À LA PLACE d'`edit_file`/`apply_edits`/`write_file`, les
- * autres ne le voient pas. Servir les deux jeux ensemble ferait hésiter le modèle
- * entre deux façons de faire exactement la même chose.
+ * `apply_patch` (MIN-115) obeys the same all-or-nothing logic: the models
+ * `gpt-*` receive it INSTEAD of `edit_file`/`apply_edits`/`write_file`, the
+ * others don't see it. Serving both games together would cause the model to hesitate
+ * between two ways of doing exactly the same thing.
  */
 export function agentToolsFor(opts: {
   anchor: AgentAnchor;
   webSearch: boolean;
   /**
-   * Plafond de recherches du TOUR, quand le run en sert (MIN-245). Il voyage en
-   * option plutôt que d'être importé : la constante vit dans le module qui
-   * facture la recherche (`lib/server/web-search.ts`), et celui-là n'entre pas
-   * dans le bundle de la microVM — c'est le même chemin que `VmJob.webSearchMax`.
-   * Sans lui la description dit « each search costs real money » sans jamais
-   * dire combien, et le modèle apprend le plafond en heurtant le mur.
+   * TOUR research cap, when the run uses it (MIN-245). He travels in
+   * option rather than being imported: the constant lives in the module which
+   * invoices the search (`lib/server/web-search.ts`), and this one does not enter
+   * in the microVM bundle — this is the same path as `VmJob.webSearchMax`.
+   * Without it the description says “each search costs real money” without ever
+   * say how much, and the model learns the ceiling by hitting the wall.
    */
   webSearchMax?: number;
-  /** Modèle du run — décide de l'interface d'édition servie. */
+  /** Run Model — decides the editing interface served. */
   model?: string | null;
-  /** Le modèle du run voit-il les images (MIN-111) ? Change ce que `read_resource`
-   *  ANNONCE — le tool est là dans les deux cas, mais il ne promet une maquette
-   *  regardable que quand elle le sera vraiment. */
+  /** Does the run model see the images (MIN-111)? Change what `read_resource`
+   * ANNOUNCEMENT — the tool is there in both cases, but it does not promise a model
+   * watchable only when it really is. */
   images?: boolean;
   /**
-   * Le run peut-il faire tourner un sous-agent sur un AUTRE modèle (MIN-112) ? À
-   * false, le champ `model` est RETIRÉ du schéma de `spawn_agent` : un run BYOK
-   * Anthropic ne peut pas faire tourner `deepseek/…`, et un champ qui revient
-   * toujours en erreur ne mérite pas d'être décrit (même règle du tout ou rien
-   * que `web_search` et `apply_patch`). La délégation reste offerte — c'est
-   * seulement le choix du modèle qui disparaît.
+   * Can the run run a subagent on ANOTHER model (MIN-112)? HAS
+   * false, the `model` field is REMOVED from the `spawn_agent` schema: a BYOK run
+   * Anthropic cannot run `deepseek/…`, and a field returns
+   * always in error does not deserve to be described (same all or nothing rule
+   * as `web_search` and `apply_patch`). The delegation remains offered — it is
+   * only the choice of model disappears.
    */
   subagentModels?: boolean;
   /**
-   * Le run est-il une étape d'une CHAÎNE d'automatisation (MIN-147) ? Seul ce
-   * cas sert `report_verdict` : hors chaîne, personne ne lit un verdict, et un
-   * tool sans lecteur est une invitation à s'en servir pour rien.
+   * Is the run a step in an automation CHAIN ​​(MIN-147)? Only this
+   * case serves `report_verdict`: outside the chain, no one reads a verdict, and a
+   * tool without reader is an invitation to use it for nothing.
    */
   chain?: boolean;
   /**
-   * Quelqu'un peut-il RÉPONDRE à ce run ? Faux pour un passage de ROUTINE
-   * (MIN-185), et deux tools disparaissent alors — par le JEU DE TOOLS, jamais
-   * par une phrase de prompt, même doctrine que la lecture seule d'une session
+   * Can anyone ANSWER this run? False for a ROUTINE passage
+   * (MIN-185), and two tools then disappear — by the TOOLS SET, never
+   * by a prompt sentence, same doctrine as reading only a session
    * de relecture :
    *
-   *  - **`ask_user`** : personne n'est devant l'écran à 9 h du matin. Une
-   *    question laisserait le run planté en attente jusqu'à ce qu'on passe —
-   *    une microVM gelée et un travail jamais rendu. La routine décide, et
-   *    documente son choix dans sa réponse.
-   *  - **`create_routine`** : une routine ne s'auto-réplique pas. Sans cette
-   *    exclusion, une routine mal formulée pose une routine chaque nuit, et
-   *    rien dans le produit ne la rattrape.
+   * - **`ask_user`**: no one is in front of the screen at 9 a.m. A
+   * question would leave the run stuck waiting until we pass —
+   * a frozen microVM and work never delivered. Routine decides, and
+   * documents his choice in his response.
+   * - **`create_routine`**: a routine is not self-replicating. Without this
+   * exclusion, a poorly formulated routine poses a routine every night, and
+   * nothing in the product makes up for it.
    *
-   * `undefined` vaut « interactif » : tous les appelants historiques le sont.
+   * `undefined` is “interactive”: all historical callers are.
    */
   interactive?: boolean;
   /**
-   * LE TOUR JOUE-T-IL SUR LA MACHINE DE L'UTILISATEUR (MIN-293, puis MIN-364) ?
+   * DOES THE TOUR PLAY ON THE USER’S MACHINE (MIN-293, then MIN-364)?
    *
-   * ⚠ **CE DRAPEAU NE RETIRE PLUS RIEN, et la trace de ce qu'il retirait est ce
-   * qui explique pourquoi.** `run_background` en était sorti pour une raison
-   * d'exploitation nommée : les jobs partent en `setsid`, **explicitement pour
-   * survivre au shell** ([background.ts](background.ts)), et ce qui les tue est le
-   * `stopAll` de fin de tour — lequel ne tourne jamais quand le harness est tué
-   * net (⌘Q, plantage du main process). Sur un Mac, le `npm run dev` du modèle
-   * restait alors vivant, port 3000 tenu, et rien nulle part ne savait où le
+   * ⚠ **THIS FLAG NO LONGER REMOVES ANYTHING, and the trace of what it removed is this
+   * which explains why.** `run_background` was out for a reason
+   * named operating system: jobs leave in `setsid`, **explicitly for
+   * survive the shell** ([background.ts](background.ts)), and what kills them is the
+   * End of turn `stopAll` — which never turns when the harness is killed
+   * net (⌘Q, main process crash). On a Mac, the `npm run dev` of the model
+   * remained then alive, port 3000 held, and nothing anywhere knew where the
    * retrouver.
    *
-   * **Le motif est tombé** (décision D8) : le registre d'enfants
-   * ([vm/child-registry.ts](vm/child-registry.ts)) existe depuis MIN-293 et sert
-   * déjà le serveur opencode ; le superviseur y inscrit désormais les jobs de
-   * fond, et le lanceur les relit au ⌘Q comme au démarrage. Ce que le retrait
-   * coûtait était le plus gros écart de parité du dossier : un agent local ne
-   * pouvait ni lancer un serveur, ni aller voir sa page rendre — la boucle de
-   * feedback la plus courte qui existe, et précisément celle que l'app de bureau
-   * rend possible pour la première fois.
+   * **The reason has been resolved** (decision D8): the child register
+   * ([vm/child-registry.ts](vm/child-registry.ts)) has existed since MIN-293 and is used
+   * already the opencode server; the supervisor now enters the jobs of
+   * background, and the launcher rereads them at ⌘Q as at startup. What withdrawal
+   * cost was the biggest parity gap in the file: a local agent did not
+   * could neither launch a server, nor see its page render — the loop
+   * shortest feedback that exists, and precisely the one that the desktop app
+   * made possible for the first time.
    *
-   * Le drapeau reste, parce qu'il reste la seule chose qui sache ce qu'est un
-   * tour local, et parce que le prochain écart se déclarera ici.
+   * The flag remains, because it remains the only thing that knows what a
+   * local turn, and because the next gap will be declared here.
    */
   local?: boolean;
 }): AgentToolDef[] {
@@ -1416,18 +1416,18 @@ export function agentToolsFor(opts: {
           function: {
             ...t.function,
             description: t.function.description + TARGET_SUFFIX[opts.anchor],
-            // Là où la prose dit « REQUIRED », le schéma doit le dire aussi
-            // (MIN-245). Sans ça, un appel sans `issue` est VALIDE au schéma et
-            // n'est refusé qu'à l'exécution (issue-tools.ts) : un round brûlé
-            // par occurrence, exactement ce qu'un schéma sert à éviter. Le
-            // remède se pose par tool et non globalement : `strict: true`
-            // forcerait TOUS les champs dans `required` et obligerait à des
+            // Where the prose says “REQUIRED”, the diagram must say so too
+            // (MIN-245). Without that, a call without `issue` is VALID to the schema and
+            // is only refused at execution (issue-tools.ts): one round burned
+            // by occurrence, exactly what a pattern is used to avoid. THE
+            // remedy is posed by tool and not globally: `strict: true`
+            // would force ALL fields in `required` and force
             // `null` explicites partout.
             //
-            // Le CARNET seulement. L'ancrage PR a un défaut CONDITIONNEL — le
-            // ticket de la pull request, quand elle en porte un — qu'un schéma
-            // ne sait pas dire : l'y rendre obligatoire casserait le cas normal
-            // au lieu d'épargner un round.
+            // The NOTEBOOK only. The PR anchor has a CONDITIONAL fault — the
+            // pull request ticket, when it carries one — only a diagram
+            // can't say: making it obligatory would break the normal case
+            // instead of saving a round.
             ...(opts.anchor === "notebook"
               ? { parameters: withRequiredIssue(t.function.parameters) }
               : {}),
@@ -1450,7 +1450,7 @@ export function agentToolsFor(opts: {
     });
 }
 
-/** `spawn_agent` sans son champ `model` — la phrase du modèle part avec lui. */
+/** `spawn_agent` without its `model` field — the model sentence leaves with it. */
 function withoutModelField(tool: AgentToolDef): AgentToolDef {
   const properties = Object.fromEntries(
     Object.entries(tool.function.parameters.properties).filter(([key]) => key !== "model"),
@@ -1468,13 +1468,13 @@ function withoutModelField(tool: AgentToolDef): AgentToolDef {
   };
 }
 
-/** Noms des tools de contrôle gérés par la boucle (pas par le Sandbox). */
+/** Names of control tools managed by the loop (not by the Sandbox). */
 export const CONTROL_TOOLS = new Set(["update_plan", "ask_user"]);
 
 /**
- * Tools de DÉLÉGATION, exposés au parent seulement (MIN-112). Un sous-agent ne les
- * a pas : la hiérarchie à un niveau est STRUCTURELLE (`subagentToolsFor` les
- * retire), pas une consigne de prompt qu'un modèle peut ignorer.
+ * DELEGATION tools, exposed to the parent only (MIN-112). A sub-agent does not
+ * step by step: the hierarchy at one level is STRUCTURAL (`subagentToolsFor` the
+ * remove), not a prompt instruction that a model can ignore.
  */
 export const SUBAGENT_CONTROL_TOOLS: ReadonlySet<string> = new Set([
   "spawn_agent",
@@ -1483,10 +1483,10 @@ export const SUBAGENT_CONTROL_TOOLS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Tools qu'un sous-agent n'a JAMAIS, quel que soit son mode. Au-delà de la
- * délégation : le ticket, le carnet, la PR, la checklist de session et les jobs de
- * fond appartiennent au PARENT. Une fille qui coche le plan de l'utilisateur ou qui
- * ouvre une pull request agirait au nom d'une conversation qu'elle n'a pas lue.
+ * Tools that a subagent NEVER has, regardless of its mode. Beyond the
+ * delegation: the ticket, the notebook, the PR, the session checklist and the jobs
+ * funds belong to the PARENT. A girl who checks the user's plan or who
+ * opening a pull request would be acting on behalf of a conversation she hasn't read.
  */
 const _SUBAGENT_FORBIDDEN_TOOLS: ReadonlySet<string> = new Set([
   ...SUBAGENT_CONTROL_TOOLS,
@@ -1495,13 +1495,13 @@ const _SUBAGENT_FORBIDDEN_TOOLS: ReadonlySet<string> = new Set([
   "update_plan",
   "run_background",
   ...MINDDY_TOOLS.map((t) => t.function.name),
-  // Les pull requests du projet appartiennent au parent, pour la même raison que
-  // `create_pr` : une fille qui fusionne ou qui commente agirait au nom d'une
-  // conversation qu'elle n'a pas lue. Elle rapporte, le parent décide.
+  // The project's pull requests belong to the parent, for the same reason as
+  // `create_pr`: a girl merging or commenting would be acting on behalf of a
+  // conversation that she did not read. She reports, the parent decides.
   ...PROJECT_PR_TOOLS.map((t) => t.function.name),
 ]);
 
-/** Les quatre lecteurs : tout ce qu'un sous-agent `explore` a le droit de faire. */
+/** The four readers: everything a `explore` sub-agent has the right to do. */
 const _SUBAGENT_READ_TOOLS: ReadonlySet<string> = new Set([
   "read_file",
   "list_dir",

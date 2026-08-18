@@ -1,26 +1,25 @@
 import type { CreateIssueInput, Issue } from "./types";
 
 /**
- * Construit une issue « optimiste » à partir de l'input de création, insérée
- * dans le cache immédiatement pour que la carte apparaisse sans attendre le POST
- * (MIN-40). Réconciliée avec la ligne serveur au succès, retirée à l'échec.
+ * Constructs an "optimistic" issue from the creation input, inserted
+ * into the cache immediately so that the card appears without waiting for POST
+ * (MIN-40). Reconciled with the server line on success, removed on failure.
  *
- * **C'est le client qui NOMME la ligne** : l'id tiré ici part avec la création
- * (`CreateIssueInput.id`) et devient la clé primaire en base. Sans ça la carte
- * s'affichait en double une seconde : le trigger diffuse l'INSERT au commit,
- * bien avant que le POST ne réponde (il lui reste les pièces jointes, les
- * catégories et Smart Assign à faire), et le pont temps réel ne pouvait pas
- * reconnaître cette diffusion comme la nôtre — le registre d'écritures en
- * attente ne connaissait que l'id optimiste, la ligne diffusée en portait un
- * autre. Il l'adoptait donc comme la ligne d'un tiers, à côté de la carte
- * optimiste ; puis le retour du POST posait la ligne serveur SUR la carte, deux
- * entrées de même id que seul un refetch recollait (rapide sur le board d'un
- * projet, plusieurs secondes sur `/all`, d'où le doublon qui « restait »).
- * Même id des deux côtés, `issueWrites.wasJustWritten` reconnaît l'écho et le
- * pont le laisse passer, exactement comme pour une édition.
+ * **It is the client who NAMEs the line**: the id drawn here leaves with the creation
+ * (`CreateIssueInput.id`) and becomes the primary key in base. Without that the card
+ * was displayed twice for a second: the trigger broadcasts the INSERT at the commit,
+ * well before the POST responded (it still has the attachments, the
+ * categories and Smart Assign to do), and the real-time bridge could not recognize this broadcast as ours — the write register en
+ * wait only knew the optimistic id, the line broadcast carried one
+ * other. He therefore adopted it as the line of a third party, alongside the optimistic card
+ *; then the return of the POST placed the server line ON the card, two
+ * entries of the same id that only a refetch reattached (quickly on the board of a
+ * project, several seconds on `/all`, hence the duplicate which "remained").
+ * Same id on both sides, `issueWrites.wasJustWritten` recognizes the echo and the
+ * bridge lets it pass, exactly as for an edition.
  *
- * Le `number`, lui, reste une estimation (max + 1 **dans ce projet**) recalée au
- * succès — la valeur définitive vient du compteur atomique côté serveur.
+ * The `number`, itself, remains an estimate (max + 1 **in this project**) adjusted to
+ * success — the final value comes from server-side atomic counter.
  */
 export function buildOptimisticIssue(
   input: CreateIssueInput,
@@ -34,7 +33,7 @@ export function buildOptimisticIssue(
       (m, i) => (i.project_id === projectId ? Math.max(m, i.number) : m),
       0
     ) + 1;
-  const status = input.status ?? "backlog"; // même défaut que la colonne DB
+  const status = input.status ?? "backlog"; // same default as the DB column
   return {
     id: crypto.randomUUID(),
     project_id: projectId,
@@ -51,8 +50,8 @@ export function buildOptimisticIssue(
     duplicate_of_id: null,
     due_date: input.due_date ?? null,
     recurrence: input.recurrence ?? null,
-    // Posée par le serveur à la première activation (elle vaut l'id de la ligne,
-    // qu'on n'a pas encore) : la carte optimiste s'en passe.
+    // Asked by the server at the first activation (it is worth the id of the line,
+    // which we don't have yet): the optimistic card does without it.
     recurrence_series_id: null,
     position: Date.now(),
     created_by: userId,
@@ -62,10 +61,10 @@ export function buildOptimisticIssue(
     completed_at: status === "done" ? now : null,
     cycle_id: null,
     category_ids: input.category_ids ?? [],
-    // Le compte de pièces jointes est un AGRÉGAT : ni la réponse du POST ni la
-    // ligne diffusée ne le portent, seul le GET du board le calcule. On le pose
-    // donc ici — à la création, les ressources du ticket sont exactement celles
-    // qu'on envoie —, sans quoi la pastille manquerait jusqu'au prochain refetch.
+    // The attachment count is an AGGREGATE: neither the POST response nor the
+    // broadcast line does not carry it, only the GET of the board calculates it. We put it
+    // so here — at creation, the ticket resources are exactly those
+    // that we send —, otherwise the pellet would be missing until the next refetch.
     resource_count:
       (input.resources?.length ?? 0) + (input.copy_resources?.length ?? 0),
   };

@@ -5,40 +5,40 @@ const PENTEST_STATUSES = new Set(["not-required", "completed", "required-not-com
 
 function requiredText(value, label) {
   const normalized = String(value ?? "").trim();
-  if (!normalized) throw new Error(`${label} est obligatoire.`);
+  if (!normalized) throw new Error(`${label} is required.`);
   if (/\s/.test(normalized)) {
-    throw new Error(`${label} doit être une référence sans espace (URL ou identifiant d'issue).`);
+    throw new Error(`${label} must be a reference without spaces (URL or issue identifier).`);
   }
   if (!/^[A-Za-z0-9._:/#?=&%+-]+$/.test(normalized)) {
-    throw new Error(`${label} contient des caractères non autorisés.`);
+    throw new Error(`${label} contains unauthorized characters.`);
   }
-  if (normalized.length > 200) throw new Error(`${label} dépasse 200 caractères.`);
+  if (normalized.length > 200) throw new Error(`${label} exceeds 200 characters.`);
   return normalized;
 }
 
 /**
- * Valide l'attestation qui accompagne toute promotion Cloud.
- * La preuve détaillée reste dans la référence : aucun secret ni détail
- * exploitable ne doit être copié dans les entrées ou les logs du workflow.
+ * Validates the certificate that accompanies any Cloud promotion.
+ * The detailed proof remains in the reference: no secrets or exploitable details
+ * must be copied into the workflow entries or logs.
  */
 export function assertSecurityRelease({ checklistVersion, reviewRef, residualRisks, pentest }) {
   if (checklistVersion !== SECURITY_CHECKLIST_VERSION) {
     throw new Error(
-      `Checklist ${checklistVersion || "absente"} invalide : utiliser la version ${SECURITY_CHECKLIST_VERSION}.`,
+      `Checklist ${checklistVersion || "missing"} is invalid: use version ${SECURITY_CHECKLIST_VERSION}.`,
     );
   }
 
-  const normalizedRef = requiredText(reviewRef, "La référence de revue sécurité");
+  const normalizedRef = requiredText(reviewRef, "The security review reference");
   if (!RISK_STATUSES.has(residualRisks)) {
-    throw new Error("Le statut des risques résiduels doit être none ou documented.");
+    throw new Error("Residual risk status must be none or documented.");
   }
   if (!PENTEST_STATUSES.has(pentest)) {
     throw new Error(
-      "Le statut du pentest doit être not-required, completed ou required-not-completed.",
+      "Pentest status must be not-required, completed, or required-not-completed.",
     );
   }
   if (pentest === "required-not-completed") {
-    throw new Error("Promotion refusée : le pentest requis n'est pas terminé.");
+    throw new Error("Promotion rejected: the required pentest is not complete.");
   }
 
   return {

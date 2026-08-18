@@ -1,42 +1,42 @@
 /**
- * Pourquoi une infobulle se rouvre toute seule quand on revient sur l'onglet.
+ * Why does a tooltip reopen by itself when you return to the tab.
  *
- * Radix ouvre l'infobulle sur le `focus` de son déclencheur, sans condition
+ * Radix opens the tooltip on the `focus` of its trigger, unconditionally
  * (`react-tooltip/dist/index.mjs` : `onFocus: … if (!isPointerDownRef.current)
- * context.onOpen()`). Or le navigateur REND le focus à l'élément qui l'avait
- * quand l'onglet — ou la fenêtre — redevient actif : Chrome émet alors un
- * `focus` que rien ne distingue d'un `Tab` de l'utilisateur. L'infobulle
- * s'ouvre donc sur un bouton que personne n'a survolé, plusieurs minutes après
- * la dernière interaction. C'est documenté chez Radix (primitives#705, fermé en
- * « won't fix » : le focus vient du navigateur, pas d'eux) — la parade est du
- * côté de l'appelant, ici.
+ * context.onOpen()`). But the browser RETURNS focus to the element that had it
+ * when the tab — or window — becomes active again: Chrome then emits a
+ * `focus` that is indistinguishable from a `Tab` of the user. The tooltip
+ * therefore opens on a button that no one hovered over, several minutes later
+ * the last interaction. This is documented at Radix (primitives#705, closed in
+ * “won't fix”: the focus comes from the browser, not from them) — the solution is
+ * caller's side, here.
  *
- * Deux règles, et c'est tout :
+ * Two rules, and that's it:
  *
- * 1. **La restitution de focus ne compte pas.** Un `focus` qui arrive juste
- *    après que la fenêtre a repris la main n'est pas un geste : c'est le
- *    navigateur qui range. On le laisse passer (l'élément DOIT reprendre le
- *    focus, sinon le clavier repart de zéro) mais il n'ouvre rien.
- * 2. **Un focus qui ne se voit pas n'ouvre rien.** `:focus-visible` est
- *    exactement la question « le navigateur estime-t-il que l'utilisateur
- *    navigue au clavier ? ». Un focus posé par un clic, ou par du code qui
- *    rend la main à un déclencheur en fermant un popover, n'est pas visible —
- *    et une infobulle qui s'ouvre là ne répond à aucune demande.
+ * 1. **Returning focus does not count.** A `focus` that just happens
+ * after the window has regained control is not a gesture: it is the
+ * browser that tidies up. We let it pass (the element MUST take back the
+ * focus, otherwise the keyboard starts from scratch) but it doesn't open anything.
+ * 2. **A focus that is not visible does not open anything.** `:focus-visible` is
+ * exactly the question "does the browser believe that the user
+ * navigate using the keyboard? ". A focus placed by a click, or by code which
+ * returns control to a trigger by closing a popover, is not visible —
+ * and a tooltip that opens there does not respond to any request.
  *
- * Ce que ça NE change pas : le survol, et la tabulation au clavier. Un vrai
- * `Tab` est précédé d'un `keydown`, qui referme le drapeau (voir le suiveur
- * ci-dessous) et se pose en `:focus-visible`.
+ * What it DOES NOT change: hovering, and keyboard tabulation. A real
+ * `Tab` is preceded by a `keydown`, which closes the flag (see the follower
+ * below) and is set to `:focus-visible`.
  */
 
-/** Le vrai geste de l'utilisateur, celui qui dit « je suis revenu ». */
+/** The real gesture of the user, the one that says “I’m back”. */
 export type TooltipFocusSignal = {
-  /** La fenêtre vient de reprendre la main, sans geste depuis. */
+  /** The window has just regained control, without any action since. */
   refocusPending: boolean;
-  /** L'élément porte `:focus-visible` (navigation clavier). */
+  /** The element carries `:focus-visible` (keyboard navigation). */
   focusVisible: boolean;
 };
 
-/** La décision, seule, sans DOM : faut-il ouvrir l'infobulle sur ce `focus` ? */
+/** The decision, alone, without DOM: should we open the tooltip on this `focus`? */
 export function shouldOpenTooltipOnFocus({
   refocusPending,
   focusVisible,
@@ -45,12 +45,12 @@ export function shouldOpenTooltipOnFocus({
 }
 
 /**
- * Le suiveur de retour de fenêtre.
+ * The window return follower.
  *
- * `markRefocus()` sur le `focus` de la fenêtre (ou un `visibilitychange` qui
- * repasse visible), `markGesture()` sur le premier `keydown` / `pointerdown` :
- * un geste prouve que l'utilisateur pilote, et rend au focus suivant son sens
- * habituel. `consumeRefocus()` lit ET referme le drapeau — le rangement du
+ * `markRefocus()` on the `focus` of the window (or a `visibilitychange` which
+ * returns visible), `markGesture()` on the first `keydown` / `pointerdown`:
+ * a gesture proves that the user is controlling, and returns the focus according to its direction
+ * usual. `consumeRefocus()` reads AND closes the flag — the storage of the
  * navigateur ne concerne qu'un seul `focus`.
  */
 export type WindowRefocusTracker = {

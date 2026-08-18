@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-332 — les deux surfaces qui SERVENT une conversation sans passer par la
- * RLS, et qui la servaient donc à tout le projet.
+ * MIN-332 — the two surfaces which SERVE a conversation without going through the
+ * RLS, and which therefore served it for the entire project.
  *
- *  • `/api/agent-runs/[runId]/events` — le fil lui-même (pensées, appels d'outil,
- *    résultats). Lu en clé service : la policy `agent_run_events_select` ne garde
- *    rien ici, c'est ce contrôle-ci qui la remplace.
- *  • `/api/issues/[id]/agent` — le panneau latéral d'un ticket. Le ticket est
- *    public, ses conversations ne le sont pas : le panneau ne doit montrer que
- *    les MIENNES, plus ce que le projet a déclenché.
+ * • `/api/agent-runs/[runId]/events` — the thread itself (thoughts, calls tool,
+ * results). Read in service key: the policy `agent_run_events_select` does not keep
+ * anything here, it is this control which replaces it.
+ * • `/api/issues/[id]/agent` — the side panel of a ticket. The ticket is
+ * public, its conversations are not: the panel should only show
+ * MINE, plus what the project has triggered.
  *
- * On ne moque que ce qui SORT du process (auth, appartenance, base).
+ * We only mock what OUT of the process (auth, membership, base).
  */
 
 const getAuthedUser = vi.fn();
@@ -33,7 +33,7 @@ vi.mock("@/lib/server/agent/runs", async (importOriginal) => ({
   getRun: (...args: unknown[]) => getRun(...args),
 }));
 
-/** Le strict minimum de PostgREST : deux tables, et un `then` qui rend le lot. */
+/** The bare minimum of PostgREST: two tables, and a `then` which returns the batch. */
 vi.mock("@/lib/supabase-service", () => {
   const table = (rows: () => Array<Record<string, unknown>>) => {
     const q: Record<string, unknown> = {};
@@ -59,7 +59,7 @@ const ISSUE = "99999999-2222-4333-8444-555555555555";
 
 const events = () =>
   eventsGET(
-    // `nextUrl` : la route y lit `?after=`, et un `Request` nu ne le porte pas.
+    // `nextUrl`: the route reads `?after=` there, and a naked `Request` does not carry it.
     Object.assign(new Request("https://minddy.app/x"), {
       nextUrl: new URL("https://minddy.app/x"),
     }) as never,
@@ -87,7 +87,7 @@ beforeEach(() => {
   getAuthedUser.mockResolvedValue({
     ok: true,
     user: { id: "user-2" },
-    // Le ticket est lu par le client RLS : ici il existe et l'appelant le voit.
+    // The ticket is read by the RLS client: here it exists and the caller sees it.
     supabase: {
       from: () => ({
         select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { id: ISSUE } }) }) }),
@@ -134,8 +134,8 @@ describe("/api/issues/[id]/agent — le panneau d'un ticket public", () => {
   });
 
   it("les colonnes de visibilité ne fuitent pas dans la réponse", async () => {
-    // Elles sont lues pour trancher, pas pour être affichées : le panneau reçoit
-    // exactement la même forme qu'avant MIN-332.
+    // They are read to decide, not to be displayed: the panel receives
+    // exactly the same shape as before MIN-332.
     h.runRows = [runRow({ id: "mien", created_by: "user-2" })];
     const { runs } = (await (await issueAgent()).json()) as {
       runs: Array<Record<string, unknown>>;

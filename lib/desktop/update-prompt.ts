@@ -1,41 +1,41 @@
 /**
- * La proposition d'installer, une fois la mise à jour TÉLÉCHARGÉE (MIN-353).
+ * The suggestion to install, once the update DOWNLOADED (MIN-353).
  *
- * ## Ce qui change, et ce qui ne change pas
+ * ## What changes, and what does not change
  *
- * Le rythme reste celui de `updater.ts` : on télécharge tout seul, en silence,
- * et **rien ne s'installe sans un oui**. Ce que ce module ajoute, c'est le
- * moment où on demande. Jusqu'ici l'installation attendait le prochain ⌘Q sans
- * jamais le dire — une app de bureau qui ne quitte quasiment jamais (⌘W la
- * cache, elle ne la ferme pas) restait donc sur sa version des semaines, avec
- * la neuve déjà sur le disque.
+ * The rhythm remains that of `updater.ts`: we download alone, silently,
+ * and **nothing is installed without a yes**. What this module adds is the
+ * moment when we ask. Until now the installation was waiting for the next ⌘Q without
+ * ever saying it - a desktop app which almost never quits (⌘W the
+ * cache, it does not close it) therefore remained on its version for weeks, with
+ * the new one already on the disk.
  *
- * ## Pourquoi « Install and Relaunch » et pas « Restart Now »
+ * ## Why “Install and Relaunch” and not “Restart Now”
  *
- * Parce que la phrase doit dire les DEUX moitiés de ce qui va se passer. Un
- * bouton qui ne promet qu'un redémarrage laisse croire qu'on retrouvera la même
- * version ; un bouton qui ne promet qu'une installation laisse croire qu'on peut
- * continuer à travailler pendant. C'est la formule qu'emploient les apps qui
- * font ça bien, et ce n'est pas un hasard.
+ * Because the sentence must say BOTH halves of what is going to happen. A
+ * button which only promises a restart suggests that we will find the same
+ * version; a button that only promises an installation suggests that we can
+ * continue working for. This is the formula used by apps which
+ * do it well, and it's not a coincidence.
  *
- * `Later` n'annule rien : la mise à jour est là, `autoInstallOnAppQuit` la
- * posera au prochain ⌘Q. C'est pour ça qu'il est le bouton d'ÉCHAPPEMENT
- * (Échap, feu rouge) — l'issue par défaut d'un dialogue qu'on renvoie sans le
- * lire ne doit jamais être celle qui interrompt le travail.
+ * `Later` does not cancel anything: the update is there, `autoInstallOnAppQuit` the
+ * will ask for the next one ⌘Q. That's why it's the ESCAPE
+ * button (Escape, red light) — the default outcome of a dialog that we return without the
+ * read should never be the one that interrupts the work.
  *
- * Module PUR : `desktop/src/updater.ts` ne fait qu'ouvrir la boîte et lire la
- * réponse.
+ * PUR module: `desktop/src/updater.ts` just opens the box and reads the
+ * response.
  */
 
-/** Ce que `dialog.showMessageBox` attend, réduit à ce qu'on décide ici. */
+/** What `dialog.showMessageBox` expects, reduced to what we decide here. */
 export interface UpdatePromptCopy {
   type: "info";
   message: string;
   detail: string;
   buttons: string[];
-  /** Le bouton mis en avant, celui que ⏎ déclenche. */
+  /** The highlighted button, the one that ⏎ triggers. */
   defaultId: number;
-  /** Celui d'Échap et du feu rouge — jamais l'installation. */
+  /** The one from Escape and the red light — never the installation. */
   cancelId: number;
 }
 
@@ -52,14 +52,14 @@ export function updatePromptCopy(version: string): UpdatePromptCopy {
 }
 
 /**
- * Ce que la réponse veut dire.
+ * What the answer means.
  *
- * **Tout ce qui n'est pas explicitement le premier bouton est un `later`.**
- * `showMessageBox` rend `cancelId` quand la boîte est fermée sans choix, mais
- * elle peut aussi rendre `-1` selon la façon dont elle est renvoyée : on ne
- * teste donc pas « est-ce que c'est un refus », on teste « est-ce que c'est un
- * oui ». Une mise à jour qui s'installe sur un dialogue mal fermé, c'est
- * exactement ce que le bouton par défaut sert à éviter.
+ * **Anything that is not explicitly the first button is a `later`.**
+ * `showMessageBox` returns `cancelId` when the box is closed without a choice, but
+ * it can also return `-1` depending on how it is returned: we therefore do not
+ * test “is it a refusal”, we test “is it a
+ * yes”. An update that installs on a poorly closed dialog is
+ * exactly what the default button is used to avoid.
  */
 export function updatePromptChoice(response: number): "install" | "later" {
   return response === 0 ? "install" : "later";

@@ -3,30 +3,30 @@ import { mentionsNumo } from "@/lib/server/assistant/comment-agent";
 import { forgeAttachmentMarkdown } from "./forge-image-assets";
 
 /**
- * `mentionsNumo` décidait jusqu'ici du sort d'un commentaire de TICKET, écrit
- * dans le composer de minddy. Depuis MIN-162 il décide aussi de ce qui part sur
- * une pull request — y compris pour un message écrit sur github.com, où le
- * markdown est autrement plus varié. Un faux positif y coûte un tour de modèle
- * facturé au owner du projet ; un faux négatif, un appel resté sans réponse.
+ * `mentionsNumo` until now decided the fate of a TICKET comment, written
+ * in minddy's composer. Since MIN-162 it also decides what goes on
+ * a pull request — including for a message written on github.com, where the
+ * markdown is much more varied. A false positive costs one round of model
+ * charged to the project owner; a false negative, a call left unanswered.
  */
-describe("mentionsNumo, sur un corps de pull request", () => {
-  it("reconnaît l'appel, à casse libre", () => {
+describe("mentionsNumo on a pull request body", () => {
+  it("recognizes the mention regardless of case", () => {
     expect(mentionsNumo("@numo peux-tu relire ?")).toBe(true);
     expect(mentionsNumo("@Numo peux-tu relire ?")).toBe(true);
     expect(mentionsNumo("cc @NUMO")).toBe(true);
   });
 
-  it("le reconnaît en fin de ligne et dans une citation", () => {
+  it("recognizes it at the end of a line and inside a quote", () => {
     expect(mentionsNumo("Ça me semble bon.\n\n@numo")).toBe(true);
     expect(mentionsNumo("> un avis ?\n@numo qu'en penses-tu")).toBe(true);
     expect(mentionsNumo("(@numo)")).toBe(true);
   });
 
-  it("ne se déclenche pas sur une adresse e-mail", () => {
+  it("does not trigger on an email address", () => {
     expect(mentionsNumo("écrivez à contact@numo.dev")).toBe(false);
   });
 
-  it("ne se déclenche pas sur un mot qui COMMENCE par numo", () => {
+  it("does not trigger on a word that STARTS with numo", () => {
     expect(mentionsNumo("@numotron a poussé un commit")).toBe(false);
   });
 
@@ -35,7 +35,7 @@ describe("mentionsNumo, sur un corps de pull request", () => {
     expect(mentionsNumo("la review de numo est passée")).toBe(false);
   });
 
-  it("le reconnaît dans un message qui porte aussi des mentions de forge", () => {
+  it("recognizes it in a message that also contains forge mentions", () => {
     expect(mentionsNumo("@mangue-dev et @numo, un avis ?")).toBe(true);
   });
 });
@@ -43,7 +43,7 @@ describe("mentionsNumo, sur un corps de pull request", () => {
 describe("forgeAttachmentMarkdown", () => {
   const url = "https://xyz.supabase.co/storage/v1/object/public/forge-attachments/a/b/x.png";
 
-  it("insère une image, pour qu'elle se regarde dans le fil", () => {
+  it("inserts an image so it can be viewed in the thread", () => {
     expect(forgeAttachmentMarkdown({ url, name: "capture.png", isImage: true })).toBe(
       `![capture.png](${url})`,
     );
@@ -55,7 +55,7 @@ describe("forgeAttachmentMarkdown", () => {
     );
   });
 
-  it("désarme les crochets d'un nom de fichier, qui casseraient le lien", () => {
+  it("escapes brackets in a file name, which would break the link", () => {
     expect(
       forgeAttachmentMarkdown({ url, name: "capture [1].png", isImage: true }),
     ).toBe(`![capture 1.png](${url})`);

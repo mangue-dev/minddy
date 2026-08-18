@@ -37,14 +37,14 @@ describe("parsePushRegistration", () => {
 });
 
 /**
- * MIN-183 — un rafraîchissement ne RALLUME pas.
+ * MIN-183 — a refresh does not TURN ON.
  *
- * Le bug que ces cas verrouillent ne se voyait pas en essayant l'app une fois :
- * on éteint l'appareil, l'interrupteur bascule, le toast le confirme. C'est à la
- * page SUIVANTE que la remise d'aplomb au chargement (`<PushServiceWorker />`)
- * repassait par cette route et rallumait la ligne. Autrement dit :
- * l'activation/désactivation par appareil — la demande centrale du ticket — ne
- * survivait pas à une navigation.
+ * The bug that these cases lock was not visible when trying the app once:
+ * we turn off the device, the switch flips, the toast confirms it. It was on the
+ * NEXT page that the loading re-alignment (`<PushServiceWorker />`)
+ * returned via this route and re-ignited the line. In other words:
+ * activation/deactivation by device — the central request of the ticket — does not
+ * survive a navigation.
  */
 describe("resolveRegistrationState", () => {
   it("allume : une activation est là pour ça", () => {
@@ -60,7 +60,7 @@ describe("resolveRegistrationState", () => {
     ).toEqual({ enabled: true, locale: "fr" });
   });
 
-  // LE cas du bug.
+  // THE case of the bug.
   it("laisse éteint ce qui était éteint quand c'est un rafraîchissement", () => {
     expect(
       resolveRegistrationState(
@@ -83,9 +83,9 @@ describe("resolveRegistrationState", () => {
     });
   });
 
-  // Le service worker n'a pas de langue à donner : il ne lit pas le cookie
-  // `NEXT_LOCALE`. Sans ce report, un ré-abonnement spontané ferait passer un
-  // téléphone français en anglais, sans que personne ne l'ait demandé.
+  // The service worker has no language to give: it does not read the cookie
+  // `NEXT_LOCALE`. Without this postponement, a spontaneous re-subscription would result in a
+  // French telephone in English, without anyone asking.
   it("garde la langue de la ligne précédente quand le corps n'en porte pas", () => {
     expect(
       resolveRegistrationState({ enabled: true, locale: "fr" }, { refresh: true })

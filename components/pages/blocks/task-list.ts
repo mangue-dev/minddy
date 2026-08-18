@@ -6,22 +6,22 @@ import {
 import type { PageBlock } from "@/components/pages/blocks/types";
 
 /**
- * Les tâches d'une page sont EXACTEMENT celles du carnet : les quatre états du
- * plan (`[ ]` / `[~]` / `[x]` / `[-]`), leur attribut `state` et leur round-trip
- * markdown viennent de components/scratchpad/task-nodes.ts, qui a été séparé de
- * sa vue pour ça.
+ * The tasks on a page are EXACTLY those in the notebook: the four states of the
+ * plan (`[ ]` / `[~]` / `[x]` / `[-]`), their `state` attribute and their round-trip
+ * markdown come from components/scratchpad/task-nodes.ts, which was separated from
+ * its view for that.
  *
- * Ne rien redéfinir ici, jamais : deux définitions des quatre états, c'est deux
- * grammaires de tâche dans le même produit, et un jour un `[~]` qui se relit
- * `[ ]` d'un côté seulement.
+ * Do not redefine anything here, ever: two definitions of the four states are two
+ * task grammars in the same product, and one day a `[~]` which rereads
+ * `[ ]` on one side only.
  *
- * Ce fichier ne pose donc AUCUNE vue — plus depuis MIN-274. La vue est celle du
- * carnet (components/scratchpad/task-item-view.tsx), menu ⋯ compris, et elle
- * tire le baril `mangue-ui` : la nommer ici rendrait le registre entier
- * inimportable hors navigateur (projection markdown, outils MCP, tests — cf.
- * lib/cx.ts). C'est l'éditeur de page qui l'injecte au montage,
- * `pageExtensions({ nodeViews: { taskItem } })`, comme il le fait déjà pour la
- * pilule de mention.
+ * This file therefore poses NO view — no longer since MIN-274. The view is that of the
+ * notebook (components/scratchpad/task-item-view.tsx), menu ⋯ included, and it
+ * pulls the barrel `mangue-ui`: naming it here would make the entire register
+ * unimportable outside the browser (markdown projection, MCP tools, tests — cf.
+ * lib/cx.ts). It is the page editor who injects it during editing,
+ * `pageExtensions({ nodeViews: { taskItem } })`, as it already does for the
+ * mention pill.
  */
 export const taskListBlock: PageBlock = {
   id: "taskList",
@@ -37,8 +37,8 @@ export const taskListBlock: PageBlock = {
   turnInto: (editor) => editor.chain().focus().toggleTaskList().run(),
   isActive: (editor) => editor.isActive("taskList"),
   shortcut: { keys: "Mod-Shift-9", display: "⌘⇧9" },
-  // La sérialisation est celle du carnet, portée par les nœuds eux-mêmes — d'où
-  // l'absence de `toMarkdown` ici. Le `sample` est ce qui le PROUVE : il
-  // traverse un vrai éditeur dans lib/pages-blocks.test.ts.
+  // The serialization is that of the notebook, carried by the nodes themselves — hence
+  // the absence of `toMarkdown` here. The `sample` is what PROVES it: it
+  // pass through a real editor in lib/pages-blocks.test.ts.
   markdown: { sample: "- [~] A task" },
 };

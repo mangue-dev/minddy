@@ -8,10 +8,10 @@ import {
 } from "./routine-schedule";
 
 /**
- * Le calcul du prochain passage d'une routine (MIN-185). Ce qui se vérifie ici
- * est ce qui ne se voit pas à la lecture : le changement d'heure, les mois
- * courts, et le réarmement qui ne doit pas rejouer l'échéance qu'il vient de
- * consommer.
+ * Calculation of the next pass of a routine (MIN-185). What is verified here
+ * is what is not seen when reading: the time change, the short months
+ *, and the rearmament which must not replay the deadline that it has just
+ * consume.
  */
 
 const paris = (over: Partial<RoutineSchedule> = {}): RoutineSchedule => ({
@@ -23,7 +23,7 @@ const paris = (over: Partial<RoutineSchedule> = {}): RoutineSchedule => ({
   ...over,
 });
 
-/** L'heure locale d'un instant dans un fuseau — ce que l'horloge affiche. */
+/** The local time of an instant in a time zone — what the clock displays. */
 function localClock(at: Date, timeZone: string): string {
   return new Intl.DateTimeFormat("en-GB", {
     timeZone,
@@ -38,15 +38,15 @@ function localClock(at: Date, timeZone: string): string {
 
 describe("nextRunAt — hebdomadaire", () => {
   it("tombe sur le lundi suivant, à 9 h locales", () => {
-    // Jeudi 5 février 2026, midi UTC.
+    // Thursday February 5, 2026, noon UTC.
     const at = nextRunAt(paris(), new Date("2026-02-05T12:00:00Z"));
     expect(localClock(at, "Europe/Paris")).toBe("09/02/2026, 09:00");
   });
 
   it("tient 9 h locales DE PART ET D'AUTRE du changement d'heure", () => {
-    // Paris passe à l'heure d'été le dimanche 29 mars 2026 : le lundi d'avant
-    // est en UTC+1 (8 h UTC), celui d'après en UTC+2 (7 h UTC). Ajouter sept
-    // fois 24 h aurait décalé la routine d'une heure pour toujours.
+    // Paris switches to summer time on Sunday March 29, 2026: the Monday before
+    // is in UTC+1 (8 a.m. UTC), the one after that in UTC+2 (7 a.m. UTC). Add seven
+    // times 24 hours would have shifted the routine by an hour forever.
     const before = nextRunAt(paris(), new Date("2026-03-24T12:00:00Z"));
     const after = nextRunAt(paris(), new Date("2026-03-31T12:00:00Z"));
     expect(before.toISOString()).toBe("2026-03-30T07:00:00.000Z");
@@ -54,15 +54,15 @@ describe("nextRunAt — hebdomadaire", () => {
     expect(after.toISOString()).toBe("2026-04-06T07:00:00.000Z");
     expect(localClock(after, "Europe/Paris")).toBe("06/04/2026, 09:00");
 
-    // Et l'autre bascule, celle d'octobre (UTC+2 → UTC+1).
+    // And the other switch, that of October (UTC+2 → UTC+1).
     const october = nextRunAt(paris(), new Date("2026-10-20T12:00:00Z"));
     expect(october.toISOString()).toBe("2026-10-26T08:00:00.000Z");
     expect(localClock(october, "Europe/Paris")).toBe("26/10/2026, 09:00");
   });
 
   it("avance d'une semaine quand `from` est EXACTEMENT sur l'échéance", () => {
-    // Le cas du cron qui réarme : sans le « strictement après », la routine
-    // repartirait sur elle-même au tour suivant.
+    // The case of the cron which resets: without the “strictly after”, the routine
+    // would start again on itself on the next turn.
     const due = new Date("2026-02-09T08:00:00Z"); // lundi 9 h Paris (UTC+1)
     expect(localClock(due, "Europe/Paris")).toBe("09/02/2026, 09:00");
     const next = nextRunAt(paris(), due);
@@ -70,7 +70,7 @@ describe("nextRunAt — hebdomadaire", () => {
   });
 
   it("passe au lundi suivant quand l'heure du jour est déjà passée", () => {
-    // Lundi 9 février, 10 h Paris : l'échéance de 9 h est derrière nous.
+    // Monday February 9, 10 a.m. Paris: the 9 a.m. deadline is behind us.
     const next = nextRunAt(paris(), new Date("2026-02-09T09:00:00Z"));
     expect(localClock(next, "Europe/Paris")).toBe("16/02/2026, 09:00");
   });
@@ -78,8 +78,8 @@ describe("nextRunAt — hebdomadaire", () => {
 
 describe("nextRunAt — plusieurs jours", () => {
   it("prend le PROCHAIN des jours retenus, pas le premier de la liste", () => {
-    // Lundi, mardi et jeudi. On est mardi 10 février à 10 h (l'échéance de 9 h
-    // est passée) : la suivante est jeudi, pas lundi prochain.
+    // Monday, Tuesday and Thursday. It's Tuesday, February 10 at 10 a.m. (the 9 a.m. deadline
+    // has passed): the next one is Thursday, not next Monday.
     const next = nextRunAt(
       paris({ weekdays: [4, 1, 2] }),
       new Date("2026-02-10T09:00:00Z"),
@@ -88,7 +88,7 @@ describe("nextRunAt — plusieurs jours", () => {
   });
 
   it("repart au premier jour de la semaine suivante après le dernier", () => {
-    // Jeudi 12 février, 10 h : plus rien cette semaine → lundi 16.
+    // Thursday February 12, 10 a.m.: nothing more this week → Monday 16.
     const next = nextRunAt(
       paris({ weekdays: [1, 2, 4] }),
       new Date("2026-02-12T09:00:00Z"),
@@ -97,7 +97,7 @@ describe("nextRunAt — plusieurs jours", () => {
   });
 
   it("enchaîne les jours du mois retenus dans l'ordre", () => {
-    // Le 1, le 3 et le 12. Depuis le 4 février, la prochaine est le 12.
+    // The 1st, the 3rd and the 12th. Since February 4th, the next one is the 12th.
     const monthly = paris({
       frequency: "monthly",
       weekdays: null,
@@ -106,20 +106,20 @@ describe("nextRunAt — plusieurs jours", () => {
     expect(
       localClock(nextRunAt(monthly, new Date("2026-02-04T12:00:00Z")), "Europe/Paris"),
     ).toBe("12/02/2026, 09:00");
-    // Après le 12, on bascule sur le 1er du mois suivant.
+    // After the 12th, we switch to the 1st of the following month.
     expect(
       localClock(nextRunAt(monthly, new Date("2026-02-13T12:00:00Z")), "Europe/Paris"),
     ).toBe("01/03/2026, 09:00");
   });
 
   it("ne joue qu'UNE fois quand deux jours retombent au même endroit", () => {
-    // 30 et 31 en février tombent tous les deux le 28 : c'est une occurrence.
+    // 30 and 31 in February both fall on the 28th: ​​this is an occurrence.
     const at = nextRunAt(
       paris({ frequency: "monthly", weekdays: null, daysOfMonth: [30, 31] }),
       new Date("2026-02-01T12:00:00Z"),
     );
     expect(localClock(at, "Europe/Paris")).toBe("28/02/2026, 09:00");
-    // Et la suivante est bien en mars, pas une seconde fois en février.
+    // And the next one is in March, not a second time in February.
     expect(localClock(nextRunAt(paris({
       frequency: "monthly",
       weekdays: null,
@@ -146,22 +146,22 @@ describe("nextRunAt — quotidien", () => {
   });
 
   it("survit à une heure qui n'existe pas (bascule de printemps)", () => {
-    // Le 29 mars 2026, Paris saute de 2 h à 3 h : 2 h 30 n'existe pas ce
-    // jour-là. La routine doit repartir sur la première heure qui existe, pas
-    // revenir en arrière ni disparaître.
+    // On March 29, 2026, Paris jumps from 2 a.m. to 3 a.m.: 2:30 a.m. does not exist this
+    // that day. The routine must start again from the first hour that exists, not
+    // go back or disappear.
     const next = nextRunAt(
       paris({ frequency: "daily", weekdays: null, hour: 2, minute: 30 }),
       new Date("2026-03-29T00:30:00Z"),
     );
     expect(next.getTime()).toBeGreaterThan(Date.parse("2026-03-29T00:30:00Z"));
-    // Elle reste dans la journée du 29 (ou repart le 30), jamais avant.
+    // She stays during the day of the 29th (or leaves on the 30th), never before.
     expect(next.toISOString() >= "2026-03-29T01:00:00.000Z").toBe(true);
   });
 });
 
 describe("nextRunAt — mensuel", () => {
   it("ramène le 31 au dernier jour d'un mois de 30 jours", () => {
-    // On ne saute pas le mois : « le 31 » veut dire la fin du mois.
+    // We don’t skip the month: “the 31st” means the end of the month.
     const next = nextRunAt(
       paris({ frequency: "monthly", weekdays: null, daysOfMonth: [31] }),
       new Date("2026-04-15T12:00:00Z"),
@@ -196,8 +196,8 @@ describe("nextRunAt — mensuel", () => {
 
 describe("assertSchedule", () => {
   it("REFUSE un fuseau inconnu au lieu de retomber sur UTC", () => {
-    // Le repli silencieux ferait partir la routine à la mauvaise heure sans que
-    // personne ne le voie — c'est le contraire de ce qu'on veut d'une cadence.
+    // Silent fallback would cause the routine to start at the wrong time without
+    // no one sees it — it's the opposite of what we want from a cadence.
     expect(() => assertSchedule(paris({ timezone: "Europe/Pariss" }))).toThrow(
       RoutineScheduleError,
     );
@@ -235,8 +235,8 @@ describe("assertSchedule", () => {
 
 describe("describeSchedule", () => {
   it("appelle chaque message AVEC ses valeurs", () => {
-    // Le piège du dépôt : un message à placeholders appelé sans valeurs affiche
-    // le chemin de la clé. On vérifie donc que les valeurs arrivent.
+    // The repository trap: a message to placeholders called without values ​​displays
+    // the path of the key. We therefore check that the values ​​arrive.
     const seen: Array<[string, Record<string, string | number>]> = [];
     const t = (key: string, values: Record<string, string | number>) => {
       seen.push([key, values]);

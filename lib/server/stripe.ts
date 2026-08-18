@@ -9,11 +9,11 @@ import {
 } from "@/lib/billing-plans";
 
 /**
- * Client Stripe minimal en fetch brut (pas de SDK), cloné d'AutoKap.
- * Périmètre v1 : checkout subscription mensuel (Go / Pro), portal, lecture
- * d'abonnement, vérification de signature webhook. Les price IDs viennent de
- * l'env (`STRIPE_PRICE_ID_GO` / `STRIPE_PRICE_ID_PRO`) — le prix facturé est
- * celui du price Stripe, les montants de lib/billing-plans.ts sont l'affichage.
+ * Minimal Stripe client in raw fetch (no SDK), cloned from AutoKap.
+ * Scope v1: monthly subscription checkout (Go / Pro), portal, reading
+ * subscription, webhook signature verification. The price IDs come from
+ * the env (`STRIPE_PRICE_ID_GO` / `STRIPE_PRICE_ID_PRO`) — the price charged is
+ * that of the Stripe price, the amounts from lib/billing-plans.ts are the display.
  */
 
 interface StripeList<T> {
@@ -40,8 +40,8 @@ export interface StripePortalSession {
 
 export interface StripeSubscriptionItem {
   price: { id: string };
-  /** Modèle « flexible » (API ≥ 2025-03-31) : la période courante est portée
-   *  par l'item d'abonnement, plus par la racine. */
+  /** “Flexible” model (API ≥ 2025-03-31): the current period is carried
+ * by the subscription item, plus by the root. */
   current_period_start?: number;
   current_period_end?: number;
 }
@@ -51,7 +51,7 @@ export interface StripeSubscription {
   customer: string;
   status: string;
   cancel_at_period_end: boolean;
-  /** Repli pour les anciennes versions d'API (période portée par la racine). */
+  /** Fallback for older API versions (root-borne period). */
   current_period_start?: number;
   current_period_end?: number;
   items: { data: StripeSubscriptionItem[] };
@@ -59,26 +59,26 @@ export interface StripeSubscription {
 }
 
 /**
- * Une ligne du LEDGER Stripe (MIN-92) — tout ce qui a bougé d'argent sur le
- * compte. Meilleure source que les charges seules pour une page de finances :
- * les remboursements et les litiges s'y comptent tout seuls (lignes négatives,
- * `type: refund` / `adjustment`), et chaque ligne porte son `fee`, donc le `net`
- * réellement encaissé — une marge calculée sur le brut serait fausse.
+ * A line of the LEDGER Stripe (MIN-92) — everything that has moved money on the
+ * counts. Better source than charges alone for a finances page:
+ * refunds and disputes are counted alone (negative lines,
+ * `type: refund` / `adjustment`), and each line carries its `fee`, therefore the `net`
+ * actually collected — a margin calculated on gross would be false.
  */
 export interface StripeBalanceTransaction {
   id: string;
   /** `charge`, `refund`, `adjustment`, `payout`, `stripe_fee`… */
   type: string;
-  /** Brut, en plus petite unité (centimes). Négatif pour un remboursement. */
+  /** Raw, in smallest unit (cents). Negative for a refund. */
   amount: number;
-  /** Commission Stripe prélevée sur cette ligne. */
+  /** Stripe commission charged on this line. */
   fee: number;
-  /** `amount - fee` : ce qui atterrit vraiment sur le compte. */
+  /** `amount - fee`: what really lands on the account. */
   net: number;
   currency: string;
   created: number;
   description: string | null;
-  /** Id de l'objet à l'origine (charge, refund…). Non expandé. */
+  /** Id of the original object (charge, refund…). Not expanded. */
   source?: string | null;
 }
 
@@ -127,7 +127,7 @@ export function getStripePriceIdForPlan(
   }
 }
 
-/** Reconnaît les price IDs mensuels ET annuels d'un plan. */
+/** Recognizes the monthly AND annual price IDs of a plan. */
 export function getPlanIdForStripePrice(
   priceId: string | null | undefined
 ): BillingPlanId | null {
@@ -148,10 +148,10 @@ export function getPlanIdForStripePrice(
 }
 
 /**
- * La CADENCE d'un price configuré. Le pendant de `getPlanIdForStripePrice` :
- * l'un dit quel plan, l'autre à quel rythme il est facturé. Utilisé par la page
- * Finances, qui doit étaler un encaissement annuel sur douze mois et non sur un.
- * `null` pour un price inconnu (promo, ancien tarif) — l'appelant décide.
+ * The CADENCE of a configured price. The counterpart of `getPlanIdForStripePrice`:
+ * one says which plan, the other at what rate it is billed. Used by the page
+ * Finances, which must spread an annual collection over twelve months and not over one.
+ * `null` for an unknown price (promo, old price) — the caller decides.
  */
 export function getIntervalForStripePrice(
   priceId: string | null | undefined
@@ -177,11 +177,11 @@ export function coerceStripePlanId(value: unknown): BillingPlanId | null {
 }
 
 /**
- * Une erreur de Stripe, avec ce que Stripe en dit — pas seulement sa phrase.
+ * An error by Stripe, with what Stripe says about it — not just its sentence.
  *
- * Le message seul ne se relit pas : `code` et `param` sont ce qui permet de
- * distinguer « ce client n'existe pas » d'une panne, et de réparer plutôt que
- * de rendre un 500. Cf. `isMissingCustomerError`.
+ * The message alone cannot be reread: `code` and `param` are what allow
+ * to distinguish "this client does not exist" from a failure, and to repair rather than
+ * to return a 500. Cf. `isMissingCustomerError`.
  */
 export class StripeApiError extends Error {
   constructor(
@@ -196,14 +196,14 @@ export class StripeApiError extends Error {
 }
 
 /**
- * L'identifiant de client qu'on garde ne désigne-t-il plus rien ?
+ * Does the customer ID that we keep no longer designate anything?
  *
- * **Ça arrive pour de vrai, et pas seulement en développement.** Un client
- * supprimé depuis le tableau de bord Stripe, une clé qui change de compte
- * Stripe (test → autre test, test → live) : l'identifiant reste écrit chez nous
- * et ne vaut plus rien chez eux. Vu en local avec un `cus_…` d'un ancien compte
- * de test — la page de facturation rendait un 500 sur un simple clic « passer
- * au plan supérieur », alors que le geste juste est de refaire un client.
+ * **It happens for real, and not just in development.** A customer
+ * deleted from the Stripe dashboard, a key that changes account
+ * Stripe (test → other test, test → live): the identifier remains written with us
+ * and is no longer worth anything with them. Seen locally with a `cus_…` from an old test account
+ * — the billing page returned a 500 on a simple click "upgrade
+ * to the higher plan", while the right gesture is to redo a customer.
  */
 export function isMissingCustomerError(error: unknown): boolean {
   return (
@@ -216,13 +216,13 @@ export function isMissingCustomerError(error: unknown): boolean {
 async function stripeRequest<T>(
   path: string,
   body?: URLSearchParams,
-  /** Forcé seulement là où le verbe ne se déduit pas du corps (DELETE). */
+  /** Forced only where the verb is not deduced from the body (DELETE). */
   method?: "GET" | "POST" | "DELETE"
 ): Promise<T> {
-  // La clé seule ne vaut jamais consentement à utiliser le compte Stripe de
-  // l'opérateur. Les routes vérifient déjà ce drapeau pour leur UI/HTTP, mais
-  // l'adaptateur garde sa propre frontière afin qu'un nouvel appelant ne puisse
-  // pas introduire un coût implicite en oubliant cette garde.
+  // The key alone never constitutes consent to use the Stripe account of
+  // the operator. Routes already check this flag for their UI/HTTP, but
+  // the adapter keeps its own boundary so that a new caller cannot
+  // not introduce an implicit cost by forgetting this guard.
   if (!isStripeConfigured()) {
     throw new Error(
       "Managed Stripe billing is disabled or incomplete; enable MINDDY_MANAGED_BILLING=1 with the full Stripe configuration.",
@@ -262,12 +262,12 @@ export async function createStripeCustomer(params: {
 }
 
 /*
- * Il y avait ici un `findStripeCustomerByEmail`, dont le checkout se servait pour
- * « retrouver » le client d'un compte sans référence enregistrée. Retiré par
- * MIN-344, et pas seulement de son appelant : une adresse n'identifie personne
- * chez Stripe, et rattacher un compte minddy au premier client qui porte la même
- * lui ouvrait l'abonnement, les factures et le portail d'un autre. Le seul lien
- * qui fasse foi est `billing_accounts.stripe_customer_id`, écrit par nous.
+ * There was a `findStripeCustomerByEmail` here, which the checkout used to
+ * “find” the customer of an account without a registered reference. Removed by
+ * MIN-344, and not only from its caller: an address does not identify anyone
+ * at Stripe, and attaching a minddy account to the first customer who carries the same
+ * opened up the subscription, invoices and portal of another. The only authentic link
+ * is `billing_accounts.stripe_customer_id`, written by us.
  */
 
 export async function createStripeCheckoutSession(params: {
@@ -292,8 +292,8 @@ export async function createStripeCheckoutSession(params: {
   body.set("client_reference_id", params.userId);
   body.set("line_items[0][price]", priceId);
   body.set("line_items[0][quantity]", "1");
-  // metadata.user_id sur la session ET l'abonnement : c'est ce qui permet au
-  // webhook de rattacher l'événement au compte minddy sans lookup fragile.
+  // metadata.user_id on the session AND the subscription: this is what allows the
+  // webhook to attach the event to the minddy account without fragile lookup.
   body.set("metadata[user_id]", params.userId);
   body.set("metadata[plan_id]", params.planId);
   body.set("subscription_data[metadata][user_id]", params.userId);
@@ -321,15 +321,15 @@ export async function fetchStripeSubscription(
 }
 
 /**
- * Résiliation IMMÉDIATE d'un abonnement (MIN-119) — pas `cancel_at_period_end`.
+ * IMMEDIATE termination of a subscription (MIN-119) — not `cancel_at_period_end`.
  *
- * Appelée quand quelqu'un supprime son compte : on ne peut pas laisser courir un
- * abonnement dont le titulaire n'existe plus, ni continuer à prélever une
- * personne qui est partie. La perte du reliquat de période est assumée, c'est
- * l'utilisateur qui choisit le moment.
+ * Called when someone deletes their account: you cannot let a
+ * subscription whose holder no longer exists, nor continue to charge a
+ * person who left. The loss of the remaining period is assumed, it is
+ * the user who chooses the moment.
  *
- * Stripe conserve de son côté les pièces de facturation le temps de l'obligation
- * comptable : la résiliation arrête le prélèvement, elle n'efface pas l'histoire.
+ * Stripe for its part keeps the invoicing documents for the duration of the obligation
+ * accounting: termination stops the debit, it does not erase the history.
  */
 export async function cancelStripeSubscription(
   subscriptionId: string
@@ -342,18 +342,18 @@ export async function cancelStripeSubscription(
 }
 
 /**
- * Résiliation à la FIN DE PÉRIODE, et son annulation (MIN-296).
+ * Termination at the END OF PERIOD, and its cancellation (MIN-296).
  *
- * C'est la résiliation ordinaire, celle qu'on déclenche depuis l'app : la
- * période déjà payée est due, on ne la reprend pas — on arrête le renouvellement.
- * Son inverse (`resume: true`) remet l'abonnement en marche tant que la date
- * n'est pas passée, et c'est la moitié qui rend le geste sans danger : une
- * résiliation qu'on ne peut pas défaire ailleurs que chez Stripe n'est pas un
- * geste réversible.
+ * This is the ordinary termination, the one that is triggered from the app: the
+ * period already paid is due, we do not take it back — we stop the renewal.
+ * Its opposite (`resume: true`) restarts the subscription until the date
+ * has passed, and this is the half that makes the gesture safe: a
+ * termination that cannot be undone anywhere other than Stripe is not a
+ * reversible gesture.
  *
- * À ne pas confondre avec `cancelStripeSubscription`, qui coupe SUR-LE-CHAMP —
- * celle-là n'est appelée qu'à la suppression du compte, où il n'y a plus
- * personne à qui laisser la fin de sa période.
+ * Not to be confused with `cancelStripeSubscription`, which cuts IMMEDIATELY —
+ * this one is only called when the account is deleted, where there is no longer
+ * anyone to whom the end of its period can be left.
  */
 export async function setStripeCancelAtPeriodEnd(
   subscriptionId: string,
@@ -367,20 +367,19 @@ export async function setStripeCancelAtPeriodEnd(
   );
 }
 
-/** Au-delà, on arrête de paginer. Cf. le commentaire de la fonction. */
+/** Beyond that, we stop paging. See the function comment. */
 const BALANCE_TX_MAX_PAGES = 10;
 const BALANCE_TX_PAGE_SIZE = 100;
 
 /**
- * Le ledger depuis une date (MIN-92). Chaque ligne porte son `net` et son jour :
- * c'est tout ce dont la page Finances a besoin, puisqu'un encaissement est
- * affiché entier au jour où il tombe. (Pas d'`expand[]=data.source` : il ne
- * servait qu'à retrouver le client pour étaler la somme sur sa période.)
+ * The ledger since a date (MIN-92). Each line has its `net` and its day:
+ * this is all the Finances page needs, since a receipt is
+ * displayed in full on the day it falls. (No `expand[]=data.source`: it was only used to find the customer to spread the amount over their period.)
  *
- * Pagination bornée à 1 000 lignes. Ce n'est pas une limite gênante aujourd'hui
- * (le compte en a deux) mais c'est un garde-fou explicite : le jour où le
- * volume la touche, c'est précisément le signal qu'il faut une table miroir
- * plutôt que de rejouer tout l'historique à chaque chargement de page.
+ * Pagination limited to 1,000 lines. This is not a bothersome limit today
+ * (the count has two) but it is an explicit safeguard: the day the
+ * volume touches it, it is precisely the signal that a mirror table
+ * is needed rather than replaying the entire history on each page load.
  */
 export async function listStripeBalanceTransactions(params: {
   since: Date;
@@ -415,9 +414,9 @@ export function stripeUnixToIso(value: number | null | undefined): string | null
 }
 
 /**
- * Période de facturation courante d'un abonnement. Depuis l'API 2025-03-31
- * (billing « flexible »), `current_period_*` est porté par l'item, plus par la
- * racine — on lit l'item d'abord, la racine en repli pour les vieux comptes.
+ * Current billing period for a subscription. Since API 2025-03-31
+ * (“flexible” billing), `current_period_*` is carried by the item, no longer by the
+ * root — we read the item first, the root falls back for old accounts.
  */
 export function getStripeSubscriptionPeriod(subscription: StripeSubscription): {
   start: number | null;
@@ -442,7 +441,7 @@ function parseStripeSignature(header: string): {
   return { timestamp, signatures };
 }
 
-/** Vérifie la signature `Stripe-Signature` (HMAC-SHA256, tolérance 300 s). */
+/** Verifies the `Stripe-Signature` signature (HMAC-SHA256, tolerance 300 s). */
 export function verifyStripeWebhookSignature(
   payload: string,
   signatureHeader: string | null,

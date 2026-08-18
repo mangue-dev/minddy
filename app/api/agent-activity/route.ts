@@ -8,20 +8,20 @@ import {
 } from "@/lib/server/agent/activity";
 
 /**
- * État de l'agent par issue, TOUS projets accessibles confondus (board global
- * « Tous les tickets », MIN-29/MIN-46). Même contrat que l'endpoint par projet
- * (working / session / PR par issue, voir buildAgentActivity) mais sans filtre
- * projet — la RLS agent_runs = can_access_project borne l'appelant.
+ * Agent status by outcome, ALL accessible projects combined (global board
+ * “All tickets”, MIN-29/MIN-46). Same contract as the endpoint per project
+ * (working / session / PR per issue, see buildAgentActivity) but without a filter
+ * project — RLS agent_runs = can_access_project terminates the caller.
  */
 
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  // Tous les runs sauf `failed` : `buildAgentActivity` en dérive les runs ACTIFS
-  // (carte « Ouvrir l'agent »). La PR, elle, vient de sa propre table depuis
-  // MIN-163 — un ticket peut en porter une sans qu'aucun run ne l'ait ouverte.
-  // RLS `pull_requests` = un projet accessible lie ce dépôt.
+  // All runs except `failed`: `buildAgentActivity` derives ACTIVE runs
+  // (“Open agent” card). PR comes from its own table since
+  // MIN-163 — a ticket can carry one without any run having opened it.
+  // RLS `pull_requests` = an accessible project links this repository.
   const [{ data }, { data: prs }] = await Promise.all([
     auth.supabase
       .from("agent_runs")

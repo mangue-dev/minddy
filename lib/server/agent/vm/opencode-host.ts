@@ -19,45 +19,45 @@ import {
 import type { SupervisorDeps } from "./supervisor";
 
 /**
- * COMMENT ON TIENT UN SERVEUR OPENCODE VIVANT DANS LA MICROVM (MIN-286, lot 3).
+ * HOW DO WE KEEP AN OPENCODE SERVER ALIVE IN THE MICROVM (MIN-286, lot 3).
  *
- * Le superviseur ne sait rien de tout ça, et c'est voulu : il reçoit
- * `startServer` / `writeFile` / `client` en dépendances, ce qui lui permet d'être
- * testé sans faire tourner 144 Mo de binaire. Ce fichier est la seule
- * implémentation RÉELLE de ces trois-là, et il ne vit que dans la VM.
+ * The supervisor knows nothing about all this, and that is intentional: he receives
+ * `startServer` / `writeFile` / `client` in dependencies, which allows it to be
+ * tested without running 144 MB of binary. This file is the only
+ * REAL implementation of these three, and it only lives in the VM.
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * TROIS CHOSES MESURÉES QUI DÉCIDENT DE SA FORME (lot 0, §2.7)
+ * ─────────────────────── ──────────────────────── ──────────────────────────────
+ * THREE MEASURED THINGS THAT DECIDE ITS FORM (lot 0, §2.7)
  *
- * 1. **Le serveur doit rester au PREMIER PLAN d'un process qui vit.** Un
- *    `nohup … &` dans un `sh -c` du Sandbox fait tomber la commande RPC
- *    (`UND_ERR_SOCKET` en ~25 s, zéro ligne de sortie, `detached: true` n'y change
- *    rien). Ici on n'est plus dans une commande RPC : on est DANS la microVM, dans
- *    le process node du harness, qui vit tant que le tour vit. `spawn` d'un
- *    enfant ordinaire suffit donc.
+ * 1. **The server must remain at the FOREFRONT of a living process.** A
+ * `nohup … &` in a `sh -c` of the Sandbox drops the RPC
+ * command (`UND_ERR_SOCKET` in ~25 s, zero output lines, `detached: true` changes
+ * nothing). Here we are no longer in an RPC command: we are IN the microVM, in
+ * the harness process node, which lives as long as the turn lives. `spawn` of an
+ * ordinary child is therefore enough.
  *
- *    ⚠ **CORRECTION (MIN-293) : « l'enfant meurt avec nous » était faux.** Cette
- *    ligne disait la garantie qu'on voulait, pas celle qu'on avait. Sur POSIX un
- *    enfant n'est pas tué quand son parent meurt, il est réparenté ; ce qui tue
- *    celui-ci, c'est le `finally` du superviseur — donc rien du tout quand le
- *    harness est tué net. Dans une microVM, sans conséquence : la machine meurt à
- *    la fin du tour. **Sur un Mac, c'est 143 Mo et un port tenu, et le tour
- *    suivant échoue sur un `listen` refusé.** D'où l'inscription au registre
- *    ci-dessous, que le lanceur relit pour finir le travail
- *    ([child-registry.ts](child-registry.ts)).
- * 2. **L'installation coûte 10,6 s / 351 Mo, le démarrage 1,3 s.** D'où la forme :
- *    on installe SEULEMENT si le binaire manque. Cuit dans
- *    `AGENT_SANDBOX_SNAPSHOT_ID` par
- *    [scripts/create-agent-snapshot.ts](../../../../scripts/create-agent-snapshot.ts),
- *    il ne manque jamais et un tour neuf paie 1,3 s ; sans snapshot à jour, le
- *    repli ci-dessous fonctionne quand même, il coûte dix secondes.
- *    **Un changement d'`OPENCODE_VERSION` périme le snapshot** : le binaire cuit
- *    n'est plus celui qu'on veut, et comme il ne manque pas, personne ne
- *    l'installera. Rejouer le script après tout bump — c'est écrit dedans.
- * 3. **La version est ÉPINGLÉE.** C'est le harness du produit : une mise à jour
- *    qui arriverait d'elle-même changerait de moteur au milieu d'un run (l'auto-update
- *    est éteint par `opencodeServerEnv`, cette épingle-ci en est le pendant à
- *    l'installation).
+ * ⚠ **CORRECTION (MIN-293): "the child dies with us" was wrong.** This
+ * line said the guarantee we wanted, not the one we had. On POSIX a
+ * child is not killed when its parent dies, it is repaired; what kills
+ * this one is the supervisor's `finally` — so nothing at all when the
+ * harness is killed outright. In a microVM, without consequence: the machine dies at
+ * the end of the round. **On a Mac, it's 143 MB and a held port, and the following round
+ * fails on a refused `listen`.** Hence the entry in the registry
+ * below, which the launcher reads again to finish the job
+ * ([child-registry.ts](child-registry.ts)).
+ * 2. **Installation costs 10.6 s / 351 MB, startup 1.3 s.** Hence the form:
+ * we install ONLY if the binary is missing. Cooked in
+ * `AGENT_SANDBOX_SNAPSHOT_ID` by
+ * [scripts/create-agent-snapshot.ts](../../../../scripts/create-agent-snapshot.ts),
+ * it never misses and a turn nine pays 1.3s; without an up-to-date snapshot, the
+ * fallback below still works, it costs ten seconds.
+ * **A change of `OPENCODE_VERSION` expires the snapshot**: the cooked binary
+ * is no longer the one we want, and as it is not missing, no one will
+ * will install it. Replay the script after any bump — it's written in it.
+ * 3. **The version is PINED.** This is the harness of the product: an update
+ * which would arrive by itself would change engine in the middle of a run (the auto-update
+ * is turned off by `opencodeServerEnv`, this pin is the counterpart to
+ * installation).
  */
 
 export { opencodeBin, OPENCODE_VERSION };
@@ -70,12 +70,12 @@ async function exists(path: string): Promise<boolean> {
 }
 
 /**
- * La version RÉELLEMENT posée dans le dossier d'installation, lue sur le disque —
- * `null` si rien n'est installé, ou si le paquet est là sans son manifeste.
+ * The version REALLY installed in the installation folder, read on the disk —
+ * `null` if nothing is installed, or if the package is there without its manifest.
  *
- * On la lit plutôt que d'exécuter `opencode --version` : un `spawn` de 144 Mo de
- * binaire natif à chaque tour pour apprendre un numéro qui est écrit dans un
- * fichier de 2 Ko, c'est cher pour la même réponse.
+ * We read it rather than executing `opencode --version`: a `spawn` of 144 MB of
+ * native binary in each round to learn a number which is written in a
+ * 2 KB file, it's expensive for the same answer.
  */
 async function packageVersion(manifestPath: string): Promise<string | null> {
   try {
@@ -88,16 +88,15 @@ async function packageVersion(manifestPath: string): Promise<string | null> {
 }
 
 /**
- * `npm i` du binaire, et seulement s'il manque **ou s'il n'est pas le nôtre**
- * (cf. §2 et §3 ci-dessus).
+ * `npm i` of the binary, and only if it is missing **or if it is not ours**
+ * (see §2 and §3 above).
  *
- * LA DEUXIÈME MOITIÉ DE CETTE CONDITION EST CE QUI TIENT L'ÉPINGLE. Un snapshot
- * pré-chauffé est cuit une fois puis oublié : le jour où `OPENCODE_VERSION`
- * bouge, un test d'existence seul verrait le binaire d'hier, le trouverait très
- * bien, et tous les runs tourneraient sur l'ancien moteur pendant que le dépôt
- * jure le contraire — sans une ligne de log pour le dire. On compare donc au
- * numéro écrit sur le disque, et une divergence réinstalle (dix secondes, une
- * fois, jusqu'à ce que le snapshot soit rejoué).
+ * THE SECOND HALF OF THIS CONDITION IS WHAT HOLDS THE PIN. A pre-heated snapshot
+ * is baked once and then forgotten: the day `OPENCODE_VERSION`
+ * moves, an existence test alone would see yesterday's binary, find it very good, and all runs would run on the old engine while the repository
+ * swears otherwise — without a log line to say so. So we compare to the
+ * number written on the disk, and a discrepancy reinstalls (ten seconds, one
+ * time, until the snapshot is replayed).
  */
 async function ensureInstalled(installDir: string): Promise<void> {
   const [found, plugin] = await Promise.all([
@@ -119,14 +118,14 @@ async function ensureInstalled(installDir: string): Promise<void> {
   }
   await mkdir(installDir, { recursive: true });
   /**
-   * ⚠ **LE `package.json` AVANT L'INSTALL, ET CE N'EST PAS DÉCORATIF** (MIN-293).
-   *
-   * Sans lui, `npm` REMONTE l'arborescence jusqu'au premier `package.json` qu'il
-   * trouve et installe DEDANS — en rendant 0. Mesuré sur un Mac : 144 Mo posés
-   * dans `~/node_modules`, `opencode-ai` ajouté aux dépendances du home, et ce
-   * dossier-ci laissé vide. Le détail et les deux garde-fous sont dans
-   * [opencode-version.ts](opencode-version.ts).
-   */
+ * ⚠ **THE `package.json` BEFORE INSTALLING, AND IT IS NOT DECORATIVE** (MIN-293).
+ *
+ * Without it, `npm` BACKSUP the tree to the first `package.json` that it
+ * finds and installs IN — returning 0. Measured on a Mac: 144 MB placed
+ * in `~/node_modules`, `opencode-ai` added to home dependencies, and this
+ * folder left empty. The detail and the two guardrails are in
+ * [opencode-version.ts](opencode-version.ts).
+ */
   await writeFile(opencodeInstallManifestPath(installDir), OPENCODE_INSTALL_MANIFEST, "utf8");
   await new Promise<void>((resolve, reject) => {
     const npm = opencodeNpmProgram(process.env);
@@ -159,11 +158,11 @@ async function ensureInstalled(installDir: string): Promise<void> {
   });
 
   /**
-   * **UN `npm` QUI REND 0 NE PROUVE PAS QUE LE BINAIRE EST LÀ** (MIN-293) — c'est
-   * exactement ce qui est arrivé. On relit donc le disque, et on lève ici plutôt
-   * que de laisser `spawn` échouer en `ENOENT` trois lignes plus loin, où le
-   * message ne nomme plus la cause.
-   */
+ * **A `npm` THAT RETURNS 0 DOES NOT PROVE THAT THE BINARY IS THERE** (MIN-293) — this is
+ * exactly what happened. So we reread the disk, and we raise here rather
+ * than letting `spawn` fail in `ENOENT` three lines later, where the
+ * message no longer names the cause.
+ */
   if (!(await exists(opencodeBin(installDir)))) {
     throw new Error(
       `opencode install reported success but ${opencodeBin(installDir)} is missing — ` +
@@ -175,11 +174,11 @@ async function ensureInstalled(installDir: string): Promise<void> {
 async function prepareToolRuntime(layout: HarnessLayout): Promise<void> {
   const runtimeDir = `${layout.harnessDir}/config/opencode`;
   await mkdir(runtimeDir, { recursive: true });
-  // OpenCode demande à son gestionnaire de paquets de « préparer » chaque
+  // OpenCode asks its package manager to “prepare” each
   // dossier qui porte des tools. Lier uniquement node_modules ne suffit pas :
-  // voyant un manifeste différent et aucun lock, npm remplaçait le lien par
-  // une copie de 61 Mo. Les trois entrées décrivent maintenant exactement le
-  // même projet déjà installé ; la préparation devient un no-op local.
+  // seeing a different manifest and no lock, npm replaced the link with
+  // a 61 MB copy. The three entries now describe exactly the
+  // same project already installed; preparation becomes a local no-op.
   for (const [name, type] of [
     ["package.json", "file"],
     ["package-lock.json", "file"],
@@ -194,15 +193,15 @@ async function prepareToolRuntime(layout: HarnessLayout): Promise<void> {
 }
 
 /**
- * Les dépendances RÉELLES du superviseur : un serveur qu'on démarre, des fichiers
- * qu'on écrit, un client HTTP.
+ * The REAL dependencies of the supervisor: a server that we start, files
+ * that we write, an HTTP client.
  *
- * `port` est RÉSERVÉ par l'appelant (MIN-354, cf. [free-port.ts](free-port.ts)) :
- * il valait 4096 en dur tant que la microVM était à nous seuls, et deux runs sur
- * une même machine s'y seraient disputé la même socket.
+ * `port` is RESERVED by the caller (MIN-354, cf. [free-port.ts](free-port.ts)):
+ * it was worth 4096 hard as long as the microVM was ours alone, and two runs on
+ * the same machine would have competed for the same socket.
  *
- * `layout` donne les deux choses que ce module ne peut pas deviner : où le
- * binaire est installé, et quel dépôt le client déclare en `directory`.
+ * `layout` gives the two things that this module cannot guess: where the
+ * binary is installed, and what repository the client declares in `directory`.
  */
 export function opencodeSupervisorDeps(opts: { port: number; layout: HarnessLayout }): Pick<
   SupervisorDeps,
@@ -216,18 +215,18 @@ export function opencodeSupervisorDeps(opts: { port: number; layout: HarnessLayo
       const bin = opencodeBin(layout.opencodeDir);
       const child = spawn(bin, ["serve", "--port", String(port), "--hostname", "127.0.0.1"], {
         // L'environnement du harness PLUS celui du tour : `opencodeServerEnv` ne
-        // porte que la config et les dossiers, or le binaire a encore besoin d'un
-        // `PATH` et d'un `HOME` pour lancer le shell des tools.
+        // carries only the config and the folders, but the binary still needs a
+        // `PATH` and a `HOME` to launch the tools shell.
         env: { ...process.env, ...env },
         stdio: ["ignore", "pipe", "pipe"],
       });
       /**
-       * INSCRIT AVANT DE SERVIR (MIN-293), et c'est l'ordre qui fait la garantie :
-       * un process tué entre son `spawn` et son inscription est exactement
-       * l'orphelin qu'on cherche à ne plus produire. Sans effet en microVM — le
-       * lanceur qui relit ce fichier est celui du Mac, et une VM jetable n'a rien
-       * à nettoyer.
-       */
+ * REGISTERED BEFORE SERVING (MIN-293), and it is the order which provides the guarantee:
+ * a process killed between its `spawn` and its registration is exactly
+ * the orphan that we are trying to no longer produce. No effect in microVM — the
+ * launcher that rereads this file is that of the Mac, and a disposable VM has nothing
+ * to clean.
+ */
       if (child.pid) {
         noteHarnessChild(layout.harnessDir, {
           pid: child.pid,
@@ -236,11 +235,9 @@ export function opencodeSupervisorDeps(opts: { port: number; layout: HarnessLayo
         });
       }
       /**
-       * LES DEUX TUBES SONT LUS, et pas par curiosité : un enfant dont personne
-       * ne lit la sortie finit par bloquer sur un tube plein — un serveur qui
-       * journalise pendant des heures y arrive. On les préfixe et on les laisse
-       * partir dans notre propre sortie, qui est celle que la microVM garde.
-       */
+ * BOTH PIPES ARE READ, and not out of curiosity: a child whose output no one reads ends up blocking on a full pipe — a server that logs for hours gets there. We prefix them and let them
+ * go into our own output, which is the one that the microVM keeps.
+ */
       const log = (prefix: string) => (chunk: Buffer) => {
         const text = chunk.toString().trimEnd();
         if (text) console.log(`[opencode:${prefix}] ${text.slice(0, 2000)}`);
@@ -249,18 +246,18 @@ export function opencodeSupervisorDeps(opts: { port: number; layout: HarnessLayo
       child.stderr?.on("data", log("err"));
 
       /**
-       * ⚠ **UN SPAWN QUI ÉCHOUE EST UN FAIT, PAS UNE LENTEUR** (MIN-293).
-       *
-       * Avant, l'échec ne faisait qu'une ligne de `console.error` et la fonction
-       * rendait quand même son `stop` : le superviseur partait alors attendre un
-       * serveur qui n'existerait jamais, en annonçant « still waiting for the
-       * server (15 s… 30 s… 45 s) » jusqu'à son plafond. Le seul message que
-       * l'utilisateur voyait parlait donc de LENTEUR, pour un binaire absent.
-       *
-       * `spawn` et `error` sont exclusifs et exactement l'un des deux arrive :
-       * on attend celui qui vient, et on LÈVE sur l'échec. Le tour se termine
-       * alors en erreur, avec la vraie cause, dans la seconde.
-       */
+ * ⚠ **A SPAWN THAT FAILS IS A FACT, NOT A SLOWNESS** (MIN-293).
+ *
+ * Before, the failure was only one line of `console.error` and the function
+ * still returned its `stop`: the supervisor then left to wait for a
+ * server which would never exist, announcing “still waiting for the
+ * server (15 s… 30 s… 45 s)” up to its ceiling. The only message that
+ * the user saw therefore spoke of SLOWNESS, for an absent binary.
+ *
+ * `spawn` and `error` are exclusive and exactly one of the two arrives:
+ * we wait for the one that comes, and we RAISE on failure. The round ends
+ * then in error, with the real cause, in the second.
+ */
       await new Promise<void>((resolve, reject) => {
         child.once("spawn", resolve);
         child.once("error", (err) =>
@@ -270,16 +267,16 @@ export function opencodeSupervisorDeps(opts: { port: number; layout: HarnessLayo
       child.on("error", (err) => console.error("[opencode] runtime error:", err.message));
       return {
         stop: async () => {
-          // Désinscrit d'abord, quel que soit l'état : à partir d'ici, ce pid est
-          // notre affaire et plus celle du lanceur. Un pid recyclé par le système
-          // entre deux tours désignerait sinon le process de quelqu'un d'autre.
+          // Unregister first, regardless of state: from here on, this pid is
+          // our business and no longer that of the launcher. A pid recycled by the system
+          // between two turns would otherwise designate someone else's process.
           if (child.pid) forgetHarnessChild(layout.harnessDir, child.pid);
           if (child.exitCode !== null || child.signalCode !== null) return;
           /**
-           * `SIGTERM` puis, s'il s'accroche, `SIGKILL`. Le serveur tient une base
-           * SQLite : lui laisser une seconde pour la fermer proprement évite un
-           * journal WAL en vrac que le tour suivant rejouerait.
-           */
+ * `SIGTERM` then, if it hangs, `SIGKILL`. The server holds a base
+ * SQLite: giving it a second to close it properly avoids a bulk
+ * WAL log that the next round would replay.
+ */
           child.kill("SIGTERM");
           await new Promise<void>((resolve) => {
             const timer = setTimeout(() => {
@@ -300,9 +297,9 @@ export function opencodeSupervisorDeps(opts: { port: number; layout: HarnessLayo
       await writeFile(path, content, "utf8");
     },
 
-    // `directory` est le dépôt : toutes les routes héritées d'opencode le veulent
-    // en query, et c'est lui qui donne au serveur son identité de projet (le hash
-    // du premier commit — cf. la sonde de reprise du lot 0).
+    // `directory` is the repository: all routes inherited from opencode want it
+    // in query, and it is he who gives the server its project identity (the hash
+    // of the first commit — cf. the batch 0 recovery probe).
     client: (baseUrl) => new OpencodeClient({ baseUrl, directory: layout.repoDir }),
   };
 }

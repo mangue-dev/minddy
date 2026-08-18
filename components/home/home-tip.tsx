@@ -1,20 +1,20 @@
 "use client";
 
-// L'astuce du bas de l'accueil (MIN — « Home page »), à la Cursor : une ligne
-// discrète, tout en bas, qui apprend un geste de l'application.
+// The tip at the bottom of the home page (MIN — “Home page”), like Cursor: one line
+// discreet, at the bottom, which learns a gesture from the application.
 //
-// Le vivier et la règle qui le tient sont dans lib/home-tips.ts ; ce fichier ne
-// s'occupe que du rendu.
+// The pool and the rule that holds it are in lib/home-tips.ts; this file does not
+// only handles rendering.
 //
-// Deux points valent d'être dits ici :
+// Two points are worth saying here:
 //
-//  1. **La graine ne se pose qu'au montage**, comme pour le salut juste
-//     au-dessus (cf. useGreeting dans app/(app)/home/page.tsx) : un tirage au
-//     rendu serveur donnerait une astuce différente de part et d'autre de
-//     l'hydratation. Les touches, elles, dépendent de la plateforme
-//     (`resolveKeyToken` lit `navigator`) et ont la même contrainte.
-//  2. **Le paragraphe est rendu de toute façon**, vide en attendant la graine.
-//     Il occupe donc sa ligne dès le premier peint, et l'astuce qui arrive ne
+// 1. **The seed only arises at the assembly**, as for righteous salvation
+// above (see useGreeting in app/(app)/home/page.tsx): a draw
+// server rendering would give a different tip on either side of
+// hydration. The keys depend on the platform
+// (`resolveKeyToken` reads `navigator`) and have the same constraint.
+// 2. **The paragraph is rendered anyway**, empty while waiting for the seed.
+// It therefore occupies its line from the first painting, and the trick that arrives does not
 //     pousse rien.
 
 import { useEffect, useState } from "react";
@@ -37,9 +37,9 @@ export function HomeTip() {
   const shortcut = tip ? tipShortcut(tip) : undefined;
 
   return (
-    // `mt-auto` la colle au bas de la rangée, qui est le bas de la page : la
-    // rangée vaut `1fr` quoi qu'elle porte, donc poser l'astuce ici ne déplace
-    // pas le composer resté au centre exact de la fenêtre.
+    // `mt-auto` glue it to the bottom of the row, which is the bottom of the page: the
+    // row is worth `1fr` whatever she wears, so putting the trick here doesn't move
+    // not compose it remained in the exact center of the window.
     <p className="mt-auto flex min-h-5 flex-wrap items-center justify-center gap-x-2 gap-y-1 pt-8 text-xs text-muted-foreground">
       {tip && (
         <>

@@ -7,52 +7,51 @@ import { AI_REVIEW_MAX_INLINE_COMMENTS } from "./tools";
 export { AI_REVIEW_MAX_INLINE_COMMENTS };
 
 /**
- * Les trois écritures d'une session de RELECTURE (MIN-168) : commenter une ligne,
- * commenter le fil, répondre à un fil. C'est tout ce qu'un run ancré à une pull
- * request peut faire sortir de la sandbox — il n'a ni tool d'édition, ni
- * `create_pr`, et le harnais ne commite ni ne pousse rien pour lui
- * (`writesToRepo` dans `execute.ts`). La lecture seule est une propriété du JEU DE
- * TOOLS, pas une phrase de prompt : même doctrine que le sous-agent `explore`.
+ * The three writes of a REREADING session (MIN-168): comment on a line,
+ * comment on the thread, reply to a thread. That's all a run anchored to a pull
+ * request can get out of the sandbox — it has no editing tools, no
+ * `create_pr`, and the harness neither commits nor pushes anything for it
+ * (`writesToRepo` in `execute.ts`). Read-only is a property of the GAME DE
+ * TOOLS, not a prompt sentence: same doctrine as the subagent `explore`.
  *
- * Deux règles de MIN-141 survivent telles quelles, et elles vivent ici :
+ * Two rules from MIN-141 survive as is, and they live here:
  *
- * **Le plafond de cinq commentaires de ligne.** Quinze remarques ancrées sur une
- * PR, ce n'est plus une review, c'est du bruit. La SOURCE DE VÉRITÉ du compteur
- * est le CHECKPOINT du run (`AgentCheckpoint.prInlineComments`), pas une variable
- * de tour : un run vit plusieurs chunks et plusieurs tours de conversation, et un
- * compteur qui repartirait de zéro à chaque réveil ferait du plafond une
- * politesse. Le compteur est donc porté par un objet que `execute.ts` sème depuis
- * le checkpoint et relit pour le persister — ce qui rend le plafond « 5 par RUN »
- * au sens strict, reprise et nouveau tour compris.
+ * **The ceiling of five line comments.** Fifteen comments anchored on a
+ * PR, this is no longer a review, it's noise. The SOURCE OF TRUTH of the counter
+ * is the CHECKPOINT of the run (`AgentCheckpoint.prInlineComments`), not a variable
+ * of round: a run lives several chunks and several rounds of conversation, and a counter which would start from zero each time it wakes up would make the ceiling a
+ * courtesy. The counter is therefore carried by an object that `execute.ts` sows from
+ * the checkpoint and rereads to persist it — which makes the ceiling “5 per RUN”
+ * in the strict sense, restart and new turn included.
  *
- * **Le verdict s'écrit dans le CORPS.** Aucune méthode d'ici ne soumet
- * d'événement de review à la forge : un `APPROVE` posté par l'app satisferait une
- * protection de branche qui exige une approbation, un `REQUEST_CHANGES` bloquerait
- * la PR jusqu'à ce qu'un humain le lève. Numo donne un avis, il ne tient pas la
- * porte.
+ * **The verdict is written in the BODY.** No method here submits
+ * a review event to the forge: a `APPROVE` posted by the app would satisfy a
+ * branch protection that requires approval, a `REQUEST_CHANGES` would block
+ * the PR until a human raises it. Numo gives notice, it does not hold the
+ * door.
  *
- * L'ANCRAGE est le reste du travail. Une ligne commentable est une ligne du DIFF,
- * pas une ligne du fichier : les deux forges refusent en 422 une ancre hors diff.
- * On valide donc avant d'appeler (`resolveDiffPosition`, le même code qui sert à
- * poster côté GitLab), et un refus rend à l'agent les PLAGES réellement
- * commentables du fichier — une erreur qu'il peut corriger, au lieu d'un 422 qu'il
- * ne peut que subir.
+ * ANCHORING is the rest of the work. A commentable line is a line from the DIFF,
+ * not a line from the file: the two forges refuse in 422 an anchor outside of diff.
+ * We therefore validate before calling (`resolveDiffPosition`, the same code which is used to
+ * post on the GitLab side), and a refusal returns the RANGES to the agent actually
+ * commentables of the file — an error it can correct, instead of a 422 that it
+ * can only suffer.
  */
 
-/** Noms des tools PR (routés vers ce module par execute.ts). */
-/** Noms des tools de ce module. Ils vivent dans `platform-tool-names.ts` depuis
- *  MIN-224 — le ROUTAGE descend dans la microVM, l'EXÉCUTION reste ici — et sont
- *  ré-exportés pour que rien n'ait à changer d'import. */
+/** Names of PR tools (routed to this module by execute.ts). */
+/** Names of the tools in this module. They live in `platform-tool-names.ts` since
+ * MIN-224 — ROUTING goes down to the microVM, EXECUTION stays here — and are
+ * re-exported so nothing has to change import. */
 export { PR_TOOL_NAMES } from "./platform-tool-names";
 
-/** Un fichier du diff, réduit à ce que l'ancrage lit (`PullRequestFile` le satisfait). */
+/** A file from the diff, reduced to what the anchor reads (`PullRequestFile` satisfies it). */
 export interface ReviewableFile {
   filename: string;
   status: string;
   additions?: number;
   deletions?: number;
   patch?: string;
-  /** Chemin AVANT la PR si le fichier a été renommé — c'est lui qui adresse la version de base. */
+  /** Path BEFORE the PR if the file has been renamed — it addresses the base version. */
   previous_filename?: string;
 }
 
@@ -61,33 +60,33 @@ type ToolOutcome = { result: unknown; success: boolean };
 export interface PrToolContext {
   forge: Forge;
   call: { token: string; repoFullName: string; number: number };
-  /** Fichiers du diff, chargés paresseusement et mémoïsés pour le chunk. */
+  /** Diff files, lazily loaded and stored for the chunk. */
   files: () => Promise<ReviewableFile[]>;
-  /** Modèle du run — il signe la synthèse. */
+  /** Model of the run — it signs the synthesis. */
   model: string;
-  /** Langue de la signature : celle du lanceur. */
+  /** Signature language: that of the launcher. */
   locale: string;
   /**
-   * Compteur d'ancres posées par CE RUN. Objet MUTÉ ici et persisté par
-   * `execute.ts` dans le checkpoint : c'est ce qui rend le plafond insensible à
-   * la reprise et au tour suivant.
-   */
+ * Counter of anchors placed by THIS RUN. MUTATED object here and persisted by
+ * `execute.ts` in the checkpoint: this is what makes the cap insensitive to
+ * the restart and the next turn.
+ */
   inline: { used: number };
 }
 
-// ── Ancrage ─────────────────────────────────────────────────────────────────
+// ── Anchoring ────────────────────────────────────────────────────────────────
 
 /**
- * Le chemin tel que le modèle l'a écrit, ramené à un chemin de fichier.
+ * The path as the model wrote it, reduced to a file path.
  *
- * Un modèle recopie volontiers l'en-tête entier d'un fichier de diff
- * (`lib/demo.ts (renamed from lib/vieux.ts) — modified · +2 −1`). Ce qui suit
- * ` — ` ou ` (` n'a jamais fait partie d'un chemin : sans ce nettoyage, l'ancre
- * serait perdue pour une raison purement typographique.
+ * A model happily copies the entire header of a diff file
+ * (`lib/demo.ts (renamed from lib/vieux.ts) — modified · +2 −1`). The following
+ * ` — ` or ` (` has never been part of a path: without this cleanup, the anchor
+ * would be lost for a purely typographical reason.
  *
- * N'est essayé qu'en SECOND, après l'égalité stricte : un vrai fichier dont le
- * nom contient une parenthèse (`app/(marketing)/page.tsx` — ils sont légion dans
- * ce dépôt) est trouvé par le premier passage et ne voit jamais ce nettoyage.
+ * Is only tried SECOND, after strict equality: a true file whose
+ * name contains a parenthesis (`app/(marketing)/page.tsx` — they are legion in
+ * this repository) is found by the first pass and never sees this cleanup.
  */
 export function normalizeFindingPath(raw: string): string {
   const unquoted = raw.trim().replace(/^[`"']+/, "").replace(/[`"']+$/, "").trim();
@@ -99,11 +98,11 @@ export function normalizeFindingPath(raw: string): string {
 }
 
 /**
- * Retrouve le fichier du diff que `path` désigne, quel que soit le côté nommé.
+ * Finds the diff file designated by `path`, regardless of which side was named.
  *
- * Un renommage fait diverger les deux chemins et l'agent peut nommer l'un ou
- * l'autre — il lit les deux dans le diff. On cherche donc par le chemin ACTUEL
- * comme par `previous_filename`, dans les deux sens.
+ * A rename makes the two paths diverge, and the agent may name either one — it
+ * reads both from the diff. Look up both the CURRENT path and
+ * `previous_filename`, in both directions.
  */
 export function findReviewableFile(
   files: ReviewableFile[],
@@ -121,18 +120,17 @@ export function findReviewableFile(
     byNewPath.get(p) ??
     byOldPath.get(p) ??
     null;
-  // Tel quel d'abord, nettoyé ensuite (cf. `normalizeFindingPath`).
+  // Try it as-is first, then cleaned up (see `normalizeFindingPath`).
   return lookup(path) ?? lookup(normalizeFindingPath(path));
 }
 
 /**
- * Les plages de lignes réellement commentables d'un patch, du côté demandé —
- * ce qu'on rend à l'agent quand son ancre tombe à côté.
+ * The genuinely commentable line ranges of a patch on the requested side —
+ * what we return to the agent when its anchor lands beside the diff.
  *
- * RIGHT : les lignes ajoutées et les lignes de contexte, numérotées dans le
- * fichier NOUVEAU. LEFT : les lignes supprimées et le contexte, numérotées dans
- * l'ANCIEN. Les plages sont fusionnées quand elles se touchent : un diff de dix
- * hunks doit rendre dix intervalles lisibles, pas trois cents numéros.
+ * RIGHT: added and context lines, numbered in the NEW file. LEFT: deleted and
+ * context lines, numbered in the OLD file. Adjacent ranges are merged: a diff
+ * with ten hunks should return ten readable intervals, not three hundred numbers.
  */
 export function commentableRanges(
   patch: string,
@@ -174,7 +172,7 @@ export function commentableRanges(
   return ranges;
 }
 
-/** Plages rendues à l'agent : `12–48, 91` — lisible, et recopiable tel quel. */
+/** Ranges shown to the agent: `12–48, 91` — readable and ready to copy as-is. */
 export function formatRanges(ranges: Array<[number, number]>): string {
   return ranges.map(([a, b]) => (a === b ? `${a}` : `${a}–${b}`)).join(", ");
 }
@@ -184,13 +182,13 @@ export type PrAnchorResult =
   | { ok: false; error: string };
 
 /**
- * Valide l'ancre d'un commentaire de ligne AVANT d'appeler la forge.
+ * Validates a line-comment anchor BEFORE calling the forge.
  *
- * Le chemin RETENU est celui du fichier tel qu'il est DANS la PR, des deux côtés
- * du diff : un commentaire de review s'adresse au fichier actuel, jamais à son nom
- * d'avant. Une ancre LEFT posée sur l'ancien nom se ferait refuser par la forge —
- * et, si elle passait, atterrirait dans les fils orphelins de la vue diff, qui
- * indexe sur le nom courant.
+ * The SELECTED path is the file path as it EXISTS IN the PR, on either side of
+ * the diff: a review comment addresses the current file, never its former name.
+ * A LEFT anchor using the old name would be rejected by the forge — and, if it
+ * got through, would land in orphaned threads in the diff view, which indexes by
+ * the current name.
  */
 export function resolvePrCommentAnchor(
   files: ReviewableFile[],
@@ -237,7 +235,7 @@ export function resolvePrCommentAnchor(
   return { ok: true, path: file.filename };
 }
 
-// ── Signature de la synthèse ────────────────────────────────────────────────
+// ── Review-summary signature ────────────────────────────────────────────────
 
 const SIGNATURE: Record<string, (model: string) => string> = {
   fr: (model) => `🤖 Relu par Numo (minddy) · ${model}`,
@@ -245,21 +243,21 @@ const SIGNATURE: Record<string, (model: string) => string> = {
 };
 
 /**
- * Signe une synthèse — exactement UNE fois.
+ * Signs a summary — exactly ONCE.
  *
- * La signature est posée par le HARNAIS et non demandée au modèle : c'est un fait
- * (quel modèle a relu), pas une opinion, et un modèle à qui on demande de signer
- * oublie, invente un autre nom de modèle, ou signe deux fois. Le garde-fou reste
- * utile pour le cas où il l'écrit quand même : un corps qui porte déjà la marque
- * `🤖` d'une signature repart tel quel.
+ * The HARNESS adds the signature rather than asking the model for it: it is a
+ * fact (which model reread the summary), not an opinion, and a model asked to
+ * sign may forget, invent another model name, or sign twice. The guard remains
+ * useful if it writes one anyway: a body that already bears the `🤖` signature
+ * marker is returned unchanged.
  */
 export function signReviewBody(body: string, model: string, locale: string): string {
   const trimmed = body.trim();
   const sign = SIGNATURE[locale] ?? SIGNATURE.en;
   const line = sign(model);
   if (trimmed.includes(line)) return trimmed;
-  // Une signature d'une AUTRE langue ou d'un autre modèle compte aussi : ce qu'on
-  // évite, c'est le double pied de page, pas une chaîne précise.
+  // A signature in ANOTHER language or from another model counts too: we avoid a
+  // duplicate footer, not one particular string.
   if (/🤖\s*(Relu par|Reviewed by) Numo \(minddy\)/.test(trimmed)) return trimmed;
   return `${trimmed}\n\n---\n${line}`;
 }
@@ -270,7 +268,7 @@ function str(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
-/** Corps de commentaire accepté — GitHub refuse au-delà de 65 536 caractères. */
+/** Accepted comment body — GitHub rejects anything over 65,536 characters. */
 const MAX_BODY_LENGTH = 65_536;
 
 async function commentPrLine(
@@ -288,7 +286,7 @@ async function commentPrLine(
     return { result: { error: "line must be a positive integer." }, success: false };
   }
 
-  // Le plafond AVANT tout appel de forge : dépassé, il n'y a rien à tenter.
+  // Enforce the ceiling BEFORE any forge call: once exceeded, there is nothing to try.
   const left = AI_REVIEW_MAX_INLINE_COMMENTS - ctx.inline.used;
   if (left <= 0) {
     return {
@@ -325,8 +323,8 @@ async function commentPrLine(
       success: true,
     };
   } catch (err) {
-    // Un refus de forge NE consomme PAS le plafond : rien n'a été posé. Le cas
-    // attendu est le 422 (la tête a bougé entre la lecture du diff et l'envoi).
+    // A forge rejection does NOT consume the ceiling: nothing was posted. The
+    // expected case is 422 (the head moved between reading the diff and sending).
     if (isForgeApiError(err)) {
       return {
         result: {
@@ -392,10 +390,10 @@ async function replyPrThread(
 }
 
 /**
- * Exécute un tool PR. Une SYNTHÈSE RÉPÉTÉE est permise et n'est pas un accident :
- * une session de review est conversationnelle, et répondre une seconde fois dans
- * le fil est exactement ce qu'un relecteur humain fait. Chaque message part signé
- * une fois ; c'est le PLAFOND, lui, qui borne ce qui compte — les ancres.
+ * Executes a PR tool. A REPEATED SUMMARY is allowed and is not an accident: a
+ * review session is conversational, and replying a second time in the thread is
+ * exactly what a human reviewer does. Each message is signed once; the CEILING
+ * is what limits what counts — the anchors.
  */
 export async function executePrTool(
   ctx: PrToolContext,

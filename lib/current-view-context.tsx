@@ -1,32 +1,32 @@
 "use client";
 
 /**
- * Ce que l'écran courant est, quand l'URL ne suffit pas à le dire.
+ * What the current screen is, when the URL isn't enough to tell.
  *
- * « Enregistrer la vue actuelle » (palette de commandes) part de l'adresse :
- * elle porte déjà la route, la page du wiki, l'onglet des réglages, l'objectif
- * ouvert. Mais plusieurs surfaces gardent leur sélection en MÉMOIRE et
- * nettoient volontairement l'URL derrière elles — /agents efface `?run=` dès
- * qu'on choisit une conversation (sans quoi la navigation suivante vers cette
- * même conversation serait inerte : pousser l'adresse courante ne fait rien),
- * /pull-requests garde la PR cliquée hors de l'adresse, un board garde sa vue
- * active dans localStorage.
+ * “Save current view” (command palette) starts from the address:
+ * it already has the route, the wiki page, the settings tab, the objective
+ * open. But many surfaces keep their selection in MEMORY and
+ * voluntarily clean up the URL behind them — /agents deletes `?run=` as soon as
+ * that we choose a conversation (otherwise the following navigation to this
+ * same conversation would be inert: pushing the current address does nothing),
+ * /pull-requests keeps the clicked PR outside the address, a board keeps its view
+ * active in localStorage.
  *
- * Ces surfaces PUBLIENT donc l'adresse qui les reconstitue, via
+ * These surfaces therefore PUBLISH the address which reconstitutes them, via
  * `usePublishCurrentView`.
  *
- * **Rien n'est lu pendant un rendu**, et c'est le point. La publication vit
- * dans une ref, pas dans un état : sinon chaque changement de sélection — une
- * PR cliquée, une vue de board changée — repasserait par le provider et
- * rendrait à nouveau tout le shell et la page sous lui, pour une valeur que
- * personne n'affiche. La palette ne l'interroge qu'au moment où elle en a
- * besoin : `resolveHref()` au clic sur « Enregistrer », `resolveLabel()` à
+ * **Nothing is played during a render**, and that's the point. The publication lives
+ * in a ref, not in a state: otherwise each selection change — a
+ * PR clicked, a changed board view — would go back through the provider and
+ * would re-render the entire shell and the page under it, for a value that
+ * no one displays. The palette only questions it at the moment when it has
+ * need: `resolveHref()` when clicking on “Save”, `resolveLabel()` when
  * l'ouverture du champ de nom.
  *
- * Ownership : le même verrou que `useAssistantContext` — une page qui se
- * démonte ne dépublie que si elle est encore propriétaire, sinon la navigation
- * A→B (B monte avant que le nettoyage de A ne s'exécute) effacerait la
- * publication toute fraîche de B.
+ * Ownership: the same lock as `useAssistantContext` — a page that is
+ * disassembles only unpublishes if it is still the owner, otherwise navigation
+ * A→B (B goes up before A's cleanup runs) would clear the
+ * fresh publication from B.
  */
 
 import {
@@ -43,13 +43,13 @@ import { buildViewHref } from "@/lib/saved-view-href";
 
 export interface CurrentViewSnapshot {
   /**
-   * L'adresse interne qui ré-ouvre exactement cet écran, query comprise. La
-   * page la fabrique elle-même — c'est elle qui sait ce qu'elle affiche.
+   * The internal address that exactly re-opens this screen, query included. There
+   * page makes it herself — she knows what she displays.
    */
   href: string;
   /**
-   * Nom proposé par défaut dans le champ de la palette (« Conversations ·
-   * MIN-42 »). Optionnel : sans lui, le champ s'ouvre vide.
+   * Name proposed by default in the palette field (“Conversations ·
+   * MIN-42"). Optional: without it, the field opens empty.
    */
   label?: string;
 }
@@ -65,8 +65,8 @@ export function CurrentViewProvider({ children }: { children: ReactNode }) {
   const snapshotRef = useRef<CurrentViewSnapshot | null>(null);
   const ownerRef = useRef<string | null>(null);
 
-  // Identité stable, pour de bon : aucun consommateur ne se re-rend jamais à
-  // cause d'une publication.
+  // Stable identity, for good: no consumer ever returns to
+  // because of a publication.
   const value = useMemo<CurrentViewContextValue>(
     () => ({
       publish: (next, ownerId) => {
@@ -75,7 +75,7 @@ export function CurrentViewProvider({ children }: { children: ReactNode }) {
           snapshotRef.current = next;
           return;
         }
-        // Seul le propriétaire courant a le droit d'effacer.
+        // Only the current owner has the right to delete.
         if (ownerRef.current !== ownerId) return;
         ownerRef.current = null;
         snapshotRef.current = null;
@@ -93,9 +93,9 @@ export function CurrentViewProvider({ children }: { children: ReactNode }) {
 }
 
 /**
- * Publie l'adresse qui reconstitue l'écran, le temps que le composant est
- * monté. À appeler depuis les surfaces dont la sélection ne vit pas dans
- * l'URL ; partout ailleurs, ne rien appeler — `window.location` dit déjà tout.
+ * Publishes the address which reconstructs the screen, while the component is
+ * mounted. To be called from surfaces whose selection does not live in
+ * the URL; everywhere else, call nothing — `window.location` already says everything.
  */
 export function usePublishCurrentView(
   snapshot: CurrentViewSnapshot | null
@@ -103,8 +103,8 @@ export function usePublishCurrentView(
   const ctx = useContext(CurrentViewContext);
   const publish = ctx?.publish;
   const ownerId = useId();
-  // Sérialisé pour que l'effet ne rejoue que sur un vrai changement : l'appelant
-  // reconstruit son objet à chaque rendu.
+  // Serialized so that the effect only replays on a real change: the caller
+  // rebuilds its object each time it is rendered.
   const key = snapshot ? JSON.stringify(snapshot) : null;
 
   useEffect(() => {
@@ -115,18 +115,18 @@ export function usePublishCurrentView(
 }
 
 export interface CurrentView {
-  /** L'adresse à enregistrer, résolue au moment de l'appel. */
+  /** The address to register, resolved at the time of the call. */
   resolveHref: () => string;
-  /** Le nom que la page propose, résolu au moment de l'appel. */
+  /** The name that the page suggests, resolved at the time of the call. */
   resolveLabel: () => string | null;
 }
 
 /**
- * Lu par la palette, jamais pendant un rendu : les deux résolveurs s'appellent
- * dans un gestionnaire d'événement (le clic sur « Enregistrer », l'ouverture du
- * menu d'actions). Lire `window.location` y est donc sûr — pas de rendu serveur
- * à désaccorder, et pas de `useSearchParams` qui imposerait une frontière
- * `<Suspense>` autour de tout le shell.
+ * Read by the palette, never during a render: the two resolvers are called
+ * in an event manager (clicking on “Save”, opening the
+ * action menu). Reading `window.location` is therefore safe — no server rendering
+ * to detune, and no `useSearchParams` which would impose a boundary
+ * `<Suspense>` around the entire shell.
  */
 export function useCurrentView(): CurrentView {
   const ctx = useContext(CurrentViewContext);

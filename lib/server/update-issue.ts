@@ -86,12 +86,12 @@ export type UpdateIssueResult =
       rawMessage?: string;
     };
 
-// Bornes de longueur (MIN-118) : même plafond de titre que l'import CSV
-// (lib/import/normalize.ts) ; la description est du markdown libre, bornée
-// comme le plan. Au-delà on tronque — pas de clé d'erreur dédiée.
+// Length limits (MIN-118): same title limit as CSV import
+// (lib/import/normalize.ts); the description is free markdown, bounded
+// like the plan. Beyond that we truncate — no dedicated error key.
 const MAX_TITLE_LENGTH = 500;
-/** Exportée : la troncature ci-dessous est SILENCIEUSE, alors les appelants qui
- *  doivent refuser bruyamment (le patch MCP de MIN-186) vérifient d'abord. */
+/** Exported: The truncation below is SILENT, so callers who
+ * must refuse loudly (the MCP patch of MIN-186) check first. */
 export const MAX_DESCRIPTION_LENGTH = 65_536;
 
 export async function updateIssueFields({
@@ -109,22 +109,22 @@ export async function updateIssueFields({
   input: Record<string, unknown>;
   /** Marks the resulting activity events as triggered through Numo. */
   viaAssistant?: boolean;
-  /** L'écriture vient d'une AUTOMATISATION de projet (MIN-147) : la timeline
-      nomme alors la règle, et non le compte dont l'id signe techniquement
-      l'écriture (l'assigné du ticket, ou le propriétaire du projet). Se cumule
-      avec `viaAssistant` — c'est bien Numo qui agit, mais personne n'a cliqué. */
+  /** The writing comes from a project AUTOMATION (MIN-147): the timeline
+ then names the rule, and not the account whose id technically signs
+ the writing (the ticket assignee, or the project owner). Stacks
+ with `viaAssistant` — it's Numo who does it, but no one clicked. */
   viaAutomation?: boolean;
-  /** L'écriture est une conséquence MÉCANIQUE du cycle de vie d'un run d'agent
-      (`issue-status-sync` : démarrage, PR ouverte/fusionnée/refusée), et non une
-      demande. Elle porte `viaAssistant` comme l'assistant — d'où ce drapeau,
-      qui sépare « Numo relaie ma demande » de « Numo décrit où en est son run ».
-      Ne change que l'ORIGINE vue par les automatisations (MIN-147). */
+  /** The write is a MECHANICAL consequence of the lifecycle of an agent run
+ (`issue-status-sync`: start, PR open/merged/denied), and not a
+ request. It carries `viaAssistant` like the assistant — hence this flag,
+ which separates “Numo relays my request” from “Numo describes where his run is”.
+ Only changes the ORIGIN seen by the automations (MIN-147). */
   viaAgentRun?: boolean;
   /** Attributes the resulting activity events to an MCP API key (agent actor). */
   mcpKeyId?: string | null;
-  /** Attribue les événements à la forge ('github' | 'gitlab') quand l'écriture
-      vient de la synchro des issues du dépôt lié (MIN-97) : l'`actorId` reste
-      le membre qui porte techniquement l'écriture, la timeline affiche GitHub. */
+  /** Assigns events to the forge ('github' | 'gitlab') when the write
+ comes from the synchronization of the outputs of the linked repository (MIN-97): the `actorId` remains
+ the member which technically carries the write, the timeline displays GitHub. */
   forgeSync?: RepoProviderId | null;
 }): Promise<UpdateIssueResult> {
   const updates: Record<string, unknown> = {};
@@ -169,9 +169,9 @@ export async function updateIssueFields({
     }
     updates.effort = input.effort ?? null;
   }
-  // Les quatre références sortantes (assigné, objectif, doublon, cycle) ne sont
-  // que RECUEILLIES ici : leur appartenance se vérifie plus bas, une fois le
-  // projet du ticket connu (MIN-339).
+  // The four outgoing references (assigned, objective, duplicate, cycle) are not
+  // that COLLECTED here: their membership is verified below, once the
+  // known ticket project (MIN-339).
   if ("assignee_id" in input) {
     updates.assignee_id =
       typeof input.assignee_id === "string" ? input.assignee_id : null;
@@ -208,9 +208,9 @@ export async function updateIssueFields({
     }
     updates.position = input.position;
   }
-  // Forçage des automatisations sur CE ticket (MIN-147). `null` = il suit les
-  // règles du projet ; toute autre forme passe par le parseur, qui rend `null`
-  // sur ce qu'il ne comprend pas — un override illisible vaut « pas d'override »,
+  // Force automations on THIS ticket (MIN-147). `null` = it follows the
+  // project rules; any other form goes through the parser, which returns `null`
+  // on what he doesn't understand — an illegible override is worth "no override",
   // jamais un refus d'enregistrement.
   if ("automation_override" in input) {
     updates.automation_override =
@@ -235,12 +235,12 @@ export async function updateIssueFields({
 
   // Snapshot before the change: it resolves the project for the access check
   // and is the baseline we diff into activity events. On joint `owner_id` +
-  // `deleted_at` pour trancher l'accès ICI, sans le second SELECT projet que
-  // faisait getProjectAccess (le projet est déjà chargé par ce join).
+  // `deleted_at` to decide access HERE, without the second SELECT project that
+  // did getProjectAccess (the project is already loaded by this join).
   const { data: before } = await service
     .from("issues")
     .select("*, projects(name, owner_id, deleted_at)")
-    // Un ticket en corbeille ne s'édite pas : il se restaure d'abord (MIN-133).
+    // A trashed ticket cannot be edited: it is first restored (MIN-133).
     .is("deleted_at", null)
     .eq("id", issueId)
     .maybeSingle();
@@ -250,8 +250,8 @@ export async function updateIssueFields({
   const beforeProject = before.projects as
     | { name?: string | null; owner_id?: string; deleted_at?: string | null }
     | null;
-  // Accès = projet vivant ET (propriétaire OU membre). Même règle que
-  // getProjectAccess/can_access_project ; l'invisibilité RLS devient un 404.
+  // Access = living project AND (owner OR member). Same rule as
+  // getProjectAccess/can_access_project; RLS invisibility becomes a 404.
   let hasAccess = !!beforeProject && !beforeProject.deleted_at;
   if (hasAccess && beforeProject!.owner_id !== actorId) {
     const { data: membership } = await service
@@ -267,22 +267,20 @@ export async function updateIssueFields({
   }
 
   /**
-   * LES RÉFÉRENCES SORTANTES, BORNÉES À LEUR PÉRIMÈTRE (MIN-339).
-   *
-   * Ici et pas plus haut : chacune se résout contre le projet du ticket, qu'on
-   * ne connaît qu'après l'instantané ci-dessus. Toutes tombent en 400 — une
-   * référence hors périmètre est une charge invalide, pas un ticket introuvable.
-   *
-   * Elles se vérifient à CHAQUE écriture, même quand la valeur ne change pas :
-   * la seule chose qui compte est ce que la ligne portera au retour, et un
-   * ticket qui pointait déjà ailleurs (ligne héritée d'avant ce contrôle) ne
-   * gagne pas le droit de continuer.
-   */
+ * OUTGOING REFERENCES, LIMITED TO THEIR SCOPE (MIN-339).
+ *
+ * Here and no higher: each resolves against the ticket's project, which we
+ * only knows after the snapshot above. All fall into 400 — an out-of-scope reference is an invalid load, not a ticket not found.
+ *
+ * They are checked on EVERY write, even when the value doesn't change:
+ * the only thing that matters is what the line will carry when it returns, and a
+ * ticket which was already pointing elsewhere (line inherited from before this check) does not gain the right to continue.
+ */
   const projectId = before.project_id as string;
   if (typeof updates.objective_id === "string") {
-    // Un objectif étranger n'est pas qu'une jointure de travers : le trigger
-    // `SECURITY DEFINER` qui recalcule le statut d'un objectif partirait alors
-    // sur celui d'un autre locataire.
+    // A foreign objective is not just a crooked join: the trigger
+    // `SECURITY DEFINER` which recalculates the status of an objective would then leave
+    // on that of another tenant.
     if (!(await objectiveInProject(service, updates.objective_id, projectId))) {
       return { ok: false, status: 400, errorKey: "objectiveNotFound" };
     }
@@ -293,10 +291,10 @@ export async function updateIssueFields({
     }
   }
   if (typeof updates.assignee_id === "string") {
-    // Refus explicite ici, là où la fabrique de tickets laisse tomber en
-    // silence : à la création l'assigné peut venir d'un autre projet (copie
-    // inter-projets), sur une édition c'est un geste, et un geste sans effet
-    // se raconte de travers dans l'UI comme dans la timeline.
+    // Explicit refusal here, where the ticket factory drops in
+    // silence: at creation the assignee can come from another project (copy
+    // inter-projects), on an edition it is a gesture, and a gesture without effect
+    // is told incorrectly in the UI as well as in the timeline.
     const isMember = await userInProject(
       service,
       updates.assignee_id as string,
@@ -308,28 +306,28 @@ export async function updateIssueFields({
     }
   }
   if (typeof updates.cycle_id === "string") {
-    // Un cycle est PERSONNEL : il n'a pas de projet, il a un propriétaire, et y
-    // ranger un ticket l'affecte à celui-ci (voir plus bas). Le seul cycle
-    // qu'on a le droit de remplir est donc le sien.
+    // A cycle is PERSONAL: it has no project, it has an owner, and
+    // storing a ticket assigns it to this one (see below). The only cycle
+    // that we have the right to fill out is therefore ours.
     if (!(await cycleBelongsToUser(service, updates.cycle_id, actorId))) {
       return { ok: false, status: 400, errorKey: "invalidCycle" };
     }
   }
   if ("automation_override" in updates) {
-    // Forcer un préréglage d'automatisation, c'est engager le quota, le plan et
-    // la clé BYOK du PROPRIÉTAIRE du projet — les runs qui en découlent partent
-    // sur son budget. C'est donc à lui seul, et 403 : ce n'est pas une charge
-    // malformée, c'est un droit qu'on n'a pas.
+    //Forcing an automation preset means engaging the quota, plan and
+    // the BYOK key of the project OWNER — the resulting runs go
+    // on his budget. So it's his alone, and 403: it's not a burden
+    // malformed, it’s a right we don’t have.
     if (beforeProject!.owner_id !== actorId) {
       return { ok: false, status: 403, errorKey: "ownerOnly" };
     }
   }
 
-  // Récurrence et échéance vont ensemble (MIN-136) : une cadence dit « et
-  // après ? » d'une date qui doit exister — c'est elle qui porte la prochaine
-  // occurrence. Poser une cadence sans échéance se refuse ; effacer l'échéance
-  // d'un ticket récurrent coupe la récurrence (et l'événement d'activité le
-  // dit), plutôt que de laisser une série sans point de départ.
+  // Recurrence and deadline go together (MIN-136): a cadence says “and
+  // After ? » of a date which must exist — it is she who carries the next
+  // occurrence. Setting a pace without a deadline is refused; clear the deadline
+  // of a recurring ticket cuts the recurrence (and the activity event
+  // said), rather than leaving a series without a starting point.
   const dueDateAfter = ("due_date" in updates ? updates.due_date : before.due_date) as
     | string
     | null;
@@ -342,12 +340,12 @@ export async function updateIssueFields({
     }
     updates.recurrence = null;
   }
-  // La date qu'on donne à une récurrence est un DÉBUT, pas une date figée :
-  // « toutes les semaines à partir de lundi dernier » veut dire lundi prochain.
-  // On la recale donc au moment où l'horaire est (re)défini — pose ou changement
-  // de cadence, choix d'une échéance sur un ticket récurrent — et seulement là :
-  // un ticket récurrent en retard doit continuer de s'afficher en retard tant
-  // qu'on ne l'a pas coché, et une édition de titre n'a pas à déplacer sa date.
+  // The date we give to a recurrence is a START, not a fixed date:
+  // “every week starting last Monday” means next Monday.
+  // We therefore postpone it when the schedule is (re)defined — installation or change
+  // cadence, choice of a deadline on a recurring ticket — and only there:
+  // a late recurring ticket must continue to appear late as long as
+  // that it has not been checked, and a title edition does not have to move its date.
   if (
     isRecurrenceCadence(recurrenceAfter) &&
     dueDateAfter &&
@@ -356,10 +354,10 @@ export async function updateIssueFields({
     const start = startDueDateISO(dueDateAfter, recurrenceAfter);
     if (start && start !== before.due_date) updates.due_date = start;
   }
-  // Annuler (ou dédoublonner) un ticket récurrent arrête la récurrence : seul
-  // le passage en `done` engendre l'occurrence suivante, une série laissée sur
-  // un ticket annulé ne produirait plus jamais rien — juste une ligne fantôme
-  // dans la page « Récurrences » du projet.
+  // Cancel (or duplicate) a recurring ticket stops the recurrence: only
+  // switching to `done` generates the following occurrence, a series left on
+  // a canceled ticket would never produce anything again — just a phantom line
+  // in the “Recurrences” page of the project.
   if (
     (updates.status === "canceled" || updates.status === "duplicate") &&
     before.recurrence
@@ -382,8 +380,8 @@ export async function updateIssueFields({
   // Adding to a cycle ASSIGNS the issue to the cycle's owner as a side-effect
   // — never the other way around, and never a status bump (MIN-32). The SQL
   // trigger enforce_issue_cycle then keeps the pair consistent on every path.
-  // Le propriétaire, c'est l'appelant : la garde de tenancy ci-dessus n'accepte
-  // que son propre cycle, il n'y a donc plus de compte tiers à relire.
+  // The owner is the caller: the tenancy custody above does not accept
+  // than its own cycle, so there is no longer a third-party account to reread.
   if (typeof updates.cycle_id === "string") {
     const finalAssignee =
       "assignee_id" in updates ? updates.assignee_id : before.assignee_id;
@@ -412,18 +410,18 @@ export async function updateIssueFields({
     return { ok: false, status: 404, errorKey: "issueNotFound" };
   }
 
-  // L'INSTANT DU GESTE, figé ici : la ligne vient d'être écrite. Les événements
-  // partent en `after()` (juste en dessous) et seraient sinon horodatés à leur
-  // insert — après Smart Assign, qui écrit AVANT la réponse quelques lignes plus
-  // bas. La timeline afficherait « a assigné » avant « a changé le statut »,
-  // c'est-à-dire l'ordre des écritures au lieu de l'ordre des gestes.
+  // THE MOMENT OF THE GESTURE, frozen here: the line has just been written. Events
+  // go to `after()` (just below) and would otherwise be timestamped to their
+  // insert — after Smart Assign, which writes BEFORE the response a few more lines
+  // down. The timeline would show "assigned" before "changed status",
+  // that is to say the order of writing instead of the order of gestures.
   const occurredAt = new Date().toISOString();
 
-  // Activité, stats, notifications, touch cycle : best-effort et DÉJÀ
-  // réconciliés côté client via le realtime (broadcasts DB). On les sort du
-  // chemin critique du PATCH — la réponse part dès la ligne écrite, ces
-  // écritures suivent juste après via after(). Hors requête HTTP (assistant en
-  // script, cron) : after() lève, on retombe sur un run best-effort synchrone.
+  // Activity, stats, notifications, touch cycle: best-effort and ALREADY
+  // reconciled on the client side via realtime (DB broadcasts). We take them out of
+  // critical path of the PATCH — the response starts from the written line, these
+  // writes follow immediately after via after(). Excluding HTTP request (assistant
+  // script, cron): after() raises, we fall back on a synchronous best-effort run.
   const runSideEffects = async () => {
     const events = buildFieldChangeEvents(issueId, actorId, before, updates);
     if ("plan" in updates && (updates.plan ?? null) !== (before.plan ?? null)) {
@@ -494,13 +492,13 @@ export async function updateIssueFields({
       }
     }
 
-    // Ledger de stats : une contribution "terminée" au nom de l'acteur, seulement
-    // sur la TRANSITION vers done (before !== done). Cette garde suffit à
-    // dédupliquer : canceled/duplicate ne matchent pas, done->done non plus. Un
-    // re-passage done->todo->done rajoute volontairement une contribution (compté
-    // brut dans la heatmap ; le total, lui, déduplique par issue au read).
-    // La synchro d'un dépôt lié (MIN-97) est exclue : l'acteur technique est le
-    // owner qui a lié le dépôt, ce n'est pas lui qui a fermé l'issue distante.
+    // Stats ledger: a “finished” contribution in the name of the actor, only
+    // on the TRANSITION to done (before !== done). This guard is enough to
+    // deduplicate: canceled/duplicate do not match, done->done neither. A
+    // re-pass done->todo->done voluntarily adds a contribution (counted
+    // raw in the heatmap; the total, for its part, deduplicates by issue in the read).
+    // The synchronization of a linked repository (MIN-97) is excluded: the technical actor is the
+    // owner who linked the repository, it was not him who closed the remote issue.
     if (updates.status === "done" && before.status !== "done" && !forgeSync) {
       const projectName =
         (before.projects as { name?: string | null } | null)?.name ?? null;
@@ -517,9 +515,9 @@ export async function updateIssueFields({
       await insertStatEvents(service, [statRow]);
     }
 
-    // Ticket récurrent terminé (MIN-136) : l'occurrence suivante naît ici, en
-    // backlog, à l'échéance décalée d'une cadence. Après la réponse comme les
-    // autres effets — le realtime la fait apparaître sur les tableaux ouverts.
+    // Recurring ticket completed (MIN-136): the next occurrence is born here, in
+    // backlog, at the deadline shifted by one cadence. After the response like
+    // other effects — realtime makes it appear on open tables.
     if (updates.status === "done" && before.status !== "done" && before.recurrence) {
       await spawnNextOccurrence({
         service,
@@ -544,16 +542,16 @@ export async function updateIssueFields({
           type: "assigned",
           issue_id: issueId,
           actor_id: actorId,
-          // Même attribution que les événements produits juste au-dessus : une
-          // affectation venue d'un agent est l'agent qui l'a faite, pas le
-          // compte dont il porte la clé — le MCP par son nom, Numo sinon.
+          // Same attribution as the events produced just above: a
+          // assignment coming from an agent is the agent who made it, not the
+          // account for which he carries the key — the MCP by name, Numo otherwise.
           ...notificationActorSource({ viaAssistant, mcpKeyId }),
         },
       ]);
     }
 
-    // Les gens qui viennent d'être cités dans la description. `before` sert de
-    // référence : relire une description ne repingue pas ceux qui y étaient déjà.
+    // The people who have just been mentioned in the description. `before` serves as
+    // reference: re-reading a description does not repeat those who were already there.
     if ("description" in updates) {
       await notifyDescriptionMentions(service, {
         projectId: before.project_id as string,
@@ -564,10 +562,10 @@ export async function updateIssueFields({
         mcpKeyId,
         viaAssistant,
       });
-      // Et les PAGES qu'elle cite (MIN-279). Pas de diff ici, contrairement aux
-      // mentions de personnes : les liens ne préviennent personne, ils décrivent
-      // un état — on réécrit donc ce que la description dit MAINTENANT, ce qui
-      // est aussi la seule façon de faire disparaître une citation retirée.
+      // And the PAGES she cites (MIN-279). No difference here, unlike
+      // mentions of people: the links do not warn anyone, they describe
+      // a state — we therefore rewrite what the description says NOW, which
+      // is also the only way to make a removed quote disappear.
       queuePageLinks(
         service,
         {
@@ -590,9 +588,9 @@ export async function updateIssueFields({
   }
 
   // Smart Assign (MIN-31): an unassigned issue leaving triage gets an assignee
-  // (opt-in per project; the run re-checks everything). ATTENDU, comme à la
-  // création : le cas déterministe écrit avant la réponse, seul l'appel au
-  // modèle repart en `after()` (voir l'en-tête de lib/server/smart-assign.ts).
+  // (opt-in per project; the run re-checks everything). WHEREAS, as in
+  // creation: the deterministic case written before the response, only the call to
+  // model restarts as `after()` (see the header of lib/server/smart-assign.ts).
   const assigneeAfterUpdate =
     "assignee_id" in updates ? updates.assignee_id : before.assignee_id;
   let smartAssignee: string | null = null;
@@ -630,17 +628,17 @@ export async function updateIssueFields({
     }
   }
 
-  // Feedback (MIN-37) : le statut public d'un post lié suit l'issue, à CHAQUE
-  // transition — la table de correspondance est totale, il n'y a plus de
+  // Feedback (MIN-37): the public status of a linked post follows the outcome, EACH
+  // transition — the correspondence table is complete, there are no more
   // transition qui ne dise rien (cf. status-sync).
   if ("status" in updates && updates.status !== before.status) {
     scheduleFeedbackStatusSync(issueId, updates.status, actorId);
 
-    // Dépôt lié : le ticket referme (ou rouvre) l'issue dont il vient. La garde
-    // `!forgeSync` EST l'anti-boucle — un statut qui DESCEND du webhook de la
-    // forge ne doit pas y remonter aussitôt. No-op pour un ticket né dans
-    // minddy : `scheduleRemoteStatusPush` sort sur l'absence d'identité
-    // distante, sans requête.
+    // Linked deposit: the ticket closes (or reopens) the issue from which it comes. The guard
+    // `!forgeSync` IS the anti-loop — a status that GOES DOWN from the webhook of the
+    // forge should not go back there immediately. No-op for a ticket born in
+    // minddy: `scheduleRemoteStatusPush` spell on the absence of identity
+    // remote, without request.
     if (!forgeSync) {
       scheduleRemoteStatusPush({
         issue: {
@@ -653,18 +651,18 @@ export async function updateIssueFields({
         actorId,
       });
     }
-    // Automatisations (MIN-147) : le changement de statut est l'un des deux
-    // seuls événements dont la boucle a besoin. Même contrat que ses voisins —
-    // hors chemin critique, et no-op silencieux si le monde a bougé.
+    // Automations (MIN-147): the status change is one of the two
+    // only events that the loop needs. Same contract as its neighbors —
+    // off critical path, and silent no-op if the world has moved.
     scheduleStatusAutomations({
       issueId,
       projectId: before.project_id as string,
       from: (before.status as IssueStatus | null) ?? null,
       to: updates.status as IssueStatus,
-      // L'ORIGINE décide si une règle a le droit de réagir : les préréglages qui
-      // écrivent du code n'acceptent qu'un geste humain, ceux qui vérifient
-      // acceptent aussi un agent. Même résolveur que la source analytique — une
-      // deuxième taxonomie divergerait le jour où l'une des deux bouge.
+      // THE ORIGIN decides whether a rule has the right to react: the presets which
+      // write code only accept a human gesture, those who check
+      // also accept an agent. Same resolver as the analytical source — one
+      // second taxonomy would diverge the day one of the two moves.
       source: automationSourceOf({
         raw: resolveIssueSource({ viaAssistant, mcpKeyId, forge: forgeSync, actorId }),
         viaAutomation,
@@ -673,9 +671,9 @@ export async function updateIssueFields({
     });
   }
 
-  // Analytics serveur (MIN-78) : même raison que pour la création — une bonne
-  // part des mises à jour vient de MCP, de Numo ou de l'agent de code, hors
-  // navigateur. `fields` liste les champs touchés (jamais leurs valeurs texte).
+  // Server Analytics (MIN-78): same reason as for creation — a good one
+  // part of the updates comes from MCP, Numo or the code agent, excluding
+  // browser. `fields` lists the affected fields (never their text values).
   captureServerEvent({
     distinctId: actorId,
     event: "issue_updated_server",
@@ -690,8 +688,8 @@ export async function updateIssueFields({
     groups: { project: data.project_id as string },
   });
 
-  // Même raison qu'à la création : `data` a été lu avant que Smart Assign
-  // n'écrive, seul le ticket rendu porte la correction.
+  // Same reason as at creation: `data` was read before Smart Assign
+  // do not write, only the returned ticket carries the correction.
   return {
     ok: true,
     issue: mapIssueRow(

@@ -19,33 +19,33 @@ import { isManagedAiEnabled } from "@/lib/managed-services";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
- * Appel OpenRouter à sortie structurée forcée (tools + tool_choice) — le contrat
- * partagé par les passes IA du feedback (merge : analyze.ts, classification :
- * classify.ts) et calqué sur smart-assign. Parse l'unique tool call ; retourne
- * `null` au moindre échec (clé absente, HTTP non-ok, timeout, JSON invalide) pour
- * que la passe appelante puisse retry sans jamais bloquer le board.
+ * OpenRouter call to forced structured output (tools + tool_choice) — the
+ * contract shared by the feedback AI passes (merge: analyze.ts, classification:
+ * classify.ts) and modeled on smart-assign. Parse the unique tool call; returns
+ * `null` at the slightest failure (absent key, non-ok HTTP, timeout, invalid JSON) so that
+ * the calling pass can retry without ever blocking the board.
  *
- * Suivi des coûts : passer `record` fait enregistrer l'usage (un appel = un run
- * d'un seul appel) dans `ai_usage`. Best-effort, n'affecte jamais le retour.
+ * Cost tracking: passing `record` records the usage (a call = a run
+ * of a single call) in `ai_usage`. Best-effort, never affect return.
  */
 
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 /**
- * Un refus d'OpenRouter, distingué des autres échecs (timeout, JSON de travers)
- * parce que c'est le SEUL qu'on rejoue : un modèle portant un raccourci de
- * routage (`:nitro`, `:floor`, `:exacto`, MIN-263) dont aucun provider ne
- * satisfait l'ordre demandé se voit refuser au moment de la requête, avant le
- * premier token. Rejouer un timeout, lui, ne ferait que doubler l'attente de
- * quelqu'un qui patiente déjà devant son écran.
+ * A refusal from OpenRouter, distinguished from other failures (timeout, crooked JSON)
+ * because it is the ONLY one that we replay: a model carrying a shortcut of
+ * routing (`:nitro`, `:floor`, `:exacto`, MIN-263) for which no provider
+ * satisfies the requested order is refused at the time of the request, before the
+ * first token. Replaying a timeout would only double the wait for
+ * someone who is already waiting in front of their screen.
  */
-/** Contexte de suivi de coût pour un appel forcé (feature + imputation). */
+/** Cost tracking context for a forced call (feature + imputation). */
 export interface ForcedToolCallRecord {
   feature: AiFeature;
-  /** Qui paye — dit par l'appelant, jamais déduit du projet (MIN-131). */
+  /** Who pays — said by the caller, never deducted from the project (MIN-131). */
   billTo: AiUsageBillTo;
   projectId?: string | null;
-  /** Conversation Numo à laquelle rattacher la dépense, quand il y en a une. */
+  /** Numo conversation to which to attach the expense, when there is one. */
   conversationId?: string | null;
 }
 
@@ -59,21 +59,21 @@ export async function forcedToolCall(
     xTitle?: string;
     logPrefix?: string;
     record?: ForcedToolCallRecord;
-    /** Type réel de l'appel : permet de résoudre son modèle BYOK. */
+    /** Actual type of the call: allows you to resolve its BYOK model. */
     modelKey?: ByokModelKey;
-    /** Cas particulier où le même modèle appartient à une autre surface (feedback voice). */
+    /** Special case where the same model belongs to another surface (feedback voice). */
     surface?: AiSurface;
-    /** Défaut : 1024 — de quoi couvrir un verdict ou un titre. À relever pour
-     *  les sorties qui grandissent avec l'entrée (un plan de correspondance
-     *  porte une ligne par colonne du fichier). */
+    /** Default: 1024 — enough to cover a verdict or title. Note for
+ * outputs that grow with the input (a correspondence plan
+ * carries one line per column of the file). */
     maxTokens?: number;
     /**
-     * Défaut : 45 s — la mesure d'un verdict ou d'un plan de correspondance.
-     * Va AVEC `maxTokens` : une sortie qu'on autorise à faire des milliers de
-     * tokens met des dizaines de secondes à s'écrire, et la couper à 45 s
-     * jette l'appel entier après l'avoir payé. Relever les deux ensemble, et
-     * tenir le `maxDuration` de la route au-dessus.
-     */
+ * Default: 45 s — the measurement of a verdict or a matching plan.
+ * Goes WITH `maxTokens`: an output that is authorized to make thousands of
+ * tokens takes tens of seconds to write, and cut it to 45 s
+ * throws the entire call after paying for it. Raise both together, and
+ * hold the `maxDuration` from the road above.
+ */
     timeoutMs?: number;
   }
 ): Promise<Record<string, unknown> | null> {

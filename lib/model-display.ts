@@ -1,12 +1,12 @@
 import { AGENT_ALLOWED_MODELS } from "@/lib/agent-models";
 
 /**
- * Affichage lisible d'un modèle IA (id OpenRouter `provider/model`) — MIN-46.
- * Nom complet formaté ("deepseek/deepseek-v4-flash" → "DeepSeek V4 Flash") et
- * slug de provider normalisé pour les logos `@lobehub/icons`. Client + serveur.
+ * Readable display of an AI model (OpenRouter id `provider/model`) — MIN-46.
+ * Formatted full name ("deepseek/deepseek-v4-flash" → "DeepSeek V4 Flash") and
+ * standardized provider slug for logos `@lobehub/icons`. Client + server.
  */
 
-/** Slug provider OpenRouter → clé provider @lobehub/icons (là où ils divergent). */
+/** OpenRouter provider slug → @lobehub/icons provider key (where they diverge). */
 const PROVIDER_ALIASES: Record<string, string> = {
   "meta-llama": "meta",
   mistralai: "mistral",
@@ -16,7 +16,7 @@ const PROVIDER_ALIASES: Record<string, string> = {
   "amazon": "bedrock",
 };
 
-/** Casse des marques/acronymes après title-case naïf. */
+/** Case of brands/acronyms after naive title-case. */
 const TOKEN_FIXUPS: Record<string, string> = {
   Gpt: "GPT",
   Deepseek: "DeepSeek",
@@ -29,22 +29,22 @@ const TOKEN_FIXUPS: Record<string, string> = {
   Llm: "LLM",
 };
 
-/** Labels curatés de l'allowlist (priorité sur le formatage automatique). */
+/** Curated labels from the allowlist (priority over automatic formatting). */
 const KNOWN_LABELS = new Map(AGENT_ALLOWED_MODELS.map((m) => [m.id, m.label]));
 
-/** Retire les suffixes de variante OpenRouter (`:free`, `:nitro`, routage `@…`). */
+/** Remove OpenRouter variant suffixes (`:free`, `:nitro`, `@…` routing). */
 function baseId(modelId: string): string {
   return modelId.split(":")[0].split("@")[0];
 }
 
-/** Slug du provider (clé @lobehub/icons) depuis un id `provider/model`. */
+/** Provider slug (key @lobehub/icons) from an id `provider/model`. */
 export function providerFromModel(modelId: string | null | undefined): string {
   if (!modelId) return "";
   const provider = baseId(modelId).split("/")[0]?.toLowerCase() ?? "";
   return PROVIDER_ALIASES[provider] ?? provider;
 }
 
-/** Majuscule initiale, puis correction de casse des marques et acronymes. */
+/** Initial capitalization, then case correction of brands and acronyms. */
 function capitalize(word: string): string {
   const cap = word.charAt(0).toUpperCase() + word.slice(1);
   return TOKEN_FIXUPS[cap] ?? cap;
@@ -53,16 +53,16 @@ function capitalize(word: string): string {
 function formatToken(tok: string): string {
   if (!tok) return tok;
   /**
-   * Token de VERSION (« k3 », « v4 », « qwen3.5 ») : le numéro reste tel quel,
-   * mais les lettres qui le précèdent se capitalisent comme partout ailleurs.
-   * Elles ne le faisaient pas, et « moonshotai/kimi-k3 » se lisait « Kimi k3 » —
-   * le cas « v4 » était traité seul, en dur, et c'était le seul.
-   *
-   * L'exception est la famille de raisonnement d'OpenAI : « o3 » s'écrit en
-   * minuscule, chez OpenAI comme dans l'index OpenRouter, qui la nomme
-   * « OpenAI: o3 Pro ». C'est bien une exception de marque et non une règle sur
-   * les préfixes d'une lettre : « k3 » et « r1 » se capitalisent, eux.
-   */
+ * VERSION token ("k3", "v4", "qwen3.5"): the number remains as is,
+ * but the letters preceding it are capitalized like everywhere else.
+ * They didn't, and "moonshotai/kimi-k3" read "Kimi k3" —
+ * the case "v4" was treated alone, hard, and it was the only one.
+ *
+ * The exception is the OpenAI reasoning family: "o3" is written in lowercase
+ *, in OpenAI as in the OpenRouter index, which names it
+ * "OpenAI: o3 Pro". This is indeed a brand exception and not a rule on
+ * the prefixes of a letter: “k3” and “r1” are capitalized.
+ */
   const versioned = /^([a-z]+)([\d.].*)$/i.exec(tok);
   if (versioned) {
     const [, letters, version] = versioned;
@@ -76,8 +76,8 @@ function formatToken(tok: string): string {
 }
 
 /**
- * Nom complet lisible d'un modèle. Utilise le label curaté de l'allowlist si
- * connu, sinon formate le slug ("gemini-2.5-flash" → "Gemini 2.5 Flash").
+ * Readable full name of a template. Uses the curated label of the allowlist if
+ * known, otherwise formats the slug ("gemini-2.5-flash" → "Gemini 2.5 Flash").
  */
 export function formatModelName(modelId: string | null | undefined): string {
   if (!modelId) return "";

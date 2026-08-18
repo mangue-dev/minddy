@@ -4,26 +4,26 @@ import { createContext, useContext, type ReactNode } from "react";
 import type { PrEndpoint } from "@/lib/agent-api";
 
 /**
- * De quelle pull request ce morceau d'écran parle-t-il ? Rien, partout ailleurs.
+ * What pull request is this piece of screen talking about? Nothing, anywhere else.
  *
- * Deux besoins l'ont fait naître, et ils posent la même question (MIN-162) :
+ * Two needs gave rise to it, and they ask the same question (MIN-162):
  *
- *  · **les images.** Une capture collée dans un commentaire de forge n'est pas
- *    servable telle quelle — son URL exige une session GitHub que minddy n'a
- *    pas, et il faut la faire passer par le proxy de SA pull request
- *    (`lib/forge-image-assets`) ;
- *  · **le composer.** Mentionner un compte de la forge et joindre un fichier
- *    demandent tous deux les routes de CETTE pull request.
+ * · **images.** A capture pasted into a forge comment is not
+ * serverable as is — its URL requires a session GitHub that minddy doesn't have
+ *, and you have to proxy it through SA pull request
+ * (`lib/forge-image-assets`);
+ * · **compose it.** Mention a forge account and attach a file
+ * both request the routes of THIS pull request.
  *
- * Un contexte plutôt qu'une prop parce que ces surfaces sont nombreuses et
- * profondes — corps de la PR, messages du fil, activité, remarques de ligne et
- * leurs réponses, jusqu'au fond de la vue diff — et parce que la réponse est la
- * même pour toutes : celle du panneau, pas celle du composant. Une seule
- * enveloppe, et la surface suivante l'aura sans rien câbler.
+ * A context rather than a prop because these surfaces are many and
+ * deep — PR body, thread messages, activity, line remarks and
+ * their responses, all the way to the bottom of the diff view — and because the response is the
+ * same for all of them: that of the panel, not that of the component. A single
+ * wraps, and the next surface will have it without wiring anything.
  *
- * La valeur est une `PrEndpoint` et non un id : la vue diff d'une session
- * d'agent passe par les façades `agent-runs/[runId]/pr/*`, et c'est ce qui lui
- * donne exactement le même composer que le panneau PR.
+ * The value is a `PrEndpoint` and not an id: the diff view of an agent session
+ * passes through the `agent-runs/[runId]/pr/*` facades, and this is what gives it
+ * exactly the same composition as the PR panel.
  */
 const PrEndpointContext = createContext<PrEndpoint | null>(null);
 
@@ -39,7 +39,7 @@ export function PrEndpointProvider({
   );
 }
 
-/** `null` hors d'une vue de pull request — un commentaire de ticket n'en a pas. */
+/** `null` out of a pull request view — a ticket comment does not have one. */
 export function usePrEndpoint(): PrEndpoint | null {
   return useContext(PrEndpointContext);
 }

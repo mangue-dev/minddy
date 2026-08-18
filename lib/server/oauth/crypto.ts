@@ -3,10 +3,10 @@ import "server-only";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 /**
- * Primitives crypto du serveur OAuth. Tous les secrets (codes, tokens) sont
- * opaques : préfixe lisible + 32 octets aléatoires base64url, et seul le
- * sha256 hex est persisté (pattern api_keys). Préfixes distincts pour que
- * tout collage au mauvais endroit échoue vite et que les logs soient lisibles.
+ * OAuth server crypto primitives. All secrets (codes, tokens) are
+ * opaque: readable prefix + 32 random base64 bytes, and only the
+ * sha256 hex is persisted (pattern api_keys). Distinct prefixes so that
+ * any paste in the wrong place fails quickly and the logs are readable.
  */
 
 export const ACCESS_TOKEN_PREFIX = "mdyat_";
@@ -14,7 +14,7 @@ export const REFRESH_TOKEN_PREFIX = "mdyrt_";
 export const CODE_PREFIX = "mdyac_";
 export const CLIENT_ID_PREFIX = "mdyc_";
 
-/** sha256 hex — la seule forme jamais persistée d'un secret. */
+/** sha256 hex — the only ever persisted form of a secret. */
 export function sha256Hex(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -28,11 +28,11 @@ export function generateClientId(): string {
   return CLIENT_ID_PREFIX + randomBytes(12).toString("base64url");
 }
 
-// RFC 7636 §4.1 : charset et longueur du code_verifier.
+// RFC 7636 §4.1: charset and length of code_verifier.
 const VERIFIER_RE = /^[A-Za-z0-9._~-]{43,128}$/;
 
-/** Vérification PKCE S256 : base64url(sha256(verifier)) === challenge,
-    en temps constant. Seul S256 est accepté (jamais "plain"). */
+/** PKCE S256 verification: base64url(sha256(verifier)) === challenge,
+ in constant time. Only S256 is accepted (never "plain"). */
 export function verifyPkceS256(verifier: unknown, challenge: string): boolean {
   if (typeof verifier !== "string" || !VERIFIER_RE.test(verifier)) return false;
   const computed = createHash("sha256").update(verifier).digest("base64url");

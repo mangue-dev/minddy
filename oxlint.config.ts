@@ -1,21 +1,21 @@
 import { defineConfig } from "oxlint";
 
-// Le linter du dépôt. Deux jeux de règles y tournent ensemble :
+// The repository linter. Two sets of rules run together:
 //
-//   - les règles `correctness` d'oxlint (actives par défaut) — ce sont elles
-//     qui trouvent des bugs : optional chaining non sûr, variables mortes,
+// - oxlint's `correctness` rules (active by default) — these are them
+// which find bugs: unsafe optional chaining, dead variables,
 //     options de `fetch` invalides ;
-//   - anti-slop (github.com/dmmulroy/anti-slop), vendorisé dans
-//     `tools/oxlint/anti-slop/` — quinze règles qui refusent les motifs TS à
-//     faible preuve. Le plugin est VENDORISÉ, donc modifiable : c'est le point
-//     de son auteur, et c'est ce qui permet la sélection ci-dessous.
+// - anti-slop (github.com/dmmulroy/anti-slop), vendorized in
+// `tools/oxlint/anti-slop/` — fifteen rules which refuse TS patterns to
+// weak evidence. The plugin is SOLD, therefore modifiable: that’s the point
+// of its author, and this is what allows the selection below.
 //
-// La sélection est le cœur du fichier. Passer les quinze règles anti-slop à
-// `error` sur ce dépôt donne 7 926 erreurs — un linter qu'on ne lance jamais
-// n'attrape rien. Ce qui est activé ici est ce que le dépôt tient à zéro, donc
-// ce qu'une PR ne peut plus regresser. Le reste est éteint AVEC SON COMPTE au
-// jour de l'audit (2026-08-15) : c'est ce qui rend un cliquet possible plus
-// tard — on rallume une règle quand son compte est retombé à zéro, pas avant.
+// The selection is the heart of the file. Pass the fifteen anti-slop rules
+// `error` on this repository gives 7,926 errors — a linter that is never run
+// doesn't catch anything. What is enabled here is that the deposit holds zero, so
+// what a PR can no longer regress. The rest is extinguished WITH HIS ACCOUNT at
+// audit day (2026-08-15): this is what makes a ratchet possible more
+// late — we turn a ruler back on when its count has dropped to zero, not before.
 export default defineConfig({
   ignorePatterns: [
     ".claude/**",
@@ -26,62 +26,62 @@ export default defineConfig({
   ],
   jsPlugins: [{ name: "anti-slop", specifier: "./tools/oxlint/anti-slop/index.ts" }],
   rules: {
-    // ── anti-slop : tenu à zéro, donc opposable ──────────────────────────────
-    "anti-slop/no-chained-type-assertions": "off", // 199 — `as X as Y` fabrique une preuve
+    // ── anti-slop: held to zero, therefore opposable ──────────────────────────────
+    "anti-slop/no-chained-type-assertions": "off", // 199 — `as X as Y` creates a proof
     "anti-slop/no-object-parameters": "error",
     "anti-slop/no-reflect-apply": "error",
     "anti-slop/no-reflect-get": "error",
     "anti-slop/no-unknown-type-aliases": "error",
     "anti-slop/no-widen-then-assert": "error",
 
-    // ── anti-slop : éteint, avec le compte du jour ───────────────────────────
-    // Rallumer une ligne demande de ramener son compte à zéro d'abord.
+    // ── anti-slop: off, with day count ───────────────────────────
+    // Relighting a line requires resetting its count to zero first.
     "anti-slop/no-conditional-empty-object-spread": "off", // 368
     "anti-slop/no-known-value-widening": "off", // 519
     "anti-slop/no-runtime-typeof": "off", // 1137
     "anti-slop/no-unknown-parameters": "off", // 433
-    "anti-slop/no-unknown-returns": "off", // 77 — le plus proche d'être tenable
+    "anti-slop/no-unknown-returns": "off", // 77 — closest to being tenable
     "anti-slop/no-unsafe-dictionary-type": "off", // 976
     "anti-slop/require-safety-comment-for-type-assertion": "off", // 3653
 
-    // ── anti-slop : éteint parce que la règle se trompe ICI ──────────────────
-    // `no-module-mocking` refuse `vi.mock`. Le dépôt s'en sert dans 372 cas et
-    // la doctrine de test de CLAUDE.md est déjà plus fine que la règle (faux
-    // `fetch`, `RepoHost` en mémoire, espions sur le vrai module). Ce n'est pas
-    // un compte à faire baisser, c'est un désaccord de fond.
+    // ── anti-slop: off because the rule is wrong HERE ──────────────────
+    // `no-module-mocking` refuses `vi.mock`. The repository uses it in 372 cases and
+    // the CLAUDE.md test doctrine is already finer than the rule (false
+    // `fetch`, `RepoHost` in memory, spies on the real module). It's not
+    // a count to be lowered is a fundamental disagreement.
     "anti-slop/no-module-mocking": "off",
-    // `no-shape-in-symbol-names` refuse le mot « shape ». Dans ce dépôt il est
-    // le plus souvent DOMAINE, pas structure : la forme visuelle d'une puce de
-    // mention (components/mention-chip.tsx), les formes du canvas de grain
-    // (components/marketing/grain-canvas.tsx). Renommer dégraderait le sens.
+    // `no-shape-in-symbol-names` refuses the word “shape”. In this deposit it is
+    // most often DOMAIN, not structure: the visual form of a bullet point
+    // mention (components/mention-chip.tsx), grain canvas shapes
+    // (components/marketing/grain-canvas.tsx). Renaming would degrade the meaning.
     "anti-slop/no-shape-in-symbol-names": "off",
 
-    // ── oxlint : réglages des règles par défaut ──────────────────────────────
-    // `{ node, ...props }` n'est pas une variable morte : c'est LA façon de
-    // retirer une prop avant de spreader le reste dans un élément du DOM
+    // ── oxlint: default rule settings ──────────────────────────────
+    // `{ node, ...props }` is not a dead variable: it is THE way to
+    // remove a prop before spreading the rest in a DOM element
     // (components/markdown.tsx). `ignoreRestSiblings` distingue cet omis
-    // volontaire d'un vrai oubli, qui lui reste signalé.
-    // Les deux `ignorePattern` sont les défauts d'oxlint : passer un objet
-    // d'options les remplace en bloc, il faut donc les réécrire ici, sinon tout
-    // le `_`-préfixé volontaire du dépôt se met à crier.
+    // voluntary of a real forgetting, which remains reported to him.
+    // The two `ignorePattern` are the defaults of oxlint: passing an object
+    // of options replaces them in bulk, so you have to rewrite them here, otherwise everything
+    // the repository's voluntary `_`-prefix starts screaming.
     "no-unused-vars": [
       "warn",
       { ignoreRestSiblings: true, varsIgnorePattern: "^_", argsIgnorePattern: "^_" },
     ],
 
-    // `no-new-array` refuse `new Array(n)` pour son ambiguïté longueur/élément.
-    // Les 6 cas du dépôt sont tous des PRÉALLOCATIONS typées — `new Array<number>(
-    // aLen + 1)` dans les deux lignes de la distance de Levenshtein de la palette
-    // (lib/command-palette/search/engine.ts), la matrice de lignes plates de
-    // ResultsList. La longueur y est le sens voulu, et `Array.from({length})`
-    // remplirait le tableau au lieu de le réserver.
+    // `no-new-array` rejects `new Array(n)` for its length/element ambiguity.
+    // The 6 cases in the repository are all typed PREALLOCATIONS — `new Array<number>(
+    // aLen + 1)` in both rows of the Levenshtein distance of the palette
+    // (lib/command-palette/search/engine.ts), the flat line matrix of
+    // ResultsList. The length is the desired meaning, and `Array.from({length})`
+    // would fill the array instead of reserving it.
     "unicorn/no-new-array": "off",
 
-    // ── oxlint : une règle par défaut qui se trompe ICI ──────────────────────
-    // `no-thenable` refuse une clé `then`. Les 59 cas sont deux motifs voulus :
-    // le `then` d'une règle d'automatisation (`when` / `if` / `then`, un nom du
-    // domaine, jamais awaité) et les faux query-builders Supabase des tests,
-    // thenables EXPRÈS pour imiter le vrai client.
+    // ── oxlint: a default rule that is wrong HERE ──────────────────────
+    // `no-thenable` refuses a `then` key. The 59 cases are two intended reasons:
+    // the `then` of an automation rule (`when` / `if` / `then`, a name of the
+    // domain, never waited) and the false Supabase query-builders of the tests,
+    //thenables EXPRESSLY to imitate the real customer.
     "unicorn/no-thenable": "off",
   },
 });

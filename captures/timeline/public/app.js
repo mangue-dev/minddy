@@ -1,8 +1,8 @@
-// Frise des captures — client.
+// Capture timeline — client.
 //
-// Deux vues : un tableau de bord chiffré, et le détail d'une capture avec le
-// rideau de comparaison. L'état tient dans l'URL (#shot/variant) pour qu'un
-// rechargement retombe au même endroit.
+// Two views: an encrypted dashboard, and the details of a capture with the
+// curtain of comparison. The state is in the URL (#shot/variant) so that a
+// reloading falls back to the same place.
 
 const main = document.getElementById("main");
 const nav = document.getElementById("nav");
@@ -12,7 +12,7 @@ const headEl = document.getElementById("head");
 let data = null;
 let current = { shot: null, variant: null, a: null, b: null, split: 50 };
 
-// ---------------------------------------------------------------- utilitaires
+// ---------------------------------------------------------------- utilities
 
 const fmt = new Intl.NumberFormat("fr-FR");
 const dateFmt = new Intl.DateTimeFormat("fr-FR", {
@@ -54,7 +54,7 @@ function esc(s) {
   );
 }
 
-// ---------------------------------------------------------------- chargement
+// ---------------------------------------------------------------- loading
 
 async function load(refresh = false) {
   main.innerHTML = `<p class="loading">${
@@ -67,7 +67,7 @@ async function load(refresh = false) {
   route();
 }
 
-// ---------------------------------------------------------------- routage
+// ---------------------------------------------------------------- routing
 
 function route() {
   const [name, variant] = decodeURIComponent(location.hash.replace(/^#/, "")).split("/");
@@ -96,7 +96,7 @@ function setTab(view) {
   }
 }
 
-// ---------------------------------------------------------------- tableau de bord
+// ---------------------------------------------------------------- dashboard
 
 function renderDashboard() {
   setTab("dashboard");
@@ -114,7 +114,7 @@ function renderDashboard() {
   const totalVerdicts = Object.values(verdicts).reduce((a, b) => a + b, 0) || 1;
   const pct = (n) => (n / totalVerdicts) * 100;
 
-  // Un run sur deux tentatives, c'est le coût réel d'une capture réussie.
+  // One run for every two attempts is the real cost of a successful capture.
   const attemptsPerOk = verdicts.ok ? runs / verdicts.ok : 0;
 
   const dated = shots.filter((s) => s.latest);
@@ -123,7 +123,7 @@ function renderDashboard() {
   const pendingCount = shots.filter((s) => s.pending).length;
   const totalBytes = shots.reduce((n, s) => n + s.totalBytes, 0);
 
-  // Tous les viewports traversés, toutes captures confondues.
+  // All viewports covered across all captures.
   const viewports = new Set();
   for (const s of shots) for (const v of s.viewports) viewports.add(v);
 
@@ -200,7 +200,7 @@ function renderDashboard() {
   `),
   );
 
-  // Le tableau, trié du plus périmé au plus frais : c'est l'ordre qui informe.
+  // The table, sorted from stalest to freshest: that is the order that informs.
   const rows = [...shots].sort(
     (a, b) => (b.latest?.behind ?? 0) - (a.latest?.behind ?? 0),
   );
@@ -277,7 +277,7 @@ function renderDashboard() {
   main.append(table);
 }
 
-// ---------------------------------------------------------------- détail
+// ---------------------------------------------------------------- details
 
 function renderShot(shot, variant) {
   setTab("shot");
@@ -292,8 +292,8 @@ function renderShot(shot, variant) {
   current.shot = shot.name;
   current.variant = active;
 
-  // Par défaut on oppose les deux bouts de l'histoire : l'origine et l'état
-  // du jour. C'est la comparaison qu'on veut voir en arrivant.
+  // By default, compare the two ends of the story: the original and today's
+  // state. That is the comparison we want to see on arrival.
   if (changed || !versions.some((v) => v.blob === current.a)) {
     current.a = versions[versions.length - 1]?.blob ?? null;
     current.b = versions[0]?.blob ?? null;
@@ -376,7 +376,7 @@ function renderShot(shot, variant) {
   if (shot.runs.length) main.append(buildRunLog(shot));
 }
 
-// ---------------------------------------------------------------- rideau
+// ---------------------------------------------------------------- comparison curtain
 
 function buildCurtain(versions) {
   const a = versions.find((v) => v.blob === current.a);
@@ -391,7 +391,7 @@ function buildCurtain(versions) {
   const newer = pair[1];
   const sameBlob = a.blob === b.blob;
 
-  // Le pourcentage cumulé entre A et B, quand elles ne se touchent pas.
+  // The cumulative percentage between A and B when they do not touch.
   const from = Math.min(versions.indexOf(a), versions.indexOf(b));
   const to = Math.max(versions.indexOf(a), versions.indexOf(b));
   const steps = versions.slice(from, to).filter((v) => v.diff);
@@ -454,7 +454,7 @@ function buildCurtain(versions) {
   };
 
   // Le suivi vit sur window, pas sur le rideau : une capture de pointeur
-  // lâche dès que le curseur sort de l'image, et le glissement s'arrête net.
+  // releases as soon as the pointer leaves the image, and the drag stops cleanly.
   const onMove = (e) => {
     e.preventDefault();
     fromEvent(e);
@@ -470,7 +470,7 @@ function buildCurtain(versions) {
     window.addEventListener("pointerup", onUp);
   });
 
-  // Survol simple : on suit le curseur sans avoir à maintenir le bouton.
+  // Simple hover: follow the pointer without requiring the button to be held.
   curtain.addEventListener("mousemove", (e) => {
     if (e.buttons === 0 && e.shiftKey) fromEvent(e);
   });

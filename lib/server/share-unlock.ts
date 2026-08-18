@@ -19,39 +19,39 @@ import {
 } from "@/lib/server/view-shares";
 
 /**
- * Le DÉVERROUILLAGE d'un partage protégé par mot de passe — une seule fois,
- * pour toutes ses cibles (MIN-283).
+ * UNLOCK a password-protected share — just once,
+ * for all its targets (MIN-283).
  *
- * Deux surfaces le déclenchent : le formulaire d'une vue partagée
- * (`/share/[token]`) et celui d'une page publiée (`/p/[token]`). Elles ne
- * partagent pas leur rendu, mais elles partagent tout ce qui touche au
- * secret — la limite de tentatives, la borne avant scrypt, la comparaison en
- * temps constant, la valeur du cookie. C'est exactement ce qu'il ne faut pas
- * écrire deux fois : la deuxième copie est celle qui rate la prochaine
+ * Two surfaces trigger it: a shared view's form
+ * (`/share/[token]`) and of a published page (`/p/[token]`). They don't
+ * share their rendering, but they share everything related to the
+ * secret — the limit of attempts, the bound before scrypt, the comparison in
+ * constant time, the value of the cookie. This is exactly what you should not
+ * write twice: the second copy is the one that misses the next
  * correction.
  *
- * Ce qui reste à l'appelant : la redirection. Elle dépend de la route, et
- * `redirect()` lève — l'appeler ici masquerait le résultat de cette fonction.
+ * What is left for the caller: the redirection. It depends on the route, and
+ * `redirect()` raises — calling it here would hide the result of this function.
  *
- * ── Deux compteurs, pas un (MIN-347) ──────────────────────────────────────
+ * ── Two counters, not one (MIN-347) ─────────────────────────── ───────────
  *
- * La limite en mémoire coupe le martèlement pour rien, mais elle ne voit qu'une
- * instance et repart à zéro à chaque déploiement : sur la seule porte du produit
- * dont le secret est un mot de passe choisi à la main, ce n'était pas un frein,
- * c'était un délai. Les échecs sont donc rangés en base
- * ([share-unlock-attempts.ts](./share-unlock-attempts.ts)), et lus AVANT scrypt.
+ * The memory limit cuts the hammering for nothing, but it only sees one
+ * instance and starts from scratch on each deployment: on the only door of the product
+ * whose secret is a hand-chosen password, it was not a brake,
+ * it was a delay. Failures are therefore stored in base
+ * ([share-unlock-attempts.ts](./share-unlock-attempts.ts)), and read BEFORE scrypt.
  */
 
-/** Clé du namespace i18n PublicShare, rendue sous le formulaire. */
+/** Key for the i18n PublicShare namespace, rendered under the form. */
 export type ShareUnlockError = "wrongPassword" | "tooManyAttempts";
 
 export type ShareUnlockResult =
-  /** Déverrouillé (cookie posé), ou déjà public : il n'y a rien à déverrouiller. */
+  /** Unlocked (cookie set), or already public: there is nothing to unlock. */
   | { ok: true }
   | { ok: false; error: ShareUnlockError };
 
-/** Borne avant scrypt : au-delà, inutile de dériver — c'est faux. Alignée sur
-    les routes PUT de partage (MIN-118). */
+/** Bound before scrypt: beyond that, there's no point in deriving — it's wrong. Aligned with
+ sharing PUT routes (MIN-118). */
 const MAX_PASSWORD_LENGTH = 256;
 
 export async function unlockShareWithPassword({
@@ -61,12 +61,11 @@ export async function unlockShareWithPassword({
 }: {
   token: string;
   password: unknown;
-  /** Path du cookie sur host primaire : `/share/<token>` ou `/p/<token>`. Un
-      seul nom de cookie sert donc n'importe quel nombre de partages. */
+  /** Cookie path on primary host: `/share/<token>` or `/p/<token>`. A single cookie name therefore serves any number of shares. */
   cookiePath: string;
 }): Promise<ShareUnlockResult> {
   // Porte anonyme : on limite par IP visiteur — celle du dernier relais de
-  // confiance, jamais la tête de `x-forwarded-for` (choisie par l'appelant).
+  // trust, never the head of `x-forwarded-for` (chosen by the caller).
   const ip = clientIpFromHeaders(await headers());
   const { allowed } = checkSessionRateLimit(ip, `share-unlock:${token}`, {
     limit: 10,
@@ -77,15 +76,15 @@ export async function unlockShareWithPassword({
   if (!target) return { ok: false, error: "wrongPassword" };
   const { share } = target;
 
-  // Passé en « public » entre-temps : il n'y a plus rien à déverrouiller, la
+  // Switched to “public” in the meantime: there is nothing more to unlock, the
   // page se re-rend telle quelle.
   if (share.level !== "password" || !share.password_salt || !share.password_hash) {
     return { ok: true };
   }
 
-  // Deuxième ligne, celle qui survit à un déploiement : les échecs rangés en
-  // base. Elle se lit APRÈS la résolution du partage — sans partage, il n'y a
-  // rien à compter — mais AVANT scrypt, qui est ce qu'on refuse de payer.
+  // Second line, the one that survives deployment: failures listed in
+  // base. It is read AFTER the resolution of the division — without division, there is no
+  // nothing to count — but BEFORE scrypt, which is what we refuse to pay.
   if (!(await shareUnlockAttemptsLeft(share.id, ip))) {
     return { ok: false, error: "tooManyAttempts" };
   }
@@ -107,8 +106,8 @@ export async function unlockShareWithPassword({
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
-      // Sur domaine personnalisé, la racine : le path visible n'y contient
-      // jamais le token, et la VALEUR du cookie reste liée à ce partage-ci.
+      // On custom domain, the root: the visible path does not contain
+      // never the token, and the VALUE of the cookie remains linked to this sharing.
       path: publicCookiePath(await isCustomPublicHost(), cookiePath),
       maxAge: 7 * 24 * 3600,
     }
@@ -117,12 +116,12 @@ export async function unlockShareWithPassword({
 }
 
 /**
- * Le visiteur a-t-il le droit de voir CE partage ?
+ * Does the visitor have the right to see THIS share?
  *
- * Un partage « public » est ouvert ; un partage « password » ne révèle RIEN —
- * pas même le nom de ce qu'il protège — tant que le cookie ne correspond pas.
- * La valeur du cookie est déterministe sur (token, empreinte) : changer le mot
- * de passe invalide tous les cookies en circulation sans tenir la moindre
+ * A “public” share is open; a “password” sharing reveals NOTHING —
+ * not even the name of what it protects — as long as the cookie does not match.
+ * The value of the cookie is deterministic on (token, fingerprint): changing the password
+ * invalidates all cookies in circulation without holding the slightest
  * session.
  */
 export async function isShareUnlocked(share: {

@@ -49,8 +49,8 @@ describe("isSendShortcut", () => {
     });
   });
 
-  // Le contrat qui tient les deux modes : c'est la touche du saut de ligne, et
-  // c'est la seule qui reste quand l'envoi est passé sur Entrée.
+  // The contract which holds the two modes: it is the line break key, and
+  // this is the only one that remains when the send is switched to Enter.
   it("n'envoie JAMAIS sur Maj+Entrée, dans aucun mode", () => {
     expect(isSendShortcut(ev({ shiftKey: true }))).toBe(false);
     expect(isSendShortcut(ev({ shiftKey: true }), "enter")).toBe(false);

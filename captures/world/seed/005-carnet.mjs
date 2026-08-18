@@ -1,17 +1,17 @@
 /**
- * 005 — le carnet de Camille.
+ * 005 — Camille's notebook.
  *
- * Pour quelle capture : `scratchpad` — « la modale du carnet de tâches : deux
- * sections « ## », des tâches cochées et d'autres à faire, et une action de
+ * For which capture: `scratchpad` — “the task book modal: two
+ * “##” sections, tasks checked and others to do, and an action to
  * section visible au survol ».
  *
- * Le carnet est une note markdown UNIQUE par personne (`user_scratchpad`),
- * cross-projet, au format de plan de lib/plan.ts : `- [ ]` à faire, `- [~]` en
- * cours, `- [x]` fait, `- [-]` annulé.
+ * The notebook is a UNIQUE markdown note per person (`user_scratchpad`),
+ * cross-project, in lib/plan.ts plan format: `- [ ]` to do, `- [~]` in
+ * course, `- [x]` done, `- [-]` cancelled.
  *
- * Idempotent : la note n'est écrite que si elle n'existe pas. On ne réécrit
- * jamais par-dessus — le carnet est éditable à la main, et l'écraser
- * silencieusement ferait perdre ce qui aurait été ajusté pour une capture.
+ * Idempotent: the note is only written if it does not exist. We don't rewrite
+ * never over — the notebook can be edited by hand, and overwrite
+ * silently would lose what would have been adjusted for a capture.
  *
  *   node captures/world/seed/005-carnet.mjs --dry-run
  *   node captures/world/seed/005-carnet.mjs
@@ -22,9 +22,9 @@ import { resolvePeople } from "./_people.mjs";
 const DRY_RUN = process.argv.includes("--dry-run");
 
 /**
- * Le contenu du carnet. Des petites choses du moment qui ne méritent pas un
- * ticket — c'est exactement ce que le carnet est censé montrer, et il ne faut
- * donc surtout pas que ça ressemble à un board.
+ * The contents of the notebook. Little things of the moment that don't deserve a
+ * ticket — this is exactly what the notebook is supposed to show, and it should not
+ * so definitely not that it looks like a board.
  */
 const CONTENT = `## Before the release
 

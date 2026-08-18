@@ -10,11 +10,11 @@ import {
 } from "@/lib/server/feedback/events";
 
 /**
- * Promotion d'un post de feedback en issue (MIN-37) — le pont entre le board
- * et le tracker. L'issue naît en backlog sauf mention contraire de l'appelant
- * (le formulaire de création, quand c'est un humain qui promeut), sa
- * description embarque le retour et son compteur de votes. Le post prend
- * aussitôt le statut que dit l'issue, et le gardera aligné sur elle
+ * Promoting an issue feedback post (MIN-37) — the bridge between the board
+ * and the tracker. The issue is born in the backlog unless otherwise stated by the caller
+ * (the creation form, when it is a human who promotes), its
+ * description carries the return and its vote counter. The post takes
+ * as soon as the status says the issue, and will keep it aligned with it
  * (status-sync).
  */
 
@@ -30,20 +30,18 @@ export async function promoteFeedbackPost(params: {
   postId: string;
   actorId: string;
   projectName?: string | null;
-  /** Attribue la création + l'événement à l'agent MCP (via_mcp) au lieu du membre. */
+  /** Assigns the creation + event to the MCP agent (via_mcp) instead of the member. */
   mcpKeyId?: string | null;
   /**
-   * Ce que l'humain a rempli dans le formulaire de création avant de valider —
-   * effort, priorité, assigné, échéance, et son propre titre s'il l'a réécrit.
-   *
-   * Le retour ne sait rien de tout ça : il porte un besoin, pas un plan de
-   * travail. Ce qu'il peut transmettre (titre, texte, catégories) sert de
-   * point de départ ; le reste est un jugement d'équipe, et il se pose au
-   * moment de promouvoir plutôt qu'en rouvrant le ticket juste après.
-   *
-   * Omis (Numo, MCP, appels historiques) → le comportement d'avant : un ticket
-   * au backlog, titre et texte du retour.
-   */
+ * What the human filled in the creation form before validating —
+ * effort, priority, assigned, deadline, and his own title if he rewrote it.
+ *
+ * The returner knows none of this: he carries a need, not a plan for
+ * work. What it can transmit (title, text, categories) serves as a starting point; the rest is a team judgment, and it arises at the moment of promotion rather than by reopening the ticket immediately afterwards.
+ *
+ * Omitted (Numo, MCP, historical calls) → the behavior before: a ticket
+ * in the backlog, title and text of the return.
+ */
   input?: Record<string, unknown>;
 }): Promise<PromoteResult> {
   const service = getServiceClient();
@@ -56,7 +54,7 @@ export async function promoteFeedbackPost(params: {
     .is("deleted_at", null)
     .eq("id", params.postId)
     .maybeSingle();
-  // Un post mergé ou déjà promu ne se promeut pas (le canonique porte le lien).
+  // A merged or already promoted post is not promoted (the canonical has the link).
   if (!post || post.merged_into_id !== null || post.issue_id !== null) {
     return { ok: false, status: 404, errorKey: "issueNotFound" };
   }
@@ -68,17 +66,17 @@ export async function promoteFeedbackPost(params: {
     `---\n\nPromoted from the feedback board · ${post.vote_count as number} vote${(post.vote_count as number) > 1 ? "s" : ""}.`
   );
 
-  // Les catégories du post sont reprises telles quelles par l'issue (même
-  // projet, donc createIssueForProject les résout toutes par id).
+  // The categories of the post are taken as is by the issue (even
+  // project, so createIssueForProject resolves them all by id).
   const categoryIds = (
     (post as { feedback_post_categories?: { category_id: string }[] | null })
       .feedback_post_categories ?? []
   ).map((c) => c.category_id);
 
-  // Le formulaire l'emporte champ par champ, et le retour tient la valeur par
-  // défaut de ceux qu'il n'a pas remplis. `parent_id` est le seul écarté :
-  // faire naître le ticket d'un retour SOUS un autre ticket ne veut rien dire,
-  // et le formulaire ne le propose pas.
+  // The form takes it field by field, and the return takes the value by
+  // default of those he did not fill. `parent_id` is the only one left out:
+  // creating a return ticket UNDER another ticket means nothing,
+  // and the form does not offer it.
   const { parent_id: _ignored, ...override } = params.input ?? {};
   const created = await createIssueForProject({
     projectId: post.project_id as string,
@@ -102,9 +100,9 @@ export async function promoteFeedbackPost(params: {
   }
 
   const issueId = created.issue.id as string;
-  // Le statut du retour est celui que dit son ticket — y compris ici, à la
-  // seconde où le lien naît. Il valait « planned » d'office, ce qui promettait
-  // au public un travail prévu alors que le ticket partait au backlog.
+  // The status of the return is what its ticket says — including here, at the
+  // second when the link is born. It was automatically “planned”, which promised
+  // to the public a work planned while the ticket went to the backlog.
   const { error } = await service
     .from("feedback_posts")
     .update({
@@ -129,9 +127,8 @@ export async function promoteFeedbackPost(params: {
   return { ok: true, issue: created.issue };
 }
 
-/** Lie un post à une issue EXISTANTE (l'alternative à la promotion : le
-    travail est déjà tracké). Le statut public s'aligne immédiatement sur
-    l'issue, puis suit toutes ses transitions via status-sync. */
+/** Links a post to an EXISTING issue (the alternative to promotion: the
+ work is already tracked). The public status immediately aligns with the outcome, then tracks all its transitions via status-sync. */
 export async function linkFeedbackIssue(params: {
   postId: string;
   issueId: string;
@@ -164,9 +161,9 @@ export async function linkFeedbackIssue(params: {
     return { ok: false, status: 404, errorKey: "issueNotFound" };
   }
 
-  // La MÊME table que le reflet continu (status-sync) : le premier alignement
-  // et tous les suivants doivent donner le même résultat, sinon lier un ticket
-  // et le bouger d'un cran diraient deux choses différentes du même état.
+  // The SAME table as the continuous reflection (status-sync): the first alignment
+  // and all subsequent ones must give the same result, otherwise link a ticket
+  // and moving it a notch would say two different things about the same state.
   const status = feedbackStatusForIssue(issue.status) ?? "open";
   const { error } = await service
     .from("feedback_posts")
@@ -187,14 +184,14 @@ export async function linkFeedbackIssue(params: {
   return { ok: true };
 }
 
-/** Détache l'issue liée (le post garde son dernier statut public). */
+/** Detaches the linked issue (the post keeps its last public status). */
 export async function unlinkFeedbackIssue(
   postId: string,
   actorId: string | null,
   mcpKeyId: string | null = null
 ): Promise<boolean> {
   const service = getServiceClient();
-  // On lit l'issue liée avant de la nul­ler pour la nommer dans le fil.
+  // We read the linked issue before nullifying it to name it in the thread.
   const { data: before } = await service
     .from("feedback_posts")
     .select("issue_id")

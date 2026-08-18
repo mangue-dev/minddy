@@ -4,12 +4,12 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { emptyTrash, listTrash, TRASH_RETENTION_DAYS } from "@/lib/server/trash";
 
 /**
- * GET /api/me/trash — ce que je peux encore rattraper, tous projets confondus
- * (MIN-133). DELETE — vider la corbeille d'un coup.
+ * GET /api/me/trash — what I can still catch, all projects combined
+ * (MIN-133). DELETE — empty the trash at once.
  *
- * `retention_days` voyage avec la liste plutôt que d'être écrit en dur côté
- * client : la durée annoncée à l'écran et celle qu'applique le balayage nocturne
- * sont la même constante, dans lib/server/trash.ts.
+ * `retention_days` travels with the list rather than being written hard side
+ * client: the duration announced on the screen and that applied by night scanning
+ * are the same constant, in lib/server/trash.ts.
  */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);

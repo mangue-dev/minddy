@@ -39,14 +39,14 @@ export interface IssueDraft extends DraftBase {
   assignee_id: string | null;
   objective_id: string | null;
   due_date: string | null;
-  /** Cadence de répétition (MIN-136). Absente des brouillons écrits avant. */
+  /** Repeat rate (MIN-136). Absent from drafts written before. */
   recurrence?: RecurrenceCadence | null;
   category_ids: string[];
   /** Resources already added: storage references (the bucket keeps them) and
       resolved links. */
   resources: ResourceInput[];
-  /** Ce que le brouillon s'appelait avant MIN-184 — des brouillons portant
-      cette clé dorment déjà dans des navigateurs, `readDrafts` les migre. */
+  /** What the draft was called before MIN-184 — drafts with
+ this key are already sleeping in browsers, `readDrafts` migrates them. */
   attachments?: AttachmentInput[];
 }
 
@@ -60,7 +60,7 @@ export interface ObjectiveDraft extends DraftBase {
   /** Resources already added. Absent from drafts saved before objectives took
       any — read it defensively. */
   resources?: ResourceInput[];
-  /** Idem : la clé d'avant MIN-184, migrée à la lecture. */
+  /** Same: the key from before MIN-184, migrated for reading. */
   attachments?: AttachmentInput[];
 }
 
@@ -76,10 +76,10 @@ const keyFor = (kind: DraftKind) => `minddy:drafts:${kind}`;
 const byRecency = (a: DraftBase, b: DraftBase) => b.updatedAt - a.updatedAt;
 
 /**
- * Un brouillon écrit avant MIN-184 porte ses fichiers sous `attachments`. Il
- * dort dans un navigateur qu'aucun déploiement ne met à jour : sa clé est lue
- * ici et versée dans `resources`, faute de quoi restaurer un tel brouillon
- * perdrait silencieusement ce qu'on y avait joint.
+ * A draft written before MIN-184 has its files under `attachments`. It
+ * sleeps in a browser that no deployment updates: its key is read
+ * here and put into `resources`, otherwise restoring such a draft
+ * would silently lose what was attached to it.
  */
 function migrateDraft<K extends DraftKind>(draft: DraftFor<K>): DraftFor<K> {
   const legacy = (draft as { attachments?: AttachmentInput[] }).attachments;

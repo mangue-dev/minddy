@@ -1,27 +1,27 @@
 /**
- * Le vocabulaire des automatisations de projet (MIN-147) — logique PURE,
- * partagée client + serveur : le moteur en fait tourner les règles, l'éditeur de
- * règles en dessine les mêmes champs. AUCUN import `server-only`.
+ * The vocabulary of project automations (MIN-147) — PURE logic,
+ * shared client + server: the engine runs the rules, the editor of
+ * rules draws the same fields. NO import `server-only`.
  *
- * Une automatisation est un `quand … si … alors …` :
- *   • `when` — l'ÉVÉNEMENT qui la réveille. Il n'y en a que deux, parce que la
- *     boucle n'a besoin que de ceux-là : un changement de statut, et la fin d'un
- *     run ;
- *   • `if`   — des conditions sur le TICKET (effort, priorité, plan, catégories,
- *     assignation) ;
- *   • `then` — des actions : lancer Numo dans un mode, poser un statut, s'arrêter
- *     pour un humain, arrêter la chaîne.
+ * An automation is a conditional rule:
+ * • `when` — the EVENT that wakes it up. There are only two, because the
+ * loop only needs these: a status change, and the end of a
+ * run ;
+ * • `if` — conditions on the TICKET (effort, priority, plan, categories,
+ * assignment) ;
+ * • `then` — actions: start Numo in a mode, set a status, stop
+ * for a human, stop the chain.
  *
- * La matrice par effort de MIN-147 n'est PAS codée en dur : c'est le préréglage
- * `loop-by-effort`, un jeu de règles éditable comme un autre. C'est ce qui rend
- * la feature personnalisable sans la rendre compliquée à prendre en main.
+ * The MIN-147 effort matrix is NOT hardcoded: it is preset
+ * `loop-by-effort`, an editable ruleset like any other. This is what makes
+ * the feature customizable without making it complicated to use.
  *
- * UNE RÈGLE PAR ÉVÉNEMENT. Le moteur joue la PREMIÈRE règle qui matche et qui
- * n'a pas déjà été jouée sur cette chaîne (`played_rule_ids`). C'est ce qui
- * permet à deux règles de partager le même déclencheur pour décrire deux étapes
- * successives — « écrire le plan » puis « vérifier le plan » finissent toutes
- * deux sur un `run_finished intent=plan` — et c'est aussi ce qui coupe la boucle
- * quand l'action `set_status` redéclenche le crochet qui l'a produite.
+ * ONE RULE PER EVENT. The engine plays the FIRST rule that matches and which
+ * has not already been played on this chain (`played_rule_ids`). This is what
+ * allows two rules to share the same trigger to describe two successive steps
+ * — "write plan" then 'check plan' all end up
+ * two on one `run_finished intent=plan` * — and it's also what breaks the loop
+ * when the action `set_status` retriggers the hook that produced it.
  */
 
 import type { IssueEffort, IssuePriority, IssueStatus } from "@/lib/issue-constants";
@@ -32,90 +32,88 @@ import { hasPlanTasks } from "@/lib/plan";
 import { EFFORT_POINTS, effortToPoints } from "@/lib/cycle";
 
 /**
- * Garde-fou anti-runaway : au-delà, la chaîne s'arrête quoi qu'en disent les
- * règles. Même rôle qu'`AGENT_MAX_CONTINUATIONS` pour un run — huit étapes
- * couvrent largement le plus long parcours prévu (les quatre du mode l/xl, plus
- * une reprise après vérification en échec et ses conséquences).
+ * Anti-runaway safeguard: beyond that, the chain stops regardless of what the
+ * rules say. Same role as `AGENT_MAX_CONTINUATIONS` for a run — eight steps
+ * largely cover the longest planned route (the four in l/xl mode, plus
+ * a recovery after failed verification and its consequences).
  */
 export const MAX_CHAIN_STEPS = 8;
 
 /**
- * Reprises autorisées quand Numo échoue SA PROPRE vérification d'implémentation.
- * Une, et une seule : la première relance porte le rapport de vérification en
- * consigne, donc elle sait quoi corriger ; un deuxième échec sur le même sujet
- * dit que le ticket a besoin d'un humain, pas d'un tour de plus.
+ * Restarts allowed when Numo fails ITS OWN implementation check.
+ * One, and only one: the first retry carries the check report in
+ * log, so it knows what to fix; a second failure on the same topic
+ * says the ticket needs a human, not one more turn.
  */
 export const MAX_VERIFICATION_RETRIES = 1;
 
 /**
- * PAS de plafond de dépense par chaîne — décision assumée. Couper une chaîne en
- * plein milieu laisse un ticket à moitié fait et un utilisateur qui ne comprend
- * pas pourquoi : le travail s'arrête sans que personne ne l'ait demandé, entre
- * deux étapes qu'il croyait enchaînées. Ce qui borne la dépense reste le QUOTA
- * DU COMPTE (`checkAgentQuota`) : global, visible dans les réglages, et le même
- * pour tous les usages de l'IA. Une chaîne dit ce qu'elle a coûté quand elle
- * finit (cf. `postChainComment`) ; elle ne s'interrompt pas là-dessus.
+ * NO spending cap per channel — decision taken. Cutting a string in
+ * right in the middle leaves a half-done ticket and a user who doesn't understand
+ * why: the work stops without anyone asking, between
+ * two steps he thought were linked. What limits the expense remains the QUOTA
+ * OF THE ACCOUNT (`checkAgentQuota`): global, visible in the settings, and the same
+ * for all uses of the AI. A string says what it cost when it ends (see `postChainComment`); she doesn't interrupt there.
  */
 
-// ── Déclencheurs ─────────────────────────────────────────────────────────────
+// ── Triggers ────────────────────────────── ───────────────────────────────
 
 /**
- * QUI a changé le statut. Même vocabulaire que `resolveIssueSource`
- * ([lib/server/create-issue.ts](lib/server/create-issue.ts)) — une deuxième
- * taxonomie pour dire la même chose serait une divergence programmée —, plus
- * `automation` pour l'empreinte de la boucle elle-même.
+ * WHO changed the status. Same vocabulary as `resolveIssueSource`
+ * ([lib/server/create-issue.ts](lib/server/create-issue.ts)) — a second
+ * taxonomy to say the same thing would be scheduled divergence — plus
+ * `automation` for the loop fingerprint itself.
  *
- * C'est le levier qui empêche l'automatisation d'entrer en conflit avec le
- * travail manuel : « à faire » ne veut pas dire la même chose selon qui l'a
- * posé. Un humain qui déplace une carte demande que quelque chose démarre ; un
- * agent MCP qui range son ticket décrit ce qu'IL est en train de faire — lui
- * lancer Numo dessus, c'est mettre deux ouvriers sur le même établi.
+ * This is the lever that prevents automation from conflicting with
+ * manual work: "to do" does not mean the same thing depending on who put it in.
+ *. A human moving a card is asking for something to start; a
+ * MCP agent who puts away his ticket describes what HE is doing — him
+ * throwing Numo on it is putting two workers on the same workbench.
  */
 export const AUTOMATION_SOURCES = [
-  /** Un geste humain dans minddy (app web, palette, glisser-déposer). */
+  /** A human gesture in minddy (web app, palette, drag and drop). */
   "web",
   /**
-   * Un geste humain passé par l'ASSISTANT Numo (« passe MIN-42 en à faire »).
-   * C'est une demande, au même titre qu'un glisser-déposer — seul le clavier
-   * change. À ne surtout pas confondre avec `agent` ci-dessous.
-   */
+ * A human gesture made by the Numo ASSISTANT ("switches to MIN-42 to do").
+ * This is a request, just like a drag and drop — only the keyboard
+ * changes. Not to be confused with `agent` below.
+ */
   "numo",
-  /** Un agent branché sur le serveur MCP (Claude Code, Cursor…). */
+  /** An agent connected to the MCP server (Claude Code, Cursor, etc.). */
   "mcp",
   /**
-   * L'AGENT DE CODE de minddy alignant le statut sur son propre cycle de vie
-   * (`issue-status-sync`) : démarrage → `in_progress`, PR ouverte → `in_review`,
-   * PR fusionnée → `done`, PR REFUSÉE → `todo`. Personne n'a demandé ces
-   * écritures-là, elles décrivent l'état d'un run. Les compter comme une demande
-   * faisait redémarrer la boucle entière au moindre refus de PR.
-   */
+ * minddy's CODE AGENT aligning status to its own lifecycle
+ * (`issue-status-sync`): startup → `in_progress`, open PR → `in_review`,
+ * merged PR → `done`, PR DENIED → `todo`. Nobody asked for these
+ * entries, they describe the state of a run. Counting them as a request
+ * caused the entire loop to restart at the slightest rejection of PR.
+ */
   "agent",
-  /** La boucle elle-même (action `set_status`, remise en triage). */
+  /** The loop itself (action `set_status`, put back into sorting). */
   "automation",
-  /** La synchro du dépôt lié ou un webhook de la forge. */
+  /** The sync of the linked repository or a webhook from the forge. */
   "forge",
-  /** Une intégration projet (API de feedback…). */
+  /** Project integration (feedback API, etc.). */
   "integration",
-  /** Aucun acteur — récurrences, crons. */
+  /** No actors — recurrences, crons. */
   "system",
 ] as const;
 export type AutomationSource = (typeof AUTOMATION_SOURCES)[number];
 
 /**
- * L'origine d'une écriture, dans le vocabulaire des règles. `raw` vient de
- * `resolveIssueSource` — on ne le réimplémente pas ici, on le NARROWE (ce module
- * est pur, il ne peut pas importer un module `server-only`), et un code inconnu
- * retombe sur `system` plutôt que d'élargir le type en silence.
+ * The origin of a writing, in the rules vocabulary. `raw` comes from
+ * `resolveIssueSource` — we do not reimplement it here, we NARROW it (this module
+ * is pure, it cannot import a module `server-only`), and an unknown code
+ * falls on `system` rather than silently expanding the type.
  *
- * Deux drapeaux que `resolveIssueSource` ne connaît pas, et qui priment dans cet
- * ordre :
- *   • `viaAutomation` — la boucle elle-même. Elle ne doit jamais réagir à sa
- *     propre empreinte ;
- *   • `viaAgentRun` — le CYCLE DE VIE d'un run d'agent. `resolveIssueSource` le
- *     rend `numo`, comme l'assistant : or l'assistant relaie une DEMANDE humaine
- *     (« passe ce ticket en à faire ») quand la synchro de statut ne fait que
- *     décrire l'état d'un run. Les confondre obligeait à écarter les deux, et
- *     donc à refuser d'amorcer la boucle sur une demande légitime.
+ * Two flags that `resolveIssueSource` does not know, and which take precedence in this
+ * order:
+ * • `viaAutomation` — the loop itself. It should never react to its
+ * own fingerprint;
+ * • `viaAgentRun` — the LIFE CYCLE of an agent run. `resolveIssueSource` the
+ * renders `numo`, like the assistant: but the assistant relays a human REQUEST
+ * ("put this ticket to to do") when the status sync only
+ * describes the state of a run. Confusing them required dismissing the two, and therefore refusing to initiate the loop on a legitimate request.
  */
 export function automationSourceOf(params: {
   raw: string;
@@ -129,32 +127,31 @@ export function automationSourceOf(params: {
     : "system";
 }
 
-/** Les deux seuls événements dont la boucle a besoin. */
+/** The only two events the loop needs. */
 export type AutomationTrigger =
   | {
       type: "status_changed";
       to: IssueStatus[];
       /**
-       * Origines acceptées. ABSENT = toutes — c'est le sens le plus faible,
-       * donc le bon défaut pour une règle écrite à la main qui ne s'en soucie
-       * pas (et pour toutes celles déjà en base). Les préréglages, eux, le
-       * posent : cf. `HUMAN_SOURCES` / `WORKER_SOURCES`.
-       */
+ * Accepted origins. ABSENT = all — this is the weakest sense,
+ * therefore the good default for a hand-written rule that doesn't care about it
+ * (and for all those already in base). The presets, the
+ * pose: cf. `HUMAN_SOURCES` / `WORKER_SOURCES`.
+ */
       source?: AutomationSource[];
     }
   | { type: "run_finished"; intent: AgentLaunchIntent[]; outcome?: "ok" | "failed" };
 
 export type AutomationTriggerType = AutomationTrigger["type"];
 
-/** L'événement RÉEL, tel que les crochets le rapportent au moteur. */
+/** The ACTUAL event, as the brackets report it to the engine. */
 export type AutomationEvent =
   | {
       type: "status_changed";
       from: IssueStatus | null;
       to: IssueStatus;
-      /** Absent = origine inconnue : c'est le cas des événements SIMULÉS
-       *  (`simulateChain`), qui ne doivent jamais être filtrés là-dessus — une
-       *  estimation décrit le parcours nominal, pas un audit d'acteur. */
+      /** Absent = unknown origin: this is the case for SIMULATED
+ * (`simulateChain`) events, which should never be filtered on this — an estimation describes the nominal journey, not an actor audit. */
       source?: AutomationSource;
     }
   | { type: "run_finished"; intent: AgentLaunchIntent; outcome: "ok" | "failed" };
@@ -162,13 +159,13 @@ export type AutomationEvent =
 // ── Conditions ───────────────────────────────────────────────────────────────
 
 /**
- * Conditions sur le ticket. Toutes optionnelles, toutes cumulatives (ET). Un
- * champ absent ne filtre rien.
+ * Conditions on the ticket. All optional, all cumulative (AND). An absent
+ * field does not filter anything.
  *
- * `effort` accepte la valeur `"none"` pour « effort non renseigné ». C'est la
- * façon de traiter autrement le ticket sans effort : par défaut il suit les
- * règles du mode `m`, qui commencent justement par écrire un plan — lequel dira
- * la taille réelle, sans payer un appel modèle pour la deviner.
+ * `effort` accepts the value `"none"` for “effort not specified”. This is the
+ * way to otherwise handle the ticket effortlessly: by default it follows the
+ * rules of `m` mode, which starts with writing a plan — which will tell
+ * the actual size, without paying a model call to guess it.
  */
 export interface AutomationConditions {
   effort?: (IssueEffort | "none")[];
@@ -181,13 +178,13 @@ export interface AutomationConditions {
 // ── Actions ──────────────────────────────────────────────────────────────────
 
 /**
- * Une étape de la chaîne. `mode` reprend les trois façons NATIVES de lancer Numo
- * (les mêmes que les boutons de l'app, cf. `AGENT_LAUNCH_MODES`) plus `custom`,
- * qui porte une consigne libre.
+ * A step in the chain. `mode` includes the three NATIVE ways of launching Numo
+ * (the same as the app buttons, see `AGENT_LAUNCH_MODES`) plus `custom`,
+ * which carries a free setpoint.
  *
- * `model` et `reasoningLevel` sont le levier « un modèle par étape » : on passe
- * par OpenRouter, donc rien n'oblige à planifier un XL et à relire un diff de
- * trois lignes avec le même modèle. `null` = le défaut du lanceur.
+ * `model` and `reasoningLevel` are the “one model per step” lever: we pass
+ * through OpenRouter, so there is no obligation to plan an XL and reread a diff of
+ * three lines with the same model. `null` = launcher default.
  */
 export interface AutomationRunAction {
   type: "run_numo";
@@ -200,7 +197,7 @@ export interface AutomationRunAction {
 export type AutomationAction =
   | AutomationRunAction
   | { type: "set_status"; status: IssueStatus }
-  /** Point d'arrêt humain : la chaîne attend un « Continuer » explicite. */
+  /** Human breakpoint: The chain waits for an explicit "Continue". */
   | { type: "await_human"; message?: string }
   | { type: "stop" };
 
@@ -216,11 +213,11 @@ export interface AutomationRule {
 }
 
 /**
- * Modes offerts par l'éditeur de règles, dans l'ordre de la boucle. Déclaré ici
- * plutôt qu'importé de `launch-message.ts` : ce module-là traîne `next-intl` et
- * un import dynamique de tous les catalogues de messages, ce qu'un composant
- * client n'a aucune raison d'embarquer. Le TYPE, lui, vient bien de là — une
- * divergence casse la compilation.
+ * Modes offered by the rule editor, in loop order. Declared here
+ * rather than imported from `launch-message.ts`: this module drags `next-intl` and
+ * a dynamic import of all message catalogs, which a component
+ * client has no reason to embark on. The TYPE comes from there — a
+ * divergence breaks the compilation.
  */
 export const AUTOMATION_RUN_MODES: readonly (AgentLaunchMode | "custom")[] = [
   "plan",
@@ -230,14 +227,14 @@ export const AUTOMATION_RUN_MODES: readonly (AgentLaunchMode | "custom")[] = [
 ];
 
 /**
- * Coût de repli d'une étape, en USD, quand le projet n'a AUCUN historique de
- * runs à médianiser (`estimateChainCost`). Ordres de grandeur mesurés sur les
- * runs de minddy, pas des chiffres exacts : une estimation n'a jamais eu à être
- * juste, elle a à ne pas surprendre.
+ * Cost of falling back a step, in USD, when the project has NO history of
+ * runs to be medianized (`estimateChainCost`). Orders of magnitude measured on the
+ * minddy runs, not exact numbers: an estimate never had to be
+ * just, it has to not surprise.
  *
- * Une CONSTANTE, pas une clé `app_config` : seul `AI_MODEL_CONFIG_FIELDS` est
- * réglable côté admin, une clé hors de cette liste ne serait jamais posée par
- * personne.
+ * A CONSTANT, not a key `app_config`: only `AI_MODEL_CONFIG_FIELDS` is
+ * adjustable on the admin side, a key outside of this list would never be set by
+ * anyone.
  */
 export const DEFAULT_STEP_COST_USD: Record<AgentLaunchMode | "custom", number> = {
   plan: 0.08,
@@ -247,27 +244,27 @@ export const DEFAULT_STEP_COST_USD: Record<AgentLaunchMode | "custom", number> =
 };
 
 /**
- * Facteur de coût d'une étape selon l'EFFORT du ticket, la référence étant le M.
+ * Cost factor of a step according to the EFFORT of the ticket, the reference being the M.
  *
- * Planifier un XS et planifier un XL ne coûtent pas la même chose — ni le plan,
- * ni le code, ni la relecture. Un coût par étape indépendant de la taille donnait
- * une estimation plate (« XS et XL, 2 % chacun »), donc fausse aux deux bouts :
- * elle surestimait les petits tickets et surtout SOUS-ESTIMAIT les gros. Le
- * second bout est le grave : le plafond d'une chaîne dérive de cette estimation,
- * et un XL budgété comme un M s'arrête sur « budget » au milieu du travail.
+ * Planning an XS and planning an XL do not cost the same — neither the plan,
+ * nor the code, nor the proofreading. A cost per step independent of size gave
+ * a flat estimate ("XS and XL, 2% each"), therefore wrong at both ends:
+ * it overestimated the small tickets and especially UNDERESTIMATED the large ones. The
+ * second end is the serious one: the ceiling of a chain derives from this estimate,
+ * and an XL budgeted like an M stops on "budget" in the middle of the work.
  *
- * L'échelle n'est pas inventée ici : c'est `EFFORT_POINTS` (Fibonacci
- * xs1 s2 m3 l5 xl8), déjà la mesure de taille du produit pour la capacité des
- * cycles. Un effort non renseigné compte comme un M, comme partout ailleurs.
- * Deux endroits qui pèsent un ticket doivent le peser pareil.
+ * The scale is not invented here: it is `EFFORT_POINTS` (Fibonacci
+ * xs1 s2 m3 l5 xl8), already the product size measurement for the capacity of the
+ * cycles. Unreported effort counts as an M, like everywhere else.
+ * Two places that weigh a ticket must weigh it the same.
  *
- * (L'estimation reste un AFFICHAGE : rien ne s'interrompt dessus.)
+ * (The estimate remains a DISPLAY: nothing interrupts on it.)
  */
 export function effortCostFactor(effort: IssueEffort | null | undefined): number {
   return effortToPoints(effort) / EFFORT_POINTS.m;
 }
 
-/** Coût de repli d'une étape SUR CE TICKET — mode × taille. */
+/** Cost of folding one step ON THIS TICKET — mode × size. */
 export function stepCostUsd(
   mode: AgentLaunchMode | "custom",
   effort: IssueEffort | null | undefined,
@@ -275,7 +272,7 @@ export function stepCostUsd(
   return DEFAULT_STEP_COST_USD[mode] * effortCostFactor(effort);
 }
 
-// ── Le ticket, tel que les règles le lisent ──────────────────────────────────
+// ── The ticket, as the rules read it ──────────────────────────────────
 
 export interface AutomationIssueFacts {
   status: IssueStatus;
@@ -289,7 +286,7 @@ export interface AutomationIssueFacts {
 export interface AutomationMatchContext {
   event: AutomationEvent;
   issue: AutomationIssueFacts;
-  /** Règles déjà jouées sur la chaîne — une règle ne se rejoue jamais. */
+  /** Rules already played on the channel — a rule is never played again. */
   playedRuleIds: readonly string[];
 }
 
@@ -297,9 +294,9 @@ function triggerMatches(trigger: AutomationTrigger, event: AutomationEvent): boo
   if (trigger.type !== event.type) return false;
   if (trigger.type === "status_changed" && event.type === "status_changed") {
     if (!trigger.to.includes(event.to)) return false;
-    // Origine : on ne filtre que si la règle le demande ET que l'événement la
-    // porte. Un événement sans origine est un événement SIMULÉ — le filtrer
-    // ferait mentir l'estimation de coût, qui doit chiffrer le parcours nominal.
+    // Origin: we only filter if the rule requests it AND the event
+    // door. An event without an origin is a SIMULATED event — filter it
+    // would lie to the cost estimate, which must quantify the nominal journey.
     if (trigger.source && event.source && !trigger.source.includes(event.source)) {
       return false;
     }
@@ -307,8 +304,8 @@ function triggerMatches(trigger: AutomationTrigger, event: AutomationEvent): boo
   }
   if (trigger.type === "run_finished" && event.type === "run_finished") {
     if (!trigger.intent.includes(event.intent)) return false;
-    // `outcome` absent = les deux issues conviennent (rare, mais c'est le sens
-    // le plus faible, donc le bon défaut pour un champ optionnel).
+    // `outcome` absent = both outcomes agree (rare, but that's the meaning
+    // the weakest, therefore the correct default for an optional field).
     return trigger.outcome === undefined || trigger.outcome === event.outcome;
   }
   return false;
@@ -336,7 +333,7 @@ function conditionsMatch(
   return true;
 }
 
-/** Une règle s'applique-t-elle ici et maintenant ? Pure, testable seule. */
+/** Does a rule apply here and now? Pure, testable alone. */
 export function matchesRule(rule: AutomationRule, ctx: AutomationMatchContext): boolean {
   if (!rule.enabled) return false;
   if (ctx.playedRuleIds.includes(rule.id)) return false;
@@ -345,8 +342,8 @@ export function matchesRule(rule: AutomationRule, ctx: AutomationMatchContext): 
 }
 
 /**
- * La règle à JOUER pour cet événement : la première qui matche dans l'ordre du
- * jeu de règles. Une seule, jamais toutes — cf. l'en-tête du module.
+ * The rule to PLAY for this event: the first that matches in the order of the
+ * rule set. Only one, never all — cf. the module header.
  */
 export function nextRule(
   rules: readonly AutomationRule[],
@@ -356,10 +353,10 @@ export function nextRule(
 }
 
 /**
- * La règle qui IMPLÉMENTE, sans regarder son déclencheur : ce que joue une
- * reprise après une vérification en échec. Le déclencheur ne convient pas ici —
- * il décrit d'où l'étape vient normalement (« le plan est écrit »), et une
- * reprise ne vient pas de là. Ce qui la définit, c'est son action.
+ * The rule that IMPLEMENTS, without looking at its trigger: what a
+ * restart after a failed check plays. The trigger doesn't fit here —
+ * it describes where the step normally comes from ("the plan is written"), and a
+ * resume doesn't come from there. What defines it is its action.
  */
 export function findImplementRule(
   rules: readonly AutomationRule[],
@@ -377,14 +374,14 @@ export function findImplementRule(
   );
 }
 
-// ── Simulation d'une chaîne ──────────────────────────────────────────────────
+// ── Simulation of a string ───────────────────────── ─────────────────────────
 
 export interface SimulatedStep {
   ruleId: string;
   action: AutomationAction;
 }
 
-/** L'événement qu'une action produit en se terminant — null = fin de parcours. */
+/** The event that an action produces when terminating — null = end of run. */
 function eventAfter(action: AutomationAction): AutomationEvent | null {
   switch (action.type) {
     case "run_numo":
@@ -401,18 +398,17 @@ function eventAfter(action: AutomationAction): AutomationEvent | null {
 }
 
 /**
- * Déroule la chaîne À SEC : quelles étapes ces règles joueraient sur ce ticket,
- * tout allant bien. Sert à l'ESTIMATION affichée avant de lancer et à l'écran de
- * réglages (« un ticket M joue trois étapes »).
+ * Unrolls the string TO DRY: what steps these rules would play on this ticket,
+ * all being well. Used for the ESTIMATE displayed before launching and on the
+ * settings screen ("an M ticket plays three steps").
  *
- * Le vrai moteur fait exactement ce parcours-ci, un aller-retour de base par
- * étape ; c'est la même fonction de choix (`nextRule`) qui décide, donc la
- * simulation ne peut pas mentir sur l'ordre — seulement sur ce que la réalité y
- * ajoute (un run qui échoue, un budget qui tombe, une reprise).
+ * The real engine does exactly this route, a basic round trip per
+ * step; it is the same choice function (`nextRule`) which decides, so the
+ * simulation cannot lie about the order — only about what reality y
+ * adds (a run that fails, a budget that falls, a recovery).
  *
- * `throughHumanStop` : passer le point d'arrêt humain comme si quelqu'un avait
- * dit « continue » — c'est ce que l'estimation doit chiffrer (le parcours
- * complet), pas ce que la barre d'état doit annoncer.
+ * `throughHumanStop`: pass the human breakpoint as if someone had
+ * said "continue" — that's what the estimate should encrypt (the full journey), not what the status bar should announce.
  */
 export function simulateChain(
   rules: readonly AutomationRule[],
@@ -423,8 +419,8 @@ export function simulateChain(
   const played: string[] = [];
   let event: AutomationEvent | null =
     opts.from ?? { type: "status_changed", from: null, to: issue.status };
-  // Le plan s'écrit en chemin : une condition `hasPlan` doit voir le ticket tel
-  // qu'il sera à cette étape-là, pas tel qu'il est maintenant.
+  // The plan is written along the way: a condition `hasPlan` must see the ticket as
+  // that he will be at that stage, not as he is now.
   let facts = issue;
   let lastRunEvent: AutomationEvent | null = null;
 
@@ -437,8 +433,8 @@ export function simulateChain(
 
     if (action.type === "await_human") {
       if (!opts.throughHumanStop) break;
-      // Reprise : le moteur rejoue l'événement du DERNIER run de la chaîne — il
-      // n'y a rien d'autre à quoi rattacher la suite.
+      // Resume: the engine replays the event of the LAST run in the chain — it
+      // there is nothing else to connect the rest to.
       event = lastRunEvent;
       continue;
     }
@@ -453,21 +449,21 @@ export function simulateChain(
 }
 
 /**
- * Tout ce que les règles jouent sur la VIE d'un ticket, et non sur une seule
- * chaîne. Deux règles peuvent réagir à deux statuts différents — « écris le plan
- * à l'entrée en à faire » et « vérifie à l'entrée en revue » — et ce sont alors
- * DEUX chaînes, ouvertes à deux moments, séparées par le travail d'un humain.
+ * All rules play on the LIFE of a ticket, not a single
+ * string. Two rules can react to two different statuses — "write plan
+ * when entering todo" and "check when entering review" — and they are then
+ * TWO chains, opened at two times, separated by human work.
  *
- * `simulateChain` n'en voit qu'une : partie de « à faire », elle s'arrête avant
- * la revue. Un préréglage plan+vérification s'estimait donc à une étape au lieu
- * de deux, et un préréglage qui ne réagit qu'à l'entrée en revue s'affichait
- * carrément GRATUIT. Pour un écran dont toute la raison d'être est de dire ce
- * que ça coûte, c'était le pire endroit où se tromper.
+ * `simulateChain` sees none only one: part of “to do”, it stops before
+ * the review. A plan+verification preset was therefore considered one step instead of
+ * two, and a preset which only reacted to the review entry was displayed
+ * downright FREE. For a screen whose whole reason for being is to say what
+ * it costs, this was the worst place to go wrong.
  *
- * On ouvre donc une chaîne par statut auquel une règle réagit. Réserve connue :
- * un jeu de règles qui utiliserait `set_status` vers un statut qu'une AUTRE
- * règle guette compterait cette suite deux fois. Aucun préréglage ne le fait, et
- * ceci est une estimation — pas une facture.
+ * So we open a channel by status to which a rule reacts. Known reserve:
+ * a rule set that would use `set_status` to a status that an OTHER
+ * rule would count this sequence twice. No preset does this, and
+ * this is an estimate — not an invoice.
  */
 export function simulateIssueLifetime(
   rules: readonly AutomationRule[],
@@ -489,7 +485,7 @@ export function simulateIssueLifetime(
   );
 }
 
-/** Les modes de run qu'un parcours joue, dans l'ordre (estimation, affichage). */
+/** The run modes a course plays, in order (estimate, display). */
 export function simulatedRunModes(steps: readonly SimulatedStep[]): (AgentLaunchMode | "custom")[] {
   return steps
     .map((s) => (s.action.type === "run_numo" ? s.action.mode : null))
@@ -497,11 +493,11 @@ export function simulatedRunModes(steps: readonly SimulatedStep[]): (AgentLaunch
 }
 
 /**
- * Les règles à DÉMARQUER quand une vérification d'implémentation échoue et qu'on
- * reprend : celles qui implémentent et celles qui vérifient. La chaîne rejoue
- * alors son parcours normal (implémenter → vérifier) au lieu de s'arrêter faute
- * de règle non jouée — et le plan, lui, reste écrit : ce n'est pas lui qu'on
- * refait.
+ * The rules to UNMARK when an implementation check fails and we
+ * include: those that implement and those that check. The chain replays
+ * then its normal course (implement → verify) instead of stopping due to a fault
+ * of an unplayed rule — and the plan remains written: it is not the one that we
+ * redo.
  */
 export function rulesToReplayOnRetry(rules: readonly AutomationRule[]): string[] {
   return rules
@@ -515,7 +511,7 @@ export function rulesToReplayOnRetry(rules: readonly AutomationRule[]): string[]
     .map((rule) => rule.id);
 }
 
-// ── Lecture tolérante du jsonb ───────────────────────────────────────────────
+// ── Tolerant reading of jsonb ─────────────────────── ────────────────────────
 
 const STATUSES: readonly IssueStatus[] = [
   "triage",
@@ -530,14 +526,14 @@ const STATUSES: readonly IssueStatus[] = [
 const PRIORITIES: readonly IssuePriority[] = ["none", "low", "medium", "high", "urgent"];
 const EFFORTS: readonly (IssueEffort | "none")[] = ["xs", "s", "m", "l", "xl", "none"];
 const INTENTS: readonly AgentLaunchIntent[] = ["implement", "plan", "verify", "custom"];
-// Le vocabulaire complet, celui des modèles (cf. lib/agent-reasoning.ts) : une
-// liste recopiée ici serait une liste qui vieillit à part.
+// The complete vocabulary, that of models (see lib/agent-reasoning.ts): a
+// list copied here would be a list that ages separately.
 const REASONING: readonly ReasoningLevel[] = REASONING_LEVELS;
 
-/** Cap d'une consigne libre stockée dans une règle (le reste est du prompt). */
+/** Cap of a free instruction stored in a rule (the rest is from the prompt). */
 const MAX_RULE_PROMPT_CHARS = 4000;
 const MAX_RULE_NAME_CHARS = 120;
-/** Cap du nombre de règles d'un projet — au-delà, personne ne les relit. */
+/** Cap for the number of rules in a project — beyond that, no one rereads them. */
 export const MAX_AUTOMATION_RULES = 30;
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -604,7 +600,7 @@ function parseAction(raw: unknown): AutomationAction | null {
       if (typeof obj.reasoningLevel === "string" && (REASONING as readonly string[]).includes(obj.reasoningLevel)) {
         action.reasoningLevel = obj.reasoningLevel as ReasoningLevel;
       }
-      // Un mode `custom` sans consigne n'a rien à demander à l'agent.
+      // A `custom` mode without instructions does not require anything from the agent.
       if (action.mode === "custom" && !action.prompt) return null;
       return action;
     }
@@ -627,10 +623,9 @@ function parseAction(raw: unknown): AutomationAction | null {
 }
 
 /**
- * Lit les règles d'un jsonb. TOLÉRANTE À DESSEIN : ces règles viennent de la
- * base, où une écriture d'une version antérieure du produit peut en avoir laissé
- * une forme qu'on ne connaît plus. Une règle illisible est IGNORÉE — elle ne
- * fait pas tomber le moteur, qui joue les autres.
+ * Reads rules from a jsonb. TOLERANT BY PURPOSE: these rules come from the
+ * base, where a writing of a previous version of the product may have left
+ * a form that we no longer know. An unreadable rule is IGNORED — it does not drop the engine, which plays the others.
  */
 export function parseAutomations(raw: unknown): AutomationRule[] {
   if (!Array.isArray(raw)) return [];
@@ -663,12 +658,12 @@ export function parseAutomations(raw: unknown): AutomationRule[] {
   return rules;
 }
 
-// ── Préréglages ──────────────────────────────────────────────────────────────
+// ── Presets ─────────────────────────────── ───────────────────────────────
 
 /**
- * Ordre d'affichage : les deux qui enchaînent plusieurs étapes d'abord, puis les
- * trois qui n'en jouent qu'une — rangées dans l'ordre de la boucle
- * (planifier, implémenter, vérifier).
+ * Display order: the two that chain several steps first, then the
+ * three that play only one — arranged in loop order
+ * (plan, implement, verify).
  */
 export const AUTOMATION_PRESET_IDS = [
   "loop-by-effort",
@@ -683,38 +678,38 @@ export function isAutomationPresetId(value: unknown): value is AutomationPresetI
   return typeof value === "string" && (AUTOMATION_PRESET_IDS as readonly string[]).includes(value);
 }
 
-/** Efforts qui suivent le mode « m » : les moyens, et ceux qu'on n'a pas chiffrés. */
+/** Efforts that follow mode “m”: the means, and those that have not been quantified. */
 const MEDIUM_EFFORTS: (IssueEffort | "none")[] = ["m", "none"];
 const BIG_EFFORTS: (IssueEffort | "none")[] = ["l", "xl"];
 const SMALL_EFFORTS: (IssueEffort | "none")[] = ["xs", "s"];
 
 /**
- * ÉCRIRE DU CODE ne part que d'une DEMANDE humaine.
+ * WRITING CODE only starts from a human REQUEST.
  *
- * « À faire » ne veut pas dire la même chose selon qui l'a posé. Toi qui
- * déplaces une carte — ou qui dis à Numo de la déplacer, c'est le même geste et
- * la même intention —, tu demandes que ça démarre. Un agent MCP qui range son
- * ticket décrit ce qu'IL fait ; l'agent de code qui aligne un statut décrit où
- * en est SON run ; la forge rapporte l'état d'une PR. Aucune de ces trois-là
- * n'est une demande, et y répondre met deux ouvriers sur la même branche.
+ * “To do” does not mean the same thing depending on who asked it. You who
+ * move a card - or who tell Numo to move it, it's the same gesture and
+ * the same intention - you ask for it to start. An MCP agent who files his
+ * ticket describes what HE is doing; the code agent that aligns a described status where
+ * is ITS run; the forge reports the status of a PR. None of these three
+ * are requests, and fulfilling them puts two workers on the same branch.
  */
 const HUMAN_SOURCES: AutomationSource[] = ["web", "numo"];
 
 /**
- * VÉRIFIER, au contraire, accepte tout ce qui TRAVAILLE. « Un agent a fini,
- * minddy relit » est le meilleur usage de la boucle — et l'interdire au MCP la
- * priverait de son scénario le plus fort : Claude Code termine, passe le ticket
- * en revue, et la vérification part toute seule. Relire n'écrase le travail de
- * personne, contrairement à coder.
+ * CHECK, on ​​the contrary, accepts anything that WORKS. “An agent has finished,
+ * minddy rereads” is the best use of the loop — and prohibiting it from the MCP la
+ * would deprive it of its strongest scenario: Claude Code finishes, reviews the ticket
+ *, and the check goes away on its own. Rereading does not overwrite the work of
+ * anyone, unlike coding.
  *
- * Seules exclues : `automation` (l'empreinte de la boucle elle-même, sans quoi
- * une chaîne réagirait à son propre `set_status`), `integration` et `system`.
+ * Only excluded: `automation` (the fingerprint of the loop itself, without which
+ * a chain would react to its own `set_status`), `integration` and `system`.
  */
 const WORKER_SOURCES: AutomationSource[] = ["web", "numo", "mcp", "agent", "forge"];
 
-// `model` reste ABSENT des préréglages : un identifiant OpenRouter épinglé ici
-// vieillirait sans que personne ne le voie, et absent veut déjà dire « le défaut
-// du lanceur ». Le levier de coût des préréglages, c'est le raisonnement.
+// `model` remains MISSING from the presets: an OpenRouter identifier pinned here
+// would age without anyone seeing it, and absent already means “the defect
+// from the launcher”. The cost driver of presets is reasoning.
 const run = (mode: AgentLaunchMode, reasoningLevel: ReasoningLevel): AutomationRunAction => ({
   type: "run_numo",
   mode,
@@ -722,19 +717,16 @@ const run = (mode: AgentLaunchMode, reasoningLevel: ReasoningLevel): AutomationR
 });
 
 /**
- * La matrice de MIN-147, écrite en règles :
- *   xs, s  → implémentation directe ;
- *   m      → plan → implémentation → vérification de l'implémentation ;
- *   l, xl  → les quatre étapes, avec point d'arrêt humain après la vérif du plan.
+ * The MIN-147 matrix, written in rules:
+ * xs, s → direct implementation;
+ * m → plan → implementation → verification of implementation;
+ * l, xl → all four steps, with human breakpoint after verification of the plan.
  *
- * Deux détails qui font tout tenir :
- *   • « vérifier le plan » n'est pas un mode à part — c'est `mode: "plan"` sur un
- *     ticket qui A DÉJÀ un plan (`agentPlanPromptVariant` rend alors `reviewPlan`).
- *     D'où trois règles l/xl qui partagent le déclencheur `run_finished/plan`,
- *     départagées par `played_rule_ids` dans l'ordre où elles sont écrites ;
- *   • le niveau de raisonnement descend là où le travail est mécanique (vérifier
- *     un diff) et monte là où il ne l'est pas (cadrer un XL) : c'est le levier de
- *     coût par étape, sans épingler d'identifiant de modèle qui vieillirait.
+ * Two details that hold everything together:
+ * • “check the plan” is not a separate mode — it's `mode: "plan"` on a
+ * ticket which ALREADY HAS a plan (`agentPlanPromptVariant` then returns `reviewPlan`) (check
+ * a diff) and goes up where it is not (frame an XL): this is the lever of
+ * cost per step, without pinning a model identifier which would age.
  */
 function loopByEffortRules(): AutomationRule[] {
   const p = "loop-by-effort";
@@ -815,10 +807,9 @@ function loopByEffortRules(): AutomationRule[] {
 }
 
 /**
- * Encadrer le travail humain : l'agent cadre AVANT, contrôle APRÈS, et n'écrit
- * jamais le code. Le seul préréglage où les deux bouts de la boucle tournent
- * sans le milieu — pour les équipes qui veulent l'aide de l'agent sur ce qui se
- * relit (un plan, un diff) sans lui confier le clavier.
+ * Supervise human work: the agent frames BEFORE, controls AFTER, and never writes
+ * the code. The only preset where both ends of the loop rotate
+ * without the middle — for teams that want the agent's help on what's being reread (a shot, a diff) without handing over the keyboard.
  */
 function planAndVerifyRules(): AutomationRule[] {
   const p = "plan-and-verify";
@@ -856,9 +847,9 @@ function planOnlyRules(): AutomationRule[] {
 }
 
 /**
- * Droit au code : ni plan avant, ni vérification après. Le préréglage le moins
- * cher et le seul sans filet — c'est ce que sa description doit dire, parce que
- * sur un ticket mal décrit, personne ne relit avant la PR.
+ * Right to the code: no plan before, no verification after. The least expensive preset
+ * and the only one without a net — that's what its description should say, because
+ * on a poorly described ticket, no one proofreads until PR.
  */
 function implementOnlyRules(): AutomationRule[] {
   return [
@@ -899,16 +890,16 @@ export const AUTOMATION_PRESETS: AutomationPreset[] = [
   { id: "verify-only", rules: verifyOnlyRules },
 ];
 
-/** Les règles d'un préréglage (copie fraîche — l'appelant peut les éditer). */
+/** The rules of a preset (fresh copy — caller can edit them). */
 export function presetRules(id: AutomationPresetId): AutomationRule[] {
   return AUTOMATION_PRESETS.find((p) => p.id === id)?.rules() ?? [];
 }
 
 /**
- * Le préréglage dont ce jeu de règles vient, si les identifiants le disent. Sert
- * à l'écran de réglages : « tu es sur `loop-by-effort` » plutôt que « voici neuf
- * règles ». Null dès qu'une règle a été ajoutée ou retirée — un préréglage
- * modifié n'est plus un préréglage.
+ * The preset this ruleset comes from, if the identifiers say so. Serves
+ * on the settings screen: "you are on `loop-by-effort`" rather than "here are new
+ * rules". Null as soon as a rule has been added or removed — a modified preset
+ * is no longer a preset.
  */
 export function presetOfRules(rules: readonly AutomationRule[]): AutomationPresetId | null {
   for (const preset of AUTOMATION_PRESETS) {
@@ -919,48 +910,45 @@ export function presetOfRules(rules: readonly AutomationRule[]): AutomationPrese
   return null;
 }
 
-// ── Le préréglage, au COMPTE ─────────────────────────────────────────────────
+// ── The preset, in COUNT ──────────────────────── ─────────────────────────
 
 /**
- * Préférence de compte (Compte → Automatisations) : le préréglage qui gouverne
- * TOUS les projets dont je suis propriétaire. Stockée dans le `user_metadata`
- * Supabase, comme `numo_default_status` et les réglages de cycle.
+ * Account Preference (Account → Automations): The preset that governs
+ * ALL projects I own. Stored in the `user_metadata`
+ * Supabase, like `numo_default_status` and the cycle settings.
  *
- * Au compte et non au projet, parce qu'on ne reconfigure pas la même boucle à
- * chaque nouveau projet. L'objection habituelle — « un réglage de compte
- * piloterait des tickets dont il ne paie pas le dépôt » — ne tient pas ici : le
- * préréglage lu est celui du PROPRIÉTAIRE du projet, qui est aussi celui qui
- * paie (`billTo: projectOwner`) et le seul à pouvoir armer un projet. Payeur et
- * configurateur restent la même personne.
+ * By the account and not by the project, because we do not reconfigure the same loop at
+ * each new project. The usual objection — "an account setting
+ * would drive tickets for which it does not pay the deposit" — does not hold here: the preset read is that of the OWNER of the project, who is also the one who pays (`billTo: projectOwner`) and the only one who can arm a project. Payer and
+ * configurator remain the same person.
  *
- * Ce qui reste au projet, c'est l'INTERRUPTEUR : `projects.automations_enabled`,
- * un par projet — allumer la boucle sur son dépôt de production n'est pas la
- * même décision que sur un bac à sable.
+ * What remains for the project is the SWITCH: `projects.automations_enabled`,
+ * one per project — turning on the loop on its production repository is not the
+ * same decision as on a sandbox.
  */
 export const AUTOMATION_PRESET_META_KEY = "automation_preset";
 
 /**
- * SURSIS avant l'amorçage d'une chaîne, en minutes (Compte → Automatisations).
+ * DEPRISE before starting a chain, in minutes (Count → Automations).
  *
- * Faire glisser une carte vers « à faire » est un geste FAIBLE — on le fait en
- * triant, parfois par erreur, et on change d'avis dans la minute. Cliquer
- * « lancer Numo » est un geste FORT. Sans sursis, l'automatisation transforme le
- * geste faible en dépense immédiate ; c'est cette disproportion qu'on corrige.
+ * Dragging a card to "to do" is a WEAK move — we do it by sorting, sometimes by mistake, and change our mind within a minute. Click
+ * “casting Numo” is a STRONG gesture. Without reprieve, automation transforms the
+ * small gesture into an immediate expense; it is this disproportion that we correct.
  *
- * Sémantique du `for:` des alertes Prometheus : la condition doit tenir EN
- * CONTINU. Au réveil, le ticket doit toujours être dans le statut qui a ouvert
- * la chaîne — ce qui couvre, sans rien tracker de plus, « j'ai copié le prompt
- * pour le faire moi-même » (la copie déplace le ticket en `in_progress`), « je
- * l'ai remis en backlog », « je l'ai classé ».
+ * Semantics of `for:` of Prometheus alerts: the condition must hold EN
+ * CONTINUOUS. When you wake up, the ticket should still be in the status that opened
+ * the chain — which covers, without tracking anything more, "I copied the prompt
+ * to do it myself" (the copy moves the ticket to `in_progress`), "I
+ * put it back in the backlog", "I filed it .
  *
- * `0` = amorçage immédiat, comme avant. Ne vaut QUE pour l'amorçage : une chaîne
- * partie enchaîne ses étapes sans attendre.
+ * `0` = immediate boot, as before. ONLY valid for bootstrapping: a chain
+ * part continues its steps without waiting.
  */
 export const AUTOMATION_START_DELAY_META_KEY = "automation_start_delay_min";
 
-/** Assez pour se raviser, assez court pour que ça reste automatique. */
+/** Enough to change your mind, short enough for it to remain automatic. */
 export const DEFAULT_AUTOMATION_START_DELAY_MIN = 5;
-/** Les valeurs offertes à l'écran — au-delà, ce n'est plus un sursis. */
+/** The values ​​offered on the screen — beyond that, it is no longer a reprieve. */
 export const AUTOMATION_START_DELAY_CHOICES = [0, 2, 5, 10, 30] as const;
 const MAX_AUTOMATION_START_DELAY_MIN = 120;
 
@@ -974,7 +962,7 @@ export function resolveAutomationStartDelayMinutes(
   return Math.min(MAX_AUTOMATION_START_DELAY_MIN, Math.max(0, Math.round(raw)));
 }
 
-/** Le préréglage du compte, ou `null` — aucun, donc rien ne se déclenche. */
+/** The account preset, or `null` — none, so nothing triggers. */
 export function resolveAutomationPreset(
   meta: Record<string, unknown> | null | undefined,
 ): AutomationPresetId | null {
@@ -985,23 +973,23 @@ export function resolveAutomationPreset(
 // ── Personnalisation par EFFORT, au compte ───────────────────────────────────
 
 /**
- * Deux réglages par taille de ticket, à côté du préréglage :
- *   • sur quels efforts la boucle a le droit de tourner ;
- *   • avec quel modèle, effort par effort.
+ * Two settings per ticket size, next to the preset:
+ * • on what efforts the loop is allowed to run;
+ * • with what model, effort by effort.
  *
- * C'est ce qui remplace l'éditeur de règles : on garde la personnalisation qui
- * compte — « pas d'automatisation sur mes XL », « un petit modèle sur mes XS » —
- * sans demander de lire neuf lignes `quand/si/alors`. Ce qu'on y perd, et c'est
- * assumé : le modèle ne se choisit plus par PHASE (planifier vs vérifier), mais
- * par taille. Les préréglages continuent de doser le RAISONNEMENT par phase.
+ * This is what replaces the rule editor: we keep the customization which
+ * counts — “no automation on my XL”, “a small model on my XS” —
+ * without asking it to read nine lines of conditional syntax. What we lose there, and that is
+ * assumed: the model is no longer chosen by PHASE (plan vs. check), but
+ * by size. The presets continue to dose the REASONING per phase.
  *
- * L'effort non renseigné n'a pas sa ligne : il suit celle du M, comme partout
- * ailleurs (règles du mode `m`, points de cycle, facteur de coût).
+ * The uninformed effort does not have its line: it follows that of the M, as everywhere
+ * elsewhere (rules of `m` mode, cycle points, cost factor).
  */
 export const AUTOMATION_EFFORTS_META_KEY = "automation_efforts";
 export const AUTOMATION_MODELS_META_KEY = "automation_models";
 
-/** La ligne de réglages que suit un ticket : la sienne, ou celle du M. */
+/** The line of settings that a ticket follows: its own, or that of the Mr. */
 export function automationEffortKey(effort: IssueEffort | null | undefined): IssueEffort {
   return effort ?? "m";
 }
@@ -1009,9 +997,9 @@ export function automationEffortKey(effort: IssueEffort | null | undefined): Iss
 const ALL_EFFORTS: readonly IssueEffort[] = ["xs", "s", "m", "l", "xl"];
 
 /**
- * Les efforts sur lesquels la boucle tourne. Défaut : TOUS — quelqu'un qui
- * choisit un préréglage veut qu'il s'applique ; c'est le retrait qui est un
- * geste, pas l'inclusion. Seul un `false` explicite éteint une taille.
+ * The forces on which the loop rotates. Default: ALL — someone who
+ * chooses a preset wants it to apply; it's the removal that is a
+ * gesture, not the inclusion. Only an explicit `false` turns off a size.
  */
 export function resolveAutomationEfforts(
   meta: Record<string, unknown> | null | undefined,
@@ -1031,7 +1019,7 @@ export function isAutomationEffortEnabled(
   return resolveAutomationEfforts(meta)[automationEffortKey(effort)];
 }
 
-/** Modèle choisi par effort. Absent = le défaut du compte, comme un lancement manuel. */
+/** Model chosen by effort. Absent = account default, such as manual launch. */
 export function resolveAutomationModels(
   meta: Record<string, unknown> | null | undefined,
 ): Partial<Record<IssueEffort, string>> {
@@ -1053,12 +1041,12 @@ export function automationModelFor(
 }
 
 /**
- * Les règles qui gouvernent un PROJET : celles écrites sur le projet si elles
- * existent, sinon celles du préréglage de son propriétaire.
+ * The rules that govern a PROJECT: those written on the project if they
+ * exist, otherwise those of its owner's preset.
  *
- * `projects.automations` n'est plus la source normale — c'est une DÉROGATION,
- * qu'aucun écran n'écrit et que seuls l'API et le serveur MCP posent. La garder
- * coûte cette ligne-ci et évite d'enfermer les cas particuliers.
+ * `projects.automations` is no longer the normal source — it is an EXEMPTION,
+ * that no screen writes and that only the API and the MCP server pose. Keeping it
+ * costs this line and avoids enclosing special cases.
  */
 export function rulesForProject(
   projectRules: unknown,
@@ -1070,17 +1058,17 @@ export function rulesForProject(
   return preset ? presetRules(preset) : [];
 }
 
-// ── Forçage par ticket ───────────────────────────────────────────────────────
+// ── Force by ticket ─────────────────────────── ────────────────────────────
 
 /**
- * `issues.automation_override` : null = suit le projet.
+ * `issues.automation_override`: null = follows the project.
  *
- * ÉCRIT PAR LE PROPRIÉTAIRE DU PROJET, ET PAR PERSONNE D'AUTRE (MIN-339). Forcer
- * un préréglage ici, c'est décider que des runs d'agent partiront — sur le
- * quota, le plan et la clé BYOK du propriétaire, jamais sur ceux de qui a posé
- * le forçage. La garde vit dans `updateIssueFields` (403 `ownerOnly`) : aucun
- * écran n'écrit ce champ, seuls l'API et le serveur MCP le posent, donc c'est
- * là — et nulle part ailleurs — qu'il faut la (re)trouver.
+ * WRITTEN BY THE PROJECT OWNER, AND BY NOBODY ELSE (MIN-339). Force
+ * a preset here is to decide that agent runs will leave — on the
+ * quota, plan and BYOK key of the owner, never on those who set
+ * the force. The guard lives in `updateIssueFields` (403 `ownerOnly`): no
+ * screen writes this field, only the API and the MCP server ask it, so it's
+ * there — and nowhere else — that you have to (re)find it.
  */
 export type AutomationOverride =
   | { disabled: true }
@@ -1094,8 +1082,8 @@ export function parseAutomationOverride(raw: unknown): AutomationOverride | null
 }
 
 /**
- * Les règles qui gouvernent CE ticket : celles du projet, sauf si le ticket
- * force un préréglage — ou se retire complètement de l'automatisation.
+ * The rules that govern THIS ticket: those of the project, unless the ticket
+ * forces a preset — or opts out of automation altogether.
  */
 export function rulesForIssue(
   projectRules: readonly AutomationRule[],

@@ -10,33 +10,32 @@ import {
 } from "@/lib/subagent-favorites";
 
 /**
- * Les DEUX réglages de sous-agents qui se lisent en base (MIN-112) — la liste de
- * favoris et le plafond de parallélisme.
+ * The TWO subagent settings that read in base (MIN-112) — the favorites list and the parallelism cap.
  *
- * Séparés de [subagent-config.ts](subagent-config.ts) par MIN-224 : celui-ci est
- * importé par la boucle, qui tourne maintenant dans la microVM, et un module que
- * la boucle importe ne doit pas pouvoir atteindre le client Supabase en clé de
- * service. Ces deux fonctions-ci se lisent donc AVANT, côté fonction, et leurs
- * résultats descendent dans le job du tour.
+ * Separated from [subagent-config.ts](subagent-config.ts) by MIN-224: this is
+ * imported by the loop, which is now running in the microVM, and a module that
+ * the loop imports must not be able to reach the Supabase client in key of
+ * service. These two functions are therefore read BEFORE, on the function side, and their
+ * results go down to the job of the turn.
  *
- * Les deux passent par `app_config`, PAS par l'env — même mécanique que
- * `agent_model` (`getAppConfigValue`, cache 60 s) : réglable sans déploiement.
+ * Both go through `app_config`, NOT through the env — same mechanics as
+ * `agent_model` (`getAppConfigValue`, 60 s cache): adjustable without deployment.
  */
 
-/** Bornes du plafond calculé. Un seul sous-agent ne servirait à rien ; au-delà de
- *  six, ce n'est plus la VM qui limite mais le fournisseur (429) et la sandbox. */
+/** Calculated ceiling limits. A single sub-agent would be of no use; beyond
+ * six, it is no longer the VM which limits but the provider (429) and the sandbox. */
 const MIN_PARALLEL = 2;
 const MAX_PARALLEL = 6;
 
-/** Clé `app_config` de la liste de favoris (JSON : tableau de FavoriteSubagentModel). */
+/** Key `app_config` of the favorites list (JSON: array of FavoriteSubagentModel). */
 export const SUBAGENT_FAVORITES_CONFIG_KEY = "agent_subagent_favorites";
-/** Clé `app_config` du plafond de sous-agents simultanés (entier). */
+/** Concurrent subagent cap `app_config` key (integer). */
 export const SUBAGENT_MAX_PARALLEL_CONFIG_KEY = "agent_subagent_max_parallel";
 
 /**
- * Favoris servis au prompt système du parent. Surchargeables par `app_config` ;
- * un JSON illisible, un tableau vide ou une liste dont aucune entrée n'est valide
- * retombe sur le repli — le run garde une liste utilisable dans tous les cas.
+ * Favorites served to the parent's system prompt. Overloadable by `app_config` ;
+ * an unreadable JSON, an empty array or a list with no valid entries
+ * falls back — the run keeps a usable list in all cases.
  */
 export async function getSubagentFavorites(): Promise<FavoriteSubagentModel[]> {
   const raw = await getAppConfigValue(SUBAGENT_FAVORITES_CONFIG_KEY).catch(() => null);
@@ -48,17 +47,14 @@ export async function getSubagentFavorites(): Promise<FavoriteSubagentModel[]> {
 }
 
 /**
- * Plafond de sous-agents SIMULTANÉS, calculé au lancement d'après les ressources de
- * la VM (`os.availableParallelism()` — les vCPU réellement utilisables), borné à
- * [2, 6], surchargeable par `app_config`.
+ * Ceiling of SIMULTANEOUS subagents, calculated at launch according to the resources of
+ * the VM (`os.availableParallelism()` — the vCPUs actually usable), limited to
+ * [2, 6], overloadable by `app_config`.
  *
- * Commentaire honnête sur ce que ce calcul vaut : un sous-agent est I/O-BOUND (des
- * appels LLM et des allers-retours vers la sandbox, presque pas de CPU local), donc
- * les vCPU ne sont qu'un PROXY — ils disent la taille de la machine, pas le nombre
- * de filles qu'elle peut nourrir. Les vrais goulots sont ailleurs, et tous deux déjà
- * traités : la sandbox partagée (un seul écrivain, cf. `Subagents`) et les 429 du
- * fournisseur (repris par `streamCompletion`). D'où les bornes serrées : le calcul
- * évite d'empiler vingt filles sur une petite VM, il ne prétend pas dimensionner.
+ * Honest comment on what this math is worth: a subagent is I/O-BOUND (some LLM calls and round trips to the sandbox, almost no local CPU), so
+ * vCPUs are just a PROXY — they tell the size of the machine, not how many girls it has can feed. The real bottlenecks are elsewhere, and both have already been dealt with: the shared sandbox (a single writer, cf. `Subagents`) and the 429 from the
+ * provider (taken over by `streamCompletion`). Hence the tight bounds: the calculation
+ * avoids stacking twenty girls on a small VM, it does not pretend to dimension.
  */
 export async function maxParallelSubagents(): Promise<number> {
   const configured = await getAppConfigValue(SUBAGENT_MAX_PARALLEL_CONFIG_KEY).catch(() => null);

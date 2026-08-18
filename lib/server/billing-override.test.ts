@@ -7,13 +7,13 @@ import {
 } from "./billing-accounts";
 
 /**
- * Le plan OFFERT s'arrête tout seul.
+ * The OFFERED plan stops by itself.
  *
- * L'échéance n'est pas appliquée par un cron : c'est la RÉSOLUTION qui refuse
- * un override échu, à chaque lecture. C'est ce qui garantit que le droit tombe
- * à la seconde près même si le balayage horaire n'est jamais passé — et ce que
- * ces tests figent. Ils vérifient aussi le rattrapage : sous le cadeau fini,
- * l'utilisateur retrouve son VRAI plan, pas free par défaut.
+ * The deadline is not applied by a cron: it is the RESOLUTION which refuses
+ * an expired override, on each reading. This is what guarantees that the right falls
+ * to the nearest second even if the time scan is never passed — and what
+ * these tests freeze. They also check the catch-up: under the finished gift,
+ * the user finds their REAL plan, not free by default.
  */
 
 const NOW = new Date("2026-08-04T09:30:00.000Z").getTime();

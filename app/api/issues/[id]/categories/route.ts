@@ -5,7 +5,7 @@ import { setIssueCategories } from "@/lib/server/set-issue-categories";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// Borne du tableau (MIN-118) — un ticket ne porte jamais autant d'étiquettes.
+// Board terminal (MIN-118) — a ticket never has so many labels.
 const MAX_CATEGORY_IDS = 100;
 
 /** PUT /api/issues/[id]/categories { category_ids } — replace the issue's category set. */

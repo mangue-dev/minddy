@@ -25,39 +25,39 @@ import {
  * Minimal circular FAB that opens the global assistant panel. Hover reveals a
  * tooltip with the label — no permanent label. Hides while the panel is open.
  *
- * Fermer le panneau pendant un tour n'arrête plus Numo (la conversation vit dans
- * AssistantChatProvider) : le FAB porte alors le liseré animé partagé de l'app
- * tant que ça travaille, et redevient inerte dès que c'est fini. C'est son SEUL
- * signal — pas de pastille de contexte : ce que Numo regarde se lit dans le
- * panneau, au-dessus du composer, pas sur le bouton qui l'ouvre.
+ * Closing the panel during a turn no longer stops Numo (the conversation lives in
+ * AssistantChatProvider): the FAB then carries the shared animated border of the app
+ * as long as it works, and becomes inert again as soon as it is finished. It's his ONLY
+ * signal — no context badge: what Numo is looking at can be read in the
+ * panel, above the composer, not on the button that opens it.
  */
-/** Les pages où Numo est déjà joignable sans lui — cf. `hiddenForRoute`. */
+/** The pages where Numo is already reachable without him — cf. `hiddenForRoute`. */
 const HIDDEN_ROUTES = ["/pull-requests"];
 
 export function AssistantFab() {
   const { isOpen, toggle, fabSuppressed } = useAssistantPanel();
-  // Le booléen seul, pas tout le contexte de conversation (MIN-323) : `state`
-  // change à chaque token SSE, et le FAB se re-rendait à cette cadence-là
-  // pour lire une valeur qui ne bouge que deux fois par tour.
+  // The boolean alone, not the entire conversation context (MIN-323): `state`
+  // changes with each SSE token, and the FAB returns at this rate
+  // to read a value that only moves twice per revolution.
   const isBusy = useAssistantBusy();
   const chordArmed = useChordPrefix() === CHORD_PREFIX;
   const t = useTranslations("Assistant");
   const tk = useTranslations("Keyboard");
   /**
-   * Pull requests : le composer du fil est épinglé en bas, avec `@Numo` dans ses
-   * suggestions, et le FAB tombe pile sur son bouton d'envoi (MIN-162).
+   * Pull requests: the thread's composer is pinned at the bottom, with `@Numo` in its
+   * suggestions, and the FAB hits its send button (MIN-162).
    *
-   * La page Agents était ici aussi, et c'était trop grossier : la route ne dit
-   * pas ce que la page MONTRE. La page routines affiche une liste sans aucun
-   * composer, et Numo y devient injoignable à la souris alors que rien ne le
-   * recouvre. C'est donc la conversation d'agent elle-même qui se déclare
-   * (`useSuppressAssistantFab`), où qu'elle soit montée — conversation ouverte,
-   * passage de routine ouvert, modale d'un ticket.
+   * The Agents page was here too, and it was too crude: the route doesn't say
+   * not what the page SHOWS. The routines page displays a list without any
+   * compose, and Numo becomes unreachable with the mouse even though nothing
+   * covers. It is therefore the agent conversation itself which declares itself
+   * (`useSuppressAssistantFab`), wherever it is mounted — open conversation,
+   * an open routine run, or an issue modal.
    */
   const pathname = usePathname();
   const hiddenForRoute = HIDDEN_ROUTES.some((route) => pathname.startsWith(route));
-  // Mode zen (MIN-134) : le FAB part avec le reste du chrome. Numo reste
-  // joignable au clavier (G puis A), et son panneau s'ouvre par-dessus.
+  // Zen mode (MIN-134): the FAB leaves with the rest of the chrome. Numo remains
+  // accessible from the keyboard (G then A), and its panel opens above.
   const { zen } = useZenMode();
 
   return (
@@ -70,8 +70,8 @@ export function AssistantFab() {
           exit={{ opacity: 0, y: 6, scale: 0.92 }}
           transition={{ ...transitions.gentle, delay: 0.35 }}
           className={cn(
-            // `assistant-fab-anchor` ré-ancre le FAB au coin du shell centré
-            // sur ultrawide (≥2200px) — voir globals.css `.ultrawide-canvas`.
+            // `assistant-fab-anchor` re-anchors the FAB to the corner of the centered shell
+            // on ultrawide (≥2200px) — see globals.css `.ultrawide-canvas`.
             "assistant-fab-anchor",
             // Hidden below the 768px mobile cutover — there the assistant is
             // reached from the mobile navbar's Numo button (single entry point),
@@ -82,9 +82,9 @@ export function AssistantFab() {
             "pb-[env(safe-area-inset-bottom)]",
           )}
         >
-          {/* `keepMounted` : le bouton ne doit pas être remonté quand le liseré
-              s'allume ou s'éteint — sinon son animation d'entrée rejouerait à
-              chaque bascule. */}
+          {/* `keepMounted`: the button must not be raised when the border
+ turns on or off — otherwise its entry animation would replay
+ each toggle. */}
           <AgentBeam
             active={isBusy}
             size="sm"
@@ -102,9 +102,9 @@ export function AssistantFab() {
                   className={cn(
                     "relative inline-flex items-center justify-center rounded-full",
                     "h-10 w-10 md:h-11 md:w-11",
-                    // Pas de `backdrop-blur` : `bg-card/95` masque déjà
-                    // entièrement ce qu'il y a derrière. Le flou coûtait un
-                    // calque de composition pour un effet invisible (MIN-323).
+                    // No `backdrop-blur`: `bg-card/95` already hides
+                    // completely what is behind it. The vagueness cost
+                    // composition layer for an invisible effect (MIN-323).
                     "bg-card/95",
                     "ring-1 ring-foreground/10 hover:ring-foreground/20",
                     "text-foreground",
@@ -115,10 +115,10 @@ export function AssistantFab() {
                     "cursor-pointer",
                   )}
                 >
-                  {/* `animated={false}` (MIN-323) : le visage animait des
-                      attributs SVG en boucle, y compris masqué sous 768 px
-                      (`max-desktop:hidden` masque sans démonter). Le signal
-                      d'activité passe déjà par l'`AgentBeam` ci-dessus. */}
+                  {/* `animated={false}` (MIN-323): the face animated
+ SVG attributes loop, including masking under 768 px
+ (`max-desktop:hidden` mask without unmounting). The activity signal
+ already passes through the `AgentBeam` above. */}
                   <NumoIcon animated={false} className="size-5 text-foreground" />
                 </motion.button>
               </TooltipTrigger>
@@ -136,10 +136,10 @@ export function AssistantFab() {
               </TooltipContent>
             </Tooltip>
           </AgentBeam>
-          {/* G-chord armed: surface the completion key (G then A). Posé HORS du
-              liseré (dont le wrapper est `overflow: hidden` à l'allumage) et
-              calé sur le conteneur `fixed`, qui a exactement la taille du
-              bouton — sinon la pastille serait rognée pendant que ça travaille. */}
+          {/* G-chord armed: surface the completion key (G then A). Placed OUTSIDE
+ border (whose wrapper is `overflow: hidden` when powered on) and
+ wedged on the `fixed` container, which is exactly the size of the
+ button — otherwise the pad would be trimmed while it works. */}
           <AnimatePresence>
             {chordArmed && (
               <motion.span

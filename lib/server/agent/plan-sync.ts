@@ -5,16 +5,16 @@ import { parsePlan, setTaskState, type PlanTaskState } from "@/lib/plan";
 import { planStateChanges } from "./plan-sync-core";
 
 /**
- * Miroir des états d'avancement du checklist de l'agent (tool update_plan) vers
- * le plan d'implémentation de l'issue liée (MIN-46) — l'issue reflète la progression.
+ * Mirror the progress states of the agent's checklist (tool update_plan) to
+ * the implementation plan of the linked issue (MIN-46) — the issue reflects the progress.
  *
- * Contrainte de sûreté : ne bascule QUE l'état des cases déjà présentes dans le
- * plan de l'issue. Jamais de réécriture, réordonnancement ni suppression du TEXTE
- * des tâches de l'utilisateur. Pas de plan, ou aucune étape de l'agent ne
- * correspond à une tâche existante → no-op.
+ * Safety constraint: ONLY toggles the state of the boxes already present in the
+ * outcome plan. Never rewrite, reorder or delete TEXT
+ * from user tasks. No plan, or no agent step does
+ * corresponds to an existing task → no-op.
  *
- * Best-effort et non bloquant : tout le corps est enveloppé pour ne JAMAIS lever
- * dans le run de l'agent (échec DB, plan malformé… sont avalés).
+ * Best-effort and non-blocking: the whole body is wrapped to NEVER raise
+ * in the agent run (DB failure, malformed plan, etc. are swallowed).
  */
 export async function syncIssuePlanStates(
   issueId: string,
@@ -24,10 +24,10 @@ export async function syncIssuePlanStates(
     if (!issueId || steps.length === 0) return;
 
     const service = getServiceClient();
-    // Read-compute-CAS, avec quelques reprises : on n'écrit QUE si `plan` n'a pas
-    // changé depuis la lecture (write full-column) → jamais d'écrasement d'une
-    // édition user/MCP concurrente (perte de mise à jour). Best-effort : on
-    // abandonne après quelques tentatives.
+    // Read-compute-CAS, with a few repetitions: we ONLY write if `plan` does not have
+    // changed since reading (write full-column) → never overwriting a
+    // concurrent user/MCP edition (loss of update). Best effort: we
+    // gives up after a few attempts.
     for (let attempt = 0; attempt < 3; attempt++) {
       const { data } = await service
         .from("issues")
@@ -43,9 +43,9 @@ export async function syncIssuePlanStates(
       const changes = planStateChanges(tasks, steps);
       if (changes.length === 0) return;
 
-      // Bascule état par état : setTaskState réécrit UNIQUEMENT le marqueur d'une
-      // ligne (via task.line) et laisse chaque autre octet intact → le texte des
-      // tâches ne peut pas être altéré.
+      // Switch state by state: setTaskState ONLY rewrites the marker of a
+      // line (via task.line) and leaves every other byte intact → the text of
+      // tasks cannot be altered.
       let next = plan;
       for (const change of changes) {
         const task = tasks[change.index];
@@ -55,7 +55,7 @@ export async function syncIssuePlanStates(
       if (next === plan) return;
 
       // CAS : garde `.eq("plan", plan)` → l'update ne s'applique que si personne n'a
-      // touché la colonne entre-temps. Zéro ligne = édition concurrente → on recalcule.
+      // touched the column in the meantime. Zero line = concurrent edition → we recalculate.
       const { data: updated } = await service
         .from("issues")
         .update({ plan: next })
@@ -66,7 +66,7 @@ export async function syncIssuePlanStates(
       if (updated && updated.length > 0) return;
     }
   } catch (err) {
-    // Non bloquant : un échec de synchro ne doit jamais faire échouer le run.
+    // Non-blocking: a sync failure should never cause the run to fail.
     console.error("[agent-plan-sync] failed:", (err as Error).message);
   }
 }

@@ -39,20 +39,17 @@ import type { Project } from "./types";
  * write (triggers → realtime.broadcast_changes, see the realtime_broadcast
  * migration) on two private topics, and this provider is the only subscriber:
  *
- *   user:{userId}       — notifications, my project list, my invitations
- *   project:{projectId} — content of a project I'm a member of
+ * user:{userId} — notifications, my project list, my invitations
+ * project:{projectId} — content of a project I'm a member of
  *
- * Un événement fait DEUX choses, dans cet ordre. La ligne diffusée est écrite
- * dans les caches de tickets tout de suite (lib/optimistic/remote-issue-echo.ts)
- * — la charge utile porte la ligne entière, il n'y a rien à demander au serveur
- * pour l'afficher ; puis les caches sont invalidés, ce qui réconcilie derrière
- * ce que la ligne ne dit pas. Sans le premier temps, un ticket créé par Numo
- * n'apparaissait qu'au retour du refetch, soit plusieurs secondes sur `/all`
- * (`/api/me/board` est une route agrégée). Le regroupement par clé absorbe les
- * rafales d'écritures (Numo/MCP) en un seul rafraîchissement.
- *
- * Subscriptions are gated on the restored session: joining with the anon token
- * would be refused on private channels (and was how the old postgres_changes
+ * An event does TWO things, in that order. The broadcast line is written
+ * to the ticket caches right away (lib/optimistic/remote-issue-echo.ts)
+ * — the payload carries the entire line, there is nothing to ask the server
+ * to display it; then the caches are invalidated, which reconciles behind
+ * what the line doesn't say. Without the first time, a ticket created by Numo
+ * only appeared when the refetch returned, i.e. several seconds on `/all`
+ * (`/api/me/board` is an aggregate route). Grouping by key absorbs
+ * bursts of writes (Numo/MCP) in a single refresh. postgres_changes
  * bridges silently died).
  *
  * Project topics are opened for ALL my projects, not just the one in the URL
@@ -62,14 +59,14 @@ import type { Project } from "./types";
  * them frozen until its staleTime expired. The set is bounded (see
  * MAX_PROJECT_CHANNELS) and reconciled, never torn down wholesale.
  *
- * Le pont porte aussi la REPRISE après absence (onglet caché, veille) : voir
- * l'effet de reprise en bas de fichier et lib/realtime-resume.ts. Une socket
- * morte met des dizaines de secondes à l'apprendre ; le rattrapage des caches,
- * lui, part tout de suite.
+ * The bridge also carries the RESUME after absence (hidden tab, standby): see
+ * the effect of resumption at the bottom of the file and lib/realtime-resume.ts. A dead socket
+ * takes tens of seconds to learn; catching up with caches,
+ * he leaves immediately.
  *
- * CE QUI N'EST PLUS ICI : la table d'aiguillage « quel événement rafraîchit
- * quoi » vit dans lib/realtime-keys.ts, pure et testée (MIN-346). Ce fichier ne
- * garde que le cycle de vie des canaux — ce que vitest ne peut pas monter.
+ * WHAT IS NO LONGER HERE: the switching table “which event refreshes
+ * what” lives in lib/realtime-keys.ts, pure and tested (MIN-346). This file does not
+ * only keeps the lifecycle of the channels — which vites cannot mount.
  */
 
 // broadcast_changes names its events after TG_OP; no wildcard, so bind all three.
@@ -78,14 +75,14 @@ const BROADCAST_EVENTS = ["INSERT", "UPDATE", "DELETE"] as const;
 const INVALIDATE_COALESCE_MS = 200;
 
 /**
- * Ce qu'un événement de projet écrit dans les caches AVANT toute invalidation.
+ * What a project event writes to the caches BEFORE any invalidation.
  *
- * Une diffusion porte la ligne : l'écrire tout de suite, c'est la seule façon
- * qu'un ticket créé par Numo (ou par le MCP, ou par un coéquipier) apparaisse
- * *à l'instant* plutôt qu'au retour du refetch — et pour `/all` ce refetch est
- * `/api/me/board`, plusieurs secondes. L'invalidation qui suit reste : elle
- * réconcilie ce que la ligne ne dit pas (catégories liées, pièces jointes, vues
- * dérivées calculées en SQL). Voir lib/optimistic/remote-echo.ts.
+ * A broadcast carries the line: write it right away, it's the only way
+ * that a ticket created by Numo (or by the MCP, or by a teammate) will appear
+ * *right now* rather than when the refetch returns — and for `/all` this refetch is
+ * `/api/me/board`, several seconds. The following invalidation remains: it
+ * reconciles what the line does not say (related categories, attachments, derived views
+ * calculated in SQL). See lib/optimistic/remote-echo.ts.
  */
 function applyProjectEvent(
   queryClient: QueryClient,
@@ -115,10 +112,10 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     const read = () => setProjects(queryClient.getQueryData<Project[]>(["projects"]));
     read();
     return queryClient.getQueryCache().subscribe((event) => {
-      // La clé EXACTE, pas son préfixe. C'est `["projects"]` qu'on relit, et une
-      // seconde clé commençant par « projects » (react-query en pose une au
-      // MONTAGE de son observateur, donc pendant le rendu d'un autre composant)
-      // faisait alors remonter un `setState` ici — React le refuse à voix haute :
+      // The EXACT key, not its prefix. It's `["projects"]` that we reread, and a
+      // second key starting with “projects” (react-query sets one at the
+      // MOUNTING its observer, therefore while rendering another component)
+      // then raised a `setState` here — React refuses it out loud:
       // « Cannot update a component while rendering a different component ».
       const key = event.query.queryKey;
       if (key.length === 1 && key[0] === "projects") read();
@@ -164,14 +161,14 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   );
 
   /**
-   * Rattrapage : tout ce qui est monté dans ces périmètres repart au serveur.
-   *
-   * Un seul parcours du cache, pas un par clé : le détail du pourquoi est dans
-   * lib/realtime-catch-up.ts. La couverture est identique à la boucle qu'il
-   * remplace — mêmes préfixes, requêtes inactives comprises —, ce qui change est
-   * le nombre de balayages (MIN-300), et le fait que la volée de rejoins qui
-   * suit une coupure n'en déclenche qu'un pour tout le monde (MIN-305).
-   */
+ * Catch-up: everything that is mounted in these perimeters returns to the server.
+ *
+ * Only one search of the cache, not one per key: the details of why are in
+ * lib/realtime-catch-up.ts. The coverage is identical to the loop it
+ * replaces—same prefixes, including inactive queries—what changes is
+ * the number of scans (MIN-300), and the fact that the volley of rejoins that
+ * follows a cut only triggers one for everyone (MIN-305).
+ */
   const catchUpQueue = useRef<CatchUpQueue | null>(null);
   if (catchUpQueue.current === null) {
     catchUpQueue.current = createCatchUpQueue((matches) => {
@@ -186,9 +183,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   }, []);
   const catchUp = useCallback(
     (keys: QueryKey[]) => {
-      // Point d'appel de la trace (MIN-307) : une ligne `catchUp` suivie d'un
-      // `longtask` est LA signature de la vague d'invalidation, et `cache` dit
-      // combien de requêtes ont été parcourues. No-op trace éteinte.
+      // Trace call point (MIN-307): a `catchUp` line followed by a
+      // `longtask` is THE signature of the invalidation wave, and `cache` says
+      // how many queries have been searched. No-op trace off.
       trace("catchUp", {
         keys: keys.length,
         cache: queryClient.getQueryCache().getAll().length,
@@ -203,7 +200,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       topic: string,
       keysFor: (change: BroadcastChange) => Invalidation[],
       scopeKeys: QueryKey[],
-      /** Écriture immédiate dans les caches, jouée avant l'invalidation. */
+      /** Immediate write to caches, played before invalidation. */
       apply?: (change: BroadcastChange) => void
     ) => {
       const supabase = getSupabase();
@@ -221,8 +218,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         for (const event of BROADCAST_EVENTS) {
           channel.on("broadcast", { event }, ({ payload }) => {
             const change = payload as BroadcastChange;
-            // La ligne d'abord (elle est dans la charge utile, c'est ce que
-            // l'utilisateur voit), le rafraîchissement ensuite.
+            // The line first (it's in the payload, that's what
+            // the user sees), the refresh then.
             apply?.(change);
             for (const invalidation of keysFor(change)) {
               invalidateCoalesced(invalidation);
@@ -288,16 +285,16 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   }, [userId, topicIds, openScope, queryClient]);
 
   /**
-   * Reprise après une absence — l'onglet revient au premier plan, la machine
-   * sort de veille.
-   *
-   * C'est le seul chemin qui remet la page à jour dans ce cas : le refetch au
-   * focus est désactivé, et l'événement `online` que guette `refetchOnReconnect`
-   * ne part pas d'une veille. Restait la socket, qui est justement ce qui vient
-   * de mourir et qui met des dizaines de secondes à s'en apercevoir — le détail
-   * est dans lib/realtime-resume.ts. On rattrape donc les caches SANS l'attendre
-   * (c'est ce que l'utilisateur voit), et on la réveille en parallèle.
-   */
+ * Resume after an absence — the tab returns to the foreground, the machine
+ * wakes up.
+ *
+ * This is the only path that brings the page up to date in this case: the refetch at
+ * focus is disabled, and the `online` event that `refetchOnReconnect`
+ * is watching for does not start from a day before. There remained the socket, which is precisely what has just
+ * died and which takes tens of seconds to notice - the details
+ * are in lib/realtime-resume.ts. We therefore catch the caches WITHOUT waiting for it
+ * (this is what the user sees), and we wake it up in parallel.
+ */
   useEffect(() => {
     if (!userId) return;
     let hiddenSince: number | null =
@@ -322,9 +319,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       resume(hiddenForMs);
     };
 
-    // Retour par le cache aller-retour du navigateur (Safari surtout) : la page
-    // reparaît telle quelle, sockets mortes comprises, sans forcément repasser
-    // par `visibilitychange`. Un retour de bfcache est par nature une absence.
+    // Return via the browser round-trip cache (Safari especially): the page
+    // reappears as is, dead sockets included, without necessarily ironing
+    // by `visibilitychange`. A bfcache return is by nature an absence.
     const onPageShow = (event: PageTransitionEvent) => {
       if (event.persisted) resume(Number.POSITIVE_INFINITY);
     };

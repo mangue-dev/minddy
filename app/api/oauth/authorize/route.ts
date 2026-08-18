@@ -12,10 +12,10 @@ import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { canonicalAppOrigin } from "@/lib/server/app-origin";
 
 /**
- * Décision de consentement (POST du formulaire /oauth/authorize). Session
- * requise + garde CSRF (Origin same-host) ; les champs cachés sont re-validés
- * INTÉGRALEMENT depuis la DB — un formulaire se falsifie. Approve → grant
- * (+ ligne api_keys acteur) + code à usage unique → 303 vers le client.
+ * Consent decision (POST of the /oauth/authorize form). Session
+ * required + CSRF (Origin same-host) guard; hidden fields are re-validated
+ * COMPLETELY from the DB — a form is falsified. Approve → grant
+ * (+ api_keys actor line) + one-time use code → 303 to the client.
  */
 
 const NO_STORE = { "Cache-Control": "no-store" };
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  // CSRF : le POST vient de notre propre page — même host obligatoire.
+  // CSRF: the POST comes from our own page — same host required.
   const originHeader = request.headers.get("origin");
   const fetchSite = request.headers.get("sec-fetch-site");
   const sameHost = (() => {
@@ -76,8 +76,8 @@ export async function POST(request: NextRequest) {
 
   const validation = await validateAuthorizeRequest(params, oauthIssuer());
   if (validation.kind === "invalid") {
-    // Formulaire falsifié, ou paramètre de protocole hors gabarit : on répond
-    // ici. Aucune erreur ne part vers le client — voir authorize-validation.
+    // Falsified form, or protocol parameter out of template: we respond
+    // here. No errors go to the client — see authorize-validation.
     return NextResponse.json(
       { error: "invalid_request", error_description: validation.reason },
       { status: 400, headers: NO_STORE }
@@ -116,9 +116,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Interstitiel « connexion réussie » (design minddy) : il valide le
-  // `continue` contre les redirect_uris du client puis redirige vers le
-  // callback qui porte le code.
+  // “Successful connection” interstitial (minddy design): it validates the
+  // `continue` against client redirect_uris then redirects to the
+  // callback which carries the code.
   const successUrl = new URL("/oauth/success", canonicalAppOrigin());
   successUrl.searchParams.set("client_id", client.client_id);
   successUrl.searchParams.set("continue", buildCallbackUrl(redirectUri, { code, state }));

@@ -5,12 +5,12 @@ import { ACCESS_TOKEN_PREFIX } from "@/lib/server/oauth/crypto";
 import { verifyOAuthAccessToken } from "@/lib/server/oauth/grants";
 
 /**
- * Vérification du Bearer pour withMcpAuth — OAuth 2.1 uniquement (mdyat_…,
- * consentement navigateur ; les anciennes clés mdyk_ sont retirées).
- * `undefined` → 401 avec WWW-Authenticate + resource_metadata : le client
- * découvre le flux OAuth tout seul. keyId = la ligne api_keys « acteur » du
- * grant → rate limit, accès projets et attribution timeline
- * (« Claude (mcp) » + logo) inchangés.
+ * Bearer verification for withMcpAuth — OAuth 2.1 only (mdyat_…,
+ * browser consent; old mdyk_ keys are removed).
+ * `undefined` → 401 with WWW-Authenticate + resource_metadata: the client
+ * discovers the OAuth flow on its own. keyId = the api_keys “actor” line of
+ * grant → rate limit, project access and timeline attribution
+ * (“Claude (mcp)” + logo) unchanged.
  */
 export async function verifyMcpToken(
   _req: Request,

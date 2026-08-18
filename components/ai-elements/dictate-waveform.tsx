@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-// Sous-chemin et pas le baril `mangue-ui` : ce composant est monté par la démo
-// publique de la landing, où le baril tirerait framer-motion, cmdk et vaul dans
-// le bundle initial (cf. `lib/public-client-messages.ts`, même chasse).
+// Subpath and not the barrel `mangue-ui`: this component is mounted by the demo
+// public landing, where the barrel would pull framer-motion, cmdk and vaul into
+// the initial bundle (see `lib/public-client-messages.ts`, same hunt).
 import { cn } from "mangue-ui/lib/utils";
 
 const BAR_COUNT = 16;

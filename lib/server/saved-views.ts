@@ -7,14 +7,14 @@ import {
 } from "@/lib/saved-view-href";
 
 /**
- * Écritures des VUES ENREGISTRÉES (la palette de commandes). Personnelles par
- * construction : tout passe par le client authentifié de l'appelant, donc RLS
- * (`user_id = auth.uid()`) est la garde, pas une vérification recopiée ici.
+ * Writes SAVED VIEWS (the command palette). Personal by
+ * construction: everything goes through the caller's authenticated client, so RLS
+ * (`user_id = auth.uid()`) is the guard, not a check copied here.
  *
- * Le seul choix de fond est dans `createSavedView` : enregistrer sous un nom
- * déjà pris MET À JOUR l'adresse au lieu d'empiler une deuxième ligne homonyme.
- * Dans une palette, deux lignes du même nom sont deux lignes qu'on ne peut plus
- * distinguer — et « je réenregistre ma vue de la semaine » veut dire ça.
+ * The only background choice is in `createSavedView`: save as a name
+ * already taken UPDATEs the address instead of stacking a second row of the same name.
+ * In a palette, two rows of the same name are two rows that can no longer be distinguished
+ * — and “I'm re-saving my view for the week” means that.
  */
 
 export type SavedViewResult =
@@ -22,7 +22,7 @@ export type SavedViewResult =
   | {
       ok: false;
       status: number;
-      /** Clé du namespace i18n `ApiErrors`. */
+      /** Key for i18n namespace `ApiErrors`. */
       errorKey:
         | "nameRequired"
         | "invalidViewHref"
@@ -31,7 +31,7 @@ export type SavedViewResult =
         | "databaseError";
     };
 
-/** Violation de l'index unique `(user_id, name)` — deux vues du même nom. */
+/** Unique index violation `(user_id, name)` — two views with the same name. */
 const UNIQUE_VIOLATION = "23505";
 
 export async function createSavedView(
@@ -45,8 +45,8 @@ export async function createSavedView(
     return { ok: false, status: 400, errorKey: "invalidViewHref" };
   }
 
-  // `onConflict` sur l'index unique (user_id, name) : réenregistrer sous un nom
-  // connu déplace la vue, `updated_at` suit par le trigger.
+  // `onConflict` on unique index (user_id, name): resave under a name
+  // known moves the view, `updated_at` follows with the trigger.
   const { data, error } = await supabase
     .from("saved_views")
     .upsert(
@@ -93,17 +93,17 @@ export async function updateSavedView(
     .maybeSingle();
 
   if (error) {
-    // Renommer sur un nom déjà pris n'est pas une panne : c'est une question
-    // posée à l'utilisateur. La création, elle, tranche toute seule (l'upsert
-    // déplace la vue homonyme) — mais un RENOMMAGE qui écraserait une autre vue
-    // en ferait disparaître une sans le dire.
+    // Renaming to a name already taken is not a problem: it's a question
+    // asked to the user. Creation decides on its own (the upsert
+    // moves the homonymous view) — but a RENAMING which would overwrite another view
+    // would make one disappear without saying it.
     if (error.code === UNIQUE_VIOLATION) {
       return { ok: false, status: 409, errorKey: "savedViewNameTaken" };
     }
     console.error("[saved-views] update failed:", error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  // Invisible par RLS (la vue d'un autre compte) → même signal qu'inexistante.
+  // Invisible by RLS (the view of another account) → same signal as non-existent.
   if (!data) return { ok: false, status: 404, errorKey: "viewNotFound" };
   return { ok: true, view: data };
 }

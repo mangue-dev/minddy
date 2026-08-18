@@ -1,16 +1,12 @@
 /**
- * L'option `analyze` de `POST /api/v1/feedback` (MIN-106) — partagé, pur.
+ * The `analyze` option of `POST /api/v1/feedback` (MIN-106) — shared, pure.
  *
- * Un client qui fait tourner son propre classifier doit pouvoir dire, retour par
- * retour, que Numo ne regarde pas celui-là. Le drapeau est optionnel et vaut
- * `true` par défaut : les intégrations déjà en place ne changent pas de
- * comportement du jour au lendemain.
+ * A client running its own classifier should be able to say, return by
+ * return, that Numo is not looking at that one. The flag is optional and is set to
+ * `true` by default: integrations already in place do not change their behavior overnight.
  *
- * La lecture est STRICTE, comme le reste de l'API publique : `"false"`, `0` ou
- * `null` ne valent pas `false`. Sur une option qui décide si un retour est
- * modéré avant d'apparaître sur un board public, deviner l'intention d'une
- * valeur mal typée serait le pire des deux mondes — silencieux, et faux dans le
- * sens dangereux une fois sur deux. Mieux vaut un 422 que l'intégrateur voit.
+ * Reading is STRICT, like the rest of the public API: `"false"`, `0` or
+ * `null` is not equal to `false`. On an option that decides whether a return is moderated before appearing on a public board, guessing the intent of a mistyped value would be the worst of both worlds — silent, and wrong in the dangerous sense one out of two times. Better a 422 that the integrator sees.
  */
 
 export type AnalyzeOption =

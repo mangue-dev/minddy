@@ -4,28 +4,28 @@ import { Reveal, RevealGroup, RevealHeading } from "./reveal";
 import { IsoNumber } from "./iso-tile";
 
 /**
- * Le board de feedback public — une section entière, pas une case de grille.
+ * The public feedback board — an entire section, not a grid box.
  *
- * Elle est AMENÉE, elle ne tombe pas : jusqu'ici tout ce qui entre dans le
- * tracker vient de l'équipe ou de ses agents, et on passait sans prévenir à une
- * page publique ouverte à des inconnus. La ligne de bascule (`feedbackLead`)
- * pose ce changement d'origine avant que le titre n'arrive.
+ * It is BROUGHT, it does not fall: so far everything that enters the
+ * tracker comes from the team or its agents, and we move without warning to a
+ * public page open to unknown. The toggle line (`feedbackLead`)
+ * sets this original change before the title arrives.
  *
- * Deux captures (la page publique, puis la même demande vue côté équipe) parce
- * que la fonctionnalité a deux faces, et quatre temps numérotés pour le trajet
- * d'un retour : posté → filtré → tranché → suivi. Tout ce qui est décrit ici
- * existe : SSO du board, détection des doublons à la publication, modération et
- * catégorisation par Numo avant publication, fusion des votes, réponse d'équipe,
- * promotion en ticket et statut public aligné sur le ticket lié.
+ * Two captures (the public page, then the same request seen on the team side) because
+ * the feature has two sides, and four numbered times for the journey
+ * of a return: posted → filtered → sliced → followed. Everything described here
+ * exists: board SSO, duplicate detection on publication, moderation and
+ * categorization by Numo before publication, vote merger, team response,
+ * promotion to ticket and public status aligned with the linked ticket.
  *
- * Le 2ᵉ temps est le filtre, pas les doublons : c'est la question qu'on se pose
- * en ouvrant un board public (« qu'est-ce qui va s'afficher sous mon nom ? »).
- * Le regroupement des doublons y est replié — c'est un des gestes du filtre.
+ * The 2nd step is the filter, not the duplicates: this is the question we ask ourselves
+ * when opening a public board (“what will be displayed under my name?”).
+ * The grouping of duplicates is folded there — it is one of the gestures of the filter.
  *
- * Le paragraphe de bas de section (API, saisie pour un utilisateur, prompt
- * d'intégration) est parti avec la passe de resserrage : trois détails
- * d'implémentation qui n'aidaient pas à décider, et qui sont à leur place dans
- * la doc, pas sous quatre cartes qui racontent déjà le trajet complet.
+ * The paragraph at the bottom of the section (API, input for a user, integration prompt
+ *) left with the tightening pass: three implementation details
+ * which did not help to decide, and which are in their place in
+ * the doc, not under four cards which already tell the journey full.
  */
 
 const STEPS = ["post", "moderate", "decide", "status"] as const;
@@ -68,17 +68,17 @@ export async function SectionFeedback() {
           </figure>
         </RevealGroup>
 
-        {/* Grille à filets : elle entre d'un bloc, sinon le fond `bg-border`
-            apparaîtrait en aplat gris derrière les cartes encore masquées. */}
+        {/* Mesh grid: it enters in one block, otherwise the background `bg-border`
+ would appear in solid gray behind the cards still hidden. */}
         <Reveal
           as="ol"
           className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:mt-16 sm:grid-cols-2 lg:grid-cols-4"
         >
           {STEPS.map((step, index) => (
             <li key={step} className="bg-card p-6">
-              {/* Le chiffre est COUCHÉ comme les icônes des autres sections :
-                  c'est le même dessin, avec un glyphe au lieu d'un tracé
-                  (`isoGlyph`). */}
+              {/* The number is LAYERED like the icons in the other sections:
+ it is the same drawing, with a glyph instead of a line
+ (`isoGlyph`). */}
               <IsoNumber value={String(index + 1)} className="mb-4 w-12" />
               <h3 className="mb-1.5 font-medium">{t(`feedback_${step}_title`)}</h3>
               <p className="text-sm leading-relaxed text-muted-foreground">

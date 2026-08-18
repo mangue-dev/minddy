@@ -7,20 +7,20 @@ import { addPageComment } from "@/lib/server/page-comments";
 
 type RouteContext = { params: Promise<{ id: string; pageId: string }> };
 
-/** Borne du tableau de mentions (MIN-118) — la même que les trois autres fils. */
+/** Notice board terminal (MIN-118) — the same as the other three wires. */
 const MAX_MENTIONS = 50;
 
 /**
- * GET /api/projects/[id]/pages/[pageId]/comments — le fil d'une page (MIN-282).
+ * GET /api/projects/[id]/pages/[pageId]/comments — the thread for a page (MIN-282).
  *
- * Client de SESSION : la garde est la RLS (`page_comments_select`), qui vaut
- * membre du projet ET page vivante. Les fils d'une page corbeillée disparaissent
- * donc avec elle sans que cette route ait à y penser — ils suivent la page, pas
- * l'inverse.
+ * SESSION client: the custody is the RLS (`page_comments_select`), which is worth
+ * member of the ET living page project. Threads on a trashed page disappear
+ * so with her without this road having to think about it — they follow the page, not
+ * the opposite.
  *
- * Le fil ENTIER, en une requête : ce qui se montre où — un fil ancré à côté de
- * son bloc, un fil de page ou détaché dans l'activité — est une décision
- * d'affichage (lib/page-comments.ts), pas une requête de plus.
+ * The ENTIRE thread, in one query: what shows where — a thread anchored next to
+ * its block, a page thread or detached in the activity — is a decision
+ * display (lib/page-comments.ts), not one more request.
  */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { pageId } = await params;
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   );
 }
 
-/** POST — commenter la page, ou un de ses blocs (auteur = l'appelant). */
+/** POST — comment on the page, or one of its blocks (author = caller). */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { pageId } = await params;
   const auth = await getAuthedUser(request);

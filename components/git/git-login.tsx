@@ -5,31 +5,31 @@ import { Badge, cn } from "mangue-ui";
 import { parseForgeLogin } from "@/lib/repo-providers";
 
 /**
- * Un login de forge, rendu comme GitHub le rend : le nom, et — si le compte est
- * une App — une petite pastille « bot » au lieu du `[bot]` en toutes lettres.
- * Le suffixe dit un TYPE de compte, pas un nom ; l'écrire brut le fait lire
- * comme une faute de recopie, et allonge une ligne déjà serrée.
+ * A forge login, rendered as GitHub renders it: the name, and — if the account is
+ * an App — a small “bot” badge instead of `[bot]` in full.
+ * The suffix says an account TYPE, not a name; writing it raw makes it read
+ * like a copying error, and lengthens an already tight line.
  *
- * Le login BRUT reste porté par `title` : c'est lui qu'on cherche pour retrouver
- * le compte chez la forge, et la pastille ne doit pas le rendre introuvable.
+ * The BRUT login remains carried by `title`: he is the one we are looking for to find
+ * the account at the forge, and the tablet must not make it untraceable.
  *
- * Un seul endroit pour cette règle, parce qu'un login de forge s'affiche dans
- * cinq vues (fil de la PR, commentaires de ligne, liste des PR, son filtre
- * d'auteur, historique du ticket) et qu'elles n'ont pas à s'accorder à la main.
+ * Only one place for this rule, because a forge login appears in
+ * five views (PR thread, line comments, list of PRs, its filter
+ * author, ticket history) and that they do not have to agree by hand.
  */
 export function GitLogin({
   login,
   className,
 }: {
-  /** Absent = auteur inconnu (la forge ne le donne pas toujours) : « — ». */
+  /** Absent = unknown author (the forge does not always give it): “—”. */
   login: string | null | undefined;
-  /** Styles du NOM (taille, graisse) — la pastille garde les siens. */
+  /** NAME styles (size, fat) — the pastille keeps its own. */
   className?: string;
 }) {
   const parsed = login ? parseForgeLogin(login) : null;
 
-  // Un seul gabarit pour les deux cas : ces logins vivent tous dans une ligne
-  // serrée, et c'est le nom — jamais la pastille — qui doit céder la place.
+  // A single template for both cases: these logins all live in one line
+  // tight, and it is the name—never the pastille—that must give way.
   return (
     <span className="inline-flex min-w-0 items-center gap-1" title={login ?? undefined}>
       <span className={cn("min-w-0 truncate", className)}>{parsed?.name ?? "—"}</span>
@@ -39,16 +39,16 @@ export function GitLogin({
 }
 
 /**
- * La pastille seule, pour les endroits où le login est enchâssé dans une phrase
- * traduite (« Ouverte par {login} ») et ne peut pas passer par `GitLogin`.
+ * The sticker alone, for places where the login is embedded in a sentence
+ * translated (“Opened by {login}”) and cannot go through `GitLogin`.
  */
 export function BotBadge({ className }: { className?: string }) {
   const t = useTranslations("Common");
   return (
     <Badge
       variant="secondary"
-      // Teinte plus claire que le `secondary` plein : la pastille marque un type
-      // de compte, elle ne doit pas peser autant que le nom qu'elle suit.
+      // Lighter shade than the full `secondary`: the tablet marks a type
+      // ultimately, it should not weigh as much as the name it follows.
       className={cn(
         "h-5 shrink-0 border-border/60 bg-muted/40 px-2 text-[11px] font-medium tracking-wide",
         className,

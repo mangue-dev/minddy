@@ -9,13 +9,13 @@ import type { PublicIdentity } from "@/lib/feedback/types";
 import { afterOrNow } from "@/lib/server/after-safe";
 
 /**
- * Identités et sessions des utilisateurs finaux du board (MIN-37). Jamais
- * d'anonyme : une identité = external_id (SSO/API) et/ou email (OTP), unique
- * par projet. Le pseudonyme public est généré une fois à la création.
+ * Board end user identities and sessions (MIN-37). Never
+ * anonymous: one identity = external_id (SSO/API) and/or email (OTP), unique
+ * per project. The public pseudonym is generated once upon creation.
  *
- * Sessions en base (pas de cookie signé : pas de secret HMAC générique dans le
- * repo, et la DB donne révocation + observabilité) : cookie httpOnly path-scopé
- * /f/<token> portant un token opaque fbs_, seul le sha256 est persisté.
+ * Base sessions (no signed cookie: no generic HMAC secret in the
+ * repo, and the DB gives revocation + observability): httpOnly path-scoped
+ * /f/<token> cookie carrying an opaque token fbs_, only sha256 is persisted.
  */
 
 export const FEEDBACK_SESSION_COOKIE = "mdy_feedback_session";
@@ -44,9 +44,9 @@ export interface UpsertFeedbackUserInput {
   verifiedVia: FeedbackVerifiedVia;
 }
 
-/** Résout ou crée l'identité : par (project, external_id) d'abord, puis par
-    (project, email) — un row email-only est upgradé quand le SSO/API apporte
-    l'external_id. Les emails sont normalisés en minuscules à l'écriture. */
+/** Resolves or creates the identity: by (project, external_id) first, then by
+ (project, email) — an email-only row is upgraded when the SSO/API brings
+ the external_id. Emails are standardized to lowercase when written. */
 export async function upsertFeedbackUser(
   input: UpsertFeedbackUserInput
 ): Promise<FeedbackUserRow | null> {
@@ -77,7 +77,7 @@ export async function upsertFeedbackUser(
       .maybeSingle();
     if (data) {
       const row = data as FeedbackUserRow;
-      // Upgrade : l'identité email-only reçoit son external_id (SSO/API).
+      // Upgrade: the email-only identity receives its external_id (SSO/API).
       const patches: Record<string, unknown> = {};
       if (externalId && !row.external_id) {
         patches.external_id = externalId;
@@ -95,7 +95,7 @@ export async function upsertFeedbackUser(
     }
   }
 
-  // Création — id généré côté app pour dériver le pseudonyme avant l'insert.
+  // Creation — id generated on the app side to derive the nickname before inserting.
   const id = randomUUID();
   const { data: created, error } = await service
     .from("feedback_users")
@@ -112,7 +112,7 @@ export async function upsertFeedbackUser(
     .maybeSingle();
   if (!error) return (created as FeedbackUserRow | null) ?? null;
 
-  // Course sur l'unique partiel : quelqu'un a créé la même identité entre nos
+  // Race on the unique partial: someone created the same identity between our
   // deux lectures — on relit.
   if (error.code === "23505") {
     return upsertFeedbackUserRetry(input.projectId, externalId, email);
@@ -194,8 +194,8 @@ export async function createFeedbackSession(params: {
   return { token, expiresAt };
 }
 
-/** Valide le cookie de session pour CE board. Renouvellement glissant passé la
-    demi-vie (fire-and-forget, jamais sur le chemin de la réponse). */
+/** Validates the session cookie for THIS board. Sliding renewal past the
+ half-life (fire-and-forget, never on the way to the answer). */
 export async function getFeedbackSession(
   boardId: string,
   token: string | undefined | null
@@ -214,8 +214,8 @@ export async function getFeedbackSession(
 
   const remaining = new Date(data.expires_at as string).getTime() - Date.now();
   if (remaining < SESSION_TTL_MS / 2) {
-    // Après la réponse, mais rattaché à l'invocation : détachée, la glissade
-    // mourrait au gel de la lambda et la session n'avancerait jamais.
+    // After the response, but attached to the invocation: detached, the slide
+    // would die when the lambda freezes and the session would never advance.
     const slid = {
       expires_at: new Date(Date.now() + SESSION_TTL_MS).toISOString(),
       last_seen_at: new Date().toISOString(),
@@ -239,19 +239,19 @@ export async function revokeFeedbackSession(token: string | undefined | null): P
 }
 
 /**
- * L'identité telle que le visiteur se voit lui-même, en haut du board.
+ * The identity as the visitor sees himself, at the top of the board.
  *
- * Le pseudonyme reste la façade publique — mais l'avatar du header n'est vu que
- * par son propriétaire (aucun post n'affiche celui de son auteur), et quelqu'un
- * arrivé par SSO depuis minddy s'attend à y retrouver SON visage, pas un second
- * tiré au sort. Le SSO a justement posé l'`auth.users.id` dans `external_id`
- * (app/feedback/route.ts) : une ligne `user_avatars` à ce nom prouve le compte
- * et donne sa graine, et la résoudre à chaque rendu suit un nouveau tirage
- * d'avatar sans rien avoir à propager.
+ * The pseudonym remains the public facade - but the avatar of the header is only seen
+ * by its owner (no post displays that of its author), and someone
+ * arrived by SSO since minddy expects to find HER face there, not a second
+ * drawn at random. The SSO has precisely placed the `auth.users.id` in `external_id`
+ * (app/feedback/route.ts): a line `user_avatars` with this name proves the account
+ * and gives its seed, and resolving it at each rendering follows a new drawing
+ * of avatar without having to propagate anything.
  *
- * Rien à trouver — vérification par OTP, ou board d'un autre produit dont les
- * `external_id` ne sont pas des comptes minddy — et l'avatar retombe sur le
- * pseudonyme, anonyme comme avant.
+ * Nothing to find — verification by OTP, or board of another product whose
+ * `external_id` are not minddy accounts — and the avatar falls back on the
+ * pseudonym, anonymous like before.
  */
 export async function toPublicIdentity(
   session: FeedbackSessionContext | null
@@ -264,10 +264,10 @@ export async function toPublicIdentity(
   };
 }
 
-/** Options du cookie de session, path-scopé au board (une seule et même
-    cookie name sert autant de boards que nécessaire). Sur un domaine
-    personnalisé (MIN-36), le path visible ne contient pas /f/<token> :
-    atRoot=true pose le cookie à la racine — un domaine = un seul board. */
+/** Session cookie options, path-scoped to the board (one and the same
+ cookie name serves as many boards as necessary). On a custom
+ domain (MIN-36), the visible path does not contain /f/<token>:
+ atRoot=true sets the cookie at the root — one domain = one board. */
 export function feedbackSessionCookieOptions(
   boardToken: string,
   expiresAt: Date,

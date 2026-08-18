@@ -6,12 +6,12 @@ import { isTrashType, purgeItem, restoreItem } from "@/lib/server/trash";
 type RouteContext = { params: Promise<{ type: string; id: string }> };
 
 /**
- * POST /api/me/trash/[type]/[id] — restaurer ; DELETE — supprimer pour de bon.
+ * POST /api/me/trash/[type]/[id] — restore; DELETE — delete for good.
  * `type` ∈ issue | project | objective | feedback (MIN-133).
  *
- * Les contrôles d'accès vivent dans lib/server/trash.ts, qui travaille en clé
- * service : un membre du projet restaure ou purge son contenu, un projet ne
- * répond qu'à son propriétaire.
+ * Access controls live in lib/server/trash.ts, which works in key
+ * service: a project member restores or purges its content, a project does not
+ * responds only to its owner.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   return run(request, params, "restore");

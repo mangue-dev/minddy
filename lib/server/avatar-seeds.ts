@@ -2,28 +2,28 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Les seeds d'avatar (`public.user_avatars`), côté serveur uniquement.
+ * Avatar seeds (`public.user_avatars`), server side only.
  *
- * Un seed est une chaîne opaque : l'avatar se dessine en la hachant
- * (`components/user-avatar.tsx`). Il ne se choisit pas, il se retire au sort.
- * La table n'a aucune policy RLS — seule la clé de service la lit, et les seeds
- * ne sortent que par les routes qui résolvent déjà les identités, donc pour les
- * seules personnes que l'appelant a le droit de voir.
+ * A seed is an opaque string: the avatar is drawn by hashing it
+ * (`components/user-avatar.tsx`). It does not choose itself, it withdraws by lot.
+ * The table has no RLS policy — only the service key reads it, and the seeds
+ * only exit via routes that already resolve identities, so for the
+ * only people the caller has the right to see.
  *
- * À brancher à côté de `fetchAuthUsersById` (lib/server/auth-users.ts) : l'un
- * donne le nom, l'autre la marque.
+ * To plug in next to `fetchAuthUsersById` (lib/server/auth-users.ts): one
+ * gives the name, the other the brand.
  */
 
 /**
- * Résout les seeds d'un lot de comptes, et crée ceux qui manquent.
+ * Resolves the seeds of a batch of accounts, and creates the missing ones.
  *
- * La création paresseuse est un filet, pas le chemin normal : la migration a
- * semé les comptes existants, et un compte neuf reçoit le sien au premier
- * affichage. Un `insert` concurrent ne casse rien (`on conflict do nothing`,
- * puis relecture).
+ * Lazy creation is a trickle, not the normal path: the migration has
+ * seeded the existing accounts, and a new account receives its own on the first
+ * view. A competing `insert` does not break anything (`on conflict do nothing`,
+ * then reread).
  *
- * Un seed introuvable malgré tout retombe sur l'identifiant du compte : mieux
- * vaut une marque stable qu'un trou dans l'interface.
+ * A seed not found despite everything falls back on the account identifier: better
+ * is worth a stable mark than a hole in interface.
  */
 export async function fetchAvatarSeeds(
   service: SupabaseClient,
@@ -50,8 +50,8 @@ export async function fetchAvatarSeeds(
       .select("user_id, seed");
     for (const row of created ?? []) seeds.set(row.user_id as string, row.seed as string);
 
-    // `ignoreDuplicates` ne renvoie rien pour une ligne déjà présente (course
-    // entre deux requêtes) : on relit celles qui manquent encore.
+    // `ignoreDuplicates` returns nothing for a line already present (race
+    // between two requests): we reread those that are still missing.
     const stillMissing = missing.filter((id) => !seeds.has(id));
     if (stillMissing.length > 0) {
       const { data: reread } = await service
@@ -69,17 +69,17 @@ export async function fetchAvatarSeeds(
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Le seed d'un compte s'il en a un — sans jamais en créer.
+ * The seed of an account if he has one — without ever creating one.
  *
- * Le pendant en lecture seule de `fetchAvatarSeed`, pour l'appelant qui ne sait
- * PAS encore si l'identifiant qu'il tient désigne un compte minddy : l'
- * `external_id` d'un visiteur du board public, par exemple. `user_avatars`
- * référence `auth.users`, donc une ligne trouvée PROUVE le compte. C'est tout
- * l'intérêt de ne pas créer ici : la création paresseuse inventerait une marque
- * pour un identifiant étranger, et brouillerait la preuve.
+ * The read-only counterpart of `fetchAvatarSeed`, for the caller who does not know
+ * NOT yet if the identifier he is holding designates a minddy account: the
+ * `external_id` of a visitor to the public board, for example. `user_avatars`
+ * references `auth.users`, so a line found PROVES the account. That's all
+ * the point of not creating here: lazy creation would invent a mark
+ * for a foreign identifier, and would obfuscate the proof.
  *
- * Un identifiant qui n'est pas un UUID n'atteint pas la base : Postgres
- * refuserait la comparaison (22P02) et l'erreur passerait inaperçue.
+ * An identifier that is not a UUID does not reach the base: Postgres
+ * would refuse the comparison (22P02) and the error would go unnoticed.
  */
 export async function findAvatarSeed(
   service: SupabaseClient,
@@ -94,7 +94,7 @@ export async function findAvatarSeed(
   return (data?.seed as string | undefined) ?? null;
 }
 
-/** Le seed d'un seul compte (même garanties que `fetchAvatarSeeds`). */
+/** The seed of a single account (same guarantees as `fetchAvatarSeeds`). */
 export async function fetchAvatarSeed(
   service: SupabaseClient,
   userId: string
@@ -104,20 +104,20 @@ export async function fetchAvatarSeed(
 }
 
 /**
- * Adopte le seed CHOISI à l'inscription (MIN-300), s'il n'y a pas déjà de ligne.
+ * Adopts the CHOSEN seed at registration (MIN-300), if there is not already a line.
  *
- * Le wizard tire l'avatar dans le navigateur, avant qu'aucun compte n'existe :
- * il n'y a pas encore de session à qui l'écrire. Le seed voyage donc dans le
- * `user_metadata` du compte (`avatar_seed`), et se pose ici à la première
- * occasion — le passage par `/auth/callback`, ou l'appel direct du wizard quand
- * la session est immédiate.
+ * The wizard pulls the avatar into the browser, before no account exists:
+ * there is no session to write it to yet. The seed therefore travels in the
+ * `user_metadata` of the account (`avatar_seed`), and lands here at the first
+ * opportunity — the passage through `/auth/callback`, or the direct call of the wizard when
+ * the session is immediate.
  *
- * `ignoreDuplicates` est le cœur de la fonction : elle ne REMPLACE jamais un
- * seed existant. Elle peut donc être appelée à chaque connexion sans risque
- * d'annuler un « Nouvel avatar » fait depuis les réglages — le métadonnée, lui,
- * garde à jamais la valeur du premier jour.
+ * `ignoreDuplicates` is the heart of the function: it never REPLACES an existing
+ * seed. It can therefore be called at each connection without risk
+ * of canceling a "New avatar" made from the settings - the metadata,
+ * forever keeps the value of the first day.
  *
- * Rend `true` si la ligne vient d'être créée avec CE seed.
+ * Returns `true` if the line has just been created with CE seed.
  */
 export async function claimAvatarSeed(
   service: SupabaseClient,
@@ -137,12 +137,12 @@ export async function claimAvatarSeed(
 }
 
 /**
- * Retire un nouveau seed au sort, et renvoie celui qui a été posé.
+ * Draws a new seed, and returns the one that was placed.
  *
- * Le tirage est fait ici et non par la base : la valeur par défaut de la colonne
- * ne s'applique qu'à l'insertion, et PostgREST ne sait pas écrire
- * `set seed = gen_random_uuid()`. Même source d'aléa (UUID v4), donc même
- * qualité de tirage.
+ * The draw is done here and not by the base: the default value of the column
+ * only applies to insertion, and PostgREST does not know how to write
+ * `set seed = gen_random_uuid()`. Same random source (UUID v4), therefore same
+ * draw quality.
  */
 export async function regenerateAvatarSeed(
   service: SupabaseClient,

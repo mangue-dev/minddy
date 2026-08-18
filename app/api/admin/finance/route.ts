@@ -4,17 +4,17 @@ import { isAdminUser } from "@/lib/server/admin";
 import { getFinanceSummary } from "@/lib/server/finance";
 
 /**
- * Lecture admin de la page Finances (MIN-92) — les coûts IA et les entrées
- * d'argent sur le même axe. Gate identique aux autres endpoints admin
+ * Admin Reading of Finances Page (MIN-92) — AI Costs and Entries
+ * money on the same axis. Gate identical to other admin endpoints
  * (`/api/admin/ai-usage`) : JWT via getClaims + isAdminUser.
  *
  * GET /api/admin/finance
- *   ?days=<n>     fenêtre en jours (défaut 30, borné 1–365)
- *   ?refresh=1    contourne le cache serveur et retape Stripe
+ * ?days=<n> window in days (default 30, bounded 1–365)
+ * ?refresh=1 bypasses server cache and retypes Stripe
  *
- * Stripe est interrogé À CHAQUE chargement, derrière un cache de quelques
- * minutes : pas de table miroir, Stripe reste la seule source de vérité et il
- * n'y a rien à resynchroniser. Le bouton « Actualiser » de l'écran est ce qui
+ * Stripe is queried EACH load, behind a cache of a few
+ * minutes: no mirror table, Stripe remains the only source of truth and it
+ * there is nothing to resynchronize. The “Refresh” button on the screen is what
  * pose `refresh=1`.
  */
 

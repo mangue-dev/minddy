@@ -7,27 +7,27 @@ import { PageEditor } from "@/components/pages/page-editor";
 import type { PagesLookup } from "@/components/pages/pages-lookup";
 
 /**
- * Le corps d'une PAGE PUBLIÉE (MIN-283), rendu pour quelqu'un qui n'a pas de
- * compte.
+ * The body of a PUBLISHED PAGE (MIN-283), rendered for someone who doesn't have a
+ * account.
  *
- * C'est le VRAI éditeur, monté en lecture seule — le même choix que l'aperçu
- * d'une version dans l'historique (MIN-277), et pour la même raison : l'éditeur
- * EST la surface de rendu. Un second rendu écrit à côté finirait par diverger
- * sur exactement les blocs qu'on regarde le moins — un dépliant, une image
- * redimensionnée —, et il divergerait en silence : une page publiée est
- * justement celle que son auteur ne relit jamais.
+ * This is the REAL editor, mounted read-only — the same choice as preview
+ * of a version in history (MIN-277), and for the same reason: the editor
+ * IS the rendering surface. A second rendering written next to it would end up diverging
+ * on exactly the blocks that we look at the least - a leaflet, a resized image
+ * -, and it would diverge silently: a published page is
+ * precisely the one that its author never rereads.
  *
- * Ce qu'on ne lui donne PAS, et chaque absence est une décision :
+ * This that we do NOT give it, and each absence is a decision:
  *
- *  - `mentions` / `mentionLinks` : une mention est du TEXTE dans le document,
- *    la pilule n'étant reposée qu'à la lecture par la surface qui en a les
- *    sources (MIN-269). Sans elles, « @Clément » et « @MIN-42 » restent du
- *    texte — ni avatar, ni lien, rien à apprendre du projet ;
- *  - `uploads`, `onComment` : rien à écrire ici, donc rien à téléverser ni à
- *    commenter ;
- *  - les pages hors de l'ensemble publié : le lookup ne les connaît pas, et
- *    leur bloc se rend inerte sous un libellé neutre. Leur titre n'a jamais
- *    quitté le serveur (cf. lib/server/page-publication.ts).
+ * - `mentions` / `mentionLinks`: a mention is of the TEXT in the document,
+ * the pill being put back only upon reading by the surface which has it the
+ * sources (MIN-269). Without them, “@Clément” and “@MIN-42” remain
+ * text — no avatar, no link, nothing to learn from the project;
+ * - `uploads`, `onComment`: nothing to write here, therefore nothing to upload or to
+ * comment ;
+ * - pages outside the published set: the lookup does not know them, and
+ * their block becomes inert under a neutral label. Their title has never
+ * left the server (see lib/server/page-publication.ts).
  */
 export function PublicPageBody({
   content,
@@ -37,13 +37,13 @@ export function PublicPageBody({
   missingLabel,
 }: {
   content: unknown;
-  /** L'ensemble PUBLIÉ, et lui seul. */
+  /** The PUBLISHED whole, and only him. */
   pages: Array<{ id: string; title: string; icon: string | null }>;
   token: string;
-  /** La page que le lien désigne : elle vit à `/p/<token>`, ses filles sous. */
+  /** The page that the link points to: she lives in `/p/<token>`, her daughters under. */
   rootId: string;
-  /** Ce que dit un bloc sous-page non publié — jamais « corbeille », qui serait
-      faux, jamais son titre, qui serait la fuite. */
+  /** What an unpublished subpage block says — never “trash”, which would be
+ false, never its title, which would be the leak. */
   missingLabel: string;
 }) {
   const lookup = useMemo<PagesLookup>(() => {
@@ -51,18 +51,18 @@ export function PublicPageBody({
     const href = (id: string) =>
       id === rootId ? `/p/${token}` : `/p/${token}/${id}`;
     return {
-      // `ready` d'emblée : le serveur a tout résolu, il n'y a aucune attente à
-      // distinguer d'une absence. Un bloc sans page est donc inerte tout de
-      // suite, et le reste.
+      // `ready` straight away: the server has resolved everything, there is no waiting to
+      // distinguish from an absence. A block without a page is therefore inert all the same.
+      // continued, and the rest.
       ready: true,
       get: (id) => byId.get(id),
       href,
-      // `navigate` est OBLIGATOIRE, même sans routeur d'application : le clic
-      // ordinaire sur l'ancre d'une vue de nœud est préempté par l'éditeur
-      // (`handleNodeLinkClick`, components/editor-node-link.ts), qui coupe
-      // l'extension Link ET le comportement par défaut, puis laisse la vue
-      // prendre le relais. Sans ce relais-ci, cliquer une sous-page publiée ne
-      // faisait rigoureusement RIEN.
+      // `navigate` is MANDATORY, even without an application router: click
+      // ordinary on the anchor of a node view is preempted by the editor
+      // (`handleNodeLinkClick`, components/editor-node-link.ts), which cuts off
+      // the Link extension AND the default behavior, then leave the view
+      // take over. Without this relay, clicking on a published subpage does
+      // absolutely NOTHING.
       navigate: (id) => {
         window.location.href = href(id);
       },

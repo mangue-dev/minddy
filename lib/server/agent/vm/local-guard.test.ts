@@ -5,14 +5,14 @@ import { isPrivateAddress, isPrivateHostname, fetchHostname } from "./private-ad
 import type { PermissionAsk, PermissionVerdict } from "./opencode-permissions";
 
 /**
- * MIN-360 — LES DEUX GARDE-FOUS QUI ONT BESOIN DU DISQUE ET DU RÉSOLVEUR.
+ * MIN-360 — THE TWO GUARDS THAT NEED DISK AND RESOLVER.
  *
- * `decidePermission` est pur et le reste ; ce qui est testé ici, ce sont les deux
- * contrôles qu'aucune chaîne de caractères ne peut rendre : le lien symbolique
- * créé DANS le dépôt (que `ln -s` pose sans qu'aucun garde-fou le voie) et le
- * domaine public qui résout vers la boucle locale.
+ * `decidePermission` is pure and remains so; what is tested here are the two
+ * checks that no string can render: the
+ * symbolic link created IN the repository (which `ln -s` places without any guardrail seeing it) and the
+ * public domain which resolves to the local loop.
  *
- * Les deux IO sont injectées, donc le fichier ne touche ni au disque ni au réseau.
+ * Both IO are injected, so the file does not touch disk or network.
  */
 
 const REPO = "/Users/dev/Projets/minddy";
@@ -28,10 +28,10 @@ const ask = (over: Partial<PermissionAsk>): PermissionAsk => ({
 const ALLOW: PermissionVerdict = { reply: "once" };
 
 /**
- * Un faux `realpath` : la table est le disque. Ce qui y est décrit existe et rend
- * sa cible réelle ; **tout ce qui n'y est pas LÈVE**, comme le vrai sur un fichier
- * qui n'a pas encore été créé — et c'est exactement le cas que `realPathOf` doit
- * savoir traiter.
+ * A fake `realpath`: the table is the disk. What is described there exists and makes
+ * its real target; **anything that is not there RISES**, like the real one on a file
+ * that has not yet been created — and this is exactly the case that `realPathOf` must
+ * know how to process.
  */
 const realpathOf = (disk: Record<string, string>) =>
   async (path: string): Promise<string> => {
@@ -44,10 +44,10 @@ describe("private-address", () => {
     for (const address of [
       "127.0.0.1", "127.1.2.3", "0.0.0.0",
       "10.0.0.5", "172.16.0.1", "172.31.255.254", "192.168.1.10",
-      "169.254.169.254", // le métadata des clouds, tant qu'à faire
+      "169.254.169.254", // the metadata of the clouds, while we're at it
       "100.100.1.2", // Tailscale
       "::1", "fd12:3456::1", "fe80::1",
-      "::ffff:127.0.0.1", // la même adresse, écrite en IPv6
+      "::ffff:127.0.0.1", // the same address, written in IPv6
     ]) {
       expect(isPrivateAddress(address), address).toBe(true);
     }
@@ -64,7 +64,7 @@ describe("private-address", () => {
       expect(isPrivateHostname(host), host).toBe(true);
     }
     expect(isPrivateHostname("example.com")).toBe(false);
-    // Un point final est une forme absolue du même nom.
+    // A full stop is an absolute form of the same name.
     expect(isPrivateHostname("nas.local.")).toBe(true);
   });
 
@@ -80,8 +80,8 @@ describe("private-address", () => {
 
 describe("realPathOf", () => {
   it("résout le plus proche ancêtre qui existe", () => {
-    // Une écriture crée souvent le fichier : `realpath` du fichier lèverait, et
-    // c'est le DOSSIER lié qui compte.
+    // A write often creates the file: `realpath` of the file would raise, and
+    // it's the linked FILE that counts.
     const realpath = realpathOf({ [`${REPO}/notes`]: "/Users/dev/.ssh" });
     return expect(realPathOf(`${REPO}/notes/x.ts`, realpath)).resolves.toBe("/Users/dev/.ssh/x.ts");
   });
@@ -96,14 +96,14 @@ describe("realPathOf", () => {
 
 describe("refineLocalVerdict — les écritures", () => {
   /**
-   * MIN-364 (décision D5) — LA GARDE DE SORTIE DE DÉPÔT A DISPARU AVEC LE
-   * PÉRIMÈTRE QU'ELLE GARDAIT.
-   *
-   * Elle n'existait que pour empêcher un `ln -s` de faire sortir une écriture
-   * d'un périmètre qui n'existe plus : le disque est désormais atteignable en
-   * ligne droite, et refuser le lien symbolique aurait été refuser par la porte
-   * de derrière ce qu'on autorise par la grande.
-   */
+ * MIN-364 (decision D5) — THE DEPOSIT EXIT GUARD DISAPPEARED WITH THE
+ * PERIMETER IT WAS GUARDING.
+ *
+ * It only existed to prevent a `ln -s` from releasing a writing
+ * of a perimeter which no longer exists: the disk is now reachable in
+ * straight line, and refusing the symbolic link would have been refusing by the door
+ * from behind what is authorized by the large one.
+ */
   it("laisse passer un lien qui sort du dépôt — le disque est ouvert", async () => {
     const realpath = realpathOf({ [REPO]: REPO, [`${REPO}/notes`]: "/Users/dev/Projets/voisin" });
     expect(
@@ -131,8 +131,8 @@ describe("refineLocalVerdict — les écritures", () => {
   });
 
   it("inspecte TOUS les fichiers d'un `apply_patch`, pas le premier", async () => {
-    // Le second passe par un lien qui mène dans `.git/` : c'est ce qui reste
-    // gardé, et il ne doit pas être sauvé par le fait d'être en second.
+    // The second goes through a link which leads to `.git/`: this is what remains
+    // kept, and it must not be saved by being second.
     const realpath = realpathOf({ [REPO]: REPO, [`${REPO}/b`]: `${REPO}/.git/hooks` });
     const verdict = await refineLocalVerdict(
       ask({
@@ -149,7 +149,7 @@ describe("refineLocalVerdict — les écritures", () => {
   });
 
   it("laisse le verdict tel quel quand la racine ne résout pas", async () => {
-    // Une IO muette ne doit pas arrêter le tour : le contrôle PUR a déjà eu lieu.
+    // A silent IO should not stop the round: the PUR check has already taken place.
     const realpath = async (): Promise<string> => {
       throw new Error("ENOENT");
     };
@@ -159,10 +159,10 @@ describe("refineLocalVerdict — les écritures", () => {
   });
 
   /**
-   * ET LE `.git/` D'UN DÉPÔT VOISIN AUSSI. Le périmètre s'est ouvert, la règle
-   * `.git` ne s'est pas ouverte avec : un hook posé dans le dépôt d'à côté
-   * s'exécute au prochain geste git de son propriétaire, exactement comme ici.
-   */
+ * AND THE `.git/` OF A NEIGHBORHOOD REPOSITORY ALSO. The perimeter opened, the rule
+ * `.git` did not open with: a hook placed in the next repository
+ * executes on the next git gesture of its owner, exactly like here.
+ */
   it("refuse un lien qui mène dans le `.git/` d'un AUTRE dépôt", async () => {
     const realpath = realpathOf({
       [REPO]: REPO,
@@ -180,22 +180,22 @@ describe("refineLocalVerdict — les écritures", () => {
 });
 
 /**
- * MIN-364 (décision D8) — LE FETCH SE JUGE SUR LE PORT, PLUS SUR L'ESPACE PRIVÉ.
+ * MIN-364 (decision D8) — THE FETCH IS JUDGED ON THE PORT, MORE ON THE PRIVATE SPACE.
  *
- * Le refus d'avant portait sur toute la boucle locale, et son dommage collatéral
- * était la capacité qu'on veut : `curl localhost:3000` pour aller voir rendre la
- * page qu'on vient d'écrire. Ce qui reste refusé est ce qui n'est pas une page —
- * le proxy LLM (il porte la clé du modèle), le pont de tools (il n'authentifie
- * rien) et le serveur opencode du tour (son API répond à qui la joint).
+ * The refusal before concerned the entire local loop, and its collateral damage
+ * was the capacity we wanted: `curl localhost:3000` to see the
+ * page that we have just written return. What remains denied is what isn't a page —
+ * the LLM proxy (it carries the model key), the tools bridge (it doesn't authenticate
+ * anything), and the round's opencode server (its API responds to who joins it).
  *
- * `HARNESS` joue les trois ports que le superviseur connaît.
+ * `HARNESS` plays the three ports that supervisor knows.
  */
 describe("refineLocalVerdict — les fetchs", () => {
   const fetchAsk = (url: string) => ask({ permission: "webfetch", url });
   const HARNESS = [4096, 4097, 51234];
 
   it("refuse un domaine PUBLIC qui résout vers un port du harness", async () => {
-    // C'est la forme qu'a une attaque : le littéral, lui, a l'air irréprochable.
+    // This is the form that an attack has: the literal one seems impeccable.
     const verdict = await refineLocalVerdict(fetchAsk("https://docs.example.com:4096/guide"), ALLOW, REPO, {
       resolve: async () => ["127.0.0.1"],
       harnessPorts: HARNESS,
@@ -214,8 +214,8 @@ describe("refineLocalVerdict — les fetchs", () => {
   });
 
   it("refuse un nom du port du harness qui ne résout pas", async () => {
-    // Un nom dont on ne sait rien, sur un port qui est le nôtre, est exactement ce
-    // que ce garde-fou existe pour ne pas laisser passer.
+    // A name we know nothing about, on a port that is ours, is exactly what
+    // that this safeguard exists so as not to let people pass.
     const verdict = await refineLocalVerdict(fetchAsk("https://nowhere.example:4096"), ALLOW, REPO, {
       resolve: async () => {
         throw new Error("ENOTFOUND");
@@ -239,9 +239,9 @@ describe("refineLocalVerdict — les fetchs", () => {
   });
 
   /**
-   * L'ÉCART DE PARITÉ N°1 DU DOSSIER, refermé : un agent qui ne peut pas aller
-   * voir la page qu'il vient d'écrire n'a plus de boucle de feedback du tout.
-   */
+ * PARITY GAP #1 IN THE FILE, closed: an agent who cannot go
+ * see the page he has just written no longer has a feedback loop at all.
+ */
   it("laisse passer le serveur de dév de l'utilisateur", async () => {
     for (const url of ["http://localhost:3000/", "http://127.0.0.1:3000/api/health"]) {
       expect(
@@ -252,8 +252,8 @@ describe("refineLocalVerdict — les fetchs", () => {
   });
 
   it("ne résout MÊME PAS un nom public qui ne vise aucun port du harness", async () => {
-    // Le contrôle ne porte que sur nos ports : résoudre le reste serait un
-    // aller-retour DNS par fetch, pour un verdict qui ne peut pas changer.
+    // Control only concerns our ports: resolving the rest would be a
+    // DNS round trip by fetch, for a verdict that cannot change.
     let called = 0;
     const verdict = await refineLocalVerdict(fetchAsk("https://developer.mozilla.org/en-US/"), ALLOW, REPO, {
       resolve: async () => {
@@ -267,10 +267,10 @@ describe("refineLocalVerdict — les fetchs", () => {
   });
 
   /**
-   * SANS LISTE DE PORTS, TOUTE LA BOUCLE LOCALE RESTE REFUSÉE. Une ignorance ne
-   * s'interprète pas en autorisation : c'est le comportement d'avant D8, et c'est
-   * ce qui doit rester si un jour le superviseur oublie de passer ses ports.
-   */
+ * WITHOUT A PORT LIST, THE ENTIRE LOCAL LOOP REMAINS DENIED. Ignorance does not
+ * is not interpreted as authorization: this is the behavior before D8, and it is
+ * what must remain if one day the supervisor forgets to pass its ports.
+ */
   it("refuse tout le privé quand les ports du harness sont inconnus", async () => {
     const verdict = await refineLocalVerdict(fetchAsk("http://localhost:3000/"), ALLOW, REPO, {});
     expect(verdict.reply).toBe("reject");
@@ -279,8 +279,8 @@ describe("refineLocalVerdict — les fetchs", () => {
 
 describe("refineLocalVerdict — le sens de la fonction", () => {
   it("ne peut que refuser ce qui était autorisé, jamais l'inverse", async () => {
-    // C'est ce qui la rend sûre à insérer après un verdict : un refus ressort
-    // intact, et on ne touche même pas au disque.
+    // This is what makes it safe to insert after a verdict: a refusal stands out
+    // intact, and we don't even touch the disk.
     const rejected: PermissionVerdict = { reply: "reject", message: "non" };
     const realpath = async (): Promise<string> => {
       throw new Error("le disque ne doit pas être touché");

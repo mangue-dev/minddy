@@ -16,20 +16,20 @@ import { agentToolsFor, type AgentToolDef } from "../tools";
 import { VM_PROTOCOL_VERSION, type VmJob } from "./protocol";
 
 /**
- * MIN-286 lot 1 — les tools de domaine, rendus pour opencode.
+ * MIN-286 batch 1 — domain tools, rendered for opencode.
  *
- * Ce que ces tests gardent tient en une phrase : **il n'y a pas de deuxième
- * table**. Le jour où quelqu'un ajoute un tool à `tools.ts`, il doit apparaître
- * ici sans qu'on ait rien à écrire ; le jour où il en change le schéma, le
- * fichier généré doit changer avec. Une liste recopiée passerait les deux, et le
- * modèle verrait un tool qui n'existe plus.
+ * What these tests keep is in one sentence: **there is no second
+ * table**. The day someone adds a tool to `tools.ts`, it should appear
+ * here without having to write anything; the day it changes the schema, the
+ * generated file must change with it. A copied list would pass both, and the
+ * model would see a tool that no longer exists.
  *
- * Les formes assertées ont été mesurées sur `opencode-ai@1.18.16` : la forme
- * `tool()` est la seule qui sache dire « ce paramètre est optionnel » (l'objet nu
- * rend TOUT obligatoire), et un tool posé hors du dépôt est bien chargé.
+ * The asserted forms were measured on `opencode-ai@1.18.16`: the form
+ * `tool()` is the only one that knows how to say "this parameter is optional" (the nu
+ * object makes EVERYTHING mandatory), and a tool placed outside the repository is loaded.
  */
 
-/** Les chemins du run, dérivés du layout que le job porte (MIN-354). */
+/** The run paths, derived from the layout that the job carries (MIN-354). */
 const LAYOUT = cloudLayout();
 const TOOL_DIR = opencodeToolDir(LAYOUT);
 
@@ -95,16 +95,16 @@ describe("le jeu de tools de domaine sort de tools.ts, pas d'une liste", () => {
       model: "deepseek/deepseek-v4-flash",
     }).map((t) => t.function.name);
     const domain = domainToolsFor(job()).map((t) => t.function.name);
-    // Aucun tool servi et « à nous » ne doit manquer : c'est cette assertion-là
+    // No tool served and “ours” must be missing: that’s this assertion
     // qui casse quand quelqu'un ajoute un tool minddy sans l'inscrire au routage.
     expect(domain).toEqual(served.filter((n) => DOMAIN_TOOL_NAMES.has(n)));
     expect(domain.length).toBeGreaterThan(25);
   });
 
   it("hérite des retraits structurels au lieu de les redire", () => {
-    // Une ROUTINE n'a pas `create_routine`, une session hors chaîne n'a pas
-    // `report_verdict`, un run sans web n'a pas `web_search`. Ces trois règles
-    // vivent dans `agentToolsFor` et doivent traverser sans une ligne ici.
+    // A ROUTINE does not have `create_routine`, an off-chain session does not have
+    // `report_verdict`, a run without web does not have `web_search`. These three rules
+    // live in `agentToolsFor` and have to cross without a line here.
     const routine = domainToolsFor(job({ interactive: false })).map((t) => t.function.name);
     expect(routine).not.toContain("create_routine");
 
@@ -164,21 +164,21 @@ describe("la traduction d'un schéma", () => {
     });
     expect(expr).toContain("tool.schema.array(");
     expect(expr).toContain('"step": tool.schema.string(),');
-    // Ce qui n'est pas requis est optionnel — c'est exactement ce que la forme
-    // d'objet nu d'opencode ne sait PAS dire, et pourquoi on émet du zod.
+    // What is not required is optional — that's exactly what the form
+    // of bare object of opencode does NOT know how to say, and why we emit zod.
     expect(expr).toContain('"status": tool.schema.enum(["pending","completed"]).optional(),');
   });
 
   it("LÈVE sur un schéma qu'elle ne sait pas traduire", () => {
-    // Un `any` silencieux serait un tool dont le modèle ne connaît plus la forme.
-    // Mieux vaut un tour qui ne démarre pas qu'un paramètre disparu sans bruit.
+    // A silent `any` would be a tool whose model no longer knows the form.
+    // Better a ride that doesn't start than a parameter that disappears quietly.
     expect(() => schemaExpression({ type: "tuple" } as never)).toThrow(/sans traduction/);
     expect(() => schemaExpression({ type: "array" })).toThrow(/items/);
   });
 
   it("traduit les 35 tools réels sans en refuser un seul", () => {
-    // Le vrai test de couverture : ce sont les schémas de production qui passent,
-    // pas trois cas construits pour l'occasion.
+    // The real coverage test: these are the production plans that pass,
+    // not three cases built for the occasion.
     for (const anchor of ["issue", "notebook", "pr"] as const) {
       for (const def of domainToolsFor(job({ anchor, chain: true }))) {
         expect(() => renderOpencodeTool(def), def.function.name).not.toThrow();
@@ -199,14 +199,14 @@ describe("le fichier généré", () => {
   it("lit l'adresse du superviseur dans l'environnement, jamais en dur", () => {
     const content = file();
     expect(content).toContain(`process.env[${JSON.stringify(SUPERVISOR_URL_ENV)}]`);
-    // Le port est choisi à l'exécution : une URL en dur serait fausse un tour sur
-    // deux, et une origine de plan de contrôle ici contournerait les compteurs.
+    // The port is chosen at runtime: a hard URL would be wrong on one turn
+    // two, and a control plane origin here would bypass the counters.
     expect(content).not.toContain("https://");
     expect(content).not.toContain("127.0.0.1");
   });
 
   it("rend l'erreur au modèle au lieu de lever", () => {
-    // Un tool qui lève coupe le round. Le modèle doit pouvoir lire, réessayer,
+    // A tool that raises cuts the round. The model must be able to read, retry,
     // ou faire autrement.
     const content = file();
     expect(content).toContain("could not reach the harness");
@@ -216,11 +216,11 @@ describe("le fichier généré", () => {
 
   it("rend une pièce jointe quand le pont l'annonce, et du texte sinon", () => {
     const content = file();
-    // Le tool généré ne DÉCIDE de rien : c'est l'en-tête du pont qui distingue
-    // une réponse ordinaire d'une maquette à montrer (MIN-286 lot 3, §2.22).
+    // The generated tool does not DECIDE anything: it is the bridge header which distinguishes
+    // an ordinary response of a model to show (MIN-286 lot 3, §2.22).
     expect(content).toContain('res.headers.get("x-minddy-attachments")');
     expect(content).toContain("return { output: envelope.output, attachments: envelope.attachments };");
-    // Une enveloppe illisible retombe sur le texte : une maquette perdue vaut
+    // An illegible envelope falls on the text: a lost model is worth
     // mieux qu'un round perdu.
     expect(content).toContain("return text;");
     expect(content).not.toContain("throw ");
@@ -252,16 +252,16 @@ describe("où les fichiers sont posés", () => {
   });
 
   /**
-   * Les tools LOCAUX (dossier §3.2), que le superviseur exécute dans la microVM :
-   * `run_background`, parce que `bash` n'a pas de mode fond, et `update_plan`,
-   * qui est un tool de CONTRÔLE — il n'exécute rien, il émet l'event que le fil
-   * rend en checklist. Rangé côté domaine, il repartait au plan de contrôle et y
-   * recevait un 404 à chaque appel.
-   *
-   * Ils sont générés comme les autres — le pont les exécute au lieu de les faire
-   * suivre —, et une session de RELECTURE n'a pas `run_background` : elle ne
-   * lance rien en fond, et `PR_REVIEW_TOOLS` ne le porte pas.
-   */
+ * The LOCAL tools (folder §3.2), which the supervisor executes in the microVM:
+ * `run_background`, because `bash` does not have a background mode, and `update_plan`,
+ * which is a CONTROL tool — it does not execute anything, it emits the event that the thread
+ * renders as a checklist. Stored on the domain side, it went back to the control plane and y
+ * received a 404 on each call.
+ *
+ * They are generated like the others — the bridge executes them instead of making them
+ * follow —, and a REVIEW session does not have `run_background` : she doesn't
+ * throw anything in the background, and `PR_REVIEW_TOOLS` doesn't carry it.
+ */
   it("`run_background` est servi au ticket et au carnet, jamais à une relecture", () => {
     for (const anchor of ["issue", "notebook"] as const) {
       expect(localToolsFor(job({ anchor })).map((t) => t.function.name)).toEqual([
@@ -279,20 +279,20 @@ describe("où les fichiers sont posés", () => {
   });
 
   /**
-   * MIN-364 (décision D8) — ET SUR LA MACHINE DE QUELQU'UN AUSSI, DÉSORMAIS.
-   *
-   * Il en avait disparu (MIN-293) pour une raison d'exploitation nommée : les
-   * jobs partent en `setsid`, **expressément pour survivre au shell**, et le
-   * `stopAll` de fin de tour ne tourne jamais quand le harness est tué net (⌘Q,
-   * plantage du main process) — le `npm run dev` restait alors vivant, port 3000
-   * tenu, sans même une fenêtre à fermer.
-   *
-   * La condition écrite de la réouverture était le registre d'enfants, et elle
-   * est remplie : le superviseur y inscrit chaque job (`kind: "background"`, donc
-   * signalé en GROUPE), le lanceur le relit au ⌘Q et au démarrage. Ce que le
-   * retrait coûtait était le premier écart de parité du dossier — un agent local
-   * ne pouvait ni lancer un serveur, ni aller voir sa page rendre.
-   */
+ * MIN-364 (decision D8) — AND ON SOMEONE'S MACHINE TOO, NOW.
+ *
+ * It had disappeared (MIN-293) for an operating reason called: the
+ * jobs go to `setsid`, **expressly to survive the shell**, and the
+ * `stopAll` at the end of the turn never runs when the harness is killed (⌘Q,
+ * main process crash) — the `npm run dev` then remained alive, port 3000
+ * held, without even a window to close.
+ *
+ * The written condition for reopening was the child register, and it
+ * is met: the supervisor enters each job there (`kind: "background"`, therefore
+ * reported in GROUP), the launcher rereads it at ⌘Q and at startup. What the
+ * withdrawal cost was the first parity gap in the file — a local
+ * agent could neither launch a server nor see its page render.
+ */
   it("un tour local reçoit le catalogue de projets avec ses chemins", () => {
     const local = job({ controlToken: "bail-hs256" });
     expect(localToolsFor(local).map((t) => t.function.name)).toEqual([
@@ -308,8 +308,8 @@ describe("où les fichiers sont posés", () => {
     expect(opencodeToolFiles(local).map((f) => f.path)).toContain(
       `${TOOL_DIR}/list_projects.ts`,
     );
-    // Les tools de domaine restent identiques : le catalogue ne quitte jamais
-    // le harness pour le plan de contrôle.
+    // The domain tools remain the same: the catalog never leaves
+    // the harness for the control plane.
     expect(domainToolsFor(local).map((t) => t.function.name)).toEqual(
       domainToolsFor(job()).map((t) => t.function.name),
     );
@@ -323,17 +323,17 @@ describe("où les fichiers sont posés", () => {
 });
 
 /**
- * MIN-286 — LES DESCRIPTIONS CITENT LES TOOLS VOISINS, et il faut qu'elles citent
- * ceux qu'opencode SERT.
+ * MIN-286 — DESCRIPTIONS CITE NEIGHBORING TOOLS, and they must cite
+ * those that opencode SERT.
  *
- * `tools.ts` est la seule source, et son texte parle la langue de la boucle
- * maison : « use run_command for those », « exactly like edit_file ». Servi tel
- * quel, il donne au modèle un nom de tool qui n'existe pas — pendant que son
- * prompt système, lui, cite le bon (`OPENCODE_TOOL_NAMES`). Deux vérités dans le
- * même contexte, et un round brûlé pour découvrir laquelle est la bonne.
+ * `tools.ts` is the only source, and its text speaks the language of the loop
+ * house: “use run_command for those”, “exactly like edit_file”. Served as
+ * as it is, it gives the model a tool name that does not exist — while its
+ * system prompt cites the correct one (`OPENCODE_TOOL_NAMES`). Two truths in the
+ * same context, and one round burned to find out which one is the right one.
  */
 describe("les descriptions, dites avec les noms d'opencode", () => {
-  /** La description telle que le MODÈLE la lit : celle du fichier généré. */
+  /** The description as the MODEL reads it: that of the generated file. */
   const servedDescription = (name: string, over: Partial<VmJob> = {}) =>
     renderOpencodeTool(
       [...domainToolsFor(job(over)), ...localToolsFor(job(over))].find(
@@ -348,7 +348,7 @@ describe("les descriptions, dites avec les noms d'opencode", () => {
     expect(retargetToolNames("exactly like edit_file, but on the minddy ticket")).toBe(
       "exactly like edit, but on the minddy ticket",
     );
-    // Nos tools de domaine gardent leur nom : ce sont EUX qui sont servis.
+    // Our domain tools keep their name: they are the ones served.
     expect(retargetToolNames("get the id from read_issue, then read_page")).toBe(
       "get the id from read_issue, then read_page",
     );
@@ -364,8 +364,8 @@ describe("les descriptions, dites avec les noms d'opencode", () => {
   });
 
   it("envoie le modèle au `bash` d'opencode pour curler son serveur", () => {
-    // Le cas qui coûtait un round : `run_background` dit comment se servir de ce
-    // qu'il vient de lancer, et il le disait avec le nom d'un tool absent.
+    // The case that cost a round: `run_background` tells how to use this
+    // that he just launched, and he said it with the name of an absent tool.
     const background = servedDescription("run_background");
     expect(background).toContain("use bash to curl it");
     expect(background).not.toContain("run_command");

@@ -4,16 +4,16 @@ import { useQuery } from "@tanstack/react-query";
 import type { SmartAssignWarningsResponse } from "./types";
 
 /**
- * Mes projets où Smart Assign tourne sans être réglé (MIN-31).
+ * My projects where Smart Assign runs without being set (MIN-31).
  *
- * Montée par la sidebar, donc sur TOUTES les pages : d'où une route à part,
- * volontairement minuscule (GET /api/me/smart-assign-warnings), plutôt qu'un
- * champ du résumé du tableau de bord — celui-là réconcilie les cycles et compte
- * les tickets, on ne le paie pas à chaque navigation pour une pastille.
+ * Mounted by the sidebar, therefore on ALL pages: hence a separate route,
+ * deliberately lowercase (GET /api/me/smart-assign-warnings), rather than a
+ * dashboard summary field — this one reconciles the cycles and counts
+ * tickets, we don't pay for each navigation for a tablet.
  *
- * Fraîcheur : le pont temps réel invalide cette clé sur tout événement de projet
- * ou de membre (lib/realtime-provider.tsx), c'est-à-dire exactement ce qui peut
- * la changer — activer Smart Assign, écrire une règle, ajouter quelqu'un.
+ * Freshness: the real-time bridge invalidates this key on any project
+ * or member event (lib/realtime-provider.tsx), i.e. exactly what can
+ * change it — enable Smart Assign, write a rule, add someone.
  */
 export const SMART_ASSIGN_WARNINGS_KEY = ["me", "smart-assign-warnings"] as const;
 

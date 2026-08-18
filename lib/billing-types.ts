@@ -5,7 +5,7 @@ import type {
 import type { UsageHistoryFeature } from "@/lib/usage-features";
 
 /**
- * Formes de réponse des routes billing (MIN-72), partagées serveur/client.
+ * Response forms for billing routes (MIN-72), shared server/client.
  * `GET /api/billing` → BillingStatusResponse · `GET /api/billing/usage` →
  * UsageSummaryResponse.
  */
@@ -13,9 +13,9 @@ import type { UsageHistoryFeature } from "@/lib/usage-features";
 export interface BillingStatusResponse {
   planId: BillingPlanId;
   source: "admin_override" | "stripe" | "default";
-  /** Service Stripe réellement opéré par cette instance. */
+  /** Stripe service actually operated by this instance. */
   managedBilling: boolean;
-  /** Quota IA réellement opéré par cette instance. */
+  /** AI quota actually operated by this instance. */
   managedAi: boolean;
   stripeConfigured: boolean;
   subscription: {
@@ -27,21 +27,21 @@ export interface BillingStatusResponse {
 
 export interface UsageHistoryEntry {
   runId: string;
-  /** Segment d'affichage (agents = LLM + sandbox fusionnés) — icône et couleur. */
+  /** Display segment (agents = LLM + sandbox merged) — icon and color. */
   segmentId: UsageSegmentId;
   /**
-   * La feature exacte du run, quand on sait la nommer : c'est ELLE que la ligne
-   * affiche (« Smart-fill », pas « Automatisations »). `null` sur une feature
-   * que l'UI ne connaît pas — l'affichage retombe alors sur le nom du segment.
-   */
+ * The exact feature of the run, when we know how to name it: it is SHE that the line
+ * displays (“Smart-fill”, not “Automations”). `null` on a feature
+ * that the UI does not know — the display then falls back to the name of the segment.
+ */
   feature: UsageHistoryFeature | null;
   at: string;
   projectName: string | null;
-  /** Coût brut USD du run — l'UI le convertit en % du budget, jamais affiché tel quel. */
+  /** Gross USD cost of the run — the UI converts it to a % of the budget, never displayed as is. */
   usd: number;
 }
 
-/** `GET /api/billing/usage-history` — runs de la fenêtre courante, paginés. */
+/** `GET /api/billing/usage-history` — runs of the current window, paginated. */
 export interface UsageHistoryResponse {
   total: number;
   entries: UsageHistoryEntry[];
@@ -51,21 +51,21 @@ export interface UsageSummaryResponse {
   planId: BillingPlanId;
   managedBilling: boolean;
   managedAi: boolean;
-  /** Budget d'usage mensuel inclus (USD, coût brut). */
+  /** Monthly usage budget included (USD, gross cost). */
   includedUsd: number;
   usedUsd: number;
   remainingUsd: number;
   periodStart: string;
-  /** Fin de la fenêtre courante = date du prochain reset. */
+  /** End of current window = date of next reset. */
   nextResetAt: string;
-  /** Ventilation par segment d'affichage, dans l'ordre de USAGE_SEGMENTS. */
+  /** Breakdown by display segment, in order of USAGE_SEGMENTS. */
   segments: Array<{ id: UsageSegmentId; usd: number }>;
   limits: {
     maxProjects: number | null;
     projectsUsed: number;
     maxIssuesPerProject: number | null;
     allowAgents: boolean;
-    /** Invités par projet, owner non compris. `null` = illimité. */
+    /** Guests per project, owner not included. `null` = unlimited. */
     maxMembersPerProject: number | null;
   };
 }

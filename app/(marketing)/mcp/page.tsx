@@ -19,53 +19,53 @@ import { StructuredData } from "@/components/marketing/structured-data";
 import { TrackedCta } from "@/components/marketing/tracked-cta";
 
 /**
- * `/mcp` — la doc publique du serveur MCP (MIN-93).
+ * `/mcp` — the public doc of the MCP server (MIN-93).
  *
- * C'est la page qui vise une requête que minddy peut réellement gagner :
- * « issue tracker MCP », « brancher Claude Code sur mes tickets » — pas
- * « meilleur outil de gestion de projet », où on n'existera jamais.
+ * This is the page that targets a request that minddy can actually win:
+ * “MCP issue tracker”, “connect Claude Code to my tickets” — not
+ * “best project management tool”, where one will never exist.
  *
- * Elle ne prétend PAS que minddy serait le seul tracker à parler MCP : Linear,
- * Atlassian et Notion publient chacun le leur. Elle montre juste ce qu'on
- * obtient ici, en une commande.
+ * She does NOT claim that minddy would be the only tracker to speak MCP: Linear,
+ * Atlassian and Notion each publish their own. It just shows what we
+ * gets it here, in one command.
  *
- * Trois règles ont dicté la forme :
+ * Three rules dictated the form:
  *
- * 1. **Rien de recopié.** Les blocs de configuration viennent de
- *    `lib/mcp-agents.ts` (le même registre que les réglages du compte), et ce
- *    que fait un agent est dit avec les MÊMES clés que la section « Agents » de
- *    la landing (`Landing.agentsCapability_*`). Un agent ajouté là-bas apparaît
- *    ici, sans copie à maintenir.
- * 2. **Tout dans le HTML rendu par le serveur.** GPTBot, ClaudeBot et
- *    PerplexityBot n'exécutent pas de JavaScript : les sept blocs de
- *    configuration sont rendus côté serveur, tous, plutôt que cachés derrière un
- *    sélecteur d'onglets qui n'en aurait exposé qu'un.
- * 3. **Rien sur la plomberie.** Une première version listait les trente-deux
- *    outils un par un, avec leurs paramètres, le transport et le mode
- *    d'enregistrement des clients — la page décrivait COMMENT ça marche à
- *    quelqu'un qui veut juste savoir ce que ça fait. La référence complète, elle,
- *    existe toujours pour les machines : `/llms.txt` et `/llms-full.txt`, tous
- *    deux dérivés du serveur.
+ * 1. **Nothing copied.** The configuration blocks come from
+ * `lib/mcp-agents.ts` (the same register as the account settings), and this
+ * what an agent does is said with the SAME keys as the “Agents” section of
+ * the landing (`Landing.agentsCapability_*`). An agent added there appears
+ * here, with no copy to maintain.
+ * 2. **Everything in the HTML rendered by the server.** GPTBot, ClaudeBot and
+ * PerplexityBot does not execute JavaScript: the seven blocks of
+ * configuration are rendered server-side, all, rather than hidden behind a
+ * tab selector which would have only exposed one.
+ * 3. **Nothing about plumbing.** An early version listed the thirty-two
+ * tools one by one, with their parameters, transport and mode
+ * customer registration — the page described HOW it works
+ * someone who just wants to know what it feels like. The complete reference,
+ * still exists for machines: `/llms.txt` and `/llms-full.txt`, all
+ * two derivatives of the server.
  */
 
 export async function generateMetadata(): Promise<Metadata> {
   return publicPageMetadata({ routeKey: "mcp", locale: (await getLocale()) as Locale });
 }
 
-/** Les trois garanties de l'autorisation, dans l'ordre du flux OAuth. */
+/** The three guarantees of authorization, in order of the OAuth flow. */
 const AUTH_POINTS = [
   { key: "who", icon: UserCheck },
   { key: "consent", icon: ShieldCheck },
   { key: "revoke", icon: KeyRound },
 ] as const;
 
-/** Les trois parcours, dans l'ordre où on les découvre. */
+/** The three routes, in the order in which they are discovered. */
 const FLOW_KEYS = ["plan", "track", "create"] as const;
 
 /**
- * Ce qu'un agent fait, dit avec les clés de la landing (`Landing`) plutôt
- * qu'avec la liste des outils du serveur : c'est la même information, écrite
- * pour quelqu'un qui veut savoir ce qu'il obtient — pas quelle fonction
+ * What an agent does, says with the landing keys (`Landing`) rather
+ * than with the list of server tools: it is the same information, written
+ * for someone who wants to know what they're getting — not what function
  * appeler.
  */
 const CAPABILITY_KEYS = [
@@ -74,8 +74,8 @@ const CAPABILITY_KEYS = [
   "track",
   "create",
   "comment",
-  // MIN-273 : les pages. Elles arrivent après « commenter » parce que c'est
-  // l'ordre du geste — on lit et on écrit les tickets, puis la doc qui les
+  // MIN-273: the pages. They come after “comment” because it’s
+  // the order of the gesture — we read and write the tickets, then the doc who
   // explique.
   "wiki",
   "review",
@@ -104,7 +104,7 @@ export default async function McpPage() {
     <>
       <StructuredData variant="mcp" />
 
-      {/* ── Ce que c'est ─────────────────────────────────────────────────── */}
+      {/* ── What it is ───────────────────────── ────────────────────────── */}
       <section className="pt-24 pb-16 sm:pt-28 sm:pb-20">
         <div className="mx-auto w-full max-w-4xl px-4 sm:px-6">
           <RevealHeading
@@ -123,10 +123,10 @@ export default async function McpPage() {
             {t("heroNote")}
           </Reveal>
 
-          {/* L'adresse, tout en haut, avec de quoi la copier : c'est la seule
-              chose que quelqu'un vient chercher ici sans savoir où la trouver.
-              Le transport et le format d'échange ont été retirés — personne
-              n'en a besoin pour brancher son agent. */}
+          {/* The address, at the top, with something to copy it: it's the only one
+              something that someone comes here looking for without knowing where to find it.
+              Transport and exchange format have been removed — no one
+              doesn't need it to connect his agent. */}
           <Reveal
             delay={0.25}
             className="mt-10 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2"
@@ -148,7 +148,7 @@ export default async function McpPage() {
         </div>
       </section>
 
-      {/* ── Brancher son agent ───────────────────────────────────────────── */}
+      {/* ── Connect your agent ───────────────────────────────────────────── */}
       <section id="connect" className="scroll-mt-24 border-t border-border py-16 sm:py-20">
         <div className="mx-auto w-full max-w-5xl px-4 sm:px-6">
           <header className="mb-10 max-w-2xl">
@@ -161,9 +161,9 @@ export default async function McpPage() {
             </Reveal>
           </header>
 
-          {/* `[&>*]:min-w-0` : une commande d'installation ne se coupe pas, et
-              un enfant de grille a `min-width: auto` — sans ça la carte
-              déborderait de sa piste et ferait défiler la page latéralement. */}
+          {/* `[&>*]:min-w-0`: an installation command is not cut, and
+              a grid child has `min-width: auto` — without that the card
+              would overrun its track and cause the page to scroll sideways. */}
           <RevealGroup
             as="ul"
             step={0.06}
@@ -180,26 +180,26 @@ export default async function McpPage() {
             ))}
           </RevealGroup>
 
-          {/* Le raccourci, APRÈS les blocs à coller : celui qui sait déjà quoi
-              faire trouve sa commande tout de suite, et celui qui ne veut pas
-              choisir tombe sur la sortie de secours juste en dessous.
+          {/* The shortcut, AFTER the blocks to stick: the one who already knows what
+              make finds his order right away, and whoever doesn't want
+              choose falls on the emergency exit just below.
 
-              Un prompt, pas un lien vers `/llms.txt` : ce fichier reste une
-              ressource pour les MACHINES, mais le montrer revenait à demander
-              au visiteur d'aller le lire. Le prompt l'y envoie sans qu'il ait à
-              le savoir. L'adresse et le guide sont INTERPOLÉS depuis
-              `lib/site.ts` — un prompt qui contiendrait une URL recopiée serait
-              le seul endroit du site à pouvoir désigner un serveur déménagé. */}
+              A prompt, not a link to `/llms.txt`: this file remains a
+              resource for MACHINES, but to show it was to ask
+              for the visitor to go and read it. The prompt sends him there without him having to
+              know it. The address and guide are INTERPOLATED from
+              `lib/site.ts` — a prompt which contains a copied URL would be
+              the only place on the site that can designate a moved server. */}
           <Reveal className="mt-6 rounded-2xl border border-border bg-muted/30 p-5 sm:p-6">
             <h3 className="mb-2 font-medium">{t("assistantTitle")}</h3>
             <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
               {t("assistantBody")}
             </p>
-            {/* Empilé, et non le prompt à gauche du bouton : une phrase de
-                quarante mots à côté d'un bouton donne, sous 400 px, une colonne
-                de texte de trois caractères de large. L'action d'abord, le
-                texte qu'elle copie en dessous — on n'a pas besoin de le lire
-                pour s'en servir. */}
+            {/* Stacked, and not the prompt to the left of the button: a sentence of
+                forty words next to a button gives, under 400 px, a column
+                of text three characters wide. Action first,
+                text that she copies below — we don't need to read it
+                to use it. */}
             <CopyButton
               text={assistantPrompt}
               label={t("copyPrompt")}
@@ -244,7 +244,7 @@ export default async function McpPage() {
         </div>
       </section>
 
-      {/* ── Les outils ───────────────────────────────────────────────────── */}
+      {/* ── Tools ────────────────────────── ─────────────────────────── */}
       <section id="tools" className="scroll-mt-24 border-t border-border py-16 sm:py-20">
         <div className="mx-auto w-full max-w-4xl px-4 sm:px-6">
           <header className="mb-10 max-w-2xl">
@@ -257,9 +257,9 @@ export default async function McpPage() {
             </Reveal>
           </header>
 
-          {/* Huit phrases, pas quarante noms de fonctions : la liste des
-              outils disait la même chose en demandant au lecteur de la
-              traduire. Ce sont les clés de la landing — une seule copie. */}
+          {/* Eight sentences, not forty function names: the list of
+              tools said the same thing by asking the reader to
+              translate. These are the keys to the landing — just one copy. */}
           <RevealGroup as="ul" step={0.06} className="grid gap-3 sm:grid-cols-2">
             {CAPABILITY_KEYS.map((key) => (
               <li key={key} className="flex items-start gap-3">
@@ -276,7 +276,7 @@ export default async function McpPage() {
         </div>
       </section>
 
-      {/* ── Les parcours ─────────────────────────────────────────────────── */}
+      {/* ── The routes ───────────────────────── ────────────────────────── */}
       <section id="flows" className="scroll-mt-24 border-t border-border py-16 sm:py-20">
         <div className="mx-auto w-full max-w-4xl px-4 sm:px-6">
           <header className="mb-10 max-w-2xl">
@@ -331,7 +331,7 @@ export default async function McpPage() {
         </div>
       </section>
 
-      {/* ── Les trois objections ─────────────────────────────────────────── */}
+      {/* ── The three objections ───────────────────── ────────────────────── */}
       <section className="border-t border-border py-16 sm:py-20">
         <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
           <h2 className="mb-8 text-3xl font-semibold tracking-tighter text-balance sm:text-4xl">
@@ -354,7 +354,7 @@ export default async function McpPage() {
   );
 }
 
-/** Une case de la carte des faits : l'étiquette au-dessus, la valeur en dessous. */
+/** A box on the fact map: label above, value below. */
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="bg-background p-5">
@@ -366,8 +366,8 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-/** Le bloc prêt à coller d'un agent : une commande, une config ou l'URL du
-    serveur, toujours copiable — aucun agent ne s'installe en un clic. */
+/** The ready-to-paste block of an agent: a command, a config or the URL of the
+    server, always copyable — no agent installs in one click. */
 function AgentCard({
   agent,
   copy,
@@ -388,9 +388,9 @@ function AgentCard({
         <span className="text-sm font-medium">{agent.label}</span>
       </div>
 
-      {/* `overflow-x-auto` sur le bloc et non `break-all` : une commande
-          coupée au milieu d'un mot se recolle mal quand on la sélectionne
-          à la main. */}
+      {/* `overflow-x-auto` on the block and not `break-all`: a command
+          cut in the middle of a word fits together badly when you select it
+          by hand. */}
       <pre
         className={cn(
           "overflow-x-auto rounded-lg border border-border bg-muted/40 px-3 py-2",

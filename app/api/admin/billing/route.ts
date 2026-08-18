@@ -19,23 +19,23 @@ import {
 import { displayName } from "@/lib/display-name";
 
 /**
- * Administration du billing (`/admin` → panneau d'un compte) — MIN-72.
- * Gate identique aux autres endpoints admin : JWT via getClaims + isAdminUser.
+ * Billing administration (`/admin` → account panel) — MIN-72.
+ * Same gate as other admin endpoints: JWT via getClaims + isAdminUser.
  *
- *  GET  ?email=<email>  → l'état billing d'un compte : plan effectif + source
- *                         (admin_override → stripe → free) et l'override posé.
- *  POST { userId, planId, note?, duration? } → offre un plan (`planId` null
- *                         reprend le cadeau) ; prioritaire sur Stripe à la
- *                         résolution.
+ * GET ?email=<email> → the billing status of an account: effective plan + source
+ * (admin_override → stripe → free) and the override set.
+ *  POST { userId, planId, note?, duration? } → grants a plan (`planId` null
+ * takes back the gift); Stripe remains the priority
+ * resolution.
  *
- * `duration` est une DURÉE, jamais une date : le client dit « un mois », le
- * serveur stampe l'échéance avec sa propre horloge. Absente, l'échéance en
- * place ne bouge pas — un admin qui corrige une note ne relance pas le compte
- * à rebours sans le vouloir.
+ * `duration` is a DURATION, never a date: the client says “one month”, the
+ * server stamps the deadline with its own clock. Absent, the deadline in
+ * place does not move — an admin who corrects a note does not restart the account
+ * backwards without wanting to.
  *
- * L'override n'écrit QUE les trois colonnes `admin_override_*` — l'état Stripe
- * du compte reste intact, reprendre le cadeau rend son vrai plan à
- * l'utilisateur.
+ * Override ONLY writes the three `admin_override_*` columns — Stripe state
+ * of the account remains intact, taking back the gift makes his real plan to
+ * the user.
  */
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -59,8 +59,8 @@ async function billingStateOf(userId: string) {
     getResolvedBilling(userId),
     getBillingAccountForUser(userId),
   ]);
-  // Un override expiré ne se montre pas : il ne donne déjà plus rien, l'afficher
-  // ferait croire à un cadeau en cours.
+  // An expired override is not shown: it already doesn't give anything anymore, display it
+  // would make it seem like a gift in progress.
   const override = activeAdminOverride(account);
   return {
     userId,
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
   if (!UUID_RE.test(userId)) {
     return NextResponse.json({ error: "Invalid userId" }, { status: 400 });
   }
-  // null = retirer l'override ; sinon un id de plan valide obligatoirement.
+  // null = remove the override; otherwise a valid plan ID is required.
   const planId = input.planId == null ? null : coerceBillingPlanId(input.planId);
   if (input.planId != null && planId == null) {
     return NextResponse.json({ error: "Invalid planId" }, { status: 400 });
@@ -135,9 +135,9 @@ export async function POST(request: NextRequest) {
       ? input.note.trim().slice(0, 500)
       : null;
 
-  // Durée absente = « garde l'échéance en place » — mais seulement si elle est
-  // encore devant : une échéance déjà passée, laissée là par un cadeau fini,
-  // rendrait le nouveau expiré à la seconde où on le pose.
+  // Duration absent = “keeps the deadline in place” — but only if it is
+  // still ahead: a deadline already passed, left there by a finished gift,
+  // would make the new one expire the second you put it down.
   const current = await getBillingAccountForUser(userId);
   const kept = isGiftExpired(current?.admin_override_expires_at)
     ? null

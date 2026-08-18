@@ -56,9 +56,9 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
 }
 
 /**
- * DELETE /api/projects/[id] — passage en corbeille, propriétaire seul (MIN-133).
- * Ses tickets, objectifs et feedbacks ne bougent pas : ils redeviennent visibles
- * tels quels quand le projet est restauré.
+ * DELETE /api/projects/[id] — move to trash, sole owner (MIN-133).
+ * Its tickets, objectives and feedback do not move: they become visible again
+ * as is when the project is restored.
  */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;

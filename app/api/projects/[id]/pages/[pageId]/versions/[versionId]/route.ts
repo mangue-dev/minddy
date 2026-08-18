@@ -8,7 +8,7 @@ type RouteContext = {
   params: Promise<{ id: string; pageId: string; versionId: string }>;
 };
 
-/** GET — UNE version, corps compris : ce que l'aperçu en lecture seule monte. */
+/** GET — A version, including body: what the read-only preview goes up. */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { pageId, versionId } = await params;
   const auth = await getAuthedUser(request);

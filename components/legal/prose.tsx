@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import { getLocale } from "next-intl/server";
 
 /**
- * Primitives de mise en page des pages légales (mentions, CGU, confidentialité,
- * cookies). Server-safe : aucune interactivité, ces pages sont du texte pur.
+ * Layout primitives for legal pages (mentions, CGU, confidentiality,
+ * cookies). Server-safe: no interactivity, these pages are pure text.
  */
 
 export function LegalTitle({ title, updated }: { title: string; updated: string }) {
@@ -30,12 +30,12 @@ export function Section({
   );
 }
 
-/** Paragraphe courant des pages légales. */
+/** Current paragraph of legal pages. */
 export function P({ children }: { children: ReactNode }) {
   return <p className="text-sm leading-relaxed text-foreground">{children}</p>;
 }
 
-/** Texte d'introduction d'une liste (un ton en dessous du corps). */
+/** Introductory text for a list (one tone below the body). */
 export function Intro({ children }: { children: ReactNode }) {
   return <p className="text-sm text-muted-foreground">{children}</p>;
 }
@@ -48,18 +48,18 @@ export function List({ children }: { children: ReactNode }) {
   );
 }
 
-/** Liste à puces « terme — description », utilisée pour les données et durées. */
+/** Bulleted list “term — description”, used for data and durations. */
 /**
- * Liste « terme : définition » des pages légales.
+ * “Term: definition” list of legal pages.
  *
- * Le séparateur suit la typographie de la langue servie : deux-points collé en
- * anglais, précédé d'une espace en français. Il était écrit en dur (`— `), ce
- * qui posait un tiret cadratin sur les trente-six entrées de la page
- * confidentialité, dans les deux langues.
+ * The separator follows the typography of the language served: colon pasted in
+ * English, preceded by a space in French. It was written in hard copy (`— `), this
+ * which placed an em dash on the thirty-six entries on the page
+ * confidentiality, in both languages.
  *
- * `async` plutôt qu'une prop `separator` passée par l'appelant : le composant
- * est server-safe par construction (voir l'en-tête du fichier), et la langue
- * n'est pas une décision de mise en page qui remonte à la page.
+ * `async` rather than a passed `separator` prop by the caller: component
+ * is server-safe by construction (see file header), and language
+ * is not a layout decision that goes back to the page.
  */
 export async function TermList({
   items,
@@ -84,7 +84,7 @@ export async function TermList({
   );
 }
 
-/** Ligne « libellé / valeur » des mentions légales. */
+/** “Label / value” line of the legal notices. */
 export function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-wrap gap-x-2 gap-y-0.5">
@@ -98,7 +98,7 @@ export function Rows({ children }: { children: ReactNode }) {
   return <dl className="space-y-1 text-sm">{children}</dl>;
 }
 
-/** Lien externe des pages légales (sous-traitants, CNIL…). */
+/** External link to legal pages (subcontractors, CNIL, etc.). */
 export function ExternalLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <a
@@ -123,7 +123,7 @@ export function MailLink({ address }: { address: string }) {
   );
 }
 
-/** Tableau des cookies : nom, finalité, durée, avec un badge obligatoire/optionnel. */
+/** Table of cookies: name, purpose, duration, with a mandatory/optional badge. */
 export function CookieTable({
   caption,
   badge,
@@ -133,7 +133,7 @@ export function CookieTable({
   rows,
 }: {
   caption: string;
-  /** Omis pour le stockage local, qui n'est pas une catégorie de consentement. */
+  /** Omitted for local storage, which is not a consent category. */
   badge?: string;
   badgeTone?: "required" | "optional";
   description: string;
@@ -157,9 +157,9 @@ export function CookieTable({
         )}
       </div>
       <p className="text-sm text-muted-foreground">{description}</p>
-      {/* Le tableau défile horizontalement sur mobile plutôt que d'élargir la page. */}
+      {/* The table scrolls horizontally on mobile rather than expanding the page. */}
       <div className="overflow-x-auto">
-        {/* Largeurs fixes : les trois tableaux de la page s'alignent entre eux. */}
+        {/* Fixed widths: the three tables on the page align with each other. */}
         <table className="w-full min-w-[32rem] table-fixed border-collapse text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs text-muted-foreground">

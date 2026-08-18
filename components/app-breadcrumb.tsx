@@ -141,7 +141,7 @@ function BreadcrumbLevel({
 
 /**
  * Mobile header (<desktop): the trail collapses to two "temps" — a back button
- * pointing at the parent level, plus the current level centred (à la AutoKap).
+ * pointing at the parent level, plus the current level centered (AutoKap-style).
  * At the project root the current level is the ProjectSwitcher itself.
  */
 function MobileBreadcrumb({
@@ -238,15 +238,15 @@ function MobileBreadcrumb({
   return (
     <div className="flex min-w-0 flex-1 items-center desktop:hidden">
       <div className="flex min-w-0 flex-1 justify-start">
-        {/* Mode mobile, sous 768 px : la barre latérale n'est plus rendue, et
-            les boutons macOS tombent pile sur le bouton retour ci-dessous — le
-            coin haut-gauche de la fenêtre, c'est cette ligne. Ce coin de garde
-            les pousse hors du chemin, et dessine les leurres quand un dialogue
-            retire les vrais (MIN-293). Ne rend rien ailleurs.
+        {/* Mobile mode, under 768 px: the sidebar is no longer rendered, and
+ the macOS buttons fall right on the back button below — the
+ top-left corner of the window is this line. This corner guard
+ pushes them out of the way, and draws the decoys when a dialogue
+ removes the real ones (MIN-293). Don't render anything else.
 
-            DANS la moitié gauche, et non avant elle : les deux moitiés sont des
-            `flex-1` de base nulle, donc le titre reste centré sur la fenêtre
-            quoi qu'on mette dedans. Posé au-dessus, il l'aurait décalé. */}
+ IN the left half, and not before it: the two halves are zero-based
+ `flex-1`, so the title remains centered on the window
+ whatever we put in it. Placed above, it would have shifted it. */}
         <HeaderWindowButtonsSlot />
         {backHref ? (
           <Button
@@ -374,11 +374,11 @@ export function AppBreadcrumb() {
           show={!!(project && section)}
           levelKey={`section-${sectionKey ?? ""}`}
         >
-          {/* Le fil s'ARRÊTE ici, y compris sur une page du wiki ouverte : trois
-              niveaux, toujours les mêmes (Accueil / Projet / Section). Le titre
-              de la page et sa chaîne de parents ne montent pas dans le header —
-              une bande qui s'allonge et se raccourcit à chaque navigation
-              bouge sous l'œil, et l'arbre juste à gauche dit déjà où l'on est. */}
+          {/* The thread STOPS here, including on an open wiki page: three
+ levels, always the same (Home / Project / Section). The title
+ of the page and its parent string do not go up in the header —
+ a strip which lengthens and shortens with each navigation
+ moves under the eye, and the tree just to the left already says where we are. */}
           <span className="truncate text-sm font-medium text-foreground">
             {section}
           </span>

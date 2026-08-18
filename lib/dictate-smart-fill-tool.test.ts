@@ -3,16 +3,16 @@ import { describe, expect, it } from "vitest";
 import { updateDraftTool } from "@/app/api/projects/[id]/dictate-issue/route";
 
 /**
- * SOUS SMART-FILL, LA DICTÉE NE POSE PLUS LES QUATRE PROPRIÉTÉS (MIN-260).
+ * UNDER SMART-FILL, THE DICTATION NO LONGER SET THE FOUR PROPERTIES (MIN-260).
  *
- * Le formulaire ne les montre plus, et le serveur ne remplit que ce qui est
- * vide : une dictée qui les posait quand même écrivait des valeurs invisibles
- * QUI GAGNAIENT sur Smart-fill — l'automatisation qu'on croyait armée ne
- * faisait alors plus rien, sans que rien ne le dise.
+ * The form no longer shows them, and the server only fills in what is
+ * empty: a dictation which set them still wrote values invisibles
+ * WHO WON on Smart-fill — the automation that we thought was armed no longer did
+ * do anything, without anything saying so.
  *
- * Les champs sont retirés du SCHÉMA plutôt que filtrés de la réponse : un
- * argument qu'on ne propose pas n'est ni rempli, ni raisonné, ni facturé. Rien
- * de tout ça ne se voit à l'écran, d'où ce test.
+ * The fields are removed from the SCHEMA rather than filtered from the response: un
+ * argument that we do not propose is neither completed, nor reasoned, nor invoiced. None
+ * of all this is seen on the screen, hence this test.
  */
 
 const SMART_FILLED = ["priority", "effort", "objective_id", "category_ids"];
@@ -23,27 +23,27 @@ function properties(smartFill: boolean): string[] {
 }
 
 describe("updateDraftTool", () => {
-  it("offre tous les champs quand Smart-fill est coupé", () => {
+  it("offers all fields when Smart-fill is disabled", () => {
     const keys = properties(false);
     for (const field of [...SMART_FILLED, ...KEPT]) expect(keys).toContain(field);
   });
 
-  it("retire les quatre champs de Smart-fill quand il est armé", () => {
+  it("removes the four Smart-fill fields when it is enabled", () => {
     const keys = properties(true);
     for (const field of SMART_FILLED) expect(keys).not.toContain(field);
   });
 
-  it("garde ce qui reste à la dictée : titre, description, statut, assigné, échéance", () => {
-    // Ces trois-là ne sont pas de Smart-fill (elles disent une intention, pas un
-    // contenu) : les perdre serait rendre la dictée muette sur l'essentiel.
+  it("keeps the fields left to dictation: title, description, status, assignee, due date", () => {
+    // These three are not Smart-fill (they say an intention, not a
+    // content): losing them would mean making dictation silent on the essential.
     const keys = properties(true);
     for (const field of KEPT) expect(keys).toContain(field);
   });
 
-  it("ne mute pas le tool partagé — deux dictées de suite, deux schémas justes", () => {
-    // `updateDraftTool` part d'une constante de module : un `delete` sur l'objet
-    // d'origine amputerait toutes les dictées suivantes du process, y compris
-    // celles des utilisateurs qui n'ont pas Smart-fill.
+  it("does not mutate the shared tool — two consecutive dictations, two correct schemas", () => {
+    // `updateDraftTool` starts from a module constant: a `delete` on the object
+    // original would cut all subsequent dictations from the process, including
+    // those of users who do not have Smart-fill.
     updateDraftTool(true);
     expect(properties(false)).toContain("priority");
   });

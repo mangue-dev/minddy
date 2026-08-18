@@ -1,8 +1,8 @@
--- minddy — données initiales du baseline (MIN-379).
+-- minddy — initial baseline data (MIN-379).
 --
--- Un dump de schéma Supabase ne transporte pas les INSERT de configuration.
--- Ces valeurs sont donc une migration distincte, idempotente, pour qu'une
--- instance neuve retrouve exactement les défauts applicatifs du précédent
+-- A Supabase schema dump does not carry configuration INSERTs.
+-- These values ​​are therefore a distinct, idempotent migration, so that a
+-- new instance finds exactly the application defects of the previous one
 -- historique de 211 migrations.
 
 insert into public.app_config (key, value) values
@@ -29,9 +29,9 @@ insert into public.plan_storage_quotas (plan_id, bytes) values
   ('pro',  107374182400)
 on conflict (plan_id) do nothing;
 
--- Les installations qui avaient appliqué certaines migrations à la main ont
--- déjà le schéma du baseline, mais peuvent conserver les anciennes variantes
--- de ces objets. Les rejouer ici les aligne sans toucher aux données métier.
+-- Facilities that had applied some migrations manually have
+-- already the baseline schema, but can keep old variants
+-- of these objects. Replaying them here aligns them without touching the business data.
 create or replace function public.broadcast_activity_scoped()
 returns trigger
 language plpgsql

@@ -1,24 +1,24 @@
 "use client";
 
-// Le fil d'Ariane d'une SOUS-PAGE (MIN-272).
+// The breadcrumbs of a SUB-PAGE (MIN-272).
 //
-// Il ne paraît que lorsqu'il y a quelque chose à dire : une page racine n'a pas
-// de chemin, et un fil d'Ariane qui n'affiche qu'un seul élément n'est qu'un
-// titre écrit deux fois. Dès qu'il y a un niveau d'imbrication, en revanche, la
-// question « où suis-je, et comment je remonte ? » se pose vraiment — la
-// sidebar y répond, mais elle est repliable et peut être fermée.
+// It only appears when there is something to say: a root page does not have
+// path, and a breadcrumb that displays only one element is only one
+// title written twice. As soon as there is a level of nesting, on the other hand, the
+// question “where am I, and how do I get back up?” » really arises — the
+// sidebar answers it, but it is collapsible and can be closed.
 //
-// Il porte les ANCÊTRES, et pas la page courante : son titre est juste en
-// dessous, en 4xl. L'écrire une seconde fois en petit, deux centimètres plus
-// haut, ne dit rien de plus et prend la largeur qu'on cherche justement à ne pas
+// It bears the ANCESTORS, and not the current page: its title is just in
+// below, in 4xl. Write it a second time in small, two centimeters more
+// high, says nothing more and takes the width that we are precisely trying not to
 // prendre.
 //
-// Quand la chaîne s'allonge, ce sont les niveaux du MILIEU qui s'effacent, sous
-// un « … » qui les rend tous d'un clic. Jamais les deux bouts : la racine dit
-// dans quel document on est, le parent direct dit d'où l'on vient, et ce sont
-// les deux seuls dont on a besoin sans réfléchir. C'est le motif de Notion, de
-// Motion et du fil d'Ariane de l'app (components/app-breadcrumb.tsx), dont
-// celui-ci reprend la ponctuation.
+// When the chain lengthens, it is the MIDDLE levels which disappear, under
+// a “…” which renders them all with one click. Never both ends: the root says
+// in which document we are, the direct relative says where we come from, and these are
+// the only two we need without thinking. This is the motive of Notion, of
+// Motion and breadcrumbs of the app (components/app-breadcrumb.tsx), including
+// this one takes the punctuation.
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -73,23 +73,23 @@ export function PageBreadcrumb({
   hrefFor,
   className,
 }: {
-  /** Les ancêtres, de la RACINE au parent direct. Vide : rien ne se rend. */
+  /** Ancestors, from ROOT to direct parent. Empty: nothing is returned. */
   trail: BreadcrumbPage[];
   hrefFor: (pageId: string) => string;
   className?: string;
 }) {
   const t = useTranslations("Pages");
-  // La règle de repli vit dans lib/pages.ts, avec le reste de la logique
-  // d'arbre : elle se teste sans monter d'interface.
+  // The fallback rule lives in lib/pages.ts, along with the rest of the logic
+  // tree: it can be tested without mounting a UI.
   const { lead, hidden, tail } = foldPath(trail);
   if (!lead) return null;
 
   return (
     <nav
       aria-label={t("breadcrumb")}
-      // `text-xs` et `min-w-0` partout : ce fil doit pouvoir rétrécir jusqu'à
-      // ses ellipses plutôt que pousser l'indicateur d'enregistrement, à
-      // l'autre bout de la même ligne.
+      // `text-xs` and `min-w-0` everywhere: this thread must be able to shrink up to
+      // its ellipses rather than pushing the record indicator, to
+      // the other end of the same line.
       className={cn(
         "flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground",
         className
@@ -110,8 +110,8 @@ export function PageBreadcrumb({
                 …
               </button>
             </DropdownMenuTrigger>
-            {/* Les niveaux repliés dans l'ordre du chemin, de la racine vers
-                ici : c'est celui qu'on a en tête en remontant. */}
+            {/* The levels folded in the order of the path, from the root to
+ here: this is the one we have in mind going up. */}
             <DropdownMenuContent align="start" className="w-56">
               {hidden.map((page) => (
                 <DropdownMenuItem key={page.id} asChild>

@@ -15,46 +15,46 @@ import type {
 } from "@/lib/types";
 import type { IssueStatus } from "@/lib/issue-constants";
 
-/** Combien de cycles clos le sélecteur de dates liste (aligné sur /api/me/board). */
+/** How many cycles the date picker lists (aligned to /api/me/board). */
 const PAST_CYCLES_SHOWN = 8;
 
 /**
- * Colonnes d'un ticket du tableau de bord : ce que les sections affichent ou
- * ordonnent, rien de plus.
+ * Dashboard ticket columns: what the sections display or
+ * sort, nothing more.
  *
- * `projects!inner(deleted_at)` n'est pas une colonne affichée, c'est le FILTRE
- * de la corbeille : mettre un projet à la corbeille ne touche pas ses tickets
- * (DELETE /api/projects/[id] : « ses tickets, objectifs et feedbacks ne bougent
- * pas »), et `can_access_project` ne regarde pas `deleted_at` — les tickets d'un
- * projet jeté continuent donc de passer RLS. Le board global s'en protège côté
- * client (`scopedIssues`, components/global-board.tsx) ; ici il faut le faire en
- * SQL, sinon les « +N autres » — qui viennent de `count: "exact"` — compteraient
- * ce que la liste, elle, aurait écarté. Même jointure que la réconciliation des
+ * `projects!inner(deleted_at)` is not a displayed column, it is the FILTER
+ * from the trash: putting a project in the trash does not affect its tickets
+ * (DELETE /api/projects/[id]: “its tickets, objectives and feedback do not move
+ * not"), and `can_access_project` does not look at `deleted_at` — the tickets of a
+ * Project thrown away therefore continue to pass RLS. The overall board protects itself from it
+ * client(`scopedIssues`, components/global-board.tsx); here it must be done in
+ * SQL, otherwise the “+N others” — which come from `count: "exact"` — would count
+ * what the list would have ruled out. Same join as the reconciliation of
  * cycles (lib/server/cycles.ts).
  */
 const SUMMARY_ISSUE_COLUMNS =
   "id, project_id, number, title, status, priority, effort, due_date, cycle_id, created_at, updated_at, issue_categories(category_id), projects!inner(deleted_at)";
 
 /**
- * Combien d'échéances proches remontent au plus. La section n'en affiche qu'une
- * poignée ; le plafond n'est là que pour qu'un compte très en retard ne fasse
- * pas d'un tableau de bord une requête sans fond.
+ * How many near deadlines are there at most? The section only displays one
+ * handle ; the ceiling is only there so that a very late account does not
+ * not a dashboard a bottomless request.
  */
 const DUE_SOON_LIMIT = 50;
 
 /**
- * Plafonds de la file « À trier » (MIN-104) : jamais la file entière — un projet
- * qui a laissé filer son triage ne doit pas alourdir le tableau de bord. La
- * section en affiche dix au plus, sur deux projets au plus ; la marge sert
- * justement à ce qu'après ce second filtre il reste de quoi remplir les dix
- * lignes. Le « +N autres » qu'elle annonce, lui, reste EXACT : `count: "exact"`
- * compte tout l'ensemble filtré, `limit` ne borne que les lignes rapatriées
- * (même requête, même prix).
+ * Ceilings of the “To be sorted” queue (MIN-104): never the entire queue — a project
+ * who has let his triage slide should not weigh down the dashboard. There
+ * section displays ten at most, on two projects at most; the margin is used
+ * precisely so that after this second filter there remains enough to fill the ten
+ * lines. The “+N others” that it announces remains EXACT: `count: "exact"`
+ * counts the entire filtered set, `limit` only bounds the repatriated lines
+ * (same request, same price).
  */
 const TRIAGE_LIMIT = 30;
 const NEW_FEEDBACK_LIMIT = 30;
 
-/** Colonnes d'un retour de la file « À trier » — cf. HomeSummaryFeedback. */
+/** Columns of a return from the “To be sorted” queue — cf. HomeSummaryFeedback. */
 const SUMMARY_FEEDBACK_COLUMNS = "id, project_id, title, vote_count, created_at";
 
 type SummaryRow = Omit<HomeSummaryIssue, "category_ids"> & {
@@ -63,8 +63,8 @@ type SummaryRow = Omit<HomeSummaryIssue, "category_ids"> & {
   projects?: unknown;
 };
 
-/** La jointure des catégories arrive en lignes ; la home veut des ids. Celle du
-    projet ne sert qu'à filtrer la corbeille et ne descend pas au client. */
+/** The joining of categories happens in lines; the house wants ids. That of
+ project only serves to filter the trash and does not go down to the client. */
 function toSummaryIssue({
   issue_categories,
   projects: _projects,
@@ -74,16 +74,16 @@ function toSummaryIssue({
 }
 
 /**
- * Retours qui attendent encore une décision d'équipe (MIN-104) : `status = 'open'`
- * — la promotion en ticket, elle, passe le post à `planned`
- * (lib/server/feedback/promote.ts) — et jamais un tombstone de merge.
+ * Returns still awaiting a team decision (MIN-104): `status = 'open'`
+ * — the ticket promotion passes the post to `planned`
+ * (lib/server/feedback/promote.ts) — and never a merge tombstone.
  *
- * Passe par le client service : toutes les tables `feedback_*` sont RLS deny-all
- * (cf. supabase/migrations/…_feedback.sql), donc la portée « mes projets » est
- * explicite ici, à partir des ids lus, eux, sous RLS.
+ * Goes through the service client: all `feedback_*` tables are RLS deny-all
+ * (see supabase/migrations/…_feedback.sql), so the “my projects” scope is
+ * explicit here, from the ids read under RLS.
  *
- * Une panne de cette lecture ne rend pas 500 : le reste du tableau de bord est
- * légitime, la section se contente d'omettre les retours.
+ * A failure of this reading does not make it 500: the rest of the dashboard is
+ * legitimate, the section simply omits returns.
  */
 async function loadNewFeedback(
   projectIds: string[]
@@ -107,32 +107,32 @@ async function loadNewFeedback(
 }
 
 /**
- * GET /api/me/summary — le strict nécessaire du tableau de bord (MIN-89).
+ * GET /api/me/summary — the bare essentials of the dashboard (MIN-89).
  *
- * Pourquoi une route à part plutôt que GET /api/me/board : celui-ci est la charge
- * utile du *kanban* cross-projet — TOUS les tickets de TOUS mes projets, en
- * lignes complètes (description + plan, jusqu'à 64 Ko pièce), plus les relations,
- * les membres, les intégrations, les catégories et les objectifs. L'accueil, lui,
- * affiche trois compteurs et trois lignes de cycle. Elle montait donc la requête
- * la plus lourde de l'app pour en utiliser une fraction de pourcent.
+ * Why a separate route rather than GET /api/me/board: this one is the load
+ * useful cross-project *kanban* — ALL tickets from ALL my projects, in
+ * complete lines (description + plan, up to 64 KB each), plus relationships,
+ * members, integrations, categories and goals. The reception,
+ * displays three counters and three cycle lines. So she made the request
+ * the heaviest part of the app to use a fraction of a percent.
  *
- * Ici : les compteurs sont des `count` SQL (aucune ligne ne remonte), et seuls
- * les tickets du cycle courant — plus, depuis MIN-96, ceux dont l'échéance
- * approche — sont matérialisés, en colonnes réduites.
+ * Here: the counters are `count` SQL (no line goes up), and only
+ * tickets from the current cycle — plus, since MIN-96, those whose expiry date
+ * approach — are materialized, in reduced columns.
  *
- * Comme /api/me/board, la lecture réconcilie d'abord la timeline des cycles
- * (création/clôture/rollover/auto-remplissage — lib/server/cycles.ts), car cette
- * réconciliation DÉPLACE des tickets et la lecture doit en tenir compte.
- * Les tickets, relations et catégories passent par le client de l'utilisateur :
- * RLS (`can_access_project`) borne le tout à mes projets.
+ * Like /api/me/board, reading first reconciles the cycle timeline
+ * (creation/closing/rollover/auto-fill — lib/server/cycles.ts), because this
+ * reconciliation MOVES tickets and reading must take this into account.
+ * Tickets, relationships and categories pass through the user's client:
+ * RLS (`can_access_project`) limits everything to my projects.
  */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  // Le fuseau du navigateur sert deux fois : à réconcilier la timeline des
-  // cycles, et à compter les jours qui restent avant une échéance (MIN-96).
+  // The browser time zone serves two purposes: to reconcile the timeline of
+  // cycles, and to count the days remaining before a deadline (MIN-96).
   const tz = request.nextUrl.searchParams.get("tz");
   const today = todayInTz(tz);
 
@@ -157,15 +157,15 @@ export async function GET(request: NextRequest) {
 
   const currentCycleId = cycles.current?.id ?? null;
 
-  // `head: true` + `count: "exact"` ne renvoie AUCUNE ligne, juste le total —
-  // c'est tout l'intérêt par rapport au board, qui comptait côté client après
-  // avoir téléchargé chaque ticket. Il n'en reste qu'un : la carte qui alignait
-  // « ouverts / en cours / à moi » a cédé la place à « En attente de moi », qui
-  // montre des lignes sur lesquelles agir plutôt que des nombres.
+  // `head: true` + `count: "exact"` returns NO rows, just the total —
+  // that's the whole point in relation to the board, which counted on the client side after
+  // have downloaded each ticket. Only one remains: the card that aligned
+  // “open / in progress / to me” gave way to “Waiting for me”, which
+  // shows lines to act on rather than numbers.
   const [totalRes, cycleIssuesRes, dueSoonRes, triageRes, myProjectsRes] =
     await Promise.all([
-      // Tous statuts confondus : l'onboarding demande « as-tu déjà créé un
-      // ticket ? », auquel un ticket terminé répond oui (lib/use-onboarding.ts).
+      // All statuses combined: onboarding asks “have you already created a
+      // ticket? ”, to which a completed ticket answers yes (lib/use-onboarding.ts).
       auth.supabase
         .from("issues")
         .select("id, projects!inner(deleted_at)", { count: "exact", head: true })
@@ -179,10 +179,10 @@ export async function GET(request: NextRequest) {
             .is("deleted_at", null)
             .eq("cycle_id", currentCycleId)
         : Promise.resolve({ data: [], error: null }),
-      // Échéances proches (MIN-96) : SQL préfiltre sur la fenêtre la plus large
-      // (XL, 8 jours) sans borne basse — un ticket en retard reste en retard —
-      // puis isDueSoon resserre à la fenêtre propre à l'effort de chacun. Le tri
-      // est déjà celui de la section : la plus vieille échéance d'abord.
+      // Close deadlines (MIN-96): SQL prefilter on the largest window
+      // (XL, 8 days) with no lower bound — an overdue ticket remains overdue —
+      // then isDueSoon tightens the window clean to everyone's effort. Sorting
+      // is already that of the section: the oldest deadline first.
       auth.supabase
         .from("issues")
         .select(SUMMARY_ISSUE_COLUMNS)
@@ -193,9 +193,9 @@ export async function GET(request: NextRequest) {
         .lte("due_date", dueSoonUpperBound(today))
         .order("due_date", { ascending: true })
         .limit(DUE_SOON_LIMIT),
-      // File « À trier » (MIN-104) : les tickets en triage, le plus ANCIEN
-      // d'abord — sur une file d'attente, ce qui a le plus patienté est ce qui
-      // pourrit, et c'est donc ce que la section montre en premier.
+      // “To be sorted” file (MIN-104): tickets in triage, the OLDEST
+      // first — in a queue, the one who waited the longest is the one who
+      // rots, and so this is what the section shows first.
       auth.supabase
         .from("issues")
         .select(SUMMARY_ISSUE_COLUMNS, { count: "exact" })
@@ -204,7 +204,7 @@ export async function GET(request: NextRequest) {
         .eq("status", "triage")
         .order("created_at", { ascending: true })
         .limit(TRIAGE_LIMIT),
-      // Mes projets, à seule fin de borner la lecture service-role du feedback
+      // My projects, for the sole purpose of limiting the service-role reading of feedback
       // (loadNewFeedback) : RLS `projects_select` = owner ∪ membre.
       auth.supabase.from("projects").select("id").is("deleted_at", null),
     ]);
@@ -220,8 +220,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
 
-  // Part maintenant (l'appel démarre la requête) et s'attend tout en bas : elle
-  // recouvre ainsi la passe séquentielle des relations du cycle.
+  // Leaves now (the call starts the request) and waits at the bottom: she
+  // thus covers the sequential pass of the cycle relations.
   const newFeedbackPromise = loadNewFeedback(
     ((myProjectsRes.data ?? []) as { id: string }[]).map((p) => p.id)
   );
@@ -239,10 +239,10 @@ export async function GET(request: NextRequest) {
     .map(toSummaryIssue)
     .filter((issue) => isDueSoon(issue, today, tz));
 
-  // Ordre « reco » de la carte : un ticket est bloqué par des tickets qui, eux,
-  // peuvent être HORS du cycle. On ne remonte donc que les relations qui touchent
-  // un ticket du cycle, puis le statut des tickets d'en face — au lieu de tout le
-  // graphe et de tous les statuts du board.
+  // “Receipt” order of the card: a ticket is blocked by tickets which, in turn,
+  // may be OUT of the cycle. We therefore only trace the relationships that affect
+  // a ticket from the cycle, then the status of the tickets opposite — instead of all the
+  // graph and all the statuses of the board.
   let relations: IssueRelation[] = [];
   const blockerStatuses: Record<string, IssueStatus> = {};
   const cycleIssueIds = cycleIssues.map((i) => i.id);
@@ -264,9 +264,9 @@ export async function GET(request: NextRequest) {
       ),
     ];
     if (counterpartIds.length > 0) {
-      // Même filtre corbeille : un bloqueur dans un projet jeté ne bloque plus
-      // rien — sans quoi il maintiendrait indéfiniment son ticket en bas de
-      // l'ordre reco, pour une raison devenue invisible.
+      // Same trash filter: a blocker in a discarded project no longer blocks
+      // nothing — otherwise he would keep his ticket indefinitely at the bottom of
+      // the receipt order, for a reason that has become invisible.
       const { data: statusRows } = await auth.supabase
         .from("issues")
         .select("id, status, projects!inner(deleted_at)")

@@ -5,21 +5,20 @@ import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
 
 /**
- * Le contrat entre le REGISTRE (`AI_MODEL_CONFIG_FIELDS`) et les catalogues :
- * tout réglage rendu dans `/admin` a un libellé dans les deux langues.
+ * The contract between the REGISTER (`AI_MODEL_CONFIG_FIELDS`) and the catalogs:
+ * any setting rendered in `/admin` has a label in both languages.
  *
- * Pourquoi un test. Le tableau de bord assemble ses clés à l'exécution
+ * Why a test. The dashboard assembles its keys at runtime
  * (`t(\`fields.${field.key}.label\`)`, cf. components/admin/admin-models-dashboard.tsx),
- * donc la clé est castée en `MessageKey<"Admin">` et le compilateur ne vérifie
- * plus son existence. Le test de contrat i18n, lui, vérifie les placeholders des
- * clés APPELÉES en dur — une clé assemblée lui échappe aussi. Entre les deux,
- * une ligne ajoutée au registre sans son entrée de catalogue ne casse rien à la
- * compilation et lève `MISSING_MESSAGE` à l'écran, en console, chez l'admin.
- * C'est arrivé avec `demo_dictation_enabled` (MIN-150).
+ * so the key is cast to `MessageKey<"Admin">` and the compiler no longer checks
+ * for its existence. The i18n contract test checks the placeholders of the
+ * keys CALLED in hard form — an assembled key also escapes it. Between the two,
+ * a line added to the registry without its catalog entry does not break anything during the
+ * compilation and raises `MISSING_MESSAGE` on the screen, in console, at the admin.
+ * It happened with `demo_dictation_enabled` (MIN-150).
  *
- * La description reste facultative : un champ dont le libellé se suffit n'en a
- * pas, et le dashboard le gère (`t.has`). Ce qui n'est pas facultatif, c'est
- * qu'elle existe des DEUX côtés dès qu'elle existe d'un.
+ * The description remains optional: a field whose label is sufficient does not have
+ *, and the dashboard manages it (`t.has`). What is not optional is that it exists on BOTH sides as long as it exists on one.
  */
 const CATALOGS = { en, fr } as const;
 

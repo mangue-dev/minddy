@@ -18,11 +18,11 @@ import type { RepoHost } from "./repo-host";
 import { cloudLayout } from "./harness-layout";
 
 /**
- * MIN-110 — le type-check de fin de tour. La partie sandbox (lancer `tsc` dans la
- * microVM) n'est pas testable ici ; ce qui l'est, et qui décide de ce que le modèle
- * lit vraiment, c'est le PARSING de la sortie de tsc, l'ordre (les fichiers du tour
- * d'abord) et le cap. Les sorties ci-dessous sont copiées de vraies exécutions dans
- * la microVM.
+ * MIN-110 — the end-of-round type-check. The sandbox part (running `tsc` in the
+ * microVM) is not testable here; what is, and which decides what the
+ * model actually reads, is the PARSING of the tsc output, the order (tour files
+ * first) and heading. The outputs below are copied from real runs in
+ * the microVM.
  */
 
 const REAL = `lib/plan.ts(253,7): error TS2322: Type 'string' is not assignable to type 'number'.
@@ -94,11 +94,11 @@ lib/a.ts(1,1): error TS2: nope.`;
       (_, i) => `lib/f${i}.ts(1,1): error TS2322: Type 'string' is not assignable to type 'number'.`,
     ).join("\n");
     const block = formatTypeErrors(many, []) ?? "";
-    // Le cap porte sur les erreurs ; en-tête et consigne s'ajoutent par-dessus.
+    // The course is about errors; header and instructions are added on top.
     expect(block.length).toBeLessThan(TYPE_ERRORS_MAX_CHARS + 400);
     expect(block).toMatch(/… and \d+ more errors\./);
-    // Aucune ligne d'erreur coupée au milieu : un chemin tronqué envoie le modèle
-    // éditer un fichier qui n'existe pas.
+    // No error line cut in the middle: truncated path sends model
+    // edit a file that does not exist.
     for (const line of block.split("\n")) {
       if (line.includes("error TS")) expect(line).toMatch(/\.$/);
     }
@@ -124,10 +124,10 @@ lib/a.ts(1,1): error TS2: nope.`;
 });
 
 /**
- * MIN-251 — la suite de tests, même geste que le type-check. Ce qui décide ici de
- * ce que le modèle lit vraiment : ce qu'on accepte de LANCER (`testRunnerBin`,
- * `detectTestRunner`), et ce qu'on sait LIRE d'une sortie de runner. Les sorties
- * ci-dessous sont copiées de vraies exécutions.
+ * MIN-251 — the test suite, same gesture as type-check. What decides here is
+ * what the model really reads: what we accept to LAUNCH (`testRunnerBin`,
+ * `detectTestRunner`), and what we know to READ from a runner's output. The outputs
+ * below are copied from real executions.
  */
 
 const VITEST_OUT = `
@@ -185,11 +185,10 @@ Tests:       1 failed, 2 passed, 3 total
 `;
 
 /**
- * MIN-257 — le cas du ticket, capturé tel quel : `vitest run` (4.1.10 du dépôt) sur
- * deux fichiers sondes, l'un avec une assertion rouge, l'autre avec un import qui
- * n'existe plus. Vitest ouvre alors une section « Failed Suites » dont l'en-tête
- * `FAIL  <fichier> [ <fichier> ]` ne porte AUCUN `>` — la forme que le parseur ne
- * savait pas lire, et dont il jetait tout le corps.
+ * MIN-257 — the case of the ticket, captured as is: `vitest run` (repo 4.1.10) on
+ * two probe files, one with a red assertion, the other with an import that
+ * no longer exists. Vitest then opens a “Failed Suites” section whose header
+ * `FAIL  <fichier> [ <fichier> ]` bears NO `>` — the form that the parser did not know how to read, and whose entire body it threw away.
  */
 const VITEST_COLLECT_OUT = `
  RUN  v4.1.10 /Users/clementguerin/Projets/minddy-ticketing/minddy
@@ -240,7 +239,7 @@ AssertionError: expected 2 to be 3 // Object.is equality
    Duration  90ms (transform 19ms, setup 0ms, import 15ms, tests 3ms, environment 0ms)
 `;
 
-/** La même exécution, sonde à l'import SEULE : aucun test n'a même été collecté. */
+/** The same execution, import probe ALONE: no tests were even collected. */
 const VITEST_COLLECT_ONLY_OUT = `
  RUN  v4.1.10 /Users/clementguerin/Projets/minddy-ticketing/minddy
 
@@ -275,9 +274,9 @@ describe("testRunnerBin", () => {
   });
 
   it("refuse de deviner derrière une enveloppe", () => {
-    // Derrière `npm run` ou `bash`, il n'y a pas de binaire à vérifier — donc pas
-    // moyen de savoir si l'environnement est installé, et un `command not found`
-    // servi comme un échec de test enverrait le modèle chercher un bug fantôme.
+    // Behind `npm run` or `bash`, there is no binary to check — so no
+    // way to know if the environment is installed, and a `command not found`
+    // served as a test failure would send the model looking for a phantom bug.
     expect(testRunnerBin("npm run test:unit")).toBeNull();
     expect(testRunnerBin("bash scripts/test.sh")).toBeNull();
     expect(testRunnerBin("node --test")).toBeNull();
@@ -289,7 +288,7 @@ describe("testRunnerBin", () => {
   });
 });
 
-/** Host de papier : un `package.json` et un `test -x` qu'on décide. */
+/** Paper host: a `package.json` and a `test -x` that we decide. */
 function hostWith(pkg: string | null, binPresent = true): RepoHost {
   return {
     layout: cloudLayout(),
@@ -307,8 +306,8 @@ describe("detectTestRunner", () => {
   });
 
   it("se tait quand le binaire n'est pas installé", async () => {
-    // Notre échec de production le plus fréquent, côté type-check : le modèle lance
-    // la vérification avant l'install. Un mur d'échecs y serait pire que le silence.
+    // Our most frequent production failure, type-check side: the model throws
+    // verification before installation. A wall of chess would be worse than silence there.
     expect(await detectTestRunner(hostWith(`{"scripts":{"test":"vitest run"}}`, false))).toBeNull();
   });
 
@@ -329,8 +328,8 @@ describe("parseTestFailures", () => {
     ]);
     expect(entries[0].text).toContain("AssertionError: expected 2 to be 3");
     expect(entries[0].text).toContain("lib/plan.test.ts:4:19");
-    // L'extrait de code source est jeté : le modèle sait relire le fichier, et ces
-    // lignes-là noieraient le message.
+    // The source code extract is thrown away: the model knows how to reread the file, and these
+    // these lines would drown out the message.
     expect(entries[0].text).not.toContain("describe(");
   });
 
@@ -351,18 +350,18 @@ describe("parseTestFailures", () => {
   it("lit un fichier qui n'a pas CHARGÉ — la forme sans `>` de « Failed Suites »", () => {
     const entries = parseTestFailures(VITEST_COLLECT_ONLY_OUT);
     expect(entries).toHaveLength(1);
-    // Ni suite ni cas à nommer : le titre vaut le fichier.
+    // Neither sequence nor case to name: the title is worth the file.
     expect(entries[0].title).toBe("lib/zz-probe-b.test.ts");
     expect(entries[0].kind).toBe("suite");
-    // Et surtout le CORPS, qui partait entièrement à la poubelle.
+    // And especially the BODY, which was completely thrown away.
     expect(entries[0].text).toContain("Cannot find module './zz-gone-module'");
     expect(entries[0].text).toContain("lib/zz-probe-b.test.ts:2:1");
     expect(entries[0].text).not.toContain("describe(");
   });
 
   it("lit les DEUX : le fichier tombé à l'import ET l'assertion rouge d'ailleurs", () => {
-    // Le cas du ticket. Une seule assertion parsée suffisait à désarmer le repli,
-    // et l'échec le plus directement causé par l'édition du modèle disparaissait.
+    // The case of the ticket. A single parsed assertion was enough to disarm the withdrawal,
+    // and the failure most directly caused by editing the model disappeared.
     const entries = parseTestFailures(VITEST_COLLECT_OUT);
     expect(entries.map((e) => e.title)).toEqual([
       "lib/zz-probe-b.test.ts",
@@ -373,9 +372,9 @@ describe("parseTestFailures", () => {
   });
 
   it("n'ouvre pas un contexte de fichier jest sur un échec de collecte", () => {
-    // `FAIL <fichier>` seul, chez jest, NOMME les `●` qui suivent. La forme
-    // `FAIL <fichier> [ <fichier> ]` est un échec à part entière : elle ne doit pas
-    // se faire prendre pour cet en-tête-là, ni renommer l'échec suivant.
+    // `FAIL <fichier>` alone, at jest, NAMEs the `●` that follow. The shape
+    // `FAIL <fichier> [ <fichier> ]` is a failure in its own right: it must not
+    // get caught for that header, nor rename the next failure.
     const raw = `${VITEST_COLLECT_ONLY_OUT}
   ● sum › adds numbers
     Expected: 3`;
@@ -384,8 +383,8 @@ describe("parseTestFailures", () => {
   });
 
   it("ignore les couleurs du terminal", () => {
-    // Le runner colorise dès qu'il croit parler à un terminal. Sans `NO_COLOR`, ou
-    // avec un runner qui l'ignore, la sortie arrive habillée : elle doit se lire
+    // The runner colors as soon as he thinks he is talking to a terminal. Without `NO_COLOR`, or
+    // with a runner who ignores it, the outing arrives dressed: it must be read
     // pareil.
     const colored = VITEST_OUT.replaceAll("FAIL ", "[41m[1mFAIL[22m[49m ");
     expect(parseTestFailures(colored).map((e) => e.title)).toEqual(
@@ -399,7 +398,7 @@ describe("formatTestFailures", () => {
     const block = formatTestFailures(VITEST_OUT) ?? "";
     expect(block).toContain("Tests are failing after your changes, please fix:");
     expect(block).toContain("do not fix it");
-    // Chaque échec s'ouvre sur `FAIL ` — c'est ce que compte `failuresShown`.
+    // Each failure opens with `FAIL ` — that's what `failuresShown` counts.
     expect(block.split("\n").filter((l) => l.startsWith("FAIL ")).length).toBe(2);
   });
 
@@ -414,9 +413,9 @@ describe("formatTestFailures", () => {
   });
 
   it("sur une sortie qu'on ne sait pas lire, sert la QUEUE plutôt que le silence", () => {
-    // Une suite qui tombe à l'import, un runner inconnu, une config cassée : le
-    // verdict vit toujours à la fin. Un « rouge sans détail » vaut infiniment mieux
-    // qu'un tour qui se termine en croyant la suite verte — c'est tout le ticket.
+    // A sequel that fails on import, an unknown runner, a broken config: the
+    // verdict always lives in the end. A “red without detail” is infinitely better
+    // that a round that ends with you believing the suit is green — that's the whole ticket.
     const raw = `Error: Cannot find module './missing'\n    at Object.<anonymous> (vitest.config.ts:3:1)`;
     const block = formatTestFailures(raw) ?? "";
     expect(block).toContain("Tests are failing after your changes");
@@ -429,15 +428,15 @@ describe("formatTestFailures", () => {
     expect(block).toContain("Cannot find module './zz-gone-module'");
     expect(block).toContain("FAIL lib/zz-probe-a.test.ts > probe a > adds");
     expect(block).toContain("AssertionError: expected 2 to be 3");
-    // Un fichier entier à zéro pèse plus qu'un cas : il passe devant le cap.
+    // An entire file at zero weighs more than a case: it passes the milestone.
     expect(block.indexOf("FAIL lib/zz-probe-b.test.ts")).toBeLessThan(
       block.indexOf("FAIL lib/zz-probe-a.test.ts"),
     );
   });
 
   it("ne laisse pas le cap manger l'échec de collecte", () => {
-    // 200 assertions rouges devant, un fichier non chargé derrière : c'est LUI qui
-    // doit rester dans le bloc, pas être poussé dehors par le volume.
+    // 200 red assertions in front, an unloaded file behind: it is HIM who
+    // must stay in the block, not be pushed out by the volume.
     const many = Array.from(
       { length: 200 },
       (_, i) => ` FAIL  lib/f${i}.test.ts > groupe > cas ${i}\nAssertionError: expected 2 to be 3`,
@@ -448,9 +447,9 @@ describe("formatTestFailures", () => {
   });
 
   it("sert la QUEUE quand la sortie annonce des « Failed Suites » qu'on n'a pas su lire", () => {
-    // Le repli ne doit pas se désarmer sur une seule assertion parsée ailleurs : si
-    // vitest change la forme de cet en-tête, on sert la queue brute plutôt que de
-    // rendre un bloc qui tait le fichier tombé.
+    // The fallback must not disarm on a single assertion parsed elsewhere: if
+    //vitest changes the form of this header, we serve the raw tail rather than
+    // return a block which was the dropped file.
     const raw = VITEST_COLLECT_OUT.replace(
       " FAIL  lib/zz-probe-b.test.ts [ lib/zz-probe-b.test.ts ]",
       " FORME-INCONNUE  lib/zz-probe-b.test.ts",
@@ -468,11 +467,11 @@ describe("formatTestFailures", () => {
 });
 
 /**
- * MIN-262 — CE QUE LE MODÈLE A VÉRIFIÉ LUI-MÊME.
+ * MIN-262 — WHAT THE MODEL HAS CHECKED ITSELF.
  *
- * La reconnaissance de commande est le point sensible de tout le ticket : un faux
- * positif fait TAIRE le harness, c'est-à-dire qu'il rend le silence à un tour que
- * personne n'a vérifié. D'où une batterie qui teste surtout ce qu'on REFUSE.
+ * Command recognition is the sensitive point of the whole ticket: a false
+ * positive SILENCES the harness, that is, it silences one turn que
+ * no one checked. Hence a battery which mainly tests what we REFUSE.
  */
 describe("looksLikeTestCommand", () => {
   it("reconnaît le script du projet et les runners appelés par leur nom", () => {
@@ -503,8 +502,8 @@ describe("looksLikeTestCommand", () => {
   });
 
   it("refuse tout ce qui rend le code de sortie menteur", () => {
-    // `|| true` et `; echo` sortent en 0 quoi qu'il arrive ; un pipe rend le code
-    // du DERNIER maillon. Les trois transformeraient une suite rouge en silence.
+    // `|| true` and `; echo` come out as 0 no matter what; a pipe renders the code
+    // of the LAST link. The three of them would turn a red suite into silence.
     for (const cmd of [
       "npm test || true",
       "npm test; echo done",
@@ -541,9 +540,9 @@ describe("looksLikeTestCommand", () => {
   });
 
   it("ne lit que le DERNIER maillon d'une chaîne `&&`", () => {
-    // `&&` propage l'échec, donc le code de sortie est celui du dernier — mais un
-    // `npm test && npm run build` sorti en 0 ne dit rien de plus que « le build
-    // passe » si le build est ce qui a fini : la reconnaissance suit ce maillon-là.
+    // `&&` propagates the failure, so the exit code is the last one — but one
+    // `npm test && npm run build` released in 0 says nothing more than “the build
+    // pass » if the build is what finished: recognition follows that link.
     expect(looksLikeTestCommand("npm test && npm run build")).toBe(false);
     expect(looksLikeTestCommand("npm run build && npm test")).toBe(true);
   });
@@ -555,13 +554,13 @@ describe("le registre de vérification", () => {
     expect(sink.greenCommand).toBeNull();
 
     noteVerificationCommand(sink, "npm run typecheck", 0);
-    expect(sink.greenCommand).toBeNull(); // pas une commande de test
+    expect(sink.greenCommand).toBeNull(); // not a test command
 
     noteVerificationCommand(sink, "npm test", 0);
     expect(sink.greenCommand).toBe("npm test");
 
-    // Rouge : le modèle a vu l'échec. S'il ne le corrige pas, le harness doit
-    // reparler — donc le registre se vide.
+    // Red: the model failed. If it does not correct it, the harness must
+    // speak again — so the register empties.
     noteVerificationCommand(sink, "npm test", 1);
     expect(sink.greenCommand).toBeNull();
   });
@@ -585,8 +584,8 @@ describe("relatedTestCommand", () => {
   });
 
   it("rend null quand il n'y a pas de mode ciblé, ou rien à cibler", () => {
-    // Un runner qu'on ne connaît pas : l'appelant retombe sur la suite entière
-    // plutôt que d'inventer un drapeau qui ne veut rien dire.
+    // A runner we don't know: the caller falls back on the entire sequence
+    // rather than inventing a flag that means nothing.
     expect(relatedTestCommand({ script: "mocha", bin: "mocha" }, ["lib/a.ts"])).toBeNull();
     expect(relatedTestCommand({ script: "vitest run", bin: "vitest" }, [])).toBeNull();
     expect(relatedTestCommand({ script: "vitest run", bin: "vitest" }, ["  "])).toBeNull();

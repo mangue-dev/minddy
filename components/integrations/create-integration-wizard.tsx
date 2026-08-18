@@ -40,30 +40,30 @@ import {
 import type { IntegrationKind } from "@/lib/types";
 
 /**
- * Créer une intégration, de bout en bout : la clé, ce qu'elle a le droit
- * d'écrire, où on la branche, ce que minddy renvoie en retour, et le prompt qui
- * fait écrire tout ça par un agent.
+ * Creating an end-to-end integration: the key, what it has the right to do
+ * to write, where we plug it in, what minddy sends back, and the prompt that
+ * have an agent write it all up.
  *
- * Le parcours était coupé en trois surfaces qui s'ignoraient — la clé ici, le
- * webhook derrière un bouton de la liste, le prompt dans l'onglet Feedback — et
- * chacune renvoyait l'utilisateur ailleurs pour finir. Elles tiennent
- * maintenant dans une seule traversée : type → nom → placement → webhook → la
- * clé et son prompt.
+ * The course was divided into three surfaces which ignored each other - the key here, the
+ * webhook behind a list button, the prompt in the Feedback tab — and
+ * each sent the user elsewhere to finish. They hold
+ * now in a single traversal: type → name → placement → webhook → la
+ * key and its prompt.
  *
- * Le parcours n'est pas le même des deux côtés. Une clé feedback dépose sur le
- * board et ne crée aucun ticket : la question du webhook ne se pose pas à elle,
- * ses écrans n'existent pas. Une clé tickets, elle, se voit demander si minddy
- * doit rappeler — et c'est une VRAIE question : l'endpoint n'existe souvent pas
- * encore au moment de créer la clé. « Pas maintenant » n'est pas un renvoi dans
- * le vide : Numo et l'agent MCP savent tous les deux le brancher après coup, et
- * la carte le dit.
+ * The route is not the same on both sides. A feedback key placed on the
+ * board and does not create any tickets: the question of the webhook does not arise for it,
+ * its screens do not exist. A ticket key, she is asked if minddy
+ * must remind — and this is a REAL question: the endpoint often does not exist
+ * again when creating the key. “Not now” is not a reference in
+ * the void: Numo and Agent MCP both know how to plug it in after the fact, and
+ * the card says so.
  *
- * Le placement se passe aussi — le prompt décidera seul.
+ * Placement is also happening — the prompt will decide alone.
  *
- * Rien n'est créé avant la DERNIÈRE étape de configuration : fermer la fenêtre
- * en route ne laisse pas de clé orpheline à révoquer. Après, en revanche, la
- * clé existe : le webhook et le prompt qui suivent peuvent échouer sans la
- * remettre en cause — on le dit, et on continue.
+ * Nothing is created before the LAST configuration step: close the window
+ * en route does not leave an orphaned key to be revoked. After, on the other hand, the
+ * key exists: the webhook and prompt that follow may fail without the
+ * call into question — we say it, and we continue.
  */
 
 type CreateStepId =
@@ -87,8 +87,8 @@ export function CreateIntegrationWizard({
   const [kind, setKind] = useState<IntegrationKind>("issues");
   const [name, setName] = useState("");
   const [placement, setPlacement] = useState("");
-  // `null` = la question n'a pas été posée. C'est une réponse à donner, pas une
-  // case à laisser cochée par défaut : le webhook engage à écrire une route.
+  // `null` = the question was not asked. This is an answer to give, not a
+  // box to leave checked by default: the webhook commits to writing a route.
   const [wantsWebhook, setWantsWebhook] = useState<boolean | null>(null);
   const [webhook, setWebhook] = useState<WebhookConfig>(DEFAULT_WEBHOOK);
   const [stepIndex, setStepIndex] = useState(0);
@@ -97,14 +97,14 @@ export function CreateIntegrationWizard({
   const [prompt, setPrompt] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Numo ne peut travailler que sur un dépôt : sans lien git, l'option ne se
-  // montre pas — un bouton qui n'aurait rien à cloner ne vaut pas un refus.
+  // Numo can only work on a repository: without a git link, the option does not work
+  // not show — a button that has nothing to clone is not worth a refusal.
   const { link } = useProjectGitLinkQuery(projectId);
   const canHandOffToNumo = !!link;
 
-  // Revenir en arrière pour répondre « pas maintenant » — ou pour changer le
-  // type de clé — abandonne ce qui avait été réglé : c'est la réponse qui
-  // décide, pas le champ resté rempli.
+  // Go back to answer “not now” — or to change the
+  // type of key — abandons what had been set: this is the answer that
+  // decides, not the field remains filled.
   const hasWebhook =
     kind === "issues" && wantsWebhook === true && !!webhook.url.trim();
 
@@ -133,16 +133,16 @@ export function CreateIntegrationWizard({
       toast.success(t("feedbackWizardCopied"));
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Refusée hors d'un clic : ce bouton EST un clic, il n'y a rien à dire.
+      // Refused out of a click: this button IS a click, there is nothing to say.
     }
   };
 
   /**
-   * Confier le prompt à Numo : même chemin que « lancer un agent » depuis le
-   * carnet (brouillon de conversation sans ticket + composer de la page
-   * Agents), projet déjà choisi. On passe par le composer plutôt que de lancer
-   * d'ici : l'utilisateur relit la consigne et choisit sa branche de base — un
-   * run sur son dépôt ne part pas d'un clic sans revue.
+   * Entrust the prompt to Numo: same path as “launch an agent” from the
+   * notebook (conversation draft without ticket + compose from the page
+   * Agents), project already chosen. We go through composing it rather than launching
+   * from here: the user rereads the instructions and chooses their basic branch — a
+   * run on its repository does not start with a click without review.
    */
   const handOffToNumo = () => {
     if (!prompt) return;
@@ -151,7 +151,7 @@ export function CreateIntegrationWizard({
     router.push(`/agents?compose=${FREE_COMPOSE_PARAM}`);
   };
 
-  /** Dernière étape de configuration : on crée, on branche, on rédige. */
+  /** Last configuration step: we create, we plug in, we write. */
   const finish = async () => {
     const trimmed = name.trim();
     if (!trimmed) return;
@@ -161,13 +161,13 @@ export function CreateIntegrationWizard({
       setCreatedKey(created.key);
       onCreated();
 
-      // On renormalise ici plutôt que de se fier au champ : valider au clavier
-      // (Entrée) soumet sans passer par la sortie de champ, donc sans le
-      // schéma que celle-ci aurait ajouté.
+      // We renormalize here rather than relying on the field: validate using the keyboard
+      // (Enter) submits without going through the field exit, therefore without the
+      // diagram that it would have added.
       const webhookUrl = normalizeWebhookUrl(webhook.url);
 
-      // La clé EXISTE. Ce qui suit l'enrichit : un échec se dit et ne l'annule
-      // pas — la fenêtre reste la seule occasion de lire la clé en clair.
+      // The key EXISTS. What follows enriches it: a failure is said and does not cancel it
+      // not — the window remains the only opportunity to read the key in plain text.
       if (hasWebhook) {
         try {
           await updateIntegrationWebhookApi(projectId, created.integration.id, {
@@ -193,7 +193,7 @@ export function CreateIntegrationWizard({
         });
         setPrompt(text);
       } catch (err) {
-        // Sans prompt, l'étape finale montre au moins la clé : c'est elle
+        // Without a prompt, the final step at least shows the key: it's her
         // qu'on ne pourra plus jamais relire.
         console.error("[create-integration] prompt failed:", err);
       }
@@ -212,8 +212,8 @@ export function CreateIntegrationWizard({
     urlRequired: true,
   });
 
-  // La clé n'existe en clair qu'ici : `kind` est celui du formulaire qui vient
-  // de la créer, donc le nom de variable affiché est toujours le sien.
+  // The key only exists in plain text here: `kind` is that of the form which comes
+  // to create it, so the displayed variable name is always its own.
   const createdEnvLine = createdKey
     ? integrationKeyEnvLine(kind, createdKey)
     : null;
@@ -266,9 +266,9 @@ export function CreateIntegrationWizard({
       ),
     },
 
-    // La question n'est pas la même des deux côtés : une clé feedback se
-    // BRANCHE quelque part dans l'interface, une clé tickets part d'un
-    // événement du code.
+    // The question is not the same on both sides: a feedback key is
+    // PLUGGED in somewhere in the interface, a tickets key comes from a
+    // code event.
     placement: {
       id: "placement",
       title:
@@ -278,8 +278,8 @@ export function CreateIntegrationWizard({
       subtitle: t("integrationWizardPlacementDesc"),
       submitLabel: placement.trim() ? undefined : tCommon("skip"),
       content: (
-        // Décrire un emplacement, c'est raconter son app — plus facile à dire
-        // qu'à taper. Le transcrit s'ajoute à la suite de ce qui est écrit.
+        // Describing a location means telling its app — easier to say
+        // than to type. The transcript is added to what is written.
         <div className="relative">
           <Textarea
             autoFocus
@@ -315,10 +315,10 @@ export function CreateIntegrationWizard({
       ),
     },
 
-    // Le webhook engage à écrire une route dans l'app du client : on le
-    // DEMANDE, plutôt que de dérouler trois écrans que la plupart passeraient.
-    // Répondre « pas maintenant » retire les trois du parcours, et le stepper
-    // le montre — la question est aussi ce qui rend le reste facultatif.
+    // The webhook commits to writing a route in the client's app: we
+    // REQUEST, rather than rolling out three screens that most would skip.
+    // Answering “not now” removes the three from the course, and the stepper
+    // shows it — the question is also what makes the rest optional.
     webhookChoice: {
       id: "webhookChoice",
       title: t("integrationWizardWebhookChoiceTitle"),
@@ -351,7 +351,7 @@ export function CreateIntegrationWizard({
 
     ...webhookSteps,
 
-    // La clé existe : reculer ne la reprendrait pas, et elle ne se remontre
+    // The key exists: going back would not take it back, and it does not come back
     // jamais.
     done: {
       id: "done",
@@ -380,8 +380,8 @@ export function CreateIntegrationWizard({
             </Button>
           </div>
 
-          {/* Le prompt : ce qui transforme une clé en intégration écrite. Il
-              manque quand sa génération a échoué — la clé, elle, est là. */}
+          {/* The prompt: what transforms a key into written integration. He
+              missing when his generation failed — the key is there. */}
           {prompt && (
             <>
               <p className="text-xs leading-relaxed text-muted-foreground">
@@ -430,11 +430,11 @@ export function CreateIntegrationWizard({
     },
   };
 
-  // La question du webhook ne se pose pas à une clé feedback : elle ne crée pas
-  // de ticket, il n'y aurait rien à livrer — ce qu'elle dépose vit sur le board.
-  // Pour une clé tickets, les trois écrans n'existent que si on a répondu oui :
-  // le parcours se rallonge au moment de la réponse, sous les yeux de
-  // l'utilisateur, et c'est le stepper qui montre ce qu'elle engage.
+  // The question of the webhook does not arise from a feedback key: it does not create
+  // ticket, there would be nothing to deliver — what she leaves lives on the board.
+  // For a ticket key, the three screens only exist if you answered yes:
+  // the route lengthens at the time of the response, under the eyes of
+  // the user, and it is the stepper which shows what it engages.
   const order: CreateStepId[] = [
     "kind",
     "name",
@@ -450,7 +450,7 @@ export function CreateIntegrationWizard({
     "done",
   ];
   const steps = order.map((id) => stepDefs[id]);
-  // Le dernier écran de configuration crée : c'est lui qui porte « Créer ».
+  // The last configuration screen creates: this is the one marked “Create”.
   const lastConfigId = order[order.length - 2];
   steps[order.length - 2] = {
     ...steps[order.length - 2],

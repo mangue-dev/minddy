@@ -19,10 +19,10 @@ import { SITE_URL } from "@/lib/site";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
- * Porte d'identité du board public (MIN-37) : vérification email par code OTP
- * en deux étapes. Jamais d'anonyme — mais les contributions restent
- * pseudonymes côté public. Après vérification, onAuthed() rejoue l'action que
- * l'utilisateur avait engagée (vote, post).
+ * Public board identity gate (MIN-37): email verification by OTP code
+ * in two steps. Never anonymous — but contributions remain
+ * pseudonyms on the public side. After verification, onAuthed() replays the action that
+ * the user had engaged (vote, post).
  */
 export function FeedbackAuthDialog({
   token,
@@ -119,10 +119,10 @@ export function FeedbackAuthDialog({
                 autoFocus
                 required
               />
-              {/* Mention d'information au point de collecte (RGPD art. 13,
-                  MIN-119). L'URL est absolue : un board peut être servi depuis
-                  le domaine personnalisé de son éditeur, où `/privacy` ne mène
-                  nulle part. */}
+              {/* Mention of information at the point of collection (GDPR art. 13,
+ MIN-119). The URL is absolute: a board can be served from
+ its publisher's custom domain, where `/privacy` leads
+ nowhere. */}
               <p className="text-xs leading-relaxed text-muted-foreground">
                 {t.rich("authLegalNotice", {
                   privacy: (chunks) => (
@@ -153,8 +153,8 @@ export function FeedbackAuthDialog({
             />
           )}
 
-          {/* Le code d'erreur vient de la réponse serveur : clé assemblée à
-              l'exécution. */}
+          {/* The error code comes from the server response: key assembled at
+ execution. */}
           {error && (
             <p className="text-sm text-destructive">
               {t(`errors.${error}` as MessageKey<"PublicFeedback">)}

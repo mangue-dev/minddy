@@ -7,10 +7,8 @@ import {
 } from "./project-icon";
 
 /**
- * La compression est la promesse faite à l'utilisateur : il envoie ce qu'il a,
- * le serveur en fait une icône. Ces tests tiennent les trois choses dont dépend
- * cette promesse — le format de sortie, ce qui est refusé, et le fait qu'on ne
- * dégrade jamais une image déjà petite.
+ * Compression is the promise made to the user: he sends what he has,
+ * the server makes it an icon. These tests deliver on the three things that this promise depends on — the output format, what is disallowed, and the fact that we never degrade an already small image.
  */
 
 const png = (width: number, height: number) =>
@@ -35,7 +33,7 @@ describe("compressIconFile", () => {
     expect(meta.width).toBe(256);
     expect(meta.height).toBe(256);
     expect(out.byteLength).toBeLessThan(source.byteLength);
-    // Le brouillon du wizard porte cette image en data URL dans sessionStorage.
+    // The draft wizard carries this image as a data URL in sessionStorage.
     expect(out.byteLength).toBeLessThan(100 * 1024);
   });
 

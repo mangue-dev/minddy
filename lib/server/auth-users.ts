@@ -37,20 +37,20 @@ export function toNamed(
   };
 }
 
-// Identity cache (id → account) partagé au niveau du module. Chaque
-// `getUserById` est un aller-retour vers l'API admin GoTrue, et les mêmes
-// membres sont résolus à CHAQUE chargement de board / poll de notifications
-// (me/board, notifications, members, invitations) — un N+1 réseau récurrent.
-// Un TTL court suffit : noms/avatars/emails bougent rarement, et Fluid Compute
-// réutilise l'instance donc le cache reste chaud entre requêtes. La 1re vue
-// paie les round-trips ; les suivantes lisent le cache.
+// Identity cache (id → account) shared at the module level. Each
+// `getUserById` is a round trip to the GoTrue admin API, and the same
+// members are resolved on EACH loading of board / poll of notifications
+// (me/board, notifications, members, invitations) — an N+1 recurring network.
+// A short TTL is enough: names/avatars/emails rarely move, and Fluid Compute
+// reuses the instance so the cache stays hot between requests. The 1st view
+// pays for round trips; the following ones read the cache.
 const IDENTITY_TTL_MS = 60_000;
 const identityCache = new Map<string, { user: User; expires: number }>();
 
 /**
- * Resolve auth users by id (best-effort; missing ids are skipped), servi depuis
- * un cache mémoire à TTL court. Seuls les ids absents ou périmés touchent l'API
- * admin, et en parallèle — au lieu d'un round-trip par id à chaque appel.
+ * Resolve auth users by id (best-effort; missing ids are skipped), served from
+ * a short TTL memory cache. Only missing or expired ids affect the API
+ * admin, and in parallel — instead of a round-trip per id on each call.
  */
 export async function fetchAuthUsersById(
   service: SupabaseClient,
@@ -85,7 +85,7 @@ export async function fetchAuthUsersById(
     }
   }
 
-  // Élagage opportuniste des entrées périmées pour borner la taille du cache.
+  // Opportunistic pruning of stale entries to limit the cache size.
   if (identityCache.size > 2_000) {
     for (const [id, entry] of identityCache) {
       if (entry.expires <= now) identityCache.delete(id);

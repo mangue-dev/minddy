@@ -1,32 +1,32 @@
 "use client";
 
-// Où mène une mention, pour la surface qui la rend — et rien de plus.
+// Where a mention leads, for the surface that renders it — and nothing more.
 //
-// Même découpage que le lookup des sous-pages (components/pages/pages-lookup) :
-// la pilule est rendue par une vue de nœud, tout en bas de l'éditeur, et elle
-// n'a aucun moyen d'aller chercher elle-même le projet d'un ticket cité. Elle le
-// DEMANDE, à qui tient déjà les sources des mentions (lib/use-mention-sources).
+// Same breakdown as the subpage lookup (components/pages/pages-lookup):
+// the pill is rendered by a node view, at the very bottom of the editor, and it
+// has no way of fetching the draft of a cited ticket herself. She
+// REQUEST, to whom already has the sources of the mentions (lib/use-mention-sources).
 //
-// La règle des URL, elle, n'est pas ici : elle est dans lib/mention-target.ts,
-// module pur, partagé avec les autres entrées vers les mêmes écrans.
+// The URL rule is not here: it is in lib/mention-target.ts,
+// pure module, shared with other inputs to the same screens.
 
 import { createContext, useContext, type ReactNode } from "react";
 import type { MentionTargetType } from "@/lib/mention-target";
 
 export interface MentionLinks {
   /**
-   * L'adresse d'une mention, ou `null` — soit qu'elle ne mène nulle part (une
-   * personne), soit que l'élément cité ne soit pas (encore) résolu. La pilule
-   * reste alors du texte : mieux que d'ouvrir une URL fausse.
-   */
+ * The address of a mention, or `null` — either it leads nowhere (a
+ * person), or the cited item is not (yet) resolved. The pill
+ * then remains text: better than opening a false URL.
+ */
   href: (type: MentionTargetType, id: string) => string | null;
   /**
-   * Y aller, dans l'onglet courant. Séparé de `href` pour la même raison que
-   * dans le lookup des sous-pages : `href` donne l'adresse — d'où le ⌘-clic, le
-   * clic du milieu et le menu contextuel du navigateur —, `navigate` fait la
-   * navigation d'APPLICATION du clic ordinaire. Sans lui, l'ancre rechargerait
-   * la page entière.
-   */
+ * Go there, in the current tab. Separated from `href` for the same reason as
+ * in the subpage lookup: `href` gives the address — hence the ⌘-click, the
+ * middle click and the browser context menu —, `navigate` does the
+ * APP navigation from ordinary click. Without it, the anchor would reload
+ * the entire page.
+ */
   navigate: (type: MentionTargetType, id: string) => void;
 }
 
@@ -42,8 +42,7 @@ export function MentionLinksProvider({
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 
-/** `null` = surface sans destinations : les pilules s'y rendent, elles ne s'y
-    cliquent pas. */
+/** `null` = surface without destinations: the pills go there, they don't click there. */
 export function useMentionLinks(): MentionLinks | null {
   return useContext(Context);
 }

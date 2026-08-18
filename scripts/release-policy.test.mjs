@@ -4,7 +4,7 @@ import { assertProductionRelease } from "./release-policy.mjs";
 
 const productionSha = "a".repeat(40);
 
-test("autorise uniquement le SHA checkouté et déployé sur production", () => {
+test("allows only the SHA checked out and deployed to production", () => {
   assert.equal(
     assertProductionRelease({
       ref: "refs/heads/production",
@@ -16,7 +16,7 @@ test("autorise uniquement le SHA checkouté et déployé sur production", () => 
   );
 });
 
-test("refuse un tag demandé hors du SHA de production", () => {
+test("rejects a tag requested outside the production SHA", () => {
   assert.throws(
     () => assertProductionRelease({
       ref: "refs/heads/production",
@@ -24,11 +24,11 @@ test("refuse un tag demandé hors du SHA de production", () => {
       checkoutSha: "b".repeat(40),
       productionSha,
     }),
-    /production .* diffère du SHA demandé/,
+    /production .* differs from requested SHA/,
   );
 });
 
-test("refuse un déclenchement depuis main", () => {
+test("rejects a trigger from main", () => {
   assert.throws(
     () => assertProductionRelease({
       ref: "refs/heads/main",
@@ -36,6 +36,6 @@ test("refuse un déclenchement depuis main", () => {
       checkoutSha: productionSha,
       productionSha,
     }),
-    /déclenchée depuis production/,
+    /triggered from production/,
   );
 });

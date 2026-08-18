@@ -1,16 +1,16 @@
-// Dérivation PURE (sans DB, sans import server-only) : testable en node/vitest,
+// PURE derivation (without DB, without server-only import): testable in node/vitest,
 // comme prune.ts / caching.ts.
 
 /**
- * Construction partagée de la réponse « activité de l'agent par issue » (MIN-46),
- * utilisée par l'endpoint projet ET l'endpoint global. Prend les runs de l'agent
- * (triés created_at DESC, hors `failed`) et en dérive trois vues.
+ * Shared construction of the "agent activity by issue" response (MIN-46),
+ * used by the project endpoint AND the global endpoint. Takes the runs of the agent
+ * (sorted created_at DESC, excluding `failed`) and derives three views.
  *
- * La PR, elle, ne vient PLUS des runs. Elle en venait, et ça faisait dire au
- * ticket « je n'ai pas de pull request » dans deux cas où il en avait une :
- * quand personne n'avait lancé Numo dessus (PR humaine rattachée par convention,
- * ou rattachée à la main depuis le header — MIN-163), et quand la PR était
- * FERMÉE. Depuis MIN-143 la pull request est une entité : c'est elle qu'on lit.
+ * The PR no longer comes from the runs. It came from there, and it made the
+ * ticket say "I don't have a pull request" in two cases where it had one:
+ * when no one had launched Numo on it (human PR attached by convention,
+ * or attached by hand from the header — MIN-163), and when the PR was
+ * CLOSED. Since MIN-143 the pull request is an entity: that's what we read.
  */
 
 export interface AgentRunRow {
@@ -22,7 +22,7 @@ export interface AgentRunRow {
   created_at: string;
 }
 
-/** Ligne `pull_requests` rattachée à un ticket, triée `updated_at` DESC. */
+/** Line `pull_requests` attached to a ticket, sorted `updated_at` DESC. */
 export interface IssuePrRow {
   id: string;
   issue_id: string | null;
@@ -31,29 +31,29 @@ export interface IssuePrRow {
   updated_at: string;
 }
 
-/** La pull request d'un ticket, telle que le client la reçoit. */
+/** The pull request for a ticket, as the client receives it. */
 export interface IssuePrRef {
-  /** Id minddy — le deep-link `?pr=` marche quel que soit l'état de la PR. */
+  /** Id minddy — the `?pr=` deep-link works regardless of the RA state. */
   prId: string;
   prNumber: number;
   state: "draft" | "open" | "merged" | "closed";
 }
 
 export interface AgentActivityResponse {
-  /** L'agent TRAVAILLE (queued/running) → halo animé sur la carte. */
+  /** The agent is WORKING (queued/running) → animated halo on the map. */
   workingIssueIds: string[];
   /**
-   * Une CONVERSATION d'agent existe sur l'issue (au moins une run non `failed`,
-   * au travail ou au repos) → l'entrée de la carte OUVRE la conversation au lieu
-   * d'en lancer une nouvelle (modèle conversationnel : une session au repos se
-   * poursuit depuis son composer).
-   */
+ * An agent CONVERSATION exists on the outcome (at least one run not `failed`,
+ * at work or at rest) → card entry OPENS the conversation instead of
+ * starting a new one (conversational model: an at-rest session se
+ * continues from its composer).
+ */
   sessionIssueIds: string[];
   /**
-   * PR du ticket, TOUS ÉTATS CONFONDUS — l'entrée « Voir la pull request » des
-   * menus doit y mener même fermée. Le chip de la carte, lui, ne s'affiche que
-   * sur une PR non fermée : c'est le client qui fait ce tri, avec `state`.
-   */
+ * PR of the ticket, ALL STATES COMBINED — the “View pull request” entry in the
+ * menus must lead there even when closed. The chip of the card is only displayed
+ * on an unclosed PR: it is the client who does this sorting, with `state`.
+ */
   pullRequests: Record<string, IssuePrRef>;
 }
 
@@ -64,15 +64,15 @@ function prState(raw: string): IssuePrRef["state"] {
 }
 
 /**
- * La PR d'un ticket qui en porte plusieurs (runs successifs : une PR refusée,
- * puis celle qui la remplace). Une PR VIVANTE gagne toujours — c'est celle qu'on
- * va relire ; à défaut, la plus récemment touchée chez la forge.
+ * The PR of a ticket which carries several (successive runs: a refused PR,
+ * then the one which replaces it). A LIVING PR always wins — it’s the one we
+ * will reread; failing that, the most recently touched at the forge.
  */
 export function pickIssuePullRequests(rows: IssuePrRow[]): Record<string, IssuePrRef> {
   const picked: Record<string, IssuePrRef> = {};
   const pickedLive = new Set<string>();
-  // `rows` arrive trié updated_at DESC : le premier vu d'un ticket est le plus
-  // frais, et on ne le remplace que par une PR vivante.
+  // `rows` arrives sorted updated_at DESC: the first seen of a ticket is the most
+  // fresh, and we only replace it with a living PR.
   for (const row of rows) {
     if (!row.issue_id) continue;
     const live = LIVE_STATES.has(row.state);
@@ -98,7 +98,7 @@ export function buildAgentActivity(
         .map((r) => r.issue_id),
     ),
   ];
-  // `rows` exclut déjà les runs `failed` (contrat des endpoints appelants).
+  // `rows` already excludes `failed` runs (contract of calling endpoints).
   const sessionIssueIds = [...new Set(rows.map((r) => r.issue_id))];
   return {
     workingIssueIds,

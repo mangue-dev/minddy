@@ -8,29 +8,26 @@ import type { UndoAction } from "@/lib/undo/undo-core";
 import type { CreateIssueInput } from "@/lib/types";
 
 /**
- * CRÉER SANS CARTE OPTIMISTE — le chemin Smart-fill (MIN-260).
+ * CREATE WITHOUT OPTIMISTIC CARD — the Smart-fill path (MIN-260).
  *
- * Les trois surfaces qui créent un ticket (le board d'un projet, le board
- * agrégé, le dialog global) posent d'abord une carte, puis POSTent : c'est ce
- * qui rend la création instantanée, et le ticket porte déjà tout ce qu'on vient
- * d'écrire.
+ * The three surfaces that create a ticket (the project board, the aggregate board
+ *, the global dialog) first place a card, then POST: it is this
+ * which makes creation instantaneous, and the ticket already carries everything we just
+ * wrote.
  *
- * Avec Smart-fill, non — et c'est la seule chose qui change. Le serveur remplit
- * le ticket AVANT de l'insérer, donc pendant quelques secondes la ligne n'existe
- * pas ; une carte optimiste montrerait exactement ce que la feature sert à ne
- * pas montrer — un ticket sans priorité, sans effort et sans catégories, qui se
- * réécrit sous les yeux. On ne montre donc rien, le dialog pose son toast
- * (« il apparaîtra dans quelques secondes »), et la carte arrive complète : par
- * cette réponse, ou par le direct, au premier des deux (`insertIssueEverywhere`
- * dédoublonne par id, les deux chemins peuvent donc gagner sans se marcher
- * dessus).
+ * With Smart-fill, no — and that's the only thing that changes. The server fills
+ * the ticket BEFORE inserting it, so for a few seconds the line does not exist
+ *; an optimistic map would show exactly what the feature is not showing — a no-priority, no-effort, no-category ticket, which is rewriting itself before your eyes. We therefore show nothing, the dialog poses its toast
+ * ("it will appear in a few seconds"), and the card arrives complete: by
+ * this response, or by direct, to the first of the two (`insertIssueEverywhere`
+ * duplicates by id, the two paths can therefore win without stepping on each other
+ * above).
  *
- * Rien n'est inscrit au registre d'écritures en attente (`issueWrites`) : il ne
- * sert qu'à protéger une carte déjà à l'écran d'un GET plus vieux qu'elle, et
- * ici il n'y a pas de carte.
+ * Nothing is entered in the pending write register (`issueWrites`): it only serves to protect a card already on the screen from a GET older than it, and
+ * here there is no carte.
  *
- * L'échec, lui, se DIT. Sans carte à retirer, ce toast est tout ce qui sépare
- * l'utilisateur d'un ticket dont il croit qu'il arrive et qui n'existera jamais.
+ * Failure is SAYED. With no card to remove, this toast is all that separates
+ * the user from a ticket they believe is coming and will never exist.
  */
 export function createIssueDeferred({
   queryClient,

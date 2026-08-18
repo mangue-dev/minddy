@@ -57,61 +57,59 @@ import { readLocalRepos } from "./repo-store";
 import { trace } from "./trace";
 
 /**
- * LE LANCEUR (MIN-293) — ce qui fait tourner un tour d'agent sur ce Mac.
+ * THE LAUNCHER (MIN-293) — which runs an agent round on this Mac.
  *
- * ## Ce que ce fichier a le droit de contenir
+ * ## What this file is allowed to contain
  *
- * Le `fork`, le `fetch`, le `fs`, et le registre des tours vivants. **Toutes les
- * décisions vivent dans `lib/desktop/`**, avec leurs tests — le contrat
- * d'affectation et le layout ([local-turn.ts](../../lib/desktop/local-turn.ts)),
- * l'empreinte du harness ([harness-bundle.ts](../../lib/desktop/harness-bundle.ts)),
- * le pré-vol opencode ([opencode-install.ts](../../lib/desktop/opencode-install.ts)),
- * la question du ⌘Q ([quit-guard.ts](../../lib/desktop/quit-guard.ts)) et le
- * registre des enfants à longue vie
+ * The `fork`, the `fetch`, the `fs`, and the living tower register. **All
+ * decisions live in `lib/desktop/`**, with their tests — the assignment contract
+ * and the layout ([local-turn.ts](../../lib/desktop/local-turn.ts)),
+ * the harness fingerprint ([harness-bundle.ts](../../lib/desktop/harness-bundle.ts)),
+ * the opencode pre-flight ([opencode-install.ts](../../lib/desktop/opencode-install.ts)),
+ * the ⌘Q question ([quit-guard.ts](../../lib/desktop/quit-guard.ts)) and the
+ * long-lived child registry
  * ([vm/child-registry.ts](../../lib/server/agent/vm/child-registry.ts)).
- * `vitest` ne collecte pas `desktop/src/`, et un lanceur est le dernier endroit
- * où l'on veut voir une décision écrite à la main.
+ * `vitest` does not collect `desktop/src/`, and a launcher is the last place
+ * where we want to see a handwritten decision.
  *
- * ## `utilityProcess.fork`, et pas un process détaché
+ * ## `utilityProcess.fork`, not a detached process
  *
- * **Mesuré** : Electron 43.4.0 rend Node 24.18.1, exactement la cible `node24`
- * du bundle, et `.agent-vm/main.js` s'exécute tel quel dessous. Mais le choix ne
- * se joue pas sur la version de Node — il se joue sur DEUX propriétés qu'un
- * process détaché n'a pas :
+ * **Measured**: Electron 43.4.0 renders Node 24.18.1, exactly the `node24`
+ * target of the bundle, and `.agent-vm/main.js` runs as is below. But the choice does not
+ * depend on the version of Node — it depends on TWO properties that a detached process does not have:
  *
- * 1. **il meurt avec l'app.** Un harness qui survivrait à ⌘Q garderait vivants un
- *    token de forge `contents: write` et une clé de modèle, sans plus aucune
- *    interface pour les arrêter ;
- * 2. **il garde son processus responsable TCC.** Un process réparenté à `launchd`
- *    le perd — et macOS ne lui refuse alors pas seulement `~/Documents` : **la
- *    fenêtre d'autorisation ne s'ouvre même pas.** Le refus est muet, exactement
- *    comme celui du micro avant MIN-294.
+ * 1. **it dies with the app.** A harness that survives ⌘Q would keep it alive a
+ * forge token `contents: write` and a model key, without any more
+ * interface to stop them;
+ * 2. **it keeps its TCC responsible process.** A process repaired to `launchd`
+ * loses it — and macOS does not then refuses it not only `~/Documents`: **the
+ * authorization window does not even open.** The refusal is silent, exactly
+ * like that of the microphone before MIN-294.
  *
- * ## Ce que le fork rend au harness, mesuré et non déduit
+ * ## What the fork returns to the harness, measured and not deduced
  *
- * Sonde du 2026-08-15, sur Electron 43.4.0 : un enfant d'`utilityProcess.fork`
- * reçoit `process.argv = [<Electron Helper>, <module>, ...args]` — **exactement
- * la convention de `child_process.fork`**. Le harness lit donc bien son job en
- * `process.argv[2]` ([vm/main.ts](../../lib/server/agent/vm/main.ts)), et rien
- * n'est décalé. Mesuré aussi : `stdio: "pipe"` donne bien les deux flux, le code
- * de sortie remonte, et le `cwd` est respecté.
+ * Probe of 2026-08-15, on Electron 43.4.0: a child of `utilityProcess.fork`
+ * receives `process.argv = [<Electron Helper>, <module>, ...args]` — **exactly
+ * the convention of `child_process.fork`**. The harness therefore reads its job correctly in
+ * `process.argv[2]` ([vm/main.ts](../../lib/server/agent/vm/main.ts)), and nothing
+ * is shifted. Also measured: `stdio: "pipe"` gives the two flows, the output code
+ * goes back, and the `cwd` is respected.
  *
- * ⚠ Et un piège qui s'est présenté dans la foulée : `env` **refuse toute valeur
- * qui n'est pas une chaîne**, avec un message qui ne nomme pas la clé
- * (`TypeError: Invalid value for env`). D'où `childEnv`
- * ([child-env.ts](../../lib/desktop/child-env.ts)), qui RETIRE au lieu de poser
+ * ⚠ And a trap which presented itself in the process: `env` **refuses all value
+ * which is not a string**, with a message that does not name the key
+ * (`TypeError: Invalid value for env`). Hence `childEnv`
+ * ([child-env.ts](../../lib/desktop/child-env.ts)), which REMOVES instead of putting
  * `undefined`.
  *
- * ## Rien ici ne laisse un tour sans journal
+ * ## Nothing here leaves a turn without a log
  *
- * Chaque refus passe par `openRunLog` ou `noteLauncherFailure` avant de rendre.
- * C'est la raison d'être de MIN-363 : un tour qui rate AVANT que le harness ait
- * parlé n'a ni event, ni checkpoint, ni ligne de `agent_runs` — le `stdio` de
- * l'enfant est la seule chose qui parle, et le journal est le seul endroit où on
- * la garde.
+ * Each refusal goes through `openRunLog` or `noteLauncherFailure` before returning.
+ * This is the reason for MIN-363: a turn that fails BEFORE the harness has spoken
+ * has no event, no checkpoint, no `agent_runs` line — the `stdio` of
+ * the child is the only thing that speaks, and the journal is the only place to keep it.
  */
 
-/** Un tour vivant sur cette machine. */
+/** A lively ride on this machine. */
 interface LiveTurn {
   readonly runId: string;
   readonly label?: string;
@@ -122,18 +120,18 @@ interface LiveTurn {
 }
 
 /**
- * LE REGISTRE, par identifiant de run.
+ * THE REGISTER, by run identifier.
  *
- * Un objet et non un singleton, parce qu'**une machine peut porter deux runs à la
- * fois** là où une microVM en portait un par construction : deux tickets lancés à
- * la suite ont deux racines, deux ports, deux journaux (cf. `HarnessLayout`).
+ * An object and not a singleton, because **a machine can carry two runs at the
+ * times** where a microVM carried one by construction: two tickets launched at
+ * the suite have two roots, two ports, two logs (see `HarnessLayout`).
  */
 const live = new Map<string, LiveTurn>();
 
 /**
- * Pré-vols opencode en cours, par dossier machine. Le préchauffage démarre au
- * lancement de l'app ; un clic très rapide sur « envoyer » doit rejoindre ce
- * même travail, jamais lancer un second `npm install` concurrent.
+ * Opencode pre-flights in progress, per machine folder. Preheating starts when
+ * launches the app; a very quick click on "send" must join this
+ * same work, never launch a second competing `npm install`.
  */
 const opencodePreflights = new Map<
   string,
@@ -143,18 +141,18 @@ const opencodePreflights = new Map<
   >
 >();
 
-/** Pré-chauffages en cours, un par origine : stable/preview ne partagent jamais
- * un harness, car leur protocole et leur code peuvent diverger. */
+/** Pre-heats in progress, one per origin: stable/preview never share
+ * a harness, because their protocol and code may diverge. */
 const localAgentWarmups = new Map<string, Promise<boolean>>();
 /**
- * Une origine n'entre dans la file locale qu'après un pré-vol réussi. Sans ce
- * verrou, une app installée incapable de trouver npm pouvait gagner le claim
- * contre une coquille de développement prête, puis abandonner le run qu'elle
- * venait de rendre inaccessible à l'autre machine.
+ * An origin only enters the local queue after a successful pre-flight. Without this
+ * lock, an installed app unable to find npm could win the claim
+ * against a ready development shell, then abort the run that it
+ * had just made inaccessible to the other machine.
  */
 const localAgentReadyOrigins = new Set<string>();
 
-/** Ce que le lanceur rend après avoir reçu une affectation du serveur. */
+/** What the launcher renders after receiving an assignment from the server. */
 export type LocalTurnResult =
   | { readonly status: "started"; readonly runId: string; readonly logPath: string }
   | {
@@ -167,7 +165,7 @@ export type LocalTurnResult =
       readonly message: string;
     };
 
-/** Les tours en cours — lu par la question du ⌘Q. */
+/** Current turns — read by the question of ⌘Q. */
 export function runningTurns(): RunningTurn[] {
   return [...live.values()].map((turn) => ({
     runId: turn.runId,
@@ -176,9 +174,8 @@ export function runningTurns(): RunningTurn[] {
 }
 
 /**
- * La présence du clone est son pull (MIN-371) : pas de heartbeat, pas de topic
- * tenu par la page. La prochaine itération n'est programmée qu'après la fin de
- * la précédente, donc deux requêtes de cette coquille ne se chevauchent jamais.
+ * The presence of the clone is its sweater (MIN-371): no heartbeat, no topic
+ * held by the page. The next iteration is only scheduled after the previous one finishes, so two requests of this shell never overlap.
  */
 export function startLocalClaimLoop(opts: {
   getOrigin: () => string;
@@ -193,8 +190,8 @@ export function startLocalClaimLoop(opts: {
     if (projectIds.length > 0) {
       try {
         const origin = opts.getOrigin();
-        // Le claim est irréversible pour les autres coquilles : on ne le tente
-        // qu'une fois le harness et opencode réellement disponibles ici.
+        // The claim is irreversible for the other shells: we do not attempt it
+        // once the harness and opencode are actually available here.
         const ready = await prewarmLocalAgent(origin);
         if (ready) {
           outcome = await claimLocalTurn({
@@ -273,13 +270,13 @@ async function claimLocalTurn(opts: {
 }
 
 /**
- * PRÉCHAUFFE LE CHEMIN LOCAL PENDANT QUE L'APPLICATION S'OUVRE.
+ * PREHEAT THE LOCAL PATH WHILE THE APPLICATION OPENS.
  *
- * Aucun job, jeton de contrôle, clé LLM ou dépôt utilisateur n'est impliqué :
- * on ne fait que mettre en cache le harness signé de l'origine et le binaire
- * opencode de la machine. Le tour garde ses contrôles complets — notamment le
- * rehash du bundle juste avant le fork — mais son premier message ne paie plus
- * un téléchargement ou une installation qui pouvait se faire à l'ouverture.
+ * No jobs, control tokens, LLM keys or user repositories are involved:
+ * we just cache the original signed harness and binary
+ * machine opencode. The trick keeps its complete controls — notably the
+ * rehash of the bundle just before the fork — but its first message no longer pays for
+ * a download or installation that could be done upon opening.
  */
 export function prewarmLocalAgent(origin: string): Promise<boolean> {
   if (localAgentReadyOrigins.has(origin)) return Promise.resolve(true);
@@ -288,8 +285,8 @@ export function prewarmLocalAgent(origin: string): Promise<boolean> {
 
   const userData = app.getPath("userData");
   const task = Promise.all([
-    // Pas encore de job, donc pas de protocole à confronter. Le tour le fera
-    // toujours avant d'exécuter le cache préchauffé.
+    // No job yet, therefore no protocol to confront. The trick will do it
+    // always before running the warmed cache.
     ensureBundle(origin),
     ensureOpencode(localOpencodeDir(userData)),
   ])
@@ -304,8 +301,8 @@ export function prewarmLocalAgent(origin: string): Promise<boolean> {
       return ready;
     })
     .catch((error) => {
-      // Le préchauffage est une optimisation : un réseau indisponible au
-      // démarrage ne doit ni alerter ni empêcher le pré-vol normal du tour.
+      // Preheating is an optimization: a network unavailable at
+      // start should neither alert nor prevent the normal pre-flight of the tour.
       trace("local-agent:prewarm-failed", {
         origin,
         message: error instanceof Error ? error.message : String(error),
@@ -318,13 +315,13 @@ export function prewarmLocalAgent(origin: string): Promise<boolean> {
 }
 
 /**
- * JOUE UNE AFFECTATION — le cœur du lot, appelé aussi bien par le déclencheur
- * historique que par la boucle de claim du clone (MIN-371).
+ * PLAY AN ASSIGNMENT — the core of the batch, called both by the historical trigger
+ * and by the clone claim loop (MIN-371).
  *
- * L'ordre des cinq étapes n'est pas indifférent : **tout ce qui peut refuser
- * refuse avant le premier octet écrit sur le disque.** Un tour qui échoue après
- * avoir posé un `job.json` laisse derrière lui un bail et une URL de push dans un
- * fichier que personne ne relira.
+ * The order of the five steps is not irrelevant: **anything that can refuse
+ * refuses before the first byte written to disk.** A round that fails after
+ * placing a `job.json` leaves behind a lease and a push URL in a
+ * file that no one will read again.
  */
 export async function runAssignment(
   assignment: LocalTurnAssignment,
@@ -338,8 +335,8 @@ export async function runAssignment(
 ): Promise<LocalTurnResult> {
   const userData = app.getPath("userData");
 
-  // 1. LE DÉPÔT, revalidé maintenant. L'attachement date peut-être d'un mois : le
-  //    dossier a pu être déplacé, le disque démonté, le projet re-lié ailleurs.
+  // 1. THE DEPOSIT, now revalidated. The attachment dates back perhaps a month: the
+  // folder could have been moved, the disk unmounted, the project re-linked elsewhere.
   const repo = describeLocalRepo(assignment.projectId, { fullName: assignment.repoFullName });
   if (repo.status !== "ready") {
     const reason: LocalTurnRefusal = repo.status === "none" ? "no_repo" : "repo_invalid";
@@ -348,12 +345,12 @@ export async function runAssignment(
     return refuse(reason, message);
   }
 
-  // 2. LE HARNESS et OPENCODE. Ces deux pré-vols ne dépendent que de données
-  //    déjà validées (l'origine, le protocole et le dossier machine) et ne
-  //    s'écrivent pas dans le dépôt du tour. Les attendre l'un après l'autre
-  //    ajoutait inutilement le temps réseau du manifeste au démarrage/à
-  //    l'installation d'opencode — particulièrement visible au premier token.
-  //    On garde les refus et leur ordre d'affichage ci-dessous : seul le temps
+  // 2. THE HARNESS and OPENCODE. These two pre-flights only depend on data
+  // already validated (the origin, the protocol and the machine folder) and do not
+  // are not written in the tour repository. Wait for them one after the other
+  // unnecessarily added manifest network time at startup/at
+  // the installation of opencode — particularly visible at the first token.
+  // We keep the refusals and their display order below: only time
   //    d'attente se recouvre.
   const bundlePromise = opts.machinePreflight
     ? validatePreflightBundle(origin, opts.machinePreflight.bundle, assignment.job.protocolVersion)
@@ -361,9 +358,9 @@ export async function runAssignment(
   const opencodeDir = localOpencodeDir(userData);
   const opencodePromise = opts.machinePreflight?.opencode ?? ensureOpencode(opencodeDir);
 
-  // Le protocole confronté est celui du JOB qu'on va lui donner, jamais une
-  // constante compilée dans l'app : la coquille ne parle pas le protocole, elle
-  // le relaie.
+  // The protocol confronted is that of the JOB that we are going to give him, never a
+  // constant compiled in the app: the shell does not speak the protocol, it
+  // relay it.
   const bundle = await bundlePromise;
   if (!bundle.ok) {
     const message = harnessRefusalMessage(bundle.reason, origin);
@@ -371,18 +368,18 @@ export async function runAssignment(
     return refuse(bundle.reason, message);
   }
 
-  // 3. OPENCODE, une fois par machine et pas une fois par tour.
+  // 3. OPENCODE, once per machine and not once per turn.
   const opencode = await opencodePromise;
   if (!opencode.ok) {
     noteLauncherFailure(opencode.message);
     return refuse(opencode.reason, opencode.message);
   }
 
-  // 4. LE DISQUE DU RUN. Le checkout attaché peut porter la branche, l'index et
-  // le WIP de la personne. Quand la session a demandé l'isolation, git crée un
-  // worktree sous sa racine de run : aucun fichier de ce checkout humain n'est
-  // touché. Ce geste arrive après les pré-vols, pour qu'un harness ou opencode
-  // indisponible ne laisse même pas un checkout à nettoyer.
+  // 4. THE RUN DISC. The attached checkout can carry the branch, index and
+  // the person's WIP. When the session has requested isolation, git creates a
+  // worktree under its run root: no file from this human checkout is
+  // touch. This gesture happens after the pre-flights, so that a harness or opencode
+  // unavailable doesn't even leave a checkout to clean.
   const isolated = assignment.localWorktree;
   const worktree = isolated
     ? prepareLocalWorktree({
@@ -398,9 +395,9 @@ export async function runAssignment(
     return refuse("repo_invalid", worktree.message);
   }
 
-  // Le layout est la seule chose que la machine ajoute au
-  //    job, et `localLayout` garantit que le harness n'atterrit jamais DANS le
-  //    dépôt de l'utilisateur — sinon il apparaîtrait dans son `git status`.
+  // The layout is the only thing the machine adds to the
+  // job, and `localLayout` ensures that the harness never lands IN the
+  // user's repository — otherwise it would appear in their `git status`.
   const layout = localLayout({
     userDataPath: userData,
     runId: assignment.runId,
@@ -445,39 +442,39 @@ export async function runAssignment(
   }
 
   /**
-   * 5. LE DERNIER CONTRÔLE, à un cheveu du fork.
-   *
-   * Le bundle a été vérifié au téléchargement — mais il a pu être réécrit
-   * depuis, et c'est précisément le scénario contre lequel ce lot existe : le
-   * fichier vit sous `userData`, **inscriptible par le modèle sous le même
-   * UID**, et un tour qui le réécrit capterait au tour suivant le bail, la clé
-   * et l'`authUrl`. On rehashe le fichier qu'on s'apprête à exécuter.
-   */
+ * 5. THE LAST CHECK, a hair's breadth from the fork.
+ *
+ * The bundle was verified upon download — but it may have been rewritten
+ * since then, and that's precisely the scenario this bundle exists against: the
+ * file lives under `userData`, **writable by the model under the same
+ * UID**, and a round that rewrites it would capture the lease, the key
+ * and the `authUrl` in the next round. We rehash the file we are about to execute.
+ */
   /**
-   * ⚠ **UNE SEULE LECTURE, ET C'EST ELLE QU'ON EXÉCUTE.**
-   *
-   * Vérifier le fichier du cache puis le relire pour le recopier rouvrirait la
-   * fenêtre qu'on vient de fermer — c'est la deuxième lecture qui serait
-   * exécutée, et rien ne dirait qu'elle rend les mêmes octets. On lit une fois,
-   * on hashe CES octets-là, et on écrit CES octets-là sous la racine du run.
-   *
-   * La recopie sous la racine, elle, n'est pas cosmétique : c'est ce que la
-   * fonction fait déjà dans la microVM ([vm-launch.ts](../../lib/server/agent/vm-launch.ts)),
-   * et surtout ça garantit qu'un tour en vol garde SON harness même si un
-   * déploiement change l'empreinte et que le ménage passe derrière.
-   */
+ * ⚠ **ONLY ONE READ, AND THIS IS WHAT WE EXECUTE.**
+ *
+ * Checking the cache file then rereading it to copy it would reopen the
+ * window that we have just closed — it is the second reading which would
+ * executed, and nothing would say that it returns the same bytes. We read once,
+ * we hash THESE bytes, and we write THESE bytes under the root of the run.
+ *
+ * Copying under the root is not cosmetic: that's what the
+ * function already does in the microVM ([vm-launch.ts](../../lib/server/agent/vm-launch.ts)),
+ * and above all it guarantees that a ride in flight keeps ITS harness even if a
+ * deployment changes the footprint and the household passes behind.
+ */
   const staged = readBundle(bundle.path);
   const beforeFork = verifyBeforeFork(staged, bundle.manifest);
   if (!beforeFork.ok) {
     const message = harnessRefusalMessage(beforeFork.reason, origin);
     log.write(message, "err");
     log.close("harness refused at fork");
-    // On le jette : le tour suivant le retéléchargera plutôt que de retrouver le
-    // même fichier et de refuser à nouveau, indéfiniment.
+    // We throw it away: the next round will redownload it rather than finding the
+    // same file and refuse again, indefinitely.
     try {
       rmSync(bundle.path, { force: true });
     } catch {
-      // Rien à réparer : la vérification refusera encore, ce qui est le bon défaut.
+      // Nothing to repair: the verification will still refuse, which is the correct fault.
     }
     return refuse(beforeFork.reason, message);
   }
@@ -494,14 +491,14 @@ export async function runAssignment(
 
   const child = utilityProcess.fork(runBundle, [vmJobPath(layout)], {
     cwd: layout.harnessDir,
-    // Les deux tubes, LUS : un enfant dont personne ne lit la sortie finit par
-    // bloquer sur un tube plein, et un tour dure des heures.
+    // The two hits, LUS: a child whose output no one reads ends up
+    // block on a full tube, and a ride lasts hours.
     stdio: "pipe",
     serviceName: `minddy-agent-${assignment.runId.slice(0, 8)}`,
-    // ⚠ `childEnv`, et surtout pas `{ ...process.env, X: undefined }` :
-    // `utilityProcess.fork` REFUSE une valeur qui n'est pas une chaîne, et il le
-    // dit sans nommer la clé (`TypeError: Invalid value for env`). Le fork tombe
-    // alors avant que le harness ait démarré, là où il n'y a encore rien à lire.
+    // ⚠ `childEnv`, and especially not `{ ...process.env, X: undefined }`:
+    // `utilityProcess.fork` REFUSES a value that is not a string, and it
+    // said without naming the key (`TypeError: Invalid value for env`). The fork falls
+    // then before the harness has started, where there is nothing to read yet.
     env: childEnv(process.env),
   });
 
@@ -510,9 +507,9 @@ export async function runAssignment(
   child.once("exit", (code) => {
     live.delete(assignment.runId);
     log.close(`exit ${code}`);
-    // Le serveur opencode SURVIT au harness (`spawn` ni détaché ni suivi) : 143 Mo
-    // en mémoire, le port tenu, et le tour suivant qui échoue sur un `listen`
-    // refusé. C'est ici qu'on finit le travail que son `finally` n'a pas pu faire.
+    // The opencode server SURVIVES the harness (`spawn` neither detached nor tracked): 143 MB
+    // in memory, the port held, and the next round which fails on a `listen`
+    // denied. This is where we finish the work that his `finally` could not do.
     reapChildren(layout.harnessDir);
     sweepRunRoots();
     trace("local-turn:exit", { runId: assignment.runId, code });
@@ -532,20 +529,20 @@ export async function runAssignment(
     ...(opts.requestedAt ? { startupMs: Date.now() - opts.requestedAt } : {}),
   });
 
-  // Le ménage APRÈS le fork, jamais avant (cf. `staleBundles`).
+  // Cleaning AFTER the fork, never before (see `staleBundles`).
   pruneBundles(bundle.path);
 
   return { status: "started", runId: assignment.runId, logPath: log.path };
 }
 
 /**
- * ARRÊTE UN TOUR. `SIGTERM` d'abord — le harness a un `finally` qui ferme
- * opencode, le proxy LLM et le pont de tools —, puis le registre d'enfants pour
- * ce qu'il n'aura pas eu le temps de faire.
+ * STOPS A ROUND. `SIGTERM` first — the harness has a `finally` which closes
+ * opencode, the LLM proxy and the tools bridge —, then the child register for
+ * which it will not have had time to do.
  *
- * On n'ATTEND pas la mort du process : l'appelant est `before-quit`, où macOS ne
- * donne pas de délai qu'on puisse tenir. Le registre est la garantie de secours,
- * et il tourne au démarrage suivant si celui-ci n'a rien pu faire.
+ * We don't WAIT the death of the process: the caller is `before-quit`, where macOS does
+ * does not give a deadline that can be met. The register is the backup guarantee,
+ * and it runs at the next startup if it could not do anything.
  */
 export function stopLocalTurn(runId: string, note = quitLogNote()): void {
   const turn = live.get(runId);
@@ -555,32 +552,32 @@ export function stopLocalTurn(runId: string, note = quitLogNote()): void {
   try {
     turn.child.kill();
   } catch {
-    // Déjà mort : il n'y a rien à réparer, et le registre d'enfants suit.
+    // Already dead: there is nothing to repair, and the child register follows.
   }
   reapChildren(turn.harnessDir);
-  // Le mot de la fin passe par `close`, qui l'écrit lui-même : l'écrire aussi
-  // avant le mettrait deux fois dans le journal, et un rapport de diagnostic qui
-  // se répète est un rapport qu'on relit mal.
+  // The final word goes through `close`, who writes it himself: write it too
+  // before would put it twice in the log, and a diagnostic report which
+  // repeating itself is a report that is poorly reread.
   turn.log.close(note);
 }
 
-/** Tous les tours, pour le ⌘Q. */
+/** All rounds, for the ⌘Q. */
 export function stopAllLocalTurns(note = quitLogNote()): void {
   for (const runId of live.keys()) stopLocalTurn(runId, note);
 }
 
 /**
- * LE MÉNAGE DU DÉMARRAGE — les orphelins d'un plantage du main process.
+ * STARTUP CLEANUP — the orphans of a main process crash.
  *
- * `stopLocalTurn` couvre le ⌘Q ; il ne couvre pas une app tuée net, ni un
- * redémarrage du Mac au milieu d'un tour. Le registre d'enfants, lui, est sur le
- * disque : on le relit pour chaque racine de run et on finit le travail.
+ * `stopLocalTurn` covers the ⌘Q; it does not cover a clean kill app, nor a
+ * restart of the Mac in the middle of a round. The child register is on the
+ * disk: we reread it for each run root and we finish the work.
  *
- * Un pid recyclé par le système désignerait le process de quelqu'un d'autre —
- * c'est le risque connu de tout registre de pid, et il est borné ici par le fait
- * que le harness DÉSINSCRIT ce qu'il a arrêté lui-même
- * ([opencode-host.ts](../../lib/server/agent/vm/opencode-host.ts)) : ne reste
- * inscrit que ce qu'on n'a jamais pu tuer.
+ * A pid recycled by the system would designate someone else's process —
+ * this is the known risk of any pid register, and it is limited here by the makes
+ * that the harness UNREGISTERS what it has stopped itself
+ * ([opencode-host.ts](../../lib/server/agent/vm/opencode-host.ts)): only left
+ * registered what we were never able to kill.
  */
 export function sweepOrphanTurns(): void {
   for (const name of runRootNames()) {
@@ -589,7 +586,7 @@ export function sweepOrphanTurns(): void {
   sweepRunRoots();
 }
 
-// ── Le harness ──────────────────────────────────────────────────────────────
+// ── The harness ─────────────────────────────── ───────────────────────────────
 
 type BundleReady = { ok: true; path: string; manifest: HarnessManifest };
 type BundleRefused = { ok: false; reason: HarnessRefusal };
@@ -600,9 +597,9 @@ type LocalMachinePreflight = {
 };
 
 /**
- * Confronte au job le bundle récupéré pendant le POST serveur. Un fichier qui a
- * disparu ou changé entre les deux est retéléchargé depuis un manifeste frais ;
- * l'empreinte sera encore recalculée juste avant le fork.
+ * Matches the job with the bundle retrieved during server POST. A file that has
+ * disappeared or changed in between is re-downloaded from a fresh manifest;
+ * the hash will be recalculated again just before the fork.
  */
 async function validatePreflightBundle(
   origin: string,
@@ -618,8 +615,8 @@ async function validatePreflightBundle(
 }
 
 /**
- * Le bundle du tour, téléchargé si besoin. **Le manifeste est demandé à CHAQUE
- * tour** — deux cents octets — et les octets seulement quand l'empreinte a changé.
+ * The tour bundle, downloaded if necessary. **The manifest is requested EACH
+ * round** — two hundred bytes — and the bytes only when the fingerprint has changed.
  */
 async function ensureBundle(
   origin: string,
@@ -633,9 +630,9 @@ async function ensureBundle(
   const file = path.join(harnessDir(), harnessBundleFileName(manifest.sha256));
   const cached = measure(file);
   if (jobProtocol == null) {
-    // Le cache n'est pas encore exécutable : seul le tour connaît le protocole
-    // qu'il a reçu. Ici, on gagne le téléchargement tout en laissant le contrôle
-    // de compatibilité à `runAssignment`.
+    // The cache is not yet executable: only the tour knows the protocol
+    // that he received. Here, we win the download while leaving control
+    // compatibility with `runAssignment`.
     if (cached?.sha256 === manifest.sha256 && cached.bytes === manifest.bytes) {
       return { ok: true, path: file, manifest };
     }
@@ -661,7 +658,7 @@ async function ensureBundle(
     mkdirSync(harnessDir(), { recursive: true });
     writeFileSync(file, body, "utf8");
   } catch (error) {
-    console.error("[launcher] harness non écrit", error);
+    console.error("[launcher] harness was not written", error);
     return { ok: false, reason: "download_failed" };
   }
   return { ok: true, path: file, manifest };
@@ -673,7 +670,7 @@ function pruneBundles(keep: string): void {
       rmSync(path.join(harnessDir(), name), { force: true });
     }
   } catch {
-    // Un ménage qui échoue coûte 280 Ko, pas un tour.
+    // A failed household costs 280 KB, not a turn.
   }
 }
 
@@ -717,11 +714,11 @@ async function ensureOpencodeOnce(
   return { ok: true, note: opencodeInstallNote(decision.why) };
 }
 
-// ── Les enfants qui survivent ───────────────────────────────────────────────
+// ── Children who survive ─────────────────────── ────────────────────────
 
 /**
- * Tue ce que le harness a laissé derrière lui. **Best-effort, et sans lever** :
- * un pid déjà mort rend `ESRCH`, ce qui est le bon résultat.
+ * Kills what the harness left behind. **Best-effort, and no lifting**:
+ * an already dead pid returns `ESRCH`, which is the correct result.
  */
 function reapChildren(harnessDir: string): void {
   const children = readHarnessChildren(harnessDir);
@@ -731,12 +728,12 @@ function reapChildren(harnessDir: string): void {
       process.kill(target.signalTo, "SIGTERM");
       trace("local-turn:reap", { signalTo: target.signalTo, kind: target.kind });
     } catch {
-      // Déjà mort, ou pid recyclé hors de notre portée : rien à faire.
+      // Already dead, or pid recycled beyond our reach: nothing to do.
     }
   }
 }
 
-// ── Le disque ───────────────────────────────────────────────────────────────
+// ── The disk ─────────────────────────────── ────────────────────────────────
 
 function harnessDir(): string {
   return path.join(app.getPath("userData"), HARNESS_DIR_NAME);
@@ -772,18 +769,17 @@ function sweepRunRoots(): void {
       rmSync(path.join(runsDir(), name), { recursive: true, force: true });
       trace("local-turn:pruned", { root: name });
     } catch {
-      // Un dossier qui résiste coûte du disque, pas un tour.
+      // A file that resists costs disk, not a turn.
     }
   }
 }
 
 /**
- * Le bundle LU, avec l'empreinte de ces octets-là. `null` s'il n'est pas là.
+ * The LU bundle, with the fingerprint of these bytes. `null` if it is not there.
  *
- * Rend la SOURCE en plus de l'empreinte, et c'est tout l'intérêt : ce qu'on
- * vérifie doit être ce qu'on exécute. Une fonction qui ne rendrait que le hash
- * obligerait à relire le fichier pour s'en servir, et c'est cette seconde
- * lecture — celle qu'on n'a pas vérifiée — qui finirait dans le `fork`.
+ * Returns the SOURCE in addition to the fingerprint, and that's the whole point: what we
+ * checks must be what we execute. A function that only returns the hash
+ * would require rereading the file to use it, and it is this second reading — the one that we have not checked — that would end up in the `fork`.
  */
 function readBundle(file: string): { source: string; sha256: string; bytes: number } | null {
   try {
@@ -794,7 +790,7 @@ function readBundle(file: string): { source: string; sha256: string; bytes: numb
   }
 }
 
-/** L'empreinte et la taille seules — ce que la décision de cache regarde. */
+/** The footprint and size alone — what the cache decision looks at. */
 function measure(file: string): { sha256: string; bytes: number } | null {
   const read = readBundle(file);
   return read ? { sha256: read.sha256, bytes: read.bytes } : null;
@@ -804,15 +800,15 @@ function sha256Of(body: string): string {
   return createHash("sha256").update(body, "utf8").digest("hex");
 }
 
-// ── Le réseau ───────────────────────────────────────────────────────────────
+// ── The network ─────────────────────────────── ────────────────────────────────
 
 /**
- * `session.defaultSession.fetch`, et pas le `fetch` global : c'est ce qui envoie
- * les COOKIES de l'origine active. Les deux surfaces du harness sont
- * authentifiées, et le seul appelant légitime est quelqu'un de connecté dans
- * cette fenêtre.
+ * `session.defaultSession.fetch`, and not the global `fetch`: this is what sends
+ * COOKIES from the active origin. Both harness surfaces are
+ * authenticated, and the only legitimate caller is someone logged into
+ * this window.
  */
-/** Ce qu'une requête rend : le corps, ou le STATUT et la phrase du serveur. */
+/** What a request returns: the body, or the STATUS and the server phrase. */
 type Fetched<T> = { ok: true; body: T } | { ok: false; status: number; error: string };
 
 async function fetchText(
@@ -833,8 +829,8 @@ async function fetchText(
     return { ok: true, body: text };
   } catch (error) {
     if (!opts.quiet) console.error(`[launcher] ${url} injoignable`, error);
-    // `0` : rien n'a répondu. Le distinguer d'un vrai statut évite de faire
-    // passer une coupure réseau pour un refus du serveur.
+    // `0`: nothing responded. Distinguishing it from a real status avoids making
+    // pass a network outage for server refusal.
     return { ok: false, status: 0, error: (error as Error).message };
   }
 }
@@ -849,7 +845,7 @@ async function fetchJson(
   try {
     return { ok: true, body: JSON.parse(text.body) };
   } catch {
-    // Une page HTML (portail captif, proxy d'entreprise) arrive ici.
+    // An HTML page (captive portal, corporate proxy) arrives here.
     const preview = text.body.replace(/\s+/g, " ").trim().slice(0, 240);
     return {
       ok: false,
@@ -859,13 +855,13 @@ async function fetchJson(
   }
 }
 
-/** La phrase du serveur, tirée de son `{ error }` — sinon le corps, borné. */
+/** The server's sentence, taken from its `{ error }` — otherwise the body, narrow-minded. */
 function serverError(text: string): string {
   try {
     const parsed = JSON.parse(text) as { error?: unknown };
     if (typeof parsed.error === "string" && parsed.error) return parsed.error;
   } catch {
-    // Pas du JSON : une page d'erreur, un proxy. Le début du corps dit déjà tout.
+    // No JSON: an error page, a proxy. The beginning of the body already says it all.
   }
   return text.slice(0, 200) || "no answer body";
 }

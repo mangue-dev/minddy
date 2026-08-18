@@ -1,113 +1,113 @@
 /**
- * CE QUI REMONTE DE LA MACHINE DE L'UTILISATEUR (MIN-361) — un module PUR, sans
- * un seul import, comme ses voisins de garde-fou (`local-exec-scope.ts`,
- * `private-address.ts`) : il descend dans le bundle du harness, et il doit
- * pouvoir être cassé dans un test plutôt qu'en production.
+ * WHAT COMES FROM THE USER'S MACHINE (MIN-361) — a PUR module, without
+ * a single import, like its guardrail neighbors (`local-exec-scope.ts`,
+ * `private-address.ts`): it goes down into the harness bundle, and it must
+ * be able to be broken in a test rather than in production.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * LE POINT QUI N'EST PAS RÉPARABLE APRÈS COUP
+ * THE POINT THAT IS NOT REPAIRABLE AFTER THE HOT
  *
- * Tout le reste du chantier local raisonne sur ce qui **descend** (le jeton du
- * run, la clé du modèle, le token de forge). Ce module est le seul à regarder ce
- * qui **remonte**, et c'est le seul endroit du dossier où l'erreur ne se corrige
- * pas : ce qui est monté est monté.
+ * All the rest of the local site reasons about what **goes down** (the token of
+ * run, model key, forge token). This module is the only one to look at this
+ * which **goes back**, and this is the only place in the file where the error is not corrected
+ * not: what is mounted is mounted.
  *
- * Dans le cloud, ce qui remonte est le contenu d'un clone jetable d'un dépôt que
- * le projet possède déjà. **Sur une machine, c'est le disque de quelqu'un** — et
- * `agent_run_events` est persisté 30 jours et lu par tout membre du projet.
+ * In the cloud, what comes back is the contents of a disposable clone of a repository that
+ * the project already has. **On one machine, it's someone's disk** — and
+ * `agent_run_events` is persisted for 30 days and read by any member of the project.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * DEUX GESTES, ET ILS NE FONT PAS LE MÊME TRAVAIL
+ * TWO GESTURES, AND THEY DO NOT DO THE SAME WORK
  *
- * 1. **Réécrire les chemins de la machine** (`scrubPaths`). Le dépôt devient
- *    relatif, la maison devient `~`. C'est le geste qui traite le porteur
- *    d'identité le plus banal et le plus universel : `/Users/<prénom nom>/…`
- *    n'est pas dans les sorties « suspectes », il est dans **toutes** — chaque
- *    trace de pile, chaque `pwd`, chaque message d'erreur de compilateur, y
- *    compris pour un fichier qui est DANS le dépôt. Une règle qui ne regarderait
- *    que ce qui sort du dépôt le laisserait passer intégralement.
- * 2. **Retenir une sortie qui parle d'ailleurs** (`foreignPaths`). Un tool dont
- *    l'appel ou la sortie porte un chemin personnel hors du dépôt ne publie pas
- *    son aperçu : il est remplacé par un compte. Ce qui reste visible, c'est le
- *    GESTE — on doit pouvoir lire ce que l'agent est allé faire, surtout quand
- *    il est allé le faire hors du dossier. Ce qui ne monte pas, c'est le
+ * 1. **Rewrite machine paths** (`scrubPaths`). The deposit becomes
+ * relative, the house becomes `~`. It is the gesture that treats the wearer
+ * the most banal and universal identity: `/Users/<first last name>/…`
+ * is not in the “suspicious” outputs, it is in **all** — every
+ * stack trace, every `pwd`, every compiler error message, y
+ * understood for a file that is IN the repository. A rule that would not look
+ * that what leaves the deposit would let it pass in full.
+ * 2. **Retain an output that speaks about elsewhere** (`foreignPaths`). A tool whose
+ * call or exit carries a personal path out of the repository does not publish
+ * its overview: it is replaced by an account. What remains visible is the
+ * GESTURE — we must be able to read what the agent went to do, especially when
+ * he went and did it off the record. What does not rise is the
  *    CONTENU.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * CE QUE « PERSONNEL » VEUT DIRE ICI, ET POURQUOI PAS PLUS
+ * WHAT “STAFF” MEANS HERE, AND WHY NOT MORE
  *
- * `/Users/x`, `/home/x`, `~`, et les points de montage (`/Volumes`, `/mnt`,
- * `/media` — le disque externe, le NAS, la clé USB). **Pas `/usr`, pas `/opt`,
- * pas `/etc`.**
+ * `/Users/x`, `/home/x`, `~`, and mount points (`/Volumes`, `/mnt`,
+ * `/media` — the external disk, the NAS, the USB key). **Not `/usr`, not `/opt`,
+ * not `/etc`.**
  *
- * Ce n'est pas de la timidité, c'est le rapport de force entre les deux erreurs.
- * `/usr/lib/…` et `/opt/homebrew/…` sont identiques sur tous les Mac : ils ne
- * disent rien de personne, et ils sont dans la moitié des traces de pile. `/etc`
- * est le cas limite qui tranche la règle — il apparaît dans le CONTENU des
- * dépôts (un Dockerfile, une conf nginx, un README), et l'y inclure ferait
- * retenir des lectures parfaitement ordinaires. Une garde qui vide le fil de ses
- * sorties honnêtes ne sera pas gardée longtemps.
+ * It's not timidity, it's the balance of power between the two errors.
+ * `/usr/lib/…` and `/opt/homebrew/…` are the same on all Macs: they do not
+ * say nothing to anyone, and they are in half of the stack traces. `/etc`
+ * is the limiting case which decides the rule — it appears in the CONTENT of the
+ * repositories (a Dockerfile, an nginx conf, a README), and including it there would
+ * retain perfectly ordinary readings. A guard who empties the thread of his
+ * Honest outputs will not be kept for long.
  *
- * Le résidu est donc nommé plutôt que masqué : `cat /etc/hosts` par le shell
- * monte. Il est du même ordre que le « mur de papier » du §2 de l'audit — le
- * shell n'a pas de périmètre de lecture, et le fermer n'est pas de ce lot.
+ * The residue is therefore named rather than hidden: `cat /etc/hosts` by the shell
+ * mounted. It is of the same order as the “wall of paper” in §2 of the audit — the
+ * shell has no read scope, and closing it does not.
  */
 
-/** Ce qui remplace le dépôt dans un texte qui remonte. */
+/** Which replaces the deposit in a text which goes back. */
 export const REPO_MARK = ".";
 
-/** Ce qui remplace le dossier personnel — et il reste utilisable tel quel. */
+/** Which replaces the personal folder — and it remains usable as is. */
 export const HOME_MARK = "~";
 
 /**
- * Les têtes de chemin d'un dossier personnel, quel qu'en soit le propriétaire.
+ * The path headers of a personal folder, regardless of ownership.
  *
- * Universel plutôt que restreint à l'utilisateur du tour, et c'est voulu : un
- * chemin `/Users/quelquun-dautre/…` dans une sortie nomme quelqu'un tout autant.
- * Le segment s'arrête aux caractères qui terminent un chemin dans une phrase ou
- * dans une trace de pile — sinon la ponctuation entrerait dans le nom.
+ * Universal rather than restricted to the user of the lathe, and this is intended: a
+ * path `/Users/quelquun-dautre/…` in an output names someone just as much.
+ * The segment stops at characters that end a path in a sentence or
+ * in a stack trace — otherwise the punctuation would enter the name.
  */
 const HOME_HEAD = /\/(?:Users|home)\/[^/\s"'`:;,)\]}]+/g;
 
 /**
- * Un chemin PERSONNEL, tel qu'on le reconnaît dans un texte quelconque.
+ * A PERSONAL path, as recognized in arbitrary text.
  *
- * Au moins un segment après la racine : `/Users` seul n'est pas un chemin de
- * quelqu'un, `/Users/clement` en est un. Les terminateurs sont ceux d'un chemin
- * cité dans du texte — guillemets, parenthèses, deux-points d'une trace de pile
- * (`fichier.ts:12`), ponctuation de fin de phrase.
+ * At least one segment after the root: `/Users` alone is not someone's path,
+ * while `/Users/clement` is. Terminators are those of a path quoted in text —
+ * quotes, parentheses, the colon in a stack trace (`file.ts:12`), and sentence-
+ * ending punctuation.
  */
 const PERSONAL_PATH = /(?:~|\/Users|\/home|\/Volumes|\/mnt|\/media)(?:\/[^\s"'`()[\]{}<>|:;,]+)+/g;
 
 /**
- * LE DOSSIER PERSONNEL, DÉDUIT DU DÉPÔT — et jamais lu dans l'environnement.
+ * PERSONAL FOLDER, INFERRED FROM THE REPOSITORY — never read from the environment.
  *
- * `process.env.HOME` aurait fait de ce module un module impur pour rien : le
- * dépôt du run est déjà un chemin absolu sur la machine, et sa racine
- * personnelle est dedans. Un dépôt qui vit ailleurs (`/srv/code`, un volume
- * monté) rend `null`, et le reste du module s'en accommode — il n'y a alors
- * simplement pas de `~` à substituer.
+ * `process.env.HOME` would make this module impure for no reason: the run
+ * repository is already an absolute path on the machine, and its personal root
+ * is inside it. A repository elsewhere (`/srv/code`, a mounted volume) returns
+ * `null`, and the rest of the module handles that — there is simply no `~` to
+ * substitute.
  */
 export function homeOf(repoDir: string): string | null {
   const found = /^(\/(?:Users|home)\/[^/]+)(?:\/|$)/.exec(repoDir);
   return found ? found[1] : null;
 }
 
-/** `a` est-il `b` ou dedans ? La comparaison de préfixe des garde-fous, redite
- *  ici pour que le module reste sans import. */
+/** Is `a` `b` or in it? The guardrail prefix comparison, repeated
+ * here so that the module remains without import. */
 function inside(path: string, dir: string): boolean {
   return path === dir || path.startsWith(`${dir}/`);
 }
 
 /**
- * LES CHEMINS D'UN TEXTE QUI PARLENT D'AILLEURS QUE DU DÉPÔT.
+ * THE PATHS OF A TEXT WHICH SPEAK ABOUT OTHER THAN THE DEPOSIT.
  *
- * Rend la liste dédoublonnée, pas seulement un booléen : c'est elle qui rend un
- * refus lisible dans un test, et un compte lisible dans le fil.
+ * Returns the deduplicated list, not just a boolean: it returns a
+ * refusal readable in a test, and a count readable in the thread.
  *
- * `~/x` est développé quand on connaît la maison — sans quoi un `~/notes` situé
- * dans le dépôt (cas rare mais réel : un dépôt à la racine du dossier personnel)
- * serait compté comme étranger.
+ * `~/x` is developed when we know the house - otherwise a `~/notes` located
+ * in the repository (rare but real case: a repository at the root of the personal folder)
+ * would be counted as foreign.
  */
 export function foreignPaths(text: string, repoDir: string): string[] {
   if (!text) return [];
@@ -121,17 +121,17 @@ export function foreignPaths(text: string, repoDir: string): string[] {
 }
 
 /**
- * LE TEXTE, CHEMINS DE LA MACHINE RÉÉCRITS.
+ * THE TEXT, PATHS OF THE MACHINE REWRITTEN.
  *
- * Le dépôt D'ABORD (c'est le préfixe le plus long, et il contient la maison),
- * puis la maison. `split`/`join` sur le dépôt plutôt qu'une expression
- * régulière, pour la raison de `SecretRedactor` : c'est une chaîne littérale, et
- * une regex construite dessus raterait en silence sur un caractère spécial
- * oublié.
+ * The deposit FIRST (this is the longest prefix, and it contains the house),
+ * then the house. `split`/`join` on the repository rather than an expression
+ * regular, for the reason of `SecretRedactor`: it is a literal string, and
+ * a regex built on it would silently fail on a special character
+ * forget.
  *
- * Ce que ça donne reste UTILISABLE : `./lib/x.ts` est un chemin valide depuis le
- * dépôt, `~/Projets/…` en est un pour le shell. Une réécriture qui casserait les
- * chemins se paierait au tour suivant, quand le modèle relit ce qu'il a écrit.
+ * What this gives remains USABLE: `./lib/x.ts` is a valid path from the
+ * repository, `~/Projets/…` is one for the shell. A rewrite that would break the
+ * paths would be paid for in the next round, when the model rereads what he has written.
  */
 export function scrubPaths(text: string, repoDir: string): string {
   if (!text) return text;
@@ -139,9 +139,9 @@ export function scrubPaths(text: string, repoDir: string): string {
   return withoutRepo.replace(HOME_HEAD, HOME_MARK);
 }
 
-/** L'aperçu qui remplace une sortie retenue. En anglais, comme les autres
- *  messages que le harness écrit dans un `tool_result` (les refus de permission,
- *  `assertNotGit`) : il est lu par le modèle autant que par un humain. */
+/** The preview that replaces a held output. In English, like the others
+ * messages that the harness writes in a `tool_result` (permission denials,
+ * `assertNotGit`): it is read by the model as much as by a human. */
 export function withheldOutput(chars: number, paths: number): string {
   return (
     `[minddy kept this output on this machine: it mentions ${paths} path(s) outside the ` +
@@ -150,22 +150,22 @@ export function withheldOutput(chars: number, paths: number): string {
   );
 }
 
-/** Ce qu'un filtrage rend : la charge réécrite, et ce qu'elle a révélé. */
+/** What filtering returns: the rewritten charge, and what it revealed. */
 export interface LocalPayloadFilter {
   payload: Record<string, unknown>;
-  /** Au moins une chaîne portait un chemin personnel hors du dépôt. */
+  /** At least one chain carried a personal path out of the depot. */
   foreign: boolean;
-  /** Combien, tous champs confondus — c'est le COMPTE que le fil publie. */
+  /** How many, all fields combined — this is the COUNT that the thread publishes. */
   foreignCount: number;
 }
 
 /**
- * LA CHARGE D'UN EVENT, PRÊTE À MONTER — réécrite en profondeur, et jugée.
+ * THE LOAD OF AN EVENT, READY TO RISE — thoroughly rewritten, and judged.
  *
- * Même parcours que `redactDeep` ([redact.ts](../redact.ts)), et pour la même
- * raison : les charges d'opencode sont imbriquées par construction, et c'est au
- * fond qu'un chemin se cache. Les deux gestes sont ici plutôt que dans le
- * superviseur pour qu'il n'y ait qu'UNE rédaction de la règle.
+ * Same route as `redactDeep` ([redact.ts](../redact.ts)), and for the same
+ * reason: opencode payloads are nested by construction, and it is
+ * background that a path is hidden. Both gestures are here rather than in the
+ * supervisor so that there is only ONE wording of the rule.
  */
 export function filterLocalPayload(
   payload: Record<string, unknown>,

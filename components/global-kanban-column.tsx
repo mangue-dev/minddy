@@ -43,9 +43,9 @@ const EMPTY_OBJECTIVES: Map<string, Objective> = new Map();
  * picks the target project — MIN-33). No relation affordances (per-project).
  */
 /**
- * ⚠ Mémoïsée (MIN-316). Le board rejouait ses colonnes — donc toutes leurs
- * cartes — à chaque rendu du board, y compris pour un état qui ne les
- * concerne pas. Ses props doivent rester stables pour que ça morde.
+ * ⚠ Memoized (MIN-316). The board replayed its columns — so all their
+ * cards — each time the board is rendered, including for a state that does not
+ * does not concern. Its props must remain stable for it to bite.
  */
 export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
   status,
@@ -92,9 +92,9 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput, projectId: string) => void;
   onSetCategories: (issueId: string, ids: string[], projectId: string) => void;
   selectedIds: Set<string>;
-  /** Les tickets embarqués par le glisser en cours — estompés avec la carte saisie. */
+  /** Tickets boarded by current swipe — faded with the card entered. */
   draggingIds?: Set<string>;
-  /** Le repère de dépôt, quand c'est CETTE colonne que le glisser vise. */
+  /** The drop mark, when dragging is aimed at THIS column. */
   dropPreview?: DropPreview;
   onSelect: (issueId: string) => void;
   /** Absent → no "new issue" footer (cycle mode — a create wouldn't join the cycle). */
@@ -106,7 +106,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
     targetId: string,
     projectId: string
   ) => void;
-  /** Corbeille depuis le clic droit d'une carte (le projet du ticket suit). */
+  /** Trash from right-clicking a card (the ticket project follows). */
   onDeleteIssue?: (issueId: string, projectId: string) => Promise<void>;
   /** Per-issue extra right-click actions (cycle add/remove — MIN-32). */
   buildMenuActions?: (issue: Issue) => ContextMenuAction[];
@@ -130,10 +130,10 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
   useRevealDropIndicator(scrollerRef, dropPreview);
 
   /**
-   * Les handlers du board cross-projet prennent le projet en DERNIER argument, et
-   * une colonne d'ici mélange les projets. On les lie donc PAR PROJET, une fois
-   * pour toutes, plutôt qu'avec une fléchée neuve par carte et par rendu — sans
-   * quoi `memo` sur `IssueCard` ne mordrait sur rien (MIN-316).
+   * The handlers of the cross-project board take the project as the LAST argument, and
+   * a column here mixes the projects. We therefore link them BY PROJECT, once
+   * for all, rather than with a new arrow per card and per rendering — without
+   * which `memo` on `IssueCard` would not bite on anything (MIN-316).
    */
   const bindToProject = useMemo(() => {
     const cache = new Map<
@@ -177,14 +177,14 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
         <span className="text-xs text-muted-foreground">{issues.length}</span>
       </div>
 
-      {/* Le fondu de bord est dessiné À CÔTÉ du scroller, jamais dessus : un
-          `mask-image` sur un conteneur qui défile le fait re-compositer à
-          chaque image (MIN-319). D'où ce parent `relative`. */}
+      {/* The edge fade is drawn NEXT to the scroller, never on top of it: a
+ `mask-image` on a scrolling container makes it re-compose to
+ each image (MIN-319). Hence this parent `relative`. */}
       <div
         className={cn(
           "relative flex min-h-0 flex-1 flex-col rounded-xl transition-colors",
-          // Le fond, son arrondi et la raison de les tenir HORS du défileur :
-          // cf. KanbanColumn (un arrondi sur ce qui défile rogne le contenu).
+          // The bottom, its roundness and the reason to keep them OUT of the scroller:
+          // cf. KanbanColumn (rounding on what scrolls crops the content).
           (dropPreview || isOver) && "bg-muted/50"
         )}
       >
@@ -242,7 +242,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
                 </Fragment>
               );
             })}
-            {/* `beforeIssueId === null` : le paquet se pose en fin de colonne. */}
+            {/* `beforeIssueId === null`: the packet is placed at the end of the column. */}
             {dropPreview && dropPreview.beforeIssueId === null && (
               <BoardDropIndicator count={dropPreview.count} />
             )}

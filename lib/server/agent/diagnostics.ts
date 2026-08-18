@@ -1,80 +1,80 @@
 import { sq, type RepoHost } from "./repo-host";
 
 /**
- * Type-check du dépôt (MIN-110). Depuis MIN-263 il ne tourne plus en fin de tour :
- * il est réclamé par la porte de livraison (`delivery-gate.ts`), au premier
- * `create_pr` d'un tour qui a édité. Le reste du raisonnement ci-dessous — un check
- * par TOUR et non par édition — vaut inchangé.
+ * Type-check of the repository (MIN-110). Since MIN-263 it no longer runs at the end of the turn:
+ * it is requested by the delivery door (`delivery-gate.ts`), at the first
+ * `create_pr` of a round that edited files. The rest of the reasoning below — a check
+ * by ROUND and not by edit — remains unchanged.
  *
- * OpenCode referme la boucle DANS le tool d'édition : chaque `edit` touche le
- * fichier côté LSP et recolle les diagnostics au résultat. On ne peut pas copier
- * ça tel quel, et la mesure le dit (docs/agent-harness-comparison.md §3.3, section
- * « Coût d'un type-check dans la sandbox ») : dans notre microVM, un `tsc --noEmit`
- * incrémental coûte 4,9 s au plancher, ~11 s en régime normal, 14,4 s quand le
- * fichier touché est un carrefour. Par édition, le run le plus lourd de notre
- * histoire paierait jusqu'à 290 s — plus que la soft-deadline d'un chunk. Et
- * surtout, un changement cohérent s'étale sur plusieurs fichiers : checker ENTRE
- * deux moitiés d'un même changement remonte des erreurs que l'édition suivante
- * efface.
+ * OpenCode closes the loop IN the editing tool: each `edit` touches the
+ * file on the LSP side and pastes the diagnostics into the result. We cannot copy
+ * it as is, and the measurement says so (docs/agent-harness-comparison.md §3.3, section
+ * “Cost of a type-check in the sandbox”): in our microVM, a `tsc --noEmit`
+ * incremental costs 4.9 s at floor, ~11 s in normal mode, 14.4 s when
+ * affected file is a crossroads. By edition, the heaviest run of our
+ * story would pay up to 290s — more than the soft-deadline of a chunk. And
+ * above all, a coherent change is spread over several files: checking BETWEEN
+ * two halves of the same change goes back to errors that the next edition
+ * edits would erase the errors found by the next edit.
  *
- * D'où : UN check par tour, et seulement si le tour a touché des fichiers. Il tombe
- * au moment de LIVRER (le premier `create_pr`, MIN-263), pas après la réponse du
- * modèle : les erreurs partent alors dans le `followUp` du tool, le modèle corrige,
- * puis rappelle `create_pr` — et rien n'a rouvert un tour déjà terminé.
+ * Hence: ONE check per round, and only if the round touched files. It runs
+ * at DELIVERY time (the first `create_pr`, MIN-263), not after the model's response:
+ * the errors then go into the tool's `followUp`, the model corrects them,
+ * then calls `create_pr` — and nothing has reopened an already completed round.
  *
- * TOUT ici est best-effort et SILENCIEUX en cas de doute : pas de `tsconfig.json`,
- * pas de `node_modules/.bin/tsc` (notre échec de production le plus fréquent :
- * `tsc: command not found`, le modèle lançant `npm run typecheck` avant d'installer),
- * timeout, sortie illisible → `null`. Un harness qui transformerait un
- * environnement pas installé en mur d'erreurs serait pire que silencieux.
+ * EVERYTHING here is best-effort and SILENT in case of doubt: no `tsconfig.json`,
+ * no `node_modules/.bin/tsc` (our most common production failure:
+ * `tsc: command not found`, the model launching `npm run typecheck` before installing),
+ * timeout, unreadable output → `null`. A harness that turned an
+ * uninstalled environment into a wall of errors would be worse than silence.
  */
 
-/** Budget mural d'un type-check. Mesuré : 22 s à froid, ~11 s à chaud sur minddy.
- *  Large pour un gros dépôt, borné pour ne jamais manger un chunk entier. */
+/** Wall budget of a type-check. Measured: 22 s cold, ~11 s hot on minddy.
+ * Large for a big deposit, narrow so you never eat a whole chunk. */
 export const TYPECHECK_TIMEOUT_MS = 120_000;
-/** Budget minimum restant sur le chunk pour lancer un check (sinon on se tait). */
+/** Minimum budget remaining on the chunk to launch a check (otherwise we keep quiet). */
 export const TYPECHECK_MIN_BUDGET_MS = 60_000;
-/** Cap du bloc d'erreurs renvoyé au modèle. Au-delà, il ne lit plus, il subit. */
+/** Heading of the error block returned to the model. Beyond that, he no longer reads, he suffers. */
 export const TYPE_ERRORS_MAX_CHARS = 2000;
 /**
- * `.tsbuildinfo` gardé HORS du dépôt : le `git add -A` de fin de tour ne le voit
- * jamais, et `git status` reste propre pour le modèle (même raison que le dossier
- * de sorties de tools). Persiste dans le snapshot de la microVM → les tours
- * suivants repartent à chaud (22 s → 11 s).
+ * `.tsbuildinfo` kept OUTSIDE the depot: the `git add -A` at the end of the turn does not see it
+ * never, and `git status` remains clean for the model (same reason as the folder
+ * tools outputs). Persists in microVM snapshot → towers
+ * following start again hot (22 s → 11 s).
  *
- * Sous la racine DU RUN depuis MIN-354 : deux runs qui partageraient un cache
- * incrémental le rendraient plus lent que pas de cache du tout, chacun
- * invalidant celui de l'autre à chaque passage.
+ * Under the DU RUN root from MIN-354: two runs which would share a cache
+ * incremental would make it slower than no cache at all, each
+ * invalidating that of the other with each passage.
  */
 function tsbuildinfo(host: RepoHost): string {
   return `${host.layout.typecheckDir}/agent.tsbuildinfo`;
 }
 
-/** En-tête du bloc d'erreurs. Formulation d'OpenCode (« … please fix: »), dont on
- *  sait qu'elle fonctionne, recalée sur notre portée : le tour, pas le fichier. */
+/** Error block header. OpenCode formulation (“…please fix:”), which we
+ * knows that it works, aligned with our scope: the trick, not the file. */
 const HEADER = "Type errors detected after your changes, please fix:";
-/** Rappel anti-boucle : un dépôt déjà cassé ne doit pas devenir le sujet du tour. */
+/** Anti-loop reminder: an already broken repository should not become the subject of the round. */
 const FOOTER =
   "If an error is unrelated to what you changed (it was already there), do not fix it — say so in your reply.";
 
-/** Une erreur de typage telle que `tsc --pretty false` la rend. */
+/** A typing error such as `tsc --pretty false` makes it. */
 export interface TypeErrorEntry {
-  /** Chemin relatif au dépôt, tel que tsc l'imprime. */
+  /** Path relative to the repository, as tsc prints it. */
   file: string;
-  /** La ligne complète, élaborations indentées comprises. */
+  /** The complete line, indented elaborations included. */
   text: string;
 }
 
-/** Le type-checker du dépôt, s'il est utilisable ICI ET MAINTENANT. */
+/** The type-checker of the repository, if it can be used HERE AND NOW. */
 export interface TypeChecker {
-  /** Version majeure de TypeScript (`--incremental` avec `--noEmit` exige TS ≥ 5). */
+  /** Major version of TypeScript (`--incremental` with `--noEmit` requires TS ≥ 5). */
   major: number;
 }
 
 /**
- * Le dépôt a-t-il un type-checker RÉELLEMENT exécutable ? `tsconfig.json` seul ne
- * suffit pas — sans `node_modules`, `tsc` n'existe pas. Une seule commande (1 ms
- * dans la VM, le round-trip domine). Best-effort : tout échec → `null`.
+ * Does the repository have an ACTUALLY executable type-checker? `tsconfig.json` alone
+ * is not enough — without `node_modules`, `tsc` does not exist. A single command (1 ms
+ * in the VM, the round-trip dominates). Best effort: any failure → `null`.
  */
 export async function detectTypeChecker(host: RepoHost): Promise<TypeChecker | null> {
   try {
@@ -91,10 +91,10 @@ export async function detectTypeChecker(host: RepoHost): Promise<TypeChecker | n
 }
 
 /**
- * Lance le type-check du dépôt et renvoie le bloc à servir au modèle, ou `null`
- * s'il n'y a rien à dire. `touched` = les chemins que le tour a édités : ils
- * passent EN TÊTE du bloc (c'est le lien « ton édition → cette erreur » que le
- * ticket cherche à rétablir), le reste du dépôt derrière.
+ * Runs the type-check of the repository and returns the block to be used for the model, or `null`
+ * if there is nothing to say. `touched` = the paths that the round has edited: they
+ * go AT THE HEAD of the block (this is the link “your edition → this error” that the
+ * ticket seeks to reinstate), the rest of the deposit behind.
  */
 export async function typeErrorsForTurn(
   host: RepoHost,
@@ -103,9 +103,9 @@ export async function typeErrorsForTurn(
   const checker = await detectTypeChecker(host);
   if (!checker) return null;
 
-  // `--incremental` explicite : le tsconfig du dépôt ne l'active pas forcément, et
-  // c'est lui qui fait passer les tours suivants de 22 s à 11 s. Interdit avec
-  // `--noEmit` avant TS 5 → on s'en passe (on paie le prix fort, mais on parle).
+  // `--incremental` explicit: the tsconfig of the repository does not necessarily activate it, and
+  // it is he who reduces the following laps from 22 s to 11 s. Prohibited with
+  // `--noEmit` before TS 5 → we do without it (we pay the high price, but we talk).
   const buildInfo = tsbuildinfo(host);
   const incremental =
     checker.major >= 5 ? ` --incremental --tsBuildInfoFile ${sq(buildInfo)}` : "";
@@ -114,24 +114,24 @@ export async function typeErrorsForTurn(
       `mkdir -p ${sq(host.layout.typecheckDir)}; ./node_modules/.bin/tsc --noEmit --pretty false${incremental} 2>&1`,
       { cwd: host.layout.repoDir, timeoutMs: TYPECHECK_TIMEOUT_MS },
     );
-    // exitCode 0 = rien à dire. Non nul SANS erreur analysable = panne d'outil
-    // (tsconfig illisible, OOM, timeout) : `formatTypeErrors` renvoie null.
+    // exitCode 0 = nothing to say. Non-zero WITHOUT analyzable error = tool failure
+    // (unreadable tsconfig, OOM, timeout): `formatTypeErrors` returns null.
     return formatTypeErrors(res.stdout + res.stderr, touched);
   } catch {
     return null;
   }
 }
 
-/** `path/to/file.ts(12,3): error TS2322: …` — la forme de `tsc --pretty false`. */
+/** `path/to/file.ts(12,3): error TS2322: …` — the form of `tsc --pretty false`. */
 const ERROR_LINE = /^(\S[^(]*)\((\d+),(\d+)\): error (TS\d+): /;
 
 /**
- * Découpe une sortie `tsc --pretty false` en erreurs. Une entrée commence à une
- * ligne `fichier(l,c): error TSxxxx:` et absorbe les lignes indentées qui la
- * suivent (les élaborations de TypeScript, souvent le seul endroit où il dit
- * POURQUOI). Tout ce qui n'appartient à aucune entrée est jeté — dont les erreurs
- * de configuration sans fichier (`TS5083`, `TS18003`), qui ne concernent pas le
- * modèle et le mèneraient sur une fausse piste.
+ * Splits a `tsc --pretty false` output into errors. An entry begins at
+ * a line `file(line,column): error TSxxxx:` and absorbs the indented lines which
+ * follow (the TypeScript elaborations, often the only place where it says
+ * FOR WHAT). Anything that does not belong to any entry is discarded — including errors
+ * configuration errors without a file (`TS5083`, `TS18003`), which do not concern the
+ * model and would lead him on a false trail.
  */
 export function parseTypeErrors(raw: string): TypeErrorEntry[] {
   const entries: TypeErrorEntry[] = [];
@@ -141,7 +141,7 @@ export function parseTypeErrors(raw: string): TypeErrorEntry[] {
       entries.push({ file: m[1], text: line.trimEnd() });
       continue;
     }
-    // Élaboration : rattachée à l'erreur en cours, jamais orpheline.
+    // Elaboration: attached to the current error, never orphaned.
     if (entries.length > 0 && /^\s+\S/.test(line)) {
       entries[entries.length - 1].text += `\n${line.trimEnd()}`;
     }
@@ -150,12 +150,12 @@ export function parseTypeErrors(raw: string): TypeErrorEntry[] {
 }
 
 /**
- * Rend le bloc servi au modèle : en-tête, erreurs des fichiers TOUCHÉS d'abord,
- * puis les autres, cap à `TYPE_ERRORS_MAX_CHARS`. `null` s'il n'y a aucune erreur
- * analysable — l'appelant se tait alors complètement.
+ * Returns the block served to the model: header, errors of files TOUCHED first,
+ * then the others, head to `TYPE_ERRORS_MAX_CHARS`. `null` if there are no errors
+ * analyzable — the caller then becomes completely silent.
  *
- * Pur (aucune sandbox) : c'est ici que vivent le tri, le cap et la formulation,
- * donc c'est ici que portent les tests.
+ * Pure (no sandbox): this is where sorting, heading and formulation live,
+ * so this is where the testing is.
  */
 export function formatTypeErrors(raw: string, touched: readonly string[]): string | null {
   const entries = parseTypeErrors(raw);
@@ -170,15 +170,15 @@ export function formatTypeErrors(raw: string, touched: readonly string[]): strin
   let used = 0;
   let shown = 0;
   for (const entry of ordered) {
-    // +1 pour le saut de ligne. On s'arrête AVANT de dépasser : un bloc coupé au
-    // milieu d'une erreur ferait lire au modèle un chemin ou un message tronqué.
+    // +1 for line break. We stop BEFORE overtaking: a block cut at
+    // middle of an error would cause the model to read a truncated path or message.
     if (used + entry.text.length + 1 > TYPE_ERRORS_MAX_CHARS) break;
     lines.push(entry.text);
     used += entry.text.length + 1;
     shown++;
   }
-  // Cap atteint dès la première erreur (une élaboration monstrueuse) : on la sert
-  // quand même, tronquée — mieux qu'un bloc vide qui dirait « tout va bien ».
+  // Cap reached from the first error (a monstrous elaboration): we serve it
+  // still, truncated — better than an empty block that would say “everything is fine”.
   if (lines.length === 0) {
     lines.push(ordered[0].text.slice(0, TYPE_ERRORS_MAX_CHARS));
     shown = 1;
@@ -189,99 +189,99 @@ export function formatTypeErrors(raw: string, touched: readonly string[]): strin
   return `${HEADER}\n${lines.join("\n")}${more}\n${FOOTER}`;
 }
 
-/** `./lib/a.ts` et `lib/a.ts` sont le même fichier ; tsc et nos tools ne les
- *  écrivent pas pareil. Comparaison sur une forme unique. */
+/** `./lib/a.ts` and `lib/a.ts` are the same file; tsc and our tools do not
+ * do not write the same. Comparison on a single form. */
 function normalizePath(path: string): string {
   return path.replace(/^\.\//, "").replace(/^\/+/, "");
 }
 
-// ── La suite de tests, même geste que le type-check (MIN-251) ────────────────
+// ── The test suite, same gesture as type-check (MIN-251) ────────────────
 
 /**
- * CE QUE LE HARNESS FAIT ENSEIGNE PLUS FORT QUE CE QUE LE PROMPT DIT.
+ * WHAT THE HARNESS DOES TEACHES HARDER THAN WHAT THE PROMPT SAYS.
  *
- * Le prompt demande depuis toujours de « lancer le linter / type-check / build /
- * tests du projet ». Le harness, lui, ne lançait QUE `tsc`. Sur le run de la PR 48,
- * un tour de 13,6 minutes qui a livré une feature en sept fichiers n'a exécuté
- * DEUX commandes en tout — un install et un `npm run typecheck` — sans ouvrir un
- * seul des 209 fichiers de test du dépôt. Et la feature ne marchait pas. Le modèle
- * avait vu le défaut dans son propre thinking, puis l'avait classé : « *that's
- * working as expected since type checks are passing* ». C'est la conclusion
- * logique de ce qu'il voyait s'exécuter à sa place, tour après tour.
+ * The prompt has always asked to “run the linter / type-check / build /
+ * project tests”. The harness ONLY launched `tsc`. On the PR 48 run,
+ * a 13.6-minute round that delivered a seven-file feature didn't run
+ * TWO commands in total — one install and one `npm run typecheck` — without opening a
+ * only one of the 209 test files in the repository. And the feature didn't work. The model
+ * had seen the flaw in his own thinking, then classified it: "*that's
+ * working as expected since type checks are passing*”. This is the conclusion
+ * logic of what he saw being performed in his place, turn after turn.
  *
- * D'où ce bloc, calqué trait pour trait sur le type-check : détecté, lancé en fin
- * de tour quand le dépôt a été touché, ses échecs mis dans le contexte AVANT que
- * le modèle ne réponde. Un seul passage par tour — le tour doit se terminer, pas
- * partir en boucle de correction.
+ * Hence this block, modeled exactly on type-check: detected, launched at the end
+ * round when the repository was modified, with its failures put into context BEFORE
+ * the model responds. Only one pass per turn — the turn must end, not spiral into
+ * a correction loop.
  *
- * Mêmes règles de silence, et pour la même raison : pas de script `test`, pas de
- * binaire installé, sortie illisible, panne → `null`. Un harness qui transformerait
- * un environnement pas installé en mur d'échecs serait pire que silencieux.
+ * Same rules of silence, and for the same reason: no `test` script, no
+ * binary installed, output unreadable, failure → `null`. A harness that would transform
+ * an environment not installed as a chess wall would be worse than silent.
  */
 
 /**
- * Budget mural de la suite. MESURÉ dans la microVM (2 vCPU / 4,2 Go) sur les 2 760
- * tests de minddy : **80,5 s**, et — contrairement à `tsc` — le second passage coûte
- * exactement le même prix (80,5 s aussi, 81,2 s avec un test rouge). Il n'y a pas
- * de dividende « à chaud » à espérer ici : le chiffre à budgéter est celui-là.
+ * Suite wall budget. MEASURED in microVM (2 vCPU / 4.2 GB) on 2760
+ * minddy tests: **80.5 s**, and — unlike `tsc` — the second pass costs
+ * exactly the same price (also 80.5s, 81.2s with a red test). There is no
+ * of “hot” dividend to hope for here: the figure to budget is this one.
  *
- * Le local ment de 4,4× (18,4 s sur douze cœurs) : c'est la mesure dans la VM qui
- * fait foi, jamais celle du poste.
+ * The local time is 4.4× (18.4 s on twelve cores): this is the measurement in the VM which
+ * that counts, never the workstation's.
  */
 export const TEST_TIMEOUT_MS = 240_000;
 /**
- * Budget mural d'un passage CIBLÉ (`vitest related` / `jest --findRelatedTests`).
- * Le runner démarre pareil et ne charge que le sous-graphe des fichiers touchés :
- * c'est le démarrage qui domine, pas les cas. Borné bien plus court que la suite
- * entière — un passage ciblé qui prend deux minutes n'est plus un passage ciblé,
- * et le laisser courir reviendrait à payer la suite sans l'avoir demandée.
+ * Wall budget for a TARGETED passage (`vitest related` / `jest --findRelatedTests`).
+ * The runner starts the same and only loads the subgraph of the affected files:
+ * it's the startup that dominates, not the cases. Bounded much shorter than the rest
+ * entire — a targeted passage that takes two minutes is no longer a targeted passage,
+ * and letting him run would amount to paying for the sequel without having asked for it.
  */
 export const TEST_RELATED_TIMEOUT_MS = 120_000;
 /**
- * Budget minimum restant sur le chunk pour lancer la suite (sinon on se tait). Même
- * marge que le type-check sur sa propre mesure (60 s pour 22 s, ~2,7×) : ici 180 s
- * pour 80 s. Un chunk complet vaut 700 s, et le pire tour paie les deux contrôles —
- * deux type-checks et une suite, soit ~125 s, un sixième du chunk. C'est le prix
- * qu'on accepte pour qu'un tour ne puisse pas se terminer en rouge sans le dire.
+ * Minimum budget remaining on the chunk to launch the sequel (otherwise we keep quiet). Even
+ * margin that the type-check on its own measurement (60 s for 22 s, ~2.7×): here 180 s
+ * for 80s. A full chunk is worth 700s, and the worst spin pays both checks —
+ * two type-checks and a continuation, i.e. ~125 s, a sixth of the chunk. This is the price
+ * that we accept so that a round cannot end in red without saying so.
  */
 export const TEST_MIN_BUDGET_MS = 180_000;
-/** Même marge, sur le budget d'un passage ciblé (~30 s mesurés au pire). */
+/** Same margin, on the budget of a targeted passage (~30 s measured at worst). */
 export const TEST_RELATED_MIN_BUDGET_MS = 90_000;
-/** Cap du bloc d'échecs renvoyé au modèle. Au-delà, il ne lit plus, il subit. */
+/** Heading of the chess block returned to the model. Beyond that, he no longer reads, he suffers. */
 export const TEST_FAILURES_MAX_CHARS = 3000;
 /**
- * Lignes gardées par échec. Un échec de vitest ou de jest, c'est un titre, un
- * message, un diff attendu/reçu et une position — puis un extrait de code source
- * que le modèle peut relire lui-même. On garde le premier, on jette le second.
+ * Lines kept by failure. A vitest or jest failure is a title, a
+ * message, an expected/received diff and a position — then a source code snippet
+ * that the model can reread itself. We keep the first, we throw away the second.
  */
 const TEST_FAILURE_MAX_LINES = 8;
 
 const TEST_HEADER = "Tests are failing after your changes, please fix:";
-/** Même rappel anti-boucle que le type-check : un dépôt déjà rouge ne doit pas
- *  devenir le sujet du tour. */
+/** Same anti-loop reminder as type-check: a deposit that is already red should not
+ * become the subject of the tour. */
 const TEST_FOOTER =
   "If a failure is unrelated to what you changed (it was already there), do not fix it — say so in your reply.";
 
-/** La suite de tests du dépôt, si elle est lançable ICI ET MAINTENANT. */
+/** The repository's test suite, if it is launchable HERE AND NOW. */
 export interface TestRunner {
-  /** Le script `test` du package.json, tel quel (on le lance via `npm run`). */
+  /** The `test` script of the package.json, as is (we launch it via `npm run`). */
   script: string;
-  /** Le binaire qu'il appelle, vérifié présent dans `node_modules/.bin`. */
+  /** The binary it calls, verified present in `node_modules/.bin`. */
   bin: string;
 }
 
 /**
- * Le binaire qu'un script npm lance, ou `null` si on ne peut pas le dire. Pur, et
- * exporté pour les tests : c'est ici que se décide ce qu'on refuse de deviner.
+ * The binary that an npm script launches, or `null` if you can't tell. Pure, and
+ * exported for testing: this is where what we refuse to guess is decided.
  *
- * On saute les affectations d'environnement en tête (`NODE_ENV=test jest`), et on
- * REFUSE les enveloppes (`npm run test:unit`, `bash scripts/test.sh`, `node --test`) :
- * derrière, il n'y a pas de binaire à vérifier, donc pas de moyen de savoir si
- * l'environnement est installé — et un `command not found` servi comme un échec de
- * test enverrait le modèle chercher un bug qui n'existe pas.
+ * We skip the environment assignments at the head (`NODE_ENV=test jest`), and we
+ * REFUSES envelopes (`npm run test:unit`, `bash scripts/test.sh`, `node --test`):
+ * behind, there is no binary to check, so no way to know if
+ * environment is installed — and a `command not found` served as a failure
+ * test would send the model looking for a bug that doesn't exist.
  */
 export function testRunnerBin(script: string): string | null {
-  // Le script par défaut de `npm init`. Il sort en 1 sans avoir rien testé.
+  // The default script for `npm init`. It comes out in 1 without having tested anything.
   if (/no test specified/i.test(script)) return null;
   const tokens = script.trim().split(/\s+/);
   while (tokens.length > 0 && /^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[0])) tokens.shift();
@@ -295,9 +295,9 @@ export function testRunnerBin(script: string): string | null {
 }
 
 /**
- * Le dépôt a-t-il une suite de tests RÉELLEMENT exécutable ? Un script `test` dans
- * `package.json` ne suffit pas — sans `node_modules`, son binaire n'existe pas.
- * Best-effort : tout échec, tout doute → `null`, et rien ne sera lancé.
+ * Does the repository have an ACTUALLY executable test suite? A `test` script in
+ * `package.json` is not enough — without `node_modules`, its binary does not exist.
+ * Best effort: any failure, any doubt → `null`, and nothing will be launched.
  */
 export async function detectTestRunner(host: RepoHost): Promise<TestRunner | null> {
   try {
@@ -318,49 +318,49 @@ export async function detectTestRunner(host: RepoHost): Promise<TestRunner | nul
 }
 
 /**
- * LA PORTÉE DU PASSAGE, ET POURQUOI ELLE N'EST PLUS TOUJOURS « TOUT » (MIN-262).
+ * THE SCOPE OF THE PASSAGE, AND WHY IT IS NO LONGER ALWAYS “EVERYTHING” (MIN-262).
  *
- * `"full"` lance la suite entière — c'est la garantie de MIN-251, et elle reste la
- * règle dès que le changement pèse : un test qui casse AILLEURS est précisément ce
- * qu'on cherche à voir, c'est la ligne non modifiée qui défait le changement.
+ * `"full"` launches the entire suite — this is the guarantee of MIN-251, and it remains the
+ * rule as soon as the change weighs: a test which breaks ELSEWHERE is precisely this
+ * that we seek to see, it is the unmodified line which undoes the change.
  *
- * `{ related }` lance le passage CIBLÉ du runner sur les fichiers du tour. Ce n'est
- * pas « les tests de ces fichiers » : `vitest related` comme `jest
- * --findRelatedTests` remontent le GRAPHE D'IMPORTS et lancent tout test qui touche
- * ces modules, transitivement. Le « casse ailleurs » reste donc couvert partout où
- * il est traçable ; ce qu'on perd est le test qui atteint le code par un chemin que
- * l'analyse statique ne voit pas (un fixture, un fichier lu à l'exécution) — pour
- * une ligne retirée, c'est un prix qu'on paie contre 80 s de mur à chaque tour.
+ * `{ related }` launches the TARGETED passage of the runner on the tour files. This is not
+ * not "tests of these files": `vitest related` like `jest
+ * --findRelatedTests` pull up the IMPORTS GRAPH and run any test that hits
+ * these modules, transitively. “Breakage elsewhere” therefore remains covered wherever
+ * it is traceable; what we lose is the test which reaches the code by a path that
+ * static analysis does not see (a fixture, a file read at execution) — for
+ * a line removed is a price that we pay against 80 s of wall each turn.
  *
- * `allowFullFallback` tranche le cas du runner sans mode ciblé : `true`, on paie la
- * suite entière ; `false`, on ne lance rien. L'appelant met `false` quand il n'a
- * PAS le budget d'une suite entière — sinon un tour minuscule déclencherait, par la
- * bande, exactement le passage qu'il essayait d'éviter, et sans budget pour lui.
+ * `allowFullFallback` decides the case of the runner without targeted mode: `true`, we pay the
+ * entire suite; `false`, we don't launch anything. The caller puts `false` when he has no
+ * NOT the budget for an entire suite — otherwise a tiny turn would trigger, by the way,
+ * tape, exactly the passage he was trying to avoid, and with no budget for him.
  */
 export type TestScope =
   | "full"
   | { related: readonly string[]; allowFullFallback: boolean };
 
-/** Ce qu'un passage de tests a produit — le bloc, et ce qui a réellement tourné. */
+/** What a test run produced — the block, and what actually went wrong. */
 export interface TestRunOutcome {
-  /** Le bloc à servir au modèle, ou `null` si la suite est verte / illisible. */
+  /** The block to be used for the model, or `null` if the sequence is green / illegible. */
   block: string | null;
-  /** Ce qui a tourné POUR DE BON : la mesure ne doit pas lire l'intention. */
+  /** What turned out FOR GOOD: Measurement should not read intent. */
   scope: "full" | "related";
 }
 
 /**
- * La commande d'un passage CIBLÉ, ou `null` si ce runner n'en a pas.
+ * The command for a TARGETED passage, or `null` if this runner does not have one.
  *
- * On sort ici du `npm run test` du projet — délibérément, et c'est la seule
- * exception : le mode ciblé est un DRAPEAU du runner, et il n'y a aucun moyen sûr
- * de le glisser dans un script qu'on ne connaît pas (`npm run test -- related`
- * donnerait `vitest run related`, qui cherche un fichier nommé « related »). On
- * appelle donc le binaire, celui-là même que `detectTestRunner` a vérifié exécutable.
+ * Here we leave the `npm run test` of the project — deliberately, and this is the only
+ * exception: targeted mode is a runner FLAG, and there is no safe way
+ * to slip it into a script that we don't know (`npm run test -- related`
+ * would give `vitest run related`, which looks for a file named “related”). We
+ * therefore calls the binary, the same one that `detectTestRunner` verified as executable.
  *
- * `--passWithNoTests` / `--passWithNoTests` : un tour qui touche un fichier que rien
- * ne teste doit rendre VERT, pas rouge — l'absence de test n'est pas un échec, et la
- * servir comme tel enverrait le modèle chercher un bug qui n'existe pas.
+ * `--passWithNoTests` / `--passWithNoTests`: a round that touches a file that no test
+ * covers should return GREEN, not red — the absence of a test is not a failure, and
+ * treating it as one would send the model looking for a bug that does not exist.
  */
 export function relatedTestCommand(runner: TestRunner, files: readonly string[]): string | null {
   const paths = files.filter((f) => f.trim() !== "").map(sq);
@@ -376,11 +376,11 @@ export function relatedTestCommand(runner: TestRunner, files: readonly string[])
 }
 
 /**
- * Lance les tests du dépôt à la portée demandée et rend ce qui en sort, ou `null`
- * s'il n'y a rien de lançable ici et maintenant.
+ * Runs the repository tests at the requested scope and renders what comes out, or `null`
+ * if there is nothing launchable here and now.
  *
- * `CI=1` n'est pas décoratif : sans lui, un script `vitest` (sans `run`) partirait
- * en mode watch et occuperait le budget jusqu'au timeout sans jamais rendre la main.
+ * `CI=1` is not decorative: without it, a `vitest` script (without `run`) would go
+ * in watch mode and would occupy the budget until the timeout without ever giving up.
  */
 export async function testFailuresForTurn(
   host: RepoHost,
@@ -393,22 +393,22 @@ export async function testFailuresForTurn(
   if (!related && scope !== "full" && !scope.allowFullFallback) return null;
 
   try {
-    // Suite entière : `npm run` plutôt que le binaire — ce qui tourne est le script
-    // DU PROJET, arguments compris. `--silent` coupe l'écho de npm et son propre
-    // rapport d'erreur — le seul texte rendu est celui du runner.
+    // Full suite: `npm run` rather than binary — what runs is the script
+    // OF THE PROJECT, arguments included. `--silent` mutes npm's echo and its own
+    // error report — the only text rendered is that of the runner.
     //
-    // Et la sortie n'est PAS filtrée ici (pas de `| tail`) : sur le chemin RPC,
-    // une commande qui reste muette une minute voit sa socket fermée par l'autre
-    // bout (`UND_ERR_SOCKET: other side closed`, mesuré en calant ces constantes —
-    // un `| tail` avait suffi à faire taire un run de suite de 2 760 tests). Un
-    // runner qui écrit sa progression tient la socket ouverte ; on le laisse.
+    // And the output is NOT filtered here (no `| tail`): on the RPC path,
+    // a command that remains silent for a minute sees its socket closed by the other
+    // other end (`UND_ERR_SOCKET: other side closed`, measured by calibrating these constants —
+    // a `| tail` was enough to silence a consecutive run of 2,760 tests). A
+    // runner who writes his progress holds the socket open; we leave it.
     const res = await host.exec(related ?? `npm run test --silent 2>&1`, {
       cwd: host.layout.repoDir,
       timeoutMs: related ? TEST_RELATED_TIMEOUT_MS : TEST_TIMEOUT_MS,
       env: { CI: "1", NO_COLOR: "1", FORCE_COLOR: "0" },
     });
     const ran = related ? ("related" as const) : ("full" as const);
-    // exitCode 0 = vert : le silence est le bon retour.
+    // exitCode 0 = green: silence is the correct return.
     if (res.exitCode === 0) return { block: null, scope: ran };
     return { block: formatTestFailures(res.stdout + res.stderr), scope: ran };
   } catch {
@@ -416,30 +416,30 @@ export async function testFailuresForTurn(
   }
 }
 
-// ── Ce que le MODÈLE a vérifié lui-même (MIN-262) ────────────────────────────
+// ── What the MODEL verified itself (MIN-262) ────────────────────────────
 
 /**
- * LE GESTE FAIT FOI.
+ * THE GESTURE IS AUTHENTIC.
  *
- * MIN-251 a mis la suite dans le harness parce que *ce que le harness fait enseigne
- * plus fort que ce que le prompt dit* : le modèle ne lançait jamais les tests, et
- * concluait « *that's working as expected since type checks are passing* » sur une
- * feature cassée. La leçon a porté — et le crochet est devenu un impôt : 80 s de
- * mur plus une réponse entière, sur un tour qui retire une ligne.
+ * MIN-251 put the rest in the harness because *what the harness does teaches
+ * stronger than what the prompt says*: the model never launched the tests, and
+ * concluded “*that's working as expected since type checks are passing*” on a
+ * broken feature. The lesson carried - and the hook became a tax: 80 seconds of
+ * wall plus an integer response, on a turn that removes a line.
  *
- * Ce registre rend la décision au modèle sans rien lui faire PROMETTRE. Il ne
- * déclare pas ce qu'il compte vérifier : il vérifie, et le harness ne relance pas
- * ce qu'il vient de voir passer vert. Une déclaration serait invérifiable ; un
- * `npm test` qui sort en 0 est un fait, daté, et le harness le lit tout seul.
+ * This register returns the decision to the model without making it PROMISE anything. He doesn't
+ * does not declare what it intends to check: it checks, and the harness does not restart
+ * what he has just seen turn green. A declaration would be unverifiable; A
+ * `npm test` which comes out as 0 is a fact, dated, and the harness reads it by itself.
  *
- * L'invariant, et il tient en une phrase : **vert APRÈS la dernière édition**.
- * Toute édition périme le registre — un tour qui teste puis réédite retrouve le
- * crochet, exactement comme avant.
+ * The invariant, and it fits in one sentence: **green AFTER the last edition**.
+ * Every edition expires the register - a trick which tests then re-edits finds the
+ * hook, exactly as before.
  */
 export interface VerificationSink {
   /**
-   * La dernière commande de test du dépôt que le MODÈLE a lancée et qui est sortie
-   * en 0, si rien n'a été édité depuis. `null` sinon — et c'est l'état par défaut.
+   * The last repository test command that the MODEL issued and exited
+   * in 0, if nothing has been edited since. `null` otherwise — and this is the default state.
    */
   greenCommand: string | null;
 }
@@ -448,15 +448,15 @@ export function newVerificationSink(): VerificationSink {
   return { greenCommand: null };
 }
 
-/** Toute édition périme la vérification : ce qui était vert ne l'est plus. */
+/** Any edition expires verification: what was green is no longer green. */
 export function noteVerificationStale(sink: VerificationSink): void {
   sink.greenCommand = null;
 }
 
 /**
- * Note le verdict d'une commande du modèle. Seule une commande de test RECONNUE et
- * VERTE remplit le registre ; une commande rouge le vide (le modèle a vu son échec,
- * s'il ne le corrige pas le crochet doit reparler).
+ * Note the verdict of a model order. Only a RECOGNIZED test command and
+ * GREEN fills the register; a red command empties it (the model has seen its failure,
+ * if he doesn't correct it the hook must speak again).
  */
 export function noteVerificationCommand(
   sink: VerificationSink,
@@ -467,31 +467,31 @@ export function noteVerificationCommand(
   sink.greenCommand = exitCode === 0 ? command.trim() : null;
 }
 
-/** Runners qu'on reconnaît à leur nom, appelés directement ou via `npx`. */
+/** Runners recognized by their name, called directly or via `npx`. */
 const TEST_BINS = new Set([
   "vitest", "jest", "mocha", "ava", "tap", "playwright", "cypress",
   "pytest", "phpunit", "rspec", "gotestsum",
 ]);
 
 /**
- * Cette commande lance-t-elle les tests du dépôt ? PUR, et volontairement AVARE :
- * un faux positif fait TAIRE le harness, c'est-à-dire qu'il rend le silence à un
- * tour qui n'a rien vérifié. Dans le doute, on ne reconnaît pas — le pire coût
- * d'un faux négatif est un passage de tests qu'on aurait pu s'épargner.
+ * Does this command run the repository tests? PURE, and deliberately AVARE:
+ * a false positive silences the harness, that is to say it silences a
+ * tour which did not verify anything. When in doubt, we do not recognize — the worst cost
+ * of a false negative is a test that could have been avoided.
  *
- * D'où trois refus nets :
- * - tout ce qui rend le code de sortie MENTEUR : `||`, `;`, un pipe, un `&`. Seul
- *   le `&&` passe, parce qu'il propage l'échec — et on n'y regarde alors que le
- *   DERNIER segment, le seul dont le code de sortie soit celui de la commande.
- * - le mode watch : il ne rend jamais la main, donc il ne conclut rien.
- * - les enveloppes qu'on ne sait pas lire (`bash script.sh`, `make test`) : on ne
- *   peut pas dire ce qu'il y a derrière.
+ * Hence three clear refusals:
+ * - anything that makes the exit code LIAR: `||`, `;`, a pipe, a `&`. Alone
+ * the `&&` passes, because it propagates the failure - and we then only look at the
+ * LAST segment, the only one whose exit code is that of the command.
+ * - watch mode: it never returns control, so it concludes nothing.
+ * - envelopes that we cannot read (`bash script.sh`, `make test`): we cannot
+ * can't tell what's behind it.
  */
 export function looksLikeTestCommand(command: string): boolean {
   const raw = command.trim();
   if (raw === "") return false;
-  // Un pipe rend le code du dernier maillon, `;` ne propage rien, `&` détache, une
-  // substitution masque tout. Seul le `&&` survit — il propage l'échec.
+  // A pipe returns the code of the last link, `;` does not propagate anything, `&` detaches, a
+  // substitution hides everything. Only the `&&` survives — it propagates the failure.
   if (/[|;`]|\$\(|(?<!&)&(?!&)/.test(raw)) return false;
   if (/(^|\s)(--watch|-w)(\s|$)|--watch=|--ui(\s|$)/.test(raw)) return false;
 
@@ -500,7 +500,7 @@ export function looksLikeTestCommand(command: string): boolean {
   while (tokens.length > 0 && /^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[0])) tokens.shift();
   if (tokens.length === 0) return false;
 
-  // `npx` / `pnpm exec` / `pnpm dlx` : ce qui compte est ce qui suit.
+  // `npx` / `pnpm exec` / `pnpm dlx`: what follows is what matters.
   if (["npx", "pnpx", "bunx"].includes(tokens[0])) tokens.shift();
   else if (["pnpm", "yarn", "bun", "npm"].includes(tokens[0]) &&
            ["exec", "dlx"].includes(tokens[1] ?? "")) tokens.splice(0, 2);
@@ -508,7 +508,7 @@ export function looksLikeTestCommand(command: string): boolean {
   const head = tokens[0] ?? "";
   const next = (tokens[1] ?? "").replace(/^--$/, "");
 
-  // Le script du projet : `npm test`, `npm t`, `pnpm run test:unit`, `yarn test`.
+  // The project script: `npm test`, `npm t`, `pnpm run test:unit`, `yarn test`.
   if (["npm", "pnpm", "yarn", "bun"].includes(head)) {
     const script = next === "run" ? (tokens[2] ?? "") : next;
     return /^(test|t)(:[\w:-]+)?$/.test(script);
@@ -516,59 +516,59 @@ export function looksLikeTestCommand(command: string): boolean {
   // `go test ./…`, `cargo test`, `python -m pytest`, `dotnet test`.
   if (["go", "cargo", "dotnet", "swift", "mix"].includes(head)) return next === "test";
   if (["python", "python3"].includes(head)) return tokens.includes("pytest");
-  // Le runner appelé par son nom, avec ou sans chemin (`./node_modules/.bin/vitest`).
+  // The runner invoked by name, with or without a path (`./node_modules/.bin/vitest`).
   return TEST_BINS.has(head.split("/").pop() ?? "");
 }
 
-/** Un échec, tel qu'on le sert : un titre normalisé et son corps. */
+/** A failure as served: a normalized title and its body. */
 export interface TestFailureEntry {
-  /** `fichier > suite > test` (vitest) ou le nom du test (jest). */
+  /** `file > suite > test` (vitest), or the test name (jest). */
   title: string;
-  /** Le bloc complet, titre `FAIL …` en tête. */
+  /** The complete block, with a `FAIL …` title at the top. */
   text: string;
   /**
-   * `"suite"` quand le fichier n'a pas pu être CHARGÉ (section « Failed Suites »
-   * de vitest) : il n'y a alors ni suite ni cas, le titre vaut le fichier, et
-   * l'échec pèse un fichier de test entier, pas une assertion.
+   * `"suite"` when the file could not be LOADED (the vitest “Failed Suites”
+   * section): there is then no suite or test case, the title is the file, and
+   * the failure represents an entire test file, not an assertion.
    */
   kind?: "suite";
 }
 
-/** ` FAIL  lib/a.test.ts > groupe > cas` — la forme de vitest. Le `>` est ce qui
- *  la distingue du `FAIL <fichier>` de jest, qui n'est qu'un en-tête de fichier. */
+/** ` FAIL  lib/a.test.ts > group > case` — the vitest form. The `>` distinguishes
+ *  it from jest's `FAIL <file>`, which is only a file header. */
 const VITEST_FAIL = /^\s*(?:❯\s*)?FAIL\s+(\S.*>.*\S)\s*$/;
 /**
- * ` FAIL  lib/b.test.ts [ lib/b.test.ts ]` — la forme de vitest quand le fichier
- * ne se CHARGE pas (import manquant, erreur au niveau module) : il n'a ni suite
- * ni cas à nommer, donc pas de `>`, et il ne ressemble pas non plus au
- * `FAIL <fichier>` de jest à cause du `[ … ]` qui suit. Sans ce motif, la ligne
- * ne matchait rien et tout le corps de l'erreur d'import partait à la poubelle —
- * le modèle ne voyait pas le défaut que son édition venait de causer.
+ * ` FAIL  lib/b.test.ts [ lib/b.test.ts ]` — the vitest form when the file
+ * cannot be LOADED (missing import, module-level error): it has no suite or
+ * case to name, so there is no `>`, and it does not resemble jest's
+ * `FAIL <file>` because of the following `[ … ]`. Without this pattern, the
+ * line matched nothing and the entire import-error body was discarded — the
+ * model could not see the defect caused by its edit.
  */
 const VITEST_SUITE_FAIL = /^\s*(?:❯\s*)?FAIL\s+(\S+)\s+\[\s*\S+\s*\]\s*$/;
-/** L'en-tête de la section des fichiers non chargeables (`⎯⎯ Failed Suites 1 ⎯⎯`). */
+/** Header of the section for files that could not be loaded (`⎯⎯ Failed Suites 1 ⎯⎯`). */
 const VITEST_SUITES_HEADER = /^[\s⎯─=-]*Failed Suites\b/m;
-/** `● groupe › cas` — la forme de jest. `● Console` n'est pas un échec. */
+/** `● group › case` — the jest form. `● Console` is not a failure. */
 const JEST_FAIL = /^\s*●\s+(?!Console\b)(\S.*\S|\S)\s*$/;
-/** `FAIL src/a.test.js` seul : contexte de fichier pour les `●` qui suivent. */
+/** `FAIL src/a.test.js` alone: file context for the following `●` lines. */
 const JEST_FILE = /^\s*FAIL\s+(\S+)\s*$/;
-/** Le récapitulatif de fin : au-delà, plus rien n'appartient à un échec. */
+/** The end summary: nothing beyond it belongs to a failure. */
 const SUMMARY = /^\s*(Test Files|Tests|Test Suites:|Snapshots:|Duration|Start at)\b/;
-/** Extrait de code source (` 4|   expect(…)`, `  |     ^`) : le modèle sait relire
- *  le fichier, et ces lignes-là noieraient le message. */
+/** Source-code excerpt (` 4|   expect(…)`, `  |     ^`): the model can reread
+ *  the file, and these lines would bury the message. */
 const CODE_FRAME = /^\s*(\d+\s*\||\|\s*\^)/;
-/** Les traits de séparation de vitest (`⎯⎯⎯[1/2]⎯⎯⎯`). */
+/** Vitest separator lines (`⎯⎯⎯[1/2]⎯⎯⎯`). */
 const RULE = /^[\s⎯─=-]*(\[\d+\/\d+\])?[\s⎯─=-]*$/;
 
-/** Les couleurs des runners, quand la sortie n'est pas un terminal mais le reste. */
+/** Runner colors, when the output is not a terminal but still contains them. */
 // eslint-disable-next-line no-control-regex
 const ANSI = /\[[0-9;]*m/g;
 
 /**
- * Découpe une sortie de runner en échecs. Vitest et jest sont les deux formes
- * traitées ; toute autre retombe sur la queue de sortie (cf. `formatTestFailures`),
- * jamais sur le silence : une suite rouge qu'on ne sait pas lire reste une suite
- * rouge, et c'est exactement la chose que ce ticket refuse de laisser passer.
+ * Splits runner output into failures. Vitest and jest are the two handled forms;
+ * anything else falls back to the tail of the output (see `formatTestFailures`),
+ * never to silence: a red suite we cannot parse remains a red suite, which is
+ * exactly what this ticket refuses to let through.
  */
 export function parseTestFailures(raw: string): TestFailureEntry[] {
   const entries: TestFailureEntry[] = [];
@@ -595,8 +595,8 @@ export function parseTestFailures(raw: string): TestFailureEntry[] {
     const suite = VITEST_SUITE_FAIL.exec(line);
     if (suite) {
       stopped = false;
-      // On ne touche PAS à `file` : ce titre nomme un fichier qui n'a pas chargé,
-      // il n'ouvre pas un contexte pour des `●` de jest qui suivraient.
+      // Do NOT change `file`: this title names a file that failed to load; it does
+      // not open a context for any following jest `●` entries.
       push(suite[1], "suite");
       continue;
     }
@@ -608,7 +608,7 @@ export function parseTestFailures(raw: string): TestFailureEntry[] {
     }
     const jestFile = JEST_FILE.exec(line);
     if (jestFile) {
-      // En-tête de fichier : il nomme les `●` suivants, il n'est pas un échec.
+      // File header: it names the following `●` entries; it is not a failure.
       file = jestFile[1];
       continue;
     }
@@ -623,22 +623,24 @@ export function parseTestFailures(raw: string): TestFailureEntry[] {
 }
 
 /**
- * Rend le bloc servi au modèle : en-tête, échecs, cap à `TEST_FAILURES_MAX_CHARS`.
+ * Renders the block served to the model: header, failures, capped at
+ * `TEST_FAILURES_MAX_CHARS`.
  *
- * Quand rien n'est analysable, on ne se tait PAS — on sert la queue de la sortie.
- * Une suite qui tombe à l'import, un runner qu'on ne connaît pas, une config
- * cassée : le verdict vit toujours à la fin, et un « rouge sans détail » vaut
- * infiniment mieux qu'un tour qui se termine en croyant la suite verte. Seule
- * exception, l'absence de test, qui n'est pas un échec.
+ * When nothing is parseable, we do NOT stay silent — we serve the tail of the
+ * output. A suite that fails during import, an unknown runner, or a broken
+ * config: the verdict is always at the end, and “red without details” is vastly
+ * better than a round that ends believing the suite is green. The only exception
+ * is the absence of tests, which is not a failure.
  */
 export function formatTestFailures(raw: string): string | null {
   const clean = raw.replace(ANSI, "");
   const entries = parseTestFailures(clean);
 
-  // Le repli ne se contente pas de `entries.length === 0` : une sortie qui annonce
-  // des « Failed Suites » dont on n'a su tirer AUCUNE entrée est le cas où l'on
-  // cache un vrai échec — un seul échec d'assertion lu ailleurs suffirait sinon à
-  // le désarmer, et le fichier tombé à l'import ne serait dit nulle part.
+  // The fallback does not rely only on `entries.length === 0`: output announcing
+  // “Failed Suites” from which we extracted NO entries is the case where a real
+  // failure would be hidden — a single assertion failure parsed elsewhere would
+  // otherwise disable it, and the file that failed during import would be
+  // reported nowhere.
   const suitesUnread = VITEST_SUITES_HEADER.test(clean) && !entries.some((e) => e.kind === "suite");
 
   if (entries.length === 0 || suitesUnread) {
@@ -648,25 +650,25 @@ export function formatTestFailures(raw: string): string | null {
     return `${TEST_HEADER}\n${tail}\n${TEST_FOOTER}`;
   }
 
-  // Les fichiers qui n'ont pas chargé d'abord : ils pèsent un fichier de test
-  // ENTIER mis à zéro, là où une assertion rouge ne pèse qu'un cas. Vitest les
-  // imprime déjà en tête, mais le cap ne doit dépendre ni de cet ordre ni du
-  // nombre d'assertions rouges qui les précéderaient chez un autre runner.
+  // Files that failed to load come first: they represent an ENTIRE test file
+  // failing, whereas a red assertion represents only one case. Vitest already
+  // prints them first, but the cap must depend neither on that order nor on the
+  // number of red assertions that might precede them in another runner.
   const ordered = [...entries.filter((e) => e.kind === "suite"), ...entries.filter((e) => !e.kind)];
 
   const lines: string[] = [];
   let used = 0;
   let shown = 0;
   for (const entry of ordered) {
-    // On s'arrête AVANT de dépasser : un échec coupé au milieu ferait lire au
-    // modèle un chemin ou un message tronqué.
+    // Stop BEFORE exceeding the cap: a failure cut in the middle would make the
+    // model read a truncated path or message.
     if (used + entry.text.length + 1 > TEST_FAILURES_MAX_CHARS) break;
     lines.push(entry.text);
     used += entry.text.length + 1;
     shown++;
   }
-  // Cap atteint dès le premier échec : on le sert quand même, tronqué — mieux
-  // qu'un bloc vide qui dirait « tout va bien ».
+  // The cap is reached on the first failure: serve it anyway, truncated — better
+  // than an empty block that would say “everything is fine”.
   if (lines.length === 0) {
     lines.push(ordered[0].text.slice(0, TEST_FAILURES_MAX_CHARS));
     shown = 1;

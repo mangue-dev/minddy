@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { appPageMetadata } from "@/lib/app-metadata";
 
 /**
- * `/reset-password` ne s'atteint que par un lien e-mail à usage unique :
- * `noindex, nofollow` — il n'y a rien à indexer, et rien à suivre.
+ * `/reset-password` can only be reached via a single-use email link:
+ * `noindex, nofollow` — there is nothing to index, and nothing to track.
  */
 export async function generateMetadata(): Promise<Metadata> {
   return {

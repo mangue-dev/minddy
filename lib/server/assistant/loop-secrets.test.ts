@@ -7,19 +7,19 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 vi.mock("server-only", () => ({}));
 
 /**
- * MIN-343 — UN IDENTIFIANT VIVANT NE S'ÉCRIT NULLE PART.
+ * MIN-343 — A LIVE IDENTIFIER DOES NOT WRITE ANYWHERE.
  *
- * Une clé `mdy_` fraîchement créée et le secret SSO d'un board sont les deux
- * seules valeurs qu'un tool de Numo rend et qui ouvrent quelque chose. Elles
- * étaient écrites telles quelles dans `assistant_messages.content` : rejouées au
- * fournisseur à chaque tour suivant, relisibles en base, et reparties dans
- * l'export de compte.
+ * A freshly created `mdy_` key and the SSO secret of a board are the two
+ * only values ​​that a Numo tool returns and which opens something. They
+ * were written as is in `assistant_messages.content`: replayed to the
+ * provider on each subsequent turn, rereadable in base, and distributed again in
+ * account export.
  *
- * Ce que ce test épingle est la frontière, pas la substitution (celle-ci a son
- * test dans `agent/redact.test.ts`) : le résultat COMPLET part au navigateur,
- * en direct, une fois — et tout ce qui reste après lui est substitué.
+ * What this test pinpoints is the border, not the substitution (this has its
+ * test in `agent/redact.test.ts`): the COMPLETE result goes to the browser,
+ * live, once — and everything that remains after it is substituted.
  *
- * On ne moque que ce qui SORT du process : le fournisseur et la base.
+ * We only mock what COMES OUT of the process: the supplier and the base.
  */
 
 const KEY = "mdy_QXBpS2V5U2VjcmV0MTIzNDU2Nzg5MA";
@@ -38,7 +38,7 @@ import type { ChatMessage } from "./loop";
 
 const { processChat } = await import("./loop");
 
-/** Un flux SSE OpenRouter, tel que la boucle le lit. */
+/** An OpenRouter SSE stream, as the loop reads it. */
 function stream(chunks: Record<string, unknown>[]): Response {
   const body = new ReadableStream<Uint8Array>({
     start(controller) {
@@ -93,15 +93,14 @@ function fakeService() {
       },
     }),
   } as unknown as SupabaseClient;
-  // `insert` est appelé tantôt avec `.select().single()`, tantôt seul (await
-  // direct) : la forme ci-dessus est thenable-compatible via l'objet rendu.
+  // `insert` is sometimes called with `.select().single()`, sometimes alone (await
+  // direct): the form above is thenable-compatible via the rendered object.
   return { client, inserted };
 }
 
 /**
- * Le filet ne vaut que si le tool DÉCLARE ce qu'il rend de vivant. Lexical, comme
- * `redaction-invariant.test.ts` : les deux chemins demandent un fournisseur, une
- * base et un projet, et ce qu'on veut épingler tient dans une ligne de source.
+ * The net is only valid if the tool DECLARE what it renders alive. Lexical, like
+ * `redaction-invariant.test.ts`: the two paths require a supplier, a base and a project, and what we want to pin fits in a source line.
  */
 describe("les tools qui rendent un identifiant le déclarent", () => {
   const source = readFileSync(join(__dirname, "execute-tool.ts"), "utf8");
@@ -155,17 +154,17 @@ describe("la clé fraîche ne survit qu'à l'écran", () => {
       }
     );
 
-    // 1. L'ÉCRAN : le résultat complet, la clé lisible, une fois.
+    // 1. THE SCREEN: the complete result, the key readable, once.
     const toolResult = events.find((e) => e.type === "tool_result");
     expect(JSON.stringify(toolResult?.payload)).toContain(KEY);
 
-    // 2. LA BASE : rien. Ni dans le contenu du message, ni dans sa métadonnée.
+    // 2. THE BASIS: nothing. Neither in the content of the message, nor in its metadata.
     const persisted = JSON.stringify(service.inserted);
     expect(persisted).not.toContain(KEY);
     expect(persisted).toContain("[redacted]");
 
-    // 3. LE MODÈLE : rien non plus — c'est ce qui empêche le rejeu à chaque
-    //    tour suivant, et la recopie de la clé dans une réponse.
+    // 3. THE MODEL: nothing either — this is what prevents replay each time
+    // next round, and copying the key into a response.
     expect(JSON.stringify(messages)).not.toContain(KEY);
     expect(JSON.stringify(messages)).toContain("[redacted]");
   });
@@ -190,8 +189,8 @@ describe("la clé fraîche ne survit qu'à l'écran", () => {
       }
     );
 
-    // La clé apparaissait DEUX fois dans le résultat : nue, et au milieu de
-    // l'entête d'exemple que le contrat d'intégration porte.
+    // The key appeared TWICE in the result: bare, and in the middle of
+    // the example header that the integration contract carries.
     const toolMessage = service.inserted.find((r) => r.role === "tool");
     expect(String(toolMessage?.content)).toContain(
       "Authorization: Bearer [redacted]"

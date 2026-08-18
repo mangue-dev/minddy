@@ -13,19 +13,19 @@ import {
 } from "mangue-ui";
 
 /**
- * Ce qu'on demande quand un dialogue de création se ferme sur une saisie
- * (MIN-41). Trois sorties, parce qu'il y a trois intentions et qu'aucune ne doit
- * coûter deux gestes : revenir à la rédaction, garder pour plus tard, ou
- * renoncer. Sans le « Abandonner », renoncer voulait dire enregistrer un
- * brouillon puis aller le supprimer dans la rangée de reprise — la sortie la
- * plus simple était la plus longue.
+ * What we ask when a creation dialog closes on an entry
+ * (MIN-41). Three exits, because there are three intentions and none should
+ * cost two actions: return to editing, save for later, or
+ * give up. Without “Abandoning”, renouncing meant saving a
+ * draft then go and delete it in the restart row — the output
+ * The simpler was the longer.
  *
- * `onDiscard` ferme SANS garder, et jette le brouillon d'origine si le
- * formulaire en venait : sinon on retrouverait, dans les brouillons récents,
- * celui qu'on croyait avoir abandonné.
+ * `onDiscard` closes WITHOUT keeping, and throws away the original draft if the
+ * form came from it: otherwise we would find, in recent drafts,
+ * the one we thought we had abandoned.
  *
- * Même dessin et même vocabulaire que `CloseProjectDraftDialog` : c'est la même
- * question, elle se pose de la même façon.
+ * Same design and same vocabulary as `CloseProjectDraftDialog`: it’s the same
+ * question, it arises in the same way.
  */
 export function CloseDraftDialog({
   open,
@@ -46,19 +46,18 @@ export function CloseDraftDialog({
           <AlertDialogTitle>{t("closeTitle")}</AlertDialogTitle>
           <AlertDialogDescription>{t("closeDescription")}</AlertDialogDescription>
         </AlertDialogHeader>
-        {/* Trois boutons dans une modale calibrée pour deux (`max-w-sm`) : ils
-            tiennent parce que les libellés sont courts, et `flex-wrap` est la
-            ceinture — une traduction qui s'allonge passe à la ligne DANS la
-            boîte au lieu d'en déborder.
-            L'ordre du DOM est celui de la pile mobile lue de bas en haut
-            (`flex-col-reverse`) ; en ligne, « Abandonner » repart à gauche pour
-            laisser à droite la paire qu'on choisit vraiment. */}
+        {/* Three buttons in a modal calibrated for two (`max-w-sm`): they
+ fit because the labels are short, and `flex-wrap` is the
+ belt — a translation that gets longer goes to the line IN the
+ box instead of overflowing it.
+ The order of the DOM is that of the moving stack read from bottom to top
+ (`flex-col-reverse`); online, “Abandon” goes back to the left to leave the pair you really choose on the right. */}
         <AlertDialogFooter className="sm:flex-wrap">
           <AlertDialogCancel>{t("keepEditing")}</AlertDialogCancel>
-          {/* `variant`, et non un `className` de couleur : AlertDialogAction
-              pose les classes du bouton sur un Slot parent, donc une couleur
-              écrite ici ne passerait pas par tailwind-merge et perdrait contre
-              celle du variant. */}
+          {/* `variant`, not a colored `className`: AlertDialogAction
+ places the button classes on a parent Slot, so a color
+ written here would not pass through tailwind-merge and would lose against
+ that of the variant. */}
           <AlertDialogAction
             variant="destructive"
             onClick={onDiscard}

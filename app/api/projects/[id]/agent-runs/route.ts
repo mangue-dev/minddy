@@ -8,9 +8,9 @@ import {
 } from "@/lib/server/agent/activity";
 
 /**
- * État de l'agent par issue d'un projet (MIN-46) : working / session / PR par issue
- * (voir buildAgentActivity). RLS agent_runs = can_access_project → le cookie client
- * suffit (l'appelant ne voit que ses projets accessibles).
+ * Agent status by project issue (MIN-46): working / session / PR by issue
+ * (see buildAgentActivity). RLS agent_runs = can_access_project → the client cookie
+ * is enough (the caller only sees his accessible projects).
  */
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -20,14 +20,14 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  // Tous les runs sauf `failed` : `buildAgentActivity` en dérive les runs ACTIFS
-  // (carte « Ouvrir l'agent »). Les runs CARNET (MIN-84, issue_id null) ne
-  // portent aucune activité d'issue : exclus.
+  // All runs except `failed`: `buildAgentActivity` derives ACTIVE runs
+  // (“Open agent” card). NOTEBOOK runs (MIN-84, issue_id null) do not
+  // carry no issue activity: excluded.
   //
-  // La PR vient de sa propre table depuis MIN-163 — un ticket peut en porter une
-  // sans qu'aucun run ne l'ait ouverte. `pull_requests` ne connaît pas le projet
-  // (une PR est un fait du DÉPÔT) : on passe donc par une jointure INTERNE sur
-  // le ticket, qui, lui, le connaît.
+  // The PR comes from its own table since MIN-163 — a ticket can carry one
+  // without any run having opened it. `pull_requests` does not know the project
+  // (a PR is a fact of the DEPOSIT): we therefore go through an INTERNAL join on
+  // the ticket, who knows it.
   const [{ data }, { data: prs }] = await Promise.all([
     auth.supabase
       .from("agent_runs")

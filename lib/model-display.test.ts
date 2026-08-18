@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { formatModelName, providerFromModel } from "./model-display";
 
 /**
- * L'affichage d'un id de modèle OpenRouter (MIN-46). Ce qui se vérifie ici est
- * la casse : elle ne se déduit pas d'une règle unique, parce que les marques ne
- * la suivent pas. Un token « lettres + numéro » se capitalise (« kimi-k3 » se
- * lit « Kimi K3 »), sauf la famille de raisonnement d'OpenAI, que son éditeur
- * écrit en minuscule. Vérifié contre les 400 ids de l'index OpenRouter.
+ * Displaying an OpenRouter model id (MIN-46). What is true here is
+ * the case: it cannot be deduced from a single rule, because the marks do not
+ * follow it. A “letters + number” token is capitalized (“kimi-k3” se
+ * reads “Kimi K3”), except for the OpenAI reasoning family, which its publisher
+ * writes in lowercase. Checked against the 400 ids in the OpenRouter index.
  */
 
 describe("formatModelName — casse des tokens de version", () => {
@@ -28,8 +28,8 @@ describe("formatModelName — casse des tokens de version", () => {
   });
 
   it("laisse intact un token qui COMMENCE par un chiffre", () => {
-    // Le « 4o » de GPT-4o, le « 70b » d'un Llama : capitaliser n'a pas de sens,
-    // il n'y a pas de lettre initiale à toucher.
+    // The “4o” of GPT-4o, the “70b” of a Llama: capitalizing makes no sense,
+    // there is no initial letter to touch.
     expect(formatModelName("openai/gpt-4o")).toBe("GPT 4o");
     expect(formatModelName("google/gemini-2.5-flash")).toBe("Gemini 2.5 Flash");
   });

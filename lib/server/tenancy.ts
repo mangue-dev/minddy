@@ -3,25 +3,23 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * CLOISONNEMENT DES RÉFÉRENCES SORTANTES (MIN-339).
+ * PARTITIONING OF OUTGOING REFERENCES (MIN-339).
  *
- * Un ticket ne porte pas que des scalaires : il pointe vers un objectif, un
- * ticket parent, un doublon, un cycle, une personne. Chacune de ces colonnes
- * est un `uuid` nu — la base ne dit nulle part qu'il doit désigner quelque
- * chose du MÊME projet, et les cœurs d'écriture (`create-issue`,
- * `update-issue`, `objectives`) tournent en clé service, RLS contournée.
+ * A ticket does not only carry scalars: it points to a goal, a
+ * parent ticket, a duplicate, a cycle, a person. Each of these columns
+ * is a bare `uuid` — the base nowhere says that it must denote something from the SAME project, and the write cores (`create-issue`,
+ * `update-issue`, `objectives`) turn into service key, RLS bypassed.
  *
- * D'où la règle, une seule, appliquée à toutes : **une référence est suspecte
- * par défaut, elle doit être résolue DANS le périmètre du ticket, sinon
- * refusée**. Résoudre veut dire lire la ligne cible avec son `project_id`
- * épinglé (ou, pour un cycle, son propriétaire) : une référence qui ne
- * ressort pas de cette lecture n'existe pas, du point de vue de l'appelant.
+ * Hence the rule, only one, applied to all: **a reference is suspicious
+ * by default, it must be resolved WITHIN the scope of the ticket, otherwise
+ * refused**. Resolving means reading the target line with its pinned `project_id`
+ * (or, for a cycle, its owner): a reference that does not emerge from this reading does not exist, from the point of view of the caller.
  *
- * Les rendus sont volontairement des booléens : c'est l'appelant qui connaît
- * sa convention d'erreur (clé i18n pour les routes, message nu pour un tool).
+ * The renderings are intentionally Booleans : it is the caller who knows
+ * its error convention (i18n key for routes, bare message for a tool).
  */
 
-/** L'objectif existe-t-il, vivant, DANS ce projet ? */
+/** Does the objective exist, alive, IN this project? */
 export async function objectiveInProject(
   service: SupabaseClient,
   objectiveId: string,
@@ -37,7 +35,7 @@ export async function objectiveInProject(
   return !!data;
 }
 
-/** Le ticket cible existe-t-il, hors corbeille, DANS ce projet ? */
+/** Does the target ticket exist, outside the trash, IN this project? */
 export async function issueInProject(
   service: SupabaseClient,
   issueId: string,
@@ -54,10 +52,10 @@ export async function issueInProject(
 }
 
 /**
- * Ce compte a-t-il accès au projet (propriétaire OU membre) ? Même règle que
- * `getProjectAccess`/`can_access_project`, sans le SELECT du projet quand
- * l'appelant tient déjà son `owner_id` (les cœurs d'écriture l'ont chargé avec
- * leur instantané d'avant).
+ * Does this account have access to the project (owner OR member)? Same rule as
+ * `getProjectAccess`/`can_access_project`, without the project SELECT when
+ * the caller already holds its `owner_id` (the write cores loaded it with
+ * their snapshot from before).
  */
 export async function userInProject(
   service: SupabaseClient,
@@ -86,10 +84,10 @@ export async function userInProject(
 }
 
 /**
- * Ce cycle appartient-il à ce compte ? Un cycle est PERSONNEL — il n'a pas de
- * projet, il a un propriétaire, et y ranger un ticket l'affecte à celui-ci
- * (MIN-32). C'est donc la seule des cinq références dont le périmètre n'est
- * pas le projet mais l'appelant lui-même.
+ * Does this cycle belong to this account? A cycle is PERSONAL — it does not have a
+ * project, it has an owner, and storing a ticket there assigns it to this one
+ * (MIN-32). It is therefore the only one of the five references whose scope is
+ * not the project but the caller itself.
  */
 export async function cycleBelongsToUser(
   service: SupabaseClient,

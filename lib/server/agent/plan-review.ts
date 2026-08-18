@@ -2,102 +2,102 @@ import { headTail } from "./prune";
 import { sq, type RepoHost } from "./repo-host";
 
 /**
- * AUTO-RELECTURE D'UN PLAN (MIN-237) — le pendant, pour un document, de ce que
- * `self-review.ts` fait pour un diff.
+ * SELF-READING OF A PLAN (MIN-237) — the counterpart, for a document, of what
+ * `self-review.ts` made for a diff.
  *
- * Un tour qui modifie des fichiers reçoit deux choses avant de rendre la main :
- * les erreurs de typage (`diagnostics.ts`) et son propre diff à relire de bout en
- * bout (`self-review.ts`). Un tour `intent: plan` ne change aucun fichier, donc
- * les deux se taisent : il écrit son document et répond. C'est la SEULE sortie de
- * l'agent qui n'a aucun moment de relecture, alors que c'est celle sur laquelle
- * quelqu'un va ensuite construire.
+ * A trick that modifies files receives two things before returning control:
+ * typing errors (`diagnostics.ts`) and its own diff to reread from start to finish
+ * end (`self-review.ts`). A `intent: plan` round doesn't change any files, so
+ * both are silent: he writes his document and responds. This is the ONLY release of
+ * the agent who has no time for proofreading, even though it is the one someone
+ * will build on next.
  *
- * Ce que ça a coûté, mesuré sur le run `ada40ec9` (MIN-226) : une tâche
- * « vérifier `components/secondary-sidebar.tsx` » écrite sur un fichier que le run
- * avait lu TROIS FOIS sans rien y trouver à changer ; un `loading.tsx` ouvert et
- * jamais repris en tâche ; et une étape de vérification qui promettait
- * `npm run lint`, script qui n'existe pas dans ce dépôt — `package.json` n'ayant
- * jamais été ouvert.
+ * What it cost, measured on run `ada40ec9` (MIN-226): a task
+ * "check `components/secondary-sidebar.tsx`" written to a file that run
+ * had read it THREE TIMES without finding anything to change; an open `loading.tsx` and
+ * never resumed work; and a verification step that promised
+ * `npm run lint`, script which does not exist in this repository — `package.json` not having
+ * never been opened.
  *
- * De ces trois défauts, UN SEUL est mécaniquement décidable, et c'est celui-là que
- * le harness tranche : les commandes que le plan nomme sont confrontées aux
- * `scripts` du `package.json` du dépôt. Les deux autres tiennent à ce que le
- * modèle sait de son PROPRE tour — quels fichiers il a ouverts, quelle question il
- * a déjà résolue — et le harness n'en sait rien. Ils restent donc des QUESTIONS,
- * posées au moment où elles peuvent encore servir : avant la réponse.
+ * Of these three defects, ONLY ONE is mechanically decidable, and it is this one that
+ * the harness slice: the orders that the plan names are confronted with the
+ * `scripts` of `package.json` of the repository. The other two insist that the
+ * model knows for its OWN turn — which files it has opened, what question it
+ * has already been resolved — and the harness knows nothing about it. So there remain QUESTIONS,
+ * asked when they can still be used: before the response.
  *
- * Jumeau de `plan-closure.ts` (MIN-236), qui attaque le même trou par la
- * complétude plutôt que par la relecture. Les deux sont utiles séparément, et sur
- * un tour de plan ils se servent l'un après l'autre — cf. l'ordre de la chaîne
- * la porte `gateWritePlan` (delivery-gate.ts).
+ * Twin of `plan-closure.ts` (MIN-236), which attacks the same hole from the
+ * completeness rather than rereading. Both are useful separately, and on
+ * a turn of plan they use one after the other - cf. chain order
+ * the `gateWritePlan` gate (delivery-gate.ts).
  */
 
-/** Budget mural minimum restant pour servir la relecture. Même seuil que la
- *  clôture : on ne lance rien de coûteux (une lecture de manifeste), mais il faut
- *  laisser au modèle de quoi relire son plan et le corriger. */
+/** Minimum wall budget remaining to serve proofreading. Same threshold as
+ * closing: we are not launching anything costly (a reading of a manifesto), but we must
+ * give the model something to reread his plan and correct it. */
 export const PLAN_REVIEW_MIN_BUDGET_MS = 45_000;
-/** Budget mural de la sonde `package.json`. Large pour un `head` sur un fichier. */
+/** Wall budget of the `package.json` probe. Large for a `head` on a file. */
 export const PLAN_REVIEW_TIMEOUT_MS = 15_000;
 /**
- * Cap du plan réinjecté. Élision par le MILIEU (`headTail`), comme le diff : le
- * contexte est en tête, l'étape de vérification en queue, et ce sont les deux
- * bouts que les questions interrogent. Un plan de plus de 12 000 caractères est
- * de toute façon un plan que personne ne relira d'une traite.
+ * Cap of the plan reinjected. Elision by the MIDDLE (`headTail`), like the diff: the
+ * context is at the head, the verification step is at the tail, and these are the two
+ * ends that the questions ask. A plan of more than 12,000 characters is
+ * in any case a plan that no one will reread in one go.
  */
 export const PLAN_REVIEW_MAX_CHARS = 12_000;
 
-/** Scripts listés dans le bloc (au-delà, on dit combien il en reste). */
+/** Scripts listed in the block (beyond that, we say how many are left). */
 const SCRIPTS_SHOWN = 24;
-/** Commandes manquantes listées (au-delà, le plan a un autre problème). */
+/** Missing orders listed (beyond that, plan has another problem). */
 const MISSING_SHOWN = 6;
-/** Cap de lecture du manifeste. Un `package.json` est un manifeste ; ce cap ne
- *  borne qu'un dépôt pathologique, où la sonde se taira faute de JSON valide. */
+/** Reading course for the manifesto. A `package.json` is a manifest; this cape does not
+ * limits only a pathological deposit, where the probe will be silent for lack of valid JSON. */
 const PKG_MAX_BYTES = 131_072;
-/** Séparateur des deux moitiés de la sonde. Sur sa propre ligne, il ne peut pas
- *  apparaître dans le JSON : une chaîne JSON ne contient pas de saut de ligne nu. */
+/** Separator of the two halves of the probe. On his own line he cannot
+ * appear in JSON: a JSON string does not contain a bare line break. */
 const WORKSPACE_MARK = "@@workspace";
 
-/** Ce que le dépôt sait dire de ses commandes. */
+/** What the depot knows about its orders. */
 export interface RepoScripts {
-  /** Les noms de `scripts` du `package.json` RACINE, dans l'ordre du fichier. */
+  /** The names of `scripts` of the `package.json` ROOT, in file order. */
   names: string[];
   /**
-   * Le dépôt a-t-il l'air d'un monorepo (`workspaces`, `pnpm-workspace.yaml`) ?
+   * Does the repository look like a monorepo (`workspaces`, `pnpm-workspace.yaml`)?
    *
-   * Ce drapeau ne sert qu'à SE TAIRE : dans un monorepo, un script absent de la
-   * racine peut très bien vivre dans un paquet, et le harness n'a aucun moyen de
-   * trancher. Il liste alors ce qu'il connaît au lieu d'accuser — une observation
-   * fausse coûte bien plus cher que l'observation qu'on n'a pas faite.
+   * This flag only serves to KEEP QUIET: in a monorepo, a script missing from the
+   * root can live very well in a bundle, and the harness has no way of
+   * slice. He then lists what he knows instead of accusing — an observation
+   * A false one costs much more than the observation that was not made.
    */
   workspace: boolean;
 }
 
-// ── Ce que le plan promet ────────────────────────────────────────────────────
+// ── What the plan promises ────────────────────────── ──────────────────────────
 
 /**
- * Un script de `package.json` invoqué par un gestionnaire de paquets.
+ * A `package.json` script invoked by a package manager.
  *
- * Seules les formes EXPLICITES (`npm run x`, `pnpm run x`, `yarn run x`) sont
- * lues : `pnpm x` tout court est ambigu — `pnpm add`, `pnpm dlx`, `pnpm install`
- * ne sont pas des scripts, et se tromper ici ferait dire au harness qu'un script
- * manque là où il n'y en a jamais eu.
+ * Only EXPLICIT forms (`npm run x`, `pnpm run x`, `yarn run x`) are
+ * read: `pnpm x` in short is ambiguous — `pnpm add`, `pnpm dlx`, `pnpm install`
+ * are not scripts, and getting it wrong here would cause the harness to say that a script
+ * missing where there never was.
  */
 const RUN_SCRIPT = /\b(?:npm|pnpm|yarn|bun)\s+(?:run|run-script)\s+([A-Za-z0-9:@._/-]+)/g;
-/** `npm test` est le seul raccourci qui vise vraiment un script du manifeste (et
- *  qui échoue bruyamment s'il manque). `npm start`, lui, retombe sur `server.js`. */
+/** `npm test` is the only shortcut that really targets a manifest script (and
+ * which fails loudly if missing). `npm start` falls back on `server.js`. */
 const NPM_TEST = /\bnpm\s+test\b/;
 
 /**
- * Les scripts que le plan promet de lancer, dans l'ordre du document.
+ * The scripts that the plan promises to run, in document order.
  *
- * Les blocs de code sont LUS ici, contrairement à `planNeedles` (plan-closure.ts)
- * qui les jette : là-bas un bloc est un extrait de code à écrire, ici c'est
- * l'endroit même où l'étape de vérification écrit ses commandes.
+ * Code blocks are READ here, unlike `planNeedles` (plan-closure.ts)
+ * who throws them: there a block is a snippet of code to write, here it is
+ * the very place where the verification step writes its commands.
  */
 export function planCommands(plan: string): string[] {
   const out: string[] = [];
   const push = (name: string): void => {
-    // `npm run -- --flag` : un drapeau n'est pas un nom de script.
+    // `npm run -- --flag`: a flag is not a script name.
     if (!name || name.startsWith("-") || out.includes(name)) return;
     out.push(name);
   };
@@ -106,20 +106,20 @@ export function planCommands(plan: string): string[] {
   return out;
 }
 
-// ── Ce que le dépôt offre ────────────────────────────────────────────────────
+// ── What the repository offers ────────────────────────── ──────────────────────────
 
 /**
- * UNE commande pour les deux moitiés de la sonde : le manifeste racine, puis la
- * présence d'un fichier d'espace de travail pnpm. Un `host.exec` par question
- * coûterait un aller-retour réseau chacun depuis la fonction (le moteur hors
- * microVM parle à la sandbox par le réseau).
+ * ONE command for both halves of the probe: the root manifest, then the
+ * presence of a pnpm workspace file. One `host.exec` per question
+ * would cost a network round trip each from the function (the engine outside
+ * microVM talks to the sandbox over the network).
  */
 export function buildScriptsCommand(): string {
   return `head -c ${PKG_MAX_BYTES} package.json 2>/dev/null || true; printf '\\n%s\\n' ${sq(WORKSPACE_MARK)}; ls pnpm-workspace.yaml pnpm-workspace.yml 2>/dev/null || true`;
 }
 
-/** Relit la sonde, ou `null` si le dépôt n'a pas de manifeste lisible — auquel cas
- *  la question des commandes reste une question, sans réponse du harness. */
+/** Rereads the probe, or `null` if the repository does not have a readable manifest — in which case
+ * the question of controls remains a question, without an answer from the harness. */
 export function parseScriptsProbe(stdout: string): RepoScripts | null {
   const at = stdout.lastIndexOf(`\n${WORKSPACE_MARK}\n`);
   const json = at >= 0 ? stdout.slice(0, at) : stdout;
@@ -144,7 +144,7 @@ export function parseScriptsProbe(stdout: string): RepoScripts | null {
   };
 }
 
-// ── Le bloc servi au modèle ──────────────────────────────────────────────────
+// ── The block used for the model ───────────────────────── ─────────────────────────
 
 const HEADER = `Before you reply: here is the plan you just wrote, read back to you. Nothing else in this turn re-reads it, and someone is going to build on it.`;
 
@@ -156,7 +156,7 @@ const QUESTIONS = `Read it as its reader will — with your plan and none of you
 
 const FOOTER = `Fix what needs fixing IN PLACE: \`edit_issue_text\` rewrites one passage (old_string → new_string), \`append_to_plan\` adds a task or a note. Do NOT call \`write_issue_plan\` again — it re-emits the whole document and would drop anything changed meanwhile. If the plan holds up, carry on — do not restate it, and do not announce that you re-read it.`;
 
-/** `\`a\`, \`b\`, \`c\`.` — la liste des scripts, capée. */
+/** `\`a\`, \`b\`, \`c\`.` — the list of scripts, capped. */
 function scriptList(names: readonly string[]): string {
   const shown = names.slice(0, SCRIPTS_SHOWN);
   const hidden = names.length - shown.length;
@@ -164,14 +164,13 @@ function scriptList(names: readonly string[]): string {
 }
 
 /**
- * La clôture qui encadre le plan sans qu'il la referme.
+ * The fence that wraps the plan without being closed by it.
  *
- * Un plan contient des blocs de code — l'étape de vérification en est un, et
- * c'est justement celui que les questions interrogent. Une clôture à trois
- * backticks serait donc REFERMÉE par le plan lui-même, et tout ce qui suit le
- * premier bloc (le reste du plan, le verdict, les questions) se lirait comme du
- * code. La règle CommonMark : une clôture plus longue que la plus longue qu'elle
- * contient.
+ * A plan contains code blocks — the verification step is one, and it is exactly
+ * what the questions inspect. A three-backtick fence would therefore be CLOSED
+ * by the plan itself, and everything after the first block (the rest of the plan,
+ * the verdict, and the questions) would be read as code. CommonMark's rule is to
+ * use a fence longer than the longest one it contains.
  */
 function fenceFor(text: string): string {
   let longest = 0;
@@ -180,16 +179,16 @@ function fenceFor(text: string): string {
 }
 
 /**
- * Ce que le harness a à dire des commandes du plan, ou `""` s'il n'a rien à en
- * dire. Quatre cas, et le silence en fait partie : sans manifeste lisible, la
- * question reste posée au modèle sans réponse — mieux vaut ça qu'une réponse
- * inventée.
+ * What the harness has to say about the plan's commands, or `""` if it has nothing to say
+ * say. Four cases, and silence is one of them: without a legible manifesto, the
+ * question remains posed to the model without answer — better that than an answer
+ * invented.
  */
 function commandsVerdict(named: readonly string[], scripts: RepoScripts | null): string {
   if (!scripts) return "";
 
-  // Monorepo : un script absent de la racine peut vivre dans un paquet. On liste,
-  // on n'accuse pas.
+  // Monorepo: a script missing from the root can live in a package. We list it;
+  // we do not accuse.
   if (scripts.workspace) {
     if (scripts.names.length === 0) return "";
     return `This repo's root \`package.json\` declares workspaces, so the harness cannot tell where a script lives. Its ROOT scripts are: ${scriptList(scripts.names)}`;
@@ -216,20 +215,20 @@ function commandsVerdict(named: readonly string[], scripts: RepoScripts | null):
 }
 
 /**
- * Le bloc de relecture, ou `null` s'il n'y a pas de plan à relire.
+ * The rereading block, or `null` if there is no plan to reread.
  *
- * Toujours servi quand un plan a été écrit, là où `formatPlanClosure` se tait
- * quand elle n'a rien trouvé : la clôture est une OBSERVATION (pas d'observation,
- * pas de bloc), la relecture est un MOMENT — celui qui manquait. Un diff correct
- * revient lui aussi au modèle.
+ * Always used when a plan has been written, where `formatPlanClosure` is silent
+ * when she found nothing: the closure is an OBSERVATION (no observation,
+ * no block), rereading is a MOMENT — the one that was missing. A correct difference
+ * also comes back to the model.
  *
- * PUR : la sandbox est lue par l'appelant, comme `formatTypeErrors` et
- * `formatSelfReview`, pour que les caps et la formulation se testent sans microVM.
+ * PUR: the sandbox is read by the caller, as `formatTypeErrors` and
+ * `formatSelfReview`, so that the headings and formulation can be tested without microVM.
  */
 export function formatPlanReview(input: {
-  /** Le markdown du plan écrit ce tour (appends et corrections du même tour compris). */
+  /** The markdown of the plan writes this round (additions and corrections of the same round included). */
   plan: string;
-  /** Ce que la sonde a rendu, ou `null` si le dépôt n'a pas de manifeste lisible. */
+  /** What the probe returned, or `null` if the repository does not have a readable manifest. */
   scripts?: RepoScripts | null;
 }): string | null {
   const plan = input.plan.trim();
@@ -247,15 +246,15 @@ export function formatPlanReview(input: {
   ].join("\n\n");
 }
 
-// ── Le crochet impur ─────────────────────────────────────────────────────────
+// ── The impure hook ──────────────────────────── ─────────────────────────────
 
 /**
- * Sonde le dépôt et rend le bloc de relecture, ou `null` si le plan est vide.
+ * Probes the repository and returns the replay block, or `null` if the plan is empty.
  *
- * La sonde est best-effort — pas de dépôt, pas de `package.json`, JSON illisible,
- * timeout → le bloc part SANS le verdict sur les commandes. Ce n'est pas une
- * dégradation silencieuse : la question des commandes est écrite dans le bloc, et
- * elle redevient simplement une question que le modèle doit trancher lui-même.
+ * The probe is best-effort — no repository, no `package.json`, unreadable JSON,
+ * timeout → the block leaves WITHOUT the verdict on the commands. It's not a
+ * silent degradation: the question of commands is written in the block, and
+ * it simply becomes a question again that the model must decide for itself.
  */
 export async function planReviewForTurn(host: RepoHost, plan: string): Promise<string | null> {
   let scripts: RepoScripts | null = null;
@@ -266,7 +265,7 @@ export async function planReviewForTurn(host: RepoHost, plan: string): Promise<s
     });
     if (res.exitCode === 0) scripts = parseScriptsProbe(res.stdout);
   } catch {
-    // La relecture vaut d'être servie sans son verdict.
+    // Rereading is worth serving without its verdict.
   }
   return formatPlanReview({ plan, scripts });
 }

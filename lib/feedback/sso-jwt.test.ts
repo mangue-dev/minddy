@@ -96,9 +96,9 @@ describe("verifyFeedbackSsoJwt", () => {
   });
 
   /**
-   * Le plafond de durée de vie ne vivait que dans le signeur — du code que le
-   * client N'EXÉCUTE PAS, c'est son backend qui signe (MIN-345).
-   */
+ * The lifetime cap only lived in the signer — code that the
+ * client DOES NOT EXECUTE, its backend does the signing (MIN-345).
+ */
   it("rejects a token whose exp is beyond the 10 min cap", () => {
     const token = sign({ sub: "user-1", exp: NOW + 86_400 });
     expect(verifyFeedbackSsoJwt(token, SECRET, NOW)).toEqual({
@@ -112,8 +112,8 @@ describe("verifyFeedbackSsoJwt", () => {
     expect(verifyFeedbackSsoJwt(token, SECRET, NOW).ok).toBe(true);
   });
 
-  /** L'identifiant de consommation dérive de la signature : deux jetons
-      distincts ne peuvent pas partager le sien, le même jeton le garde. */
+  /** The consumption identifier derives from the signature: two distinct
+ tokens cannot share theirs, the same token keeps it. */
   it("derives a stable, per-token id to consume", () => {
     const token = sign({ sub: "user-1", exp: NOW + 60 });
     const other = sign({ sub: "user-2", exp: NOW + 60 });
@@ -154,8 +154,8 @@ describe("signFeedbackSsoJwt", () => {
     });
   });
 
-  /** Deux jetons aux mêmes claims, signés dans la même seconde, doivent rester
-      DEUX jetons : sinon le double-clic passe pour un rejeu (MIN-345). */
+  /** Two tokens with the same claims, signed in the same second, must remain
+ TWO tokens: otherwise the double-click passes for a replay (MIN-345). */
   it("never signs the same token twice for the same claims", () => {
     const a = signFeedbackSsoJwt({ sub: "user-1" }, SECRET, NOW);
     const b = signFeedbackSsoJwt({ sub: "user-1" }, SECRET, NOW);

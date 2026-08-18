@@ -4,22 +4,22 @@ import { useQuery } from "@tanstack/react-query";
 
 export interface MfaStatus {
   enabled: boolean;
-  /** Facteurs TOTP vérifiés — 1 en pratique. */
+  /** TOTP factors checked — 1 in practice. */
   verifiedFactors: number;
-  /** Codes de récupération encore consommables. */
+  /** Recovery codes still consumable. */
   unusedRecoveryCodes: number;
 }
 
 export const mfaStatusQueryKey = ["mfa-status"] as const;
 
 /**
- * État du second facteur du compte (MIN-132).
+ * State of the second factor of the account (MIN-132).
  *
- * Dans un hook partagé plutôt qu'en état local de la section, parce que DEUX
- * endroits en dépendent : la section elle-même, et la page de réglages qui pose
- * une pastille d'attention sur l'onglet « Sécurité » tant que la 2FA est
- * inactive. Sans ça, la recommandation ne serait visible que depuis l'onglet
- * qu'on ne pense pas à ouvrir.
+ * In a shared hook rather than in the local state of the section, because TWO
+ * places depend on it: the section itself, and the settings page which sets
+ * an attention badge on the “tab Security” as long as 2FA is
+ * inactive. Without that, the recommendation would only be visible from the tab
+ * which we don't think to open.
  */
 export function useMfaStatusQuery() {
   const { data, isPending } = useQuery({

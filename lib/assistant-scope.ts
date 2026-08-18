@@ -1,65 +1,64 @@
 /**
- * La PORTÉE de Numo : sur quel projet il travaille, ou `null` en mode global.
+ * Numo's SCOPE: what project he is working on, or `null` in global mode.
  *
- * C'est elle qui décide de tout ce qui compte pour un tour — le jeu d'outils, le
- * prompt système, le projet où atterrit un ticket créé sans qu'on le nomme. D'où
- * la question, qui a l'air anodine et ne l'est pas : **qui la choisit ?**
+ * It is she who decides everything that matters for a round — the toolset, the
+ * system prompt, the project where a ticket created without being named lands. Hence
+ * the question, which seems trivial but is not: **who chooses it?**
  *
- * Avant MIN-353, l'URL. Une conversation vivante était jetée dès que la route
- * changeait de projet (`reset()`, puis restauration de la conversation de la
- * nouvelle portée). Écrire à Numo depuis un projet puis cliquer sur l'accueil
- * suffisait à faire disparaître le fil de l'écran — intact en base, mais plus
- * nulle part à l'écran.
+ * Before MIN-353, the URL. A living conversation was thrown away as soon as the
+ * route changed projects (`reset()`, then restoring the conversation to the new scope). Writing to Numo from a project then clicking on the home page
+ * was enough to make the thread disappear from the screen — intact in base, but no longer
+ * anywhere on the screen.
  *
- * Depuis, **c'est la conversation** : elle porte sa portée (son `project_id`,
- * figé à sa création) et la garde jusqu'au bout. Naviguer ne déplace plus que le
- * CONTEXTE DE PAGE qui accompagne le prochain message — « ce ticket », l'onglet
- * ouvert —, ce qui est justement ce qu'on veut voir bouger.
+ * Since then, **it's the conversation**: it carries its scope (its `project_id`,
+ * frozen at its creation) and keeps it until the end. Navigating only moves the
+ * PAGE CONTEXT which accompanies the next message — “this ticket”, the open __
+ * tab —, which is precisely what we want to see move.
  *
- * Deux cas seulement rendent la main à l'extérieur :
+ * Only two cases give back the hand outside:
  *
- * - **Pas de conversation vivante.** La route décide, comme avant : un premier
- *   message écrit depuis un projet ouvre une conversation de ce projet, et
- *   « nouvelle conversation » repart de la page où l'on se trouve.
- * - **Une ouverture qui IMPOSE une portée** (`open({ projectId })`) et qui
- *   contredit la conversation vivante. C'est le « Demander à Numo » d'un tableau,
- *   d'une vue, d'un retour : un geste explicite, sur une chose précise, ici. Il
- *   ouvre un fil neuf dans la bonne portée plutôt que de poursuivre l'ancien avec
- *   un contexte qui ne lui appartient pas. Une navigation, elle, n'impose rien.
+ * - **No live conversation.** The route decides, as before: a first
+ * message written from a project opens a conversation of this project, and
+ * "new conversation" starts from the page where we are.
+ * - **An opening which IMPOSES a scope** (`open({ projectId })`) and which
+ * contradicts the living conversation. It’s the “Ask Numo” of a painting,
+ * of a view, of a return: an explicit gesture, on a specific thing, here. It
+ * opens a new thread in the correct scope rather than continuing the old one with
+ * a context that does not belong to it. Navigation imposes nothing.
  *
- * Et jamais pendant un tour : `busy` fige la portée le temps que Numo réponde,
- * sans quoi la réponse en cours atterrirait dans une conversation qu'on vient de
- * remplacer.
+ * And never during a turn: `busy` freezes the range while Numo responds,
+ * otherwise the current response would land in a conversation that we have just started
+ * replace.
  */
 
 export interface AssistantScopeInput {
-  /** La conversation vivante, ou `null` si le panneau part d'un écran vide. */
+  /** The living conversation, or `null` if the panel starts from a blank screen. */
   conversationId: string | null;
-  /** Le `project_id` de cette conversation (`null` = conversation globale). */
+  /** The `project_id` of this conversation (`null` = global conversation). */
   conversationProjectId: string | null;
-  /** Le projet de la route courante (`null` hors d'un projet). */
+  /** The project of the current route (`null` outside a project). */
   routeProjectId: string | null;
   /**
-   * Portée imposée à l'ouverture du panneau : `undefined` = suivre la route,
-   * `null` = mode global explicite, `string` = ce projet-là.
-   */
+ * Scope imposed when opening the panel: `undefined` = follow the road,
+ * `null` = explicit global mode, `string` = this project.
+ */
   overrideProjectId?: string | null;
-  /** Numo produit un tour : rien ne bouge tant qu'il n'a pas rendu la main. */
+  /** Numo performs a trick: nothing moves until he gives up his hand. */
   busy?: boolean;
 }
 
 export interface AssistantScopeResolution {
-  /** La portée effective — celle du prochain message. */
+  /** The effective reach — that of the next message. */
   scopeProjectId: string | null;
   /**
-   * La conversation vivante doit-elle céder la place à un fil neuf ? Vrai
-   * uniquement sur une ouverture qui impose une portée incompatible.
-   *
-   * Reste vrai PENDANT le tour, alors que `scopeProjectId` n'a pas encore bougé :
-   * c'est ce qui permet à l'appelant de faire patienter l'envoi qui accompagne
-   * l'ouverture au lieu de l'expédier dans la conversation d'à côté (le serveur
-   * le refuserait — un message dont la portée dément la conversation est un 404).
-   */
+ * Should lively conversation give way to a new thread? True
+ * only on an opening that imposes an incompatible range.
+ *
+ * Remains true DURING the turn, while `scopeProjectId` has not yet moved:
+ * this is what allows the caller to wait for the sending that accompanies
+ * opening it instead of sending it to the next conversation (the server
+ * would refuse it — a message whose scope contradicts the conversation is a 404).
+ */
   startsNewConversation: boolean;
 }
 
@@ -89,8 +88,8 @@ export function resolveAssistantScope({
   }
 
   return {
-    // La bascule attend la fin du tour : la portée reste celle de la
-    // conversation qui répond, sinon sa réponse atterrirait à côté.
+    // The seesaw waits for the end of the turn: the range remains that of the
+    // conversation that responds, otherwise its response would land next to it.
     scopeProjectId: busy ? conversationProjectId : overrideProjectId,
     startsNewConversation: true,
   };

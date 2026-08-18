@@ -1,19 +1,19 @@
 "use client";
 
-// Une PAGE ouverte (MIN-270) : son en-tête, son corps, et ce qui les relie à la
+// An open PAGE (MIN-270): its header, its body, and what links them to the
 // base.
 //
-// Ce composant se remonte à chaque changement de page (`key={pageId}` chez son
-// appelant). C'est voulu : tiptap ne relit pas son `content` après le montage,
-// et une page dont le corps changerait sous l'éditeur ne pourrait pas garder le
-// curseur ni la pile d'annulation de toute façon.
+// This component is reassembled at each page change (`key={pageId}` at its
+// appellant). This is intentional: tiptap does not reread its `content` after editing,
+// and a page whose body changed under the editor would not be able to keep the
+// cursor nor the undo stack anyway.
 //
-// La SAUVEGARDE est VERSIONNÉE (MIN-271) : chaque écriture du corps dit sur
-// quelle `version` elle s'appuie, le serveur refuse si la page a bougé, et le
-// refus se résout par une fusion bloc par bloc plutôt que par un choix. Toute
-// cette mécanique vit dans `usePageAutosave` — ici on ne fait que la brancher,
-// l'afficher (l'état d'enregistrement, le bandeau de conflit) et lui donner
-// l'éditeur, seule surface capable d'adopter un document fusionné.
+// The BACKUP is VERSIONED (MIN-271): each body writing says on
+// which `version` it relies on, the server refuses if the page has moved, and the
+// refusal is resolved by a block-by-block merger rather than by a choice. All
+// this mechanism lives in `usePageAutosave` — here we just plug it in,
+// display it (the recording status, the conflict banner) and give it
+// the editor, the only surface capable of adopting a merged document.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -83,27 +83,27 @@ import {
 } from "@/components/pages/use-page-autosave";
 import type { PagesLookup } from "@/components/pages/pages-lookup";
 
-/** Délai avant écriture, à compter de la dernière frappe. */
+/** Delay before writing, from the last keystroke. */
 const SAVE_DELAY_MS = 1_000;
 
 /**
- * OÙ EN EST CE DOCUMENT — l'état d'enregistrement et le dernier auteur, en un
- * seul objet (MIN-282).
+ * WHERE IS THIS DOCUMENT — registration status and last author, in one
+ * single object (MIN-282).
  *
- * Les deux répondaient à la même question depuis deux coins opposés de l'écran :
- * une coche en haut à droite (« c'est parti »), et « modifiée par Clément il y a
- * 2 jours » sous le titre. Rien ne les reliait, alors qu'on les lit dans le même
- * mouvement en arrivant sur une page — et la seconde poussait le corps d'une
- * ligne, sur toutes les pages, pour une information qu'on cherche une fois.
+ * The two were answering the same question from opposite corners of the screen:
+ * a check mark at the top right (“here we go”), and “modified by Clément” ago
+ * 2 days” under the title. Nothing linked them, even though we read them in the same
+ * movement when arriving at a page — and the second pushed the body of a
+ * line, on all pages, for information that we seek once.
  *
- * Ce que la fusion garde du raisonnement d'origine : **ce qui clignote reste une
- * icône**. Le texte, lui, est stable — un nom et une date qui ne bougent pas à
- * la frappe —, donc il peut s'écrire. La roue d'enregistrement tourne à côté
- * sans rien déplacer.
+ * What the merger keeps from the original reasoning: **what flashes remains a
+ * icon**. The text is stable — a name and a date that do not change over time.
+ * typing —, so it can be written. The recording wheel spins alongside
+ * without moving anything.
  *
- * Et c'est un BOUTON : c'est en lisant « modifiée par quelqu'un d'autre » qu'on
- * se demande ce qui a changé, donc c'est de là que s'ouvre le panneau
- * d'activité. La question reste à côté de sa réponse.
+ * And it's a BUTTON: it's by reading "modified by someone else" that we
+ * wonders what has changed, so that's where the panel opens
+ * of activity. The question remains beside its answer.
  */
 function PageStatus({
   state,
@@ -113,8 +113,8 @@ function PageStatus({
 }: {
   state: PageSaveState;
   updatedAt: string | null;
-  /** QUI a écrit en dernier, et quand. Absent tant que le nom n'est pas résolu :
-      un nom qui change sous les yeux se lit comme une erreur. */
+  /** WHO wrote last, and when. Absent until name is resolved:
+      a name that changes before the eyes reads like an error. */
   lastEdit: { name: string; at: string } | null;
   onOpenHistory: () => void;
 }) {
@@ -126,29 +126,29 @@ function PageStatus({
     return () => clearInterval(id);
   }, []);
 
-  // Les deux horodatages que cette ligne connaît. Ils sont le plus souvent le
-  // MÊME instant — la dernière écriture est celle qu'on vient d'enregistrer —
-  // mais pas toujours : une écriture venue d'ailleurs bouge `lastEdit` sans
-  // qu'on ait rien enregistré. Les deux tirent l'horloge, ci-dessous.
+  // The two timestamps that this line knows. They are most often the
+  // SAME moment — the last writing is the one just recorded —
+  // but not always: writing from elsewhere moves `lastEdit` without
+  // that nothing was recorded. The two pull the clock, below.
   const at = updatedAt ? new Date(updatedAt).getTime() : NaN;
   const editedAt = lastEdit ? new Date(lastEdit.at).getTime() : NaN;
   /**
-   * L'instant de RÉFÉRENCE des durées relatives, et il ne doit jamais être
-   * dépassé par ce qu'il mesure.
+   * The REFERENCE moment for relative durations, and it must never be
+   * overwhelmed by what it measures.
    *
-   * L'horloge ne bat que toutes les 15 secondes : entre deux battements, un
-   * enregistrement qui vient d'aboutir porte un horodatage POSTÉRIEUR à elle, et
-   * le formateur relatif dit alors « dans 1 seconde ». Le maximum le ramène à
-   * « à l'instant », qui est ce qu'on vient de faire.
+   * The clock only beats every 15 seconds: between two beats, one
+   * record that has just completed has a timestamp AFTER it, and
+   * the relative formatter then says “in 1 second”. The maximum reduces it to
+   * “at the moment”, which is what we just did.
    */
   const now = Math.max(
     tick,
     Number.isFinite(at) ? at : 0,
     Number.isFinite(editedAt) ? editedAt : 0
   );
-  // Le conflit reste dans cette même icône, et ne devient pas une quatrième
-  // chose à lire : la page EST enregistrée — c'est le bandeau, juste au-dessus
-  // du document, qui porte ce qu'il y a à décider.
+  // The conflict remains in this same icon, and does not become a fourth
+  // thing to read: the page IS saved — it's the banner, just above
+  // of the document, which contains what is to be decided.
   const label =
     state === "saving"
       ? t("saving")
@@ -167,17 +167,17 @@ function PageStatus({
     <button
       type="button"
       onClick={onOpenHistory}
-      // Le nom accessible ne dépend PAS du survol : le texte visible est caché
-      // au repos, donc absent de l'arbre d'accessibilité. Les deux moitiés sont
-      // reprises ici — l'état, puis qui a écrit —, et le texte à l'écran est
-      // marqué décoratif pour ne pas être annoncé deux fois.
+      // Accessible name does NOT depend on hover: visible text is hidden
+      // at rest, therefore absent from the accessibility tree. The two halves are
+      // repeated here — the status, then who wrote —, and the text on the screen is
+      // marked decoratively so as not to be announced twice.
       aria-label={edited ? `${label} — ${edited}` : label}
       className={cn(
         "group flex items-center gap-1.5 rounded px-1 py-0.5 text-xs transition-colors",
         "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-        // Le fond au survol fait deux choses d'un coup : il dit que ça se
-        // clique, et il détache le texte qui se déplie de ce qu'il recouvre —
-        // sur une surface étroite, il passe devant le fil d'Ariane.
+        // The background on hover does two things at once: it says that it
+        // click, and it detaches the text which unfolds from what it covers —
+        // on a narrow surface, it passes in front of Ariadne's thread.
         "hover:bg-muted",
         state === "conflict"
           ? "text-amber-600 dark:text-amber-500"
@@ -193,10 +193,10 @@ function PageStatus({
           <Check className="size-3.5" />
         )}
       </span>
-      {/* Au REPOS, une coche et rien d'autre. Le nom et la date ne sont pas ce
-          qu'on surveille en écrivant — c'est ce qu'on va CHERCHER, une fois, en
-          arrivant sur une page qu'on n'a pas écrite. Ils se déplient donc au
-          survol (et à la tabulation), là où l'œil est déjà. */}
+      {/* At REST, a check mark and nothing else. The name and date are not what
+          that we monitor while writing - this is what we will SEEK, once, in
+          arriving on a page that was not written. They therefore unfold to
+          hover (and tab), where the eye already is. */}
       {edited ? (
         <span
           aria-hidden
@@ -209,8 +209,8 @@ function PageStatus({
   );
 }
 
-/** Un corps vide, ou qui ne porte qu'un paragraphe vide — ce que rend une page
-    qu'on vient de créer, quel que soit le chemin par lequel on l'a créée. */
+/** An empty body, or one that only has an empty paragraph — what a page renders
+    that we have just created, whatever the path by which we created it. */
 function isEmptyDoc(content: unknown): boolean {
   const blocks = (content as { content?: unknown[] } | null)?.content;
   if (!Array.isArray(blocks) || blocks.length === 0) return true;
@@ -220,13 +220,13 @@ function isEmptyDoc(content: unknown): boolean {
 }
 
 /**
- * La coquille qui rend la SURFACE remontable (MIN-277).
+ * The shell that makes the SURFACE remountable (MIN-277).
  *
- * Restaurer une version réécrit le corps et fait avancer la `version` : le
- * document affiché et le compteur sur lequel s'appuie l'enregistrement sont
- * alors tous les deux périmés, et tiptap ne relit pas son `content`. Plutôt que
- * de rattraper les deux à la main, on remonte — exactement ce que fait déjà une
- * navigation d'une page à l'autre.
+ * Restore a version rewrites the body and advances the `version`: the
+ * displayed document and the counter on which the recording is based are
+ * then both expire, and tiptap does not reread its `content`. Rather than
+ * to catch both by hand, we go back up - exactly what a
+ * navigation from one page to another.
  */
 export function PageView({
   projectId,
@@ -253,7 +253,7 @@ function PageSurface({
 }: {
   projectId: string;
   pageId: string;
-  /** Une version vient d'être remise en place : la surface se remonte. */
+  /** A version has just been put back in place: the surface is going back up. */
   onRestored: () => void;
 }) {
   const t = useTranslations("Pages");
@@ -282,11 +282,11 @@ function PageSurface({
     [mentionSources]
   );
 
-  // `refetchOnMount: "always"` : l'éditeur ne lit son document qu'au montage,
-  // donc ce cache-là n'a pas droit à la fenêtre de fraîcheur des autres. Sans
-  // ça, revenir sur une page moins de cinq minutes après l'avoir quittée la
-  // rouvrait sur le corps du premier chargement — un coéquipier, Numo, ou un
-  // autre onglet a pu écrire depuis, et rien ne serait allé le demander.
+  // `refetchOnMount: "always"`: the editor only reads his document during editing,
+  // therefore this cache does not have the right to the window of freshness of the others. Without
+  // that, returning to a page less than five minutes after leaving it
+  // reopened on the body of the first load — a teammate, Numo, or a
+  // other tab has been able to write since, and nothing would have gone to ask for it.
   const {
     data: page,
     isPending,
@@ -298,14 +298,14 @@ function PageSurface({
     refetchOnMount: "always",
   });
 
-  // La ligne de la LISTE est la source du titre et de l'icône affichés : c'est
-  // elle que la sidebar, le fil d'Ariane et le bloc sous-page lisent, et les
-  // trois doivent bouger dès la première lettre tapée ici.
+  // The LIST line is the source of the displayed title and icon: it is
+  // it that the sidebar, the breadcrumbs and the subpage block read, and the
+  // three must move from the first letter typed here.
   //
-  // Dès qu'on a tapé, en revanche, c'est CE composant qui fait foi. Sans cela,
-  // la réponse d'un PATCH parti une seconde plus tôt réécrit dans le champ le
-  // titre d'AVANT les dernières lettres — une frappe rapide se voyait revenir
-  // en arrière à chaque enregistrement.
+  // As soon as you type, on the other hand, it is THIS component which is authentic. Without this,
+  // the response of a PATCH left a second earlier rewritten in the field
+  // title BEFORE the last letters — a quick typing was seen returning
+  // backwards with each recording.
   const summary = byId.get(pageId);
   const [edited, setEdited] = useState<{
     title?: string;
@@ -315,36 +315,36 @@ function PageSurface({
   const icon =
     edited.icon !== undefined ? edited.icon : (summary?.icon ?? page?.icon ?? null);
 
-  /* ── Le titre et le corps, cousus au clavier ─────────────────────────── */
+  /* ── The title and body, sewn on the keyboard ─────────────────────────── */
   //
-  // Le titre est un champ à part, mais pour qui écrit c'est la ligne au-dessus
-  // de la première ligne du corps : ⌫ au tout début du document et ↑ depuis sa
-  // première ligne remontent en FIN de titre, ↓ depuis le titre redescend dans
-  // le corps. La moitié « document » du passage vit dans title-bridge.ts ;
-  // c'est ici qu'elle rejoint le champ, seul endroit qui tienne les deux.
+  // The title is a separate field, but for those writing it is the line above
+  // of the first line of the body: ⌫ at the very beginning of the document and ↑ from its
+  // first line goes back to the END of the title, ↓ since the title goes back down to
+  // the body. The "document" half of the passage lives in title-bridge.ts;
+  // it is here that it joins the field, the only place that holds both.
   const titleFieldRef = useRef<HTMLTextAreaElement | null>(null);
   const focusTitleEnd = useCallback(() => {
     const field = titleFieldRef.current;
     if (!field) return;
     field.focus();
-    // En FIN de titre, et pas là où le caret traînait : on arrive par la
-    // gauche, comme on arriverait en bout de la ligne précédente.
+    // At the END of the title, and not where the caret was left: we arrive by the
+    // left, as we would arrive at the end of the previous line.
     const end = field.value.length;
     field.setSelectionRange(end, end);
   }, []);
 
-  /* ── L'écriture, groupée et VERSIONNÉE (MIN-271) ──────────────────────── */
+  /* ── Writing, grouped and VERSIONED (MIN-271) ──────────────────────── */
   const editorRef = useRef<Editor | null>(null);
-  // Les images et les fichiers collés ou lâchés dans le corps (MIN-280). Monté
-  // ici, avec l'éditeur, parce que c'est ici que vivent le projet, la page et la
-  // ref de l'éditeur — un envoi qui aboutit doit retrouver son bloc.
+  // Images and files pasted or dropped in the body (MIN-280). Mounted
+  // here, with the editor, because this is where the project, the page and the
+  // publisher's ref — a successful submission must find its block.
   const uploads = usePageUploads(projectId, pageId, editorRef);
-  // ↓ DESCEND — le curseur va sur la première ligne du corps, telle qu'elle est.
+  // ↓ DOWN — the cursor goes to the first line of the body, as it is.
   const focusBodyStart = useCallback(() => {
     editorRef.current?.commands.focus("start");
   }, []);
-  // Entrée OUVRE une ligne, comme partout ailleurs dans le document : une ligne
-  // vide en tête du corps, curseur dedans (cf. `focusDocumentStart`).
+  // Enter OPENS a line, like anywhere else in the document: one line
+  // empty at the head of the body, cursor inside (see `focusDocumentStart`).
   const openBodyLine = useCallback(() => {
     const editor = editorRef.current;
     if (editor) focusDocumentStart(editor);
@@ -358,8 +358,8 @@ function PageSurface({
   const autosave = usePageAutosave({
     pageId,
     page,
-    // La `version` qui sert de garde-fou ne se prend PAS dans le cache : elle
-    // n'a de sens que venue du serveur, et de ce montage-ci.
+    // The `version` which serves as a safeguard is NOT caught in the cache: it
+    // only makes sense when it comes from the server, and from this montage.
     fresh: isFetchedAfterMount,
     delayMs: SAVE_DELAY_MS,
     save: updatePage,
@@ -368,13 +368,13 @@ function PageSurface({
   });
   const { schedule, flush, takePending } = autosave;
 
-  /* ── Le départ : écrire, ou faire comme si de rien n'était ───────────────
-     Quitter la page ÉCRIT ce qui restait — sans ça, taper puis cliquer aussitôt
-     sur une autre page de l'arbre perd la dernière seconde de frappe.
-     Sauf si la page est un BROUILLON resté vide (lib/pages-draft.ts) : elle
-     vient d'être créée, on n'y a rien mis, et il ne doit rien en rester.
-     Ce qu'on lit au démontage passe par des refs : à cet instant il n'y a plus
-     de rendu, et l'éditeur peut déjà être démonté. */
+  /* ── Departure: write, or act as if nothing had happened ───────────────
+     Leave the page WRITE what remained — otherwise, type then click immediately
+     on another page in the tree loses the last second of typing.
+     Unless the page is a DRAFT that remains empty (lib/pages-draft.ts): it
+     has just been created, nothing has been put into it, and there should be nothing left.
+     What we read when dismantling goes through refs: at this moment there is no longer
+     rendering, and the editor can already be unmounted. */
   const flushRef = useRef(flush);
   flushRef.current = flush;
   const titleRef = useRef(title);
@@ -388,7 +388,7 @@ function PageSurface({
   const discardRef = useRef(discardPage);
   discardRef.current = discardPage;
 
-  /** Rien n'a été écrit sur cette page depuis qu'on l'a créée. */
+  /** Nothing has been written on this page since we created it. */
   const stillBlank = useCallback(
     () =>
       isDraftPage(pageId) &&
@@ -401,36 +401,36 @@ function PageSurface({
   blankRef.current = stillBlank;
 
   useEffect(() => {
-    // On est là : rien de ce qui a été programmé au démontage précédent ne doit
-    // aboutir. C'est ce qui rend la destruction sûre en Strict Mode, où React
-    // démonte et remonte aussitôt (cf. lib/pages-draft.ts).
+    // Here we are: nothing that was programmed in the previous dismantling should
+    // succeed. This is what makes destruction safe in Strict Mode, where React
+    // disassemble and reassemble immediately (see lib/pages-draft.ts).
     cancelDraftDiscard(pageId);
     return () => {
       if (blankRef.current()) {
         scheduleDraftDiscard(pageId, () => void discardRef.current(pageId));
         return;
       }
-      // Écrite : ce n'est plus un brouillon, et elle ne le redeviendra pas.
+      // Written: it is no longer a draft, and it will not become one again.
       forgetDraftPage(pageId);
       void flushRef.current();
     };
   }, [pageId]);
 
-  // L'onglet qui s'en va (rafraîchissement, fermeture, navigation externe).
+  // The tab that leaves (refresh, close, external navigation).
   //
-  // `pagehide` est le seul événement sur lequel on puisse compter — `beforeunload`
-  // ne se déclenche pas toujours sur mobile, et à ce moment-là un `fetch`
-  // ordinaire meurt avec le document. D'où l'écriture `keepalive`, qui part
-  // sans qu'on l'attende : sans elle, la dernière seconde de frappe était
-  // perdue et la page rouvrait sur sa version d'avant.
+  // `pagehide` is the only event we can count on — `beforeunload`
+  // does not always trigger on mobile, and at that time a `fetch`
+  // ordinary dies with the document. Hence the writing `keepalive`, which starts
+  // without being expected: without it, the last second of the shot was
+  // lost and the page reopened to its previous version.
   //
-  // `visibilitychange` complète le tableau : passer sur un autre onglet écrit
-  // tout de suite, par un PATCH normal, plutôt que de laisser le brouillon
-  // attendre un retour qui peut ne jamais venir.
+  // `visibilitychange` completes the table: move to another written tab
+  // right away, with a normal PATCH, rather than waiting for a response that may
+  // never arrive.
   useEffect(() => {
     const onHide = () => {
-      // Même règle qu'au démontage : un brouillon vide ne part pas en base, il
-      // s'efface. `takePending` n'est pas appelé — il n'y a rien à écrire.
+      // Same rule as for disassembly: an empty draft does not go to base, it
+      // fades away. `takePending` is not called — there is nothing to write.
       if (blankRef.current()) {
         forgetDraftPage(pageId);
         discardPageOnUnload(projectId, pageId);
@@ -450,10 +450,10 @@ function PageSurface({
     };
   }, [projectId, pageId, takePending]);
 
-  // ⌘S / Ctrl+S écrit maintenant, comme dans le carnet. L'enregistrement est
-  // déjà automatique : ce que le geste apporte n'est pas la sauvegarde, c'est
-  // de la VOIR — le réflexe est trop ancré pour qu'on laisse le navigateur
-  // répondre à sa place par sa boîte « enregistrer la page ».
+  // ⌘S / Ctrl+S now writes, as in the notebook. The recording is
+  // already automatic: what the gesture brings is not safeguarding, it is
+  // to SEE it — the reflex is too ingrained for us to leave the browser
+  // respond for him through his “save page” box.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (
@@ -470,11 +470,11 @@ function PageSurface({
     return () => window.removeEventListener("keydown", onKey, true);
   }, []);
 
-  /* ── Les sous-pages du corps (MIN-272) ───────────────────────────────── */
+  /* ── Body subpages (MIN-272) ───────────────────────────────── */
   //
-  // La même information est portée à deux endroits : `parent_id` en base, et le
-  // bloc `subpage` dans ce document. La colonne fait la vérité, le bloc en est
-  // une vue — et c'est ici que la vue redescend sur la vérité.
+  // The same information is carried in two places: `parent_id` in base, and the
+  // `subpage` block in this document. The column makes the truth, the block is
+  // a view — and it is here that the view comes back down to the truth.
   const router = useRouter();
   const base = `/projects/${projectId}/pages`;
 
@@ -497,10 +497,10 @@ function PageSurface({
         }
       },
       opened: (id) => {
-        // Le bloc vient d'être posé dans CE document : on l'écrit AVANT de
-        // partir. Sans ce `flush`, la navigation démonte l'éditeur avec, dans
-        // le brouillon, un bloc que personne n'a encore enregistré — la
-        // sous-page existe, son lien dans le parent non.
+        // The block has just been placed in THIS document: we write it BEFORE
+        // leave. Without this `flush`, navigation unmounts the editor with, in
+        // the draft, a block that no one has yet recorded — the
+        // subpage exists, its link in the parent does not.
         void flushRef.current().finally(() => router.push(`${base}/${id}`));
       },
       duplicate: async (id) => {
@@ -527,17 +527,17 @@ function PageSurface({
     [pagesLoaded, byId, base, createPage, duplicatePage, pageId, restorePage, router, t]
   );
 
-  /* ── Supprimer le bloc met la page à la corbeille ─────────────────────── */
+  /* ── Delete block moves page to trash ─────────────────────── */
   //
-  // Le comportement de Notion, retenu délibérément contre « détacher » : quand
-  // on supprime le lien vers une sous-page, c'est le plus souvent qu'on veut
-  // supprimer la sous-page. La laisser vivre la ferait survivre dans une
-  // sidebar qu'on ne regarde pas tout le temps, sans jamais qu'on le voie.
+  // The behavior of Notion, deliberately retained against “detach”: when
+  // we delete the link to a subpage, this is most often what we want
+  // delete the subpage. Letting her live would make her survive in a
+  // sidebar that we don't look at all the time, without ever seeing it.
   //
-  // Ce qui rend ce choix tenable, c'est la corbeille : rien n'est détruit,
-  // tout revient pendant 30 jours (MIN-266). Et ce qui le rend honnête, c'est
-  // que la confirmation annonce le compte RÉEL — la page qu'on voit et tous ses
-  // descendants, qui partent avec elle sans être à l'écran.
+  // What makes this choice tenable is the trash: nothing is destroyed,
+  // everything comes back for 30 days (MIN-266). And what makes it honest is
+  // that the confirmation announces the REAL account — the page we see and all its
+  // descendants, who leave with her without being on screen.
   const [pendingTrash, setPendingTrash] = useState<string[] | null>(null);
   const pendingCount = useMemo(() => {
     if (!pendingTrash) return 0;
@@ -551,8 +551,8 @@ function PageSurface({
 
   const onSubpagesRemoved = useCallback(
     (ids: string[]) => {
-      // Un bloc ORPHELIN qu'on efface ne demande rien à personne : sa page
-      // n'est déjà plus là, il n'y a que du texte à retirer.
+      // An ORPHAN block that is deleted does not ask anyone for anything: its page
+      // is already no longer there, there is only text to remove.
       const live = ids.filter((id) => byId.has(id));
       if (live.length === 0) return;
       setPendingTrash(live);
@@ -560,18 +560,18 @@ function PageSurface({
     [byId]
   );
 
-  // Confirmer ferme la boîte, et Radix annonce toute fermeture de la même
-  // façon. Sans cette marque, le « oui » repasserait par le chemin du « non »
-  // et défairait la suppression qu'on vient d'accepter.
+  // Confirm closes the box, and Radix announces any closure of the same
+  // way. Without this mark, “yes” would go back the way of “no”
+  // and undo the deletion that we have just accepted.
   const decided = useRef(false);
 
   const cancelTrash = useCallback(() => {
     setPendingTrash(null);
-    // Le bloc est DÉJÀ parti du document quand la question se pose : la
-    // détection constate une suppression, elle ne l'intercepte pas (il y a une
-    // douzaine de façons de supprimer un bloc, et les intercepter une par une
-    // c'est en oublier). Annuler, c'est donc défaire — et la boîte étant
-    // modale, le geste défait est bien le dernier.
+    // The block is ALREADY part of the document when the question arises: the
+    // detection notices a deletion, it does not intercept it (there is a
+    // dozen ways to delete a block, and intercept them one by one
+    // it's forgetting). To cancel is therefore to undo — and the box being
+    // modal, the undone gesture is indeed the last.
     editorRef.current?.commands.undo();
   }, []);
 
@@ -595,85 +595,85 @@ function PageSurface({
     })();
   }, [pendingTrash, trashPage, t]);
 
-  /* ── Qui a écrit en dernier, et l'historique (MIN-277) ────────────────── */
+  /* ── Who wrote last, and history (MIN-277) ────────────────── */
   //
-  // Sur un ticket, personne ne le demande ; sur de la doc, c'est la ligne qui
-  // fait qu'on croit une page. Le nom sort des MEMBRES du projet, déjà chargés
-  // pour les mentions et la présence — jamais de l'email brut (lib/display-name).
+  // On a ticket, no one asks for it; on the doc, this is the line that
+  // makes one believe a page. The name comes from the MEMBERS of the project, already charged
+  // for mentions and presence — never the raw email (lib/display-name).
   const [historyOpen, setHistoryOpen] = useState(false);
   const lastWriterId =
     summary?.updated_by ?? page?.updated_by ?? summary?.created_by ?? page?.created_by ?? null;
   const lastWriterKind = summary?.updated_kind ?? page?.updated_kind ?? "human";
   const lastEditName = useMemo(() => {
-    // Une écriture d'agent porte l'id du compte qui l'a permise ; on ne le
-    // montre pas — c'est toute la règle d'identité de minddy.
+    // An agent entry carries the id of the account that authorized it; we don't
+    // don't show — that's Minddy's whole identity rule.
     if (lastWriterKind === "agent") return SITE_NAME;
     if (!lastWriterId) return null;
-    // On attend les membres plutôt que d'écrire « Quelqu'un » une seconde puis
-    // le vrai nom : un nom qui change sous les yeux se lit comme une erreur.
+    // We wait for the members rather than writing “Someone” for a second then
+    // the real name: a name that changes before the eyes reads like an error.
     if (membersLoading) return null;
     const member = members.find((m) => m.user_id === lastWriterId);
-    // Parti du projet, ou compte supprimé : la DATE reste la moitié utile de la
-    // ligne, et « Quelqu'un » ne prétend rien de faux.
+    // Leaving the project, or account deleted: the DATE remains the useful half of the
+    // line, and “Someone” doesn’t claim anything false.
     return (member && displayName(member, "")) || t("someone");
   }, [members, membersLoading, lastWriterId, lastWriterKind, t]);
   const lastEditAt =
     autosave.savedAt ?? summary?.updated_at ?? page?.updated_at ?? null;
 
-  /* ── Le chemin jusqu'ici ─────────────────────────────────────────────── */
+  /* ── The way here ─────────────────────── ──────────────────────── */
   //
-  // `ancestorsOf` remonte du plus proche à la racine ; le fil d'Ariane se lit
-  // dans l'autre sens. Il est vide sur une page racine, et le composant ne rend
-  // alors rien du tout.
+  // `ancestorsOf` goes back from the nearest to the root; breadcrumbs read
+  // in the other direction. It is empty on a root page, and the component does not render
+  // then nothing at all.
   const trail = useMemo(
     () => ancestorsOf(pages, pageId).reverse(),
     [pages, pageId]
   );
 
-  /* ── Faire SORTIR cette page : publier, exporter (MIN-283) ────────────── */
+  /* ── Send this page OUT: publish, export (MIN-283) ─────────────────────── */
   //
-  // Les mêmes entrées que dans le menu ⋯ de la ligne d'arbre, écrites une
-  // fois (components/pages/page-document-actions.tsx). Elles sont ICI aussi
-  // parce que c'est en LISANT une page qu'on décide de l'envoyer à quelqu'un —
-  // pas en la cherchant dans une colonne.
+  // The same entries as in the menu ⋯ of the tree line, written one
+  // times (components/pages/page-document-actions.tsx). They are HERE too
+  // because it is by READING a page that we decide to send it to someone —
+  // not by looking for it in a column.
   const documentMenu = usePageDocumentMenu({ projectId, pages });
   const pageRef = useMemo(() => ({ id: pageId, title }), [pageId, title]);
 
-  /* ── ⌘⇧L : copier cette page pour un agent ───────────────────────────── */
+  /* ── ⌘⇧L: copy this page for an agent ───────────────────────────── */
   //
-  // Le geste de Notion, et pour la même raison : donner la page qu'on lit à
-  // quelqu'un d'autre est trop fréquent pour passer par un menu. Ce que
-  // « quelqu'un d'autre » veut dire ici, c'est un agent — d'où les coordonnées
-  // MCP à côté de l'URL, et la consigne facultative (lib/page-agent-prompt.ts).
+  // Notion's gesture, and for the same reason: giving the page we read to
+  // someone else is too frequent to go through a menu. That
+  // “someone else” here means, it’s an agent — hence the contact details
+  // MCP next to the URL, and the optional instruction (lib/page-agent-prompt.ts).
   //
-  // ⇧ EST OBLIGATOIRE, et ce n'est pas un choix d'esthétique. ⌘L nu ne parvient
-  // jamais à la page sur un Mac : la barre d'adresse le prend au niveau du
-  // navigateur, avant le document — le `keydown` n'arrive pas, et il n'y a donc
-  // rien à `preventDefault`. Vérifié en vrai sur la PR 67, après l'avoir écrit
-  // en ⌘L. Le voisinage est déjà en ⌘⇧ pour la même raison (⌘⇧D, la dictée,
-  // lib/create-context.tsx) : c'est la forme qui passe.
+  // ⇧ IS MANDATORY, and it is not an aesthetic choice. ⌘L naked fails
+  // never on the page on a Mac: the address bar takes it to the level of
+  // browser, before the document — the `keydown` does not arrive, and there is therefore
+  // nothing at `preventDefault`. Verified in real life on PR 67, after having written it
+  // in ⌘L. The neighborhood is already in ⌘⇧ for the same reason (⌘⇧D, dictation,
+  // lib/create-context.tsx): this is the form that passes.
   //
-  // Il OUVRE le dialog au lieu de copier sec, et c'est délibéré : l'entrée du
-  // menu et le raccourci sont le même geste, ils doivent donner le même
-  // résultat. Le champ prend le focus, donc ⌘⇧L puis ⌘Entrée copie sans rien
-  // demander, contre la possibilité de dire ce qu'on veut voir fait.
+  // He OPENS the dialog instead of copying, and this is deliberate: the entry of the
+  // menu and shortcut are the same gesture, they should give the same
+  // result. The field takes focus, so ⌘⇧L then ⌘Enter copy without anything
+  // to ask, against the possibility of saying what we want to see done.
   //
-  // Il ne demande AUCUN focus particulier : il suffit que la page soit à
-  // l'écran. L'écouteur est sur `window`, en capture — le curseur peut être
-  // dans l'éditeur, dans le titre ou nulle part, c'est la page affichée qu'on
+  // It does not require ANY particular focus: it is enough for the page to be
+  // the screen. The listener is on `window`, in capture — the cursor can be
+  // in the editor, in the title or nowhere, it is the displayed page that we
   // copie.
   //
-  // `openAgentCopyRef` : le raccourci ne se réabonne pas à chaque frappe dans
-  // le titre. `pageRef` change à chaque caractère tapé, et un `useEffect` qui
-  // en dépendrait poserait un écouteur par lettre.
+  // `openAgentCopyRef`: the shortcut does not resubscribe on each keystroke in
+  // the title. `pageRef` changes with each character typed, and a `useEffect` which
+  // would depend on it would put an earpiece per letter.
   const openAgentCopyRef = useRef<() => void>(() => {});
   openAgentCopyRef.current = () => documentMenu.openAgentCopy(pageRef, "shortcut");
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (!matchesModShiftCombo(event, "l")) return;
-      // Un dialog déjà ouvert tient l'écran — celui-ci compris : sans cette
-      // garde, le raccourci pendant qu'on écrit la consigne rouvrirait le
-      // dialog et effacerait ce qui vient d'être tapé.
+      // A dialog already open takes up the screen - this one included: without this
+      // guard, the shortcut while writing the instruction would reopen the
+      // dialog and would erase what was just typed.
       if (document.querySelector('[role="dialog"][data-state="open"]')) return;
       event.preventDefault();
       openAgentCopyRef.current();
@@ -682,15 +682,15 @@ function PageSurface({
     return () => window.removeEventListener("keydown", onKey, true);
   }, []);
 
-  /* ── Ce que Numo voit quand on est sur cette page ─────────────────────── */
+  /* ── What Numo sees when you are on this page ─────────────────────── */
   //
-  // La page ouverte devient le contexte ambiant de l'assistant (MIN-273) : « fais
-  // des tickets de cette page », « corrige ce paragraphe » se résolvent alors
-  // sans qu'on ait à la nommer, et Numo a les outils pour la lire et l'écrire.
+  // The open page becomes the ambient context of the assistant (MIN-273): “do
+  // tickets on this page”, “corrects this paragraph” are then resolved
+  // without having to name it, and Numo has the tools to read and write it.
   //
-  // Le titre part avec l'id : la pilule le dit sans relire la page, et le prompt
-  // peut la nommer avant le premier appel d'outil. C'est le titre AFFICHÉ, donc
-  // celui qu'on vient peut-être de taper.
+  // The title goes with the id: the pill says it without rereading the page, and the prompt
+  // can name it before the first tool call. This is the DISPLAYED title, so
+  // the one we may have just typed.
   useAssistantContext(
     useMemo(
       () => ({ projectId, pageId, pageTitle: title, pageIcon: icon }),
@@ -698,27 +698,27 @@ function PageSurface({
     )
   );
 
-  /* ── La table des matières flottante ─────────────────────────────────── */
+  /* ── The floating table of contents ─────────────────────────────────── */
   //
-  // Elle a besoin de DEUX choses que le corps ne rend pas de lui-même :
-  // l'instance de l'éditeur (pour lire les titres et les suivre à la frappe) et
-  // le conteneur qui défile (pour savoir où l'on en est, et pour y aller).
+  // It needs TWO things that the body does not provide on its own:
+  // the editor instance (to read the titles and follow them when typing) and
+  // the container that scrolls (to know where we are, and to get there).
   const scrollRef = useRef<HTMLDivElement>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
 
-  /* ── Commenter un passage (MIN-282) ───────────────────────────────────── */
+  /* ── Comment on a passage (MIN-282) ───────────────────────────────────── */
   //
-  // La bulle de sélection rend le bloc et l'extrait ; le calque ouvre dessus le
-  // panneau du fil, à côté du bloc. L'état vit ICI parce qu'il relie deux
-  // enfants qui ne se connaissent pas — l'éditeur et le calque.
+  // The selection bubble renders the block and extracts it; the layer opens on it
+  // wire panel, next to the block. The state lives HERE because it connects two
+  // children who don't know each other — the editor and the layer.
   const [draftAnchor, setDraftAnchor] = useState<PageCommentAnchor | null>(null);
   const onComment = useCallback((anchor: PageCommentAnchor) => {
     setDraftAnchor(anchor);
   }, []);
   const clearDraftAnchor = useCallback(() => setDraftAnchor(null), []);
 
-  /* ── L'ancre d'un bloc ───────────────────────────────────────────────── */
-  /** Marge au-dessus du bloc visé par une ancre, une fois arrivé. */
+  /* ── The anchor of a block ───────────────────────────────────────────── */
+  /** Margin above the block targeted by an anchor, once arrived. */
   const ANCHOR_MARGIN = 96;
   const bodyRef = useRef<HTMLDivElement>(null);
   const loaded = !!page;
@@ -726,17 +726,17 @@ function PageSurface({
     if (!loaded) return;
     const id = window.location.hash.slice(1);
     if (!id) return;
-    // Après la peinture : le bloc visé n'existe dans le DOM qu'une fois le
-    // document monté par tiptap, ce qui arrive un cran après la réponse.
+    // After painting: the targeted block only exists in the DOM once it has been
+    // document mounted by tiptap, which arrives one step after the response.
     let unflash: (() => void) | null = null;
     const handle = requestAnimationFrame(() => {
       const view = editor;
       const container = scrollRef.current;
       if (!view || !container) return;
-      // L'ancre se résout dans le DOCUMENT, et non dans le DOM : le clignement
-      // est une décoration ProseMirror, qui se pose sur une POSITION (cf.
-      // block-flash.ts). Le geste est ensuite exactement celui de la table des
-      // matières — un seul chemin, un seul endroit où se tromper.
+      // The anchor resolves to the DOCUMENT, not the DOM: blink
+      // is a ProseMirror decoration, which is placed on a POSITION (cf.
+      // block-flash.ts). The gesture is then exactly that of the table of
+      // matters — only one path, only one place to go wrong.
       const pos = posOfBlockId(view, id);
       if (pos === null) return;
       unflash = revealBlock(view, container, pos, ANCHOR_MARGIN);
@@ -755,16 +755,16 @@ function PageSurface({
     );
   }
 
-  // On attend la réponse de CE montage, et pas seulement « une » donnée.
+  // We are waiting for the response from THIS montage, and not just “one” piece of data.
   //
-  // C'est la contrepartie du modèle : tiptap ne relit jamais son `content`, donc
-  // le document sur lequel l'éditeur se monte est celui qu'il gardera à l'écran
-  // jusqu'au démontage. Peindre d'abord le cache — le réflexe partout ailleurs
-  // dans l'app, et ce que fait la réhydratation depuis le disque au
-  // rechargement — mettait à l'écran un corps périmé que la réponse arrivée un
-  // instant plus tard ne pouvait plus corriger. D'où l'attente : sur un
-  // document, un instant de squelette vaut mieux qu'une version d'avant
-  // affichée avec l'aplomb de la bonne.
+  // This is the counterpart of the model: tiptap never rereads its `content`, so
+  // the document on which the editor mounts is the one he will keep on the screen
+  // until dismantling. Paint the cover first – the reflex everywhere else
+  // in the app, and what rehydration does from the disk to
+  // reloading — put on the screen an expired body that the response arrived one
+  // moment later could no longer correct. Hence the wait: on a
+  // document, a skeleton moment is better than a previous version
+  // displayed with the aplomb of the maid.
   if (isPending || !page || !isFetchedAfterMount) {
     return (
       <div className="flex flex-1 items-center justify-center py-16">
@@ -775,20 +775,20 @@ function PageSurface({
 
   return (
     <div className="relative min-h-0 flex-1">
-      {/* L'état d'enregistrement est épinglé au COIN de la surface, hors du
-          flux et hors du défilement : il reste au même endroit quand on
-          descend dans le document, et ne pousse rien. Même place que dans le
-          carnet, à ceci près qu'il est à droite — la gauche est occupée par la
-          barre secondaire. */}
-      {/* Les avatars des autres lecteurs voisinent l'état d'enregistrement, et
-          c'est le bon endroit : les deux répondent à la même question — « où en
-          est ce document, et suis-je seul dessus ? ». */}
-      {/* Le CHEMIN, à l'opposé de l'état d'enregistrement : les deux sont
-          épinglés hors du flux et hors du défilement, et se partagent la même
-          ligne. Il ne paraît que sur une sous-page — voir page-breadcrumb.tsx. */}
-      {/* La réserve de droite : l'état est une coche au repos et son texte ne
-          se déplie qu'au survol, par-dessus, sur son propre fond (MIN-282) —
-          plus le ⋯, qui ouvre la publication et l'export (MIN-283). */}
+      {/* The recording state is pinned to the CORNER of the surface, outside the
+          flow and out of scrolling: it stays in the same place when you
+          goes down into the document, and doesn't push anything. Same place as in the
+          notebook, except that it is on the right — the left is occupied by the
+          secondary sidebar. */}
+      {/* The avatars of other readers are near the recording state, and
+          this is the right place: both answer the same question — “where in
+          is this document, and am I alone on it? ". */}
+      {/* The PATH, the opposite of the recording state: both are
+          pinned out of feed and out of scroll, and share the same
+          line. It only appears on a subpage — see page-breadcrumb.tsx. */}
+      {/* The reservation on the right: the state is a checkmark at rest and its text does not
+          unfolds only when hovering, over, on its own background (MIN-282) —
+          plus the ⋯, which opens publication and export (MIN-283). */}
       <div className="absolute top-3 left-3.5 z-10 flex min-w-0 max-w-[calc(100%-11rem)] items-center">
         <PageBreadcrumb trail={trail} hrefFor={(id) => `${base}/${id}`} />
       </div>
@@ -807,8 +807,8 @@ function PageSurface({
         />
         <IssueActionsMenu
           searchable={false}
-          // La touche n'est affichée QUE là : ⌘⇧L vise la page ouverte, qui est
-          // celle-ci et pas la ligne d'arbre qu'on survole.
+          // The key is ONLY displayed there: ⌘⇧L aims at the open page, which is
+          // this one and not the tree line we are flying over.
           actions={documentMenu.actionsFor(pageRef, { shortcut: true })}
           trigger={
             <Button
@@ -824,35 +824,35 @@ function PageSurface({
       </div>
       {documentMenu.dialogs}
 
-      {/* La table des matières flotte au bord droit du PANNEAU, donc hors du
-          conteneur qui défile : elle reste à sa place pendant qu'on descend
-          dans le document, et c'est le défilement qui la traverse. */}
+      {/* The table of contents floats at the right edge of the PANEL, therefore out of the
+          container that moves by: it stays in its place while we go down
+          in the document, and it's scrolling through it. */}
       <PageToc editor={editor} scrollRef={scrollRef} />
 
       <div ref={scrollRef} className="scrollbar-quiet h-full overflow-y-auto">
-      {/* La COLONNE du document. Elle porte deux choses, et elle est la seule à
-          pouvoir les porter ensemble : la réserve de GOUTTIÈRE à gauche (56 px,
-          la largeur exacte de la poignée et du `+`) et le positionnement dont
-          le chrome se sert pour s'y placer. Titre et blocs partagent donc le
-          même bord gauche, et la marge du survol tombe dans la réserve au lieu
-          de décaler le corps sous le titre. */}
+      {/* The COLUMN of the document. She carries two things, and she's the only one
+          be able to carry them together: the GUTTER reserve on the left (56 px,
+          the exact width of the handle and the `+`) and the positioning of which
+          the chrome is used to place itself there. Title and blocks therefore share the
+          same left edge, and the hover margin falls into the reserve instead
+          to shift the body under the title. */}
       <div className="relative mx-auto w-full max-w-3xl px-6 py-10 md:pl-24 md:pr-10">
         <PageHeader
           title={title}
           icon={icon}
-          // Une page NEUVE — sans nom et sans contenu — met le curseur dans son
-          // titre. Le test porte sur ce que la page EST, et pas sur la façon
-          // dont on y est arrivé : c'est vrai qu'on vienne du `/page` du corps
-          // du parent, du `+` de la sidebar ou du menu d'une ligne de l'arbre,
-          // et ça évite de faire voyager un « je viens d'être créée » à travers
-          // trois composants et une navigation.
+          // A NEW page — without a name and without content — puts the cursor in its
+          // title. The test is about what the page IS, not how
+          // which we arrived at: it's true that we come from the `/page` of the body
+          // of the parent, of the `+` of the sidebar or of the menu of a line of the tree,
+          // and that avoids making a “I have just been created” travel through
+          // three components and navigation.
           autoFocus={!title && isEmptyDoc(page.content)}
           onTitleChange={(next) => {
             setEdited((current) => ({ ...current, title: next }));
-            // La sidebar, le fil d'Ariane et le bloc sous-page lisent le cache
-            // de la LISTE : sans cet écrit local, ils ne bougeaient qu'une
-            // seconde plus tard, à l'enregistrement groupé — on tapait un titre
-            // en regardant l'ancien dans la colonne de gauche.
+            // The sidebar, breadcrumbs and subpage block read the cache
+            // of the LIST: without this local writing, they only moved one
+            // second later, at group recording — we typed a title
+            // looking at the old one in the left column.
             previewPage(pageId, { title: next });
             schedule({ title: next });
           }}
@@ -866,19 +866,19 @@ function PageSurface({
           onDown={focusBodyStart}
           fieldRef={titleFieldRef}
         />
-        {/* Entre le titre et le corps : au-dessus du document, parce que c'est
-            du document qu'il parle, et dans le flux, parce qu'un écrasement
-            silencieux est exactement ce qu'on refuse — il ne se ferme qu'au
-            geste de son lecteur. */}
+        {/* Between the title and the body: above the document, because it is
+            of the document it is talking about, and in the flow, because an overwrite
+            silent is exactly what we refuse — it only closes when
+            gesture from its reader. */}
         <PageConflictBanner
           conflicts={autosave.conflicts}
           onRestore={autosave.restore}
           onDismiss={autosave.dismiss}
         />
         <div ref={bodyRef} className="mt-6">
-          {/* Ce que « confier une tâche » veut dire quand elle sort d'une page
-              plutôt que du carnet : le prompt nomme la page, et la navigation
-              attend que ce qui est en attente soit écrit (MIN-274). */}
+          {/* What “assign a task” means when it comes off a page
+              rather than the notebook: the prompt names the page, and the navigation
+              waits for what is pending to be written (MIN-274). */}
           <PageTaskSurface
             projectId={projectId}
             pageTitle={title}
@@ -902,21 +902,21 @@ function PageSurface({
             />
           </PageTaskSurface>
         </div>
-        {/* En pied du DOCUMENT, dans la même colonne que lui : « qui s'appuie
-            sur cette page ? » se demande quand on a fini de la lire, pas dans
-            un meuble qui prendrait de la largeur en permanence. Absent tant que
-            personne ne cite la page (MIN-279). */}
+        {/* At the foot of the DOCUMENT, in the same column as it: “which relies
+            on this page? » asks oneself when one has finished reading it, not in
+            a piece of furniture that would constantly gain width. Absent while
+            no one cites the page (MIN-279). */}
         <PageBacklinks projectId={projectId} pageId={pageId} />
       </div>
       </div>
 
-      {/* Le compte annoncé est le compte RÉEL : la page qu'on voit disparaître
-          plus tous ses descendants, qui partent avec elle sans être à l'écran.
-          Dire « cette page » quand cinq s'en vont, c'est faire de la corbeille
-          une surprise plutôt qu'un filet. */}
-      {/* L'historique, ouvert depuis la ligne « modifiée par » de l'en-tête —
-          là où la question se pose. Monté seulement quand il est demandé : il
-          tire un second éditeur avec lui. */}
+      {/* The announced account is the REAL account: the page that we see disappear
+          plus all her descendants, who leave with her without being on screen.
+          Saying “this page” when five are gone is trash
+          a surprise rather than a trickle. */}
+      {/* History, opened from the “modified by” line in the header —
+          where the question arises. Mounted only when requested: it
+          pulls a second editor with him. */}
       {historyOpen ? (
         <PageHistorySheet
           projectId={projectId}
@@ -927,9 +927,9 @@ function PageSurface({
         />
       ) : null}
 
-      {/* Les COMMENTAIRES (MIN-282), en calque : rien dans le flux du document.
-          Le fil d'un bloc s'ouvre à côté de son bloc, celui de la page vit dans
-          l'onglet « Activité » de l'historique. */}
+      {/* COMMENTS (MIN-282), in layer: nothing in the document flow.
+          The thread of a block opens next to its block, that of the page lives in
+          the “Activity” tab of the history. */}
       <PageCommentLayer
         projectId={projectId}
         pageId={pageId}

@@ -3,32 +3,32 @@ import type { PullRequestReviewComment } from "@/lib/agent-api";
 import type { ReviewThread } from "@/lib/pr-review-threads";
 
 /**
- * Où une remarque s'accroche au diff : la traduction entre le vocabulaire de la
- * forge (`side: "LEFT" | "RIGHT"`, numéro de ligne) et celui de `@pierre/diffs`
- * (`side: "deletions" | "additions"`), plus la règle du 422.
+ * Where a remark clings to the diff: the translation between the vocabulary of the
+ * forge (`side: "LEFT" | "RIGHT"`, line number) and that of `@pierre/diffs`
+ * (`side: "deletions" | "additions"`), plus the rule of 422.
  *
- * Séparé du regroupement (`pr-review-threads`, pur et partagé avec le serveur)
- * et du rendu, comme l'était `pr-review-diff` avant lui : les deux règles
- * ci-dessous sont subtiles, dictées par le comportement RÉEL de l'API GitHub,
- * et elles se testent sans React.
+ * Separated from bundling (`pr-review-threads`, pure and shared with the server)
+ * and rendering, as `pr-review-diff` was before him: the two rules
+ * below are subtle, dictated by the ACTUAL behavior of the GitHub API,
+ * and they can be tested without React.
  */
 
-/** Un fil de review côté client — celui que manipulent la vue diff et ses annotations. */
+/** A client-side review thread — the one handled by the diff view and its annotations. */
 export type PrReviewThread = ReviewThread<PullRequestReviewComment>;
 
-/** Côté d'une ligne chez Pierre. GitHub nomme les deux mêmes côtés LEFT / RIGHT. */
+/** Side of a line at Pierre. GitHub names the same two sides LEFT/RIGHT. */
 export type DiffSide = "deletions" | "additions";
 
-/** Ancre d'une ligne, dans le vocabulaire de la vue. */
+/** Anchor of a line, in the vocabulary of sight. */
 export interface LineAnchor {
   side: DiffSide;
   line: number;
 }
 
 /**
- * Ancre d'un commentaire à envoyer. `startLine` n'est posé que pour une
- * remarque multi-lignes : GitHub attend alors `line` = DERNIÈRE ligne de la
- * plage et `start_line` = la première.
+ * Anchor a comment to send. `startLine` is only set for one
+ * multi-line note: GitHub then expects `line` = LAST line of the
+ * range and `start_line` = the first.
  */
 export interface CommentAnchor extends LineAnchor {
   startLine?: number;
@@ -44,9 +44,9 @@ export function toDiffSide(side: "LEFT" | "RIGHT"): DiffSide {
 }
 
 /**
- * Identité d'une ancre dans les tables du composant (brouillons, composers
- * ouverts). Même forme que le nom du `<slot>` que la lib crée pour une
- * annotation, ce qui n'est pas un hasard : c'est la même paire (côté, ligne).
+ * Identity of an anchor in the component tables (drafts, composers
+ * open). Same form as the name of `<slot>` that the lib creates for a
+ * annotation, which is not a coincidence: it is the same pair (side, line).
  */
 export function anchorKey(anchor: LineAnchor): string {
   return `${anchor.side}:${anchor.line}`;
@@ -55,17 +55,17 @@ export function anchorKey(anchor: LineAnchor): string {
 /**
  * Ligne d'ancrage d'un fil, ou `null` s'il n'en a plus.
  *
- * ⚠️ On rend l'ancre DÉCLARÉE, sans vérifier qu'elle tombe dans le diff : c'est
- * la lib qui tranche, en ne créant le `<slot>` correspondant que si la ligne est
- * effectivement rendue. Un fil dont la ligne est masquée réapparaît donc à sa
- * place dès qu'on déplie le contexte autour, sans qu'on ait à suivre l'état de
- * dépliage — et un fil dont la ligne n'existe plus dans aucun hunk se replie
- * dans les « périmés », comme avant (cf. `placedAnchorKeys` dans `pr-diff`).
+ * ⚠️ We make the anchor DECLARED, without checking that it falls in the diff: this is
+ * the lib which decides, by only creating the corresponding `<slot>` if the line is
+ * actually rendered. A thread whose line is hidden therefore reappears at its
+ * place as soon as we unfold the context around it, without having to follow the state of
+ * unfolding — and a wire whose line no longer exists in any hunk folds
+ * in the “expired”, as before (see `placedAnchorKeys` in `pr-diff`).
  *
- * Le test n'est PAS `line !== null` seul : vérifié contre l'API GitHub, un
- * commentaire posé sur une ligne de CONTEXTE garde son `line` même une fois que
- * le diff s'est déplacé ailleurs dans le fichier. C'est bien pour ça que la
- * décision « ancré ou périmé » ne se prend pas ici.
+ * The test is NOT `line !== null` alone: ​​checked against the GitHub API, a
+ * comment placed on a CONTEXT line keeps its `line` even once
+ * the diff has moved elsewhere in the file. This is why the
+ * “anchored or expired” decision is not made here.
  */
 export function threadAnchor(thread: PrReviewThread): LineAnchor | null {
   const { line, side } = thread.root;
@@ -74,14 +74,14 @@ export function threadAnchor(thread: PrReviewThread): LineAnchor | null {
 }
 
 /**
- * Une ligne appartient-elle aux hunks du patch — donc au diff que la forge
- * connaît ?
+ * Does a line belong to the hunks of the patch - so at the diff that the forge
+ * knows?
  *
- * GitHub refuse (**422** `line: could not be resolved`) tout commentaire sur une
- * ligne hors diff, et la vue en affiche justement : le dépliage de contexte
- * ramène des lignes VRAIES mais absentes du patch. Les hunks passés ici sont
- * ceux du patch d'origine — la lib garde son état de dépliage à part et ne les
- * touche pas, ce qui fait de ce test la frontière exacte.
+ * GitHub refuses (**422** `line: could not be resolved`) any comments on a
+ * line out of diff, and the view displays it: context unfolding
+ * brings back REAL lines but missing from the patch. The hunks passed here are
+ * those of the original patch — the lib keeps its unfolded state separately and does not
+ * not touch, which makes this test the exact boundary.
  */
 export function isLineInDiff(hunks: Hunk[], side: DiffSide, line: number): boolean {
   return hunks.some((hunk) => {
@@ -92,12 +92,12 @@ export function isLineInDiff(hunks: Hunk[], side: DiffSide, line: number): boole
 }
 
 /**
- * Nature de la ligne dans le patch : ajoutée, supprimée, ou inchangée
- * (contexte). `null` si elle n'y est pas du tout.
+ * Nature of the line in the patch: added, deleted, or unchanged
+ * (context). `null` if it is not there at all.
  *
- * Sert l'en-tête d'une annotation, et il n'est pas décoratif : en vue unifiée,
- * une ligne MODIFIÉE produit deux lignes portant le même numéro — la supprimée
- * puis l'ajoutée — donc deux annotations voisines que seul ce mot départage.
+ * Serves as the header of an annotation, and it is not decorative: in unified view,
+ * an MODIFIED line produces two lines with the same number — the deleted
+ * then added it - therefore two neighboring annotations that only this word separates.
  */
 export function lineKind(
   hunks: Hunk[],
@@ -125,17 +125,17 @@ export function lineKind(
 }
 
 /**
- * Ancre à envoyer pour une sélection de gouttière, ou `null` si elle sort du
- * diff — auquel cas on n'ouvre pas de composer plutôt que d'offrir un envoi
- * voué au 422.
+ * Anchor to send for a gutter selection, or `null` if it comes out of the
+ * diff — in which case we do not open compose rather than offering a send
+ * dedicated to 422.
  *
- * La sélection arrive dans l'ordre du GESTE : glisser vers le haut donne
- * `start > end`. GitHub, lui, veut la plage dans l'ordre du FICHIER.
+ * The selection arrives in the order of the GESTURE: sliding up gives
+ * `start > end`. GitHub wants the range in FILE order.
  *
- * Une plage qui change de côté en route (de la colonne des suppressions à celle
- * des ajouts, en côte-à-côte) ne décrit rien que la forge sache ancrer : on la
- * ramène alors à sa ligne d'arrivée. `multiLine` fait de même partout où les
- * plages ne sont pas supportées (GitLab).
+ * A range that changes sides en route (from the deletions column to that
+ * additions, side-by-side) does not describe anything that the forge knows how to anchor: it is
+ * then returns to its finish line. `multiLine` does the same wherever the
+ * ranges are not supported (GitLab).
  */
 export function commentAnchor(
   hunks: Hunk[],
@@ -152,11 +152,11 @@ export function commentAnchor(
 
   const line = Math.max(range.start, range.end);
   const startLine = Math.min(range.start, range.end);
-  // On ne contrôle que les deux BOUTS. Une plage peut donc enjamber un écart
-  // masqué (deux hunks distincts) — ce cas-là n'a PAS été éprouvé contre l'API :
-  // si la forge le refuse, elle répond 422 et l'UI le dit déjà (`lineNotInDiff`),
-  // texte gardé. Vérifier les lignes intermédiaires demanderait de les énumérer
-  // pour un cas qu'on ne sait pas encore fautif.
+  // We only control the two ENDS. A beach can therefore span a gap
+  // hidden (two separate hunks) — this case has NOT been proven against the API:
+  // if the forge refuses it, it responds 422 and the UI already says it (`lineNotInDiff`),
+  // text kept. Checking intermediate lines would require listing them
+  // for a case that we do not yet know to be at fault.
   if (!isLineInDiff(hunks, endSide, line) || !isLineInDiff(hunks, startSide, startLine)) {
     return single();
   }
@@ -164,12 +164,12 @@ export function commentAnchor(
 }
 
 /**
- * Première ligne commune à tous les fils ancrés sur une même ligne, ou `null`.
+ * First line common to all wires anchored on the same line, or `null`.
  *
- * Sert l'intitulé d'une annotation, qui est UNIQUE là où les fils peuvent être
- * plusieurs : si deux d'entre eux couvrent des plages différentes, aucune phrase
- * ne les dit tous les deux, et on retombe alors sur la ligne d'ancrage — le seul
- * énoncé qui reste vrai dans tous les cas.
+ * Serves as the title of an annotation, which is UNIQUE where the threads can be
+ * several: if two of them cover different ranges, no sentence
+ * does not say them both, and we then fall back on the anchor line — the only
+ * statement which remains true in all cases.
  */
 export function sharedStartLine(threads: PrReviewThread[]): number | null {
   const first = threads[0]?.root.start_line ?? null;

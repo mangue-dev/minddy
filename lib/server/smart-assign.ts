@@ -18,47 +18,45 @@ import type { SmartAssignConfigWarning } from "@/lib/types";
 /**
  * Smart Assign (MIN-31) — guarantees no active issue stays unassigned on
  * projects that opted in. Triggered after an issue is created past triage
- * without an assignee, or when an unassigned issue leaves triage.
+ * without an assigned, or when an unassigned issue leaves triage.
  *
  * - Single-member project (owner only): deterministic, no AI.
  * - Multi-member with no rule written for anyone: deterministic too, the owner —
- *   with no rule the model has nothing but names to compare.
+ * with no rule the model has nothing but names to compare.
  * - Multi-member with rules: one forced tool call to the model in app_config
- *   (`smart_assign_model`), fed the issue and the per-member rules; any
- *   failure falls back to the owner so the run always assigns someone.
+ * (`smart_assign_model`), fed the issue and the per-member rules; any
+ * failure falls back to the owner so the run always assigns someone.
  *
- * L'événement écrit porte `smart_assign_ai` : seul le troisième cas le met à
- * true, et seulement si le modèle a répondu un membre valide. C'est ce que
- * l'activité du ticket distingue — sans ça les trois se lisaient pareil.
+ * The written event carries `smart_assign_ai`: only the third case sets it to
+ * true, and only if the model responded a valid member. This is what
+ * the ticket activity distinguishes — otherwise the three would read the same.
  *
- * Le run re-vérifie TOUT au moment où il s'exécute : un déclenchement périmé
- * (toggle retombé, quelqu'un a assigné entre-temps, statut revenu en triage)
- * est un no-op silencieux.
+ * The run re-checks EVERYTHING at the moment it executes: an expired trigger
+ * (toggle dropped, someone assigned in the meantime, status returned to triage)
+ * is a silent no-op.
  *
- * ## Ce qui est fait tout de suite, et ce qui est différé
+ * ## What is done right away, and what is deferred
  *
- * Tout vivait dans `after()`. Ça ne tient pas : le travail d'après la réponse
- * est au mieux best-effort, et un ticket créé par le MCP en a fait les frais —
- * l'événement `created` écrit, l'affectation jamais. Le coupable n'était pas la
- * décision (elle prend une seconde) mais sa longueur : six aller-retours de
- * LECTURE avant la moindre écriture, dont trois pour un contrôle de budget sur
- * un chemin qui ne dépense rien. Six occasions de disparaître sans trace.
+ * Everything lived in `after()`. It doesn't hold: the work according to the response
+ * is best effort at best, and a ticket created by the MCP paid the price —
+ * the event `created` writes, the assignment never. The culprit was not the
+ * decision (it takes a second) but its length: six round trips of
+ * READ before any writing, including three for a budget check on
+ * a path that spends nothing. Six opportunities to disappear without a trace.
  *
- * D'où la découpe :
- * - le cas DÉTERMINISTE (membre unique, ou aucune règle) écrit avant la réponse.
- *   C'est une update ; l'attendre coûte moins cher que de la perdre ;
- * - seul l'appel au MODÈLE reste différé — plusieurs secondes de latence n'ont
- *   rien à faire dans un POST — et c'est LUI seul que le budget garde ;
- * - `sweepUnassignedIssues` (cron) rattrape ce que ce dernier `after()` perd.
+ * Hence the cut:
+ * - the DETERMINIST case (single member, or no rule) written before the response.
+ * This is an update; waiting for it costs less than losing it;
+ * - only the call to the MODEL remains deferred — several seconds of latency have nothing to do in a POST — and it is HIM alone that the budget keeps;
+ * - `sweepUnassignedIssues` (cron) catches up with what the latter `after()` loses.
  */
 
 const MAX_DESCRIPTION_CHARS = 4000;
 
-/** Fenêtre du rattrapage : au-delà, un ticket sans assigné est un choix, pas
-    un accident (cf. sweepUnassignedIssues). */
+/** Catch-up window: beyond that, an unassigned ticket is a choice, not
+ an accident (see sweepUnassignedIssues). */
 const SWEEP_WINDOW_MS = 24 * 60 * 60_000;
-/** Assez pour absorber une rafale de sous-tickets, assez peu pour tenir dans
-    la fenêtre du cron — le reste est repris au réveil suivant. */
+/** Enough to absorb a burst of sub-tickets, few enough to fit in the cron window — the rest is picked up the next time you wake up. */
 const SWEEP_LIMIT = 100;
 
 /** Statuses Smart Assign acts on: anything past triage that is still a real,
@@ -78,21 +76,20 @@ export interface SmartAssignParams {
   /** Who created / transitioned the issue — suppresses their own notification
       when Smart Assign picks them. NULL for integration-created issues. */
   triggerActorId: string | null;
-  /** `sweep` = le rattrapage du cron. Il n'a pas de réponse à rendre, donc il
-      ATTEND l'appel au modèle au lieu de le différer — différer, c'est
-      justement ce qui a fait perdre l'affectation qu'il vient réparer. */
+  /** `sweep` = cron catch-up. He has no response to give, so he
+ WAITS for the call to the model instead of deferring it — deferring is precisely what caused the assignment he is repairing to be lost. */
   trigger: "create" | "triage_exit" | "sweep";
 }
 
 /**
- * Point d'entrée des deux cœurs d'écriture (création / mise à jour d'un
- * ticket) : à ATTENDRE, et sans filet à poser — il ne lève jamais.
+ * Entry point of the two writing cores (creation / update of a
+ * ticket): to WAIT, and without a net to place — it never raises.
  *
- * Ce qu'on attend, c'est la décision et, dans le cas déterministe, l'écriture.
- * Pas l'appel au modèle : celui-là part en `after()` depuis `runSmartAssign`.
+ * What we wait for is the decision and, in the deterministic case, writing.
+ * Not the call to the model: this one goes to `after()` from `runSmartAssign`.
  *
- * Renvoie l'assigné écrit, pour que l'appelant puisse rendre un ticket à jour
- * plutôt qu'une ligne qu'il sait déjà périmée.
+ * Returns the written assignment, so the caller can return an up-to-date ticket
+ * rather than a line it already knows expired.
  */
 export async function applySmartAssign(
   params: SmartAssignParams
@@ -106,18 +103,18 @@ export async function applySmartAssign(
 }
 
 /**
- * Le run lui-même. Renvoie l'assigné que CE run a écrit — donc `null` s'il n'y
- * avait rien à faire, mais aussi quand l'appel au modèle a été différé : à ce
- * moment-là rien n'est encore écrit, et prétendre le contraire mentirait à
- * l'appelant comme au balayeur qui compte.
+ * The run itself. Returns the assignee that THIS run wrote — so `null` if there
+ * had nothing to do, but also when the call to the model was deferred: at that
+ * moment nothing is written yet, and to pretend otherwise would lie to
+ * the caller as well as to the sweeper who account.
  */
 export async function runSmartAssign(
   params: SmartAssignParams
 ): Promise<string | null> {
   const service = getServiceClient();
 
-  // Les trois lectures EN PARALLÈLE : elles ne dépendent pas les unes des
-  // autres, et c'est la longueur de ce prélude qui décide si l'affectation
+  // The three readings IN PARALLEL: they do not depend on each other
+  // others, and it is the length of this prelude which decides whether the assignment
   // survit. Un aller-retour de temps d'horloge, pas trois.
   const [{ data: project }, { data: issue }, { data: memberRows }] =
     await Promise.all([
@@ -155,24 +152,24 @@ export async function runSmartAssign(
   ];
 
   const rules = (project.smart_assign_rules ?? {}) as Record<string, string>;
-  // Une règle écrite pour QUELQU'UN de l'équipe est ce qui rend le choix
-  // possible : sans aucune, le modèle n'a que des noms à comparer, et le prompt
-  // lui dit déjà de retomber sur le owner dans ce cas. Autant ne pas payer
-  // l'appel — le résultat est le même, en moins cher et sans latence.
+  // A rule written for SOMEONE on the team is what makes the choice
+  // possible: without any, the model only has names to compare, and the prompt
+  // already tells him to fall back on the owner in this case. Might as well not pay
+  // the call — the result is the same, cheaper and without latency.
   if (memberIds.length === 1 || !hasAnyRule(memberIds, rules)) {
-    // Seul membre, ou aucune règle : pas d'ambiguïté à lever, pas d'IA — donc
-    // rien à facturer, rien à garder, et aucune raison d'attendre la réponse
-    // pour écrire. C'est le cas de l'immense majorité des projets.
+    // Only member, or no rules: no ambiguity to remove, no AI — therefore
+    // nothing to charge, nothing to keep, and no reason to wait for a response
+    // to write. This is the case for the vast majority of projects.
     return await claimForSmartAssign(service, params, ownerId, false);
   }
 
-  // Reste le seul morceau qui coûte : quelques secondes de latence et une ligne
-  // d'usage. Il part après la réponse — sauf pour le balayeur, qui n'en a pas.
+  // Remains the only piece that costs: a few seconds of latency and a line
+  // of use. He leaves after the answer — except for the sweeper, who doesn't have one.
   const askTheModel = async () => {
-    // Le budget ne garde QUE la dépense. Le mettre en tête du run revenait à
-    // suspendre aussi les affectations déterministes, qui ne coûtent rien ; et
-    // budget à sec ou modèle muet, le contrat reste le même — on assigne
-    // quelqu'un, à défaut le propriétaire.
+    // The budget ONLY keeps the expense. Putting him at the head of the run amounted to
+    // also suspend deterministic assignments, which cost nothing; And
+    // dry budget or silent model, the contract remains the same — we assign
+    // someone, failing that the owner.
     const picked = (await canUseSmartAssign(ownerId))
       ? await chooseAssigneeViaAI({
           service,
@@ -184,9 +181,9 @@ export async function runSmartAssign(
           rules,
         })
       : null;
-    // Le modèle a-t-il VRAIMENT choisi ? L'activité du ticket le dit, et les
-    // deux modes ne se valent pas : le repli sur le propriétaire — faute
-    // d'appel, ou faute de réponse exploitable — reste une affectation
+    // Did the model REALLY choose? The ticket activity says so, and the
+    // two modes are not equal: falling back on the owner — fault
+    // call, or exploitable response error — remains an assignment
     // automatique.
     return await claimForSmartAssign(
       service,
@@ -203,13 +200,12 @@ export async function runSmartAssign(
 }
 
 /**
- * L'écriture : compare-and-set contre une affectation manuelle concurrente
- * (aucune ligne en retour → quelqu'un nous a devancés), puis l'activité et la
+ * Writing: compare-and-set against a concurrent manual assignment
+ * (no rows returned → someone beat us to it), then the activity and the
  * notification.
  *
- * Les trois vont ensemble et dans cet ordre : une affectation sans son
- * événement serait une main invisible dans la timeline — pire que pas
- * d'affectation du tout.
+ * The three go together and in this order: an assignment without its
+ * event would be an invisible hand in the timeline — worse than no assignment at all.
  */
 async function claimForSmartAssign(
   service: SupabaseClient,
@@ -248,8 +244,8 @@ async function claimForSmartAssign(
         type: "assigned",
         issue_id: params.issueId,
         actor_id: null,
-        // Sans ce drapeau l'inbox lit un acteur nul et affiche « Quelqu'un » —
-        // la timeline, elle, nomme déjà Smart Assign sur le même geste.
+        // Without this flag the inbox reads a null actor and displays “Someone” —
+        // the timeline already names Smart Assign on the same gesture.
         via_smart_assign: true,
       },
     ]);
@@ -258,23 +254,23 @@ async function claimForSmartAssign(
 }
 
 /**
- * Le RATTRAPAGE (cron `/api/cron/smart-assign`) : les tickets qu'un
- * déclenchement aurait dû assigner et qui sont restés sans personne.
+ * CATCH-UP (cron `/api/cron/smart-assign`): tickets that a
+ * trigger should have assigned and which remained without anyone.
  *
- * Il existe parce que rien ne garantit qu'un `after()` aille au bout — c'est
- * exactement comme ça qu'un ticket créé par le MCP est resté orphelin, sans
- * erreur, sans trace, sans nouvelle tentative. Le cas déterministe n'en dépend
- * plus ; l'appel au modèle, si.
+ * It exists because there is no guarantee that a `after()` will complete — this is
+ * exactly how a ticket created by the MCP remained orphaned, without
+ * error, without trace, without retrying. The deterministic case no longer depends on it
+ *; the call to the model, if.
  *
- * Deux bornes, qui disent ce que ce balayage est et n'est pas :
+ * Two bounds, which say what this scan is and is not:
  *
- * - **24 h**, sur la création OU la dernière modification. C'est un filet sous
- *   un déclenchement récent, pas une relecture de l'arriéré : activer le toggle
- *   ne doit pas assigner d'un coup trois ans de backlog.
- * - **Jamais assigné**, au sens de l'activité : un ticket qui porte un
- *   événement `assignee_id` est sorti du périmètre, quel qu'en soit l'auteur.
- *   Sans ça, vider l'assigné d'un ticket à la main le verrait revenir tout seul
- *   dans l'heure — un « filet » qui contredit un geste explicite n'en est pas un.
+ * - **24 h**, on creation OR last modification. This is a net under
+ * a recent trigger, not a reread of the backlog: activate the toggle
+ * must not assign three years of backlog at once.
+ * - **Never assigned**, in the sense of the activity: a ticket which carries a
+ * event `assignee_id` has left the perimeter, whoever the author.
+ * Without this, emptying the assignee of a ticket by hand would see him return on his own
+ * within the hour — a “net” which contradicts an explicit gesture is not one.
  */
 export async function sweepUnassignedIssues(
   limit = SWEEP_LIMIT
@@ -312,9 +308,9 @@ export async function sweepUnassignedIssues(
   for (const candidate of candidates) {
     if (everAssigned.has(candidate.id)) continue;
     try {
-      // `trigger: "sweep"` → l'appel au modèle est attendu, pas différé, et
-      // l'acteur est nul : personne n'a rien fait, la notification part donc
-      // même vers celui qui avait créé le ticket.
+      // `trigger: "sweep"` → the call to the model is expected, not deferred, and
+      // the actor is zero: no one did anything, the notification therefore goes away
+      // even to the person who created the ticket.
       const chosen = await runSmartAssign({
         issueId: candidate.id,
         projectId: candidate.project_id,
@@ -323,7 +319,7 @@ export async function sweepUnassignedIssues(
       });
       if (chosen) assigned++;
     } catch (err) {
-      // Un ticket qui explose ne doit pas emporter les suivants.
+      // An exploding ticket should not carry the following ones.
       console.error(
         "[smart-assign] sweep failed:",
         candidate.id,
@@ -335,18 +331,18 @@ export async function sweepUnassignedIssues(
 }
 
 /**
- * Les projets DONT JE SUIS OWNER où Smart Assign est actif alors qu'un membre
- * au moins n'a pas de règle (MIN-31). Lu par le tableau de bord, qui affiche
- * l'avertissement : seul le owner peut écrire ces règles, donc lui seul est
- * averti.
+ * Projects I AM OWNER OF where Smart Assign is active while at least one member
+ * has no rule (MIN-31). Read by the dashboard, which displays
+ * the warning: only the owner can write these rules, so only he is
+ * warned.
  *
- * L'équipe et la notion de « règle écrite » se lisent exactement comme dans
- * runSmartAssign : owner (sans ligne project_members) + membres, et une règle
- * vide de blancs ne compte pas. Un projet solo n'est jamais signalé — il
- * n'a rien à régler, l'affectation y est déterministe.
+ * The team and the notion of "written rule" read exactly as in
+ * runSmartAssign: owner (without project_members line) + members, and a rule
+ * empty of blanks does not count. A solo project is never reported — it
+ * has nothing to adjust, the assignment is deterministic.
  *
- * Ne rejette jamais : c'est un avertissement, il ne doit pas pouvoir faire
- * tomber la lecture du tableau de bord qui le transporte.
+ * Never rejects: it's a warning, it must not be able to make
+ * fall off the reading of the dashboard that carries it.
  */
 export async function loadSmartAssignConfigWarnings(
   userId: string

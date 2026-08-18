@@ -3,15 +3,15 @@ import { describe, expect, it } from "vitest";
 import { cleanTitle } from "./short-title";
 
 /**
- * Un titre de conversation se lit dans une colonne de 320 px, d'un coup d'œil.
- * La consigne système demande deux ou trois mots, mais un PETIT modèle rend
- * volontiers la phrase entière — `cleanTitle` est le garde-fou de ce cas-là.
+ * A conversation title is read in a 320 px column, at a glance.
+ * The system instruction requires two or three words, but a SMALL model happily renders
+ * the entire sentence — `cleanTitle` is the safeguard in this case.
  *
- * Ce qu'il produit alors n'est PAS le bon titre : il coupe, il ne réécrit pas.
- * « Migration de la base vers le nouveau schéma MCP » se titre « Migration MCP »,
- * et c'est le modèle qui doit le savoir (le prompt porte l'exemple) ; ici, on
- * épingle seulement qu'un titre raté reste court et lisible — jamais plus de six
- * mots, et jamais fini sur un mot qui annonce la suite.
+ * What it then produces is NOT the right title: it cuts, it does not rewrite.
+ * "Migration of the base towards the new MCP schema" is titled "MCP Migration",
+ * and it is the model which must know this (the prompt carries the example); here, on
+ * only points out that a failed title remains short and readable — never more than six
+ * words, and never ends on a word that announces the sequel.
  */
 describe("cleanTitle", () => {
   it("laisse intact un titre déjà court", () => {
@@ -35,7 +35,7 @@ describe("cleanTitle", () => {
   });
 
   it("ne finit pas sur un mot-outil quand il coupe", () => {
-    // Sans la coupe des mots-outils : « Migration de la base vers ».
+    // Without cutting the tool words: “Migration from the base to”.
     expect(cleanTitle("Migration de la base vers le nouveau schéma MCP")).toBe(
       "Migration de la base",
     );
@@ -45,7 +45,7 @@ describe("cleanTitle", () => {
   });
 
   it("garde un mot court qui porte le sujet", () => {
-    // « PDF » est aussi court qu'un mot-outil, mais c'est LE sujet.
+    // “PDF” is as short as a tool word, but it’s THE subject.
     expect(cleanTitle("Ajout du support de l'export PDF dans les rapports")).toBe(
       "Ajout du support de l'export PDF",
     );

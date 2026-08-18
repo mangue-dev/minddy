@@ -10,17 +10,16 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * L'avancement d'un objectif, sous sa forme compacte : l'anneau du cycle et, à
- * côté, le compte de tickets clos.
+ * The progress of an objective, in its compact form: the ring of the cycle and, on the side, the count of closed tickets.
  *
- * Les deux ne disent PAS la même chose, et c'est pour ça qu'ils cohabitent :
- * l'anneau est pondéré par l'effort (un XL fini devant un XS restant remplit les
- * neuf dixièmes du cercle), le compte est brut (« 1/2 »). Le premier dit où en
- * est le travail, le second combien de tickets restent à fermer.
+ * The two do NOT say the same thing, and that's why they coexist:
+ * the ring is weighted by the effort (a finished XL in front of a remaining XS fills the
+ * nine tenths of the circle), the count is gross (“1/2”). The first says where en
+ * is the work, the second how many tickets remain to be closed.
  *
- * Écrit une fois pour les deux surfaces qui le portent — la ligne de la colonne
- * et l'en-tête du détail : elles ont divergé une fois déjà, l'une montrant un
- * pourcentage que l'autre taisait.
+ * Written once for the two surfaces carrying it — the column row
+ * and the detail header: they have diverged once already, one showing a
+ * percentage that the other was silent.
  */
 export function ObjectiveProgressStat({
   progress,
@@ -30,16 +29,16 @@ export function ObjectiveProgressStat({
 }: {
   progress: { done: number; total: number; percent: number };
   /**
-   * Le compte AVANT l'anneau. C'est la forme de la colonne : l'anneau tombe
-   * alors sur son bord droit, à la même abscisse d'une ligne à l'autre, et c'est
-   * cet alignement-là qu'on parcourt des yeux.
-   */
+ * The count BEFORE the ring. This is the shape of the column: the ring falls
+ * then on its right edge, at the same abscissa from one line to the other, and it is
+ * this alignment that we run our eyes over.
+ */
   countFirst?: boolean;
   /**
-   * Le pourcentage au survol. Réservé aux surfaces où l'on s'ARRÊTE (l'en-tête
-   * d'un objectif ouvert) : dans une liste qu'on balaie, une infobulle par ligne
-   * survolée est du bruit, pas une information.
-   */
+ * The percentage on hover. Reserved for surfaces where we STOP (the header
+ * of an open objective): in a list that we scan, one tooltip per line
+ * hovered over is noise, not information.
+ */
   tooltip?: boolean;
   className?: string;
 }) {

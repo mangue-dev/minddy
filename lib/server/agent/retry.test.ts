@@ -66,7 +66,7 @@ describe("backoffMs", () => {
     expect(backoffMs(0, 0.5)).toBe(500); // 500 * 1.0
     expect(backoffMs(1, 0.5)).toBe(1000);
     expect(backoffMs(2, 0.5)).toBe(2000);
-    expect(backoffMs(10, 0.5)).toBe(8000); // plafonné
+    expect(backoffMs(10, 0.5)).toBe(8000); // capped
   });
   it("applique un jitter ±10%", () => {
     expect(backoffMs(0, 0)).toBe(450); // 500 * 0.9

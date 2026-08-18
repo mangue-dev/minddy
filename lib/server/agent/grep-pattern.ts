@@ -1,48 +1,47 @@
 /**
- * Repli littéral du tool `grep` de l'agent (MIN-109). Logique PURE (aucun shell),
- * séparée de sandbox.ts pour être testable.
+ * Literal fallback of agent tool `grep` (MIN-109). PURE logic (no shell),
+ * separated from sandbox.ts to be testable.
  *
- * CONSTAT : les seuls échecs de `grep` mesurés sur `agent_run_events` sont tous la
- * même chose — le modèle cherche une chaîne LITTÉRALE de code (`onUpdateIssue={`,
- * `useState(`, `items[0]`) et `git grep -E` la lit comme une regex étendue, donc
- * `fatal: -e option, 'onUpdateIssue={': Unmatched \{`. Le modèle ne SAIT pas qu'il
- * a écrit une regex invalide : il croit chercher du texte. Un paramètre n'y change
- * rien — il faut retenter en `-F` à sa place.
+ * FINDING: the only `grep` failures measured on `agent_run_events` are all the
+ * same thing — the model is looking for a LITERAL string of code (`onUpdateIssue={`,
+ * `useState(`, `items[0]`) and `git grep -E` reads it as an extended regex, so
+ * `fatal: -e option, 'onUpdateIssue={': Unmatched \{`. The model does not KNOW that it
+ * wrote an invalid regex: it thinks it is looking for text. A parameter changes
+ * nothing — you have to try `-F` again in its place.
  */
 
-/** Note préfixée à la sortie quand le motif a été relancé en littéral. */
+/** Note prefixed to the output when the pattern has been rerun as a literal. */
 export const LITERAL_RETRY_NOTE =
   "(pattern retried as a literal string — it was not a valid POSIX regex)";
 
 /**
- * Note quand le motif a été relancé en REGEX, `fixed_strings` ayant cherché la
- * barre verticale au pied de la lettre (MIN-238).
+ * Note when the pattern was restarted in REGEX, `fixed_strings` having searched for the
+ * vertical bar at the foot of the letter (MIN-238).
  */
 export const REGEX_RETRY_NOTE =
   "(pattern retried as a regex — 'fixed_strings' had matched the '|' literally, so the alternatives were never searched. These are the regex results.)";
 
 /**
- * Le motif est-il une ALTERNATION que `fixed_strings` a prise au mot ?
+ * Is the pattern an ALTERNATION that `fixed_strings` took at face value?
  *
- * Le jumeau exact de `isInvalidRegexError`, et il vient du même endroit : le
- * modèle ne SAIT pas dans quel mode il cherche. Là, il a suivi la description du
- * tool — qui listait `|` parmi les caractères justifiant `fixed_strings` — et a
- * demandé `claimRun|requeueStuckRuns` en littéral. `git grep -F` a cherché ces
- * vingt-quatre caractères d'affilée, n'a rien trouvé, et a répondu « (no
- * matches) » : un fait vérifié, sur du code qui existait aux deux endroits.
- * Quinze appels de cette forme dans le run qui a écrit le plan de MIN-225,
- * quinze faux négatifs, zéro vrai — et un plan bâti sur l'absence de symboles
- * bien présents.
+ * The exact twin of `isInvalidRegexError`, and it comes from the same place: the
+ * pattern doesn't KNOW what mode it's searching in. There, he followed the description of the
+ * tool — which listed `|` among the characters justifying `fixed_strings` — and asked for `claimRun|requeueStuckRuns` literally. `git grep -F` searched for these
+ * twenty-four characters in a row, found nothing, and responded "(no
+ * matches)": a verified fact, on code that existed in both places.
+ * Fifteen calls of this form in the run that wrote the plan for MIN-225,
+ * fifteen false negatives, zero true — and a plan built on the absence of symbols
+ * very present.
  *
- * STRICT, parce qu'une relance en regex sur un motif qu'on voulait vraiment
- * littéral rendrait autre chose que ce qui a été demandé. Trois conditions, qui
- * ensemble ne laissent passer que l'intention d'alterner :
+ * STRICT, because a regex rerun on a pattern that we really wanted
+ * literal would render something other than what was asked. Three conditions, which
+ * together only allow the intention to alternate:
  *
- * - une barre non échappée (`\|` est un pipe voulu) ;
- * - aucune alternative vide — ce qui écarte `a || b` et la ligne de tableau
- *   markdown `| --- |`, dont le split rend des bouts vides ;
- * - aucune barre bordée d'espace — ce qui écarte le tube shell `cmd | grep`,
- *   là où une liste de symboles s'écrit toujours collée.
+ * - an unescaped bar (`\|` is an intended pipe);
+ * - no empty alternative — which excludes `a || b` and the line of array
+ * markdown `| --- |`, the split of which makes empty ends;
+ * - no bar bordered by space — which excludes the shell pipe `cmd | grep`,
+ * where a list of symbols is always written pasted.
  */
 export function looksLikeIntendedAlternation(pattern: string): boolean {
   if (!pattern.includes("|")) return false;
@@ -52,37 +51,37 @@ export function looksLikeIntendedAlternation(pattern: string): boolean {
 }
 
 /**
- * Réponse quand `path`/`glob` n'ont sélectionné AUCUN fichier (MIN-226).
+ * Response when `path`/`glob` have selected NO files (MIN-226).
  *
- * Elle ne dit surtout pas « aucune correspondance » : la recherche n'a rien lu,
- * donc elle ne sait rien du code. Le mot compte plus que le mécanisme — c'est
- * cette phrase-là que le modèle relit dans son contexte au moment de conclure,
- * et « no matches » l'autorisait à conclure sur du code jamais ouvert.
+ * It definitely doesn't say "no match": the search didn't read anything,
+ * so it doesn't know anything about the code. The word counts more than the mechanism — it is
+ * this sentence that the model rereads in its context when concluding,
+ * and “no matches” authorized it to conclude on code never opened.
  */
 export const NO_FILES_IN_SCOPE_NOTE =
   "(no file matched the 'path'/'glob' filter — nothing was searched, so this says NOTHING about whether the pattern exists. Re-run without the filter, or check it: 'path' is a DIRECTORY, and to search a single file you pass it as 'path' and leave 'glob' empty.)";
 
 /**
- * Le stderr dit-il « ton MOTIF n'est pas une regex valide » ?
+ * Does stderr say “your PATTERN is not a valid regex”?
  *
- * Volontairement STRICT : on ne retente qu'un motif refusé, jamais une option
- * invalide, un pathspec cassé ou un fichier absent — ceux-là sortent aussi en
- * code ≥ 2, et les relancer en `-F` échouerait pareil après avoir menti au modèle.
+ * Deliberately STRICT: we only retry a rejected pattern, never an invalid option
+ *, a broken pathspec or an absent file — those also come out en
+ * code ≥ 2, and restarting them in `-F` would fail the same after lying to the model.
  *
- * Le signal FIABLE côté `git grep` est structurel, pas lexical : git préfixe
- * `fatal: -e option, '<motif>':` À CHAQUE refus de motif, quel que soit le moteur
- * de regex derrière (les messages, eux, changent d'une plateforme à l'autre —
- * « Unmatched \{ » sous glibc, « braces not balanced » sous BSD). Les autres
- * erreurs de git n'ont jamais ce préfixe. La liste de phrases qui suit ne sert
- * donc qu'au grep SYSTÈME (recherche dans les sorties de tools déposées, MIN-107),
- * qui n'annonce rien de tel.
+ * The RELIABLE signal on the `git grep` side is structural, not lexical: git prefix
+ * `fatal: -e option, '<motif>':` AT EACH reason refusal, whatever the regex engine
+ * behind it (the messages change from one platform to another —
+ * “Unmatched \{” under glibc, “braces not balanced” under BSD). Other
+ * git errors never have this prefix. The following list of sentences only serves
+ * therefore only for grep SYSTEM (search in the outputs of tools deposited, MIN-107),
+ * which announces nothing of the sort.
  */
 export function isInvalidRegexError(stderr: string): boolean {
   if (/^fatal: -e option, /m.test(stderr)) return true;
   return REGCOMP_ERRORS.some((re) => re.test(stderr));
 }
 
-/** Messages de regcomp relayés par le grep système (GNU, puis BSD). */
+/** Regcomp messages relayed by the system grep (GNU, then BSD). */
 const REGCOMP_ERRORS = [
   // GNU : « Unmatched ( or \( », « Unmatched \{ », « Unmatched [, [^, [:, [., or [= »
   /\bUnmatched\b/i,

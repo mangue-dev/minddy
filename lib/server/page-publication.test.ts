@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-283 — ce qu'une page publiée laisse voir, et surtout ce qu'elle ne laisse
- * pas voir.
+ * MIN-283 — what a published page lets you see, and especially what it doesn't let
+ * see.
  *
- * Chaque cas ci-dessous est une fuite qu'on refuse, pas une préférence :
+ * Each case below is a leak that we refuse, not a preference:
  *
- *  - un token inconnu, ou une page dépubliée, ne répond RIEN (404) ;
- *  - sans `include_children`, le titre d'une sous-page ne sort pas du serveur —
- *    « Spécification tarifs 2027 » barré dans un bloc est déjà une fuite ;
- *  - une page hors de la branche publiée n'est pas atteignable par son id ;
- *  - un fichier dont la page n'est pas publiée perd son adresse : le bucket
- *    reste privé, et l'URL d'application dirait le projet et l'identifiant.
+ * - an unknown token, or an unpublished page, responds NOTHING (404);
+ * - without `include_children`, the title of a subpage does not come out of the server —
+ * “2027 price specification” crossed out in a block is already a leak;
+ * - a page outside the published branch cannot be reached by its id ;
+ * - a file whose page is not published loses its address: the bucket
+ * remains private, and the application URL would say the project and the identifier.
  */
 
 interface Row {
@@ -32,10 +32,10 @@ vi.mock("@/lib/server/attachments", () => ({
     signed(args[0], args[1] as string),
 }));
 
-/** Un faux client de service : juste assez de PostgREST pour ces lectures.
-    L'objet de requête est THENABLE — `await service.from(…).select(…)` rend la
-    liste, `maybeSingle()` rend la ligne. C'est exactement la forme que le code
-    appelle. */
+/** A fake service client: just enough PostgREST for these reads.
+ Request object is THENABLE — `await service.from(…).select(…)` returns the
+ list, `maybeSingle()` returns the row. This is exactly the form that the code
+ calls for. */
 function table(name: string) {
   const filters: Record<string, unknown> = {};
   let ins: unknown[] | undefined;
@@ -85,8 +85,8 @@ vi.mock("@/lib/supabase-service", () => ({
 
 const { getPublicPageBundle } = await import("@/lib/server/page-publication");
 
-// Des UUID pour le projet et les fichiers : l'adresse d'un fichier de page est
-// reconnue à sa FORME (lib/page-files.ts), et un id bricolé n'en serait pas une.
+// UUIDs for the project and files: the address of a page file is
+// recognized by its FORM (lib/page-files.ts), and a tinkered id would not be one.
 const PROJECT = "07b14964-0def-4941-8ddf-686572d6345d";
 const FILE_OK = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const FILE_HORS = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -159,7 +159,7 @@ describe("getPublicPageBundle", () => {
     expect(bundle).not.toBeNull();
     expect(bundle!.page.id).toBe("kid");
     expect(bundle!.pages.map((p) => p.id).sort()).toEqual(["kid", "root"]);
-    // Le fil d'Ariane s'arrête à la page publiée, jamais au-dessus.
+    // The breadcrumbs stop at the published page, never above.
     expect(bundle!.trail.map((p) => p.id)).toEqual(["root"]);
   });
 
@@ -189,8 +189,8 @@ describe("getPublicPageBundle", () => {
     const bundle = await getPublicPageBundle("tok");
     const json = JSON.stringify(bundle!.content);
     expect(json).toContain(`https://signed/projects/${PROJECT}/pages/root/a.png`);
-    // La page de ce fichier-là n'est pas publiée : plus d'adresse du tout, et
-    // surtout pas l'URL d'application, qui nomme le projet et le fichier.
+    // The page of this file is not published: no more address at all, and
+    // especially not the application URL, which names the project and the file.
     expect(json).not.toContain(FILE_HORS);
     expect(json).not.toContain("/api/projects/");
   });

@@ -1,30 +1,30 @@
 /**
- * Ce qu'un compte git a le droit de faire sur un dépôt (MIN-144) — logique PURE,
- * lisible depuis la charge utile de chaque forge, testable sans réseau.
+ * What a git account has the right to do on a repository (MIN-144) — PURE logic,
+ * readable from the payload of each forge, testable without a network.
  *
- * Trois niveaux, et pas plus :
- *  • `write` — merger, fermer, proposer une PR brouillon, résoudre un fil ;
- *  • `read`  — reviewer, commenter la conversation, commenter une ligne, y
- *    répondre. Ce n'est PAS « connecté » : commenter une ligne relit la PR à
- *    chaud (côté GitHub, pour son `commitId`), donc il faut vraiment savoir lire
- *    le dépôt ;
- *  • `none`  — 404 chez la forge : le compte ne voit pas ce dépôt.
+ * Three levels, and no more:
+ * • `write` — merge, close, propose a draft PR, resolve a thread ;
+ * • `read` — review, comment on the conversation, comment on a line, y
+ * reply. This is NOT "connected": commenting on a line reads the hot PR to
+ * (on the GitHub side, for its `commitId`), so you really need to know how to read
+ * the repository ;
+ * • `none` — 404 at the forge: the account does not see this repository.
  *
- * On ne modélise pas la protection de branche : elle coûterait une permission
- * GitHub hors périmètre, la forge refuse le merge toute seule, et
- * `mergeableState === "blocked"` le dit déjà dans l'UI.
+ * We do not model branch protection: it would cost permission
+ * GitHub outside the scope, the forge refuses the merge on its own, and
+ * `mergeableState === "blocked"` already says it in the UI.
  */
 
 export type RepoCapability = "write" | "read" | "none";
 
 /**
- * GitHub — `GET /repos/{owner}/{repo}` avec le token UTILISATEUR. L'objet
- * `permissions` n'existe que sur une réponse authentifiée ; un dépôt public lu
- * sans droit dessus renvoie `push: false, pull: true` → `read`, ce qui est
- * exact : on peut commenter un dépôt public sans y être contributeur.
+ * GitHub — `GET /repos/{owner}/{repo}` with the USER token. The
+ * `permissions` object only exists on an authenticated response; a public repository read
+ * without permission returns `push: false, pull: true` → `read`, which is
+ * correct: you can comment on a public repository without being a contributor.
  *
- * `permissions` absent = réponse inattendue (ou dépôt lu sans auth) : on retombe
- * sur `read`, jamais sur `write` — le doute ne donne pas le droit de merger.
+ * `permissions` absent = unexpected response (or repository read without auth): we fall back to
+ * on `read`, never on `write` — doubt does not give the right to merge.
  */
 export function githubCapabilityFromRepo(json: unknown): RepoCapability {
   const permissions = (json as { permissions?: unknown } | null)?.permissions as
@@ -36,12 +36,12 @@ export function githubCapabilityFromRepo(json: unknown): RepoCapability {
 }
 
 /**
- * GitLab — `GET /projects/:id`. Le droit effectif est le MAX de l'accès direct
- * au projet et de l'accès hérité du groupe : un Maintainer de groupe n'a souvent
- * aucun `project_access`, et ne lire que celui-là le déclasserait à `read`.
+ * GitLab — `GET /projects/:id`. The effective right is the MAX of direct
+ * access to the project and inherited access from the group: a group Maintainer often has
+ * no `project_access`, and reading only that one would downgrade it to `read`.
  *
- * Seuils GitLab : 30 = Developer (peut pousser, commenter, résoudre un fil),
- * 20 = Reporter (lecture + commentaires). En dessous, rien.
+ * GitLab thresholds: 30 = Developer (can push, comment, resolve a thread),
+ * 20 = Reporter (read + comments). Below, nothing.
  */
 const GITLAB_DEVELOPER = 30;
 const GITLAB_REPORTER = 20;
@@ -61,7 +61,7 @@ export function gitlabCapabilityFromProject(json: unknown): RepoCapability {
   );
   if (level >= GITLAB_DEVELOPER) return "write";
   if (level >= GITLAB_REPORTER) return "read";
-  // `permissions` absent ou vide : le projet a répondu, donc il est LISIBLE
-  // (public, ou visible sans appartenance). On peut y commenter, pas y écrire.
+  // `permissions` absent or empty: the project responded, so it is READABLE
+  // (public, or visible without membership). You can comment there, not write there.
   return "read";
 }

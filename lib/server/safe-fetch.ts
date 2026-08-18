@@ -5,32 +5,31 @@ import { isIP } from "node:net";
 import { pinnedRequest } from "@/lib/server/pinned-request";
 
 /**
- * La seule sortie HTTP autorisée vers une URL choisie par un utilisateur
- * (MIN-336, partagée par MIN-341).
+ * The only HTTP output allowed to a URL chosen by a user
+ * (MIN-336, shared by MIN-341).
  *
- * Trois choses qu'un `fetch` nu ne fait pas :
+ * Three things a bare `fetch` doesn't do:
  *
- *  1. **Il refuse ce qui n'est pas publiquement routable** — protocole autre
- *     que http(s), `localhost`, IP privée, lien-local, CGNAT, plages réservées,
- *     et leurs déguisements IPv6 (IPv4 mappée en hexadécimal, 6to4, NAT64).
- *  2. **Il se connecte à l'adresse qu'il a validée**, pas au nom : la
- *     résolution est faite une fois et épinglée sur la socket
- *     ([pinned-request.ts](./pinned-request.ts)). Sans ça, un domaine à double
- *     réponse DNS passe le contrôle puis atteint le réseau interne.
- *  3. **Il borne ce qu'il avale** : chaque redirection est revalidée, le corps
- *     est coupé au plafond d'octets PENDANT la lecture, et un délai global
- *     tient sur toute la chaîne.
+ * 1. **It refuses what is not publicly routable** — protocol other than http(s), `localhost`, private IP, link-local, CGNAT, reserved ranges,
+ * and their IPv6 disguises (hex-mapped IPv4, 6to4, NAT64).
+ * 2. **It connects to the address it validated**, not to the name: the
+ * resolution is done once and pinned to the socket
+ * ([pinned-request.ts](./pinned-request.ts)). Without this, a double domain
+ * DNS response passes the check and then reaches the internal network.
+ * 3. **It limits what it swallows**: each redirect is revalidated, the body
+ * is cut off at the byte cap DURING reading, and a global delay
+ * holds over the entire string.
  *
- * Ce que ça n'est pas : un client HTTP général. Pas de POST, pas de corps de
- * requête, pas de cookies, pas de compression — on lit des pages et des images.
+ * What it is not: a general HTTP client. No POST, no body of
+ * request, no cookies, no compression — we read pages and images.
  */
 
 export type SafeFetchReason =
-  /** L'URL elle-même est irrécupérable : protocole, hôte privé, DNS mort. */
+  /** The URL itself is unrecoverable: protocol, private host, dead DNS. */
   | "url"
-  /** L'hôte est légitime mais la requête n'a rien donné d'exploitable. */
+  /** The host is legitimate but the request did not produce anything usable. */
   | "unreachable"
-  /** Le corps dépasse le plafond d'octets. */
+  /** The body exceeds the byte limit. */
   | "tooLarge";
 
 export class SafeFetchError extends Error {
@@ -43,18 +42,17 @@ export class SafeFetchError extends Error {
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_MAX_REDIRECTS = 3;
 
-/** Découpe une IPv4 pointée en ses quatre octets, null si ce n'en est pas une. */
+/** Cuts a pointed IPv4 into its four bytes, null if it is not one. */
 function ipv4Octets(address: string): number[] | null {
   if (isIP(address) !== 4) return null;
   return address.split(".").map(Number);
 }
 
-/** Développe une IPv6 en ses huit groupes de 16 bits, null si ce n'en est pas
-    une. Gère le `::` et la queue en notation pointée (`::ffff:127.0.0.1`). */
+/** Expands an IPv6 into its eight 16-bit groups, null if not one. Handles `::` and tail in dotted notation (`::ffff:127.0.0.1`). */
 function ipv6Groups(address: string): number[] | null {
   if (isIP(address) !== 6) return null;
   let text = address;
-  // Une IPv4 en queue vaut deux groupes.
+  // One IPv4 in queue is worth two groups.
   const tail = /(\d{1,3}(?:\.\d{1,3}){3})$/.exec(text);
   if (tail) {
     const octets = tail[1].split(".").map(Number);
@@ -79,13 +77,13 @@ function ipv6Groups(address: string): number[] | null {
 }
 
 /**
- * Les écritures anciennes d'une IPv4 : `2130706433`, `0177.0.0.1`, `0x7f.1`.
- * `inet_aton` les accepte toutes — donc le résolveur du système aussi, et
- * `curl`, et le navigateur — mais `isIP` n'en reconnaît aucune, si bien que le
- * filtre les prendrait pour des noms d'hôte. On les ramène donc à la forme
- * pointée AVANT de décider quoi que ce soit. Une à quatre parties, chacune en
- * décimal, en octal (préfixe `0`) ou en hexadécimal (préfixe `0x`) ; la
- * dernière absorbe les octets restants.
+ * The old IPv4 writes: `2130706433`, `0177.0.0.1`, `0x7f.1`.
+ * `inet_aton` accepts them all — so the system resolver too, and
+ * `curl`, and the browser — but `isIP` doesn't recognize any of them, so the
+ * filter would mistake them for hostnames. We therefore bring them back to the pointed form
+ * BEFORE deciding anything. One to four parts, each in
+ * decimal, octal (prefix `0`), or hexadecimal (prefix `0x`); the last
+ * absorbs the remaining bytes.
  */
 export function legacyIpv4(host: string): string | null {
   if (isIP(host)) return null;
@@ -101,7 +99,7 @@ export function legacyIpv4(host: string): string | null {
     if (!Number.isSafeInteger(value) || value < 0) return null;
     values.push(value);
   }
-  // Toutes les parties sauf la dernière valent un octet ; la dernière porte le
+  // All parts except the last are worth one byte; the last one carries the
   // reste (`127.1` = `127.0.0.1`).
   const last = values.pop()!;
   if (values.some((v) => v > 0xff)) return null;
@@ -112,20 +110,20 @@ export function legacyIpv4(host: string): string | null {
   return octets.join(".");
 }
 
-/** Une IPv4 embarquée dans deux groupes IPv6. */
+/** An IPv4 embedded in two IPv6 groups. */
 function embeddedIpv4(high: number, low: number): string {
   return [high >> 8, high & 0xff, low >> 8, low & 0xff].join(".");
 }
 
 /**
- * Tout ce qui n'est pas routable sur l'internet public est refusé : privé,
- * loopback, lien-local, CGNAT, multicast, plages de documentation et de test,
- * et — côté IPv6 — les formes qui rhabillent une IPv4 (mappée, 6to4, NAT64).
- * Une adresse écrite `::ffff:c0a8:1` est `192.168.0.1`, et le filtre qui ne lit
- * que la forme pointée la laisse passer.
+ * Anything that is not routable on the public Internet is refused: private,
+ * loopback, link-local, CGNAT, multicast, documentation and test ranges,
+ * and — on the IPv6 side — the forms that dress up an IPv4 (mapped, 6to4, NAT64).
+ * An address written `::ffff:c0a8:1` is `192.168.0.1`, and the filter that only reads
+ * as the dotted form lets it pass.
  */
 export function isPrivateAddress(address: string): boolean {
-  // Une adresse de lien porte parfois sa zone (`fe80::1%eth0`).
+  // A link address sometimes carries its zone (`fe80::1%eth0`).
   const bare = address.split("%")[0];
 
   const octets = ipv4Octets(legacyIpv4(bare) ?? bare);
@@ -145,7 +143,7 @@ export function isPrivateAddress(address: string): boolean {
     if (a === 198 && (b === 18 || b === 19)) return true; // benchmark
     if (a === 198 && b === 51 && c === 100) return true; // TEST-NET-2
     if (a === 203 && b === 0 && c === 113) return true; // TEST-NET-3
-    if (a >= 224) return true; // multicast, réservé, broadcast
+    if (a >= 224) return true; // multicast, reserved, broadcast
     return false;
   }
 
@@ -159,14 +157,14 @@ export function isPrivateAddress(address: string): boolean {
   if ((g0 & 0xfe00) === 0xfc00) return true; // ULA fc00::/7
   if (g0 === 0x2001 && g1 === 0x0db8) return true; // documentation
   if (g0 === 0x0100 && g1 === 0 && g2 === 0 && g3 === 0) return true; // discard
-  // Teredo (2001::/32) transporte DEUX IPv4 dans l'adresse, dont celle du
-  // client, obfusquée : plutôt que de les démêler, on refuse la plage — comme
-  // le reste de 2001::/23, qui n'est que de l'assignation protocolaire
-  // (ORCHIDv2, benchmark…), et 3fff::/20, la documentation moderne.
+  // Teredo (2001::/32) carries TWO IPv4 in the address, including that of
+  // client, obfuscated: rather than untangling them, we refuse the beach — like
+  // the rest of 2001::/23, which is only the protocol assignment
+  // (ORCHIDv2, benchmark…), and 3fff::/20, modern documentation.
   if (g0 === 0x2001 && (g1 & 0xfe00) === 0x0000) return true;
   if ((g0 & 0xfff0) === 0x3ff0) return true;
-  // IPv4 mappée (::ffff:a.b.c.d) et IPv4 compatible (::a.b.c.d), sous leur
-  // forme pointée comme sous leur forme hexadécimale.
+  // mapped IPv4 (::ffff:a.b.c.d) and compatible IPv4 (::a.b.c.d), under their
+  // dotted form as in their hexadecimal form.
   if (g0 === 0 && g1 === 0 && g2 === 0 && g3 === 0 && g4 === 0) {
     if (g5 === 0xffff || g5 === 0) return isPrivateAddress(embeddedIpv4(g6, g7));
   }
@@ -175,8 +173,7 @@ export function isPrivateAddress(address: string): boolean {
   return false;
 }
 
-/** Une URL http(s) dont l'hôte est publiquement routable, et l'adresse à
-    laquelle s'y connecter. Lève `SafeFetchError("url")`. */
+/** An http(s) URL whose host is publicly routable, and the address to connect to. Raise `SafeFetchError("url")`. */
 export interface ValidatedTarget {
   url: URL;
   address: string;
@@ -193,8 +190,8 @@ export async function assertPublicHttpUrl(raw: string | URL): Promise<ValidatedT
     throw new SafeFetchError("url");
   }
   const host = url.hostname.replace(/^\[|\]$/g, "");
-  // `0177.0.0.1` n'est pas un nom d'hôte : c'est `127.0.0.1` écrit autrement, et
-  // le résolveur le sait. On décide donc sur l'adresse, et on s'y épingle.
+  // `0177.0.0.1` is not a hostname: it is `127.0.0.1` written differently, and
+  // the resolver knows this. So we decide on the address, and we stick to it.
   const literal = isIP(host) ? host : legacyIpv4(host);
   if (literal) {
     if (isPrivateAddress(literal)) throw new SafeFetchError("url");
@@ -209,8 +206,8 @@ export async function assertPublicHttpUrl(raw: string | URL): Promise<ValidatedT
   } catch {
     throw new SafeFetchError("url");
   }
-  // Une seule adresse privée dans la réponse suffit à refuser l'hôte : servir
-  // les deux est précisément la manœuvre du rebinding.
+  // A single private address in the response is enough to refuse the host: serve
+  // both is precisely the rebinding maneuver.
   if (addresses.length === 0 || addresses.some((a) => isPrivateAddress(a.address))) {
     throw new SafeFetchError("url");
   }
@@ -218,28 +215,27 @@ export async function assertPublicHttpUrl(raw: string | URL): Promise<ValidatedT
 }
 
 export interface SafeFetchOptions {
-  /** Plafond d'octets du corps, appliqué PENDANT la lecture. */
+  /** Body byte cap, applied DURING reading. */
   maxBytes: number;
   /**
-   * Ce qu'on fait quand le corps dépasse le plafond. `"error"` par défaut : un
-   * fichier tronqué n'est pas un fichier (une image à moitié lue est une image
-   * cassée). `"truncate"` pour ce qui se lit par le début — un `<head>` de page
-   * est dans les premiers kilo-octets, et jeter le mégaoctet déjà reçu revient
-   * à perdre le titre d'un site simplement parce qu'il est gros.
-   */
+ * What we do when the body exceeds the ceiling. Default `"error"`: a truncated
+ * file is not a file (a half-read image is a broken
+ * image). `"truncate"` for what reads from the beginning — a page `<head>`
+ * is in the first kilobytes, and throwing away the megabyte already received is like
+ * losing the title of a site simply because it is big.
+ */
   onOverflow?: "error" | "truncate";
   timeoutMs?: number;
   maxRedirects?: number;
-  /** En-têtes de requête, `user-agent` compris. */
+  /** Request headers, including `user-agent`. */
   headers?: Record<string, string>;
-  /** `GET` par défaut. */
+  /** `GET` by default. */
   method?: "GET" | "POST";
   /**
-   * Corps de requête (POST). Il n'est PAS rejoué sur une redirection : un
-   * appelant qui poste choisit `maxRedirects: 0` — suivre un 302 avec la même
-   * charge signée vers un hôte que l'appelant n'a pas choisi n'est pas ce
-   * qu'on veut d'un webhook.
-   */
+ * Request body (POST). It is NOT replayed on a redirect: a
+ * caller who station chooses `maxRedirects: 0` — follow a 302 with the same
+ * signed load to a host that the caller has not chosen is not what we want from a webhook.
+ */
   body?: string;
 }
 
@@ -247,10 +243,10 @@ export interface SafeResponse {
   status: number;
   ok: boolean;
   headers: Headers;
-  /** L'URL finale, redirections suivies — la base des href relatifs. */
+  /** The final URL, redirects followed — the basis of relative hrefs. */
   url: URL;
   bytes: Buffer;
-  /** Le corps a dépassé le plafond et s'arrête à `maxBytes`. */
+  /** The body has passed the ceiling and stops at `maxBytes`. */
   truncated: boolean;
 }
 
@@ -268,8 +264,8 @@ export async function safeFetch(
       response = await pinnedRequest(target.url, {
         address: target.address,
         headers: {
-          // Pas de compression : on lit un plafond d'octets, et un corps
-          // compressé mentirait sur ce qu'il coûte à décompresser.
+          // No compression: we read a ceiling of bytes, and a body
+          // compressed would lie about how much it costs to decompress.
           "accept-encoding": "identity",
           ...(options.body === undefined
             ? {}
@@ -294,7 +290,7 @@ export async function safeFetch(
       } catch {
         throw new SafeFetchError("url");
       }
-      // Chaque saut est un nouvel hôte à valider et à épingler.
+      // Each jump is a new host to validate and pin.
       target = await assertPublicHttpUrl(next);
       continue;
     }
@@ -312,10 +308,10 @@ export async function safeFetch(
   throw new SafeFetchError("unreachable");
 }
 
-/** Lit un corps en flux avec plafond de taille. Le compte se fait sur les
-    octets REÇUS — un `content-length` menteur ne fait pas lever le plafond —
-    et la lecture est coupée net dès qu'il est atteint : rien au-delà n'est
-    téléchargé, encore moins gardé en mémoire. */
+/** Beds a body in flow with height ceiling. The count is made on the
+ bytes RECEIVED — a lying `content-length` does not raise the ceiling —
+ and reading is cut off as soon as it is reached: nothing beyond that is
+ downloaded, much less kept in memory. */
 async function readCapped(
   response: { headers: Headers; stream: NodeJS.ReadableStream; destroy(): void },
   cap: number,

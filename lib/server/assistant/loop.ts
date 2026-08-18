@@ -36,7 +36,7 @@ export interface GenerationInfo {
   promptTokens: number | null;
   completionTokens: number | null;
   totalTokens: number | null;
-  /** Coût USD rapporté par OpenRouter (null si non fourni). */
+  /** USD cost reported by OpenRouter (null if not provided). */
   cost: number | null;
 }
 
@@ -90,8 +90,8 @@ export async function modelSupportsCaching(
   apiKey: string
 ): Promise<boolean> {
   await loadModelIndex(apiKey);
-  // L'id NU : le catalogue OpenRouter ne connaît pas les raccourcis de routage
-  // (`…:nitro`, MIN-263), et un lookup raté couperait le cache sans rien dire.
+  // The NU id: the OpenRouter catalog does not know the routing shortcuts
+  // (`…:nitro`, MIN-263), and a failed lookup would cut off the cache without saying anything.
   return modelIndexCache.get(stripModelSuffix(model))?.caching ?? false;
 }
 
@@ -105,8 +105,8 @@ export async function getModelInputModalities(
   apiKey: string
 ): Promise<Set<string>> {
   await loadModelIndex(apiKey);
-  // Idem : sans l'id nu, un modèle suffixé passerait pour texte seul et les
-  // pièces jointes seraient dégradées en notes.
+  // Same: without the bare id, a suffixed model would pass as text alone and the
+  // attachments would be degraded to notes.
   return new Set(modelIndexCache.get(stripModelSuffix(model))?.modalities ?? ["text"]);
 }
 
@@ -125,8 +125,8 @@ function getToolResultCharLimit(toolName: string): number {
     case "search_issues":
     case "get_issue":
       return 12000;
-    // Une recherche web est payée : la tronquer à 4 000 caractères jetterait la
-    // moitié des extraits qu'on vient d'acheter.
+    // A web search is paid for: truncating it to 4,000 characters would throw away
+    // half of the extracts we just bought.
     case "web_search":
       return 10000;
     default:
@@ -137,7 +137,7 @@ function getToolResultCharLimit(toolName: string): number {
 export interface ProcessChatContext extends ToolContext {
   model: string;
   conversationId: string;
-  /** Résolu par la route. Optionnel pour les appels internes/tests historiques. */
+  /** Solved by the way. Optional for internal calls/historical tests. */
   aiRuntime?: ResolvedAiRuntime;
 }
 
@@ -175,13 +175,13 @@ export async function processChat(
   const allToolCalls: AssistantToolCall[] = [];
   let continueLoop = true;
   let roundCount = 0;
-  // Le modèle envoyé, suffixe de routage compris (MIN-263) — il peut perdre son
-  // suffixe en cours de boucle si OpenRouter le refuse.
+  // The template sent, including routing suffix (MIN-263) — it may lose its
+  // suffix being looped if OpenRouter refuses it.
   let requestModel = context.model;
   const MAX_TOOL_ROUNDS = 6;
-  // Les identifiants vivants vus pendant le tour (MIN-343). Le registre est
-  // CUMULATIF à dessein : une clé rendue au round 1 doit rester substituée dans
-  // ce qu'un `list_integrations` du round 3 réécrirait.
+  // Living IDs seen during the tour (MIN-343). The register is
+  // CUMULATIVE on purpose: a key returned in round 1 must remain substituted in
+  // what a round 3 `list_integrations` would rewrite.
   const redactor = new SecretRedactor();
 
   while (continueLoop) {
@@ -202,8 +202,8 @@ export async function processChat(
       "[assistant]",
     );
     const response = call.response;
-    // Le repli du raccourci de routage colle au modèle qui a marché : sans ça,
-    // chaque round de la boucle repaierait une requête refusée.
+    // The fallback of the routing shortcut sticks to the model that worked: without that,
+    // each round of the loop would repay a refused request.
     requestModel = call.model;
 
     if (!response.ok) {
@@ -360,8 +360,8 @@ export async function processChat(
       const hasAskUser = [...toolCallAccumulators.values()].some(
         (acc) => acc.name === "ask_user"
       );
-      // Un outil peut lui aussi rendre la main (propose_backlog, MIN-173) : ce
-      // qu'il met sous les yeux de l'utilisateur attend son geste.
+      // A tool can also help (propose_backlog, MIN-173): this
+      // which it puts before the user's eyes awaits his gesture.
       let pausedByTool = false;
 
       // Execute each tool and save results to DB
@@ -412,9 +412,9 @@ export async function processChat(
 
         const { result, success, modelResult, pause, secrets }: ToolExecution =
           await executeTool(acc.name, args, context);
-        // Le résultat COMPLET part au navigateur, secret compris : c'est le
-        // seul endroit où une clé fraîche doit apparaître, en direct, une fois
-        // (MIN-343). Rien de ce qui suit ne le reverra.
+        // The COMPLETE result goes to the browser, secret included: this is the
+        // only place where a fresh key should appear, live, once
+        // (MIN-343). Nothing that follows will see him again.
         emitter.emit("tool_result", {
           id: acc.id,
           name: acc.name,
@@ -423,17 +423,17 @@ export async function processChat(
         });
         if (pause) pausedByTool = true;
 
-        // La substitution, appliquée AVANT la base et AVANT le modèle. Elle est
-        // celle de l'agent (`redactDeep`), pas une seconde écrite à côté : un
-        // identifiant vivant peut être imbriqué n'importe où dans le résultat.
+        // The substitution, applied BEFORE the base and BEFORE the model. She is
+        // that of the agent (`redactDeep`), not a second written next to it: a
+        // living identifier can be nested anywhere in the result.
         for (const secret of secrets ?? []) redactor.add(secret);
 
-        // Ce que le MODÈLE relit n'est pas toujours ce que l'écran montre : une
+        // What the MODEL reads back is not always what the screen shows: a
         // proposition d'amorce (MIN-173) fait quarante titres qu'il vient
-        // d'écrire, et que l'historique lui re-servirait à chaque tour. Le
-        // résultat complet part alors sur la métadonnée, d'où le fil le relit
-        // (`buildToolCallResultsFromMessages`), et `content` ne porte que ce que
-        // le modèle a besoin de savoir.
+        // to write, and that history would serve him again at every turn. THE
+        // complete result then goes to the metadata, from where the thread reads it again
+        // (`buildToolCallResultsFromMessages`), and `content` only carries what
+        // the model needs to know.
         const forModel = redactDeep(modelResult ?? result, redactor.redact);
         await context.service.from("assistant_messages").insert({
           conversation_id: context.conversationId,

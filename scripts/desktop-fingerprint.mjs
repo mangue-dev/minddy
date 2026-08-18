@@ -5,75 +5,73 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * L'EMPREINTE DE LA COQUILLE (MIN-292) — « faut-il republier l'app native ? »
+ * THE IMPRINT OF THE SHELL (MIN-292) — “should we republish the native app? »
  *
- * L'app de bureau est une fenêtre sur `www.minddy.app` : déployer le site suffit
- * à changer ce qu'elle affiche, et **la plupart des déploiements ne la
- * concernent pas du tout**. Republier un binaire, c'est vingt minutes de
- * notarisation et 120 Mo que chaque utilisateur téléchargera. Il faut donc
- * savoir répondre à la question sans se fier au flair.
+ * The desktop app is a window into `www.minddy.app`: deploying the site just
+ * changes what it displays, and **most deployments don't concern it at all**. Republishing a binary means twenty minutes of notarization and 120 MB that each user will download. So you have to
+ * know how to answer the question without relying on instinct.
  *
- * **Ce qui compte n'est pas « ai-je touché à `desktop/` ».** esbuild bundle aussi
- * ce que ces fichiers importent, et la liste surprend — `lib/public-routes.ts` en
- * fait partie, parce que la garde de navigation en dérive. On demande donc à
- * esbuild lui-même quels fichiers entrent dans le bundle, plutôt que de tenir une
- * liste à la main qui se désynchroniserait au premier import ajouté.
+ * **What matters is not “have I touched `desktop/`”.** esbuild bundle also
+ * what these files import, and the list surprises — `lib/public-routes.ts` en
+ * is part, because the navigation guard derives from it. We therefore ask
+ * esbuild itself which files go into the bundle, rather than maintaining a
+ * list by hand which would get out of sync at the first added import.
  *
- * **Et ce qui compte encore moins, c'est la VERSION.** Le numéro est réécrit à
- * chaque build depuis celui du dépôt : le prendre en compte ferait republier
- * l'app à chaque déploiement du site, c'est-à-dire exactement ce qu'on cherche à
- * éviter. Même raison pour deux autres contenus qui entrent dans le bundle sans
- * rien changer à son comportement — voir `NORMALIZE`.
+ * **And what matters even less is the VERSION.** The number is rewritten to
+ * each build from that of the repository: taking this into account would cause
+ * to republish the app each time the site is deployed, that is to say exactly what we are trying to
+ * to avoid. Same reason for two other contents that enter the bundle without
+ * change anything about its behavior — see `NORMALIZE`.
  *
- *     node scripts/desktop-fingerprint.mjs            # l'empreinte
- *     node scripts/desktop-fingerprint.mjs --explain  # ce qui a changé depuis la publication
+ * node scripts/desktop-fingerprint.mjs # the fingerprint
+ * node scripts/desktop-fingerprint.mjs --explain # what has changed since publication
  */
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(dir, "..");
 
 /**
- * Ce qui entre dans le binaire SANS passer par esbuild : l'empaquetage lui-même.
- * Changer l'icône, les entitlements ou une cible de build produit une app
- * différente, sans qu'une seule ligne de TypeScript ait bougé.
+ * What goes into the binary WITHOUT going through esbuild: the packaging itself.
+ * Changing the icon, entitlements, or a build target produces a different app
+ *, without a single line of TypeScript having moved.
  */
 const PACKAGING_INPUTS = [
   "desktop/electron-builder.yml",
   "desktop/build/entitlements.mac.plist",
-  // Les traductions de l'`Info.plist`, posées par `extraResources` (MIN-359).
-  // Elles n'entrent pas par esbuild et ne sont nommées dans aucun fichier
-  // TypeScript : sans cette ligne, corriger la phrase française d'une demande
-  // d'autorisation produisait une app DIFFÉRENTE que l'empreinte déclarait « à
-  // jour ». C'est exactement le mensonge que ce script existe pour empêcher.
+  // The translations of `Info.plist`, posed by `extraResources` (MIN-359).
+  // They are not entered by esbuild and are not named in any file
+  // TypeScript: without this line, correct the French sentence of a request
+  // authorization produced a DIFFERENT app that the fingerprint declared "to
+  // day ". This is exactly the lie that this script exists to prevent.
   "desktop/build/fr.lproj",
-  // La source Icon Composer est un DOSSIER (`icon.json` + le SVG) : elle est
-  // dépliée fichier par fichier, cf. `expandDirectories`.
+  // The Icon Composer source is a FILE (`icon.json` + the SVG): it is
+  // unfolded file by file, cf. `expandDirectories`.
   "desktop/build/icon.icon",
-  // Les options du bundler font partie de ce qui est produit.
+  // The bundler options are part of what is produced.
   "scripts/build-desktop.mjs",
-  // Pour les VERSIONS d'electron et d'electron-updater — voir NORMALIZE, qui en
-  // retire le numéro de version de l'app.
+  // For VERSIONS of electron and electron-updater — see NORMALIZE, which
+  // remove the version number from the app.
   "desktop/package.json",
 ];
 
 /**
- * Ce qui entre dans le bundle mais ne dit RIEN de son comportement. Chaque
- * entrée est une décision, et chacune a coûté une réflexion :
+ * What goes into the bundle but says NOTHING about its behavior. Each
+ * entry is a decision, and each one cost some thought:
  *
- * - `desktop/package.json` — le numéro de version, réécrit à chaque build depuis
- *   celui du dépôt. Sans cette coupe, tout déploiement du site republierait
- *   l'app. Le reste du fichier (les dépendances, donc la version d'Electron)
- *   compte, lui.
- * - `lib/changelog.ts` — n'entre dans le bundle que par ricochet
- *   (`CHANGELOG_LAST_MODIFIED`, lu par `public-routes.ts`), et n'apporte qu'une
- *   DATE. Sans cette coupe, publier une nouveauté ferait télécharger 120 Mo à
- *   tout le monde pour rien.
- * - `lib/public-routes.ts` — ses `lastModified` sont tenus à la main pour le
- *   sitemap (voir CLAUDE.md) et bougent à chaque page retouchée. La coquille,
- *   elle, ne lit que les CHEMINS. Le reste du fichier compte : **ajouter une
- *   page publique DOIT republier l'app**, sans quoi les installations
- *   existantes l'afficheraient dans la fenêtre au lieu de l'ouvrir dans le
- *   navigateur.
+ * - `desktop/package.json` — the version number, rewritten with each build from
+ * that of the repository. Without this cut, any deployment of the site would republish
+ * the app. The rest of the file (the dependencies, therefore the version of Electron)
+ * counts.
+ * - `lib/changelog.ts` — enters the bundle only by ricochet
+ * (`CHANGELOG_LAST_MODIFIED`, read by `public-routes.ts`), and does not bring that a
+ * DATE. Without this cut, publishing something new would cause
+ * to download 120 MB for nothing.
+ * - `lib/public-routes.ts` — its `lastModified` are held by hand for the
+ * sitemap (see CLAUDE.md) and move with each retouched page. The shell,
+ * only reads PATHS. The rest of the file matters: **add a
+ * public page MUST republish the app**, otherwise existing installations
+ * would display it in the window instead of opening it in the
+ * browser.
  */
 const NORMALIZE = {
   "desktop/package.json": (src) => src.replace(/"version":\s*"[^"]*"/, '"version":"·"'),
@@ -85,7 +83,7 @@ function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
-/** Les fichiers qu'esbuild fait réellement entrer dans le bundle. */
+/** Files that esbuild actually includes in the bundle. */
 async function bundleInputs() {
   const result = await build({
     entryPoints: [
@@ -99,7 +97,7 @@ async function bundleInputs() {
     target: "node24",
     external: ["electron", "electron-updater"],
     tsconfig: path.join(repo, "desktop", "tsconfig.json"),
-    // On ne veut que la liste : rien n'est écrit sur le disque.
+    // We only want the list: nothing is written to disk.
     write: false,
     metafile: true,
     logLevel: "silent",
@@ -113,10 +111,10 @@ async function bundleInputs() {
 }
 
 /**
- * Déplie les entrées qui sont des dossiers en leurs fichiers, chemins relatifs au
- * dépôt. Une entrée de `PACKAGING_INPUTS` peut en être un depuis que l'icône est
- * une source Icon Composer : garder le détail fichier par fichier, c'est ce qui
- * permet à `--explain` de dire *quoi* a changé dans l'icône.
+ * Expands directory entries into their files, using paths relative to the
+ * repository. An entry in `PACKAGING_INPUTS` can be one since the icon became
+ * an Icon Composer source: keeping file-by-file detail lets `--explain` say
+ * *what* changed in the icon.
  */
 async function expandDirectories(entries) {
   const files = [];
@@ -134,8 +132,8 @@ async function expandDirectories(entries) {
 }
 
 /**
- * L'empreinte, et le détail par fichier — c'est ce détail qui permet de DIRE ce
- * qui a changé plutôt que d'annoncer « quelque chose a changé ».
+ * The fingerprint and per-file detail — this detail lets us SAY what changed
+ * instead of announcing that “something changed”.
  */
 export async function computeDesktopFingerprint() {
   const files = [...(await bundleInputs()), ...(await expandDirectories(PACKAGING_INPUTS))].sort();
@@ -145,8 +143,8 @@ export async function computeDesktopFingerprint() {
     const raw = await readFile(path.join(repo, file));
     const normalize = NORMALIZE[file];
     const content = normalize ? normalize(raw.toString("utf8")) : raw;
-    // Un fichier neutralisé entièrement n'entre pas dans l'empreinte : le voir
-    // dans la liste avec un hash constant ferait croire qu'il compte.
+    // A fully neutralized file is not part of the fingerprint: listing it with
+    // a constant hash would make it appear to count.
     if (normalize && content === "") continue;
     perFile[file] = sha256(content);
   }
@@ -159,14 +157,14 @@ export async function computeDesktopFingerprint() {
   return { fingerprint, files: perFile };
 }
 
-/** Ce qui a changé entre deux relevés — ajouts, retraits, modifications. */
+/** Changes between two snapshots — additions, removals, modifications. */
 export function diffFingerprints(published = {}, current = {}) {
   const names = [...new Set([...Object.keys(published), ...Object.keys(current)])].sort();
   return names
     .filter((name) => published[name] !== current[name])
     .map((name) => ({
       file: name,
-      change: !published[name] ? "ajouté" : !current[name] ? "retiré" : "modifié",
+      change: !published[name] ? "added" : !current[name] ? "removed" : "modified",
     }));
 }
 
@@ -182,13 +180,13 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       .catch(() => null);
 
     if (!released) {
-      console.log("Aucune publication enregistrée (desktop/released.json absent).");
-      console.log(`Empreinte actuelle : ${fingerprint}`);
+      console.log("No publication recorded (desktop/released.json is missing).");
+      console.log(`Current fingerprint: ${fingerprint}`);
     } else if (released.fingerprint === fingerprint) {
-      console.log(`À jour — publiée en ${released.version}, empreinte ${fingerprint.slice(0, 12)}.`);
+      console.log(`Up to date — published in ${released.version}, fingerprint ${fingerprint.slice(0, 12)}.`);
     } else {
-      console.log(`Publiée : ${released.version} (${released.fingerprint.slice(0, 12)})`);
-      console.log(`Actuelle : ${fingerprint.slice(0, 12)}`);
+      console.log(`Published: ${released.version} (${released.fingerprint.slice(0, 12)})`);
+      console.log(`Current: ${fingerprint.slice(0, 12)}`);
       console.log("");
       for (const { file, change } of diffFingerprints(released.files, files)) {
         console.log(`  ${change.padEnd(9)} ${file}`);

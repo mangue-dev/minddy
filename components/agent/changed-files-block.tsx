@@ -70,11 +70,11 @@ function FileRow({
 }
 
 /**
- * Carte finale des fichiers changés sous la réponse d'un tour.
+ * Final map of files changed under the response of a round.
  *
- * Le résumé reste visible avec une liste courte : cinq fichiers au départ, puis
- * dix de plus à chaque demande. La diff complète reste accessible via Review ;
- * cliquer une ligne ouvre directement le fichier correspondant dans cette même
+ * The summary remains visible with a short list: five files initially, then
+ * ten more with each request. The full diff remains accessible via Review;
+ * clicking a line directly opens the corresponding file in that same
  * sidebar.
  */
 export function ChangedFilesBlock({

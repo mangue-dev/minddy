@@ -16,49 +16,46 @@ import type { AgentLaunchMode } from "@/lib/server/agent/launch-message";
 import type { AgentLaunchIntent } from "@/lib/server/agent/launch";
 
 /**
- * Ce qu'une chaîne va coûter (MIN-147) — un AFFICHAGE, et rien d'autre : rien ne
- * s'interrompt dessus (cf. l'en-tête de lib/automations sur l'absence de plafond
- * par chaîne). Elle sert à répondre « est-ce que ça va me coûter cher ? » avant
- * d'armer la boucle, pas à la couper une fois lancée.
+ * What a string will cost (MIN-147) — a DISPLAY, and nothing else: nothing interrupts on it (see the lib/automations header on no cap
+ * per string). It is used to answer “is this going to cost me a lot?” » before
+ * to arm the loop, not to cut it once launched.
  *
- * Elle se lit dans l'historique du projet plutôt que dans une table de prix : la
- * MÉDIANE du coût des derniers runs, par intention. Une médiane parce qu'un seul
- * run parti en vrille ne doit pas déplacer l'estimation de tous les suivants.
- * Sans historique, le repli est `DEFAULT_STEP_COST_USD`.
+ * It is read in the history of the project rather than in a price table: the
+ * MEDIAN of the cost of the last runs, by intention. A median because a single
+ * run gone into a spin should not move the estimate of all subsequent ones.
+ * Without history, the fallback is `DEFAULT_STEP_COST_USD`.
  *
- * Deux dimensions, pas une : ce que le run FAIT (planifier, coder, vérifier) et
- * la TAILLE du ticket. Les runs de l'historique sont donc ramenés à leur
- * équivalent-M (`effortCostFactor`) avant d'être médianisés, puis la médiane est
- * remise à l'échelle du ticket qu'on estime. Sans cette normalisation, un projet
- * qui vient d'enchaîner des XS budgéterait ses XL comme des XS — et la chaîne
- * afficherait une estimation de XS pour un XL.
- *
- * Elle sort en USD **et** en part du budget mensuel du plan de l'utilisateur :
- * c'est cette part-là que l'UI affiche — jamais de dollars dans l'UI.
+ * Two dimensions, not one: what the run DOES (plan, code, verify) and
+ * the SIZE of the ticket. The runs in the history are therefore reduced to their
+ * M-equivalent (`effortCostFactor`) before being medianized, then the median is
+ * rescaled to the ticket that is estimated. Without this normalization, a project
+ * that has just chained XS would budget its XL as XS — and the chain
+ * would display an estimate of :
+ * this is what the UI displays — never dollars in the UI.
  */
 
-/** Runs regardés pour médianiser. Assez pour lisser, assez récent pour valoir. */
+/** Runs watched to mediate. Enough to smooth, recent enough to be worth. */
 const HISTORY_RUNS = 60;
 
 export interface ChainCostEstimate {
-  /** Coût attendu du parcours complet, en USD. */
+  /** Expected cost of the complete route, in USD. */
   usd: number;
-  /** Sa part du budget mensuel inclus du plan, entre 0 et 1 (0 si budget nul). */
+  /** Its share of the monthly budget included in the plan, between 0 and 1 (0 if zero budget). */
   shareOfMonthlyBudget: number;
-  /** Les étapes chiffrées, dans l'ordre — de quoi les nommer à l'écran. */
+  /** The encrypted steps, in order — enough to name them on the screen. */
   modes: (AgentLaunchMode | "custom")[];
-  /** L'estimation vient-elle de l'historique du projet, ou du repli ? */
+  /** Does the estimate come from the history of the project, or from fallback? */
   fromHistory: boolean;
 }
 
-/** Médiane d'une série non vide. */
+/** Median of a non-empty series. */
 function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
   return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
 
-/** Le mode d'une étape, ramené à l'intention persistée sur le run. */
+/** The mode of a step, reduced to the intention persisted on the run. */
 function intentOfMode(mode: AgentLaunchMode | "custom"): AgentLaunchIntent {
   return mode === "custom" ? "custom" : mode;
 }
@@ -76,11 +73,11 @@ function effortOf(row: HistoryRow): IssueEffort | null {
 }
 
 /**
- * Coût médian par intention, RAMENÉ À L'ÉQUIVALENT-M, sur les derniers runs du
- * projet. Les runs à coût nul sont ÉCARTÉS : un run mort à l'amorçage (dépôt
- * injoignable, quota) n'a rien consommé, et le compter tirerait toutes les
- * médianes vers zéro — c'est-à-dire vers une estimation qui rassure et un
- * plafond qui coupe.
+ * Median cost per intention, REDUCED TO M-EQUIVALENT, on the last runs of the
+ * project. Zero-cost runs are DISREGARDED: a dead run at start-up (deposit
+ * unreachable, quota) has not consumed anything, and counting it would pull all the
+ * medians towards zero — that is to say towards an estimate which reassures and a
+ * ceiling which cuts.
  */
 async function medianCostByIntent(
   projectId: string,
@@ -99,8 +96,8 @@ async function medianCostByIntent(
   for (const row of rows) {
     const cost = Number(row.cost_usd);
     if (!Number.isFinite(cost) || cost <= 0) continue;
-    // Normalisation : ce run a coûté ça POUR SA TAILLE — on le ramène à ce
-    // qu'il aurait coûté sur un M, pour pouvoir le comparer aux autres.
+    // Normalization: this run cost this FOR ITS SIZE — we bring it back to this
+    // what it would have cost on an M, to be able to compare it to the others.
     const factor = effortCostFactor(effortOf(row));
     if (factor <= 0) continue;
     const list = buckets.get(row.intent) ?? [];
@@ -118,13 +115,13 @@ export async function estimateChainCost(params: {
   rules: readonly AutomationRule[];
   issue: AutomationIssueFacts;
   /**
-   * L'événement d'où part le parcours. À FOURNIR quand on chiffre une chaîne
-   * qu'on ouvre : le défaut (« le ticket vient d'entrer dans son statut
-   * actuel ») est faux au moment précis d'une transition — un ticket qui passe
-   * `backlog → todo` est encore en `backlog` en base quand le crochet appelle,
-   * et simuler depuis `backlog` ne joue AUCUNE étape. Le plafond tombait alors
-   * à zéro, et la chaîne s'arrêtait sur « budget » avant sa première étape.
-   */
+ * The event from which the journey starts. TO BE PROVIDED when we encrypt a string
+ * that we open: the default ("the ticket has just entered its current status
+ *") is false at the precise moment of a transition — a ticket which passes
+ * `backlog → todo` is still in `backlog` in base when the hook calls,
+ * and simulating from `backlog` plays NO steps. The cap then dropped
+ * to zero, and the chain stopped on "budget" before its first step.
+ */
   from?: AutomationEvent;
 }): Promise<ChainCostEstimate> {
   const steps = simulateChain(params.rules, params.issue, {
@@ -140,9 +137,9 @@ export async function estimateChainCost(params: {
     getResolvedBilling(params.ownerId).catch(() => null),
   ]);
 
-  // Les deux dimensions se multiplient : ce que l'étape FAIT × la TAILLE du
-  // ticket. La base vient de l'historique du projet quand il en a, du repli
-  // sinon — les deux étant exprimées en équivalent-M.
+  // The two dimensions are multiplied: what the step DOES × the SIZE of the
+  // ticket. The basis comes from the history of the project when it has any, from the withdrawal
+  // otherwise — both being expressed in M-equivalent.
   const factor = effortCostFactor(params.issue.effort);
   let fromHistory = false;
   const usd = modes.reduce((sum, mode) => {

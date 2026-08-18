@@ -1,30 +1,30 @@
 "use client";
 
-// LA case à cocher d'une tâche — celle du carnet et celle d'une page.
+// THE checkbox for a task — that of the notebook and that of a page.
 //
-// Elle vit ici, à côté du schéma partagé (task-nodes.ts), et pas dans l'une des
-// deux vues : les quatre états du plan (`[ ]` / `[~]` / `[x]` / `[-]`) sont un
-// vocabulaire du produit, et deux dessins du même vocabulaire, ce sont deux
-// produits. Le carnet et les pages ne diffèrent que par ce qu'ils ajoutent
-// AUTOUR — le menu ⋯ du carnet lance un agent, ce qui n'a aucun sens dans un
+// It lives here, next to the shared schema (task-nodes.ts), and not in one of the
+// two views: the four states of the plan (`[ ]` / `[~]` / `[x]` / `[-]`) are a
+// product vocabulary, and two drawings of the same vocabulary, these are two
+// products. The notebook and the pages only differ in what they add
+// AROUND — the notebook menu launches an agent, which makes no sense in a
 // document.
 //
-// `cx` et pas `cn` : cette vue est montée par le registre de blocs des pages,
-// qui doit rester importable hors navigateur (cf. lib/cx.ts).
+// `cx` and not `cn`: this view is mounted by the page block register,
+// which must remain importable outside the browser (see lib/cx.ts).
 
 import { Check, Minus } from "lucide-react";
 import { cx } from "@/lib/cx";
 import type { PlanTaskState } from "@/lib/plan";
 
 /**
- * La hauteur d'UNE ligne de texte (`leading-relaxed` sur `text-sm`) : la case
- * et le menu se centrent dessus, quoi que le texte fasse ensuite en passant à
- * la ligne. C'est ce qui les tient sur la BASELINE de la première ligne plutôt
- * que sur le haut du bloc.
+ * The height of ONE line of text (`leading-relaxed` over `text-sm`): the checkbox
+ * and the menu center on it, no matter what the text does next by moving to
+ * the line. This is what keeps them on the BASELINE of the first line rather
+ * than on the top of the block.
  */
 export const TASK_LINE = "flex h-[1.625rem] shrink-0 items-center";
 
-/** Le texte d'une tâche est-il barré ? Terminée et annulée, pas les autres. */
+/** Is the text of a task crossed out? Completed and canceled, not the others. */
 export function taskStruck(state: PlanTaskState): boolean {
   return state === "completed" || state === "cancelled";
 }
@@ -36,7 +36,7 @@ export function TaskCheckbox({
   className,
 }: {
   state: PlanTaskState;
-  /** Ce que le lecteur d'écran annonce — le texte de la tâche, chez l'appelant. */
+  /** What the screen reader announces — the text of the task, to the caller. */
   label: string;
   onToggle: () => void;
   className?: string;
@@ -45,8 +45,8 @@ export function TaskCheckbox({
     <button
       type="button"
       aria-label={label}
-      // `preventDefault` au `mousedown` : sans lui le caret se pose dans le
-      // bouton et la frappe suivante écrit à côté du texte de la tâche.
+      // `preventDefault` to `mousedown`: without it the caret is placed in the
+      // button and the next keystroke writes next to the task text.
       onMouseDown={(event) => event.preventDefault()}
       onClick={onToggle}
       className={cx(

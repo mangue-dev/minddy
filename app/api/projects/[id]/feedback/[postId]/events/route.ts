@@ -9,9 +9,9 @@ import {
 
 type RouteContext = { params: Promise<{ id: string; postId: string }> };
 
-/** GET — le journal d'activité d'un post de feedback (MIN-57). Lecture
-    service-role gardée par l'appartenance au projet : le feedback reste RLS
-    deny-all, les checks d'accès vivent ici, comme le reste du canal équipe. */
+/** GET — the activity log of a feedback post (MIN-57). Reading
+ service-role kept by project membership: feedback remains RLS
+ deny-all, access checks live here, like the rest of the team channel. */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id, postId } = await params;
   const guard = await requireProjectMember(request, id);
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
 
-  // Actions MCP : résoudre la clé (nom + agent) via le service client.
+  // MCP Actions: Resolve key (name + agent) via customer service.
   const keyActors = await resolveApiKeyActors(
     (data ?? []).map((e) => e.api_key_id as string | null)
   );

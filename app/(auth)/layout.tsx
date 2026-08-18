@@ -2,11 +2,11 @@ import { FullCatalogMessages } from "@/components/full-catalog-messages";
 import { AuthShell } from "./auth-shell";
 
 /**
- * Écrans d'authentification. Composant SERVEUR, comme celui de `(app)` : il ne
- * porte que le catalogue i18n complet — sans lui, `/login` atteinte depuis la
- * landing en navigation cliente n'aurait que les namespaces du site public et
- * afficherait le chemin de ses clés (MIN-100). La mise en page, qui dépend du
- * `usePathname`, vit dans `auth-shell.tsx`.
+ * Authentication screens. SERVER component, like that of `(app)`: it does not
+ * carries only the complete i18n catalog — without it, `/login` reached since the
+ * landing in client navigation would only have the namespaces of the public site and
+ * would display the path of its keys (MIN-100). The layout, which depends on the
+ * `usePathname`, lives in `auth-shell.tsx`.
  */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (

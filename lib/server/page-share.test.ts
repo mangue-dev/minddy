@@ -3,13 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MIN_SHARE_PASSWORD_LENGTH } from "@/lib/share-password";
 
 /**
- * MIN-283 — publier, re-régler, dépublier. Les gardes d'abord :
+ * MIN-283 — publish, re-set, unpublish. The guards first:
  *
- *  - une page qu'on ne peut pas voir répond « introuvable », jamais « interdit » ;
- *  - une page à la corbeille ne se publie pas ;
- *  - « mot de passe » sans mot de passe est refusé plutôt que créé ouvert ;
- *  - le TOKEN survit à un changement de réglage : un lien déjà envoyé à un
- *    client ne doit pas mourir parce qu'on a coché « inclure les sous-pages ».
+ * - a page that cannot be seen responds "not found", never "forbidden";
+ * - a page in the trash is not published;
+ * - "password" without a password is refused rather than created open;
+ * - the TOKEN survives a change of setting: a link already sent to a
+ * client must not die because “include subpages” was checked.
  */
 
 interface Row {
@@ -76,7 +76,7 @@ beforeEach(() => {
 });
 
 describe("upsertPageShare", () => {
-  it("refuse une page dont le projet n'est pas le mien — en 404", async () => {
+  it("rejects a page whose project is not mine — with 404", async () => {
     access = null;
     expect(await upsertPageShare({ pageId: "page-1", actorId: "u", level: "public" })).toEqual(
       { ok: false, status: 404, errorKey: "pageNotFound" }
@@ -84,7 +84,7 @@ describe("upsertPageShare", () => {
     expect(writes).toHaveLength(0);
   });
 
-  it("refuse une page qui n'existe pas (ou qui est à la corbeille)", async () => {
+  it("rejects a page that does not exist (or is in the trash)", async () => {
     db.page = null;
     expect(await getPageShare("page-1", "u")).toEqual({
       ok: false,
@@ -93,16 +93,16 @@ describe("upsertPageShare", () => {
     });
   });
 
-  it("exige un mot de passe pour un partage protégé qui n'en a pas encore", async () => {
+  it("requires a password for a protected share that does not have one yet", async () => {
     expect(
       await upsertPageShare({ pageId: "page-1", actorId: "u", level: "password" })
     ).toEqual({ ok: false, status: 400, errorKey: "passwordRequired" });
     expect(writes).toHaveLength(0);
   });
 
-  it("refuse un mot de passe trop court plutôt que de le hacher (MIN-347)", async () => {
-    // Aucune longueur minimale : « a » était un réglage acceptable, c'est-à-dire
-    // un partage annoncé comme protégé et ouvert de fait.
+  it("rejects a password that is too short instead of hashing it (MIN-347)", async () => {
+    // No minimum length: “a” was an acceptable setting, i.e.
+    // a sharing announced as protected and de facto open.
     expect(
       await upsertPageShare({
         pageId: "page-1",
@@ -122,10 +122,10 @@ describe("upsertPageShare", () => {
     expect(ok.ok).toBe(true);
   });
 
-  it("dit la même longueur à l'écran qu'elle n'en exige", async () => {
-    // Le chiffre est en toutes lettres dans les messages (un placeholder appelé
-    // sans ses valeurs afficherait le chemin de sa clé) : c'est ce test qui
-    // tient les deux ensemble.
+  it("shows the same length on screen as it requires", async () => {
+    // The number is spelled out in messages (a placeholder called
+    // without its values ​​would display the path of its key): it is this test which
+    // holds the two together.
     const [en, fr] = await Promise.all([
       import("@/messages/en.json"),
       import("@/messages/fr.json"),
@@ -143,7 +143,7 @@ describe("upsertPageShare", () => {
     }
   });
 
-  it("publie la page seule par défaut : la branche ne suit pas", async () => {
+  it("publishes only the page by default: the branch does not follow", async () => {
     const result = await upsertPageShare({
       pageId: "page-1",
       actorId: "u",
@@ -155,7 +155,7 @@ describe("upsertPageShare", () => {
     expect(result.share.token).toHaveLength(22);
   });
 
-  it("garde le token quand on change un réglage", async () => {
+  it("keeps the token when a setting changes", async () => {
     const first = await upsertPageShare({
       pageId: "page-1",
       actorId: "u",
@@ -174,7 +174,7 @@ describe("upsertPageShare", () => {
 });
 
 describe("deletePageShare", () => {
-  it("dépublie, et le lien cesse de répondre", async () => {
+  it("unpublishes and the link stops responding", async () => {
     await upsertPageShare({ pageId: "page-1", actorId: "u", level: "public" });
     expect(await deletePageShare("page-1", "u")).toEqual({ ok: true, share: null });
     expect(await getPageShare("page-1", "u")).toEqual({ ok: true, share: null });

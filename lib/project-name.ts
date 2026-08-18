@@ -1,15 +1,15 @@
 /**
- * Noms de projet proposés — pour qui démarre un projet qui n'existe pas encore
- * et n'a pas de nom sous la main. Un nom de code, pas un nom vide : « Sirocco »
- * se retient, se cherche et se renomme, « Projet 1 » ne fait rien de tout ça.
+ * Suggested project names — for anyone starting a project that doesn't yet exist
+ * and doesn't have a name on hand. A code name, not an empty name: "Sirocco"
+ * holds back, searches for itself and renames itself, "Project 1" does none of that.
  *
- * La liste est UNIQUE, pas traduite, et c'est voulu — même raison que les
- * pseudonymes du board public (lib/feedback/pseudonym.ts) : ce qui sort d'ici
- * n'est pas de la copy, c'est une donnée. Elle est stockée sur le projet et lue
- * par toute l'équipe, y compris par les coéquipiers qui n'ont pas la même
- * langue que celui qui a cliqué. Les mots retenus s'écrivent donc pareil en
- * français et en anglais, et font au moins 4 lettres pour que la clé suggérée
- * (`suggestKeyFromName`) soit lisible : « Quartz » → QUAR.
+ * The list is UNIQUE, not translated, and that's intentional — same reason as the
+ * pseudonyms of the public board (lib/feedback/pseudonym.ts): what comes out of here
+ * is not copying, it is data. It is stored on the project and read
+ * by the whole team, including by teammates who do not have the same
+ * language as the one who clicked. The words retained are therefore written the same in
+ * French and English, and are at least 4 letters long so that the suggested key
+ * (`suggestKeyFromName`) is readable: “Quartz” → QUAR.
  */
 
 const CODENAMES = [
@@ -23,11 +23,11 @@ const CODENAMES = [
 ] as const;
 
 /**
- * Un nom au hasard, en évitant ceux que `isTaken` refuse — l'appelant y met ce
- * qu'il sait : les projets déjà nommés ainsi, ceux dont la clé est prise, et le
- * nom proposé juste avant (une proposition qui retombe sur la même passe pour
- * un bouton mort). Si tout est refusé, on propose quand même : un nom déjà vu
- * vaut mieux qu'un champ vide, et il reste modifiable.
+ * A random name, avoiding those that `isTaken` refuses — the caller puts this
+ * that he knows: the projects already named like this, those whose key is taken, and the
+ * name proposed just before (a proposition which falls on the same pass for
+ * a dead button). If everything is refused, we still offer: a name already seen
+ * is better than an empty field, and it remains modifiable.
  */
 export function suggestProjectName(
   isTaken: (name: string) => boolean = () => false,

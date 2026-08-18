@@ -26,34 +26,34 @@ import {
 import { renderDigest, type CsvDigest } from "@/lib/import/digest";
 
 /**
- * La passe de correspondance d'un import (MIN-45 suite) : un PETIT modèle lit
- * le résumé du fichier — en-têtes, nombre de valeurs distinctes, échantillons —
- * et rend un plan de lecture.
+ * The import match pass (MIN-45 continued): a SMALL model reads
+ * the summary of the file — headers, number of distinct values, samples —
+ * and returns a reading plan.
  *
- * Pourquoi un modèle là où des tables d'alias existaient déjà : les alias ne
- * connaissent que des NOMS. Ils savent lire « Status », pas « Niveau
- * d'avancement » ; ils savent traduire « In Progress », pas « Bloqué » ni
- * « Sprint 3 terminé ». Tout ce qu'ils ne reconnaissaient pas tombait
- * silencieusement — colonne ignorée, statut ramené à backlog, priorité perdue.
- * Un appel de quelques milliers de tokens PAR FICHIER (jamais par ligne) rend
- * cette part-là de l'import, et c'est la moins chère à récupérer.
+ * Why a model where alias tables already existed: aliases ne
+ * only know NAMES. They know how to read "Status", not "Progress Level
+ *"; they know how to translate “In Progress”, not “Blocked” nor
+ * “Sprint 3 completed”. Anything they didn't recognize fell
+ * silently — column ignored, status returned to backlog, priority lost.
+ * A call of a few thousand tokens PER FILE (never per line) makes
+ * that part of the import, and it's the cheapest to retrieve.
  *
- * Ce que le modèle rend n'est qu'une PROPOSITION : elle est fusionnée avec le
- * plan déduit des en-têtes, affichée dans le tableau de correspondance de
- * l'aperçu, et modifiable avant de valider. Un échec (clé absente, timeout,
- * JSON invalide) rend `null` et l'import se fait comme avant.
+ * What the model renders is only a PROPOSAL: it is merged with the
+ * plan deduced from the headers, displayed in the correspondence table of
+ * the preview, and editable before validating. A failure (absent key, timeout,
+ * JSON invalid) makes `null` and the import is done as before.
  *
- * Le contenu du fichier est de la DONNÉE à étiqueter, jamais des consignes : la
- * sortie forcée borne ce qu'une ligne malveillante peut obtenir à un mauvais
- * plan, que l'utilisateur voit à l'écran avant que quoi que ce soit ne soit écrit.
+ * The content of the file is the DATA to be labeled, never instructions: the
+ * forced output limits what a malicious line can get to a bad
+ * plan, which the user sees on the screen before anything is written.
  */
 
-/** Clé `app_config` du modèle qui propose les correspondances. */
+/** `app_config` key of the model which proposes the matches. */
 export const IMPORT_MAP_MODEL_KEY = "import_map_model";
-/** Clé `app_config` de l'interrupteur global de la passe. */
+/** `app_config` key for the global pass switch. */
 export const IMPORT_MAP_ENABLED_KEY = "import_map_enabled";
 
-/** Un plan de 60 colonnes et de leurs valeurs tient largement dedans. */
+/** A plan of 60 columns and their values ​​fits well within it. */
 const MAX_OUTPUT_TOKENS = 4096;
 
 const FIELD_DOC = `- title: the issue's name. EXACTLY ONE column. Mandatory — always assign one.
@@ -212,24 +212,24 @@ const PARAMETERS = {
       },
     },
   },
-  // Un petit modèle ne répond tout simplement pas un champ hors `required`.
+  // A small model simply does not respond to a field outside `required`.
   required: ["columns", "statuses", "priorities", "efforts", "assignees", "labels"],
   additionalProperties: false,
 } as const;
 
 export interface ImportMappingAiInput {
   digest: CsvDigest;
-  /** Les membres, dans l'ordre EXACT des refs du digest : le modèle répond un
-   *  rang, c'est ici qu'il redevient un identifiant. */
+  /** The members, in the EXACT order of the digest refs: the model responds to a
+ * rank, this is where it becomes an identifier again. */
   members: ImportMember[];
-  /** Les catégories du projet — un nom hors liste n'est pas retenu. */
+  /** Project categories — a name off the list is not retained. */
   categories: string[];
-  /** Qui paye l'appel : l'auteur de l'import, qui est le owner du projet. */
+  /** Who pays for the call: the author of the import, who is the owner of the project. */
   userId: string;
   projectId: string;
 }
 
-/** Le plan proposé, ou `null` si la passe n'a rien donné d'exploitable. */
+/** The proposed plan, or `null` if the pass did not produce anything usable. */
 export async function proposeImportMapping({
   digest,
   members,
@@ -282,16 +282,16 @@ export async function proposeImportMapping({
     if (isImportField(entry.field)) mapping.columns[index] = entry.field;
   }
 
-  // Un plan sans titre n'est pas un plan : mieux vaut n'en proposer aucun et
-  // laisser la détection par en-têtes faire ce qu'elle sait faire.
+  // A plan without a title is not a plan: it is better not to propose any and
+  // let header detection do what it knows how to do.
   if (!mapping.columns.includes("title")) return null;
 
   collectValues(args.statuses, "status", isStatus, mapping.statusValues);
   collectValues(args.priorities, "priority", isPriority, mapping.priorityValues);
   collectValues(args.efforts, "effort", isEffort, mapping.effortValues);
 
-  // Les rangs redeviennent des identifiants ici, et NULLE PART ailleurs : le
-  // modèle n'a jamais vu un UUID, il ne peut donc pas en inventer un.
+  // Ranks become identifiers again here, and NOWHERE else: the
+  // model has never seen a UUID, so it can't invent one.
   for (const entry of asArray(args.assignees)) {
     if (typeof entry.value !== "string" || typeof entry.member !== "number") continue;
     const member = members[entry.member - 1];
@@ -299,8 +299,8 @@ export async function proposeImportMapping({
     if (token && member) mapping.assigneeValues[token] = member.userId;
   }
 
-  // Un nom de catégorie hors de la liste réelle est une invention : on l'écarte
-  // et l'étiquette est créée telle quelle, ce qui est le repli correct.
+  // A category name outside the real list is an invention: we discard it
+  // and the label is created as is, which is the correct fallback.
   const known = new Map(categories.map((name) => [normalizeToken(name), name]));
   for (const entry of asArray(args.labels)) {
     if (typeof entry.value !== "string" || typeof entry.category !== "string") continue;

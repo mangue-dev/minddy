@@ -1,64 +1,64 @@
-# Une page du wiki
+# A wiki page
 
-Emplacement de landing : `pagesEditor`. La consigne du catalogue
-(`components/marketing/screenshot-slots.ts`) : *« une page du wiki ouverte : à
-gauche l'arbre des pages du projet avec une page dépliée sur ses sous-pages, à
-droite le contenu — un titre, un paragraphe, une liste de cases à cocher dont
-deux cochées, et une pilule de mention vers un ticket dans le texte. Pas de menu
-ouvert : c'est la page telle qu'on la lit, pas l'éditeur en train d'être
-manipulé. »*
+Landing location: `pagesEditor`. The catalog instructions
+(`components/marketing/screenshot-slots.ts`): *“an open wiki page: to
+left the project page tree with a page unfolded on its subpages, at
+right the content — a title, a paragraph, a list of check boxes including
+two checked, and a mention pill towards a ticket in the text. No menu
+open: this is the page as we read it, not the editor currently being
+manipulated. »*
 
 ## Ce que l'image doit montrer
 
-- **L'arbre, à gauche** : les quatre pages racines d'Aurora, et « 📘 Product
-  handbook » **déplié sur ses trois sous-pages**, dont celle qui est ouverte —
-  surlignée dans l'arbre.
-- **Le fil des parents**, au-dessus du titre : « 📘 Product handbook », qui dit
-  qu'une page est une page, pas un fragment de son parent.
-- **Le contenu**, à droite : l'icône 🚀 et le titre « Release process », un
-  paragraphe, le sous-titre « Before you ship », **cinq cases à cocher dont deux
-  cochées** (les deux cochées barrées), puis un dernier paragraphe portant la
+- **The tree, on the left**: the four root pages of Aurora, and “📘 Product
+handbook » **unfolded on its three subpages**, including the one which is open —
+highlighted in the tree.
+- **Parents' thread**, above the title: “📘 Product handbook”, which says
+that a page is a page, not a fragment of its parent.
+- **The content**, on the right: the 🚀 icon and the title “Release process”, a
+paragraph, the subtitle “Before you ship”, **five check boxes including two
+checked** (both checked and crossed out), then a final paragraph bearing the
   **pilule `AUR-2`**.
-- **Rien d'ouvert** : pas de menu « / », pas de menu ⋯, pas de poignée de bloc
-  au survol, pas de curseur dans le texte. C'est une page qu'on lit.
+- **Nothing open**: no “/” menu, no ⋯ menu, no block handle
+on hover, no cursor in the text. It’s a page that we read.
 
-## Où
+## Or
 
-`/projects/6cd36606…/pages/cd3ee91e…` — la page « Release process » d'Aurora,
-connecté en Camille Roy. Les données viennent de
+`/projects/6cd36606…/pages/cd3ee91e…` — the Aurora “Release process” page,
+connected in Camille Roy. The data comes from
 `captures/world/seed/014-pages-aurora.mjs`.
 
-## Déclinaisons
+## Variations
 
 fr/light, fr/dark, en/light, en/dark
 
-Le contenu des pages est en **anglais** dans les quatre : c'est de la donnée,
-comme les tickets du board. Ce qui change d'une langue à l'autre, c'est le
-chrome — « Nouvelle page », « Filtrer 7 pages… », « Modifiée par… ».
+The content of the pages is in **English** in all four: it is data,
+like board tickets. What changes from one language to another is the
+chrome — “New page”, “Filter 7 pages…”, “Modified by…”.
 
 ## Cadrage
 
-1736 × 1085, la fenêtre des emplacements en 16/10 (`heroBoard`, `featureCycle`,
-les deux boards de retours). Il en faut la largeur : l'arbre et le corps de la
-page doivent tenir côte à côte, et c'est justement ce que la section raconte.
+1736 × 1085, slots window in 16/10 (`heroBoard`, `featureCycle`,
+the two return boards). You need the width: the shaft and the body of the
+page must fit side by side, and that is precisely what the section is about.
 
-## Pièges connus
+## Known pitfalls
 
-- **La cible est l'env de preview**, pas la production : les pages n'y sont pas
-  encore. `CAPTURE_BASE_URL=https://preview.minddy.app`, et une session prise
-  sur le même hôte (`CAPTURE_BASE_URL=… node captures/lib/session.mjs`) — les
-  cookies d'authentification sont liés au domaine.
-- **Le survol pose une poignée de bloc** dans la marge gauche du texte
-  (`components/pages/block-gutter.tsx`). La souris est donc écartée du corps
-  avant la prise ; sans ça, l'image montre l'éditeur en train d'être manipulé,
+- **The target is the preview environment**, not the production: the pages are not there
+Again. `CAPTURE_BASE_URL=https://preview.minddy.app`, and a session taken
+on the same host (`CAPTURE_BASE_URL=… node captures/lib/session.mjs`) — the
+Authentication cookies are domain-related.
+- **Hover places a block handle** in the left margin of the text
+(`components/pages/block-gutter.tsx`). The mouse is therefore removed from the body
+before taking; otherwise, the image shows the editor being manipulated,
   ce que l'intention interdit explicitement.
-- **Les deux tâches cochées se reconnaissent au texte barré**, pas à l'attribut :
-  c'est ce que le contrôle mesure, parce que c'est ce que l'œil lit.
-- **La pilule est un nœud stocké, pas du texte re-scanné.** Contrairement à une
-  description de ticket, l'éditeur de page n'hydrate pas les « @… » écrits en
-  texte — voir l'en-tête du script de seed. Si la pilule sort en texte brut,
-  c'est le seed qu'il faut reprendre, pas la capture.
-- **L'en-tête affiche « Modifiée par Camille Roy · il y a 2 jours »** : les dates
-  du seed sont antérieures à l'horloge figée (15 juillet 2026). Un « maintenant »
-  à l'image veut dire que les pages ont été réécrites après coup, avec la date du
-  jour — relancer `014-pages-aurora.mjs`, qui les repose backdatées.
+- **The two checked tasks can be recognized by the crossed out text**, not by the attribute:
+this is what the control measures, because this is what the eye reads.
+- **The pill is a stored node, not re-scanned text.** Unlike a
+ticket description, the page editor does not hydrate the “@…” written in
+text — see seed script header. If the pill comes out in plain text,
+It is the seed that must be taken, not the capture.
+- **The header displays “Modified by Camille Roy · 2 days ago”**: the dates
+of the seed are before the frozen clock (July 15, 2026). A “now”
+to the image means that the pages were rewritten after the fact, with the date of
+day — restart `014-pages-aurora.mjs`, which resets them backdated.

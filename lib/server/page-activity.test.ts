@@ -2,17 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * MIN-278 — le DÉBIT, qui est tout ce que ce module a de délicat.
+ * MIN-278 — THROUGHPUT, which is all that is delicate about this module.
  *
- * « Pas de bruit » est la quatrième condition du ticket, et c'est celle qu'on ne
- * remarque qu'en la subissant : une page se réenregistre une seconde après la
- * dernière frappe, donc un après-midi d'écriture fait mille lignes d'activité —
- * et un agent qui repasse dix fois sur la même page, dix notifications. Les deux
- * bornes vivent ici, et rien à l'écran ne les montre avant qu'elles ne cèdent.
+ * “No noise” is the fourth condition of the ticket, and it is the one that we do
+ * note that by undergoing it: a page is re-recorded one second after the
+ * last keystroke, so an afternoon of writing makes a thousand lines of activity —
+ * and an agent who returns to the same page ten times, ten notifications. Both
+ * terminals live here, and nothing on screen shows them before they give way.
  */
 
-// Signatures explicites : sans elles, `mock.calls` est typé sur un tuple vide
-// et lire `c[1]` ne compile pas (même remarque que notifications.test.ts).
+// Explicit signatures: without them, `mock.calls` is typed on an empty tuple
+// and reading `c[1]` does not compile (same remark as notifications.test.ts).
 const H = vi.hoisted(() => ({
   insertEvents: vi.fn<
     (service: unknown, rows: Array<Record<string, unknown>>) => Promise<void>
@@ -35,8 +35,8 @@ const PAGE = "page-1";
 const PROJECT = "project-1";
 const ACTOR = "user-1";
 
-/** Faux PostgREST : la lecture de coalescence rend ce qu'on lui dit, et on
- *  garde les filtres posés — c'est leur EXACTITUDE qui décide de la borne. */
+/** False PostgREST: the coalescence reading returns what it is told, and on
+ * keeps the filters set — it is their EXACTNESS which decides the bound. */
 function stubService(existing: unknown[]) {
   const filters: Array<[string, unknown]> = [];
   const service = {
@@ -68,7 +68,7 @@ beforeEach(() => {
 });
 
 describe("recordPageEvent", () => {
-  it("marque une écriture d'agent `via_assistant` — la ligne nomme Numo", async () => {
+  it("marks an agent write `via_assistant` — the line names Numo", async () => {
     const { service } = stubService([]);
     await recordPageEvent(service, {
       pageId: PAGE,
@@ -76,8 +76,8 @@ describe("recordPageEvent", () => {
       kind: "agent",
       type: "page_updated",
     });
-    // Sans ce drapeau, l'activité dirait « Clément a modifié cette page » d'un
-    // texte que Clément n'a pas écrit : l'inverse de la règle d'identité.
+    // Without this flag, the activity would say “Clément modified this page” with a
+    // text that Clément did not write: the opposite of the identity rule.
     expect(H.insertEvents.mock.calls[0][1]).toEqual([
       {
         page_id: PAGE,
@@ -98,9 +98,9 @@ describe("recordPageEvent", () => {
       type: "page_updated",
       mcpKeyId: "key-1",
     });
-    // Les deux drapeaux ne se cumulent pas : la timeline teste `via_assistant`
-    // AVANT `via_mcp`, donc les porter ensemble ferait dire « Numo » d'un geste
-    // dont on connaît l'agent par son nom.
+    // The two flags do not cumulate: the timeline tests `via_assistant`
+    // BEFORE `via_mcp`, so wearing them together would make one say “Numo” with a gesture
+    // whose agent we know by name.
     expect(H.insertEvents.mock.calls[0][1][0]).toEqual({
       page_id: PAGE,
       actor_id: ACTOR,
@@ -121,8 +121,8 @@ describe("recordPageEvent", () => {
       type: "page_updated",
     });
     expect(H.insertEvents).not.toHaveBeenCalled();
-    // La fenêtre est bornée à la PAGE, au TYPE, à la NATURE du geste et à
-    // l'ACTEUR. Un filtre qui sauterait ferait taire les lignes d'un autre.
+    // The window is limited to the PAGE, the TYPE, the NATURE of the gesture and
+    // the ACTOR. A blown filter would silence another's lines.
     expect(filters.map(([column]) => column)).toEqual([
       "page_id",
       "type",
@@ -132,9 +132,9 @@ describe("recordPageEvent", () => {
     ]);
   });
 
-  it("écrit quand même si c'est l'AGENT qui recouvre l'écriture d'un humain", async () => {
-    // La fenêtre ne recouvre jamais un changement de nature : « l'agent est
-    // passé après moi » est exactement ce qu'on vient lire.
+  it("still writes when the AGENT overwrites a human's write", async () => {
+    // The window never covers a change of nature: “the agent is
+    // passed after me” is exactly what we came to read.
     const { service, filters } = stubService([]);
     await recordPageEvent(service, {
       pageId: PAGE,
@@ -146,10 +146,10 @@ describe("recordPageEvent", () => {
     expect(H.insertEvents).toHaveBeenCalledTimes(1);
   });
 
-  it("ne coalesce PAS la création, la corbeille ni la restauration", async () => {
-    // Une ligne récente existe : elle ne doit rien avaler de ces trois-là — on
-    // ne corbeille pas une page quarante fois de suite, et rater le geste
-    // destructeur serait rater le seul qu'on vient chercher.
+  it("does NOT coalesce creation, trashing, or restoration", async () => {
+    // A recent line exists: it must not swallow any of these three — we
+    // don't trash a page forty times in a row, and miss the gesture
+    // destructive would be to miss the only one we are looking for.
     for (const type of ["page_created", "page_trashed", "page_restored"] as const) {
       const { service } = stubService([{ id: "existing" }]);
       await recordPageEvent(service, { pageId: PAGE, actorId: ACTOR, kind: "human", type });
@@ -159,7 +159,7 @@ describe("recordPageEvent", () => {
 });
 
 describe("notifyAgentPageWrite", () => {
-  it("prévient le lanceur, sans acteur, et déplace sa ligne non lue", async () => {
+  it("notifies the launcher without an actor and moves its unread row", async () => {
     const { service } = stubService([]);
     await notifyAgentPageWrite(service, {
       projectId: PROJECT,
@@ -175,13 +175,13 @@ describe("notifyAgentPageWrite", () => {
         type: "page_agent_edit",
         issue_id: null,
         page_id: PAGE,
-        // `actor_id` NULL : l'acteur n'est pas une personne. Rempli, le
-        // destinataire verrait son propre portrait sur une écriture d'agent.
+        // `actor_id` NULL: the actor is not a person. Filled, the
+        // recipient would see their own portrait on an agent's writing.
         actor_id: null,
       },
     ]);
-    // Dix passages sur la même page = une ligne, pas dix (MIN-278, « pas de
-    // bruit »). La clause `page_id` d'`insertNotifications` la borne à celle-ci.
+    // Ten passages on the same page = one line, not ten (MIN-278, “no
+    // noise "). The `page_id` clause of `insertNotifications` limits it to this one.
     expect(opts).toEqual({ replaceUnread: true });
   });
 });

@@ -1,64 +1,64 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 /**
- * LE JETON D'EXÉCUTION LOCALE (MIN-355) — comment un tour qui vit sur la machine
- * de l'utilisateur prouve QUEL RUN il est, alors que rien ne signe pour lui.
+ * THE LOCAL EXECUTION TOKEN (MIN-355) — how a spin that lives on the machine
+ * of the user proves WHAT RUN he is, while nothing signs for him.
  *
- * Dans une microVM, le `runId` n'est jamais reçu : il est DÉRIVÉ du claim
- * `sandbox_name` d'un OIDC que le firewall de Vercel Sandbox pose après la sortie
- * de la VM ([network-policy.ts](network-policy.ts)). Sur un Mac, il n'y a pas de
- * firewall, donc pas de signature à dériver — la machine doit porter quelque
- * chose, et c'est le renversement complet de la doctrine du chemin cloud.
+ * In a microVM, the `runId` is never received: it is DERIVED from the claim
+ * `sandbox_name` of an OIDC that the Vercel Sandbox firewall installs after the release
+ * of the VM ([network-policy.ts](network-policy.ts)). On a Mac, there is no
+ * firewall, so no signature to derive — the machine must carry something
+ * thing, and it is the complete reversal of the cloud path doctrine.
  *
  * HS256 AUTO-PORTEUR `{rid, gen, exp}`, patron exact de
- * [sso-jwt.ts](../../feedback/sso-jwt.ts) : HS256 seul (aucune confusion
- * d'algorithme possible), comparaison en temps constant, `exp` obligatoire, et le
- * plafond de durée de vie imposé À LA VÉRIFICATION — le seul endroit qui tourne
- * chez nous, et donc le seul qui garantisse quoi que ce soit.
+ * [sso-jwt.ts](../../feedback/sso-jwt.ts): HS256 alone (no confusion
+ * possible algorithm), comparison in constant time, `exp` obligatory, and the
+ * lifetime cap imposed AT VERIFICATION — the only place that turns
+ * with us, and therefore the only one that guarantees anything.
  *
- * POURQUOI PAS UN JETON OPAQUE HACHÉ, qui serait révocable par nature :
- * `POST /stream` est servi SANS lire la ligne du run, délibérément — ~4 appels/s,
- * ~29 000 par tour de deux heures ([control-plane.ts](control-plane.ts), le
- * commentaire du court-circuit). Un hash imposerait un lookup par requête,
- * c'est-à-dire exactement la charge que ce court-circuit existe pour supprimer.
- * La révocation se paie donc ailleurs, et elle est gratuite : le claim `gen` est
- * opposé à `agent_runs.local_exec_gen` là où la ligne est DÉJÀ lue, c'est-à-dire
- * partout sauf sur ce direct-là.
+ * WHY NOT AN OPAQUE HATCHED TOKEN, which would be revocable by nature:
+ * `POST /stream` is served WITHOUT reading the run line, deliberately — ~4 calls/s,
+ * ~29,000 per two-hour tour ([control-plane.ts](control-plane.ts), the
+ * short circuit comment). A hash would require a lookup per request,
+ * that is, exactly the load that this short circuit exists to remove.
+ * The revocation is therefore paid for elsewhere, and it is free: the claim `gen` is
+ * opposed to `agent_runs.local_exec_gen` where the line is ALREADY read, i.e.
+ * everywhere except on this live one.
  *
- * CE QUE CE JETON NE PRÉTEND PAS ÊTRE. Il vit sur un disque que le modèle peut
- * lire, et aucune discipline de code ne changera ça. Ce qui est traité, ce n'est
- * donc pas sa confidentialité, c'est son POUVOIR : pas de `/repo-auth` sur le
- * chemin local, et `status = 'running'` exigé sur toutes les surfaces qui lisent
- * la ligne du run (cf. `handleControlPlaneRequest`). Le jeu de TOOLS, lui, ne
- * bouge pas — le pourquoi est écrit sur place.
+ * WHAT THIS TOKEN DOES NOT PRETEND TO BE. It lives on a disk that the model can
+ * read, and no amount of code discipline will change that. What is processed is not
+ * therefore not its confidentiality, it is its POWER: no `/repo-auth` on the
+ * local path, and `status = 'running'` required on all surfaces that read
+ * the run line (see `handleControlPlaneRequest`). The TOOLS game does not
+ * don't move - the why is written on the spot.
  */
 
 /**
- * Durée de vie maximale, IMPOSÉE À LA VÉRIFICATION. Quinze minutes glissantes :
- * assez pour qu'un tour de plusieurs heures ne se réveille pas sur un refus entre
- * deux renouvellements, assez court pour qu'un jeton recopié d'un `job.json`
- * cesse de valoir quelque chose avant qu'on ait fini de le lire.
+ * Maximum lifespan, IMPOSED TO VERIFICATION. Fifteen sliding minutes:
+ * enough so that a tour of several hours does not wake up to a refusal between
+ * two renewals, short enough for a token copied from a `job.json`
+ * ceases to be worth anything before you finish reading it.
  */
 export const LOCAL_EXEC_MAX_TTL_SECONDS = 900;
 
 /**
- * Écart d'horloge toléré SUR LE PLAFOND, et sur lui seul. Nous signons et nous
- * vérifions, mais pas depuis la même invocation : deux fonctions dont les
- * horloges diffèrent de quelques secondes refuseraient un jeton parfaitement
- * frais, pour la seule raison qu'il paraît trop neuf. L'expiration, elle, reste
- * stricte — la tolérance y allongerait la fenêtre au lieu de la corriger.
+ * Clock deviation tolerated ON THE CEILING, and on it alone. We sign and we
+ * let's check, but not from the same invocation: two functions whose
+ * clocks differ by a few seconds would refuse a token perfectly
+ * fresh, for the sole reason that it seems too new. The exhalation remains
+ * strict — tolerance would lengthen the window instead of correcting it.
  */
 export const LOCAL_EXEC_CLOCK_SKEW_SECONDS = 30;
 
-/** Le préfixe du schéma d'authentification, tel que le harness le pose. */
+/** The prefix of the authentication scheme, as the harness sets it. */
 const BEARER = /^bearer\s+(.+)$/i;
 
 /**
- * Le format d'un identifiant de run, exigé comme il l'est sur le chemin cloud
- * (`runIdFromSandboxName`, network-policy.ts) et pour la même raison : `rid` part
- * en requête Postgrest, et une chaîne arbitraire n'a rien à y faire — même si la
- * signature l'a couverte, c'est NOTRE clé qui signe, donc c'est un bug de chez
- * nous qui la produirait.
+ * The format of a run identifier, required as it is on the cloud path
+ * (`runIdFromSandboxName`, network-policy.ts) and for the same reason: `rid` leaves
+ * in Postgrest query, and an arbitrary string has no place there — even if the
+ * signature covered it, it's OUR key that signs, so it's a bug from
+ * us who would produce it.
  */
 const RUN_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -70,21 +70,21 @@ export type LocalExecVerifyResult =
     };
 
 /**
- * Le secret, DÉRIVÉ de la clé de service — pas une variable d'environnement de
- * plus à tenir.
+ * The secret, DERIVED from the service key — not an environment variable
+ * no longer to hold.
  *
- * Même geste que `hashIp` ([feedback/otp.ts](../feedback/otp.ts)) : c'est le seul
- * secret dont ce chemin dispose déjà, et sans lequel il n'aurait de toute façon
- * ni base ni plan de contrôle. Une variable dédiée n'ajouterait pas de sécurité
- * (qui lit l'une lit l'autre) mais ajouterait un déploiement où la fonctionnalité
- * est silencieusement morte parce que personne ne l'a posée.
+ * Same gesture as `hashIp` ([feedback/otp.ts](../feedback/otp.ts)): it is the only
+ * secret which this path already has, and without which it would not have in any case
+ * neither basis nor control plan. A dedicated variable would not add security
+ * (which reads one reads the other) but would add a deployment where the functionality
+ * silently died because no one asked it.
  *
- * HMAC et pas concaténation : le label sépare cet usage de tout autre, et le
- * changer révoque d'un coup tous les jetons en vol — c'est notre bouton de
- * rotation, et il ne coûte rien à personne (quinze minutes de fenêtre).
+ * HMAC and not concatenation: the label separates this use from any other, and the
+ * changing suddenly revokes all the tokens in flight — this is our button
+ * rotation, and it doesn't cost anyone anything (fifteen minute window).
  *
- * `null` quand la clé manque, et l'appelant en fait un **503, pas un
- * passe-droit** : un plan de contrôle qui ne sait pas vérifier ne vérifie pas.
+ * `null` when the key is missing, and the caller makes it a **503, not a
+ * privilege**: a control plan that does not know how to verify does not verify.
  */
 export function resolveLocalExecSecret(
   env: Record<string, string | undefined> = process.env,
@@ -110,15 +110,15 @@ function decodeSegment(segment: string): Record<string, unknown> | null {
 }
 
 export interface SignLocalExecInput {
-  /** Le run que ce jeton désigne, et le seul (claim `rid`). */
+  /** The run that this token designates, and the only one (claim `rid`). */
   runId: string;
-  /** La génération du bail au moment de l'émission (claim `gen`). */
+  /** The generation of the lease at the time of issue (claim `gen`). */
   gen: number;
-  /** Durée de vie ; bornée à {@link LOCAL_EXEC_MAX_TTL_SECONDS}. */
+  /** Lifetime ; limited to {@link LOCAL_EXEC_MAX_TTL_SECONDS}. */
   ttlSeconds?: number;
 }
 
-/** Signe le jeton d'un bail. Miroir exact de {@link verifyLocalExecToken}. */
+/** Sign the lease token. Exact mirror of {@link verifyLocalExecToken}. */
 export function signLocalExecToken(
   input: SignLocalExecInput,
   secret: string,
@@ -171,9 +171,9 @@ export function verifyLocalExecToken(
   const exp = payload.exp;
   if (typeof exp !== "number" || !Number.isFinite(exp)) return { ok: false, error: "expired" };
   if (exp <= nowSeconds) return { ok: false, error: "expired" };
-  // LE PLAFOND, ICI ET PAS AU SIGNEUR. Le signeur, c'est nous aujourd'hui — mais
-  // c'est aussi la seule moitié du contrat qu'un jour de refactor peut déplacer
-  // sans que personne ne s'en aperçoive. Un `exp` à un an ne passera jamais.
+  // THE CEILING, HERE AND NOT TO THE SIGNER. The signator is us today — but
+  // it's also the only half of the contract that a refactor day can move
+  // without anyone noticing. A one-year `exp` will never pass.
   if (exp > nowSeconds + LOCAL_EXEC_MAX_TTL_SECONDS + LOCAL_EXEC_CLOCK_SKEW_SECONDS) {
     return { ok: false, error: "ttl_too_long" };
   }
@@ -188,27 +188,27 @@ export function verifyLocalExecToken(
   return { ok: true, runId: rid, gen, expiresAt: exp };
 }
 
-/** Ce qu'une admission locale rend — le miroir de `SandboxAdmission`. */
+/** What a local admission renders — the mirror of `SandboxAdmission`. */
 export type LocalAdmission =
   | { ok: true; runId: string; gen: number }
   | { ok: false; status: 403 | 503; error: string };
 
 /**
- * QUI A LE DROIT DE PARLER SANS FIREWALL (MIN-355) — le pendant local
- * d'`admitSandboxCaller` ([network-policy.ts](network-policy.ts)), et le seul
- * garde de la deuxième voie d'admission.
+ * WHO HAS THE RIGHT TO SPEAK WITHOUT FIREWALL (MIN-355) — the local counterpart
+ * of `admitSandboxCaller` ([network-policy.ts](network-policy.ts)), and the only
+ * guard of the second admission route.
  *
- * PUR, comme son jumeau, et pour la même raison : la route
+ * PURE, like its twin, and for the same reason: the road
  * ([app/api/agent-vm/[...path]/route.ts](../../../app/api/agent-vm/[...path]/route.ts))
- * n'est pas exercée par la suite de tests (`vitest.config.ts` ne lit que
- * `lib/**`). Ce qui décide de l'admission doit donc vivre ici, où un test peut le
+ * is not exercised by the test suite (`vitest.config.ts` only reads
+ * `lib/**`). Whoever decides on admission must therefore live here, where a test can
  * casser.
  *
- * 403 sur tout ce qui n'est pas un jeton valide, sans distinguer l'absence de la
- * fausseté : un appelant sans jeton n'est pas un client qui s'est trompé, c'est
- * quelqu'un qui n'a rien à faire ici. La RAISON, elle, voyage dans le corps —
- * elle est ce qui permet au harness de demander un jeton frais à l'app plutôt que
- * de retenter le sien (un 403 n'est pas retenté, cf. `retryable`).
+ * 403 on anything that is not a valid token, without distinguishing the absence from the
+ * falsehood: a caller without a token is not a customer who made a mistake, it is
+ * someone who has no place here. REASON travels in the body —
+ * it is what allows the harness to request a fresh token from the app rather than
+ * to try his own again (a 403 is not retried, cf. `retryable`).
  */
 export function admitLocalCaller(
   authorization: string | null | undefined,

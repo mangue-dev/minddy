@@ -9,37 +9,37 @@ import { buildFileTree, type FileTreeNode } from "@/lib/pr-file-tree";
 import { DiffCounters, FileStatusIcon } from "@/components/pull-requests/pr-file-marks";
 
 /**
- * « Qu'est-ce que cette PR touche, et emmène-moi à ce fichier » (MIN-182) —
- * l'arbre des fichiers modifiés, dans un panneau qui s'ouvre depuis le compteur
- * de la barre du diff.
+ * "What does this PR touch, and take me to this file" (MIN-182) —
+ * the tree of changed files, in a panel that opens from the diff bar counter
  *
- * **Un panneau, pas une colonne.** Mesuré : sur un portable de 1512 px, une fois
- * la barre principale et la liste des PR déduites, le diff a ~890 px. Une
- * colonne latérale façon GitHub (240–280 px) en prendrait presque un tiers — et
- * pour rien, parce qu'un arbre ne se réduit pas : l'information EST le chemin, et
- * `pr-di…` ne distingue plus `pr-diff.tsx` de `pr-detail.tsx`. Posé PAR-DESSUS le
- * diff, le panneau peut faire 380 px et montrer les chemins en entier, le temps
- * qu'on choisisse.
  *
- * **Un `Popover`, et pas une feuille.** Deux des trois surfaces qui rendent
- * `PrDiff` SONT déjà des `Sheet` (le diff d'un commit, celui d'un run d'agent) :
- * en imbriquer une seconde ferait deux surcouches, deux pièges de focus et deux
- * Échap qui se disputent. Un seul geste partout, donc, et pas de bifurcation
- * mobile à écrire ni à vérifier.
+ * **A panel, not a column.** Measured: on a 1512 px laptop, once
+ * the main bar and the list of PRs deduced, the diff has ~890 px. A
+ * GitHub-style side column (240–280 px) would take almost a third — and
+ * for nothing, because a tree cannot be reduced: the information IS the path, and
+ * `pr-di…` no longer distinguishes `pr-diff.tsx` from `pr-detail.tsx`. Placed ABOVE the
+ * diff, the panel can be 380 px and show the paths in full, for the time
+ * you choose.
+ *
+ * **A `Popover`, and not a sheet.** Two of the three surfaces which render
+ * `PrDiff` ARE already `Sheet` (the diff of a commit, that of an agent run):
+ * nesting a second one would make two overlays, two focus traps and two
+ * Escapes that argue. A single gesture everywhere, therefore, and no bifurcation
+ * mobile to write or check.
  */
 
 /**
- * Les rails d'indentation : un trait vertical par niveau au-dessus de la ligne.
+ * The indentation rails: one vertical line per level above the line.
  *
- * C'est eux qui disent « qui est dans quoi ». Un simple retrait laisse l'œil
- * mesurer des distances ; le trait, lui, RELIE — on remonte du fichier à son
- * dossier en suivant une ligne, sans compter les pixels. Sur un diff de dix-sept
- * fichiers c'est la différence entre une liste et un arbre.
+ * These are the ones that say “who is in what”. A simple removal lets the eye
+ * measure distances; the line, LINKS — we go back from the file to its
+ * folder following a line, without counting the pixels. On a diff of seventeen
+ * files it is the difference between a list and a tree.
  *
- * Chaque rail fait 16 px et pose son trait à 7 px de son bord : le trait tombe
- * donc pile au CENTRE du chevron du niveau au-dessus, et la colonne est continue
- * d'une ligne à l'autre. `self-stretch` le fait courir sur toute la hauteur de la
- * ligne, y compris quand un chemin long passe sur deux lignes.
+ * Each rail is 16 px and places its line 7 px from its edge: the line falls
+ * therefore right at the CENTER of the chevron of the level above, and the column is continue
+ * from one line to the next. `self-stretch` makes it run the full height of the
+ * line, including when a long path crosses two lines.
  */
 function Rails({ depth }: { depth: number }) {
   return Array.from({ length: depth }, (_, i) => (
@@ -52,10 +52,10 @@ function Rails({ depth }: { depth: number }) {
 }
 
 /**
- * Éteint la ponctuation d'un libellé — les `/` d'un dossier replié, la flèche
- * d'un renommage. C'est le NOM qu'on cherche des yeux, pas ce qui l'articule :
- * dans `components/pull-requests`, deux séparateurs pleine encre feraient trois
- * mots de force égale.
+ * Turns off the punctuation of a label — the `/` of a folded folder, the arrow
+ * of a rename. It's the NAME that we're looking for, not what articulates it:
+ * in `components/pull-requests`, two full ink separators would make three
+ * words of equal strength.
  */
 function Segmented({ label }: { label: string }) {
   return label.split(/( → |\/)/).map((part, i) =>
@@ -70,8 +70,8 @@ function Segmented({ label }: { label: string }) {
 }
 
 /**
- * Le squelette commun aux deux lignes. Sans `gap` : les rails se touchent pour
- * former une colonne, et les écarts sont posés un par un après eux.
+ * The skeleton common to both lines. Without `gap`: the rails touch to
+ * form a column, and the gaps are placed one by one after them.
  */
 const ROW_CLASS =
   "flex w-full items-start rounded-md py-1 pr-2 pl-1.5 text-left transition-colors hover:bg-muted";
@@ -85,7 +85,7 @@ function TreeRows({
 }: {
   nodes: FileTreeNode[];
   depth: number;
-  /** Les dossiers REFERMÉS : tout est ouvert au départ, on ne note que l'écart. */
+  /** Files CLOSED: everything is open at the start, we only note the difference. */
   closed: ReadonlySet<string>;
   onToggleDir: (path: string) => void;
   onSelect: (path: string) => void;
@@ -109,10 +109,10 @@ function TreeRows({
                 ) : (
                   <ChevronRight className="mt-px size-3.5 shrink-0 text-muted-foreground" />
                 )}
-                {/* Le dossier en demi-gras, le fichier en normal : c'est la
-                    structure qui porte, et le nom de fichier qu'on lit ensuite.
-                    `break-words` et pas `truncate` — un chemin tronqué ne désigne
-                    plus rien, deux lignes valent mieux qu'un préfixe. */}
+                {/* The folder in half bold, the file in normal: it is the
+ structure which bears, and the file name which we then read.
+ `break-words` and not `truncate` — a truncated path no longer designates
+ anything, two lines are better than a prefix. */}
                 <span className="ml-1.5 min-w-0 flex-1 font-mono text-xs font-medium break-words">
                   <Segmented label={node.label} />
                 </span>
@@ -140,8 +140,8 @@ function TreeRows({
             <button
               type="button"
               onClick={() => onSelect(node.path)}
-              // Le chemin ENTIER, renommage compris : la ligne dit le nom, ce
-              // survol dit d'où il vient.
+              // The ENTIRE path, including renaming: the line says the name, this
+              // hover says where it comes from.
               title={
                 node.file.previous_filename
                   ? `${node.file.previous_filename} → ${node.path}`
@@ -176,7 +176,7 @@ export function PrFileTreeButton({
   files: PullRequestFile[];
   totalAdditions: number;
   totalDeletions: number;
-  /** Emmène au fichier : le parent déplie la carte, puis y défile. */
+  /** Takes to the file: the parent unfolds the card, then scrolls through it. */
   onSelect: (path: string) => void;
 }) {
   const t = useTranslations("PullRequests");
@@ -184,12 +184,12 @@ export function PrFileTreeButton({
   const [closed, setClosed] = useState<ReadonlySet<string>>(() => new Set());
 
   /**
-   * Le panneau de Numo l'avait déjà appris : dans un `Sheet` modal,
-   * react-remove-scroll bloque la molette sur tout ce qui est porté à `<body>`.
-   * Deux de nos trois surfaces EN SONT — sans ça, l'arbre d'une PR de quarante
-   * fichiers ne défilerait pas. On le porte donc dans la feuille quand il y en a
-   * une, et à `<body>` sinon.
-   */
+ * Numo's panel had already learned this: in a `Sheet` modal,
+ * react-remove-scroll blocks the wheel on anything set to `<body>`.
+ * Two of our three surfaces ARE IN — otherwise, the tree of a PR of forty
+ * files would not scroll. We therefore carry it in the sheet when there is
+ * one, and `<body>` otherwise.
+ */
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const triggerRef = useCallback((node: HTMLButtonElement | null) => {
     setContainer(
@@ -209,19 +209,19 @@ export function PrFileTreeButton({
   }, []);
 
   /**
-   * Un saut vient d'avoir lieu — donc le focus est DÉJÀ posé, sur l'en-tête du
-   * fichier visé. Radix, lui, rend le focus au déclencheur à la fermeture, et le
-   * navigateur ramène le défilement avec : le saut serait défait sous nos yeux.
-   * Le drapeau ne vaut que pour ce cas-là ; sur Échap ou un clic à côté, la
-   * restitution normale reste la bonne.
-   */
+ * A jump has just taken place — so the focus is ALREADY set, on the header of the
+ * targeted file. Radix returns focus to the trigger when closing, and the
+ * browser brings back scrolling with: the jump would be undone before our eyes.
+ * The flag is only valid for this case; on Esc or a click next to it, the
+ * normal restitution remains the correct one.
+ */
   const jumped = useRef(false);
 
   const select = useCallback(
     (path: string) => {
       jumped.current = true;
-      // Fermé AVANT le saut : le panneau couvre le diff, et on veut voir arriver
-      // le fichier, pas le retrouver derrière un panneau resté ouvert.
+      // Closed BEFORE the jump: the panel covers the diff, and we want to see it happen
+      // the file, not find it behind a panel that remains open.
       setOpen(false);
       onSelect(path);
     },
@@ -255,8 +255,8 @@ export function PrFileTreeButton({
           jumped.current = false;
           event.preventDefault();
         }}
-        // 384 px au large, et la largeur de l'écran moins ses marges en dessous
-        // — les chemins entiers plutôt qu'une colonne qui les tronquerait.
+        // 384 px wide, and the width of the screen minus its margins below
+        // — the entire paths rather than a column which would truncate them.
         className="w-[min(24rem,calc(100vw_-_2rem))] gap-0 p-0"
       >
         <p className="border-b border-border px-3 py-2 text-xs font-medium text-foreground">

@@ -1,24 +1,24 @@
-// Ce que le menu ⋯ FAIT — sans une ligne de React.
+// What the menu ⋯ DOES — without a line of React.
 //
-// Le menu, lui, n'est qu'une liste de libellés : tout ce qui touche au document
-// est ici, en fonctions qui prennent un éditeur et rendent un booléen. C'est ce
-// qui permet à lib/pages-chrome.test.ts de les jouer sur un vrai éditeur monté
-// sur le vrai registre, sans monter d'interface.
+// The menu is just a list of labels: everything related to the document
+// is here, in functions that take an editor and render a boolean. This is what
+// which allows lib/pages-chrome.test.ts to play them on a real mounted editor
+// on the real register, without mounting an interface.
 //
-// Le fil qui traverse le fichier : **rien ne travaille sur « le bloc »**, tout
-// travaille sur une PLAGE DE BLOCS. Le cas d'un seul bloc n'est que celui d'une
-// plage qui n'en contient qu'un — dupliquer, supprimer, colorer et copier le
-// lien couvrent les deux sans une ligne de plus.
+// The thread that crosses the file: **nothing works on “the block”**, everything
+// works on a RANGE OF BLOCKS. The case of a single block is only that of a
+// range that contains only one — duplicate, delete, color and copy the
+// link covers both without one more line.
 //
-// Deux exceptions, et ce sont exactement les deux endroits où la sélection
-// multi-blocs paraissait ne pas exister :
+// Two exceptions, and these are exactly the two places where the selection
+// multi-block selection appeared not to exist:
 //
-//  - `turnBlocksInto` — les commandes de conversion de tiptap lisent la
-//    sélection elles-mêmes, et lisaient mal celle que pose la poignée ;
-//  - `selectBlockFromHandle` — aller CHERCHER la poignée effaçait la sélection
-//    qu'on venait de faire.
+// - `turnBlocksInto` — tiptap conversion commands read the
+// selection themselves, and misread the one placed by the handle;
+// - `selectBlockFromHandle` — go SEARCH the handle erases the selection
+//    that we had just made.
 //
-// Les deux sont écrits ci-dessous, avec ce qu'ils réparent.
+// Both are written below, along with what they fix.
 
 import type { Editor, JSONContent } from "@tiptap/core";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
@@ -29,45 +29,45 @@ import {
 import { flashBlockAt } from "@/components/pages/block-flash";
 
 /**
- * La largeur des BOUTONS de la gouttière, en pixels : deux boutons de 24 px,
- * leur `gap-0.5` et le `pr-1` qui les sépare du bloc. C'est ce que `BlockGutter`
- * occupe réellement — pas la bande qui le fait apparaître, ci-dessous.
+ * The width of the BUTTONS of the gutter, in pixels: two buttons of 24 px,
+ * their `gap-0.5` and the `pr-1` which separates them from the block. This is what `BlockGutter`
+ * actually occupies — not the strip that makes it appear, below.
  */
 export const GUTTER_WIDTH = 54;
 
 /**
- * La largeur de la BANDE DE SURVOL, en pixels : toute la réserve que la colonne
- * du document laisse à sa gauche (`md:pl-24`, components/pages/page-view.tsx).
+ * The width of the HOVERBAND, in pixels: the entire reserve as the column
+ * of the document leaves to its left (`md:pl-24`, components/pages/page-view.tsx).
  *
- * Ce n'est PAS `GUTTER_WIDTH`, et la différence est ce qui a fait échouer la
- * première version : les boutons n'occupent que les 54 px collés au texte, mais
- * la gouttière qu'on VOIT — et donc celle qu'on vise — est la marge entière. En
- * la limitant aux boutons, il restait une bande morte de 42 px au bord gauche,
- * exactement là où la souris arrive quand elle vient de la sidebar. Mesuré au
- * navigateur : arrêt à 25 px du texte, la poignée sort ; arrêt à 70 px, rien.
+ * This is NOT `GUTTER_WIDTH`, and the difference is what caused the
+ * first version: the buttons only occupy the 54 px stuck to the text, but
+ * the gutter we SEE — and therefore the one we aim for — is the entire margin. In
+ * limiting it to the buttons, there remained a dead band of 42 px at the left edge,
+ * exactly where the mouse arrives when it comes from the sidebar. Measured at
+ * browser: stop at 25 px of text, handle comes out; stop at 70 px, nothing.
  *
- * Elle est ici, dans un module sans React, parce qu'elle est lue par deux
- * endroits qui ne se voient pas l'un l'autre : la règle de `app/globals.css`
- * qui étend la surface de survol de l'éditeur, et la classe de la colonne qui
- * lui réserve la place. `lib/pages-chrome.test.ts` compare les trois.
+ * It is here, in a module without React, because it is read by two
+ * places that do not see each other: the rule of `app/globals.css`
+ * which extends the hover surface of the editor, and the class of the column which
+ * reserves the place for him. `lib/pages-chrome.test.ts` compares the three.
  */
 export const GUTTER_HOVER = 96;
 
-/** Une plage de blocs entiers, en positions absolues du document. */
+/** A range of entire blocks, in absolute document positions. */
 export interface BlockRange {
   from: number;
   to: number;
 }
 
 /**
- * La plage de blocs que porte la sélection courante.
+ * The range of blocks that the current selection carries.
  *
- * `blockRange` de ProseMirror remonte jusqu'au plus petit ancêtre commun qui
- * soit une suite de blocs : un curseur au milieu d'un paragraphe rend le
- * paragraphe entier, une sélection qui court sur trois blocs les rend tous les
- * trois, et une `NodeSelection` sur un dépliant rend le dépliant AVEC son
- * contenu — c'est ce dernier point qui fait que dupliquer ou supprimer emporte
- * les enfants sans qu'on ait à les chercher.
+ * `blockRange` from ProseMirror goes back to the smallest common ancestor that
+ * or a series of blocks: a cursor in the middle of a paragraph makes the
+ * entire paragraph, a selection that runs over three blocks makes them all
+ * three, and a `NodeSelection` on a flyer makes the flyer WITH sound
+ * content — it is this last point which means that duplicating or deleting takes
+ * children without having to look for them.
  */
 export function blockRange(editor: Editor): BlockRange | null {
   const { $from, $to } = editor.state.selection;
@@ -77,9 +77,9 @@ export function blockRange(editor: Editor): BlockRange | null {
 }
 
 /**
- * Poser la sélection sur le bloc qui commence à `pos` — ce que fait un clic sur
- * la poignée avant d'ouvrir le menu. Sans ça, le menu agirait là où le curseur
- * traînait, pas sur le bloc survolé.
+ * Place the selection on the block that begins at `pos` — what a click on does
+ * the handle before opening the menu. Without it, the menu would act where the cursor
+ * was hanging around, not on the block we flew over.
  */
 export function selectBlockAt(editor: Editor, pos: number): boolean {
   const { doc } = editor.state;
@@ -92,21 +92,21 @@ export function selectBlockAt(editor: Editor, pos: number): boolean {
 }
 
 /**
- * Ce que sélectionne un clic sur la POIGNÉE, une fois qu'on tient compte de ce
- * qui était déjà sélectionné.
+ * What a click on the HANDLE selects, once we take this into account
+ * which was already selected.
  *
- * Trois cas, et le deuxième est celui qui manquait :
+ * Three cases, and the second is the one that was missing:
  *
- *  - ⇧-clic : étendre depuis la sélection courante jusqu'à ce bloc ;
- *  - la sélection porte DÉJÀ plusieurs blocs et celui-ci en fait partie : on
- *    n'y touche pas. C'est ce qui rend la sélection multi-blocs utilisable —
- *    on balaye trois blocs à la souris, on va chercher la poignée, et la
- *    poignée gardait la sélection à un seul bloc, celui qu'elle survole. Le
- *    geste existait, il s'effaçait juste au moment de s'en servir ;
- *  - sinon : ce bloc, et lui seul.
+ * - ⇧-click: extend from the current selection to this block;
+ * - the selection ALREADY has several blocks and this one is one of them: we
+ * don't touch it. This is what makes multi-block selection usable —
+ * we sweep three blocks with the mouse, we look for the handle, and the
+ * handle kept the selection to a single block, the one it hovers over. THE
+ * gesture existed, it faded just when it was time to use it;
+ * - otherwise: this block, and it alone.
  *
- * Rendre `true` sans rien dispatcher (cas 2) n'est pas un échec : c'est « la
- * sélection est déjà la bonne », et l'appelant ouvre son menu par-dessus.
+ * Making `true` without dispatching anything (case 2) is not a failure: it is “the
+ * selection is already the correct one", and the caller opens his menu over it.
  */
 export function selectBlockFromHandle(
   editor: Editor,
@@ -139,11 +139,11 @@ export function selectBlockFromHandle(
 }
 
 /**
- * Les blocs de PREMIER niveau que couvre la plage — pas leurs descendants.
+ * The FIRST level blocks that the range covers — not their descendants.
  *
- * C'est la distinction qui compte pour le menu : trois blocs sélectionnés font
- * « 3 blocs », même quand l'un d'eux est une liste de dix items. Descendre dans
- * l'arbre donnerait un décompte que personne ne reconnaît.
+ * This is the distinction that matters for the menu: three selected blocks make
+ * “3 blocks”, even when one of them is a list of ten items. Go down in
+ * the tree would give a count that no one recognizes.
  */
 function blocksIn(editor: Editor, range: BlockRange) {
   const $from = editor.state.doc.resolve(range.from);
@@ -159,7 +159,7 @@ function blocksIn(editor: Editor, range: BlockRange) {
   return blocks;
 }
 
-/** Les ID des blocs couverts par la sélection, dans l'ordre du document. */
+/** The IDs of the blocks covered by the selection, in document order. */
 export function selectedBlockIds(editor: Editor): string[] {
   const range = blockRange(editor);
   if (!range) return [];
@@ -168,8 +168,8 @@ export function selectedBlockIds(editor: Editor): string[] {
     .filter((id): id is string => id !== null);
 }
 
-/** Le nombre de blocs sur lesquels le menu va agir — ce qu'il annonce en tête
-    quand il y en a plus d'un. */
+/** The number of blocks on which the menu will act — what it announces at the top
+    when there is more than one. */
 export function selectedBlockCount(editor: Editor): number {
   const range = blockRange(editor);
   if (!range) return 0;
@@ -177,18 +177,18 @@ export function selectedBlockCount(editor: Editor): number {
 }
 
 /**
- * La page citée quand la sélection est UN bloc sous-page, et rien d'autre.
+ * The page cited when selected is ONE subpage block, and nothing else.
  *
- * C'est ce qui fait basculer le menu ⋯ d'un vocabulaire de bloc à un
- * vocabulaire de PAGE (MIN-272) : dupliquer copie la page, supprimer la met à
- * la corbeille, et « transformer en » comme les couleurs disparaissent — un
- * lien vers un document ne se convertit pas en citation et n'a pas de couleur
- * de texte à choisir.
+ * This is what switches the menu ⋯ from a block vocabulary to a
+ * PAGE vocabulary (MIN-272): duplicate copies the page, delete updates it
+ * the trash, and “turn into” as the colors disappear — a
+ * link to a document does not convert to a quote and has no color
+ * of text to choose from.
  *
- * `null` dès que la sélection porte sur autre chose ou sur plusieurs blocs :
- * une sélection mêlée retombe sur le menu ordinaire, où « dupliquer » veut dire
- * dupliquer des blocs. Deux vocabulaires dans un même menu, c'est un menu qui
- * ment sur la moitié de ce qu'il propose.
+ * `null` as soon as the selection concerns something else or several blocks:
+ * a mixed selection falls back on the ordinary menu, where “duplicate” means
+ * duplicate blocks. Two vocabularies in the same menu, it’s a menu that
+ * lies about half of what he offers.
  */
 export function selectedSubpageId(editor: Editor): string | null {
   const range = blockRange(editor);
@@ -211,18 +211,18 @@ export function selectedSubpageId(editor: Editor): string | null {
 }
 
 /**
- * La sélection ne porte-t-elle QUE des médias — images, fichiers (MIN-282) ?
+ * Is the selection ONLY media — images, files (MIN-282)?
  *
- * Le même besoin que `selectedSubpageId`, et la même raison : le menu doit
- * changer de vocabulaire plutôt que proposer des gestes qui n'ont pas de sens.
- * Un fichier ne se « transforme » pas en citation, il n'a pas de couleur de
- * texte à choisir, et le DUPLIQUER ne duplique rien — il pose une seconde
- * référence aux mêmes octets, ce qui se lit comme une copie sans en être une.
+ * The same need as `selectedSubpageId`, and the same reason: the menu must
+ * change vocabulary rather than proposing gestures that make no sense.
+ * A file does not “transform” into a quote; it has no color for
+ * text to choose, and DUPLICATE does not duplicate anything — it takes a second
+ * reference to the same bytes, which reads like a copy without actually being one.
  *
- * Vrai sur une sélection multiple qui n'a que ça : trois images sélectionnées
- * posent exactement les mêmes questions qu'une seule. Faux sur une sélection
- * mêlée, qui retombe sur le menu ordinaire — deux vocabulaires dans un même
- * menu, c'est un menu qui ment sur la moitié de ce qu'il propose.
+ * True on a multiple selection which only has that: three images selected
+ * ask exactly the same questions as one. False on a selection
+ * melee, which falls back on the ordinary menu — two vocabularies in the same
+ * menu, it's a menu that lies about half of what it offers.
  */
 export function selectionIsMediaOnly(editor: Editor): boolean {
   const range = blockRange(editor);
@@ -242,18 +242,18 @@ export function selectionIsMediaOnly(editor: Editor): boolean {
 }
 
 /**
- * Poser un bloc sous-page vers `pageId` à la position `at` — ce que fait
- * « dupliquer » sur un bloc sous-page, une fois la page copiée.
+ * Place a subpage block towards `pageId` at position `at` — what does
+ * “duplicate” on a sub-page block, once the page has been copied.
  *
- * La position est passée, et non relue : la copie est un aller-retour au
- * serveur, et pendant ce temps la sélection a pu partir ailleurs. La relire au
- * retour poserait la copie sous le bloc où l'on se trouve ALORS, pas sous celui
- * qu'on a dupliqué. Elle est bornée au document plutôt que refusée — le pire
- * qui puisse arriver est un bloc en fin de page, là où refuser perdrait une
- * page déjà écrite en base.
+ * The position is passed, and not reread: the copy is a round trip to the
+ * server, and during this time the selection was able to go elsewhere. reread it at
+ * return would place the copy under the block where we are THEN, not under the one
+ * which we duplicated. It is limited to the document rather than refused — the worst
+ * that can happen is a block at the end of the page, where refusing would lose a
+ * page already written in base.
  *
- * Sans `focus()` non plus : reprendre le curseur une seconde après le clic le
- * volerait à qui s'est remis à taper entre-temps.
+ * Without `focus()` either: resume the cursor one second after clicking
+ * would steal from anyone who started typing again in the meantime.
  */
 export function insertSubpageAfter(
   editor: Editor,
@@ -267,21 +267,21 @@ export function insertSubpageAfter(
     .run();
 }
 
-/* ── Deux pièges du DOM des vues de nœud ──────────────────────────────── */
+/* ── Two DOM Pitfalls of Node Views ──────────────────────────────── */
 
 /**
- * L'élément qui porte VRAIMENT le style d'un bloc, à partir de ce que
+ * The element that REALLY carries the style of a block, from what
  * `view.nodeDOM` retourne.
  *
- * Une vue de nœud React (la sous-page, l'item de tâche) n'est pas rendue dans
- * cet élément-là : tiptap-react crée un `div.react-renderer` NU et monte le
- * `NodeViewWrapper` dedans. Tout le style du bloc — son rembourrage, sa hauteur
- * de ligne — vit donc un cran plus bas, et mesurer le conteneur revient à
- * mesurer rien : la gouttière (poignée + `+`) se calait sur un div sans
- * rembourrage et flottait au-dessus du texte, d'exactement la valeur du `py-`
- * du bloc.
+ * A React node view (the subpage, the task item) is not rendered in
+ * this element: tiptap-react creates a NU `div.react-renderer` and mounts it
+ * `NodeViewWrapper` in it. The whole style of the block — its padding, its height
+ * of line — therefore lives a notch lower, and measuring the container amounts to
+ * measure nothing: the gutter (handle + `+`) was positioned on a div without
+ * padding and floated above the text, of exactly the value of `py-`
+ * the block.
  *
- * On descend d'un cran, et d'un seul : ce qu'on cherche est le bloc, pas son
+ * We go down a notch, and only one: what we are looking for is the block, not its
  * contenu.
  */
 export function styledBox(dom: HTMLElement): HTMLElement {
@@ -292,20 +292,20 @@ export function styledBox(dom: HTMLElement): HTMLElement {
     : dom;
 }
 
-/* L'ancre d'une vue de nœud (le bloc sous-page, la pilule d'une mention) et le
-   clic qui la garde hors de l'extension Link vivent dans
-   components/editor-node-link.ts : elle n'est pas propre aux pages — une
-   description en rend une aussi. */
+/* The anchor of a node view (the subpage block, the pill of a mention) and the
+   click that keeps it out of the Link extension live in
+   components/editor-node-link.ts: it is not specific to pages — one
+   description makes one too. */
 
-/* ── Les actions ──────────────────────────────────────────────────────── */
+/* ── Actions ──────────────────────────── ──────────────────────────── */
 
 /**
- * L'attribut d'identité RETIRÉ de tout un sous-arbre.
+ * The identity attribute REMOVED from an entire subtree.
  *
- * Dupliquer en recopiant les attributs tels quels donnerait deux blocs portant
- * le même `blockId` — donc deux ancres identiques, et une sauvegarde par bloc
- * (MIN-271) qui écrirait l'un par-dessus l'autre. On enlève l'ID, `UniqueID`
- * en pose un neuf à l'insertion.
+ * Duplicate by copying the attributes as they are would give two blocks carrying
+ * the same `blockId` — therefore two identical anchors, and one backup per block
+ * (MIN-271) which would write one over the other. We remove the ID, `UniqueID`
+ * install a new one when inserted.
  */
 export function withoutBlockIds(content: JSONContent[]): JSONContent[] {
   return content.map((node) => {
@@ -320,14 +320,14 @@ export function withoutBlockIds(content: JSONContent[]): JSONContent[] {
 }
 
 /**
- * Poser une sélection de TEXTE qui court d'un bout à l'autre de la plage de
- * blocs. C'est la forme de sélection que les commandes de conversion de tiptap
- * savent lire ; une `NodeSelection` — celle que pose la poignée — n'en est pas
- * une, et c'est là que tout se jouait (cf. `turnBlocksInto`).
+ * Place a selection of TEXT that runs from one end of the text range to the other
+ * blocks. This is the selection form that tiptap convert commands
+ * can read; a `NodeSelection` — the one placed on the handle — is not one
+ * one, and that's where everything was at stake (see `turnBlocksInto`).
  *
- * `TextSelection.between` cherche les positions de texte les plus proches des
- * deux bords et retombe sur une sélection de nœud s'il n'y en a pas — un
- * séparateur, une sous-page. Rien à protéger de plus.
+ * `TextSelection.between` searches for text positions closest to
+ * two edges and falls on a node selection if there is none — one
+ * separator, a subpage. Nothing more to protect.
  */
 function spreadOverBlocks(editor: Editor): boolean {
   const range = blockRange(editor);
@@ -342,32 +342,32 @@ function spreadOverBlocks(editor: Editor): boolean {
 }
 
 /**
- * « Transformer en » — sur TOUTE la sélection, et pas sur son premier bloc.
+ * “Transform to” — on the WHOLE selection, not its first block.
  *
- * C'est le geste que le menu ⋯ et les raccourcis du registre déclenchent tous
- * les deux, et il ne peut pas se contenter d'appeler `block.turnInto` : une
- * liste de trois items, convertie depuis la poignée, ressortait en une liste
- * numérotée d'UN item suivie de deux paragraphes nus. La poignée sélectionne le
- * bloc entier (`NodeSelection`), et `toggleOrderedList` ne sait pas quoi en
- * faire : il n'y voit pas de liste parente à retyper, retombe sur son chemin
- * générique, et celui-ci ne rattrape que le premier bloc.
+ * This is the gesture that the ⋯menu and registry shortcuts all trigger
+ * both, and he can't just call `block.turnInto`: a
+ * list of three items, converted from the handle, emerged as a list
+ * numbered with ONE item followed by two bare paragraphs. The handle selects the
+ * whole block (`NodeSelection`), and `toggleOrderedList` does not know what in
+ * do: it doesn't see a parent list to retype, falls back on its path
+ * generic, and this only catches the first block.
  *
- * Deux gestes, donc, avant de convertir :
+ * Two actions, therefore, before converting:
  *
- *  1. **étaler** la sélection sur la plage entière, en sélection de texte ;
- *  2. **aplatir** (`clearNodes`) : les items sortent de leur liste, le contenu
- *     sort du dépliant, tout redevient une suite de blocs de même niveau.
+ * 1. **spread** the selection over the entire range, in text selection;
+ * 2. **flatten** (`clearNodes`): the items leave their list, the content
+ * leaves the leaflet, everything becomes a series of blocks of the same level again.
  *
- * Le deuxième est ce qui donne au menu une réponse dans TOUS les sens, et pas
- * seulement vers les listes : « liste → paragraphe » et « liste → citation » ne
- * faisaient, eux, strictement rien avant — `setParagraph` et `toggleBlockquote`
- * ne délistent pas. Une liste devient trois paragraphes, ou une citation qui
- * les porte tous les trois ; trois paragraphes deviennent une liste de trois
- * items. « Transformer en » veut dire la même chose dans les deux sens.
+ * The second is what gives the menu a response in ALL directions, and not
+ * only towards lists: “list → paragraph” and “list → quote” does not
+ * They did absolutely nothing before — `setParagraph` and `toggleBlockquote`
+ * do not delist. A list becomes three paragraphs, or a quote that
+ * carries all three; three paragraphs become a list of three
+ * items. “Transform into” means the same thing in both senses.
  *
- * Ce que ça coûte, et qui est assumé : la conversion repose des blocs NEUFS,
- * donc de nouveaux `blockId`. C'était déjà le cas d'un simple paragraphe → titre
- * avant ce changement — un bloc converti n'est pas le même bloc.
+ * What it costs, and who is covered: the conversion is based on NEW blocks,
+ * therefore new `blockId`. This was already the case with a simple paragraph → title
+ * before this change — a converted block is not the same block.
  */
 export function turnBlocksInto(editor: Editor, block: PageBlock): boolean {
   if (!block.turnInto) return false;
@@ -377,7 +377,7 @@ export function turnBlocksInto(editor: Editor, block: PageBlock): boolean {
   return block.turnInto(editor);
 }
 
-/** Dupliquer la sélection JUSTE EN DESSOUS d'elle, enfants compris. */
+/** Duplicate the selection JUST BELOW her, including children. */
 export function duplicateBlocks(editor: Editor): boolean {
   const range = blockRange(editor);
   if (!range) return false;
@@ -391,7 +391,7 @@ export function duplicateBlocks(editor: Editor): boolean {
     .run();
 }
 
-/** Supprimer la sélection, enfants compris. */
+/** Delete the selection, including children. */
 export function deleteBlocks(editor: Editor): boolean {
   const range = blockRange(editor);
   if (!range) return false;
@@ -399,12 +399,12 @@ export function deleteBlocks(editor: Editor): boolean {
 }
 
 /**
- * Insérer un paragraphe vide au-dessus ou en dessous du bloc qui commence à
- * `pos`, curseur dedans, et amorcer le menu « / » : le `+` de la marge ne pose
- * pas un paragraphe, il ouvre le catalogue — c'est le geste de Notion.
+ * Insert an empty paragraph above or below the block that begins
+ * `pos`, cursor in, and start the “/” menu: the `+` of the margin does not pose
+ * not a paragraph, he opens the catalog — it’s Notion’s gesture.
  *
- * Le « / » est tapé DANS le document plutôt que simulé au clavier : le menu est
- * une suggestion ProseMirror, elle s'ouvre sur le texte devant le curseur, d'où
+ * The “/” is typed IN the document rather than simulated on the keyboard: the menu is
+ * a ProseMirror suggestion, it opens to the text in front of the cursor, hence
  * qu'il vienne.
  */
 export function insertBlockAround(
@@ -424,16 +424,16 @@ export function insertBlockAround(
 }
 
 /**
- * Écrire À LA SUITE du document, depuis le vide sous le dernier bloc.
+ * Write FOLLOWING the document, from the gap under the last block.
  *
- * Un document se termine là où se termine son dernier bloc, et sous ce bloc il
- * n'y a rien à cliquer : pour reprendre l'écriture à la fin d'une page, il
- * fallait viser la dernière ligne au pixel puis appuyer sur Entrée. La réserve
- * cliquable du bas (components/pages/page-editor.tsx) appelle ceci et rend le
- * geste évident — on clique sous le texte, on écrit.
+ * A document ends where its last block ends, and below that block it
+ * there is nothing to click: to resume writing at the end of a page, it
+ * had to aim at the last line at the pixel then press Enter. The reserve
+ * bottom clickable (components/pages/page-editor.tsx) calls this and renders the
+ * obvious gesture - we click under the text, we write.
  *
- * Le paragraphe n'est ajouté que s'il en manque un : cliquer deux fois dans la
- * réserve ne doit pas empiler des lignes vides dans le document enregistré.
+ * The paragraph is only added if one is missing: click twice in the
+ * reserve should not stack empty lines in the saved document.
  */
 export function focusDocumentEnd(editor: Editor): void {
   if (editor.isDestroyed) return;
@@ -452,17 +452,17 @@ export function focusDocumentEnd(editor: Editor): void {
 }
 
 /**
- * Écrire AU DÉBUT du document, depuis le titre.
+ * Write AT THE BEGINNING of the document, from the title.
  *
- * Entrée à la fin du titre est le geste d'une ligne : elle ouvre la ligne
- * SUIVANTE, vide, et y met le curseur — le titre se comporte comme la première
- * ligne de la page alors qu'il est un champ à part (cf. title-bridge.ts). Se
- * contenter de descendre dans le corps mettait le curseur devant le texte déjà
- * écrit, où Entrée n'a jamais rien ouvert.
+ * Enter at the end of the title is the one-line gesture: it opens the line
+ * NEXT, empty, and put the cursor there — the title behaves like the first
+ * line of the page even though it is a separate field (see title-bridge.ts). Just
+ * going down into the body puts the cursor in front of the text already
+ * written, where Enter never opened anything.
  *
- * Même garde que `focusDocumentEnd`, pour la même raison : si le document
- * commence déjà par un paragraphe vide, on s'y pose au lieu d'en empiler un
- * second à chaque passage.
+ * Same guard as `focusDocumentEnd`, for the same reason: if the document
+ * already starts with an empty paragraph, we settle on it instead of stacking one
+ * second on each pass.
  */
 export function focusDocumentStart(editor: Editor): void {
   if (editor.isDestroyed) return;
@@ -476,13 +476,13 @@ export function focusDocumentStart(editor: Editor): void {
 }
 
 /**
- * La position du bloc qui porte cet ID — l'ancre d'un lien de bloc, résolue
- * dans le DOCUMENT et non dans le DOM.
+ * The position of the block that has this ID — the anchor of a block link, resolved
+ * in the DOCUMENT and not in the DOM.
  *
- * Le DOM ne suffit plus depuis que le clignement passe par une décoration
- * (components/pages/block-flash.ts) : une décoration se pose sur une position,
- * pas sur un élément. Et c'est aussi bien — un élément peut être remplacé sous
- * nos pieds, une position se remappe.
+ * The DOM is no longer enough since the blink goes through a decoration
+ * (components/pages/block-flash.ts): a decoration is placed on a position,
+ * not on an element. And that's also good — an element can be replaced under
+ * our feet, a position is remapped.
  */
 export function posOfBlockId(editor: Editor, blockId: string): number | null {
   let found: number | null = null;
@@ -498,21 +498,21 @@ export function posOfBlockId(editor: Editor, blockId: string): number | null {
 }
 
 /**
- * AMÈNE un bloc à l'écran et l'allume — le geste complet de « va là ».
+ * BRING a block to the screen and light it — the full “go there” gesture.
  *
- * Les deux moitiés sont écrites ensemble, et c'est tout l'intérêt : les
- * séparer a coûté deux passes. Le défilement DOUX rend la main tout de suite
- * et met jusqu'à une seconde à arriver, alors qu'une animation CSS tourne
- * qu'on la voie ou non — le clignement brûlait son temps pendant le trajet et
- * n'était plus là à l'arrivée. Visible sur un bloc proche, invisible sur un
- * bloc lointain.
+ * The two halves are written together, and that's the whole point: the
+ * separating cost two passes. GENTLE scrolling makes the hand feel right away
+ * and takes up to a second to arrive, while a CSS animation is running
+ * whether we saw her or not — the blinking was burning up her time during the journey and
+ * was no longer there on arrival. Visible on a nearby block, invisible on a
+ * distant block.
  *
- * D'où le saut SEC. Attendre l'arrivée demanderait `scrollend`, que tous les
- * navigateurs ne servent pas et qui ne vient jamais quand rien n'a défilé.
- * Et c'est justement pour se repérer après un saut sec que le clignement
- * existe.
+ * Hence the SEC jump. Waiting for arrival would request `scrollend`, which all
+ * browsers are not used and which never comes when nothing has scrolled.
+ * And it is precisely to find one's bearings after a sharp jump that the blink
+ * exists.
  *
- * Rend de quoi ÉTEINDRE le clignement (cf. `flashBlockAt`).
+ * Makes enough to TURN OFF the blink (see `flashBlockAt`).
  */
 export function revealBlock(
   editor: Editor,
@@ -532,25 +532,25 @@ export function revealBlock(
 }
 
 /**
- * L'URL d'un bloc : celle de la page, plus l'ID du bloc en fragment.
+ * The URL of a block: that of the page, plus the block ID in fragment.
  *
- * Un fragment et pas un paramètre : il ne part pas au serveur, ne casse aucune
- * route, et le défilement vers l'ancre se branchera dessus (ticket de l'onglet
- * Pages). `href` est passé plutôt que lu ici pour que la fonction reste
- * testable hors navigateur.
+ * A fragment and not a parameter: it does not go to the server, does not break any
+ * route, and scrolling to the anchor will plug into it (tab ticket
+ * Pages). `href` is passed rather than read here so that the function remains
+ * testable outside the browser.
  */
 export function blockLink(href: string, blockId: string): string {
   const [base] = href.split("#");
   return `${base}#${blockId}`;
 }
 
-/** L'ID du premier bloc de la sélection — ce que « copier le lien » vise. */
+/** The ID of the first block in the selection — what “copy link” is aiming for. */
 export function selectedBlockId(editor: Editor): string | null {
   return selectedBlockIds(editor)[0] ?? null;
 }
 
-/** Rendre le curseur au document, au début de la plage — ce que fait le menu en
-    se fermant, pour que `Échap` ne laisse pas le focus nulle part. */
+/** Return the cursor to the document, at the start of the range — what the menu does in
+    closing, so that `Escape` doesn't leave focus anywhere. */
 export function focusBlockRange(
   editor: Editor,
   range: BlockRange | null

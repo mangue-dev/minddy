@@ -1,18 +1,18 @@
-# L'IDENTITÉ DE L'APP, ET SA DISTRIBUTION (MIN-292).
+# THE IDENTITY OF THE APP, AND ITS DISTRIBUTION (MIN-292).
 #
-# Ce fichier est le seul endroit où minddy s'appelle « minddy » aux yeux de
-# macOS. Rien de ce qu'il pose ne se corrige à l'exécution : le nom sous l'icône,
-# celui de la barre de menus, l'icône elle-même, l'identifiant de signature et le
-# schéma `minddy://` sont lus dans l'`Info.plist` du bundle, une fois, au
-# lancement. Tant qu'on lançait depuis le dépôt, macOS lisait celui
-# d'`Electron.app` — d'où « Electron » partout, et un `minddy://` qui n'atteignait
-# personne (LaunchServices inscrivait Electron.app, pas nous).
+# This file is the only place where minddy is called "minddy" in the eyes of
+#macOS. Nothing he asks is corrected upon execution: the name under the icon,
+# that of the menu bar, the icon itself, the signature identifier and the
+# schema `minddy://` are read from the `Info.plist` of the bundle, once, at
+# launch. As long as we launched from the repository, macOS read the one
+# of `Electron.app` — hence “Electron” everywhere, and a `minddy://` which only reached
+# anyone (LaunchServices registered Electron.app, not us).
 #
-# `app.setName("minddy")` (MIN-291) ne fait PAS double emploi : lui nomme le
-# dossier de données (`~/Library/Application Support/minddy/`, où vivront les
-# worktrees de l'agent local), et il devait être posé avant qu'il existe des
-# installations. Celui-ci nomme le bundle. Les deux disent le même mot, pour deux
-# raisons différentes.
+# `app.setName("minddy")` (MIN-291) does NOT duplicate: he names it
+# data folder (`~/Library/Application Support/minddy/`, where the
+# worktrees of the local agent), and it had to be set before there were
+# facilities. This names the bundle. Both say the same word, for two
+# different reasons.
 
 appId: app.minddy.desktop
 productName: minddy
@@ -22,21 +22,21 @@ directories:
   buildResources: build
   output: release
 
-# Négations seulement : le défaut d'electron-builder embarque déjà `dist/`,
-# `package.json` et les dépendances de PRODUCTION (`electron-updater` et le npm
-# de bootstrap de l'agent local, avec leurs transitivités), en élaguant les
-# devDependencies — dont Electron et electron-builder eux-mêmes. Lister `files`
-# en positif obligerait à réénumérer cette transitivité à la main et à la tenir à
-# jour.
+# Negations only: the electron-builder default already embeds `dist/`,
+# `package.json` and PRODUCTION dependencies (`electron-updater` and npm
+# of bootstrap of the local agent, with their transitivities), by pruning the
+# devDependencies — including Electron and electron-builder themselves. List `files`
+# in positive would require re-enumerating this transitivity by hand and keeping it at
+# current.
 files:
-  # Les sources TypeScript : `dist/` est le bundle esbuild, il se suffit.
+  # TypeScript sources: `dist/` is the esbuild bundle, it is sufficient.
   - "!src/**"
   - "!tsconfig.json"
   - "!electron-builder.yml"
 
-# C'est LUI qui écrit `CFBundleURLTypes`, et c'est ce qui rend le deep link
-# d'authentification testable pour la première fois : `app.setAsDefaultProtocolClient`
-# ne fait qu'ANNONCER un schéma que le bundle doit déjà déclarer.
+# It's HIM who writes `CFBundleURLTypes`, and that's what makes the deep link
+Testable authentication # for the first time: `app.setAsDefaultProtocolClient`
+# just ANNOUNCES a schema that the bundle must already declare.
 protocols:
   - name: minddy
     schemes:
@@ -44,83 +44,83 @@ protocols:
 
 mac:
   category: public.app-category.productivity
-  # LA SOURCE EST LE `.icon`, PAS UN `.icns`.
+  # THE SOURCE IS THE `.icon`, NOT A `.icns`.
   #
-  # `build/icon.icon` est le dossier rendu par Icon Composer (`icon.json` + le
-  # SVG du logo) : le vecteur, les couches, le verre, et les déclinaisons sombre
-  # et teintée. Depuis macOS 26 un bundle porte DEUX icônes, et elles ne se
-  # remplacent pas — `Assets.car` + `CFBundleIconName` pour 26 et au-delà,
-  # `icon.icns` + `CFBundleIconFile` pour tout ce qui précède (ici jusqu'à
-  # Big Sur, cf. `minimumSystemVersion`). Retirer la seconde, c'est laisser sans
-  # icône tous ceux qui n'ont pas encore migré.
+  # `build/icon.icon` is the folder rendered by Icon Composer (`icon.json` + the
+  # SVG of the logo): the vector, the layers, the glass, and the dark variations
+  # and tinted. Since macOS 26 a bundle carries TWO icons, and they do not
+  # do not replace — `Assets.car` + `CFBundleIconName` for 26 and beyond,
+  # `icon.icns` + `CFBundleIconFile` for all of the above (here until
+  # Big Sur, cf. `minimumSystemVersion`). To remove the second is to leave without
+  # icon all those who have not yet migrated.
   #
-  # electron-builder 26 pose les deux à partir de cette seule ligne
-  # (`macPackager.applyCommonInfo` → `util/macosIconComposer`) : il appelle
-  # `actool` sur le `.icon`, écrit l'`Assets.car`, pose la clé, ET dérive
-  # l'`icns` de compatibilité de la même sortie. D'où la disparition de
-  # `scripts/build-desktop-icon.mjs` et de l'`icns` commité, qui fabriquaient à
-  # la main — depuis un PNG carré de 512, sans squircle ni marges — quelque
-  # chose qui n'avait pas la forme d'une icône macOS.
+  # electron-builder 26 installs both from this single line
+# (`macPackager.applyCommonInfo` → `util/macosIconComposer`): it calls
+  # `actool` on the `.icon`, writes the `Assets.car`, sets the key, AND drifts
+  # the `icns` compatibility of the same output. Hence the disappearance of
+  # `scripts/build-desktop-icon.mjs` and the `icns` commit, which manufactured
+  # hand — from a 512 square PNG, without squircle or margins — some
+  # something that wasn't in the shape of a macOS icon.
   #
-  # **Le build exige donc Xcode 26 ou plus** : `actool` en version < 26 fait
-  # échouer la fabrication, avec un message explicite. C'était déjà le cas de la
-  # notarisation pour la machine (macOS), ça l'est maintenant pour l'outillage.
+  # **The build therefore requires Xcode 26 or more**: `actool` in version < 26 done
+  # fail crafting, with an explicit message. This was already the case for
+  # notarization for the machine (macOS), it is now for the tools.
   #
-  # Une réserve à connaître : l'`icns` que rend `actool` s'arrête à 256 px. Sur
-  # macOS 11→15, une vue Finder en grandes icônes agrandit donc du 256. C'est le
-  # prix de la chaîne officielle, et il vaut mieux qu'une icône bien nette de
-  # mauvaise forme.
+  # A reservation to be aware of: the `icns` that `actool` renders stops at 256 px. On
+  # macOS 11→15, a Finder view in large icons therefore enlarges by 256. This is the
+  # price of the official channel, and it is better than a very clear icon of
+# the wrong shape.
   icon: build/icon.icon
-  # Electron 43 ne démarre plus en deçà (et Big Sur est la première version qui
-  # tourne sur Apple Silicon).
+  # Electron 43 no longer starts below (and Big Sur is the first version that
+  # runs on Apple Silicon).
   minimumSystemVersion: "11.0"
   darkModeSupport: true
-  # Le `.dmg` sert au PREMIER téléchargement, le `.zip` aux mises à jour :
-  # Squirrel.Mac ne sait lire que le second. Publier l'un sans l'autre donne une
-  # app qui s'installe et ne se met jamais à jour, sans rien dire.
+  # The `.dmg` is used for the FIRST download, the `.zip` for updates:
+  # Squirrel.Mac can only read the second one. Publishing one without the other gives
+  # app that installs and never updates, without saying anything.
   target:
     - target: dmg
       arch: [arm64, x64]
     - target: zip
       arch: [arm64, x64]
-  # LA PHRASE QUE MACOS AFFICHE EN DEMANDANT LE MICRO (MIN-294).
+  # THE PHRASE THAT MACOS DISPLAYS WHEN ASKING FOR THE MICROPHONE (MIN-294).
   #
-  # Sans elle, pas de fenêtre de demande — et pas d'avertissement non plus : le
-  # système refuse, l'app n'en sait rien. Le bundle en HÉRITE pourtant une,
-  # d'Electron.app, mais c'est son gabarit anglais (« This app needs access to
-  # the microphone ») : il ne dit ni qui demande ni pour quoi faire, et c'est la
-  # seule phrase que la personne lira avant de décider.
+  # Without it, no request window — and no warning either: the
+  # system refuses, the app knows nothing about it. The bundle nevertheless INHERITS one,
+  # of Electron.app, but it is its English template (“This app needs access to
+  # the microphone"): it says neither who is asking nor for what to do, and that is the
+  # only sentence that the person will read before deciding.
   #
-  # La version française est dans `build/fr.lproj/InfoPlist.strings`, posée par
-  # `extraResources` juste en dessous. Celle-ci reste la base, servie à tous les
-  # autres.
+  # The French version is in `build/fr.lproj/InfoPlist.strings`, posted by
+  # `extraResources` just below. This remains the basis, served to all
+# others.
   #
-  # LES DOSSIERS PROTÉGÉS PAR TCC (MIN-359, décision D4).
+  # FILES PROTECTED BY TCC (MIN-359, decision D4).
   #
-  # `~/Documents`, `~/Desktop` et `~/Downloads` sont des emplacements COURANTS
-  # pour un dépôt, et un volume externe l'est pour qui manque de place. Sans ces
-  # phrases, macOS refuse la lecture **et la fenêtre de demande ne s'ouvre même
-  # pas** : le refus est muet, exactement comme celui du micro avant MIN-294.
-  # C'est une panne qui n'arrive qu'après empaquetage, chez l'utilisateur, sans
-  # log — le pire endroit pour la découvrir.
+  # `~/Documents`, `~/Desktop` and `~/Downloads` are COMMON locations
+  # for a deposit, and an external volume is for those who lack space. Without these
+  # sentences, macOS refuses to read **and the request window does not even open
+# at all**: the refusal is silent, exactly like that of the microphone before MIN-294.
+  # This is a failure that only occurs after packaging, at the user's premises, without
+  # log — the worst place to find it.
   #
-  # ⚠ **Ces clés changent l'empreinte de republication** (scripts/desktop-fingerprint.mjs,
-  # `PACKAGING_INPUTS`), donc republication + renotarisation. L'objection ne tient
-  # pas pour ce lot : MIN-359 touche déjà `desktop/src/main.ts` et `preload.ts`,
-  # donc l'empreinte bouge de toute façon. Les ajouter ici est gratuit ; les
-  # ajouter plus tard coûterait une seconde publication.
+  # ⚠ **These keys change the repost fingerprint** (scripts/desktop-fingerprint.mjs,
+# `PACKAGING_INPUTS`), so republication + re-notarization. The objection does not hold
+# for this batch: MIN-359 already touches `desktop/src/main.ts` and `preload.ts`,
+  # so the print moves anyway. Adding them here is free; THE
+  # adding later would cost a second post.
   #
-  # **Ce qui reste à mesurer, et qui ne change pas la décision :** une sélection
-  # par `dialog.showOpenDialog` vaut consentement explicite et POURRAIT suffire à
-  # ouvrir le chemin sans invite. Non vérifié — la sonde de MIN-359 n'a pas abouti
-  # (cf. le commentaire du ticket). Même si elle suffit, ces phrases restent le
-  # filet du cas où elle ne suffit PAS, et le cas où elle ne suffit pas est muet.
-  # La question qui compte davantage — le droit descend-il jusqu'aux shells du
-  # modèle, petits-enfants du bundle ? — appartient au lanceur (MIN-293).
+  # **What remains to be measured, and which does not change the decision:** a selection
+  # by `dialog.showOpenDialog` constitutes explicit consent and MAY be sufficient to
+  # open the path without prompting. Not verified — MIN-359 probe failed
+  # (see the ticket comment). Even if it is enough, these sentences remain the
+  # net of the case where it is NOT enough, and the case where it is not enough is silent.
+  # The question that matters more — does the law reach down to the shells of
+  # model, bundle grandchildren? — belongs to the launcher (MIN-293).
   #
-  # `NSNetworkVolumesUsageDescription` est là bien qu'aucun document ne la
-  # demande : un dépôt sur un partage réseau est rare, mais il échouerait dans le
-  # même silence, et la ligne coûte une phrase.
+  # `NSNetworkVolumesUsageDescription` is there although there is no document
+  # request: a repository on a network share is rare, but it would fail in the
+  # same silence, and the line costs a sentence.
   extendInfo:
     NSMicrophoneUsageDescription: >-
       minddy uses your microphone to turn what you say into text — dictating an
@@ -141,44 +141,44 @@ mac:
     NSNetworkVolumesUsageDescription: >-
       minddy needs this to open a project folder you attached on a network
       share, when you ask an agent to work on this Mac rather than in the cloud.
-  # Les `.lproj` d'Electron sont des dossiers VIDES : ils ne servent qu'à
-  # déclarer les langues du bundle. Y déposer un `InfoPlist.strings`, c'est
-  # traduire la phrase ci-dessus pour qui a réglé son Mac en français — la seule
-  # autre langue que minddy parle.
+  # Electron's `.lproj` are EMPTY folders: they are only used to
+  # declare the bundle languages. Depositing a `InfoPlist.strings` there is
+  # translate the sentence above for those who have set their Mac to French — the only one
+# only other language that minddy supports.
   extraResources:
     - from: build/fr.lproj/InfoPlist.strings
       to: fr.lproj/InfoPlist.strings
-  # Hardened runtime : Apple refuse de notariser sans. Les entitlements qui
-  # l'accompagnent sont dans build/entitlements.mac.plist, avec la raison de
-  # chacun.
+  # Hardened runtime: Apple refuses to notarize without. The entitlements which
+# accompanying it are in build/entitlements.mac.plist, with the reason for
+# each one.
   hardenedRuntime: true
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
-  # `gatekeeperAssess` fait passer `spctl` PENDANT le build, avant notarisation —
-  # il échoue donc toujours à ce moment-là, et pour rien. La vraie vérification
-  # est `spctl -a -vvv` sur le `.dmg` agrafé (voir docs/desktop-release.md).
+  # `gatekeeperAssess` passes `spctl` DURING the build, before notarization —
+  # so it always fails at that point, and for nothing. The real check
+  # is `spctl -a -vvv` on the stapled `.dmg` (see docs/desktop-release.md).
   gatekeeperAssess: false
-  # Notarisation par `notarytool`, puis agrafage du ticket. **Un booléen, et rien
-  # d'autre** : la forme objet (`notarize: {teamId: …}`) est refusée par
-  # electron-builder 26, qui rend une erreur de schéma.
+  # Notarization by `notarytool`, then stapling the ticket. **A boolean, and nothing
+  # else**: the object form (`notarize: {teamId: …}`) is refused by
+  # electron-builder 26, which renders a schematic error.
   #
-  # Les identifiants se lisent dans l'ENVIRONNEMENT, jamais ici. Trois familles,
-  # essayées dans cet ordre (app-builder-lib, `MacTargetHelper.getNotarizeOptions`) :
-  # APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD + APPLE_TEAM_ID, puis la clé d'API
-  # App Store Connect, puis **APPLE_KEYCHAIN_PROFILE** — celle qu'on utilise,
-  # parce qu'elle est la seule où le mot de passe ne quitte pas le trousseau
+  # Identifiers are read in the ENVIRONMENT, never here. Three families,
+  # tried in this order (app-builder-lib, `MacTargetHelper.getNotarizeOptions`):
+  # APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD + APPLE_TEAM_ID, then the API key
+# App Store Connect, then **APPLE_KEYCHAIN_PROFILE** — the one we use,
+  # because it is the only one where the password does not leave the keychain
   # (`xcrun notarytool store-credentials "minddy-notary"`).
   #
-  # ⚠ **L'absence d'identifiants ne fait PAS échouer le build** : electron-builder
-  # écrit `skipped macOS notarization` en `warn` au milieu de cent lignes, et rend
-  # une app signée mais NON notarisée — que Gatekeeper refusera chez les gens.
-  # C'est pour ça que `scripts/publish-desktop.mjs` vérifie le ticket agrafé avant
-  # de publier : ce silence-là ne doit pas franchir la porte.
+  # ⚠ **The absence of identifiers does NOT cause the build to fail**: electron-builder
+  # writes `skipped macOS notarization` to `warn` in the middle of a hundred lines, and returns
+  # a signed but NOT notarized app — which Gatekeeper will refuse from people.
+  # This is why `scripts/publish-desktop.mjs` checks the stapled ticket before
+  # to publish: this silence must not cross the door.
   notarize: true
 
 dmg:
-  # La fenêtre du `.dmg` : l'app à gauche, le lien vers /Applications à droite.
-  # C'est le geste que tout le monde connaît, et il ne se réinvente pas.
+  # The `.dmg` window: the app on the left, the link to /Applications on the right.
+  # It's the gesture that everyone knows, and it cannot be reinvented.
   contents:
     - x: 140
       y: 190
@@ -188,11 +188,11 @@ dmg:
       type: link
       path: /Applications
 
-# Le flux de mise à jour. `generic` et non `github` : le dépôt est privé, et le
-# provider GitHub obligerait à embarquer un token dans une app distribuée.
-# electron-builder recopie ce bloc dans `app-update.yml` À L'INTÉRIEUR du bundle,
-# et c'est ce fichier-là que lit electron-updater — d'où le fait que l'URL soit
-# ici et nulle part dans le code.
+# The update feed. `generic` and not `github`: the deposit is private, and the
+# provider GitHub would require embedding a token in a distributed app.
+# electron-builder copies this block into `app-update.yml` INSIDE the bundle,
+# and this is the file that electron-updater reads — hence the fact that the URL is
+# here and nowhere in the code.
 publish:
   provider: generic
   url: ${env.MINDDY_DESKTOP_FEED_URL}

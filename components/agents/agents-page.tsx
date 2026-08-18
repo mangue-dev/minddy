@@ -66,11 +66,11 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Vrai dès que le volet détail est rendu par le layout (breakpoint md = 768px, le
- * volet passe en `md:flex`). Sert à savoir si la conversation SÉLECTIONNÉE est
- * réellement affichée (desktop) ou seulement présélectionnée derrière la liste
- * (mobile). Uniquement lu dans un effet → pas de souci d'hydratation (valeur `false`
- * au 1er rendu serveur/client, corrigée juste après).
+ * True as soon as the detail pane is rendered by the layout (breakpoint md = 768px, the
+ * pane changes to `md:flex`). Used to know if the SELECTED conversation is
+ * actually displayed (desktop) or only preselected behind the list
+ * (mobile). Only read in an effect → no concern for hydration (value `false`
+ * at the 1st server/client rendering, corrected just after).
  */
 function useIsWideViewport(): boolean {
   const [wide, setWide] = useState(false);
@@ -85,10 +85,10 @@ function useIsWideViewport(): boolean {
 }
 
 /**
- * Clé d'une conversation dans la liste : SON RUN, toujours. Les runs successifs
- * d'un ticket partageaient autrefois la clé de l'issue et se rangeaient sous une
- * même ligne, derrière un sélecteur ; ce sont maintenant des conversations à part
- * entière, distinguées à l'écran par leur titre et l'identifiant du ticket.
+ * Key to a conversation in the list: ITS RUN, always. The successive runs
+ * of a ticket once shared the key to the outcome and were placed under a
+ * same line, behind a selector; these are now separate conversations
+ * entire, distinguished on the screen by their title and ticket ID.
  */
 function sessionKey(s: AgentSessionListItem): string {
   return s.conversationId;
@@ -99,15 +99,15 @@ const PINNED_GROUP_KEY = "__pinned__";
 type SessionGroup = ProjectGroup<AgentSessionListItem>;
 
 /**
- * Une conversation dans la liste : SON TITRE, sur une ligne, et rien d'autre —
- * au plus une épingle, un point ou un spinner en bout de ligne, pour ce qui ne
- * peut pas attendre le survol (l'agent travaille, il a fini, il attend une
- * réponse).
+ * A conversation in the list: ITS TITLE, on one line, and nothing else —
+ * at most a pin, a dot or a spinner at the end of the line, for what does not
+ * cannot wait for the hover (the agent is working, he is finished, he is waiting for a
+ * answer).
  *
- * Tout le reste — de quoi la conversation parle (ticket, sujet libre, relecture
- * de PR), son état exact, sa date, son projet — vit dans le TOOLTIP. Une colonne
- * de navigation se parcourt du regard : quatre informations par ligne, c'est
- * quatre fois plus long à balayer, pour trois qu'on ne cherchait pas.
+ * Everything else — what the conversation is about (ticket, open topic, proofreading
+ * of PR), its exact state, its date, its project — lives in the TOOLTIP. A column
+ * navigation can be looked at: four pieces of information per line, it’s
+ * four times longer to sweep, for three that we weren't looking for.
  */
 function SessionRow({
   session,
@@ -123,7 +123,7 @@ function SessionRow({
   session: AgentSessionListItem;
   selected: boolean;
   unread: boolean;
-  /** Non lu ET question posée : le point passe au jaune. */
+  /** Unread AND question asked: the dot turns yellow. */
   awaiting: boolean;
   dateLabel: string;
   onSelect: () => void;
@@ -132,16 +132,16 @@ function SessionRow({
   onDelete: () => void;
 }) {
   const t = useTranslations("Agents");
-  // Le clic droit : la position du pointeur, ou `null` quand le menu est fermé.
-  // Même montage que l'arbre des Pages (components/pages/page-tree.tsx).
+  // Right click: the position of the pointer, or `null` when the menu is closed.
+  // Same assembly as the Pages tree (components/pages/page-tree.tsx).
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
-  // « MIN-42: Corriger la redirection » pour une conversation de ticket, le seul
-  // titre pour les autres. Cf. `agentSessionTitle`.
+  // “MIN-42: Fix redirection” for a ticket conversation, the only
+  // title for others. See `agentSessionTitle`.
   const title = agentSessionTitle(session, t("freeSessionTitle"));
-  // De quoi la conversation parle : le TICKET, « Sujet libre » ou « Analyse de
-  // PR » — la même question, trois réponses possibles. Le ticket se dit ici par
-  // son titre entier, et non plus par son identifiant : celui-ci est passé
-  // devant le titre de la ligne, et le répéter au survol n'apprendrait rien.
+  // What the conversation is about: the TICKET, “Free subject” or “Analysis of
+  // PR” — the same question, three possible answers. The ticket is said here by
+  // its entire title, and no longer by its identifier: this is passed
+  // in front of the line title, and repeating it on hover would not teach anything.
   const anchor = session.issue
     ? session.issue.title
     : session.pullRequest
@@ -149,10 +149,10 @@ function SessionRow({
       : t("freeBadge");
 
   /**
-   * Les choses qu'on fasse à une conversation sans l'ouvrir : la renommer,
-   * l'épingler et la supprimer. Écrites une fois, comme partout ailleurs dans
-   * l'app — c'est le sens de `ContextMenuAction[]` plutôt que des
-   * `<DropdownMenuItem>` recopiés.
+   * Things you do to a conversation without opening it: rename it,
+   * pin it and delete it. Written once, like everywhere else in
+   * the app — that's the meaning of `ContextMenuAction[]` rather than
+   * `<DropdownMenuItem>` copied.
    */
   const actions: ContextMenuAction[] = [
     {
@@ -184,17 +184,17 @@ function SessionRow({
         <button
           type="button"
           onClick={onSelect}
-          // Le clic droit ouvre le menu de la ligne, où qu'il tombe dessus. Viser
-          // un « ⋯ » demanderait de survoler la ligne pour le faire apparaître,
-          // puis d'atteindre un carré de 24 px — et la ligne, ici, n'a
-          // délibérément rien d'autre que son titre.
+          // Right-clicking opens the row menu, wherever it lands on it. Aim
+          // a “⋯” would require hovering over the line to make it appear,
+          // then reach a square of 24 px — and the line, here, has no
+          // deliberately nothing other than its title.
           onContextMenu={(event) => {
             event.preventDefault();
             setMenuPosition({ x: event.clientX, y: event.clientY });
           }}
           className={cn(
             "flex items-center gap-2 rounded-md py-1.5 pr-2 text-left outline-none transition-colors",
-            // Aligné sur le NOM du projet, un niveau plus haut.
+            // Aligned with the NAME of the project, one level higher.
             PROJECT_GROUP_INDENT,
             selected ? "bg-muted" : "hover:bg-muted/60 focus-visible:bg-muted/60",
           )}
@@ -219,8 +219,8 @@ function SessionRow({
           ) : null}
         </button>
       </TooltipTrigger>
-      {/* Le tooltip porte ce que la ligne a cessé de dire. `text-left` : le
-          centrage par défaut est fait pour un mot, pas pour quatre lignes. */}
+      {/* The tooltip carries what the line stopped saying. `text-left`: the
+ default centering is done for one word, not for four lines. */}
       <TooltipContent side="right" className="max-w-[260px] text-left">
         <p className="font-medium">{title}</p>
         <p className="mt-1 text-background/70">
@@ -231,9 +231,9 @@ function SessionRow({
         ) : null}
       </TooltipContent>
     </Tooltip>
-    {/* Le menu, ancré au pointeur, HORS de la ligne : il pose une ancre invisible
-        en `position: fixed` aux coordonnées du clic, et la garder dedans
-        déformerait le rectangle de survol du tooltip. */}
+    {/* The menu, anchored to the pointer, OUT of the line: it places an invisible anchor
+ in `position: fixed` at the click coordinates, and keeping it in
+ would distort the tooltip hover rectangle. */}
     <IssueContextMenu
       position={menuPosition}
       onClose={() => setMenuPosition(null)}
@@ -245,20 +245,20 @@ function SessionRow({
 }
 
 /**
- * Un PROJET dans la liste, et ses conversations sous lui — l'accordéon est
- * l'échelle à laquelle on cherche : on sait sur quel projet on parlait à l'agent
- * bien avant de se souvenir du titre exact de la conversation.
+ * A PROJECT in the list, and its conversations under it — the accordion is
+ * the scale on which we are looking: we know what project we were talking to the agent about
+ * long before remembering the exact title of the conversation.
  *
- * L'en-tête porte l'orbe du projet et son nom. Replié, il porte aussi ce qui se
- * passe dessous (spinner, point non lu) : replier un projet ne doit pas faire
- * disparaître une réponse attendue. Au survol paraît un « + » — la même
- * conversation vierge que le bouton de la colonne, mais avec CE projet déjà
- * choisi : on est en train de lire ce qu'on lui a dit, c'est le moment où l'on
- * sait sur quel dépôt on veut repartir.
+ * The header bears the project orb and its name. Folded, it also carries what is
+ * goes under (spinner, unread point): folding a project should not
+ * disappear an expected response. On hover appears a “+” — the same
+ * blank conversation as the column button, but with THIS project already
+ * chosen: we are reading what we told him, this is the moment when we
+ * knows which depot we want to go back to.
  *
- * Les cinq conversations les plus récentes, puis « Afficher plus ». Replier le
- * projet remet le compteur à cinq — c'est le chemin de retour, sans un second
- * bouton à ajouter.
+ * The five most recent conversations, then “Show more”. Fold it
+ * project resets the counter to five — it's the way back, without a second
+ * button to add.
  */
 function SessionGroupRows({
   group,
@@ -284,9 +284,9 @@ function SessionGroupRows({
   showAll: boolean;
   collapsible: boolean;
   /**
-   * Le projet a-t-il un DÉPÔT lié ? Sans lui, l'agent n'a rien à cloner : le
-   * « + » n'a pas lieu d'être. Les conversations passées, elles, restent (le
-   * dépôt a pu être délié après coup).
+   * Does the project have a linked DEPOSIT? Without it, the agent has nothing to clone: ​​the
+   * “+” does not apply. Past conversations remain (the
+   * deposit could have been untied afterwards).
    */
   canLaunch: boolean;
   selectedKey: string | null;
@@ -295,9 +295,9 @@ function SessionGroupRows({
   onToggle: () => void;
   onShowAll: () => void;
   onSelect: (key: string) => void;
-  /** « + » du survol : conversation vierge, ce projet déjà choisi. */
+  /** “+” from hover: blank conversation, this project already chosen. */
   onNewSession: () => void;
-  /** Clic droit sur une ligne : renommer / supprimer cette conversation. */
+  /** Right click on a line: rename / delete this conversation. */
   onRename: (session: AgentSessionListItem) => void;
   onTogglePinned: (session: AgentSessionListItem) => void;
   onDelete: (session: AgentSessionListItem) => void;
@@ -305,13 +305,13 @@ function SessionGroupRows({
   headerIcon?: ReactNode;
 }) {
   const t = useTranslations("Agents");
-  // « Afficher plus » et « Sans projet » sont ceux de l'accordéon, partagés avec
-  // la colonne des pull requests : une seule paire de mots pour un seul geste.
+  // “Show more” and “No project” are those of the accordion, shared with
+  // the pull requests column: a single pair of words for a single gesture.
   const tCommon = useTranslations("Common");
   const sessions = group.items;
 
-  // La conversation OUVERTE reste visible : si elle est au-delà des cinq
-  // premières, la coupe descend jusqu'à elle plutôt que de la cacher.
+  // The OPEN conversation remains visible: if it is beyond the five
+  // first, the cup goes down to it rather than hiding it.
   const selectedIndex = sessions.findIndex((s) => sessionKey(s) === selectedKey);
   const shown = showAll
     ? sessions
@@ -346,8 +346,8 @@ function SessionGroupRows({
         ) : null
       }
       actions={
-        /* Sans projet joint, rien à pré-choisir ; sans dépôt lié, rien à lancer :
-           dans les deux cas le raccourci n'existe pas. */
+        /* Without a joint project, nothing to pre-choose; without linked deposit, nothing to launch:
+ in both cases the shortcut does not exist. */
         group.project && canLaunch ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -356,9 +356,9 @@ function SessionGroupRows({
                 variant="ghost"
                 onClick={onNewSession}
                 aria-label={t("newInProject", { project: group.project.name })}
-                // Invisible, il ne se clique pas : au doigt, où il n'y a pas de
-                // survol, le bord droit d'un en-tête ouvrirait sinon une
-                // conversation sans que rien ne l'ait annoncé.
+                // Invisible, it does not click: on the finger, where there is no
+                // hover, the right edge of a header would otherwise open a
+                // conversation without anything announcing it.
                 className="pointer-events-none size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/project:pointer-events-auto group-hover/project:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
               >
                 <Plus className="size-3.5" />
@@ -394,20 +394,20 @@ function SessionGroupRows({
 }
 
 /**
- * Bouton « Nouveau » de la colonne : il OUVRE une conversation vierge, il ne
- * demande rien d'abord. Il n'y a plus de menu ici — lancer l'agent SUR UN TICKET
- * se fait depuis le ticket lui-même (carte ou panneau), là où l'on sait de quel
- * ticket on parle. Cet écran-ci ne sert qu'au sujet libre, et la conversation
- * vierge en est déjà la vue par défaut : le bouton ne fait donc que la
- * REDEMANDER, à neuf, quand on est parti lire une conversation.
+ * “New” button in the column: it OPENS a blank conversation, it does not
+ * ask for nothing first. There is no more menu here — launch the agent ON A TICKET
+ * is done from the ticket itself (card or panel), where we know which
+ * ticket we're talking. This screen is only used for the free subject, and the conversation
+ * blank is already the default view: the button therefore only does the
+ * ASK AGAIN, at nine, when we have gone to read a conversation.
  */
 function NewSessionButton({ onClick }: { onClick: () => void }) {
   const t = useTranslations("Agents");
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        {/* `-mr-2` compense le padding du bouton : l'icône s'aligne alors sur le
-            bord droit des lignes de la liste, pas 8 px en-deçà. */}
+        {/* `-mr-2` compensates for the padding of the button: the icon then aligns with the
+ right edge of the list lines, not 8 px below. */}
         <Button
           size="icon-sm"
           variant="ghost"
@@ -424,20 +424,20 @@ function NewSessionButton({ onClick }: { onClick: () => void }) {
 }
 
 /**
- * Renommer une conversation : un champ, un bouton. Le titre initial est celui que
- * la ligne AFFICHE — identifiant du ticket compris (`agentSessionTitle`) : on
- * renomme ce qu'on a sous les yeux, pas une colonne dont on ne verrait la moitié
- * qu'après coup.
+ * Rename a conversation: one field, one button. The initial title is the one that
+ * the DISPLAY line — ticket identifier included (`agentSessionTitle`): on
+ * rename what we have in front of us, not a column of which we cannot see half
+ * only afterwards.
  *
- * Un champ VIDÉ est un envoi valide (le bouton reste actif) : c'est ainsi qu'on
- * efface un titre pour retomber sur celui du ticket.
+ * An EMPTY field is a valid sending (the button remains active): this is how we
+ * delete a title to return to that of the ticket.
  */
 function SessionNameDialog({
   session,
   onOpenChange,
   onSubmit,
 }: {
-  /** La conversation à renommer — `null` ferme le dialog. */
+  /** The conversation to rename — `null` closes the dialog. */
   session: AgentSessionListItem | null;
   onOpenChange: (open: boolean) => void;
   onSubmit: (name: string) => Promise<void>;
@@ -447,9 +447,9 @@ function SessionNameDialog({
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // Repartir du titre courant à chaque ouverture : le dialog est piloté depuis le
-  // parent (poser la cible suffit à ouvrir), donc Radix n'appelle pas
-  // `onOpenChange` et le champ resterait sur le titre de la conversation d'avant.
+  // Start from the current title each time you open: the dialog is controlled from the
+  // parent (placing the target is enough to open), so Radix does not call
+  // `onOpenChange` and the field would remain on the title of the conversation from before.
   useEffect(() => {
     if (!session) return;
     setName(agentSessionTitle(session, t("freeSessionTitle")));
@@ -491,44 +491,44 @@ function SessionNameDialog({
 }
 
 /**
- * Page Agents — vue liste/détail : à gauche TOUTES les conversations de l'agent
- * Numo (tous projets accessibles, sans filtre), à droite la conversation inline
- * (`AgentSessionDetail` → `AgentConversation`, le même cœur que la modal).
+ * Agents page — list/detail view: left ALL agent conversations
+ * Numo (all projects accessible, without filter), on the right the inline conversation
+ * (`AgentSessionDetail` → `AgentConversation`, the same core as the modal).
  *
- * **UNE CONVERSATION = UN RUN**, ticket ou pas. Les runs successifs d'un ticket
- * étaient réunis sous une seule ligne, les précédents rangés derrière un sélecteur
- * au milieu de l'en-tête : on ne voyait qu'une conversation par ticket, et les
- * autres n'existaient que pour qui pensait à déplier ce menu. Chacune a maintenant
- * sa ligne, sous son propre titre — celui que le titreur écrit au lancement,
- * précédé de l'identifiant du ticket (`agentSessionTitle`). La conversation
- * sélectionnée est publiée dans le contexte de Numo quand elle a une issue.
+ * **ONE CONVERSATION = ONE RUN**, ticket or not. The successive runs of a ticket
+ * were gathered under a single line, the previous ones stored behind a selector
+ * in the middle of the header: we only saw one conversation per ticket, and the
+ * others only existed for those who thought of unfolding this menu. Each now has
+ * its line, under its own title - the one that the titler writes at launch,
+ * preceded by the ticket identifier (`agentSessionTitle`). The conversation
+ * selected is published in the context of Numo when it has an issue.
  *
- * La colonne est un ACCORDÉON par projet (`ProjectGroup`), cinq conversations par
- * projet puis « Afficher plus », et chaque ligne se réduit à son titre
- * (`SessionRow`) — le reste attend le survol. Deux façons de retrouver une
- * conversation, et une seule à la fois : parcourir les projets, ou filtrer (le
- * filtre déplie tout et lève la coupe des cinq).
+ * The column is one ACCORDION per project (`ProjectGroup`), five conversations per
+ * project then “Show more”, and each line is reduced to its title
+ * (`SessionRow`) — the rest waits for hover. Two ways to find a
+ * conversation, and only one at a time: browse the projects, or filter (the
+ * filter unfolds everything and lifts the cup of five).
  *
- * **La vue par défaut est une CONVERSATION VIERGE** (`SessionCompose`), pas la
- * dernière session : arriver ici, c'est vouloir parler à l'agent, pas relire ce
- * qu'on lui a déjà dit. Une conversation se lit en la choisissant dans la liste.
- * C'est la clé de sélection `FREE_COMPOSE_PARAM` — elle ne désigne aucune session
- * réelle, et la liste ne montre RIEN pour elle : une conversation n'entre dans la
- * colonne que lorsqu'elle existe vraiment, c'est-à-dire au premier message envoyé.
+ * **The default view is a BLANK CONVERSATION** (`SessionCompose`), not the
+ * last session: arriving here means wanting to speak to the agent, not rereading this
+ * that we already told him. A conversation is read by choosing it from the list.
+ * This is the `FREE_COMPOSE_PARAM` selection key — it does not designate any session
+ * real, and the list shows NOTHING for her: a conversation does not enter into the
+ * column only when it really exists, that is to say at the first message sent.
  *
- * Points d'entrée « Lancer un agent » :
- *  • ISSUE (MIN-46) : le bouton du ticket (carte ou panneau) pose un BROUILLON
- *    (`useAgentComposeDraft`, kind "issue") et navigue ici avec `?compose=<issueId>`.
- *    C'est le SEUL chemin vers une conversation ancrée à un ticket — la page, elle,
- *    n'offre plus de sélecteur de ticket.
- *  • SUJET LIBRE : le bouton « Nouveau » de cette page (conversation vierge, sans
- *    brouillon), le CARNET (MIN-84) et les wizards d'intégration, qui posent un
- *    brouillon kind "free" avec un texte pré-écrit et naviguent avec `?compose=new`.
- *    Le volet ouvre le composer de lancement (`SessionCompose` : projet + modèle +
+ * “Launch Agent” entry points:
+ * • OUTCOME (MIN-46): the ticket button (card or panel) places a DRAFT
+ * (`useAgentComposeDraft`, kind "issue") and navigate here with `?compose=<issueId>`.
+ * This is the ONLY path to a conversation anchored to a ticket — the page, it,
+ * no longer offers a ticket selector.
+ * • FREE SUBJECT: the “New” button on this page (blank conversation, without
+ * draft), the NOTEBOOK (MIN-84) and the integration wizards, which pose a
+ * draft kind "free" with pre-written text and navigate with `?compose=new`.
+ * The pane opens the launch composer (`SessionCompose`: project + model +
  *    raisonnement + branche).
- * Purement optimiste dans les deux cas : si l'utilisateur n'envoie pas le 1er
- * message, rien n'a existé ; dès qu'il l'envoie, la run réelle prend le relais dans
- * le même volet et paraît dans la liste.
+ * Purely optimistic in both cases: if the user does not send the 1st
+ * message, nothing existed; as soon as he sends it, the actual run takes over in
+ * the same section and appears in the list.
  */
 export function AgentsPage() {
   const t = useTranslations("Agents");
@@ -538,65 +538,65 @@ export function AgentsPage() {
   const router = useRouter();
   const { projects, openCreateProject, loading: projectsLoading } = useProjects();
   const { sessions, loading, refetch } = useAgentSessionsQuery();
-  // Les projets où l'agent peut travailler (dépôt lié) — ils seuls portent le
-  // « + » de leur en-tête. Même requête que le composer, donc un seul appel.
+  // Projects where the agent can work (linked repository) — only they carry the
+  // “+” in their header. Same request as dial, so only one call.
   const { projectIds: gitLinked } = useGitLinkedProjectsQuery();
   const { reads, markRead } = useAgentReads();
   const isWide = useIsWideViewport();
 
-  // Deep-link (« Ouvrir l'agent » depuis ailleurs) : ?run=<runId> ouvre CETTE
-  // conversation ; ?issue=<issueId> ouvre la plus récente du ticket (il n'est plus
-  // la clé d'aucune conversation — cf. `sessionForKey`) ; ?compose=<issueId>
-  // l'ouvre en brouillon de lancement ; ?compose=new le brouillon SANS ticket.
+  // Deep-link (“Open agent” from elsewhere): ?run=<runId> opens THIS
+  // conversation ; ?issue=<issueId> opens the most recent ticket (it is no longer
+  // the key to no conversation — cf. `sessionForKey`); ?compose=<issueId>
+  // opens it as a launch draft; ?compose=new the draft WITHOUT a ticket.
   const searchParams = useSearchParams();
   const issueParam = searchParams.get("issue");
   const runParam = searchParams.get("run");
   const composeParam = searchParams.get("compose");
 
   const draft = useAgentComposeDraft();
-  // Le brouillon n'est honoré que si l'URL le signale ENCORE : une navigation vers
-  // /agents sans `?compose=` (retour plus tard) l'ignore, même s'il traîne en mémoire.
+  // The draft is only honored if the URL indicates it AGAIN: a navigation to
+  // /agents without `?compose=` (return later) ignores it, even if it is lying around in memory.
   const draftHonored =
     !!draft &&
     (draft.kind === "issue"
       ? composeParam === draft.issueId
       : composeParam === FREE_COMPOSE_PARAM);
   const issueDraft = draftHonored && draft?.kind === "issue" ? draft : null;
-  // Brouillon SANS ticket : il ne fait que PRÉ-ÉCRIRE la conversation vierge (une
-  // note du carnet, un prompt d'intégration). Le bouton « Nouveau », lui, n'en pose
-  // aucun — une conversation vierge n'a rien à pré-écrire.
+  // Draft WITHOUT a ticket: it only PRE-WRITE the blank conversation (a
+  // note in the notebook, an integration prompt). The “New” button does not pose any problems
+  // none — a blank conversation has nothing to pre-write.
   const freeDraft = draftHonored && draft?.kind === "free" ? draft : null;
 
-  // Sélection courante. `FREE_COMPOSE_PARAM` n'est la clé d'AUCUNE session : c'est
-  // la conversation vierge, et c'est là qu'on arrive par défaut.
+  // Current selection. `FREE_COMPOSE_PARAM` is not the key to ANY session: it is
+  // the blank conversation, and that's where we arrive by default.
   const [selectedKey, setSelectedKey] = useState<string | null>(
     composeParam ?? issueParam ?? runParam ?? FREE_COMPOSE_PARAM,
   );
   const [mobileDetail, setMobileDetail] = useState(
     !!composeParam || !!issueParam || !!runParam,
   );
-  // Issue liée ouverte dans le panneau latéral (par-dessus la page, pas de navigation).
+  // Related issue open in side panel (on top of page, no navigation).
   const [panel, setPanel] = useState<{ projectId: string; issueId: string } | null>(null);
-  // Id de la run tout juste lancée depuis le composer : on garde le volet monté
-  // (même clé → aucun remount, transition compose → live fluide) jusqu'à ce que la
-  // liste des sessions rattrape cette run précise.
+  // Id of the run just launched from the composer: we keep the shutter mounted
+  // (same key → no remount, transition compose → live smooth) until the
+  // list of sessions catches up with this specific run.
   const [launchedRunId, setLaunchedRunId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  // Cibles du menu contextuel de la liste : la conversation qu'on renomme, celle
-  // qu'on s'apprête à supprimer. `null` = le dialog correspondant est fermé.
+  // Targets of the context menu of the list: the conversation that we rename, the one
+  // which we are about to delete. `null` = the corresponding dialog is closed.
   const [renameTarget, setRenameTarget] = useState<AgentSessionListItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AgentSessionListItem | null>(null);
   const [deleting, setDeleting] = useState(false);
-  // Remonte le composer À NEUF à chaque « Nouveau » (et à chaque texte pré-écrit
-  // reçu) : sans ça, un message tapé puis abandonné traînerait dans la conversation
-  // « vierge » suivante — qui ne le serait plus.
+  // Go back to composing it NEW with each “New” (and with each pre-written text
+  // received): without this, a message typed and then abandoned would drag on in the conversation
+  // next “virgin” — which would no longer be.
   const [composeNonce, setComposeNonce] = useState(0);
-  // Projet pré-choisi de la prochaine conversation vierge, quand elle est ouverte
-  // depuis l'en-tête d'un projet. `null` = le composer choisit son défaut.
+  // Pre-chosen draft of the next blank conversation, when it is open
+  // from the header of a project. `null` = the composer chooses his default.
   const [newSessionProjectId, setNewSessionProjectId] = useState<string | null>(null);
-  // Accordéon de la liste : les projets REPLIÉS (tout est déplié par défaut — on
-  // arrive pour voir, pas pour ouvrir) et ceux dont on a demandé toutes les
-  // conversations. Deux ensembles, l'absence valant le cas courant.
+  // Accordion of the list: FOLDED projects (everything is unfolded by default - we
+  // arrives to see, not to open) and those from whom we have asked all the
+  // conversations. Two sets, the absence being worth the current case.
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -604,7 +604,7 @@ export function AgentsPage() {
     () => new Set(),
   );
 
-  /** Replie / déplie un projet. Le replier remet sa liste à ses cinq premières. */
+  /** Folds/unfolds a project. Folding it back resets his list to his top five. */
   const toggleGroup = (key: string) => {
     const wasOpen = !collapsedGroups.has(key);
     setCollapsedGroups((prev) => toggledSet(prev, key));
@@ -613,22 +613,22 @@ export function AgentsPage() {
     }
   };
 
-  // Clé de sélection du brouillon : l'issue visée (kind "issue") ou le marqueur de
-  // la conversation vierge (kind "free" — aucune run, donc aucune clé réelle).
+  // Draft selection key: the intended issue (kind “issue”) or the draft marker
+  // the blank conversation (kind "free" — no run, therefore no real key).
   const draftKey = issueDraft ? issueDraft.issueId : freeDraft ? FREE_COMPOSE_PARAM : null;
 
-  // Le projet RÉEL du brouillon, retrouvé dans le contexte : le brouillon ne
-  // porte que l'id et la clé du projet, or l'en-tête de la conversation peint son
-  // ORBE — sans `icon_url`, elle affichait l'orbe générée là où le projet a une
-  // vraie icône, puis basculait sur la bonne au premier message envoyé.
+  // The REAL draft of the draft, found in the context: the draft does not
+  // carries only the id and the key of the project, but the header of the conversation paints its
+  // ORB — without `icon_url`, it displayed the generated orb where the project has a
+  // real icon, then switched to the correct one at the first message sent.
   const draftProject = issueDraft
     ? projects.find((p) => p.id === issueDraft.projectId) ?? null
     : null;
 
-  // Entrée synthétique du brouillon ISSUE, façonnée comme une vraie session pour
-  // traverser le même volet de détail (`AgentSessionDetail`). Aucune run réelle :
-  // `runId` est un marqueur, le volet s'ouvre en compose et la conversation gère le
-  // passage live. (Le brouillon SANS TICKET a son propre volet, `SessionCompose`.)
+  // Synthetic entry of the ISSUE draft, shaped like a real session for
+  // cross the same detail pane (`AgentSessionDetail`). No real run:
+  // `runId` is a marker, the pane opens in compose and the conversation handles the
+  // live passage. (The TICKET-FREE draft has its own section, `SessionCompose`.)
   const draftItem: AgentSessionListItem | null = issueDraft
     ? {
         conversationId: `draft:${issueDraft.issueId}`,
@@ -636,8 +636,8 @@ export function AgentsPage() {
         status: "queued",
         model: null,
         triggered_by: "button",
-        // Aucun titre : le brouillon n'a pas encore de run, donc rien de généré.
-        // Son volet se nomme donc « MIN-42: <titre du ticket> », le temps que le
+        // No title: the draft has no run yet, so nothing has been generated.
+        // Its component is therefore called “MIN-42: <ticket title>”, while the
         // premier message parte.
         title: null,
         pullRequest: null,
@@ -651,9 +651,9 @@ export function AgentsPage() {
           number: issueDraft.issueNumber,
           title: issueDraft.issueTitle,
         },
-        // Le brouillon ne paraît pas dans la liste, mais son volet de détail, lui,
-        // porte l'orbe du projet : elle vient donc du projet RÉEL (nom et icône),
-        // et non des seules bribes que le brouillon transporte.
+        // The draft does not appear in the list, but its detail section does.
+        // carries the project orb: it therefore comes from the REAL project (name and icon),
+        // and not just the scraps that the draft carries.
         project: {
           id: issueDraft.projectId,
           key: issueDraft.projectKey,
@@ -668,23 +668,23 @@ export function AgentsPage() {
       }
     : null;
 
-  // La liste a-t-elle rattrapé la run qu'on vient de lancer ? Une seule question
-  // pour les deux formes : la session d'un ticket prend cette run pour
-  // représentant, une session sans ticket EST cette run.
+  // Has the list caught up with the run we just launched? Just one question
+  // for both forms: the session of a ticket takes this run for
+  // rep, a ticketless session IS this run.
   const launchedItem = launchedRunId
     ? sessions.find((s) => s.runId === launchedRunId) ?? null
     : null;
 
-  // Volets de LANCEMENT — aucune run encore. Ils tiennent jusqu'à ce que la run
-  // lancée paraisse dans la liste, où la vraie session prend le relais.
+  // LAUNCH flaps — no runs yet. They hold until the run
+  // launched appears in the list, where the real session takes over.
   const issueComposeSelected =
     !!issueDraft && selectedKey === issueDraft.issueId && !launchedItem;
-  // La conversation vierge : la vue par défaut, ce que « Nouveau » rouvre, et ce
-  // que le carnet et les wizards pré-écrivent.
+  // The blank conversation: the default view, what “New” reopens, and what
+  // that the notebook and the wizards pre-write.
   const freeComposeActive = selectedKey === FREE_COMPOSE_PARAM && !launchedItem;
   const composeSelected = issueComposeSelected || freeComposeActive;
 
-  // Suit les changements de params (navigation client vers une autre entrée).
+  // Tracks param changes (client navigation to another entry).
   useEffect(() => {
     if (!composeParam) return;
     setSelectedKey(composeParam);
@@ -700,27 +700,27 @@ export function AgentsPage() {
     setSelectedKey(runParam);
     setMobileDetail(true);
   }, [runParam]);
-  // Un brouillon POSÉ ouvre son volet, même si l'URL, elle, ne bouge pas :
-  // `router.push` vers l'adresse COURANTE est inerte, donc les effets de params
-  // ci-dessus ne rejouent pas. C'est exactement le cas d'une deuxième note lancée
-  // depuis le carnet (`?compose=new` déjà dans la barre) — le brouillon existait
-  // bien, mais la sélection était restée sur la conversation ouverte entre-temps.
-  // La sélection suit donc le brouillon, pas seulement le paramètre. Le composer
-  // est remonté à neuf pour que le texte pré-écrit remplace le précédent.
+  // A POSTED draft opens its pane, even if the URL does not move:
+  // `router.push` to the CURRENT address is inert, so the params effects
+  // above do not play again. This is exactly the case of a second note thrown
+  // from the notebook (`?compose=new` already in the bar) — the draft existed
+  // fine, but the selection had remained on open conversation in the meantime.
+  // The selection therefore follows the draft, not just the parameter. Compose it
+  // is reworked so that the pre-written text replaces the previous one.
   useEffect(() => {
     if (!draftKey) return;
     setSelectedKey(draftKey);
     setMobileDetail(true);
     setComposeNonce((n) => n + 1);
-    // Le brouillon dit lui-même son projet (ou laisse choisir) : le pré-choix
-    // d'un « + » précédent n'a plus voix au chapitre.
+    // The draft itself says its project (or lets you choose): the pre-choice
+    // of a previous “+” no longer has a say.
     setNewSessionProjectId(null);
   }, [draft, draftKey]);
 
-  // Transition terminée : la run lancée figure dans la liste → on efface le
-  // brouillon et on sélectionne sa session — sa clé RÉELLE (l'issue pour une
-  // session de ticket, le run sinon), lue sur l'entrée qu'on vient de rattraper
-  // plutôt que redevinée ici. On nettoie aussi `?compose=` de l'URL.
+  // Transition completed: the run launched appears in the list → we delete the
+  // draft and we select its session — its REAL key (the outcome for a
+  // ticket session, the run otherwise), read on the entry that we have just caught
+  // rather than guessed again here. We also clean `?compose=` from the URL.
   useEffect(() => {
     if (!launchedItem) return;
     setSelectedKey(sessionKey(launchedItem));
@@ -730,12 +730,12 @@ export function AgentsPage() {
   }, [launchedItem?.runId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
-   * La conversation que désigne une clé de sélection. C'est un run (le cas
-   * courant : une ligne de la liste, `?run=`) — mais un deep-link peut aussi
-   * désigner un TICKET (`?issue=`, depuis une carte ou une pull request), qui
-   * n'est plus la clé d'aucune conversation depuis qu'un run vaut une
-   * conversation. On ouvre alors la plus RÉCENTE du ticket : la liste arrive
-   * triée par date de création décroissante, c'est donc la première trouvée.
+   * The conversation designated by a selection key. It's a run (the case
+   * current: a line in the list, `?run=`) — but a deep-link can also
+   * designate a TICKET (`?issue=`, from a card or a pull request), which
+   * is no longer the key to any conversation since a run is worth a
+   * conversation. We then open the most RECENT ticket: the list arrives
+   * sorted by decreasing creation date, so it is the first one found.
    */
   const sessionForKey = (key: string | null): AgentSessionListItem | null =>
     key
@@ -745,19 +745,19 @@ export function AgentsPage() {
         null
       : null;
 
-  // Élément affiché à droite. La run tout juste lancée passe DEVANT la sélection :
-  // elle vient d'être rattrapée par la liste et l'effet ci-dessus n'a pas encore
-  // déplacé `selectedKey` — sans ça, le volet clignoterait « aucune sélection » le
-  // temps d'une image, juste après l'envoi du premier message.
+  // Item displayed on the right. The run just launched passes IN FRONT of the selection:
+  // she has just been caught up by the list and the effect above has not yet
+  // moved `selectedKey` — otherwise, the pane would flash “no selection” on
+  // time of an image, just after sending the first message.
   const realSelected = launchedItem ?? sessionForKey(selectedKey);
   const activeItem = issueComposeSelected ? draftItem : realSelected;
 
-  // La conversation AFFICHÉE n'a jamais de bulle : on la marque lue à son ouverture ET
-  // à chaque nouvelle fin de run tant qu'elle reste visible (dépendance sur
-  // `lastCompletedAt`). « Visible » = desktop (le volet est toujours rendu) ou, sur
-  // mobile, le volet détail ouvert ; sinon (liste mobile ou compose) on ne marque pas,
-  // pour ne pas effacer la bulle d'une session qu'on ne regarde pas. Les sessions
-  // SANS TICKET n'ont pas de suivi lu/non-lu (personnelles, pas d'issue à ancrer).
+  // The DISPLAYED conversation never has a bubble: it is marked read when it is opened AND
+  // at each new end of run as long as it remains visible (dependence on
+  // `lastCompletedAt`). “Visible” = desktop (the pane is always rendered) or, on
+  // mobile, the detail pane open; otherwise (mobile list or compose) we do not score,
+  // so as not to erase the bubble of a session that we are not watching. The sessions
+  // WITHOUT TICKET have no read/unread tracking (personal, no issue to anchor).
   const shownReal = !composeSelected && (isWide || mobileDetail) ? realSelected : null;
   useEffect(() => {
     const id = shownReal?.conversationId;
@@ -765,11 +765,11 @@ export function AgentsPage() {
   }, [shownReal?.conversationId, shownReal?.lastCompletedAt, markRead]);
 
   /**
-   * Publie l'issue active à Numo : il résout « cette issue » (et sa PR le cas
-   * échéant), la lit et peut agir dessus — brouillon compris (issue sans PR).
+   * Publishes the active issue to Numo: it resolves “this issue” (and its PR in the case
+   * appropriate), reads it and can act on it — draft included (issue without PR).
    *
-   * La page routines porte son propre contexte assistant ; ici, seule la
-   * conversation visible publie son ticket.
+   * The routines page carries its own helper context; here, only the
+   * visible conversation publishes its ticket.
    */
   useAssistantContext(
     activeItem && activeItem.project && activeItem.issue
@@ -789,13 +789,13 @@ export function AgentsPage() {
       : null,
   );
 
-  // « Enregistrer la vue actuelle » (⌘K). Cette page NETTOIE volontairement son
-  // adresse dès qu'on choisit une ligne (cf. `selectReal` : pousser l'adresse
-  // courante serait inerte, la navigation suivante vers la même conversation ne
-  // ferait plus rien) — l'URL ne dit donc jamais ce qu'on regarde. Elle le
-  // publie ici, avec les paramètres qui savent le rétablir : `?run=` pour une
-  // conversation. Le composer vierge
-  // n'est la vue de rien : on retient alors la page nue.
+  // “Save current view” (⌘K). This page voluntarily CLEANS its
+  // address as soon as a line is chosen (see `selectReal`: push the address
+  // current would be inert, the next navigation to the same conversation will not
+  // would do nothing anymore) — the URL therefore never says what we are looking at. She
+  // publishes here, with the parameters which can restore it: `?run=` for a
+  // conversation. Compose it blank
+  // is not the sight of anything: we then retain the bare page.
   usePublishCurrentView(
     realSelected && !composeSelected
         ? {
@@ -805,11 +805,11 @@ export function AgentsPage() {
         : { href: "/agents", label: t("title") }
   );
 
-  // Garde une sélection valide : quand la session sélectionnée disparaît (ou qu'un
-  // deep-link désigne une session qui n'existe plus), on retombe sur la conversation
-  // vierge — jamais sur une AUTRE conversation, qu'on n'a pas demandé à lire. On ne
-  // touche à rien pendant un compose (aucune session à valider) ni tant que la liste
-  // n'est pas arrivée (chargement / présélection deep-link).
+  // Keeps a valid selection: when the selected session disappears (or a
+  // deep-link designates a session which no longer exists), we return to the conversation
+  // blank — never on ANOTHER conversation, that we didn't ask to read. We don't
+  // touches nothing during a compose (no session to validate) nor as long as the list
+  // has not arrived (loading / deep-link preselection).
   useEffect(() => {
     if (composeSelected || launchedRunId) return;
     if (sessions.length === 0) return;
@@ -818,29 +818,29 @@ export function AgentsPage() {
       setSelectedKey(FREE_COMPOSE_PARAM);
       return;
     }
-    // Deep-link par TICKET (`?issue=`) : la sélection retient la CONVERSATION
-    // qu'il a ouverte, pas le ticket — sinon aucune ligne ne se surligne, et le
-    // volet suivrait un ticket dont les conversations ne sont plus une.
+    // Deep-link by TICKET (`?issue=`): the selection retains the CONVERSATION
+    // that he opened, not the ticket — otherwise no line is highlighted, and the
+    // part would follow a ticket whose conversations are no longer one.
     if (resolved.conversationId !== selectedKey) setSelectedKey(resolved.conversationId);
   }, [sessions, selectedKey, composeSelected, launchedRunId]);
 
-  // Sélectionne une VRAIE session : abandonne le brouillon en cours (jamais envoyé →
-  // effacé, comme quitter la page). Purement UI, aucune run n'a existé.
+  // Select a REAL session: abandon the current draft (never sent →
+  // deleted, such as leaving the page). Purely UI, no run existed.
   const selectReal = (key: string) => {
     if (draft) setAgentComposeDraft(null);
     setLaunchedRunId(null);
     setSelectedKey(key);
     setMobileDetail(true);
-    // L'URL cesse de désigner l'entrée qu'on vient de quitter. Elle mentirait au
-    // rechargement, et surtout elle rendrait INERTE la navigation suivante vers
-    // cette même entrée : pousser l'adresse courante ne change rien.
+    // The URL stops pointing to the entry you just left. She would lie to
+    // reloading, and above all it would make the following navigation towards
+    // this same entry: pushing the current address changes nothing.
     if (composeParam || issueParam || runParam) router.replace("/agents");
   };
 
-  // « Nouveau » : une conversation vierge, tout de suite — même geste que d'arriver
-  // sur la page. Le brouillon éventuellement en cours est abandonné (jamais envoyé)
-  // et le composer repart à zéro, texte compris. Lancée depuis l'en-tête d'un
-  // projet, elle part avec ce projet déjà choisi (le composer laisse en changer).
+  // “New”: a blank conversation, right away — same gesture as arriving
+  // on the page. Any draft currently in progress is abandoned (never sent)
+  // and compose it from scratch, text included. Launched from the header of a
+  // project, she leaves with this project already chosen (composing it allows it to change).
   const startNewSession = (projectId?: string) => {
     if (draft) setAgentComposeDraft(null);
     setLaunchedRunId(null);
@@ -852,17 +852,17 @@ export function AgentsPage() {
   };
 
   /**
-   * Renommer : on écrit `agent_runs.title`, la première marche de la cascade
-   * d'affichage — le nom change du même coup dans la liste et dans l'en-tête du
-   * volet (cf. `agentSessionTitle`). Un titre vidé efface le sien et la
-   * conversation retombe sur le titre de son ticket : c'est le chemin de retour.
+   * Rename: we write `agent_runs.title`, the first step of the waterfall
+   * display — the name changes at the same time in the list and in the header of the
+   * pane (see `agentSessionTitle`). An empty title erases its own and the
+   * The conversation returns to the title of his ticket: it's the way back.
    */
   const renameSession = async (session: AgentSessionListItem, title: string) => {
     await renameAgentRunApi(session.runId, title);
     await refetch();
   };
 
-  /** Épingle une conversation pour ce compte, puis la replace en tête de liste. */
+  /** Pin a conversation for this account, then move it back to the top of the list. */
   const togglePinnedSession = async (session: AgentSessionListItem) => {
     try {
       await setAgentConversationPinnedApi(session.runId, !session.pinned);
@@ -873,11 +873,11 @@ export function AgentsPage() {
   };
 
   /**
-   * Supprimer, pour de bon : `agent_run_events` et `agent_run_messages` partent en
-   * cascade, et le serveur coupe d'abord la microVM. Si c'est la conversation
-   * OUVERTE qui disparaît, on retombe sur la conversation vierge plutôt que de
-   * laisser un volet fantôme — l'effet de garde le ferait aussi, une image plus
-   * tard, et cette image-là se voit.
+   * Delete, for good: `agent_run_events` and `agent_run_messages` are leaving
+   * cascade, and the server first shuts down the microVM. If this is the conversation
+   * OPEN which disappears, we fall back on the blank conversation rather than
+   * leave a ghost shutter — the guard effect would do it too, an image more
+   * late, and this image is visible.
    */
   const deleteSession = async (session: AgentSessionListItem) => {
     setDeleting(true);
@@ -898,12 +898,12 @@ export function AgentsPage() {
     format.dateTime(new Date(at), { day: "numeric", month: "short" });
 
   /**
-   * Ce que la colonne AFFICHE. Le filtre texte ne touche PAS `sessions`, qui
-   * porte la sélection et l'effet de garde : sinon taper trois lettres ferait
-   * sauter la conversation ouverte, une fois par lettre.
+   * What the column DISPLAYS. The text filter does NOT touch `sessions`, which
+   * carries the selection and the guard effect: otherwise typing three letters would
+   * skip open conversation, once per letter.
    *
-   * Une session se cherche par son ancrage (le ticket, le sujet) ou par son
-   * projet — c'est ce que la ligne affiche.
+   * A session is sought by its anchor (the ticket, the subject) or by its
+   * project — this is what the line displays.
    */
   const visibleSessions = useMemo(() => {
     if (!query.trim()) return sessions;
@@ -927,15 +927,14 @@ export function AgentsPage() {
     () => groupByProject(visibleSessions.filter((session) => !session.pinned), (s) => s.project),
     [visibleSessions],
   );
-  // Un filtre en cours DÉPLIE tout et lève la coupe des cinq : chercher, c'est
-  // demander à voir ce qui correspond, pas à savoir où c'est rangé.
+  // A filter in progress UNFOLDS everything and lifts the cup of five: searching is
+  // ask to see what fits, not to know where it is stored.
   const filtering = query.trim().length > 0;
 
-  /* AUCUN PROJET : la conversation vierge ne mène nulle part — le sujet libre
-     lui-même réclame un projet dont l'agent clone le dépôt. C'est un projet qu'il
-     faut d'abord, et cet écran ne dit que ça. Des projets sans aucune session, en
-     revanche, gardent la vue normale : la conversation vierge y est déjà ouverte,
-     il n'y a rien de plus à proposer. */
+  /* NO PROJECT: the blank conversation leads nowhere — the free subject
+ itself requests a project whose agent clones the repository. This is a project that needs to be done first, and this screen says just that. Projects without any session, in
+ on the other hand, keep the normal view: the blank conversation is already open,
+ there is nothing more to propose. */
   if (!loading && !projectsLoading && projects.length === 0 && sessions.length === 0) {
     return (
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
@@ -953,7 +952,7 @@ export function AgentsPage() {
 
   return (
     <div className="flex h-full min-h-0">
-      {/* ── Gauche : liste des sessions ─────────────────────────────────── */}
+      {/* ── Left: session list ──────────────────────────────────────────── */}
       <SecondarySidebar
         title={t("title")}
         hiddenOnMobile={mobileDetail}
@@ -966,7 +965,7 @@ export function AgentsPage() {
         actions={<NewSessionButton onClick={() => startNewSession()} />}
       >
         {loading ? (
-          /* À la forme de la liste : deux projets, quelques conversations d'une
+          /* In the form of a list: two projects, a few conversations of a
              ligne dessous. */
           <div className="flex flex-col gap-2 px-2 pt-2">
             {[0, 1].map((g) => (
@@ -979,23 +978,23 @@ export function AgentsPage() {
             ))}
           </div>
         ) : sessions.length === 0 ? (
-          /* La colonne n'a JAMAIS rien eu : personne n'a encore parlé à l'agent.
-             La scène des autres surfaces vides, en `compact` — une colonne de
-             320 px n'a pas la place d'une illustration de page. Aucun bouton : la
-             conversation vierge est déjà ouverte juste à côté, et c'est le premier
-             message envoyé qui remplira cette liste. */
+          /* The column NEVER got anything: no one has spoken to the agent yet.
+ The scene of the other empty surfaces, in `compact` — a column of
+ 320 px does not have room for a page illustration. No button: the blank
+ conversation is already open right next to it, and it is the first
+ message sent that will fill this list. */
           <EmptyScene icon={Bot} title={t("emptyTitle")} size="compact" />
         ) : listCount === 0 ? (
-          // Le filtre, lui, a simplement vidé la liste : une ligne discrète suffit,
-          // la colonne n'est pas vide, elle est restreinte.
+          // The filter simply emptied the list: a discrete line is enough,
+          // the column is not empty, it is restricted.
           <p className="px-4 py-6 text-center text-sm text-muted-foreground">
             {tCommon("noFilterMatch")}
           </p>
         ) : (
           <div className="flex flex-col gap-2 px-2 pt-2 pb-4">
-            {/* Un projet, ses conversations. Aucune entrée synthétique : un
-                brouillon n'est pas une conversation — la colonne ne montre que ce
-                qui existe, c'est-à-dire à partir du premier message envoyé. */}
+            {/* A project, its conversations. No synthetic entry: one
+ draft is not a conversation — the column only shows this
+ that exists, that is, from the first message sent. */}
             {pinnedSessions.length > 0 ? (
               <SessionGroupRows
                 group={{ key: PINNED_GROUP_KEY, project: null, items: pinnedSessions }}
@@ -1043,7 +1042,7 @@ export function AgentsPage() {
         )}
       </SecondarySidebar>
 
-      {/* ── Droite : conversation de la session, ou conversation vierge ───── */}
+      {/* ── Right: session conversation, or blank conversation ───── */}
       <div
         className={cn(
           "min-h-0 min-w-0 flex-1 flex-col md:flex",
@@ -1052,9 +1051,9 @@ export function AgentsPage() {
       >
         {freeComposeActive ? (
           <SessionCompose
-            // Le pré-remplissage du composer est one-shot (montage) : un « Nouveau »,
-            // ou une NOUVELLE note lancée depuis le carnet, doit remonter un composer
-            // neuf plutôt que garder le texte du précédent.
+            // The pre-filling of the composer is one-shot (montage): a “New”,
+            // or a NEW note launched from the notebook, must go up a composer
+            // new rather than keeping the text from the previous one.
             key={`${composeNonce}:${freeDraft?.prompt ?? ""}`}
             initialText={freeDraft?.prompt}
             initialProjectId={freeDraft?.projectId ?? newSessionProjectId ?? undefined}
@@ -1067,10 +1066,10 @@ export function AgentsPage() {
             item={activeItem}
             compose={issueComposeSelected}
             composeInitialText={issueComposeSelected ? issueDraft?.prompt : undefined}
-            // Cadrage (« Générer un plan » / « Vérifier le plan ») et contrôle
-            // (« Vérifier l'implémentation ») : le ticket ne démarre pas au
-            // lancement, il garde son statut. Le brouillon porte l'intention du
-            // bouton d'origine, pas ce que le composer contient à l'envoi.
+            // Framing (“Generate plan” / “Check plan”) and control
+            // (“Check implementation”): the ticket does not start at
+            // launch, it keeps its status. The draft carries the intention of
+            // original button, not what the composer contains when sending.
             composeIntent={
               issueComposeSelected ? issueDraft?.intent ?? "implement" : undefined
             }
@@ -1085,7 +1084,7 @@ export function AgentsPage() {
         )}
       </div>
 
-      {/* Renommer / supprimer, depuis le clic droit de la liste. */}
+      {/* Rename/delete, from the right click on the list. */}
       <SessionNameDialog
         session={renameTarget}
         onOpenChange={(open) => {
@@ -1110,9 +1109,8 @@ export function AgentsPage() {
                   : "",
               })}
             </DialogTitle>
-            {/* Ce qui part avec : tout le fil, et le travail de l'agent avec lui.
-                Une conversation ne va pas à la corbeille — il n'y en a pas pour
-                elle, et le dire vaut mieux que de le laisser découvrir. */}
+            {/* What goes with it: all the thread, and the agent's work with it.
+ A conversation doesn't go in the trash — there isn't one for her, and telling it is better than letting it find out. */}
             <DialogDescription>{t("deleteSessionDescription")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1130,7 +1128,7 @@ export function AgentsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Panneau latéral de l'issue liée — overlay par-dessus la page (pas de nav). */}
+      {/* Linked issue side panel — overlay over the page (no nav). */}
       {panel ? (
         <PrIssuePanel
           key={`${panel.projectId}:${panel.issueId}`}

@@ -91,10 +91,10 @@ function CalendarDayButton({
 
   const selected = modifiers.selected;
   const today = modifiers.today && !selected;
-  // Modificateur maison, générique : un jour SIGNALÉ, en retrait du jour
-  // sélectionné. Le picker d'échéance s'en sert pour montrer les prochaines
-  // occurrences d'un ticket récurrent (MIN-136) — on voit d'un coup d'œil sur
-  // quels jours le ticket va retomber.
+  // Home edit, generic: a REPORTED day, indented from the day
+  // selected. The due date picker uses this to show the next
+  // occurrences of a recurring ticket (MIN-136) — we see at a glance on
+  // on which days the ticket will drop.
   const highlighted = modifiers.highlighted && !selected;
 
   return (

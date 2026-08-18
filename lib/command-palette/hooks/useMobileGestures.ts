@@ -74,10 +74,10 @@ interface TouchState {
 export function useMobileGestures(options: MobileGestureOptions = {}): MobileGestureHandlers {
   const { onSwipeLeft, onSwipeRight, onLongPress, enabled = true } = options;
 
-  // Quatre sélecteurs, pas un `usePaletteStore()` nu (MIN-323) : appelé sans
-  // sélecteur, le store s'abonne à SON ÉTAT ENTIER — donc à chaque frappe dans
-  // la palette, à chaque déplacement de l'index actif. C'est la règle que
-  // `views/SearchView.tsx` documente déjà pour lui-même.
+  // Four selectors, not a bare `usePaletteStore()` (MIN-323): called without
+  // selector, the store subscribes to ITS ENTIRE STATE — so with each keystroke in
+  // the palette, each time the active index is moved. It is the rule that
+  // `views/SearchView.tsx` already documents for itself.
   const view = usePaletteStore((s) => s.view);
   const isActionsPopoverOpen = usePaletteStore((s) => s.isActionsPopoverOpen);
   const openActionsForItem = usePaletteStore((s) => s.openActionsForItem);

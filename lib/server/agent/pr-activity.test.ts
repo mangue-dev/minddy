@@ -2,17 +2,17 @@ import { describe, expect, it } from "vitest";
 import { forgeAccountMatches } from "./pr-activity";
 
 /**
- * MIN-154 : la règle PURE qui reconnaît un compte de forge. C'est elle qui décide
- * si le hook qui revient est l'écho d'un geste fait DEPUIS minddy — un membre non
- * reconnu, et le ticket porte deux fois la même ligne, l'intégration reçoit deux
- * dispatchs, l'auteur du run reçoit une notification pour son propre geste.
+ * MIN-154: the PURE rule which recognizes a forge account. It is she who decides
+ * if the hook that returns is the echo of a gesture made FROM minddy — a non
+ * member recognized, and the ticket has the same line twice, the integration receives two
+ * dispatches, the author of the run receives a notification for his own gesture.
  *
- * Ce qu'elle affirme tient en deux phrases : **l'id est la clé, le login est un
- * repli d'ancienneté**, et un login ne gagne jamais contre un id différent.
- * L'écriture en base (`minddyUsersForForgeAccount`) n'est pas testable en node.
+ * What it says is in two sentences: **the id is the key, the login is a
+ * seniority fallback**, and a login never wins against a different id.
+ * Writing in base (`minddyUsersForForgeAccount`) is not testable in node.
  */
 
-/** Une ligne de `git_user_identities` / `git_connections`. */
+/** A line of `git_user_identities` / `git_connections`. */
 const row = (providerAccountId: string | null, accountLogin: string | null) => ({
   provider_account_id: providerAccountId,
   account_login: accountLogin,
@@ -20,7 +20,7 @@ const row = (providerAccountId: string | null, accountLogin: string | null) => (
 
 describe("forgeAccountMatches", () => {
   it("reconnaît par l'id un compte qui s'est renommé", () => {
-    // Le cas du ticket : la ligne porte le nom d'hier, le hook celui d'aujourd'hui.
+    // The case of the ticket: the line has yesterday's name, the hook has today's name.
     expect(
       forgeAccountMatches(row("1234", "ancien-nom"), {
         accountId: "1234",
@@ -30,8 +30,8 @@ describe("forgeAccountMatches", () => {
   });
 
   it("ne reconnaît pas un même login porté par un AUTRE id", () => {
-    // Deux personnes peuvent se succéder sur un nom libéré : attribuer le geste
-    // au mauvais membre est pire que ne l'attribuer à personne.
+    // Two people can follow one another on a released name: assign the gesture
+    // to the wrong member is worse than assigning it to no one.
     expect(
       forgeAccountMatches(row("1234", "clement"), {
         accountId: "9999",
@@ -41,7 +41,7 @@ describe("forgeAccountMatches", () => {
   });
 
   it("retombe sur le login quand la ligne n'a pas d'id", () => {
-    // `provider_account_id` est nullable des deux côtés : les lignes d'avant
+    // `provider_account_id` is nullable on both sides: the lines before
     // MIN-154 n'ont que leur nom.
     expect(
       forgeAccountMatches(row(null, "clement"), {
@@ -64,7 +64,7 @@ describe("forgeAccountMatches", () => {
     expect(
       forgeAccountMatches(row("1234", "clement"), { accountId: null, login: null }),
     ).toBe(false);
-    // Une ligne vide des deux côtés ne désigne personne, même face à un acteur vide.
+    // An empty line on both sides designates no one, even against an empty actor.
     expect(
       forgeAccountMatches(row(null, null), { accountId: null, login: null }),
     ).toBe(false);

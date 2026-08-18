@@ -33,8 +33,8 @@ const page = (title: string, icon: string | null = null): MentionPage => ({
   icon,
 });
 
-/** Une lecture compacte du découpage : le texte tel quel, une mention en
-    « @Nom » (ou « @numo »). */
+/** A compact reading of the division: the text as is, a mention in
+ “@Nom” (or “@numo”). */
 const shape = (segments: MentionSegment[]) =>
   segments.map((s) =>
     s.mention === undefined
@@ -176,12 +176,12 @@ describe("contentMentionScanner", () => {
     ]);
   });
 
-  // MIN-273 — une page du wiki se cite comme un objectif : par son TITRE.
+  // MIN-273 — a wiki page is cited as an objective: by its TITLE.
   it("cite une page du wiki par son titre", () => {
     const scan = contentMentionScanner({ pages: [page("Guide de démarrage", "📘")] });
     const segments = scan("tout est dans @Guide de démarrage");
     expect(shape(segments)).toEqual(["tout est dans ", "@Guide de démarrage"]);
-    // L'émoji voyage avec la page : c'est sa figure sur la pilule.
+    // The emoji travels with the page: it is its face on the pill.
     expect(segments[1].mention).toMatchObject({
       type: "page",
       page: { icon: "📘" },

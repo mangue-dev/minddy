@@ -2,76 +2,76 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AiUsageInput } from "@/lib/server/ai-usage";
 
 /**
- * MIN-223 — le plan de contrôle ne croit RIEN de ce que la microVM raconte
- * d'elle-même.
+ * MIN-223 — the control plane believes NOTHING what the microVM says
+ * of herself.
  *
- * Ce que ces tests gardent tient en une phrase : le `runId` vient de l'OIDC posé
- * par la plateforme, jamais du corps de la requête. Tout le reste — le topic du
- * direct, le payeur au ledger, l'acteur des écritures de tickets — en DÉRIVE.
- * L'oublier une fois, sur une seule surface, et une VM compromise diffuse sur le
- * fil d'un autre run ou impute sa dépense à quelqu'un d'autre. C'est précisément
- * ce qu'une clé Supabase à portée réduite n'aurait pas su empêcher : le topic et
- * le payeur y sont des paramètres.
+ * What these tests keep is in one sentence: the `runId` comes from the OIDC placed
+ * by the platform, never from the body of the request. Everything else — the topic of
+ * direct, the payer to the ledger, the actor of ticket entries — DRIFT.
+ * Forget it once, on a single surface, and a compromised VM broadcasts on the
+ * thread from another run or charge your expense to someone else. It is precisely
+ * what a reduced-range Supabase key would not have been able to prevent: the topic and
+ * the payer there are parameters.
  *
- * On ne moque que ce qui sort du process (base, realtime, ledger, tools) : le
- * routage des surfaces et les dérivations sont le vrai chemin.
+ * We only mock what comes out of the process (base, realtime, ledger, tools): the
+ * Surface routing and branching are the real path.
  */
 
 const h = vi.hoisted(() => ({
   recorded: [] as AiUsageInput[],
   streams: [] as Array<{ topic: string; event: string; text: unknown }>,
-  /** La charge de direct ENTIÈRE — `streams` n'en garde que le texte. */
+  /** The ENTIRE direct load — `streams` only keeps the text. */
   streamPayloads: [] as Array<Record<string, unknown>>,
   events: [] as Array<{ runId: string; type: string }>,
   stamped: [] as Array<Record<string, unknown>>,
   issueCalls: [] as Array<{ ctx: Record<string, unknown>; name: string }>,
-  /** Ce qui a été confié à `afterOrNow` — donc au canal qui maintient
-   *  l'invocation en vie après la réponse, et jamais détaché. */
+  /** What has been entrusted to `afterOrNow` — therefore to the channel which maintains
+   * the invocation alive after the response, and never detached. */
   afterWork: [] as Array<() => void | Promise<void>>,
   prIssueId: null as string | null,
   stampReturnsNull: false,
-  /** La BASE refuse l'écriture (octet nul, panne) — pas la garde de transition. */
+  /** The BASE refuses the write (null byte, failure) — not the transition guard. */
   stampFails: false,
   landed: 0,
-  /** Les contextes d'atterrissage passés à l'implémentation partagée. */
+  /** Landing contexts passed to the shared implementation. */
   prLandings: [] as Array<{ workBranch: string; baseBranch: string }>,
   run: null as Record<string, unknown> | null,
-  /** Combien de fois la ligne du run a été LUE EN BASE. Le direct doit rester à
-   *  zéro : c'est le seul appel chaud de la surface (~4/s pendant tout le tour). */
+  /** How many times the run line was BASIC READ. The direct must remain at
+   * zero: this is the only hot call from the surface (~4/s during the entire tour). */
   runReads: 0,
-  /** Ce que `checkAgentQuota` répond — `null` = lecture en panne (elle lève). */
+  /** What `checkAgentQuota` responds to — `null` = read failed (it throws). */
   quota: null as Record<string, unknown> | null,
-  /** La somme du ledger pour ce run. */
+  /** The sum of the ledger for this run. */
   ledgerSpent: 0 as number | null,
-  /** Les runs dont le drapeau d'interruption a été effacé. */
+  /** Runs whose abort flag has been cleared. */
   cleared: [] as string[],
-  /** Les messages REMIS en file par la microVM (`POST /messages`). */
+  /** Messages RELEASED by the microVM (`POST /messages`). */
   requeued: [] as Array<{
     runId: string;
     userId: string | null;
     content: string;
     mentions: unknown;
   }>,
-  /** Les incréments de journal écrits (`POST /journal`). */
+  /** Log increments written (`POST /journal`). */
   journal: [] as Array<{ runId: string; sessionId: string; events: unknown[] }>,
-  /** Un TIERS a-t-il parlé à ce run ? (la question que pose le carnet, MIN-326) */
+  /** Did a THIRD PARTY speak to this run? (the question asked in the notebook, MIN-326) */
   steeredByOther: false,
-  /** Les appels de tool carnet réellement EXÉCUTÉS. */
+  /** Tool notebook calls actually EXECUTED. */
   scratchpadCalls: [] as string[],
-  /** Le PROFIL de token demandé à `resolveRepoCloneTarget`, appel par appel. */
+  /** The token PROFILE requested from `resolveRepoCloneTarget`, call by call. */
   repoAccessAsked: [] as string[],
-  /** Les clés LLM demandées au fournisseur, avec le plafond posé sur chacune. */
+  /** The LLM keys requested from the supplier, with the ceiling placed on each. */
   minted: [] as Array<{ runId: string; capUsd: number }>,
-  /** Les clés révoquées — ce qui ne doit jamais survivre au tour qui l'a demandée. */
+  /** Revoked keys — which must never survive the turn that requested it. */
   revoked: [] as string[],
   /** L'API de provisioning refuse (variable absente, panne) : `mintRunKey` → null. */
   mintFails: false,
   byokAvailable: true,
 }));
 
-// `runKeyCapUsd` reste le VRAI : c'est l'arithmétique du plafond, et la servir
-// depuis cette surface sans l'exercer reviendrait à ne rien tester du tout. Seuls
-// les deux appels qui SORTENT du process sont moqués.
+// `runKeyCapUsd` remains the TRUE: it is the arithmetic of the ceiling, and serving it
+// from this surface without exercising it would amount to testing nothing at all. Alone
+// the two calls that EXIT the process are mocked.
 vi.mock("./run-key", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./run-key")>()),
   mintRunKey: vi.fn(async (opts: { runId: string; capUsd: number }) => {
@@ -101,8 +101,8 @@ vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
   spentFromLedger: vi.fn(async () => h.ledgerSpent),
 }));
 
-// Le tarif du modèle sort du process (index OpenRouter) : on le fige, sinon le
-// plafond calculé dépendrait du catalogue du jour.
+// The price of the model leaves the process (OpenRouter index): we freeze it, otherwise it
+// calculated ceiling would depend on the catalog of the day.
 vi.mock("./openrouter-index", () => ({
   getOpenRouterModelInfo: vi.fn(async () => ({
     pricing: { inputUsdPerMTok: 0.3, outputUsdPerMTok: 1.2 },
@@ -127,10 +127,10 @@ vi.mock("./live", async (importOriginal) => ({
   ),
 }));
 
-// `afterOrNow` n'exécute RIEN ici : les tests le déclenchent eux-mêmes. C'est ce
-// qui rend visible la différence entre « confié au canal de fond » et « détaché »
-// — un `void fetch(…)` posé avant la réponse n'apparaîtrait jamais dans cette
-// file, et il mourrait avec l'invocation en vrai.
+// `afterOrNow` does NOTHING here: the tests trigger it themselves. This is what
+// which makes visible the difference between “entrusted to the background channel” and “detached”
+// — a `void fetch(…)` placed before the response would never appear in this
+// file, and he would die with the summon in real life.
 vi.mock("@/lib/server/after-safe", () => ({
   afterOrNow: (work: () => void | Promise<void>) => {
     h.afterWork.push(work);
@@ -165,8 +165,8 @@ vi.mock("./forge", async (importOriginal) => ({
   forgeFor: vi.fn(() => ({})),
 }));
 
-// La moitié FORGE de `create_pr` est PARTAGÉE avec l'ancienne forme, et couverte
-// avec elle : ici on vérifie ce qu'on lui passe, pas ce qu'elle en fait.
+// The FORGED half of `create_pr` is SHARED with the old form, and covered
+// with her: here we check what we give her, not what she does with it.
 vi.mock("./pr-landing", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./pr-landing")>()),
   openPullRequestAfterPush: vi.fn(
@@ -305,8 +305,8 @@ beforeEach(() => {
     chain_id: null,
     model: "deepseek/deepseek-v4-flash",
     checkpoint: { messages: [] },
-    // MIN-357 : les deux colonnes que `/llm-key` regarde — le mode de clé (un
-    // BYOK n'est pas plafonnable) et la clé du tour précédent, à révoquer.
+    // MIN-357: the two columns that `/llm-key` looks at — the key mode (one
+    // BYOK cannot be capped) and the key from the previous round, to be revoked.
     key_mode: "platform",
     provider_key_id: null,
   };
@@ -320,23 +320,23 @@ const call = (
 ) => handleControlPlaneRequest({ runId, method, surface, body });
 
 /**
- * MIN-224 — le plafond de dépense d'un tour se RELIT en cours de route.
+ * MIN-224 — the spending limit for a turn RELEASES midway through.
  *
- * Un tour de microVM dure des heures et son plafond était figé à son lancement.
- * Or rien ne réserve de budget : deux runs lancés à la même seconde lisent le même
- * restant et le prennent chacun pour plafond, donc ils peuvent dépenser le double.
+ * A round of microVM lasts hours and its ceiling was frozen when launched.
+ * But nothing reserves budget: two runs launched at the same second read the same
+ * remaining and each take it as their ceiling, so they can spend double.
  */
 describe("le budget restant du tour", () => {
   it("rend le restant du COMPTE quand le run n'a pas de plafond propre", async () => {
-    // Le cas courant : seules les routines posent un `budget_usd`.
+    // The common case: only routines set a `budget_usd`.
     const res = await call("GET", "/budget");
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ remainingUsd: 3 });
   });
 
   it("prend le plus serré des deux, et déduit au LEDGER ce que le run a dépensé", async () => {
-    // Une routine à 2 $, qui en a déjà brûlé 1,20 — dont une part qu'un chunk mort
-    // n'a jamais stampée sur la colonne. C'est le ledger qui la porte.
+    // A $2 routine, which has already burned $1.20 — part of which is just a dead chunk
+    // was never stamped on the column. It is the ledger who carries it.
     h.run = { ...h.run!, budget_usd: 2, cost_usd: 0.4 };
     h.ledgerSpent = 1.2;
     const res = await call("GET", "/budget");
@@ -355,8 +355,8 @@ describe("le budget restant du tour", () => {
   });
 
   it("rend `null` quand la facturation est injoignable, jamais 0", async () => {
-    // Un 0 arrêterait le tour sur une panne de lecture. La VM garde alors son
-    // plafond d'entrée : le pire cas est le comportement d'avant, pas pire.
+    // A 0 would stop the round on a read failure. The VM then keeps its
+    // input ceiling: worst case is the behavior before, not worse.
     h.quota = null;
     const res = await call("GET", "/budget");
     expect(res.status).toBe(200);
@@ -373,15 +373,15 @@ describe("le direct — le topic vient du run, pas du corps", () => {
   });
 
   it("confie la diffusion au canal de fond, au lieu de la détacher", async () => {
-    // Le direct n'est écrit NULLE PART : contrairement aux events, aucun poll ne
-    // le rattrape. Détaché juste avant la réponse, son fetch meurt gelé avec
-    // l'invocation et le fil ne voit jamais l'agent écrire (cf. after-safe.ts).
+    // Direct is not written ANYWHERE: unlike events, no poll
+    // catches up with him. Detached just before the response, its fetch dies frozen with
+    // the invocation and the thread never sees the agent writing (cf. after-safe.ts).
     await call("POST", "/stream", { text: "salut" });
-    // Rien n'est parti pendant la requête : la diffusion attend le crochet.
+    // Nothing happened during the request: the broadcast is waiting for the hook.
     expect(h.streams).toHaveLength(0);
     expect(h.afterWork).toHaveLength(1);
-    // Et le travail doit RENDRE sa promesse : la détacher à l'intérieur du
-    // crochet referait exactement la même panne, un cran plus bas.
+    // And work must RENDER its promise: detach it from within the
+    // hook would do exactly the same breakdown, one notch lower.
     const returned = h.afterWork[0]();
     expect(returned).toBeInstanceOf(Promise);
     await returned;
@@ -389,10 +389,10 @@ describe("le direct — le topic vient du run, pas du corps", () => {
   });
 
   it("ne LIT PAS la ligne du run — c'est le seul appel chaud de la surface", async () => {
-    // `emitLive` diffuse ~4×/s pendant toute la durée du tour : une lecture de
-    // `agent_runs` par tick, c'est ~29 000 requêtes sur un tour de deux heures,
-    // pour une surface qui n'a besoin que du `runId` de l'OIDC. Les surfaces qui
-    // ÉCRIVENT, elles, gardent la lecture — la comparaison est le test.
+    // `emitLive` broadcasts ~4×/s for the entire duration of the round: a reading of
+    // `agent_runs` per tick is ~29,000 requests over a two-hour shift,
+    // for a surface that only needs OIDC `runId`. The surfaces which
+    // WRITE, they keep reading — the comparison is the test.
     await call("POST", "/stream", { text: "salut" });
     expect(h.runReads).toBe(0);
     await call("POST", "/events", { type: "status" });
@@ -405,14 +405,14 @@ describe("le direct — le topic vient du run, pas du corps", () => {
   });
 
   it("ne rediffuse pas la liste de fichiers telle quelle : chemins vides, statuts inventés et surplus tombent", async () => {
-    // La VM est notre code, mais elle reste de l'autre côté d'un POST : ce qui
-    // part sur le topic est ce que le fil sait lire, pas ce qu'elle a envoyé.
+    // The VM is our code, but it remains on the other side of a POST: which
+    // share on the topic is what the thread can read, not what she sent.
     await call("POST", "/stream", {
       text: "",
       files: [
         { path: "a.ts", status: "deleted" },
         { path: "b.ts", status: "cosmique" }, // statut inconnu → modified
-        { path: "", status: "added" }, // chemin vide → ignoré
+        { path: "", status: "added" }, // empty path → ignored
         "pas un objet",
         { path: "c.ts", status: "renamed", previousPath: "old.ts", vole: "des octets" },
       ],
@@ -423,13 +423,13 @@ describe("le direct — le topic vient du run, pas du corps", () => {
       { path: "b.ts", status: "modified" },
       { path: "c.ts", status: "renamed", previousPath: "old.ts" },
     ]);
-    // Deux entrées écartées : la liste diffusée est plus courte que celle reçue.
+    // Two entries discarded: the list broadcast is shorter than the one received.
     expect(h.streamPayloads[0].filesTruncated).toBe(true);
   });
 
   it("borne la liste, et le DIT", async () => {
-    // Sans plafond, un tour qui touche 500 fichiers les diffuse tous, quatre fois
-    // par seconde, à tous les abonnés du topic.
+    // Without a cap, a round that affects 500 files broadcasts them all, four times
+    // per second, to all subscribers of the topic.
     await call("POST", "/stream", {
       text: "",
       files: Array.from({ length: CHANGED_FILES_CAP + 20 }, (_, i) => ({
@@ -443,9 +443,9 @@ describe("le direct — le topic vient du run, pas du corps", () => {
   });
 
   it("garde l'aveu de troncature de la VM, qui borne DÉJÀ avant d'envoyer", async () => {
-    // La VM coupe au même plafond : sa liste arrive donc entière du point de vue
-    // du relais (`raw.length === files.length`), et sans ce report la troncature
-    // se perdait ici — le fil lisait une liste bornée comme une liste complète.
+    // The VM cuts at the same ceiling: its list therefore arrives complete from the point of view
+    // of the relay (`raw.length === files.length`), and without this report the truncation
+    // got lost here — the thread read a limited list as a complete list.
     await call("POST", "/stream", {
       text: "",
       files: [{ path: "a.ts", status: "modified" }],
@@ -470,8 +470,8 @@ describe("le direct — le topic vient du run, pas du corps", () => {
   });
 
   it("ne parle pas de fichiers quand il n'y en a pas", async () => {
-    // `clearLive` passe par ici : une liste vide ne doit pas devenir un `files: []`
-    // que le fil lirait comme « le tour n'a rien touché ».
+    // `clearLive` goes through here: an empty list must not become a `files: []`
+    // that the thread would read as "the trick didn't hit anything".
     await call("POST", "/stream", { text: "salut" });
     await Promise.all(h.afterWork.map((w) => w()));
     expect(h.streamPayloads[0]).not.toHaveProperty("files");
@@ -484,9 +484,9 @@ describe("le ledger — le payeur vient de la ligne du run, pas du corps", () =>
     await call("POST", "/usage", {
       feature: "agent_code",
       cost: 0.42,
-      // Les tokens accompagnent le montant, comme sur toute vraie ligne de
-      // fournisseur : au-dessus du plancher, c'est ce qui rend le montant
-      // vérifiable (MIN-329).
+      // The tokens accompany the amount, as on any real line of
+      // supplier: above the floor, this is what makes the amount
+      // verifiable (MIN-329).
       promptTokens: 1_000_000,
       completionTokens: 100_000,
       billTo: { userId: "quelquun-dautre" },
@@ -495,24 +495,24 @@ describe("le ledger — le payeur vient de la ligne du run, pas du corps", () =>
     });
     expect(h.recorded).toHaveLength(1);
     expect(h.recorded[0].billTo).toEqual({ userId: "user-owner" });
-    // …et sous l'identifiant de facturation du run, pas sous celui du corps.
+    // …and under the billing ID of the run, not under that of the body.
     expect(h.recorded[0].runId).toBe("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee");
     expect(h.recorded[0].cost).toBe(0.42);
   });
 
   /**
-   * MIN-329 — le montant n'est pas une déclaration.
+   * MIN-329 — amount is not a declaration.
    *
-   * Le corps de `/usage` vient d'une boucle pilotée par un modèle qui lit du
-   * contenu tiers : une injection suffisait à y poster un `cost` négatif, et
-   * cette ligne-là faisait DESCENDRE la consommation du mois du compte.
+   * The body of `/usage` comes from a loop driven by a model that reads
+   * third-party content: one injection was enough to post a negative `cost`, and
+   * this line brought down the consumption of the month in the account.
    */
   it("REFUSE un cost négatif, et n'écrit AUCUNE ligne", async () => {
     const res = await call("POST", "/usage", { feature: "agent_code", cost: -500 });
     expect(res.status).toBe(400);
     expect(h.recorded).toHaveLength(0);
-    // Le refus se trace sur le run : une dépense qui n'entre nulle part doit se
-    // lire là où le trou s'est fait.
+    // The refusal is traced on the run: an expense which does not enter anywhere must be
+    // read where the hole was made.
     expect(h.events).toEqual([{ runId: RUN_ID, type: "error" }]);
   });
 
@@ -541,15 +541,15 @@ describe("le ledger — le payeur vient de la ligne du run, pas du corps", () =>
       completionTokens: 10_000,
     });
     expect(res.status).toBe(200);
-    // 100k × 0,30 $ + 10k × 1,20 $ par million = 0,042 $, et la ligne se dit
-    // calculée : ce chiffre-là n'a pas été relevé chez le fournisseur.
+    // 100k × $0.30 + 10k × $1.20 per million = $0.042, and the line reads
+    // calculated: this figure was not recorded by the supplier.
     expect(h.recorded[0].cost).toBe(0.042);
     expect(h.recorded[0].estimated).toBe(true);
   });
 
   it("le total d'un compte ne peut donc que MONTER après un tour", async () => {
-    // La somme du ledger est faite sur `cost` : il suffit qu'aucune ligne écrite
-    // ne soit négative pour qu'elle ne redescende jamais.
+    // The sum of the ledger is done on `cost`: it is enough that no line is written
+    // is negative so that it never comes back down.
     for (const cost of [-1, -0.000001, Number.NaN, 1e9, 0.02]) {
       await call("POST", "/usage", { feature: "agent_code", cost, completionTokens: 100_000 });
     }
@@ -563,8 +563,8 @@ describe("le ledger — le payeur vient de la ligne du run, pas du corps", () =>
   });
 
   it("refuse une feature hors du périmètre de l'agent", async () => {
-    // Sans ce refus, une VM compromise rangerait sa dépense sous `numo_chat` et
-    // la sortirait des compteurs de l'agent — invisible là où on la cherche.
+    // Without this refusal, a compromised VM would place its expense under `numo_chat` and
+    // would take it out of the agent's counters — invisible where we look for it.
     const res = await call("POST", "/usage", { feature: "numo_chat", cost: 10 });
     expect(res.status).toBe(400);
     expect(h.recorded).toHaveLength(0);
@@ -589,8 +589,8 @@ describe("le checkpoint", () => {
   });
 
   it("dit 409 quand le run n'est plus en cours — au lieu de laisser croire", async () => {
-    // Une VM qui croit avoir sauvegardé et continue travaille pour une
-    // conversation qui est finie.
+    // A VM that believes it has saved and continues working for a
+    // conversation which is over.
     h.stampReturnsNull = true;
     const res = await call("PUT", "/checkpoint", { checkpoint: { messages: [1] } });
     expect(res.status).toBe(409);
@@ -599,9 +599,9 @@ describe("le checkpoint", () => {
 
 describe("steering et interruption — inchangés côté base", () => {
   it("drainent les messages en attente, MENTIONS COMPRISES", async () => {
-    // La forme a changé avec les mentions (PR 52) : un message est un objet, et
-    // ses ids voyagent à côté de son texte — c'est ce que le superviseur
-    // repostera au modèle sans les lui faire deviner.
+    // The form changed with the mentions (PR 52): a message is an object, and
+    // its ids travel alongside its text — that's what the supervisor
+    // will repost to the model without making him guess them.
     expect((await call("GET", "/messages")).body).toEqual({
       messages: [{ text: "relis @MIN-42", mentions: [{ type: "issue", id: "i-1", label: "MIN-42" }] }],
     });
@@ -612,20 +612,20 @@ describe("steering et interruption — inchangés côté base", () => {
   });
 
   /**
-   * MIN-286 — le pendant du drainage. Le superviseur d'opencode consomme la file
-   * AVANT de couper le round pour reposter derrière : quand le tour sort entre les
-   * deux (plafond, deadline, run conclu ailleurs), le message n'a été ni joué ni
-   * gardé, et il meurt avec la microVM. Il revient donc en file, et c'est LUI qui
-   * re-queue le run.
+   * MIN-286 — the counterpart of drainage. The opencode supervisor consumes the queue
+   * BEFORE cutting the round to restart behind: when the round comes out between the
+   * two (ceiling, deadline, run concluded elsewhere), the message was neither played nor
+   * kept, and it dies with the microVM. So he comes back in line, and it's HE who
+   * re-queue the run.
    */
   it("REMETTENT en file ce qui a été drainé sans être joué", async () => {
     const res = await call("POST", "/messages", { messages: ["fais plutôt ça", "  ", ""] });
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ requeued: 1 });
-    // Sans auteur : réinséré, il redevient un message en attente ordinaire.
+    // Without author: reinserted, it becomes an ordinary waiting message again.
     expect(h.requeued).toEqual([
-      // `parseAgentMentions` rend une liste VIDE quand il n'y a rien à lire —
-      // `insertRunMessage` n'écrit alors pas la colonne.
+      // `parseAgentMentions` returns an EMPTY list when there is nothing to read —
+      // `insertRunMessage` then does not write the column.
       { runId: RUN_ID, userId: null, content: "fais plutôt ça", mentions: [] },
     ]);
   });
@@ -633,10 +633,10 @@ describe("steering et interruption — inchangés côté base", () => {
   /**
    * PR 52 — UN MESSAGE REMIS EN FILE GARDE SES MENTIONS.
    *
-   * Le retour en file est la seule chose qui sépare « accepté à l'écran » de
-   * « joué » quand un tour sort au mauvais moment. S'il perdait les ids en
-   * chemin, le tour suivant relirait « relis @MIN-42 » sans savoir de quel
-   * ticket on parle — c'est-à-dire exactement ce que cette PR répare.
+   * Returning to the queue is the only thing that separates "accepted on screen" from
+   * “played” when a trick comes out at the wrong time. If he lost the ids in
+   * path, the next round would reread “reread @MIN-42” without knowing which
+   * ticket we're talking about — which is exactly what this PR fixes.
    */
   it("gardent les mentions d'un message remis en file, et ignorent une forme illisible", async () => {
     const res = await call("POST", "/messages", {
@@ -659,9 +659,9 @@ describe("steering et interruption — inchangés côté base", () => {
   });
 
   /**
-   * MIN-329 — la remise en file est bornée comme l'écriture qui l'a produite.
-   * Sans borne, la surface écrivait en base autant de messages que la VM en
-   * envoyait, de la taille qu'elle voulait — et chacun revenait dans le prompt du
+   * MIN-329 — re-queuing is limited like the writing that produced it.
+   * Without a limit, the surface wrote as many messages in base as the VM in base
+   * sent, of the size she wanted - and everyone came back promptly
    * tour suivant.
    */
   it("bornent le nombre et la taille de ce qui revient en file", async () => {
@@ -674,10 +674,10 @@ describe("steering et interruption — inchangés côté base", () => {
   });
 
   it("l'EFFACENT sur DELETE — et seulement pour LEUR run", async () => {
-    // La boucle consomme le drapeau quand le « stop » qu'elle vient de lire
-    // arrivait avec un message : le tour se poursuit alors avec la consigne au
-    // lieu de sortir pour être re-queué par ce message resté en file. Le runId
-    // vient du claim OIDC, jamais du corps : une VM ne peut effacer que le sien.
+    // The loop consumes the flag when the “stop” it has just read
+    // arrived with a message: the tour then continues with the instruction to
+    // instead of going out to be re-queued by this message left in queue. The runId
+    // comes from the OIDC claim, never from the body: a VM can only delete its own.
     expect((await call("DELETE", "/interrupt")).status).toBe(200);
     expect(h.cleared).toEqual([RUN_ID]);
   });
@@ -695,10 +695,10 @@ describe("les tools de plateforme", () => {
   });
 
   it("ancrent une RELECTURE sur le ticket de sa pull request", async () => {
-    // `run.issue_id` est toujours nul sur une session de review, mais la PR porte
-    // souvent le ticket qu'elle met en œuvre : c'est LUI le défaut de `read_issue`
-    // (même règle qu'execute.ts). Sans ça le tool annonce un défaut qui n'existe
-    // pas, et le premier appel sans argument brûle un round.
+    // `run.issue_id` is always zero on a review session, but the PR carries
+    // often the ticket that it implements: HE is the fault of `read_issue`
+    // (same rule as execute.ts). Without that, the tool announces a fault that does not exist
+    // not, and the first call without argument burns a round.
     h.run = { ...h.run, issue_id: null, pull_request_id: "pr-1" };
     h.prIssueId = "issue-de-la-pr";
     await call("POST", "/tool/read_issue", { args: {} });
@@ -706,9 +706,9 @@ describe("les tools de plateforme", () => {
   });
 
   it("ouvrent la pull request sur la branche que la VM vient de POUSSER", async () => {
-    // `agent_runs.branch_name` n'est stampé qu'après un premier push RÉEL
-    // (MIN-123) — or c'est `create_pr` qui vient de le faire. Le lire sur la ligne
-    // du run donnait une tête VIDE à la forge, et stampait `branch_name: ""`.
+    // `agent_runs.branch_name` is only stamped after a first REAL push
+    // (MIN-123) — but it is `create_pr` who has just done it. Read it on the line
+    // of the run gave an EMPTY head to the forge, and stamped `branch_name: ""`.
     const branch = "minddy/agent/min-42-abcd1234";
     const res = await call("POST", "/tool/create_pr", {
       args: { title: "Ajoute le truc" },
@@ -717,7 +717,7 @@ describe("les tools de plateforme", () => {
     });
     expect(res.status).toBe(200);
     expect(h.prLandings).toEqual([{ workBranch: branch, baseBranch: "main" }]);
-    // …et c'est CETTE branche-là qu'on enregistre sur la ligne du run.
+    // …and it is THIS branch that we record on the run line.
     expect(h.stamped.find((f) => "branch_name" in f)).toMatchObject({ branch_name: branch });
   });
 
@@ -728,7 +728,7 @@ describe("les tools de plateforme", () => {
       pushed: { pushed: true, remoteUpdated: true, headSha: "abc" },
     });
     expect(h.prLandings[0].workBranch).toBe("minddy/agent/deja-poussee");
-    // Déjà enregistrée : on ne la re-stampe pas.
+    // Already recorded: we do not re-stamp it.
     expect(h.stamped.some((f) => "branch_name" in f)).toBe(false);
   });
 
@@ -738,8 +738,8 @@ describe("les tools de plateforme", () => {
   });
 
   it("ne servent PAS les tools de fichier — ils s'exécutent dans la VM", async () => {
-    // 403 et pas 404 : le nom n'est pas dans le jeu de ce run, ce qui n'est pas la
-    // même chose que « ça n'existe pas » (MIN-326).
+    // 403 and not 404: the name is not in the game of this run, which is not the
+    // same thing as “it doesn’t exist” (MIN-326).
     for (const name of ["read_file", "edit_file", "run_command", "git_commit"]) {
       expect((await call("POST", `/tool/${name}`, { args: {} })).status).toBe(403);
     }
@@ -747,17 +747,17 @@ describe("les tools de plateforme", () => {
 });
 
 /**
- * MIN-326 — L'ANCRAGE EST UN VERROU DE CODE, PAS UNE PHRASE DE PROMPT.
+ * MIN-326 — ANCHOR IS A CODE LOCK, NOT A PROMPT SENTENCE.
  *
- * `runPlatformTool` routait sur le seul NOM du tool. Une session de relecture —
- * celle dont tout le dépôt affirme qu'elle est en lecture seule, et la seule dont
- * le contenu lu vient d'un fork inconnu — pouvait donc écrire dans les tickets,
- * le carnet, le wiki et jusque dans une ROUTINE planifiée, par un POST sur
- * `/api/agent-vm/tool/<nom>` depuis son shell. Une instruction glissée dans un
+ * `runPlatformTool` routed only to the NAME of the tool. A proofreading session —
+ * the one that the entire repository claims is read-only, and the only one that
+ * the content read comes from an unknown fork — could therefore write in tickets,
+ * the notebook, the wiki and even in a planned ROUTINE, by a POST on
+ * `/api/agent-vm/tool/<nom>` from its shell. An instruction slipped into a
  * `AGENTS.md` suffisait.
  */
 describe("l'ancrage du run ferme la surface `/tool/`", () => {
-  /** Une session de relecture : `issue_id` nul, une pull request ancrée. */
+  /** A review session: `issue_id` null, an anchored pull request. */
   const review = () => {
     h.run = { ...h.run, issue_id: null, pull_request_id: "pr-1" };
   };
@@ -790,8 +790,8 @@ describe("l'ancrage du run ferme la surface `/tool/`", () => {
     review();
     expect((await call("POST", "/tool/read_issue", { args: {} })).status).toBe(200);
     expect((await call("POST", "/tool/read_page", { args: { page: "p" } })).status).toBe(200);
-    // `comment_pr` part chez la forge : ce qui compte ici est qu'il ne soit pas refusé
-    // en amont — l'exécution est couverte par `pr-tools.test.ts`.
+    // `comment_pr` leaves for the forge: what matters here is that he is not refused
+    // upstream — execution is covered by `pr-tools.test.ts`.
     expect((await call("POST", "/tool/comment_pr", { args: { body: "ok" } })).status).not.toBe(403);
   });
 
@@ -814,29 +814,29 @@ describe("l'ancrage du run ferme la surface `/tool/`", () => {
 });
 
 /**
- * MIN-327 — LE TOKEN DE FORGE QU'UNE MICROVM REÇOIT DÉPEND DE SON ANCRAGE.
+ * MIN-327 — THE FORGE TOKEN A MICROVM RECEIVES DEPENDS ON ITS ANCHOR.
  *
- * `/repo-auth` rendait un token frais à n'importe quelle VM, sans regarder
- * l'ancrage. Une relecture — le seul dont tout le contenu vient d'un fork
- * inconnu — en obtenait un EN ÉCRITURE, qui atterrissait dans son `.git/config` :
- * une injection depuis le fork suffisait à le lire et à l'exfiltrer, et il
- * ouvrait alors tous les dépôts privés de l'installation.
+ * `/repo-auth` returned a fresh token to any VM, without looking
+ * anchoring. A replay — the only one where all content comes from a fork
+ * unknown — got one IN WRITING, which landed in his `.git/config`:
+ * an injection from the fork was enough to read it and exfiltrate it, and it
+ * then opened all the private repositories of the installation.
  */
 describe("le token de forge remis à la microVM", () => {
   it("refuse tout token à une session de RELECTURE", async () => {
     h.run = { ...h.run, issue_id: null, pull_request_id: "pr-1" };
     const res = await call("POST", "/repo-auth");
     expect(res.status).toBe(403);
-    // Et rien n'a été minté : le refus est en amont de la forge, pas un token
-    // qu'on fabriquerait pour le jeter.
+    // And nothing was minted: the refusal is upstream of the forge, not a token
+    // that we would make to throw away.
     expect(h.repoAccessAsked).toEqual([]);
   });
 
   it("rend au run de TICKET un token de dépôt, pas le token de la fonction", async () => {
     const res = await call("POST", "/repo-auth");
     expect(res.status).toBe(200);
-    // `repo-write` : la VM clone, fetch et pousse. Elle ne merge pas une pull
-    // request et n'en approuve pas une — ces gestes-là repassent par `/tool/`.
+    // `repo-write`: the VM clones, fetches and pushes. She doesn't wear a sweater
+    // request and does not approve one — these gestures go back to `/tool/`.
     expect(h.repoAccessAsked).toEqual(["repo-write"]);
     expect(res.body).toEqual({
       authUrl: "https://x-access-token:tok-repo-write@github.com/org/repo.git",
@@ -851,12 +851,12 @@ describe("le token de forge remis à la microVM", () => {
 });
 
 /**
- * MIN-326 — LE CARNET EST PERSONNEL, ET IL EST CELUI DU CRÉATEUR DU RUN.
+ * MIN-326 — THE NOTEBOOK IS PERSONAL, AND IT IS THAT OF THE CREATOR OF THE RUN.
  *
- * N'importe quel membre du projet peut reprendre un run à chaud (`/steer`) : les
- * tools carnet, eux, sont câblés sur `run.created_by`. Un collègue pilotait donc
- * un agent branché sur la note privée de quelqu'un d'autre — qu'il pouvait lire,
- * et réécrire en entier.
+ * Any member of the project can resume a hot run (`/steer`):
+ * tools notebook are wired to `run.created_by`. A colleague was piloting
+ * an agent tapped into someone else's private note — which he could read,
+ * and rewrite in full.
  */
 describe("le carnet se ferme dès qu'un tiers a parlé au run", () => {
   it("refuse les tools carnet sur un run repris par quelqu'un d'autre", async () => {
@@ -887,7 +887,7 @@ describe("le carnet se ferme dès qu'un tiers a parlé au run", () => {
 describe("la surface est fermée", () => {
   it("refuse ce qu'elle ne connaît pas", async () => {
     expect((await call("POST", "/whatever")).status).toBe(404);
-    // …y compris une bonne surface avec la mauvaise méthode.
+    // …including a good surface with the wrong method.
     expect((await call("GET", "/events")).status).toBe(404);
     expect((await call("POST", "/messages/pending")).status).toBe(404);
   });
@@ -906,10 +906,10 @@ describe("la fin de tour n'atterrit qu'UNE fois", () => {
   });
 
   it("refuse en 409 un second rapport — le client ne le retente pas", async () => {
-    // Le client du plan de contrôle retente sur 5xx : sans cette garde, un rapport
-    // dont la réponse s'est perdue en vol serait rejoué. Events en double dans le
-    // fil, et une SECONDE ligne de compute au ledger — la moitié microVM de la
-    // facture, comptée deux fois.
+    // The control plane client tries again on 5xx: without this guard, a report
+    // whose response was lost in flight would be replayed. Duplicate events in the
+    // thread, and a SECOND compute line to the ledger — the microVM half of the
+    // invoice, counted twice.
     h.run = { ...h.run, status: "completed" };
     const res = await call("POST", "/rest", { status: "completed", costUsd: 0.1 });
     expect(res.status).toBe(409);
@@ -924,9 +924,9 @@ describe("la fin de tour n'atterrit qu'UNE fois", () => {
 
 describe("le checkpoint périodique fait aussi office de battement de cœur", () => {
   it("horodate l'activité du run à chaque sauvegarde", async () => {
-    // C'est le seul signal régulier qu'un tour qui vit dans la VM produise, et
-    // c'est sur lui que le chien de garde décide d'aller interroger la plateforme.
-    // Sans lui, il la sonderait pour chaque run à chaque passage du cron.
+    // This is the only regular signal that a rook that lives in the VM produces, and
+    // it is on him that the watchdog decides to question the platform.
+    // Without it, it would probe it for each run each time the cron passes.
     await call("PUT", "/checkpoint", { checkpoint: { messages: [] } });
     expect(h.stamped[0]).toHaveProperty("last_activity_at");
   });
@@ -938,12 +938,12 @@ describe("le checkpoint périodique fait aussi office de battement de cœur", ()
   });
 
   /**
-   * MIN-286 — UNE PANNE D'ÉCRITURE N'EST PAS UN RUN CONCLU.
+   * MIN-286 — A WRITE FAILURE IS NOT A CONCLUDED RUN.
    *
-   * Le superviseur lit un 409 comme « la conversation n'existe plus » : il coupe
-   * le tour, il ne pousse pas, il rend la main. Une base qui refuse la ligne —
-   * l'octet nul du 2026-08-12, une coupure réseau — lui disait donc d'abandonner
-   * un tour parfaitement vivant, et le fil restait figé sur son dernier geste.
+   * The supervisor reads a 409 as “the conversation no longer exists”: he cuts
+   * the turn, he doesn't push, he gives back. A base that refuses the line —
+   * the null byte of 2026-08-12, a network outage — therefore told him to give up
+   * a perfectly lively turn, and the thread remained frozen on its last gesture.
    */
   it("dit 503 quand la BASE refuse — la VM doit retenter, pas mourir", async () => {
     h.stampFails = true;
@@ -953,13 +953,13 @@ describe("le checkpoint périodique fait aussi office de battement de cœur", ()
 });
 
 /**
- * MIN-286 (2026-08-13) — LE JOURNAL D'OPENCODE S'ÉCRIT EN APPEND.
+ * MIN-286 (2026-08-13) — THE OPENCODE LOG IS WRITTEN IN APPEND.
  *
- * Il portait la sortie complète de chaque tool et voyageait dans le checkpoint :
- * le plafond du corps tombait au bout d'une quinzaine de lectures de fichiers, et
- * un tour de 31 minutes perdait toute sa conversation. La microVM n'envoie plus
- * que ce qui est NEUF, et la ligne du run — relue à chaque appel de cette
- * surface — n'en garde que le pointeur.
+ * He carried the full output of each tool and traveled through the checkpoint:
+ * the ceiling of the body fell after about fifteen file readings, and
+ * a 31 minute round lost all his conversation. The microVM no longer sends
+ * only what is NEW, and the run line — reread at each call of this
+ * surface — only keeps the pointer.
  */
 describe("le journal de la session", () => {
   it("écrit l'incrément sous le run de l'OIDC, pas sous celui du corps", async () => {
@@ -982,13 +982,13 @@ describe("le journal de la session", () => {
 });
 
 /**
- * MIN-331 — UNE MICROVM NE PARLE QUE POUR SON RUN, vu depuis la base.
+ * MIN-331 — A MICROVM ONLY SPEAKS FOR ITS RUN, seen from the base.
  *
- * L'admission de la route (`admitSandboxCaller`) refuse déjà une sandbox d'un
- * autre compte Vercel, et dérive le run du nom signé — donc le nom et le run
- * s'accordent par construction. Ce contrôle-ci est l'autre moitié : la ligne du
- * run doit RECONNAÎTRE cette microVM comme la sienne. Le jour où le nommage
- * cesserait d'être déterministe, c'est ici que ça se dit, pas dans les logs.
+ * The route admission (`admitSandboxCaller`) already denies a sandbox of a
+ * other Vercel account, and derives the run from the signed name — therefore the name and the run
+ * agree by construction. This control is the other half: the line of
+ * run should RECOGNIZE this microVM as its own. The day the naming
+ * would cease to be deterministic, that's where it says it, not in the logs.
  */
 describe("la microVM appelante et le run qu'elle prétend exécuter", () => {
   it("laisse passer la microVM enregistrée sur le run", async () => {
@@ -1031,12 +1031,12 @@ describe("la microVM appelante et le run qu'elle prétend exécuter", () => {
 });
 
 /**
- * MIN-355 — LE CHEMIN LOCAL, ET CE QU'IL NE SERT PAS.
+ * MIN-355 — THE LOCAL ROAD, AND WHAT IT’S NOT USEFUL.
  *
- * Un tour qui joue sur la machine de l'utilisateur porte un jeton que NOUS avons
- * signé, sur un disque que le modèle peut lire. On ne prétend donc pas le
- * protéger : on réduit ce qu'il ouvre. Trois refus, et une garde de fraîcheur qui
- * ne coûte rien parce que la ligne du run est déjà lue.
+ * A spin that plays on the user's machine carries a token that WE have
+ * signed, on a disk that the model can read. We therefore do not claim the
+ * protect: we reduce what it opens. Three refusals, and a keep of freshness which
+ * costs nothing because the run line is already read.
  */
 describe("le plan de contrôle vu depuis une machine", () => {
   const LOCAL_GEN = 4;
@@ -1079,25 +1079,25 @@ describe("le plan de contrôle vu depuis une machine", () => {
   });
 
   it("refuse un jeton dont la GÉNÉRATION a été dépassée — la révocation est là", async () => {
-    // Émettre un jeton incrémente la génération (`issueLocalExecToken`) : celui de
-    // la machine précédente meurt à l'instant, sans qu'on ait rien à rappeler.
+    // Issuing a token increments the generation (`issueLocalExecToken`): that of
+    // the previous machine dies instantly, without us having anything to remember.
     const res = await callLocal("POST", "/events", { type: "assistant_message" }, LOCAL_GEN - 1);
     expect(res.status).toBe(403);
     expect(h.events).toEqual([]);
   });
 
   it("refuse un jeton signé pour un run qui n'est PAS local", async () => {
-    // Ne devrait pas exister — donc si ça existe, c'est une faute de chez nous, et
-    // elle s'arrête ici plutôt que d'ouvrir une seconde voie sur un run cloud.
+    // Shouldn't exist — so if it exists, it's our fault, and
+    // it stops here rather than opening a second route on a cloud run.
     h.run = { ...h.run!, local_exec: false };
     expect((await callLocal("POST", "/events", { type: "assistant_message" })).status).toBe(403);
     expect(h.events).toEqual([]);
   });
 
   it("exige que le run TRAVAILLE, sur toutes les surfaces qui lisent sa ligne", async () => {
-    // Une microVM se fait couper au repos ; une machine, non. Sans cette ligne, un
-    // jeton de quinze minutes servirait encore les tools d'une conversation finie
-    // et consommerait sa file de steering.
+    // A microVM gets shut down while idle; a machine, no. Without this line, a
+    // fifteen minute token would still serve as the tools of a finished conversation
+    // and would consume its steering line.
     h.run = { ...h.run!, status: "completed" };
     for (const [method, surface] of [
       ["POST", "/events"],
@@ -1107,8 +1107,8 @@ describe("le plan de contrôle vu depuis une machine", () => {
       ["POST", "/llm-key"],
     ] as const) {
       const res = await callLocal(method, surface, { type: "assistant_message", args: {} });
-      // 409 et pas 403 : c'est celui que le client du plan de contrôle lit déjà
-      // comme « arrête-toi », et il n'est pas retenté.
+      // 409 and not 403: this is the one that the control plan client already reads
+      // like "stop", and it is not tried again.
       expect([surface, res.status]).toEqual([surface, 409]);
     }
     expect(h.events).toEqual([]);
@@ -1118,29 +1118,29 @@ describe("le plan de contrôle vu depuis une machine", () => {
   it("ne rend AUCUN token de forge — le renouvellement passe par l'app", async () => {
     const res = await callLocal("POST", "/repo-auth");
     expect(res.status).toBe(403);
-    // Rien n'a été minté : le refus est en amont de la forge.
+    // Nothing has been minted: the refusal is upstream of the forge.
     expect(h.repoAccessAsked).toEqual([]);
   });
 
   /**
-   * MIN-357 — LA CLÉ DU MODÈLE, ET LE MIROIR DE `/repo-auth`.
+   * MIN-357 — THE KEY TO THE MODEL, AND THE MIRROR OF `/repo-auth`.
    *
-   * Sur un Mac il n'y a pas de firewall pour poser la clé à la sortie : elle
-   * descend jusqu'au proxy du harness, en mémoire, et cette surface est par où.
-   * La clé plateforme n'est rendue que si elle a été mintée avec un plafond dur.
-   * La clé BYOK, elle, est servie directement pour les lancements locaux que la
-   * surface d'admission réserve à une action interactive de l'utilisateur.
+   * On a Mac there is no firewall to place the key on exit: it
+   * goes down to the harness proxy, in memory, and this surface is where.
+   * The platform key is only returned if it has been minted with a hard cap.
+   * The BYOK key is served directly for local launches that the
+   * Admission surface reserved for interactive user action.
    */
   describe("la clé du modèle", () => {
     it("mint une clé plafonnée sur le restant du compte, et la stampe pour la révoquer", async () => {
       const res = await callLocal("POST", "/llm-key");
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ key: "sk-or-v1-clef-du-run", capUsd: 3 });
-      // Le plafond n'est pas déclaré par la machine : il est calculé ici, sur le
-      // quota du compte et le ledger, exactement comme au lancement d'un chunk.
+      // The ceiling is not declared by the machine: it is calculated here, on the
+      // account quota and ledger, exactly as when launching a chunk.
       expect(h.minted).toEqual([{ runId: RUN_ID, capUsd: 3 }]);
-      // Sans ce stamp, ni la fin de tour ni le chien de garde ne sauraient quoi
-      // révoquer : la clé vivrait ses 24 h sur la machine de quelqu'un.
+      // Without this stamp, neither the end of the turn nor the guard dog would know what
+      // revoke: the key would live its 24 hours on someone's machine.
       expect(h.stamped.at(-1)).toEqual({ provider_key_id: "hash-neuf" });
     });
 
@@ -1151,9 +1151,9 @@ describe("le plan de contrôle vu depuis une machine", () => {
     });
 
     it("n'en sert AUCUNE à une microVM", async () => {
-      // Là-bas, la clé est posée par le firewall APRÈS la sortie de la VM : la
-      // servir ferait entrer le secret dans le process où le modèle a un shell,
-      // c'est-à-dire défaire MIN-223 par une porte qu'on aurait ouverte.
+      // There, the key is placed by the firewall AFTER the exit of the VM: the
+      // serve would bring the secret into the process where the model has a shell,
+      // that is to say, undo MIN-223 through a door that has been opened.
       expect((await call("POST", "/llm-key")).status).toBe(403);
       expect(h.minted).toEqual([]);
     });
@@ -1175,13 +1175,13 @@ describe("le plan de contrôle vu depuis une machine", () => {
     });
 
     it("rend 503 quand rien ne sait minter — jamais la clé plateforme", async () => {
-      // C'est LE point du verrou : la clé plateforme est non plafonnée et partagée
-      // avec Numo, la transcription, les embeddings et le catalogue. Un tour local
-      // qui n'a pas de clé plafonnée ne doit pas avoir lieu.
+      // This is THE point of the lock: the platform key is uncapped and shared
+      // with Numo, transcription, embeddings and catalog. A local tour
+      // which does not have a capped key should not take place.
       h.mintFails = true;
       const res = await callLocal("POST", "/llm-key");
       expect(res.status).toBe(503);
-      // Et rien n'est stampé : on ne remplace pas un hash révocable par du vide.
+      // And nothing is stamped: we do not replace a revocable hash with nothing.
       expect(h.stamped).toEqual([]);
       expect(h.revoked).toEqual([]);
     });
@@ -1189,14 +1189,14 @@ describe("le plan de contrôle vu depuis une machine", () => {
 
   it("sert le MÊME jeu de tools que dans la microVM, carnet compris", async () => {
     /**
-     * Le cadrage voulait retirer `set_scratchpad` du chemin local — le seul tool
-     * destructeur de la surface. Écarté le 2026-08-15, et ce test est la trace de
-     * la décision plutôt que de son absence :
+     * The framework wanted to remove `set_scratchpad` from the local path — the only tool
+     * destructive of the surface. Dismissed on 2026-08-15, and this test is the trace of
+     * the decision rather than its absence:
      *
-     * - un porteur de jeton lit le carnet et son `rev` par `read_scratchpad`, qui
-     *   reste servi : le compare-and-swap ne garde que de l'obsolescence ;
-     * - et un refus servi ici sans retrait du CATALOGUE (`agentToolsFor`) ferait
-     *   brûler un round au modèle sur un tool déclaré qui ment.
+     * - a token holder reads the book and its `rev` by `read_scratchpad`, which
+     * remains served: compare-and-swap only keeps obsolescence;
+     * - and a refusal served here without withdrawal from the CATALOG (`agentToolsFor`) would
+     * burn a round on the model on a declared tool that lies.
      */
     for (const name of [
       "read_scratchpad",
@@ -1213,18 +1213,18 @@ describe("le plan de contrôle vu depuis une machine", () => {
   });
 
   it("laisse le DIRECT passer sans lire la ligne du run — le 13e cas, assumé", async () => {
-    // C'est le seul appel chaud (~4/s) : lui imposer un lookup serait exactement
-    // la charge que son court-circuit existe pour supprimer. Ce qu'un jeton volé y
-    // gagne est du texte éphémère sur le fil de SON run, quinze minutes au plus.
+    // This is the only hot call (~4/s): imposing a lookup on him would be exactly
+    // the load that its short circuit exists to remove. What a stolen token there
+    // wins is ephemeral text on the thread of HIS run, fifteen minutes at most.
     const res = await callLocal("POST", "/stream", { text: "salut" }, LOCAL_GEN - 1);
     expect(res.status).toBe(200);
     expect(h.runReads).toBe(0);
   });
 
   it("ne change RIEN au chemin de la microVM", async () => {
-    // La preuve que les deux refus sont bien conditionnés : les mêmes appels,
-    // sans `local`, se comportent comme avant — y compris sur un run conclu, que
-    // seul le chemin local ferme.
+    // The proof that the two refusals are well conditioned: the same calls,
+    // without `local`, behave as before — including on a completed run, that
+    // only the local road closes.
     h.run = { ...h.run!, status: "completed", local_exec: true, local_exec_gen: LOCAL_GEN };
     expect((await call("POST", "/repo-auth")).status).toBe(200);
     expect((await call("POST", "/events", { type: "assistant_message" })).status).toBe(200);

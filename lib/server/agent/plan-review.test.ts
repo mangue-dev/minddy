@@ -8,8 +8,8 @@ import {
   PLAN_REVIEW_MAX_CHARS,
 } from "./plan-review";
 
-/** Le plan fondateur, réduit : celui du run `ada40ec9` (MIN-226), dont l'étape de
- *  vérification promettait un script qui n'existe pas dans ce dépôt. */
+/** The founding plan, reduced: that of the run `ada40ec9` (MIN-226), whose verification step
+ * promised a script which does not exist in this repository. */
 const PLAN = `## Contexte
 
 Modifier la page objectifs.
@@ -27,7 +27,7 @@ npm run typecheck
 \`\`\`
 `;
 
-/** Ce que la sonde rend sur ce dépôt-ci. */
+/** What the probe reports on this repository. */
 const MINDDY = { names: ["dev", "build", "start", "typecheck", "test"], workspace: false };
 
 describe("planCommands", () => {
@@ -48,8 +48,8 @@ describe("planCommands", () => {
   });
 
   it("ne devine pas sur les formes ambiguës", () => {
-    // `pnpm add`/`npx` ne nomment aucun script : les prendre pour tels ferait dire
-    // au harness qu'il manque un script qui n'a jamais existé.
+    // `pnpm add`/`npx` do not name any script: taking them as such would mean
+    // the harness is missing a script that never existed.
     expect(planCommands("`pnpm add zod`, `npx vitest run lib/plan.test.ts`, `npm install`")).toEqual(
       [],
     );
@@ -82,7 +82,7 @@ describe("parseScriptsProbe", () => {
 
   it("rend un manifeste sans scripts, et rien du tout sans manifeste", () => {
     expect(parseScriptsProbe(probe(`{"name":"x"}`))).toEqual({ names: [], workspace: false });
-    // `package.json` absent : la sortie n'a que le marqueur.
+    // `package.json` absent: the output only has the marker.
     expect(parseScriptsProbe("\n@@workspace\n")).toBeNull();
     expect(parseScriptsProbe(probe("{ not json"))).toBeNull();
   });
@@ -99,7 +99,7 @@ describe("formatPlanReview", () => {
   it("rend le plan et pose les questions du relecteur", () => {
     const block = formatPlanReview({ plan: PLAN, scripts: MINDDY })!;
     expect(block).toContain("- [ ] `app/objectives/page.tsx`");
-    // Les trois défauts mesurés sur le run fondateur, un par question.
+    // The three defects measured on the founding run, one per question.
     expect(block).toContain("actually opened this turn");
     expect(block).toContain('"verify X"');
     expect(block).toContain("commands that exist in this repo");
@@ -161,11 +161,11 @@ describe("formatPlanReview", () => {
 
   it("encadre le plan sans que ses propres blocs le referment", () => {
     const block = formatPlanReview({ plan: PLAN, scripts: null })!;
-    // Le plan porte un bloc ```bash : une clôture à trois backticks serait fermée
-    // par lui, et tout ce qui suit (questions comprises) se lirait comme du code.
+    // The plan has a ```bash block: a fence with three backticks would be closed
+    // by him, and everything that follows (including questions) would read like code.
     expect(block).toContain("````markdown");
     expect(block.trimEnd().endsWith("````")).toBe(false);
-    // Une clôture par bloc, pas une de plus : l'ouverture et la fermeture.
+    // One fence per block, not one more: opening and closing.
     expect(block.match(/````/g)).toHaveLength(2);
   });
 

@@ -1,27 +1,26 @@
 /**
- * Le contrat de l'API d'intégration, sous forme de données (MIN-106).
+ * The integration API contract, in data form (MIN-106).
  *
- * Une clé d'intégration ne sert à rien sans le format qui va avec. Jusqu'ici ce
- * format n'existait qu'en prose, dans le prompt d'intégration copié depuis
- * l'interface (`lib/server/integration-prompt.ts`) : très bien pour un
- * humain qui colle un prompt, inexploitable pour un agent qui vient d'appeler un
- * outil et doit écrire l'appel HTTP dans la foulée.
+ * An integration key is useless without the format that goes with it. Until now this
+ * format only existed in prose, in the integration prompt copied from
+ * the interface (`lib/server/integration-prompt.ts`): very good for a
+ * human who pastes a prompt, unusable for an agent who has just called a
+ * tool and must write the HTTP call in the stride.
  *
- * On décrit donc le contrat une fois, en structuré, et les deux surfaces
- * d'agent renvoient le MÊME objet avec la clé qu'elles viennent de créer :
- * Numo dans le chat, le serveur MCP dans l'IDE de l'utilisateur. Un agent n'a
- * plus à deviner l'endpoint, le nom du champ d'identité ni les codes d'erreur —
- * ni, surtout, à les inventer.
+ * We therefore describe the contract once, in structured form, and the two agent surfaces
+ * return the SAME object with the key they have just created:
+ * Numo in the chat, the MCP server in the user's IDE. An agent no longer has to guess the endpoint, the name of the identity field or the error codes —
+ * nor, above all, to invent them.
  *
- * Module pur (pas de `server-only`, aucun accès base) : c'est ce qui le rend
- * testable, et testable est ici la seule garantie que la description colle aux
- * routes de `app/api/v1/`.
+ * Pure module (no `server-only`, no database access): this is what makes
+ * testable, and testable here is the only guarantee that the description sticks to the
+ * routes of `app/api/v1/`.
  */
 
 import { FEEDBACK_BODY_MAX, FEEDBACK_TITLE_MAX } from "@/lib/feedback/types";
 import { envLine } from "@/lib/feedback/env-lines";
 
-/** Usage dédié d'une clé : créer des issues directement, ou déposer du feedback. */
+/** Dedicated use of a key: create issues directly, or submit feedback. */
 export type IntegrationKind = "issues" | "feedback";
 
 export function isIntegrationKind(value: unknown): value is IntegrationKind {
@@ -29,19 +28,19 @@ export function isIntegrationKind(value: unknown): value is IntegrationKind {
 }
 
 /**
- * La variable d'environnement où la clé de chaque kind est attendue. Un nom, pas
- * une suggestion : c'est celui que le prompt d'intégration cite (il ne porte plus
- * la clé), celui que l'interface propose à la copie, et celui que le contrat
- * ci-dessous annonce aux agents. Les trois doivent lire la même constante, sans
- * quoi le code écrit par l'agent cherchera une variable que l'utilisateur n'a
- * pas remplie.
+ * The environment variable where the key of each kind is expected. A name, not
+ * a suggestion: it is the one that the integration prompt cites (it no longer carries
+ * the key), the one that the interface offers for copying, and the one that the
+ * contract below announces to agents. All three should read the same constant, without
+ * so the code written by the agent will look for a variable that the user has
+ * not filled in.
  */
 export const INTEGRATION_ENV_VAR: Record<IntegrationKind, string> = {
   feedback: "MINDDY_FEEDBACK_KEY",
   issues: "MINDDY_API_KEY",
 };
 
-/** La ligne de `.env` d'une clé fraîchement créée — affichée telle qu'on la colle. */
+/** The `.env` line of a freshly created key — displayed as pasted. */
 export function integrationKeyEnvLine(kind: IntegrationKind, key: string): string {
   return envLine(INTEGRATION_ENV_VAR[kind], key);
 }
@@ -49,11 +48,11 @@ export function integrationKeyEnvLine(kind: IntegrationKind, key: string): strin
 export interface IntegrationEndpointDoc {
   method: "GET" | "POST";
   url: string;
-  /** Ce que fait l'appel, en une phrase. */
+  /** What the call does, in one sentence. */
   purpose: string;
-  /** Champ → description, tel qu'attendu dans le corps JSON. */
+  /** Field → description, as expected in the JSON body. */
   request_body?: Record<string, string>;
-  /** Forme de la réponse en cas de succès. */
+  /** Form of response on success. */
   response: string;
 }
 
@@ -61,55 +60,55 @@ export interface IntegrationUsage {
   kind: IntegrationKind;
   auth: {
     header: string;
-    /** Nom de variable d'environnement recommandé — l'agent écrit dans `.env`. */
+    /** Recommended environment variable name — agent writes to `.env`. */
     env_var: string;
     note: string;
   };
   endpoints: IntegrationEndpointDoc[];
   /**
-   * Le sens INVERSE : minddy qui rappelle l'application. Réservé aux clés
-   * 'issues' — un webhook ne porte que des événements d'issue, et une clé
-   * 'feedback' n'en crée aucune. Absent, donc, du contrat d'une clé feedback.
-   */
+ * The REVERSE meaning: minddy which recalls the application. Reserved for
+ * 'issues' keys — a webhook only carries issue events, and a
+ * 'feedback' key does not create any. Absent, therefore, from the contract of a feedback key.
+ */
   webhook?: IntegrationWebhookDoc;
   errors: Array<{ status: number; code: string; meaning: string }>;
   rules: string[];
 }
 
 /**
- * Le webhook sortant, décrit du point de vue de qui le REÇOIT.
+ * The outgoing webhook, described from the point of view of who RECEIVES it.
  *
- * Une clé 'issues' a deux sens de circulation, et le second se documentait
- * nulle part : l'application pousse dans minddy par `/api/v1/issues`, et minddy
- * la rappelle quand les tickets bougent. Un agent qui ne connaît que le premier
- * écrit une boucle de polling — alors que le récepteur tient en une route.
+ * An 'issues' key has two directions of circulation, and the second was documented
+ * nowhere: the application pushes into minddy by `/api/v1/issues`, and minddy
+ * calls her back when the tickets move. An agent that only knows the first
+ * writes a polling loop — while the receiver is a route.
  *
- * Une clé 'feedback', elle, n'a pas de webhook : elle ne crée pas d'issue, donc
- * il n'y aurait rien à livrer. Ce qu'elle dépose vit sur le board.
+ * A 'feedback' key has no webhook: it does not create an issue, so
+ * there would be nothing to deliver. What it deposits lives on the board.
  *
- * Ce que le récepteur ne peut PAS deviner et qui est ici : la clé du HMAC n'est
- * pas la clé d'API mais son empreinte, la livraison est best-effort (donc son
- * handler doit être idempotent), et un enregistrement qui touche plusieurs
- * champs ne produit qu'une seule livraison.
+ * What the receiver can NOT guess and which is here: the HMAC key is
+ * not the API key but its fingerprint, delivery is best-effort (so its
+ * handler must be idempotent), and a record that touches multiple
+ * fields produces only one delivery.
  */
 export interface IntegrationWebhookDoc {
   purpose: string;
-  /** Où on l'allume — l'agent ne devine pas qu'il existe un réglage. */
+  /** Where it is turned on — the agent does not guess that there is a setting. */
   configure: string;
   events: Array<{ name: string; when: string }>;
   scopes: Array<{ value: string; meaning: string }>;
-  /** En-têtes de la requête sortante, valeur telle qu'elle arrive. */
+  /** Headers of the outgoing request, value as it arrives. */
   headers: Record<string, string>;
-  /** Comment vérifier `X-Minddy-Signature`. */
+  /** How to check `X-Minddy-Signature`. */
   signature: string;
   /** Champ → contenu du corps JSON. */
   payload: Record<string, string>;
-  /** Ce que le récepteur doit tenir pour vrai des livraisons. */
+  /** What the receiver must take as true about deliveries. */
   delivery: string[];
 }
 
-/** Le nom de l'en-tête de signature — lu par le récepteur, écrit par
- *  `lib/server/webhooks.ts`. */
+/** The name of the signature header — read by the receiver, written by
+ * `lib/server/webhooks.ts`. */
 export const WEBHOOK_SIGNATURE_HEADER = "X-Minddy-Signature";
 
 export function integrationWebhookDoc(): IntegrationWebhookDoc {
@@ -200,7 +199,7 @@ export function integrationWebhookDoc(): IntegrationWebhookDoc {
   };
 }
 
-/** Erreurs communes aux deux kinds — l'authentification et le débit. */
+/** Errors common to both kinds — authentication and throughput. */
 function sharedErrors(kind: IntegrationKind) {
   return [
     { status: 401, code: "invalid_api_key", meaning: "Missing, unknown or revoked key." },
@@ -219,9 +218,9 @@ function sharedErrors(kind: IntegrationKind) {
 }
 
 /**
- * Le contrat complet pour une clé donnée. `origin` est l'origine de minddy
- * (`SITE_URL` en production) : les URL sont absolues parce que l'agent qui les
- * lit code contre elles depuis un autre dépôt.
+ * The full contract for a given key. `origin` is the origin of minddy
+ * (`SITE_URL` in production): URLs are absolute because the agent that reads them
+ * reads code against them from another repository.
  */
 export function integrationUsage(
   kind: IntegrationKind,
@@ -278,7 +277,7 @@ function feedbackUsage(base: string): IntegrationUsage {
         response: "200 { ok: true }",
       },
     ],
-    // Pas de `webhook` ici : il ne livre que des événements d'issue.
+    // No `webhook` here: it only delivers outcome events.
     errors: [
       ...sharedErrors("feedback"),
       { status: 422, code: "title_required", meaning: "title is empty." },

@@ -6,8 +6,8 @@
  *
  * Search features:
  * - Fuzzy matching for typo tolerance
- * - Abbreviation matching (e.g. "ct" matches "Créer une tâche")
- * - Accent normalization ("creer" matches "Créer")
+ * - Abbreviation matching (e.g. "ct" matches "Create a task")
+ * - Accent normalization ("creer" matches "Create")
  * - Relevance scoring with context/usage/favorite boosts
  * - Query history recall (ArrowUp in the empty field)
  */

@@ -9,16 +9,16 @@ const SHA_PATTERN = /^[0-9a-f]{40}$/;
 
 export function assertProductionRelease({ ref, requestedSha, checkoutSha, productionSha }) {
   if (ref !== "refs/heads/production") {
-    throw new Error(`la release doit être déclenchée depuis production, pas ${ref || "une ref vide"}`);
+    throw new Error(`the release must be triggered from production, not ${ref || "an empty ref"}`);
   }
   for (const [label, sha] of Object.entries({ requestedSha, checkoutSha, productionSha })) {
-    if (!SHA_PATTERN.test(sha)) throw new Error(`${label} n'est pas un SHA Git complet`);
+    if (!SHA_PATTERN.test(sha)) throw new Error(`${label} is not a full Git SHA`);
   }
   if (checkoutSha !== requestedSha) {
-    throw new Error(`le checkout ${checkoutSha} diffère du SHA demandé ${requestedSha}`);
+    throw new Error(`checkout ${checkoutSha} differs from requested SHA ${requestedSha}`);
   }
   if (productionSha !== requestedSha) {
-    throw new Error(`production ${productionSha} diffère du SHA demandé ${requestedSha}`);
+    throw new Error(`production ${productionSha} differs from requested SHA ${requestedSha}`);
   }
   return requestedSha;
 }
@@ -35,5 +35,5 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     checkoutSha: git(["rev-parse", "HEAD"]),
     productionSha: git(["rev-parse", "origin/production"]),
   });
-  console.log(`Release autorisée sur production ${requestedSha}`);
+  console.log(`Release authorized on production ${requestedSha}`);
 }

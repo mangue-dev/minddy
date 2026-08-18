@@ -8,23 +8,23 @@ import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
 
 /**
- * Le contrat entre un OUTIL de Numo et sa LIGNE dans le fil.
+ * The contract between a Numo TOOL and its LINE in the thread.
  *
- * Chaque appel d'outil s'affiche dans la conversation par une ligne — une icône
- * et une phrase (« Agent de code démarré », « 3 retours trouvés »). Cette phrase
- * vient de `TOOL_META`, indexée par le NOM de l'outil, et l'absence d'entrée ne
- * casse rien : le composant retombe sur « Traitement… » puis « Terminé ».
+ * Each tool call is displayed in the conversation by a line — an icon
+ * and a phrase ("Code Agent started", "3 returns found"). This sentence
+ * comes from `TOOL_META`, indexed by the NAME of the tool, and the absence of an entry does not break
+ *: the component falls back to “Processing…” then “Done”.
  *
- * C'est exactement ce qui rend l'oubli invisible. Douze outils avaient dérivé
- * ainsi — lancer l'agent de code, lire une pull request, promouvoir un retour
- * s'affichaient tous « Traitement… », pendant que créer une catégorie
- * s'affichait par son nom. Ajouter un outil et oublier sa ligne ne lève rien,
- * ne journalise rien, et ne se voit qu'à l'écran.
+ * This is exactly what makes the omission invisible. Twelve tools had derived
+ * so — launching the code broker, reading a pull request, promoting a return
+ * were all showing "Processing...", while create category
+ * was showing by name. Adding a tool and forgetting its line does not raise anything,
+ * does not log anything, and is only seen on the screen.
  *
- * Le test lit la SOURCE du composant plutôt que de l'importer : c'est un module
- * client (JSX, lucide), et ce qu'on veut épingler est une table de noms, pas un
- * rendu. Même geste que lib/i18n-contract.test.ts, pour la même raison — la
- * faute n'existe qu'ENTRE deux fichiers.
+ * The test reads the SOURCE of the component rather than importing it: it is a module
+ * client (JSX, lucid), and what we want to pin is a table of names, not a
+ * rendered. Same gesture as lib/i18n-contract.test.ts, for the same reason — the
+ * fault only exists BETWEEN two files.
  */
 
 const DISPLAY = join(
@@ -40,32 +40,32 @@ const DISPLAY = join(
 const source = readFileSync(DISPLAY, "utf8");
 const metaBlock = source.slice(source.indexOf("const TOOL_META"));
 
-/** Les clés de premier niveau de TOOL_META (2 espaces d'indentation). */
+/** The first level keys of TOOL_META (2 indentation spaces). */
 const labelled = new Set(
   [...metaBlock.matchAll(/^ {2}([a-z_0-9]+):/gm)].map((m) => m[1])
 );
 
-/** Les clés du namespace ToolCall que ces libellés demandent au catalogue. */
+/** The ToolCall namespace keys that these labels request from the catalog. */
 const usedKeys = new Set(
   [...metaBlock.matchAll(/\bt\("([a-zA-Z0-9_]+)"/g)].map((m) => m[1])
 );
 
-/** Les deux modes : le mode projet et le mode global, qui ajoute ses propres
-    outils (list_projects, list_global_filter_options). Une ligne manquante dans
-    l'un ou l'autre se voit pareil à l'écran. */
+/** The two modes: project mode and global mode, which adds its own
+ tools (list_projects, list_global_filter_options). A missing line in
+ either shows the same on the screen. */
 const EVERY_TOOL = [
   ...new Set(
     [...ASSISTANT_TOOLS, ...GLOBAL_ASSISTANT_TOOLS].map((t) => t.function.name)
   ),
 ];
 
-describe("chaque outil de Numo porte sa ligne dans le fil", () => {
+describe("each Numo tool has its line in the thread", () => {
   it.each(EVERY_TOOL)("%s a une entrée dans TOOL_META", (name) => {
     expect(labelled).toContain(name);
   });
 });
 
-describe("les libellés d'outil existent dans les DEUX catalogues", () => {
+describe("tool labels exist in BOTH catalogs", () => {
   const catalogs: [string, Record<string, unknown>][] = [
     ["en", en.ToolCall as Record<string, unknown>],
     ["fr", fr.ToolCall as Record<string, unknown>],

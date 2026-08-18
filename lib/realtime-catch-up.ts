@@ -1,57 +1,57 @@
 /**
- * Le rattrapage des caches : ce qu'on invalide quand la page a raté des
- * événements — retour d'une absence, canal tombé puis rejoint.
+ * Catch-up of caches: what is invalidated when the page has missed caches
+ * events — return from an absence, channel fallen then rejoined.
  *
- * Le périmètre à rattraper est une liste de clés-PRÉFIXES (`["comments"]` vise
- * toutes les requêtes `["comments", issueId]`). Le geste naïf est de les jouer
- * une par une :
+ * The perimeter to be caught is a list of PREFIX-keys (`["comments"]` aims
+ * all `["comments", issueId]` requests). The naive gesture is to play them
+ * one by one:
  *
  * ```ts
  * for (const key of keys) queryClient.invalidateQueries({ queryKey: key });
  * ```
  *
- * Chaque appel balaie le cache DEUX fois — le `findAll` d'`invalidateQueries`,
- * puis celui du `refetchQueries` qu'il enchaîne. Le périmètre d'une reprise fait
- * 9 clés utilisateur + 32 clés par projet, plafonné à 25 canaux : ~85 appels
- * (~170 parcours) sur un compte à cinq projets, ~300 (~600 parcours) au plafond.
- * Le tout dans une boucle synchrone, à l'instant du retour au premier plan —
- * c'est-à-dire pile au moment du premier geste (MIN-300).
+ * Each call scans the cache TWICE — `findAll` from `invalidateQueries`,
+ * then that of `refetchQueries` which he connects. The scope of a recovery is
+ * 9 user keys + 32 keys per project, capped at 25 channels: ~85 calls
+ * (~170 courses) on a five project account, ~300 (~600 courses) on the ceiling.
+ * All in a synchronous loop, at the moment of return to the foreground —
+ * that is to say right at the moment of the first gesture (MIN-300).
  *
- * Restreindre la portée n'était pas une option : `type: "active"` casserait le
- * marquage des requêtes inactives, et borner aux projets à l'écran casserait les
- * agrégats que la barre latérale lit sur toutes les pages. Ce qu'on change est
- * donc le NOMBRE DE PARCOURS, pas la couverture : un seul `invalidateQueries`
- * avec un prédicat qui reconnaît les mêmes requêtes.
+ * Restricting the scope was not an option: `type: "active"` would break the
+ * marking inactive requests, and limiting them to projects on the screen would break the
+ * aggregates that the sidebar reads on all pages. What we change is
+ * therefore the NUMBER OF COURSES, not the coverage: only one `invalidateQueries`
+ * with a predicate that recognizes the same queries.
  *
- * Et comme une coupure de socket fait tomber tous les canaux d'un coup — une
- * seule WebSocket porte les 26 topics —, les rejoins arrivent au fil des ACK,
- * chacun avec son propre rattrapage, étalés sur plusieurs images (MIN-305). D'où
- * la file : on empile les préfixes et on ne balaie qu'une fois, à la fin.
+ * And since a socket cut causes all the channels to drop at once — a
+ * only WebSocket carries the 26 topics —, the joins arrive over the ACKs,
+ * each with its own catch-up, spread over several images (MIN-305). Hence
+ * the line: we stack the prefixes and we only sweep once, at the end.
  *
- * Séparé du provider pour être testable : vitest tourne sur node nu, sans React
- * (même raison que lib/realtime-topics.ts).
+ * Separated from the provider to be testable: vitest runs on bare node, without React
+ * (same reason as lib/realtime-topics.ts).
  */
 
 import type { QueryKey } from "@tanstack/react-query";
 
 /**
- * Fenêtre de regroupement des rattrapages. Assez large pour couvrir la volée de
- * rejoins qui suit une reconnexion (les ACK arrivent en quelques images), assez
- * courte pour que le retour au premier plan reste immédiat à l'œil.
+ * Catch-up grouping window. Wide enough to cover the flight of
+ * rejoin following a reconnection (the ACKs arrive in a few frames), enough
+ * short so that the return to the foreground remains immediate to the eye.
  */
 export const CATCH_UP_COALESCE_MS = 120;
 
-/** L'identité d'une clé dans la file — la même que celle de react-query. */
+/** The identity of a key in the queue — the same as react-query. */
 const hash = (key: readonly unknown[]): string => JSON.stringify(key);
 
 /**
- * Une requête est-elle visée par ce périmètre ?
+ * Is a request covered by this scope?
  *
- * Reproduit exactement la sémantique de préfixe d'`invalidateQueries({ queryKey })` :
- * `["comments"]` vise `["comments", issueId]`, et une clé vise aussi la requête
- * qui lui est identique. On remonte les préfixes du plus long au plus court,
- * parce que les clés du périmètre sont courtes et que le premier essai qui
- * matche est presque toujours l'un des derniers.
+ * Exactly reproduces the prefix semantics of `invalidateQueries({ queryKey })`:
+ * `["comments"]` targets `["comments", issueId]`, and a key also targets the query
+ * which is identical to it. We go up the prefixes from longest to shortest,
+ * because the perimeter keys are short and the first try which
+ * match is almost always one of the last.
  */
 export function matchesCatchUpScope(
   queryKey: readonly unknown[],
@@ -64,22 +64,22 @@ export function matchesCatchUpScope(
 }
 
 export interface CatchUpQueue {
-  /** Empile un périmètre. Le balayage part au plus tard {@link CATCH_UP_COALESCE_MS} après. */
+  /** Stack a perimeter. The scan leaves at the latest {@link CATCH_UP_COALESCE_MS} afterwards. */
   push(keys: QueryKey[]): void;
-  /** Oublie ce qui est en attente (démontage). */
+  /** Forget what is pending (disassembly). */
   cancel(): void;
 }
 
 /**
- * La file de rattrapage.
+ * The catch-up line.
  *
- * ⚠ Volontairement SÉPARÉE de la coalescence par clé des événements courants
- * (`invalidateCoalesced` dans le provider). Cette map-là porte le mode de
- * refetch dans son identité (`${refetch}:${hash}`) pour qu'un `"none"` n'avale
- * pas un `"active"` en attente ; partager les deux réintroduirait ce bug exact.
+ * ⚠ Deliberately SEPARATE from coalescence by key of current events
+ * (`invalidateCoalesced` in the provider). This map carries the mode of
+ * refetch in its identity (`${refetch}:${hash}`) so that a `"none"` does not swallow
+ * not a pending `"active"`; sharing both would reintroduce this exact bug.
  *
- * @param flush  reçoit le prédicat à passer à `invalidateQueries`.
- * @param delayMs fenêtre de regroupement.
+ * @param flush receives the predicate to pass to `invalidateQueries`.
+ * @param delayMs grouping window.
  */
 export function createCatchUpQueue(
   flush: (matches: (queryKey: readonly unknown[]) => boolean) => void,

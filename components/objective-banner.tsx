@@ -23,14 +23,14 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Le nom du bandeau est un SÉLECTEUR : d'un board d'objectif, on passe au
- * suivant sans repasser par la liste des objectifs. Le même picker cherchable
- * que partout ailleurs (pastille de couleur comprise), sur un déclencheur nu —
- * le titre reste un titre, un chevron dit qu'il s'ouvre.
+ * The name of the banner is a SELECTOR: from one objective board, we move to the next
+ * without going through the list of objectives again. The same searchable picker
+ * as everywhere else (color patch included), on a bare trigger —
+ * the title remains a title, an chevron says that it opens.
  *
- * Changer d'objectif, c'est CHANGER D'URL (`?objective=`) : c'est ce paramètre,
- * et lui seul, qui cadre le board. Un `push` plutôt qu'un `replace`, pour que
- * le retour arrière ramène à l'objectif d'avant.
+ * Changing objective is CHANGE URL (`?objective=`): this is what parameter,
+ * and it alone, which frames the board. A `push` rather than a `replace`, so that
+ * backtracking takes you back to the goal before.
  */
 function ObjectiveSwitch({
   objective,
@@ -82,7 +82,7 @@ export function ObjectiveBanner({
   lead,
 }: {
   objective: Objective;
-  /** Tous les objectifs du projet — la liste du sélecteur de titre. */
+  /** All project goals — the title selector list. */
   objectives: Objective[];
   projectId: string;
   progress: { done: number; total: number; percent: number };
@@ -133,12 +133,12 @@ export function ObjectiveBanner({
 
       {/* Indicators — progress · lead · target */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-        {/* L'anneau prend la place — et la taille exacte — des pastilles rondes
-            du responsable et de la date cible : les trois indicateurs du bandeau
-            se lisent alors sur la même grille, un cercle puis deux lignes.
-            La barre horizontale d'avant réclamait sa propre largeur et cassait
-            cette rangée. Le pourcentage, lui, passe au survol : c'est de
-            l'EFFORT pondéré, quand le compte à côté est brut. */}
+        {/* The ring takes the place — and the exact size — of the round dots
+ of the manager and the target date: the three indicators of the banner
+ are then read on the same grid, a circle then two lines.
+ The horizontal bar from before demanded its own width and broke
+ this row. The percentage is hovered over: it is
+ the weighted EFFORT, when the account next to it is raw. */}
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="flex items-center gap-2">
@@ -211,9 +211,9 @@ export function ObjectiveBanner({
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        {/* Modifier, c'est ALLER à l'objectif (MIN-226) : il a sa page, et le
-            panneau qui se posait ici par-dessus le board n'existe plus. Un vrai
-            lien, donc — ouvrable dans un onglet comme n'importe quel autre. */}
+        {/* Modify is GO to the objective (MIN-226): it has its page, and the
+ panel which was placed here on top of the board no longer exists. A real
+ link, therefore — openable in a tab like any other. */}
         <Button asChild variant="outline" size="sm">
           <Link href={`/projects/${projectId}/objectives?open=${objective.id}`}>
             <Pencil />

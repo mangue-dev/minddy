@@ -1,42 +1,42 @@
 /**
- * Détection d'un déploiement plus récent que celui chargé dans l'onglet
- * (MIN-157) — la partie pure, sans React ni fetch, pour être testable.
+ * Detection of a more recent deployment than the one loaded in the
+ tab * (MIN-157) — the pure part, without React or fetch, to be testable.
  *
- * Deux SHA se font face : celui du BUILD, inliné dans le bundle par
- * `next.config.mjs`, et celui que renvoie `/api/version`, qui vient du
- * déploiement servant la requête. S'ils diffèrent, l'onglet fait tourner du code
- * qui n'est plus celui de la production.
+ * Two SHAs face each other: that of BUILD, inlined in the bundle by
+ * `next.config.mjs`, and the one returned by `/api/version`, which comes from the
+ * deployment serving the request. If they differ, the tab runs code
+ * which is no longer that of production.
  *
- * Le refus est mémorisé par SHA SERVEUR, pas par un booléen : refuser une
- * version ne doit pas éteindre la suivante.
+ * The refusal is memorized by SHA SERVER, not by a boolean: refusing a
+ * version must not extinguish the next one.
  */
 
-/** Le SHA de CE bundle. Vide en local, et si les variables système de Vercel
-    sont décochées — dans les deux cas la détection reste muette. */
+/** The SHA of THIS bundle. Empty locally, and if the Vercel
+ system variables are unchecked — in both cases the detection remains silent. */
 export const BUILD_COMMIT = process.env.NEXT_PUBLIC_GIT_COMMIT_SHA ?? "";
 
-/** Clé localStorage du dernier SHA refusé. Préfixe `minddy.` comme le cache de
-    queries (lib/query-provider.tsx). */
+/** localStorage key of the last SHA refused. Prefix `minddy.` like the
+ queries cache (lib/query-provider.tsx). */
 export const DISMISSED_VERSION_KEY = "minddy.dismissed-version";
 
-/** Le SHA refusé, ou null si l'utilisateur n'a rien refermé (ou pas de stockage). */
+/** The SHA refused, or null if the user has not closed anything (or no storage). */
 export function readDismissedCommit(): string | null {
   if (typeof window === "undefined") return null;
   try {
     return window.localStorage.getItem(DISMISSED_VERSION_KEY) || null;
   } catch {
-    // localStorage indisponible (navigation privée stricte) → aucun refus connu.
+    // localStorage unavailable (strict private browsing) → no known denials.
     return null;
   }
 }
 
-/** Mémorise le SHA refusé pour ne plus rouvrir le bandeau sur celui-là. */
+/** Memorize the refused SHA so as not to reopen the banner on that one. */
 export function writeDismissedCommit(commit: string): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(DISMISSED_VERSION_KEY, commit);
   } catch {
-    // Sans stockage, le bandeau réapparaîtra : c'est le comportement sûr.
+    // Without storage, the banner will reappear: this is the safe behavior.
   }
 }
 
@@ -49,7 +49,7 @@ export function shouldShowNewVersion({
   serverCommit: string | undefined;
   dismissedCommit: string | null;
 }): boolean {
-  // Un SHA manquant d'un côté ou de l'autre ne prouve rien : on se tait.
+  // A missing SHA on one side or the other proves nothing: we keep silent.
   if (!buildCommit || !serverCommit) return false;
   if (buildCommit === serverCommit) return false;
   return serverCommit !== dismissedCommit;

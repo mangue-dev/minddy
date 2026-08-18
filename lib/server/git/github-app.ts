@@ -10,14 +10,14 @@ import {
 } from "./github-rest";
 
 /**
- * Client GitHub App (MIN-47), porté d'AutoKap (github-app.ts) et réduit au flux
- * de liaison inerte : mint du JWT d'app, échange en token d'installation,
- * énumération des dépôts, métadonnées du compte installé. PAS de client
- * repo-scoped ni de webhooks (ceux-ci viendront avec l'agent de code, MIN-46).
+ * GitHub App client (MIN-47), ported from AutoKap (github-app.ts) and reduced to the flow
+ * inert binding: mint of the app JWT, exchange in installation token,
+ * enumeration of repositories, metadata of the installed account. NO client
+ * repo-scoped or webhooks (these will come with the code agent, MIN-46).
  *
- * Modèle d'auth : l'app s'authentifie comme elle-même via un JWT RS256 court
- * (`mintAppJwt`), l'échange contre un token d'installation (`getInstallationToken`),
- * puis appelle l'API REST scopée aux dépôts de l'installation.
+ * Auth model: the app authenticates as itself via a short RS256 JWT
+ * (`mintAppJwt`), exchange it for an installation token (`getInstallationToken`),
+ * then calls the REST API scoped to the installation repositories.
  */
 
 // --- Environment -----------------------------------------------------------
@@ -31,7 +31,7 @@ function getGithubAppId(): string {
 function getGithubAppPrivateKey(): string {
   const value = process.env.GITHUB_APP_PRIVATE_KEY;
   if (!value) throw new Error("Missing GITHUB_APP_PRIVATE_KEY");
-  // Les env mono-ligne stockent le PEM avec des \n échappés ; on les restaure.
+  // Single-line envs store the PEM with \n escapes; we restore them.
   return value.includes("\\n") ? value.replace(/\\n/g, "\n") : value;
 }
 
@@ -50,10 +50,10 @@ export function isGithubWebhookConfigured(): boolean {
 }
 
 /**
- * Vérifie la signature HMAC d'un webhook GitHub (`X-Hub-Signature-256: sha256=<hex>`)
- * en temps constant. Renvoie false — jamais d'exception — sur en-tête manquant/
- * malformé ou toute divergence (fail closed). Le récepteur webhook est INERTE
- * pour l'instant (il acquitte sans traiter) ; MIN-46 branchera la logique.
+ * Checks the HMAC signature of a GitHub webhook (`X-Hub-Signature-256: sha256=<hex>`)
+ * in constant time. Returns false — never an exception — on missing/malformed
+ * header or any discrepancy (fail closed). The webhook receiver is INERT
+ * for the moment (it acknowledges without processing); MIN-46 will hook up the logic.
  */
 export function verifyGithubSignature(
   rawBody: string,
@@ -80,10 +80,10 @@ function base64url(input: Buffer | string): string {
 }
 
 /**
- * Mint un JWT RS256 court qui authentifie l'app GitHub elle-même. `iat` reculé de
- * 60s pour tolérer la dérive d'horloge ; `exp` à 8 min (sous le plafond GitHub de
- * 10 min). node:crypto accepte les clés PKCS#1 (`BEGIN RSA PRIVATE KEY`, défaut de
- * GitHub) et PKCS#8 (`BEGIN PRIVATE KEY`).
+ * Mint a short RS256 JWT that authenticates the GitHub app itself. `iat` moved back by
+ * 60s to tolerate clock drift; `exp` to 8 min (under the GitHub cap of
+ * 10 min). node:crypto accepts PKCS#1 (`BEGIN RSA PRIVATE KEY`, default of
+ * GitHub) and PKCS#8 (`BEGIN PRIVATE KEY`).
  */
 export function mintAppJwt(): string {
   const nowSeconds = Math.floor(Date.now() / 1000);
@@ -114,53 +114,51 @@ export interface InstallationToken {
 }
 
 /**
- * DE QUOI RESTREINDRE LE TOKEN QU'ON MINTE (MIN-327).
+ * HOW TO RESTRICT THE TOKEN WE MINTE (MIN-327).
  *
- * Sans ces deux champs, `POST /access_tokens` rend le token MAXIMAL de
- * l'installation : **tous** ses dépôts, **toutes** ses permissions. C'est ce
- * token-là qui partait dans le `.git/config` de la microVM de l'agent — donc
- * lisible par le modèle, donc exfiltrable par une injection, donc une clé sur
- * tous les dépôts privés du compte pour un projet qui n'en a lié qu'un.
+ * Without these two fields, `POST /access_tokens` makes the MAXIMUM token of
+ * the installation: **all** its repositories, **all** its permissions. It is this
+ * token that went into the `.git/config` of the agent's microVM — therefore
+ * readable by the model, therefore exfiltrable by an injection, therefore a key on
+ * all the private deposits of the account for a project which has only linked one.
  *
- * Les deux champs sont indépendants et se cumulent :
+ * The two fields are independent and cumulative:
  *
- * - `repositories` réduit la PORTÉE. Ce sont les noms COURTS (`minddy`), jamais
- *   `owner/name` — GitHub répond 422 sur un slash. C'est la restriction qui
- *   compte : elle transforme « tous les dépôts » en « celui que le projet a lié ».
- * - `permissions` réduit le POUVOIR, et il n'est jamais qu'un sous-ensemble de
- *   ce que l'installation a déjà accepté. Demander une permission qu'elle n'a
- *   pas est un 422 — d'où la règle : ne narrower qu'avec `contents`, la seule
- *   que l'App déclare depuis son premier jour (cf. `.env.example`). Une
- *   permission ajoutée plus tard n'est pas rétroactive, et un mint qui la
- *   demanderait casserait les installations existantes.
+ * - `repositories` reduces the SCOPE. These are the SHORT names (`minddy`), never
+ * `owner/name` — GitHub responds 422 on a slash. This is the restriction that
+ * matters: it turns "all repositories" into "the ones the project has linked to."
+ * - `permissions` reduces POWER, and it is only ever a subset of
+ * what the installation has already accepted. Asking for permission that it doesn't have is a 422 — hence the rule: only narrow with `contents`, the only
+ * that the App has declared since its first day (see `.env.example`). A
+ * permission added later is not retroactive, and a mint asking for it would break existing installations.
  */
 export interface InstallationTokenScope {
-  /** Noms COURTS des dépôts (`name`), jamais `owner/name`. */
+  /** SHORT repository names (`name`), never `owner/name`. */
   repositories?: string[];
   /** Sous-ensemble des permissions de l'installation (voir ci-dessus). */
   permissions?: Record<string, "read" | "write">;
 }
 
-// Cache in-process des tokens d'installation, par installationId ET PAR PORTÉE.
-// Les tokens GitHub valent ~1h ; réutilisés jusqu'à SAFETY_WINDOW_MS avant expiry.
+// In-process cache of installation tokens, by installationId AND BY SCOPE.
+// GitHub tokens are worth ~1h; reused until SAFETY_WINDOW_MS before expiry.
 // Best-effort.
 //
-// La portée fait partie de la clé, et c'est structurel : sans elle, le premier
-// mint large d'un process resservirait son token à un appelant qui a demandé un
-// token restreint — la restriction serait vraie sur le fil et fausse en mémoire,
-// exactement le genre de garde qui a l'air posé et ne l'est pas.
+// The scope is part of the key, and it's structural: without it, the first
+// mint large of a process would reserve its token to a caller who requested a
+// restricted token — the restriction would be true on the wire and false in memory,
+// exactly the kind of guard that looks calm and isn't.
 //
-// SUR LA DURÉE DE VIE (MIN-327) : GitHub la fixe à 1 h et n'accepte aucun
-// paramètre pour la raccourcir. Ce qu'on peut réduire, ce n'est donc pas le
-// TEMPS pendant lequel le token vaut, c'est ce qu'il OUVRE — la portée et les
-// permissions ci-dessus. Un token de microVM survit à son tour dans le pire cas
-// une heure, sur un seul dépôt, avec `contents` pour seule permission.
+// ON THE LIFESPAN (MIN-327): GitHub sets it at 1 hour and does not accept any
+// parameter to shorten it. What we can reduce is therefore not the
+// TIME the token is worth is what it OPENS — the scope and
+// permissions above. A microVM token in turn survives in the worst case
+// one hour, on a single repository, with `contents` for only permission.
 const SAFETY_WINDOW_MS = 5 * 60_000;
 const installationTokenCache = new Map<string, InstallationToken>();
 
-/** Clé de cache STABLE pour un couple (installation, portée) : les listes sont
- *  triées, donc deux appels équivalents dans un ordre différent se partagent
- *  bien le même token. */
+/** STABLE cache key for a pair (installation, scope): the lists are
+ * sorted, so two equivalent calls in a different order share
+ * the same token. */
 function installationTokenCacheKey(
   installationId: number | string,
   scope: InstallationTokenScope | undefined,
@@ -174,10 +172,10 @@ function installationTokenCacheKey(
 }
 
 /**
- * Échange le JWT d'app contre un token d'installation, restreint à `scope` quand
- * on lui en donne une (cf. `InstallationTokenScope` : SANS elle, le token vaut
- * sur tous les dépôts de l'installation). Réutilise un token encore valide depuis
- * le cache in-process, à portée égale.
+ * Exchanges the app JWT for an installation token, restricted to `scope` when
+ * is given one (see `InstallationTokenScope`: WITHOUT it, the token is worth
+ * on all installation repositories). Reuses a still valid token from
+ * the in-process cache, with equal scope.
  */
 export async function getInstallationToken(
   installationId: number | string,
@@ -229,8 +227,8 @@ export async function getInstallationToken(
   return minted;
 }
 
-/** Vide le cache de tokens d'installation. Réservé aux tests — un token qui
- *  survit d'un cas au suivant masquerait la portée demandée par le second. */
+/** Clears the installation token cache. Reserved for testing — a token that
+ * survives from one case to the next would hide the scope requested by the second. */
 export function __clearInstallationTokenCacheForTests(): void {
   installationTokenCache.clear();
 }
@@ -246,9 +244,9 @@ export interface InstallationRepo {
 const INSTALLATION_REPOS_PER_PAGE = 100;
 
 /**
- * Liste tous les dépôts qu'une installation peut atteindre (paginé via l'en-tête
- * Link). Alimente le sélecteur de dépôt du flux de liaison. Lève sur une réponse
- * non-OK pour que l'appelant surface l'échec.
+ * Lists all repositories that an installation can reach (paginated via the
+ * Link header). Feeds the link feed drop selector. Raise on a non-OK response
+ * so that the caller surfaces the failure.
  */
 export async function listInstallationRepositories(
   installationId: number | string,
@@ -293,19 +291,19 @@ export interface CommitIdentity {
   email: string;
 }
 
-// Identité git mémoïsée du bot de l'App (login `<slug>[bot]`). L'id numérique du
-// bot est stable par app ; résolu une fois puis réutilisé pour tout le process.
+// Stored Git identity of the App bot (login `<slug>[bot]`). The numeric id of
+// bot is stable per app; solved once then reused for the entire process.
 let cachedBotIdentity: CommitIdentity | null = null;
 
 /**
- * Identité de commit du bot de l'App GitHub (`<slug>[bot]` + son email noreply
- * GitHub `<id>+<slug>[bot]@users.noreply.github.com`). Commiter sous CETTE
- * identité — et non un email fantaisie comme `agent@minddy.app` — permet à GitHub,
- * et donc au contrôle d'auteur de commit de Vercel, de rattacher chaque commit de
- * l'agent à un vrai compte (exactement comme dependabot[bot] / github-actions[bot]) ;
- * sinon Vercel bloque le déploiement (« commit email could not be matched to a
- * GitHub account »). L'id numérique vient de `GET /users/<slug>[bot]` (donnée
- * publique, lisible avec le token d'installation) et ne change jamais : mémoïsé.
+ * GitHub App bot commit identity (`<slug>[bot]` + its email noreply
+ * GitHub `<id>+<slug>[bot]@users.noreply.github.com`). Committing under THIS
+ * identity — not a fancy email like `agent@minddy.app` — allows GitHub,
+ * and therefore Vercel's commit author control, to attach each commit from
+ * the agent to a real account (exactly like dependabot[bot] / github-actions[bot]) ;
+ * otherwise Vercel blocks the deployment (“commit email could not be matched to a
+ * GitHub account”). The numeric id comes from `GET /users/<slug>[bot]` (public
+ * data, readable with the installation token) and never changes: memorized.
  */
 export async function getGithubBotCommitIdentity(
   installationToken: string,
@@ -337,23 +335,23 @@ export interface RemoteRepoIssue {
   title: string;
   body: string | null;
   htmlUrl: string | null;
-  /** Noms des labels — priorité, effort et catégories en sortent (MIN-97 suite). */
+  /** Label names — priority, effort and categories come out (MIN-97 continued). */
   labels: string[];
-  /** Logins des assignés, dans l'ordre de GitHub. */
+  /** Logins of assignees, in GitHub order. */
   assigneeLogins: string[];
 }
 
 const REPO_ISSUES_PER_PAGE = 100;
 
 /**
- * Liste les issues OUVERTES d'un dépôt (backfill de la synchro, MIN-97), paginé
- * via l'en-tête Link. `/issues` renvoie AUSSI les pull requests — toute entrée
- * portant un champ `pull_request` est écartée. Lève sur une réponse non-OK.
+ * Lists the OPEN issues of a repository (sync backfill, MIN-97), paginated
+ * via the Link header. `/issues` ALSO returns pull requests — any
+ * entry with a `pull_request` field is discarded. Lifts on a non-OK response.
  */
 export async function listRepoOpenIssues(
   installationId: number | string,
   repoFullName: string,
-  /** Plafond dur : on s'arrête dès qu'il est atteint (backfill borné). */
+  /** Hard ceiling: we stop as soon as it is reached (bounded backfill). */
   limit = Number.POSITIVE_INFINITY,
 ): Promise<RemoteRepoIssue[]> {
   const { token } = await getInstallationToken(installationId);
@@ -399,15 +397,15 @@ export async function listRepoOpenIssues(
 }
 
 /**
- * Le niveau de la permission `Issues` accepté par CETTE installation.
+ * The level of permission `Issues` accepted by THIS installation.
  *
- * Une App qui gagne une permission ne l'obtient PAS rétroactivement : chaque
- * installation existante doit l'accepter. Le niveau compte parce que les deux
- * sens de la synchro n'en demandent pas le même — `read` suffit à importer les
- * issues du dépôt, mais refermer une issue depuis minddy demande `write`.
+ * An App that gains a permission does NOT obtain it retroactively: each existing
+ * installation must accept it. The level matters because the two
+ * directions of the sync do not require the same one — `read` is enough to import the
+ * from the repository, but closing an issue from minddy requests `write`.
  *
- * Renvoie `"none"` si l'appel échoue : l'activation de la synchro doit alors
- * guider l'utilisateur, pas planter.
+ * Returns `"none"` if the call fails: activating sync should then
+ * guide the user, not crash.
  */
 export async function getIssuesPermission(
   installationId: number | string,
@@ -436,8 +434,8 @@ export interface InstallationAccount {
 }
 
 /**
- * Métadonnées du compte d'une installation (login, type, sélection de dépôts).
- * Renvoie null sur échec pour que l'appelant retombe proprement.
+ * Installation account metadata (login, type, repository selection).
+ * Returns null on failure so that the caller fails cleanly.
  */
 export async function getInstallationAccount(
   installationId: number | string,

@@ -9,35 +9,35 @@ import {
 } from "@/lib/server/favicon";
 
 /**
- * L'icône stockée d'un projet (MIN-62) : le fichier vit dans le bucket public
- * `project-icons`, une entrée par projet, et son URL est posée sur
- * `projects.icon_url`. Deux sources, un seul emplacement :
+ * The stored icon of a project (MIN-62): the file lives in the public bucket
+ * `project-icons`, one entry per project, and its URL is placed on
+ * `projects.icon_url`. Two sources, one location:
  *
- *  - le favicon du site live, téléchargé tel quel ([favicon.ts](./favicon.ts)) ;
- *  - une image envoyée par l'utilisateur, recompressée ici.
+ * - the live site favicon, downloaded as is ([favicon.ts](./favicon.ts));
+ * - an image sent by the user, recompressed here.
  *
- * L'upload accepte n'importe quel poids : c'est le serveur qui ramène l'image à
- * 256 px de côté en WebP — quelques dizaines de Ko, souvent moins — et non
- * l'utilisateur qui doit préparer son fichier. `MAX_ICON_UPLOAD_BYTES` n'est pas
- * une règle produit mais un garde-fou mémoire : la requête entière est
- * tamponnée avant d'atteindre libvips.
+ * The upload accepts any weight: it is the server which brings the image to
+ * 256 px side in WebP — a few tens of KB, often less — and not
+ * the user who must prepare his file. `MAX_ICON_UPLOAD_BYTES` is not
+ * a product rule but a memory safeguard: the entire request is
+ * buffered before reaching libvips.
  *
- * Le favicon distant, lui, N'EST PAS recompressé : les `.ico` sont le format le
- * plus courant du web et libvips ne sait pas les lire. Ils sont déjà minuscules.
+ * The remote favicon is NOT recompressed: the `.ico` are the most common
+ * format on the web and libvips cannot read them. They are already tiny.
  */
 
-/** Garde-fou mémoire, pas une contrainte de cadrage. */
+/** Memory guardrail, not a framing constraint. */
 export const MAX_ICON_UPLOAD_BYTES = 25 * 1024 * 1024; // 25 Mo
 
-/** Côté rendu max (64 px dans le wizard) × 4 : au-delà, l'écran ne montre rien de plus. */
+/** Max rendering side (64 px in the wizard) × 4: beyond that, the screen shows nothing more. */
 const ICON_SIZE = 256;
 
-/** Rendu des entrées vectorielles (SVG) avant réduction — 96 dpi × ~3. */
+/** Render vector (SVG) inputs before reduction — 96 dpi × ~3. */
 const VECTOR_DENSITY = 300;
 
 const BUCKET = "project-icons";
 
-/** Erreur typée pour que la route réponde avec la bonne clé ApiErrors. */
+/** Typed error so that the route responds with the correct ApiErrors key. */
 export class IconFileError extends Error {
   constructor(public readonly key: "invalidFile" | "tooLarge") {
     super(key);
@@ -45,23 +45,23 @@ export class IconFileError extends Error {
 }
 
 /**
- * Ramène n'importe quelle image lisible par libvips (PNG, JPEG, WebP, GIF,
- * AVIF, TIFF, HEIC, SVG…) à un carré WebP d'au plus 256 px.
+ * Reduces any image readable by libvips (PNG, JPEG, WebP, GIF,
+ * AVIF, TIFF, HEIC, SVG…) to a WebP square of at most 256 px.
  *
- * `contain` sur fond transparent plutôt que `cover` : un logo n'est pas une
- * photo, on préfère des marges à un rognage. Carré, parce que la tuile qui
- * l'affiche l'est (`object-cover` dans `ProjectOrb`) — une sortie 256 × 192
- * s'y ferait rogner, ce que `contain` cherchait précisément à éviter.
+ * `contain` on a transparent background rather than `cover`: a logo is not a
+ * photo, we prefer margins to cropping. Square, because the tile that
+ * displays it is (`object-cover` in `ProjectOrb`) — a 256 × 192
+ * output would get cropped there, which is precisely what `contain` was trying to avoid.
  *
- * D'où le côté calculé sur les dimensions d'entrée plutôt que fixé à 256 :
- * `withoutEnlargement` n'empêche que l'agrandissement du CONTENU, pas la
- * fabrication du canevas demandé — une icône de 48 px y arrivait entière mais
- * perdue au centre d'un carré six fois trop grand.
+ * Hence the side calculated on the input dimensions rather than fixed at 256:
+ * `withoutEnlargement` only prevents the enlargement of the CONTENT, not the
+ * production of the requested canvas — a 48 px icon arrived there whole but
+ * lost in the center of a square six times too large.
  *
- * `rotate()` sans argument applique l'orientation EXIF, sans quoi une photo
- * prise au téléphone arrive couchée. On ne fait confiance ni à l'extension ni
- * au type MIME déclaré : c'est libvips qui tranche sur les octets, et ce qu'il
- * ne sait pas lire est refusé.
+ * `rotate()` without argument applies the EXIF orientation, otherwise a photo
+ * taken on the phone arrives lying down. We do not trust either the extension nor
+ * the declared MIME type: it is libvips which decides on the bytes, and what it
+ * cannot read is refused.
  */
 export async function compressIconFile(bytes: Buffer): Promise<Buffer> {
   if (bytes.byteLength === 0) throw new IconFileError("invalidFile");
@@ -86,9 +86,9 @@ export async function compressIconFile(bytes: Buffer): Promise<Buffer> {
 }
 
 /**
- * Pose des octets déjà prêts comme icône du projet : upsert dans
- * `project-icons/{projectId}.{ext}`, update de `projects.icon_url` (URL publique
- * + cache-buster). Renvoie l'URL stockée.
+ * Set bytes already ready as project icon: upsert in
+ * `project-icons/{projectId}.{ext}`, update of `projects.icon_url` (public URL
+ * + cache-buster). Returns the stored URL.
  */
 async function storeProjectIcon(
   projectId: string,
@@ -99,7 +99,7 @@ async function storeProjectIcon(
   const path = `${projectId}.${ext}`;
   const service = getServiceClient();
 
-  await removeProjectIconObjects(projectId); // une seule extension à la fois
+  await removeProjectIconObjects(projectId); // only one extension at a time
   const { error: uploadError } = await service.storage
     .from(BUCKET)
     .upload(path, bytes, { contentType, upsert: true });
@@ -118,8 +118,7 @@ async function storeProjectIcon(
 }
 
 /**
- * Importe le favicon de `siteUrl` comme icône du projet. L'appelant a déjà
- * vérifié que l'utilisateur est owner du projet.
+ * Imports the favicon of `siteUrl` as the project icon. The caller has already verified that the user is the owner of the project.
  */
 export async function importProjectIcon(
   projectId: string,
@@ -135,7 +134,7 @@ export async function importProjectIcon(
   );
 }
 
-/** Pose un fichier envoyé par l'utilisateur comme icône du projet (owner). */
+/** Sets a file sent by the user as the project icon (owner). */
 export async function uploadProjectIcon(
   projectId: string,
   bytes: Buffer
@@ -144,7 +143,7 @@ export async function uploadProjectIcon(
   return storeProjectIcon(projectId, webp, "image/webp", "webp");
 }
 
-/** Supprime les objets storage possibles de l'icône (toutes extensions). */
+/** Removes possible storage objects from the icon (all extensions). */
 async function removeProjectIconObjects(projectId: string): Promise<void> {
   const service = getServiceClient();
   const exts = [...new Set([...Object.values(ICON_MIME_EXT), "webp"])];
@@ -153,7 +152,7 @@ async function removeProjectIconObjects(projectId: string): Promise<void> {
     .remove(exts.map((ext) => `${projectId}.${ext}`));
 }
 
-/** Efface l'icône du projet (colonne + objets storage). */
+/** Clears the project icon (column + storage objects). */
 export async function clearProjectIcon(projectId: string): Promise<void> {
   const service = getServiceClient();
   const { error } = await service

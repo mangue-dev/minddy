@@ -1,29 +1,29 @@
 "use client";
 
-// L'icône d'un objectif — la cible, à SA couleur.
+// The icon of an objective — the target, in ITS color.
 //
-// Un objectif porte une couleur (facultative, prise dans la palette des
-// catégories). Partout où une icône désigne CET objectif-là, elle la porte : la
-// pilule de contexte de Numo, la mention posée dans une description, la liste
-// des suggestions du « @ ». Le repli d'un objectif sans couleur est le gris des
-// puces du board, et pas une teinte inventée : un objectif sans couleur n'en a
+// An objective carries a color (optional, taken from the palette of
+// categories). Wherever an icon designates THIS objective, it carries it: the
+// Numo context pill, the mention placed in a description, the list
+// “@” suggestions. The fallback of a lens without color is the gray of
+// chips from the board, and not an invented tint: a lens without color has none
 // pas.
 //
-// Ce composant ne sert PAS là où la cible désigne la NOTION d'objectif —
-// l'onglet de la nav, « nouvel objectif » dans la palette, l'état vide de la
-// page. Il n'y a là aucun objectif dont suivre la couleur, et l'icône reste
-// neutre : la teindre reviendrait à désigner un objectif qui n'existe pas.
+// This component is NOT used where the target designates the NOTION of objective —
+// the nav tab, “new objective” in the palette, the empty state of the
+// page. There is no objective there whose color to follow, and the icon remains
+// neutral: to dye it would be to designate an objective which does not exist.
 
 import { Target } from "lucide-react";
 import { cn } from "mangue-ui";
 
-/** La couleur d'un objectif, repli compris — la même règle que les puces du
-    board (components/issue-property-fields, Dot). */
+/** The color of an objective, including fallback — the same rule as the chips on the
+ board (components/issue-property-fields, Dot). */
 export function objectiveColor(color: string | null | undefined): string {
   return color ?? "var(--muted-foreground)";
 }
 
-/** La cible, à la couleur de l'objectif. */
+/** The target, in the color of the objective. */
 export function ObjectiveIcon({
   color,
   className,
@@ -37,10 +37,10 @@ export function ObjectiveIcon({
 }
 
 /**
- * La cible dans sa pastille teintée : 12 % de la couleur en fond, la couleur
- * pleine pour le trait — exactement le dosage des pilules de contexte de Numo,
- * dont c'est la géométrie. `color-mix` plutôt qu'une classe Tailwind : la
- * couleur est un hexadécimal stocké en base, pas un jeton connu à la compilation.
+ * The target in its tinted patch: 12% of the color in the background, the full color
+ * for the line — exactly the dosage of Numo's context pills,
+ * of which it is the geometry. `color-mix` rather than a Tailwind class: the
+ * color is a hexadecimal stored in base, not a token known at compile time.
  */
 export function ObjectiveIconBadge({
   color,

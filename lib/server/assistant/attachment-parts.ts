@@ -18,27 +18,27 @@ const MAX_TEXT_CHARS = 4000;
  * What the prompt needs to know about one resource (a DB row or a metadata
  * entry from assistant_messages alike).
  *
- * `storage_path` est NULLABLE, et ce n'est pas une précaution : depuis MIN-184
- * une ressource peut être un LIEN, depuis MIN-275 une PAGE citée — deux lignes
- * de `attachments` sans octet dans le bucket. Les typer `string` ici a fait
- * tomber une réponse @Numo entière : `storage.download(null)` lève dans
- * `getFinalPath` (`Cannot read properties of null (reading 'replace')`), et rien
- * n'attrapait ça avant le `catch` du run.
+ * `storage_path` is NULLABLE, and this is not a precaution: since MIN-184
+ * a resource can be a LINK, since MIN-275 a cited PAGE — two lines
+ * of `attachments` without a byte in the bucket. Typing them `string` here made
+ * drop an entire @Numo response: `storage.download(null)` raises in
+ * `getFinalPath` (`Cannot read properties of null (reading 'replace')`), and nothing
+ * was catching that before `catch` of run.
  */
 export type PromptAttachment = {
   kind?: "file" | "link" | "page" | null;
   storage_path: string | null;
-  /** Le lien lui-même (kind: "link"). */
+  /** The link itself (kind: "link"). */
   url?: string | null;
-  /** La page citée (kind: "page") — l'id que `get_page` prend. */
+  /** The cited page (kind: "page") — the id that `get_page` takes. */
   page_id?: string | null;
   file_name: string;
   mime_type: string;
   size_bytes: number;
 };
 
-/** Une ligne de `attachments` telle que la lisent les trois modes de
-    @Numo — groupée par commentaire (clé `null` = la ressource du parent). */
+/** A line of `attachments` as read by the three modes of
+ @Numo — grouped by comment (key `null` = the parent resource). */
 export function groupPromptAttachments(
   rows:
     | {
@@ -72,8 +72,8 @@ export function groupPromptAttachments(
   return byComment;
 }
 
-/** Les colonnes que `groupPromptAttachments` attend — une seule source pour les
-    trois `select()` de @Numo. */
+/** The columns that `groupPromptAttachments` expects — a single source for @Numo's
+ three `select()`. */
 export const PROMPT_ATTACHMENT_COLUMNS =
   "comment_id, kind, storage_path, url, page_id, file_name, mime_type, size_bytes";
 
@@ -116,15 +116,15 @@ async function download(
 /**
  * Build the content parts for a message's attachments.
  *
- * - links → a text part naming the URL (rien à téléverser : l'adresse EST le
- *   contenu, et un lien porte le MIME `text/uri-list`, donc sans cette branche
- *   il partait se faire télécharger comme du texte);
- * - pages citées → un texte qui donne l'id, pour que le modèle la lise avec
- *   `get_page` s'il en a besoin;
+ * - links → a text part naming the URL (nothing to upload: the address IS the
+ * content, and a link has the MIME `text/uri-list`, so without this branch
+ * it was going to be downloaded like text);
+ * - cited pages → a text which gives the id, so that the model reads it with
+ * `get_page` if it needs it;
  * - images → `image_url` with a short-lived signed URL (OpenRouter fetches it
- *   server-side within the TTL), when the model takes image input;
+ * server-side within the TTL), when the model takes image input;
  * - PDFs → base64 `file` part, only when `includeHeavy` (the trigger / latest
- *   message — re-encoding history PDFs on every turn would be prohibitive);
+ * message — re-encoding history PDFs on every turn would be prohibitive);
  * - CSV / text-ish → inline text excerpt, same `includeHeavy` rule;
  * - everything else (or over the caps) → a text note naming the file.
  */
@@ -159,8 +159,8 @@ export async function buildAttachmentParts(
       continue;
     }
 
-    // Un fichier sans objet dans le bucket : rien à télécharger, et surtout pas
-    // un `download(null)` qui lèverait (voir PromptAttachment).
+    // A file with no object in the bucket: nothing to download, and especially not
+    // a `download(null)` which would raise (see PromptAttachment).
     if (!a.storage_path) {
       parts.push(note(a));
       continue;

@@ -19,10 +19,10 @@ import type {
 const MAX_ISSUES = 4000;
 const MAX_OBJECTIVES = 1000;
 /**
- * Les pages sont plus rares qu'un ticket et bien plus lourdes à lire en entier
- * — mais on n'en lit que le titre, et un wiki de mille pages est déjà un gros
- * wiki. Ce que le plafond coupe, la recherche de CONTENU le retrouve
- * (/api/me/pages/search), qui interroge la base et non cet instantané.
+ * The pages are rarer than a ticket and much heavier to read in full
+ * — but we only read the title, and a wiki of a thousand pages is already a big
+ * wiki. What the ceiling cuts off, the CONTENT search finds
+ * (/api/me/pages/search), which queries the database and not this snapshot.
  */
 const MAX_PAGES = 2000;
 
@@ -38,11 +38,11 @@ const MAX_PAGES = 2000;
 const ISSUE_COLUMNS =
   "id, project_id, number, title, status, priority, effort, assignee_id, objective_id, updated_at, projects!inner(deleted_at)";
 const OBJECTIVE_COLUMNS = "id, project_id, name, status, color, projects!inner(deleted_at)";
-/** Le titre et son emoji : ce que la ligne affiche. Jamais `content` (MIN-276). */
+/** The title and its emoji: what the line displays. Never `content` (MIN-276). */
 const PAGE_COLUMNS =
   "id, project_id, title, icon, updated_at, projects!inner(deleted_at)";
 
-/** La jointure de filtrage ne descend pas au client. */
+/** The filter join does not go down to the client. */
 function stripJoin<T>(rows: ({ projects?: unknown } | null)[] | null): T[] {
   return (rows ?? []).map((row) => {
     const { projects: _projects, ...rest } = (row ?? {}) as { projects?: unknown };
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
       .is("projects.deleted_at", null)
       .order("updated_at", { ascending: false })
       .limit(MAX_OBJECTIVES),
-    // `pages_select` exclut déjà les corbeillées — pas de filtre à ajouter ici.
+    // `pages_select` already excludes trash bins — no filter to add here.
     auth.supabase
       .from("pages")
       .select(PAGE_COLUMNS)

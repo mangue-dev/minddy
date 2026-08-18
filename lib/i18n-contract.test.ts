@@ -9,26 +9,26 @@ import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
 
 /**
- * Le contrat entre le CATALOGUE et le CODE : un message à placeholder doit être
- * appelé avec ses valeurs.
+ * The contract between CATALOG and CODE: a placeholder message must be
+ * called with its values.
  *
- * Pourquoi un test et pas un type. Le typage strict de next-intl (`global.d.ts`)
- * vérifie les NOMS de clés, mais pas leurs arguments : les messages sont importés
- * depuis du JSON, et TypeScript élargit toute valeur de chaîne JSON en `string`.
- * La signature `TranslateArgs` de use-intl prend alors sa branche
- * `string extends Value`, où `values` est optionnel. Autrement dit le
- * compilateur ne peut pas voir ce bug-là, quelle que soit la configuration.
+ * Why a test and not a type. Strict typing of next-intl (`global.d.ts`)
+ * checks key NAMES, but not their arguments: messages are imported
+ * from JSON, and TypeScript expands any JSON string value to `string`.
+ * The `TranslateArgs` signature of use-intl then takes its branch
+ * `string extends Value`, where `values` is optional. In other words the
+ * compiler cannot see this bug, whatever the configuration.
  *
- * Ce que ça coûte de ne pas le voir, mesuré sur le cas qui a motivé ce test :
- * `t("deleteViewTitle")` sur le message `"Delete “{name}”?"` ne lève rien, ne
- * journalise rien — next-intl retombe sur le chemin de la clé, et le dialog de
- * suppression de vue affichait `Board.deleteViewTitle` en guise de titre.
+ * The cost of missing this, measured on the case that motivated the test:
+ * calling `t("deleteViewTitle")` for the message `"Delete “{name}”?"` raises
+ * nothing and logs nothing — next-intl falls back to the key path, so the view
+ * deletion dialog displays `Board.deleteViewTitle` as its title.
  *
- * La détection n'utilise aucune heuristique sur la syntaxe ICU : elle appelle le
- * VRAI formateur de next-intl sans valeurs et regarde s'il proteste. Un message
- * à `{name}`, à `{count, plural, …}` ou à balises riches est donc classé comme
- * exigeant des valeurs parce qu'il l'exige réellement, pas parce qu'une regex
- * l'a cru.
+ * The detection does not use heuristics for ICU syntax: it calls the actual
+ * next-intl formatter without values and checks whether it reports an error. A
+ * message with `{name}`, `{count, plural, …}`, or rich tags is therefore classified as
+ * requiring values ​​because it actually requires them, not because a regex
+ * believed it to be so.
  */
 
 const ROOT = join(import.meta.dirname, "..");
@@ -37,7 +37,7 @@ const IGNORED_DIRS = new Set(["node_modules", ".next", ".git", "dist", "build"])
 
 type Catalog = Record<string, unknown>;
 
-/** Chemins pointés (`Board.deleteViewTitle`) de toutes les feuilles du catalogue. */
+/** Pointed paths (`Board.deleteViewTitle`) of all sheets in the catalog. */
 function leafPaths(node: Catalog, prefix = ""): string[] {
   const out: string[] = [];
   for (const [key, value] of Object.entries(node)) {
@@ -49,8 +49,8 @@ function leafPaths(node: Catalog, prefix = ""): string[] {
 }
 
 /**
- * Les clés qui EXIGENT des valeurs, d'après next-intl lui-même : on formate sans
- * rien passer et on retient celles qui déclenchent une erreur de formatage.
+ * Keys that REQUIRE values, according to next-intl itself: we format without
+ * passing anything and we retain those which trigger a formatting error.
  */
 function keysRequiringValues(messages: Catalog): Set<string> {
   const required = new Set<string>();
@@ -64,8 +64,8 @@ function keysRequiringValues(messages: Catalog): Set<string> {
   });
   for (const path of leafPaths(messages)) {
     failed = false;
-    // `t` accepte ici n'importe quel chemin : le catalogue est passé en `never`
-    // pour court-circuiter le typage strict, dont c'est justement la limite.
+    // `t` accepts any path here: the catalog is changed to `never`
+    // to bypass strict typing, which is precisely the limit.
     (t as unknown as (key: string) => string)(path);
     if (failed) required.add(path);
   }
@@ -86,11 +86,11 @@ function sourceFiles(): string[] {
   return out;
 }
 
-/** `const t = useTranslations("Board")` → `t` vaut le namespace `Board`. */
+/** `const t = useTranslations("Board")` → `t` is equal to the namespace `Board`. */
 const NAMESPACE_BINDING =
   /(?:const|let)\s+([A-Za-z0-9_]+)\s*=\s*(?:await\s+)?(?:useTranslations|getTranslations)\s*\(\s*["'`]([^"'`]+)["'`]/g;
 
-/** `t("cle")` — la parenthèse fermante SUIT la clé, donc aucune valeur n'est passée. */
+/** `t("key")` — the closing parenthesis follows the key, so no values are passed. */
 const CALL_WITHOUT_VALUES = /\b([A-Za-z0-9_]+)\s*\(\s*["'`]([A-Za-z0-9_.]+)["'`]\s*\)/g;
 
 interface Violation {
@@ -131,14 +131,14 @@ describe("contrat i18n catalogue ↔ code", () => {
   const requiredFr = keysRequiringValues(fr as Catalog);
   const required = new Set([...requiredEn, ...requiredFr]);
 
-  it("le catalogue de référence porte bien des messages à placeholder", () => {
-    // Garde-fou du test lui-même : si la détection cassait, elle renverrait un
-    // ensemble vide et le test principal passerait sans rien vérifier.
+  it("the reference catalog contains messages with placeholders", () => {
+    // Guardrail for the test itself: if detection broke, it would return an
+    // empty set and the main test would pass without checking anything.
     expect(requiredEn.size).toBeGreaterThan(100);
     expect(requiredEn.has("Board.deleteViewTitle")).toBe(true);
   });
 
-  it("aucun message à placeholder n'est appelé sans ses valeurs", () => {
+  it("no message with placeholders is called without its values", () => {
     const violations = findViolations(required);
     const report = violations
       .map((v) => `  ${v.file}:${v.line} — ${v.key} attend des valeurs`)
@@ -147,11 +147,11 @@ describe("contrat i18n catalogue ↔ code", () => {
   });
 
   /**
-   * Les clés construites à l'exécution échappent au typage : elles sont castées
-   * au point d'appel (convention de lib/i18n-keys.ts), et le compilateur ne
-   * garantit alors plus leur existence. Ces familles-là vivent sur des pages
-   * PUBLIQUES — une clé manquante y afficherait `Changelog.entry_x_title` à un
-   * visiteur. On vérifie donc leur existence ici, à la source.
+   * Keys built at runtime bypass typing: they are cast at the call site
+   * (the convention in lib/i18n-keys.ts), so the compiler no longer guarantees
+   * that they exist. These key families are used on PUBLIC pages, where a
+   * missing key would display `Changelog.entry_x_title` to a visitor. We
+   * therefore verify their existence here, at the source.
    */
   it.each([
     ["Changelog", CHANGELOG_ENTRIES.map((e) => e.id), ["entry_%_title", "entry_%_body"]],
@@ -163,10 +163,10 @@ describe("contrat i18n catalogue ↔ code", () => {
     expect(missing, `Clés absentes de ${namespace} : ${missing.join(", ")}`).toEqual([]);
   });
 
-  it("fr et en exigent les mêmes valeurs pour une même clé", () => {
-    // Une divergence signifie qu'une des deux traductions a perdu (ou gagné) un
-    // placeholder : le message est alors cassé dans une seule langue, ce qu'une
-    // relecture monolingue ne voit jamais.
+  it("fr and en require the same values for the same key", () => {
+    // A difference means that one translation lost or gained a placeholder:
+    // the message is then broken in only one language, which a monolingual
+    // review never catches.
     const diverging = [...new Set([...requiredEn, ...requiredFr])]
       .filter((key) => requiredEn.has(key) !== requiredFr.has(key))
       .sort();

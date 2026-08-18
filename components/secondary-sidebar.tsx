@@ -13,32 +13,32 @@ import { useSecondarySidebar } from "@/lib/secondary-sidebar-context";
 import { SidebarFilterField } from "@/components/sidebar-filter-field";
 import { transitions } from "@/lib/motion";
 
-/** Largeur de la colonne (`w-80`), partagée par le volet, sa gouttière, et le
- *  bloc de navigation du mode zen, qui l'ajoute à celle de la primaire. */
+/** Width of the column (`w-80`), shared by the shutter, its gutter, and the
+ * Zen mode navigation block, which adds it to that of the primary. */
 export const SECONDARY_WIDTH = 320;
 
 /**
- * L'enregistrement doit être fait AVANT la peinture : c'est lui qui décide si la
- * sidebar primaire est en rail. Passé par un effet ordinaire, on verrait la
- * primaire dépliée le temps d'une image à chaque navigation vers une page à
+ * Registration must be done BEFORE painting: it is he who decides whether the
+ * Primary sidebar is rail. Passed by an ordinary effect, we would see the
+ * primary unfolded for the duration of an image each time you navigate to a page
  * barre secondaire.
  */
 const useIsoLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 /**
- * La colonne de navigation d'une page — liste des pull requests, des sessions
- * d'agent, du triage, des retours. Écrite dans la page (son état de sélection
- * pilote le détail juste à côté), affichée dans le châssis de l'application.
+ * The navigation column of a page — list of pull requests, sessions
+ * agent, sorting, returns. Written in the page (its selection state
+ * driver detail right next to it), displayed in the application chassis.
  *
- * Deux rendus, un seul composant :
+ * Two renderings, one component:
  *
- * - **≥ 768 px** : téléportée dans le châssis, pleine hauteur, à gauche du
- *   header. Sa ligne de titre fait la hauteur du header et porte la même
- *   bordure basse — une seule ligne horizontale traverse l'écran.
- * - **< 768 px** : rendue sur place, exactement comme avant — colonne de la
- *   page à partir de `md`, page entière en dessous, `hiddenOnMobile` la cédant
- *   au détail. Le mobile ne bouge pas.
+ * - **≥ 768 px**: teleported into the chassis, full height, to the left of the
+ * header. Its title line is the height of the header and bears the same
+ * bottom border — a single horizontal line crosses the screen.
+ * - **< 768 px**: rendered in place, exactly as before — column of the
+ * page from `md`, whole page below, `hiddenOnMobile` assigning it
+ * retail. The mobile does not move.
  */
 export function SecondarySidebar({
   title,
@@ -48,26 +48,26 @@ export function SecondarySidebar({
   children,
 }: {
   /**
-   * Le nom de la colonne. Il n'est plus ÉCRIT sur la ligne de titre — le fil
-   * d'Ariane le porte déjà, sur la même bande horizontale et à 340 px de là —
-   * mais il reste l'étiquette accessible du volet, et le repli quand la page
-   * n'offre pas de filtre. Omis par les SQUELETTES de route, qui occupent la
-   * place de la barre le temps que l'écran arrive : sans eux la primaire se
-   * déplierait et la gouttière se refermerait à chaque navigation, pour tout
-   * rouvrir une demi-seconde plus tard.
+   * The name of the column. It is no longer WRITTEN on the title line — the thread
+   * d'Ariane already has it, on the same horizontal strip and 340 px away —
+   * but there remains the accessible label of the pane, and the fallback when the page
+   * does not offer a filter. Omitted by the road SKELETONS, who occupy the
+   * place of the bar by the time the screen arrives: without them the primary is
+   * would unfold and the gutter would close with each navigation, for all
+   * reopen half a second later.
    */
   title?: string;
   /**
-   * Le filtre texte de la liste, qui occupe la ligne de titre.
+   * The text filter of the list, which occupies the title line.
    *
-   * Passé en données plutôt qu'en `ReactNode` : les cinq écrans à barre
-   * secondaire doivent offrir le même geste, au même endroit, avec la même
-   * apparence — un `ReactNode` laisserait chacun réinventer sa version.
+   * Passed in data rather than `ReactNode`: the five bar screens
+   * secondary must offer the same gesture, in the same place, with the same
+   * appearance — a `ReactNode` would let everyone reinvent their version.
    *
-   * Il n'y a PAS de compteur à côté : le nombre d'éléments est dans le
-   * placeholder (« Filtrer les 12 pull requests… »). Un chiffre posé seul entre
-   * le champ et les actions ne disait pas de quoi il comptait, et volait à un
-   * champ déjà à l'étroit les 20 px qui font la différence.
+   * There is NO counter next to it: the number of elements is in the
+   * placeholder (“Filter the 12 pull requests…”). A number placed alone between
+   * the field and the actions did not say what it counted on, and flew to a
+   * field already cramped the 20 px which make the difference.
    */
   filter?: {
     value: string;
@@ -75,20 +75,20 @@ export function SecondarySidebar({
     placeholder: string;
     clearLabel: string;
   };
-  /** Actions de la ligne de titre (filtres, bouton de création…), poussées à droite. */
+  /** Actions from the title line (filters, creation button, etc.), pushed to the right. */
   actions?: ReactNode;
   /**
-   * Sous `md`, la liste et le détail se relaient en plein écran : passer ici
-   * l'état « le détail est ouvert » de la page. Sans effet au-dessus de `md`.
+   * Under `md`, the list and details take turns in full screen: go here
+   * the “detail is open” state of the page. No effect above `md`.
    */
   hiddenOnMobile?: boolean;
   children: ReactNode;
 }) {
   const { slot, register } = useSecondarySidebar();
   const isMobileLayout = useMediaQuery("(max-width: 767px)");
-  // Rien au rendu serveur : la place à prendre dans le châssis y est réservée
-  // par la route (routeHasSecondaryNav), et rendre la barre ici avant de savoir
-  // où elle va ferait diverger l'hydratation.
+  // Nothing in the server rendering: the space to be taken in the chassis is reserved there
+  // by road (routeHasSecondaryNav), and make the bar here before knowing
+  // where it goes would diverge the hydration.
   const [mounted, setMounted] = useState(false);
 
   useIsoLayoutEffect(() => {
@@ -113,10 +113,10 @@ export function SecondarySidebar({
             ),
       )}
     >
-      {/* La ligne de titre COMMANDE la colonne, elle ne la nomme pas : le filtre
-          de la liste, ce qui la restreint, ce qu'on peut y créer. C'est la seule
-          bande épinglée du volet — tout ce qui pilote la liste doit être ici, et
-          non dans `children`, qui défile avec elle. */}
+      {/* The title line COMMANDS the column, it does not name it: the filter
+          of the list, what restricts it, what can be created there. It's the only one
+          pinned strip of the pane — everything that drives the list should be here, and
+          not in `children`, which scrolls with it. */}
       <div className="secondary-sidebar-header flex h-[60px] shrink-0 items-center gap-2 border-b border-border px-4">
         {filter ? (
           <SidebarFilterField {...filter} />
@@ -141,13 +141,13 @@ export function SecondarySidebar({
 }
 
 /**
- * Le point d'accueil, posé par le châssis entre la sidebar primaire et la
- * colonne header + contenu.
+ * The docking point, placed by the chassis between the primary sidebar and the
+ * column header + content.
  *
- * En mode zen (MIN-134) il est rendu à l'identique, mais DANS le bloc de
- * navigation en surimpression (`ZenNavOverlay`) plutôt que dans le flux : la
- * gouttière y ouvre et referme la même colonne, à la même largeur, selon que la
- * page porte une barre secondaire ou non.
+ * In Zen mode (MIN-134) it is rendered identically, but IN the block of
+ * superimposed navigation (`ZenNavOverlay`) rather than in the flow: the
+ * gutter opens and closes the same column, at the same width, depending on whether the
+ * page carries a secondary bar or not.
  */
 export function SecondarySidebarSlot({ reserve }: { reserve: boolean }) {
   const reduce = useReducedMotion();
@@ -155,24 +155,24 @@ export function SecondarySidebarSlot({ reserve }: { reserve: boolean }) {
 }
 
 /**
- * La gouttière : le mode ordinaire. Vide, elle ne prend aucune place ; `reserve`
- * lui donne sa largeur avant que la page n'ait monté sa barre (premier
- * affichage), pour que le contenu ne parte pas pleine largeur puis ne se
- * rétracte.
+ * The gutter: ordinary mode. Empty, it takes up no space; `reserve`
+ * gives it its width before the page has increased its bar (first
+ * display), so that the content does not start at full width and then do not
+ * retracts.
  *
- * C'est elle qui porte la moitié du glissement entre les deux modes de la
- * PRIMAIRE : elle s'ouvre et se referme (0 ↔ 320) sur la MÊME courbe que la
- * largeur de celle-ci (`transitions.shell`), et le header, le fil d'Ariane et le
- * contenu suivent d'un bloc. Le volet intérieur garde sa largeur pendant tout le
- * trajet — c'est la gouttière qui le découvre ou le recouvre, il ne se comprime
+ * It is she who carries half of the shift between the two modes of
+ * PRIMARY: it opens and closes (0 ↔ 320) on the SAME curve as the
+ * width of it (`transitions.shell`), and the header, the breadcrumbs and the
+ * contents follow in a block. The interior flap maintains its width throughout the
+ * path — it is the gutter which uncovers or covers it, it is not compressed
  * jamais.
  *
- * Elle est peinte AUX COULEURS DE LA BARRE, et non laissée transparente : en
- * quittant une page à sidebar secondaire, la page se démonte d'un coup et la
- * gouttière se retrouve vide pendant les 320 ms de sa fermeture. Sans fond, on y
- * voyait le `bg-background` du châssis — une bande claire ouverte entre la barre
- * primaire et le header, tous deux en `bg-sidebar`. Avec, la colonne se referme
- * comme un volet, sans trou.
+ * It is painted IN THE COLORS OF THE BAR, and not left transparent: in
+ * leaving a page with a secondary sidebar, the page is suddenly unmounted and it
+ * gutter is empty during the 320 ms of its closure. Without a bottom, we
+ * saw the `bg-background` of the chassis — a light strip open between the bar
+ * primary and the header, both in `bg-sidebar`. With it, the column closes
+ * like a panel, without a gap.
  */
 function SecondarySidebarGutter({
   reserve,
@@ -185,21 +185,21 @@ function SecondarySidebarGutter({
   return (
     <motion.div
       className="relative z-[31] h-full shrink-0 overflow-hidden bg-sidebar"
-      // `initial` explicite : c'est cette valeur-là que framer écrit dans le
-      // HTML du serveur, et c'est elle qui réserve la colonne au premier
+      // `initial` explicit: this is the value that framer writes in the
+      // HTML from the server, and it is she who reserves the column for the first
       // affichage (cf. routeHasSecondaryNav).
       initial={{ width: reserve ? SECONDARY_WIDTH : 0 }}
       animate={{ width: reserve ? SECONDARY_WIDTH : 0 }}
       transition={reduce ? { duration: 0 } : transitions.shell}
     >
-      {/* Le trait qui court sous le header et sous la ligne de titre de la
-          barre, rejoué ici pour la même raison : vidée, la gouttière l'aurait
-          interrompu sur toute sa largeur le temps de se refermer.
-          Il passe DERRIÈRE le volet (`relative` sur celui-ci, qui le peint
-          par-dessus), et surtout pas au-dessus : `--border` vaut 8 % de blanc en
-          thème sombre, deux traits superposés en font un de 15 % — une ligne
-          plus claire sur la largeur exacte de la barre, au milieu d'une ligne
-          qui traverse tout l'écran. */}
+      {/* The line that runs under the header and under the title line of the
+          bar, replayed here for the same reason: emptied, the gutter would have it
+          interrupted over its entire width until it closes.
+          He goes BEHIND the shutter (`relative` on this one, which paints him
+          above), and especially not above: `--border` is worth 8% of white in
+          dark theme, two superimposed lines make one of 15% — a line
+          clearer on the exact width of the bar, in the middle of a line
+          which crosses the entire screen. */}
       <div
         aria-hidden
         className="absolute inset-x-0 top-0 h-[60px] border-b border-border"

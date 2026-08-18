@@ -8,8 +8,8 @@ import { insertNotifications } from "@/lib/server/notifications";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import { AGENT_ENGINE, type AgentEngine } from "@/lib/agent-engines";
-// Type SEUL (donc effacé à la compilation) : `launch.ts` importe ce module, la
-// dépendance ne doit pas exister à l'exécution.
+// Type ONLY (therefore deleted during compilation): `launch.ts` imports this module, the
+// dependency should not exist at runtime.
 import type { AgentLaunchIntent } from "./launch";
 import type { AgentChatMessage, AgentEventType } from "./agent-contract";
 import { broadcastRunEvent } from "./live";
@@ -24,16 +24,16 @@ import type { AssistantMention } from "@/lib/assistant-types";
 import type { AgentUserMessage } from "@/lib/agent-mentions";
 
 /**
- * Accès données des runs de l'agent de code (MIN-46) : création, claim CAS,
- * stamping terminal-gardé, sweeper des runs bloqués, et append des events du
- * live view. Service client uniquement (RLS lecture-seule côté membres).
+ * Data access to code agent runs (MIN-46): creation, CAS claim,
+ * terminal-guarded stamping, sweeping blocked runs, and adding events to the
+ * live view. Customer service only (read-only RLS on the members side).
  */
 
 /**
- * Statuts d'un run (modèle conversationnel). `completed` = AU REPOS : le tour est
- * fini, la session attend le prochain message dans sa conversation — elle reste
- * reprennable à chaud et n'occupe PLUS le ticket. (`needs_input` n'existe plus :
- * une question de l'agent est une réponse comme une autre.)
+ * Statuses of a run (conversational model). `completed` = AT REST: the turn is
+ * finished, the session waits for the next message in its conversation — it remains
+ * can be resumed hot and no longer takes up the ticket. (`needs_input` no longer exists:
+ * a question from the agent is an answer like any other.)
  */
 export type AgentRunStatus =
   | "queued"
@@ -50,11 +50,11 @@ const TERMINAL_RUN_STATUSES: ReadonlySet<AgentRunStatus> = new Set([
 ]);
 
 /**
- * Qui a lancé le run. `automation` (MIN-147) est le quatrième : une règle de
- * projet, pas un geste — c'est ce qui distingue, dans l'analytics comme dans
- * l'UI, une chaîne qui se déroule d'un clic sur « lancer Numo ». `routine`
- * (MIN-185) est le cinquième : une échéance, pas même une règle — personne
- * n'était devant l'écran, pas même pour changer un statut.
+ * Who started the run. `automation` (MIN-147) is the fourth: a rule of
+ * project, not a gesture — this is what distinguishes, in analytics as in
+ * the UI, a chain that unfolds with a click on “launch Numo”. `routine`
+ * (MIN-185) is the fifth: a deadline, not even a rule — no one
+ * was not in front of the screen, not even to change a status.
  */
 export type AgentRunTrigger =
   | "button"
@@ -64,9 +64,9 @@ export type AgentRunTrigger =
   | "routine";
 
 /**
- * Ce que l'agent a répondu au tool `report_verdict` (MIN-147), servi aux seules
- * étapes de vérification d'une chaîne. C'est ce que le moteur lit pour décider
- * entre « on continue », « on reprend une fois » et « on rend la main ».
+ * What the agent responded to tool `report_verdict` (MIN-147), used only for
+ * steps for verifying a string. This is what the engine reads to decide
+ * between “we continue”, “we start again” and “we give back”.
  */
 export interface AgentRunVerdict {
   ok: boolean;
@@ -74,87 +74,87 @@ export interface AgentRunVerdict {
   blockers: string[];
 }
 
-/** Contenu sérialisé du checkpoint (repris tel quel au chunk suivant). */
+/** Serialized content of the checkpoint (resumed as is in the next chunk). */
 export interface AgentCheckpoint {
   messages: AgentChatMessage[];
   /** Prochain index de ligne ai_usage (ordre d'affichage). */
   usageSeq?: number;
   /**
-   * Sha git au dernier event `files_changed` émis — le « avant » du diff par tour
-   * (MIN-46). Persisté dans le checkpoint pour qu'un tour éclaté sur plusieurs chunks
-   * (WIP intermédiaires) diffe quand même depuis son VRAI début, pas depuis le dernier
-   * chunk. Amorcé au HEAD du premier chunk (« rien de changé encore » pour ce run).
+   * Sha git at the last event `files_changed` emitted — the “before” of the diff per turn
+   * (MIN-46). Persisted in the checkpoint so that a round broke out on several chunks
+   * (intermediate WIP) still differs from its REAL beginning, not from the last
+   * chunk. Started at the HEAD of the first chunk (“nothing changed yet” for this run).
    */
   lastFilesSha?: string;
   /**
-   * Instructions repo déjà servies au modèle (MIN-115) : chemins vus (racine à
-   * l'amorce, sous-dossiers à la première édition dedans) et octets consommés sur
-   * le cap global. Persisté pour qu'un tour éclaté sur plusieurs chunks ne
-   * re-serve jamais un `AGENTS.md` que le modèle a déjà lu.
+   * Repo instructions already served to the model (MIN-115): paths seen (root to
+   * the boot, subfolders at the first edition in it) and bytes consumed on
+   * the overall course. Persisted so that a round exploded on several chunks
+   * never re-serves a `AGENTS.md` that the model has already read.
    */
   instructions?: { paths: string[]; bytes: number };
   /**
-   * Commentaires de ligne déjà posés par CE run sur sa pull request (MIN-168).
-   * Le plafond est « 5 par run », pas « 5 par tour » : le compteur doit donc
-   * survivre au découpage en chunks ET au tour suivant, et le checkpoint est le
-   * seul état du run qui traverse les deux.
+   * Line comments already posted by CE run on its pull request (MIN-168).
+   * The ceiling is “5 per run”, not “5 per turn”: the counter must therefore
+   * survive the chunking AND the next round, and the checkpoint is
+   * only state of the run that crosses both.
    */
   prInlineComments?: number;
   /**
-   * Fichiers édités et pas encore type-checkés (MIN-210) — capés à
-   * `CHECKPOINT_EDITED_PATHS_MAX` (execute.ts) pour ne rien peser sur
-   * `MAX_CHECKPOINT_BYTES`. C'est de l'état de TOUR, comme `lastFilesSha` et
-   * `instructions` : sans lui, un tour qui déborde d'un chunk conclut avec un
-   * `Set` vide, et ni `tsc` ni l'auto-relecture ne tournent sur le travail du
-   * chunk précédent — la PR part sans qu'aucune vérification n'ait eu lieu.
+   * Files edited and not yet type-checked (MIN-210) — capped at
+   * `CHECKPOINT_EDITED_PATHS_MAX` (execute.ts) so as not to weigh anything on
+   * `MAX_CHECKPOINT_BYTES`. It's from TOWER state, like `lastFilesSha` and
+   * `instructions`: without it, a turn that extends beyond a chunk ends with a
+   * `Set` empty, and neither `tsc` nor auto-readback works on the work of the
+   * previous chunk — the PR leaves without any verification having taken place.
    */
   editedPaths?: string[];
   /**
-   * Le tour a édité le dépôt (MIN-210) — le verrou qui ouvre l'auto-relecture, là
-   * où `editedPaths` se vide à chaque type-check.
+   * Turn Edited Repository (MIN-210) — the lock that unlocks auto-replay, there
+   * where `editedPaths` empties at each type-check.
    *
-   * Ces deux champs sont écrits par TOUTES les mises au repos sauf `completed` :
-   * là, le tour est fini (type-check et relecture ont parlé, `lastFilesSha` a
-   * avancé jusqu'à la tête poussée), et les faire fuiter sur le tour suivant y
-   * déclencherait une auto-relecture qui n'a rien à relire.
+   * These two fields are written by ALL quiesces except `completed`:
+   * there, the tour is over (type-check and rereading have spoken, `lastFilesSha` has
+   * advanced until the head is pushed), and make them leak on the next turn y
+   * would trigger a self-reread which has nothing to re-read.
    */
   repoTouched?: boolean;
   /**
-   * Re-queues CONSÉCUTIFS accordés à une panne de fournisseur (MIN-219), borné
-   * par `MAX_PROVIDER_REQUEUES`. Écrit par la seule sortie qui attend le
-   * fournisseur, donc remis à zéro de lui-même dès qu'un chunk avance : le
-   * checkpoint est reconstruit à neuf à chaque mise au repos, et aucune autre
+   * CONSECUTIVE re-queues granted to provider failure (MIN-219), bounded
+   * by `MAX_PROVIDER_REQUEUES`. Written by the only output that awaits the
+   * provider, therefore reset by itself as soon as a chunk advances: the
+   * checkpoint is rebuilt anew each time it is quiesced, and no other
    * branche ne repose ce champ.
    *
-   * Ici et pas dans une colonne : c'est un compteur d'ATTENTE, il n'a de sens
-   * que rattaché à l'état du tour qu'il fait patienter. `continuations` compte
-   * les chunks qui ont travaillé, `attempts` les claims d'un crash — un chunk
-   * mort sur son premier appel modèle n'est ni l'un ni l'autre.
+   * Here and not in a column: it is a WAIT counter, it has no meaning
+   * only attached to the state of the turn that he makes wait. `continuations` account
+   * the chunks that worked, `attempts` the claims of a crash — a chunk
+   * dead on his first model call is neither.
    */
   providerRetries?: number;
   /**
-   * L'ÉTAT D'OPENCODE (MIN-286) — le journal d'événements que le superviseur
-   * rejoue pour retrouver sa session (cf. `OpencodeCheckpointState`).
+   * OPENCODE STATUS (MIN-286) — the event log that the supervisor
+   * play again to find your session (see `OpencodeCheckpointState`).
    *
-   * À CÔTÉ de `messages` et non à sa place, et ce n'est pas une transition : c'est
-   * ce qui rend un checkpoint lisible sans son contexte. Une conversation menée par
-   * la boucle maison a `messages` et pas ce champ ; une conversation menée par
-   * opencode a ce champ et un `messages` vide. Un tour repris sait donc, en lisant
-   * son seul checkpoint, quel moteur l'a écrit — et c'est ce qui protège un run
-   * dont la LIGNE dirait le contraire (cf. `effectiveEngine` dans execute.ts).
+   * NEXT to `messages` and not in its place, and this is not a transition: it is
+   * which makes a checkpoint readable without its context. A conversation led by
+   * the home loop has `messages` and not this field; a conversation led by
+   * opencode has this field and an empty `messages`. A tour resumed therefore knows, by reading
+   * its only checkpoint, which engine wrote it — and that's what protects a run
+   * whose LINE would say the opposite (see `effectiveEngine` in execute.ts).
    */
   opencode?: {
     sessionId: string;
     /**
-     * Le curseur d'export par agrégat — l'argument de la prochaine exportation.
+     * The aggregate export slider — the argument for the next export.
      *
-     * LES EVENTS, EUX, NE SONT PLUS ICI (MIN-286, 2026-08-13). Ils vivent dans
-     * `agent_run_journal`, en append, pour deux raisons mesurées : le journal
-     * porte la sortie COMPLÈTE de chaque tool (22 Ko pour une lecture de 260
-     * lignes, republiée deux à trois fois), donc il dépassait le plafond de corps
-     * du plan de contrôle en une quinzaine de lectures — un tour de 31 minutes
-     * perdait toute sa conversation ; et cette ligne-ci est relue à CHAQUE appel
-     * du plan de contrôle, où le journal se payait des centaines de fois par tour.
+     * THE EVENTS ARE NO LONGER HERE (MIN-286, 2026-08-13). They live in
+     * `agent_run_journal`, add it, for two measured reasons: the log
+     * carries the COMPLETE output of each tool (22 KB for a reading of 260
+     * lines, republished two to three times), so it exceeded the body ceiling
+     * of the control plan in around fifteen readings — a 31-minute tour
+     * lost all his conversation; and this line is reread on EVERY call
+     * of the control plane, where the newspaper was paid hundreds of times per turn.
      */
     seq: Record<string, number>;
   };
@@ -162,7 +162,7 @@ export interface AgentCheckpoint {
 
 export interface AgentRun {
   id: string;
-  /** Identite durable de la conversation. Un run n'est qu'une execution de
+  /** Durable identity of the conversation. A run is just an execution of
    *  celle-ci ; plusieurs runs pourront donc partager cet identifiant. */
   conversation_id: string;
   conversation?: {
@@ -170,20 +170,20 @@ export interface AgentRun {
     visibility: "private" | "project";
   } | null;
   project_id: string;
-  /** Null = run « carnet » (MIN-84) ou run de PULL REQUEST (MIN-168) : ancré au
-   *  projet + une instruction libre, sans ticket. Aucune lignée : chaque run de
-   *  ce genre est sa propre conversation. */
+  /** Null = “notebook” run (MIN-84) or PULL REQUEST run (MIN-168): anchored to
+   * project + free instruction, without tickets. No lineage: every run of
+   * this genre is its own conversation. */
   issue_id: string | null;
   /**
-   * Pull request RELUE par ce run (MIN-168) — le troisième ancrage, à côté du
-   * ticket et du carnet. Non nul ⇒ session de review : lecture seule sur le
-   * dépôt, écriture uniquement en commentaires de PR.
+   * Pull request RELEASE by this run (MIN-168) — the third anchor, next to the
+   * ticket and notebook. Not null ⇒ review session: read only on the
+   * filing, writing only in PR comments.
    */
   pull_request_id: string | null;
   /**
-   * Le sha que cette review a LU. C'est lui qui répond à « relancer aurait-il
-   * quelque chose de nouveau à lire ? » — la tête courante vit dans
-   * `pull_requests.head_sha` et ne dit rien de ce qui a été relu.
+   * The sha that this review has READ. It is he who responds to “relaunch would he have
+   * something new to read? » — the running head lives in
+   * `pull_requests.head_sha` and says nothing about what was reread.
    */
   pr_head_sha: string | null;
   repo_link_id: string | null;
@@ -193,13 +193,13 @@ export interface AgentRun {
   created_by: string | null;
   prompt: string | null;
   prompt_mentions: AssistantMention[] | null;
-  /** Résumé court de la note, pour les sessions CARNET. Null = pas de résumé
-   *  (run d'issue, dont le titre est celui du ticket ; ou génération échouée). */
+  /** Short summary of the note, for the CARNET sessions. Null = no summary
+   * (issue run, whose title is that of the ticket; or failed generation). */
   title: string | null;
   model: string | null;
   model_forced: boolean;
-  /** Niveau de raisonnement FIGÉ au lancement (MIN-122), comme le modèle : un run
-   *  repris par une autre invocation doit retrouver le même. */
+  /** Level of reasoning FROZEN at launch (MIN-122), like the model: one run
+   * taken up by another invocation must find the same one. */
   reasoning_level: ReasoningLevel;
   key_mode: "platform" | "byok";
   base_branch: string | null;
@@ -217,104 +217,104 @@ export interface AgentRun {
   cost_usd: number;
   outcome: string | null;
   error_message: string | null;
-  /** Le dernier tour s'est terminé sur un ask_user : la session attend la réponse
-   *  de l'utilisateur (point jaune sur les surfaces). Remis à false à chaque
-   *  autre entrée au repos. */
+  /** The last round ended on an ask_user: the session is waiting for the response
+   * of the user (yellow dot on surfaces). Set to false every time
+   * other entry at rest. */
   awaiting_input: boolean;
-  /** Horloge d'inactivité : heartbeat client + steer + entrée au repos. Pilote le
-   *  reaping de la sandbox idle. */
+  /** Idle clock: client heartbeat + steer + idle input. Pilot it
+   * reaping sandbox idle. */
   last_activity_at: string;
-  /** « Interrompre la réponse en cours » : lu par le chunk actif qui suspend. */
+  /** “Interrupt current response”: read by the active suspending chunk. */
   interrupt_requested: boolean;
-  /** microVM coupée par le reaper (null = vivante/inconnue). */
+  /** microVM cut by the reaper (null = alive/unknown). */
   sandbox_stopped_at: string | null;
-  /** Déploiement qui a le droit de drainer ce run (MIN-165). Null = la file
-   *  commune (prod + local) ; sinon le `VERCEL_URL` d'un preview, seul à le
+  /** Deployment which has the right to drain this run (MIN-165). Null = queue
+   * municipality (prod + local); otherwise the `VERCEL_URL` of a preview, only it
    *  reprendre — cf. `deployment.ts`. */
   deployment_url: string | null;
-  /** Chaîne d'automatisation (MIN-147) dont ce run est une étape. Null = run
-   *  ordinaire, lancé à la main. */
+  /** Automation chain (MIN-147) of which this run is a step. Null = run
+   * ordinary, hand-thrown. */
   chain_id: string | null;
   /**
-   * ROUTINE (MIN-185) dont ce run est un passage. Non nul ⇒ trois écarts avec
-   * un run carnet ordinaire, et ils sont TOUS portés par cette colonne : la
-   * dépense se compte sous « Routines » (`routine_code`/`routine_compute`), le
-   * jeu de tools perd `ask_user` et `create_routine` (personne devant l'écran ;
-   * pas d'auto-réplication), et la liste des conversations l'exclut — sans ça
-   * une routine quotidienne noierait la colonne Agents en une semaine.
+   * ROUTINE (MIN-185) of which this run is a passage. Not zero ⇒ three deviations with
+   * an ordinary run notebook, and they are ALL carried by this column: the
+   * expense is counted under “Routines” (`routine_code`/`routine_compute`), the
+   * toolset loses `ask_user` and `create_routine` (person in front of the screen;
+   * no self-replication), and the conversation list excludes it — otherwise
+   * a daily routine would drown the Agents column in a week.
    */
   routine_id: string | null;
-  /** Plafond de dépense de CE run, en USD. Null = seuls le quota et le plafond
-   *  de la chaîne bornent. */
+  /** CE run spending limit, in USD. Null = only the quota and the ceiling
+   * of the bound chain. */
   budget_usd: number | null;
-  /** Ce qu'on DEMANDAIT à ce run. Persisté depuis MIN-147 : sans lui, la chaîne
-   *  ne peut pas savoir ce que le run qui vient de finir faisait. */
+  /** What we ASKED for this run. Persisted since MIN-147: without it, the chain
+   * can't know what the run that just finished was doing. */
   intent: AgentLaunchIntent | null;
-  /** Verdict d'une étape de vérification (cf. `AgentRunVerdict`). */
+  /** Verdict of a verification step (see `AgentRunVerdict`). */
   verdict: AgentRunVerdict | null;
   /**
-   * Identifiant de RÉVOCATION de la clé LLM émise pour ce run (MIN-223) — le
-   * `hash` d'OpenRouter, jamais le secret. Il vit sur la ligne et pas dans la
-   * mémoire de la fonction qui l'a mintée, parce que ce n'est pas elle qui
-   * révoque : c'est le reaper d'inactivité, qui ne connaît du run que sa ligne.
-   * Null = pas de clé par run (BYOK, ou provisioning non configuré).
+   * REVOCATION identifier of the LLM key issued for this run (MIN-223) — the
+   * `hash` from OpenRouter, never the secret. He lives on the line and not in the
+   * memory of the function which minted it, because it is not she who
+   * revokes: it is the inactivity reaper, which only knows its line of the run.
+   * Null = no key per run (BYOK, or provisioning not configured).
    */
   provider_key_id: string | null;
   /**
-   * La boucle de ce run tourne DANS la microVM (MIN-224), pas dans la fonction.
+   * The loop of this run runs IN the microVM (MIN-224), not in the function.
    *
-   * FIGÉ AU LANCEMENT depuis `app_config` (cf. `vm-flag.ts`), comme `model` et
-   * `reasoning_level`. Le lire à chaque chunk ferait changer une conversation de
-   * moteur en cours de vie : un tour lancé avant la bascule et repris après
-   * repartirait sur une boucle qui n'a jamais vu son checkpoint.
+   * FROZEN AT LAUNCH from `app_config` (see `vm-flag.ts`), like `model` and
+   * `reasoning_level`. Reading it every chunk would change a conversation
+   * motor during its life: one revolution started before the switch and resumed after
+   * would go back on a loop that never saw its checkpoint.
    */
   loop_in_vm: boolean;
   /**
-   * La commande Vercel Sandbox qui PORTE la boucle, lancée en `detached: true`
-   * (MIN-224). Null tant que la boucle n'a pas démarré.
+   * The Vercel Sandbox command which CARRIES the loop, launched in `detached: true`
+   * (MIN-224). Null until the loop starts.
    *
-   * C'est le constat de vie du tour : la fonction rend la main tout de suite, et
-   * ce qui reste pour savoir si le process travaille encore, c'est cet id — que
-   * `Sandbox.getCommand()` sait interroger. Le chien de garde s'en sert à la
-   * place d'une présomption après vingt minutes de silence : un constat, et il
-   * est exact.
+   * This is the observation of the life of the trick: the function returns the hand immediately, and
+   * what remains to know if the process is still working is this id — that
+   * `Sandbox.getCommand()` knows how to query. The watchdog uses it to
+   * place of a presumption after twenty minutes of silence: an observation, and it
+   * is correct.
    */
   loop_command_id: string | null;
   /**
-   * LE HARNESS qui joue ce run (MIN-286) : `loop`, la boucle maison, ou
-   * `opencode`, le serveur headless piloté par notre superviseur.
+   * THE HARNESS that plays this run (MIN-286): `loop`, the house loop, or
+   * `opencode`, the headless server controlled by our supervisor.
    *
-   * FIGÉ AU LANCEMENT depuis `app_config` (cf. `engine-flag.ts`), pour la même
-   * raison que `loop_in_vm` : elle DIT ce qui a joué ce run, elle ne décide plus
-   * rien. La boucle maison est partie en MIN-225 ; les lignes qui portent `loop`
-   * restent lisibles, et c'est tout ce qu'on leur demande.
+   * FROZEN AT LAUNCH from `app_config` (see `engine-flag.ts`), for the same
+   * reason that `loop_in_vm`: she SAYS what played a role in this run, she no longer decides
+   * Nothing. The home loop left in MIN-225; the lines which carry `loop`
+   * remain readable, and that’s all we ask of them.
    */
   agent_engine: AgentEngine;
   /**
-   * Ce run s'exécute sur la MACHINE DE L'UTILISATEUR (MIN-355), pas dans une
+   * This run runs on the USER'S MACHINE (MIN-355), not in a
    * microVM.
    *
-   * FIGÉ AU LANCEMENT, comme `loop_in_vm` et `agent_engine`, et pour une raison de
-   * plus qu'eux : ce qui change n'est pas seulement où la boucle tourne, c'est le
-   * DÉPÔT sur lequel elle travaille. Un tour joué sur un Mac puis repris dans une
-   * microVM repartirait d'un clone qui ne connaît rien de ce que le premier a
-   * écrit.
+   * FROZEN AT LAUNCH, like `loop_in_vm` and `agent_engine`, and for some reason
+   * more than them: what changes is not only where the loop turns, it is the
+   * DEPOSIT she is working on. A trick played on a Mac then repeated in a
+   * microVM would start from a clone which knows nothing of what the first has
+   * writing.
    *
-   * Deux lecteurs, et ils ne se ressemblent pas : le plan de contrôle, qui n'admet
-   * un jeton local que sur une ligne qui le dit, et le CHIEN DE GARDE, pour qui un
-   * run local est le seul cas où « on ne sait pas » est permanent (il n'y a pas de
-   * plateforme à interroger, cf. `reapDeadVmRuns`).
+   * Two readers, and they are not alike: the control plane, which does not admit
+   * a local token only on a line which says so, and the WATCHDOG, for which a
+   * run local is the only case where "we don't know" is permanent (there is no
+   * platform to query, cf. `reapDeadVmRuns`).
    */
   local_exec: boolean;
-  /** Le run local utilise un worktree isolé plutôt que le checkout attaché. */
+  /** The local run uses an isolated worktree rather than the attached checkout. */
   local_worktree: boolean;
   /**
-   * La GÉNÉRATION du bail d'exécution locale (MIN-355) — la seule révocation
+   * GENERATION of local execution lease (MIN-355) — the only revocation
    * possible d'un jeton auto-porteur.
    *
-   * Le jeton du harness porte ce nombre en claim ; `issueLocalExecToken`
-   * ([local-exec.ts](local-exec.ts)) l'incrémente à chaque émission, ce qui tue
-   * tous les précédents à l'instant. Une machine par run, par construction plutôt
+   * The harness token bears this number as a claim; `issueLocalExecToken`
+   * ([local-exec.ts](local-exec.ts)) increments it on each emission, which kills
+   * all the previous ones just now. One machine per run, by construction rather
    * que par convention.
    */
   local_exec_gen: number;
@@ -327,54 +327,54 @@ export interface CreateRunInput {
   projectId: string;
   /** Null = run carnet (MIN-84) ou run de pull request (MIN-168), sans ticket. */
   issueId: string | null;
-  /** Pull request relue par ce run (MIN-168). Exclusif avec `issueId`. */
+  /** Pull request reread by this run (MIN-168). Exclusive with `issueId`. */
   pullRequestId?: string | null;
-  /** Sha de la tête de cette PR au lancement — ce que la review aura lu. */
+  /** Sha from the head of this PR at launch — what the review will have read. */
   prHeadSha?: string | null;
   repoLinkId: string | null;
   connectionId: string | null;
   createdBy: string;
   prompt?: string | null;
   promptMentions?: AssistantMention[] | null;
-  /** Résumé de la note (runs carnet) — cf. `AgentRun.title`. */
+  /** Summary of the note (runs notebook) — cf. `AgentRun.title`. */
   title?: string | null;
   model: string;
   modelForced: boolean;
-  /** Niveau de raisonnement résolu au lancement (cf. `resolveReasoningLevel`). */
+  /** Level of reasoning resolved at launch (see `resolveReasoningLevel`). */
   reasoningLevel: ReasoningLevel;
   keyMode: "platform" | "byok";
   triggeredBy: AgentRunTrigger;
-  /** Étape d'une chaîne d'automatisation (MIN-147) : son id et son plafond. */
+  /** Step of an automation chain (MIN-147): its id and its ceiling. */
   chainId?: string | null;
   budgetUsd?: number | null;
-  /** Passage d'une ROUTINE (MIN-185) — cf. `AgentRun.routine_id`. */
+  /** Passage of a ROUTINE (MIN-185) — cf. `AgentRun.routine_id`. */
   routineId?: string | null;
-  /** Ce qu'on demande au run — persisté, contrairement à avant MIN-147. */
+  /** What we ask of the run — persisted, unlike before MIN-147. */
   intent?: AgentLaunchIntent | null;
   /**
-   * Branche à reprendre (au lieu d'en générer une neuve) : une run froide qui
-   * hérite de la PR de l'issue repart de SA branche → même PR mise à jour (MIN-68).
+   * Branch to resume (instead of generating a new one): a cold run which
+   * inherits the PR from the issue leaves from ITS branch → same updated PR (MIN-68).
    */
   baseBranch?: string | null;
   branchName?: string | null;
-  /** PR héritée, posée dès la création (cf. `inheritableWorkForIssue`). */
+  /** Legacy PR, installed from creation (see `inheritableWorkForIssue`). */
   prNumber?: number | null;
   prUrl?: string | null;
   prState?: AgentRun["pr_state"];
   /**
-   * Ce run part sur la MACHINE DE L'UTILISATEUR (MIN-355) — cf.
-   * `AgentRun.local_exec`. C'est la SEULE entrée : le mode est figé ici, à la
-   * création, et rien ne le bascule ensuite. Absent = un run de microVM, ce que
-   * sont tous les runs jusqu'à MIN-293.
+   * This run starts on the USER'S MACHINE (MIN-355) — cf.
+   * `AgentRun.local_exec`. This is the ONLY entry: the mode is fixed here, at
+   * creation, and nothing switches it afterward. Absent = a microVM run, which
+   * are all runs up to MIN-293.
    */
   localExec?: boolean;
-  /** Isole le run local dans un worktree de la machine qui l'exécute. */
+  /** Isolates the local run in a worktree from the machine running it. */
   localWorktree?: boolean;
 }
 
 /**
- * Levée par `createRun` quand un index unique partiel refuse l'insertion (une
- * routine, une chaîne ou une pull request a gagné la course de lancement).
+ * Raised by `createRun` when a partial unique index refuses the insertion (a
+ * routine, a chain or a pull request has won the launch race).
  */
 export class ActiveRunExistsError extends Error {
   constructor() {
@@ -384,9 +384,9 @@ export class ActiveRunExistsError extends Error {
 }
 
 /**
- * Ancrage d'un run, tel que l'analytics le nomme. Trois valeurs depuis MIN-168 :
- * une session de review n'est ni un run de ticket ni un run carnet, et les
- * confondre ferait lire les reviews comme des sessions de code.
+ * Anchoring a run, as analytics calls it. Three values ​​since MIN-168:
+ * a review session is neither a ticket run nor a notebook run, and the
+ * confusing it would make the reviews read like coding sessions.
  */
 function runScope(run: {
   issueId?: string | null;
@@ -399,29 +399,29 @@ function runScope(run: {
   return "general";
 }
 
-/** Code Postgres d'une violation de contrainte d'unicité. */
+/** Postgres code with a unique constraint violation. */
 const PG_UNIQUE_VIOLATION = "23505";
 
-/** Crée un run en `queued`, prêt à être drainé. */
+/** Creates a run in `queued`, ready to be drained. */
 export async function createRun(input: CreateRunInput): Promise<AgentRun> {
   const service = getServiceClient();
   /**
-   * LE MOTEUR ET LA MICROVM, POSÉS SANS RIEN DEMANDER À PERSONNE (MIN-286).
+   * THE ENGINE AND THE MICROVM, INSTALLED WITHOUT ASKING ANYONE (MIN-286).
    *
-   * Il n'y a plus de drapeau : `opencode` est le harness, et il ne tourne que dans
-   * la microVM — il n'existe pas de version « dans la fonction » de son
-   * superviseur, qui pilote un serveur vivant à côté du dépôt. Les deux listes de
-   * projets d'`app_config` (`agent_opencode_projects`, `agent_loop_in_vm_projects`)
-   * ont donc disparu avec ce qu'elles servaient à décider.
+   * There is no more flag: `opencode` is the harness, and it only runs in
+   * microVM — there is no “in-function” version of its
+   * supervisor, who controls a server living next to the depot. The two lists of
+   * `app_config` projects (`agent_opencode_projects`, `agent_loop_in_vm_projects`)
+   * therefore disappeared with what they were used to decide.
    *
-   * Les deux valeurs restent ÉCRITES sur la ligne, et c'est ce qui compte : elles
-   * disent quel moteur a joué CE run, et un run déjà en vol au moment du déploiement
-   * garde le sien. Les deux moteurs ne gardent pas leur mémoire au même endroit
-   * (`checkpoint.messages` contre `checkpoint.opencode`), donc une conversation qui
-   * changerait de moteur en cours de vie ne perdrait pas un réglage : elle perdrait
-   * son historique. La colonne est par ailleurs lue par les BALAYEURS
-   * (`reapDeadVmRuns` la veut vraie) — une ligne qui dirait `false` en jouant dans
-   * la VM ne serait jamais constatée morte.
+   * Both values ​​remain WRITTEN on the line, and that's what matters: they
+   * say which engine performed THIS run, and a run already in flight at the time of deployment
+   * keep his. The two engines do not keep their memory in the same place
+   * (`checkpoint.messages` against `checkpoint.opencode`), therefore a conversation which
+   * changing the engine during its life would not lose a setting: it would lose
+   * its history. The column is also read by the SWEEPERS
+   * (`reapDeadVmRuns` wants it true) — a line that would say `false` when playing in
+   * the VM would never be found dead.
    */
   const engine = AGENT_ENGINE;
   const loopInVm = true;
@@ -454,22 +454,22 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       budget_usd: input.budgetUsd ?? null,
       routine_id: input.routineId ?? null,
       intent: input.intent ?? null,
-      // Affinité de déploiement (MIN-165) : posée UNE fois, à la création. Tous
-      // les chunks d'un run lancé depuis un preview restent sur ce déploiement.
+      // Deployment affinity (MIN-165): set ONCE, at creation. All
+      // the chunks of a run launched from a preview remain on this deployment.
       deployment_url: currentDeploymentScope(),
       loop_in_vm: loopInVm,
       agent_engine: engine,
       /**
-       * L'ENVIRONNEMENT D'EXÉCUTION (MIN-355), posé ici et jamais ailleurs — même
-       * doctrine que les deux lignes du dessus. La génération du bail, elle, part
-       * à zéro : elle ne devient quelque chose qu'à l'émission du premier jeton.
+       * THE EXECUTION ENVIRONMENT (MIN-355), placed here and never elsewhere — even
+       * doctrine than the two lines above. The lease generation leaves
+       * to zero: it only becomes something when the first token is issued.
        *
-       * ET L'INVARIANT DES RUNS À CONTENU TIERS, APPLIQUÉ ICI (MIN-360). C'est
-       * l'unique écrivain de la colonne : y poser la règle est ce qui la rend
-       * vraie de toutes les portes d'entrée, y compris celle que personne n'a
-       * encore écrite. Un run de relecture, de routine, de chaîne ou déclenché par
-       * une mention lit du texte que minddy n'a pas écrit — en microVM une
-       * injection coûte une VM jetable, sur le Mac de quelqu'un c'est un shell.
+       * AND THE INVARIANT OF RUNS WITH THIRD PARTY CONTENT, APPLIED HERE (MIN-360). It is
+       * the only writer of the column: laying the rule there is what makes it
+       * true of all front doors, including the one that no one has
+       * still written. A replay, routine, chain, or trigger run
+       * a mention reads text that minddy did not write — in microVM a
+       * injection costs a disposable VM, on someone's Mac it's a shell.
        */
       local_exec:
         input.localExec === true &&
@@ -479,8 +479,8 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
           chainId: input.chainId,
           pullRequestId: input.pullRequestId,
         }).ok,
-      // Cette option n'a de sens que pour un run effectivement local. La même
-      // garde que `local_exec` ferme les entrées automatisées / tierces.
+      // This option only makes sense for a truly local run. The same
+      // keeps `local_exec` closes automated/third-party entries.
       local_worktree:
         input.localWorktree === true &&
         input.localExec === true &&
@@ -497,9 +497,9 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
     if (error?.code === PG_UNIQUE_VIOLATION) throw new ActiveRunExistsError();
     throw new Error(error?.message ?? "Failed to create agent run");
   }
-  // Analytics (MIN-78) : le lancement est aussi tracké côté client, mais lui
-  // seul ne voit pas les runs déclenchés par mention ou relancés par le drain.
-  // Le prompt n'est jamais envoyé.
+  // Analytics (MIN-78): the launch is also tracked on the client side, but it
+  // only does not see runs triggered by mention or restarted by drain.
+  // The prompt is never sent.
   captureServerEvent({
     distinctId: input.createdBy ?? "agent:system",
     event: "agent_run_started",
@@ -509,13 +509,13 @@ export async function createRun(input: CreateRunInput): Promise<AgentRun> {
       reasoning_level: input.reasoningLevel,
       key_mode: input.keyMode,
       triggered_by: input.triggeredBy,
-      // Ce que le run DEMANDE (MIN-147) : sans ça, une chaîne d'automatisation
-      // ne se lit dans l'analytics que comme une rafale de lancements.
+      // What the run REQUESTS (MIN-147): without that, an automation chain
+      // only reads in analytics as a burst of launches.
       intent: input.intent ?? "implement",
       in_chain: !!input.chainId,
-      // Un passage de ROUTINE (MIN-185) : sans ce drapeau, l'analytics les lit
-      // comme des sessions carnet, et « combien de runs part-il tout seul ? »
-      // n'a pas de réponse.
+      // A ROUTINE passage (MIN-185): without this flag, analytics reads them
+      // like notebook sessions, and “how many runs does he go on his own?” »
+      // has no answer.
       in_routine: !!input.routineId,
       scope: runScope(input),
       has_base_branch: !!input.baseBranch,
@@ -550,20 +550,20 @@ export async function getRun(runId: string): Promise<AgentRun | null> {
 }
 
 /**
- * Le prochain tour qu'une coquille connectée peut réclamer (MIN-371).
+ * The next turn a connected shell can claim (MIN-371).
  *
- * La machine ne transmet que les projets pour lesquels elle possède un
- * attachement local. `created_by` garde les runs sur le compte qui les a
- * demandés : être membre du même projet ne permet pas de faire exécuter le run
- * d'un collègue sur son Mac.
+ * The machine only transmits projects for which it has a
+ * local attachment. `created_by` keeps runs on the account that got them
+ * requested: being a member of the same project does not allow the run to be executed
+ * from a colleague on his Mac.
  *
- * Cette lecture ne claim rien. Le CAS de `claimRun`, dans la route, départage
- * les coquilles qui auraient vu la même ligne entre cette lecture et le claim.
+ * This reading claims nothing. The CASE of `claimRun`, in the road, tiebreaker
+ * the shells which would have seen the same line between this reading and the claim.
  */
 export async function findQueuedLocalRunForMachine(input: {
   userId: string;
   projectIds: readonly string[];
-  /** Le client de session applique la RLS ; le défaut sert les appels internes. */
+  /** The session client applies RLS; the default serves internal calls. */
   client?: SupabaseClient;
 }): Promise<AgentRun | null> {
   if (input.projectIds.length === 0) return null;
@@ -595,11 +595,11 @@ export async function findQueuedLocalRunForMachine(input: {
 }
 
 /**
- * Replie vers le cloud un tour local que ce déploiement ne peut pas admettre.
+ * Fold to the cloud a local tour that this deployment cannot support.
  *
- * La garde est aussi importante que l'écriture : entre la sélection du run et
- * cette transition, une autre coquille peut l'avoir claim. Dans ce cas elle a
- * gagné et on ne change surtout pas l'environnement sous un tour déjà préparé.
+ * Guarding is as important as writing: between run selection and
+ * this transition, another shell may have claimed it. In this case she has
+ * won and we certainly do not change the environment under an already prepared turn.
  */
 export async function declineQueuedLocalRun(runId: string): Promise<AgentRun | null> {
   const { data, error } = await getServiceClient()
@@ -618,12 +618,12 @@ export async function declineQueuedLocalRun(runId: string): Promise<AgentRun | n
 }
 
 /**
- * DE QUOI JUGER LA NATURE D'UN RUN (MIN-360) — les quatre colonnes qui disent d'où
- * son contexte vient, et rien d'autre.
+ * HOW TO JUDGE THE NATURE OF A RUN (MIN-360) — the four columns which say from where
+ * its context comes, and nothing else.
  *
- * Lu par l'émission du bail ([local-exec.ts](local-exec.ts)), qui doit pouvoir
- * refuser AVANT de révoquer. `null` quand la ligne a disparu : l'appelant en tire
- * ce qu'il veut, et le bail, lui, échouera de toute façon un peu plus loin.
+ * Read by issuing the lease ([local-exec.ts](local-exec.ts)), which must be able to
+ * refuse BEFORE revoking. `null` when the line has disappeared: the caller draws
+ * what he wants, and the lease will fail a little further anyway.
  */
 export async function runLocalExecScopeRow(runId: string): Promise<{
   triggered_by: string | null;
@@ -640,24 +640,24 @@ export async function runLocalExecScopeRow(runId: string): Promise<{
 }
 
 /**
- * PREND LE BAIL D'EXÉCUTION LOCALE (MIN-355) : incrémente `local_exec_gen` et rend
- * la nouvelle génération, celle que le jeton portera.
+ * TAKES LOCAL EXECUTION LEASE (MIN-355): increment `local_exec_gen` and render
+ * the new generation, the one that the token will carry.
  *
- * C'est le geste de révocation autant que celui d'émission, et c'est voulu : un
- * jeton auto-porteur ne se rappelle pas, il se PÉRIME. Émettre le suivant est donc
- * la seule façon de tuer le précédent — d'où « une machine par run », qui devient
- * une propriété de la colonne plutôt qu'une règle que quelqu'un devrait faire
+ * It is the gesture of revocation as much as that of emission, and this is intended: a
+ * self-bearing token is not remembered, it EXPIRES. Emitting the following is therefore
+ * the only way to kill the previous one — hence “one machine per run”, which becomes
+ * a property of the column rather than a rule that someone should make
  * respecter.
  *
- * COMPARE-AND-SWAP plutôt qu'un `col = col + 1` : Postgrest ne sait pas écrire un
- * incrément, et une lecture suivie d'une écriture nue laisserait deux émissions
- * simultanées rendre la MÊME génération — donc deux machines valides sur un run
- * qui n'en admet qu'une. La garde `.eq("local_exec_gen", …)` fait que la seconde
- * n'écrit rien et recommence.
+ * COMPARE-AND-SWAP rather than a `col = col + 1`: Postgrest does not know how to write a
+ * increment, and a read followed by a bare write would leave two emissions
+ * simultaneous rendering of the SAME generation — therefore two valid machines on a run
+ * which only admits one. The guard `.eq("local_exec_gen", …)` makes the second
+ * Don't write anything and start again.
  *
- * `null` = ce run n'est pas un run local (garde `local_exec`), ou la ligne a
- * disparu. Un run de microVM n'a pas de bail à donner, et lui en donner un serait
- * exactement la bascule d'environnement à chaud que le mode figé interdit.
+ * `null` = this run is not a local run (keeps `local_exec`), or the line has
+ * disappeared. A microVM run has no lease to give, and giving it one would be
+ * exactly the hot environment toggle that frozen mode prohibits.
  */
 export async function bumpLocalExecGen(runId: string): Promise<number | null> {
   const service = getServiceClient();
@@ -686,10 +686,10 @@ export async function bumpLocalExecGen(runId: string): Promise<number | null> {
 }
 
 /**
- * Run ACTIF le plus récent qui cite l'issue, ou null. Ce n'est PAS un verrou :
- * plusieurs conversations indépendantes peuvent travailler sur le même ticket.
- * Les lecteurs historiques qui veulent seulement peindre « Numo travaille sur
- * ce ticket » utilisent ce représentant léger.
+ * Most recent ACTIVE run that cites the outcome, or null. This is NOT a lock:
+ * multiple independent conversations can work on the same ticket.
+ * Historical readers who only want to paint “Numo is working on
+ * this ticket” use this light representative.
  */
 export async function activeRunForIssue(issueId: string): Promise<AgentRun | null> {
   const service = getServiceClient();
@@ -704,9 +704,9 @@ export async function activeRunForIssue(issueId: string): Promise<AgentRun | nul
   return (data as AgentRun | null) ?? null;
 }
 
-/** Run ACTIF d'une chaîne d'automatisation. Le ticket n'est plus un verrou :
- * plusieurs conversations peuvent le citer, tandis qu'une chaîne doit suivre
- * et interrompre uniquement l'exécution qui lui appartient. */
+/** Run ACTIVE of an automation chain. The ticket is no longer a lock:
+ * several conversations can cite it, while a chain must follow
+ * and interrupt only the execution that belongs to it. */
 export async function activeRunForChain(chainId: string): Promise<AgentRun | null> {
   const service = getServiceClient();
   const { data } = await service
@@ -721,12 +721,12 @@ export async function activeRunForChain(chainId: string): Promise<AgentRun | nul
 }
 
 /**
- * Run ACTIF (queued/running) de la PULL REQUEST, ou null (MIN-168). Même règle
- * que pour un ticket, pour la même raison : deux sessions de review sur le même
- * diff, c'est deux fois la dépense pour deux fois le même avis — et deux jeux de
- * commentaires sur la PR. L'index partiel unique `idx_agent_runs_active_pr` en
- * garantit au plus un ; le tri + `limit(1)` reste le garde-fou (`maybeSingle`
- * lèverait au lieu de répondre si des données antérieures en portaient deux).
+ * Run ACTIVE (queued/running) of the PULL REQUEST, or null (MIN-168). Same rule
+ * than for a ticket, for the same reason: two review sessions on the same
+ * diff is twice the expense for twice the same opinion — and two sets of
+ * comments on PR. The unique partial index `idx_agent_runs_active_pr` in
+ * guarantees at most one; sorting + `limit(1)` remains the safeguard (`maybeSingle`
+ * would raise instead of answering if previous data carried two).
  */
 export async function activeRunForPullRequest(
   pullRequestId: string,
@@ -744,11 +744,11 @@ export async function activeRunForPullRequest(
 }
 
 /**
- * Run ACTIF (queued/running) de la ROUTINE, ou null (MIN-185). Une routine ne se
- * marche pas dessus : un passage qui traîne (quota, sandbox lente) ne doit pas
- * se faire doubler par l'échéance suivante — deux passages parallèles sur la
- * même instruction, c'est deux fois la dépense pour deux fois le même travail,
- * et potentiellement deux pull requests. L'index partiel unique
+ * Run ACTIVE (queued/running) of the ROUTINE, or null (MIN-185). A routine does not
+ * do not walk on it: a passage that drags (quota, slow sandbox) must not
+ * to be overtaken by the next deadline — two parallel passages on the
+ * same instruction, it's twice the expense for twice the same work,
+ * and potentially two pull requests. The unique partial index
  * `idx_agent_runs_active_routine` en garantit au plus un.
  */
 export async function activeRunForRoutine(routineId: string): Promise<AgentRun | null> {
@@ -765,9 +765,9 @@ export async function activeRunForRoutine(routineId: string): Promise<AgentRun |
 }
 
 /**
- * Les « Exécutions précédentes » d'une routine (MIN-185), la plus récente en
- * tête. C'est LE seul endroit où les runs d'une routine se lisent : ils sont
- * exclus de `/api/agent-runs`, donc de la colonne des conversations.
+ * The “Previous Executions” of a routine (MIN-185), the most recent in
+ * head. This is THE only place where the runs of a routine can be read: they are
+ * excluded from `/api/agent-runs`, therefore from the conversations column.
  */
 export async function runsForRoutine(routineId: string, limit = 50): Promise<AgentRun[]> {
   const service = getServiceClient();
@@ -781,10 +781,10 @@ export async function runsForRoutine(routineId: string, limit = 50): Promise<Age
 }
 
 /**
- * La DERNIÈRE session de review de cette pull request, quel que soit son état —
- * c'est elle que la carte du fil et le menu Review montrent. `viewerId` n'est pas
- * demandé : contrairement à l'ancienne passe, un run de PR est visible de tous
- * les membres du projet (cf. la policy de MIN-168).
+ * The LAST review session for this pull request, regardless of its status —
+ * this is what the thread map and the Review menu show. `viewerId` is not
+ * requested: unlike the old pass, a PR run is visible to everyone
+ * the members of the project (see the MIN-168 policy).
  */
 export async function latestRunForPullRequest(
   pullRequestId: string,
@@ -801,9 +801,9 @@ export async function latestRunForPullRequest(
 }
 
 /**
- * Le sha relu par la dernière review TERMINÉE de cette PR. Comparé à la tête
- * courante par l'écran : tant qu'ils sont égaux, relancer repaierait un run
- * entier pour exactement le même code.
+ * The sha reread by the last COMPLETED review of this PR. Compared to the head
+ * current by the screen: as long as they are equal, restarting would pay for a run
+ * integer for exactly the same code.
  */
 export async function lastReviewedShaForPullRequest(
   pullRequestId: string,
@@ -821,26 +821,26 @@ export async function lastReviewedShaForPullRequest(
   return (data as { pr_head_sha?: string | null } | null)?.pr_head_sha ?? null;
 }
 
-/** Workspace existant repris explicitement via une pull request. */
+/** Existing workspace explicitly taken over via a pull request. */
 export interface InheritableWork {
   branchName: string;
   baseBranch: string | null;
-  /** PR de la lignée, si une a été ouverte (la création de PR est optionnelle). */
+  /** PR of the lineage, if one has been opened (the creation of PR is optional). */
   prNumber: number | null;
   prUrl: string | null;
   prState: AgentRun["pr_state"];
 }
 
 /**
- * Reprend explicitement le workspace d'une pull request existante.
+ * Explicitly takes over the workspace of an existing pull request.
  *
- * La lignée est ici indexée sur la PULL REQUEST — c'est-à-dire sur les runs qui
- * portent son numéro dans ce dépôt (`pr_number`, la colonne qui dit « ce run a
- * OUVERT cette PR »). Un run de RELECTURE ne la porte jamais (cf. MIN-168), il ne
- * peut donc pas être pris pour une lignée de travail.
+ * The lineage is here indexed on the PULL REQUEST — that is to say on the runs which
+ * bear its number in this repository (`pr_number`, the column that says “this run has
+ * OPEN this PR"). A REREADING run never carries it (see MIN-168), it
+ * therefore cannot be taken for a working lineage.
  *
- * Mêmes règles qu'au ticket : la run la plus récente qui porte une branche gagne,
- * et une PR `merged` ne se reprend pas (le travail est livré).
+ * Same rules as for the ticket: the most recent run which carries a branch wins,
+ * and a PR `merged` is not resumed (the work is delivered).
  */
 export async function inheritableWorkForPr(opts: {
   repoFullName: string;
@@ -878,11 +878,11 @@ export async function inheritableWorkForPr(opts: {
 }
 
 /**
- * Run ACTIF (queued/running) portant cette PR, ou null (MIN-292). C'est la règle
- * « un seul agent à la fois » écrite pour une lignée SANS ticket : sans elle,
- * deux relances sur la même pull request pousseraient sur la même branche en
- * parallèle. Aucun index unique ne la garantit en base (les runs carnet n'en ont
- * pas) — cette lecture est donc la garde, pas un garde-fou.
+ * Run ACTIVE (queued/running) carrying this PR, or null (MIN-292). This is the rule
+ * “one agent at a time” written for a lineage WITHOUT a ticket: without it,
+ * two relaunches on the same pull request would push on the same branch in
+ * parallel. No single index guarantees it as a base (book runs do not have one).
+ * not) — this reading is therefore the guard, not a safeguard.
  */
 export async function activeRunForPrNumber(opts: {
   repoFullName: string;
@@ -904,11 +904,11 @@ export async function activeRunForPrNumber(opts: {
 }
 
 /**
- * Une run PLUS ANCIENNE de l'issue a-t-elle déjà travaillé cette branche ?
- * Distingue, à l'amorce d'une run sans checkpoint, une branche HÉRITÉE (elle porte
- * le travail d'une session précédente → message d'héritage) de la branche NEUVE
- * d'un premier chunk re-tenté après crash (générée puis stampée par le chunk mort,
- * sans aucun passé — un message d'héritage y serait mensonger).
+ * Has an OLDER run of the issue already worked this branch?
+ * Distinguishes, at the start of a run without checkpoint, an INHERITANCE branch (it carries
+ * the work of a previous session → inheritance message) of the NEW branch
+ * a first chunk re-attempted after crash (generated then stamped by the dead chunk,
+ * without any past — a message of heritage would be misleading).
  */
 export async function branchHasPriorRun(
   issueId: string,
@@ -927,10 +927,10 @@ export async function branchHasPriorRun(
 }
 
 /**
- * Résumé de la run précédente de l'issue (son `outcome` = la DERNIÈRE RÉPONSE de
- * l'agent, capée). Injecté dans le prompt d'AMORCE d'une run froide : elle n'hérite
- * d'aucun checkpoint, ce résumé est son seul lien avec ce qui a été fait avant.
- * Exclut la run courante. Restreint aux runs `completed` avec un `outcome`.
+ * Summary of the previous run of the outcome (its `outcome` = the LAST RESPONSE of
+ * the agent, cape). Injected in the START prompt of a cold run: it does not inherit
+ * of any checkpoint, this summary is its only link with what has been done before.
+ * Excludes the current run. Restricted to `completed` runs with a `outcome`.
  */
 export async function previousRunSummaryForIssue(
   issueId: string,
@@ -952,10 +952,10 @@ export async function previousRunSummaryForIssue(
 }
 
 /**
- * Résumé de la run précédente d'une PULL REQUEST (MIN-292) — même rôle que
- * `previousRunSummaryForIssue`, pour une lignée qui n'a pas de ticket : sans lui,
- * une relance sur une PR de carnet repartirait sans le moindre lien avec ce que
- * la session précédente a fait, et le raconterait à l'agent comme un premier jour.
+ * Summary of the previous run of a PULL REQUEST (MIN-292) — same role as
+ * `previousRunSummaryForIssue`, for a lineage which does not have a ticket: without it,
+ * a relaunch on a notebook PR would leave without the slightest link with what
+ * the previous session did, and would tell the agent about it as a first day.
  */
 export async function previousRunSummaryForPr(
   opts: {
@@ -984,24 +984,24 @@ export async function previousRunSummaryForPr(
 }
 
 /**
- * L'OCTET NUL, RETIRÉ AVANT LA BASE (MIN-286) — et ce n'est pas de l'hygiène,
- * c'est un tour d'agent qui meurt.
+ * THE NULL BYTE, REMOVED BEFORE THE BASE (MIN-286) — and this is not hygiene,
+ * it's a trick of an agent who dies.
  *
- * Postgres ne sait pas stocker `\u0000` dans une chaîne, ni en `text` ni dans un
- * `jsonb` : l'écriture entière est refusée, avec `unsupported Unicode escape
- * sequence`. Or ce que nous écrivons vient d'un MODÈLE et de son shell — la
- * sortie d'une commande qui lit un binaire, un fichier de log tronqué au milieu
- * d'un caractère, le journal d'événements d'opencode qui les transporte. Un seul
- * de ces octets et c'est la LIGNE qui ne s'écrit plus : plus de sauvegarde de
- * checkpoint, donc plus de battement de cœur, et le rapport de fin de tour
- * refusé lui aussi. Vécu en production le 2026-08-12 (runs `66023558`,
- * `a8051d06`) : le tour se figeait, le fil restait « en cours », et le chien de
- * garde finissait par ranger le run en « le processus s'est arrêté ».
+ * Postgres does not know how to store `\u0000` in a string, nor in `text` nor in a
+ * `jsonb`: the entire write is refused, with `unsupported Unicode escape
+ * sequence`. But what we write comes from a MODEL and its shell — the
+ * output of a command that reads a binary, log file truncated in the middle
+ * of a character, the opencode event log that carries them. Only one
+ * of these bytes and it is the LINE which is no longer written: no more saving of
+ * checkpoint, so no more heartbeat, and the end of turn report
+ * refused him too. Lived in production on 2026-08-12 (runs `66023558`,
+ * `a8051d06`): the trick froze, the thread remained “in progress”, and the dog
+ * guard ended up putting the run away as “the process has stopped”.
  *
- * On le RETIRE plutôt que de refuser l'écriture : cet octet n'a aucune valeur
- * pour un lecteur humain ni pour le modèle, et le perdre coûte infiniment moins
- * que perdre le tour. Les substituts de surrogates isolés tombent avec, pour la
- * même raison — `JSON.parse` côté Postgres les refuse tout autant.
+ * We REMOVE it rather than refusing the write: this byte has no value
+ * for a human reader nor for the model, and losing it costs infinitely less
+ * than lose the turn. Isolated surrogate substitutes fall with, for the
+ * same reason — `JSON.parse` on the Postgres side refuses them just as much.
  */
 const NUL_AND_LONE_SURROGATES =
   // oxlint-disable-next-line no-control-regex
@@ -1009,8 +1009,8 @@ const NUL_AND_LONE_SURROGATES =
 
 export function stripUnstorable<T>(value: T): T {
   if (typeof value === "string") {
-    // `replace` remet `lastIndex` à zéro, `test` NON : sonder d'abord ferait
-    // sauter un caractère sur deux d'une chaîne à l'autre.
+    // `replace` resets `lastIndex` to zero, `test` NO: probing first would
+    // skip every other character from one string to another.
     return value.replace(NUL_AND_LONE_SURROGATES, "") as T;
   }
   if (Array.isArray(value)) return value.map((item) => stripUnstorable(item)) as T;
@@ -1036,7 +1036,7 @@ export interface StampFields {
   pr_number?: number | null;
   pr_url?: string | null;
   pr_state?: AgentRun["pr_state"];
-  /** Sha relu par une session de relecture, recalé sur la forge à l'amorce. */
+  /** Sha reread by a proofreading session, failed on the forge at the beginning. */
   pr_head_sha?: string | null;
   cost_usd?: number;
   outcome?: string | null;
@@ -1045,22 +1045,22 @@ export interface StampFields {
   interrupt_requested?: boolean;
   sandbox_stopped_at?: string | null;
   awaiting_input?: boolean;
-  /** Verdict d'une étape de vérification de chaîne (tool `report_verdict`). */
+  /** Verdict of a string verification step (tool `report_verdict`). */
   verdict?: AgentRunVerdict | null;
-  /** Clé LLM du run à révoquer (MIN-223). */
+  /** LLM key of the run to be revoked (MIN-223). */
   provider_key_id?: string | null;
-  /** Commande qui porte la boucle dans la microVM (MIN-224). */
+  /** Command that carries the loop in the microVM (MIN-224). */
   loop_command_id?: string | null;
 }
 
 /**
- * Met à jour un run en gardant la transition (`.in('status', guard)`, défaut
- * ['running']) : un run annulé/déjà terminé n'est jamais réécrit par un chunk en
- * retard. Renvoie le run mis à jour, ou null si la garde n'a pas matché.
+ * Updates a run while keeping the transition (`.in('status', guard)`, default
+ * ['running']): a canceled/already finished run is never rewritten by a chunk in
+ * delay. Returns the updated run, or null if the guard did not match.
  *
- * Null couvre aussi l'échec (garde perdue, contrainte, panne de base). On le
+ * Null also covers failure (lost guard, duress, basic breakdown). We
  * trace au lieu de l'avaler en silence : un appelant
- * qui ignore le null croirait le run relancé alors qu'il ne le sera jamais.
+ * who ignores the null would believe the run to be restarted when it never will be.
  */
 export async function stampRun(
   runId: string,
@@ -1071,15 +1071,15 @@ export async function stampRun(
 }
 
 /**
- * LE MÊME STAMP, MAIS QUI DIT POURQUOI IL N'A PAS ÉCRIT (MIN-286).
+ * THE SAME STAMP, BUT WHO SAYS WHY HE DIDN'T WRITE (MIN-286).
  *
- * `null` recouvre deux choses que rien ne distinguait, et qui appellent des
- * conduites opposées : **la garde n'a pas matché** (quelqu'un a conclu ce run —
- * il faut s'arrêter) et **l'écriture a échoué** (panne de base, octet nul, coupure
- * réseau — il faut retenter). Le plan de contrôle rendait 409 dans les deux cas,
- * et le superviseur lit un 409 comme « le run n'existe plus » : une sauvegarde de
- * checkpoint refusée par la base TUAIT donc le tour en cours, en silence et sans
- * qu'il ait rien fait de mal. Vécu en production le 2026-08-12.
+ * `null` covers two things that nothing distinguishes, and which call for
+ * opposing conducts: **the guard did not match** (someone concluded this run —
+ * must stop) and **write failed** (basic failure, null byte, cut
+ * network — you have to try again). The control plan returned 409 in both cases,
+ * and the supervisor reads a 409 like “the run no longer exists”: a backup of
+ * checkpoint refused by the base KILLED the current round, silently and without
+ * that he has done nothing wrong. Lived in production on 2026-08-12.
  */
 export async function stampRunResult(
   runId: string,
@@ -1090,8 +1090,8 @@ export async function stampRunResult(
   const guard = opts?.guard ?? ["running"];
   const { data, error } = await service
     .from("agent_runs")
-    // Ce qu'on écrit ici vient du modèle et de son shell (checkpoint, résumé,
-    // message d'erreur) : un octet nul dedans ferait refuser la ligne ENTIÈRE.
+    // What we write here comes from the model and its shell (checkpoint, summary,
+    // error message): a null byte in it would cause the ENTIRE line to be refused.
     .update(stripUnstorable(fields))
     .eq("id", runId)
     .in("status", guard)
@@ -1104,10 +1104,10 @@ export async function stampRunResult(
     );
   }
 
-  // Fin de run (MIN-78). Tracké ici et non dans la boucle d'exécution : c'est
-  // le passage OBLIGÉ vers un statut terminal, et le `.in(status, guard)`
-  // garantit qu'une seule mise à jour gagne — donc un seul événement par run,
-  // même si plusieurs chunks tentent de conclure.
+  // End of run (MIN-78). Tracked here and not in the execution loop: this is
+  // the MANDATORY transition to a terminal status, and the `.in(status, guard)`
+  // guarantees that only one update wins — so only one event per run,
+  // even if several chunks try to conclude.
   const run = (data as AgentRun | null) ?? null;
   if (run && TERMINAL_RUN_STATUSES.has(run.status)) {
     captureServerEvent({
@@ -1127,21 +1127,21 @@ export async function stampRunResult(
       },
       groups: { project: run.project_id },
     });
-    // Automatisations (MIN-147) : le MÊME passage obligé sert de crochet de fin
+    // Automations (MIN-147): the SAME obligatory passage serves as an ending hook
     // de run. `execute.ts` a huit chemins de repos, pas quatre — fin de tour,
-    // budget épuisé, erreur LLM, interruption ×2, garde-fou anti-runaway, erreur
-    // d'amorçage ×2 — et tous convergent ici. La garde de transition ci-dessus
-    // assure qu'un seul gagne, donc un seul avancement de chaîne. Le re-queue de
-    // steering (`queued`, non terminal) en est exclu d'office.
+    // budget exhausted, LLM error, interrupt ×2, anti-runaway guardrail, error
+    // seed ×2 — and all converge here. The transitional guard above
+    // ensures that only one wins, therefore only one chain advancement. The re-tail of
+    // steering (`queued`, non-terminal) is automatically excluded.
     if (run.chain_id) notifyChainOfRunEnd(run);
-    // Même passage obligé pour une ROUTINE (MIN-185) : son propriétaire apprend
-    // qu'une pull request est là ou que le passage a échoué, et la routine
-    // elle-même retient l'issue du dernier passage.
+    // Same obligatory passage for a ROUTINE (MIN-185): its owner learns
+    // that a pull request is there or that the pass failed, and the routine
+    // itself retains the outcome of the last passage.
     //
-    // `afterOrNow` et non une promesse détachée : la réponse HTTP peut partir
-    // avant que ces deux écritures aboutissent, et une promesse que personne ne
-    // retient meurt avec l'invocation (cf. lib/server/after-safe.ts). Ce qui se
-    // perdrait ici, c'est l'alerte de budget épuisé qu'on vient précisément de
+    // `afterOrNow` and not a detached promise: the HTTP response can go
+    // before these two scriptures come to fruition, and a promise that no one
+    // retain dies with the invocation (see lib/server/after-safe.ts). What happens
+    // would lose here, it is the exhausted budget alert that we have just
     // rendre visible.
     if (run.routine_id) {
       afterOrNow(async () => {
@@ -1154,11 +1154,11 @@ export async function stampRunResult(
 }
 
 /**
- * Inbox (MIN-82) : prévient le LANCEUR du run — question posée, tour terminé,
- * échec. C'est le seul endroit où « se notifier soi-même » est voulu : l'acteur
- * est l'agent, pas l'utilisateur. `replaceUnread` garde au plus une
- * notification agent non lue par ticket (une longue session n'empile pas un
- * « terminé » par tour). Best-effort — ne casse jamais le run.
+ * Inbox (MIN-82): warns the LAUNCHER of the run — question asked, round completed,
+ * failure. This is the only place where “notifying oneself” is desired: the actor
+ * is the agent, not the user. `replaceUnread` keeps at most one
+ * agent notification not read by ticket (a long session does not stack a
+ * “finished” per turn). Best effort — never breaks the run.
  */
 export async function notifyAgentRun(
   run: {
@@ -1191,18 +1191,18 @@ export async function notifyAgentRun(
 }
 
 
-/** Run affecté par une synchro PR (pour aligner le statut d'issue côté appelant).
-    `issueId` null = run carnet : aucune issue à aligner. */
+/** Run affected by a PR sync (to align the issue status on the calling side).
+    `issueId` null = run notebook: no issue to align. */
 export interface SyncedPrRun {
   id: string;
   issueId: string | null;
   createdBy: string | null;
-  /** Projet porteur — la notification d'inbox en a besoin pour ranger la ligne. */
+  /** Supporting project — the inbox notification needs it to tidy up the line. */
   projectId: string;
 }
 
-/** Colonnes lues par les deux résolutions de runs d'une PR (`findRunsForPr` et
-    `syncPrState`) — à garder alignées sur `SyncedPrRun`. */
+/** Columns read by the two run resolutions of a PR (`findRunsForPr` and
+    `syncPrState`) — to keep aligned with `SyncedPrRun`. */
 const SYNCED_PR_RUN_COLUMNS = "id, issue_id, created_by, project_id";
 
 interface RawSyncedPrRun {
@@ -1221,11 +1221,11 @@ function toSyncedPrRun(r: RawSyncedPrRun): SyncedPrRun {
   };
 }
 
-/** Ids des liaisons projet↔dépôt pour `repoFullName` (un numéro de PR est unique
-    par dépôt ; plusieurs projets peuvent lier le même dépôt). Filtré par
-    PROVIDER (MIN-69) : `owner/name` n'est unique QUE par forge — sans ce filtre,
-    un webhook GitLab pour `acme/app` tamponnerait les runs d'un dépôt GitHub
-    homonyme (miroirs, forks migrés), et réciproquement. */
+/** Ids of project↔deposit links for `repoFullName` (a PR number is unique
+    by deposit; several projects can link the same repository). Filtered by
+    PROVIDER (MIN-69): `owner/name` is ONLY unique by forge — without this filter,
+    a GitLab webhook for `acme/app` would buffer runs from a GitHub repository
+    homonym (mirrors, migrated forks), and vice versa. */
 async function repoLinkIds(
   service: ReturnType<typeof getServiceClient>,
   repoFullName: string,
@@ -1240,9 +1240,9 @@ async function repoLinkIds(
 }
 
 /**
- * Runs ayant ouvert la PR `prNumber` sur le dépôt `repoFullName` (lecture seule,
- * sans toucher à l'état PR). Utilisé par le webhook des reviews GitHub, qui doit
- * retrouver l'issue liée sans modifier le cycle draft/open/merged/closed.
+ * Runs having opened PR `prNumber` on repository `repoFullName` (read only,
+ * without touching the PR state). Used by the GitHub reviews webhook, which should
+ * find the linked outcome without modifying the draft/open/merged/closed cycle.
  */
 export async function findRunsForPr(opts: {
   repoFullName: string;
@@ -1261,9 +1261,9 @@ export async function findRunsForPr(opts: {
 }
 
 /**
- * Synchronise l'état PR des runs qui ont ouvert la PR `prNumber` sur le dépôt
- * `repoFullName` (appelé par le webhook GitHub). Best-effort. Renvoie les runs
- * touchés pour que l'appelant aligne le statut de leur issue (in_review / done /
+ * Synchronizes the PR state of runs that opened PR `prNumber` on the repository
+ * `repoFullName` (called by the GitHub webhook). Best-effort. Return runs
+ * touched for the caller to align the status of their issue (in_review / done /
  * canceled).
  */
 export async function syncPrState(opts: {
@@ -1292,8 +1292,8 @@ export async function syncPrState(opts: {
 }
 
 /**
- * Ajoute un message utilisateur à la file de steering d'un run (drainé par la
- * boucle à la frontière de round). Service client — l'endpoint authentifie avant.
+ * Adds a user message to the steering queue of a run (drained by the
+ * loop at the border of round). Customer service — the endpoint authenticates before.
  */
 export async function insertRunMessage(
   runId: string,
@@ -1308,23 +1308,23 @@ export async function insertRunMessage(
       run_id: runId,
       created_by: userId,
       content: stripUnstorable(content),
-      // Les labels des mentions viennent de titres et de noms : ils passent par
-      // le même filtre que le texte, sinon un octet nul dedans ferait refuser
-      // l'insert jsonb — et le message avec.
+      // The labels of mentions come from titles and names: they go through
+      // the same filter as the text, otherwise a null byte in it would cause it to be refused
+      // the jsonb insert — and the message with it.
       ...(mentions?.length ? { mentions: stripUnstorable(mentions) } : {}),
     });
-  // Un insert refusé (RLS, contrainte, octet nul) revient dans `{ error }` sans
-  // lever : sans ce contrôle, la route répondait `ok` sur un message que
-  // PERSONNE n'avait mis en file — accepté à l'écran, jamais joué, disparu au
-  // rechargement. L'appelant en fait une erreur HTTP, donc une bulle retirée et
-  // un motif à l'écran.
+  // A refused insert (RLS, constraint, null byte) returns in `{ error }` without
+  // raise: without this check, the route responded `ok` on a message that
+  // NO ONE had lined up — accepted on screen, never played, disappeared at
+  // reloading. The caller makes an HTTP error, so a bubble removed and
+  // a pattern on the screen.
   if (error) throw new Error(`agent_run_messages insert failed: ${error.message}`);
 }
 
 /**
- * Draine (atomiquement) les messages de steering non consommés d'un run : les
- * marque consommés et renvoie leur contenu, ordre chronologique. Appelé au SOMMET
- * de chaque round de la boucle. Un run n'a qu'UN écrivain à la fois (le claimer).
+ * Drains (atomically) the unconsumed steering messages from a run:
+ * mark consumed and returns their content, chronological order. Called to the SUMMIT
+ * of each round of the loop. A run has only ONE writer at a time (the claimer).
  */
 export async function pullPendingMessages(runId: string): Promise<AgentUserMessage[]> {
   const service = getServiceClient();
@@ -1335,12 +1335,12 @@ export async function pullPendingMessages(runId: string): Promise<AgentUserMessa
     .is("consumed_at", null)
     .select("content, mentions, created_at");
   /**
-   * UN DRAIN QUI ÉCHOUE SE DIT. Ce `return []` veut dire « personne ne t'a rien
-   * écrit » au tour qui appelle : une colonne manquante (migration pas encore
-   * poussée), une RLS, une panne — et les messages de l'utilisateur
-   * disparaissent en silence, alors qu'ils sont TOUJOURS en file, non consommés.
-   * Le symptôme est le plus déroutant du produit : « il ne me répond pas », sans
-   * une ligne nulle part.
+   * A DRAIN THAT FAILS IS SAYING. This `return []` means “no one has anything for you
+   * written » to the calling turn: a missing column (migration not yet
+   * thrust), EPIRB, failure — and user messages
+   * disappear silently, while they are STILL in line, uneaten.
+   * The symptom is the most confusing of the product: “it does not respond to me”, without
+   * a line nowhere.
    */
   if (error) {
     console.error("[agent-runs] pullPendingMessages failed:", error.message);
@@ -1356,22 +1356,22 @@ export async function pullPendingMessages(runId: string): Promise<AgentUserMessa
 }
 
 /**
- * Rafraîchit l'horloge d'inactivité du run (heartbeat client, steer, entrée au
- * repos). Best-effort. Empêche le reaper de couper la sandbox pendant l'usage.
+ * Refreshes the run inactivity clock (client heartbeat, steer, input to
+ * rest). Best-effort. Prevents the reaper from cutting the sandbox while in use.
  *
- * JAMAIS SUR UN RUN QUI TRAVAILLE, et c'est tout l'intérêt de cette ligne.
- * `last_activity_at` sert à DEUX lecteurs, sur deux populations disjointes
- * ([drain.ts](drain.ts)) : le reaper d'inactivité, qui ne regarde que les runs AU
- * REPOS, et le chien de garde des microVM, qui ne regarde que les runs `running`.
- * Un bump pendant que le run travaille n'apporte donc rien au premier — et il
- * AVEUGLE le second : la conversation ouverte dans un onglet bat toutes les 45 s,
- * le chien de garde ne sonde qu'après trois minutes de silence, et un tour dont
- * le process est mort restait `running` pour toujours tant que quelqu'un le
- * regardait. C'est-à-dire exactement quand on le regardait le plus — impossible à
- * arrêter, impossible à guider, et supprimé à la main en production.
+ * NEVER ON A RUN THAT WORKS, and that’s the whole point of this line.
+ * `last_activity_at` is used for TWO readers, on two disjoint populations
+ * ([drain.ts](drain.ts)): the inactivity reaper, which only looks at AU runs
+ * REST, and the microVM watchdog, which only watches `running` runs.
+ * A bump while the run is working therefore brings nothing to the first - and it
+ * BLIND the second: the conversation opened in a tab beats every 45 s,
+ * the watchdog only probes after three minutes of silence, and a turn of which
+ * the process died remained `running` forever as long as someone
+ * looked. That is to say exactly when we looked at him the most — impossible to
+ * stop, unguideable, and deleted by hand in production.
  *
- * Sur un run `running`, ce champ n'a donc qu'un seul écrivain : la boucle
- * elle-même (sa sauvegarde périodique de checkpoint, cf. `control-plane.ts`).
+ * On a `running` run, this field therefore has only one writer: the loop
+ * itself (its periodic checkpoint backup, cf. `control-plane.ts`).
  */
 export async function bumpRunActivity(runId: string): Promise<void> {
   try {
@@ -1387,20 +1387,20 @@ export async function bumpRunActivity(runId: string): Promise<void> {
 }
 
 /**
- * QUELQU'UN D'AUTRE QUE SON CRÉATEUR A-T-IL PARLÉ À CE RUN ? (MIN-326)
+ * DID ANYONE OTHER THAN ITS CREATOR SPEAK TO THIS RUN? (MIN-326)
  *
- * N'importe quel membre du projet peut reprendre un run à chaud
- * ([steer](../../../app/api/agent-runs/[runId]/steer/route.ts)) : le tour repart
- * alors sur la consigne d'un tiers, mais avec l'identité du CRÉATEUR — dont le
- * carnet est personnel. C'est cette question-là que le plan de contrôle pose
- * avant d'ouvrir le carnet.
+ * Any member of the project can resume a hot run
+ * ([steer](../../../app/api/agent-runs/[runId]/steer/route.ts)): the tour starts again
+ * then on the instructions of a third party, but with the identity of the CREATOR - whose
+ * notebook is personal. This is the question that the control plan asks
+ * before opening the notebook.
  *
- * Elle porte sur la VIE DU RUN et pas sur le tour en cours : une consigne reste
- * dans l'historique de la conversation et gouverne aussi les tours suivants.
+ * It concerns the LIFE OF THE RUN and not the current round: an instruction remains
+ * in the conversation history and also governs subsequent turns.
  *
- * Une lecture en panne répond `true` — le carnet se ferme plutôt que de s'ouvrir
- * sur un doute. C'est le seul sens sûr : le pire cas est un tool qui refuse, pas
- * la note privée de quelqu'un réécrite par l'agent d'un collègue.
+ * A failed read responds `true` — the notebook closes rather than opening
+ * on a doubt. This is the only sure meaning: the worst case is a tool which refuses, not
+ * someone's private note rewritten by a colleague's agent.
  */
 export async function runSteeredByOther(runId: string, ownerId: string): Promise<boolean> {
   const service = getServiceClient();
@@ -1419,8 +1419,8 @@ export async function runSteeredByOther(runId: string, ownerId: string): Promise
 }
 
 /**
- * Demande l'interruption de la réponse en cours (« Stop »). Ne pose le drapeau que
- * sur un run qui TRAVAILLE (queued/running) — le chunk actif le lit et suspend
+ * Requests the interruption of the current response (“Stop”). Only place the flag
+ * on a WORKING run (queued/running) — the active chunk reads it and suspends
  * proprement au repos. N'annule rien, ne touche ni checkpoint ni sandbox.
  */
 export async function requestInterrupt(runId: string): Promise<void> {
@@ -1432,7 +1432,7 @@ export async function requestInterrupt(runId: string): Promise<void> {
     .in("status", ["queued", "running"]);
 }
 
-/** Lit le drapeau d'interruption (poll par la boucle : frontière de round + stream). */
+/** Reads the interrupt flag (poll via loop: round boundary + stream). */
 export async function readInterruptFlag(runId: string): Promise<boolean> {
   const service = getServiceClient();
   const { data } = await service
@@ -1443,7 +1443,7 @@ export async function readInterruptFlag(runId: string): Promise<boolean> {
   return Boolean((data as { interrupt_requested?: boolean } | null)?.interrupt_requested);
 }
 
-/** Réinitialise le drapeau d'interruption (une fois consommé par l'exécuteur). */
+/** Resets the interrupt flag (once consumed by the executor). */
 export async function clearInterrupt(runId: string): Promise<void> {
   const service = getServiceClient();
   await service
@@ -1453,10 +1453,10 @@ export async function clearInterrupt(runId: string): Promise<void> {
 }
 
 /**
- * Reste-t-il des messages de steering NON consommés ? Sert à décider, en fin de
- * tour, s'il faut RE-QUEUER (un message arrivé pendant la phase de finalisation,
- * après la dernière frontière de round, ne serait sinon traité qu'à l'action
- * utilisateur suivante).
+ * Are there any UNconsumed steering messages remaining? Used to decide, at the end of
+ * turn, if it is necessary to RE-QUEUE (a message arrived during the finalization phase,
+ * after the last round boundary, would otherwise only be processed in action
+ * next user).
  */
 export async function hasPendingRunMessages(runId: string): Promise<boolean> {
   const service = getServiceClient();
@@ -1469,33 +1469,33 @@ export async function hasPendingRunMessages(runId: string): Promise<boolean> {
   return ((data ?? []) as unknown[]).length > 0;
 }
 
-/** Violation d'unicité Postgres — ici, `idx_agent_run_events_run_seq`. */
+/** Postgres uniqueness violation — here, `idx_agent_run_events_run_seq`. */
 const UNIQUE_VIOLATION = "23505";
 /**
- * Recalculs de `seq` sur collision. Deux émetteurs (le parent et un sous-agent,
- * MIN-112) peuvent lire le même max(seq) et tenter le même numéro : le perdant
- * recalcule. Trois reprises couvrent largement le parallélisme réel (au plus
- * quelques sous-agents), et le compteur ne peut que MONTER — chaque tour de boucle
- * relit un max déjà avancé par le gagnant.
+ * Recalculations of `seq` on collision. Two senders (the parent and a subagent,
+ * MIN-112) can read the same max(seq) and try the same number: the loser
+ * recalculates. Three covers largely cover the real parallelism (at most
+ * a few subagents), and the counter can only UP — each loop of the loop
+ * rereads a maximum already advanced by the winner.
  */
 const APPEND_EVENT_MAX_ATTEMPTS = 4;
 
 /**
- * Ajoute un event au flux du live view (seq monotone par run). Best-effort : le
- * suivi ne doit jamais faire échouer le run.
+ * Adds an event to the live view stream (monotonic seq per run). Best effort:
+ * followed should never cause the run to fail.
  *
- * `seq` se calcule en LISANT le max puis en insérant, et `idx_agent_run_events_run_seq`
- * est UNIQUE. C'était sûr tant que la boucle émettait en série ; depuis les
- * sous-agents (MIN-112), une fille émet EN MÊME TEMPS que son parent — même max lu,
- * même `seq` tenté, insert refusé, event AVALÉ (le code loguait et rendait la main).
- * D'où la reprise sur violation d'unicité. Le second garde-fou est chez l'appelant :
- * `execute.ts` sérialise les emits d'un chunk derrière une chaîne de promesses, pour
+ * `seq` is calculated by READING the max then inserting, and `idx_agent_run_events_run_seq`
+ * is UNIQUE. It was safe as long as the loop transmitted serially; since the
+ * subagents (MIN-112), a daughter transmits AT THE SAME TIME as her parent — even max read,
+ * even `seq` attempted, insert refused, event SWALLOWED (the code logged and returned control).
+ * Hence the recovery on uniqueness violation. The second safeguard is with the appellant:
+ * `execute.ts` serializes the emits of a chunk behind a chain of promises, to
  * que l'ORDRE du fil reste celui des faits — cette reprise-ci ne garantit que de ne
  * rien PERDRE, pas l'ordre.
  *
- * La ligne insérée est aussi DIFFUSÉE sur le topic du run (lib/server/agent/live)
- * : le fil ouvert l'affiche à l'instant plutôt qu'au prochain poll. Le `returning`
- * de l'insert la donne sans aller-retour supplémentaire.
+ * The inserted line is also BROADCAST on the run topic (lib/server/agent/live)
+ * : the open thread displays it now rather than at the next poll. The `returning`
+ * of the insert gives it without additional round trip.
  */
 export async function appendEvent(
   runId: string,
@@ -1513,20 +1513,20 @@ export async function appendEvent(
         .limit(1)
         .maybeSingle();
       const nextSeq = ((data as { seq: number } | null)?.seq ?? -1) + 1;
-      // supabase-js ne LÈVE pas sur un insert refusé (contrainte CHECK, RLS…) — il
-      // renvoie { error }. Sans ce log, un type d'event non déclaré dans le CHECK
-      // de agent_run_events disparaît en silence total (vécu sur `question`, MIN-86).
+      // supabase-js does not RISK on a refused insert (CHECK constraint, RLS…) — it
+      // returns { error }. Without this log, a type of event not declared in the CHECK
+      // of agent_run_events disappears in total silence (experienced on `question`, MIN-86).
       const { data: row, error } = await service
         .from("agent_run_events")
-        // Même garde que `stampRun` : le payload d'un `tool_result` porte la
-        // sortie d'une commande du modèle, où un octet nul se glisse tout seul.
+        // Same guard as `stampRun`: the payload of a `tool_result` carries the
+        // output of a model command, where a null byte slips in by itself.
         .insert({ run_id: runId, seq: nextSeq, type, payload: stripUnstorable(payload) })
         .select("id, seq, type, payload, created_at")
         .single();
       if (error) {
-        // `seq` déjà pris par un autre émetteur : on relit le max et on retente.
-        // Tout autre refus (CHECK sur `type`, RLS) est définitif — le retenter
-        // à l'identique redonnerait la même erreur.
+        // `seq` already taken by another transmitter: we reread the max and try again.
+        // Any other refusal (CHECK on `type`, RLS) is final — try again
+        // identically would give the same error.
         if (
           (error as { code?: string }).code === UNIQUE_VIOLATION &&
           attempt < APPEND_EVENT_MAX_ATTEMPTS - 1
@@ -1547,12 +1547,12 @@ export async function appendEvent(
 }
 
 /**
- * LE JOURNAL D'UNE SESSION OPENCODE (MIN-286) — écrit en APPEND, jamais relu
- * pour être réécrit.
+ * THE LOG OF AN OPENCODE SESSION (MIN-286) — written in APPEND, never proofread
+ * to be rewritten.
  *
- * Un lot par export incrémental. C'est ce qui rend la mémoire d'une session
- * indépendante de la taille d'un corps HTTP : le superviseur n'envoie que ce qui
- * est neuf, et la table le garde.
+ * One batch per incremental export. This is what makes the memory of a session
+ * independent of the size of an HTTP body: the supervisor only sends what
+ * is new, and the table keeps it.
  */
 export async function appendRunJournal(
   runId: string,
@@ -1568,11 +1568,11 @@ export async function appendRunJournal(
 }
 
 /**
- * Le journal d'une session, rassemblé dans l'ordre d'écriture.
+ * The journal of a session, collected in writing order.
  *
- * Filtré sur la SESSION : une session remise à blanc (reprise impossible) écrit
- * sous un id neuf, et les lots de l'ancienne ne doivent pas être rejoués par-
- * dessus. La rétention les emportera avec le run.
+ * Filtered on the SESSION: a session reset (resumption impossible) written
+ * under a new id, and the lots from the old one must not be replayed by-
+ * above. Retention will take them with the run.
  */
 export async function loadRunJournal(
   runId: string,
@@ -1587,8 +1587,8 @@ export async function loadRunJournal(
     .eq("session_id", sessionId)
     .order("id", { ascending: true });
   if (error) {
-    // Un journal illisible coûte la REPRISE, pas le tour : le superviseur
-    // repartira d'une session neuve, et il le dira au fil.
+    // An illegible log costs RESTART, not the turn: the supervisor
+    // will start with a new session, and he will say it over time.
     console.error("[agent-runs] loadRunJournal failed:", error.message);
     return [];
   }

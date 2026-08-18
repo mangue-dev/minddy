@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import { RoutinesPanel } from "@/components/routines/routines-panel";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 
-/** La page globale des routines, indépendante de la page des conversations. */
+/** The global routines page, independent of the conversations page. */
 export function RoutinesPage() {
   const t = useTranslations("Routines");
   const router = useRouter();

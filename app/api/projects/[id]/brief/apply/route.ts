@@ -12,23 +12,23 @@ import {
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// Une dizaine d'objectifs créés un par un, puis un import par lots : loin des
-// 120 s de l'import CSV, mais au-dessus d'un appel ordinaire.
+// Around ten objectives created one by one, then an import in batches: far from the
+// 120 s from the CSV import, but above an ordinary call.
 export const maxDuration = 60;
 
 /**
- * POST /api/projects/[id]/brief/apply — écrit l'amorce validée (MIN-172).
- * Corps : `{ proposal }`, la proposition TELLE QUE L'APERÇU LA MONTRE, après
- * les décochages et les titres réécrits.
+ * POST /api/projects/[id]/brief/apply — writes the committed primer (MIN-172).
+ * Body: `{ proposal }`, the proposition AS THE PREVIEW SHOWS IT, after
+ * unchecks and rewritten titles.
  *
- * Ce corps est fabriqué par le navigateur : il repasse en entier par
- * `sanitizeSeedProposal` avant toute écriture — c'est la même porte que la
- * proposition du modèle a franchie, donc rien de neuf ne peut entrer ici.
+ * This body is made by the browser: it passes entirely through
+ * `sanitizeSeedProposal` before any writing — it is the same door as the
+ * proposal of the model has passed, so nothing new can enter here.
  *
- * Les objectifs d'abord (il faut leurs identifiants), puis UN import : le
- * chemin d'écriture est celui du CSV (`importIssuesIntoProject`), qui sait
- * déjà réserver les numéros par lot, créer les catégories manquantes et
- * rattacher les sous-tickets. Pas de second chemin à maintenir.
+ * The objectives first (you need their identifiers), then ONE import: the
+ * writing path is that of the CSV (`importIssuesIntoProject`), who knows
+ * already reserve the numbers in batches, create the missing categories and
+ * attach the sub-tickets. No second path to maintain.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -63,9 +63,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("importNoIssues") }, { status: 400 });
   }
 
-  // Les objectifs d'abord : un ticket a besoin de l'identifiant du sien AVANT
-  // d'être inséré. Un objectif qui échoue ne coûte que son rattachement — les
-  // tickets partent quand même, sans objectif, ce qui se rattrape à la main.
+  // Objectives first: a ticket needs the identifier of its own BEFORE
+  // to be inserted. A failed objective only costs its attachment — the
+  // Tickets still go out, without any objective, which can be caught by hand.
   const objectiveIdByKey = new Map<string, string>();
   let objectivesCreated = 0;
   for (const objective of proposal.objectives) {

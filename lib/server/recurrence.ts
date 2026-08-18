@@ -6,21 +6,21 @@ import { createIssueForProject } from "@/lib/server/create-issue";
 import { insertEvents } from "@/lib/server/issue-events";
 
 /**
- * Le cœur des tickets récurrents (MIN-136) : un ticket qui passe en `done`
- * engendre son successeur, en `backlog`, à l'échéance décalée d'une cadence.
+ * The heart of recurring tickets (MIN-136): a ticket which passes to `done`
+ * generates its successor, to `backlog`, at the expiry shifted by one cadence.
  *
- * L'invariant tenu ici : UN SEUL ticket vivant porte une récurrence donnée. La
- * cadence est d'abord RETIRÉE du ticket terminé par un compare-and-swap
- * (`where recurrence is not null`), et seul celui qui gagne ce swap crée
- * l'occurrence. Deux conséquences, toutes deux voulues :
+ * The invariant held here: ONE single living ticket carries a given recurrence. The
+ * cadence is first REMOVED from the terminated ticket by a compare-and-swap
+ * (`where recurrence is not null`), and only the one who wins this swap creates
+ * the occurrence. Two consequences, both intended:
  *
- * - deux écritures concurrentes (édition groupée qui rejoue, webhook redélivré)
- *   ne peuvent pas créer deux occurrences ;
- * - un `done → todo → done` ne recrée rien : la récurrence a déménagé sur
- *   l'occurrence suivante, le ticket rouvert n'est plus qu'un ticket ordinaire.
+ * - two concurrent writes (grouped edition which replays, webhook reissued)
+ * cannot create two occurrences;
+ * - a `done → todo → done` does not recreate anything: the recurrence has moved on
+ * the next occurrence, the reopened ticket is just a regular ticket.
  *
- * Appelé depuis les effets différés de lib/server/update-issue.ts — le seul
- * chemin d'écriture du statut (UI, MCP, Numo, agent, synchro de dépôt).
+ * Called from the deferred effects of lib/server/update-issue.ts — the only
+ * status write path (UI, MCP, Numo, agent, sync of deposit).
  */
 export async function spawnNextOccurrence({
   service,
@@ -29,11 +29,11 @@ export async function spawnNextOccurrence({
   projectName = null,
 }: {
   service: SupabaseClient;
-  /** La ligne du ticket terminé, telle que update-issue l'a chargée AVANT la
-      mise à jour (elle porte encore sa récurrence). */
+  /** The completed ticket line, such that update-issue loaded it BEFORE the
+ update (it still carries its recurrence). */
   completed: Record<string, unknown>;
-  /** Qui a coché le ticket : auteur de l'occurrence suivante et de son
-      événement de création — c'est bien son geste qui l'a fait naître. */
+  /** Who checked the ticket: author of the following occurrence and its
+ creation event — it was his gesture that gave rise to it. */
   actorId: string;
   projectName?: string | null;
 }): Promise<void> {
@@ -41,7 +41,7 @@ export async function spawnNextOccurrence({
   if (!isRecurrenceCadence(cadence)) return;
   const issueId = completed.id as string;
 
-  // Compare-and-swap : qui remet la cadence à null crée l'occurrence.
+  // Compare-and-swap: which resets the cadence to null creates the occurrence.
   const { data: claimed, error: claimError } = await service
     .from("issues")
     .update({ recurrence: null })
@@ -53,12 +53,12 @@ export async function spawnNextOccurrence({
     console.error("[recurrence] claim failed:", claimError.message);
     return;
   }
-  if (!claimed) return; // quelqu'un d'autre a déjà créé l'occurrence
+  if (!claimed) return; // someone else has already created the occurrence
 
-  // L'échéance donne le rythme, pas la date de clôture : une revue du lundi
-  // cochée le mercredi retombe sur le lundi suivant. Sans échéance (ligne
-  // écrite avant la règle « une cadence exige une date »), la série s'arrête —
-  // la cadence vient d'être retirée, il n'y a rien à replanifier.
+  // The deadline sets the pace, not the closing date: a Monday review
+  // checked on Wednesday falls on the following Monday. Without deadline (line
+  // written before the rule “a cadence requires a date”), the series stops —
+  // the cadence has just been removed, there is nothing to reschedule.
   const due = nextDueDateISO(completed.due_date as string | null, cadence);
   if (!due) {
     console.error("[recurrence] no due date to schedule from, series stopped:", issueId);
@@ -70,9 +70,9 @@ export async function spawnNextOccurrence({
     .select("category_id")
     .eq("issue_id", issueId);
 
-  // Ce qui se transmet : de quoi refaire LE MÊME travail. Ni le plan (le
-  // journal d'UNE occurrence), ni le parent (l'occurrence suivante n'est pas
-  // un sous-ticket du même chantier), ni les pièces jointes ou commentaires.
+  // What is transmitted: enough to do THE SAME work again. Neither the plan (the
+  // log ONE occurrence), nor the parent (the next occurrence is not
+  // a sub-ticket of the same site), nor the attachments or comments.
   const result = await createIssueForProject({
     projectId: completed.project_id as string,
     projectName,
@@ -96,10 +96,10 @@ export async function spawnNextOccurrence({
   });
 
   if (!result.ok) {
-    // Limite d'issues du plan atteinte, base indisponible… La cadence a déjà
-    // été retirée : la série s'arrête là plutôt que de boucler à chaque
-    // clôture. Le ticket terminé garde son `recurrence_series_id`, donc la
-    // récurrence reste reposable à la main sur le prochain ticket.
+    // Limit of plan outcomes reached, base unavailable… The rate has already
+    // been removed: the series ends there rather than looping each time
+    // fence. The completed ticket keeps its `recurrence_series_id`, so the
+    // recurrence remains restable by hand on the next ticket.
     console.error(
       "[recurrence] next occurrence failed:",
       result.rawMessage ?? result.errorKey
@@ -107,8 +107,8 @@ export async function spawnNextOccurrence({
     return;
   }
 
-  // La trace côté ticket terminé : sans elle, cocher un ticket ferait
-  // apparaître un ticket ailleurs sans que rien ne le dise.
+  // The trace on the ticket side completed: without it, checking a ticket would
+  // appear a ticket elsewhere without anything saying so.
   await insertEvents(service, [
     {
       issue_id: issueId,

@@ -35,8 +35,8 @@ export const maxDuration = 120;
 //   patch immediately, from the side panel.
 // The route itself never writes to the DB.
 
-// Même modèle que la dictée de ticket (clé app_config `dictate_model`) : c'est
-// la même étape agentique, sur d'autres champs.
+// Same model as ticket dictation (app_config key `dictate_model`): it is
+// the same agentic step, on other fields.
 const RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 } as const;
 const MAX_TOOL_ROUNDS = 3;
 const MAX_HISTORY_TURNS = 12;
@@ -147,7 +147,7 @@ function sanitizePatch(
 }
 
 /** "Tuesday 2026-07-07 14:32" in the user's timezone — lets the model resolve
- *  "fin du mois" as a local wall-clock date without offset math. */
+ *  "end of the month" as a local wall-clock date without offset math. */
 function formatNow(timeZone: string): string {
   try {
     return new Intl.DateTimeFormat("en-CA", {
@@ -254,7 +254,7 @@ export async function POST(
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  // Budget d'usage du plan (MIN-72) — pré-vol avant le mini-agent de dictée.
+  // Plan usage budget (MIN-72) — pre-flight before the mini-dictation agent.
   try {
     await ensureUsageBudget(auth.user.id, "voice");
   } catch (err) {
@@ -286,7 +286,7 @@ export async function POST(
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  // `null` est du JSON valide : lire body.mode dessus ferait un 500, pas un 400.
+  // `null` is valid JSON: reading body.mode on it would make a 500, not a 400.
   if (!body || typeof body !== "object") {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
@@ -351,8 +351,8 @@ export async function POST(
   }
 
   const service = getServiceClient();
-  // Seuls les MEMBRES entrent dans ce prompt : un objectif ne référence ni
-  // catégorie ni ticket, le reste du contexte projet ne lui sert à rien.
+  // Only MEMBERS enter this prompt: an objective does not reference or
+  // category or ticket, the rest of the project context is of no use to it.
   const [membersResult, aiRuntime, locale] = await Promise.all([
     listMembers(
       { db: auth.supabase, service, projectId, projectKey: project.key as string },
@@ -368,8 +368,8 @@ export async function POST(
           name: m.name as string,
         }))
       : [];
-  // `let` : le repli du raccourci de routage (MIN-263) colle au modèle qui a
-  // marché, pour ne pas re-tenter le suffixe à chaque round.
+  // `let`: The routing shortcut fallback (MIN-263) sticks to the template that has
+  // market, so as not to re-attempt the suffix each round.
   let model = aiRuntime.model;
 
   const messages: OpenRouterMessage[] = [
@@ -393,7 +393,7 @@ export async function POST(
   // until the model answers with plain text (or the round cap hits).
   const merged: ObjectiveDraftPatch = {};
   let reply = "";
-  // Suivi des coûts : un run = cette dictée ; chaque round est un appel.
+  // Cost tracking: one run = this dictation; each round is a call.
   const runId = newRunId();
   const usageRows: AiUsageInput[] = [];
   try {

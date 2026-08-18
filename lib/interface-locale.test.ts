@@ -20,10 +20,10 @@ describe("resolveInterfaceLocale", () => {
     ).toBe("fr");
   });
 
-  // Le cas de l'inscription : le cookie n'est écrit QUE par les sélecteurs de
-  // langue, donc quelqu'un qui n'en a jamais changé n'en a pas — alors qu'il a
-  // bien vu l'app en français.
-  it("retombe sur la langue du navigateur, pas sur l'anglais", () => {
+  // The case of registration: the cookie is ONLY written by the selectors of
+  // language, so someone who has never changed it does not have one — even though he has
+  // well seen the app in French.
+  it("falls back to the browser language, not English", () => {
     expect(
       resolveInterfaceLocale({
         cookieHeader: "",

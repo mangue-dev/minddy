@@ -10,27 +10,27 @@ import {
 } from "@/lib/billing-plans";
 
 /**
- * Tableau comparatif de `/pricing` (MIN-73).
+ * Comparison table of `/pricing` (MIN-73).
  *
- * Il ne listait que les cinq champs de `BILLING_PLANS` — donc exactement ce que
- * les cartes disaient déjà juste au-dessus, et rien du produit. Il liste
- * maintenant CE QUE FAIT minddy, groupe par groupe, y compris tout ce qui est
- * inclus partout : c'est là que se voient le serveur MCP (gratuit compris) et
- * la clé d'API perso, les deux choses qu'un visiteur cherche et que les cartes
- * n'ont pas la place de porter.
+ * It only listed the five fields of `BILLING_PLANS` — so exactly what
+ * the cards already said just above, and nothing about the product. It lists
+ * now WHAT minddy DOES, group by group, including everything that is
+ * included everywhere: this is where you see the MCP server (including free) and
+ * the personal API key, the two things that a visitor is looking for and that the cards
+ * have no place to porter.
  *
- * Règle inchangée, et c'est elle qui garde le tableau honnête : une ligne
- * GARDÉE PAR UN PLAN lit son état dans `BILLING_PLANS` (jamais une valeur
- * écrite à la main, sinon les cartes et le tableau divergeraient au premier
- * changement de plan) ; une ligne NON GARDÉE renvoie `true` partout, et le code
- * qui la sert n'a aucune garde de plan — vérifié une à une contre
- * `lib/server/entitlements.ts`, qui ne connaît que projets, issues, membres,
- * agents et budget d'usage.
+ * Rule unchanged, and it is this which keeps the table honest: a line
+ * KEPT BY A PLAN reads its state in `BILLING_PLANS` (never a value
+ * written by hand, otherwise the cards and the table would diverge at first
+ * plan change); an UNGUARDED line returns `true` everywhere, and the code
+ * which serves it has no plan guard — checked one by one against
+ * `lib/server/entitlements.ts`, which only knows projects, issues, members,
+ * agents and usage budget.
  *
- * Le détail d'une ligne vit dans son « i » (`PricingInfoHint`) et non sous son
- * libellé : trente lignes suivies chacune de deux lignes d'explication, c'est
- * un tableau qu'on ne parcourt plus. Le survol garde l'information à portée
- * pour qui la cherche, sans la faire payer à qui balaye les colonnes.
+ * The detail of a line lives in its "i" (`PricingInfoHint`) and not under its
+ * wording: thirty lines each followed by two lines of explanation, it's
+ * a table that we no longer go through. Hovering keeps information within reach
+ * for those looking for it, without charging those who scan the columns.
  */
 
 const PLAN_LABEL_KEYS: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> = {
@@ -39,28 +39,28 @@ const PLAN_LABEL_KEYS: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> 
   pro: "planPro",
 };
 
-/** Le translator du namespace `Billing`, typé depuis la source. Une signature
- *  maison `(key: string, values?: …)` accepterait une clé inexistante ou un
- *  message à placeholder appelé sans ses valeurs. */
+/** The translator of the `Billing` namespace, typed from the source. A signature
+ * house `(key: string, values?: …)` would accept a non-existent key or a
+ * message to placeholder called without its values. */
 type Translator = Awaited<ReturnType<typeof getTranslations<"Billing">>>;
 
-/** `true` = inclus, `false` = absent, une chaîne = la valeur chiffrée du plan. */
+/** `true` = included, `false` = absent, a string = the encrypted value of the plan. */
 type Cell = FeatureCell;
 
 interface Row {
-  /** Suffixe des clés i18n `row_<key>` et, si `hint`, `row_<key>_hint`. */
+  /** i18n key suffix `row_<key>` and, if `hint`, `row_<key>_hint`. */
   key: string;
   hint?: boolean;
   value: (plan: BillingPlan, t: Translator) => Cell;
 }
 
 interface Group {
-  /** Suffixe de la clé i18n `group_<key>`. */
+  /** i18n key suffix `group_<key>`. */
   key: string;
   rows: ReadonlyArray<Row>;
 }
 
-/** Inclus dans tous les plans — aucune garde côté serveur. */
+/** Included in all plans — no server-side guarding. */
 const EVERYWHERE = () => true;
 
 const GROUPS: ReadonlyArray<Group> = [
@@ -92,16 +92,16 @@ const GROUPS: ReadonlyArray<Group> = [
   {
     key: "agents",
     rows: [
-      // Le serveur MCP n'a AUCUNE garde de plan (app/api/mcp) : brancher ses
-      // propres agents est gratuit, seul l'agent Numo est vendu.
+      // The MCP server has NO plan guard (app/api/mcp): connect its
+      // own agents is free, only the Numo agent is sold.
       { key: "mcp", hint: true, value: EVERYWHERE },
       { key: "plan", hint: true, value: EVERYWHERE },
       { key: "agent", hint: true, value: (plan) => plan.allowAgents },
-      // Une PR n'existe dans minddy que portée par un run d'agent
-      // (`app/api/pull-requests` lit `agent_runs`) : même garde que l'agent.
+      // A PR only exists in minddy carried by an agent run
+      // (`app/api/pull-requests` reads `agent_runs`): same guard as the agent.
       { key: "pr", hint: true, value: (plan) => plan.allowAgents },
-      // BYOK lève le plafond d'usage, pas la garde de plan : `checkAgentQuota`
-      // refuse un run sans `allowAgents`, clé perso ou non.
+      // BYOK raises the usage cap, not the plan guard: `checkAgentQuota`
+      // refuse a run without `allowAgents`, personal key or not.
       { key: "byok", hint: true, value: (plan) => plan.allowAgents },
     ],
   },
@@ -109,10 +109,10 @@ const GROUPS: ReadonlyArray<Group> = [
     key: "ai",
     rows: [
       {
-        // Les cartes disent « 10× plus d'usage que Free » ; en cellule de
-        // tableau, la phrase déborde de sa colonne sur mobile alors que la
-        // comparaison, elle, tient en trois caractères. Free vaut 1× par
-        // construction (c'est lui la référence de `usageMultiplierVsFree`).
+        // The cards say “10x more usage than Free”; in cell of
+        // table, the sentence overflows its column on mobile while the
+        // comparison, it takes three characters. Free is worth 1× per
+        // construction (this is the reference for `usageMultiplierVsFree`).
         key: "usage",
         hint: true,
         value: (plan) => `${usageMultiplierVsFree(plan)}×`,
@@ -151,7 +151,7 @@ const GROUPS: ReadonlyArray<Group> = [
             ? t("unlimited")
             : String(plan.maxMembersPerProject),
       },
-      // Pas un champ de plan : l'annuel n'existe que là où il y a un prix.
+      // Not a plan field: the annual only exists where there is a price.
       { key: "annual", hint: true, value: (plan) => plan.priceEurMonthly > 0 },
     ],
   },
@@ -163,10 +163,10 @@ export async function PricingComparison() {
     getTranslations("Pricing"),
   ]);
 
-  // Le tableau lui-même vit dans `feature-table.tsx` : les comparatifs
-  // `/alternatives/<outil>` en rendent un second avec d'autres colonnes
-  // (MIN-93). Ici on ne fait plus que CALCULER — et c'est ce calcul, dérivé de
-  // `BILLING_PLANS` ligne par ligne, qui garde le tableau honnête.
+  // The table itself lives in `feature-table.tsx`: comparisons
+  // `/alternatives/<outil>` return a second one with other columns
+  // (MIN-93). Here we only do CALCULATE — and it is this calculation, derived from
+  // `BILLING_PLANS` row by row, which keeps the table honest.
   return (
     <FeatureTable
       caption={tp("comparisonTitle")}

@@ -5,8 +5,8 @@ import { isAdminUser } from "@/lib/server/admin";
 import { capabilities } from "@/lib/server/capabilities";
 
 /**
- * Diagnostic opérateur sans secret : classification, état, noms des variables
- * manquantes et conduite à tenir. Le endpoint n'importe ni ne sonde aucun SDK.
+ * Operator diagnostics without secrets: classification, status, variable names
+ * missing and what to do. The endpoint does not import or probe any SDKs.
  */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);

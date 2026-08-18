@@ -150,9 +150,9 @@ describe("scratchpadPreview", () => {
   });
 
   it("compte comme la pastille du header, sous-titres de Questions compris", () => {
-    // `### Détail` nichant SOUS `## Questions` : le titre plus profond ne ferme
-    // pas la section, ses cases restent des questions. Parsée pour elle-même,
-    // cette sous-section les aurait recomptées comme du travail à faire.
+    // `### Détail` nesting UNDER `## Questions`: deeper title does not close
+    // not the section, its boxes remain questions. Pared for herself,
+    // this subsection would have counted them as work to be done.
     const note = [
       "## Questions",
       "- [ ] Garder la grille ?",
@@ -225,8 +225,8 @@ describe("appendScratchpadTasks", () => {
   });
 
   it("nests under what is ALREADY in the note", () => {
-    // Une première tâche à depth 1 n'est pas renormalisée : elle passe sous la
-    // dernière ligne du carnet, ce que l'agent demande en écrivant `depth: 1`.
+    // A first task at depth 1 is not renormalized: it goes under the
+    // last line of the notebook, what the agent requests by writing `depth: 1`.
     expect(
       appendScratchpadTasks("- [ ] a", [{ text: "a1", state: "pending", depth: 1 }])
     ).toBe("- [ ] a\n  - [ ] a1\n");
@@ -404,7 +404,7 @@ describe("removeSettledTasks", () => {
 
 describe("removeSettledTasks — la hiérarchie", () => {
   it("garde une tâche cochée qui porte encore du travail", () => {
-    // La retirer laisserait « child » indenté sous plus rien.
+    // Removing it would leave “child” indented under nothing.
     const note = "- [x] parent\n  - [ ] child";
     expect(removeSettledTasks(note)).toEqual({ content: note, removed: 0 });
   });
@@ -485,7 +485,7 @@ describe("tasksCheckedOff", () => {
   });
 
   it("ignores a task that arrives already checked", () => {
-    // Liste collée, ou agent qui écrit '- [x]' via le MCP : personne n'a coché.
+    // Pasted list, or agent who writes '- [x]' via MCP: no one checked.
     expect(tasksCheckedOff("- [ ] a", "- [ ] a\n- [x] importée")).toEqual([]);
   });
 
@@ -499,7 +499,7 @@ describe("tasksCheckedOff", () => {
   });
 
   it("does not report deleting a checked task, nor re-adding it", () => {
-    // Le cycle de vie normal du carnet : on coche, on nettoie, on recommence.
+    // The normal life cycle of the notebook: we check off, we clean, we start again.
     expect(tasksCheckedOff("- [x] faite\n- [ ] b", "- [ ] b")).toEqual([]);
     expect(tasksCheckedOff("- [ ] b", "- [ ] b\n- [x] faite")).toEqual([]);
   });

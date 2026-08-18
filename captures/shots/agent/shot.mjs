@@ -1,12 +1,12 @@
 /**
- * workflowAgent — le run de l'agent sur AUR-2, fil d'exécution déplié.
+ * workflowAgent — the agent run on AUR-2, thread unfolded.
  *
- * Voir `intent.md`, notamment pour le bug d'affichage trouvé ici (« Édition de
- * 0 fichier(s) ») : le contrôle de libellé ci-dessous échoue tant que la
- * correction de `tool-call-display.tsx` n'est pas déployée.
+ * See `intent.md`, especially for the display bug found here (“Editing
+ * 0 file(s)"): the label check below fails as long as the
+ * fix for `tool-call-display.tsx` is not deployed.
  *
- *   node captures/shots/agent/shot.mjs             # produit les PNG
- *   node captures/shots/agent/shot.mjs --publish   # + livre sur la landing
+ * node captures/shots/agent/shot.mjs # produces the PNGs
+ * node captures/shots/agent/shot.mjs --publish # + book on the landing
  */
 import { openPage, settle, shoot, CAPTURE } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
@@ -17,14 +17,14 @@ const OUT = "captures/shots/agent/out";
 const VIEWPORT = { width: 1447, height: 1085 };
 
 /**
- * Le déroulé de travail se désigne par la DURÉE du run — la seule partie de son
- * libellé qui soit commune au français et à l'anglais, et qui vienne des
- * horodatages plutôt que d'une traduction. Viser « le premier accordéon fermé »
- * ouvrirait le menu « Nouveau », en haut de la liste.
+ * The work sequence is designated by the DURATION of the run — the only part of its
+ * wording which is common to French and English, and which comes from
+ * timestamps rather than a translation. Aim for “the first closed accordion”
+ * would open the “New” menu, at the top of the list.
  */
 const DURATION = /\b8\b[^0-9]*\b40\b/;
 
-/** Ce que le fil doit contenir une fois déplié — des chemins, donc des données. */
+/** What the wire should contain once unfolded — paths, therefore data. */
 const TRACE = [
   "**/palette/**",
   "lib/palette/actions.ts",
@@ -43,19 +43,19 @@ const VARIANTS = [
 ];
 
 /**
- * « Édition de 3 fichiers », reconstruit depuis le catalogue de l'app.
+ * “Editing 3 files”, reconstructed from the app catalog.
  *
- * La clé était une interpolation simple (`{count} fichier(s)`) et le
- * `.replace("{count}", …)` d'origine suffisait. Elle est devenue un PLURIEL ICU
- * (commit `5d18182`, qui a au passage corrigé le « 0 fichier(s) » décrit dans
- * `intent.md`), et ce remplacement produisait alors le motif brut — introuvable
- * dans la page, donc capture en échec. `icuPlural` gère les deux formes.
+ * The key was a simple interpolation (`{count} fichier(s)`) and the
+ * The original `.replace("{count}", …)` was enough. She became a PLURAL ICU
+ * (commit `5d18182`, which incidentally corrected the “0 file(s)” described in
+ * `intent.md`), and this replacement then produced the raw pattern — not found
+ * in the page, so capture failed. `icuPlural` handles both forms.
  */
 async function applyEditsLabel(locale) {
   return toolCallLabel(locale, "agentApplyEdits", 3);
 }
 
-/** Un libellé traduit passé en motif : il peut contenir des méta-caractères. */
+/** A translated label passed as a pattern: it can contain meta-characters. */
 function escapeRe(text) {
   return text.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -66,22 +66,22 @@ async function capture({ locale, theme }) {
     await page.goto(`${CAPTURE.baseUrl}/agents`, { waitUntil: "domcontentloaded" });
     await settle(page, { expect: "text=AUR-2" });
 
-    // `/agents` n'ouvre plus le dernier run : la page s'ouvre sur une
-    // conversation NEUVE, et le run vit dans la colonne de gauche. Sans ce clic,
-    // l'image sortirait sur « Bonjour, Camille Roy » et son message d'absence de
-    // dépôt. Le libellé du bouton est une DONNÉE (l'identifiant du ticket et son
-    // titre anglais), donc valable dans les deux langues.
+    // `/agents` no longer opens the last run: the page opens on a
+    // NEW conversation, and the run lives in the left column. Without this click,
+    // the image would come out on “Hello, Camille Roy” and its message of absence
+    // deposit. The label of the button is DATA (the ticket identifier and its
+    // English title), therefore valid in both languages.
     await page.getByRole("button", { name: /^AUR-2:/ }).first().click();
 
-    // Le fil arrive replié : un run terminé referme son déroulé de travail.
+    // The thread arrives folded: a completed run closes its work sequence.
     await page.getByRole("button", { name: DURATION }).click();
 
-    // Plusieurs actions d'un même tour se résument, et le RÉSUMÉ a changé : le
-    // groupe s'intitulait par sa dernière ligne (« … provider.tsx »), il compte
-    // désormais ce qu'il contient (« Lecture de 2 fichiers, une recherche »).
-    // Ce libellé est traduit ; on le rebâtit depuis le catalogue plutôt que de
-    // le recopier, et on n'en garde que la première moitié — le séparateur et la
-    // casse de la phrase sont posés par le composant, pas par une clé.
+    // Several actions of the same turn are summarized, and the SUMMARY has changed: the
+    // group was titled by its last line (“… provider.tsx”), it counts
+    // now what it contains (“Reading 2 files, one search”).
+    // This wording is translated; we rebuild it from the catalog rather than
+    // copy it, and we only keep the first half — the separator and the
+    // sentence case are set by the component, not by a key.
     const readSummary = await toolCallLabel(locale, "summaryRead", 2);
     const readGroup = page
       .getByRole("button", { name: new RegExp(escapeRe(readSummary), "i") })
@@ -92,7 +92,7 @@ async function capture({ locale, theme }) {
       .first()
       .waitFor({ state: "visible", timeout: 10_000 });
 
-    // Rien ne doit rester sous le curseur : les lignes du fil ont un survol.
+    // Nothing must remain under the cursor: the lines of the thread have a hover.
     await page.mouse.move(600, 60);
     await page.waitForTimeout(400);
 
@@ -104,7 +104,7 @@ async function capture({ locale, theme }) {
         return {
           missing: trace.filter((t) => !text.includes(t)),
           hasEdits: text.includes(editsLabel),
-          // Le libellé fautif d'avant correction, quelle que soit la langue.
+          // The faulty wording before correction, whatever the language.
           zeroEdits: /(0 fichier|0 file)/.test(text),
         };
       },

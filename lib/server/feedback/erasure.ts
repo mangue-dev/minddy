@@ -4,34 +4,32 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { getBoardForProject } from "@/lib/server/feedback/boards";
 
 /**
- * Effacement d'un participant de board (RGPD art. 17).
+ * Deletion of a board participant (GDPR art. 17).
  *
- * L'éditeur du board est responsable de traitement pour les gens qui y
- * participent ; minddy est son sous-traitant. Quand une demande d'effacement lui
- * arrive, c'est donc à lui de l'exécuter — et jusqu'ici il n'avait rien pour le
- * faire : aucune suppression d'identité n'existait dans le produit.
+ * The board editor is responsible for processing the people who participate in it; minddy is his subcontractor. When a deletion request to him
+ * arrives, it is therefore up to him to execute it — and until now he had nothing to do: no identity deletion existed in the product.
  *
- * Ce qui part : email, nom, external_id, les codes de vérification en attente,
- * et toutes les sessions ouvertes. Ce qui reste : la ligne, opaque, portant un
- * uuid et le pseudonyme qui en dérive. Le POURQUOI de ce choix est au long dans
- * la migration `20261110090000_feedback_erasure.sql` — en une phrase : supprimer
- * la ligne ferait passer les commentaires publics de la personne pour ceux de
- * l'équipe, emporterait au passage les réponses des autres, et changerait
- * rétroactivement le poids des retours qu'elle avait soutenus.
+ * What leaves: email, name, external_id, verification codes in wait,
+ * and all open sessions. What remains: the line, opaque, bearing a
+ * uuid and the pseudonym that derives from it. The WHY of this choice is at length in
+ * the migration `20261110090000_feedback_erasure.sql` — in one sentence: delete
+ * the line would change the public comments of the person to those of
+ * the team, would take away the responses of others, and would change
+ * retroactively the weight of the feedback that she had supported.
  *
- * Idempotent : effacer deux fois la même identité ne fait rien la seconde fois
- * et rend le même compte-rendu.
+ * Idempotent: erasing the same identity twice does nothing the second time
+ * and gives the same report.
  */
 
 export interface FeedbackErasureReport {
   userId: string;
-  /** Déjà effacée avant cet appel — rien n'a été retouché. */
+  /** Already deleted before this call — nothing has been retouched. */
   alreadyErased: boolean;
-  /** Contributions restées en ligne, désormais sans auteur identifiable. */
+  /** Contributions remaining online, now without identifiable author. */
   posts: number;
   comments: number;
   votes: number;
-  /** Sessions révoquées (le visiteur est déconnecté de partout). */
+  /** Sessions revoked (visitor is logged out everywhere). */
   sessions: number;
 }
 
@@ -45,9 +43,9 @@ export async function eraseFeedbackUser(params: {
 }): Promise<FeedbackErasureResult> {
   const service = getServiceClient();
 
-  // `project_id` fait partie du filtre, pas seulement de la lecture : la route
-  // porte un identifiant de projet et un identifiant d'identité, et rien
-  // n'interdirait sinon d'effacer l'identité d'un board voisin.
+  // `project_id` is part of the filter, not just the read: route
+  // carries a project id and an identity id, and nothing
+  // would otherwise prohibit erasing the identity of a neighboring board.
   const { data: user } = await service
     .from("feedback_users")
     .select("id, project_id, email, erased_at")
@@ -76,16 +74,16 @@ export async function eraseFeedbackUser(params: {
     };
   }
 
-  // Les sessions d'abord : tant que le cookie vaut, son porteur continuerait de
-  // se voir « connecté » sous une identité qu'on est en train de vider.
+  // Sessions first: as long as the cookie is valid, its bearer would continue to
+  // see yourself “connected” under an identity that you are emptying.
   const { count: sessions } = await service
     .from("feedback_sessions")
     .delete({ count: "exact" })
     .eq("user_id", params.userId);
 
-  // Un code en attente porte l'adresse en clair. Il expire en dix minutes et le
-  // balayage nocturne le ramasse — mais « dans dix minutes » n'est pas une
-  // réponse à une demande d'effacement.
+  // A pending code carries the address in plain text. It expires in ten minutes and the
+  // night sweep picks it up — but “in ten minutes” is not a
+  // response to a deletion request.
   if (user.email) {
     const board = await getBoardForProject(params.projectId);
     if (board) {
@@ -124,9 +122,9 @@ export async function eraseFeedbackUser(params: {
   };
 }
 
-/** `select("*")` et non `select("id")` : `feedback_votes` n'a pas de colonne
-    `id` (sa clé primaire est le couple post/identité), et une colonne absente
-    fait échouer le comptage au lieu de rendre zéro. */
+/** `select("*")` and not `select("id")`: `feedback_votes` does not have a column
+ `id` (its primary key is the post/identity pair), and an absent column
+ causes the count to fail instead of returning zero. */
 async function countRows(
   service: ReturnType<typeof getServiceClient>,
   table: string,

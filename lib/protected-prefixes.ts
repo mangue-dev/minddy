@@ -1,21 +1,21 @@
 /**
- * Les chemins qui EXIGENT une session (MIN-88). Tout le reste tombe dans le
- * rendu Next — et donc en 404 si aucune route ne correspond.
+ * Paths that REQUIRE a session (MIN-88). Everything else falls into the
+ * rendering Next — and therefore in 404 if no route matches.
  *
- * C'était l'inverse jusqu'ici : le proxy protégeait « tout sauf une liste
- * blanche », donc n'importe quelle URL inconnue — un vieux lien, une faute de
- * frappe, `/blog`, `/docs`, `/llms.txt` — repartait en `307 → /login?redirect=…`
- * au lieu d'un 404. Un espace de soft-404 infini : du budget de crawl brûlé, et
- * un rapport « Page avec redirection » qui grossit tout seul dans Search
+ * It was the opposite until now: the proxy protected "everything except a white list
+ *", so any unknown URL — an old link, a fault of
+ * hits, `/blog`, `/docs`, `/llms.txt` — started again in `307 → /login?redirect=…`
+ * instead of a 404. An infinite soft-404 space: crawl budget burned, and
+ * a “Page with redirection” report which grows by itself in Search
  * Console.
  *
- * La contrepartie d'une liste noire, c'est qu'elle n'oublie que ce qu'on
- * protège : une route d'app ajoutée demain serait publique par défaut.
- * `lib/public-routes.test.ts` lit `app/(app)/` et échoue si un dossier manque
- * ici.
+ * The downside of a blacklist is that it only forgets what it
+ * is protecting: an app route added tomorrow would be public by default.
+ * `lib/public-routes.test.ts` reads `app/(app)/` and fails if a folder is missing
+ * here.
  *
- * Module à part (et sans `next/server`) pour que ce test puisse l'importer sans
- * charger le runtime du middleware.
+ * Separate module (and without `next/server`) so this test can import it without
+ * loading the middleware runtime.
  */
 export const PROTECTED_PREFIXES = [
   "/home",
@@ -30,17 +30,17 @@ export const PROTECTED_PREFIXES = [
   "/pull-requests",
   "/statistics",
   "/trash",
-  // `/my` est redirigée vers `/all?view=my` par next.config, mais la garder ici
-  // évite qu'un jour de désactivation de la redirection l'expose.
+  // `/my` is redirected to `/all?view=my` by next.config, but keep it here
+  // prevents one day of deactivation of the redirection from exposing it.
   "/my",
-  // Écrans OAuth (consentement, succès) : `app/(auth)/oauth/`.
+  // OAuth screens (consent, success): `app/(auth)/oauth/`.
   "/oauth",
-  // Bancs d'essai de développement (`app/(app)/lab/`), déjà 404 en production —
-  // protégés quand même, ceinture et bretelles. À retirer avec eux.
+  // Development testbenches (`app/(app)/lab/`), already 404 in production —
+  // protected all the same, belt and suspenders. To be removed with them.
   "/lab",
 ] as const;
 
-/** `/projects` couvre `/projects` et `/projects/<id>/…`, jamais `/projectsfoo`. */
+/** `/projects` covers `/projects` and `/projects/<id>/…`, never `/projectsfoo`. */
 export function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),

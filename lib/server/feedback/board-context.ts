@@ -4,8 +4,8 @@ import { cache } from "react";
 import { getBoardByToken } from "./boards";
 
 /**
- * Résolution du board public par token, mémoïsée par requête (React `cache`).
- * Partagée entre le layout du segment `/f/[token]` (injection de l'accent,
- * MIN-59) et la page elle-même : une seule lecture DB par rendu.
+ * Resolution of the public board by token, memorized by request (React `cache`).
+ * Shared between the layout of the segment `/f/[token]` (injection of the accent,
+ * MIN-59) and the page itself: only one DB read per rendered.
  */
 export const getBoardContext = cache(getBoardByToken);

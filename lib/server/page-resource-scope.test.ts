@@ -5,30 +5,30 @@ vi.mock("server-only", () => ({}));
 const { insertAttachments, ResourceScopeError } = await import("./attachments");
 
 /**
- * MIN-275 — la garde de périmètre d'une ressource PAGE.
+ * MIN-275 — the perimeter guard of a PAGE resource.
  *
- * `parseResourcesInput` valide des FORMES : il ne peut pas savoir si le
- * `page_id` qu'on lui donne désigne une page de ce projet-là. C'est le seul
- * point d'écriture qui le sait, et c'est donc là que ça se vérifie — routes,
- * création de ticket, MCP, Numo et import y passent tous.
+ * `parseResourcesInput` validates FORMS: it cannot know if the
+ * `page_id` that we give it designates a page of this project. This is the only
+ * write point that knows this, and so this is where it checks out — routes,
+ * ticket creation, MCP, Numo and import all go through it.
  *
- * Ce qui compte ici est aussi ce qui est REFUSÉ : une page d'un autre projet
- * serait une citation illisible pour l'équipe qui la reçoit, et une page à la
- * corbeille une pilule inerte dès sa naissance.
+ * What matters here is also what is DENIED: a page from another project
+ * would be an unreadable quote for the team receiving it, and a page at the
+ * trashes an inert pill from birth.
  */
 
 const PROJECT = "11111111-1111-4111-8111-111111111111";
 const PAGE = "22222222-2222-4222-8222-222222222222";
 
-/** Client Supabase de service, réduit à ce que la garde en appelle : le select
-    des pages vivantes du projet, et l'insert. */
+/** Supabase service client, reduced to what the guard calls: the select
+ of the living pages of the project, and the insert. */
 function fakeService(livePageIds: string[]) {
   const inserted: Record<string, unknown>[][] = [];
   const pagesFilters: Record<string, unknown> = {};
 
   const client = {
-    // MIN-343 : l'insert demande aussi au storage qui a téléversé les fichiers
-    // du lot. Aucun téléverseur connu ici — ce fichier-ci parle des pages.
+    // MIN-343: the insert also asks the storage which uploaded the files
+    // of the batch. No known uploaders here — this file is about pages.
     rpc: async () => ({ data: [], error: null }),
     from(table: string) {
       if (table === "pages") {
@@ -85,7 +85,7 @@ describe("insertAttachments — une ressource page", () => {
       resources: [{ kind: "page", page_id: PAGE, file_name: "Spec" }],
     });
 
-    // Le contrôle porte sur LE projet du parent, et ignore la corbeille.
+    // The control concerns THE parent's project, and ignores the trash.
     expect(pagesFilters.project_id).toBe(PROJECT);
     expect(pagesFilters.deleted_at).toBeNull();
     expect(rows).toHaveLength(1);
@@ -111,8 +111,8 @@ describe("insertAttachments — une ressource page", () => {
   });
 
   it("refuse le LOT entier quand une seule page cloche", async () => {
-    // Même politique que `parseResourcesInput` : enregistrer le reste ferait
-    // disparaître une ressource sans que personne ne l'apprenne.
+    // Same policy as `parseResourcesInput`: saving the rest would do
+    // disappear a resource without anyone finding out.
     const { client, inserted } = fakeService([PAGE]);
     await expect(
       insertAttachments(client as never, {

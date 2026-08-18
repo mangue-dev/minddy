@@ -9,15 +9,14 @@ import { claimAvatarSeed } from "@/lib/server/avatar-seeds";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
- * Ce qui se passe quand une session vient de naître, quel que soit le chemin
- * qui l'a ouverte.
+ * What happens when a session is just born, regardless of the path
+ * that opened it.
  *
- * Ces trois gestes vivaient dans `app/auth/callback/route.ts`, seule porte
- * d'entrée à l'époque. Depuis MIN-345 il y en a deux — le callback pour le tour
- * OAuth, et `/auth/confirm/complete` pour le jeton d'un lien e-mail, qui n'est
- * plus consommé sur une navigation — et une session qui naît par la seconde
- * doit valoir exactement la même chose que par la première : mêmes événements,
- * mêmes invitations rattachées, même avatar. D'où ce module, et non une copie.
+ * These three gestures lived in `app/auth/callback/route.ts`, the only entry point
+ * at the time. Since MIN-345 there are two - the callback for the
+ * OAuth tour, and `/auth/confirm/complete` for the token of an e-mail link, which is no longer consumed on a navigation - and a session which is born by the second
+ * must be worth exactly the same thing as by the first: same events,
+ * same invitations attached, same avatar. Hence this module, and not a copy.
  */
 
 export function buildAuthFailureRedirect(
@@ -32,24 +31,23 @@ export function buildAuthFailureRedirect(
 }
 
 /**
- * Inscription ou connexion ? (MIN-78)
+ * Registration or login? (MIN-78)
  *
- * C'est ICI que la question se tranche, et nulle part ailleurs : le serveur voit
- * `created_at` et `last_sign_in_at` du compte au moment exact de l'échange.
- * Un écart de quelques secondes entre les deux = première connexion. AutoKap
- * avait tenté l'heuristique côté client (« compte créé il y a moins d'une
- * minute »), qui étiquetait mal les premières connexions différées et
- * double-comptait avec l'événement serveur — d'où ce choix.
+ * This is where the question is decided, and nowhere else: the server sees
+ * `created_at` and `last_sign_in_at` of the account at the exact moment of the exchange.
+ * A gap of a few seconds between the two = first connection. AutoKap
+ * had tried the client-side heuristic ("account created less than 1
+ * minute ago"), which mislabeled the first deferred connections and
+ * double-counted with the server event — hence this choice.
  *
- * Ces événements partent quel que soit le consentement cookies : aucun cookie
- * n'est posé de ce fait, et le `distinctId` est l'id du compte, que
- * l'utilisateur nous confie déjà en créant ce compte.
+ * These events go regardless of the cookie consent: no cookie
+ * is placed as a result, and the `distinctId` is the account ID, which
+ * the user already gives us when creating this account.
  *
- * L'alerte push « nouvel utilisateur » (MIN-92), elle, ne part PLUS d'ici : ce
- * callback ne voit que les comptes dont quelqu'un a ouvert le lien, et une
- * inscription par email ne le traverse jamais avant. Elle part désormais du
- * webhook `auth.users` (MIN-117). Les événements PostHog restent, eux : ils
- * datent la première SESSION, pas la création du compte.
+ * The “new user” push alert (MIN-92) no longer leaves here: this
+ * callback only sees accounts that someone has linked to, and an email signup never passes through it before. It now starts from
+ * webhook `auth.users` (MIN-117). The PostHog events remain: they
+ * date from the first SESSION, not the creation of the account.
  */
 export function onAuthArrival(
   user: User | null,
@@ -59,7 +57,7 @@ export function onAuthArrival(
   const provider = user.app_metadata?.provider ?? "email";
   const createdAt = user.created_at ? Date.parse(user.created_at) : Number.NaN;
   const lastSignIn = user.last_sign_in_at ? Date.parse(user.last_sign_in_at) : Number.NaN;
-  // Première connexion : la session en cours est la toute première du compte.
+  // First connection: the current session is the very first for the account.
   const isFirstSignIn =
     !Number.isNaN(createdAt) &&
     (Number.isNaN(lastSignIn) || Math.abs(lastSignIn - createdAt) < 10_000);
@@ -82,26 +80,26 @@ export function onAuthArrival(
 }
 
 /**
- * Les invitations laissées en attente sur cette adresse deviennent les siennes
- * (MIN-197). C'est le point de rattachement PRINCIPAL : celui où minddy tient un
- * email VÉRIFIÉ par Supabase — et c'est cet email, jamais le `?invite=` du lien,
- * qui décide de qui hérite de quoi. Le rattrapage des sessions qui ne passent
- * pas par ici vit dans `claimPendingInvitationsLate`.
+ * Invitations left pending on this address become theirs
+ * (MIN-197). This is the MAIN connection point: the one where minddy holds a
+ * email VERIFIED by Supabase — and it is this email, never the `?invite=` of the link,
+ * that decides who inherits what. Catch-up for sessions that don't pass
+ * through here lives in `claimPendingInvitationsLate`.
  *
- * **Attendu avant la redirection**, et non différé comme le reste du travail de
- * fond. La séquence est serrée : on redirige vers /home, qui demande aussitôt
- * ses invitations — et cette lecture filtre sur `invited_user_id`, que seul ce
- * rattachement pose. Différé, il courait contre le premier chargement, et le
- * perdre donne le pire accueil possible : quelqu'un qui vient de s'inscrire pour
- * rejoindre une équipe atterrit sur « créez votre premier projet », sans un mot
- * du projet qui l'a fait venir.
+ * **Expected before redirecting**, and not deferred like the rest of the work in
+ * background. The sequence is tight: we redirect to /home, which immediately requests
+ * its invitations — and this reading filters on `invited_user_id`, which only this
+ * connection poses. Delayed, he was racing against the first load, and the
+ * losing gives the worst reception possible: someone who has just signed up to
+ * join a team lands on "create your first project", without a word
+ * of the project that brought him in.
  *
- * Le coût est une attente, pas une requête de plus : elle avait déjà lieu, elle
- * se paie juste avant la réponse. Les notifications push, elles, restent
- * différées — `attachPendingInvitations` les passe à `afterOrNow`.
+ * The cost is a wait, not one more request: it already took place, it
+ * is paid just before the response. Push notifications remain
+ * deferred — `attachPendingInvitations` passes them to `afterOrNow`.
  *
- * Best-effort : une panne ici ne doit pas coûter la session qu'on vient
- * d'établir. Le rattachement se rejouera au prochain passage.
+ * Best-effort: a failure here should not cost the session that we have just
+ * established. The attachment will be replayed on the next pass.
  */
 export async function claimInvitations(user: User | null): Promise<void> {
   if (!user) return;
@@ -113,21 +111,21 @@ export async function claimInvitations(user: User | null): Promise<void> {
 }
 
 /**
- * L'avatar choisi pendant l'inscription devient celui du compte (MIN-300).
+ * The avatar chosen during registration becomes that of the account (MIN-300).
  *
- * Le wizard tire la marque dans le navigateur, avant qu'aucun compte n'existe :
- * elle voyage dans `user_metadata.avatar_seed` et se pose ICI, à la première
- * session. `claimAvatarSeed` n'écrase jamais une marque déjà en place, donc
- * repasser par ce chemin à chaque connexion ne défait pas un « Nouvel avatar »
- * fait depuis les réglages.
+ * The wizard draws the mark in the browser, before no account exists:
+ * it travels in `user_metadata.avatar_seed` and lands HERE, at the first
+ *session. `claimAvatarSeed` never overwrites a mark already in place, so
+ * going back through this path at each connection does not undo a “New avatar”
+ * made from the settings.
  *
- * Attendu, comme le rattachement des invitations et pour la même raison : /home
- * demande l'avatar dès son premier rendu, et une écriture différée courrait
- * contre cette lecture — la personne verrait une autre marque que celle qu'elle
- * vient de choisir, jusqu'au prochain rechargement.
+ * Expected, like the attachment of invitations and for the same reason: /home
+ * asks for the avatar as soon as it is first rendered, and a delayed write would run
+ * against this reading — the person would see a different mark than the one they
+ * just chose, until the next reload.
  *
- * Best-effort : une panne ici ne doit pas coûter la session qu'on vient
- * d'établir.
+ * Best-effort: a failure here should not cost the session that we just
+ * established.
  */
 export async function claimAvatarChoice(user: User | null): Promise<void> {
   const seed = (user?.user_metadata as { avatar_seed?: unknown } | undefined)?.avatar_seed;
@@ -139,7 +137,7 @@ export async function claimAvatarChoice(user: User | null): Promise<void> {
   }
 }
 
-/** Les trois gestes d'arrivée, dans l'ordre où ils doivent avoir lieu. */
+/** The three arrival gestures, in the order in which they must take place. */
 export async function completeAuthArrival(
   user: User | null,
   channel: "oauth" | "email_confirmation" | "otp"

@@ -1,20 +1,18 @@
 /**
- * L'adresse d'un webhook, telle qu'on la saisit.
+ * The address of a webhook, as entered.
  *
- * Module pur, sans dépendance : c'est ce qui le rend testable et utilisable des
- * deux côtés — le champ qui la collecte comme, un jour, ce qui la reçoit.
+ * Pure module, without dependencies: this is what makes it testable and usable on both sides — the field that collects it and, one day, what receives it.
  */
 
 /**
- * « example.com/hooks/minddy » est une URL pour qui la lit, pas pour
- * `new URL()` — et c'est ainsi qu'on la copie depuis une doc ou une barre
- * d'adresse. On complète donc le schéma manquant plutôt que de refuser la
- * saisie.
+ * "example.com/hooks/minddy" is a URL for the reader, not for
+ * `new URL()` — and that's how you copy it from a doc or an address bar. We therefore complete the missing schema rather than refusing the
+ * entry.
  *
- * En `https`, jamais `http` : cette adresse recevra des charges utiles signées,
- * et un défaut en clair serait un choix pris à la place de l'utilisateur. Un
- * schéma déjà écrit, lui, est respecté tel quel — `http://localhost:3000` reste
- * ce qu'il est.
+ * In `https`, never `http`: this address will receive signed payloads,
+ * and a default in plain text would be a choice made in the user's place. A
+ * schema already written is respected as is — `http://localhost:3000` remains
+ * what it is.
  */
 export function normalizeWebhookUrl(raw: string): string {
   const trimmed = raw.trim();
@@ -24,7 +22,7 @@ export function normalizeWebhookUrl(raw: string): string {
     : `https://${trimmed}`;
 }
 
-/** L'adresse est-elle appelable telle quelle ? (le serveur revérifie) */
+/** Is the address callable as is? (server rechecks) */
 export function isDeliverableWebhookUrl(url: string): boolean {
   try {
     const parsed = new URL(url);

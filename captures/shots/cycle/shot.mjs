@@ -1,12 +1,12 @@
 /**
- * featureCycle — la quinzaine de Camille, tickets de deux projets mêlés.
+ * featureCycle — Camille's fortnight, tickets from two mixed projects.
  *
- * Voir `intent.md`, notamment pour le décalage d'une colonne : cadré au bord
- * gauche, le board s'ouvrirait sur une colonne vide et laisserait les 5
- * tickets terminés hors champ.
+ * See `intent.md`, in particular for the offset of a column: trimmed to the edge
+ * left, the board would open on an empty column and leave the 5
+ * tickets completed off-camera.
  *
- *   node captures/shots/cycle/shot.mjs             # produit les PNG
- *   node captures/shots/cycle/shot.mjs --publish   # + livre sur la landing
+ * node captures/shots/cycle/shot.mjs # produces the PNGs
+ * node captures/shots/cycle/shot.mjs --publish # + book on the landing
  */
 import { openPage, settle, shoot, CAPTURE } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
@@ -15,7 +15,7 @@ const SLOT = "featureCycle";
 const OUT = "captures/shots/cycle/out";
 const VIEWPORT = { width: 1736, height: 1085 };
 
-/** Pas d'une colonne du board : 352 px de large + 12 px de gouttière. */
+/** Not one column of the board: 352 px wide + 12 px gutter. */
 const COLUMN_PITCH = 364;
 
 const PUBLISH = process.argv.includes("--publish");
@@ -31,16 +31,16 @@ async function capture({ locale, theme }) {
   try {
     await page.goto(`${CAPTURE.baseUrl}/all?view=cycle`, { waitUntil: "domcontentloaded" });
 
-    // Ancre indépendante de la langue : un ticket de Beacon, qui n'est dans le
-    // cycle que parce qu'il est cross-projet. S'il manque, l'image ne montre
+    // Language-independent anchor: a ticket from Beacon, which is not in the
+    // cycle only because it is cross-project. If it is missing, the image does not show
     // pas ce qu'elle doit montrer.
     await settle(page, { expect: "text=BCN-8" });
 
-    // Les anneaux viennent d'un calcul séparé : sans eux, l'en-tête est nu.
+    // The rings come from a separate calculation: without them the header is bare.
     await page.locator("main").getByText("%", { exact: false }).first()
       .waitFor({ state: "visible", timeout: 15_000 });
 
-    // Décalage d'un pas de colonne, dans le conteneur qui défile horizontalement.
+    // Offset by one column step, in the horizontally scrolling container.
     const scrolled = await page.evaluate((pitch) => {
       const el = [...document.querySelectorAll("main *")]
         .find((e) => e.scrollWidth > e.clientWidth + 100);
@@ -56,7 +56,7 @@ async function capture({ locale, theme }) {
       );
     }
 
-    // Contrôle du cadrage APRÈS défilement, comme pour le board du hero.
+    // Control of framing AFTER scrolling, as for the hero's board.
     const check = await page.evaluate(() => {
       const heads = [...document.querySelectorAll("main h2")];
       const columns = heads.map((h) => {
@@ -71,9 +71,9 @@ async function capture({ locale, theme }) {
         straddling: columns
           .filter((c) => c.left < window.innerWidth && c.right > window.innerWidth)
           .map((c) => c.name),
-        // Le nom du projet préfixe l'identifiant sur chaque carte du board
-        // cross-projet. On le cherche dans tout le texte visible, sans
-        // l'ancrer : la structure interne de la carte n'a pas à être devinée.
+        // The name of the project prefixes the identifier on each card on the board
+        // cross-project. We look for it in all the visible text, without
+        // anchor it: the internal structure of the card does not have to be guessed.
         projects: [...new Set(
           (document.querySelector("main")?.textContent || "")
             .match(/Aurora|Beacon/g) || [],

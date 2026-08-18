@@ -23,35 +23,35 @@ import { trackEvent } from "@/lib/analytics";
 
 export interface OpenAssistantOptions {
   /**
-   * Portée IMPOSÉE à Numo. `null` = mode global explicite, `string` = ce projet.
-   *
-   * `undefined` = ne rien imposer : la conversation ouverte garde la sienne, et
-   * s'il n'y en a pas, on suit la route (MIN-353, cf. lib/assistant-scope.ts).
-   * Ça n'est PAS « suivre la route » : depuis que la conversation porte sa
-   * portée, une navigation ne la déplace plus. Une surface qui veut vraiment la
-   * route passe `routeProjectId` — c'est ce que fait le carnet.
-   *
-   * Une portée imposée que la conversation ouverte ne peut pas porter ouvre un
-   * fil neuf : c'est le « Demander à Numo » d'un tableau ou d'un retour, un geste
-   * sur une chose précise, qui n'a rien à faire dans la conversation d'à côté.
-   */
+ * IMPOSED range on Numo. `null` = explicit global mode, `string` = this project.
+ *
+ * `undefined` = do not impose anything: the open conversation keeps its own, and
+ * if there is none, we follow the route (MIN-353, cf. lib/assistant-scope.ts).
+ * This is NOT “following the route”: since the conversation carries its
+ * scope, navigation no longer moves it. A surface that really wants the
+ * road passes `routeProjectId` — that's what the notebook does.
+ *
+ * An imposed scope that open conversation cannot carry opens a
+ * new thread: it's the "Ask Numo" of a painting or a return, a gesture
+ * on a specific thing, which has nothing to do with the next conversation.
+ */
   projectId?: string | null;
   /** Auto-send a one-shot message right after opening. */
   prompt?: string;
   /**
-   * Ce que le « @ » et le « / » du composer d'origine ont posé dans `prompt`.
-   * L'accueil ouvre son propre composer, mentions et commande comprises : sans
-   * ces deux-là, le texte arriverait bien à Numo mais dépouillé de ce qu'il
-   * désigne — une mention redevenue du texte, une commande sans effet.
-   */
+ * What the "@" and "/" of the original composer set in `prompt`.
+ * Home opens its own composer, mentions and command included: without
+ * these two, the text would arrive at Numo but stripped of what it
+ * designates — a mention becomes text again, a command with no effect.
+ */
   mentions?: AssistantMention[];
   command?: AssistantCommandId;
   /**
-   * Les pièces jointes du composer d'origine, DÉJÀ téléversées : `ResourceInput`
-   * ne porte qu'un chemin de stockage, pas un fichier. L'accueil peut donc en
-   * joindre — l'attente qui les monte se joue dans son composer, et l'ouverture
-   * ne transporte plus que des références.
-   */
+ * Attachments from the original composer, ALREADY uploaded: `ResourceInput`
+ * only carries a storage path, not a file. The reception can therefore en
+ * join — the wait which goes up for them is played out in its composition, and the opening
+ * only carries references.
+ */
   attachments?: ResourceInput[];
   /** Pre-fill the composer without sending (one-shot). */
   draft?: string;
@@ -92,13 +92,13 @@ export interface AssistantPanelContextValue {
     ownerId: string,
   ) => void;
   /**
-   * Une surface affiche-t-elle déjà un composer épinglé en bas d'écran, là où
-   * le FAB se pose ? Déclaré par la surface elle-même (`useSuppressAssistantFab`)
-   * plutôt que déduit d'une liste de routes : sur une même route, une page peut
-   * en montrer un ou non selon l'onglet ouvert.
-   */
+ * Does a surface already display a composer pinned to the bottom of the screen, where
+ * the FAB lands? Declared by the surface itself (`useSuppressAssistantFab`)
+ * rather than deduced from a list of routes: on the same road, a page can
+ * show one or not depending on the open tab.
+ */
   fabSuppressed: boolean;
-  /** `ownerId` compte les surfaces : plusieurs peuvent être montées à la fois. */
+  /** `ownerId` counts surfaces: several can be mounted at once. */
   setFabSuppressed: (suppressed: boolean, ownerId: string) => void;
   open: (opts?: OpenAssistantOptions) => void;
   close: () => void;
@@ -146,11 +146,11 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
   );
 
   /**
-   * Les surfaces qui masquent le FAB, par id. Un ENSEMBLE et non un booléen :
-   * deux peuvent se chevaucher (une conversation d'agent en pleine page, une
-   * autre dans une modale par-dessus), et la première à se démonter rendrait
-   * le FAB alors que la seconde le recouvre encore.
-   */
+ * Surfaces that hide the FAB, by id. A SET and not a boolean:
+ * two can overlap (one agent conversation in full page, one
+ * another in a modal on top), and the first to unmount would make
+ * the FAB while the second still covers it.
+ */
   const [fabOwners, setFabOwners] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -166,7 +166,7 @@ export function AssistantPanelProvider({ children }: { children: ReactNode }) {
 
   const open = useCallback((opts?: OpenAssistantOptions) => {
     // `prompt` = ouverture programmatique (home, action de ticket) ; sans lui
-    // c'est un clic direct sur le panneau.
+    // it's a direct click on the panel.
     trackEvent("assistant_opened", {
       source: opts?.prompt ? "home" : opts?.pageContext ? "issue" : "fab",
       has_page_context: !!opts?.pageContext,
@@ -278,21 +278,20 @@ export function useAssistantContext(
 }
 
 /**
- * Masque le FAB de Numo tant que ce composant est monté et `active`.
+ * Hides Numo's FAB as long as this component is mounted and `active`.
  *
- * À appeler depuis la surface qui porte déjà un composer, pour l'une des deux
- * raisons qui rendent le bouton flottant de trop :
+ * To be called from the surface that already has a composer, for one of two reasons that make the button float too much:
  *
- * - il le RECOUVRE — un composer épinglé en bas d'écran, où le FAB tombe
- *   souvent pile sur son bouton d'envoi (les conversations d'agent) ;
- * - il le RÉPÈTE — l'accueil, dont le composer est au centre de l'écran et fait
- *   déjà ce que le FAB propose. Là, la suppression est conditionnelle : le FAB
- *   revient dès qu'il a autre chose à offrir, à savoir une conversation à
- *   rouvrir (cf. `useResumableConversation`).
+ * - he COVERS it — a composer pinned at the bottom of the screen, where the FAB falls
+ * often right on its send button (agent conversations);
+ * - he REPEATS it — the welcome, whose composer is in the center of the screen and already does
+ * what the FAB offers. There, the deletion is conditional: the FAB
+ * returns as soon as it has something else to offer, namely a conversation with
+ * reopen (see `useResumableConversation`).
  *
- * C'est la surface qui sait, pas la route — la page Agents montre une
- * conversation sous son onglet Conversations et une simple liste sous son
- * onglet Routines, à la même URL.
+ * It's the surface that knows, not the road — the Agents page shows a
+ * conversation under its Conversations tab and a simple list under its
+ * Routines tab, at the same URL.
  */
 export function useSuppressAssistantFab(active = true): void {
   const { setFabSuppressed } = useAssistantPanel();

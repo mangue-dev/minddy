@@ -9,25 +9,25 @@ import {
 } from "@/components/illustrations/iso-icon";
 
 /**
- * Un état vide illustré : le bloc isométrique, une phrase, les gestes qui le
- * remplissent (MIN-173). L'écrire une fois est la seule façon d'être sûr que
- * tous tombent au même endroit, à la même hauteur, avec les mêmes écarts — les
- * avoir recopiés a suffi à les faire diverger.
+ * An empty state illustrated: the isometric block, a sentence, the gestures that make it
+ * fill (MIN-173). Writing it down once is the only way to be sure
+ * all fall in the same place, at the same height, with the same gaps — the
+ * having copied it was enough to make them diverge.
  *
- * Deux tailles, et pas une de plus :
- *  - `page` (le défaut) — le board, les objectifs, le triage, la corbeille : la
- *    surface entière est vide, l'illustration a la place de respirer.
- *  - `compact` — une SECTION de réglages : le vide n'est qu'une ligne du
- *    formulaire, et un dessin à pleine taille y crierait plus fort que la
- *    section elle-même. Même bloc, moitié moins large, écarts resserrés.
+ * Two sizes, and not one more:
+ * - `page` (the default) — the board, the objectives, the sorting, the trash: the
+ * entire surface is empty, the illustration has room to breathe.
+ * - `compact` — a SECTION of settings: the void is only one line of the
+ * form, and a full-size drawing would scream louder than the
+ * section itself. Same block, half as wide, gaps narrowed.
  *
- * Les largeurs ont été DIVISÉES PAR DEUX en passant de l'icône couchée au bloc :
- * la première s'étalait dans un losange deux fois plus large que haut, le second
- * est presque carré. À largeur égale l'illustration aurait doublé de hauteur et
- * pris toute la place que l'état vide laissait au texte.
+ * The widths have been DIVIDED BY HALF when going from the lying icon to the block:
+ * the first spread out in a diamond twice as wide as it was high, the second
+ * is almost square. At equal width the illustration would have doubled in height and
+ * took up all the space that the empty state left for the text.
  *
- * À distinguer de `components/empty-state.tsx`, la petite boîte en pointillés
- * qui reste pour les listes internes (panneaux, sous-vues).
+ * To be distinguished from `components/empty-state.tsx`, the small dotted box
+ * which remains for internal lists (panels, subviews).
  */
 export function EmptyScene({
   icon,
@@ -37,13 +37,13 @@ export function EmptyScene({
   children,
   className,
 }: {
-  /** L'icône de la page ou de la section — elle se pose sur le bloc. */
+  /** The icon of the page or section — it is placed on the block. */
   icon: SceneIcon;
   title: string;
   size?: "page" | "compact";
-  /** Teinte du dessin — `destructive` pour ce qui supprime (la corbeille). */
+  /** Drawing tint — `destructive` for what deletes (the trash). */
   tone?: SceneTone;
-  /** Les actions, côte à côte. Aucune sur une surface qui se remplit seule. */
+  /** Stocks, side by side. None on a surface that fills itself. */
   children?: ReactNode;
   className?: string;
 }) {

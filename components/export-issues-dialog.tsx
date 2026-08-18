@@ -26,18 +26,18 @@ import { StatusIndicator } from "@/components/issue-indicators";
 import { useProjects } from "@/lib/projects-context";
 
 /**
- * L'export CSV de mes tickets, ouvert depuis ⌘K — deux questions, pas une de
- * plus : QUOI (un projet ou tous) et JUSQU'OÙ (quels statuts).
+ * The CSV export of my tickets, opened from ⌘K — two questions, not one of
+ * plus: WHAT (one project or all) and UNTIL WHERE (what statuses).
  *
- * Les statuts sont des cases à cocher et non un filtre libre parce que la seule
- * question qu'on se pose vraiment devant un export est « est-ce que j'emporte
- * les terminés et les annulés ? ». D'où le pré-cochage : tout SAUF les statuts
- * clos (`CLOSED_STATUSES`), c'est-à-dire le backlog vivant. Emporter le reste
- * est un geste, une case — pas une option enfouie.
+ * The statuses are check boxes and not a free filter because the only
+ * The question we really ask ourselves when faced with an export is “do I take
+ * the completed and the canceled? ". Hence the pre-checking: everything EXCEPT the statuses
+ * closed (`CLOSED_STATUSES`), i.e. the living backlog. Take away the rest
+ * is a gesture, a box — not a buried option.
  *
- * Le fichier obtenu est le format documenté (`lib/export/issues-csv.ts`), donc
- * relisible par l'import de minddy : c'est ce que dit la ligne d'aide, et c'est
- * ce qui fait de ce dialogue un déménagement possible et pas juste une sortie.
+ * The resulting file is the documented format (`lib/export/issues-csv.ts`), so
+ * rereadable by importing minddy: that's what the help line says, and it's
+ * which makes this dialogue a possible move and not just an exit.
  */
 export function ExportIssuesDialog({
   open,
@@ -46,7 +46,7 @@ export function ExportIssuesDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Projet de la page à l'ouverture — le plus probable, donc le pré-sélectionné. */
+  /** Project of the page when opened — the most likely, therefore the pre-selected. */
   defaultProjectId?: string | null;
 }) {
   const t = useTranslations("Export");
@@ -58,8 +58,8 @@ export function ExportIssuesDialog({
   const [statuses, setStatuses] = useState<Set<IssueStatus>>(defaultStatuses);
   const [exporting, setExporting] = useState(false);
 
-  // Chaque ouverture repart du projet de la page : entre deux exports on a
-  // changé de projet, et garder l'ancien ferait exporter le mauvais.
+  // Each opening starts from the project of the page: between two exports we have
+  // changed project, and keeping the old one would export the wrong one.
   useEffect(() => {
     if (!open) return;
     setScope(defaultProjectId ?? ALL_SCOPE);
@@ -153,8 +153,8 @@ export function ExportIssuesDialog({
           <Button
             type="button"
             onClick={() => void handleExport()}
-            // Zéro statut coché, c'est un fichier vide : le bouton le dit en
-            // restant éteint, plutôt qu'une erreur après le clic.
+            // Zero status checked, it is an empty file: the button says so in
+            // remaining off, rather than an error after the click.
             disabled={exporting || statuses.size === 0}
           >
             {exporting ? <Spinner /> : <Download />}
@@ -166,11 +166,11 @@ export function ExportIssuesDialog({
   );
 }
 
-/** Valeur du sélecteur pour « tous mes projets » — pas un id, donc pas de
- *  collision possible avec un uuid de projet. */
+/** Selector value for “all my projects” — not an id, so no
+ * possible collision with a project uuid. */
 const ALL_SCOPE = "all";
 
-/** Le backlog vivant : tout sauf terminé, annulé et doublon. */
+/** The Living Backlog: Everything but Completed, Canceled and Duplicate. */
 const defaultStatuses = (): Set<IssueStatus> =>
   new Set(
     ALL_STATUSES.map((s) => s.value).filter((v) => !CLOSED_STATUSES.includes(v))

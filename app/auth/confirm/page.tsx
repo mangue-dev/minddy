@@ -9,21 +9,21 @@ import { appPageMetadata } from "@/lib/app-metadata";
 import { AUTH_PENDING_COOKIE, decodePendingOtp } from "@/lib/auth-otp-pending";
 
 /**
- * Le pas qui manquait entre un lien reçu et une session ouverte (MIN-345).
+ * The missing step between a received link and an open session (MIN-345).
  *
- * `/auth/callback` ne consomme plus le jeton d'un lien e-mail : il le met en
- * attente dans un cookie et amène ici. Cette page ne fait qu'une chose, et
- * c'est tout son objet : obtenir un GESTE. Une navigation `GET` arrive de
- * n'importe où — d'un lien reçu, d'une image, d'une redirection — et ne prouve
- * rien ; un `POST` parti de cette page, avec un cookie `SameSite=Lax` qu'aucun
- * autre site ne peut faire voyager, prouve que quelqu'un a lu et cliqué.
+ * `/auth/callback` no longer consumes the token of an e-mail link: it puts it in
+ * wait in a cookie and bring here. This page only does one thing, and
+ * that’s its whole purpose: to obtain a GESTURE. A `GET` navigation arrives from
+ * anywhere — from a received link, from an image, from a redirection — and does not prove
+ * Nothing ; a `POST` part of this page, with a `SameSite=Lax` cookie that none
+ * other site cannot make you travel, proves that someone read and clicked.
  *
- * Le jeton n'est ni dans l'URL ni dans le formulaire : il est resté dans le
- * cookie `httpOnly`, que seul le serveur relit. Le bouton n'a donc rien à
- * porter, et l'écran n'a rien à fuiter dans un `Referer`.
+ * The token is neither in the URL nor in the form: it remained in the
+ * cookie `httpOnly`, which only the server rereads. The button therefore has nothing to
+ * wear, and the screen has nothing to leak into a `Referer`.
  *
- * Page hors de `app/(auth)/` comme sa voisine `/auth/confirmed` : aucun hook
- * d'auth, donc rien à faire de l'`AuthProvider` de ce segment.
+ * Page outside of `app/(auth)/` like its neighbor `/auth/confirmed`: no hook
+ * auth, so nothing to do with the `AuthProvider` of this segment.
  */
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -37,10 +37,10 @@ export default async function ConfirmSignInPage() {
   const t = await getTranslations("Auth");
   const pending = decodePendingOtp((await cookies()).get(AUTH_PENDING_COOKIE)?.value);
 
-  // Un lien de réinitialisation demande le même GESTE, mais ne promet pas la
-  // même chose (MIN-297) : « Me connecter » sous un mail intitulé « Réinitialiser
-  // votre mot de passe » ferait douter de la page au moment précis où l'on
-  // demande de faire confiance.
+  // A reset link asks for the same GESTURE, but does not promise
+  // same thing (MIN-297): “Connect” under an email titled “Reset
+  // your password" would make the page doubtful at the precise moment when we
+  // ask the user to trust it.
   const recovery = pending?.type === "recovery";
   const title = recovery ? "confirmResetTitle" : "confirmSignInTitle";
   const body = recovery ? "confirmResetBody" : "confirmSignInBody";
@@ -68,9 +68,9 @@ export default async function ConfirmSignInPage() {
           </div>
 
           {pending ? (
-            // Formulaire natif, pas de fetch : la réponse est une redirection
-            // que le navigateur suit, et les cookies de session qu'elle porte
-            // se posent sans qu'aucun script n'ait à exister.
+            // Native form, no fetch: response is a redirect
+            // that the browser tracks, and the session cookies it carries
+            // arise without any script having to exist.
             <form action="/auth/confirm/complete" method="post" className="w-full">
               <Button type="submit" className="h-10 w-full justify-center">
                 {t(cta)}

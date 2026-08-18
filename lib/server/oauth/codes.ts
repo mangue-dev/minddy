@@ -5,9 +5,9 @@ import { CODE_PREFIX, generateSecret, sha256Hex } from "@/lib/server/oauth/crypt
 import { afterOrNow } from "@/lib/server/after-safe";
 
 /**
- * Codes d'autorisation à usage unique (10 min). Le claim est atomique
- * (UPDATE … WHERE used_at IS NULL) : un code rejoué ne matche plus et
- * déclenche la révocation du grant lié (interception potentielle).
+ * Single-use authorization codes (10 min). The claim is atomic
+ * (UPDATE … WHERE used_at IS NULL): a replayed code no longer matches and
+ * triggers the revocation of the linked grant (potential interception).
  */
 
 const CODE_TTL_MS = 10 * 60_000;
@@ -59,8 +59,7 @@ export async function createAuthorizationCode({
   return value;
 }
 
-/** Claim atomique : marque le code utilisé et le retourne — ou null s'il est
-    inconnu, expiré, ou déjà consommé. */
+/** Atomic Claim: marks the code used and returns it — or null if it is unknown, expired, or already consumed. */
 export async function claimAuthorizationCode(
   code: string
 ): Promise<AuthorizationCode | null> {
@@ -80,8 +79,8 @@ export async function claimAuthorizationCode(
   return (data as unknown as AuthorizationCode) ?? null;
 }
 
-/** Le code existe mais a déjà été consommé → rejeu (RFC 6749 §4.1.2) :
-    retourne le grant à révoquer. */
+/** The code exists but has already been consumed → replay (RFC 6749 §4.1.2):
+ returns the grant to be revoked. */
 export async function findReplayedCode(code: string): Promise<string | null> {
   const { data } = await getServiceClient()
     .from("oauth_authorization_codes")
@@ -92,9 +91,9 @@ export async function findReplayedCode(code: string): Promise<string | null> {
   return (data?.grant_id as string) ?? null;
 }
 
-/** Purge opportuniste des codes expirés depuis plus d'un jour. Hors chemin
-    critique, donc APRÈS la réponse — mais par `afterOrNow`, sans quoi le DELETE
-    part en vol libre et meurt au gel de la lambda (« fetch failed »). */
+/** Opportunistic purge of codes expired for more than a day. Outside the critical path
+, therefore AFTER the response — but by `afterOrNow`, otherwise the DELETE
+ goes into free flight and dies when the lambda freezes (“fetch failed”). */
 export function cleanupExpiredCodes(): void {
   const cutoff = new Date(Date.now() - 24 * 3600_000).toISOString();
   afterOrNow(async () => {

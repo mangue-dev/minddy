@@ -6,7 +6,7 @@ import {
   relativeDue,
 } from "./due-date";
 
-/** Un instant LOCAL — `relativeDue` raisonne dans le fuseau du navigateur. */
+/** A LOCAL moment — `relativeDue` reasons in the browser's time zone. */
 const local = (
   y: number,
   m: number,
@@ -19,9 +19,9 @@ const NOW = local(2026, 7, 27, 14, 0); // lundi 27 juillet, 14 h
 
 describe("calendarDaysBetween", () => {
   it("compte les jours, pas les heures", () => {
-    // 23 h d'écart mais deux jours différents.
+    // 23 hours apart but two different days.
     expect(calendarDaysBetween(local(2026, 7, 27, 23, 30), local(2026, 7, 28, 0, 30))).toBe(1);
-    // 10 h d'écart dans la même journée.
+    // 10 hours apart in the same day.
     expect(calendarDaysBetween(local(2026, 7, 27, 8), local(2026, 7, 27, 18))).toBe(0);
     expect(calendarDaysBetween(NOW, local(2026, 7, 24))).toBe(-3);
   });
@@ -32,9 +32,9 @@ describe("calendarDaysBetween", () => {
   });
 
   it("garde 1 jour à travers un changement d'heure", () => {
-    // Nuit du passage à l'heure d'été (Europe) : 23 h de vraie durée.
+    // Night of the changeover to summer time (Europe): 23 hours of real duration.
     expect(calendarDaysBetween(local(2026, 3, 29, 12), local(2026, 3, 30, 12))).toBe(1);
-    // …et du retour à l'heure d'hiver : 25 h.
+    // …and the return to winter time: 25 p.m.
     expect(calendarDaysBetween(local(2026, 10, 25, 12), local(2026, 10, 26, 12))).toBe(1);
   });
 });
@@ -66,7 +66,7 @@ describe("relativeDue — les trois jours qui ont un nom", () => {
   });
 
   it("nomme encore le jour même quand l'heure est déjà passée", () => {
-    // « aujourd'hui à 07:00 » à 14 h : c'est en retard, mais ça reste aujourd'hui.
+    // “today at 07:00” at 2 p.m.: it's late, but it's still today.
     const due = local(2026, 7, 27, 7, 0);
     expect(relativeDue(due, NOW)).toMatchObject({ kind: "named", day: "today" });
     expect(isDueDateOverdue(due, NOW.getTime())).toBe(true);
@@ -75,7 +75,7 @@ describe("relativeDue — les trois jours qui ont un nom", () => {
 
 describe("relativeDue — au-delà, on compte", () => {
   it("compte les jours calendaires quand il n'y a pas d'heure", () => {
-    // À 14 h, minuit du 30 est à 2 j 10 h — mais sans heure, c'est « dans 3 jours ».
+    // At 2 p.m., midnight of the 30th is 2d 10 a.m. — but without a time, it's "in 3 days."
     expect(relativeDue(local(2026, 7, 30), NOW)).toEqual({
       kind: "counted",
       days: 3,
@@ -94,7 +94,7 @@ describe("relativeDue — au-delà, on compte", () => {
   });
 
   it("ajoute les heures quand le ticket porte une heure", () => {
-    // Mercredi 17 h, depuis lundi 14 h : 2 jours et 3 heures.
+    // Wednesday 5 p.m., since Monday 2 p.m.: 2 days and 3 hours.
     expect(relativeDue(local(2026, 7, 29, 17, 0), NOW)).toEqual({
       kind: "counted",
       days: 2,
@@ -113,7 +113,7 @@ describe("relativeDue — au-delà, on compte", () => {
   });
 
   it("rend 0 heure quand l'écart tombe juste", () => {
-    // Même heure trois jours plus tard : rien à ajouter aux jours.
+    // Same time three days later: nothing to add to the days.
     expect(relativeDue(local(2026, 7, 30, 14, 0), NOW)).toEqual({
       kind: "counted",
       days: 3,
@@ -123,7 +123,7 @@ describe("relativeDue — au-delà, on compte", () => {
   });
 
   it("arrondit à l'heure la plus proche plutôt que de tronquer", () => {
-    // Une minute avant « 2 jours et 3 heures » : tronquer dirait 2 heures.
+    // One minute before “2 days and 3 hours”: truncating would say 2 hours.
     const almost = new Date(NOW.getTime() + 2 * 86_400_000 + 3 * 3_600_000 - 60_000);
     expect(relativeDue(almost, NOW)).toEqual({
       kind: "counted",
@@ -134,7 +134,7 @@ describe("relativeDue — au-delà, on compte", () => {
   });
 
   it("ne dit jamais « 24 heures » : l'arrondi passe au jour suivant", () => {
-    // 2 j 23 h 40 min → 72 h → « dans 3 jours », pas « 2 jours et 24 heures ».
+    // 2 d 23 h 40 min → 72 h → “in 3 days”, not “2 days and 24 hours”.
     const nearlyThree = new Date(
       NOW.getTime() + 2 * 86_400_000 + 23 * 3_600_000 + 40 * 60_000,
     );
@@ -147,7 +147,7 @@ describe("relativeDue — au-delà, on compte", () => {
   });
 
   it("ne descend jamais sous 1 jour dans la forme comptée", () => {
-    // Cas limite : deux jours calendaires d'écart mais 25 h de durée réelle.
+    // Limit case: two calendar days apart but 25 hours of actual duration.
     const late = local(2026, 7, 27, 23, 30);
     const rel = relativeDue(local(2026, 7, 29, 0, 30), late);
     expect(rel).toEqual({ kind: "counted", days: 1, hours: 1, past: false });

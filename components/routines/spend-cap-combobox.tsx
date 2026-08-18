@@ -21,18 +21,18 @@ import {
 } from "@/lib/routine-budget";
 
 /**
- * Le PLAFOND DE DÉPENSE d'un passage — même montage que le picker de niveau de
- * raisonnement : liste courte et FERMÉE, donc pas de recherche ni de saisie
- * libre, et la même pastille compacte que ses voisins de rangée.
+ * The SPENDING CEILING of a passage — same setup as the level picker of
+ * reasoning: short and CLOSED list, therefore no search or entry
+ * free, and the same compact pellet as its row neighbors.
  *
- * Des PALIERS et pas un champ de nombre : personne n'a d'avis au pourcent près,
- * et un champ libre demanderait d'en inventer un. Ce qui se décide vraiment
- * tient dans les cinq — une routine parmi d'autres, un quart du mois, la
- * moitié, le défaut, ou rien du tout.
+ * LAYERS and not one number field: no one has an opinion to the nearest percent,
+ * and a free field would require inventing one. What is really decided
+ * is within the five — a routine among others, a quarter of the month, the
+ * half, the default, or nothing at all.
  *
- * En POURCENTAGE, comme tout ce qui parle d'usage à l'utilisateur : les dollars
- * de coût brut ne sortent que sur le tableau de bord admin, et un plafond en
- * pourcentage suit le plan tout seul le jour où l'abonnement change.
+ * In PERCENTAGE, like everything that speaks of use to the user: the dollars
+ * of gross cost only come out on the admin dashboard, and a cap in
+ * percentage follows the plan on its own on the day the subscription changes.
  */
 export function SpendCapCombobox({
   value,
@@ -47,8 +47,8 @@ export function SpendCapCombobox({
   const t = useTranslations("Routines");
   const [open, setOpen] = useState(false);
 
-  /** Un plafond réglé ailleurs (MCP, Numo) peut ne tomber sur aucun palier :
-   *  il s'affiche tel quel, et la liste le montre en plus des cinq. */
+  /** A cap set elsewhere (MCP, Numo) may not fall on any tier:
+ * it is displayed as is, and the list shows it in addition to the five. */
   const choices = SPEND_CAP_CHOICES.includes(value)
     ? SPEND_CAP_CHOICES
     : [...SPEND_CAP_CHOICES, value].sort((a, b) => a - b);
@@ -73,12 +73,11 @@ export function SpendCapCombobox({
           <ChevronsUpDown className="size-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      {/* `rounded-xl` : c'est `Command` qui peint la surface et il s'impose déjà
-          20px. Avec les 8px de retrait de la liste, les options (12px) sont
-          concentriques. */}
+      {/* `rounded-xl`: it is `Command` which paints the surface and it already imposes
+ 20px. With the 8px removal from the list, the options (12px) are concentric. */}
       <PopoverContent className="w-72 rounded-xl p-0" align="start">
         <Command shouldFilter={false}>
-          {/* `p-1` : mêmes 8px de retrait des QUATRE côtés. */}
+          {/* `p-1`: same 8px indent on ALL FOUR sides. */}
           <CommandList className="p-1">
             {choices.map((percent) => (
               <CommandItem

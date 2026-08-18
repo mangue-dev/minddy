@@ -1,35 +1,34 @@
 /**
- * `minddy://open?next=…` — ramener la fenêtre sur une page précise (MIN-293).
+ * `minddy://open?next=…` — return the window to a specific page (MIN-293).
  *
- * ## Pourquoi il existe
+ * ## Why there is
  *
- * Stripe. Le paiement s'ouvre dans le navigateur système, et c'est normal : une
- * page de carte bancaire dans une fenêtre installée est exactement ce qu'on ne
- * veut pas avoir à faire auditer. Mais Stripe revient ensuite sur son
- * `success_url` — une URL **http(s)**, il n'en accepte pas d'autre — et ce
- * retour se faisait dans le navigateur. On finissait un achat commencé dans
- * l'app en se retrouvant devant sa page de facturation dans Safari, l'app
- * toujours ouverte derrière, toujours sur l'ancien plan.
+ * Stripe. The payment opens in the system browser, and this is normal: a
+ * credit card page in an installed window is exactly what we don't want to have to audit. But Stripe then returns to its
+ * `success_url` — a **http(s)** URL, it does not accept any other — and this
+ * return was done in the browser. We finished a purchase started in
+ * the app by finding ourselves in front of its billing page in Safari, the app
+ * still open behind, still on the old plan.
  *
- * D'où le rebond en deux temps : Stripe revient sur une page à nous
- * (`/desktop/return`, app/desktop/return/route.ts), qui n'existe que pour
- * rouvrir l'app sur ce lien-ci. Le même chemin vaudra pour tout aller-retour du
- * même genre — c'est pour ça que le lien porte une DESTINATION et pas « le
- * paiement est fini ».
+ * Hence the two-step bounce: Stripe returns to a page of ours
+ * (`/desktop/return`, app/desktop/return/route.ts), which only exists to
+ * reopen the app on this link. The same path will apply for any round trip of the
+ * same type — that's why the link has a DESTINATION and not "the
+ * payment is finished".
  *
- * ## Les deux moitiés, et pourquoi elles sont dans le même fichier
+ * ## The two halves, and why they are in the same file
  *
- * `buildDesktopOpenUrl` est lue par la page de rebond, servie au NAVIGATEUR ;
- * `parseDesktopOpenLink` est lue par le MAIN PROCESS, qui reçoit le lien. Même
- * raison qu'entre les deux moitiés de auth-link.ts : c'est un contrat entre deux
- * process, et les relire séparément ne le vérifie pas.
+ * `buildDesktopOpenUrl` is read by the bounce page, served to the BROWSER;
+ * `parseDesktopOpenLink` is read by the MAIN PROCESS, which receives the link. Same
+ * reason that between the two halves of auth-link.ts: it's a contract between two
+ * processes, and rereading them separately doesn't check it.
  *
- * ## Ce que la destination ne peut pas être
+ * ## What the destination cannot be
  *
- * Un chemin interne, et rien d'autre (`sanitizeInternalRedirectPath`). Le lien
- * arrive du système : macOS livre à l'app TOUT ce qui porte notre schéma, y
- * compris ce qu'on n'a jamais émis. Une destination absolue serait une fenêtre
- * qu'un tiers peut pointer où il veut.
+ * An internal path, and nothing else (`sanitizeInternalRedirectPath`). The link
+ * arrives from the system: macOS delivers to the app EVERYTHING that carries our schema, including
+ * including what we have never sent. An absolute destination would be a window
+ * that a third party can point anywhere they want.
  */
 
 import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
@@ -44,8 +43,8 @@ export function buildDesktopOpenUrl(next: string): string {
 }
 
 /**
- * Lit un `minddy://open`. Rend `null` pour tout le reste — y compris pour
- * `minddy://auth`, qui a son propre lecteur.
+ * Reads a `minddy://open`. Returns `null` for everything else — including
+ * `minddy://auth`, which has its own reader.
  */
 export function parseDesktopOpenLink(raw: string): string | null {
   let url: URL;
@@ -55,9 +54,9 @@ export function parseDesktopOpenLink(raw: string): string | null {
     return null;
   }
   if (url.protocol !== `${DESKTOP_PROTOCOL}:`) return null;
-  // `minddy://open?x=1` range l'hôte dans `hostname`, `minddy:open?x=1` dans le
-  // chemin. Les deux formes circulent selon qui compose l'URL — même tolérance
-  // que pour le lien d'authentification.
+  // `minddy://open?x=1` stores the host in `hostname`, `minddy:open?x=1` in the
+  // path. Both forms circulate depending on who composes the URL — same tolerance
+  // only for the authentication link.
   const host = url.hostname || url.pathname.replace(/^\/*/, "");
   if (host !== DESKTOP_OPEN_HOST) return null;
   const next = url.searchParams.get("next");

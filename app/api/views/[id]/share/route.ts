@@ -9,9 +9,9 @@ import {
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// Borne du mot de passe (MIN-118) : scrypt hache ce qu'on lui donne — un mot de
-// passe démesuré coûterait du CPU pour rien. Refus plutôt que troncature : un
-// mot de passe tronqué en silence ne déverrouillerait jamais la vue.
+// Password bound (MIN-118): scrypt hashes what it receives — an overly long
+// excessive pass would cost CPU for nothing. Refusal rather than truncation: a
+// Silently truncated password would never unlock the view.
 const MAX_PASSWORD_LENGTH = 256;
 
 /** GET /api/views/[id]/share — current share state ({ share: null } = private). */

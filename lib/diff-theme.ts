@@ -1,37 +1,37 @@
 import type { LineDiffTypes, ThemesType } from "@pierre/diffs";
 
 /**
- * Habillage de la vue diff (MIN-181) — ce qui, du thème de minddy, doit
- * traverser la frontière du Shadow DOM de `@pierre/diffs`.
+ * Diff view skin (MIN-181) — which, from minddy's theme, must
+ * cross the Shadow DOM border of `@pierre/diffs`.
  *
- * Deux moitiés, et elles ne vivent pas au même endroit :
+ * Two halves, and they don't live in the same place:
  *
- * - **Les couleurs du CADRE** (fonds, aplats vert/rouge, numéros de ligne) sont
- *   des variables CSS `--diffs-*`, posées sur `.pr-diff-view` dans
- *   [app/globals.css](../app/globals.css). Les propriétés personnalisées
- *   TRAVERSENT la frontière d'ombre par héritage : la lib les lit dans son
- *   `:host` sans qu'on ait rien à injecter. Elles sont écrites là-bas, avec les
- *   autres jetons du dépôt, parce qu'elles s'expriment en `var(--card)`,
- *   `var(--foreground)`… — les mêmes que le reste de l'app.
+ * - **The colors of the FRAME** (background, green/red solids, line numbers) are
+ * CSS variables `--diffs-*`, placed on `.pr-diff-view` in
+ * [app/globals.css](../app/globals.css). Custom properties
+ * CROSS the shadow boundary by inheritance: the lib reads them in its
+ * `:host` without having to inject anything. They are written there, with the
+ * other tokens in the repository, because they are expressed in `var(--card)`,
+ * `var(--foreground)`… — the same as the rest of the app.
  *
- * - **Les couleurs du CODE** (mots-clés, chaînes, commentaires) viennent d'un
- *   thème Shiki, choisi ici. Plus de palette maison : Shiki colore par
- *   grammaire TextMate, et un thème complet dit ce que la nôtre approximait.
+ * - **CODE colors** (keywords, strings, comments) come from a
+ * Shiki theme, chosen here. More house palette: Shiki colors by
+ * TextMate grammar, and a complete theme says what ours approximated.
  *
- * Reste `unsafeCSS`, la seule chose qu'on injecte VRAIMENT dans l'ombre : deux
- * règles de comportement, pas de décoration.
+ * Remains `unsafeCSS`, the only thing we REALLY inject into the shadows: two
+ * rules of behavior, no decoration.
  */
 
 /**
- * Le couple clair / sombre passé à `options.theme`. Les thèmes maison de Pierre
- * plutôt qu'un `github-*` : ils sont calibrés POUR ce rendu-là — les tokens y
- * restent lisibles posés sur les aplats vert et rouge du diff, ce qui est
- * exactement le problème qui nous faisait maintenir une palette à la main.
+ * The light/dark pairing changed to `options.theme`. Pierre's in-house themes
+ * rather than a `github-*`: they are calibrated FOR this rendering - the y
+ * tokens remain legible placed on the green and red solids of the diff, which is
+ * exactly the problem which made us hold a palette in our hand.
  *
- * `themeType` (`"light" | "dark"`), lui, se passe à part : il force le
- * `color-scheme` du `:host`, donc la branche que résolvent les dizaines de
- * `light-dark()` de la lib. Sans lui, elles suivraient la préférence de l'OS —
- * pas le thème choisi dans minddy.
+ * `themeType` (`"light" | "dark"`), happens separately: it forces the
+ * `color-scheme` of the `:host`, therefore the branch that the tens of
+ * `light-dark()` of the lib. Without it, they would follow the OS preference —
+ * not the theme chosen in minddy.
  */
 export const DIFF_THEMES: ThemesType = {
   light: "pierre-light",
@@ -39,48 +39,48 @@ export const DIFF_THEMES: ThemesType = {
 };
 
 /**
- * Comment marquer, DANS une ligne modifiée, ce qui a réellement changé. Ça
- * compte autant que la coloration : sans ce marquage, une ligne retouchée d'un
- * caractère se présente comme entièrement réécrite, et l'oeil doit refaire la
- * comparaison lui-même.
+ * How to mark, IN a modified line, what has actually changed. This
+ * counts as much as the coloring: without this marking, a retouched line of a
+ * character appears as entirely rewritten, and the eye must redo the
+ * comparison itself.
  *
- * `word-alt` et pas `char` : sur du code (indentation, ponctuation), le découpage
- * caractère par caractère produit un confetti de surlignages qui dessert la
- * lecture.
+ * `word-alt` and not `char`: on code (indentation, punctuation), splitting
+ * character by character produces a confetti of highlights which serves the
+ * reading.
  *
- * Comme `DIFF_THEMES`, ce réglage se passe à DEUX endroits — au composant et au
- * pool de workers, qui l'emporte quand il est là (cf. `PrDiffWorkers`). D'où la
- * constante : deux valeurs qui divergeraient donneraient deux rendus selon que
- * la coloration vient du worker ou du fil principal.
+ * Like `DIFF_THEMES`, this setting happens in TWO places — in the component and the
+ * worker pool, which wins when it is there (see `PrDiffWorkers`). Hence the
+ * constant: two diverging values ​​would give two renderings depending on whether
+ * the coloring comes from the worker or the main thread.
  */
 export const DIFF_LINE_DIFF_TYPE: LineDiffTypes = "word-alt";
 
 /**
- * CSS injecté dans le Shadow DOM (`options.unsafeCSS`). Deux règles, et les
- * deux disent où le « + » de commentaire n'a PAS le droit d'apparaître.
+ * CSS injected into the Shadow DOM (`options.unsafeCSS`). Two rules, and
+ * both say where the comment "+" is NOT allowed to appear.
  *
- * 1. **Une ligne de contexte dépliée n'est pas dans le diff.** GitHub renvoie
- *    **422** (`line: could not be resolved`) sur un commentaire posé là —
- *    vérifié contre l'API. La lib distingue justement `context` (dans le patch)
- *    de `context-expanded` (ramenée par le dépliage) : la règle s'écrit donc en
- *    une ligne de CSS, là où elle demandait un ensemble de clés de changement
- *    recalculé à chaque rendu.
+ * 1. **An expanded context line is not in the diff.** GitHub returns
+ * **422** (`line: could not be resolved`) on a comment placed there —
+ * checked against the API. The lib precisely distinguishes `context` (in the patch)
+ * from `context-expanded` (reduced by unfolding): the rule is therefore written as
+ * a line of CSS, where it requested a set of change keys
+ * recalculated each time rendered.
  *
- * 2. **En côte-à-côte, une ligne de contexte ne s'ancre qu'à DROITE.** Elle
- *    existe des deux côtés, mais commenter du contexte parle du code tel qu'il
- *    est APRÈS la PR — c'est le choix de GitHub, et celui qu'on tenait déjà.
- *    Offrir le « + » dans la gouttière de gauche produirait un `side: LEFT` sur
- *    une ligne inchangée : accepté par la forge, mais pas ce que la personne
- *    croit désigner.
+ * 2. **In side-by-side, a context line only anchors to the RIGHT.** It
+ * exists on both sides, but commenting context talks about the code as it
+ * is AFTER the PR — that's GitHub's choice, and that that we already held.
+ * Offering the "+" in the left gutter would produce a `side: LEFT` on
+ * an unchanged line: accepted by the forge, but not what the person
+ * thinks it denotes.
  *
- * Le clic est refusé une seconde fois côté JS (`commentAnchor`) : le CSS cache
- * l'affordance, il ne garantit pas la règle — un glissement de sélection peut
- * finir sur une ligne dépliée sans jamais y avoir survolé la gouttière.
+ * The click is refused a second time on the JS side (`commentAnchor`): the CSS hides
+ * the affordance, it does not guarantee the rule — a selection drag can
+ * end up on an unfolded line without ever having hovered over the gutter.
  */
 /**
- * Attribut posé par `pr-diff` sur les lignes couvertes par une remarque
- * MULTI-LIGNES. Il vit ici avec la règle CSS qui le peint : les deux moitiés
- * n'ont de sens qu'ensemble.
+ * Attribute set by `pr-diff` on lines covered by a remark
+ * MULTI-LINES. It lives here with the CSS rule that paints it: the two halves
+ * only make sense together.
  */
 export const DIFF_RANGE_ATTRIBUTE = "data-pr-comment-range";
 
@@ -88,20 +88,21 @@ export const DIFF_UNSAFE_CSS = `
 [data-line-type="context-expanded"] [data-gutter-utility-slot] { display: none; }
 [data-deletions] [data-line-type="context"] [data-gutter-utility-slot] { display: none; }
 
-/* Les lignes qu'une remarque multi-lignes couvre.
-   On ne pose PAS un fond : on remonte la variable dont la lib dérive le fond de
-   chaque ligne. Elle mélange par-dessus \`--diffs-computed-diff-line-bg\`, donc le
-   vert d'un ajout et le rouge d'un retrait restent lisibles sous la teinte —
-   là où un \`background-color\` les aurait effacés. Même chaîne, mêmes
-   proportions que la sélection de la lib, en un ton plus discret : une plage
-   commentée est un état durable, pas un geste en cours. */
+/* Lines covered by a multi-line comment.
+   We do NOT set a background: we override the variable the library uses to
+   derive each line's background. It blends over
+   \`--diffs-computed-diff-line-bg\`, so the green of an addition and the red of
+   a deletion remain legible beneath the tint — unlike a \`background-color\`,
+   which would erase them. Same blend, same proportions as the library's
+   selection, in a subtler tone: a commented range is a lasting state, not an
+   action in progress. */
 [${DIFF_RANGE_ATTRIBUTE}] {
   --diffs-computed-selected-line-bg: light-dark(
     color-mix(in lab, var(--diffs-computed-diff-line-bg) 90%, var(--diffs-selection-base)),
     color-mix(in lab, var(--diffs-computed-diff-line-bg) 85%, var(--diffs-selection-base)));
 }
-/* La gouttière porte le trait vertical qui donne à la plage ses deux bouts —
-   c'est lui, plus que la teinte, qui se voit sans qu'on ait à lire. */
+/* The gutter carries the vertical line that marks both ends of the range — it is
+   more visible than the tint itself, even without reading the code. */
 [data-column-number][${DIFF_RANGE_ATTRIBUTE}] {
   --diffs-computed-selected-line-bg: light-dark(
     color-mix(in lab, var(--diffs-computed-diff-line-bg) 82%, var(--diffs-selection-base)),

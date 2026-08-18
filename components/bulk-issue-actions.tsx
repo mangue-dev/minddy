@@ -21,7 +21,7 @@ import {
  * Linear-style floating selection pill (MIN-75). It no longer carries its own
  * cmdk dropdown: "Actions" hands the selection to the global command palette
  * (⌘K) via {@link useBulkActions}, so bulk edits reuse the palette's inline
- * submenu forms (one "Changer le statut" that opens a select, etc.). The pill
+ * submenu forms (one "Change Status" that opens a select, etc.). The pill
  * keeps only the fast paths: the count, Actions, an icon-only "Ask Numo", and
  * clear.
  */
@@ -46,7 +46,7 @@ export function BulkIssueActions({
   cycle?: BulkCycleActions;
   objectives?: Objective[];
   onLink?: () => void;
-  /** L'écran d'où part la sélection, pour l'analytics (défaut « board »). */
+  /** The screen from which the selection starts, for analytics (“board” default). */
   surface?: string;
 }) {
   const t = useTranslations("BulkActions");
@@ -77,8 +77,8 @@ export function BulkIssueActions({
       onLink,
     });
 
-  // Pas de `backdrop-blur` : `bg-background/95` masque déjà entièrement le fond,
-  // le flou ne se voyait pas et coûtait un calque de composition (MIN-323).
+  // No `backdrop-blur`: `bg-background/95` already completely hides the background,
+  // the blur was not visible and cost a composition layer (MIN-323).
   return (
     <div className="fixed bottom-5 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-full border border-border bg-background/95 p-1.5 shadow-xl">
       <span className="px-3 text-sm font-medium whitespace-nowrap">
@@ -106,7 +106,7 @@ export function BulkIssueActions({
             <NumoIcon className="size-4" />
           </Button>
         </TooltipTrigger>
-        {/* Le raccourci se découvre là où vit l'action (MIN-105). */}
+        {/* The shortcut is discovered where the action lives (MIN-105). */}
         <TooltipContent className="flex items-center gap-1.5">
           {t("askNumo")}
           <Kbd size="sm">@</Kbd>

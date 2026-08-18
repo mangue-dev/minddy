@@ -191,11 +191,11 @@ export const SlashCommand = Extension.create<{ items: SlashItem[] }>({
         // pnpm dual @tiptap/core (same 3.27.4) — Extension's editor reads as a
         // different identity than @tiptap/suggestion's. Runtime is fine.
         editor: this.editor as never,
-        // Une CLÉ à soi. `Suggestion` en pose une par défaut, la même pour
-        // tout le monde : deux suggestions sur un même éditeur (un menu « / »
-        // et un « @ ») font lever ProseMirror au montage. Le carnet n'a pas
-        // encore de mentions — la clé est là pour que le jour où on lui en
-        // ajoute ne soit pas un écran d'erreur (c'est ce qui est arrivé à la
+        // A KEY to yourself. `Suggestion` sets one by default, the same for
+        // everyone: two suggestions on the same editor (a “/” menu
+        // and an “@”) cause ProseMirror to raise on editing. The notebook does not have
+        // more mentions — the key is there so that the day we get it
+        // add not an error screen (this is what happened to the
         // page, MIN-270).
         pluginKey: new PluginKey("scratchpadSlashCommand"),
         char: "/",

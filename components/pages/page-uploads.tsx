@@ -1,29 +1,29 @@
 "use client";
 
-// Les TÉLÉVERSEMENTS d'une page (MIN-280) : ce qu'un bloc image ou fichier a
-// besoin de savoir d'un envoi en cours, et rien de plus.
+// One page UPLOADS (MIN-280): what an image or file block has
+// need to know about a sending in progress, and nothing more.
 //
-// La forme est celle de components/pages/pages-lookup.tsx, et pour la même
-// raison : les deux vues de blocs sont montées en portails tout en bas de
-// l'éditeur, et n'ont aucun moyen d'aller chercher elles-mêmes le projet, la
-// page ou l'octet en vol. La surface leur pose un contexte.
+// The form is that of components/pages/pages-lookup.tsx, and for the same
+// reason: the two block views are mounted as portals at the very bottom of
+// the publisher, and have no way of finding the project themselves, the
+// page or byte in flight. The surface provides a context for them.
 //
-// ── Ce que le nœud garde, et ce qu'il ne garde pas ──────────────────────────
+// ── What the node keeps, and what it doesn't keep ──────────────────────────
 //
-// Un envoi vit dans un ÉTAT REACT, jamais dans le document. Le nœud ne porte
-// qu'un `uploadId` (non rendu en HTML, donc jamais relu depuis la base) le temps
-// que l'adresse définitive arrive. Deux conséquences voulues :
+// A submission lives in a REACT STATE, never in the document. The knot does not carry
+// that a `uploadId` (not rendered in HTML, therefore never reread from the database) the time
+// that the final address arrives. Two intended consequences:
 //
-//  - fermer l'onglet pendant un envoi ne laisse pas un bloc « en cours » figé
-//    pour l'éternité dans le corps : au rechargement, c'est un bloc SANS adresse,
-//    que la vue annonce comme raté et qu'on supprime d'un geste ;
-//  - et l'inverse : un envoi qui aboutit alors que l'utilisateur a déjà supprimé
-//    le bloc n'écrit rien. Le fichier devient un orphelin, que le balayage
-//    ramasse une semaine plus tard (lib/server/page-files.ts).
+// - closing the tab during a send does not leave a “in progress” block frozen
+// for eternity in the body: when reloading, it is a block WITHOUT an address,
+// that the view announces as a failure and that we delete with a gesture;
+// - and the opposite: a sending which succeeds even though the user has already deleted
+// the block does not write anything. The file becomes an orphan, as scanning
+// pick up a week later (lib/server/page-files.ts).
 //
-// Le `File` d'origine, lui, est gardé en mémoire tant que l'envoi n'a pas
-// abouti : c'est ce qui permet de RÉESSAYER sans redemander le fichier, et
-// d'afficher l'aperçu local d'une image avant même qu'elle soit partie.
+// The original `File` is kept in memory as long as the sending has not
+// successful: this is what allows you to TRY AGAIN without requesting the file again, and
+// to display the local preview of an image before it is even gone.
 
 import {
   createContext,
@@ -45,7 +45,7 @@ import {
   isImageMime,
 } from "@/lib/page-files";
 
-/** Ce que la route rend quand le fichier est arrivé. */
+/** What the route renders when the file has arrived. */
 export interface PageFileUploaded {
   id: string;
   src: string;
@@ -56,19 +56,19 @@ export interface PageFileUploaded {
 
 export interface PageUpload {
   id: string;
-  /** Le fichier d'origine — gardé pour l'aperçu local et pour le réessai. */
+  /** The original file — kept for local preview and retrying. */
   file: File;
   status: "uploading" | "failed";
-  /** 0 → 1. Reste à 0 tant que le navigateur n'a rien émis. */
+  /** 0 → 1. Remains at 0 as long as the browser has not issued anything. */
   progress: number;
-  /** L'aperçu local d'une image, en `blob:`. Null pour tout le reste. */
+  /** The local preview of an image, in `blob:`. Void for everything else. */
   previewUrl: string | null;
 }
 
 export interface PageUploads {
-  /** L'envoi en cours (ou raté) sous cet identifiant, s'il y en a un. */
+  /** The sending in progress (or failed) under this identifier, if there is one. */
   get: (uploadId: string) => PageUpload | undefined;
-  /** Relancer un envoi qui a échoué, avec le fichier déjà en mémoire. */
+  /** Restart a failed upload, with the file already in memory. */
   retry: (uploadId: string) => void;
 }
 
@@ -88,22 +88,22 @@ export function usePageUploadsContext(): PageUploads | null {
   return useContext(Context);
 }
 
-/* ── Le moteur ────────────────────────────────────────────────────────────── */
+/* ── The engine ─────────────────────────────── ─────────────────────────────── */
 
-/** Réencoder un gif tue son animation, un svg ses vecteurs : ceux-là partent
-    tels quels. Miroir exact de lib/use-attachment-uploads.ts. */
+/** Re-encoding a gif kills its animation, an svg its vectors: these leave
+ as is. Exact mirror of lib/use-attachment-uploads.ts. */
 function isCompressible(type: string): boolean {
   return isImageMime(type) && type !== "image/gif" && type !== "image/svg+xml";
 }
 
-/** Aligner l'extension du nom affiché sur le blob réencodé (png → webp). */
+/** Align the displayed name extension to the re-encoded blob (png → webp). */
 function renameForType(name: string, type: string): string {
   const ext = type === "image/webp" ? "webp" : type === "image/jpeg" ? "jpg" : null;
   if (!ext) return name;
   return `${name.replace(/\.[a-zA-Z0-9]+$/, "")}.${ext}`;
 }
 
-/** Le nœud qui porte cet `uploadId`, s'il est encore dans le document. */
+/** The node that carries this `uploadId`, if it is still in the document. */
 function findUploadNode(editor: Editor, uploadId: string): number | null {
   let found: number | null = null;
   editor.state.doc.descendants((node, pos) => {
@@ -118,13 +118,11 @@ function findUploadNode(editor: Editor, uploadId: string): number | null {
 }
 
 /**
- * L'envoi lui-même, en `XMLHttpRequest` et non en `fetch`.
+ * The sending itself, in `XMLHttpRequest` and not in `fetch`.
  *
- * Ce n'est pas de la nostalgie : `fetch` ne rapporte pas l'avancement d'un corps
- * de requête (les flux de requête ne sont pas déployés partout, et n'existent
- * pas du tout sur Safari). Sans avancement, un envoi de 8 Mo sur une connexion
- * lente est un bloc gris qui ne bouge pas pendant quinze secondes — le moment
- * exact où l'on recommence à coller.
+ * This is not nostalgia: `fetch` does not report the progress of a request body
+ * (the request flows are not deployed everywhere, and do not exist
+ * at all on Safari). Without progress, an 8MB send over a slow connection is a gray block that doesn't move for fifteen seconds — the exact moment we start pasting again.
  */
 function postFile(
   url: string,
@@ -161,19 +159,18 @@ function postFile(
 }
 
 /**
- * Le crochet que monte la surface (components/pages/page-view.tsx) : il tient la
- * file des envois et RECOUD le nœud quand l'adresse arrive.
+ * The hook that mounts the surface (components/pages/page-view.tsx): it holds the
+ * queue of sendings and SEWS the node when the address arrives.
  *
- * `editorRef` plutôt que l'éditeur lui-même : l'éditeur naît après le premier
- * rendu, et un envoi lancé par un collage doit pouvoir le lire au moment où il
- * aboutit, pas au moment où le crochet a été appelé.
+ * `editorRef` rather than the editor himself: the editor is born after the first
+ * rendered, and a paste-initiated send should be able to read it at the time it completed, not at the time the hook was called.
  */
 export function usePageUploads(
   projectId: string,
   pageId: string,
   editorRef: { current: Editor | null }
 ): PageUploads & {
-  /** Poser le bloc adapté au fichier, et lancer son envoi. */
+  /** Place the appropriate block on the file, and start sending it. */
   addFiles: (files: Iterable<File>, options?: { at?: number }) => void;
 } {
   const t = useTranslations("Pages");
@@ -202,8 +199,8 @@ export function usePageUploads(
     });
   }, []);
 
-  // Les `blob:` survivent au démontage s'ils ne sont pas révoqués — une page
-  // qu'on ouvre et referme dix fois retiendrait dix images en mémoire.
+  // `blob:` survives unmount if not revoked — one page
+  // opening and closing ten times would retain ten images in memory.
   const uploadsAtUnmount = useRef(uploads);
   uploadsAtUnmount.current = uploads;
   useEffect(
@@ -220,9 +217,9 @@ export function usePageUploads(
       patch(uploadId, { status: "uploading", progress: 0 });
       void (async () => {
         try {
-          // Une capture d'écran sort à 4 Mo d'un Mac récent pour un rendu qui
-          // n'en demande pas le quart. Même recompression que les ressources de
-          // ticket, donc même résultat visuel et le même respect des gif et des
+          // A screenshot comes out at 4 MB from a recent Mac for a rendering that
+          // don't ask for a quarter. Same recompression as the resources of
+          // ticket, therefore same visual result and the same respect for gifs and
           // svg (lib/image-compress.ts).
           const blob = isCompressible(file.type)
             ? await compressImage(file, {
@@ -251,9 +248,9 @@ export function usePageUploads(
             return;
           }
           const pos = findUploadNode(editor, uploadId);
-          // Le bloc a été supprimé pendant l'envoi : on n'écrit rien. Le fichier
-          // part avec le balayage des orphelins — mieux vaut un octet de trop
-          // qu'un bloc qui réapparaît sous le curseur.
+          // The block was deleted during sending: nothing is written. The file
+          // start with orphan scanning — better one byte too many
+          // as a block which reappears under the cursor.
           if (pos === null) {
             drop(uploadId);
             return;
@@ -297,17 +294,17 @@ export function usePageUploads(
 
       let at = options.at;
       for (const file of files) {
-        // Un refus AVANT le bloc est un refus que rien dans le document ne
-        // montrera : sans ce toast, coller une capture de 15 Mo ne ferait
-        // absolument rien à l'écran — le symptôme exact que ce ticket ouvre.
+        // A refusal BEFORE the block is a refusal that nothing in the document
+        // will show: without this toast, pasting a 15 MB capture would not
+        //absolutely nothing on screen — the exact symptom this ticket is causing.
         if (file.size === 0) {
           toast.error(t("uploadEmpty", { name: file.name }));
           continue;
         }
-        // La taille est refusée AVANT de poser le bloc : un bloc raté d'avance
-        // n'apprend rien de plus à l'utilisateur que ce message immédiat, et il
-        // laisse un trou dans le document à nettoyer à la main. Le serveur
-        // revérifie de son côté.
+        // The size is refused BEFORE placing the block: a failed block in advance
+        // teaches the user nothing more than this immediate message, and it
+        // leaves a hole in the document to clean up by hand. The server
+        // recheck on his side.
         if (file.size > MAX_PAGE_FILE_BYTES) {
           toast.error(t("uploadTooLarge", { name: file.name, max: MAX_PAGE_FILE_MB }));
           continue;
@@ -343,8 +340,8 @@ export function usePageUploads(
         if (at === undefined) chain.insertContent(attrs);
         else chain.insertContentAt(at, attrs);
         chain.run();
-        // Les fichiers d'un même lâcher se suivent, dans l'ordre où on les a
-        // pris — sans ça, ils s'empileraient tous à la même position, donc à
+        // The files of the same release follow each other, in the order in which we have them
+        // taken — otherwise, they would all pile up in the same position, so at
         // l'envers.
         if (at !== undefined) at = editor.state.selection.to;
 

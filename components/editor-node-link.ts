@@ -1,34 +1,34 @@
-// L'ancre d'une VUE DE NŒUD, et le clic qui va avec.
+// The anchor of a NODE VIEW, and the click that goes with it.
 //
-// Deux nœuds en rendent une : le bloc sous-page d'une page
-// (components/pages/blocks/subpage-view.tsx) et la pilule d'une mention
-// (components/markdown-mention.tsx). Les deux mènent quelque part DANS l'app, et
-// les deux se heurtent à la même chose : dans un éditeur tiptap, l'extension
-// Link attrape tout `<a>` du document sans savoir d'où il vient.
+// Two nodes make one: the subpage block of a page
+// (components/pages/blocks/subpage-view.tsx) and the pill of a mention
+// (components/markdown-mention.tsx). Both lead somewhere IN the app, and
+// both run into the same thing: in a tiptap editor, the extension
+// Link grabs any `<a>` from the document without knowing where it came from.
 //
-// D'où une marque commune — une classe — et un seul crochet à poser dans les
-// `editorProps` de chaque éditeur qui rend de telles ancres.
+// Hence a common mark – a class – and a single hook to place in the
+// `editorProps` of each editor that renders such anchors.
 
-/** La marque d'une ancre rendue par une vue de nœud : ni le style ni le clic de
-    l'éditeur ne doivent la traiter comme un lien du texte. */
+/** The mark of an anchor rendered by a node view: neither the style nor the click of
+ the editor should treat it as a text link. */
 export const NODE_LINK_CLASS = "editor-node-link";
 
 /**
- * Le clic sur l'ancre d'une vue de nœud n'appartient pas à l'extension Link.
+ * Clicking on the anchor of a node view does not belong to the Link extension.
  *
- * Elle attrape tout `<a>` du document, sans savoir d'où il vient, et fait
- * `window.open(href, target)` — donc un onglet neuf. Sur le bloc sous-page, ça
- * faisait DEUX navigations pour un clic : le nouvel onglet de l'extension, et
- * celle du navigateur qui suit l'ancre dans l'onglet courant. Aucune des deux
- * n'était voulue.
+ * It grabs everything `<a>` in the document, without knowing where it comes from, and does
+ * `window.open(href, target)` — therefore a new tab. On the subpage block, this
+ * made TWO navigations for one click: the new extension tab, and
+ * that of the browser which follows the anchor in the current tab. Neither
+ * was not wanted.
  *
- * Posé dans `editorProps`, qui passe AVANT tous les plugins dans `someProp` de
- * ProseMirror : rendre `true` suffit à couper l'extension. Le `preventDefault`
- * coupe l'autre moitié, et la vue du nœud prend le relais avec une navigation
- * d'application (son propre `onClick`).
+ * Placed in `editorProps`, which goes BEFORE all plugins in `someProp` of
+ * ProseMirror: making `true` is enough to cut the extension. The `preventDefault`
+ * cuts off the other half, and the node view takes over with navigation
+ * (its own `onClick`).
  *
- * Avec un MODIFICATEUR, on ne préempte que l'extension : ⌘/Ctrl-clic veut dire
- * « dans un nouvel onglet », et le navigateur le fait mieux que nous.
+ * With a EDIT, we only preempt the extension: ⌘/Ctrl-click means
+ * “in a new tab”, and the browser does it better than us.
  */
 export function handleNodeLinkClick(event: MouseEvent): boolean {
   const target = event.target as Element | null;
@@ -40,11 +40,11 @@ export function handleNodeLinkClick(event: MouseEvent): boolean {
 }
 
 /**
- * Le clic ORDINAIRE d'une ancre de vue de nœud : celui qui doit passer par le
- * routeur plutôt que par le navigateur.
+ * The ORDINARY click of a node view anchor: the one that should go through the
+ * router rather than the browser.
  *
- * `false` pour un ⌘-clic, un clic du milieu, un ⇧-clic : ceux-là veulent un
- * onglet ou une fenêtre, et l'ancre les sert telle quelle.
+ * `false` for a ⌘-click, a middle click, a ⇧-click: these want a
+ * tab or window, and the anchor serves them as is.
  */
 export function isPlainNavigationClick(event: {
   metaKey: boolean;

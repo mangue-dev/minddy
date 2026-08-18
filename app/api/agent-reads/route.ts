@@ -3,19 +3,19 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 
 /**
- * État « lu » des sessions d'agent de l'utilisateur (bulle bleue « terminé, non lu »).
- *  GET  → carte { conversationId → last_read_at } de ses conversations.
- *  POST → marque une conversation lue ({ conversationId }).
+ * “Read” status of user agent sessions (“completed, unread” blue bubble).
+ *  GET  → map { conversationId → last_read_at } for the user's conversations.
+ * POST → marks a read conversation ({ conversationId }).
  *
- * Table `agent_conversation_reads`, strictement perso (RLS user_id = auth.uid()) : le
- * cookie client suffit, aucun service client. La non-lecture se dérive côté client en
- * comparant ce timestamp au `lastCompletedAt` de la session.
+ * Table `agent_conversation_reads`, strictly personal (RLS user_id = auth.uid()): the
+ * Customer cookie is enough, no customer service. Non-reading occurs on the client side by
+ * comparing this timestamp to the `lastCompletedAt` of the session.
  */
 
 export const runtime = "nodejs";
 
-// `conversation_id` est un uuid : filtrer ici transforme un 500 Postgres en 400 propre
-// (et borne la chaîne au passage).
+// `conversation_id` is a uuid: filtering here transforms a Postgres 500 into a clean 400
+// (and limits the chain in the process).
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(request: NextRequest) {
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     const parsed: unknown = await request.json();
     if (parsed && typeof parsed === "object") body = parsed as { conversationId?: string };
   } catch {
-    // corps invalide → identifiant manquant, rejeté ci-dessous.
+    // invalid body → missing id, rejected below.
   }
   const conversationId =
     typeof body.conversationId === "string" ? body.conversationId.trim() : "";
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "conversationId required" }, { status: 400 });
   }
 
-  // La policy vérifie à la fois l'utilisateur et son droit de lire la conversation.
+  // The policy verifies both the user and their right to read the conversation.
   const { error } = await auth.supabase.from("agent_conversation_reads").upsert(
     {
       user_id: auth.user.id,

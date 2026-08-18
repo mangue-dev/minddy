@@ -3,118 +3,118 @@ import { RUN_COMMAND_TIMEOUT_MS } from "../tools";
 import { isLocalJob, type VmJob } from "./protocol";
 
 /**
- * LA CONFIG D'OPENCODE POUR UN TOUR (MIN-286, lot 1) — ce que le superviseur pose
- * dans `OPENCODE_CONFIG_CONTENT` avant de démarrer `opencode serve`.
+ * THE OPENCODE CONFIG FOR A LAP (MIN-286, batch 1) — what the supervisor asks
+ * in `OPENCODE_CONFIG_CONTENT` before starting `opencode serve`.
  *
- * Un module PUR : il prend le `VmJob` que la fonction a déjà écrit et rend un
- * document JSON. Aucune IO, aucun secret, aucune lecture d'environnement — c'est
- * ce qui le rend testable à l'unité, et c'est aussi ce que le test miroir de
- * [vm-bundle-secrets.test.ts](../vm-bundle-secrets.test.ts) vérifie sur sa
- * SORTIE : la clé du modèle n'entre jamais dans la microVM, le firewall la pose
- * après la sortie et opencode envoie le placeholder du job.
+ * A PUR module: it takes the `VmJob` that the function has already written and returns a
+ * JSON document. No IO, no secrets, no environment reading — it's
+ * which makes it unit testable, and this is also what the mirror test of
+ * [vm-bundle-secrets.test.ts](../vm-bundle-secrets.test.ts) checks on its
+ * OUTPUT: the model key never enters the microVM, the firewall installs it
+ * after exit and opencode sends the job placeholder.
  *
- * TOUT PASSE PAR L'ENVIRONNEMENT, SANS FICHIER. `OPENCODE_CONFIG_CONTENT` porte
- * le document entier — mesuré sur `opencode-ai@1.18.16` : le serveur démarré avec
- * lui rend exactement ce document sur `GET /config`, provider maison compris.
+ * EVERYTHING GOES THROUGH THE ENVIRONMENT, WITHOUT A FILE. `OPENCODE_CONFIG_CONTENT` carries
+ * the entire document — measured on `opencode-ai@1.18.16`: the server started with
+ * gives him exactly this document on `GET /config`, in-house provider included.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * CE QUI A ÉTÉ MESURÉ, ET QUI DÉCIDE DE LA FORME CI-DESSOUS
+ * WHAT WAS MEASURED, AND WHO DECIDED ON THE FORM BELOW
  *
- * (Serveur headless réel, faux endpoint OpenAI-compatible local pour lire le
- * corps des requêtes sans dépenser de modèle. Les chiffres sont reproductibles.)
+ * (Real headless server, fake local OpenAI-compatible endpoint to read the
+ * body of requests without spending a template. Figures are reproducible.)
  *
- * 1. **UN SEUL PROVIDER, LE NÔTRE, ET C'EST NOUS QUI LE TARIFONS.** On déclare
- *    `provider.minddy` sur `@ai-sdk/openai-compatible` avec la `baseURL` du job.
- *    C'est la seule forme qui couvre les CINQ providers du registre
- *    ([agent-providers.ts](../../../agent-providers.ts)) sans changer de wire
- *    format : tous sont adressés en `<baseUrl>/chat/completions` + `Bearer`.
+ * 1. **ONLY ONE PROVIDER, OURS, AND WE ARE THE ONE WHO PRICES IT.** We declare
+ * `provider.minddy` on `@ai-sdk/openai-compatible` with the `baseURL` of the job.
+ * This is the only form that covers the FIVE providers in the registry
+ *    ([agent-providers.ts](../../../agent-providers.ts)) without changing the wire
+ * format: all are addressed in `<baseUrl>/chat/completions` + `Bearer`.
  *
- *    La conséquence, elle, ne se devine pas : **un modèle déclaré sans `cost`
- *    rend `cost: 0`** — mesuré, tokens exacts et coût nul, ce qui viderait le
- *    ledger en silence. Avec `cost` déclaré, opencode calcule au décimal près
- *    (1 000 in / 200 out à 3 $ / 15 $ → `0.006`, exact). D'où `job.pricing` :
- *    **on donne nos prix**, ceux de l'index OpenRouter, plutôt que de dépendre du
- *    catalogue models.dev. Ça règle au passage le seul risque que la sonde de
- *    coût du lot 0 avait laissé ouvert (docs/harness-opencode.md §2.5) : la
- *    DÉRIVE DE CATALOGUE. Prix inconnus (BYOK hors index) → pas de `cost`, et le
- *    superviseur devra marquer l'usage `estimated` plutôt que d'écrire un zéro.
+ * The consequence cannot be guessed: **a model declared without `cost`
+ * makes `cost: 0`** — measured, exact tokens and zero cost, which would empty the
+ * ledger in silence. With `cost` declared, opencode calculates to the nearest decimal
+ * (1,000 in / 200 out at $3 / $15 → `0.006`, correct). Hence `job.pricing`:
+ * **we give our prices**, those of the OpenRouter index, rather than depending on the
+ * catalog models.dev. This resolves the only risk that the probe
+ * cost of batch 0 had left open (docs/harness-opencode.md §2.5): the
+ * CATALOG DRIFT. Unknown prices (BYOK excluding index) → no `cost`, and the
+ * supervisor should mark the usage `estimated` rather than writing a zero.
  *
- * 2. **Un id de modèle à slash passe.** `"minddy/deepseek/deepseek-chat-v3.1"` est
- *    coupé au PREMIER `/` : provider `minddy`, modèle `deepseek/deepseek-chat-v3.1`.
- *    Mesuré de bout en bout, jusqu'au corps de requête.
+ * 2. **A slash model id passes.** `"minddy/deepseek/deepseek-chat-v3.1"` is
+ * cut to FIRST `/`: provider `minddy`, model `deepseek/deepseek-chat-v3.1`.
+ * Measured end-to-end, right down to the request body.
  *
- * 3. **Le raisonnement ne passe QUE sous sa forme imbriquée.** `options.reasoning
- *    = { effort }` (la forme OpenRouter) arrive intact dans le corps ; `options.
- *    reasoning_effort` à plat est **retiré** par opencode sur l'appel principal
- *    (il survit sur le petit modèle, ce qui rend la faute d'autant plus discrète).
- *    OpenAI et Gemini, qui attendent la forme PLATE, perdent donc leur niveau de
- *    raisonnement en 1.18.16 ; Anthropic attend sa propre forme `thinking` :
- *    c'est le proxy local du
- *    superviseur (§2.6 du dossier) qui le réinjectera, et c'est sa deuxième
- *    raison d'être après le `generation_id`.
+ * 3. **The reasoning ONLY passes in its nested form.** `options.reasoning
+ * = { effort }` (the OpenRouter form) arrives intact in the body; `options.
+ * flat reasoning_effort` is **removed** by opencode on the main call
+ * (it survives on the small model, which makes the fault all the more discreet).
+ * OpenAI and Gemini, which expect the FLAT form, therefore lose their level of
+ *    reasoning in 1.18.16; Anthropic expects its own `thinking` form:
+ * this is the local proxy of
+ * supervisor (§2.6 of the file) who will reinject him, and this is his second
+ * reason for being after `generation_id`.
  *
- * 4. **`tools: { x: false }` n'ENLÈVE pas le tool intégré `x`** : il le sert quand
- *    même et pose une permission `deny`. Ce qui retire vraiment un intégré, c'est
- *    le jeu de tools de l'AGENT (`agent.<id>.tools`) — d'où les deux, posés
- *    ensemble : la carte globale pour la permission, le jeu de l'agent pour
- *    l'absence.
+ * 4. **`tools: { x: false }` does not REMOVE the integrated tool `x`**: it uses it when
+ * same and sets a `deny` permission. What really takes away from an integrated is
+ * the set of AGENT tools (`agent.<id>.tools`) — hence the two, placed
+ * together: the global map for permission, the agent's game for
+ *    absence.
  *
- *    ⚠ **La conclusion « toujours servi » était fausse** (MIN-362, MIN-363), et
- *    la correction tient à ce qu'il y a DEUX catalogues, qui ne disent pas la
- *    même chose. Un `deny` NU retire bel et bien le tool de ce qui est **offert
- *    au modèle** — mesuré dans le corps de la requête au fournisseur : `websearch`
- *    et `todowrite` n'y sont pas « refusés », ils n'y sont pas. Ce qui continue de
- *    les lister, c'est `GET /experimental/tool`, le catalogue REST — celui que
- *    lisent nos sondes, pas celui que lit le modèle. La mesure était juste ;
- *    l'endroit où la lire ne l'était pas
+ * ⚠ **The “always served” conclusion was false** (MIN-362, MIN-363), and
+ * the correction is due to the fact that there are TWO catalogs, which do not say the
+ * same thing. A NU `deny` actually removes the tool from what is **offered
+ * to model** — measured in the body of the request to the provider: `websearch`
+ * and `todowrite` are not “refused”, they are not there. What continues to
+ * list them, it is `GET /experimental/tool`, the REST catalog — the one that
+ * read our probes, not the one the model reads. The measure was right;
+ * the place to read it was not
  *    ([opencode-permissions.probe.test.ts](opencode-permissions.probe.test.ts),
  *    docs/harness-opencode.md §2.32).
  *
- * 5. **`agent.<id>.prompt` REMPLACE le prompt système intégré**, et les
- *    `instructions` sont des CHEMINS DE FICHIER dont le contenu est ajouté au
- *    message système (mesuré : marqueur retrouvé dans le corps). L'ancrage minddy
- *    voyage donc par un fichier que le superviseur écrit sous `harnessDir` —
- *    hors du dépôt, pour que le `git add -A` de fin de tour ne l'emporte
- *    jamais dans un commit du dépôt de l'utilisateur.
+ * 5. **`agent.<id>.prompt` REPLACES the built-in system prompt**, and the
+ * `instructions` are FILE PATHS whose contents are added to the
+ * system message (measured: marker found in the body). minddy anchor
+ * therefore travels through a file that the supervisor writes under `harnessDir` —
+ * outside the depot, so that the `git add -A` at the end of the turn does not win
+ * never in a commit from the user's repository.
  */
 
-/** L'id de provider qu'on déclare. Un seul, quel que soit le BYOK derrière. */
+/** The provider id that we declare. Just one, regardless of the BYOK behind it. */
 export const OPENCODE_PROVIDER_ID = "minddy";
 
-/** Le paquet AI SDK que ce provider charge : la couche OpenAI-compatible. */
+/** The AI ​​SDK package that this provider loads: the OpenAI-compatible layer. */
 export const OPENCODE_PROVIDER_NPM = "@ai-sdk/openai-compatible";
 
-/** L'agent PRIMAIRE d'un tour — celui qui reçoit le prompt de l'utilisateur. */
+/** The PRIMARY agent of a round — the one that receives the prompt from the user. */
 export const OPENCODE_PRIMARY_AGENT = "build";
 
 /**
- * LES CHEMINS D'OPENCODE, DÉRIVÉS DU LAYOUT DU RUN (MIN-354).
+ * OPENCODE PATHS, DERIVED FROM THE RUN LAYOUT (MIN-354).
  *
- * C'étaient six constantes de module sous `/vercel/sandbox/harness`. Le piège
- * qu'elles portaient n'était pas seulement `/vercel` : deux runs lancés à la
- * suite sur une même machine auraient partagé **une seule base SQLite**, un seul
- * fichier d'ancrage et un seul dossier de tools — chacun réécrivant le décor de
- * l'autre, avec des symptômes qui ne ressemblent pas à leur cause.
+ * These were six module constants under `/vercel/sandbox/harness`. The trap
+ * that they wore was not only `/vercel`: two runs launched at the
+ * suite on the same machine would have shared **a single SQLite database**, a single
+ * anchor file and a single tools folder — each rewriting the scenery of
+ * the other, with symptoms that do not resemble their cause.
  */
 
-/** Le fichier d'ancrage minddy, ajouté au prompt système par `instructions`. */
+/** The minddy anchor file, added to the system prompt by `instructions`. */
 export function opencodeAnchorFile(layout: HarnessLayout): string {
   return `${layout.harnessDir}/minddy-anchor.md`;
 }
 
-/** Où vit l'état d'opencode : SQLite, hors du dépôt (cf. §5). */
+/** Where the opencode state lives: SQLite, outside the repository (see §5). */
 export function opencodeDbPath(layout: HarnessLayout): string {
   return `${layout.harnessDir}/opencode.db`;
 }
 
 /**
- * Le `XDG_CONFIG_HOME` du serveur, et le dossier de tools qui en découle.
+ * The `XDG_CONFIG_HOME` of the server, and the resulting tools folder.
  *
- * Mesuré : `$XDG_CONFIG_HOME/opencode/tool/*.ts` est chargé exactement comme le
- * `.opencode/tool/` d'un projet — servi au modèle ET appelé. C'est ce qui permet
- * aux ~35 tools de domaine de vivre **hors du dépôt** : dans le dépôt, ils
- * entreraient dans le `git add -A` de fin de tour et se retrouveraient commités
- * chez l'utilisateur.
+ * Measured: `$XDG_CONFIG_HOME/opencode/tool/*.ts` is loaded exactly as the
+ * `.opencode/tool/` of a project — served to the model AND called. This is what allows
+ * to ~35 living domain tools **outside the depot**: in the depot, they
+ * would enter the end of turn `git add -A` and find themselves committed
+ * at the user.
  */
 export function opencodeConfigHome(layout: HarnessLayout): string {
   return `${layout.harnessDir}/config`;
@@ -124,16 +124,16 @@ export function opencodeToolDir(layout: HarnessLayout): string {
 }
 
 /**
- * LES DEUX AUTRES DOSSIERS D'OPENCODE, ramenés eux aussi sous `harnessDir`.
+ * THE TWO OTHER OPENCODE FILES, also brought back under `harnessDir`.
  *
- * Mesuré le 2026-08-12 (serveur réel, dépôt git jetable) : `XDG_DATA_HOME` reçoit
- * `opencode/repos/` — les **snapshots** de travail, qui sont des dépôts git —, et
- * `opencode/log/` ; `XDG_CACHE_HOME` reçoit les binaires téléchargés. Sans ces
- * deux variables, tout cela part dans le `$HOME` de la microVM : hors du dépôt,
- * donc jamais dans un `git add -A`, mais hors de notre portée aussi — un
- * `$HOME` absent ou posé sur le dépôt par une image de sandbox suffirait à
- * ramener des dépôts git entiers dans le commit du tour. Tout l'état d'opencode
- * tient sous un seul dossier, et ce dossier est frère du dépôt.
+ * Measured on 2026-08-12 (real server, disposable git repository): `XDG_DATA_HOME` receives
+ * `opencode/repos/` — the working **snapshots**, which are git repositories —, and
+ * `opencode/log/` ; `XDG_CACHE_HOME` receives the downloaded binaries. Without these
+ * two variables, all this goes into the `$HOME` of the microVM: outside the repository,
+ * so never in a `git add -A`, but out of our reach too — a
+ * `$HOME` absent or placed on the repository by a sandbox image would be sufficient to
+ * bringing entire git repositories into the tour commit. All state of opencode
+ * fits under a single folder, and this folder is sibling to the repository.
  */
 export function opencodeDataHome(layout: HarnessLayout): string {
   return `${layout.harnessDir}/data`;
@@ -143,9 +143,9 @@ export function opencodeCacheHome(layout: HarnessLayout): string {
 }
 
 /**
- * Troncature de sortie de tool. Les valeurs par défaut d'opencode, redites ici
- * parce qu'un défaut qui bouge à une release près déplacerait silencieusement une
- * frontière que le produit connaît (`READ_MAX_LINES`, `READ_MAX_BYTES`).
+ * Tool output truncation. Opencode defaults, restated here
+ * because a defect that moves within one release would silently move a
+ * boundary that the product knows (`READ_MAX_LINES`, `READ_MAX_BYTES`).
  */
 const TOOL_OUTPUT = { max_lines: 2000, max_bytes: 250_000 } as const;
 
@@ -166,7 +166,7 @@ export interface OpencodeConfig {
   $schema: string;
   model: string;
   small_model: string;
-  /** Hiérarchie à UN niveau : une fille ne délègue pas (cf. `subagentToolsFor`). */
+  /** Hierarchy at ONE level: a girl does not delegate (see `subagentToolsFor`). */
   subagent_depth: number;
   default_agent: string;
   instructions: string[];
@@ -190,7 +190,7 @@ interface OpencodeModelDef {
   name: string;
   tool_call: true;
   attachment?: boolean;
-  /** `input`/`output` au sens models.dev — cf. `modelDef` pour ce qui en dépend. */
+  /** `input`/`output` in the sense of models.dev — cf. `modelDef` for what depends on it. */
   modalities?: { input: string[]; output: string[] };
   reasoning?: boolean;
   options?: Record<string, unknown>;
@@ -199,57 +199,57 @@ interface OpencodeModelDef {
 }
 
 /**
- * Les intégrés qu'on ÉTEINT, et pourquoi chacun — la liste est courte parce que
- * l'inventaire de parité (docs/harness-opencode.md §3) dit que le reste tombe
- * pile sur les nôtres.
+ * The built-ins that we turn OFF, and why each one — the list is short because
+ * the parity inventory (docs/harness-opencode.md §3) says the rest falls
+ * right on top of ours.
  *
- * - `todowrite` : notre checklist EST le plan du ticket, et elle se synchronise
- *   ([plan-sync.ts](../plan-sync.ts)). Une todo locale ne se lit nulle part.
- *   **Mesuré (MIN-364, lot 9)** : ce tool n'écrit nulle part hors d'opencode et
- *   ne publie aucune permission. Le « 20 écritures réseau » que l'audit du 15/08
- *   lui reprochait (§3 #12) visait en fait NOTRE `update_plan`, qui miroite vers
- *   le plan du ticket — et c'est là qu'on l'a réglé (cf. `update_plan` dans
- *   [supervisor.ts](supervisor.ts) : un plan identique ne se re-synchronise pas).
- *   Le retrait reste donc une décision de PRODUIT — une seule checklist — et pas
- *   une histoire de coût.
- * - `websearch` : il ne porterait ni le plafond du tour (`webSearchMax`) ni la
- *   facturation ([web-search.ts](../../web-search.ts)) — et il n'est de toute
- *   façon pas servi sur OpenRouter. Notre `web_search` de domaine le remplace.
- * - `skill` : **et le motif écrit ici était faux** (MIN-364, lot 9). Il disait
- *   « les skills lisent le disque de la microVM ; il n'y en a aucune ». Mesuré :
- *   la découverte lit **`$HOME`**, que le harness ne relocalise pas — donc, sur
- *   un Mac, `~/.claude/skills/` et `~/.agents/skills/`, plus la remontée du
- *   dossier de session jusqu'à la racine du dépôt.
+ * - `todowrite`: our checklist IS the ticket plan, and it synchronizes
+ * ([plan-sync.ts](../plan-sync.ts)). A local todo cannot be read anywhere.
+ * **Measured (MIN-364, batch 9)**: this tool does not write anywhere outside of opencode and
+ * does not post any permissions. The “20 network entries” that the audit of 08/15
+ *   criticized (§3 #12) actually targeted OUR `update_plan`, which mirrors to
+ * the ticket plan — and that’s where we settled it (see `update_plan` in
+ *   [supervisor.ts](supervisor.ts): an identical plan is not synchronized again).
+ * Withdrawal therefore remains a PRODUCT decision – a single checklist – and not
+ * a story of cost.
+ * - `websearch`: it would neither carry the turn ceiling (`webSearchMax`) nor the
+ * billing ([web-search.ts](../../web-search.ts)) — and it is definitely not
+ * way not served on OpenRouter. Our domain `web_search` replaces it.
+ * - `skill`: **and the reason written here was false** (MIN-364, lot 9). He said
+ * “the skills read the microVM disk; there are none.” Measure :
+ * the discovery reads **`$HOME`**, which the harness does not relocate — so, on
+ * a Mac, `~/.claude/skills/` and `~/.agents/skills/`, plus the rise of the
+ * session folder up to the root of the repository.
  *
- *   Ce n'est donc pas « rien » qu'on retirait, c'est **les skills Claude Code de
- *   l'utilisateur ET celles du dépôt**. Et c'est la seconde moitié qui décide :
- *   un `SKILL.md` est écrit par quiconque peut committer, il est INSTRUCTIONS par
- *   nature, et il entre dans le contexte sans passer par notre note de frontière
- *   ([repo-instructions.ts](../repo-instructions.ts)) — c'est-à-dire exactement
- *   la surface d'injection que le lot 6 vient de refermer pour les `AGENTS.md`.
+ * So it’s not “nothing” that we’re removing, it’s **the Claude Code skills of
+ * the user AND those of the repository**. And it is the second half which decides:
+ * a `SKILL.md` is written by anyone who can commit, it is INSTRUCTED by
+ * nature, and it enters the context without passing through our border note
+ * ([repo-instructions.ts](../repo-instructions.ts)) — that is, exactly
+ * the injection surface that batch 6 has just closed for `AGENTS.md`.
  *
- *   Le levier existe le jour où minddy voudra servir SES skills :
- *   `skills.paths` les NOMME, et survit à `OPENCODE_DISABLE_EXTERNAL_SKILLS`
- *   (mesuré, [opencode-capabilities.probe.test.ts](opencode-capabilities.probe.test.ts)).
+ * The lever exists the day Minddy wants to serve HER skills:
+ * `skills.paths` NAMES them, and survives `OPENCODE_DISABLE_EXTERNAL_SKILLS`
+ * (measured, [opencode-capabilities.probe.test.ts](opencode-capabilities.probe.test.ts)).
  */
 const DISABLED_BUILTINS = ["todowrite", "websearch", "skill"] as const;
 
-/** Les intégrés d'ÉCRITURE, retirés d'une session qui n'écrit pas (relecture). */
+/** WRITE built-ins, removed from a session that is not writing (replay). */
 const WRITE_BUILTINS = ["edit", "write", "apply_patch"] as const;
 
-/** Ce qu'un sous-agent `explore` a le droit de faire, et rien d'autre. */
+/** What a sub-agent `explore` has the right to do, and nothing else. */
 const EXPLORE_TOOLS = ["read", "grep", "glob"] as const;
 
 /**
- * COMBIEN DE MODÈLES DE FILLE ON DÉCLARE AU PLUS.
+ * HOW MANY GIRL MODELS ARE DECLARED AT MOST.
  *
- * Chaque modèle offert coûte DEUX agents (un par mode) et deux lignes dans la
- * description du tool `task` — c'est là que le modèle lit l'offre (mesuré : le
+ * Each model offered costs TWO agents (one per mode) and two lines in the
+ * description of the tool `task` — this is where the model reads the offer (measured: the
  * serveur y colle « Available agent types and the tools they have access to: »
- * suivi d'un `- <nom>: <description>` par agent non primaire). La liste des
- * favoris en compte quatre par défaut ; ce plafond borne une liste d'admin qui
- * partirait à trente, sans quoi la description du tool grossirait sans que
- * personne ne le voie.
+ * followed by a `- <nom>: <description>` per non-primary agent). The list of
+ * favorites has four by default; this ceiling limits a list of admins who
+ * would start at thirty, otherwise the description of the tool would grow without
+ * no one sees it.
  */
 export const MAX_SUBAGENT_MODELS = 8;
 
@@ -258,25 +258,25 @@ function modelRef(model: string): string {
 }
 
 /**
- * Le modèle du job, déclaré chez nous : ses prix (§1), sa fenêtre, ses capacités.
+ * The job model, declared with us: its prices (§1), its window, its capacities.
  *
- * `tool_call: true` est une affirmation et non une mesure — un modèle sans appel
- * d'outil ne sort jamais du catalogue de l'agent (`models-catalog.ts` le filtre),
- * donc celui qui arrive ici en a forcément.
+ * `tool_call: true` is a statement and not a measurement — a clear model
+ * tool never leaves the agent catalog (`models-catalog.ts` the filter),
+ * so whoever arrives here necessarily has some.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * LES IMAGES DEMANDENT **DEUX** DÉCLARATIONS, ET `attachment` N'EST PAS LA BONNE
+ * THE IMAGES REQUEST **TWO** STATEMENTS, AND `attachment` IS NOT THE RIGHT ONE
  *
- * Mesuré le 2026-08-12 (dossier §2.22) : avec `attachment: true` seul, une image
- * rendue par un tool est bien acheminée jusqu'au dernier moment, puis **remplacée
- * par un texte d'erreur** juste avant l'appel — « ERROR: Cannot read "x.png"
- * (this model does not support image input). Inform the user. » Le modèle lit
- * donc une phrase qui l'invite à prévenir l'utilisateur d'une limite qui n'existe
- * pas, et la maquette est perdue en silence.
+ * Measured on 2026-08-12 (file §2.22): with `attachment: true` alone, an image
+ * rendered by a tool is well routed until the last moment, then **replaced
+ * by an error text** just before the call — “ERROR: Cannot read "x.png"
+ * (this model does not support image input). Inform the user. » Model reads
+ * therefore a sentence which invites him to warn the user of a limit which does not exist
+ * not, and the model is lost in silence.
  *
- * Ce que le binaire teste, c'est `capabilities.input.image`, qui se déclare en
- * config par **`modalities.input`** — d'où les deux champs ci-dessous, posés
- * ensemble et sur le même `job.imageInput`. Ne jamais en poser un sans l'autre.
+ * What the binary tests is `capabilities.input.image`, which is declared as
+ * config by **`modalities.input`** — hence the two fields below, set
+ * together and on the same `job.imageInput`. Never put one without the other.
  */
 function modelDef(job: VmJob): OpencodeModelDef {
   const def: OpencodeModelDef = {
@@ -301,8 +301,8 @@ function modelDef(job: VmJob): OpencodeModelDef {
     };
   }
   if (job.contextWindow) {
-    // `output` est requis par le schéma dès qu'on donne `limit`. 8192 est le
-    // `maxTokens` que notre profil de requête envoie déjà (agent-providers.ts).
+    // `output` is required by the schema as soon as `limit` is given. 8192 is the
+    // `maxTokens` that our request profile is already sending (agent-providers.ts).
     def.limit = { context: job.contextWindow, output: 8192 };
   }
   const reasoning = reasoningOptions(job);
@@ -314,17 +314,17 @@ function modelDef(job: VmJob): OpencodeModelDef {
 }
 
 /**
- * LES MODÈLES DU TOUR : celui du run, plus un par modèle de sous-agent offert.
+ * TOUR MODELS: that of the run, plus one per sub-agent model offered.
  *
- * Un modèle non déclaré ne tourne pas — et un modèle déclaré sans prix rend
- * `cost: 0` (§1). Les deux raisons pour lesquelles cette table est la même que
- * celle des agents : ce qui n'a pas de prix n'est pas offert
- * (`subagentModelChoices`), et ce qui est offert est tarifé ici.
+ * An undeclared model does not work — and a declared model without price makes
+ * `cost: 0` (§1). The two reasons why this table is the same as
+ * that of agents: what is priceless is not offered
+ * (`subagentModelChoices`), and what is offered is priced here.
  *
- * Le `thinking_effort` conseillé du favori n'est PAS reporté : le niveau de
- * raisonnement est une option de MODÈLE chez opencode, donc le poser reviendrait
- * à le figer pour toutes les filles de ce modèle. Elles héritent de celui du run,
- * exactement comme `spawn_agent` sans `thinking_effort`.
+ * The recommended `thinking_effort` of the favorite is NOT reported: the level of
+ * reasoning is a TEMPLATE option at opencode, so asking it would be
+ * to freeze it for all the girls of this model. They inherit that of the run,
+ * exactly like `spawn_agent` without `thinking_effort`.
  */
 function providerModels(job: VmJob): Record<string, OpencodeModelDef> {
   const models: Record<string, OpencodeModelDef> = { [job.model]: modelDef(job) };
@@ -349,11 +349,11 @@ function providerModels(job: VmJob): Record<string, OpencodeModelDef> {
 }
 
 /**
- * Le niveau de raisonnement, dans la SEULE forme qui survive (§3) : imbriquée.
+ * The level of reasoning, in the ONLY form that survives (§3): nested.
  *
- * `off` ne se dit pas ici — c'est l'absence du champ. Envoyer `effort: "none"` à
- * un endpoint qui ne connaît pas le champ revient en 400, et notre propre
- * profil de requête ne l'envoie déjà que sur les providers qui l'acceptent.
+ * `off` is not said here — it is the absence of the field. Send `effort: "none"` to
+ * an endpoint that does not know the field returns to 400, and our own
+ * request profile already only sends it to providers that accept it.
  */
 function reasoningOptions(job: VmJob): Record<string, unknown> | null {
   if (job.reasoningLevel === "off") return null;
@@ -361,107 +361,107 @@ function reasoningOptions(job: VmJob): Record<string, unknown> | null {
 }
 
 /**
- * Les permissions du tour — une ACL, dernière règle gagnante, `resource` en glob.
+ * The permissions of the round — an ACL, last winning rule, `resource` overall.
  *
- * Ce qu'elles ne sont PAS : le garde-fou des commandes. `command-guard.ts` et
- * `repo-path.ts` restent des fonctions pures rejouées par le superviseur sur
- * `POST /permission/:id/reply` — d'où `bash: "ask"`, qui est ce qui LUI DONNE la
- * main. Une ACL en glob ne saurait pas dire « `rm -rf` hors du dépôt », et une
- * règle qui approuve tout retirerait au superviseur son point de contrôle.
+ * What they are NOT: order guardrail. `command-guard.ts` and
+ * `repo-path.ts` remain pure functions replayed by the supervisor on
+ * `POST /permission/:id/reply` — hence `bash: "ask"`, which is what GIVES IT the
+ * hand. A global ACL cannot say “`rm -rf` outside the repository”, and a
+ * rule that approves everything would take away the supervisor's point of control.
  */
 function permissions(job: VmJob): Record<string, PermissionRule> {
   /**
-   * `ask` ET NON `allow` sur une session qui écrit, et ça n'est pas de la
-   * prudence : `.git/` n'est protégé par personne chez opencode — mesuré, un
-   * `write` sur `<dépôt>/.git/config` l'a écrasé. `ask` est ce qui donne la main
-   * au superviseur, qui y rejoue `assertNotGit` et `resolveWithin`
+   * `ask` AND NOT `allow` on a session which writes, and that is not
+   * caution: `.git/` is not protected by anyone at opencode — measured, a
+   * `write` over `<repository>/.git/config` overwrote it. `ask` is what gives the hand
+   * to the supervisor, who replays `assertNotGit` and `resolveWithin`
    * ([opencode-permissions.ts](opencode-permissions.ts)).
    */
   const write: PermissionAction = job.writesToRepo ? "ask" : "deny";
   const local = isLocalJob(job);
   return {
     /**
-     * `read` (MIN-360) — `allow` en microVM, `ask` sur la machine de quelqu'un.
+     * `read` (MIN-360) — `allow` in microVM, `ask` on someone's machine.
      *
-     * `allow` n'était pas neutre : opencode LIVRE `{"*.env": "ask", "*.env.*":
-     * "ask", "*.env.example": "allow"}` dans son ruleset par défaut, nos règles
-     * sont concaténées APRÈS, et la dernière qui matche gagne — notre `allow`
-     * effaçait donc la question sur les `.env`. Sur un clone jetable, sans
-     * enjeu ; en mode dépôt courant, c'est le `.env` réel de l'utilisateur.
+     * `allow` was not neutral: opencode BOOK `{"*.env": "ask", "*.env.*":
+     * "ask", "*.env.example": "allow"}` in its default ruleset, our rules
+     * are concatenated AFTER, and the last one to match wins — our `allow`
+     * therefore deleted the question on `.env`. On a disposable clone, without
+     * stake ; in current deposit mode, this is the user's real `.env`.
      *
-     * On ne remet pas leur glob : on prend la main. Un `ask` global fait passer
-     * chaque lecture par `decidePermission`, qui est à nous, testé, et ne dépend
-     * ni de l'ordre de concaténation ni de la sémantique de glob d'une version.
-     * Le coût est un aller-retour HTTP en boucle locale par lecture — le même
-     * que `bash` paie depuis toujours.
+     * We don't hand over their glob: we take the hand. A global `ask` passes
+     * each reading by `decidePermission`, which is ours, tested, and does not depend
+     * neither the concatenation order nor the glob semantics of a version.
+     * The cost is one local loop HTTP round trip per read — the same
+     * that `bash` has always paid.
      */
     read: local ? "ask" : "allow",
     glob: "allow",
     grep: "allow",
     /**
-     * ⚠ IL N'Y A PAS DE `list` ICI, ET C'EST DÉLIBÉRÉ (MIN-363).
+     * ⚠ THERE IS NO `list` HERE, AND THIS IS DELIBERATE (MIN-363).
      *
-     * La ligne `list: "allow"` a vécu là ; elle ne réglait rien. **Il n'existe
-     * pas de tool `list` en 1.18.16.** Relevé sur `GET /experimental/tool` d'un
-     * serveur nu (agent `build`, modèle non-`gpt-*`, donc sans `apply_patch`) :
+     * The `list: "allow"` line lived there; it didn't solve anything. **There is no
+     * no tool `list` in 1.18.16.** Found on `GET /experimental/tool` of a
+     * bare server (agent `build`, non-`gpt-*` model, therefore without `apply_patch`):
      * `invalid question bash read glob grep edit write task webfetch todowrite
-     * skill`, et rien d'autre. C'est `read` sur un répertoire qui liste
-     * (docs/harness-opencode.md §3.1). Une ACL posée sur une action qui n'existe
-     * pas ne se voit jamais échouer : elle se relit comme une garantie.
+     * skill`, and nothing else. It is `read` on a directory that lists
+     * (docs/harness-opencode.md §3.1). An ACL placed on an action that does not exist
+     * you never see yourself failing: it reads like a guarantee.
      */
-    // Chaque commande passe par nous : c'est là que `command-guard` s'exécute.
+    // Each command goes through us: this is where `command-guard` executes.
     bash: "ask",
     edit: write,
-    // Second rideau seulement : la permission `question` n'est PAS consultée
-    // (mesuré). Ce qui retire vraiment `ask_user` d'une routine est le jeu de
-    // tools de l'agent (`primaryTools`).
+    // Second curtain only: permission `question` is NOT consulted
+    // (measure). What really takes `ask_user` out of a routine is the game of
+     // the agent's tools (`primaryTools`).
     question: job.interactive ? "ask" : "deny",
     /**
-     * `webfetch` (MIN-360) — `allow` en microVM, `ask` sur une machine.
+     * `webfetch` (MIN-360) — `allow` in microVM, `ask` on a machine.
      *
-     * En `allow`, il n'est JAMAIS publié en permission : `decidePermission` ne
-     * voyait aucun fetch. Dans la microVM c'était sans conséquence, la boucle
-     * locale ne portant que nos deux serveurs et le firewall bornant le reste.
-     * Sur un Mac, la même ligne atteint le proxy LLM (donc la clé), le pont de
-     * tools — qui n'authentifie rien —, les serveurs de dév de l'utilisateur, un
-     * Ollama, un NAS, et tout ce que son VPN rend joignable.
+     * In `allow`, it is NEVER published under permission: `decidePermission` does not
+     * saw no fetch. In the microVM it was of no consequence, the loop
+     * local only carrying our two servers and the firewall limiting the rest.
+     * On a Mac, the same line reaches the LLM proxy (hence the key), the bridge
+     * tools — which does not authenticate anything —, the user's dev servers, a
+     * Ollama, a NAS, and everything its VPN makes reachable.
      */
     webfetch: local ? "ask" : "allow",
     websearch: "deny",
     todowrite: "deny",
     /**
-     * `ask` ET NON `allow` : la demande de permission d'un `task` porte le
-     * `subagent_type` demandé (mesuré : `patterns: ["explore-cheap"]`,
-     * `metadata: {description, subagent_type}`), et elle arrive AVANT
-     * qu'opencode ne résolve l'agent. C'est donc le seul endroit d'où tenir les
-     * deux choses que la config ne sait pas dire : le PLAFOND DE PARALLÉLISME
-     * (`maxParallel`, réglé en `app_config`) et le mot au modèle quand il
-     * demande un sous-agent qui n'existe pas — « voilà ce qui est offert »
-     * plutôt qu'« Unknown agent type ».
+     * `ask` AND NOT `allow`: the permission request for a `task` bears the
+     * `subagent_type` requested (measured: `patterns: ["explore-cheap"]`,
+     * `metadata: {description, subagent_type}`), and it arrives BEFORE
+     * that opencode does not resolve the agent. It is therefore the only place from which to hold the
+     * two things that the config does not know how to say: the PARALLELISM CEILING
+     * (`maxParallel`, set to `app_config`) and the word to the model when it
+     * asks for a subagent that doesn't exist — "this is what's offered"
+     * rather than “Unknown agent type”.
      */
     task: "ask",
     /**
-     * SORTIR DU DOSSIER (MIN-364, décision D5).
+     * EXIT THE FILE (MIN-364, decision D5).
      *
-     * En microVM : `deny`. Il n'y a qu'un dépôt et un harness, tout le reste est
-     * hors sujet, et un `deny` de config court-circuite avant publication.
+     * In microVM: `deny`. There is only a deposit and a harness, everything else is
+     * off-topic, and a config `deny` bypasses before publication.
      *
-     * Sur la machine de l'utilisateur : `ask`, **pour autoriser**. Le mur d'avant
-     * n'attrapait que les tools honnêtes — vingt des trente commandes mesurées
-     * atteignent un dossier extérieur sans publier autre chose que `bash` — et il
-     * poussait donc le travail vers l'endroit où l'on ne voit plus rien. `ask`
-     * rend un `once` immédiat ET publie la sortie au fil : le verdict ne bride
-     * rien, et on garde la trace de chaque excursion.
+     * On the user's machine: `ask`, **to authorize**. The front wall
+     * only caught the honest tools — twenty of the thirty orders measured
+     * reach an external folder without publishing anything other than `bash` — and it
+     * therefore pushed the work towards the place where we no longer see anything. `ask`
+     * renders an immediate `once` AND publishes the output to the thread: the verdict does not restrict
+     * nothing, and we keep track of each excursion.
      *
-     * Le prix, à savoir plutôt qu'à découvrir : un aller-retour HTTP en boucle
-     * locale sur les ~10 commandes (sur 30 mesurées) qui publient vraiment cette
-     * permission. Les vingt autres ne passent de toute façon jamais par ici.
+     * The price, to know rather than to discover: an HTTP round trip in a loop
+     * local on the ~10 orders (out of 30 measured) that actually publish this
+     * permission. The other twenty never pass through here anyway.
      */
     external_directory: local ? "ask" : "deny",
   };
 }
 
-/** La carte globale des intégrés — permission, pas retrait (§4). */
+/** The global map of integrated people — permission, not withdrawal (§4). */
 function toolMap(job: VmJob): Record<string, boolean> {
   const map: Record<string, boolean> = {};
   for (const name of DISABLED_BUILTINS) map[name] = false;
@@ -470,26 +470,26 @@ function toolMap(job: VmJob): Record<string, boolean> {
 }
 
 /**
- * Le jeu de tools de l'agent PRIMAIRE : ce qui reste des intégrés après retrait.
+ * The PRIMARY agent toolset: what remains of the built-ins after removal.
  *
- * `apply_patch` est laissé à opencode, qui bascule dessus sur les modèles `gpt-*`
- * exactement comme notre `usesApplyPatch` ([patch.ts](../patch.ts), MIN-115) — la
- * bascule est mesurée identique (docs/harness-opencode.md §2.3), donc la
- * redéclarer ici ne ferait que créer un deuxième endroit où elle peut diverger.
+ * `apply_patch` is left to opencode, which switches to it on the `gpt-*` models
+ * exactly like our `usesApplyPatch` ([patch.ts](../patch.ts), MIN-115) — the
+ * rocker is measured identical (docs/harness-opencode.md §2.3), so the
+ * redeclaring here would just create a second place where it can diverge.
  */
 function primaryTools(job: VmJob): Record<string, boolean> {
   const tools: Record<string, boolean> = {};
   for (const name of DISABLED_BUILTINS) tools[name] = false;
   if (!job.writesToRepo) for (const name of WRITE_BUILTINS) tools[name] = false;
-  // La délégation est le tool `task` : il disparaît quand le tour n'a pas de
-  // sous-agents à donner, plutôt que d'être servi et de refuser.
+  // Delegation is the `task` tool: it disappears when the turn has no
+  // subagents to give, rather than being served and refusing.
   tools.task = job.subagents.maxParallel > 0;
   /**
-   * `ask_user` N'EXISTE PAS POUR UNE ROUTINE (MIN-185) : personne ne répondra à
-   * 9 h du matin. Le RETRAIT est ici et pas seulement dans l'ACL, parce que la
-   * permission `question` n'est pas consultée — mesuré : avec `question: "ask"`
-   * en config, aucune `permission.asked` n'est publiée, le tool s'exécute et
-   * publie directement `question.asked`. Seul le jeu de tools de l'agent le
+   * `ask_user` DOES NOT EXIST FOR A ROUTINE (MIN-185): no one will respond to
+   * 9 a.m. The WITHDRAWAL is here and not just in the ACL, because the
+   * permission `question` is not consulted — measured: with `question: "ask"`
+   * in config, no `permission.asked` is published, the tool runs and
+   * directly publishes `question.asked`. Only the agent toolset
    * retire vraiment (§4).
    */
   tools.question = job.interactive;
@@ -497,65 +497,65 @@ function primaryTools(job: VmJob): Record<string, boolean> {
 }
 
 /**
- * LES SOUS-AGENTS D'UN TOUR (MIN-286, lot 2) — nos deux modes (MIN-112), fois
- * les modèles qu'on accepte de leur donner.
+ * THE SUB-AGENTS OF A TOUR (MIN-286, lot 2) — our two modes (MIN-112), times
+ * the models that we agree to give them.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * POURQUOI UN AGENT PAR (MODE × MODÈLE), ET PAS UN CHAMP `model` SUR L'APPEL
+ * WHY AN AGENT BY (MODE × MODEL), AND NOT A `model` FIELD ON THE CALL
  *
- * Mesuré sur le binaire : le tool `task` prend `{description, prompt,
- * subagent_type, task_id}` — **et rien d'autre**. Il n'a pas de champ `model`, et
- * le modèle d'une fille vient de `agent.<id>.model` (`b.model ?? le modèle du
- * message parent`, lu dans `TaskTool.execute`). Le `model` de `spawn_agent` n'a
- * donc qu'une traduction possible : le NOM DE L'AGENT le porte.
+ * Measured on the binary: the tool `task` takes `{description, prompt,
+ * subagent_type, task_id}` — **and nothing else**. It has no `model` field, and
+ * the model of a girl comes from `agent.<id>.model` (`b.model ?? the model of
+ * parent message`, read in `TaskTool.execute`). The `model` of `spawn_agent` has
+ * so only one possible translation: the NAME OF THE AGENT bears it.
  *
- * D'où la forme : `explore` / `general` sur le modèle du run, puis
- * `explore-<slug>` / `general-<slug>` par favori. Le modèle lit l'offre dans la
- * description du tool `task`, où le serveur colle un `- <nom>: <description>` par
- * agent non primaire (mesuré) — c'est là que le libellé et le `use_case` du
+ * Hence the form: `explore` / `general` on the run model, then
+ * `explore-<slug>` / `general-<slug>` by favorite. The model reads the offer in the
+ * description of the tool `task`, where the server pastes a `- <nom>: <description>` by
+ * non-primary (measured) agent — this is where the wording and `use_case` of the
  * favori atterrissent.
  *
- * CE QUE CETTE FORME RESSERRE, et il faut le dire : `spawn_agent` acceptait
- * n'importe quel id du catalogue (`allowedIds`, ~345 modèles). Les énumérer en
- * agents gonflerait la description du tool de 700 lignes. L'offre devient donc
- * **les favoris curatés**, déjà passés au plafond du plan par `scopeSubagentModels`
- * — le plafond est ainsi tenu PAR CONSTRUCTION, il n'y a plus d'id libre à
- * refuser. Ce qu'un modèle demanderait hors liste revient en erreur de tool par
- * le superviseur, qui lui redonne l'offre ([opencode-permissions.ts](opencode-permissions.ts)).
+ * WHAT THIS FORM TIGHTENS, and it must be said: `spawn_agent` accepted
+ * any catalog id (`allowedIds`, ~345 models). List them in
+ * agents would inflate the tool description by 700 lines. The offer therefore becomes
+ * **curated favorites**, already passed to the plan ceiling by `scopeSubagentModels`
+ * — the ceiling is thus held BY CONSTRUCTION, there is no longer any free id to
+ * refuse. What a model would request outside the list returns as a tool error by
+ * the supervisor, who gives him the offer again ([opencode-permissions.ts](opencode-permissions.ts)).
  *
- * La lecture seule d'`explore` reste une propriété du JEU DE TOOLS doublée d'une
- * ACL — pas une phrase de prompt qu'un modèle peut ignorer, même doctrine que
- * `subagentToolsFor`. Mesuré sur le binaire : une fille `{"*": false, read: true}`
- * reçoit exactement UN tool dans le corps de sa requête.
+ * The reading only of `explore` remains a property of the TOOLSET coupled with a
+ * ACL — not a prompt phrase that a model can ignore, same doctrine as
+ * `subagentToolsFor`. Measured on the binary: a girl `{"*": false, read: true}`
+ * receives exactly ONE tool in the body of its request.
  */
 export interface SubagentAgentEntry {
-  /** Le `subagent_type` que le modèle passera à `task`. */
+  /** The `subagent_type` that the model will change to `task`. */
   name: string;
-  /** Notre mode, celui que le fil affiche (`subagent_mode`). */
+  /** Our mode, the one that the thread displays (`subagent_mode`). */
   mode: "explore" | "implement";
-  /** Le modèle de la fille, ou absent quand elle hérite de celui du run. */
+  /** The girl's model, or absent when she inherits that of the run. */
   modelId?: string;
-  /** Le libellé du favori — ce que `spawn_agent` affichait dans `model`. */
+  /** The label of the favorite — what `spawn_agent` displayed in `model`. */
   label?: string;
-  /** Le `use_case` du favori, écrit POUR être lu par un modèle qui choisit. */
+  /** The `use_case` of the favorite, written TO be read by a model who chooses. */
   useCase?: string;
 }
 
-/** Le nom d'agent d'un mode et d'un modèle. `null` = le modèle du run. */
+/** The agent name of a mode and model. `null` = the run model. */
 export function subagentAgentName(mode: "explore" | "implement", modelId: string | null): string {
   const base = mode === "explore" ? "explore" : "general";
   if (!modelId) return base;
-  // Un nom d'agent sert aussi de PATRON de permission (`permission.task`), où il
-  // est comparé au glob : on n'y laisse donc que des lettres, des chiffres et des
-  // tirets. Le slug n'a pas à être réversible — le superviseur garde la table.
+  // An agent name also serves as a permission PATTERN (`permission.task`), where it
+  // is compared to the glob: we therefore only leave letters, numbers and
+  // dashes. The slug does not have to be reversible — the supervisor keeps the table.
   const slug = modelId.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   return `${base}-${slug}`;
 }
 
 /**
- * LA TABLE DES SOUS-AGENTS DU TOUR. Exportée parce qu'elle est lue deux fois : ici
- * pour écrire la config, et par le superviseur pour rendre au fil le `mode` et le
- * `model` qu'un `spawn_agent` portait (le nom d'agent, lui, ne se relit pas).
+ * THE TOUR SUB-AGENT TABLE. Exported because it is read twice: here
+ * to write the config, and by the supervisor to return to the thread the `mode` and the
+ * `model` that a `spawn_agent` carried (the agent name cannot be read again).
  */
 export function subagentAgentTable(job: VmJob): SubagentAgentEntry[] {
   const entries: SubagentAgentEntry[] = [
@@ -577,12 +577,12 @@ export function subagentAgentTable(job: VmJob): SubagentAgentEntry[] {
 }
 
 /**
- * Les modèles qu'on accepte de donner aux filles : les favoris DÉJÀ passés au
- * plafond du plan, dont on connaît le prix, dans la limite du plafond de liste.
+ * The models we agree to give to girls: the favorites ALREADY passed
+ * ceiling of the plan, the price of which is known, within the limit of the list ceiling.
  *
- * Le filtre sur le prix n'est pas de la prudence comptable : un modèle déclaré
- * sans `cost` fait rendre `cost: 0` à opencode (§1), donc une fille gratuite au
- * ledger. Ne pas l'offrir est le seul choix qui ne mente pas.
+ * The price filter is not accounting prudence: a declared model
+ * without `cost` renders `cost: 0` to opencode (§1), so a free girl at
+ * ledger. Not offering it is the only choice that doesn't lie.
  */
 function subagentModelChoices(job: VmJob): Array<{ id: string; label: string; useCase?: string }> {
   if (!job.subagents.models) return [];
@@ -594,17 +594,17 @@ function subagentModelChoices(job: VmJob): Array<{ id: string; label: string; us
 }
 
 /**
- * Ce qu'une fille a le droit de faire, mode par mode — la traduction en config
+ * What a girl is allowed to do, mode by mode — translation into config
  * de [subagentToolsFor](../tools.ts).
  *
- * `"*": false` PUIS la liste : c'est ce qui retire les ~32 tools de DOMAINE, que
- * `SUBAGENT_FORBIDDEN_TOOLS` interdit à une fille (le ticket, le carnet, les pull
- * requests, le plan de session appartiennent au parent — une fille qui coche le
- * plan de l'utilisateur agirait au nom d'une conversation qu'elle n'a pas lue).
- * Sans le joker, ces tools-là étaient servis à la fille : ils sont dans le dossier
- * de tools du serveur, donc à tout le monde par défaut.
+ * `"*": false` THEN the list: this is what removes the ~32 tools from DOMAIN, which
+ * `SUBAGENT_FORBIDDEN_TOOLS` forbidden to a girl (the ticket, the notebook, the sweaters
+ * requests, the session plan belongs to the parent — a daughter who checks the
+ * plan of the user would be acting on behalf of a conversation that she has not read).
+ * Without the joker, these tools were served to the girl: they are in the file
+ * of server tools, so everyone by default.
  *
- * `web_search` est la seule exception, et c'est celle de `subagentToolsFor`.
+ * `web_search` is the only exception, and that is `subagentToolsFor`.
  */
 function subagentTools(job: VmJob, mode: "explore" | "implement"): Record<string, boolean> {
   const tools: Record<string, boolean> = { "*": false };
@@ -613,10 +613,10 @@ function subagentTools(job: VmJob, mode: "explore" | "implement"): Record<string
 
   tools.bash = true;
   tools.webfetch = true;
-  // Les trois interfaces d'écriture sont ouvertes ensemble : c'est opencode qui
-  // tranche selon le modèle DE LA FILLE (`apply_patch` sur les `gpt-*`, les tools
-  // par chaîne sinon), et il tranche avant que ce jeu-ci ne s'applique. En
-  // désigner une ici la figerait sur le modèle du PARENT.
+  // The three writing interfaces are open together: it is opencode which
+  // slice according to the model OF THE GIRL (`apply_patch` on the `gpt-*`, the tools
+  // per chain otherwise), and it decides before this game applies. In
+  // designating one here would freeze it on the PARENT model.
   if (job.writesToRepo) for (const name of WRITE_BUILTINS) tools[name] = true;
   if (job.webSearch) tools.web_search = true;
   return tools;
@@ -628,18 +628,18 @@ function subagentAgents(job: VmJob): Record<string, OpencodeAgentConfig> {
     const explore = entry.mode === "explore";
     agents[entry.name] = {
       mode: "subagent",
-      // C'est la SEULE chose que le parent lit sur un sous-agent (elle part dans
-      // la description du tool `task`) : sans elle, opencode écrit « This subagent
-      // should only be called manually by the user » et l'offre disparaît.
+      // This is the ONLY thing the parent reads about a sub-agent (she goes into
+      // the description of the tool `task`): without it, opencode writes “This subagent
+      // should only be called manually by the user” and the offer disappears.
       description: subagentDescription(entry),
       tools: subagentTools(job, entry.mode),
       permission: explore
-        ? // `read` suit la même règle que celle du parent (MIN-360), et c'est ici
-          // qu'elle compte le plus : une fille `explore` n'a que ça à faire.
+        ? // `read` follows the same rule as the parent (MIN-360), and it's here
+          // that she matters the most: a `explore` girl only has that to do.
           { "*": "deny", read: isLocalJob(job) ? "ask" : "allow", grep: "allow", glob: "allow" }
-        : // Une fille ne délègue pas (hiérarchie à un niveau, doublée du
-          // `subagent_depth: 1` d'opencode) et ne pose pas de question : elle
-          // rapporte au parent, qui décide.
+        : // A girl does not delegate (one-level hierarchy, coupled with
+          // `subagent_depth: 1` of opencode) and does not ask questions: it
+          // reports to the parent, who decides.
           { ...permissions(job), task: "deny", question: "deny" },
       ...(entry.modelId ? { model: modelRef(entry.modelId) } : {}),
     };
@@ -647,7 +647,7 @@ function subagentAgents(job: VmJob): Record<string, OpencodeAgentConfig> {
   return agents;
 }
 
-/** Ce que le parent lit pour choisir : le mode, puis le modèle et son usage. */
+/** What the parent reads to choose: the mode, then the model and its use. */
 function subagentDescription(entry: SubagentAgentEntry): string {
   const what =
     entry.mode === "explore"
@@ -660,23 +660,23 @@ function subagentDescription(entry: SubagentAgentEntry): string {
 }
 
 export interface BuildOpencodeConfigOptions {
-  /** Chemins des plugins que le superviseur a écrits. Toujours vide : la décision
-   *  de MIN-286 (docs/harness-opencode.md §2.15) est de n'en poser aucun. */
+  /** Paths of plugins that the supervisor wrote. Still empty: the decision
+   * of MIN-286 (docs/harness-opencode.md §2.15) is to pose none. */
   plugins?: string[];
   baseUrl?: string;
   /**
-   * Les fichiers de conventions du dépôt (`AGENTS.md`, `CLAUDE.md`) que le
-   * superviseur a TROUVÉS — chemins absolus, racine du dépôt seulement.
+   * The repository convention files (`AGENTS.md`, `CLAUDE.md`) that the
+   * supervisor FOUND — absolute paths, repository root only.
    *
-   * Ils remplacent ce qu'opencode faisait tout seul avant que
-   * `OPENCODE_DISABLE_PROJECT_CONFIG` ne le lui retire (MIN-360).
+   * They replace what opencode did on its own before
+   * `OPENCODE_DISABLE_PROJECT_CONFIG` does not take it away (MIN-360).
    */
   repoInstructionFiles?: string[];
 }
 
 /**
- * LA CONFIG D'UN TOUR. Pure : même job, même document, à l'octet près — c'est ce
- * qui permet de la comparer dans un test au lieu de la relire.
+ * THE SETUP OF A TOUR. Pure: same job, same document, down to the byte — that’s what
+ * which allows you to compare it in a test instead of rereading it.
  */
 export function buildOpencodeConfig(
   job: VmJob,
@@ -686,20 +686,20 @@ export function buildOpencodeConfig(
   return {
     $schema: "https://opencode.ai/config.json",
     model: ref,
-    // Le petit modèle (titre, résumé) est le MÊME : un deuxième modèle serait un
-    // deuxième prix, un deuxième catalogue et une deuxième ligne de ledger que
-    // personne n'a choisis.
+    // The small model (title, summary) is the SAME: a second model would be a
+    // second prize, a second catalog and a second ledger line that
+    // nobody chose.
     small_model: ref,
     subagent_depth: 1,
     default_agent: OPENCODE_PRIMARY_AGENT,
     /**
-     * L'ancrage minddy, PUIS les conventions du dépôt (MIN-360).
+     * The minddy anchor, THEN the repository conventions (MIN-360).
      *
-     * Opencode allait chercher `AGENTS.md` / `CLAUDE.md` tout seul en remontant
-     * depuis le dépôt. `OPENCODE_DISABLE_PROJECT_CONFIG` — qu'on pose désormais,
-     * cf. `opencodeServerEnv` — lui retire ce geste EN MÊME TEMPS que les tools et
-     * les plugins du dépôt, parce que c'est la même remontée. On les rend donc
-     * explicitement : nommés, à la racine, et sans rien exécuter.
+     * Opencode would fetch `AGENTS.md` / `CLAUDE.md` on its own while walking up
+     * from the depot. `OPENCODE_DISABLE_PROJECT_CONFIG` — which we now ask,
+     * cf. `opencodeServerEnv` — removes this gesture AT THE SAME TIME as the tools and
+     * the plugins from the repository, because it's the same feedback. We therefore return them
+     * explicitly: named, at the root, and without executing anything.
      */
     instructions: [opencodeAnchorFile(job.layout), ...(opts.repoInstructionFiles ?? [])],
     provider: {
@@ -708,27 +708,27 @@ export function buildOpencodeConfig(
         name: "minddy",
         options: {
           /**
-           * LE PLACEHOLDER, JAMAIS LA CLÉ — et c'est vrai des DEUX mondes, pour
-           * deux raisons différentes.
+           * THE PLACEHOLDER, NEVER THE KEY — and this is true of BOTH worlds, for
+           * two different reasons.
            *
-           * Ce document part sur le disque d'un process où le modèle exécute du
-           * shell arbitraire, et il entre dans l'environnement du serveur
-           * opencode (`OPENCODE_CONFIG_CONTENT`) : un `env` suffit à le lire.
-           * Dans la microVM, la vraie clé est posée par le firewall à la sortie
-           * (cf. `network-policy.ts`) ; sur la machine de l'utilisateur, où il
-           * n'y a pas de firewall, elle est posée par le proxy LLM — en mémoire,
-           * sur la seule route qu'il sert ([llm-proxy.ts](llm-proxy.ts), MIN-357).
-           * Ce champ-ci ne change pas d'un monde à l'autre, et c'est le but.
+           * This document leaves on the disk of a process where the model executes
+           * arbitrary shell, and it enters the server environment
+           * opencode (`OPENCODE_CONFIG_CONTENT`): a `env` is enough to read it.
+           * In the microVM, the real key is placed by the firewall at the exit
+           * (see `network-policy.ts`); on the user's machine, where he
+           * there is no firewall, it is installed by the LLM proxy — in memory,
+           * on the only route it serves ([llm-proxy.ts](llm-proxy.ts), MIN-357).
+           * This field doesn't change from one world to the next, and that's the goal.
            */
           apiKey: job.llmPlaceholderKey,
           /**
-           * LE PROXY LOCAL QUAND IL Y EN A UN (lot 2), le fournisseur sinon.
+           * THE LOCAL PROXY WHEN THERE IS ONE (lot 2), the supplier otherwise.
            *
-           * `127.0.0.1` ne relâche rien : le proxy tourne DANS la microVM, il
-           * relaie vers cette même URL de fournisseur avec le même placeholder,
-           * et c'est toujours le firewall qui pose la clé à la sortie. Ce qu'il
-           * ajoute — `generation_id`, coût facturé, raisonnement des couches
-           * compat — n'a aucun autre point d'observation
+           * `127.0.0.1` does not release anything: the proxy runs IN the microVM, it
+           * relays to this same provider URL with the same placeholder,
+           * and it is always the firewall which places the key at the exit. What he
+           * adds — `generation_id`, invoiced cost, layer reasoning
+           * compat — has no other point of observation
            * ([llm-proxy.ts](llm-proxy.ts)).
            */
           baseURL: opts.baseUrl ?? job.baseUrl,
@@ -752,16 +752,16 @@ export function buildOpencodeConfig(
 }
 
 /**
- * L'ENVIRONNEMENT DU SERVEUR opencode, tel que le superviseur le passera.
+ * THE opencode SERVER ENVIRONMENT, as the supervisor will pass it.
  *
- * Tout est ici, et rien n'est un fichier de config : `OPENCODE_CONFIG_CONTENT`
- * porte le document, `OPENCODE_DB` relocalise l'état hors du dépôt.
+ * Everything is here, and nothing is a config file: `OPENCODE_CONFIG_CONTENT`
+ * carries the document, `OPENCODE_DB` relocates the state out of the repository.
  *
- * Les trois `DISABLE` ne sont pas de la frilosité : un run ne doit dépendre ni de
- * models.dev (on donne nos prix, §1), ni d'un téléchargement de LSP, ni de
- * l'auto-update — mesuré au lot 0, le démarrage sans catalogue en ligne est
- * identique (1 248 ms contre 1 336 ms), et une mise à jour automatique changerait
- * de harness au milieu d'un run.
+ * The three `DISABLE` are not reluctance: a run should not depend on either
+ * models.dev (we give our prices, §1), neither an LSP download, nor a
+ * auto-update — measured at batch 0, startup without an online catalog is
+ * identical (1248 ms versus 1336 ms), and an automatic update would change
+ * from the harness in the middle of a run.
  */
 export function opencodeServerEnv(
   job: VmJob,
@@ -771,84 +771,84 @@ export function opencodeServerEnv(
     OPENCODE_CONFIG_CONTENT: JSON.stringify(buildOpencodeConfig(job, opts)),
     OPENCODE_DB: opencodeDbPath(job.layout),
     /**
-     * LES DEUX ÉCOUTILLES QUI FERMENT L'AUTO-DÉCOUVERTE (MIN-360) — et elles ne
-     * sont pas de la prudence, elles ferment de l'EXÉCUTION DE CODE ARBITRAIRE
-     * DEPUIS LE CONTENU D'UN DÉPÔT, sur la machine de l'utilisateur.
+     * THE TWO HATCHES THAT SELF-DISCOVERY (MIN-360) — and they do not
+     * are not prudent, they close ARBITRARY CODE EXECUTION
+     * FROM THE CONTENTS OF A REPOSITORY, on the user's machine.
      *
-     * Relevé dans le binaire (1.18.16, `opencode-darwin-arm64`), pas déduit :
+     * Noted in binary (1.18.16, `opencode-darwin-arm64`), not deduced:
      *
-     * - `OPENCODE_PURE` → le chargeur de plugins SERVEUR fait
-     *   `let A = flags.pure ? [] : config.plugin_origins ?? []`. Aucun plugin
-     *   externe n'est chargé — ni ceux d'un `opencode.json` du dépôt, ni les
-     *   `*.ts` que le binaire ramasse sous `.opencode/plugin(s)/`. Nos plugins à
-     *   nous ne sont pas concernés : il n'y en a aucun (§2.15 du dossier) ;
+     * - `OPENCODE_PURE` → the SERVER plugin loader does
+     * `let A = flags.pure ? [] : config.plugin_origins ?? []`. No plugins
+     * external is not loaded — neither those of a `opencode.json` of the repository, nor the
+     * `*.ts` that the binary picks up under `.opencode/plugin(s)/`. Our plugins
+     * we are not concerned: there are none (§2.15 of the file);
      * - `OPENCODE_DISABLE_PROJECT_CONFIG` → `ConfigPaths.directories` cesse de
-     *   remonter chercher `.opencode/` depuis le dépôt, et `ConfigPaths.files` de
-     *   remonter chercher `opencode.json(c)`. Ça ferme les TOOLS du dépôt (des
-     *   `*.ts` exécutés dès que le modèle les appelle) et ses serveurs MCP (un
-     *   process lancé au démarrage de la session), que notre config ne pouvait
-     *   pas neutraliser : elle est fusionnée APRÈS, donc elle GAGNE sur ce qui se
-     *   remplace, mais ces trois-là s'AJOUTENT.
+     * go back to find `.opencode/` from the repository, and `ConfigPaths.files` from
+     * go back to search for `opencode.json(c)`. This closes the TOOLS of the repository (of
+     * `*.ts` executed as soon as the model calls them) and its MCP servers (a
+     * process launched at the start of the session), that our config could not
+     * not neutralize: it is fused AFTER, so it WINS on what is
+     * replaces, but these three ADD.
      *
-     * Ce que la seconde retire aussi, et qui est rendu ailleurs : les `AGENTS.md`
-     * et `CLAUDE.md` du dépôt, qu'opencode chargeait par la même remontée. Ils
-     * repassent par `instructions` (cf. `BuildOpencodeConfigOptions`). Notre
-     * dossier de tools, lui, est intact — il vient de `Path.config`
-     * (`XDG_CONFIG_HOME`), qui reste inclus inconditionnellement.
+     * What the second also removes, and which is returned elsewhere: the `AGENTS.md`
+     * and `CLAUDE.md` from the repository, which opencode loaded by the same upload. They
+     * go through `instructions` (see `BuildOpencodeConfigOptions`). Our
+     * tools folder is intact — it comes from `Path.config`
+     * (`XDG_CONFIG_HOME`), which remains included unconditionally.
      */
     OPENCODE_PURE: "1",
     OPENCODE_DISABLE_PROJECT_CONFIG: "1",
     /**
-     * `PURE` ferme les plugins externes, mais pas les plugins livrés par
-     * OpenCode. Ceux-ci ne participent pas à notre harness : provider, agents,
-     * permissions et tools sont tous déclarés explicitement ci-dessus. Les
-     * charger à chaque serveur déclenche néanmoins leur initialisation avant le
-     * premier prompt. Les couper conserve les intégrés que nous servons, tout en
-     * retirant ce travail de démarrage sans surface fonctionnelle utilisée.
+     * `PURE` closes external plugins, but not plugins delivered by
+     * OpenCode. These do not participate in our harness: provider, agents,
+     * permissions and tools are all declared explicitly above. THE
+     * load to each server nevertheless triggers their initialization before the
+     * first prompt. Cutting them keeps the built-ins we serve, while
+     * removing this start-up work with no functional surface used.
      */
     OPENCODE_DISABLE_DEFAULT_PLUGINS: "1",
     /**
-     * LA TROISIÈME ÉCOUTILLE (MIN-364, lot 9) — celle qui manquait, et dont
-     * l'absence ne se voyait que parce qu'un autre réglage la couvrait.
+     * THE THIRD HATCH (MIN-364, lot 9) — the one that was missing, and of which
+     * the absence was only visible because another setting covered it.
      *
-     * La découverte de skills d'opencode lit **`$HOME`** (`~/.claude/skills/`,
-     * `~/.agents/skills/`) et remonte du dossier de session à la racine du dépôt.
-     * Le harness relocalise `XDG_CONFIG_HOME`, `XDG_DATA_HOME` et
-     * `XDG_CACHE_HOME` — **mais pas `HOME`**, qui doit rester celui de
-     * l'utilisateur pour que son `PATH`, ses `nvm`, ses `~/.gitconfig` marchent.
+     * Opencode skills discovery reads **`$HOME`** (`~/.claude/skills/`,
+     * `~/.agents/skills/`) and goes back from the session folder to the root of the repository.
+     * The harness relocates `XDG_CONFIG_HOME`, `XDG_DATA_HOME` and
+     * `XDG_CACHE_HOME` — **but not `HOME`**, which must remain the user's
+     * the user so that his `PATH`, his `nvm`, his `~/.gitconfig` work.
      *
-     * Aujourd'hui `tools.skill` est à `false`, donc rien ne se charge. Mais le
-     * jour où quelqu'un le passe à `true` en pensant offrir « les skills du
-     * dépôt », il ouvre AUSSI le dossier de skills Claude Code de son
-     * propriétaire — sans qu'aucune ligne ne le dise. Cette écoutille fait que
-     * ce jour-là, il faudra NOMMER ce qu'on sert (`skills.paths`, mesuré comme la
-     * seule forme sélective) au lieu de tout prendre.
+     * Today `tools.skill` is at `false`, so nothing is loading. But the
+     * day when someone passes it to `true` thinking of offering “the skills of
+     * deposit”, he ALSO opens the Claude Code skills file of his
+     * owner — without any line saying so. This hatch means that
+     * that day, you will have to NAME what you are serving (`skills.paths`, measured as the
+     * only selective form) instead of taking everything.
      *
-     * Mesuré : `OPENCODE_DISABLE_EXTERNAL_SKILLS` coupe la découverte implicite
-     * ENTIÈRE et laisse passer `skills.paths`
+     * Measured: `OPENCODE_DISABLE_EXTERNAL_SKILLS` cuts implicit discovery
+     * ENTIRE and lets `skills.paths` pass
      * ([opencode-capabilities.probe.test.ts](opencode-capabilities.probe.test.ts)).
      */
     OPENCODE_DISABLE_EXTERNAL_SKILLS: "1",
     /**
-     * ET LA QUESTION, ÉPINGLÉE (MIN-364) — parce qu'elle est devenue
-     * load-bearing et qu'elle ne tenait qu'à un défaut.
+     * AND THE QUESTION, PINED (MIN-364) — because it became
+     * load-bearing and that it was only due to one flaw.
      *
-     * Relevé dans le binaire 1.18.16 : le tool `question` n'entre dans le jeu des
-     * intégrés que si `["app","cli","desktop"].includes(client) ||
-     * enableQuestionTool`, où `client` vient d'`OPENCODE_CLIENT` avec `"cli"`
-     * pour défaut. On ne pose pas `OPENCODE_CLIENT`, donc ça marche — **par
-     * accident de défaut**.
+     * Noted in binary 1.18.16: the tool `question` does not enter into the game of
+     * included only if `["app","cli","desktop"].includes(client) ||
+     * enableQuestionTool`, where `client` comes from `OPENCODE_CLIENT` with `"cli"`
+     * for defect. We don't set `OPENCODE_CLIENT`, so it works — **by
+     * fault accident**.
      *
-     * Or `ask_user` EST `question`, et depuis D7 il ne termine plus le tour : il
-     * le suspend. Si une version d'opencode changeait ce défaut, ou si quelqu'un
-     * posait `OPENCODE_CLIENT=sdk` en croyant bien faire, `ask_user` disparaîtrait
-     * du jeu de tools **sans un mot** — le modèle cesserait simplement de pouvoir
-     * demander. Une variable explicite coûte une ligne et ferme ce cas-là.
+     * But `ask_user` IS `question`, and since D7 he no longer ends the round: he
+     * suspends it. If an opencode version changed this defect, or if someone
+     * posed `OPENCODE_CLIENT=sdk` believing that it was doing the right thing, `ask_user` would disappear
+     * of the toolset **without a word** — the model would simply cease to be able to
+     * ask. An explicit variable costs one line and closes this case.
      */
     OPENCODE_ENABLE_QUESTION_TOOL: "1",
-    // C'est lui qui met les tools de domaine hors du dépôt (cf. `opencodeToolDir`).
+    // It is he who puts the domain tools outside the repository (see `opencodeToolDir`).
     XDG_CONFIG_HOME: opencodeConfigHome(job.layout),
-    // Les snapshots, les journaux et les binaires téléchargés — sous le harness
+    // Downloaded snapshots, logs and binaries — under the harness
     // eux aussi (cf. `opencodeDataHome`).
     XDG_DATA_HOME: opencodeDataHome(job.layout),
     XDG_CACHE_HOME: opencodeCacheHome(job.layout),
@@ -857,36 +857,36 @@ export function opencodeServerEnv(
     OPENCODE_DISABLE_LSP_DOWNLOAD: "1",
     OPENCODE_DISABLE_EMBEDDED_WEB_UI: "1",
     /**
-     * FFF construit un index de recherche par projet et démarre son watcher au
-     * premier prompt. Notre harness utilise déjà les tools `glob` et `grep`
-     * intégrés ; garder cet index spéculatif faisait payer plusieurs secondes
-     * avant la première requête modèle pour un bénéfice qui n'est jamais requis
-     * par le tour. OpenCode retombe sur son implémentation de recherche normale.
+     * FFF builds a search index per project and starts its watcher at
+     * first prompt. Our harness already uses the `glob` and `grep` tools
+     * integrated; keeping this speculative index cost several seconds
+     * before the first model query for a benefit that is never required
+     * by the turn. OpenCode falls back to its normal search implementation.
      */
     OPENCODE_DISABLE_FFF: "1",
     /**
-     * ⚠ IL N'Y A PAS D'`OPENCODE_SHELL_CWD` ICI, ET C'EST UNE CORRECTION (MIN-363).
+     * ⚠ THERE IS NO `OPENCODE_SHELL_CWD` HERE, AND THIS IS A FIX (MIN-363).
      *
-     * Cette clé a vécu là, avec un commentaire qui disait « le shell d'opencode
-     * est PERSISTANT et démarre où on le lui dit : le dépôt ». La variable
-     * n'existe pas : **zéro occurrence** dans `opencode-darwin-arm64` en 1.18.16
-     * (relevé au `strings`, à comparer aux 6 d'`OPENCODE_PURE` et aux 7 de
-     * `OPENCODE_DISABLE_PROJECT_CONFIG` juste au-dessus, qui, eux, sont lus).
+     * This key lived there, with a comment that said "the opencode shell
+     * is PERSISTENT and starts where it is told: the deposit”. The variable
+     * does not exist: **zero occurrences** in `opencode-darwin-arm64` in 1.18.16
+     * (noted at `strings`, to be compared to 6 of `OPENCODE_PURE` and 7 of
+     * `OPENCODE_DISABLE_PROJECT_CONFIG` just above, which are read).
      *
-     * Ce qui donne au serveur son dépôt, c'est le `directory` du client
-     * ([opencode-host.ts](opencode-host.ts)) — il voyage en query sur chaque
-     * route. Le `cwd` du shell, lui, n'est tenu par rien de notre côté : il n'y a
-     * donc **aucun raisonnement à fonder sur un shell persistant qui resterait
-     * dans le dépôt entre deux rounds**. Le seul endroit où une intention de
-     * chemin se déclare de façon fiable est le paramètre `workdir` du tool `bash`.
+     * What gives the server its deposit is the client's `directory`
+     * ([opencode-host.ts](opencode-host.ts)) — it travels to query on each
+     * road. The `cwd` of the shell is not bound by anything on our side: there is no
+     * therefore **no reasoning to be based on a persistent shell which would remain
+     * in the deposit between two rounds**. The only place where an intention to
+     * path is declared reliably is the `workdir` parameter of the tool `bash`.
      */
   };
 }
 
 /**
- * Le plafond de temps d'une commande, reporté sur celui du produit — le défaut
- * d'opencode est 120 s, le nôtre 180 s (`RUN_COMMAND_TIMEOUT_MS`). Exporté et non
- * posé dans la config : c'est un argument d'appel du tool `bash`, pas un réglage
- * global, et le superviseur est le seul à savoir combien de tour il reste.
+ * The time limit of an order, carried over to that of the product — the defect
+ * opencode's is 120 s, ours is 180 s (`RUN_COMMAND_TIMEOUT_MS`). Exported and not
+ * placed in the config: it is an argument for calling the tool `bash`, not a setting
+ * global, and the supervisor is the only one who knows how many turns are left.
  */
 export const OPENCODE_BASH_TIMEOUT_MS = RUN_COMMAND_TIMEOUT_MS;

@@ -24,23 +24,23 @@ import {
 import type { IssueEffort, IssuePriority, IssueStatus } from "@/lib/issue-constants";
 
 /**
- * La CHAÎNE d'automatisation d'un ticket (MIN-147).
- *   GET  → son état (étape, dépense en part de budget, motif d'arrêt), et — qu'une
- *          chaîne tourne ou non — ce que les règles JOUERAIENT sur ce ticket, avec
- *          l'estimation. C'est l'« estimation affichée avant de lancer ».
- *   POST → { action: "resume" | "stop" }. Deux gestes, et seulement deux : le
- *          reste se décide dans les règles, pas au coup par coup.
+ * The ticket automation CHAIN ​​(MIN-147).
+ * GET → its state (step, expenditure in budget share, reason for stopping), and — that a
+ * chain is spinning or not — what the rules WOULD PLAY on this ticket, with
+ * the estimate. This is the “estimate displayed before launching”.
+ * POST → { action: "resume" | "stop" }. Two gestures, and only two: the
+ * The rest is decided according to the rules, not piecemeal.
  *
- * `resume` ne relance que depuis `awaiting_human` — c'est le feu vert humain, pas
- * un bouton « refaire ». `stop` marche depuis n'importe quel état vivant et
- * interrompt AUSSI le run en cours : arrêter une chaîne en laissant son agent
- * finir son tour, ce serait ne rien arrêter du tout.
+ * `resume` only restarts from `awaiting_human` — it's the human green light, not
+ * a “redo” button. `stop` works from any living state and
+ * ALSO interrupts the current run: stop a chain by leaving its agent
+ * finishing your turn would mean stopping nothing at all.
  */
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// La reprise kicke le drain du prochain run dans `after()` : même fenêtre que la
-// route de lancement, sinon la fonction meurt en plein premier round.
+// The restart kicks the drain of the next run in `after()`: same window as the
+// launch route, otherwise the function dies in the middle of the first round.
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
@@ -55,8 +55,8 @@ interface IssueRow {
   automation_override: unknown;
 }
 
-/** Vue client d'une chaîne — jamais d'USD.
- *  Aucune part de plafond : il n'y en a plus (cf. lib/automations). */
+/** Customer view of a channel — never USD.
+ * No ceiling share: there is no more (see lib/automations). */
 function publicChain(chain: AgentChain) {
   return {
     id: chain.id,
@@ -65,7 +65,7 @@ function publicChain(chain: AgentChain) {
     step: chain.step,
     retries: chain.retries,
     stopReason: chain.stop_reason,
-    /** Chaîne en sursis : l'heure d'amorçage, pour le compte à rebours. */
+    /** Suspended channel: the start time, for the countdown. */
     notBefore: chain.not_before,
     createdAt: chain.created_at,
     updatedAt: chain.updated_at,
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  // RLS : l'appelant doit pouvoir voir le ticket.
+  // RLS: The caller must be able to see the ticket.
   const { data: issueRow } = await auth.supabase
     .from("issues")
     .select(
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     service.from("issue_categories").select("category_id").eq("issue_id", id),
   ]);
 
-  // Même cascade que le moteur : ticket > projet > préréglage du propriétaire.
+  // Same cascade as the engine: ticket > project > owner preset.
   const ownerMeta = project
     ? ((await service.auth.admin.getUserById(project.owner_id as string)).data?.user
         ?.user_metadata ?? null)
@@ -119,9 +119,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     ),
   };
 
-  // Ce que les règles joueraient si le ticket repartait de son statut actuel :
-  // c'est la promesse affichée avant de lancer, et elle doit se lire sans avoir
-  // déclenché quoi que ce soit.
+  // What the rules would do if the ticket restarted from its current status:
+  // this is the promise displayed before launching, and it must be read without having
+  // triggered anything.
   const planned = simulateChain(rules, facts, { throughHumanStop: true });
   const estimate =
     project && planned.length > 0
@@ -179,11 +179,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   const chain = await latestChainForIssue(id);
 
-  // « Je prends la main » — envoyé par les gestes manuels qui ne déplacent PAS
-  // le ticket (copier le prompt de plan, de vérification, une consigne libre).
-  // NO-OP silencieux quand il n'y a rien à annuler : l'appelant tire ce signal à
-  // chaque copie, sans savoir s'il existe une chaîne, et un 404 le ferait
-  // journaliser une erreur pour un cas parfaitement normal.
+  // “Take your hand” — sent by hand gestures that do NOT move
+  // the ticket (copy the plan prompt, verification, a free instruction).
+  // Silent NO-OP when there is nothing to cancel: the caller pulls this signal to
+  // each copy, without knowing if there is a string, and a 404 would
+  // log an error for a perfectly normal case.
   if (action === "handoff") {
     if (chain?.status === "pending") await cancelPendingChain(chain.id, "taken_over");
     return NextResponse.json({ ok: true });
@@ -192,9 +192,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (!chain) return NextResponse.json({ error: "No chain on this issue" }, { status: 404 });
 
   if (action === "stop") {
-    // Une chaîne EN SURSIS s'annule en silence : elle n'a rien joué, rien
-    // dépensé, et un rapport « la chaîne s'est arrêtée » pour un travail jamais
-    // commencé ne ferait qu'encombrer le ticket.
+    // A suspended channel cancels silently: it has played nothing, nothing
+    // spent, and a “chain stopped” report for never working
+    // started would only clutter up the ticket.
     if (chain.status === "pending") {
       const cancelled = await cancelPendingChain(chain.id, "canceled");
       return NextResponse.json({
@@ -202,10 +202,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         chain: cancelled ? publicChain(cancelled) : null,
       });
     }
-    // Le run en cours part avec elle — mais SEULEMENT s'il est à elle. Sans ce
-    // test, arrêter une chaîne garée interrompait la session que l'utilisateur
-    // avait lancée à la main pour faire le travail lui-même : le geste « je me
-    // débarrasse de l'automatisation » tuait son propre agent.
+    // The current run goes with her — but ONLY if it's hers. Without this
+    // test, stopping a parked channel interrupted the session that the user
+    // had launched by hand to do the work itself: the gesture “I
+    // get rid of automation” killed his own agent.
     const active = await activeRunForChain(chain.id);
     if (active) await requestInterrupt(active.id);
     await haltChain(chain, "interrupted");
@@ -214,9 +214,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   }
 
   if (action === "start") {
-    // « Lancer maintenant » : on court-circuite le sursis. Le moteur re-vérifie
-    // quand même que le ticket est resté où il était — c'est un raccourci, pas
-    // un passe-droit.
+    // “Launch now”: we short-circuit the reprieve. The engine re-checks
+    // even though the ticket remained where it was — it's a shortcut, not
+    // a shortcut around the rule.
     if (chain.status !== "pending" || !chain.pending_event?.to) {
       return NextResponse.json({ error: "Chain is not waiting to start" }, { status: 409 });
     }
@@ -235,16 +235,16 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ ok: true, chain: publicChain(chain) });
   }
 
-  // resume — feu vert humain, uniquement depuis `awaiting_human`.
+  // resume — human approval, only from `awaiting_human`.
   const resumed = await resumeChain(chain.id);
   if (!resumed) {
     return NextResponse.json({ error: "Chain is not waiting for a decision" }, { status: 409 });
   }
 
-  // La suite se rattache au DERNIER run de la chaîne : c'est l'événement que le
-  // point d'arrêt avait interrompu, et il n'y a rien d'autre à quoi la rattacher.
-  // Pas de run du tout (une règle qui s'arrête avant d'en lancer un) : rien n'a
-  // échoué, et le dire déclencherait l'arrêt sur `run_failed` du moteur.
+  // The rest is linked to the LAST run of the chain: this is the event that the
+  // breakpoint had interrupted, and there is nothing else to attach it to.
+  // No run at all (a rule that stops before running one): nothing has
+  // failed, and saying so would trigger the engine to shut down on `run_failed`.
   const last = await lastRunOfChain(resumed.id);
   scheduleAutomations({
     issueId: id,

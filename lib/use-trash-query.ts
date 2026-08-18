@@ -17,7 +17,7 @@ const TRASH_KEY = ["me", "trash"] as const;
 
 export interface UseTrashResult {
   items: TrashItem[];
-  /** Jours de conservation annoncés par le serveur (30 par défaut). */
+  /** Retention days announced by the server (30 by default). */
   retentionDays: number;
   loading: boolean;
   error: Error | null;
@@ -27,14 +27,14 @@ export interface UseTrashResult {
 }
 
 /**
- * La corbeille (MIN-133).
+ * The trash (MIN-133).
  *
- * Restaurer ramène du contenu que TOUS les écrans croient absent : le board du
- * projet, le board cross-projet, l'index de la palette, le résumé d'accueil, les
- * compteurs de triage, la vue feedback. Aucun événement realtime ne le dira —
- * ce sont des `update` sur une ligne que le client n'a plus en cache, et rien ne
- * les rattacherait à un écran qui l'ignore. D'où l'invalidation large, ici,
- * juste après la réponse.
+ * Restore brings back content that ALL screens believe is missing: the
+ * project board, the cross-project board, the palette index, the home summary, the
+ * sorting counters, the view feedback. No realtime event will tell —
+ * these are `update` on a line that the client no longer has in cache, and nothing
+ * would attach them to a screen that ignores it. Hence the broad invalidation, here,
+ * just after the response.
  */
 export function useTrashQuery(): UseTrashResult {
   const queryClient = useQueryClient();
@@ -53,15 +53,15 @@ export function useTrashQuery(): UseTrashResult {
         [...TRASH_KEY],
         ["projects"],
         ["me", "board"],
-        // Les routines vivent dans une liste à elles, hors projet (MIN-201).
+        // The routines live in their own list, outside the project (MIN-201).
         ["routines"],
       ];
       if (item?.project_id) {
         keys.push(
           ["issues", item.project_id],
           ["objectives", item.project_id],
-          // L'arbre du wiki : restaurer une page en ramène tout un sous-arbre,
-          // qu'aucun événement realtime ne signalerait (MIN-266).
+          // The wiki tree: restoring a page brings back a whole sub-tree,
+          // that no realtime event would signal (MIN-266).
           ["pages", item.project_id],
           ["feedback", item.project_id],
           ["feedback-count", item.project_id]
@@ -112,13 +112,13 @@ export function useTrashQuery(): UseTrashResult {
   };
 }
 
-/** Jours restants avant la purge automatique. Jamais négatif à l'écran. */
+/** Days remaining before automatic purge. Never negative on screen. */
 export function daysLeft(deletedAt: string, retentionDays: number): number {
   const elapsed = (Date.now() - new Date(deletedAt).getTime()) / 86_400_000;
   return Math.max(0, Math.ceil(retentionDays - elapsed));
 }
 
-/** Ordre d'affichage des sections : le contenu d'abord, le contenant ensuite. */
+/** Order of display of sections: content first, containing then. */
 export const TRASH_TYPE_ORDER: TrashType[] = [
   "issue",
   "objective",

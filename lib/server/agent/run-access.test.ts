@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-332 — LA règle de visibilité d'un run, et le seul endroit qui la porte.
+ * MIN-332 — THE visibility rule of a run, and the only place that carries it.
  *
- * Elle vivait en RLS et nulle part ailleurs, alors que quatre chemins la
- * contournent : les routes (clé service), `agent_run_messages` (policy jamais
- * resserrée), le trigger de diffusion et l'autorisation du topic temps réel.
+ * She lived in RLS and nowhere else, while four paths circumvent the
+ *: the roads (service key), `agent_run_messages` (policy never
+ * tightened), the broadcast trigger and the authorization of the real-time topic.
  *
- * Ce fichier tient le prédicat. Les deux migrations jumelles
- * (20261217090000 / 20261217091000) le redisent en SQL : si l'un des deux
- * change, l'autre doit changer dans le même geste.
+ * This file holds the predicate. The two twin migrations
+ * (20261217090000 / 20261217091000) say it again in SQL: if one of the two
+ * changes, the other must change in the same gesture.
  */
 
 const getProjectAccess = vi.fn();
@@ -32,14 +32,14 @@ const run = (over: Partial<Parameters<typeof canReadAgentRun>[1]> = {}) => ({
 });
 
 beforeEach(() => {
-  // Membre du projet : c'est le décor de TOUS les cas ci-dessous, sinon on ne
-  // testerait que le contrôle d'appartenance, qui n'a jamais été le problème.
+  // Project member: this is the setting for ALL cases below, otherwise we cannot
+  // would only test the membership check, which was never the problem.
   getProjectAccess.mockResolvedValue({ isOwner: false, isMember: true });
 });
 
 describe("isSharedRun — ce qui n'est écrit à la première personne par personne", () => {
   it("une conversation ordinaire n'est pas partagée, même ancrée à un ticket", () => {
-    // Le ticket est public ; ce qu'on a demandé à Numo dessus ne l'est pas.
+    // The ticket is public; what Numo was asked above is not.
     expect(isSharedRun(run())).toBe(false);
   });
 
@@ -48,8 +48,8 @@ describe("isSharedRun — ce qui n'est écrit à la première personne par perso
   });
 
   it("une étape d'AUTOMATISATION l'est", () => {
-    // Son `created_by` est le porteur de la chaîne, pas un acteur : la réserver à
-    // lui rendrait invisible à tous le travail que le projet a déclenché.
+    // Its `created_by` is the bearer of the chain, not an actor: reserve it for
+    // would make the work that the project has triggered invisible to all.
     expect(isSharedRun(run({ chain_id: "c-1" }))).toBe(true);
   });
 
@@ -89,8 +89,8 @@ describe("canReadAgentRun", () => {
   });
 
   it("hors du projet, rien — pas même son propre run", async () => {
-    // Un run dont on serait créateur dans un projet qu'on a quitté : le contrôle
-    // d'appartenance passe D'ABORD, il n'est pas remplacé par celui de création.
+    // A run that we would create in a project that we left: control
+    // membership comes FIRST, it is not replaced by creation.
     getProjectAccess.mockResolvedValue(null);
     expect(await canReadAgentRun(ME, run())).toBe(false);
     expect(await canReadAgentRun(ME, run({ routine_id: "r-1" }))).toBe(false);

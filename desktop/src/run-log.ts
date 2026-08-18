@@ -29,14 +29,14 @@ import {
 import { OPENCODE_VERSION } from "@/lib/server/agent/vm/opencode-version";
 
 /**
- * LE `fs` DU JOURNAL D'UN TOUR LOCAL (MIN-363) — et rien d'autre.
+ * THE `fs` OF A LOCAL TOUR'S DIARY (MIN-363) — and nothing else.
  *
- * Toutes les décisions (nommage, rotation, en-tête, substitution, forme du
- * rapport) vivent dans [@/lib/desktop/run-log](../../lib/desktop/run-log.ts),
- * avec leur test. Ici il n'y a que le disque, le dossier de données et l'horloge.
+ * All decisions (naming, rotation, header, substitution, form of
+ * report) live in [@/lib/desktop/run-log](../../lib/desktop/run-log.ts),
+ * with their test. Here there is only the disk, the data folder and the clock.
  *
- * **Ce fichier existe AVANT le lanceur, et c'est délibéré.** Le lanceur de
- * MIN-293 n'a plus qu'à ouvrir un journal et brancher les deux flux de son
+ * **This file exists BEFORE the launcher, and this is deliberate.** The launcher
+ * MIN-293 just needs to open a log and connect the two sound streams
  * `utilityProcess` dessus :
  *
  * ```ts
@@ -48,35 +48,35 @@ import { OPENCODE_VERSION } from "@/lib/server/agent/vm/opencode-version";
  * child.on("exit", (code) => log.close(`exit ${code}`));
  * ```
  *
- * **Rien ici ne lève.** Un disque plein, un dossier en lecture seule ou un
- * fichier verrouillé ne doivent pas faire tomber un tour : un journal est ce
- * qu'on lit quand ça a raté, pas une raison de rater. Chaque échec est signalé
- * sur `console.error`, où il finit dans les journaux du système.
+ * **Nothing here raises.** A full disk, a read-only folder, or a
+ * locked file must not drop a round: a log is this
+ * that we read when it fails, not a reason to fail. Every failure is reported
+ * to `console.error`, where it ends up in the system logs.
  */
 
-/** Où vivent les journaux : sous `userData`, à côté du canal et de la session. */
+/** Where the logs live: under `userData`, next to the channel and session. */
 export function runLogDir(): string {
   return path.join(app.getPath("userData"), RUN_LOG_DIR_NAME);
 }
 
-/** Un journal ouvert, tel que le lanceur le tiendra. */
+/** An open log, such as the thrower will hold it. */
 export interface RunLog {
-  /** Le fichier, pour qu'un message d'erreur puisse le nommer. */
+  /** The file, so that an error message can name it. */
   readonly path: string;
-  /** Un morceau de sortie de l'enfant. Ne lève jamais. */
+  /** A child's outing piece. Never lift. */
   write(chunk: string, stream: "out" | "err"): void;
-  /** Ferme le journal en y écrivant le mot de la fin (code de sortie, motif). */
+  /** Close the log by writing the final word (exit code, reason). */
   close(note?: string): void;
 }
 
 /**
- * Ouvre le journal d'un tour : crée le dossier, écrit l'en-tête, fait tourner
- * les anciens, et rend le puits.
+ * Opens the log in one turn: creates the folder, writes the header, rotates
+ * the elders, and returns the well.
  *
- * `secrets` porte ce que le tour détient et que le journal ne doit pas garder —
- * le jeton d'exécution locale, la clé mintée du modèle. La substitution est
- * posée à l'écriture : c'est le seul moment où l'on est sûr que l'octet n'a pas
- * encore touché le disque.
+ * `secrets` carries what the round holds and which the journal should not keep —
+ * the local execution token, the minted key of the model. The substitution is
+ * posed when writing: this is the only moment when we are sure that the byte has not
+ * touched the disk again.
  */
 export function openRunLog(
   facts: RunLogFacts,
@@ -87,15 +87,15 @@ export function openRunLog(
   const file = path.join(dir, runLogFileName(facts.runId, startedAt));
   const redact = runLogRedactor(secrets);
 
-  // Le fichier d'abord, la rotation ensuite : le journal du tour qui commence ne
-  // doit pas dépendre du succès d'un ménage.
+  // The file first, the rotation then: the log of the round which begins
+  // should not depend on the success of a household.
   let handle: number | null = null;
   try {
     mkdirSync(dir, { recursive: true });
     handle = openSync(file, "a");
     writeSync(handle, runLogHeader(facts, startedAt));
   } catch (error) {
-    console.error("[run-log] journal impossible à ouvrir", error);
+    console.error("[run-log] could not open journal", error);
   }
   pruneOldRunLogs();
 
@@ -104,7 +104,7 @@ export function openRunLog(
     try {
       writeSync(handle, redact(text));
     } catch (error) {
-      console.error("[run-log] écriture impossible", error);
+      console.error("[run-log] write failed", error);
     }
   };
 
@@ -117,14 +117,14 @@ export function openRunLog(
       try {
         closeSync(handle);
       } catch {
-        // Déjà fermé, ou descripteur invalide : il n'y a rien à réparer.
+        // Already closed, or invalid descriptor: there is nothing to repair.
       }
       handle = null;
     },
   };
 }
 
-/** Les journaux du dossier, du plus récent au plus ancien. Vide si illisible. */
+/** The logs in the file, from newest to oldest. Blank if illegible. */
 function listRunLogs(): Array<{ name: string; bytes: number }> {
   try {
     return readdirSync(runLogDir())
@@ -142,7 +142,7 @@ function listRunLogs(): Array<{ name: string; bytes: number }> {
   }
 }
 
-/** Applique la rotation. Un fichier qui résiste est sauté, pas fatal. */
+/** Applies rotation. A file that resists is skipped, not fatal. */
 function pruneOldRunLogs(): void {
   for (const name of pruneRunLogs(listRunLogs())) {
     try {
@@ -154,11 +154,11 @@ function pruneOldRunLogs(): void {
 }
 
 /**
- * CE QUE LE RAPPORT DE DIAGNOSTIC EMPORTE, ramassé sur le disque.
+ * WHAT THE DIAGNOSTIC REPORT BRINGS, picked up from the disk.
  *
- * Le dernier journal donne quatre des cinq faits (bundle, dépôt, run, date) : ils
- * ne sont connus que d'un tour, et l'app ne les porte pas entre deux lancements.
- * Quand il n'y en a aucun, le rapport le dit — c'est déjà une réponse.
+ * The last log gives four of the five facts (bundle, deposit, run, date): they
+ * are only known for one turn, and the app does not carry them between two launches.
+ * When there is none, the report says so — that’s already an answer.
  */
 export function collectDiagnostic(): DiagnosticFacts {
   const logs = listRunLogs();
@@ -174,7 +174,7 @@ export function collectDiagnostic(): DiagnosticFacts {
         tail: tailLines(text, RUN_LOG_REPORT_LINES),
       };
     } catch (error) {
-      console.error("[run-log] dernier journal illisible", error);
+      console.error("[run-log] latest journal is unreadable", error);
     }
   }
 
@@ -189,15 +189,15 @@ export function collectDiagnostic(): DiagnosticFacts {
   };
 }
 
-/** Le rapport, prêt pour le presse-papier. Il ne part JAMAIS tout seul. */
+/** The report, ready for the clipboard. He NEVER leaves alone. */
 export function diagnosticReport(): string {
   return formatDiagnosticReport(collectDiagnostic());
 }
 
 /**
- * Le journal du LANCEUR lui-même, hors de tout tour — pour ce qui rate avant
- * qu'un `runId` existe (pas de dépôt attaché, bundle refusé, opencode absent).
- * Il n'a pas d'en-tête de run à écrire ; il en porte un minimal.
+ * The journal of the LAUNCHER himself, out of all tricks - for what misses before
+ * that a `runId` exists (no repository attached, bundle refused, opencode absent).
+ * It has no run header to write; he wears minimal one.
  */
 export function noteLauncherFailure(message: string): void {
   const log = openRunLog({

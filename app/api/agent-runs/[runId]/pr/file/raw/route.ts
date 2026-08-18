@@ -13,20 +13,20 @@ import {
 import { imageMimeType } from "@/lib/diff-binary";
 
 /**
- * Octets d'un fichier du diff d'un run (MIN-66) — ce que la vue diff met dans
- * ses `<img>` pour montrer une image modifiée côte à côte.
- *  GET ?path=…&side=base|head → le fichier, sous le type MIME de son extension.
+ * Bytes of a run diff file (MIN-66) — what the diff view puts in
+ * its `<img>` to show an edited image side by side.
+ * GET ?path=…&side=base|head → the file, under the MIME type of its extension.
  *
- * Même partage que la route texte voisine : avec une PR, c'est une FAÇADE de
- * `/api/pull-requests/[prId]/file/raw` ; SANS PR, c'est le compare base…branche
- * de travail — la vue diff DANS la conversation, avant toute pull request.
+ * Same sharing as the neighboring text route: with a PR, it is a FACADE of
+ * `/api/pull-requests/[prId]/file/raw` ; WITHOUT PR, it is the base comparison…branch
+ * working — the diff view IN the conversation, before any pull request.
  */
 
 type RouteContext = { params: Promise<{ runId: string }> };
 
 export const maxDuration = 60;
 
-/** Chemin qui adresse la version de base : l'ancien nom si le fichier a été renommé. */
+/** Path that addresses the base version: the old name if the file has been renamed. */
 function basePathOf(file: { filename: string; previous_filename?: string }): string {
   return file.previous_filename ?? file.filename;
 }
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (auth.ok) return prFileBytesResponse(auth.scope, path, side);
   if (!("noPr" in auth)) return auth.response;
 
-  // ── Run sans PR : le diff est le compare base…branche de travail ──────────
+  // ── Run without PR: the diff is the compare base…branch of work ──────────
   const contentType = imageMimeType(path);
   if (!contentType) {
     return NextResponse.json({ error: "Not a previewable image" }, { status: 415 });
@@ -89,9 +89,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: "File has no head version" }, { status: 404 });
     }
 
-    // Côté tête, la BRANCHE : une session en cours pousse encore, et c'est son
-    // dernier état qu'on veut montrer. Le contenu à cette URL bouge donc — d'où
-    // le `moving` passé plus bas, qui coupe le cache navigateur de ce côté-là.
+    // On the head side, the BRANCH: a session in progress is still growing, and it is
+    // last state we want to show. The content at this URL therefore moves — hence
+    // the `moving` passed below, which cuts the browser cache on that side.
     const ref =
       side === "head"
         ? head

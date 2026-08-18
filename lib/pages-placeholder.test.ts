@@ -1,17 +1,17 @@
 // @vitest-environment jsdom
 //
-// Le placeholder des blocs vides (MIN-270).
+// The placeholder for empty blocks (MIN-270).
 //
-// Ce que ce fichier tient, et qu'aucun type ni aucune relecture ne voit : QUELS
-// blocs vides portent un placeholder. `Placeholder` de tiptap, laissé sur ses
-// options par défaut, ne regarde que le nœud de PROFONDEUR 1 — pour un item de
-// liste ou une ligne de citation, c'est la liste ou la citation, qui n'est pas
-// un bloc de texte. La moitié des blocs vides restait donc muette, en silence,
-// et rien dans le code ne le disait.
+// What this file holds, and which no type or reread sees: WHAT
+// empty blocks carry a placeholder. `Placeholder` of tiptap, left behind
+// default options, only look at the DEPTH 1 node — for an item of
+// list or quote line, this is the list or quote, which is not
+// a block of text. Half of the empty blocks therefore remained mute, in silence,
+// and nothing in the code said that.
 //
-// Le second point tenu ici est le TEXTE : un titre annonce son niveau, un bloc
-// imbriqué invite juste à écrire, et seule la ligne de premier niveau porte
-// l'invitation au menu « / » — c'est la seule où « / » est le bon geste.
+// The second point held here is the TEXT: a title announces its level, a block
+// nested just prompts to write, and only the top level line carries
+// the menu invitation “/” — this is the only one where “/” is the right gesture.
 
 import { describe, expect, it } from "vitest";
 import { Editor } from "@tiptap/core";
@@ -22,20 +22,20 @@ import {
   pagePlaceholder,
 } from "@/components/pages/block-placeholder";
 
-/** Un traducteur qui rend sa clé : on épingle QUELLE clé sort, pas sa langue. */
+/** A translator who returns his key: we pin WHICH key comes out, not his language. */
 const t = ((key: string) => key) as never;
 
 /**
- * Les placeholders présents dans le document, curseur posé à `at`.
+ * The placeholders present in the document, cursor placed at `at`.
  *
- * `blur` : on quitte le document après avoir posé le curseur. La sélection
- * SURVIT au focus, donc rien dans l'état ne dit qu'on est parti — c'est
- * exactement le cas qui laissait une invitation à écrire allumée sur un
- * document qu'on venait de quitter.
+ * `blur`: we leave the document after placing the cursor. The selection
+ * SURVIVES focus, so nothing in the state says we left — this is
+ * exactly the case that left a write prompt lit on a
+ * document we had just left.
  *
- * L'événement de focus est envoyé À LA MAIN : jsdom ne considère pas un
- * `contenteditable` comme focalisable et n'en émet donc pas de lui-même, là où
- * un navigateur en émet un à chaque clic dans l'éditeur.
+ * The focus event is sent TO HAND: jsdom does not consider a
+ * `contenteditable` as focusable and therefore does not emit one on its own, where
+ * a browser emits one on each click in the editor.
  */
 function placeholders(
   content: string,
@@ -63,18 +63,18 @@ function placeholders(
 }
 
 describe("placeholder d'un bloc vide", () => {
-  it("invite au menu « / » sur une ligne de premier niveau", () => {
+  it("invites the « / » menu on a top-level line", () => {
     expect(placeholders("<p></p>", "start")).toEqual(["placeholder"]);
     expect(placeholders("<p>texte</p><p></p>", "end")).toEqual(["placeholder"]);
   });
 
-  it("annonce son niveau sur un titre vide", () => {
+  it("announces its level on an empty heading", () => {
     expect(placeholders("<p>x</p><h1></h1>", "end")).toEqual(["blockHeading1"]);
     expect(placeholders("<p>x</p><h2></h2>", "end")).toEqual(["blockHeading2"]);
     expect(placeholders("<p>x</p><h3></h3>", "end")).toEqual(["blockHeading3"]);
   });
 
-  it("descend dans les blocs IMBRIQUÉS — le défaut de tiptap les oubliait", () => {
+  it("descends into NESTED blocks — tiptap's default omitted them", () => {
     expect(placeholders("<p>x</p><ul><li><p></p></li></ul>", "end")).toEqual([
       "placeholderNested",
     ]);
@@ -83,19 +83,19 @@ describe("placeholder d'un bloc vide", () => {
     ).toEqual(["placeholderNested"]);
   });
 
-  it("s'éteint dès qu'on quitte le document", () => {
-    // La sélection reste sur la ligne vide : seul le FOCUS a changé, et c'est
-    // pourtant lui qui décide — une invitation à écrire n'a pas de sens sur un
-    // document que l'on vient de quitter.
+  it("turns off as soon as the document is left", () => {
+    // The selection remains on the empty line: only FOCUS changed, and it is
+    // the one that decides — a writing prompt has no meaning on a
+    // document we have just left.
     expect(placeholders("<p></p>", "start", { blur: true })).toEqual([]);
     expect(placeholders("<p>x</p><h2></h2>", "end", { blur: true })).toEqual([]);
   });
 
-  it("ne décore ni un bloc plein, ni un bloc vide sans le curseur", () => {
+  it("decorates neither a full block nor an empty block without the cursor", () => {
     expect(placeholders("<p>plein</p>", "end")).toEqual([]);
-    // Deux blocs vides qui se TOUCHENT : ils partagent une borne, et tiptap les
-    // allumait tous les deux (plus leurs ancêtres vides) dès que le curseur se
-    // posait entre eux. Un seul, toujours — celui du curseur.
+    // Two empty blocks that TOUCH: they share a terminal, and tiptap them
+    // both are read (plus their empty ancestors) as soon as the cursor moved
+    // between them. Only one, always — the one under the cursor.
     expect(placeholders("<p></p><p></p>", "start")).toHaveLength(1);
     expect(placeholders("<p></p><p></p><p></p>", "end")).toHaveLength(1);
     expect(

@@ -10,29 +10,24 @@ import { desktopChannelForOrigin, type DesktopChannel } from "@/lib/desktop/chan
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 
 /**
- * Compte → Préférences : le CANAL de l'app de bureau (MIN-352).
+ * Account → Preferences: the CHANNEL of the desktop app (MIN-352).
  *
- * ## Elle n'existe que dans l'app, et sans ancre
+ * ## It only exists in the app, and without anchor
  *
- * Pas d'entrée dans `SETTINGS_SECTIONS`, contrairement à toutes ses voisines, et
- * ce n'est pas un oubli : le catalogue alimente ⌘K, qui tourne partout. Une
- * entrée ici donnerait à chaque personne sur le web une ligne de palette qui
- * ouvre les préférences et ne surligne rien — exactement le défaut que
- * `settings-sections.test.ts` existe pour empêcher. Une carte qui n'apparaît que
- * dans un contexte n'a pas sa place dans une table lue par tous les contextes.
- *
- * ## L'état vient de l'origine, pas du pont
- *
- * `window.location.origin` EST le canal : c'est l'origine qui sert cette page.
- * Aucun aller-retour à faire, et surtout aucun second état à tenir synchrone
- * avec l'URL réellement chargée. `null` — le dév sur `localhost`, ou tout
- * simplement le navigateur — retire la carte plutôt que d'afficher un
- * interrupteur qui ne bougerait pas.
+ * No entry in `SETTINGS_SECTIONS`, unlike all its neighbors, and
+ * this is not an oversight: the catalog feeds ⌘K, which runs everywhere. An
+ * entry here would give every person on the web a palette row that
+ * opens preferences and doesn't highlight anything — exactly the default that
+ * `settings-sections.test.ts` exists to prevent. A card that only appears in one context has no place in a table read by all contexts. it is the origin which serves this page.
+ * No round trip to do, and above all no second state to keep synchronous
+ * with the URL actually loaded. `null` — the dev on `localhost`, or any
+ * just the browser — removes the card rather than displaying a
+ * switch which would not move.
  */
 export function AccountDesktopSection() {
   const ta = useTranslations("Account");
-  // `null` jusqu'au montage : le pont et l'origine n'existent que côté client, et
-  // rendre la carte au premier passage la ferait clignoter chez tout le monde.
+  // `null` until mounting: the bridge and the origin only exist on the client side, and
+  // returning the card on the first pass would cause it to flash at everyone's house.
   const [channel, setChannel] = useState<DesktopChannel | null>(null);
   const [switching, setSwitching] = useState(false);
 
@@ -43,10 +38,10 @@ export function AccountDesktopSection() {
 
   if (!channel) return null;
 
-  // On ne revient PAS de cet appel : le main process recharge la fenêtre sur
-  // l'autre origine, et ce document cesse d'exister. L'interrupteur se fige donc
-  // sur la position demandée — il n'y a personne pour le remettre, et c'est ce
-  // qu'on veut voir pendant la seconde de chargement.
+  // We do NOT return from this call: the main process reloads the window on
+  // the other origin, and this document ceases to exist. So the switch freezes
+  // on the requested position — there is no one to put it back, and that's it
+  // that we want to see during the second of loading.
   const toggle = (next: boolean) => {
     const bridge = getDesktopBridge();
     if (!bridge || switching) return;

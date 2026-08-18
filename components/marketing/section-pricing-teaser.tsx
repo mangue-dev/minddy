@@ -6,8 +6,8 @@ import { Reveal, RevealHeading } from "./reveal";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
 
-/** Aperçu tarifs sur la landing (MIN-73) : les trois mêmes cartes que
-    `/pricing`, sans le tableau comparatif — qui reste la raison d'y aller. */
+/** Price overview on the landing (MIN-73): the same three cards as
+ `/pricing`, without the comparison table — which remains the reason to go there. */
 export async function SectionPricingTeaser() {
   const [t, locale] = await Promise.all([getTranslations("Landing"), getLocale()]);
 

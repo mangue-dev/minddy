@@ -11,34 +11,34 @@ import {
   type PageToolResult,
 } from "@/lib/server/page-tools";
 /**
- * Les PAGES pour l'agent de code (MIN-273) — le wiki du projet du run.
+ * PAGES for Code Agent (MIN-273) — the run project wiki.
  *
- * L'agent lisait le dépôt et les tickets, jamais la doc que l'équipe a écrite.
- * C'est le trou que ces six tools ferment : une convention écrite dans une page
- * vaut mieux qu'une convention déduite de deux fichiers, et une décision
- * d'architecture ne se trouve nulle part dans le code.
+ * The agent read the filing and the tickets, never the doc the team wrote.
+ * This is the hole that these six tools close: a convention written on a page
+ * is better than a convention deduced from two files, and a decision
+ * architecture is not found anywhere in the code.
  *
- * Aucune logique ici, volontairement : le noyau (`lib/server/page-tools.ts`) est
- * celui du MCP et du chat, projection markdown comprise. Ce module traduit les
- * arguments du modèle, nomme les tools DE CETTE SURFACE dans les refus
- * (`read_page`, pas `minddy_get_page`) et rend la forme de résultat de la boucle.
+ * No logic here, deliberately: the kernel (`lib/server/page-tools.ts`) is
+ * that of the MCP and the cat, markdown projection included. This module translates the
+ * model arguments, name the tools OF THIS SURFACE in the refusals
+ * (`read_page`, not `minddy_get_page`) and returns the result form of the loop.
  *
- * Ils sont routés avec les tools ticket (`ISSUE_TOOL_NAMES`) parce qu'ils ont
- * exactement le même contexte — le projet du run et son acteur — et qu'une
- * famille de plus dans le routage n'aurait rien apporté que du câblage.
+ * They are routed with the tools ticket (`ISSUE_TOOL_NAMES`) because they have
+ * exactly the same context — the run project and its actor — and that a
+ * additional family in the routing would have brought nothing but cabling.
  */
 
-/** La forme de résultat de la boucle, déclarée localement comme dans les autres
-    modules de tools de plateforme (le type de `tool-loop.ts` n'est pas exporté). */
+/** The result form of the loop, declared locally as in the others
+    platform tools modules (`tool-loop.ts` type is not exported). */
 type ToolOutcome = { result: unknown; success: boolean };
 
 export interface PageToolContext {
   projectId: string;
-  /** Propriétaire du run : l'acteur de toute écriture. */
+  /** Run owner: the actor of all writing. */
   actorId: string | null;
 }
 
-/** Les noms servis au modèle, tels que `lib/server/agent/tools.ts` les déclare. */
+/** The names used for the model, such as `lib/server/agent/tools.ts` declares them. */
 export const PAGE_TOOL_NAMES = new Set([
   "list_pages",
   "search_pages",
@@ -57,7 +57,7 @@ function render<T>(result: PageToolResult<T>): ToolOutcome {
     : { result: { error: result.message, code: result.code }, success: false };
 }
 
-/** Exécute un tool page. L'appelant a déjà routé sur `PAGE_TOOL_NAMES`. */
+/** Runs a tool page. The caller has already routed to `PAGE_TOOL_NAMES`. */
 export async function executePageTool(
   ctx: PageToolContext,
   name: string,
@@ -65,8 +65,8 @@ export async function executePageTool(
 ): Promise<ToolOutcome> {
   const actorId = ctx.actorId;
   if (!actorId) {
-    // Un run sans propriétaire n'a personne au nom de qui écrire — et la lecture
-    // suit la même garde : l'accès au projet se contrôle par l'acteur.
+    // An ownerless run has no one to write for — and reading
+    // follows the same guard: access to the project is controlled by the actor.
     return {
       result: { error: "This run has no owner, so it cannot read or write pages." },
       success: false,

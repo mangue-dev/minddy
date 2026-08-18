@@ -7,19 +7,18 @@ import type { LocalRepoState } from "@/lib/desktop/local-repo";
 import { useProjectGitLinkQuery } from "@/lib/use-project-git-link-query";
 
 /**
- * LE DOSSIER LOCAL D'UN PROJET, VU DE LA PAGE (MIN-359).
+ * THE LOCAL FILE OF A PROJECT, SEEN FROM THE PAGE (MIN-359).
  *
- * Un seul hook pour les deux surfaces qui en parlent : la carte des réglages du
- * projet, qui l'attache, et le sélecteur d'environnement de la conversation, qui
- * décide si le choix « ma machine » existe.
+ * A single hook for the two surfaces which talk about it: the settings map of the
+ * project, which attaches it, and the environment selector of the conversation, which
+ * decides if the "my machine" choice exists.
  *
- * **`null` partout ailleurs que dans l'app de bureau**, et c'est le cas normal :
- * dans un navigateur il n'y a pas de pont, donc pas d'attachement possible, donc
- * pas de sélecteur — pas un sélecteur grisé qui promettrait quelque chose.
+ * **`null` anywhere other than in the desktop app**, and this is the normal case:
+ * in a browser there is no bridge, therefore no attachment possible, therefore
+ * no selector — not a grayed-out selector that would promise something.
  *
- * Le dépôt contre lequel on valide vient de la liaison du projet
- * (`useProjectGitLinkQuery`) : sans dépôt lié, l'agent n'a de toute façon rien à
- * faire, en local comme dans le cloud.
+ * The deposit against which we validate comes from the link of the project
+ * (`useProjectGitLinkQuery`): without a linked deposit, the agent has nothing to do anyway, both locally and in the cloud.
  */
 export function useLocalRepo(projectId: string | null) {
   const { link } = useProjectGitLinkQuery(projectId);
@@ -28,9 +27,9 @@ export function useLocalRepo(projectId: string | null) {
   const [busy, setBusy] = useState(false);
   const [branches, setBranches] = useState<string[]>([]);
 
-  // La page est servie à distance, le preload ne l'est pas : une coquille déjà
-  // ouverte peut donc précéder ce membre. Elle reste locale, simplement sans le
-  // nouveau listing, plutôt que de faire échouer toute la lecture d'attachement.
+  // The page is served remotely, the preload is not: a typo already
+  // open can therefore precede this member. It remains local, simply without
+  // new listing, rather than failing the entire attachment read.
   const readBranches = useCallback((bridge: NonNullable<ReturnType<typeof getDesktopBridge>>) => {
     if (!projectId || !fullName || !bridge.localRepoBranches) return Promise.resolve([]);
     return bridge.localRepoBranches({ projectId, fullName });
@@ -43,8 +42,8 @@ export function useLocalRepo(projectId: string | null) {
       setBranches([]);
       return;
     }
-    // La réponse d'un projet qu'on vient de quitter ne doit pas s'afficher sur
-    // le suivant : le montage suivant repart de `null`, celui-ci se tait.
+    // The response from a project that has just left should not be displayed on
+    // the next one: the next montage starts from `null`, this one goes silent.
     let alive = true;
     void bridge
       .localRepo({ projectId, fullName })
@@ -72,15 +71,15 @@ export function useLocalRepo(projectId: string | null) {
     };
   }, [projectId, fullName, readBranches]);
 
-  /** Ouvre le panneau système. Rend le verdict, pour que l'appelant le dise. */
+  /** Opens the system panel. Gives the verdict, for the appellant to say. */
   const attach = useCallback(async (): Promise<LocalRepoState | null> => {
     const bridge = getDesktopBridge();
     if (!bridge || !projectId || !fullName || busy) return null;
     setBusy(true);
     try {
       const next = await bridge.chooseLocalRepo({ projectId, fullName });
-      // Un dossier REFUSÉ n'est pas rangé côté app : on ne l'affiche donc pas
-      // comme l'état courant, on le rend à l'appelant qui en fera un message.
+      // A REFUSED folder is not stored on the app side: we therefore do not display it
+      // like the current state, we return it to the caller who will make a message.
       if (next.status === "ready") {
         setState(next);
         setBranches(await readBranches(bridge).catch(() => []));
@@ -100,23 +99,23 @@ export function useLocalRepo(projectId: string | null) {
     try {
       setState(await bridge.forgetLocalRepo({ projectId }));
     } catch {
-      // Rien à réparer : l'état affiché reste celui d'avant, et le prochain
-      // montage relira le disque.
+      // Nothing to repair: the displayed state remains the one before, and the next one
+      // mount will reread the disk.
     } finally {
       setBusy(false);
     }
   }, [projectId, busy]);
 
   return {
-    /** L'app de bureau est-elle présente dans cette fenêtre ? */
+    /** Is the desktop app present in this window? */
     available: !!getDesktopBridge(),
-    /** `null` hors app de bureau, ou tant que la première lecture n'a pas répondu. */
+    /** `null` outside of desktop app, or until first read responds. */
     state,
-    /** Le dossier est attaché ET encore valide : le run local est possible. */
+    /** The folder is attached AND still valid: local run is possible. */
     ready: state?.status === "ready",
-    /** Branches déjà présentes dans le checkout attaché à cette machine. */
+    /** Branches already present in the checkout attached to this machine. */
     branches,
-    /** Le projet a un dépôt lié : sans ça, il n'y a rien à attacher. */
+    /** The project has a linked repository: without that, there is nothing to attach. */
     linked: !!fullName,
     busy,
     attach,

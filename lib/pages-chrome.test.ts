@@ -1,21 +1,21 @@
 // @vitest-environment jsdom
 //
-// Le garde-fou du CHROME du bloc (MIN-268).
+// The CHROME guardrail of the block (MIN-268).
 //
-// Ce que ce fichier tient, et qu'aucun type ne voit :
+// What this file holds, and which no type sees:
 //
-//  - les actions du menu ⋯ opèrent sur une PLAGE de blocs, pas sur un bloc :
-//    dupliquer un dépliant emporte son contenu, supprimer trois blocs les
-//    supprime tous les trois. C'est la propriété qui décide si l'éditeur
-//    « paraît bon », et c'est celle qu'une relecture ne voit pas ;
-//  - un bloc dupliqué ne recopie PAS son identité. Deux blocs de même `blockId`
-//    donneraient deux ancres identiques et une sauvegarde par bloc (MIN-271)
-//    qui écrase l'un par l'autre — silencieusement ;
-//  - chaque raccourci déclaré au registre est bien lié, et bascule : celui du
-//    bloc actif ramène au paragraphe. Le menu affiche le champ que le clavier
-//    déclenche, donc les deux ne peuvent pas diverger ;
-//  - la palette des couleurs et les jetons CSS de app/globals.css disent la
-//    même chose. C'est le seul lien du dépôt entre un fichier TypeScript et une
+// - the menu actions ⋯ operate on a RANGE of blocks, not on a block:
+// duplicating a leaflet takes away its contents, delete three blocks
+// delete all three. It is the property that decides whether the publisher
+// “looks good”, and that’s what a rereading doesn’t see;
+// - a duplicated block does NOT copy its identity. Two blocks of the same `blockId`
+// would give two identical anchors and one save per block (MIN-271)
+// which crushes one by the other — silently;
+// - each shortcut declared in the register is well linked, and switches: that of
+// active block returns to paragraph. The menu displays the field that the keyboard
+// triggers, so the two cannot diverge;
+// - the color palette and CSS tokens of app/globals.css say the
+// same thing. This is the only link in the repository between a TypeScript file and a
 //    feuille de style : rien d'autre ne peut l'attraper.
 
 import { readFileSync } from "node:fs";
@@ -63,9 +63,9 @@ import {
   withoutBlockIds,
 } from "@/components/pages/block-actions";
 
-/** Le vrai éditeur d'une page, moins React : le registre, les couleurs, les
-    raccourcis et les ID stables — c'est-à-dire tout ce sur quoi le chrome
-    s'appuie. */
+/** The real one-page editor, minus React: the registry, the colors, the
+ shortcuts and stable IDs — that is, everything that chrome
+ relies on. */
 function makeEditor(content = "") {
   return new Editor({
     element: document.createElement("div"),
@@ -85,13 +85,11 @@ function makeEditor(content = "") {
 }
 
 /**
- * Le même éditeur, une fois les ID de bloc posés.
+ * The same editor, once the block IDs are set.
  *
- * `UniqueID` les attribue depuis l'événement `create`, que tiptap émet au tour
- * de boucle SUIVANT — un document lu juste après `new Editor()` n'a donc que
- * des `blockId` à `null`. Ce n'est pas une bizarrerie de test : c'est aussi
- * vrai dans l'app, et c'est pourquoi rien de ce qui dépend de l'identité d'un
- * bloc ne peut se faire au montage.
+ * `UniqueID` assigns them from the `create` event, which tiptap emits in the NEXT loop
+ * — a document read just after `new Editor()` therefore only has
+ * from `blockId` to `null`. This isn't a testing quirk: it's also true in the app, and that's why nothing that depends on the identity of a block can be done in mount.
  */
 async function makeIdentifiedEditor(content = "") {
   const editor = makeEditor(content);
@@ -99,7 +97,7 @@ async function makeIdentifiedEditor(content = "") {
   return editor;
 }
 
-/** Le nom de chaque nœud de premier niveau, dans l'ordre. */
+/** The name of each top-level node, in order. */
 function topLevel(editor: Editor): string[] {
   const names: string[] = [];
   editor.state.doc.forEach((node) => names.push(node.type.name));
@@ -107,15 +105,15 @@ function topLevel(editor: Editor): string[] {
 }
 
 /**
- * Frapper un raccourci — par le VRAI chemin, celui du plugin `keymap`.
+ * Hit a shortcut — via the REAL path, that of the plugin `keymap`.
  *
- * Et pas `editor.commands.keyboardShortcut()`, qui passe par
- * `captureTransaction` : celui-ci retient les transactions au lieu de les
- * appliquer, si bien que l'état de l'éditeur ne bouge pas d'une transaction à
- * l'autre. Une conversion qui en dispatche plusieurs — étaler la sélection,
- * aplatir, convertir — s'y calcule donc trois fois sur le document de départ et
- * lève. Dans un navigateur, le keymap appelle la liaison directement et chaque
- * transaction s'applique : c'est ce chemin-là qu'on veut mesurer.
+ * And not `editor.commands.keyboardShortcut()`, which goes through
+ * `captureTransaction`: this one holds transactions instead of the
+ * apply, so that the publisher state does not move from one transaction to
+ * another. A conversion which dispatches several — spread the selection,
+ * flatten, convert — is therefore calculated three times on the starting document and
+ * raises. In a browser, the keymap calls the link directly and each
+ * transaction applies: this is the path we want to measure.
  */
 function press(editor: Editor, shortcut: string): void {
   const keys = shortcut.split("-");
@@ -139,13 +137,13 @@ describe("la plage de blocs", () => {
     const range = blockRange(editor);
     expect(range).not.toBeNull();
     expect(selectedBlockCount(editor)).toBe(1);
-    // La plage couvre le paragraphe entier, pas les trois caractères devant le
-    // curseur : c'est ce qui fait que « dupliquer » duplique un bloc.
+    // The range covers the entire paragraph, not the three characters in front of the
+    // cursor: this is what makes “duplicate” duplicate a block.
     expect(range!.to - range!.from).toBe(editor.state.doc.firstChild!.nodeSize);
     editor.destroy();
   });
 
-  it("couvre TOUS les blocs d'une sélection qui en traverse plusieurs", async () => {
+  it("covers ALL blocks in a selection that crosses several of them", async () => {
     const editor = await makeIdentifiedEditor(
       "<p>Un</p><p>Deux</p><p>Trois</p>"
     );
@@ -164,8 +162,8 @@ describe("la plage de blocs", () => {
     );
     selectBlockAt(editor, 0);
     const range = blockRange(editor)!;
-    // Un seul bloc de premier niveau — la liste — mais la plage couvre ses deux
-    // items : c'est ce que « le bloc part avec ses enfants » veut dire.
+    // Only one first-level block — the list — but the range covers both
+    // items: this is what “the block leaves with its children” means.
     expect(selectedBlockCount(editor)).toBe(1);
     expect(range.to - range.from).toBe(editor.state.doc.firstChild!.nodeSize);
     editor.destroy();
@@ -223,7 +221,7 @@ describe("dupliquer", () => {
 });
 
 describe("supprimer", () => {
-  it("emporte toute la sélection", () => {
+  it("carries the entire selection", () => {
     const editor = makeEditor("<p>Un</p><p>Deux</p><p>Trois</p>");
     editor.commands.setTextSelection({ from: 2, to: 8 });
     expect(selectedBlockCount(editor)).toBe(2);
@@ -234,7 +232,7 @@ describe("supprimer", () => {
 });
 
 describe("le « + » de la marge", () => {
-  it("insère un paragraphe et y amorce le menu « / »", () => {
+  it("inserts a paragraph and starts the « / » menu in it", () => {
     const editor = makeEditor("<h1>Titre</h1>");
     expect(insertBlockAround(editor, 0, "below")).toBe(true);
     expect(topLevel(editor)).toEqual(["heading", "paragraph"]);
@@ -242,7 +240,7 @@ describe("le « + » de la marge", () => {
     editor.destroy();
   });
 
-  it("insère au-dessus quand on le lui demande", () => {
+  it("inserts above when asked", () => {
     const editor = makeEditor("<h1>Titre</h1>");
     insertBlockAround(editor, 0, "above");
     expect(topLevel(editor)).toEqual(["paragraph", "heading"]);
@@ -250,7 +248,7 @@ describe("le « + » de la marge", () => {
   });
 });
 
-describe("la réserve cliquable du bas", () => {
+describe("the clickable bottom reserve", () => {
   it("ajoute un paragraphe et y met le curseur", () => {
     const editor = makeEditor("<h1>Titre</h1>");
     focusDocumentEnd(editor);
@@ -263,14 +261,14 @@ describe("la réserve cliquable du bas", () => {
     const editor = makeEditor("<h1>Titre</h1><p></p>");
     focusDocumentEnd(editor);
     focusDocumentEnd(editor);
-    // Deux clics dans la réserve, un seul paragraphe : le vide sous le texte
-    // est de la mise en page, il ne doit pas partir en base.
+    // Two clicks in the reserve, a single paragraph: the void under the text
+    // is from the layout, it must not start from the base.
     expect(topLevel(editor)).toEqual(["heading", "paragraph"]);
     expect(editor.state.selection.$from.parent.type.name).toBe("paragraph");
     editor.destroy();
   });
 
-  it("écrit à la SUITE, sans toucher au dernier bloc", () => {
+  it("writes NEXT to the last block without touching it", () => {
     const editor = makeEditor("<p>Un</p><blockquote><p>Deux</p></blockquote>");
     focusDocumentEnd(editor);
     expect(topLevel(editor)).toEqual(["paragraph", "blockquote", "paragraph"]);
@@ -279,13 +277,13 @@ describe("la réserve cliquable du bas", () => {
   });
 });
 
-describe("Entrée à la fin du titre", () => {
-  it("ouvre une ligne vide en tête du corps, curseur dedans", () => {
+describe("Enter at the end of the title", () => {
+  it("opens an empty line at the start of the body with the cursor in it", () => {
     const editor = makeEditor("<p>Déjà écrit</p>");
     focusDocumentStart(editor);
     expect(topLevel(editor)).toEqual(["paragraph", "paragraph"]);
-    // La ligne OUVERTE est la première, et elle est vide : le texte déjà écrit
-    // descend d'un cran, comme quand on ouvre une ligne n'importe où ailleurs.
+    // The OPEN line is the first, and it is empty: the text already written
+    // goes down a notch, like when you open a line anywhere else.
     expect(editor.state.doc.child(0).content.size).toBe(0);
     expect(editor.state.doc.child(1).textContent).toBe("Déjà écrit");
     expect(editor.state.selection.$from.parent.content.size).toBe(0);
@@ -303,7 +301,7 @@ describe("Entrée à la fin du titre", () => {
 });
 
 describe("le clignement d'un bloc", () => {
-  /** Le vrai éditeur, AVEC l'extension du clignement — c'est elle qu'on teste. */
+  /** The real editor, WITH the blink extension — that's what we're testing. */
   function flashEditor(content: string) {
     return new Editor({
       element: document.createElement("div"),
@@ -324,7 +322,7 @@ describe("le clignement d'un bloc", () => {
   const domAt = (editor: Editor, pos: number) =>
     editor.view.nodeDOM(pos) as HTMLElement;
 
-  it("passe par une DÉCORATION, donc la classe est bien dans le document rendu", () => {
+  it("uses a DECORATION, so the class is in the rendered document", () => {
     const editor = flashEditor("<p>Avant</p><h2>Cible</h2>");
     const pos = 7;
     expect(editor.state.doc.nodeAt(pos)?.type.name).toBe("heading");
@@ -334,21 +332,21 @@ describe("le clignement d'un bloc", () => {
     editor.destroy();
   });
 
-  it("SURVIT à un re-rendu du nœud — ce qu'une classe posée à la main ne fait pas", () => {
+  it("SURVIVES a node re-render — unlike a manually added class", () => {
     const editor = flashEditor("<p>Avant</p><h2>Cible</h2>");
     const pos = 7;
 
-    // Le défaut qu'on garde : ProseMirror surveille le DOM de sa zone éditable
-    // et DÉFAIT tout ce qu'il n'a pas écrit. Une classe posée par
-    // `classList.add` atterrissait sur un élément que PM remplaçait dans la
-    // foulée — mesuré dans le navigateur, sur le vrai éditeur. Ici on force le
-    // re-rendu par le chemin le plus court : on change le document.
+    // The default we keep: ProseMirror monitors the DOM of its editable area
+    // and UNDOES everything he didn't write. A class posed by
+    // `classList.add` landed on an element that PM replaced in the
+    // stride — measured in the browser, on the real editor. Here we force it
+    // re-rendered by the shortest path: we change the document.
     flashBlockAt(editor, pos);
     editor.commands.insertContentAt(1, "x");
 
     const node = editor.state.doc.nodeAt(pos + 1);
     expect(node?.type.name).toBe("heading");
-    // La décoration a SUIVI son nœud, qui a bougé d'un cran.
+    // The decoration FOLLOWED its knot, which moved a notch.
     expect(domAt(editor, pos + 1).classList.contains("page-block-target")).toBe(
       true
     );
@@ -363,16 +361,16 @@ describe("le clignement d'un bloc", () => {
 
     flashBlockAt(editor, 7);
 
-    // Un clignement qui rentrerait dans le document partirait en base et
-    // ressortirait dans le markdown que lit l'agent.
+    // A blink that would enter the document would go to the base and
+    // would appear in the markdown that the agent reads.
     expect(JSON.stringify(editor.getJSON())).toBe(before);
     expect(updates).toBe(0);
     editor.destroy();
   });
 
   it("s'éteint tout seul, et s'annule", () => {
-    // L'éditeur est monté AVANT de figer le temps : tiptap diffère une partie
-    // de son montage, et un faux minuteur le laisserait à moitié construit.
+    // The editor is mounted BEFORE freezing time: tiptap defers a part
+    // of its assembly, and a false timer would leave it half-built.
     const editor = flashEditor("<p>Avant</p><h2>Cible</h2>");
     const pos = 7;
     const lit = () =>
@@ -386,7 +384,7 @@ describe("le clignement d'un bloc", () => {
       vi.advanceTimersByTime(1_000);
       expect(lit()).toBe(false);
 
-      // Et l'annulation, qui empêche le minuteur d'un clic d'éteindre le suivant.
+      // And cancel, which prevents the timer of one click from turning off the next.
       const cancel = flashBlockAt(editor, pos);
       cancel();
       expect(lit()).toBe(false);
@@ -396,7 +394,7 @@ describe("le clignement d'un bloc", () => {
     }
   });
 
-  it("retrouve un bloc par son identité, pour l'ancre d'un lien", async () => {
+  it("finds a block by its identity for a link anchor", async () => {
     const editor = await makeIdentifiedEditor("<p>Un</p><p>Deux</p>");
     const id = editor.state.doc.child(1).attrs[BLOCK_ID_ATTRIBUTE] as string;
     expect(posOfBlockId(editor, id)).toBe(editor.state.doc.child(0).nodeSize);
@@ -405,7 +403,7 @@ describe("le clignement d'un bloc", () => {
   });
 });
 
-describe("amener un bloc à l'écran", () => {
+describe("bringing a block into view", () => {
   it("saute SEC, et c'est ce qui rend le clignement visible", () => {
     vi.useFakeTimers();
     const editor = new Editor({
@@ -425,14 +423,14 @@ describe("amener un bloc à l'écran", () => {
 
     revealBlock(editor, container, pos, 24);
 
-    // En défilement DOUX, `scrollBy` rend la main tout de suite et la page met
-    // jusqu'à une seconde à arriver — or une animation CSS tourne qu'on la voie
-    // ou non. Le clignement brûlait son temps pendant le trajet et n'était plus
-    // là à l'arrivée : visible sur un bloc proche, invisible sur un bloc loin.
+    // In GENTLE scrolling, `scrollBy` returns control immediately and the page puts
+    // up to one second to arrive — but a CSS animation is running so that we can see it
+    // or not. The blink was burning up its time during the ride and was no longer
+    // there on arrival: visible on a nearby block, invisible on a far block.
     expect(calls).toHaveLength(1);
     expect(calls[0].behavior).toBe("auto");
-    // 2000 - 100 - 24 : le bloc se pose 24 px sous le bord haut, et non collé
-    // dessous, où le fil d'Ariane et l'état d'enregistrement le cacheraient.
+    // 2000 - 100 - 24: the block is placed 24 px below the top edge, and not pasted
+    // below, where the breadcrumbs and save state would hide it.
     expect(calls[0].top).toBe(1_876);
     expect(
       (editor.view.nodeDOM(pos) as HTMLElement).classList.contains(
@@ -446,26 +444,26 @@ describe("amener un bloc à l'écran", () => {
 
 describe("la teinte du clignement", () => {
   it("n'est PAS l'encre du produit", () => {
-    // Le garde-fou d'une régression déjà commise : `--primary` est l'ENCRE de
+    // The safeguard of a regression already committed: `--primary` is the INK of
     // minddy — presque noire en clair, presque blanche en sombre. Un fond
-    // d'encre dilué est un gris pâle qui ne se voit pas passer, et le
-    // clignement ne désignait alors rien du tout. Il lui faut une teinte
-    // d'attention, prise au registre des couleurs de bloc.
+    // diluted ink is a pale gray that does not fade, and the
+    // blinking then designated nothing at all. It needs a shade
+    // attention, taken from the block color register.
     const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
     const rule = css.slice(
       css.indexOf("@keyframes page-block-pulse"),
       css.indexOf("@media (prefers-reduced-motion: reduce)", css.indexOf("@keyframes page-block-pulse"))
     );
-    // La teinte vient du registre des couleurs de bloc, quelle qu'elle soit —
-    // ce qui est verrouillé ici, c'est qu'elle n'est PAS l'encre.
+    // The hue comes from the block color register, whatever it is —
+    // what is locked here is that it is NOT the ink.
     expect(rule).toMatch(/--page-color-[a-z]+/);
     expect(rule).not.toContain("--primary");
   });
 
-  it("tient le fond sous « réduire les animations » au lieu de disparaître", () => {
-    // L'autre moitié de la même régression : une animation réduite à néant est
-    // une animation invisible. Sans battement, le fond doit RESTER — c'est le
-    // minuteur de `flashBlock` qui le retire, pas la durée de l'animation.
+  it("keeps the background under « reduce animations » instead of disappearing", () => {
+    // The other half of the same regression: an animation reduced to nothing is
+    // an invisible animation. Without beating, the bottom must STAY — this is the
+    // `flashBlock` timer that removes it, not the duration of the animation.
     const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
     const start = css.indexOf(".page-block-target {");
     const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)", start));
@@ -477,7 +475,7 @@ describe("la teinte du clignement", () => {
 });
 
 describe("le lien d'un bloc", () => {
-  it("est l'URL de la page plus l'ancre, et remplace l'ancre existante", () => {
+  it("is the page URL plus the anchor and replaces the existing anchor", () => {
     expect(blockLink("https://minddy.app/p/42", "abc")).toBe(
       "https://minddy.app/p/42#abc"
     );
@@ -486,7 +484,7 @@ describe("le lien d'un bloc", () => {
     );
   });
 
-  it("vise un bloc réellement identifié", async () => {
+  it("targets a block with a real identity", async () => {
     const editor = await makeIdentifiedEditor("<p>Un</p>");
     selectBlockAt(editor, 0);
     expect(selectedBlockIds(editor)).toHaveLength(1);
@@ -495,7 +493,7 @@ describe("le lien d'un bloc", () => {
 });
 
 describe("les couleurs", () => {
-  it("posent un NOM de palette, jamais une couleur", () => {
+  it("set a palette NAME, never a color", () => {
     const editor = makeEditor("<p>Un texte</p>");
     editor.commands.setTextSelection({ from: 1, to: 3 });
     expect(setPageColor(editor, "text", "red")).toBe(true);
@@ -504,7 +502,7 @@ describe("les couleurs", () => {
     editor.destroy();
   });
 
-  it("texte et fond sont deux marks : poser l'une n'efface pas l'autre", () => {
+  it("text and background are two marks: setting one does not erase the other", () => {
     const editor = makeEditor("<p>Un texte</p>");
     editor.commands.setTextSelection({ from: 1, to: 3 });
     setPageColor(editor, "text", "red");
@@ -525,7 +523,7 @@ describe("les couleurs", () => {
     editor.destroy();
   });
 
-  it("couvrent TOUTE une sélection multi-blocs d'un seul appel", () => {
+  it("cover an ENTIRE multi-block selection in one call", () => {
     const editor = makeEditor("<p>Un</p><p>Deux</p>");
     editor.commands.setTextSelection({ from: 1, to: 8 });
     setPageColor(editor, "text", "green");
@@ -538,17 +536,17 @@ describe("les couleurs", () => {
 describe("la palette et ses jetons CSS", () => {
   const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
 
-  it("est CELLE du produit, pas une seconde palette", () => {
+  it("is the product's, not a second palette", () => {
     expect([...PAGE_COLORS]).toEqual(
       CATEGORY_COLORS.map((hex) => CATEGORY_COLOR_NAMES[hex])
     );
   });
 
-  it("a, pour chaque couleur, sa teinte source et ses deux règles", () => {
+  it("has each color's source hue and its two rules", () => {
     for (const hex of CATEGORY_COLORS) {
       const name = CATEGORY_COLOR_NAMES[hex];
-      // La teinte source recopie EXACTEMENT le hex de lib/category-colors.ts —
-      // c'est le seul endroit où les deux se rencontrent.
+      // The source color EXACTLY copies the hex of lib/category-colors.ts —
+      // this is the only place where the two meet.
       expect(css, `--page-ink-${name} manque ou diverge de ${hex}`).toContain(
         `--page-ink-${name}: ${hex};`
       );
@@ -564,7 +562,7 @@ describe("la palette et ses jetons CSS", () => {
     }
   });
 
-  it("donne au thème sombre sa propre valeur pour chacune", () => {
+  it("gives the dark theme its own value for each one", () => {
     const dark = css.slice(
       css.indexOf(".dark {", css.indexOf("--page-ink-red"))
     );
@@ -577,51 +575,51 @@ describe("la palette et ses jetons CSS", () => {
 });
 
 /**
- * La gouttière se survole ELLE-MÊME.
+ * The gutter hovers over ITSELF.
  *
- * L'extension de la poignée n'écoute que le `mousemove` de la vue ProseMirror :
- * hors de cette boîte, rien ne se passe, et la bande vide à gauche du texte —
- * celle où l'on va justement chercher la poignée — était morte. La réparation
- * est une règle de style : un rembourrage à gauche étend la boîte de la vue
- * sous la gouttière, et une marge négative exactement opposée remet le texte où
- * il était.
+ * The handle extension only listens to the `mousemove` of the ProseMirror view:
+ * outside of this box, nothing happens, and the strip is empty to the left of the text —
+ * the one where we go to look for the handle — was dead. The repair
+ * is a style rule: left padding extends the view box
+ * below the gutter, and an exactly opposite negative margin puts the text back where
+ * it was.
  *
- * Trois valeurs doivent coïncider, et aucun type ne les regarde : la RÉSERVE
- * que la colonne laisse à gauche (`md:pl-24`), le rembourrage de la règle, et
- * la marge négative qui l'annule. Un déséquilibre d'un pixel entre les deux
- * dernières décale le corps sous son titre. Un rembourrage plus étroit que la
- * réserve laisse une bande morte au bord gauche — c'est le défaut mesuré au
- * navigateur sur la première version : la poignée sortait quand on s'arrêtait
- * à 25 px du texte, et pas quand on s'arrêtait à 70 px, c'est-à-dire pas quand
- * on visait la gouttière. Un rembourrage plus LARGE, lui, sortirait la boîte
- * de la colonne.
+ * Three values must match, and no type looks at them: the RESERVE
+ * that the column leaves on the left (`md:pl-24`), the padding of the rule, and
+ * the negative margin which cancels it. An imbalance of one pixel between the last two
+ * shifts the body under its title. A padding narrower than the
+ * reserve leaves a dead band at the left edge — this is the defect measured in
+ * browser on the first version: the handle came out when you stopped
+ * at 25 px from the text, and not when you stopped at 70 px, that is to say not when
+ * we aimed at the gutter. LARGER padding would remove the box
+ * from the column.
  */
-describe("la surface de survol de la gouttière", () => {
+describe("the gutter hover surface", () => {
   const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
   const rule = css.slice(
     css.indexOf(".page-editor[data-gutter] .ProseMirror {"),
     css.indexOf("}", css.indexOf(".page-editor[data-gutter] .ProseMirror {"))
   );
 
-  it("couvre TOUTE la réserve de la colonne, pas seulement les boutons", () => {
+  it("covers the ENTIRE column reserve, not only the buttons", () => {
     expect(rule, "la règle a disparu de app/globals.css").toContain(
       "padding-left"
     );
     expect(rule).toContain(`padding-left: ${GUTTER_HOVER}px;`);
-    // Le garde-fou du défaut d'origine, dit en une ligne : la bande de survol
-    // est plus large que les boutons, elle ne s'arrête pas à eux.
+    // The safeguard of the original defect, said in one line: the flyover strip
+    // is wider than the buttons, it doesn't stop at them.
     expect(GUTTER_HOVER).toBeGreaterThan(GUTTER_WIDTH);
   });
 
-  it("ne déplace pas le texte : la marge annule le rembourrage", () => {
+  it("does not move the text: the margin cancels the padding", () => {
     expect(rule).toContain(`margin-left: -${GUTTER_HOVER}px;`);
   });
 
-  it("vaut exactement la réserve que la colonne du document se donne", () => {
-    // `md:pl-24` = 6rem = 96 px. C'est la colonne qui décide de la largeur de
-    // la gouttière ; la règle de style ne fait que la recopier. Si l'une des
-    // deux bouge sans l'autre, ou bien la boîte sort de la colonne, ou bien il
-    // reste une bande morte — les deux sont invisibles à la relecture.
+  it("equals exactly the reserve given by the document column", () => {
+    // `md:pl-24` = 6rem = 96 px. It is the column that decides the width of
+    // the gutter; the style rule only copies it. If one of the
+    // two moves without the other, either the box comes out of the column, or it
+    // remains a dead band — both are invisible on replay.
     const view = readFileSync(
       join(process.cwd(), "components/pages/page-view.tsx"),
       "utf8"
@@ -633,9 +631,9 @@ describe("la surface de survol de la gouttière", () => {
   });
 
   it("n'est pas allumée là où il n'y a pas de gouttière", () => {
-    // La règle est conditionnée à `[data-gutter]`, que page-editor.tsx ne pose
-    // qu'en édition : une page publique ou une impression n'a pas de réserve à
-    // gauche, et la marge négative y ferait sortir le texte de sa colonne.
+    // The rule is conditional on `[data-gutter]`, which page-editor.tsx does not set
+    // that in edition: a public page or an impression has no reservation
+    // left, and the negative margin there would move the text out of its column.
     const editor = readFileSync(
       join(process.cwd(), "components/pages/page-editor.tsx"),
       "utf8"
@@ -643,7 +641,7 @@ describe("la surface de survol de la gouttière", () => {
     expect(editor).toContain("data-gutter={editor && editable");
   });
 
-  it("laisse aux boutons leur propre largeur, plus étroite", () => {
+  it("gives the buttons their own narrower width", () => {
     const gutter = readFileSync(
       join(process.cwd(), "components/pages/block-gutter.tsx"),
       "utf8"
@@ -653,17 +651,16 @@ describe("la surface de survol de la gouttière", () => {
 });
 
 /**
- * « Transformer en » sur une PLAGE (MIN-274 bis).
+ * “Transform into” on a RANGE (MIN-274 bis).
  *
- * Le défaut d'origine : une liste de trois items, convertie depuis la poignée,
- * ressortait en liste numérotée d'UN item suivie de deux paragraphes nus. La
- * poignée pose une `NodeSelection` sur le bloc entier, ce que les commandes de
- * liste de tiptap ne savent pas lire — elles retombent sur un chemin générique
- * qui ne rattrape que le premier bloc. Rien ne le signale : la conversion
- * « réussit », et c'est le document qui est faux.
+ * The original default: a list of three items, converted from the handle,
+ * appeared as a numbered list of ONE item followed by two bare paragraphs. The
+ * handle places a `NodeSelection` on the entire block, which the tiptap list commands cannot read — they fall back on a generic
+ * path which only catches the first block. Nothing indicates this: the conversion
+ * "succeeds", and it is the document which is false.
  *
- * Ces cas-là sont écrits en NOMBRE d'items exprès : c'est ce que l'œil voit à
- * l'écran, et c'est exactement ce qui manquait.
+ * These cases are written in NUMBER of items on purpose: this is what the eye sees on
+ * the screen, and this is exactly what was missing.
  */
 describe("« transformer en »", () => {
   const LIST =
@@ -671,7 +668,7 @@ describe("« transformer en »", () => {
   const turn = (editor: Editor, id: PageBlockId) =>
     turnBlocksInto(editor, blockById.get(id)!);
 
-  /** Le nom de chaque bloc de premier niveau, avec son nombre d'enfants. */
+  /** The name of each first level block, with its number of children. */
   function outline(editor: Editor): string[] {
     const out: string[] = [];
     editor.state.doc.forEach((node) =>
@@ -680,9 +677,9 @@ describe("« transformer en »", () => {
     return out;
   }
 
-  it("convertit la liste ENTIÈRE, pas son premier item", () => {
+  it("converts the ENTIRE list, not its first item", () => {
     const editor = makeEditor(LIST);
-    // Exactement ce que fait un clic sur la poignée.
+    // Exactly what clicking the handle does.
     selectBlockAt(editor, 0);
     turn(editor, "orderedList");
     expect(outline(editor)).toEqual(["orderedList:3"]);
@@ -697,9 +694,9 @@ describe("« transformer en »", () => {
     editor.destroy();
   });
 
-  it("DÉLISTE — c'est le sens que « transformer en » n'avait pas", () => {
-    // `setParagraph` et `toggleBlockquote` ne sortent pas les items de leur
-    // liste : les deux entrées de menu ne faisaient donc, littéralement, rien.
+  it("UNLISTS — that is the meaning « transform into » did not have", () => {
+    // `setParagraph` and `toggleBlockquote` do not remove items from their
+    // list: the two menu entries therefore literally did nothing.
     const toParagraphs = makeEditor(LIST);
     selectBlockAt(toParagraphs, 0);
     turn(toParagraphs, "paragraph");
@@ -717,7 +714,7 @@ describe("« transformer en »", () => {
     toQuote.destroy();
   });
 
-  it("rassemble une sélection MÊLÉE en une seule liste", () => {
+  it("gathers a MIXED selection into a single list", () => {
     const editor = makeEditor(
       "<p>Un</p><ul><li><p>Deux</p></li><li><p>Trois</p></li></ul>"
     );
@@ -727,7 +724,7 @@ describe("« transformer en »", () => {
     });
     expect(selectedBlockCount(editor)).toBe(2);
     turn(editor, "orderedList");
-    // Un paragraphe et deux items font trois items — pas un item et une liste
+    // A paragraph and two items make three items — not an item and a list
     // orpheline.
     expect(outline(editor)).toEqual(["orderedList:3"]);
     editor.destroy();
@@ -743,7 +740,7 @@ describe("« transformer en »", () => {
     editor.destroy();
   });
 
-  it("ne bouge pas quand on redemande le bloc déjà actif", () => {
+  it("does not move when the already active block is requested again", () => {
     const editor = makeEditor(LIST);
     selectBlockAt(editor, 0);
     turn(editor, "bulletList");
@@ -753,20 +750,20 @@ describe("« transformer en »", () => {
 });
 
 /**
- * La sélection multi-blocs, et ce qui l'effaçait (MIN-274 bis).
+ * The multi-block selection, and what erased it (MIN-274 bis).
  *
- * Le geste existait — balayer plusieurs blocs à la souris, le menu ⋯ annonce
- * « 3 blocs » et agit sur les trois. Ce qui manquait tenait au dernier
- * centimètre : aller CHERCHER la poignée ramenait la sélection au seul bloc
- * qu'elle survole, donc la sélection ne survivait jamais jusqu'au menu.
+ * The gesture existed — sweeping several blocks with the mouse, the menu ⋯ announces
+ * “3 blocks” and acts on all three. What was missing was the last
+ * centimeter: going FIND the handle brought the selection back to the single block
+ * it hovered over, so the selection never survived to the menu.
  */
-describe("la poignée face à une sélection existante", () => {
-  it("garde une sélection multi-blocs qui contient le bloc survolé", () => {
+describe("the handle facing an existing selection", () => {
+  it("keeps a multi-block selection containing the hovered block", () => {
     const editor = makeEditor("<p>Un</p><p>Deux</p><p>Trois</p>");
     editor.commands.setTextSelection({ from: 1, to: 14 });
     expect(selectedBlockCount(editor)).toBe(3);
 
-    // La poignée du DEUXIÈME bloc — au milieu de la sélection.
+    // The handle of the SECOND block — in the middle of the selection.
     const second = editor.state.doc.firstChild!.nodeSize;
     expect(selectBlockFromHandle(editor, second, false)).toBe(true);
     expect(selectedBlockCount(editor)).toBe(3);
@@ -785,7 +782,7 @@ describe("la poignée face à une sélection existante", () => {
     editor.destroy();
   });
 
-  it("ne garde rien quand un seul bloc était sélectionné", () => {
+  it("keeps nothing when a single block was selected", () => {
     const editor = makeEditor("<p>Un</p><p>Deux</p>");
     selectBlockAt(editor, 0);
     const second = editor.state.doc.firstChild!.nodeSize;
@@ -795,7 +792,7 @@ describe("la poignée face à une sélection existante", () => {
     editor.destroy();
   });
 
-  it("⇧-clic étend jusqu'au bloc visé", () => {
+  it("⇧-click extends to the targeted block", () => {
     const editor = makeEditor("<p>Un</p><p>Deux</p><p>Trois</p>");
     selectBlockAt(editor, 0);
     const third =
@@ -808,9 +805,9 @@ describe("la poignée face à une sélection existante", () => {
 });
 
 describe("les raccourcis de conversion", () => {
-  it("sont déclarés au registre, pas dans le chrome", () => {
-    // Les blocs qui portent un raccourci sont exactement ceux qu'on convertit
-    // à la volée en écrivant. Un raccourci sur un bloc non convertible ne
+  it("are declared in the registry, not in chrome", () => {
+    // The blocks which carry a shortcut are exactly those which are converted
+    // on the fly while writing. A shortcut on a non-convertible block does not
     // pourrait rien faire.
     for (const block of PAGE_BLOCKS) {
       if (!block.shortcut) continue;
@@ -833,32 +830,32 @@ describe("les raccourcis de conversion", () => {
       ).toBeUndefined();
       seen.set(block.shortcut.keys, block.id);
     }
-    // Ceux du carnet et des extensions tiptap, à l'identique : un utilisateur
-    // qui passe d'une note à une page ne réapprend rien.
+    // Those of the notebook and tiptap extensions, identically: one user
+    // going from a note to a page does not relearn anything.
     expect(seen.get("Mod-Alt-1")).toBe("heading1");
     expect(seen.get("Mod-Shift-8")).toBe("bulletList");
     expect(seen.get("Mod-Shift-9")).toBe("taskList");
   });
 
-  it("sont réellement liés, et basculent", () => {
+  it("are actually linked and toggle", () => {
     const editor = makeEditor("<p>Un texte</p>");
     editor.commands.setTextSelection(2);
 
-    // Le registre monte la liaison : ⌘⌥2 convertit…
+    // The register mounts the link: ⌘⌥2 converts…
     expect(editor.commands.keyboardShortcut("Mod-Alt-2")).toBe(true);
     expect(editor.state.doc.firstChild!.type.name).toBe("heading");
     expect(editor.state.doc.firstChild!.attrs.level).toBe(2);
 
-    // …et la même combinaison ramène au paragraphe. Sans cette bascule
-    // uniforme, `⌘⌥1` basculerait (Heading) et `⌘⌥D` non (Details).
+    // …and the same combination leads back to the paragraph. Without this switch
+    // uniform, `⌘⌥1` would switch (Heading) and `⌘⌥D` not (Details).
     expect(editor.commands.keyboardShortcut("Mod-Alt-2")).toBe(true);
     expect(editor.state.doc.firstChild!.type.name).toBe("paragraph");
     editor.destroy();
   });
 
-  it("convertissent la liste entière, comme le menu ⋯", () => {
-    // Même défaut, autre porte : le raccourci lit la même sélection que le
-    // menu, il devait donc gagner la même correction.
+  it("convert the entire list, like the ⋯ menu", () => {
+    // Same default, different door: the shortcut reads the same selection as the
+    // menu, so it had to gain the same fix.
     const editor = makeEditor(
       "<ul><li><p>Un</p></li><li><p>Deux</p></li><li><p>Trois</p></li></ul>"
     );
@@ -869,7 +866,7 @@ describe("les raccourcis de conversion", () => {
     editor.destroy();
   });
 
-  it("valent aussi pour une sélection de plusieurs blocs", () => {
+  it("also apply to a selection of several blocks", () => {
     const editor = makeEditor("<p>Un</p><p>Deux</p>");
     editor.commands.setTextSelection({ from: 1, to: 8 });
     editor.commands.keyboardShortcut("Mod-Alt-3");
@@ -879,17 +876,17 @@ describe("les raccourcis de conversion", () => {
 });
 
 /**
- * Les deux pièges du DOM des vues de nœud REACT (MIN-272).
+ * The two DOM traps of REACT node views (MIN-272).
  *
- * Ils se ressemblent : dans les deux cas, l'éditeur traite un élément produit
- * par tiptap-react comme s'il venait du document, et se trompe de cible.
+ * They are similar: in both cases, the editor treats an element produced
+ * by tiptap-react as if it came from the document, and gets the wrong target.
  */
 describe("le DOM d'une vue de nœud", () => {
   it("mesure l'élément qui porte le style, pas le conteneur de tiptap-react", () => {
-    // `view.nodeDOM` rend un `div.react-renderer` NU : tout le style du bloc —
-    // son rembourrage, sa hauteur de ligne — vit dans le `NodeViewWrapper`
-    // qu'il contient. Mesurer le conteneur revient à mesurer rien, et la
-    // gouttière flottait au-dessus du texte d'exactement le `py-` du bloc.
+    // `view.nodeDOM` returns a NUDE `div.react-renderer`: all the style of the block —
+    // its padding, its line height — lives in the `NodeViewWrapper`
+    // that it contains. Measuring the container is like measuring nothing, and the
+    // gutter floated above the text of exactly the `py-` of the block.
     const container = document.createElement("div");
     container.className = "react-renderer";
     const wrapper = document.createElement("div");
@@ -903,16 +900,16 @@ describe("le DOM d'une vue de nœud", () => {
     paragraph.append(document.createTextNode("texte"));
     expect(styledBox(paragraph)).toBe(paragraph);
 
-    // Un conteneur vide n'a rien où descendre : on ne rend pas `null`.
+    // An empty container has nothing to go down to: we do not return `null`.
     const empty = document.createElement("div");
     empty.className = "react-renderer";
     expect(styledBox(empty)).toBe(empty);
   });
 
   it("garde le clic d'une ancre de vue de nœud hors de l'extension Link", () => {
-    // L'extension attrape TOUT `<a>` du document et fait `window.open` : sur le
-    // bloc sous-page comme sur la pilule d'une mention, un clic donnait deux
-    // navigations — un onglet neuf, et l'ancre suivie dans l'onglet courant.
+    // The extension catches ALL `<a>` of the document and does `window.open`: on the
+    // sub-page block like on the pill of a mention, one click gave two
+    // navigations — a new tab, and the anchor followed in the current tab.
     const link = document.createElement("a");
     link.className = "editor-node-link";
     const inner = document.createElement("span");
@@ -924,14 +921,14 @@ describe("le DOM d'une vue de nœud", () => {
     expect(handleNodeLinkClick(plain)).toBe(true);
     expect(plain.defaultPrevented).toBe(true);
 
-    // ⌘-clic : on coupe l'extension, mais on laisse le navigateur ouvrir son
-    // onglet — il le fait mieux que nous.
+    // ⌘-click: we cut the extension, but we let the browser open its
+    // tab — he does it better than us.
     const meta = new MouseEvent("click", { cancelable: true, metaKey: true });
     inner.dispatchEvent(meta);
     expect(handleNodeLinkClick(meta)).toBe(true);
     expect(meta.defaultPrevented).toBe(false);
 
-    // Un lien du TEXTE ne nous regarde pas : l'extension garde la main.
+    // A TEXT link does not concern us: the extension keeps control.
     const other = document.createElement("a");
     document.body.append(other);
     const textLink = new MouseEvent("click", { cancelable: true });

@@ -3,21 +3,21 @@ import { prStateFromRef } from "./pull-requests";
 import type { PullRequestRef } from "./pr";
 
 /**
- * `prStateFromRef` — « ce que l'API de la forge répond » → état minddy. C'est la
- * TROISIÈME des trois règles d'état (avec `githubPrState` / `gitlabMrState`, qui
- * lisent des payloads de webhook), et la seule qui parle le vocabulaire NEUTRE
- * de `PullRequestRef` : les deux forges y arrivent déjà normalisées par leur
- * `toRef` respectif.
+ * `prStateFromRef` — “what the forge API responds to” → minddy state. This is the
+ * THIRD of the three state rules (along with `githubPrState` / `gitlabMrState`, which
+ * reads webhook payloads), and the only one that speaks the NEUTRAL
+ * vocabulary of `PullRequestRef`: both forges are already there normalized by their respective
+ * `toRef`.
  *
- * Elle porte les chemins les plus récents — la réouverture in-app (`pr-actions`,
- * qui lit l'état sur la PR que la forge renvoie plutôt que de le supposer
- * `open`) et la réconciliation du balayage (`syncRepoPullRequests`) — plus
- * `registerPr` et le prompt d'héritage. Se tromper ici ne lève rien : ça déplace
- * un ticket.
+ * It carries the most recent paths — in-app reopening (`pr-actions`,
+ * which reads the state on the PR that the forge returns rather than assume
+ * `open`) and scan reconciliation (`syncRepoPullRequests`) — plus
+ * `registerPr` and inheritance prompt. Getting it wrong here doesn't mean anything: it moves
+ * a ticket.
  *
- * L'ORDRE est tout ce qu'elle affirme, et il tient en deux phrases : fusionnée
- * l'emporte sur fermée, et un brouillon n'est un brouillon que tant qu'il est
- * ouvert.
+ * ORDER is all it asserts, and it fits in two sentences: merged
+ * trumps closed, and a draft is only a draft as long as it is
+ * open.
  */
 
 const ref = (over: Partial<PullRequestRef>): PullRequestRef => ({
@@ -38,11 +38,11 @@ describe("prStateFromRef", () => {
   it("un brouillon n'est brouillon que tant qu'il est OUVERT", () => {
     expect(prStateFromRef(ref({ state: "open", draft: true }))).toBe("draft");
     // GitHub NE RETIRE PAS `draft` en fermant : l'annoncer « brouillon »
-    // cacherait qu'il est mort, et le ticket repartirait « en cours » au lieu
-    // d'« à faire ». C'est le cas qui a motivé MIN-164.
+    // would hide that he is dead, and the ticket would go “in progress” instead
+    // of “to do”. This is the case that motivated MIN-164.
     expect(prStateFromRef(ref({ state: "closed", draft: true }))).toBe("closed");
-    // Idem d'une PR brouillon fusionnée (rare, mais GitHub l'autorise après
-    // `ready_for_review` côté API).
+    // Same as a merged draft PR (rare, but GitHub authorizes it after
+    // `ready_for_review` API side).
     expect(prStateFromRef(ref({ state: "closed", draft: true, merged: true }))).toBe("merged");
   });
 

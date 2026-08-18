@@ -1,36 +1,36 @@
 import { Extension, textInputRule } from "@tiptap/core";
 
 /**
- * « -> » devient « → » sous les doigts, comme dans Notion.
+ * “->” becomes “→” under the fingers, as in Notion.
  *
- * C'est une règle de SAISIE, pas un rendu : le caractère écrit dans le document
- * — et donc dans le markdown enregistré — est la vraie flèche. Rien à
- * réinterpréter à la relecture, et le texte copié ailleurs part avec sa flèche.
+ * It is an INPUT rule, not a rendering: the character written in the document
+ * — and therefore in the saved markdown — is the real arrow. Nothing to
+ * reinterpret upon rereading, and the text copied elsewhere leaves with its arrow.
  *
- * Les deux règles se déclenchent sur le MÊME caractère, le « > » final, et c'est
- * ce qui les rend prévisibles : chacune remonte de là jusqu'au début de la
- * flèche, tirets et « < » compris. `-->` donne donc une seule flèche et non
- * « -→ », et `<->` donne « ↔ » et non « <→ ». Une règle qui se déclencherait sur
- * un caractère non final — un « <- » seul, sans rien qui le ferme — couperait
- * l'herbe sous le pied des deux autres : elle n'existe pas, et « <- » reste donc
+ * Both rules are triggered on the SAME character, the final “>”, and it is
+ * which makes them predictable: each goes back from there to the beginning of the
+ * arrow, dashes and “< » compris. `-->` therefore gives a single arrow and not
+ * “-→”, and `<->` gives “↔” and not “<→”. A rule that would be triggered on
+ * a non-final character — a “<-” alone, without anything closing it — would cut
+ * the grass under the feet of the other two: it does not exist, and “<-” therefore remains
  * tel quel.
  *
- * Ce que les règles ne touchent pas, et c'est voulu : les blocs de code et le
- * code en ligne, que le moteur de règles de tiptap écarte lui-même (le `a -> b`
- * d'un exemple de code reste du code). Et une substitution dont on ne voulait
- * pas s'annule d'un Retour arrière, qui rend les caractères tapés.
+ * What the rules do not touch, and this is intentional: code blocks and
+ * inline code, which the tiptap rules engine itself discards (the `a -> b`
+ * of sample code is still code). And a substitution that we didn't want
+ * does not cancel with a Backspace, which returns the typed characters.
  *
- * Posée sur les deux surfaces de texte riche — le carnet de tâches et
+ * Placed on the two rich text surfaces — the task notebook and
  * <MarkdownEditor> (description d'un ticket, d'un objectif, d'un retour), donc
- * la modale de création comprise.
+ * the mode of creation understood.
  */
 export const Arrows = Extension.create({
   name: "arrows",
 
   addInputRules() {
     return [
-      // Avant la flèche simple : « <-> » est bien une double flèche, pas un
-      // « < » suivi d'une flèche.
+      // Before the single arrow: “<->” is indeed a double arrow, not a
+      // “<” followed by an arrow.
       textInputRule({ find: /<-{1,2}>$/, replace: "↔" }),
       textInputRule({ find: /-{1,2}>$/, replace: "→" }),
     ];

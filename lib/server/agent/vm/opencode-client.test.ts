@@ -8,10 +8,10 @@ import {
 } from "./opencode-client";
 
 /**
- * MIN-286 lot 1 — le client du serveur opencode.
+ * MIN-286 batch 1 — the opencode server client.
  *
- * Ce fichier ne teste pas HTTP : il teste les **trois pièges mesurés** qui, sans
- * lui, se paieraient en production à trois heures du matin.
+ * This file does not test HTTP: it tests the **three measured traps** which, without
+ *, would pay off in production at three in the morning.
  */
 
 function clientWith(handler: (url: string, init?: RequestInit) => Response): OpencodeClient {
@@ -25,9 +25,9 @@ function clientWith(handler: (url: string, init?: RequestInit) => Response): Ope
 
 describe("le piège des deux générations d'API", () => {
   it("dit « la route n'existe pas » au lieu d'exploser sur du HTML", async () => {
-    // Mesuré : une faute d'un segment ne rend pas un 404 mais la page du TUI. Le
-    // message par défaut serait « Unexpected token < in JSON », qui envoie
-    // chercher un bug de sérialisation là où il n'y a qu'une URL fausse.
+    // Measured: a fault in a segment does not return a 404 but the TUI page. THE
+    // default message would be “Unexpected token < in JSON”, which sends
+    // look for a serialization bug where there is only one false URL.
     const client = clientWith(() => new Response("<!doctype html><html>…", { status: 200 }));
     await expect(client.createSession()).rejects.toThrow(/route n'existe pas/);
   });
@@ -38,7 +38,7 @@ describe("le piège des deux générations d'API", () => {
   });
 
   it("passe `?directory=` sur les routes héritées", async () => {
-    // Sans lui, le serveur travaille dans SON cwd et pas dans le dépôt du run.
+    // Without it, the server works in ITS cwd rather than the run repository.
     let seen = "";
     const client = clientWith((url) => {
       seen = url;
@@ -66,12 +66,12 @@ describe("le piège des deux générations d'API", () => {
 
 describe("le piège du snake_case", () => {
   it("traduit `aggregate_id` en `aggregateID` dans les deux sens", () => {
-    // L'export rend du snake_case, le replay attend du camelCase — c'est dans le
-    // schéma d'opencode, pas un accident de sonde.
+    // The export emits snake_case, replay expects camelCase — this is in
+    // opencode's schema, not a probe accident.
     expect(
       normalizeSyncEvents([{ aggregate_id: "ses_1", seq: 3, type: "x" }]),
     ).toEqual([{ aggregateID: "ses_1", seq: 3, type: "x" }]);
-    // Idempotent : un journal déjà normalisé (celui du checkpoint) ne bouge pas.
+    // Idempotent: an already normalized journal (the checkpoint's) does not move.
     expect(normalizeSyncEvents([{ aggregateID: "ses_1", seq: 3 }])).toEqual([
       { aggregateID: "ses_1", seq: 3 },
     ]);
@@ -84,8 +84,8 @@ describe("le piège du snake_case", () => {
           status: 200,
         }),
     );
-    // Le curseur d'export se dérive d'`aggregateID` : laisser passer le
-    // snake_case rendait un curseur vide, donc un export complet à chaque tour.
+    // The export cursor is derived from `aggregateID`: letting snake_case through
+    // produced an empty cursor, and therefore a full export on every turn.
     expect(await client.syncHistory()).toEqual([{ aggregateID: "ses_1", seq: 2 }]);
   });
 });
@@ -96,8 +96,8 @@ describe("le flux d'events", () => {
   });
 
   it("ignore ce qui n'est pas un événement, sans lever", () => {
-    // Un flux tiers qui envoie un ping, un commentaire ou une frame illisible ne
-    // doit pas tuer un tour de deux heures.
+    // A third-party stream that sends a ping, a comment, or an unreadable frame
+    // must not kill a two-hour turn.
     expect(parseFrame(": ping")).toBeNull();
     expect(parseFrame("data: pas du json")).toBeNull();
     expect(parseFrame('data: {"sans":"type"}')).toBeNull();
@@ -105,7 +105,7 @@ describe("le flux d'events", () => {
   });
 
   it("rend les événements d'un flux découpé n'importe comment", async () => {
-    // Les frames arrivent en morceaux de socket, pas en lignes propres.
+    // Frames arrive in socket chunks, not clean lines.
     const chunks = ['data: {"type":"a"}\n', '\ndata: {"ty', 'pe":"b"}\n\n'];
     const client = clientWith(
       () =>
@@ -135,22 +135,22 @@ describe("la santé du serveur", () => {
       }) as typeof fetch,
     });
     expect(await client.healthy()).toBe(false);
-    // Et l'attente rend `false` au lieu de boucler : c'est l'appelant qui décide
-    // quoi dire d'un serveur qui ne démarrera jamais.
+    // And the wait returns `false` instead of looping: it's the caller who decides
+    // what to say about a server that will never start.
     expect(await client.waitHealthy(30, async () => {})).toBe(false);
   });
 
   it("ne reste pas pendue à une connexion acceptée mais sans réponse", async () => {
     /**
-     * LE DÉFAUT DU PREMIER RUN DE PRODUCTION (2026-08-12). Sur une microVM neuve,
-     * le serveur accepte la connexion bien avant de savoir répondre. Sans plafond
-     * par sonde, le `fetch` attend le `headersTimeout` d'undici — 300 s — et la
-     * deadline de `waitHealthy` ne veut plus rien dire : le run est mort à
-     * 6 min 30 sur un message qui annonçait 60 s.
-     *
-     * Ce que ce test garde, c'est que la sonde ABANDONNE : on lui donne un
-     * `fetch` qui ne rend jamais, et l'attente doit quand même rendre `false`.
-     */
+ * THE FAULT OF THE FIRST PRODUCTION RUN (2026-08-12). On a new microVM,
+ * the server accepts the connection well before knowing how to respond. Without ceiling
+ * by probe, the `fetch` waits for the `headersTimeout` from undici — 300 s — and the
+ * deadline of `waitHealthy` no longer means anything: the run died at
+ * 6 min 30 on a message which announced 60 s.
+ *
+ * What this test keeps is that the probe ABORTS: we give it a
+ * `fetch` which never returns, and the wait must still return `false`.
+ */
     const client = new OpencodeClient({
       baseUrl: "http://127.0.0.1:4096",
       directory: "/repo",

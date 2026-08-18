@@ -3,34 +3,33 @@ import "server-only";
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * Ré-authentification avant un geste irréversible (MIN-345).
+ * Re-authentication before an irreversible gesture (MIN-345).
  *
- * La suppression de compte n'en demandait aucune : une session ouverte et une
- * adresse recopiée suffisaient. Or ce geste-là ne détruit pas qu'un compte — il
- * emporte en cascade tous les projets possédés, leurs tickets, leurs fichiers,
- * et l'accès de leurs membres. Un poste laissé déverrouillé cinq minutes, ou un
- * jeton volé, et l'équipe entière perd son travail.
+ * Account deletion did not require any: an open session and a copied
+ * address were enough. However, this gesture does not only destroy one account - it
+ * cascades all the projects owned, their tickets, their files,
+ * and the access of their members. A station left unlocked for five minutes, or a
+ * token stolen, and the entire team loses their job.
  *
- * Ce qu'on exige dépend de ce que le compte PEUT produire :
+ * What is required depends on what the account CAN produce:
  *
- * - **Compte avec mot de passe** : le mot de passe, revérifié auprès de GoTrue.
- *   C'est la preuve la plus directe, et la seule que rien d'autre ne détient.
- * - **Compte OAuth seul** (Google, GitHub) : il n'y a pas de mot de passe à
- *   redemander. On exige alors que l'authentification soit RÉCENTE — quinze
- *   minutes —, ce que le claim `amr` du JWT date pour nous. Se reconnecter chez
- *   le provider est le geste équivalent, et il est à une déconnexion de là.
+ * - **Account with password**: the password, double-checked with GoTrue.
+ * This is the most direct proof, and the only one that nothing else has.
+ * - **OAuth account only** (Google, GitHub): There is no password to ask for again. We then require that the authentication be RECENT — fifteen
+ * minutes —, which is what the JWT claim `amr` dates for us. Reconnecting at
+ * the provider is the equivalent gesture, and it is one disconnection away.
  */
 
-/** Au-delà, une authentification n'est plus une preuve de présence. */
+/** Beyond that, authentication is no longer proof of presence. */
 export const REAUTH_MAX_AGE_SECONDS = 15 * 60;
 
-/** Code rendu à l'appelant : « reconnecte-toi, puis recommence ». */
+/** Code returned to the caller: “reconnect, then try again”. */
 export const REAUTH_REQUIRED_CODE = "reauth_required";
 
 /**
- * Le compte a-t-il une identité mot de passe ? `providers` liste tout ce qui
- * peut ouvrir une session dessus ; `provider` seul est la forme des comptes qui
- * n'en ont qu'une.
+ * Does the account have a password identity? `providers` lists everything that
+ * can log on to; `provider` only is the form of accounts which
+ * only have one.
  */
 export function hasPasswordIdentity(appMetadata: unknown): boolean {
   if (!appMetadata || typeof appMetadata !== "object") return false;
@@ -40,17 +39,16 @@ export function hasPasswordIdentity(appMetadata: unknown): boolean {
 }
 
 /**
- * Quand cette session s'est-elle authentifiée pour la dernière fois ?
+ * When was this session last authenticated?
  *
- * `amr` (« authentication methods references ») porte un horodatage par méthode
- * présentée — mot de passe, OAuth, TOTP. On garde le plus récent : c'est le
- * dernier moment où quelqu'un a prouvé quelque chose.
+ * `amr` ("authentication methods references") carries a timestamp per method
+ * presented — password, OAuth, TOTP. We keep the most recent: it is the
+ * last moment when someone proved something.
  *
- * **Le repli sur `iat` vaut moins, et c'est délibéré.** Un jeton se rafraîchit
- * tout seul toutes les heures, donc son `iat` ne date pas une authentification.
- * Mais un jeton sans `amr` — ce qu'aucune version de GoTrue en service ne
- * produit — laisserait sinon un compte OAuth définitivement incapable de se
- * supprimer, et enfermer quelqu'un dehors est le pire des deux défauts.
+ * **The fallback to `iat` is worth less, and this is deliberate.** A token refreshes
+ * by itself every hour, so its `iat` does not date not an authentication.
+ * But a token without `amr` * — which no version of GoTrue in use
+ * produces — would otherwise leave an OAuth account permanently incapable of deleting itself, and locking someone out is the worse of the two flaws.
  */
 export function lastAuthenticationAt(
   claims: { amr?: unknown; iat?: unknown } | null | undefined
@@ -79,12 +77,11 @@ export function isRecentlyAuthenticated(
 }
 
 /**
- * Le mot de passe, revérifié auprès de GoTrue.
+ * The password, double-checked with GoTrue.
  *
- * Client JETABLE, sans persistance : cette connexion ne doit rien ouvrir, elle
- * ne sert qu'à répondre oui ou non. Un client à cookies écrirait une session
- * neuve sur la réponse — et ferait tourner le jeton de rafraîchissement de la
- * personne au passage.
+ * DISPOSABLE client, without persistence: this connection should not open anything, it
+ * is only used to answer yes or no. A cookie client would write a new session
+ * on the response — and rotate the person's refresh token as it passes.
  */
 export async function verifyAccountPassword(
   email: string,
@@ -98,7 +95,7 @@ export async function verifyAccountPassword(
   );
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return false;
-  // La session obtenue n'a aucune raison de survivre à cette question.
+  // The resulting session has no reason to survive this question.
   if (data.session) await supabase.auth.signOut({ scope: "local" });
   return Boolean(data.user);
 }

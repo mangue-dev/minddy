@@ -13,13 +13,13 @@ import {
 } from "./llm-proxy";
 
 /**
- * MIN-286 lot 2 — le proxy local, celui qui rend au ledger ce qu'opencode ne dit
- * pas : le `generation_id` et le coût facturé.
+ * MIN-286 batch 2 — the local proxy, the one which returns to the ledger what opencode does not say
+ * not: the `generation_id` and the billed cost.
  *
- * Le test monte le VRAI serveur (localhost, port libre) et ne moque que le
- * fournisseur. C'est la seule forme qui prouve ce qui compte ici : que le corps
- * relayé est bien celui qu'on a complété, et que le flux ressort intact —
- * un proxy qui avale une frame SSE casse un tour sans rien dire.
+ * The test mounts the REAL server (localhost, free port) and only mocks the
+ * provider. This is the only form that proves what matters here: that the relayed body
+ * is indeed the one that was completed, and that the flow comes out intact —
+ * a proxy that swallows an SSE frame breaks a turn without saying anything.
  */
 
 const JOB: LlmProxyJob = {
@@ -28,22 +28,22 @@ const JOB: LlmProxyJob = {
   reasoningLevel: "medium",
 };
 
-/** Un flux de complétion, tel qu'OpenRouter le rend avec `usage: {include}`. */
+/** A completion flow, such as OpenRouter renders with `usage: {include}`. */
 function sse(lines: Array<Record<string, unknown>>): string {
   return `${lines.map((l) => `data: ${JSON.stringify(l)}`).join("\n\n")}\n\ndata: [DONE]\n\n`;
 }
 
 describe("le corps de la requête, complété et pas refait", () => {
   it("ajoute le comptage d'usage d'OpenRouter", () => {
-    // C'est LUI qui fait exister le coût facturé dans la réponse ; sans lui, il
-    // n'y a rien à opposer au coût qu'opencode calcule.
+    // It is HE who makes the cost invoiced in the response exist; without him, he
+    // there is nothing to oppose to the cost that opencode calculates.
     const out = patchCompletionBody({ model: "x", messages: [] }, JOB);
     expect(out.usage).toEqual({ include: true });
     expect(out.stream_options).toEqual({ include_usage: true });
   });
 
   it("réinjecte le raisonnement que les couches compat perdent", () => {
-    // Mesuré au lot 1 : opencode RETIRE `reasoning_effort` à plat du corps. Un
+    // Measured at batch 1: opencode REMOVES `reasoning_effort` flat from the body. A
     // BYOK anthropic garderait son round, mais penserait moins — sans un mot.
     const out = patchCompletionBody(
       { model: "claude-sonnet-5" },
@@ -74,10 +74,10 @@ describe("le corps de la requête, complété et pas refait", () => {
   });
 
   it("ne laisse jamais partir les deux formes du raisonnement", () => {
-    // Le corps peut porter la forme plate d'opencode ET la nôtre, imbriquée :
-    // OpenRouter refuse alors le round en 400 (« "reasoning_effort" and
-    // "reasoning.effort" are both provided with conflicting values »), et le tour
-    // meurt sans que le niveau demandé y soit pour quoi que ce soit.
+    // The body can carry opencode's flat form AND ours, nested:
+    // OpenRouter then refuses the round in 400 ("reasoning_effort" and
+    // "reasoning.effort" are both provided with conflicting values"), and the trick
+    // dies without the requested level having anything to do with it.
     const out = patchCompletionBody(
       { model: "x", reasoning: { effort: "high" }, reasoning_effort: "low" },
       JOB,
@@ -85,7 +85,7 @@ describe("le corps de la requête, complété et pas refait", () => {
     expect(out.reasoning).toEqual({ effort: "medium", exclude: false });
     expect("reasoning_effort" in out).toBe(false);
 
-    // Et dans l'autre sens, sur une couche compat : c'est la forme plate qui reste.
+    // And in the other direction, on a flat layer: it is the flat shape that remains.
     const compat = patchCompletionBody(
       { model: "x", reasoning: { effort: "high" } },
       { ...JOB, provider: "openai" },
@@ -95,8 +95,8 @@ describe("le corps de la requête, complété et pas refait", () => {
   });
 
   it("fait taire le raisonnement quand le run l'a mis à `off`", () => {
-    // Même faute, autre bout : un `reasoning_effort` posé par opencode ferait
-    // penser — et payer — un run qui avait demandé de ne pas penser.
+    // Same fault, other end: a `reasoning_effort` set by opencode would
+    // think — and pay — for a run that required not thinking.
     const out = patchCompletionBody(
       { model: "x", reasoning_effort: "medium" },
       { ...JOB, reasoningLevel: "off" },
@@ -113,14 +113,14 @@ describe("le corps de la requête, complété et pas refait", () => {
 });
 
 /**
- * MIN-357 — LA FAILLE MESURÉE, REJOUÉE.
+ * MIN-357 — THE FAULT MEASURED, REPLAYED.
  *
- * L'ancienne garde testait un SUFFIXE sur la request-target brute, que `fetch`
- * normalise ensuite : `'/../v1/keys#/chat/completions'` passait le test et
- * partait sur `/api/v1/keys`, la route de PROVISIONING. Tant que le firewall
- * posait la clé après la sortie de la microVM, ça ne rendait rien ; le jour où
- * le proxy porte la vraie clé (tour local), le modèle s'émet une clé SANS
- * PLAFOND depuis son propre shell.
+ * The old guard tested a SUFFIX on the raw request-target, which `fetch`
+ * then normalized: `'/../v1/keys#/chat/completions'` passed the test and
+ * was leaving on `/api/v1/keys`, the PROVISIONING route. As long as the firewall
+ * installed the key after exiting the microVM, it did nothing; the day when
+ * the proxy carries the real key (local turn), the model issues a key WITHOUT
+ * CEILING from its own shell.
  */
 describe("le proxy ne sert qu'une route", () => {
   const target = (method: string, path: string) =>
@@ -131,7 +131,7 @@ describe("le proxy ne sert qu'une route", () => {
       const decision = target("POST", `/../v1/${route}#/chat/completions`);
       expect(decision.ok).toBe(false);
       expect(decision.ok === false && decision.status).toBe(400);
-      // Ce que l'ancienne forme croyait lire, et ce que `fetch` aurait appelé.
+      // What the old form thought it read, and what `fetch` would have called.
       expect(`/../v1/${route}#/chat/completions`.endsWith("/chat/completions")).toBe(true);
       expect(new URL(`https://openrouter.ai/api/v1/../v1/${route}`).pathname).toBe(`/api/v1/${route}`);
     }
@@ -139,14 +139,14 @@ describe("le proxy ne sert qu'une route", () => {
 
   it("refuse ce qui changerait d'hôte, de forme ou de méthode", () => {
     // `//` : `new URL('https://openrouter.ai/api/v1' + '//evil.test/x')` sort du
-    // domaine du fournisseur sans un seul caractère suspect au milieu.
+    // provider domain without a single suspicious character in the middle.
     expect(target("POST", "//evil.test/chat/completions")).toMatchObject({ status: 400 });
-    // Une request-target absolue, que le parseur HTTP accepte (forme proxy).
+    // An absolute request-target, which the HTTP parser accepts (proxy form).
     expect(target("POST", "https://evil.test/chat/completions")).toMatchObject({ status: 400 });
-    // Un chemin voisin, sans rien de malformé : ce n'est pas la route servie.
+    // A nearby path, without anything malformed: it is not the route served.
     expect(target("POST", "/keys")).toMatchObject({ status: 404 });
     expect(target("POST", "/chat/completions/x")).toMatchObject({ status: 404 });
-    // La route servie, mais en lecture : une sonde, pas un round.
+    // The route served, but in reading: a probe, not a round.
     expect(target("GET", "/chat/completions")).toMatchObject({ status: 405 });
   });
 
@@ -162,12 +162,11 @@ describe("le proxy ne sert qu'une route", () => {
   });
 
   /**
-   * La même chose sur le VRAI serveur, en écrivant la request-target à la main :
-   * `fetch` normaliserait le chemin avant de l'envoyer, donc il ne peut pas
-   * prouver ce qui compte ici — c'est un `curl --path-as-is` (ou n'importe quelle
-   * socket) que le modèle a sous la main. Et le parseur de node ne rattrape rien :
-   * mesuré, `req.url` vaut `/../v1/keys#/chat/completions` À L'IDENTIQUE.
-   */
+ * The same thing on the REAL server, writing the request-target by hand:
+ * `fetch` would normalize the path before sending it, so it can't prove what matters here — it's a `curl --path-as-is` (or whatever which
+ * socket) that the model has on hand. And the node parser doesn't catch anything:
+ * measured, `req.url` is worth `/../v1/keys#/chat/completions` EQUALLY.
+ */
   it("refuse la request-target brute sans jamais appeler le fournisseur", async () => {
     let calls = 0;
     const upstream = (async () => {
@@ -190,8 +189,8 @@ describe("le proxy ne sert qu'une route", () => {
   });
 });
 
-/** Une requête HTTP écrite à la main — la seule façon de faire arriver une
- *  request-target que `fetch` refuserait de laisser telle quelle. */
+/** A hand-written HTTP request — the only way to get a
+ * request-target that `fetch` would refuse to leave as is. */
 function rawRequest(origin: string, requestTarget: string): Promise<string> {
   const { hostname, port } = new URL(origin);
   const body = "{}";
@@ -218,14 +217,14 @@ describe("ce que la réponse laisse voir", () => {
   it("lit l'id et le coût d'une génération streamée", () => {
     const sniffer = new GenerationSniffer();
     sniffer.push(`data: {"id":"gen-1","model":"anthropic/claude-haiku-4.5","choi`);
-    // Coupé au milieu d'une frame : c'est le cas normal d'un flux réseau.
+    // Cut in the middle of a frame: this is the normal case for a network stream.
     sniffer.push(`ces":[]}\n\ndata: {"id":"gen-1","usage":{"completion_tokens":42,"cost":0.0012}}\n\n`);
     sniffer.end();
     expect(sniffer.captured()).toMatchObject([
       { id: "gen-1", model: "anthropic/claude-haiku-4.5", outputTokens: 42, costUsd: 0.0012 },
     ]);
-    // L'usage COMPLET est gardé à côté : c'est lui, et lui seul, qui permet
-    // d'écrire la ligne d'un round coupé en vol (MIN-286 lot 3, §2.23).
+    // COMPLETE usage is kept aside: it is he, and he alone, who allows
+    // to write the line of a round cut in flight (MIN-286 lot 3, §2.23).
     expect(sniffer.captured()[0].usage).toMatchObject({
       completionTokens: 42,
       cost: 0.0012,
@@ -240,15 +239,15 @@ describe("ce que la réponse laisse voir", () => {
   });
 
   /**
-   * MIN-286 — UNE GÉNÉRATION SANS AUCUNE TRACE N'EN EST PAS UNE.
-   *
-   * Le lecteur alloue dès la première ligne JSON lisible, sans exiger d'`id` ni
-   * d'`usage` : un corps d'erreur du fournisseur (`{"error":{…}}` sur un 429) en
-   * fabriquait une, au MODÈLE VIDE — donc appariable à n'importe quel round par
-   * `takeGeneration`. Le round repartait sans son coût facturé, et la vraie
-   * génération restait en file jusqu'à `recordOrphans`, qui l'écrivait une SECONDE
-   * fois : un round facturé deux fois sur une réponse d'erreur.
-   */
+ * MIN-286 — A GENERATION WITHOUT ANY TRACE IS NOT ONE.
+ *
+ * The reader allocates readable JSON on the first line, without requiring `id` nor
+ * `usage`: a body provider error (`{"error":{…}}` on a 429) en
+ * manufactured one, with EMPTY MODEL — therefore matchable to any round by
+ * `takeGeneration`. The round restarted without its billed cost, and the real
+ * generation remained in line until `recordOrphans`, which wrote it a SECOND
+ * time: a round billed twice on an error response.
+ */
   it("ne retient RIEN d'un corps d'erreur, qui n'a ni identifiant ni usage", () => {
     const sniffer = new GenerationSniffer();
     sniffer.push(`{"error":{"message":"rate limited","code":429}}`);
@@ -276,13 +275,13 @@ describe("l'appariement round → génération", () => {
       { id: "gen-b", model: "m", outputTokens: 20, costUsd: 2, usage: null },
     ];
     expect(takeGeneration(pool, { model: "m", outputTokens: 20 })?.id).toBe("gen-b");
-    // Consommée : le round suivant ne la reprendra pas.
+    // Consumed: the next round will not take it back.
     expect(pool.map((g) => g.id)).toEqual(["gen-a"]);
   });
 
   it("retombe sur l'ordre d'arrivée quand les tokens ne concordent pas", () => {
-    // Les tokens d'opencode et ceux du fournisseur ne se comptent pas forcément
-    // pareil ; l'ordre, lui, est toujours vrai en séquentiel.
+    // Opencode tokens and those of the supplier are not necessarily counted
+    // The same ; the order is always true sequentially.
     const pool = [{ id: "gen-a", model: "m", outputTokens: 7, costUsd: 1, usage: null }];
     expect(takeGeneration(pool, { model: "m", outputTokens: 99 })?.id).toBe("gen-a");
   });
@@ -361,15 +360,15 @@ describe("le relais, monté pour de vrai", () => {
       const text = await res.text();
 
       expect(res.status).toBe(200);
-      // Le flux ressort TEL QUEL : opencode le parse derrière, une frame perdue
-      // ou réordonnée casserait le round.
+      // The flow comes out AS IS: opencode parses it behind, one frame lost
+      // or reordered would break the round.
       expect(text).toContain('data: {"id":"gen-42"');
       expect(text.trimEnd().endsWith("data: [DONE]")).toBe(true);
 
       expect(seen!.url).toBe("https://openrouter.ai/api/v1/chat/completions");
       expect((seen!.body as Record<string, unknown>).usage).toEqual({ include: true });
-      // Le placeholder passe INCHANGÉ : c'est le firewall qui pose la vraie clé
-      // à la sortie de la microVM, et le proxy n'en connaît aucune.
+      // The placeholder goes UNCHANGED: it is the firewall which sets the real key
+      // at the exit of the microVM, and the proxy does not know any.
       expect(seen!.headers.authorization).toBe("Bearer placeholder");
       expect(seen!.headers["HTTP-Referer"]).toBe("http://localhost:3000");
 
@@ -385,14 +384,14 @@ describe("le relais, monté pour de vrai", () => {
   });
 
   /**
-   * MIN-328 — LE SEUL POINT DE PASSAGE OBLIGÉ ENTRE OPENCODE ET LE MODÈLE.
-   *
-   * MIN-239 promettait que le modèle ne voit jamais le token de forge : la boucle
-   * maison fabriquait chaque message `role:"tool"` et le substituait au passage.
-   * Opencode exécute ses tools dans la microVM et construit le corps sans repasser
-   * par nous — un `bash("cat .git/config")` remontait donc intact. La substitution
-   * revient ici, où tout passe, quelle que soit la sortie de tool.
-   */
+ * MIN-328 — THE ONLY COMPULSORY PASSING POINT BETWEEN OPENCODE AND THE MODEL.
+ *
+ * MIN-239 promised that the model never sees the forge token: the loop
+ * made each message `role:"tool"` and substituted it in passing.
+ * Opencode executes its tools in the microVM and builds the body without passing
+ * through us — a `bash("cat .git/config")` therefore came back intact. The substitution
+ * returns here, where everything passes, regardless of the output of tool.
+ */
   it("substitue les secrets du corps sortant, sorties de tools comprises", async () => {
     const TOKEN = "ghs_16C7e42F292c6912E7710c838347Ae178B4a";
     let seenBody = "";
@@ -425,7 +424,7 @@ describe("le relais, monté pour de vrai", () => {
       });
       expect(seenBody).not.toContain(TOKEN);
       expect(seenBody).toContain("[redacted]");
-      // Le complément du corps est toujours là : substituer ne remplace pas le
+      // The complement of the body is still there: substituting does not replace the
       // reste du travail du proxy.
       expect(JSON.parse(seenBody).usage).toEqual({ include: true });
     } finally {
@@ -434,10 +433,10 @@ describe("le relais, monté pour de vrai", () => {
   });
 
   /**
-   * MIN-357 — LE TOUR LOCAL : c'est ce process qui pose la clé, parce qu'il n'y a
-   * pas de firewall sur un Mac. Elle ne descend pas plus bas que lui : ni dans le
-   * job, ni dans la config d'opencode (que le modèle lit par un `env`).
-   */
+ * MIN-357 — THE LOCAL TURN: it is this process which sets the key, because there is
+ * no firewall on a Mac. It does not go lower than it: neither in the
+ * job, nor in the opencode config (which the model reads with a `env`).
+ */
   it("pose la clé du tour local à la place du placeholder", async () => {
     let seenAuth = "";
     let asked = 0;
@@ -466,7 +465,7 @@ describe("le relais, monté pour de vrai", () => {
         });
       }
       expect(seenAuth).toBe("Bearer sk-or-v1-clef-plafonnee");
-      // DEMANDÉE UNE FOIS, au démarrage : deux rounds ne font pas deux mints.
+      // REQUESTED ONCE, at startup: two rounds do not make two mints.
       expect(asked).toBe(1);
     } finally {
       await proxy.close();
@@ -498,9 +497,9 @@ describe("le relais, monté pour de vrai", () => {
   });
 
   it("refuse de démarrer quand le plan de contrôle ne rend pas de clé", async () => {
-    // Sans clé plafonnée, un tour local n'a plus AUCUN garde-fou de dépense : le
-    // compute de microVM, dernier filet dans le cloud, vaut zéro sur une machine.
-    // Mieux vaut un tour qui ne part pas — et qui le dit dans son rapport.
+    // Without a capped key, a local tour no longer has ANY spending safeguards: the
+    // microVM compute, last net in the cloud, is zero on a machine.
+    // Better a tour that doesn't leave — and that says so in its report.
     await expect(startLlmProxy({ job: JOB, apiKey: async () => null })).rejects.toThrow(
       /no capped model key/,
     );
@@ -547,8 +546,8 @@ describe("le relais, monté pour de vrai", () => {
   });
 
   it("rend une erreur JSON quand le fournisseur est injoignable", async () => {
-    // Une panne du proxy doit se dire au client (opencode retente), pas faire
-    // tomber le process qui tient tout le tour.
+    // A proxy failure must be reported to the client (opencode retry), not done
+    // drop the process that holds everything together.
     const upstream = (async () => {
       throw new Error("réseau coupé");
     }) as typeof fetch;

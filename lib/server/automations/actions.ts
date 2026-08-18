@@ -13,29 +13,29 @@ import { lastVerdictOfChain, parkChain, type AgentChain } from "./chain";
 import { haltChain, notifyChain, postChainComment } from "./report";
 
 /**
- * Exécution des quatre actions d'une règle (MIN-147).
+ * Execution of the four actions of a rule (MIN-147).
  *
- * Rien n'est réinventé côté agent : `launchAgentRun` est déjà le point d'entrée
- * UNIQUE d'un run froid, et `buildAgentLaunchMessage` sait écrire les consignes
- * cadrées sans contexte de requête — il a justement été écrit pour les appelants
- * qui n'ont pas de composer sous la main.
+ * Nothing is reinvented on the agent side: `launchAgentRun` is already the entry point
+ * UNIQUE of a cold run, and `buildAgentLaunchMessage` knows how to write the instructions
+ * framed without request context — it was precisely written for callers
+ * who do not have a composer on hand.
  *
- * Un échec de lancement ARRÊTE la chaîne avec son motif, jamais en silence :
- * `LaunchError` en distingue huit, et c'est ce code-là que le commentaire de
- * rapport ira traduire. Une chaîne qui s'éteint sans rien dire serait pire que
- * pas d'automatisation du tout.
+ * A launch failure STOPS the chain with its reason, never silently:
+ * `LaunchError` distinguishes eight of them, and it is this code that the comment of
+ * report will translate. A channel that dies out without saying anything would be worse than
+ * no automation at all.
  */
 
-/** Ce qu'une action a fait de la chaîne, du point de vue du moteur. */
+/** What an action did to the chain, from the engine's perspective. */
 export type ActionOutcome =
-  /** Un run est parti : la chaîne attend sa fin, le crochet reprendra la main. */
+  /** A run has started: the chain awaits its end, the hook will take control again. */
   | { kind: "launched"; runId: string }
-  /** L'action a été jouée et le moteur peut enchaîner sur l'événement produit. */
+  /** The action has been played and the engine can continue with the event produced. */
   | { kind: "continue" }
-  /** La chaîne est garée (point d'arrêt humain) ou arrêtée : plus rien à jouer. */
+  /** The channel is parked (human stopping point) or stopped: nothing more to play. */
   | { kind: "halted" };
 
-/** Champs du ticket dont l'écriture d'une consigne a besoin. */
+/** Fields in the ticket needed to write an instruction. */
 interface IssueForLaunch {
   id: string;
   number: number;
@@ -63,9 +63,9 @@ async function runNumo(
   model: string | null,
 ): Promise<ActionOutcome> {
   const locale = await localeOf(chain.owner_id);
-  // Mode `custom` : la consigne de la règle EST le message. Les trois autres
-  // reprennent mot pour mot celle des boutons de l'app — une seule source de
-  // vérité, ici comme pour l'assistant.
+  // `custom` mode: the rule instruction IS the message. The other three
+  // repeat word for word that of the app buttons — a single source of
+  // truth, here as for the assistant.
   const prompt =
     action.mode === "custom"
       ? [action.prompt ?? "", extraPrompt ?? ""].filter(Boolean).join("\n\n")
@@ -89,8 +89,8 @@ async function runNumo(
     triggeredBy: "automation",
     intent: action.mode === "custom" ? "custom" : intentForLaunchMode(action.mode),
     prompt,
-    // Le modèle par TAILLE de ticket (réglage de compte) l'emporte sur celui de
-    // la règle : c'est celui que l'utilisateur voit et manipule.
+    // The model by ticket SIZE (account setting) takes precedence over that of
+    // the rule: it is the one that the user sees and manipulates.
     model: model ?? action.model ?? null,
     reasoningLevel: action.reasoningLevel ?? null,
     chainId: chain.id,
@@ -104,17 +104,17 @@ async function runNumo(
 }
 
 /**
- * Point d'arrêt humain. La chaîne se gare, le ticket ne bouge pas, et on prévient
- * le compte qui la porte — c'est le seul moment où la boucle a besoin de
- * quelqu'un, il ne doit pas se découvrir par hasard.
+ * Human breakpoint. The chain parks, the ticket does not move, and we warn
+ * the account that carries it — this is the only moment when the loop needs
+ * someone, it must not be discovered by chance.
  */
 async function awaitHuman(chain: AgentChain): Promise<ActionOutcome> {
   const parked = await parkChain(chain.id);
   if (!parked) return { kind: "halted" };
-  // Le verdict de l'étape qui amène ici — la vérification du plan. C'est
-  // exactement ce sur quoi on demande un feu vert : sans lui, le commentaire
-  // annonce « le plan est vérifié » sans dire ce que la vérification a conclu,
-  // et il faut ouvrir la session de l'agent pour le savoir.
+  // The verdict of the step that leads here — the verification of the plan. It is
+  // exactly what we are asking for a green light on: without it, the comment
+  // announces “the plan is verified” without saying what the verification concluded,
+  // and you have to open the agent session to find out.
   const verdict = await lastVerdictOfChain(parked.id);
   await postChainComment(parked, "awaiting_human", {
     verdictSummary: verdict?.summary ?? null,
@@ -128,9 +128,9 @@ export async function runAction(params: {
   chain: AgentChain;
   action: AutomationAction;
   issue: IssueForLaunch;
-  /** Consigne ajoutée à l'étape (le rapport d'une vérification en échec). */
+  /** Instruction added to the step (the report of a failed verification). */
   extraPrompt?: string | null;
-  /** Modèle réglé pour la TAILLE de ce ticket (Compte → Automatisations). */
+  /** Model set for the SIZE of this ticket (Account → Automations). */
   model?: string | null;
 }): Promise<ActionOutcome> {
   const { chain, action, issue } = params;
@@ -138,17 +138,17 @@ export async function runAction(params: {
     case "run_numo":
       return runNumo(chain, action, issue, params.extraPrompt ?? null, params.model ?? null);
     case "set_status":
-      // Repasse par le cœur d'écriture ordinaire : c'est lui qui écrit
-      // l'activité, les notifications et la synchro du feedback. Il redéclenche
-      // donc le crochet de statut, et c'est voulu — `played_rule_ids` et
-      // `MAX_CHAIN_STEPS` sont ce qui empêche la boucle.
+      // Go back through the ordinary writing heart: it is he who writes
+      // activity, notifications and feedback sync. It retriggers
+      // so the status hook, and this is intended — `played_rule_ids` and
+      // `MAX_CHAIN_STEPS` are what prevents the loop.
       await updateIssueFields({
         issueId: issue.id,
         actorId: chain.owner_id,
         input: { status: action.status },
         viaAssistant: true,
-        // …et la RÈGLE, pas seulement Numo : sans ce drapeau, un statut posé par
-        // la boucle se lit dans la timeline comme un run lancé à la main.
+        // …and the RULE, not just Numo: without this flag, a status posed by
+        // the loop reads in the timeline like a run launched by hand.
         viaAutomation: true,
       });
       return { kind: "continue" };

@@ -4,12 +4,12 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { previewAccountDeletion } from "@/lib/server/account-deletion";
 
 /**
- * Ce que la suppression du compte détruira (MIN-119) — lu par l'écran de
- * confirmation avant que quoi que ce soit ne parte.
+ * What account deletion will destroy (MIN-119) — read by the screen of
+ * confirmation before anything goes.
  *
- * Le chiffre qui compte est celui des projets possédés : leur suppression
- * emporte les tickets et l'accès des autres membres. Une confirmation qui ne
- * dit pas ça n'est pas un consentement éclairé.
+ * The number that counts is that of projects owned: their deletion
+ * takes away tickets and access from other members. A confirmation that
+ * Don't say that's not informed consent.
  */
 
 export async function GET(request: NextRequest) {

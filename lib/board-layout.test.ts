@@ -8,39 +8,39 @@ import { describe, expect, it } from "vitest";
 import { BOARD_COLUMN_CLASS } from "./board-layout";
 
 /**
- * La largeur d'une colonne de board se décide dans la CASCADE, pas dans le
- * fichier qui l'écrit.
+ * The width of a board column is decided in the CASCADE, not in the
+ * file that writes it.
  *
- * `BOARD_COLUMN_CLASS` empile quatre largeurs sur le même élément — une par
- * palier — et la seule qui compte est la dernière qui s'applique. Or l'ordre
- * d'écriture des media queries n'est pas celui des classes : Tailwind trie les
- * points de rupture par valeur mais ne compare pas `px` et `rem`, si bien que le
- * `wide:` de l'application (1200px) sort AVANT les `sm:`/`lg:` du cœur (40rem,
- * 64rem). Une colonne peut donc être trois fois plus large que ce que le fichier
- * annonce, sans que rien ne l'annonce nulle part — c'est arrivé, et ça se lisait
- * en cartes de ticket étirées au-dessus de 1200 px.
+ * `BOARD_COLUMN_CLASS` stacks four widths on the same element — one per
+ * level — and the only one that matters is the last one that applies. But the order
+ * writing of media queries is not that of classes: Tailwind sorts the
+ * break points by value but does not compare `px` and `rem`, so the
+ * `wide:` of the application (1200px) outputs BEFORE the `sm:`/`lg:` of the core (40rem,
+ * 64rem). A column can therefore be three times as wide as the file
+ * announcement, without anything announcing it anywhere — it happened, and it read
+ * in ticket cards stretched above 1200 px.
  *
- * Relire les classes ne vérifie pas ça. Ce qui le vérifie : les compiler pour de
- * vrai, avec les tokens de mangue-ui, puis rejouer la cascade à cinq largeurs de
- * fenêtre. Le test échoue aussi bien si quelqu'un retire le `max-desktop:` que si
- * un bump de mangue-ui déplace le seuil.
+ * Rereading the classes doesn't check that. What verifies it: compiling them for
+ * true, with the mango-ui tokens, then replay the cascade at five widths of
+ * window. The test fails both if someone removes the `max-desktop:` and if
+ * a mango-ui bump moves the threshold.
  */
 
 const require = createRequire(import.meta.url);
 
-/** Ce que vaut 1rem dans une media query : la taille de police RACINE par défaut.
-    C'est ce qui permet de comparer les paliers en `rem` du cœur au seuil en `px`
-    de mangue-ui — la comparaison que Tailwind, justement, ne fait pas. */
+/** What 1rem is worth in a media query: the default ROOT font size.
+    This is what makes it possible to compare the levels in `rem` of the heart to the threshold in `px`
+    of mango-ui — the comparison that Tailwind, precisely, does not make. */
 const REM = 16;
 
 /**
- * Compile les classes avec le VRAI thème : les points de rupture de Tailwind plus
- * celui de l'application (`--breakpoint-wide`), qui est tout l'enjeu.
+ * Compiles classes with the REAL theme: Tailwind plus breaking points
+ * that of the application (`--breakpoint-wide`), which is the whole point.
  *
- * Les `@import` de `tokens.css` sont retirés plutôt que résolus : ils tirent
- * `tw-animate-css`, dont l'export ne se résout que par la condition `style` que
+ * The `@import` of `tokens.css` are removed rather than resolved: they pull
+ * `tw-animate-css`, whose export is only resolved by the condition `style` that
  * `require.resolve` ne sait pas demander. Rien de ce qu'ils apportent (des
- * keyframes) ne pèse sur une largeur ; le bloc `@theme` du fichier, lui, est lu
+ * keyframes) only weighs one width; the `@theme` block of the file is read
  * tel quel.
  */
 async function buildCss(candidates: string[]): Promise<string> {
@@ -68,11 +68,11 @@ async function buildCss(candidates: string[]): Promise<string> {
   return compiler.build(candidates);
 }
 
-/** `(width >= 40rem)` / `(width < 1200px)` → la condition tient-elle à `viewport` ? */
+/** `(width >= 40rem)` / `(width < 1200px)` → does the condition depend on `viewport`? */
 function conditionHolds(condition: string, viewport: number): boolean {
   const m = /\(\s*width\s*(>=|<=|>|<)\s*([\d.]+)(px|rem)\s*\)/.exec(condition);
-  // Une condition qu'on ne sait pas lire (`print`, `hover`…) ne doit pas être
-  // silencieusement traitée comme vraie : la lecture serait fausse sans le dire.
+  // A condition that cannot be read (`print`, `hover`…) must not be
+  // silently treated as true: the reading would be false without saying it.
   if (!m) throw new Error(`Condition de media query non reconnue : ${condition}`);
   const bound = Number(m[2]) * (m[3] === "rem" ? REM : 1);
   switch (m[1]) {
@@ -88,11 +88,11 @@ function conditionHolds(condition: string, viewport: number): boolean {
 }
 
 /**
- * Les règles de la feuille : `sélecteur` → `corps`, dans l'ordre du document.
+ * The rules of the sheet: `selector` → `body`, in document order.
  *
- * Les `@layer` sont TRAVERSÉS (les utilitaires sont générés dans
- * `@layer utilities`) : une couche ne change pas l'ordre entre deux règles qui
- * vivent dedans, et c'est cet ordre-là qu'on rejoue.
+ * The `@layer` are CROSSED (the utilities are generated in
+ * `@layer utilities`): a layer does not change the order between two rules which
+ * live inside, and it is this order that we replay.
  */
 function flatRules(css: string): { selector: string; body: string }[] {
   const rules: { selector: string; body: string }[] = [];
@@ -118,12 +118,12 @@ function flatRules(css: string): { selector: string; body: string }[] {
   return rules;
 }
 
-/** La `width` posée par un corps de règle, si toutes ses media queries tiennent. */
+/** The `width` posed by a rule body, if all its media queries hold. */
 function widthInBody(body: string, viewport: number): string | null {
   const nested = /@media([^{]*)\{/.exec(body);
   if (nested) {
     if (!conditionHolds(nested[1].trim(), viewport)) return null;
-    // Le corps imbriqué : de l'accolade ouvrante à sa fermante.
+    // The nested body: from the opening brace to its closing brace.
     let depth = 0;
     for (let i = nested.index + nested[0].length - 1; i < body.length; i++) {
       if (body[i] === "{") depth++;
@@ -137,13 +137,13 @@ function widthInBody(body: string, viewport: number): string | null {
   return decl ? decl[1].trim() : null;
 }
 
-/** La largeur qui GAGNE à cette largeur de fenêtre — la dernière qui s'applique. */
+/** The width that WINS at this window width — the last one that applies. */
 async function resolvedWidth(viewport: number): Promise<string | null> {
   const candidates = BOARD_COLUMN_CLASS.split(" ").filter((c) => /(^|:)w-/.test(c));
   expect(candidates.length).toBeGreaterThan(1);
   const css = await buildCss(candidates);
-  // Le sélecteur généré est échappé (`.max-desktop\:sm\:w-\[…\]`) : retirer les
-  // antislashs le ramène au nom de la classe.
+  // The generated selector is escaped (`.max-desktop\:sm\:w-\[…\]`): remove the
+  // backslashes return it to the class name.
   const wanted = new Set(candidates.map((c) => `.${c}`));
   let winner: string | null = null;
   for (const rule of flatRules(css)) {
@@ -168,8 +168,8 @@ describe("largeur d'une colonne de board", () => {
   });
 
   it("au-dessus de 1200 px la colonne est FIXE — le partage ne déborde pas", async () => {
-    // Le cœur du test : sans `max-desktop:` sur les fractions, `lg:` gagnait ici
-    // et rendait une colonne au tiers de la fenêtre.
+    // The heart of the test: without `max-desktop:` on fractions, `lg:` won here
+    // and made a column a third of the window.
     expect(await resolvedWidth(1400)).toBe("22rem");
     expect(await resolvedWidth(2400)).toBe("22rem");
   });

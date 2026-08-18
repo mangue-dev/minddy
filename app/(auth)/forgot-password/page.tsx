@@ -3,10 +3,10 @@ import { Spinner } from "mangue-ui";
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
 
 /**
- * « Mot de passe oublié » (MIN-297). Page publique — on y arrive précisément
- * parce qu'on ne peut pas se connecter. Le `Suspense` est celui de ses
- * voisines : le formulaire lit `useSearchParams` (l'adresse déjà tapée sur
- * l'écran de connexion), ce qui exige une frontière de rendu.
+ * “Forgotten password” (MIN-297). Public page — we're getting there precisely
+ * because we can't connect. The `Suspense` is that of its
+ * neighbors: the form reads `useSearchParams` (the address already typed on
+ * the login screen), which requires a rendering border.
  */
 export default function ForgotPasswordPage() {
   return (

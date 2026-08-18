@@ -49,7 +49,7 @@ export async function updateProjectApi(
   );
 }
 
-/** Importe le favicon du site live comme icône du projet (owner). */
+/** Imports the live site favicon as the project icon (owner). */
 export async function importProjectIconApi(
   id: string,
   siteUrl: string
@@ -65,8 +65,7 @@ export async function importProjectIconApi(
 }
 
 /**
- * Envoie une image comme icône du projet (owner). Aucun redimensionnement côté
- * client : le serveur compresse, et lui seul décide du format stocké.
+ * Sends an image as the project icon (owner). No resizing on the client side: the server compresses, and only it decides the stored format.
  */
 export async function uploadProjectIconApi(
   id: string,
@@ -81,9 +80,9 @@ export async function uploadProjectIconApi(
 }
 
 /**
- * Aperçu du favicon d'un site, sans projet et sans rien stocker : le wizard de
- * création montre l'icône avant que le projet existe, l'import réel
- * ({@link importProjectIconApi}) suit à la création.
+ * Preview of the favicon of a site, without a project and without storing anything: the wizard of
+ * creation shows the icon before the project exists, the real import
+ * ({@link importProjectIconApi}) follows upon creation.
  */
 export async function previewProjectIconApi(
   siteUrl: string
@@ -98,9 +97,9 @@ export async function previewProjectIconApi(
 }
 
 /**
- * Même aperçu, pour un fichier : renvoie l'image compressée en data URL. Le
- * wizard la garde en brouillon et {@link uploadProjectIconDataUrlApi} la rejoue
- * une fois le projet créé.
+ * Same preview, for a file: returns the compressed image as a data URL. The
+ * wizard keeps it in draft and {@link uploadProjectIconDataUrlApi} replays it
+ * once the project is created.
  */
 export async function previewProjectIconFileApi(
   file: Blob
@@ -112,7 +111,7 @@ export async function previewProjectIconFileApi(
   );
 }
 
-/** Rejoue une data URL d'aperçu comme icône du projet fraîchement créé. */
+/** Replays a preview URL data as the icon of the newly created project. */
 export async function uploadProjectIconDataUrlApi(
   id: string,
   dataUrl: string
@@ -122,8 +121,8 @@ export async function uploadProjectIconDataUrlApi(
 }
 
 /**
- * Relance le tirage de l'orbe générée (owner). L'orbe ne se choisit pas, elle
- * se retire — même geste que « Nouvel avatar » sur un compte.
+ * Restarts drawing of the generated orb (owner). The orb cannot be chosen, it
+ * withdraws — same gesture as “New avatar” on an account.
  */
 export async function regenerateProjectOrbApi(
   id: string
@@ -134,7 +133,7 @@ export async function regenerateProjectOrbApi(
   );
 }
 
-/** Retire l'icône du projet — retour à l'orbe générée (owner). */
+/** Removes the project icon — returns to the generated orb (owner). */
 export async function clearProjectIconApi(id: string): Promise<void> {
   trackEvent("project_icon_changed", { kind: "orb" });
   const response = await fetch(`/api/projects/${id}/icon`, { method: "DELETE" });

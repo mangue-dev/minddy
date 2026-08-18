@@ -14,27 +14,27 @@ import { cloudLayout, layoutForRoot } from "../harness-layout";
 import { VM_PROTOCOL_VERSION, type VmJob } from "./protocol";
 
 /**
- * MIN-286 lot 1 — la config d'opencode d'un tour.
+ * MIN-286 batch 1 — one round opencode config.
  *
- * Ce que ce fichier garde, et qui ne se relit pas : **la config est ce qui DIT ce
- * qu'un tour a le droit de faire**. Une lecture seule de relecture, un plafond de
- * dépense, un placeholder de clé — tout cela cesse d'être du code de boucle pour
- * devenir un document JSON, et un document ne lève pas quand il est faux. Il
- * tourne, et le tour fait autre chose que ce qu'on croit.
+ * What this file keeps, and which is not reread: **the config is what SAYS this
+ * that a trick has the right to do**. A read-only replay, a cap of
+ * spend, a key placeholder — all of this stops being loop code for
+ * become a JSON document, and a document does not throw when it is false. He
+ * turns, and the turn does something other than what we think.
  *
- * Les valeurs asserties ici ne sont pas des goûts : chacune a été **mesurée sur
- * `opencode-ai@1.18.16`** (cf. l'en-tête d'`opencode-config.ts`). Les deux qui
- * coûteraient le plus cher à redécouvrir :
- *  - un modèle déclaré SANS `cost` rend `cost: 0`, tokens exacts — le ledger se
- *    viderait sans un mot ;
- *  - `reasoning_effort` à plat est retiré du corps de requête, la forme
- *    imbriquée passe.
+ * The values ​​stated here are not tastes: each was **measured on
+ * `opencode-ai@1.18.16`** (see the header of `opencode-config.ts`). The two who
+ * would cost the most to rediscover:
+ * - a model declared WITHOUT `cost` returns `cost: 0`, exact tokens — the ledger is
+ *    would empty silently;
+ * - flat `reasoning_effort` is removed from the request body, the form
+ * nested pass.
  */
 
 /**
- * MIN-354 — le job porte son layout, et tous les chemins de la config en dérivent.
- * Le fixture garde celui de la microVM (rien ne bouge en production) ; le dernier
- * bloc du fichier vérifie que TOUT suit quand la racine change.
+ * MIN-354 — the job carries its layout, and all the paths in the config derive from it.
+ * The fixture keeps that of the microVM (nothing moves in production); the last
+ * block of the file verifies that EVERYTHING follows when the root changes.
  */
 const LAYOUT = cloudLayout();
 
@@ -96,14 +96,14 @@ describe("le modèle et son fournisseur", () => {
     const provider = cfg.provider[OPENCODE_PROVIDER_ID];
     expect(provider.options.apiKey).toBe("minddy-placeholder-key");
     expect(provider.options.baseURL).toBe("https://openrouter.ai/api/v1");
-    // La couche OpenAI-compatible : c'est le seul wire format que nos cinq
-    // providers parlent tous (cf. agent-providers.ts).
+    // The OpenAI-compatible layer: it is the only wire format that our five
+    // providers all speak (see agent-providers.ts).
     expect(provider.npm).toBe("@ai-sdk/openai-compatible");
   });
 
   it("réfère le modèle par `provider/modèle`, slash du modèle compris", () => {
-    // Mesuré : opencode coupe au PREMIER slash. Un id à slash (le cas normal chez
-    // OpenRouter) traverse donc intact.
+    // Measured: opencode cuts at FIRST slash. A slash id (the normal case with
+    // OpenRouter) therefore passes through intact.
     const cfg = buildOpencodeConfig(job());
     expect(cfg.model).toBe("minddy/deepseek/deepseek-v4-flash");
     expect(cfg.small_model).toBe(cfg.model);
@@ -113,18 +113,18 @@ describe("le modèle et son fournisseur", () => {
   });
 
   it("déclare la modalité image, sans quoi une maquette est remplacée par une erreur", () => {
-    // MESURÉ (§2.22) : `attachment: true` seul ne suffit PAS. Le binaire teste
-    // `capabilities.input.image`, qui se déclare par `modalities.input` — sans
-    // lui, opencode remplace l'image par « ERROR: Cannot read … (this model does
-    // not support image input). Inform the user. » et le modèle prévient
-    // l'utilisateur d'une limite qui n'existe pas.
+    // MEASURED (§2.22): `attachment: true` alone is NOT enough. The binary tests
+    // `capabilities.input.image`, which is declared by `modalities.input` — without
+    // without it, opencode replaces the image with « ERROR: Cannot read … (this model does
+    // not support image input). Inform the user. » and the model warns
+    // the user of a limit that does not exist.
     const withImages = buildOpencodeConfig(job({ imageInput: true }));
     const model = withImages.provider[OPENCODE_PROVIDER_ID].models["deepseek/deepseek-v4-flash"];
     expect(model.attachment).toBe(true);
     expect(model.modalities).toEqual({ input: ["text", "image"], output: ["text"] });
 
-    // Et l'inverse : un run dont le modèle ne voit pas les images ne l'annonce
-    // pas — le plan de contrôle ne lui en servira pas non plus.
+    // And the opposite: a run whose model does not see the images does not announce it
+    // not — the control plan will not help him either.
     const without = buildOpencodeConfig(job({ imageInput: false }));
     const blind = without.provider[OPENCODE_PROVIDER_ID].models["deepseek/deepseek-v4-flash"];
     expect(blind.attachment).toBe(false);
@@ -151,8 +151,8 @@ describe("le modèle et son fournisseur", () => {
   });
 
   it("n'invente aucun prix quand le job n'en porte pas", () => {
-    // BYOK hors index OpenRouter. Le coût rendu vaudra zéro, et c'est au
-    // superviseur d'écrire l'usage en `estimated` — pas à la config de mentir.
+    // BYOK outside OpenRouter index. The cost returned will be worth zero, and it is
+    // supervisor to write the usage in `estimated` — not the config to lie.
     const cfg = buildOpencodeConfig(job({ pricing: undefined }));
     expect(
       cfg.provider[OPENCODE_PROVIDER_ID].models["deepseek/deepseek-v4-flash"].cost,
@@ -164,8 +164,8 @@ describe("le modèle et son fournisseur", () => {
     const model = cfg.provider[OPENCODE_PROVIDER_ID].models["deepseek/deepseek-v4-flash"];
     expect(model.options).toEqual({ reasoning: { effort: "high" } });
     expect(model.reasoning).toBe(true);
-    // Mesuré : `reasoning_effort` à plat est RETIRÉ du corps par opencode sur
-    // l'appel principal. L'écrire ici donnerait un réglage qui ne part jamais.
+    // Measured: `reasoning_effort` flat is REMOVED from the body by opencode on
+    // the main call. Writing it here would result in a setting that never goes away.
     expect(JSON.stringify(model.options)).not.toContain("reasoning_effort");
   });
 
@@ -181,18 +181,18 @@ describe("le modèle et son fournisseur", () => {
 
 describe("ce que le tour a le droit de faire", () => {
   it("laisse le shell en `ask` — c'est ce qui donne la main à command-guard", () => {
-    // La règle de commande n'est PAS une ACL en glob : `command-guard.ts` reste
-    // une fonction pure que le superviseur rejoue sur /permission/:id/reply. Une
-    // permission `allow` lui retirerait son point de contrôle, en silence.
+    // The command rule is NOT a global ACL: `command-guard.ts` remains
+    // a pure function that the supervisor replays on /permission/:id/reply. A
+    // permission `allow` would silently remove his checkpoint.
     expect(buildOpencodeConfig(job()).permission.bash).toBe("ask");
   });
 
   it("refuse l'écriture et retire les tools d'écriture sur une relecture", () => {
     const cfg = buildOpencodeConfig(job({ writesToRepo: false, anchor: "pr" }));
     expect(cfg.permission.edit).toBe("deny");
-    // Les deux moitiés de la même garantie : l'ACL ET l'absence du tool. Mesuré :
-    // `tools: {x: false}` ne retire pas l'intégré, il pose un `deny` — c'est le
-    // jeu de tools de l'agent qui le fait disparaître.
+    // Two halves of the same guarantee: the ACL AND the absence of the tool. Measure :
+    // `tools: {x: false}` does not remove the integrated, it places a `deny` — this is the
+    // set of agent tools that makes it disappear.
     for (const name of ["edit", "write", "apply_patch"]) {
       expect(cfg.tools[name]).toBe(false);
       expect(cfg.agent[OPENCODE_PRIMARY_AGENT].tools?.[name]).toBe(false);
@@ -200,9 +200,9 @@ describe("ce que le tour a le droit de faire", () => {
   });
 
   it("laisse l'écriture en `ask` — c'est ce qui protège `.git/`", () => {
-    // Mesuré : `.git/` n'est gardé par personne chez opencode, un `write` sur
-    // `<dépôt>/.git/config` l'écrase. `ask` est ce qui donne la main au
-    // superviseur, qui y rejoue `assertNotGit` et `resolveWithin`.
+    // Measured: `.git/` is not kept by anyone at opencode, a `write` on
+    // `<repository>/.git/config` overwrites it. `ask` is what gives the hand to
+    // supervisor, which replays `assertNotGit` and `resolveWithin`.
     const cfg = buildOpencodeConfig(job({ writesToRepo: true }));
     expect(cfg.permission.edit).toBe("ask");
     expect(cfg.agent[OPENCODE_PRIMARY_AGENT].tools?.edit).toBeUndefined();
@@ -210,8 +210,8 @@ describe("ce que le tour a le droit de faire", () => {
 
   it("coupe la question quand personne ne peut répondre (routine)", () => {
     const routine = buildOpencodeConfig(job({ interactive: false }));
-    // Le RETRAIT du tool, et pas seulement l'ACL : mesuré, la permission
-    // `question` n'est pas consultée — le tool s'exécute et publie sa question.
+    // REMOVAL of the tool, not just the ACL: measured, permission
+    // `question` is not consulted — the tool runs and publishes its question.
     expect(routine.agent[OPENCODE_PRIMARY_AGENT].tools?.question).toBe(false);
     expect(routine.permission.question).toBe("deny");
     const interactive = buildOpencodeConfig(job({ interactive: true }));
@@ -221,8 +221,8 @@ describe("ce que le tour a le droit de faire", () => {
 
   it("éteint les intégrés qui n'ont pas de lecteur chez nous", () => {
     const cfg = buildOpencodeConfig(job());
-    // `todowrite` : notre checklist est le plan du ticket. `websearch` : il ne
-    // porterait ni le plafond du tour ni la facturation. `skill` : il n'y en a pas.
+    // `todowrite`: our checklist is the ticket plan. `websearch`: it does not
+    // would affect neither the tour limit nor the billing. `skill`: there is none.
     for (const name of ["todowrite", "websearch", "skill"]) {
       expect(cfg.tools[name]).toBe(false);
       expect(cfg.agent[OPENCODE_PRIMARY_AGENT].tools?.[name]).toBe(false);
@@ -231,13 +231,13 @@ describe("ce que le tour a le droit de faire", () => {
 });
 
 /**
- * Les sous-agents (MIN-286, lot 2, tâche 12).
+ * Sub-agents (MIN-286, lot 2, task 12).
  *
- * Deux mesures du 2026-08-12 décident de tout ce qui suit, et aucune ne se
- * devine : le tool `task` n'a **pas** de champ `model` (le modèle d'une fille
- * vient de `agent.<id>.model`), et le dossier de tools du serveur est servi à
- * TOUT LE MONDE — une fille reçoit donc les 32 tools de domaine tant qu'un
- * `"*": false` ne les lui retire pas.
+ * Two measurements from 2026-08-12 decide everything that follows, and neither
+ * guess: the tool `task` has **no** field `model` (the model of a girl
+ * comes from `agent.<id>.model`), and the server's tools folder is served to
+ * EVERYONE — a girl therefore receives the 32 domain tools as long as one
+ * `"*": false` does not take them away.
  */
 describe("les sous-agents", () => {
   const favorites = (): VmJob["subagents"] => ({
@@ -259,8 +259,8 @@ describe("les sous-agents", () => {
   it("tient la hiérarchie à UN niveau", () => {
     const cfg = buildOpencodeConfig(job());
     expect(cfg.subagent_depth).toBe(1);
-    // Le joker retire `task` du jeu de la fille, et l'ACL le redit : la
-    // délégation en cascade est structurelle, jamais une phrase de prompt.
+    // The joker removes `task` from the girl's game, and the ACL says it again: the
+    // Cascading delegation is structural, never a prompt sentence.
     expect(cfg.agent.general.tools?.["*"]).toBe(false);
     expect(cfg.agent.general.tools?.task).toBeUndefined();
     expect(cfg.agent.general.permission?.task).toBe("deny");
@@ -274,9 +274,9 @@ describe("les sous-agents", () => {
   });
 
   it("retire à une fille les tools de DOMAINE, qui appartiennent au parent", () => {
-    // `SUBAGENT_FORBIDDEN_TOOLS` (MIN-112) : le ticket, le carnet, les pull
-    // requests, le plan de session. Sans le `"*": false`, ils étaient servis —
-    // ils vivent dans le dossier de tools du serveur, donc à tout le monde.
+    // `SUBAGENT_FORBIDDEN_TOOLS` (MIN-112): the ticket, the notebook, the sweaters
+    // requests, the session plan. Without the `"*": false`, they were served —
+    // they live in the server's tools folder, so everyone.
     const cfg = buildOpencodeConfig(job());
     for (const agent of [cfg.agent.explore, cfg.agent.general]) {
       expect(agent.tools?.["*"]).toBe(false);
@@ -284,8 +284,8 @@ describe("les sous-agents", () => {
         expect(agent.tools?.[name]).toBeUndefined();
       }
     }
-    // `web_search` est la seule exception, et c'est celle de `subagentToolsFor` :
-    // il est facturé et plafonné par nous, pas interdit à une fille.
+    // `web_search` is the only exception, and it is that of `subagentToolsFor`:
+    // it is charged and capped by us, not forbidden to a girl.
     expect(cfg.agent.general.tools?.web_search).toBe(true);
     expect(buildOpencodeConfig(job({ webSearch: false })).agent.general.tools?.web_search).toBe(
       undefined,
@@ -293,8 +293,8 @@ describe("les sous-agents", () => {
   });
 
   it("ouvre les TROIS interfaces d'écriture à une fille qui écrit", () => {
-    // C'est opencode qui tranche selon le modèle DE LA FILLE (`apply_patch` sur
-    // les `gpt-*`) : en désigner une ici la figerait sur celui du parent.
+    // It is opencode which decides according to the model OF THE GIRL (`apply_patch` on
+    // the `gpt-*`): designating one here would freeze it on that of the parent.
     const cfg = buildOpencodeConfig(job());
     for (const name of ["edit", "write", "apply_patch"]) {
       expect(cfg.agent.general.tools?.[name]).toBe(true);
@@ -315,9 +315,9 @@ describe("les sous-agents", () => {
   });
 
   it("laisse le superviseur arbitrer chaque délégation", () => {
-    // `ask` et non `allow` : la demande porte le `subagent_type` et arrive AVANT
-    // qu'opencode ne résolve l'agent — c'est le seul endroit d'où tenir le
-    // plafond de simultané et rendre l'offre au modèle qui se trompe de nom.
+    // `ask` and not `allow`: the request has `subagent_type` and arrives BEFORE
+    // until opencode resolves the agent — that's the only place to get the
+    // simultaneous ceiling and return the offer to the model with the wrong name.
     expect(buildOpencodeConfig(job()).permission.task).toBe("ask");
   });
 
@@ -337,16 +337,16 @@ describe("les sous-agents", () => {
     expect(cfg.agent["explore-anthropic-claude-haiku-4-5"].model).toBe(
       `${OPENCODE_PROVIDER_ID}/anthropic/claude-haiku-4.5`,
     );
-    // Le mode reste le mode : un modèle choisi ne rend pas une fille écrivante.
+    // Fashion remains fashion: a chosen model does not make a girl write.
     expect(cfg.agent["explore-anthropic-claude-haiku-4-5"].tools).toEqual(
       cfg.agent.explore.tools,
     );
   });
 
   it("décrit chaque sous-agent — c'est la SEULE chose que le parent en lit", () => {
-    // Sans `description`, opencode écrit « This subagent should only be called
-    // manually by the user » dans la description du tool `task` : l'offre
-    // disparaît et le modèle ne délègue plus.
+    // Without `description`, opencode writes “This subagent should only be called
+    // manually by the user” in the description of the tool `task`: the offer
+    // disappears and the model no longer delegates.
     const cfg = buildOpencodeConfig(job({ subagents: favorites() }));
     for (const [name, agent] of Object.entries(cfg.agent)) {
       if (name === OPENCODE_PRIMARY_AGENT) continue;
@@ -358,8 +358,8 @@ describe("les sous-agents", () => {
   });
 
   it("TARIFE tout modèle de fille qu'il offre, et n'offre pas ce qu'il ne sait pas tarifer", () => {
-    // Un modèle déclaré sans `cost` rend `cost: 0` : une fille gratuite au
-    // ledger. Ne pas l'offrir est le seul choix qui ne mente pas.
+    // A model declared without `cost` makes `cost: 0`: a free girl at
+    // ledger. Not offering it is the only choice that doesn't lie.
     const cfg = buildOpencodeConfig(job({ subagents: favorites() }));
     const models = cfg.provider[OPENCODE_PROVIDER_ID].models;
     expect(models["anthropic/claude-haiku-4.5"].cost).toEqual({ input: 1, output: 5 });
@@ -373,8 +373,8 @@ describe("les sous-agents", () => {
   });
 
   it("n'offre AUCUN autre modèle en BYOK", () => {
-    // Même règle du tout ou rien que le champ `model` de `spawn_agent` : un run
-    // BYOK Anthropic ne peut pas faire tourner `deepseek/…`.
+    // Same all-or-nothing rule as the `model` field of `spawn_agent`: one run
+    // BYOK Anthropic cannot run `deepseek/…`.
     const byok = buildOpencodeConfig(job({ subagents: { ...favorites(), models: false } }));
     expect(Object.keys(byok.agent).sort()).toEqual([OPENCODE_PRIMARY_AGENT, "explore", "general"].sort());
     expect(Object.keys(byok.provider[OPENCODE_PROVIDER_ID].models)).toEqual([
@@ -383,8 +383,8 @@ describe("les sous-agents", () => {
   });
 
   it("borne la liste des modèles offerts", () => {
-    // Chaque modèle coûte deux agents et deux lignes dans la description du tool
-    // `task` : un réglage d'admin parti à trente la ferait grossir en silence.
+    // Each model costs two agents and two lines in the tool description
+    // `task`: an admin setting of thirty would make it grow silently.
     const many = favorites();
     many.favorites = Array.from({ length: MAX_SUBAGENT_MODELS + 4 }, (_, i) => ({
       id: `vendor/model-${i}`,
@@ -402,8 +402,8 @@ describe("les sous-agents", () => {
   });
 
   it("ne se propose jamais lui-même comme modèle de fille", () => {
-    // Le modèle du run est déjà `explore` / `general` : le redonner sous un
-    // deuxième nom offrirait deux fois la même chose.
+    // The run model is already `explore` / `general`: restore it under a
+    // second name would offer the same thing twice.
     const same = favorites();
     same.favorites = [{ id: "deepseek/deepseek-v4-flash", label: "Same", use_case: "x" }];
     same.pricing = { "deepseek/deepseek-v4-flash": { inputUsdPerMTok: 1, outputUsdPerMTok: 2 } };
@@ -419,19 +419,19 @@ describe("l'environnement du serveur", () => {
   });
 
   it("garde l'état d'opencode HORS du dépôt", () => {
-    // Sinon le `git add -A` de fin de tour emporte la base de la conversation
-    // dans un commit du dépôt de l'utilisateur (même règle que le harness).
+    // Otherwise the `git add -A` at the end of the turn takes away the basis of the conversation
+    // in a commit of the user's repository (same rule as the harness).
     expect(opencodeDbPath(LAYOUT).startsWith(`${LAYOUT.repoDir}/`)).toBe(false);
     expect(opencodeAnchorFile(LAYOUT).startsWith(`${LAYOUT.repoDir}/`)).toBe(false);
   });
 
   it("ramène les TROIS dossiers d'opencode sous le harness, pas seulement la config", () => {
     /**
-     * Mesuré le 2026-08-12 sur le binaire : `XDG_DATA_HOME` reçoit
-     * `opencode/repos/` — des **dépôts git de snapshot** — et `opencode/log/`.
-     * Laissés au `$HOME` de la microVM, ils sont hors de notre portée : un
-     * `$HOME` absent, ou posé sur le dépôt par une image de sandbox, ramènerait
-     * des dépôts git entiers dans le commit du tour.
+     * Measured on 2026-08-12 on binary: `XDG_DATA_HOME` receives
+     * `opencode/repos/` — **snapshot git repositories** — and `opencode/log/`.
+     * Left at `$HOME` of the microVM, they are beyond our reach: a
+     * `$HOME` absent, or placed on the repository by a sandbox image, would bring back
+     * entire git repositories in the tour commit.
      */
     const env = opencodeServerEnv(job());
     for (const dir of [env.XDG_CONFIG_HOME, env.XDG_DATA_HOME, env.XDG_CACHE_HOME]) {
@@ -449,15 +449,15 @@ describe("l'environnement du serveur", () => {
 
 describe("aucun secret ne peut entrer dans la config", () => {
   /**
-   * Le miroir de [vm-bundle-secrets.test.ts](../vm-bundle-secrets.test.ts), du
-   * côté de la SORTIE : ce test-là garde le graphe d'imports du bundle, celui-ci
-   * garde le document que le bundle produit. Les deux ensemble disent « rien de
-   * ce qui part dans la microVM ne détient un secret ».
+   * The mirror of [vm-bundle-secrets.test.ts](../vm-bundle-secrets.test.ts), of
+   * OUTPUT side: this test keeps the bundle import graph, this one
+   * keeps the document that the bundle produces. The two together say "nothing
+   * “what goes into the microVM doesn’t hold a secret.”
    *
-   * La faute qu'il attrape n'a aucun symptôme : la config marche parfaitement
-   * avec une vraie clé dedans — mieux, même, puisque le firewall n'aurait plus
-   * rien à transformer. Elle ne se voit que le jour où le modèle fait `env` ou
-   * lit `~/.config`, et ce jour-là il est trop tard.
+   * The fault it catches has no symptoms: the config works perfectly
+   * with a real key inside — even better, since the firewall would no longer have
+   * nothing to transform. It is only seen on the day the model does `env` or
+   * reads `~/.config`, and that day it is too late.
    */
   it("ne porte que le placeholder, jamais une clé de fournisseur", () => {
     const serialized = opencodeServerEnv(
@@ -470,16 +470,16 @@ describe("aucun secret ne peut entrer dans la config", () => {
   });
 
   it("ne laisse pas fuiter le token de forge de l'URL de push", () => {
-    // `authUrl` porte un token éphémère de la forge. Il n'a rien à faire dans une
-    // config lue par le harness — et il finirait dans les logs du serveur.
+    // `authUrl` carries an ephemeral token from the forge. He has nothing to do in a
+    // config read by the harness — and it would end up in the server logs.
     expect(opencodeServerEnv(job()).OPENCODE_CONFIG_CONTENT).not.toContain("ghs_TOKEN_SECRET");
   });
 
   it("n'emporte rien du job qui ne serve pas à opencode", () => {
-    // Le job porte l'historique, les chemins édités, l'origine du plan de
-    // contrôle. La config n'en veut aucun : ce qui n'y entre pas ne peut pas en
-    // sortir. Assertion sur les clés de PREMIER niveau, pour que l'ajout d'un
-    // champ soit un geste conscient.
+    // The job carries the history, the edited paths, the origin of the plan
+    // control. The config doesn't want any: what doesn't fit there can't fit into it.
+    // to go out. Assertion on FIRST level keys, so that adding a
+    // adding a field must be a conscious change.
     expect(Object.keys(buildOpencodeConfig(job())).sort()).toEqual(
       [
         "$schema",
@@ -500,13 +500,13 @@ describe("aucun secret ne peut entrer dans la config", () => {
 });
 
 /**
- * MIN-354 — LE DÉCOR SUIT LE RUN, ET PAS UNE CONSTANTE.
+ * MIN-354 — THE DECOR FOLLOWS THE RUN, AND NOT A CONSTANT.
  *
- * Six chemins d'opencode étaient des `const` de module sous
- * `/vercel/sandbox/harness`. Ce que ce bloc garde n'est pas leur valeur, c'est
- * qu'aucun ne soit resté en arrière : un seul chemin figé et **deux runs d'une
- * même machine partageraient une base SQLite**, un fichier d'ancrage et un
- * dossier de tools — chacun réécrivant le décor de l'autre.
+ * Six opencode paths were module `const` under
+ * `/vercel/sandbox/harness`. What this block keeps is not their value, it is
+ * that no one remained behind: a single fixed path and **two runs of a
+ * same machine would share an SQLite** database, an anchor file and a
+ * tools folder — each rewriting the decor of the other.
  */
 describe("un run qui ne vit pas dans une microVM", () => {
   const LOCAL = layoutForRoot("/Users/dev/Library/Application Support/minddy/runs/r-7", "/Users/dev/oc");
@@ -517,13 +517,13 @@ describe("un run qui ne vit pas dans une microVM", () => {
     for (const value of [env.OPENCODE_DB, env.XDG_CONFIG_HOME, env.XDG_DATA_HOME, env.XDG_CACHE_HOME]) {
       expect(value.startsWith(`${LOCAL.harnessDir}/`)).toBe(true);
     }
-    // Et plus rien ne pointe vers la microVM.
+    // And nothing points to the microVM anymore.
     expect(JSON.stringify(env)).not.toContain("/vercel/");
   });
 
-  // MIN-363 : `OPENCODE_SHELL_CWD` a été retiré — la variable n'existe pas dans
-  // le binaire (0 occurrence en 1.18.16). Ce qui donne son dépôt au serveur est
-  // le `directory` du client, pas l'environnement. Rien à assurer ici.
+  // MIN-363: `OPENCODE_SHELL_CWD` was removed — the variable does not exist in
+  // binary (0 occurrences in 1.18.16). What gives its deposit to the server is
+  // the client's `directory`, not the environment. Nothing to be assured here.
 
   it("fait lire l'ancrage là où le superviseur l'écrit", () => {
     expect(buildOpencodeConfig(local()).instructions).toEqual([opencodeAnchorFile(LOCAL)]);
@@ -540,45 +540,45 @@ describe("un run qui ne vit pas dans une microVM", () => {
 });
 
 /**
- * MIN-360 — LES GARDE-FOUS QUE LE PASSAGE EN LOCAL REND OBLIGATOIRES.
+ * MIN-360 — THE SAFEGUARDS THAT GOING LOCAL MAKES OBLIGATORY.
  *
- * Deux choses ici, et la seconde compte autant que la première : ce que la config
- * FERME pour tout le monde (l'auto-découverte de plugins et de config d'un dépôt),
- * et ce qu'elle ne resserre QUE sur le chemin local — parce que resserrer les
- * runs cloud leur ferait payer un aller-retour de permission par lecture pour un
- * risque qui n'existe pas dans un clone jetable.
+ * Two things here, and the second matters as much as the first: what the config
+ * CLOSED for everyone (auto-discovery of plugins and config from a repository),
+ * and what it ONLY tightens on the local path — because tightening the
+ * runs cloud would make them pay a round trip permission per read for a
+ * a risk that does not exist in a disposable clone.
  *
- * Ce qui distingue un job local d'un job cloud est la présence du jeton
- * (`isLocalJob`), et c'est voulu : un drapeau `local: true` à côté de lui serait
- * une seconde vérité sur le même fait.
+ * What distinguishes a local job from a cloud job is the presence of the token
+ * (`isLocalJob`), and this is intended: a `local: true` flag next to it would be
+ * a second truth about the same fact.
  */
 describe("l'auto-découverte depuis le dépôt (MIN-360)", () => {
   it("coupe les plugins et la config de projet, dans les deux mondes", () => {
-    // Mesuré dans le binaire 1.18.16 : `pure` vide `plugin_origins` côté serveur,
-    // `DISABLE_PROJECT_CONFIG` arrête la remontée vers `.opencode/` et
-    // `opencode.json`. Sans elles, le contenu d'un dépôt exécute du code.
+    // Measured in binary 1.18.16: `pure` empty `plugin_origins` server side,
+    // `DISABLE_PROJECT_CONFIG` stops the ascent to `.opencode/` and
+    // `opencode.json`. Without them, the contents of a repository execute code.
     for (const j of [job(), job({ controlToken: "jeton" })]) {
       const env = opencodeServerEnv(j);
       expect(env.OPENCODE_PURE).toBe("1");
       expect(env.OPENCODE_DISABLE_PROJECT_CONFIG).toBe("1");
-      // MIN-368 : aucun plugin par défaut ni index FFF spéculatif ne doit
-      // retarder le premier prompt. Les outils standards restent servis par
-      // OpenCode et nos tools sont explicitement déclarés par le harness.
+      // MIN-368: no default plugin or speculative FFF index should be
+      // delay the first prompt. Standard tools remain served by
+      // OpenCode and our tools are explicitly declared by the harness.
       expect(env.OPENCODE_DISABLE_DEFAULT_PLUGINS).toBe("1");
       expect(env.OPENCODE_DISABLE_FFF).toBe("1");
-      // MIN-364, lot 9 : `skill` ne doit jamais ramasser implicitement les
-      // skills Claude Code / agents du HOME ni celles du dépôt. Le jour où
-      // Minddy en sert, elles passent par `skills.paths`, explicitement nommé.
+      // MIN-364, lot 9: `skill` must never implicitly pick up the
+      // skills Claude Code / HOME agents nor those of the depot. The day when
+      // Minddy uses them, they go through `skills.paths`, explicitly named.
       expect(env.OPENCODE_DISABLE_EXTERNAL_SKILLS).toBe("1");
-      // `ask_user` est le tool `question`. Sa présence est désormais un contrat
-      // du chemin local (D7), pas un effet du client `cli` choisi par défaut.
+      // `ask_user` is tool `question`. His presence is now a contract
+      // of the local path (D7), not an effect of the client `cli` chosen by default.
       expect(env.OPENCODE_ENABLE_QUESTION_TOOL).toBe("1");
     }
   });
 
   it("garde NOTRE dossier de tools, qui ne passe pas par cette remontée", () => {
-    // `Path.config` (donc `XDG_CONFIG_HOME`) reste inclus inconditionnellement :
-    // les ~35 tools de domaine sont servis, l'écoutille ne les emporte pas.
+    // `Path.config` (therefore `XDG_CONFIG_HOME`) remains included unconditionally:
+    // the ~35 domain tools are served, the hatch does not take them.
     const env = opencodeServerEnv(job());
     expect(env.XDG_CONFIG_HOME).toBe(`${LAYOUT.harnessDir}/config`);
   });
@@ -586,7 +586,7 @@ describe("l'auto-découverte depuis le dépôt (MIN-360)", () => {
   it("rend explicitement les conventions du dépôt qu'elle vient de lui retirer", () => {
     const repoFiles = [`${LAYOUT.repoDir}/AGENTS.md`, `${LAYOUT.repoDir}/CLAUDE.md`];
     const cfg = buildOpencodeConfig(job(), { repoInstructionFiles: repoFiles });
-    // L'ancrage minddy d'ABORD : c'est le nôtre, et il n'est pas négociable.
+    // The minddy anchor FIRST: it's ours, and it's non-negotiable.
     expect(cfg.instructions).toEqual([opencodeAnchorFile(LAYOUT), ...repoFiles]);
   });
 
@@ -600,41 +600,41 @@ describe("les permissions du chemin local (MIN-360)", () => {
   const onMachine = () => buildOpencodeConfig(job({ controlToken: "jeton-de-bail" }));
 
   it("passe `read` en `ask` sur une machine, et le laisse en `allow` en microVM", () => {
-    // `allow` effaçait le `*.env ask` qu'opencode livre : nos règles sont
-    // concaténées APRÈS, et la dernière qui matche gagne.
+    // `allow` erased the `*.env ask` that opencode delivers: our rules are
+    // concatenated AFTER, and the last one to match wins.
     expect(cloud().permission.read).toBe("allow");
     expect(onMachine().permission.read).toBe("ask");
   });
 
   it("applique la même règle aux filles `explore`, dont c'est tout le métier", () => {
-    // Le littéral des sous-agents est le SECOND endroit où la ligne était écrite,
-    // et c'est précisément celui des agents qui ne font que lire.
+    // The literal of subagents is the SECOND place where the line was written,
+    // and it is precisely that of agents who only read.
     expect(cloud().agent.explore.permission?.read).toBe("allow");
     expect(onMachine().agent.explore.permission?.read).toBe("ask");
   });
 
   it("passe `webfetch` en `ask` sur une machine", () => {
-    // En `allow` il n'est JAMAIS publié en permission : le verdict ne voyait
-    // aucun fetch, et sur un Mac la boucle locale porte le proxy LLM.
+    // In `allow` it is NEVER published on leave: the verdict did not see
+    // no fetch, and on a Mac the local loop carries the LLM proxy.
     expect(cloud().permission.webfetch).toBe("allow");
     expect(onMachine().permission.webfetch).toBe("ask");
     expect(onMachine().agent[OPENCODE_PRIMARY_AGENT].permission?.webfetch).toBe("ask");
   });
 
   /**
-   * MIN-364 (décision D5) — LA QUATRIÈME LIGNE QUI BASCULE.
+   * MIN-364 (decision D5) — THE FOURTH LINE THAT SWINGS.
    *
-   * `external_directory` passe de `deny` à `ask` **pour autoriser** : le `deny`
-   * de config court-circuite avant publication, donc il n'attrapait que les tools
-   * honnêtes et poussait le travail vers `bash`, où l'on ne voit plus rien. En
-   * `ask`, le superviseur rend `once` ET publie la sortie au fil.
+   * `external_directory` changes from `deny` to `ask` **to authorize**: `deny`
+   * of config bypasses before publication, so it only catches the tools
+   * honest and pushed the work towards `bash`, where we no longer see anything. In
+   * `ask`, the supervisor renders `once` AND publishes the output to the thread.
    */
   it("ouvre le disque en LAISSANT une trace, et rien d'autre ne bouge", () => {
     expect(cloud().permission.external_directory).toBe("deny");
     expect(onMachine().permission.external_directory).toBe("ask");
     expect(onMachine().agent[OPENCODE_PRIMARY_AGENT].permission?.external_directory).toBe("ask");
 
-    // Le reste de l'ACL est le même : ces lots resserrent quatre lignes, pas le tour.
+    // The rest of the ACL is the same: these lots tighten four lines, not the round.
     const { read: _r1, webfetch: _w1, external_directory: _e1, ...cloudRest } = cloud().permission;
     const { read: _r2, webfetch: _w2, external_directory: _e2, ...localRest } = onMachine().permission;
     expect(localRest).toEqual(cloudRest);

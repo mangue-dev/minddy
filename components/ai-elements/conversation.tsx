@@ -17,26 +17,26 @@ import {
 } from "react";
 
 /**
- * Fil de conversation défilant.
+ * Scrolling conversation thread.
  *
- * Ce qu'il NE fait PAS, et c'est tout le sujet : suivre la réponse pendant qu'elle
- * s'écrit. Le fil ne se déplace QUE sur un geste de l'utilisateur — ouvrir une
- * conversation, envoyer un message (prop `anchor`), cliquer le bouton de retour en
- * bas. Tant que Numo écrit, la vue ne bouge pas d'un pixel : on lit ce qu'on lisait,
- * le contenu grandit dessous, et le bouton de retour en bas dit qu'il y en a.
+ * What it DOES NOT do, and that's the whole point: follow the response as it
+ * is written. The thread ONLY moves on a user gesture — open a
+ * conversation, send a message (prop `anchor`), click the back button
+ * down. As long as Numo writes, the view does not move a single pixel: we read what we read,
+ * the content grows underneath, and the back button at the bottom says there is.
  *
- * D'où le remplacement de `use-stick-to-bottom`, dont c'était exactement le métier
- * inverse (recoller en bas à chaque changement de taille du contenu).
+ * Hence the replacement of `use-stick-to-bottom`, whose job that was exactly
+ * reverse (paste at the bottom each time the content size changes).
  */
 
-/** Tolérance (px) sous laquelle on se considère « en bas » : un défilement lisse
- *  s'arrête rarement au pixel près, et le bouton clignoterait pour un demi-pixel. */
+/** Tolerance (px) under which one considers oneself “at the bottom”: smooth scrolling
+ * rarely stops at the pixel level, and the button would blink for half a pixel. */
 const BOTTOM_SLACK = 24;
 
 type ConversationContextValue = {
   scrollRef: RefObject<HTMLDivElement | null>;
   contentRef: RefObject<HTMLDivElement | null>;
-  /** Recalcule `isAtBottom` — branché sur le défilement ET sur la taille du contenu. */
+  /** Recalculates `isAtBottom` — plugged into scrolling AND content size. */
   measure: () => void;
   isAtBottom: boolean;
   scrollToBottom: () => void;
@@ -55,9 +55,9 @@ function useConversationContext(): ConversationContextValue {
 export type ConversationProps = Omit<ComponentProps<"div">, "children"> & {
   children: ReactNode;
   /**
-   * Point d'ancrage : à CHAQUE changement de cette valeur, le fil se recale en bas,
-   * sans animation. L'hôte y met ce qui vaut « ramène-moi en bas » — la conversation
-   * ouverte, le nombre de messages envoyés.
+   * Anchor point: EACH change in this value, the wire resets at the bottom,
+   * without animation. The host puts in what amounts to “take me back downstairs” — the conversation
+   * open, the number of messages sent.
    */
   anchor?: string | number;
 };
@@ -86,9 +86,9 @@ export const Conversation = ({
     node.scrollTo({ top: node.scrollHeight, behavior: "smooth" });
   }, []);
 
-  // Ancrage (ouverture, envoi) : sans animation — c'est un point de départ, pas un
-  // mouvement à regarder. useLayoutEffect → avant peinture, donc pas de flash du
-  // haut du fil. L'effet tourne aussi au montage : on ouvre une conversation en bas.
+  // Anchor (open, send): without animation — this is a starting point, not a
+  // movement to watch. useLayoutEffect → before painting, so no flash of the
+  // top of the wire. The effect also works in the editing: we open a conversation at the bottom.
   useLayoutEffect(() => {
     const node = scrollRef.current;
     if (!node) return;
@@ -119,9 +119,9 @@ export const ConversationContent = ({
 }: ConversationContentProps) => {
   const { scrollRef, contentRef, measure } = useConversationContext();
 
-  // Le contenu grandit SOUS l'utilisateur pendant que Numo écrit : sans observer sa
-  // taille, « suis-je en bas ? » ne se rafraîchirait qu'au prochain geste de
-  // défilement — et le bouton de retour en bas n'apparaîtrait jamais.
+  // The content grows UNDER the user while Numo writes: without observing its
+  // waist, “am I down?” » would only refresh with the next gesture of
+  // scrolling — and the back button at the bottom would never appear.
   useEffect(() => {
     const content = contentRef.current;
     if (!content) return;

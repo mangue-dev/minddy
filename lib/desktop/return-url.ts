@@ -1,17 +1,17 @@
 import { DESKTOP_RETURN_PATH } from "@/lib/desktop/config";
 
 /**
- * Où renvoyer quelqu'un qu'on envoie chez un tiers (MIN-293).
+ * Where to return someone sent to a third party (MIN-293).
  *
- * Le tiers — Stripe — n'accepte qu'une URL http(s) en retour. Depuis le web,
- * c'est la page elle-même ; depuis l'app de bureau, c'est la page de rebond, qui
- * rouvre l'app dessus (app/desktop/return/route.ts).
+ * The third party — Stripe — only accepts an http(s) URL in return. From the web,
+ * is the page itself; from the desktop app, it's the bounce page, which
+ * reopens the app on it (app/desktop/return/route.ts).
  *
- * **`fromDesktop` vient du CORPS de la requête, pas de l'user agent.** C'est la
- * règle de lib/desktop/bridge.ts : ce qui décide, c'est la présence du pont, que
- * seule la page peut constater. Le suffixe d'user agent est là pour les logs.
- * Et le pire qu'un client puisse obtenir en mentant est de se faire renvoyer
- * vers une app qu'il n'a pas — sur SA propre session.
+ * **`fromDesktop` comes from the BODY of the request, not from the user agent.** This is the
+ * rule lib/desktop/bridge.ts: what decides is the presence of the bridge, which
+ * only the page can observe. The user agent suffix is ​​there for the logs.
+ * And the worst a customer can get for lying is getting sent
+ * to an app they don't have — on HIS own session.
  */
 export function billingReturnUrl(
   origin: string,

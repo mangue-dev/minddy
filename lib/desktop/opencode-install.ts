@@ -6,52 +6,52 @@ import {
 } from "@/lib/server/agent/vm/opencode-version";
 
 /**
- * LE BINAIRE OPENCODE SUR LA MACHINE (MIN-293) — la moitié qui se décide sans
- * disque.
+ * OPENCODE'S BINARY ON THE MACHINE (MIN-293) — the half that is decided without
+ * the disk.
  *
- * ## Pourquoi c'est un PRÉ-VOL du lanceur, et pas l'affaire du harness
+ * ## Why this is a launcher PRE-FLIGHT, not a harness concern
  *
- * Le harness sait déjà s'installer tout seul : `ensureInstalled`
- * ([opencode-host.ts](../server/agent/vm/opencode-host.ts)) pose le paquet quand
- * il manque ou quand la version diverge, et c'est ce qui fait qu'une microVM sans
- * snapshot à jour tourne quand même. On ne le remplace pas — on le double, plus
- * tôt, et ce n'est pas de la redondance : **c'est une question de LOG**.
+ * The harness already knows how to install itself: `ensureInstalled`
+ * ([opencode-host.ts](../server/agent/vm/opencode-host.ts)) installs the package when
+ * it is missing or when the version diverges, which is what lets a microVM run even
+ * without an up-to-date snapshot. We do not replace it — we run it earlier as well,
+ * and this is not redundant: **it is about the LOG**.
  *
- * Une installation qui échoue à l'intérieur du harness échoue à l'endroit exact
- * où l'on n'a rien à lire — le tour n'a pas encore parlé, aucun event n'existe,
- * et le seul témoin est un `stdio` qui n'était branché nulle part avant MIN-363.
- * Faite ici, elle a un journal ([run-log.ts](run-log.ts)), un refus nommé et un
- * geste de réparation. C'est la différence entre « ça ne marche pas » et une
- * phrase qu'on peut coller dans un fil de support.
+ * An installation that fails inside the harness fails at the exact place
+ * where there is nothing to read — the turn has not spoken yet, no event exists,
+ * and the only witness is a `stdio` stream that was not connected anywhere before MIN-363.
+ * Done here, it has a log ([run-log.ts](run-log.ts)), a named refusal, and a
+ * recovery action. That is the difference between “it does not work” and a
+ * sentence you can paste into a support thread.
  *
- * ## L'inconnue que l'audit n'avait pas nommée : `npm`
+ * ## The unknown that the audit didn't name: `npm`
  *
- * `ensureInstalled` shell-out `npm i opencode-ai@…`. **Electron embarque Node,
- * pas npm.** Le launcher fournit donc un npm de repli dans le bundle signé et
- * l'exécute avec le Node d'Electron. Le npm système reste utilisable par une
- * ancienne app et le PATH utilisateur est tout de même réparé pour les shells
- * des tools, mais aucun des deux n'est requis pour amorcer OpenCode.
+ * `ensureInstalled` shells out to `npm i opencode-ai@…`. **Electron bundles Node,
+ * not npm.** The launcher therefore provides a fallback npm in the signed bundle and
+ * runs it with Electron's Node. The system npm remains available to older app
+ * installations, and the user's PATH is still repaired for tool shells, but neither
+ * is required to start OpenCode.
  *
- * ## Une fois par MACHINE, pas une fois par tour
+ * ## Once per MACHINE, not once per turn
  *
- * 144 Mo, 10,6 s d'installation. Le dossier est propre à la machine
- * (`HarnessLayout.opencodeDir` n'est PAS sous la racine du run — cf.
- * [harness-layout.ts](../server/agent/harness-layout.ts)), donc deux runs
- * simultanés le partagent, et le second tour d'un ticket ne repaie rien.
+ * 144 MB, 10.6 seconds to install. The folder is machine-specific
+ * (`HarnessLayout.opencodeDir` is NOT under the run root — cf.
+ * [harness-layout.ts](../server/agent/harness-layout.ts)), so two simultaneous runs
+ * share it, and the second turn for a ticket pays nothing again.
  *
- * ## L'entitlement qui va avec, et ce qu'il ouvre
+ * ## The entitlement that goes with it, and what it opens
  *
- * Lancer ce binaire depuis une app signée exige
+ * Running this binary from a signed app requires
  * `com.apple.security.cs.disable-library-validation`
- * ([entitlements.mac.plist](../../desktop/build/entitlements.mac.plist)) — il y
- * est écrit noir sur blanc, y compris ce qu'il coûte : **combiné à
- * `allow-dyld-environment-variables`, déjà présent pour Chromium, il fait de
- * minddy un véhicule d'héritage TCC.**
+ * ([entitlements.mac.plist](../../desktop/build/entitlements.mac.plist)) — this
+ * is documented explicitly, including the cost: **combined with
+ * `allow-dyld-environment-variables`, already present for Chromium, it makes
+ * minddy a TCC inheritance vehicle.**
  */
 
 export { OPENCODE_VERSION, opencodeBin };
 
-/** Un chemin POSIX sans doublons, qui respecte d'abord le shell déjà configuré. */
+/** A deduplicated POSIX path that preserves the already configured shell first. */
 export function localRuntimePath(current: string | undefined, discovered: readonly string[]): string {
   const ordered = [
     ...(current ?? "").split(":"),
@@ -68,7 +68,7 @@ export function localRuntimePath(current: string | undefined, discovered: readon
   return [...new Set(ordered.filter((entry) => entry.trim()))].join(":");
 }
 
-/** Script POSIX qui transforme l'exécutable Electron en commande Node/npm. */
+/** POSIX script that turns the Electron executable into a Node/npm command. */
 export function electronToolShim(executable: string, args: readonly string[] = []): string {
   const quote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`;
   return (
@@ -85,9 +85,9 @@ export interface NpmInvocation {
 }
 
 /**
- * Le npm livré avec l'app est prioritaire : il rend le premier lancement
- * indépendant de la configuration shell de la personne. Le npm système reste
- * un repli utile en développement et pour les anciennes installations.
+ * The npm bundled with the app takes priority: it makes the first launch
+ * independent of the user's shell configuration. The system npm remains a useful
+ * fallback in development and for older installations.
  */
 export function npmInvocation(opts: {
   bundledCli: string | null;
@@ -115,39 +115,38 @@ export function npmInvocation(opts: {
   };
 }
 
-/** Ce que la coquille a lu sur le disque avant de décider. */
+/** What the probe read from disk before making its decision. */
 export interface OpencodeFacts {
-  /** La version écrite dans `node_modules/opencode-ai/package.json`, ou `null`. */
+  /** The version recorded in `node_modules/opencode-ai/package.json`, or `null`. */
   readonly installedVersion: string | null;
-  /** Version du runtime des tools, installé au même endroit que le binaire. */
+  /** The tool runtime version, installed alongside the binary. */
   readonly pluginVersion: string | null;
-  /** Le binaire existe-t-il, et est-il exécutable ? */
+  /** Whether the binary exists and is executable. */
   readonly binaryPresent: boolean;
-  /** Un `npm` a-t-il été trouvé sur le `PATH` ? */
+  /** Whether an `npm` executable was found on `PATH`. */
   readonly npmAvailable: boolean;
 }
 
 export type OpencodeDecision =
-  /** Rien à faire : la bonne version est là. */
+  /** Nothing to do: the correct version is already present. */
   | { readonly action: "ready" }
   /**
-   * À installer, et la raison est portée : `missing` sur une machine neuve,
-   * `version` quand l'épingle a bougé. La distinction n'est pas décorative — la
-   * seconde vaut une ligne de journal, parce qu'elle explique dix secondes
-   * d'attente au milieu d'une mise à jour de l'app.
+   * To install, with the reason attached: `missing` on a new machine,
+   * `version` when the pin changed. The distinction is meaningful — the latter
+   * deserves a log line because it explains a ten-second wait during an app update.
    */
   | { readonly action: "install"; readonly why: "missing" | "version" }
-  /** Impossible : rien sur le disque, et rien pour l'y mettre. */
+  /** Impossible: nothing is on disk, and nothing is available to put there. */
   | { readonly action: "refuse"; readonly reason: "no_npm" };
 
 /**
- * FAUT-IL INSTALLER OPENCODE ?
+ * SHOULD OPENCODE BE INSTALLED?
  *
- * La comparaison de version compte autant que la présence, et pour la raison
- * écrite dans `ensureInstalled` : un test d'existence seul verrait le binaire
- * d'hier, le trouverait très bien, et tous les tours tourneraient sur l'ancien
- * moteur pendant que le dépôt jure le contraire — sans une ligne de log. Le
- * carnet de mesures de ce dépôt porte sur CE binaire
+ * Version comparison matters as much as presence, and for the same reason
+ * described in `ensureInstalled`: an existence check alone would accept yesterday's
+ * binary, and every turn would run on the old engine while the repository claimed
+ * otherwise — without a log line. This repository's measurement record covers THIS
+ * binary
  * ([docs/harness-opencode.md](../../docs/harness-opencode.md)), pas sur une API
  * publique.
  */
@@ -168,14 +167,14 @@ export function opencodeDecision(
 }
 
 /**
- * La commande d'installation et les chemins du dossier vivent dans
+ * The installation command and directory paths live in
  * [opencode-version.ts](../server/agent/vm/opencode-version.ts) depuis MIN-293 :
- * le harness les pose aussi, et deux écritures d'une même commande finissent par
- * ne plus poser les mêmes drapeaux. Ceux-là comptent — `--prefix` est ce qui
- * empêche `npm` de remonter l'arborescence et d'installer dans le home.
+ * the harness installs them too, and two copies of the same command can otherwise
+ * drift into using different flags. Those flags matter — `--prefix` keeps `npm` from
+ * walking up the directory tree and installing into the home directory.
  */
 
-/** La version lue dans ce manifeste, ou `null` si le paquet est là sans elle. */
+/** The version read from this manifest, or `null` if the package is present without one. */
 export function readOpencodeManifestVersion(raw: string): string | null {
   try {
     const version = (JSON.parse(raw) as { version?: unknown }).version;
@@ -186,9 +185,8 @@ export function readOpencodeManifestVersion(raw: string): string | null {
 }
 
 /**
- * La phrase du journal. Elle nomme le geste — `xcode-select --install` est
- * l'incantation qui pose `npm` sur un Mac sans chaîne d'outils, et personne ne la
- * devine.
+ * The log message. It names the action — `xcode-select --install` is the
+ * incantation that installs `npm` on a Mac without the toolchain, and no one can infer it.
  */
 export function opencodeRefusalMessage(reason: "no_npm", wanted = OPENCODE_VERSION): string {
   return (
@@ -197,7 +195,7 @@ export function opencodeRefusalMessage(reason: "no_npm", wanted = OPENCODE_VERSI
   );
 }
 
-/** Ce qu'on écrit au journal quand on s'apprête à attendre dix secondes. */
+/** What we write to the log before waiting ten seconds. */
 export function opencodeInstallNote(why: "missing" | "version", wanted = OPENCODE_VERSION): string {
   return why === "version"
     ? `installing opencode ${wanted} — the pinned version changed since the last turn`

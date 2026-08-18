@@ -33,8 +33,8 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     projectId: id,
     integrationId,
     input: (body ?? {}) as Record<string, unknown>,
-    // Une session d'owner : c'est le geste humain que MIN-341 exige pour
-    // choisir une destination de webhook.
+    // An owner session: this is the human gesture that MIN-341 requires to
+    // choose a webhook destination.
     actor: "human",
   });
   if (!result.ok) {

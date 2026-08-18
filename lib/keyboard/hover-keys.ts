@@ -1,42 +1,42 @@
 "use client";
 
-// Raccourcis clavier qui agissent sur « ce qu'il y a sous le pointeur » : les
-// pickers de champ d'une carte de ticket (S/P/E/A/L/D/O), ⇧A/⇧P sur une tâche
-// du carnet, « @ » sur une carte. Tous suivent la même règle — **la cible est
-// décidée au moment de la frappe**, en demandant au DOM qui est `:hover`.
+// Keyboard shortcuts that act on “what is under the pointer”:
+// field pickers of a ticket card (S/P/E/A/L/D/O), ⇧A/⇧P on a task
+// from the notebook, “@” on a card. All follow the same rule — **the target is
+// decided at the time of typing**, by asking the DOM which is `:hover`.
 //
-// Cette règle existe parce que l'implémentation évidente est fausse (MIN-158).
-// Garder le survol dans un state React et abonner l'écouteur depuis un
-// `useEffect` glisse un **effet passif** entre le déplacement du pointeur et le
-// déplacement de l'écouteur : React flushe ces effets après la peinture, pas à
-// la fin de l'événement souris. On passe de la carte A à la carte B, on tape
-// dans cette fenêtre, et c'est A qui écoute encore — et comme ces handlers
-// appellent `stopImmediatePropagation()`, B ne verrait pas la touche même déjà
-// abonnée. La fenêtre est invisible sur une page au repos et large sur une page
-// chargée : c'est exactement à quoi ressemble « de temps en temps, ça part sur
-// la carte d'avant ».
+// This rule exists because the obvious implementation is wrong (MIN-158).
+// Keep hover in a React state and subscribe the listener from a
+// `useEffect` slips a **passive effect** between moving the pointer and
+// moving the listener: React flushes these effects after painting, not at
+// the end of the mouse event. We go from card A to card B, we type
+// in this window, and it's A who's still listening — and like these handlers
+// call `stopImmediatePropagation()`, B wouldn't even see the key already
+// subscribed. The window is invisible on a page at rest and wide on a page
+// loaded: this is exactly what “every now and then it goes on” looks like
+// the map from before”.
 //
-// `:hover` n'a pas ce décalage : le navigateur le met à jour pendant le
-// hit-test, dans le même souffle que `mouseenter`. Il se répare aussi tout
-// seul — un `mouseleave` perdu, un élément démonté sous le curseur, un calque
-// qui recouvre la carte — là où un drapeau mémorisé resterait périmé.
+// `:hover` does not have this offset: the browser updates it during the
+// hit-test, in the same breath as `mouseenter`. It also repairs everything
+// alone — a lost `mouseleave`, an element unmounted under the cursor, a layer
+// which covers the map — where a memorized flag would remain out of date.
 
 import { useCallback, useRef } from "react";
 
 /**
- * La valeur inscrite pour le plus INTÉRIEUR des éléments survolés, ou
- * `undefined` si aucun inscrit n'est sous le pointeur.
+ * The value entered for the INNERmost of the elements hovered over, or
+ * `undefined` if no entry is under the pointer.
  *
- * `:hover` vaut pour toute l'ascendance : une tâche imbriquée dans une tâche,
- * une carte dans un panneau, sont toutes deux survolées. Prendre la plus
- * intérieure est la seule lecture qui corresponde à ce que l'utilisateur vise.
- * Le survol formant un seul chemin depuis la racine, deux inscrits survolés
- * sont toujours l'un dans l'autre : `contains` tranche à tous les coups.
+ * `:hover` is valid for the entire ancestry: a task nested in a task,
+ * a card in a panel, are both hovered over. Taking the innermost
+ * is the only reading that matches what the user is aiming for.
+ * Since hovering forms a single path from the root, two hovered entries
+ * are always one inside the other: `contains` cuts every time.
  *
- * On interroge les inscrits un par un plutôt que le document entier
- * (`querySelectorAll(":hover")`) : le coût suit le nombre de cartes montées, pas
- * la taille du DOM — et ceci tourne à CHAQUE frappe, y compris pendant qu'on
- * écrit une description.
+ * We query the registrants one by one rather than the entire document
+ * (`querySelectorAll(":hover")`): the cost follows the number of cards mounted, not
+ * the size of the DOM — and this rotates on EACH keystroke, including while writing a
+ * description.
  */
 export function innermostHovered<T>(
   registry: Map<Element, T>,
@@ -51,22 +51,21 @@ export function innermostHovered<T>(
 }
 
 /**
- * Le pointeur est-il PÉRIMÉ, c'est-à-dire posé là sans qu'on l'y ait mis pour
- * cette frappe ? Sur une surface éditable — le carnet — cette question tranche
- * seule entre « raccourci » et « lettre ».
+ * Is the pointer OUTDATED, that is to say placed there without having been put there for
+ * this keystroke? On an editable surface - the notebook - this question decides
+ * alone between "shortcut" and "letter".
  *
- * Ailleurs, il suffit de regarder la cible de l'événement : on ne prend pas la
- * touche quand elle part dans un champ (cf. `isTypingTarget`). Le carnet, lui,
- * EST un champ de bout en bout, et il prend le focus à l'ouverture : la même
- * règle y éteindrait ⇧A/⇧P pour toujours. Ce qui distingue les deux gestes
- * n'est donc pas le focus, c'est le pointeur — visé à l'instant, ou laissé là
- * pendant qu'on écrit ailleurs.
+ * Elsewhere, just look at the target of the event: we do not take the
+ * key when it goes into a field (see `isTypingTarget`). The notebook,
+ * IS an end-to-end field, and it takes focus when opened: the same
+ * rule would turn off ⇧A/⇧P forever. What distinguishes the two gestures
+ * is therefore not the focus, it is the pointer — aimed at the moment, or left there
+ * while writing elsewhere.
  *
- * D'où le drapeau : écrire périme le pointeur, le bouger le rafraîchit. Une
- * tâche survolée depuis dix minutes pendant qu'on rédige la ligne d'au-dessus
- * ne reçoit plus rien ; la viser à nouveau, même d'un frémissement, la remet en
- * jeu. C'est un booléen et pas deux horodatages : seul l'ordre des deux gestes
- * compte, jamais le délai entre eux.
+ * Hence the flag: writing expires the pointer, moving it refreshes it. A
+ * task hovered over for ten minutes while writing the line above
+ * no longer receives anything; aiming it again, even with a quiver, puts it back into play. It's a boolean and not two timestamps: only the order of the two gestures
+ * counts, never the delay between them.
  */
 let pointerStale = false;
 let pointerTrackers = 0;
@@ -74,19 +73,19 @@ const freshenPointer = () => {
   pointerStale = false;
 };
 
-/** À appeler à chaque frappe reçue par la surface éditable. */
+/** To be called on each keystroke received by the editable surface. */
 export function noteTyping(): void {
   pointerStale = true;
 }
 
-/** Vrai tant qu'on a écrit sans redéplacer le pointeur depuis. */
+/** True as long as we have written without moving the pointer since. */
 export function pointerIsStale(): boolean {
   return pointerStale;
 }
 
 /**
- * Suit les déplacements du pointeur tant que la surface éditable est montée.
- * Rend son désabonnement. Un seul écouteur, passif, qui n'écrit qu'un booléen.
+ * Tracks pointer movements as long as the editable surface is mounted.
+ * Returns unsubscription. A single listener, passive, which only writes a boolean.
  */
 export function trackPointerFreshness(): () => void {
   pointerStale = false;
@@ -113,11 +112,11 @@ function dispatch(e: KeyboardEvent) {
 }
 
 /**
- * Inscrit `handler` comme handler de survol de `el`. Rend son désabonnement.
+ * Registers `handler` as the hover handler of `el`. Returns his unsubscription.
  *
- * Un seul écouteur `keydown` pour toute l'application, monté au premier inscrit
- * et retiré au dernier : cent cartes ne font pas cent écouteurs, et il n'y a
- * plus d'ordre d'abonnement entre cartes dont dépendrait qui gagne.
+ * A single listener `keydown` for the entire application, mounted at the first registered
+ * and removed at the last: one hundred cards do not make one hundred listeners, and there is
+ * no more order of subscription between cards on which which would depend wins.
  */
 export function registerHoverKeys(
   el: Element,
@@ -133,14 +132,14 @@ export function registerHoverKeys(
 }
 
 /**
- * Exécute `handler` à chaque frappe pendant que le pointeur est sur l'élément
- * porteur du ref rendu. Rendre un **callback ref** : le poser sur l'élément (le
- * fusionner avec les autres refs qu'il porte déjà, sans rien renvoyer depuis la
- * fusion pour que React rappelle bien avec `null` au démontage).
+ * Executes `handler` on each keystroke while the pointer is on the element
+ * carrying the rendered ref. Render a **callback ref**: place it on the element (the
+ * merge with the other refs it already carries, without returning anything from the
+ * merger so that React calls back with `null` when unmounting).
  *
- * `handler` et `enabled` se lisent par ref : l'abonnement se fait une fois, au
- * montage. Rien dedans ne dépend du survol, donc rien ne peut retarder sur le
- * pointeur.
+ * `handler` and `enabled` is read by ref: the subscription is done once, at
+ * assembly. Nothing in it depends on hover, so nothing can delay on the
+ * pointer.
  */
 export function useHoverKeys(
   handler: HoverKeyHandler,

@@ -72,15 +72,15 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Ce qu'un message doit porter pour être rendu par `CommentBlock` — le
- * dénominateur commun des QUATRE fils de l'app (MIN-282).
+ * What a message must carry to be rendered by `CommentBlock` — the
+ * common denominator of the FOUR threads of the app (MIN-282).
  *
- * Les trois premiers (ticket, objectif, retour) sont des lignes de `comments` et
- * le remplissent tout entier. Le quatrième, le fil d'une page, vit dans sa
- * propre table (`page_comments`) et n'a ni pièce jointe, ni visibilité publique,
- * ni réponse @Numo en cours : d'où les optionnels. C'est cette interface, et non
- * `Comment`, qui dit ce que ce composant LIT vraiment — l'élargir est ce qui a
- * évité une quatrième copie du fil.
+ * The first three (ticket, objective, return) are lines of `comments` and
+ * fill it entirely. The fourth, the thread of a page, lives in its
+ * own table (`page_comments`) and has neither attachment nor public visibility,
+ * no @Numo response in progress: hence the optional ones. It is this interface, and not
+ * `Comment`, which says what this component actually READS — expanding it is what
+ * avoided a fourth copy of the thread.
  */
 export interface ThreadMessage {
   id: string;
@@ -100,12 +100,12 @@ export interface ThreadMessage {
 }
 
 /**
- * Une ligne de fil d'activité : un GESTE, ou un message.
+ * A line of activity thread: a GESTURE, or a message.
  *
- * `TimelineItem` (lib/use-issue-timeline.ts) en est le cas particulier des trois
- * surfaces bâties sur la table `comments` ; celui-ci accepte en plus les
- * messages d'une autre table — le fil d'une page (MIN-282), qui vit dans
- * `page_comments`. Un `Comment` remplit `ThreadMessage`, donc les anciens
+ * `TimelineItem` (lib/use-issue-timeline.ts) is the special case of the three
+ * surfaces built on the table `comments`; it also accepts
+ * messages from another table — the thread of a page (MIN-282), which lives in
+ * `page_comments`. A `Comment` fills `ThreadMessage`, so the old ones
  * appelants passent tels quels.
  */
 export type ActivityItem =
@@ -119,9 +119,9 @@ export type ActivityItem =
 
 type EventItem = Extract<ActivityItem, { kind: "event" }>;
 type CommentItem = Extract<ActivityItem, { kind: "comment" }>;
-/** Le translator du namespace `Timeline` — celui que reçoivent les helpers
- *  ci-dessous. Nommer le namespace n'est pas cosmétique : sans lui, le type
- *  couvre les 2 600 clés du catalogue et TypeScript abandonne sur un
+/** The `Timeline` namespace translator — the one the helpers receive
+ * below. Naming the namespace is not cosmetic: without it, the type
+ * covers all 2,600 keys in the catalog and TypeScript aborts on one
  *  « type instantiation is excessively deep » (TS2589). */
 type TimelineT = ReturnType<typeof useTranslations<"Timeline">>;
 /** Which entity's activity we render — picks the event describer + status set. */
@@ -198,15 +198,15 @@ function ActorAvatar({
   name: string;
   className?: string;
 }) {
-  // Un acteur hors projet (compte parti, action système) n'a pas de membre à
-  // qui emprunter sa graine : son nom fait un repli stable.
+  // An actor outside the project (party account, system action) has no member
+  // to borrow its seed: its name provides a stable fallback.
   const seed = (id ? members.find((m) => m.user_id === id)?.avatar_seed : null) ?? name;
   return <UserAvatar seed={seed} className={cn("size-5", className)} />;
 }
 
-/** Avatar de repli pour un retour venu du board dont on ne connaît pas
-    l'auteur : le board tient lieu d'acteur. Auteur connu → son propre visage,
-    celui de la fiche auteur (`authorAvatarSeed`). */
+/** Fallback avatar for a return from the board of which we do not know
+    the author: the board acts as an actor. Known author → his own face,
+    that of the author file (`authorAvatarSeed`). */
 function BoardAvatar({ className }: { className?: string }) {
   return (
     <span
@@ -303,16 +303,16 @@ function EventRow({
   const t = useTranslations("Timeline");
   const tr = useEventTranslators();
   const viaSmartAssign = !!item.event.via_smart_assign;
-  // Smart-fill (MIN-260) : mêmes règles que Smart Assign — la fonctionnalité
-  // tient lieu d'acteur. Testé AVANT `via_assistant` et compagnie pour la même
-  // raison qu'elle : l'écriture porte l'id de l'auteur du ticket, qui n'a rien
-  // fait de ces quatre propriétés.
+  // Smart-fill (MIN-260): same rules as Smart Assign — functionality
+  // takes the place of an actor. Tested BEFORE `via_assistant` and company for the same
+  // reason: the writing bears the id of the author of the ticket, which has nothing
+  // made of these four properties.
   const viaSmartFill = !viaSmartAssign && !!item.event.via_smart_fill;
-  // Automatisation de projet (MIN-147) : le run part sous le compte de l'assigné
-  // — c'est de lui que viennent la clé, le quota et la langue — mais PERSONNE
-  // n'a cliqué. Sans ce drapeau la timeline écrivait « <assigné> a lancé l'agent
-  // Numo », un geste que cette personne n'a pas fait. Acteur à part et non
-  // « Numo » : la phrase nomme déjà l'agent lancé, c'est la RÈGLE qui l'a lancé.
+  // Project automation (MIN-147): the run leaves under the account of the assignee
+  // — it’s from him that the key, the quota and the language come — but NO ONE
+  // didn't click. Without this flag the timeline wrote “<assignee> launched the agent
+  // Numo”, a gesture that this person did not make. Actor apart and not
+  // “Numo”: the sentence already names the agent launched, it is the RULE which launched it.
   const viaAutomation = !viaSmartAssign && !viaSmartFill && !!item.event.via_automation;
   const viaNumo =
     !viaSmartAssign && !viaSmartFill && !viaAutomation && !!item.event.via_assistant;
@@ -325,31 +325,31 @@ function EventRow({
     !viaNumo &&
     !viaMcp &&
     !!item.event.integration_id;
-  // Synchro des issues du dépôt lié (MIN-97) : l'écriture porte techniquement
-  // l'id du owner, mais c'est la forge qui a agi — elle tient lieu d'acteur.
+  // Synchronization of the outputs of the linked repository (MIN-97): the writing technically carries
+  // the id of the owner, but it is the forge which acted — it acts as an actor.
   const forgeSync = item.event.forge_sync
     ? getRepoProvider(item.event.forge_sync)
     : null;
-  // Action PR/MR faite directement sur le provider (webhook GitHub/GitLab) :
-  // pas d'utilisateur minddy, le login provider (from_value, préfixé `gitlab:`
-  // le cas échéant) tient lieu d'acteur, avec le logo du provider.
+  // PR/MR action done directly on the provider (GitHub/GitLab webhook):
+  // no user minddy, the login provider (from_value, prefixed `gitlab:`
+  // where applicable) acts as an actor, with the provider's logo.
   const viaForge = isForgePrEvent(item.event);
   const forgeActor = viaForge ? forgePrActor(item.event.from_value) : null;
-  // Une App de la forge (`vercel[bot]`, et le nôtre quand Numo pousse) : le nom
-  // d'un côté, la marque de bot de l'autre — jamais `[bot]` en toutes lettres.
+  // A forge App (`vercel[bot]`, and ours when Numo grows): the name
+  // on one side, the bot brand on the other — never `[bot]` in full.
   const forgeLogin = forgeActor?.login ? parseForgeLogin(forgeActor.login) : null;
-  // Soumission board (feedback) : l'auteur est un utilisateur final sans
-  // identité équipe, mais il n'est pas anonyme pour autant — le board a son
-  // email (c'est par lui qu'on le recontacte). C'est donc LUI que la ligne
-  // nomme, comme la fiche auteur du panneau ; le board ne tient lieu d'acteur
-  // que pour les rares posts sans auteur connu.
+  // Submission board (feedback): the author is an end user without
+  // team identity, but it is not anonymous - the board has its
+  // email (we contact him through him). It is therefore HIM that the line
+  // name, like the author of the panel; the board does not act as an actor
+  // only for the rare posts without a known author.
   const viaBoard =
     entity === "feedback" &&
     item.event.type === "created" &&
     item.event.field === "board";
   const boardAuthor = viaBoard ? ctx.feedbackAuthor ?? null : null;
-  // via_mcp : l'acteur affiché est l'AGENT (nom canonique + logo), pas
-  // l'utilisateur — l'action peut venir d'un workflow automatisé.
+  // via_mcp: the actor displayed is the AGENT (canonical name + logo), not
+  // the user — the action can come from an automated workflow.
   const actor = actorName(ctx.members, item.event.actor_id, t);
   const name = forgeSync
     ? forgeSync.displayName
@@ -421,7 +421,7 @@ function EventRow({
 
 /** One comment inside a card (root or reply): header, markdown body, and —
     for the author — a hover "⋯" menu with inline edit and delete.
-    Exporté depuis MIN-282 : le fil d'une page le monte tel quel. */
+    Exported from MIN-282: the thread of a page mounts it as is. */
 export function CommentBlock({
   comment,
   ctx,
@@ -433,18 +433,18 @@ export function CommentBlock({
   isReply = false,
 }: {
   comment: ThreadMessage;
-  /** Seuls les MEMBRES sont lus ici (l'auteur, son visage, les pilules de
-      mention) : le type le dit, pour qu'une surface sans objectifs ni
-      catégories — le fil d'une page — n'ait pas à fabriquer un décor vide. */
+  /** Only MEMBERS are read here (the author, his face, the pills of
+      mention): the guy says it, so that a surface without objectives or
+      categories — the thread of a page — does not have to create an empty setting. */
   ctx: Pick<EventContext, "members">;
   currentUserId: string | null;
   onEdit: (commentId: string, body: string) => Promise<void>;
   onDelete: (commentId: string) => Promise<void>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
   deletesReplies: boolean;
-  /** Message d'un fil, pas sa racine : le badge « Public » ne se répète pas à
-      chaque ligne — la racine et la teinte de la carte le disent déjà, et cinq
-      badges pour une seule idée se lisent comme du bruit. */
+  /** Message from a thread, not its root: the “Public” badge is not repeated at
+      each line — the root and the tint of the card already say it, and five
+      badges for a single idea read like noise. */
   isReply?: boolean;
 }) {
   const t = useTranslations("Timeline");
@@ -454,13 +454,13 @@ export function CommentBlock({
   const viaNumo = !!comment.via_assistant;
   const viaMcp = !viaNumo && !!comment.via_mcp;
   const author = actorName(ctx.members, comment.author_id, t);
-  // Fil public d'un retour (MIN-196). Deux nouveautés dans ce bloc, et une
-  // seule règle : ici, dans la vue d'ÉQUIPE, on NOMME le visiteur. C'est
-  // exactement l'inverse du board, où il n'est qu'un avatar — et c'est pour ça
-  // qu'on lui demande de se connecter avant d'écrire : sans identité, il n'y a
-  // personne à modérer. L'avatar, lui, reste semé sur le pseudonyme : le même
-  // visage des deux côtés, pour reconnaître d'un coup d'œil sur le board le
-  // commentaire qu'on vient de lire ici.
+  // Public thread of a return (MIN-196). Two new features in this block, and one
+  // only rule: here, in the TEAM view, we NAME the visitor. It is
+  // exactly the opposite of the board, where he is just an avatar — and that's why
+  // asked to connect before writing: without identity, there is no
+  // no one to moderate. The avatar remains sown on the pseudonym: the same
+  // face on both sides, to recognize at a glance on the board the
+  // comment we just read here.
   const visitor = comment.feedback_users ?? null;
   const isPublic = comment.visibility === "public";
   const name = viaNumo
@@ -479,10 +479,10 @@ export function CommentBlock({
     Date.now() - new Date(comment.created_at).getTime() > 5 * 60_000;
   const working = comment.assistant_status === "working" && !stale;
   const failed = comment.assistant_status === "error" || stale;
-  // Le texte en train de s'écrire arrive par le topic du commentaire, pas par la
-  // base : ~4 fois par seconde, sans refetch du fil. La ligne en base reste le
-  // repli — c'est elle que voit l'onglet ouvert en cours de route, ou celui qui
-  // a manqué une diffusion.
+  // The text being written arrives through the topic of the comment, not through the
+  // base: ~4 times per second, without thread refetch. The basic line remains the
+  // fallback — it is she who sees the tab opened along the way, or the one which
+  // missed a broadcast.
   const live = useCommentLive(comment.id, working);
   const liveTool = live ? live.tool : comment.assistant_tool;
   const liveBody = live ? live.text : comment.body;
@@ -493,20 +493,20 @@ export function CommentBlock({
   const mine = !!currentUserId && comment.author_id === currentUserId;
   const edited = comment.updated_at !== comment.created_at;
   /**
-   * Ce qu'on peut faire à ce commentaire, et les deux règles ne se recouvrent
-   * pas.
+   * What we can do to this comment, and the two rules do not overlap
+   * not.
    *
-   * SUPPRIMER un commentaire PUBLIC est ouvert à toute l'équipe, quel qu'en soit
-   * l'auteur — la règle suit l'endroit où sont les mots, pas la main qui les a
-   * tapés. Ils sont sur une page que l'équipe publie en son nom : réserver le
-   * retrait à l'auteur laissait un propos abusif en ligne jusqu'à son retour,
-   * rendait irrécupérable la réponse d'un collègue parti, et laissait les
-   * réponses d'équipe reprises par la migration — sans auteur par construction —
+   * DELETE a comment PUBLIC is open to the entire team, regardless of who they are
+   * the author — the rule follows where the words are, not the hand that wrote them
+   * typed. They are on a page that the team publishes in its name: reserve the
+   * withdrawal to the author leaving an abusive comment online until his return,
+   * made the response of a colleague who had left unrecoverable, and left the
+   * team responses taken over by the migration — without author by construction —
    * supprimables par personne.
    *
-   * ÉDITER reste à l'auteur. Réécrire les mots d'un autre sous son nom n'est pas
-   * de la modération ; et ceux d'un VISITEUR ne se réécrivent jamais. Corriger
-   * une coquille dans sa propre réponse publiée, en revanche, reste permis.
+   * EDIT remains with the author. Rewriting someone else's words under one's name is not
+   * moderation; and those of a VISITOR are never rewritten. To correct
+   * a typo in one's own published response, however, remains permitted.
    */
   const canDelete = isPublic || (mine && !viaNumo);
   const canEdit = mine && !viaNumo && !visitor;
@@ -541,9 +541,9 @@ export function CommentBlock({
           <ActorAvatar members={ctx.members} id={comment.author_id} name={author} />
         )}
         <span className="min-w-0 truncate text-sm font-medium text-foreground">{name}</span>
-        {/* Ce que ce commentaire engage, dit avant de le lire : « Public » veut
-            dire qu'il est SUR le board, lisible par tout le monde. L'absence de
-            badge est la valeur par défaut de toute l'app — une note d'équipe. */}
+        {/* What this comment commits, says before reading it: “Public” wants
+            say that it is ON the board, readable by everyone. The absence of
+            badge is the app-wide default — a team rating. */}
         {isPublic && !isReply && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -562,11 +562,11 @@ export function CommentBlock({
           <span className="shrink-0 text-xs text-muted-foreground/60">{t("edited")}</span>
         )}
         <span className="min-w-0 flex-1" />
-        {/* UN seul menu, deux règles. Il apparaît dès qu'un geste est possible :
-            supprimer (tout commentaire public, ou le sien) ou éditer (le sien
-            seulement). Les commentaires de Numo restent en lecture seule tant
-            qu'ils sont internes ; publiés, ils se retirent comme le reste — il
-            faut bien que quelqu'un puisse dépublier ce qu'un agent a publié. */}
+        {/* ONE menu, two rules. It appears as soon as a gesture is possible:
+            delete (any public comments, or his own) or edit (his
+            only). Numo's comments remain read-only until
+            that they are internal; published, they withdraw like the rest — it
+            Someone has to be able to unpublish what an agent has published. */}
         {(canEdit || canDelete) && !editing && !working && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -690,9 +690,9 @@ export function CommentBlock({
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
         title={t("deleteCommentTitle")}
-        // Supprimer un message PUBLIC ne se confirme pas comme une note d'équipe :
-        // ce qui disparaît est une page que des gens ont lue, et parfois la
-        // réponse qu'on leur avait faite. La phrase doit le dire avant le clic.
+        // Deleting a PUBLIC message does not confirm as a team note:
+        // what disappears is a page that people have read, and sometimes the
+        // response given to them. The sentence must say it before the click.
         description={
           isPublic
             ? deletesReplies
@@ -718,7 +718,7 @@ export function CommentBlock({
 
 /** Collapsed "Reply…" affordance at the bottom of a card, expanding into a
     mention-aware composer targeting the thread's root comment.
-    Exporté depuis MIN-282 : le fil d'une page répond avec le même geste. */
+    Exported from MIN-282: the thread of a page responds with the same gesture. */
 export function ReplyComposer({
   members,
   currentUserId,
@@ -733,23 +733,23 @@ export function ReplyComposer({
   projectId: string;
   rootId: string;
   /**
-   * Le fil est PUBLIC (MIN-196) : la réponse partira sur le board, sans que
-   * personne l'ait choisi ici — une réponse hérite de la visibilité de son fil,
-   * c'est le serveur qui le décide et il n'y a rien à basculer.
+   * The thread is PUBLIC (MIN-196): the response will go on the board, without
+   * no one chose it here — a response inherits the visibility of its thread,
+   * it's the server that decides and there is nothing to switch.
    *
-   * D'où ce drapeau, dont le seul rôle est de le DIRE : sans lui, le geste le
-   * plus naturel de l'écran (répondre à quelqu'un) publierait sur une page
-   * indexable dans le même costume qu'une note d'équipe.
+   * Hence this flag, whose only role is to SAY it: without it, the gesture
+   * more natural of the screen (reply to someone) would post on a page
+   * indexable in the same suit as a team note.
    */
   threadIsPublic?: boolean;
   /**
-   * Le fil accepte des PIÈCES JOINTES (MIN-282).
+   * The thread accepts ATTACHMENTS (MIN-282).
    *
-   * Faux sur une page, et ce n'est pas une simplification : une ressource pend
-   * à un ticket, à un objectif ou à un retour (`attachments_parent_ck`), donc un
-   * fichier lâché ici partirait en stockage sans jamais trouver de ligne où
-   * s'accrocher. Le document, lui, prend déjà les images et les fichiers
-   * (MIN-280) — c'est là que le geste a un sens.
+   * False on a page, and this is not a simplification: a resource hangs
+   * to a ticket, to an objective or to a return (`attachments_parent_ck`), therefore a
+   * file dropped here would go to storage without ever finding a line where
+   * hang on. The document already takes the images and files
+   * (MIN-280) — this is where the gesture has meaning.
    */
   allowAttachments?: boolean;
   onReply: (
@@ -805,8 +805,8 @@ export function ReplyComposer({
     <div
       className={cn(
         "relative flex flex-col rounded-b-lg",
-        // Le même air que le composeur en mode public : ce qui s'écrit ici part
-        // au même endroit, ça doit se ressembler.
+        // The same tune as the composer in public mode: what is written here leaves
+        // in the same place, it should look the same.
         threadIsPublic && "bg-brand/[0.03]"
       )}
       onPaste={allowAttachments ? pasteFileHandler(uploads.addFiles) : undefined}
@@ -893,7 +893,7 @@ function CommentCard({
   ctx: EventContext;
   currentUserId: string | null;
   projectId: string;
-  /** Le bandeau de tête, quand la surface en a un (cf. `commentHeader`). */
+  /** The headband, when the surface has one (see `commentHeader`). */
   header?: React.ReactNode;
   allowAttachments?: boolean;
   onReply: (
@@ -906,15 +906,15 @@ function CommentCard({
   onDeleteComment: (commentId: string) => Promise<void>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
 }) {
-  // La visibilité se lit sur la RACINE : c'est elle dont hérite toute réponse.
+  // Visibility is read on the ROOT: it is this from which any response inherits.
   const threadIsPublic = item.comment.visibility === "public";
   return (
     <li
       className={cn(
         "flex flex-col rounded-lg border bg-card",
-        // Un fil public se voit d'un coup d'œil dans une liste qui en mélange
-        // deux sortes : c'est ce qui distingue une note d'équipe d'une
-        // conversation que des gens lisent sur le board.
+        // A public thread can be seen at a glance in a list that mixes it
+        // two kinds: this is what distinguishes a team note from one
+        // conversation that people read on the board.
         threadIsPublic ? "border-brand/30" : "border-border"
       )}
     >
@@ -961,7 +961,7 @@ function CommentCard({
   );
 }
 
-/** A run of events between two comments — collapsed behind "N événements" so
+/** A run of events between two comments — collapsed behind "N events" so
     the surrounding comments stand out. */
 function EventsGroup({
   items,
@@ -1001,7 +1001,7 @@ function EventsGroup({
 }
 
 /** Groups consecutive events (delimited by comments) so comments stay isolated;
-    a run of 3+ events collapses into a "N événements" accordion. */
+    a run of 3+ events collapses into a "N events" accordion. */
 function groupRows(
   items: ActivityItem[]
 ): ({ type: "comment"; item: CommentItem } | { type: "events"; items: EventItem[] })[] {
@@ -1042,14 +1042,14 @@ export function IssueActivity({
   items: ActivityItem[];
   ctx: EventContext;
   /**
-   * Un bandeau propre à la surface, en tête de la carte d'un fil (MIN-282).
+   * A strip clean to the surface, at the head of the card of a wire (MIN-282).
    *
-   * Le fil d'une page y met ce qu'aucune autre surface n'a : l'extrait cité, le
-   * fait que le bloc commenté ait disparu, et le bouton qui résout. Rendre
-   * `null` n'ajoute rien — un ticket n'a pas de bandeau.
+   * The thread of a page puts there what no other surface has: the quoted extract, the
+   * makes the commented block disappear, and the button that resolves. Give back
+   * `null` adds nothing — a ticket has no banner.
    */
   commentHeader?: (comment: ThreadMessage) => React.ReactNode;
-  /** Cf. `ReplyComposer` : faux sur une page, où un fichier n'a pas de ligne où
+  /** Cf. `ReplyComposer`: false on a page, where a file has no line where
       s'accrocher. */
   allowAttachments?: boolean;
   currentUserId: string | null;
@@ -1138,13 +1138,13 @@ export function CommentComposer({
 }: {
   members: Member[];
   projectId: string;
-  /** Cf. `ReplyComposer` : faux sur une page, où un fichier n'a pas de ligne
-      où s'accrocher (MIN-282). */
+  /** Cf. `ReplyComposer`: false on a page, where a file has no line
+      where to hang on (MIN-282). */
   allowAttachments?: boolean;
-  /** Le libellé du champ vide, quand « Écrire un commentaire… » ne dit pas ce
-      qu'on est en train de faire (commenter un PASSAGE, par exemple). */
+  /** The wording of the empty field, when “Write a comment…” does not say this
+      that we are doing (commenting on a PASSAGE, for example). */
   placeholder?: string;
-  /** Le libellé du bouton d'envoi, même raison. */
+  /** The submit button wording, same reason. */
   submitLabel?: string;
   autoFocus?: boolean;
   onSubmit: (
@@ -1154,13 +1154,13 @@ export function CommentComposer({
     visibility: CommentVisibility
   ) => Promise<void>;
   /**
-   * Le fil d'un retour peut être adressé à deux publics (MIN-196) : on offre
-   * alors la bascule. Absente ailleurs — un ticket ou un objectif n'a pas de
-   * page publique, et une bascule qui n'a qu'une position est un mensonge.
+   * The feedback thread can be addressed to two audiences (MIN-196): we offer
+   * then the seesaw. Absent elsewhere — a ticket or objective has no
+   * public page, and a toggle that only has one position is a lie.
    *
-   * `disabledReason` (board non publié) garde la bascule VISIBLE mais éteinte,
-   * avec sa raison : la faire disparaître laisserait croire que les retours ne
-   * se répondent pas, alors qu'il manque un réglage à deux écrans d'ici.
+   * `disabledReason` (unpublished board) keeps the toggle VISIBLE but off,
+   * with its reason: making it disappear would suggest that the returns
+   * do not respond to each other, while a setting two screens away from here is missing.
    */
   publicOption?: { disabledReason?: string };
 }) {
@@ -1180,17 +1180,17 @@ export function CommentComposer({
     try {
       await onSubmit(
         draft.trim(),
-        // Un commentaire public n'emporte pas de mention : il s'adresse à qui a
-        // écrit le retour, pas à un collègue.
+        // A public comment does not carry any mention: it is addressed to those who have
+        // write the return, not to a colleague.
         isPublic ? [] : extractMentions(draft, members),
         uploads.inputs,
         visibility
       );
       setDraft("");
       uploads.clear();
-      // Retour à « interne » après chaque envoi. Les deux erreurs possibles ne
-      // se valent pas : une note d'équipe écrite en interne par mégarde ne
-      // coûte rien et se répare, un mot publié par mégarde a déjà été lu.
+      // Return to “internal” after each sending. The two possible errors
+      // are not equal: a team note written internally by mistake is not
+      // costs nothing and can be repaired, a word published inadvertently has already been read.
       setVisibility("internal");
     } catch (e) {
       toast.error((e as Error).message);
@@ -1204,9 +1204,9 @@ export function CommentComposer({
       className={cn(
         "relative w-full rounded-lg border border-border bg-card transition-colors focus-within:border-ring",
         allowAttachments && drop.dragging && "border-brand",
-        // Le composeur CHANGE D'AIR quand ce qu'on écrit part sur le board.
-        // Une pastille discrète se rate ; la bordure du champ, non — et c'est
-        // la seule chose que regarde quelqu'un en train de taper.
+        // The composer CHANGES AIR when what we write goes onto the board.
+        // A discreet pellet is missed; the edge of the field, no — and it is
+        // the only thing someone is looking at while typing.
         isPublic && "border-brand/50 bg-brand/[0.03]"
       )}
       onPaste={allowAttachments ? pasteFileHandler(uploads.addFiles) : undefined}
@@ -1280,13 +1280,13 @@ export function CommentComposer({
 }
 
 /**
- * À qui on écrit : à l'équipe, ou au board (MIN-196).
+ * Who we write to: the team, or the board (MIN-196).
  *
- * Un seul bouton qui bascule, pas deux onglets — il n'y a que deux positions,
- * et celle qui compte est celle qu'on QUITTE. Éteint, il dit « Interne » au
- * gris de tout le reste de l'écran ; allumé, il porte le globe et la couleur
- * de marque, exactement la même que le badge des commentaires publics du fil
- * juste au-dessus : le bouton et son résultat se ressemblent.
+ * One toggle button, not two tabs — there are only two positions,
+ * and the one that counts is the one we LEAVE. When turned off, it says “Internal” to
+ * gray of everything else on the screen; lit, it carries the globe and the color
+ * branded, exactly the same as the thread's public comments badge
+ * just above: the button and its result look similar.
  */
 function VisibilityToggle({
   visibility,
@@ -1296,7 +1296,7 @@ function VisibilityToggle({
 }: {
   visibility: CommentVisibility;
   onChange: (next: CommentVisibility) => void;
-  /** Board non publié : le geste n'a nulle part où aboutir, on dit pourquoi. */
+  /** Unpublished board: the gesture has nowhere to end, we say why. */
   disabledReason?: string;
   disabled?: boolean;
 }) {
@@ -1323,9 +1323,9 @@ function VisibilityToggle({
   );
   return (
     <Tooltip>
-      {/* `span` porteur : un bouton désactivé n'émet pas les événements de
-          survol dont l'infobulle a besoin — et c'est justement désactivé
-          qu'elle a le plus à dire. */}
+      {/* `span` carrier: a disabled button does not emit the events of
+          hover that the tooltip needs — and it’s precisely disabled
+          that she has the most to say. */}
       <TooltipTrigger asChild>
         <span className="flex">{button}</span>
       </TooltipTrigger>

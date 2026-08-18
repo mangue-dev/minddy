@@ -4,16 +4,15 @@ import { Check, ShieldAlert } from "lucide-react";
 import { OAuthLogoPair } from "@/components/oauth/logo-pair";
 
 /**
- * Carte de consentement OAuth — présentationnelle, rendue par la page
+ * OAuth consent card — presentational, rendered by the page
  * /oauth/authorize.
  *
- * Ce que l'écran doit dire, et ne disait pas (MIN-346) : l'inscription des
- * clients est OUVERTE, donc `client_name` est une chaîne que n'importe qui
- * choisit. La carte affichait ce nom sous le vrai logo du vendeur homonyme,
- * sans jamais montrer l'adresse à laquelle le compte allait partir. On montre
- * maintenant l'adresse de retour en clair — c'est la seule chose de cet écran
- * que l'utilisateur puisse effectivement reconnaître —, on dit que le nom
- * n'est pas vérifié, et on énumère ce que le scope unique accorde vraiment.
+ * What the screen should say, and did not say (MIN-346): client registration is OPEN, so `client_name` is a string that anyone
+ * chooses. The card displayed this name under the real logo of the seller of the same name,
+ * without ever showing the address to which the account would go. We now show
+ * the return address in plain text — it's the only thing on this
+ * screen that the user can actually recognize —, we say that the name
+ * is not verified, and we list what the unique scope really grants.
  */
 export interface ConsentFormFields {
   clientId: string;
@@ -74,8 +73,8 @@ export async function OAuthConsentCard({
                 : t("redirectToUnknownHost")}
             </span>
           </p>
-          {/* L'URI entière, jamais tronquée : c'est le seul élément vérifiable
-              de l'écran. `break-all` parce qu'un callback n'a pas d'espaces. */}
+          {/* The entire URI, never truncated: this is the only verifiable
+ element on the screen. `break-all` because a callback has no spaces. */}
           <p className="break-all rounded-lg bg-background/70 px-2.5 py-1.5 font-mono text-xs text-muted-foreground">
             {fields.redirectUri}
           </p>
@@ -110,9 +109,9 @@ export async function OAuthConsentCard({
   );
 }
 
-/** Hôte de l'URI de retour, quand elle en a un. Un schéma privé d'app native
-    (`cursor://…`, `com.example.app:/cb`) n'en a pas toujours : dans ce cas on
-    ne prétend pas en nommer un, l'URI complète en dessous fait le travail. */
+/** Host of the return URI, when it has one. A private native app schema
+ (`cursor://…`, `com.example.app:/cb`) doesn't always have one: in this case on
+ doesn't pretend to name one, the full URI below does the job. */
 function hostOf(uri: string): string | null {
   try {
     return new URL(uri).host || null;

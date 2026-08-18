@@ -1,60 +1,58 @@
 /**
- * L'INVARIANT DES RUNS À CONTENU TIERS (MIN-360) — un module PUR, sans une seule
- * importation, parce qu'il est lu à trois endroits qui ne se connaissent pas : le
- * lancement, l'écriture de la ligne, et l'émission du bail.
+ * THE THIRD-PARTY CONTENT RUNS INVARIANT (MIN-360) — a PURE module, without a single
+ * import, because it is read in three places that do not know each other: the
+ * launch, the line write, and the lease issue.
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * CE QU'IL DIT, ET POURQUOI IL NE SE NÉGOCIE PAS
+ * ─────────────────────── ─────────────────────── ───────────────────────────────
+ * WHAT IT SAYS, AND WHY IT DOES NOT TRADE
  *
- * **Un run dont le contexte n'a pas été écrit par la personne qui lance ne part
- * jamais sur une machine locale.** L'ancrage `pr`, un webhook de forge, une
- * mention externe, une routine, une chaîne, le board public de feedback : dans
- * tous ces cas, le texte que le modèle lit est du **texte d'attaquant potentiel**.
+ * **A run whose context has not been written by the person running it never leaves
+ * on a local machine.** The `pr` anchor, a forge webhook, a
+ * mention external, a routine, a string, the public feedback board: in
+ * all these cases, the text that the model reads is **potential attacker text**.
  *
- * Le dépôt le reconnaît déjà ailleurs, et c'est ce précédent qui fixe la règle :
- * une session de relecture sur un fork ne reçoit qu'un token `contents: read`,
- * parce qu'« une injection de prompt depuis le fork suffisait à le lire et à
- * l'exfiltrer » ([repo-access.ts](repo-access.ts)). En microVM, cette injection
- * coûte une VM jetable. **En local, c'est un shell sur la machine du
- * développeur.**
+ * The repository already recognizes it elsewhere, and it is this precedent which sets the rule:
+ * a review session on a fork only receives one token `contents: read`,
+ * because “a prompt injection from the fork was enough to read it and
+ * exfiltrate it” ([repo-access.ts](repo-access.ts)). In microVM, this injection
+ * costs a disposable VM. **Locally, it's a shell on the developer's machine.**
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * LE PRÉDICAT EST LA SOURCE DU DÉCLENCHEMENT, JAMAIS `job.interactive`
+ * ─────────────────────── ──────────────────────── ──────────────────────────────
+ * THE PREDICATE IS THE SOURCE OF TRIGGER, NEVER `job.interactive`
  *
- * `interactive` vaut `!run.routine_id`. Il est donc **vrai** pour une relecture de
- * pull request déclenchée par un webhook — c'est-à-dire précisément le cas le plus
- * dangereux de la liste. Cette confusion-là est la raison d'être du module : le
- * bon test existait déjà à moitié dans `localExecRequested`, et un `if` recopié
- * ailleurs aurait fini par ne plus vouloir dire la même chose.
+ * `interactive` is `!run.routine_id`. It is therefore **true** for a replay of
+ * pull request triggered by a webhook — that is, precisely the most dangerous case on the list. This confusion is the reason for the module: the
+ * good test already existed half in `localExecRequested`, and a `if` copied
+ * elsewhere would have ended up no longer meaning the same thing.
  */
 
-/** D'où vient le déclenchement, tel que `agent_runs.triggered_by` l'enregistre. */
+/** Where the trigger came from, as `agent_runs.triggered_by` records it. */
 export type LocalRunTrigger = "button" | "chat" | "mention" | "automation" | "routine";
 
-/** Ce qu'il faut savoir d'un run pour dire s'il peut jouer sur une machine. */
+/** What you need to know about a run to tell if it can play on a machine. */
 export interface LocalRunContext {
   triggeredBy: LocalRunTrigger | string;
   routineId?: string | null;
   chainId?: string | null;
-  /** L'ancrage `pr` — une relecture lit un diff et des commentaires de fork. */
+  /** The `pr` anchor — a replay reads a diff and fork comments. */
   pullRequestId?: string | null;
 }
 
-/** Pourquoi ce run ne peut pas jouer sur une machine locale. */
+/** Why can't this run play on a local machine. */
 export type LocalRunScopeRefusal = "pull_request" | "routine" | "chain" | "trigger";
 
 export type LocalRunScope = { ok: true } | { ok: false; reason: LocalRunScopeRefusal };
 
 /**
- * CE RUN PEUT-IL, PAR SA NATURE, JOUER SUR UNE MACHINE LOCALE ?
+ * CAN THIS RUN, BY ITS NATURE, PLAY ON A LOCAL MACHINE?
  *
- * Une liste FERMÉE de sources autorisées, jamais une liste de sources interdites :
- * la porte d'entrée qu'on ajoutera l'an prochain doit être refusée par défaut, pas
- * autorisée par oubli.
+ * A CLOSED list of authorized sources, never a list of prohibited sources:
+ * the entry point that we will add next year must be refused by default, not
+ * authorized by oversight.
  *
- * `mention` est exclu volontairement, et ce n'est pas un excès de prudence : une
- * mention peut venir d'un commentaire de forge recopié par un webhook, et rien à
- * cet endroit ne distingue les deux.
+ * `mention` is excluded voluntarily, and this is not an excess of caution: a
+ * mention may come from a forge comment copied by a webhook, and nothing in
+ * this place does not distinguish the two.
  */
 export function localRunScope(ctx: LocalRunContext): LocalRunScope {
   if (ctx.pullRequestId) return { ok: false, reason: "pull_request" };
@@ -66,8 +64,8 @@ export function localRunScope(ctx: LocalRunContext): LocalRunScope {
   return { ok: true };
 }
 
-/** La même question posée d'une LIGNE `agent_runs` — pour les surfaces qui lisent
- *  la base plutôt que l'entrée d'un lancement (l'émission du bail). */
+/** The same question asked of a LINE `agent_runs` — for surfaces that read
+ * the base rather than the entry of a launch (issuance of the lease). */
 export function rowMayRunLocally(row: {
   triggered_by?: string | null;
   routine_id?: string | null;

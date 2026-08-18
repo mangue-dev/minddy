@@ -11,12 +11,12 @@ import { canonicalAppOrigin } from "@/lib/server/app-origin";
 /**
  * GET /api/git/github/setup — Setup URL de l'app GitHub (MIN-47).
  *
- * Après que l'utilisateur a installé l'app minddy sur un compte/dépôt, GitHub
- * redirige ici avec `installation_id`, `setup_action` et notre `state` signé. Le
- * `state` dit vers quel projet revenir ; c'est la SESSION qui dit sous quel
+ * After the user installs the minddy app on an account/repository, GitHub
+ * redirects here with `installation_id`, `setup_action` and our signed `state`. THE
+ * `state` says which project to return to; it is the SESSION which says under what
  * compte enregistrer l'installation (MIN-324 — cf. callback-session.ts). On
- * vérifie les deux, on enregistre la connexion au niveau compte, puis on renvoie
- * l'utilisateur vers les paramètres du projet pour choisir un dépôt.
+ * checks both, we save the connection at account level, then we return
+ * the user to the project settings to choose a repository.
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
   const state = verifyGitLinkState(searchParams.get("state"));
   const installationIdRaw = searchParams.get("installation_id");
 
-  // Sans state valide on ne sait pas où revenir : retour aux paramètres du compte.
+  // Without a valid state we don't know where to return: return to account settings.
   if (!state) {
     return applyCookies(
       NextResponse.redirect(new URL("/settings?tab=git&git=error", origin)),
@@ -34,10 +34,10 @@ export async function GET(request: NextRequest) {
   }
 
   const isAccount = state.projectId === ACCOUNT_CONNECT_PROJECT;
-  // Une install initiée depuis le wizard de création (MIN-62) revient sur
-  // /home : à ce stade le projet n'existe pas encore, c'est le brouillon en
-  // session qui rouvre le wizard là où il en était. Sinon, retour aux
-  // paramètres git du projet (ou du compte).
+  // An install initiated from the creation wizard (MIN-62) returns to
+  // /home: at this stage the project does not yet exist, it is the draft in
+  // session which reopens the wizard where it left off. Otherwise, return to
+  // git settings of the project (or account).
   const isWizard = isAccount && state.origin === "wizard";
   const base = isWizard
     ? "/home?setup=git"
@@ -45,8 +45,8 @@ export async function GET(request: NextRequest) {
       ? "/settings?tab=git"
       : `/projects/${state.projectId}/settings?tab=git`;
 
-  // Un `state` valide n'est pas une identité : son porteur l'a peut-être minté
-  // depuis un autre compte. Sans session correspondante, on n'écrit rien.
+  // A valid `state` is not an identity: its bearer may have minted it
+  // from another account. Without a corresponding session, nothing is written.
   if (!sessionMatchesState(sessionUserId, state.userId)) {
     return applyCookies(
       NextResponse.redirect(new URL(`${base}&git=error`, origin)),
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
 
   const installationId = installationIdRaw ? Number(installationIdRaw) : NaN;
   if (!Number.isFinite(installationId) || installationId <= 0) {
-    // setup_action === 'request' (approbation org en attente) ou install annulée.
+    // setup_action === 'request' (org approval pending) or install canceled.
     return applyCookies(
       NextResponse.redirect(new URL(`${base}&git=error`, origin)),
     );
@@ -64,16 +64,16 @@ export async function GET(request: NextRequest) {
   try {
     const account = await getInstallationAccount(installationId);
     const connectionId = await upsertGithubConnection({
-      // `state.userId` plutôt que `sessionUserId` : la garde ci-dessus les a
-      // rendus égaux, et celui-ci est typé `string`.
+      // `state.userId` rather than `sessionUserId`: the guard above has them
+      // made equal, and this is typed `string`.
       userId: state.userId,
       installationId,
       accountLogin: account?.login ?? null,
       accountType: account?.type ?? null,
       repositorySelection: account?.repositorySelection ?? null,
     });
-    // Le wizard a besoin de l'id de connexion pour ouvrir le sélecteur de dépôt
-    // au retour ; les paramètres du compte, eux, n'en font rien.
+    // The wizard needs the login id to open the repository selector
+    // on the return; the account settings don't do anything about it.
     const suffix =
       isAccount && !isWizard
         ? "&git=connected"
@@ -82,8 +82,8 @@ export async function GET(request: NextRequest) {
       NextResponse.redirect(new URL(`${base}${suffix}`, origin)),
     );
   } catch (err) {
-    // Y compris `GithubInstallationOwnedByAnotherUserError` : l'écran dit
-    // « erreur », et rien de plus — surtout pas à qui l'installation appartient.
+    // Including `GithubInstallationOwnedByAnotherUserError`: the screen says
+    // “error”, and nothing more — especially not who owns the installation.
     console.error("[git/github/setup] failed:", err);
     return applyCookies(
       NextResponse.redirect(new URL(`${base}&git=error`, origin)),

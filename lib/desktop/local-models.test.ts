@@ -6,14 +6,14 @@ import {
   parseDiscoveredModels,
 } from "./local-models";
 
-describe("découverte des modèles locaux", () => {
+describe("local model discovery", () => {
   it("emploie l'API native /api/tags d'Ollama, même si le chat passe par /v1", () => {
     expect(
       localModelDiscoveryUrl({ provider: "ollama", baseUrl: "http://127.0.0.1:11434/v1" }),
     ).toBe("http://127.0.0.1:11434/api/tags");
   });
 
-  it("emploie /models pour un endpoint OpenAI-compatible", () => {
+  it("uses /models for an OpenAI-compatible endpoint", () => {
     expect(
       localModelDiscoveryUrl({ provider: "local_openai", baseUrl: "http://localhost:1234/v1" }),
     ).toBe("http://localhost:1234/v1/models");

@@ -42,21 +42,21 @@ import {
  * half-edited plan). The markdown is the single source of truth — every task
  * interaction rewrites one line and commits the full document (lib/plan.ts).
  *
- * Plan vide : trois façons de le remplir — laisser un agent Numo le cadrer,
- * copier le prompt pour un agent externe (MCP), ou l'écrire à la main. Les deux
- * premières sont optionnelles : le panneau ne les passe que quand elles ont un
- * sens (agents autorisés + dépôt lié pour Numo).
+ * Empty shot: three ways to fill it — let a Numo agent frame it,
+ * copy the prompt for an external agent (MCP), or write it by hand. Both
+ * first are optional: the panel only passes them when they have a
+ * meaning (authorized agents + linked deposit for Numo).
  *
- * Plan rempli : le plan est écrit, la suite est de l'IMPLÉMENTER — c'est le
- * bouton principal, en tête de l'onglet. En dessous, les deux façons de le
- * reprendre d'abord : le faire vérifier point par point par Numo, ou copier un
- * prompt pour un agent externe (au choix : implémenter, ou vérifier le plan).
+ * Completed plan: the plan is written, the next step is to IMPLEMENT it — that’s the
+ * main button, at the head of the tab. Below, the two ways to
+ * take it again first: have it checked point by point by Numo, or copy a
+ * prompt for an external agent (choice: implement, or verify the plan).
  *
- * Travail commencé (au moins une tâche cochée) : le bouton principal devient
- * « Vérifier l'implémentation » — relire ce qui a été fait face au plan et aux
- * commentaires, corriger les vrais bugs. Le menu des prompts, lui, ne remplace
- * rien : il gagne une entrée, pour qu'un plan à moitié fait laisse encore copier
- * le prompt d'implémentation.
+ * Work started (at least one task checked): the main button becomes
+ * “Check the implementation” — reread what was done against the plan and
+ * comments, fix real bugs. The prompt menu does not replace
+ * nothing: he gains an entry, so that a half-made plan still leaves room for copying
+ * the implementation prompt.
  */
 export function IssuePlan({
   plan,
@@ -70,17 +70,17 @@ export function IssuePlan({
 }: {
   plan: string | null;
   onCommit: (plan: string | null) => void;
-  /** Ouvre le composer d'agent avec un prompt « écris / vérifie le plan ». */
+  /** Opens the agent composer with a “write/verify plan” prompt. */
   onWriteWithAgent?: () => void;
-  /** Copie le prompt « écris / vérifie le plan » pour un agent externe. */
+  /** Copies the “write/verify plan” prompt to an external agent. */
   onCopyPrompt?: () => void;
-  /** Ouvre le composer d'agent avec le prompt « implémente le ticket ». */
+  /** Opens the agent composer with the prompt “implements ticket”. */
   onImplementWithAgent?: () => void;
-  /** Copie le prompt « implémente le ticket » pour un agent externe. */
+  /** Copies the “implement ticket” prompt to an external agent. */
   onCopyImplementPrompt?: () => void;
-  /** Ouvre le composer d'agent avec le prompt « vérifie l'implémentation ». */
+  /** Opens the agent composer with the "check implementation" prompt. */
   onVerifyWithAgent?: () => void;
-  /** Copie le prompt « vérifie l'implémentation » pour un agent externe. */
+  /** Copies the "check implementation" prompt for an external agent. */
   onCopyVerifyPrompt?: () => void;
 }) {
   const t = useTranslations("Plan");
@@ -92,13 +92,13 @@ export function IssuePlan({
   const { segments, progress } = useMemo(() => parsePlan(plan), [plan]);
   const percent =
     progress.total === 0 ? 0 : Math.round((progress.done / progress.total) * 100);
-  // Un plan avec des tâches se VÉRIFIE ; du markdown sans tâche (de la prose
-  // seule) reste à écrire — même définition que `hasPlanTasks`, pour que les
-  // libellés collent aux prompts que les callbacks déclenchent.
+  // A plan with tasks CHECKS; markdown without stain (prose
+  // only) remains to be written — same definition as `hasPlanTasks`, so that the
+  // labels stick to the prompts that the callbacks trigger.
   const reviewing = progress.total > 0;
-  // Au moins une tâche cochée = du travail a été fait, donc il y a quelque chose
-  // à vérifier. Les tâches annulées et les questions ne comptent pas (parsePlan
-  // les exclut déjà de `done`) : elles ne sont pas du code écrit.
+  // At least one task checked = work has been done, so there is something
+  // to be checked. Canceled tasks and questions don't count (parsePlan
+  // already excludes them from `done`): they are not written code.
   const started = progress.done > 0;
 
   const startEditing = () => {
@@ -124,9 +124,9 @@ export function IssuePlan({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
-            // L'éditeur de plan est un DOCUMENT, pas un message : Entrée y fait
-            // une ligne quel que soit le réglage de compte, d'où l'appel sans
-            // mode — mais la définition du geste reste la seule de l'app.
+            // The plan editor is a DOCUMENT, not a message: Enter done
+            // a line regardless of the account setting, hence the call without
+            // mode — but the definition of the gesture remains the only one in the app.
             if (isSendShortcut(e)) {
               e.preventDefault();
               saveDraft();
@@ -158,8 +158,8 @@ export function IssuePlan({
       <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-6 py-10 text-center">
         <p className="text-sm font-medium">{t("emptyTitle")}</p>
         <p className="max-w-sm text-xs text-muted-foreground">{t("emptyHint")}</p>
-        {/* Les deux façons de faire écrire le plan, puis — en retrait — celle
-            qui consiste à l'écrire soi-même. */}
+        {/* The two ways of having the plan written, then - behind - the one
+ which consists of writing it yourself. */}
         {(onWriteWithAgent || onCopyPrompt) && (
           <div className="flex flex-wrap items-center justify-center gap-2">
             {onWriteWithAgent && (
@@ -169,7 +169,7 @@ export function IssuePlan({
               </Button>
             )}
             {onCopyPrompt && (
-              // Le libellé ne dit pas QUEL prompt : l'infobulle le dit.
+              // The wording does not say WHICH prompt: the tooltip says so.
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="outline" size="sm" onClick={onCopyPrompt}>
@@ -218,13 +218,12 @@ export function IssuePlan({
         </Button>
       </div>
 
-      {/* Ce qu'on fait d'un plan écrit. L'implémenter est l'action attendue —
-          seul bouton plein, remplacé par « Vérifier l'implémentation » dès qu'une
-          tâche est cochée : le travail a commencé, ce qu'on veut alors est de le
-          relire ; en dessous, les deux façons de reprendre le plan lui-même.
-          Numo n'apparaît que là où il peut travailler (le panneau ne passe ses
-          callbacks que dans ce cas) ; les prompts copiables, eux, servent
-          les agents externes et restent toujours là. */}
+      {/* What you do with a written plan. Implementing it is the expected action —
+ only full button, replaced by “Check implementation” as soon as a
+ task is checked: the work has started, what we then want is to re-read it; below, the two ways to resume the plan itself.
+ Numo only appears where it can work (the panel only passes its
+ callbacks in this case); Copyable prompts serve
+ external agents and always remain there. */}
       {(onImplementWithAgent ||
         onVerifyWithAgent ||
         onWriteWithAgent ||
@@ -249,10 +248,10 @@ export function IssuePlan({
             {onWriteWithAgent && (
               <Button
                 variant="outline"
-                // `grow basis-*` plutôt que `flex-1` : les boutons partagent la
-                // ligne quand elle est assez large, sans jamais rogner leur
-                // libellé (le composant est `shrink-0`) — sinon ils passent à la
-                // ligne, chacun sur toute la largeur.
+                // `grow basis-*` rather than `flex-1`: the buttons share the
+                // line when it is wide enough, without ever trimming their
+                // label (the component is `shrink-0`) — otherwise they go to the
+                // line, each across the entire width.
                 className="grow basis-40"
                 onClick={onWriteWithAgent}
               >
@@ -263,8 +262,8 @@ export function IssuePlan({
             {(onCopyPrompt ||
               onCopyImplementPrompt ||
               (started && onCopyVerifyPrompt)) && (
-              // Le libellé ne dit pas QUEL prompt : le menu le demande — les
-              // mêmes façons de travailler le ticket que le menu « ⋯ ».
+              // The wording does not say WHICH prompt: the menu asks for it — the
+              // same ways of working on the ticket as the “⋯” menu.
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="grow basis-32">

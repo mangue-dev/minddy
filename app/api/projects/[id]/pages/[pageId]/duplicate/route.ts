@@ -8,16 +8,16 @@ import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
 type RouteContext = { params: Promise<{ id: string; pageId: string }> };
 
 /**
- * POST /api/projects/[id]/pages/[pageId]/duplicate — copier une page.
+ * POST /api/projects/[id]/pages/[pageId]/duplicate — copy a page.
  *
- * RÉCURSIF, comme la corbeille : une page est un arbre, et dupliquer la racine
- * sans ses sous-pages rendrait une copie amputée dont les blocs pointent vers
- * les enfants de l'ORIGINAL. Les liens internes à la branche sont réécrits vers
- * la copie (`remapSubpages`), ceux qui sortent de la branche sont laissés tels
+ * RECURSIVE, like the recycle bin: a page is a tree, and duplicate the root
+ * without its subpages would render an amputated copy whose blocks point to
+ * the children of the ORIGINAL. Internal branch links are rewritten to
+ * copy (`remapSubpages`), those that exit the branch are left as they are
  * quels.
  *
- * Rend la page racine de la copie, corps compris : c'est d'elle que le bloc
- * sous-page tire son `pageId`.
+ * Returns the root page of the copy, body included: it is from it that the block
+ * subpage gets its `pageId`.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { pageId } = await params;
@@ -25,9 +25,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  // Le geste le plus multiplicateur du wiki : une branche entière copiée par
-  // appel, corps compris. Plus serré que la création simple, pour la même
-  // raison qui le rend pratique (MIN-348).
+  // The most multiplier gesture on the wiki: an entire branch copied by
+  // call, body included. Tighter than simple creation, for the same
+  // reason which makes it practical (MIN-348).
   const refused = rateLimitRefusal(auth.user.id, "page-duplicate", { limit: 10 });
   if (refused) return refused;
 

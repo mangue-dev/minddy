@@ -1,10 +1,10 @@
 /**
- * Combien de temps un élément supprimé reste rattrapable (MIN-133).
+ * How long a deleted item remains retrievable (MIN-133).
  *
- * Module à part, sans `server-only` ni `"use client"` : la valeur est lue des
- * DEUX côtés — par le balayage nocturne qui efface pour de bon
- * (lib/server/retention.ts) et par les phrases qui promettent le délai à
- * l'écran (« restaurable pendant 30 jours »). Les laisser vivre séparément,
- * c'est se garantir qu'un jour l'app promet un délai que le cron ne tient plus.
+ * Separate module, without `server-only` nor `"use client"`: the value is read from
+ * BOTH sides — by the nightly scan which erases for good
+ * (lib/server/retention.ts) and by the sentences that promise the delay to
+ * the screen ("restoreable for 30 days"). Letting them live separately,
+ * is guaranteeing that one day the app promises a deadline that the cron no longer keeps.
  */
 export const TRASH_RETENTION_DAYS = 30;

@@ -6,15 +6,15 @@ import { Popover, PopoverContent, PopoverTrigger } from "mangue-ui";
 import { Info } from "lucide-react";
 
 /**
- * Le petit ⓘ qui ouvre l'explication détaillée — il SORT la prose des réglages.
+ * The little ⓘ that opens the detailed explanation — it OUTs the prose of the settings.
  *
- * Un écran de réglages se lit d'un coup d'œil : ce qui est allumé, ce qui est
- * choisi, ce que ça coûte. Le paragraphe qui explique pourquoi a sa place, mais
- * pas entre l'interrupteur et le suivant — sinon on ne voit plus l'organisation
- * de la page, seulement du texte. Il vit donc ici, à un clic.
+ * A settings screen can be read at a glance: what is on, what is
+ * chosen, what it costs. The paragraph which explains why has its place, but
+ * not between the switch and the next one — otherwise we no longer see the organization
+ * of the page, only the text. So it lives here, one click away.
  *
- * Né dans les réglages Feedback, extrait pour les Automatisations : deux écrans
- * qui affichent la même chose doivent l'afficher pareil.
+ * Born in the Feedback settings, extracted for Automations: two screens
+ * that display the same thing should display it the same.
  */
 export function HelpHint({ children }: { children: ReactNode }) {
   const t = useTranslations("Settings");

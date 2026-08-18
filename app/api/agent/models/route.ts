@@ -5,10 +5,10 @@ import { getAgentModelsForUser } from "@/lib/server/agent/models-catalog";
 import { capability } from "@/lib/server/capabilities";
 
 /**
- * Index des modèles pour le picker de l'agent (MIN-46), résolu selon le provider
- * ACTIF du compte. La logique (résolution provider, listing, cache) vit dans
- * `lib/server/agent/models-catalog.ts` — partagée avec le tool `list_agent_models`
- * de Numo. Cette route n'est plus qu'une façade HTTP authentifiée.
+ * Model index for agent picker (MIN-46), resolved according to provider
+ * Account ASSET. The logic (resolution provider, listing, cache) lives in
+ * `lib/server/agent/models-catalog.ts` — shared with the `list_agent_models` tool
+ * by Numo. This route is now just an authenticated HTTP front.
  */
 
 export const runtime = "nodejs";

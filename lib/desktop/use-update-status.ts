@@ -9,29 +9,29 @@ import {
 } from "@/lib/desktop/update-status";
 
 /**
- * Où en est la mise à jour de la coquille, dans un composant (MIN-353).
+ * Where is the shell update, in a component (MIN-353).
  *
- * **Rend `idle` partout ailleurs** : dans le navigateur il n'y a pas de pont, et
- * pendant le rendu serveur il n'y a pas de `window`. C'est ce qui permet à
- * l'appelant de ne rien tester d'autre que l'état — une mise à jour de la
- * coquille n'existe simplement pas sur le web.
+ * **Renders `idle` everywhere else**: in the browser there is no bridge, and
+ * during server rendering there is no `window`. This is what allows
+ * the caller to test nothing other than the state — an update to the
+ * shell simply does not exist on the web.
  *
- * ⚠ **On se DÉSABONNE.** Le pont rend son désabonnement et il faut le rendre :
- * un `ipcRenderer.on` laissé derrière survit au démontage, et la barre latérale
- * se remonte à chaque bascule de mode. C'est le défaut de la PR 48, à
- * l'identique — un abonnement qu'on n'a pas relâché ne se voit ni au type-check
- * ni à l'écran, il s'accumule.
+ * ⚠ **We UNSUBSCRIBE.** The bridge returns its unsubscription and it must be returned :
+ * a `ipcRenderer.on` left behind survives disassembly, and the sidebar
+ * reassembles with each mode toggle. This is the default of PR 48, identical to
+ * — a subscription that has not been released is neither visible in the type-check
+ * nor on the screen, it accumulates.
  */
 export function useDesktopUpdateStatus(): DesktopUpdateStatus {
   const [status, setStatus] = useState<DesktopUpdateStatus>(IDLE_UPDATE_STATUS);
 
   useEffect(() => {
-    // Le pont ne se lit qu'après le montage : le rendu serveur n'en a pas, et
-    // partir d'une valeur différente ferait diverger la première hydratation.
+    // The bridge only reads after editing: the server rendering does not have one, and
+    // starting from a different value would cause the first hydration to diverge.
     const bridge = getDesktopBridge();
     if (!bridge) return;
-    // L'abonnement rejoue l'état courant tout seul (`minddy:update-status-ready`),
-    // il n'y a donc rien à demander en plus au montage.
+    // The subscription replays the current state by itself (`minddy:update-status-ready`),
+    // there is therefore nothing more to ask for during assembly.
     return bridge.onUpdateStatus(setStatus);
   }, []);
 

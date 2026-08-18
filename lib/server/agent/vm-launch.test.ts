@@ -1,62 +1,60 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-// `typescript-api` est un alias vers `typescript@5` (cf. package.json et CLAUDE.md) :
-// depuis MIN-180 le dépôt vérifie avec `typescript@7`, qui ne livre plus l'API du
-// compilateur. Un test structurel a besoin d'un TypeScript en JS pour lire un arbre.
+// `typescript-api` is an alias to `typescript@5` (see package.json and CLAUDE.md):
+// since MIN-180 the repository checks with `typescript@7`, which no longer delivers the API
+// compiler. A structural test needs a TypeScript in JS to read a tree.
 import ts from "typescript-api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { vmBundlePath, vmJobPath, VM_PROTOCOL_VERSION, type VmJob } from "./vm/protocol";
 import { cloudLayout, layoutForRoot } from "./harness-layout";
 
-/** Le layout d'un run en microVM — celui que la fonction pose sur chaque job. */
+/** The layout of a run in microVM — the one that the function places on each job. */
 const LAYOUT = cloudLayout();
 const BUNDLE_PATH = vmBundlePath(LAYOUT);
 const JOB_PATH = vmJobPath(LAYOUT);
 
 /**
- * MIN-224 — L'AMORÇAGE DE LA MICROVM EST DU COMPUTE, ET IL DOIT ÊTRE FACTURÉ.
+ * MIN-224 — MICROVM BOOT IS COMPUTE, AND IT MUST BE CHARGED.
  *
- * Ce qu'il manquait. Le wall-clock de la microVM a changé de main avec la boucle :
- * c'est elle qui le tient, du début à la fin du tour. Mais son horloge ne démarre
- * qu'au lancement du process node — et avant lui, la fonction a réveillé ou CRÉÉ
- * la machine, posé la politique réseau, cloné le dépôt (~22 s à froid, MIN-222) et
- * écrit 280 Ko de bundle. La fonction ne facturait plus rien pour ces runs, la VM
- * ne pouvait pas connaître une durée d'avant sa naissance : cette tranche-là ne
- * tombait dans AUCUN compteur. Un défaut qui ne se voit pas — il faut comparer le
- * ledger à la facture Vercel pour s'en apercevoir.
+ * What was missing. The wall-clock of the microVM has changed hands with the loop:
+ * it is she who holds it, from the start to the end of the turn. But its clock only starts
+ * when the process node is launched — and before it, the function has woken up or CREATED
+ * the machine, set the network policy, cloned the repository (~22 s cold, MIN-222) and
+ * wrote 280 KB of bundle. The function no longer charged anything for these runs, the VM
+ * could not know a duration before its birth: this slice did not
+ * fall into ANY counter. A defect that is not visible — you have to compare the
+ * ledger to the Vercel invoice to notice it.
  *
- * Deux moitiés, donc deux familles de tests. `startVmLoop` se monte pour de vrai
- * (un faux Sandbox suffit) ; la garde du `finally` d'`executeAgentRun`, elle, ne
- * s'atteint qu'avec une microVM, une base et un modèle — mais l'invariant y est
- * lexical, et ça se lit dans l'arbre. Le compilateur ne dira jamais rien : la
- * garde d'origine (`!run.loop_in_vm`) type parfaitement.
+ * Two halves, therefore two families of tests. `startVmLoop` is set up for real
+ * (a fake Sandbox is enough); the custody of `finally` of `executeAgentRun`, it is only achieved with a microVM, a base and a model - but the invariant is lexical, and it can be read in the tree. The compiler will never say anything: the
+ * keeps original (`!run.loop_in_vm`) type perfectly.
  */
 
-// ── `startVmLoop` : où la mesure se prend ────────────────────────────────────
+// ── `startVmLoop`: where the measurement is taken ────────────────────────────────────
 
 const h = vi.hoisted(() => ({
   writes: [] as Array<Array<{ path: string; content: string }>>,
   ranCommand: null as null | { cmd: string; args: string[] },
-  /** Combien de temps le SDK met à écrire le bundle — le gros de l'amorçage. */
+  /** How long does the SDK take to write the bundle — the bulk of bootstrapping. */
   bundleWriteMs: 0,
   /**
-   * L'HORLOGE EST PILOTÉE, ELLE NE TOURNE PAS. Ces tests mesurent une durée : la
-   * première version faisait dormir `writeFiles` de 120 ms et attendait
-   * `bootstrapMs >= 120`. `setTimeout(n)` rend la main à `n - 1` ms d'horloge
-   * murale environ trois fois sur mille au repos, bien plus souvent sous les
-   * 2 800 tests de la suite — le test échouait donc au hasard, et le harness
-   * servait cet échec à l'agent comme une régression de son propre changement
-   * (run f80dca09, MIN-249 : un aller-retour de modèle brûlé sur un test vert).
-   * Une horloge à la main rend la mesure EXACTE, donc l'assertion aussi.
-   */
+ * THE CLOCK IS CONTROLLED, IT DOES NOT TURN. These tests measure a duration: the
+ * first version made `writeFiles` sleep for 120 ms and waited for
+ * `bootstrapMs >= 120`. `setTimeout(n)` returns control to `n - 1` ms clock
+ * wall about three times out of a thousand at rest, much more often under the
+ * 2,800 tests in the sequence — the test therefore failed at random, and the harness
+ * served this failure to the agent as a regression of its own change
+ * (run f80dca09, MIN-249: a round trip of model burned on a green test).
+ * A clock in hand makes the measurement EXACT, so the assertion too.
+ */
   nowMs: 1_700_000_000_000,
 }));
 
-// Le bundle est lu PAR CHEMIN dans `.agent-vm/`, un artefact que seul `prebuild`
-// produit. Sans ce double, ces tests ne passeraient que sur une machine qui vient
-// de builder — et échoueraient sur un dépôt fraîchement cloné.
+// The bundle is read BY PATH into `.agent-vm/`, an artifact that only `prebuild`
+// product. Without this duplicate, these tests would only pass on a machine that comes
+// from builder — and would fail on a freshly cloned repository.
 vi.mock("node:fs/promises", async (importOriginal) => ({
   ...(await importOriginal<typeof import("node:fs/promises")>()),
   readFile: vi.fn(async () => "// bundle de test"),
@@ -67,8 +65,8 @@ const sandbox = () =>
     mkDir: vi.fn(async () => {}),
     writeFiles: vi.fn(async (files: Array<{ path: string; content: string }>) => {
       h.writes.push(files);
-      // L'écriture du bundle ne DORT pas, elle AVANCE l'horloge : même effet sur
-      // ce que `startVmLoop` mesure, sans dépendre de l'ordonnanceur.
+      // Writing the bundle does not SLEEP, it ADVANCES the clock: same effect on
+      // what `startVmLoop` measures, without depending on the scheduler.
       if (files.some((f) => f.path.endsWith("/main.js"))) h.nowMs += h.bundleWriteMs;
     }),
     runCommand: vi.fn(async (params: { cmd: string; args: string[] }) => {
@@ -79,7 +77,7 @@ const sandbox = () =>
 
 const { startVmLoop } = await import("./vm-launch");
 
-/** Le job tel qu'il a ATTERRI sur le disque de la microVM. */
+/** The job as it LANDED on the microVM disk. */
 function writtenJob(): VmJob {
   const file = h.writes.flat().find((f) => f.path === JOB_PATH);
   expect(file, "aucun job écrit dans la microVM").toBeDefined();
@@ -113,16 +111,16 @@ afterEach(() => {
 
 describe("startVmLoop pose la durée de l'amorçage dans le job", () => {
   it("mesure depuis le début du travail de la FONCTION, pas depuis son propre appel", async () => {
-    // 400 ms d'amorçage déjà écoulées quand on l'appelle : réveil de la microVM,
-    // politique réseau, clone. C'est le gros du chiffre, et il est derrière nous.
+    // 400 ms of boot time already elapsed when called: wake up the microVM,
+    // network policy, clone. That's the bulk of the number, and it's behind us.
     const callStart = Date.now() - 400;
     await startVmLoop(sandbox(), jobInput(), callStart);
     expect(writtenJob().bootstrapMs).toBe(400);
   });
 
   it("compte l'écriture du bundle — c'est pour elle qu'il y a deux écritures", async () => {
-    // Le job ne peut porter la mesure qu'APRÈS ce qui la compose. Un seul
-    // `writeFiles` obligerait à figer le chiffre avant ses 280 Ko.
+    // The job can only carry the measure AFTER what it consists of. Only one
+    // `writeFiles` would require freezing the figure before its 280 KB.
     h.bundleWriteMs = 120;
     await startVmLoop(sandbox(), jobInput(), Date.now());
     expect(writtenJob().bootstrapMs).toBe(120);
@@ -140,22 +138,22 @@ describe("startVmLoop pose la durée de l'amorçage dans le job", () => {
   });
 
   /**
-   * LE CHEMIN DU JOB PART EN ARGUMENT (MIN-354), et c'est la seule information
-   * que le harness ne peut pas apprendre du job : le layout est DEDANS. Sans cet
-   * argument, un harness lancé hors microVM irait chercher son job dans
-   * `/vercel/sandbox/harness`, qui n'existe pas — et mourrait là, avant tout le
-   * reste. C'est la panne mesurée à l'ouverture du dossier.
-   */
+ * THE JOB PATH GOES IN ARGUMENT (MIN-354), and this is the only information
+ * that the harness cannot learn from the job: the layout is IN IT. Without this
+ * argument, a harness launched outside microVM would seek its job in
+ * `/vercel/sandbox/harness`, which does not exist — and would die there, before all the
+ * remains. This is the failure measured when the file is opened.
+ */
   it("passe au harness le chemin de son job", async () => {
     await startVmLoop(sandbox(), jobInput(), Date.now());
     expect(h.ranCommand).toMatchObject({ args: [BUNDLE_PATH, JOB_PATH] });
   });
 
   /**
-   * ET TOUT SUIT LE LAYOUT DU JOB, sans exception : un layout ailleurs déplace
-   * les trois écritures ET le lancement. Un seul chemin resté en dur ferait
-   * écrire le bundle à un endroit et le chercher à un autre.
-   */
+ * AND EVERYTHING FOLLOWS THE LAYOUT OF THE JOB, without exception: a layout elsewhere moves
+ * the three writes AND the launch. A single path left hard would make
+ * write the bundle in one place and look for it in another.
+ */
   it("écrit et lance là où le job le dit, quelle que soit la racine", async () => {
     const root = "/Users/dev/Library/Application Support/minddy/runs/r-9";
     const layout = layoutForRoot(root, "/Users/dev/oc");
@@ -172,13 +170,13 @@ describe("startVmLoop pose la durée de l'amorçage dans le job", () => {
   });
 
   /**
-   * ET UN LAYOUT INUTILISABLE FAIT ÉCHOUER L'AMORÇAGE ICI, pas dans la VM.
-   *
-   * Le harness le refuserait aussi (`parseVmJob`), mais seulement après le
-   * réveil de la microVM et le clone du dépôt : un tour lancé pour rien, dont la
-   * cause n'apparaît qu'au bout d'une minute. `repoDir` est en plus la racine de
-   * sécurité des garde-fous d'écriture — elle se contrôle là où on l'écrit.
-   */
+ * AND AN UNUSABLE LAYOUT FAILS THE BOOT HERE, not in the VM.
+ *
+ * The harness would also refuse it (`parseVmJob`), but only after the
+ * waking up the microVM and the repository clone: a round launched for nothing, of which the
+ * cause only appears after a minute. `repoDir` is also the root of
+ * security of writing safeguards — it is checked where it is written.
+ */
   it("refuse d'écrire un job dont le layout ne tient pas", async () => {
     const layout = { ...LAYOUT, repoDir: "repo" };
     const job = { ...jobInput(), layout } as Omit<VmJob, "bootstrapMs">;
@@ -188,7 +186,7 @@ describe("startVmLoop pose la durée de l'amorçage dans le job", () => {
   });
 });
 
-// ── la garde du `finally` d'execute.ts ───────────────────────────────────────
+// ── guarding the `finally` of execute.ts ───────────────────────────────────────
 
 const EXECUTE_PATH = join(process.cwd(), "lib/server/agent/execute.ts");
 const source = ts.createSourceFile(
@@ -199,13 +197,13 @@ const source = ts.createSourceFile(
 );
 
 /**
- * La condition qui décide si la FONCTION facture la microVM de ce passage.
+ * The condition that decides whether the FUNCTION charges the microVM for this passage.
  *
- * Elle a déménagé sans changer de sens : le métrage vit maintenant dans
- * `billSandboxCompute`, appelé par les mises au repos (pour que `cost_usd` puisse
- * relire un ledger complet) et par le `finally` en filet. La garde y est une
- * sortie anticipée plutôt qu'un `if` autour de l'appel — ce qu'on vérifie est la
- * CONDITION, pas sa forme.
+ * It moved without changing direction: the footage now lives in
+ * `billSandboxCompute`, called by quiesces (so that `cost_usd` can
+ * reread a complete ledger) and by the `finally` in net. The guard there is a
+ * early exit rather than a `if` around the call — what we check is the
+ * CONDITION, not its form.
  */
 function sandboxUsageGuard(): string {
   let decl: ts.VariableDeclaration | undefined;
@@ -240,10 +238,10 @@ function sandboxUsageGuard(): string {
 describe("execute.ts facture la microVM quand la boucle n'est PAS partie", () => {
   it("garde le métrage sur `vmLoopLaunched`, pas sur `run.loop_in_vm`", () => {
     const guard = sandboxUsageGuard();
-    // La différence entre les deux tient tout le défaut : un amorçage qui LÈVE
-    // est bien un run `loop_in_vm`, mais aucune boucle n'en rendra jamais compte.
-    // Le chien de garde ne le rattrape pas non plus — il ne balaie que les runs
-    // `running`, et celui-ci vient d'être mis au repos par le `catch`.
+    // The difference between the two lies in the whole defect: a priming which RISES
+    // is indeed a `loop_in_vm` run, but no loop will ever account for it.
+    // The watchdog doesn't catch him either — he only sweeps the runs
+    // `running`, and this has just been put to rest by the `catch`.
     expect(guard).toContain("vmLoopLaunched");
     expect(
       guard,
@@ -257,9 +255,9 @@ describe("execute.ts facture la microVM quand la boucle n'est PAS partie", () =>
     const launched = text.indexOf("vmLoopLaunched = true");
     expect(stamp, "`loop_command_id` n'est plus persisté").toBeGreaterThan(-1);
     expect(launched, "`vmLoopLaunched` n'est plus posé").toBeGreaterThan(-1);
-    // Si le stamp échoue, le tour part sans que son id soit en base : son rapport
-    // sera refusé en 409 et le chien de garde n'aura rien à interroger. Personne
-    // ne facturera cette microVM-là si ce n'est pas la fonction.
+    // If the stamp fails, the round leaves without its id being in base: its report
+    // will be refused in 409 and the watchdog will have nothing to query. Person
+    // will not charge for this microVM if it is not the function.
     expect(launched, "`vmLoopLaunched` doit être posé après le stamp, pas avant").toBeGreaterThan(
       stamp,
     );

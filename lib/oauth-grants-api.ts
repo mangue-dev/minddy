@@ -6,7 +6,7 @@ export interface OAuthGrant {
   id: string;
   client_id: string;
   client_name: string;
-  /** Agent du registry deviné depuis le nom du client (logo) ; null = inconnu. */
+  /** Registry agent guessed from the client name (logo); null = unknown. */
   agent: string | null;
   scope: string;
   created_at: string;

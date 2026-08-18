@@ -20,12 +20,12 @@ import { AutoTextarea } from "@/components/auto-textarea";
 import type { Project } from "@/lib/types";
 
 /** Project-level Smart Assign preferences (MIN-31): the opt-in switch and, on
-    multi-member projects, one free-text assignment rule per member (owner
-    included — the AI matches new issues against these rules). Owner-only;
-    members see a disabled, read-only state.
+ multi-member projects, one free-text assignment rule per member (owner
+ included — the AI ​​matches new issues against these rules). Owner-only;
+ members see a disabled, read-only state.
 
-    Les règles restent en rangées VERTICALES : un texte libre de 500 caractères
-    ne tient pas au bout d'une ligne. C'est l'exception assumée au clé/valeur. */
+ The rules remain in VERTICAL rows: a free text of 500 characters
+ does not fit at the end of a line. This is the assumed exception to key/value. */
 export function SmartAssignSection({
   project,
   isOwner,
@@ -76,10 +76,10 @@ export function SmartAssignSection({
     (m) => (rules[m.user_id] ?? "").trim() !== (savedRules[m.user_id] ?? "")
   );
 
-  // Ce qui manque, lu sur les règles ENREGISTRÉES et non sur le brouillon : c'est
-  // l'état dont Smart Assign se sert, et c'est celui que le tableau de bord
-  // signale. Un texte tapé mais pas encore enregistré ne fait donc pas
-  // disparaître la marque — l'enregistrement, si.
+  // What is missing, read on the SAVED rules and not on the draft: it is
+  // the state that Smart Assign uses, and this is the one that the dashboard
+  // signal. A text typed but not yet saved therefore does not
+  // disappear the mark — the registration, yes.
   const missingRuleIds = new Set(
     userIdsWithoutRule(
       members.map((m) => m.user_id),
@@ -136,9 +136,9 @@ export function SmartAssignSection({
           ) : undefined
         }
       >
-        {/* Seul dans le projet : Smart Assign est armé mais n'a personne entre
-            qui trancher. La scène le dit, et offre le geste qui la remplit —
-            inviter quelqu'un, ce que seul le propriétaire peut faire. */}
+        {/* Alone in the project: Smart Assign is armed but has no one between
+ who can decide. The scene says so, and offers the gesture that fulfills it —
+ inviting someone, which only the owner can do. */}
         {enabled && !loading && members.length <= 1 && (
           <EmptyScene
             size="compact"
@@ -160,9 +160,9 @@ export function SmartAssignSection({
             label={t("smartAssignRulesTitle")}
             hint={t("smartAssignRulesDesc")}
           >
-            {/* Ce qui manque, dit en clair : sans quoi un champ vide ressemble à
-                un champ facultatif, et Smart Assign a l'air de trier alors qu'il
-                renvoie tout au propriétaire. */}
+            {/* What's missing, said in plain English: otherwise an empty field looks like
+ an optional field, and Smart Assign looks like it sorts while it
+ returns everything to the owner. */}
             {incomplete && (
               <p className="flex items-start gap-2 text-xs leading-relaxed text-amber-600 dark:text-amber-500">
                 <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />

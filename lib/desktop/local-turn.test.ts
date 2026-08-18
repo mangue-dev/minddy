@@ -20,12 +20,12 @@ import {
 } from "./local-turn";
 
 /**
- * MIN-293 — LE CONTRAT ENTRE LE SERVEUR ET LA MACHINE.
+ * MIN-293 — THE CONTRACT BETWEEN THE SERVER AND THE MACHINE.
  *
- * L'invariant que ce fichier tient : **le serveur ne pose aucun chemin de cette
- * machine, la machine ne fabrique aucun champ de run.** Le reste des tests en
- * découle — un `layout` venu du serveur est refusé, un `appOrigin` venu du
- * serveur est réécrit, et rien d'autre n'est touché.
+ * The invariant that this file holds: **the server does not set any path of this
+ * machine, the machine does not produce any run field.** The rest of the tests in
+ * follow — a `layout` from the server is refused, a `appOrigin` from the
+ * server is rewritten, and nothing else is affected.
  */
 
 const USER_DATA = "/Users/clement/Library/Application Support/minddy";
@@ -33,10 +33,10 @@ const RUN_ID = "11111111-2222-4333-8444-555555555555";
 const REPO = "/Users/clement/Projets/minddy";
 
 /**
- * Une affectation minimale. `over.job` est fusionné DANS le job, jamais
- * par-dessus — un `...over` posé après `job:` remplacerait le job entier par le
- * seul champ qu'on voulait changer, et la moitié des refus ci-dessous passerait
- * alors pour la mauvaise raison.
+ * A minimal allocation. `over.job` is merged INTO the job, never
+ * on top — a `...over` placed after `job:` would replace the entire job with the
+ * only field that we wanted to change, and half of the refusals below would pass
+ * then for the wrong one reason.
  */
 function assignment(over: Record<string, unknown> = {}) {
   const { job: jobOver, ...envelope } = over;
@@ -62,13 +62,13 @@ function assignment(over: Record<string, unknown> = {}) {
 }
 
 describe("parseLocalTurnAssignment", () => {
-  it("accepte une affectation complète", () => {
+  it("accepts a complete assignment", () => {
     const parsed = parseLocalTurnAssignment(assignment());
     expect(parsed?.runId).toBe(RUN_ID);
     expect(parsed?.repoFullName).toBe("mangue-dev/minddy");
   });
 
-  it("lit le catalogue de projets sans jamais y accepter de chemin", () => {
+  it("reads the project catalog without ever accepting a path in it", () => {
     const parsed = parseLocalTurnAssignment(
       assignment({
         projects: [
@@ -89,9 +89,9 @@ describe("parseLocalTurnAssignment", () => {
   });
 
   it("REFUSE un `layout` posé par le serveur", () => {
-    // Le serveur ne connaît aucun chemin de cette machine. Un layout venu de lui
-    // désignerait un dossier que personne n'a choisi — et `repoDir` est la racine
-    // de sécurité de toutes les écritures du modèle.
+    // The server does not know any path to this machine. A layout from him
+    // would point to a folder that no one has chosen — and `repoDir` is the root
+    // security of all model writes.
     const forged = assignment();
     (forged.job as Record<string, unknown>).layout = {
       root: "/tmp/pwn",
@@ -104,12 +104,12 @@ describe("parseLocalTurnAssignment", () => {
     expect(parseLocalTurnAssignment(forged)).toBeNull();
   });
 
-  it("exige une version de protocole, mais ne la JUGE pas ici", () => {
-    // La coquille ne parle pas le protocole : elle relaie un job vers un harness
-    // qu'elle télécharge à la même origine, dans le même geste. C'est donc au
-    // choix du harness que les deux se confrontent (`bundleDecision`), pas ici —
-    // sinon l'app porterait une constante qu'elle n'utilise jamais et qui la
-    // périmerait à chaque mouvement du contrat.
+  it("requires a protocol version but does not JUDGE it here", () => {
+    // The shell does not speak the protocol: it relays a job to a harness
+    // that it downloads to the same origin, in the same gesture. It is therefore at
+    // choice of harness that the two confront (`bundleDecision`), not here —
+    // otherwise the app would carry a constant that it never uses and which
+    // would expire with each movement of the contract.
     expect(
       parseLocalTurnAssignment(assignment({ job: { protocolVersion: VM_PROTOCOL_VERSION + 1 } }))
         ?.job.protocolVersion,
@@ -119,19 +119,19 @@ describe("parseLocalTurnAssignment", () => {
     }
   });
 
-  it("refuse un job sans bail : il ne pourrait même pas rendre son rapport", () => {
+  it("rejects a job without a lease: it could not even return its report", () => {
     expect(parseLocalTurnAssignment(assignment({ job: { controlToken: "" } }))).toBeNull();
     expect(parseLocalTurnAssignment(assignment({ job: { controlToken: undefined } }))).toBeNull();
   });
 
   it("refuse un job dont l'identité de run ne correspond pas à l'enveloppe", () => {
-    // Deux vérités sur le même fait : celle qui décide du dossier (l'enveloppe)
-    // et celle qui décide de ce que le bail ouvre (le job). Elles doivent être
-    // la même, sans quoi un tour écrirait dans la racine d'un autre run.
+    // Two truths about the same fact: the one that decides the file (the envelope)
+    // and the one who decides what the lease opens (the job). They must be
+    // the same, otherwise a run would write in the root of another run.
     expect(parseLocalTurnAssignment(assignment({ job: { runId: "un-autre" } }))).toBeNull();
   });
 
-  it("refuse une enveloppe incomplète, une chaîne, une page HTML", () => {
+  it("rejects an incomplete envelope, a string, or an HTML page", () => {
     expect(parseLocalTurnAssignment(assignment({ repoFullName: "  " }))).toBeNull();
     expect(parseLocalTurnAssignment(assignment({ projectId: 42 }))).toBeNull();
     expect(parseLocalTurnAssignment({ runId: RUN_ID })).toBeNull();
@@ -139,14 +139,14 @@ describe("parseLocalTurnAssignment", () => {
     expect(parseLocalTurnAssignment(null)).toBeNull();
   });
 
-  it("tolère un serveur antérieur à l'option, mais refuse une valeur incohérente", () => {
+  it("tolerates a server from before the option but rejects an inconsistent value", () => {
     expect(parseLocalTurnAssignment(assignment({ localWorktree: undefined }))?.localWorktree).toBe(false);
     expect(parseLocalTurnAssignment(assignment({ localWorktree: "yes" }))).toBeNull();
   });
 });
 
 describe("le layout de la machine", () => {
-  it("donne une racine par run — deux tickets ne partagent ni job ni base SQLite", () => {
+  it("gives each run a root — two tickets share neither a job nor a SQLite database", () => {
     const a = localRunRoot(USER_DATA, RUN_ID);
     const b = localRunRoot(USER_DATA, "99999999-2222-4333-8444-555555555555");
     expect(a).not.toBe(b);
@@ -154,9 +154,9 @@ describe("le layout de la machine", () => {
   });
 
   it("passe l'identifiant au tamis : aucune racine ne sort du dossier de travail", () => {
-    // L'identifiant vient de la base, mais il traverse le réseau avant d'arriver
-    // ici : un `/` ou un `..` ferait sortir la racine de son dossier, et c'est
-    // elle qui borne le harness, ses sorties de tools et son `.tsbuildinfo`.
+    // The identifier comes from the base, but it crosses the network before arriving
+    // here: a `/` or a `..` would take the root out of its folder, and that's
+    // it which limits the harness, its tool outputs and its `.tsbuildinfo`.
     const base = `${USER_DATA}/agent-runs`;
     for (const hostile of ["../../../etc", "a/b", "..", "./.ssh", ""]) {
       const root = localRunRoot(USER_DATA, hostile);
@@ -175,16 +175,16 @@ describe("le layout de la machine", () => {
   it("produit un layout que les garde-fous savent tenir", () => {
     const layout = localLayout({ userDataPath: USER_DATA, runId: RUN_ID, repoPath: REPO });
     expect(() => assertUsableLayout(layout)).not.toThrow();
-    // La règle qui compte : le harness et ses sorties ne sont JAMAIS dans le
-    // dépôt, sinon ils apparaissent dans le `git status` de l'utilisateur et
-    // dans le périmètre du tour.
+    // The rule that counts: the harness and its outputs are NEVER in the
+    // repository, otherwise they appear in the user's `git status` and
+    // within the perimeter of the tour.
     expect(layout.repoDir).toBe(REPO);
     expect(layout.harnessDir.startsWith(`${REPO}/`)).toBe(false);
     expect(layout.toolOutputDir.startsWith(`${REPO}/`)).toBe(false);
     expect(layout.typecheckDir.startsWith(`${REPO}/`)).toBe(false);
   });
 
-  it("survit à un `userData` avec un slash final", () => {
+  it("survives a `userData` path with a trailing slash", () => {
     expect(localRunRoot(`${USER_DATA}/`, RUN_ID)).toBe(localRunRoot(USER_DATA, RUN_ID));
   });
 });
@@ -196,19 +196,19 @@ describe("assignmentToJob", () => {
     appOrigin: "http://localhost:3000",
   });
 
-  it("RÉÉCRIT l'origine : la machine ne parle qu'à qui lui a donné son travail", () => {
-    // Le serveur résout `agentControlOrigin()`, qui retombe sur la production
-    // hors Vercel. Une coquille de dév parlerait alors à www.minddy.app avec un
-    // bail signé par localhost.
+  it("REWRITES the origin: the machine talks only to whoever gave it its work", () => {
+    // The server resolves `agentControlOrigin()`, which falls back on production
+    // excluding Vercel. A dev shell would then talk to www.minddy.app with a
+    // lease signed by localhost.
     expect(job.appOrigin).toBe("http://localhost:3000");
   });
 
-  it("pose le mode dépôt courant en VALEUR, jamais par déduction", () => {
+  it("sets current-repository mode as a VALUE, never by inference", () => {
     expect(job.repoMode).toBe("current");
     expect(isCurrentRepoJob(job)).toBe(true);
   });
 
-  it("pose le mode clone pour un worktree isolé", () => {
+  it("sets clone mode for an isolated worktree", () => {
     const isolated = assignmentToJob(parseLocalTurnAssignment(assignment({ localWorktree: true }))!, {
       layout: localLayout({ userDataPath: USER_DATA, runId: RUN_ID, repoPath: REPO, isolated: true }),
       appOrigin: "http://localhost:3000",
@@ -219,7 +219,7 @@ describe("assignmentToJob", () => {
     expect(isolated.layout.repoDir).toBe(`${USER_DATA}/agent-runs/${RUN_ID}/repo`);
   });
 
-  it("ne facture aucun amorçage — il n'y a pas eu de microVM", () => {
+  it("charges no startup — there was no microVM", () => {
     expect(job.bootstrapMs).toBe(0);
   });
 
@@ -227,7 +227,7 @@ describe("assignmentToJob", () => {
     expect(isLocalJob(job)).toBe(true);
   });
 
-  it("ne touche à rien d'autre — le run appartient au serveur", () => {
+  it("touches nothing else — the run belongs to the server", () => {
     expect(job.model).toBe("anthropic/claude-sonnet-5");
     expect(job.workBranch).toBe("minddy/run-1");
     expect(job.controlToken).toBe("jeton.de.bail");
@@ -237,7 +237,7 @@ describe("assignmentToJob", () => {
     expect(job.layout).toEqual(layout);
   });
 
-  it("joint les chemins locaux seulement quand la machine les a validés", () => {
+  it("includes local paths only after the machine has validated them", () => {
     const withProjects = assignmentToJob(parseLocalTurnAssignment(assignment())!, {
       layout,
       appOrigin: "http://localhost:3000",
@@ -282,37 +282,37 @@ describe("localTurnSecrets", () => {
 });
 
 /**
- * LE SEUL ENDROIT OÙ LES DEUX GRAPHES SE RENCONTRENT.
+ * THE ONLY PLACE WHERE THE TWO GRAPHS MEET.
  *
- * `lib/desktop/local-turn.ts` ne peut PAS importer `VmJob` : `vm/protocol.ts`
- * type-importe `../runs`, qui est `server-only`, et le suivre ferait entrer la
- * moitié du serveur dans le type-check de la coquille — mesuré, il tombe alors
- * sur une quarantaine de fichiers qui n'ont rien à voir avec elle.
+ * `lib/desktop/local-turn.ts` cannot import `VmJob`: `vm/protocol.ts`
+ * type-imports `../runs`, which is `server-only`, and following it would bring the
+ * half of the server into the shell's type-check — measured, it then hits
+ * on about forty files that have nothing to do with it.
  *
- * Ce test tourne sous le tsconfig RACINE, où les deux graphes coexistent sans
- * peine. Il rachète donc la vérification qu'on a dû retirer du module : ce que la
- * machine écrit dans `job.json` est bien un `VmJob`, et le harness qui le relira
- * ne s'y trompera pas. Sans lui, la coquille pourrait dériver du contrat sans
- * qu'aucun compilateur ne le dise.
+ * This test runs under the tsconfig ROOT, where the two graphs coexist without
+ * trouble. It therefore redeems the verification that we had to remove from the module: what the
+ * machine writes in `job.json` is indeed a `VmJob`, and the harness which will read it
+ * will not make a mistake. Without it, the shell could derive from the contract without
+ * no compiler saying so.
  */
-describe("ce que la machine écrit EST un job du contrat", () => {
+describe("what the machine writes IS a contract job", () => {
   const built = assignmentToJob(parseLocalTurnAssignment(fullAssignment())!, {
     layout: localLayout({ userDataPath: USER_DATA, runId: RUN_ID, repoPath: REPO }),
     appOrigin: "https://www.minddy.app",
   });
 
   it("passe la porte du HARNESS — `parseVmJob`, et pas une relecture à nous", () => {
-    // La seule autorité qui compte : c'est cette fonction que le harness appelle
-    // sur le `job.json` qu'on vient d'écrire.
+    // The only authority that counts: it is this function that the harness calls
+    // on the `job.json` that we just wrote.
     expect(() => parseVmJob(built)).not.toThrow();
     expect(built.protocolVersion).toBe(VM_PROTOCOL_VERSION);
   });
 
   it("pose les quatre champs de la machine AU TYPE DU CONTRAT", () => {
-    // ⚠ L'annotation EST le test : `tsc` refuse ces lignes le jour où l'un des
-    // quatre change de type ou de sens dans `protocol.ts`. C'est ce qui remplace
-    // l'import de `VmJob` que la coquille ne peut pas faire — et ça porte
-    // exactement sur ce que la coquille écrit, ni plus ni moins.
+    // ⚠ The annotation IS the test: `tsc` refuses these lines on the day when one of the
+    // four changes type or meaning in `protocol.ts`. This is what replaces
+    // import `VmJob` that the shell cannot do — and that works
+    // exactly what the shell writes, no more, no less.
     const machineFields: Pick<
       VmJob,
       "layout" | "appOrigin" | "repoMode" | "bootstrapMs"
@@ -325,11 +325,11 @@ describe("ce que la machine écrit EST un job du contrat", () => {
     expect(machineFields.repoMode).toBe("current");
   });
 
-  it("ne perd AUCUN champ du serveur en chemin", () => {
-    // L'invariant de partage, vérifié à l'exécution : la machine ajoute quatre
-    // champs et ne touche à rien d'autre. Un `...spread` mal placé ferait
-    // disparaître le journal d'opencode ou les réglages de sous-agents en
-    // silence, et le tour repartirait amnésique.
+  it("loses NO server fields along the way", () => {
+    // The sharing invariant, checked at runtime: the machine adds four
+    // fields and don't touch anything else. A poorly placed `...spread` would
+    //disappear the opencode log or subagent settings by
+    // silence, and the tour would start again with amnesia.
     const server = fullAssignment().job;
     const posesParLaMachine = new Set(["layout", "appOrigin", "repoMode", "bootstrapMs"]);
     for (const [key, value] of Object.entries(server)) {
@@ -339,7 +339,7 @@ describe("ce que la machine écrit EST un job du contrat", () => {
   });
 });
 
-/** Un job COMPLET — celui que le serveur remet vraiment, tous champs peuplés. */
+/** A COMPLETE job — the one that the server actually delivers, with all fields populated. */
 function fullAssignment() {
   const job: Omit<VmJob, "layout" | "bootstrapMs"> = {
     protocolVersion: VM_PROTOCOL_VERSION,
@@ -411,9 +411,9 @@ describe("staleRunRoots", () => {
     ).toEqual(["vieux"]);
   });
 
-  it("ne touche JAMAIS à la racine d'un run qui tourne", () => {
-    // Le ménage tourne aussi à la fin d'un tour, et un second tour peut être en
-    // vol : lui retirer son job et sa base SQLite le tuerait sans un mot.
+  it("NEVER touches the root of a running run", () => {
+    // The household also turns at the end of a round, and a second round can be in progress
+    // theft: taking away his job and his SQLite database would kill him without a word.
     expect(
       staleRunRoots([{ name: "en-vol", modifiedMs: now - 30 * DAY }], {
         nowMs: now,
@@ -422,13 +422,13 @@ describe("staleRunRoots", () => {
     ).toEqual([]);
   });
 
-  it("ne supprime rien sur une date illisible", () => {
+  it("deletes nothing for an unreadable date", () => {
     expect(
       staleRunRoots([{ name: "?", modifiedMs: Number.NaN }], { nowMs: now }),
     ).toEqual([]);
   });
 
-  it("respecte un délai plus court quand on le lui donne", () => {
+  it("uses a shorter delay when given one", () => {
     expect(
       staleRunRoots([{ name: "hier", modifiedMs: now - 2 * DAY }], { nowMs: now, keepDays: 1 }),
     ).toEqual(["hier"]);
@@ -436,7 +436,7 @@ describe("staleRunRoots", () => {
 });
 
 describe("ce que l'utilisateur lit quand rien n'a démarré", () => {
-  it("nomme le geste de réparation, pas seulement la panne", () => {
+  it("names the repair action, not only the failure", () => {
     expect(localTurnRefusalMessage("no_repo", "mangue-dev/minddy")).toContain("mangue-dev/minddy");
     expect(localTurnRefusalMessage("no_repo", "x/y")).toMatch(/attach/i);
     expect(localTurnRefusalMessage("repo_invalid", "x/y")).toMatch(/moved|unmounted/i);

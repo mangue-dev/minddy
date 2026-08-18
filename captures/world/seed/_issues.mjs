@@ -1,35 +1,35 @@
 /**
- * Alignement des tickets déjà créés sur la donnée de leur script de seed.
+ * Alignment of tickets already created with the data of their seed script.
  *
- * Les scripts de board ne créaient que ce qui manquait, et ne touchaient plus
- * jamais aux tickets existants : ajouter une description à un ticket déjà semé
- * demandait de le supprimer et de le recréer — impossible, un ticket porte un
- * plan, un run d'agent, une place dans la quinzaine.
+ * The board scripts only created what was missing, and no longer touched
+ * never to existing tickets: add a description to an already seeded ticket
+ * asked to delete it and recreate it — impossible, a ticket has a
+ * plan, an agent run, a place in the fortnight.
  *
- * Cette passe rend les seeds CONVERGENTS : relancer 002 aligne le board sur ce
- * que le fichier décrit, quel que soit son état de départ.
+ * This pass makes the seeds CONVERGENT: rerolling 002 aligns the board with this
+ * that the file describes, whatever its initial state.
  *
- * Deux temps obligatoires, imposés par les garde-fous : un enfant ne peut pas
- * être inséré dans le même plan que son parent (le monde n'est rafraîchi qu'à
- * `apply()`). Les rattachements de catégories sont donc posés APRÈS que les
- * tickets ont été appliqués — d'où l'appel en fin de script, pas au milieu.
+ * Two compulsory periods, imposed by the safeguards: a child cannot
+ * be inserted in the same plane as its parent (the world is only refreshed
+ * `apply()`). The category connections are therefore made AFTER the
+ * tickets have been applied — hence the call at the end of the script, not the middle.
  *
- * Note sur `updated_at` : le trigger `issues_set_updated_at` le repose à
- * `now()` à chaque modification, et rien ne peut l'en empêcher côté client.
- * Une description ajoutée après coup décale donc la date de modification du
- * ticket. Aucune capture ne l'affiche (les cartes montrent l'échéance, pas la
- * dernière modification) ; seul l'ordre de l'index de recherche s'en trouve
- * changé, ce que la capture de la palette assume déjà.
+ * Note on `updated_at`: the `issues_set_updated_at` trigger returns it to
+ * `now()` on each modification, and nothing can prevent it from the client side.
+ * A description added after the fact therefore shifts the date of modification of the
+ * ticket. No capture shows it (the cards show the deadline, not the
+ * last modification); only the order of the search index is found
+ * changed, which the palette capture already assumes.
  */
 import { createPlan } from "../../lib/guards.mjs";
 import { resolveCategories } from "./_categories.mjs";
 
 /**
- * Aligne descriptions et catégories des tickets d'un projet sur `issues`
- * (le tableau du script appelant : `title`, `description`, `categories`).
+ * Aligns project ticket descriptions and categories with `issues`
+ * (the table of the calling script: `title`, `description`, `categories`).
  *
- * Idempotent : ne modifie que ce qui diverge, n'insère que les rattachements
- * absents, et ne retire jamais une catégorie posée à la main.
+ * Idempotent: only modifies what diverges, only inserts the connections
+ * absent, and never removes a category placed by hand.
  */
 export async function syncIssueMetadata(world, project, issues) {
   const { data: rows, error } = await world.admin
@@ -57,7 +57,7 @@ export async function syncIssueMetadata(world, project, issues) {
 
   for (const issue of issues) {
     const row = byTitle.get(issue.title);
-    if (!row) continue; // ticket retiré du board à la main : on ne le ressuscite pas.
+    if (!row) continue; // ticket removed from the board by hand: we do not resuscitate it.
 
     const wanted = issue.description ?? null;
     if (wanted !== (row.description ?? null)) {
@@ -90,7 +90,7 @@ export async function syncIssueMetadata(world, project, issues) {
   return { descriptions, links: missingLinks.length };
 }
 
-/** Résumé lisible, pour le `--dry-run` des scripts de board. */
+/** Readable summary, for the `--dry-run` of board scripts. */
 export function describeMetadata(issues) {
   const withDescription = issues.filter((i) => i.description).length;
   const withCategory = issues.filter((i) => (i.categories ?? []).length > 0).length;

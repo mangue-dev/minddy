@@ -18,7 +18,7 @@ export const maxDuration = 300;
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// Borne du tableau de mentions (MIN-118) — on ne mentionne jamais autant de monde.
+// Mention-array bound (MIN-118) — never mention that many people.
 const MAX_MENTIONS = 50;
 
 /** GET /api/issues/[id]/comments — the issue's comment thread (RLS: project access). */
@@ -39,8 +39,8 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
 
-  // Commentaires MCP : résoudre la clé actrice (nom + agent) — service client,
-  // la policy RLS d'api_keys est owner-only (voir api-key-actors.ts).
+  // MCP comments: resolve actress key (name + agent) — customer service,
+  // the api_keys RLS policy is owner-only (see api-key-actors.ts).
   const keyActors = await resolveApiKeyActors(
     (data ?? []).map((c) => c.api_key_id as string | null)
   );

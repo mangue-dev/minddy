@@ -1,18 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-355 — ÉMETTRE UN JETON, C'EST RÉVOQUER LE PRÉCÉDENT.
+ * MIN-355 — ISSUING A TOKEN MEANS REVOKING THE PREVIOUS.
  *
- * Un jeton auto-porteur ne se rappelle pas : il se périme. La seule révocation
- * possible est donc un compteur sur la ligne du run, et le geste qui l'incrémente
- * est l'émission elle-même. C'est ce qui fait de « une machine par run » une
- * propriété de la colonne plutôt qu'une règle que quelqu'un devrait tenir.
+ * A self-bearing token cannot be remembered: it expires. The only revocation
+ * possible is therefore a counter on the run line, and the gesture which increments it
+ * is the show itself. This is what makes “one machine per run” a
+ * property of the column rather than a rule that someone should keep.
  */
 
 const h = vi.hoisted(() => ({
-  /** La ligne, réduite à ce que le bail regarde. `null` = run introuvable. */
+  /** The line, reduced to what the lease looks at. `null` = run not found. */
   row: { local: true, gen: 0 } as { local: boolean; gen: number } | null,
-  /** D'OÙ VIENT LE CONTEXTE DU RUN (MIN-360) — ce que le second rideau relit. */
+  /** WHERE THE CONTEXT OF THE RUN COMES FROM (MIN-360) — what the second curtain reads back. */
   scope: {
     triggered_by: "button",
     routine_id: null,
@@ -60,19 +60,19 @@ describe("le bail d'exécution locale", () => {
     const second = await issueLocalExecToken(RUN_ID);
     expect(first.ok && second.ok).toBe(true);
     if (!first.ok || !second.ok) return;
-    // La génération du premier n'est plus celle de la ligne : le plan de contrôle
-    // la refusera à l'appel suivant, sans qu'on ait rien eu à rappeler.
+    // The generation of the first is no longer that of the line: the control plane
+    // will refuse it on the next call, without having had anything to call back.
     expect(second.gen).toBe(first.gen + 1);
     expect(h.row?.gen).toBe(second.gen);
   });
 
   /**
-   * MIN-360 — LE SECOND RIDEAU, À L'ENDROIT QUI COMPTE.
+   * MIN-360 — THE SECOND CURTAIN, IN THE PLACE THAT MATTERS.
    *
-   * `createRun` est le seul écrivain de `local_exec` et applique déjà
-   * l'invariant. Ce contrôle-ci est ce qui fait que **sans jeton, aucune machine
-   * ne peut jouer ce run** : une colonne écrite par une migration, un
-   * back-office ou un chemin de lancement futur ne suffit pas à ouvrir la porte.
+   * `createRun` is the only writer of `local_exec` and already applies
+   * the invariant. This control is what means that **without a token, no machine
+   * cannot play this run**: a column written by a migration, a
+   * back office or a future launch path is not enough to open the door.
    */
   it("refuse un bail à un run dont le contexte vient d'ailleurs", async () => {
     for (const scope of [
@@ -92,15 +92,15 @@ describe("le bail d'exécution locale", () => {
         ok: false,
         error: "third_party_context",
       });
-      // Et le bail précédent n'a pas été révoqué au passage : on refuse AVANT
-      // d'incrémenter, sinon un refus casserait la machine en place.
+      // And the previous lease was not revoked by the way: we refuse BEFORE
+      // to increment, otherwise a refusal would break the machine in place.
       expect(h.row?.gen).toBe(0);
     }
   });
 
   it("refuse de donner un bail à un run de microVM", async () => {
-    // Ce serait la bascule d'environnement à chaud que le mode figé interdit —
-    // chaque environnement relit SA mémoire, et travaille sur SON dépôt.
+    // This would be the hot environment toggle that frozen mode prohibits —
+    // each environment rereads ITS memory, and works on ITS repository.
     h.row = { local: false, gen: 0 };
     expect(await issueLocalExecToken(RUN_ID)).toEqual({ ok: false, error: "not_local" });
   });
@@ -110,8 +110,8 @@ describe("le bail d'exécution locale", () => {
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
     try {
       expect(await issueLocalExecToken(RUN_ID)).toEqual({ ok: false, error: "not_configured" });
-      // Et la génération n'a pas bougé : on ne révoque pas la machine en place
-      // pour un jeton qu'on n'a pas su fabriquer.
+      // And the generation has not moved: we do not revoke the existing machine
+      // for a token that we couldn't make.
       expect(h.row?.gen).toBe(0);
     } finally {
       process.env.SUPABASE_SERVICE_ROLE_KEY = saved;
@@ -120,10 +120,10 @@ describe("le bail d'exécution locale", () => {
 });
 
 /**
- * MIN-357 — CE QUI N'A PAS DE PLAFOND RESTE DANS LE CLOUD.
+ * MIN-357 — WHAT DOES NOT HAVE A CEILING REMAINS IN THE CLOUD.
  *
- * Le BYOK local est interactif ; les contextes non surveillés sont exclus plus
- * tôt par `localRunScope`. La plateforme garde son exigence de mint.
+ * Local BYOK is interactive; unmonitored contexts are excluded more
+ * early by `localRunScope`. The platform maintains its mint requirement.
  */
 describe("qui a le droit de jouer sur la machine de l'utilisateur", () => {
   const withProvisioning = <T,>(value: string | undefined, run: () => T): T => {
@@ -149,14 +149,14 @@ describe("qui a le droit de jouer sur la machine de l'utilisateur", () => {
   });
 
   it("garde les runs plateforme dans le cloud quand rien ne sait minter", () => {
-    // Sans mint, l'appelant retomberait sur la clé plateforme — NON PLAFONNÉE, et
-    // partagée avec Numo, la transcription, les embeddings et le catalogue.
+    // Without mint, the caller would fall back on the platform key — UNCAPED, and
+    // shared with Numo, transcription, embeddings and catalog.
     withProvisioning(undefined, () => {
       expect(admitLocalRun({ keyMode: "platform" })).toEqual({ ok: false, reason: "no_mint" });
     });
-    // Une variable posée à VIDE compte comme absente — c'est déjà la règle de
-    // `runKeyMintingEnabled`, et deux lectures qui divergeraient là-dessus
-    // donneraient un run local sans clé.
+    // A variable set to EMPTY counts as absent — this is already the rule of
+    // `runKeyMintingEnabled`, and two readings which would differ on this
+    // would give a local run without a key.
     withProvisioning("   ", () => {
       expect(admitLocalRun({ keyMode: "platform" })).toEqual({ ok: false, reason: "no_mint" });
     });

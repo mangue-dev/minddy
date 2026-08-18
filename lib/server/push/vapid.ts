@@ -7,25 +7,24 @@ import {
 } from "@/lib/deployment-profile";
 
 /**
- * La configuration VAPID du serveur — l'identité qui signe chaque envoi Web Push
+ * The server's VAPID configuration — the identity that signs each Web Push
  * (MIN-183).
  *
- * Tout part d'ici parce que tout doit pouvoir s'ÉTEINDRE ici : en local sans
- * clés, en preview sur une branche qui n'en a pas, l'app doit continuer de
- * tourner et l'inbox de se remplir. `isPushConfigured()` est donc le
- * court-circuit que la chaîne d'envoi consulte avant de faire quoi que ce soit —
- * pas un `throw` de démarrage, pas un `!` sur `process.env`.
+ * Everything starts from here because everything must be able to TURN OFF here: locally without
+ * keys, in preview on a branch that doesn't have any, the app should continue to run and the inbox should fill. `isPushConfigured()` is therefore the
+ * short circuit that the sending chain consults before doing anything —
+ * not a startup `throw`, not a `!` on `process.env`.
  *
- * `setVapidDetails` est un état de MODULE dans `web-push` : l'appeler à chaque
- * envoi serait une réécriture globale par requête. Le drapeau ci-dessous le
- * réduit à une fois par instance, comme le singleton de lib/supabase-service.ts
- * — et sous Fluid Compute, l'instance étant réutilisée, c'est une fois pour
- * beaucoup d'envois.
+ * `setVapidDetails` is a MODULE state in `web-push`: calling it every
+ * send would be a global rewrite per request. The flag below the
+ * reduces to once per instance, like the singleton in lib/supabase-service.ts
+ * — and under Fluid Compute, because the instance is reused, it's once for
+ * many sends.
  */
 
-/** Le contact que le service de push voit passer — `mailto:` ou `https:`, la
- *  RFC 8292 n'admet rien d'autre. Une valeur bancale ferait échouer TOUS les
- *  envois : on désactive alors la capacité. */
+/** The contact that the push service sees pass — `mailto:` or `https:`, the
+ * RFC 8292 does not admit anything else. An incorrect value would cause ALL
+ * sendings to fail: the capacity is then deactivated. */
 function vapidSubject(): string | null {
   const raw = process.env.VAPID_SUBJECT?.trim() ||
     (isOfficialMinddyCloud(process.env) ? LEGACY_MINDDY_VAPID_SUBJECT : "");
@@ -37,8 +36,8 @@ function vapidSubject(): string | null {
   return null;
 }
 
-/** Vrai quand la paire de clés est là. Tout le reste de la chaîne d'envoi en
- *  dépend : faux → no-op silencieux, jamais d'exception. */
+/** True when the key pair is there. Everything else in the sending chain en
+ * depends: false → silent no-op, never an exception. */
 export function isPushConfigured(): boolean {
   return (
     !!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim() &&
@@ -50,15 +49,15 @@ export function isPushConfigured(): boolean {
 let configured = false;
 
 /**
- * Arme `web-push` avec la paire VAPID, une fois par instance. Rend `false` quand
- * il n'y a rien à armer — l'appelant s'arrête là.
+ * Arms `web-push` with the VAPID pair, once per instance. Returns `false` when
+ * there is nothing to arm — the caller stops there.
  */
 export function configureWebPush(): boolean {
-  // La présence des clés est REVÉRIFIÉE à chaque appel, avant le drapeau : le
-  // drapeau ne dit que « `setVapidDetails` a déjà été appelé », jamais « le
-  // push est allumé ». Les intervertir ferait répondre `true` à une instance
-  // dont les clés ont disparu de l'environnement, et l'extinction propre — le
-  // contrat de ce fichier — ne tiendrait plus qu'au redémarrage du processus.
+  // The presence of the keys is REVERIFIED at each call, before the flag: the
+  // flag only says “`setVapidDetails` has already been called”, never “the
+  //push is on.” Switching them would make an instance respond `true`
+  // whose keys have disappeared from the environment, and their own extinction — the
+  // contract of this file — would only hold when restarting the process.
   if (!isPushConfigured()) return false;
   if (configured) return true;
   try {
@@ -70,8 +69,8 @@ export function configureWebPush(): boolean {
     configured = true;
     return true;
   } catch (e) {
-    // Une clé mal recopiée (mauvaise longueur, base64url tronqué) lève ICI, au
-    // premier armement, et non à chaque envoi. On le dit une fois et on éteint.
+    // A poorly copied key (wrong length, base64url truncated) returns HERE, at
+    // first arming, and not at each sending. We say it once and turn it off.
     console.error("[push] clés VAPID refusées:", (e as Error).message);
     return false;
   }

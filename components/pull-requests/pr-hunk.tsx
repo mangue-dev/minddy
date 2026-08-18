@@ -12,24 +12,24 @@ import { DIFF_LINE_DIFF_TYPE, DIFF_THEMES } from "@/lib/diff-theme";
 import { hunkPatch } from "@/lib/pr-diff-hunk";
 
 /**
- * L'extrait de code d'un commentaire de review — le `diff_hunk` que la forge
- * livre avec la remarque — rendu comme l'onglet Fichiers rend le code : sous un
- * en-tête de fichier repliable, coloré par Shiki, en mode diff.
+ * The code snippet of a review comment — the `diff_hunk` that the forge
+ * book with the note — rendered as the Files tab renders the code: under a
+ * collapsible file header, colored by Shiki, in diff mode.
  *
- * Il existe parce que ce même extrait se rendait à la main partout ailleurs :
- * un pavé monospace sans coloration dans le fil d'activité, un `<pre>` du hunk
- * BRUT (en-tête `@@` compris) dans le repli des fils périmés. Trois rendus pour
- * un même objet, dont deux qui ne ressemblaient pas à la vue de code de la page
- * d'à côté — alors qu'un commentaire de ligne parle exactement du même code.
+ * It exists because this same extract was found by hand everywhere else:
+ * a minivan pad without coloring in the activity thread, a `<pre>` of the hunk
+ * BRUT (including `@@` header) in the fallback of expired threads. Three renderings for
+ * the same object, two of which did not look like the code view of the page
+ * next door — while a line comment talks about exactly the same code.
  *
- * Le rendu passe donc par la lib de diff, comme `pr-diff` : mêmes thèmes, même
- * marquage mot-à-mot, même pool de workers. Ce que ça demande, c'est de rendre au
- * fragment le fichier qui l'entoure — c'est le travail de `hunkPatch`.
+ * The rendering therefore goes through the diff lib, like `pr-diff`: same themes, same
+ * word-for-word marking, same pool of workers. What it requires is to give back to
+ * fragments the surrounding file — that's the job of `hunkPatch`.
  *
- * Ce qui n'est PAS repris de l'onglet Fichiers, et délibérément : le « + » de
- * gouttière (on ne commente pas depuis un extrait — c'est le rôle du diff, à sa
- * ligne), le dépliage du contexte (un extrait n'a pas de fichier autour de lui à
- * charger) et la bascule unifié ↔ côte-à-côte (quatre lignes en deux colonnes
+ * What is NOT taken from the Files tab, and deliberately: the “+” of
+ * gutter (we do not comment from an extract - this is the role of the diff, to its
+ * line), the unfolding of the context (an extract does not have a file around it
+ * load) and the unified ↔ side-by-side toggle (four rows in two columns
  * n'apprennent rien).
  */
 export function PrHunk({
@@ -39,13 +39,13 @@ export function PrHunk({
   maxLines,
   className,
 }: {
-  /** Chemin du fichier commenté — il porte l'ancre ET décide de la grammaire. */
+  /** Path of the commented file — it carries the anchor AND decides the grammar. */
   path: string;
-  /** Le fragment de la forge. GitLab n'en sert aucun : l'en-tête reste seul. */
+  /** The fragment of the forge. GitLab does not serve any of them: the header remains alone. */
   diffHunk?: string | null;
-  /** Ligne visée, quand on la connaît — elle complète l'ancre de l'en-tête. */
+  /** Aimed line, when you know it — it completes the anchor of the header. */
   line?: number | null;
-  /** Nombre de lignes gardées (les dernières). `0` = tout le hunk. */
+  /** Number of lines kept (the last ones). `0` = the whole hunk. */
   maxLines?: number;
   className?: string;
 }) {
@@ -55,9 +55,9 @@ export function PrHunk({
   const [collapsed, setCollapsed] = useState(false);
 
   /**
-   * Le fragment, analysé une fois. `null` quand il n'y a pas de hunk, ou quand la
-   * lib n'y reconnaît pas un fichier — l'en-tête tient alors seul l'information,
-   * comme avant, plutôt que d'afficher une boîte vide.
+   * The fragment, analyzed once. `null` when there is no hunk, or when the
+   * lib does not recognize a file there — the header then alone holds the information,
+   * as before, rather than displaying an empty box.
    */
   const fileDiff = useMemo(() => {
     const patch = hunkPatch(path, diffHunk ?? "", maxLines);
@@ -67,10 +67,10 @@ export function PrHunk({
   }, [path, diffHunk, maxLines]);
 
   /**
-   * Le même nettoyage d'ombre que `pr-diff`, et pour la même raison : la lib vide
-   * son `<pre>` au démontage mais le LAISSE dans le Shadow DOM, où son `hydrate`
-   * suivant le prend pour un rendu déjà peint. En développement, `reactStrictMode`
-   * remonte sur le même noeud — l'extrait naîtrait vide.
+   * The same shadow cleanup as `pr-diff`, and for the same reason: the empty lib
+   * its `<pre>` upon disassembly but LEAVES it in the Shadow DOM, where its `hydrate`
+   * following takes it for an already painted rendering. In development, `reactStrictMode`
+   * goes back to the same node — the extract would be born empty.
    */
   const onPostRender = useCallback(
     (node: HTMLElement, _instance: FileDiffInstance, phase: PostRenderPhase) => {
@@ -84,15 +84,15 @@ export function PrHunk({
       theme: DIFF_THEMES,
       themeType: resolvedTheme,
       diffStyle: "unified" as const,
-      // Même règle que l'onglet Fichiers : on défile, sauf sur un écran assez
-      // étroit pour qu'un défilement ne montre plus jamais une ligne entière.
+      // Same rule as the Files tab: we scroll, except on a fairly small screen.
+      // narrow so that scrolling never shows an entire line again.
       overflow: isMobile ? ("wrap" as const) : ("scroll" as const),
-      // L'en-tête est le nôtre — c'est lui qui replie.
+      // The header is ours — it’s the one that folds.
       disableFileHeader: true,
-      // `simple` ne pose un séparateur qu'ENTRE deux hunks, et un extrait n'en a
-      // qu'un : rien ne s'affiche. `line-info` annoncerait « N lignes non
-      // modifiées » avec la flèche qui va avec, pour un dépliage qui n'existe pas
-      // ici (pas de `loadDiffFiles` : il n'y a pas de fichier autour à charger).
+      // `simple` only places a separator BETWEEN two hunks, and an extract does not have one
+      // than one: nothing is displayed. `line-info` would announce “N lines not
+      // modified” with the arrow that goes with it, for an unfolding that does not exist
+      // here (no `loadDiffFiles`: there is no surrounding file to load).
       hunkSeparators: "simple" as const,
       lineDiffType: DIFF_LINE_DIFF_TYPE,
       onPostRender,
@@ -100,14 +100,14 @@ export function PrHunk({
     [resolvedTheme, isMobile, onPostRender],
   );
 
-  // Le dossier s'efface, le nom du fichier porte — le partage de `pr-diff`.
+  // The folder is deleted, the file name is — the share of `pr-diff`.
   const slash = path.lastIndexOf("/");
   const dir = slash === -1 ? "" : path.slice(0, slash + 1);
   const name = slash === -1 ? path : path.slice(slash + 1);
 
-  // L'ancre, peinte en deux morceaux. Le deux-points n'est pas du texte à
-  // traduire : les deux catalogues écrivent `{path}:{line}`, et c'est cette
-  // forme-là qu'on assemble ici pour pouvoir estomper le dossier.
+  // The anchor, painted in two pieces. The colon is not text to
+  // translate: both catalogs write `{path}:{line}`, and it is this
+  // this form that we assemble here to be able to blur the file.
   const anchor = (
     <span className="min-w-0 flex-1 truncate font-mono text-xs">
       <span className="text-muted-foreground">{dir}</span>
@@ -117,9 +117,9 @@ export function PrHunk({
   );
   const title = line != null ? t("staleAnchor", { path, line }) : path;
 
-  // Sans extrait (GitLab n'en sert aucun), l'en-tête n'a plus rien à replier :
-  // il redevient une ligne d'ancre, sans chevron ni geste. Un bouton qui ne fait
-  // rien est pire qu'une étiquette.
+  // Without an extract (GitLab does not serve any), the header has nothing left to fold:
+  // it becomes an anchor line again, without chevron or gesture. A button that doesn't
+  // nothing is worse than a label.
   if (!fileDiff) {
     return (
       <div className={cn("px-2.5 py-1.5", className)} title={title}>

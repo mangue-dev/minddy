@@ -1,156 +1,152 @@
 /**
- * Les constantes que l'app de bureau et le web partagent (MIN-291).
+ * The constants that the desktop app and the web share (MIN-291).
  *
- * Module PUR, sans `electron` et sans React : il est lu par le main process
- * (bundlé par scripts/build-desktop.mjs), par le preload, par le renderer, et
- * par la route de callback côté serveur. C'est exactement pour ça qu'il vit dans
- * `lib/` et non dans `desktop/src/` — voir desktop/README.md.
+ * PUR module, without `electron` and without React: it is read by the main process
+ * (bundled by scripts/build-desktop.mjs), by the preload, by the renderer, and
+ * by the server-side callback route. This is exactly why it lives in
+ * `lib/` and not `desktop/src/` — see desktop/README.md.
  */
 
 /**
- * L'origine de développement, ou `null` — `MINDDY_DESKTOP_ORIGIN`.
+ * The development origin, or `null` — `MINDDY_DESKTOP_ORIGIN`.
  *
- * Elle n'existe que pour développer contre `localhost` : en production la
- * coquille est signée et distribuée, les origines y sont en dur — une app de
- * bureau dont on peut détourner l'origine par une variable d'environnement est
- * une app dont on peut détourner l'écran de connexion.
+ * It only exists to develop against `localhost`: in production the
+ * shell is signed and distributed, the origins are hard-coded — an app de
+ * desktop whose origin can be hijacked by an environment variable is
+ * an app whose login screen can be hijacked.
  *
- * Quand elle est posée, elle gagne sur TOUT, canal compris : sur `localhost` il
- * n'y a ni stable ni preview, il n'y a qu'un serveur de dév.
+ * When it is installed, it wins on EVERYTHING, channel included: on `localhost` there
+ * is neither stable nor preview, there is only one dev server.
  */
 export const DESKTOP_ORIGIN_OVERRIDE: string | null =
   process.env.MINDDY_DESKTOP_ORIGIN?.trim() || null;
 
 /**
- * L'origine du canal STABLE — celle que la fenêtre charge par défaut.
+ * The origin of the STABLE channel — the one that the window loads by default.
  *
- * Le canal, lui, se choisit à l'exécution : voir lib/desktop/channel.ts.
+ * The channel is chosen at runtime: see lib/desktop/channel.ts.
  */
 export const DESKTOP_STABLE_ORIGIN: string =
   process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/+$/, "") ||
   "https://www.minddy.app";
 
 /**
- * L'origine du canal PREVIEW — le déploiement de branche `main` (MIN-352).
+ * The origin of the PREVIEW channel — branch deployment `main` (MIN-352).
  *
- * En dur, comme sa voisine, et pour la même raison. Ce n'est pas un
- * environnement à part : c'est le MÊME projet Supabase (mêmes comptes, mêmes
- * données, mêmes clés publiques), servi par le dernier commit de `main` au lieu
- * du dernier promu en production. D'où le fait qu'on puisse y basculer sans rien
- * perdre — la seule chose qui ne suit pas, ce sont les cookies, qui sont par
- * origine.
+ * Hard, like its neighbor, and for the same reason. This is not a separate
+ * environment: it is the SAME Supabase project (same accounts, same
+ * data, same public keys), served by the last commit of `main` instead of
+ * of the last one promoted to production. Hence the fact that you can switch to it without losing anything — the only thing that doesn't follow is cookies, which are par
+ * origin.
  */
 export const DESKTOP_PREVIEW_ORIGIN = "https://preview.minddy.app";
 
 /**
- * L'origine par DÉFAUT de la fenêtre — le dév s'il est demandé, le stable sinon.
+ * The DEFAULT origin of the window — the dev if requested, the stable otherwise.
  *
- * ⚠ Ce n'est pas forcément celle que la fenêtre charge : le canal choisi par la
- * personne vit dans le main process (`desktop/src/channel-store.ts`) et se
- * résout par `desktopOriginForChannel`. Cette constante-ci reste le point de
- * départ, et ce que lisent les surfaces qui n'ont pas de canal (le lien du menu
- * d'aide, par exemple).
+ * ⚠ This is not necessarily the one that the window loads: the channel chosen by the
+ * person lives in the main process (`desktop/src/channel-store.ts`) and se
+ * resolves to `desktopOriginForChannel`. This constant remains the starting point, and what surfaces that do not have a channel read (the help menu link, for example).
  */
 export const DESKTOP_ORIGIN: string = DESKTOP_ORIGIN_OVERRIDE ?? DESKTOP_STABLE_ORIGIN;
 
-/** Le schéma d'URL que macOS nous attribue (`minddy://auth?code=…`). */
+/** The URL scheme that macOS assigns to us (`minddy://auth?code=…`). */
 /**
- * L'écran par lequel la fenêtre entre — **jamais la racine**.
+ * The screen through which the window enters — **never the root**.
  *
- * `/` sert l'argumentaire, et l'argumentaire s'adresse à quelqu'un qui ne s'est
- * pas encore décidé : dans une app installée, cette personne n'existe pas.
- * `/home` tranche tout seul, sans un octet de logique de plus ici : le proxy y
- * renvoie vers `/login` quand la session manque, et rend l'app quand elle est
- * là. Viser `/login` directement ferait clignoter l'écran de connexion sous les
- * yeux de quelqu'un qui est déjà connecté.
+ * `/` serves the argument, and the argument is addressed to someone who has not yet decided: in an installed app, this person does not exist not.
+ * `/home` slices by itself, without an extra byte of logic here: the proxy y
+ * returns to `/login` when the session is missing, and returns the app when it is
+ * there. Aiming `/login` directly would cause the login screen to flash under the
+ * eyes of someone who is already logged in.
  */
 export const DESKTOP_ENTRY_PATH = "/home";
 
 /**
- * Le nom de l'app, et il n'est pas décoratif : **c'est lui qui nomme le dossier
- * de données**. `app.getPath("userData")` en dérive, et c'est là que vivront la
- * session, les caches et — surtout — les worktrees de l'agent local (§4.3 du
- * cadrage : `~/Library/Application Support/minddy/…`).
+ * The name of the app, and it is not decorative: **it is what names the folder
+ * of data**. `app.getPath("userData")` derives from it, and this is where the
+ * session, caches and — above all — the worktrees of the local agent will live (§4.3 of
+ * framing: `~/Library/Application Support/minddy/…`).
  *
- * D'où le fait de le poser MAINTENANT, avant qu'il existe des installations :
- * le changer plus tard déplacerait le dossier de tout le monde, et il faudrait
- * écrire une migration pour un simple renommage.
+ * Hence the fact of putting it NOW, before there are installations:
+ * changing it later would move everyone's folder, and you would have to
+ * write a migration for a simple rename.
  *
- * Ce qu'il ne corrige PAS : le nom dans la barre de menus et l'icône du dock,
- * lus dans l'`Info.plist` du bundle. Ceux-là sont posés par
- * `desktop/electron-builder.yml` (MIN-292), donc par l'EMPAQUETAGE — d'où le
- * fait qu'en développement macOS affiche « Electron », et que c'est normal.
+ * What it does NOT fix: the name in the menu bar and the dock icon,
+ * read in the `Info.plist` of the bundle. These are set by
+ * `desktop/electron-builder.yml` (MIN-292), therefore by PACKAGING — hence the
+ * causes macOS to display “Electron” in development, and this is normal.
  */
 export const DESKTOP_APP_NAME = "minddy";
 
-/** L'identifiant signé du bundle macOS (`appId` dans electron-builder.yml). */
+/** The signed identifier of the macOS bundle (`appId` in electron-builder.yml). */
 export const DESKTOP_BUNDLE_ID = "app.minddy.desktop";
 
-/** Le schéma d'URL que macOS nous attribue (`minddy://auth?code=…`). */
+/** The URL scheme that macOS assigns to us (`minddy://auth?code=…`). */
 export const DESKTOP_PROTOCOL = "minddy";
 
-/** L'hôte du deep link d'authentification : `minddy://auth`. */
+/** The host of the authentication deep link: `minddy://auth`. */
 export const DESKTOP_AUTH_HOST = "auth";
 
 /**
- * L'hôte du deep link de RETOUR : `minddy://open?next=…` (MIN-293).
+ * The host of the RETURN deep link: `minddy://open?next=…` (MIN-293).
  *
- * Il ramène la fenêtre sur une page de l'app depuis le navigateur système —
- * aujourd'hui la fin d'un paiement Stripe, demain tout aller-retour du même
- * genre. Voir lib/desktop/open-link.ts.
+ * It returns the window to a page of the app from the system browser —
+ * today the end of a Stripe payment, tomorrow any round trip of the same
+ * kind. See lib/desktop/open-link.ts.
  */
 export const DESKTOP_OPEN_HOST = "open";
 
 /**
- * La page de rebond que le navigateur système traverse pour rouvrir l'app.
+ * The bounce page that the system browser goes through to reopen the app.
  *
- * Elle existe parce qu'un tiers ne peut PAS nous renvoyer sur `minddy://` :
- * Stripe (comme tout service sérieux) n'accepte qu'une URL http(s) en retour.
- * On lui donne donc celle-ci, et c'est elle qui appelle le schéma.
+ * It exists because a third party can NOT bounce us back to `minddy://`:
+ * Stripe (like any serious service) only accepts an http(s) URL in return.
+ * So we give it this one, and it is she who calls the schema.
  */
 export const DESKTOP_RETURN_PATH = "/desktop/return";
 
 /**
- * Le marqueur que le `redirectTo` d'une demande d'authentification porte quand
- * elle vient de l'app de bureau.
+ * The marker that the `redirectTo` of an authentication request carries when
+ * it comes from the desktop app.
  *
- * Il est dans l'URL et non dans l'user agent, et ce n'est pas un raccourci : le
- * navigateur qui revient sur `/auth/callback` est le navigateur SYSTÈME, pas
- * notre fenêtre. Son user agent ne dit rien de nous, et ne le dira jamais.
+ * It is in the URL and not in the user agent, and it is not a shortcut: the
+ * browser that returns about `/auth/callback` is the SYSTEM browser, not
+ * our window. Its user agent says nothing about us, and never will.
  */
 export const DESKTOP_CALLBACK_FLAG = "desktop";
 
 /**
- * Le marqueur du TOUR, dans la même URL (MIN-345).
+ * The TURN marker, in the same URL (MIN-345).
  *
- * macOS livre à l'app tout ce qui porte notre schéma, quelle qu'en soit
- * l'origine : un `minddy://auth?code=…` reçu du système connectait la fenêtre
- * sans que rien ne rattache ce lien à une demande de l'app. Le nonce part avec
- * la demande, traverse le provider et revient dans le deep link, où la fenêtre
- * le compare à celui qu'elle a gardé. Sans correspondance, le lien est ignoré.
+ * macOS delivers to the app everything that carries our schema, whatever it is
+ * the origin: a `minddy://auth?code=…` received from the system connected the window
+ * without anything connecting this link to a request from the app. The nonce leaves with
+ * the request, passes through the provider and returns to the deep link, where the window
+ * compares it to the one it kept. Without a match, the link is ignored.
  */
 export const DESKTOP_TURN_PARAM = "turn";
 
 /**
- * Le suffixe d'user agent de la fenêtre — `…Chrome/… minddy-desktop/1.0.0`.
+ * The user agent suffix of the window — `…Chrome/… minddy-desktop/1.0.0`.
  *
- * Il ne sert à AUCUNE décision de l'app (celles-là lisent la présence du pont,
- * cf. lib/desktop/bridge.ts) : il sert à ce que les logs serveur et l'analytics
- * puissent distinguer l'app du navigateur sans qu'on ait à leur envoyer autre
- * chose.
+ * It is not used for ANY decision of the app (those read the presence of the bridge,
+ * cf. lib/desktop/bridge.ts): it is used for the logs server and analytics
+ * can distinguish the app from the browser without having to send them another
+ * thing.
  */
 export function desktopUserAgentSuffix(version: string): string {
   return `minddy-desktop/${version}`;
 }
 
 /**
- * Le suffixe posé sur un user agent — **une seule fois**.
+ * The suffix placed on a user agent — **only once**.
  *
- * Mesuré dans une vraie fenêtre : l'user agent par défaut d'Electron porte DÉJÀ
- * `<nom de l'app>/<version>`, au milieu de la chaîne, juste avant `Chrome/…`.
- * Comme l'app s'appelle `minddy-desktop`, ajouter naïvement le suffixe le fait
- * apparaître deux fois — une fois au milieu, une fois à la fin. Ce n'est pas
- * grave, c'est juste faux, et ça se voit dans chaque ligne de log.
+ * Measured in a real window: Electron's default user agent ALREADY has
+ * `<nom de l'app>/<version>`, in the middle of the chain, just before `Chrome/…`.
+ * Since the app is called `minddy-desktop`, naively adding the suffix makes it
+ * appear twice — once in the middle, once at the end. It's not
+ * serious, it's just wrong, and it shows in every log line.
  */
 export function withDesktopUserAgent(userAgent: string, version: string): string {
   const suffix = desktopUserAgentSuffix(version);

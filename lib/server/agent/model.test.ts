@@ -1,14 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-111 : ce qui décide qu'un run VOIT les maquettes est une lecture de l'index
- * OpenRouter — `architecture.input_modalities` contient-il `image`. Le reste du
- * ticket en dépend entièrement : se tromper de champ, et soit la capacité n'arrive
- * jamais, soit on envoie une image à un modèle texte (400 en plein tour).
+ * MIN-111: what decides that a run SEES the mocks is a read of the index
+ * OpenRouter — Does `architecture.input_modalities` contain `image`. The rest of the
+ * ticket depends entirely on it: get the field wrong, and either the capacity never arrives, or we send an image to a text model (400 in full turn).
  *
- * Les charges utiles ci-dessous sont copiées de la VRAIE réponse de
- * `https://openrouter.ai/api/v1/models` (2026-07-28) : c'est la forme qu'on parse,
- * pas celle qu'on imagine. Un seul appel réseau sert les deux capacités.
+ * The payloads below are copied from the REAL answer of
+ * `https://openrouter.ai/api/v1/models` (2026-07-28): this is the form we parse,
+ * not the one we imagine. A single network call serves both capabilities.
  */
 
 const MODELS_PAYLOAD = {
@@ -28,14 +27,14 @@ const MODELS_PAYLOAD = {
       context_length: 1_050_000,
       architecture: { input_modalities: ["file", "image", "text"] },
     },
-    // Modèle sans bloc `architecture` : l'index n'est pas homogène.
+    // Model without block `architecture`: the index is not homogeneous.
     { id: "legacy/model", context_length: 8_192 },
   ],
 };
 
 let fetchMock: ReturnType<typeof vi.fn>;
 
-/** Import FRAIS : l'index est caché au niveau module (une fois par process). */
+/** FRESH import: the index is hidden at module level (once per process). */
 async function freshModel() {
   vi.resetModules();
   return await import("./model");
@@ -88,7 +87,7 @@ describe("getModelContextWindow (inchangé, même index)", () => {
     const { getModelContextWindow, supportsImageInput } = await freshModel();
     expect(await getModelContextWindow("anthropic/claude-sonnet-5", "openrouter", "sk")).toBe(1_000_000);
     expect(await supportsImageInput("anthropic/claude-sonnet-5", "openrouter", "sk")).toBe(true);
-    // Un seul aller-retour réseau pour les deux questions.
+    // Only one network round trip for both questions.
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 

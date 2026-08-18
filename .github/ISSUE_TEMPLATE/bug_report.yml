@@ -1,5 +1,5 @@
-name: Signaler un bug
-description: Signaler un comportement reproductible de minddy
+name: Report a bug
+description: Report a reproducible minddy issue
 title: "[Bug] "
 labels:
   - bug
@@ -8,39 +8,39 @@ body:
   - type: markdown
     attributes:
       value: |
-        Merci de vérifier les issues existantes avant de continuer. Pour une vulnérabilité, n'utilisez pas ce formulaire : suivez la [politique de sécurité](https://github.com/mangue-dev/minddy-issues/security/policy).
+        Please check existing issues before continuing. For a vulnerability, do not use this form: follow the [security policy](https://github.com/mangue-dev/minddy-issues/security/policy).
 
   - type: checkboxes
     id: prerequisites
     attributes:
-      label: Vérifications préalables
+      label: Prior checks
       options:
-        - label: J'ai recherché une issue existante décrivant le même problème.
+        - label: I searched for an existing issue describing the same problem.
           required: true
-        - label: Ce rapport ne contient ni secret, ni donnée personnelle, ni détail de vulnérabilité non corrigée.
+        - label: This report contains no secret, personal data, or details of an unpatched vulnerability.
           required: true
-        - label: J'accepte de respecter le Code of Conduct du projet.
+        - label: I agree to follow the project's Code of Conduct.
           required: true
 
   - type: input
     id: version
     attributes:
-      label: Version ou commit
-      description: Tag, numéro de version ou SHA du commit utilisé.
-      placeholder: v0.9.5 ou abc1234
+      label: Version or commit
+      description: Tag, version number or SHA of the commit used.
+      placeholder: v0.9.5 or abc1234
     validations:
       required: true
 
   - type: dropdown
     id: deployment
     attributes:
-      label: Mode d'utilisation
+      label: Usage mode
       options:
-        - Auto-hébergé
-        - Service managé minddy
-        - Développement local
+        - Self-hosted
+        - Minddy Cloud
+        - Local development
         - Application macOS
-        - Autre
+        - Other
     validations:
       required: true
 
@@ -48,8 +48,8 @@ body:
     id: environment
     attributes:
       label: Environnement
-      description: Navigateur et version, système, version de Node.js, hébergeur et base de données si pertinents.
-      placeholder: macOS 15, Chrome 140, Node.js 24, Supabase hébergé
+      description: Browser and version, system, Node.js version, host and database if relevant.
+      placeholder: macOS 15, Chrome 140, Node.js 24, Supabase hosted
     validations:
       required: true
 
@@ -57,16 +57,16 @@ body:
     id: description
     attributes:
       label: Description
-      description: Que s'est-il passé, et quel est l'impact concret ?
+      description: What happened, and what is the concrete impact?
     validations:
       required: true
 
   - type: textarea
     id: reproduction
     attributes:
-      label: Étapes de reproduction minimales
+      label: Minimal reproduction steps
       placeholder: |
-        1. Créer…
+        1. Create…
         2. Ouvrir…
         3. Observer…
     validations:
@@ -75,26 +75,26 @@ body:
   - type: textarea
     id: expected
     attributes:
-      label: Résultat attendu
+      label: Expected result
     validations:
       required: true
 
   - type: textarea
     id: actual
     attributes:
-      label: Résultat obtenu
+      label: Result obtained
     validations:
       required: true
 
   - type: textarea
     id: logs
     attributes:
-      label: Journaux ou captures expurgés
-      description: Retirez tokens, e-mails, identifiants de projet et données client. Les fichiers peuvent être déposés ici.
+      label: Redacted logs or captures
+      description: Remove tokens, emails, project IDs and customer data. Files can be dropped here.
       render: shell
 
   - type: textarea
     id: context
     attributes:
-      label: Contexte supplémentaire
-      description: Régression connue, fréquence, solution de contournement ou autre information utile.
+      label: Additional Context
+      description: Known regression, frequency, workaround, or other useful information.

@@ -35,8 +35,8 @@ describe("objectiveProgress", () => {
   });
 
   it("counts closed issues — canceled and duplicate — as dealt with", () => {
-    // Le compteur dit la même chose que la barre : un ticket annulé est réglé,
-    // sinon un objectif à 100 % affichait « 1/3 ».
+    // The counter says the same thing as the bar: a canceled ticket is settled,
+    // otherwise a 100% objective displayed “1/3”.
     const { done, total, percent } = objectiveProgress("obj", [
       issue("done", "m"),
       issue("canceled", "m"),

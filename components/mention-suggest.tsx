@@ -1,14 +1,14 @@
 "use client";
 
-// Ce qu'on peut citer par « @ », et à quoi ça ressemble dans une liste de
+// What can be cited by “@”, and what it looks like in a list of
 // suggestions.
 //
-// Une seule table pour les deux surfaces qui ouvrent un « @ » : le composer de
-// Numo (contentEditable, liste posée au-dessus) et l'éditeur de description
-// (tiptap, menu porté au corps du document). Elles ne partagent pas leur boîte —
-// l'une est ancrée au composer, l'autre au caret — mais elles partagent la
-// FIGURE et la LIGNE : une personne, un projet, un ticket, un objectif, une page
-// du wiki s'y reconnaissent au même signe des deux côtés.
+// A single table for the two surfaces which open an “@”: compose it from
+// Numo (contentEditable, list placed above) and the description editor
+// (tiptap, menu brought to the body of the document). They don't share their box —
+// one is anchored to the composer, the other to the caret — but they share the
+// FIGURE and the LINE: a person, a project, a ticket, an objective, a page
+// from the wiki are recognized by the same sign on both sides.
 
 import { BookText, FileText } from "lucide-react";
 import { cn } from "mangue-ui";
@@ -19,25 +19,24 @@ import { UserAvatar } from "@/components/user-avatar";
 export interface MentionOption {
   type: "member" | "project" | "issue" | "objective" | "page";
   id: string;
-  /** Ce qui s'écrit après le « @ ». */
+  /** What is written after the “@”. */
   label: string;
-  /** Membres : graine du portrait. Projets : graine de l'orbe, quand le tirage
-      a été relancé (`projectOrbSeed`). */
+  /** Members: seed of the portrait. Projects: seed of the orb, when the draw
+ was restarted (`projectOrbSeed`). */
   avatarSeed?: string;
-  /** Projets : le favicon importé, quand il y en a un (sinon l'orbe). */
+  /** Projects: the imported favicon, when there is one (otherwise the orb). */
   iconUrl?: string | null;
   /** Objectifs : leur couleur — celle que porte leur cible partout ailleurs. */
   color?: string | null;
-  /** Pages : leur émoji, quand elles en ont un (MIN-273). */
+  /** Pages: their emoji, when they have one (MIN-273). */
   icon?: string | null;
-  /** Second rang de la ligne : le titre d'un ticket, le nom du projet d'un
-      objectif. Ce qui distingue MIN-42 de MIN-43 quand on choisit. */
+  /** Second row of the line: the title of a ticket, the name of the project of an objective. What distinguishes MIN-42 from MIN-43 when choosing. */
   detail?: string;
-  /** Termes de recherche en plus du libellé (e-mail, clé de projet, titre). */
+  /** Search terms in addition to the label (email, project key, title). */
   keywords?: string[];
 }
 
-/** Les options qui correspondent à la requête tapée après le « @ ». */
+/** The options that match the query typed after the “@”. */
 export function filterMentions(
   options: MentionOption[],
   query: string,
@@ -55,7 +54,7 @@ export function filterMentions(
     .slice(0, limit);
 }
 
-/** La figure d'une option — la même que celle de sa pilule une fois posée. */
+/** The figure of an option — the same as that of its pill once placed. */
 export function MentionFigure({
   option,
   className = "size-5",
@@ -113,9 +112,9 @@ export function MentionFigure({
 }
 
 /**
- * Une ligne de la liste. `mousedown` et non `click` : la surface d'édition ne
- * doit pas perdre le focus, sinon le blur referme la liste avant que le clic
- * n'arrive.
+ * A line from the list. `mousedown` and not `click`: the editing surface does not
+ * must not lose focus, otherwise the blur closes the list before the click
+ * arrives.
  */
 export function MentionOptionRow({
   option,
@@ -152,8 +151,8 @@ export function MentionOptionRow({
   );
 }
 
-/** La liste ancrée AU-DESSUS de son composer (celui de Numo, collé en bas de son
-    panneau). L'éditeur de description, lui, ancre la sienne au caret. */
+/** The list anchored ABOVE its composer (Numo's, pasted at the bottom of its
+ panel). The description editor anchors his to the caret. */
 export function MentionSuggestions({
   options,
   activeIndex,

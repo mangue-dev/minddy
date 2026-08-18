@@ -9,31 +9,30 @@ export type SidebarNavRailItem = {
   value: string;
   label: string;
   icon?: LucideIcon;
-  /** Pastille d'attention sur la rangée — quelque chose y est incomplet. La
-      chaîne est ce que dit le survol et ce que lit un lecteur d'écran : le point
-      seul n'apprendrait rien à qui ne le voit pas. */
+  /** Attention badge on the row — something is incomplete there. Tea
+ string is what the hover says and what a screen reader reads: the dot
+ alone would tell nothing to anyone who doesn't see it. */
   indicator?: string;
 };
 
 /**
- * Le rail d'une sidebar secondaire dont les rangées choisissent un PANNEAU et
- * non un objet : les réglages (compte et projet) et l'admin.
+ * The rail of a secondary sidebar whose rows choose a PANEL and
+ * not an object: the settings (account and project) and the admin.
  *
- * Ce sont des cartes à nous, et plus les `Tabs` de mangue-ui. La bibliothèque a
- * gagné en 0.6.0 un indicateur GLISSANT, un `<span>` peint dans la liste au
- * gabarit de l'onglet actif (`rounded-full`, `bg-background`, `shadow-sm`, et
- * une bordure en sombre). Il est invisible dans une barre d'onglets classique,
- * où il EST le fond de l'onglet actif — mais ici la sélection est déjà dessinée
- * par la pastille `layoutId` ci-dessous, et les deux se superposaient : une
- * capsule claire bordée, aux mauvais coins, sous la pastille. Neutraliser le
- * fond du déclencheur ne l'atteignait pas — il ne vit pas sur le déclencheur.
+ * These are our cards, and no longer the `Tabs` from mango-ui. The library has
+ * gained in 0.6.0 a SLIDING indicator, a `<span>` painted in the list at
+ * template of the active tab (`rounded-full`, `bg-background`, `shadow-sm`, and
+ * a border in dark). It is invisible in a classic tab bar,
+ * where it IS the background of the active tab — but here the selection is already drawn
+ * by the `layoutId` patch below, and the two overlapped: a clear capsule bordered, at the wrong corners, under the patch. Neutralize the
+ * background of the trigger did not reach it — it does not live on the trigger.
  *
- * Le rendu ne bouge pas d'un pixel : mêmes rangées, même pastille qui glisse,
- * mêmes libellés. Ce qui disparaît, c'est la sémantique d'onglets, dont ce rail
- * n'avait plus l'usage : la liste part par portail dans le châssis (donc hors du
- * DOM de son `<Tabs>`), et l'état vit dans `?tab=`. Un bouton par panneau, avec
- * `aria-current`, c'est la grammaire des autres barres secondaires — celle du
- * triage, des retours, des pull requests.
+ * The rendering does not move a pixel: same rows, same slide that slides,
+ * same labels. What disappears is the semantics of tabs, of which this rail
+ * no longer had use: the list leaves by portal in the chassis (therefore outside the
+ * DOM of its `<Tabs>`), and the state lives in `?tab=`. One button per panel, with
+ * `aria-current`, this is the grammar of the other secondary bars — that of
+ * sorting, returns, pull requests.
  */
 export function SidebarNavRail({
   items,
@@ -44,13 +43,13 @@ export function SidebarNavRail({
   items: SidebarNavRailItem[];
   value: string;
   onValueChange: (value: string) => void;
-  /** Le nom de la liste pour un lecteur d'écran (le titre de l'écran). */
+  /** The list name for a screen reader (the screen title). */
   label: string;
 }) {
   const reduceMotion = useReducedMotion();
-  // `layoutId` est GLOBAL à framer-motion : deux rails montés en même temps
-  // (une transition de route qui superpose deux écrans) se voleraient la
-  // pastille. Un id par instance ferme la porte.
+  // `layoutId` is GLOBAL to framer-motion: two rails mounted at the same time
+  // (a route transition which superimposes two screens) would steal the
+  // pellet. One id per instance closes the door.
   const pillId = `sidebar-nav-pill-${useId()}`;
 
   return (
@@ -72,9 +71,9 @@ export function SidebarNavRail({
                     : "text-foreground/60 hover:bg-muted/60 hover:text-foreground focus-visible:bg-muted/60 dark:text-muted-foreground dark:hover:text-foreground",
                 )}
               >
-                {/* `layoutId` : une seule pastille montée à la fois, que
-                    framer-motion fait GLISSER vers la nouvelle rangée au lieu de
-                    la faire disparaître ici et réapparaître là. */}
+                {/* `layoutId`: only one pad mounted at a time, which
+ framer-motion SLIDEs to the new row instead of
+ disappearing here and reappearing there. */}
                 {active && (
                   <motion.span
                     layoutId={pillId}
@@ -87,9 +86,9 @@ export function SidebarNavRail({
                     }
                   />
                 )}
-                {/* Positionné, donc peint AU-DESSUS de la pastille (même pile,
-                    ordre du DOM) : sans ce span, l'absolu passerait par-dessus
-                    le libellé, qui n'est pas positionné. */}
+                {/* Positioned, therefore painted ABOVE the pad (same stack,
+ order of the DOM): without this span, the absolute would pass over
+ the label, which is not positioned. */}
                 <span className="relative flex min-w-0 flex-1 items-center gap-2">
                   {Icon && <Icon className="size-4 shrink-0" aria-hidden />}
                   <span className="truncate">{item.label}</span>

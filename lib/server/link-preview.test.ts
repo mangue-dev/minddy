@@ -2,23 +2,23 @@ import { Readable } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-184 — `resolveLinkPreview` est la seule chose qui fait SORTIR une requête
- * HTTP depuis une URL tapée par un utilisateur. Deux propriétés comptent, et
- * elles tirent dans des sens opposés :
+ * MIN-184 — `resolveLinkPreview` is the only thing that makes a
+ * HTTP request OUTPUT from a URL typed by a user. Two properties matter, and
+ * they pull in opposite directions:
  *
- *  1. **Refuser ce qui n'est pas public.** `localhost`, une IP privée, un
- *     protocole exotique : la garde anti-SSRF doit lever
- *     `FaviconError("invalidUrl")` AVANT tout appel réseau. Le test le vérifie
- *     par l'absence d'appel, pas seulement par l'erreur — une garde qui lève
- *     après avoir déjà tapé sur l'hôte n'aurait rien gardé.
- *  2. **Ne pas échouer sur une URL publique valide.** Un site éteint, sans
- *     favicon, sans <title>, ou qui rend un HTML démesuré reste un lien qu'on
- *     doit pouvoir enregistrer — avec son hostname pour titre.
+ * 1. **Deny what is not public.** `localhost`, a private IP, a
+ * exotic protocol: anti-SSRF guard must raise
+ * `FaviconError("invalidUrl")` BEFORE any network call. The test verifies it
+ * by the absence of a call, not just by the error — a guard that raises
+ * after having already tapped on the host would have kept nothing.
+ * 2. **Do not fail on a valid public URL.** A site turned off, without
+ * favicon, without <title>, or which renders excessive HTML remains a link that we
+ * must be able to save - with its hostname as title.
  *
- * MIN-336 en ajoute une troisième : la requête part vers l'**adresse validée**,
- * pas vers le nom. Le mock est donc posé sur `pinnedRequest`, ce qui laisse
- * jouer tout le garde-fou (résolution, revalidation des redirections, plafond
- * d'octets) et permet d'asserter l'adresse épinglée.
+ * MIN-336 adds a third: the request goes to the **validated address**,
+ * not to the name. The mock is therefore placed on `pinnedRequest`, which lets
+ * play all the safeguards (resolution, revalidation of redirections, ceiling
+ * of bytes) and allows the pinned address to be asserted.
  */
 
 const lookup = vi.hoisted(() => vi.fn());
@@ -29,7 +29,7 @@ vi.mock("./pinned-request", () => ({ pinnedRequest }));
 
 const { FaviconError, resolveLinkPreview } = await import("./favicon");
 
-/** Une réponse comme en rend `pinnedRequest` : corps en flux, jetable. */
+/** A response like `pinnedRequest`: body in flow, disposable. */
 function response(
   body: string | Buffer,
   { status = 200, headers = {} as Record<string, string> } = {}
@@ -47,8 +47,7 @@ function htmlResponse(html: string, contentType = "text/html") {
   return response(html, { headers: { "content-type": contentType } });
 }
 
-/** Chaque appel rend la réponse suivante — recréée à chaque fois, un flux ne se
-    lit qu'une fois. */
+/** Each call returns the following response — recreated each time, a stream is only read once. */
 function replies(...makers: (() => ReturnType<typeof response>)[]) {
   let call = 0;
   pinnedRequest.mockImplementation(async () =>
@@ -59,7 +58,7 @@ function replies(...makers: (() => ReturnType<typeof response>)[]) {
 beforeEach(() => {
   pinnedRequest.mockReset();
   lookup.mockReset();
-  // Par défaut, tout hôte résout vers une IP publique.
+  // By default, any host resolves to a public IP.
   lookup.mockResolvedValue([{ address: "93.184.216.34" }]);
 });
 
@@ -93,8 +92,8 @@ describe("resolveLinkPreview — ce qui est refusé", () => {
   });
 
   it("refuse un hôte qui répond une adresse publique ET une privée", async () => {
-    // Le rebinding DNS commence ici : servir les deux, puis compter sur une
-    // seconde résolution au moment de se connecter.
+    // DNS rebinding starts here: serve both, then rely on one
+    // second resolution when connecting.
     lookup.mockResolvedValue([{ address: "93.184.216.34" }, { address: "169.254.169.254" }]);
     await expect(resolveLinkPreview("https://rebind.exemple.com")).rejects.toMatchObject(
       { key: "invalidUrl" }
@@ -154,8 +153,8 @@ describe("resolveLinkPreview — ce qui aboutit", () => {
   });
 
   it("préfixe aussi un hôte à port, qui n'est pas un schéma", async () => {
-    // `exemple.com:8080` porte un `:` sans porter de schéma. Le confondre avec
-    // un protocole exotique le faisait refuser côté serveur alors même que
+    // `exemple.com:8080` carries a `:` without carrying a schema. Confuse it with
+    // an exotic protocol caused it to be refused on the server side even though
     // l'app venait de l'accepter.
     replies(() => htmlResponse("<title>App</title>"), () => response("", { status: 404 }));
     const preview = await resolveLinkPreview("exemple.com:8080/docs");
@@ -196,10 +195,10 @@ describe("resolveLinkPreview — ce qui aboutit", () => {
   });
 
   it("coupe un HTML démesuré au plafond, et lit quand même son <head>", async () => {
-    // 2 Mo : au-dessus du plafond d'un mégaoctet. La lecture s'arrête au
-    // plafond — le reste n'est jamais téléchargé — mais ce qui a été lu sert :
-    // le `<head>` est en tête, et un site un peu gros (linear.app fait 1,2 Mo)
-    // n'a pas à perdre son titre pour autant.
+    // 2 MB: above the one megabyte limit. Playback stops at
+    // ceiling — the rest is never downloaded — but what has been read is used:
+    // the `<head>` is at the top, and a somewhat large site (linear.app is 1.2 MB)
+    // doesn't have to lose his title though.
     const huge = `<title>Titre</title>${"x".repeat(2 * 1024 * 1024)}`;
     replies(() => htmlResponse(huge), () => response("", { status: 404 }));
     const preview = await resolveLinkPreview("https://enorme.exemple.com");
@@ -208,7 +207,7 @@ describe("resolveLinkPreview — ce qui aboutit", () => {
   });
 
   it("refuse une icône dont le content-length annoncé dépasse le plafond", async () => {
-    // Une image, elle, ne se tronque pas : à moitié lue, elle est cassée.
+    // An image cannot be truncated: half read, it is broken.
     replies(
       () => htmlResponse('<link rel="icon" href="/fav.png"><title>Site</title>'),
       () =>

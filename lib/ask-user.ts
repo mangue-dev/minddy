@@ -1,38 +1,38 @@
 /**
- * Questions `ask_user` (MIN-86) — forme normalisée partagée entre les boucles
- * serveur (Numo `loop.ts`, agent `agent-loop.ts`) et la carte de questions de
- * l'UI. Schéma aligné sur l'outil AskUserQuestion de Claude Code : chaque
- * question porte un header court (chip), un mode multi-sélection (checkboxes)
- * ou exclusif (radio), et des options `{label, description}` dont la première
- * peut être recommandée (suffixe « (Recommended) » détecté et retiré du label).
+ * Questions `ask_user` (MIN-86) — normalized form shared between loops
+ * server (Numo `loop.ts`, agent `agent-loop.ts`) and the question card of
+ * him. Schema aligned with Claude Code's AskUserQuestion tool: each
+ * question carries a short header (chip), a multi-selection mode (checkboxes)
+ * or exclusive (radio), and `{label, description}` options including the first
+ * can be recommended (“(Recommended)” suffix detected and removed from the label).
  *
- * Le parseur absorbe TOUTES les formes historiques :
+ * The parser absorbs ALL historical forms:
  *  - actuelle : `{questions: [{question, header?, multi_select?, options: [{label, description?}]}]}`
  *  - v1 MIN-86 : `{questions: [{question, suggestions: string[]}]}`
  *  - legacy mono-question : `{question, suggestions}`
- *  - sa propre sortie normalisée (round-trip par le feed de l'agent).
+ * - its own standardized output (round-trip via the agent's feed).
  */
 
 export interface AskUserOption {
   label: string;
   description: string;
-  /** Option recommandée par le modèle (1re + suffixe « (Recommended) »). */
+  /** Option recommended by the model (1st + suffix “(Recommended)”). */
   recommended: boolean;
 }
 
 export interface AskUserQuestion {
   question: string;
-  /** Chip courte (≤12 caractères) affichée comme onglet de set. "" si absente. */
+  /** Short chip (≤12 characters) displayed as set tab. "" if absent. */
   header: string;
-  /** true = plusieurs réponses combinables (checkboxes) ; false = radio. */
+  /** true = several combinable responses (checkboxes); false = radio. */
   multiSelect: boolean;
   options: AskUserOption[];
 }
 
-/** Nombre max de questions affichées/transmises pour un même appel ask_user. */
+/** Maximum number of questions displayed/transmitted for the same ask_user call. */
 export const MAX_ASK_USER_QUESTIONS = 4;
 
-/** Suffixe « (Recommended) » / « (Recommandé) » — détecté puis retiré du label. */
+/** Suffix “(Recommended)” / its French translation — detected and then removed from the label. */
 const RECOMMENDED_SUFFIX = /\s*\(\s*(?:recommended|recommandée?)\s*\)\s*$/i;
 
 function toOption(raw: unknown): AskUserOption | null {
@@ -62,7 +62,7 @@ function toQuestion(raw: unknown): AskUserQuestion | null {
   let multiSelect = false;
   let rawOptions: unknown;
   if (typeof raw === "string") {
-    // Tolérance : le modèle envoie parfois des questions nues.
+    // Tolerance: the model sometimes sends naked questions.
     question = raw;
   } else if (raw && typeof raw === "object") {
     const rec = raw as Record<string, unknown>;
@@ -98,10 +98,10 @@ export function parseAskUserQuestions(
 }
 
 /**
- * Compose le message user qui répond à un lot de questions : la réponse seule
- * pour une question unique, sinon une ligne `question → réponse` par question
- * (lisible dans le fil ET sans ambiguïté pour le modèle). Une réponse
- * multi-sélection arrive déjà jointe (« a, b, c ») par la carte.
+ * Composes the user message which answers a set of questions: the answer alone
+ * for a single question, otherwise one `question → answer` line per question
+ * (readable in the thread AND unambiguously for the model). An answer
+ * multi-selection arrives already joined (“a, b, c”) by the card.
  */
 export function composeAskUserReply(
   entries: Array<{ question: string; answer: string }>
@@ -114,17 +114,17 @@ export function composeAskUserReply(
 
 export interface AskUserAnswerEntry {
   question: string;
-  /** null = réponse introuvable dans le message (forme libre, skip, ancien flux). */
+  /** null = response not found in message (free form, skip, old flow). */
   answer: string | null;
 }
 
 /**
- * Inverse de `composeAskUserReply` : ré-associe le message de réponse de
- * l'utilisateur aux questions posées, pour l'affichage replié « détails » de la
- * ligne ask_user du fil. Question unique → tout le message est la réponse ;
- * plusieurs → on retrouve chaque ligne `question → réponse`. Une réponse non
- * appariable (skip, texte libre tapé hors carte) laisse `answer: null` — la
- * surface affiche alors le message brut.
+ * Reverse of `composeAskUserReply`: re-associates the response message from
+ * the user to the questions asked, for the folded “details” display of the
+ * ask_user line of the thread. Single question → the whole message is the answer;
+ * several → we find each line `question → answer`. An answer no
+ * matchable (skip, free text typed outside the map) leaves `answer: null` — the
+ * surface then displays the raw message.
  */
 export function matchAskUserAnswers(
   questions: AskUserQuestion[],

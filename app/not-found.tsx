@@ -11,25 +11,25 @@ import type { Locale } from "@/i18n/config";
 /**
  * Vraie page 404 (MIN-88).
  *
- * minddy n'en avait aucune, et n'en avait pas besoin : le proxy protégeait
- * « tout sauf une liste blanche », donc `/blog`, `/docs` ou une faute de frappe
- * repartaient en `307 → /login?redirect=…`. Une redirection n'est pas une
- * absence : elle dit au crawler « cette page existe, ailleurs », et l'espace
- * des URLs inexistantes étant infini, le rapport « Page avec redirection » de
- * Search Console l'était aussi. Le proxy protège maintenant une liste noire —
- * ce qui n'y est pas arrive ici, avec un vrai statut 404.
+ * minddy had none, and didn't need one: the proxy protected
+ * “anything but a whitelist”, so `/blog`, `/docs` or a typo
+ * went back to `307 → /login?redirect=…`. A redirect is not a
+ * absence: it tells the crawler “this page exists, elsewhere”, and the space
+ * non-existent URLs being infinite, the “Page with redirection” report of
+ * Search Console was too. The proxy now protects a blacklist —
+ * what is not there arrives here, with a real 404 status.
  *
- * Le chrome marketing plutôt qu'un écran nu : on tombe sur cette page depuis
- * l'extérieur, et une nav est ce qui rattrape le visiteur.
+ * Marketing chrome rather than a bare screen: we have come across this page since
+ * the outside, and a nav is what catches up with the visitor.
  *
- * L'ÉCHELLE EST CELLE DE LA LANDING, pas celle d'une boîte de dialogue. La
- * première version tenait dans un `max-w-lg` avec un titre en `text-3xl` : posée
- * entre la nav et le footer, hauts de leur taille normale, elle se lisait comme
- * une note perdue au milieu d'un écran vide. Le titre reprend donc la mesure du
- * hero (`hero.tsx`), et le nombre devient un vrai élément d'affichage — même
- * recette que le mot-symbole du footer : une taille fluide en `clamp`, un
- * `leading-none` et un tracking resserré, pour qu'il occupe la largeur qu'on lui
- * donne sur un téléphone comme sur un grand écran.
+ * THE SCALE IS THAT OF THE LANDING, not that of a dialog box. There
+ * first version was in a `max-w-lg` with a title in `text-3xl`: asked
+ * between the nav and the footer, taller than their normal size, it read like
+ * a note lost in the middle of a blank screen. The title therefore takes up the measure of
+ * hero (`hero.tsx`), and the number becomes a real display element — even
+ * recipe as the wordmark of the footer: a fluid size in `clamp`, a
+ * `leading-none` and tight tracking, so that it occupies the width required for it
+ * looks on a phone like a big screen.
  */
 export async function generateMetadata(): Promise<Metadata> {
   return {

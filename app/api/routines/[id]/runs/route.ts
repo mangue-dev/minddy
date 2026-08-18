@@ -5,19 +5,19 @@ import { getRoutineForUser } from "@/lib/server/routines";
 import { runsForRoutine } from "@/lib/server/agent/runs";
 
 /**
- * Les « Exécutions précédentes » d'une routine (MIN-185) — le SEUL endroit où
- * ses runs se lisent. Ils sortent de `/api/agent-runs` : sans ça, une routine
- * quotidienne noierait la colonne des conversations en une semaine.
+ * The “Previous Executions” of a Routine (MIN-185) — the ONLY place where
+ * his runs are readable. They come out of `/api/agent-runs`: without that, a routine
+ * daily would drown out the column of conversations in a week.
  *
- * Lecture ouverte aux membres du projet, comme la routine elle-même.
+ * Reading open to project members, like the routine itself.
  */
 
 export const runtime = "nodejs";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** Colonnes client-safe — jamais le checkpoint ni le sandbox_id. Même forme
-    que `AgentRunSummary`, pour que le fil d'events se réutilise tel quel. */
+/** Client-safe columns — never checkpoint or sandbox_id. Same shape
+ as `AgentRunSummary`, so that the events thread is reused as is. */
 const RUN_FIELDS = [
   "id",
   "project_id",
@@ -58,8 +58,8 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     const row = run as unknown as Record<string, unknown>;
     const out: Record<string, unknown> = {};
     for (const field of RUN_FIELDS) out[field] = row[field] ?? null;
-    // Posé par trigger DB, hors du type `AgentRun` — la liste en a besoin pour
-    // dire quand un passage s'est terminé.
+    // Set by DB trigger, outside of type `AgentRun` — the list needs it to
+    // tell when a passage has ended.
     out.completed_at = row.completed_at ?? null;
     return out;
   });

@@ -140,21 +140,21 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Onglet équipe des retours (MIN-37) — deux panneaux façon triage : liste
- * filtrable (vraies identités, indicateur de suggestion IA), détail avec
- * édition de la couche canonique (le brut reste visible), merge 1-clic + undo,
- * file de suggestions, réponse d'équipe, promotion en issue et saisie interne
- * au nom d'un utilisateur.
+ * Returns team tab (MIN-37) — two triage-style panels: list
+ * filterable (real identities, AI suggestion indicator), detail with
+ * editing the canonical layer (the raw remains visible), 1-click merge + undo,
+ * suggestion queue, team response, resulting promotion and internal input
+ * on behalf of a user.
  *
- * Deux règles gouvernent ce que l'écran montre :
+ * Two rules govern what the screen shows:
  *
- * - **Tout ce qui se décide sur un retour se lit au même endroit** — la table
- *   clé/valeur, comme sur un ticket : statut, type, visibilité, auteur,
- *   catégories. Le haut de page ne garde que ce qu'on FAIT (promouvoir,
- *   refuser), pas ce que le retour EST.
- * - **Sans board public, la moitié de ces commandes n'a plus d'objet** : pas de
- *   voix à compter, pas de public/privé à trancher. Elles disparaissent au lieu
- *   de proposer des gestes qui ne mènent nulle part (`boardEnabled`).
+ * - **Everything that is decided on a return can be read in the same place** — the table
+ * key/value, like on a ticket: status, type, visibility, author,
+ * categories. The top of the page only keeps what we DO (promote,
+ * refuse), not what the return IS.
+ * - **Without a public board, half of these orders no longer have a purpose**: no
+ * votes to count, no public/private to decide. They disappear instead
+ * to propose actions that lead nowhere (`boardEnabled`).
  */
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -169,27 +169,27 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-/** Chrome d'un badge qui OUVRE quelque chose (statut, visibilité) : le badge
-    porte déjà sa forme, le déclencheur ne fait qu'annoncer qu'on peut cliquer. */
+/** Chrome of a badge that OPENS something (status, visibility): the badge
+    already bears its shape, the trigger only announces that we can click. */
 const BADGE_TRIGGER =
   "rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:opacity-80";
 
-/** Le badge tel qu'il tient dans une LIGNE de la colonne — même gabarit que sur
-    la liste des pull requests, d'où ces trois valeurs. L'icône descend à 12 px
-    avec lui : à sa taille de détail elle remplissait toute la hauteur du badge. */
+/** The badge as it fits in a LINE of the column — same template as on
+    the list of pull requests, hence these three values. The icon goes down to 12 px
+    with him: at its detailed size it filled the entire height of the badge. */
 const LIST_BADGE = "h-5 px-2 text-[10px] [&>svg]:size-3";
 
-// ── Filtres de la colonne ────────────────────────────────────────────────────
+// ── Column filters ────────────────────────── ──────────────────────────
 
 /**
- * L'état filtré. `unresolved` n'est pas un statut : c'est « tout ce qui n'est
- * pas tranché » — le point de départ, et le pendant exact du filtre « ouvertes »
- * des pull requests, qui exclut lui aussi fusionnées et fermées.
+ * The filtered state. `unresolved` is not a status: it is “all that is not
+ * not decided” — the starting point, and the exact counterpart of the “open” filter
+ * pull requests, which also excludes merged and closed.
  */
 type FeedbackStateFilter = "unresolved" | FeedbackPostStatus | "all";
 
-/** L'ordre de la colonne. `top` (les plus soutenus d'abord) est celui du
-    serveur et du board public ; les deux autres sont chronologiques. */
+/** The order of the column. `top` (the most supported first) is that of
+    server and public board; the other two are chronological. */
 type FeedbackSort = "top" | "recent" | "oldest";
 
 const SORTS: ReadonlyArray<{
@@ -208,12 +208,12 @@ function matchesStateFilter(post: TeamFeedbackListItem, filter: FeedbackStateFil
 }
 
 /**
- * Le filtre de la colonne : UN déclencheur pour trois dimensions — l'état, le
- * tri, et ce qui reste à trancher. Le même combobox que les pull requests, pour
- * la même raison : sur la ligne de titre il ne reste la place que d'une icône,
- * et ce que le libellé disait passe dans le tooltip. Une pastille signale de
- * loin qu'un filtre est posé — sans elle, une liste restreinte n'aurait plus
- * rien pour le dire.
+ * The column filter: ONE trigger for three dimensions — state,
+ * sorting, and what remains to be decided. The same combobox as pull requests, for
+ * the same reason: on the title line there is only room for one icon,
+ * and what the wording said goes into the tooltip. A tablet signals
+ * far from a filter being placed — without it, a restricted list would no longer have
+ * nothing to say.
  */
 function FeedbackFilterMenu({
   state,
@@ -242,7 +242,7 @@ function FeedbackFilterMenu({
       : state === "all"
         ? t("filterAll")
         : tStatus(`status.${state}`);
-  // « Ouverts, par popularité, tout » est le point de départ : rien à signaler.
+  // “Open, by popularity, everything” is the starting point: nothing to report.
   const active = state !== "unresolved" || sort !== "top" || onlyToReview;
   const tooltip = t("filterTooltip", { state: stateLabel });
 
@@ -258,12 +258,12 @@ function FeedbackFilterMenu({
       align="end"
       tooltip={tooltip}
       trigger={
-        /* PAS de `-mr-2` ici : cette compensation-là aligne l'icône sur le bord
-           droit des lignes de la liste, et elle ne revient donc qu'à la DERNIÈRE
-           action de la ligne de titre — le « + », juste après. Portée par le
-           filtre aussi, elle rognait les 8 px qui séparent les deux boutons et
-           les collait l'un à l'autre (la page Objectifs, écrite après, ne la met
-           que sur le « + »). */
+        /* NO `-mr-2` here: this compensation aligns the icon on the edge
+           right of the lines of the list, and it therefore only returns to the LAST
+           action of the title line — the “+”, just after. Carried by the
+           filter too, it cropped the 8 px which separate the two buttons and
+           stuck them one to the other (the Objectives page, written afterwards, does not put it
+           than on the “+”). */
         <Button
           variant="ghost"
           size="icon-sm"
@@ -335,9 +335,9 @@ function FeedbackFilterMenu({
         ))}
       </CommandGroup>
 
-      {/* « À revoir » (MIN-87) : ce que la revue automatique n'a pas tranché est
-          noyé dans une liste triée par votes. L'entrée n'apparaît que s'il y a
-          matière — pas de ligne morte. */}
+      {/* “To be reviewed” (MIN-87): what the automatic review has not decided is
+          drowned in a list sorted by votes. The entry only appears if there is
+          matter — no dead line. */}
       {toReviewCount > 0 ? (
         <>
           <CommandSeparator className="my-1" />
@@ -360,12 +360,12 @@ function FeedbackFilterMenu({
   );
 }
 
-// ── Briques partagées liste / détail ─────────────────────────────────────────
+// ── Shared bricks list / detail ──────────────────── ─────────────────────
 
-/** Résumé compact des catégories d'un retour dans la colonne — pastille + 1er
-    nom + « +N » pour le reste (MIN-52). Du TEXTE, et non des badges : à côté du
-    statut et de l'auteur, trois pastilles de plus faisaient une ligne de
-    confettis où l'on ne lisait plus rien. */
+/** Compact summary of the categories of a return in the column — pad + 1st
+    name + “+N” for the rest (MIN-52). TEXT, not badges: next to the
+    status and author, three more pellets made a line of
+    confetti where nothing could be read. */
 function CategorySummary({
   categoryIds,
   categoryMap,
@@ -374,12 +374,12 @@ function CategorySummary({
   categoryIds: string[];
   categoryMap: Map<string, Category>;
   /**
-   * Précéder le résumé d'une puce de séparation (« · »).
+   * Precede the summary with a separator bullet (“·”).
    *
-   * Elle est rendue ICI, et non par l'appelant, parce que c'est ici seulement
-   * qu'on sait s'il y aura quelque chose derrière : une catégorie supprimée
-   * laisse son id sur le retour sans que `categoryMap` la résolve, et un
-   * appelant qui compterait `categoryIds` afficherait une puce suivie de rien.
+   * It is rendered HERE, not by the caller, because it is here only
+   * that we know if there will be something behind it: a deleted category
+   * leaves its id on the return without `categoryMap` resolving it, and a
+   * Caller who counted `categoryIds` would display a bullet followed by nothing.
    */
   separated?: boolean;
 }) {
@@ -395,9 +395,9 @@ function CategorySummary({
           ·
         </span>
       )}
-      {/* `shrink-0` : sur une ligne trop courte, c'est l'AUTEUR qui se tronque.
-          Une catégorie tient en un ou deux mots et les rogner les rend
-          illisibles, là où un email coupé reste reconnaissable à son début. */}
+      {/* `shrink-0`: on a line that is too short, it is the AUTHOR who is truncated.
+          A category fits into one or two words and trimming them makes them
+          unreadable, where a cut email remains recognizable at its beginning. */}
       <span className="flex shrink-0 items-center gap-1">
         <span
           className="size-2 shrink-0 rounded-full"
@@ -412,17 +412,17 @@ function CategorySummary({
 }
 
 /**
- * Compteur de voix d'un retour. Absent quand le board public est éteint : sans
- * lui, personne ne peut voter, et un « 0 » permanent serait un reproche.
+ * Voice counter of a return. Absent when the public board is turned off: without
+ * No one can vote for him, and a permanent “0” would be a reproach.
  *
- * Il se peint comme les chips neutres du reste de l'app (`--control` +
- * `--foreground`, la paire que les tokens documentent pour ça) et non en gris
- * sur rien. En gris sur rien, il ne se voyait pas : le fond était transparent,
- * le filet à `--border` disparaît sur une ligne de liste, et le texte à
- * `--muted-foreground` tombait à ~4,6:1 sur clair — pire encore sur une ligne
- * SÉLECTIONNÉE, où le `bg-muted` de la ligne remontait sous un texte muted.
- * Le chiffre qui décide de l'ordre de la colonne était le plus pâle de l'écran,
- * juste à côté de badges à fond plein.
+ * It is painted like the neutral chips of the rest of the app (`--control` +
+ * `--foreground`, the pair that the tokens document for this) and not in gray
+ * about nothing. In gray on nothing, it was not visible: the background was transparent,
+ * the rule at `--border` disappears on a list line, and the text at
+ * `--muted-foreground` dropped to ~4.6:1 on clear — even worse on a line
+ * SELECTED, where the `bg-muted` of the line went up under muted text.
+ * The number which decides the order of the column was the lightest on the screen,
+ * right next to full bottom badges.
  */
 function VoteCount({
   count,
@@ -431,10 +431,10 @@ function VoteCount({
 }: {
   count: number;
   /**
-   * `sm` pour la tête de ligne de la colonne, au gabarit des badges de liste.
-   * `md` dans la fiche, où il ouvre la table clé/valeur : il y voisinait des
-   * badges de 28 px avec ses 20, et le chiffre le plus important du retour
-   * était le plus petit de l'écran.
+   * `sm` for the column header, in the list badge template.
+   * `md` in the file, where it opens the key/value table: there were neighboring
+   * badges of 28 px with its 20, and the most important number of the return
+   * was the smallest on the screen.
    */
   size?: "sm" | "md";
   className?: string;
@@ -454,10 +454,10 @@ function VoteCount({
 }
 
 /**
- * Public ou privé, dit par sa couleur autant que par son mot : bleu pour ce qui
- * est exposé, orangé pour ce qui reste à l'équipe. Ce sont les deux moitiés
- * d'une même question, donc les deux se montrent — un badge présent d'un côté
- * et absent de l'autre se lit comme un oubli, pas comme un état.
+ * Public or private, said by its color as much as by its word: blue for what
+ * is exposed, orange for what remains for the team. These are the two halves
+ * of the same question, so both are shown — a badge present on one side
+ * and absence of the other reads like an oblivion, not like a state.
  */
 function VisibilityBadge({
   isPublic,
@@ -484,15 +484,15 @@ function VisibilityBadge({
 }
 
 /**
- * Un retour qui réclame une décision humaine (MIN-87) : pas encore publié, ou
- * publié mais signalé sensible. C'est la matière du filtre « À revoir » — sans
- * lui, un post que la revue automatique n'a pas su trancher reste invisible.
+ * A return that requires a human decision (MIN-87): not yet published, or
+ * published but flagged as sensitive. This is the stuff of the “To see again” filter — without
+ * him, a post that the automatic review was unable to resolve remains invisible.
  */
 function needsHumanReview(post: TeamFeedbackListItem): boolean {
   return post.review_state !== "published" || post.sensitivity !== null;
 }
 
-/** La revue automatique a abandonné (3 échecs) : à trancher à la main (MIN-87). */
+/** The automatic review has given up (3 failures): to be decided by hand (MIN-87). */
 function reviewGaveUp(post: {
   analysis_failures: number;
   classified_at: string | null;
@@ -501,11 +501,11 @@ function reviewGaveUp(post: {
 }
 
 /**
- * Badges d'état de revue IA (MIN-54) : en attente de publication, et alerte
- * contenu sensible (le motif est en tooltip). Partagé liste + détail.
+ * IA Journal Status Badges (MIN-54): Pending Publication, and Alert
+ * sensitive content (the pattern is in tooltip). Shared list + detail.
  *
- * Le rejet n'y est plus : il est devenu le statut `spam`, et se lit donc avec
- * les autres statuts, là où l'équipe lit toutes ses décisions.
+ * The rejection is no longer there: it has become the status `spam`, and is therefore read with
+ * the other statuses, where the team reads all its decisions.
  */
 function ReviewBadges({
   reviewState,
@@ -518,7 +518,7 @@ function ReviewBadges({
   sensitivity: string | null;
   moderationReason: string | null;
   reviewFailed?: boolean;
-  /** Gabarit du badge — resserré dans la colonne, pleine taille au détail. */
+  /** Badge template — tight in the column, full retail size. */
   className?: string;
 }) {
   const t = useTranslations("FeedbackBoard");
@@ -557,10 +557,10 @@ function ReviewBadges({
 }
 
 /**
- * L'auteur d'un retour, tel qu'on le nomme partout : son nom si on le connaît,
- * sinon son email — jamais les deux collés, qui donnaient une ligne à rallonge
- * dont on ne lisait ni l'un ni l'autre. L'email reste à un survol, et se copie :
- * c'est le canal de recontact, la seule chose qu'on vient chercher ici.
+ * The author of a return, as he is called everywhere: his name if we know it,
+ * otherwise his email — never the two pasted together, which gave an extended line
+ * neither of which we read. The email remains on hover, and is copied:
+ * it's the recontact channel, the only thing we're looking for here.
  */
 function AuthorValue({
   name,
@@ -571,7 +571,7 @@ function AuthorValue({
   name: string | null;
   email: string | null;
   pseudonym: string | null;
-  /** Graine d'avatar résolue par `authorAvatarSeed`. */
+  /** Avatar seed resolved by `authorAvatarSeed`. */
   seed: string;
 }) {
   const t = useTranslations("FeedbackBoard");
@@ -583,9 +583,9 @@ function AuthorValue({
     void navigator.clipboard
       .writeText(email)
       .then(() => {
-        // La coche dans l'infobulle et le toast disent la même chose deux fois,
-        // et c'est voulu : l'infobulle disparaît dès qu'on écarte la souris —
-        // souvent le geste même qui suit la copie — et emporterait sa preuve.
+        // The check mark in the tooltip and the toast say the same thing twice,
+        // and this is intentional: the tooltip disappears as soon as you move the mouse away —
+        // often the very gesture which follows the copy — and would carry its proof.
         setCopied(true);
         toast.success(t("emailCopied"));
         setTimeout(() => setCopied(false), 1500);
@@ -600,7 +600,7 @@ function AuthorValue({
     </span>
   );
 
-  // Sans email il n'y a rien à révéler au survol : le nom se suffit.
+  // Without email there is nothing to reveal on hover: the name is enough.
   if (!email) return identity;
 
   return (
@@ -615,11 +615,11 @@ function AuthorValue({
           {identity}
         </button>
       </TooltipTrigger>
-      {/* L'email, et le geste en icône — « Copier l'email » écrit en toutes
-          lettres à côté de l'adresse doublait la largeur de l'infobulle pour
-          répéter ce qu'une paire de feuillets dit déjà. La coche qui remplace
-          l'icône est l'accusé de réception ; le mot reste, mais en
-          `aria-label`, pour qui ne voit pas l'icône. */}
+      {/* Email, and the icon gesture — “Copy email” written in all
+          letters next to the address doubled the width of the tooltip to
+          repeat what a pair of leaves already says. The checkmark that replaces
+          the icon is acknowledgment; the word remains, but
+          `aria-label`, for those who do not see the icon. */}
       <TooltipContent className="flex items-center gap-2">
         {email}
         {copied ? (
@@ -632,13 +632,13 @@ function AuthorValue({
   );
 }
 
-// ── Ligne de la colonne ──────────────────────────────────────────────────────
+// ── Column line ─────────────────────────── ───────────────────────────
 
 /**
- * Un retour dans la liste — le gabarit des pull requests, garni de ce qu'un
- * retour a de propre : à la place de l'identifiant, le nombre de voix (c'est ce
- * qui trie la liste et ce qu'on vient y comparer) ; à droite, l'état et la date
- * en « il y a… », parce qu'un retour se juge à sa fraîcheur plus qu'à son jour.
+ * A return to the list — the pull requests template, filled with what a
+ * return to its own: instead of the identifier, the number of votes (this is what
+ * who sorts the list and what we compare to it); on the right, the state and the date
+ * in “there is…”, because a return is judged by its freshness more than by its day.
  */
 function FeedbackRow({
   post,
@@ -657,22 +657,22 @@ function FeedbackRow({
   categoryMap: Map<string, Category>;
   /** Email → graine d'avatar des membres (cf. `authorAvatarSeed`). */
   memberSeeds: Map<string, string>;
-  /** Langue de l'équipe — décide si la traduction stockée vaut encore. */
+  /** Team language — decides whether the stored translation is still valid. */
   teamLanguage: FeedbackLanguage;
   onSelect: () => void;
 }) {
-  // La colonne se lit dans la langue de l'équipe : un titre qu'on ne comprend
-  // pas ne sert à rien pour choisir quoi ouvrir. C'est le seul endroit où la
-  // traduction s'impose sans bascule — il n'y a pas la place pour une.
+  // The column is read in the language of the team: a title that we do not understand
+  // There is no point in choosing what to open. This is the only place where
+  // translation is required without switching — there is no room for one.
   const title =
     (normalizeLanguage(post.translated_language) === teamLanguage
       ? post.translated_title
       : null) ?? post.title;
   const authorLabel = post.author?.name?.trim() || post.author?.email?.trim() || null;
-  // « @ » pendant qu'on survole cette ligne parle de CE retour (MIN-105). Le
-  // titre passé est le canonique et non celui affiché ci-dessus : c'est celui
-  // que publie déjà le contexte ambiant, et deux titres pour un même retour
-  // selon la façon de l'ouvrir se liraient comme deux retours.
+  // “@” while hovering over this line speaks of THIS return (MIN-105). THE
+  // title passed is the canonical and not the one displayed above: it is the one
+  // that the ambient context already publishes, and two titles for the same return
+  // depending on how you open it would read like two returns.
   const askNumoRef = useAskNumoFeedbackTarget(post);
 
   return (
@@ -687,11 +687,11 @@ function FeedbackRow({
       )}
     >
       <div className="flex items-center gap-2">
-        {/* UNE case en tête de ligne, et les deux choses qui peuvent l'occuper
-            ne coexistent jamais : le soutien d'un retour public, ou le fait
-            qu'il soit privé. Un retour privé n'a pas de voix à montrer —
-            personne ne peut lui en donner — et c'est ce qu'il faut lire à sa
-            place. Sans board publié, ni l'un ni l'autre n'a de sens. */}
+        {/* ONE box at the head of the line, and the two things that can occupy it
+            never coexist: support for a public return, or the fact
+            let it be private. A private return has no voice to show —
+            no one can give it to him - and this is what should be read to him
+            place. Without a published board, neither has any meaning. */}
         {boardEnabled ? (
           post.is_public ? (
             <VoteCount count={post.vote_count} />
@@ -713,14 +713,14 @@ function FeedbackRow({
 
       <span className="line-clamp-2 text-sm font-medium leading-snug">{title}</span>
 
-      {/* UNE ligne, toujours. Elle passait à la ligne (`flex-wrap`) : une carte
-          gagnait un étage dès qu'un auteur avait un email long, et la colonne
-          se mettait à respirer irrégulièrement d'une ligne à l'autre — sur une
-          liste qu'on parcourt à la verticale, c'est le rythme qui se casse, pas
-          seulement la place. `overflow-hidden` autorise les enfants à rétrécir ;
-          l'AUTEUR est le seul qui le fasse, parce qu'il est le seul dont la
-          longueur soit imprévisible (un email, parfois très long) et le seul
-          dont la fin ne porte rien. */}
+      {/* ONE line, always. She moved to the line (`flex-wrap`): a card
+          gained a floor as soon as an author had a long email, and the column
+          began to breathe irregularly from one line to another — on one
+          list that we go through vertically, it's the rhythm that breaks, not
+          only the place. `overflow-hidden` allows children to shrink;
+          the AUTHOR is the only one who does it, because he is the only one whose
+          length is unpredictable (an email, sometimes very long) and the only
+          whose ending means nothing. */}
       <span className="flex min-w-0 items-center gap-1.5 overflow-hidden text-xs text-muted-foreground">
         {authorLabel ? (
           <span className="flex min-w-0 items-center gap-1.5">
@@ -741,9 +741,9 @@ function FeedbackRow({
         <CategorySummary
           categoryIds={post.category_ids}
           categoryMap={categoryMap}
-          // La puce ne sépare que deux TEXTES : elle demande donc un auteur à sa
-          // gauche. Les badges de revue, eux, sont des pastilles — elles se
-          // détachent seules, et les encadrer de points ferait de la ponctuation
+          // The chip only separates two TEXTS: it therefore asks for an author from its
+          // LEFT. Review badges are pellets — they are
+          // stand out on their own, and framing them with points would make punctuation
           // autour de ce qui n'en demande pas.
           separated={!!authorLabel}
         />
@@ -768,7 +768,7 @@ export function FeedbackTeamPage() {
   const { projects } = useProjects();
   const project = projects.find((p) => p.id === projectId);
   const queryClient = useQueryClient();
-  // Le wizard provisionne et fabrique des secrets : il n'est offert qu'au owner.
+  // The wizard provisions and creates secrets: it is only offered to the owner.
   const { user } = useAuth();
   const isOwner = !!project && project.owner_id === user?.id;
   const [setupOpen, setSetupOpen] = useState(false);
@@ -788,9 +788,9 @@ export function FeedbackTeamPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [query, setQuery] = useState("");
 
-  // On arrive sur cette page pour trancher ce qui n'est pas tranché : la
-  // colonne s'ouvre donc sur les retours ouverts, et non sur les centaines
-  // d'archivés qui les enterraient.
+  // We arrive on this page to decide what is not decided: the
+  // column therefore opens on the open returns, and not on the hundreds
+  // archives which buried them.
   const [state, setState] = useState<FeedbackStateFilter>("unresolved");
   const [sort, setSort] = useState<FeedbackSort>("top");
   const [onlyToReview, setOnlyToReview] = useState(false);
@@ -804,15 +804,15 @@ export function FeedbackTeamPage() {
       (p) => matchesStateFilter(p, state) && (!onlyToReview || needsHumanReview(p))
     );
     /**
-     * Le tri choisi est le tri obtenu — RIEN ne passe devant.
+     * The sort chosen is the sort obtained — NOTHING goes ahead.
      *
-     * La liste arrivait déjà ordonnée par le serveur : voix décroissantes, puis
-     * date, et surtout les retours résolus repoussés en bas. Cette dernière
-     * règle datait d'avant le sélecteur de tri, où elle rendait service. Depuis
-     * qu'on peut demander « les plus populaires », elle ment : le retour le plus
-     * soutenu du projet, s'il est livré, se retrouve au fond de la liste, et
-     * c'est le plus RÉCENT qui s'affiche en tête. Un ordre qu'on a demandé
-     * explicitement ne se laisse pas corriger par une heuristique.
+     * The list arrived already ordered by the server: decreasing votes, then
+     * date, and especially the resolved returns pushed down to the bottom. The latter
+     * rule predated the sort selector, where it was useful. From
+     * that we can ask for “the most popular”, she is lying: the most
+     * supported by the project, if delivered, is at the bottom of the list, and
+     * the most RECENT is displayed at the top. An order we asked for
+     * explicitly cannot be corrected by a heuristic.
      */
     const sorted = [...kept];
     if (sort === "top") {
@@ -829,14 +829,14 @@ export function FeedbackTeamPage() {
   }, [posts, state, onlyToReview, sort]);
 
   /**
-   * Ce que la colonne AFFICHE. Un cran EN DESSOUS de `visiblePosts`, qui porte la
-   * sélection : le filtre texte ne doit pas la déplacer, sinon chaque frappe
-   * ferait changer le retour ouvert à droite — alors qu'on filtre justement pour
-   * aller en chercher un autre, et le choisir soi-même.
+   * What the column DISPLAYS. One notch BELOW `visiblePosts`, which carries the
+   * selection: the text filter must not move it, otherwise each keystroke
+   * would change the open return to the right — while we filter precisely for
+   * go find another one, and choose it yourself.
    *
-   * Le texte SOUMIS est cherché autant que le texte canonique : c'est souvent
-   * avec les mots de l'auteur qu'on se souvient d'un retour, pas avec le titre
-   * réécrit par l'équipe.
+   * The SUBMITTED text is searched as much as the canonical text: it is often
+   * with the words of the author that we remember a return, not with the title
+   * rewritten by the team.
    */
   const listedPosts = useMemo(() => {
     if (!query.trim()) return visiblePosts;
@@ -846,8 +846,8 @@ export function FeedbackTeamPage() {
         p.body,
         p.submitted_title,
         p.submitted_body,
-        // On cherche un retour avec les mots qu'on a LUS : le titre traduit est
-        // celui que la colonne affiche, il doit donc répondre à la frappe.
+        // We seek a return with the words we READ: the translated title is
+        // the one that the column displays, so it must respond to the keystroke.
         p.translated_title,
         p.translated_body,
         p.author?.name,
@@ -857,8 +857,8 @@ export function FeedbackTeamPage() {
     );
   }, [visiblePosts, query]);
 
-  // Side panel d'issue : le ticket lié s'ouvre ICI, sans navigation — même
-  // câblage que le board (issues + relations + collections du projet).
+  // Side panel issue: the linked ticket opens HERE, without navigation — even
+  // cabling as the board (issues + relationships + project collections).
   const { issues, createIssue, updateIssue, deleteIssue, setCategories } =
     useIssuesQuery(projectId);
   const { relations, addRelation, removeRelation } = useIssueRelationsQuery(projectId);
@@ -874,19 +874,19 @@ export function FeedbackTeamPage() {
     normalizeLanguage(project?.feedback_team_language) ??
     (normalizeLanguage(defaultLocale) as FeedbackLanguage);
 
-  // Publie le retour sélectionné à Numo (MIN-52) : il résout « ce feedback »,
-  // « promeus-le », « réponds-lui » sur ce post sans le chercher — comme le
+  // Publishes the selected feedback to Numo (MIN-52): it resolves “this feedback”,
+  // “promote it”, “reply to it” on this post without looking for it — like the
   // panneau d'issue publie l'issue ouverte.
   const selectedPost = posts.find((p) => p.id === selectedId) ?? null;
 
-  // « Enregistrer la vue actuelle » (⌘K) : le retour ouvert à droite est une
-  // sélection de la page, mais `?post=` est consommé puis effacé de l'adresse
-  // (même idiome que `?open=` des objectifs) — sans cette publication, la vue
-  // enregistrée rouvrirait la liste sur son premier élément.
+  // “Save current view” (⌘K): the open return to the right is a
+  // page selection, but `?post=` is consumed then deleted from the address
+  // (same idiom as `?open=` of objectives) — without this publication, the view
+  // saved would reopen the list on its first element.
   //
-  // Le nom proposé porte le PROJET, comme sur les objectifs : le champ arrive
-  // pré-sélectionné, Entrée l'accepte, et « Retours » tout court est le même
-  // nom sur chaque projet — la deuxième vue écraserait la première.
+  // The proposed name bears the PROJECT, as on the objectives: the field is arriving
+  // pre-selected, Enter accepts it, and “Returns” for short is the same
+  // name on each project — the second view would overwrite the first.
   usePublishCurrentView({
     href: buildViewHref(pathname, searchParams.toString(), {
       post: selectedPost?.id ?? null,
@@ -907,10 +907,10 @@ export function FeedbackTeamPage() {
   );
 
   /**
-   * « @ » au survol d'une ligne (MIN-105) : le retour VISÉ part dans Numo, même
-   * s'il n'est pas celui qui est ouvert à droite. Le contexte explicite passé
-   * ici l'emporte sur l'ambiant publié juste au-dessus — sans quoi le raccourci
-   * ne parlerait jamais que du retour déjà sélectionné.
+   * “@” when hovering over a line (MIN-105): the TARGET return goes into Numo, even
+   * if it is not the one that is open on the right. The explicit past context
+   * here prevails over the ambient published just above - otherwise the shortcut
+   * would only ever talk about the already selected return.
    */
   const { open: openAssistant } = useAssistantPanel();
   const handleAskNumo = useCallback(
@@ -957,15 +957,15 @@ export function FeedbackTeamPage() {
   // opens the detail on mobile, then strips the param so a background list
   // refetch can't snap the selection back (same idiom as the objectives ?open).
   //
-  // Le filtre repasse à « tous » : le retour visé peut être livré, décliné ou
-  // écarté, et le lien doit l'ouvrir quel que soit son état.
+  // The filter returns to “all”: the targeted return can be delivered, declined or
+  // discarded, and the link should open it regardless of its state.
   //
-  // On ATTEND que la liste porte le retour visé, comme la page des objectifs
-  // attend le sien. À froid (onglet neuf, vue enregistrée, notification suivie
-  // depuis un lien), `posts` est encore vide : l'effet de garde juste au-dessus
-  // remettait la sélection à zéro au rendu suivant — et `?post=` avait déjà été
-  // effacé de l'adresse, donc plus rien ne pouvait la rétablir. Le lien
-  // retombait sur le premier retour de la liste.
+  // We EXPECT the list to carry the targeted return, like the objectives page
+  // wait for his. Cold (new tab, saved view, tracked notification
+  // from a link), `posts` is still empty: the guard effect just above
+  // reset the selection to zero on the next rendering — and `?post=` had already been
+  // erased from the address, so nothing could restore it. The link
+  // fell on the first return in the list.
   useEffect(() => {
     if (!postParam) return;
     if (!posts.some((p) => p.id === postParam)) return;
@@ -976,9 +976,9 @@ export function FeedbackTeamPage() {
     router.replace(pathname);
   }, [postParam, posts, pathname, router]);
 
-  // Invalide la liste ET tous les détails du projet (préfixe) : un merge/undo
-  // change aussi le post canonique, pas seulement celui qu'on regarde. Le
-  // badge de la sidebar suit aussi (compteur ouverts/prévus).
+  // Invalidates the list AND all project details (prefix): a merge/undo
+  // also changes the canonical post, not just the one we are looking at. THE
+  // sidebar badge also follows (open/planned counter).
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["feedback", projectId] });
     void queryClient.invalidateQueries({ queryKey: ["feedback-detail", projectId] });
@@ -994,20 +994,20 @@ export function FeedbackTeamPage() {
       onOpenChange={setCreateOpen}
       onCreated={(postId) => {
         refresh();
-        // Un retour tout juste saisi est ouvert : il tombe dans le filtre par
-        // défaut. Mais si la colonne est ailleurs, l'ouvrir sans l'y ramener
-        // sélectionnerait un post que la liste ne montre pas.
+        // A return just entered is opened: it falls into the filter by
+        // default. But if the column is elsewhere, open it without bringing it back there
+        // would select a post that the list does not show.
         setState("all");
         setSelectedId(postId);
       }}
     />
   );
 
-  // Rien du tout (pas « rien dans ce filtre ») : les deux colonnes n'ont plus
-  // rien à montrer, et l'écran doit dire d'où viennent les retours plutôt que
-  // d'afficher une liste vide à côté d'un « sélectionnez un retour ». Les deux
-  // gestes restent à portée : en saisir un à la main, et aller régler la
-  // collecte — c'est elle qui remplit la page ensuite.
+  // Nothing at all (not “nothing in this filter”): the two columns no longer have
+  // nothing to show, and the screen should say where the feedback is coming from rather than
+  // to display an empty list next to a "select return". Both
+  // gestures remain within reach: grab one in your hand, and go and adjust the
+  // collection — it is she who then fills the page.
   if (!isPending && posts.length === 0) {
     return (
       <>
@@ -1019,11 +1019,11 @@ export function FeedbackTeamPage() {
                   <Plus />
                   {t("newFeedback")}
                 </Button>
-                {/* Régler la collecte se fait ICI, pas au bout d'un lien :
-                    c'est le geste que la scène propose, et l'envoyer dans un
-                    onglet de réglages lui ferait quitter la page qu'il vient
-                    remplir. Un membre, lui, n'a que la lecture des réglages à
-                    offrir — il garde donc le lien. */}
+                {/* Pay for the collection is done HERE, not at the end of a link:
+                    this is the gesture that the scene proposes, and send it into a
+                    settings tab would make him leave the page he came from
+                    fill. One member only has the ability to read the settings
+                    offer — he therefore keeps the link. */}
                 {isOwner ? (
                   <Button variant="outline" onClick={() => setSetupOpen(true)}>
                     <Globe />
@@ -1042,12 +1042,12 @@ export function FeedbackTeamPage() {
           </div>
         </div>
 
-        {/* Le dialog reste monté : c'est lui que « Nouveau retour » ouvre. */}
+        {/* The dialog remains edited: it is this that “New Return” opens. */}
         {createDialog}
 
-        {/* Le board a pu s'allumer pendant le parcours, et `board_enabled` vient
-            de la liste : la refetcher à la fermeture, sinon la page continue de
-            refuser de publier un retour sur un board désormais actif. */}
+        {/* The board was able to turn on during the course, and `board_enabled` comes
+            from the list: refetch it when closing, otherwise the page continues to
+            refuse to post feedback on a board that is now active. */}
         {isOwner && (
           <FeedbackSetupWizard
             projectId={projectId}
@@ -1068,9 +1068,9 @@ export function FeedbackTeamPage() {
   }
 
   return (
-    /* « @ » au survol d'une ligne de la colonne ouvre Numo sur ce retour
-       (MIN-105). Le contexte traverse le portail de la barre secondaire, qui
-       n'est déportée que dans le DOM. */
+    /* “@” when hovering over a row of the column opens Numo on this return
+       (MIN-105). The context passes through the secondary bar portal, which
+       is only deported to the DOM. */
     <AskNumoFeedbackProvider onAskNumo={handleAskNumo}>
     <div className="flex h-full min-h-0">
       {/* ── Liste ────────────────────────────────────────────────────────── */}
@@ -1094,9 +1094,9 @@ export function FeedbackTeamPage() {
               onSortChange={setSort}
               onToReviewChange={setOnlyToReview}
             />
-            {/* Icône seule : le libellé complet mangeait la moitié de la ligne.
+            {/* Icon alone: ​​the complete wording took up half of the line.
                 Ce qu'il disait revient au survol — un vrai tooltip, celui de
-                l'app, et non l'infobulle du navigateur. */}
+                the app, not the browser tooltip. */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -1122,23 +1122,23 @@ export function FeedbackTeamPage() {
               <Skeleton className="h-16 w-full rounded-lg" />
             </div>
           ) : listedPosts.length === 0 ? (
-            /* Des retours existent forcément ici — la surface entièrement vide
-               est traitée plus haut. La liste ne peut donc être vide que parce
-               qu'un filtre l'a vidée, et la même scène que les autres états
-               vides le dit, à la taille de la colonne.
-               « Rien ne correspond » et « aucun retour ouvert » ne sont pas la
-               même nouvelle : la première se répare en effaçant trois lettres,
-               la seconde demande de rouvrir le filtre — d'où le bouton, qui n'a
-               rien à offrir tant que c'est la saisie qui restreint. */
+            /* Returns necessarily exist here — the entirely empty surface
+               is discussed above. The list can therefore only be empty because
+               that a filter emptied it, and the same scene as the other states
+               blanks says it, to the size of the column.
+               “Nothing matches” and “no returns open” are not the
+               same news: the first is repaired by erasing three letters,
+               the second asks to reopen the filter — hence the button, which has no
+               nothing to offer as long as it is the seizure that restricts. */
             <EmptyScene
               size="compact"
               icon={MessagesSquare}
-              /* La colonne vide NOMME ce qu'on cherchait. « Aucun retour dans
-                 ce filtre » renvoyait rouvrir le menu pour se rappeler lequel
-                 était posé — alors que la réponse tient dans la phrase.
-                 L'ordre compte : une saisie qui ne matche rien se répare en
-                 effaçant trois lettres, et c'est cette nouvelle-là qui prime
-                 sur l'état, quel qu'il soit. */
+              /* The empty column NAMES what we were looking for. “No return in
+                 this filter" returned to reopen the menu to remember which one
+                 was asked — while the answer lies in the sentence.
+                 The order matters: a seizure that does not match anything is repaired in
+                 erasing three letters, and it is this news that takes precedence
+                 on the state, whatever it may be. */
               title={
                 query.trim()
                   ? tCommon("noFilterMatch")
@@ -1148,8 +1148,8 @@ export function FeedbackTeamPage() {
                       ? t("emptyUnresolved")
                       : state === "all"
                         ? t("emptyFiltered")
-                        : // Clé assemblée à l'exécution : elle échappe au typage
-                          // des clés, d'où le cast (cf. CLAUDE.md).
+                        : // Key assembled at runtime: it escapes typing
+                          // keys, hence the cast (see CLAUDE.md).
                           t(`emptyStatus.${state}` as MessageKey<"FeedbackBoard">)
               }
               className="py-10"
@@ -1168,10 +1168,10 @@ export function FeedbackTeamPage() {
               )}
             </EmptyScene>
           ) : (
-            /* La MÊME ligne que le triage, les agents et les pull requests :
-               une pastille arrondie dans une gouttière de 8 px, et non un bandeau
+            /* The SAME line as triage, agents and pull requests:
+               a rounded pellet in an 8 px gutter, not a banner
                pleine largeur. Quatre listes qui se ressemblent doivent se
-               ressembler jusque dans la forme de leur sélection. */
+               resemble even in the form of their selection. */
             <ul className="flex flex-col gap-1 px-2 pt-2 pb-4">
               {listedPosts.map((post) => (
                 <li key={post.id}>
@@ -1195,7 +1195,7 @@ export function FeedbackTeamPage() {
         </div>
       </SecondarySidebar>
 
-      {/* ── Détail ──────────────────────────────────────────────────────── */}
+      {/* ── Detail ──────────────────────────── ──────────────────────────── */}
       <div className={cn("min-w-0 flex-1", !mobileDetail && "hidden md:block")}>
         {selectedId ? (
           <FeedbackDetail
@@ -1252,7 +1252,7 @@ export function FeedbackTeamPage() {
   );
 }
 
-// ── Détail ──────────────────────────────────────────────────────────────────
+// ── Detail ───────────────────────────────── ─────────────────────────────────
 
 function FeedbackDetail({
   projectId,
@@ -1270,23 +1270,23 @@ function FeedbackDetail({
   onOpenIssue,
 }: {
   projectId: string;
-  /** Le projet lui-même — le formulaire de promotion en a besoin. */
+  /** The project itself — the promotion form needs it. */
   project: Project | null;
   projectKey: string;
   postId: string;
-  /** Board public publié : sans lui, ni voix ni choix public/privé. */
+  /** Public board published: without it, no voice or public/private choice. */
   boardEnabled: boolean;
   allPosts: TeamFeedbackListItem[];
   /** Project members + issues — resolve actor names and issue refs in the feed. */
   members: Member[];
-  /** Catégories du projet (celles des issues) — réutilisées ici (MIN-52). */
+  /** Project categories (those of outcomes) — reused here (MIN-52). */
   categories: Category[];
-  /** Objectifs du projet — le sélecteur du formulaire de promotion. */
+  /** Project objectives — the promotion form selector. */
   objectives: Objective[];
   issues: Issue[];
   onBack: () => void;
   onChanged: () => void;
-  /** Ouvre le side panel d'issue directement (pas de navigation). */
+  /** Opens the issue side panel directly (no navigation). */
   onOpenIssue: (issueId: string) => void;
 }) {
   const t = useTranslations("FeedbackBoard");
@@ -1298,9 +1298,9 @@ function FeedbackDetail({
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const memberSeeds = useMemberSeeds(members);
-  // La langue vers laquelle la revue traduit. NULL en base = jamais renseignée
-  // (projet d'avant la migration) : même repli que côté serveur, pour que les
-  // deux jugent une traduction valide sur le même critère.
+  // The language the journal translates into. NULL in base = never entered
+  // (project before the migration): same fallback as on the server side, so that the
+  // two judge a translation valid on the same criterion.
   const teamLanguage =
     normalizeLanguage(project?.feedback_team_language) ??
     (normalizeLanguage(defaultLocale) as FeedbackLanguage);
@@ -1341,9 +1341,9 @@ function FeedbackDetail({
   const post = data?.post ?? null;
 
   // describeFeedbackEvent reads members (actors) + issues/projectKey (refs);
-  // objectives/categories are unused for feedback. `feedbackAuthor` nomme la
-  // soumission board : la personne qui a écrit, du même nom et du même visage
-  // que la fiche auteur ci-dessous — jamais deux graphies à deux blocs d'écart.
+  // objectives/categories are not used for feedback. `feedbackAuthor` names it
+  // submission board: the person who wrote, with the same name and face
+  // than the author sheet below — never two spellings two blocks apart.
   const author = post?.author ?? null;
   const authorSeed = authorAvatarSeed(author, memberSeeds);
   const eventCtx = useMemo<EventContext>(
@@ -1369,14 +1369,14 @@ function FeedbackDetail({
   const [promoteOpen, setPromoteOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   /**
-   * Refuser et écarter passent par une confirmation : ce sont les deux gestes
-   * qui répondent non à quelqu'un, et le seul écran d'équipe où ils tiennent à
-   * un clic — sur le bouton, sous son chevron, et dans le sélecteur de statut de
-   * la fiche, qui pose exactement le même statut.
+   * Refusing and rejecting require confirmation: these are the two gestures
+   * who say no to someone, and the only team screen where they care about
+   * one click — on the button, under its chevron, and in the status selector
+   * the form, which has exactly the same status.
    *
-   * L'ouverture et le statut visé sont DEUX états plutôt qu'un seul nullable :
-   * la boîte reste à l'écran le temps de son animation de sortie, et un état
-   * remis à null lui ferait relire « Refuser » au moment même où l'on ferme
+   * The opening and the targeted status are TWO states rather than a single nullable one:
+   * the box remains on the screen for the duration of its exit animation, and a state
+   * reset to null would make it reread “Refuse” at the very moment when we close
    * « Marquer comme spam ».
    */
   const [confirmStatus, setConfirmStatus] = useState<"declined" | "spam">("declined");
@@ -1385,9 +1385,9 @@ function FeedbackDetail({
     setConfirmStatus(status);
     setConfirmOpen(true);
   };
-  // Traduit, le retour s'ouvre sur sa traduction : c'est la version que
-  // l'équipe peut lire. La bascule est par retour et repart à zéro en changeant
-  // de retour (`key={selectedId}` remonte tout le détail).
+  // Translated, the return opens with its translation: this is the version that
+  // the team can read. The seesaw is by return and starts again from zero by changing
+  // back (`key={selectedId}` brings up all the details).
   const [showTranslated, setShowTranslated] = useState(true);
 
   useEffect(() => {
@@ -1396,7 +1396,7 @@ function FeedbackDetail({
 
   const refreshDetail = () => {
     void queryClient.invalidateQueries({ queryKey: ["feedback-detail", projectId] });
-    // Le fil d'activité n'a pas de realtime : chaque action le rafraîchit.
+    // The activity feed has no realtime: each action refreshes it.
     void queryClient.invalidateQueries({ queryKey: ["feedback-events", projectId] });
     onChanged();
   };
@@ -1418,10 +1418,10 @@ function FeedbackDetail({
         body: JSON.stringify(payload ?? {}),
       }),
     onSuccess: (_data, variables) => {
-      // Toutes les actions d'équipe (promouvoir, fusionner, annuler une
-      // fusion…) passent par cette mutation : le dernier segment du chemin EST
-      // le nom de l'action. Un seul point d'instrumentation plutôt qu'un par
-      // bouton, et les actions futures sont couvertes d'office.
+      // All team actions (promote, merge, cancel a team)
+      // fusion…) go through this mutation: the last segment of the path IS
+      // the name of the action. A single instrumentation point rather than one
+      // button, and future actions are automatically covered.
       const verb = variables.path.split("/").filter(Boolean).pop() ?? "unknown";
       trackEvent("feedback_action", { action: verb });
       return refreshDetail();
@@ -1429,10 +1429,10 @@ function FeedbackDetail({
     onError: (e: Error) => toast.error(e.message || t("errorGeneric")),
   });
 
-  // Catégories du post (MIN-52) : optimiste + debounce 300 ms, comme les cartes
-  // d'issue. Des toggles rapides patchent le cache tout de suite et fusionnent en
-  // un seul PUT du jeu final (évite le delete-then-insert concurrent sur la
-  // table de jonction). Erreur → toast + refetch autoritatif.
+  // Post categories (MIN-52): optimistic + debounce 300 ms, like cards
+  // of outcome. Quick toggles patch the cache right away and merge into
+  // a single PUT of the final game (avoids the concurrent delete-then-insert on the
+  // junction table). Error → toast + authoritative refetch.
   const catTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const catLatest = useRef<string[] | null>(null);
   const flushCategories = useCallback(
@@ -1476,8 +1476,8 @@ function FeedbackDetail({
     },
     [projectId, postId, queryClient, flushCategories, t]
   );
-  // Quitter le détail avant la fin du debounce ne doit pas perdre l'édition :
-  // on flush l'écriture en attente à l'unmount (le patch optimiste est déjà posé).
+  // Exiting the detail before the end of the debounce should not lose the edition:
+  // we flush the pending write to unmount (the optimistic patch is already installed).
   useEffect(() => {
     return () => {
       if (!catTimer.current) return;
@@ -1489,15 +1489,15 @@ function FeedbackDetail({
     };
   }, [flushCategories]);
 
-  // Le fondu qui remplace la bordure sous la barre du haut : il ne paraît que
-  // du côté où il reste quelque chose à découvrir.
+  // The fade that replaces the border under the top bar: it only appears
+  // on the side where there is still something to discover.
   //
-  // Il est déclaré ICI, loin du JSX qui s'en sert, et pas juste au-dessus de
-  // lui : c'est un HOOK, et le squelette de chargement rend plus bas. Appelé
-  // après ce `return`, il n'existait pas au premier rendu (`post` encore nul)
-  // et apparaissait au second — « Rendered more hooks than during the previous
-  // render », et tout l'écran Retours tombait sur sa frontière d'erreur dès
-  // qu'un projet avait des retours à afficher.
+  // It is declared HERE, far from the JSX which uses it, and not just above
+  // him: it's a HOOK, and the loading skeleton makes it lower. Called
+  // after this `return`, it did not exist at the first rendering (`post` still null)
+  // and appeared in the second — “Rendered more hooks than during the previous
+  // render", and the entire Returns screen fell on its error boundary as soon as
+  // that a project had feedback to display.
   const detailFade = useScrollFade<HTMLDivElement>();
 
   if (isPending || !post) {
@@ -1513,12 +1513,12 @@ function FeedbackDetail({
     post.submitted_title !== post.title || post.submitted_body !== post.body;
 
   /**
-   * La traduction, si la revue en a produit une ET qu'elle vaut encore.
+   * The translation, if the magazine has produced one AND it is still valid.
    *
-   * `translated_language` est comparée à la langue de l'équipe : une équipe qui
-   * passe du français à l'anglais a en base des traductions françaises, et les
-   * présenter comme « la version que vous pouvez lire » serait un mensonge.
-   * Elles ne réapparaîtront que si la langue revient — on ne re-traduit pas
+   * `translated_language` is compared to the language of the team: a team that
+   * goes from French to English based on French translations, and the
+   * presenting it as “the version you can read” would be a lie.
+   * They will only reappear if the language returns — we do not re-translate
    * l'historique.
    */
   const translation =
@@ -1528,32 +1528,32 @@ function FeedbackDetail({
       : null;
 
   /**
-   * Le statut d'un retour lié à un ticket n'est plus le sien : `status-sync` le
-   * recopie depuis l'issue à chaque changement. Le laisser modifiable ici
-   * offrirait un geste que la prochaine transition du ticket écraserait — d'où
-   * la lecture seule, sur le statut comme sur les raccourcis qui le posent.
+   * The status of a return linked to a ticket is no longer its own: `status-sync` on
+   * copies from the issue at each change. Leave it editable here
+   * would offer a gesture that the next ticket transition would overwrite — hence
+   * reading only, on the status as well as on the shortcuts that set it.
    */
   const statusLocked = !!post.issue;
 
   /**
-   * On a répondu non. Il n'y a plus de ticket à faire naître d'un retour
-   * refusé ou écarté — proposer encore « Promouvoir » rouvrirait, d'un clic
-   * sans confirmation, une décision qu'on vient de prendre.
+   * We answered no. There is no longer a ticket to generate from a return
+   * refused or discarded — still proposing “Promote” would reopen, with one click
+   * without confirmation, a decision that we have just made.
    *
-   * Le geste n'est pas perdu pour autant : il revient dès que le statut
-   * repasse ouvert, et ce statut est juste en dessous, dans la fiche.
+   * The gesture is not lost however: it returns as soon as the status
+   * returns to open, and this status is just below, in the file.
    */
   const settledAsNo = post.status === "declined" || post.status === "spam";
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Barre du haut, façon triage : retour (mobile) · identifiants (voix,
-          source, date) à gauche · ce qu'on FAIT du retour à droite. Ce qu'il
-          EST — statut, visibilité, type, auteur — se lit plus bas, dans la
-          table clé/valeur, avec le reste de ses propriétés.
-          SANS bordure : c'est le fondu du contenu qui dit qu'il continue
-          au-dessus, et une barre séparée le couperait de ce qu'il coiffe (même
-          parti que la pull request et la conversation d'agent). */}
+      {/* Top bar, sorting style: return (mobile) · identifiers (voice,
+          source, date) on the left · what we DO with the return on the right. What he
+          EST — status, visibility, type, author — can be read below, in the
+          key/value table, with the rest of its properties.
+          WITHOUT border: it is the fading of the content which says that it continues
+          above, and a separate bar would cut it off from what it covers (even
+          part as the pull request and the agent conversation). */}
       <div className="flex shrink-0 flex-wrap items-center gap-2 px-4 py-3 md:px-6">
         <Button
           variant="ghost"
@@ -1564,9 +1564,9 @@ function FeedbackDetail({
         >
           <ChevronLeft />
         </Button>
-        {/* Ce qui reste ici : les alertes de revue, seules choses qui demandent
-            une réaction. Les voix, la date et la provenance sont descendues
-            dans la table clé/valeur, avec le reste de ce que le retour EST. */}
+        {/* What's left here: review alerts, the only things that require
+            a reaction. The voices, the date and the origin came down
+            in the key/value table, with the rest of what the return IS. */}
         <span className="flex items-center gap-2 text-xs text-muted-foreground">
           <ReviewBadges
             reviewState={post.review_state}
@@ -1576,9 +1576,9 @@ function FeedbackDetail({
           />
         </span>
         <div className="ml-auto flex items-center gap-1.5">
-          {/* Le ticket lié n'est plus ANNONCÉ ici : il a sa rangée dans la
-              fiche, avec son statut, son titre et son détachement. Ne reste que
-              le geste qui n'existe qu'avant lui — en fabriquer un. */}
+          {/* The linked ticket is no longer ANNOUNCED here: it has its row in the
+              file, with its status, title and detachment. Only remains
+              the gesture that only exists before it — making one. */}
           {post.issue || settledAsNo ? null : (
             <SplitButton
               variant="outline"
@@ -1596,14 +1596,14 @@ function FeedbackDetail({
               {t("promote")}
             </SplitButton>
           )}
-          {/* Les deux issues d'un retour encore ouvert : on le prend, ou on le
-              refuse. Le troisième cas — ce n'était pas un retour — vit sous le
-              chevron : c'est un jugement sur l'expéditeur, pas sur la demande,
-              et il n'a pas à être à un clic de distance. */}
+          {/* Both results from a still open return: we take it, or we
+              denied. The third case — it was not a return — lives under the
+              chevron: this is a judgment on the sender, not on the request,
+              and it doesn't have to be a click away. */}
           {post.status === "open" && !statusLocked ? (
             <SplitButton
-              // Destructif : refuser, c'est répondre non à quelqu'un. Le bouton
-              // doit le dire avant le clic, pas après.
+              // Destructive: to refuse is to say no to someone. The button
+              // must say it before the click, not after.
               variant="destructive"
               size="sm"
               disabled={patch.isPending}
@@ -1626,9 +1626,9 @@ function FeedbackDetail({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {/* Revue IA (MIN-54) : l'équipe peut publier un retour que la
-                  revue n'a pas encore laissé passer. L'écarter, lui, est
-                  devenu un statut — il se pose dans la table clé/valeur. */}
+              {/* IA Review (MIN-54): the team can publish feedback that the
+                  review hasn't let it go yet. To dismiss it is
+                  become a status — it arises in the key/value table. */}
               {post.review_state !== "published" && (
                 <DropdownMenuItem
                   onSelect={() => patch.mutate({ review_state: "published" })}
@@ -1641,8 +1641,8 @@ function FeedbackDetail({
                 <GitMerge className="size-4" />
                 {t("mergeInto")}
               </DropdownMenuItem>
-              {/* Délier a suivi le ticket dans la fiche : il se fait sur la
-                  ligne du ticket lui-même, là où on le voit. */}
+              {/* Unlink followed the ticket in the file: it is done on the
+                  line of the ticket itself, where you see it. */}
               <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
                 <Trash2 className="size-4" />
                 {t("deletePost")}
@@ -1652,7 +1652,7 @@ function FeedbackDetail({
         </div>
       </div>
 
-      {/* Corps défilant, centré comme le triage. */}
+      {/* Scrolling body, centered like the yard. */}
       <div
         ref={detailFade.ref}
         {...detailFade.scrollProps}
@@ -1693,15 +1693,15 @@ function FeedbackDetail({
           </div>
         )}
 
-        {/* Titre + description rapprochés, comme dans le triage — la
-            description est éditée en markdown rendu (même éditeur).
+        {/* Title + description brought together, as in triage — the
+            description is edited in rendered markdown (same editor).
 
-            Traduit, le retour s'ouvre SUR sa traduction : c'est la version que
-            l'équipe peut lire, et la lui cacher derrière un onglet reviendrait
-            à ne pas l'avoir traduite. Mais elle est en LECTURE SEULE — éditer
-            une traduction produirait un texte que plus rien ne relie à ce que
-            l'utilisateur a écrit, et que la prochaine passe de revue écraserait
-            sans le savoir. La couche canonique, elle, s'édite comme avant, sous
+            Translated, the return opens ON its translation: this is the version that
+            the team can read, and hiding it behind a tab would amount to
+            for not having translated it. But it is READ ONLY — edit
+            a translation would produce a text that no longer connects to what
+            the user wrote, and that the next review pass would overwrite
+            without knowing it. The canonical layer is edited as before, under
             l'onglet « version originale ». */}
         {translation ? (
           <div className="flex flex-wrap items-center gap-2">
@@ -1772,22 +1772,22 @@ function FeedbackDetail({
         </div>
         )}
 
-        {/* Ce que la personne a écrit, mot pour mot — le repli qu'on vient
-            chercher quand le texte au-dessus a été retouché. Sa place est ICI,
-            collé à ce texte : c'est de lui qu'il est la version d'avant, et
-            renvoyé sous la fiche il devenait une propriété du retour, ce qu'il
-            n'est pas. Chevron plutôt que le triangle natif, comme les autres
-            sections dépliables de l'app, et un filet à gauche qui le pose en
-            citation : c'est un texte qu'on relit, pas un champ de plus qu'on
-            pourrait éditer. */}
+        {/* What the person wrote, word for word — the withdrawal we come from
+            look for when the text above has been retouched. Its place is HERE,
+            stuck to this text: it is the version from before, and
+            returned under the form it became a property of the return, which it
+            is not. Chevron rather than the native triangle, like the others
+            unfoldable sections of the app, and a net on the left which places it in
+            quote: it is a text that we reread, not one more field that we
+            could edit. */}
         {rawDiffers && (
           <details className="group rounded-md border border-border/60 px-3 py-2">
             <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-muted-foreground outline-none transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
               <ChevronRight className="size-3.5 shrink-0 transition-transform group-open:rotate-90" />
               {t("rawTitle")}
             </summary>
-            {/* ml-1.5 + pl-3 : le filet tombe dans l'axe du chevron, et le
-                texte reprend exactement la marge du libellé au-dessus. */}
+            {/* ml-1.5 + pl-3: the net falls in the axis of the rafter, and the
+                text takes exactly the margin of the wording above. */}
             <div className="mt-2 ml-1.5 flex flex-col gap-1.5 border-l-2 border-border/60 pl-3 text-sm">
               <p className="font-medium">{post.submitted_title}</p>
               {post.submitted_body ? (
@@ -1795,23 +1795,23 @@ function FeedbackDetail({
                   {post.submitted_body}
                 </p>
               ) : (
-                // Sans cette ligne, « envoyé sans description » et « description
-                // inchangée, seul le titre a bougé » se ressemblent : rien sous
-                // le titre. Elle dit lequel des deux on lit.
+                // Without this line, "sent without description" and "description
+                // unchanged, only the title has moved" are similar: nothing under
+                // the title. She says which of the two we are reading.
                 <p className="italic text-muted-foreground/70">{t("rawNoBody")}</p>
               )}
             </div>
           </details>
         )}
 
-        {/* Tout ce que le retour EST, sur des rangées clé/valeur — mêmes
-            contrôles que le panneau d'issue. C'est ici, et nulle part ailleurs,
-            qu'on lit son statut, sa nature, sa visibilité, son auteur. */}
+        {/* Whatever the return IS, on key/value rows — same
+            controls as the exit panel. It's here, and nowhere else,
+            that we read its status, its nature, its visibility, its author. */}
         <div className="flex flex-col">
-          {/* En tête de fiche : le soutien. C'est le chiffre qu'on vient
-              comparer, et celui qui décide de l'ordre de la colonne. Il ne se
-              compte que là où on peut en donner — board publié ET retour
-              public ; sur un retour privé ce serait un nombre qui ne bougera
+          {/* At the top of the list: support. This is the number we come from
+              compare, and whoever decides the order of the column. He doesn't
+              consider only where we can give — board published AND return
+              audience ; on a private return it would be a number that will not move
               jamais. */}
           {boardEnabled && post.is_public ? (
             <PropertyRow label={t("votes")}>
@@ -1834,10 +1834,10 @@ function FeedbackDetail({
                 value={post.status}
                 onChange={(value) => {
                   if (!value || value === post.status) return;
-                  // Le sélecteur pose le même statut que le bouton « Refuser » et
-                  // que son entrée « spam » : il demande donc la même
-                  // confirmation. Les autres statuts (prévu, en cours, livré,
-                  // ouvert) ne ferment rien et passent directement.
+                  // The selector sets the same status as the “Refuse” button and
+                  // than its “spam” entry: it therefore asks for the same
+                  // confirmation. Other statuses (planned, in progress, delivered,
+                  // open) do not close anything and go directly.
                   if (value === "declined" || value === "spam") {
                     askStatus(value);
                     return;
@@ -1868,13 +1868,13 @@ function FeedbackDetail({
             )}
           </PropertyRow>
 
-          {/* Le ticket lié, sur le modèle des relations d'un ticket : la ligne
-              existe TOUJOURS, même vide. C'est elle qui apprend qu'un retour
-              peut porter un ticket — cachée tant qu'il n'y en a pas, elle ne
-              l'apprenait qu'à ceux qui le savaient déjà. Vide, son déclencheur
-              ouvre la recherche ; garni, le ticket se lit en dessous, pleine
-              largeur, parce qu'un titre ne tient pas dans la moitié droite
-              d'une rangée clé/valeur. */}
+          {/* The linked ticket, based on the model of ticket relationships: the line
+              ALWAYS exists, even when empty. It is she who learns that a return
+              can carry a ticket — hidden until there is one, she
+              taught it only to those who already knew it. Empty, its trigger
+              opens search; garnished, the ticket reads below, full
+              width, because a title does not fit in the right half
+              of a key/value row. */}
           <PropertyRow label={t("linkedIssue")}>
             {post.issue ? null : (
               <Tooltip>
@@ -1929,11 +1929,11 @@ function FeedbackDetail({
             </div>
           ) : null}
 
-          {/* Interne / externe : de qui vient ce retour. Ce n'est pas modifiable
-              — c'est un fait sur sa provenance, pas une décision — donc le
-              survol explique au lieu d'ouvrir. Il dit aussi PAR OÙ il est
-              arrivé (board, API), ce que la barre du haut portait avant : la
-              distinction reste utile, mais pas au point d'occuper une ligne. */}
+          {/* Internal/external: who does this feedback come from? This is not editable
+              — it is a fact about its provenance, not a decision — so the
+              hover explains instead of opening. He also says WHERE he is
+              arrived (board, API), what the top bar carried before: the
+              distinction remains useful, but not to the point of occupying a line. */}
           <PropertyRow label={t("feedbackType")}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -1945,8 +1945,8 @@ function FeedbackDetail({
             </Tooltip>
           </PropertyRow>
 
-          {/* Public ou privé — la question ne se pose que s'il existe un board
-              où publier. */}
+          {/* Public or private — the question only arises if there is a board
+              where to publish. */}
           {boardEnabled ? (
             <PropertyRow label={t("visibility")}>
               <SearchSelect
@@ -2037,12 +2037,12 @@ function FeedbackDetail({
           </div>
         )}
 
-        {/* Journal d'activité + LE fil du retour — interne et public dans la
-            même liste (MIN-196). La « réponse d'équipe » n'est plus une section
-            à part au-dessus : c'était un champ que le produit publiait sur sa
-            propre page, alors que c'est quelqu'un qui répond à quelqu'un. Elle
-            s'écrit maintenant là où on écrit tout le reste, la bascule du
-            composeur décidant à qui. */}
+        {/* Activity log + THE feedback thread — internal and public in the
+            same list (MIN-196). “Team Response” is no longer a section
+            except above: it was a field that the product published on its
+            own page, even though it's someone replying to someone. She
+            is now written where everything else is written, the seesaw of
+            composer deciding to whom. */}
         <div className="flex flex-col gap-3">
           <IssueActivity
             items={activityItems}
@@ -2059,9 +2059,9 @@ function FeedbackDetail({
             members={members}
             projectId={projectId}
             onSubmit={handleComment}
-            // Sans board publié, un commentaire public n'a aucune page où
-            // s'afficher : la bascule reste visible mais éteinte, et dit
-            // pourquoi plutôt que de disparaître sans explication.
+            // Without a published board, a public comment has no pages where
+            // displayed: the toggle remains visible but off, and says
+            // why rather than disappearing without explanation.
             publicOption={{
               disabledReason: boardEnabled ? undefined : t("publicNeedsBoard"),
             }}
@@ -2074,9 +2074,9 @@ function FeedbackDetail({
         open={mergeOpen}
         onOpenChange={setMergeOpen}
         boardEnabled={boardEnabled}
-        // Ni ce retour-ci, ni un retour déjà porté par un ticket, ni un spam :
-        // absorber un vrai retour dans un post écarté l'enterrerait derrière un
-        // tombstone que le board ne montre plus (même garde que la revue IA).
+        // Neither this return, nor a return already carried by a ticket, nor spam:
+        // absorbing a real return in a discarded post would bury it behind a
+        // tombstone that the board no longer shows (same guard as the AI ​​review).
         candidates={allPosts.filter(
           (p) => p.id !== postId && !p.issue_id && p.status !== "spam"
         )}
@@ -2095,16 +2095,16 @@ function FeedbackDetail({
           action.mutate({ path: `${postId}/link`, body: { issue_id: issueId } });
         }}
       />
-      {/* Promouvoir, c'est ouvrir le formulaire de création de ticket déjà
-          rempli par le retour — pas fabriquer un ticket dans le dos de qui
-          clique. Le retour donne ce qu'il sait (titre, texte, catégories) ;
-          l'effort, la priorité, l'assigné et l'échéance sont des jugements
-          d'équipe, et se posent ici plutôt qu'en rouvrant le ticket juste
-          après. C'est le MÊME formulaire que partout ailleurs : ses raccourcis
-          de champ, sa dictée et ses brouillons viennent avec.
-          `projects` ne porte que le projet courant : un retour appartient à
-          son projet, « créer dans un autre projet » n'aurait pas de sens et
-          laisserait le lien derrière lui. */}
+      {/* Promoting means opening the ticket creation form already
+          filled by the return — not make a ticket behind whose back
+          click. The return gives what it knows (title, text, categories);
+          effort, priority, assignment and deadline are judgments
+          team, and ask themselves here rather than reopening the ticket just
+          After. It's the SAME form as everywhere else: its shortcuts
+          field, his dictation and his drafts come with it.
+          `projects` only carries the current project: a return belongs to
+          his project, “creating in another project” would not make sense and
+          would leave the link behind. */}
       <CreateIssueDialog
         open={promoteOpen}
         onOpenChange={setPromoteOpen}
@@ -2126,14 +2126,14 @@ function FeedbackDetail({
           setPromoteOpen(false);
           refreshDetail();
         }}
-        // Inatteignable (aucun autre projet dans la liste), mais la prop est
-        // requise : la faire échouer bruyamment vaut mieux qu'un ticket créé
-        // ailleurs et détaché de son retour.
+        // Unattainable (no other projects in the list), but the prop is
+        // required: failing loudly is better than a ticket created
+        // elsewhere and detached from his return.
         onCreateInProject={() => Promise.reject(new Error(t("errorGeneric")))}
       />
-      {/* Refuser / écarter. Rien n'est détruit — le statut se rechange après
-          coup — mais les deux se voient du dehors : l'un affiche un non sur le
-          board, l'autre en retire le retour. La boîte dit lequel des deux. */}
+      {/* Refuse/discard. Nothing is destroyed — the status is replaced later
+          suddenly — but both see each other from the outside: one displays a no on the
+          board, the other takes the return. The box says which one. */}
       <ConfirmDeleteDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
@@ -2147,9 +2147,9 @@ function FeedbackDetail({
         }
         confirmLabel={confirmStatus === "spam" ? t("markSpam") : t("decline")}
         cancelLabel={tCommon("cancel")}
-        // L'échec est déjà dit par le `onError` de la mutation : on avale le
-        // rejet pour que la boîte se ferme sur le toast, et non sur une
-        // promesse non capturée qui la laisserait ouverte et figée.
+        // The failure is already indicated by the `onError` of the mutation: we swallow the
+        // rejection so that the box closes on the toast, and not on a
+        // uncaptured promise that would leave it open and frozen.
         onConfirm={async () => {
           await patch.mutateAsync({ status: confirmStatus }).catch(() => {});
         }}
@@ -2174,12 +2174,12 @@ function FeedbackDetail({
 // ── Dialogs ──────────────────────────────────────────────────────────────────
 
 /**
- * Fusionner ce retour DANS un autre.
+ * Merge this return INTO another.
  *
- * Deux temps, et c'est délibéré : on choisit le retour parent, puis on confirme
- * en le lisant. Une fusion déplace des voix et fait rediriger une URL publique ;
- * elle se défait, mais après coup, et un clic dans une liste de titres proches
- * n'est pas un endroit où se tromper en silence.
+ * Two steps, and this is deliberate: we choose the parent return, then we confirm
+ * while reading it. A merge moves votes and redirects a public URL;
+ * it unravels, but after the fact, and a click in a list of nearby titles
+ * is not a place to be silently wrong.
  */
 function MergeDialog({
   open,
@@ -2276,8 +2276,8 @@ function MergeDialog({
   );
 }
 
-/** Lier à une issue existante : recherche par titre ou identifiant, les
-    issues closes (canceled/duplicate) sont exclues. */
+/** Link to an existing issue: search by title or identifier, the
+    closed issues (canceled/duplicate) are excluded. */
 function LinkIssueDialog({
   projectId,
   projectKey,
@@ -2351,26 +2351,26 @@ function LinkIssueDialog({
 
 // ── Saisie interne ───────────────────────────────────────────────────────────
 
-/** L'auteur choisi dans le composeur : quelqu'un qu'on connaît déjà, ou un
-    email frais. Les deux se résolvent en la même identité côté serveur. */
+/** The author chosen in the composer: someone we already know, or a
+    fresh email. Both resolve to the same identity on the server side. */
 interface ComposerAuthor {
   email: string;
   name: string | null;
-  /** Graine d'avatar d'un membre de l'équipe — voir {@link authorAvatarSeed}. */
+  /** Team member avatar seed — see {@link authorAvatarSeed}. */
   seed?: string | null;
 }
 
 /**
- * La graine de l'avatar d'un auteur.
+ * The seed of an author's avatar.
  *
- * Un membre de l'équipe a DÉJÀ un visage dans minddy, tiré au sort une fois
- * pour toutes (`public.user_avatars`) et affiché partout ailleurs — sur ses
- * tickets, dans le fil d'activité, dans le sélecteur d'assigné. Le semer ici
- * sur son email lui en dessinerait un second, sans rapport avec le premier :
- * la même personne, deux visages, sur deux écrans voisins.
+ * A team member ALREADY has a face in minddy, drawn once
+ * for all (`public.user_avatars`) and displayed everywhere else — on its
+ * tickets, in the activity feed, in the assignee selector. Sow it here
+ * on his email he would draw a second one, unrelated to the first:
+ * the same person, two faces, on two neighboring screens.
  *
- * D'où l'ordre : la graine du compte s'il en a un, l'email sinon (un visiteur
- * du board n'a pas de compte, et son email est ce qu'il a de stable), le
+ * Hence the order: the seed of the account if it has one, the email otherwise (a visitor
+ * of the board does not have an account, and his email is what is stable), the
  * pseudonyme en dernier recours.
  */
 function authorAvatarSeed(
@@ -2383,7 +2383,7 @@ function authorAvatarSeed(
   );
 }
 
-/** Email (en minuscules) → graine d'avatar, pour les membres du projet. */
+/** Email (lower case) → avatar seed, for project members. */
 function useMemberSeeds(members: Member[]): Map<string, string> {
   return useMemo(
     () =>
@@ -2397,12 +2397,12 @@ function useMemberSeeds(members: Member[]): Map<string, string> {
 }
 
 /**
- * Au nom de qui l'équipe saisit ce retour.
+ * In whose name the team enters this return.
  *
- * Retaper l'email de tête créait une SECONDE identité à la moindre faute — avec
- * son pseudonyme, sa voix et son historique séparés. Le champ propose donc ceux
- * qui ont déjà écrit ou voté, et n'accepte une saisie libre qu'après avoir
- * montré qu'aucun d'eux ne correspond.
+ * Retyping the head email created a SECOND identity at the slightest mistake — with
+ * his pseudonym, voice and history separated. The field therefore offers those
+ * who have already written or voted, and only accepts free entry after having
+ * shown that none of them match.
  */
 function AuthorPicker({
   projectId,
@@ -2412,11 +2412,11 @@ function AuthorPicker({
   onCreateRequested,
 }: {
   projectId: string;
-  /** Les membres du projet — eux aussi ont des retours à faire remonter. */
+  /** The members of the project — they too have feedback to give. */
   members: Member[];
   value: ComposerAuthor | null;
   onChange: (author: ComposerAuthor | null) => void;
-  /** Bascule le champ en saisie d'une personne neuve, avec ce qui a été tapé. */
+  /** Switches the field to a new person's input, with what was typed. */
   onCreateRequested: (typed: string) => void;
 }) {
   const t = useTranslations("FeedbackBoard");
@@ -2435,22 +2435,22 @@ function AuthorPicker({
   const typed = search.trim();
 
   /**
-   * L'équipe d'abord. Un retour saisi à la main vient très souvent de
-   * l'intérieur — quelqu'un est tombé sur un défaut, l'a raconté en réunion, et
-   * on le consigne. Sans les membres dans cette liste, il fallait retaper de
-   * mémoire l'email d'un collègue qui est pourtant déjà dans le projet.
+   * The team first. A return typed by hand very often comes from
+   * the interior — someone came across a defect, reported it in a meeting, and
+   * we record it. Without the members in this list, it was necessary to retype
+   * memory the email of a colleague who is already in the project.
    *
-   * Ils ne sont PAS filtrés à la main : cmdk filtre déjà les items sur leur
-   * valeur et leurs mots-clés, et le faire deux fois donnerait deux résultats
-   * différents pour une même frappe.
+   * They are NOT filtered by hand: cmdk already filters the items on their
+   * value and their keywords, and doing it twice would give two results
+   * different for the same keystroke.
    */
   const teamOptions = useMemo(
     () => members.filter((m) => m.email),
     [members]
   );
-  // Un membre qui a déjà écrit sur le board a AUSSI une ligne côté visiteurs :
-  // c'est la même personne, et c'est l'entrée « équipe » qu'on garde — elle
-  // seule porte son vrai visage et son nom de compte.
+  // A member who has already written on the board ALSO has a line on the visitors side:
+  // it's the same person, and it's the "team" entry that we keep - she
+  // only bears his real face and account name.
   const teamEmails = useMemo(
     () => new Set(teamOptions.map((m) => m.email!.trim().toLowerCase())),
     [teamOptions]
@@ -2476,8 +2476,8 @@ function AuthorPicker({
       searchValue={search}
       onSearchValueChange={setSearch}
       searchPlaceholder={t("authorSearchPlaceholder")}
-      // « Aucun résultat » n'a jamais le dernier mot ici : la ligne de création
-      // juste dessous EST la réponse quand rien ne correspond.
+      // “No results” never has the last word here: the creative line
+      // just below IS the answer when nothing matches.
       hideEmpty
       contentClassName="w-80"
       trigger={
@@ -2506,8 +2506,8 @@ function AuthorPicker({
               pick({ email: m.email!, name: m.full_name, seed: m.avatar_seed })
             }
           >
-            {/* Sa graine de compte, pas son email : le même visage que partout
-                ailleurs dans minddy. */}
+            {/* His account seed, not his email: the same face as everywhere
+                elsewhere in minddy. */}
             <UserAvatar seed={m.avatar_seed} className="size-5 shrink-0" />
             <span className="flex min-w-0 flex-col">
               <span className="truncate">{displayName(m)}</span>
@@ -2539,10 +2539,10 @@ function AuthorPicker({
           </CommandItem>
         ))}
       </CommandGroup>
-      {/* Créer quelqu'un est TOUJOURS à portée, pas seulement quand la
-          recherche échoue : le plus souvent, saisir un retour reçu par mail,
-          c'est saisir une personne qu'on n'a jamais vue. `forceMount` la garde
-          affichée quand cmdk ne trouve rien — c'est-à-dire précisément là où
+      {/* Creating someone is ALWAYS within reach, not just when the
+          search fails: most often, enter a return received by email,
+          it's capturing a person you've never seen before. `forceMount` custody
+          displayed when cmdk finds nothing — that is, precisely where
           elle sert. */}
       <CommandSeparator alwaysRender className="my-1" />
       <CommandGroup forceMount>
@@ -2567,13 +2567,13 @@ function AuthorPicker({
 }
 
 /**
- * La personne neuve : email et nom, les deux champs que la saisie interne a
- * toujours eus. Ils reviennent parce que le sélecteur seul les avait perdus —
- * on ne pouvait plus que retrouver quelqu'un, jamais l'inscrire, alors que
- * saisir un retour reçu par mail commence presque toujours par là.
+ * The new person: email and name, the two fields that the internal entry has
+ * always had. They come back because the selector alone had lost them —
+ * we could only find someone, never register them, while
+ * entering a return received by email almost always starts there.
  *
- * Rendus SUR PLACE, dans le composeur, plutôt que dans un second dialog :
- * empiler deux modales pour deux champs coûte plus cher en attention que ce
+ * Rendered ON-SITE, in the composer, rather than in a second dialog:
+ * stacking two modals for two fields costs more in attention than this
  * qu'elles demandent.
  */
 function NewAuthorFields({
@@ -2624,12 +2624,12 @@ function NewAuthorFields({
 }
 
 /**
- * Saisir un retour reçu ailleurs — un email, un appel, une conversation.
+ * Enter feedback received elsewhere — an email, a call, a conversation.
  *
- * Même surface d'écriture que le composeur du board public : le titre et le
- * corps sont des champs libres, sans chrome, parce que ce qu'on écrit ici finit
- * exactement au même endroit. Ce qui s'y ajoute est ce que le visiteur n'a pas
- * à choisir : AU NOM DE QUI on écrit.
+ * Same writing surface as the composer of the public board: the title and the
+ * bodies are free fields, without chrome, because what we write here ends
+ * exactly the same place. What is added is what the visitor does not have
+ * to choose: IN WHOSE NAME we write.
  */
 function InternalFeedbackDialog({
   projectId,
@@ -2640,7 +2640,7 @@ function InternalFeedbackDialog({
   onCreated,
 }: {
   projectId: string;
-  /** Les membres du projet, proposés comme auteurs au même titre que les
+  /** The members of the project, proposed as authors in the same way as the
       visiteurs du board. */
   members: Member[];
   boardEnabled: boolean;
@@ -2653,23 +2653,23 @@ function InternalFeedbackDialog({
   const tDictate = useTranslations("Dictate");
   const locale = useLocale();
   const [author, setAuthor] = useState<ComposerAuthor | null>(null);
-  // Personne neuve en cours de saisie. `null` = on est sur le sélecteur.
+  // New person being entered. `null` = we are on the selector.
   const [draftAuthor, setDraftAuthor] = useState<{ email: string; name: string } | null>(
     null
   );
   const [title, setTitle] = useState("");
   const [isPublic, setIsPublic] = useState(true);
   const [busy, setBusy] = useState(false);
-  // Le MarkdownEditor ne committe qu'au blur — la ref porte toujours la
-  // dernière valeur commitée, et submit() force le blur avant de lire.
+  // The MarkdownEditor only commits to blur — the ref always carries the
+  // last committed value, and submit() forces the blur before reading.
   const bodyRef = useRef("");
   const [initialBody, setInitialBody] = useState("");
   const [editorKey, setEditorKey] = useState(0);
 
-  // ── Dictée ────────────────────────────────────────────────────────────────
-  // Le même geste qu'au board public, sur la même paire de champs : on raconte
-  // le retour reçu, Numo l'écrit. Ce qui change tient au transport — ici on est
-  // authentifié, et c'est le membre qui parle qui paye.
+  // ── Dictation ──────────────────────────────── ────────────────────────────────
+  // The same gesture as on the public board, on the same pair of fields: we tell
+  // the return received, Numo writes it down. What changes is due to transport — here we are
+  // authenticated, and it is the member who speaks who pays.
 
   const [transcribing, setTranscribing] = useState(false);
 
@@ -2717,9 +2717,9 @@ function InternalFeedbackDialog({
     },
   });
 
-  /** L'écoute passe par la route de transcription commune, mais s'inscrit au
-      ledger sous `feedback_voice` : au compteur d'usage, dicter un retour est
-      une dépense de « Retours », pas de « Dictée vocale ». */
+  /** Listening goes through the common transcription route, but is part of the
+      ledger under `feedback_voice`: at the usage counter, dictating a return is
+      an expense of “Returns”, not of “Voice dictation”. */
   const uploadAudio = async (blob: Blob): Promise<string | null> => {
     const form = new FormData();
     form.append(
@@ -2756,10 +2756,10 @@ function InternalFeedbackDialog({
   };
 
   /**
-   * Qui signe ce retour, quel que soit le mode : la personne choisie dans la
-   * liste, ou celle qu'on est en train d'inscrire. Un email est le minimum —
-   * c'est lui qui résout l'identité côté serveur (`upsertFeedbackUser`), et
-   * c'est par lui qu'on recontactera.
+   * Who signs this return, whatever the method: the person chosen in the
+   * list, or the one we are currently listing. An email is the minimum —
+   * it is he who resolves the identity on the server side (`upsertFeedbackUser`), and
+   * it is through him that we will contact again.
    */
   const resolvedAuthor: ComposerAuthor | null = draftAuthor
     ? draftAuthor.email.trim().includes("@")
@@ -2799,7 +2799,7 @@ function InternalFeedbackDialog({
   };
 
   const requestClose = () => {
-    // Une dictée en vol atterrit dans ce formulaire : fermer la jetterait.
+    // A dictation in flight lands in this form: closing it would throw it away.
     if (transcribing || numoBusy) {
       toast.info(tDictate("inFlight"), { id: "dictation-in-flight" });
       return;
@@ -2816,11 +2816,11 @@ function InternalFeedbackDialog({
         else onOpenChange(true);
       }}
     >
-      {/* ⌘/Ctrl+Entrée envoie depuis N'IMPORTE QUEL champ du modal — le titre
-          comme le corps. Le raccourci est posé ici plutôt que sur chaque champ
-          parce que le corps est un éditeur riche : la touche y remonte par
-          bouillonnement. `defaultPrevented` laisse la priorité à l'éditeur
-          quand il s'en sert lui-même (sortir d'un bloc de code). */}
+      {/* ⌘/Ctrl+Enter sends from ANY field in the modal — the title
+          like the body. The shortcut is placed here rather than on each field
+          because the body is a rich editor: the key goes back to it through
+          bubbling. `defaultPrevented` leaves priority to the editor
+          when he uses it himself (exiting a block of code). */}
       <DialogContent
         className="top-24 translate-y-0 gap-0 sm:max-w-xl"
         onKeyDown={(e) => {
@@ -2869,8 +2869,8 @@ function InternalFeedbackDialog({
               members={members}
               value={author}
               onChange={setAuthor}
-              // Ce qui a été tapé n'est pas perdu au passage : un email part
-              // dans le champ email, tout le reste dans le champ nom.
+              // What has been typed is not lost in passing: an email leaves
+              // in the email field, everything else in the name field.
               onCreateRequested={(typed) => {
                 setAuthor(null);
                 setDraftAuthor(
@@ -2902,9 +2902,9 @@ function InternalFeedbackDialog({
           </div>
         ) : null}
 
-        {/* La voix à gauche, la création à droite — la même barre qu'au board
-            public et qu'au modal de ticket. Pendant que Numo range, son visage
-            prend la place du micro. */}
+        {/* The voice on the left, the creation on the right — the same bar as on the board
+            public and only in the ticket modal. While Numo tidies up, his face
+            takes the place of the microphone. */}
         <div className="mt-3 flex items-center justify-between gap-4 border-t pt-3">
           {numoBusy ? (
             <span
@@ -2944,8 +2944,8 @@ function InternalFeedbackDialog({
           </div>
         </div>
 
-        {/* Numo reprend la dictée : le liseré souligne le bord du modal pendant
-            qu'il travaille — même signal que son visage, plus haut. */}
+        {/* Numo takes over the dictation: the border highlights the edge of the modal during
+            that he is working — same signal as his face, higher up. */}
         <AgentBeamOverlay active={numoBusy} />
       </DialogContent>
     </Dialog>

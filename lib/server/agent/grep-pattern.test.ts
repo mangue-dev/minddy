@@ -7,16 +7,16 @@ import {
 } from "./grep-pattern";
 
 /**
- * MIN-109 : les 3 seuls échecs de `grep` mesurés en 60 jours sont la MÊME chose —
- * un bout de JSX collé comme motif. La détection doit donc attraper le refus de
- * motif, et RIEN d'autre : une option invalide ou un pathspec cassé relancé en
- * `-F` échouerait pareil, en ayant menti au modèle au passage.
+ * MIN-109: the only 3 `grep` failures measured in 60 days are the SAME thing —
+ * a piece of JSX stuck as a pattern. The detection must therefore catch the refusal of
+ * pattern, and NOTHING else: an invalid option or a broken pathspec restarted in
+ * `-F` would fail the same, having lied to the model in passing.
  *
- * Les stderr ci-dessous ne sont pas inventés : ce sont ceux de `git grep` et de
- * `grep`, relevés en production (la sandbox tourne sous glibc) ou reproduits en
- * lançant les commandes. Les messages CHANGENT d'une plateforme à l'autre — même
- * motif, « Unmatched \{ » sous glibc et « braces not balanced » sous BSD — d'où
- * la détection sur le préfixe structurel de git plutôt que sur la phrase.
+ * The stderrs below are not invented: they are those of `git grep` and de
+ * `grep`, recorded in production (the sandbox runs under glibc) or reproduced by
+ * launching the commands. Messages CHANGE from one platform to another — same
+ * pattern, “Unmatched \{” under glibc and “braces not balanced” under BSD — hence
+ * detection on the git structural prefix rather than on the phrase.
  */
 
 describe("isInvalidRegexError", () => {
@@ -26,10 +26,10 @@ describe("isInvalidRegexError", () => {
 
   it("attrape TOUT refus de motif de git grep, quel que soit le moteur de regex", () => {
     const stderrs = [
-      // glibc (ce que fait tourner la sandbox).
+      // glibc (what the sandbox runs).
       `fatal: -e option, 'foo(bar': Unmatched ( or \\(`,
       `fatal: -e option, 'items[0': Unmatched [, [^, [:, [., or [=`,
-      // BSD — mêmes motifs, autres phrases : la détection ne doit pas en dépendre.
+      // BSD — same patterns, other sentences: detection should not depend on them.
       `fatal: -e option, 'useState(': parentheses not balanced`,
       `fatal: -e option, 'items[0': brackets ([ ]) not balanced`,
       `fatal: -e option, 'a{2': braces not balanced`,
@@ -74,20 +74,20 @@ describe("isInvalidRegexError", () => {
 
 describe("LITERAL_RETRY_NOTE", () => {
   it("dit au modèle que SON motif a été relu comme du texte", () => {
-    // Le modèle croit avoir cherché une regex : sans cette phrase, il lit des
-    // résultats qui ne correspondent pas à ce qu'il a demandé.
+    // The model thinks it has searched for a regex: without this sentence, it reads
+    // results that don't match what he asked for.
     expect(LITERAL_RETRY_NOTE).toMatch(/literal/i);
     expect(LITERAL_RETRY_NOTE).toMatch(/not a valid POSIX regex/i);
   });
 });
 
 /**
- * MIN-238 — le miroir de MIN-109, et il a coûté un plan entier.
+ * MIN-238 — the mirror of MIN-109, and it cost an entire blueprint.
  *
- * Les motifs ci-dessous sont ceux du run qui a écrit le plan de MIN-225 : quinze
- * `grep` en `fixed_strings` sur des listes de symboles séparées par `|`, quinze
- * « (no matches) » sur du code présent aux deux endroits, et un plan bâti sur
- * l'absence de `claimRun`, `requeueStuckRuns` et `planProviderStall`.
+ * The patterns below are from the run that wrote the blueprint for MIN-225: fifteen
+ * `grep` in `fixed_strings` on lists of symbols separated by `|`, fifteen
+ * “(no matches)” on code present in both places, and a plan built on
+ * the absence of `claimRun`, `requeueStuckRuns` and `planProviderStall`.
  */
 describe("looksLikeIntendedAlternation", () => {
   it("reconnaît les motifs EXACTS qui ont menti dans le run de MIN-225", () => {
@@ -96,8 +96,8 @@ describe("looksLikeIntendedAlternation", () => {
       "drainAgentRuns|claimRun|requeueStuckRuns",
       "drainAgentRuns|claimRun|requeueStuckRuns|hasDueAgentWork|reapIdleSandboxes",
       "hasDueAgentWork|drainAgentRuns|executeAgentRun",
-      // Des espaces DANS une alternative ne gênent pas : ce qui compte est que la
-      // barre soit collée. Celui-ci est le 13e du run.
+      // Spaces IN an alternative do not interfere: what matters is that the
+      // bar is stuck. This is the 13th of the run.
       "export async function drainAgentRuns|drainAgentRuns",
     ];
     for (const p of patterns) expect(looksLikeIntendedAlternation(p)).toBe(true);
@@ -106,13 +106,13 @@ describe("looksLikeIntendedAlternation", () => {
   it("laisse tranquille ce qu'on cherche VRAIMENT au pied de la lettre", () => {
     const patterns = [
       "useState(", // pas de barre du tout
-      "a || b", // alternative vide au milieu → un OU de code, pas une alternation
+      "a || b", // empty alternative in the middle → an OR of code, not an alternation
       "| --- |", // ligne de tableau markdown : alternatives vides aux deux bouts
-      "cmd | grep foo", // tube shell : barre bordée d'espaces
+      "cmd | grep foo", // tube shell: bar bordered by spaces
       "value |> pipe", // idem
-      "a\\|b", // barre échappée = barre voulue
-      "|leading", // alternative vide en tête
-      "trailing|", // et en queue
+      "a\\|b", // escaped bar = desired bar
+      "|leading", // empty alternative at the head
+      "trailing|", // and in tail
     ];
     for (const p of patterns) expect(looksLikeIntendedAlternation(p)).toBe(false);
   });
@@ -120,8 +120,8 @@ describe("looksLikeIntendedAlternation", () => {
 
 describe("REGEX_RETRY_NOTE", () => {
   it("dit que les alternatives n'avaient jamais été cherchées", () => {
-    // Sans ça, le modèle lit les résultats de la RELANCE comme ceux de sa
-    // demande — et n'apprend pas que `fixed_strings` ne fait pas ce qu'il croit.
+    // Without that, the model reads the results of the RAISING as those of its
+    // asks — and does not learn that `fixed_strings` is not doing what it thinks.
     expect(REGEX_RETRY_NOTE).toMatch(/regex/i);
     expect(REGEX_RETRY_NOTE).toMatch(/never searched/i);
   });

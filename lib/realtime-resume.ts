@@ -1,61 +1,60 @@
 /**
- * Reprise après une absence : ce qu'il faut faire quand l'onglet revient au
- * premier plan (changement d'onglet, machine sortie de veille).
+ * Resumption after an absence: what to do when the tab returns to
+ * foreground (tab change, machine wakes up).
  *
- * Le problème est que PERSONNE ne le fait à notre place :
+ * The problem is that NO ONE does it for us:
  *
- * - `refetchOnWindowFocus` est à false (lib/query-provider.tsx) — la fraîcheur
- *   est censée venir du pont temps réel, pas de l'horloge ;
- * - `refetchOnReconnect` n'écoute que l'événement `online` du navigateur, qu'une
- *   veille ou un onglet gelé n'émettent jamais ;
- * - restait la socket… c'est-à-dire précisément ce qui vient de mourir.
+ * - `refetchOnWindowFocus` is false (lib/query-provider.tsx) — freshness
+ * is supposed to come from the real-time bridge, not the clock;
+ * - `refetchOnReconnect` only listens for the browser's `online` event, a
+ * sleeps or a frozen tab never emits;
+ * - the socket remained… that is to say precisely what had just died.
  *
- * Et elle met du temps à s'en apercevoir. Un onglet caché voit ses minuteurs
- * gelés (Chrome les passe à un par minute après cinq minutes, puis gèle
- * carrément l'onglet) : le heartbeat de 25 s ne part plus, et phoenix ne conclut
- * à la mort qu'après un aller-retour complet — 25 s pour envoyer le battement
- * suivant, 25 s de plus pour le déclarer perdu — avant de rejoindre avec un
- * backoff de 1 → 2 → 5 → 10 s. D'où la dizaine de secondes d'état périmé à
- * l'écran au retour, pendant lesquelles l'utilisateur lit des données fausses
- * sans qu'aucun indicateur ne le lui dise.
+ * And it took a while to notice it. A hidden tab sees its timers
+ * frozen (Chrome switches them to one per minute after five minutes, then freezes
+ * the tab altogether): the 25 s heartbeat no longer starts, and phoenix only concludes
+ * death after a complete round trip — 25 s to send the beat
+ * next, 25 sec more to declare it lost — before rejoining with a
+ * backoff of 1 → 2 → 5 → 10 sec. Hence the ten seconds of expired status at
+ * the screen upon return, during which the user reads false data
+ * without any indicator telling him so.
  *
- * La réponse tient en une phrase : **au retour, on ne demande rien à la
- * socket.** On refetch tout de suite (c'est ce que l'utilisateur voit), et on
- * réveille la socket en parallèle. Ce qu'elle rapportera ensuite est un bonus.
+ * The answer is in one sentence: **on return, we do not ask the
+ * anything. socket.** We refetch immediately (this is what the user sees), and on
+ * wakes up the socket in parallel. What it will bring back afterwards is a bonus.
  *
- * Séparé du provider pour être testable : vitest tourne sur node nu, sans React
- * ni navigateur (même raison que lib/realtime-topics.ts).
+ * Separated from the provider to be testable: vitest runs on bare node, without React
+ * nor browser (same reason as lib/realtime-topics.ts).
  */
 
 /**
- * En dessous de cette absence, une socket qui se dit connectée l'est vraiment :
- * on ne refetch pas. Au-dessus, elle a pu mourir en silence pendant le gel des
- * minuteurs — le doute suffit à justifier une poignée de GET.
+ * Below this absence, a socket that says it is connected really is:
+ * we do not refetch. Above, she was able to die silently while the
+ * timers froze — the doubt is enough to justify a handful of GET.
  */
 export const RESUME_AFTER_HIDDEN_MS = 15_000;
 
-/** Délai avant de conclure qu'un heartbeat sans réponse ne viendra jamais. */
+/** Delay before concluding that an unanswered heartbeat will never come. */
 export const ZOMBIE_PROBE_MS = 3_000;
 
 /**
- * Faut-il rattraper les caches au retour ?
+ * Should we catch the caches on return?
  *
- * **Une seule condition, la durée.** L'état de la socket ne participe plus.
+ * **Only one condition, the duration.** The state of the socket no longer participates.
  *
- * Il l'a fait : « une socket tombée est un oui sans condition, quelle qu'ait été
- * la durée ». Cette branche-là n'avait aucun plancher, et `isConnected()` est
- * faux pendant TOUTE reconnexion phoenix en cours (backoff 1 → 2 → 5 → 10 s).
- * Sur macOS, une fenêtre entièrement recouverte passe en occlusion et émet un
- * `visibilitychange` : une occlusion d'une demi-seconde — une autre fenêtre qui
- * passe devant, un changement d'espace — suffisait alors à déclencher le
- * rattrapage complet de tous les périmètres, si la socket se trouvait en backoff
- * à cet instant. Deux événements indépendants, dont aucun n'est provoqué par
- * l'utilisateur, mais qui tombent pendant qu'il travaille (MIN-306).
+ * He did it: "a fallen socket is an unconditional yes, whatever summer
+ * duration”. This branch had no floor, and `isConnected()` is
+ * false during ANY phoenix reconnection in progress (backoff 1 → 2 → 5 → 10 s).
+ * On macOS, a fully covered window goes into occlusion and issues a
+ * `visibilitychange`: an occlusion of half a second — another window which
+ * passes in front, a change of space — was then sufficient to trigger the
+ * complete catch-up of all perimeters, if the socket was in backoff
+ * at that moment. Two independent events, none of which are caused by
+ * the user, but which fall while he is working (MIN-306).
  *
- * ⚠ **Ce n'est pas un oubli, et ça ne creuse aucun trou de fraîcheur** : un canal
- * tombé puis rejoint rattrape déjà son propre périmètre de lui-même, à la
- * re-souscription (voir `openScope` dans lib/realtime-provider.tsx). Rétablir un
- * « oui sans condition » ici ne rendrait rien, et rouvrirait le défaut.
+ * ⚠ **This is not an oversight, and it does not create any freshness hole**: a channel
+ * that fell then rejoined already catches up with its own perimeter of itself, upon re-subscription (see `openScope` in lib/realtime-provider.tsx). Resetting a
+ * “unconditional yes” here would do nothing, and would reopen the default.
  */
 export function shouldCatchUpOnResume({
   hiddenForMs,
@@ -65,7 +64,7 @@ export function shouldCatchUpOnResume({
   return hiddenForMs >= RESUME_AFTER_HIDDEN_MS;
 }
 
-/** Ce qu'on utilise d'une socket realtime — assez pour la tester avec un faux. */
+/** What we use from a realtime socket — enough to test it with a fake. */
 export interface WakeableRealtime {
   isConnected(): boolean;
   connect(): void;
@@ -75,28 +74,26 @@ export interface WakeableRealtime {
 }
 
 /**
- * Réveille la socket sans attendre qu'elle s'aperçoive de sa propre mort.
+ * Wakes up the socket without waiting for it to notice its own death.
  *
- * Trois gestes, tous en API publique :
+ * Three gestures, all in public API:
  *
- * 1. `setAuth()` — le JWT a pu expirer pendant la veille, et une jonction de
- *    canal privé présentée avec un jeton périmé est refusée, ce qui relance le
- *    backoff pour rien.
- * 2. socket fermée → `connect()`, qui ne fait rien si une reconnexion est déjà
- *    en vol.
- * 3. socket « ouverte » mais peut-être zombie → on lui écrit dessus. Un premier
- *    battement part ; s'il n'a toujours pas de réponse {@link ZOMBIE_PROBE_MS}
- *    plus tard, le second déclenche la logique de timeout de phoenix, qui
- *    démonte et replanifie une reconnexion immédiate. Détection en ~3 s au lieu
- *    de 50.
+ * 1. `setAuth()` — the JWT could have expired during sleep, and a join de
+ * private channel presented with an expired token is refused, which restarts the
+ * backoff for nothing.
+ * 2. closed socket → `connect()`, which does nothing if a reconnection is already
+ * in flight.
+ * 3. socket “open” but perhaps zombie → we write on him. A first
+ * beat leaves; if it still has no response {@link ZOMBIE_PROBE_MS}
+ * later, the second triggers phoenix timeout logic, which
+ * unmounts and reschedules an immediate reconnection. Detection in ~3 s instead of 50.
  *
- * Renvoie le minuteur de la sonde, à annuler au démontage (null s'il n'y en a
- * pas eu besoin).
+ * Returns the probe timer, to be canceled on disassembly (null if none is needed).
  */
 export function wakeRealtime(
   realtime: WakeableRealtime
 ): ReturnType<typeof setTimeout> | null {
-  // Volontairement non attendu : le rattrapage des caches ne dépend pas de lui.
+  // Deliberately not expected: catching up with caches does not depend on it.
   void realtime.setAuth().catch(() => {});
 
   if (!realtime.isConnected()) {
@@ -106,7 +103,7 @@ export function wakeRealtime(
 
   void realtime.sendHeartbeat();
   return setTimeout(() => {
-    // Toujours en attente : la socket ne répond plus, on force la conclusion.
+    // Still waiting: the socket no longer responds, we force the conclusion.
     if (realtime.pendingHeartbeatRef) void realtime.sendHeartbeat();
   }, ZOMBIE_PROBE_MS);
 }

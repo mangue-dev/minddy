@@ -4,31 +4,31 @@ import { decrypt, encrypt, isEncryptedEnvelope } from "@/lib/server/encryption";
 import { hasStrongSecret, requireSecret } from "@/lib/server/env-secrets";
 
 /**
- * Chiffrement au repos des tokens de forge (MIN-47, généralisé en MIN-144).
- * Enveloppe AES-256-GCM (lib/server/encryption.ts) : le ciphertext stocké est
- * `JSON.stringify(encrypt(plaintext, secret))`, rangé dans
+ * At-rest encryption of forge tokens (MIN-47, generalized to MIN-144).
+ * AES-256-GCM envelope (lib/server/encryption.ts): the stored ciphertext is
+ * `JSON.stringify(encrypt(plaintext, secret))`, stored in
  * `git_connections.access_token_encrypted` / `refresh_token_encrypted` (OAuth
- * GitLab) et `git_user_identities.*` (token user-to-server GitHub) — colonnes
- * service-role uniquement. Les tokens ne quittent jamais le serveur et ne sont
- * jamais logués en clair.
+ * GitLab) and `git_user_identities.*` (user-to-server token GitHub) — columns
+ * service-role only. The tokens never leave the server and are
+ * never logged in the clear.
  *
- * Le secret s'appelle désormais `GIT_TOKEN_ENCRYPTION_SECRET`, avec repli sur
- * `GITLAB_TOKEN_ENCRYPTION_SECRET` : les enveloppes déjà en base ont été
- * scellées avec l'ancien, et la dérivation scrypt part du secret — le renommer
- * sans repli rendrait illisibles toutes les connexions GitLab existantes. Une
- * prod qui ne pose que l'ancien nom continue donc de marcher, sans rien faire.
+ * The secret is now called `GIT_TOKEN_ENCRYPTION_SECRET`, with fallback to
+ * `GITLAB_TOKEN_ENCRYPTION_SECRET`: the envelopes already in the base have been
+ * sealed with the old one, and the scrypt derivation starts from secrecy — renaming it to
+ * without fallback would make all existing GitLab connections unreadable. A
+ * prod which only sets the old name therefore continues to work, without doing anything.
  *
- * Fail-closed : un secret absent lève (on ne stocke JAMAIS un token en clair) ;
- * le déchiffrement renvoie null (jamais d'exception) pour qu'un secret tourné ou
- * une enveloppe corrompue se traduise par une invite de reconnexion en amont.
+ * Fail-closed: an absent secret raises (we NEVER store a token in clear);
+ * decryption returns null (never an exception) so that a secret is turned or
+ * a corrupted envelope results in an upstream reconnect prompt.
  */
 function getForgeTokenSecret(): string {
-  // Le repli sur l'ancien nom vit dans la spec du secret (`aliases`), avec la
-  // longueur minimale — absent OU trop court, même refus (MIN-347).
+  // The fallback to the old name lives in the secret spec (`aliases`), with the
+  // minimum length — absent OR too short, same refusal (MIN-347).
   return requireSecret("GIT_TOKEN_ENCRYPTION_SECRET");
 }
 
-/** Un secret de chiffrement est-il déployé, et utilisable ? (garde de config.) */
+/** Is an encryption secret deployed and usable? (config. guard) */
 export function isForgeTokenCryptoConfigured(): boolean {
   return hasStrongSecret("GIT_TOKEN_ENCRYPTION_SECRET");
 }

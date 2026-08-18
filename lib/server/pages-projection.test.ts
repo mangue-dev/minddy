@@ -1,15 +1,15 @@
-// La projection markdown d'une page, jouée SANS DOM au départ — environnement
-// node, comme une fonction Vercel (MIN-273).
+// The markdown projection of a page, played WITHOUT DOM at the start — environment
+// node, like a Vercel function (MIN-273).
 //
-// C'est le seul test de ce dépôt qui vérifie que le DOM s'installe tout seul :
-// tous les autres tests de page tournent sous jsdom, où le manque ne se voit
-// pas. Or c'est bien dans une fonction serveur que les outils de page lisent et
-// écrivent, et un `document is not defined` n'y apparaîtrait qu'en production,
+// This is the only test in this repository that verifies that the DOM installs itself:
+// all other page tests run under jsdom, where the lack is not visible
+// not. However, it is in a server function that the page tools read and
+// write, and a `document is not defined` would only appear in production,
 // au premier appel de Numo.
 //
-// Le cas d'aller-retour porte un bloc RICHE (dépliant, sous-page) : ce sont eux
-// qui traversent `DOMParser` et le `parseHTML` du registre, donc eux qui
-// tombent si le DOM installé est incomplet.
+// The round trip case carries a RICH block (leaflet, subpage): these are them
+// which cross `DOMParser` and the `parseHTML` of the register, so they which
+// fall if the installed DOM is incomplete.
 
 import { describe, expect, it } from "vitest";
 import {

@@ -11,31 +11,31 @@ import {
 } from "@/lib/server/agent/pr-actions";
 
 /**
- * Review in-app d'une pull request, indexée PAR LA PR (MIN-143).
- *  GET  → metadata PR + fichiers/patches + checks CI + approbations + méthodes
- *         de merge offertes par la forge.
+ * In-app review of a pull request, indexed BY THE PR (MIN-143).
+ * GET → metadata PR + files/patches + CI checks + approvals + methods
+ * of merge offered by the forge.
  *  POST → { action: 'merge', method? }
  *       | { action: 'close' }
- *       | { action: 'reopen' }                               → fermée → rouverte (MIN-164)
- *       | { action: 'ready_for_review' }                     → brouillon → prête
+ * | { action: 'reopen' } → closed → reopened (MIN-164)
+ * | { action: 'ready_for_review' } → draft → ready
  *       | { action: 'review', verdict, message, relaunch?, model?, reasoningLevel?, localExec?, localWorktree? }
  *       | { action: 'ai_review', model?, reasoningLevel? }    → Numo relit (MIN-141)
- *       | { action: 'link_issue', issueId }                  → rattache un ticket (MIN-163)
+ *       | { action: 'link_issue', issueId }                  → attaches a ticket (MIN-163)
  *
- * `ai_review` rend un 202 avec la SESSION d'agent ancrée à cette PR (MIN-168) :
- * l'agent clone la branche, lit le code et commente, et la session se regarde
- * dans `/agents` — `./ai-review` en donne l'état pour le fil de la PR.
+ * `ai_review` returns a 202 with the agent SESSION anchored to this PR (MIN-168):
+ * the agent clones the branch, reads the code and comments, and the session watches itself
+ * in `/agents` — `./ai-review` gives the status for the PR thread.
  *
- * Les anciennes routes `agent-runs/[runId]/pr/*` sont devenues des façades de
- * celles-ci : le corps de chaque geste vit dans `lib/server/agent/pr-actions`,
- * les routes ne font que l'auth.
+ * The old `agent-runs/[runId]/pr/*` roads have become facades of
+ * these: the body of each gesture lives in `lib/server/agent/pr-actions`,
+ * routes only do auth.
  */
 
 type RouteContext = { params: Promise<{ prId: string }> };
 
-// `review` + relaunch lance une run froide et kicke le drain dans after() : il
-// lui faut la fenêtre complète du drain (270 s de budget), sinon le premier
-// chunk est tué en plein round — même raison que /api/issues/[id]/agent.
+// `review` + relaunch launches a cold run and kicks the drain in after(): it
+// it needs the full drain window (270 s budget), otherwise the first
+// chunk is killed in the middle of a round — same reason as /api/issues/[id]/agent.
 export const maxDuration = 300;
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   let body: PrActionBody;
   try {
     const parsed: unknown = await request.json();
-    // Corps non-objet (null, chaîne…) : refusé ici plutôt que de crasher plus bas.
+    // Non-object body (null, string…): refused here rather than crashing further down.
     if (!parsed || typeof parsed !== "object") throw new Error("not an object");
     body = parsed as PrActionBody;
   } catch {
@@ -80,8 +80,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return prLinkIssueResponse(auth.scope, auth.supabase, body, auth.userId);
   }
   if (action === "ai_review") {
-    // La langue n'est plus un paramètre : une session d'agent écrit dans celle de
-    // son lanceur, résolue au premier chunk comme pour toutes les autres.
+    // Language is no longer a parameter: an agent session writes in that of
+    // its launcher, resolved in the first chunk as for all the others.
     return prAiReviewResponse(auth.scope, auth.userId, body.model, body.reasoningLevel);
   }
   return prStateActionResponse(auth.scope, action, body, auth.userId);

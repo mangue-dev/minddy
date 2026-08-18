@@ -6,11 +6,11 @@ import { getRun, requestInterrupt } from "@/lib/server/agent/runs";
 import { stopChainOnInterrupt } from "@/lib/server/automations/hooks";
 
 /**
- * « Interrompre la réponse en cours » d'une session d'agent (MIN-46). Pose le
- * drapeau d'interruption : le chunk qui tourne abandonne l'appel LLM en cours (à la
- * frontière de round ou en plein stream) et revient AU REPOS. N'ANNULE PAS la
- * session, ne touche ni au checkpoint ni à la sandbox — tout reste reprennable.
- * (L'endpoint reste /stop côté client.) Réservé à qui peut lire le run (MIN-332).
+ * “Interrupt the current response” of an agent session (MIN-46). Put it down
+ * interrupt flag: the running chunk aborts the current LLM call (at
+ * border of round or in full stream) and returns to REST. DO NOT CANCEL the
+ * session, do not touch the checkpoint or the sandbox — everything remains resumable.
+ * (The endpoint remains /stop on the client side.) Reserved for those who can read the run (MIN-332).
  */
 
 type RouteContext = { params: Promise<{ runId: string }> };
@@ -29,20 +29,20 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Run not found" }, { status: 404 });
   }
 
-  // On n'interrompt qu'un run qui TRAVAILLE ; au repos il n'y a rien à interrompre.
+  // We only interrupt a run that WORKS; at rest there is nothing to interrupt.
   const working = WORKING.includes(run.status);
   if (working) {
     await requestInterrupt(runId);
   }
 
-  // Un « stop » humain ARRÊTE la chaîne (MIN-147), il ne la fait pas avancer :
-  // c'est le geste de quelqu'un qui veut que ça cesse, pas une fin d'étape. Il
-  // faut le dire ICI — le crochet de fin de run ne peut pas le déduire,
-  // `clearInterrupt` ayant déjà effacé le drapeau quand `stampRun` s'exécute.
+  // A human “stop” STOPS the chain (MIN-147), it does not move it forward:
+  // it's the gesture of someone who wants it to stop, not the end of a stage. He
+  // must be said HERE — the end of run hook cannot deduct it,
+  // `clearInterrupt` having already cleared the flag when `stampRun` executes.
   //
-  // Seulement si CE run travaillait : ouvrir un ANCIEN run de la chaîne et y
-  // cliquer « stop » arrêtait la chaîne alors que son run courant continuait de
-  // tourner et de pousser du code — la barre disait « arrêtée », l'agent codait.
+  // Only if THIS run worked: open an OLD run in the chain and there
+  // clicking “stop” stopped the chain while its current run continued
+  // turn and push code — the bar said “stopped”, the agent was coding.
   if (run.chain_id && working) stopChainOnInterrupt(run.chain_id);
 
   return NextResponse.json({ ok: true, status: run.status });

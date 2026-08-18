@@ -4,16 +4,16 @@ import { getAppEnv } from "@/lib/env";
 import { capability } from "@/lib/server/capabilities";
 
 /**
- * Client minimal de l'API Domaines de Vercel (MIN-36). Attache/détache les
- * domaines personnalisés au projet Vercel qui héberge minddy — Vercel gère
- * ensuite DNS + certificat TLS tout seul.
+ * Vercel Domains API minimal client (MIN-36). Attaches/detaches
+ * custom domains to the Vercel project that hosts minddy — Vercel manages
+ * then DNS + TLS certificate on its own.
  *
- * Env requis : VERCEL_TOKEN + VERCEL_PROJECT_ID (VERCEL_TEAM_ID si le projet
- * vit dans une team). Absents → la feature répond « non configuré », jamais
- * d'erreur au démarrage.
+ * Env required: VERCEL_TOKEN + VERCEL_PROJECT_ID (VERCEL_TEAM_ID if project
+ * lives in a team). Absent → the feature responds “not configured”, never
+ * error at startup.
  *
- * Mock local : MDY_FAKE_VERCEL_DOMAINS=1 (hors production) court-circuite tous
- * les appels en succès/verified pour tester le flux complet sans token.
+ * Local mock: MDY_FAKE_VERCEL_DOMAINS=1 (non-production) short-circuits all
+ * successful/verified calls to test the complete flow without token.
  */
 
 export type VercelVerificationRecord = {
@@ -28,7 +28,7 @@ export type VercelDomainState = {
   verified: boolean;
   misconfigured: boolean;
   verification: VercelVerificationRecord[];
-  /** Cible CNAME recommandée par Vercel pour CE domaine (rank 1), ou null. */
+  /** CNAME target recommended by Vercel for THIS domain (rank 1), or null. */
   cnameTarget: string | null;
 };
 
@@ -36,10 +36,8 @@ export type AddDomainResult =
   | { ok: true; verified: boolean; verification: VercelVerificationRecord[] }
   | { ok: false; code: "taken" | "invalid" | "api_error" };
 
-/** Cible CNAME générique de Vercel — repli quand la recommandation par domaine
-    (recommendedCNAME) n'a pas encore été lue. Fonctionne toujours, mais le
-    dashboard Vercel affiche « DNS Change Recommended » depuis l'expansion
-    d'IP : préférer la valeur par domaine dès qu'on l'a. */
+/** Vercel generic CNAME target — fallback when the recommendation by domain
+ (recommendedCNAME) has not yet been read. Still works, but the Vercel dashboard displays “DNS Change Recommended” since the IP expansion: prefer the value by domain as soon as you have it. */
 export const VERCEL_CNAME_TARGET = "cname.vercel-dns.com";
 
 function isFake(): boolean {
@@ -97,8 +95,8 @@ export async function addDomainToVercel(domain: string): Promise<AddDomainResult
 
   const body = (await res.json().catch(() => null)) as { error?: { code?: string } } | null;
   const code = body?.error?.code ?? "";
-  // « Déjà en usage » : si c'est sur NOTRE projet, c'est un cleanup raté qui se
-  // répare tout seul — on repart de l'état actuel. Sinon, le domaine est pris.
+  // “Already in use”: if it is on OUR project, it is a failed cleanup which is
+  // repair it yourself — we start from the current state. Otherwise, the domain is taken.
   if (res.status === 409 || code.includes("already")) {
     const state = await getVercelDomainState(domain);
     if (state.attached) {
@@ -111,7 +109,7 @@ export async function addDomainToVercel(domain: string): Promise<AddDomainResult
   return { ok: false, code: "api_error" };
 }
 
-/** 404 = déjà détaché : succès (idempotent). */
+/** 404 = already detached: success (idempotent). */
 export async function removeDomainFromVercel(domain: string): Promise<{ ok: boolean }> {
   if (isFake()) return { ok: true };
   if (!isVercelDomainsConfigured()) return { ok: false };
@@ -168,8 +166,8 @@ export async function getVercelDomainState(domain: string): Promise<VercelDomain
     verification?: VercelVerificationRecord[];
   };
 
-  // Challenge TXT en attente (domaine revendiqué par un autre compte Vercel) :
-  // on tente la vérification — elle réussit dès que le TXT est posé.
+  // TXT challenge pending (domain claimed by another Vercel account):
+  // we attempt the verification — it succeeds as soon as the TXT is placed.
   if (body.verified !== true && (body.verification?.length ?? 0) > 0) {
     const verifyRes = await vercelFetch(
       `/v9/projects/${projectId}/domains/${encoded}/verify`,
@@ -180,8 +178,8 @@ export async function getVercelDomainState(domain: string): Promise<VercelDomain
     }
   }
 
-  // projectIdOrName : la recommandation CNAME est propre au couple
-  // domaine × projet depuis l'expansion d'IP Vercel (vercel-dns-016 & co).
+  // projectIdOrName: the CNAME recommendation is specific to the couple
+  // domain × project since IP Vercel expansion (vercel-dns-016 & co).
   const configRes = await vercelFetch(`/v6/domains/${encoded}/config`, undefined, {
     projectIdOrName: projectId as string,
   });

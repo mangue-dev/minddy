@@ -15,12 +15,12 @@ import {
 } from "./pages";
 
 /**
- * MIN-266 — l'arbre des pages, reconstruit côté client depuis la liste à plat.
+ * MIN-266 — the page tree, reconstructed on the client side from the flat list.
  *
- * Ce qui est épinglé ici est ce qui casse un écran : une page qui DISPARAÎT de
- * l'arbre (parent absent), une fratrie dans le mauvais ordre, et surtout le
- * CYCLE — la profondeur étant illimitée, une boucle fait partir toute descente
- * en récursion infinie, et c'est un écran blanc en prod.
+ * What is pinned here is what breaks a screen: a page which DISAPPEARS from
+ * the tree (absent parent), siblings in the wrong order, and above all
+ * CYCLE — the depth being unlimited, a loop causes any descent
+ * to go into infinite recursion, and it is a white screen in production.
  */
 
 let counter = 0;
@@ -50,9 +50,9 @@ function page(overrides: Partial<Page> & { id: string }): Page {
 }
 
 /**
- * L'arbre rendu en chemins « a/b/c », un par nœud, dans l'ordre d'affichage.
- * On descend par `children` et non par `parent_id` : c'est la STRUCTURE rendue
- * qu'on veut lire, pas la colonne dont elle est censée sortir.
+ * The tree rendered in paths "a/b/c", one per node, in the order of display.
+ * We descend by `children` and not by `parent_id`: it is the rendered STRUCTURE
+ * that we want to read, not the column for which it is intended exit.
  */
 function paths(pages: Page[]): string[] {
   const out: string[] = [];
@@ -68,7 +68,7 @@ function paths(pages: Page[]): string[] {
 }
 
 describe("buildPageTree", () => {
-  it("reconstruit trois niveaux depuis la liste à plat", () => {
+  it("reconstructs three levels from the flat list", () => {
     const pages = [
       page({ id: "c", parent_id: "b" }),
       page({ id: "a" }),
@@ -96,22 +96,22 @@ describe("buildPageTree", () => {
     ]);
   });
 
-  it("remonte à la racine une page dont le parent n'est pas là", () => {
-    // Le parent est à la corbeille : la lecture ne le rend pas. L'enfant doit
-    // rester VISIBLE — une page invisible est pire qu'une page mal placée.
+  it("promotes a page whose parent is missing to the root", () => {
+    // The parent is in the trash: reading does not return it. The child must
+    // stay VISIBLE — an invisible page is worse than a misplaced page.
     const pages = [page({ id: "orphan", parent_id: "gone" })];
 
     expect(paths(pages)).toEqual(["orphan"]);
     expect(buildPageTree(pages)[0].depth).toBe(0);
   });
 
-  it("ne boucle pas sur un cycle déjà présent en base", () => {
+  it("does not loop on a cycle already present in the database", () => {
     const pages = [
       page({ id: "a", parent_id: "b" }),
       page({ id: "b", parent_id: "a" }),
     ];
 
-    // Rendu possible : les deux membres deviennent des racines, aucune récursion.
+    // Made possible: both members become roots, no recursion.
     expect(paths(pages).sort()).toEqual(["a", "b"]);
   });
 });
@@ -132,7 +132,7 @@ describe("descendantIds", () => {
 });
 
 describe("ancestorsOf", () => {
-  it("remonte du parent immédiat jusqu'à la racine", () => {
+  it("walks from the immediate parent to the root", () => {
     const pages = [
       page({ id: "a" }),
       page({ id: "b", parent_id: "a" }),
@@ -151,8 +151,8 @@ describe("wouldCreateCycle", () => {
     page({ id: "c", parent_id: "b" }),
   ];
 
-  it("refuse de mettre une page sous un de ses descendants", () => {
-    // A → B → C : reparenter A sous C fermerait la boucle.
+  it("rejects placing a page below one of its descendants", () => {
+    // A → B → C: reparenting A under C would close the loop.
     expect(wouldCreateCycle(pages, "a", "c")).toBe(true);
     expect(wouldCreateCycle(pages, "a", "b")).toBe(true);
   });
@@ -161,20 +161,20 @@ describe("wouldCreateCycle", () => {
     expect(wouldCreateCycle(pages, "b", "b")).toBe(true);
   });
 
-  it("laisse passer un déplacement légitime", () => {
+  it("allows a legitimate move through", () => {
     expect(wouldCreateCycle(pages, "c", "a")).toBe(false);
     expect(wouldCreateCycle(pages, "b", null)).toBe(false);
   });
 
-  it("ne voit pas de cycle dans un parent inconnu", () => {
-    // L'existence du parent est un AUTRE contrôle : ne pas la confondre avec
-    // celui-ci ferait répondre 409 là où la réponse juste est 404.
+  it("does not see a cycle in an unknown parent", () => {
+    // The existence of the parent is ANOTHER control: do not confuse it with
+    // this one would answer 409 where the correct answer is 404.
     expect(wouldCreateCycle(pages, "a", "unknown")).toBe(false);
   });
 });
 
 describe("positionBetween", () => {
-  it("range la nouvelle clé strictement entre ses voisines", () => {
+  it("places the new key strictly between its neighbors", () => {
     const first = positionBetween(null, null);
     const before = positionBetween(null, first);
     const after = positionBetween(first, null);
@@ -185,9 +185,9 @@ describe("positionBetween", () => {
     expect(middle < after).toBe(true);
   });
 
-  it("tient mille insertions au même endroit sans collision", () => {
-    // Le pire cas d'un index fractionnaire : toujours insérer juste après la
-    // première page. Les clés s'allongent, elles ne se rejoignent jamais.
+  it("handles one thousand insertions at the same place without collision", () => {
+    // Worst case of a fractional index: always insert just after the
+    // first page. The keys get longer, they never come together.
     let low = positionBetween(null, null);
     const high = positionBetween(low, null);
     const seen = new Set<string>([low, high]);
@@ -200,14 +200,14 @@ describe("positionBetween", () => {
     }
   });
 
-  it("retombe sur un bord plutôt que de lever sur des bornes incohérentes", () => {
+  it("falls back to an edge instead of throwing for inconsistent bounds", () => {
     const key = positionBetween("z", "a");
     expect(key > "z").toBe(true);
   });
 });
 
 describe("positionAtEnd", () => {
-  it("place la nouvelle page après toute la fratrie", () => {
+  it("places the new page after all siblings", () => {
     const siblings = [
       page({ id: "x", position: "a" }),
       page({ id: "y", position: "c" }),
@@ -220,18 +220,18 @@ describe("positionAtEnd", () => {
 });
 
 /**
- * MIN-272 — le repli du fil d'Ariane d'une sous-page.
+ * MIN-272 — the folding of the breadcrumbs of a subpage.
  *
- * Ce qui compte n'est pas « ça tient sur une ligne » mais QUELS niveaux
- * survivent : ce sont ceux du MILIEU qui s'effacent, jamais les deux bouts. La
- * racine dit dans quel document on est, le dernier dit d'où l'on vient. Replier
- * par la fin ferait disparaître le parent direct — le seul lien dont on se sert
- * vraiment.
+ * What matters is not “it fits on one line” but WHICH levels
+ * survive: it is those in the MIDDLE that disappear, never the two ends. The
+ * root says which document we are in, the last says where we come from. Folding
+ * at the end would make the direct parent disappear — the only link we use
+ * really.
  */
 describe("foldPath", () => {
   const path = (n: number) => Array.from({ length: n }, (_, i) => `n${i + 1}`);
 
-  it("ne replie rien tant que le chemin est court", () => {
+  it("collapses nothing while the path is short", () => {
     expect(foldPath(path(1))).toEqual({ lead: "n1", hidden: [], tail: [] });
     expect(foldPath(path(3))).toEqual({
       lead: "n1",
@@ -248,7 +248,7 @@ describe("foldPath", () => {
     });
   });
 
-  it("ne rend aucune tête sur un chemin vide — une page racine n'a pas de fil", () => {
+  it("returns no heading for an empty path — a root page has no thread", () => {
     expect(foldPath([])).toEqual({ lead: null, hidden: [], tail: [] });
   });
 
@@ -260,13 +260,13 @@ describe("foldPath", () => {
 });
 
 /**
- * Les FAVORIS de la barre secondaire (partagés par le projet).
+ * The FAVORITES of the secondary bar (shared by the project).
  *
- * Deux propriétés, et elles sont le geste lui-même : le bloc suit l'ordre de
- * l'ARBRE — pas celui des mises en favori, qui ferait sauter les lignes d'une
- * visite à l'autre —, et une sous-page épinglée reste À SA PLACE dans l'arbre.
- * Épingler est un raccourci vers une page, pas un reparentage : la voir quitter
- * son parent se lirait comme un déplacement que personne n'a demandé.
+ * Two properties, and they are the gesture itself: the block follows the order of
+ * the TREE — not that of favorites, which would jump the lines from one
+ * visit to the next —, and a pinned subpage stays IN ITS PLACE in the tree.
+ * Pinning is a shortcut to a page, not a reparenting: seeing it leave
+ * its parent would read like a move that no one requested.
  */
 describe("les pages en favori", () => {
   const doc = () => [
@@ -276,21 +276,21 @@ describe("les pages en favori", () => {
     page({ id: "b", position: "B", favorite: true }),
   ];
 
-  it("sortent dans l'ordre de l'arbre, pas dans celui de la liste", () => {
-    // « b » est le DERNIER de la liste à plat mais vient après « a1 » dans
-    // l'arbre : c'est cet ordre-là qu'on lit.
+  it("come out in tree order, not list order", () => {
+    // “b” is the LAST in the flat list but comes after “a1” in
+    // the tree: this is the order we read.
     const tree = buildPageTree(doc());
     expect(favoritePages(tree).map((p) => p.id)).toEqual(["a1", "b"]);
   });
 
-  it("ne quittent pas leur place dans l'arbre", () => {
+  it("do not leave their place in the tree", () => {
     const tree = buildPageTree(doc());
     expect(flattenPageTree(tree).map((p) => p.id)).toEqual(["a", "a1", "a2", "b"]);
   });
 
-  it("restent épinglées quand leur parent n'est plus dans la liste", () => {
-    // Parent à la corbeille : `buildPageTree` remonte l'enfant à la racine
-    // plutôt que de le faire disparaître, et le favori suit.
+  it("remain pinned when their parent is no longer in the list", () => {
+    // Parent to trash: `buildPageTree` moves the child back to the root
+    // rather than making it disappear, and the favorite follows.
     const orphan = doc().filter((p) => p.id !== "a");
     expect(favoritePages(buildPageTree(orphan)).map((p) => p.id)).toEqual([
       "a1",
@@ -298,7 +298,7 @@ describe("les pages en favori", () => {
     ]);
   });
 
-  it("rendent une liste vide quand rien n'est épinglé", () => {
+  it("return an empty list when nothing is pinned", () => {
     const none = doc().map((p) => ({ ...p, favorite: false }));
     expect(favoritePages(buildPageTree(none))).toEqual([]);
   });

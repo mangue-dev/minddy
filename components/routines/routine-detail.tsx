@@ -81,38 +81,38 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Une ROUTINE (MIN-185) et ses « Exécutions précédentes ».
+ * A ROUTINE (MIN-185) and its “Previous Executions”.
  *
- * C'est LE seul endroit où ses runs se lisent : ils sortent de la liste des
- * conversations, sinon une routine quotidienne y prendrait toute la place.
+ * This is THE only place where his runs can be read: they come off the list of
+ * conversations, otherwise a daily routine would take up all the space.
  *
- * **Deux niveaux, pas un.** La routine montre la LISTE de ses passages — une
- * ligne pleine largeur par passage, sa date et l'état de sa pull request. Ouvrir
- * une ligne ouvre la VRAIE conversation de ce run (`AgentConversation`, celle-là
- * même que l'onglet Conversations sert) : le fil, le diff, la pull request, et
- * le composer pour lui répondre. Un run de routine n'est pas un mode dégradé —
- * il se poursuit comme n'importe quelle session, simplement depuis l'onglet
+ * **Two levels, not one.** The routine shows the LIST of its passages — one
+ * full width line per pass, its date and the status of its pull request. Open
+ * a line opens the REAL conversation of this run (`AgentConversation`, this one
+ * same as the Conversations tab serves): the thread, the diff, the pull request, and
+ * dial him to respond. A routine run is not a degraded mode —
+ * it continues like any session, simply from the tab
  * Routines.
  *
- * L'en-tête suit ce qu'on regarde : le titre de la routine et ses réglages sur
- * la liste, la DATE du passage et un retour dans la conversation. Le reste des
- * gestes de routine (l'interrupteur, le menu) n'y a rien à faire : on ne règle
- * pas une cadence en lisant ce qu'un passage a produit.
+ * The header follows what we are looking at: the title of the routine and its settings on
+ * the list, the DATE of the passage and a return to the conversation. The rest of the
+ * routine gestures (the switch, the menu) there is nothing to do: we do not adjust
+ * not a cadence when reading what a passage produced.
  *
- * **L'en-tête suit celui des autres volets de détail** (conversation, pull
- * request, retour) : le titre seul sur sa ligne, aucune bordure sous lui — le
- * contenu respire jusqu'en haut — et les gestes regroupés dans un menu « … »
- * plutôt qu'alignés en boutons. Ce qui les distingue vraiment, l'interrupteur
- * actif/en pause, reste dehors : c'est un état, pas une action ponctuelle.
+ * **The header follows that of the other detail panes** (conversation, pull
+ * request, return): the title alone on its line, no border under it — the
+ * content breathes all the way to the top — and gestures grouped into a “…” menu
+ * rather than aligned in buttons. What really sets them apart is the switch
+ * active/paused, stays out: this is a state, not a one-time action.
  *
- * La CADENCE sort de l'en-tête et vit avec les exécutions, là où elle répond à
- * la question qu'on se pose en lisant la liste des passages.
+ * The CADENCE comes out of the header and lives with the executions, where it responds to
+ * the question we ask ourselves when reading the list of passages.
  *
- * **`last_error` se LIT.** Un passage sauté faute de budget se dit ici, avec le
- * lien vers la facturation — pas seulement dans une colonne de la base. Un
- * passage qui, lui, est PARTI et s'est arrêté sur son plafond de dépense le dit
- * dans sa conversation, à la fin de son fil : c'est un travail interrompu, pas
- * un rendez-vous manqué, et il a des choses à montrer.
+ * **`last_error` READS.** A passage skipped due to lack of budget is said here, with the
+ * link to invoicing — not just in a column in the database. A
+ * passage which, for its part, LEFT and stopped on its spending limit says so
+ * in his conversation, at the end of his thread: it's interrupted work, not
+ * a missed appointment, and he has things to show.
  */
 export function RoutineDetail({
   routine,
@@ -123,11 +123,11 @@ export function RoutineDetail({
   onDeleted,
 }: {
   routine: Routine;
-  /** Le projet porteur — son orbe ouvre l'en-tête, comme sur une conversation :
-   *  « de quel dépôt parle-t-on ? » est la question qu'on se pose en arrivant. */
+  /** The supporting project — its orb opens the header, like a conversation:
+   * “what deposit are we talking about? » is the question we ask ourselves when we arrive. */
   project: { id: string; icon_url: string | null; orb_seed: string | null } | null;
-  /** Les gestes (interrupteur, lancer, éditer, supprimer) sont au propriétaire
-   *  seul — un bouton qui mène à un 403 ne s'affiche pas. */
+  /** Gestures (switch, throw, edit, delete) are up to the owner
+   * alone — a button that leads to a 403 is not displayed. */
   isOwner: boolean;
   onBack: () => void;
   onChanged: () => void;
@@ -147,31 +147,31 @@ export function RoutineDetail({
 
   const { runs, loading } = useRoutineRunsQuery(routine.id);
   /**
-   * Le passage OUVERT, ou `null` — c'est lui, et lui seul, qui décide de ce que
-   * ce volet montre : la liste des passages, ou la conversation de l'un d'eux.
-   * Rien n'est ouvert par défaut : arriver sur une routine, c'est vouloir voir
-   * ce qu'elle est et ce qu'elle a fait, pas relire un fil en particulier.
+   * The OPEN passage, or `null` — it is he, and he alone, who decides what
+   * this pane shows: the list of passages, or the conversation of one of them.
+   * Nothing is open by default: arriving at a routine means wanting to see
+   * what she is and what she has done, not reread a particular thread.
    */
   const [openRunId, setOpenRunId] = useState<string | null>(null);
   /**
-   * Le BROUILLON d'édition, ou `null` quand on lit. Il vit ICI et non dans le
-   * formulaire parce que « Enregistrer » a quitté le bas du formulaire pour
-   * l'en-tête, où il prend la place de l'interrupteur : le bouton et les champs
-   * ne sont plus dans le même composant, et c'est le volet qui les tient tous
-   * les deux.
+   * The DRAFT edition, or `null` when reading. He lives HERE and not in the
+   * form because “Save” left the bottom of the form to
+   * the header, where it takes the place of the switch: the button and the fields
+   * are no longer in the same component, and this is the pane that holds them all
+   * both.
    *
-   * Sa présence EST le mode : plus de booléen `editing` à tenir d'accord avec
-   * lui.
+   * Its presence IS the mode: no more boolean `editing` to agree with
+   * it.
    */
   const [draft, setDraft] = useState<RoutineDraft | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [busy, setBusy] = useState(false);
-  // Le fondu du bas de la liste, comme partout où un contenu déborde.
+  // The fade from the bottom of the list, like everywhere where content overflows.
   const listFade = useScrollFade<HTMLDivElement>();
 
   const editing = draft !== null && isOwner;
 
-  // Changer de routine referme ce qu'on lisait de la précédente.
+  // Changing routine closes what we read about the previous one.
   useEffect(() => {
     setOpenRunId(null);
     setDraft(null);
@@ -180,10 +180,10 @@ export function RoutineDetail({
     runs.find((r) => r.id === openRunId) ?? null;
 
   /**
-   * Le prochain passage se lit dans la LISTE des exécutions, en tête — c'est
-   * une date de la même série que celles d'en dessous, simplement pas encore
-   * arrivée. Une routine en pause n'en a pas : son échéance est désarmée
-   * (`next_run_at` null), et en annoncer une serait un mensonge à l'écran.
+   * The next passage reads in the LIST of executions, at the head — it is
+   * a date from the same series as those below, just not yet
+   * arrival. A paused routine does not have one: its deadline is disarmed
+   * (`next_run_at` null), and announcing one would be a lie on screen.
    */
   const nextRunAtIso = routine.enabled ? routine.next_run_at : null;
 
@@ -200,8 +200,8 @@ export function RoutineDetail({
   };
 
   /**
-   * Enregistre le brouillon. Les champs de JOUR n'existent que pour leur
-   * cadence : les envoyer tous les deux ferait refuser la cadence côté serveur.
+   * Save the draft. DAY fields only exist for their
+   * cadence: sending them both would cause cadence to be refused on the server side.
    */
   const saveDraft = async () => {
     if (!draft || !draft.prompt.trim()) return;
@@ -230,8 +230,8 @@ export function RoutineDetail({
     setBusy(true);
     try {
       await runRoutineNowApi(routine.id);
-      // Le passage vient de naître : la liste des exécutions ne le connaît pas
-      // encore, et elle ne poll qu'à partir du moment où elle en a un.
+      // The passage has just been born: the list of executions does not know it
+      // again, and it only pollutes from the moment it has one.
       await queryClient.invalidateQueries({
         queryKey: routineRunsQueryKey(routine.id),
       });
@@ -246,18 +246,18 @@ export function RoutineDetail({
   /**
    * L'interrupteur bascule TOUT DE SUITE.
    *
-   * C'est un ÉTAT, et un état se renverse d'un doigt : attendre l'écriture puis
-   * le rechargement de la liste laissait deux secondes d'interrupteur figé sur
-   * l'ancienne position, pendant lesquelles le geste semblait n'avoir servi à
-   * rien. On écrit donc dans le cache d'abord — la colonne et ce volet lisent la
-   * même entrée, tout bouge dans le même rendu —, on envoie ensuite, et on
-   * REMET l'instantané d'avant si le serveur refuse (403 d'un membre, cadence
-   * devenue illisible), avec son message.
+   * It's a STATE, and a state is reversed with a finger: wait for the writing then
+   * reloading the list left two seconds of switch frozen on
+   * the old position, during which the gesture seemed to have served no purpose
+   * Nothing. So we write to the cache first — the column and this pane read the
+   * same input, everything moves in the same rendering - we then send, and we
+   * RESETS the snapshot from before if the server refuses (403 from a member, cadence
+   * become illegible), with its message.
    *
-   * `next_run_at` suit dans le même mouvement : le désactiver désarme
-   * l'échéance, le réactiver la recalcule — avec la MÊME fonction que le
-   * serveur, sinon la ligne « prochaine exécution » afficherait une date pour en
-   * montrer une autre une seconde plus tard.
+   * `next_run_at` follows in the same movement: deactivating it disarms
+   * the deadline, reactivating it recalculates it — with the SAME function as the
+   * server, otherwise the “next execution” line would display a date for
+   * show another one a second later.
    */
   const toggleSeq = useRef(0);
   const toggleEnabled = (enabled: boolean) => {
@@ -278,8 +278,8 @@ export function RoutineDetail({
     });
     void updateRoutineApi(routine.id, { enabled })
       .then(({ routine: saved }) => {
-        // Une bascule plus récente est partie entre-temps : sa réponse fait foi,
-        // pas celle-ci — deux clics rapides ne doivent pas finir à l'envers.
+        // A more recent switch has left in the meantime: its answer is authentic,
+        // not this one — two quick clicks shouldn't end up upside down.
         if (seq === toggleSeq.current) patchRoutineInCache(queryClient, saved.id, saved);
       })
       .catch((err) => {
@@ -302,19 +302,19 @@ export function RoutineDetail({
   };
 
   /**
-   * UN PASSAGE OUVERT : la vraie conversation de ce run — le même composant que
-   * l'onglet Conversations sert, avec son fil, son diff, sa pull request et son
-   * composer. On peut donc RÉPONDRE à un passage de routine : il reprend là où
-   * il s'est arrêté, comme n'importe quelle session.
+   * AN OPEN PASSAGE: The real conversation of this run — the same component as
+   * the Conversations tab serves, with its thread, its diff, its pull request and its
+   * compose. We can therefore RESPOND to a routine passage: it picks up where
+   * it stopped, like any session.
    *
-   * L'en-tête ne porte plus que ce qui vaut ici : le retour vers la liste des
-   * passages, et la DATE de celui-ci à la place du titre. Ni interrupteur ni
-   * menu — on ne règle pas une cadence en lisant ce qu'un passage a produit.
+   * The header only carries what is valid here: the return to the list of
+   * passages, and the DATE of it in place of the title. Neither switch nor
+   * menu — you don't set a cadence by reading what a passage produced.
    *
-   * À droite, la conversation pose elle-même le DIFF ; la pull request, elle,
-   * vient de l'hôte (`headerActions`), exactement comme sur la page Agents :
-   * `AgentConversation` ne sait proposer que d'en CRÉER une, jamais d'ouvrir
-   * celle qui existe — c'est au volet qui l'accueille de savoir où elle se lit.
+   * On the right, the conversation itself poses the DIFF; the pull request, she,
+   * comes from the host (`headerActions`), exactly like on the Agents page:
+   * `AgentConversation` can only offer to CREATE one, never to open
+   * the one that exists — it is up to the part that receives it to know where it is read.
    */
   if (openRun) {
     return (
@@ -357,10 +357,10 @@ export function RoutineDetail({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      {/* ── En-tête : le titre, et rien d'autre sur sa ligne ─────────────
-          Même géométrie que la conversation d'un agent et le volet d'une pull
-          request (`px-4 pt-4 pb-2.5`, sans bordure) : le contenu monte jusqu'en
-          haut au lieu d'être posé sous une barre. */}
+      {/* ── Header: the title, and nothing else on its line ─────────────
+          Same geometry as the conversation of an agent and the flap of a sweater
+          request (`px-4 pt-4 pb-2.5`, borderless): the content goes up to
+          high instead of being placed under a bar. */}
       <div className="flex shrink-0 items-center gap-2 px-4 pt-4 pb-2.5">
         <Button
           variant="ghost"
@@ -382,33 +382,33 @@ export function RoutineDetail({
           {routine.title}
         </span>
 
-        {/* L'ÉTAT, à côté du geste qui le change — et un badge, pas une glose en
-            fin de ligne de cadence : « cette routine ne tourne plus » est la
-            première chose à voir en arrivant, pas la dernière à lire. Rien
-            quand elle tourne : l'absence d'alerte EST l'état normal, et un
-            badge « active » sur chaque routine ne distinguerait plus rien.
-            Hors du bloc propriétaire : un membre ne peut pas la relancer, mais
+        {/* THE STATE, alongside the gesture that changes it — and a badge, not a gloss in
+            end of cadence line: “this routine no longer runs” is the
+            first thing to see when you arrive, not the last to read. Nothing
+            when it turns: the absence of alert IS the normal state, and a
+            “active” badge on each routine would no longer distinguish anything.
+            Outside the owner block: a member cannot restart it, but
             il doit savoir qu'elle dort. */}
         {!routine.enabled ? (
           <Badge
             variant="secondary"
             icon={<PauseCircle />}
-            // L'ambre des badges de mise en garde du produit (le « Privé » d'un
-            // retour) : un état qui n'est pas une erreur, mais qu'on ne veut pas
-            // découvrir en se demandant pourquoi rien ne s'est passé.
+            // The amber product warning badges (the “Private” one
+            // return): a state which is not an error, but which we do not want
+            // discover by wondering why nothing happened.
             className="shrink-0 border-amber-700/30 bg-amber-500/10 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-400"
           >
             {t("paused")}
           </Badge>
         ) : null}
 
-        {/* PENDANT L'ÉDITION, « Annuler / Enregistrer » PRENNENT LA PLACE de
-            l'interrupteur et du menu — ils ne s'y ajoutent pas.
-            Ce n'est pas qu'une question de place : un interrupteur qui écrit
-            immédiatement, à côté d'un formulaire qui attend d'être enregistré,
-            ce sont deux notions d'« appliqué » sur la même ligne. Et « Lancer
-            maintenant » lancerait la routine telle qu'elle est ENREGISTRÉE,
-            c'est-à-dire pas celle qu'on est en train d'écrire. */}
+        {/* DURING EDITING, “Cancel/Save” TAKES THE PLACE of
+            the switch and the menu — they are not added to it.
+            It's not just a question of space: a switch that writes
+            immediately, next to a form waiting to be saved,
+            these are two notions of “applied” on the same line. And “Throw
+            now" would start the routine as it is SAVED,
+            that is to say not the one we are currently writing. */}
         {!isOwner ? null : editing ? (
           <div className="flex shrink-0 items-center gap-2">
             <Button
@@ -429,15 +429,15 @@ export function RoutineDetail({
           </div>
         ) : (
           <div className="flex shrink-0 items-center gap-2">
-            {/* L'interrupteur reste DEHORS : c'est l'état de la routine — elle
-                tourne, ou elle est en pause —, pas un geste ponctuel qu'on va
-                chercher dans un menu. */}
+            {/* The switch remains OUT: this is the state of the routine — it
+                is running, or it is on pause —, not a one-off gesture that we are going to
+                search in a menu. */}
             <label className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
               {t("enabledLabel")}
-              {/* Pas de `disabled` pendant sa propre écriture : elle est
-                  optimiste, il n'y a rien à attendre. `busy` ne le grise que
-                  pour les autres gestes (un lancement, une suppression en
-                  cours), où l'état pourrait changer sous la main. */}
+              {/* No `disabled` during its own writing: it is
+                  optimistic, there is nothing to expect. `busy` only grays it
+                  for other gestures (a launch, a deletion in
+                  course), where the state could change on hand. */}
               <Switch
                 checked={routine.enabled}
                 disabled={
@@ -496,11 +496,11 @@ export function RoutineDetail({
         />
       ) : (
         <>
-          {/* ── La cadence, puis CE QU'ELLE FAIT ────────────────────────
-              L'instruction sous la cadence : sans elle, une routine n'était
-              qu'un titre de trois mots et une heure, tout tassé en haut de
-              l'écran — et « ce qu'elle fait » était précisément ce qu'on venait
-              vérifier. */}
+          {/* ── The cadence, then WHAT IT DOES ────────────────────────
+              Instruction under cadence: without it, a routine was not
+              than a title of three words and an hour, all crammed at the top of
+              the screen — and “what she does” was precisely what we had come
+              check. */}
           <div className="flex shrink-0 flex-col gap-1 px-4 pb-2">
             <RoutineSummary
               schedule={routineSchedule(routine)}
@@ -540,25 +540,25 @@ export function RoutineDetail({
               </p>
             ) : null}
 
-            {/* L'instruction, rendue et repliée (cf. `RoutinePrompt`). */}
+            {/* The instruction, rendered and folded (see `RoutinePrompt`). */}
             <RoutinePrompt prompt={routine.prompt} />
           </div>
         </>
       )}
 
-      {/* ── Exécutions : UNE LIGNE par passage ─────────────────────────
-          Pleine largeur, sa date et l'état de sa pull request. Pas le fil :
-          empiler des conversations dans une liste rend les deux illisibles.
-          Ouvrir une ligne ouvre le fil, à sa place.
+      {/* ── Executions: ONE LINE per passage ─────────────────────────
+          Full width, its date and the status of its pull request. Not the thread:
+          Stacking conversations in a list makes both unreadable.
+          Opening a line opens the thread in its place.
 
-          En TÊTE, le passage à VENIR — la même liste, un cran plus tôt dans le
-          temps. Grisé et sans chevron : il n'a rien produit, il n'y a rien à
-          ouvrir. Il ne paraît que si la routine est armée : une routine en
-          pause n'a pas de prochain passage, et en annoncer un serait faux.
+          At the HEAD, the transition to COMING — the same list, one notch earlier in the
+          time. Grayed out and without chevron: it has not produced anything, there is nothing to
+          open. It only appears if the routine is armed: a routine in
+          pause has no next passage, and announcing one would be wrong.
 
-          Absentes pendant l'ÉDITION : on règle la routine ou on lit ce qu'elle
-          a produit, jamais les deux en même temps — et le formulaire a besoin
-          de toute la hauteur pour ne pas se lire au défilement. */}
+          Absent during EDITING: we adjust the routine or we read what it reads
+          produced, never both at the same time — and the form needs
+          full height so as not to be read when scrolling. */}
       {editing ? null : (
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="shrink-0 px-4 pt-2 pb-1.5">
@@ -579,19 +579,19 @@ export function RoutineDetail({
               {...listFade.scrollProps}
               className="min-h-0 flex-1 overflow-y-auto"
             >
-              {/* Rien à encadrer quand il n'y a ni passage à venir ni passage
-                  passé : la liste disparaît entièrement plutôt que de laisser
-                  son filet du haut tout seul au-dessus de l'écran vide. */}
+              {/* Nothing to frame when there is neither passage to come nor passage
+                  past: the list disappears entirely rather than leaving
+                  its top net all alone above the blank screen. */}
               {nextRunAtIso || runs.length > 0 ? (
                 <ul className="flex flex-col divide-y divide-border border-t border-border">
                   {nextRunAtIso ? <NextRunRow at={nextRunAtIso} /> : null}
                   {runs.map((run) => (
-                    /* La ligne entière ouvre le passage — sauf le badge de pull
-                     request, qui mène à la PR. D'où le bouton ÉTENDU sous la
-                     ligne plutôt qu'autour d'elle : un bouton dans un bouton n'est
-                     pas du HTML valide, et le badge doit rester cliquable pour
-                     lui-même. Les éléments `relative` qui suivent se peignent
-                     au-dessus de lui et gardent leurs propres clics. */
+                    /* The entire line opens the passage — except the sweater badge
+                     request, which leads to the PR. Hence the EXTENDED button under the
+                     line rather than around it: a button within a button is not
+                     not valid HTML, and the badge must remain clickable to
+                     himself. The following `relative` elements are painted
+                     above it and keep their own clicks. */
                     <li
                       key={run.id}
                       className="relative flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/50 focus-within:bg-muted/50"
@@ -613,9 +613,9 @@ export function RoutineDetail({
                           timeStyle: "short",
                         })}
                       </span>
-                      {/* L'ÉTAT de la pull request quand il y en a une — c'est ce
-                        qu'un passage produit de visible, et c'est aussi le chemin
-                        vers elle. Sinon l'état du run, qui répond à la même
+                      {/* The STATUS of the pull request when there is one — this is
+                        that a passage produces visible, and it is also the path
+                        towards her. Otherwise the state of the run, which responds to the same
                         question d'un cran plus bas. */}
                       {run.pr_state ? (
                         <button
@@ -644,11 +644,11 @@ export function RoutineDetail({
                 </ul>
               ) : null}
 
-              {/* Le geste EST là où le vide se constate : « elle n'a pas encore
-                  tourné » appelle « alors fais-la tourner », pas un détour par
-                  le menu. Réservé au propriétaire, comme le reste. Il reste
-                  sous la ligne du prochain passage quand elle est là : les deux
-                  disent des choses différentes — ce qui n'a pas eu lieu, et ce
+              {/* The gesture IS where the void is seen: “she has not yet
+                  turned" calls for "then spin it", not a detour through
+                  the menu. Reserved for the owner, like the rest. He's staying
+                  under the line of the next passage when it is there: both
+                  say different things — which did not happen, and which
                   qu'on peut faire tout de suite sans attendre. */}
               {runs.length === 0 ? (
                 <div className="px-4 py-8">
@@ -687,41 +687,41 @@ export function RoutineDetail({
 }
 
 /**
- * L'INSTRUCTION de la routine : rendue en markdown, repliée, et dépliable.
+ * THE INSTRUCTION of the routine: rendered in markdown, folded, and unfolded.
  *
- * Elle EST du markdown à la source — titres, listes, chemins de fichiers en
- * `code` — et l'afficher brut faisait lire des `##` et des `**` à la place de
- * la structure qu'ils portent. Elle fait aussi couramment plusieurs milliers de
- * signes : c'est un cahier des charges, pas une phrase. D'où deux décisions qui
+ * It IS markdown at the source — titles, lists, file paths in
+ * `code` — and displaying it raw read `##` and `**` instead of
+ * the structure they carry. It also commonly makes several thousand
+ * signs: it is a specification, not a sentence. Hence two decisions which
  * vont ensemble :
  *
- *  - **repliée par défaut.** On ouvre une routine pour voir ce qu'elle a
- *    produit ; dépliée d'office, l'instruction pousserait la liste des
- *    exécutions hors de l'écran, à chaque fois, pour un texte qu'on a écrit
- *    soi-même.
- *  - **`line-clamp` ne peut plus servir.** Il compte des lignes DANS un bloc, et
- *    un rendu markdown en produit plusieurs (titres, paragraphes, listes) : il
- *    ne couperait plus rien. C'est donc une HAUTEUR qui borne, et le fondu de
- *    `useScrollFade` qui dit que le texte continue — sur une boîte qui clippe,
- *    son `edges.end` est exactement ce signal-là, déjà mesuré, déjà amorti.
+ * - **folded by default.** We open a routine to see what it has
+ * product ; automatically unfolded, the instruction would push the list of
+ * executions off screen, each time, for a text that we have written
+ * yourself.
+ * - **`line-clamp` can no longer be used.** It counts lines IN a block, and
+ *    one Markdown render produces several (headings, paragraphs, lists): it
+ * wouldn't cut anything anymore. It is therefore a HEIGHT which limits, and the fading of
+ * `useScrollFade` which says that the text continues — on a clipping box,
+ * its `edges.end` is exactly this signal, already measured, already damped.
  *
- * Dépliée, elle ne pousse toujours rien : elle défile DANS sa boîte, et la
- * liste des exécutions reste à l'écran sous elle.
+ * Unfolded, it still doesn't push anything: it parades IN its box, and the
+ * list of executions remains on the screen below it.
  */
 function RoutinePrompt({ prompt }: { prompt: string }) {
   const t = useTranslations("Routines");
   const [expanded, setExpanded] = useState(false);
-  /* Un fondu plus long que celui d'un bord de défilement (2 rem par défaut) :
-     ici il ne signale pas une lisière, il éteint une fin de texte coupée. */
+  /* A fade longer than a scroll edge (2 rem by default):
+     here it does not indicate a border, it turns off a cut end of text. */
   const fade = useScrollFade<HTMLDivElement>("y", "3rem");
   /**
-   * « Voir plus » n'existe que s'il y a vraiment plus à voir : une instruction
-   * de deux lignes ne porte pas un bouton qui ne révélerait rien.
+   * “See more” only exists if there is truly more to see: an instruction
+   * of two lines does not wear a button which would reveal nothing.
    *
-   * Le constat se FIGE une fois relevé. Déplié, `edges.end` répond à une autre
-   * question — « reste-t-il à défiler ? » — et retombe à faux dès qu'on touche
-   * le bas : le bouton du retour disparaîtrait sous le doigt, au moment précis
-   * où l'on veut replier.
+   * The observation FREEZES once noted. Unfolded, `edges.end` responds to another
+   * question — “is there any left to scroll?” » — and falls back false as soon as we touch
+   * the bottom: the back button would disappear under the finger, at the precise moment
+   * where we want to fold.
    */
   const [truncated, setTruncated] = useState(false);
   useEffect(() => {
@@ -735,7 +735,7 @@ function RoutinePrompt({ prompt }: { prompt: string }) {
         {...fade.scrollProps}
         className={cn(
           "w-full",
-          // Replié : la hauteur des six lignes que `line-clamp-6` donnait.
+          // Folded: the height of the six lines that `line-clamp-6` gave.
           expanded ? "max-h-[40vh] overflow-y-auto" : "max-h-36 overflow-hidden",
         )}
       >
@@ -756,29 +756,29 @@ function RoutinePrompt({ prompt }: { prompt: string }) {
 }
 
 /**
- * Le passage à VENIR, en tête de la liste des exécutions. Tout est en
- * `text-muted-foreground` : c'est ce qui le distingue d'un passage qui a eu
- * lieu, sans lui donner ni icône ni badge à part. Aucun geste — la ligne n'est
- * pas cliquable, il n'y a encore rien à lire.
+ * The COMING passage, at the top of the list of executions. Everything is in
+ * `text-muted-foreground`: this is what distinguishes it from a passage which had
+ * place, without giving it a separate icon or badge. No gestures — the line is not
+ * not clickable, there is nothing to read yet.
  *
- * **Il se dit en RELATIF** — « aujourd'hui à 09:00 », « dans 3 jours à 11:00 ».
- * C'est la question qu'on se pose en le lisant : pas *quand* dans l'absolu,
- * mais *dans combien de temps*. La date exacte n'a pas disparu, elle est passée
- * derrière, au survol, dans l'infobulle.
+ * **It is said in RELATIVE** — “today at 09:00”, “in 3 days at 11:00”.
+ * This is the question we ask ourselves when reading it: not *when* in absolute terms,
+ * but *how soon*. The exact date has not disappeared, it has passed
+ * behind, on hover, in the tooltip.
  *
- * Le déclencheur de l'infobulle, c'est le TEXTE — pas la ligne. D'où l'absence
- * de `flex-1` sur le `span` : étiré, il ferait de toute la largeur une zone de
- * survol, et l'infobulle sortirait en passant à côté de ce qu'elle explique.
+ * The tooltip trigger is the TEXT — not the line. Hence the absence
+ * of `flex-1` on the `span`: stretched, it would make the entire width a zone of
+ * hover, and the tooltip would come out missing what it explains.
  *
- * L'écart se compte en jours CALENDAIRES et non en durée : à 22 h, un passage
- * demain à 9 h est « demain », pas « dans 11 heures ». Ce qui change d'un
- * passage à l'autre, c'est le nom du jour, pas un nombre d'heures.
+ * The difference is counted in CALENDAR days and not in duration: at 10 p.m., a passage
+ * tomorrow at 9 a.m. is “tomorrow,” not “in 11 hours.” What changes from one
+ * transition to the other, it's the name of the day, not a number of hours.
  *
- * `useNow` vit ICI plutôt que dans le volet : une horloge qui bat à la minute
- * ne doit re-rendre que la ligne qui la lit.
+ * `useNow` lives HERE rather than in the shutter: a clock that beats to the minute
+ * should only re-render the line that reads it.
  *
- * Un passage en retard d'un jour PLEIN — le cron est mort — retombe sur la date
- * absolue : « aujourd'hui » y serait faux, et un retard pareil doit se voir.
+ * A run late by a FULL day — the cron is dead — falls back on the date
+ * absolute: “today” would be false, and such a delay must be seen.
  */
 function NextRunRow({ at }: { at: string }) {
   const t = useTranslations("Routines");
@@ -817,10 +817,10 @@ function NextRunRow({ at }: { at: string }) {
 }
 
 /**
- * Ce que l'en-tête d'un passage montre de sa pull request — même règle que sur
- * la page Agents : une PR VIVANTE est une action (« Ouvrir la pull request »),
- * une PR FINIE est un état (le badge, cliquable — la PR se consulte encore).
- * Aucune PR : rien, et la conversation propose alors d'en créer une.
+ * What the header of a passage shows about its pull request — same rule as on
+ * the Agents page: a LIVING PR is an action (“Open pull request”),
+ * a FINISHED PR is a state (the badge, clickable - the PR can still be consulted).
+ * No PR: nothing, and the conversation then suggests creating one.
  */
 function PrHeaderAction({ run }: { run: AgentRunSummary }) {
   const t = useTranslations("Agents");
@@ -854,13 +854,13 @@ function PrHeaderAction({ run }: { run: AgentRunSummary }) {
 }
 
 /**
- * L'échéance que le serveur VA écrire, calculée ici pour ne pas l'attendre :
- * `null` quand on met la routine en pause (l'échéance est désarmée), la
- * prochaine occurrence quand on la réveille. C'est `updateRoutine` qui fait
- * foi, mais il fait exactement ce calcul-là, avec cette fonction-là.
+ * The deadline that the server WILL write, calculated here so as not to wait for it:
+ * `null` when the routine is paused (the deadline is disarmed), the
+ * next occurrence when we wake her up. It is `updateRoutine` which does
+ * faith, but it does exactly this calculation, with this function.
  *
- * Une cadence que `nextRunAt` refuse (fuseau retiré d'ICU, donnée bricolée) ne
- * se devine pas : on garde la valeur en place et on laisse la réponse trancher.
+ * A cadence that `nextRunAt` refuses (time zone removed from ICU, tinkered data) does not
+ * cannot be guessed: we keep the value in place and let the answer be decided.
  */
 function optimisticNextRunAt(routine: Routine, enabled: boolean): string | null {
   if (!enabled) return null;
@@ -871,7 +871,7 @@ function optimisticNextRunAt(routine: Routine, enabled: boolean): string | null 
   }
 }
 
-/** La cadence d'une routine, telle que le calcul et la phrase l'attendent. */
+/** The cadence of a routine, such as calculation and sentence awaits it. */
 function routineSchedule(routine: Routine): RoutineSchedule {
   return {
     frequency: routine.frequency,
@@ -883,7 +883,7 @@ function routineSchedule(routine: Routine): RoutineSchedule {
   };
 }
 
-/** Le motif d'un passage manqué, en une phrase. Le CODE vient du serveur. */
+/** The reason for a missed passage, in one sentence. The CODE comes from the server. */
 function routineErrorLabel(
   code: string,
   t: (key: "lastError_quota", values?: Record<string, string>) => string,
@@ -907,23 +907,23 @@ function routineErrorLabel(
 }
 
 /**
- * COMMENT la routine est réglée, en une ligne : sa cadence, et le modèle qui
- * l'exécute. Les deux réglages qui décident de ce que coûte et de ce que vaut
- * chaque exécution, ensemble parce qu'ils répondent à la même question.
+ * HOW the routine is set, in one line: its cadence, and the model that
+ * executes it. The two settings that decide what costs and what is worth
+ * each execution, together because they answer the same question.
  *
- * La date du prochain passage, elle, n'est pas ici : elle vit dans la liste des
- * exécutions, à sa place chronologique. Les trois tenaient sur cette ligne, et
- * « Tous les jours à 18 h · prochaine exécution 7 août » se lisait comme une
- * seule information alors que c'en est deux — une règle, et une date qui la
+ * The date of the next passage is not here: it lives in the list of
+ * executions, in its chronological place. The three stood on this line, and
+ * “Every day at 6 p.m. · next execution August 7” read like a
+ * only information when there are two — a rule, and a date which
  * suit.
  *
- * En LECTURE il décrit la routine enregistrée, sous l'en-tête. En ÉDITION il
- * décrit le BROUILLON, sous les champs qui le fabriquent : c'est la phrase que
- * les réglages produisent, et la lire juste en dessous d'eux évite d'avoir à
- * traduire « lundi, 9, 0, Europe/Paris » de tête. Un modèle FIGÉ sur la routine
- * ne suit pas le défaut du compte, et c'est bien pour ça qu'il se lit plutôt
- * que de se deviner ; sans modèle explicite, le badge le dit au lieu de
- * disparaître — « lequel tourne ? » se pose surtout dans ce cas-là.
+ * In READING it describes the recorded routine, under the header. In EDITION it
+ * describes the DRAFT, under the fields that make it: it is the sentence that
+ * the settings produce, and reading it just below them avoids having to
+ * translate “Monday, 9, 0, Europe/Paris” at the head. A FIXED model on routine
+ * does not follow the default of the account, and that is why it reads instead
+ * than guessing; without an explicit model, the badge says so instead of
+ * disappear — “which one is spinning?” » arises especially in this case.
  */
 function RoutineSummary({
   schedule,
@@ -935,9 +935,9 @@ function RoutineSummary({
   const t = useTranslations("Routines");
   const locale = useLocale();
 
-  // Une cadence en cours d'édition peut être momentanément invalide (aucun jour
-  // coché) : `describeSchedule` lève, et une ligne de résumé n'est pas l'endroit
-  // où le dire — les champs, eux, le signalent déjà.
+  // A cadence being edited may be temporarily invalid (no day
+  // checked): `describeSchedule` throws, and a summary line is not the place
+  // where to say it - the fields already indicate it.
   let cadence: string | null = null;
   try {
     cadence = describeSchedule(schedule, (key, values) => t(key, values), {
@@ -961,46 +961,46 @@ function RoutineSummary({
   );
 }
 
-/** Le brouillon d'édition : tout ce qu'une routine expose au réglage. */
+/** The editing draft: everything that a routine exposes to adjustment. */
 interface RoutineDraft {
   prompt: string;
-  /** "" = le modèle par défaut du compte (pas de modèle figé sur la routine). */
+  /** "" = the default model of the account (no model fixed on the routine). */
   model: string;
   reasoning: ReasoningLevel;
-  /** "" = la branche par défaut du dépôt. */
+  /** "" = the default branch of the repository. */
   baseBranch: string;
-  /** Part du budget mensuel qu'UN passage peut dépenser (1–100). */
+  /** Share of the monthly budget that ONE passage can spend (1–100). */
   spendCap: number;
   schedule: RoutineSchedule;
 }
 
-/** Le brouillon tel qu'une routine enregistrée le donne. */
+/** The draft as a recorded routine gives it. */
 function draftFrom(routine: Routine): RoutineDraft {
   return {
     prompt: routine.prompt,
     model: routine.model ?? "",
     reasoning: routine.reasoning_level,
     baseBranch: routine.base_branch ?? "",
-    // Les routines posées avant le plafond n'en portent pas dans le cache déjà
-    // chargé : le défaut, celui-là même que la base leur a donné.
+    // The routines placed before the ceiling do not already carry any in the cache
+    // loaded: the fault, the very one that the base gave them.
     spendCap: routine.max_spend_percent ?? DEFAULT_MAX_SPEND_PERCENT,
     schedule: routineSchedule(routine),
   };
 }
 
 /**
- * L'édition d'une routine : tout ce qui décide de ce qu'elle fait, et de ce que
- * ça coûte — son instruction, son modèle, son niveau de raisonnement, sa
- * branche de départ et sa cadence.
+ * Editing a routine: everything that decides what it does, and what
+ * it costs — its education, its model, its level of reasoning, its
+ * starting branch and its cadence.
  *
- * Pas de champ « nom » : le titre est écrit par minddy à partir de
- * l'instruction, et réécrit dès qu'elle change. Pas de wizard rejoué non plus —
- * on ne repasse pas par quatre écrans pour déplacer une heure.
+ * No “name” field: the title is written by minddy from
+ * the instruction, and rewrites as soon as it changes. No wizard replayed either —
+ * we don't go through four screens to move an hour.
  *
- * Pas de boutons non plus : « Annuler » et « Enregistrer » sont dans l'en-tête,
- * à la place de l'interrupteur, où ils restent visibles quelle que soit la
- * longueur de l'instruction. Ce formulaire ne fait que tenir des champs, et
- * c'est le volet qui possède le brouillon.
+ * No buttons either: “Cancel” and “Save” are in the header,
+ * in place of the switch, where they remain visible whatever the
+ * length of the instruction. This form only holds fields, and
+ * this is the part that owns the draft.
  */
 function RoutineEditor({
   draft,
@@ -1010,18 +1010,18 @@ function RoutineEditor({
 }: {
   draft: RoutineDraft;
   onChange: (draft: RoutineDraft) => void;
-  /** Ancrage du listing de branches : une routine clone le dépôt du projet. */
+  /** Anchoring the branch listing: a routine clones the project repository. */
   projectId: string;
   busy: boolean;
 }) {
   const t = useTranslations("Routines");
   const tAgent = useTranslations("Agent");
   const tCommon = useTranslations("Common");
-  // Le défaut du COMPTE, puis celui de l'instance : ce que la routine exécutera
-  // si on ne lui fige aucun modèle. Le combobox l'affiche comme option « défaut ».
+  // The default of the ACCOUNT, then that of the instance: what the routine will execute
+  // if we don't set any model for it. The combobox displays it as the “default” option.
   const { defaultModel: providerDefaultModel } = useAgentModelsQuery();
   const { defaultModel } = useAgentPreferencesQuery();
-  // Les paliers du modèle que cette routine fait tourner (cf. le composer).
+  // The levels of the model that this routine rotates (see composing it).
   const reasoningLevels = useReasoningLevelsFor(
     draft.model || defaultModel || providerDefaultModel,
   );
@@ -1031,19 +1031,19 @@ function RoutineEditor({
 
   return (
     /**
-     * Le formulaire DÉFILE, et c'est la seule façon d'atteindre son bas.
+     * The form SCROLLS, and that's the only way to reach its bottom.
      *
-     * Il était `shrink-0` dans un parent `overflow-hidden` : une instruction
-     * longue poussait tout ce qui la suivait hors de l'écran, sans aucun moyen
-     * de le rattraper. `flex-1` + `min-h-0` lui donne la place restante, et
-     * `overflow-y-auto` la rend parcourable.
+     * It was `shrink-0` in a parent `overflow-hidden`: an instruction
+     * long pushed everything that followed her off the screen, without any means
+     * to catch up with him. `flex-1` + `min-h-0` gives it the remaining space, and
+     * `overflow-y-auto` makes it searchable.
      */
     <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-3">
-      {/* CE QU'ELLE FAIT — en tête, parce que c'est la routine : le reste ne
-          fait que dire avec quoi et quand. */}
+      {/* WHAT SHE DOES — top of mind, because it’s routine: the rest doesn’t
+          just say with what and when. */}
       <EditorSection title={t("promptLabel")}>
-        {/* Le MÊME champ que l'étape `job` du wizard — c'est littéralement le
-            même composant : dictée, plafond de saisie et hauteur bornée. */}
+        {/* The SAME field as the `job` step of the wizard — it's literally the
+            same component: dictation, input ceiling and limited height. */}
         <RoutinePromptField
           autoFocus
           value={draft.prompt}
@@ -1052,16 +1052,16 @@ function RoutineEditor({
         />
       </EditorSection>
 
-      {/* AVEC QUOI elle travaille : le modèle, ce qu'on lui laisse réfléchir, et
-          le code dont elle part. Les trois étaient figés à la création sans
-          aucune surface pour changer d'avis — il fallait supprimer la routine et
-          la refaire.
+      {/* WHAT she works with: the model, what she is left to think about, and
+          the code from which it starts. The three were frozen at creation without
+          no surface to change one's mind — it was necessary to remove the routine and
+          redo it.
 
-          En RANGÉES (libellé à gauche, contrôle à droite) et non empilés : trois
-          contrôles à la suite sans libellé de ligne ne disaient pas lequel
-          réglait quoi, et le sélecteur de modèle en pleine largeur écrasait les
-          deux autres alors qu'il n'est pas plus important. Les trois portent
-          maintenant la même pastille compacte. */}
+          In ROWS (labeled on the left, control on the right) and not stacked: three
+          controls in a row without line label did not say which one
+          set what, and the full-width model selector overwrote the
+          two more when it is not more important. The three carry
+          now the same compact pellet. */}
       <EditorSection title={t("sectionAgent")}>
         <div className="divide-y divide-border/60">
           <SettingsRow
@@ -1090,9 +1090,9 @@ function RoutineEditor({
               />
             }
           />
-          {/* La branche de DÉPART : celle que chaque exécution clone et depuis
-              laquelle elle ouvre sa pull request. Ancrée au projet, comme le
-              compose d'une session de carnet — une routine n'a pas de ticket. */}
+          {/* The START branch: the one that each execution clones and from
+              which she opens her pull request. Anchored to the project, like the
+              consists of a notebook session — a routine does not have a ticket. */}
           <SettingsRow
             label={t("baseBranchLabel")}
             control={
@@ -1109,9 +1109,9 @@ function RoutineEditor({
               />
             }
           />
-          {/* CE QU'UN PASSAGE PEUT DÉPENSER. C'est ici qu'on vient le baisser
-              après avoir vu ce que la routine coûte vraiment — d'où sa place à
-              côté du modèle, l'autre réglage qui décide de la note. */}
+          {/* WHAT A PASS CAN EXPEND. This is where we come to lower it
+              after seeing what routine really costs — hence its place at
+              side of the model, the other setting which decides the note. */}
           <SettingsRow
             label={t("spendCapLabel")}
             help={t("spendCapHelp")}
@@ -1126,14 +1126,14 @@ function RoutineEditor({
         </div>
       </EditorSection>
 
-      {/* QUAND elle part. */}
+      {/* WHEN it starts. */}
       <EditorSection title={t("sectionSchedule")}>
         <RoutineScheduleFields
           value={draft.schedule}
           onChange={(value) => set("schedule", value)}
         />
-        {/* Ce que tous les champs ci-dessus donnent, en clair. Sous eux, et non
-            en bas de l'écran : c'est leur résultat qui se relit avant
+        {/* What all the fields above give, in plain English. Under them, and not
+            at the bottom of the screen: it is their result which is read again before
             d'enregistrer. */}
         <RoutineSummary schedule={draft.schedule} model={draft.model || null} />
       </EditorSection>
@@ -1142,11 +1142,11 @@ function RoutineEditor({
 }
 
 /**
- * Une section du formulaire : un titre, et ce qu'il coiffe.
+ * A section of the form: a title, and what it covers.
  *
- * Le titre reprend celui des « Exécutions » du mode lecture (`text-xs`,
- * `font-medium`, atténué) — c'est déjà le niveau « section » de ce volet, et en
- * inventer un deuxième aurait donné deux hiérarchies dans le même panneau.
+ * The title takes up that of the “Executions” of the reading mode (`text-xs`,
+ * `font-medium`, attenuated) — it is already the “section” level of this pane, and in
+ * inventing a second one would have given two hierarchies in the same panel.
  */
 function EditorSection({
   title,

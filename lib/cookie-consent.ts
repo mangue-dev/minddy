@@ -1,16 +1,14 @@
 /**
- * Consentement aux cookies analytiques (MIN-77 / pages légales).
+ * Consent to analytical cookies (MIN-77 / legal pages).
  *
- * Le choix vit dans le localStorage du navigateur, jamais côté serveur : c'est
- * une préférence d'appareil, pas une donnée de compte. Tant qu'aucun choix n'a
- * été fait, la valeur est `null` et AUCUN cookie analytique ne doit être posé.
+ * The choice lives in the browser's localStorage, never on the server side: it's
+ * a device preference, not an account data. As long as no choice has
+ * been made, the value is `null` and NO analytical cookies should be set.
  *
- * Ce contrat est honoré par `components/posthog-init.tsx` (MIN-78) : il lit
- * `readConsent()` à l'init (persistence "memory" tant que ce n'est pas
- * "accepted") et écoute CONSENT_CHANGED_EVENT pour réagir au clic du bandeau
- * sans rechargement. L'écouteur est posé au montage, AVANT le chargement du
- * client PostHog, et la relecture du consentement se fait après : un clic tombé
- * pendant le téléchargement est donc rattrapé (MIN-94).
+ * This contract is honored by `components/posthog-init.tsx` (MIN-78): it reads
+ * `readConsent()` at init ("memory" persistence as long as it is not
+ * "accepted") and listens to CONSENT_CHANGED_EVENT to react to the click of the banner
+ * without reloading. The listener is installed during assembly, BEFORE loading the PostHog client, and the consent is reread after: a click that falls during the download is therefore caught (MIN-94).
  */
 
 export const COOKIE_CONSENT_KEY = "cookie_consent";
@@ -18,56 +16,56 @@ export const CONSENT_CHANGED_EVENT = "minddy:cookie-consent-changed";
 
 export type CookieConsent = "accepted" | "declined";
 
-/** Le choix enregistré, ou null si l'utilisateur n'a pas encore tranché. */
+/** The saved choice, or null if the user has not yet decided. */
 export function readConsent(): CookieConsent | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(COOKIE_CONSENT_KEY);
     return raw === "accepted" || raw === "declined" ? raw : null;
   } catch {
-    // localStorage indisponible (navigation privée stricte) → pas de consentement.
+    // localStorage unavailable (strict private browsing) → no consent.
     return null;
   }
 }
 
-/** Enregistre le choix et prévient les écouteurs (analytics) dans l'onglet. */
+/** Saves the choice and notifies the listeners (analytics) in the tab. */
 export function writeConsent(consent: CookieConsent): void {
   try {
     window.localStorage.setItem(COOKIE_CONSENT_KEY, consent);
   } catch {
-    // Sans stockage, le bandeau réapparaîtra : c'est le comportement sûr.
+    // Without storage, the banner will reappear: this is the safe behavior.
   }
   window.dispatchEvent(new Event(CONSENT_CHANGED_EVENT));
 }
 
-/* ─── La copie qui SURVIT à l'appareil ─────────────────────────────────── */
+/* ─── The copy that SURVIVES the device ─────────────────────────────── */
 
 /**
- * Le même choix, dans le compte (MIN-293).
+ * The same choice, in the account (MIN-293).
  *
- * Le localStorage seul suffisait tant que la question se posait dans un
- * navigateur, qui garde son stockage pour toujours. **Dans l'app de bureau,
- * non** : la question s'y pose en modale bloquante au lancement, et le moindre
- * profil neuf — une réinstallation, une coquille de dév, une session repartie de
- * zéro — la reposait. Une question posée « une fois » qui revient à chaque
- * lancement n'est plus une question, c'est le bandeau qu'on remplaçait.
+ * The localStorage alone was enough as long as the question arose in a
+ * browser, which keeps its storage forever. **In the desktop app,
+ * no**: the question arises in blocking mode at launch, and the slightest
+ * new profile — a reinstallation, a dev shell, a session restarted from
+ * zero — rested it. A question asked "once" which comes back at each
+ * launch is no longer a question, it is the banner that was replaced.
  *
- * D'où la copie dans `user_metadata`, écrite à côté du stockage local et jamais
- * à sa place. Le partage des rôles compte :
+ * Hence the copy in `user_metadata`, written next to the local storage and never
+ * in its place. The sharing of roles counts:
  *
- * - **le localStorage reste la source de vérité de la MESURE.** C'est lui que
- *   `posthog-init` lit, de façon synchrone, avant toute session ; le compte
- *   n'existe pas encore à ce moment-là, et attendre une session pour décider de
- *   poser un cookie serait le prendre à l'envers ;
- * - **le compte est la source de vérité de la QUESTION.** Un appareil sans choix
- *   local mais dont le compte en a un adopte celui du compte, sans redemander.
+ * - **the localStorage remains the source of truth of the MEASUREMENT.** It is he that
+ * `posthog-init` reads, synchronously, before any session; the account
+ * does not yet exist at that moment, and waiting for a session to decide to
+ * setting a cookie would be taking it in reverse;
+ * - **the account is the source of truth of the QUESTION.** A device without a local choice
+ * but whose account has one adopts that of the account, without ask again.
  *
- * Ce que ça ne change pas : un refus reste un refus partout, et l'accord d'un
- * appareil ne pose rien sur un autre tant qu'on ne s'y connecte pas.
+ * What this doesn't change: a refusal remains a refusal everywhere, and the agreement of a
+ * device does not pose anything to another as long as you do not connect to it.
  */
 export const ANALYTICS_CONSENT_META_KEY = "analytics_consent";
 
-/** Le choix porté par le compte, ou `null` s'il n'en porte pas. */
+/** The choice made by the account, or `null` if it does not have one. */
 export function resolveAnalyticsConsent(meta: unknown): CookieConsent | null {
   if (!meta || typeof meta !== "object") return null;
   const raw = (meta as Record<string, unknown>)[ANALYTICS_CONSENT_META_KEY];

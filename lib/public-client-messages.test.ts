@@ -11,10 +11,10 @@ import frMessages from "../messages/fr.json";
 const REPO_ROOT = path.resolve(__dirname, "..");
 
 /**
- * Racines du site public : le root layout (qui monte le bandeau cookies), la 404
- * — qui rend le chrome marketing directement sous lui — et les deux groupes de
- * routes publiques. Le reste de l'app monte son propre provider et garde tout le
- * catalogue, donc n'a rien à vérifier ici (voir `FULL_CATALOG_SEGMENTS`).
+ * Roots of the public site: the root layout (which mounts the cookies banner), the 404
+ * — which renders the marketing chrome directly under it — and the two groups of
+ * public routes. The rest of the app sets up its own provider and keeps the entire
+ * catalog, so has nothing to check here (see `FULL_CATALOG_SEGMENTS`).
  */
 const PUBLIC_ENTRIES = [
   "app/layout.tsx",
@@ -31,8 +31,8 @@ const PUBLIC_ENTRIES = [
 
 const CANDIDATE_SUFFIXES = ["", ".tsx", ".ts", "/index.tsx", "/index.ts"];
 
-/** Résout un import RELATIF ou en `@/` vers un fichier du dépôt. Les paquets
-    npm renvoient `null` : ils ne traduisent pas avec notre catalogue. */
+/** Resolves a RELATIVE or `@/` import to a repository file.
+ npm packages return `null`: they do not translate with our catalog. */
 function resolveImport(specifier: string, from: string): string | null {
   let base: string;
   if (specifier.startsWith("@/")) base = path.join(REPO_ROOT, specifier.slice(2));
@@ -47,15 +47,15 @@ function resolveImport(specifier: string, from: string): string | null {
 }
 
 interface Scan {
-  /** namespace → fichiers clients qui l'utilisent */
+  /** namespace → client files that use it */
   namespaces: Map<string, Set<string>>;
-  /** appels que l'analyse statique ne sait pas trancher */
+  /** calls that static analysis cannot resolve */
   undecidable: string[];
   clientFiles: Set<string>;
 }
 
-/** Suit les imports depuis les racines et relève les namespaces traduits dans
-    les fichiers marqués `"use client"`. */
+/** Tracks imports from the roots and notes translated namespaces in
+ files marked `"use client"`. */
 function scanEntries(entries: readonly string[]): Scan {
   const seen = new Set<string>();
   const scan: Scan = { namespaces: new Map(), undecidable: [], clientFiles: new Set() };
@@ -66,19 +66,19 @@ function scanEntries(entries: readonly string[]): Scan {
     const source = readFileSync(file, "utf8");
     const relative = path.relative(REPO_ROOT, file);
 
-    // La directive doit être la première instruction du module : la chercher au
-    // début seulement évite de prendre une mention en commentaire pour elle.
+    // The directive must be the first instruction of the module: look for it at
+    // start only avoids taking a comment for it.
     if (/^\s*(["'])use client\1/m.test(source.slice(0, 400))) {
       scan.clientFiles.add(relative);
       for (const match of source.matchAll(/useTranslations\(\s*(["'`])([^"'`]+)\1/g)) {
-        // `useTranslations("Keyboard.sections")` puise dans `Keyboard`.
+        // `useTranslations("Keyboard.sections")` reads from `Keyboard`.
         const namespace = match[2].split(".")[0];
         const users = scan.namespaces.get(namespace) ?? new Set<string>();
         users.add(relative);
         scan.namespaces.set(namespace, users);
       }
-      // Sans littéral, on ne peut rien conclure — et le test doit le dire au
-      // lieu de laisser passer un namespace manquant.
+      // Without a literal, we cannot conclude anything — and the test must say so
+      // instead of allowing a missing namespace through.
       if (/useTranslations\(\s*(\)|[^"'`)\s])/.test(source)) {
         scan.undecidable.push(`${relative} : useTranslations() sans namespace littéral`);
       }
@@ -87,12 +87,12 @@ function scanEntries(entries: readonly string[]): Scan {
       }
     }
 
-    // Les imports de TYPES sont retirés avant de suivre le graphe : `import
-    // type … from "x"` est effacé à la compilation, donc `x` n'est jamais
-    // chargé à l'exécution et n'apporte aucun `useTranslations` à la page. Les
-    // suivre quand même faisait remonter des namespaces qu'aucun octet envoyé
-    // au navigateur ne contient — un faux positif qu'on ne pourrait corriger
-    // qu'en déclarant public un namespace qui ne l'est pas.
+    // TYPES imports are removed before following the graph: `import
+    // type … from "x"` is erased at compilation, so `x` is never
+    // loaded at runtime and brings no `useTranslations` to the page. THE
+    // follow still brings up namespaces that no bytes sent
+    // to the browser contain — a false positive we could only correct
+    // than by declaring public a namespace which is not.
     const runtime = source.replace(
       /^[ \t]*(?:import|export)[ \t]+type[ \t][^;\n]*(?:\n[^;]*)*?;/gm,
       ""
@@ -114,21 +114,21 @@ function scanEntries(entries: readonly string[]): Scan {
 describe("messages du site public", () => {
   const scan = scanEntries(PUBLIC_ENTRIES);
 
-  it("part bien de composants clients réels", () => {
-    // Filet contre un scan qui ne résoudrait plus rien (renommage de dossier,
-    // changement d'alias) et passerait alors au vert en ne trouvant personne.
+  it("starts from real client components", () => {
+    // Net against a scan which would no longer resolve anything (folder renaming,
+    // alias change) and would then turn green when finding no one.
     expect(scan.clientFiles.size).toBeGreaterThan(8);
     expect(scan.clientFiles).toContain("components/marketing/marketing-nav.tsx");
     expect(scan.clientFiles).toContain("components/cookie-banner.tsx");
   });
 
-  it("couvre tous les namespaces traduits côté client", () => {
+  it("covers all namespaces translated on the client", () => {
     const missing = [...scan.namespaces]
       .filter(([namespace]) => !PUBLIC_CLIENT_NAMESPACES.includes(namespace as never))
       .map(([namespace, users]) => `${namespace} (${[...users].join(", ")})`);
 
-    // Le message d'échec dit quoi ajouter à PUBLIC_CLIENT_NAMESPACES, et qui
-    // l'a demandé.
+    // The failure message says what to add to PUBLIC_CLIENT_NAMESPACES, and which
+    // asked for it.
     expect(missing, `namespaces absents de PUBLIC_CLIENT_NAMESPACES : ${missing.join(" · ")}`)
       .toEqual([]);
   });
@@ -138,24 +138,24 @@ describe("messages du site public", () => {
     expect(unused, `namespaces à retirer : ${unused.join(", ")}`).toEqual([]);
   });
 
-  it("ne rencontre aucun appel indécidable", () => {
+  it("finds no undecidable call", () => {
     expect(scan.undecidable).toEqual([]);
   });
 
-  it("existent dans les deux catalogues", () => {
+  it("exist in both catalogs", () => {
     for (const namespace of PUBLIC_CLIENT_NAMESPACES) {
       expect(enMessages, `en.json`).toHaveProperty(namespace);
       expect(frMessages, `fr.json`).toHaveProperty(namespace);
     }
   });
 
-  it("réduit vraiment le catalogue", () => {
+  it("actually reduces the catalog", () => {
     const scoped = publicClientMessages(enMessages as Record<string, unknown>);
     expect(Object.keys(scoped).sort()).toEqual([...PUBLIC_CLIENT_NAMESPACES].sort());
 
-    // Le gain est la raison d'être du fichier : s'il fond, c'est que le site
-    // public s'est mis à demander la moitié du catalogue et qu'il faut
-    // reprendre la question, pas relâcher le seuil.
+    // The gain is the reason for the file's existence: if it melts, it's because the site
+    // public has started to ask for half of the catalog and that it is necessary
+    // resume the question, not release the threshold.
     const full = JSON.stringify(enMessages).length;
     const trimmed = JSON.stringify(scoped).length;
     expect(trimmed / full).toBeLessThan(0.2);
@@ -168,7 +168,7 @@ describe("messages du site public", () => {
   });
 });
 
-/** Toutes les pages de `app/`, en chemin relatif au dépôt. */
+/** All pages of `app/`, in path relative to the repository. */
 function allPages(dir = path.join(REPO_ROOT, "app")): string[] {
   const found: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -179,7 +179,7 @@ function allPages(dir = path.join(REPO_ROOT, "app")): string[] {
   return found;
 }
 
-/** Chaîne des layouts au-dessus d'une page, du plus proche au root layout. */
+/** Chain of layouts above a page, from closest to root layout. */
 function layoutChain(page: string): string[] {
   const chain: string[] = [];
   let dir = path.dirname(path.join(REPO_ROOT, page));
@@ -194,28 +194,28 @@ function layoutChain(page: string): string[] {
 }
 
 /**
- * Le root layout ne diffuse que `PUBLIC_CLIENT_NAMESPACES`, et il le fait sur
- * TOUTES les routes : ce qu'il envoie ne peut pas dépendre de la requête, un
- * layout partagé n'étant pas re-rendu lors d'une navigation cliente. Toute page
- * qui traduit ailleurs doit donc trouver `FullCatalogMessages` au-dessus d'elle.
+ * The root layout only broadcasts `PUBLIC_CLIENT_NAMESPACES`, and it does so on
+ * ALL routes: what it sends cannot depend on the request, a shared
+ * layout is not re-rendered during a client navigation. Any page
+ * which translates elsewhere must therefore find `FullCatalogMessages` above it.
  *
- * Sans ce test, la sanction d'un oubli est un `MISSING_MESSAGE` en production —
- * et seulement sur les visiteurs arrivés depuis le site public, ce qui le rend
- * invisible en développement, où l'on recharge la page.
+ * Without this test, the sanction for an oversight is a `MISSING_MESSAGE` in production —
+ * and only on visitors arriving from the public site, which makes
+ * invisible in development, where we reload the page.
  */
-describe("chaque page reçoit les messages qu'elle traduit", () => {
+describe("each page receives the messages it translates", () => {
   const pages = allPages();
 
-  it("trouve bien toutes les pages", () => {
+  it("finds all pages", () => {
     expect(pages.length).toBeGreaterThan(20);
     expect(pages).toContain("app/(auth)/login/page.tsx");
   });
 
   it.each(pages)("%s", (page) => {
     const chain = layoutChain(page);
-    // L'IMPORT, pas le nom : le root layout cite `FullCatalogMessages` dans le
-    // commentaire qui explique pourquoi il ne le monte pas, et une simple
-    // recherche de chaîne déclarait alors toutes les pages servies.
+    // IMPORT, not the name: the root layout cites `FullCatalogMessages` in the
+    // comment that explains why he doesn't mount it, and a simple
+    // string search then declared all pages served.
     const servesFullCatalog = chain.some((layout) =>
       /from\s*["']@\/components\/full-catalog-messages["']/.test(
         readFileSync(path.join(REPO_ROOT, layout), "utf8"),
@@ -223,7 +223,7 @@ describe("chaque page reçoit les messages qu'elle traduit", () => {
     );
     if (servesFullCatalog) return;
 
-    // Pas de provider au-dessus : la page ne dispose que du jeu public.
+    // No provider above: the page only has the public set.
     const scan = scanEntries([page, ...chain]);
     const missing = [...scan.namespaces]
       .filter(([namespace]) => !PUBLIC_CLIENT_NAMESPACES.includes(namespace as never))

@@ -14,23 +14,22 @@ import type { LocalProject, LocalTurnProject } from "@/lib/desktop/local-turn";
 import { readLocalRepos, writeLocalRepos } from "./repo-store";
 
 /**
- * ATTACHER UN DOSSIER DE LA MACHINE À UN PROJET (MIN-359) — le câblage.
+ * ATTACH A MACHINE FOLDER TO A PROJECT (MIN-359) — wiring.
  *
- * Ce que la page peut demander : ouvrir le panneau système, relire
- * l'attachement, l'oublier. **Elle ne peut jamais NOMMER un dossier** — le pont
- * ne prend pas de chemin en entrée (cf. lib/desktop/bridge.ts). Un chemin ne
- * redescend que pour être affiché, et il ne remonte que d'un `NSOpenPanel`,
- * c'est-à-dire d'un geste humain. C'est la seule forme qui rende le code distant
- * incapable de désigner `~/.ssh` en écrivant une chaîne.
+ * What the page may request: open the system panel, reread
+ * the attachment, forget it. **It can never NAME a folder** — the bridge
+ * does not take a path as input (see lib/desktop/bridge.ts). A path only goes back down to be displayed, and it only goes back up with a `NSOpenPanel`,
+ *, that is to say with a human gesture. This is the only form that makes remote code
+ * incapable of denoting `~/.ssh` by writing a string.
  *
- * Tout ce qui se décide vit ailleurs, et c'est délibéré : les verdicts dans
- * [lib/desktop/local-repo.ts](../../lib/desktop/local-repo.ts) (pur), la lecture
- * du disque dans [lib/desktop/git-config.ts](../../lib/desktop/git-config.ts) —
- * hors de `desktop/src/`, où la suite de tests ne va pas. Il ne reste ici que le
- * panneau, le rangement, et la question « quel état rendre ».
+ * Everything that decides lives elsewhere, and it is deliberate: the verdicts in
+ * [lib/desktop/local-repo.ts](../../lib/desktop/local-repo.ts) (pure), reading
+ * from disk in [lib/desktop/git-config.ts](../../lib/desktop/git-config.ts) —
+ * out of `desktop/src/`, where the test suite is going wrong. All that remains here is the
+ * panel, the storage, and the question “what state to return to”.
  */
 
-/** L'état d'un chemin donné, revalidé contre le dépôt lié au projet. */
+/** The state of a given path, revalidated against the repository linked to the project. */
 function stateFor(dirPath: string, expected: ExpectedRepo): LocalRepoState {
   const verdict = localRepoVerdict(readGitFacts(dirPath), expected);
   return verdict.ok
@@ -39,12 +38,12 @@ function stateFor(dirPath: string, expected: ExpectedRepo): LocalRepoState {
 }
 
 /**
- * L'attachement d'un projet, **revalidé à chaque lecture**.
+ * The attachment of a project, **revalidated on each reading**.
  *
- * Un chemin retenu ne prouve rien : le dossier a pu être déplacé, le disque
- * démonté, le dépôt du projet re-lié ailleurs entre-temps. Répondre « attaché »
- * sur la foi du fichier ferait partir un run vers un dossier qui n'existe plus,
- * et la panne n'apparaîtrait qu'au premier tour, sur la machine, sans log.
+ * A chosen path proves nothing: the folder could have been moved, the disk
+ * unmounted, the project repository re-linked elsewhere in the meantime. Answering “attached”
+ * based on the file would send a run to a folder that no longer exists,
+ * and the failure would only appear on the first run, on the machine, without log.
  */
 export function describeLocalRepo(
   projectId: string,
@@ -56,9 +55,9 @@ export function describeLocalRepo(
 }
 
 /**
- * Les dossiers prêts parmi les projets connus du lanceur. Cette revalidation est
- * importante : un ancien attachement ne doit pas faire croire au modèle qu'il
- * peut ouvrir un dossier déplacé, démonté ou relié à un autre dépôt.
+ * Ready folders among the projects known to the launcher. This revalidation is
+ * important: an old attachment must not make the model believe that it
+ * can open a folder that has been moved, unmounted or linked to another repository.
  */
 export function localProjectsFor(projects: readonly LocalTurnProject[]): LocalProject[] {
   return projects.map((project) => {
@@ -72,17 +71,17 @@ export function localProjectsFor(projects: readonly LocalTurnProject[]): LocalPr
 }
 
 /**
- * Ouvre le panneau système et attache le dossier choisi.
+ * Opens the system panel and attaches the chosen folder.
  *
- * **Un dossier refusé n'est pas rangé** : on rend le verdict pour que l'écran le
- * dise, et l'attachement précédent — s'il y en avait un — reste en place. Se
- * tromper de dossier ne doit pas coûter celui qui marchait.
+ * **A rejected folder is not stored**: the verdict is given so that the screen says
+ *, and the previous attachment — if there was one — remains in place. Se
+ * cheating on a folder should not cost the one that worked.
  *
- * Une annulation rend l'état courant, comme si rien ne s'était passé.
+ * A cancellation returns the state to current, as if nothing had happened.
  *
- * Le chemin est **résolu** avant d'être rangé (`realRepoPath`) : cf. le
- * commentaire de cette fonction, c'est ce qui évite qu'un lien symbolique fasse
- * échouer le premier tour sur une comparaison de chaînes.
+ * The path is **resolved** before being put away (`realRepoPath`): cf. the
+ * comment of this function, this is what prevents a symbolic link from causing
+ * to fail the first round on a string comparison.
  */
 export async function attachLocalRepo(
   projectId: string,
@@ -111,13 +110,13 @@ export async function attachLocalRepo(
   return state;
 }
 
-/** Détache le dossier. Rend l'état d'après, qui est toujours « aucun ». */
+/** Detaches the folder. Returns the next state, which is always “none”. */
 export function detachLocalRepo(projectId: string): LocalRepoState {
   writeLocalRepos(withoutLocalRepo(readLocalRepos(), projectId));
   return { status: "none" };
 }
 
-/** Branches locales, lues sans laisser la page désigner un chemin de disque. */
+/** Local branches, read without letting the page designate a disk path. */
 export function localBranches(projectId: string, expected: ExpectedRepo): string[] {
   const state = describeLocalRepo(projectId, expected);
   if (state.status !== "ready") return [];

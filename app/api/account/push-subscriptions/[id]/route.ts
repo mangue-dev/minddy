@@ -7,21 +7,21 @@ import type { PushDevice } from "@/lib/types";
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * Un appareil abonné, pris un par un (MIN-183) : l'allumer/l'éteindre, ou le
- * retirer.
+ * A subscriber device, taken one by one (MIN-183): turn it on/off, or
+ * remove.
  *
- * Les deux gestes sont distincts et le restent :
- *   • PATCH `enabled` COUPE l'envoi sans toucher à l'abonnement navigateur — la
- *     permission reste acquise, l'appareil se rallume d'un clic. C'est le geste
- *     « pas ce soir ».
- *   • DELETE retire la ligne. C'est le geste « j'ai changé de téléphone ». Rien
- *     ne peut plus être poussé à cet endpoint, même si le navigateur d'en face
- *     garde son abonnement (il ne fera plus rien de personne).
+ * The two gestures are distinct and remain so:
+ * • PATCH `enabled` CUTS sending without affecting the browser subscription — the
+ * permission remains granted, the device turns back on with a click. It's the gesture
+ *     “not tonight”.
+ * • DELETE removes the line. It’s the “I changed phone” gesture. Nothing
+ * can no longer be pushed to this endpoint, even if the opposite browser
+ *     keeps its subscription (it will no longer do anything for anyone).
  *
- * Client AUTHENTIFIÉ dans les deux cas : la RLS fait la vérification de
- * propriété, et une ligne qui ne m'appartient pas est simplement introuvable —
- * d'où le 404 sur zéro ligne touchée, qui ne distingue pas « n'existe pas » de
- * « pas à vous ».
+ * AUTHENTICATED customer in both cases: the RLS verifies
+ * property, and a line that doesn't belong to me is simply not found —
+ * hence the 404 on zero affected lines, which does not distinguish "does not exist" from
+ * “not yours”.
  */
 
 export async function PATCH(request: NextRequest, { params }: RouteContext) {

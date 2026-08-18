@@ -11,12 +11,12 @@ import { issueComparator } from "./view-filter";
 import type { Issue } from "./types";
 import type { IssuePriority, IssueStatus } from "./issue-constants";
 
-/** Un ticket réduit à ce que le glisser regarde. */
+/** A ticket reduced to what the swipe looks like. */
 function issue(id: string, status: IssueStatus, position: number): Issue {
   return { id, status, position } as Issue;
 }
 
-/** Idem, plus les champs sur lesquels une colonne peut être triée. */
+/** Same, plus the fields on which a column can be sorted. */
 function sortable(
   id: string,
   status: IssueStatus,
@@ -26,7 +26,7 @@ function sortable(
   return { id, status, position, priority: "none", due_date: null, ...fields } as Issue;
 }
 
-/** Le rectangle d'une carte, tel que dnd-kit le donne au glisser. */
+/** The rectangle of a map, as dnd-kit gives it when dragging. */
 function box(top: number, height = 100) {
   return { top, height };
 }
@@ -59,14 +59,14 @@ describe("tri manuel", () => {
     const moves = planBoardMove({
       bundle,
       targetStatus: "todo",
-      overIssueId: "c", // on lâche sur la 3e carte de « À faire »
+      overIssueId: "c", // we let go on the 3rd card of “To do”
       columnItems: todo,
       manual: true,
       now: 0,
     });
     expect(moves.map((m) => m.issue.id)).toEqual(["x", "y"]);
     expect(moves.every((m) => m.patch.status === "todo")).toBe(true);
-    // Deux positions distinctes, strictement entre b (10) et c (20).
+    // Two distinct positions, strictly between b (10) and c (20).
     const positions = moves.map((m) => m.patch.position);
     expect(positions[0]).toBeGreaterThan(10);
     expect(positions[0]).toBeLessThan(positions[1]);
@@ -75,7 +75,7 @@ describe("tri manuel", () => {
 
   it("réordonne dans la colonne d'origine sans changer de statut", () => {
     const moves = planBoardMove({
-      bundle: [todo[1], todo[2]], // b et c remontés en tête
+      bundle: [todo[1], todo[2]], // b and c moved to the top
       targetStatus: "todo",
       overIssueId: "a",
       columnItems: todo,
@@ -85,11 +85,11 @@ describe("tri manuel", () => {
     expect(moves.map((m) => m.patch.status)).toEqual([undefined, undefined]);
     const positions = moves.map((m) => m.patch.position);
     expect(positions[0]).toBeLessThan(positions[1]);
-    expect(positions[1]).toBeLessThan(0); // avant a
+    expect(positions[1]).toBeLessThan(0); // before a
   });
 
   it("ancre correctement quand la carte survolée fait partie du paquet", () => {
-    // On lâche sur c, qui est glissé avec a : l'ancre utile est « après b ».
+    // We let go of c, which is slipped with a: the useful anchor is “after b”.
     const moves = planBoardMove({
       bundle: [todo[0], todo[2]],
       targetStatus: "todo",
@@ -98,7 +98,7 @@ describe("tri manuel", () => {
       manual: true,
       now: 0,
     });
-    // Le seul ticket restant est b (10) : le paquet passe après lui.
+    // The only remaining ticket is b (10): the packet goes after it.
     expect(moves.map((m) => m.patch.position)).toEqual([11, 12]);
   });
 });
@@ -113,7 +113,7 @@ describe("tri par champ", () => {
       manual: false,
       now: 1000,
     });
-    // a est déjà « À faire » : rien à écrire pour lui.
+    // a is already “To do”: nothing to write for him.
     expect(moves.map((m) => m.issue.id)).toEqual(["x"]);
     expect(moves[0].patch).toEqual({ status: "todo", position: 1000 });
   });
@@ -195,7 +195,7 @@ describe("de quel côté de la carte survolée", () => {
       manual: true,
       now: 0,
     });
-    // c vaut 20 et n'a pas de suivant : le paquet passe à 21, pas avant lui.
+    // c is 20 and has no next: the packet goes to 21, not before it.
     expect(moves[0].patch.position).toBe(21);
   });
 });
@@ -241,8 +241,8 @@ describe("le repère de dépôt", () => {
   });
 
   it("compte le paquet et s'ancre sur une carte QUI RESTE", () => {
-    // a et c sont glissés ensemble et lâchés sur c : b est le seul repère fixe,
-    // et le paquet passe après lui — donc en fin de colonne.
+    // a and c are dragged together and dropped on c: b is the only fixed reference,
+    // and the packet goes after it — so at the end of the column.
     const moves = planBoardMove({
       bundle: [todo[0], todo[2]],
       targetStatus: "todo",
@@ -262,9 +262,9 @@ describe("le repère de dépôt", () => {
     expect(preview([], todo)).toBeNull();
   });
 
-  // Le contrat de toute la reprise : ce que le trait annonce est ce que
-  // l'écriture produit. On applique donc vraiment les patchs, on rejoue le tri,
-  // et on relit le voisin.
+  // The contract of the entire recovery: what the line announces is what
+  // product writing. So we really apply the patches, we replay the sorting,
+  // and we reread the neighbor.
   it("annonce l'arrivée que l'écriture produit vraiment", () => {
     for (const [overIssueId, dropAfter] of [
       ["a", false],
@@ -275,7 +275,7 @@ describe("le repère de dépôt", () => {
       [null, false],
     ] as const) {
       const moves = planBoardMove({
-        bundle: [doing[1]], // y, glissé depuis « en cours »
+        bundle: [doing[1]], // y, dragged from “in progress”
         targetStatus: "todo",
         overIssueId,
         dropAfter,
@@ -296,8 +296,8 @@ describe("le repère de dépôt", () => {
     }
   });
 
-  // Le cœur de la reprise : dans une colonne triée par champ, la carte ne tombe
-  // PAS sous le curseur. Le repère doit dire où le tri va la mettre.
+  // The heart of the recovery: in a column sorted by field, the card does not fall
+  // NOT under the cursor. The marker should say where the sort will put it.
   it("suit le tri par priorité, pas le curseur", () => {
     const byPriority = issueComparator("priority");
     const column = [
@@ -306,7 +306,7 @@ describe("le repère de dépôt", () => {
       sortable("bas", "todo", 20, { priority: "low" }),
     ];
     const dragged = sortable("neuf", "in_progress", 5, { priority: "high" });
-    // Lâchée tout en bas de la colonne, sur la dernière carte.
+    // Dropped at the bottom of the column, on the last card.
     const moves = planBoardMove({
       bundle: [dragged],
       targetStatus: "todo",
@@ -316,7 +316,7 @@ describe("le repère de dépôt", () => {
       manual: false,
       now: 1_700_000_000_000,
     });
-    // Le tri la range entre « urgent » et « moyen » : c'est là que le trait va.
+    // Sorting places it between “urgent” and “medium”: that’s where the line goes.
     expect(preview(moves, column, byPriority)).toEqual({
       status: "todo",
       beforeIssueId: "moyen",

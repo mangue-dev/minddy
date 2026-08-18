@@ -38,20 +38,20 @@ import type { PullRequestReviewComment } from "@/lib/agent-api";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
- * L'ACTIVITÉ de la PR dans le fil de conversation (MIN-159) — ce qui s'est passé
- * entre deux messages, et qui manquait entièrement à minddy : une approbation
- * motivée n'y était visible nulle part, pas plus qu'un push, un renommage ou un
- * passage en brouillon.
+ * PR ACTIVITY in the conversation thread (MIN-159) — what happened
+ * between two messages, and which minddy was entirely missing: a reasoned approval
+ * was nowhere visible, nor was a push, a renaming or a
+ * switch to draft.
  *
- * Deux formes, comme chez GitHub, et l'écart entre elles est ce qui rend le fil
- * lisible :
- *  - une **review** est un MESSAGE (verdict + corps + les points posés sur le
- *    code) : elle prend une carte, au même gabarit que les commentaires ;
- *  - tout le reste est une **ligne** : une pastille, un nom, un verbe, une heure.
- *    Les empiler en cartes noierait les trois messages qui comptent.
+ * Two forms, like at GitHub, and the gap between them is what makes the thread
+ * readable:
+ * - a **review** is a MESSAGE (verdict + body + the points placed on the
+ * code): it takes a card, at the same template as the comments ;
+ * - everything else is a **line**: a sticker, a noun, a verb, a time.
+ * Stacking them into cards would drown out the three messages that matter.
  */
 
-/** Pastille de chaque fait — la même grammaire visuelle que GitHub. */
+/** Tag of every fact — the same visual grammar as GitHub. */
 const KIND_ICON: Record<PrTimelineEvent["kind"], typeof Check> = {
   reviewed: Eye,
   review_dismissed: CircleSlash,
@@ -82,7 +82,7 @@ const KIND_ICON: Record<PrTimelineEvent["kind"], typeof Check> = {
   system: History,
 };
 
-/** Le verbe de chaque fait. Les clés à placeholder sont appelées avec leurs valeurs. */
+/** The verb of each fact. Placeholder keys are called with their values. */
 const KIND_MESSAGE: Record<
   Exclude<PrTimelineEvent["kind"], "reviewed" | "system">,
   MessageKey<"PullRequests">
@@ -115,30 +115,30 @@ const KIND_MESSAGE: Record<
 };
 
 /**
- * Un fait, en une ligne. Le nom de l'auteur ouvre la phrase, comme sur GitHub —
- * c'est lui qu'on scanne en descendant le fil.
+ * One fact, in one line. The name of the author opens the sentence, as on GitHub —
+ * it is him who we scan going down the thread.
  *
- * Le cas `system` est le repli GitLab : une phrase que minddy n'a pas su traduire
- * dans son vocabulaire, rendue telle que GitLab l'a écrite. Un fait dit en
- * anglais reste un fait dit ; le taire serait le seul vrai défaut.
+ * The case `system` is the GitLab fallback: a sentence that minddy did not know how to translate
+ * in his vocabulary, rendered as GitLab wrote it. A fact said in
+ * English remains a fact said; silence would be the only real fault.
  */
 export function PrTimelineRow({ event }: { event: PrTimelineEvent }) {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
   const now = useNow();
-  // Une review NUE — approuvée sans un mot — arrive ici plutôt qu'en carte : elle
-  // garde alors l'icône et la couleur de son verdict, seuls porteurs du sens.
+  // A NUE review — approved without a word — arrives here rather than on the map: it
+  // then keeps the icon and the color of its verdict, the only carriers of meaning.
   const verdict = event.kind === "reviewed" ? REVIEW_STATE[event.reviewState ?? "commented"] : null;
   const Icon = verdict?.icon ?? KIND_ICON[event.kind] ?? History;
-  // `actors` n'est rempli que sur les commits : partout ailleurs un fait a un
-  // seul auteur, et la pile retombe sur le rendu d'origine.
+  // `actors` is only filled on commits: everywhere else a fact has a
+  // sole author, and the stack falls back to the original rendering.
   const authors = event.actors ?? [];
 
   return (
-    // `items-start` + hauteur de ligne imposée : la pastille se cale sur la
-    // PREMIÈRE ligne du texte, et n'y flotte plus — elle fait pile la hauteur
-    // d'une ligne `text-sm` (20 px), donc aucun décalage à corriger. Centrer sur
-    // tout le bloc la ferait descendre dès qu'une phrase passe à la ligne.
+    // `items-start` + imposed line height: the pad fits on the
+    // FIRST line of the text, and no longer floats there — it is exactly the height
+    // of a `text-sm` line (20 px), so no offset to correct. Center on
+    // the whole block would move it down as soon as a sentence passes the line.
     <li className="flex items-start gap-2.5 px-1 py-0.5 text-sm leading-5 text-muted-foreground">
       <span
         className={cn(
@@ -149,11 +149,11 @@ export function PrTimelineRow({ event }: { event: PrTimelineEvent }) {
       >
         <Icon className="size-3" />
       </span>
-      {/* Les auteurs au pluriel quand le fait en a plusieurs — un commit
-          co-signé, une poussée à plusieurs mains. Sinon l'acteur seul, ce qui
-          rend exactement l'avatar d'avant. */}
+      {/* Authors in the plural when the fact has several — a co-signed commit
+, a multi-handed push. Otherwise the actor alone, which
+ returns exactly the avatar from before. */}
       {authors.length > 0 ? (
-        // 16 px centrés dans la ligne de 20 px : le même calage que la pastille.
+        // 16 px centered in the 20 px line: the same setting as the pad.
         <AuthorStack authors={authors} size="size-4" className="mt-0.5" />
       ) : event.actor ? (
         <UserAvatar
@@ -179,14 +179,14 @@ export function PrTimelineRow({ event }: { event: PrTimelineEvent }) {
   );
 }
 
-/** Le texte du fait, valeurs des placeholders comprises (le contrat i18n). */
+/** The text of the fact, including placeholder values ​​(the i18n contract). */
 function timelineText(
   event: PrTimelineEvent,
   t: ReturnType<typeof useTranslations<"PullRequests">>,
 ): string {
   switch (event.kind) {
-    // Une phrase de GitLab qu'aucun motif ne reconnaît : elle se rend telle
-    // quelle, c'est la seule information qu'on ait.
+    // A sentence from GitLab that no pattern recognizes: it is rendered as
+    // what, this is the only information we have.
     case "system":
       return event.body ?? "";
     case "committed":
@@ -205,8 +205,8 @@ function timelineText(
       return t("timelineMilestoned", { name: event.name ?? "—" });
     case "cross_referenced":
       return t("timelineCrossReferenced", { reference: event.reference ?? "—" });
-    // Une review qui atterrit en LIGNE n'a ni corps ni point : son verdict est
-    // tout ce qu'elle dit, et c'est le même mot que sur sa carte.
+    // A review that lands ONLINE has neither body nor point: its verdict is
+    // everything she says, and it's the same word as on her card.
     case "reviewed":
       return t(REVIEW_STATE[event.reviewState ?? "commented"].label);
     default:
@@ -215,12 +215,12 @@ function timelineText(
 }
 
 /**
- * Verdict → mot et couleur. Les mêmes que l'état de la PR : c'est un standard.
+ * Verdict → word and color. The same as the state of the PR: it is a standard.
  *
- * `icon: null` sur « a relu », et c'est délibéré : ce verdict ne TRANCHE rien —
- * son contenu est juste en dessous, dans la carte. Une bulle de commentaire
- * devant un bloc qui n'est fait que de commentaires ne dit rien de plus, et le
- * bruit se paie sur les deux verdicts qui, eux, comptent.
+ * `icon: null` on “reread”, and this is deliberate: this verdict does not DECIDE anything —
+ * its content is just below, in the card. A comment bubble
+ * in front of a block which is only made up of comments says nothing more, and the
+ * noise is paid for by the two verdicts which count.
  */
 const REVIEW_STATE: Record<
   PrReviewState,
@@ -249,31 +249,30 @@ const REVIEW_STATE: Record<
 };
 
 /**
- * Une review soumise, rendue comme un message : le verdict en en-tête, le corps
- * en dessous, et les points posés sur le code repliés à la suite.
+ * A review submitted, rendered as a message: the verdict in the header, the body
+ * below, and the points placed on the code folded afterward.
  *
- * Ces points vivent dans l'onglet Fichiers, à leur ligne — mais une review dont
- * le fil ne montrerait QUE « a demandé des changements », sans dire lesquels,
- * obligerait à changer d'onglet pour comprendre ce qui vient d'arriver. Ils sont
- * donc rappelés ici, en extrait, avec leur ancre : le détail (le hunk, le fil de
- * réponses) reste dans le diff.
+ * These points live in the Files tab, on their line — but a review whose thread would ONLY show " requested changes”, without saying which ones,
+ * would require you to change tabs to understand what just happened. They are
+ * therefore recalled here, in extract, with their anchor: the detail (the hunk, the thread of
+ * answers) remains in the diff.
  *
- * Une review NUE — pas de corps, pas de point — ne mérite pas une carte : c'est
- * un fait, et l'appelant la range en ligne comme les autres.
+ * A NAKED review - no body, no point - does not deserve a card: it is
+ * a fact, and the caller puts it online like the others.
  */
 export function PrTimelineReview({
   event,
   comments,
 }: {
   event: PrTimelineEvent;
-  /** Les points de CETTE review, déjà filtrés par l'appelant. */
+  /** The points of THIS review, already filtered by the caller. */
   comments: PullRequestReviewComment[];
 }) {
   const t = useTranslations("PullRequests");
   const format = useFormatter();
   const now = useNow();
   const state = REVIEW_STATE[event.reviewState ?? "commented"];
-  // Absente sur « a relu » : la carte est déjà faite de ce que l'icône annonce.
+  // Absent on “read again”: the map is already made of what the icon announces.
   const Icon = state.icon;
 
   return (
@@ -312,20 +311,20 @@ export function PrTimelineReview({
 }
 
 /**
- * Un point de review, rendu comme GitHub le rend dans le fil : le fichier, le
- * CODE dont il parle, puis le commentaire lui-même.
+ * A review point, rendered as GitHub renders it in the thread: the file, the
+ * CODE it's talking about, then the comment itself.
  *
- * Les trois parties sont dans cet ordre pour une raison. Le chemin situe, le code
- * montre de quoi on parle — un commentaire de ligne sans son extrait est une
- * phrase sans sujet, et c'est exactement ce qui rendait ces blocs illisibles — et
- * la séparation nette (fond, bordure, avatar) dit que ce qui suit est quelqu'un
- * qui PARLE, pas une suite du diff.
+ * The three parts are in this order for a reason. The path locates, the code
+ * shows what we're talking about — a line comment without its extract is a
+ * sentence without a subject, and that's exactly what made these blocks unreadable — and
+ * the clear separation (background, border, avatar) says that what follows is someone
+ * speaking, not a continuation of the diff.
  *
- * Les deux premières parties sont `PrHunk`, c'est-à-dire le rendu de l'onglet
- * Fichiers : le même code, dans la même page, ne peut pas avoir deux apparences
- * selon l'onglet d'où on le regarde. Sans hunk (GitLab n'en sert aucun),
- * l'extrait disparaît et l'ancre `fichier:ligne` porte seule le contexte : le
- * bloc se lit encore.
+ * The first two parts are `PrHunk`, that is to say the rendering of the tab
+ * Files: the same code, in the same page, cannot have two appearances
+ * depending on the tab from which it is viewed. Without a hunk (GitLab does not use any),
+ * the extract disappears and the anchor `fichier:ligne` alone carries the context: the
+ * block is still read.
  */
 export function ReviewCommentBlock({ comment }: { comment: PullRequestReviewComment }) {
   const format = useFormatter();
@@ -337,8 +336,8 @@ export function ReviewCommentBlock({ comment }: { comment: PullRequestReviewComm
         path={comment.path}
         line={displayLineOf(comment)}
         diffHunk={comment.diff_hunk}
-        // Le bloc est en `bg-background` (c'est ce qui le détache de la carte de
-        // review) : le diff doit prendre ce fond-là, pas celui d'une carte.
+        // The block is in `bg-background` (this is what detaches it from the map
+        // review): the diff must take this background, not that of a card.
         className="pr-diff-view-inset border-b border-border"
       />
 

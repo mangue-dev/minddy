@@ -3,17 +3,17 @@ import { describe, expect, it } from "vitest";
 import { localRunScope, rowMayRunLocally } from "./local-exec-scope";
 
 /**
- * MIN-360 — L'INVARIANT DES RUNS À CONTENU TIERS.
+ * MIN-360 — THE INVARIANT OF RUNS WITH THIRD-PARTY CONTENT.
  *
- * Logique PURE, testée comme [prune.test.ts](prune.test.ts) : on appelle, on
- * assert. Ce qu'elle décide, en revanche, n'a rien de mineur — un run dont le
- * contexte est du texte d'attaquant potentiel qui partirait sur une machine
- * locale, c'est une injection de prompt qui devient un shell sur l'ordinateur du
- * développeur.
+ * PURE logic, tested like [prune.test.ts](prune.test.ts): we call, on
+ * assert. What it decides, on the other hand, is nothing minor — a run whose
+ * context is text from a potential attacker which would start on a local
+ * machine, it is a prompt injection which becomes a shell on the computer of the
+ * developer.
  *
- * Le cas qui a motivé le module est le dernier de ce fichier : `job.interactive`
- * vaut `!run.routine_id`, donc **vrai** pour une relecture de pull request
- * déclenchée par un webhook.
+ * The case which motivated the module is the last of this file: `job.interactive`
+ * is `!run.routine_id`, so **true** for a replay of pull request
+ * triggered by a webhook.
  */
 
 const ctx = (over: Partial<Parameters<typeof localRunScope>[0]> = {}) => ({
@@ -28,8 +28,8 @@ describe("localRunScope", () => {
   });
 
   it("refuse une relecture de pull request", () => {
-    // Le diff et les commentaires d'un fork sont écrits par n'importe qui. Le
-    // dépôt le reconnaît déjà en refusant un token `repo-write` à ces sessions.
+    // A fork's diff and comments are written by anyone. THE
+    // repository already recognizes this by refusing a `repo-write` token in these sessions.
     expect(localRunScope(ctx({ pullRequestId: "pr-1" }))).toEqual({
       ok: false,
       reason: "pull_request",
@@ -50,8 +50,8 @@ describe("localRunScope", () => {
   });
 
   it("refuse une mention, même quand elle a l'air interne", () => {
-    // Une mention peut venir d'un commentaire de forge recopié par un webhook, et
-    // rien à cet endroit ne distingue les deux.
+    // A mention can come from a forge comment copied by a webhook, and
+    // nothing here distinguishes the two.
     expect(localRunScope(ctx({ triggeredBy: "mention" }))).toEqual({
       ok: false,
       reason: "trigger",
@@ -59,8 +59,8 @@ describe("localRunScope", () => {
   });
 
   it("refuse une source qu'il ne connaît pas — la liste est FERMÉE", () => {
-    // La porte d'entrée qu'on écrira l'an prochain (board public, webhook d'un
-    // autre forge) doit être refusée par défaut, pas autorisée par oubli.
+    // The gateway that we will write next year (public board, webhook of a
+    // other forge) must be refused by default, not authorized by forgetting.
     expect(localRunScope(ctx({ triggeredBy: "feedback_board" }))).toEqual({
       ok: false,
       reason: "trigger",
@@ -69,8 +69,8 @@ describe("localRunScope", () => {
   });
 
   it("refuse dès la PREMIÈRE raison, et la nomme", () => {
-    // Un run de chaîne SUR une pull request : le motif rendu est celui qui se
-    // raconte le mieux, et l'ordre est stable pour que les logs le soient aussi.
+    // A chain run ON a pull request: the pattern rendered is the one that is
+    // tells the best story, and the order is stable so that the logs are stable too.
     expect(localRunScope(ctx({ pullRequestId: "pr-1", chainId: "c-1" }))).toEqual({
       ok: false,
       reason: "pull_request",
@@ -99,7 +99,7 @@ describe("rowMayRunLocally", () => {
   });
 
   it("refuse une ligne muette", () => {
-    // Une colonne absente n'est pas une autorisation : c'est une ignorance.
+    // An absent column is not authorization: it is ignorance.
     expect(rowMayRunLocally({})).toEqual({ ok: false, reason: "trigger" });
   });
 });

@@ -6,9 +6,9 @@ import { fetchGitIdentitiesApi } from "./git-integration-api";
 export const gitIdentitiesQueryKey = ["git-identities"] as const;
 
 /**
- * Le compte git PERSONNEL de l'utilisateur (MIN-144) + les providers déployés —
- * ce sous quoi partent ses gestes sur une pull request. À ne pas confondre avec
- * `useGitConnectionsQuery`, qui parle de l'installation de la GitHub App.
+ * The user's PERSONAL git account (MIN-144) + the deployed providers —
+ * which is what his actions on a pull request are based on. Not to be confused with
+ * `useGitConnectionsQuery`, which talks about installing the GitHub App.
  */
 export function useGitIdentitiesQuery(enabled = true) {
   const { data, isPending } = useQuery({

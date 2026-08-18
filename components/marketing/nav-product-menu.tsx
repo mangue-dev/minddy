@@ -10,38 +10,35 @@ import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
 
 /**
- * Le menu « Produit » de la nav publique.
+ * The "Product" menu of the public nav.
  *
- * Pourquoi un menu et pas six liens : la nav pointait quatre ancres au hasard
- * du plan de la page (« Le tracker », « Les agents », « Tarifs », « FAQ »), ce
- * qui obligeait le visiteur à deviner ce qu'il y avait derrière chacune. Un
- * seul mot — Produit — et six entrées qui se lisent d'un coup d'œil demandent
- * un survol de plus, mais suppriment la devinette.
+ * Why a menu and not six links: the nav pointed to four anchors at random
+ * of the page map ("The tracker", "The agents", "Prices", "FAQ"), this
+ * which forced the visitor to guess what was behind each one. A single word — Product — and six read-at-a-glance entries require one more hover, but remove the guesswork.
  *
- * ÉCRIT À LA MAIN plutôt qu'avec Radix NavigationMenu : la primitive n'est pas
- * réexportée par `mangue-ui` et le paquet n'est pas résolvable en direct
- * (pnpm strict). L'ajouter en dépendance obligerait à resynchroniser les deux
- * lockfiles du dépôt pour un seul composant.
+ * HAND-WRITTEN rather than Radix NavigationMenu: primitive is not re-exported
+ * by `mangue-ui` and the package is not live-resolvable
+ * (strict pnpm). Adding it as a dependency would require resynchronizing the two
+ * lockfiles of the repository for a single component.
  *
- * Ce qui est repris de la primitive, parce que c'est ce qui fait la différence
- * entre un menu utilisable et un menu qui se ferme sous le curseur :
+ * This is taken from the primitive, because it is what makes the difference
+ * between a usable menu and a menu which closes under the cursor:
  *
- *  - **Fermeture différée.** Sortir du déclencheur pour entrer dans le panneau
- *    fait passer le curseur au-dessus du vide. Sans délai, le menu se ferme
- *    pendant le trajet.
- *  - **Pas de zone morte.** L'espace entre la pastille et le panneau est DANS
- *    la zone survolée (padding du conteneur, pas marge du panneau).
- *  - **Clavier.** Le déclencheur est un vrai bouton : Entrée / Espace / Flèche
- *    bas ouvrent, Échap ferme et rend le focus. Le panneau reste ouvert tant
- *    que le focus est dedans, sinon on ne pourrait pas le traverser au Tab.
- *  - **Tactile.** Le survol n'existe pas : le clic bascule.
+ * - **Delayed close.** Exiting the trigger to enter the panel
+ * moves the cursor over the gap. Without delay, the menu closes
+ * during the trip.
+ * - **No dead zone.** The space between the pad and the panel is IN
+ * the hovered area (padding of the container, not panel margin).
+ * - **Keyboard.** The trigger is a real button: Enter / Space / Arrow
+ * down opens, Escape closes and returns focus. The panel remains open as long as
+ * the focus is in it, otherwise we would not be able to cross it at Tab.
+ * - **Tactile.** Hover does not exist: clicking switches.
  */
 
 /**
- * Les slugs du menu Produit. Union de littéraux, et non `string` : c'est ce qui
- * permet à TypeScript de résoudre `navMenu_${key}_title` en clés réelles et de
- * les confronter au catalogue. Ajouter une entrée sans ajouter ses deux messages
- * ne compile pas.
+ * Product menu slugs. Union of literals, not `string`: this is what
+ * allows TypeScript to resolve `navMenu_${key}_title` into real keys and to confront them with the catalog. Adding an entry without adding its two messages
+ * does not compile.
  */
 export type ProductEntryKey =
   | "tracker"
@@ -55,14 +52,14 @@ export type ProductEntryKey =
   | "download";
 
 export type ProductEntry = {
-  /** Clé i18n : `navMenu_<key>_title` et `navMenu_<key>_desc`. */
+  /** i18n key: `navMenu_<key>_title` and `navMenu_<key>_desc`. */
   key: ProductEntryKey;
   href: string;
-  /** `null` pour Numo, qui porte son propre logo plutôt qu'une icône générique. */
+  /** `null` for Numo, which has its own logo rather than a generic icon. */
   icon: LucideIcon | null;
 };
 
-/** Délai de grâce avant fermeture, le temps de traverser vers le panneau. */
+/** Grace period before closing, time to cross to the sign. */
 const CLOSE_DELAY_MS = 140;
 
 export function NavProductMenu({
@@ -73,7 +70,7 @@ export function NavProductMenu({
 }: {
   entries: ReadonlyArray<ProductEntry>;
   label: string;
-  /** Langue servie : les ancres pointent sur `/fr` quand la page est en français. */
+  /** Language served: anchors point to `/fr` when the page is in French. */
   locale: Locale;
   className?: string;
 }) {
@@ -97,8 +94,8 @@ export function NavProductMenu({
 
   useEffect(() => cancelClose, [cancelClose]);
 
-  // Échap ferme et REND LE FOCUS au déclencheur : sans ça, le focus reste sur
-  // un élément qui vient de disparaître et la tabulation repart du document.
+  // Close escape and RETURN FOCUS to the trigger: without this, the focus remains on
+  // an element that has just disappeared and the tabulation starts again from the document.
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
@@ -119,8 +116,8 @@ export function NavProductMenu({
         setOpen(true);
       }}
       onMouseLeave={scheduleClose}
-      // Le focus qui sort du bloc ferme le menu — mais seulement s'il part
-      // VRAIMENT ailleurs, d'où le test sur la cible entrante.
+      // Focus leaving the block closes the menu — but only if it leaves
+      // REALLY elsewhere, hence the test on the incoming target.
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
           setOpen(false);
@@ -153,9 +150,9 @@ export function NavProductMenu({
         />
       </button>
 
-      {/* `pt-3` sur le conteneur et non une marge sur le panneau : l'écart avec
-          la pastille doit rester survolable, sinon le menu se ferme dès qu'on
-          descend vers lui. `-translate-x-1/2` le centre sous son déclencheur. */}
+      {/* `pt-3` on the container and not a margin on the panel: the gap with
+ the patch must remain hoverable, otherwise the menu closes as soon as you
+ descends towards it. `-translate-x-1/2` centers it under its trigger. */}
       <div
         id={panelId}
         className={cn(
@@ -165,12 +162,12 @@ export function NavProductMenu({
       >
         <div
           className={cn(
-            // 36rem : deux colonnes où chaque description tient sur UNE ligne.
-            // Plus étroit, trois entrées repassaient à la ligne et décalaient
-            // leurs voisines — la grille se lisait de travers.
-            // Fond OPAQUE, contrairement à la pastille de la nav : le badge du
-            // hero transparaissait au travers d'un `bg-popover/95`, et un menu
-            // qui laisse lire la page derrière lui se lit deux fois moins vite.
+            // 36rem: two columns where each description fits on ONE line.
+            // Narrower, three entries returned to the line and shifted
+            // their neighbors — the grid read crookedly.
+            // OPAQUE background, unlike the nav badge: the badge of the
+            // hero showed through a `bg-popover/95`, and a menu
+            // who lets the page behind him read reads half as fast.
             "w-[min(92vw,36rem)] origin-top rounded-2xl border border-border bg-popover p-2 shadow-xl",
             "transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
             open ? "translate-y-0 scale-100 opacity-100" : "-translate-y-1 scale-[0.98] opacity-0",
@@ -187,20 +184,16 @@ export function NavProductMenu({
                     tabIndex={open ? undefined : -1}
                     className="group flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/70 focus-visible:bg-muted/70 focus-visible:outline-none"
                   >
-                    {/* Les icônes de l'APPLICATION, posées sur son bloc
-                        isométrique (MIN-254). C'était jusqu'ici une pastille
-                        grise avec une icône lucide dedans — le dessin le plus
-                        neutre possible, donc celui qui ne disait rien de minddy,
-                        dans ce qui est souvent le premier écran du produit que
-                        voit un visiteur. Elles gardent la teinte de marque à
-                        tous les états : ce sont ses trois valeurs (les trois
-                        faces du solide) qui portent le relief, les repeindre au
-                        survol l'écraserait. */}
+                    {/* The APPLICATION icons, placed on its isometric
+ block (MIN-254). Until now it was a gray
+ sticker with a lucid icon in it — the most neutral drawing possible, therefore one that said nothing about minddy,
+ in what is often the first screen of the product that
+ a visitor sees. They keep the brand color in all states: these are its three values ​​(the three faces of the solid) which carry the relief; repainting them with hovering over them would overwrite it. */}
                     {Icon ? (
                       <IsoIcon icon={Icon} className="w-11 shrink-0" />
                     ) : (
-                      /* Numo porte son visage : il n'y a rien à poser sur un
-                         bloc, c'est déjà un dessin de marque. */
+                      /* Numo wears his face: there is nothing to put on a
+ block, it is already a brand design. */
                       <span className="flex w-11 shrink-0 items-center justify-center text-muted-foreground">
                         <NumoFace className="h-4 w-auto" />
                       </span>

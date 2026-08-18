@@ -159,10 +159,10 @@ describe("generic CSV import (FR)", () => {
   });
 });
 
-// MIN-98 — les deux outils que l'onboarding documente sans leur donner de
-// mapper : Trello (export natif du tableau) et GitHub (CSV écrit par `gh`).
-// Tous deux passent par le mapper générique ; ces tests sont là pour que la
-// marche à suivre de l'étape d'import reste vraie.
+// MIN-98 — the two tools that onboarding documents without giving them any
+// map: Trello (native table export) and GitHub (CSV written by `gh`).
+// Both pass through the generic mapper; these tests are there so that the
+// procedure of the import step remains true.
 
 const TRELLO_CSV = `Card ID,Card Name,Card Description,List Name,Labels,Due Date
 6a1,Refonte de la page d'accueil,"Maquette Figma prête",Doing,"design, marketing",2026-09-30
@@ -188,7 +188,7 @@ describe("Trello / GitHub exports", () => {
     const [first, second, third, fourth] = result.issues;
     expect(first.title).toBe("Refonte de la page d'accueil");
     expect(first.description).toBe("Maquette Figma prête");
-    // Les noms de listes Trello courants sont déjà des alias de statut.
+    // Common Trello list names are already status aliases.
     expect(first.status).toBe("in_progress");
     expect(first.labels).toEqual(["design", "marketing"]);
     expect(first.dueDate).toBe("2026-09-30");
@@ -196,7 +196,7 @@ describe("Trello / GitHub exports", () => {
     expect(second.status).toBe("done");
     expect(third.status).toBe("todo");
 
-    // Une liste maison retombe sur backlog, avec l'avertissement qui le dit.
+    // A homemade list falls back on backlog, with the warning that says so.
     expect(fourth.status).toBe("backlog");
     expect(result.warnings).toContainEqual({
       key: "unknownStatus",
@@ -244,9 +244,9 @@ describe("edge cases", () => {
   });
 
   it("takes a file of a few thousand rows without breaking a sweat", () => {
-    // Le plafond est un garde-fou, pas une limite technique : depuis que les
-    // colonnes ne sont comptées qu'une fois, préparer un gros fichier est un
-    // seul balayage — et c'est ce que l'aperçu refait à chaque retouche.
+    // The ceiling is a safeguard, not a technical limit: since the
+    // columns are only counted once, preparing a large file is a
+    // just one swipe — and that's what the preview does again with each edit.
     const header = "Title,Status,Priority,Assignee,Labels,Sprint";
     const rows = Array.from(
       { length: 3000 },
@@ -261,8 +261,8 @@ describe("edge cases", () => {
     const elapsed = performance.now() - started;
 
     expect(issues).toHaveLength(3000);
-    expect(result.stats[3].distinctCount).toBe(7); // les 7 personnes, comptées une fois
-    // Large, mais ça casse net si un balayage par colonne revenait.
+    expect(result.stats[3].distinctCount).toBe(7); // the 7 people, counted once
+    // Wide, but it would break if a column scan came back.
     expect(elapsed).toBeLessThan(2000);
   });
 
@@ -284,8 +284,8 @@ describe("parseDateValue", () => {
     expect(parseDateValue("")).toBeNull();
   });
 
-  // Notion écrit ses dates en toutes lettres, dans la langue de l'espace de
-  // travail, et une propriété « Date » peut porter une plage.
+  // Notion writes its dates in full, in the language of space
+  // work, and a “Date” property can carry a range.
   it("reads Notion's spelled-out dates, in French too", () => {
     expect(parseDateValue("July 14, 2026")).toBe("2026-07-14T00:00:00.000Z");
     expect(parseDateValue("14 juillet 2026")).toBe("2026-07-14T00:00:00.000Z");
@@ -301,10 +301,10 @@ describe("parseDateValue", () => {
 });
 
 // ── Notion ───────────────────────────────────────────────────────────────────
-// Un export de base de données Notion : les colonnes sont les propriétés que
-// l'utilisateur a créées, ici celles du modèle « Tâches » en français. Deux
-// singularités qui n'existent nulle part ailleurs : aucune colonne
-// d'identifiant, et un parent référencé PAR SON TITRE.
+// A Notion database export: the columns are the properties that
+// the user has created, here those of the “Tasks” model in French. Two
+// singularities that do not exist anywhere else: no column
+// identifier, and a parent referenced BY HIS TITLE.
 
 const NOTION_CSV = `Nom de la tâche,Statut,Priorité,Étiquettes,Date d'échéance,Élément parent,Responsable
 Refondre l'onboarding,Pas commencé,Haute,"produit, UX",14 juillet 2026,,Marie Dupont
@@ -321,7 +321,7 @@ describe("Notion export", () => {
     const [first] = result.issues;
     expect(result.issues).toHaveLength(4);
     expect(first.title).toBe("Refondre l'onboarding");
-    expect(first.status).toBe("todo"); // « Pas commencé »
+    expect(first.status).toBe("todo"); // “Not started”
     expect(first.priority).toBe("high");
     expect(first.labels).toEqual(["produit", "UX"]);
     expect(first.dueDate).toBe("2026-07-14T00:00:00.000Z");
@@ -329,8 +329,8 @@ describe("Notion export", () => {
   });
 
   it("links a sub-task through the parent's TITLE, for want of an id", () => {
-    // Sans colonne d'identifiant, le titre en tient lieu : c'est la seule façon
-    // de relier « Élément parent », qui porte le titre du parent.
+    // Without an identifier column, the title takes its place: this is the only way
+    // to link "Parent Element", which has the title of the parent.
     expect(result.issues[1].parentExternalKey).toBe("Refondre l'onboarding");
     expect(result.issues[0].externalKeys).toEqual(["Refondre l'onboarding"]);
     expect(result.warnings).not.toContainEqual(
@@ -339,7 +339,7 @@ describe("Notion export", () => {
   });
 
   it("leaves a genuinely ambiguous status to the user, and says so", () => {
-    // minddy n'a pas de statut « bloqué » : on ne le devine pas, on le signale.
+    // minddy does not have a “blocked” status: we don’t guess it, we report it.
     expect(result.issues[3].status).toBe("backlog");
     expect(result.warnings).toContainEqual({
       key: "unknownStatus",
@@ -349,18 +349,18 @@ describe("Notion export", () => {
   });
 
   it("ignores a column it has no field for, until someone places it", () => {
-    // « Responsable » n'est aliasé nulle part : la détection par en-têtes le
-    // laisse de côté, et c'est la passe du modèle (ou le tableau de
-    // correspondance) qui le récupère — cf. le test extraNote plus bas.
+    // “Responsible” is not aliased anywhere: header detection
+    // leaves aside, and it is the pass of the model (or the table of
+    // correspondence) who recovers it — cf. the extra testNote below.
     const { table, stats, mapping } = prepared(NOTION_CSV);
     expect(mapping.columns[table.headers.indexOf("Responsable")]).toBe("assignee");
-    // Sans membre qui lui corresponde, la personne reste à placer.
+    // Without a corresponding member, the person remains to be placed.
     expect(mapping.assigneeValues).toEqual({});
     expect(mappingHasGaps(stats, mapping)).toBe(true);
   });
 });
 
-// ── Le plan de lecture ───────────────────────────────────────────────────────
+// ── The reading plan ─────────────────────────── ────────────────────────────
 
 function prepared(csv: string) {
   const result = prepareImport(csv);
@@ -373,16 +373,16 @@ describe("import mapping", () => {
     const { table, mapping } = prepared(NOTION_CSV);
     const at = (header: string) => table.headers.indexOf(header);
 
-    // Ce que la passe du modèle propose sur ce fichier : peu de valeurs
-    // distinctes et répétées → catégories ; une personne → note.
+    // What the model pass offers on this file: few values
+    // distinct and repeated → categories; a person → note.
     const columns = [...mapping.columns];
     columns[at("Responsable")] = "extraNote";
     columns[at("Étiquettes")] = "labels";
 
     const { issues } = issuesFromMapping(table, { ...mapping, columns });
-    // Pas de description d'origine → pas de trait de séparation en tête.
+    // No original description → no separating line at the top.
     expect(issues[0].description).toBe("Responsable : Marie Dupont");
-    expect(issues[3].description).toBeNull(); // colonne vide → rien d'ajouté
+    expect(issues[3].description).toBeNull(); // empty column → nothing added
 
     columns[at("Responsable")] = "extraLabels";
     const asLabels = issuesFromMapping(table, { ...mapping, columns });
@@ -400,10 +400,10 @@ describe("import mapping", () => {
   });
 
   /**
-   * Un champ simple ne se propose qu'une fois, parce qu'`applyMapping` ne lit
-   * QUE la première colonne : la seconde serait du texte perdu en silence. Ce
-   * qui suit vérifie les deux moitiés de cette affirmation — la liste des
-   * exceptions, et le fait qu'elle décrive vraiment le comportement du mapper.
+   * A simple field is only offered once, because `applyMapping` does not read
+   * THAT the first column: the second would be text lost in silence. This
+   * The following verifies both halves of this statement — the list of
+   * exceptions, and the fact that it really describes the behavior of the mapper.
    */
   it("offers a simple field only to the column that holds it", () => {
     const csv = `Title,Description,Sprint\nA,B,S-1\n`;
@@ -412,23 +412,23 @@ describe("import mapping", () => {
     expect(mapping.columns[at("Title")]).toBe("title");
     expect(mapping.columns[at("Sprint")]).toBe("ignore");
 
-    // La colonne orpheline peut devenir beaucoup de choses — mais pas un
-    // second titre ni une seconde description.
+    // The orphan column can become many things — but not one
+    // second title nor a second description.
     const forOrphan = fieldsAvailableForColumn(mapping.columns, at("Sprint"));
     expect(forOrphan).not.toContain("title");
     expect(forOrphan).not.toContain("description");
-    // Les champs à plusieurs colonnes, eux, restent offerts.
+    // Fields with several columns remain available.
     expect(forOrphan).toEqual(expect.arrayContaining([...MULTI_COLUMN_FIELDS]));
 
-    // Et la colonne qui PORTE le champ le garde dans sa propre liste, sans quoi
-    // son sélecteur s'afficherait vide.
+    // And the column that CARRYS the field keeps it in its own list, otherwise
+    // its selector would appear empty.
     expect(fieldsAvailableForColumn(mapping.columns, at("Title"))).toContain("title");
   });
 
   it("does not hand a simple field to two columns at detection time either", () => {
-    // « Description » et « Notes » sont deux alias du MÊME champ, et ce fichier
-    // a les deux. Les assigner tous les deux revenait à jeter « Notes » sans
-    // rien dire ; orpheline, la colonne redevient une question qu'on pose.
+    // “Description” and “Notes” are two aliases of the SAME field, and this file
+    // has both. Assigning them both was like throwing “Notes” away without
+    // say nothing; orphaned, the column once again becomes a question that we ask.
     const { table, mapping } = prepared(
       `Title,Description,Notes\nFix the login,Broken since v2,Reported by Ada\n`
     );
@@ -436,8 +436,8 @@ describe("import mapping", () => {
     expect(mapping.columns[at("Description")]).toBe("description");
     expect(mapping.columns[at("Notes")]).toBe("ignore");
 
-    // Rien n'est perdu pour autant : reportée en note, la colonne réapparaît en
-    // bas de la description — c'est exactement ce que le tableau propose.
+    // Nothing is lost however: reported in a note, the column reappears in
+    // bottom of the description — that's exactly what the table suggests.
     const columns = [...mapping.columns];
     columns[at("Notes")] = "extraNote";
     const { issues } = issuesFromMapping(table, { ...mapping, columns });
@@ -447,7 +447,7 @@ describe("import mapping", () => {
   });
 
   it("still lets Jira repeat the columns that are meant to repeat", () => {
-    // Deux « Labels » et les deux identifiants du format : la règle du champ
+    // Two “Labels” and the two format identifiers: the field rule
     // unique ne doit surtout pas y toucher.
     const csv =
       `Issue key,Issue id,Summary,Status,Labels,Labels\n` +
@@ -459,8 +459,8 @@ describe("import mapping", () => {
   });
 
   it("keeps a duplicate the detection already produced, without adding more", () => {
-    // Deux colonnes du même nom : les deux visent le statut. On n'efface pas ce
-    // qui est là — mais aucune TROISIÈME colonne ne peut s'y ajouter.
+    // Two columns with the same name: both aim for status. We do not erase this
+    // which is there — but no THIRD column can be added to it.
     const columns: ImportField[] = ["title", "status", "status", "ignore"];
     expect(fieldsAvailableForColumn(columns, 1)).toContain("status");
     expect(fieldsAvailableForColumn(columns, 2)).toContain("status");
@@ -468,9 +468,9 @@ describe("import mapping", () => {
   });
 
   it("only exempts fields the row mapper actually reads more than once", () => {
-    // Le garde-fou de la règle : deux colonnes sur un champ SIMPLE, et la
-    // seconde n'existe pas pour `applyMapping`. Si un jour elle comptait, c'est
-    // ici qu'on l'apprendrait — et `MULTI_COLUMN_FIELDS` devrait l'accueillir.
+    // The safeguard of the rule: two columns on a SIMPLE field, and the
+    // second does not exist for `applyMapping`. If one day it mattered, it's
+    // here that we would learn it — and `MULTI_COLUMN_FIELDS` should welcome it.
     const csv = `Title,Description,Details\nFix the login,Broken since v2,Second body\n`;
     const { table, mapping } = prepared(csv);
     const columns = [...mapping.columns];
@@ -480,8 +480,8 @@ describe("import mapping", () => {
     expect(issues[0].description).toBe("Broken since v2");
     expect(MULTI_COLUMN_FIELDS.has("description")).toBe(false);
 
-    // Deux colonnes d'identifiant, à l'inverse, comptent toutes les deux —
-    // c'est un export Jira, et « Parent » y référence l'une OU l'autre.
+    // Two ID columns, conversely, both count —
+    // it's a Jira export, and "Parent" references it one OR the other.
     const bothKeys = [...mapping.columns];
     bothKeys[table.headers.indexOf("Details")] = "externalKey";
     bothKeys[table.headers.indexOf("Description")] = "externalKey";
@@ -507,8 +507,8 @@ describe("import mapping", () => {
   });
 
   it("asks nothing of the model when the headers already say everything", () => {
-    // Un export Linear complet : chaque colonne est placée, chaque valeur
-    // traduite. Appeler un modèle pour le confirmer ne rapporterait rien.
+    // A complete Linear export: each column is placed, each value
+    // translated. Calling a model to confirm it wouldn't yield anything.
     const clean = `ID,Title,Description,Status,Priority,Labels,Created,Completed,Due Date,Parent issue,Estimate
 ENG-1,Fix login,,In Progress,Urgent,Bug,2026-01-05,,2026-02-01,,2
 `;
@@ -518,7 +518,7 @@ ENG-1,Fix login,,In Progress,Urgent,Bug,2026-01-05,,2026-02-01,,2
   });
 });
 
-// ── Rendre les tickets à leurs propriétaires ─────────────────────────────────
+// ── Return the tickets to their owners ─────────────────────────────────
 
 const TEAM: ImportContext = {
   actorId: "u-marie",
@@ -562,12 +562,12 @@ describe("people and categories", () => {
 
   it("lands a label on the category the project already has", () => {
     const { issues } = issuesFromMapping(result.table, result.mapping);
-    // « bugs » → la catégorie « Bug » existante, pas une jumelle au pluriel ;
-    // « Design » et « infra » → leur catégorie, à la casse près.
+    // “bugs” → the existing “Bug” category, not a twin in the plural;
+    // “Design” and “infra” → their category, case correct.
     expect(issues[0].labels).toEqual(["Bug"]);
     expect(issues[1].labels).toEqual(["Design"]);
     expect(issues[2].labels).toEqual(["Infra"]);
-    // Ce que le projet n'a pas reste tel quel : il sera créé.
+    // What the project does not have remains as is: it will be created.
     expect(issues[3].labels).toEqual(["rédaction"]);
   });
 
@@ -576,13 +576,13 @@ describe("people and categories", () => {
     if (!alone.ok) throw new Error(alone.error);
     const { issues } = issuesFromMapping(alone.table, alone.mapping);
     expect(issues.every((i) => i.assigneeId === null)).toBe(true);
-    // Et rien n'est perdu pour autant.
+    // And nothing is lost yet.
     expect(issues[0].description).toBe("Assignee : marie.dupont@corp.com");
   });
 
   it("refuses an assignee who is not a member of the project", () => {
-    // Le plan vient du navigateur : un identifiant arbitraire ne doit pas
-    // pouvoir assigner un ticket à quelqu'un d'étranger au projet.
+    // The plan comes from the browser: an arbitrary identifier must not
+    // be able to assign a ticket to someone outside the project.
     const forged = {
       ...result.mapping,
       assigneeValues: { "someone else": "u-intruder", "ali ben": "u-ali" },
@@ -628,7 +628,7 @@ describe("sanitizeMapping", () => {
   });
 
   it("always spans the columns of the file the SERVER re-read", () => {
-    // Un plan plus long que le fichier ne peut pas déborder, un plan plus court
+    // A clip longer than the file cannot overflow, a clip shorter
     // ne laisse pas de trous.
     const long = sanitizeMapping(2, EMPTY_IMPORT_CONTEXT, {
       columns: Array.from({ length: 40 }, () => "title"),
@@ -662,7 +662,7 @@ describe("mergeMapping", () => {
       { columnsWin: false }
     );
     expect(merged.columns).toEqual(["title", "extraNote", "status"]);
-    // Ce que les alias savaient traduire n'est jamais écrasé.
+    // What the aliases knew how to translate is never overwritten.
     expect(merged.statusValues).toEqual({ done: "done", bloque: "todo" });
   });
 
@@ -687,9 +687,9 @@ describe("mergeMapping", () => {
 
 describe("a mapping travels to the server and back", () => {
   it("replays the user's corrections on the raw file", () => {
-    // Ce que le commit fait : le serveur relit le CSV et rejoue le plan que
-    // l'aperçu a montré. Le résultat doit être celui de l'aperçu, pas celui de
-    // la détection.
+    // What the commit does: the server rereads the CSV and replays the plan that
+    // the preview showed. The result should be that of the preview, not that of
+    // detection.
     const { table, mapping } = prepared(NOTION_CSV);
     const columns = [...mapping.columns];
     columns[table.headers.indexOf("Responsable")] = "extraLabels";

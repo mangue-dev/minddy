@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { editIssueText, type IssueTextTools } from "./text-edit";
 
-/** Un jeu de noms de surface quelconque — le contrat testé ici est que les
- *  refus renvoient vers CES noms-là, jamais vers ceux d'une autre surface. */
+/** Any set of surface names - the contract tested here is that
+ * refusals refer to THESE names, never to those of another surface. */
 const TOOLS: IssueTextTools = {
   read: "minddy_get_issue",
   appendToPlan: "minddy_append_to_plan",
@@ -13,11 +13,11 @@ const TOOLS: IssueTextTools = {
 };
 
 /**
- * Le patch de plan/description du MCP (MIN-186). Le moteur de substitution est
- * déjà couvert ailleurs (lib/server/agent/edit.test.ts) : ce qui se vérifie ici,
- * c'est le CONTRAT rendu au modèle — ce qui passe, ce qui est refusé, et avec
- * quel code d'erreur. Un refus mal codé, et un agent réessaie en réécrivant tout,
- * c'est-à-dire exactement le geste que ce tool remplace.
+ * The MCP blueprint/description patch (MIN-186). The substitution engine is
+ * already covered elsewhere (lib/server/agent/edit.test.ts): what is verified here,
+ * is the CONTRACT rendered to the model — what passes, what is refused, and with
+ * what error code. A poorly coded refusal, and an agent tries again by rewriting everything,
+ * that is to say exactly the gesture that this tool replaces.
  */
 
 const PLAN = `# Contexte
@@ -45,7 +45,7 @@ describe("editIssueText", () => {
     if (!result.ok) return;
     expect(result.content).toContain("- [ ] Deuxième tâche, reformulée");
     expect(result.content).not.toContain("à faire");
-    // Le reste du document, au byte près.
+    // The rest of the document, to the nearest byte.
     expect(result.content).toContain("- [x] Première tâche, faite");
     expect(result.content).toContain("Le plan initial, écrit d'un bloc.");
     expect(result.additions).toBe(1);
@@ -63,13 +63,13 @@ describe("editIssueText", () => {
     });
 
     expect(result).toMatchObject({ ok: false, code: "text_not_found" });
-    // Le message renvoie vers la RELECTURE, pas vers la réécriture complète.
+    // The message refers to REREADING, not full rewriting.
     if (result.ok) return;
     expect(result.message).toContain("minddy_get_issue");
     expect(result.message).not.toContain("write_file");
   });
 
-  it("refuse une correspondance ambiguë plutôt que d'en choisir une", () => {
+  it("rejects an ambiguous match instead of choosing one", () => {
     const result = editIssueText({
       field: "description",
       current: "Le bug apparaît ici.\n\nLe bug apparaît là aussi.\n",
@@ -83,7 +83,7 @@ describe("editIssueText", () => {
     expect(result.message).toContain("replace_all");
   });
 
-  it("replace_all change toutes les occurrences", () => {
+  it("replace_all changes every occurrence", () => {
     const result = editIssueText({
       field: "description",
       current: "Le bug apparaît ici.\n\nLe bug apparaît là aussi.\n",
@@ -126,7 +126,7 @@ describe("editIssueText", () => {
       });
       expect(result).toMatchObject({ ok: false, code: "invalid_params" });
       if (result.ok) continue;
-      // Et il nomme le geste qui, LUI, sait créer un plan.
+      // And he names the gesture which, HE, knows how to create a plan.
       expect(result.message).toContain("minddy_append_to_plan");
     }
   });
@@ -143,12 +143,12 @@ describe("editIssueText", () => {
     expect(result).toMatchObject({ ok: false, code: "invalid_params" });
   });
 
-  it("tolère la dérive typographique du modèle (guillemets courbes, tirets)", () => {
+  it("tolerates the model's typographic drift (curly quotes, dashes)", () => {
     const stored = 'Le champ "plan" - remplacé en entier.';
     const result = editIssueText({
       field: "description",
       current: `${stored}\n`,
-      // Ce que le modèle ré-émet spontanément : quotes courbes et em-dash.
+      // What the model re-emits spontaneously: curved quotes and em-dash.
       oldString: "Le champ “plan” — remplacé en entier.",
       tools: TOOLS,
       newString: "Le champ « plan » se patche.",
@@ -159,7 +159,7 @@ describe("editIssueText", () => {
     expect(result.content).toBe("Le champ « plan » se patche.\n");
   });
 
-  it("ne parle jamais de fichier à un modèle qui édite un ticket", () => {
+  it("never mentions files to a model editing a ticket", () => {
     const refusals = [
       editIssueText({
         field: "description",
@@ -186,9 +186,9 @@ describe("editIssueText", () => {
 });
 
 /**
- * Trois surfaces servent ce patch — le MCP, le chat Numo, l'agent de code — et
- * elles ne nomment pas les mêmes tools. Un refus qui envoie vers un tool absent
- * de la surface fait perdre un tour au modèle sur un « Unknown tool ».
+ * Three surfaces serve this patch — the MCP, the Numo chat, the code agent — and
+ * they do not name the same tools. A refusal that sends to an absent tool
+ * on the surface causes the model to lose a turn on an “Unknown tool”.
  */
 describe("editIssueText — les refus nomment les tools de LA surface", () => {
   const NUMO: IssueTextTools = {
@@ -224,7 +224,7 @@ describe("editIssueText — les refus nomment les tools de LA surface", () => {
     }
   });
 
-  it("nomme la bonne écriture complète, par surface ET par champ", () => {
+  it("names the correct complete write by surface AND field", () => {
     const onEmpty = (tools: IssueTextTools, field: "plan" | "description") => {
       const result = editIssueText({
         field,

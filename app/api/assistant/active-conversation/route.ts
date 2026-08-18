@@ -2,15 +2,15 @@ import { NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 
 /**
- * La conversation Numo OUVERTE, côté serveur (MIN-353).
+ * The Numo OPEN conversation, server side (MIN-353).
  *
- * Les messages étaient en base depuis le premier jour ; le pointeur qui dit
- * LAQUELLE est ouverte, lui, vivait dans localStorage — donc pas d'un onglet à
- * l'autre, pas d'un navigateur à l'autre, pas du web à l'app de bureau.
+ * The messages were in base since day one; the pointer that says
+ * WHICH is open, he lived in localStorage — so not from one tab to
+ * the other, not from one browser to another, not from the web to the desktop app.
  *
- * Le GET rend aussi le `project_id` de la conversation : c'est lui qui fixe la
- * portée à la restauration, sans quoi le panneau retomberait sur le projet de
- * l'URL du moment — exactement le bug qu'on referme.
+ * The GET also returns the `project_id` of the conversation: it is he who sets the
+ * brought to the restoration, otherwise the panel would fall on the project of
+ * the current URL — exactly the bug we are closing.
  */
 
 interface ActiveConversationResponse {
@@ -23,17 +23,17 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
   const { user, supabase } = auth;
 
-  // La conversation est jointe pour sa portée. Sa suppression efface la ligne
-  // (cascade), donc une réponse non vide désigne toujours un fil qui existe.
+  // The conversation is attached for its scope. Deleting it erases the line
+  // (cascade), so a non-empty response always designates a thread that exists.
   const { data } = await supabase
     .from("assistant_active_conversation")
     .select("conversation_id, conversation:conversations(project_id)")
     .eq("user_id", user.id)
     .maybeSingle();
 
-  // PostgREST rend un OBJET pour une relation « vers un », mais le client n'est
-  // pas typé sur le schéma : la forme tableau est acceptée par sécurité plutôt
-  // que d'écrire un cast qui mentirait si elle arrivait.
+  // PostgREST renders an OBJECT for a "to one" relationship, but the client is not
+  // not typed on the diagram: the table form is accepted for security purposes rather
+  // than writing a cast that would lie if it happened.
   type Embedded = { project_id: string | null };
   const embedded = data?.conversation as Embedded | Embedded[] | null | undefined;
   const conversation = Array.isArray(embedded)
@@ -60,7 +60,7 @@ export async function PUT(request: NextRequest) {
     const parsed: unknown = await request.json();
     if (!parsed || typeof parsed !== "object") throw new Error("not an object");
     const raw = (parsed as { conversationId?: unknown }).conversationId;
-    // Un uuid fait 36 caractères — au-delà de 100, corps forgé.
+    // A uuid is 36 characters long — beyond 100, forged body.
     if (typeof raw !== "string" || !raw || raw.length > 100) {
       throw new Error("bad conversationId");
     }
@@ -69,8 +69,8 @@ export async function PUT(request: NextRequest) {
     return Response.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  // Propriété vérifiée ici plutôt que laissée à la RLS seule : une conversation
-  // qui n'est pas la sienne doit répondre 404, pas une violation de contrainte.
+  // Property verified here rather than left to the RLS alone: ​​a conversation
+  // which is not its own should respond 404, not a constraint violation.
   const { data: conversation } = await supabase
     .from("conversations")
     .select("id")

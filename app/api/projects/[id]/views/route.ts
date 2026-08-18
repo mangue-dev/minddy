@@ -7,7 +7,7 @@ import { createView, ensureBaselineViews } from "@/lib/server/views";
 type RouteContext = { params: Promise<{ id: string }> };
 
 /** GET /api/projects/[id]/views — shared + own personal views (RLS scopes it).
-    Seeds the baseline (system "Mes tickets" + default "Toutes") first. */
+ Seeds the baseline (system "My tickets" + default "All") first. */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);

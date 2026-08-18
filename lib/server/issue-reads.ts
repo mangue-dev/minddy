@@ -14,17 +14,17 @@ import {
 import { resourceSummary } from "@/lib/server/resource-select";
 import type { IssueRelation } from "@/lib/types";
 
-// ── Lectures partagées Numo / MCP ───────────────────────────────────────
-// Extraites d'execute-tool.ts pour être servies aux deux consommateurs :
-// Numo passe son client RLS (isolation tenant gratuite), le MCP passe le
-// service client (pas de session cookie). Toutes les requêtes sont épinglées
-// `.eq("project_id")` APRÈS un getProjectAccess côté appelant — elles sont
-// donc sûres sur n'importe quel client.
+// ── Numo / MCP shared readings ───────────────────────────────────────
+// Extracted from execute-tool.ts to be served to both consumers:
+// Numo passes its RLS client (free insulation), the MCP passes it
+// customer service (no cookie session). All queries are pinned
+// `.eq("project_id")` AFTER a getProjectAccess caller side — they are
+// therefore safe on any client.
 
 export interface ReadContext {
   /** Client de lecture — RLS (Numo) ou service (MCP). */
   db: SupabaseClient;
-  /** Service client (résolution des noms via auth admin). */
+  /** Customer service (name resolution via auth admin). */
   service: SupabaseClient;
   projectId: string;
   projectKey: string;
@@ -54,9 +54,9 @@ export function compactIssue(
     assignee_id: row.assignee_id,
     objective_id: row.objective_id,
     due_date: row.due_date,
-    // La cadence se lit AVEC l'échéance (« tous les lundis ») : sans elle dans
-    // la ligne compacte, un agent ne peut pas distinguer un ticket récurrent
-    // d'un ticket daté, et reposerait une récurrence déjà en place.
+    // The cadence is read WITH the deadline (“every Monday”): without it in
+    // the compact line, an agent cannot distinguish a recurring ticket
+    // of a dated ticket, and would rely on a recurrence already in place.
     recurrence: row.recurrence,
     parent_id: row.parent_id,
     category_ids: categories?.map((c) => c.category_id) ?? [],
@@ -102,22 +102,22 @@ export interface ResolvedIssueRef {
   identifier: string;
 }
 
-/** Pourquoi une référence n'a pas résolu — l'appelant mappe ce code sur SA
-    convention d'erreur (codes stables du MCP, message nu pour un tool d'agent). */
+/** Why a reference didn't resolve — the caller maps this code to SA
+ error convention (MCP stable codes, bare message for an agent tool). */
 export type IssueRefErrorCode =
   | "invalid_params"
   | "issue_not_found"
   | "database_error";
 
 /**
- * Résout une référence de ticket — UUID, identifiant « MIND-42 » ou numéro nu —
- * vers son id, épinglée au projet. Un préfixe d'identifiant qui ne correspond pas
- * à la clé du projet est une erreur explicite (protège d'un copier-coller depuis
- * un autre projet).
+ * Resolves a ticket reference — UUID, identifier "MIND-42" or bare number —
+ * to its id, pinned to the project. An identifier prefix that does not match
+ * the project key is an explicit error (protects against copy-pasting from
+ * another project).
  *
- * Partagé par le MCP (`lib/server/mcp/tool-helpers.ts`, qui l'enveloppe pour ses
- * codes d'erreur) et les tools ticket de l'agent de code, où le modèle passe
- * indifféremment l'un des trois formats.
+ * Shared by the MCP (`lib/server/mcp/tool-helpers.ts`, which wraps it for its
+ * codes error) and the code agent's tools ticket, where the model passes
+ * indifferently one of the three formats.
  */
 export async function resolveIssueRef(
   db: SupabaseClient,
@@ -189,8 +189,8 @@ export async function listIssues(
     typeof args.offset === "number" && args.offset > 0 ? Math.floor(args.offset) : 0;
   const withDescription = args.include_description === true;
 
-  // Typée `string` pour court-circuiter le parser de types de supabase-js,
-  // qui ne sait pas résoudre un select conditionnel.
+  // Typed `string` to bypass the supabase-js type parser,
+  // which does not know how to resolve a conditional select.
   const columns: string = withDescription
     ? `${COMPACT_ISSUE_COLUMNS}, description`
     : COMPACT_ISSUE_COLUMNS;
@@ -200,7 +200,7 @@ export async function listIssues(
     .is("deleted_at", null)
     .eq("project_id", ctx.projectId)
     .order("updated_at", { ascending: false })
-    // Une ligne de plus que demandé pour savoir s'il en reste (has_more).
+    // One more line than requested to know if there are any left (has_more).
     .range(offset, offset + limit);
 
   const statusFilter = Array.isArray(args.status)
@@ -313,15 +313,14 @@ export interface IssueDetail {
   duplicate_of?: Record<string, unknown>;
   relations: Array<Record<string, unknown>>;
   /**
-   * Les retours du board que ce ticket met en œuvre (MIN-196) — absent quand il
-   * n'y en a pas.
-   *
-   * C'est la DEMANDE derrière le travail, et c'est souvent la seule chose qui
-   * dise pourquoi il est demandé : un agent qui lit « ajouter un filtre par
-   * date » sans savoir que trois personnes l'ont réclamé pour retrouver leurs
-   * exports du mois construit le mauvais filtre. On ne met ici que de quoi
-   * décider d'aller voir ; `get_feedback` ouvre le retour et sa conversation.
-   */
+ * The board feedback this ticket implements (MIN-196) — absent when there
+ * isn't there.
+ *
+ * It's the REQUEST behind the work, and it's often the only thing that says why it's requested: an agent reading "add a filter by
+ * date" without knowing that three people requested it to find their
+ * exports of the month builds the wrong filter. We only put here what
+ * decide to go see; `get_feedback` opens the return and its conversation.
+ */
   linked_feedback?: IssueLinkedFeedback[];
 }
 
@@ -408,11 +407,11 @@ export async function getIssue(
 
   let duplicateOf: Record<string, unknown> | null = null;
   if (issue.duplicate_of_id) {
-    // `.eq("project_id")` obligatoire (MIN-339) : le MCP lit avec la clé
+    // `.eq("project_id")` mandatory (MIN-339): the MCP reads with the key
     // service, donc RIEN d'autre ne borne cette jointure — un `duplicate_of_id`
-    // pointant ailleurs (ligne d'avant la garde d'écriture) ferait ressortir le
-    // titre d'un ticket d'un autre locataire. Et l'identifiant composé juste
-    // après avec la clé de CE projet serait faux par-dessus le marché.
+    // pointing elsewhere (line before the writing guard) would bring out the
+    // title of a ticket from another tenant. And the identifier composed just
+    // afterwards with the key of THIS project would be wrong on top of that.
     const { data } = await ctx.db
       .from("issues")
       .select("id, number, title")
@@ -464,11 +463,11 @@ export async function getIssue(
     };
   });
 
-  // Les retours que ce ticket met en œuvre (MIN-196). Lu par `ctx.service` et
-  // non par `ctx.db` : `feedback_posts` est RLS deny-all, et le client de
-  // session de Numo n'y rendrait pas une erreur mais une liste VIDE — le
-  // silence le plus coûteux, puisqu'il se lit « ce ticket ne vient de nulle
-  // part ». L'accès au projet est déjà prouvé par la lecture du ticket.
+  // The returns that this ticket implements (MIN-196). Read by `ctx.service` and
+  // not by `ctx.db`: `feedback_posts` is RLS deny-all, and the client of
+  // Numo session would not return an error but an EMPTY list — the
+  // the most costly silence, since it reads “this ticket does not come from nowhere
+  // leaves”. Access to the project is already proven by reading the ticket.
   const linkedFeedback = await listFeedbackForIssue(
     ctx.projectId,
     issue.id as string

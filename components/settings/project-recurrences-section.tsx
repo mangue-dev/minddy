@@ -30,14 +30,14 @@ import { useCreate } from "@/lib/create-context";
 import type { RecurringIssue } from "@/lib/types";
 
 /**
- * Les récurrences d'un projet, réunies en un seul endroit (MIN-136) : ce que la
- * feature crée est disséminé dans les tickets, et une maintenance qu'on a
- * oubliée ne se retrouve pas en fouillant le tableau.
+ * The recurrences of a project, gathered in one place (MIN-136): what the
+ * feature creates is scattered in the tickets, and maintenance that we have
+ * forgotten cannot be found by searching the table.
  *
- * La liste EST celle des tickets qui portent une cadence — un seul ticket vivant
- * par série en porte une. Rien de plus à modéliser : arrêter une récurrence,
- * c'est retirer la cadence du ticket, et changer de cadence, c'est la changer
- * là où elle est écrite. Les deux passent par le PATCH d'issue habituel.
+ * The list IS that tickets that carry a cadence — only one living ticket
+ * per series carries one. Nothing more to model: stopping a recurrence,
+ * is removing the cadence from the ticket, and changing the cadence is changing it
+ * where it is written. Both go through the usual issue PATCH.
  */
 export function ProjectRecurrencesSection({
   projectId,
@@ -47,7 +47,7 @@ export function ProjectRecurrencesSection({
 }: {
   projectId: string;
   projectKey: string;
-  /** Titre et indice du groupe — la page les lit dans le namespace Recurrence. */
+  /** Group title and index — the page reads them in the Recurrence namespace. */
   title: string;
   description: string;
 }) {
@@ -77,7 +77,7 @@ export function ProjectRecurrencesSection({
 
   const setCadence = async (row: RecurringIssue, recurrence: RecurrenceCadence) => {
     setBusyId(row.id);
-    // Optimiste : la ligne ne bouge pas de place, seul son libellé change.
+    // Optimistic: the line does not move, only its wording changes.
     setRows((r) => r?.map((x) => (x.id === row.id ? { ...x, recurrence } : x)) ?? r);
     try {
       await updateIssueApi(row.id, { recurrence });
@@ -93,7 +93,7 @@ export function ProjectRecurrencesSection({
     setBusyId(row.id);
     try {
       await updateIssueApi(row.id, { recurrence: null });
-      // Le ticket reste, seule la récurrence s'arrête : il sort de cette liste.
+      // The ticket remains, only the recurrence stops: it leaves this list.
       setRows((r) => r?.filter((x) => x.id !== row.id) ?? r);
       toast.success(t("stopped"));
     } catch (e) {
@@ -117,8 +117,8 @@ export function ProjectRecurrencesSection({
           <Skeleton className="h-11 w-full" />
         </div>
       ) : rows.length === 0 ? (
-        /* Une récurrence ne se crée pas ici : elle naît d'un ticket auquel on
-           donne une cadence. Le geste offert est donc « nouveau ticket ». */
+        /* A recurrence is not created here: it is born from a ticket to which on
+ gives a cadence. The gesture offered is therefore “new ticket”. */
         <EmptyScene size="compact" icon={Repeat} title={t("empty")}>
           <Button type="button" size="sm" onClick={() => openCreateIssue()}>
             <Plus />
@@ -146,8 +146,8 @@ export function ProjectRecurrencesSection({
                   {row.title}
                 </Link>
               }
-              /* La prochaine échéance : c'est elle qui se décalera. Sans son
-                 heure — la cadence à côté la dit déjà. */
+              /* The next deadline: it is this which will be postponed. Without its
+ hour — the cadence next to it already says it. */
               subtitle={
                 due
                   ? `${t("nextOccurrence")} ${format.dateTime(due, {
@@ -159,8 +159,8 @@ export function ProjectRecurrencesSection({
               }
               action={
                 <>
-                  {/* Même affordance que les cartes du tableau : un rond
-                      pointillé pour « personne », jamais un avatar vide. */}
+                  {/* Same affordance as the cards in the table: a dotted circle
+ for “person”, never an empty avatar. */}
                   {assignee ? (
                     <UserAvatar
                       seed={assignee.avatar_seed}
@@ -197,7 +197,7 @@ export function ProjectRecurrencesSection({
                     </SelectContent>
                   </Select>
 
-                  {/* En icône, comme les actions de la liste des catégories. */}
+                  {/* As an icon, like the actions in the category list. */}
                   <Button
                     variant="ghost"
                     size="icon-sm"

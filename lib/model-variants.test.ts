@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { canonicalModelId, dedupeModelVariants } from "@/lib/model-variants";
 
 /**
- * Les doublons de version du catalogue (cf. lib/model-variants.ts). Rien d'IO :
- * c'est une règle de chaîne sur une liste d'ids, et c'est là qu'elle se vérifie.
- * Les ids sont ceux qu'OpenRouter publiait vraiment le jour de l'écriture.
+ * Catalog version duplicates (see lib/model-variants.ts). Nothing IO:
+ * it's a chain rule over a list of ids, and that's where it checks.
+ * The ids are the ones OpenRouter was actually publishing on the day of writing.
  */
 
 const ids = (models: { id: string }[]) => models.map((m) => m.id);
@@ -18,9 +18,9 @@ describe("canonicalModelId", () => {
   });
 
   it("NE retire PAS un tag de release à quatre chiffres", () => {
-    // `-0731` / `-2507` ne sont pas des dates de build mais le nom d'une sortie
-    // de plus : l'id nu reste accroché à la précédente. Les ramener à lui, c'est
-    // annoncer un doublon là où il y a deux modèles.
+    // `-0731` / `-2507` are not build dates but the name of a release
+    // moreover: the bare id remains attached to the previous one. Bringing them back to him is
+    // announce a duplicate where there are two models.
     for (const id of [
       "deepseek/deepseek-v4-flash-0731",
       "deepseek/deepseek-v4-pro-0813",
@@ -59,8 +59,8 @@ describe("canonicalModelId", () => {
   });
 
   it("ne rend jamais un nom vide, même sur un slug qui n'est que sa date", () => {
-    // Un id nu vide serait la clé de TOUS les slugs dégénérés : ils se
-    // dédoublonneraient entre eux. La boucle s'arrête sur la dernière forme qui
+    // An empty bare id would be the key to ALL degenerate slugs: they
+    // would duplicate between them. The loop stops on the last shape which
     // nomme encore quelque chose.
     for (const id of ["vendor/2024-01-01", "vendor/preview", "2024-01-01"]) {
       expect(canonicalModelId(id).replace(/^[^/]*\//, "")).not.toBe("");
@@ -70,8 +70,8 @@ describe("canonicalModelId", () => {
 
 describe("dedupeModelVariants", () => {
   it("écarte le tarif différé, toujours", () => {
-    // Même sans base en face : on n'appelle jamais une file asynchrone depuis
-    // une boucle qui attend sa réponse.
+    // Even without a base in front: we never call an asynchronous queue from
+    // a loop that waits for its response.
     expect(dedupe(["openai/gpt-5.4", "openai/gpt-5.4:batch"])).toEqual(["openai/gpt-5.4"]);
     expect(dedupe(["google/gemini-3.1-pro-preview:batch"])).toEqual([]);
   });
@@ -96,17 +96,17 @@ describe("dedupeModelVariants", () => {
   });
 
   it("GARDE la pré-version qui est le seul chemin vers ce modèle", () => {
-    // `google/gemini-3.1-pro` n'existe pas : la retirer ne rangerait pas la
-    // liste, elle retirerait le modèle.
+    // `google/gemini-3.1-pro` does not exist: removing it would not tidy it up
+    // list, it would remove the model.
     expect(dedupe(["google/gemini-3.1-pro-preview", "google/gemini-3.1-pro-preview:batch"])).toEqual(
       ["google/gemini-3.1-pro-preview"],
     );
   });
 
   it("GARDE la sortie suivante d'une famille, même à côté de l'id nu", () => {
-    // Le cas qui a cassé le picker : `deepseek-v4-flash-0731` et
-    // `deepseek-v4-pro-0813` sont des modèles de plus, pas des photos de
-    // `-flash` et `-pro`. Les écarter ne laissait AUCUN chemin vers eux.
+    // The case that broke the picker: `deepseek-v4-flash-0731` and
+    // `deepseek-v4-pro-0813` are more models, not photos of
+    // `-flash` and `-pro`. Pushing them aside left NO path to them.
     expect(
       dedupe([
         "deepseek/deepseek-v4-flash",
@@ -128,7 +128,7 @@ describe("dedupeModelVariants", () => {
   });
 
   it("garde toute une famille qui n'a que des datés", () => {
-    // Aucun id nu : désigner un gagnant serait un pari sur ce que l'utilisateur veut.
+    // No bare id: choosing a winner would be a bet on what the user wants.
     expect(dedupe(["openai/gpt-4o-2024-11-20", "openai/gpt-4o-2024-08-06"])).toEqual([
       "openai/gpt-4o-2024-11-20",
       "openai/gpt-4o-2024-08-06",
@@ -136,8 +136,8 @@ describe("dedupeModelVariants", () => {
   });
 
   it("garde les variantes qui sont une autre offre", () => {
-    // `:free` est un autre prix, `:thinking` un autre comportement — et cette
-    // dernière survit à la disparition de sa base datée, faute d'équivalent.
+    // `:free` is another price, `:thinking` another behavior — and this
+    // last survives the disappearance of its dated base, for lack of an equivalent.
     expect(dedupe(["openai/gpt-oss-20b", "openai/gpt-oss-20b:free"])).toEqual([
       "openai/gpt-oss-20b",
       "openai/gpt-oss-20b:free",

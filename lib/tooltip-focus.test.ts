@@ -6,10 +6,10 @@ import {
 } from "@/lib/tooltip-focus";
 
 /**
- * Le défaut, tel qu'on le vit : on quitte l'onglet minddy, on revient, et une
- * infobulle est ouverte sur un bouton qu'on n'a pas survolé. Ce que le test
- * rejoue n'est pas Radix mais la SÉQUENCE d'événements qui la déclenche — c'est
- * elle qui porte la décision.
+ * The default, as we experience it: we leave the minddy tab, we return, and a
+ * tooltip is open on a button that we did not hover over. What the test
+ * replays is not Radix but the SEQUENCE of events that triggers it — it is
+ * that makes the decision.
  */
 
 describe("shouldOpenTooltipOnFocus", () => {
@@ -37,15 +37,15 @@ describe("createWindowRefocusTracker", () => {
     const tracker = createWindowRefocusTracker();
     tracker.markRefocus();
     expect(tracker.consumeRefocus()).toBe(true);
-    // Le rangement du navigateur ne concerne qu'un focus : le suivant est un
-    // vrai geste, et rouvre normalement.
+    // Browser storage only concerns one focus: the next one is a
+    // real gesture, and reopens normally.
     expect(tracker.consumeRefocus()).toBe(false);
   });
 
   it("laisse passer une tabulation qui suit le retour d'onglet", () => {
     const tracker = createWindowRefocusTracker();
     tracker.markRefocus();
-    // Un `keydown` précède toujours le focus qu'il déclenche.
+    // A `keydown` always precedes the focus it triggers.
     tracker.markGesture();
     expect(tracker.consumeRefocus()).toBe(false);
   });
@@ -65,14 +65,14 @@ describe("createWindowRefocusTracker", () => {
 
   it("la séquence complète du défaut : retour d'onglet, puis focus rendu", () => {
     const tracker = createWindowRefocusTracker();
-    // On était sur un bouton cliqué, l'onglet part, revient.
+    // We were on a button clicked, the tab leaves, comes back.
     tracker.markRefocus();
     const decision = shouldOpenTooltipOnFocus({
       refocusPending: tracker.consumeRefocus(),
       focusVisible: true,
     });
     expect(decision).toBe(false);
-    // Et l'infobulle redevient ouvrable dès le geste suivant.
+    // And the tooltip becomes open again from the next gesture.
     expect(
       shouldOpenTooltipOnFocus({
         refocusPending: tracker.consumeRefocus(),

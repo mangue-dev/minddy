@@ -2,127 +2,123 @@ import "server-only";
 import { SITE_NAME } from "@/lib/site";
 
 /**
- * Clé LLM PAR RUN, à plafond dur (MIN-223).
+ * LLM PAR RUN key, hard cap (MIN-223).
  *
- * LE PROBLÈME QU'ELLE BORNE, et il ne se referme pas autrement. La politique
- * réseau ([network-policy.ts](network-policy.ts)) fait que la microVM ne détient
- * plus la clé : c'est le firewall qui la pose, après la sortie. Mais elle laisse
- * la VM **appeler la route créditée hors de la boucle** — un `curl` suffit, la
- * sonde du cadrage l'a fait. Ce n'est pas de l'exfiltration, c'est de la
- * DÉPENSE, et elle échappe au ledger : personne ne la voit passer.
+ * THE PROBLEM IT COVERS, and it doesn't close otherwise. The
+ * network policy ([network-policy.ts](network-policy.ts)) means that the microVM no longer holds
+ * the key: it is the firewall which sets it, after exit. But it lets
+ * the VM **call the credited route out of the loop** — a `curl` is enough, the
+ * framing probe did it. It's not exfiltration, it's
+ * EXPENDITURE, and it escapes the ledger: no one sees it pass.
  *
- * Un contrôle de plus DANS la VM ne borne rien — elle est compromise par
- * hypothèse. Ce qui borne, c'est un plafond tenu **hors de la VM et hors de notre
- * code** : une clé OpenRouter émise pour ce run, avec `limit` en dollars et
- * `expires_at`. Au-delà, c'est le fournisseur qui refuse. Le pire cas devient
- * « le run a dépensé son budget sans rien produire », pas « la facture de minddy
- * a doublé cette nuit ».
+ * One more check IN the VM limits nothing — it is compromised by
+ * hypothesis. What limits this is a ceiling held **outside the VM and outside our
+ * code**: an OpenRouter key issued for this run, with `limit` in dollars and
+ * `expires_at`. Beyond that, it is the supplier who refuses. The worst case becomes
+ * "the run spent its budget without producing anything", not "mindy's bill
+ * doubled last night".
  *
- * BYOK : pas de mint. La clé de l'utilisateur est injectée telle quelle — aussi
- * inexfiltrable que la nôtre, mais **non plafonnable** : c'est sa clé et sa
- * facture, et l'API de provisioning d'OpenRouter n'émet que sur le compte qui la
- * détient. Ça se DIT dans l'écran BYOK, ça ne se corrige pas.
+ * BYOK: no mint. The user's key is injected as is — as
+ * inexfiltrable as ours, but **uncapped**: it's their key and their
+ * bill, and OpenRouter's provisioning API only issues to the account that owns it. It is SAYED in the BYOK screen, it cannot be corrected.
  *
- * DÉGRADATION VOULUE **DANS UNE MICROVM**, et nulle part ailleurs : sans
- * `OPENROUTER_PROVISIONING_KEY`, le chemin cloud retombe sur la clé plateforme.
- * Le mint y est un garde-fou de dépense, pas un prérequis de fonctionnement —
- * une variable pas encore posée en prod ne doit pas empêcher un run de tourner,
- * elle doit lui retirer son plafond fournisseur et le DIRE dans les logs. Elle ne
- * le disait pas : `mintRunKey` rendait `null` sans un mot quand la variable
- * manquait, ce qui est la seule façon pour une dégradation d'être vraiment
- * silencieuse (MIN-357).
+ * DESIRED DEGRADATION **IN A MICROVM**, and nowhere else: without
+ * `OPENROUTER_PROVISIONING_KEY`, the cloud path falls back on the platform key.
+ * The mint is there a spending safeguard, not an operating prerequisite —
+ * a variable not yet set in prod must not prevent a run from running,
+ * it must remove its supplier ceiling and SAY it in the logs. She didn't
+ * say it: `mintRunKey` made `null` silently when the variable
+ * was missing, which is the only way for a degradation to be truly
+ * silent (MIN-357).
  *
- * ET CETTE DÉGRADATION N'EXISTE PAS SUR LA MACHINE DE L'UTILISATEUR. La clé
- * plateforme est NON PLAFONNÉE et partagée avec Numo, la transcription, les
- * embeddings et le catalogue : la laisser descendre sur un Mac, où le compute de
- * microVM — dernier garde-fou du cloud — vaut structurellement zéro, serait
- * offrir un robinet ouvert. **Pas de mint = pas de run local** : le lanceur garde
- * le run dans le cloud (`admitLocalRun`, [local-exec.ts](local-exec.ts)) et la
- * surface qui sert la clé refuse en 503 (`/llm-key`, control-plane.ts).
+ * AND THIS DEGRADATION DOES NOT EXIST ON THE USER'S MACHINE. The key
+ * platform is UNCAPED and shared with Numo, the transcription, the
+ * embeddings and the catalog: letting it go down on a Mac, where the compute of
+ * microVM — the last safeguard of the cloud — is structurally worth zero, would be
+ * offering an open tap. **No mint = no local run**: the launcher keeps
+ * the run in the cloud (`admitLocalRun`, [local-exec.ts](local-exec.ts)) and the
+ * surface which serves the key refuses in 503 (`/llm-key`, control-plane.ts).
  */
 
-/** Clé de provisioning OpenRouter (émet et révoque les clés de run). JAMAIS
- *  passée à la politique réseau : elle ne sort pas de la fonction. */
+/** OpenRouter provisioning key (issues and revokes run keys). NEVER
+ * passed to network policy: it does not exit the function. */
 const PROVISIONING_ENV = "OPENROUTER_PROVISIONING_KEY";
 const KEYS_URL = "https://openrouter.ai/api/v1/keys";
 
 /**
- * Plancher du plafond, en dollars. Un run dont il ne reste presque rien à
- * dépenser sur SON budget recevrait sinon une clé à 0 $, donc morte à la première
- * complétion — et le tour échouerait sur un 402 illisible au lieu de s'arrêter
- * proprement sur son budget (ce que la boucle sait déjà faire, et dire).
+ * Ceiling floor, in dollars. A run with almost nothing left to spend on ITS budget would otherwise receive a $0 key, therefore dead at the first
+ * completion — and the round would fail on an unreadable 402 instead of stopping
+ * properly on its budget (which the loop already knows how to do, and say).
  *
- * Il ne franchit JAMAIS le restant du COMPTE : c'est un plancher sous un plafond,
- * pas un droit de dépenser un quart de dollar de plus que ce que l'utilisateur a.
+ * It NEVER crosses the remainder of the ACCOUNT: it is a floor under a ceiling,
+ * not a right to spend a quarter of a dollar more than the user has.
  */
 const MIN_CAP_USD = 0.25;
 /**
- * Marge au-dessus du budget restant DU RUN. Ce plafond-là est un FILET derrière un
- * gouverneur qui marche : c'est la boucle qui arrête le run sur `budget_usd`, avec
- * un message. Le serrer à l'euro près ferait gagner la course au fournisseur, et
- * l'utilisateur lirait une erreur d'API là où il devait lire « budget atteint ».
+ * Margin above the remaining RUN budget. This ceiling is a NET behind a
+ * governor which works: it is the loop which stops the run on `budget_usd`, with
+ * a message. Tightening it to the nearest euro would make the supplier win the race, and
+ * the user would read an API error where he should have read "budget reached".
  *
- * Elle ne s'applique QU'À ce budget-là. Le restant du compte, lui, ne se multiplie
- * pas : c'est de l'argent qui n'existe pas.
+ * It ONLY applies TO this budget. The remainder of the account does not multiply
+ *: it is money that does not exist.
  */
 const CAP_HEADROOM = 1.5;
 /**
- * Ce qu'on accorde quand le restant du compte est INCONNU — `checkAgentQuota` en
- * panne, donc facturation injoignable. La boucle est alors sans plafond elle
- * aussi (`budgetUsd` vaut `undefined`), ce qui fait de cette clé le seul garde-fou
- * du passage : trop bas il casse un run ordinaire (0,07 à 0,24 $ mesurés), trop
- * haut il ne borne plus rien.
+ * What we grant when the remainder of the account is UNKNOWN — `checkAgentQuota` en
+ * breakdown, therefore unreachable billing. The loop is then without a ceiling
+ * also (`budgetUsd` is worth `undefined`), which makes this key the only safeguard
+ * of the passage: too low it breaks an ordinary run (0.07 to 0.24 $ measured), too
+ * high it no longer limits nothing.
  */
 const UNKNOWN_REMAINING_CAP_USD = 1.5;
-/** Durée de vie d'une clé de run. Large devant un tour, court devant l'oubli. */
+/** Lifespan of a run key. Large in front of a turn, short in front of oblivion. */
 const KEY_TTL_MS = 24 * 60 * 60_000;
 
 export interface RunKey {
-  /** Le secret `sk-or-v1-…`. Ne sort d'ici que vers la politique réseau. */
+  /** The `sk-or-v1-…` secret. Only exits here to network policy. */
   key: string;
-  /** Identifiant de révocation (`hash` chez OpenRouter) — à persister sur le run. */
+  /** Revocation identifier (`hash` at OpenRouter) — to persist on the run. */
   hash: string;
-  /** Plafond posé, en dollars. */
+  /** Ceiling installed, in dollars. */
   capUsd: number;
 }
 
-/** L'API de provisioning est-elle configurée ? Sert aussi à l'écran d'admin. */
+/** Is the provisioning API configured? Also used on the admin screen. */
 export function runKeyMintingEnabled(): boolean {
   return Boolean(process.env[PROVISIONING_ENV]?.trim());
 }
 
 /**
- * Le plafond à poser sur la clé d'un run.
+ * The cap to put on the key of a run.
  *
- * DEUX BUDGETS, ET ILS N'ONT PAS LE MÊME STATUT — c'est tout ce que cette
- * fonction dit.
+ * TWO BUDGETS, AND THEY DON'T HAVE THE SAME STATUS — that's all this
+ * function says.
  *
- * - le budget du RUN (`agent_runs.budget_usd`, une routine réglée à « 15 % de mon
- *   plan ») est un GOUVERNEUR : la boucle l'oppose à sa dépense à chaque round et
- *   s'arrête dessus en le disant. La clé le double d'une marge, pour que ce soit
- *   toujours notre message que l'utilisateur lise, jamais un 402 ;
- * - le restant du COMPTE (budget mensuel inclus du plan, moins ce qui a été
- *   consommé) est un PLAFOND DUR. Il ne se multiplie pas et ne se relève pas :
- *   au-delà, on ferait dépenser à l'utilisateur un argent qu'il n'a pas.
+ * - the RUN budget (`agent_runs.budget_usd`, a routine set to "15% of my
+ * plan") is a GOVERNOR: the loop pits it against its expenditure each round and
+ * stops on it by saying so. The key doubles it by a margin, so that it is always our message that the user reads, never a 402 ;
+ * - the remainder of the ACCOUNT (monthly budget included in the plan, minus what has been consumed) is a HARD CEILING. It does not multiply and does not rise again:
+ * beyond that, we would make the user spend money that he does not have.
  *
- * L'ancienne version prenait le `min` des deux PUIS multipliait le tout par la
- * marge, plancher compris. Sur le cas COURANT — un run sans budget propre, donc
- * le seul restant du compte — un utilisateur à 3 $ de reste recevait une clé à
- * 4,50 $, et un utilisateur à 0,10 $ une clé à 0,25 $. Le garde-fou accordait
- * jusqu'à 50 % de plus que le budget qu'il était censé tenir.
+ * The old version took the `min` of the two THEN multiplied everything by the
+ * margin, floor included. On the COMMON case — a run with no budget of its own, so
+ * the only remaining part of the account — a user with $3 left received a key at
+ * $4.50, and a user with $0.10 a key at $0.25. The safeguard granted
+ * up to 50% more than the budget it was supposed to hold.
  *
- * Les deux entrées sont du RÉEL, pas des colonnes : `runSpentUsd` est le max de
- * la colonne et de la somme du ledger (MIN-215), et le restant du compte descend
- * de `getUserUsage`, qui somme l'usage de la fenêtre de facturation, toutes
- * features comprises — compute de microVM inclus.
+ * The two entries are REAL, not columns: `runSpentUsd` is the max of
+ * the column and the sum of the ledger (MIN-215), and the remainder of the account descends
+ * from `getUserUsage`, which sums the usage of the billing window, all
+ * features included — microVM compute included.
  */
 export function runKeyCapUsd(opts: {
-  /** Plafond posé sur le run lui-même (`agent_runs.budget_usd`), s'il y en a un. */
+  /** Ceiling placed on the run itself (`agent_runs.budget_usd`), if there is one. */
   runBudgetUsd?: number | null;
-  /** Ce que le run a déjà dépensé, tous chunks confondus (ledger compris). */
+  /** What the run has already spent, all chunks combined (ledger included). */
   runSpentUsd?: number;
-  /** Ce qu'il reste du budget mensuel du COMPTE. `undefined` = inconnu ou
-   *  illimité — mais en BYOK (le seul cas illimité) on ne mint pas. */
+  /** What remains of the ACCOUNT's monthly budget. `undefined` = unknown or
+ * unlimited — but in BYOK (the only unlimited case) we do not mint. */
   accountRemainingUsd?: number;
 }): number {
   const ceiling =
@@ -134,8 +130,8 @@ export function runKeyCapUsd(opts: {
       ? undefined
       : Math.max(0, Number(opts.runBudgetUsd) - (opts.runSpentUsd ?? 0)) * CAP_HEADROOM;
 
-  // Sans budget de run, ce qu'on demande EST le restant du compte — donc, une fois
-  // le plafond dur appliqué, exactement lui.
+  // Without a run budget, what we ask for IS the remainder of the account — so, once
+  // the hard ceiling applied, exactly him.
   const asked = fromRun ?? ceiling ?? UNKNOWN_REMAINING_CAP_USD;
   const floored = Math.max(asked, MIN_CAP_USD);
   const capped = ceiling === undefined ? floored : Math.min(floored, ceiling);
@@ -143,9 +139,9 @@ export function runKeyCapUsd(opts: {
 }
 
 /**
- * Émet une clé pour ce run. `null` si l'API de provisioning n'est pas configurée
- * ou refuse : l'appelant retombe alors sur la clé plateforme — sans plafond
- * fournisseur, et il le dit.
+ * Issues a key for this run. `null` if the provisioning API is not configured
+ * or refuses: the caller then falls back on the platform key — without ceiling
+ * provider, and it says so.
  */
 export async function mintRunKey(opts: {
   runId: string;
@@ -153,10 +149,10 @@ export async function mintRunKey(opts: {
 }): Promise<RunKey | null> {
   const provisioning = process.env[PROVISIONING_ENV]?.trim();
   if (!provisioning) {
-    // LE SEUL ÉCHEC QUI NE SE DISAIT PAS (MIN-357). Les deux autres branches
-    // journalisent depuis le début ; celle-ci, la seule qui soit permanente sur
-    // un déploiement, rendait `null` en silence — et l'appelant retombait sur la
-    // clé plateforme sans que rien, nulle part, ne l'ait dit une seule fois.
+    // THE ONLY FAILURE THAT IS NOT SAYING (MIN-357). The other two branches
+    // log from start; this one, the only one that is permanent on
+    // a deployment, returned `null` silently — and the caller fell back to the
+    // platform key without anything, anywhere, saying it even once.
     console.error(`[agent-run-key] ${PROVISIONING_ENV} manquante — run non plafonné chez le fournisseur`);
     return null;
   }
@@ -168,8 +164,8 @@ export async function mintRunKey(opts: {
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        // Le nom est LU par un humain dans le tableau de bord OpenRouter le jour
-        // où une clé traîne : il doit dire de quel run elle vient.
+        // The name is READ by a human in the OpenRouter dashboard during the day
+        // where a key is lying around: it must say which run it comes from.
         name: `${SITE_NAME} agent run ${opts.runId}`,
         limit: opts.capUsd,
         expires_at: new Date(Date.now() + KEY_TTL_MS).toISOString(),
@@ -182,8 +178,8 @@ export async function mintRunKey(opts: {
     const body = (await res.json()) as { key?: string; data?: { hash?: string } };
     const key = body.key?.trim();
     const hash = body.data?.hash?.trim();
-    // Le secret n'est rendu qu'à la création : sans les deux, la clé est
-    // inutilisable ET irrévocable. Mieux vaut ne pas s'en servir du tout.
+    // The secret is only returned to creation: without both, the key is
+    // unusable AND irrevocable. Better not to use it at all.
     if (!key || !hash) {
       console.error("[agent-run-key] mint returned no key/hash");
       return null;
@@ -196,10 +192,10 @@ export async function mintRunKey(opts: {
 }
 
 /**
- * Révoque une clé de run. Best-effort et idempotent : une clé déjà supprimée
- * rend 404, ce qui est le résultat voulu. Appelée quand la microVM est mise au
- * repos — la clé ne survit jamais à la session qui l'utilisait, et un réveil en
- * remint une.
+ * Revokes a run key. Best-effort and idempotent: an already deleted key
+ * returns 404, which is the desired result. Called when the microVM is put to
+ * dormancy — the key never survives the session that used it, and a wakeup in
+ * returns one.
  */
 export async function revokeRunKey(hash: string): Promise<void> {
   const provisioning = process.env[PROVISIONING_ENV]?.trim();

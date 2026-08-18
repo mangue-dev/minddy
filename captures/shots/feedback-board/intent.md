@@ -1,69 +1,69 @@
-# Le board public de retours
+# The public feedback board
 
-Emplacement de landing : `feedbackBoard`, à gauche de la vue équipe dans la
-section « Feedback ». Cette image-ci montre ce que voient les **utilisateurs**
-d'un produit ; sa voisine montre ce que l'équipe en fait.
+Landing location: `feedbackBoard`, to the left of the team view in the
+“Feedback” section. This image shows what **users** see
+of a product; his neighbor shows what the team does with it.
 
 ## Ce que l'image doit montrer
 
-- Le board **trié par votes** : huit retours visibles, de 24 à 2 voix, chacun
-  avec son compteur cliquable.
-- Des **badges de statut** variés — Ouvert, Prévu, En cours — qui prouvent que
-  le board est tenu, pas juste une boîte à idées. Chaque ligne porte aussi
-  l'**avatar de son auteur**, et son compteur de commentaires s'il en a.
-- Le **champ de recherche** en tête, le filtre d'état replié en un déclencheur
-  (« Ouverts »), et le tri « Populaires ».
-- Le bouton **Partager un retour**, et l'en-tête « Aurora · Feedback » avec la
-  mention « Créé avec minddy ».
-- Aucune trace de session : c'est une page publique, vue par quelqu'un qui n'a
-  pas de compte. Le seul bouton de connexion est celui du board lui-même.
+- The board **sorted by votes**: eight visible returns, from 24 to 2 votes, each
+with its clickable counter.
+- Various **status badges** — Open, Planned, In Progress — which prove that
+the board is maintained, not just an ideas box. Each line also carries
+the **avatar of its author**, and its comment counter if it has one.
+- The **search field** at the top, the state filter folded into a trigger
+(“Open”), and the “Popular” sort.
+- The **Share Feedback** button, and the “Aurora · Feedback” header with the
+mention “Created with minddy”.
+- No trace of session: it is a public page, seen by someone who has not
+no account. The only connection button is on the board itself.
 
-## Où
+## Or
 
-`/f/CTxGSyqeTTB85z8crWBwyw` sur `https://www.minddy.app`, **déconnecté**
+`/f/CTxGSyqeTTB85z8crWBwyw` on `https://www.minddy.app`, **disconnected**
 (`openPage({ authed: false })`).
 
-## Deux choses que l'écran ne montre plus (12 août 2026)
+## Two things that the screen no longer shows (August 12, 2026)
 
-- **La colonne de catégories a disparu.** L'`aside` de droite ne porte plus que
-  le bouton « Partager un retour » ; les puces de catégorie ont aussi quitté les
-  lignes. C'est une décision de produit, pas une capture ratée — la colonne
-  reste donc large et calme sur l'image, et c'est ce que voit un visiteur.
-- **« Livré » n'est plus dans le cadre.** Les six pastilles d'état sont repliées
-  en un déclencheur unique dont le défaut, « Ouverts », groupe les états vivants
-  et laisse l'archive de côté : huit retours au lieu de neuf. `?status=all` les
-  ramène tous, mais le « Livré » y est neuvième, sous la ligne de flottaison —
-  on ne gagnerait qu'un libellé « Tous » qui ferait croire à une vue filtrée.
+- **The category column has disappeared.** The `aside` on the right now only carries
+the “Share Feedback” button; category chips have also left the
+lines. It's a product decision, not a botched capture — the column
+therefore remains wide and calm on the image, and this is what a visitor sees.
+- **“Delivered” is no longer in the frame.** The six status dots are folded
+in a single trigger whose default, “Open”, groups the live states
+and leaves the archive aside: eight returns instead of nine. `?status=all` them
+brings everyone back, but the “Delivered” is ninth there, below the waterline —
+we would only gain a wording “All” which would make us believe in a filtered view.
   On garde l'URL nue du board.
 
-## Une consigne du catalogue qui ne survit pas au produit
+## A catalog instruction that does not survive the product
 
-Le catalogue demande « une réponse d'équipe dépliée sur l'un d'eux ». La liste
-du board n'en rend aucune : `teamResponse` n'est lu que par la page d'un retour
+The catalog asks for “a team response unfolded on one of them.” The list
+of the board does not return any: `teamResponse` is only read by the return page
 (`app/f/[token]/feedback-post-client.tsx`), un clic plus loin. Il faudrait
-choisir entre la liste et la réponse ; on garde la liste, qui est le sujet de
-l'emplacement — et la réponse d'équipe se voit déjà, côté rédaction, dans
+choose between the list and the answer; we keep the list, which is the subject of
+the location — and the team response is already visible, on the editorial side, in
 `feedbackInbox`.
 
 ## Cadrage
 
-1736 × 1085 — cadre 16/10, la fenêtre commune.
+1736 × 1085 — 16/10 frame, the common window.
 
-## Déclinaisons
+## Variations
 
 fr/light, fr/dark, en/light, en/dark
 
-## Pièges connus
+## Known pitfalls
 
-- **Se déconnecter n'est pas cosmétique.** Connecté, l'en-tête remplace
-  « S'authentifier » par l'identité du visiteur, et le board n'a plus l'air
-  public. `authed: false` est la première ligne du script.
-- **Les titres des retours sont des données anglaises**, donc des ancres
-  valables pour les deux langues. Les statuts et le tri, eux, sont traduits.
-- **Les catégories sont passées en anglais le 26 juillet 2026**, comme le reste
-  du monde de démo (`013-categories-en.mjs`). Les PNG de `out/`, plus anciens,
-  affichent encore « Fonctionnalité » et « Amélioration » : ils sont à refaire.
-  Le sujet produit reste entier — un vrai projet créé en anglais naît toujours
-  avec des catégories françaises, c'est le trigger `projects_seed_categories`.
-- **Le nombre de votes vient d'un trigger.** Les 95 votes correspondent à des
-  lignes réelles ; un compteur écrit à la main dériverait au premier vote.
+- **Disconnecting is not cosmetic.** Connected, header replaces
+“Authenticate” with the identity of the visitor, and the board no longer appears
+audience. `authed: false` is the first line of the script.
+- **The titles of the returns are English data**, therefore anchors
+valid for both languages. The statuses and sorting are translated.
+- **The categories moved to English on July 26, 2026**, like the rest
+from the demo world (`013-categories-en.mjs`). The older `out/` PNGs
+still display “Functionality” and “Improvement”: they need to be redone.
+The subject produced remains intact — a real project created in English is always born
+with French categories, it is the `projects_seed_categories` trigger.
+- **The number of votes comes from a trigger.** The 95 votes correspond to
+real lines; a handwritten counter would drift at the first vote.

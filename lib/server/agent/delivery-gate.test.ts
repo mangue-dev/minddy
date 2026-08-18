@@ -5,8 +5,8 @@ vi.mock("@/lib/server/ai-usage", async (importOriginal) => ({
   recordAiUsage: vi.fn(async () => {}),
 }));
 
-// Les contrôles sont moqués : ce fichier ne teste pas ce qu'ils DISENT (chacun a
-// son test), il teste QUI PARLE, QUAND, et COMBIEN DE FOIS.
+// The controls are mocked: this file does not test what they SAY (each has
+// its test), it tests WHO SPEAKS, WHEN, and HOW MANY TIMES.
 vi.mock("./diagnostics", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./diagnostics")>()),
   typeErrorsForTurn: vi.fn(async () => "TYPES"),
@@ -20,9 +20,9 @@ vi.mock("./plan-review", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./plan-review")>()),
   planReviewForTurn: vi.fn(async () => "PLAN_REVIEW"),
 }));
-// `turnDiffStat` mesure la TAILLE du tour, et c'est elle qui choisit la portée du
-// passage de tests (MIN-262). Moquée ici pour que chaque test dise sa taille ; le
-// défaut est un GROS tour, celui qui paie la suite entière.
+// `turnDiffStat` measures the SIZE of the tower, and it is she who chooses the range of the
+// passing tests (MIN-262). Mocked here so that each test tells its size; THE
+// default is a BIG trick, one that pays off the entire suite.
 vi.mock("./repo-host", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./repo-host")>()),
   turnDiffStat: vi.fn(async () => ({
@@ -45,20 +45,20 @@ import type { RepoHost } from "./repo-host";
 import { cloudLayout } from "./harness-layout";
 
 /**
- * MIN-263 — LE HARNESS NE VÉRIFIE PLUS QU'À LA LIVRAISON.
+ * MIN-263 — HARNESS ONLY CHECKS UPON DELIVERY.
  *
- * Il n'y a plus de contrôle de fin de tour : quand le modèle répond sans tool-call,
- * le tour se termine, point. Tout ce que le harness exécute est réclamé par une
- * PORTE de tool — `create_pr` pour les trois contrôles de code, `write_issue_plan`
- * pour le plan — donc dans un `followUp`, sans jamais rouvrir un tour terminé ni
- * coûter une réponse de plus.
+ * There is no longer any end-of-turn control: when the model responds without a tool-call,
+ * the round ends, period. Everything the harness performs is claimed by a
+ * tool DOOR — `create_pr` for all three code checks, `write_issue_plan`
+ * for the plan — therefore in a `followUp`, without ever reopening a completed round or
+ * cost one more response.
  *
- * Ce fichier teste les deux niveaux : la porte (qui parle, quand, une seule fois) et
- * la boucle (qu'elle ne rouvre plus rien, ce qui est le seul invariant qui protège
- * tout le reste).
+ * This file tests the two levels: the door (who speaks, when, only once) and
+ * the loop (that it no longer reopens anything, which is the only invariant that protects
+ * everything else).
  */
 
-/** Host inerte : les quatre contrôles sont moqués, `turnDiff` peut rendre du vide. */
+/** Host inert: the four controls are mocked, `turnDiff` can render empty. */
 function fakeHost(): RepoHost {
   return {
     layout: cloudLayout(),
@@ -73,7 +73,7 @@ interface HookOpts {
   edited?: string[];
   wrotePlan?: boolean;
   repoTouched?: boolean;
-  /** Ce que le modèle a lancé lui-même et vu passer vert (MIN-262). */
+  /** What the model launched itself and saw go green (MIN-262). */
   greenCommand?: string;
 }
 
@@ -101,24 +101,24 @@ function gateFor(opts: HookOpts = {}) {
   return { gate, editedPaths, phases, verification };
 }
 
-/** Budget large : aucun bloc n'est empêché par le temps restant. */
+/** Large budget: no block is prevented by the remaining time. */
 const ROOMY = 600_000;
 
-/** Les deux contrôles du plan sont FUSIONNÉS en un bloc depuis MIN-256 : le
- *  modèle y répond d'un seul geste, et ça coûte une réponse de moins. */
+/** The two plane controls are MERGED into one block since MIN-256: the
+ * model responds with a single gesture, and it costs one response less. */
 const PLAN = "PLAN_REVIEW\n\n---\n\nPLAN_CLOSURE";
 
 describe("la porte de livraison", () => {
-  // Les compteurs d'appels sont l'assertion de plusieurs tests (« le harness n'a
-  // RIEN lancé ») : sans ça, ils liraient les appels du test précédent.
+  // The call counters are the assertion of several tests (“the harness has not
+  // NOTHING launched"): without that, they would read the calls from the previous test.
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("sert les trois contrôles en UN bloc, dans l'ordre", async () => {
-    // L'ordre porte du sens : les types d'abord — des échecs de test sur un dépôt
-    // qui ne compile pas ne se lisent même pas —, les échecs ensuite (un échec est
-    // un fait), le diff en dernier (c'est une question).
+    // The order makes sense: types first — test failures on a repository
+    // which does not compile are not even read -, the failures then (a failure is
+    // a fact), the diff last (it's a question).
     const { gate, phases } = gateFor({ edited: ["lib/x.ts"] });
 
     const said = await gate.checkBeforeSubmit(ROOMY);
@@ -128,9 +128,9 @@ describe("la porte de livraison", () => {
   });
 
   it("ne s'ouvre qu'UNE fois : le second create_pr livre", async () => {
-    // Une porte qui re-vérifie à chaque tentative est une porte qui peut refuser de
-    // s'ouvrir — et un agent qui ne peut plus livrer est pire qu'un agent qui livre
-    // du rouge en le disant.
+    // A door that re-checks on each attempt is a door that can refuse to
+    // open up — and an agent who can no longer deliver is worse than an agent who delivers
+    // red when saying it.
     const { gate } = gateFor({ edited: ["lib/x.ts"] });
 
     expect(await gate.checkBeforeSubmit(ROOMY)).toContain("TYPES");
@@ -144,8 +144,8 @@ describe("la porte de livraison", () => {
   });
 
   it("ne rend que le diff quand types et tests sont verts", async () => {
-    // Le silence des deux premiers est le bon retour ; le diff, lui, parle toujours
-    // — c'est une question posée avant la livraison, pas un verdict.
+    // The silence of the first two is the good return; the difference always speaks
+    // — this is a question asked before delivery, not a verdict.
     vi.mocked(typeErrorsForTurn).mockResolvedValueOnce(null);
     vi.mocked(testFailuresForTurn).mockResolvedValueOnce({ block: null, scope: "full" });
     const { gate } = gateFor({ edited: ["lib/x.ts"] });
@@ -154,9 +154,9 @@ describe("la porte de livraison", () => {
   });
 
   it("laisse passer les contrôles qui n'ont pas le budget de tourner", async () => {
-    // 50 s : sous le plancher du type-check (60 s), d'un passage de tests même
-    // ciblé (90 s) et de l'auto-relecture (75 s). La porte ne doit pas pour autant
-    // retenir la livraison.
+    // 50 s: under the type-check floor (60 s), even a test pass
+    // targeted (90 s) and self-replay (75 s). The door should not, however,
+    // hold delivery.
     const { gate, phases } = gateFor({ edited: ["lib/x.ts"] });
 
     expect(await gate.checkBeforeSubmit(50_000)).toBeNull();
@@ -164,8 +164,8 @@ describe("la porte de livraison", () => {
   });
 
   it("latche `repoTouched`, y compris hors de la porte", async () => {
-    // Un tour qui n'ouvre pas de pull request ne franchit jamais la porte : c'est
-    // `noteEdits` qui doit alors dire au checkpoint que le dépôt a bougé.
+    // A turn that doesn't open a pull request never gets through the door: it's
+    // `noteEdits` which should then tell the checkpoint that the depot has moved.
     const { gate, editedPaths } = gateFor();
     expect(gate.repoTouched()).toBe(false);
     editedPaths.add("lib/x.ts");
@@ -174,8 +174,8 @@ describe("la porte de livraison", () => {
   });
 
   /**
-   * MIN-262 — LE GESTE DU MODÈLE FAIT FOI, et il vaut aussi à la livraison : ce
-   * qu'il a vu passer vert sans réédition derrière n'est pas relancé.
+   * MIN-262 — THE GESTURE OF THE MODEL IS AUTHENTIC, and it also applies to delivery: this
+   * which he saw go green without a reissue behind it is not relaunched.
    */
   it("ne relance pas les tests que le modèle a lancés verts lui-même", async () => {
     const { gate, phases } = gateFor({
@@ -187,8 +187,8 @@ describe("la porte de livraison", () => {
 
     expect(said).toBe("TYPES\n\n---\n\nDIFF");
     expect(testFailuresForTurn).not.toHaveBeenCalled();
-    // Compté quand même : c'est ce qui dira combien de livraisons le modèle vérifie
-    // lui-même, donc si la doctrine du prompt porte.
+    // Counted anyway: this will tell you how many deliveries the model checks
+    // himself, therefore if the doctrine of the prompt carries.
     expect(phases).toEqual(["type_check", "tests", "self_review"]);
   });
 
@@ -214,7 +214,7 @@ describe("la porte de livraison", () => {
   });
 
   it("fait payer la suite entière dès qu'un fichier NEUF apparaît", async () => {
-    // Un fichier neuf est du comportement neuf : c'est exactement ce dont aucun
+    // A new file is new behavior: this is exactly what none of
     // test existant ne parle (MIN-251), quelle que soit sa taille en lignes.
     vi.mocked(turnDiffStat).mockResolvedValueOnce({
       files: ["lib/x.ts"],
@@ -228,8 +228,8 @@ describe("la porte de livraison", () => {
   });
 
   it("traite un tour de taille INCONNUE comme un gros tour", async () => {
-    // git muet, baseline hors de l'historique shallow : la mesure sert à s'épargner
-    // du travail, pas à s'en dispenser sur un doute.
+    // git silent, baseline outside the shallow history: the measurement is used to save yourself
+    // work, not to dispense with it due to doubt.
     vi.mocked(turnDiffStat).mockResolvedValueOnce(null);
     const { gate } = gateFor({ repoTouched: true });
 
@@ -238,9 +238,9 @@ describe("la porte de livraison", () => {
   });
 
   it("ne retombe PAS sur la suite entière quand le budget ne la couvre pas", async () => {
-    // Petit tour, 100 s au compteur : au-dessus du plancher d'un passage ciblé
-    // (90 s), sous celui de la suite entière (180 s). Un runner sans mode ciblé ne
-    // doit pas déclencher, par la bande, les 80 s qu'on essayait d'éviter.
+    // Short turn, 100 s on the clock: above the floor of a targeted passage
+    // (90 s), below that of the entire sequence (180 s). A runner without a targeted mode
+    // must not trigger, through the tape, the 80 s that we were trying to avoid.
     vi.mocked(turnDiffStat).mockResolvedValueOnce({
       files: ["lib/x.ts"],
       lines: 1,
@@ -256,7 +256,7 @@ describe("la porte de livraison", () => {
   });
 });
 
-// ── La boucle ne rouvre plus un tour terminé ────────────────────────────────────────────────
+// ── The loop no longer reopens after a completed turn ──────────────────────── ────────────────────────
 
 interface Choice {
   delta?: Record<string, unknown>;
@@ -301,14 +301,14 @@ function _seed(): AgentChatMessage[] {
 }
 
 /**
- * MIN-247, puis MIN-263 — LE PREMIER `create_pr` NE SOUMET PAS, ET C'EST LÀ QUE TOUT
- * SE VÉRIFIE.
+ * MIN-247, then MIN-263 — THE FIRST `create_pr` DOES NOT SUBMIT, AND THAT’S WHERE IT’S ALL
+ * IS CHECKED.
  *
- * `create_pr` pousse et ouvre la pull request AU MOMENT DE L'APPEL : sans porte,
- * l'ordre réel serait PR ouverte, corps rédigé, relecteur notifié, puis vérification.
- * La porte déplace le contrôle juste avant la livraison — et depuis qu'il n'y a plus
- * rien en fin de tour, c'est le seul endroit où le harness exécute quoi que ce soit
- * sur le code.
+ * `create_pr` pushes and opens the pull request AT THE TIME OF THE CALL: without door,
+ * the actual order would be PR open, body drafted, reviewer notified, then proofread.
+ * The gate moves control just before delivery — and since there is no longer
+ * nothing at the end of the turn, this is the only place where the harness does anything
+ * on the code.
  */
 describe("la porte de create_pr", () => {
   const opener = () => {
@@ -329,15 +329,15 @@ describe("la porte de create_pr", () => {
 
     const first = await gated({ title: "MIN-1: faire la chose" });
     expect(first.success).toBe(true);
-    // Les trois d'un coup, dans le `followUp` et pas dans le résultat : celui-ci est
-    // capé à 6 000 caractères avec le MILIEU élidé, ce qui d'un diff couperait ce
-    // qu'on donne à lire. Le résultat ne dit que le fait.
+    // All three at once, in the `followUp` and not in the result: this one is
+    // capped at 6,000 characters with the MIDDLE elided, which of a diff would cut this
+    // that we give to read. The result only says the fact.
     expect(first.followUp).toContain("TYPES");
     expect(first.followUp).toContain("TESTS");
     expect(first.followUp).toContain("DIFF");
     expect(first.result).toMatchObject({ opened: false });
     expect(String((first.result as { note: string }).note)).toContain("call create_pr again");
-    expect(calls).toEqual([]); // RIEN n'a été poussé.
+    expect(calls).toEqual([]); // NOTHING was pushed.
 
     const second = await gated({ title: "MIN-1: faire la chose" });
     expect(second.result).toEqual({ url: "https://forge/pr/1" });
@@ -353,15 +353,15 @@ describe("la porte de create_pr", () => {
     await gated({ title: "t" });
     await gated({ title: "t" });
 
-    // Deux ouvertures pour trois appels : le premier a servi les contrôles, les
-    // suivants livrent. Et les contrôles n'ont tourné qu'UNE fois.
+    // Two openings for three calls: the first served the controls, the
+    // following deliver. And the controls only turned ONE time.
     expect(calls).toHaveLength(2);
     expect(phases).toEqual(["type_check", "tests", "self_review"]);
   });
 
   it("ouvre du premier coup quand le tour n'a rien touché", async () => {
-    // Une PR sur du travail poussé au tour précédent : il n'y a pas de diff de CE
-    // tour à relire, donc rien à faire attendre.
+    // A PR on extensive work in the previous round: there is no CE difference
+    // turn to reread, so nothing to wait.
     const { gate } = gateFor({ repoTouched: false });
     const { calls, handler } = opener();
     const gated = gateCreatePr(handler, gate, () => ROOMY);
@@ -381,9 +381,9 @@ describe("la porte de create_pr", () => {
 });
 
 /**
- * Le canal par lequel la porte parle : un message `user`, pas un résultat de tool.
- * Un résultat traverse `headTail(…, 6 000)`, qui élide le MILIEU — d'un diff, ça
- * coupe exactement ce qu'on donne à lire.
+ * The channel through which the door speaks: a `user` message, not a tool result.
+ * A result passes through `headTail(…, 6 000)`, which elides the MIDDLE — of a diff, that
+ * cuts exactly what is given to read.
  */
 describe("la porte de write_issue_plan", () => {
   const writer = () => {
@@ -403,8 +403,8 @@ describe("la porte de write_issue_plan", () => {
     const gated = gateWritePlan(handler, gate, () => ROOMY);
 
     const out = await gated("write_issue_plan", { plan: "- [ ] faire" });
-    // À la différence de `create_pr`, la porte ne retient RIEN : le plan est écrit,
-    // et il doit l'être — c'est le document qu'on relit.
+    // Unlike `create_pr`, the door retains NOTHING: the plan is written,
+    // and it must be — it is the document that we reread.
     expect(calls).toEqual(["write_issue_plan"]);
     expect(out.success).toBe(true);
     expect(out.followUp).toBe(PLAN);
@@ -415,8 +415,8 @@ describe("la porte de write_issue_plan", () => {
     const gated = gateWritePlan(writer().handler, gate, () => ROOMY);
 
     expect((await gated("write_issue_plan", {})).followUp).toBe(PLAN);
-    // Un second write ne redemande rien : le contrôle relit un plan, il ne commente
-    // pas la correction qui suit.
+    // A second write does not ask for anything again: the control rereads a plan, it does not comment
+    // not the correction that follows.
     expect((await gated("write_issue_plan", {})).followUp).toBeUndefined();
     expect(phases).toEqual(["plan_check"]);
   });
@@ -430,18 +430,18 @@ describe("la porte de write_issue_plan", () => {
     );
 
     expect((await failing("append_to_plan", {})).followUp).toBeUndefined();
-    // Un `write_issue_plan` refusé n'a rien écrit : relire son plan ferait parler
-    // le harness d'un document qui n'existe pas.
+    // A refused `write_issue_plan` has not written anything: rereading his plan would make people talk
+    // the harness of a document that does not exist.
     expect((await failing("write_issue_plan", {})).followUp).toBeUndefined();
-    // Et le verrou n'a pas été consommé : le prochain write réussi sera relu.
+    // And the lock has not been consumed: the next successful write will be reread.
     const ok = gateWritePlan(writer().handler, gate, () => ROOMY);
     expect((await ok("write_issue_plan", {})).followUp).toBe(PLAN);
   });
 
   it("se tait quand le budget manque, sans consommer le verrou", async () => {
-    // Il n'y a plus de fin de tour pour rattraper : ce contrôle-là est simplement
-    // sauté. Mais le verrou reste libre, donc un second write, plus tard dans le
-    // tour, sera relu.
+    // There is no more end of turn to catch up: this control is simply
+    // skipped. But the lock remains free, so a second write later in the
+    // turn is read again.
     const { gate, phases } = gateFor({ wrotePlan: true });
     const poor = gateWritePlan(writer().handler, gate, () => 1_000);
 

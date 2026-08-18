@@ -32,32 +32,32 @@ import {
 import { nearestReasoningLevel, type ReasoningLevel } from "@/lib/agent-reasoning";
 
 /**
- * Poser une ROUTINE (MIN-185), à la main : où, quoi, avec quel modèle, à quel
+ * Set up a ROUTINE (MIN-185), by hand: where, what, with what model, at what
  * rythme.
  *
- * **Un wizard, pas un formulaire**, et c'est la seule porte de création
- * manuelle. Une routine se règle en quatre décisions indépendantes dont trois
- * n'ont pas de réponse évidente ; un formulaire à huit champs les poserait les
- * quatre en même temps. Le [shell partagé](components/wizard/wizard-dialog.tsx)
- * fournit la modale, le stepper, l'animation et les boutons — il reste à dire
- * quelles étapes, quand chacune est valide, et ce que la dernière crée.
+ * **A wizard, not a form**, and it is the only door to creation
+ * manual. A routine is resolved in four independent decisions, three of which
+ * have no obvious answer; an eight-field form would ask them
+ * four at the same time. The [shared shell](components/wizard/wizard-dialog.tsx)
+ * provides modal, stepper, animation and buttons — it remains to be said
+ * what steps, when each is valid, and what the last one creates.
  *
- * **Rien n'est créé avant la validation de `schedule`** : fermer la fenêtre en
- * route ne laisse pas de routine orpheline à supprimer, même règle que la clé
- * d'intégration. L'échec de création s'affiche sous l'étape (prop `error` du
- * shell) sans quitter l'écran — un modèle passé hors plan, un dépôt délié
+ * **Nothing is created before validating `schedule`**: close the window by
+ * route does not leave an orphan routine to delete, same rule as the key
+ * integration. The creation failure is displayed under the step (prop `error` of the
+ * shell) without leaving the screen — a model passed out of plan, an unbound repository
  * entre-temps.
  *
- * **Le wizard ne sert PAS à modifier.** Éditer une routine existante se fait
- * dans son détail, champ par champ : un wizard est un parcours d'établissement,
- * et le rejouer pour changer une heure ferait repasser par quatre écrans.
+ * **The wizard is NOT used to modify.** Editing an existing routine is done
+ * in detail, field by field: a wizard is an establishment course,
+ * and replaying it to change an hour would take you through four screens.
  */
 
 type StepId = "project" | "job" | "model" | "schedule" | "done";
 
-/** Instructions pré-écrites de l'étape `job` — la page blanche est le vrai
-    obstacle de cette étape, et ces trois-là décrivent ce qu'une routine fait de
-    mieux : revenir sur ce qu'on ne regarde jamais spontanément. */
+/** Pre-written instructions for step `job` — the blank page is the real one
+    obstacle of this step, and these three describe what a routine does
+    better: return to what we never look at spontaneously. */
 const EXAMPLE_KEYS = ["exampleSecurity", "exampleDeps", "exampleTests"] as const;
 
 export function CreateRoutineWizard({
@@ -68,10 +68,10 @@ export function CreateRoutineWizard({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Ouvert depuis l'en-tête d'un projet : ce projet est déjà choisi, et son
-   *  étape disparaît du parcours. */
+  /** Opened from the header of a project: this project is already chosen, and its
+   * step disappears from the route. */
   initialProjectId?: string | null;
-  /** La routine créée — l'appelant la sélectionne et rafraîchit sa liste. */
+  /** The created routine — the caller selects it and refreshes its list. */
   onCreated: (routine: Routine) => void;
 }) {
   const t = useTranslations("Routines");
@@ -85,9 +85,9 @@ export function CreateRoutineWizard({
   const { defaultModel, defaultReasoningLevel } = useAgentPreferencesQuery();
 
   /**
-   * Les projets ÉLIGIBLES : possédés (seul le propriétaire peut poser une
-   * routine — c'est son budget qui part) ET avec un dépôt lié (sans quoi il n'y
-   * a rien à cloner). Proposer les autres mènerait droit à un 403 ou à un 409.
+   * ELIGIBLE projects: owned (only the owner can apply for
+   * routine — it's his budget that leaves) AND with a linked deposit (without which there is no
+   * nothing to clone). Proposing the others would lead to a 403 or a 409.
    */
   const eligible = useMemo(
     () =>
@@ -101,14 +101,14 @@ export function CreateRoutineWizard({
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState("");
   const [reasoning, setReasoning] = useState<ReasoningLevel | null>(null);
-  // Les paliers du modèle que cette routine fera tourner (cf. le composer).
+  // The levels of the model that this routine will rotate (see composing it).
   const reasoningLevels = useReasoningLevelsFor(model || defaultModel || providerDefaultModel);
-  /** "" = la branche par défaut du dépôt, ce qui est le cas courant. */
+  /** "" = the default branch of the repository, which is the common case. */
   const [baseBranch, setBaseBranch] = useState("");
-  /** Ce qu'un passage a le droit de dépenser, en % du budget mensuel. */
+  /** What a passage is allowed to spend, as a % of the monthly budget. */
   const [spendCap, setSpendCap] = useState(DEFAULT_MAX_SPEND_PERCENT);
-  // La cadence tient dans UN état, celui-là même que le calcul et la phrase
-  // lisible attendent : rien à recomposer entre l'écran et le serveur.
+  // The cadence holds in ONE state, the same as the calculation and the sentence
+  // readable wait: nothing to recompose between the screen and the server.
   const [schedule, setSchedule] = useState<RoutineSchedule>(() => ({
     frequency: "weekly",
     hour: 9,
@@ -123,9 +123,9 @@ export function CreateRoutineWizard({
   const [created, setCreated] = useState<Routine | null>(null);
   const [launchingNow, setLaunchingNow] = useState(false);
 
-  /** « Lancer maintenant » depuis l'écran final : le premier passage sans
-      attendre lundi. La fenêtre se ferme derrière — la routine est déjà
-      sélectionnée dans la colonne, et son passage s'y affiche en direct. */
+  /** “Launch now” from the final screen: the first pass without
+      wait until Monday. The window closes behind — the routine is already
+      selected in the column, and its passage is displayed live. */
   const launchNow = async (routineId: string) => {
     setLaunchingNow(true);
     try {
@@ -140,11 +140,11 @@ export function CreateRoutineWizard({
   };
 
   /**
-   * L'étape `project` disparaît quand il n'y a rien à choisir : un projet
-   * pré-choisi (le « + » d'un en-tête de projet) ou un seul candidat. Le projet
-   * effectif est donc DÉRIVÉ, jamais recopié dans l'état par un effet : les
-   * projets et leurs liens arrivent par react-query, et une valeur recopiée au
-   * montage resterait vide pour toujours.
+   * The `project` step disappears when there is nothing to choose: a project
+   * pre-chosen (the “+” in a project header) or a single candidate. The project
+   * effective is therefore DERIVED, never copied into the state by an effect: the
+   * projects and their links arrive via react-query, and a value copied to
+   * montage would remain empty forever.
    */
   const skipProject = !!initialProjectId || eligible.length === 1;
   const projectId =
@@ -175,9 +175,9 @@ export function CreateRoutineWizard({
     onOpenChange(next);
   };
 
-  /** La cadence en une phrase + la date du premier passage. Calculée avec la
-      MÊME fonction que le serveur : c'est la seule façon de vérifier un fuseau
-      avant de le subir. `null` quand le fuseau saisi n'existe pas. */
+  /** The cadence in a sentence + the date of the first passage. Calculated with the
+      SAME function as the server: this is the only way to check a time zone
+      before undergoing it. `null` when the zone entered does not exist. */
   const preview = useMemo<
     { sentence: string; first: string } | { error: string }
   >(() => {
@@ -197,9 +197,9 @@ export function CreateRoutineWizard({
         }).format(at),
       };
     } catch (err) {
-      // Le motif EXACT du refus, pas « fuseau inconnu » pour tout : une cadence
-      // hebdomadaire sans jour et un fuseau mal tapé sont deux problèmes
-      // différents, et celui qu'on affiche est celui qu'on doit corriger.
+      // The EXACT reason for the refusal, not “unknown zone” for everything: a cadence
+      // weekly without a day and a poorly typed time zone are two problems
+      // different, and the one we display is the one we need to correct.
       const code = (err as { code?: string }).code;
       return {
         error: code === "unknownTimezone" ? "error_unknownTimezone" : "error_invalidSchedule",
@@ -208,7 +208,7 @@ export function CreateRoutineWizard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schedule, locale]);
 
-  /** La cadence tient-elle debout ? (le récapitulatif ne peut alors qu'exister) */
+  /** Does the cadence hold up? (the summary can then only exist) */
   const scheduleOk = !("error" in preview);
 
   const create = async () => {
@@ -235,8 +235,8 @@ export function CreateRoutineWizard({
       setStepIndex(steps.length - 1);
     } catch (err) {
       const code = (err as { code?: string }).code;
-      // Un code connu se traduit ; le reste se dit tel quel plutôt que d'être
-      // remplacé par une phrase vague.
+      // A known code is translated; the rest is said as it is rather than being
+      // replaced by a vague sentence.
       setError(
         code && ROUTINE_ERROR_KEYS.has(code)
           ? t(`error_${code}` as "error_ownerOnly")
@@ -252,14 +252,14 @@ export function CreateRoutineWizard({
       id: "project",
       title: t("stepProjectTitle"),
       subtitle: t("stepProjectDesc"),
-      // Cliquer un projet EST le geste : un « Continuer » demanderait un second
-      // clic pour confirmer ce qui vient d'être dit.
+      // Clicking a project IS the gesture: a “Continue” would require a second
+      // click to confirm what has just been said.
       hideSubmit: eligible.length > 0,
       submitDisabled: !projectId,
       content:
         eligible.length === 0 && !gitLoading ? (
-          // Aucun projet éligible : le dire, et renvoyer vers ce qui manque —
-          // une liste vide laisserait chercher pourquoi.
+          // No eligible project: say it, and refer to what is missing —
+          // an empty list would leave one wondering why.
           <p className="rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
             {t("noEligibleProject")}
           </p>
@@ -297,8 +297,8 @@ export function CreateRoutineWizard({
       submitDisabled: !prompt.trim(),
       content: (
         <div className="flex flex-col gap-4">
-          {/* Le MÊME champ que la modification d'une routine (volet de détail) :
-              même dictée, même plafond de saisie, même hauteur bornée. */}
+          {/* The SAME field as modifying a routine (detail pane):
+              same dictation, same input ceiling, same limited height. */}
           <RoutinePromptField
             autoFocus
             value={prompt}
@@ -306,9 +306,9 @@ export function CreateRoutineWizard({
             disabled={creating}
           />
 
-          {/* Trois instructions pré-écrites : elles remplacent le champ, elles ne
-              s'y ajoutent pas — on choisit un point de départ, on ne colle pas
-              trois exemples bout à bout. */}
+          {/* Three pre-written instructions: they replace the field, they do not
+              are not added to it — we choose a starting point, we do not stick
+              three examples end to end. */}
           <div className="flex flex-wrap gap-2">
             {EXAMPLE_KEYS.map((key) => (
               <button
@@ -331,9 +331,9 @@ export function CreateRoutineWizard({
       title: t("stepModelTitle"),
       subtitle: t("stepModelDesc"),
       content: (
-        /* Les trois réglages de l'agent en RANGÉES — mêmes libellés, mêmes
-           pastilles et même ordre que l'éditeur du volet de détail : on ne
-           réapprend pas l'écran quand on revient changer un réglage. */
+        /* The three agent settings in ROWS — same labels, same
+           pastilles and same order as the editor of the detail pane: we do not
+           does not relearn the screen when you come back to change a setting. */
         <div className="divide-y divide-border/60">
           <SettingsRow
             label={t("modelLabel")}
@@ -364,11 +364,11 @@ export function CreateRoutineWizard({
               />
             }
           />
-          {/* La branche de DÉPART se choisit ICI plutôt qu'après coup : une
-              routine qui part de la mauvaise base ouvre des pull requests
-              inutilisables, et c'est au moment de la poser qu'on sait sur quoi
-              elle doit travailler. Le listing est ancré au projet choisi à
-              l'étape précédente. */}
+          {/* The DEPARTURE branch is chosen HERE rather than after the fact: a
+              routine that starts from the wrong database opens pull requests
+              unusable, and it's when you put it on that you know what
+              she has to work. The listing is anchored to the project chosen at
+              the previous step. */}
           <SettingsRow
             label={t("baseBranchLabel")}
             control={
@@ -385,10 +385,10 @@ export function CreateRoutineWizard({
               />
             }
           />
-          {/* CE QU'ELLE PEUT DÉPENSER, à côté de ce qui le décide (le modèle, le
-              raisonnement) : une routine part seule, personne ne regarde sa
+          {/* WHAT SHE CAN SPEND, alongside what decides it (the model, the
+              reasoning): a routine leaves alone, no one looks at its
               barre d'usage pendant qu'elle travaille. Sans ce plafond, un seul
-              passage pouvait prendre le mois entier. */}
+              The passage could take a whole month. */}
           <SettingsRow
             label={t("spendCapLabel")}
             help={t("spendCapHelp")}
@@ -413,14 +413,14 @@ export function CreateRoutineWizard({
       submitDisabled: !scheduleOk,
       content: (
         <div className="flex flex-col gap-6">
-          {/* Les champs de cadence sont les MÊMES que ceux de l'édition d'une
-              routine (`RoutineScheduleFields`) : deux formulaires séparés
-              auraient fini par accepter deux choses différentes. */}
+          {/* The cadence fields are the SAME as when editing a
+              routine (`RoutineScheduleFields`): two separate forms
+              would have ended up accepting two different things. */}
           <RoutineScheduleFields value={schedule} onChange={setSchedule} />
 
-          {/* Le récapitulatif VIVANT : la phrase et la date que la routine va
-              vraiment suivre. C'est la seule façon de vérifier un fuseau avant
-              de le subir — et le seul endroit qui attrape un fuseau mal tapé. */}
+          {/* The LIVING recap: the phrase and date that the routine goes
+              really follow. This is the only way to check a spindle before
+              to endure it — and the only place that catches a poorly typed spindle. */}
           {"error" in preview ? (
             <p className="rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
               {t(preview.error as "error_unknownTimezone")}
@@ -442,10 +442,10 @@ export function CreateRoutineWizard({
       id: "done",
       title: t("createdTitle"),
       subtitle: t("createdDesc"),
-      // La routine EXISTE : un pas en arrière ne la déferait pas.
+      // The routine EXISTS: one step back would not undo it.
       lockBack: true,
-      // Le CTA mène à la routine — c'est elle qu'on vient de poser, et la
-      // fermeture la laisse sélectionnée dans la colonne.
+      // The CTA leads to routine — that’s what we just asked, and the
+      // closing the leash selected in the column.
       submitLabel: t("seeRoutine"),
       content: (
         <div className="flex flex-col gap-3">
@@ -457,9 +457,9 @@ export function CreateRoutineWizard({
               </span>
             )}
           </div>
-          {/* La seconde sortie : voir la routine travailler tout de suite,
-              sans attendre lundi — et SANS déplacer l'échéance (c'est la route
-              « Lancer maintenant » qui le garantit, pas ce bouton). */}
+          {/* The second output: see the routine working right away,
+              without waiting for Monday — and WITHOUT moving the deadline (this is the route
+              “Launch now” guarantees it, not this button). */}
           {created ? (
             <Button
               type="button"
@@ -497,10 +497,10 @@ export function CreateRoutineWizard({
       submitting={creating}
       error={error}
       /**
-       * Un clic à côté ne doit pas emporter le brouillon. La question n'est
-       * posée QU'ENTRE les deux bouts du parcours : sur la première étape il
-       * n'y a rien à perdre, et sur `done` la routine existe déjà — fermer y
-       * EST la façon de finir. Même règle que le wizard du board public.
+       * A click next to it should not take away the draft. The question is not
+       * posed ONLY BETWEEN the two ends of the route: on the first stage it
+       * there is nothing to lose, and on `done` the routine already exists — close y
+       * IS the way to end. Same rule as the public board wizard.
        */
       dismissConfirm={
         stepIndex > 0 && order[Math.min(stepIndex, order.length - 1)] !== "done"
@@ -531,7 +531,7 @@ export function CreateRoutineWizard({
   );
 }
 
-/** Les refus que l'écran sait nommer. Le reste s'affiche tel quel. */
+/** The refusals that the screen knows how to name. The rest is displayed as is. */
 const ROUTINE_ERROR_KEYS = new Set([
   "ownerOnly",
   "noRepo",

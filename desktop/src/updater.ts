@@ -13,69 +13,66 @@ import {
 } from "@/lib/desktop/update-status";
 
 /**
- * Les mises à jour de la coquille (MIN-292) — §5 de docs/desktop-electron.md.
+ * Shell updates (MIN-292) — §5 from docs/desktop-electron.md.
  *
- * **Ce que l'app met à jour, c'est elle-même, pas minddy.** L'UI vit sur
- * `www.minddy.app` et se livre par `git push` ; ici on ne remplace le binaire que
- * quand la coquille change — deux fois par an, plus une majeure Electron toutes
- * les huit semaines. D'où le rythme, qui n'a pas à être serré.
+ * **What the app updates is itself, not minddy.** The UI lives on
+ * `www.minddy.app` and is delivered by `git push`; here we only replace the binary
+ * when the shell changes — twice a year, plus a major Electron every
+ * every eight weeks. Hence the pace, which does not have to be tight.
  *
- * **Squirrel.Mac EXIGE une app signée.** La signature n'est donc pas seulement la
- * formalité du premier lancement : c'est ce qui permet à l'app de se mettre à
- * jour ensuite. Une build non signée qui essaierait quand même échoue sur une
- * erreur de vérification de code, sans rien dire d'utile — d'où le renoncement
- * franc de `startAutoUpdates` hors app empaquetée.
+ * **Squirrel.Mac REQUIRES a signed app.** The signature is therefore not only the
+ * formality of the first launch: it is what allows the app to be updated afterwards. An unsigned build that tries to still fails on a
+ * code check error, without saying anything useful — hence the
+ * abort of `startAutoUpdates` outside the packaged app.
  *
- * L'URL du flux n'est PAS ici. electron-builder la recopie dans
- * `app-update.yml`, à l'intérieur du bundle, à partir du bloc `publish` de
- * desktop/electron-builder.yml — et `autoUpdater` le lit tout seul. Une URL
- * écrite deux fois est une URL qui divergera.
+ * The feed URL is NOT here. electron-builder copies it into
+ * `app-update.yml`, inside the bundle, from the `publish` block of
+ * desktop/electron-builder.yml — and `autoUpdater` reads it by itself. A URL
+ * written twice is a URL that will diverge.
  */
 
 /**
- * ⚠ **Import NOMMÉ, et rien qu'au point d'usage.** Deux pièges se tiennent la
- * main ici, et les deux ne se voient QUE dans l'app empaquetée :
+ * ⚠ **NAMED import, and only at the point of use.** Two traps stand here, and both are ONLY seen in the packaged app:
  *
- * 1. `electron-updater` se déclare `__esModule: true` mais **n'exporte pas de
- *    `default`**. Un `import electronUpdater from "electron-updater"` compile
- *    sans un mot et rend `undefined` à l'exécution — le main process meurt au
- *    chargement, sur une boîte « A JavaScript error occurred in the main
- *    process » et rien d'autre.
- * 2. `autoUpdater` est un **getter paresseux** qui construit un `MacUpdater` au
- *    premier accès, et ce constructeur appelle `app.getVersion()`. Le lire au
- *    niveau du module (`const { autoUpdater } = …`) le ferait donc s'exécuter
- *    avant qu'Electron soit prêt. L'import nommé, lui, se compile en un accès de
- *    propriété à l'endroit où on s'en sert : il ne se déclenche jamais avant.
+ * 1. `electron-updater` declares itself `__esModule: true` but **does not export from
+ * `default`**. A `import electronUpdater from "electron-updater"` compiles
+ * without a word and returns `undefined` at runtime — the main process dies on
+ * loading, on a box "A JavaScript error occurred in the main
+ * process" and nothing else.
+ * 2. `autoUpdater` is a **lazy getter** that constructs a `MacUpdater` on
+ * first access, and this constructor calls `app.getVersion()`. Reading it at
+ * module level (`const { autoUpdater } = …`) would therefore cause it to execute
+ * before Electron is ready. The named import is compiled into an access to
+ * property at the place where it is used: it is never triggered before.
  */
 
-/** Six heures. Une coquille qui bouge deux fois par an n'a pas besoin de mieux. */
+/** Six o'clock. A shell that moves twice a year doesn't need anything better. */
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
-/** La fenêtre à qui attacher la proposition d'installer, quand il y en a une. */
+/** The window to attach the install proposal to, when there is one. */
 let ownerWindow: () => BrowserWindow | null = () => null;
 
 /**
- * L'état, tenu ICI et pas dans la page (MIN-353).
+ * The state, held HERE and not in the page (MIN-353).
  *
- * Le renderer arrive toujours après coup — il se remonte à chaque rechargement,
- * à chaque bascule de canal — alors que la coquille, elle, vit des semaines.
- * Elle est donc la seule des deux qui puisse se souvenir qu'une version attend
- * sur le disque.
+ * The renderer always arrives after the fact - it is reloaded at each reload,
+ * at each channel switch - while the shell lives for weeks.
+ * It is therefore the only one of the two which can remember that a version is waiting for
+ * on disk.
  */
 let status: DesktopUpdateStatus = IDLE_UPDATE_STATUS;
 
-/** L'état courant, pour le rejeu demandé par un abonné qui vient d'arriver. */
+/** The current state, for the replay requested by a subscriber who has just arrived. */
 export function currentUpdateStatus(): DesktopUpdateStatus {
   return status;
 }
 
 /**
- * Réduit l'événement, et n'annonce que si quelque chose a bougé.
+ * Reduces the event, and only announces if something has changed.
  *
- * `reduceUpdateStatus` rend l'objet PRÉCÉDENT quand rien ne change (une version
- * déjà prête réannoncée par la vérification des six heures) : l'égalité de
- * référence est donc exactement le test qu'il faut, et elle évite de réveiller
- * la barre latérale toutes les six heures pour lui redire la même chose.
+ * `reduceUpdateStatus` returns the PREVIOUS object when nothing changes (an already ready version re-announced by the six-hour check): equality de
+ * reference is therefore exactly the test you need, and it avoids waking up
+ * the sidebar every six hours to tell it the same thing again.
  */
 function publish(event: DesktopUpdateEvent): void {
   const next = reduceUpdateStatus(status, event);
@@ -88,22 +85,21 @@ function sendStatus(target?: Electron.WebContents): void {
   (target ?? ownerWindow()?.webContents)?.send("minddy:update-status", status);
 }
 
-/** Le rejeu, CIBLÉ sur l'abonné qui le demande — même motif que les boutons macOS. */
+/** Replay, TARGETED at the subscriber who requests it — same reason as macOS buttons. */
 export function replayUpdateStatus(target: Electron.WebContents): void {
   sendStatus(target);
 }
 
 /**
- * Ce que la ligne de la barre latérale déclenche.
+ * What the sidebar line triggers.
  *
- * Elle ne relance PAS l'app : elle rouvre la boîte native, qui demande le
- * dernier oui. Une page distante qui ferait redémarrer l'application d'un
- * `postMessage` serait un membre de pont d'une tout autre nature que les neuf
- * autres — et « installer » sans confirmation sur un simple clic de barre
- * latérale n'est de toute façon pas ce qu'on veut.
+ * It does NOT restart the app: it reopens the native box, which asks for the
+ * last yes. A remote page that would restart the application of one
+ * `postMessage` would be a bridge member of a completely different nature than the other nine
+ * — and "installing" without confirmation on a single sidebar click is not what we want anyway.
  *
- * Sans effet si rien n'est prêt : le fichier n'est pas là, il n'y a rien à
- * proposer.
+ * No effect if nothing is ready: the file is not there, there is nothing to
+ * to propose.
  */
 export function requestInstall(): void {
   if (status.state !== "ready") return;
@@ -113,84 +109,84 @@ export function requestInstall(): void {
 export function startAutoUpdates(owner: () => BrowserWindow | null): void {
   ownerWindow = owner;
 
-  // Hors app empaquetée il n'y a ni signature ni `app-update.yml` : Squirrel
-  // échouerait bruyamment à chaque lancement du dev.
+  // Outside of the packaged app there is neither signature nor `app-update.yml`: Squirrel
+  // would fail loudly every time the dev launches.
   if (!app.isPackaged) return;
 
-  // On télécharge tout seul, mais on n'IMPOSE rien : l'installation se DEMANDE
-  // une fois le téléchargement fini (`update-downloaded` plus bas), et un refus
-  // la laisse au prochain ⌘Q. Redémarrer l'app sous les doigts de quelqu'un qui
-  // écrit un ticket est le genre de geste qu'on ne pardonne pas à une app de
+  // We download alone, but we don't IMPOSE anything: the installation is REQUIRED
+  // once the download is finished (`update-downloaded` below), and a refusal
+  // leave it to the next ⌘Q. Restarting the app under the fingers of someone who
+  // writing a ticket is the kind of gesture you can't forgive in a gaming app
   // bureau.
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
 
-  // **Le filet de `autoInstallOnAppQuit` ne suffisait pas, et c'est la forme de
-  // l'app qui le dit** : ⌘W la CACHE, le feu rouge aussi (main.ts). Une app de
-  // bureau qu'on ne ferme jamais ne quitte jamais — donc n'installait jamais, et
-  // sans le dire. La version neuve restait sur le disque des semaines.
+  // **The net of `autoInstallOnAppQuit` was not enough, and this is the form of
+  // the app that says it**: ⌘W the CACHE, the red light too (main.ts). An app of
+  // office that you never close, never leave — so never install, and
+  // without saying it. The new version remained on the disk for weeks.
   //
-  // ⚠ **Une seule fois par version.** `update-downloaded` n'est émis qu'à la fin
-  // d'un téléchargement, mais la vérification tourne toutes les six heures et
-  // rien n'interdit à electron-updater de retélécharger après une erreur de
-  // reprise. Reproposer la même version toutes les six heures à quelqu'un qui a
-  // dit « plus tard », c'est la transformer en interruption.
+  // ⚠ **Only once per version.** `update-downloaded` is only issued at the end
+  // of a download, but the check runs every six hours and
+  // nothing prevents electron-updater from redownloading after an error
+  // resume. Propose the same version every six hours to someone who has
+  // saying “later” transforms it into an interruption.
   autoUpdater.on("update-downloaded", (info) => {
-    // L'état, TOUJOURS : c'est lui qui fait vivre la ligne de la barre latérale
-    // longtemps après que la boîte a été renvoyée. Seule la boîte se retient.
+    // The state, ALWAYS: it’s what brings the sidebar line to life
+    // long after the box has been returned. Only the box is holding back.
     publish({ kind: "downloaded", version: info.version });
     if (promptedVersion === info.version) return;
     promptedVersion = info.version;
     void promptInstall(info.version);
   });
 
-  // Une erreur de mise à jour n'est pas une erreur de l'app : réseau coupé, flux
-  // momentanément absent, Wi-Fi d'hôtel. On la journalise et on retente au
-  // prochain tour, sans jamais l'afficher — sinon la seule chose que l'app dit à
-  // quelqu'un hors ligne, c'est qu'elle n'a pas pu se mettre à jour.
+  // An update error is not an app error: network cut, flow
+  // temporarily absent, hotel Wi-Fi. We journal it and try again
+  // next turn, without ever displaying it — otherwise the only thing the app says to
+  // someone offline means it couldn't update.
   autoUpdater.on("error", (error) => {
     console.error("[updater]", error);
-    // La page, elle, ne dit rien non plus : `reduceUpdateStatus` retire la ligne
-    // du téléchargement en cours et LAISSE celle d'une version déjà prête.
+    // The page doesn't say anything either: `reduceUpdateStatus` removes the line
+    // of the current download and LEAVE that of a version already ready.
     publish({ kind: "error" });
   });
 
-  // La détection, avant même que le fichier soit là : c'est le premier des deux
-  // états que la barre latérale montre. Rien à cliquer à ce moment-là — mais on
-  // voit qu'il se passe quelque chose, et l'attente cesse d'être un silence.
+  // Detection, even before the file is there: it is the first of the two
+  // states that the sidebar shows. Nothing to click at that moment — but we
+  // sees that something is happening, and the wait ceases to be silence.
   autoUpdater.on("update-available", (info) => {
     publish({ kind: "available", version: info.version });
   });
 
-  // ⚠ `checkForUpdates()` signale DEUX FOIS : l'événement `error` ci-dessus, ET
-  // une promesse rejetée. S'abonner à l'un ne dispense pas d'attraper l'autre —
-  // un `void` laissait une `UnhandledPromiseRejectionWarning` à chaque
-  // vérification hors ligne, et Node se réserve de les rendre fatales. Mesuré
-  // dans l'app empaquetée, pas déduit.
+  // ⚠ `checkForUpdates()` reports TWICE: the `error` event above, AND
+  // a rejected promise. Subscribing to one does not exempt you from catching the other —
+  // a `void` left a `UnhandledPromiseRejectionWarning` for each
+  // offline verification, and Node reserves the right to make them fatal. Measure
+  // in the packaged app, not inferred.
   const check = () => autoUpdater.checkForUpdates().catch(() => {});
 
   void check();
   setInterval(check, CHECK_INTERVAL_MS);
 }
 
-/** La version déjà proposée, pour ne pas la reproposer à chaque tour. */
+/** The version already proposed, so as not to repropose it every round. */
 let promptedVersion: string | null = null;
 
 /**
- * « minddy 0.9.5 est prêt » — la proposition, et le redémarrage s'il est accepté.
+ * "minddy 0.9.5 is ready" — the proposal, and the restart if accepted.
  *
- * La boîte s'attache à la fenêtre quand elle est VISIBLE, et flotte seule sinon :
- * une feuille modale posée sur une fenêtre cachée est une app qui ne répond plus
- * à rien, sans que rien ne soit affiché.
+ * The box attaches to the window when it is VISIBLE, and floats alone otherwise:
+ * a modal sheet placed on a hidden window is an app that no longer responds
+ * to nothing, without anything being displayed.
  *
- * ⚠ `setImmediate` avant `quitAndInstall` : appelé depuis le gestionnaire de
- * `update-downloaded`, il quitte l'app pendant qu'electron-updater est encore en
- * train de dérouler ses propres écouteurs. Le tour de boucle suivant lui laisse
- * finir — c'est la précaution que documente electron-updater, et elle ne coûte
- * rien.
+ * ⚠ `setImmediate` before `quitAndInstall`: called from the
+ * `update-downloaded` manager, it leaves the app while electron-updater is still in
+ *unwinding his own headphones. The next loop lets it
+ * finish — this is the precaution that electron-updater documents, and it costs
+ * nothing.
  *
- * Rien à faire du refus : `autoInstallOnAppQuit` reste vrai, la mise à jour est
- * déjà sur le disque, elle se posera au prochain ⌘Q.
+ * Nothing to do with the refusal: `autoInstallOnAppQuit` remains true, the update is
+ * already on the disk, it will land on the next ⌘Q.
  */
 async function promptInstall(version: string): Promise<void> {
   const copy = updatePromptCopy(version);
@@ -203,9 +199,9 @@ async function promptInstall(version: string): Promise<void> {
 }
 
 /**
- * La vérification DEMANDÉE, depuis le menu — la seule qui a le droit de répondre
- * « vous êtes à jour ». C'est toute la différence avec celle du dessus : ici
- * quelqu'un a posé la question, donc le silence serait une panne.
+ * The REQUESTED verification, from the menu — the only one that has the right to answer
+ * “you are up to date”. That's the difference with the one above: here
+ * someone asked the question, so silence would be a breakdown.
  */
 export async function checkForUpdatesFromMenu(): Promise<void> {
   if (!app.isPackaged) {
@@ -218,20 +214,20 @@ export async function checkForUpdatesFromMenu(): Promise<void> {
   }
 
   try {
-    // Une version déjà téléchargée et REPORTÉE est le cas qu'on rattrape ici :
-    // quelqu'un qui rouvre ce menu après avoir dit « plus tard » vient
-    // précisément redemander le bouton d'installation. `checkForUpdates` ne
-    // relancerait rien — le fichier est là — et répondrait donc « à jour », ce
-    // qui est faux et sans issue.
+    // A version already downloaded and POSTPONED is the case that we catch up here:
+    // someone who reopens this menu after saying "later" comes
+    // specifically ask for the install button again. `checkForUpdates` does not
+    // would restart nothing – the file is there – and would therefore respond “up to date”, this
+    // which is false and dead end.
     if (status.state === "ready") {
       await promptInstall(status.version);
       return;
     }
 
     const result = await autoUpdater.checkForUpdates();
-    // `updateInfo.version` est toujours renseigné ; c'est la comparaison avec la
+    // `updateInfo.version` is always specified; this is the comparison with the
     // version courante qui dit s'il se passe quelque chose. `downloadPromise`
-    // n'existe que quand une mise à jour a réellement été retenue.
+    // only exists when an update has actually been retained.
     if (result?.downloadPromise) {
       await dialog.showMessageBox({
         type: "info",

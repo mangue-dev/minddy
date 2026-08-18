@@ -1,21 +1,21 @@
 /**
- * 006 — une conversation avec Numo.
+ * 006 — a conversation with Numo.
  *
- * Pour quelle capture : `numoPanel` — « une instruction de l'utilisateur, la
- * réponse de Numo, et deux ou trois appels d'outils dépliés (recherche de
- * tickets, mise à jour groupée) ».
+ * For which capture: `numoPanel` — “a user instruction, the
+ * response from Numo, and two or three calls for unfolded tools (search for
+ * tickets, bulk update)”.
  *
- * Le badge « Ticket en contexte » de l'en-tête n'est PAS une donnée : il est
- * rendu à partir de la page ouverte au moment de la capture
- * (`components/assistant/page-context-badge.tsx`). Il suffit d'ouvrir le
- * panneau depuis un ticket pour qu'il apparaisse.
+ * The “Ticket in context” badge in the header is NOT data: it is
+ * rendered from the page open at capture time
+ * (`components/assistant/page-context-badge.tsx`). Just open the
+ * panel from a ticket for it to appear.
  *
- * Forme des lignes, imposée par le schéma (20260707160000_assistant) :
+ * Shape of the lines, imposed by the diagram (20260707160000_assistant):
  *   - `tool_calls` = [{ id, type: 'function', function: { name, arguments } }],
- *     `arguments` étant du JSON SÉRIALISÉ, pas un objet ;
- *   - une ligne `role: 'tool'` par appel, portant `tool_call_id` et `tool_name`.
+ * `arguments` being SERIALIZED JSON, not an object;
+ * - one `role: 'tool'` line per call, carrying `tool_call_id` and `tool_name`.
  *
- * Idempotent : la conversation est reconnue à son titre.
+ * Idempotent: the conversation is recognized by its title.
  *
  *   node captures/world/seed/006-numo.mjs --dry-run
  *   node captures/world/seed/006-numo.mjs
@@ -28,7 +28,7 @@ const DRY_RUN = process.argv.includes("--dry-run");
 
 const TITLE = "Sweep the unassigned backlog";
 
-/** Les appels d'outils, avec le nom réel des outils de Numo (lib/server/assistant/tools.ts). */
+/** Tool calls, with the actual name of Numo's tools (lib/server/assistant/tools.ts). */
 const SEARCH_CALL = "call_hxq2r7";
 const UPDATE_CALL = "call_m4t8vd";
 
@@ -42,35 +42,35 @@ const SEARCH_RESULT = {
 };
 
 /**
- * Ce que la conversation raconte est aussi ce que la base contient : le script
- * applique la même modification aux tickets. Un fil qui annonce un changement
- * que le board dément se remarque tout de suite sur une capture.
+ * What the conversation says is also what the database contains: the script
+ * applies the same change to tickets. A thread that announces a change
+ * that the crazy board is immediately noticed on a capture.
  */
 const BUMPED = ["AUR-11", "AUR-7"];
 const UPDATE_RESULT = { updated: BUMPED.length, identifiers: BUMPED };
 
 /**
- * Le déroulé, en SECONDES depuis le premier message.
+ * The sequence, in SECONDS from the first message.
  *
- * L'app affiche la durée d'un tour de travail (« A travaillé pendant … »,
- * `Agent.workedForMinutes`) en soustrayant le premier horodatage du dernier.
- * Le fil tenait sur douze minutes rondes, ce qui est invraisemblable pour deux
- * recherches et une mise à jour groupée — et le « et 0 seconde » d'une durée
- * pile sonnait faux. Une minute trois, avec des intervalles inégaux : le temps
- * de lire un résultat n'est pas celui d'écrire une phrase.
+ * The app displays the duration of a shift (“Worked for…”),
+ * `Agent.workedForMinutes`) by subtracting the first timestamp from the last.
+ * The thread lasted for twelve full minutes, which is incredible for two
+ * searches and a bulk update — and the “and 0 seconds” of a duration
+ * tails sounded wrong. One minute three, with unequal intervals: time
+ * reading a result is not like writing a sentence.
  */
 const TIMELINE = [0, 4, 9, 31, 38, 63];
 
-/** Les six horodatages du fil, dans l'ordre. Partagés par la création et le
-    réalignement, pour qu'il n'existe qu'une seule définition du déroulé. */
+/** The thread's six timestamps, in order. Shared by creation and
+ realignment, so that there is only one definition of the unfolding. */
 function timelineFor(window) {
   const base = Date.parse(spreadInWindow(window, 1, 14));
   return TIMELINE.map((seconds) => new Date(base + seconds * 1000).toISOString());
 }
 
 /**
- * Le fil, dans l'ordre. Il est daté dans la quinzaine courante — la
- * conversation doit être récente pour que l'horodatage affiché ait l'air vivant.
+ * The thread, in order. It is dated in the current fortnight — the
+ * conversation must be recent for the displayed timestamp to look lively.
  */
 function buildMessages(conversationId, window) {
   const stamps = timelineFor(window);
@@ -144,12 +144,12 @@ function buildMessages(conversationId, window) {
 }
 
 /**
- * Redate les messages d'une conversation déjà en base sur le déroulé courant.
+ * Redates the messages of a conversation already based on the current progress.
  *
- * Le script est idempotent par le TITRE : une conversation déjà là est laissée
- * telle quelle, et changer `TIMELINE` ne suffirait donc pas à corriger ce qui
- * est photographié. Même logique qu'`applyBump` : on réaligne l'existant au
- * lieu de tout détruire pour tout recréer.
+ * The script is idempotent by the TITLE: a conversation already there is left
+ * as is, and changing `TIMELINE` would therefore not be enough to correct what
+ * is photographed. Same logic as `applyBump`: we realign the existing
+ * instead of destroying everything to recreate everything.
  */
 async function alignTimeline(world, conversation, window) {
   const { data, error } = await world.admin
@@ -173,12 +173,12 @@ async function alignTimeline(world, conversation, window) {
     .map((message, index) => ({ message, want: stamps[index] }))
     .filter(({ message, want }) => Date.parse(message.created_at) !== Date.parse(want));
 
-  // `conversations.updated_at` n'est PAS à nous : le trigger
-  // `conversations_set_updated_at` (migration 20260707160000_assistant) le
-  // repose à `now()` à chaque UPDATE. Le viser ne changerait rien et laisserait
-  // le script réclamer la même modification à chaque exécution. Il ne se voit
-  // pas sur la capture — la liste range la conversation sous « Aujourd'hui »,
-  // ce que `now()` donne de toute façon.
+  // `conversations.updated_at` is NOT ours: the trigger
+  // `conversations_set_updated_at` (migration 20260707160000_assistant) on
+  // rests at `now()` on each UPDATE. Aiming it wouldn't change anything and would leave
+  // the script will claim the same change each time it is run. He doesn't see himself
+  // not on the capture - the list puts the conversation under "Today",
+  // which `now()` gives anyway.
   if (drifted.length === 0) {
     console.log("  → déroulé déjà à l'heure : rien à redater");
     return;
@@ -198,7 +198,7 @@ async function alignTimeline(world, conversation, window) {
   await plan.apply({ confirmed: true });
 }
 
-/** Applique aux tickets la mise à jour groupée que la conversation annonce. */
+/** Applies the bulk update that the conversation announces to tickets. */
 async function applyBump(world, project) {
   const numbers = BUMPED.map((id) => Number(id.split("-")[1]));
   const { data, error } = await world.admin
@@ -249,20 +249,20 @@ async function main() {
     .eq("title", TITLE);
   if (error) throw new Error(`captures: lecture des conversations — ${error.message}`);
 
-  // Le résultat annoncé par le fil, réellement appliqué aux tickets. Fait
-  // AVANT le test d'idempotence pour qu'une conversation déjà là ne laisse pas
-  // les priorités désalignées.
+  // The result announced by the thread, actually applied to tickets. Do
+  // BEFORE the idempotence test so that a conversation already there does not leave
+  // misaligned priorities.
   await applyBump(world, project);
 
   if ((existing || []).length > 0) {
     console.log(`  → conversation « ${TITLE} » déjà là, contenu laissé tel quel`);
-    // Le déroulé, lui, se rattrape : c'est lui qui donne la durée affichée.
+    // The sequence, for its part, catches up: it is this which gives the displayed duration.
     await alignTimeline(world, existing[0], window);
     return;
   }
 
-  // Deux temps obligatoires : les messages s'ancrent sur la conversation, et
-  // un parent n'est reconnu du monde de démo qu'une fois appliqué.
+  // Two obligatory steps: the messages are anchored in the conversation, and
+  // a parent is only recognized from the demo world once applied.
   const conversationPlan = createPlan(world);
   conversationPlan.insert(
     "conversations",

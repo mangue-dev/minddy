@@ -15,10 +15,10 @@ import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * Domaine personnalisé d'une vue partagée (MIN-36) — miroir de la route board
- * (app/api/projects/[id]/feedback/domain). GET pour qui peut gérer le partage ;
- * PUT/DELETE owner-only (attacher un domaine touche l'infra Vercel). 404 tant
- * que la vue n'a pas de share : le domaine s'attache à un lien public existant.
+ * Custom domain of a shared view (MIN-36) — mirror of the route board
+ * (app/api/projects/[id]/feedback/domain). GET for who can manage sharing;
+ * PUT/DELETE owner-only (attaching a domain touches Vercel infrastructure). 404 while
+ * that the view does not have a share: the domain attaches to an existing public link.
  */
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
@@ -35,10 +35,10 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const row = resolved.share ? await getDomainForShare(resolved.share.id) : null;
   if (!row) return NextResponse.json({ configured, can_manage: resolved.isOwner, domain: null });
 
-  // Un domaine non vérifié ne sert RIEN depuis MIN-337 : la vérification est
-  // devenue le passage obligé, donc elle se retente à chaque ouverture de
-  // l'écran, sans attendre un clic sur « Vérifier le statut ». Le coût (un
-  // appel Vercel) ne concerne que les domaines en attente.
+  // An unverified domain serves NOTHING since MIN-337: verification is
+  // become the obligatory passage, so it is repeated at each opening of
+  // the screen, without waiting for a click on “Check Status”. The cost (a
+  // Vercel call) only concerns pending domains.
   const refresh = request.nextUrl.searchParams.get("refresh") === "1";
   const domain =
     configured && (refresh || row.status !== "verified")
@@ -84,9 +84,9 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  // `null` est du JSON valide : lire body.domain dessus ferait un 500. La
-  // longueur, elle, est bornée par normalizeDomain (253 max, RFC hostname).
-  // Même garde que le jumeau /api/projects/[id]/feedback/domain (MIN-118).
+  // `null` is valid JSON: reading body.domain on it would make a 500. The
+  // length is bounded by normalizeDomain (253 max, RFC hostname).
+  // Same guard as the twin /api/projects/[id]/feedback/domain (MIN-118).
   if (!body || typeof body !== "object" || typeof body.domain !== "string") {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
@@ -105,9 +105,9 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
         return NextResponse.json({ error: t("customDomainApiError") }, { status: 502 });
     }
   }
-  // Refresh immédiat : lit la cible CNAME recommandée par Vercel pour CE
-  // domaine (vercel-dns-016 & co) et la persiste — les instructions DNS
-  // affichées au premier rendu sont les bonnes.
+  // Immediate refresh: reads the CNAME target recommended by Vercel for CE
+  // domain (vercel-dns-016 & co) and persists it — DNS instructions
+  // displayed at first rendering are the correct ones.
   return NextResponse.json({
     configured: true,
     can_manage: true,
@@ -130,7 +130,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   }
 
   const row = resolved.share ? await getDomainForShare(resolved.share.id) : null;
-  // Rien à détacher → idempotent.
+  // Nothing to detach → idempotent.
   if (!row)
     return NextResponse.json({
       configured: isVercelDomainsConfigured(),

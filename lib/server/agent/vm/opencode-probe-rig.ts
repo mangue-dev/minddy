@@ -7,71 +7,71 @@ import path from "node:path";
 import { OPENCODE_VERSION } from "./opencode-version";
 
 /**
- * LE DÉCOR PARTAGÉ DES SONDES DE PERMISSION (MIN-362).
+ * THE SHARED DECOR OF PERMISSION PROBES (MIN-362).
  *
- * Ce module n'est chargé par AUCUN chemin de production : il n'existe que pour
- * [opencode-permissions.probe.test.ts](opencode-permissions.probe.test.ts) et
- * [opencode-wait.probe.test.ts](opencode-wait.probe.test.ts), qui mesurent le
- * comportement du vrai binaire `opencode-ai@${OPENCODE_VERSION}` et gardent ces
- * mesures d'un bump à l'autre. Il vit ici, à côté d'elles, parce que le décor
- * EST la moitié difficile de la mesure — et qu'un décor recopié dans deux
- * fichiers dérive.
+ * This module is not loaded by ANY production path: it only exists for
+ * [opencode-permissions.probe.test.ts](opencode-permissions.probe.test.ts) and
+ * [opencode-wait.probe.test.ts](opencode-wait.probe.test.ts), which measure the
+ * behavior of the true binary `opencode-ai@${OPENCODE_VERSION}` and keep these
+ * measurements from bump to bump. He lives here, next to them, because the setting
+ * IS the difficult half of the measurement — and a setting copied into two
+ * files is drifting.
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * LE FAUX FOURNISSEUR, ET POURQUOI IL NE COÛTE RIEN
+ * ─────────────────────── ──────────────────────── ──────────────────────────────
+ * THE FAKE SUPPLIER, AND WHY IT COSTS NOTHING
  *
- * Ce qu'on mesure n'est pas le modèle : c'est ce qu'opencode fait AUTOUR d'un
- * appel de tool — quelle permission il publie, dans quel ordre, ce qu'un « oui »
- * couvre, ce qu'un `deny` empêche. Un modèle réel rendrait tout ça
- * non-déterministe (il choisit ses outils) et payant. `startProvider` sert donc
- * un `/v1/chat/completions` OpenAI-compatible qui rend EXACTEMENT l'appel de
- * tool qu'on lui a mis dans la file, en SSE, comme le ferait OpenRouter.
+ * What we measure is not the model: it's what opencode does AROUND a
+ * tool call — what permission it publishes, in what order, what a “yes”
+ * covers, what a `deny` prevents. A real model would make it all
+ * non-deterministic (it chooses its tools) and paid. `startProvider` therefore serves
+ * an OpenAI-compatible `/v1/chat/completions` which makes EXACTLY the call to
+ * tool that we put in the queue, in SSE, as would OpenRouter.
  *
- * SA LIMITE, ET ELLE COMPTE : le faux fournisseur a **fini son flux** avant que
- * le tool s'exécute. Il ne peut donc rien dire d'une session dont le modèle
- * attend encore de l'autre côté d'une connexion ouverte — c'est ce que
- * `opencode-wait.probe.test.ts` va chercher avec un vrai fournisseur.
+ * ITS LIMIT, AND IT MATTERS: the fake provider has **finished its flow** before
+ * the tool executes. So it can't say anything about a session whose model
+ * is still waiting on the other side of an open connection — that's what
+ * `opencode-wait.probe.test.ts` will fetch with a real provider.
  *
- * ⚠ CHAQUE RÉSULTAT DE TOOL RAPPELLE LE FOURNISSEUR. Une file de trois tours ne
- * demande donc pas trois prompts : un seul prompt les déroule tous les trois.
- * C'est ce qui permet d'enchaîner « demande → réponse → nouvelle demande » dans
- * un tour unique, et ce qui fait qu'une file mal dimensionnée décale tout.
+ * ⚠ EACH TOOL RESULT REMINDS IT SUPPLIER. A queue of three turns does not
+ * therefore require three prompts: a single prompt unrolls all three.
+ * This is what allows you to chain “request → response → new request” in
+ * a single turn, and what causes a poorly sized queue to shift everything.
  *
- * ⚠ `realpathSync` SUR LE DOSSIER TEMPORAIRE, et ce n'est pas de la coquetterie :
- * `/var/folders/…` est un lien vers `/private/var/…` sur macOS, opencode résout
- * le chemin de sa session, et un `write` visant la forme non résolue est vu
- * comme HORS du dépôt — la sonde mesure alors `external_directory` en croyant
- * mesurer `edit`. Deux mesures ont été fausses avant qu'on s'en aperçoive.
+ * ⚠ `realpathSync` ON THE TEMPORARY FOLDER, and this is not flirtatious:
+ * `/var/folders/…` is a link to `/private/var/…` on macOS, opencode resolves
+ * the path of its session, and a `write` targeting the unresolved form is seen
+ * as OUT of the repository — the probe then measures `external_directory` believing
+ * to measure `edit`. Two measurements were wrong before we noticed.
  */
 
-/** Un appel de tool, tel que le modèle l'émettrait. */
+/** A tool call, such as the model would issue. */
 export interface ToolCall {
   name: string;
   args: Record<string, unknown>;
 }
 
-/** Un tour scripté : soit des appels de tool, soit du texte qui clôt le round. */
+/** A scripted round: either tool calls, or text which ends the round. */
 export type ProviderTurn =
   | { tools: ToolCall[]; text?: undefined }
   | { text: string; tools?: undefined };
 
 export interface FakeProvider {
-  /** À poser dans `options.baseURL` de la config opencode. */
+  /** To be placed in `options.baseURL` of the opencode config. */
   url: string;
-  /** La file des tours à servir. Vide → le fournisseur clôt le round. */
+  /** The line of turns to serve. Empty → the supplier closes the round. */
   queue: ProviderTurn[];
-  /** Les corps de requête reçus, dans l'ordre — c'est là que vivent les tools offerts. */
+  /** The request bodies received, in order — this is where the offered tools live. */
   seen: string[];
-  /** Les noms de tools offerts au modèle dans la dernière requête vue. */
+  /** The names of tools offered to the model in the last query seen. */
   offeredTools(): string[];
   close(): void;
 }
 
 /**
- * Un fournisseur OpenAI-compatible qui rend ce qu'on lui dit de rendre.
+ * An OpenAI-compatible provider that renders what it is told to render.
  *
- * Le port est choisi par le noyau (`listen(0)`) : deux sondes lancées en
- * parallèle ne se disputent rien.
+ * The port is chosen by the kernel (`listen(0)`): two probes launched in
+ * in parallel do not compete for anything.
  */
 export function startProvider(turns: ProviderTurn[] = []): Promise<FakeProvider> {
   const seen: string[] = [];
@@ -147,10 +147,10 @@ export function startProvider(turns: ProviderTurn[] = []): Promise<FakeProvider>
 }
 
 /**
- * Le binaire, installé une fois pour toutes.
+ * The binary, installed once and for all.
  *
- * `MDY_OPENCODE_BIN` court-circuite l'installation : 144 Mo par `npm i`, c'est
- * 40 s qu'on ne veut pas repayer à chaque itération d'écriture d'une sonde.
+ * `MDY_OPENCODE_BIN` short-circuits the installation: 144 MB per `npm i`, that's
+ * 40 s that we don't want to pay for each write iteration of a probe.
  */
 export function installOpencode(root: string): string {
   const given = process.env.MDY_OPENCODE_BIN;
@@ -165,10 +165,10 @@ export function installOpencode(root: string): string {
 }
 
 /**
- * Les creds vivent dans `.env` ; vitest ne le charge pas tout seul.
+ * Creds live in `.env`; vitest doesn't load it on its own.
  *
- * Seule la sonde d'attente à VRAI fournisseur en a besoin — les mesures de
- * permission ne dépensent aucun modèle.
+ * Only the REAL provider wait probe needs it — measurements from
+ * permission don't spend any models.
  */
 export function loadEnv(): void {
   const file = path.resolve(process.cwd(), ".env");
@@ -182,12 +182,12 @@ export function loadEnv(): void {
   }
 }
 
-/** Un dossier de sonde, CHEMIN RÉSOLU (cf. l'avertissement en tête de fichier). */
+/** A probe directory, RESOLVED PATH (see the warning at the top of the file). */
 export function probeRoot(tag: string): string {
   return fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), `mdy-probe-${tag}-`)));
 }
 
-/** Un dépôt git minimal, avec un commit — opencode veut une session dans un dépôt. */
+/** A minimal git repository, with one commit — opencode wants a session in a repository. */
 export function makeRepo(root: string): string {
   const repo = path.join(root, "repo");
   fs.mkdirSync(repo, { recursive: true });
@@ -200,7 +200,7 @@ export function makeRepo(root: string): string {
   return repo;
 }
 
-/** La config d'un tour de sonde : notre provider, et ce qu'on veut mesurer autour. */
+/** The configuration of a probe tower: our provider, and what we want to measure around it. */
 export function probeConfig(
   providerUrl: string,
   extra: Record<string, unknown> = {},
@@ -220,7 +220,7 @@ export function probeConfig(
   };
 }
 
-/** Un événement du flux `/event`, tel qu'il arrive. */
+/** An event from the `/event` stream, as it arrives. */
 export interface ProbeEvent {
   type: string;
   properties: Record<string, any>;
@@ -232,11 +232,11 @@ export interface ProbeServer {
   root: string;
   proc: ChildProcess;
   events: ProbeEvent[];
-  /** Les demandes de permission publiées, dans l'ordre. */
+  /** Published permission requests, in order. */
   asks(sessionId?: string): Array<Record<string, any>>;
-  /** Le DERNIER état connu de chaque appel de tool. */
+  /** The LAST known state of each tool call. */
   toolParts(): Array<{ tool: string; status: string; error: string }>;
-  /** A-t-on vu la session retomber au repos ? */
+  /** Have we seen the session go back to rest? */
   sawIdle(): boolean;
   post(route: string, body?: unknown): Promise<{ status: number; body: any }>;
   get(route: string): Promise<{ status: number; body: any }>;
@@ -246,26 +246,26 @@ export interface ProbeServer {
 }
 
 /**
- * Monte un serveur opencode sur un dépôt neuf, et branche le collecteur d'events.
+ * Mount an opencode server on a new repository, and plug in the event collector.
  *
- * `HOME` pointe sur la racine de la sonde : les motifs en `~` deviennent alors
- * mesurables sans jamais toucher au vrai home de qui lance la sonde.
+ * `HOME` points to the root of the probe: the patterns in `~` then become
+ * measurable without ever touching the real home of who launches the probe.
  */
 export async function startProbeServer(opts: {
   bin: string;
   tag: string;
   config: Record<string, unknown>;
-  /** Réutiliser un décor existant (redémarrage : même DB, même dépôt). */
+  /** Reuse an existing decor (restart: same DB, same repository). */
   reuse?: { root: string; repo: string };
   /**
-   * Variables d'environnement de PLUS, posées sur le serveur (MIN-364, lot 9).
-   *
-   * Elles vont ici plutôt que dans le `process.env` de la sonde parce que la
-   * découverte d'opencode est MÉMOÏSÉE au premier accès : mesurer un
-   * `OPENCODE_DISABLE_*` demande de redémarrer le serveur, et un `process.env`
-   * restauré entre-temps aurait rendu la mesure muette — une sonde qui dit « oui,
-   * c'est coupé » sur un serveur où rien n'était posé.
-   */
+ * PLUS environment variables, placed on the server (MIN-364, batch 9).
+ *
+ * They go here rather than in the `process.env` of the probe because the
+ * opencode discovery is SAVED on first access: measure a
+ * `OPENCODE_DISABLE_*` asks to restart the server, and a `process.env`
+ * restored in the meantime would have made the measurement silent — a probe that says "yes,
+ * it's cut" on a server where nothing was set.
+ */
   env?: Record<string, string>;
 }): Promise<ProbeServer> {
   const root = opts.reuse?.root ?? probeRoot(opts.tag);
@@ -369,7 +369,7 @@ export async function startProbeServer(opts: {
   };
 }
 
-/** Attend qu'une condition devienne vraie, ou rend `false` au bout du plafond. */
+/** Waits for a condition to become true, or returns `false` to the end of the cap. */
 export async function waitFor(
   predicate: () => boolean | Promise<boolean>,
   timeoutMs = 15_000,
@@ -386,14 +386,13 @@ export async function waitFor(
 export const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 /**
- * Attend que le fournisseur soit RETOMBÉ AU CALME — plus aucune requête depuis
+ * Waits until the provider has FUCKED DOWN — no more requests since
  * `quietMs`.
  *
- * À appeler entre deux mesures qui partagent une file. Le piège, mesuré : le
- * résultat d'un tool (une réponse de permission, un refus) rappelle le
- * fournisseur, et cet appel-là arrive APRÈS qu'on a rendu la main. Sans cette
- * attente, il consomme le tour de la mesure SUIVANTE — qui, elle, ne voit alors
- * rien venir. Symptôme reconnaissable : une mesure sur deux tombe à vide.
+ * To be called between two metrics that share a queue. The trap, measured: the
+ * result of a tool (a permission response, a refusal) calls back the
+ * supplier, and this call arrives AFTER we have handed over. Without this
+ * wait, it consumes the turn of the NEXT measure - which then sees nothing coming. Recognizable symptom: one out of two measurements falls empty.
  */
 export async function settleProvider(
   provider: FakeProvider,
@@ -414,13 +413,13 @@ export async function settleProvider(
   }
 }
 
-/** Un appel de tool `bash`, tel que le modèle l'émettrait. */
+/** A tool `bash` call, as the model would issue it. */
 export const bash = (command: string, extra: Record<string, unknown> = {}): ToolCall => ({
   name: "bash",
   args: { command, ...extra },
 });
 
-/** Un appel de tool `write` — le chemin est ABSOLU, comme chez un vrai modèle. */
+/** A call to tool `write` — the path is ABSOLUTE, like in a real model. */
 export const write = (filePath: string, content = "x\n"): ToolCall => ({
   name: "write",
   args: { filePath, content },
@@ -454,11 +453,11 @@ async function streamEvents(
         try {
           sink(JSON.parse(line.slice(5).trim()) as ProbeEvent);
         } catch {
-          // Une frame tronquée n'est pas une panne de sonde.
+          // A truncated frame is not a probe failure.
         }
       }
     }
   } catch {
-    // Le flux meurt avec le serveur : c'est la fin normale d'une sonde.
+    // The flow dies with the server: this is the normal end of a probe.
   }
 }

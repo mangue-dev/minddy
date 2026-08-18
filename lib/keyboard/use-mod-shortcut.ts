@@ -7,19 +7,19 @@ import {
   resolveKeyToken,
 } from "@/lib/keyboard/shortcuts";
 
-/** La plateforme ne change pas en cours de session : rien à quoi s'abonner. */
+/** The platform does not change during the session: nothing to subscribe to. */
 const subscribe = () => () => {};
 
 /**
- * La touche de modification de la plateforme, seule : « ⌘ » sur un Mac,
- * « Ctrl » ailleurs. Pour les surfaces qui rendent les touches SÉPARÉMENT
- * (deux `Kbd` côte à côte, comme le cheat sheet).
+ * The platform modifier key, only: "⌘" on a Mac,
+ * "Ctrl" elsewhere. For surfaces that render keys SEPARATELY
+ * (two `Kbd` side by side, like the cheat sheet).
  *
- * Pourquoi `useSyncExternalStore` et pas un appel direct à `resolveKeyToken` :
- * ces surfaces-là sont rendues AUSSI côté serveur, où `navigator` n'existe pas.
- * React prend alors la valeur serveur pour l'hydratation puis rebascule sur
- * celle du navigateur — au lieu de crier au décalage. Le repli serveur est la
- * forme Windows/Linux, la plus répandue : c'est celle qui clignotera le moins.
+ * Why `useSyncExternalStore` and not a direct call to `resolveKeyToken`:
+ * these surfaces are rendered ALSO on the server side, where `navigator` does not exist.
+ * React then takes the server value for hydration and then switches back to
+ * that of the browser — instead of crying about the offset. The server fallback is the
+ * Windows/Linux form, the most common: it is the one that will flash the least.
  */
 export function useModKey(): string {
   return useSyncExternalStore(
@@ -30,9 +30,9 @@ export function useModKey(): string {
 }
 
 /**
- * Le même raccourci écrit DANS une phrase — « ⌘K » sur un Mac, « Ctrl+K »
- * ailleurs : une marche à suivre ou un toast ont besoin d'une chaîne, pas de
- * deux touches côte à côte.
+ * The same shortcut written IN a sentence — "⌘K" on a Mac, "Ctrl+K"
+ * elsewhere: a procedure or a toast needs a string, not
+ * two keys side by side.
  */
 export function useModShortcut(key: string): string {
   return useSyncExternalStore(
@@ -42,7 +42,7 @@ export function useModShortcut(key: string): string {
   );
 }
 
-/** Le même, avec ⇧ — « ⌘⇧L » sur un Mac, « Ctrl+Shift+L » ailleurs. */
+/** The same, with ⇧ — “⌘⇧L” on a Mac, “Ctrl+Shift+L” elsewhere. */
 export function useModShiftShortcut(key: string): string {
   return useSyncExternalStore(
     subscribe,

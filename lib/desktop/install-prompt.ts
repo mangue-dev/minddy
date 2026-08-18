@@ -1,64 +1,63 @@
 /**
- * À qui propose-t-on d'installer l'app de bureau ? (MIN-292)
+ * Who is offered to install the desktop app? (MIN-292)
  *
- * Module PUR — pas de React, pas de `navigator` lu en douce : tout ce qui décide
- * entre en paramètre. C'est ce qui permet de tester la règle, y compris ses cas
- * pénibles (l'iPad qui se déclare « MacIntel »), sans monter un DOM.
+ * PUR module — no React, no `navigator` read softly: whatever decides
+ * comes in as a parameter. This is what makes it possible to test the rule, including its painful cases
+ * (the iPad which declares itself "MacIntel"), without mounting a DOM.
  *
- * **Trois conditions, et chacune retire une population qu'on ferait fuir :**
+ * **Three conditions, and each removes a population that would be driven away:**
  *
- * 1. **Pas dans l'app de bureau.** Proposer de l'installer à quelqu'un qui l'a
- *    ouverte est la définition du bruit.
- * 2. **Sur un Mac.** Il n'existe pas de version Windows ni Linux ; le proposer
- *    ailleurs, c'est promettre ce qu'on n'a pas.
- * 3. **Pas déjà écarté.** L'utilisateur a dit non une fois, et « une fois »
- *    veut dire pour toujours.
+ * 1. **Not in the desktop app.** Offering to install it to someone who has it open is the definition of noise.
+ * 2. **On a Mac.** There is no Windows or Linux version; offering it
+ * elsewhere is promising what you don't have.
+ * 3. **Not already ruled out.** The user said no once, and “once”
+ * means forever.
  */
 
 /**
- * Le drapeau vit dans `user_metadata`, comme les autres petites préférences du
- * compte (`prompt_copy_auto_start`, `numo_default_status`) — et NON dans le
+ * The flag lives in `user_metadata`, like the other small preferences in the
+ * account (`prompt_copy_auto_start`, `numo_default_status`) — and NOT in the
  * `localStorage`.
  *
- * C'est ce que veut dire « plus jamais montré » : un stockage local le
- * ramènerait au premier navigateur privé, au premier nettoyage de cache, et sur
- * la deuxième machine. Refuser une proposition est une décision de la personne,
- * pas de son navigateur.
+ * This is what "never shown again" means: local storage le
+ * would return to the first private browser, the first cache clean, and on
+ * the second machine. Refusing a proposal is a decision of the person,
+ * not of their browser.
  */
 export const DESKTOP_PROMPT_DISMISSED_META_KEY = "desktop_prompt_dismissed";
 
-/** A-t-on déjà écarté la proposition ? Faux par défaut. */
+/** Have we already ruled out the proposal? False by default. */
 export function resolveDesktopPromptDismissed(
   meta: Record<string, unknown> | null | undefined
 ): boolean {
   return meta?.[DESKTOP_PROMPT_DISMISSED_META_KEY] === true;
 }
 
-/** Ce qu'on lit du navigateur, et rien de plus. */
+/** What we read from the browser, and nothing more. */
 export interface PlatformProbe {
-  /** `navigator.userAgentData?.platform` — le seul champ non déprécié. */
+  /** `navigator.userAgentData?.platform` — the only non-deprecated field. */
   uaDataPlatform?: string | null;
-  /** `navigator.platform` — déprécié, mais c'est le repli de Safari. */
+  /** `navigator.platform` — deprecated, but this is Safari's fallback. */
   platform?: string | null;
   userAgent?: string | null;
-  /** `navigator.maxTouchPoints` — voir le piège de l'iPad ci-dessous. */
+  /** `navigator.maxTouchPoints` — see iPad trap below. */
   maxTouchPoints?: number | null;
 }
 
 /**
- * Est-ce un Mac ?
+ * Is it a Mac?
  *
- * ⚠ **L'iPad ment.** Depuis iPadOS 13, en mode « site pour ordinateur » (le
- * défaut), il annonce `MacIntel` et un user agent de Macintosh : à s'en tenir
- * là, on proposerait un `.dmg` à une tablette. Le seul signe qui les sépare est
- * le TACTILE — un Mac rend `maxTouchPoints` à 0, un iPad à 5. C'est le test que
- * fait Apple elle-même dans sa documentation, faute de mieux.
+ * ⚠ **The iPad lies.** Since iPadOS 13, in “site for computer” mode (the
+ * default), it announces `MacIntel` and a Macintosh user agent: see it hold
+ * there, we would offer a `.dmg` to a tablet. The only sign that separates them is
+ * TOUCH — a Mac makes `maxTouchPoints` 0, an iPad 5. This is the test that
+ * does Apple itself in its documentation, for lack of anything better.
  */
 export function isMacPlatform(probe: PlatformProbe): boolean {
   const { uaDataPlatform, platform, userAgent, maxTouchPoints } = probe;
 
-  // Un Mac tactile n'existe pas : au-delà d'un point de contact, c'est un iPad
-  // déguisé. On coupe avant de regarder quoi que ce soit d'autre.
+  // A touchscreen Mac does not exist: beyond a point of contact, it is an iPad
+  // disguised. We cut before watching anything else.
   if ((maxTouchPoints ?? 0) > 1) return false;
 
   if (uaDataPlatform) return uaDataPlatform === "macOS";
@@ -68,7 +67,7 @@ export function isMacPlatform(probe: PlatformProbe): boolean {
 
 /** Faut-il proposer l'app de bureau ? */
 export function shouldOfferDesktopApp(input: {
-  /** Tourne-t-on DÉJÀ dans l'app ? (présence du pont, cf. bridge.ts) */
+  /** Are we ALREADY running in the app? (presence of the bridge, cf. bridge.ts) */
   inDesktopApp: boolean;
   isMac: boolean;
   dismissed: boolean;

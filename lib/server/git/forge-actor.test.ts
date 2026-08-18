@@ -1,14 +1,14 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
 /**
- * Ce que la forge répond quand elle refuse le TOKEN, et non le dépôt.
+ * What the forge responds to when it refuses the TOKEN, not the deposit.
  *
- * Le repli historique envoyait tout échec non-404 sur `read`. Un 401 y devenait
- * donc « compte connecté, droits limités » — la pire phrase possible, servie au
- * PROPRIÉTAIRE du dépôt (« votre compte git ne peut ni fusionner ni résoudre les
- * fils de ce dépôt »), puis un `Bad credentials` nu au premier geste. Trois cas,
- * et le troisième est le garde-fou : 403 doit RESTER un repli sur `read`, sinon
- * un quota d'API épuisé se mettrait à réclamer une réautorisation.
+ * Historical fallback sent any non-404 failure to `read`. A 401 became
+ * therefore "connected account, limited rights" - the worst possible sentence, served to the
+ * OWNER of the repository ("your git account can neither merge nor resolve the
+ * children of this repository"), then a bare `Bad credentials` at the first gesture. Three cases,
+ * and the third is the safeguard: 403 must REMAIN a fallback to `read`, otherwise
+ * an exhausted API quota would start demanding reauthorization.
  */
 
 let tokens: string[];
@@ -18,8 +18,8 @@ let probes: string[];
 
 vi.mock("./user-identities", () => ({
   getGithubUserToken: async (_userId: string, opts: { force?: boolean } = {}) => {
-    // Une rotation forcée consomme le token suivant ; sans elle, on rend celui
-    // qui est en base — exactement le contrat de la vraie fonction.
+    // A forced rotation consumes the next token; without it, we return the one
+    // which is in base — exactly the contract of the real function.
     const token = opts.force && tokens.length > 1 ? tokens[1] : tokens[0];
     if (opts.force && tokens.length > 1) tokens = tokens.slice(1);
     minted.push({ token, force: !!opts.force });
@@ -37,7 +37,7 @@ function json(status: number, body: unknown): Response {
   });
 }
 
-/** Le module garde des caches in-process : chaque cas repart d'un module neuf. */
+/** The module keeps in-process caches: each case starts from a new module. */
 async function freshResolve() {
   vi.resetModules();
   const mod = await import("./forge-actor");
@@ -61,7 +61,7 @@ const opts = {
   repoFullName: "mangue-dev/minddy-issues",
 };
 
-it("répare tout seul un token que la forge refuse, quand la rotation aboutit", async () => {
+it("repairs a token rejected by the forge when rotation succeeds", async () => {
   tokens = ["mort", "frais"];
   responses = [
     () => json(401, { message: "Bad credentials" }),
@@ -71,7 +71,7 @@ it("répare tout seul un token que la forge refuse, quand la rotation aboutit", 
 
   const actor = await resolveForgeActor(opts);
 
-  // Le propriétaire du dépôt retrouve son droit de fusionner, sans rien faire.
+  // The owner of the repository regains his right to merge, without doing anything.
   expect(actor).toMatchObject({ kind: "actor", token: "frais", capability: "write" });
   expect(minted).toEqual([
     { token: "mort", force: false },
@@ -79,7 +79,7 @@ it("répare tout seul un token que la forge refuse, quand la rotation aboutit", 
   ]);
 });
 
-it("dit « à réautoriser » plutôt que « lecture seule » quand rien ne peut le sauver", async () => {
+it("says « reauthorize » rather than « read-only » when nothing can save it", async () => {
   tokens = ["mort"];
   responses = [() => json(401, { message: "Bad credentials" })];
   const resolveForgeActor = await freshResolve();
@@ -89,7 +89,7 @@ it("dit « à réautoriser » plutôt que « lecture seule » quand rien ne peut
   expect(actor).toEqual({ kind: "none", reason: "expired", login: "mangue-dev" });
 });
 
-it("ne rejoue pas la rotation pour un token déjà constaté mort", async () => {
+it("does not replay rotation for a token already known to be dead", async () => {
   tokens = ["mort"];
   responses = [
     () => json(401, { message: "Bad credentials" }),
@@ -102,14 +102,14 @@ it("ne rejoue pas la rotation pour un token déjà constaté mort", async () => 
   const actor = await resolveForgeActor(opts);
 
   expect(actor).toMatchObject({ kind: "none", reason: "expired" });
-  // Le second passage mint le token puis s'arrête net : ni probe de plus, ni
-  // échange OAuth — le panneau d'une PR repolle toutes les 15 s, à trois ou
-  // quatre requêtes le tour.
+  // The second pass mints the token then stops abruptly: no more probe, no
+  // OAuth exchange — the panel of a PR repolles every 15 s, at three or
+  // four requests per turn.
   expect(minted.length).toBe(before + 1);
   expect(probes.length).toBe(1);
 });
 
-it("garde le repli sur `read` pour un 403 — quota, SSO d'organisation", async () => {
+it("keeps the `read` fallback for a 403 — quota, organization SSO", async () => {
   tokens = ["vivant"];
   responses = [() => json(403, { message: "API rate limit exceeded" })];
   const resolveForgeActor = await freshResolve();

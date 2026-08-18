@@ -6,39 +6,39 @@ import type { PageBacklink } from "@/lib/types";
 export type { PageBacklink };
 
 /**
- * QUI cite cette page — la lecture, par ses deux chemins (MIN-279).
+ * WHO cites this page — reading, by its two paths (MIN-279).
  *
- * Deux origines, et elles n'ont rien en commun sauf le résultat :
+ * Two origins, and they have nothing in common except the result:
  *
- *  • la RESSOURCE de genre `page` (MIN-275) — une vraie clé étrangère,
- *    `attachments.page_id`, dont l'index avait été posé pour ce jour-ci ;
- *  • la MENTION — du texte, donc rien à interroger, d'où la table dérivée
- *    `page_links` que `lib/server/page-links.ts` réécrit à chaque écriture.
+ * • the RESOURCE of genre `page` (MIN-275) — a real foreign key,
+ * `attachments.page_id`, whose index had been set for this day;
+ * • the MENTION — text, therefore nothing to query, hence the derived table
+ * `page_links` than `lib/server/page-links.ts` rewritten on each write.
  *
- * Les deux se FONDENT : une source qui cite la page des deux façons est une
- * ligne, pas deux. Le panneau répond à « qui s'appuie sur cette page ? » ;
- * comment la citation est écrite n'est pas la question.
+ * The two merge: a source that cites the page both ways is one
+ * line, not two. The sign responds to “who relies on this page?” " ;
+ * how the quote is written is not the question.
  *
- * Écrit une fois parce que deux surfaces le lisent, et qu'elles doivent
- * répondre la même chose : la route du panneau, et `minddy_get_page` — l'agent
- * qui ouvre une spec doit voir les tickets qui en dépendent sans les chercher.
+ * Written once because two surfaces read it, and they must
+ * respond the same: the road sign, and `minddy_get_page` — the agent
+ * who opens a spec must see the tickets that depend on it without searching for them.
  *
- * Le CLIENT est celui de l'appelant, et c'est ce qui porte le contrôle d'accès.
- * Au client de session, les quatre lectures sont filtrées par la RLS ; au client
- * service (le MCP), elles ne le sont pas — et la garde a été faite avant, en
- * TypeScript, par le noyau des pages.
+ * The CLIENT is that of the caller, and this is what carries access control.
+ * At the session client, the four readings are filtered by the RLS; to the client
+ * service (the MCP), they are not — and the guard was done before, in
+ * TypeScript, by the core of the pages.
  */
 
 type Rows = { data: unknown; error: { message: string } | null };
 
 /**
- * Le strict minimum de PostgREST dont ce module a besoin — quatre `select` avec
- * un filtre chacun.
+ * The bare minimum of PostgREST this module needs — four `select` with
+ * a filter each.
  *
- * Décrit à la main, et les appelants passent leur client par un `as unknown as` :
- * sans types de schéma générés, laisser TypeScript inférer `from()` sur un vrai
- * `SupabaseClient` à travers cette frontière fait exploser l'instanciation
- * (TS2589), et le typage rendu n'est de toute façon qu'un `any` déguisé.
+ * Hand-described, and callers pass their client through a `as unknown as` :
+ * without types generated schema, letting TypeScript infer `from()` to a real
+ * `SupabaseClient` across this boundary blows up the instantiation
+ * (TS2589), and the rendered typing is just a `any` in disguise anyway.
  */
 export interface BacklinkQueryable {
   from: (table: string) => {
@@ -49,7 +49,7 @@ export interface BacklinkQueryable {
   };
 }
 
-/** Une source, avant qu'on sache la nommer. */
+/** A source, before we knew how to name it. */
 interface RawSource {
   kind: PageBacklink["kind"];
   id: string;
@@ -93,19 +93,19 @@ export async function pageBacklinks(
     objective_id: string | null;
     created_at: string;
   }[]) {
-    // Une ressource pend à un ticket OU à un objectif, jamais aux deux
-    // (`attachments_parent_ck`). Une page n'en porte pas encore — le jour où
-    // elle en portera, ce sera une branche de plus ici et rien d'autre.
+    // A resource depends on a ticket OR an objective, never both
+    // (`attachments_parent_ck`). A page does not yet bear one — the day when
+    // she will carry some, it will be one more branch here and nothing else.
     if (row.issue_id) raw.push({ kind: "issue", id: row.issue_id, at: row.created_at });
     else if (row.objective_id) {
       raw.push({ kind: "objective", id: row.objective_id, at: row.created_at });
     }
   }
 
-  // La FUSION des deux origines. La plus ANCIENNE des deux dates gagne : c'est
-  // le moment où cette source a commencé à s'appuyer sur la page, et ajouter la
-  // ressource d'un ticket qui la mentionnait déjà ne doit pas le faire remonter
-  // en tête comme une nouveauté.
+  // The FUSION of the two origins. The OLDEST of the two dates wins: it is
+  // when this source started to rely on the page, and add the
+  // resource of a ticket which already mentioned it must not bring it up
+  // at the top as a novelty.
   const merged = new Map<string, RawSource>();
   for (const source of raw) {
     const key = `${source.kind}:${source.id}`;
@@ -173,10 +173,10 @@ export async function pageBacklinks(
     });
   }
 
-  // Ce qui ne se résout plus est SILENCIEUSEMENT abandonné : une source
-  // corbeillée (le ticket est parti à la poubelle, on n'en parle plus), ou
-  // purgée — `page_links.source_id` ne porte pas de clé étrangère, la ligne
-  // survit à sa source, et c'est ici qu'elle cesse d'exister.
+  // What is no longer resolved is SILENTLY abandoned: a source
+  // trashed (the ticket went in the trash, we don't talk about it anymore), or
+  // purged — `page_links.source_id` does not carry a foreign key, the line
+  // survives at its source, and it is here that it ceases to exist.
   return [...merged.values()]
     .flatMap((source) => {
       const entry = named.get(`${source.kind}:${source.id}`);
@@ -188,7 +188,7 @@ export async function pageBacklinks(
     );
 }
 
-/** `.in(…)` sur une liste vide interroge pour rien — on court-circuite. */
+/** `.in(…)` on an empty list queries for nothing — we short-circuit. */
 function fetchIn(
   client: BacklinkQueryable,
   table: string,

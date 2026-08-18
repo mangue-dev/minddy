@@ -1,61 +1,61 @@
 /**
- * Regroupement des commentaires de review d'une PR en fils. Volontairement PUR
- * (aucune dépendance) et générique : la même règle sert au rendu client et à la
- * construction du contexte de l'agent, côté serveur — la dupliquer les ferait
- * diverger. Ce qui dépend du diff rendu vit dans `pr-review-diff`.
+ * Grouping PR review comments into threads. Deliberately PUR
+ * (no dependencies) and generic: the same rule is used for client rendering and for
+ * agent context construction, server side — duplicating it would make them
+ * diverge. What depends on the rendered diff lives in `pr-review-diff`.
  */
 
-/** Le strict nécessaire au regroupement — les types client et serveur s'y conforment. */
+/** The bare minimum for bundling — the client and server types conform to this. */
 export interface ReviewCommentLike {
   id: number;
-  /** Racine du fil, ou null si ce commentaire EST la racine. */
+  /** Root of the thread, or null if this comment IS the root. */
   in_reply_to_id: number | null;
   created_at: string;
 }
 
 /**
- * Ce que la forge sait d'un FIL et que la liste des commentaires ne dit pas
- * (MIN-139) : son identité propre et son état de résolution.
+ * What the forge knows about a THREAD and which the list of comments does not say
+ * (MIN-139): its own identity and its resolution state.
  *
- * `rootCommentId` est la clé d'appariement : les deux forges désignent le fil par
- * son premier commentaire, exactement l'id sur lequel `groupReviewThreads`
- * regroupe déjà. `threadId`, lui, est OPAQUE et sans rapport avec les ids de
- * commentaires — node id GraphQL côté GitHub (`PRRT_…`, seule clé acceptée par
- * `resolveReviewThread`), id de discussion côté GitLab. D'où son type `string` :
- * il ne se compare pas, il se renvoie tel quel à la forge.
+ * `rootCommentId` is the pairing key: the two forges designate the thread by
+ * its first comment, exactly the id that `groupReviewThreads`
+ * already aggregates to. `threadId`, is OPAQUE and unrelated to the ids of
+ * comments — node id GraphQL on the GitHub side (`PRRT_…`, only key accepted by
+ * `resolveReviewThread`), discussion id on the GitLab side. Hence its type `string`:
+ * it does not compare, it is returned as is to the forge.
  */
 export interface ReviewThreadState {
   rootCommentId: number;
   threadId: string;
   resolved: boolean;
-  /** Qui a résolu, quand la forge le dit — l'en-tête d'un fil replié le nomme. */
+  /** Who has resolved, when the forge says it — the header of a folded wire names it. */
   resolvedBy: string | null;
 }
 
-/** Un fil de review : la racine et ses réponses, du plus ancien au plus récent. */
+/** A review thread: the root and its responses, from oldest to most recent. */
 export interface ReviewThread<T extends ReviewCommentLike = ReviewCommentLike> {
-  /** Id de la racine — c'est lui qu'on passe à l'endpoint `/replies`. */
+  /** Root id — this is what we pass to the `/replies` endpoint. */
   id: number;
   root: T;
   comments: T[];
   /**
-   * État du fil chez la forge, quand l'appelant l'a chargé (`listReviewThreads`).
-   * `undefined` = INCONNU — pas « non résolu » : c'est le cas de tout appelant qui
-   * ne lit que les commentaires, et l'UI n'y propose alors aucune affordance
-   * plutôt que d'afficher un fil ouvert qui ne l'est peut-être pas.
-   */
+ * State of the thread at the forge, when the caller loaded it (`listReviewThreads`).
+ * `undefined` = UNKNOWN — not “unresolved”: this is the case of any caller who
+ * only reads the comments, and the UI then offers no comments. affordance
+ * rather than showing an open thread that may not be open.
+ */
   resolution?: ReviewThreadState;
 }
 
 /**
- * Regroupe les commentaires en fils. Les fils GitHub sont PLATS : répondre à une
- * réponse renvoie un `in_reply_to_id` qui pointe la RACINE, jamais la réponse
- * (vérifié contre l'API) — d'où la clé `in_reply_to_id ?? id`, sans récursion.
+ * Groups comments into threads. GitHub threads are FLAT: responding to a
+ * response returns a `in_reply_to_id` that points to the ROOT, never the response
+ * (checked against the API) — hence the key `in_reply_to_id ?? id`, without recursion.
  *
- * `states` (optionnel) attache l'état de résolution, apparié par la racine. Un
- * état sans fil correspondant est ignoré, et un fil sans état reste `undefined` :
- * les deux listes viennent de deux appels distincts et peuvent diverger d'un
- * commentaire posté entre les deux.
+ * `states` (optional) attaches the resolution state, matched by the root. A
+ * corresponding thread state is ignored, and a stateless thread remains `undefined` :
+ * the two lists come from two separate calls and may diverge from a
+ * comment posted between the two.
  */
 export function groupReviewThreads<T extends ReviewCommentLike>(
   comments: T[],
@@ -64,11 +64,11 @@ export function groupReviewThreads<T extends ReviewCommentLike>(
   const byId = new Map(comments.map((c) => [c.id, c]));
   const olderFirst = (a: T, b: T) => a.created_at.localeCompare(b.created_at) || a.id - b.id;
 
-  // Premier regroupement sur la racine DÉCLARÉE, même quand ce commentaire-là
-  // n'est plus dans la liste : c'est `in_reply_to_id` qui dit « ces réponses sont
-  // UN fil », et lui seul. Promouvoir commentaire par commentaire (l'ancien
-  // découpage) éclatait un fil dont la racine avait été supprimée en autant de
-  // fils que de réponses survivantes.
+  // First grouping on the DECLARED root, even when this comment
+  // is no longer in the list: it is `in_reply_to_id` which says “these answers are
+  // ONE thread”, and him alone. Promote comment by comment (the old
+  // cutting) burst a thread whose root had been removed in as many
+  // son only surviving answers.
   const declared = new Map<number, T[]>();
   for (const c of comments) {
     const key = c.in_reply_to_id ?? c.id;
@@ -77,10 +77,10 @@ export function groupReviewThreads<T extends ReviewCommentLike>(
     else declared.set(key, [c]);
   }
 
-  // Puis promotion, une fois par fil : racine absente → la plus ancienne réponse
-  // SURVIVANTE en tient lieu. C'est aussi ce que rendent les deux forges dans ce
-  // cas (premier commentaire restant du fil : `comments(first:1)` côté GitHub, la
-  // première DiffNote côté GitLab), donc l'état de résolution s'apparie encore.
+  // Then promotion, once per thread: root absent → oldest answer
+  // SURVIVOR takes its place. This is also what the two forges do in this
+  // case (first remaining comment of the thread: `comments(first:1)` on the GitHub side, the
+  // first DiffNote on GitLab side), so the resolution state still matches.
   const groups = new Map<number, T[]>();
   for (const [key, group] of declared) {
     const rootId = byId.has(key) ? key : group.reduce((a, b) => (olderFirst(a, b) <= 0 ? a : b)).id;
@@ -99,17 +99,16 @@ export function groupReviewThreads<T extends ReviewCommentLike>(
       resolution: stateByRoot.get(rootId),
     };
   });
-  // Fils ordonnés par leur racine : deux fils sur la même ligne s'empilent dans
-  // l'ordre où ils ont été ouverts.
+  // Threads ordered by their root: two threads on the same line stack in
+  // the order in which they were opened.
   return threads.sort(
     (a, b) => a.root.created_at.localeCompare(b.root.created_at) || a.id - b.id,
   );
 }
 
 /**
- * Ligne à AFFICHER pour un fil périmé : `line` quand GitHub sait encore la placer,
- * sinon la ligne du commit d'origine. Sert d'étiquette (« fichier:120 »), pas
- * d'ancre — un fil périmé n'en a plus.
+ * Line to DISPLAY for an outdated thread: `line` when GitHub still knows how to place it,
+ * otherwise the line from the original commit. Serves as a label (“file:120”), not as an anchor — an expired thread no longer has one.
  */
 export function displayLineOf(comment: { line: number | null; original_line: number | null }): number | null {
   return comment.line ?? comment.original_line;

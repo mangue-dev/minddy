@@ -6,63 +6,63 @@ import path from "node:path";
 import type { JSONContent } from "@tiptap/core";
 
 /**
- * La projection markdown des pages, MONTABLE DANS UNE FONCTION SERVEUR (MIN-273).
+ * Markdown projection of pages, MOUNTABLE IN A SERVER FUNCTION (MIN-273).
  *
- * `lib/pages-markdown.ts` fait tout le travail, et le dit lui-même : il suppose
- * un DOM (`window.DOMParser`, `document.createElement`), parce que tiptap lit le
- * markdown en passant par du HTML et qu'un éditeur — même sans une ligne de
- * rendu — se monte sur un élément. Dans un navigateur et sous jsdom, il est là.
- * Dans une fonction Vercel, il n'y a rien.
+ * `lib/pages-markdown.ts` does all the work, and says it himself: he assumes
+ * a DOM (`window.DOMParser`, `document.createElement`), because tiptap reads the
+ * markdown through HTML and an editor — even without a line of
+ * rendered — mounts on an element. In a browser and under jsdom, it is there.
+ * In a Vercel function, there is nothing.
  *
- * Ce module est ce « rien » comblé, une fois pour toutes : il installe un DOM
- * jsdom sur les globales au premier appel, puis rend la projection en async. Les
- * six outils de page (MCP, Numo, agent de code) passent tous par ici — un
- * deuxième chemin serait un deuxième DOM, donc deux comportements pour une même
+ * This module is this “nothing” filled, once and for all: it installs a DOM
+ * jsdom on globals on the first call, then renders the projection async. THE
+ * six page tools (MCP, Numo, code agent) all pass through here — one
+ * second path would be a second DOM, therefore two behaviors for the same
  * page.
  *
- * Pourquoi jsdom et pas un DOM minimal écrit à la main : le sens LECTURE
- * traverse `DOMParser` puis le `parseHTML` de chaque nœud du registre (le
- * dépliant et la sous-page se projettent en HTML, cf. `Markdown.configure({
- * html: true })`). Un faux DOM qui couvre « la plupart » des cas se rate
- * justement sur les blocs riches, c'est-à-dire sur ce que MIN-269 promet de ne
- * pas perdre. jsdom, lui, est exactement ce que joue le test d'aller-retour.
+ * Why jsdom and not a hand-written minimal DOM: the meaning READING
+ * crosses `DOMParser` then the `parseHTML` of each node of the register (the
+ * leaflet and subpage are projected in HTML, cf. `Markdown.configure({
+ * html: true })`). A false DOM which covers “most” cases fails
+ * precisely on the rich blocks, that is to say on what MIN-269 promises not to
+ * not lose. jsdom is exactly what the round trip test plays.
  *
- * L'installation est GLOBALE et non annulée : jsdom monte une fenêtre par
- * process, réutilisée par tous les appels. La détruire entre deux projections
- * coûterait le montage à chaque page lue, pour rien — le document, lui, est
- * jetable et créé par appel (cf. `pageEditor`).
+ * The installation is GLOBAL and not canceled: jsdom mounts a window per
+ * process, reused by all calls. Destroy it between two projections
+ * would cost editing for each page read, for nothing — the document itself is
+ * disposable and created by call (see `pageEditor`).
  *
- * ⚠️ **jsdom est bloqué en 26.x, et ce n'est pas de la paresse de mise à jour.**
- * La fonction Vercel tourne sur Node 24, mais lancé avec
+ * ⚠️ **jsdom is stuck in 26.x, and it's not update laziness.**
+ * The Vercel function runs on Node 24, but launched with
  * `--no-experimental-require-module` : l'interop `require()` d'un module ESM y
- * est COUPÉE (relevé sur `process.execArgv`, en production). Or jsdom 27+ a fait
- * passer des dépendances en ESM-only (`@exodus/bytes` via
+ * is CUT (read on `process.execArgv`, in production). Gold jsdom 27+ did
+ * switch dependencies to ESM-only (`@exodus/bytes` via
  * `html-encoding-sniffer@6`, `@csstools/css-calc` via `@asamuzakjp/css-color`) :
- * le `require` interne de jsdom lève `ERR_REQUIRE_ESM`, et l'`import()`
- * ci-dessous échoue en bloc. Ça n'a AUCUN symptôme en local — le loader de Vite
- * et le Node du poste chargent très bien jsdom 30 — et ça casse en production
- * toute écriture de page, sur les quatre surfaces à la fois.
- * `lib/server/pages-projection-loadable.test.ts` rejoue la condition exacte :
- * s'il tombe, c'est la version de jsdom qu'il faut redescendre, pas le test.
+ * jsdom's internal `require` raises `ERR_REQUIRE_ESM`, and `import()`
+ * below fails en bloc. It has NO symptoms locally — the Vite loader
+ * and the Node of the post loads jsdom 30 very well — and it breaks in production
+ * any page writing, on all four surfaces at once.
+ * `lib/server/pages-projection-loadable.test.ts` replays the exact condition:
+ * if it falls, it is the version of jsdom that must be lowered, not the test.
  *
- * ⚠️ **Et `lib/pages-markdown.ts` n'est PAS importé — il est chargé par chemin,
- * depuis un bundle esbuild à part.** Deuxième piège de build, cousin du premier
- * (MIN-295) : le bundler de Next substitue `typeof window` → `"undefined"` côté
- * serveur, ce qui réduit `elementFromString` de `@tiptap/core` à un `throw`
- * inconditionnel. Le DOM installé plus bas n'y peut rien — la décision est prise
- * à la COMPILATION, avant que jsdom n'existe. Voir `scripts/build-pages-md.mjs`,
- * qui porte la mesure et les deux routes écartées.
+ * ⚠️ **And `lib/pages-markdown.ts` is NOT imported — it is loaded by path,
+ * from a separate esbuild bundle.** Second build trap, cousin of the first
+ * (MIN-295): Next bundler substitutes `typeof window` → `"undefined"` side
+ * server, which reduces `elementFromString` from `@tiptap/core` to a `throw`
+ * unconditional. The DOM installed lower can't do anything about it — the decision is made
+ * at COMPILATION, before jsdom existed. See `scripts/build-pages-md.mjs`,
+ * which carries the measure and the two roads separated.
  */
 
 let installing: Promise<void> | null = null;
 
 /**
- * Les globales à poser. Tout ce qui commence par une majuscule vient des
+ * The global ones to pose. Everything that starts with a capital letter comes from
  * constructeurs du DOM (`DOMParser`, `Node`, `Element`, `MutationObserver`,
- * `Range`…) : les copier en bloc évite d'en découvrir un manquant par une
- * exception à la première page qui porte un dépliant. Le reste est nommé, parce
- * qu'y copier `window` en entier ferait atterrir `close`, `name`, `length` et
- * `top` sur `globalThis`, où ils ne veulent rien dire.
+ * `Range`…): copying them in bulk avoids discovering a missing one at a time
+ * exception to the first page which carries a leaflet. The rest is named, because
+ * that copying `window` in full would land `close`, `name`, `length` and
+ * `top` on `globalThis`, where they mean nothing.
  */
 const LOWERCASE_GLOBALS = [
   "document",
@@ -72,7 +72,7 @@ const LOWERCASE_GLOBALS = [
 ] as const;
 
 async function installDom(): Promise<void> {
-  // Un navigateur, ou un test sous jsdom : le DOM est déjà là, on n'y touche pas.
+  // A browser, or a test under jsdom: the DOM is already there, we don't touch it.
   if (typeof (globalThis as { document?: unknown }).document !== "undefined") {
     return;
   }
@@ -93,55 +93,55 @@ async function installDom(): Promise<void> {
   };
 
   target.window = win;
-  // Les CONSTRUCTEURS se posent tels quels, jamais liés : une fonction liée perd
-  // les propriétés statiques de sa cible, et `Node.TEXT_NODE` deviendrait
-  // `undefined`. tiptap-markdown compare justement `nextSibling?.nodeType` à
-  // cette constante — avec `undefined` des deux côtés, un `nextSibling` absent
-  // passe pour un nœud texte, et la lecture du markdown tombe une ligne plus bas.
+  // The CONSTRUCTORS are posed as they are, never linked: a linked function loses
+  // the static properties of its target, and `Node.TEXT_NODE` would become
+  // `undefined`. tiptap-markdown correctly compares `nextSibling?.nodeType` to
+  // this constant — with `undefined` on both sides, an absent `nextSibling`
+  // passes for a text node, and the markdown reading falls one line lower.
   for (const key of Object.getOwnPropertyNames(win)) {
     if (/^[A-Z]/.test(key)) put(key, false);
   }
   for (const key of LOWERCASE_GLOBALS) put(key, true);
 }
 
-/** Le DOM en place, quel que soit le nombre d'appels concurrents. */
+/** The DOM in place, regardless of the number of concurrent calls. */
 export function ensurePageDom(): Promise<void> {
   installing ??= installDom();
   return installing;
 }
 
-/* ── La projection, chargée par CHEMIN ────────────────────────────────── */
+/* ── The projection, loaded by PATH ────────────────────────────────── */
 
-/** Ce que le bundle expose — la surface de `lib/pages-markdown.ts`, à la lettre. */
+/** What the bundle exposes — the surface of `lib/pages-markdown.ts`, literally. */
 type PagesMarkdown = typeof import("@/lib/pages-markdown");
 
 /**
- * Où le bundle est lu. Produit par `prebuild` et `predev`
- * (`scripts/build-pages-md.mjs`), embarqué dans les fonctions par
- * `outputFileTracingIncludes` (next.config.mjs), et construit avant la suite par
- * le `globalSetup` de vitest.
+ * Where the bundle is read. Produced by `prebuild` and `predev`
+ * (`scripts/build-pages-md.mjs`), embedded in the functions by
+ * `outputFileTracingIncludes` (next.config.mjs), and built before the continuation by
+ * the `globalSetup` of vites.
  */
 const BUNDLE_PATH = path.join(process.cwd(), ".pages-md", "main.js");
 
 /**
- * `createRequire` plutôt qu'un `import()` : c'est le seul appel que le bundler
- * ne peut pas suivre. Un `import()` d'un chemin calculé le ferait quand même
- * essayer, et surtout un `import()` de ce module-ci le ramènerait dans le
- * graphe — donc sous la substitution qu'on cherche précisément à fuir.
+ * `createRequire` rather than a `import()`: this is the only call that the bundler
+ * can't follow. A `import()` of a calculated path would still do it
+ * try, and above all a `import()` of this module would bring it back into the
+ * graph — therefore under the substitution that we are precisely seeking to escape.
  */
 const requireFromRepo = createRequire(path.join(process.cwd(), "noop.js"));
 
 let bundle: PagesMarkdown | null = null;
 
 /**
- * Le bundle chargé, une fois par instance de fonction.
+ * The bundle loaded, once per function instance.
  *
- * **Pas de repli sur `import("@/lib/pages-markdown")` si le fichier manque**, et
- * c'est le cœur du correctif : ce repli est exactement le code mort de MIN-295.
- * Il rendrait la panne silencieuse au premier oubli de câblage — un `prebuild`
- * qui saute, une ligne de `outputFileTracingIncludes` perdue dans un refactor —
- * et on reviendrait à un wiki qu'aucun agent ne peut écrire, sans rien dans les
- * logs qui le dise. Une erreur qui nomme le script à lancer vaut mieux.
+ * **No fallback to `import("@/lib/pages-markdown")` if the file is missing**, and
+ * this is the heart of the fix: this fallback is exactly the dead code of MIN-295.
+ * It would make the failure silent at the first forgetting of wiring — a `prebuild`
+ * which jumps, a line of `outputFileTracingIncludes` lost in a refactor —
+ * and we would return to a wiki that no agent can write, with nothing in the
+ * logs that say so. An error that names the script to run is better.
  */
 function pagesMarkdown(): PagesMarkdown {
   if (bundle) return bundle;
@@ -155,13 +155,13 @@ function pagesMarkdown(): PagesMarkdown {
   return bundle;
 }
 
-/** Le DOM posé ET la projection chargée — le préalable de toutes les surfaces. */
+/** The DOM placed AND the projection loaded — the prerequisite for all surfaces. */
 async function projection(): Promise<PagesMarkdown> {
   await ensurePageDom();
   return pagesMarkdown();
 }
 
-/** La page entière en markdown, en-tête (titre + icône) compris. */
+/** The entire page in markdown, header (title + icon) included. */
 export async function pageToMarkdownServer(page: {
   title: string;
   icon: string | null;
@@ -170,14 +170,14 @@ export async function pageToMarkdownServer(page: {
   return (await projection()).pageToMarkdown(page);
 }
 
-/** Le corps seul en markdown — pour une surface qui a déjà le titre. */
+/** The body alone in markdown — for a surface that already has the title. */
 export async function pageBodyToMarkdownServer(
   content: JSONContent | null
 ): Promise<string> {
   return (await projection()).bodyToMarkdown(content);
 }
 
-/** Le markdown relu en page : titre, icône, corps ProseMirror. */
+/** The markdown reread on the page: title, icon, body ProseMirror. */
 export async function markdownToPageServer(markdown: string): Promise<{
   title: string;
   icon: string | null;
@@ -186,7 +186,7 @@ export async function markdownToPageServer(markdown: string): Promise<{
   return (await projection()).markdownToPage(markdown);
 }
 
-/** Le corps seul, relu depuis du markdown. */
+/** The body alone, reread from markdown. */
 export async function bodyFromMarkdownServer(
   markdown: string
 ): Promise<JSONContent> {

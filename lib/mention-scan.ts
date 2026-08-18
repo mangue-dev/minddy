@@ -1,84 +1,83 @@
-// Ce qui, dans un texte, EST une mention — la règle, en un seul endroit.
+// What, in a text, IS a mention — the rule, in one place.
 //
-// Elle sert deux fois pour un même commentaire : pendant qu'on l'écrit (le
-// composer repose une pilule sur chaque mention qu'il relit) et une fois publié
-// (le rendu markdown fait pareil). Deux surfaces, deux moments, une seule règle :
-// dupliquer l'expression rationnelle, c'était se donner un contrat de plus à
-// tenir entre deux fichiers, avec pour seul symptôme visible une pilule qui
-// apparaît d'un côté et pas de l'autre.
+// It is used twice for the same comment: while it is written (the
+// compose rests a pill on each mention it rereads) and once published
+// (markdown rendering does the same). Two surfaces, two moments, one rule:
+// duplicating the regular expression was giving yourself one more contract
+// hold between two files, with the only visible symptom being a pill that
+// appears on one side and not the other.
 
 import { displayName } from "@/lib/display-name";
 import { PROJECT_KEY_MAX, PROJECT_KEY_MIN } from "@/lib/project-key";
 import type { Member } from "@/lib/types";
 
-/** Ce qui s'écrit après le « @ » pour citer un membre. */
+/** What is written after the “@” to quote a member. */
 export function memberLabel(m: Member): string {
   return displayName(m);
 }
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/* « @numo » s'écrit comme on veut : c'est ainsi que le serveur le reconnaît
-   (mentionsNumo, lib/server/assistant/comment-agent.ts). Un nom de membre, lui,
-   se reconnaît à sa casse EXACTE — c'est ce que extractMentions notifie, et une
-   pilule doit dire vrai sur qui a été prévenu. Deux règles, une seule passe :
-   comme JS n'a pas de drapeau par branche, la casse libre de « numo » s'écrit
-   lettre par lettre. */
+/* “@numo” is written as you want: this is how the server recognizes it
+ (mentionsNumo, lib/server/assistant/comment-agent.ts). A member name,
+ is recognized by its EXACT case - this is what extractMentions notifies, and a
+ pill must tell the truth about who has been notified. Two rules, one pass:
+ as JS does not have a flag per branch, the free case of “numo” is written
+ letter by letter. */
 const NUMO_PATTERN = "[Nn][Uu][Mm][Oo]";
 
-/* La FORME d'un identifiant de ticket : la clé du projet (2 à 5 majuscules,
-   lib/project-key) et son numéro. La garde de queue empêche « @MIN-42x » et
-   « @MIN-1234567890 » de se faire passer pour « @MIN-42 » suivi de rien. */
+/* The FORM of a ticket identifier: the project key (2 to 5 capital letters,
+ lib/project-key) and its number. The tail guard prevents "@MIN-42x" and
+ "@MIN-1234567890" from impersonating "@MIN-42" followed by nothing. */
 const ISSUE_IDENTIFIER_PATTERN = `[A-Z]{${PROJECT_KEY_MIN},${PROJECT_KEY_MAX}}-\\d{1,7}(?![\\w-])`;
 
-/** Un TICKET tel qu'une mention a besoin de le connaître : de quoi le dessiner
-    et y aller. */
+/** A TICKET such as a mention needs to be known: enough to draw it
+ and go there. */
 export interface MentionIssue {
   id: string;
   project_id: string;
-  /** « MIN-42 » — c'est LUI qui s'écrit après l'arobase. */
+  /** “MIN-42” — HIM is written after the at sign. */
   identifier: string;
   title: string;
 }
 
-/** Un OBJECTIF tel qu'une mention a besoin de le connaître. Sa couleur voyage
-    avec lui : partout où une icône désigne CET objectif-là, elle la porte. */
+/** An OBJECTIVE such as a mention needs to be known. Its color travels
+ with it: wherever an icon designates THIS objective, it carries it. */
 export interface MentionObjective {
   id: string;
   project_id: string;
-  /** Le nom — c'est lui qui s'écrit après l'arobase. */
+  /** The name — it’s what is written after the at sign. */
   name: string;
   color: string | null;
 }
 
-/** Une PAGE du wiki telle qu'une mention a besoin de la connaître (MIN-273).
-    Son icône voyage avec elle : c'est ce qui distingue « @Guide » d'un ticket au
-    premier coup d'œil, comme partout ailleurs dans l'app. */
+/** A PAGE of the wiki such that a mention needs to know it (MIN-273).
+ Its icon travels with it: this is what distinguishes “@Guide” from a ticket at first glance, like everywhere else in the app. */
 export interface MentionPage {
   id: string;
   project_id: string;
-  /** Le TITRE — c'est lui qui s'écrit après l'arobase. */
+  /** The TITLE — this is what is written after the at sign. */
   title: string;
-  /** L'émoji de la page, ou null quand elle prend l'icône par défaut. */
+  /** The page emoji, or null when it takes the default icon. */
   icon: string | null;
 }
 
 export type ScannedMention =
   | { type: "numo"; member?: undefined }
   | { type: "member"; member: Member }
-  /** Un compte de la FORGE (MIN-162) : ce qui se mentionne sur une pull request,
-      où seul un compte GitHub/GitLab notifie quelqu'un. Aucun `user_id` minddy —
-      c'est justement ce qui le distingue d'un `member`. */
+  /** A FORGE account (MIN-162): what is mentioned on a pull request,
+ where only a GitHub/GitLab account notifies someone. None `user_id` minddy —
+ this is precisely what distinguishes it from a `member`. */
   | { type: "forge"; member?: undefined; login: string; avatarUrl: string | null }
   | { type: "issue"; member?: undefined; issue: MentionIssue }
   | { type: "objective"; member?: undefined; objective: MentionObjective }
   | { type: "page"; member?: undefined; page: MentionPage };
 
-/** Un morceau de texte nu, ou une mention reconnue. Jamais les deux.
-    `raw` est ce qui a été LU dans le texte (« @Jean Dupont », « @NUMO ») : les
-    surfaces qui remplacent une mention en place — l'éditeur de description, qui
-    y pose un nœud — ont besoin de sa longueur exacte, que le libellé seul ne
-    donne pas (la casse de « numo » est libre). */
+/** A piece of bare text, or a recognized statement. Never both.
+ `raw` is what was READ in the text ("@Jean Dupont", "@NUMO"): the
+ surfaces which replace a mention in place - the description editor, which
+ places a node there - need its exact length, which the wording alone does not
+ not given (the case of “numo” is free). */
 export type MentionSegment =
   | { text: string; mention?: undefined; raw?: undefined }
   | { text?: undefined; mention: ScannedMention; raw: string };
@@ -86,35 +85,34 @@ export type MentionSegment =
 export type MentionScan = (value: string) => MentionSegment[];
 
 /**
- * Le découpage, pour une table « ce qui s'écrit après l'arobase » → « ce que
- * ça désigne ». Membres minddy et comptes de forge n'en sont que deux
- * remplissages : la RÈGLE — l'arobase en début de mot, le plus long d'abord,
- * « numo » à casse libre — n'existe qu'ici, et les deux surfaces qui relisent un
- * même texte (le champ pendant la frappe, le rendu une fois publié) la partagent.
+ * The division, for a table “what is written after the at sign” → “what
+ * designates”. Minddy members and forge accounts are only two
+ * fillings: the RULE — the at the beginning of the word, the longest first,
+ * "numo" in free case — only exists here, and the two surfaces which reread a
+ * same text (the field during typing, the rendering once published) the share.
  */
 function buildScanner(
   entries: Array<{ label: string; mention: ScannedMention }>,
   /**
-   * Les tickets citables, indexés par identifiant. Ils ne passent PAS par
-   * l'alternance de noms : un espace de travail en compte des milliers, et les
-   * énumérer ferait une expression rationnelle de plusieurs dizaines de milliers
-   * de caractères, reconstruite à chaque fois que la liste bouge. Un identifiant
-   * se reconnaît à sa FORME (CLÉ-numéro) — la table ne sert plus qu'à dire si ce
-   * ticket-là existe, et à donner de quoi le dessiner.
-   */
+ * Citable tickets, indexed by identifier. They do NOT pass by
+ * alternation of names: a workspace has thousands of them, and enumerating them would make a regular expression of several tens of thousands
+ * of characters, reconstructed each time the list moves. An identifier
+ * can be recognized by its FORM (KEY-number) — the table is only used to say if this
+ * ticket exists, and to provide something to draw it.
+ */
   issuesByIdentifier?: Map<string, MentionIssue>,
 ): MentionScan {
-  // Du plus long au plus court : « Jean Dupont » doit gagner sur « Jean », et
-  // « @bobby » sur « @bob ».
+  // From longest to shortest: “Jean Dupont” must win over “Jean”, and
+  // “@bobby” on “@bob”.
   const byLength = [...entries].sort((a, b) => b.label.length - a.label.length);
   const byName = new Map(byLength.map((e) => [e.label, e.mention]));
   const names = byLength.map((e) => escapeRegExp(e.label));
 
-  // Une branche par nature de mention, dans l'ordre. Chacune porte EXACTEMENT
-  // un groupe capturant, donc son rang dans `parts` est son numéro de groupe —
-  // c'est ce qui permet de les rendre facultatives sans décaler les indices.
-  // Sans entrée, pas de branche de noms : un « (|) » vide matcherait la chaîne
-  // vide, et chaque « @ » du texte deviendrait une pilule.
+  // A branch by nature of mention, in order. Each one wears EXACTLY
+  // a capturing group, so its rank in `parts` is its group number —
+  // this is what allows them to be made optional without shifting the indices.
+  // Without entry, no branch of names: an empty “(|)” would match the string
+  // empty, and each “@” in the text would become a pill.
   const parts = [`(${NUMO_PATTERN})\\b`];
   let nameGroup = 0;
   let issueGroup = 0;
@@ -135,7 +133,7 @@ function buildScanner(
     re.lastIndex = 0;
     while ((m = re.exec(value)) !== null) {
       const numo = !!m[1];
-      // Même garde que côté serveur : « clement@numo.dev » ne cite personne.
+      // Same guard as on the server side: “clement@numo.dev” does not cite anyone.
       if (numo && m.index > 0 && !/[\s(>]/.test(value[m.index - 1])) continue;
       const name = nameGroup ? m[nameGroup] : undefined;
       const identifier = issueGroup ? m[issueGroup] : undefined;
@@ -147,8 +145,8 @@ function buildScanner(
           : issue
             ? { type: "issue", issue }
             : undefined;
-      // Un identifiant bien formé mais inconnu (ticket d'un autre espace,
-      // faute de frappe) reste du TEXTE : une pilule morte mentirait.
+      // A well-formed but unknown identifier (ticket from another space,
+      // typo) rest of the TEXT: a dead pill would lie.
       if (!found) continue;
       if (m.index > last) out.push({ text: value.slice(last, m.index) });
       out.push({ mention: found, raw: m[0] });
@@ -159,8 +157,8 @@ function buildScanner(
   };
 }
 
-/** Prépare le découpage pour une liste de membres minddy donnée. L'expression
-    rationnelle se construit une fois pour toutes les relectures qui suivent. */
+/** Prepares the split for a given list of minddy members. The
+ regular expression builds once for all subsequent rereads. */
 export function mentionScanner(members: Member[]): MentionScan {
   return buildScanner(
     members.map((member) => ({
@@ -171,9 +169,9 @@ export function mentionScanner(members: Member[]): MentionScan {
 }
 
 /**
- * Le même découpage, pour les comptes d'une FORGE (MIN-162). Ce qui s'écrit
- * après l'arobase est le LOGIN et rien d'autre — c'est GitHub qui le résoudra,
- * minddy ne transforme rien — même quand la forge connaît aussi un nom affiché.
+ * The same breakdown, for the accounts of a FORGE (MIN-162). What is written
+ * after the at sign is the LOGIN and nothing else — GitHub will solve it,
+ * minddy does not transform anything — even when the forge also knows a displayed name.
  */
 export function forgeMentionScanner(
   members: Array<{ login: string; avatar_url: string | null }>,
@@ -187,13 +185,13 @@ export function forgeMentionScanner(
 }
 
 /**
- * Le découpage d'une DESCRIPTION : ce qui s'y cite est plus large que dans un
- * commentaire — une personne, un ticket, un objectif, une page du wiki.
+ * The division of a DESCRIPTION: what is cited there is broader than in a
+ * comment — a person, a ticket, an objective, a wiki page.
  *
- * Les objectifs passent AVANT les membres dans la table : à nom strictement
- * égal, c'est le dernier posé qui gagne, et entre une personne et un objectif
- * homonymes, c'est la personne qu'on a voulu citer. Les PAGES du wiki (MIN-273)
- * se citent de la même façon, par leur titre.
+ * The objectives come BEFORE the members in the table: with strictly equal names
+ * it is the last pose wins, and between a person and an objective
+ * homonyms, it is the person we wanted to cite. Wiki PAGES (MIN-273)
+ * are cited in the same way, by their title.
  */
 export function contentMentionScanner(source: {
   members?: Member[];
@@ -203,10 +201,10 @@ export function contentMentionScanner(source: {
 }): MentionScan {
   return buildScanner(
     [
-      // Les pages d'abord, donc les moins prioritaires à titre égal : entre une
-      // page et un objectif qui portent le même nom, c'est l'objectif — l'objet
-      // de travail — qu'on a voulu citer, et entre les deux et une personne,
-      // c'est la personne (cf. l'ordre ci-dessous).
+      // The pages first, therefore the least priority on an equal basis: between a
+      // page and an objective which have the same name, it is the objective — the object
+      // of work — that we wanted to cite, and between the two and a person,
+      // it's the person (see the order below).
       ...(source.pages ?? []).map((page) => ({
         label: page.title,
         mention: { type: "page", page } as const,

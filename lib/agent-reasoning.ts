@@ -1,31 +1,31 @@
 /**
  * Niveau de raisonnement d'un run de l'agent de code (MIN-122). Logique PURE :
- * le vocabulaire (`off` / `minimal` / `low` / `medium` / `high` / `xhigh` /
- * `max`) et sa traduction en champs de requête, provider par provider.
+ * vocabulary (`off` / `minimal` / `low` / `medium` / `high` / `xhigh` /
+ * `max`) and its translation into query fields, provider by provider.
  *
- * CE VOCABULAIRE EST CELUI DES MODÈLES, PAS LE NÔTRE. Il ne s'invente pas : il
- * est publié modèle par modèle dans `/models` d'OpenRouter (objet `reasoning`,
- * champ `supported_efforts`), et c'est de là qu'il descend jusqu'au sélecteur —
- * 128 modèles sur 406 en publient un, et deux d'entre eux ont rarement le même
+ * THIS VOCABULARY IS THAT OF THE MODELS, NOT OURS. He does not invent himself: he
+ * is published model by model in `/models` of OpenRouter (object `reasoning`,
+ * field `supported_efforts`), and that's where it goes down to the selector —
+ * 128 out of 406 models publish one, and two of them rarely have the same
  * (`high|medium|low`, `xhigh|high|medium|low|minimal`, `max|high|low`…). Ce que
- * l'écran propose est donc ce que le modèle CHOISI accepte, et rien d'autre
- * (`reasoningLevelsFor`) : trois paliers génériques appliqués à tous
+ * the screen suggests is therefore what the CHOSEN model accepts, and nothing else
+ * (`reasoningLevelsFor`): three generic levels applied to all
  * n'affichaient ni ce qu'il savait faire de plus, ni ce qu'il ne savait pas
  * faire du tout.
  *
- * Partagé client + serveur (AUCUN import server-only), comme
- * `lib/agent-providers.ts` dont il lit la capacité : le sélecteur de lancement a
- * besoin de la liste des niveaux, la route de lancement de `isReasoningLevel`,
- * et la boucle de `reasoningRequestFields`. Un seul fichier plutôt que deux
- * moitiés qui pourraient diverger.
+ * Shared client + server (NO server-only import), like
+ * `lib/agent-providers.ts` whose capacity it reads: the launch selector has
+ * need the level list, the launch route of `isReasoningLevel`,
+ * and the `reasoningRequestFields` loop. One file rather than two
+ * halves that could diverge.
  *
  * UN SEUL vocabulaire produit, traduit au dernier moment : `reasoning: { effort }`
- * (OpenRouter), `reasoning_effort` (OpenAI/Gemini) ou `thinking` (la couche de
- * compatibilité Anthropic conserve ici son contrat natif).
+ * (OpenRouter), `reasoning_effort` (OpenAI/Gemini) or `thinking` (the
+ * compatibility Anthropic retains its native contract here).
  *
- * La gate est le registre : un provider sans `reasoningField` n'envoie RIEN.
- * C'est le défaut sûr — un champ inconnu envoyé à un serveur OpenAI-compatible
- * strict (BYOK generic) revient en 400, et un 400 tue le round.
+ * The gate is the register: a provider without `reasoningField` sends NOTHING.
+ * This is the safe default — an unknown field sent to an OpenAI-compatible server
+ * strict (BYOK generic) returns to 400, and a 400 kills the round.
  */
 
 import { getAgentProvider, type AgentProviderId } from "./agent-providers";
@@ -40,15 +40,15 @@ export type ReasoningLevel =
   | "max";
 
 /**
- * Tout le vocabulaire, du moins cher au plus cher. C'est celui d'OpenRouter
- * (`minimal`, `low`, `medium`, `high`, `xhigh`, `max`), à un mot près : leur
- * `none` est notre `off`, qui veut dire quelque chose d'un peu plus fort —
- * n'envoyer AUCUN champ de raisonnement, plutôt que d'en envoyer un qui demande
- * zéro. C'est le seul défaut sûr hors OpenRouter, où un champ inconnu revient en
- * 400 et tue le round.
+ * All the vocabulary, from least expensive to most expensive. It's OpenRouter's
+ * (`minimal`, `low`, `medium`, `high`, `xhigh`, `max`), except for one word: their
+ * `none` is our `off`, which means something a little stronger —
+ * send NO reasoning fields, rather than sending one that asks
+ * zero. This is the only safe fault outside OpenRouter, where an unknown field returns
+ * 400 and kills the round.
  *
- * Cette liste n'est PAS ce que le sélecteur affiche : un modèle donné n'accepte
- * qu'une partie de ces valeurs, et c'est lui qui le dit (`reasoningLevelsFor`).
+ * This list is NOT what the selector displays: a given model does not accept
+ * only part of these values, and it is he who says it (`reasoningLevelsFor`).
  */
 export const REASONING_LEVELS: ReasoningLevel[] = [
   "off",
@@ -61,51 +61,51 @@ export const REASONING_LEVELS: ReasoningLevel[] = [
 ];
 
 /**
- * Ce qu'on propose d'un modèle qui ne publie RIEN sur son raisonnement — un BYOK
- * direct, un modèle hors index, un provider dont on n'a pas d'index de capacités.
+ * What we propose about a model that publishes NOTHING about its reasoning — a BYOK
+ * direct, a non-index model, a provider for which we do not have a capacity index.
  *
- * Les quatre historiques, et pas les sept : proposer `xhigh` à un modèle dont on
- * ignore tout, c'est proposer un niveau qui sera silencieusement rabattu (chez
- * OpenRouter) ou refusé (ailleurs). Un sélecteur ne doit offrir que des choix qui
+ * The four histories, and not the seven: propose `xhigh` to a model of which we
+ * ignores everything, it is proposing a level which will be silently reduced (at
+ * OpenRouter) or refused (elsewhere). A selector should only offer choices that
  * changent quelque chose.
  */
 export const GENERIC_REASONING_LEVELS: ReasoningLevel[] = ["off", "low", "medium", "high"];
 
 /**
- * Ce qu'un modèle dit de son propre raisonnement, tel que l'index OpenRouter le
- * publie (`/models`, objet `reasoning`). Lu côté serveur
+ * What a model says about its own reasoning, such as the OpenRouter index
+ * publishes (`/models`, object `reasoning`). Read server side
  * ([openrouter-index.ts](server/agent/openrouter-index.ts)), il voyage jusqu'au
- * sélecteur avec le catalogue.
+ * selector with the catalog.
  *
- * On n'en garde que deux champs sur les cinq publiés, parce que ce sont les deux
- * qui changent l'écran. `default_effort` et `default_enabled` décrivent ce que le
- * modèle fait quand on ne demande rien — or on demande toujours quelque chose.
- * `supports_max_tokens` (10 modèles sur 406) ouvrirait une SECONDE forme de
- * réglage, un budget de tokens, et un sélecteur qui change de nature selon le
- * modèle est un sélecteur qu'on ne sait plus lire : OpenRouter traduit de toute
- * façon nos paliers en budget pour les modèles qui n'entendent que ça.
+ * We only keep two fields out of the five published, because they are the two
+ * which change the screen. `default_effort` and `default_enabled` describe what the
+ * model made when we ask for nothing — but we always ask for something.
+ * `supports_max_tokens` (10 models out of 406) would open a SECOND form of
+ * adjustment, a token budget, and a selector which changes nature depending on the
+ * model is a selector that we no longer know how to read: OpenRouter translates everything
+ * way our budget levels for models that only hear that.
  */
 export interface ModelReasoning {
   /**
-   * Les paliers que CE modèle accepte, du moins cher au plus cher. Vide = il
-   * raisonne, mais ne publie aucune énumération (c'est le cas des Claude) : on
-   * retombe alors sur `GENERIC_REASONING_LEVELS`.
+   * The tiers that THIS model accepts, from least expensive to most expensive. Empty = he
+   * reasons, but does not publish any enumeration (this is the case of Claude): we
+   * then falls back to `GENERIC_REASONING_LEVELS`.
    */
   efforts: ReasoningLevel[];
   /**
-   * Le modèle raisonne TOUJOURS (`mandatory`) : « sans raisonnement » n'est pas
-   * une option à lui proposer — il refuse `none`, et le lui envoyer casse l'appel.
+   * The model ALWAYS reasons (`mandatory`): “without reasoning” is not
+   * an option to offer him — he refuses `none`, and sending it to him breaks the call.
    */
   mandatory: boolean;
 }
 
 /**
- * Ce que le sélecteur affiche pour un modèle donné. Sans métadonnées (modèle
- * inconnu, provider sans index), les quatre paliers historiques ; avec, ceux que
- * le modèle publie, plus `off` quand il autorise qu'on ne raisonne pas.
+ * What the selector displays for a given model. Without metadata (model
+ * unknown, provider without index), the four historical levels; with, those who
+ * the model publishes, more `off` when it allows us not to reason.
  *
- * `null` (et non une liste vide) = ce modèle n'a AUCUNE capacité de raisonnement :
- * l'appelant montre alors un sélecteur inerte plutôt qu'un choix sans effet.
+ * `null` (not an empty list) = this model has NO reasoning ability:
+ * the caller then shows an inert selector rather than a choice with no effect.
  */
 export function reasoningLevelsFor(
   reasoning: ModelReasoning | null | undefined,
@@ -117,14 +117,14 @@ export function reasoningLevelsFor(
 }
 
 /**
- * Rabat un niveau sur ce que le modèle accepte VRAIMENT. Sert au sélecteur (un
- * défaut perso à `xhigh` sur un modèle qui n'en veut pas doit s'afficher sur son
- * plus proche voisin, pas sur du vide) et au lancement.
+ * Drop a level on what the model REALLY accepts. Used for the selector (a
+ * personal default at `xhigh` on a model which does not want it must be displayed on its
+ * nearest neighbor, not in a vacuum) and at launch.
  *
- * « Le plus proche » se lit sur l'échelle complète, dans les deux sens : d'abord
- * vers le bas (moins cher que demandé, jamais plus), puis vers le haut si le
- * modèle n'a rien de moins cher — un modèle qui n'accepte que `high` doit
- * recevoir `high`, même quand on lui demandait `low`.
+ * “Closest” is read on the full scale, in both directions: first
+ * downwards (cheaper than requested, never more), then upwards if the
+ * model is nothing cheaper — a model that only accepts `high` must
+ * receive `high`, even when asked for `low`.
  */
 export function nearestReasoningLevel(
   level: ReasoningLevel,
@@ -139,41 +139,41 @@ export function nearestReasoningLevel(
 }
 
 /**
- * Défaut : `medium` (« Standard » dans l'UI). L'agent réfléchit un peu avant
- * d'agir, parce que c'est ce qu'on veut d'un agent de code dans le cas général —
- * `off` était le défaut d'atterrissage de MIN-122, choisi pour n'introduire aucun
- * changement de comportement le jour de la livraison, pas parce qu'il servait mieux
- * l'utilisateur. Le surcoût reste borné par le budget d'usage (`checkAgentQuota`),
- * et un endpoint qui refuse le champ est rattrapé par la relance sans champ de
+ * Default: `medium` (“Standard” in the UI). The agent thinks a little before
+ * to act, because that's what we want from a code agent in the general case —
+ * `off` was the MIN-122 landing fault, chosen to introduce no
+ * change in behavior on delivery day, not because it served better
+ * the user. The additional cost remains limited by the usage budget (`checkAgentQuota`),
+ * and an endpoint which refuses the field is caught by the restart without field of
  * `streamCompletion` (cf. docs/reasoning-levels.md).
  */
 export const DEFAULT_REASONING_LEVEL: ReasoningLevel = "medium";
 
-/** Valide une entrée d'API / une valeur lue en base. */
+/** Validates an API entry / a value read in base. */
 export function isReasoningLevel(value: unknown): value is ReasoningLevel {
   return typeof value === "string" && (REASONING_LEVELS as string[]).includes(value);
 }
 
-/** Normalise n'importe quoi en niveau valide (défaut `DEFAULT_REASONING_LEVEL`). */
+/** Normalizes anything to valid level (default `DEFAULT_REASONING_LEVEL`). */
 export function toReasoningLevel(value: unknown): ReasoningLevel {
   return isReasoningLevel(value) ? value : DEFAULT_REASONING_LEVEL;
 }
 
 /**
- * Les clés de raisonnement qu'on peut poser dans un corps de requête. Sert aussi
- * au garde-fou 400 de la boucle : un message d'erreur qui cite l'une d'elles
- * désigne un endpoint qui REJETTE le champ au lieu de l'ignorer.
+ * The reasoning keys that can be placed in a request body. Also serves
+ * at guardrail 400 of the loop: an error message which cites one of them
+ * designates an endpoint that REJECTS the field instead of ignoring it.
  */
 export const REASONING_REQUEST_KEYS = ["reasoning_effort", "reasoning", "thinking"] as const;
 
-/** Ce qu'un `reasoning_effort` à plat accepte : le vocabulaire de l'API OpenAI. */
+/** What a flat `reasoning_effort` accepts: the OpenAI API vocabulary. */
 const COMPAT_EFFORTS: ReasoningLevel[] = ["minimal", "low", "medium", "high"];
 
 /**
- * Champs à fusionner dans le corps `/chat/completions` pour demander ce niveau.
- * `{}` (rien à envoyer) quand : niveau `off`, valeur inconnue, ou provider sans
- * capacité déclarée au registre (`generic`, et tout provider futur tant qu'on
- * n'a pas constaté qu'il accepte le champ).
+ * Fields to merge into body `/chat/completions` to request this level.
+ * `{}` (nothing to send) when: level `off`, unknown value, or provider without
+ * capacity declared in the register (`generic`, and any future provider as long as we
+ * has not found that it accepts the field).
  */
 export function reasoningRequestFields(
   level: ReasoningLevel | null | undefined,
@@ -182,26 +182,26 @@ export function reasoningRequestFields(
   if (!isReasoningLevel(level) || level === "off") return {};
   const field = getAgentProvider(provider)?.requestProfile.reasoningField;
   if (!field) return {};
-  // `exclude: false` : on VEUT recevoir la trace pour la persister repliée dans
-  // le fil — ce qu'on ne veut pas, c'est la streamer (cf. l'indicateur du feed).
+  // `exclude: false`: we WANT to receive the trace to persist it folded into
+  // the feed — what we don't want is the streamer (see the feed indicator).
   if (field === "reasoning") return { reasoning: { effort: level, exclude: false } };
-  // Anthropic dépend de la famille de modèle (manuel jusqu'à 4.6, adaptatif à
-  // partir de 4.7). Le traducteur model-aware de lib/ai-chat.ts s'en charge.
+  // Anthropic depends on the model family (manual up to 4.6, adaptive to
+  // from 4.7). The model-aware translator in lib/ai-chat.ts takes care of this.
   if (field === "thinking") return {};
   /**
-   * Les couches compat (openai, anthropic, google) ne connaissent que le
-   * vocabulaire de l'API OpenAI. `xhigh` et `max` sont des paliers d'OpenRouter,
-   * qui les rabat lui-même sur ce que le modèle accepte ; envoyés en direct, ils
-   * reviennent en 400 et tuent le round. On rabat donc AVANT — perdre un cran de
-   * réflexion vaut mieux que perdre le tour.
+   * The compat layers (openai, anthropic, google) only know the
+   * OpenAI API vocabulary. `xhigh` and `max` are OpenRouter tiers,
+   * who himself reduces them to what the model accepts; sent directly, they
+   * come back to 400 and kill the round. We therefore fold down BEFORE — lose a notch of
+   * reflection is better than losing the turn.
    */
   return { reasoning_effort: nearestReasoningLevel(level, COMPAT_EFFORTS) };
 }
 
 /**
- * Tokens de réflexion à prévoir EN PLUS de la réponse, par niveau. Ils servent
- * au plafond global et, pour les Claude qui acceptent encore le mode manuel, de
- * budget indicatif dans l'adaptateur model-aware.
+ * Reflection tokens to be provided IN ADDITION to the answer, by level. They serve
+ * to the overall ceiling and, for Claudes who still accept manual mode, to
+ * indicative budget in the model-aware adapter.
  */
 const REASONING_HEADROOM: Record<ReasoningLevel, number> = {
   off: 0,
@@ -213,17 +213,17 @@ const REASONING_HEADROOM: Record<ReasoningLevel, number> = {
   max: 8192,
 };
 
-/** Budget indicatif derrière un palier, utilisé par l'adaptateur Anthropic. */
+/** Indicative budget behind a level, used by the Anthropic adapter. */
 export function reasoningTokenBudget(level: ReasoningLevel): number {
   return REASONING_HEADROOM[level];
 }
 
 /**
- * Plafond de sortie interne à demander quand le raisonnement est actif. Les
- * tokens de réflexion sont comptés DANS ce plafond par les couches compat : à `high`, la
- * réflexion mangerait l'essentiel des 8192 du profil et tronquerait la réponse
- * **et les tool-calls** du round. On relève donc le plafond du surcoût attendu.
- * `undefined` en entrée (surface sans plafond) reste `undefined`.
+ * Internal output ceiling to request when reasoning is active. THE
+ * reflection tokens are counted IN this ceiling by the compat layers: at `high`, the
+ * reflection would eat most of the 8192 in the profile and truncate the answer
+ * **and the tool-calls** of the round. We therefore raise the ceiling on the expected additional cost.
+ * `undefined` at the entrance (surface without ceiling) remains `undefined`.
  */
 export function reasoningMaxTokens(
   base: number | undefined,
@@ -235,9 +235,9 @@ export function reasoningMaxTokens(
 }
 
 /**
- * Les quatre niveaux sont ouverts à TOUS, quota minddy compris : l'abonnement est
- * payé, il doit être utilisable en entier. Un `high` consomme le budget d'usage
- * mensuel plus vite, mais ne peut pas le dépasser — `checkAgentQuota` refuse le
- * lancement et la boucle s'arrête d'elle-même quand le budget est épuisé. Plafonner
- * le niveau en plus n'aurait protégé de rien, au prix d'une règle à expliquer.
+ * The four levels are open to ALL, minddy quota included: the subscription is
+ * paid, it must be usable in its entirety. A `high` consumes the usage budget
+ * monthly faster, but cannot exceed it — `checkAgentQuota` refuses the
+ * launch and the loop stops by itself when the budget is exhausted. Ceiling
+ * the extra level would not have protected anything, at the cost of a rule to explain.
  */

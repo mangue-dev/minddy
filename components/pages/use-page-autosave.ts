@@ -1,30 +1,30 @@
 "use client";
 
-// L'ENREGISTREMENT d'une page (MIN-271) — débouncé, versionné, fusionné.
+// RECORDING a page (MIN-271) — unbound, versioned, merged.
 //
-// Trois choses, et elles tiennent ensemble :
+// Three things, and they hold together:
 //
-//  1. **Une seule écriture en vol.** Ce qui est tapé pendant qu'une requête
-//     voyage n'ouvre pas une deuxième requête : il attend son tour dans
-//     `pending`, et repart dès que la première est revenue. Deux PATCH
-//     concurrents sur le même corps arriveraient dans un ordre que personne ne
-//     contrôle, et le plus ancien gagnerait une fois sur deux.
+// 1. **A single in-flight write.** What is typed during a query
+// trip does not open a second request: it waits its turn in
+// `pending`, and leaves as soon as the first one returns. Two PATCHES
+// competitors on the same body would arrive in an order that no one
+// control, and the oldest would win half the time.
 //
-//  2. **La version voyage avec le corps.** Chaque écriture dit sur quoi elle
-//     s'appuie ; le serveur refuse (409) si la page a bougé depuis, au lieu
-//     d'écraser. C'est tout le garde-fou, et il ne coûte qu'un entier.
+// 2. **The version travels with the body.** Each scripture says what it says about
+// leans; the server refuses (409) if the page has moved since then, instead
+// to crush. That's the whole guardrail, and it only costs a whole.
 //
-//  3. **Le refus se résout par une fusion, pas par un choix.** Le 409 rapporte
-//     le document du serveur : on le fusionne bloc par bloc avec celui de
-//     l'écran (`lib/pages-merge.ts`), on adopte le résultat dans l'éditeur, et
-//     on REJOUE l'écriture sur la nouvelle version. Ce qu'on ne sait pas
-//     fusionner — un bloc que les deux ont écrit — ne se tranche pas en
-//     silence : il ressort dans `conflicts`, et l'écran le dit.
+// 3. **Refusal is resolved by a merge, not by a choice.** The 409 reports
+// the server document: we merge it block by block with that of
+// the screen (`lib/pages-merge.ts`), we adopt the result in the editor, and
+// we REPLAY the writing on the new version. What we don't know
+// merge — a block that both wrote — is not decided in
+// silence: it comes out in `conflicts`, and the screen says it.
 //
-// Ce qui n'est PAS ici : le temps réel. Une page ne se met pas à jour toute
-// seule sous les yeux de son lecteur ; on n'apprend l'écriture de l'autre qu'au
-// moment d'enregistrer la sienne. C'est le cadrage de MIN-271, et la porte
-// laissée ouverte est `prosemirror-collab`, qui se poserait sur exactement ce
+// What is NOT here: real time. A page does not update at all
+// alone before the eyes of its reader; we only learn each other's writing
+// time to record yours. This is the framing of MIN-271, and the door
+// left open is `prosemirror-collab`, which would land on exactly this
 // compteur de version.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -42,34 +42,34 @@ import {
   type PageDocJSON,
 } from "@/lib/pages-merge";
 
-/** Ce que l'en-tête affiche. `conflict` survit à l'écriture qui l'a produit :
-    la page EST enregistrée, mais un bloc a été remplacé et il faut le dire. */
+/** What the header displays. `conflict` survives the writing that produced it:
+    the page IS saved, but a block has been replaced and it needs to be said. */
 export type PageSaveState = "saved" | "saving" | "conflict";
 
 /**
- * Le nombre de rejeux consécutifs. Trois, parce qu'un rejeu ne rate que si un
- * TROISIÈME enregistrement est passé pendant la fusion — au-delà, insister
- * ferait tourner une boucle plutôt que converger. On garde alors le brouillon
- * en attente : la prochaine frappe (ou le prochain ⌘S) le renverra.
+ * The number of consecutive replays. Three, because a replay only fails if one
+ * THIRD record played during merge — beyond, insist
+ * would spin a loop rather than converge. We then keep the draft
+ * waiting: the next keystroke (or the next ⌘S) will return it.
  */
 const MAX_REPLAYS = 3;
 
 export interface PageAutosave {
   state: PageSaveState;
-  /** L'horodatage de la dernière écriture acceptée, pour l'infobulle. */
+  /** The timestamp of the last accepted write, for the tooltip. */
   savedAt: string | null;
-  /** Les blocs qu'on a refusé de trancher. Vide = fusion muette. */
+  /** The blocks that we refused to cut. Empty = silent merge. */
   conflicts: PageBlockConflict[];
-  /** Empile un changement ; l'écriture part après le délai d'inactivité. */
+  /** Stack a change; the write leaves after the inactivity timeout. */
   schedule: (patch: UpdatePageInput) => void;
-  /** Écrit maintenant ce qui attend (⌘S, sortie de page, onglet caché). */
+  /** Now writes what is waiting (⌘S, page exit, hidden tab). */
   flush: () => Promise<void>;
-  /** Retire le brouillon de la file — l'écriture de la dernière chance
-      (`pagehide`) doit l'emporter elle-même, sans passer par une promesse. */
+  /** Remove draft from queue — last chance writing
+      (`pagehide`) must win itself, without going through a promise. */
   takePending: () => UpdatePageInput | null;
-  /** Remet ma version d'un bloc contesté, et l'enregistre. */
+  /** Submits my version of a contested block, and saves it. */
   restore: (conflict: PageBlockConflict) => void;
-  /** « J'ai vu » — le bandeau se referme, le document ne bouge pas. */
+  /** “I saw” — the blindfold closes, the document does not move. */
   dismiss: () => void;
 }
 
@@ -83,45 +83,45 @@ export function usePageAutosave({
   onError,
 }: {
   pageId: string;
-  /** La page telle qu'elle a été lue : la BASE de la première écriture. */
+  /** The page as it was read: the BASIS of the first writing. */
   page: Page | undefined;
   /**
-   * `page` vient-elle d'une lecture faite pendant CE montage ?
+   * Does `page` come from a reading made during THIS editing?
    *
-   * Le compteur de version ne vaut que s'il est celui du serveur : le tenir
-   * d'un cache, c'est fonder tout le garde-fou sur une donnée dont on ne sait
-   * pas l'âge. `isFetchedAfterMount`, chez l'appelant.
+   * The version counter is only valid if it is that of the server: keep it
+   * of a cache, it is basing the entire safeguard on a data of which we do not know
+   * not the age. `isFetchedAfterMount`, at the caller's house.
    */
   fresh: boolean;
   delayMs: number;
-  /** L'écriture elle-même — `usePagesQuery.updatePage`, qui patche aussi
-      l'arbre. Elle lève `PageConflictError` sur un refus de version. */
+  /** The writing itself — `usePagesQuery.updatePage`, which also patches
+      the tree. It raises `PageConflictError` on a version refusal. */
   save: (pageId: string, input: UpdatePageInput) => Promise<Page>;
   editorRef: React.MutableRefObject<Editor | null>;
   onError: (error: unknown) => void;
 }): PageAutosave {
-  /** La dernière version SERVEUR connue : son corps et son compteur. C'est la
-      base de la fusion, et elle avance à chaque écriture acceptée. */
+  /** The last known SERVER version: its body and its counter. This is the
+      basis of the merger, and it advances with each accepted write. */
   const base = useRef<{ content: PageDocJSON | null; version: number }>({
     content: null,
     version: 0,
   });
-  /** Ce que porte l'ÉCRAN, toujours à jour — la fusion travaille sur lui et non
-      sur le corps parti dans la requête, qui a une seconde de retard. */
+  /** What the SCREEN carries, always up to date — the fusion works on it and not
+      on the body left in the request, which is one second late. */
   const screen = useRef<PageDocJSON | null>(null);
 
-  // La base est posée UNE fois par page, et SEULEMENT depuis une lecture faite
-  // pendant ce montage (`fresh`). Les deux moitiés de cette phrase corrigent
-  // chacune un 409 sur une page où personne d'autre n'écrit :
+  // The basis is laid ONCE per page, and ONLY after reading
+  // during this assembly (`fresh`). Both halves of this sentence correct
+  // each a 409 on a page where no one else writes:
   //
-  //  - une fois : un refetch qui repasserait par ici écraserait la version que
-  //    les écritures ont fait avancer, et la sauvegarde suivante repartirait
-  //    sur un compteur périmé ;
-  //  - depuis une lecture fraîche : sinon on se cale sur la PREMIÈRE donnée
-  //    venue, c'est-à-dire le cache — un instantané de localStorage vieux de
-  //    plusieurs heures au rechargement. Le verrou ci-dessous figeait alors
-  //    cette version périmée pour toute la session, et TOUTES les sauvegardes
-  //    partaient en 409 (résolus en silence par la fusion, mais gratuits).
+  // - once: a refetch that passes through here again would overwrite the version that
+  // the writes moved forward, and the next save would start again
+  // on an expired meter;
+  // - from a fresh reading: otherwise we stick to the FIRST data
+  // came, that is to say the cache — a snapshot of localStorage old
+  // several hours to recharge. The lock below then froze
+  // this outdated version for the entire session, and ALL saves
+  // left in 409 (silently resolved by the merger, but free).
   const seeded = useRef<string | null>(null);
   const loaded = fresh && page?.id === pageId;
   useEffect(() => {
@@ -149,17 +149,17 @@ export function usePageAutosave({
     }
     const patch = pending.current;
     pending.current = null;
-    // Une écriture de dernière chance part sur la version qu'on a en main :
-    // sans elle, elle écraserait — avec elle, elle est simplement refusée.
+    // A last chance entry is made on the version we have in hand:
+    // without it, it would crush — with it, it is simply refused.
     if (patch && patch.content !== undefined && patch.version === undefined) {
       return { ...patch, version: base.current.version };
     }
     return patch;
   }, []);
 
-  /** Adopte un document venu d'ailleurs sans faire repartir l'autosave : le
-      curseur est replacé où il était, autant que le nouveau document le
-      permette — un conflit ne doit pas renvoyer le lecteur en haut de page. */
+  /** Adopt a document from elsewhere without restarting the autosave: the
+      cursor is placed back where it was, as much as the new document
+      allows — a conflict must not send the reader back to the top of the page. */
   const adopt = useCallback(
     (doc: PageDocJSON) => {
       screen.current = doc;
@@ -174,15 +174,15 @@ export function usePageAutosave({
   );
 
   const write = useCallback(async () => {
-    if (inFlight.current) return; // la file est déjà servie
+    if (inFlight.current) return; // the line is already served
     let patch = takePending();
     if (!patch) return;
 
     inFlight.current = true;
     setSaving(true);
     try {
-      // Une écriture, ses rejeux, puis ce qui a été tapé pendant — le tout
-      // dans UNE boucle, donc jamais deux requêtes en vol.
+      // A writing, its replays, then what was typed during — all
+      // in ONE loop, so never two requests in flight.
       while (patch) {
         let replays = 0;
         let sent: UpdatePageInput | null = patch;
@@ -200,8 +200,8 @@ export function usePageAutosave({
             sent = null;
           } catch (err) {
             if (!(err instanceof PageConflictError) || replays >= MAX_REPLAYS) {
-              // Un refus qu'on ne sait pas résoudre ne perd pas la frappe : le
-              // brouillon retourne dans la file, la prochaine tentative le
+              // A refusal that we do not know how to resolve does not lose its impact: the
+              // draft returns to the queue, the next attempt the
               // reprendra.
               pending.current = { ...attempt, ...pending.current };
               throw err;
@@ -219,7 +219,7 @@ export function usePageAutosave({
       setSaving(false);
     }
 
-    /** Le 409 : fusionner, adopter, et dire ce qu'on n'a pas su fusionner. */
+    /** The 409: merge, adopt, and say what we have not been able to merge. */
     function resolve(
       err: PageConflictError,
       sent: UpdatePageInput
@@ -235,9 +235,9 @@ export function usePageAutosave({
       }
       setSavedAt(err.page.updated_at);
 
-      // Rien à rendre au serveur : la fusion n'a retenu que ce qu'il porte
-      // déjà. Les champs hors corps (titre, icône) repartent quand même — ils
-      // n'ont pas été écrits, et ils ne se disputent avec personne.
+      // Nothing to return to the server: the fusion only retained what it carries
+      // Already. The fields outside the body (title, icon) still start again — they
+      // have not been written, and they do not argue with anyone.
       const { content: _content, version: _version, ...rest } = sent;
       if (!merged.changed) {
         return Object.keys(rest).length > 0 ? rest : null;
@@ -282,9 +282,9 @@ export function usePageAutosave({
 
   const dismiss = useCallback(() => setConflicts([]), []);
 
-  // Le minuteur ne survit pas au composant : une écriture programmée qui part
-  // après le démontage écrirait sur une page qu'on ne regarde plus. La sortie
-  // de page, elle, est écrite par l'appelant (`flush`) AVANT de démonter.
+  // The timer does not survive the component: a programmed write which leaves
+  // after dismantling would write on a page that we no longer look at. The exit
+  // page, it is written by the caller (`flush`) BEFORE disassembling.
   useEffect(
     () => () => {
       if (timer.current) clearTimeout(timer.current);

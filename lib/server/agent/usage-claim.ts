@@ -1,62 +1,59 @@
 import type { ModelPricing } from "@/lib/model-multiplier";
 
 /**
- * CE QUE LA MICROVM DIT AVOIR DÉPENSÉ, ramené à ce qui est possible (MIN-329).
+ * WHAT THE MICROVM SAYS IT SPENT, reduced to what is possible (MIN-329).
  *
- * `POST /api/agent-vm/usage` est le SEUL registre du budget : la ligne qu'il
- * écrit est ce qui compte dans le quota mensuel du compte et dans le plafond du
- * run. Or le corps de cette requête vient d'une boucle pilotée par un modèle qui
- * lit du contenu tiers — issues, diffs, pages web. Une injection suffisait à y
- * poster un `cost` négatif : la somme du mois DESCENDAIT, et le plafond de
- * dépense sautait pour tout le compte. Le même chemin, dans l'autre sens,
- * imputait une dépense fictive au propriétaire du run.
+ * `POST /api/agent-vm/usage` is the ONLY budget record: the line it writes is what counts toward the account's monthly quota and cap du
+ * run. However, the body of this request comes from a loop driven by a model which
+ * reads third-party content — issues, diffs, web pages. One injection was enough to y
+ * post a negative `cost`: the sum for the month FALLED DOWN, and the spending limit jumped for the entire account. The same path, in the other direction,
+ * charged a fictitious expense to the owner of the run.
  *
- * La défense tient en deux temps, et le second est le vrai :
+ * The defense holds in two stages, and the second is the real one:
  *
- * 1. **Des bornes** — un montant est un nombre fini, positif ou nul, sous un
- *    plafond par ligne ; un compte de tokens ne peut être ni négatif ni délirant.
- *    Hors bornes, la ligne est REFUSÉE (rien n'est écrit) et ça se trace.
- * 2. **Un plafond CALCULÉ** — les tokens rapportés au tarif publié du modèle
- *    donnent ce que cet appel peut coûter au maximum. Au-dessus, on n'écrit pas
- *    le chiffre de la VM mais le nôtre, marqué `estimated`. C'est ce qui fait que
- *    le montant n'est plus une déclaration : le seul levier qui reste à une VM
- *    est de mentir sur ses tokens, et ceux-là sont bornés aussi.
+ * 1. **Limits** — an amount is a finite number, positive or zero, under un
+ * cap per line; a token count can be neither negative nor delusional.
+ * Outside the limits, the line is REFUSED (nothing is written) and it is traced.
+ * 2. **A CALCULATED ceiling** — the tokens reported at the published rate of the model
+ * give what this call can cost at most. Above, we do not write
+ * the number of the VM but ours, marked `estimated`. This is what makes
+ * the amount is no longer a declaration: the only leverage left to a VM
+ * is to lie about its tokens, and those are limited too.
  *
- * Pourquoi PLAFONNER plutôt que remplacer systématiquement : le coût rapporté par
- * le fournisseur est la vraie facture (remises de cache, tarifs négociés, BYOK),
- * notre calcul n'en est qu'un majorant au prix affiché. Le remplacer partout
- * ferait payer le cache au prix plein à tout le monde pour se protéger d'un cas
- * qui ne s'est jamais produit. On garde donc la valeur rapportée TANT qU'ELLE EST
- * PLAUSIBLE, et on la coupe dès qu'elle ne l'est plus.
+ * Why CAP rather than systematically replace: the cost reported by
+ * the supplier is the real invoice (cache discounts, negotiated rates, BYOK),
+ * our calculation is only an addition to the displayed price. Replacing it everywhere
+ * would make everyone pay full price for the cache to protect against a case
+ * that never happened. We therefore keep the reported value AS LONG AS IT IS
+ * PLAUSIBLE, and we cut it as soon as it is no longer.
  *
- * Module PUR — pas d'IO, pas de `server-only` : c'est ce qui le rend testable
- * ligne à ligne, et c'est là que vivent les invariants qu'un test doit casser.
+ * PUR module — no IO, no `server-only`: this is what makes it testable
+ * line by line, and this is where the invariants live that a test must break.
  */
 
-/** Aucun appel unique ne rapporte plus de tokens que ça. Un ordre de grandeur
- *  au-dessus des plus grandes fenêtres de contexte publiées. */
+/** No single call earns more tokens than that. An order of magnitude
+ * above the largest published context windows. */
 export const MAX_USAGE_TOKENS = 10_000_000;
 
-/** Plafond DUR d'une ligne, tarif inconnu compris : un appel LLM au tarif le plus
- *  cher du marché, avec la plus grande fenêtre, reste très en dessous. */
+/** HARD ceiling of a line, unknown rate included: an LLM call at the most expensive rate on the market, with the largest window, remains far below. */
 export const MAX_USAGE_COST_USD = 100;
 
-/** La marge qu'on laisse au chiffre du fournisseur au-dessus de notre calcul.
- *  Elle absorbe ce que le prix affiché ne dit pas : majoration de routage,
- *  tokens de raisonnement facturés à part, arrondis. */
+/** The margin that we leave for the supplier's figure above our calculation.
+ * It absorbs what the displayed price does not say: routing surcharge,
+ * reasoning tokens invoiced separately, rounded. */
 export const USAGE_COST_TOLERANCE = 2;
 
-/** En dessous de ce montant, on ne plafonne pas : sur une ligne à quelques
- *  millièmes de dollar, la tolérance relative ne mesure plus rien. */
+/** Below this amount, there is no cap: on a line of a few
+ * thousandths of a dollar, the relative tolerance no longer measures anything. */
 export const USAGE_COST_FLOOR_USD = 0.05;
 
-/** Ce que l'index OpenRouter sait du prix d'un modèle. */
+/** What the OpenRouter index knows about a model's price. */
 export interface UsageModelPricing {
   pricing: ModelPricing | null;
   cachePricing: { readUsdPerMTok: number; writeUsdPerMTok: number } | null;
 }
 
-/** Les compteurs d'une ligne, une fois vérifiés. */
+/** The counters of a line, once verified. */
 export interface UsageTokens {
   promptTokens: number | null;
   completionTokens: number | null;
@@ -71,20 +68,19 @@ export type UsageClaimVerdict =
       ok: true;
       cost: number | null;
       estimated: boolean;
-      /** Le montant rapporté, quand il a été remplacé par le nôtre. */
+      /** The reported amount, when it was replaced by ours. */
       clampedFrom?: number;
     });
 
-/** `ai_usage.cost` est un `numeric(12,6)` : on arrondit là où la colonne coupe. */
+/** `ai_usage.cost` is a `numeric(12,6)`: we round where the column cuts. */
 function roundUsd(usd: number): number {
   return Math.round(usd * 1e6) / 1e6;
 }
 
 /**
- * Un compteur de tokens, ou `null` quand il n'est pas annoncé. `undefined` dit
- * « refusé » — un compteur PRÉSENT mais impossible n'est pas une absence : le
- * traiter comme telle laisserait passer la ligne avec un compteur en moins, donc
- * un plafond calculé plus bas, donc rien de gagné.
+ * A token counter, or `null` when not announced. `undefined` says
+ * “refused” — a PRESENT but impossible counter is not an absence: treating it as such would let the line pass with one counter less, therefore
+ * a lower calculated ceiling, so nothing gained.
  */
 function tokenField(raw: unknown): number | null | undefined {
   if (raw == null) return null;
@@ -94,15 +90,13 @@ function tokenField(raw: unknown): number | null | undefined {
 }
 
 /**
- * Ce que cet appel PEUT coûter au maximum, tokens rapportés × tarif publié.
+ * What this call MAY cost at maximum, reported tokens × published price.
  *
- * Majorant assumé : les tokens de cache sont comptés en PLUS du prompt (ils y
- * sont souvent déjà inclus) et l'écriture de cache au plus cher des deux tarifs.
- * On cherche une borne, pas une facture — un majorant trop serré couperait des
- * lignes honnêtes, et c'est le seul risque qui compte ici.
+ * Surcharge assumed: cache tokens are counted IN ADDITION to the prompt (they are often already included) and the cache write at the more expensive of the two prices.
+ * We are looking for a terminal, not an invoice — too tight an increase would cut honest lines, and that is the only risk that counts here.
  *
- * `null` quand le prix du modèle est inconnu (hors catalogue OpenRouter, BYOK
- * générique) : on ne devine pas un tarif, et seules les bornes dures s'appliquent.
+ * `null` when the price of the model is unknown (excluding the OpenRouter catalog, BYOK
+ * generic): we cannot guess a price, and only the terminals Hard rules apply.
  */
 export function maxPlausibleCostUsd(
   tokens: UsageTokens,
@@ -125,12 +119,12 @@ export function maxPlausibleCostUsd(
 }
 
 /**
- * La ligne d'usage que la VM propose, vérifiée puis bornée.
+ * The usage line that the VM proposes, checked then bounded.
  *
- * `estimated` de la VM est conservé quand la ligne passe telle quelle ; il est
- * FORCÉ quand on a remplacé le montant, parce que le chiffre écrit vient alors de
- * notre calcul et pas d'un relevé — l'admin finance ne doit jamais confondre les
- * deux (même règle que `abandonedSpend`).
+ * `estimated` of the VM is kept when the line passes as is; it is
+ * FORCED when we have replaced the amount, because the written figure then comes from
+ * our calculation and not from a statement — the finance admin must never confuse the two
+ * (same rule as `abandonedSpend`).
  */
 export function checkUsageClaim(
   body: Record<string, unknown>,
@@ -162,9 +156,9 @@ export function checkUsageClaim(
   if (rawCost != null && (typeof rawCost !== "number" || !Number.isFinite(rawCost))) {
     return { ok: false, reason: "cost must be a finite number" };
   }
-  // LE SIGNE, et c'est tout le ticket : un montant négatif ne borne pas une
-  // dépense, il en efface une autre. Le refus est net, jamais un `Math.max(0, …)`
-  // silencieux — une VM qui poste ça a un problème qu'on veut voir.
+  // THE SIGN, and that's the whole ticket: a negative amount does not limit a
+  // spend, it deletes another one. The refusal is clear, never a `Math.max(0, …)`
+  // silent — a VM that posts this has a problem that we want to see.
   if (typeof rawCost === "number" && rawCost < 0) {
     return { ok: false, reason: "cost cannot be negative" };
   }
@@ -178,13 +172,13 @@ export function checkUsageClaim(
   }
 
   /**
-   * UN MONTANT SANS TOKENS N'EST PAS VÉRIFIABLE, et c'est le trou qu'ouvrirait la
-   * suite si on le laissait passer : sans compteur, le majorant vaut zéro, donc
-   * plafonner écrirait 0 sur une ligne honnête (de l'argent dépensé et jamais
-   * compté), et ne pas plafonner offrirait à qui omet ses tokens le plein plafond
-   * dur. Aucune des deux ne va. Un relevé de fournisseur porte TOUJOURS ses
-   * tokens à côté de son montant : au-dessus du plancher, on l'exige.
-   */
+ * AN AMOUNT WITHOUT TOKENS IS NOT VERIFIABLE, and this is the hole that the
+ * continuation would open if we let it pass: without a counter, the upper bound is worth zero, so
+ * capping would write 0 on an honest line (money spent and never
+ * counted), and would not not capping would offer those who omit their tokens the full hard cap
+ *. Neither is okay. A supplier statement ALWAYS has its
+ * tokens next to its amount: above the floor, it is required.
+ */
   const hasTokens =
     tokens.promptTokens != null || tokens.completionTokens != null || tokens.totalTokens != null;
   if (rawCost > USAGE_COST_FLOOR_USD && !hasTokens) {

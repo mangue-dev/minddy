@@ -3,33 +3,32 @@ import { NextRequest } from "next/server";
 import type { CookieOptions } from "@supabase/ssr";
 
 /**
- * MIN-351 — CE QUE LE PROXY DIT AU RENDU, ET CE QU'IL RAPPORTE AU NAVIGATEUR.
+ * MIN-351 — WHAT THE PROXY SAYS IN RENDERING, AND WHAT IT REPORTS TO THE BROWSER.
  *
- * Deux défauts qui n'ont en commun que leur adresse, `proxy.ts` :
+ * Two faults which only have their address in common, `proxy.ts` :
  *
- *  - **Les en-têtes de confiance n'étaient pas nettoyés.** `x-minddy-public`,
- *    `x-minddy-locale`, `x-minddy-route` sont des affirmations du proxy que le
- *    root layout et next-intl croient sur parole. Rien n'empêchait le client de
- *    les envoyer lui-même : un `curl -H 'x-minddy-public: 1'` et le rendu d'une
- *    page de l'app basculait sur le décor du site public.
- *  - **MIN-293 était toujours vivant ici.** `readSession` lit la session avec un
- *    adaptateur au `setAll` vide : jeton expiré, GoTrue rend un couple neuf et
- *    fait tourner le jeton de rafraîchissement — le proxy le DÉPENSAIT puis le
- *    jetait. Le navigateur gardait l'ancien, mort. C'est la déconnexion
- *    silencieuse, corrigée côté routes et pas côté proxy.
+ * - **Trust headers were not sanitized.** `x-minddy-public`,
+ * `x-minddy-locale`, `x-minddy-route` are proxy assertions that the
+ * root layout and next-intl take at their word. Nothing prevented the client from
+ * sending them himself: a `curl -H 'x-minddy-public: 1'` and the rendering of a
+ * app page switched to the setting of the public site.
+ * - **MIN-293 was still alive here.** `readSession` reads the session with a
+ * adapter to empty `setAll`: expired token, GoTrue returns a new pair and
+ * spins up the refresh token — the proxy SPENT it then threw it away. The navigator kept the old one, dead. This is the silent disconnection
+ *, corrected on the route side and not on the proxy side.
  *
- * Ce qu'on moque : `@supabase/ssr`, la seule frontière réseau. Tout le reste —
- * le vrai proxy, ses branches, ses en-têtes — s'exécute.
+ * What we are mocking: `@supabase/ssr`, the only network boundary. Everything else —
+ * the real proxy, its branches, its headers — executes.
  *
- * Comment on observe ce qui atteint le rendu : `NextResponse.next({ request })`
- * publie les en-têtes de requête réécrits sous `x-middleware-request-*`, et leur
- * liste sous `x-middleware-override-headers`. C'est littéralement ce que Next
- * repassera au layout.
+ * How we observe what hits the renderer: `NextResponse.next({ request })`
+ * publishes the rewritten request headers as `x-middleware-request-*`, and their
+ * list under `x-middleware-override-headers`. This is literally what Next
+ * will return to the layout.
  */
 
 type SetAll = (c: { name: string; value: string; options: CookieOptions }[]) => void;
 
-/** Ce que la lib « rendrait » à écrire au prochain appel de getSession. */
+/** What the lib would “render” to write on the next call to getSession. */
 let refreshed: { name: string; value: string; options: CookieOptions }[] = [];
 let session: { user: { id: string }; access_token?: string } | null = null;
 
@@ -54,7 +53,7 @@ function request(pathname: string, headers: Record<string, string> = {}): NextRe
   });
 }
 
-/** Les en-têtes de requête que le proxy laisse passer jusqu'au rendu. */
+/** The request headers that the proxy lets pass until rendering. */
 function forwardedHeaders(response: { headers: Headers }): Record<string, string> {
   const names = response.headers.get("x-middleware-override-headers");
   if (!names) return {};
@@ -74,13 +73,13 @@ beforeEach(() => {
   session = null;
 });
 
-describe("en-têtes de confiance envoyés par le client", () => {
+describe("trusted headers sent by the client", () => {
   it.each([
     ["/login", "une route publique"],
     ["/home", "une route de l'app"],
     ["/f/tok", "un board public"],
   ])("n'atteint pas le rendu sur %s (%s)", async (pathname) => {
-    // /home est protégée : une session, sinon on part en redirection vers /login.
+    // /home is protected: a session, otherwise we redirect to /login.
     session = { user: { id: "u1" } };
 
     const response = await proxy(
@@ -94,15 +93,15 @@ describe("en-têtes de confiance envoyés par le client", () => {
     const forwarded = forwardedHeaders(response);
     expect(forwarded["x-minddy-locale"]).toBeUndefined();
     expect(forwarded["x-minddy-route"]).toBeUndefined();
-    // `/f/` est un site public : le proxy y pose LUI-MÊME le drapeau. Ce qui
-    // compte est qu'il vienne de lui — d'où le nettoyage systématique, y compris
-    // là où la valeur finale est la même.
+    // `/f/` is a public site: the proxy sets the flag ITSELF. What
+    // counts is that it comes from him — hence the systematic cleaning, including
+    // where the final value is the same.
     if (!pathname.startsWith("/f/")) {
       expect(forwarded["x-minddy-public"]).toBeUndefined();
     }
   });
 
-  it("laisse le proxy poser les siens sur une page publique localisée", async () => {
+  it("lets the proxy set its own on a localized public page", async () => {
     const response = await proxy(request("/fr/tarifs", { "x-minddy-public": "0" }));
     const forwarded = forwardedHeaders(response);
 
@@ -112,7 +111,7 @@ describe("en-têtes de confiance envoyés par le client", () => {
   });
 });
 
-describe("cookies rafraîchis pendant la lecture de session (MIN-293)", () => {
+describe("cookies refreshed while reading the session (MIN-293)", () => {
   const OPTIONS = { path: "/", sameSite: "lax" as const };
 
   beforeEach(() => {
@@ -122,14 +121,14 @@ describe("cookies rafraîchis pendant la lecture de session (MIN-293)", () => {
     ];
   });
 
-  it("repart avec la réponse sur /login (visiteur déconnecté)", async () => {
+  it("returns the /login response for a signed-out visitor", async () => {
     const response = await proxy(request("/login"));
 
     expect(response.cookies.get("sb-access-token")?.value).toBe("neuf");
     expect(response.cookies.get("sb-refresh-token")?.value).toBe("aussi-neuf");
   });
 
-  it("repart avec la REDIRECTION vers /home (visiteur déjà connecté)", async () => {
+  it("returns the REDIRECT to /home for an already signed-in visitor", async () => {
     session = { user: { id: "u1" } };
 
     const response = await proxy(request("/login"));
@@ -138,7 +137,7 @@ describe("cookies rafraîchis pendant la lecture de session (MIN-293)", () => {
     expect(response.cookies.get("sb-access-token")?.value).toBe("neuf");
   });
 
-  it("repart avec la landing servie à un visiteur déconnecté", async () => {
+  it("returns the landing page served to a signed-out visitor", async () => {
     const response = await proxy(request("/"));
 
     expect(response.cookies.get("sb-access-token")?.value).toBe("neuf");
@@ -146,8 +145,8 @@ describe("cookies rafraîchis pendant la lecture de session (MIN-293)", () => {
 
   it("porte `Secure` en production, pas en développement", async () => {
     const response = await proxy(request("/login"));
-    // Le test tourne en NODE_ENV=test : le drapeau suit `production`, comme les
-    // trois autres cookies écrits à la main par le dépôt.
+    // The test runs in NODE_ENV=test: the flag follows `production`, like the
+    // three more cookies handwritten by the repository.
     expect(response.cookies.get("sb-access-token")?.secure).toBe(
       process.env.NODE_ENV === "production",
     );

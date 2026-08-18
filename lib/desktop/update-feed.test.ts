@@ -9,9 +9,9 @@ import {
 } from "./update-feed";
 
 /**
- * Un `latest-mac.yml` RÉEL, tel qu'electron-builder l'écrit pour deux
- * architectures — copié d'une sortie plutôt que réinventé, parce que c'est
- * exactement la forme du fichier qui est le contrat ici.
+ * An ACTUAL `latest-mac.yml`, as electron-builder writes it for two
+ * architectures — copied from a release rather than reinvented, because it is
+ * exactly the form of the file that is the contract here.
  */
 const FEED = `version: 1.2.0
 files:
@@ -39,7 +39,7 @@ describe("parseLatestMacFeed", () => {
     expect(release?.files).toHaveLength(4);
   });
 
-  it("déduit l'architecture du NOM — le manifeste ne la porte pas", () => {
+  it("infers the architecture from the NAME — the manifest does not carry it", () => {
     const release = parseLatestMacFeed(FEED);
     expect(release?.files.map((file) => [file.name, file.arch, file.kind])).toEqual([
       ["minddy-1.2.0-arm64.dmg", "arm64", "dmg"],
@@ -61,10 +61,10 @@ describe("parseLatestMacFeed", () => {
     expect(release?.files[0].size).toBeNull();
   });
 
-  // `path:` redit le premier fichier en fin de manifeste, mais sans la clé
-  // `url:` — il ne peut donc pas entrer. Le dédoublonnage, lui, garde la liste
-  // juste si un jour le générateur écrit la même entrée deux fois.
-  it("ne rend jamais deux fois le même fichier", () => {
+  // `path:` repeats the first file at the end of the manifest, but without the key
+  // `url:` — so he cannot enter. Deduplication keeps the list
+  // just if one day the generator writes the same entry twice.
+  it("never returns the same file twice", () => {
     const release = parseLatestMacFeed(FEED);
     expect(release?.files.filter((f) => f.name === "minddy-1.2.0-arm64.dmg")).toHaveLength(1);
     const twice = parseLatestMacFeed(
@@ -89,7 +89,7 @@ describe("parseLatestMacFeed", () => {
 });
 
 describe("formatBytes", () => {
-  it("compte en méga-octets DÉCIMAUX, comme le Finder", () => {
+  it("counts in DECIMAL megabytes, like Finder", () => {
     expect(formatBytes(119370561, "fr")).toBe("119 Mo");
     expect(formatBytes(119370561, "en")).toBe("119 MB");
   });
@@ -136,7 +136,7 @@ describe("desktopFeedBaseUrl", () => {
     else process.env.MINDDY_DESKTOP_FEED_URL = initial;
   });
 
-  it("retire la barre oblique finale — les noms du manifeste sont relatifs", () => {
+  it("removes the trailing slash — manifest names are relative", () => {
     process.env.MINDDY_DESKTOP_FEED_URL = "https://blob.example.com/desktop/";
     expect(desktopFeedBaseUrl()).toBe("https://blob.example.com/desktop");
   });

@@ -11,27 +11,26 @@ import {
 } from "./harness-layout";
 
 /**
- * MIN-354 — le layout du harness, devenu une valeur du run.
+ * MIN-354 — the layout of the harness, which has become a value of the run.
  *
- * Logique pure, testée comme [prune.test.ts](prune.test.ts) : on appelle, on
- * assert. Ce que ce fichier garde tient en trois faits, et aucun n'est un goût :
+ * Pure logic, tested like [prune.test.ts](prune.test.ts): we call, on
+ * assert. What this file keeps is three facts, and none of them are tastes:
  *
- *  1. **Le cloud ne bouge pas.** Ce lot ne déplace rien en production ; il
- *     calcule ce qui était écrit. Une dérive d'un seul de ces six chemins
- *     laisserait le binaire opencode cuit à côté de celui que le harness
- *     cherche, ou le `.tsbuildinfo` dans le `git add -A` de fin de tour.
- *  2. **Deux runs sont disjoints.** C'est la raison d'être du ticket : sur une
- *     machine, deux tours simultanés ne doivent partager ni dépôt, ni job, ni
- *     base SQLite, ni sorties de tools.
- *  3. **Un layout douteux est refusé.** `repoDir` est la racine de sécurité de
- *     quatre garde-fous, et elle arrive désormais par un JSON.
+ * 1. **The cloud is not moving.** This batch does not move anything in production; il
+ * calculates what was written. A deviation from just one of these six paths
+ * would leave the cooked opencode binary next to the one the harness
+ * is looking for, or the `.tsbuildinfo` in the end-of-round `git add -A`.
+ * 2. **Two runs are disjoint.** This is the reason for the ticket: on a
+ * machine, two simultaneous turns must not share a repository, a job, a SQLite base, or tools outputs.
+ * 3. **A questionable layout is refused.** `repoDir` is the security root of
+ * four guardrails, and it now arrives by a JSON.
  */
 
 describe("le layout du cloud", () => {
   it("rend exactement les chemins d'avant MIN-354", () => {
-    // Ces six valeurs étaient des constantes de module. Les voir écrites ici est
-    // ce qui dit qu'on a paramétré sans DÉPLACER : un run de production doit
-    // trouver son dépôt, son binaire et son snapshot là où ils ont toujours été.
+    // These six values ​​were module constants. Seeing them written here is
+    // which says that we have configured without MOVE: a production run must
+    // find your repository, binary and snapshot where they've always been.
     expect(cloudLayout()).toEqual({
       root: "/vercel/sandbox",
       repoDir: "/vercel/sandbox/repo",
@@ -53,17 +52,17 @@ describe("la dérivation", () => {
     for (const dir of [layout.repoDir, layout.toolOutputDir, layout.harnessDir, layout.typecheckDir]) {
       expect(dir.startsWith("/work/r-1/")).toBe(true);
     }
-    // Le binaire, lui, est propre à la MACHINE : 144 Mo qu'on ne réinstalle pas
+    // The binary is specific to the MACHINE: 144 MB which cannot be reinstalled
     // par ticket.
     expect(layout.opencodeDir).toBe("/opt/oc");
   });
 
   /**
-   * LE HARNESS ET LES SORTIES SONT FRÈRES DU DÉPÔT, JAMAIS SES ENFANTS. C'est ce
-   * qui fait que le `git add -A` de fin de tour ne les voit pas — sans quoi le
-   * job du tour, qui porte l'historique de la conversation ET l'URL de push,
-   * partirait dans un commit du dépôt de l'utilisateur puis dans sa PR.
-   */
+ * HARNESS AND RELEASES ARE BROTHERS OF THE DEPOSIT, NEVER ITS CHILDREN. It is this
+ * which means that the `git add -A` at the end of the round does not see them — otherwise the
+ * job of the round, which carries the history of the conversation AND the push URL,
+ * would leave in a commit in the user's repository then in his PR.
+ */
   it("garde le harness et les sorties HORS du dépôt", () => {
     const layout = layoutForRoot("/work/r-1", "/opt/oc");
     for (const dir of [layout.toolOutputDir, layout.harnessDir, layout.typecheckDir]) {
@@ -72,10 +71,10 @@ describe("la dérivation", () => {
   });
 
   /**
-   * MIN-358 — le mode dépôt courant : le dépôt est celui de l'utilisateur, tout
-   * le reste appartient au run. C'est le seul layout où `repoDir` n'est pas
-   * `<root>/repo`, et il passe le même contrôle que les autres.
-   */
+ * MIN-358 — the current deposit mode: the deposit is that of the user, all
+ * the rest belongs to the run. This is the only layout where `repoDir` is not
+ * `<root>/repo`, and it passes the same check as the others.
+ */
   it("laisse le dépôt courant où il est, sans y installer le harness", () => {
     const layout = layoutForCurrentRepo("/work/r-1", "/Users/x/Projets/app/", "/opt/oc");
     expect(layout.repoDir).toBe("/Users/x/Projets/app");
@@ -87,19 +86,19 @@ describe("la dérivation", () => {
   });
 
   it("absorbe un slash final plutôt que de produire un `//`", () => {
-    // `resolveWithin` compare à `${base}/` : un double slash y échapperait à la
-    // comparaison de préfixe d'un côté et pas de l'autre.
+    // `resolveWithin` compares to `${base}/`: a double slash would escape the
+    // prefix comparison on one side and not on the other.
     expect(layoutForRoot("/work/r-1/", "/opt/oc/")).toEqual(layoutForRoot("/work/r-1", "/opt/oc"));
   });
 });
 
 describe("deux runs sur une machine", () => {
   /**
-   * LE PIÈGE QUE LE TICKET EXISTE POUR REFERMER. Sur une microVM, un run avait sa
-   * machine ; sur un poste, deux tickets lancés à la suite partageaient tout — le
-   * job réécrit sous le premier, une seule base SQLite opencode pour les deux, un
-   * dossier de sorties commun.
-   */
+ * THE TRAP THAT THE TICKET EXISTS TO CLOSE. On a microVM, a run had its
+ * machine; on a workstation, two tickets launched in succession shared everything — the
+ * job rewritten under the first, a single SQLite opencode base for both, a
+ * common output folder.
+ */
   it("ne partagent aucun chemin de run", () => {
     const a = layoutForRoot(runScopedRoot("/work", "run-a"), "/opt/oc");
     const b = layoutForRoot(runScopedRoot("/work", "run-b"), "/opt/oc");
@@ -107,8 +106,8 @@ describe("deux runs sur une machine", () => {
     for (const [left, right] of perRun(a).map((v, i) => [v, perRun(b)[i]])) {
       expect(left).not.toBe(right);
     }
-    // …et aucun n'est préfixe de l'autre : `/work/run-a` ne doit pas passer pour
-    // être dans `/work/run-a-bis`, ni l'inverse.
+    // …and neither is a prefix of the other: `/work/run-a` must not pass as
+    // be in `/work/run-a-bis`, nor vice versa.
     expect(a.root.startsWith(`${b.root}/`)).toBe(false);
     expect(b.root.startsWith(`${a.root}/`)).toBe(false);
   });
@@ -120,16 +119,16 @@ describe("deux runs sur une machine", () => {
   });
 
   /**
-   * L'identifiant vient de la base, mais il BORNE une racine : un `/` ou un `..`
-   * qui y passerait ferait sortir le run de son dossier de travail, et c'est
-   * cette racine-là qui borne tout le reste.
-   */
+ * The identifier comes from the base, but it BOUNDS a root: a `/` or a `..`
+ * which passes there would take the run out of its working folder, and it is
+ * this root which bounds all the rest.
+ */
   it("neutralise un identifiant qui tenterait de sortir du dossier de travail", () => {
     for (const runId of ["../../etc", "a/b", "..", "", "/etc/passwd"]) {
       const root = runScopedRoot("/work", runId);
       expect(root.startsWith("/work/")).toBe(true);
-      // Ce qui compte : plus aucun séparateur après le dossier de travail, donc
-      // plus de segment `..` à remonter — la racine ne peut plus sortir.
+      // What matters: no more separator after the working folder, so
+      // no more `..` segments to go up — the root can no longer exit.
       expect(root.slice("/work/".length)).not.toContain("/");
       expect(root.slice("/work/".length).startsWith(".")).toBe(false);
     }
@@ -142,8 +141,8 @@ describe("le contrôle du layout", () => {
   const base = layoutForRoot("/work/r-1", "/opt/oc");
 
   it("refuse un chemin relatif", () => {
-    // `resolveWithin("repo", "../x")` ne sort de rien du tout : la garde
-    // deviendrait muette, pas fausse — ce qui est pire.
+    // `resolveWithin("repo", "../x")` comes out of nothing at all: the guard
+    // would become mute, not false — which is worse.
     expect(() => assertUsableLayout({ ...base, repoDir: "repo" })).toThrow(/absolute/i);
   });
 
@@ -152,11 +151,11 @@ describe("le contrôle du layout", () => {
   });
 
   /**
-   * MIN-358 : un dépôt HORS de la racine du run est désormais légitime — c'est
-   * le mode dépôt courant, où le dépôt est celui de l'utilisateur. Ce qui reste
-   * refusé est la seule chose que la règle protégeait vraiment : un harness
-   * installé DANS le dépôt, donc visible du `git status` de quelqu'un.
-   */
+ * MIN-358: a repository OUTSIDE the run root is now legitimate — this is
+ * the current repository mode, where the repository is that of the user. What remains
+ * denied is the only thing the rule really protected: a harness
+ * installed IN the repository, therefore visible to someone's `git status`.
+ */
   it("accepte un dépôt hors de la racine du run (mode dépôt courant)", () => {
     expect(() => assertUsableLayout({ ...base, repoDir: "/Users/x/Projets/app" })).not.toThrow();
   });
@@ -179,7 +178,7 @@ describe("le contrôle du layout", () => {
   });
 
   it("laisse le binaire opencode vivre hors de la racine du run", () => {
-    // C'est le SEUL chemin qui a le droit d'être ailleurs, et c'est délibéré.
+    // It's the ONLY path that has the right to be elsewhere, and that's deliberate.
     expect(() =>
       assertUsableLayout({ ...base, opencodeDir: `${CLOUD_SANDBOX_ROOT}/../oc` }),
     ).not.toThrow();

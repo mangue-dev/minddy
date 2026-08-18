@@ -2,14 +2,14 @@ import { getTranslations } from "next-intl/server";
 import { VoiceDemoPlayer } from "./voice-demo-player";
 
 /**
- * L'enveloppe SERVEUR de la démo de dictée (MIN-150).
+ * The SERVER envelope of the dictation demo (MIN-150).
  *
- * Elle n'existe que pour une raison : `Field` et `Priority` ne font pas partie
- * des namespaces servis au navigateur sur le site public
- * (`lib/public-client-messages.ts` — le catalogue complet pesait 39 Ko gzippés
- * dans le document). Les lire ici et passer les neuf intitulés en props coûte
- * quelques dizaines d'octets dans le flux RSC, et garde la démo alignée sur les
- * mots exacts de l'app : si « Échéance » change dans le produit, il change ici.
+ * It only exists for one reason: `Field` and `Priority` are not part of
+ * of the namespaces served to the browser on the site public
+ * (`lib/public-client-messages.ts` — the full catalog was 39 KB gzipped
+ * into the document). Reading them here and passing the nine titles in props costs
+ * a few dozen bytes in the RSC feed, and keeps the demo aligned with the
+ * exact words of the app: if "Expiration" changes in the product, it changes here.
  */
 export async function VoiceDemo() {
   const [tField, tPriority] = await Promise.all([

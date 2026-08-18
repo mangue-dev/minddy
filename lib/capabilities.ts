@@ -1,8 +1,8 @@
 /**
- * Catalogue pur des infrastructures dont minddy peut dépendre.
+ * Pure catalog of infrastructures on which minddy can depend.
  *
- * Il ne lit pas `process.env` lui-même : le serveur lui passe son environnement,
- * et les tests peuvent ainsi prouver qu'une installation vide n'active rien.
+ * It does not read `process.env` itself: the server passes it its environment,
+ * and the tests can thus prove that an empty installation does not activate anything.
  */
 export type CapabilityRequirement = "required" | "replaceable" | "optional";
 export type CapabilityState = "ready" | "disabled" | "incomplete" | "external";
@@ -98,7 +98,7 @@ function optIn(
       });
 }
 
-/** Résout toutes les capacités, sans import de SDK ni appel réseau. */
+/** Resolves all capabilities, without SDK import or network calls. */
 export function resolveCapabilities(env: CapabilityEnvironment): Record<CapabilityId, CapabilityStatus> {
   const officialCloud = isOfficialMinddyCloud(env);
   const supabaseMissing = missing(env, [

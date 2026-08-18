@@ -8,11 +8,11 @@ import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * GET /api/projects/[id]/pages — toutes les pages vivantes du projet, À PLAT.
+ * GET /api/projects/[id]/pages — all live pages in the project, FLAT.
  *
- * Une seule requête, sans le corps des documents : l'arbre se reconstruit chez
- * l'appelant (`buildPageTree`, lib/pages.ts). C'est ce qui permet la profondeur
- * illimitée sans CTE récursive ni N+1.
+ * A single request, without the body of the documents: the tree is reconstructed at
+ * the caller (`buildPageTree`, lib/pages.ts). This is what allows for depth
+ * unlimited without recursive CTE or N+1.
  */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -28,12 +28,12 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 }
 
 /**
- * POST /api/projects/[id]/pages — créer une page (tout membre du projet).
+ * POST /api/projects/[id]/pages — create a page (any project member).
  *
- * Le corps arrive en JSON ProseMirror (`content`), tel que l'éditeur le
- * produit, ou en MARKDOWN (`markdown`) — le wizard de projet s'en sert pour
- * poser le brief collé en page. La bascule est dans `createPage`, avec le reste
- * des règles d'écriture.
+ * The body arrives in JSON ProseMirror (`content`), as the editor
+ * product, or in MARKDOWN (`markdown`) — the project wizard uses it to
+ * place the brief pasted on the page. The toggle is in `createPage`, with the rest
+ * writing rules.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -41,9 +41,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  // Créer une page écrit une ligne ET, en différé, monte un éditeur serveur
-  // pour en projeter le texte indexé : c'est la plus chère des écritures du
-  // wiki, et rien ne bornait la boucle qui en crée mille (MIN-348).
+  // Create a page writes a line AND, offline, mounts a server editor
+  // to project the indexed text: it is the most expensive writing of the
+  // wiki, and nothing limited the loop that creates a thousand (MIN-348).
   const refused = rateLimitRefusal(auth.user.id, "page-create", { limit: 30 });
   if (refused) return refused;
 

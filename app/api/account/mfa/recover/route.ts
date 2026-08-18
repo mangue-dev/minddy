@@ -7,19 +7,19 @@ import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { captureServerEvent } from "@/lib/server/posthog";
 
 /**
- * « Je n'ai plus mon téléphone » (MIN-132) — la SEULE route servie en `aal1` sur
- * un compte protégé, et donc la seule à monter `getAuthedUser` avec
- * `allowAal1`. Il faut quand même une session valide : un code de récupération
- * n'est pas un identifiant, c'est le second facteur de quelqu'un qui a déjà
- * donné son mot de passe (ou est passé par Google / GitHub).
+ * “I No Longer Have My Phone” (MIN-132) — the ONLY route served in `aal1` on
+ * a protected account, and therefore the only one to set up `getAuthedUser` with
+ * `allowAal1`. You still need a valid session: a recovery code
+ * is not an identifier, it is the second factor of someone who has already
+ * gave his password (or went through Google / GitHub).
  *
- * Un code consommé ne délivre pas d'`aal2` — seul GoTrue peut en frapper un. Il
- * DÉSACTIVE la 2FA : les facteurs partent, le drapeau retombe, le compte
- * redevient accessible en `aal1`. C'est plus honnête qu'une élévation
- * silencieuse, et ça dit à la personne ce qu'il lui reste à faire : réactiver.
+ * A consumed code does not issue a `aal2` — only GoTrue can strike one. He
+ * DEACTIVATES 2FA: the postmen leave, the flag falls, the count
+ * becomes accessible again in `aal1`. It's more honest than an elevation
+ * silent, and it tells the person what they have to do: reactivate.
  *
- * Dix essais par minute : de quoi se tromper en recopiant, pas de quoi balayer
- * un espace de 40 bits.
+ * Ten attempts per minute: enough to make a copying mistake, not enough to scan
+ * a 40-bit space.
  */
 
 const RECOVERY_LIMIT = { limit: 10, windowMs: 60_000 };
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
   let body: { code?: string };
   try {
     const parsed: unknown = await request.json();
-    // Corps non-objet (null, chaîne…) : refusé ici, pas en 500 plus bas.
+    // Non-object body (null, string…): refused here, not 500 below.
     if (!parsed || typeof parsed !== "object") throw new Error("not an object");
     body = parsed as { code?: string };
   } catch {
@@ -49,15 +49,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Un compte sans 2FA n'a rien à récupérer. On le dit tel quel : la session
-    // est déjà celle de la personne, il n'y a rien à protéger par le flou.
+    // An account without 2FA has nothing to recover. We tell it like it is: the session
+    // is already that of the person, there is nothing to protect by vagueness.
     const status = await getMfaStatus(auth.user.id);
     if (!status.enabled) {
       return NextResponse.json({ error: "MFA is not enabled" }, { status: 400 });
     }
 
-    // Un code frappé fait une dizaine de caractères : bien au-delà, c'est un
-    // corps forgé — inutile de le normaliser et de le hacher.
+    // A typed code is around ten characters long: well beyond that, it’s a
+    // forged body — no need to standardize and chop it up.
     const code = typeof body.code === "string" ? body.code.trim() : "";
     if (!code || code.length > 64) {
       return NextResponse.json({ error: t("invalidRecoveryCode") }, { status: 400 });

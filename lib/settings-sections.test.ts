@@ -6,21 +6,21 @@ import { describe, expect, it } from "vitest";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 
 /**
- * Le contrat entre le CATALOGUE des réglages et les CARTES qui les rendent.
+ * The contract between the CATALOG of settings and the MAPS that render them.
  *
- * Une entrée de `SETTINGS_SECTIONS` sert deux fois : elle produit une ligne dans
- * ⌘K, et elle nomme l'ancre DOM que le shell déroule. Le typage tient un sens
- * (`anchor={SETTINGS_SECTIONS.…}` n'accepte rien d'autre qu'une entrée du
- * catalogue) mais pas l'autre : ajouter une entrée sans la poser sur une carte
- * compile parfaitement, et donne une ligne de palette qui ouvre le bon onglet
- * puis ne déroule rien — cinq secondes de guette, aucune erreur, aucun log.
+ * An entry in `SETTINGS_SECTIONS` serves twice: it produces a line in
+ * ⌘K, and it names the DOM anchor that the shell unrolls. The typing makes one sense
+ * (`anchor={SETTINGS_SECTIONS.…}` accepts nothing other than an entry from the
+ * catalog) but not the other: adding an entry without putting it on a card
+ * compiles perfectly, and gives a palette line which opens the right tab
+ * then does not unroll anything — five seconds of waiting, none error, no log.
  *
- * D'où ce test : chaque entrée du catalogue doit être posée en ancre quelque
- * part dans `app/` ou `components/`.
+ * Hence this test: each entry in the catalog must be anchored somewhere
+ * in `app/` or `components/`.
  */
 
 const ROOT = join(import.meta.dirname, "..");
-/** Le catalogue vit dans `lib/` : le chercher là reviendrait à se citer soi-même. */
+/** The catalog lives in `lib/`: looking for it there would be like quoting yourself. */
 const SOURCE_DIRS = ["app", "components"];
 const IGNORED_DIRS = new Set(["node_modules", ".next", ".git", "dist", "build"]);
 
@@ -38,10 +38,10 @@ function sourceFiles(): string[] {
   return out;
 }
 
-describe("catalogue des sections de réglages", () => {
+describe("settings section catalog", () => {
   const sources = sourceFiles().map((file) => readFileSync(file, "utf8"));
 
-  it("pose chaque entrée du catalogue sur une carte", () => {
+  it("places each catalog entry on a card", () => {
     const orphans = Object.keys(SETTINGS_SECTIONS).filter((name) => {
       const anchor = `anchor={SETTINGS_SECTIONS.${name}}`;
       return !sources.some((src) => src.includes(anchor));
@@ -51,7 +51,7 @@ describe("catalogue des sections de réglages", () => {
     );
   });
 
-  it("donne à chaque section un identifiant unique", () => {
+  it("gives each section a unique identifier", () => {
     const ids = Object.values(SETTINGS_SECTIONS);
     expect(new Set(ids).size).toBe(ids.length);
   });

@@ -12,18 +12,18 @@ import { CommandGroup, CommandItem, CommandSeparator, Spinner, toast } from "man
 import { SearchMenu } from "@/components/search-menu";
 
 /**
- * Le déclencheur d'un picker qui se PRÉSENTE COMME UN CHAMP — posé dans une
- * ligne de formulaire, à côté d'un `Input` ou d'un `Button` outline.
+ * The trigger of a picker which PRESENTS LIKE A FIELD — placed in a
+ * form line, next to a `Input` or `Button` outline.
  *
- * Il vit ici, et pas recopié chez chaque appelant, parce qu'il a divergé
- * exactement comme ça : les deux copies écrivaient `bg-transparent`, et le
- * champ paraissait donc VIDE à côté de ses voisins, qui sont en `bg-control`
- * (cf. `Input` et le variant `outline` de `Button` dans mangue-ui). Un fond
- * transparent est légitime sur une carte ; dans une rangée de champs, il se lit
- * comme un contrôle désactivé ou pas encore chargé.
+ * He lives here, and not copied to each caller, because he diverged
+ * exactly like this: both copies wrote `bg-transparent`, and the
+ * field therefore appeared EMPTY next to its neighbors, which are in `bg-control`
+ * (cf. `Input` and the `outline` variant of `Button` in mango-ui). A background
+ * transparent is legitimate on a map; in a row of fields it reads
+ * like a disabled or not yet loaded control.
  *
- * Les pickers dont le déclencheur est une PASTILLE (les champs compacts d'un
- * ticket) n'ont rien à voir avec ceci : ils passent leur propre `trigger`.
+ * Pickers whose trigger is a PELLET (the compact fields of a
+ * ticket) have nothing to do with this: they pass their own `trigger`.
  */
 export const PICKER_FIELD_TRIGGER =
   "flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-input bg-control px-3 text-sm outline-none transition-colors hover:bg-control-hover focus-visible:border-ring";
@@ -39,31 +39,31 @@ export type PickerOption = {
 };
 
 /**
- * Une dernière ligne du menu qui CRÉE ce qu'on ne trouve pas — l'ajout rapide
- * de catégorie / d'objectif depuis n'importe quel board. Elle n'existe qu'à
- * partir du moment où quelque chose est tapé : ce texte EST le nom de ce qu'on
- * crée, donc sans lui la ligne n'aurait rien à faire. Elle reste en revanche
- * visible quand la recherche ne matche rien — c'est là qu'elle sert le plus.
+ * A last line of the menu that CREATES what we can't find — quick add
+ * category / objective from any board. It only exists
+ * from the moment something is typed: this text IS the name of what we
+ * creates, so without it the line would have nothing to do. On the other hand, she remains
+ * visible when the search doesn't match anything — that's when it's most useful.
  *
- * Les hooks qui la fabriquent, avec leurs libellés traduits et leur écriture,
- * vivent dans lib/use-picker-create.ts — un picker ne fait que la passer.
+ * The hooks that make it, with their translated wordings and their writing,
+ * live in lib/use-picker-create.ts — a picker just passes it.
  */
 export type PickerCreateOption = {
-  /** Libellé, construit sur le texte tapé (« Créer « design » »). */
+  /** Label, built on the typed text (“Create “design””). */
   labelFor: (name: string) => string;
-  /** Crée l'entité à partir du texte tapé (jamais vide). */
+  /** Creates the entity from the typed text (never empty). */
   onCreate: (name: string) => void | Promise<void>;
-  /** Ferme le menu au lieu de le garder ouvert — le picker d'objectif passe la
-   *  main à son dialog, qui a besoin du clavier. */
+  /** Close the menu instead of keeping it open — the objective picker passes the
+   * hand to its dialog, which needs the keyboard. */
   closeOnCreate?: boolean;
 };
 
-/** La ligne de création, épinglée en bas du menu.
+/** The creation line, pinned at the bottom of the menu.
  *
- *  `forceMount` sur l'item ET sur son groupe : sans lui, cmdk masque l'un
- *  (score de filtre nul) et l'autre (aucun item enregistré dans le groupe) dès
- *  que la recherche ne matche pas — c'est-à-dire exactement quand on veut créer.
- *  Le séparateur, lui, ne s'affiche par défaut QUE recherche vide, d'où
+ * `forceMount` on the item AND on its group: without it, cmdk hides one
+ * (zero filter score) and the other (no item recorded in the group) from
+ * that the research does not match — that is to say exactly when we want to create.
+ * The separator is only displayed by default ONLY empty search, hence
  *  `alwaysRender`. */
 export function PickerCreateRow({
   create,
@@ -72,18 +72,18 @@ export function PickerCreateRow({
   onDone,
 }: {
   create: PickerCreateOption;
-  /** Texte de recherche courant — il devient le nom de ce qu'on crée. */
+  /** Common search text — it becomes the name of what we create. */
   query: string;
-  /** Les noms déjà pris dans ce menu (comparaison insensible à la casse). */
+  /** Names already taken from this menu (case insensitive comparison). */
   takenLabels: string[];
   onDone: () => void;
 }) {
   const [busy, setBusy] = React.useState(false);
   const name = query.trim();
-  // Rien de tapé : pas de ligne (elle n'aurait pas de nom à donner).
+  // Nothing typed: no line (it would have no name to give).
   if (!name) return null;
-  // Un nom déjà pris ne se propose pas une deuxième fois : la ligne existante
-  // est juste au-dessus, la cocher est le bon geste.
+  // A name already taken cannot be proposed a second time: the existing line
+  // is just above, checking it is the right move.
   if (takenLabels.some((label) => label.trim().toLowerCase() === name.toLowerCase()))
     return null;
 
@@ -125,10 +125,10 @@ export function PickerCreateRow({
 /** cmdk forwards `data-checked` to the DOM; mangue-ui's CommandItem renders its
  *  trailing check from it. Spread (not a static prop) to stay type-safe.
  *
- *  Exporté pour les menus qui se construisent sur `SearchMenu` directement, sans
- *  passer par les deux variantes ci-dessous — un menu à PLUSIEURS dimensions (le
- *  filtre des pull requests : état + auteur) n'a pas une valeur mais deux, et
- *  doit donc cocher ses lignes lui-même. */
+ * Exported for menus that are built on `SearchMenu` directly, without
+ * go through the two variations below — a menu with MULTIPLE dimensions (the
+ * pull requests filter: state + author) has not one value but two, and
+ * must therefore check his lines himself. */
 export const checkedProps = (checked: boolean) =>
   checked ? ({ "data-checked": "true" } as const) : {};
 
@@ -165,9 +165,9 @@ function usePickerShell(
     ? {
         searchValue: query,
         onSearchValueChange: setQuery,
-        // « Aucun résultat » ne s'efface que quand la ligne de création prend
-        // sa place. Recherche vide, elle n'existe pas : un projet sans aucune
-        // catégorie garde donc son indication.
+        // “No results” is only cleared when the creation line takes
+        // his place. Empty search, it does not exist: a project without any
+        // category therefore keeps its indication.
         hideEmpty: query.trim() !== "",
       }
     : {};
@@ -190,7 +190,7 @@ export function SearchSelect({
   onChange: (v: string | null) => void;
   options: PickerOption[];
   noneOption?: { label: string; icon?: React.ReactNode };
-  /** Dernière ligne « Ajouter… » (voir {@link PickerCreateOption}). */
+  /** Last line “Add…” (see {@link PickerCreateOption}). */
   createOption?: PickerCreateOption;
   /** Controlled open state (e.g. driven by a keyboard shortcut). */
   open?: boolean;
@@ -260,7 +260,7 @@ export function SearchMultiSelect({
   values: string[];
   onChange: (values: string[]) => void;
   options: PickerOption[];
-  /** Dernière ligne « Ajouter… » (voir {@link PickerCreateOption}). */
+  /** Last line “Add…” (see {@link PickerCreateOption}). */
   createOption?: PickerCreateOption;
   /** Controlled open state (e.g. driven by a keyboard shortcut). */
   open?: boolean;
@@ -295,9 +295,9 @@ export function SearchMultiSelect({
           query={query}
           takenLabels={options.map((o) => o.label)}
           onDone={() => {
-            // La sélection multiple reste ouverte : on vient d'ajouter une
-            // étiquette, on en veut peut-être une deuxième. Le champ repart
-            // vide pour ne pas cacher la liste derrière la recherche d'avant.
+            // The multiple selection remains open: we have just added a
+            // label, maybe we want a second one. The field starts again
+            // empty so as not to hide the list behind the search before.
             setQuery("");
             if (createOption.closeOnCreate) setOpen(false);
           }}

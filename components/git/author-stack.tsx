@@ -13,17 +13,17 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Les auteurs d'un commit, empilés — la forme que les forges donnent à un commit
- * CO-SIGNÉ (MIN-159).
+ * Authors of a commit, stacked — the shape that forges give to a commit
+ * CO-SIGNED (MIN-159).
  *
- * Ce n'est pas un détail dans minddy : tout commit écrit avec un agent porte un
- * `Co-authored-by:`, donc la quasi-totalité des commits qu'on y lit ont deux
- * auteurs. N'en montrer qu'un attribuait tout le travail à une seule personne.
+ * This is not a detail in minddy: any commit written with an agent carries a
+ * `Co-authored-by:`, so almost all of the commits we read there have two
+ * authors. Showing only one assigned all the work to one person.
  *
- * Les avatars se chevauchent plutôt que de s'aligner : la pile dit « une seule
- * paternité, partagée », là où une rangée espacée aurait fait lire plusieurs
- * gestes distincts. Un auteur seul rend exactement l'avatar d'avant — le cas
- * courant reste intact.
+ * The avatars overlap rather than align: the stack says "only one
+ * paternity, shared", where a spaced row would have made several people read
+ * distinct gestures. A single author renders exactly the avatar from before — the case
+ * current one remains intact.
  */
 export function AuthorStack({
   authors,
@@ -32,7 +32,7 @@ export function AuthorStack({
 }: {
   authors: CommitAuthor[];
   className?: string;
-  /** Classe de taille des avatars — la pile suit ce que la vue lui donne. */
+  /** Avatar size class — the stack follows what the view tells it to be. */
   size?: string;
 }) {
   if (authors.length === 0) return null;
@@ -43,13 +43,13 @@ export function AuthorStack({
           <TooltipTrigger asChild>
             <span
               className={cn(
-                // Chaque avatar mord sur le précédent, et l'anneau de la couleur
-                // du fond détache celui du dessus : sans lui, deux photos sombres
-                // se lisent comme une seule tache.
+                // Each avatar bites on the previous one, and the ring of color
+                // at the bottom detaches the one above: without it, two dark photos
+                // read like a single spot.
                 i > 0 && "-ml-1.5 ring-2 ring-card",
                 "shrink-0 rounded-full",
               )}
-              // Empilés du premier au dernier, l'auteur principal DEVANT.
+              // Stacked from first to last, with the main author IN FRONT.
               style={{ zIndex: authors.length - i }}
             >
               <UserAvatar
@@ -67,10 +67,10 @@ export function AuthorStack({
 }
 
 /**
- * Les mêmes auteurs, en toutes lettres : « untel et untel », « untel et 2 autres ».
+ * The same authors, in full: “so-and-so”, “so-and-so and 2 others”.
  *
- * Deux noms tiennent sur une ligne ; au-delà, la ligne se casserait et c'est le
- * NOMBRE qui informe — la pile d'avatars juste à côté dit déjà qui.
+ * Two names fit on one line; beyond that, the line would break and it is
+ * NUMBER that informs — the pile of avatars right next to it already says who.
  */
 export function AuthorNames({
   authors,
@@ -96,7 +96,7 @@ export function AuthorNames({
             ? t("authorsPair", { first: display(first), second: display(second) })
             : t("authorsMore", { first: display(first), count: authors.length - 1 })}
       </span>
-      {/* La pastille ne suit que l'auteur PRINCIPAL : accolée à une énumération,
+      {/* The pastille only follows the MAIN author: attached to a list,
           elle ne dirait plus de qui elle parle. */}
       {authors.length === 1 && isBot(first) ? <BotBadge /> : null}
     </span>

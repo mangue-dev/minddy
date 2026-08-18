@@ -6,22 +6,22 @@ import { isRepoProviderId } from "@/lib/repo-providers";
 import type { BranchCleanupTarget } from "@/lib/types";
 
 /**
- * GET /api/me/branch-cleanup-targets — les projets où le ménage des branches
- * d'agent (MIN-102) a un sens, tous projets confondus. La command palette s'en
- * sert pour offrir l'action de n'importe où, pas seulement depuis le projet.
+ * GET /api/me/branch-cleanup-targets — projects where branch cleaning
+ * of agent (MIN-102) makes sense, all projects combined. The palette command is
+ * serves to offer the action from anywhere, not just from the project.
  *
- * Un projet est retenu s'il remplit les trois conditions du bouton des
- * paramètres : j'en suis le OWNER, un dépôt y est lié, et au moins un run
- * d'agent y a poussé une branche. Cette dernière condition se lit en base
- * (`agent_runs.branch_name`) : savoir s'il reste vraiment des branches à
- * supprimer demanderait d'interroger la forge pour chaque projet — bien trop
- * cher pour peupler une liste. Le dialogue, lui, le dit exactement.
+ * A project is selected if it meets the three conditions of the button
+ * parameters: I am the OWNER, a repository is linked to it, and at least one run
+ * agent pushed a branch there. This last condition is read in base
+ * (`agent_runs.branch_name`): find out if there are really branches left to
+ * delete would require interrogating the forge for each project — far too much
+ * expensive to populate a list. The dialogue says it exactly.
  *
- * Tout passe par le client de l'appelant : RLS (`can_access_project`) borne
- * déjà la lecture à mes projets, et le filtre owner se fait sur `owner_id`.
+ * Everything goes through the caller's client: RLS (`can_access_project`) terminal
+ * already reading to my projects, and the owner filter is set to `owner_id`.
  */
 
-/** Route de peuplement de liste : jamais mise en cache par la plateforme. */
+/** List population route: never cached by the platform. */
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
@@ -56,9 +56,9 @@ export async function GET(request: NextRequest) {
     }[]
   ).filter((l) => ownedIds.has(l.project_id) && isRepoProviderId(l.provider));
 
-  // Une existence par projet candidat, en parallèle : `limit(1)` ne ramène qu'un
-  // id là où un `select` global ramènerait un uuid par run. Les candidats se
-  // comptent sur les doigts d'une main — un projet lié dont je suis owner.
+  // One existence per candidate project, in parallel: `limit(1)` only brings back one
+  // id where a global `select` would return one uuid per run. The candidates
+  // count on the fingers of one hand — a related project of which I am the owner.
   const withBranches = await Promise.all(
     candidates.map(async (link) => {
       const { data } = await auth.supabase

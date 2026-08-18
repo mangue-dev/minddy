@@ -1,16 +1,16 @@
 "use client";
 
-// Le sélecteur d'emoji d'une page (MIN-270).
+// The one-page emoji picker (MIN-270).
 //
-// `frimousse` plutôt qu'une grille écrite ici : un vrai sélecteur, c'est la
-// recherche multilingue, les variantes de teinte, la virtualisation de 1 800
-// emojis et le repli sur ce que le navigateur sait AFFICHER. Rien de tout cela
-// ne se bricole en un après-midi, et la version bricolée qu'on garderait
-// afficherait des carrés vides sur la moitié des systèmes.
+// `frimousse` rather than a grid written here: a real selector is the
+// multilingual search, color variants, 1800 virtualization
+// emojis and fallback on what the browser knows how to DISPLAY. None of this
+// can't be DIYed in an afternoon, and the DIY version we would keep
+// would show empty squares on half of the systems.
 //
-// La bibliothèque est sans style, façon Radix : c'est nous qui peignons, donc
-// le sélecteur reste dans la grammaire de l'app plutôt que d'y poser un widget
-// venu d'ailleurs.
+// The library is without style, Radix style: it’s us who paint, so
+// the selector remains in the grammar of the app rather than placing a widget there
+// from elsewhere.
 
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
@@ -30,15 +30,14 @@ export function EmojiPicker({
   children,
 }: {
   value: string | null;
-  /** `null` retire l'icône — la page n'en montre alors AUCUNE (page-header.tsx). */
+  /** `null` removes the icon — the page then shows NONE (page-header.tsx). */
   onChange: (emoji: string | null) => void;
   className?: string;
   /**
-   * Le déclencheur. Absent : un bouton qui montre l'emoji courant — à ne
-   * prendre que lorsqu'il y en a un. Sans icône, c'est à l'appelant de fournir
-   * son propre déclencheur : un 📄 posé d'office se lit comme une icône
-   * choisie, et cache justement qu'on peut en choisir une.
-   */
+ * The trigger. Absent: a button that shows the current emoji — only take it when there is one. Without an icon, it is up to the caller to provide
+ * its own trigger: a 📄 automatically reads like a chosen icon
+ *, and hides that one can be chosen.
+ */
   children?: React.ReactNode;
 }) {
   const t = useTranslations("Pages");
@@ -58,17 +57,17 @@ export function EmojiPicker({
           </Button>
         )}
       </PopoverTrigger>
-      {/* `overflow-hidden` : le sélecteur peint son propre fond sur toute sa
-          hauteur (barre de recherche, liste virtualisée). Sans découpe, ses
-          angles carrés recouvrent ceux du panneau et le tout paraît sans rayon
-          — le rayon est bien là, c'est le contenu qui passe par-dessus. */}
+      {/* `overflow-hidden`: the selector paints its own background over its entire
+ height (search bar, virtualized list). Without cutting, its
+ square corners cover those of the panel and the whole thing appears without radius
+ — the radius is there, it is the content which passes over it. */}
       <PopoverContent
         align="start"
         className="w-[320px] overflow-hidden p-0"
       >
         <Frimousse.Root
-          // La langue de l'app pilote celle de la recherche : chercher
-          // « fusée » doit trouver 🚀 en français comme « rocket » en anglais.
+          // The language of the app controls that of the search: search
+          // “fuze” must find 🚀 in French like “rocket” in English.
           locale={locale === "fr" ? "fr" : "en"}
           className="isolate flex h-[340px] w-full flex-col bg-popover"
           onEmojiSelect={({ emoji }) => {

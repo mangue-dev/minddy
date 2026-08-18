@@ -7,14 +7,14 @@ import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
 
 /**
- * La ligne d'activité de Smart-fill (MIN-260).
+ * The Smart-fill activity line (MIN-260).
  *
- * Elle ne se compose pas comme les autres : la base ne stocke qu'une liste de
- * NOMS de champs (« priority,effort »), et la phrase se fabrique à la lecture,
- * dans la langue du lecteur. Deux choses peuvent donc casser sans bruit — un
- * nom de champ qui ne trouve pas son libellé, et un `{fields}` non substitué qui
- * afficherait « Activity.smartFilled » à l'écran. Le test passe par le VRAI
- * formateur sur les deux catalogues, ce qui attrape les deux.
+ * It is not composed like the others: the base only stores a list of
+ * field NAMES ("priority, effort"), and the sentence is created upon reading,
+ * in the reader's language. So two things can break quietly — a
+ * field name that doesn't find its label, and an unsubstituted `{fields}` that
+ * would display "Activity.smartFilled" on the screen. The test goes through the TRUE
+ * formatter on both catalogs, which catches both.
  */
 
 const ctx: EventContext = {
@@ -64,24 +64,24 @@ describe("describeEvent — Smart-fill", () => {
   });
 
   it("garde l'ordre dans lequel le serveur a rempli", () => {
-    // Le serveur pousse dans l'ordre où il applique : priorité, effort,
-    // objectif, puis catégories. La phrase suit ce même ordre plutôt qu'un tri
-    // alphabétique, qui ne voudrait rien dire pour un lecteur.
+    // The server pushes in the order it applies: priority, effort,
+    // objective, then categories. The sentence follows this same order rather than sorting
+    // alphabetical, which would mean nothing to a reader.
     expect(
       describeEvent(smartFillEvent("effort,priority"), ctx, translators("fr")),
     ).toBe("a rempli l'effort, la priorité");
   });
 
   it("saute un nom de champ qu'il ne connaît pas", () => {
-    // Un champ retiré du produit depuis : mieux vaut une phrase plus courte que
-    // « a rempli priority, machin_truc » dans la timeline.
+    // A field removed from the product since: better a shorter sentence than
+    // “filled priority, thing_thing” in the timeline.
     expect(
       describeEvent(smartFillEvent("priority,inconnu"), ctx, translators("fr")),
     ).toBe("a rempli la priorité");
   });
 
   it("retombe sur « ses propriétés » quand la liste est vide ou illisible", () => {
-    // Un vieil événement, ou une liste perdue : la ligne doit rester une phrase.
+    // An old event, or a lost list: the line must remain a sentence.
     expect(describeEvent(smartFillEvent(null), ctx, translators("fr"))).toBe(
       "a rempli ses propriétés",
     );
@@ -91,8 +91,8 @@ describe("describeEvent — Smart-fill", () => {
   });
 
   it("ne dit rien de Smart-fill sur un événement ordinaire", () => {
-    // Le champ `smart_fill` est le seul aiguillage — un changement de priorité
-    // écrit à la main garde sa phrase à lui.
+    // The `smart_fill` field is the only switch — a priority change
+    // written by hand keeps his sentence to himself.
     const plain = {
       ...smartFillEvent("priority"),
       field: "priority",

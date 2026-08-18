@@ -7,13 +7,13 @@ import { hasUsageBudget } from "@/lib/server/usage";
 import { isManagedBillingEnabled } from "@/lib/managed-services";
 
 /**
- * Entitlements (MIN-72) — les gardes de plan appelées par les routes de
- * mutation. Les limites STRUCTURELLES (nb de projets, d'issues, d'invités,
- * agents) vivent ici ; le budget d'usage IA vit dans lib/server/usage.ts.
+ * Entitlements (MIN-72) — plane guards called by
+ * mutation routes. STRUCTURAL limits (number of projects, issues, guests,
+ * agents) live here; the IA usage budget lives in lib/server/usage.ts.
  *
- * Règle d'attribution : une limite structurelle se vérifie toujours sur le
- * plan du OWNER du projet (un membre Pro n'étend pas un projet d'un owner
- * Free) ; une action IA se paye sur le plan de son ACTEUR.
+ * Assignment rule: a structural limit is always verified on the
+ * plan of the OWNER of the project (a Pro member does not extend a project of an owner
+ * Free); an AI action is paid for on the level of its ACTOR.
  */
 
 export async function getEntitlements(userId: string): Promise<ResolvedBilling> {
@@ -21,11 +21,11 @@ export async function getEntitlements(userId: string): Promise<ResolvedBilling> 
 }
 
 /**
- * Nombre de projets (non supprimés) AUXQUELS l'utilisateur a accès : ceux dont
- * il est owner ∪ ceux où il est membre — le même périmètre que sa liste de
- * projets (RLS `projects_select`). Compter les seuls projets créés laisserait
- * un compte Free travailler sur autant de projets qu'il veut du moment qu'un
- * autre les a créés ; la limite porte sur ce qu'on voit, pas sur qui a cliqué.
+ * Number of projects (not deleted) TO WHICH the user has access: those of which
+ * he is owner ∪ those where he is a member — the same scope as his list of
+ * projects (RLS `projects_select`). Counting only the projects created would leave
+ * a Free account working on as many projects as it wants as long as another
+ * created them; the limit is on what you see, not who clicked.
  */
 export async function countAccessibleProjects(userId: string): Promise<number> {
   const service = getServiceClient();
@@ -45,8 +45,8 @@ export async function countAccessibleProjects(userId: string): Promise<number> {
     .select("id", { count: "exact", head: true })
     .is("deleted_at", null);
 
-  // `or()` dédoublonne d'office (union de lignes) : un owner qui aurait aussi
-  // une ligne `project_members` ne serait pas compté deux fois.
+  // `or()` automatically deduplicates (union of lines): an owner who would also have
+  // a `project_members` line would not be counted twice.
   const { count, error } = await (memberIds.length > 0
     ? base.or(`owner_id.eq.${userId},id.in.(${memberIds.join(",")})`)
     : base.eq("owner_id", userId));
@@ -54,7 +54,7 @@ export async function countAccessibleProjects(userId: string): Promise<number> {
   return count ?? 0;
 }
 
-/** Garde de création de projet : throw 403 `project_limit_reached` si plein. */
+/** Project creation guard: throw 403 `project_limit_reached` if full. */
 export async function ensureProjectLimit(ownerId: string): Promise<void> {
   if (!isManagedBillingEnabled()) return;
   const { plan } = await getResolvedBilling(ownerId);
@@ -68,9 +68,9 @@ export async function ensureProjectLimit(ownerId: string): Promise<void> {
 }
 
 /**
- * Garde de création d'issue : la limite issues/projet du plan du OWNER du
- * projet. Appelée dans `createIssueForProject` → couvre tous les chemins
- * (UI, API v1, MCP, Numo, import CSV, dictée).
+ * Issue creation guard: the issues/project limit of the OWNER plan of the
+ * project. Called in `createIssueForProject` → covers all paths
+ * (UI, API v1, MCP, Numo, CSV import, dictation).
  */
 export async function ensureIssueLimit(projectId: string): Promise<void> {
   if (!isManagedBillingEnabled()) return;
@@ -100,16 +100,16 @@ export async function ensureIssueLimit(projectId: string): Promise<void> {
 }
 
 /**
- * Garde d'invitation : le plafond d'invités PAR PROJET du plan du owner
- * (MIN-199). Le owner ne compte pas — il n'a pas de ligne `project_members` —,
- * donc « 2 invités » veut bien dire deux personnes en plus de soi.
+ * Invitation guard: the guest cap PER DRAFT of the owner's plan
+ * (MIN-199). The owner does not count — he has no line `project_members` —,
+ * so “2 guests” means two people in addition to yourself.
  *
- * Une invitation encore EN ATTENTE occupe sa place : sans ça, on en envoie
- * cinquante d'un coup et le plafond ne veut plus rien dire.
+ * An invitation still PENDING occupies its place: without that, we send
+ * fifty at once and the ceiling no longer wants anything say.
  *
- * Vérifié à l'invitation, jamais rétroactivement : un projet qui dépasse déjà
- * son plafond (abonnement expiré, plan rétrogradé) garde tous ses membres,
- * seule la prochaine invitation est refusée. Aucune migration de données.
+ * Checked at the invitation, never retroactively: a project which already exceeds
+ * its ceiling (expired subscription, downgraded plan) keeps all its members,
+ * only the next invitation is refused. No data migration.
  */
 export async function ensureMemberSlotAvailable(
   ownerId: string,
@@ -130,11 +130,11 @@ export async function ensureMemberSlotAvailable(
       .select("id", { count: "exact", head: true })
       .eq("project_id", projectId)
       .eq("status", "pending")
-      // Une invitation PÉRIMÉE ne promet plus rien : elle ne peut plus être ni
-      // rattachée ni acceptée (MIN-197). La compter mangerait une place du plan
-      // pendant les soixante jours qui séparent l'expiration (30 j) de la purge
-      // (`RETENTION_DAYS.pendingInvitations`, 90 j) — c'est le même piège que
-      // MIN-133 avec la corbeille, sous une autre forme.
+      // An EXPOSURE invitation no longer promises anything: it can no longer be
+      // attached nor accepted (MIN-197). Counting it would eat up a place in the plan
+      // during the sixty days which separate the expiration (30 days) of the purge
+      // (`RETENTION_DAYS.pendingInvitations`, 90 days) — this is the same trap as
+      // MIN-133 with the trash can, in another form.
       .gt("expires_at", new Date().toISOString()),
   ]);
   if (members.error) throw new Error(members.error.message);
@@ -148,7 +148,7 @@ export async function ensureMemberSlotAvailable(
   }
 }
 
-/** Garde de lancement d'agent : le plan doit inclure les agents (Go/Pro). */
+/** Agent Launch Guard: The plan must include agents (Go/Pro). */
 export async function ensureAgentsAllowed(userId: string): Promise<void> {
   if (!isManagedBillingEnabled()) return;
   const { plan } = await getResolvedBilling(userId);
@@ -158,26 +158,26 @@ export async function ensureAgentsAllowed(userId: string): Promise<void> {
 }
 
 /**
- * Billing gate de Smart Assign — branché sur le plan depuis MIN-72 : entitled
- * tant que le budget d'usage du owner n'est pas épuisé (l'action est payée par
- * le owner). Appelé à l'activation du toggle ET avant chaque run — un budget à
- * sec suspend l'exécution sans migration de données.
+ * Smart Assign billing gate — connected to the plan from MIN-72: entitled
+ * as long as the owner's usage budget is not exhausted (the action is paid by
+ * the owner). Called on activation of the AND toggle before each run — a budget at
+ * sec suspends execution without data migration.
  */
 export async function canUseSmartAssign(ownerId: string): Promise<boolean> {
   return hasUsageBudget(ownerId);
 }
 
 /**
- * Billing gate des automatisations de projet (MIN-147). Voisine de
- * `canUseSmartAssign`, mais PAS la même : Smart Assign ne regarde que le budget,
- * parce qu'un appel de routage tient dans n'importe quel plan. Une automatisation
- * lance des RUNS D'AGENT — elle doit donc aussi passer `allowAgents`, sans quoi
- * un compte Free armerait une boucle dont chaque étape se ferait refuser au
- * lancement.
+ * Billing gate of project automations (MIN-147). Neighbor of
+ * `canUseSmartAssign`, but NOT the same: Smart Assign only looks at the budget,
+ * because a routing call fits in any plan. An automation
+ * launches AGENT RUNS — it must therefore also pass `allowAgents`, otherwise
+ * a Free account would arm a loop whose each step would be refused at
+ * launch.
  *
- * Renvoie un booléen : le throw, c'est `ensureAgentsAllowed`. Appelée à
- * l'activation du toggle ET avant chaque exécution — un budget à sec suspend les
- * chaînes sans migration de données.
+ * Returns a boolean: the throw is `ensureAgentsAllowed`. Called to
+ * activate the AND toggle before each execution — a dry budget suspends
+ * chains without data migration.
  */
 export async function canUseAutomations(ownerId: string): Promise<boolean> {
   if (!isManagedBillingEnabled()) return true;

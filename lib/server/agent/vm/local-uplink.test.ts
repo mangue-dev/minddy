@@ -9,18 +9,17 @@ import {
 } from "./local-uplink";
 
 /**
- * MIN-361 — CE QUI REMONTE DE LA MACHINE DE L'UTILISATEUR.
+ * MIN-361 — WHAT COMES FROM THE USER'S MACHINE.
  *
- * Logique PURE, testée comme [local-exec-scope.test.ts](../local-exec-scope.test.ts) :
- * on appelle, on assert. Ce qui compte ici, et qui décide de la forme de la
- * règle, c'est que **les deux erreurs coûtent** :
+ * PURE logic, tested like [local-exec-scope.test.ts](../local-exec-scope.test.ts):
+ * we call, we assert. What matters here, and which decides the form of the
+ * rule, is that **both errors cost**:
  *
- * - trop peu retenir fait monter le disque de quelqu'un dans une base de
- *   production, 30 jours, sous les yeux des membres du projet ;
- * - trop retenir vide le fil de ses sorties honnêtes — et une garde qui rend le
- *   produit inutilisable ne reste pas en place.
+ * - holding too little causes someone's disk to move up into a production base, 30 days, in front of the project members;
+ * - holding too much dumps the thread of its honest outputs — and a guard that makes the
+ * product unusable does not stay in place.
  *
- * D'où la moitié de ce fichier, qui teste ce qui ne doit PAS être retenu.
+ * Hence half of this file, which tests what should NOT be retained.
  */
 
 const REPO = "/Users/clement/Projets/minddy";
@@ -29,13 +28,13 @@ describe("homeOf", () => {
   it("déduit la maison du dépôt, sans lire l'environnement", () => {
     expect(homeOf(REPO)).toBe("/Users/clement");
     expect(homeOf("/home/clement/code/minddy")).toBe("/home/clement");
-    // Le dépôt EST la maison : le cas limite du dépôt cloné à la racine.
+    // The repository IS the home: the limiting case of the repository cloned at the root.
     expect(homeOf("/Users/clement")).toBe("/Users/clement");
   });
 
   it("rend null quand le dépôt vit ailleurs", () => {
-    // Pas d'échec, pas de repli deviné : il n'y a alors simplement pas de `~` à
-    // substituer, et `foreignPaths` continue de fonctionner sur le reste.
+    // No failure, no guessed fallback: there is then simply no `~` to
+    // override, and `foreignPaths` continues to work on the rest.
     expect(homeOf("/srv/code/minddy")).toBeNull();
     expect(homeOf("/vercel/sandbox/repo")).toBeNull();
   });
@@ -47,11 +46,11 @@ describe("foreignPaths", () => {
     expect(foreignPaths("/Users/clement/clients/acme/.env", REPO)).toEqual([
       "/Users/clement/clients/acme/.env",
     ]);
-    // Le dossier personnel de QUELQU'UN D'AUTRE nomme quelqu'un tout autant.
+    // SOMEONE ELSE's personal file names someone just as much.
     expect(foreignPaths("/Users/autre/Documents/notes.md", REPO)).toEqual([
       "/Users/autre/Documents/notes.md",
     ]);
-    // Un point de montage : disque externe, NAS, clé USB.
+    // A mounting point: external disk, NAS, USB key.
     expect(foreignPaths("/Volumes/Sauvegardes/2026/impots.pdf", REPO)).toEqual([
       "/Volumes/Sauvegardes/2026/impots.pdf",
     ]);
@@ -63,8 +62,8 @@ describe("foreignPaths", () => {
   });
 
   it("ne voit rien dans ce qui est identique sur tous les Mac", () => {
-    // C'est ce qui rend la garde tenable : ces chemins sont dans la moitié des
-    // traces de pile, et ils ne disent rien de personne.
+    // This is what makes the guard tenable: these paths are in half of the
+    // stack traces, and they don't say anything about anyone.
     const trace =
       "at Object.<anonymous> (/opt/homebrew/lib/node_modules/npm/index.js:1:1)\n" +
       "  /usr/bin/node --version\n" +
@@ -74,8 +73,8 @@ describe("foreignPaths", () => {
   });
 
   it("développe `~` avant de juger", () => {
-    // Sans développement, un dépôt cloné dans la maison verrait ses propres
-    // fichiers comptés comme étrangers.
+    // Without development, a cloned repository in the house would see its own
+    // files counted as foreign.
     expect(foreignPaths("~/Projets/minddy/lib/x.ts", REPO)).toEqual([]);
     expect(foreignPaths("~/Projets/autre/lib/x.ts", REPO)).toEqual(["~/Projets/autre/lib/x.ts"]);
   });
@@ -94,17 +93,17 @@ describe("scrubPaths", () => {
   });
 
   it("réécrit AUSSI ce qui est dans le dépôt — c'est le fond de l'affaire", () => {
-    // `/Users/<prénom nom>` n'est pas dans les sorties suspectes, il est dans
-    // toutes : une règle qui ne regarderait que ce qui sort du dépôt le
-    // laisserait passer intégralement.
+    // `/Users/<prénom nom>` is not in suspicious outputs, it is in
+    // all: a rule that would only look at what leaves the repository on
+    // would let it pass in full.
     const trace = `TypeError at ${REPO}/app/page.tsx:42\n  at ${REPO}/lib/x.ts:7`;
     expect(scrubPaths(trace, REPO)).toBe("TypeError at ./app/page.tsx:42\n  at ./lib/x.ts:7");
     expect(scrubPaths(trace, REPO)).not.toContain("clement");
   });
 
   it("laisse un chemin utilisable", () => {
-    // Ce qui est réécrit est relu par le modèle au tour suivant : `./lib/x.ts`
-    // depuis le dépôt et `~/…` pour le shell restent des chemins valides.
+    // What is rewritten is reread by the model in the next round: `./lib/x.ts`
+    // from the repository and `~/…` for the shell remain valid paths.
     expect(scrubPaths(`cd ${REPO} && cat ${REPO}/package.json`, REPO)).toBe(
       "cd . && cat ./package.json",
     );
@@ -166,8 +165,8 @@ describe("withheldOutput", () => {
     const text = withheldOutput(4312, 2);
     expect(text).toContain("4312");
     expect(text).toContain("2 path(s)");
-    // Le modèle a VU la sortie quand le tool a tourné : sans cette phrase, il
-    // relit un trou et recommence le geste.
+    // The model SAW the output when the tool turned: without this sentence, it
+    // reread a gap and repeat the gesture.
     expect(text).toContain("you saw the output when the tool ran");
   });
 });

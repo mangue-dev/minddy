@@ -3,20 +3,20 @@ import { PUBLIC_ROUTES } from "@/lib/public-routes";
 import { SITE_URL } from "@/lib/site";
 
 /**
- * Sitemap : les six pages publiques, dans leurs deux langues — douze URLs
- * (MIN-88). `/login` et `/signup` sont accessibles sans compte mais n'ont pas
- * de contenu propre : les lister diluerait l'index sans rien apporter.
+ * Sitemap: the six public pages, in their two languages ​​— twelve URLs
+ * (MIN-88). `/login` and `/signup` are accessible without an account but do not have
+ * own content: listing them would dilute the index without adding anything.
  *
- * Chaque entrée porte ses `alternates.languages`, que Next rend en
- * `<xhtml:link rel="alternate" hreflang="…">`. C'est le pendant obligatoire des
- * `hreflang` du `<head>` : déclarés d'un seul côté, Google signale un « retour
- * manquant » et ignore le groupe — les deux langues redeviennent alors deux
- * pages concurrentes sur les mêmes requêtes.
+ * Each entry carries its `alternates.languages`, which Next renders in
+ * `<xhtml:link rel="alternate" hreflang="…">`. It is the obligatory counterpart of
+ * `hreflang` of `<head>`: declared on one side only, Google signals a “return
+ * missing” and ignores the group — the two languages ​​then become two again
+ * competing pages on the same queries.
  *
- * La table des routes (et ses `lastModified` tenus à la main) vit dans
- * `lib/public-routes.ts` : le proxy, les métadonnées et les liens la lisent
- * aussi. `priority` et `changeFrequency` restent parce que Bing les regarde
- * encore un peu ; Google les ignore depuis longtemps.
+ * The route table (and its hand-held `lastModified`) lives in
+ * `lib/public-routes.ts`: proxy, metadata and links read it
+ * Also. `priority` and `changeFrequency` stay because Bing is looking at them
+ * a little more; Google has been ignoring them for a long time.
  */
 export default function sitemap(): MetadataRoute.Sitemap {
   return PUBLIC_ROUTES.flatMap((route) => {

@@ -1,19 +1,19 @@
-// Construction, validation et fusion des plans de lecture (`ImportMapping`).
+// Construction, validation and merger of reading plans (`ImportMapping`).
 //
-// Trois sources écrivent un plan, et une seule le lit (`lib/import/apply.ts`) :
-//   • la détection — les tables d'alias de linear/jira/generic pour les
-//     colonnes, et le projet d'arrivée lui-même pour les personnes et les
-//     étiquettes (`lib/import/people.ts`) ;
-//   • le modèle — `POST /api/projects/[id]/import/plan`, qui voit AUSSI les
-//     valeurs, les membres et les catégories, et sait donc placer une colonne
-//     « Niveau », un statut « Bloqué » ou rapprocher « M. Dupont » de Marie ;
-//   • l'utilisateur — le tableau de correspondance de l'aperçu.
+// Three sources write a plan, and only one reads it (`lib/import/apply.ts`):
+// • detection — linear/jira/generic alias tables for
+// columns, and the arrival project itself for people and
+// labels (`lib/import/people.ts`);
+// • the model — `POST /api/projects/[id]/import/plan`, which ALSO sees the
+// values, members and categories, and therefore knows how to place a column
+// “Level”, a “Blocked” status or bring “Mr. Dupont” closer to Marie;
+// • user — the preview lookup table.
 //
-// Le plan qui part au commit vient du client : il est donc REJOUÉ contre le
-// fichier côté serveur, et passe d'abord par `sanitizeMapping`, qui n'accepte
-// que des champs et des valeurs connus, sur le bon nombre de colonnes. Rien de
-// ce qui vient du navigateur n'entre ailleurs que par là — y compris les
-// identifiants de membres, vérifiés contre la liste réelle du projet.
+// The plan which leaves at commit comes from the client: it is therefore REPLAYED against the
+// file on the server side, and first passes through `sanitizeMapping`, which does not accept
+// only known fields and values, on the right number of columns. Nothing
+// what comes from the browser only enters there - including the
+// member IDs, verified against the actual project roster.
 
 import {
   isEffort,
@@ -53,21 +53,21 @@ import { GENERIC_COLUMN_ALIASES } from "@/lib/import/generic";
 import { MINDDY_COLUMN_ALIASES } from "@/lib/import/minddy";
 
 /**
- * Assigne les colonnes à partir des noms d'en-tête. La première règle qui
- * matche gagne : l'ordre de la table d'alias porte la priorité (un fichier avec
- * « Title » ET « Name » lit le premier comme titre).
+ * Assigns columns based on header names. The first rule that
+ * match wins: the order of the alias table has priority (a file with
+ * “Title” AND “Name” reads the first as title).
  */
 export function assignColumns(table: CsvTable, aliases: ColumnAliases): ImportField[] {
   const columns: ImportField[] = table.headers.map(() => "ignore");
   const takenColumns = new Set<number>();
-  // Et l'inverse : un champ SIMPLE ne se prend qu'une fois. Une table d'alias
-  // porte plusieurs noms pour le même champ (« Description », « Notes », « Body »
-  // pour `description`), et un fichier peut les avoir tous : les deux colonnes
-  // visaient alors le même champ, dont `applyMapping` ne lit que la première —
-  // la seconde disparaissait sans un mot. Laissée `ignore`, elle redevient au
-  // contraire un trou VISIBLE, que le modèle sait combler et que le tableau de
-  // correspondance montre. Les champs à plusieurs colonnes en sont exemptés,
-  // c'est tout leur intérêt (`MULTI_COLUMN_FIELDS`).
+  // And the opposite: a SIMPLE field is only taken once. An alias table
+  // has multiple names for the same field (“Description”, “Notes”, “Body”
+  // for `description`), and a file can have them all: both columns
+  // then targeted the same field, of which `applyMapping` only reads the first —
+  // the second disappeared without a word. Left `ignore`, it returns to
+  // On the contrary, a VISIBLE hole, which the model knows how to fill and which the table of
+  // match shows. Fields with multiple columns are exempt,
+  // that's all in their interest (`MULTI_COLUMN_FIELDS`).
   const takenFields = new Set<ImportField>();
 
   for (const [field, names] of aliases) {
@@ -84,18 +84,18 @@ export function assignColumns(table: CsvTable, aliases: ColumnAliases): ImportFi
   return columns;
 }
 
-/** Les index des colonnes qui alimentent un champ. */
+/** The indexes of the columns that populate a field. */
 export const columnsOf = (mapping: ImportMapping, field: ImportField): number[] =>
   mapping.columns.flatMap((f, i) => (f === field ? [i] : []));
 
 /**
- * Ce que le sélecteur d'une colonne a le droit de proposer : tout, moins les
- * champs simples qu'une AUTRE colonne occupe déjà (`MULTI_COLUMN_FIELDS`).
+ * What the selector of a column has the right to propose: everything, minus the
+ * simple fields that ANOTHER column already occupies (`MULTI_COLUMN_FIELDS`).
  *
- * Le champ courant de la colonne y figure toujours, même s'il est en double —
- * un plan détecté peut l'être (deux colonnes « Status » dans le même fichier),
- * et un sélecteur dont la valeur n'est pas dans sa liste s'affiche VIDE. On
- * refuse d'aggraver, on n'efface pas ce qui est là.
+ * The current field of the column always appears there, even if it is duplicated —
+ * a detected plan can be detected (two “Status” columns in the same file),
+ * and a selector whose value is not in its list displays EMPTY. We
+ * refuse to aggravate, we do not erase what is there.
  */
 export function fieldsAvailableForColumn(
   columns: ImportField[],
@@ -112,10 +112,10 @@ export function fieldsAvailableForColumn(
 }
 
 /**
- * Les valeurs distinctes des colonnes à dictionnaire, libellé d'origine
- * compris — ce que le tableau de correspondance affiche. Plafonné : un fichier
- * dont la colonne « statut » a 400 valeurs n'est pas une colonne de statut, et
- * 400 sélecteurs ne sont pas une interface.
+ * Distinct values ​​from dictionary columns, original label
+ * understood — what the correspondence table displays. Capped: one file
+ * whose “status” column has 400 values ​​is not a status column, and
+ * 400 selectors are not an interface.
  */
 export const MAX_VALUE_OPTIONS = 60;
 
@@ -142,13 +142,13 @@ export function collectValueOptions(
     priority: list("priority"),
     effort: list("effort"),
     assignee: list("assignee"),
-    // Une cellule d'étiquettes en porte plusieurs : c'est `splitLabels` qui
-    // décide, pas la cellule brute.
+    // A cell of labels has several: it is `splitLabels` which
+    // decides, not the raw cell.
     labels: splitLabelValues(stats, mapping),
   };
 }
 
-/** Les étiquettes distinctes du fichier, cellules multi-valeurs éclatées. */
+/** Distinct file labels, exploded multi-value cells. */
 export function splitLabelValues(stats: TableStats, mapping: ImportMapping): string[] {
   const indexes = [...columnsOf(mapping, "labels"), ...columnsOf(mapping, "extraLabels")];
   const seen = new Map<string, string>();
@@ -164,10 +164,10 @@ export function splitLabelValues(stats: TableStats, mapping: ImportMapping): str
 }
 
 /**
- * Le plan déduit des en-têtes et de ce que le projet contient déjà — celui
- * d'avant le modèle, et le repli quand il n'est pas disponible. Ce que les
- * tables d'alias et le rapprochement certain ne savent pas placer reste absent,
- * donc visible dans le tableau de correspondance comme une décision à prendre.
+ * The plan infers from the headers and what the project already contains — that
+ * before the model, and fallback when it is not available. What the
+ * alias tables and the certain reconciliation do not know how to place remains absent,
+ * therefore visible in the correspondence table as a decision to be made.
  */
 export function buildMapping(
   table: CsvTable,
@@ -186,7 +186,7 @@ export function buildMapping(
 
   const columns = assignColumns(table, aliases);
 
-  // Jira range les points dans un champ maison dont l'en-tête exact varie
+  // Jira stores points in a house field whose exact header varies
   // (« Custom field (Story Points) », « Story point estimate »…).
   if (source === "jira") {
     const header = jiraStoryPointsHeader(table);
@@ -217,25 +217,25 @@ export function buildMapping(
     const mapped = mapPriorityToken(token);
     if (mapped) draft.priorityValues[token] = mapped;
   }
-  // Les points chiffrés restent convertis à la volée (`effortFromPoints`) :
-  // les lister gonflerait le dictionnaire d'une entrée par valeur numérique.
+  // The encrypted points remain converted on the fly (`effortFromPoints`):
+  // listing them would bloat the dictionary by one entry per numeric value.
   for (const token of tokensOf("effort").keys()) {
     const mapped = mapEffortToken(token);
     if (mapped) draft.effortValues[token] = mapped;
   }
 
-  // Personnes : l'égalité d'un e-mail ou d'un nom d'affichage suffit à rendre
-  // un ticket à son propriétaire, et c'est le cas de loin le plus fréquent —
-  // le fichier vient du même outil, avec les mêmes gens.
+  // People: the equality of an email or display name is enough to make
+  // a ticket to its owner, and this is by far the most common case —
+  // the file comes from the same tool, with the same people.
   const memberIndex = buildMemberIndex(context.members);
   for (const value of tokensOf("assignee").values()) {
     const userId = matchMember(value.label, memberIndex);
     if (userId) draft.assigneeValues[normalizeToken(value.label)] = userId;
   }
 
-  // Étiquettes : rapprochées des catégories que le projet a DÉJÀ, pour ne pas
-  // en fabriquer des jumelles. Ce qui ne correspond à rien reste absent du
-  // dictionnaire, donc créé tel quel — le comportement historique.
+  // Tags: compared to the categories that the project ALREADY has, so as not to
+  // make binoculars. What does not correspond to anything remains absent from
+  // dictionary, therefore created as is — historical behavior.
   const categoryIndex = buildCategoryIndex(context.categories);
   for (const label of splitLabelValues(stats, draft)) {
     const existing = matchCategory(label, categoryIndex);
@@ -245,22 +245,22 @@ export function buildMapping(
   return draft;
 }
 
-/** Une colonne alimente-t-elle vraiment un ticket ? (« ignore » ne compte pas.) */
+/** Does a column really feed a ticket? (“ignore” does not count.) */
 export const hasTitleColumn = (mapping: ImportMapping): boolean =>
   mapping.columns.includes("title");
 
 /**
- * Reste-t-il quelque chose à gagner à appeler le modèle ? Une colonne qu'on n'a
- * pas su placer, une valeur qu'on n'a pas su traduire, une personne qu'on n'a
- * pas reconnue. Sur un export Linear propre d'un projet dont on connaît déjà
- * les gens, la réponse est non, et l'appel n'a pas lieu.
+ * Is there anything left to be gained from calling out the model? A column that we don't have
+ * not knowing how to place, a value that we have not been able to translate, a person that we have
+ * not recognized. On a clean Linear export of a project that we already know about
+ * people, the answer is no, and the call is not happening.
  *
- * Un export minddy est le cas extrême : ses colonnes sont les nôtres, ses
- * valeurs de statut, de priorité et d'effort sont nos propres énumérations, et
- * les deux colonnes qu'il ne rend pas (`Project`, `Objective`) sont ignorées
- * DÉLIBÉRÉMENT. Il ne reste qu'une inconnue, les gens — un export venu d'un
- * autre espace de travail nomme des personnes que le projet d'arrivée n'a pas
- * forcément. C'est la seule chose qu'on aille demander au modèle.
+ * A minddy export is the extreme case: its columns are ours, its
+ * status, priority, and effort values ​​are our own enumerations, and
+ * the two columns that it does not render (`Project`, `Objective`) are ignored
+ * DELIBERATELY. There's only one unknown left, folks — an export from a
+ * other workspace appoints people that the arrival project does not have
+ * necessarily. That's the only thing we're going to ask the model.
  */
 export function mappingHasGaps(
   stats: TableStats,
@@ -278,7 +278,7 @@ export function mappingHasGaps(
 
   if (source === "minddy") return missing("assignee", mapping.assigneeValues);
 
-  // Une colonne toujours vide n'est pas un manque : il n'y a rien à en tirer.
+  // A column that is always empty is not a lack: there is nothing to gain from it.
   if (mapping.columns.some((f, i) => f === "ignore" && (stats[i]?.filled ?? 0) > 0)) {
     return true;
   }
@@ -291,11 +291,11 @@ export function mappingHasGaps(
 }
 
 /**
- * Nettoie un plan venu de l'extérieur (navigateur ou modèle). Tout ce qui n'est
- * pas un champ connu, une valeur d'énumération connue, un membre RÉEL du projet
- * ou qui déborde du nombre de colonnes du fichier est écarté silencieusement —
- * le plan reste utilisable, amputé de ce qu'on ne sait pas lire. `null`
- * seulement si l'objet n'a pas la forme attendue du tout.
+ * Cleans a plan from outside (browser or model). Everything that is not
+ * not a known field, a known enumeration value, an ACTUAL project member
+ * or which exceeds the number of columns of the file is silently discarded —
+ * the plan remains usable, amputated of what we cannot read. `null`
+ * only if the object doesn't have the expected shape at all.
  */
 export function sanitizeMapping(
   columnCount: number,
@@ -321,8 +321,8 @@ export function sanitizeMapping(
     return out;
   };
 
-  // Un identifiant de membre venu du navigateur n'assigne que s'il est
-  // vraiment membre du projet : sinon on écrirait un assigné arbitraire.
+  // A member identifier from the browser only assigns if it is
+  // really a member of the project: otherwise we would write an arbitrary assignment.
   const memberIds = new Set(context.members.map((m) => m.userId));
   const isMember = (v: unknown): v is string =>
     typeof v === "string" && memberIds.has(v);
@@ -333,7 +333,7 @@ export function sanitizeMapping(
     priorityValues: dict<IssuePriorityValue>(input.priorityValues, isPriority),
     effortValues: dict<IssueEffortValue>(input.effortValues, isEffort),
     assigneeValues: dict<string>(input.assigneeValues, isMember),
-    // Un nom de catégorie est du texte libre : borné en longueur, c'est tout.
+    // A category name is free text: limited in length, that's all.
     labelValues: dict<string>(
       input.labelValues,
       (v): v is string => typeof v === "string" && v.length <= 60
@@ -342,17 +342,17 @@ export function sanitizeMapping(
 }
 
 /**
- * Fusionne la proposition du modèle avec le plan déduit.
+ * Merges the model proposition with the deduced plan.
  *
- * `columnsWin` dit qui tranche sur les colonnes DÉJÀ placées :
- *   • export Linear ou Jira → non. Leurs en-têtes sont ceux, exacts, d'un
- *     export connu ; le modèle ne comble que les colonnes laissées de côté.
- *   • CSV générique → oui. Là, la détection ne fait que reconnaître des noms
- *     plausibles, alors que le modèle a lu les valeurs : un fichier dont la
- *     colonne « Name » porte l'assigné et « Task » le titre, seul lui le voit.
+ * `columnsWin` says which decides on the columns ALREADY placed:
+ * • Linear or Jira export → no. Their headers are those, exact, of a
+ * known export; the model only fills in the columns left out.
+ * • Generic CSV → yes. There, detection only recognizes names
+ * plausible, while the model has read the values: a file whose
+ * “Name” column bears the assignee and “Task” the title, only he sees it.
  *
- * Les dictionnaires, eux, ne sont jamais écrasés : ce que le rapprochement
- * certain a su traduire est juste, le modèle n'ajoute que le reste.
+ * Dictionaries are never overwritten: what the comparison
+ * someone knew how to translate is correct, the model only adds the rest.
  */
 export function mergeMapping(
   base: ImportMapping,
@@ -366,7 +366,7 @@ export function mergeMapping(
     return field;
   });
 
-  // Une proposition qui perd le titre en route n'est pas une amélioration.
+  // A proposal that loses the title along the way is not an improvement.
   const keep = !columns.includes("title") && base.columns.includes("title");
   return {
     columns: keep ? base.columns : columns,

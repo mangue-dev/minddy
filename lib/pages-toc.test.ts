@@ -1,17 +1,17 @@
 // @vitest-environment jsdom
 //
-// La lecture des titres pour la table des matières flottante.
+// Reading titles for the floating table of contents.
 //
-// Ce que ce fichier tient, et qu'aucun type ne voit :
+// What this file holds, and which no type sees:
 //
-//  - un titre VIDE n'entre pas dans la table. On en fabrique un dès qu'on tape
-//    « ## » et qu'on s'arrête pour réfléchir : sans ce filtre, une ligne muette
-//    apparaît sous le curseur, puis se déplace au fil de la frappe ;
-//  - les titres imbriqués (dans un dépliant) comptent. Les sauter ferait une
-//    table qui ignore des sections entières sans jamais dire pourquoi ;
-//  - `sameHeadings` est ce qui empêche un re-rendu par frappe : la lecture est
-//    refaite à chaque `update`, et deux tables identiques doivent se
-//    reconnaître comme telles.
+// - an EMPTY title does not enter the table. We make one as soon as we type
+// “##” and we stop to think: without this filter, a silent line
+// appears under the cursor, then moves as you type;
+// - nested titles (in a leaflet) count. Skipping them would make
+// table that ignores entire sections without ever saying why;
+// - `sameHeadings` is what prevents re-rendering by typing: reading is
+// redone at each `update`, and two identical tables must be
+// recognize as such.
 
 import { describe, expect, it } from "vitest";
 import { Editor } from "@tiptap/core";

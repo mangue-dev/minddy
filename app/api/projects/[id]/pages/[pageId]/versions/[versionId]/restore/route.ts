@@ -9,14 +9,14 @@ type RouteContext = {
 };
 
 /**
- * POST — remet une version en place (MIN-277).
+ * POST — re-establishes a version (MIN-277).
  *
- * Une ÉCRITURE, pas un retour en arrière : la page repart à la version
- * suivante, sous le nom de celui qui a cliqué, et l'état d'avant la
- * restauration entre lui-même dans l'historique. Restaurer ne perd donc jamais
- * rien, et se défait du même geste.
+ * A WRITING, not a return: the page goes back to the version
+ * next, under the name of the person who clicked, and the state before the
+ * restoration between itself in history. Restore therefore never loses
+ * nothing, and is undone with the same gesture.
  *
- * Rend la page écrite, corps compris : l'éditeur ouvert la recharge de là.
+ * Returns the written page, body included: the open editor reloads it from there.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { pageId, versionId } = await params;

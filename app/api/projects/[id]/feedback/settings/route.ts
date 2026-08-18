@@ -20,9 +20,9 @@ import {
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * Réglages du board de feedback (MIN-37). GET pour tout membre ; les mutations
- * (publication, rotation du token, secret SSO) sont owner-only, comme les
- * intégrations. Le secret SSO n'est renvoyé qu'au owner.
+ * Feedback board settings (MIN-37). GET for any member; the mutations
+ * (publication, token rotation, SSO secret) are owner-only, like
+ * integrations. The SSO secret is only returned to the owner.
  */
 
 function boardPayload(
@@ -44,7 +44,7 @@ function boardPayload(
   };
 }
 
-/** Les vues partagées du projet — la matière de la checklist des onglets. */
+/** Shared project views — tab checklist material. */
 async function listSharedViews(projectId: string): Promise<{ id: string; name: string }[]> {
   const service = getServiceClient();
   const { data } = await service
@@ -87,7 +87,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  // `null` est du JSON valide : lire body.enabled dessus ferait un 500.
+  // `null` is valid JSON: reading body.enabled on it would make a 500.
   if (!body || typeof body !== "object") {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
@@ -122,8 +122,8 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: t("databaseError") }, { status: 500 });
     }
   }
-  // Accent optionnel (MIN-59) : chaque champ est soit un hex valide, soit null
-  // (retour au défaut). Une valeur non-null non-hex est rejetée.
+  // Optional accent (MIN-59): each field is either a valid hex or null
+  // (return to default). A non-null non-hex value is rejected.
   const accentPatch: { accent_light?: string | null; accent_dark?: string | null } = {};
   for (const field of ["accent_light", "accent_dark"] as const) {
     if (field in body) {
@@ -148,7 +148,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     ) {
       return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
     }
-    // Seules les vues réellement partagées du projet sont retenues.
+    // Only truly shared views of the project are retained.
     const known = new Set((await listSharedViews(id)).map((v) => v.id));
     const ids = (body.visible_view_ids as string[]).filter((v) => known.has(v));
     const ok = await setBoardVisibleViews(id, ids);
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  // `null` est du JSON valide : lire body.action dessus ferait un 500.
+  // `null` is valid JSON: reading body.action on it would do a 500.
   if (!body || typeof body !== "object") {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }

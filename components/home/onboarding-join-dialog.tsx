@@ -15,15 +15,15 @@ import { Copy, Share2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
 /**
- * « Rejoindre un projet », depuis l'étape 1 de l'onboarding et depuis l'étape
- * « nom » du wizard de création (chemin « projet existant ») — c'est là qu'on
- * se rend compte qu'on s'apprêtait à créer un doublon de ce que l'équipe a déjà.
+ * “Join a project”, from step 1 of onboarding and from step
+ * “name” of the creation wizard (“existing project” path) — this is where we
+ * realizes that we were about to create a duplicate of what the team already has.
  *
- * On ne rejoint pas un projet de son propre chef dans minddy : c'est son
- * propriétaire qui invite, par adresse e-mail. Le dialog dit donc deux choses,
- * dans cet ordre : l'adresse à transmettre — la seule chose à FAIRE ici, d'où
- * l'encart en tête et les deux boutons — puis la marche à suivre côté hôte,
- * pour qu'on puisse la lui dicter.
+ * You don't join a project on your own in minddy: it's your
+ * owner who invites, by email address. The dialog therefore says two things,
+ * in this order: the address to transmit — the only thing to DO here, hence
+ * the insert at the head and the two buttons — then the procedure to follow on the host side,
+ * so that we can dictate it to him.
  */
 export function OnboardingJoinDialog({
   open,
@@ -33,9 +33,9 @@ export function OnboardingJoinDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /**
-   * Où l'invitation attendra, dit depuis l'endroit d'où l'on ouvre : l'accueil
-   * la porte en haut de page, mais le wizard s'ouvre de n'importe où — là, le
-   * seul endroit vrai est la boîte de réception.
+   * Where the invitation will wait, said from the place where we open: the welcome
+   * the door at the top of the page, but the wizard opens from anywhere — there, the
+   * only true place is the inbox.
    */
   outro?: "home" | "inbox";
 }) {
@@ -44,10 +44,10 @@ export function OnboardingJoinDialog({
   const { user } = useAuth();
   const email = user?.email ?? "";
 
-  // `navigator.share` n'existe pas sur la plupart des navigateurs de bureau :
-  // le bouton n'apparaît que là où une feuille de partage s'ouvrira vraiment.
-  // Résolu après montage — le serveur n'a pas de `navigator`, et un rendu qui
-  // en dépendrait ne pourrait pas s'hydrater.
+  // `navigator.share` does not exist on most desktop browsers:
+  // the button only appears where a share sheet will actually open.
+  // Resolved after mounting — the server has no `navigator`, and a rendering that
+  // would depend on it would not be able to hydrate.
   const [canShare, setCanShare] = useState(false);
   useEffect(() => {
     setCanShare(typeof navigator !== "undefined" && typeof navigator.share === "function");
@@ -62,7 +62,7 @@ export function OnboardingJoinDialog({
     try {
       await navigator.share({ title: t("joinShareTitle"), text: email });
     } catch {
-      // Partage annulé depuis la feuille native : ce n'est pas une erreur.
+      // Sharing canceled from the native sheet: this is not an error.
     }
   };
 

@@ -3,19 +3,19 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 
 /**
- * Sert le catalogue i18n COMPLET au sous-arbre client d'un segment (MIN-100).
+ * Serves the FULL i18n catalog to the client subtree of a segment (MIN-100).
  *
- * Le root layout n'envoie au navigateur que les quatre namespaces du site
- * public (`lib/public-client-messages.ts`), et il les envoie **toujours** — voir
- * `app/layout.tsx` pour la raison. Tout segment dont les composants clients
- * traduisent ailleurs que dans ces quatre-là monte donc ce provider : l'app
- * authentifiée, l'écran de connexion, les boards de feedback publics et les vues
- * partagées.
+ * The root layout only sends the four site namespaces to the browser
+ * public (`lib/public-client-messages.ts`), and it **always** sends them — see
+ * `app/layout.tsx` for the reason. Any segment whose customer components
+ * translate elsewhere than in these four so mount this provider: the app
+ * authenticated, login screen, public feedback boards and views
+ * shared.
  *
- * `NextIntlClientProvider` REMPLACE les messages hérités, il ne les complète
- * pas : ce provider doit contenir tout ce que son sous-arbre traduit. Le
- * catalogue entier est donc la valeur sûre — c'est déjà ce que ces pages
- * recevaient avant.
+ * `NextIntlClientProvider` REPLACES inherited messages, it does not complete them
+ * not: this provider must contain everything that its subtree translates. THE
+ * entire catalog is therefore the safe bet — that’s already what these pages
+ * received before.
  */
 export async function FullCatalogMessages({ children }: { children: ReactNode }) {
   return <NextIntlClientProvider messages={await getMessages()}>{children}</NextIntlClientProvider>;

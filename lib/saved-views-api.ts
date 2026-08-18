@@ -4,9 +4,9 @@ import type { SavedView } from "./types";
 import { trackEvent } from "./analytics";
 
 /**
- * Les VUES ENREGISTRÉES de la palette (une adresse + un nom, personnelles).
- * Distinct de `views-api.ts`, qui sert les vues de board (filtres, tri,
- * partage) — même mot, deux objets.
+ * SAVED VIEWS of the palette (an address + a name, personal).
+ * Distinct from `views-api.ts`, which serves board views (filters, sorting,
+ * sharing) — same word, two objects.
  */
 
 async function parseJson<T>(response: Response): Promise<T> {
@@ -40,8 +40,8 @@ export async function createSavedViewApi(input: {
       body: JSON.stringify(input),
     })
   );
-  // APRÈS la réponse : compter une vue créée sur un 400, un 401 ou une coupure
-  // réseau ferait mentir la mesure dans le sens le plus flatteur.
+  // AFTER the response: count a view created on a 400, a 401 or a cut
+  // network would lie to the measure in the most flattering sense.
   trackEvent("saved_view_created", {});
   return view;
 }

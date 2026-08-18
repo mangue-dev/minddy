@@ -1,25 +1,25 @@
 /**
- * captures/ — mise en scène d'une capture (mockup).
+ * captures/ — staging of a capture (mockup).
  *
- * Le cadre est rendu par le navigateur lui-même : on injecte le PNG dans une
- * page stylée et on rephotographie. Pas de dépendance de traitement d'image,
- * et le rendu profite du même moteur que la capture d'origine.
+ * The frame is rendered by the browser itself: we inject the PNG into a
+ * stylish page and we rephotograph. No image processing dependency,
+ * and the rendering benefits from the same engine as the original capture.
  */
 import { readFile } from "node:fs/promises";
 import { chromium } from "playwright";
 import { shoot } from "./browser.mjs";
 
 const PRESETS = {
-  /** Fenêtre de navigateur macOS avec barre d'adresse. */
+  /** macOS browser window with address bar. */
   browser: { chrome: true, radius: 12, padding: 96, shadow: true },
   /** Cadre sobre, sans chrome de navigateur. */
   plain: { chrome: false, radius: 12, padding: 72, shadow: true },
-  /** Bord à bord, juste des coins arrondis. */
+  /** Edge to edge, just rounded corners. */
   bare: { chrome: false, radius: 10, padding: 0, shadow: false },
 };
 
 /**
- * Encadre une capture existante.
+ * Frames an existing capture.
  *
  *   await frame("shots/board/out/fr-light.png", "shots/board/out/fr-light@browser.png",
  *               { preset: "browser", url: "minddy.app/projects/mdy", background: "#0b0b0f" })

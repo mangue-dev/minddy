@@ -13,11 +13,11 @@ const valid = {
   pentest: "not-required",
 };
 
-test("accepte une revue courante sans risque résiduel ni pentest requis", () => {
+test("accepts a current review with no residual risk or required pentest", () => {
   assert.deepEqual(assertSecurityRelease(valid), valid);
 });
 
-test("accepte les risques consignés et un pentest terminé", () => {
+test("accepts documented risks and a completed pentest", () => {
   assert.deepEqual(
     assertSecurityRelease({
       ...valid,
@@ -34,31 +34,31 @@ test("accepte les risques consignés et un pentest terminé", () => {
   );
 });
 
-test("refuse une ancienne checklist ou une preuve absente", () => {
+test("rejects an old checklist or missing evidence", () => {
   assert.throws(() => assertSecurityRelease({ ...valid, checklistVersion: "0.9" }), /version 1\.0/);
-  assert.throws(() => assertSecurityRelease({ ...valid, reviewRef: " " }), /obligatoire/);
+  assert.throws(() => assertSecurityRelease({ ...valid, reviewRef: " " }), /required/);
   assert.throws(
     () => assertSecurityRelease({ ...valid, reviewRef: "review;echo-pwned" }),
-    /caractères non autorisés/,
+    /unauthorized characters/,
   );
 });
 
-test("refuse de promouvoir quand le pentest requis n'est pas terminé", () => {
+test("rejects promotion when the required pentest is not complete", () => {
   assert.throws(
     () => assertSecurityRelease({ ...valid, pentest: "required-not-completed" }),
-    /Promotion refusée/,
+    /Promotion rejected/,
   );
 });
 
-test("refuse les statuts ambigus", () => {
+test("rejects ambiguous statuses", () => {
   assert.throws(
     () => assertSecurityRelease({ ...valid, residualRisks: "unknown" }),
-    /none ou documented/,
+    /none or documented/,
   );
   assert.throws(() => assertSecurityRelease({ ...valid, pentest: "planned" }), /not-required/);
 });
 
-test("le déploiement et le workflow exigent la version courante et les trois attestations", () => {
+test("the deployment and workflow require the current version and three attestations", () => {
   const workflow = readFileSync(
     new URL("../.github/workflows/promote-production.yml", import.meta.url),
     "utf8",
@@ -83,6 +83,6 @@ test("le déploiement et le workflow exigent la version courante et les trois at
   const preparation = deploy.indexOf('npm run release:prepare -- "$TARGET_VERSION"');
   const securityGate = deploy.indexOf("node scripts/release-security-policy.mjs");
   const push = deploy.indexOf("git push origin main");
-  assert.ok(preparation !== -1 && preparation < securityGate, "la revue porte sur le commit préparé");
-  assert.ok(securityGate < push, "la revue bloque avant tout push du candidat");
+  assert.ok(preparation !== -1 && preparation < securityGate, "the review covers the prepared commit");
+  assert.ok(securityGate < push, "the review blocks before pushing the candidate");
 });

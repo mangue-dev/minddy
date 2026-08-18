@@ -7,15 +7,15 @@ describe("hideWindowStep", () => {
   });
 
   it("sort du plein écran avant de cacher, sur macOS", () => {
-    // Le bug : cacher ici laisse un Space vide et noir au premier plan, sans
-    // rien dedans pour en sortir.
+    // The bug: hiding here leaves an empty and black Space in the foreground, without
+    // nothing in to get out.
     expect(hideWindowStep({ platform: "darwin", fullScreen: true })).toBe(
       "leave-full-screen"
     );
   });
 
   it("ne fait pas l'aller-retour ailleurs que sur macOS", () => {
-    // Pas de Space : le plein écran y est une fenêtre comme une autre, et la
+    // No Space: the full screen is a window like any other, and the
     // sortie ne ferait que clignoter.
     for (const platform of ["win32", "linux"]) {
       expect(hideWindowStep({ platform, fullScreen: true })).toBe("hide");

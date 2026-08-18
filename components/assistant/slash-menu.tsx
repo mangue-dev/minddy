@@ -1,8 +1,8 @@
 "use client";
 
-// Le menu des commandes « / » du composer de Numo — le frère jumeau de la
-// liste de mentions (mention-suggest), pour les Skills : taper « / » en début
-// de message ouvre la liste, choisir pose la commande en pilule dans le texte.
+// The “/” command menu of the Numo composer — the twin brother of the
+// list of mentions (mention-suggest), for Skills: type “/” at the beginning
+// message opens the list, choosing places the command in pill in the text.
 
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
@@ -12,23 +12,23 @@ import type { AssistantCommandId } from "@/lib/assistant-types";
 
 export interface SlashCommandOption {
   id: AssistantCommandId;
-  /** Ce qui s'écrit après le « / » — localisé (« create issue » / « créer ticket »). */
+  /** What is written after the “/” — localized (“create issue” / “create ticket”). */
   label: string;
-  /** Ce que la commande fait, en une ligne, sous le libellé. */
+  /** What the command does, in one line, below the label. */
   description: string;
   icon: LucideIcon;
-  /** Termes de recherche en plus du libellé (l'alias de l'autre langue). */
+  /** Search terms in addition to the label (the alias of the other language). */
   keywords?: string[];
 }
 
 /**
- * Les commandes « / » offertes par les composers de Numo (MIN-159) — ids
- * canoniques, libellés localisés. Une seule table pour toutes les surfaces qui
- * lui parlent (le panneau, l'accueil) : une commande ajoutée ici s'ouvre des
- * deux côtés, et son libellé ne peut pas diverger de l'une à l'autre.
+ * The “/” commands offered by Numo composers (MIN-159) — ids
+ * canonical, localized labels. A single table for all surfaces that
+ * speak to him (the panel, the reception): a command added here opens
+ * two sides, and its wording cannot diverge from one to the other.
  *
- * Les keywords portent les deux langues : « /create » trouve la commande même
- * quand l'interface est en français, et inversement.
+ * The keywords carry both languages: “/create” finds the same command
+ * when the interface is in French, and vice versa.
  */
 export function useSlashCommands(): SlashCommandOption[] {
   const t = useTranslations("Assistant");
@@ -46,7 +46,7 @@ export function useSlashCommands(): SlashCommandOption[] {
   );
 }
 
-/** Les commandes qui correspondent à la requête tapée après le « / ». */
+/** Commands that match the query typed after the “/”. */
 export function filterCommands(
   options: SlashCommandOption[],
   query: string,
@@ -87,8 +87,8 @@ export function SlashMenu({
         <button
           key={option.id}
           type="button"
-          // mousedown, pas click : le composer ne doit pas perdre le focus (le
-          // blur fermerait la liste avant que le clic n'arrive).
+          // mousedown, not click: the composer must not lose focus (the
+          // blur would close the list before the click arrives).
           onMouseDown={(e) => {
             e.preventDefault();
             onPick(option);

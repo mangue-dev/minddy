@@ -6,31 +6,31 @@ import { DesktopMarketingRedirect } from "@/components/desktop-marketing-redirec
 import { resolveCapabilities } from "@/lib/capabilities";
 
 /**
- * Site public (MIN-73) : landing et tarifs. Chrome partagé avec les pages
- * légales, qui rendent les deux mêmes composants depuis leur propre layout.
- * `pt-20` compense la pastille de navigation, posée en sticky au-dessus du flux.
+ * Public site (MIN-73): landing and prices. Chrome shared with pages
+ * legal, which render the same two components from their own layout.
+ * `pt-20` compensates for the navigation badge, placed in sticky form above the flow.
  *
- * `Analytics` et `SpeedInsights` vivent ICI, pas au layout racine (MIN-323).
+ * `Analytics` and `SpeedInsights` live HERE, not at the root layout (MIN-323).
  *
- * Ils installent des `PerformanceObserver` et un écouteur de navigation sur tout
- * ce qu'ils couvrent. Au layout racine, ils tournaient dans l'app authentifiée —
- * qui n'en a pas l'usage : sa mesure d'audience passe par PostHog, et ses écrans
- * ne sont pas des pages publiques dont on optimise le Web Vital.
+ * They install `PerformanceObserver` and a navigation listener on everything
+ * what they cover. In the root layout, they were running in the authenticated app —
+ * who does not use it: their audience measurement goes through PostHog, and their screens
+ * are not public pages for which Web Vital is optimized.
  *
- * Contrepartie assumée : plus de pageviews Vercel sur l'app connectée. C'est
- * exactement ce qu'on cherchait — la mesure suit les pages publiques.
+ * Assumed compensation: no more Vercel pageviews on the connected app. It is
+ * exactly what we were looking for — the measurement follows public pages.
  */
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   const webAnalytics = resolveCapabilities(process.env).vercelWebAnalytics.configured;
   return (
-    // `relative isolate` : bloc conteneur ET contexte d'empilement pour les
-    // fonds de page. La landing y ancre son shader en `-z-10` pour qu'il parte
-    // du haut du document — donc DERRIÈRE la navbar, qui est transparente hors
-    // de sa pastille. Sans ça, le fond démarrerait sous les 80 px réservés à la
-    // barre et laisserait une couture horizontale en travers de la page.
+    // `relative isolate`: container block AND stacking context for
+    // backgrounds. The landing anchors its shader there in `-z-10` so that it leaves
+    // from the top of the document — therefore BEHIND the navbar, which is transparent outside
+    // of its pellet. Without that, the background would start below the 80 px reserved for the
+    // bar and would leave a horizontal seam across the page.
     <div className="relative isolate flex min-h-[100dvh] flex-col bg-background">
-      {/* Dans l'app de bureau, le site public n'a rien à dire : on repart vers
-          l'app, qui renverra vers la connexion si besoin (MIN-291). */}
+      {/* In the desktop app, the public site has nothing to say: we go back to
+ the app, which will return to the connection if necessary (MIN-291). */}
       <DesktopMarketingRedirect />
       <MarketingNav />
       <main className="flex-1">{children}</main>

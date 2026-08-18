@@ -21,12 +21,12 @@ export const maxDuration = 120;
  * re-runs it on the raw text because the payload can't be trusted. Owner-only:
  * a bad file creates hundreds of issues at once.
  *
- * `mapping` est le plan de lecture que l'utilisateur a VU dans l'aperçu, après
- * la proposition du modèle et ses propres corrections. Il est rejoué tel quel,
- * mais nettoyé d'abord (`sanitizeMapping`, dans `mapCsvToIssues`) : il ne peut
- * porter que des champs et des valeurs d'énumération connus, sur les colonnes
- * du fichier tel que le serveur vient de le relire. Absent, la détection par
- * en-têtes reprend la main.
+ * `mapping` is the reading plan that the user SAW in the preview, after
+ * the model proposal and its own corrections. It is replayed as is,
+ * but cleaned first (`sanitizeMapping`, in `mapCsvToIssues`): it cannot
+ * carry only known enumeration fields and values, on columns
+ * of the file as the server has just reread it. Absent, detection by
+ * headers regain control.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -64,9 +64,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("importTooLarge") }, { status: 413 });
   }
 
-  // Les membres et les catégories du projet, lus MAINTENANT : c'est contre
-  // cette liste que le plan reçu du navigateur est validé, donc elle ne peut
-  // pas venir de lui.
+  // Project members and categories, read NOW: it's against
+  // this list that the plan received from the browser is validated, therefore it cannot
+  // not come from it.
   const context = await loadImportContext(id, auth.user.id);
   const parsed = mapCsvToIssues(csv, (body as { mapping?: unknown }).mapping, context);
   if (!parsed.ok) {

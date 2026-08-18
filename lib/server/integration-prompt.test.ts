@@ -5,13 +5,13 @@ import { SSO_ENV_VAR } from "@/lib/feedback/env-lines";
 import { INTEGRATION_ENV_VAR } from "@/lib/feedback/integration-contract";
 
 /**
- * Ce que ces tests gardent, c'est la RAISON d'être des deux destinations du
- * prompt : il peut partir chez Numo parce qu'il ne porte aucun credential — le
- * secret SSO et la clé d'API n'y sont nommés que par leur variable
- * d'environnement. Le jour où on rebranche un secret dans un de ces textes,
- * « confier à Numo » devient un envoi de credential dans une conversation
- * d'agent, sans que rien ne le signale. D'où la vérification par le type (le
- * builder n'accepte plus ni secret ni clé) ET par ces assertions.
+ * What these tests keep is the REASON for the two destinations of the
+ * prompt: it can go to Numo because it does not carry any credential — the
+ * SSO secret and the API key are only named by their environment variable
+ *. The day we reconnect a secret in one of these texts,
+ * “entrust to Numo” becomes a sending of credential in an agent conversation
+ *, without anything signaling it. Hence the verification by the type (the
+ * builder no longer accepts either secret or key) AND by these assertions.
  */
 
 const BASE = {
@@ -21,7 +21,7 @@ const BASE = {
   origin: "https://www.minddy.app",
 };
 
-/** Les préfixes que portent les credentials de minddy, tous chemins confondus. */
+/** The prefixes that minddy's credentials carry, all paths combined. */
 const CREDENTIAL_PREFIXES = ["fbsso_", "mdyk_"];
 
 describe("prompt d'intégration — board public", () => {
@@ -69,8 +69,8 @@ describe("prompt d'intégration — API serveur-à-serveur", () => {
       const prompt = buildIntegrationPrompt({ ...BASE, locale, mode: "api" });
       expect(prompt).toContain(INTEGRATION_ENV_VAR.feedback);
       for (const prefix of CREDENTIAL_PREFIXES) expect(prompt).not.toContain(prefix);
-      // L'appel reste décrit de bout en bout : c'est l'endpoint, pas le secret,
-      // qui fait la valeur de ce prompt.
+      // The call remains described from start to finish: it is the endpoint, not the secret,
+      // which is the value of this prompt.
       expect(prompt).toContain("https://www.minddy.app/api/v1/feedback");
     });
   }
@@ -106,11 +106,11 @@ describe("prompt d'intégration — tickets par l'API", () => {
 });
 
 /**
- * La section webhook décrit une route que l'agent va ÉCRIRE, et qui vérifiera
- * une signature. Deux choses s'y jouent : elle ne doit pas plus porter de
- * credential que le reste (le prompt part chez Numo), et elle doit dire la
- * seule chose qu'un récepteur ne peut pas deviner — que la clé du HMAC est
- * l'empreinte de la clé d'API, pas la clé.
+ * The webhook section describes a route that the agent will WRITE, and which will check
+ * for a signature. Two things are at stake: it must not carry a
+ * credential any more than the rest (the prompt goes to Numo), and it must say the
+ * only thing that a receiver cannot guess — that the HMAC key is
+ * the fingerprint of the API key, not the key.
  */
 describe("prompt d'intégration — section webhook", () => {
   const WEBHOOK = {
@@ -142,8 +142,8 @@ describe("prompt d'intégration — section webhook", () => {
         const envVar =
           mode === "issues" ? INTEGRATION_ENV_VAR.issues : INTEGRATION_ENV_VAR.feedback;
         expect(prompt).toContain("X-Minddy-Signature");
-        // La clé du HMAC est l'empreinte de la clé, pas la clé : c'est CETTE
-        // phrase qui évite au récepteur de refuser toutes les livraisons.
+        // The HMAC key is the fingerprint of the key, not the key: it is THIS
+        // sentence which prevents the receiver from refusing all deliveries.
         expect(prompt).toContain(`sha256_hex(process.env.${envVar})`);
         expect(prompt).toContain("delivery_id");
         for (const prefix of CREDENTIAL_PREFIXES) expect(prompt).not.toContain(prefix);
@@ -157,8 +157,8 @@ describe("prompt d'intégration — section webhook", () => {
       mode: "issues",
       webhook: { ...WEBHOOK, events: ["issue.created"], scope: "all" },
     });
-    // La phrase d'annonce, pas le prompt entier : la description du corps cite
-    // les autres événements pour dire quel champ les accompagne.
+    // The announcement sentence, not the entire prompt: the description of the body cites
+    // the other events to say which field accompanies them.
     const announcement = prompt
       .split("\n")
       .find((line) => line.includes(WEBHOOK.url));

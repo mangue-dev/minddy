@@ -1,46 +1,46 @@
 /**
- * Contenu MULTIMODAL des messages de l'agent de code (MIN-111).
+ * MULTIMODAL content of code agent messages (MIN-111).
  *
- * Jusqu'ici tout le harness supposait `content: string` : l'agent lisait la
- * DESCRIPTION d'une maquette, jamais la maquette. Un message peut désormais porter
- * un tableau de PARTIES au format OpenAI/OpenRouter (texte + image) — ce qui
- * traverse le checkpoint, la compaction, l'élagage et le cache de prompt.
+ * Until now all the harness assumed `content: string`: the agent read the
+ * DESCRIPTION of a model, never the model. A message can now carry
+ * an array of PARTS in OpenAI/OpenRouter format (text + image) — which
+ * passes through the checkpoint, compaction, pruning and prompt cache.
  *
- * Module PUR (comme compact.ts / prune.ts / caching.ts) : ces helpers sont le SEUL
- * endroit qui sait lire un contenu quelle que soit sa forme. Toute lecture de
- * `m.content` ailleurs dans le harness passe par `textOf` / `contentChars`.
+ * PUR module (like compact.ts / prune.ts / caching.ts): these helpers are the ONLY
+ * place that can read content whatever its form. Any reading of
+ * `m.content` elsewhere in the harness goes through `textOf` / `contentChars`.
  */
 
-/** Une partie de contenu, au format des content parts OpenAI/OpenRouter. */
+/** A part of content, in OpenAI/OpenRouter content parts format. */
 export type AgentContentPart =
   | { type: "text"; text: string }
   | { type: "image_url"; image_url: { url: string } };
 
-/** Le contenu d'un message, sous ses deux formes. */
+/** The content of a message, in its two forms. */
 export type AgentMessageContent = string | AgentContentPart[] | null | undefined;
 
 /**
- * Une image renvoyée par un tool, prête à devenir une partie `image_url`.
- * `url` est une DATA URL (`data:image/png;base64,…`), jamais une URL signée :
- * l'historique EST le checkpoint et il est rejoué des heures plus tard, quand
- * l'URL signée a expiré depuis longtemps.
+ * An image returned by a tool, ready to become a game `image_url`.
+ * `url` is a DATA URL (`data:image/png;base64,…`), never a signed URL:
+ * the history IS the checkpoint and it is replayed hours later, when
+ * the signed URL has long expired.
  */
 export interface AgentToolImage {
   url: string;
-  /** Nom du fichier — pour les traces et les events, jamais envoyé au modèle. */
+  /** File name — for traces and events, never sent to the model. */
   name?: string;
 }
 
 /**
- * Coût de contexte attribué à UNE image, en « caractères » (≈ 1 000 tokens au
- * ratio 4:1 de compact.ts). La taille de la data URL n'a AUCUN rapport avec le
- * prix : une maquette de 1 Mo en base64 vaut ~1 000 tokens chez le modèle, pas
- * 250 000. Compter les octets déclencherait une compaction à chaque round dès la
- * première maquette ouverte.
+ * Context cost assigned to ONE image, in "characters" (≈ 1000 tokens au
+ * 4:1 ratio of compact.ts). The size of the data URL has NO relation to the
+ * price: a 1 MB model in base64 is worth ~1,000 tokens in the model, not
+ * 250,000. Counting the bytes would trigger a compaction in each round from the
+ * first open model.
  */
 export const IMAGE_PART_CHARS = 4000;
 
-/** Le texte d'un contenu, quelle que soit sa forme (parties image ignorées). */
+/** The text of content, whatever its form (image parts ignored). */
 export function textOf(content: AgentMessageContent): string {
   if (typeof content === "string") return content;
   if (!Array.isArray(content)) return "";
@@ -50,13 +50,13 @@ export function textOf(content: AgentMessageContent): string {
     .join("\n");
 }
 
-/** Nombre de parties image d'un contenu (0 pour une chaîne). */
+/** Number of image parts of content (0 for a string). */
 export function imageCount(content: AgentMessageContent): number {
   if (!Array.isArray(content)) return 0;
   return content.reduce((n, p) => (p.type === "image_url" ? n + 1 : n), 0);
 }
 
-/** Octets « de contexte » d'un contenu — proxy pour les images (cf. IMAGE_PART_CHARS). */
+/** “Context” bytes of content — proxy for images (see IMAGE_PART_CHARS). */
 export function contentChars(content: AgentMessageContent): number {
   if (typeof content === "string") return content.length;
   if (!Array.isArray(content)) return 0;
@@ -68,9 +68,9 @@ export function contentChars(content: AgentMessageContent): number {
 }
 
 /**
- * Retire les parties image d'un contenu et les remplace par UNE note texte.
- * Renvoie le contenu inchangé (même référence) s'il n'y a pas d'image — l'appelant
- * s'en sert pour savoir s'il a quelque chose à réécrire.
+ * Removes the image parts of content and replaces them with ONE text note.
+ * Returns the content unchanged (same reference) if there is no image — the caller
+ * uses this to know if they have anything to rewrite.
  */
 export function stripImages(
   content: AgentMessageContent,

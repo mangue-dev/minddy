@@ -53,11 +53,11 @@ export function useIssueDictation({
   getDraft: () => DictationDraft;
   applyPatch: (patch: IssueDraftPatch) => void;
   /**
-   * Smart-fill est armé sur le formulaire (MIN-260) : la route retire alors
-   * priorité, effort, catégories et objectif du tool, donc la dictée ne les
-   * pose plus — c'est Smart-fill qui les posera à la création. Lu à CHAQUE
-   * envoi et pas figé à l'ouverture : la bascule peut changer entre deux prises.
-   */
+ * Smart-fill is armed on the form (MIN-260): the route then removes
+ * priority, effort, categories and objective from the tool, so the dictation no longer poses them
+ * — it is Smart-fill which will pose them at creation. Read at EACH
+ * sent and not frozen on opening: the toggle can change between two takes.
+ */
   smartFill?: boolean;
 }) {
   const t = useTranslations("IssueUI");

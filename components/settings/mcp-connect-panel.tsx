@@ -17,26 +17,24 @@ import { Copy } from "lucide-react";
 import { MCP_AGENTS, type McpAgent } from "@/lib/mcp-agents";
 import { BrandLogo } from "@/components/brand-logo";
 
-/** « Connecter un agent » — OAuth uniquement : la commande d'installation ne
-    contient AUCUN secret (l'agent ouvre le navigateur pour autoriser à la
-    première utilisation). Copie 100 % côté client, rien à générer.
+/** “Connect an agent” — OAuth only: The install command does not contain ANY secrets (the agent opens the browser to allow first use). 100% client-side copy, nothing to generate.
 
-    UNE question à la fois : la grille demande quel agent, le dialog donne sa
-    commande. Tout tenait auparavant dans le même cadre — sélecteur, commande,
-    bouton et explication empilés — et plus rien ne s'y lisait.
+ ONE question at a time: the grid asks which agent, the dialog gives its
+ command. Everything was previously in the same frame - selector, command,
+ button and explanation stacked together - and nothing was read there anymore.
 
-    Le même composant sert les réglages du compte (`account-mcp-section.tsx`) et
-    l'étape MCP de l'onboarding (`components/home/onboarding-mcp-step.tsx`), qui
-    n'y ajoute que sa sortie « Passer cette étape ». */
+ The same component serves the account settings (`account-mcp-section.tsx`) and
+ the MCP stage of onboarding (`components/home/onboarding-mcp-step.tsx`), qui
+ only adds its “Skip this step” output. */
 export function McpConnectPanel({
   className,
   onSelect,
   onConnected,
 }: {
   className?: string;
-  /** L'agent vient d'être choisi — l'onboarding s'en sert pour l'analytics. */
+  /** The agent has just been chosen — onboarding uses it for analytics. */
   onSelect?: (agent: McpAgent) => void;
-  /** Le dialog s'est fermé sur « C'est connecté ». */
+  /** The dialog closed with "It's connected". */
   onConnected?: () => void;
 }) {
   const t = useTranslations("Account");
@@ -99,12 +97,12 @@ export function McpConnectPanel({
   );
 }
 
-/** L'artefact d'un agent et le geste qui va avec : une commande à coller, un
-    bloc de config, l'URL du serveur, ou un lien d'installation en un clic. */
+/** The artifact of an agent and the gesture that goes with it: a command to paste, a
+ config block, the server URL, or a one-click installation link. */
 function McpAgentInstall({ agent }: { agent: McpAgent }) {
   const t = useTranslations("Account");
 
-  // window n'existe qu'au client ; rendu après mount pour éviter tout mismatch.
+  // window only exists on the client; rendered after mount to avoid any mismatch.
   const [origin, setOrigin] = useState<string | null>(null);
   useEffect(() => setOrigin(window.location.origin), []);
   if (!origin) return null;
@@ -130,10 +128,9 @@ function McpAgentInstall({ agent }: { agent: McpAgent }) {
 
   return (
     <div className="flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-muted/40 p-3">
-      {/* `w-full min-w-0` : sans eux, `whitespace-pre` impose au bloc sa
-          largeur min-content — celle de la commande entière, sur une ligne —
-          et le dialog se fait élargir par son propre contenu au lieu de le
-          laisser défiler. */}
+      {/* `w-full min-w-0`: without them, `whitespace-pre` imposes on the block its
+ min-content width — that of the entire command, on one line —
+ and the dialog is expanded by its own content instead of letting it scroll. */}
       <code className="max-h-40 w-full min-w-0 overflow-auto whitespace-pre rounded-md border border-border bg-background px-3 py-2 font-mono text-xs">
         {agent.build(endpoint)}
       </code>

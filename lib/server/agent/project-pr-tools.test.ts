@@ -1,21 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * Les pull requests DU PROJET, vues et agies depuis un run ordinaire (MIN-267).
+ * The pull requests OF THE PROJECT, seen and acted upon from an ordinary run (MIN-267).
  *
- * Ce qui se teste ici est ce qu'aucune description de tool ne garantit :
- *  - la LISTE se lit en base, avec les filtres qu'on lui a demandés, et elle dit
- *    quand elle a été coupée — une routine qui rend « les PR de la semaine » sur
- *    une fenêtre tronquée sans le savoir rend un rapport faux ;
- *  - le balayage de rattrapage n'a lieu que si la liste a vieilli ;
- *  - le DIFF ne part pas sans qu'on l'ait demandé (le coût d'une revue de quinze
- *    PR tient à ça), et ce qui n'est pas lisible chez la forge (checks, reviews)
- *    vaut `null` sans faire tomber la lecture ;
- *  - une ancre hors diff ne part JAMAIS chez la forge, et le plafond des ancres
- *    est celui du RUN, toutes pull requests confondues ;
- *  - les gestes IRRÉVERSIBLES sont bornés avant l'appel : une méthode de merge
- *    que la forge n'offre pas est refusée ici, et un refus de forge revient au
- *    modèle en erreur exploitable plutôt qu'en exception.
+ * What is tested here is what no tool description guarantees:
+ * - the LIST is read in base, with the filters that we asked for, and it says
+ * when it has been cut off — a routine that makes "this week's PRs" on
+ * an unknowingly truncated window makes a false report;
+ * - the catch-up scan only takes place if the list has aged;
+ * - the DIFF does not leave without being asked (the cost of a review of fifteen
+ * PR depends on that), and what is not readable at the forge (checks, reviews)
+ * is worth `null` without dropping the reading;
+ * - an anchor outside of diff NEVER leaves at the forge, and the ceiling of anchors
+ * is that of RUN, all pull requests combined;
+ * - IRREVERSIBLE gestures are limited before the call: a merge
+ * method that the forge does not offer is refused here, and a forge refusal returns to the
+ * model as an exploitable error rather than as an exception.
  */
 
 const REPO = "mangue-dev/minddy";
@@ -36,7 +36,7 @@ interface PrRow {
 
 const world = {
   rows: [] as PrRow[],
-  /** Ce que la requête a réellement demandé — le test lit ça, pas une intention. */
+  /** What the query actually asked for — the test reads that, not an intent. */
   query: {} as {
     eq?: Record<string, unknown>;
     in?: { column: string; values: unknown[] };
@@ -212,7 +212,7 @@ describe("list_pull_requests", () => {
     expect(res.success).toBe(true);
     expect(world.query.eq).toMatchObject({ provider: "github", repo_full_name: REPO });
     expect(world.query.in).toEqual({ column: "state", values: ["open", "merged"] });
-    // L'arobase que le modèle recopie du fil ne fait pas partie du login.
+    // The at sign that the model copies from the thread is not part of the login.
     expect(world.query.ilike).toEqual(["author_login", "octocat"]);
     expect(world.query.gte?.[0]).toBe("updated_at");
     expect(world.query.limit).toBe(5);
@@ -335,7 +335,7 @@ describe("les écritures", () => {
       body: "ailleurs",
     });
     expect(refused.success).toBe(false);
-    // Le plafond tranche AVANT tout appel : rien n'a été relu ni posé.
+    // The ceiling decides BEFORE any appeal: nothing has been reread or placed.
     expect(forge.createPullRequestReviewComment).toHaveBeenCalledTimes(1);
   });
 
@@ -351,7 +351,7 @@ describe("les écritures", () => {
     });
     expect(res.success).toBe(false);
     expect(String((res.result as { error: string }).error)).toContain("422");
-    // Rien n'a été posé : le plafond ne se consomme pas sur un échec.
+    // Nothing has been set: the ceiling is not consumed on a failure.
     expect(inline.used).toBe(0);
   });
 });

@@ -13,21 +13,21 @@ import {
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 
 /**
- * Droit à l'effacement (MIN-119, RGPD art. 17) — la personne supprime son
- * compte elle-même, sans passer par un e-mail à traiter à la main.
+ * Right to erasure (MIN-119, GDPR art. 17) — the person deletes their
+ * account itself, without going through an email to process by hand.
  *
- * Le corps doit répéter l'adresse du compte (`{ confirm }`). Ce n'est pas de
- * l'authentification — la session l'a déjà faite — mais un cran d'arrêt : un
- * DELETE part d'un clic, et celui-ci ne se rattrape pas.
+ * The body should repeat the account address (`{ confirm }`). It's not about
+ * authentication — the session has already done it — but a switchblade: a
+ * DELETE starts with a click, and it does not catch up.
  *
- * ## Et une ré-authentification par-dessus (MIN-345)
+ * ## And a re-authentication on top (MIN-345)
  *
- * Le cran d'arrêt protège de la maladresse, pas de quelqu'un d'autre. Ce geste
- * emporte en cascade les projets possédés, leurs tickets, leurs fichiers et
- * l'accès de leurs membres : une session ouverte trouvée sur un poste
- * déverrouillé ne doit pas suffire. On redemande donc le mot de passe, ou —
- * compte OAuth, il n'y en a pas — une authentification datant de moins d'un
- * quart d'heure. Le détail du choix est dans `lib/server/reauth.ts`.
+ * The switchblade protects from clumsiness, not from anyone else. This gesture
+ * cascades the owned projects, their tickets, their files and
+ * access of their members: an open session found on a workstation
+ * unlocked should not be enough. We therefore ask for the password again, or —
+ * OAuth account, there is none — an authentication less than a year old
+ * quarter of an hour. The details of the choice are in `lib/server/reauth.ts`.
  */
 
 export const maxDuration = 60;
@@ -40,7 +40,7 @@ export async function DELETE(request: NextRequest) {
   let body: { confirm?: string; password?: string };
   try {
     const parsed: unknown = await request.json();
-    // Corps non-objet (null, chaîne…) : refusé ici plutôt que de crasher plus bas.
+    // Non-object body (null, string…): refused here rather than crashing further down.
     if (!parsed || typeof parsed !== "object") throw new Error("not an object");
     body = parsed as { confirm?: string; password?: string };
   } catch {
@@ -55,8 +55,8 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Confirmation mismatch" }, { status: 400 });
   }
 
-  // Le débit AVANT la vérification du mot de passe : sans lui, cette route
-  // devient un oracle à mots de passe pour qui tient une session volée.
+  // The flow BEFORE password verification: without it, this route
+  // becomes a password oracle for anyone holding a stolen session.
   const rate = checkSessionRateLimit(auth.user.id, "account:delete", { limit: 5 });
   if (!rate.allowed) {
     return NextResponse.json(
@@ -83,8 +83,8 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
-  // Émis AVANT la suppression : après, l'identifiant ne désigne plus personne et
-  // l'événement serait rattaché à un fantôme.
+  // Issued BEFORE deletion: afterward, the identifier no longer designates anyone and
+  // the event would be linked to a ghost.
   captureServerEvent({ distinctId: auth.user.id, event: "account_deleted", properties: {} });
 
   try {

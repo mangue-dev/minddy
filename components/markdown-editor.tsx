@@ -23,22 +23,22 @@ import type { MentionOption } from "@/components/mention-suggest";
 import type { MentionScan } from "@/lib/mention-scan";
 
 /**
- * Ce qu'une description peut citer. Absent = surface sans mentions (le board
- * public de feedback, où un « @ » ne doit désigner personne d'ici).
+ * What a description can quote. Absent = surface without mentions (the public feedback board
+ *, where an “@” must not designate anyone from here).
  *
- * `options` est la liste proposée après le « @ » ; `scan` est la règle qui
- * retrouve les mentions d'un texte DÉJÀ écrit, pour leur reposer leur pilule à
- * l'ouverture. Les deux se déduisent des mêmes sources (lib/use-mention-sources)
- * mais restent distinctes : on ne propose que ce qui est citable ici, alors
- * qu'on relit tout ce qui a pu l'être.
+ * `options` is the list proposed after the “@”; `scan` is the rule which
+ * finds mentions of a text ALREADY written, to give them their pill at
+ * when opening. The two are deduced from the same sources (lib/use-mention-sources)
+ * but remain distinct: we only offer what is quotable here, so
+ * we reread everything that could be cited.
  */
 export interface MarkdownEditorMentions {
   options: MentionOption[];
   scan: MentionScan;
-  /** Où mène chaque pilule — un ticket, un objectif, une page s'ouvrent d'un
-      clic ; une personne ne mène nulle part (components/mention-links). */
+  /** Where each pill leads — a ticket, an objective, a page opens with one
+ click; a person leads nowhere (components/mention-links). */
   links?: MentionLinks;
-  /** Le premier « @ » tapé — charge la liste à ce moment-là. */
+  /** The first “@” typed — loads the list at that time. */
   onQuery?: () => void;
 }
 
@@ -48,10 +48,10 @@ const PROSE = cn(
   "text-sm leading-relaxed break-words outline-none",
   "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
   "[&_p]:my-2",
-  // Les liens du TEXTE. `:not(.editor-node-link)` en exclut l'ancre d'une vue de
-  // nœud — la pilule d'une mention qui mène quelque part : `.ProseMirror a` a
-  // une spécificité plus forte que la classe posée sur l'ancre, donc sans cette
-  // exception la pilule héritait de la couleur des liens et d'un soulignement.
+  // TEXT links. `:not(.editor-node-link)` excludes the anchor from a view of
+  // node — the pill of a mention that leads somewhere: `.ProseMirror a` a
+  // a stronger specificity than the class placed on the anchor, therefore without this
+  // exception the pill inherited the color of the links and an underline.
   "[&_a:not(.editor-node-link)]:text-primary",
   "[&_a:not(.editor-node-link)]:underline",
   "[&_a:not(.editor-node-link)]:underline-offset-2",
@@ -69,13 +69,13 @@ const PROSE = cn(
   "[&_hr]:my-3 [&_hr]:border-border",
 );
 
-/** Les réglages de la vue ProseMirror — figés hors du composant, cf. la règle
-    au-dessus de l'appel à `useEditor`. */
+/** ProseMirror view settings — frozen outside the component, cf. the rule
+ above the call to `useEditor`. */
 const EDITOR_PROPS: EditorProps = {
   attributes: { class: PROSE },
-  // Le clic sur la pilule d'une mention n'appartient pas à l'extension Link :
-  // elle attrape tout `<a>` du document et l'ouvre dans un onglet neuf, ce qui
-  // faisait DEUX navigations pour un clic (components/editor-node-link.ts).
+  // Clicking on the pill of a mention does not belong to the Link extension:
+  // it grabs all `<a>` of the document and opens it in a new tab, which
+  // did TWO navigations for one click (components/editor-node-link.ts).
   handleClick: (_view: unknown, _pos: number, event: MouseEvent) =>
     handleNodeLinkClick(event),
 };
@@ -102,12 +102,11 @@ export function MarkdownEditor({
   /** Live emptiness signal (fires on mount and on each edit) — lets callers see
       typed-but-uncommitted content, since onCommit only fires on blur. */
   onEmptyChange?: (empty: boolean) => void;
-  /** Le contenu vient d'être MODIFIÉ (frappe, collage) — jamais au montage.
-      Dit à l'appelant que ce qui est à l'écran n'est plus ce qu'il a chargé :
-      de quoi ne pas remplacer le texte sous les doigts, ni recommitter un
-      reflet périmé au blur. */
+  /** The content has just been MODIFIED (typing, pasting) — never in editing.
+ Tells the caller that what is on the screen is no longer what he loaded:
+ so as not to replace the text under the fingers, nor recommit an expired reflection to the blur. */
   onEdit?: () => void;
-  /** Ouvre le « @ » sur cette surface. Absent = pas de mentions du tout. */
+  /** Opens the “@” on this surface. Absent = no mentions at all. */
   mentions?: MarkdownEditorMentions;
   placeholder?: string;
   className?: string;
@@ -118,13 +117,13 @@ export function MarkdownEditor({
     onEmptyChange?.(next);
   };
 
-  // Les extensions ne se construisent qu'une fois, mais la liste des citables
-  // arrive après coup (l'index se charge au temps mort) : l'extension lit donc
-  // une RÉFÉRENCE, jamais une capture.
+  // Extensions are only built once, but the list of citables
+  // arrives afterwards (the index loads at dead time): the extension therefore reads
+  // a REFERENCE, never a capture.
   const mentionsRef = useRef(mentions);
   mentionsRef.current = mentions;
-  // Fixé au montage : basculer une surface de « sans mentions » à « avec »
-  // demanderait de reconstruire le schéma, ce qu'aucun appelant ne fait.
+  // Fixed during editing: switch a surface from “without mentions” to “with”
+  // would ask to rebuild the schema, which no caller does.
   const [hasMentions] = useState(!!mentions);
 
   const extensions = useMemo(
@@ -150,8 +149,8 @@ export function MarkdownEditor({
     [hasMentions],
   );
 
-  // Le texte de départ, figé au montage : tiptap ne lit `content` qu'à la
-  // création de l'éditeur (la surface se remonte par `key`, cf. plus haut).
+  // The starting text, frozen during editing: tiptap only reads `content` at the
+  // creation of the editor (the surface is raised by `key`, see above).
   const initialContentRef = useRef(value);
   const editorRef = useRef<Editor | null>(null);
   const editorProps = useMemo<EditorProps>(
@@ -175,12 +174,12 @@ export function MarkdownEditor({
     [],
   );
 
-  // ⚠️ tiptap relit ces options à CHAQUE rendu et réapplique d'un
-  // `editor.setOptions()` tout ce qui a changé d'identité — depuis son propre
-  // effet, donc en pleine phase de commit React, où remonter une vue de nœud
-  // (les pilules de mention en sont) lève l'erreur `flushSync` décrite plus
-  // bas. D'où extensions mémoïsées, `editorProps` hors du composant et contenu
-  // figé : plus rien ne bouge d'un rendu à l'autre.
+  // ⚠️ tiptap rereads these options EACH rendering and reapplies one
+  // `editor.setOptions()` anything that has changed identity — from its own
+  // effect, therefore in the middle of the React commit phase, where to reassemble a node view
+  // (mention pills are) raises the `flushSync` error described more
+  // down. Hence memorized extensions, `editorProps` outside the component and content
+  // frozen: nothing moves from one rendering to another.
   const editor = useEditor({
     immediatelyRender: false,
     extensions,
@@ -192,10 +191,10 @@ export function MarkdownEditor({
     },
     onUpdate: ({ editor, transaction }) => {
       syncEmpty(editor.isEmpty);
-      // Poser les pilules sur un texte déjà écrit n'est pas une frappe : sans
-      // cette garde, ouvrir un ticket dont la description cite quelqu'un le
-      // marquerait « modifié », et le panneau refuserait ensuite toute écriture
-      // distante sur un texte que personne n'a touché.
+      // Placing the pills on an already written text is not a typing: without
+      // this guard, open a ticket whose description cites someone
+      // would mark "modified", and the panel would then refuse any writing
+      // distant on a text that no one has touched.
       if (transaction.getMeta(MENTION_HYDRATION_META)) return;
       onEdit?.();
     },
@@ -210,16 +209,16 @@ export function MarkdownEditor({
       ),
   });
 
-  // Les pilules d'un texte déjà écrit se reposent à l'ouverture — et de nouveau
-  // quand la liste des citables arrive après coup. JAMAIS sous le caret : une
-  // description en cours de frappe ne doit pas se réécrire toute seule (même
-  // règle que le champ des commentaires).
+  // The pills of an already written text rest upon opening — and again
+  // when the quotable list arrives afterwards. NEVER under the caret: a
+  // description while typing must not rewrite itself (even
+  // rule that the comments field).
   //
-  // HORS de la phase de commit (`queueMicrotask`) : poser un nœud de mention
-  // monte une vue React, et tiptap la monte en `flushSync`. Appelé directement
-  // dans l'effet, React refuse — « flushSync was called from inside a lifecycle
-  // method » — et les pilules se posent au petit bonheur. Une microtâche
-  // s'exécute juste après le commit, donc hors de tout rendu.
+  // OUTSIDE the commit phase (`queueMicrotask`): place a mention node
+  // mount a React view, and tiptap mounts it as `flushSync`. Called directly
+  // in effect, React refuses — “flushSync was called from inside a lifecycle
+  // method” — and the pills are placed haphazardly. A microtask
+  // executes just after the commit, therefore outside of any rendering.
   const scan = mentions?.scan;
   useEffect(() => {
     if (!editor || !scan || editor.isFocused) return;
@@ -242,10 +241,9 @@ export function MarkdownEditor({
           {placeholder}
         </p>
       )}
-      {/* Les pilules sont rendues par des vues de nœud, montées en portails
-          SOUS `EditorContent` : le contexte posé ici leur parvient donc, et
-          c'est ce qui leur donne leur destination sans rien traverser à la
-          main. Même montage que le lookup des sous-pages d'une page. */}
+      {/* The pills are rendered by node views, mounted as portals
+ UNDER `EditorContent`: the context set here therefore reaches them, and
+ is what gives them their destination without crossing anything manually. Same layout as the lookup of the subpages of a page. */}
       <MentionLinksProvider value={mentions?.links ?? null}>
         <EditorContent editor={editor} />
       </MentionLinksProvider>

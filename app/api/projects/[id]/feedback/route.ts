@@ -8,24 +8,24 @@ import { upsertFeedbackUser } from "@/lib/server/feedback/identity";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// Bornes de l'identité saisie : un email plus long que la RFC (254) n'existe
-// pas ; le nom est cosmétique, on le tronque. Titre/corps sont bornés par
+// Limits of the identity entered: an email longer than the RFC (254) does not exist
+// not ; the name is cosmetic, it is truncated. Title/body are bounded by
 // createFeedbackPost (FEEDBACK_TITLE_MAX / FEEDBACK_BODY_MAX).
 const EMAIL_MAX = 254;
 const NAME_MAX = 200;
 
-/** GET — liste équipe (vraies identités) ; POST — saisie interne d'un retour
-    au nom d'un utilisateur final (canal 'internal', jamais anonyme). */
+/** GET — team list (real identities); POST — internal entry of a return
+ on behalf of an end user ('internal' channel, never anonymous). */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const guard = await requireProjectMember(request, id);
   if (!guard.ok) return guard.response;
 
-  // `board_enabled` voyage AVEC la liste, et non dans un appel à part : sans
-  // board public, la moitié de ce que la vue affiche n'a pas de sens (les voix
-  // que personne ne peut donner, le choix public/privé qui ne mène nulle part).
-  // Les deux doivent donc arriver ensemble, sinon l'écran se peint une fois
-  // avec ces commandes puis les retire.
+  // `board_enabled` travels WITH the list, and not in a separate call: without
+  // public board, half of what the view displays makes no sense (the voices
+  // that no one can give, the public/private choice which leads nowhere).
+  // So both must arrive together, otherwise the screen paints itself once
+  // with these commands and then remove them.
   const [posts, board] = await Promise.all([
     listTeamFeedback(id),
     getBoardForProject(id),
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  // `null` est du JSON valide : lire body.title dessus ferait un 500, pas un 400.
+  // `null` is valid JSON: reading body.title on it would make a 500, not a 400.
   if (!body || typeof body !== "object") {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
@@ -77,8 +77,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     source: "internal",
     authorId: feedbackUser.id,
     createdByMember: guard.userId,
-    // Même choix que le composeur du board public : publier ou garder pour
-    // l'équipe. Omis (agents, appels historiques) → public, comme avant.
+    // Same choice as the public board composer: publish or keep for
+    // the team. Omitted (agents, historical calls) → public, as before.
     isPublic: typeof body.is_public === "boolean" ? body.is_public : undefined,
   });
   if (!result.ok) {

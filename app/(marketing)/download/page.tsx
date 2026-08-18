@@ -19,25 +19,25 @@ import { IsoTile, type IsoTileName } from "@/components/marketing/iso-tile";
 /**
  * `/download` — l'app de bureau macOS (MIN-292).
  *
- * **Une PAGE et non un bouton sur la landing**, parce qu'il y a ici quelque
- * chose d'honnête à dire qui ne tient pas sous un bouton : app quittée, plus de
- * notification. Electron n'embarque pas le service de push de Chromium (§3 du
- * cadrage), alors que le site et l'app web installée sonnent même fermés. Le
- * taire serait la seule malhonnêteté du site ; l'écrire en petit sous un bouton
- * reviendrait au même — d'où sa place, à mi-page, à la même taille que la
- * réassurance qui lui fait face.
+ * **A PAGE and not a button on the landing**, because there is something here
+ * honest thing to say that doesn't fit under a button: app left, no more
+ * notification. Electron does not support the Chromium push service (§3 of
+ * framing), while the site and the installed web app even sound closed. THE
+ * silence would be the only dishonesty of the site; write it in small letters under a button
+ * would amount to the same — hence its place, mid-page, at the same size as the
+ * reassurance that faces him.
  *
- * **Les chiffres sont LUS, pas écrits.** La version et le poids viennent du
- * manifeste du flux (`latest-mac.yml`), avec une heure de cache. Un « ~100 Mo »
- * en dur dans `messages/*.json` serait faux à la publication suivante, et
- * personne ne penserait à le corriger. Flux injoignable → la page tombe sur des
- * valeurs génériques et garde son bouton : elle ne se prive jamais de son seul
- * geste utile.
+ * **Numbers are READ, not written.** Version and weight come from
+ * flow manifest (`latest-mac.yml`), with a cache time. A “~100 MB”
+ * hard in `messages/*.json` would be false on the next publication, and
+ * no one would think to correct it. Feed unreachable → the page falls on
+ * generic values ​​and keeps its button: it never deprives itself of its only
+ * useful action.
  *
- * La mise en page rompt avec les autres pages publiques, qui sont toutes
- * centrées : ici le hero est en DEUX COLONNES, texte à gauche, app à droite.
- * C'est la seule page du site dont le sujet est un objet — il faut le montrer,
- * pas en parler.
+ * The layout breaks from the other public pages, which are all
+ * centered: here the hero is in TWO COLUMNS, text on the left, app on the right.
+ * This is the only page on the site whose subject is an object — it must be shown,
+ * rather than merely talked about.
  */
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -45,12 +45,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * Ce que l'app apporte, dans l'ordre où on s'en aperçoit en l'utilisant.
+ * What the app provides, in the order you see it when using it.
  *
- * Les icônes sont celles de la landing — couchées dans l'isométrie de l'app
- * (`IsoTile`), et non une lucide de face dans une pastille arrondie. Cette page
- * était la dernière du site à porter l'ancien dessin, celui qui ne dit rien de
- * minddy ; un nom suffit ici, la résolution se fait dans le registre.
+ * The icons are those of the landing — lying in the isometry of the app
+ * (`IsoTile`), and not a lucid face in a rounded pellet. This page
+ * was the last one on the site to bear the old design, the one that says nothing about
+ * minddy; a name is enough here, the resolution is done in the register.
  */
 const POINTS = [
   { key: "window", icon: "window" },
@@ -59,12 +59,12 @@ const POINTS = [
 ] as const satisfies ReadonlyArray<{ key: string; icon: IsoTileName }>;
 
 /**
- * La version et le poids du `.dmg` Apple silicon, lus dans le flux.
+ * The version and weight of the `.dmg` Apple silicon, read in the feed.
  *
- * `revalidate` plutôt que `no-store` : la page reste servie depuis le cache —
- * c'est une page publique, elle doit rester rapide — et se rafraîchit dans
- * l'heure qui suit une publication. Une erreur ne remonte jamais : une page de
- * téléchargement sans son bouton serait pire qu'un numéro de version périmé.
+ * `revalidate` rather than `no-store`: the page remains served from the cache —
+ * it's a public page, it needs to stay fast — and refreshes in
+ * the hour following a publication. An error never comes up: a page of
+ * download without its button would be worse than an outdated version number.
  */
 async function currentRelease(): Promise<{ version: string; size: number | null } | null> {
   const base = desktopFeedBaseUrl();
@@ -99,7 +99,7 @@ export default async function DownloadPage() {
 
   return (
     <>
-      {/* ── Le téléchargement, et l'objet ────────────────────────────────── */}
+      {/* ── The download, and the object ────────────────────────────────── */}
       <section className="overflow-hidden pt-24 pb-16 sm:pt-28 sm:pb-24">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
           <div className="grid items-center gap-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-16">
@@ -108,16 +108,16 @@ export default async function DownloadPage() {
                 as="p"
                 className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium tracking-wide text-muted-foreground"
               >
-                {/* Le logo Apple n'est pas dans lucide, et le pictogramme d'une
-                    marque tierce se dessine ou ne se met pas. Le mot suffit. */}
+                {/* The Apple logo is not in lucid, and the pictogram of a
+ third-party brand is drawn or not displayed. The word is enough. */}
                 {t("eyebrow")}
               </Reveal>
 
-              {/* `Reveal` et non `RevealHeading` : celui-ci découpe le texte mot
-                  à mot, ce qui interdit de styler une PARTIE du titre. Or
-                  l'accent en serif italique — la seule fantaisie typographique
-                  du site, portée par le hero de la landing — est ce qui rattache
-                  cette page aux autres. */}
+              {/* `Reveal` and not `RevealHeading`: this cuts the word text
+ to word, which prohibits styling PART of the title. Or
+ the accent in italic serif — the only typographical fantasy
+ of the site, carried by the hero of the landing — is what connects
+ this page to the others. */}
               <Reveal
                 as="h1"
                 delay={0.06}
@@ -135,9 +135,9 @@ export default async function DownloadPage() {
                 {t("heroSubtitle")}
               </Reveal>
 
-              {/* Un `<a>` et non un `<Link>` : la cible n'est pas une page mais
-                  une redirection vers un fichier de cent vingt mégaoctets. Un
-                  préchargement de route n'aurait aucun sens. */}
+              {/* A `<a>` and not a `<Link>`: the target is not a page but
+ a redirection to a one hundred and twenty megabyte file. A
+ route preload would make no sense. */}
               <Reveal
                 delay={0.26}
                 className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3"
@@ -161,21 +161,20 @@ export default async function DownloadPage() {
                 {t("requirements")}
               </Reveal>
 
-              {/* macOS est la seule cible, et ça se dit ICI — sous le bouton,
-                  pas à mi-page. Depuis MIN-292 la landing mène directement à
-                  cette page par un bouton « Télécharger pour Mac » : quelqu'un
-                  sous Windows ou Linux y arrive, et doit avoir sa réponse avant
-                  d'avoir à défiler pour la chercher.
-                  Et elle ne s'arrête pas au refus : sur ces machines minddy
-                  s'utilise dans le navigateur, ce qui est une réponse, pas une
-                  porte fermée. */}
+              {/* macOS is the only target, and it says HERE — under the button,
+ not halfway through the page. From MIN-292 the landing leads directly to
+ this page via a "Download for Mac" button: someone
+ on Windows or Linux gets there, and must have their answer before
+ having to scroll to look for it.
+ And it doesn't stop at refusal: on these machines minddy
+ is used in the browser, which is a response, not a closed door. */}
               <Reveal as="p" delay={0.36} className="mt-1.5 text-xs text-muted-foreground">
                 {t("platformNote")}
               </Reveal>
             </div>
 
-            {/* `-mr-6` : la composition mord sur la marge droite en grand écran.
-                C'est ce qui la sort de la grille et lui donne son échelle. */}
+            {/* `-mr-6`: the composition bites on the right margin in wide screen.
+ This is what takes it out of the grid and gives it its scale. */}
             <Reveal delay={0.1} className="lg:-mr-14">
               <DesktopShowcase />
             </Reveal>
@@ -183,12 +182,12 @@ export default async function DownloadPage() {
         </div>
       </section>
 
-      {/* ── Les faits ────────────────────────────────────────────────────────
-          Une bande de quatre cases séparées par des filets d'un pixel, dans le
-          goût d'une fiche technique : l'étiquette en petit au-dessus, la valeur
-          en dessous. Deux des quatre sont LUES dans le flux, donc toujours
-          vraies. `gap-px` sur un fond `bg-border` dessine les filets sans une
-          seule bordure à gérer aux jonctions. */}
+      {/* ── The facts ──────────────────────────── ────────────────────────────
+ A strip of four boxes separated by one-pixel lines, in the
+ taste of a technical sheet: the label in small above, the value
+ below. Two of the four are READ in the stream, so always
+ true. `gap-px` on a `bg-border` background draws the nets without a single
+ border to manage at the junctions. */}
       <section className="border-y border-border">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
           <RevealGroup
@@ -227,10 +226,10 @@ export default async function DownloadPage() {
 
           <RevealGroup as="ul" step={0.08} className="grid gap-10 sm:grid-cols-3">
             {POINTS.map((point) => (
-              /* Un filet au-dessus de chaque colonne, et rien autour : trois
-                 traits qui répondent à la bande de faits sans la répéter en
-                 cartes. Trois cartes bordées de plus auraient fait de la page
-                 une grille de boîtes. */
+              /* A net above each column, and nothing around: three
+ traits that respond to the fact strip without repeating it in
+ cards. Three more bordered cards would have made the page
+ a grid of boxes. */
               <li key={point.key} className="border-t border-border pt-6">
                 <IsoTile name={point.icon} className="mb-4 w-14" />
                 <h3 className="mb-2 text-base font-medium">{t(`point_${point.key}_title`)}</h3>
@@ -243,10 +242,8 @@ export default async function DownloadPage() {
         </div>
       </section>
 
-      {/* ── Le renoncement, et sa contrepartie ───────────────────────────────
-          Les deux à la MÊME taille, et le renoncement en premier. L'inverse — la
-          bonne nouvelle en grand, la mauvaise en note de bas de page — est
-          exactement la mise en page qui donne envie de ne pas lire. */}
+      {/* ── Renunciation, and its counterpart ───────────────────────────────
+ first. The opposite — the good news in big, the bad news in footnote — is exactly the layout that makes you not want to read. */}
       <section className="border-t border-border bg-muted/20 py-16 sm:py-24">
         <div className="mx-auto w-full max-w-4xl px-4 sm:px-6">
           <div className="grid gap-px overflow-hidden rounded-2xl bg-border ring-1 ring-border md:grid-cols-2">

@@ -1,106 +1,106 @@
 /**
- * Le SCHÉMA d'un corps de page, écrit en clair (MIN-350).
+ * The SCHEME of a page body, written in plaintext (MIN-350).
  *
- * Jusqu'ici `page.content` entrait comme du JSON arbitraire, borné en profondeur
- * et en taille et rien d'autre : n'importe quel type de nœud, n'importe quel
- * attribut, et surtout n'importe quel `src` — un `javascript:` rangé dans un
- * bloc fichier ressortait tel quel dans le `href` de son ancre
- * (components/pages/blocks/file-view.tsx), qui est une vraie ancre et qu'un clic
- * suit vraiment.
+ * Until now `page.content` entered as arbitrary JSON, bounded in depth
+ * and in size and nothing else: any type of node, any whatever
+ * attribute, and especially any `src` — a `javascript:` stored in a
+ * file block appeared as is in the `href` of its anchor
+ * (components/pages/blocks/file-view.tsx), which is a real anchor and that a click
+ * really follows.
  *
- * Ce module est la porte. Il liste les nœuds, les marques et leurs attributs, et
- * il tranche sur les adresses.
+ * This module is the door. It lists the nodes, the marks and their attributes, and
+ * it decides on the addresses.
  *
- * ## Pourquoi une liste écrite à la main, alors que le registre existe
+ * ## Why a list written by hand, when the register exists
  *
- * Le registre de blocs EST la vérité, et cette liste doit lui rester égale —
- * mais on ne peut pas la lui demander ici. La lire, c'est monter les extensions
- * tiptap, donc un éditeur, donc un DOM : `lib/server/pages.ts` valide dans une
- * fonction serveur, sur le chemin critique de chaque sauvegarde, là où la
- * projection markdown a justement dû se faire charger par chemin depuis un
- * bundle à part (cf. lib/server/pages-projection.ts). Le prix serait un jsdom
- * par écriture pour relire une liste de vingt noms.
+ * The block register IS the truth, and this list must remain equal to it —
+ * but we can't ask him here. Reading it means mounting the extensions
+ * tiptap, therefore an editor, therefore a DOM: `lib/server/pages.ts` valid in a
+ * server function, on the critical path of each backup, where the
+ * markdown projection must have been loaded by path from a
+ * bundle to part (see lib/server/pages-projection.ts). The price would be one jsdom
+ * per write to reread a list of twenty names.
  *
- * L'égalité, elle, n'est pas laissée à la relecture : `page-content-schema.test.ts`
- * monte le VRAI registre sous jsdom et exige que ce fichier dise exactement les
- * mêmes nœuds, les mêmes marques et les mêmes attributs. Un bloc ajouté sans son
- * entrée ici fait tomber la suite — pas la sauvegarde d'un utilisateur.
+ * Equality is not left to rereading: `page-content-schema.test.ts`
+ * mounts the REAL register under jsdom and requires that this file says exactly the
+ * same nodes, the same marks and the same attributes. A block added without its
+ * entry here drops the continuation — not a user's save.
  *
- * ## Ce qu'on refuse, et ce qu'on laisse tomber
+ * ## What we refuse, and what we drop
  *
- * Un nœud ou une marque INCONNUE fait refuser l'écriture entière (400) : c'est
- * du contenu qu'aucune surface ne sait rendre, et l'accepter en base voudrait
- * dire le resservir un jour à un rendu qui, lui, le comprendra. Une adresse
- * hostile, pareil — un refus est ce que l'auteur doit voir.
+ * An UNKNOWN node or mark causes the entire write to be refused (400): it is
+ * content that no surface can render, and accepting it as a base would mean
+ * reserving it one day for a rendering which will understand it. A hostile address
+ *, the same - a refusal is what the author must see.
  *
- * Un ATTRIBUT inconnu, lui, est simplement retiré : c'est déjà ce que fait
- * ProseMirror en chargeant le document (`Node.fromJSON` ignore ce que le schéma
- * ne déclare pas), et refuser une page entière pour un attribut de plus rendrait
- * chaque déploiement de l'éditeur capable de bloquer les onglets restés ouverts.
+ * An unknown ATTRIBUTE is simply removed: this is already what
+ * ProseMirror when loading the document (`Node.fromJSON` ignores what the schema
+ * does not declare), and refusing an entire page for one more attribute would make
+ * each deployment of the editor capable of blocking tabs left open.
  *
- * Module pur, sans `server-only` ni dépendance : les blocs l'importent aussi
- * (leur sérialisation markdown refuse d'écrire un lien vers une adresse que ce
- * fichier rejette), et ils sont montés headless dans une fonction serveur.
+ * Pure module, without `server-only` or dependencies: blocks import it also
+ * (their markdown serialization refuses to write a link to an address that this
+ * file rejects), and they are mounted headless in a server function.
  */
 
-/* ── Les adresses ─────────────────────────────────────────────────────────── */
+/* ── Addresses ───────────────────────────── ────────────────────────────── */
 
 /**
- * Les attributs qui portent une ADRESSE, quel que soit le nœud ou la marque.
+ * Attributes that carry an ADDRESS, regardless of node or brand.
  *
- * Par NOM et non par nœud, volontairement : le jour où un bloc vidéo arrive avec
- * son `src`, il est couvert avant d'être écrit. La contrepartie — un attribut
- * nommé `src` qui ne serait pas une URL — n'existe pas dans le schéma, et le
- * test le tient.
+ * By NAME and not by node, intentionally: the day a video block arrives with
+ * its `src`, it is covered before being written. The counterpart — an attribute
+ * named `src` which would not be a URL — does not exist in the schema, and the
+ * test holds it.
  */
 const URL_ATTRIBUTES = new Set(["src", "href"]);
 
 /**
- * Les protocoles qu'une adresse de page a le droit de porter.
+ * The protocols that a page address is allowed to carry.
  *
- * `http`/`https` parce qu'une image externe est un cas normal et documenté (cf.
- * blocks/image.ts : `![graphe](https://…)` écrit par Numo doit marcher), et
- * `mailto` parce qu'un lien de contact dans une page en est un.
+ * `http`/`https` because an external image is a normal and documented case (cf.
+ * blocks/image.ts: `![graphe](https://…)` written by Numo should work), and
+ * `mailto` because a contact link in a page is one.
  *
- * Tout le reste tombe, `javascript:` en tête, mais aussi `data:` (une page HTML
- * en base64 dans un `href` est un XSS complet à un clic) et `blob:`.
+ * Everything else falls, `javascript:` at the top, but also `data:` (an HTML page
+ * at base64 in a `href` is a full one-click XSS) and `blob:`.
  */
 const SAFE_PROTOCOLS = new Set(["http:", "https:", "mailto:"]);
 
 /**
- * `true` si cette adresse peut être rangée dans un corps de page.
+ * `true` if this address can be stored in a page body.
  *
- * Les adresses RELATIVES (`/api/projects/…`, la forme que prennent nos propres
- * fichiers) sont acceptées telles quelles : elles n'ont pas de protocole, donc
- * pas de protocole à refuser, et elles ne peuvent désigner que nous.
+ * RELATIVE addresses (`/api/projects/…`, the form that our own
+ * files take) are accepted as is: they have no protocol, therefore
+ * no protocol to refuse, and they can only designate us.
  *
- * La normalisation compte autant que la liste : `java\tscript:alert(1)` est une
- * URL que le navigateur suit et qu'une comparaison naïve laisse passer. On
- * retire donc les blancs et les caractères de contrôle AVANT de lire le
- * protocole — et comme c'est cette même chaîne nettoyée qu'on renvoie à
- * l'appelant ({@link normalizePageUrl}), ce qui est rangé est ce qui a été jugé.
+ * The normalization counts as much as the list: `java\tscript:alert(1)` is a
+ * URL that the browser follows and that a naive comparison lets through. On
+ * therefore removes blanks and control characters BEFORE reading the
+ * protocol — and since it is this same cleaned string that we send back to
+ * the caller ({@link normalizePageUrl}), what is put away is what was judged.
  */
 export function isSafePageUrl(value: unknown): boolean {
   return normalizePageUrl(value) !== null;
 }
 
 /**
- * L'adresse telle qu'on accepte de la ranger, ou `null` si elle est refusée.
+ * The address as we agree to store it, or `null` if it is refused.
  *
- * `new URL` avec une base ne sert qu'à LIRE le protocole : la valeur rendue
- * reste la chaîne d'origine nettoyée, jamais l'URL absolutisée — un `/api/…`
- * doit rester relatif dans le document (cf. lib/page-files.ts).
+ * `new URL` with a base is only used to READ the protocol: the returned value
+ * remains the original cleaned string, never the URL absolute — a `/api/…`
+ * must remain relative in the document (see lib/page-files.ts).
  */
 export function normalizePageUrl(value: unknown): string | null {
   if (typeof value !== "string") return null;
-  // Blancs et caractères de contrôle : `java\tscript:` et `java\nscript:` sont
-  // suivis par les navigateurs, et ne ressemblent à rien pour un test de
-  // préfixe. Ils n’ont par ailleurs aucun sens dans une adresse.
+  // Blanks and control characters: `java\tscript:` and `java\nscript:` are
+  // tracked by browsers, and looks like nothing for a test of
+  // prefix. They also have no meaning in an address.
   // eslint-disable-next-line no-control-regex
   const cleaned = value.replace(/[\u0000-\u0020\u007f]/g, "");
   if (!cleaned) return null;
-  // Pas de protocole : une adresse relative. `//hôte/chemin` en porte un
-  // implicitement (celui de la page) — il est donc http(s), donc acceptable.
+ // No protocol: a relative address. `//host/path` carries one
+  // implicitly (that of the page) — it is therefore http(s), therefore acceptable.
   if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(cleaned)) return cleaned;
   try {
     return SAFE_PROTOCOLS.has(new URL(cleaned).protocol) ? cleaned : null;
@@ -109,12 +109,12 @@ export function normalizePageUrl(value: unknown): string | null {
   }
 }
 
-/* ── Les nœuds et les marques ─────────────────────────────────────────────── */
+/* ── Nodes and marks ─────────────────────── ──────────────────────── */
 
 /**
- * Chaque nœud du schéma d'une page, avec ses attributs. Miroir exact du registre
- * (components/pages/blocks) plus le substrat de StarterKit, la mention et
- * l'`blockId` d'UniqueID — vérifié nœud par nœud par le test.
+ * Each node in a page's schema, with its attributes. Exact mirror of the registry
+ * (components/pages/blocks) plus the StarterKit substrate, the mention and
+ * the `blockId` of UniqueID — verified node by node by the test.
  */
 export const PAGE_NODE_ATTRIBUTES: Record<string, readonly string[]> = {
   doc: [],
@@ -146,7 +146,7 @@ export const PAGE_NODE_ATTRIBUTES: Record<string, readonly string[]> = {
   ],
 };
 
-/** Les marques, même contrat que les nœuds. */
+/** Brands, same contract as nodes. */
 export const PAGE_MARK_ATTRIBUTES: Record<string, readonly string[]> = {
   link: ["href", "target", "rel", "class", "title"],
   bold: [],
@@ -158,10 +158,9 @@ export const PAGE_MARK_ATTRIBUTES: Record<string, readonly string[]> = {
   pageBackgroundColor: ["color"],
 };
 
-/* ── La validation ────────────────────────────────────────────────────────── */
+/* ── Validation ───────────────────────────── ───────────────────────────── */
 
-/** Pourquoi un corps est refusé. `unknown-node` couvre aussi les marques : du
-    point de vue de l'auteur, c'est le même « ce bloc n'existe pas ici ». */
+/** Why is a body refused. `unknown-node` also covers brands: from the author's point of view, it's the same "this block doesn't exist here". */
 export type PageContentRefusal = "unknown-node" | "unsafe-url";
 
 export type PageContentCheck =
@@ -169,15 +168,15 @@ export type PageContentCheck =
   | { ok: false; reason: PageContentRefusal };
 
 /**
- * Le corps tel qu'on accepte de l'écrire.
+ * The body as we agree to write it.
  *
- * Rend une COPIE quand quelque chose a été retiré, jamais l'objet d'entrée
- * modifié en place : l'appelant garde ce qu'il a reçu, et la comparaison
- * « le corps a-t-il changé ? » de l'historique reste vraie.
+ * Returns a COPY when something has been removed, never the input object
+ * modified in place: the caller keeps what it received, and the comparison
+ * "has the body changed?" » of the history remains true.
  *
- * La descente est récursive, et elle peut l'être : la profondeur est bornée
- * avant (lib/json-depth.ts, MIN-348), c'est précisément l'ordre que ce
- * garde-fou-là impose.
+ * The descent is recursive, and it can be: the depth is bounded
+ * before (lib/json-depth.ts, MIN-348), this is precisely the order that this
+ * guardrail imposes.
  */
 export function checkPageContent(value: unknown): PageContentCheck {
   try {
@@ -203,9 +202,9 @@ function walk(value: unknown, isRoot: boolean): unknown {
     if (typeof type !== "string" || !(type in PAGE_NODE_ATTRIBUTES)) {
       throw new PageContentError("unknown-node");
     }
-    // La racine est un DOCUMENT, et rien d'autre : accepter un `paragraph` nu
-    // ferait un corps que l'éditeur refuse de charger — un document qu'on ne
-    // peut plus ouvrir vaut moins qu'une écriture refusée.
+    // The root is a DOCUMENT, and nothing else: accept a bare `paragraph`
+    // would make a body that the editor refuses to load — a document that cannot be
+    // can no longer open is worth less than a write refused.
     if (isRoot && type !== "doc") throw new PageContentError("unknown-node");
   }
 

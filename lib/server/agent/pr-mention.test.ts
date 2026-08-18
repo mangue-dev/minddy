@@ -1,18 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-330 — qui peut faire dépenser le propriétaire d'un projet en écrivant
- * `@numo` sur une pull request.
+ * MIN-330 — which can make a project owner spend writing
+ * `@numo` on a pull request.
  *
- * Le sujet du fichier est un REFUS, pas une fonctionnalité : ce qu'on vérifie
- * d'abord, c'est qu'aucune relecture ne démarre. `startNumoPrReview` est donc le
- * témoin central — s'il est appelé, l'attaque a réussi.
+ * The subject of the file is a REFUSAL, not a feature: what we check
+ * first, is that no replay starts. `startNumoPrReview` is therefore the
+ * central witness — if it is called, the attack succeeded.
  *
- * Le faux Supabase porte les cinq requêtes du chemin (le ticket, les liens de
- * dépôt, le owner, les membres, les identités de forge) et le compteur de débit
- * `claim_forge_mention`, qu'il implémente VRAIMENT : la fenêtre et le rang rendu
- * sont ce qui décide du refus et de l'unique commentaire de refus, un faux qui
- * rendrait toujours 1 ne dirait rien.
+ * The fake Supabase carries the five requests of the path (the ticket, the links of
+ * repository, the owner, the members, the forge identities) and the counter of debit
+ * `claim_forge_mention`, which it REALLY implements: the window and the rank rendered
+ * are what decides the refusal and the only refusal comment, a false one which
+ * would always return 1 would say nothing.
  */
 
 const REPO = "mangue-dev/minddy";
@@ -22,11 +22,11 @@ const MEMBER_ID = "22222222-2222-4222-8222-222222222222";
 const PR_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 
 const world = {
-  /** login de forge → utilisateur minddy ayant connecté ce compte. */
+  /** forge login → minddy user who connected this account. */
   identities: [] as Array<{ user_id: string; account_login: string; provider: string }>,
   members: [] as string[],
   links: [{ provider: "github", repo_full_name: REPO, project_id: PROJECT_ID }],
-  /** Le compteur persisté, tel que le rend la fonction SQL. */
+  /** The persisted counter, as rendered by the SQL function. */
   counters: new Map<string, number>(),
   rpcFails: false,
 };

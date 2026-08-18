@@ -15,8 +15,8 @@ export async function generateMetadata({
     appPageMetadata("project"),
     projectName(id),
   ]);
-  // Le tableau est LA page du projet : son nom suffit, sans le préfixer du
-  // libellé générique. Les sous-pages, elles, gardent « Triage · Acme ».
+  // The table is THE page of the project: its name is enough, without prefixing it with
+  // generic wording. The subpages keep “Triage · Acme”.
   return name ? { ...meta, title: name } : meta;
 }
 

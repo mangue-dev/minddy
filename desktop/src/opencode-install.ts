@@ -33,15 +33,15 @@ import {
 } from "@/lib/server/agent/vm/opencode-version";
 
 /**
- * LE `fs` ET LE `spawn` DU PRÉ-VOL OPENCODE (MIN-293) — et rien d'autre.
+ * THE `fs` AND THE `spawn` OF THE PRE-FLIGHT OPENCODE (MIN-293) — and nothing else.
  *
- * Toutes les décisions (faut-il installer, quelle commande, quel refus, quelle
- * phrase) vivent dans [@/lib/desktop/opencode-install](../../lib/desktop/opencode-install.ts),
- * avec leur test. Ici il n'y a que trois lectures de disque, une recherche dans
- * le `PATH` et un `npm`.
+ * All decisions (whether to install, which command, which denial, which
+ * phrase) live in [@/lib/desktop/opencode-install](../../lib/desktop/opencode-install.ts),
+ * with their test. Here there are only three disk reads, a search in
+ * the `PATH` and a `npm`.
  */
 
-/** Le binaire existe-t-il, et le noyau accepterait-il de l'exécuter ? */
+/** Does the binary exist, and would the kernel be willing to run it? */
 function isExecutable(path: string): boolean {
   try {
     accessSync(path, constants.X_OK);
@@ -52,11 +52,9 @@ function isExecutable(path: string): boolean {
 }
 
 /**
- * `npm` est-il là ? On cherche dans le `PATH` **sans lancer `npm --version`** :
- * sur un Mac sans Command Line Tools, invoquer un exécutable absent fait surgir
- * la fenêtre d'installation de Xcode — au milieu d'un lancement de tour, sans que
- * personne l'ait demandé. C'est exactement le piège que `lib/desktop/local-repo.ts`
- * évite déjà en lisant `.git/config` au lieu de lancer `git`.
+ * Is `npm` there? We search in the `PATH` **without launching `npm --version`**:
+ * on a Mac without Command Line Tools, invoking an absent executable causes the This is exactly the trap that `lib/desktop/local-repo.ts`
+ * already avoids by reading `.git/config` instead of running `git`.
  */
 function npmOnPath(runtimePath: string): string | null {
   for (const dir of runtimePath.split(":")) {
@@ -67,7 +65,7 @@ function npmOnPath(runtimePath: string): string | null {
   return null;
 }
 
-/** Les gestionnaires Node rangent leurs versions hors du PATH des apps GUI. */
+/** Node managers store their versions outside the PATH of GUI apps. */
 function managedNodeBins(home: string): string[] {
   const bins = [
     `${home}/.volta/bin`,
@@ -86,7 +84,7 @@ function managedNodeBins(home: string): string[] {
       );
       bins.push(...versions.map((version) => `${root}/${version}/${suffix}`));
     } catch {
-      // Gestionnaire absent : ce n'est pas une erreur de bootstrap.
+      // Manager missing: this is not a bootstrap error.
     }
   }
   return bins;
@@ -103,9 +101,9 @@ function bundledNpmCli(): string | null {
 }
 
 /**
- * Donne au harness de vraies commandes `node` et `npm`, même sans chaîne Node
- * système. Elles exécutent le runtime signé d'Electron ; le shim npm sert aussi
- * aux `npm install` que l'agent lance ensuite dans le dépôt de l'utilisateur.
+ * Gives the harness real `node` and `npm` commands, even without a Node
+ * system string. They run the signed Electron runtime; the npm shim also serves
+ * for `npm install` that the agent then launches in the user's repository.
  */
 function electronToolBin(npmCli: string | null): string | null {
   const binDir = path.join(app.getPath("userData"), "agent-runtime", "bin");
@@ -122,7 +120,7 @@ function electronToolBin(npmCli: string | null): string | null {
           continue;
         }
       } catch {
-        // Premier lancement, ou shim d'une version précédente.
+        // First launch, or shim from a previous version.
       }
       const staged = `${file}.${process.pid}.tmp`;
       writeFileSync(staged, source, { encoding: "utf8", mode: 0o700 });
@@ -134,7 +132,7 @@ function electronToolBin(npmCli: string | null): string | null {
   }
 }
 
-/** Environnement commun au bootstrap, au harness et aux shells des tools. */
+/** Environment common to bootstrap, harness and tools shells. */
 export function localRuntimeEnv(): Record<string, string> {
   const env = childEnv(process.env);
   const home = env.HOME ?? app.getPath("home");
@@ -150,9 +148,9 @@ export function localRuntimeEnv(): Record<string, string> {
     electronExecutable: process.execPath,
     systemNpm: npmOnPath(env.PATH),
   });
-  // `ELECTRON_RUN_AS_NODE` ne doit jamais contaminer le harness ou les tools.
-  // Il est ajouté uniquement au process npm, dans `installOpencode` et dans le
-  // repli du harness. Seuls les chemins inertes voyagent jusque-là.
+  // `ELECTRON_RUN_AS_NODE` must never contaminate the harness or tools.
+  // It is added only to the npm process, in `installOpencode` and in the
+  // harness fallback. Only inert paths travel there.
   if (npm?.source === "bundled") {
     for (const [key, value] of Object.entries(npm.extraEnv)) {
       if (key !== "ELECTRON_RUN_AS_NODE") env[key] = value;
@@ -169,7 +167,7 @@ function availableNpm(env: Record<string, string>): NpmInvocation | null {
   });
 }
 
-/** Ce que la coquille a lu, prêt pour la décision. */
+/** What the shell read, ready for decision. */
 export function readOpencodeFacts(installDir: string): {
   decision: OpencodeDecision;
   npm: NpmInvocation | null;
@@ -184,14 +182,14 @@ export function readOpencodeFacts(installDir: string): {
       readFileSync(opencodePackageManifestPath(installDir), "utf8"),
     );
   } catch {
-    // Pas de paquet : `installedVersion` reste `null`, et la décision le lit.
+    // No packet: `installedVersion` remains `null`, and the decision reads it.
   }
   try {
     pluginVersion = readOpencodeManifestVersion(
       readFileSync(opencodePluginManifestPath(installDir), "utf8"),
     );
   } catch {
-    // Une installation antérieure à ce cache n'avait que le binaire.
+    // An installation prior to this cache only had the binary.
   }
   return {
     decision: opencodeDecision({
@@ -206,13 +204,13 @@ export function readOpencodeFacts(installDir: string): {
 }
 
 /**
- * `npm i opencode-ai@<épingle>` dans le dossier de la MACHINE (jamais celui du
- * run : 144 Mo par ticket, sinon).
+ * `npm i opencode-ai@<pinned-version>` in the MACHINE folder (never the
+ * run: 144 MB per ticket, otherwise).
  *
- * Rend `null` en cas de succès, le message d'erreur sinon — jamais une exception.
- * L'appelant est le lanceur, dont le contrat est de refuser un tour AVANT le fork
- * avec une phrase dans le journal, pas de lever à un endroit où plus personne
- * n'écoute.
+ * Returns `null` if successful, the error message otherwise — never a exception.
+ * The caller is the thrower, whose contract is to deny a round BEFORE the fork
+ * with a sentence in the log, not raise to a place where no one
+ * is listening anymore.
  */
 export function installOpencode(opts: {
   installDir: string;
@@ -221,11 +219,11 @@ export function installOpencode(opts: {
   timeoutMs?: number;
 }): Promise<string | null> {
   /**
-   * ⚠ **LE `package.json` AVANT L'INSTALL** (MIN-293). Sans lui, `npm` remonte
-   * l'arborescence jusqu'au premier qu'il trouve et installe DEDANS, en rendant
-   * 0 — mesuré : 144 Mo dans `~/node_modules` et ce dossier-ci resté vide. Le
-   * `--prefix` de `opencodeInstallArgs` ferme la même porte une seconde fois.
-   */
+ * ⚠ **THE `package.json` BEFORE INSTALL** (MIN-293). Without it, `npm` goes back
+ * the tree to the first one it finds and installs IN, making
+ * 0 — measured: 144 MB in `~/node_modules` and this folder remained empty. The
+ * `--prefix` of `opencodeInstallArgs` closes the same door a second time.
+ */
   try {
     writeFileSync(opencodeInstallManifestPath(opts.installDir), OPENCODE_INSTALL_MANIFEST, "utf8");
   } catch (error) {
@@ -244,10 +242,10 @@ export function installOpencode(opts: {
       {
         cwd: opts.installDir,
         stdio: ["ignore", "ignore", "pipe"],
-        // Un `npm` qui hériterait de l'environnement d'Electron peut trouver un
-        // `NODE_OPTIONS` qui ne le concerne pas et le faire échouer d'une façon
-        // incompréhensible. `ELECTRON_RUN_AS_NODE`, lui, n'est réintroduit que
-        // pour le npm embarqué, après le filtrage de `childEnv`.
+        // A `npm` which would inherit the Electron environment can find a
+        // `NODE_OPTIONS` that doesn't concern it and cause it to fail in some way
+        // incomprehensible. `ELECTRON_RUN_AS_NODE` is only reintroduced
+        // for embedded npm, after filtering `childEnv`.
         env: childEnv,
       },
     );
@@ -258,8 +256,8 @@ export function installOpencode(opts: {
     });
 
     // Un `npm install` qui n'a pas rendu au bout de cinq minutes ne rendra pas :
-    // registre injoignable, proxy d'entreprise qui avale la connexion. Mieux vaut
-    // un refus qui se dit qu'un tour bloqué avant d'avoir commencé.
+    // registry unreachable, corporate proxy swallowing connection. Better
+    // a refusal which says that a turn is blocked before having started.
     const timer = setTimeout(() => {
       child.kill("SIGKILL");
       resolve("opencode install timed out after 5 minutes");
@@ -276,12 +274,12 @@ export function installOpencode(opts: {
         return;
       }
       /**
-       * **UN `npm` QUI REND 0 NE PROUVE PAS QUE LE BINAIRE EST LÀ**, et c'est
-       * exactement ce qui est arrivé : install « réussie », dossier vide, et le
-       * pré-vol qui annonçait « prêt » au lanceur. Un pré-vol qui ment est pire
-       * que pas de pré-vol — il déplace la panne trois étages plus bas, dans un
-       * `spawn ENOENT` que le harness lit comme une lenteur.
-       */
+ * **A `npm` THAT RETURNS 0 DOES NOT PROVE THAT THE BINARY IS THERE**, and that's
+ * exactly what happened: install "successful", empty folder, and the
+ * pre-flight which announced "ready" to the launcher. A lying pre-flight is worse
+ * than no pre-flight — it moves the failure three floors down, into a
+ * `spawn ENOENT` that the harness reads as slow.
+ */
       if (!isExecutable(opencodeBin(opts.installDir))) {
         resolve(
           `opencode install reported success but ${opencodeBin(opts.installDir)} is missing — ` +

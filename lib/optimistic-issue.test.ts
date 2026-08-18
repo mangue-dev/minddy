@@ -24,7 +24,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const cachedIssue = (id: string, projectId: string, number: number): Issue =>
   ({ id, project_id: projectId, number, status: "todo" }) as Issue;
 
-/** Une pièce jointe telle que le composer l'envoie, une fois téléversée. */
+/** An attachment such as the composer sends it, once uploaded. */
 const file = (storage_path: string): ResourceInput => ({
   kind: "file",
   storage_path,
@@ -33,7 +33,7 @@ const file = (storage_path: string): ResourceInput => ({
   size_bytes: 1,
 });
 
-/** La ligne telle que le POST la rend ET que le trigger la diffuse. */
+/** The line as the POST renders it AND the trigger broadcasts it. */
 function serverRow(id: string, overrides: Record<string, unknown> = {}) {
   return {
     id,
@@ -64,13 +64,13 @@ beforeEach(() => {
   client.setQueryData(GLOBAL_BOARD_KEY, { issues: [], objectives: {} });
 });
 
-// Le registre est un singleton partagé par toute l'application.
+// The register is a singleton shared by the entire application.
 afterEach(() => issueWrites.reset());
 
 describe("buildOptimisticIssue", () => {
-  // Le contrat qui ferme le doublon : la carte porte l'id que la ligne aura en
-  // base, donc le pont temps réel (isOwnEcho → wasJustWritten) reconnaît la
-  // diffusion de NOTRE création au lieu de l'adopter comme celle d'un tiers.
+  // The contract which closes the duplicate: the card carries the id that the line will have in
+  // base, so the real-time bridge (isOwnEcho → wasJustWritten) recognizes the
+  // dissemination of OUR creation instead of adopting it as that of a third party.
   it("nomme la ligne d'un UUID que le registre reconnaît en vol", () => {
     const optimistic = buildOptimisticIssue(
       { title: "Nouveau ticket" },
@@ -81,13 +81,13 @@ describe("buildOptimisticIssue", () => {
     expect(optimistic.id).toMatch(UUID_RE);
 
     issueWrites.begin({ kind: "insert", row: optimistic });
-    // La diffusion part du trigger AU COMMIT, avant que le POST ne réponde.
+    // The broadcast starts from the COMMIT trigger, before the POST responds.
     const broadcast = serverRow(optimistic.id);
     expect(issueWrites.wasJustWritten(broadcast.id, broadcast)).toBe(true);
   });
 
-  // Sur `/all`, la liste présentée est celle de TOUS les projets : compter le
-  // maximum sans filtrer donnait un numéro emprunté au voisin le plus fourni.
+  // On `/all`, the list presented is that of ALL projects: count the
+  // maximum without filtering gave a number borrowed from the most provided neighbor.
   it("estime le numéro sur les tickets du projet visé", () => {
     const existing = [
       cachedIssue("a", PROJECT, 3),
@@ -98,9 +98,9 @@ describe("buildOptimisticIssue", () => {
     ).toBe(4);
   });
 
-  // `resource_count` est un agrégat que seul le GET du board calcule : sans lui
-  // ici, la pastille manquait sur un ticket créé avec des pièces jointes — plus
-  // rien ne refetch le projet sur notre propre création.
+  // `resource_count` is an aggregate that only the GET of the board calculates: without it
+  // here, the sticker was missing on a ticket created with attachments — more
+  // nothing reflects the project on our own creation.
   it("compte les ressources jointes à la création", () => {
     const input: CreateIssueInput = {
       title: "T",
@@ -122,11 +122,11 @@ describe("création optimiste, de bout en bout", () => {
     const handle = issueWrites.begin({ kind: "insert", row: optimistic });
     insertIssueEverywhere(client, PROJECT, optimistic);
 
-    // 1. La diffusion arrive d'abord — le pont la reconnaît et n'adopte rien.
+    // 1. Broadcast comes first — the bridge recognizes it and doesn't adopt anything.
     const broadcast = serverRow(optimistic.id);
     expect(issueWrites.wasJustWritten(broadcast.id, broadcast)).toBe(true);
 
-    // 2. Puis la réponse du POST : la ligne serveur se pose sur la carte.
+    // 2. Then the POST response: the server line is placed on the card.
     const issue = { ...serverRow(optimistic.id), category_ids: [] } as unknown as Issue;
     insertIssueEverywhere(client, PROJECT, issue);
     mergeServerIssue(client, PROJECT, issue);
@@ -134,14 +134,14 @@ describe("création optimiste, de bout en bout", () => {
 
     expect(projectIssues(client).map((i) => i.id)).toEqual([optimistic.id]);
     expect(boardIssues(client).map((i) => i.id)).toEqual([optimistic.id]);
-    // Le numéro définitif vient du serveur ; l'agrégat qu'il ne porte pas reste.
+    // The final number comes from the server; the aggregate that it does not carry remains.
     expect(projectIssues(client)[0].number).toBe(42);
     expect(projectIssues(client)[0].resource_count).toBe(1);
   });
 
-  // Filet : même adoptée (diffusion d'un autre onglet à nous, rattrapage après
-  // reprise), la ligne ne peut plus s'ajouter À CÔTÉ de la carte — c'est la même
-  // ligne, `findCachedIssue` la trouve par son id et la patche.
+  // Filet: same adopted (broadcasting another tab of ours, catching up afterwards
+  // repeat), the line can no longer be added NEXT to the card — it's the same
+  // line, `findCachedIssue` finds it by its id and patches it.
   it("adopte la ligne diffusée en la patchant, jamais en la doublant", () => {
     const optimistic = buildOptimisticIssue({ title: "T" }, PROJECT, USER, []);
     issueWrites.begin({ kind: "insert", row: optimistic });

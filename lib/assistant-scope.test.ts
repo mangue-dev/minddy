@@ -51,8 +51,8 @@ describe("resolveAssistantScope", () => {
   });
 
   describe("avec une conversation vivante", () => {
-    // Le cœur de MIN-353 : la conversation garde SA portée quoi qu'il arrive à
-    // l'URL. C'est ce qui l'empêche d'être jetée à la première navigation.
+    // The heart of MIN-353: the conversation keeps ITS scope whatever happens to
+    // the URL. This is what prevents it from being thrown away on first navigation.
     it("ignore la route qui change (le bug d'origine)", () => {
       expect(
         resolveAssistantScope({
@@ -116,9 +116,9 @@ describe("resolveAssistantScope", () => {
       ).toEqual({ scopeProjectId: PROJECT_A, startsNewConversation: false });
     });
 
-    // Une réponse en cours atterrit dans la conversation qui l'a demandée : la
-    // portée est gelée le temps du tour. La bascule, elle, est ANNONCÉE — c'est
-    // ce qui fait patienter l'envoi de l'ouverture au lieu de le mal adresser.
+    // A response in progress lands in the conversation that requested it: the
+    // range is frozen for the duration of the turn. The shift is ANNOUNCED — it’s
+    // which makes you wait to send the opening instead of misdirecting it.
     it("annonce la bascule sans déplacer la portée pendant un tour", () => {
       expect(
         resolveAssistantScope({
@@ -143,8 +143,8 @@ describe("resolveAssistantScope", () => {
       ).toEqual({ scopeProjectId: PROJECT_A, startsNewConversation: false });
     });
 
-    // Une navigation n'impose rien : pendant un tour comme au repos, elle ne
-    // déclenche aucune bascule.
+    // Navigation imposes nothing: during a tour or at rest, it does not
+    // trigger no toggle.
     it("ne bascule jamais sur une simple navigation", () => {
       expect(
         resolveAssistantScope({

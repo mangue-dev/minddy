@@ -1,61 +1,59 @@
 /**
- * Où en est la mise à jour de la coquille, vu de la PAGE (MIN-353).
+ * Where is the shell update, seen from the PAGE (MIN-353).
  *
- * ## Pourquoi la page a besoin de le savoir
+ * ## Why the page needs to know
  *
- * La boîte native est un instant : elle s'ouvre une fois, à la fin du
- * téléchargement, et qui répond « plus tard » n'a plus rien devant les yeux.
- * L'état, lui, dure — la version neuve reste sur le disque jusqu'au prochain ⌘Q.
- * D'où cette seconde surface, dans la barre latérale : elle ne demande rien,
- * elle CONSTATE, et elle se retrouve quand on la cherche.
+ * The native box is an instant: it opens once, at the end du
+ * download, and whoever responds "later" no longer has anything in front of their eyes.
+ * The state lasts - the new version remains on the disk until the next ⌘Q.
+ * Hence this second surface, in the sidebar: it asks for nothing,
+ * it OBSERVES, and it is found when we see it seeks.
  *
- * ## Un état, pas des événements
+ * ## State, not events
  *
- * electron-updater parle en événements (`update-available`, `update-downloaded`,
- * `error`), et un abonné arrivé après coup ne les entend jamais. Or le renderer
- * arrive TOUJOURS après coup : la fenêtre se recharge, on change de canal, la
- * page se remonte. Le main process tient donc l'état, la page le lit — et le
- * rejeu à l'abonnement, comme pour les boutons macOS, est ce qui fait la
- * différence entre « il n'y a pas de mise à jour » et « je n'étais pas là quand
- * on l'a dit ».
+ * electron-updater speaks in events (`update-available`, `update-downloaded`,
+ * `error`), and a a subscriber who arrives afterwards never hears them. But the renderer
+ * ALWAYS arrives afterwards: the window reloads, we change the channel, the
+ * page rewinds. The main process therefore holds the state, the page reads it — and the
+ * replay of the subscription, as for the macOS buttons, is what makes the
+ * difference between “there is no update” and “I was not there when
+ * we said it”.
  *
- * Module PUR : `desktop/src/updater.ts` réduit les événements ici,
- * `components/app-sidebar.tsx` affiche le résultat.
+ * PUR module: `desktop/src/updater.ts` reduces events here,
+ * `components/app-sidebar.tsx` displays the result.
  */
 
 export type DesktopUpdateStatus =
-  /** Rien à signaler — le cas de presque toujours, et celui du navigateur. */
+  /** Nothing to report — almost always the case, and that of the browser. */
   | { state: "idle" }
-  /** Une version neuve est en train de descendre. Rien à faire, rien à cliquer. */
+  /** A new version is coming down. Nothing to do, nothing to click. */
   | { state: "downloading"; version: string }
-  /** Elle est sur le disque. C'est le seul état où un geste est possible. */
+  /** It's on the disk. This is the only state where a gesture is possible. */
   | { state: "ready"; version: string };
 
 export const IDLE_UPDATE_STATUS: DesktopUpdateStatus = { state: "idle" };
 
-/** Ce que la coquille apprend d'electron-updater, réduit à ce qui compte. */
+/** What the shell learns from electron-updater, reduced to what matters. */
 export type DesktopUpdateEvent =
   | { kind: "available"; version: string }
   | { kind: "downloaded"; version: string }
   | { kind: "error" };
 
 /**
- * L'état suivant.
+ * The next state.
  *
- * **Deux règles, et chacune répare un aller-retour qu'on aurait vu à l'écran.**
+ * **Two rules, and each repairs a round trip that we would have seen on the screen.**
  *
- * 1. **Une version déjà prête ne redevient pas « en cours ».** La vérification
- *    tourne toutes les six heures et réannonce ce qu'elle trouve, téléchargé ou
- *    non : sans cette garde, une mise à jour posée sur le disque le lundi
- *    repassait en « téléchargement… » tous les six heures, et n'en ressortait
- *    jamais — le second `update-downloaded`, lui, n'est pas garanti.
- * 2. **Une erreur n'efface pas ce qui est prêt.** Le fichier est là ; un Wi-Fi
- *    d'hôtel qui fait échouer la vérification suivante ne le retire pas du
- *    disque. Retirer la ligne à ce moment-là, c'est effacer la seule chose qui
- *    permettait encore d'installer.
+ * 1. **An already ready version does not become "in progress" again.** The check
+ * runs every six hours and announces again what it finds, downloaded or
+ * no: without this guard, an update placed on the disk on Monday
+ * went back to "download..." every six hours, and never came out
+ * never — the second `update-downloaded` is not guaranteed.
+ * 2. **An error does not erase what is ready.** The file is there; a hotel Wi-Fi
+ * that fails the next check does not remove it from the
+ * disk. Removing the line at this point erases the only thing that still allowed you to install.
  *
- * Une erreur PENDANT le téléchargement, en revanche, ramène au silence : il n'y
- * a rien sur le disque et rien à annoncer.
+ * An error DURING the download, on the other hand, returns to silence: there is nothing on the disk and nothing to announce.
  */
 export function reduceUpdateStatus(
   current: DesktopUpdateStatus,

@@ -1,43 +1,43 @@
 /**
- * Retrouver, depuis le SERVEUR, l'identité PostHog du navigateur (MIN-292).
+ * Find, from the SERVER, the PostHog identity of the browser (MIN-292).
  *
- * `/api/desktop/download` est une route publique : pas de session, donc pas
- * d'id de compte à donner à `captureServerEvent`. Sans rien, chaque
- * téléchargement partirait sous un id jeté, et l'événement ne se rattacherait à
- * aucun parcours — on saurait COMBIEN, jamais À LA SUITE DE QUOI.
+ * `/api/desktop/download` is a public route: no session, therefore no
+ * account id to give to `captureServerEvent`. Without anything, each
+ * download would leave under a discarded id, and the event would not be linked to
+ * no path — we would know HOW MUCH, never AS A RESULT OF WHAT.
  *
- * `posthog-js` écrit son `distinct_id` dans un cookie `ph_<clé>_posthog`, que le
- * navigateur joint à la requête comme à toutes les autres. Le lire ici suffit à
- * recoudre l'événement serveur au reste de la visite — la page vue, le clic sur
- * le bouton, l'inscription qui suit.
+ * `posthog-js` writes its `distinct_id` in a cookie `ph_<key>_posthog`, which the
+ * browser attaches to the request like all others. Reading it here is enough to
+ * stitch the server event to the rest of the visit — the page viewed, the click on
+ * the button, the inscription that follows.
  *
- * **Ce cookie n'existe que si les cookies ont été ACCEPTÉS** : avant tout choix,
- * la persistance est en mémoire et rien n'est écrit sur l'appareil (voir
- * components/posthog-init.tsx). Le repli n'est donc pas un cas rare mais le cas
- * ordinaire, et il ne doit surtout pas inventer un identifiant stable : ce
- * serait poser côté serveur exactement le suivi que le navigateur s'est refusé
- * à poser. L'appelant tire un id jetable et coupe le profil de personne.
+ * **This cookie only exists if the cookies have been ACCEPTED**: before any choice,
+ * the persistence is in memory and nothing is written to the device (see
+ * components/posthog-init.tsx). The fallback is therefore not a rare case but the ordinary case
+ *, and it must certainly not invent a stable identifier: this
+ * would pose on the server side exactly the follow-up that the browser refused
+ * to pose. The caller pulls a throwaway id and cuts off the person's profile.
  *
- * Module PUR — il ne lit ni `process.env` ni les en-têtes : tout entre en
- * paramètre, et c'est ce qui le rend testable sans requête.
+ * PUR module — it doesn't read `process.env` or the headers: everything goes into a
+ * parameter, and that's what makes it testable without a query.
  */
 
-/** Le nom du cookie de `posthog-js` pour une clé de projet donnée. */
+/** The cookie name of `posthog-js` for a given project key. */
 export function posthogCookieName(apiKey: string | null | undefined): string | null {
   if (!apiKey) return null;
   return `ph_${apiKey}_posthog`;
 }
 
-/** Longueur au-delà de laquelle on refuse la valeur : un cookie forgé. */
+/** Length beyond which we refuse the value: a forged cookie. */
 const MAX_DISTINCT_ID_LENGTH = 200;
 
 /**
- * Le `distinct_id` porté par la valeur du cookie, ou `null`.
+ * The `distinct_id` carried by the cookie value, or `null`.
  *
- * La valeur est du JSON, parfois encodé en URL selon qui l'a relue — d'où la
- * seconde tentative après `decodeURIComponent`. Tout ce qui n'est pas un JSON
- * portant une chaîne non vide rend `null` : c'est une donnée qui vient du
- * client, elle se vérifie.
+ * The value is JSON, sometimes URL encoded depending on who read it again — hence the
+ * second attempt after `decodeURIComponent`. Anything that is not a JSON
+ * carrying a non-empty string returns `null`: it is data that comes from the
+ * client, it is verified.
  */
 export function readPosthogDistinctId(raw: string | null | undefined): string | null {
   if (!raw) return null;
@@ -62,8 +62,8 @@ function safeDecode(value: string): string | null {
   try {
     return decodeURIComponent(value);
   } catch {
-    // `decodeURIComponent` LÈVE sur un `%` isolé — fréquent dans un cookie
-    // bricolé à la main. Une exception ici ferait tomber un téléchargement.
+    // `decodeURIComponent` RISES on an isolated `%` — common in a cookie
+    // DIY by hand. An exception here would cause a download to drop.
     return null;
   }
 }

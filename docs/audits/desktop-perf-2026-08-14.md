@@ -1,27 +1,27 @@
-# Audit de performance — app de bureau minddy (Electron 43 / macOS)
+# Performance audit — minddy desktop app (Electron 43 / macOS)
 
-## 1. Le diagnostic, en trois lignes
+## 1. The diagnosis, in three lines
 
-L'app de bureau paie un impôt que le navigateur ne paie pas : `app/globals.css:1711` pose `-webkit-app-region: no-drag` sur **tous** les éléments focusables du document (`a, button, input, …, [role="option"], [tabindex]`), ce qui transforme chaque bouton, chaque item de menu et chaque ligne de liste en **région annotée** que Blink recollecte et renvoie par IPC au process navigateur — celui-là même qui dépile les événements souris de macOS.
-Deux aggravants s'y branchent : les deux prises `drag` posées sur des éléments dont framer-motion **anime la géométrie** (`.sidebar-brand-row` et `.app-shell > div > header`, globals.css:1739 et 1782), donc une carte de régions reconstruite à chaque frame du dépliage du rail — et 20 dropdowns Radix laissés en `modal` par défaut, qui écrivent `body.style.pointerEvents = "none"` (propriété **héritée**) à chaque ouverture et à chaque fermeture, soit un recalcul de style de tout le document sur la frame d'animation du menu.
-Le reste (cartes non mémoïsées, contextes non mémoïsés, backdrop-filters) est réel mais c'est du **coût par rendu**, pas par frame : ce sont des amplificateurs, pas la source.
+The desktop app pays a tax that the browser does not pay: `app/globals.css:1711` places `-webkit-app-region: no-drag` on **all** the focusable elements of the document (`a, button, input, …, [role="option"], [tabindex]`), which transforms each button, each menu item and each list line into an **annotated region** that Blink collects and sends back by IPC to the browser process — the same one that populates macOS mouse events.
+Two aggravators are connected to it: the two `drag` sockets placed on elements whose framer-motion **animate the geometry** (`.sidebar-brand-row` and `.app-shell > div > header`, globals.css:1739 and 1782), therefore a map of regions reconstructed at each frame of the unfolding of the rail — and 20 Radix dropdowns left in `modal` by default, which write `body.style.pointerEvents = "none"` (**inherited** property) each time it opens and closes, i.e. a style recalculation of the entire document on the menu animation frame.
+The rest (non-memorized maps, non-memorized contexts, backdrop-filters) is real but it is **cost per rendering**, not per frame: they are amplifiers, not the source.
 
-**Ce qui n'est pas tranché, et comment le trancher.** L'existence des règles est certaine (lues ci-dessus). Le *coût* du modèle de régions annotées de Blink est une inférence : rien dans ce dépôt ne l'a mesuré, et le commentaire de globals.css:1704 affirme au contraire « Le coût est nul » — c'est précisément l'hypothèse à casser. La manip est en §5 ; le test décisif tient en 30 secondes : **ouvrir le même board dans Chrome et dans l'app de bureau.** Si Chrome est fluide, tout ce qui n'est pas `data-desktop-app` est disculpé et l'ordre du §3 est le bon. Si Chrome saccade autant, la thèse tombe et il faut basculer sur le palier (b) — mémoïsation du board.
+**What is not decided, and how to decide it.** The existence of the rules is certain (read above). The *cost* of Blink's annotated region model is an inference: nothing in this repository has measured it, and the comment from globals.css:1704 instead states "The cost is zero" — which is precisely the assumption to break. The manipulation is in §5; the litmus test takes 30 seconds: **open the same board in Chrome and in the desktop app.** If Chrome is fluid, everything that is not `data-desktop-app` is exonerated and the order in §3 is the correct one. If Chrome jerks so much, the thesis falls and you have to switch to level (b) — memorization of the board.
 
 ---
 
-## 2. Les causes, par gain attendu
+## 2. The causes, by expected gain
 
-### CERTAIN — lu dans le code, mécanisme incontestable
+### CERTAIN — read in the code, indisputable mechanism
 
-#### C1. Les 20 dropdowns modaux écrivent `pointer-events` sur `<body>` à chaque ouverture *et* fermeture
-`components/new-menu.tsx:80`, `components/app-sidebar.tsx:437`, `components/app-breadcrumb.tsx:69`, `components/board-toolbar.tsx:919` et `:962`, `components/objective-detail.tsx:450`, `components/resources.tsx:178`, `components/project-card.tsx:116`, `components/cycle/cycle-header.tsx:88`, `components/issue-plan.tsx:268`, `components/pages/block-menu.tsx:216`, `components/pages/page-breadcrumb.tsx:103`, `components/routines/routine-detail.tsx:427`, `components/agents/session-compose.tsx:71`, `components/mobile-nav-actions.tsx:41`, `components/git/provider-connect-buttons.tsx:157`, `components/feedback/feedback-team-page.tsx:1597`.
+#### C1. The 20 modal dropdowns write `pointer-events` to `<body>` on each open *and* close
+`components/new-menu.tsx:80`, `components/app-sidebar.tsx:437`, `components/app-breadcrumb.tsx:69`, `components/board-toolbar.tsx:919` and `:962`, `components/objective-detail.tsx:450`, `components/resources.tsx:178`, `components/project-card.tsx:116`, `components/cycle/cycle-header.tsx:88`, `components/issue-plan.tsx:268`, `components/pages/block-menu.tsx:216`, `components/pages/page-breadcrumb.tsx:103`, `components/routines/routine-detail.tsx:427`, `components/agents/session-compose.tsx:71`, `components/mobile-nav-actions.tsx:41`, `components/git/provider-connect-buttons.tsx:157`, `components/feedback/feedback-team-page.tsx:1597`.
 
-`DropdownMenu` de mangue-ui ne force rien (`node_modules/mangue-ui/src/components/ui/dropdown-menu.tsx:21-25` : passe-plat), donc Radix applique son défaut `modal={true}`. Dans ce mode, `DismissableLayer` exécute `ownerDocument.body.style.pointerEvents = "none"` (`@radix-ui/react-dismissable-layer/dist/index.mjs:111`, restauré l.121) et `RemoveScroll` injecte `body{overflow:hidden;padding-right:Npx}`. `pointer-events` est **héritée** : la poser sur `<body>` invalide le style calculé de chaque nœud du document, et le `padding-right` force un relayout complet — deux fois par ouverture de menu.
+`DropdownMenu` of mango-ui does not force anything (`node_modules/mangue-ui/src/components/ui/dropdown-menu.tsx:21-25`: pass-through), so Radix applies its default `modal={true}`. In this mode, `DismissableLayer` executes `ownerDocument.body.style.pointerEvents = "none"` (`@radix-ui/react-dismissable-layer/dist/index.mjs:111`, restored l.121) and `RemoveScroll` injects `body{overflow:hidden;padding-right:Npx}`. `pointer-events` is **inherited**: setting it to `<body>` invalidates the calculated style of each node in the document, and `padding-right` forces a complete relayout — twice per menu open.
 
-**Symptôme** : le sursaut de dropdown, à la lettre. Il tombe pendant les ~100 ms de `zoom-in-95`, donc on le *voit* sur le panneau qui apparaît.
+**Symptom**: dropdown burst, literally. It falls during the ~100ms of `zoom-in-95`, so we *see* it on the panel that appears.
 
-Le dépôt sait déjà le faire : `components/issue-context-menu.tsx:294`, `components/plan-task-row.tsx:76`, `components/issue-timeline.tsx:571` et les trois de `pull-requests/pr-detail.tsx` passent `modal={false}`. Correctif : renverser le défaut **dans mangue-ui**, pas dans une copie locale.
+The repository already knows how to do this: `components/issue-context-menu.tsx:294`, `components/plan-task-row.tsx:76`, `components/issue-timeline.tsx:571` and the three of `pull-requests/pr-detail.tsx` pass `modal={false}`. Fix: reverse the default **in mangue-ui**, not in a local copy.
 
 ```tsx
 // node_modules/mangue-ui/src/components/ui/dropdown-menu.tsx:21
@@ -33,16 +33,16 @@ function DropdownMenu({
 }
 ```
 
-Seul effet de bord : le fond reste défilable menu ouvert — que Radix ferme de toute façon au premier scroll extérieur.
+Only side effect: the background remains scrollable open menu - which Radix closes anyway at the first external scroll.
 
-#### C2. Les deux prises `drag` sont posées sur des rectangles que framer-motion anime
-`app/globals.css:1739-1741` (`.app-shell > div > header`) et `:1782-1787` (`.sidebar-brand-row`).
+#### C2. The two `drag` sockets are placed on rectangles that framer-motion animates
+`app/globals.css:1739-1741` (`.app-shell > div > header`) and `:1782-1787` (`.sidebar-brand-row`).
 
-`.sidebar-brand-row` est enfant de la `motion.aside` dont framer anime la largeur 56 → 256 px (`components/app-sidebar.tsx:810-815`), déclenchée par `onPointerMove` (`:822`). Son rectangle change donc à chaque frame de l'animation, le vecteur de régions diffère à chaque frame, et Electron reconstruit la région déplaçable de la fenêtre côté process navigateur. Sur ProMotion : ~38 reconstructions pour un simple survol du rail.
+`.sidebar-brand-row` is a child of `motion.aside` whose framer animates the width 56 → 256 px (`components/app-sidebar.tsx:810-815`), triggered by `onPointerMove` (`:822`). Its rectangle therefore changes at each frame of the animation, the vector of regions differs at each frame, and Electron reconstructs the movable region of the window on the browser process side. On ProMotion: ~38 reconstructions for a simple flight over the rail.
 
-**Symptôme** : la saccade du curseur, et le fait qu'elle se ressente *au survol* plutôt qu'au clic — le geste qui provoque le coût est le mouvement de la souris lui-même.
+**Symptom**: Cursor jerkiness, and the fact that it is felt *on hover* rather than on click — the gesture that causes the cost is the mouse movement itself.
 
-Ces deux prises sont **redondantes** avec `.desktop-drag-band` (`globals.css:1682-1694`), qui est `position: fixed; inset: 0 0 auto 0; height: 60px` et couvre déjà exactement la ligne de marque et les 60 premiers pixels de l'en-tête, avec un rectangle qui ne bouge jamais.
+These two sockets are **redundant** with `.desktop-drag-band` (`globals.css:1682-1694`), which is `position: fixed; inset: 0 0 auto 0; height: 60px` and already covers exactly the mark line and the first 60 pixels of the header, with a rectangle that never moves.
 
 ```diff
 -/* app/globals.css:1739 */
@@ -56,15 +56,15 @@ Ces deux prises sont **redondantes** avec `.desktop-drag-band` (`globals.css:168
  }
 ```
 
-Conserver `container-type: inline-size` : c'est lui qui porte le glissement de la marque (`100cqw`, globals.css:1789).
+Keep `container-type: inline-size`: it is he who carries the dragging of the mark (`100cqw`, globals.css:1789).
 
-#### C3. `applyWindowButtons` repose inconditionnellement les boutons natifs, à chaque survol du rail
-`desktop/src/main.ts:59-84`. Aucune comparaison : `setWindowButtonVisibility` puis `setWindowButtonPosition(TRAFFIC_LIGHTS)` à chaque appel, et Electron répond à chacun par un `RedrawTrafficLights()` — de l'AppKit synchrone sur le thread UI du process navigateur. Or `useHoldWindowButtons("rail", …)` (`components/app-sidebar.tsx:780`) bascule à chaque dépliage/repliage du rail, donc à chaque survol de la barre latérale, et `useHoldWindowButtons("modal", …)` à chaque ouverture *et* fermeture de dialogue, palette ou tiroir.
+#### C3. `applyWindowButtons` unconditionally rests the native buttons, on each hover of the rail
+`desktop/src/main.ts:59-84`. No comparison: `setWindowButtonVisibility` then `setWindowButtonPosition(TRAFFIC_LIGHTS)` on each call, and Electron responds to each with a `RedrawTrafficLights()` — from the synchronous AppKit on the UI thread of the browser process. However, `useHoldWindowButtons("rail", …)` (`components/app-sidebar.tsx:780`) switches each time the rail is unfolded/folded, therefore each time the sidebar is hovered, and `useHoldWindowButtons("modal", …)` each time a dialog, palette or drawer is opened *and* closed.
 
-Le renderer refuse volontairement de dédupliquer (`lib/use-window-buttons.ts:50-55`) parce que `useWindowButtonsSlot` a besoin de la réponse du pont pour dégeler sa mise en page. La déduplication doit donc vivre dans le main, **sur les appels natifs seulement** :
+The renderer intentionally refuses to deduplicate (`lib/use-window-buttons.ts:50-55`) because `useWindowButtonsSlot` needs the response from the bridge to unfreeze its layout. Deduplication must therefore live in the main, **on native calls only**:
 
 ```ts
-/** Ce qui a réellement été posé sur la fenêtre, pour ne pas le reposer. */
+/** What was actually applied to the window, so it is not applied again. */
 let appliedButtons: string | null = null;
 
 function applyWindowButtons(target?: BrowserWindow): void {
@@ -77,47 +77,47 @@ function applyWindowButtons(target?: BrowserWindow): void {
     window.setWindowButtonVisibility(fullScreen || wantsWindowButtons);
     if (!fullScreen && wantsWindowButtons) window.setWindowButtonPosition(TRAFFIC_LIGHTS);
   }
-  // TOUJOURS republier : c'est cette réponse qu'attend useWindowButtonsSlot.
+  // ALWAYS republish: this is the response useWindowButtonsSlot is waiting for.
   publishWindowButtons(wantsWindowButtons && !fullScreen);
 }
 ```
 
-Remettre `appliedButtons = null` dans le handler `did-start-navigation` (`main.ts:303`) : un document neuf repart de zéro.
+Put `appliedButtons = null` back into the `did-start-navigation` handler (`main.ts:303`): a new document starts from scratch.
 
-#### C4. Un `MutationObserver` `childList + subtree` sur `<body>` tourne partout, y compris hors app de bureau
-`lib/use-window-buttons.ts:180-185`. Il est bien **unique** (singleton de module l.158) et son callback est coalescé à une frame (l.173-179) — le constat qui parlait de « deux observateurs » et de « rafale » était faux. Ce qui reste vrai et non trivial : Chromium alloue un `MutationRecord` avec ses `StaticNodeList` pour **chaque** nœud inséré ou retiré n'importe où (recyclage react-window, frappe tiptap, streaming du fil d'agent, montages framer), et à chaque frame mutante le callback exécute `document.querySelector(MODAL_SELECTOR)` — 7 sélecteurs composés (l.136-144) qui, dans le cas dominant, ne matchent rien et traversent donc tout l'arbre.
+#### C4. A `MutationObserver` `childList + subtree` on `<body>` runs everywhere, including outside the desktop app
+`lib/use-window-buttons.ts:180-185`. It is indeed **unique** (singleton of module l.158) and its callback is coalesced to a frame (l.173-179) — the observation which spoke of “two observers” and “burst” was false. What remains true and non-trivial: Chromium allocates a `MutationRecord` with its `StaticNodeList` for **each** node inserted or removed anywhere (react-window recycling, tiptap hitting, agent thread streaming, framer mounts), and at each mutating frame the callback executes `document.querySelector(MODAL_SELECTOR)` — 7 compound selectors (l.136-144) which, in the dominant case, do not match anything and therefore cross the entire tree.
 
-Ce chemin n'est **pas** spécifique au bureau : `DesktopWindowButtons` est monté sans condition (`app/(app)/app-providers.tsx:99`) et retourne `null` hors coquille. C'est donc un candidat que le test Chrome/desktop disculpe ou charge tout seul.
+This path is **not** desktop specific: `DesktopWindowButtons` is mounted unconditionally (`app/(app)/app-providers.tsx:99`) and returns `null` out of shell. This is therefore a candidate that the Chrome/desktop test exonerates or charges on its own.
 
-Correctif : deux observateurs **distincts** (le piège documenté l.152-154 ne vaut que pour deux `observe()` du *même* observateur), et une garde de pont.
+Fix: two **distinct** observers (the documented trap l.152-154 only applies to two `observe()` of the *same* observer), and a bridge guard.
 
 ```ts
-if (!getDesktopBridge()) return () => {};   // rien à observer dans un navigateur
+if (!getDesktopBridge()) return () => {};   // nothing to observe in a browser
 
-// Attributs, partout : couverture INCHANGÉE. Une observation attributes-only
-// n'alloue AUCUN enregistrement pour les insertions de nœuds — tout le coût était là.
+// Attributes everywhere: coverage UNCHANGED. An attributes-only observation
+// allocates NO record for node insertions — all the cost was there.
 attrObserver = new MutationObserver(schedule);
 attrObserver.observe(document.body, {
   subtree: true, attributes: true,
   attributeFilter: ["data-slot", "data-state", "aria-modal"],
 });
 
-// Arrivée d'un portail : enfants DIRECTS de <body>, sans subtree.
+// Portal arrival: DIRECT children of <body>, without a subtree.
 childObserver = new MutationObserver(schedule);
 childObserver.observe(document.body, { childList: true });
 ```
 
-À contrôler ensuite sur les quatre surfaces que MIN-291 dit avoir relevées (palette ⌘K, carnet, drawer, wizard) : si l'une n'est pas portalisée en enfant direct de `<body>`, garder `childList` en `subtree` pour elle et se contenter d'alléger `readModalOpen`.
+To then check on the four surfaces that MIN-291 says he noted (⌘K palette, notebook, drawer, wizard): if one is not made a direct child of `<body>`, keep `childList` in `subtree` for it and simply lighten `readModalOpen`.
 
-#### C5. Le scroll horizontal du board re-rend tout le board, pour des pastilles invisibles au-dessus de 640 px
-`components/kanban-board.tsx:253-267` et `:365-369`. `updateActiveColumn` appelle `setActiveColumn(idx)` — un état de `KanbanBoard` — à chaque franchissement de seuil de colonne. Aucune carte n'est mémoïsée : chaque franchissement rejoue N cartes. Son seul consommateur est `<ColumnDots>`, marqué `sm:hidden` (`:467`). Sur desktop, ce travail est intégralement gaspillé. Le voisin immédiat (`scrollProps.onScroll`, `lib/use-scroll-fade.ts:81-87`) a déjà été corrigé pour exactement ce motif, avec le commentaire qui dit que ça « faisait sauter toute l'interface ».
+#### C5. The horizontal scroll of the board re-renders the entire board, for invisible pellets above 640 px
+`components/kanban-board.tsx:253-267` and `:365-369`. `updateActiveColumn` calls `setActiveColumn(idx)` — a state of `KanbanBoard` — each time a column threshold is crossed. No card is memorized: each crossing replays N cards. Its only consumer is `<ColumnDots>`, marked `sm:hidden` (`:467`). On desktop, this work is entirely wasted. The immediate neighbor (`scrollProps.onScroll`, `lib/use-scroll-fade.ts:81-87`) has already been fixed for exactly this reason, with the comment saying that it "blew up the whole interface".
 
-À noter : `components/global-kanban-board.tsx:371` n'a pas ce défaut.
+Note: `components/global-kanban-board.tsx:371` does not have this default.
 
 ```tsx
 const updateActiveColumn = useCallback((el: HTMLDivElement) => {
-  // Les points sont `sm:hidden` : au-dessus de 640 px il n'y a rien à montrer,
-  // et surtout rien à ÉTAT — setActiveColumn re-rend tout le board.
+  // The dots are `sm:hidden`: above 640 px there is nothing to show,
+  // and above all nothing to STATE — setActiveColumn re-renders the entire board.
   if (window.innerWidth >= 640) {
     setActiveColumn((prev) => (prev === 0 ? prev : 0));
     return;
@@ -126,49 +126,49 @@ const updateActiveColumn = useCallback((el: HTMLDivElement) => {
 }, [columnCount]);
 ```
 
-#### C6. Trois contextes rendent un littéral d'objet, dont le plus haut de l'arbre
-`lib/auth-context.tsx:379-398`, `lib/projects-context.tsx:61-73` (avec une fléchée `openCreateProject` inline l.64-67), `lib/create-context.tsx:329-331`, plus `lib/use-projects-query.ts:72-80`.
+#### C6. Three contexts render an object literal, including the top of the tree
+`lib/auth-context.tsx:379-398`, `lib/projects-context.tsx:61-73` (with an inline `openCreateProject` arrow l.64-67), `lib/create-context.tsx:329-331`, plus `lib/use-projects-query.ts:72-80`.
 
-`AuthProvider` est le provider le plus haut (`app/(app)/app-providers.tsx`), et son handler `onAuthStateChange` (l.127-133) fait `setSession(s)` + `setUser(…)` **sans comparaison** : supabase-js ré-émet `SIGNED_IN`/`TOKEN_REFRESHED` au retour au premier plan et à chaque rafraîchissement de jeton, toujours avec des objets neufs. La cascade est vérifiable de bout en bout : `use-projects-query.ts:33` consomme `useAuth` → `ProjectsProvider` se re-rend → `create-context.tsx:118-119` → `global-board.tsx:88-89` → toutes les cartes.
+`AuthProvider` is the highest provider (`app/(app)/app-providers.tsx`), and its handler `onAuthStateChange` (l.127-133) does `setSession(s)` + `setUser(…)` **without comparison**: supabase-js re-issues `SIGNED_IN`/`TOKEN_REFRESHED` when returning to the foreground and each time the token is refreshed, always with new objects. The cascade is verifiable end-to-end: `use-projects-query.ts:33` consumes `useAuth` → `ProjectsProvider` re-renders → `create-context.tsx:118-119` → `global-board.tsx:88-89` → all cards.
 
-**Symptôme** : le sursaut au retour sur la fenêtre — le geste le plus fréquent dans une coquille de bureau.
+**Symptom**: the startle when returning to the window — the most frequent gesture in an office shell.
 
 ```ts
 // lib/auth-context.tsx:132
 setSession((prev) => (prev?.access_token === s?.access_token ? prev : s));
 ```
-et un `useMemo` sur les trois values. Sur `projects-context.tsx`, stabiliser d'abord `openCreateProject` en `useCallback` : son identité est dans les dépendances de `commandGroups` (`components/app-shell-chrome.tsx:956`) **et** de `sections` (`:1420`), donc de `paletteGroups` (`:1434`) — le piège que `components/mobile-account.tsx:54-56` documente mot pour mot. Ne pas toucher au bail-out de `user` : `refreshUser`/`updateUserMetadata` s'appuient dessus pour propager les métadonnées.
+and a `useMemo` on the three values. On `projects-context.tsx`, first stabilize `openCreateProject` in `useCallback`: its identity is in the dependencies of `commandGroups` (`components/app-shell-chrome.tsx:956`) **and** of `sections` (`:1420`), therefore of `paletteGroups` (`:1434`) — the trap that `components/mobile-account.tsx:54-56` documents verbatim. Do not touch the bail-out of `user`: `refreshUser`/`updateUserMetadata` rely on it to propagate metadata.
 
-#### C7. Le filtre de persistance vise une clé qui n'existe pas
-`lib/query-provider.tsx:89` liste `["agent-activity"]`, alors que la clé réellement posée est `["agent-active-issues", projectId ?? "__global__"]` (`components/agent/agent-activity-context.tsx:68`). Le poll de 15 s (`:72-73`) est donc **sérialisé sur le disque** à chaque tick, alors que l'en-tête du fichier (l.77-80) affirme que « les préfixes ci-dessous sont les VRAIES clés ». `lib/query-persist.test.ts:31` verrouille la clé inexistante : il passe et ne prouve rien.
+#### C7. Persistence filter targets a key that does not exist
+`lib/query-provider.tsx:89` lists `["agent-activity"]`, while the key actually placed is `["agent-active-issues", projectId ?? "__global__"]` (`components/agent/agent-activity-context.tsx:68`). The 15 s poll (`:72-73`) is therefore **serialized on disk** on each tick, while the file header (l.77-80) asserts that "the prefixes below are the REAL keys". `lib/query-persist.test.ts:31` locks the non-existent key: it passes and proves nothing.
 
 ```diff
 -  ["agent-activity"],
 +  ["agent-active-issues"], // components/agent/agent-activity-context.tsx:68
 ```
 
-Corriger le test dans le même geste.
+Correct the test in the same gesture.
 
 ---
 
-### PROBABLE — mécanisme inféré, à confirmer par le profil
+### PROBABLE — inferred mechanism, to be confirmed by profile
 
-#### P1. Le creusement `no-drag` global — le suspect n°1
-`app/globals.css:1711-1732`. La règle est certaine et son périmètre aussi : elle marque littéralement tout ce qui se clique. Chaque ligne de la palette est à la fois `role="option"` **et** `tabIndex` (`lib/command-palette/components/ResultItem.tsx:98-101`), chaque item Radix de menu et de select l'est, chaque bouton de mangue-ui l'est. Sur un board non virtualisé (react-window n'est utilisé **que** par `lib/command-palette/components/ResultsList.tsx:14`), ce sont plusieurs centaines à plusieurs milliers de rectangles.
+#### P1. Global `no-drag` digging — suspect #1
+`app/globals.css:1711-1732`. The rule is certain and its perimeter too: it literally marks everything that clicks. Each row of the palette is both `role="option"` **and** `tabIndex` (`lib/command-palette/components/ResultItem.tsx:98-101`), each Radix menu and select item is, each mango-ui button is. On a non-virtualized board (react-window is only used **by `lib/command-palette/components/ResultsList.tsx:14`), there are several hundred to several thousand rectangles.
 
-Ce qui est inféré, et donc à mesurer : que `LocalFrameView::UpdateDocumentAnnotatedRegions()` reparcourt l'arbre de mise en page en fin de chaque layout, appelle `AbsoluteBoundingBoxRect()` sur chaque élément marqué, compare le vecteur au précédent et l'envoie en IPC au process navigateur qui en reconstruit une `SkRegion` sur son thread UI. Si ce modèle est le bon, c'est le seul défaut de tout cet audit qui explique les **trois** symptômes ensemble *et* explique pourquoi ils ne se voient que dans la coquille.
+What is inferred, and therefore to be measured: that `LocalFrameView::UpdateDocumentAnnotatedRegions()` retraces the layout tree at the end of each layout, calls `AbsoluteBoundingBoxRect()` on each marked element, compares the vector to the previous one and sends it in IPC to the browser process which reconstructs one `SkRegion` on its UI thread. If this model is correct, it is the only flaw in this entire audit that explains the **three** symptoms together *and* explains why they are only seen in the shell.
 
-Le correctif ne consiste pas à raccourcir la liste mais à changer de modèle : **les régions sont géométriques**, un `no-drag` posé sur un conteneur creuse tout ce que ce conteneur recouvre. Marquer les feuilles n'a jamais été nécessaire.
+The fix does not consist of shortening the list but of changing the model: **the regions are geometric**, a `no-drag` placed on a container digs everything that this container covers. Marking the sheets was never necessary.
 
 ```css
-/* Les meubles qui occupent réellement la bande des 60 px. */
+/* The elements that actually occupy the 60 px band. */
 html[data-desktop-app] :is(.app-shell > div > header, .sidebar-brand-row)
   :is(a, button, input, select, textarea, [role="button"], [tabindex]) {
   -webkit-app-region: no-drag;
 }
 
-/* Les surfaces flottantes : UN rectangle chacune, sur leur racine. Elles
-   couvrent leurs propres contrôles, donc leurs descendants ne déclarent rien. */
+/* Floating surfaces: ONE rectangle each, on its root. They
+   cover their own controls, so their descendants declare nothing. */
 html[data-desktop-app] :is(
     [data-radix-popper-content-wrapper],
     [data-slot="dialog-content"],
@@ -183,16 +183,16 @@ html[data-desktop-app] :is(
 }
 ```
 
-On passe de quelques milliers de rectangles à une dizaine. À vérifier ensuite écran par écran — c'est la seule chose que la règle globale garantissait vraiment : qu'aucun contrôle des 60 premiers pixels n'est avalé par la bande. Tout ce qui vit sous 60 px n'a jamais eu besoin d'être creusé.
+We go from a few thousand rectangles to around ten. Then check screen by screen — this is the only thing that the global rule really guaranteed: that no control of the first 60 pixels is swallowed by the tape. Anything that lives under 60 px never needed to be dug.
 
-#### P2. Le board rejoue tout, à chaque rendu — l'amplificateur
-`components/issue-card.tsx` fait 1483 lignes, `memo` n'y est importé nulle part (l.3), ni pour `IssueCard` (l.876) ni pour `IssueCardBody` (l.640) ni pour les colonnes. Chaque carte exécute ~15 hooks (six `useTranslations`, `useAuth` l.946, `useSortable` l.948, trois contextes d'agent, `usePlanGates` l.954 = 2 observateurs react-query, `useProjectGitLinkQuery` l.958, `useAttachmentUploads`, `useFileDrop`…). Trois postes s'y ajoutent, tous du **contenu de menu fermé** :
+#### P2. The board replays everything, with each rendition — the amplifier
+`components/issue-card.tsx` is 1483 lines, `memo` is not imported anywhere (l.3), neither for `IssueCard` (l.876) nor for `IssueCardBody` (l.640) nor for the columns. Each card runs ~15 hooks (six `useTranslations`, `useAuth` l.946, `useSortable` l.948, three agent contexts, `usePlanGates` l.954 = 2 react-query observers, `useProjectGitLinkQuery` l.958, `useAttachmentUploads`, `useFileDrop`…). Three positions are added, all **closed menu content**:
 
-- `components/agent/use-agent-menu-actions.tsx:216-231` : neuf callbacks en dépendances, tous fabriqués inline dans `issue-card.tsx:1202-1215` — le `useMemo` ne tombe donc **jamais** juste, et refabrique ~20 objets d'action, ~16 icônes JSX et une douzaine de `t(...)` par carte et par rendu.
-- `components/issue-card.tsx:709` : `plainPreview(issue.description)` sans memo, 8 regex (dont `/```[\s\S]*?```/g` non ancré, `/^\s{0,3}#{1,6}\s+/gm`, `/^\s*[-*+]\s+/gm`, l.127-138) sur la description **entière**, alors que le rendu est `line-clamp-3`.
-- Les cinq pickers (`:166`, `:206`, `:254`, `:360`, `:423`) reconstruisent leurs tableaux d'options avec un JSX `icon` par entrée, sur des sources elles-mêmes neuves (`:823` `members={[...memberMap.values()]}`, `:847` idem catégories).
+- `components/agent/use-agent-menu-actions.tsx:216-231`: nine callbacks in dependencies, all made inline in `issue-card.tsx:1202-1215` — the `useMemo` therefore **never** falls correctly, and remanufactures ~20 action objects, ~16 JSX icons and a dozen `t(...)` per card and per rendering.
+- `components/issue-card.tsx:709`: `plainPreview(issue.description)` without memo, 8 regex (including `/```[\s\S]*?```/g` unanchored, `/^\s{0,3}#{1,6}\s+/gm`, `/^\s*[-*+]\s+/gm`, l.127-138) on the **entire** description, while the rendering is `line-clamp-3`.
+- The five pickers (`:166`, `:206`, `:254`, `:360`, `:423`) rebuild their options tables with one JSX `icon` per entry, on new sources themselves (`:823` `members={[...memberMap.values()]}`, `:847` same categories).
 
-Rien de tout cela n'est une source par-frame — c'est ce qui transforme **un** rendu de provider ou **un** franchissement de seuil de scroll en frame longue. À corriger **après** C5 et C6, sinon `memo` ne mordra pas : `IssueCard` reste abonnée à `useAuth` et aux trois contextes d'agent, qui traversent `memo` sans le voir.
+None of this is a per-frame source — it's what turns **a** provider rendering or **a** scroll threshold crossing into a long frame. To be corrected **after** C5 and C6, otherwise `memo` will not bite: `IssueCard` remains subscribed to `useAuth` and the three agent contexts, which pass through `memo` without seeing it.
 
 ```tsx
 const description = useMemo(
@@ -201,63 +201,63 @@ const description = useMemo(
 );
 ```
 
-Et vérifier ce que publient `useAgentActive` / `useAgentHasSession` / `useIssuePr` : si l'un expose une value non mémoïsée, il annule `memo` sur toutes les cartes à chaque événement d'agent. Ces trois contextes n'ont pas été ouverts par cet audit.
+And check what `useAgentActive` / `useAgentHasSession` / `useIssuePr` publishes: if one exposes an unremembered value, it cancels `memo` on all cards at each agent event. These three contexts were not opened by this audit.
 
-#### P3. Le voile du panneau latéral floute le viewport pendant toute la lecture d'un ticket
-`node_modules/mangue-ui/src/components/ui/side-panel.tsx:93` : `fixed inset-0 isolate z-50 bg-black/10 supports-backdrop-filter:backdrop-blur-xs`. Monté par `components/issue-side-panel.tsx:755` — le geste le plus fréquent du produit. Même motif en `dialog.tsx:89`, `sheet.tsx:40`, `alert-dialog.tsx:61`. mangue-ui 0.5.1 résout ses exports sur `./src`, donc ce sont bien ces classes qui partent en prod.
+#### P3. The side panel veil blurs the viewport while reading a ticket
+`node_modules/mangue-ui/src/components/ui/side-panel.tsx:93`: `fixed inset-0 isolate z-50 bg-black/10 supports-backdrop-filter:backdrop-blur-xs`. Edited by `components/issue-side-panel.tsx:755` — the most frequent gesture of the product. Same pattern in `dialog.tsx:89`, `sheet.tsx:40`, `alert-dialog.tsx:61`. mangue-ui 0.5.1 resolves its exports to `./src`, so it is these classes that go into production.
 
-Deux nuances à garder en tête, qui empêchent de le classer haut : le voile bloque le survol derrière lui (la source de repaint la plus fréquente disparaît), et le contenu du panneau est peint **au-dessus** du voile (taper dans la description ne re-déclenche pas le filtre). Ce qui repeint vraiment derrière : les mises à jour temps réel et les animations framer du board.
+Two nuances to keep in mind, which prevent it from being ranked high: the veil blocks hovering behind it (the most frequent source of repaint disappears), and the content of the panel is painted **above** the veil (typing in the description does not re-trigger the filter). What really stands out: the real-time updates and framer animations of the board.
 
-Neutraliser d'un bloc, **hors de tout `@layer`** — en Tailwind v4 les utilitaires sont dans `@layer utilities`, une règle non layerisée les bat quelle que soit la spécificité :
+Neutralize in one block, **out of all `@layer`** — in Tailwind v4 the utilities are in `@layer utilities`, a non-layered rule beats them whatever the specificity:
 
 ```css
-/* app/globals.css, hors @layer : un flou plein viewport pour 10 % de noir sur
-   un fond déjà uni ne se voit pas, et coûte une surface intermédiaire à chaque
-   repaint du board derrière. */
+/* app/globals.css, outside @layer: a full-viewport blur for 10% black over
+   an already solid background is not visible, and costs an intermediate surface on each
+   repaint of the board behind it. */
 [data-slot$="-overlay"] { backdrop-filter: none !important; }
 ```
 
-Vérifier ensuite à l'œil que `bg-black/10` sépare encore assez en thème clair ; monter à `bg-black/20` coûte zéro frame là où le flou en coûte à chaque repaint.
+Then check by eye that `bg-black/10` still separates sufficiently into a clear theme; going up to `bg-black/20` costs zero frames where blurring costs each repaint.
 
-#### P4. Le popover d'actions de la palette entre en boucle de layout forcé à chaque flèche
-`lib/command-palette/components/ActionsPopover.tsx:121-131` : `getBoundingClientRect()` puis `setPosition({ top, left })` — objet neuf, donc jamais de bail-out — abonné en `window.addEventListener("scroll", updatePosition, true)` (l.135). Le déclencheur n'est pas le scroll de page (l'ancre est `styles.searchView`, dans la modale fixe de la palette) mais **interne** : `:189-196` appelle `scrollIntoView({ behavior: "smooth" })` à chaque changement d'index, un défilement animé qui émet ~60 événements/s, tous captés en capture. Chaque flèche pressée dans le dropdown ouvre donc une boucle de layout forcé pendant ~300 ms.
+#### P4. The palette actions popover enters a forced layout loop at each arrow
+`lib/command-palette/components/ActionsPopover.tsx:121-131`: `getBoundingClientRect()` then `setPosition({ top, left })` — new object, therefore never bail-out — subscribed in `window.addEventListener("scroll", updatePosition, true)` (l.135). The trigger is not the page scroll (the anchor is `styles.searchView`, in the fixed modal of the palette) but **internal**: `:189-196` calls `scrollIntoView({ behavior: "smooth" })` at each index change, an animated scroll which emits ~60 events/s, all captured in capture. Each arrow pressed in the dropdown therefore opens a forced layout loop for ~300 ms.
 
-Le correctif minimal et exact est de **supprimer** l'écouteur, pas de le throttler :
+The minimal and exact fix is ​​to **remove** the listener, not throttle it:
 
 ```tsx
-// ActionsPopover.tsx:133-140 — l'ancre est dans la modale fixe de la palette :
-// elle ne bouge pas au scroll de page. Le seul scroll qui atteignait cet
-// écouteur était celui, animé, du scrollIntoView l.189-196.
+// ActionsPopover.tsx:133-140 — the anchor is inside the palette's fixed modal:
+// it does not move with page scrolling. The only scroll that reached this
+// listener was the animated scrollIntoView at l.189-196.
 updatePosition();
 window.addEventListener("resize", updatePosition);
 return () => window.removeEventListener("resize", updatePosition);
 ```
 
-Et garder un bail-out d'identité pour le resize : `setPosition((prev) => prev && prev.top === top && prev.left === left ? prev : { top, left })`.
+And keep an identity bail-out for the resize: `setPosition((prev) => prev && prev.top === top && prev.left === left ? prev : { top, left })`.
 
-#### P5. La persistance du cache react-query, à mesurer avant de toucher
-`lib/query-provider.tsx:144-149`. La chaîne est vérifiée dans les libs : `persist.js:53-58` réagit à `added`/`removed`/`updated`, appelle `persistQueryClientSave` qui exécute `dehydrate` **sans** throttle, puis `persistClient` — seul throttlé — dont le corps est `JSON.stringify` + `localStorage.setItem`, synchrones sur le thread principal. `gcTime` est à 24 h (l.45), donc rien ne sort du cache.
+#### P5. The persistence of the react-query cache, to measure before touching
+`lib/query-provider.tsx:144-149`. The string is checked in the libs: `persist.js:53-58` reacts to `added`/`removed`/`updated`, calls `persistQueryClientSave` which executes `dehydrate` **without** throttle, then `persistClient` — only throttled — whose body is `JSON.stringify` + `localStorage.setItem`, synchronous on the main thread. `gcTime` is at 24 h (l.45), so nothing comes out of the cache.
 
-Trois rectifications au constat d'origine : le throttle est à front **traînant**, donc l'écriture ne tombe pas « pile pendant l'animation d'ouverture » d'un menu — c'est un à-coup périodique, décorrélé du geste ; le coût n'est pas dans `dehydrate` (qui ne clone rien) ; et les « 5-20 ms » sont une estimation, pas une lecture. **Rien ne justifie de toucher à ce fichier avant d'avoir mesuré** `localStorage.getItem("minddy.query-cache").length` sur un vrai board. Sous ~100 Ko, il n'y a rien à corriger ici — sauf C7, qui est un bug de filtre, pas un arbitrage de perf.
+Three corrections to the original observation: the throttle is at **trailing** front, so the writing does not fall “right during the opening animation” of a menu — it is a periodic jerk, uncorrelated with the gesture; the cost is not in `dehydrate` (which does not clone anything); and the "5-20 ms" is an estimate, not a reading. **There is no reason to touch this file before measuring** `localStorage.getItem("minddy.query-cache").length` on a real board. Under ~100 KB, there is nothing to fix here — except C7, which is a filter bug, not a performance arbitration.
 
-Si la mesure justifie le geste : enveloppe `requestIdleCallback` + throttle 10 s, **avec un vidage sur `pagehide` et sur `visibilitychange`** — sans quoi un rechargement jette jusqu'à 10 s d'écritures en attente, alors que la persistance n'existe que pour le rechargement (MIN-89).
+If the measure justifies the gesture: envelope `requestIdleCallback` + throttle 10 s, **with a dump on `pagehide` and on `visibilitychange`** — without which a reload throws up to 10 s of pending writes, while persistence only exists for reloading (MIN-89).
 
-#### P6. Le correcteur orthographique n'est jamais coupé, et ses suggestions sont inatteignables
-`desktop/src/main.ts:264-276` : le bloc `webPreferences` énumère `contextIsolation`, `nodeIntegration`, `sandbox`, `webviewTag`, `backgroundThrottling` — pas `spellcheck`, qui vaut `true`. Sur macOS, chaque modification de texte déclenche un aller-retour vers `NSSpellChecker` sur le thread UI du process navigateur. Le service est intégralement perdu : `desktop/src/menu.ts` ne construit aucun menu contextuel et `main.ts` n'écoute jamais `context-menu` — il ne reste que les soulignements.
+#### P6. The spell checker is never cut off, and its suggestions are unattainable
+`desktop/src/main.ts:264-276`: The `webPreferences` block lists `contextIsolation`, `nodeIntegration`, `sandbox`, `webviewTag`, `backgroundThrottling` — not `spellcheck`, which is `true`. On macOS, each text modification triggers a round trip to `NSSpellChecker` on the UI thread of the browser process. The service is completely lost: `desktop/src/menu.ts` does not build any context menu and `main.ts` never listens to `context-menu` — only the underlines remain.
 
 ```ts
       webviewTag: false,
-      // Le correcteur passe par NSSpellChecker sur macOS, à chaque modification
-      // de texte, sur le thread UI du process navigateur — et aucune de ses
-      // suggestions n'est atteignable (aucun menu contextuel n'est construit).
+      // The spell checker goes through NSSpellChecker on macOS for every text
+      // modification, on the browser process's UI thread — and none of its
+      // suggestions can be reached (no context menu is built).
       spellcheck: false,
       backgroundThrottling: true,
 ```
 
-#### P7. Le masque de fondu est posé sur les conteneurs qui défilent
-`lib/use-scroll-fade.ts:112-118` rend `WebkitMaskImage`/`maskImage` dans `scrollProps.style`, appliqué au scroller lui-même : `components/kanban-column.tsx:111` (une instance par colonne), `components/global-kanban-column.tsx:125`, et `components/kanban-board.tsx:371` — un masque *à l'intérieur* d'un masque. Un scroller masqué ne peut plus être fait défiler par translation de calque : le masque est ancré à la boîte de bordure et le contenu doit être re-composité à chaque frame. S'y ajoute, par colonne, un `ResizeObserver` **et** un `MutationObserver` en `childList + subtree` (`:100-103`).
+#### P7. The fade mask is placed on the scrolling containers
+`lib/use-scroll-fade.ts:112-118` renders `WebkitMaskImage`/`maskImage` in `scrollProps.style`, applied to the scroller itself: `components/kanban-column.tsx:111` (one instance per column), `components/global-kanban-column.tsx:125`, and `components/kanban-board.tsx:371` — a mask *within* a mask. A hidden scroller can no longer be scrolled by layer translation: the mask is anchored to the border box and the content must be re-composed every frame. Added to this, per column, is a `ResizeObserver` **and** a `MutationObserver` in `childList + subtree` (`:100-103`).
 
-Sortir le fondu du scroller — `edges` est déjà rendu par le hook (`:123`), il n'y a rien à mesurer en plus :
+Exit the scroller fade — `edges` is already rendered by the hook (`:123`), there is nothing more to measure:
 
 ```tsx
 <div className="relative flex min-h-0 flex-1 flex-col">
@@ -267,122 +267,122 @@ Sortir le fondu du scroller — `edges` est déjà rendu par le hook (`:123`), i
 </div>
 ```
 
-#### P8. La boucle du lasso alterne écritures et lectures de layout à chaque frame
-`components/marquee-selection.tsx:319` appelle `autoScroll()` **inconditionnellement**, avant de tester `dirty`. `autoScroll` (l.288-315) enchaîne : lecture de rect → écriture de `scrollLeft` → relecture → `document.elementFromPoint` (qui force une mise à jour de style + layout après l'écriture qui précède) → remontée des ancêtres avec `getComputedStyle().overflowY` et lectures de `scrollHeight`/`clientHeight` par niveau → écriture de `scrollTop`. Deux à trois layouts forcés par frame, y compris pointeur immobile. Puis `apply()` écrit les styles de l'overlay **avant** de faire N `getBoundingClientRect()`.
+#### P8. The lasso loop alternates layout writes and reads each frame
+`components/marquee-selection.tsx:319` calls `autoScroll()` **unconditionally**, before testing `dirty`. `autoScroll` (l.288-315) continues: reading of rect → writing of `scrollLeft` → rereading → `document.elementFromPoint` (which forces an update of style + layout after the previous writing) → raising the ancestors with `getComputedStyle().overflowY` and readings of `scrollHeight`/`clientHeight` per level → write `scrollTop`. Two to three forced layouts per frame, including stationary pointer. Then `apply()` writes the overlay styles **before** doing N `getBoundingClientRect()`.
 
-Résoudre le scroller dans le handler `pointermove` plutôt qu'à chaque frame, ne mesurer que si `dx !== 0 || dy !== 0`, et dans `apply()` **lire avant d'écrire** — un seul layout par frame.
+Resolve the scroller in the `pointermove` handler rather than every frame, only measure if `dx !== 0 || dy !== 0`, and in `apply()` **read before writing** — only one layout per frame.
 
 ---
 
-### Bas de tableau — à faire en passant, sans en attendre d'image
+### Bottom of the table — to do in passing, without waiting for an image
 
-| Défaut | Fichier:ligne | Geste |
+| Default | File:line | Gesture |
 | --- | --- | --- |
-| Chaque `<Tooltip>` monte son propre `TooltipProvider` (8-10 par carte) | `node_modules/mangue-ui/src/components/ui/tooltip.tsx:21-28` | Retirer le provider du wrapper, en monter **un** à la racine. Corrige aussi un bug : le « skip delay » de Radix ne marche qu'entre infobulles d'un même provider. |
-| Flou invisible sous un fond à 95 % | `components/assistant-fab.tsx:102`, `components/pages/page-toc.tsx:215`, `components/bulk-issue-actions.tsx:81` | Retirer `backdrop-blur-*`. C'est du travail GPU gratuit, pas une correction de perf — ne pas l'inscrire au budget. |
-| `backdrop-filter: blur(0.5px)` plein écran sur le voile de la palette | `lib/command-palette/styles/CommandPalette.module.css:20` | Supprimer la ligne, **et rien d'autre** : `.overlay` n'a aucun `background` (l.12-22) ; ajouter un scrim serait un changement de design. |
-| Le visage de Numo anime des attributs SVG en boucle, y compris masqué sous 1200 px (`max-desktop:hidden` masque sans démonter) | `components/assistant-fab.tsx:112`, `components/mobile-nav-actions.tsx:34` | `animated={false}` — le signal d'activité passe déjà par `AgentBeam` (`assistant-fab.tsx:85-90`). |
-| Le FAB se re-rend à chaque token SSE pour lire un booléen | `components/assistant-fab.tsx:39`, `lib/assistant-chat-context.tsx:195-216` | Scinder le contexte : un `AssistantBusyContext` séparé. Ne mord que panneau fermé (le FAB rend `null` panneau ouvert, l.62). |
-| `usePaletteStore()` appelé nu, sans sélecteur | `lib/command-palette/hooks/useMobileGestures.ts:77` | Quatre sélecteurs. Le fichier consommateur documente lui-même la règle (`SearchView.tsx:113-122`). |
-| Le preload bloque le renderer sur un IPC synchrone pour lire une version | `desktop/src/preload.ts:24` | `additionalArguments: ["--minddy-version=…"]`. Coût de **premier rendu** seulement. |
-| `Analytics` + `SpeedInsights` dans le layout racine | `app/layout.tsx:185-186` | Les descendre dans `(marketing)` et `(legal)`. |
-| `onPointerMove={openRail}` sur toute la barre latérale | `components/app-sidebar.tsx:822` | `onPointerMove={overlay && !hovered ? openRail : undefined}`. |
+| Each `<Tooltip>` builds its own `TooltipProvider` (8-10 per card) | `node_modules/mangue-ui/src/components/ui/tooltip.tsx:21-28` | Remove the provider from the wrapper, mount **one** at the root. Also fixes a bug: the Radix “skip delay” only works between tooltips from the same provider. |
+| Invisible blur under 95% background | `components/assistant-fab.tsx:102`, `components/pages/page-toc.tsx:215`, `components/bulk-issue-actions.tsx:81` | Remove `backdrop-blur-*`. This is free GPU work, not a performance fix — don't budget for it. |
+| `backdrop-filter: blur(0.5px)` full screen on palette veil | `lib/command-palette/styles/CommandPalette.module.css:20` | Delete the line, **and nothing else**: `.overlay` has no `background` (l.12-22); adding a scrim would be a design change. |
+| Numo's face animates SVG attributes in a loop, including masking under 1200 px (`max-desktop:hidden` mask without unmounting) | `components/assistant-fab.tsx:112`, `components/mobile-nav-actions.tsx:34` | `animated={false}` — the activity signal already goes through `AgentBeam` (`assistant-fab.tsx:85-90`). |
+| The FAB goes back to each SSE token to read a boolean | `components/assistant-fab.tsx:39`, `lib/assistant-chat-context.tsx:195-216` | Split context: a separate `AssistantBusyContext`. Only bites closed panel (the FAB makes `null` open panel, l.62). |
+| `usePaletteStore()` called bare, without selector | `lib/command-palette/hooks/useMobileGestures.ts:77` | Four selectors. The consumer file itself documents the rule (`SearchView.tsx:113-122`). |
+| The preload blocks the renderer on a synchronous IPC to read a version | `desktop/src/preload.ts:24` | `additionalArguments: ["--minddy-version=…"]`. Cost of **first delivery** only. |
+| `Analytics` + `SpeedInsights` in root layout | `app/layout.tsx:185-186` | Lower them into `(marketing)` and `(legal)`. |
+| `onPointerMove={openRail}` on entire sidebar | `components/app-sidebar.tsx:822` | `onPointerMove={overlay && !hovered ? openRail : undefined}`. |
 
 ---
 
-## 3. Le plan d'action
+## 3. The action plan
 
-### (a) Moins d'une heure, meilleur rapport gain/risque
+### (a) Less than an hour, best gain/risk ratio
 
-Dans cet ordre — chacun est indépendant des autres, aucun ne demande de mesure préalable :
+In this order — each is independent of the others, none requires prior action:
 
-1. **`modal={false}` par défaut sur `DropdownMenu`** dans mangue-ui (C1). Une ligne, 20 dropdowns corrigés d'un coup. Le dépôt a déjà 6 sites qui le passent à la main, avec la justification.
-2. **Retirer les deux prises `drag` animées** de globals.css (C2). Deux suppressions ; la bande fixe fait déjà le travail.
-3. **Dédupliquer `applyWindowButtons`** (C3), en gardant le `publishWindowButtons` inconditionnel.
-4. **Garder `updateActiveColumn` sous 640 px** (C5).
-5. **Corriger `["agent-activity"]` → `["agent-active-issues"]`** et le test qui verrouille la mauvaise clé (C7).
-6. **Mémoïser les trois values de contexte** + bail-out sur `access_token` (C6).
-7. **Supprimer l'écouteur `scroll` de `ActionsPopover`** (P4).
+1. **`modal={false}` defaults to `DropdownMenu`** in mango-ui (C1). One line, 20 dropdowns fixed at once. The repository already has 6 sites passing it by hand, with justification.
+2. **Remove the two animated `drag` sockets** from globals.css (C2). Two deletions; the fixed band already does the job.
+3. **Deduplicate `applyWindowButtons`** (C3), keeping the `publishWindowButtons` unconditional.
+4. **Keep `updateActiveColumn` under 640 px** (C5).
+5. **Fix `["agent-activity"]` → `["agent-active-issues"]`** and the test that locks the wrong key (C7).
+6. **Memorize the three context values** + bail-out on `access_token` (C6).
+7. **Remove `scroll` listener from `ActionsPopover`** (P4).
 8. **`spellcheck: false`** (P6).
 
-### (b) Un vrai chantier
+### (b) A substantial workstream
 
-- **Refondre le creusement `no-drag` par surface** (P1). C'est le poste au plus fort gain attendu, mais son correctif change un invariant de sécurité du produit : « rien d'interactif dans les 60 px ne devient une poignée de fenêtre ». Il faut repasser sur les six écrans listés dans le commentaire MIN-292, un par un, en fenêtré **et** en plein écran, rail replié **et** déplié.
-- **Mémoïser le board** (P2) : `React.memo` sur `IssueCard`/`IssueCardBody`/les colonnes, callbacks stables dans `kanban-column.tsx` (prendre l'`issue` en argument, comme `onUpdateIssue` le fait déjà), `extraActions` calculé à l'ouverture du menu et non à chaque rendu, les listes de pickers remontées au board à côté de `memberMap`/`categoryMap`/`objectiveMap` (`kanban-board.tsx:108-121`), `agentsEnabled` résolu une fois par board. **Après (a).6**, sinon la mémoïsation ne mord pas. Et ouvrir au passage les trois contextes d'agent, que cet audit n'a pas lus.
-- **Sortir le masque des scrollers** (P7) et **corriger la boucle du lasso** (P8).
-- **Un `TooltipProvider` unique** dans mangue-ui, avec la vérif qu'aucune infobulle ne se retrouve orpheline (Radix lève, la suite le dira).
+- **Recast the `no-drag` digging by surface** (P1). This is the position with the highest expected gain, but its fix changes a product security invariant: “nothing interactive in the 60 px becomes a window handle”. You must return to the six screens listed in the MIN-292 comment, one by one, windowed **and** full screen, rail folded **and** unfolded.
+- **Memorize the board** (P2): `React.memo` on `IssueCard`/`IssueCardBody`/the columns, stable callbacks in `kanban-column.tsx` (take the `issue` as an argument, like `onUpdateIssue` already does), `extraActions` calculated when opening the menu and not at each rendering, the lists of pickers reported to the board next to `memberMap`/`categoryMap`/`objectiveMap` (`kanban-board.tsx:108-121`), `agentsEnabled` resolved once per board. **After (a).6**, otherwise the memorization does not bite. And open the three agent contexts, which this audit has not read.
+- **Remove the scrollers mask** (P7) and **correct the lasso loop** (P8).
+- **A unique `TooltipProvider`** in mango-ui, with the check that no tooltip is orphaned (Radix raises, the rest will tell).
 
-### (c) À mesurer avant de toucher
+### (c) Measure before touching
 
-- **Le modèle de coût des régions annotées** (P1). Tant qu'un profil n'a pas montré le poste, l'ordre entre (a) et (b) reste une hypothèse. C'est la mesure la plus rentable de tout ce document.
-- **La taille du snapshot localStorage** (P5). `localStorage.getItem("minddy.query-cache").length` sur un board réel. Sous ~100 Ko, on ne touche à rien.
-- **`issues.length` sur un vrai projet** avant de borner `components/relation-target-picker.tsx:38`, qui monte tous les tickets ouverts sans virtualisation. En dessous de ~80 candidats, le défaut ne coûte rien.
-- **Le temps GPU des voiles** (P3) avant d'aller au-delà de la règle `[data-slot$="-overlay"]`.
-
----
-
-## 4. Ce qui a été écarté, et pourquoi
-
-**Le `backdrop-blur` du FAB comme cause des drops diffus.** Le code est bien celui qu'on décrit (`assistant-fab.tsx:102`, bouton `fixed z-40` monté sur toute l'app), mais l'élément fait `h-10 w-10 md:h-11 md:w-11` (l.101) : la lecture du fond et la convolution sont bornées à ~2 000 px², côté GPU. Il n'y a pas de « surface de la taille du viewport re-rasterisée à chaque frame ». Le flou est invisible sous `bg-card/95` — c'est du rangement, pas une piste.
-
-**Le voile de la palette comme cause de saccade continue.** `blur(0.5px)` est une convolution triviale et ne dure que le temps d'ouverture. On retire la ligne parce qu'elle ne sert à personne, pas parce qu'elle rendra une image. Et surtout : **ne pas ajouter de `background`** en compensation, le voile est volontairement transparent (`CommandPalette.module.css:12-22`).
-
-**Le `backdrop-filter` en transition du panneau Numo** (`components/assistant/panel-geometry.ts:62`). Le lien annoncé — « à chaque ouverture » — est faux : à l'ouverture le panneau arrive en mode compact, où l.63-64 pose `!bg-transparent supports-backdrop-filter:!backdrop-blur-none` ; il n'y a rien à interpoler, et la valeur initiale d'une transition ne s'anime pas au montage. Seule la bascule compact⇄étendu paie, geste rare. **Et ne pas toucher à `.assistant-panel-morph`** (`app/globals.css`, bloc `@layer utilities`) : le commentaire juste au-dessus explique que l'ancrage `right`/`bottom` dans les deux modes *est* ce qui fait le mouvement voulu.
-
-**Le `getBoundingClientRect` du bloc zen** (`components/zen-nav-overlay.tsx:101`). Tant que le pointeur reste du même côté de la frontière, `setOpen` baille, aucun rendu n'a lieu, la mise en page reste **propre** — et un rect sur un layout propre est servi depuis le cache. Il n'y a de reflow forcé qu'à l'instant de la bascule, une fois par entrée et une fois par sortie. Portée : mode zen, bloc déplié. Le correctif proposé (rect en cache relu au `resize`) **introduirait une régression** : la zone testée deviendrait fausse dès qu'un changement de mise en page la déplace sans redimensionner la fenêtre (repli du rail, barre secondaire téléportée) — exactement le bug que ce code a été écrit pour supprimer. **Ne rien changer est la bonne réponse.**
-
-**Couper le poll d'activité agent** (`agent-activity-context.tsx:72`). Le pont temps réel n'invalide **jamais** `["agent-active-issues", …]` (`lib/realtime-provider.tsx:409-427` et `:451-462` invalident `ALL_AGENT_SESSIONS_KEY`, `["agent-runs","issue",id]`, `["pull-request",id]`). Passer `refetchInterval` à `false` gèlerait le halo « Numo travaille » et les pastilles de PR jusqu'au prochain montage. Si on veut y toucher un jour : d'abord ajouter l'invalidation manquante, ensuite allonger le backstop à 60 s — jamais le supprimer.
-
-**Couper l'invalidation temps réel de `["billing","usage"]`** (`realtime-provider.tsx:201`). C'est la fonction que la migration `20260818090000_billing_realtime.sql` a été écrite pour servir : la jauge du header qui descend pendant qu'un agent travaille (MIN-72). Une fois `agentsEnabled` hissé au board, la question ne se pose plus — il ne reste qu'un observateur, et le rafraîchir ne re-rend plus aucune carte.
-
-**Déplacer les trois requêtes de `CreateProvider` sous `{target && …}`.** Elles sont déjà inertes : `useMembersQuery(target, !!target)` (`create-context.tsx:143`), et `useCategoriesQuery`/`useObjectivesQuery` gardent `enabled = !!projectId`. `target` n'est posé qu'à la première ouverture d'un dialogue (l.125). Leurs clés valent `["members",""]` etc., qu'aucune invalidation n'atteint. Du travail pour zéro gain, qui déplacerait en prime l'état d'un dialogue délibérément laissé monté (l.124).
-
-**Les 100 observateurs `useProjectGitLinkQuery` par board** (`issue-card.tsx:958`). Ils partagent **une** Query : react-query dédoublonne, il n'y a pas 100 requêtes. Et la clé n'est écrite qu'en liant ou déliant un dépôt — pas une source continue. Le geste reste bon (hisser au board) mais pour l'hygiène, pas pour une image.
-
-**`useMobileGestures` comme cause de sursaut.** Le re-render de `SearchView` qu'il provoque est superficiel : `filteredItems`, `itemsWithCalculator`, `groupStartIndices` (`SearchView.tsx:455-460`) sont des `useMemo` dont aucune dépendance ne bouge quand seuls `actionsPopoverQuery`/`actionActiveIndex` changent — le scoring n'est pas rejoué, et `ResultsList` est virtualisée. Quelques dixièmes de milliseconde. On corrige parce que c'est gratuit et que le fichier se contredit lui-même, pas pour le gain.
-
-**Le premier correctif proposé pour l'observateur des boutons de fenêtre** (une observation `attributes`-only avec un `known` set d'enfants de `<body>`). Il rouvre le bug que MIN-291 a fermé : sans `childList`, un portail déjà connu qui reçoit son contenu plus tard n'émet plus rien, et un dialogue déjà ouvert au moment du premier abonnement devient invisible pour toujours — feux macOS en travers du coin du dialogue. La forme retenue en C4 est celle à deux observateurs distincts.
+- **The cost model of annotated regions** (P1). Until a profile shows the position, the order between (a) and (b) remains an assumption. This is the most cost-effective measure in this entire document.
+- **The size of the localStorage snapshot** (P5). `localStorage.getItem("minddy.query-cache").length` on a real board. Under ~100 KB, we don't touch anything.
+- **`issues.length` on a real project** before limiting `components/relation-target-picker.tsx:38`, which mounts all open tickets without virtualization. Below ~80 candidates, the default costs nothing.
+- **GPU time of sails** (P3) before going beyond the `[data-slot$="-overlay"]` rule.
 
 ---
 
-## 5. La manip de mesure
+## 4. What was excluded, and why
 
-### Ouvrir les DevTools de la fenêtre Electron
+**The `backdrop-blur` of the FAB as the cause of the diffuse drops.** The code is indeed the one described (`assistant-fab.tsx:102`, `fixed z-40` button mounted on the entire app), but the element does `h-10 w-10 md:h-11 md:w-11` (l.101): the reading of the background and the convolution are limited to ~2,000 px², on the GPU side. There is no “viewport size surface re-rastered every frame”. The blur is invisible under `bg-card/95` — it's storage, not a lead.
 
-Il n'y a **aucun** élément de menu pour ça : `desktop/src/menu.ts` ne construit ni `toggleDevTools` ni menu contextuel, et `main.ts` n'appelle jamais `openDevTools()`. Passer par le protocole de débogage.
+**Paddle veiling as a cause of continuous jerking.** `blur(0.5px)` is a trivial convolution and only lasts the opening time. We remove the line because it is of no use to anyone, not because it will render an image. And above all: **do not add `background`** as compensation, the veil is deliberately transparent (`CommandPalette.module.css:12-22`).
+
+**The `backdrop-filter` transitioning from the Numo panel** (`components/assistant/panel-geometry.ts:62`). The announced link — “at each opening” — is false: upon opening the panel arrives in compact mode, where l.63-64 places `!bg-transparent supports-backdrop-filter:!backdrop-blur-none`; there is nothing to interpolate, and the initial value of a transition does not animate during editing. Only the compact⇄extended toggle pays, a rare gesture. **And don't touch `.assistant-panel-morph`** (`app/globals.css`, `@layer utilities` block): the comment just above explains that anchoring `right`/`bottom` in both modes *is* what makes the desired move.
+
+**The `getBoundingClientRect` of the zen block** (`components/zen-nav-overlay.tsx:101`). As long as the pointer remains on the same side of the border, `setOpen` yawns, no rendering occurs, the layout remains **clean** — and a rect on a clean layout is served from the cache. There is only a forced reflow at the moment of the switch, once per input and once per output. Range: Zen mode, block unfolded. The proposed fix (cached rect reread at `resize`) **would introduce a regression**: the tested area would become false as soon as a layout change moves it without resizing the window (rail collapse, secondary bar teleported) — exactly the bug this code was written to remove. **Change nothing is the correct answer.**
+
+**Cut agent activity poll** (`agent-activity-context.tsx:72`). The real-time bridge **never** invalidates `["agent-active-issues", …]` (`lib/realtime-provider.tsx:409-427` and `:451-462` invalidate `ALL_AGENT_SESSIONS_KEY`, `["agent-runs","issue",id]`, `["pull-request",id]`). Changing `refetchInterval` to `false` would freeze the “Numo working” halo and PR pellets until the next edit. If we want to touch it one day: first add the missing invalidation, then extend the backstop to 60 s — never delete it.
+
+**Cut real-time invalidation of `["billing","usage"]`** (`realtime-provider.tsx:201`). This is the function that the `20260818090000_billing_realtime.sql` migration was written to serve: the header gauge that goes down while an agent is working (MIN-72). Once `agentsEnabled` is placed on the board, the question no longer arises - only one observer remains, and refreshing it no longer returns any cards.
+
+**Move the three requests from `CreateProvider` under `{target && …}`.** They are already inert: `useMembersQuery(target, !!target)` (`create-context.tsx:143`), and `useCategoriesQuery`/`useObjectivesQuery` keep `enabled = !!projectId`. `target` is only placed when a dialogue is first opened (l.125). Their keys are worth `["members",""]` etc., which no invalidation affects. Work for zero gain, which would also displace the state of a dialogue deliberately left edited (l.124).
+
+**The 100 observers `useProjectGitLinkQuery` per board** (`issue-card.tsx:958`). They share **one** Query: react-query duplicates, there are not 100 queries. And the key is only written by linking or unlinking a repository — not a continuous source. The gesture remains good (hoisting on the board) but for hygiene, not for an image.
+
+**`useMobileGestures` as cause of startle.** The re-rendering of `SearchView` that it causes is superficial: `filteredItems`, `itemsWithCalculator`, `groupStartIndices` (`SearchView.tsx:455-460`) are `useMemo` of which no dependency moves when alone `actionsPopoverQuery`/`actionActiveIndex` changes — scoring is not replayed, and `ResultsList` is virtualized. A few tenths of a millisecond. We correct because it's free and the file contradicts itself, not for profit.
+
+**The first proposed fix for the window button watcher** (a `attributes`-only watcher with a `known` child set of `<body>`). It reopens the bug that MIN-291 closed: without `childList`, an already known portal that receives its content later no longer emits anything, and a dialog already open at the time of the first subscription becomes invisible forever — macOS fires across the corner of the dialog. The form retained in C4 is that with two distinct observers.
+
+---
+
+## 5. The measuring procedure
+
+### Open DevTools from the Electron window
+
+There is **no** menu item for this: `desktop/src/menu.ts` does not construct `toggleDevTools` or context menu, and `main.ts` never calls `openDevTools()`. Go through the debug protocol.
 
 ```bash
 cd /Users/clementguerin/Projets/minddy-ticketing/minddy/desktop
 npm run build && npx electron . --remote-debugging-port=9222
 ```
 
-Puis, dans Chrome : `chrome://inspect` → **Configure…** → ajouter `localhost:9222` → **inspect** sur la cible `www.minddy.app`. On obtient les DevTools complets, panneau Performance inclus, sur le renderer de la fenêtre.
+Then, in Chrome: `chrome://inspect` → **Configure…** → add `localhost:9222` → **inspect** on target `www.minddy.app`. We obtain the complete DevTools, Performance panel included, on the window renderer.
 
-Sur un binaire déjà installé, le même drapeau marche :
+On an already installed binary, the same flag works:
 `/Applications/minddy.app/Contents/MacOS/minddy --remote-debugging-port=9222`
 
-⚠️ Un seul process lourd à la fois sur ce Mac : fermer Playwright, les serveurs de dev et les autres fenêtres Electron avant d'enregistrer, sinon le profil mesure la contention et pas l'app.
+⚠️ Only one heavy process at a time on this Mac: close Playwright, the dev servers and the other Electron windows before saving, otherwise the profile measures the contention and not the app.
 
-### Le test qui tranche, avant tout profil (30 secondes)
+### The test that decides, before any profile (30 seconds)
 
-Ouvrir **le même board**, sur le même compte, dans Chrome (`https://www.minddy.app`) et dans l'app de bureau, côte à côte. Survoler la barre latérale, ouvrir un dropdown de statut sur une carte, promener le curseur.
+Open **the same board**, on the same account, in Chrome (`https://www.minddy.app`) and in the desktop app, side by side. Hover over the sidebar, open a status dropdown on a card, move the cursor.
 
-- Chrome fluide, bureau saccadé → la thèse du §1 tient. `data-desktop-app` n'existe pas dans un navigateur, aucune des règles de `globals.css:1682-1800` ne s'y applique, et `getDesktopBridge()` est nul : P1, C2, C3 et le coût de C4 sont les seuls suspects restants.
-- Les deux saccadent pareil → la thèse tombe. Le poste est alors dans le web (C1, C5, C6, P2), et l'ordre du plan bascule sur le palier (b).
+- Fluid Chrome, jerky desktop → the thesis of §1 holds. `data-desktop-app` does not exist in a browser, none of the rules for `globals.css:1682-1800` apply to it, and `getDesktopBridge()` is null: P1, C2, C3, and the cost of C4 are the only remaining suspects.
+- Both jerk the same → the thesis falls. The station is then in the web (C1, C5, C6, P2), and the order of the plan switches to level (b).
 
-### Lire un profil Performance sur ProMotion
+### Read a Performance profile on ProMotion
 
-L'écran est à 120 Hz : **le budget par frame est de 8,3 ms, pas 16,7.** Une tâche de 12 ms qui passe inaperçue sur un écran 60 Hz saute visiblement ici. C'est aussi pour ça que le symptôme est ressenti sur le Mac et pas ailleurs.
+The screen is 120 Hz: **budget per frame is 8.3 ms, not 16.7.** A 12 ms task that goes unnoticed on a 60 Hz screen visibly skips here. This is also why the symptom is felt on the Mac and not elsewhere.
 
-1. Panneau **Performance**, cocher **Screenshots**, régler **CPU: 4× slowdown** — le défaut cherché est un coût *proportionnel au nombre d'éléments*, le ralentissement le rend lisible sans le déformer.
-2. **Enregistrer 5 secondes** pendant ce geste précis, dans cet ordre : survoler la barre latérale d'un bord à l'autre (déclenche l'animation de largeur), ouvrir un dropdown de statut sur une carte, le fermer, promener le curseur sur la liste.
-3. Dans la piste **Main**, chercher, par ordre de valeur diagnostique :
-   - des tâches longues juste **après** chaque `Layout`, sans `Paint` derrière — signature du parcours de régions annotées (P1/C2). Elles apparaissent en « Update Layer Tree » ou en portion non attribuée de la tâche, pas sous un nom explicite : ce sont les blocs orphelins qu'il faut repérer.
-   - un `Recalculate Style` couvrant un **nombre d'éléments égal à tout le document** au moment de l'ouverture du menu — signature de `body{pointer-events:none}` (C1). La ligne « Elements affected » du détail est la preuve directe.
-   - des `Function Call` répétés portant `updateActiveColumn` / `setActiveColumn` pendant un scroll horizontal (C5).
-   - des `Recalculate Style` + `Layout` en rafale au moment où la fenêtre reprend le premier plan (C6).
-4. **L'A/B qui vaut mieux qu'une lecture d'internals** : dans l'onglet Elements, sélectionner `<html>`, retirer l'attribut `data-desktop-app`, refaire exactement le même geste et réenregistrer. Toutes les règles de la section « app de bureau » de globals.css tombent d'un coup — la fenêtre n'est plus déplaçable pendant le test, c'est le prix. Si le profil s'aplatit, P1 et C2 sont démontrés et le palier (b) devient prioritaire. Si rien ne change, on a économisé un chantier.
+1. **Performance** panel, check **Screenshots**, set **CPU: 4× slowdown** — the default sought is a cost *proportional to the number of elements*, the slowdown makes it readable without distorting it.
+2. **Record 5 seconds** during this specific gesture, in this order: hover over the sidebar from one edge to the other (triggers the width animation), open a status dropdown on a card, close it, move the cursor over the list.
+3. In the **Main** track, search, in order of diagnostic value:
+   - long tasks just **after** each `Layout`, without `Paint` behind — signature of the annotated region journey (P1/C2). They appear in the “Update Layer Tree” or in the unassigned portion of the task, not under an explicit name: these are the orphan blocks that must be identified.
+   - a `Recalculate Style` covering a **number of elements equal to the entire document** when the menu is opened — signature of `body{pointer-events:none}` (C1). The “Elements affected” line in the detail is direct proof.
+   - repeated `Function Call` carrying `updateActiveColumn` / `setActiveColumn` during a horizontal scroll (C5).
+   - bursts of `Recalculate Style` + `Layout` when the window returns to the foreground (C6).
+4. **A/B which is better than reading internals**: in the Elements tab, select `<html>`, remove the `data-desktop-app` attribute, repeat exactly the same gesture and re-record. All the rules in the “desktop app” section of globals.css fall at once — the window is no longer movable during testing, that's the price. If the profile flattens, P1 and C2 are demonstrated and stage (b) becomes priority. If nothing changes, we have saved a project.
 
-### L'écran à reproduire
+### The screen to reproduce
 
-Un **board de projet avec 60 cartes ou plus** (`/p/<clé>`), fenêtre large (rail déplié, ≥1200 px pour que la barre latérale soit rendue), thème indifférent. C'est l'écran où les trois mécanismes se croisent : le plus grand nombre d'éléments `[tabindex]`/`[role]` montés (P1), la barre latérale animée au survol (C2), les dropdowns modaux des pickers de carte (C1), et le scroller horizontal (C5). Pour la variante « curseur », ajouter un survol lent le long de la frontière du rail — c'est le geste qui déclenche à la fois l'animation de largeur, la reconstruction de région et le `RedrawTrafficLights` de C3.
+A **project board with 60 cards or more** (`/p/<clé>`), wide window (unfolded rail, ≥1200 px for the sidebar to be rendered), indifferent theme. This is the screen where the three mechanisms intersect: the largest number of mounted `[tabindex]`/`[role]` elements (P1), the animated sidebar on hover (C2), the modal dropdowns of the card pickers (C1), and the horizontal scroller (C5). For the "cursor" variant, add a slow hover along the rail border — this is the gesture that triggers both the width animation, region rebuild, and C3's `RedrawTrafficLights`.

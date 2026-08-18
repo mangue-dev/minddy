@@ -10,9 +10,9 @@ import type { FeedbackPostRow } from "@/lib/server/feedback/posts";
 import { FEEDBACK_POST_SELECT } from "@/lib/server/feedback/posts";
 
 /**
- * Garde commune des routes API internes du feedback (MIN-37) : session +
- * appartenance au projet (la mécanique standard getAuthedUser +
- * getProjectAccess), factorisée car une dizaine de routes la répètent.
+ * Common guard of internal feedback API routes (MIN-37): session +
+ * project membership (the standard mechanic getAuthedUser +
+ * getProjectAccess), factored because around ten routes repeat it.
  */
 
 export type TeamGuardResult =
@@ -38,7 +38,7 @@ export async function requireProjectMember(
   return { ok: true, userId: auth.user.id, access, supabase: auth.supabase };
 }
 
-/** Charge un post et vérifie qu'il appartient bien au projet de la route. */
+/** Load a post and check that it belongs to the road project. */
 export async function getProjectFeedbackPost(
   projectId: string,
   postId: string

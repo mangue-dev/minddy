@@ -6,16 +6,16 @@ import {
   type ShareUnlockError,
 } from "@/lib/server/share-unlock";
 
-/** Clé du namespace PublicShare, rendue sous le formulaire. */
+/** PublicShare namespace key, rendered under the form. */
 export type UnlockState = { error: ShareUnlockError } | null;
 
 /**
- * Déverrouiller une page publiée protégée par mot de passe (MIN-283).
+ * Unlock a password-protected published page (MIN-283).
  *
- * Tout ce qui touche au secret est dans `lib/server/share-unlock.ts`, partagé
- * avec la vue partagée : il ne reste ici que le chemin de retour. Pas de
- * domaine personnalisé à ménager — une page publiée répond sur `/p/<token>` et
- * nulle part ailleurs (les domaines de MIN-36 mappent un board ou une vue).
+ * Everything related to the secret is in `lib/server/share-unlock.ts`, shared
+ * with the shared view: only the return path remains here. No
+ * custom domain to spare — a published page responds to `/p/<token>` and
+ * nowhere else (MIN-36 domains map a board or a view).
  */
 export async function unlockPageShare(
   token: string,

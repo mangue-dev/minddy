@@ -3,24 +3,23 @@ import "server-only";
 import { SITE_URL } from "@/lib/site";
 
 /**
- * L'origine CANONIQUE de l'app, dérivée de l'environnement — jamais d'un
- * en-tête de requête.
+ * The CANONICAL origin of the app, derived from the environment — never from a
+ * request header.
  *
- * C'est la même règle que l'issuer OAuth, et pour la même raison : un `Host` ou
- * un `X-Forwarded-Host` est une valeur que l'APPELANT choisit. Tout lien qu'on
- * fabrique dessus part vers un domaine qu'on n'a pas décidé — et quand ce lien
- * porte un jeton (invitation, confirmation), le jeton part avec lui. Il suffit
- * de déclencher l'envoi avec le bon en-tête pour que l'e-mail légitime, expédié
- * par nous, sous notre nom, mène chez l'attaquant (MIN-351).
+ * This is the same rule as the OAuth issuer, and for the same reason: a `Host` or
+ * a `X-Forwarded-Host` is a value that the CALLER chooses. Any link that we
+ * creates on it goes to a domain that we have not decided on — and when this link
+ * carries a token (invitation, confirmation), the token goes with it. Simply
+ * trigger sending with the correct header so that the legitimate e-mail, sent
+ * by us, under our name, leads to the attacker (MIN-351).
  *
- * Quatre cas, dans cet ordre :
- * - production Vercel — le domaine canonique, quel que soit l'alias emprunté ;
- * - preview Vercel — l'URL du déploiement, pour qu'un preview reste chez lui ;
- * - production auto-hébergée — le domaine canonique configuré par l'opérateur ;
- * - poste de dev — le localhost du serveur.
+ * Four cases, in this order:
+ * - Vercel production — the domain canonical, whatever the alias borrowed;
+ * - preview Vercel — the URL of the deployment, so that a preview remains there;
+ * - self-hosted production — the canonical domain configured by the operator;
+ * - dev station — the localhost of the server.
  *
- * `SITE_URL` porte l'origine publique configurée, mais un preview Vercel la
- * remplace par son URL de déploiement (voir `lib/server/agent/origin.ts`).
+ * `SITE_URL` carries the configured public origin, but a Vercel preview replaces it with its deployment URL (see `lib/server/agent/origin.ts`).
  */
 export interface AppOriginEnvironment {
   VERCEL_ENV?: string;

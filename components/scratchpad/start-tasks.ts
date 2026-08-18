@@ -3,18 +3,18 @@ import type { Node as PMNode } from "@tiptap/pm/model";
 import { isQuestionHeading, type PlanTaskState } from "@/lib/plan";
 import type { ScratchpadTaskLine } from "@/lib/scratchpad";
 
-/** Rang (1–3) d'un nœud titre. */
+/** Rank (1–3) of a title node. */
 export const nodeRank = (node: { attrs: { level?: unknown } }): number =>
   Math.min(6, Math.max(1, Number(node.attrs.level) || 1));
 
 /**
- * Le texte PROPRE d'une tâche : celui de son premier paragraphe, pas celui de
- * tout ce qu'elle porte.
+ * The OWN text of a task: that of its first paragraph, not that of
+ * whatever it carries.
  *
- * `node.textContent` d'un `taskItem` concatène ses descendants — texte de la
- * tâche ET de ses sous-tâches, collés sans séparateur. C'est ce qui sortait du
- * carnet quand on copiait une tâche à enfants : une seule ligne, « relancer le
- * croncheck les logsprévenir Marc ».
+ * `node.textContent` of a `taskItem` concatenates its descendants — text of the
+ * task AND its subtasks, pasted without separator. This is what came out of the
+ * notebook when we copied a children's task: a single line, "restart the
+ * croncheck the logs notify Marc".
  */
 export function taskOwnText(node: PMNode): string {
   const first = node.firstChild;
@@ -22,15 +22,15 @@ export function taskOwnText(node: PMNode): string {
 }
 
 /**
- * Une tâche et TOUT ce qu'elle porte, à plat et en profondeur (racine à 0).
+ * A task and EVERYTHING it carries, flat and deep (root at 0).
  *
- * La règle de la hiérarchie : le parent emporte ses enfants, l'enfant n'emporte
- * pas son parent. Le nombre de niveaux n'est pas borné — une sous-tâche de
- * sous-tâche est une sous-tâche.
+ * The rule of hierarchy: the parent takes its children, the child does not take
+ * its parent. The number of levels is not limited — a subtask of
+ * subtask is a subtask.
  *
- * `map` sert à sortir la tâche dans son état d'APRÈS le geste : une passation
- * démarre le travail, et le markdown copié doit dire « en cours » ce que le
- * carnet dit déjà « en cours ».
+ * `map` is used to output the task in its state AFTER the gesture: a handover
+ * starts the work, and the copied markdown must say “in progress” what the
+ * notebook already says “in progress”.
  */
 export function taskItemLines(
   node: PMNode,
@@ -52,18 +52,18 @@ export function taskItemLines(
 }
 
 /**
- * Passe « en cours » toutes les tâches PAS ENCORE COMMENCÉES de l'intervalle
- * [from, to) — sous-tâches comprises, à tous les niveaux. C'est le pendant, à
- * l'échelle d'une tâche, d'une section ou du carnet entier, de ce que dit la
- * règle : confier du travail à un agent, c'est le commencer, et confier un
- * parent, c'est confier ce qu'il porte.
+ * Makes all NOT YET STARTED tasks in the interval
+ * [from, to) — including subtasks, at all levels — “in progress”. This is the counterpart, at
+ * the scale of a task, a section or the entire notebook, of what the
+ * rule says: to entrust work to an agent is to begin it, and to entrust a
+ * parent is to entrust what he or she is carrying.
  *
- * Une tâche déjà en cours, cochée ou annulée ne bouge pas, et les cases d'une
- * section « Questions » non plus — ce sont des questions, pas du travail (même
- * règle que `parsePlan`, que suivent déjà le compteur et l'aperçu de l'accueil).
+ * A task already in progress, checked or canceled does not move, and the boxes in a
+ * "Questions" section either — they are questions, not work (even
+ * rule that `parsePlan`, which the counter and the welcome overview already follow).
  *
- * Tout part en UNE transaction : un seul Ctrl-Z remet l'ensemble, et l'autosave
- * ne voit qu'une modification. Retourne le nombre de tâches déplacées.
+ * Everything is ONE transaction: a single Ctrl-Z puts the whole thing back, and autosave
+ * only sees one change. Returns the number of tasks moved.
  */
 export function startPendingTasks(
   editor: Editor,
@@ -73,8 +73,8 @@ export function startPendingTasks(
   const { state } = editor;
   const tr = state.tr;
   let moved = 0;
-  // Le balayage part du DÉBUT du document, pas de `from` : l'intervalle visé
-  // peut commencer à l'intérieur d'une section « Questions » ouverte plus haut.
+  // The scan starts from the START of the document, no `from`: the target interval
+  // can start inside a “Questions” section opened above.
   let questionRank: number | null = null;
   state.doc.descendants((node, pos) => {
     if (node.type.name === "heading") {
@@ -85,9 +85,9 @@ export function startPendingTasks(
     }
     if (node.type.name !== "taskItem") return true;
     if (questionRank !== null || pos < from || pos >= to) return true;
-    // Changer un attribut ne change pas la taille du nœud, donc les positions
-    // déjà relevées restent valides d'un pas à l'autre — y compris celles des
-    // sous-tâches, dans lesquelles on continue de descendre.
+    // Changing an attribute does not change the size of the node, therefore the positions
+    // already noted remain valid from one step to the next — including those of the
+    // subtasks, into which we continue to descend.
     if (node.attrs.state === "pending") {
       tr.setNodeMarkup(pos, undefined, { ...node.attrs, state: "in_progress" });
       moved += 1;

@@ -1,15 +1,15 @@
-// Construction PURE du message qui LANCE l'agent de code sur un ticket, pour les
-// appelants qui n'ont pas de composer sous la main — l'assistant Numo (chat et
-// @numo en commentaire). Aucune DB, aucun secret, pas d'import `server-only` :
-// l'appelant fournit déjà les champs du ticket, donc ce module est testable en
+// PURE construction of the message which LAUNCHES the code agent on a ticket, for
+// callers who do not have a dialer on hand — the Numo assistant (chat and
+// @numo in comment). No DB, no secret, no `server-only` import:
+// the caller already provides the ticket fields, so this module is testable in
 // node/vitest, comme prompt.ts.
 //
-// Les textes ne sont PAS réécrits ici : ce sont exactement ceux des boutons de
-// l'UI (`Agent.launchPrompt.*` dans messages/<locale>.json), lus avec
-// `createTranslator` plutôt qu'avec `getTranslations` — un lancement peut partir
-// d'un contexte détaché de la requête (@numo en fond), où `cookies()`/`headers()`
-// ne sont plus disponibles. Une seule source de vérité pour les trois modes :
-// changer la consigne d'un bouton change celle de l'assistant.
+// The texts are NOT rewritten here: they are exactly those of the buttons
+// the UI (`Agent.launchPrompt.*` in messages/<locale>.json), read with
+// `createTranslator` rather than with `getTranslations` — a launch can go
+// from a context detached from the request (@numo in the background), where `cookies()`/`headers()`
+// are no longer available. A single source of truth for all three modes:
+// changing the instruction of a button changes that of the assistant.
 
 import { createTranslator } from "next-intl";
 import { defaultLocale, locales, type Locale } from "@/i18n/config";
@@ -22,14 +22,14 @@ import {
 import { issueIdentifier, type IssueEffort } from "@/lib/issue-constants";
 
 /**
- * Les trois façons NATIVES de lancer l'agent sur un ticket — les mêmes que les
- * boutons de l'app, pour que l'assistant ne parte pas d'une consigne maison :
- *  • `plan`      — cadrer le ticket sans l'implémenter (écrire le plan s'il n'y
- *                  en a pas, le VÉRIFIER point par point s'il existe) ;
- *  • `implement` — faire le travail (la consigne suit le plan et l'effort) ;
- *  • `verify`    — relire l'implémentation déjà faite face au plan et aux
- *                  commentaires, et corriger les vrais bugs.
- * Hors de ces trois-là, l'assistant envoie librement son propre prompt.
+ * The three NATIVE ways of launching the agent on a ticket — the same as the
+ * buttons in the app, so that the assistant does not start from a house instruction:
+ * • `plan` — frame the ticket without implementing it (write the plan if it there
+ * does not have one, CHECK it point by point if it exists);
+ * • `implement` — do the work (the instruction follows the plan and the effort);
+ * • `verify` — reread the implementation already done against the plan and the
+ * comments, and fix real bugs.
+ * Outside of these three, the wizard freely sends its own prompt.
  */
 export const AGENT_LAUNCH_MODES = ["plan", "implement", "verify"] as const;
 export type AgentLaunchMode = (typeof AGENT_LAUNCH_MODES)[number];
@@ -38,7 +38,7 @@ export function isAgentLaunchMode(value: unknown): value is AgentLaunchMode {
   return (AGENT_LAUNCH_MODES as readonly unknown[]).includes(value);
 }
 
-/** Champs du ticket dont le message a besoin (rien de plus n'est lu). */
+/** Fields from the ticket that the message needs (nothing more is read). */
 export interface LaunchMessageIssue {
   number: number;
   title: string;
@@ -47,23 +47,22 @@ export interface LaunchMessageIssue {
 }
 
 /**
- * Clé i18n du corps du message pour un mode. `plan` et `implement` s'adaptent au
- * ticket (plan existant, effort t-shirt) exactement comme les entrées de menu ;
- * `verify` ne dépend de rien — il n'y a qu'une façon de relire du travail fait.
+ * Message body i18n key for a mode. `plan` and `implement` fit the
+ * ticket (existing plan, t-shirt effort) exactly like the menu entries;
+ * `verify` doesn't depend on anything — there's only one way to reread work done.
  */
 export function launchPromptVariantForMode(
   mode: AgentLaunchMode,
   issue: Pick<LaunchMessageIssue, "plan" | "effort">,
   /**
-   * Le lancement est une étape d'une CHAÎNE d'automatisation (MIN-147). Seules
-   * les deux VÉRIFICATIONS changent alors : elles doivent finir par un appel à
-   * `report_verdict`, la seule chose que la chaîne sait lire pour décider de la
-   * suite. Le reste est identique — un plan écrit par une chaîne est un plan.
-   *
-   * À noter : « vérifier le plan » de la chaîne, c'est `mode: "plan"` sur un
-   * ticket qui en a DÉJÀ un — `agentPlanPromptVariant` rend `reviewPlan`, dont
-   * `chainVerifyPlan` est la variante à verdict.
-   */
+ * Launch is a step in an automation CHAIN ​​(MIN-147). Only
+ * the two CHECKS then change: they must end with a call to
+ * `report_verdict`, the only thing that the chain knows how to read to decide what to do next. The rest is the same — a plan written by a chain is a plan.
+ *
+ * Note: "check plan" of the chain is `mode: "plan"` on a
+ * ticket that ALREADY has one — `agentPlanPromptVariant` returns `reviewPlan`, of which
+ * `chainVerifyPlan` is the verdict variant.
+ */
   fromChain = false
 ): AgentLaunchPromptVariant {
   switch (mode) {
@@ -79,12 +78,12 @@ export function launchPromptVariantForMode(
 }
 
 /**
- * Ce que le lancement fait au STATUT du ticket. Les trois modes portent les
- * mêmes noms que les trois intentions — le mode dit ce qu'on DEMANDE, l'intention
- * ce que ça fait au ticket — donc la conversion est l'identité, et elle existe
- * pour que ça reste vrai par écrit : seul « implémenter » est du travail neuf,
- * cadrer vient avant et vérifier vient après, tous deux laissant le ticket
- * exactement où il est (un ticket en revue qu'on fait contrôler doit y rester).
+ * What launching does to the STATUS of the ticket. The three modes have the
+ * same names as the three intentions - the mode says what we ASK, the intention
+ * what it does to the ticket - so the conversion is the identity, and it exists
+ * so that it remains true in writing: only "implementing" is new work,
+ * framing comes before and verifying comes after, both leaving the ticket
+ * exactly where it is (a ticket under review that is checked must remain there).
  */
 export function intentForLaunchMode(mode: AgentLaunchMode): AgentLaunchIntent {
   return mode;
@@ -97,12 +96,12 @@ function resolveLocale(raw: string | null | undefined): Locale {
 }
 
 /**
- * Le message envoyé à l'agent : l'en-tête « Travaille sur MIN-42 : titre. » puis
- * la consigne du mode, dans la langue du demandeur — l'agent répond dans cette
- * langue-là (cf. `buildAgentSystemPrompt`), et le message reste lisible dans la
- * conversation du run. `extra` (les précisions que l'utilisateur a données à
- * l'assistant) est ajouté en dernier : il précise la consigne, il ne la remplace
- * pas.
+ * The message sent to the agent: the header “Working on MIN-42: title. » then
+ * the mode instruction, in the language of the requester — the agent responds in this
+ * language (see `buildAgentSystemPrompt`), and the message remains readable in the
+ * conversation of the run. `extra` (the details that the user gave to
+ * the assistant) is added last: it specifies the instruction, it does not replace
+ *.
  */
 export async function buildAgentLaunchMessage(input: {
   mode: AgentLaunchMode;
@@ -110,7 +109,7 @@ export async function buildAgentLaunchMessage(input: {
   projectKey: string;
   locale?: string | null;
   extra?: string | null;
-  /** Étape d'une chaîne d'automatisation — cf. `launchPromptVariantForMode`. */
+  /** Step in an automation chain — cf. `launchPromptVariantForMode`. */
   fromChain?: boolean;
 }): Promise<string> {
   const locale = resolveLocale(input.locale);

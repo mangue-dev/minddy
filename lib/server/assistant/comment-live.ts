@@ -3,50 +3,50 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Afficheur d'une réponse @Numo pendant qu'elle s'écrit (migration
+ * Displaying an @Numo response as it is written (migration
  * 20260909090000_numo_comment_live_stream).
  *
- * Deux canaux, et la répartition entre les deux est tout l'intérêt :
+ * Two channels, and the distribution between the two is the whole point:
  *
- *   LE DIRECT — le texte du round, diffusé sur le topic privé
- *     `numo-comment:{id}` à la cadence de `LIVE_FLUSH_MS`. Éphémère : rien n'est
- *     écrit en base, rien n'est refetché, le fil ouvert repeint et voilà.
- *   LA BASE — les seules transitions qui comptent : l'outil en cours, la fin, un
- *     échec. Rejouables, donc lisibles par l'onglet qui arrive en cours de route
- *     ou qui a manqué un message.
+ * LIVE — the text of the round, broadcast on the private topic
+ * `numo-comment:{id}` at the cadence of `LIVE_FLUSH_MS`. Ephemeral: nothing is
+ * written in base, nothing is refetched, the open thread repainted and that's it.
+ * THE BASE — the only transitions that count: the current tool, the end, a
+ * failure. Replayable, therefore readable by the tab which arrives along the way
+ * or which has missed a message.
  *
- * Avant, tout passait par la base : un UPDATE toutes les 900 ms, un refetch
- * complet du fil derrière chacun. Le texte arrivait par blocs et la fin du
- * message n'apparaissait qu'à l'écriture finale.
+ * Before, everything went through the base: an UPDATE every 900 ms, a complete refetch
+ * of the thread behind each one. The text arrived in blocks and the end of the
+ * message only appeared on final writing.
  *
- * On tape l'endpoint HTTP de Realtime plutôt que d'ouvrir un websocket, pour la
- * même raison que l'agent de code (lib/server/agent/live.ts) : la boucle tourne
- * dans un after() qui peut être coupé à tout moment, un POST sans état s'y prête
- * mieux qu'une connexion à maintenir. La clé de service autorise la diffusion
- * sur un topic privé.
+ * We type the Realtime HTTP endpoint rather than opening a websocket, for the
+ * same reason as the code agent (lib/server/agent/live.ts): the loop runs
+ * in an after() which can be cut at any time, a stateless POST lends itself to this
+ * better than a connection to maintain. The service key authorizes broadcast
+ * on a private topic.
  *
- * Le direct est best-effort de bout en bout : une diffusion ratée ne doit jamais
- * faire échouer une réponse — le fil poll tant qu'elle est 'working'.
+ * Direct is best-effort from end to end: a failed broadcast must never
+ * cause a response to fail — the thread polls as long as it is 'working'.
  */
 
-/** Cadence du direct, alignée sur celle de l'agent de code (agent-loop.ts). */
+/** Live cadence, aligned with that of the code agent (agent-loop.ts). */
 const LIVE_FLUSH_MS = 250;
 
 export function numoCommentTopic(commentId: string): string {
   return `numo-comment:${commentId}`;
 }
 
-/** Charge utile du direct : l'état COMPLET du round, jamais un delta — un
- *  message perdu se rattrape donc au suivant, sans trou dans le texte. */
+/** Live payload: the COMPLETE state of the round, never a delta — un
+ * lost message is therefore made up for in the next one, without a gap in the text. */
 export interface NumoCommentLive {
-  /** Réponse telle qu'écrite jusqu'ici. */
+  /** Answer as written so far. */
   text: string;
-  /** Outil en cours, s'il y en a un : il prend le pas sur le texte à l'écran. */
+  /** Current tool, if there is one: it takes precedence over the text on the screen. */
   tool: string | null;
-  /** Horodatage d'émission (ms). Le client jette ce qui arrive dans le désordre.
-   *  Un compteur ne conviendrait pas : deux POST partis à 250 ms d'écart peuvent
-   *  très bien arriver dans l'autre sens, et un texte plus ancien effacerait la
-   *  fin de celui déjà affiché. */
+  /** Transmission timestamp (ms). The client throws what arrives out of order.
+ * A counter would not be suitable: two POSTs left 250 ms apart can
+ * very well arrive in the other direction, and an older text would erase the
+ * end of the one already displayed. */
   at: number;
 }
 
@@ -74,19 +74,19 @@ async function broadcast(commentId: string, payload: NumoCommentLive): Promise<v
       }),
     });
   } catch {
-    // Le fil poll tant que la réponse est 'working' : au pire, un temps de retard.
+    // The thread polls as long as the response is 'working': at worst, a delay.
   }
 }
 
-/** La réponse en train de s'écrire, vue du serveur. */
+/** The response being written, seen from the server. */
 export interface CommentDisplay {
-  /** Texte du round tel qu'écrit jusqu'ici — diffusé, throttlé, jamais en base. */
+  /** Text of the round as written so far — broadcast, throttled, never in base. */
   stream(text: string): void;
-  /** Un outil démarre : en base (l'onglet qui arrive doit le voir) et en direct. */
+  /** A tool starts: in base (the arriving tab must see it) and live. */
   tool(name: string): void;
-  /** Fin de la réponse : le texte complet, puis l'état figé. */
+  /** End of response: the full text, then the frozen state. */
   finish(body: string): Promise<void>;
-  /** Échec : corps vide + statut 'error', le fil rend sa ligne localisée. */
+  /** Failure: empty body + 'error' status, the thread renders its line located. */
   fail(): Promise<void>;
 }
 
@@ -98,10 +98,10 @@ export function commentDisplay(
   let lastFlushAt = 0;
   let lastFlushLen = -1;
 
-  // Les écritures se suivent à la queue leu leu. Elles partaient jusqu'ici en
-  // fire-and-forget : rien ne garantissait que la dernière demandée soit la
-  // dernière appliquée, et un UPDATE partiel doublant l'UPDATE final laissait le
-  // commentaire tronqué pour de bon, en statut 'done'.
+  // The writings follow one another in single file. They left so far in
+  // fire-and-forget: nothing guaranteed that the last one requested was the
+  // last applied, and a partial UPDATE doubling the final UPDATE left the
+  // comment truncated for good, in 'done' status.
   let writes: Promise<void> = Promise.resolve();
   const write = (fields: Record<string, unknown>): Promise<void> => {
     writes = writes.then(async () => {
@@ -120,8 +120,8 @@ export function commentDisplay(
 
   return {
     stream(text) {
-      // Le modèle écrit : l'outil précédent est terminé. Une seule écriture à la
-      // bascule — pas une par fragment de texte.
+      // The model writes: the previous tool is finished. A single writing
+      // toggle — not one per text fragment.
       if (currentTool !== null) {
         currentTool = null;
         void write({ assistant_tool: null });
@@ -135,9 +135,9 @@ export function commentDisplay(
 
     tool(name) {
       currentTool = name;
-      // Le round d'après repart d'un texte vide : sans ça, sa première diffusion
-      // pourrait tomber sur la même longueur que la dernière du round précédent
-      // et se faire filtrer.
+      // The next round starts with an empty text: without that, its first broadcast
+      // could fall on the same length as the last one from the previous round
+      // and get filtered.
       lastFlushLen = -1;
       push("");
       void write({ assistant_tool: name });
@@ -145,10 +145,10 @@ export function commentDisplay(
 
     async finish(body) {
       currentTool = null;
-      // Le texte complet part EN DIRECT d'abord : l'écran est à jour tout de
-      // suite. Sans ce flush, les derniers fragments — retenus par le throttle —
-      // n'arrivaient qu'avec le refetch déclenché par l'écriture ci-dessous, une
-      // bonne seconde plus tard, et la fin du message tombait d'un bloc.
+      // The complete text goes LIVE first: the screen is up to date all the time
+      // following. Without this flush, the last fragments — retained by the throttle —
+      // only happened with the refetch triggered by the writing below, a
+      // a good second later, and the end of the message fell straight away.
       push(body);
       await write({
         body,
@@ -159,8 +159,8 @@ export function commentDisplay(
 
     async fail() {
       currentTool = null;
-      // Diffusion à vide : le fil lâche le direct et retombe sur la ligne en
-      // base, que l'écriture qui suit passe en 'error'.
+      // Blank broadcast: the wire releases the direct and falls back onto the line
+      // base, that the writing which follows passes into 'error'.
       push("");
       await write({
         body: "",

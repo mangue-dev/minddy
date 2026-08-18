@@ -9,9 +9,9 @@ const REPO_ROOT = path.resolve(__dirname, "..");
 const APP_DIR = path.join(REPO_ROOT, "app");
 
 /**
- * Les clés de `MetaPageKey` (lib/app-metadata.ts). Recopiées ici plutôt
- * qu'importées : un type ne survit pas à la compilation, et c'est justement la
- * correspondance entre le type et le catalogue qu'on vérifie.
+ * The keys for `MetaPageKey` (lib/app-metadata.ts). Copied here rather
+ * than imported: a type does not survive compilation, and it is precisely the
+ * correspondence between the type and the catalog that we check.
  */
 const META_PAGE_KEYS = [
   "home",
@@ -40,11 +40,11 @@ const META_PAGE_KEYS = [
   "resetPassword",
 ] as const;
 
-/** Chemins de toutes les feuilles de route rendues en HTML (`page.tsx`). */
+/** Paths of all directions rendered in HTML (`page.tsx`). */
 function findPages(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
     const full = path.join(dir, entry);
-    // `app/api` ne rend aucune page ; `_`/`.` sont des dossiers privés.
+    // `app/api` does not render any pages; `_`/`.` are private folders.
     if (entry === "api" || entry.startsWith("_") || entry.startsWith(".")) continue;
     if (statSync(full).isDirectory()) findPages(full, out);
     else if (entry === "page.tsx") out.push(full);
@@ -53,9 +53,9 @@ function findPages(dir: string, out: string[] = []): string[] {
 }
 
 /**
- * Les fichiers qui peuvent nommer une page : la page elle-même et chacun de ses
- * layouts ancêtres — SAUF le root layout, dont le `default: "minddy"` ferait
- * passer n'importe quoi au vert.
+ * Files that can name a page: the page itself and each of its
+ * ancestor layouts — EXCEPT the root layout, whose `default: "minddy"` would make
+ * turn anything green.
  */
 function titleSources(page: string): string[] {
   const files = [page];
@@ -67,7 +67,7 @@ function titleSources(page: string): string[] {
   return files;
 }
 
-/** Le fichier déclare-t-il des métadonnées porteuses d'un titre ? */
+/** Does the file declare titled metadata? */
 function declaresTitle(file: string): boolean {
   let source: string;
   try {
@@ -79,17 +79,17 @@ function declaresTitle(file: string): boolean {
     /export\s+(async\s+)?function\s+generateMetadata/.test(source) ||
     /export\s+const\s+metadata\b/.test(source);
   if (!hasExport) return false;
-  // Soit le titre est posé sur place, soit il vient d'une des fabriques.
-  // `publishedPageMetadata` (MIN-283) en est une : les deux routes de la page
-  // publiée délèguent leurs métadonnées au rendu qu'elles partagent.
+  // Either the title is placed on site, or it comes from one of the factories.
+  // `publishedPageMetadata` (MIN-283) is one: the two routes of the page
+  // published delegate their metadata to the rendering they share.
   return (
     /\btitle\b/.test(source) ||
     /\b(appPageMetadata|publicPageMetadata|publicTokenMetadata|publishedPageMetadata)\s*\(/.test(source)
   );
 }
 
-describe("métadonnées de page (MIN-95)", () => {
-  it("donne à chaque page une clé de titre ET de description dans les deux catalogues", () => {
+describe("page metadata (MIN-95)", () => {
+  it("gives every page a title AND description key in both catalogs", () => {
     for (const key of META_PAGE_KEYS) {
       for (const [name, catalog] of [
         ["en.json", enMessages],
@@ -102,11 +102,11 @@ describe("métadonnées de page (MIN-95)", () => {
     }
   });
 
-  it("ne laisse traîner aucune clé `Meta` orpheline", () => {
-    // `description` (repli du root layout), `signIn` et `signUp` (dont les
-    // descriptions vivent dans `Auth.loginSubtitle` / `Auth.signupSubtitle`,
-    // avec le reste de leur écran) sont les seules clés hors du schéma « une
-    // page = deux clés ».
+  it("leaves no orphaned `Meta` key behind", () => {
+    // `description` (root layout fallback), `signIn` and `signUp` (including the
+    // descriptions live in `Auth.loginSubtitle` / `Auth.signupSubtitle`,
+    // with the rest of their screen) are the only keys outside the schema "a
+    // page = two keys”.
     const expected = new Set<string>(["description", "signIn", "signUp"]);
     for (const key of META_PAGE_KEYS) {
       expected.add(key);
@@ -117,7 +117,7 @@ describe("métadonnées de page (MIN-95)", () => {
     expect(extra, `clés à retirer ou à typer dans MetaPageKey : ${extra.join(", ")}`).toEqual([]);
   });
 
-  it("garde les deux catalogues alignés, clé pour clé", () => {
+  it("keeps both catalogs aligned key by key", () => {
     const flatten = (value: unknown, prefix = ""): string[] =>
       typeof value === "object" && value !== null
         ? Object.entries(value).flatMap(([key, child]) =>
@@ -131,9 +131,9 @@ describe("métadonnées de page (MIN-95)", () => {
     expect([...fr].filter((key) => !en.has(key)), "absentes de en.json").toEqual([]);
   });
 
-  it("ne laisse aucune page sans titre à elle", () => {
+  it("leaves no page without its own title", () => {
     const pages = findPages(APP_DIR);
-    // Filet contre un scan qui ne trouverait plus rien et passerait au vert.
+    // Net against a scan which would no longer find anything and would turn green.
     expect(pages.length).toBeGreaterThan(15);
 
     const untitled = pages
@@ -152,17 +152,17 @@ describe("metaExcerpt", () => {
     expect(metaExcerpt("Un besoin, une phrase.")).toBe("Un besoin, une phrase.");
   });
 
-  it("écrase les blancs multiples et les retours à la ligne", () => {
+  it("collapses repeated whitespace and line breaks", () => {
     expect(metaExcerpt("deux\n\nlignes   collées")).toBe("deux lignes collées");
   });
 
-  it("coupe sur un mot, jamais au milieu", () => {
+  it("cuts at a word boundary, never in the middle", () => {
     const excerpt = metaExcerpt("ab cdefgh ijklmnop qrstuvwxyz", 20);
     expect(excerpt).toBe("ab cdefgh ijklmnop…");
     expect(excerpt.length).toBeLessThanOrEqual(20);
   });
 
-  it("coupe quand même un mot unique plus long que la limite", () => {
+  it("still cuts a single word longer than the limit", () => {
     expect(metaExcerpt("a".repeat(40), 10)).toBe(`${"a".repeat(9)}…`);
   });
 });

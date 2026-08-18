@@ -8,21 +8,18 @@ import { PUBLIC_ROUTES, routeByKey, type PublicRouteKey } from "@/lib/public-rou
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 /**
- * Vignette de partage du site public (MIN-88) — ce qu'on voit quand un lien
- * minddy est collé dans Slack, X ou une conversation.
+ * Public site sharing thumbnail (MIN-88) — what you see when a link
+ * minddy is stuck in Slack, it inevitable: it only covered the segment
+ * `(marketing)` (the legal and `/login` pages therefore had NO thumbnail),
+ * it was frozen in English, and its title was a manual copy of
+ * `en.Landing.metaTitle` — outside the i18n catalog, therefore out of reach of a
+ * copy audit, and already out of sync.
  *
- * Remplace `app/(marketing)/opengraph-image.tsx`, qui avait trois défauts que
- * la convention de fichier rend inévitables : elle ne couvrait que le segment
- * `(marketing)` (les pages légales et `/login` n'avaient donc AUCUNE vignette),
- * elle était figée en anglais, et son titre était une copie manuelle de
- * `en.Landing.metaTitle` — hors du catalogue i18n, donc hors de portée d'un
- * audit de copy, et déjà désynchronisée.
+ * A parameterized route sets all three: `?route=<key>&locale=<language>` reads the
+ * texts in `messages/<language>.json`, for any public page and
+ * in both languages. `lib/seo.ts` is the only caller.
  *
- * Une route paramétrée règle les trois : `?route=<clé>&locale=<langue>` lit les
- * textes dans `messages/<langue>.json`, pour n'importe quelle page publique et
- * dans les deux langues. `lib/seo.ts` est le seul appelant.
- *
- * Volontairement sobre : la marque, la promesse, rien d'autre.
+ * Deliberately sober: the brand, the promise, nothing else.
  */
 
 export const contentType = "image/png";
@@ -36,8 +33,8 @@ function parseParams(request: NextRequest): { key: PublicRouteKey; locale: Local
   const rawKey = params.get("route") ?? "";
   const rawLocale = params.get("locale") ?? "";
   return {
-    // Paramètres publics, donc arbitraires : on retombe sur la landing en
-    // anglais plutôt que de rendre une image d'erreur dans un aperçu de lien.
+    // Public parameters, therefore arbitrary: we return to the landing in
+    // English rather than rendering an error image in a link preview.
     key: (ROUTE_KEYS.has(rawKey) ? rawKey : "home") as PublicRouteKey,
     locale: ((locales as readonly string[]).includes(rawLocale)
       ? rawLocale
@@ -46,12 +43,12 @@ function parseParams(request: NextRequest): { key: PublicRouteKey; locale: Local
 }
 
 /**
- * Combien de vignettes une même adresse IP peut faire RENDRE par minute.
+ * How many thumbnails a single IP address can RENDER per minute.
  *
- * Le rendu satori d'un PNG de 1200×630 est, de loin, le calcul le plus cher que
- * cette application offre sans authentification. La borne est haute parce que
- * les scrapers légitimes (Slack, X, un client mail) tapent en rafale sur les
- * douze adresses canoniques — mais elle existe, ce qui n'était pas le cas.
+ * The satori rendering of a 1200x630 PNG is, by far, the most expensive calculation that
+ * This app offers no authentication. The bound is high because
+ * legitimate scrapers (Slack, X, an email client) type in bursts on the
+ * twelve canonical addresses — but it exists, which was not the case.
  */
 const OG_RATE_LIMIT = { limit: 60, windowMs: 60_000 };
 
@@ -59,12 +56,12 @@ export async function GET(request: NextRequest) {
   const { key, locale } = parseParams(request);
   const route = routeByKey(key);
 
-  // La CLÉ DE CACHE, d'abord (MIN-348). Le contenu ne dépend que de deux
-  // paramètres, mais le CDN, lui, indexe sur l'URL entière : `?route=home&x=1`,
-  // `&x=2`, `&x=3`… sont autant d'entrées neuves, donc autant de rendus. Une
-  // adresse non canonique est donc renvoyée vers la canonique — 308, sans
-  // rendre l'image — et il ne reste qu'une douzaine d'URLs à rendre pour tout
-  // le site. Le limiteur ci-dessous ne garde plus que ces douze-là.
+  // The CACHE KEY, first (MIN-348). The content depends only on two
+  // parameters, but the CDN indexes on the entire URL: `?route=home&x=1`,
+  // `&x=2`, `&x=3`… are as many new entries, therefore as many renderings. A
+  // non-canonical address is therefore returned to the canonical — 308, without
+  // render the image — and there are only a dozen URLs left to render for everything
+  // the site. The limiter below only keeps these twelve.
   const canonical = `route=${key}&locale=${locale}`;
   if (request.nextUrl.search.replace(/^\?/, "") !== canonical) {
     const target = new URL(request.nextUrl);
@@ -137,8 +134,8 @@ export async function GET(request: NextRequest) {
     {
       ...SIZE,
       headers: {
-        // Le contenu ne dépend que des deux paramètres d'URL : une fois rendue,
-        // la vignette peut rester longtemps dans le CDN et chez les scrapers.
+        // The content only depends on the two URL parameters: once rendered,
+        // the thumbnail can remain for a long time in the CDN and with scrapers.
         "Cache-Control": "public, max-age=3600, s-maxage=86400, immutable",
       },
     },

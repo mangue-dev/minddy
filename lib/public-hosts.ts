@@ -1,25 +1,24 @@
 /**
- * Détection des hosts « primaires » (MIN-36) : ceux qui servent l'app minddy
- * elle-même, par opposition aux domaines personnalisés des clients qui ne
- * servent qu'une page publique (board de feedback ou vue partagée).
+ * Detection of "primary" hosts (MIN-36): those which serve the minddy
+ * app itself, as opposed to the clients' custom domains which only serve a public page (feedback board or shared view).
  *
- * Module pur (pas de "server-only") : importé par proxy.ts (middleware) ET par
- * le code serveur classique — la logique doit être identique des deux côtés.
+ * Pure module (no "server-only"): imported by proxy.ts (middleware) AND by
+ * classic server code — the logic must be identical on both sides.
  */
 
-/** Minuscules, sans port ni point final — la forme canonique stockée en base. */
+/** Lowercase, without port or endpoint — the canonical form stored in base. */
 export function normalizeHost(raw: string): string {
   return raw.trim().toLowerCase().replace(/\.$/, "").replace(/:\d+$/, "");
 }
 
-// Les hosts qui servent l'app elle-même ne sont JAMAIS allowlistables : une
-// faute de frappe dans l'env ne doit pas pouvoir 404er toute la prod.
+// Hosts that serve the app itself are NEVER allowlistable: a
+// typo in the env must not be able to 404er the entire prod.
 const NEVER_CUSTOM = new Set(["minddy.app", "www.minddy.app", "preview.minddy.app"]);
 
 /**
- * Sous-domaines minddy.app explicitement autorisés comme domaines custom
- * (dogfooding : feedback.minddy.app). Contrôlé par l'ops via env — jamais par
- * les utilisateurs : *.minddy.app reste interdit à la revendication sinon.
+ * Minddy.app subdomains explicitly allowed as custom
+ * domains (dogfooding: feedback.minddy.app). Controlled by ops via env — never by
+ * users: *.minddy.app remains forbidden to claim otherwise.
  */
 export function customDomainAllowlist(): Set<string> {
   const raw = process.env.MDY_CUSTOM_DOMAIN_ALLOWLIST ?? "";
@@ -31,16 +30,16 @@ export function customDomainAllowlist(): Set<string> {
   );
 }
 
-/** Host attendu déjà normalisé (voir normalizeHost). */
+/** Expected host already normalized (see normalizeHost). */
 export function isPrimaryHost(host: string): boolean {
   if (host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "[::1]") {
     return true;
   }
-  // Un host allowlisté est routé comme domaine custom malgré le suffixe minddy.
+  // An allowlisted host is routed as a custom domain despite the minddy suffix.
   if (customDomainAllowlist().has(host)) return false;
-  // Tout minddy.app (apex + sous-domaines actuels et futurs : www, preview…)
+  // All minddy.app (apex + current and future subdomains: www, preview…)
   if (host === "minddy.app" || host.endsWith(".minddy.app")) return true;
-  // Déploiements Vercel (previews *.vercel.app).
+  // Vercel deployments (previews *.vercel.app).
   if (host.endsWith(".vercel.app")) return true;
   return false;
 }

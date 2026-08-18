@@ -1,55 +1,54 @@
 /**
- * Durcissement du contexte de l'agent de code (MIN-46) : élagage des sorties de
- * tools périmées. Inspiré du `prune` d'opencode.
+ * Code agent context hardening (MIN-46): pruning stale output from
+ * tools. Inspired by opencode's `prune`.
  *
- * Sur un run long, les plus gros consommateurs de contexte sont les résultats de
- * `read_file`/`grep`/`list_dir`/`glob` lus il y a de nombreux tours : volumineux
- * et périmés (l'agent a déjà agi dessus). On protège les DERNIERS ~400 Ko de sortie
- * de tools (contexte récent, encore utile) et on remplace les plus anciens par un
- * marqueur — MAIS seulement si l'on récupère au moins ~100 Ko (sinon on ne touche à
- * rien : pas de churn sur les petits runs), et jamais la DERNIÈRE lecture d'un
- * chemin donné (`keepLastPerKey`, MIN-248). Logique PURE, testable ; appelée à la
- * frontière de round dans agent-loop.ts, et seulement sous pression de contexte.
- * Élaguer réduit le coût par appel ET la taille du checkpoint (l'historique EST le
+ * On a long run, the biggest consumers of context are the results of
+ * `read_file`/`grep`/`list_dir`/`glob` read ago many tricks: large
+ * and expired (the agent has already acted on it). We protect the LAST ~400 KB of output
+ * from tools (recent context, still useful) and we replace the oldest with a
+ * marker — BUT only if we recover at least ~100 KB (otherwise we don't touch
+ * nothing: no churn on small runs), and never the LAST reading from a
+ * given path (`keepLastPerKey`, MIN-248). PURE logic, testable; called at the
+ * round boundary in agent-loop.ts, and only under context pressure.
+ * Pruning reduces the cost per call AND the size of the checkpoint (the history IS the
  * checkpoint).
  *
- * Sûreté : on ne modifie QUE le `content` des messages `role:"tool"` (leur
- * `tool_call_id` et l'appariement tool_call ↔ résultat restent intacts). Les
- * messages de l'agent, de l'utilisateur et les tool-calls ne sont jamais touchés.
+ * Safety: we ONLY modify the `content` of `role:"tool"` messages (their
+ * `tool_call_id` and the tool_call ↔ result pairing remain intact). The
+ * messages from the agent, user and tool-calls are never affected.
  */
 
 import { contentChars, imageCount, stripImages, type AgentContentPart } from "./content";
 
 /**
- * Enveloppe d'UN résultat de tool dans l'historique : la boucle sérialise le
- * résultat en JSON et le passe à `headTail`. Un tool qui compose sa sortie doit
- * tenir DEDANS — sinon c'est cette coupe-ci qui décide, et elle élide le milieu
- * du JSON (donc, pour une commande, la queue de stdout : le verdict, MIN-107).
+ * Wrapper of ONE tool result in history: the loop serializes the
+ * result into JSON and passes it to `headTail`. A tool that composes its output must
+ * fit IN — otherwise it is this cut that decides, and it elides the middle
+ * of the JSON (so, for a command, the tail of stdout: the verdict, MIN-107).
  */
 export const TOOL_RESULT_MAX_CHARS = 6000;
 
 /**
- * Octets de sortie de tools (les plus récents) protégés de l'élagage.
+ * Tools output bytes (most recent) protected from pruning.
  *
- * 400 Ko ≈ 100 k tokens, du même ordre que `AGENT_COMPACT_BASELINE_TOKENS`
- * (120 k) : élaguer est le geste qui PRÉCÈDE la compaction, pas celui qui la
- * remplace. Les 40 Ko d'origine (MIN-46) valaient ~7 fenêtres de `read_file` —
- * un ordre de grandeur sous le seuil de compaction, donc le seul des deux
- * garde-fous à jamais entrer en jeu. Le modèle y perdait ses lectures au bout de
- * quelques rounds et les rachetait une par une : 83 lectures du même fichier en
- * 44 minutes, zéro édition (MIN-248).
+ * 400 KB ≈ 100 k tokens, of the same order as `AGENT_COMPACT_BASELINE_TOKENS`
+ * (120 k): prune is the gesture PRECEDING the compaction, not the one that the
+ * replaces. The original 40 KB (MIN-46) was worth ~7 windows of `read_file` —
+ * an order of magnitude below the compaction threshold, so the only one of the two
+ * safeguards ever to come into play. The model lost its readings after a few rounds and bought them back one by one: 83 reads from the same file in
+ * 44 minutes, zero edits (MIN-248).
  */
 export const PRUNE_PROTECT_BYTES = 400_000;
-/** On n'élague que si l'on récupère au moins autant (évite le churn). */
+/** We only prune if we recover at least this much (avoid churn). */
 export const PRUNE_MINIMUM_BYTES = 100_000;
-/** Marqueur qui remplace une sortie de tool élaguée. */
+/** Marker that replaces pruned tool output. */
 export const PRUNE_STUB =
   "[Tool output elided to save context. Re-read the file or re-run the search if you still need it.]";
 
 /**
- * Tronque une chaîne en gardant le DÉBUT et la FIN (le milieu élidé). Mieux que
- * head-only pour les sorties de commandes : la queue (tail d'un test qui échoue,
- * derniers matchs de grep) est souvent la partie utile.
+ * Truncates a string while keeping the START and END (the middle elided). Better than
+ * head-only for command output: the tail (tail of a failing test,
+ * last grep matches) is often the useful part.
  */
 export function headTail(str: string, max: number): string {
   if (str.length <= max) return str;
@@ -58,44 +57,43 @@ export function headTail(str: string, max: number): string {
   return `${str.slice(0, keep)}\n… [${elided} chars elided] …\n${str.slice(-keep)}`;
 }
 
-/** Forme minimale d'un message manipulé (compatible AgentChatMessage). */
+/** Minimal form of a manipulated message (AgentChatMessage compatible). */
 interface PrunableMessage {
   role: string;
   content?: string | AgentContentPart[] | null;
 }
 
 /**
- * Clé de MÉMOIRE d'un résultat de tool : deux résultats de même clé disent la
- * même chose du même objet (le même fichier lu deux fois, à deux fenêtres près),
- * et seul le plus récent vaut d'être gardé. Rendre `null` = ce résultat n'a rien
- * de re-lisible à protéger, il s'élague comme avant.
+ * MEMORY key of a tool result: two results with the same key say the
+ * same thing of the same object (the same file read twice, within two windows),
+ * and only the most recent is worth keeping. Return `null` = this result has nothing
+ * re-readable to protect, it is pruned as before.
  *
- * La fonction vient de l'APPELANT : `prune.ts` ne connaît ni les noms de tools ni
- * la forme de leurs arguments (cf. `toolMemoryKeys` dans agent-loop.ts). C'est ce
- * qui garde ce module pur — et testable sans microVM.
+ * The function comes from the CALLER: `prune.ts` knows neither the names of tools nor
+ * the form of their arguments (cf. `toolMemoryKeys` in agent-loop.ts). It's this
+ * that keeps this module pure — and testable without microVM.
  */
 export type ToolMemoryKey<T> = (msg: T, index: number) => string | null;
 
 /**
- * Parties image gardées dans TOUT l'historique (MIN-111). L'historique EST le
- * checkpoint : une maquette y reste sous forme de data URL, tour après tour. Sans
- * plafond, une conversation qui ouvre des maquettes à répétition ferait grossir le
- * checkpoint jusqu'au `MAX_CHECKPOINT_BYTES` (8 Mo) qui met le run au repos. Trois
- * images (≈ 3 Mo au pire, cf. le cap par image d'issue-tools.ts) couvrent le cas
- * réel — le ticket porte une maquette, parfois deux états d'un même écran — et
- * laissent la marge au reste du contexte.
+ * Image parts kept in ALL history (MIN-111). The history IS the
+ * checkpoint: a model remains there in the form of data URL, round after round. Without
+ * cap, a conversation that opens mockups repeatedly would grow the
+ * checkpoint up to the `MAX_CHECKPOINT_BYTES` (8 MB) which puts the run to rest. Three
+ * images (≈ 3 MB at worst, cf. the cap per image of issue-tools.ts) cover the real case
+ * — the ticket carries a model, sometimes two states of the same screen — and
+ * leave room for the rest of the context.
  */
 export const MAX_HISTORY_IMAGES = 3;
-/** Note qui remplace une image élaguée (même contrat que PRUNE_STUB : re-demandable). */
+/** Note which replaces a pruned image (same contract as PRUNE_STUB: re-requestable). */
 export const IMAGE_ELIDED_NOTE =
   "[Image elided to save context. Call read_resource again if you still need to look at it.]";
 
 /**
- * Borne le nombre d'images RETENUES dans l'historique : garde les
- * `max` plus récentes, remplace les plus anciennes par une note. Ne touche QUE les
- * messages `role:"tool"` (mêmes garanties que `pruneToolOutputs` : l'appariement
- * tool_call↔résultat reste intact, les messages de l'agent et de l'utilisateur ne
- * sont jamais réécrits). Renvoie le nombre d'images élaguées.
+ * Limits the number of images RETAINED in history: keeps the most recent
+ * `max`, replaces the oldest with a note. ONLY affects
+ * `role:"tool"` messages (same guarantees as `pruneToolOutputs`: the pairing
+ * tool_call↔result remains intact, agent and user messages are never rewritten). Returns the number of pruned images.
  */
 export function capHistoryImages<T extends PrunableMessage>(
   messages: T[],
@@ -112,8 +110,8 @@ export function capHistoryImages<T extends PrunableMessage>(
       seen += count;
       continue;
     }
-    // Ce message fait déborder le plafond : on le vide de ses images d'un bloc
-    // (une partie d'un même résultat de tool n'a pas de sens à moitié).
+    // This message overflows the ceiling: we empty it of its images in one block
+    // (part of the same tool result doesn't make half sense).
     messages[i] = { ...m, content: stripImages(m.content, IMAGE_ELIDED_NOTE) } as T;
     elided += count;
   }
@@ -121,19 +119,19 @@ export function capHistoryImages<T extends PrunableMessage>(
 }
 
 /**
- * Élague en place les sorties de tools les plus anciennes. Parcourt l'historique
- * de la fin vers le début : tant que la sortie de tools cumulée reste sous
- * `protectBytes`, on protège ; au-delà, on marque à élaguer. Ne modifie rien si
- * le total récupérable est sous `minimumBytes`. Renvoie le nombre d'octets
- * récupérés (0 si aucun élagage).
+ * Prunes the oldest tools output in place. Scans the history
+ * from the end to the beginning: as long as the cumulative tools output remains under
+ * `protectBytes`, we protect; beyond that, we mark to prune. Does not change anything if
+ * the recoverable total is under `minimumBytes`. Returns the number of bytes
+ * retrieved (0 if no pruning).
  *
- * `keepLastPerKey` ajoute une seconde protection, indépendante de l'âge : le
- * DERNIER résultat de chaque clé survit, aussi vieux soit-il. Un fichier lu vingt
- * fois n'en garde qu'une lecture ; il n'en garde jamais zéro. Sans elle, le stub
- * (« relis le fichier si tu en as encore besoin ») se referme en tapis roulant —
- * le modèle relit, la relecture sort de la fenêtre au round suivant, il relit
- * encore (MIN-248). Le chemin de SAUVETAGE (`checkpoint-fit.ts`) ne la passe pas :
- * quand le checkpoint déborde, tout doit pouvoir partir.
+ * `keepLastPerKey` adds a second protection, independent of age: the
+ * LAST result of each key survives, no matter how old it is. A file read twenty
+ * times only keeps one reading; he never keeps zero. Without it, the stub
+ * ("reread the file if you still need it") closes like a conveyor belt —
+ * the model rereads, the replay exits the window in the next round, it rereads
+ * again (MIN-248). The RESCUE path (`checkpoint-fit.ts`) does not pass it:
+ * when the checkpoint overflows, everything must be able to leave.
  */
 export function pruneToolOutputs<T extends PrunableMessage>(
   messages: T[],
@@ -146,35 +144,35 @@ export function pruneToolOutputs<T extends PrunableMessage>(
   let remainingProtect = protectBytes;
   let reclaimable = 0;
   const toPrune: number[] = [];
-  /** Clés dont on a déjà croisé le résultat le plus récent (on remonte le temps). */
+  /** Keys for which we have already crossed the most recent result (we go back in time). */
   const seenKeys = new Set<string>();
 
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
     if (m.role !== "tool") continue;
     if (typeof m.content !== "string") {
-      // Résultat MULTIPART (une pièce jointe image, MIN-111) : on ne le remplace
-      // pas par un marqueur texte — ce serait retirer l'image au modèle qui vient
-      // de la demander. Il consomme quand même la fenêtre protégée (au proxy de
-      // `contentChars`, pas aux octets de la base64) ; c'est `capHistoryImages`
+      // MULTIPART result (an image attachment, MIN-111): we do not replace it
+      // not by a text marker — this would remove the image from the model that comes
+      // to ask for it. It still consumes the protected window (at the proxy of
+      // `contentChars`, not to base64 bytes); it's `capHistoryImages`
       // qui borne son accumulation.
       remainingProtect -= contentChars(m.content);
       markSeen(keyOf?.(m, i), seenKeys);
       continue;
     }
-    if (m.content === PRUNE_STUB) continue; // déjà élagué
+    if (m.content === PRUNE_STUB) continue; // already pruned
     const size = m.content.length;
     if (remainingProtect > 0) {
-      remainingProtect -= size; // dans la fenêtre protégée récente
-      // Même dans la fenêtre : la clé est vue, donc les lectures PLUS ANCIENNES du
-      // même fichier s'élaguent normalement. On garde une lecture par clé, pas une
+      remainingProtect -= size; // in the recent protected window
+      // Even in the window: the key is seen, so the OLDER readings of the
+      // same file prunes normally. We keep one reading per key, not one
       // de plus.
       markSeen(keyOf?.(m, i), seenKeys);
       continue;
     }
     const key = keyOf?.(m, i) ?? null;
     if (key !== null && !seenKeys.has(key)) {
-      seenKeys.add(key); // dernière lecture de ce chemin : elle reste
+      seenKeys.add(key); // last reading of this path: it remains
       continue;
     }
     reclaimable += size;

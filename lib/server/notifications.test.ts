@@ -4,27 +4,27 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { NOTIF_COMMENT_META_KEY, NOTIF_PAGE_META_KEY } from "@/lib/notification-prefs";
 
 /**
- * MIN-183 — le branchement du push sur le point d'insertion des notifications.
+ * MIN-183 — the connection of the push to the notification insertion point.
  *
- * Ce que ce test protège n'est pas l'envoi (couvert par `push/send.test.ts`)
- * mais les trois conditions du branchement, dont aucune ne se voit en essayant
- * l'app :
+ * What this test protects is not the sending (covered by `push/send.test.ts`)
+ * but the three conditions of the connection, none of which are visible in trying
+ * the app:
  *
- *   • le push suit `kept`, APRÈS le filtre de préférences (MIN-82) — une
- *     catégorie coupée doit taire les DEUX surfaces. Un jour où quelqu'un
- *     déplacerait l'appel avant le filtre, l'inbox resterait muette et le
- *     téléphone sonnerait quand même : exactement le bug qu'on ne remarque
- *     qu'en le subissant ;
- *   • le push ne part QUE si l'insert a réussi — sinon une notification qu'on
- *     n'a pas su écrire sonnerait sur un téléphone en laissant l'inbox vide ;
- *   • `afterOrNow` et non un `void` détaché : la moitié des producteurs tournent
- *     hors requête (cf. lib/server/after-safe.ts).
+ * • the push follows `kept`, AFTER the preferences filter (MIN-82) — a cut
+ * category must silence BOTH surfaces. One day when someone
+ * moved the call before the filter, the inbox would remain silent and the
+ * phone would still ring: exactly the bug that we only notice
+ * by undergoing it;
+ * • the push ONLY goes off if the insert was successful — otherwise a notification that one
+ * did not know how to write would ring on a telephone leaving the inbox empty;
+ * • `afterOrNow` and not a detached `void`: half of the producers turn
+ * outside the request (cf. lib/server/after-safe.ts).
  */
 
 const H = vi.hoisted(() => ({
   after: vi.fn<(fn: () => void | Promise<void>) => void>(),
-  // Signatures explicites : sans elles, `mock.calls` est typé sur un tuple vide
-  // et lire `c[1]` ne compile pas.
+  // Explicit signatures: without them, `mock.calls` is typed on an empty tuple
+  // and reading `c[1]` doesn't compile.
   sendPushToUser: vi.fn<
     (
       service: unknown,
@@ -50,8 +50,8 @@ const { insertNotifications } = await import("./notifications");
 const ALICE = "11111111-1111-1111-1111-111111111111";
 const BOB = "22222222-2222-2222-2222-222222222222";
 
-/** Client Supabase minimal : l'insert réussit ou échoue sur commande, et les
- *  préférences de chaque compte sortent de la table ci-dessous. */
+/** Minimal Supabase Client: The insert succeeds or fails on command, and each account's
+ * preferences come out of the table below. */
 function stubService(opts: {
   insertError?: string;
   prefs?: Record<string, Record<string, unknown>>;
@@ -97,7 +97,7 @@ const commentRow = (userId: string) => ({
   actor_id: "someone",
 });
 
-/** Exécute ce qu'`afterOrNow` a mis en attente. */
+/** Executes what `afterOrNow` has queued. */
 async function runScheduledWork() {
   for (const fn of H.after.mock.calls.map((c) => c[0])) await fn();
 }
@@ -114,19 +114,19 @@ beforeEach(() => {
 });
 
 describe("insertNotifications — volet push (MIN-183)", () => {
-  it("pousse vers chaque destinataire après un insert réussi", async () => {
+  it("pushes to each recipient after a successful insert", async () => {
     const { service, inserted } = stubService({});
 
     await insertNotifications(service, [commentRow(ALICE), commentRow(BOB)]);
 
     expect(inserted).toHaveLength(2);
-    // Différé, pas sur le chemin critique.
+    // Deferred, not on critical path.
     expect(H.sendPushToUser).not.toHaveBeenCalled();
     expect(H.after).toHaveBeenCalledTimes(1);
 
     await runScheduledWork();
     expect(H.sendPushToUser.mock.calls.map((c) => c[1])).toEqual([ALICE, BOB]);
-    // Une seule hydratation pour tout le lot.
+    // Just one hydration for the whole lot.
     expect(H.loadPushContext).toHaveBeenCalledTimes(1);
   });
 
@@ -141,9 +141,9 @@ describe("insertNotifications — volet push (MIN-183)", () => {
     expect(H.sendPushToUser).not.toHaveBeenCalled();
   });
 
-  // Une seule bascule, deux surfaces : « Commentaires » coupé chez Bob doit lui
-  // épargner la ligne d'inbox ET la notification système.
-  it("suit le filtre de préférences : pas de ligne, pas de push", async () => {
+  // A single rocker, two surfaces: “Comments” cut at Bob must him
+  // spare the inbox line AND the system notification.
+  it("follows the preference filter: no row, no push", async () => {
     const { service, inserted } = stubService({
       prefs: { [BOB]: { [NOTIF_COMMENT_META_KEY]: false } },
     });
@@ -156,9 +156,9 @@ describe("insertNotifications — volet push (MIN-183)", () => {
     expect(H.sendPushToUser.mock.calls[0][1]).toBe(ALICE);
   });
 
-  // MIN-278 : les deux signaux du wiki passent par la même porte, donc par le
-  // même filtre. Sans cette bascule, couper « Pages » aurait laissé passer les
-  // citations — la moitié de ce qu'on voulait couper.
+  // MIN-278: the two signals from the wiki pass through the same door, therefore through the
+  // same filter. Without this toggle, cutting “Pages” would have missed the
+  // quotes — half of what we wanted to cut.
   it("respecte la bascule « Pages » comme n'importe quelle autre", async () => {
     const { service, inserted } = stubService({
       prefs: { [BOB]: { [NOTIF_PAGE_META_KEY]: false } },
@@ -172,13 +172,13 @@ describe("insertNotifications — volet push (MIN-183)", () => {
     expect(H.sendPushToUser.mock.calls[0][1]).toBe(ALICE);
   });
 
-  it("ne programme rien du tout sans clés VAPID", async () => {
+  it("schedules nothing without VAPID keys", async () => {
     vi.stubEnv("VAPID_PRIVATE_KEY", "");
     const { service, inserted } = stubService({});
 
     await insertNotifications(service, [commentRow(ALICE)]);
 
-    // L'inbox, elle, marche toujours : c'est tout le contrat de l'extinction.
+    // The inbox still works: it's the whole contract of extinction.
     expect(inserted).toHaveLength(1);
     expect(H.after).not.toHaveBeenCalled();
   });

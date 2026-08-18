@@ -12,21 +12,21 @@ type RouteContext = { params: Promise<{ id: string }> };
 /**
  * POST /api/projects/[id]/link-preview → { url, file_name, icon_data_url }
  *
- * Le pendant de l'upload direct pour un LIEN (MIN-184) : le client poste une
- * URL, le serveur en rend le descripteur que la route d'enregistrement attend.
- * Les deux gestes deviennent alors symétriques — un fichier part vers le
+ * The counterpart of direct upload for a LINK (MIN-184): the client posts a
+ * URL, the server returns the descriptor that the registration route expects.
+ * The two gestures then become symmetrical — a file goes towards the
  * storage puis on enregistre son descripteur, un lien part ici puis on
- * enregistre le sien — et la modal de création, où l'entité n'existe pas
- * encore, suit exactement le même chemin que la sidebar.
+ * saves its own — and the creation modal, where the entity does not exist
+ * again, follows exactly the same path as the sidebar.
  *
- * Rien n'est écrit : c'est un aperçu. La route est limitée en débit parce
- * qu'elle fait SORTIR une requête HTTP côté serveur ; les gardes anti-SSRF
- * (protocole, IP privées, redirects revalidés, timeout, plafond de taille)
- * vivent dans [favicon.ts](../../../../../lib/server/favicon.ts).
+ * Nothing is written: it's an overview. The road is limited in flow because
+ * that it OUTPUTS an HTTP request on the server side; anti-SSRF guards
+ * (protocol, private IPs, re-validated redirects, timeout, size ceiling)
+ * live in [favicon.ts](../../../../../lib/server/favicon.ts).
  *
- * Une URL publique valide ne fait jamais échouer la route : site injoignable ou
- * favicon absent rendent un aperçu partiel (hostname pour libellé, icône nulle).
- * Seule une URL irrécupérable — protocole exotique, IP privée, DNS mort — vaut
+ * A valid public URL never fails the route: site unreachable or
+ * absent favicon renders a partial preview (hostname for label, null icon).
+ * Only an unrecoverable URL — exotic protocol, private IP, dead DNS — is worth
  * un 400.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {

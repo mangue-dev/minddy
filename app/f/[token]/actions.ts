@@ -37,13 +37,13 @@ import { clientIpFromHeaders } from "@/lib/server/request-ip";
 import type { FeedbackVoicePatch, SimilarPost } from "@/lib/feedback/types";
 
 /**
- * Server actions du board public (MIN-37). Le cookie de session est path-scopé
- * /f/<token> : toutes les interactions visiteur passent par ces actions (pas
- * de routes API visiteur). Chaque action re-résout le board par token et
- * revérifie la session — le token seul n'autorise que la lecture.
+ * Server actions of the public board (MIN-37). Session cookie is path-scoped
+ * /f/<token>: all visitor interactions go through these actions (not
+ * of visitor API routes). Each action re-solves the board by token and
+ * rechecks the session — the token alone only authorizes reading.
  */
 
-/** Similarité cosinus minimale pour montrer une suggestion « existe déjà ». */
+/** Minimum cosine similarity to show an “already exists” suggestion. */
 const MIN_SUGGESTION_SIMILARITY = 0.4;
 
 async function clientIp(): Promise<string> {
@@ -127,8 +127,8 @@ export async function verifyOtpAction(
 
   const session = await createFeedbackSession({ boardId: ctx.board.id, userId: user.id });
   if (!session) return { ok: false, error: "invalidCode" };
-  // Sur domaine personnalisé (MIN-36), le path visible est la racine — le
-  // cookie doit y vivre, sinon le navigateur ne le renverra jamais.
+  // On custom domain (MIN-36), the visible path is the root — the
+  // cookie must live there, otherwise the browser will never return it.
   const atRoot = await isCustomPublicHost();
   (await cookies()).set(
     FEEDBACK_SESSION_COOKIE,
@@ -142,8 +142,8 @@ export async function verifyOtpAction(
 export async function logoutAction(token: string): Promise<void> {
   const cookie = (await cookies()).get(FEEDBACK_SESSION_COOKIE)?.value;
   await revokeFeedbackSession(cookie);
-  // Le path de suppression doit refléter le host courant : le cookie a été
-  // posé sur le même site (path "/" sur domaine custom, /f/<token> sinon).
+  // The deletion path must reflect the current host: the cookie was
+  // placed on the same site (path "/" on custom domain, /f/<token> otherwise).
   const atRoot = await isCustomPublicHost();
   (await cookies()).delete({
     name: FEEDBACK_SESSION_COOKIE,
@@ -176,7 +176,7 @@ export async function createPostAction(
     body: input.body,
     source: "board",
     authorId: session.user.id,
-    // Coché par défaut côté composeur ; décoché = retour privé pour l'équipe.
+    // Checked by default on the composer side; unchecked = private return for the team.
     isPublic: input.isPublic ?? true,
   });
   if (!result.ok) {
@@ -202,8 +202,8 @@ export async function togglePostVoteAction(
   if (!rate.allowed) return { ok: false };
 
   const ok = vote
-    ? // Le post se résout DANS le projet du board (MIN-342) : l'id vient du
-      // client, et sans ce garde-fou il désigne n'importe quel retour.
+    ? // The post resolves IN the board project (MIN-342): the id comes from
+      // customer, and without this safeguard it means any return.
       await votePost({ postId, userId: session.user.id, projectId: ctx.project.id })
     : await unvotePost({ postId, userId: session.user.id });
   if (ok) revalidatePath(`/f/${token}`, "layout");
@@ -217,19 +217,19 @@ export type PublicCommentState =
   | { ok: false; error: "notAuthenticated" | "closed" | "rateLimited" | "failed" };
 
 /**
- * Répondre publiquement à un retour. La connexion est obligatoire — non pour
- * afficher qui écrit (le fil est anonyme, seul l'avatar sort), mais pour que
- * l'équipe ait quelqu'un à qui rattacher un propos qu'elle doit pouvoir modérer.
+ * Respond publicly to feedback. Login is required — not for
+ * display who is writing (the thread is anonymous, only the avatar comes out), but so that
+ * the team has someone to relate to a statement that it must be able to moderate.
  *
- * `notAuthenticated` rejoue la porte OTP puis le commentaire, exactement comme
- * le vote : quelqu'un qui vient d'écrire trois phrases ne doit pas les perdre
- * parce qu'on lui demande son email à ce moment-là.
+ * `notAuthenticated` replays the OTP gate then the comment, exactly like
+ * voting: someone who has just written three sentences must not lose them
+ * because he is asked for his email at that moment.
  */
 export async function addPublicCommentAction(
   token: string,
   postId: string,
   body: string,
-  /** Le message auquel on répond (rangé sous la racine de son fil). */
+  /** The message to which we respond (stored under the root of its thread). */
   parentId: string | null = null
 ): Promise<PublicCommentState> {
   const resolved = await resolveSession(token);
@@ -256,8 +256,8 @@ export async function addPublicCommentAction(
   return { ok: true };
 }
 
-/** Retirer SON commentaire. Le fil est anonyme : personne d'autre ne peut le
-    faire depuis le board — l'équipe, elle, modère depuis sa vue. */
+/** Remove HIS comment. The thread is anonymous: no one else can
+ from the board — the team moderates from its view. */
 export async function deletePublicCommentAction(
   token: string,
   postId: string,
@@ -274,21 +274,21 @@ export async function deletePublicCommentAction(
   return { ok };
 }
 
-// ── Retour dicté : le rangement par Numo ─────────────────────────────────────
+// ── Return dictated: storage by Numo ─────────────────────────────────────
 
 export type DictateFeedbackState =
   | { ok: true; patch: FeedbackVoicePatch; reply: string }
   | { ok: false; error: "notAuthenticated" | "rateLimited" | "unavailable" | "failed" };
 
 /**
- * Deuxième moitié d'une prise : le transcript rendu par `./voice/route.ts`
- * devient un patch du composeur. Une server action suffit ici — c'est du JSON,
- * et le cookie de session voyage avec.
+ * Second half of a take: the transcript rendered by `./voice/route.ts`
+ * becomes a composer patch. A server action is enough here — it's JSON,
+ * and the session cookie travels with it.
  *
- * `runId` vient de l'étape d'écoute : les deux appels d'une même prise se
- * rangent ainsi sous une seule ligne du ledger. On l'accepte du client parce
- * qu'il n'ouvre rien — c'est une clé de regroupement, revalidée en UUID, et
- * l'imputation ne s'en déduit pas (elle vient du board, comme ici).
+ * `runId` comes from the listening stage: the two calls from the same socket are
+ * thus stored under a single line of the ledger. We accept it from the customer because
+ * that it doesn't open anything — it's a grouping key, revalidated to UUID, and
+ * the imputation is not deduced from it (it comes from the board, like here).
  */
 export async function dictateFeedbackAction(
   token: string,
@@ -323,7 +323,7 @@ export async function dictateFeedbackAction(
       projectName: ctx.project.name,
       surface: "board",
       runId: isUuid(input.runId) ? input.runId : newRunId(),
-      // 1 quand l'écoute a bien eu lieu : la ligne d'après, dans le même run.
+      // 1 when listening has taken place: the next line, in the same run.
       seq: isUuid(input.runId) ? 1 : 0,
       billTo: { projectOwner: ctx.project.id },
       projectId: ctx.project.id,
@@ -343,17 +343,17 @@ function isUuid(value: unknown): value is string {
   );
 }
 
-// ── Suggestions live (« ce post existe peut-être déjà ») ─────────────────────
+// ── Live suggestions (“this post may already exist”) ─────────────────────
 
 /**
- * L'appel est FACTURÉ au propriétaire du board (MIN-131), donc il exige une
- * identité de visiteur (MIN-342) : sans elle, un anonyme vidait le budget IA de
- * quelqu'un d'autre à la frappe. Le composeur ouvert par un visiteur non
- * identifié n'a simplement pas de suggestions — la porte OTP arrive de toute
- * façon à l'envoi, et un tableau vide est déjà le cas nominal ici.
+ * The call is CHARGED to the board owner (MIN-131), so it requires a
+ * visitor identity (MIN-342): without it, an anonymous person emptied the AI ​​budget of
+ * someone else typing. The composer opened by a visitor
+ * identified simply has no suggestions — the OTP gate is coming all the way
+ * way to sending, and an empty array is already the nominal case here.
  *
- * Le quota vient avec : le plafond par identité, et le budget du propriétaire,
- * comme la dictée juste au-dessus.
+ * The quota comes with: the ceiling per identity, and the owner's budget,
+ * like the dictation just above.
  */
 export async function findSimilarPostsAction(
   token: string,
@@ -363,7 +363,7 @@ export async function findSimilarPostsAction(
   if (!resolved) return [];
   const { ctx, session } = resolved;
   const trimmed = title.trim();
-  // ≥ 15 caractères : en dessous, l'embedding du titre seul est du bruit.
+  // ≥ 15 characters: below, the embedding of the title alone is noise.
   if (trimmed.length < 15) return [];
 
   const rate = checkSessionRateLimit(session.user.id, "feedback:similar", {
@@ -373,11 +373,11 @@ export async function findSimilarPostsAction(
 
   if (!(await ownerHasUsageBudget(ctx.project.id, "feedback"))) return [];
 
-  // 5 s : le premier appel à froid (config + OpenRouter) peut dépasser 3 s,
-  // et un échec ici est silencieux pour le visiteur.
+  // 5 s: the first cold call (config + OpenRouter) can exceed 3 s,
+  // and failure here is silent to the visitor.
   const embedding = await embedText(trimmed, {
     timeoutMs: 5000,
-    // Visiteur du board : aucun déclencheur nommable, le owner paye (MIN-131).
+    // Visitor to the board: no nameable trigger, the owner pays (MIN-131).
     record: { billTo: { projectOwner: ctx.project.id }, projectId: ctx.project.id },
   });
   if (!embedding) return [];
@@ -385,7 +385,7 @@ export async function findSimilarPostsAction(
     projectId: ctx.project.id,
     embedding,
     limit: 5,
-    // Un visiteur ne doit jamais se voir suggérer un retour privé d'autrui.
+    // A visitor should never be suggested private feedback from another.
     publicOnly: true,
   });
   return matches

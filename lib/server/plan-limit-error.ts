@@ -5,10 +5,10 @@ import { getTranslations } from "next-intl/server";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
- * Erreur typée levée quand une limite de plan bloque une action (MIN-72).
- * Les routes la convertissent via `planLimitResponse` en 403 JSON
- * `{ error, code, params }` — `error` déjà localisé (namespace ApiErrors),
- * `code` stable pour les clients qui veulent brancher un CTA upgrade.
+ * Typed error raised when a plan limit blocks an action (MIN-72).
+ * Routes convert it via `planLimitResponse` to 403 JSON
+ * `{ error, code, params }` — `error` already located (namespace ApiErrors),
+ * `code` stable for clients who want to plug in a CTA upgrade.
  */
 
 export type PlanLimitCode =
@@ -37,7 +37,7 @@ export function isPlanLimitError(error: unknown): error is PlanLimitError {
   return error instanceof PlanLimitError;
 }
 
-/** code → clé du namespace ApiErrors (messages localisés FR/EN). */
+/** code → ApiErrors namespace key (FR/EN localized messages). */
 const PLAN_LIMIT_I18N_KEYS: Record<PlanLimitCode, MessageKey<"ApiErrors">> = {
   project_limit_reached: "projectLimitReached",
   issue_limit_reached: "issueLimitReached",
@@ -47,7 +47,7 @@ const PLAN_LIMIT_I18N_KEYS: Record<PlanLimitCode, MessageKey<"ApiErrors">> = {
   model_above_plan: "modelAbovePlan",
 };
 
-/** Réponse 403 localisée d'une PlanLimitError (contexte requête uniquement). */
+/** Localized 403 response from a PlanLimitError (query context only). */
 export async function planLimitResponse(error: PlanLimitError): Promise<Response> {
   const t = await getTranslations("ApiErrors");
   return Response.json(

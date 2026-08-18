@@ -1,33 +1,33 @@
 import { normalizePageUrl } from "@/lib/page-content-schema";
 
 /**
- * L'ÉCHAPPEMENT de la projection markdown (MIN-350).
+ * THE EXHAUST projection markdown (MIN-350).
  *
- * Deux blocs écrivent autre chose que du markdown ordinaire, et les deux le
- * faisaient nu :
+ * Two blocks write something other than ordinary markdown, and both used to do
+ * so without escaping:
  *
- * - le dépliant projette du HTML (`<summary>…</summary>`), parce que markdown
- *   n'a pas de repliable et que `<details>` est le seul que GitHub, Notion et
- *   Obsidian rendent tous les trois (cf. blocks/details.ts). Un résumé qui
- *   contient `<b>` ou `</summary>` sortait donc DANS la balise, où il n'est plus
- *   du texte ;
- * - le bloc fichier et le bloc image interpolent leur `src` dans la destination
- *   d'un lien (`[nom](src)`). Une parenthèse y ferme le lien une syllabe trop
- *   tôt, et le reste de l'adresse retombe en texte.
+ * - the leaflet projects HTML (`<summary>…</summary>`), because markdown
+ * does not have collapsible and that `<details>` is the only one that GitHub, Notion and
+ * Obsidian renders all three (see blocks/details.ts). A summary which
+ * contains `<b>` or `</summary>` therefore came out IN the tag, where it is no longer
+ *   plain text;
+ * - the file block and the image block interpolate their `src` into the destination
+ * of a link (`[nom](src)`). A parenthesis closes the link one syllable too
+ * early, and the rest of the address falls into text.
  *
- * Aucun des deux n'était un XSS dans minddy — la projection est lue par Numo,
- * par la recherche et par les exports, jamais rendue en HTML par l'application.
- * Mais un markdown exporté est fait pour être rendu AILLEURS, et un aller-retour
- * qui ne rend pas le texte qu'on lui a donné est un aller-retour qui perd du
- * contenu, ce que lib/pages-markdown.ts promet précisément de ne pas faire.
+ * Neither was an XSS in minddy — the projection is read by Numo,
+ * by search and by exports, never rendered in HTML by the application.
+ * But an exported markdown is made to be rendered ELSEWHERE, and a round trip
+ * who does not return the text given to him is a round trip which loses
+ * content, which lib/pages-markdown.ts specifically promises not to do.
  */
 
 /**
- * Le texte tel qu'il peut vivre DANS une balise HTML.
+ * The text as it can live IN an HTML tag.
  *
- * Symétrique à la lecture sans rien de plus : le chemin de lecture est
- * markdown-it → HTML → `parseHTML`, et le parseur décode les entités. `&amp;`
- * revient donc `&`, et `&lt;b&gt;` revient `<b>`, en texte.
+ * Symmetrical when reading without anything more: the reading path is
+ * markdown-it → HTML → `parseHTML`, and the parser decodes the entities. `&amp;`
+ * therefore returns `&`, and `&lt;b&gt;` returns `<b>`, in text.
  */
 export function escapeHtmlText(value: string): string {
   return value
@@ -36,24 +36,23 @@ export function escapeHtmlText(value: string): string {
     .replace(/>/g, "&gt;");
 }
 
-/** Idem, plus le guillemet : une valeur d'attribut est délimitée par lui. */
+/** Same, plus the quote: an attribute value is delimited by it. */
 export function escapeHtmlAttribute(value: string): string {
   return escapeHtmlText(value).replace(/"/g, "&quot;");
 }
 
 /**
- * L'adresse telle qu'elle peut vivre dans la destination d'un lien markdown, ou
- * `null` quand il ne faut PAS écrire de lien du tout.
+ * The address as it can appear in a Markdown link destination, or `null` when
+ * no link should be written at all.
  *
- * `null` couvre deux cas, et le second est le sujet du ticket : une adresse
- * vide, et une adresse dont le protocole est refusé
- * ({@link normalizePageUrl}). Un `javascript:` rangé dans un corps avant ce
- * garde-fou — ou entré par un chemin qui l'aurait contourné — ne doit pas
- * ressortir en lien cliquable dans un markdown qu'on exporte.
+ * `null` covers two cases: an empty address, and an address whose protocol is rejected
+ * ({@link normalizePageUrl}). A `javascript:` placed in a body before this
+ * guard — or entered through a path that bypassed it — must not reappear as a
+ * clickable link in exported Markdown.
  *
- * Les parenthèses sont échappées comme le fait prosemirror-markdown lui-même :
- * elles ferment la destination. Les blancs, eux, sont déjà tombés à la
- * normalisation — une adresse n'en porte pas.
+ * Parentheses are escaped the same way prosemirror-markdown escapes them:
+ * they close the destination. Whitespace has already been removed during
+ * normalization — an address does not contain it.
  */
 export function markdownLinkDestination(src: unknown): string | null {
   const url = normalizePageUrl(src);

@@ -1,94 +1,94 @@
-# Registre des violations de données — minddy
+# Data Breach Registry — minddy
 
-*Article 33.5 du RGPD. Document interne, à présenter en cas de contrôle.*
+*Article 33.5 of the GDPR. Internal document, to be presented in the event of an inspection.*
 
-**Toute violation y figure, notifiée ou non.** L'obligation de tenir ce registre
-est autonome : elle ne dépend ni de la gravité de l'incident, ni de la décision
-de notifier. Un registre absent est un manquement en soi.
+**Any violation appears there, notified or not.** The obligation to keep this register
+is autonomous: it depends neither on the seriousness of the incident, nor on the decision
+to notify. A missing register is a breach in itself.
 
-La procédure à suivre est décrite dans
+The procedure to follow is described in
 [procedure-violation.md](procedure-violation.md).
 
 ---
 
-## État
+## State
 
-**Aucune violation de données personnelles constatée à ce jour.**
+**No personal data breach noted to date.**
 
-Dernière vérification : 30 juillet 2026.
+Last checked: July 30, 2026.
 
 ---
 
-## Comment consigner une violation
+## How to log a violation
 
-Copier le gabarit ci-dessous sous « Violations enregistrées », le remplir dès la
-qualification (étape 3 de la procédure) et le compléter au fil de la réponse.
-Ne jamais attendre la clôture pour ouvrir la ligne : le registre sert aussi à
-tenir le fil pendant l'incident.
+Copy the template below under “Recorded Violations”, complete it as soon as
+qualification (step 3 of the procedure) and complete it as the response progresses.
+Never wait for the closing to open the line: the register is also used to
+hold the wire during the incident.
 
-Les champs se remplissent même quand la réponse est « inconnu à ce stade » —
-écrire « inconnu » et dater est une information ; laisser vide n'en est pas une.
+The fields fill even when the answer is “unknown at this stage” —
+writing “unknown” and dating is information; leaving blank is not one of them.
 
-### Gabarit
+### Template
 
 ```markdown
-### V-AAAA-NN — <titre court et factuel>
+### V-YYYY-MM-DD — <short factual title>
 
-| Champ | Valeur |
+| Field | Value |
 | --- | --- |
-| Date et heure de la violation | |
-| Date et heure de la constatation | *(fait courir le délai de 72 h)* |
-| Origine de la découverte | alerte hébergeur / signalement / journaux / constat interne |
-| Nature | confidentialité / intégrité / disponibilité *(cumulables)* |
-| Cause | erreur de configuration / faille applicative / compromission d'un accès / erreur humaine / défaillance d'un sous-traitant |
-| Traitements concernés | *renvoi au registre des traitements* |
-| Catégories de données | |
-| Catégories de personnes | utilisateurs inscrits / visiteurs de boards publics / prospects |
-| Nombre de personnes concernées | exact ou estimation motivée |
-| Nombre d'enregistrements | |
-| Fenêtre d'exposition | du … au … |
-| Accès effectif constaté | oui *(par qui, quelle preuve)* / non / indéterminé |
-| Conséquences probables | |
-| Facteurs aggravants | volume, réidentification aisée, identifiants réutilisables, personnes vulnérables |
+| Date and time of the violation | |
+| Date and time discovered | *(starts the 72-hour period)* |
+| Discovery source | host alert / report / logs / internal observation |
+| Nature | confidentiality / integrity / availability *(can be combined)* |
+| Cause | configuration error / application flaw / compromised access / human error / subcontractor failure |
+| Relevant processing | *refer to the processing register* |
+| Data categories | |
+| Categories of people | registered users / public-board visitors / prospects |
+| Number of people affected | exact number or reasoned estimate |
+| Number of records | |
+| Exposure window | from … to … |
+| Effective access observed | yes *(by whom, what evidence)* / no / undetermined |
+| Likely consequences | |
+| Aggravating factors | volume, easy re-identification, reusable identifiers, vulnerable people |
 
-**Mesures de confinement immédiates**
+**Immediate containment measures**
 
-*(ce qui a été révoqué, coupé, mis en rotation — avec l'horodatage de chaque action)*
+*(what was revoked, disabled, or rotated — with the timestamp of each action)*
 
-**Notification à la CNIL**
+**CNIL notification**
 
 | | |
 | --- | --- |
-| Décision | notifiée / non notifiée |
-| Motivation | *obligatoire dans les deux cas — le « non » se justifie par écrit* |
-| Date et heure du dépôt | |
-| Numéro de récépissé | |
-| Compléments transmis | *(art. 33.4)* |
+| Decision | notified / not notified |
+| Reasoning | *required in both cases — “no” must be justified in writing* |
+| Filing date and time | |
+| Receipt number | |
+| Additional information sent | *(Art. 33.4)* |
 
-**Information des personnes concernées**
+**Information for affected people**
 
 | | |
 | --- | --- |
-| Décision | informées / non informées |
-| Motivation | *risque élevé ? dispense de l'art. 34.3 invoquée ?* |
+| Decision | informed / not informed |
+| Reasoning | *high risk? exemption under Art. 34.3 invoked?* |
 | Date | |
-| Canal | e-mail / bandeau applicatif / communication publique |
-| Nombre de personnes informées | |
+| Channel | email / in-app banner / public communication |
+| Number of people informed | |
 
-**Correction de la cause racine**
+**Root-cause correction**
 
-*(correctif déployé, test ou garde-fou ajouté, procédure mise à jour)*
+*(fix deployed, test or safeguard added, procedure updated)*
 
-**Clôture**
+**Closure**
 
 | | |
 | --- | --- |
-| Date de clôture | |
-| Enseignement retenu | |
+| Closure date | |
+| Lesson learned | |
 ```
 
 ---
 
-## Violations enregistrées
+## Violations recorded
 
-*(aucune à ce jour)*
+*(none to date)*

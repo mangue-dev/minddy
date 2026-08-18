@@ -6,11 +6,11 @@ import { fetchGitConnectionsApi } from "./git-integration-api";
 export const gitConnectionsQueryKey = ["git-connections"] as const;
 
 /**
- * Connexions git du compte (sanitisées) + providers configurés.
+ * Account git connections (sanitized) + providers configured.
  *
- * `enabled` parce que le wizard de création est monté en permanence (il vit
- * dans `ProjectsProvider`) : sans garde, chaque chargement de page irait
- * chercher les connexions pour une modale fermée.
+ * `enabled` because the creation wizard is permanently mounted (it lives
+ * in `ProjectsProvider`): without guard, each page load would go
+ * look for connections for a closed modal.
  */
 export function useGitConnectionsQuery(enabled = true) {
   const { data, isPending } = useQuery({

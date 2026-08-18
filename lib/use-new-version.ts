@@ -10,22 +10,22 @@ import {
 } from "./new-version";
 
 /**
- * « Une nouvelle version est disponible » (MIN-157) : compare en boucle le SHA
- * du déploiement qui répond à celui figé dans ce bundle.
+ * “A new version is available” (MIN-157): loop compares the SHA
+ * of the deployment which meets the one fixed in this bundle.
  *
- * C'est un `useQuery` et pas un `setInterval`, pour une raison précise : chez
- * TanStack les timers sont pilotés par le `focusManager`, qui écoute
- * `visibilitychange`, et `refetchIntervalInBackground` vaut `false` par défaut.
- * L'onglet en arrière-plan suspend donc le polling sans une ligne à écrire.
+ * It is a `useQuery` and not a `setInterval`, for a specific reason: at
+ * TanStack timers are controlled by `focusManager`, which listens to
+ * `visibilitychange`, and `refetchIntervalInBackground` is `false` by default.
+ * The background tab therefore suspends polling without a line to write.
  *
- * La clé est exclue de la persistance disque (lib/query-provider.tsx) : un SHA
- * serveur réhydraté depuis le localStorage rallumerait le bandeau juste après
- * le rechargement qui vient de mettre l'app à jour.
+ * The key is excluded from disk persistence (lib/query-provider.tsx): a SHA
+ * server rehydrated from localStorage would turn the banner back on just after
+ * the reload which has just updated the app.
  */
 export const NEW_VERSION_KEY = ["version"] as const;
 
-/** Une minute : absorbe les ~30 s de propagation de l'environnement Vercel
-    après un déploiement, pour ~30 octets par onglet actif. */
+/** One minute: absorbs the ~30 s of propagation of the Vercel
+ environment after a deployment, for ~30 bytes per active tab. */
 const POLL_INTERVAL_MS = 60_000;
 
 export function useNewVersion() {
@@ -36,20 +36,20 @@ export function useNewVersion() {
       if (!response.ok) return { commit: "" };
       return (await response.json()) as { commit: string };
     },
-    // Sans SHA de build (dev local, variables système décochées) il n'y a rien à
-    // comparer : on n'émet même pas la requête.
+    // Without build SHA (local dev, system variables unchecked) there is nothing to
+    // compare: we don't even issue the request.
     enabled: BUILD_COMMIT !== "",
     refetchInterval: POLL_INTERVAL_MS,
-    // Le défaut du dépôt est `false` : ici on veut une vérification au retour
-    // sur l'onglet, et `staleTime: 0` pour que ce refetch ait lieu — le
-    // staleTime global de 5 min le neutraliserait.
+    // The deposit default is `false`: here we want verification upon return
+    // on the tab, and `staleTime: 0` for this refetch to take place — the
+    // global staleTime of 5 min would neutralize it.
     refetchOnWindowFocus: true,
     staleTime: 0,
-    // Un réseau coupé n'est pas un déploiement : on retentera au tick suivant.
+    // A cut network is not a deployment: we will try again at the next tick.
     retry: false,
   });
 
-  // Lu après montage seulement : lire le localStorage au rendu ferait diverger
+  // Read after editing only: reading the localStorage when rendered would diverge
   // l'hydratation (cf. CookieBanner).
   const [dismissedCommit, setDismissedCommit] = useState<string | null>(null);
   useEffect(() => {
@@ -64,10 +64,10 @@ export function useNewVersion() {
     setDismissedCommit(serverCommit);
   }, [serverCommit]);
 
-  // Un rechargement complet met une seconde ou deux à repeindre, et pendant ce
-  // temps la page reste EXACTEMENT dans l'état où le clic l'a laissée : sans
-  // cet état, le bouton a l'air mort et on reclique. L'état ne redescend
-  // jamais à `false` — ce qui l'éteint, c'est le nouveau document.
+  // A full reload takes a second or two to repaint, and during that
+  // time the page remains EXACTLY in the state where the click left it: without
+  // in this state, the button looks dead and we click again. The state does not go down
+  // never to `false` — what turns it off is the new document.
   const [refreshing, setRefreshing] = useState(false);
   const refresh = useCallback(() => {
     setRefreshing(true);

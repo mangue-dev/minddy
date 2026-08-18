@@ -9,8 +9,8 @@ import {
 } from "@tiptap/react";
 import { useTranslations } from "next-intl";
 import { ImageOff, RotateCcw } from "lucide-react";
-// `cx` et pas `cn` de mangue-ui : le baril tire le sélecteur d'emoji, et le
-// registre de blocs cesserait d'être importable hors navigateur (cf. cx.ts).
+// `cx` and not `cn` of mango-ui: the barrel draws the emoji selector, and the
+// block register would cease to be importable outside the browser (see cx.ts).
 import { cx } from "@/components/pages/blocks/cx";
 import {
   IMAGE_MAX_WIDTH,
@@ -20,24 +20,24 @@ import {
 import { usePageUploadsContext } from "@/components/pages/page-uploads";
 
 /**
- * La vue d'un bloc image (MIN-280). Quatre états, et le quatrième est celui qui
- * fait la différence entre une feature et une démo :
+ * The view of an image block (MIN-280). Four states, and the fourth is the one which
+ * makes the difference between a feature and a demo:
  *
- *  - l'image est là : elle s'affiche à sa largeur, avec sa légende ;
- *  - elle PART : l'aperçu local en filigrane, et l'avancement par-dessus. On
- *    voit ce qu'on vient de coller avant même que le réseau ait fini, ce qui est
- *    la moitié du confort d'un collage ;
- *  - l'envoi a ÉCHOUÉ : le fichier est encore en mémoire, on réessaie d'un clic
- *    sans avoir à le rechercher ;
- *  - le bloc n'a NI adresse NI envoi en cours — un onglet fermé au mauvais
- *    moment. On le dit, et il se supprime comme n'importe quel bloc. Jamais un
- *    carré vide dont on ne sait pas s'il charge encore.
+ * - the image is there: it is displayed at its width, with its caption;
+ * - it LEAVES: the local preview as a watermark, and the progress on top. We
+ * sees what we have just pasted even before the network has finished, which is
+ * half the convenience of a paste;
+ * - the sending has FAILED: the file is still in memory, we try again with a click
+ * without having to search for it;
+ * - the block has NEITHER an address NOR sending in progress — a tab closed at the wrong
+ * time. We say it, and it is removed like any block. Never an
+ * empty square which we do not know if it still loads.
  *
- * La LÉGENDE est un champ de saisie ordinaire, pas un nœud de texte : elle vit
- * dans l'attribut `alt` (donc dans le texte alternatif du markdown, cf.
- * blocks/image.ts). En faire du contenu ProseMirror aurait voulu dire un nœud de
- * plus, une position de curseur de plus, et un aller-retour markdown à réinventer
- * pour la même phrase.
+ * The LEGEND is an ordinary input field, not a text node: it lives
+ * in the `alt` attribute (so in the alternative text of the markdown, cf.
+ * blocks/image.ts). Making it ProseMirror content would have meant one more
+ * node, one more cursor position, and one more markdown round trip to reinvent
+ * for the same sentence.
  */
 export function ImageView({ node, editor, updateAttributes, getPos }: NodeViewProps) {
   const t = useTranslations("Pages");
@@ -51,11 +51,11 @@ export function ImageView({ node, editor, updateAttributes, getPos }: NodeViewPr
   const wrapper = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
 
-  /* ── Le redimensionnement ─────────────────────────────────────────────── */
+  /* ── Resizing ─────────────────────── ──────────────────────── */
 
-  // En pourcentage de la COLONNE, jamais en pixels (cf. blocks/image.ts) : la
-  // poignée lit donc la largeur du conteneur à chaque mouvement, et la souris
-  // n'a rien à savoir de la taille réelle du fichier.
+  // As a percentage of the COLUMN, never in pixels (see blocks/image.ts): the
+  // handle therefore reads the width of the container on each movement, and the mouse
+  // has nothing to do with the actual size of the file.
   const startResize = useCallback(
     (event: React.PointerEvent<HTMLElement>) => {
       if (!editor.isEditable) return;
@@ -87,7 +87,7 @@ export function ImageView({ node, editor, updateAttributes, getPos }: NodeViewPr
     [editor, updateAttributes]
   );
 
-  /* ── L'aperçu au clic ─────────────────────────────────────────────────── */
+  /* ── Preview on click ───────────────────────── ────────────────────────── */
 
   const [zoomed, setZoomed] = useState(false);
   useEffect(() => {
@@ -101,23 +101,23 @@ export function ImageView({ node, editor, updateAttributes, getPos }: NodeViewPr
 
   const displayed = src ?? upload?.previewUrl ?? null;
   const failed = upload?.status === "failed";
-  // Ni adresse, ni envoi : le bloc a survécu à un onglet fermé en plein envoi.
+  // Neither address nor sending: the block survived a tab closed in the middle of sending.
   const abandoned = !src && !upload;
 
   return (
     <NodeViewWrapper
       as="div"
       ref={wrapper}
-      // Ni contour ni coins arrondis quand le bloc est sélectionné (MIN-282).
+      // Neither contour nor rounded corners when the block is selected (MIN-282).
       //
-      // L'anneau encadrait TOUT le bloc, légende comprise, et son rayon rognait
-      // ce qui touche les angles — à commencer par le texte alternatif, que le
-      // navigateur dessine DANS la boîte de l'image quand elle ne charge pas.
+      // The ring framed the ENTIRE block, legend included, and its radius cut
+      // what affects the angles — starting with the alternative text, that the
+      // browser draws IN the image box when it doesn't load.
       //
-      // Il n'y a donc plus AUCUNE marque de sélection sur l'image, et c'est
-      // assumé : ce qui désigne le bloc est la gouttière au survol (la poignée
-      // et le `+`), comme sur n'importe quel autre bloc du document. Rien
-      // d'autre dans cet éditeur ne se peint parce qu'il est sélectionné.
+      // There is therefore NO more selection mark on the image, and it is
+      // assumed: what designates the block is the gutter when hovered (the handle
+      // and the `+`), as on any other block of the document. Nothing
+      // else in this editor is not painting because it is selected.
       className="my-2 flex flex-col items-start"
       contentEditable={false}
     >
@@ -126,34 +126,32 @@ export function ImageView({ node, editor, updateAttributes, getPos }: NodeViewPr
           className="group/image relative max-w-full"
           style={{ width: width ? `${width}%` : "100%" }}
         >
-          {/* Une balise `img` nue, et non `next/image` : la source est une
-              redirection 302 vers une URL signée, que l'optimiseur de Next ne
-              peut ni mettre en cache ni redimensionner — il ferait un aller-retour
-              de plus pour rendre exactement le même octet. */}
+          {/* A bare `img` tag, not `next/image`: the source is a
+ 302 redirect to a signed URL, which Next's optimizer can neither cache nor resize — it would do one more
+ round trip to render exactly the same byte. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={displayed}
             alt={alt}
             /**
-             * Le glissé ne part pas de l'IMAGE, il part du bloc (MIN-282).
-             *
-             * Une image est nativement glissable, et c'est elle que le
-             * navigateur emporte quand on la tire — pas le nœud qui la contient.
-             * Le transfert porte alors du HTML (`<img src=…>`), donc rien que
-             * ProseMirror reconnaisse comme un déplacement : il retombe sur son
-             * collage par défaut et INSÈRE une seconde image. Un glissé de trois
-             * pixels, celui qu'on fait sans le vouloir en cliquant, dupliquait
-             * le bloc.
-             *
-             * `draggable={false}` rend le geste au conteneur, que ProseMirror
-             * sait déjà glisser (`draggable: true` dans le schéma du nœud,
-             * blocks/image.ts). Tirer une image la DÉPLACE donc, au lieu de la
-             * recopier — ce que fait déjà la poignée de gouttière, et ce que
-             * faisait croire le geste.
-             *
-             * Ce qu'on y perd : glisser l'image vers le bureau ou un autre
-             * onglet. L'ouvrir en grand d'un clic la rend à ce geste-là.
-             */
+ * Dragging does not start from the IMAGE, it starts from the block (MIN-282).
+ *
+ * An image is natively draggable, and it is this that the
+ * browser takes when you drag it — not the node that contains it.
+ * The transfer then carries HTML (`<img src=…>`), so nothing but
+ * ProseMirror recognizes it as a move: it falls back to its default
+ * collage and INSERTS a second image. A drag of three
+ * pixels, the one you do without meaning to by clicking, duplicated
+ * the block.
+ *
+ * `draggable={false}` returns the gesture to the container, which ProseMirror
+ * already knows how to drag (`draggable: true` in node schema,
+ * blocks/image.ts). Dragging an image therefore MOVES it, instead of copying it — what the gutter handle already does, and what
+ * made the gesture appear.
+ *
+ * What we lose: dragging the image to the desktop or another
+ * tab. Opening it wide with a click returns it to this gesture.
+ */
             draggable={false}
             className={cx(
               "h-auto w-full",
@@ -175,9 +173,9 @@ export function ImageView({ node, editor, updateAttributes, getPos }: NodeViewPr
           )}
 
           {editor.isEditable && src && (
-            // La poignée de largeur : sur le bord droit, révélée au survol.
-            // `touch-none` parce qu'un glissé au doigt ferait sinon défiler la
-            // page sous la poignée au lieu de la suivre.
+            // The width handle: on the right edge, revealed on hover.
+            // `touch-none` because a swipe would otherwise scroll the
+            // page under the handle instead of following it.
             <span
               role="slider"
               tabIndex={-1}
@@ -229,13 +227,13 @@ export function ImageView({ node, editor, updateAttributes, getPos }: NodeViewPr
           placeholder={t("imageCaption")}
           aria-label={t("imageCaption")}
           onChange={(event) => updateAttributes({ alt: event.target.value })}
-          // Le clavier appartient au champ tant qu'on y écrit : sans ça, ⌫ sur
-          // une légende vide remonterait à ProseMirror et supprimerait l'image
-          // qu'on est en train de légender.
+          // The keyboard belongs to the field as long as we write on it: without that, ⌫ on
+          // an empty caption would go up to ProseMirror and delete the image
+          // that we are in the process of captioning.
           onKeyDown={(event) => event.stopPropagation()}
           onFocus={() => {
-            // `getPos` rend `undefined` quand le nœud n'est plus dans le
-            // document — la vue survit un instant à sa propre suppression.
+            // `getPos` returns `undefined` when the node is no longer in the
+            // document — the view survives its own deletion for a moment.
             const pos = getPos?.();
             if (typeof pos === "number") editor.commands.setNodeSelection(pos);
           }}
@@ -245,9 +243,9 @@ export function ImageView({ node, editor, updateAttributes, getPos }: NodeViewPr
       )}
 
       {zoomed && src && (
-        // L'aperçu au clic : un calque, fermé par ÉCHAP ou par un clic n'importe
-        // où. Pas de dialog de mangue-ui — le registre de blocs doit rester
-        // importable hors navigateur, et cette vue est déjà tout ce qu'il faut.
+        // Preview on click: a layer, closed by ESC or by any click
+        // Or. No mango-ui dialog — block register should remain
+        // importable outside the browser, and this view is already all you need.
         <div
           role="dialog"
           aria-modal="true"
@@ -268,10 +266,10 @@ export function ImageView({ node, editor, updateAttributes, getPos }: NodeViewPr
 }
 
 /**
- * La vue, prête à être greffée sur le nœud image — par l'éditeur de page, qui
- * l'injecte dans `pageExtensions({ nodeViews })`. Elle vit ICI et non sur le
- * nœud parce que ce fichier est un module client : le nœud, lui, est monté hors
- * navigateur par la projection markdown (cf. blocks/subpage-view.tsx).
+ * The view, ready to be grafted onto the image node — by the page editor, which
+ * injects it into `pageExtensions({ nodeViews })`. It lives HERE and not on the
+ * node because this file is a client module: the node is mounted outside the
+ * browser by the markdown projection (see blocks/subpage-view.tsx).
  */
 export function imageNodeView(): NodeViewRenderer {
   return ReactNodeViewRenderer(ImageView) as unknown as NodeViewRenderer;

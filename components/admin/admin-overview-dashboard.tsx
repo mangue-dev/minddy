@@ -21,20 +21,20 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * `/admin` → onglet « Vue d'ensemble » (MIN-90) : l'app vue d'en haut —
- * combien de comptes, combien vivent, où ils en sont.
+ * `/admin` → “Overview” tab (MIN-90): the app seen from above —
+ * how many accounts, how many live, where they are.
  *
- * L'écran reprend délibérément le chrome de `/statistics` (`stats-chrome`) :
- * même carte, même hiérarchie titre-hors-carte, même poids de chiffre. Un admin
- * n'a pas à apprendre une deuxième grammaire visuelle pour lire des compteurs.
+ * The screen deliberately uses the chrome of `/statistics` (`stats-chrome`):
+ * same map, same title-off-map hierarchy, same figure weight. An admin
+ * doesn't have to learn a second visual grammar to read meters.
  *
- * Deux séries se lisent ici — actifs par jour et inscriptions par jour. Elles ne
- * partagent PAS un graphique : deux bandes jumelles, chacune avec sa propre
- * échelle et son titre. Superposer deux mesures d'amplitudes différentes sur un
- * même axe écraserait la plus petite (les inscriptions) jusqu'à l'invisible.
+ * Two series can be read here — actives per day and registrations per day. They don't
+ * NOT share a chart: two twin bands, each with its own
+ * scale and its title. Superimpose two measurements of different amplitudes on a
+ * same axis would crush the smallest (the inscriptions) until invisible.
  */
 
-/** Une bande de 30 jours, une barre par jour, une seule mesure. */
+/** A 30-day strip, one bar per day, one measurement. */
 function DayStrip({
   days,
   label,
@@ -69,17 +69,17 @@ function DayStrip({
       <div className="flex h-16 items-end gap-[2px]">
         {days.map((day) => {
           const value = pick(day);
-          // Une journée à 1 doit rester visible à côté d'une journée à 30 :
-          // plancher de hauteur pour toute valeur non nulle.
+          // A day at 1 must remain visible next to a day at 30:
+          // height floor for any non-zero value.
           const height = value === 0 ? 0 : Math.max((value / max) * 100, 8);
           return (
-            // La cible de survol est la COLONNE entière, pas la barre : viser
-            // 2 px de haut un jour à zéro serait impossible.
+            // The hover target is the entire COLUMN, not the bar: aim
+            // 2 px high on a zero day would be impossible.
             <Tooltip key={day.day}>
               <TooltipTrigger asChild>
                 <div className="flex h-full flex-1 items-end">
-                  {/* Barre ancrée à la ligne de base : seul le haut est arrondi —
-                      un bas arrondi ferait flotter la barre au-dessus de zéro. */}
+                  {/* Bar anchored to the baseline: only the top is rounded —
+ a rounded bottom would cause the bar to float above zero. */}
                   <div
                     className={cn(
                       "w-full rounded-t-[3px] transition-[height]",
@@ -107,7 +107,7 @@ function DayStrip({
   );
 }
 
-/** Répartition par plan : une ligne, une barre, la part en pourcentage. */
+/** Distribution by plan: a line, a bar, the percentage share. */
 function PlanRow({
   planId,
   count,
@@ -148,8 +148,8 @@ export function AdminOverviewDashboard() {
 
   const load = useCallback(async () => {
     try {
-      // Les journées sont découpées dans le fuseau de l'admin qui regarde :
-      // « actifs aujourd'hui » doit vouloir dire aujourd'hui, chez lui.
+      // The days are divided into the time zone of the admin who is watching:
+      // “active today” must mean today in their time zone.
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const response = await fetch(
         `/api/admin/overview?tz=${encodeURIComponent(tz || "UTC")}`,
@@ -189,15 +189,15 @@ export function AdminOverviewDashboard() {
 
   return (
     <div>
-      {/* 1 — Le présent : combien de comptes, combien vivent. */}
+      {/* 1 — The present: how many accounts, how many live. */}
       <StatsCard className="grid grid-cols-1 gap-5 divide-y divide-border sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-y-0">
         <Metric
           variant="hero"
           className="sm:pr-5"
           label={t("overview.totalUsers")}
           value={data.totalUsers}
-          // Un total qui baisse parce qu'on a marqué un compte interne doit
-          // s'expliquer sur place, sinon le chiffre devient suspect.
+          // A total that decreases because an internal account has been marked must
+          // explain yourself on the spot, otherwise the figure becomes suspect.
           hint={
             <>
               {t("overview.newUsers", { count: data.newUsers7d })}
@@ -229,7 +229,7 @@ export function AdminOverviewDashboard() {
         />
       </StatsCard>
 
-      {/* 2 — Les 30 derniers jours, deux bandes jumelles (jamais superposées). */}
+      {/* 2 — The last 30 days, two twin bands (never superimposed). */}
       <StatsSection title={t("overview.activity")} info={t("overview.activeInfo")}>
         <StatsCard className="flex flex-col gap-6">
           <div className="flex flex-col gap-3">
@@ -253,7 +253,7 @@ export function AdminOverviewDashboard() {
         </StatsCard>
       </StatsSection>
 
-      {/* 3 — Où en sont les nouveaux venus. */}
+      {/* 3 — Where are the newcomers? */}
       <StatsSection
         title={t("overview.onboarding")}
         info={t("overview.onboardingInfo")}
@@ -293,7 +293,7 @@ export function AdminOverviewDashboard() {
         </StatsCard>
       </StatsSection>
 
-      {/* 5 — Le socle : ce que l'app contient. */}
+      {/* 5 — The base: what the app contains. */}
       <StatsSection title={t("overview.content")}>
         <StatsCard className="grid grid-cols-2 gap-5 sm:grid-cols-4">
           <TotalItem

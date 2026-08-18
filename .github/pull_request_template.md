@@ -1,30 +1,30 @@
-## Pourquoi
+## Why
 
-<!-- Lien vers l'issue acceptée, le problème résolu et le résultat visé. -->
+<!-- Link to the accepted issue, the problem solved, and the intended outcome. -->
 
 Closes #
 
 ## Changements
 
-<!-- Résumé concis. Mentionnez explicitement migrations, API, données et ruptures de compatibilité. -->
+<!-- Concise summary. Explicitly mention migrations, APIs, data, and breaking changes. -->
 
-## Vérification
+## Verification
 
-<!-- Commandes exécutées et scénarios vérifiés. Indiquez ce qui n'a pas pu être testé. -->
+<!-- Commands run and scenarios verified. State what could not be tested. -->
 
 - [ ] `pnpm lint`
 - [ ] `pnpm typecheck`
 - [ ] `pnpm test`
 
-## Risques et dépendances
+## Risks and dependencies
 
-<!-- Sécurité, confidentialité, déploiement, rollback, nouvelle dépendance/asset et sa licence. Écrire « Aucun » le cas échéant. -->
+<!-- Security, privacy, deployment, rollback, new dependencies/assets, and their licenses. Write “None” when applicable. -->
 
 ## Checklist
 
-- [ ] La PR a un périmètre unique et une issue associée, ou explique pourquoi elle n'en a pas.
-- [ ] Chaque commit est signé avec `git commit -s` conformément au DCO.
-- [ ] Le comportement nouveau ou corrigé possède un test.
-- [ ] La documentation et les deux catalogues `messages/en.json` / `messages/fr.json` sont à jour si nécessaire.
-- [ ] Aucune clé, donnée client, configuration privée ou information de vulnérabilité non corrigée n'est incluse.
-- [ ] Toute dépendance ou ressource ajoutée a une origine, une nécessité et une licence compatibles documentées.
+- [ ] The RA has a unique scope and an associated outcome, or explains why it does not have one.
+- [ ] Each commit is signed with `git commit -s` according to the DCO.
+- [ ] The new or corrected behavior has a test.
+- [ ] The documentation and the two catalogs `messages/en.json` / `messages/fr.json` are up to date if necessary.
+- [ ] No keys, customer data, private configuration, or unpatched vulnerability information are included.
+- [ ] Any added dependencies or resources have a documented origin, requirement, and compatible license.

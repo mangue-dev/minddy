@@ -1,48 +1,47 @@
 // minddy — MIN-74 : onboarding du nouveau compte.
 //
-// Cinq étapes, franchies sur `/home` : créer ou rejoindre son premier projet,
-// faire entrer ses premiers tickets (à la main ou par import CSV, MIN-98),
-// connecter un agent au serveur MCP, poser sa clé d'API (MIN-149), activer les
-// cycles. Trois d'entre elles se cochent SEULES à partir d'une donnée réelle (le
-// projet existe, un ticket existe, une clé est enregistrée) ; les autres sont
-// acquittées explicitement par l'utilisateur — importer son backlog, connecter
-// un agent et apporter sa clé sont des propositions, pas des obligations.
+// Five steps, completed on `/home`: create or join your first project,
+// enter your first tickets (by hand or by CSV import, MIN-98),
+// connect an agent to the MCP server, set its API key (MIN-149), activate the
+// cycles. Three of them are checked ONLY from real data (the
+// project exists, a ticket exists, a key is registered); the others are
+// explicitly acknowledged by the user — import their backlog, connect
+// an agent and bringing your key are propositions, not obligations.
 //
-// RIEN NE BLOQUE. C'est la leçon d'AutoKap, dont l'onboarding exigeait une
-// connexion GitHub dès l'étape 1 : un seul onboarding complété en 120 jours.
-// Ici chaque étape est franchissable et l'onboarding entier se passe.
+// NOTHING IS BLOCKED. This is the lesson of AutoKap, whose onboarding required
+// GitHub connection from step 1: a single onboarding completed in 120 days.
+// Here each step can be taken and the entire onboarding takes place.
 //
-// L'état vit dans `user_metadata` (auth Supabase), comme les préférences de
-// cycles : pas de table, pas de migration. Server-safe (aucun import React) —
-// le résolveur est partageable avec un route handler si le besoin vient.
+// The state lives in `user_metadata` (Supabase auth), like the preferences of
+// cycles: no table, no migration. Server-safe (no React import) —
+// the resolver can be shared with a route handler if the need arises.
 
 export const ONBOARDING_STEPS = ["project", "tickets", "mcp", "key", "cycles"] as const;
 
-/** Les quatre étapes d'avant MIN-149, dans leur ordre d'alors. Elles servent à
- *  reconnaître un compte qui avait DÉJÀ fini son onboarding quand `key` s'y est
- *  ajoutée — cf. `isCompleted` ci-dessous. */
+/** The four stages before MIN-149, in their then order. They are used to
+ * recognize an account which had ALREADY finished its onboarding when `key` was added to it
+ * — cf. `isCompleted` below. */
 const PRE_KEY_STEPS = ONBOARDING_STEPS.filter((id) => id !== "key");
 
 export type OnboardingStepId = (typeof ONBOARDING_STEPS)[number];
 
-/** Ids d'étapes disparus, encore présents dans les métadonnées des comptes qui
- *  ont commencé l'onboarding avant la fusion « premier ticket » + « importer »
- *  en une seule étape `tickets`. Ils ne sont plus des étapes — seulement des
- *  traces à relire pour ne pas rouvrir un onboarding déjà avancé. */
+/** Step ids disappeared, still present in the metadata of accounts that
+ * started onboarding before the “first ticket” + “import”
+ * merge into a single step `tickets`. They are no longer steps — only traces to be reread so as not to reopen an already advanced onboarding. */
 const LEGACY_ACK_IDS = ["issue", "import"] as const;
 
-/** Étapes acquittées à la main (tableau d'ids) — les autres se déduisent. */
+/** Steps acknowledged by hand (ID table) — the others are deduced. */
 export const ONBOARDING_STEPS_META_KEY = "onboarding_steps";
-/** « Passer l'onboarding » : il ne réapparaît plus, même incomplet. */
+/** “Skip onboarding”: it no longer reappears, even incomplete. */
 export const ONBOARDING_DISMISSED_META_KEY = "onboarding_dismissed";
-/** Posé la première fois que l'onboarding s'affiche — voir `eligible`. */
+/** Asked the first time the onboarding is displayed — see `eligible`. */
 export const ONBOARDING_STARTED_META_KEY = "onboarding_started";
 
-/** Signaux réels lus dans l'app — ce que l'utilisateur a vraiment fait. */
+/** Actual signals read in the app — what the user actually did. */
 export interface OnboardingSignals {
   projectCount: number;
   issueCount: number;
-  /** Une clé BYOK est enregistrée sur le compte (`user_ai_keys`). */
+  /** A BYOK key is registered on the account (`user_ai_keys`). */
   hasAiKey: boolean;
   cyclesEnabled: boolean;
 }
@@ -54,21 +53,21 @@ export interface OnboardingStep {
 
 export interface OnboardingState {
   steps: OnboardingStep[];
-  /** Première étape non franchie, ou null si tout est fait. */
+  /** First step not taken, or null if everything is done. */
   currentStepId: OnboardingStepId | null;
-  /** Rang 1-basé de l'étape courante, pour « Étape 2 sur 5 ». */
+  /** Rank 1 - based on current step, for "Step 2 of 5". */
   currentStepNumber: number;
   completedCount: number;
   totalCount: number;
   allComplete: boolean;
   dismissed: boolean;
-  /** Le compte était neuf quand l'onboarding l'a vu pour la première fois. */
+  /** The account was new when onboarding first saw it. */
   eligible: boolean;
-  /** Compte neuf éligible dont l'entrée n'est pas encore gravée : l'appelant
-   *  doit poser `onboarding_started` (sinon créer projet + ticket rendrait le
-   *  compte « installé » et le ferait sortir de l'onboarding en cours de route). */
+  /** New eligible account whose entry is not yet engraved: the caller
+ * must set `onboarding_started` (otherwise creating project + ticket would make the
+ * account “installed” and remove it from onboarding along the way). */
   needsStartStamp: boolean;
-  /** Seule chose que la home a besoin de savoir pour afficher la carte. */
+  /** Only thing the home needs to know to display the map. */
   visible: boolean;
 }
 
@@ -76,9 +75,9 @@ function isOnboardingStepId(value: unknown): value is OnboardingStepId {
   return (ONBOARDING_STEPS as readonly unknown[]).includes(value);
 }
 
-/** Le tableau brut, ids inconnus compris : c'est là que vivent les étapes
- *  disparues (`LEGACY_ACK_IDS`), qu'il faut relire pour la reprise des comptes
- *  entamés avant la fusion. Rien d'autre ne devrait l'utiliser. */
+/** The raw table, including unknown ids: this is where the missing
+ * steps live (`LEGACY_ACK_IDS`), which must be reread to resume the accounts
+ * started before the merge. Nothing else should use it. */
 function readRawAcknowledged(
   meta: Record<string, unknown> | null | undefined
 ): Set<string> {
@@ -87,9 +86,9 @@ function readRawAcknowledged(
   return new Set(raw.filter((v): v is string => typeof v === "string"));
 }
 
-/** Étapes acquittées, lues défensivement : les métadonnées auth sont du JSON
- *  libre, un tableau absent / mal typé / porteur d'ids inconnus ne doit pas
- *  faire tomber la home. */
+/** Steps acknowledged, read defensively: the auth metadata is free JSON
+ *, an absent table / incorrectly typed / carrying unknown ids must not
+ * bring down the home. */
 export function readAcknowledgedSteps(
   meta: Record<string, unknown> | null | undefined
 ): Set<OnboardingStepId> {
@@ -98,8 +97,8 @@ export function readAcknowledgedSteps(
   return new Set(raw.filter(isOnboardingStepId));
 }
 
-/** Ajoute une étape à la liste acquittée, dans l'ordre canonique et sans
- *  doublon — le patch à écrire dans `user_metadata`. */
+/** Adds a step to the acknowledged list, in canonical order and without
+ * duplicate — the patch to write to `user_metadata`. */
 export function withAcknowledgedStep(
   meta: Record<string, unknown> | null | undefined,
   step: OnboardingStepId
@@ -110,16 +109,13 @@ export function withAcknowledgedStep(
 }
 
 /**
- * Fusionne les acquittements persistés avec les signaux réels.
+ * Merges persisted acknowledgments with actual signals.
  *
- * ÉLIGIBILITÉ. L'onboarding s'adresse aux comptes NEUFS : il prend la place du
- * corps de la home, ce qui n'a de sens que quand il n'y a rien à y montrer. Un
- * compte déjà installé (des projets, des tickets) ne doit pas se faire
- * confisquer sa home pour une étape « connecter un agent » qu'il n'a jamais
- * demandée. Le compte est éligible s'il est vide au premier regard — et le
- * reste ensuite grâce à `onboarding_started`, sans quoi créer son projet et son
- * ticket le ferait basculer « installé » et le ferait sortir de l'onboarding
- * juste après avoir coché ses deux premières étapes.
+ * ELIGIBILITY. Onboarding is aimed at NEW accounts: it takes the place of the
+ * body of the home, which only makes sense when there is nothing to show there. An account already installed (projects, tickets) must not have its home confiscated for a “connect an agent” step that it never requested. The account is eligible if it is empty at first glance — and the
+ * then remains thanks to `onboarding_started`, otherwise creating your project and its
+ * ticket would switch it to "installed" and take it out of onboarding
+ * just after checking its first two steps.
  */
 export function resolveOnboardingState({
   meta,
@@ -135,39 +131,39 @@ export function resolveOnboardingState({
 
   const isCompleted = (id: OnboardingStepId): boolean => {
     if (acknowledged.has(id)) return true;
-    // `key` est arrivée APRÈS les quatre autres (MIN-149). Un compte qui avait
-    // déjà franchi celles-là avait fini son onboarding : lui rendre sa home
-    // confisquée pour une étape ajoutée après coup serait exactement la
-    // reconfiscation contre laquelle `onboarding_started` existe. Le test se
-    // fait sur les quatre étapes d'alors, pas sur `allComplete` — qui compte
-    // `key` et tournerait en rond.
+    // `key` arrived AFTER the other four (MIN-149). An account that had
+    // already crossed these had finished his onboarding: return him his home
+    // confiscated for a step added after the fact would be exactly the
+    // reconfiscation against which `onboarding_started` exists. The test is
+    // done on the four steps then, not on `allComplete` — which counts
+    // `key` and would go around in circles.
     //
-    // Pendant l'onboarding lui-même, cette branche ne peut pas mordre : les
-    // cycles sont opt-in (`resolveCyclePrefs`), donc la dernière étape n'est
-    // jamais franchie avant qu'on arrive à `key`.
+    // During onboarding itself, this branch cannot bite: the
+    // cycles are opt-in (`resolveCyclePrefs`), so the last step is not
+    // never crossed before we arrive at `key`.
     if (id === "key") {
       return hasAiKey || PRE_KEY_STEPS.every((step) => isCompleted(step));
     }
     switch (id) {
       case "project":
         return projectCount > 0;
-      // Un ticket existe : créé à la main ou importé, la distinction ne se voit
-      // pas dans la donnée et n'a pas à se voir ici. Sans ticket, l'étape se
-      // passe explicitement (« Passer cette étape » → acquittement).
+      // A ticket exists: created by hand or imported, the distinction is not visible
+      // not in the data and should not be seen here. Without a ticket, the stage
+      // pass explicitly (“Skip this step” → acknowledgment).
       //
-      // REPRISE DES COMPTES ENTAMÉS. Les deux étapes fusionnées ici étaient
-      // `issue` (auto) et `import` (acquittée). Un compte qui portait l'une de
-      // ces marques était déjà PLUS LOIN que la nouvelle étape `tickets` : la
-      // relire évite de le renvoyer en arrière. Idem pour `mcp`, qui suivait
-      // les deux — donc les impliquait.
+      // RESUMPTION OF STARTED ACCOUNTS. The two steps merged here were
+      // `issue` (auto) and `import` (acknowledged). An account that carried one of
+      // these brands were already FURTHER than the new `tickets` stage: the
+      // reread avoids sending it back. Same for `mcp`, which followed
+      // both — therefore involved them.
       case "tickets":
         return (
           issueCount > 0 ||
           acknowledged.has("mcp") ||
           LEGACY_ACK_IDS.some((legacy) => raw.has(legacy))
         );
-      // Connecter un agent ne laisse pas de trace exploitable côté client : cette
-      // étape est informative et se valide sur « Continuer » (acquittement).
+      // Connecting an agent does not leave a usable trace on the client side: this
+      // step is informative and validates on “Continue” (acknowledgment).
       case "mcp":
         return false;
       case "cycles":

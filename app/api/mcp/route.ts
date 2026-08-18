@@ -4,15 +4,15 @@ import { verifyMcpToken } from "@/lib/server/mcp/auth";
 import { MCP_SERVER_INSTRUCTIONS } from "@/lib/server/mcp/instructions";
 
 /**
- * Serveur MCP de minddy — Streamable HTTP stateless (un McpServer neuf par
- * POST, pas de sessions ni de notifications serveur : profil « tools-only »,
- * adapté au serverless). Auth OAuth 2.1 uniquement : le 401 renvoie le
- * resource_metadata, le client découvre l'AS (well-known) et ouvre le
- * navigateur pour le consentement — l'agent agit comme l'utilisateur qui a
- * autorisé.
+ * minddy MCP server — stateless Streamable HTTP (a new McpServer per
+ * POST, with no sessions or server notifications: a “tools-only” profile,
+ * suitable for serverless). Auth OAuth 2.1 only: 401 returns
+ * resource_metadata, the client discovers the AS (well-known) and opens the
+ * browser for consent — the agent acts as the user who has
+ * allowed.
  *
  *   claude mcp add --scope user --transport http minddy <url>/api/mcp
- *   (puis /mcp dans Claude Code pour s'authentifier)
+ * (then /mcp in Claude Code to authenticate)
  */
 
 const handler = createMcpHandler(

@@ -14,15 +14,14 @@ import { useObjectiveResources } from "@/lib/use-objective-resources";
 import { useAuth } from "@/lib/auth-context";
 
 /**
- * Les pièces jointes d'un OBJECTIF — jumelle d'IssueResourcesSection. Une pièce
- * s'enregistre dès qu'elle atterrit (pas d'étape de validation) ; le retrait est
- * réservé à qui l'a déposée (RLS).
+ * Attachments of an OBJECTIVE — twin of IssueResourcesSection. A coin
+ * is saved as soon as it lands (no validation step); withdrawal is
+ * reserved for who deposited it (RLS).
  *
- * C'est une LIGNE de la table clé/valeur de l'objectif, et pas une section à
- * part : « Ressources » se lit dans la même colonne que Statut, Responsable et
- * Couleur, du même gris et sur la même grille. Elle en était voisine sans en
- * faire partie — un titre plus gras, deux pixels plus à gauche —, et cette
- * différence-là ne disait rien qu'on ait voulu dire.
+ * It is a LINE of the key/value table of the objective, and not a section at
+ * part: “Resources” is read in the same column as Status, Responsible and
+ * Color, the same gray and on the same grid. It was close to it without being part of it — a bolder title, two pixels further to the left —, and this
+ * difference didn't say anything we wanted to say.
  */
 export function ObjectiveResourcesSection({
   objectiveId,
@@ -50,9 +49,9 @@ export function ObjectiveResourcesSection({
     <div className="relative flex flex-col rounded-lg" {...drop.handlers}>
       <DropOverlay show={drop.dragging} />
       <PropertyRow label={t("sectionTitle")}>
-        {/* `-mr-1.5` : le même recalage que les autres valeurs de la table, qui
-            portent toutes un déclencheur à padding. Sans lui, le « + » finit une
-            encoche à droite des sélecteurs du dessus. */}
+        {/* `-mr-1.5`: the same resetting as the other values ​​in the table, which
+ all carry a padding trigger. Without it, the “+” ends in a
+ notch to the right of the selectors above. */}
         <AddResourceButton
           onFiles={uploads.addFiles}
           onLink={uploads.addLink}
@@ -61,9 +60,7 @@ export function ObjectiveResourcesSection({
           className="-mr-1.5"
         />
       </PropertyRow>
-      {/* Les pastilles passent SOUS la ligne, sur toute la largeur : un nom de
-          fichier ne tient pas dans la colonne de droite, et les tronquer là où
-          il y a la place de les lire n'aurait servi qu'à garder l'alignement. */}
+      {/* The pellets pass UNDER the line, over the entire width: a file name does not fit in the right column, and truncating them where there is room to read them would only have served to keep the alignment. */}
       {!empty && (
         <ResourcePills
           className="pb-2"

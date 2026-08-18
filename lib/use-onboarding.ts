@@ -19,35 +19,35 @@ import {
 } from "./onboarding";
 
 export interface UseOnboardingResult extends OnboardingState {
-  /** Les signaux ne sont pas encore connus — la home n'affiche rien. */
+  /** The signals are not yet known — the home does not display anything. */
   loading: boolean;
-  /** Dernière étape franchie sous les yeux de l'utilisateur : la carte reste,
-   *  et montre son mot de fin. Se ferme sur `finish`. */
+  /** Last step completed before the user's eyes: the card remains,
+ * and shows its end word. Closes on `finish`. */
   finalScreen: boolean;
-  /** Ce que la home a besoin de savoir pour monter la carte : les étapes, ou
-   *  l'écran de fin qui les suit. */
+  /** What the home needs to know to mount the card: the steps, or
+ * the end screen that follows them. */
   showCard: boolean;
-  /** Marque une étape franchie (« Continuer », « Terminer »). */
+  /** Marks a step completed (“Continue”, “Finish”). */
   acknowledgeStep: (step: OnboardingStepId) => Promise<void>;
-  /** Ferme le mot de fin — l'onboarding ne reviendra pas. */
+  /** Closes the end word — onboarding will not return. */
   finish: () => Promise<void>;
-  /** « Passer l'onboarding » — définitif. */
+  /** “Pass onboarding” — definitive. */
   dismiss: () => Promise<void>;
 }
 
 /**
- * L'onboarding vu par la home (MIN-74) : les signaux réels de l'app (projets,
- * tickets, cycles) fusionnés aux acquittements stockés dans `user_metadata`.
+ * Onboarding seen by the home (MIN-74): the real signals of the app (projects,
+ * tickets, cycles) merged with the acknowledgments stored in `user_metadata`.
  *
- * Les écritures sont OPTIMISTES : `updateUserMetadata` fait un aller-retour
- * GoTrue, une étape ne peut pas attendre ça pour avancer. Les acquittements en
- * vol sont superposés aux métadonnées lues, et retirés si l'écriture échoue.
+ * The writes are OPTIMISTIC: `updateUserMetadata` goes back and forth
+ * GoTrue, one step can't wait for this to move forward. Acknowledgments en
+ * vol are superimposed on the read metadata, and removed if the write fails.
  */
 export function useOnboarding(): UseOnboardingResult {
   const { user, updateUserMetadata } = useAuth();
   const { projects, loading: projectsLoading } = useProjects();
-  // MIN-89 : seul le NOMBRE de tickets sert ici. Il vient du compteur SQL de
-  // /api/me/summary — la home n'a plus à télécharger le board agrégé complet.
+  // MIN-89: only the NUMBER of tickets is used here. It comes from the SQL counter of
+  // /api/me/summary — the home no longer has to download the complete aggregated board.
   const { counts, loading: summaryLoading } = useHomeSummaryQuery();
   const { track, setPersonProperties } = useAnalytics();
 
@@ -58,14 +58,14 @@ export function useOnboarding(): UseOnboardingResult {
   const meta = user?.user_metadata as Record<string, unknown> | undefined;
 
   /**
-   * L'étape « clé » (MIN-149) se coche sur une donnée réelle, donc il faut lire
-   * les clés du compte — mais UNIQUEMENT quand l'onboarding peut s'afficher.
-   * Les deux conditions se calculent sans cette lecture (c'est ce qui rend le
-   * garde-fou possible) : le compte n'a pas passé l'onboarding, et il est soit
-   * déjà entré dedans, soit encore vierge. Les signaux sont attendus avant de
-   * conclure « vierge », sinon la requête partirait pour tout le monde le temps
-   * d'un rendu.
-   */
+ * The "key" step (MIN-149) is checked on real data, so it is necessary to read
+ * the keys of the account - but ONLY when the onboarding can be displayed.
+ * The two conditions are calculated without this reading (this is what makes the
+ * safeguard possible): the account has not passed onboarding, and it is either
+ * already entered, or still blank. The signals are expected before
+ * concluding “blank”, otherwise the request would leave for everyone while it takes
+ * to render.
+ */
   const signalsReady = !!user && !projectsLoading && !summaryLoading;
   const onboardingPossible =
     signalsReady &&
@@ -94,9 +94,9 @@ export function useOnboarding(): UseOnboardingResult {
         projectCount: projects.length,
         issueCount: counts.total,
         hasAiKey: keys.length > 0,
-        // Source de vérité des cycles : les métadonnées du compte, pas le board.
-        // `GET /api/me/summary` ne fait que les refléter — s'appuyer sur lui
-        // ferait attendre un refetch avant que l'étape se coche.
+        // Source of truth for cycles: account metadata, not the board.
+        // `GET /api/me/summary` only reflects them — builds on it
+        // make it wait for a refetch before the step is checked.
         cyclesEnabled: resolveCyclePrefs(effectiveMeta).enabled,
       }),
     [effectiveMeta, projects.length, counts.total, keys.length],
@@ -105,30 +105,28 @@ export function useOnboarding(): UseOnboardingResult {
   const loading = !user || projectsLoading || summaryLoading || keysLoading;
 
   /**
-   * Grave l'entrée en onboarding sur le compte, une seule fois, dès que la
-   * carte s'affiche pour un compte encore vierge. Sans cette marque, créer le
-   * projet et le ticket rendrait le compte « installé » (`blankAccount` faux)
-   * et le ferait décrocher de son propre onboarding juste avant l'étape MCP.
-   */
+ * Engraves the onboarding entry on the account, only once, as soon as the
+ * card is displayed for an account that is still empty. Without this mark, creating the
+ * project and ticket would make the account "installed" (`blankAccount` false)
+ * and cause it to drop out of its own onboarding just before the MCP step.
+ */
   const stampedRef = useRef(false);
   useEffect(() => {
     if (loading || !state.needsStartStamp || stampedRef.current) return;
     stampedRef.current = true;
     setPendingStart(true);
     void updateUserMetadata({ [ONBOARDING_STARTED_META_KEY]: true }).catch(() => {
-      // Silencieux : c'est une écriture d'arrière-plan que l'utilisateur n'a pas
-      // demandée. Le rendu suivant réessaiera.
+      // Silent: this is a background write that the user does not have
+      // requested. The next renderer will try again.
       stampedRef.current = false;
       setPendingStart(false);
     });
   }, [loading, state.needsStartStamp, updateUserMetadata]);
 
   /**
-   * Entonnoir d'activation (MIN-78). L'étape COURANTE vue est l'événement le
-   * plus précieux du produit : c'est lui qui dit où les nouveaux comptes
-   * décrochent. Émis une seule fois par étape et par session — sans le garde-fou,
-   * chaque rendu de la home en enverrait un.
-   */
+ * Activation funnel (MIN-78). The CURRENT step seen is the product's most valuable event: it tells where new accounts drop off. Issued only once per step per session — without the guardrail,
+ * each rendering of the home would send one.
+ */
   const seenStepsRef = useRef<Set<OnboardingStepId>>(new Set());
   useEffect(() => {
     if (loading || !state.visible || !state.currentStepId) return;
@@ -154,7 +152,7 @@ export function useOnboarding(): UseOnboardingResult {
     track,
   ]);
 
-  /** Onboarding bouclé : jalon de compte, pas seulement un événement. */
+  /** Completed onboarding: account milestone, not just an event. */
   const completionSentRef = useRef(false);
   useEffect(() => {
     if (loading || !state.eligible || !state.allComplete || completionSentRef.current) return;
@@ -164,15 +162,15 @@ export function useOnboarding(): UseOnboardingResult {
   }, [loading, state.eligible, state.allComplete, state.completedCount, track, setPersonProperties]);
 
   /**
-   * MOT DE FIN. La dernière étape franchie fait tomber `visible` — la carte
-   * disparaîtrait au moment précis où il y a quelque chose à dire. On retient
-   * donc la TRANSITION, sous les yeux de qui la provoque : la carte était
-   * affichée, elle ne l'est plus parce que tout est fait.
-   *
-   * C'est un état de session, pas une métadonnée : le seul moment où il compte
-   * est celui du clic. Un rechargement de page à cet instant précis rend la
-   * home normale — ce qui est justement ce que l'écran annonce.
-   */
+ * END WORD. The last step taken drops `visible` — the card
+ * would disappear at the precise moment when there is something to say. We retain
+ * therefore the TRANSITION, before the eyes of whoever causes it: the card was
+ * displayed, it is no longer so because everything is done.
+ *
+ * It is a session state, not metadata: the only moment when it counts
+ * is that of the click. A page reload at this precise moment returns the
+ * home to normal — which is precisely what the screen announces.
+ */
   const wasVisibleRef = useRef(false);
   const [finalScreen, setFinalScreen] = useState(false);
   useEffect(() => {
@@ -190,15 +188,15 @@ export function useOnboarding(): UseOnboardingResult {
     setFinalScreen(false);
     wasVisibleRef.current = false;
     if (!user) return;
-    // Même clé que « Passer l'onboarding » : tout est fait, il ne doit plus
-    // rien reprendre à la home. L'événement de complétion, lui, est déjà parti
+    // Same key as “Skip onboarding”: everything is done, it no longer needs to be
+    // take nothing back home. The completion event has already started
     // par l'effet ci-dessus — inutile d'ajouter un `onboarding_dismissed` qui
-    // dirait le contraire de ce qui s'est passé.
+    // would say the opposite of what happened.
     try {
       await updateUserMetadata({ [ONBOARDING_DISMISSED_META_KEY]: true });
     } catch {
-      // Silencieux : l'onboarding est fini, la home est déjà rendue. Le pire
-      // cas est un mot de fin revu au prochain passage — pas une erreur à
+      // Silent: onboarding is finished, home has already been returned. The worst
+      // case is an end word revised on the next passage — not an error to
       // montrer.
     }
   }, [user, updateUserMetadata]);
@@ -241,9 +239,9 @@ export function useOnboarding(): UseOnboardingResult {
 
   return {
     ...state,
-    // Sans compte résolu ni signaux chargés, `visible` vaudrait `true` par
-    // défaut (0 projet, 0 ticket) et ferait clignoter l'onboarding sur la home
-    // d'un compte bien installé.
+    // Without account resolved or signals loaded, `visible` would be worth `true` by
+    // default (0 project, 0 ticket) and would flash the onboarding on the home
+    // a well-established account.
     loading,
     finalScreen,
     showCard: state.visible || finalScreen,

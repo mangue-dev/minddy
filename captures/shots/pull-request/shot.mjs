@@ -1,11 +1,11 @@
 /**
- * workflowPr — la pull request de Numo sur AUR-2, onglet Fichiers.
+ * workflowPr — Numo's pull request on AUR-2, Files tab.
  *
- * Voir `intent.md` : le diff d'une PR est lu EN DIRECT chez GitHub, donc aucune
- * donnée semée ne peut le fabriquer. On ouvre la VRAIE page et on répond à la
- * place du réseau sur trois lectures. Aucune écriture, aucun `pr_number` posé.
+ * See `intent.md`: the diff of a PR is read LIVE at GitHub, so no
+ * sown data cannot make it. We open the REAL page and respond to the
+ * position of the network on three readings. No writing, no `pr_number` set.
  *
- *   node captures/shots/pull-request/shot.mjs             # produit les PNG
+ * node captures/shots/pull-request/shot.mjs # produces the PNGs
  *   node captures/shots/pull-request/shot.mjs --publish   # + livre
  */
 import { openPage, settle, shoot, CAPTURE } from "../../lib/browser.mjs";
@@ -38,17 +38,17 @@ const json = (route, body) =>
   route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
 
 /**
- * Les lectures répondues par la capture. Elles sont TOUTES indexées par la PR
- * depuis MIN-143 (`/api/pull-requests/{prId}/…`) : la page montre aussi les PR
- * humaines, qui n'ont aucun run, et les routes `agent-runs/{runId}/pr/*` ne
- * sont plus que des façades qu'elle n'appelle pas.
+ * Readings responded to by capture. They are ALL indexed by the PR
+ * since MIN-143 (`/api/pull-requests/{prId}/…`): the page also shows the PRs
+ * human, which have no runs, and `agent-runs/{runId}/pr/*` routes do not
+ * are more than facades that she does not call.
  *
- * On vise par le CHEMIN EXACT, pas par un glob : `**\/pull-requests/*` ramasse
+ * We aim by the EXACT PATH, not by a glob: `**\/pull-requests/*` picks up
  * aussi bien `/comments` que `/commits` selon l'ordre d'enregistrement.
  *
- * Le dernier filet attrape TOUT le reste de la famille et refuse de le servir :
- * une route inconnue partirait sinon pour de vrai, avec ses vraies
- * conséquences — un appel à GitHub au nom du compte de démo.
+ * The last net catches ALL the rest of the family and refuses to serve it:
+ * an unknown road would leave if not for real, with its real
+ * consequences — a call to GitHub on behalf of the demo account.
  */
 async function serveFixture(page) {
   const served = [];
@@ -66,11 +66,11 @@ async function serveFixture(page) {
   const under = (suffix) =>
     new RegExp(`^/api/pull-requests/[^/]+${suffix}$`);
 
-  // Filet de sécurité, posé EN PREMIER et donc consulté EN DERNIER : Playwright
-  // essaie ses gestionnaires dans l'ordre INVERSE d'enregistrement, le plus
-  // récent d'abord. Posé en dernier, ce filet passait devant tous les autres et
-  // abortait la liste elle-même — la page rendait son écran vide, et le message
-  // d'erreur parlait d'un `#128` introuvable.
+  // Safety net, installed FIRST and therefore consulted LAST: Playwright
+  // tries its handlers in REVERSE order of registration, the most
+  // recent first. Placed last, this net passed in front of all the others and
+  // aborted the list itself — the page rendered its screen blank, and the message
+  // error was talking about a `#128` not found.
   await page.route(
     (url) => url.pathname.startsWith("/api/pull-requests"),
     async (route) => {
@@ -83,9 +83,9 @@ async function serveFixture(page) {
   await on((p) => under("").test(p), (r) => json(r, DETAIL_RESPONSE));
   await on(
     (p) => under("/comments").test(p),
-    // Le fil est PLAT côté forge : `comments` est la conversation, `timeline`
-    // les événements (assignations, labels…) et `reactions` les emoji. Les deux
-    // derniers sont vides — le monde de démo n'a ni l'un ni l'autre.
+    // The wire is FLAT on the forge side: `comments` is the conversation, `timeline`
+    // events (assignments, labels, etc.) and `reactions` emoji. Both
+    // The latter are empty — the demo world has neither.
     (r) => json(r, { comments: COMMENTS, timeline: [], reactions: [] }),
   );
   await on((p) => under("/commits").test(p), (r) => json(r, { commits: COMMITS, truncated: false }));
@@ -93,8 +93,8 @@ async function serveFixture(page) {
     (p) => under("/review-comments").test(p),
     (r) => json(r, { comments: [], threads: [], reactions: [] }),
   );
-  // La relecture par Numo (MIN-168) : aucune session sur cette PR, donc rien à
-  // annoncer dans le fil. Le hook cesse de poller dès que `working` est faux.
+  // Rereading by Numo (MIN-168): no session on this PR, therefore nothing to
+  // announce in the thread. The hook stops polling as soon as `working` is false.
   await on(
     (p) => under("/ai-review").test(p),
     (r) => json(r, { run: null, reviewedHeadSha: null, model: null }),
@@ -111,20 +111,20 @@ async function capture({ locale, theme }) {
     await page.goto(`${CAPTURE.baseUrl}/pull-requests`, { waitUntil: "domcontentloaded" });
     await settle(page, { expect: `text=#${PR_NUMBER}` });
 
-    // La pastille d'usage de l'en-tête affiche « … » tant que la facturation
-    // n'a pas répondu, et cette page-ci la double sur le fil. Un run l'a
-    // photographiée en chargement. On attend qu'elle ait fini, quelle que soit
-    // la langue — c'est le caractère qu'on guette, pas un libellé.
+    // The header usage badge displays “…” as long as the billing
+    // did not respond, and this page doubles it on the thread. One run got it
+    // photographed while loading. We wait for her to finish, whatever
+    // the language — it is the character that we look for, not a wording.
     await page.waitForFunction(
       () => ![...document.querySelectorAll("button")].some((b) => b.textContent?.trim() === "…"),
       undefined,
       { timeout: 15_000 },
     );
 
-    // Onglet Fichiers : désigné par son rang, son libellé est traduit et porte
-    // le compteur de fichiers. C'est le TROISIÈME depuis qu'un onglet
-    // « Commits » s'est glissé entre Conversation et Fichiers — viser le
-    // deuxième ouvrait la liste des commits, et le contrôle du diff échouait
+    // Files tab: designated by its rank, its wording is translated and carries
+    // the file counter. This is the THIRD since a tab
+    // “Commit” slipped between Conversation and Files — aim for
+    // second opened the commits list, and the diff check failed
     // sans dire pourquoi.
     const filesTab = page.getByRole("tab").nth(2);
     await filesTab.click();
@@ -132,8 +132,8 @@ async function capture({ locale, theme }) {
       throw new Error(`${locale}/${theme} — l'onglet Fichiers n'est pas sélectionné.`);
     }
 
-    // Le diff est rendu par un parseur : on attend une ligne de code, pas le titre
-    // du fichier — celui-ci s'affiche avant que le patch soit découpé en hunks.
+    // The diff is rendered by a parser: we expect a line of code, not the title
+    // of the file — this is displayed before the patch is split into hunks.
     await page
       .getByText("export type KeyHint", { exact: false })
       .first()
@@ -146,24 +146,24 @@ async function capture({ locale, theme }) {
       ({ files, totals }) => {
         const main = document.querySelector("main");
         const text = main?.textContent || "";
-        // Les couleurs du diff : on compte les lignes réellement peintes plutôt
-        // que de faire confiance à une classe.
+        // The colors of the diff: we count the lines actually painted rather
+        // than trusting a class.
         //
-        // Deux choses ont changé sous ce contrôle, et chacune le rendait
-        // silencieusement faux — il rendait 0 sur un diff parfaitement coloré.
+        // Two things changed under this control, and each made it
+        // silently wrong — it rendered 0 on a perfectly colored diff.
         //
-        // 1. Le diff est rendu par `@pierre/diffs`, DANS UN SHADOW DOM
-        //    (cf. app/globals.css et ses variables `--diffs-*`).
-        //    `main.querySelectorAll` ne le traverse pas : il faut descendre
-        //    dans les `shadowRoot` à la main. Les locators Playwright, eux, le
-        //    percent — d'où l'attente de « export type KeyHint » qui passait
-        //    pendant que le comptage échouait.
-        // 2. Les couleurs calculées ne sont plus en `rgb()`. Les variables
-        //    `--diffs-*` sont posées en `oklch`, et `getComputedStyle` rend
-        //    alors `oklab(0.627 -0.167 0.099 / 0.1)` ou `lab(…)` : la lecture
-        //    du triplet par expression régulière ne reconnaissait plus une
-        //    seule couleur de la page. On ne parse donc plus rien — c'est le
-        //    navigateur qui convertit, via un canvas, et ça vaudra pour la
+        // 1. The diff is rendered by `@pierre/diffs`, IN A SHADOW DOM
+        // (see app/globals.css and its `--diffs-*` variables).
+        // `main.querySelectorAll` do not cross it: you have to go down
+        // in the `shadowRoot` by hand. The Playwright locators
+        // percent — hence the expectation of “export type KeyHint” which passed
+        // while counting failed.
+        // 2. The calculated colors are no longer in `rgb()`. The variables
+        // `--diffs-*` are set to `oklch`, and `getComputedStyle` makes
+        // then `oklab(0.627 -0.167 0.099 / 0.1)` or `lab(…)`: reading
+        // of the triple by regular expression no longer recognized a
+        // only color of the page. We therefore no longer parse anything — it is the
+        // browser which converts, via a canvas, and that will be valid for the
         //    prochaine notation qu'il adoptera.
         const everyElement = (root, out = []) => {
           for (const el of root.querySelectorAll("*")) {
@@ -185,7 +185,7 @@ async function capture({ locale, theme }) {
         const painted = everyElement(main ?? document).filter((el) => {
           const [r, g, b, a] = toRgba(getComputedStyle(el).backgroundColor);
           if (a === 0) return false;
-          // Un vert ou un rouge franc : une composante domine nettement.
+          // A clear green or red: one component clearly dominates.
           return (g > r + 12 && g > b + 12) || (r > g + 12 && r > b + 12);
         }).length;
         return {

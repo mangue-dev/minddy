@@ -52,8 +52,8 @@ export async function gatherProjectPromptContext({
       .select("id, name")
       .eq("project_id", project.id)
       .order("name", { ascending: true }),
-    // Le WIKI (MIN-273) : titres et parents, jamais les corps — la carte tient
-    // dans le prompt, les documents se lisent page par page avec get_page.
+    // The WIKI (MIN-273): titles and parents, never the bodies — the map holds
+    // in the prompt, the documents are read page by page with get_page.
     supabase
       .from("pages")
       .select("id, title, parent_id")

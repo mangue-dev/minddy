@@ -16,10 +16,10 @@ import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import type { Project } from "@/lib/types";
 
 /**
- * Onglet « Général » des réglages d'un projet : son identité (nom, clé, icône)
- * et la zone de danger. Deux branches — propriétaire, qui modifie et supprime ;
- * membre, qui lit et quitte. Extrait de la page (MIN-167), où il vivait en JSX
- * inline avec son propre état de formulaire.
+ * “General” tab of a project's settings: its identity (name, key, icon)
+ * and the danger zone. Two branches — owner, which modifies and deletes ;
+ * member, which reads and exits. Excerpt from page (MIN-167), where he lived in JSX
+ * inline with its own form state.
  */
 export function ProjectGeneralSection({
   project,
@@ -28,7 +28,7 @@ export function ProjectGeneralSection({
 }: {
   project: Project;
   isOwner: boolean;
-  /** La page possède le `ConfirmDeleteDialog` : elle route vers /home après. */
+  /** The page has the `ConfirmDeleteDialog`: it routes to /home afterwards. */
   onRequestDelete: () => void;
 }) {
   const t = useTranslations("Settings");
@@ -114,8 +114,8 @@ export function ProjectGeneralSection({
           />
         </SettingsGroup>
 
-        {/* Le geste vit dans l'en-tête : le groupe n'a qu'une action, et une
-            rangée qui répétait mot pour mot le titre au-dessus d'elle. */}
+        {/* The gesture lives in the header: the group has only one action, and a
+ row that repeats word for word the title above it. */}
         <SettingsGroup
           anchor={SETTINGS_SECTIONS.projectLeave}
           icon={LogOut}
@@ -140,8 +140,8 @@ export function ProjectGeneralSection({
 
   return (
     <>
-      {/* Le `<form>` enveloppe la carte pour que Entrée dans un champ soumette,
-          comme avant — le bouton d'envoi vit dans le pied du groupe. */}
+      {/* The `<form>` wraps the card so Enter in a field submits,
+ as before — the submit button lives in the footer of the group. */}
       <form onSubmit={handleSave}>
         <SettingsGroup
           anchor={SETTINGS_SECTIONS.projectGeneral}
@@ -190,8 +190,8 @@ export function ProjectGeneralSection({
           <SettingsRow
             label={t("iconLabel")}
             control={
-              /* Le projet existe : chaque geste écrit tout de suite et le cache
-                 `projects` rafraîchi rend la nouvelle icône — rien à retenir ici. */
+              /* The project exists: each gesture writes immediately and the refreshed cache
+ `projects` renders the new icon — nothing to remember here. */
               <ProjectIconPicker
                 projectId={project.id}
                 seed={projectOrbSeed(project)}

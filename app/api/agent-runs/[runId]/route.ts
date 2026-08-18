@@ -8,15 +8,15 @@ import { stopSandboxByName } from "@/lib/server/agent/sandbox";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
- * Une conversation de l'agent (MIN-46) : la LIRE, la RENOMMER, l'ÉPINGLER, la
- * DÉSÉPINGLER, la SUPPRIMER.
+ * A conversation from the agent (MIN-46): READ it, RENAME it, PIN it,
+ * UNPIN, DELETE.
  *
- * Ces gestes demandent la même chose — pouvoir lire ce run, c'est-à-dire être
- * membre de son projet ET, sauf run partagé, en être le créateur (MIN-332,
- * `canReadAgentRun`) — et rendent le même 404 quand on ne l'a pas : dire
- * « interdit » apprendrait déjà qu'un run porte cet identifiant.
+ * These gestures require the same thing — to be able to read this run, that is to say to be
+ * member of his project AND, except shared run, be the creator (MIN-332,
+ * `canReadAgentRun`) — and return the same 404 when we don't have it: say
+ * “forbidden” would already learn that a run has this identifier.
  *
- * La lecture ne rend que des colonnes client-safe (jamais le checkpoint ni le
+ * Reading only makes client-safe columns (never the checkpoint or the
  * sandbox_id).
  */
 
@@ -27,8 +27,8 @@ function sanitizeRun(run: AgentRun) {
     id: run.id,
     project_id: run.project_id,
     issue_id: run.issue_id,
-    // Ce qui dit à la conversation qu'elle regarde une RELECTURE (MIN-168) : pas
-    // de branche à pousser, donc pas de « créer une pull request » à proposer.
+    // Which tells the conversation that she is watching a REVIEW (MIN-168): not
+    // branch to push, so no “create a pull request” to propose.
     pull_request_id: run.pull_request_id,
     status: run.status,
     model: run.model,
@@ -36,7 +36,7 @@ function sanitizeRun(run: AgentRun) {
     reasoning_level: run.reasoning_level,
     key_mode: run.key_mode,
     triggered_by: run.triggered_by,
-    // Bulle « originelle » de la conversation (la note, pour un run carnet).
+    // “Original” bubble of the conversation (the note, for a run notebook).
     prompt: run.prompt,
     prompt_mentions: run.prompt_mentions,
     base_branch: run.base_branch,
@@ -51,12 +51,12 @@ function sanitizeRun(run: AgentRun) {
     created_at: run.created_at,
     updated_at: run.updated_at,
     awaiting_input: run.awaiting_input,
-    // L'environnement de la conversation (MIN-359), figé au lancement : c'est
-    // lui que le chip verrouillé du composer et la note du fil lisent.
+    // The conversation environment (MIN-359), frozen at launch: it is
+    // him that the locked chip of the composer and the note of the thread read.
     local_exec: run.local_exec,
     local_worktree: run.local_worktree,
-    // Stampé par trigger DB (hors du type AgentRun) — parité avec RUN_COLUMNS de
-    // /api/issues/[id]/agent pour que le client réutilise AgentRunSummary tel quel.
+    // Stamped by DB trigger (outside the AgentRun type) — parity with RUN_COLUMNS of
+    // /api/issues/[id]/agent for the client to reuse AgentRunSummary as is.
     completed_at: (run as AgentRun & { completed_at?: string | null }).completed_at ?? null,
   };
 }
@@ -76,20 +76,20 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   return NextResponse.json({ run: sanitizeRun(run) });
 }
 
-/** Un titre de conversation tient sur une ligne — au-delà, la colonne le tronque
- *  de toute façon, et la base n'a pas à porter un paragraphe. */
+/** A conversation title fits on one line — beyond that, the column truncates it
+ * anyway, and the base doesn't have to carry a paragraph. */
 const MAX_TITLE = 200;
 
 /**
- * RENOMMER la conversation. Le titre est celui que le titreur a écrit au
- * lancement (`agent_runs.title`) : le remplacer à la main, c'est écrire la même
- * colonne, et la cascade d'affichage (`lib/agent-session-title.ts`) le reprend
- * partout — la ligne de la liste, l'en-tête du volet.
+ * RENAME the conversation. The title is the one that the titrator wrote on
+ * launch (`agent_runs.title`): replacing it by hand means writing the same
+ * column, and the display cascade (`lib/agent-session-title.ts`) takes it
+ * everywhere — the list line, the pane header.
  *
- * Un titre VIDE efface le sien : la conversation retombe alors sur le titre de son
- * ticket, ou sur « Conversation sans titre ». C'est le seul moyen de revenir en
- * arrière, et il vaut mieux que d'interdire — un renommage malheureux ne doit pas
- * être définitif.
+ * An EMPTY title erases its own: the conversation then returns to the title of its
+ * ticket, or on “Untitled Conversation”. It's the only way to come back
+ * back, and it is better than banning — an unfortunate renaming should not
+ * be definitive.
  */
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { runId } = await params;
@@ -152,22 +152,22 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
 }
 
 /**
- * SUPPRIMER la conversation, quel que soit son état — y compris `running`.
+ * DELETE the conversation in any state — including `running`.
  *
- * C'est délibéré, et c'est même le cas qui a fait écrire cette route : une
- * conversation dont la boucle est morte reste `running`, ne s'arrête pas et ne se
- * guide pas. Refuser de la supprimer parce qu'elle « travaille » laisserait pour
- * seule issue une suppression à la main en base — ce qu'il a fallu faire.
+ * It is deliberate, and it is even the case which caused this route to be written: a
+ * conversation whose loop is dead remains `running`, does not stop and does not
+ * guide not. Refusing to delete it because it “works” would leave
+ * The only way out was to delete it by hand from the base - which had to be done.
  *
- * TROIS GESTES, ET L'ORDRE COMPTE. On pose le drapeau d'interruption, on coupe la
- * microVM, on révoque la clé du run, PUIS on supprime la ligne. Supprimer d'abord
- * perdrait le nom de la sandbox et le hash de la clé : la microVM tournerait
- * jusqu'au bout de sa session (24 h facturées) et la clé resterait valide, sans
- * plus rien en base pour dire lesquelles. Les trois premiers sont best-effort — un
- * de ces ménages qui échoue ne doit pas empêcher la suppression demandée.
+ * THREE GESTURES, AND THE ORDER COUNTS. We set the interrupt flag, we cut the
+ * microVM, we revoke the run key, THEN we delete the line. Delete first
+ * would lose the name of the sandbox and the hash of the key: the microVM would run
+ * until the end of its session (24 hours billed) and the key would remain valid, without
+ * nothing left in the basis to say which ones. The first three are best-effort — one
+ * of these households which fails should not prevent the requested deletion.
  *
- * La base fait le reste : `agent_run_events` et `agent_run_messages` sont en
- * `on delete cascade`, et rien d'autre ne référence un run.
+ * The database does the rest: `agent_run_events` and `agent_run_messages` are in
+ * `on delete cascade`, and nothing else references a run.
  */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { runId } = await params;

@@ -27,15 +27,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-/** Briques partagées du board public : badge de statut (mêmes icônes que les
-    statuts d'issue), vote en pill horizontal (style UserJot), avatars
-    déterministes, et LA ligne de retour — celle du board comme celle de
-    « mes retours ». */
+/** Shared bricks of the public board: status badge (same icons as the
+ issue statuses), horizontal pill voting (UserJot style), deterministic avatars
+, and THE feedback line — that of the board like that of
+ “my feedback”. */
 
-/** Teintes du badge par statut — appariées à la couleur des icônes d'issue
-    mais déclinées par thème : les hex des icônes (#FADB28…) sont pensés pour
-    le dark et deviennent illisibles en texte sur fond clair. Chaque paire
-    tient un contraste ≥ 4.5:1 ; null = neutre. */
+/** Badge shades by status — matched to the color of the issue icons
+ but declined by theme: the hexes of the icons (#FADB28…) are designed for
+ dark and become illegible in text on a light background. Each pair
+ holds a contrast ≥ 4.5:1; null = neutral. */
 const STATUS_BADGE_CLASSES: Record<FeedbackPostStatus, string | null> = {
   open: null,
   planned: null,
@@ -45,19 +45,19 @@ const STATUS_BADGE_CLASSES: Record<FeedbackPostStatus, string | null> = {
     "border-green-700/30 bg-green-500/10 text-green-700 dark:border-green-400/30 dark:bg-green-400/10 dark:text-green-400",
   declined:
     "border-red-700/30 bg-red-500/10 text-red-700 dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-400",
-  // Le spam ne se peint pas : il s'éteint. Une couleur d'alerte lui donnerait
-  // le poids d'une décision à relire, alors qu'il est justement ce qu'on a
+  // Spam cannot be painted off: it goes out. An alert color would give it
+  // the weight of a decision to reread, when it is precisely what we have
   // fini de regarder.
   spam: "border-border bg-muted text-muted-foreground",
 };
 
 /**
- * Le badge de statut d'un retour, partagé par le board public et la vue équipe.
+ * The status badge of a return, shared by the public board and the team view.
  *
- * Il emprunte la FORME des badges du reste de l'app (`Badge` de mangue-ui, la
- * même hauteur que sur les pull requests et les sessions d'agent) plutôt que la
+ * It borrows the SHAPE of the badges from the rest of the app (`Badge` from mangue-ui, the
+ * same height as on pull requests and agent sessions) rather than the
  * micro-pastille qu'il portait : quatre listes qui se ressemblent doivent se
- * ressembler, et un badge de 11 px au milieu de badges de 12 se lit comme un
+ * look like, and an 11 px badge in the middle of 12 badges reads like a
  * badge de seconde classe.
  */
 export function FeedbackStatusBadge({
@@ -67,14 +67,14 @@ export function FeedbackStatusBadge({
 }: {
   status: FeedbackPostStatus;
   /**
-   * Le nom du produit — et, en le passant, la demande d'une infobulle qui
-   * EXPLIQUE l'état.
+   * The name of the product — and, by the way, the request for a tooltip that
+   * EXPLAIN the condition.
    *
-   * Un visiteur du board ne connaît pas la convention : « Prévu » ne dit pas
-   * qui l'a prévu ni ce que ça engage, et « Ouvert » se lit aussi bien
-   * « personne ne l'a lu » que « c'est en discussion ». La phrase nomme
-   * l'équipe qui a posé l'état, donc elle a besoin du projet. Côté équipe on ne
-   * le passe pas : le mot y suffit, et la surface porte déjà ses propres
+   * A visitor to the board does not know the convention: “Planned” does not say
+   * who planned it or what it entails, and “Open” reads as well
+   * “no one has read it” that “it’s under discussion”. The sentence names
+   * the team that created the report, so it needs the project. On the team side we don't
+   * it does not pass: the word is enough, and the surface already bears its own
    * infobulles.
    */
   projectName?: string;
@@ -99,14 +99,14 @@ export function FeedbackStatusBadge({
   if (!projectName) return badge;
   return (
     <Tooltip>
-      {/* Le `span` porte le déclencheur : `Badge` rend un `span` lui aussi, mais
-          `asChild` a besoin d'un nœud à qui poser les handlers sans écraser les
-          classes de teinte. */}
+      {/* The `span` carries the trigger: `Badge` also returns a `span`, but
+ `asChild` needs a node to place handlers on without overwriting the
+ hue classes. */}
       <TooltipTrigger asChild>
         <span className="flex">{badge}</span>
       </TooltipTrigger>
       <TooltipContent side="top">
-        {/* Clé assemblée à l'exécution (lib/i18n-keys.ts). */}
+        {/* Key assembled at runtime (lib/i18n-keys.ts). */}
         {t(`statusHint.${status}` as MessageKey<"PublicFeedback">, { project: projectName })}
       </TooltipContent>
     </Tooltip>
@@ -114,14 +114,14 @@ export function FeedbackStatusBadge({
 }
 
 /**
- * Le badge « non publié » de « mes retours ».
+ * The “unpublished” badge of “my returns”.
  *
- * Un retour absent du board l'est pour deux raisons — son auteur l'a gardé
- * privé, ou la modération l'a écarté — et elles ne se disent PAS à celui qui a
- * écrit. « Spam » est le mot de l'équipe, pas une réponse à un visiteur ; et un
- * badge « Privé » à côté d'un statut fait deux étiquettes pour une seule idée.
- * Un seul badge, un seul mot, la même infobulle dans les deux cas : ce n'est
- * pas sur le board, l'équipe l'a quand même.
+ * A return absent from the board is for two reasons — its author kept it
+ * private, or moderation has ruled it out — and they are NOT said to the one who has
+ * writing. “Spam” is the team word, not a response to a visitor; and a
+ * “Private” badge next to a status makes two labels for one idea.
+ * A single badge, a single word, the same tooltip in both cases: this is not
+ * not on the board, the team still has it.
  */
 export function UnpublishedBadge({ projectName }: { projectName?: string }) {
   const t = useTranslations("PublicFeedback");
@@ -157,10 +157,10 @@ export function VoteButton({
   className?: string;
 }) {
   const t = useTranslations("PublicFeedback");
-  // Le chevron et un nombre, sans un mot : ce que le clic FAIT ne se lit nulle
-  // part, et il ne se devine pas non plus dans l'autre sens — un compteur déjà
-  // allumé se retire, ce que la flèche vers le haut dit mal. La phrase dit le
-  // geste et son sens courant, et sert d'étiquette accessible du même coup.
+  // The chevron and a number, without a word: what the click DOES reads zero
+  // leaves, and it cannot be guessed in the other direction either — a counter already
+  // lit removes itself, which the up arrow says wrong. The sentence says
+  // gesture and its common meaning, and serves as an accessible label at the same time.
   const label = voted ? t("unvote") : t("vote");
   return (
     <Tooltip>
@@ -179,12 +179,12 @@ export function VoteButton({
             size === "md" ? "gap-1 px-3 py-1.5 text-sm" : "gap-0.5 px-2 py-0.5 text-xs",
             voted
               ? "border-primary/50 bg-primary/10 text-primary"
-              : // Pas voté n'est pas « éteint ». En gris sur transparent, le
-                // geste central du board était l'élément le plus pâle de la
-                // carte — et depuis que la carte s'allume au survol, son fond
-                // remontait carrément sous le compteur. Il prend le fond des
-                // chips neutres (`--control`) et son texte plein : un bouton
-                // qu'on voit, dont l'état voté reste distinct par la teinte.
+              : // Not voted for is not “extinct”. In gray on transparent, the
+                // central gesture of the board was the palest element of the
+                // map — and since the map lights up on hover, its background
+                // went right back under the counter. It takes the bottom of
+                // neutral chips (`--control`) and its full text: a button
+                // that we see, whose voted state remains distinct in color.
                 "bg-control text-foreground hover:border-foreground/30 hover:bg-control-hover",
             className
           )}
@@ -198,10 +198,10 @@ export function VoteButton({
   );
 }
 
-/** Avatar du visiteur dans le header, la même marque abstraite que dans l'app :
-    semée sur la graine de son compte minddy quand le SSO l'a identifié — le
-    visage qu'il y connaît — et sinon sur son pseudonyme, les votants du board
-    public étant anonymes. */
+/** Visitor avatar in the header, the same abstract mark as in the app:
+ sown on the seed of his minddy account when the SSO identified him — the
+ face he knows there — and otherwise on his pseudonym, the voters of the public board
+ being anonymous. */
 export function IdentityAvatar({
   identity,
   className,
@@ -218,22 +218,22 @@ export function IdentityAvatar({
 }
 
 /**
- * L'avatar de celui qui a écrit le retour — semé sur son PSEUDONYME, jamais sur
- * son email ni son compte.
+ * The avatar of the one who wrote the return — sown on his PSEUDONYM, never on
+ * their email or account.
  *
- * Ce qu'il ajoute au board : deux retours du même auteur portent le même visage,
- * et une liste cesse d'être une pile de titres sans personne derrière. Ce qu'il
- * n'ajoute pas : un nom. Le pseudonyme lui-même ne s'affiche nulle part côté
- * public — l'avatar en est la seule trace, et il ne se remonte pas jusqu'à
- * quelqu'un.
+ * What he adds to the board: two returns from the same author have the same face,
+ * and a list ceases to be a pile of titles with no one behind it. What he
+ * does not add: a noun. The nickname itself is not displayed anywhere next to
+ * public — the avatar is the only trace of it, and it cannot be traced back to
+ * anyone.
  *
- * Sans auteur (saisie interne non rattachée), `UserAvatar` rend un disque neutre
- * plutôt qu'un visage : la ligne garde son gabarit, et on n'invente personne.
+ * Without author (unattached internal entry), `UserAvatar` makes a disk neutral
+ * rather than a face: the line keeps its size, and we don't invent anyone.
  *
- * Sa taille est celle du badge d'état qu'il précède (`h-7`), et pas une taille
- * choisie pour lui : les deux ouvrent la même ligne de méta, et un visage de
- * 16 px devant un badge de 28 se lisait comme une puce de liste plutôt que
- * comme quelqu'un.
+ * Its size is that of the state badge it precedes (`h-7`), and not a size
+ * chosen for him: both open the same meta line, and a face of
+ * 16 px in front of a 28 badge read like a list bullet rather than
+ * like a person.
  */
 export function AuthorAvatar({
   pseudonym,
@@ -246,23 +246,23 @@ export function AuthorAvatar({
 }
 
 /**
- * La discussion d'un retour, en un seul badge.
+ * The discussion of a return, in a single badge.
  *
- * Il en portait deux : « L'équipe a répondu » d'un côté, le nombre de
- * commentaires de l'autre — et jamais les deux à la fois, parce que côte à côte
- * ils disaient deux fois la même chose (il y a à lire là-dedans). Résultat, le
- * nombre disparaissait justement quand la discussion était la plus vivante :
- * celle où l'équipe a parlé.
+ * He wore two: "The team responded" on one side, the number of
+ * comments from the other — and never both at the same time, because side by side
+ * they said the same thing twice (there is something to be said in that). Result, the
+ * many disappeared precisely when the discussion was most lively:
+ * the one where the team spoke.
  *
- * Un seul badge, donc, qui dit toujours COMBIEN. Ce que l'équipe ajoute passe
- * dans l'ICÔNE : l'orbe du projet, celle du header, au lieu de la bulle
- * générique. Une bulle dit « il y a des messages » ; l'orbe dit qu'un de ces
- * messages vient du produit — et c'est ça, la nouvelle. Le mot qu'on perd en
- * chemin est rendu par l'infobulle, parce qu'un logo de 14 px n'a jamais dit
- * « l'équipe a répondu » à qui ne le savait pas déjà.
+ * A single badge, therefore, which always says HOW MUCH. What the team adds passes
+ * in the ICON: the orb of the project, that of the header, instead of the bubble
+ * generic. A bubble says “there are messages”; the orb says that one of these
+ * messages comes from the product — and that's the news. The word we lose in
+ * path is rendered by the tooltip, because a 14 px logo never said
+ * “the team responded” to anyone who didn’t already know.
  *
- * Pas de commentaire → pas de badge : un « 0 » n'est pas une information, c'est
- * une case vide qu'on a laissée dans la ligne.
+ * No comments → no badge: a “0” is not information, it is
+ * an empty box that was left in the line.
  */
 function FeedbackCommentsBadge({
   post,
@@ -274,15 +274,15 @@ function FeedbackCommentsBadge({
   const t = useTranslations("PublicFeedback");
   if (post.commentCount === 0) return null;
 
-  // L'équipe a parlé : son message est l'un de ceux qu'on compte.
+  // The team has spoken: its message is one that counts.
   const teamIsIn = post.teamRepliedAt !== null;
   const badge = (
     <Badge
       variant="secondary"
-      // Pas de teinte en plus : l'orbe du projet est déjà en couleur là où la
-      // bulle est grise, et le badge d'état juste à côté peint DÉJÀ le sien
-      // (« En cours » en ambre, « Livré » en vert). Deux badges colorés côte à
-      // côte, et on ne sait plus lequel des deux est la nouvelle.
+      // No additional tint: the orb of the project is already in color where the
+      // bubble is gray, and the state badge right next to it ALREADY paints its own
+      // (“In progress” in amber, “Delivered” in green). Two colorful badges side by side
+      // coast, and we no longer know which of the two is the news.
       icon={
         teamIsIn ? (
           <ProjectOrb
@@ -300,9 +300,9 @@ function FeedbackCommentsBadge({
   );
   return (
     <Tooltip>
-      {/* Le `span` porte le déclencheur : `Badge` rend un `span` lui aussi, mais
-          `asChild` a besoin d'un nœud à qui poser les handlers sans écraser les
-          classes de teinte. */}
+      {/* The `span` carries the trigger: `Badge` also returns a `span`, but
+ `asChild` needs a node to place handlers on without overwriting the
+ hue classes. */}
       <TooltipTrigger asChild>
         <span className="flex">{badge}</span>
       </TooltipTrigger>
@@ -314,14 +314,14 @@ function FeedbackCommentsBadge({
 }
 
 /**
- * La date d'un retour, DITE.
+ * The date of a return, SAY.
  *
- * Une date nue au milieu d'une ligne de méta ne dit pas de quoi elle est la
- * date — création, dernier vote, réponse de l'équipe. Le verbe la fixe. Et il
- * change avec ce qu'on regarde : sur « mes retours » vivent des retours privés
- * et des retours en attente de vérification, qui ne sont publiés nulle part —
- * leur coller « Publié le » à côté d'un badge « Non publié » écrirait la
- * contradiction sur la même ligne.
+ * A bare date in the middle of a meta line doesn't say what it's about
+ * date — creation, last vote, team response. The verb fixes her. And he
+ * changes with what we look at: on “my returns” live private returns
+ * and returns awaiting verification, which are not published anywhere —
+ * sticking “Published on” next to an “Unpublished” badge would write the
+ * contradiction on the same line.
  */
 export function FeedbackPostedAt({ post }: { post: PublicPost }) {
   const t = useTranslations("PublicFeedback");
@@ -333,19 +333,19 @@ export function FeedbackPostedAt({ post }: { post: PublicPost }) {
 }
 
 /**
- * Le retour au board, depuis une page d'un retour comme depuis « mes retours ».
+ * The return to the board, from a page of a return as from “my returns”.
  *
- * C'est le SEUL chemin de sortie de ces deux pages : elles n'ont ni sidebar ni
- * fil d'Ariane, et le header ne porte que l'identité du visiteur. Il a donc le
- * gabarit d'un vrai bouton plein — pas la pastille grise de 24 px qu'il était,
- * qui portait la taille et la couleur de la ligne de méta juste en dessous et
- * se lisait comme une légende plutôt que comme la commande qu'il est.
+ * This is the ONLY exit path for these two pages: they have neither sidebar nor
+ * breadcrumbs, and the header only carries the identity of the visitor. He therefore has the
+ * template of a real solid button — not the 24 px gray dot that it was,
+ * which bore the size and color of the meta line just below and
+ * read like a legend rather than the command it is.
  */
 export function BackToBoardLink({ basePath }: { basePath: string }) {
   const t = useTranslations("PublicFeedback");
   return (
     <Button asChild className="w-fit">
-      {/* basePath "" (domaine personnalisé) : la racine du board est "/". */}
+      {/* basePath "" (custom domain): the root of the board is "/". */}
       <Link href={basePath || "/"}>
         <ArrowLeft />
         {t("back")}
@@ -355,15 +355,15 @@ export function BackToBoardLink({ basePath }: { basePath: string }) {
 }
 
 /**
- * LA ligne d'un retour — la même sur le board et sur « mes retours ».
+ * THE line of a return — the same on the board and on “my returns”.
  *
- * Elle l'est parce que c'est le même objet : deux listes qui montrent le même
- * retour et ne le montrent pas pareil font douter qu'il s'agisse du même. Le
- * vote y est vivant partout, y compris depuis « mes retours » — une liste où le
- * geste central de la page d'à côté est éteint se lit comme une capture d'écran.
+ * It is because it is the same object: two lists which show the same
+ * return and do not show it the same makes one doubt whether it is the same one. THE
+ * vote is alive everywhere, including from “my returns” — a list where the
+ * Center gesture of the next page is off reads like a screenshot.
  *
- * Ce qui change d'une vue à l'autre passe par `meta` (les badges propres à la
- * vue : privé, en vérification, écrit/voté par moi) et `footer`.
+ * What changes from one view to another goes through `meta` (the badges specific to the
+ * view: private, in verification, written/voted by me) and `footer`.
  */
 export function FeedbackPostRow({
   token,
@@ -378,21 +378,21 @@ export function FeedbackPostRow({
   token: string;
   href: string;
   post: PublicPost;
-  /** Le produit : son nom nourrit les infobulles d'état, son icône signe le
-      badge « L'équipe a répondu ». */
+  /** The product: its name populates the status tooltips, its icon signs the
+ badge “The team responded”. */
   project: PublicProject;
-  /** Ouvre la porte OTP puis rejoue le vote. Le board public en a besoin ; « mes
-      retours » ne s'affiche que connecté et s'en passe. */
+  /** Open the OTP gate then replay the vote. The public board needs it; “my
+ returns” is only displayed when connected and does without it. */
   onNeedAuth?: (run: () => void) => void;
   /**
-   * Remplace le badge de statut. Ce n'est pas une variante de style : sur « mes
-   * retours », un retour écarté par la modération ne dit pas « spam » à celui
-   * qui l'a écrit — c'est le mot de l'équipe, pas une réponse à un visiteur.
+   * Replaces the status badge. This is not a style variation: on “my
+   * returns", a return rejected by moderation does not say "spam" to the one
+   * who wrote it — it's the team's word, not a response to a visitor.
    */
   statusBadge?: ReactNode;
-  /** Badges propres à la vue, à la suite du statut et de la date. */
+  /** View-specific badges, following status and date. */
   meta?: ReactNode;
-  /** Ligne libre sous la méta (« votre retour a été regroupé avec celui-ci »). */
+  /** Free line under the meta (“your feedback has been grouped with this one”). */
   footer?: ReactNode;
 }) {
   const router = useRouter();
@@ -416,13 +416,10 @@ export function FeedbackPostRow({
   };
 
   return (
-    /* La cible du survol, c'est le RETOUR — pas son titre. Un titre qui bleuit
-       désigne un lien au milieu d'une carte dont le reste ne réagit pas, et il
-       fallait viser trois mots pour l'ouvrir. Le fond qui s'allume désigne la
-       carte entière, et le lien s'étend derrière elle (`before:inset-0`) pour
-       que la surface qui s'allume soit exactement celle qui s'ouvre. Ce qui
-       doit rester cliquable par-dessus — le vote, les badges à infobulle — se
-       repositionne (`relative`), sinon la nappe du lien le recouvre. */
+    /* The target of the hover is RETURN — not its title. A title that turns blue
+ designates a link in the middle of a card to which the rest does not react, and it
+ had to aim for three words to open it. The background that lights up designates the entire board, and the link extends behind it (`before:inset-0`) so that the surface that lights up is exactly the one that opens. What
+ must remain clickable on top - voting, tooltip badges - is repositioned (`relative`), otherwise the link table covers it. */
     <li className="relative flex flex-col gap-2 rounded-lg px-3 py-3.5 transition-colors hover:bg-muted/50">
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-1">

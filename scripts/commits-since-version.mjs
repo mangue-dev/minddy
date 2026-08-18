@@ -5,9 +5,9 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
-/** `git <args>` dans le dépôt, ou `null` si la commande échoue (pas un dépôt,
- * tag absent, historique tronqué…). Jamais de throw : cette mesure est un
- * confort d'affichage, elle n'a pas à faire échouer un build. */
+/** `git <args>` in the repository, or `null` if the command fails (not a repository,
+ * tag missing, truncated history…). Never throw: this measure is a
+ * display comfort, it does not have to cause a build to fail. */
 function git(args) {
   try {
     return execFileSync("git", args, {
@@ -21,23 +21,22 @@ function git(args) {
 }
 
 /**
- * Le nombre de commits entre la version courante et HEAD — c'est-à-dire le
- * nombre de fois où le code a bougé depuis la dernière release publique.
+ * The number of commits between the current version and HEAD — that is to say the
+ * number of times the code has moved since the last public release.
  *
- * Le résultat sépare preview et production tout seul, sans rien connaître de
- * l'environnement : le workflow public tague `v<version>` sur `main`. Un
- * déploiement Cloud peut être posé sur ce tag (→ 0) ou sur des commits plus
- * récents (→ 1, 2, 3…). C'est l'historique du commit construit qui répond, pas
+ * The result separates preview and production on its own, without knowing anything about
+ * the environment: the public workflow tags `v<version>` to `main`. A
+ * Cloud deployment can be placed on this tag (→ 0) or on more recent commits (→ 1, 2, 3…). It's the history of the built commit that responds, not
  * `VERCEL_ENV`.
  *
- * **Sur Vercel, ça demande `VERCEL_DEEP_CLONE=1` dans les variables du projet**
- * (preview ET production) : le clone de build est sinon un `--depth=10`, où
- * ni le tag ni le commit de bump ne sont joignables au-delà de dix commits.
- * Sans la variable, la mesure retombe à 0 et l'app affiche la version nue —
- * le même écran qu'avant cette fonctionnalité, jamais un compte faux.
+ * **On Vercel, it requires `VERCEL_DEEP_CLONE=1` in the project variables**
+ * (preview AND production): the build clone is otherwise a `--depth=10`, where
+ * neither the tag nor the bump commit are reachable beyond ten commits.
+ * Without the variable, the measurement falls to 0 and the app displays the bare version —
+ * the same screen as before this feature, never a false account.
  *
- * @param {string} [version] version lue dans package.json par défaut
- * @returns {number} 0 quand l'historique ne permet pas de conclure
+ * @param {string} [version] version read in package.json by default
+ * @returns {number} 0 when the history does not allow to conclude
  */
 export function commitsSinceVersion(version) {
   const v =
@@ -45,14 +44,14 @@ export function commitsSinceVersion(version) {
     JSON.parse(readFileSync(path.join(ROOT, "package.json"), "utf8")).version;
   if (!v) return 0;
 
-  // Le tag de release d'abord : le workflow public le pose sur le commit dont
-  // package.json porte cette version.
+  // The release tag first: the public workflow places it on the commit whose
+  // package.json carries this version.
   let base = git(["rev-parse", "--verify", "--quiet", `refs/tags/v${v}`]);
 
-  // Sans tag — un clone qui n'a pas récupéré les tags, un dépôt fraîchement
-  // forké — le commit de bump dit la même chose : c'est celui qui a introduit
-  // ce numéro de version dans package.json. Le workflow le tague après avoir
-  // refait tous les contrôles et le build.
+  // Untagged — a clone that has not picked up the tags, a fresh repository
+  // forked — bump's commit says the same thing: it's the one that introduced
+  // this version number in package.json. The workflow tags it after
+  // redo all the checks and the build.
   if (!base) {
     base = git([
       "log",

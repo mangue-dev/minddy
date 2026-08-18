@@ -6,7 +6,7 @@ import en from "@/messages/en.json";
 const P = "11111111-1111-1111-1111-111111111111";
 
 describe("notificationTargetPath", () => {
-  it("ouvre une conversation d'agent meme sans ticket", () => {
+  it("opens an agent conversation even without a ticket", () => {
     expect(
       notificationTargetPath({
         project_id: P,
@@ -28,14 +28,14 @@ describe("notificationTargetPath", () => {
     ).toBe(`/projects/${P}/feedback?post=fp`);
   });
 
-  it("ouvre le ticket dans son board", () => {
+  it("opens the ticket in its board", () => {
     expect(notificationTargetPath({ project_id: P, issue_id: "iss" })).toBe(
       `/projects/${P}?issue=iss`
     );
   });
 
-  // L'ordre de priorité est le contrat : une ligne d'objectif qui traîne un
-  // `issue_id` de contexte doit ouvrir l'OBJECTIF, pas le ticket.
+  // The order of priority is the contract: a goal line that drags a
+  // context `issue_id` should open the GOAL, not the ticket.
   it("fait passer l'objectif avant le retour, et le retour avant le ticket", () => {
     expect(
       notificationTargetPath({
@@ -50,11 +50,11 @@ describe("notificationTargetPath", () => {
     ).toBe(`/projects/${P}/feedback?post=fp`);
   });
 
-  // MIN-278 : la page a sa propre route, et son BLOC est un fragment — il ne
-  // part pas au serveur, ne casse aucune route, et c'est déjà la forme des
-  // liens de bloc (`blockLink`). Sans lui, le clic ouvre un document de trois
-  // écrans en tête, sur une citation posée au milieu.
-  it("ouvre la page, et son bloc quand la citation en désigne un", () => {
+  // MIN-278: the page has its own route, and its BLOCK is a fragment — it does not
+  // does not go to the server, does not break any route, and this is already the form of
+  // block links (`blockLink`). Without it, clicking opens a document of three
+  // screens at the top, on a quote placed in the middle.
+  it("opens the page and its block when the mention identifies one", () => {
     expect(notificationTargetPath({ project_id: P, issue_id: null, page_id: "pg" })).toBe(
       `/projects/${P}/pages/pg`
     );
@@ -68,16 +68,16 @@ describe("notificationTargetPath", () => {
     ).toBe(`/projects/${P}/pages/pg#b2`);
   });
 
-  it("ne mène nulle part sans projet, ni sans cible", () => {
+  it("goes nowhere without a project or target", () => {
     expect(notificationTargetPath({ project_id: null, issue_id: "iss" })).toBeNull();
     expect(notificationTargetPath({ project_id: P, issue_id: null })).toBeNull();
   });
 });
 
 describe("NOTIFICATION_LINE_KEYS", () => {
-  // Le typage `MessageKey<"Inbox">` tient déjà la promesse à la compilation ;
-  // ce test la tient aussi au build d'un catalogue amputé à la main.
-  it("pointe sur des clés qui existent vraiment dans le namespace Inbox", () => {
+  // The `MessageKey<"Inbox">` typing already keeps the promise at compile time;
+  // this test also involves building a catalog amputated by hand.
+  it("points to keys that really exist in the Inbox namespace", () => {
     for (const key of Object.values(NOTIFICATION_LINE_KEYS)) {
       expect(en.Inbox, `Inbox.${key}`).toHaveProperty(key);
     }

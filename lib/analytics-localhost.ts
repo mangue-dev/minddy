@@ -1,24 +1,24 @@
 /**
- * Hôtes considérés comme « du développement » : PostHog n'est jamais initialisé
- * dessus, pour qu'un `next dev` (ou un test de domaine custom) ne pollue pas les
- * statistiques de production. Voir `components/posthog-init.tsx`, qui laisse
- * une porte de sortie (`NEXT_PUBLIC_POSTHOG_ALLOW_LOCALHOST=1`) pour vérifier le
- * câblage des événements en local avec une clé jetable.
+ * Hosts considered "development": PostHog is never initialized
+ * on them, so that a `next dev` (or a custom domain test) does not pollute the
+ * production statistics. See `components/posthog-init.tsx`, which leaves
+ * an exit gate (`NEXT_PUBLIC_POSTHOG_ALLOW_LOCALHOST=1`) to check for
+ * event wiring locally with a disposable key.
  *
- * `*.minddy.test` couvre les hôtes pointés sur 127.0.0.1 dans /etc/hosts pour
- * tester les domaines personnalisés (MIN-36) — ce sont bien des URLs locales,
- * même si leur nom ne finit pas par `.localhost`.
+ * `*.minddy.test` covers hosts pointed at 127.0.0.1 in /etc/hosts for
+ * test custom domains (MIN-36) — they are indeed local URLs,
+ * even if their name does not end with `.localhost`.
  */
 /**
- * Les événements SERVEUR doivent-ils partir depuis cet environnement ?
+ * Should SERVER events originate from this environment?
  *
- * Pendant d'`isLocalAnalyticsHostname`, qui ne protège que le navigateur. Le
- * serveur n'a pas de `location.hostname` : il se repère à `VERCEL_ENV`, absent
- * en local (voir `getAppEnv`). Sans cette garde, couper le flag localhost
- * silencerait le client mais laisserait `issue_created_server`,
- * `user_signed_up`, `agent_run_started`… continuer de partir d'un `pnpm dev`
- * vers le projet de production — une pollution invisible, et d'autant plus
- * trompeuse que ce sont justement les événements qui font autorité.
+ * Counterpart to `isLocalAnalyticsHostname`, which only protects the browser. The
+ * server does not have `location.hostname`: it is located at `VERCEL_ENV`, absent
+ * locally (see `getAppEnv`). Without this guard, cutting the localhost
+ * flag would silence the client but would let `issue_created_server`,
+ * `user_signed_up`, `agent_run_started`… continue to go from a `pnpm dev`
+ * to the production project — a pollution invisible, and all the more
+ * misleading since it is precisely the events which are authoritative.
  */
 export function shouldSendServerAnalytics(params: {
   hasKey: boolean;
@@ -26,15 +26,15 @@ export function shouldSendServerAnalytics(params: {
   allowLocalhost: boolean;
 }): boolean {
   if (!params.hasKey) return false;
-  // Production et preview envoient toujours : ce sont de vrais utilisateurs.
+  // Production and preview always send: these are real users.
   if (params.appEnv !== "development") return true;
-  // En local, seulement si on a explicitement demandé à vérifier le câblage.
+  // Locally, only if you have explicitly asked to check the cabling.
   return params.allowLocalhost;
 }
 
 export function isLocalAnalyticsHostname(hostname: string): boolean {
   const normalized = hostname.trim().toLowerCase();
-  // Une adresse IPv6 littérale arrive entre crochets dans `location.hostname`.
+  // A literal IPv6 address comes in square brackets in `location.hostname`.
   const host =
     normalized.startsWith("[") && normalized.endsWith("]")
       ? normalized.slice(1, -1)

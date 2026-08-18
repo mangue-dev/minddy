@@ -13,18 +13,18 @@ function settings(
 }
 
 describe("normalizeLanguage — ce qui entre en base", () => {
-  it("garde le sous-code principal, quelle que soit la région", () => {
+  it("keeps the primary subcode regardless of region", () => {
     expect(normalizeLanguage("pt-BR")).toBe("pt");
     expect(normalizeLanguage("pt_BR")).toBe("pt");
     expect(normalizeLanguage("  EN  ")).toBe("en");
   });
 
-  it("refuse un nom de langue plutôt que de le deviner", () => {
+  it("rejects a language name instead of guessing it", () => {
     expect(normalizeLanguage("Portuguese")).toBeNull();
     expect(normalizeLanguage("por")).toBeNull();
   });
 
-  it("refuse une langue hors du jeu fermé", () => {
+  it("rejects a language outside the closed set", () => {
     expect(normalizeLanguage("sv")).toBeNull();
     expect(normalizeLanguage(null)).toBeNull();
     expect(normalizeLanguage(42)).toBeNull();
@@ -32,13 +32,13 @@ describe("normalizeLanguage — ce qui entre en base", () => {
 });
 
 describe("shouldTranslateFeedback", () => {
-  it("traduit une langue étrangère non listée", () => {
+  it("translates an unlisted foreign language", () => {
     expect(shouldTranslateFeedback(settings(), "pt")).toBe(true);
   });
 
   it("ne traduit pas vers la langue de l'équipe", () => {
     expect(shouldTranslateFeedback(settings(), "fr")).toBe(false);
-    // Même retour, écrit par un Québécois : c'est la même équipe qui le lit.
+    // Same feedback, written by a Quebecer: it’s the same team that reads it.
     expect(shouldTranslateFeedback(settings(), "fr-CA")).toBe(false);
   });
 
@@ -48,18 +48,18 @@ describe("shouldTranslateFeedback", () => {
     expect(shouldTranslateFeedback(s, "de")).toBe(true);
   });
 
-  it("compare la liste blanche sur le code normalisé", () => {
+  it("checks the allowlist against the normalized code", () => {
     const s = settings({ skipLanguages: ["EN-GB"] });
     expect(shouldTranslateFeedback(s, "en")).toBe(false);
   });
 
-  it("ne traduit rien quand le projet a coupé la traduction", () => {
+  it("translates nothing when the project has disabled translation", () => {
     expect(shouldTranslateFeedback(settings({ enabled: false }), "pt")).toBe(false);
   });
 
   it("s'abstient quand la langue n'a pas été reconnue", () => {
-    // Une traduction fausse coûte plus cher qu'une traduction absente : l'équipe
-    // la lirait sans savoir qu'elle est fausse.
+    // A false translation costs more than an absent translation: the team
+    // would read it without knowing that it is false.
     expect(shouldTranslateFeedback(settings(), null)).toBe(false);
     expect(shouldTranslateFeedback(settings(), "klingon")).toBe(false);
   });
@@ -70,33 +70,33 @@ describe("effectiveSkipLanguages", () => {
     expect(effectiveSkipLanguages(settings())).toEqual(["fr"]);
   });
 
-  it("dédoublonne et normalise le reste", () => {
+  it("deduplicates and normalizes the rest", () => {
     const s = settings({ skipLanguages: ["en", "EN-GB", "fr", "sv"] });
     expect(effectiveSkipLanguages(s)).toEqual(["fr", "en"]);
   });
 });
 
 describe("languageLabel — ce que l'utilisateur lit", () => {
-  it("nomme la langue dans la langue de qui regarde", () => {
+  it("names the language in the viewer's language", () => {
     expect(languageLabel("de", "en")).toBe("German");
     expect(languageLabel("de", "fr")).toBe("Allemand");
   });
 
-  it("met une majuscule, que le français n'a pas", () => {
-    // Le nom n'apparaît jamais dans une phrase : c'est une option de liste, à
-    // côté du « Français » du sélecteur de langue de l'app.
+  it("adds an uppercase initial, which French does not have", () => {
+    // The name never appears in a sentence: it is a list option,
+    // “French” side of the app’s language selector.
     expect(languageLabel("en", "fr")).toBe("Anglais");
     expect(languageLabel("ja", "fr")).toBe("Japonais");
   });
 
-  it("laisse intactes les écritures sans casse", () => {
+  it("leaves casing-free scripts intact", () => {
     expect(languageLabel("ja", "ja")).toBe("日本語");
   });
 
-  it("retombe sur le code plutôt que sur rien", () => {
-    // Une locale MALFORMÉE fait lever `Intl.DisplayNames` (RangeError) — c'est
-    // ce cas-là que le `catch` rattrape. Une locale simplement inconnue, elle,
-    // ne lève pas : ICU retombe tout seul sur une locale par défaut.
+  it("falls back to the code rather than nothing", () => {
+    // A MALFORMED locale raises `Intl.DisplayNames` (RangeError) — this is
+    // this case that the `catch` catches up. A simply unknown local, she,
+    // do not raise: ICU falls back to a default locale by itself.
     expect(languageLabel("de", "!!")).toBe("de");
     expect(languageLabel("de", "zzz-invalid")).toBe("German");
   });

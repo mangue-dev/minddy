@@ -1,31 +1,31 @@
 "use client";
 
 /**
- * Le côté navigateur des notifications push (MIN-183) : enregistrer le service
- * worker, demander la permission, s'abonner, se désabonner.
+ * The browser side of push notifications (MIN-183): register service
+ * worker, ask permission, subscribe, unsubscribe.
  *
- * Tout est isolé ici parce que tout y est PLEIN DE PIÈGES de plateforme, et
- * qu'aucun n'est visible depuis le composant qui appelle :
+ * Everything is isolated here because everything is FULL OF platform TRAPS, and
+ * none are visible from the component which calls:
  *
- *   • `Notification.requestPermission()` doit partir d'un GESTE utilisateur.
- *     Safari (macOS et iOS) refuse net sinon, sans erreur lisible. D'où
- *     `subscribeThisDevice` appelée directement depuis l'`onCheckedChange` de
- *     l'interrupteur, jamais depuis un effet.
- *   • Une permission `denied` est DÉFINITIVE côté page : redemander ne
- *     rouvre aucune boîte de dialogue, la promesse rend `denied` tout de suite.
- *     Seuls les réglages du navigateur la rouvrent — c'est ce que la carte doit
- *     dire au lieu d'offrir un bouton qui ne peut rien faire.
- *   • iOS 16.4+ n'autorise le push QUE sur une PWA ajoutée à l'écran d'accueil.
- *     Dans Safari mobile, `PushManager` existe et `subscribe()` échoue : il faut
- *     tester `display-mode: standalone` AVANT de proposer quoi que ce soit.
- *   • HTTPS obligatoire, `localhost` excepté (d'où `next dev --experimental-https`).
+ * • `Notification.requestPermission()` must come from a user GESTURE.
+ * Safari (macOS and iOS) refuses outright otherwise, without readable error. Hence
+ * `subscribeThisDevice` called directly from the `onCheckedChange` of
+ * the switch, never from an effect.
+ * • A `denied` permission is DEFINITIVE on the page side: request again ne
+ * reopens no dialog, the promise renders `denied` right away.
+ * Only browser settings reopen it — that's what the card should
+ * say instead of offering a button that can't do anything.
+ * • iOS 16.4+ ONLY allows pushing on a PWA added to the home screen.
+ * In mobile Safari, `PushManager` exists and `subscribe()` fails: you have to
+ * test `display-mode: standalone` BEFORE offering anything.
+ * • HTTPS required, `localhost` except (hence `next dev --experimental-https`).
  */
 
 import { saveNativePushDeviceApi, savePushDeviceApi } from "@/lib/push-devices-api";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
 import type { PushDevice } from "@/lib/types";
 
-/** Le navigateur sait-il faire du push ? (Firefox privé, vieux Safari, non.) */
+/** Does the browser know how to push? (Private Firefox, old Safari, no.) */
 export function isPushSupported(): boolean {
   if (getDesktopBridge()?.registerForPushNotifications) return true;
   return (
@@ -36,21 +36,21 @@ export function isPushSupported(): boolean {
   );
 }
 
-/** La permission actuelle, sans rien demander. `"unsupported"` là où l'API
- *  n'existe pas — un état de plus, mais qui évite un `undefined` à traiter. */
+/** The current permission, without asking anything. `"unsupported"` where the API
+ * does not exist — one more state, but one that avoids a `undefined` to process. */
 export function pushPermission(): NotificationPermission | "unsupported" {
   if (!isPushSupported()) return "unsupported";
   return Notification.permission;
 }
 
-/** L'app tourne-t-elle en PWA installée (écran d'accueil, fenêtre autonome) ? */
+/** Does the app run in installed PWA (home screen, standalone window)? */
 export function isStandalone(): boolean {
   if (typeof window === "undefined") return false;
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
-    // Safari iOS ne parle pas `display-mode` avant 17 : il expose ce booléen
-    // non standard, seul moyen d'y répondre à la question sur les versions qui
-    // sont précisément celles où l'installation est obligatoire.
+    // Safari iOS does not speak `display-mode` before 17: it exposes this boolean
+    // non-standard, only way to answer the question about the versions which
+    // are precisely those where installation is mandatory.
     (navigator as { standalone?: boolean }).standalone === true
   );
 }
@@ -59,17 +59,17 @@ export function isIOS(): boolean {
   if (typeof window === "undefined") return false;
   return (
     /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    // iPadOS 13+ se présente comme un Mac ; l'écran tactile le trahit.
+    // iPadOS 13+ presents itself as a Mac; the touch screen gives it away.
     (navigator.userAgent.includes("Macintosh") && navigator.maxTouchPoints > 1)
   );
 }
 
-/** `applicationServerKey` veut des octets bruts ; VAPID se transporte en
- *  base64url. Même conversion que dans `public/sw.js` (qui ne peut pas importer). */
+/** `applicationServerKey` wants raw bytes; VAPID is transported as
+ * base64url. Same conversion as in `public/sw.js` (which cannot import). */
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  // `globalThis` et non `window` : identique dans le navigateur, mais la
+  // `globalThis` and not `window`: identical in the browser, but the
   // fonction reste appelable depuis un test node.
   const raw = globalThis.atob(base64);
   const output = new Uint8Array(raw.length);
@@ -77,20 +77,20 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return output;
 }
 
-/** Enregistre `/sw.js` et rend son enregistrement PRÊT (`navigator.serviceWorker.ready`
- *  attend l'activation — s'abonner sur un worker encore en installation échoue). */
+/** Registers `/sw.js` and makes its registration READY (`navigator.serviceWorker.ready`
+ * awaits activation — subscribing on a worker still installing fails). */
 export async function registerPushServiceWorker(): Promise<ServiceWorkerRegistration> {
   await navigator.serviceWorker.register("/sw.js", {
     scope: "/",
-    // Sans ça, le navigateur peut servir le worker depuis son cache HTTP et ne
-    // jamais voir la nouvelle version.
+    // Without this, the browser can serve the worker from its HTTP cache and not
+    // never see the new version.
     updateViaCache: "none",
   });
   return navigator.serviceWorker.ready;
 }
 
-/** L'endpoint de l'abonnement de CET appareil, ou null s'il n'y en a pas. Sert
- *  à reconnaître « cet appareil-ci » dans la liste rendue par le serveur. */
+/** The subscription endpoint of THIS device, or null if there is none. Serves
+ * to recognize “this device” in the list rendered by the server. */
 export async function currentEndpoint(): Promise<string | null> {
   const native = getDesktopBridge()?.registerForPushNotifications;
   if (native) {
@@ -105,27 +105,27 @@ export async function currentEndpoint(): Promise<string | null> {
 }
 
 /**
- * L'abonnement en place porte-t-il bien NOTRE clé publique ?
+ * Does the existing subscription carry OUR public key?
  *
- * Question vitale, et invisible autrement : un `PushSubscription` scelle la clé
- * publique qui l'a créé, et le service de push refuse ensuite tout envoi signé
- * par une autre — un 403 sec, « the VAPID credentials in the authorization
+ * Vital question, and otherwise invisible: a `PushSubscription` seals the public key
+ * that created it, and the push service then refuses any sending signed
+ * by another — a 403 sec, “the VAPID credentials in the authorization
  * header do not correspond to the credentials used to create the
- * subscriptions ». Rien côté navigateur ne le signale : l'abonnement paraît
- * parfaitement valide, la ligne s'affiche dans les réglages, et rien n'arrive
- * jamais.
+ * subscriptions”. Nothing on the browser side indicates this: the subscription appears
+ * perfectly valid, the line is displayed in the settings, and nothing happens
+ * ever.
  *
- * Deux façons d'y tomber, l'une quotidienne et l'autre rare :
- *   • en développement, `http://localhost:3000` est une origine PARTAGÉE entre
- *     tous les projets de la machine. Un abonnement laissé par un autre projet
- *     y est visible depuis minddy, permission comprise ;
- *   • en production, une rotation de la paire VAPID périme d'un coup tous les
- *     abonnements existants.
+ * Two ways to get there, one daily and the other rare:
+ * • in development, `http://localhost:3000` is a SHARED origin between
+ * all projects on the machine. A subscription left by another project
+ * is visible from minddy, permission included;
+ * • in production, a rotation of the VAPID pair suddenly expires all
+ * existing subscriptions.
  *
- * Le repli est délibérément asymétrique : un navigateur qui n'expose pas
- * `options` (spécification plus récente que lui) rend `true`, faute de pouvoir
- * trancher — se tromper dans ce sens ne coûte qu'un 403 de temps en temps, se
- * tromper dans l'autre ferait se réabonner tout le monde à chaque chargement.
+ * The fallback is deliberately asymmetrical: a browser which does not expose not
+ * `options` (more recent specification than it) makes `true`, for lack of being able to
+ * decide — being wrong in this sense only costs a 403 from time to time, se
+ * making a mistake in the other would make everyone resubscribe each time loading.
  */
 export function usesOurApplicationServerKey(
   subscription: Pick<PushSubscription, "options">,
@@ -134,7 +134,7 @@ export function usesOurApplicationServerKey(
   const options = subscription.options as PushSubscriptionOptions | undefined;
   if (!options) return true;
   const current = options.applicationServerKey;
-  if (!current) return false; // abonnement sans clé applicative : pas le nôtre
+  if (!current) return false; // subscription without application key: not ours
   const theirs = new Uint8Array(current);
   const ours = urlBase64ToUint8Array(key);
   return (
@@ -143,11 +143,11 @@ export function usesOurApplicationServerKey(
 }
 
 /**
- * L'abonnement de cet appareil pour NOTRE clé, quitte à le refaire.
+ * The subscription of this device for OUR key, even if it means redoing it.
  *
- * Rend aussi l'endpoint périmé qu'on vient de jeter, le cas échéant : il faut
- * le transmettre au serveur pour que sa ligne parte, sans quoi la carte
- * montrerait deux fois le même appareil, dont un muet.
+ * Also makes the expired endpoint that we have just thrown away, if necessary: it is necessary to
+ * transmit it to the server so that its line goes, otherwise the card
+ * would show the same thing twice device, including one mute.
  */
 async function subscriptionForOurKey(
   registration: ServiceWorkerRegistration,
@@ -158,8 +158,8 @@ async function subscriptionForOurKey(
 
   if (existing && !usesOurApplicationServerKey(existing, key)) {
     staleEndpoint = existing.endpoint;
-    // Obligatoire avant de se réabonner : `subscribe()` avec une clé
-    // différente de celle en place lève `InvalidStateError`, il n'y a pas de
+    // Mandatory before resubscribing: `subscribe()` with a key
+    // different from the one in place raises `InvalidStateError`, there is no
     // remplacement en un geste.
     await existing.unsubscribe();
   } else if (existing) {
@@ -185,11 +185,11 @@ export type SubscribeResult =
   | { ok: false; reason: SubscribeFailure; message?: string };
 
 /**
- * Abonne cet appareil, de bout en bout : permission → service worker →
- * `pushManager.subscribe` → enregistrement côté serveur.
+ * Subscribes this device, end to end: permission → service worker →
+ * `pushManager.subscribe` → server-side registration.
  *
- * **À appeler dans le geste utilisateur**, sans `await` intermédiaire avant la
- * demande de permission (voir l'en-tête du fichier).
+ * **To be called in the user gesture**, without `await` intermediate before the
+ * permission request (see file header).
  */
 export async function subscribeThisDevice(locale: string): Promise<SubscribeResult> {
   const native = getDesktopBridge()?.registerForPushNotifications;
@@ -208,8 +208,8 @@ export async function subscribeThisDevice(locale: string): Promise<SubscribeResu
     }
   }
   if (!isPushSupported()) return { ok: false, reason: "unsupported" };
-  // Safari iOS : hors PWA installée, `subscribe()` échoue par construction. Le
-  // dire AVANT vaut mieux qu'une erreur opaque après.
+  // Safari iOS: outside PWA installed, `subscribe()` fails by construction. THE
+  // saying BEFORE is better than an opaque error afterwards.
   if (isIOS() && !isStandalone()) return { ok: false, reason: "needs-install" };
 
   const permission = await Notification.requestPermission();
@@ -234,12 +234,12 @@ export async function subscribeThisDevice(locale: string): Promise<SubscribeResu
 }
 
 /**
- * Remet d'aplomb l'abonnement d'un appareil DÉJÀ autorisé, au chargement de
- * l'app — sans jamais rien demander à personne.
+ * Restores the subscription of an ALREADY authorized device, when loading
+ * the app — without ever asking anyone.
  *
- * Rend `null` quand il n'y a rien à faire : pas de permission, pas de clé, ou
- * aucun abonnement (l'appareil a été retiré depuis les réglages — c'est un
- * choix, pas une panne, et il ne se rattrape pas tout seul).
+ * Returns `null` when there is nothing to do: no permission, no key, or
+ * no subscription (the device was removed from settings — it's a
+ * choice, not a failure, and it doesn't recover on its own).
  */
 export async function refreshThisDeviceSubscription(
   locale: string
@@ -264,22 +264,22 @@ export async function refreshThisDeviceSubscription(
   const { subscription, staleEndpoint } = await subscriptionForOurKey(registration, key);
   return savePushDeviceApi(subscription.toJSON(), locale, {
     oldEndpoint: staleEndpoint,
-    // Un rafraîchissement n'est PAS une activation, et le serveur doit le
-    // savoir : sans ce drapeau, l'appel rallume la ligne, et l'appareil qu'on
-    // vient d'éteindre se rallume au chargement de page suivant.
+    // A refresh is NOT an activation, and the server must
+    // know: without this flag, the call turns the line back on, and the device you
+    // just turned off, turns back on at the next page load.
     refresh: true,
-    // Même raison côté analytics : une visite = un appel, le compter comme une
-    // activation gonflerait l'événement d'un facteur cent.
+    // Same reason on the analytics side: one visit = one call, count it as one
+    // activation would inflate the event by a factor of one hundred.
     track: false,
   });
 }
 
 /**
- * Désabonne CET appareil côté navigateur, et retire sa ligne côté serveur.
+ * Unsubscribe THIS device on the browser side, and remove its line on the server side.
  *
- * L'ordre compte : on lit l'endpoint AVANT `unsubscribe()`, qui le rend
- * inaccessible — sans quoi la ligne resterait en base, et la carte montrerait
- * un appareil qui ne peut plus rien recevoir.
+ * The order matters: we read the endpoint BEFORE `unsubscribe()`, which makes it
+ * inaccessible — otherwise the line would remain in base, and the map would show
+ * a device that can no longer receive anything.
  */
 export async function unsubscribeThisDevice(): Promise<string | null> {
   const bridge = getDesktopBridge();

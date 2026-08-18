@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-// `typescript-api` est un alias vers `typescript@5` (voir package.json) : depuis
-// MIN-180 le dépôt vérifie avec `typescript@7`, qui ne livre plus l'API du
-// compilateur. Même raison qu'en [subagent-runner-init.test.ts](subagent-runner-init.test.ts).
+// `typescript-api` is an alias to `typescript@5` (see package.json): from
+// MIN-180 the repository checks with `typescript@7`, which no longer ships the API
+// compiler. Same reason as in [subagent-runner-init.test.ts](subagent-runner-init.test.ts).
 import ts from "typescript-api";
 import { describe, expect, it } from "vitest";
 
@@ -15,25 +15,21 @@ import {
 } from "./tools";
 
 /**
- * TOUT TOOL SERVI À L'AGENT A SA LIGNE DANS LE FIL.
+ * ANY TOOL SERVED TO THE AGENT HAS HIS LINE IN THE THREAD.
  *
  * `TOOL_META` ([tool-call-display.tsx](../../../components/assistant/tool-call-display.tsx))
- * est la table qui donne à un appel son icône et sa phrase. Un tool qui n'y est
- * pas ne lève rien : il retombe sur `getDefaultLabel`, c'est-à-dire
- * « Traitement… » puis « Terminé », sous l'icône grille du repli.
+ * is the table that gives a call its icon and phrase. A tool that is not there
+ * does not raise anything: it falls back to `getDefaultLabel`, that is to say
+ * "Processing..." then "Finished", under the grid icon of the fallback.
  *
- * Ce que ça a coûté. `create_pr` n'y était pas — l'acte le PLUS visible d'un run,
- * celui qui rend le travail, s'affichait comme une ligne anonyme au milieu de
- * douze lectures de fichiers nommées, elles. Onze autres tools étaient dans le
- * même cas : les trois écritures d'une session de relecture, les six tools des
- * pull requests du projet, le verdict d'une chaîne, la lecture d'une page et
- * celle d'un retour du board. Aucun type-check ne le dit : `TOOL_META` est un
- * `Record<string, ToolMeta>`, il accepte n'importe quel jeu de clés.
+ * What it cost. `create_pr` was not there — the MOST visible act of a run,
+ * the one that does the work, appeared as an anonymous line in the middle of
+ * twelve named file reads, them. Eleven other tools were in the same case: the three writes of a proofreading session, the six tools of the project's pull requests, the verdict of a chain, the reading of a page and that of a return from the board. No type-check says this: `TOOL_META` is a
+ * `Record<string, ToolMeta>`, it accepts any set of keys.
  *
- * Un test STRUCTUREL, parce que le composant est du React client et que la suite
- * ne monte rien (`environment: "node"`, `include: ["lib/**"]`). On ne rend donc
- * pas la ligne : on lit les clés de la table dans l'arbre syntaxique, et on les
- * oppose aux jeux de tools que le serveur sert vraiment.
+ * A STRUCTURAL test, because the component is from the React client and the suite
+ * does not mount anything (`environment: "node"`, `include: ["lib/**"]`). We therefore do not render
+ * the line: we read the keys of the table in the syntactic tree, and we oppose them to the sets of tools that the server really uses.
  */
 
 const DISPLAY_PATH = join(
@@ -41,7 +37,7 @@ const DISPLAY_PATH = join(
   "components/assistant/tool-call-display.tsx",
 );
 
-/** Les clés de l'objet littéral `TOOL_META`, lues dans l'arbre. */
+/** The keys of the literal object `TOOL_META`, read from the tree. */
 function toolMetaKeys(): Set<string> {
   const src = ts.createSourceFile(
     DISPLAY_PATH,
@@ -85,20 +81,20 @@ describe("les lignes du fil d'un run", () => {
       ...names(PR_REVIEW_TOOLS),
     ]);
     /**
-     * `update_plan` et `ask_user` sont des tools de CONTRÔLE : le premier ne
-     * devient jamais un `tool_call` (il part en event `plan_update`, rendu par la
-     * carte au-dessus du composer), le second devient un event `question`. Ils
-     * n'ont donc pas de ligne à porter — `ask_user` en a une quand même, pour les
-     * questions passées du fil de Numo.
-     */
+ * `update_plan` and `ask_user` are CONTROL tools: the first never
+ * ever becomes a `tool_call` (it starts as an `plan_update` event, rendered by the
+ * card above the composer), the second becomes an event `question`. They
+ * therefore do not have a line to carry — `ask_user` has one anyway, for the
+ * past questions from Numo's thread.
+ */
     served.delete("update_plan");
     expect([...served].filter((name) => !keys.has(name)).sort()).toEqual([]);
   });
 
   it("nomme `webfetch`, qui arrive sous le nom d'opencode", () => {
-    // Seul tool du fil qui n'a pas de vis-à-vis maison : il n'est dans aucun jeu
-    // de `tools.ts` (c'est un intégré d'opencode, cf. `ourToolName`), donc le
-    // contrôle ci-dessus ne le voit pas.
+    // Only thread tool that does not have a house opposite: it is not in any game
+    // of `tools.ts` (it is an opencode integrated, cf. `ourToolName`), so the
+    // control above doesn't see it.
     expect(toolMetaKeys().has("webfetch")).toBe(true);
   });
 });

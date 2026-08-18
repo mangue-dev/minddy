@@ -8,9 +8,9 @@ import {
 } from "./saved-view-href";
 
 /**
- * L'adresse d'une vue enregistrée. Tout se joue sur ce qu'on GARDE et ce qu'on
- * RETIRE : une vue enregistrée retient l'écran, pas la boîte de dialogue posée
- * devant, et surtout pas une adresse qui sortirait du site.
+ * The address of a saved view. Everything depends on what we KEEP and what we
+ * REMOVE: a saved view retains the screen, not the dialog box placed
+ * in front, and especially not an address that would leave the site.
  */
 
 describe("buildViewHref", () => {
@@ -56,11 +56,11 @@ describe("buildViewHref", () => {
     expect(buildViewHref("/projects/p1", "?objective=o1", { view: "v2" })).toBe(
       "/projects/p1?objective=o1&view=v2"
     );
-    // La page écrase le paramètre déjà là plutôt que d'en ajouter un second.
+    // The page overwrites the parameter already there rather than adding a second one.
     expect(buildViewHref("/all", "?view=v1", { view: "cycle" })).toBe(
       "/all?view=cycle"
     );
-    // Pas de sélection → pas de paramètre (et pas un `?open=` vide).
+    // No selection → no parameter (and not an empty `?open=`).
     expect(
       buildViewHref("/projects/p1/objectives", "?open=o1", { open: null })
     ).toBe("/projects/p1/objectives");
@@ -81,12 +81,12 @@ describe("isSavedViewHref", () => {
   });
 
   it("refuse tout ce qui sort du site", () => {
-    // Protocol-relative : chemin absolu pour la grammaire des URLs, autre site
-    // pour un navigateur.
+    // Protocol-relative: absolute path for URL grammar, other site
+    // for a browser.
     expect(isSavedViewHref("//evil.example/x")).toBe(false);
     expect(isSavedViewHref("https://evil.example")).toBe(false);
     expect(isSavedViewHref("javascript:alert(1)")).toBe(false);
-    // Antislash lu comme une barre par certains navigateurs.
+    // Backslash read as a bar by some browsers.
     expect(isSavedViewHref("/\\evil.example")).toBe(false);
     expect(isSavedViewHref("projects/p1")).toBe(false);
   });

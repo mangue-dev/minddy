@@ -1,202 +1,201 @@
-# Sécurité — minddy
+# Security — minddy
 
-Ce document décrit l'architecture de sécurité de minddy : comment
-l'authentification, l'autorisation, le chiffrement et les surfaces publiques
-sont conçus, et quoi faire en cas d'incident. Il complète les décisions
-consignées au fil de l'eau dans les migrations et le code — il ne les remplace
-pas.
+This document describes the security architecture of minddy: how to
+authentication, authorization, encryption and public surfaces
+are designed, and what to do in the event of an incident. It completes the decisions
+recorded over time in migrations and code — it does not replace them.
 
-**Stack :** Next.js (App Router) + Supabase (PostgreSQL, Auth, Storage), déployé
-sur Vercel (HTTPS natif, redirection HTTP→HTTPS gérée par la plateforme).
+**Stack:** Next.js (App Router) + Supabase (PostgreSQL, Auth, Storage), deployed
+on Vercel (native HTTPS, HTTP→HTTPS redirection managed by the platform).
 
-## Versions prises en charge
+## Supported versions
 
-Avant la première version publique, seul le dernier commit de `main` reçoit des
-correctifs. Après publication, la dernière version stable et `main` sont prises
-en charge ; les versions antérieures peuvent recevoir un correctif à la
-discrétion des mainteneurs, sans garantie. Le bulletin de sécurité indique les
-versions affectées et corrigées.
+Before the first public release, only the latest commit of `main` receives
+fixes. After publication, the latest stable version and `main` are taken
+in charge; Earlier versions may receive a patch at
+discretion of the maintainers, without guarantee. The safety bulletin indicates the
+affected and corrected versions.
 
 ---
 
-## 1. Authentification
+## 1. Authentication
 
-- **Fournisseur :** Supabase Auth (GoTrue). Email/mot de passe, magic link, et
-  OAuth Google/GitHub. La configuration OAuth et SMTP vit dans le Dashboard
-  Supabase ; sa trace versionnée est dans [.env.example](.env.example).
-- **Vérification du JWT :** les route handlers résolvent l'utilisateur via
-  `getClaims()` et non `getUser()` ([lib/server/api-auth.ts](lib/server/api-auth.ts)).
-  Avec les clés de signature **asymétriques** (ES256) en place, la vérification
-  est **locale** (WebCrypto + JWKS mis en cache) — aucun aller-retour réseau vers
-  GoTrue par requête.
-- **Durée de vie :** access token court (1 h), refresh token en rotation. Une
-  instance Supabase injoignable est traitée en 503, jamais déguisée en 401
-  (« déconnexion »).
-- **Second facteur (MFA / TOTP) :** enrôlement TOTP + codes de récupération
-  déjà en place. Le refus `aal2` est **global** et vit dans `getAuthedUser` : un
-  compte qui a enrôlé un facteur n'est servi qu'en `aal2`. Ce choix évite la
-  faille classique de la liste de routes sensibles qu'on oublie de compléter.
-  Seule `/api/account/mfa/recover` passe `allowAal1` (le cas « plus de
-  téléphone »).
-- **Privilège admin (`/admin`, `/api/admin/*`) :** deux sources, et une seule
-  porte — `isAdminUser` ([lib/server/admin.ts](lib/server/admin.ts)), appelée
-  dans **chaque** handler exporté, jamais présumée d'un passage précédent.
-  (1) `app_metadata.role === "admin"`, non écrivable par l'utilisateur ;
-  (2) l'allowlist `ADMIN_EMAILS`, qui exige depuis MIN-344 que l'adresse soit
-  **confirmée** — vérifié sur `auth.users.email_confirmed_at` en clé de service,
-  jamais sur un claim (le `email_verified` de `user_metadata` est écrit par
-  l'utilisateur lui-même, donc forgeable). Sans cette exigence, s'inscrire avec
-  l'adresse d'un admin listé mais pas encore inscrit suffisait à obtenir le
-  privilège le plus élevé du produit. Lecture fail-closed, mémorisée 60 s.
-  `/api/me/admin` est purement informatif : il dit à la barre latérale s'il faut
-  afficher l'entrée, il n'ouvre rien.
-- **Un lien reçu n'ouvre pas de session (MIN-345).** Trois surfaces posaient une
-  session sur une simple navigation `GET`, sans rien qui prouve que la personne
-  ait demandé **ce** tour d'authentification — c'est la fixation de session :
-  l'attaquant demande un lien pour son compte, l'envoie, et lit ensuite tout ce
-  que sa victime y écrit. Chacune est traitée à sa mesure :
-  - **Lien e-mail** (`/auth/callback?token_hash=…`) : le jeton n'est plus
-    consommé sur la navigation. Il attend dans un cookie `httpOnly`
-    `SameSite=Lax` ([lib/auth-otp-pending.ts](lib/auth-otp-pending.ts)) et la
-    session ne naît que du `POST` de `/auth/confirm`. Pas de nonce dans le lien :
-    le gabarit GoTrue compose l'URL, et un mail s'ouvre légitimement sur un autre
-    appareil que celui qui l'a demandé (invitation, confirmation lue au
-    téléphone).
-  - **Tour OAuth** : inchangé, il était déjà lié à son initiateur — le
-    vérificateur PKCE est un cookie posé au départ, et l'échange échoue sans lui.
-  - **Deep link de bureau** (`minddy://auth`) : nonce tiré par l'app au départ du
-    tour ([lib/desktop/auth-turn.ts](lib/desktop/auth-turn.ts)), rapporté par le
-    lien, consommé au retour. Un lien que le système livre sans qu'on ait rien
-    demandé est ignoré ; un jeton de mail, qui ne peut pas porter de nonce, se
-    confirme à la main dans la fenêtre.
-  - **SSO de board** (`/f/<token>/sso?jwt=…`) : plafond de durée de vie imposé
-    **au vérificateur** (il ne vivait que dans notre signeur, que le client
-    n'exécute pas) et jeton **à usage unique**, consommé en base
+- **Provider:** Supabase Auth (GoTrue). Email/password, magic link, and
+OAuth Google/GitHub. OAuth and SMTP configuration lives in the Dashboard
+Supabase; its versioned trace is in [.env.example](.env.example).
+- **JWT verification:** route handlers resolve the user via
+`getClaims()` and not `getUser()` ([lib/server/api-auth.ts](lib/server/api-auth.ts)).
+With **asymmetric** (ES256) signing keys in place, verification
+is **local** (WebCrypto + cached JWKS) — no network round trip to
+GoTrue by query.
+- **Lifespan:** short access token (1 hour), rotating refresh token. A
+Unreachable Supabase instance is treated as 503, never disguised as 401
+(“disconnection”).
+- **Second factor (MFA / TOTP):** TOTP enrollment + recovery codes
+already in place. The `aal2` denial is **global** and lives in `getAuthedUser`: a
+account that has enrolled a factor is only served in `aal2`. This choice avoids the
+classic flaw in the list of sensitive routes that we forget to complete.
+Only `/api/account/mfa/recover` passes `allowAal1` (the case “more than
+phone ").
+- **Admin privilege (`/admin`, `/api/admin/*`):** two sources, and only one
+gate — `isAdminUser` ([lib/server/admin.ts](lib/server/admin.ts)), called
+in **each** exported handler, never assumed from a previous pass.
+(1) `app_metadata.role === "admin"`, not writable by the user;
+  (2) the `ADMIN_EMAILS` allowlist, which since MIN-344 requires the address to be
+**confirmed** — checked on `auth.users.email_confirmed_at` in service key,
+never on a claim (the `email_verified` of `user_metadata` is written by
+the user himself, therefore forgeable). Without this requirement, register with
+the address of an admin listed but not yet registered was enough to obtain the
+highest privilege of the product. Fail-closed reading, memorized for 60 s.
+`/api/me/admin` is purely informative: it tells the sidebar whether to
+show the entry, it doesn't open anything.
+- **A link received does not open a session (MIN-345).** Three surfaces posed a
+session on a simple `GET` navigation, without anything to prove that the person
+requested **this** round of authentication — this is session fixation:
+the attacker requests a link for his account, sends it, and then reads everything
+that his victim wrote there. Each is treated according to its own measure:
+- **Email link** (`/auth/callback?token_hash=…`): the token is no longer
+consumed on navigation. It waits in a cookie `httpOnly`
+`SameSite=Lax` ([lib/auth-otp-pending.ts](lib/auth-otp-pending.ts)) and the
+session is only born from `POST` of `/auth/confirm`. No nonce in the link:
+the GoTrue template composes the URL, and one email opens legitimately on another
+device than the one who requested it (invitation, confirmation read on
+phone).
+- **OAuth Tour**: unchanged, it was already linked to its initiator — the
+PKCE verifier is a cookie set initially, and the exchange fails without it.
+- **Desktop deep link** (`minddy://auth`): nonce pulled by the app at the start of the
+turn ([lib/desktop/auth-turn.ts](lib/desktop/auth-turn.ts)), reported by the
+link, consumed on return. A link that the system delivers without us having anything
+requested is ignored; an email token, which cannot carry a nonce, is
+confirm by hand in the window.
+- **Board SSO** (`/f/<token>/sso?jwt=…`): lifespan ceiling imposed
+**to the verifier** (he only lived in our signer, that the client
+does not execute) and **single-use** token, consumed in base
     ([lib/server/feedback/sso-replay.ts](lib/server/feedback/sso-replay.ts)).
-- **Origine des écritures.** Les routes d'API s'authentifient par cookie, et un
-  cookie part tout seul : une écriture qui **se déclare** d'une autre origine est
-  refusée en 403, dans `getAuthedUser` — global, pour la même raison que le refus
-  `aal2`. Une requête qui ne déclare **aucune** origine passe, à dessein : elle
-  ne peut pas venir d'une page tierce (le navigateur aurait posé l'en-tête), et
-  la refuser ferait tomber les appelants sans page (sondes, tests, CLI). Le
-  raisonnement complet et les deux niveaux de garde sont dans
-  [lib/server/same-origin.ts](lib/server/same-origin.ts). Deux surfaces sont plus
-  strictes et **exigent** l'en-tête, parce qu'elles ne sont atteintes que par un
-  formulaire de l'app : `/api/oauth/authorize` (consentement) et
-  `/auth/confirm/complete` (ouverture de session).
-- **Ré-authentification avant l'irréversible.** `DELETE /api/account` emporte en
-  cascade les projets possédés, leurs tickets, leurs fichiers et l'accès de leurs
-  membres : recopier son adresse protège de la maladresse, pas de quelqu'un
-  d'autre. La route redemande donc le mot de passe — ou, pour un compte OAuth qui
-  n'en a pas, une authentification datant de moins de 15 minutes, datée par le
-  claim `amr` du JWT ([lib/server/reauth.ts](lib/server/reauth.ts)). La
-  vérification du mot de passe est débitée par utilisateur, pour ne pas devenir
-  un oracle entre les mains d'une session volée.
-- **Politique de mot de passe :** l'interface applique les mêmes règles que
-  la configuration Supabase dans [lib/password-policy.ts](lib/password-policy.ts)
-  (8 caractères, minuscule, majuscule, chiffre). Le Dashboard Supabase reste
-  l'autorité qui les impose ; le bloc « Durcissement Auth » de
-  [.env.example](.env.example) consigne aussi la protection contre les mots de
-  passe fuités et les rate limits Auth.
+- **Origin of writes.** API routes are authenticated by cookie, and a
+cookie leaves by itself: a writing which **declares** itself of another origin is
+refused in 403, in `getAuthedUser` — global, for the same reason as the refusal
+`aal2`. A query which declares **no** origin passes, on purpose: it
+cannot come from a third-party page (the browser would have set the header), and
+refusing it would cause callers to be left without a page (probes, tests, CLI). THE
+complete reasoning and the two levels of custody are in
+[lib/server/same-origin.ts](lib/server/same-origin.ts). Two surfaces are more
+strict and **require** the header, because they are only reached by a
+app form: `/api/oauth/authorize` (consent) and
+  `/auth/confirm/complete` (session opening).
+- **Re-authentication before irreversible.** `DELETE /api/account` takes
+cascade the owned projects, their tickets, their files and the access of their
+members: copying your address protects against clumsiness, not from someone
+else. The route therefore asks for the password again — or, for an OAuth account which
+does not have one, an authentication less than 15 minutes old, dated by the
+claim `amr` of the JWT ([lib/server/reauth.ts](lib/server/reauth.ts)). There
+password verification is charged per user, so as not to become
+an oracle in the hands of a stolen session.
+- **Password policy:** the interface applies the same rules as
+the Supabase configuration in [lib/password-policy.ts](lib/password-policy.ts)
+(8 characters, lowercase, uppercase, number). The Supabase Dashboard remains
+the authority which imposes them; the “Auth Hardening” block of
+[.env.example](.env.example) also logs protection against
+leaked passwords and rate limits Auth.
 
-## 2. Autorisation — un monolithe service-role, RLS en seconde ligne
+## 2. Authorization — a service-role monolith, RLS as the second line
 
-Le modèle réel du code : la plupart des écritures passent par le **service
-client** (`getServiceClient()`), et l'autorisation vit en **TypeScript**
-(`getProjectAccess`, `requireProjectMember`, `is_project_owner`). C'est la
-première ligne de défense, testée et explicite.
+The actual code model: most writes go through the **service
+client** (`getServiceClient()`), and the authorization lives in **TypeScript**
+(`getProjectAccess`, `requireProjectMember`, `is_project_owner`). This is the
+first line of defense, tested and explicit.
 
-**RLS est la seconde ligne**, pas un ornement : tout utilisateur connecté détient
-la clé anon publique + son JWT et peut parler à PostgREST (`/rest/v1/…`) en
-direct. RLS est ce qui l'empêche de lire ou écrire les données d'un autre tenant
-par ce chemin.
+**RLS is the second line**, not an ornament: any logged in user has
+the public anon key + its JWT and can talk to PostgREST (`/rest/v1/…`) in
+directly. RLS is what prevents it from reading or writing data from another tenant
+through that path.
 
-- **RLS activé sur toutes les tables `public`.** Certaines tables sont
-  **deny-all volontaires** (RLS activé, aucune policy) : tout leur accès passe
-  par le service client (ex. `oauth_clients`, journaux d'événements, tables de
-  billing techniques). C'est intentionnel — ne pas « corriger » en ajoutant une
-  policy sans en comprendre le consommateur.
-- **Least privilege :** les policies de lecture/écriture s'appuient sur
-  `auth.uid()` et `can_access_project()`. Depuis MIN-118, toute policy vise
-  explicitement le rôle `authenticated` (plus aucune sur le rôle `public`, qui
-  aurait inclus `anon`) — garde structurelle documentée dans
+- **RLS enabled on all `public` tables.** Some tables are
+**deny-all volunteers** (RLS activated, no policy): all their access passes
+by customer service (e.g. `oauth_clients`, event logs, tables of
+billing techniques). This is intentional — not “correcting” by adding a
+policy without understanding the consumer.
+- **Least privilege:** read/write policies are based on
+`auth.uid()` and `can_access_project()`. Since MIN-118, all policy aims
+explicitly the `authenticated` role (no more on the `public` role, which
+would have included `anon`) — structural guard documented in
   [20260926091000_policy_tightening.sql](supabase/migrations/20260926091000_policy_tightening.sql),
-  rejouée par [20261220090000_tenant_isolation.sql](supabase/migrations/20261220090000_tenant_isolation.sql)
-  (MIN-338 : neuf policies écrites depuis étaient revenues sans clause `TO`).
-- **`project_id` est gelé** sur toute table cloisonnée que la RLS laisse mettre à
-  jour depuis le client. Un `with check` ne voit que la ligne NOUVELLE : il
-  vérifie que la destination m'est accessible, pas que je n'ai pas déplacé la
-  ligne. Un membre de deux projets pouvait donc sortir un ticket, un objectif ou
-  une page de l'un — sans corbeille et sans trace. C'est un trigger
-  `before update of project_id` (`public.freeze_project_id`), posé par une boucle
-  sur le catalogue, qui refuse (MIN-338).
-- **Binding d'auteur :** les inserts client exigent que l'auteur soit l'appelant
+replayed by [20261220090000_tenant_isolation.sql](supabase/migrations/20261220090000_tenant_isolation.sql)
+(MIN-338: nine policies written since then came back without `TO` clause).
+- **`project_id` is frozen** on any partitioned table that the RLS allows to be set
+day from the client. A `with check` only sees the NEW line: it
+checks that the destination is accessible to me, not that I have not moved the
+line. A member of two projects could therefore release a ticket, an objective or
+a page from one — without basket and without trace. It's a trigger
+`before update of project_id` (`public.freeze_project_id`), set by a loop
+on the catalog, which refuses (MIN-338).
+- **Author Binding:** Client inserts require the author to be the caller
   — `created_by = auth.uid()` (`issues`, `issue_relations`), `author_id =
-  auth.uid()` (`comments`). Pas d'usurpation d'auteur.
-- **Pas de hard delete PostgREST** sur `issues`/`objectives`/`attachments`/`pages` :
-  la suppression passe par la corbeille et le nettoyage storage côté serveur
+  auth.uid()` (`comments`). No author spoofing.
+- **No PostgREST hard delete** on `issues`/`objectives`/`attachments`/`pages`:
+the deletion goes through the recycle bin and the server-side storage cleanup
   ([lib/server/trash.ts](lib/server/trash.ts), [lib/server/pages.ts](lib/server/pages.ts)).
-  `pages_delete` avait rouvert cette porte — un DELETE direct emportait
-  l'historique de la page et laissait ses fichiers orphelins (MIN-338).
-- **Colonnes secrètes cloisonnées par privilèges colonne** (pas seulement par
-  RLS, qui filtre les lignes et non les colonnes) : `git_connections`,
+  `pages_delete` had reopened this door — a direct DELETE carried away
+the history of the page and left its files orphaned (MIN-338).
+- **Secret columns partitioned by column privileges** (not only by
+RLS, which filters rows and not columns): `git_connections`,
   `git_user_identities`, `user_ai_keys`, `api_keys`, `oauth_grants`, `integrations`,
-  `billing_accounts` — les tokens/hashs/identifiants Stripe ne sont pas dans
-  la liste blanche lisible par `authenticated`. Voir
+`billing_accounts` — Stripe tokens/hashes/IDs are not in
+the white list readable by `authenticated`. See
   [20260926090000_security_grants.sql](supabase/migrations/20260926090000_security_grants.sql).
-  ⚠ Conséquence : une colonne AJOUTÉE plus tard à l'une de ces tables n'est pas
-  lisible tant qu'un `grant select (col)` explicite ne l'ajoute pas.
-- **Fonctions SECURITY DEFINER :** réservées au `service_role`, sauf les sept
-  aides de policy : `can_access_project`, `is_project_member`,
+⚠ Consequence: a column ADDED later to one of these tables is not
+  unreadable until an explicit `grant select (col)` adds it.
+- **SECURITY DEFINER functions:** reserved for `service_role`, except the seven
+  policy helpers: `can_access_project`, `is_project_member`,
   `is_project_owner`, `can_watch_agent_run`, `can_watch_numo_comment`,
-  `can_watch_pr_review` et `can_watch_pull_request`. Elles ne répondent que sur
-  l'accès de l'appelant, et les policies RLS ne peuvent pas les appeler sans
-  EXECUTE. La règle est appliquée par une boucle sur `pg_proc`
+`can_watch_pr_review` and `can_watch_pull_request`. They only respond on
+caller access, and RLS policies cannot call them without
+EXECUTED. The rule is applied by a loop on `pg_proc`
   ([20260926093000_definer_grants_sweep.sql](supabase/migrations/20260926093000_definer_grants_sweep.sql)),
-  pas fonction par fonction.
-  ⚠ **Piège Supabase :** `revoke … from public` NE SUFFIT PAS. Le bootstrap pose
+  not function by function.
+⚠ **Supabase Trap:** `revoke … from public` IS NOT ENOUGH. The bootstrap pose
   `alter default privileges … grant all on functions to anon, authenticated`,
-  donc chaque fonction naît avec un EXECUTE **explicite** pour ces deux rôles ;
-  seul `revoke … from public, anon, authenticated` les retire. Neuf fonctions du
-  repo (dashboard admin, coûts IA, usage, `claim_agent_run`) étaient de fait
-  appelables sans aucune session avec la seule clé anon publique. Le piège a
-  resservi : `get_ai_run_spend` (20261118090000) a été écrite avec cette forme-là
-  et laissée ouverte jusqu'à MIN-338 — d'où le balai rejoué, et le garde-fou
-  (§10) qui refuse désormais la forme insuffisante à l'écriture.
+so each function is born with an EXECUTE **explicit** for these two roles;
+only `revoke … from public, anon, authenticated` removes them. Nine functions of
+repo (admin dashboard, AI costs, usage, `claim_agent_run`) were in fact
+callable without any session with only the public anon key. The trap has
+reserved: `get_ai_run_spend` (20261118090000) was written with this form
+and left open until MIN-338 — hence the replayed broom, and the guardrail
+(§10) which now refuses the insufficient form of writing.
 
-## 3. Chiffrement
+## 3. Encryption
 
-- **Au repos :** Supabase chiffre la base (AES-256) et le stockage via son
-  infrastructure. `auth.users` (email, métadonnées) est géré et chiffré par
+- **At rest:** Supabase encrypts the base (AES-256) and storage via its
+infrastructure. `auth.users` (email, metadata) is managed and encrypted by
   Supabase.
-- **Secrets applicatifs :** les secrets réversibles sont chiffrés **côté app** en
-  AES-256-GCM (enveloppe) avant écriture. Ils ne figurent pas dans les réponses
-  ordinaires, avec une exception explicite : un owner peut obtenir le secret SSO
-  de son board depuis les endpoints de configuration ou le MCP afin de le poser
-  dans le backend de son site. Il ne doit jamais aller dans le code client ni
-  dans le contrôle de version.
+- **Application secrets:** reversible secrets are encrypted **on the app side** in
+AES-256-GCM (envelope) before writing. They are not included in the answers
+ordinary, with an explicit exception: an owner can obtain the SSO secret
+of its board from the configuration endpoints or the MCP in order to install it
+in the backend of its site. It should never go into client code or
+in version control.
   - tokens OAuth GitLab → `GIT_TOKEN_ENCRYPTION_SECRET` /
     `GITLAB_TOKEN_ENCRYPTION_SECRET`
-  - **secret de webhook GitLab, un par dépôt** (MIN-333) → même enveloppe et
-    même secret de dérivation que les tokens ci-dessus, rangé dans
-    `project_git_links.webhook_secret_encrypted`. Par dépôt et pas global :
-    GitLab affiche le token d'un hook à qui peut l'éditer, donc un secret unique
-    écrit chez chaque locataire laissait tout mainteneur d'un dépôt lié forger
-    des événements pour les dépôts des autres.
-  - clés IA « BYOK » → `AI_KEY_ENCRYPTION_SECRET`
-  - secrets SSO des boards de feedback → `FEEDBACK_SSO_ENCRYPTION_SECRET`
-    (MIN-119). Chiffrés et non hachés parce qu'ils sont **partagés** avec le
-    backend de l'éditeur, qui doit pouvoir les relire ; qui les détient peut
-    forger l'identité de n'importe quel visiteur du board.
-  - clés API / grants OAuth → stockés en **sha256** (jamais réversibles).
-- **Pas de pgcrypto colonne :** inutile ici — les secrets sont déjà chiffrés
-  côté app, et email/nom vivent dans `auth.users` (chiffré par Supabase).
+- **GitLab webhook secret, one per repository** (MIN-333) → same envelope and
+same derivation secret as the tokens above, stored in
+`project_git_links.webhook_secret_encrypted`. By deposit and not global:
+GitLab displays the token of a hook to anyone who can edit it, therefore a unique secret
+written at each tenant left any maintainer of a linked deposit forging
+events for other people's repositories.
+- “BYOK” AI keys → `AI_KEY_ENCRYPTION_SECRET`
+  - feedback board SSO secrets → `FEEDBACK_SSO_ENCRYPTION_SECRET`
+(MIN-119). Encrypted and not hashed because they are **shared** with the
+backend of the editor, which must be able to reread them; who owns them can
+forge the identity of any visitor to the board.
+- API keys / OAuth grants → stored in **sha256** (never reversible).
+- **No pgcrypto column:** useless here — the secrets are already encrypted
+app side, and email/name live in `auth.users` (encrypted by Supabase).
 
 ## 4. Transport & headers
 
-Définis dans [next.config.mjs](next.config.mjs), sur toutes les routes :
+Defined in [next.config.mjs](next.config.mjs), on all routes:
 
-| Header | Valeur |
+| Header | Value |
 | --- | --- |
 | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` |
 | `X-Content-Type-Options` | `nosniff` |
@@ -205,223 +204,223 @@ Définis dans [next.config.mjs](next.config.mjs), sur toutes les routes :
 | `Permissions-Policy` | `camera=(), microphone=(self), geolocation=()` |
 | `Content-Security-Policy` | `frame-ancestors 'none'; base-uri 'self'; form-action 'self'` |
 
-- `preload` est dans le header mais le domaine **n'est pas soumis** à
-  hstspreload.org (quasi irréversible pour tout le domaine).
-- **Une seule exception :** `/oauth/authorize` (l'écran de consentement) sert la
-  même CSP **sans `form-action`**. Son formulaire POSTe vers
-  `/api/oauth/authorize`, qui répond 303 vers le `redirect_uri` du client MCP —
-  cross-origin par construction. Chrome et Safari appliquent `form-action` à la
-  cible de la redirection qui suit un POST de formulaire (Firefox non) :
-  `form-action 'self'` y bloquerait tout le flux OAuth du MCP.
-- La CSP se limite à `frame-ancestors`/`base-uri`/`form-action`. Une CSP à
-  `script-src` strict (nonces) exigerait de réécrire la chaîne de rendu (scripts
-  inline Next + theme-init-script) — **chantier séparé** si souhaité.
-- Micro autorisé en `self` : la dictée de l'assistant s'en sert.
+- `preload` is in the header but the domain **is not subject** to
+hstspreload.org (almost irreversible for the entire domain).
+- **One exception:** `/oauth/authorize` (the consent screen) serves the
+same CSP **without `form-action`**. Its POST form to
+`/api/oauth/authorize`, which responds 303 to the MCP client's `redirect_uri` —
+cross-origin by construction. Chrome and Safari apply `form-action` to the
+target of the redirection following a form POST (Firefox not):
+`form-action 'self'` would block the entire MCP OAuth flow there.
+- The CSP is limited to `frame-ancestors`/`base-uri`/`form-action`. A CSP to
+`script-src` strict (nonces) would require rewriting the rendering string (scripts
+inline Next + theme-init-script) — **separate site** if desired.
+- Microphone authorized in `self`: the assistant's dictation uses it.
 
 ## 5. Fichiers (Supabase Storage)
 
-- **Buckets privés** (`attachments`) : lecture par URLs signées mintées en clé
-  service ; upload gaté par le préfixe de chemin
-  (`projects/{project_id}/…` → membre du projet, `chat/{user_id}/…` → soi-même).
+- **Private Buckets** (`attachments`): reading by signed URLs minted in key
+service ; upload spoiled by path prefix
+(`projects/{project_id}/…` → project member, `chat/{user_id}/…` → self).
 - **Buckets publics** (`project-icons`) : lecture via `/object/public/…` ;
-  aucune policy de **listing** (l'énumération anon a été retirée, MIN-118).
-- **Limites de taille** posées sur les buckets (`file_size_limit`) — la seule
-  borne que le client direct-to-storage ne peut pas contourner :
-  `attachments` = 20 Mo, `project-icons` = 25 Mo. Voir
+no **listing** policy (the anon listing has been removed, MIN-118).
+- **Size limits** placed on buckets (`file_size_limit`) — the only one
+bound that the direct-to-storage client cannot bypass:
+  `attachments` = 20 MB, `project-icons` = 25 MB. See
   [20260926092000_storage_limits.sql](supabase/migrations/20260926092000_storage_limits.sql).
-- Le bucket public `avatars` (orphelin) est retiré via
+- The public bucket `avatars` (orphan) is removed via
   [scripts/drop-avatars-bucket.mjs](scripts/drop-avatars-bucket.mjs).
 
-## 6. Validation des entrées
+## 6. Input Validation
 
-- La plupart des route handlers valident manuellement : chaque string est
-  bornée en longueur, chaque enum passe par une allowlist
+- Most route handlers validate manually: each string is
+bounded in length, each enum passes through an allowlist
   ([lib/issue-validation.ts](lib/issue-validation.ts),
   [lib/objective-constants.ts](lib/objective-constants.ts),
-  [lib/category-colors.ts](lib/category-colors.ts)), chaque nombre fini et borné,
-  chaque array plafonné. L'enregistrement dynamique des clients OAuth/MCP
-  (`/api/oauth/register`) utilise, lui, un schéma Zod. Un corps JSON malformé
-  produit un 400, jamais un crash.
-- **Injection SQL :** Supabase/PostgREST paramétrise ; aucune requête raw
-  concaténée.
-- **XSS :** les commentaires et contenus riches sont du markdown, pas du texte
-  brut. Le composant de rendu n'active `rehype-raw` que sur demande ; lorsque
-  cette porte est utilisée, `rehype-sanitize` le suit immédiatement.
-  L'éditeur TipTap des pages configure `html: true`.
-- **Éditeur de PAGES : `html: true`**
+[lib/category-colors.ts](lib/category-colors.ts)), each finite and bounded number,
+each array capped. Dynamic registration of OAuth/MCP clients
+(`/api/oauth/register`) uses a Zod schema. A malformed JSON body
+  produces a 400, never a crash.
+- **SQL injection:** Supabase/PostgREST parameterizes; no raw query
+concatenated.
+- **XSS:** comments and rich content are markdown, not text
+raw. The rendering component only enables `rehype-raw` upon request; when
+this door is used, `rehype-sanitize` immediately follows it.
+The TipTap Page Editor configures `html: true`.
+- **PAGES Editor: `html: true`**
   ([components/pages/page-extensions.ts](components/pages/page-extensions.ts)).
-  Markdown n'a ni dépliant ni sous-page ; les deux se projettent en HTML minimal
-  (`<details>`, `<div data-type="subpage">`), et sans cette option elles
-  repartiraient en texte échappé. Ce qui assainit, à sa place :
-  - le SCHÉMA. Le chemin de lecture est markdown-it → HTML → `parseHTML` de
-    ProseMirror, qui ne garde que les nœuds et attributs déclarés : un `<script>`
-    ou un `onerror=` n'a pas de nœud, il tombe. Rien n'est jamais rendu en
+Markdown has no flyers or subpages; both project in minimal HTML
+(`<details>`, `<div data-type="subpage">`), and without this option they
+would leave as escaped text. What cleanses, in its place:
+- the DIAGRAM. The reading path is markdown-it → HTML → `parseHTML` of
+ProseMirror, which only keeps declared nodes and attributes: a `<script>`
+or a `onerror=` has no node, it falls. Nothing is ever returned
     `dangerouslySetInnerHTML` ;
-  - la porte d'ÉCRITURE ([lib/page-content-schema.ts](lib/page-content-schema.ts),
-    MIN-350) : `page.content` est refusé s'il porte un type de nœud ou de marque
-    inconnu, ou un `src`/`href` dont le protocole n'est pas `http`, `https` ou
-    `mailto` — un `javascript:` sortait sinon dans le `href` d'une vraie ancre
-    (bloc fichier). Les attributs inconnus, eux, sont retirés ;
-  - la projection markdown échappe ce qu'elle interpole dans une balise ou dans
-    la destination d'un lien
+- the WRITE gate ([lib/page-content-schema.ts](lib/page-content-schema.ts),
+MIN-350): `page.content` is refused if it carries any type of node or mark
+unknown, or a `src`/`href` whose protocol is not `http`, `https` or
+`mailto` — a `javascript:` would otherwise come out in the `href` of a real anchor
+(file block). The unknown attributes are removed;
+- the markdown projection escapes what it interpolates into a tag or into
+the destination of a link
     ([components/pages/blocks/escape.ts](components/pages/blocks/escape.ts)).
-- **Le préfixe de stockage `projects/{id}/pages/…` n'est pas écrivable par le
+- **The storage prefix `projects/{id}/pages/…` cannot be written by the
   client** ([20261230090000_pages_prefix_server_only.sql](supabase/migrations/20261230090000_pages_prefix_server_only.sql)) :
-  un fichier de page naît côté serveur, avec sa ligne `page_files`.
+a page file is created on the server side, with its `page_files` line.
 
 ## 7. Rate limiting
 
-- Rate limiter **in-memory** par utilisateur+route
-  ([lib/server/session-rate-limit.ts](lib/server/session-rate-limit.ts)) sur les
-  routes coûteuses (dictée, assistant, imports, créations, commentaires…).
-- **Limite connue :** in-memory = **par instance** (se réinitialise au deploy,
-  ne se partage pas entre régions/instances Fluid). Acceptable sans utilisateurs.
-  **Critère de passage à Upstash Redis :** abus constaté, ou besoin d'un plafond
-  strict cross-instance. Non déployé tant que ce critère n'est pas atteint.
-- **Login / signup / reset / OTP** parlent à GoTrue **en direct** depuis le
-  navigateur : nos routes ne les voient pas. Leur rate limit est réglé côté
-  **Dashboard Supabase** (voir [.env.example](.env.example)).
+- Rate limit **in-memory** per user+route
+([lib/server/session-rate-limit.ts](lib/server/session-rate-limit.ts)) on the
+expensive routes (dictation, assistant, imports, creations, comments, etc.).
+- **Known limit:** in-memory = **per instance** (reset on deploy,
+is not shared between regions/Fluid instances). Acceptable without users.
+**Criteria for moving to Upstash Redis:** abuse noted, or need for a cap
+strict cross-instance. Not deployed until this criterion is met.
+- **Login / signup / reset / OTP** speak to GoTrue **live** from the
+navigator: our routes do not see them. Their rate limit is set in the
+  **Supabase Dashboard** (see [.env.example](.env.example)).
 
-## 8. Surfaces publiques et leurs protections
+## 8. Public surfaces and their protections
 
 | Surface | Protection |
 | --- | --- |
-| Crons (`/api/cron/*`) | `Authorization: Bearer ${CRON_SECRET}`, comparé en `timingSafeEqual` ([lib/server/cron-auth.ts](lib/server/cron-auth.ts)) |
-| Webhook GitHub | Signature HMAC de l'App (`timingSafeEqual`) ; **fail-closed** — secret absent → 503, rien traité ; anti-rejeu sur `X-GitHub-Delivery` |
-| Webhook GitLab | Jeton **propre au dépôt**, résolu sur `project.id` puis comparé en `timingSafeEqual` (ce n'est pas une signature HMAC). Si le chiffrement et le repli historique sont tous deux absents, la route répond 503 ; un jeton absent ou non reconnu répond 401, y compris lorsqu'aucun secret de ce dépôt n'a été chargé. Anti-rejeu sur `X-Gitlab-Event-UUID`. |
-| Webhook Stripe | Signature Stripe vérifiée ; idempotence en **deux temps** (MIN-344) — la ligne `stripe_webhook_events` est une réservation, le `processed_at` n'est posé qu'après un traitement réussi, donc un échec transitoire reste rejouable |
-| Webhook Supabase (nouvel utilisateur) | Secret partagé `x-minddy-webhook-secret` ; fail-closed 503 |
-| OAuth 2.1 / MCP (`/api/oauth/*`, `/api/mcp`) | Clients publics PKCE S256 obligatoire, tokens opaques hashés, codes à usage unique |
-| Boards publics (`/f/<token>`, `/share/<token>`) | Servis côté serveur en clé service ; option mot de passe ; OTP email pour voter/commenter |
-| API intégration (`/api/v1/*`) | Clé API d'intégration (sha256), scopée au projet |
-| Plan de contrôle microVM (`/api/agent-vm/*`) | OIDC Vercel Sandbox, tenant Vercel attendu et nom de sandbox dérivant du run ; voie locale distincte par jeton HS256 à portée réduite |
-| Administration (`/admin`, `/api/admin/*`) | Session Supabase puis `isAdminUser` dans chaque handler ; allowlist d'e-mail confirmée ou rôle `app_metadata` |
-| Callbacks forge (GitHub setup, GitHub user authorization, GitLab OAuth) | `state` signé et session de callback liée au même utilisateur avant tout échange de code ou écriture |
+| Crons (`/api/cron/*`) | `Authorization: Bearer ${CRON_SECRET}`, compared to `timingSafeEqual` ([lib/server/cron-auth.ts](lib/server/cron-auth.ts)) |
+| GitHub Webhook | HMAC signature of the App (`timingSafeEqual`); **fail-closed** — secret missing → 503, nothing processed; anti-replay on `X-GitHub-Delivery` |
+| GitLab Webhook | Token **specific to the repository**, resolved to `project.id` then compared to `timingSafeEqual` (this is not an HMAC signature). If encryption and historical fallback are both absent, the route responds 503; an absent or unrecognized token responds 401, including when no secret from this repository has been loaded. Anti-replay on `X-Gitlab-Event-UUID`. |
+| Stripe Webhook | Stripe signature verified; idempotence in **two steps** (MIN-344) — the `stripe_webhook_events` line is a reservation, the `processed_at` is only set after successful processing, so a transient failure remains replayable |
+| Supabase Webhook (new user) | Shared secret `x-minddy-webhook-secret`; fail-closed 503 |
+| OAuth 2.1 / MCP (`/api/oauth/*`, `/api/mcp`) | Public clients PKCE S256 mandatory, opaque hashed tokens, single-use codes |
+| Public boards (`/f/<token>`, `/share/<token>`) | Served on the server side using a service key; password option; OTP email to vote/comment |
+| Integration API (`/api/v1/*`) | Integration API key (sha256), scoped to the project |
+| microVM Control Plane (`/api/agent-vm/*`) | OIDC Vercel Sandbox, holding expected Vercel and sandbox name deriving from the run; separate local channel by reduced range HS256 token |
+| Administration (`/admin`, `/api/admin/*`) | Supabase session then `isAdminUser` in each handler; confirmed email allowlist or `app_metadata` role |
+| Forge callbacks (GitHub setup, GitHub user authorization, GitLab OAuth) | `state` signed and callback session linked to the same user before any code exchange or writing |
 
-## 9. L'agent de code — ce que sa microVM détient
+## 9. The code agent — what its microVM holds
 
-La microVM d'un run (Vercel Sandbox) exécute du shell décidé par un modèle, avec
-un réseau sortant ouvert. On la considère **compromise par hypothèse** : la
-question n'est pas de l'empêcher de mal faire, c'est de borner ce qu'elle tient.
+The microVM of a run (Vercel Sandbox) executes the shell decided by a model, with
+an open outgoing network. We consider it **compromised by hypothesis**: the
+The question is not to prevent her from doing wrong, it is to limit what she holds.
 
-- **Elle ne reçoit pas les secrets de la plateforme minddy.** Ni clé LLM
-  racine (le firewall pose l'en-tête `authorization` *après* la sortie de la
-  VM), ni clé Supabase, ni jeton d'identité. Le plan de contrôle reconnaît la
-  VM par l'OIDC que la plateforme signe, et vérifie le locataire
-  (`team_id`/`project_id`) avant le nom (MIN-331). Voir
+- **She does not receive the secrets of the minddy platform.** Nor LLM key
+root (the firewall sets the `authorization` header *after* the exit of the
+VM), neither Supabase key nor identity token. The control plan recognizes the
+VM by the OIDC that the platform signs, and verifies the tenant
+(`team_id`/`project_id`) before the name (MIN-331). See
   [lib/server/agent/network-policy.ts](lib/server/agent/network-policy.ts).
-- **Elle détient néanmoins un secret de forge lorsque le run doit cloner ou
+- **It nevertheless holds a forge secret when the run must clone or
   pousser.** `git clone`
-  l'écrit dans `.git/config` — c'est ce avec quoi la VM clone et pousse, elle ne
-  peut pas travailler sans. Ce qui est borné, c'est ce qu'il ouvre
+writes it in `.git/config` — that's what the VM clones and pushes with, it doesn't
+can't work without it. What is limited is what it opens
   ([lib/server/agent/repo-access.ts](lib/server/agent/repo-access.ts),
   `RepoTokenAccess`) :
 
-  | Qui le détient | Portée | Pouvoir |
+| Who owns it | Scope | Power |
   | --- | --- | --- |
-  | Nos routes (PR, review, merge, issues) | le dépôt lié | permissions de l'installation |
-  | microVM d'un run de ticket / carnet | le dépôt lié | `contents: write` (clone + push) |
-  | microVM d'une **relecture** de pull request | le dépôt lié | `contents: read` |
+| Our roads (PR, review, merge, issues) | the linked deposit | installation permissions |
+| microVM of a ticket / notebook run | the linked deposit | `contents: write` (clone + push) |
+| microVM of a pull request **replay** | the linked deposit | `contents: read` |
 
-  La relecture est le seul ancrage dont le contenu vient d'un **fork inconnu** :
-  elle n'écrit rien dans le dépôt, et `/repo-auth` lui **refuse** tout token
-  frais. Avant MIN-327, le token minté n'était scopé à rien — il valait sur tous
-  les dépôts de l'installation — et une relecture en recevait un en écriture.
-- **⚠ GitLab n'a pas cette gradation.** Le token remis est l'access token OAuth
-  de la connexion, de portée `api` sur le compte entier : GitLab ne sait pas
-  down-scoper un token OAuth à l'usage, et son seul mécanisme à portée réduite
-  (project access token) est un jeton persistant d'au moins un jour. Une
-  relecture GitLab tourne donc avec un token qui peut écrire. Contrainte de la
-  plateforme, assumée et dite — comme l'absence d'identité de bot (MIN-146).
-- **Le token ne remonte pas dans les journaux.** La substitution de
-  [lib/server/agent/redact.ts](lib/server/agent/redact.ts) le retire de tout ce
-  qui sort de la boucle (sortie de tool, message d'erreur, checkpoint) *avant* le
-  modèle : `git remote -v` et `cat .git/config` rendent `[redacted]`.
-- **Ce qui reste possible**, et qui est borné ailleurs : exfiltrer le **contenu**
-  du dépôt (réseau ouvert, assumé — une liste blanche casserait `npm install`
-  chez nos utilisateurs), et dépenser hors ledger sur la route LLM créditée
-  (bornée par la clé par run à plafond dur, tenue par le fournisseur).
+Replay is the only anchor whose content comes from an **unknown fork**:
+it does not write anything in the repository, and `/repo-auth` **refuses** any token to it
+costs. Before MIN-327, the minted token was not valid for anything — it was valid for everyone
+the installation repositories — and a proofreader received one in writing.
+- **⚠ GitLab does not have this gradation.** The token given is the OAuth access token
+connection, scope `api` on the entire account: GitLab does not know
+down-scope an OAuth token for use, and its only mechanism with reduced scope
+(project access token) is a persistent token for at least one day. A
+GitLab rereading therefore runs with a token that can write. Constraint of the
+platform, assumed and said — such as the absence of bot identity (MIN-146).
+- **The token does not appear in the logs.** The substitution of
+[lib/server/agent/redact.ts](lib/server/agent/redact.ts) removes it from everything
+which exits the loop (tool exit, error message, checkpoint) *before* the
+pattern: `git remote -v` and `cat .git/config` render `[redacted]`.
+- **What remains possible**, and which is limited elsewhere: exfiltrate the **content**
+of the repository (open network, assumed — a whitelist would break `npm install`
+among our users), and spend outside ledger on the credited LLM route
+(limited by the key per run to hard ceiling, held by the supplier).
 
 ## 10. Outillage
 
 - **CI GitHub** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) : tests,
-  typecheck et audit sur chaque pull request et chaque push, dans un runner
-  jetable **sans aucun secret** (déclencheur `pull_request`, jamais
-  `pull_request_target` ; `permissions: contents: read`). C'est ce qui permet
-  d'ouvrir le dépôt aux contributions : avant MIN-335, `deploy.sh` était le seul
-  pipeline, donc le code d'une PR ne pouvait être vérifié qu'en l'exécutant sur
-  le poste du mainteneur, à côté du `.env` de production. Le dépôt exécute du
-  code au premier `install` et au premier `vitest` — c'est dit dans
+typecheck and audit on each pull request and each push, in a runner
+disposable **without any secrets** (`pull_request` trigger, never
+`pull_request_target` ; `permissions: contents: read`). This is what allows
+to open the deposit for contributions: before MIN-335, `deploy.sh` was the only
+pipeline, so the code of a PR could only be verified by running it on
+the maintainer's station, next to the production `.env`. The depot performs
+code to the first `install` and to the first `vitest` — it is said in
   [CONTRIBUTING.md](CONTRIBUTING.md).
-- **Gate de vulnérabilités** ([scripts/audit.mjs](scripts/audit.mjs)) : seuil
-  high/critical sur les **trois** lockfiles (`pnpm-lock.yaml` — celui qui
-  installe réellement —, `package-lock.json`, `desktop/package-lock.json`),
-  **arbre entier**. `--omit=dev` a été retiré : `esbuild` produit les bundles
-  livrés et `tailwindcss` le CSS servi, sans être des `dependencies`.
-- **Pipeline de deploy** ([deploy.sh](deploy.sh)) : rejoue ces mêmes gates, plus
-  le verdict de la CI pour le commit déployé. Dernier filet, pas source de
-  vérité.
+- **Vulnerability gate** ([scripts/audit.mjs](scripts/audit.mjs)): threshold
+high/critical on the **three** lockfiles (`pnpm-lock.yaml` — the one that
+actually installs —, `package-lock.json`, `desktop/package-lock.json`),
+**entire tree**. `--omit=dev` has been removed: `esbuild` produces the bundles
+delivered and `tailwindcss` the CSS served, without being `dependencies`.
+- **deploy pipeline** ([deploy.sh](deploy.sh)): replays these same gates, more
+the CI verdict for the deployed commit. Last trickle, not source of
+truth.
 - **Sonde anti cross-tenant** ([scripts/security-probe.mjs](scripts/security-probe.mjs)) :
-  vérifie EN VRAI contre la prod que RLS + grants refusent les accès croisés
-  (lecture/écriture d'un projet étranger, RPC definer, colonnes secrètes,
-  upload hors préfixe, listing de bucket, déplacement d'une ligne vers son
-  propre projet, hard delete d'une page). **Exécution manuelle** (touche la
-  prod) — hors du `include` de vitest.
-- **Garde-fou des migrations** ([lib/schema-guardrails.test.ts](lib/schema-guardrails.test.ts)),
-  lui dans la suite : il relit les migrations écrites depuis le dernier balai et
-  échoue si l'une crée une policy sans clause `TO`, une table sans RLS, une
-  definer qui ne se referme pas sur `anon`/`authenticated`, ou une policy UPDATE
-  sur une table cloisonnée sans le gel de `project_id`. C'est la réponse à ce qui
-  a produit MIN-338 : quatre régressions écrites de bonne foi, chacune juste
-  prise seule, par des gens qui n'avaient aucune raison d'ouvrir le fichier où la
-  règle était écrite.
+REALLY verifies against production that RLS + grants refuse cross access
+(reading/writing a foreign project, RPC definer, secret columns,
+upload outside prefix, bucket listing, moving a line to its
+own project, hard delete of a page). **Manual execution** (touch
+  prod) — outside vitest's `include`.
+- **Migration guardrail** ([lib/schema-guardrails.test.ts](lib/schema-guardrails.test.ts)),
+him in the sequel: he rereads the migrations written since the last broom and
+fails if one creates a policy without `TO` clause, a table without RLS, a
+definer which does not close on `anon`/`authenticated`, or an UPDATE policy
+on a partitioned table without the `project_id` gel. This is the answer to what
+produced MIN-338: four regressions written in good faith, each correct
+taken alone, by people who had no reason to open the file where the
+rule was written.
 
-## 11. Procédure d'incident (courte)
+## 11. Incident procedure (short)
 
-En cas de compromission suspectée :
+In case of suspected compromise:
 
-1. **Révoquer les clés exposées.** Faire tourner dans le Dashboard Supabase :
-   `SUPABASE_SERVICE_ROLE_KEY`, clé anon si nécessaire. Faire tourner les
-   secrets d'env sur Vercel (`*_ENCRYPTION_SECRET`, `CRON_SECRET`,
-   `*_WEBHOOK_SECRET`, `OPENROUTER_API_KEY`, clés Stripe). Redéployer.
-2. **Purger les sessions.** Dashboard Supabase → Auth → déconnecter tous les
-   utilisateurs (invalide les refresh tokens). Le passage aux clés de signature
-   asymétriques n'invalide pas les access tokens en cours — la purge des
-   sessions + leur expiration 1 h ferme la fenêtre.
-3. **Révoquer les grants OAuth / clés API** compromis
+1. **Revoke exposed keys.** Run in the Supabase Dashboard:
+`SUPABASE_SERVICE_ROLE_KEY`, anon key if necessary. Rotate the
+env secrets on Vercel (`*_ENCRYPTION_SECRET`, `CRON_SECRET`,
+`*_WEBHOOK_SECRET`, `OPENROUTER_API_KEY`, Stripe keys). Redeploy.
+2. **Purge sessions.** Supabase Dashboard → Auth → disconnect all
+users (invalidates refresh tokens). The move to signing keys
+asymmetric does not invalidate current access tokens — purging
+sessions + their 1 hour expiration closes the window.
+3. **Revoke compromised OAuth grants / API keys**
    (`oauth_grants.revoked_at`, `api_keys.revoked_at`, `integrations.revoked_at`).
-4. **Constater l'étendue.** Journaux Vercel + Supabase, table
-   `stripe_webhook_events` et journaux d'activité (`issue_events`) pour tracer
-   les actions.
-5. **Rejouer la sonde** ([scripts/security-probe.mjs](scripts/security-probe.mjs))
-   après remédiation.
+4. **Observe the extent.** Vercel + Supabase logs, table
+`stripe_webhook_events` and activity logs (`issue_events`) to trace
+actions.
+5. **Replay the probe** ([scripts/security-probe.mjs](scripts/security-probe.mjs))
+after remediation.
 
-## 12. Signaler une vulnérabilité
+## 12. Report a vulnerability
 
-Ne publiez jamais une vulnérabilité, une preuve d'exploitation ou des données
-exposées dans une issue, une discussion ou une pull request publique.
+Never publish a vulnerability, proof of exploitation or data
+exposed in a public issue, discussion or pull request.
 
-Utilisez en priorité **Security → Report a vulnerability** sur GitHub, qui crée
-un avis privé. Si cette option n'est pas visible, écrivez à
-[hello@minddy.app](mailto:hello@minddy.app). Chiffrez les éléments sensibles ou
-demandez d'abord un canal adapté. Incluez :
+Prioritize **Security → Report a vulnerability** on GitHub, which creates
+a private opinion. If this option is not visible, write to
+[hello@minddy.app](mailto:hello@minddy.app). Encrypt sensitive items or
+ask for a suitable channel first. Include:
 
-- la version ou le commit affecté et le mode de déploiement ;
-- les prérequis et étapes minimales de reproduction ;
-- l'impact, les données ou privilèges concernés et l'exploitabilité connue ;
-- les journaux ou preuves expurgés, et une correction suggérée si vous en avez
-  une ;
-- vos attentes de crédit et de coordination de la divulgation.
+- the version or commit affected and the deployment mode;
+- the prerequisites and minimum reproduction steps;
+- the impact, the data or privileges concerned and the known exploitability;
+- redacted logs or evidence, and a suggested correction if you have any
+a ;
+- your credit expectations and coordination of disclosure.
 
-Nous accusons réception sous sept jours calendaires, confirmons ensuite le
-périmètre et convenons d'un calendrier de correction et de publication. Nous
-pouvons demander un délai raisonnable avant divulgation afin de protéger les
-utilisateurs. Le reporter est tenu informé aux étapes importantes ; aucun
-programme de prime n'est promis.
+We acknowledge receipt within seven calendar days, then confirm the
+scope and agree on a correction and publication schedule. We
+may request a reasonable period of time before disclosure in order to protect the
+users. The reporter is kept informed at important stages; none
+bonus program is promised.
 
-Les recherches de bonne foi qui évitent l'accès persistant, l'exfiltration, la
-destruction, l'indisponibilité et les données de tiers ne feront pas l'objet de
-représailles de notre part. Arrêtez le test dès qu'une donnée réelle est
-rencontrée et signalez-la sans la conserver. Les tests sur le service managé ne
-doivent utiliser que vos propres comptes et données ; l'ingénierie sociale, le
-spam et les attaques par déni de service sont hors périmètre.
+Good faith searches that avoid persistent access, exfiltration,
+destruction, unavailability and third party data will not be subject to
+retaliation on our part. Stop the test as soon as real data is
+encountered and report it without keeping it. Tests on the managed service do not
+must only use your own accounts and data; social engineering,
+Spam and denial of service attacks are outside the scope.

@@ -9,17 +9,17 @@ import { useCsvImport } from "@/lib/use-csv-import";
 import type { ImportCommitResponse } from "@/lib/import-api";
 import type { MessageKey } from "@/lib/i18n-keys";
 
-/** Le geste d'import dans une PAGE (MIN-45) : l'onglet « Import » des réglages
-    du projet, où le dépôt et son aperçu se lisent en défilant, entre les autres
+/** The import gesture in a PAGE (MIN-45): the “Import” tab of the settings
+    of the project, where the deposit and its overview can be read by scrolling, among the others
     sections.
 
-    Le parcours en modale, lui, passe par `ImportWizardDialog` — même hook, même
-    tableau de correspondance, mais trois étapes et un CTA pleine largeur : une
-    modale n'a pas la place d'une page. Les deux surfaces partagent tout ce qui
-    décide (`lib/use-csv-import.ts`) et ne diffèrent que par leur mise en scène.
+    The modal route goes through `ImportWizardDialog` — same hook, same
+    correspondence table, but three steps and a full-width CTA: one
+    modal does not have the space of a page. The two surfaces share everything that
+    decides (`lib/use-csv-import.ts`) and only differ in their staging.
 
-    Le geste seul : la marche à suivre qui le précède vit dans `import-panel.tsx`.
-    Il garde le namespace i18n `Settings` : aucune chaîne n'a changé de place. */
+    The gesture alone: ​​the procedure that precedes it lives in `import-panel.tsx`.
+    It keeps the i18n namespace `Settings`: no string has changed place. */
 export function CsvImportPanel({
   projectId,
   className,
@@ -28,8 +28,8 @@ export function CsvImportPanel({
 }: {
   projectId: string;
   className?: string;
-  /** Fichier déjà tenu par l'appelant, analysé comme s'il venait de la zone de
-   *  dépôt : un seul chemin de lecture. */
+  /** File already held by the caller, analyzed as if it came from the zone of
+   * repository: a single reading path. */
   initialFile?: File | null;
   onImported?: (result: ImportCommitResponse) => void;
 }) {
@@ -66,8 +66,8 @@ export function CsvImportPanel({
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{prepared.fileName}</p>
               <p className="text-xs text-muted-foreground">
-                {/* La source est détectée à l'analyse du fichier : clé
-                    assemblée à l'exécution. */}
+                {/* The source is detected when analyzing the file: key
+                    assembly at execution. */}
                 {t(`importSource_${prepared.source}` as MessageKey<"Settings">)} —{" "}
                 {t("importPreviewCount", { count: preview.issues.length })}
                 {newCategoryCount > 0 &&
@@ -104,8 +104,8 @@ export function CsvImportPanel({
             aiPending={aiPending}
           />
 
-          {/* Aucune colonne de titre : le fichier n'est pas refusé, il attend
-              qu'on désigne laquelle porte le nom des tickets — juste au-dessus. */}
+          {/* No title column: the file is not refused, it is waiting
+              let us designate which one bears the name of the tickets — just above. */}
           {!hasTitleColumn && (
             <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-500">
               <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
@@ -130,14 +130,14 @@ export function CsvImportPanel({
             </ul>
           )}
 
-          {/* Les boutons s'ENROULENT : dans une colonne étroite, trois boutons
-              sur une ligne sortaient du cadre plutôt que de passer à la ligne. */}
+          {/* The buttons ROLL UP: in a narrow column, three buttons
+              on a line went out of frame rather than moving into the line. */}
           <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               onClick={() => void runImport()}
-              // Sans colonne de titre, il n'y a pas de ticket à fabriquer : le
-              // tableau de correspondance est ouvert, et c'est là que ça se règle.
+              // Without a title column, there is no ticket to produce: the
+              // correspondence table is open, and that's where it's settled.
               disabled={importing || preview.issues.length === 0}
             >
               {importing && <Spinner />}

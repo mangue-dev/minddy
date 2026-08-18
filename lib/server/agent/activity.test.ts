@@ -2,13 +2,12 @@ import { describe, expect, it } from "vitest";
 import { buildAgentActivity, type AgentRunRow, type IssuePrRow } from "./activity";
 
 /**
- * Sémantique de l'activité par issue (modèle CONVERSATIONNEL). Le point sensible :
- * `session` veut dire « une CONVERSATION existe » (au travail OU au repos) — c'est
- * ce qui décide si la carte propose d'OUVRIR la conversation ou d'en LANCER une
- * nouvelle. S'il régresse, une issue dont la session est au repos retomberait sur
- * un composer vierge au lieu de poursuivre sa conversation. `working` reste, lui,
- * strictement queued/running (halo animé, un seul agent au travail par ticket).
- * NB : les endpoints appelants excluent déjà les runs `failed` des rows.
+ * Semantics of activity by outcome (CONVERSATIONAL model). The sensitive point:
+ * `session` means “a CONVERSATION exists” (at work OR at rest) — it is
+ * which decides whether the card proposes to OPEN the conversation or START a new one. If it regresses, an issue whose session is idle would fall back to
+ * a blank composer instead of continuing its conversation. `working` remains,
+ * strictly queued/running (animated halo, only one agent at work per ticket).
+ * NB: calling endpoints already exclude `failed` runs from rows.
  */
 
 function row(over: Partial<AgentRunRow> & { status: string }): AgentRunRow {
@@ -44,7 +43,7 @@ describe("buildAgentActivity", () => {
   });
 
   it("une run active plus ancienne fait travailler l'issue même sous une run terminée", () => {
-    // Cas réel : plusieurs runs successives, triées created_at DESC par l'appelant.
+    // Real case: several successive runs, sorted created_at DESC by the caller.
     const out = buildAgentActivity([
       row({ id: "run-2", status: "completed", created_at: "2026-07-15T12:00:00Z" }),
       row({ id: "run-1", status: "running" }),
@@ -64,12 +63,12 @@ describe("buildAgentActivity", () => {
 });
 
 /**
- * La PR d'un ticket ne se lit PLUS sur les runs (MIN-163) : une PR humaine, ou
- * une PR rattachée à la main, n'a aucun run — le ticket disait alors « pas de
- * pull request » alors qu'il en avait une. Elle vient de `pull_requests`, et
- * TOUS ses états comptent : « Voir la pull request » doit mener à une PR fermée
- * comme à une PR ouverte. C'est le chip de la carte qui, lui, écarte `closed`,
- * avec le `state` qu'on lui rend ici.
+ * The PR of a ticket is NO LONGER read on the runs (MIN-163): a human PR, or
+ * a PR attached to the hand, has no runs — the ticket then said "no
+ * pull request" even though it had one. It comes from `pull_requests`, and
+ * ALL its states count: "See pull request" must lead to a closed PR
+ * as well as to an open PR. It is the chip of the card which removes `closed`,
+ * with the `state` which is returned here.
  */
 function prRow(over: Partial<IssuePrRow> = {}): IssuePrRow {
   return {
@@ -84,7 +83,7 @@ function prRow(over: Partial<IssuePrRow> = {}): IssuePrRow {
 
 describe("pullRequests", () => {
   it("expose la PR du ticket, sans qu'aucun run ne la porte", () => {
-    // Le cas qui manquait : PR humaine (ou rattachée à la main), zéro run.
+    // The missing case: human PR (or attached to the hand), zero runs.
     const out = buildAgentActivity([], [prRow()]);
     expect(out.sessionIssueIds).toEqual([]);
     expect(out.pullRequests["issue-1"]).toEqual({
@@ -100,8 +99,8 @@ describe("pullRequests", () => {
   });
 
   it("une PR VIVANTE l'emporte sur une PR terminale plus récente", () => {
-    // Cas réel : la PR fermée vient d'être touchée (un commentaire), celle qu'on
-    // veut relire est l'ouverte. La fraîcheur ne doit pas gagner contre elle.
+    // Real case: the closed PR has just been affected (a comment), the one we
+    // wants to reread is the open. Freshness must not win against it.
     const out = buildAgentActivity(
       [],
       [

@@ -1,27 +1,27 @@
 import { createTwoFilesPatch, diffLines } from "diff";
 
 /**
- * Moteur d'édition par remplacement de chaîne de l'agent de code (MIN-46) — le
- * cœur du « vrai éditeur ». Porté depuis le `edit` tool d'opencode
- * (https://github.com/sst/opencode, MIT), lui-même dérivé des approches de
- * Cline et gemini-cli. On garde la logique PURE (aucune I/O, aucun Effect/LSP/
- * permission) : `replace()` applique une substitution robuste, `applyEdit()`
- * renvoie le nouveau contenu + un diff unifié.
+ * Code Agent String Replacement Editing Engine (MIN-46) — the
+ * heart of the “real editor”. Ported from the opencode `edit` tool
+ * (https://github.com/sst/opencode, MIT), itself derived from the approaches of
+ * Cline and gemini-cli. We keep the logic PURE (no I/O, no Effect/LSP/
+ * permission): `replace()` applies robust substitution, `applyEdit()`
+ * returns the new content + a unified diff.
  *
- * Principe : le modèle fournit `oldString` (le texte exact à remplacer) et
- * `newString`. Un remplacement exact échoue dès que le modèle dérive d'un espace,
- * d'une indentation, d'un échappement ou d'une fin de ligne — fréquent sur les
- * modèles éco. On tente donc une CASCADE de stratégies de matching, de la plus
- * stricte à la plus tolérante, jusqu'à ce que l'une localise le bloc. L'échec
+ * Principle: the model provides `oldString` (the exact text to replace) and
+ * `newString`. An exact replacement fails as soon as the model drifts from a space,
+ * an indentation, escape or end of line — common on
+ * eco models. We therefore attempt a CASCADE of matching strategies, from the most
+ * strict to the most tolerant, until one locates the block. Failure
  * reste BRUYANT (throw) : jamais de corruption silencieuse.
  */
 
 /**
- * Pourquoi une substitution a été refusée. Le message reste celui que l'agent
- * de code lit depuis toujours (`execute.ts` n'en connaît que `.message`) ; ce
- * `reason` s'ajoute à côté pour les appelants qui doivent RÉÉCRIRE le message —
- * le tool MCP `minddy_edit_issue_text` édite un plan de ticket, pas un fichier,
- * et n'a ni « the file » ni `write_file` à proposer (MIN-186).
+ * Why a substitution was refused. The message remains that which the agent
+ * of code reads forever (`execute.ts` only knows `.message`); This
+ * `reason` is added next to it for callers who need to REWRITE the message —
+ * the MCP tool `minddy_edit_issue_text` edits a ticket plan, not a file,
+ * and has neither “the file” nor `write_file` to offer (MIN-186).
  */
 export type ReplaceFailure =
   | "identical"
@@ -31,27 +31,27 @@ export type ReplaceFailure =
   | "ambiguous";
 
 /**
- * Ce que la cascade a fait pour arriver à ce résultat (MIN-246). On ne l'arbitre
- * pas, on la MESURE : quel replacer a résolu, à quel rang de la cascade, avec
- * quelle similarité quand il en calcule une, et combien de candidats ont été
- * écartés en chemin. `exec-tool` l'agrège par appel de tool et `agent-loop` la
- * persiste dans l'event `tool_result` — elle ne part JAMAIS au modèle.
+ * What the cascade did to achieve this result (MIN-246). We don't referee it
+ * not, we MEASURE it: which place to resolve, at what rank of the cascade, with
+ * what similarity when it calculates one, and how many candidates were
+ * discarded along the way. `exec-tool` aggregates it by calling tool and `agent-loop`
+ * persists in the `tool_result` event — it NEVER leaves the model.
  *
- * Sur un échec, elle voyage sur la `ReplaceError` : c'est le seul endroit où
- * l'on sache qu'un `not_found` a vu passer douze candidats ou aucun.
+ * On a failure, she travels to `ReplaceError`: it is the only place where
+ * we know that a `not_found` saw twelve candidates pass or none.
  */
 export interface ReplaceTrace {
-  /** Nom du replacer qui a résolu (absent : aucun n'a résolu). */
+  /** Name of the replacer who resolved (absent: none resolved). */
   replacer?: string;
-  /** Rang 1-based dans la cascade (1 = match exact). */
+  /** Rank 1-based in the cascade (1 = exact match). */
   rank?: number;
-  /** Similarité du bloc retenu, quand le replacer en calcule une (ancrage). */
+  /** Similarity of the retained block, when replacing it calculates one (anchoring). */
   similarity?: number;
-  /** Candidats examinés, tous replacers confondus. */
+  /** Candidates examined, all replacers combined. */
   candidates: number;
-  /** Candidats écartés parce que leur étendue était disproportionnée. */
+  /** Candidates rejected because their scope was disproportionate. */
   rejectedDisproportionate: number;
-  /** Candidats écartés parce qu'ils apparaissaient plusieurs fois. */
+  /** Candidates excluded because they appeared several times. */
   rejectedAmbiguous: number;
 }
 
@@ -61,7 +61,7 @@ function emptyTrace(): ReplaceTrace {
 
 export class ReplaceError extends Error {
   readonly reason: ReplaceFailure;
-  /** Ce que la cascade avait vu au moment de renoncer (MIN-246). */
+  /** What the waterfall had seen when giving up (MIN-246). */
   readonly trace: ReplaceTrace;
   constructor(reason: ReplaceFailure, message: string, trace: ReplaceTrace = emptyTrace()) {
     super(message);
@@ -86,13 +86,13 @@ function convertToLineEnding(text: string, ending: "\n" | "\r\n"): string {
   return text.replaceAll("\n", "\r\n");
 }
 
-// ── Similarité ───────────────────────────────────────────────────────────────
+// ── Similarity ─────────────────────────────── ────────────────────────────────
 
-/** Seuil de similarité (0..1) des lignes internes pour accepter un bloc ancré. */
+/** Similarity threshold (0..1) of internal lines to accept an anchored block. */
 const SINGLE_CANDIDATE_SIMILARITY_THRESHOLD = 0.65;
 const MULTIPLE_CANDIDATES_SIMILARITY_THRESHOLD = 0.65;
 
-/** Distance de Levenshtein entre deux chaînes. */
+/** Levenshtein distance between two strings. */
 function levenshtein(a: string, b: string): number {
   if (a === "" || b === "") return Math.max(a.length, b.length);
   const matrix = Array.from({ length: a.length + 1 }, (_, i) =>
@@ -108,13 +108,13 @@ function levenshtein(a: string, b: string): number {
 }
 
 // ── Replacers (cascade) ──────────────────────────────────────────────────────
-// Chaque replacer est un générateur qui yield des sous-chaînes CANDIDATES du
-// contenu (des matchs potentiels de `find`). `replace()` les essaie dans l'ordre.
+// Each replacer is a generator that yields CANDIDATES substrings of the
+// content (potential matches of `find`). `replace()` tries them in order.
 
 /**
- * Un candidat. La forme longue sert aux replacers qui CALCULENT une similarité
- * pour décider (l'ancrage de bloc) : elle la fait remonter jusqu'à la trace, où
- * elle est la seule mesure qui dise à quel point le modèle avait dérivé.
+ * A candidate. The long form is used for replacers which CALCULATE a similarity
+ * to decide (block anchoring): it takes it back to the trace, where
+ * it is the only measure that tells how far the model had drifted.
  */
 type Candidate = string | { text: string; similarity: number };
 
@@ -125,7 +125,7 @@ const SimpleReplacer: Replacer = function* (_content, find) {
   yield find;
 };
 
-/** 2. Match ligne à ligne en ignorant les espaces de début/fin. */
+/** 2. Match line for line ignoring leading/trailing spaces. */
 const LineTrimmedReplacer: Replacer = function* (content, find) {
   const originalLines = content.split("\n");
   const searchLines = find.split("\n");
@@ -152,7 +152,7 @@ const LineTrimmedReplacer: Replacer = function* (content, find) {
   }
 };
 
-/** 3. Ancres première/dernière ligne + similarité Levenshtein sur le milieu. */
+/** 3. First/last line anchors + Levenshtein similarity on the middle. */
 const BlockAnchorReplacer: Replacer = function* (content, find) {
   const originalLines = content.split("\n");
   const searchLines = find.split("\n");
@@ -201,10 +201,10 @@ const BlockAnchorReplacer: Replacer = function* (content, find) {
         const searchLine = searchLines[j].trim();
         const maxLen = Math.max(originalLine.length, searchLine.length);
         if (maxLen === 0) continue;
-        // Le cumul ne fait que croître : sortir dès le seuil atteint (ce que
-        // faisait le code d'origine) donnait la même DÉCISION mais un chiffre
-        // tronqué. Depuis MIN-246 la similarité est mesurée, donc on la calcule
-        // en entier — le surcoût est borné par la taille du bloc.
+        // The accumulation only increases: exit as soon as the threshold is reached (which
+        // did the original code) gave the same DECISION but a number
+        // truncated. Since MIN-246 the similarity is measured, so we calculate it
+        // in full — the additional cost is bounded by the size of the block.
         similarity += (1 - levenshtein(originalLine, searchLine) / maxLen) / linesToCheck;
       }
     } else {
@@ -277,7 +277,7 @@ const WhitespaceNormalizedReplacer: Replacer = function* (content, find) {
   }
 };
 
-/** 5. Match en retirant l'indentation commune des deux côtés. */
+/** 5. Match by removing the common indentation on both sides. */
 const IndentationFlexibleReplacer: Replacer = function* (content, find) {
   const removeIndentation = (text: string) => {
     const lines = text.split("\n");
@@ -298,7 +298,7 @@ const IndentationFlexibleReplacer: Replacer = function* (content, find) {
   }
 };
 
-/** 6. Match après dés-échappement de `\n`/`\t`/`\"`… (modèles sur-échappent). */
+/** 6. Match after un-escape of `\n`/`\t`/`\"`… (over-escape models). */
 const EscapeNormalizedReplacer: Replacer = function* (content, find) {
   const unescapeString = (str: string): string =>
     str.replace(/\\(n|t|r|'|"|`|\\|\n|\$)/g, (match, ch) => {
@@ -337,7 +337,7 @@ const EscapeNormalizedReplacer: Replacer = function* (content, find) {
   }
 };
 
-/** 7. Match après trim global de `find`. */
+/** 7. Match after globally trimming `find`. */
 const TrimmedBoundaryReplacer: Replacer = function* (content, find) {
   const trimmedFind = find.trim();
   if (trimmedFind === find) return;
@@ -351,7 +351,7 @@ const TrimmedBoundaryReplacer: Replacer = function* (content, find) {
   }
 };
 
-/** 8. Ancres première/dernière ligne + ≥50 % des lignes du milieu identiques. */
+/** 8. First/last-line anchors plus ≥50% identical middle lines. */
 const ContextAwareReplacer: Replacer = function* (content, find) {
   const findLines = find.split("\n");
   if (findLines.length < 3) return;
@@ -389,9 +389,9 @@ const ContextAwareReplacer: Replacer = function* (content, find) {
 
 /**
  * Normalisation unicode : replie tirets typographiques (U+2010–2015, U+2212),
- * guillemets courbes (U+2018–201B / U+201C–201F) et espaces insécables/typo vers
- * l'ASCII des DEUX côtés (les modèles émettent souvent un em-dash/une quote courbe
- * là où le fichier a de l'ASCII, ou l'inverse).
+ * smart quotes (U+2018–201B / U+201C–201F) and non-breaking/typographic spaces to
+ * ASCII on BOTH sides (models often emit an em dash or smart quote where the file
+ * has ASCII, or the reverse).
  */
 const UnicodeNormalizedReplacer: Replacer = function* (content, find) {
   const fold = (s: string) =>
@@ -409,7 +409,7 @@ const UnicodeNormalizedReplacer: Replacer = function* (content, find) {
   }
 };
 
-/** 10. Toutes les occurrences exactes (support de replaceAll). */
+/** 10. All exact occurrences (replaceAll support). */
 const MultiOccurrenceReplacer: Replacer = function* (content, find) {
   let startIndex = 0;
   for (;;) {
@@ -421,9 +421,9 @@ const MultiOccurrenceReplacer: Replacer = function* (content, find) {
 };
 
 /**
- * La cascade, NOMMÉE (MIN-246) : le rang seul ne dit rien à qui lit un relevé
- * six mois plus tard, et l'ordre a déjà bougé une fois (unicode inséré en 6ᵉ).
- * Les noms sont ceux des replacers, et ce sont eux qui atterrissent en base.
+ * The waterfall, NAMED (MIN-246): the rank alone says nothing to anyone reading a statement
+ * six months later, and the order has already moved once (unicode inserted in 6ᵉ).
+ * The names are those of the replacers, and they are the ones who land at base.
  */
 const REPLACERS: Array<{ name: string; run: Replacer }> = [
   { name: "simple", run: SimpleReplacer },
@@ -439,8 +439,8 @@ const REPLACERS: Array<{ name: string; run: Replacer }> = [
 ];
 
 /**
- * Refuse un match dont l'étendue est disproportionnée vs `oldString` (garde-fou :
- * un replacer tolérant peut sinon capturer un bloc bien plus grand que voulu).
+ * Refuses a match whose scope is disproportionate vs `oldString` (safeguard:
+ * a tolerant replacer can otherwise capture a block much larger than desired).
  */
 function isDisproportionateMatch(search: string, oldString: string): boolean {
   const oldLines = oldString.split("\n").length;
@@ -451,11 +451,11 @@ function isDisproportionateMatch(search: string, oldString: string): boolean {
 }
 
 /**
- * Réalignement du saut de ligne de frontière : les replacers tolérants yield un
- * span SANS le `\n` final de la dernière ligne. Si ce `\n` subsiste dans le contenu
- * (juste après le match) et que `newString` en porte un aussi, on insérerait une
- * ligne vide parasite. On absorbe ce `\n` des DEUX côtés → exactement un saut de
- * ligne préservé (jamais de doublon, jamais de fusion de lignes).
+ * Boundary newline realignment: tolerant replacers yield un
+ * span WITHOUT the final `\n` of the last line. If this `\n` remains in the content
+ * (just after the match) and `newString` is also wearing one, we would insert a
+ * stray empty line. We absorb this `\n` from BOTH sides → exactly one jump of
+ * line preserved (never duplicate, never merge lines).
  */
 function realignBoundary(
   content: string,
@@ -473,16 +473,16 @@ function realignBoundary(
 }
 
 /**
- * Applique la substitution `oldString` → `newString` sur `content` via la
- * cascade. Lève si introuvable, ambigu (plusieurs matchs sans replaceAll), ou
- * si le match est disproportionné. Renvoie le nouveau contenu.
+ * Applies the substitution `oldString` → `newString` on `content` via the
+ * cascade. Raised if not found, ambiguous (multiple matches without replaceAll), or
+ * if the match is disproportionate. Returns the new content.
  *
- * `firstMatch` lève le refus d'ambiguïté et prend le PREMIER match : réservé à
- * `apply_patch` (MIN-115), dont les hunks sont POSITIONNELS et ordonnés — deux
- * hunks identiques y désignent deux occurrences successives, et
- * [patch.ts](./patch.ts) n'appelle avec ce drapeau qu'après avoir avancé son
- * curseur au-delà du hunk précédent. Sur `edit_file`/`apply_edits`, où
- * `old_string` est censé être unique par lui-même, l'ambiguïté reste un refus.
+ * `firstMatch` lifts the refusal of ambiguity and takes the FIRST match: reserved for
+ * `apply_patch` (MIN-115), whose hunks are POSITIONAL and ordered — two
+ * identical hunks designate two successive occurrences, and
+ * [patch.ts](./patch.ts) only calls with this flag after advancing its
+ * cursor past the previous hunk. On `edit_file`/`apply_edits`, where
+ * `old_string` is supposed to be unique by itself, ambiguity remains a refusal.
  */
 export function replace(
   content: string,
@@ -495,8 +495,8 @@ export function replace(
 }
 
 /**
- * `replace()` qui rend AUSSI ce que la cascade a fait (MIN-246). C'est la vraie
- * fonction ; `replace()` n'en est que la façade historique.
+ * `replace()` which ALSO renders what the waterfall did (MIN-246). It's the real one
+ * function ; `replace()` is only the historical facade.
  */
 export function replaceTraced(
   content: string,
@@ -538,18 +538,18 @@ export function replaceTraced(
       notFound = false;
       trace.candidates++;
       if (isDisproportionateMatch(search, oldString)) {
-        // On PASSE au candidat suivant (MIN-246). Lever ici tuait toute la
-        // cascade : un replacer tolérant qui capture un bloc trop grand faisait
-        // échouer une édition qu'un replacer plus bas résolvait proprement — pas
-        // de corruption, mais un round brûlé. L'échec reste bruyant si personne
-        // ne résout : le refus est rendu à la fin, avec le même message.
+        // We MOVE ON to the next candidate (MIN-246). Getting up here killed all the
+        // cascade: a tolerant replacer which captures a block too large was
+        // fail an edit that a lower replacer resolved cleanly — not
+        // of corruption, but a burnt round. Failure remains noisy if no one
+        // does not resolve: the refusal is returned at the end, with the same message.
         trace.rejectedDisproportionate++;
         continue;
       }
       if (replaceAll) {
-        // Remplace CHAQUE occurrence littérale de `search`, en réalignant le `\n`
-        // de frontière à chacune (comme le chemin single-match) — sinon un
-        // new_string terminé par `\n` insère une ligne vide parasite après chaque bloc.
+        // Replaces EVERY literal occurrence of `search`, realigning `\n`
+        // border at each (like the single-match path) — otherwise a
+        // new_string ending with `\n` inserts a stray empty line after each block.
         let result = "";
         let pos = 0;
         for (;;) {
@@ -582,9 +582,9 @@ export function replaceTraced(
       trace,
     );
   }
-  // Un candidat a bien été trouvé mais aucun n'a pu être appliqué. Le refus le
+  // A candidate was found but none could be applied. The refusal
   // plus actionnable prime : « ton oldString ne couvre pas ce que tu vises »
-  // avant « ton oldString n'est pas unique ».
+  // before “your oldString is not unique”.
   if (trace.rejectedDisproportionate > 0) {
     throw new ReplaceError(
       "disproportionate",
@@ -599,20 +599,20 @@ export function replaceTraced(
   );
 }
 
-// ── Télémétrie (MIN-246) ─────────────────────────────────────────────────────
+// ── Telemetry (MIN-246) ────────────────────────── ───────────────────────────
 
-/** Une substitution qui a abouti, telle qu'elle part en base. */
+/** A substitution which was successful, as it starts at base. */
 export interface EditTelemetryMatch {
   replacer: string;
   rank: number;
   similarity?: number;
-  /** `apply_patch` seulement : rang de la tentative d'ancrage qui a passé. */
+  /** `apply_patch` only: rank of the anchoring attempt which passed. */
   attempt?: number;
   rejected_disproportionate?: number;
   rejected_ambiguous?: number;
 }
 
-/** Une substitution refusée : le motif, et ce que la cascade avait vu. */
+/** A substitution refused: the reason, and what the waterfall had seen. */
 export interface EditTelemetryFailure {
   reason: string;
   candidates: number;
@@ -620,27 +620,27 @@ export interface EditTelemetryFailure {
 }
 
 /**
- * Ce qu'UN appel d'un tool d'édition a fait passer par la cascade. Agrégé par
- * `exec-tool`, persisté par `agent-loop` dans le payload de l'event
- * `tool_result` — jamais rendu au modèle. Le modèle du run se lit à côté, sur
- * `agent_runs.model` : c'est ce qui donne « par modèle et par chemin ».
+ * What ONE call from an editing tool made go through the cascade. Aggregated by
+ * `exec-tool`, persisted by `agent-loop` in the event payload
+ * `tool_result` — never returned to the model. The run model can be read next to it, on
+ * `agent_runs.model`: this is what gives “by model and by path”.
  */
 export interface EditTelemetry {
   tool: "edit_file" | "apply_edits" | "apply_patch";
   matched: EditTelemetryMatch[];
   failed: EditTelemetryFailure[];
-  /** `apply_patch` : l'enveloppe elle-même était illisible (échec de FORMAT). */
+  /** `apply_patch`: the envelope itself was unreadable (FORMAT failure). */
   parse_error?: string;
-  /** Présents SEULEMENT quand la liste a été capée : un relevé qui compte des
-   *  substitutions ne doit pas prendre un plafond pour un total. */
+  /** Present ONLY when the list has been completed: a statement which includes
+   * Substitutions should not take a cap for a total. */
   matched_total?: number;
   failed_total?: number;
 }
 
-/** Entrées gardées par appel — un batch de 40 fichiers n'a pas à peser en base. */
+/** Entries kept per call — a batch of 40 files does not have to weigh in base. */
 const TELEMETRY_CAP = 20;
 
-/** Arrondi : trois décimales suffisent à comparer une similarité à un seuil. */
+/** Rounding: three decimal places are enough to compare a similarity to a threshold. */
 function round3(n: number): number {
   return Math.round(n * 1000) / 1000;
 }
@@ -659,9 +659,9 @@ export function telemetryMatch(trace: ReplaceTrace & { attempt?: number }): Edit
 }
 
 /**
- * L'échec tel qu'il se compte. `reason` vient de `ReplaceError` quand c'est la
- * cascade qui a refusé ; tout autre échec (fichier absent, hunk illisible)
- * s'agrège sous un motif à part — ce n'est pas la même mesure.
+ * Failure as it counts. `reason` comes from `ReplaceError` when it is
+ * waterfall who refused; any other failure (missing file, unreadable hunk)
+ * aggregates under a separate pattern — it is not the same measure.
  */
 export function telemetryFailure(err: unknown): EditTelemetryFailure {
   if (err instanceof ReplaceError) {
@@ -676,7 +676,7 @@ export function telemetryFailure(err: unknown): EditTelemetryFailure {
   return { reason: "other", candidates: 0 };
 }
 
-/** Cape les listes d'une télémétrie et la rend, ou `undefined` si elle est vide. */
+/** Cape lists a telemetry and returns it, or `undefined` if empty. */
 export function sealTelemetry(t: EditTelemetry): EditTelemetry | undefined {
   if (t.matched.length === 0 && t.failed.length === 0 && !t.parse_error) return undefined;
   return {
@@ -688,7 +688,7 @@ export function sealTelemetry(t: EditTelemetry): EditTelemetry | undefined {
   };
 }
 
-/** Retire l'indentation commune des lignes de contenu d'un diff (lisibilité). */
+/** Removes common indentation from content lines of a diff (readability). */
 export function trimDiff(diff: string): string {
   const isContent = (line: string) =>
     (line.startsWith("+") || line.startsWith("-") || line.startsWith(" ")) &&
@@ -714,20 +714,20 @@ export function trimDiff(diff: string): string {
 export interface EditResult {
   /** Nouveau contenu complet du fichier. */
   content: string;
-  /** Diff unifié (indentation commune retirée), prêt à afficher. */
+  /** Unified diff (common indentation removed), ready to display. */
   diff: string;
   additions: number;
   deletions: number;
-  /** Ce que la cascade a fait pour y arriver (MIN-246). */
+  /** What the waterfall did to get there (MIN-246). */
   trace: ReplaceTrace;
 }
 
 /**
- * Diff unifié entre deux contenus, mis en forme comme celui d'`applyEdit`. Les
- * chemins qui appliquent PLUSIEURS substitutions dans un même fichier
+ * Unified diff between two contents, formatted like that of `applyEdit`. THE
+ * paths that apply MULTIPLE substitutions in the same file
  * (`apply_edits`, `apply_patch`) en ont besoin sans repasser par `applyEdit` :
- * ce qui vaut d'être rendu au modèle, c'est le diff du fichier une fois toutes
- * les substitutions posées, pas un diff par substitution.
+ * what is worth returning to the model is the diff of the file once all
+ * the substitutions made, not a diff by substitution.
  */
 export function diffFiles(path: string, before: string, after: string): string {
   return trimDiff(
@@ -735,7 +735,7 @@ export function diffFiles(path: string, before: string, after: string): string {
   );
 }
 
-/** Lignes ajoutées / supprimées entre deux contenus (fins de ligne neutralisées). */
+/** Lines added/deleted between two contents (neutralized line endings). */
 export function countLineChanges(
   before: string,
   after: string,
@@ -750,9 +750,9 @@ export function countLineChanges(
 }
 
 /**
- * Applique une édition et renvoie le nouveau contenu + un diff unifié compté.
- * Gère les fins de ligne du fichier d'origine (CRLF préservé). Lève comme
- * `replace()` en cas d'échec.
+ * Applies an edit and returns the new content + a counted unified diff.
+ * Handles line endings from the original file (CRLF preserved). Get up like
+ * `replace()` on failure.
  */
 export function applyEdit(
   path: string,

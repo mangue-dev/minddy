@@ -7,13 +7,13 @@ import {
 } from "@/lib/server/agent/pr-actions";
 
 /**
- * Version AVANT-ce-commit d'un fichier de son diff — le dépliage de contexte de
- * la vue diff d'un commit.
- *  GET ?path=… → { content } (texte brut du fichier au PARENT du commit).
+ * BEFORE-commit version of a file its diff — context unfolding
+ * the diff view of a commit.
+ *  GET ?path=… → { content } (raw file text at the commit PARENT).
  *
- * Jumelle de `[prId]/file`, à un ref près, et c'est tout l'objet de la route :
- * déplier le diff d'un commit avec le merge base de la PR montrerait les lignes
- * d'avant tous les autres commits.
+ * Twin of `[prId]/file`, except for one ref, and that's the whole point of the route:
+ * unfolding the diff of a commit with the merge base of the PR would show the lines
+ * before all other commits.
  */
 
 type RouteContext = { params: Promise<{ prId: string; sha: string }> };

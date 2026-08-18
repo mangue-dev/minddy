@@ -6,9 +6,9 @@ import type { UsageSummaryResponse } from "@/lib/billing-types";
 import { managedServices } from "@/lib/managed-services";
 
 /**
- * GET /api/billing/usage — résumé d'usage de la fenêtre courante (MIN-72) :
- * budget du plan, dépensé (coût brut USD), ventilation par segment d'affichage
- * et limites structurelles. Nourrit la barre du header et la page billing.
+ * GET /api/billing/usage — usage summary of the current window (MIN-72):
+ * plan budget, spent (gross cost USD), breakdown by display segment
+ * and structural limits. Feeds the header bar and the page billing.
  */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);

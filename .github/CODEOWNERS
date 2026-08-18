@@ -1,8 +1,8 @@
-# Le mainteneur principal reste responsable de chaque changement tant qu'un
-# deuxième mainteneur n'a pas été nommé dans GOVERNANCE.md.
+# The primary maintainer remains responsible for every change until a
+# second maintainer has been named in GOVERNANCE.md.
 * @mangue-dev
 
-# Ces surfaces modifient les règles de confiance, de publication ou de droits.
+# These surfaces modify trust, publishing, or permission rules.
 /.github/ @mangue-dev
 /SECURITY.md @mangue-dev
 /GOVERNANCE.md @mangue-dev

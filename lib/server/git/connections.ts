@@ -7,13 +7,13 @@ import { encryptForgeToken } from "./token-crypto";
 import type { GitlabTokenSet } from "./gitlab-app";
 
 /**
- * Accès aux connexions git au niveau compte (git_connections) — MIN-47. Service
- * client (RLS bypassé), la vérif utilisateur est faite ici en TS (pattern
- * api_keys). Les colonnes de tokens ne sont JAMAIS renvoyées : les fonctions
- * publiques sélectionnent des colonnes explicites, sans les secrets.
+ * Access to account-level git connections (git_connections) — MIN-47. Service
+ * client (RLS bypassed), user verification is done here in TS (pattern
+ * api_keys). Token columns are NEVER returned: public
+ * functions select explicit columns, without secrets.
  */
 
-/** Colonnes non-secrètes exposables à l'UI. */
+/** Non-secret columns exposed to the UI. */
 const PUBLIC_COLS =
   "id, provider, account_login, account_type, installation_id, created_at, updated_at";
 
@@ -44,8 +44,8 @@ function toPublic(
 }
 
 /**
- * Liste les connexions git de l'utilisateur (sanitisées), avec les projets qui
- * les réutilisent. Renvoie [] si aucune, null sur erreur DB.
+ * Lists the user's git connections (sanitized), with projects that
+ * reuse them. Returns [] if none, null on error DB.
  */
 export async function listUserConnections(
   userId: string,
@@ -60,7 +60,7 @@ export async function listUserConnections(
   const rows = (data ?? []) as PublicRow[];
   if (rows.length === 0) return [];
 
-  // Projets liés par connexion (pour l'avertissement de déconnexion).
+  // Projects linked by connection (for disconnection warning).
   const { data: links } = await supabase
     .from("project_git_links")
     .select("connection_id, projects(id, name)")
@@ -69,8 +69,8 @@ export async function listUserConnections(
       rows.map((r) => r.id),
     );
   const byConnection = new Map<string, GitConnection["projects"]>();
-  // Supabase infère la relation to-one embarquée comme un tableau ; à l'exécution
-  // c'est un objet (FK many-to-one). On cast via unknown pour refléter le runtime.
+  // Supabase infers the embedded to-one relation like a table; at execution
+  // it's an object (FK many-to-one). We cast via unknown to reflect the runtime.
   for (const link of (links ?? []) as unknown as Array<{
     connection_id: string;
     projects: { id: string; name: string } | null;
@@ -85,9 +85,9 @@ export async function listUserConnections(
 }
 
 /**
- * Trouve une connexion réutilisable de l'utilisateur pour un provider (la plus
- * récente). Sert au flux « reuse » : ne pas refaire l'install/authorize si une
- * connexion existe déjà. Renvoie null si aucune.
+ * Finds a reusable user connection for a provider (the most recent
+ *). Used for the “reuse” flow: do not redo the install/authorize if a
+ * connection already exists. Returns null if none.
  */
 export async function findReusableConnection(
   userId: string,
@@ -106,10 +106,10 @@ export async function findReusableConnection(
 }
 
 /**
- * Les installations GitHub de l'utilisateur (connexions portant un
- * `installation_id`). Sert au rafraîchissement du nom affiché (MIN-154) : le
- * compte d'une installation se renomme comme un autre, et l'App sait le dire
- * sans token utilisateur.
+ * The user's GitHub installations (connections carrying a
+ * `installation_id`). Used to refresh the displayed name (MIN-154): the
+ * account of an installation is renamed like another, and the App knows how to say it
+ * without a user token.
  */
 export async function listUserInstallations(
   userId: string,
@@ -125,13 +125,13 @@ export async function listUserInstallations(
 }
 
 /**
- * Recale le compte affiché d'une connexion sur ce que la forge en dit
- * aujourd'hui (MIN-154) : `account_login` est un nom d'AFFICHAGE, écrit à la
- * connexion et jamais rafraîchi ensuite.
+ * Reset the displayed count of a connection to what the forge says
+ * today (MIN-154): `account_login` is a DISPLAY name, written at the
+ * connection and never refreshed afterwards.
  *
- * Seuls les champs fournis bougent, et seulement s'ils diffèrent : la page des
- * réglages se recharge souvent, et un `updated_at` qui avance sans raison n'est
- * le marqueur de rien.
+ * Only the fields provided move, and only if they differ: the
+ * settings page often reloads, and a `updated_at` that advances for no reason is
+ * the marker of nothing.
  */
 export async function updateConnectionAccount(
   connectionId: string,
@@ -168,9 +168,9 @@ export async function updateConnectionAccount(
 }
 
 /**
- * Charge une connexion appartenant à l'utilisateur (colonnes publiques), ou null.
- * Sert à valider qu'une connexion référencée dans un bind appartient bien à
- * l'owner du projet.
+ * Loads a connection belonging to the user (public columns), or null.
+ * Used to validate that a connection referenced in a bind really belongs to
+ * the project owner.
  */
 export async function getUserConnection(
   userId: string,
@@ -194,10 +194,10 @@ export async function getUserConnection(
 }
 
 /**
- * L'installation visée est déjà reliée à un AUTRE compte minddy (MIN-324).
+ * The targeted installation is already connected to ANOTHER minddy account (MIN-324).
  *
- * Le message ne nomme personne : l'appelant n'a pas à apprendre à qui appartient
- * une installation qu'il ne détient pas. La route setup le traduit en `git=error`.
+ * The message does not name anyone: the caller does not have to learn who owns
+ * an installation that he does not own. The setup route translates it to `git=error`.
  */
 export class GithubInstallationOwnedByAnotherUserError extends Error {
   constructor() {
@@ -207,16 +207,15 @@ export class GithubInstallationOwnedByAnotherUserError extends Error {
 }
 
 /**
- * Upsert d'une connexion GitHub App (callback setup). installation_id est unique
- * globalement : on met à jour la ligne existante ou on insère. Renvoie l'id.
+ * Upsert a GitHub App connection (callback setup). installation_id is unique
+ * globally: we update the existing line or we insert. Returns the id.
  *
- * **Une ligne existante ne change jamais de main** (MIN-324). La clé de conflit
- * est le seul `installation_id`, et l'`update` réécrivait `user_id` : appelée
- * avec un `installation_id` énuméré, la fonction réattribuait l'installation
- * d'un autre locataire à l'appelant — donc ses dépôts privés. Un propriétaire
- * différent lève désormais, et pour reprendre une installation il faut d'abord
- * que son détenteur la déconnecte (la ligne disparaît, l'insert redevient
- * possible).
+ * **An existing row never changes hands** (MIN-324). The conflict key
+ * is the only `installation_id`, and the `update` rewrote `user_id`: called
+ * with an `installation_id` listed, the function reassigned the installation
+ * from another tenant to the appellant — therefore his private deposits. A different owner
+ * now raises, and to resume an installation it is first necessary for its holder to disconnect it (the line disappears, the insert becomes
+ * again possible).
  */
 export async function upsertGithubConnection(params: {
   userId: string;
@@ -270,14 +269,14 @@ export async function upsertGithubConnection(params: {
 }
 
 /**
- * Upsert d'une connexion GitLab OAuth (callback). Dé-duplique par
- * (user_id, provider, provider_account_id) : reconnexion du même compte → update
- * des tokens. Renvoie l'id.
+ * Upsert of a GitLab OAuth connection (callback). De-duplicate by
+ * (user_id, provider, provider_account_id): reconnection of the same account → update
+ * tokens. Returns id.
  *
- * La clé de conflit porte `user_id`, donc pas de vol par réattribution ici
- * (MIN-324) : deux utilisateurs reliant le même compte GitLab obtiennent deux
- * lignes distinctes, chacune avec ses propres jetons. Idem pour
- * `upsertUserIdentity`, unique sur `(user_id, provider)`.
+ * Conflict key has `user_id`, so no reassignment theft here
+ * (MIN-324): Two users linking the same GitLab account get two separate
+ * rows, each with their own tokens. Same for
+ * `upsertUserIdentity`, unique on `(user_id, provider)`.
  */
 export async function upsertGitlabConnection(params: {
   userId: string;
@@ -332,9 +331,9 @@ export async function upsertGitlabConnection(params: {
 }
 
 /**
- * Supprime une connexion de l'utilisateur (déconnexion au niveau compte). Les
- * project_git_links pointant dessus tombent en cascade (ON DELETE CASCADE).
- * Renvoie false si la connexion n'existe pas / n'appartient pas à l'utilisateur.
+ * Deletes a user login (account level logout). The
+ * project_git_links pointing to it cascade (ON DELETE CASCADE).
+ * Returns false if the connection does not exist / does not belong to the user.
  */
 export async function deleteConnection(
   userId: string,

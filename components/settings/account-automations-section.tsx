@@ -52,22 +52,18 @@ import { EFFORTS, type IssueEffort } from "@/lib/issue-constants";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
- * Compte → Automatisations (MIN-147). Le préréglage vit ICI, pas sur chaque
- * projet : on ne reconfigure pas la même boucle à chaque nouveau dépôt.
+ * Account → Automations (MIN-147). The preset lives HERE, not on each
+ * project: we do not reconfigure the same loop for each new repository.
  *
- * Ce qui reste au projet, c'est l'INTERRUPTEUR — un par projet, listés plus bas.
- * Armer la boucle sur un dépôt de production n'est pas la même décision que sur
- * un bac à sable, et c'est la seule décision qui mérite d'être reprise projet
- * par projet.
+ * What remains in the project is the SWITCH — one per project, listed below.
+ * Arming the loop on a production repository is not the same decision as on
+ * a sandbox, and it is the only decision that deserves to be taken up project
+ * by project.
  *
- * Seuls les projets dont on est PROPRIÉTAIRE apparaissent : c'est le propriétaire
- * qui paie (`billTo: projectOwner`), lui seul qui peut armer un projet, et c'est
- * son préréglage que le moteur lit. Payeur et configurateur sont la même
- * personne — ce qui est exactement ce qu'un réglage de compte devait garantir.
- *
- * Écritures : le préréglage par `updateUserMetadata` (patron des préférences de
- * compte), l'interrupteur par `updateProject` (la liste blanche du PATCH projet,
- * déjà gatée par `canUseAutomations`).
+ * Only the projects of which one is the OWNER appear: it is the owner
+ * who pays (`billTo: projectOwner`), only he who can arm a project, and it's
+ * its preset that the engine reads. Payer and configurator are the same person — which is exactly what an account setting should ensure. `updateProject` (the whitelist of the PATCH project,
+ * already spoiled by `canUseAutomations`).
  */
 
 const PRESET_DESC_KEYS: Record<
@@ -82,9 +78,9 @@ const PRESET_DESC_KEYS: Record<
 };
 
 /**
- * Le ticket-type de chaque effort, tel que les règles le verront à l'entrée en
- * « à faire » : ni plan, ni assigné, ni catégorie. C'est le cas NOMINAL — celui
- * qui dit la promesse.
+ * The standard ticket for each effort, as the rules will see it upon entry in
+ * “to do”: neither plan, nor assigned, nor category. This is the NOMINAL case — the one
+ * that says the promise.
  */
 function sampleIssue(effort: IssueEffort) {
   return {
@@ -132,7 +128,7 @@ export function AccountAutomationsSection() {
 
   const setStartDelay = async (minutes: number) => {
     const prev = delay;
-    setDelay(minutes); // optimiste — annulé en cas d'échec
+    setDelay(minutes); // optimistic — canceled on failure
     try {
       await updateUserMetadata({ [AUTOMATION_START_DELAY_META_KEY]: minutes });
     } catch (e) {
@@ -141,15 +137,15 @@ export function AccountAutomationsSection() {
     }
   };
 
-  // Un projet en cours d'écriture : son interrupteur seul se fige, pas la liste.
+  // A project being written: only its switch freezes, not the list.
   const [pending, setPending] = useState<string | null>(null);
 
-  /** Tailles ÉTEINTES — le compteur de l'accordéon replié. */
+  /** Sizes OFF — the folded accordion counter. */
   const offCount = EFFORTS.filter((e) => !efforts[e.value]).length;
 
   const setEffortEnabled = async (effort: IssueEffort, enabled: boolean) => {
     const next = { ...efforts, [effort]: enabled };
-    setEfforts(next); // optimiste — annulé en cas d'échec
+    setEfforts(next); // optimistic — canceled on failure
     try {
       await updateUserMetadata({ [AUTOMATION_EFFORTS_META_KEY]: next });
     } catch (e) {
@@ -159,8 +155,8 @@ export function AccountAutomationsSection() {
   };
 
   const setEffortModel = async (effort: IssueEffort, model: string) => {
-    // Vide = « mon modèle par défaut » : on retire la clé plutôt que d'écrire
-    // une chaîne vide, pour que le repli reste le défaut du compte.
+    // Empty = “my default model”: we remove the key rather than writing
+    // an empty string, so that the fallback remains the default of the account.
     const next = { ...models };
     if (model.trim()) next[effort] = model.trim();
     else delete next[effort];
@@ -178,7 +174,7 @@ export function AccountAutomationsSection() {
   const choosePreset = async (next: AutomationPresetId | null) => {
     if (savingPreset) return;
     const prev = preset;
-    setPreset(next); // optimiste — annulé en cas d'échec
+    setPreset(next); // optimistic — canceled on failure
     setSavingPreset(true);
     try {
       await updateUserMetadata({ [AUTOMATION_PRESET_META_KEY]: next });
@@ -206,17 +202,17 @@ export function AccountAutomationsSection() {
     }
   };
 
-  // Ce que ça coûte, par taille de ticket — sur la VIE du ticket, toutes chaînes
-  // confondues. Toujours en part du budget mensuel, jamais en dollars.
+  // What it costs, by ticket size — on the LIFE of the ticket, all channels
+  // combined. Always based on the monthly budget, never dollars.
   const rules = preset ? presetRules(preset) : [];
   const costRows = EFFORTS.map((e) => {
-    // Une taille éteinte ne coûte RIEN : le tableau doit le dire, sinon les deux
-    // réglages se contrediraient à l'écran.
+    // An extinct size costs NOTHING: the table must say it, otherwise both
+    // settings would contradict each other on screen.
     const modes = efforts[e.value]
       ? simulatedRunModes(simulateIssueLifetime(rules, sampleIssue(e.value)))
       : [];
-    // Deux dimensions : ce que l'étape fait, et la TAILLE du ticket. Planifier
-    // un XS et planifier un XL ne coûtent pas la même chose.
+    // Two dimensions: what the step does, and the SIZE of the ticket. To plan
+    // an XS and planning an XL do not cost the same.
     const usd = modes.reduce(
       (sum, mode) => sum + stepCostUsd(mode, e.value),
       0,
@@ -234,10 +230,9 @@ export function AccountAutomationsSection() {
         description={t("description")}
         help={t("presetHint")}
       >
-        {/* 1. Quel préréglage ? Sa description est VISIBLE : c'est la seule
-            chose qu'on lit avant d'armer une boucle qui dépense. Le sélecteur
-            est une grille de cartes, donc une rangée verticale — l'exception
-            assumée au clé/valeur. */}
+        {/* 1. What preset? Its description is VISIBLE: it is the only thing you read before arming a spending loop. The selector
+ is a grid of cards, therefore a vertical row — the exception
+ assumed to the key/value. */}
         <SettingsRow label={t("presetTitle")} orientation="vertical">
           <AutomationPresetPicker
             value={preset}
@@ -249,7 +244,7 @@ export function AccountAutomationsSection() {
           </p>
         </SettingsRow>
 
-        {/* 2. Combien ça coûte ? Cinq lignes courtes. */}
+        {/* 2. How much does it cost? Five short lines. */}
         {preset && (
           <SettingsRow
             label={t("costTitle")}
@@ -284,8 +279,8 @@ export function AccountAutomationsSection() {
           </SettingsRow>
         )}
 
-        {/* 3. Le SURSIS. Juste après le coût, parce que c'est le garde-fou qui
-            protège ce coût-là : le temps de se raviser avant que ça dépense. */}
+        {/* 3. THE RESPONSIBILITY. Just after the cost, because it is the safeguard which
+ protects this cost: the time to change your mind before it costs. */}
         {preset && (
           <SettingsRow
             htmlFor="automation-delay"
@@ -311,9 +306,9 @@ export function AccountAutomationsSection() {
           />
         )}
 
-        {/* 4. La personnalisation, PLIÉE. Le préréglage marche tel quel : ces
-            deux réglages sont pour qui veut aller plus loin, et n'ont donc pas à
-            occuper l'écran de qui vient juste d'en choisir un. */}
+        {/* 4. Personalization, FOLDED. The preset works as is: these
+ two settings are for those who want to go further, and therefore do not have to
+ occupy the screen of those who have just chosen one. */}
         {preset && (
           <Accordion type="multiple">
             <AccordionItem value="efforts" className="border-b-0">
@@ -378,9 +373,9 @@ export function AccountAutomationsSection() {
                           freeTextLabel={(q) =>
                             tAgent("modelUseCustom", { model: q })
                           }
-                          // Une taille éteinte ne lance rien : lui choisir un
-                          // modèle n'aurait aucun effet, et l'offrir quand même
-                          // laisserait croire le contraire.
+                          // An off size doesn't do anything: choose one
+                          // template would have no effect, and offer it anyway
+                          // would suggest the opposite.
                           disabled={!efforts[e.value]}
                         />
                       }
@@ -393,8 +388,8 @@ export function AccountAutomationsSection() {
         )}
       </SettingsGroup>
 
-      {/* 5. Sur quels projets ? Un interrupteur par projet possédé — c'est ce
-          qui remplace l'ancien toggle général des réglages de projet. */}
+      {/* 5. On which projects? One switch per project owned — it's this
+ which replaces the old general toggle for project settings. */}
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountAutomationsProjects}
         icon={FolderKanban}
@@ -414,10 +409,10 @@ export function AccountAutomationsSection() {
           />
         ) : (
           owned.map((project) => (
-            /* L'icône avant le nom : c'est à elle qu'on reconnaît un projet
-               partout ailleurs (barre latérale, fil d'Ariane, cartes) — une
-               liste d'interrupteurs se lit plus vite quand elle parle le même
-               langage. */
+            /* The icon before the name: this is how we recognize a
+ project everywhere else (sidebar, breadcrumbs, maps) — a
+ list of switches is read faster when it speaks the same
+ language. */
             <SettingsListRow
               key={project.id}
               avatar={

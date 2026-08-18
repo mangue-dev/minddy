@@ -14,27 +14,27 @@ import { NumoIcon } from "@/components/numo-icon";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 
 /**
- * Les deux entrées « agent » du menu ⋯ / clic droit d'un ticket — copier le
- * prompt, lancer l'agent Numo — partagées par les cartes du board et le panneau
- * latéral, pour qu'elles ne divergent pas.
+ * The two “agent” entries in the menu ⋯ / right-click on a ticket — copy the
+ * prompt, launch the Numo agent — shared by the board cards and the panel
+ * lateral, so that they do not diverge.
  *
- * Chacune est un SOUS-MENU avec les façons de travailler un ticket, dans l'ordre
- * où on les traverse : le plan (cadrer, sans coder), « Implémenter le ticket »,
- * « Vérifier l'implémentation » (relire le travail fait face au plan et aux
- * commentaires, corriger les vrais bugs), puis « Personnalisé » — la consigne
- * écrite par l'utilisateur, en dernier parce qu'elle sort des trois façons
- * cadrées. Les raccourcis clavier ne bougent pas — ⇧P copie le prompt
- * d'implémentation, ⇧A lance l'agent dessus — et s'affichent donc sur cette
- * feuille-là.
+ * Each is a SUBMENU with ways to work on a ticket, in order
+ * where we cross them: the plan (frame, without coding), “Implement the ticket”,
+ * “Check the implementation” (read again the work against the plan and the
+ * comments, fix real bugs), then “Custom” — the instructions
+ * written by the user, last because it comes out in all three ways
+ * framed. Keyboard shortcuts do not move — ⇧P copies the prompt
+ * implementation, ⇧A launches the agent on it — and are therefore displayed on this
+ * leaf there.
  *
- * La feuille « plan » suit l'état du ticket : « Générer un plan » quand il n'en
- * a pas, « Vérifier le plan » quand il en a un — en redemander un n'aurait pas
- * de sens, et le prompt sous-jacent bascule de la même façon. La feuille
- * « vérifier », elle, ne dépend d'aucun état : le menu garde la même forme quel
- * que soit le ticket (le prompt, lui, s'adapte au plan qui existe ou non).
+ * The “plan” sheet tracks the status of the ticket: “Generate a plan” when there is no
+ * does not, “Check the plan” when he has one — asking for one again would not have
+ * direction, and the underlying prompt switches the same way. The leaf
+ * “check” does not depend on any state: the menu keeps the same form whatever
+ * whatever the ticket (the prompt adapts to the plan which exists or not).
  *
- * Session existante : « Ouvrir l'agent » reste une entrée simple (elle rouvre la
- * conversation, elle ne lance rien) et c'est « Nouvelle session » qui porte le
+ * Existing session: “Open agent” remains a simple entry (it reopens the
+ * conversation, it does not launch anything) and it is “New session” which carries the
  * sous-menu.
  */
 export function useAgentMenuActions({
@@ -51,25 +51,25 @@ export function useAgentMenuActions({
   onCustomWithAgent,
   onOpenSession,
 }: {
-  /** Agents disponibles (plan payant + dépôt lié) — sinon, pas d'entrée agent. */
+  /** Agents available (paid plan + linked deposit) — otherwise, no agent entry. */
   agentsEnabled: boolean;
-  /** Le ticket a déjà une conversation d'agent. */
+  /** The ticket already has an agent conversation. */
   hasSession: boolean;
-  /** Le ticket a déjà un plan (au moins une tâche) → vérifier, plutôt qu'écrire. */
+  /** The ticket already has a plan (at least one task) → check, rather than write. */
   hasPlan: boolean;
   onCopyPrompt: () => void;
   onCopyPlanPrompt: () => void;
-  /** Copie le prompt « vérifie l'implémentation » pour un agent externe. */
+  /** Copies the "check implementation" prompt for an external agent. */
   onCopyVerifyPrompt: () => void;
-  /** Ouvre le dialog de consigne libre, puis copie le prompt correspondant. */
+  /** Opens the free instruction dialog, then copies the corresponding prompt. */
   onCopyCustomPrompt: () => void;
   onImplementWithAgent: () => void;
   onWritePlanWithAgent: () => void;
-  /** Lance Numo sur la vérification du travail déjà fait. */
+  /** Lance Numo on checking the work already done. */
   onVerifyWithAgent: () => void;
-  /** Ouvre le dialog de consigne libre, puis lance Numo dessus. */
+  /** Open the free locker dialog, then launch Numo on it. */
   onCustomWithAgent: () => void;
-  /** Rouvre la conversation existante (modal côté panneau, page côté carte). */
+  /** Reopens the existing conversation (modal on panel side, page on card side). */
   onOpenSession: () => void;
 }): ContextMenuAction[] {
   const t = useTranslations("IssueUI");
@@ -77,8 +77,8 @@ export function useAgentMenuActions({
 
   return useMemo(() => {
 
-    // Les deux libellés restent cherchables ensemble : quel que soit l'état du
-    // ticket, taper « plan » ou « vérifier » trouve l'entrée.
+    // The two labels remain searchable together: whatever the state of the
+    // ticket, typing “map” or “check” finds the entry.
     const planKeywords = [
       "plan",
       "planifier",
@@ -92,8 +92,8 @@ export function useAgentMenuActions({
     ];
     const planLabel = hasPlan ? t("actionReviewPlan") : t("actionWritePlan");
     const implementKeywords = ["implement", "implémenter", "code", "coder", "build"];
-    // « Vérifier » est aussi le mot de la feuille plan : les mots qui séparent
-    // les deux (bug, relire, implémentation) sont donc ceux qui comptent ici.
+    // “Check” is also the word of the plan sheet: the words that separate
+    // so both (bug, proofread, implementation) are the ones that matter here.
     const verifyKeywords = [
       "verify",
       "vérifier",
@@ -114,9 +114,9 @@ export function useAgentMenuActions({
       onSelect,
     });
 
-    // « Personnalisé » : l'utilisateur écrit la consigne (dialog), minddy garde
-    // le contexte du ticket autour. Cherchable par ce qu'on tape quand on veut
-    // sortir des trois façons cadrées.
+    // “Personalized”: the user writes the instructions (dialog), Minddy keeps
+    // the context of the ticket around. Searchable by what you type when you want
+    // get out of the three framed ways.
     const customAction = (id: string, onSelect: () => void): ContextMenuAction => ({
       id,
       label: t("actionCustomPrompt"),
@@ -161,9 +161,9 @@ export function useAgentMenuActions({
 
     if (!agentsEnabled) return [copyPrompt];
 
-    // Les deux feuilles du lancement d'agent. ⇧A ne s'affiche que quand il
-    // déclenche VRAIMENT cette feuille — avec une session existante, il rouvre
-    // la conversation, et le raccourci reste donc sur « Ouvrir l'agent ».
+    // The two sheets of agent launch. ⇧A is only displayed when it
+    // REALLY triggers this sheet — with an existing session it reopens
+    // the conversation, and the shortcut therefore remains on “Open agent”.
     const launchChildren: ContextMenuAction[] = [
       {
         id: "agent-plan",

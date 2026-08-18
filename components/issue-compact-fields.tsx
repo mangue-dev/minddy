@@ -43,8 +43,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-// Au doigt, la rangée d'options est faite de cibles de 30 px, sous le seuil du
-// confortable : sous `sm` chaque déclencheur gagne quelques pixels de garde.
+// On the finger, the row of options is made of targets of 30 px, below the threshold of the
+// comfortable: under `sm` each trigger gains a few guard pixels.
 const BARE =
   "flex items-center gap-1.5 rounded-md p-1.5 text-sm text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted max-sm:p-2";
 const PILL =
@@ -183,7 +183,7 @@ export function CategoriesCompact({
   categories: Category[];
   value: string[];
   onChange: (ids: string[]) => void;
-  /** Projet où l'ajout rapide crée l'étiquette. */
+  /** Project where quick add creates the label. */
   projectId?: string | null;
 } & ShortcutControl) {
   const t = useTranslations("IssueUI");
@@ -300,7 +300,7 @@ export function DueDateCompact({
 }: {
   value: string | null;
   onChange: (v: string | null) => void;
-  /** Ouvre le mode récurrent du popover (MIN-136). */
+  /** Opens recurring popover mode (MIN-136). */
   recurrence?: RecurrenceCadence | null;
   onRecurrenceChange?: (next: {
     due_date: string | null;
@@ -339,7 +339,7 @@ export function ObjectiveCompact({
   value: string | null;
   objectives: Objective[];
   onChange: (v: string | null) => void;
-  /** Projet où l'ajout rapide crée l'objectif. */
+  /** Project where quick adding creates the goal. */
   projectId?: string | null;
 } & ShortcutControl) {
   const t = useTranslations("IssueUI");
@@ -386,19 +386,19 @@ export function ObjectiveCompact({
 }
 
 /**
- * SMART-FILL (MIN-260) — la bascule, dans la rangée d'options.
+ * SMART-FILL (MIN-260) — the toggle, in the row of options.
  *
- * Elle n'y apparaît QUE si le compte a la préférence armée : coupée dans les
- * réglages, la feature n'existe pas et sa bascule non plus (c'est l'appelant qui
- * décide de la rendre). Ici, elle ne sert qu'à la couper POUR CE TICKET-LÀ —
- * quand on sait déjà ce qu'on veut, ou qu'on préfère ne pas dépenser un appel.
+ * It ONLY appears there if the account has the armed preference: cut off in the
+ * settings, the feature does not exist and neither does its toggle (it is the caller who
+ * decides to return it). Here, it only serves to cut it FOR THIS TICKET —
+ * when we already know what we want, or we prefer not to spend a call.
  *
- * Elle est allumée par défaut, donc elle se dessine à l'envers des autres : un
- * chip PLEIN quand la chose est active (l'état normal), et vidé quand on l'a
- * coupée. Les six autres pickers, eux, sont vides tant qu'on n'a rien choisi.
+ * It is on by default, so it is drawn in reverse from the others: a
+ * chip FULL when the thing is active (the normal state), and emptied when we have it
+ * cut off. The other six pickers are empty until anything is chosen.
  *
- * `aria-pressed` et pas un `Switch` : c'est un bouton de rangée d'outils, au
- * même dessin que ses voisins, pas une ligne de réglages.
+ * `aria-pressed` and not a `Switch`: it is a tool row button, at least
+ * same design as its neighbors, not a line of adjustments.
  */
 export function SmartFillCompact({
   value,
@@ -422,8 +422,8 @@ export function SmartFillCompact({
               : "text-muted-foreground",
           )}
         >
-          {/* Le même glyphe que l'acteur « Smart-fill » de la timeline
-              (actor-avatars) : ce qu'on arme ici est ce qu'on relit là-bas. */}
+          {/* The same glyph as the “Smart-fill” actor in the timeline
+ (actor-avatars): what we arm here is what we reread there. */}
           <Sparkles className="size-4 shrink-0" />
           <span>{t("smartFillChip")}</span>
         </button>

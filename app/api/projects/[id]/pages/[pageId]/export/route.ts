@@ -7,18 +7,18 @@ import { exportPage } from "@/lib/server/pages-export";
 type RouteContext = { params: Promise<{ id: string; pageId: string }> };
 
 /**
- * GET /api/projects/[id]/pages/[pageId]/export — emporter une page (MIN-283).
+ * GET /api/projects/[id]/pages/[pageId]/export — take a page (MIN-283).
  *
- * `?scope=branch` prend la page ET ses sous-pages, et rend alors un `.zip` :
- * un fichier par page, l'imbrication en dossiers, les blocs sous-page réécrits
- * en liens relatifs. Sans lui, un seul `.md`.
+ * `?scope=branch` takes the page AND its subpages, and then returns a `.zip`:
+ * one file per page, nesting in folders, rewritten sub-page blocks
+ * into relative links. Without it, there would be only one `.md` file.
  *
- * Le PDF n'a pas de route : il passe par l'impression du navigateur sur la vue
- * (feuille `@media print`, cf. app/globals.css). Un moteur de rendu PDF dans une
- * fonction serveur, c'est un paquet de plusieurs centaines de mégaoctets, un
- * temps de démarrage à froid et une seconde définition de la mise en page à
- * tenir — pour produire ce que le navigateur produit déjà, depuis le document
- * qui est justement à l'écran.
+ * The PDF has no route: it goes through the browser printing on the view
+ * (`@media print` sheet, see app/globals.css). A PDF rendering engine in a
+ * server function, it is a packet of several hundred megabytes, a
+ * cold start time and a second definition of the layout to
+ * hold — to produce what the browser already produces, from the document
+ * which is right on screen.
  */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { pageId } = await params;
@@ -35,8 +35,8 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
   }
 
-  // `filename*` en UTF-8 : les titres de page portent des accents et des
-  // émojis, et un `filename=` nu les rendrait illisibles côté navigateur.
+  // `filename*` in UTF-8: page titles carry accents and
+  // emojis, and a bare `filename=` would make them unreadable on the browser side.
   return new NextResponse(result.body as unknown as BodyInit, {
     headers: {
       "Content-Type": result.contentType,

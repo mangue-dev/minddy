@@ -1,25 +1,25 @@
 # Changelog
 
-Les changements du cœur public de minddy sont consignés ici. Le format suit
-[Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et les versions suivent
+Changes in minddy's public heart are recorded here. The format follows
+[Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/lang/fr/).
 
-Les déploiements de Minddy Cloud et du site marketing ont leur propre journal
-d'exploitation : ils ne créent ni version ni tag du cœur public.
+Minddy Cloud and Marketing Site deployments have their own log
+exploitation: they create neither version nor tag of the public core.
 
 ## [Unreleased]
 
 ### Added
 
-- Chaîne de release publique reproductible : artefacts source et migrations,
-  checksums SHA-256, provenance CI, notes de mise à jour et publication macOS
-  optionnelle sans secret personnel.
+- Reproducible public release chain: source artifacts and migrations,
+SHA-256 checksums, CI provenance, release notes and macOS release
+  optional release without personal secrets.
 
 ## [0.9.5] - 2026-08-15
 
 ### Changed
 
-- Dernière version publiée avant l'introduction de ce changelog structuré.
+- Last version released before the introduction of this structured changelog.
 
 [Unreleased]: https://github.com/mangue-dev/minddy-issues/compare/v0.9.5...HEAD
 [0.9.5]: https://github.com/mangue-dev/minddy-issues/releases/tag/v0.9.5

@@ -26,19 +26,19 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Picker de la branche de BASE d'une session d'agent — le pendant du
- * ModelCombobox (variante compacte uniquement : il ne vit que dans la barre du
- * composer). L'agent COPIE cette branche pour créer son espace de travail ;
- * `value` vaut "" pour « la branche par défaut du dépôt », sinon un nom de
+ * Picker of the BASE branch of an agent session — the counterpart of
+ * ModelCombobox (compact variant only: it only lives in the bar of the
+ * compose). The agent COPIES this branch to create its workspace;
+ * `value` is "" for "the default branch of the repository", otherwise a name of
  * branche du listing. Choix possible seulement au lancement (phase compose,
- * lignée neuve) — partout ailleurs le picker est un chip verrouillé + tooltip,
- * comme le modèle. Pas de saisie libre : une branche inexistante ferait
- * échouer le clone, le listing fait foi.
+ * new lineage) — everywhere else the picker is a locked chip + tooltip,
+ * like the model. No free entry: a non-existent branch would
+ * fail the clone, the listing is authentic.
  *
- * Une fois le travail commencé, la branche de travail RÉELLE de la session est
- * connue (`workBranch`) : le chip verrouillé se dédouble en « origine →
- * branche de session », la branche de session mise en avant (c'est là que
- * l'agent pousse). Tant qu'elle n'est pas stampée, on n'affiche que l'origine.
+ * Once work begins, the ACTUAL work stream of the session is
+ * known (`workBranch`): the locked chip splits into “origin →
+ * session branch", the session branch highlighted (this is where
+ * the agent pushes). As long as it is not stamped, only the origin is displayed.
  */
 
 const MAX_RESULTS = 50;
@@ -63,47 +63,47 @@ export function BranchCombobox({
   localLabel,
   cloudLabel,
 }: {
-  /** Ancrage ISSUE du listing (sessions de ticket). Exclusif avec `projectId`. */
+  /** Anchoring ISSUE of the listing (ticket sessions). Exclusive with `projectId`. */
   issueId?: string | null;
-  /** Ancrage PROJET du listing (compose d'un run carnet, MIN-84). */
+  /** PROJECT anchoring of the listing (consisting of a run notebook, MIN-84). */
   projectId?: string | null;
-  /** "" = branche par défaut du dépôt ; sinon un nom de branche. */
+  /** "" = default branch of the repository; otherwise a branch name. */
   value: string;
   onChange: (value: string) => void;
-  /** Libellé de repli tant que la branche par défaut n'est pas connue. */
+  /** Fallback label as long as the default branch is not known. */
   defaultLabel: string;
-  /** Aparté sur l'option par défaut (« défaut »). */
+  /** Apart from the default option (“default”). */
   defaultHint: string;
   placeholder: string;
   emptyLabel: string;
   loadingLabel: string;
   disabled?: boolean;
-  /** Tooltip du chip verrouillé (branche figée pour la session / lignée héritée). */
+  /** Locked chip tooltip (frozen branch for session/legacy lineage). */
   disabledTooltip?: string;
   /**
-   * Branche affichée par le chip verrouillé (ex. `base_branch` de la run live,
-   * ou la base de la lignée héritée). Repli : `value`, puis la branche par défaut.
+   * Branch displayed by the locked chip (e.g. `base_branch` of the live run,
+   * or the basis of the inherited lineage). Fallback: `value`, then the default branch.
    */
   lockedBranch?: string | null;
   /**
-   * Branche de travail RÉELLE de la session (ex. `branch_name` de la run live),
-   * connue une fois le travail lancé. Présente → le chip verrouillé se dédouble
+   * REAL working branch of the session (e.g. `branch_name` of the live run),
+   * known once the work has started. Present → the locked chip splits
    * en « origine → branche de session ». Null/absente → chip d'origine seul.
    */
   workBranch?: string | null;
-  /** Tooltip du chip dédoublé (remplace `disabledTooltip` quand `workBranch` existe). */
+  /** Split chip tooltip (replaces `disabledTooltip` when `workBranch` exists). */
   workBranchTooltip?: string;
-  /** Variante sans contour, pour la barre de contexte au-dessus du composer. */
+  /** Variant without outline, for the context bar above the composer. */
   bare?: boolean;
-  /** Présentes seulement en environnement local : refs/heads du checkout attaché. */
+  /** Present only in local environment: refs/heads of the attached checkout. */
   localBranches?: readonly string[];
   localLabel?: string;
   cloudLabel?: string;
 }) {
-  // Chip verrouillé avec une branche connue → aucun listing à charger : on ne
-  // paie l'appel provider que quand le picker est interactif (ou qu'il faut
-  // résoudre le défaut à afficher). Deux ancrages exclusifs (issue ou projet),
-  // les deux hooks restent appelés inconditionnellement (règles des hooks).
+  // Chip locked with a known branch → no listing to load: we cannot
+  // pays the provider call only when the picker is interactive (or when it is necessary
+  // resolve the fault to display). Two exclusive anchors (issue or project),
+  // both hooks remain called unconditionally (hook rules).
   const skipListing = !!(disabled && lockedBranch);
   const issueBranches = useIssueRepoBranchesQuery(skipListing ? null : issueId);
   const projectBranches = useProjectRepoBranchesQuery(
@@ -116,8 +116,8 @@ export function BranchCombobox({
   const results = useMemo(() => {
     const q = query.trim();
     const local = localBranches ?? [];
-    // Une branche peut exister aux deux endroits. Elle reste locale dans le
-    // menu : la sélectionner n'exige alors aucun téléchargement supplémentaire.
+    // A branch can exist in both places. It remains local in the
+    // menu: selecting it then requires no additional download.
     const entries = [
       ...local.map((branch) => ({ branch, source: "local" as const })),
       ...branches.filter((branch) => !local.includes(branch)).map((branch) => ({ branch, source: "cloud" as const })),
@@ -132,15 +132,15 @@ export function BranchCombobox({
   }, [branches, localBranches, query]);
 
   const select = (next: string) => {
-    // Choisir la branche par défaut = suivre le défaut ("").
+    // Choose the default branch = follow the default ("").
     onChange(next === defaultBranch ? "" : next);
     setQuery("");
     setOpen(false);
   };
 
-  // Verrouillé : chip statique + tooltip, SANS popover (même montage que le
-  // ModelCombobox — le <span> extérieur porte le hover, un bouton `disabled`
-  // n'émettant pas d'événement pointer).
+  // Locked: static chip + tooltip, WITHOUT popover (same assembly as the
+  // ModelCombobox — the outer <span> carries the hover, a `disabled` button
+  // not emitting a pointer event).
   if (disabled && disabledTooltip) {
     const origin = lockedBranch || value || defaultBranch || defaultLabel;
     return (
@@ -154,8 +154,8 @@ export function BranchCombobox({
               <GitBranch className="size-3.5 shrink-0" />
               {workBranch ? (
                 <>
-                  {/* Origine (contexte, en retrait) → branche de session (mise en
-                      avant : c'est la branche réelle de travail de la session). */}
+                  {/* Origin (context, indented) → session branch (put in
+ before: this is the actual working branch of the session). */}
                   <span className="max-w-[7rem] truncate">{origin}</span>
                   <ArrowRight className="size-3 shrink-0 opacity-60" />
                   <span className="max-w-[10rem] truncate text-foreground/75">
@@ -202,14 +202,13 @@ export function BranchCombobox({
           <ChevronsUpDown className="size-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      {/* `rounded-xl` : c'est `Command` qui peint la surface et il s'impose déjà
-          20px. Avec les 8px de retrait de la liste, les options (12px) sont
-          concentriques. */}
+      {/* `rounded-xl`: it is `Command` which paints the surface and it is already imposed
+ 20px. With the 8px removal from the list, the options (12px) are concentric. */}
       <PopoverContent className="w-80 rounded-xl p-0" align="start">
         <Command shouldFilter={false}>
           <CommandInput value={query} onValueChange={setQuery} placeholder={placeholder} />
-          {/* `p-1` : mêmes 8px de retrait des QUATRE côtés que le picker de
-              modèle — ceux du champ de recherche juste au-dessus. */}
+          {/* `p-1`: same 8px removal from FOUR sides as the picker
+ pattern — those in the search box just above. */}
           <CommandList className="p-1">
             {results.map(({ branch, source }, index) => {
               const selected = value === branch || (!value && branch === defaultBranch);

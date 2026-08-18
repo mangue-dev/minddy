@@ -1,218 +1,218 @@
-# minddy — Plan de cadrage
+# minddy — Framing plan
 
-> Issue tracking simplifié. Une interface sobre, un seul moyen de faire les choses.
-> Ce document est le résultat de la session de cadrage — il décrit **comment minddy doit marcher**,
-> le modèle de données qui en découle, et le périmètre v1 vs différé.
-
----
-
-## 1. Vision & positionnement
-
-minddy est un outil d'issue tracking **volontairement opinionated et minimal**, à contre-courant de la
-flexibilité de Linear/Jira. Le principe directeur : **un seul moyen de faire chaque chose**. Pas de
-config à rallonge, pas de workflows personnalisables, pas de statuts sur mesure. La valeur est dans la
-sobriété et la prévisibilité.
-
-Référence de conception (logique **et** interface) : **AutoKap** (repo `screenshot-agent`). On clone ses
-patterns d'architecture et on réutilise **mangue-ui** pour toute la coquille UI.
+> Simplified issue tracking. A simple interface, only one way to do things.
+> This document is the result of the framing session — it describes **how minddy should walk**,
+> the resulting data model, and the v1 vs deferred scope.
 
 ---
 
-## 2. Concepts & vocabulaire
+## 1. Vision & positioning
 
-Le mot « projet » désignait deux choses — c'est désormais tranché :
+minddy is a **deliberately opinionated and minimal** issue tracking tool, going against the grain of
+flexibility of Linear/Jira. The guiding principle: **only one way to do everything**. No
+extended config, no customizable workflows, no tailor-made statuses. The value is in the
+sobriety and predictability.
 
-| Terme (UI) | Ce que c'est | Analogie Linear |
+Design reference (logic **and** interface): **AutoKap** (repo `screenshot-agent`). We clone its
+architectural patterns and we reuse **mango-ui** for the entire UI shell.
+
+---
+
+## 2. Concepts & vocabulary
+
+The word “project” designated two things – it is now clear:
+
+| Term (UI) | What it is | Linear Analogy |
 |---|---|---|
-| **Projet** | Le **workspace**, l'unité de base. Les issues, membres, catégories y sont scopés. Sans Projet, l'utilisateur ne peut rien faire. | Team / Workspace |
-| **Objectif** | Un **groupe d'issues** d'un Projet partageant un but commun (« Refactor UI »). Une « grosse issue ». | Project |
-| **Issue** | L'unité de travail atomique. | Issue |
-| **onglet** | Le niveau de nav haut dans un Projet : *My issues*, *All issues*, *Objectifs*. | Vue de section |
-| **Vue** | Une « tab » sauvegardée **dans** un onglet issues = un kanban avec ses filtres + son tri. | Saved view |
-| **Triage** | Une **zone d'arrivage** de proto-issues non traitées (pas un statut). Différé (voir §8). | Triage |
+| **Project** | The **workspace**, the basic unit. The issues, members, categories are scoped there. Without a Project, the user cannot do anything. | Team / Workspace |
+| **Objective** | A **group of issues** from a Project sharing a common goal (“Refactor UI”). A “big issue”. | Project |
+| **Outcome** | The atomic work unit. | Issue |
+| **tab** | The high nav level in a Project: *My issues*, *All issues*, *Objectives*. | Section view |
+| **View** | A “tab” saved **in** an issues tab = a kanban with its filters + its sorting. | Saved view |
+| **Triage** | An **arrival zone** of unprocessed proto-issues (not a status). Deferred (see §8). | Triage |
 
-Convention code : garder des noms techniques non ambigus (ex. `project` = Projet, `objective` = Objectif)
-pour ne jamais confondre les deux niveaux.
+Code convention: keep technical names unambiguous (e.g. `project` = Project, `objective` = Objective)
+to never confuse the two levels.
 
 ---
 
-## 3. Stack technique
+## 3. Technical stack
 
-Clone de la stack AutoKap, sur une **instance Supabase séparée** (auth propre à minddy — un utilisateur
-minddy n'est pas partagé avec AutoKap).
+Clone of the AutoKap stack, on a **separate Supabase instance** (auth specific to minddy — one user
+minddy is not shared with AutoKap).
 
-- **Front** : Next.js 16 (App Router, Turbopack) · React 19 · Tailwind v4 · **mangue-ui**
-- **Données** : Supabase (Postgres) · **Supabase Auth** (email/password + OAuth Google/GitHub)
-- **Multi-tenant** : RLS Postgres + fonctions `SECURITY DEFINER` (`can_access_project()`-style), calqué
-  sur AutoKap (`project_members`, `project_invitations`, owner = `projects.user_id`)
-- **Data client** : TanStack React Query + **Supabase Realtime** (mutations optimistes, patch du cache en live)
-- **API** : route handlers sous `app/api/*` (pas de server actions pour les mutations)
-- **Ajouts spécifiques minddy** : **dnd-kit** (drag & drop du kanban)
+- **Front**: Next.js 16 (App Router, Turbopack) · React 19 · Tailwind v4 · **mango-ui**
+- **Data**: Supabase (Postgres) · **Supabase Auth** (email/password + OAuth Google/GitHub)
+- **Multi-tenant**: Postgres RLS + `SECURITY DEFINER` (`can_access_project()`-style) functions, modeled
+  on AutoKap (`project_members`, `project_invitations`, owner = `projects.user_id`)
+- **Client data**: TanStack React Query + **Supabase Realtime** (optimistic mutations, live cache patch)
+- **API**: route handlers under `app/api/*` (no server actions for mutations)
+- **Specific minddy additions**: **dnd-kit** (kanban drag & drop)
 
-Fichiers AutoKap à mirrorer : `web/lib/migrations/001_create_projects.sql`,
+AutoKap files to mirror: `web/lib/migrations/001_create_projects.sql`,
 `016_create_project_collaboration.sql`, `026_create_project_invitations.sql`,
 `web/lib/server/project-access.ts`, `web/app/api/projects/route.ts`.
 
 ---
 
-## 4. L'issue en détail
+## 4. The outcome in detail
 
-Champs d'une issue :
+Fields of an issue:
 
-| Champ | Type / valeurs | Notes |
+| Field | Type/values ​​| Notes |
 |---|---|---|
-| **Titre** | texte, obligatoire | |
-| **Description** | rich-text (markdown) | commandes `/` plus tard |
-| **Identifiant** | `CLÉ-numéro` (ex. `MIND-42`) | clé du Projet + compteur **par Projet** |
-| **Statut** | **figé** : `Backlog · Todo · In Progress · In Review · Done · Canceled` | = colonnes du kanban. Non personnalisable. |
-| **Assigné** | **1 seul** membre (ou aucun) | responsabilité claire |
-| **Priorité** | `Aucune · Urgent · Haute · Moyenne · Basse` | figé |
-| **Effort** | `XS · S · M · L · XL` | figé (t-shirt) |
-| **Catégories** | multi-select | **personnalisables par Projet** (créer/éditer/supprimer dans ses paramètres), partagées par tous ses membres |
-| **Objectif** | 0 ou 1 | lien optionnel |
-| **Due date** | date, optionnelle | dispo dès v1 |
-| **Parent** | `parent_id` (self-FK) | sous-issues, **1 seul niveau** |
-| **Commentaires** | fil par issue, rich-text markdown | activé surtout quand le Projet est partagé |
-| Méta | `created_by`, `created_at`, `updated_at`, `position` | `position` = ordre manuel dans une colonne |
+| **Title** | text, required | |
+| **Description** | rich-text (markdown) | `/` commands later |
+| **Identifier** | `KEY-number` (e.g. `MIND-42`) | Project key + counter **per Project** |
+| **Status** | **frozen**: `Backlog · Todo · In Progress · In Review · Done · Canceled` | = kanban columns. Not customizable. |
+| **Assigned** | **only 1** member (or none) | clear responsibility |
+| **Priority** | `None · Urgent · High · Medium · Low` | frozen |
+| **Effort** | `XS · S · M · L · XL` | frozen (t-shirt) |
+| **Categories** | multi-select | **customizable by Project** (create/edit/delete in its settings), shared by all its members |
+| **Objective** | 0 or 1 | optional link |
+| **Due date** | date, optional | available from v1 |
+| **Parent** | `parent_id` (self-FK) | sub-exits, **only 1 level** |
+| **Comments** | thread by issue, rich-text markdown | activated especially when the Project is shared |
+| Meta | `created_by`, `created_at`, `updated_at`, `position` | `position` = manual order in a column |
 
-**Sous-issues** : une sous-issue est une **issue à part entière** (identifiant, statut, assigné propres),
-elle apparaît sur le kanban comme les autres. Le parent affiche la liste de ses enfants + une **barre de
-progression** (X/Y done). Une sous-issue hérite par défaut de l'Objectif du parent (modifiable).
-Supprimer un parent **détache** ses enfants (ne les supprime pas). Imbrication limitée à un niveau.
-
----
-
-## 5. Navigation & Vues
-
-### Structure dans un Projet ouvert
-
-```
-Projet  ┌─ My issues       ← onglet, seulement si le Projet est partagé · pré-filtré assigné = moi
-        ├─ All issues      ← onglet, toujours dispo · toutes les issues du Projet
-        ├─ Objectifs       ← liste des objectifs
-        ├─ Paramètres      ← catégories, membres, clé, nom
-        └─ (Triage)        ← différé, voir §8
-```
-
-### Les Vues (tabs dans un onglet issues)
-
-Une **Vue** = un kanban sauvegardé avec ses **filtres** + son **tri**. Règles :
-
-- **`All issues` → Vues partagées** par tout le Projet (process d'équipe commun). N'importe quel membre
-  peut créer/modifier une Vue partagée (pas de droits fins en v1).
-- **`My issues` → Vues personnelles** à chaque membre (toutes implicitement filtrées sur assigné = moi).
-- Chaque onglet démarre sur une **Vue par défaut non supprimable** (« Toutes »).
-- **Le kanban regroupe TOUJOURS par statut.** Une Vue ne fait que **filtrer** (statut, priorité,
-  catégorie, assigné, objectif, effort) et **trier** — jamais regrouper autrement. UI prévisible.
-- Options d'affichage d'une Vue : masquer les issues `Done`, afficher/masquer les sous-issues, etc.
-
-### Portée
-
-Tout est **scopé au Projet courant** en v1. Pas de vue « Mes issues » globale (cross-projet) — envisagée
-plus tard au niveau Home.
+**Sub-issues**: a sub-issue is a **issue in its own right** (specific identifier, status, assigned),
+it appears on the kanban like the others. The parent displays the list of his children + a **bar
+progress** (X/Y done). A sub-issue inherits by default the Objective of the parent (editable).
+Deleting a parent **detaches** its children (does not delete them). Nesting limited to one level.
 
 ---
 
-## 6. Objectifs
+## 5. Navigation & Views
 
-Un Objectif = un groupe d'issues avec un but commun.
+### Structure in an Open Project
 
-| Champ | Valeurs |
+```
+Project ┌─ My issues       ← tab, only when the Project is shared · pre-filtered to assigned = me
+        ├─ All issues      ← tab, always available · every issue in the Project
+        ├─ Objectives      ← list of objectives
+        ├─ Settings        ← categories, members, key, name
+        └─ (Triage)        ← deferred, see §8
+```
+
+### Views (tabs in an issues tab)
+
+A **View** = a kanban saved with its **filters** + its **sorting**. Rules :
+
+- **`All issues` → Views shared** by the entire Project (common team process). Any member
+  can create/modify a Shared View (no fine-grained rights in v1).
+- **`My issues` → Personal views** to each member (all implicitly filtered to assigned = me).
+- Each tab starts on a **Non-deletable default view** (“All”).
+- **Kanban ALWAYS groups by status.** A View only **filters** (status, priority,
+  category, assigned, objective, effort) and **sort** — never group otherwise. Predictable UI.
+- View display options: hide `Done` issues, show/hide sub-issues, etc.
+
+### Scope
+
+Everything is **scoped to the current Project** in v1. No global “My issues” view (cross-project) — considered
+later at Home level.
+
+---
+
+## 6. Objectives
+
+An Objective = a group of outcomes with a common goal.
+
+| Field | Values ​​|
 |---|---|
-| **Nom** | obligatoire |
+| **Name** | obligatory |
 | **Description** | rich-text |
-| **Statut** | figé : `Planifié · En cours · Terminé · Annulé` |
-| **Lead** | 1 membre responsable (optionnel) |
-| **Date cible** | optionnelle |
-| **Couleur / icône** | optionnelle (repérage visuel) |
-| **Progression** | **auto** = issues `Done` / total des issues liées (barre) |
+| **Status** | frozen: `Planned · In Progress · Done · Canceled` |
+| **Lead** | 1 responsible member (optional) |
+| **Target date** | optional |
+| **Color / icon** | optional (visual identification) |
+| **Progress** | **auto** = issues `Done` / total linked issues (bar) |
 
-- **Onglet Objectifs** = une **liste simple** (nom, statut, progression, lead, nb d'issues). Pas de
-  système de Vues/tabs ici.
-- **Cliquer un Objectif** → ouvre le board `All issues` **filtré** sur cet objectif. Ce board filtré
-  porte un **bandeau d'en-tête** : nom, statut, progression, lead, date cible + bouton **Éditer**
-  (dialog/SidePanel pour name/description/lead/date/statut/couleur).
-- **Créer un Objectif** = un dialog.
-
----
-
-## 7. Création & interactions
-
-- **Créer une issue** : bouton « Nouvelle issue » + raccourci **`C`** → **dialog de création rapide**
-  (titre focus, statut/priorité/assigné/objectif optionnels en inline, création au clavier). L'issue peut
-  ensuite s'ouvrir en **SidePanel** pour la détailler.
-- **Détail d'une issue** : s'ouvre dans le **SidePanel** (`SidePanel` de mangue-ui), jamais en pleine page.
-  Contient tous les champs méta + le fil de **commentaires** + la liste des **sous-issues** avec
-  progression. une **timeline unifiée** en bas : **journal d'activité + commentaires** entrelacés chronologiquement
-  (voir « Journal d'activité » ci-dessous).
-- **Drag & drop** (dnd-kit) : glisser une carte entre colonnes change son statut ; ordre manuel dans une
-  colonne via `position`.
-- **Temps réel** : le board se met à jour en live (Supabase Realtime).
-- **Clavier — niveau modéré** : ⌘K (recherche d'issue par titre/identifiant via `CommandMenu`) + quelques
-  raccourcis clés (`C` créer, `échap` fermer, navigation flèches). Pas de clavier-first intégral en v1.
-
-### Journal d'activité (timeline)
-
-Chaque issue garde une **trace de tous ses événements**, affichée comme une timeline dans le SidePanel,
-**entrelacée avec les commentaires** (façon Linear).
-
-- **Événements tracés** : création, changement de titre, description, statut, priorité, effort, assigné,
-  objectif, due date, catégorie (ajout/retrait), parent, ajout/retrait d'une sous-issue.
-- **Stockage** (`issue_events`) : `type`, `field`, `from_value`, `to_value`, `actor_id`, `created_at`.
-- **Génération** : côté serveur dans les route handlers de mutation (diff avant/après = source unique
-  d'écriture ; triggers Postgres en alternative si on veut être exhaustif).
-- **Description** : comme elle peut être volumineuse, on enregistre seulement l'événement
-  « description modifiée » (sans stocker le diff complet) en v1. Les autres champs stockent `from`/`to`.
-  Le versioning/diff complet de la description reste différé.
+- **Objectives tab** = a **simple list** (name, status, progress, lead, number of outcomes). No
+  Views/tabs system here.
+- **Click an Objective** → opens the `All issues` **filtered** board for this objective. This board filtered
+  has a **header banner**: name, status, progress, lead, target date + **Edit** button
+  (dialog/SidePanel for name/description/lead/date/status/color).
+- **Create an Objective** = a dialog.
 
 ---
 
-## 8. Triage (différé)
+## 7. Creation & interactions
 
-Le Triage est une **zone d'arrivage** : un item de triage est un **proto-issue** léger (titre +
-description, sans statut/assigné/priorité) qui devient une vraie issue quand un humain le **traite**
-(Accepter → pose statut/priorité/assigné/objectif · Rejeter · Fusionner en doublon).
+- **Create an issue**: “New issue” button + shortcut **`C`** → **quick creation dialog**
+  (title focus, status/priority/assigned/optional objective inline, creation by keyboard). The outcome can
+  then open in **SidePanel** to detail it.
+- **Detail of an issue**: opens in the **SidePanel** (`SidePanel` of mangue-ui), never in full page.
+  Contains all meta fields + the **comments** thread + the list of **subissues** with
+  progression. a **unified timeline** at the bottom: **activity log + comments** interleaved chronologically
+  (see “Activity Log” below).
+- **Drag & drop** (dnd-kit): dragging a card between columns changes its status; manual order in a
+  column via `position`.
+- **Real time**: the board updates live (Supabase Realtime).
+- **Keyboard — moderate level**: ⌘K (search for issue by title/identification via `CommandMenu`) + some
+key shortcuts (`C` create, `Escape` close, navigation arrows). No full keyboard-first in v1.
 
-**Décision de périmètre** : une issue créée par un membre **naît directement sur le board** (pas via le
-Triage). Les seules sources qui alimentent le Triage sont **Numo** (§9) — qui vient plus tard. **Le Triage
-est donc de fait un concept v2.** On réserve sa place dans le modèle de données (proto-issue) mais on ne
-construit **aucune** logique de capture ni d'onglet Triage en v1.
+### Activity log (timeline)
+
+Each issue keeps a **trace of all its events**, displayed as a timeline in the SidePanel,
+**interlaced with comments** (Linear way).
+
+- **Traced events**: creation, title change, description, status, priority, effort, assigned,
+  objective, due date, category (addition/removal), parent, addition/removal of a sub-issue.
+- **Storage** (`issue_events`): `type`, `field`, `from_value`, `to_value`, `actor_id`, `created_at`.
+- **Generation**: server side in the mutation route handlers (diff before/after = single source
+  writing; Postgres triggers as an alternative if we want to be exhaustive).
+- **Description**: as it can be large, we only record the event
+  “modified description” (without storing the full diff) in v1. The other fields store `from`/`to`.
+  The full versioning/diff of the description remains deferred.
+
+---
+
+## 8. Triage (delayed)
+
+Triage is an **arrival zone**: a triage item is a light **proto-issue** (title +
+description, without status/assigned/priority) which becomes a real issue when a human **processes** it
+(Accept → set status/priority/assigned/objective · Reject · Merge into duplicate).
+
+**Scope decision**: an issue created by a member **arises directly on the board** (not via the
+Triage). The only sources that feed the Triage are **Numo** (§9) — which comes later. **Triage
+is therefore in fact a v2 concept.** We reserve its place in the data model (proto-issue) but we do not
+built **no** capture logic or Triage tab in v1.
 
 ---
 
 ## 9. Collaboration
 
-- **Rôles** : **owner** (créateur, = `projects.user_id`) + **member** (invité par email). Deux rôles
-  seulement.
-  - *member* : tout le travail quotidien (créer/éditer/supprimer issues, objectifs, catégories, Vues partagées).
-  - *owner* uniquement : renommer/supprimer le Projet, gérer membres/invitations, changer la clé.
-- **Invitations** : par email, calqué sur AutoKap (`project_invitations` : pending → accepted/rejected).
-- **Inbox / notifications** — déclencheurs v1 :
-  1. Une **issue m'est assignée**
-  2. On me **@mentionne** dans un commentaire
-  3. **Nouveau commentaire** sur une issue que je porte (assignée à moi ou créée par moi)
+- **Roles**: **owner** (creator, = `projects.user_id`) + **member** (guest by email). Two roles
+  only.
+  - *member*: all daily work (create/edit/delete issues, objectives, categories, shared views).
+  - *owner* only: rename/delete the Project, manage members/invitations, change the key.
+- **Invitations**: by email, modeled on AutoKap (`project_invitations`: pending → accepted/rejected).
+- **Inbox / notifications** — v1 triggers:
+  1. An **outcome is assigned to me**
+  2. I am **@mentioned** in a comment
+  3. **New comment** on an issue that I carry (assigned to me or created by me)
 
-  (Les changements de statut ne notifient **pas** en v1.)
+(Status changes do not notify **not** in v1.)
 
-- **Home (hors Projet)** : calque la `HomeSidebar` d'AutoKap — liste/switcher de **Projets** + bouton
-  « nouveau Projet » + **Inbox** + menu compte. Créer un Projet demande **nom** + **clé** (ex. `MIND`) ;
-  le reste (catégories, membres) se configure après. Un utilisateur sans aucun Projet est invité à en
-  créer un (il ne peut rien faire d'autre).
-
----
-
-## 10. Numo (assistant IA) — roadmap
-
-Numo est l'assistant IA de minddy : il pourra **créer, modifier, chercher** des issues et **créer des
-Objectifs** en langage naturel. Coquille UI déjà disponible dans mangue-ui (`NumoChat`). Les issues
-créées par Numo atterriront en **Triage** pour validation humaine avant d'entrer sur le board.
-**Différé post-v1** (probablement via AI SDK + tool-calling sur les mêmes route handlers).
+- **Home (excluding Project)**: copies the AutoKap `HomeSidebar` — list/switcher of **Projects** + button
+  “new Project” + **Inbox** + account menu. Create a Project requests **name** + **key** (e.g. `MIND`);
+  the rest (categories, members) is configured later. A user without any Project is invited to
+  create one (it can't do anything else).
 
 ---
 
-## 11. Modèle de données (proposition)
+## 10. Numo (AI assistant) — roadmap
 
-Tables Postgres (Supabase), toutes protégées par RLS via `can_access_project(project_id)` :
+Numo is minddy's AI assistant: he will be able to **create, modify, search** for exits and **create
+Objectives** in natural language. UI shell already available in mangue-ui (`NumoChat`). The exits
+created by Numo will land in **Triage** for human validation before entering the board.
+**Deferred post-v1** (probably via AI SDK + tool-calling on the same route handlers).
+
+---
+
+## 11. Data model (proposal)
+
+Postgres tables (Supabase), all protected by RLS via `can_access_project(project_id)`:
 
 ```
 projects
@@ -224,7 +224,7 @@ project_members
 project_invitations
   id, project_id, invited_email, invited_user_id, invited_by, status, created_at, responded_at
 
-categories                       -- les "labels", scopés au Projet
+categories                       -- the "labels", scoped to the Project
   id, project_id, name, color, created_at
 
 objectives
@@ -232,7 +232,7 @@ objectives
   created_at, updated_at
 
 issues
-  id, project_id, number (compteur/Projet), title, description,
+  id, project_id, number (counter/Project), title, description,
   status, priority, effort, assignee_id, objective_id, parent_id (self-FK),
   due_date, position, created_by, created_at, updated_at, completed_at
 
@@ -242,60 +242,60 @@ issue_categories                 -- N–N issues ↔ categories
 comments
   id, issue_id, author_id, body, created_at, updated_at
 
-issue_events                     -- journal d'activité (timeline)
+issue_events                     -- activity log (timeline)
   id, issue_id, actor_id, type, field, from_value, to_value, created_at
 
-views                            -- Vues sauvegardées
-  id, project_id, onglet ('my'|'all'), user_id (NULL si partagée),
+views                            -- Saved views
+  id, project_id, tab ('my'|'all'), user_id (NULL if shared),
   name, filters (jsonb), sort, position, created_at
 
 notifications                    -- Inbox
   id, user_id, project_id, type, issue_id, comment_id, actor_id, read_at, created_at
 ```
 
-Identifiant d'issue : `projects.key` + `issues.number` (compteur incrémenté par Projet, façon AutoKap).
+Outcome identifier: `projects.key` + `issues.number` (counter incremented by Project, AutoKap style).
 
 ---
 
-## 12. Périmètre v1 vs différé
+## 12. Scope v1 vs deferred
 
-| Dans la v1 | Différé (v2+) |
+| In v1 | Deferred (v2+) |
 |---|---|
-| Projets (workspace) + membres + invitations | Rôle Viewer / droits fins |
-| Issues complètes + sous-issues + **journal d'activité** | Versioning/diff complet de la description |
-| Kanban DnD par statut + ordre manuel | Triage (capture) + Numo |
-| onglets My/All + Vues (partagées/perso) | Vue « Mes issues » globale cross-projet |
-| Objectifs + progression auto | Pièces jointes (issues/commentaires) |
-| Commentaires + @mentions | Billing / Stripe |
-| Inbox (assignation, mention, commentaire) | Gouvernance des Vues partagées |
-| ⌘K recherche + raccourcis modérés | Clavier-first intégral |
-| Temps réel (Realtime) | Intégrations externes |
+| Projects (workspace) + members + invitations | Viewer role / fine rights |
+| Full issues + sub-issues + **activity log** | Full description versioning/diff |
+| Kanban DnD by status + manual order | Triage (capture) + Numo |
+| My/All tabs + Views (shared/personal) | Global cross-project “My issues” view |
+| Objectives + auto progress | Attachments (issues/comments) |
+| Comments + @mentions | Billing/Striping |
+| Inbox (assignment, mention, comment) | Governance of Shared Views |
+| ⌘K search + moderated shortcuts | Full keyboard-first |
+| Real time (Realtime) | External integrations |
 
 ---
 
-## 13. Roadmap de build (proposition)
+## 13. Build roadmap (proposal)
 
-1. **Fondations** : scaffolding déjà en place → auth Supabase, shell (`AppShell`/`Sidebar`/`Header`),
-   ThemeProvider, providers React Query/Realtime.
-2. **Projets** : CRUD Projet + clé + Home/switcher + création + RLS de base + membres/invitations.
-3. **Issues (cœur)** : table + CRUD + identifiants + SidePanel détail + dialog de création rapide.
-4. **Kanban** : board par statut + dnd-kit + ordre manuel + temps réel.
-5. **Vues & onglets** : My/All issues + Vues (partagées/perso) + filtres/tri/affichage.
-6. **Catégories** : gestion dans les paramètres du Projet + multi-select sur l'issue.
-7. **Objectifs** : CRUD + progression + liste + board filtré + bandeau.
-8. **Sous-issues** : parent_id + affichage + progression parent.
-9. **Commentaires, activité & Inbox** : fil par issue + **journal d'activité (timeline)** + @mentions + notifications.
-10. **Finitions** : ⌘K, raccourcis, empty states, polish.
-> Post-v1 : Triage + Numo, puis activity feed, pièces jointes, billing, vue globale.
+1. **Foundations**: scaffolding already in place → auth Supabase, shell (`AppShell`/`Sidebar`/`Header`),
+   ThemeProvider, React Query/Realtime providers.
+2. **Projects**: CRUD Project + key + Home/switcher + creation + basic RLS + members/invitations.
+3. **Issues (core)**: table + CRUD + identifiers + SidePanel detail + quick creation dialog.
+4. **Kanban**: board by status + dnd-kit + manual order + real time.
+5. **Views & tabs**: My/All issues + Views (shared/personal) + filters/sorting/display.
+6. **Categories**: management in the Project parameters + multi-select on the outcome.
+7. **Objectives**: CRUD + progression + list + filtered board + banner.
+8. **Sub-issues**: parent_id + display + parent progress.
+9. **Comments, activity & Inbox**: thread by issue + **activity log (timeline)** + @mentions + notifications.
+10. **Finishes**: ⌘K, shortcuts, empty states, polish.
+> Post-v1: Triage + Numo, then activity feed, attachments, billing, global view.
 
 ---
 
-## 14. Décisions de détail
+## 14. Detail decisions
 
-- **Clé de Projet** : **unique par compte** (owner) — auto-suggérée depuis le nom, éditable, 2–5 lettres.
-  Un autre compte peut réutiliser la même clé (pas d'unicité globale).
-- **Gouvernance des Vues partagées** : **ouvert à tous les membres** en v1 (à restreindre plus tard si besoin).
-- **Format des commentaires** : **rich-text markdown**, même éditeur que la description.
-- **Scope de Numo** : **laissé ouvert** — la surface de tools + les garde-fous seront décidés à
-  l'implémentation (post-v1). Intention : créer/modifier/chercher des issues, créer des objectifs ;
-  ses issues atterrissent en Triage.
+- **Project Key**: **unique per account** (owner) — auto-suggested from the name, editable, 2–5 letters.
+  Another account can reuse the same key (no global uniqueness).
+- **Governance of Shared Views**: **open to all members** in v1 (to be restricted later if necessary).
+- **Comment format**: **rich-text markdown**, same editor as the description.
+- **Numo Scope**: **left open** — the surface of tools + guardrails will be decided at
+  the implementation (post-v1). Intention: create/modify/search for outcomes, create goals;
+  its exits land in Triage.

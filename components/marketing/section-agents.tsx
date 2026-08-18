@@ -11,22 +11,22 @@ import type { ScreenshotSlotId } from "./screenshot-slots";
 
 /**
  * §4 — « Vos agents travaillent dedans ». Fusion de trois sections qui
- * racontaient le même geste : Workflow (le récit ticket → plan → PR), Agents /
- * MCP (la plomberie de ce récit) et Numo (le même récit déclenché depuis
- * l'app). Elles se suivaient, et le lecteur lisait trois fois la même chose.
+ * told the same gesture: Workflow (the ticket → plan → PR story), Agents /
+ * MCP (the plumbing of this story) and Numo (the same story triggered since
+ * the app). They followed one another, and the reader read the same thing three times.
  *
- * Un seul fil, dans l'ordre de la plomberie : on branche (le serveur MCP), vos
- * agents tiennent le tracker à jour, l'agent maison exécute et ouvre les PR,
- * et Numo fait la même chose depuis l'app avec le contexte de la page.
+ * A single wire, in the order of the plumbing: we connect (the MCP server), your
+ * agents keep the tracker up to date, the in-house agent executes and opens the PRs,
+ * and Numo does the same thing from the app with the context of the page.
  *
- * C'est ici que se dit ce que la page taisait : le serveur MCP n'est gardé par
- * AUCUN plan (`app/api/mcp/route.ts` ne fait aucun contrôle), alors que l'agent
- * Numo demande Go ou Pro. Le tableau de /pricing affichait « Agent Numo » barré
- * pour Free, et un visiteur en concluait que brancher Claude Code était payant.
+ * This is where what the page kept silent is said: the MCP server is not guarded by
+ * NO plan (`app/api/mcp/route.ts` makes no control), while the agent
+ * Numo asks for Go or Pro. The /pricing table showed “Agent Numo” crossed out
+ * for Free, and a visitor concluded that connecting Claude Code was profitable.
  *
- * La commande d'installation et la liste des agents compatibles viennent du même
- * registry que les réglages du compte (`lib/mcp-agents.ts`) : ajouter un agent
- * là-bas le fait apparaître ici, sans copie à maintenir.
+ * The installation command and the list of compatible agents come from the same
+ * registry as account settings (`lib/mcp-agents.ts`): add an agent
+ * over there makes it appear here, with no copy to maintain.
  */
 
 const CAPABILITY_KEYS = [
@@ -40,7 +40,7 @@ const CAPABILITY_KEYS = [
   "beyond",
 ] as const;
 
-/** Les trois temps d'un ticket confié à l'agent de code. */
+/** The three stages of a ticket entrusted to the code agent. */
 const STEPS = [
   { key: "write", slot: "workflowIssue" },
   { key: "run", slot: "workflowAgent" },
@@ -48,10 +48,10 @@ const STEPS = [
 ] as const satisfies ReadonlyArray<{ key: string; slot: ScreenshotSlotId }>;
 
 /**
- * Ce que Numo sait faire et que rien d'autre ne fait : chercher, agir, et
- * connaître l'écran où vous êtes. La 4ᵉ capacité — « il planifie, puis il
- * lance » — a été retirée : elle redisait mot pour mot le parcours en trois
- * temps qui la précède maintenant dans la même section.
+ * What Numo can do that nothing else does: search, act, and
+ * know the screen you are on. The 4th ability — “he plans, then he
+ * lance” — was withdrawn: she repeated word for word the route in three
+ * time which now precedes it in the same section.
  */
 const NUMO_CAPABILITIES = [
   { key: "find", icon: "find" },
@@ -67,11 +67,11 @@ export async function SectionAgents() {
   return (
     <section id="agents" className="scroll-mt-24 border-t border-border py-16 sm:py-24">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
-        {/* ── Le branchement ─────────────────────────────────────────────── */}
-        {/* min-w-0 sur les deux colonnes : un enfant de grille a
-            `min-width: auto`, donc la commande d'installation (non sécable)
-            élargirait la carte au-delà de sa piste et ferait scroller toute la
-            page latéralement sur mobile. */}
+        {/* ── The connection ─────────────────────── ──────────────────────── */}
+        {/* min-w-0 on both columns: a grid child has
+            `min-width: auto`, therefore the installation command (not divisible)
+            would expand the map beyond its track and scroll the entire
+            page sideways on mobile. */}
         <div className="grid items-start gap-10 md:grid-cols-2 md:gap-16 [&>*]:min-w-0">
           <div>
             <RevealHeading
@@ -100,10 +100,10 @@ export async function SectionAgents() {
             </RevealGroup>
           </div>
 
-          {/* Une vitrine, pas un mode d'emploi : des cases logo + nom, et rien
-              à copier. Le visiteur n'installe pas depuis la landing — il veut
-              savoir si SON agent est de la partie. La commande d'installation
-              (et son bouton « copier ») vit dans les réglages du compte, là où
+          {/* A showcase, not instructions: logo + name boxes, and nothing
+              to copy. The visitor does not install from the landing — he wants
+              find out if HIS agent is on board. The installation command
+              (and its “copy” button) lives in the account settings, where
               elle sert vraiment. */}
           <Reveal
             delay={0.1}
@@ -122,11 +122,11 @@ export async function SectionAgents() {
               ))}
             </ul>
 
-            {/* Ce que coûte l'agent, et à qui. La deuxième phrase est le seul
-                endroit de la landing où le BYOK se dit (MIN-149) : elle suit
-                celle qui annonce le plan payant, parce que c'est là qu'un dev
-                qui a déjà une clé se demande ce qu'on va lui compter. Le détail
-                complet est la section « Votre clé, votre inférence » de
+            {/* What the agent costs, and to whom. The second sentence is the only
+                location of the landing where BYOK is said (MIN-149): it follows
+                the one that announces the paid plan, because that's where a dev
+                who already has a key wonders what we will charge him. The detail
+                complete is the “Your key, your inference” section of
                 /pricing. */}
             <p className="mt-5 border-t border-border pt-5 text-xs leading-relaxed text-muted-foreground">
               {t("agentsPlanNote")} {t("agentsByokNote")}
@@ -134,7 +134,7 @@ export async function SectionAgents() {
           </Reveal>
         </div>
 
-        {/* ── Le parcours ────────────────────────────────────────────────── */}
+        {/* ── The route ───────────────────────── ───────────────────────── */}
         <div id="workflow" className="mt-20 scroll-mt-24 sm:mt-28">
           <header className="mx-auto mb-12 max-w-2xl text-center sm:mb-16">
             <RevealHeading
@@ -151,9 +151,9 @@ export async function SectionAgents() {
             </Reveal>
           </header>
 
-          {/* Disposition alternée gauche/droite. La cascade est posée sur la
-              grille elle-même (`RevealGroup`) et non sur des enveloppes, sinon
-              les classes `md:order-*` ne s'appliqueraient plus au bon élément. */}
+          {/* Alternating left/right layout. The waterfall is placed on the
+              grid itself (`RevealGroup`) and not on envelopes, otherwise
+              `md:order-*` classes would no longer apply to the correct element. */}
           <div className="flex flex-col gap-14 sm:gap-20">
             {STEPS.map((step, index) => (
               <RevealGroup
@@ -186,9 +186,9 @@ export async function SectionAgents() {
             </Reveal>
 
             <div>
-              {/* L'icône porte l'identité de Numo ; le badge « Numo » qui était
-                  ici a sauté — il était en dur, non traduit, et redisait un
-                  titre qui commence déjà par le mot. */}
+              {/* The icon bears the identity of Numo; the “Numo” badge which was
+                  here jumped out — it was in hard copy, not translated, and repeated a
+                  title that already begins with the word. */}
               <span className="mb-4 flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-primary">
                 <NumoFace className="h-4 w-auto" />
               </span>

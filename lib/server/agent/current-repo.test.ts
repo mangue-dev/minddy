@@ -13,25 +13,25 @@ import { layoutForCurrentRepo } from "./harness-layout";
 import type { RepoHost, ShellOptions, ShellResult } from "./repo-host";
 
 /**
- * MIN-358 — LE MODE DÉPÔT COURANT, côté logique.
+ * MIN-358 — CURRENT DEPOSIT MODE, logic side.
  *
- * Le comportement de git est vérifié contre un vrai dépôt
+ * Git behavior is checked against a real repository
  * ([current-repo.git.test.ts](current-repo.git.test.ts)) ; ce qui se joue ICI
- * est ce qu'aucun dépôt ne dira jamais tout seul :
+ * will no repository ever say on its own:
  *
- * 1. **ce qu'on décide de livrer** — l'union des deux sources et, surtout, ce
- *    qu'elle DÉCLARE emporter du travail de l'utilisateur ;
- * 2. **les commandes qu'on n'envoie pas**. La promesse du ticket est une
+ * 1. **what we decide to deliver** — the union of the two sources and, above all, this
+ * that it DECLARE to take away from the user's work;
+ * 2. **orders that are not sent**. The promise of the ticket is a
  *    absence : ni `git add -A`, ni `git commit`, ni `git checkout`, ni
- *    `git config` ne doivent partir dans le dépôt de quelqu'un. Une absence ne
- *    se teste pas sur un vrai dépôt — elle se teste en regardant ce qui sort.
+ * `git config` should not leave in someone's repository. An absence
+ * is not tested on a real repository — it is tested by looking at what comes out.
  */
 
 const LAYOUT = layoutForCurrentRepo("/run/r-1", "/Users/x/Projets/app", "/opt/oc");
 const RUN_ID = "11111111-2222-4333-8444-555555555555";
 const COMMITTER = { name: "minddy[bot]", email: "42+minddy[bot]@users.noreply.github.com" };
 
-/** Un dépôt factice qui enregistre tout ce qu'on lui envoie, et répond par table. */
+/** A dummy repository that records everything sent to it, and responds by table. */
 function fakeHost(replies: Array<[RegExp, Partial<ShellResult>]> = []): {
   host: RepoHost;
   commands: string[];
@@ -62,8 +62,8 @@ const state = (entries: Array<[string, string]>): RepoState => new Map(entries);
 
 describe("l'état de l'arbre de travail", () => {
   it("relit le format `-z`, qui ne cite RIEN", () => {
-    // Le même contenu en `--porcelain` nu donnerait `"lib/\303\251t\303\251.ts"`,
-    // et un chemin accentué mal relu est un fichier absent de la pull request.
+    // The same content in bare `--porcelain` would give `"lib/\303\251t\303\251.ts"`,
+    // and a poorly reread accented path is a file missing from the pull request.
     const parsed = parseStatusZ(" M lib/été.ts\0?? un fichier à espaces.md\0");
     expect([...parsed]).toEqual([
       ["lib/été.ts", " M"],
@@ -72,8 +72,8 @@ describe("l'état de l'arbre de travail", () => {
   });
 
   it("compte les DEUX chemins d'un renommage", () => {
-    // `R  <arrivée>\0<départ>\0` : l'arrivée est un chemin neuf, le départ un
-    // chemin disparu, et un tour qui renomme doit livrer les deux.
+    // `R  <arrivée>\0<départ>\0`: the arrival is a new path, the departure one
+    // path gone, and a renaming ride must deliver both.
     const parsed = parseStatusZ("R  b.ts\0a.ts\0 M c.ts\0");
     expect([...parsed.keys()].sort()).toEqual(["a.ts", "b.ts", "c.ts"]);
   });
@@ -87,9 +87,9 @@ describe("l'état de l'arbre de travail", () => {
 describe("le périmètre du tour", () => {
   it("unit les éditions notées et le delta des deux instantanés", () => {
     const scope = turnPaths({
-      // Ce que les permissions `edit` ont vu…
+      // What `edit` permissions saw…
       edited: ["lib/a.ts"],
-      // …et ce que seul le shell a fait (un lockfile régénéré, un fichier effacé).
+      // …and what only the shell did (a regenerated lockfile, a deleted file).
       before: state([["humain.ts", " M"]]),
       after: state([
         ["humain.ts", " M"],
@@ -101,8 +101,8 @@ describe("le périmètre du tour", () => {
   });
 
   it("laisse le WIP de l'utilisateur DEHORS", () => {
-    // `humain.ts` était déjà modifié au début du tour et n'a pas rebougé : ni
-    // l'agent ni le shell ne l'ont touché, il n'a rien à faire dans la PR.
+    // `humain.ts` was already modified at the start of the round and did not move again: neither
+    // the agent nor the shell touched it, it has nothing to do in the PR.
     const before = state([["humain.ts", " M"]]);
     expect(turnPaths({ edited: [], before, after: before }).paths).toEqual([]);
   });
@@ -118,10 +118,10 @@ describe("le périmètre du tour", () => {
   });
 
   /**
-   * LE PIÈGE DU DEUXIÈME TOUR. Nos commits vivent sur une ref, pas sur le HEAD de
-   * l'utilisateur : le travail que l'agent a livré au tour précédent est donc
-   * ENCORE « modifié » dans l'arbre. Sans `owned`, chaque fichier de l'agent se
-   * dénoncerait comme du travail humain emporté, à chaque tour.
+   * THE TRAP OF THE SECOND ROUND. Our commits live on a ref, not on the HEAD of
+   * the user: the work that the agent delivered in the previous round is therefore
+   * AGAIN “edited” in the tree. Without `owned`, each agent file is
+   * would denounce as human labor taken away, at every turn.
    */
   it("ne prend pas son propre travail d'hier pour celui de l'utilisateur", () => {
     const dirty = state([["lib/a.ts", " M"]]);
@@ -142,7 +142,7 @@ describe("le périmètre du tour", () => {
 
 describe("les chemins gitignorés", () => {
   it("les retire — `update-index` les stagerait sans un mot", async () => {
-    // Dans ce mode, `.env.local` est le VRAI fichier de secrets de l'utilisateur.
+    // In this mode, `.env.local` is the user's REAL secrets file.
     const { host } = fakeHost([[/check-ignore/, { stdout: ".env.local\0" }]]);
     expect(await dropIgnoredPaths(host, ["lib/a.ts", ".env.local"])).toEqual(["lib/a.ts"]);
   });
@@ -158,7 +158,7 @@ describe("les chemins gitignorés", () => {
     const { host, commands, files } = fakeHost([[/check-ignore/, { exitCode: 1 }]]);
     await dropIgnoredPaths(host, ["a.ts", "b.ts"]);
     expect(commands.some((c) => c.includes("--stdin"))).toBe(true);
-    // …et le fichier vit sous la racine du RUN, jamais dans le dépôt.
+    // …and the file lives under the RUN root, never in the repository.
     const [path, content] = [...files][0];
     expect(path.startsWith(`${LAYOUT.root}/`)).toBe(true);
     expect(content).toBe("a.ts\0b.ts\0");
@@ -185,7 +185,7 @@ describe("préparer le dépôt courant", () => {
   });
 
   it("ramène la branche de travail sous NOTRE ref, jamais sous les siennes", async () => {
-    // Première `rev-parse` : pas d'ancre. Le fetch la crée, la seconde la trouve.
+    // First `rev-parse`: no anchor. The fetch creates it, the second finds it.
     let seen = 0;
     const { host, commands } = fakeHost([
       [/show-toplevel/, { stdout: `${LAYOUT.repoDir}\n${LAYOUT.repoDir}\n` }],
@@ -279,7 +279,7 @@ describe("préparer le dépôt courant", () => {
 });
 
 describe("le commit par index temporaire", () => {
-  /** Un dépôt où l'arbre écrit DIFFÈRE de celui du parent — donc un vrai commit. */
+  /** A repository where the writing tree DIFFERS from that of the parent — therefore a true commit. */
   const working = () =>
     fakeHost([
       [/rev-parse --verify/, { exitCode: 1 }],
@@ -321,7 +321,7 @@ describe("le commit par index temporaire", () => {
     const indexed = commands
       .map((command, i) => ({ command, env: envs[i] }))
       .filter(({ env }) => env?.GIT_INDEX_FILE);
-    // Les trois commandes d'index, et elles seules.
+    // The three index commands, and them alone.
     expect(indexed.map(({ command }) => command.split(" ").slice(0, 2).join(" "))).toEqual([
       "git read-tree",
       "git update-index",
@@ -367,8 +367,8 @@ describe("le commit par index temporaire", () => {
   });
 
   /**
-   * PAS DE BRANCHE POUR RIEN, la règle de MIN-123 tenue dans l'autre mode : un
-   * tour de question ou de plan ne doit rien laisser sur le dépôt de quelqu'un.
+   * NO BRANCH FOR NOTHING, the MIN-123 rule held in the other mode: a
+   * round of question or plan should not leave anything on anyone's deposit.
    */
   it("ne pousse rien quand l'arbre écrit est celui du parent", async () => {
     const { host, commands } = fakeHost([
@@ -391,9 +391,9 @@ describe("le commit par index temporaire", () => {
   });
 
   /**
-   * …sauf si le run a DÉJÀ une ancre : la branche existe alors sur le remote, et
-   * un tour sans changement doit quand même la pousser pour que `remoteUpdated`
-   * dise la vérité (c'est lui qui rouvre une pull request refusée).
+   * …unless the run ALREADY has an anchor: the branch then exists on the remote, and
+   * a turn without change must still push it so that `remoteUpdated`
+   * tell the truth (he's the one who reopens a refused pull request).
    */
   it("pousse quand même sur un tour vide si le run a déjà poussé", async () => {
     const { host, commands } = fakeHost([
@@ -420,7 +420,7 @@ describe("le commit par index temporaire", () => {
     (host as { exec: RepoHost["exec"] }).exec = ((exec) =>
       async (command: string, opts?: ShellOptions) => {
         const res = await exec(command, opts);
-        // L'ancre existe : c'est ELLE le parent, pas le HEAD de l'utilisateur.
+        // The anchor exists: SHE is the parent, not the HEAD of the user.
         return /rev-parse --verify/.test(command)
           ? { exitCode: 0, stdout: "anchor1\n", stderr: "" }
           : res;
@@ -453,9 +453,9 @@ describe("l'ancre du run", () => {
 
 describe("ce que le push déclare avoir livré", () => {
   /**
-   * `carried` déclenche une note au fil — « du travail à vous est parti dans la
-   * pull request ». La publier sur un tour qui n'a rien commité annoncerait un
-   * dégât qui n'a pas eu lieu.
+   * `carried` triggers a note in the thread — “some work of yours has gone to the
+   * pull request”. Publishing it on a tour that has not committed anything would announce a
+   * damage that did not occur.
    */
   it("ne déclare rien quand aucun commit n'a été fait", async () => {
     const { host } = fakeHost([

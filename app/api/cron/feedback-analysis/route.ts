@@ -6,12 +6,12 @@ import { getAppConfigValue } from "@/lib/server/app-config";
 
 /**
  * Cron horaire (Vercel Cron, vercel.json) : passe de revue IA du feedback
- * (MIN-87 — dédoublonnage + catégorisation + modération en un appel), purge des
- * farces écartées, et ménage des sessions/OTP expirés. Depuis MIN-87 la revue
- * est surtout déclenchée à la soumission (`after()`) : ce cron est le FILET DE
- * SÉCURITÉ (LLM en panne au moment du post, budget IA revenu depuis, backfill).
- * Vercel envoie automatiquement `Authorization: Bearer ${CRON_SECRET}` quand la
- * variable est configurée ; la route est inutilisable sans ce secret.
+ * (MIN-87 — deduplication + categorization + moderation in one call), purge of
+ * pranks ruled out, and cleaning of expired sessions/OTPs. Since MIN-87 the review
+ * is mainly triggered on submission (`after()`): this cron is the NET OF
+ * SECURITY (LLM down at time of post, AI budget returned since, backfill).
+ * Vercel automatically sends `Authorization: Bearer ${CRON_SECRET}` when the
+ * variable is configured; the road is unusable without this secret.
  */
 
 export const maxDuration = 300;
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   const service = getServiceClient();
   const purged = await purgeJunk();
 
-  // Ménage : codes OTP expirés depuis plus d'un jour, sessions expirées.
+  // Housekeeping: OTP codes expired for more than a day, expired sessions.
   const dayAgo = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
   const now = new Date().toISOString();
   await Promise.all([
@@ -41,12 +41,12 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Suppression définitive des farces (MIN-87). Un post écarté par la modération
- * n'a pas à traîner indéfiniment, mais on ne supprime QUE ce dont personne ne
- * s'est saisi : pas d'issue liée, pas de soutien au-delà de la voix de son
- * auteur, et passé le délai de rétention (l'équipe peut le republier d'ici là).
- * Toutes les dépendances partent en cascade (votes, commentaires, événements,
- * notifications, pièces jointes).
+ * Permanent removal of pranks (MIN-87). A post removed by moderation
+ * does not have to drag on indefinitely, but we ONLY delete what no one
+ * seized: no linked issue, no support beyond the voice of its
+ * author, and past the retention period (the team can republish it until then).
+ * All dependencies cascade (votes, comments, events,
+ * notifications, attachments).
  */
 async function purgeJunk(): Promise<number> {
   const days = Number.parseFloat(
@@ -74,9 +74,9 @@ async function purgeJunk(): Promise<number> {
   const ids = (candidates ?? []).map((p) => p.id as string);
   if (ids.length === 0) return 0;
 
-  // Un post en spam peut avoir absorbé des doublons (fusions d'avant la
-  // modération). Le supprimer remettrait ses tombstones à `merged_into_id`
-  // null — ils ressusciteraient en posts autonomes sur le board. On le garde.
+  // A spam post may have absorbed duplicates (mergers before the
+  // moderation). Deleting it would reset its tombstones to `merged_into_id`
+  // null — they would be resurrected as standalone posts on the board. We keep it.
   const { data: absorbers } = await service
     .from("feedback_posts")
     .select("merged_into_id")

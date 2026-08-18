@@ -7,17 +7,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 const { sweepOrphanAttachments } = await import("./attachments");
 
 /**
- * MIN-348 — le balayage des objets que plus aucune ligne ne désigne.
+ * MIN-348 — scanning objects that are no longer designated by any line.
  *
- * L'envoi d'une pièce jointe est direct-to-storage : les octets partent du
- * navigateur AVANT que la ressource soit enregistrée. Tout ce qui se passe entre
- * les deux — un composeur fermé, une création annulée — laisse l'objet seul dans
- * le bucket, et rien ne le ramassait.
+ * Sending an attachment is direct-to-storage: the bytes leave the
+ * browser BEFORE the resource is saved. Anything that happens between
+ * the two — a composer closed, a creation canceled — leaves the object alone in
+ * the bucket, and nothing was picking it up.
  *
- * Le tri est en SQL (une anti-jointure sur les deux tables qui référencent le
- * bucket) ; ce que ce fichier épingle, c'est ce que le module en FAIT : il
- * efface par lots bornés, et il s'arrête au premier échec plutôt que de compter
- * comme partis des octets qui sont encore là.
+ * The sorting is in SQL (an anti-join on the two tables that reference the
+ * bucket); what this file pinpoints is what the module DOES with it: it
+ * erases in bounded batches, and it stops at the first failure rather than counting
+ * as part of the bytes that are still there.
  */
 
 function fake(options: { orphans: string[]; removeFails?: boolean }) {
@@ -52,8 +52,8 @@ describe("sweepOrphanAttachments", () => {
 
     expect(removed).toBe(2);
     expect(service.removed).toEqual([["projects/p/1/a.png", "projects/p/2/b.pdf"]]);
-    // Le délai de grâce voyage jusqu'au SQL : c'est lui qui protège l'objet
-    // téléversé il y a trois minutes et pas encore enregistré.
+    // The grace period travels to the SQL: it is he who protects the object
+    // uploaded three minutes ago and not yet saved.
     expect(service.args()).toMatchObject({ p_before: BEFORE });
   });
 

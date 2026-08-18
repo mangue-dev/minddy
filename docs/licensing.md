@@ -1,43 +1,43 @@
-# Politique de licence et d'open core
+# License and open core policy
 
-Date de décision : 16 août 2026. Ce document est une décision de produit et d'exploitation ; il ne remplace pas un avis juridique pour une situation particulière.
+Decision date: August 16, 2026. This document is a product and operating decision; it does not replace legal advice for a particular situation.
 
-## Décision
+## Decision
 
-Le dépôt `minddy` est distribué sous **GNU Affero General Public License v3.0 only** (AGPL-3.0-only). Ce choix remplace la politique MIT pour les versions publiées à partir de cette décision. Les copies et contributions historiques restent aussi soumises à leurs notices MIT et autres notices applicables, qui ne sont pas retirées par ce changement.
+The `minddy` repository is distributed under **GNU Affero General Public License v3.0 only** (AGPL-3.0-only). This choice replaces the MIT policy for versions released from this decision onwards. Historical copies and contributions also remain subject to their MIT notices and other applicable notices, which are not removed by this change.
 
-Nous choisissons l'AGPL pour accueillir les contributions et l'auto-hébergement tout en empêchant qu'une version modifiée, proposée comme service réseau, reste fermée. La MIT maximisait la réutilisation, mais ne protégeait pas cet objectif. L'AGPL impose à l'opérateur d'une version modifiée de proposer à ses utilisateurs distants le code source correspondant de cette version, sous AGPL-3.0.
+We choose AGPL to accommodate contributions and self-hosting while preventing a modified version, offered as a network service, from remaining closed. MIT maximized reuse, but did not protect this goal. The AGPL requires the operator of a modified version to offer its remote users the corresponding source code of this version, under AGPL-3.0.
 
-L'expression « AGPL-3.0-only » est intentionnelle : aucune migration future vers une autre version de l'AGPL n'est automatique.
+The term "AGPL-3.0-only" is intentional: no future migration to another version of AGPL is automatic.
 
-## Frontière produit et commerciale
+## Product and commercial border
 
-Il n'existe **pas d'édition Enterprise distribuée** ni de module propriétaire chargé par le cœur. Tout ce qui est nécessaire pour installer, administrer, utiliser, exporter et faire évoluer minddy auto-hébergé appartient au cœur AGPL : application web, API, schéma et migrations de base de données, client desktop, CLI/outillage publié et documentation d'exploitation.
+There is **no distributed Enterprise edition** or proprietary core-loaded module. Everything needed to install, administer, use, export and scale self-hosted minddy belongs to the AGPL core: web application, API, database schema and migrations, desktop client, published CLI/tooling and operating documentation.
 
-Le revenu peut provenir de services qui ne sont pas une distribution ou une extension du cœur : hébergement managé, support/SLA, migration, formation et opérations privées (facturation, support, supervision de flotte, gestion des comptes du service). Ces surfaces doivent vivre hors de ce dépôt et communiquer avec le cœur par des protocoles documentés. Elles ne doivent pas contenir une fonction nécessaire à l'usage normal de l'édition auto-hébergée.
+Revenue can come from services that are not a distribution or extension of the core: managed hosting, support/SLA, migration, training and private operations (billing, support, fleet monitoring, service account management). These surfaces must live outside this deposit and communicate with the heart through documented protocols. They must not contain a function necessary for normal use of the self-hosted edition.
 
-Une future édition commerciale ne pourra être décidée qu'après un nouveau contrôle de chaîne de droits. Sans CLA ou cession couvrant explicitement la double licence, les titulaires de droits de chaque contribution concernée devront autoriser cette licence commerciale ; l'AGPL seule ne le permet pas.
+A future commercial edition can only be decided after a new check of the chain of rights. Without a CLA or assignment explicitly covering the dual license, the rights holders of each contribution concerned will have to authorize this commercial license; the AGPL alone does not allow this.
 
-## Chaîne de droits et dépendances
+## Chain of rights and dependencies
 
-L'inventaire Git au 16 août 2026 identifie des contributions de Clément Guérin, « mangué », `minddy agent` et `minddy-app[bot]`. Git est une piste d'audit, pas une cession de droits. Le dépôt garde donc un fichier `NOTICE` avec les attributions connues et la licence MIT historique. Avant toute publication ou relicence présentant une propriété exclusive, le mainteneur doit archiver pour chaque contributeur externe l'accord/contrat qui confirme le droit de contribuer sous AGPL-3.0-only, ou obtenir une confirmation écrite. Les contributions d'un agent doivent être rattachées à la personne ou à l'organisation qui détenait les instructions et les droits d'utilisation du service d'IA.
+The Git inventory as of August 16, 2026 identifies contributions from Clément Guérin, “mangué”, `minddy agent` and `minddy-app[bot]`. Git is an audit trail, not an assignment of rights. The repository therefore keeps a `NOTICE` file with the known attributions and the historical MIT license. Before any publication or re-license presenting exclusive ownership, the maintainer must archive for each external contributor the agreement/contract which confirms the right to contribute under AGPL-3.0-only, or obtain written confirmation. An agent's contributions must be traced to the person or organization that held the instructions and rights to use the AI ​​service.
 
-L'audit du lockfile recense principalement MIT, Apache-2.0, ISC et BSD ; il ne recense pas de GPL-2.0-only. Des dépendances MPL-2.0 et LGPL-3.0-or-later existent (notamment dans la chaîne `sharp`) et restent sous leurs propres conditions. Le code du projet ne doit ni copier leurs sources dans le cœur sans nouvel examen, ni supprimer leurs notices. Le fichier de police Inter est sous SIL OFL-1.1 et garde sa notice dédiée. Toute dépendance, asset, police, icône ou capture ajouté doit avoir une origine et une licence tracées avant inclusion.
+The lockfile audit mainly lists MIT, Apache-2.0, ISC and BSD; it does not list GPL-2.0-only. MPL-2.0 and LGPL-3.0-or-later dependencies exist (notably in the `sharp` chain) and remain under their own conditions. Project code should neither copy their sources into the core without further review, nor remove their notices. The Inter font file is under SIL OFL-1.1 and keeps its dedicated notice. Any dependencies, assets, fonts, icons or captures added must have an origin and license traced before inclusion.
 
 ## Contributions
 
-Les contributions sont acceptées sous AGPL-3.0-only, avec un **DCO** : chaque commit doit porter `Signed-off-by:` et atteste que son auteur a le droit de le soumettre sous cette licence. Aucun CLA ni cession de copyright n'est requis. Le DCO ne donne pas au projet le droit de proposer ultérieurement une licence propriétaire ; c'est volontaire et protège les contributeurs.
+Contributions are accepted under AGPL-3.0-only, with a **DCO**: each commit must carry `Signed-off-by:` and attest that its author has the right to submit it under this license. No CLA or copyright assignment is required. The DCO does not give the project the right to subsequently offer a proprietary license; it is voluntary and protects contributors.
 
 ## Marque
 
-La licence porte sur le droit d'auteur et les brevets éventuels, pas sur les marques. Les droits éventuels sur le nom « minddy », les logos et les éléments d'identité visuelle ne sont pas concédés. Un fork peut expliquer honnêtement sa relation avec minddy et conserver les attributions nécessaires, mais ne doit pas se présenter comme le service officiel ni employer les logos de façon à créer une confusion. Toute future marque enregistrée fera l'objet d'une politique séparée.
+The license relates to copyright and any patents, not to trademarks. Any rights to the name “minddy”, logos and visual identity elements are not granted. A fork can honestly explain its relationship with minddy and maintain necessary attributions, but must not present itself as the official service or use logos in a manner that creates confusion. Any future registered trademarks will be subject to a separate policy.
 
-## Obligations opérateurs et distributeurs
+## Operator and distributor obligations
 
-- Un distributeur conserve `LICENSE`, `NOTICE` et les notices de tiers, et fournit le code source correspondant quand l'AGPL l'exige.
-- Un opérateur qui modifie minddy et permet à des utilisateurs de l'employer via le réseau met à leur disposition l'offre de téléchargement du code source correspondant, y compris les scripts nécessaires pour générer, installer et exécuter la version déployée.
-- Une instance non modifiée peut indiquer le commit/tag et l'URL du source ; une instance modifiée doit exposer son propre source, ses patches et ses instructions de construction. La mention de l'upstream seule ne suffit pas.
-- Les clés, données clients, configurations de production et l'infrastructure d'hébergement ne font pas partie du code source correspondant et ne doivent jamais être publiés.
+- A distributor maintains `LICENSE`, `NOTICE` and third party notices, and provides corresponding source code when required by AGPL.
+- An operator who modifies minddy and allows users to use it via the network makes available to them the offer to download the corresponding source code, including the scripts necessary to generate, install and run the deployed version.
+- An unmodified instance can indicate the commit/tag and the source URL; a modified instance must expose its own source, patches, and build instructions. Mentioning upstream alone is not enough.
+- Keys, customer data, production configurations and hosting infrastructure are not part of the corresponding source code and should never be published.
 
-Cette politique doit être revue avant chaque modification de frontière entre le cœur et une surface commerciale, et à chaque ajout de code ou d'assets d'une provenance externe.
+This policy must be reviewed before each modification of the boundary between the core and a commercial area, and each time code or assets from an external source are added.
 

@@ -23,9 +23,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
 
-  // Actions MCP : résoudre la clé (nom + agent) via le service client — la
-  // policy RLS d'api_keys est owner-only, un membre du projet ne verrait pas
-  // le nom de la clé d'un autre membre par jointure.
+  // MCP Actions: Resolve key (name + agent) via customer service — the
+  // policy RLS of api_keys is owner-only, a project member would not see
+  // the key name of another member by join.
   const keyActors = await resolveApiKeyActors(
     (data ?? []).map((e) => e.api_key_id as string | null)
   );

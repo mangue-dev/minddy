@@ -1,64 +1,64 @@
-# Réglages GitHub du dépôt public
+# Public repository GitHub settings
 
-Ce fichier est la référence reproductible des réglages non versionnables. Il ne
-remplace pas les contrôles GitHub : après chaque modification, un mainteneur
-vérifie l'écran Settings et met à jour la date ci-dessous.
+This file is the reproducible reference for non-versionable settings. He doesn't
+does not replace GitHub controls: after each modification, a maintainer
+Check the Settings screen and update the date below.
 
-Dernière vérification : 18 août 2026, dépôt encore privé sur le plan GitHub
-gratuit. Les protections de branche et approbations d'environnement sont
-volontairement reportées à MIN-388 tant que GitHub ne les rend pas applicables.
-Les workflows décrivent déjà le chemin cible ; aucune publication ne doit être
-annoncée avant que les réglages ci-dessous aient été activés et testés.
+Last checked: August 18, 2026, repository still private on GitHub plan
+free. Industry protections and environmental approvals are
+voluntarily deferred to MIN-388 until GitHub makes them applicable.
+The workflows already describe the target path; no publication should be
+announced before the settings below have been activated and tested.
 
-## Réglages déjà applicables
+## Settings already applicable
 
-- Issues et Discussions activées ; suppression automatique des branches après
-  fusion.
-- **Squash merge uniquement** ; merge commits et rebase merge désactivés.
-- Actions limitées aux actions GitHub et à `pnpm/action-setup@*`, avec jeton en
-  lecture seule dans les workflows de pull request.
-- Dependency graph, Dependabot alerts et Dependabot security updates activés.
-- Labels : `bug`, `enhancement`, `documentation`, `dependencies`, `security`,
+- Issues and Discussions activated; automatic deletion of branches after
+  merger.
+- **Squash merge only**; merge commits and rebase merge disabled.
+- Actions limited to GitHub actions and `pnpm/action-setup@*`, with token in
+read-only in pull request workflows.
+- Dependency graph, Dependabot alerts and Dependabot security updates enabled.
+- Labels: `bug`, `enhancement`, `documentation`, `dependencies`, `security`,
   `needs reproduction`, `breaking change`, `status: blocked`, `good first
-  issue` et `help wanted`.
+issue` and `help wanted`.
 
-## À appliquer lors de la publication (MIN-388)
+## To be applied when publishing (MIN-388)
 
-1. Activer **Private vulnerability reporting**, **Secret scanning** et **Push
-   protection** dans Security → Code security and analysis.
-2. Dans Actions → General, choisir **Require approval for all external
-   contributors**. Ne jamais utiliser `pull_request_target` pour exécuter le
-   code d'une PR.
-3. Protéger `main`, administrateurs inclus :
-   - pull request obligatoire, une approbation et revue code owner ;
-   - invalider les approbations obsolètes, exiger l'approbation du dernier push
-     par une autre personne et résoudre toutes les conversations ;
-   - interdire suppression, force-push et contournement ;
-   - exiger un historique linéaire ;
-   - exiger `CI / Tests & typecheck`, `CI / Audit des dépendances` et
-     `DCO / Developer Certificate of Origin` à jour avant fusion.
-4. Protéger `production` contre suppression, force-push et écriture humaine.
-   Conserver l'historique linéaire et exiger les deux checks CI du SHA ; le
-   workflow `Promote production` est l'unique exception d'écriture directe.
-5. Créer deux environnements GitHub :
-   - `cloud-production`, avec approbateurs requis, autorisé uniquement depuis
-     `main`, et le workflow `Promote production` comme seul chemin d'écriture
-     vers `production`. L'approbateur ouvre la référence de revue produite avec
+1. Enable **Private vulnerability reporting**, **Secret scanning** and **Push
+protection** in Security → Code security and analysis.
+2. In Actions → General, choose **Require approval for all external
+contributors**. Never use `pull_request_target` to run the
+code of a PR.
+3. Protect `main`, administrators included:
+- mandatory pull request, owner code approval and review;
+- invalidate obsolete approvals, require approval from last push
+by another person and resolve all conversations;
+- prohibit deletion, force-push and circumvention;
+- require a linear history;
+- require `CI / Tests & typecheck`, `CI / Dependency audit` and
+`DCO / Developer Certificate of Origin` updated before merging.
+4. Protect `production` against deletion, force-push and human writing.
+Keep the linear history and require the two SHA CI checks; TEA
+workflow `Promote production` is the only direct write exception.
+5. Create two GitHub environments:
+- `cloud-production`, with approvers required, only allowed from
+`main`, and the `Promote production` workflow as the only write path
+to `production`. The approver opens the journal reference produced with
      [`docs/security-release-checklist.md`](../docs/security-release-checklist.md),
-     vérifie les exceptions/risques résiduels et la décision de pentest avant
-     d'autoriser le job ;
-   - `public-release`, avec approbateurs requis, autorisé uniquement depuis
-     `production` et les tags protégés `v*`, contenant les secrets Apple et du
-     flux desktop décrits dans `docs/releases.md`.
-6. Vérifier que l'intégration Vercel suit uniquement `production` pour le projet
-   public et crée un GitHub Deployment nommé `Production` avec son URL immuable.
-7. Ouvrir une pull request de test depuis un fork sans historique de confiance :
-   vérifier que le workflow attend l'approbation, qu'aucun secret n'est exposé,
-   qu'un commit sans sign-off échoue et qu'un mainteneur ne peut pas fusionner
-   tant que chaque règle n'est pas satisfaite.
-8. Vérifier les liens des formulaires, le bouton **Report a vulnerability**, les
-   catégories de Discussions et la création des premières PR Dependabot.
+checks exceptions/residual risks and pentest decision before
+to authorize the job;
+- `public-release`, with approvers required, only allowed from
+`production` and the protected tags `v*`, containing Apple secrets and
+desktop flows described in `docs/releases.md`.
+6. Verify that Vercel integration only follows `production` for the project
+public and creates a GitHub Deployment named `Production` with its immutable URL.
+7. Open a test pull request from a fork without trust history:
+verify that the workflow is awaiting approval, that no secrets are exposed,
+that a commit without sign-off fails and a maintainer cannot merge
+until each rule is satisfied.
+8. Check the form links, the **Report a vulnerability** button, the
+Discussion categories and the creation of the first Dependabot PRs.
 
-Une urgence peut nécessiter une dérogation temporaire. Elle est limitée au
-mainteneur principal, consignée dans une issue ou un avis de sécurité dès que la
-confidentialité le permet, puis les règles sont réactivées immédiatement.
+An emergency may require a temporary exemption. It is limited to
+primary maintainer, documented in an issue or safety notice as soon as the
+privacy permits, then the rules are reactivated immediately.

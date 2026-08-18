@@ -16,51 +16,50 @@ import {
 } from "./opencode-probe-rig";
 
 /**
- * MIN-364 (lot 9, §3 #11-#12 et §5.4 de l'audit du 15/08) — LES TROIS CAPACITÉS
- * « À CADRER », MESURÉES AVANT D'ÊTRE TRANCHÉES.
+ * MIN-364 (lot 9, §3 #11-#12 and §5.4 of the audit of 08/15) — THE THREE CAPACITIES
+ * “TO BE FRAMED”, MEASURED BEFORE BEING DECISIONED.
  *
- * Ne tourne PAS avec `npm test` : `describe.skipIf` la saute tant que
- * `MDY_OPENCODE_CAPS_PROBE=1` n'est pas posé. Aucun modèle n'est dépensé.
+ * Does NOT work with `npm test`: `describe.skipIf` skips it until
+ * `MDY_OPENCODE_CAPS_PROBE=1` is placed. No templates are spent.
  *
- *   MDY_OPENCODE_CAPS_PROBE=1 MDY_OPENCODE_BIN=<…>/bin/opencode \
- *     npx vitest run lib/server/agent/vm/opencode-capabilities.probe.test.ts --testTimeout=900000
+ * MDY_OPENCODE_CAPS_PROBE=1 MDY_OPENCODE_BIN=<…>/bin/opencode \
+ * npx vitest run lib/server/agent/vm/opencode-capabilities.probe.test.ts --testTimeout=900000
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * POURQUOI ELLE EXISTE
+ * ─────────────────────── ──────────────────────── ──────────────────────────────
+ * WHY IT EXISTS
  *
- * L'audit range `skill`, `todowrite` et les serveurs MCP du dépôt en « à
- * cadrer », et le cadrage ne pouvait pas se faire sans savoir **d'où ces choses
- * viennent**. Un `skill: true` posé sans le savoir ouvre — sur la machine de
- * l'utilisateur — une porte dont l'audit ne mesure pas la largeur.
+ * The audit ranks `skill`, `todowrite` and the MCP servers of the repository in "at
+ * frame", and the framing could not be done without knowing **where these things come from
+ * come**. A `skill: true` placed without knowing it opens — on the user's
+ * machine — a door whose audit does not measure the width.
  *
- * ⚠ LA DÉCOUVERTE EST MÉMOÏSÉE au premier accès : toute mesure d'un
- * `OPENCODE_DISABLE_*` demande un serveur NEUF, avec la variable posée dès le
- * `spawn` (`startProbeServer({env})`). Une première version de cette sonde
- * restaurait `process.env` avant de redémarrer, et mesurait donc un serveur sur
- * lequel rien n'était posé — elle disait « oui, c'est bien coupé » sur trois cas
- * où rien ne l'était.
+ * ⚠ THE DISCOVERY IS MEMORIZED on first access: any measurement of a
+ * `OPENCODE_DISABLE_*` requests a NEW server, with the variable set from
+ * `spawn` (`startProbeServer({env})`). A first version of this probe
+ * restored `process.env` before restarting, and therefore measured a server on
+ * on which nothing was installed - it said "yes, it is well cut" on three cases
+ * where nothing was.
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * RELEVÉ DU 2026-08-15 sur `opencode-ai@1.18.16`
+ * ─────────────────────── ──────────────────────── ──────────────────────────────
+ * STATEMENT OF 2026-08-15 on `opencode-ai@1.18.16`
  *
- * 1. **`skill` lit `$HOME`, pas `XDG_CONFIG_HOME`.** La découverte est
- *    `~/.claude/skills/…/SKILL.md` et `~/.agents/skills/…/SKILL.md`, plus la même
- *    remontée depuis le dossier de session jusqu'à la racine du dépôt. Le harness
- *    relocalise `XDG_*` mais **pas `HOME`** : `skill: true` sur un Mac servirait
- *    donc à l'agent les skills Claude Code de son propriétaire ET celles du
- *    dépôt, sans que rien ne l'ait décidé.
- * 2. **Deux écoutilles existent pour choisir**, et le harness n'en posait aucune :
- *    `OPENCODE_DISABLE_EXTERNAL_SKILLS` (coupe TOUTE la découverte implicite) et
- *    `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS` (coupe `~/.claude` seulement). Plus une
- *    clé de config `skills.paths` qui NOMME les dossiers — la seule forme
- *    sélective, et la seule qui survive à `OPENCODE_DISABLE_EXTERNAL_SKILLS`.
- * 3. **`todowrite` est purement local à opencode** : aucune permission publiée,
- *    aucune écriture ailleurs. Son coût est un jeu de tools plus large et une
- *    seconde checklist à côté de la nôtre — pas du réseau.
- * 4. **Les serveurs MCP du dépôt sont bien fermés par
- *    `OPENCODE_DISABLE_PROJECT_CONFIG`**, et la clé `mcp` de NOTRE config reste
- *    lue : servir un serveur MCP nommé par minddy est possible sans rouvrir la
- *    remontée qui ramasse aussi les tools `*.ts` et les plugins.
+ * 1. **`skill` reads `$HOME`, not `XDG_CONFIG_HOME`.** The discovery is
+ * `~/.claude/skills/…/SKILL.md` and `~/.agents/skills/…/SKILL.md`, plus the same
+ * raised from the session folder to the repository root. The harness
+ * relocates `XDG_*` but **not `HOME`**: `skill: true` on a Mac would serve
+ * therefore to the agent the Claude Code skills of its owner AND those of the
+ * deposit, without anything having it decided.
+ * 2. **Two hatches exist to choose from**, and the harness posed neither:
+ * `OPENCODE_DISABLE_EXTERNAL_SKILLS` (cuts ALL implicit discovery) and
+ * `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS` (cuts `~/.claude` only). Plus a
+ * config key `skills.paths` that NAMEs the folders — the only selective form
+ *, and the only one that survives `OPENCODE_DISABLE_EXTERNAL_SKILLS`.
+ * 3. **`todowrite` is purely local to opencode**: no permissions published,
+ * no writing elsewhere. Its cost is a larger set of tools and a second checklist next to ours — not the network.
+ * 4. **The MCP servers in the repository are closed by
+ * `OPENCODE_DISABLE_PROJECT_CONFIG`**, and the `mcp` key from OUR config rest
+ * read: serving an MCP server named by minddy is possible without reopening the
+ * upload which also picks up the `*.ts` tools and plugins.
  */
 
 const LIVE = process.env.MDY_OPENCODE_CAPS_PROBE === "1";
@@ -88,9 +87,9 @@ afterAll(() => {
 });
 
 /**
- * Un décor où le DÉCOR EST POSÉ AVANT LE SERVEUR : `prepare` reçoit la racine et
- * le dépôt, écrit ce qu'il veut, et seulement ensuite opencode démarre. C'est ce
- * que la mémoïsation de la découverte impose.
+ * A setting where the SETTING IS SET BEFORE THE SERVER: `prepare` receives the root and
+ * the repository, writes whatever it wants, and only then does opencode start. It is this
+ * that the memorization of the discovery imposes.
  */
 async function boot(opts: {
   tag: string;
@@ -124,7 +123,7 @@ async function boot(opts: {
   return { server, provider };
 }
 
-/** Pose une skill au format attendu (`<dir>/<nom>/SKILL.md`, front-matter YAML). */
+/** Sets a skill in the expected format (`<dir>/<nom>/SKILL.md`, YAML front-matter). */
 function writeSkill(dir: string, name: string, description: string): void {
   const target = path.join(dir, name);
   fs.mkdirSync(target, { recursive: true });
@@ -134,7 +133,7 @@ function writeSkill(dir: string, name: string, description: string): void {
   );
 }
 
-/** Les skills qu'opencode dit connaître, par leur nom (`GET /skill`). */
+/** The skills that opencode says it knows, by their name (`GET /skill`). */
 async function skillNames(server: ProbeServer): Promise<string[]> {
   const res = await server.get("/skill").catch(() => null);
   const body = res?.body;
@@ -147,8 +146,8 @@ async function skillNames(server: ProbeServer): Promise<string[]> {
 
 describe.skipIf(!LIVE)("d'où viennent les skills (§3 #11)", () => {
   const poser = ({ root }: { root: string }): void => {
-    // `startProbeServer` pose `HOME` sur la racine de la sonde : on y écrit donc
-    // « le home de l'utilisateur », sans jamais toucher au vrai.
+    // `startProbeServer` places `HOME` on the root of the probe: we therefore write there
+    // “the user’s home”, without ever touching the real thing.
     writeSkill(path.join(root, ".claude", "skills"), "skill-de-lhumain", "la sienne");
     writeSkill(path.join(root, ".agents", "skills"), "skill-agents", "la sienne aussi");
   };
@@ -162,8 +161,8 @@ describe.skipIf(!LIVE)("d'où viennent les skills (§3 #11)", () => {
         prepare: poser,
       });
       const names = await skillNames(server);
-      // C'EST LE FAIT QUI CADRE LE LOT 9 : ouvrir `skill` sur un Mac, c'est
-      // ouvrir le dossier de skills Claude Code de son propriétaire.
+      // THIS IS THE FACT THAT FRAMES LOT 9: opening `skill` on a Mac is
+      // open the Claude Code skills folder of its owner.
       expect(names).toEqual(expect.arrayContaining(["skill-de-lhumain", "skill-agents"]));
     },
     900_000,
@@ -207,15 +206,15 @@ describe.skipIf(!LIVE)("d'où viennent les skills (§3 #11)", () => {
       let choisi = "";
       const { server } = await boot({
         tag: "skill-paths",
-        config: {}, // complété juste après : le chemin dépend de la racine
+        config: {}, // completed just after: the path depends on the root
         prepare: ({ root }) => {
           choisi = path.join(root, "skills-minddy");
           writeSkill(choisi, "skill-nommee", "celle que minddy a choisie");
         },
       });
       server.stop();
-      // Le chemin n'existe qu'après `prepare` : on relance avec la config qui le
-      // nomme, sur le MÊME décor.
+      // The path only exists after `prepare`: we restart with the config that contains it
+      // name, on the SAME setting.
       const repris = await startProbeServer({
         bin,
         tag: "skill-paths",
@@ -224,8 +223,8 @@ describe.skipIf(!LIVE)("d'où viennent les skills (§3 #11)", () => {
           skills: { paths: [choisi] },
         }),
         reuse: { root: server.root, repo: server.repo },
-        // Et avec la découverte implicite COUPÉE : c'est la combinaison qui
-        // intéresse le cadrage — rien du disque de l'utilisateur, seulement ce
+        // And with the implicit discovery CUT: it is the combination which
+        // interests the framing — nothing from the user's disk, only this
         // que minddy nomme.
         env: { OPENCODE_DISABLE_EXTERNAL_SKILLS: "1" },
       });
@@ -268,9 +267,9 @@ describe.skipIf(!LIVE)("ce que `todowrite` coûte vraiment (§3 #12)", () => {
 
       const part = server.toolParts().find((p) => p.tool === "todowrite");
       expect(part?.status, `le tool n'a pas abouti : ${part?.error ?? "?"}`).toBe("completed");
-      // Aucune permission publiée : rien à arbitrer, donc rien qui sorte du
-      // process. Le « 20 écritures réseau » du §3 #12 vise `update_plan`, notre
-      // checklist à nous — pas celle-ci.
+      // No published permission: nothing to arbitrate, therefore nothing that comes out of
+      // process. The “20 network writes” of §3 #12 targets `update_plan`, our
+      // checklist to us — not this one.
       expect(server.asks().map((a) => a.permission)).not.toContain("todowrite");
     },
     900_000,
@@ -278,8 +277,8 @@ describe.skipIf(!LIVE)("ce que `todowrite` coûte vraiment (§3 #12)", () => {
 });
 
 describe.skipIf(!LIVE)("les serveurs MCP (§5.4, dernière écoutille)", () => {
-  /** Un `opencode.json` de dépôt qui déclare un serveur MCP — ce que n'importe
-   *  quel dépôt public peut porter, et qu'une session lance au démarrage. */
+  /** A repository `opencode.json` that declares an MCP server — whatever
+ * any public repository can carry, and that a session starts at startup. */
   const piegerLeDepot = ({ repo }: { repo: string }): void => {
     fs.writeFileSync(
       path.join(repo, "opencode.json"),
@@ -308,9 +307,9 @@ describe.skipIf(!LIVE)("les serveurs MCP (§5.4, dernière écoutille)", () => {
   it(
     "…et le TÉMOIN : sans l'écoutille, le dépôt impose bien son serveur",
     async () => {
-      // Sans ce témoin, le test du dessus passerait aussi le jour où la clé `mcp`
-      // cesserait d'exister — il mesurerait alors l'absence d'une fonctionnalité,
-      // pas l'effet d'une écoutille.
+      // Without this witness, the test above would also pass on the day when the `mcp` key
+      // would cease to exist — it would then measure the absence of a functionality,
+      // not the effect of a hatch.
       const { server } = await boot({ tag: "mcp-temoin", prepare: piegerLeDepot });
       const config = await server.get("/config");
       const mcp = (config.body as { mcp?: Record<string, unknown> })?.mcp ?? {};
@@ -332,8 +331,8 @@ describe.skipIf(!LIVE)("les serveurs MCP (§5.4, dernière écoutille)", () => {
       });
       const config = await server.get("/config");
       const mcp = (config.body as { mcp?: Record<string, unknown> })?.mcp ?? {};
-      // Le nôtre passe, celui du dépôt non : la fermeture est SÉLECTIVE, ce qui
-      // est exactement ce que le cadrage du lot 9 avait besoin de savoir.
+      // Ours passes, that of the deposit does not: the closure is SELECTIVE, which
+      // is exactly what Lot 9 scoping needed to know.
       expect(Object.keys(mcp)).toEqual(["minddy"]);
     },
     900_000,

@@ -1,15 +1,15 @@
 import type { IssueEffort } from "@/lib/issue-constants";
 import { hasPlanTasks } from "@/lib/plan";
 
-/** Clé i18n du corps du prompt de lancement (namespace `Agent.launchPrompt`).
- *  `writePlan` / `reviewPlan` ne sont jamais choisies par
- *  `agentLaunchPromptVariant` : elles répondent à une demande EXPLICITE de
- *  l'utilisateur (entrée « Générer un plan » / « Vérifier le plan », bouton de
- *  l'onglet Plan) — cadrer le ticket, sans l'implémenter. Voir
+/** i18n key of the launch prompt body (namespace `Agent.launchPrompt`).
+ * `writePlan` / `reviewPlan` are never chosen by
+ * `agentLaunchPromptVariant`: they respond to an EXPLICIT request for
+ * the user (“Generate plan” / “Check plan” entry, button
+ * the Plan tab) — frame the ticket, without implementing it. See
  *  `agentPlanPromptVariant`.
- *  `verifyImplementation` non plus : c'est l'autre demande explicite — relire le
- *  travail DÉJÀ fait face au plan et aux commentaires, et corriger les vrais
- *  bugs (entrée « Vérifier l'implémentation »). */
+ * `verifyImplementation` neither: this is the other explicit request — reread the
+ * work ALREADY faced with the plan and comments, and correct the real ones
+ * bugs (“Check implementation” entry). */
 export type AgentLaunchPromptVariant =
   | "planExists"
   | "planExistsXl"
@@ -20,27 +20,27 @@ export type AgentLaunchPromptVariant =
   | "writePlan"
   | "reviewPlan"
   | "verifyImplementation"
-  /** Les deux mêmes vérifications, jouées par une CHAÎNE (MIN-147). Elles ne
-   *  disent rien de plus sur le travail : elles ajoutent l'obligation d'appeler
-   *  `report_verdict`, sans quoi la chaîne n'a rien à lire pour décider de la
-   *  suite. Écrire un plan n'en a pas de variante — il n'y a pas de verdict à
-   *  rendre sur un plan qu'on vient d'écrire. */
+  /** The same two checks, played by a CHAIN ​​(MIN-147). They don't
+   * say nothing more about work: they add the obligation to call
+   * `report_verdict`, otherwise the string has nothing to read to decide the
+   * following. Writing a plan has no variation — there is no verdict in
+   * report on a plan that has just been written. */
   | "chainVerifyPlan"
   | "chainVerifyImplementation";
 
 /**
- * Choisit la variante du prompt pré-écrit du composer de lancement selon l'issue.
- * Logique PURE (pas de texte) : le texte, localisé, vit dans `Agent.launchPrompt.*`
- * et l'appelant l'assemble `head + "\n\n" + <variante>` avec son translator.
+ * Selects the variant of the pre-written launch composer prompt depending on the issue.
+ * PURE logic (no text): the text, localized, lives in `Agent.launchPrompt.*`
+ * and the caller assembles it `head + "\n\n" + <variante>` with its translator.
  *
  * Deux axes :
- *  • Un PLAN existe déjà (issue.plan avec des tâches) → on demande de le SUIVRE
- *    (pour un XL déjà planifié, on garde le checkpoint : relire puis demander).
- *  • Sinon, la profondeur de cadrage suit l'EFFORT (t-shirt) :
- *      XS       → implémentation directe, pas de plan ;
- *      S        → plan léger si la tâche le mérite, puis implémentation ;
- *      M/L/none → plan clair, puis implémentation ;
- *      XL       → plan, puis STOP et demande avant d'implémenter.
+ * • A PLAN already exists (issue.plan with tasks) → we ask to FOLLOW it
+ * (for an XL already planned, we keep the checkpoint: reread then ask).
+ * • Otherwise, the framing depth follows the EFFORT (t-shirt):
+ * XS → direct implementation, no plan;
+ * S → light plan if the task merits it, then implementation;
+ * M/L/none → clear plan, then implementation;
+ * XL → plan, then STOP and ask before implementing.
  */
 export function agentLaunchPromptVariant(issue: {
   plan: string | null;
@@ -59,15 +59,15 @@ export function agentLaunchPromptVariant(issue: {
     case "m":
     case "l":
     default:
-      // Effort M/L ou non renseigné : cadrer puis exécuter.
+      // Effort M/L or not indicated: frame then execute.
       return "default";
   }
 }
 
 /**
- * Variante du prompt quand l'utilisateur demande explicitement de travailler le
- * PLAN et rien d'autre : l'écrire s'il n'existe pas, le VÉRIFIER point par point
- * s'il existe déjà — redemander un plan à un ticket qui en a un n'a pas de sens.
+ * Variant of the prompt when the user explicitly asks to work on the
+ * PLAN and nothing else: write it down if it does not exist, CHECK it point by point
+ * if it already exists — re-requesting a plan from a ticket that has one doesn't make sense.
  */
 export function agentPlanPromptVariant(issue: {
   plan: string | null;

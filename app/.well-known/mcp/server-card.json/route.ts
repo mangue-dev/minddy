@@ -3,17 +3,17 @@ import { OAUTH_CORS_HEADERS } from "@/lib/server/oauth/cors";
 import { MCP_ENDPOINT, SITE_URL } from "@/lib/site";
 
 /**
- * MCP Server Card (SEP-1649) — la fiche d'identité du serveur MCP, à l'endroit
- * où un agent va la chercher tout seul (MIN-88).
+ * MCP Server Card (SEP-1649) — the identity card of the MCP server, right side up
+ * where an agent goes to look for her alone (MIN-88).
  *
- * minddy servait déjà `/.well-known/oauth-authorization-server` et
- * `/.well-known/oauth-protected-resource` : un agent à qui on donne l'URL du
- * endpoint sait donc s'authentifier. Ce qui manquait, c'est le maillon d'AVANT
- * — partir d'un nom de domaine et découvrir qu'il y a un serveur MCP derrière,
- * ce qu'il sait faire, et s'il faut un compte.
+ * minddy was already serving `/.well-known/oauth-authorization-server` and
+ * `/.well-known/oauth-protected-resource`: an agent who is given the URL of the
+ * endpoint therefore knows how to authenticate itself. What was missing was the BEFORE link
+ * — start from a domain name and discover that there is an MCP server behind it,
+ * what he can do, and whether he needs an account.
  *
- * La liste des outils est dérivée de leur enregistrement réel
- * (`lib/server/mcp/catalog.ts`), comme `/llms.txt`.
+ * The list of tools is derived from their actual registration
+ * (`lib/server/mcp/catalog.ts`), like `/llms.txt`.
  */
 export function GET(): Response {
   const tools = mcpToolCatalog();
@@ -33,9 +33,9 @@ export function GET(): Response {
         {
           type: "streamable-http",
           url: MCP_ENDPOINT,
-          // OAuth 2.1 uniquement : il n'existe aucune clé statique. Le 401
-          // renvoie le `resource_metadata` qui mène aux deux autres
-          // `.well-known`, et l'enregistrement dynamique de client est accepté.
+          // OAuth 2.1 only: there are no static keys. The 401
+          // returns the `resource_metadata` which leads to the other two
+          // `.well-known`, and dynamic client registration is accepted.
           authentication: {
             required: true,
             type: "oauth2",

@@ -1,50 +1,50 @@
 /**
- * Le raccourci d'ENVOI, dit une seule fois pour toute l'application.
+ * The SEND shortcut, said only once for the entire application.
  *
- * Deux modes, et un seul est un choix de compte :
+ * Two modes, and only one is an account choice:
  *
- * - `mod-enter` (le défaut, celui de toujours) : ⌘/Ctrl + Entrée envoie, Entrée
- *   seule passe à la ligne. C'est ce qu'il faut à un composer où l'on écrit
+ * - `mod-enter` (the default, the one always): ⌘/Ctrl + Enter send, Enter
+ * only line pass. This is what is needed in a composition where one writes
  *   plusieurs phrases ;
- * - `enter` : Entrée envoie. Pour qui vient de Slack et tape court.
+ * - `enter`: Entry sends. For those who come from Slack and type short.
  *
- * **⌘/Ctrl + Entrée envoie dans les DEUX modes.** Le réglage ajoute une touche,
- * il n'en retire pas : la mémoire musculaire de celui qui bascule continue de
- * marcher, et une légende « ⌘↵ » restée quelque part ne devient jamais fausse.
+ * **⌘/Ctrl + Enter sends in BOTH modes.** The setting adds a key,
+ * he does not remove it: the muscle memory of the one who tips continues to
+ * walk, and a “⌘↵” caption left somewhere never becomes false.
  *
- * **Maj + Entrée ne l'est dans AUCUN.** C'est la touche du saut de ligne, dans
- * les deux modes et sans exception — en `enter` parce que c'est la seule qui
- * reste pour respirer, en `mod-enter` parce qu'un ⌘⇧Entrée parti par erreur est
+ * **Shift + Enter is not in NONE.** It is the newline key, in
+ * both modes and without exception — in `enter` because it is the only one which
+ * remains to breathe, in `mod-enter` because a ⌘⇧Entrance left by mistake is
  * exactement ce qu'on ne veut pas d'un geste d'envoi.
  *
- * La règle vit ici, hors de tout composant, pour deux raisons : elle est pure —
- * elle se teste sans monter de DOM — et les surfaces qui la LISENT (le tooltip
- * et les pastilles de [components/send-shortcut.tsx]) tirent mangue-ui derrière
- * elles, ce dont un test node n'a que faire. Les deux moitiés du geste restent
- * donc solidaires, sans que la touche dépende de l'habillage.
+ * The rule lives here, outside of any component, for two reasons: it is pure —
+ * it can be tested without mounting a DOM — and the surfaces that READ it (the tooltip
+ * and the pellets of [components/send-shortcut.tsx]) pull mango-ui behind
+ * them, which a test node has no use for. The two halves of the gesture remain
+ * therefore united, without the key depending on the covering.
  *
- * Ce module ne dépend de RIEN (ni React, ni Supabase) : les composers le lisent
- * côté client via [use-send-mode.ts](use-send-mode.ts), l'écran de réglages
- * l'écrit. C'est la seule définition d'« envoyer au clavier ».
+ * This module does not depend on ANYTHING (neither React nor Supabase): composers read it
+ * client side via [use-send-mode.ts](use-send-mode.ts), the settings screen
+ * writes it. This is the only definition of “send to keyboard”.
  */
 
-/** Les deux modes, dans l'ordre où l'écran de réglages les propose. */
+/** The two modes, in the order in which the settings screen offers them. */
 export const SEND_MODES = ["mod-enter", "enter"] as const;
 
 export type SendMode = (typeof SEND_MODES)[number];
 
-/** Le mode historique, et celui d'un compte qui n'a rien choisi. */
+/** The historical mode, and that of an account which chose nothing. */
 export const DEFAULT_SEND_MODE: SendMode = "mod-enter";
 
-/** La clé du `user_metadata` Supabase où vit la préférence, comme ses voisines
+/** The key to `user_metadata` Supabase where preference lives, like its neighbors
     (`smart_fill`, `numo_default_status`, …). */
 export const SEND_MODE_META_KEY = "send_shortcut";
 
 export const isSendMode = (v: unknown): v is SendMode =>
   typeof v === "string" && (SEND_MODES as readonly string[]).includes(v);
 
-/** Le mode d'envoi du compte, lu dans son `user_metadata`. Une absence — un
-    compte neuf n'a pas de métadonnée du tout — se lit comme le défaut. */
+/** The method of sending the account, read in its `user_metadata`. An absence — an
+    account nine has no metadata at all — reads like the default. */
 export function resolveSendMode(
   meta: Record<string, unknown> | null | undefined,
 ): SendMode {
@@ -53,12 +53,12 @@ export function resolveSendMode(
 }
 
 /**
- * L'événement clavier est-il le raccourci d'envoi ?
+ * Is keyboard event the send shortcut?
  *
- * `mode` par défaut à `mod-enter` : les surfaces qui ne connaissent PAS le
- * compte (les formulaires, où Entrée appartient à l'éditeur de description ;
- * un board public, où il n'y a pas de compte) l'appellent sans argument et
- * gardent le contrat de toujours.
+ * `mode` defaults to `mod-enter`: surfaces that do NOT know the
+ * account (forms, where Enter belongs to the description editor;
+ * a public board, where there is no account) call it without argument and
+ * keep the contract forever.
  */
 export function isSendShortcut(
   e: {
@@ -71,11 +71,11 @@ export function isSendShortcut(
   mode: SendMode = DEFAULT_SEND_MODE,
 ): boolean {
   if (e.key !== "Enter") return false;
-  // Maj + Entrée saute la ligne, toujours — c'est ce qui rend le mode `enter`
-  // habitable, et ça ne coûte rien au mode `mod-enter`.
+  // Shift+Enter skips the line, always — that's what makes `enter` mode
+  // habitable, and it costs nothing in `mod-enter` mode.
   if (e.shiftKey) return false;
   if (e.metaKey || e.ctrlKey) return true;
-  // ⌥Entrée reste à l'éditeur (saut de ligne doux) : le mode `enter` ne prend
-  // que la frappe NUE.
+  // ⌥Input remains with the editor (soft line break): `enter` mode does not take
+  // than NUE typing.
   return mode === "enter" && !e.altKey;
 }

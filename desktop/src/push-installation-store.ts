@@ -8,10 +8,10 @@ import {
 } from "@/lib/desktop/push-installation";
 
 /**
- * Identité stable de l'INSTALLATION APNs (MIN-356), distincte du token que
- * Apple peut faire tourner. Elle sert uniquement à reporter l'interrupteur et
- * retirer l'ancien token lors d'une rotation ; ce n'est ni un secret ni une
- * autorisation.
+ * Stable identity of the APNs INSTALLATION (MIN-356), distinct from the token that
+ * Apple can run. It is only used to postpone the switch and
+ * remove the old token during a rotation; it is neither a secret nor a
+ * authorization.
  */
 let cached: string | null = null;
 
@@ -24,7 +24,7 @@ export async function pushInstallationId(userData: string): Promise<string> {
       return (cached = value);
     }
   } catch {
-    // Premier lancement : le fichier n'existe pas encore.
+    // First launch: the file does not yet exist.
   }
   const value = randomUUID();
   await mkdir(userData, { recursive: true });
@@ -33,7 +33,7 @@ export async function pushInstallationId(userData: string): Promise<string> {
   return value;
 }
 
-/** L'opt-in natif survit aux lancements ; absent signifie jamais demandé. */
+/** Native opt-in survives launches; absent means never asked. */
 export async function nativePushAllowed(userData: string): Promise<boolean> {
   try {
     return nativePushAllowedFromStored(

@@ -14,30 +14,29 @@ import { FORBIDDEN_COMMAND_REASON } from "../command-guard";
 import { layoutForRoot } from "../harness-layout";
 
 /**
- * MIN-286 lot 2 — le verdict du harness sur une demande de permission d'opencode.
+ * MIN-286 batch 2 — the harness's verdict on an opencode permission request.
  *
- * Logique PURE, donc testée comme [prune.test.ts](../prune.test.ts) : on appelle,
- * on assert, rien à monter. Ce qu'elle protège n'a pas changé de nature — le
- * travail non commité (`command-guard`) et le dépôt (`repo-path`) —, seul
- * l'endroit où la question est posée a changé.
+ * PURE logic, therefore tested like [prune.test.ts](../prune.test.ts): we call,
+ * we assert, nothing to mount. What it protects has not changed in nature — the
+ * uncommitted work (`command-guard`) and the repository (`repo-path`) — only
+ * the place where the question is asked has changed.
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * MIN-354 — LE DÉPÔT EST DEVENU UN ARGUMENT, ET CE FICHIER EN CHANGE DE SENS
+ * ─────────────────────── ──────────────────────── ──────────────────────────────
+ * MIN-354 — THE DEPOSIT BECAME AN ARGUMENT, AND THIS FILE CHANGED ITS MEANING
  *
- * Il était écrit contre `REPO_DIR`, donc contre `/vercel/sandbox/repo`, donc
- * contre le seul monde où ces assertions étaient triviales : les chemins testés
- * et la racine comparée venaient de la même constante, et ne pouvaient pas ne
- * pas s'accorder.
+ * It was written against `REPO_DIR`, therefore against `/vercel/sandbox/repo`, therefore
+ * against the only world where these assertions were trivial: the tested paths
+ * and the compared root came from the same constant, and could not agree.
  *
- * Il est réécrit contre une racine de POSTE DE TRAVAIL. C'est là que le verdict
- * a un travail à faire : `metadata.filepath` est ABSOLU (mesure n°2), et un
- * `absoluteInRepo` figé sur `/vercel` refusait *chaque* écriture réelle d'un Mac
- * — pas trop peu, TOUT. Le dernier cas du bloc « les écritures » garde
- * exactement ça : l'ancien chemin de la microVM est désormais **hors** du dépôt,
- * et doit être refusé comme n'importe quel autre.
+ * It is rewritten against a WORKSTATION root. This is where the
+ * verdict has a job to do: `metadata.filepath` is ABSOLUTE (measure #2), and a
+ * `absoluteInRepo` frozen on `/vercel` refused *every* actual write from a Mac
+ * — not too much little, EVERYTHING. The last case of the "writes" block keeps
+ * exactly that: the old microVM path is now **outside** of the repository,
+ * and must be refused like any other.
  */
 
-/** La racine d'un run local — délibérément pas `/vercel` (cf. en-tête). */
+/** The root of a local run — deliberately not `/vercel` (see header). */
 const LAYOUT = layoutForRoot("/Users/dev/Library/Application Support/minddy/runs/r-42", "/Users/dev/Library/Application Support/minddy/oc");
 const REPO = LAYOUT.repoDir;
 
@@ -49,7 +48,7 @@ const ask = (over: Partial<PermissionAsk>): PermissionAsk => ({
   ...over,
 });
 
-/** Le verdict, sur le dépôt de CE run. */
+/** The verdict, on the filing of THIS run. */
 const decide = (a: PermissionAsk, subagents?: SubagentContext) =>
   decidePermission(a, REPO, subagents);
 
@@ -63,10 +62,10 @@ describe("les commandes", () => {
   it("refuse ce que `command-guard` refuse, en disant pourquoi au modèle", () => {
     const verdict = decide(ask({ command: "git reset --hard" }));
     expect(verdict.reply).toBe("reject");
-    // Le message VOYAGE : opencode le recopie dans l'erreur du tool, et c'est là
-    // que le modèle le lit. Un refus muet le laisserait deviner.
+    // The TRAVEL message: opencode copies it in the tool error, and it's there
+    // let the model read it. A silent refusal would leave him guessing.
     expect(verdict.message).toContain("throws away uncommitted work");
-    // Et le refus reste mesurable en base, comme du temps de la boucle maison.
+    // And the refusal remains measurable in base, as in the time of the house loop.
     expect(verdict.reason).toBe(FORBIDDEN_COMMAND_REASON);
   });
 
@@ -86,9 +85,9 @@ describe("les écritures", () => {
   });
 
   it("refuse ce qui sort du dépôt — y compris en chemin ABSOLU", () => {
-    // Le piège du branchement : `resolveWithin` recolle un absolu sous le dépôt
-    // (`/etc/passwd` → `<dépôt>/etc/passwd`), donc ne refuse rien. Or opencode
-    // rend justement `metadata.filepath` en absolu.
+    // The branching trap: `resolveWithin` pastes an absolute under the repository
+    // (`/etc/passwd` → `<repository>/etc/passwd`), so don't refuse anything.
+    // Actual opencode returns `metadata.filepath` as an absolute path.
     expect(decide(ask({ permission: "edit", filepath: "/etc/passwd" })).reply).toBe(
       "reject",
     );
@@ -98,8 +97,8 @@ describe("les écritures", () => {
   });
 
   it("refuse `.git/`, qu'opencode écrit sans rien demander", () => {
-    // Mesuré : `write` sur `<dépôt>/.git/config` a été exécuté et a écrasé le
-    // fichier. C'est la raison d'être du `ask` sur `edit`.
+    // Measured: `write` on `<repository>/.git/config` was executed and overwrote the
+    // file. This is the reason for `ask` over `edit`.
     const verdict = decide(ask({ permission: "edit", filepath: `${REPO}/.git/config` }));
     expect(verdict.reply).toBe("reject");
     expect(verdict.message).toContain(".git");
@@ -110,13 +109,13 @@ describe("les écritures", () => {
   });
 
   /**
-   * LE VERDICT SUIT LE RUN, ET RIEN D'AUTRE (MIN-354).
-   *
-   * `/vercel/sandbox/repo` était LE dépôt ; il n'est plus qu'un chemin comme un
-   * autre dès que le run vit ailleurs, et il doit être refusé comme tel. C'est
-   * le sens exact de l'assertion : la garde ne connaît aucun chemin béni, elle
-   * ne connaît que celui de son run.
-   */
+ * THE VERDICT FOLLOWS THE RUN, AND NOTHING ELSE (MIN-354).
+ *
+ * `/vercel/sandbox/repo` was THE deposit; it becomes nothing more than a path like a
+ * other as soon as the run lives elsewhere, and it must be refused as such. This is
+ * the exact meaning of the assertion: the guard does not know any blessed path, it
+ * only knows that of its run.
+ */
   it("refuse l'ancien chemin de la microVM quand le run vit ailleurs", () => {
     expect(
       decide(ask({ permission: "edit", filepath: "/vercel/sandbox/repo/lib/a.ts" })).reply,
@@ -124,11 +123,11 @@ describe("les écritures", () => {
   });
 
   /**
-   * ET IL NE SORT PAS DE SA RACINE PAR LE HAUT. Le harness, les sorties de tools
-   * et le `.tsbuildinfo` sont FRÈRES du dépôt sous la racine du run : un
-   * `../harness/job.json` viserait le job du tour — donc l'historique de la
-   * conversation et l'URL de push, token compris.
-   */
+ * AND IT DOES NOT COME OUT OF ITS ROOT FROM THE TOP. The harness, the outputs of tools
+ * and the `.tsbuildinfo` are SIBLINGS of the repository under the root of the run: a
+ * `../harness/job.json` would target the job of the round — therefore the history of the
+ * conversation and the push URL, including the token.
+ */
   it("refuse d'écrire dans le harness du run, qui est le frère du dépôt", () => {
     expect(
       decide(ask({ permission: "edit", filepath: `${LAYOUT.harnessDir}/job.json` })).reply,
@@ -140,11 +139,10 @@ describe("les écritures", () => {
 });
 
 /**
- * `apply_patch` — UNE demande pour N fichiers (mesuré sur opencode-ai@1.18.16 :
- * `ask({permission: "edit", metadata: {filepath: chemins.join(", "), files}})`).
- * Le `filepath` recollé n'est pas un chemin : lu comme tel, il faisait passer
- * `a.ts, .git` pour un unique segment de répertoire, et le garde-fou du dépôt ne
- * voyait plus le `.git/` qui suivait.
+ * `apply_patch` — ONE request for N files (measured on opencode-ai@1.18.16:
+ * `ask({permission: "edit", metadata: {filepath: paths.join(", "), files}})`).
+ * The pasted `filepath` is not a path: read as such, it was pass
+ * `a.ts, .git` for a single directory segment, and the repository guardrail no longer saw the `.git/` which followed.
  */
 describe("les écritures d'un patch multi-fichiers", () => {
   const patch = (files: { path: string; status: "added" | "modified" | "deleted" }[]) =>
@@ -187,7 +185,7 @@ describe("les écritures d'un patch multi-fichiers", () => {
   });
 
   it("ne lit JAMAIS le filepath recollé comme un chemin", () => {
-    // Sans `files`, c'est cette chaîne-là qui servait de chemin unique.
+    // Without `files`, this string served as the unique path.
     const joined = ask({
       permission: "edit",
       filepath: `${REPO}/lib/a.ts, ${REPO}/.git/config`,
@@ -232,10 +230,10 @@ describe("editTargets", () => {
 });
 
 /**
- * La délégation (tâche 12). Mesuré sur le binaire le 2026-08-12 : la demande de
- * permission d'un `task` porte `patterns: ["explore-cheap"]` et
- * `metadata: {description, subagent_type}` — **et elle arrive avant** qu'opencode
- * ne résolve l'agent. C'est ce qui rend ces deux refus possibles.
+ * Delegation (task 12). Measured on binary on 2026-08-12: the request for
+ * permission of a `task` carries `patterns: ["explore-cheap"]` and
+ * `metadata: {description, subagent_type}` — **and it arrives before** opencode
+ * resolves the agent. This is what makes these two refusals possible.
  */
 describe("la délégation", () => {
   const context = (over: Partial<SubagentContext> = {}): SubagentContext => ({
@@ -256,8 +254,8 @@ describe("la délégation", () => {
   });
 
   it("tient le plafond de simultané, et le DIT au modèle", () => {
-    // Le sandbox est partagé : deux filles qui écrivent en même temps se
-    // marchent dessus. Même refus, aux mots près, que le registre maison.
+    // The sandbox is shared: two girls who write at the same time
+    // walk on it. Same refusal, except for the words, as the house register.
     const verdict = decide(task("general"), context({ running: 2, maxParallel: 2 }));
     expect(verdict.reply).toBe("reject");
     expect(verdict.message).toContain("2/2");
@@ -265,15 +263,15 @@ describe("la délégation", () => {
   });
 
   /**
-   * MIN-286 — LE CAS QUE LE PLAFOND A À BORNER, ET LE SEUL.
-   *
-   * Chez opencode, le `task` de premier plan BLOQUE le parent : le simultané ne
-   * peut venir que d'un round qui appelle `task` PLUSIEURS FOIS. Or ces demandes
-   * sont toutes arbitrées avant qu'aucune fille n'existe — le flux ne rattache une
-   * fille qu'après coup (`opencode-delegation.test.ts` ancre `runningAtAsk === 0`).
-   * Compté sur les seules vivantes, le plafond valait donc zéro aux trois, et ne
-   * bornait rien. C'est le crédit ouvert par les autorisations qui le tient.
-   */
+ * MIN-286 — THE CASE THAT THE CEILING HAS TO BOUND, AND THE ONLY.
+ *
+ * In opencode, the foreground `task` BLOCKS the parent: the simultaneous ne
+ * can only come from a round that calls `task` SEVERAL TIMES. However, these requests
+ * are all arbitrated before any girl exists — the flow only attaches a
+ * girl after the fact (`opencode-delegation.test.ts` anchors `runningAtAsk === 0`).
+ * Counted on only the living ones, the ceiling was therefore worth zero to all three, and not
+ * limited nothing. It is the credit opened by the authorizations which holds it.
+ */
   it("compte les délégations AUTORISÉES dont la fille n'est pas encore née", () => {
     const verdict = decide(
       task("general"),
@@ -294,7 +292,7 @@ describe("la délégation", () => {
   });
 
   it("rend l'offre au modèle qui demande un sous-agent qui n'existe pas", () => {
-    // Opencode répondrait « Unknown agent type: X » sans dire ce qui est offert.
+    // Opencode would respond "Unknown agent type: X" without saying what is offered.
     const verdict = decide(task("general-openai-gpt-5"), context());
     expect(verdict.reply).toBe("reject");
     expect(verdict.message).toContain("general-openai-gpt-5");
@@ -303,8 +301,8 @@ describe("la délégation", () => {
   });
 
   it("ne refuse rien quand personne ne lui a donné l'offre du tour", () => {
-    // Un garde-fou qui ne sait pas ce qui est offert ne doit pas inventer un
-    // refus : la config a déjà tranché ce qui existe.
+    // A guard who does not know what is offered should not invent one
+    // refusal: the config has already decided what exists.
     expect(decide(task("explore"))).toEqual({ reply: "once" });
   });
 });
@@ -324,13 +322,13 @@ describe("le reste", () => {
 });
 
 /**
- * MIN-360 — CE QUE LE CHEMIN LOCAL CHANGE, ET LUI SEUL.
+ * MIN-360 — WHAT THE LOCAL PATH CHANGES, AND IT ALONE.
  *
- * Trois verdicts basculent quand le tour joue sur la machine de quelqu'un, et la
- * moitié de ce bloc sert à garder l'autre moitié : **rien ne bascule en microVM**.
- * Le clone y est jetable, la boucle locale n'y porte que nos deux serveurs, et
- * faire payer un aller-retour de permission à chaque lecture de 100 % des runs
- * cloud pour un risque qui n'existe pas serait le mauvais échange.
+ * Three verdicts flip when the turn plays on someone's machine, and the
+ * half of this block is used to guard the other half: **nothing flips in microVM**.
+ * The clone is disposable, the local loop only carries our two servers, and
+ * charge a round trip permission for each reading of 100% of the runs
+ * cloud for a risk that does not exist would be the wrong exchange.
  */
 describe("le chemin local (MIN-360)", () => {
   const local = (a: PermissionAsk) => decidePermission(a, REPO, undefined, { local: true });
@@ -364,15 +362,15 @@ describe("le chemin local (MIN-360)", () => {
   });
 
   /**
-   * MIN-364 (décision D8) — LE FETCH SE JUGE SUR LE PORT.
-   *
-   * Le refus portait sur tout l'espace privé, et son dommage collatéral était la
-   * capacité qu'on veut : `curl localhost:3000` pour aller voir rendre la page
-   * qu'on vient d'écrire. Ce qui reste refusé est ce qui n'est PAS une page — le
-   * proxy LLM (il porte la clé du modèle), le pont de tools (il n'authentifie
-   * rien : le joindre, c'est appeler `create_pr` à la place de l'agent) et le
-   * serveur opencode du tour (son API répond à qui la joint).
-   */
+ * MIN-364 (decision D8) — THE FETCH IS JUDGED ON THE PORT.
+ *
+ * The refusal covered the entire private space, and its collateral damage was the
+ * capacity we want: `curl localhost:3000` to see return the page
+ * that we just wrote. What remains refused is what is NOT a page — the
+ * LLM proxy (it carries the model key), the tools bridge (it does not authenticate
+ * anything: joining it means calling `create_pr` in place of the agent) and the
+ * opencode turn server (its API responds to who is attached).
+ */
   describe("les fetchs", () => {
     const HARNESS = [4096, 4097, 51234];
     const localFetch = (url?: string) =>
@@ -383,9 +381,9 @@ describe("le chemin local (MIN-360)", () => {
 
     it("refuse les trois services du harness, sur la boucle locale", () => {
       for (const url of [
-        "http://127.0.0.1:4096/v1/chat/completions", // le proxy LLM, donc la clé
-        "http://localhost:4097/tool", // le pont, qui n'authentifie rien
-        "http://[::1]:51234/session", // le serveur opencode du tour
+        "http://127.0.0.1:4096/v1/chat/completions", // the LLM proxy, therefore the key
+        "http://localhost:4097/tool", // the bridge, which authenticates nothing
+        "http://[::1]:51234/session", // the opencode server of the tour
       ]) {
         const verdict = localFetch(url);
         expect(verdict.reply, url).toBe("reject");
@@ -413,11 +411,10 @@ describe("le chemin local (MIN-360)", () => {
     });
 
     /**
-     * SANS LISTE DE PORTS, TOUTE LA BOUCLE LOCALE RESTE REFUSÉE — le comportement
-     * d'avant D8. Une ignorance ne s'interprète pas en autorisation, et le
-     * superviseur est le seul à connaître ces trois ports : s'il oublie de les
-     * passer, c'est le refus large qui doit rester.
-     */
+ * WITHOUT A PORT LIST, THE ENTIRE LOCAL LOOP REMAINS DENIED — the
+ * behavior from before D8. Ignorance cannot be interpreted as authorization, and the
+ * supervisor is the only one to know these three ports: if he forgets to pass them, the broad refusal must remain.
+ */
     it("refuse tout le privé quand les ports du harness sont inconnus", () => {
       for (const url of ["http://localhost:3000", "http://192.168.1.1/admin", "http://nas.local/x"]) {
         expect(local(ask({ permission: "webfetch", url })).reply, url).toBe("reject");
@@ -427,30 +424,30 @@ describe("le chemin local (MIN-360)", () => {
 
   describe("la permission inconnue", () => {
     it("passe en microVM, refuse sur une machine", () => {
-      // `lsp`, et tout ce qu'une montée de version ajoutera sans que personne ne
-      // l'ait lu. (`skill`, `doom_loop` et `plan_enter` ont depuis été LUS et
-      // tranchés, cf. `KNOWN_PERMISSIONS` : ils ne sont plus des inconnus.)
+      // `lsp`, and everything that a version upgrade will add without anyone
+      // read it. (`skill`, `doom_loop` and `plan_enter` have since been READ and
+      // sliced, cf. `KNOWN_PERMISSIONS`: they are no longer strangers.)
       for (const permission of ["lsp", "mcp_call", "quelque_chose_de_1_19"]) {
         expect(decide(ask({ permission })), permission).toEqual({ reply: "once" });
         const verdict = local(ask({ permission }));
         expect(verdict.reply, permission).toBe("reject");
         expect(verdict.reason).toBe("unknown_permission");
-        // Le refus NOMME la permission : c'est ce qui le rend réparable, et ce
-        // qui fait qu'une montée de version se voit dans `agent_run_events`.
+        // Refusal NAMES permission: this is what makes it reparable, and this
+        // which causes a version upgrade to be seen in `agent_run_events`.
         expect(verdict.message).toContain(permission);
       }
     });
   });
 
   /**
-   * MIN-364 (décision D5) — LE PÉRIMÈTRE D'ÉCRITURE S'OUVRE ICI, ET NULLE PART
-   * AILLEURS.
-   *
-   * `external_directory: "deny"` a longtemps été décrit comme la frontière ; il
-   * n'en était pas une (un `deny` de config court-circuite avant publication).
-   * Ce qui refusait vraiment, c'est `absoluteInRepo` dans le `case "edit"` —
-   * donc c'est lui qui devait changer.
-   */
+ * MIN-364 (D5 decision) — THE WRITE PERIMETER OPENS HERE, AND NOWHERE
+ * ELSEWHERE.
+ *
+ * `external_directory: "deny"` has long been described as the border; he
+ * was not one (a `deny` in config bypassed before publication).
+ * What really refused was `absoluteInRepo` in the `case "edit"` —
+ * so it was he who had to change.
+ */
   describe("le périmètre d'écriture", () => {
     it("laisse écrire hors du dossier attaché — un monorepo, un dépôt voisin", () => {
       for (const path of [
@@ -468,18 +465,18 @@ describe("le chemin local (MIN-360)", () => {
       expect(local(ask({ permission: "external_directory", filepath: "/Users/dev/Projets" }))).toEqual({
         reply: "once",
       });
-      // …et la microVM, elle, garde son refus : elle n'a qu'un dépôt.
+      // …and the microVM maintains its refusal: it only has one repository.
       expect(decide(ask({ permission: "external_directory", filepath: "/etc" })).reply).toBe(
         "reject",
       );
     });
 
     /**
-     * LE SEUL RESTE DE PÉRIMÈTRE, et il ne dépend d'aucune décision (§9 de
-     * l'audit) : un hook écrit dans un `.git/` s'exécute au prochain geste git
-     * d'un humain, et un `.git/config` porte des identifiants. Où qu'il soit sur
-     * le disque, pas seulement dans le dépôt du tour.
-     */
+ * THE ONLY REST OF SCOPE, and it does not depend on any decision (§9 of
+ * auditing): a hook written in a `.git/` executes on the next git
+ * gesture of a human, and a `.git/config` carries identifiers. Wherever it is on
+ * the disk, not just in the tower repository.
+ */
     it("refuse `.git/` PARTOUT, y compris dans un dépôt voisin", () => {
       for (const path of [
         `${REPO}/.git/hooks/pre-commit`,
@@ -499,25 +496,25 @@ describe("le chemin local (MIN-360)", () => {
     expect(local(ask({ permission: "edit", filepath: `${REPO}/lib/x.ts` }))).toEqual({
       reply: "once",
     });
-    // …et la microVM garde SA frontière : c'est le clone jetable, il n'y a
-    // qu'un dépôt, et rien n'y justifie d'ouvrir le disque.
+    // …and the microVM keeps ITS boundary: it is the disposable clone, there is no
+    // only a repository, and there is no reason to open the disk.
     expect(decide(ask({ permission: "edit", filepath: "/etc/passwd" })).reply).toBe("reject");
   });
 });
 
 /**
- * MIN-364 (lot 7, §5.5 de l'audit du 15/08) — LE CLIQUET DE VERSION.
+ * MIN-364 (batch 7, §5.5 of 08/15 audit) — THE VERSION CLICK.
  *
- * `default: reject` est la bonne POSTURE sur la machine de quelqu'un. Laissé
- * seul, il fait de chaque montée d'opencode un RETRAIT de capacité que personne
- * ne décide : `lsp`, `plan_enter`/`plan_exit`, `skill`, `doom_loop` étaient tous
- * refusés « par construction », et le seraient restés indéfiniment. Combiné à
- * `OPENCODE_DISABLE_LSP_DOWNLOAD`, ça voulait dire qu'on n'aurait JAMAIS les
- * diagnostics LSP recollés à l'édition — le mécanisme que la porte de livraison
- * cite elle-même comme la bonne forme.
+ * `default: reject` is the correct POSTURE on someone's machine. Left
+ * alone, it makes each opencode upgrade a WITHDRAWAL of capacity that no one
+ * decides: `lsp`, `plan_enter`/`plan_exit`, `skill`, `doom_loop` were all
+ * refused “by construction”, and would have remained so indefinitely. Combined with
+ * `OPENCODE_DISABLE_LSP_DOWNLOAD`, this meant that we would NEVER get the
+ * LSP diagnostics stuck to the release — the mechanism that the delivery gate
+ * itself cites as the correct form.
  *
- * Ce qui manquait n'était pas le refus, c'était le geste qui le lève. Ces tests
- * SONT ce geste : la relecture devient une étape de la montée de version.
+ * What was missing was not the refusal, it was the gesture that lifted it. These tests
+ * ARE this gesture: rereading becomes a step in the version upgrade.
  */
 describe("les permissions lues, et la montée de version qui les périme", () => {
   it("TOMBE dès qu'opencode monte de version, tant que la liste n'a pas été relue", () => {
@@ -532,9 +529,9 @@ describe("les permissions lues, et la montée de version qui les périme", () =>
   });
 
   it("traite VRAIMENT chaque permission qu'elle déclare connaître", () => {
-    // La liste ne doit pas pouvoir grossir sans que le `switch` grossisse avec :
-    // un nom déclaré mais non casé retomberait dans le `default`, c'est-à-dire
-    // refusé « parce qu'inconnu » tout en étant annoncé connu.
+    // The list must not be able to grow without the `switch` growing with:
+    // a name declared but not cased would fall into the `default`, i.e.
+    // refused “because unknown” while being announced known.
     for (const permission of KNOWN_PERMISSIONS) {
       const verdict = decidePermission(ask({ permission }), REPO, undefined, { local: true });
       expect(verdict.reason, permission).not.toBe(UNKNOWN_PERMISSION_REASON);
@@ -547,19 +544,18 @@ describe("les permissions lues, et la montée de version qui les périme", () =>
       const verdict = decidePermission(ask({ permission }), REPO, undefined, { local: true });
       expect(verdict.reply, permission).toBe("reject");
       expect(verdict.reason).toBe(UNKNOWN_PERMISSION_REASON);
-      // Et il NOMME la permission : c'est ce qui le rend réparable, et ce qui
-      // fait qu'une montée de version se voit dans `agent_run_events`.
+      // And he NAMES the permission: this is what makes it reparable, and what
+      // causes a version upgrade to be seen in `agent_run_events`.
       expect(verdict.message).toContain(permission);
     }
   });
 
   /**
-   * `doom_loop` est publié quand le modèle rejoue exactement le même appel de
-   * tool, plusieurs fois d'affilée. Le refus est le bon verdict — personne n'est
-   * devant l'écran pour arbitrer, et une boucle coûte un round à chaque tour —
-   * mais il doit DIRE ce qui se passe : « permission inconnue » n'aide pas à en
-   * sortir.
-   */
+ * `doom_loop` is released when the model replays the exact same
+ * tool call, several times in a row. Refusal is the correct verdict — no one is
+ * in front of the screen to judge, and a loop costs a round each turn —
+ * but he must TELL what's happening: "permission unknown" doesn't help to get out.
+ */
   it("coupe une boucle en disant que c'en est une", () => {
     const verdict = decidePermission(ask({ permission: "doom_loop" }), REPO, undefined, {
       local: true,

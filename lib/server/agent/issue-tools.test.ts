@@ -1,34 +1,34 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * Tools TICKET de l'agent de code. Deux couches sont testées ici :
- *  - MIN-111 : `read_resource` sur une maquette doit RENVOYER l'image, en data
- *    URL (l'URL signée expire en 10 min ; le checkpoint est rejoué bien plus tard),
- *    et se comporter exactement comme avant dès que l'une des trois conditions
- *    manque : modèle texte, format non montrable, fichier trop lourd.
- *  - MIN-125 : les tools visent n'importe quel ticket DU PROJET (`issue`), le
- *    ticket du run n'étant que la cible par défaut ; `update_issue` refuse les
- *    statuts ; `create_issue` atterrit sur le réglage de compte du lanceur.
+ * Code Agent Tools TICKET. Two layers are tested here:
+ * - MIN-111: `read_resource` on a model must RETURN the image, in data
+ * URL (the signed URL expires in 10 min; the checkpoint is replayed much later),
+ * and behave exactly as before as soon as one of the three conditions
+ * missing: text model, format not showable, file too large.
+ * - MIN-125: the tools target any ticket FROM THE PROJECT (`issue`), the
+ * ticket from the run being only the default target; `update_issue` refuses
+ * statuses; `create_issue` lands on the launcher's account setting.
  *
- * `resolveIssueRef` et `assertIssueInProject` sont les VRAIS (c'est l'épinglage au
- * projet qu'on veut vérifier) : seules les grosses lectures de `issue-reads.ts`
- * sont remplacées.
+ * `resolveIssueRef` and `assertIssueInProject` are the REAL ones (it's the pinning to the
+ * project we want to check): only the big readings of `issue-reads.ts`
+ * are replaced.
  */
 
 // ── Faux Supabase, par table ────────────────────────────────────────────────
-// `.select().eq()…maybeSingle()` — la seule forme qu'utilisent resolveIssueRef,
-// assertIssueInProject et la lecture d'une pièce jointe.
+// `.select().eq()…maybeSingle()` — the only form that resolveIssueRef uses,
+// assertIssueInProject and reading an attachment.
 
-// Vrais uuid : `anchorIssueId` est `agent_runs.issue_id`, et la résolution d'une
-// référence distingue un uuid d'un identifiant 'KEY-42' sur sa FORME.
+// True uuid: `anchorIssueId` is `agent_runs.issue_id`, and the resolution of a
+// reference distinguishes a uuid from a 'KEY-42' identifier on its FORM.
 const ANCHOR_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_ID = "77777777-7777-4777-8777-777777777777";
 const FOREIGN_ID = "22222222-2222-4222-8222-222222222222";
 
 const TRASHED_ID = "33333333-3333-4333-8333-333333333333";
 
-/** Le plan stocké du ticket d'ancrage — ce que lisent append_to_plan et
- *  edit_issue_text avant de patcher (MIN-186). */
+/** The stored plan of the anchor ticket — what append_to_plan and
+ * edit_issue_text read before patching (MIN-186). */
 const STORED_PLAN =
   "# Contexte\n\nLe plan de départ.\n\n## Tâches\n\n- [ ] Première tâche\n\n## Questions\n\n- [ ] Une question parquée\n";
 
@@ -42,7 +42,7 @@ const ISSUE_ROWS = [
   },
   { id: OTHER_ID, number: 7, project_id: "proj-1" },
   { id: FOREIGN_ID, number: 3, project_id: "proj-2" },
-  // MIN-133 : même projet, mais à la corbeille — l'agent ne doit pas le voir.
+  // MIN-133: same project, but in the trash — the agent should not see it.
   {
     id: TRASHED_ID,
     number: 9,
@@ -51,7 +51,7 @@ const ISSUE_ROWS = [
   },
 ];
 
-/** Objectifs du projet (MIN-287) — la cible de `objective` sur create/update. */
+/** Project Goals (MIN-287) — the target of `objective` on create/update. */
 const OBJECTIVE_ID = "44444444-4444-4444-8444-444444444444";
 const FOREIGN_OBJECTIVE_ID = "55555555-5555-4555-8555-555555555555";
 const OBJECTIVE_ROWS = [
@@ -85,8 +85,8 @@ vi.mock("@/lib/supabase-service", () => {
     return (
       rows.find((row) =>
         Object.entries(filters).every(
-          // `?? null` : une colonne absente de la ligne vaut null, pour que
-          // `.is("deleted_at", null)` retienne bien les lignes vivantes.
+          // `?? null`: a column absent from the row is null, so that
+          // `.is("deleted_at", null)` retains live lines well.
           ([column, value]) =>
             ((row as Record<string, unknown>)[column] ?? null) === value,
         ),
@@ -101,8 +101,8 @@ vi.mock("@/lib/supabase-service", () => {
       filters[column] = value;
       return query;
     };
-    // `.is("deleted_at", null)` — depuis MIN-133 toute lecture de ticket écarte
-    // les corbeillés ; le faux applique vraiment le filtre, sans quoi le test ne
+    // `.is("deleted_at", null)` — since MIN-133 any ticket reading discards
+    // the baskets; the false one really applies the filter, otherwise the test will not
     // dirait rien de ce que voit l'agent.
     query.is = (column: string, value: unknown) => {
       filters[column] = value;
@@ -124,7 +124,7 @@ vi.mock("@/lib/server/auth-users", () => ({
   toNamed: (u: unknown) => u,
 }));
 
-// `vi.mock` est hissé en tête de fichier : les espions doivent l'être aussi.
+// `vi.mock` is placed at the top of the file: the spies must be there too.
 const { getIssue, searchIssues, updateIssueFields, createIssueForProject } = vi.hoisted(
   () => ({
     getIssue: vi.fn(async () => ({
@@ -181,7 +181,7 @@ describe("read_resource sur une image", () => {
     expect(out.images).toHaveLength(1);
     expect(out.images![0].url).toBe(`data:image/png;base64,${Buffer.from("PNGBYTES").toString("base64")}`);
     expect(out.images![0].name).toBe("mockup.png");
-    // Les octets NE sont PAS dans `result` : il part en JSON dans l'event et le message.
+    // The bytes are NOT in `result`: it goes into JSON in the event and the message.
     expect(JSON.stringify(out.result)).not.toContain("base64");
     expect(JSON.stringify(out.result)).toContain("mockup.png");
   });
@@ -235,9 +235,9 @@ describe("read_resource sur une image", () => {
 });
 
 /**
- * MIN-125 : la pièce jointe est cadrée au PROJET du run, plus au seul ticket
- * d'ancrage — sinon les `resource_id` que `read_issue` renvoie sur un autre
- * ticket ne seraient ouvrables par rien.
+ * MIN-125: the attachment is framed to the PROJECT of the run, no longer to the only anchor ticket
+ * - otherwise the `resource_id` that `read_issue` returns on another
+ * ticket would not be openable by anything.
  */
 describe("read_resource — périmètre projet", () => {
   it("ouvre une pièce d'un AUTRE ticket du même projet", async () => {
@@ -256,10 +256,10 @@ describe("read_resource — périmètre projet", () => {
 });
 
 /**
- * MIN-275 : une ressource peut être une PAGE du wiki. Elle n'a ni octets ni
- * adresse — ce que `read_resource` en rend, c'est de quoi ouvrir le document
- * avec `read_page`, et surtout le titre VIVANT (une page renommée ne doit pas
- * revenir sous son ancien nom, qui n'est plus dans aucune sidebar).
+ * MIN-275: A resource can be a wiki PAGE. It has neither bytes nor
+ * address - what `read_resource` renders is enough to open the document
+ * with `read_page`, and especially the title LIVING (a renamed page must not
+ * return under its old name, which is no longer in any sidebar).
  */
 describe("read_resource sur une page du wiki", () => {
   const pageRow = (over: Record<string, unknown> = {}) => ({
@@ -293,7 +293,7 @@ describe("read_resource sur une page du wiki", () => {
       title: "Spécification des pages",
       read_with: "read_page",
     });
-    // Aucune URL signée : il n'y a pas d'objet dans le bucket.
+    // No signed URL: there is no object in the bucket.
     expect(JSON.stringify(out.result)).not.toContain("download_url");
   });
 
@@ -393,8 +393,8 @@ describe("read_issue — cible par défaut et ciblage explicite", () => {
     expect(getIssue).not.toHaveBeenCalled();
   });
 
-  // MIN-133 — un ticket à la corbeille est, pour l'agent, un ticket qui
-  // n'existe pas : il n'a plus à le lire, encore moins à travailler dessus.
+  // MIN-133 — a ticket in the trash does not exist for the agent:
+  // it no longer has to read it, much less work on it.
   it("ne résout pas un ticket mis à la corbeille", async () => {
     const out = await executeIssueTool(ctx(), "read_issue", { issue: "MIN-9" });
     expect(out.success).toBe(false);
@@ -433,10 +433,10 @@ describe("create_issue — le statut d'atterrissage vient du compte du lanceur",
 });
 
 /**
- * MIN-287 — le RATTACHEMENT à un objectif. Un ticket créé ou modifié sans
- * objectif est hors de toute barre de progression et hors du remplissage de
- * cycle : c'est ce trou-là que ces trois cas ferment, aux deux portes d'écriture
- * et dans la lecture.
+ * MIN-287 — ATTACHMENT to a goal. A ticket created or modified without
+ * objective is outside of any progress bar and outside the filling of
+ * cycle: it is this hole that these three cases close, at the two write gates
+ * and in reading.
  */
 describe("objectif d'un ticket", () => {
   it("create_issue rattache le ticket à l'objectif visé", async () => {
@@ -542,13 +542,13 @@ describe("write_issue_plan — ciblable", () => {
 });
 
 /**
- * MIN-186 : l'agent de code ne pouvait toucher au plan qu'en le RÉÉMETTANT
- * (`write_issue_plan`), ce qui détruit en silence les états de tâches et ce
- * qu'un autre a écrit entre-temps. Ces deux tools écrivent chirurgicalement,
- * sur le même cœur que le MCP et Numo.
+ * MIN-186: The code agent could only touch the plan by REISSUEING
+ * (`write_issue_plan`), which silently destroys the task states and this
+ * that someone else wrote in the meantime. These two tools surgically write,
+ * on the same core as the MCP and Numo.
  */
-/** Le champ écrit par le DERNIER appel à updateIssueFields. Les espions hissés
- *  n'ont pas de signature typée : on la rend ici, une fois. */
+/** The field written by the LAST call to updateIssueFields. Hoisted spies
+ * do not have a typed signature: we return it here, once. */
 const lastWrite = (): Record<string, unknown> => {
   const calls = updateIssueFields.mock.calls as unknown as Array<
     [{ input: Record<string, unknown> }]
@@ -568,7 +568,7 @@ describe("append_to_plan — faire grossir un plan sans le réémettre", () => {
     expect(written.indexOf("Deuxième tâche")).toBeLessThan(
       written.indexOf("## Questions"),
     );
-    // Les index rendus sont ceux que le modèle réutilisera juste après.
+    // The indexes returned are those that the model will reuse immediately afterwards.
     expect(out.result).toMatchObject({
       identifier: "MIN-42",
       plan_progress: { done: 0, total: 2 },
@@ -581,7 +581,7 @@ describe("append_to_plan — faire grossir un plan sans le réémettre", () => {
       section: "Questions",
     });
     expect(parked.success).toBe(true);
-    // Une question n'est pas du travail : le total ne bouge pas.
+    // A question is not work: the total does not change.
     expect(parked.result).toMatchObject({ plan_progress: { done: 0, total: 1 } });
 
     updateIssueFields.mockClear();
@@ -599,7 +599,7 @@ describe("append_to_plan — faire grossir un plan sans le réémettre", () => {
       issue: "7",
       markdown: "- [ ] Sur l'autre ticket",
     });
-    // MIN-7 n'a pas de plan stocké : le bloc devient le plan.
+    // MIN-7 has no stored plan: the block becomes the plan.
     expect(out.success).toBe(true);
     expect(updateIssueFields).toHaveBeenCalledWith(
       expect.objectContaining({ issueId: OTHER_ID }),
@@ -643,8 +643,8 @@ describe("edit_issue_text — corriger un passage en place", () => {
     });
     expect(out.success).toBe(false);
     expect(updateIssueFields).not.toHaveBeenCalled();
-    // Et le message renvoie vers la relecture, jamais vers un fichier.
-    // Et le message nomme les tools DE L'AGENT, pas ceux du MCP.
+    // And the message refers to rereading, never to a file.
+    // And the message names the AGENT tools, not the MCP ones.
     const error = String((out.result as { error: string }).error);
     expect(error).toContain("read_issue");
     expect(error).not.toMatch(/write_file|minddy_/);
@@ -663,12 +663,12 @@ describe("edit_issue_text — corriger un passage en place", () => {
 });
 
 /**
- * MIN-247 — UNE PIÈCE JOINTE TEXTE NE PERD PLUS SA FIN.
+ * MIN-247 — A TEXT ATTACHMENT NO LONGER LOSE ITS END.
  *
- * La coupe se faisait par la TÊTE : sur un log, une trace ou un export — ce
- * qu'on dépose presque toujours sur un ticket — c'est la fin qui porte le
- * verdict. C'est exactement le défaut que MIN-107 avait nommé pour `run_command`
- * et qui n'avait jamais été porté ici.
+ * The cut was done by the HEAD: on a log, a trace or an export — this
+ * which is almost always placed on a ticket — it is the end which carries the
+ * verdict. This is exactly the default that MIN-107 named for `run_command`
+ * and which was never ported here.
  */
 describe("read_resource sur un texte trop long", () => {
   it("garde le DÉBUT et la FIN, et dit que c'est le milieu qui manque", async () => {
@@ -688,7 +688,7 @@ describe("read_resource sur un texte trop long", () => {
     expect(result.content).toContain("DERNIÈRE LIGNE");
     expect(result.content).toContain("chars elided");
     expect(result.content_note).toContain("MIDDLE");
-    // Et le chemin du fichier entier reste dit : l'URL signée, puis read_file.
+    // And the path of the entire file remains: the signed URL, then read_file.
     expect(result.content_note).toContain("read_file");
   });
 
@@ -709,11 +709,11 @@ describe("read_resource sur un texte trop long", () => {
 });
 
 /**
- * LE TROU QUE MIN-287 A TROUVÉ AU PASSAGE : `search_pages` était servi au modèle
- * et routé vers `executeIssueTool` par `ISSUE_TOOL_NAMES`, mais absent de son
- * `switch` — chaque appel repartait en « Unknown issue tool ». Un tool servi et
- * non routé ne se voit dans aucun test de schéma ni dans aucun test d'exécuteur :
- * la faute n'existe qu'ENTRE les deux tables. D'où ce cas, qui les confronte.
+ * THE HOLE THAT MIN-287 FOUND IN PASSING: `search_pages` was served to model
+ * and routed to `executeIssueTool` by `ISSUE_TOOL_NAMES`, but missing from its
+ * `switch` — every call went back to “Unknown issue tool”. An unrouted tool served and
+ * is not seen in any schema test or in any executor test:
+ * the fault only exists BETWEEN the two tables. Hence this case, which confronts them.
  */
 describe("routage — tout nom servi est un nom exécuté", () => {
   it("chaque nom d'ISSUE_TOOL_NAMES a sa branche dans executeIssueTool", async () => {

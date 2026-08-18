@@ -42,13 +42,13 @@ describe("launchPromptVariantForMode", () => {
     expect(launchPromptVariantForMode("verify", issue, true)).toBe(
       "chainVerifyImplementation",
     );
-    // « Vérifier le plan » = mode `plan` sur un ticket qui en a déjà un.
+    // “Check plan” = `plan` mode on a ticket that already has one.
     expect(launchPromptVariantForMode("plan", planned, true)).toBe("chainVerifyPlan");
   });
 
   it("dans une chaîne : ÉCRIRE un plan et IMPLÉMENTER ne changent pas", () => {
-    // Rien à juger sur un plan qu'on vient d'écrire, ni sur du code qu'on vient
-    // de poser : le verdict est le geste de la vérification, pas du travail.
+    // Nothing to judge on a plan that we have just written, nor on the code that we have just
+    // to ask: the verdict is the gesture of verification, not of work.
     expect(launchPromptVariantForMode("plan", issue, true)).toBe("writePlan");
     expect(launchPromptVariantForMode("implement", planned, true)).toBe("planExists");
   });

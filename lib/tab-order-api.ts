@@ -23,9 +23,9 @@ export async function saveTabOrderApi(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ scope, keys }),
   });
-  // Message technique : la route ne renvoie que des erreurs de validation
-  // (inatteignables depuis l'UI) ou un message de base. Ce que l'utilisateur
-  // voit est traduit par l'appelant (ApiErrors.tabOrderSaveFailed).
+  // Technical message: the route only returns validation errors
+  // (unreachable from the UI) or a basic message. What the user
+  // see is translated by the caller (ApiErrors.tabOrderSaveFailed).
   if (!res.ok) {
     const data = (await res.json().catch(() => null)) as { error?: string } | null;
     throw new Error(data?.error || `tab-order save failed (${res.status})`);

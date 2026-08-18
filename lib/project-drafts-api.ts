@@ -9,8 +9,8 @@ import {
 } from "./project-draft";
 
 /**
- * Les allers-retours réseau des brouillons de création de projet. La FORME du
- * brouillon et sa relecture défensive sont dans lib/project-draft.ts.
+ * Network round trips of project creation drafts. The FORM of the
+ * draft and its defensive proofreading are in lib/project-draft.ts.
  */
 
 async function parseJson<T>(response: Response): Promise<T> {
@@ -40,10 +40,10 @@ export async function fetchProjectDraftsApi(): Promise<ProjectDraft[]> {
 }
 
 /**
- * Pose ou remplace un brouillon. L'icône est le seul champ gras (une data URL
- * WebP) : si le brouillon dépassait le plafond de la route, on l'envoie SANS
- * elle plutôt que de perdre la saisie — le reste tient toujours dans quelques
- * centaines d'octets.
+ * Posts or replaces a draft. The icon is the only bold field (a data URL
+ * WebP): if the draft exceeded the ceiling of the route, we send it WITHOUT
+ * it rather than losing the entry — the rest always fits in a few
+ * hundreds of bytes.
  */
 export async function saveProjectDraftApi(
   draft: ProjectDraftInput

@@ -29,7 +29,7 @@ import { isManagedAiEnabled } from "@/lib/managed-services";
 
 export type AiKeyMode = "platform" | "byok";
 
-/** Aucun repli plateforme hors service IA explicitement opéré par minddy. */
+/** No platform fallback outside AI service explicitly operated by minddy. */
 export class ManagedAiUnavailableError extends Error {
   constructor() {
     super("Managed AI is not configured. Configure BYOK or enable MINDDY_MANAGED_AI.");
@@ -37,7 +37,7 @@ export class ManagedAiUnavailableError extends Error {
   }
 }
 
-/** Tout ce qu'un appel IA doit savoir, résolu en un seul endroit. */
+/** Everything an AI caller needs to know, solved in one place. */
 export interface ResolvedAiRuntime {
   apiKey: string;
   mode: AiKeyMode;
@@ -61,12 +61,12 @@ async function providerDefaultModel(
   const configured = values[featureKey]?.trim();
   if (configured) return configured;
 
-  // Compatibilité avec les réglages BYOK historiques de l'agent.
+  // Compatibility with historical agent BYOK settings.
   if (modelKey === "agent_model") return (await resolveProviderDefaultModel(provider)) ?? null;
   const registryFallback = aiModelFallback(featureKey).trim();
   if (registryFallback) return registryFallback;
-  // Aucun endpoint natif équivalent chez Anthropic ; sans choix admin explicite,
-  // ces appels restent sur Minddy au lieu d'envoyer un modèle manifestement faux.
+  // No equivalent native endpoint at Anthropic; without explicit admin choice,
+  // these calls stay on Minddy instead of sending an obviously false model.
   if (modelKey === "transcription_model" && provider !== "openai") return null;
   if (modelKey === "feedback_embedding_model" && provider === "anthropic") return null;
   if (provider === "generic") return null;
@@ -76,7 +76,7 @@ async function providerDefaultModel(
   return getAgentProvider(provider)?.defaultModel?.trim() || null;
 }
 
-/** Défaut affichable d'un provider pour un type d'appel, sans lire de clé user. */
+/** Displayable fault of a provider for a type of call, without reading a user key. */
 export async function resolveByokFeatureDefaultModel(
   provider: AgentProviderId,
   modelKey: ByokModelKey,
@@ -87,15 +87,15 @@ export async function resolveByokFeatureDefaultModel(
 }
 
 /**
- * Résout provider + clé + modèle pour un appel imputé à un user. Une surface
- * décochée retombe intégralement sur Minddy. OpenRouter BYOK reprend le modèle
- * plateforme du même type ; les providers natifs prennent d'abord le choix du
- * compte, puis le défaut admin/provider.
+ * Resolves provider + key + model for a call attributed to a user. A surface
+ * unchecked falls entirely on Minddy. OpenRouter BYOK takes over the model
+ * platform of the same type; native providers first take the choice of
+ * account, then the default admin/provider.
  */
 export async function resolveAiRuntime(params: {
   userId: string;
   modelKey: ByokModelKey;
-  /** À préciser seulement si un appel appartient à une autre surface que son modèle (feedback voice). */
+  /** To be specified only if a call belongs to a surface other than its model (feedback voice). */
   surface?: AiSurface;
 }): Promise<ResolvedAiRuntime> {
   const surface = params.surface ?? surfaceForModelKey(params.modelKey);
@@ -111,8 +111,8 @@ export async function resolveAiRuntime(params: {
       (byok.provider === "openrouter"
         ? rootModel
         : await providerDefaultModel(byok.provider, params.modelKey));
-    // Un endpoint générique sans modèle fiable ne peut pas recevoir un id
-    // OpenRouter au hasard : on garde la feature sur le quota jusqu'au choix.
+    // A generic endpoint without a reliable model cannot receive an id
+    // OpenRouter at random: we keep the feature on the quota until the choice.
     if (model) {
       return {
         apiKey: byok.apiKey,
@@ -167,12 +167,12 @@ async function retryRejectedChatRequest(
 }
 
 /**
- * Fetch chat OpenAI-compatible, avec les particularités du provider résolu.
+ * Fetch chat OpenAI-compatible, with the particularities of the provider resolved.
  *
- * Les profils choisissent le contrat documenté. Deux 400 seulement sont
- * réparables sans ambiguïté : un alias de plafond explicitement rejeté, et le
- * couple GPT-5.6 function tools + raisonnement explicitement refusé par Chat
- * Completions. Aucun autre 400 n'est rejoué.
+ * Profiles choose the documented contract. Only two 400s are
+ * unambiguously repairable: an explicitly rejected ceiling alias, and the
+ * couple GPT-5.6 function tools + reasoning explicitly refused by Chat
+ * Completions. No other 400 is replayed.
  */
 export async function fetchAiChat(
   runtime: ResolvedAiRuntime,

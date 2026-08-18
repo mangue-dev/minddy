@@ -18,119 +18,113 @@ import { decodeJwtPayload, needsMfaChallenge } from "@/lib/mfa";
 import { createCookieSink, SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
 
 /**
- * Next 16 middleware (named `proxy`). Il fait quatre choses : router les
- * domaines personnalisés, résoudre la langue des URLs publiques, garder les
- * routes de l'app derrière une session, et tenir les crawlers hors de ce qui
- * ne les regarde pas.
+ * Next 16 middleware (named `proxy`). It does four things: route custom domains, resolve the language of public URLs, keep app routes behind a session, and keep crawlers out of anything that doesn't look at them.
  *
- * Ce qui exige une session vit dans `lib/protected-prefixes.ts` (liste NOIRE) :
- * tout ce qui n'y est pas tombe dans le rendu Next, et donc en 404 s'il n'y a
- * pas de route. Voir ce fichier pour le pourquoi de l'inversion.
+ * What requires a session lives in `lib/protected-prefixes.ts` (BLACK list):
+ * everything that is not there falls into the Next rendering, and therefore in 404 if there is
+ * no route. See this file for the reason for the inversion.
  *
- * API mises à part : `/api/` s'authentifie tout seul (401 JSON, jamais une
- * redirection HTML vers /login), donc le matcher l'exclut.
+ * API aside: `/api/` authenticates on its own (401 JSON, never a
+ * HTML redirect to /login), so the matcher excludes it.
  */
 
 /**
- * Routes publiques hors du site marketing : elles n'ont pas de version
- * localisée et ne portent pas de contenu indexable.
+ * Public routes outside the marketing site: they do not have a localized version
+ * and do not carry indexable content.
  *
- * `/icon` = favicon généré (app/icon.tsx). Contrairement aux fichiers d'icônes
- * statiques il n'a pas d'extension, donc le matcher ne l'exclut pas.
- * `/manifest.json` : le fetch d'un manifest n'envoie JAMAIS les cookies, donc
- * sans whitelist il partait vers /login et le navigateur loggait
- * « Manifest: Syntax error » sur toutes les pages.
+ * `/icon` = generated favicon (app/icon.tsx). Unlike static icon files
+ * it has no extension, so the matcher does not exclude it.
+ * `/manifest.json`: the fetch of a manifest NEVER sends cookies, so
+ * without whitelist it went to /login and the browser logged
+ * “Manifest: Syntax error” on all pages.
  */
 const PUBLIC_ROUTES = new Set([
   "/login",
-  // `/signup` est une vraie page depuis MIN-300 (le wizard d'inscription) : il
-  // lui faut sa ligne ici, sans quoi le proxy renverrait vers `/login` la
-  // personne qui vient précisément créer son compte.
+  // `/signup` is a real page from MIN-300 (the registration wizard): it
+  // it needs its line here, otherwise the proxy would send to `/login` the
+  // person who specifically comes to create their account.
   "/signup",
-  // `/feedback` (app/feedback/route.ts) pré-identifie l'utilisateur connecté
-  // puis redirige vers le board public ; déconnecté, elle redirige sans SSO.
-  // Elle sait donc gérer les deux cas — la protéger la cassait pour le second.
+  // `/feedback` (app/feedback/route.ts) pre-identifies the logged in user
+  // then redirect to the public board; disconnected, it redirects without SSO.
+  // So she knows how to handle both cases — protecting her broke her for the second.
   "/feedback",
-  // `/desktop/return` (app/desktop/return/route.ts) rebondit le navigateur
-  // système vers `minddy://` après un détour par Stripe. Le navigateur qui en
-  // revient n'est pas forcément celui où l'on est connecté, et la page ne porte
-  // rien de personnel — la protéger la casserait pour tout le monde.
+  // `/desktop/return` (app/desktop/return/route.ts) bounces browser
+  // system to `minddy://` after a detour via Stripe. The browser that
+  // returns is not necessarily the one where you are connected, and the page does not carry
+  // nothing personal — protecting her would break her for everyone.
   "/desktop/return",
   "/favicon.ico",
   "/icon",
   "/manifest.json",
   "/robots.txt",
   "/sitemap.xml",
-  // Guide d'intégration MCP pour les assistants de code (MIN-88).
+  // MCP Integration Guide for Code Wizards (MIN-88).
   "/llms.txt",
   "/llms-full.txt",
 ]);
 
 /**
- * `/.well-known/` = découverte OAuth (RFC 8414/9728) et carte MCP, forcément
- * accessibles sans session. `/share/` = liens publics de vues (MIN-26) — la
- * page valide elle-même le token. `/f/` = boards publics de feedback (MIN-37).
- * `/og` = la vignette de partage (app/og/route.tsx) : sans elle, Slack, X et
- * les moteurs recevraient une redirection vers /login au lieu de l'image.
- * `/p/` = pages du wiki publiées en lecture (MIN-283) — la route valide son
- * token elle-même, exactement comme `/share/`.
+ * `/.well-known/` = OAuth discovery (RFC 8414/9728) and MCP card, necessarily
+ * accessible without session. `/share/` = public view links (MIN-26) — the
+ * page validates the token itself. `/f/` = public feedback boards (MIN-37).
+ * `/og` = the sharing tile (app/og/route.tsx): without it, Slack, `/p/` = wiki pages published for reading (MIN-283) — the route validates its
+ * token itself, just like `/share/`.
  */
 const PUBLIC_PREFIXES = ["/auth/", "/_next/", "/.well-known/", "/share/", "/f/", "/p/", "/og", "/md"];
 
-/** Publiques mais hors index : l'URL EST le secret, ou il n'y a rien à indexer.
-    `/p/` en est (MIN-283) : publier une page n'est pas la rendre trouvable sur
-    Google, et ce n'est pas une option — ni ici, ni dans le dialogue. */
+/** Public but not indexed: the URL IS the secret, or there is nothing to index.
+ `/p/` is (MIN-283): publishing a page does not make it findable on
+ Google, and it is not an option — neither here nor in the dialog. */
 const NOINDEX_PREFIXES = ["/share/", "/f/", "/p/"];
 
-// Domaines personnalisés (MIN-36) : chemins servis tels quels sur un host
-// custom. `/f/` + `/share/` = navigation croisée par token (onglets du site
+// Custom domains (MIN-36): paths served as is on a host
+//custom. `/f/` + `/share/` = cross-navigation by token (site tabs
 // public) ; `/icon`, `/favicon.ico`, `/manifest.json` = routes/fichiers de
-// métadonnées qui seraient sinon réécrits vers /f/<token>/icon → 404.
+// metadata that would otherwise be rewritten to /f/<token>/icon → 404.
 const CUSTOM_HOST_PASS_PREFIXES = ["/f/", "/share/", "/p/", "/api/", "/auth/", "/_next/", "/.well-known/"];
 const CUSTOM_HOST_PASS_ROUTES = new Set(["/favicon.ico", "/icon", "/manifest.json"]);
 
-// Parmi ces préfixes passants, ceux dont le premier segment est un TOKEN, donc
-// désigne un contenu appartenant à un locataire (MIN-337). Sur le domaine d'un
-// client, seuls les tokens de SON projet passent : les autres sont des contenus
-// étrangers, servis sous son nom et derrière son certificat.
+// Among these passing prefixes, those whose first segment is a TOKEN, therefore
+// denotes content owned by a tenant (MIN-337). On the domain of a
+// client, only the tokens from HIS project pass: the others are content
+// foreigners, served under his name and behind his certificate.
 const CUSTOM_HOST_TOKEN_PREFIXES: ReadonlyArray<{ prefix: string; kind: PublicTokenKind }> = [
   { prefix: "/f/", kind: "feedback" },
   { prefix: "/share/", kind: "share" },
   { prefix: "/p/", kind: "page" },
 ];
 
-// Pages publiques anonymes (board de feedback /f/, vues partagées /share/, site
-// marketing et pages légales) : on tague la requête pour que le root layout
-// bascule le thème par défaut sur "system" au lieu de "dark" (MIN-60). Le header
-// étant posé côté serveur, le script anti-FOUC du layout choisit le bon défaut
-// dès le premier paint.
+// Anonymous public pages (feedback board /f/, shared views /share/, site
+// marketing and legal pages): we tag the request so that the root layout
+// switch the default theme to "system" instead of "dark" (MIN-60). The header
+// being placed on the server side, the anti-FOUC script of the layout chooses the correct default
+// from the first paint.
 const PUBLIC_SITE_PREFIXES = ["/f/", "/share/", "/p/"];
 const PUBLIC_THEME_HEADER = "x-minddy-public";
 const LOCALE_HEADER = "x-minddy-locale";
 const ROUTE_HEADER = "x-minddy-route";
 
-/** Le préfixe de tous les en-têtes que CE fichier pose, et que lui seul pose. */
+/** The prefix of all headers that THIS file sets, and that only it sets. */
 const TRUST_HEADER_PREFIX = "x-minddy-";
 
 /**
- * Réécrit les en-têtes de la REQUÊTE (ce que lisent le layout et next-intl).
+ * Rewrites the REQUEST headers (what the layout and next-intl read).
  *
- * Tout `x-minddy-*` ENTRANT part d'abord (MIN-351). Ces en-têtes sont des
- * affirmations du proxy — « cette page est publique », « la langue de cette URL
- * est le français » — et le layout les croit sur parole. Rien n'empêche un
- * client de les envoyer lui-même : `curl -H 'x-minddy-public: 1'` sur une page
- * de l'app, et le rendu bascule sur le décor du site public. On efface avant
- * d'écrire, sur CHAQUE chemin qui rend, y compris ceux qui n'ajoutent rien —
- * ne pas poser d'en-tête n'est pas la même chose que ne pas en avoir.
+ * Any INCOMING `x-minddy-*` leaves first (MIN-351). These headers are proxy assertions — “this page is public,” “the language of this URL
+ * is French” — and the layout takes them at their word. Nothing prevents a
+ * client from sending them itself: `curl -H 'x-minddy-public: 1'` on a page
+ * of the app, and the rendering switches to the setting of the public site. We delete before
+ * writing, on EVERY path that renders, including those which add nothing —
+ * not setting a header is not the same as not having one.
  */
 function withRequestHeaders(
   request: NextRequest,
   extra: Record<string, string> = {},
 ): { request: { headers: Headers } } {
   const headers = new Headers(request.headers);
-  // Le spread n'est PAS superflu : `headers.delete()` mute la collection qu'on
-  // itère. Sans la copie, l'itérateur saute des en-têtes — et ceux qu'il saute
-  // sont précisément ceux qu'on voulait retirer.
+  // The spread is NOT superfluous: `headers.delete()` mutates the collection we
+  // iterate. Without the copy, the iterator skips headers — and which ones it skips
+  // are precisely the ones we wanted to remove.
   // oxlint-disable-next-line unicorn/no-useless-spread
   for (const name of [...headers.keys()]) {
     if (name.toLowerCase().startsWith(TRUST_HEADER_PREFIX)) headers.delete(name);
@@ -139,7 +133,7 @@ function withRequestHeaders(
   return { request: { headers } };
 }
 
-/** `NextResponse.next()` avec les en-têtes de confiance nettoyés. */
+/** `NextResponse.next()` with trusted headers cleaned. */
 function nextClean(request: NextRequest, extra: Record<string, string> = {}): NextResponse {
   return NextResponse.next(withRequestHeaders(request, extra));
 }
@@ -154,35 +148,35 @@ function hasPrefix(pathname: string, prefixes: readonly string[]): boolean {
 }
 
 /**
- * Rien de ce qui sort d'un domaine client ne va dans un cache partagé (MIN-337).
+ * Nothing that leaves a client domain goes into a shared cache (MIN-337).
  *
- * Ces pages sont personnalisées par cookie — l'identité de l'utilisateur final
- * du board, son déverrouillage de vue partagée — et le `/` d'un domaine custom
- * tombait sous l'en-tête de cache CDN posé sur `/` pour la landing, sans
- * `Vary` : le CDN pouvait servir à un visiteur la page d'un autre. La cause est
- * traitée en amont (les en-têtes de `next.config.mjs` sont désormais bornés aux
- * hosts primaires) ; ceci est la ceinture, posée sur le seul chemin par lequel
- * passe TOUTE requête d'un domaine client.
+ * These pages are personalized by cookie — the identity of the end user
+ * of the board, its shared view unlock — and the `/` of a domain custom
+ * fell under the CDN cache header placed on `/` for the landing, without
+ * `Vary`: the CDN could serve another visitor's page to one visitor. The cause is
+ * handled upstream (`next.config.mjs` headers are now limited to
+ * primary hosts); this is the belt, placed on the only path through which
+ * passes ANY request from a client domain.
  */
 function noSharedCache(response: NextResponse): NextResponse {
   response.headers.set("Cache-Control", "private, no-store");
-  // L'en-tête que le CDN de Vercel lit en priorité, et que Next n'écrase jamais
-  // (voir le long commentaire de next.config.mjs, qui porte la mesure).
+  // The header that the Vercel CDN reads as a priority, and that Next never overwrites
+  // (see the long comment of next.config.mjs, which covers the measurement).
   response.headers.set("Vercel-CDN-Cache-Control", "no-store");
   return response;
 }
 
 /**
- * Le chemin demandé désigne-t-il le contenu d'un AUTRE locataire ? (MIN-337)
+ * Does the requested path point to content from ANOTHER tenant? (MIN-337)
  *
- * `/f/`, `/share/` et `/p/` sont passants sur un domaine client — le board a
- * besoin de `/f/<son token>/…` pour ses onglets, et une vue partagée peut être
- * ouverte depuis un board. Mais le token est un identifiant global : sans ce
- * contrôle, `feedback.acme.com/f/<token d'un concurrent>` rendait le board du
- * concurrent, sous le nom d'Acme.
+ * `/f/`, `/share/` and `/p/` are passing on a client domain — the board has
+ * needs `/f/<son token>/…` for its tabs, and a shared view can be
+ * opened from a board. But the token is a global identifier: without this
+ * control, `feedback.acme.com/f/<token d'un concurrent>` made the board of the
+ * competitor, under the name of Acme.
  *
- * `false` sur un chemin sans token (`/_next/`, `/favicon.ico`…) : rien à
- * rattacher à un locataire, rien à refuser.
+ * `false` on a path without token (`/_next/`, `/favicon.ico`…): nothing to
+ * to attach to a tenant, nothing to refuse.
  */
 async function isForeignTenantPath(
   pathname: string,
@@ -195,27 +189,26 @@ async function isForeignTenantPath(
   if (!token) return true;
 
   const projectId = await lookupTokenProject(match.kind, token);
-  // Token inconnu : 404 ici plutôt qu'un rendu qui 404era plus loin — et pas de
-  // différence observable entre « n'existe pas » et « appartient à un autre ».
+  // Unknown token: 404 here rather than a rendering which will be 404 later — and no
+  // observable difference between “does not exist” and “belongs to another”.
   return projectId !== target.projectId;
 }
 
 /**
- * Host custom → réécriture vers la page publique mappée (board de feedback ou
- * vue partagée) : `/` devient `/f/<token>` (resp. `/share/<token>`), les
- * sous-chemins sont préfixés (`/p/123` → `/f/<token>/p/123`), la query string
- * est préservée. Host inconnu, ou domaine dont la propriété n'est pas encore
- * vérifiée → 404 texte. Jamais d'auth Supabase ici : un domaine client ne
- * sert que du public.
+ * Host custom → rewrite to the mapped public page (feedback board or
+ * shared view): `/` becomes `/f/<token>` (resp. `/share/<token>`), the
+ * subpaths are prefixed (`/p/123`) → `/f/<token>/p/123`), the query string
+ * is preserved. Unknown host, or domain whose ownership is not yet
+ * verified → 404 text. Never Supabase auth here: a client domain only serves the public.
  */
 async function proxyCustomHost(request: NextRequest, host: string): Promise<NextResponse> {
   const pathname = request.nextUrl.pathname;
 
-  // Crawl d'un domaine client (MIN-88). Sans cette branche, `/robots.txt` était
-  // réécrit en `/f/<token>/robots.txt` — une route qui n'existe pas, donc un
-  // 404 en guise de robots.txt : le crawler en déduit « tout est autorisé » et
-  // indexe le board sous le domaine du client. Les boards restent hors index
-  // (décision de cadrage), donc on répond explicitement.
+  // Crawl a client domain (MIN-88). Without this branch, `/robots.txt` was
+  // rewritten as `/f/<token>/robots.txt` — a route that does not exist, therefore a
+  // 404 as robots.txt: the crawler deduces “everything is authorized” and
+  // indexes the board under the client's domain. Boards remain off-index
+  // (framing decision), so we respond explicitly.
   if (pathname === "/robots.txt") {
     return noSharedCache(
       new NextResponse("User-agent: *\nDisallow: /\n", {
@@ -223,16 +216,16 @@ async function proxyCustomHost(request: NextRequest, host: string): Promise<Next
       }),
     );
   }
-  // Un domaine client n'a pas de sitemap : 404 franc plutôt que la réécriture
-  // vers une route inexistante, qui produisait le même code mais en HTML.
+  // A client domain does not have a sitemap: 404 franc rather than rewriting
+  // to a non-existent route, which produced the same code but in HTML.
   if (pathname === "/sitemap.xml") {
     return noSharedCache(new NextResponse("Not found", { status: 404 }));
   }
 
-  // Le mapping est résolu AVANT les chemins passants : c'est lui qui nomme le
-  // locataire du domaine, et donc ce que les préfixes à token ont le droit de
-  // servir. Un host sans mapping vérifié ne sert plus rien du tout, assets
-  // compris — il n'y a aucune page à laquelle ils appartiendraient.
+  // The mapping is resolved BEFORE the passing paths: it is he who names the
+  // tenant of the domain, and therefore what token prefixes have the right to
+  // serve. A host without verified mapping is no longer useful at all, assets
+  // understood — there is no page they belong on.
   const target = await lookupCustomDomain(host);
   if (!target) return noSharedCache(new NextResponse("Unknown domain", { status: 404 }));
 
@@ -243,8 +236,8 @@ async function proxyCustomHost(request: NextRequest, host: string): Promise<Next
     if (await isForeignTenantPath(pathname, target)) {
       return noSharedCache(new NextResponse("Not found", { status: 404 }));
     }
-    // Un host custom ne sert que du public → thème "system" (MIN-60). Inoffensif
-    // sur /api, /_next… qui ne rendent pas le layout thémé.
+    // A custom host only serves the public → “system” theme (MIN-60). Harmless
+    // on /api, /_next… which do not render the themed layout.
     return noSharedCache(
       NextResponse.next(withRequestHeaders(request, { [PUBLIC_THEME_HEADER]: "1" })),
     );
@@ -267,24 +260,22 @@ function isSupabaseGetSessionWarning(args: unknown[]): boolean {
 }
 
 /**
- * Session courante lue depuis les cookies. `getSession()` ne vérifie pas la
- * signature du JWT : il ne sert ici qu'au routage et au renouvellement des
- * cookies, jamais à autoriser une donnée. Les handlers vérifient l'identité
- * avec `getClaims()` ou leur garde dédiée.
+ * Current session read from cookies. `getSession()` does not check the
+ * signature of the JWT: it is only used here for the routing and renewal of
+ * cookies, never to authorize any data. Handlers verify the identity
+ * with `getClaims()` or their dedicated guard.
  *
- * ## Elle ÉCRIT, et c'est tout l'objet du `sink` (MIN-293)
+ * ## She WRITES, and that's the whole point of `sink` (MIN-293)
  *
- * Lire une session peut la renouveler : jeton d'accès expiré, GoTrue rend un
- * couple neuf et **fait tourner** le jeton de rafraîchissement au passage.
- * L'adaptateur d'ici avait un `setAll` vide — il DÉPENSAIT le jeton et jetait le
- * couple neuf. Le navigateur gardait l'ancien, et le rafraîchissement suivant
- * échouait en `refresh_token_not_found` : la déconnexion silencieuse, corrigée
- * côté routes et restée vivante ici.
+ * Read a session can renew it: expired access token, GoTrue returns a new pair and **spins** the refresh token as it passes.
+ * The adapter here had an empty `setAll` — it SPENT the token and threw away the new pair. The browser kept the old one, and the next refresh
+ * failed in `refresh_token_not_found`: silent disconnect, fixed
+ * on the roads side and remained alive here.
  *
- * Les deux appelants sont des pages PUBLIQUES (`/`, `/login`, `/signup`) : la
- * branche « routes de l'app », plus bas, a son propre client qui écrit déjà.
- * D'où l'obligation, pour eux, de passer **chaque** sortie par `applyCookies` —
- * la redirection vers /home comprise.
+ * Both callers are PUBLIC pages (`/`, `/login`, `/signup`): the
+ * "app routes" branch, further down, has its own client which already writes.
+ * Hence the obligation, for them, to pass **each** output through `applyCookies` —
+ * the redirection to /home included.
  */
 async function readSession(request: NextRequest, url: string, key: string) {
   const sink = createCookieSink();
@@ -310,14 +301,14 @@ async function readSession(request: NextRequest, url: string, key: string) {
 }
 
 /**
- * Session authentifiée mais dont le second facteur n'a pas encore été présenté
- * (MIN-132) : elle a le droit d'aller à l'écran de challenge, et nulle part
- * ailleurs.
+ * Authenticated session but whose second factor has not yet been presented
+ * (MIN-132): it has the right to go to the challenge screen, and nowhere
+ * elsewhere.
  *
- * Le proxy ne VÉRIFIE pas la signature ici — il ne fait que router, comme pour
- * la présence de session juste au-dessus. Le vrai garde est `getAuthedUser` :
- * une session `aal1` qui forcerait le passage n'obtiendrait, sur chaque appel
- * d'API, qu'un 403 `mfa_required`. L'app rendue serait une coquille vide.
+ * The proxy does not VERIFY the signature here — it only does router, as for
+ * the presence of session just above. The real guard is `getAuthedUser` :
+ * a `aal1` session that forces passage would only get, on each
+ * API call, a 403 `mfa_required`. The rendered app would be an empty shell.
  */
 function awaitsMfaChallenge(session: { access_token?: string } | null): boolean {
   if (!session?.access_token) return false;
@@ -325,11 +316,11 @@ function awaitsMfaChallenge(session: { access_token?: string } | null): boolean 
 }
 
 /**
- * Site public : langue portée par l'URL (MIN-88). `/fr/tarifs` est réécrite
- * vers `/pricing` en posant `x-minddy-locale: fr` — une seule page de code,
- * deux URLs indexables. Sans en-tête, la même URL servait les deux langues
- * selon un cookie : Googlebot ne voyait que l'anglais, et la moitié du contenu
- * du site n'existait pour personne.
+ * Public site: language carried by the URL (MIN-88). `/fr/tarifs` is rewritten
+ * to `/pricing` by making `x-minddy-locale: fr` — a single code page,
+ * two indexable URLs. Without a header, the same URL served both languages
+ * according to a cookie: Googlebot only saw English, and half of the content
+ * on the site didn't exist for anyone.
  */
 function serveLocalizedPublicRoute(request: NextRequest, pathname: string): NextResponse {
   const englishPath = englishPathForFrench(pathname);
@@ -343,16 +334,16 @@ function serveLocalizedPublicRoute(request: NextRequest, pathname: string): Next
 
   const markdownPath = route ? `/md?route=${route.key}&locale=${locale}` : null;
 
-  // Négociation de contenu (MIN-88). Un agent qui demande explicitement du
-  // Markdown reçoit le contenu de la page sans les 440 Ko de balisage dont il
-  // n'a que faire. `app/md/route.ts` le rend depuis les mêmes clés i18n.
+  // Content negotiation (MIN-88). An agent who explicitly requests
+  // Markdown receives the content of the page without the 440 KB of markup it
+  // has nothing to do. `app/md/route.ts` returns it from the same i18n keys.
   if (markdownPath && prefersMarkdown(request.headers.get("accept"))) {
-    // La page demandée voyage dans `ROUTE_HEADER`, pas dans la query de cette
-    // réécriture : sur une réécriture de middleware, Next 16 donne au route
-    // handler l'URL D'ORIGINE, donc `/md` ne voyait jamais `?route=…` et
-    // retombait sur son défaut — toutes les pages du site servaient le Markdown
-    // de la landing (MIN-93). La query reste dans l'URL réécrite pour que les
-    // journaux disent ce qui a été servi.
+    // The requested page travels in `ROUTE_HEADER`, not in this query
+    // rewrite: on a middleware rewrite, Next 16 gives the route
+    // handle the ORIGINAL URL, so `/md` never saw `?route=…` and
+    // fell back on its default — all the pages of the site used Markdown
+    // from the landing (MIN-93). The query remains in the rewritten URL so that
+    // logs say what was served.
     return NextResponse.rewrite(
       new URL(markdownPath, request.url),
       withRequestHeaders(request, headers),
@@ -366,8 +357,8 @@ function serveLocalizedPublicRoute(request: NextRequest, pathname: string): Next
       )
     : NextResponse.next(withRequestHeaders(request, headers));
 
-  // …et la page HTML annonce elle-même sa version Markdown, pour qui ne pense
-  // pas à la demander.
+  // …and the HTML page itself announces its Markdown version, for those who do not think
+  // not to ask for it.
   if (markdownPath) {
     response.headers.append(
       "Link",
@@ -384,9 +375,9 @@ function rewriteTo(request: NextRequest, pathname: string): URL {
 }
 
 /**
- * `text/markdown` doit être demandé EXPLICITEMENT : un navigateur envoie
- * `Accept: text/html,…,*​/*`, et le joker ne doit jamais suffire à basculer une
- * page publique en texte brut.
+ * `text/markdown` must be requested EXPLICITLY: a browser sends
+ * `Accept: text/html,…,*​/*`, and the wildcard must never be enough to switch a
+ * public page in plain text.
  */
 function prefersMarkdown(accept: string | null): boolean {
   if (!accept) return false;
@@ -396,8 +387,8 @@ function prefersMarkdown(accept: string | null): boolean {
 }
 
 export async function proxy(request: NextRequest) {
-  // Domaine personnalisé (MIN-36) : branche dédiée, AVANT toute la logique
-  // pathname-based — les hosts primaires ne paient rien, les hosts custom ne
+  // Custom domain (MIN-36): dedicated branch, BEFORE all logic
+  // pathname-based — primary hosts pay nothing, custom hosts do not
   // touchent jamais l'auth/locale/login.
   const host = normalizeHost(request.headers.get("host") ?? "");
   if (host && !isPrimaryHost(host)) {
@@ -413,20 +404,20 @@ export async function proxy(request: NextRequest) {
     return nextClean(request);
   }
 
-  // Ce que la lecture de session a éventuellement à écrire (MIN-293). Identité
-  // tant qu'aucune session n'a été lue — il n'y a alors rien à reporter.
+  // What session reading possibly has to write (MIN-293). Identify
+  // as long as no session has been read — then there is nothing to carry forward.
   let applySession = <T extends NextResponse>(response: T): T => response;
 
-  // --- Site public localisé (les six pages de lib/public-routes.ts) ---------
+  // --- Localized public site (the six pages of lib/public-routes.ts) ---------
   if (PUBLIC_ROUTE_PATHS.has(pathname)) {
     const route = routeByPath(pathname);
 
     if (route?.key === "home") {
-      // Un visiteur déjà connecté qui tape minddy.app veut son app, pas
-      // l'argumentaire. Le rebond vivait dans la page, où il coûtait un
-      // `auth.getUser()` — un aller-retour réseau vers GoTrue AVANT le premier
-      // octet de la landing, ce qui la rendait aussi non cacheable. Ici il ne
-      // coûte qu'une vérification de signature (MIN-88).
+      // An already logged in visitor who types minddy.app wants their app, not
+      // the argument. The bounce lived in the page, where it cost a
+      // `auth.getUser()` — a network round trip to GoTrue BEFORE the first
+      // byte of the landing, which also made it non-cacheable. Here he
+      // costs only one signature verification (MIN-88).
       const { session, applyCookies } = await readSession(
         request,
         supabaseUrl,
@@ -437,27 +428,27 @@ export async function proxy(request: NextRequest) {
         return applySession(NextResponse.redirect(new URL("/home", request.url)));
       }
 
-      // Visiteur francophone sur `/` → `/fr`. Le cookie d'abord (une préférence
-      // explicite), l'`Accept-Language` ensuite. Avant les URLs localisées, le
-      // cookie faisait rendre `/` en français ; maintenant que la langue est
-      // portée par l'URL, la seule façon de continuer à l'honorer est d'envoyer
-      // le visiteur sur la bonne URL.
+      // French-speaking visitor on `/` → `/fr`. Cookie first (a preference
+      // explicit), the `Accept-Language` then. Before localized URLs, the
+      // cookie made `/` render in French; now that the language is
+      // carried by the URL, the only way to continue honoring it is to send
+      // the visitor to the correct URL.
       //
       // TEMPORAIRE (307), jamais permanent : `/` doit rester crawlable telle
-      // quelle, et Googlebot n'a ni cookie ni `Accept-Language` français — il
-      // reçoit donc toujours 200 sur la version anglaise.
+      // what, and Googlebot has neither cookies nor French `Accept-Language` — it
+      // therefore always receives 200 on the English version.
       if (pathname === "/") {
         const cookieLocale = request.cookies.get("NEXT_LOCALE")?.value;
         const preferred =
           cookieLocale ??
           detectFromAcceptLanguage(request.headers.get("accept-language"));
         if (preferred === "fr") {
-          // `nextUrl.clone()`, et surtout PAS `new URL("/fr", request.url)` :
-          // une URL relative repart de la racine et efface la query. Un
-          // francophone arrivant sur `/?utm_source=…` était renvoyé vers un
-          // `/fr` nu — l'attribution de la visite partait avec, et la landing
-          // s'enregistrait en `$direct`. C'est exactement le trafic (campagne,
-          // lancement, newsletter) qu'on cherche à mesurer.
+          // `nextUrl.clone()`, and above all NOT `new URL("/fr", request.url)`:
+          // a relative URL starts from the root and deletes the query. A
+          // French speaking arriving on `/?utm_source=…` was sent to a
+          // `/fr` nu — the attribution of the visit left with, and the landing
+          // registered as `$direct`. This is exactly the traffic (campaign,
+          // launch, newsletter) that we seek to measure.
           const target = request.nextUrl.clone();
           target.pathname = "/fr";
           return applySession(NextResponse.redirect(target, 307));
@@ -468,13 +459,13 @@ export async function proxy(request: NextRequest) {
     return applySession(serveLocalizedPublicRoute(request, pathname));
   }
 
-  // --- Autres routes publiques (login, assets de métadonnées, boards…) ------
+  // --- Other public routes (login, metadata assets, boards, etc.) ------
   if (PUBLIC_ROUTES.has(pathname) || hasPrefix(pathname, PUBLIC_PREFIXES)) {
-    // On /login et /signup, bounce already-authenticated users to /home — sauf
-    // si leur session attend encore son second facteur (MIN-132) : /login EST
-    // l'écran de challenge, et les renvoyer vers /home reboucle indéfiniment.
-    // `/signup` suit la même règle : un compte connecté n'a pas de compte à
-    // créer, et le wizard s'en irait de lui-même une frame plus tard.
+    // On /login and /signup, bounce already-authenticated users to /home — except
+    // if their session is still waiting for its second factor (MIN-132): /login EST
+    // the challenge screen, and send them back to /home loops indefinitely.
+    // `/signup` follows the same rule: a connected account does not have an account
+    // create, and the wizard would exit by itself one frame later.
     if (pathname === "/login" || pathname === "/signup") {
       const { session, applyCookies } = await readSession(
         request,
@@ -492,16 +483,16 @@ export async function proxy(request: NextRequest) {
       ? nextClean(request, { [PUBLIC_THEME_HEADER]: "1" })
       : nextClean(request);
 
-    // Boards de feedback et vues partagées : hors index quoi qu'il arrive. Le
-    // `metadata.robots` des pages ne couvre que le HTML — pas les réponses
-    // JSON, les images, ni les sous-routes.
+    // Feedback boards and shared views: outside the index whatever happens. THE
+    // `metadata.robots` of pages only covers HTML — not responses
+    // JSON, images, nor subroutes.
     if (hasPrefix(pathname, NOINDEX_PREFIXES)) {
       response.headers.set("X-Robots-Tag", "noindex");
     }
     return applySession(response);
   }
 
-  // --- Tout ce qui n'est pas protégé part au rendu (et donc en 404) ---------
+  // --- Everything that is not protected is rendered (and therefore in 404) ---------
   if (!isProtectedPath(pathname)) {
     return nextClean(request);
   }
@@ -525,10 +516,10 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  // `getSession()` lit les cookies mais ne vérifie pas la signature du JWT. La
-  // route ne l'utilise que pour router et rafraîchir la session ; les API gardent
-  // leur propre vérification. Le SDK avertit à juste titre, mais le warning est
-  // masqué ici pour ne pas polluer les logs à chaque requête.
+  // `getSession()` reads cookies but does not verify the JWT signature. There
+  // route only uses it to route and refresh the session; APIs keep
+  // their own verification. The SDK rightly warns, but the warning is
+  // hidden here so as not to pollute the logs with each request.
   const _w = console.warn;
   console.warn = (...a: unknown[]) => {
     if (isSupabaseGetSessionWarning(a)) return;
@@ -539,24 +530,24 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getSession();
   console.warn = _w;
 
-  // Pas de session, ou session dont le second facteur n'a pas encore été
-  // présenté (MIN-132) : dans les deux cas la destination est /login, qui rend
-  // le formulaire ou l'écran de challenge selon ce qu'il trouve.
+  // No session, or session whose second factor has not yet been
+  // presented (MIN-132): in both cases the destination is /login, which renders
+  // the form or the challenge screen depending on what it finds.
   if (!session?.user || awaitsMfaChallenge(session)) {
     const loginUrl = new URL("/login", request.url);
-    // pathname + search : /oauth/authorize doit retrouver ses paramètres
-    // (client_id, code_challenge…) après le passage par /login.
+    // pathname + search: /oauth/authorize must find its parameters
+    // (client_id, code_challenge…) after passing through /login.
     loginUrl.searchParams.set("redirect", pathname + request.nextUrl.search);
     const redirect = NextResponse.redirect(loginUrl);
-    // Même sur la redirection : une URL d'app n'a pas à figurer dans un index,
-    // ne serait-ce que comme « page avec redirection ».
+    // Even on redirection: an app URL does not have to appear in an index,
+    // if only as “page with redirection”.
     redirect.headers.set("X-Robots-Tag", "noindex, nofollow");
     return redirect;
   }
 
-  // L'app authentifiée n'a rien à faire dans un index, quel que soit
-  // l'environnement. `app/(app)/layout.tsx` pose déjà `robots: noindex` sur le
-  // HTML ; cet en-tête couvre tout le reste (MIN-88).
+  // The authenticated app has nothing to do in an index, whatever
+  // the environment. `app/(app)/layout.tsx` already places `robots: noindex` on the
+  //HTML; this header covers everything else (MIN-88).
   response.headers.set("X-Robots-Tag", "noindex, nofollow");
 
   // Cross-device locale: if no NEXT_LOCALE cookie yet, seed it from the user's

@@ -4,35 +4,33 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * MIN-362 — LA MATRICE DE TEST DU CHANTIER LOCAL, exécutable.
+ * MIN-362 — THE LOCAL SITE TEST MATRIX, executable.
  *
- * `vitest.config.ts` ne COLLECTE que `lib/**` et les tests du plugin oxlint : ni
- * `app/api/**` ni `desktop/src/**` ne sont exercés directement par la suite. Or le
- * verrou d'admission du plan de contrôle tient dans UN fichier de `app/api/`, et
- * le lanceur du harness vivra dans `desktop/src/` — c'est-à-dire que le chantier
- * le plus sensible du dépôt atterrit exactement là où sa culture de test ne va
- * pas.
+ * `vitest.config.ts` only COLLECTS `lib/**` and oxlint plugin tests: neither
+ * `app/api/**` nor `desktop/src/**` is exercised directly. The control-plane
+ * admission lock now fits in ONE file under `app/api/`, and the harness
+ * launcher will live in `desktop/src/` — so the repository's most sensitive
+ * code lands exactly where its test culture does not reach.
  *
- * Élargir `include` aux surfaces applicatives serait le geste évident et le
- * mauvais : la suite tourne en node nu, en 18 s, et `app/**` traînerait React,
- * Next et jsdom derrière lui. Le plugin oxlint reste pur et garde ses tests à
- * côté de son code vendorisé.
- * Le dépôt a déjà écrit les deux bonnes réponses, et ce fichier ne fait que les
- * RENDRE OBLIGATOIRES :
+ * Extending `include` to the application surfaces would be the obvious move, but
+ * it would be wrong: the suite runs on bare Node in 18 seconds, and `app/**`
+ * would pull React, Next, and jsdom behind it. The oxlint plugin remains pure,
+ * with its tests alongside its vendored code.
+ * The repository has already established the two correct answers, and this file
+ * only makes them MANDATORY:
  *
- *  1. **un test de `lib/` peut aller chercher ce qui vit ailleurs** — en
- *     l'important ([local-exec-admission.test.ts](local-exec-admission.test.ts)
- *     poste de vraies requêtes à la route), ou en lisant sa source quand le
- *     chemin d'exécution demande une base et une microVM
- *     ([engine-wiring.test.ts](engine-wiring.test.ts) en explique la doctrine) ;
- *  2. **la décision descend dans `lib/desktop/`**, où elle a son test à côté
- *     (patron `hide-window.ts` / `hide-window.test.ts`), et la coquille de
- *     `desktop/src/` ne garde que le câblage : un `ipcMain.handle` qui appelle
- *     une fonction pure et rend sa réponse.
+ * 1. **a test of `lib/` can reach code that lives elsewhere** — most importantly
+ * ([local-exec-admission.test.ts](local-exec-admission.test.ts), which posts real
+ * requests to the route), or by reading its source when the execution path
+ * requests a base and a microVM
+ * ([engine-wiring.test.ts](engine-wiring.test.ts) explains the doctrine);
+ * 2. **the decision belongs in `lib/desktop/`**, where it has a neighboring test
+ * (`hide-window.ts` / `hide-window.test.ts`), while the `desktop/src/` shell keeps
+ * only the wiring: an `ipcMain.handle` that calls a pure function and returns
+ * its response.
  *
- * Ce fichier échoue donc quand quelqu'un ajoute une surface sensible sans son
- * test — et le message dit laquelle. C'est un garde-fou de CULTURE, pas de
- * comportement : il ne remplace aucun des tests qu'il exige.
+ * So this file fails when someone adds a sensitive surface without its
+ * test — and the message says which one. This is a CULTURE safeguard, not a behavior one: it does not replace any of the tests it requires.
  */
 
 const REPO = path.resolve(__dirname, "../../..");
@@ -42,7 +40,7 @@ const listTs = (relative: string): string[] =>
     .filter((f) => f.endsWith(".ts") || f.endsWith(".tsx"))
     .sort();
 
-/** Tous les fichiers de test de `lib/`, à plat — c'est là qu'on cherche les preuves. */
+/** All `lib/` test files, flat — this is where we look for evidence. */
 function libTests(): Array<{ file: string; source: string }> {
   const out: Array<{ file: string; source: string }> = [];
   const walk = (dir: string) => {
@@ -57,12 +55,12 @@ function libTests(): Array<{ file: string; source: string }> {
 }
 
 /**
- * CE QUI VIT HORS DE `lib/**` ET DOIT QUAND MÊME ÊTRE EXERCÉ.
+ * WHAT LIVES OUTSIDE `lib/**` AND MUST STILL BE EXERCISED.
  *
- * Une entrée par surface, avec la RAISON — sans quoi la liste devient un
- * inventaire qu'on rallonge sans y penser. `reachedBy` est le texte qu'un test
- * de `lib/` doit contenir pour prouver qu'il va la chercher : un chemin
- * d'import, ou le chemin lu par un test structurel.
+ * One entry per surface, with the REASON — otherwise the list becomes an
+ * inventory that we extend without thinking about it. `reachedBy` is the text that a test
+ * of `lib/` must contain to prove that it will fetch it: an import path
+ *, or the path read by a structural test.
  */
 const SURFACES_HORS_LIB = [
   {
@@ -102,8 +100,8 @@ const SURFACES_HORS_LIB = [
 
 describe("les surfaces du chantier local qui vivent hors de `lib/**`", () => {
   it("la prémisse tient : vitest ne collecte que les tests purs", () => {
-    // Si un jour `include` s'élargit, ce fichier n'a plus la même valeur — il
-    // doit alors être relu, pas contourné.
+    // If one day `include` expands, this file no longer has the same value — it
+    // must then be reread, not bypassed.
     expect(read("vitest.config.ts")).toContain(
       'include: ["lib/**/*.test.ts", "tools/**/*.test.ts"]',
     );
@@ -120,14 +118,14 @@ describe("les surfaces du chantier local qui vivent hors de `lib/**`", () => {
 });
 
 /**
- * LA COQUILLE DE BUREAU, ET OÙ VIVENT SES DÉCISIONS.
+ * THE DESKTOP SHELL, AND WHERE ITS DECISIONS LIVE.
  *
- * Un fichier de plus dans `desktop/src/` est un fichier que la suite de tests ne
- * verra jamais. La liste ci-dessous est donc fermée : y ajouter une ligne est le
- * geste par lequel on dit CE QUE ce fichier a le droit de contenir, et le module
- * pur de `lib/desktop/` qui porte ses décisions. C'est ce qui doit arriver au
- * lanceur du harness (MIN-293) : sa décision — quel dossier, quel jeton, quel
- * layout — descend dans `lib/desktop/`, et `desktop/src/` n'en garde que le
+ * One more file in `desktop/src/` is a file that the test suite will never
+ * see. The list below is therefore closed: adding a line to it is the
+ * gesture by which we say WHAT this file has the right to contain, and the pure module
+ * of `lib/desktop/` which makes its decisions. This is what should happen to the
+ * launcher of the harness (MIN-293): its decision — which folder, which token, which
+ * layout — goes down to `lib/desktop/`, and `desktop/src/` only keeps the
  * `utilityProcess.fork`.
  */
 const COQUILLE = {
@@ -167,19 +165,19 @@ describe("la coquille de `desktop/src/`", () => {
   });
 
   it("garde le pont fermé : un chemin de fichier ne remonte jamais de la page", () => {
-    // La règle de lib/desktop/bridge.ts, vérifiée là où elle se casserait : le
-    // preload ne doit accepter aucun chemin, sous peine que du code distant
-    // puisse désigner `~/.ssh` en écrivant une chaîne.
+    // The rule of lib/desktop/bridge.ts, checked where it would break: the
+    // preload must not accept any path, otherwise remote code
+    // can designate `~/.ssh` by writing a string.
     const preload = read("desktop/src/preload.ts");
     expect(preload).not.toMatch(/\b(path|filePath|dirPath|directory)\s*:\s*string/);
   });
 });
 
 /**
- * `lib/desktop/` : LE PATRON `<module>.ts` / `<module>.test.ts`.
+ * `lib/desktop/`: THE BOSS `<module>.ts` / `<module>.test.ts`.
  *
- * C'est la moitié qui rend la première tenable. Une exemption se déclare ici,
- * avec sa raison — et il n'y en a que deux.
+ * This is the half that makes the first half tenable. An exemption is declared here,
+ * with its reason — and there are only two.
  */
 const SANS_TEST = {
   "bridge.ts": "surface de TYPES (plus `getDesktopBridge`, six lignes de garde) — rien à exercer",

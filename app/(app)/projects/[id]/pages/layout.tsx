@@ -3,9 +3,9 @@ import { appPageMetadata } from "@/lib/app-metadata";
 import { projectName } from "@/lib/server/project-meta";
 import { PagesShell } from "@/components/pages/pages-shell";
 
-// « Pages · Acme · minddy » : sans le nom du projet, deux onglets ouverts sur
-// deux projets portaient exactement le même titre. La lecture du nom est mise en
-// cache et partagée avec le `generateMetadata` du layout parent.
+// “Pages · Acme · minddy”: without the project name, two tabs open on
+// two projects had exactly the same title. The name reading is set to
+// cache and shared with the `generateMetadata` of the parent layout.
 export async function generateMetadata({
   params,
 }: {
@@ -16,9 +16,9 @@ export async function generateMetadata({
 }
 
 /**
- * L'arbre est monté par le LAYOUT, et non par chaque page du segment : il ne se
- * remonte donc pas d'une page à l'autre — son état d'ouverture, son défilement
- * et sa requête traversent la navigation.
+ * The tree is mounted by the LAYOUT, and not by each page of the segment: it is not
+ * therefore does not go back from one page to another — its opening state, its scrolling
+ * and its query cross the navigation.
  */
 export default function ProjectPagesLayout({
   children,

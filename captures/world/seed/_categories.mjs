@@ -1,22 +1,22 @@
 /**
- * Le vocabulaire de catégories du monde de démo, partagé par tous les seeds.
+ * The category vocabulary of the demo world, shared by all seeds.
  *
- * Les six catégories d'un projet ne sont PAS créées par nous : le trigger
- * `projects_seed_categories` les pose à la naissance du projet, avec des noms
- * français (`default_categories()` dans la migration 20260704161000). Or tout
- * le reste du monde de démo est en anglais — titres, descriptions, retours —
- * parce que les mêmes données servent les captures FR et EN. Une carte
- * anglaise portant « Fonctionnalité » se voit immédiatement.
+ * The six categories of a project are NOT created by us: the trigger
+ * `projects_seed_categories` asks them at the birth of the project, with names
+ * French (`default_categories()` in migration 20260704161000). But everything
+ * the rest of the demo world is in English — titles, descriptions, feedback —
+ * because the same data serves the FR and EN captures. A map
+ * English with “Functionality” is immediately visible.
  *
- * D'où ce module : les scripts désignent une catégorie par une CLÉ courte
- * (`feature`), jamais par un libellé. `013-categories-en.mjs` renomme les
- * lignes en anglais une fois pour toutes, et la résolution ci-dessous accepte
- * les deux noms — un seed reste donc rejouable avant comme après le renommage,
- * et sur un projet dont les catégories ont été semées en français.
+ * Hence this module: scripts designate a category with a short KEY
+ * (`feature`), never by a label. `013-categories-en.mjs` renames them
+ * lines in English once and for all, and the resolution below accepts
+ * both names — a seed therefore remains replayable before as well as after renaming,
+ * and on a project whose categories were sown in French.
  */
 import { createPlan } from "../../lib/guards.mjs";
 
-/** Miroir de `public.default_categories()`, plus le nom anglais et la clé. */
+/** Mirror of `public.default_categories()`, plus English name and key. */
 export const CATEGORIES = [
   { key: "bug", fr: "Bug", en: "Bug", color: "#ef4444" },
   { key: "feature", fr: "Fonctionnalité", en: "Feature", color: "#3b82f6" },
@@ -27,16 +27,16 @@ export const CATEGORIES = [
 ];
 
 /**
- * Garantit qu'un projet de démo porte ses six catégories, en anglais.
+ * Guarantees that a demo project carries its six categories, in English.
  *
- * Elles étaient posées par un trigger Postgres ; depuis la migration
- * `20260904090000`, c'est `POST /api/projects` qui sème, dans la langue de
- * l'appelant. Or les seeds écrivent en base directement — délibérément, pour
- * ne déclencher ni Smart Assign, ni notifications, ni facturation — donc
- * personne ne sèmerait pour eux. D'où cette fonction, appelée par les scripts
- * qui créent un projet.
+ * They were posed by a Postgres trigger; since migration
+ * `20260904090000`, it is `POST /api/projects` which sows, in the language of
+ * the caller. But the seeds write to the base directly — deliberately, to
+ * do not trigger Smart Assign, notifications, or billing — so
+ * no one would sow for them. Hence this function, called by the scripts
+ * who create a project.
  *
- * Idempotent : ne fait rien si le projet a déjà des catégories.
+ * Idempotent: does nothing if the project already has categories.
  */
 export async function ensureCategories(world, projectId) {
   const { data, error } = await world.admin
@@ -58,7 +58,7 @@ export async function ensureCategories(world, projectId) {
   return { created: CATEGORIES.length };
 }
 
-/** Nom anglais d'une clé — pour les résumés lisibles avant écriture. */
+/** English name of a key — for readable summaries before writing. */
 export function categoryLabel(key) {
   const category = CATEGORIES.find((c) => c.key === key);
   if (!category) throw new Error(`captures: catégorie inconnue « ${key} ».`);
@@ -66,10 +66,10 @@ export function categoryLabel(key) {
 }
 
 /**
- * Résout les six catégories d'un projet de démo : clé courte → ligne en base.
- * Accepte le nom anglais comme le nom français, pour rester valable des deux
- * côtés du renommage. Échoue si l'une manque — un projet sans ses catégories
- * par défaut est une anomalie, pas un cas à contourner en silence.
+ * Solves the six categories of a demo project: short key → basic line.
+ * Accepts the English name as well as the French name, to remain valid for both
+ * sides of the renaming. Fails if one is missing — a project without its categories
+ * default is an anomaly, not one to be silently worked around.
  */
 export async function resolveCategories(world, projectId) {
   const { data, error } = await world.admin

@@ -1,26 +1,26 @@
 import type { AgentAnchor } from "./prompt";
 
 /**
- * LES NOMS des tools de PLATEFORME — ticket, carnet, pull request.
+ * NAMES of PLATFORM tools — ticket, notebook, pull request.
  *
- * Trois `Set`, et rien d'autre. Ils vivaient dans les modules qui EXÉCUTENT ces
- * tools (`issue-tools.ts`, `scratchpad-tools.ts`, `pr-tools.ts`), lesquels
- * touchent la base et la forge. Or depuis MIN-224 c'est le ROUTAGE — « ce nom
- * est-il un tool de plateforme ? » — qui descend dans la microVM avec la boucle,
- * pas l'exécution. Un routeur qui importe ses exécuteurs pour connaître leurs
- * noms emmènerait `getServiceClient` dans un process où le modèle lance du shell.
+ * Three `Set`, and nothing else. They lived in the modules that RUN these
+ * tools (`issue-tools.ts`, `scratchpad-tools.ts`, `pr-tools.ts`), which
+ * touch the base and the forge. But since MIN-224 it is ROUTING — “is this name
+ * a platform tool? » — which goes down into the microVM with the loop,
+ * not execution. A router that imports its executors to know their
+ * names would take `getServiceClient` into a process where the model launches from the shell.
  *
- * Les trois modules d'exécution les RÉ-EXPORTENT : aucun appelant existant ne
- * change, et il n'y a toujours qu'une seule liste par famille.
+ * The three execution modules RE-EXPORT them: no existing caller
+ * changes, and there is still only one list per family.
  */
 
-/** Tools ticket (routés vers `issue-tools.ts`). */
+/** Tools ticket (routed to `issue-tools.ts`). */
 export const ISSUE_TOOL_NAMES = new Set([
   "search_issues",
   "read_issue",
   "read_resource",
-  // Le nom d'avant MIN-184, gardé POUR L'EXÉCUTION seule : il n'est plus servi
-  // dans la liste des tools, mais un checkpoint repris rejoue l'ancien appel.
+  // The name before MIN-184, kept FOR EXECUTION only: it is no longer used
+  // in the list of tools, but a resumed checkpoint replays the old call.
   "read_attachment",
   "read_feedback",
   "update_issue",
@@ -30,10 +30,10 @@ export const ISSUE_TOOL_NAMES = new Set([
   "create_issue",
   "create_routine",
   "report_verdict",
-  // Les PAGES du projet (MIN-273) — le wiki. Elles voyagent avec les tickets
-  // parce qu'elles ont exactement le même contexte, le projet du run et son
-  // acteur : une famille de plus dans le routage n'aurait apporté que du
-  // câblage. L'exécution vit dans `page-tools.ts`, à côté de `issue-tools.ts`.
+  // The PAGES of the project (MIN-273) — the wiki. They travel with the tickets
+  // because they have exactly the same context, the run project and its
+  // actor: one more family in the routing would only have brought
+  // wiring. The execution lives in `page-tools.ts`, next to `issue-tools.ts`.
   "list_pages",
   "search_pages",
   "read_page",
@@ -41,9 +41,9 @@ export const ISSUE_TOOL_NAMES = new Set([
   "update_page",
   "append_to_page",
   "edit_page_text",
-  // Les OBJECTIFS du projet (MIN-287) — le but auquel sert le ticket. Ils
-  // voyagent avec les tickets pour la même raison que les pages : même
-  // contexte, le projet du run et son acteur. L'exécution vit dans
+  // Project OBJECTIVES (MIN-287) — the purpose for which the ticket serves. They
+  // travel with the tickets for the same reason as the pages: same
+  // context, the run project and its actor. Execution lives in
   // `objective-tools.ts`.
   "list_objectives",
   "read_objective",
@@ -52,7 +52,7 @@ export const ISSUE_TOOL_NAMES = new Set([
   "comment_objective",
 ]);
 
-/** Tools carnet (routés vers `scratchpad-tools.ts`). */
+/** Notebook tools (routed to `scratchpad-tools.ts`). */
 export const SCRATCHPAD_TOOL_NAMES = new Set([
   "read_scratchpad",
   "add_scratchpad_tasks",
@@ -60,18 +60,18 @@ export const SCRATCHPAD_TOOL_NAMES = new Set([
   "set_scratchpad",
 ]);
 
-/** Écritures sur la pull request relue (routées vers `pr-tools.ts`). */
+/** Writes to the reread pull request (routed to `pr-tools.ts`). */
 export const PR_TOOL_NAMES = new Set(["comment_pr_line", "comment_pr", "reply_pr_thread"]);
 
 /**
- * Pull requests DU PROJET (routées vers `project-pr-tools.ts`) — l'inventaire et
- * ce qu'un run ordinaire peut y faire, celle du run relue mise à part.
+ * Pull requests FROM THE PROJECT (routed to `project-pr-tools.ts`) — the inventory and
+ * what an ordinary run can do there, apart from that of the reread run.
  *
- * Deux familles et pas une, alors qu'elles se recouvrent en partie : ces
- * tools-là prennent un `pull_request` (aucune session n'est ancrée pour eux),
- * et surtout ils ne sont JAMAIS servis ensemble — la relecture a les trois
- * ci-dessus, tout le reste a ceux-ci. Des noms distincts sont ce qui rend le
- * routage lisible des deux côtés (`control-plane.ts`, `exec-tool.ts`).
+ * Two families and not one, even though they partly overlap: these
+ * tools take a `pull_request` (no session is anchored for them),
+ * and most importantly they are NEVER served together — replay has the three
+ * above, everything else has these. Distinct names are what make the
+ * routing readable on both sides (`control-plane.ts`, `exec-tool.ts`).
  */
 export const PROJECT_PR_TOOL_NAMES = new Set([
   "list_pull_requests",
@@ -84,14 +84,12 @@ export const PROJECT_PR_TOOL_NAMES = new Set([
 ]);
 
 /**
- * L'ANCRAGE D'UN RUN, lu sur sa ligne (MIN-326).
+ * THE ANCHOR OF A RUN, read on its line (MIN-326).
  *
- * La même précédence qu'`execute.ts` (« `issue` ? "issue" : `prRun` ? "pr" :
- * "notebook" »), et il faut qu'elle le reste : c'est cet ancrage qui décide à la
- * fois de ce qu'on ANNONCE au modèle (`agentToolsFor`) et de ce qu'on lui SERT
- * (`runPlatformTool`). Deux réponses différentes à « quel ancrage ? » et le jeu
- * de tools annoncé cesse d'être celui qui est appliqué — précisément la
- * divergence que la table ci-dessous existe pour empêcher.
+ * The same precedence as `execute.ts` ("`issue` ? "issue": `prRun` ? "pr" :
+ * "notebook"), and it must remain so: it is this anchor which decides both what we ANNOUNCE to the model (`agentToolsFor`) and what we SERVE to it
+ * (`runPlatformTool`). Two different answers to “what anchor?” » and the announced toolset
+ * ceases to be the one applied — precisely the discrepancy that the table below exists to prevent.
  */
 export function anchorForRun(run: {
   issue_id: string | null;
@@ -101,8 +99,8 @@ export function anchorForRun(run: {
   return run.pull_request_id ? "pr" : "notebook";
 }
 
-/** Tout tool de plateforme d'un run de TICKET ou de CARNET — les deux ancrages
- *  ont exactement le même jeu (cf. `AGENT_TOOLS` / `NOTEBOOK_AGENT_TOOLS`). */
+/** Any platform tool from a run of TICKET or NOTEBOOK — the two anchors
+ * have exactly the same game (see `AGENT_TOOLS` / `NOTEBOOK_AGENT_TOOLS`). */
 const FULL_PLATFORM_TOOL_NAMES: ReadonlySet<string> = new Set([
   ...ISSUE_TOOL_NAMES,
   ...SCRATCHPAD_TOOL_NAMES,
@@ -112,14 +110,14 @@ const FULL_PLATFORM_TOOL_NAMES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Ce qu'une RELECTURE de pull request peut appeler : les LECTEURS minddy, et les
- * trois écritures sur la pull request relue. Rien d'autre — pas un tool ticket,
- * pas le carnet, pas une page, pas un objectif, pas une routine, pas `create_pr`,
- * et pas `web_search` (le jeu de relecture ne l'a jamais servi).
+ * What a REREAD pull request can call: minddy READERS, and the
+ * three writes to the reread pull request. Nothing else — not a tool ticket,
+ * not the notebook, not a page, not a goal, not a routine, not `create_pr`,
+ * and not `web_search` (the proofreading game never served it).
  *
- * `read_attachment` est le nom d'avant MIN-184 de `read_resource` : il n'est plus
- * annoncé nulle part, mais un checkpoint repris rejoue l'ancien appel — il vit
- * donc partout où `read_resource` vit, ici comme dans `ISSUE_TOOL_NAMES`.
+ * `read_attachment` is the pre-MIN-184 name of `read_resource`: it is no longer
+ * announced anywhere, but a resumed checkpoint replays the old call — it lives
+ * so wherever `read_resource` lives, here as in `ISSUE_TOOL_NAMES`.
  */
 const PR_REVIEW_PLATFORM_TOOL_NAMES: ReadonlySet<string> = new Set([
   "search_issues",
@@ -135,23 +133,23 @@ const PR_REVIEW_PLATFORM_TOOL_NAMES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * LE JEU D'OUTILS EST UNE PROPRIÉTÉ DU RUN, pas une liste que le prompt est prié
- * de respecter (MIN-326).
+ * TOOLSET IS A PROPERTY OF THE RUN, not a list that the prompt is asked
+ * to respect (MIN-326).
  *
- * `runPlatformTool` routait sur le SEUL nom du tool : seules les deux familles PR
- * regardaient un ancrage. Une session de relecture — celle dont tout le dépôt
- * affirme qu'elle est en lecture seule, et la seule dont le contenu lu vient d'un
- * fork inconnu — pouvait donc appeler `update_issue`, `set_scratchpad`,
- * `create_page`, `create_routine` ou `create_pr` par un simple POST sur
- * `/api/agent-vm/tool/<nom>` depuis son shell. Une instruction glissée dans un
- * `AGENTS.md` suffisait à franchir l'ancrage, jusqu'à la ROUTINE planifiée, qui
- * donne une persistance.
+ * `runPlatformTool` routed to the ONLY tool name: only the two families PR
+ * were looking at an anchor. A replay session — the one that the entire
+ * repository asserts is read-only, and the only one whose read content comes from an unknown
+ * fork — could therefore call `update_issue`, `set_scratchpad`,
+ * `create_page`, `create_routine` or `create_pr` by a simple POST to
+ * `/api/agent-vm/tool/<nom>` from its shell. An instruction slipped into a
+ * `AGENTS.md` was enough to cross the anchor, to the scheduled ROUTINE, which
+ * gives persistence.
  *
- * Cette table est le verrou de CODE que la doctrine n'avait qu'en prompt. Elle
- * est aussi la raison pour laquelle un tool neuf ne peut plus être ajouté sans
- * décider de son ancrage : le test de `control-plane.test.ts` la confronte, nom
- * par nom, à ce qu'`agentToolsFor` ANNONCE pour chaque ancrage — les deux ne
- * peuvent plus diverger en silence.
+ * This table is the CODE lock that the doctrine only had in prompt. It
+ * is also the reason why a new tool can no longer be added without
+ * deciding on its anchor: the `control-plane.test.ts` test confronts it, name
+ * by name, with what `agentToolsFor` ANNOUNCES for each anchor — both ne
+ * can no longer diverge silently.
  */
 export const PLATFORM_TOOLS_BY_ANCHOR: Record<AgentAnchor, ReadonlySet<string>> = {
   issue: FULL_PLATFORM_TOOL_NAMES,
@@ -159,9 +157,9 @@ export const PLATFORM_TOOLS_BY_ANCHOR: Record<AgentAnchor, ReadonlySet<string>> 
   pr: PR_REVIEW_PLATFORM_TOOL_NAMES,
 };
 
-/** TOUS les tools de plateforme, ancrages confondus — « ce nom est-il soumis à la
- *  table ? ». Un nom qui n'y est pas n'est pas de plateforme (fichier, contrôle,
- *  délégation) : son handler décide, comme avant. */
+/** ALL platform tools, anchors combined — “is this name subject to the
+ * table? ". A name that is not there is not platform (file, control,
+ * delegation): its handler decides, as before. */
 export const PLATFORM_TOOL_NAMES: ReadonlySet<string> = new Set([
   ...FULL_PLATFORM_TOOL_NAMES,
   ...PR_REVIEW_PLATFORM_TOOL_NAMES,

@@ -17,39 +17,37 @@ import type { NotificationType } from "@/lib/types";
 import type { AgentRun, SyncedPrRun } from "./runs";
 
 /**
- * Fenêtre pendant laquelle un geste identique DÉJÀ tracé vaut écho. Le hook
- * arrive dans la seconde qui suit l'appel de forge ; deux gestes identiques
- * espacés de plus que ça sont deux faits distincts, et se tracent tous les deux.
+ * Window during which an identical gesture ALREADY drawn is echoed. The hook
+ * arrives within a second of the forge call; two identical gestures
+ * spaced more than that are two distinct facts, and both can be traced.
  */
 const ECHO_WINDOW_MS = 2 * 60_000;
 
-/** Le compte de forge d'un membre, tel que les deux tables le stockent. */
+/** A member's forge count, as both tables store it. */
 interface ForgeAccountRow {
   user_id?: string | null;
   provider_account_id: string | null;
   account_login: string | null;
 }
 
-/** L'acteur d'un hook, tel que la forge le livre. */
+/** The actor of a hook, such as the forge book. */
 interface ForgeAccountRef {
-  /** Id du compte chez la forge — la CLÉ : immuable au renommage. */
+  /** Account ID at the forge — the KEY: immutable when renamed. */
   accountId: string | null;
-  /** Login du compte — un nom d'AFFICHAGE, gardé en repli d'ancienneté. */
+  /** Account login — a DISPLAY name, kept in seniority. */
   login: string | null;
 }
 
 /**
- * Cette ligne désigne-t-elle ce compte de forge (MIN-154) ?
+ * Does this line refer to this forge account (MIN-154)?
  *
- * La clé est `provider_account_id` : le login est un nom d'affichage, écrit une
- * fois à la connexion du compte et jamais rafraîchi — un renommage chez GitHub
- * ou GitLab suffisait à rendre son porteur inconnu de minddy.
+ * The key is `provider_account_id`: the login is a display name, written once upon account login and never refreshed — a rename at GitHub
+ * or GitLab was enough to make its bearer unknown to minddy.
  *
- * Le login reste un repli, mais seulement là où l'id ne peut pas trancher :
- * ligne d'ancienneté dont l'id est nul (la colonne est nullable des deux côtés),
- * ou hook qui n'en livre pas. Il ne gagne JAMAIS contre un id différent — deux
- * personnes peuvent se succéder sur un même nom, et attribuer le geste au
- * mauvais membre est pire que ne l'attribuer à personne.
+ * The login remains a fallback, but only where the id cannot decide:
+ * seniority line whose id is null (the column is nullable on both sides),
+ * or hook which don't deliver any. It NEVER wins against a different id — two
+ * people can follow one another on the same name, and assigning the gesture to the wrong member is worse than assigning it to no one.
  */
 export function forgeAccountMatches(
   row: ForgeAccountRow,
@@ -62,29 +60,29 @@ export function forgeAccountMatches(
 }
 
 /**
- * `,` `(` `)` `"` sont les séparateurs de la syntaxe de filtre PostgREST : une
- * valeur qui en porte casserait le `.or(...)` au lieu de le restreindre. Aucun
- * login de forge n'en contient — le terme se saute plutôt que de se risquer.
+ * `,` `(` `)` `"` are the PostgREST filter syntax separators: a
+ * value carrying one would break the `.or(...)` instead of restricting it. No
+ * forge login contains any — the term is skipped rather than risked.
  */
 function isFilterSafe(value: string): boolean {
   return !/[,()"]/.test(value);
 }
 
 /**
- * Les membres minddy derrière un compte de forge — le pont que MIN-144 rend
- * possible : `git_user_identities` côté GitHub (le compte autorisé), la connexion
- * OAuth côté GitLab (elle EST déjà l'identité de la personne).
+ * minddy members behind a forge account — the bridge enabled by MIN-144:
+ * `git_user_identities` on GitHub (the authorized account), and the OAuth
+ * connection on GitLab (which IS already the person's identity).
  *
- * Exporté pour `pr-opened-notify.ts`, qui s'en sert dans l'autre sens : non plus
- * « ce geste est-il un écho du nôtre » mais « qui, chez nous, vient d'ouvrir
- * cette PR » — la seule personne à qui ne pas l'annoncer.
+ * Exported for `pr-opened-notify.ts`, which uses it in the opposite direction:
+ * not “is this gesture an echo of ours?” but “who among us just opened this
+ * PR?” — the only person not to notify.
  *
- * Une seule requête sur le chemin webhook : on demande les lignes que l'id OU le
- * login pourraient désigner, puis `forgeAccountMatches` tranche en mémoire — le
- * `.or(...)` est un filet large, la règle est celle-là.
+ * A single query on the webhook path: request the rows that either the ID or
+ * login could identify, then let `forgeAccountMatches` decide in memory — the
+ * `.or(...)` is a broad net; the in-memory rule is authoritative.
  *
- * Vide quand personne n'a connecté ce compte : c'est alors quelqu'un qui n'agit
- * pas depuis minddy, et rien n'est à dédoublonner.
+ * Empty when nobody has connected this account: the person is then acting
+ * outside minddy, and there is nothing to deduplicate.
  */
 export async function minddyUsersForForgeAccount(opts: {
   provider: ForgeProvider;
@@ -118,41 +116,40 @@ export async function minddyUsersForForgeAccount(opts: {
 }
 
 /**
- * Ce (ticket, geste, PR) vient-il d'être tracé par la route, c'est-à-dire fait
- * DEPUIS minddy (MIN-144) ?
+ * Was this (ticket, gesture, PR) just recorded by the route, meaning it was
+ * performed FROM minddy (MIN-144)?
  *
- * Jusqu'à MIN-144, l'anti-écho se lisait sur l'ACTEUR : merger depuis minddy
- * partait du bot de la GitHub App (ou du compte qui a lié le dépôt côté GitLab),
- * donc « acteur = nous » suffisait. Depuis, un geste humain part du compte git de
- * la PERSONNE : l'acteur du hook est le même qu'elle ait cliqué dans minddy ou
- * sur la forge, et l'identité seule ne discrimine plus rien — sans ce garde,
- * chaque merge fait depuis minddy produit DEUX lignes d'activité (celle de la
- * route, puis celle du hook), deux dispatchs de webhook d'intégration, et une
- * notification d'inbox à l'auteur du run pour son propre geste.
+ * Until MIN-144, echo prevention could use the ACTOR: a merge from minddy came
+ * from the GitHub App bot (or the account that linked the repository on GitLab),
+ * so “actor = us” was sufficient. Now a human gesture comes from the PERSON'S
+ * git account: the hook actor is the same whether they clicked in minddy or on
+ * the forge, and identity alone no longer distinguishes the two — without this
+ * guard, every merge from minddy produces TWO activity lines (one from the
+ * route, then one from the hook), two integration webhook dispatches, and an
+ * inbox notification to the run author for their own gesture.
  *
- * Ce qu'on cherche est donc précis : un événement du MÊME type, sur la MÊME PR,
- * écrit il y a quelques secondes PAR LE MEMBRE qui porte ce compte de forge. Un
- * autre membre qui approuve sur la forge à la même seconde garde sa ligne.
+ * What we therefore seek is precise: an event of the SAME type, on the SAME PR,
+ * written a few seconds ago BY THE MEMBER who owns this forge account. Another
+ * member approving on the forge at the same second keeps their own line.
  *
- * Ce membre se reconnaît à l'ID de son compte de forge, pas à son login
- * (MIN-154) : le login est un nom d'affichage jamais rafraîchi, et un renommage
- * chez GitHub ou GitLab rendait ce garde muet — pour toujours, et en silence.
- * Deux lignes d'activité identiques sur le ticket, deux dispatchs de webhook
- * d'intégration, et une notification d'inbox à l'auteur du run pour son propre
- * geste.
+ * This member is identified by their forge account ID, not their login
+ * (MIN-154): the login is a display name that is never refreshed, and a rename
+ * on GitHub or GitLab made this guard silently stop working forever. The result
+ * was two identical activity lines on the ticket, two integration webhook
+ * dispatches, and an inbox notification to the run author for their own gesture.
  *
- * Best-effort, et la course n'est pas gagnée d'avance : si le hook arrivait avant
- * l'écriture de la route, on retombe sur l'ancien comportement (un doublon) —
- * jamais sur une perte.
+ * Best effort, and the race is not always won: if the hook arrives before the
+ * route writes its event, we fall back to the previous behavior (a duplicate) —
+ * never a lost event.
  */
 export async function isPrActionEcho(opts: {
   issueIds: (string | null | undefined)[];
   type: PrActionEventType;
   prNumber: number;
   provider: ForgeProvider;
-  /** Id du compte de l'acteur chez la forge — la clé d'identité (MIN-154). */
+  /** Forge account ID of the actor — the identity key (MIN-154). */
   accountId: string | null;
-  /** Login de l'acteur chez la forge : repli quand l'id manque d'un côté. */
+  /** Forge login of the actor: fallback when the ID is missing on one side. */
   login: string | null;
 }): Promise<boolean> {
   const issueIds = [...new Set(opts.issueIds.filter((id): id is string => !!id))];
@@ -176,21 +173,22 @@ export async function isPrActionEcho(opts: {
 }
 
 /**
- * Ce (ticket, geste, PR, acteur) porte-t-il DÉJÀ une ligne de moins de deux
- * minutes ? Le garde des gestes répétables (`collapsesInBurst`).
+ * Does this (ticket, gesture, PR, actor) ALREADY have a line less than two
+ * minutes old? This is the guard for repeatable gestures (`collapsesInBurst`).
  *
- * Une review GitHub de huit remarques de ligne arrive en huit
- * `pull_request_review_comment` quasi simultanés : ce sont huit faits pour la
- * forge, un seul geste pour le lecteur du ticket. Sans ce regroupement, le
- * journal porterait huit fois la même phrase.
+ * A GitHub review with eight line comments arrives as eight nearly simultaneous
+ * `pull_request_review_comment` events: eight facts for the forge, but one
+ * gesture for the ticket reader. Without this grouping, the log would repeat
+ * the same sentence eight times.
  *
- * Best-effort, et pour la même raison que l'anti-écho : les huit livraisons
- * peuvent s'exécuter en parallèle, et une lecture peut passer avant l'écriture
- * de sa voisine. On retombe alors sur quelques lignes de trop — jamais sur une
- * perte, jamais sur une ligne attribuée à côté.
+ * Best effort, for the same reason as echo prevention: the eight deliveries can
+ * run in parallel, and one read can occur before its neighbor is written. We
+ * may then end up with a few extra lines — never a lost line, and never one
+ * attributed to the wrong actor.
  *
- * Deux modes, selon d'où vient le geste : in-app (`actorId`, le membre minddy)
- * ou forge (`actor_id` null, l'acteur encodé dans `from_value`).
+ * Two modes, depending on where the gesture came from: in-app (`actorId`, the
+ * minddy member) or forge (`actor_id` null, with the actor encoded in
+ * `from_value`).
  */
 export async function hasRecentPrEvent(opts: {
   issueIds: string[];
@@ -220,7 +218,7 @@ export async function hasRecentPrEvent(opts: {
   return !!data?.length;
 }
 
-/** Tickets qui n'ont pas déjà la ligne (identité : geste + PR + acteur de forge). */
+/** Tickets that do not already have the line (identity: gesture + PR + forge actor). */
 async function withoutBurstDuplicates(opts: {
   issueIds: string[];
   type: PrActionEventType;
@@ -242,13 +240,13 @@ async function withoutBurstDuplicates(opts: {
 }
 
 /**
- * Émetteur d'activité des actions PR/MR faites DIRECTEMENT sur le provider
- * (webhooks GitHub ET GitLab — MIN-69, extrait du webhook GitHub). Un seul event
- * par issue (plusieurs runs peuvent partager la même PR). Acteur = l'utilisateur
- * provider : pas d'utilisateur minddy (`actor_id` null), son login est porté par
- * `from_value` (préfixé `gitlab:` pour GitLab — cf. `forgeActorValue`), le numéro
- * de PR/MR par `to_value`. Les actions in-app passent, elles, par les routes avec
- * l'acteur membre.
+ * Activity emitter for PR/MR actions performed DIRECTLY on the provider
+ * (GitHub AND GitLab webhooks — MIN-69, extracted from the GitHub webhook). One
+ * event per issue (multiple runs can share the same PR). The actor is the
+ * provider user, not a minddy user (`actor_id` null); their login is stored in
+ * `from_value` (prefixed with `gitlab:` for GitLab — see `forgeActorValue`), and
+ * the PR/MR number in `to_value`. In-app actions go through the routes with the
+ * member as actor.
  */
 export async function recordForgePrActionEvents(opts: {
   runs: SyncedPrRun[];
@@ -257,7 +255,7 @@ export async function recordForgePrActionEvents(opts: {
   provider: ForgeProvider;
   login: string | null;
 }): Promise<void> {
-  // Les runs CARNET (MIN-84) n'ont pas d'issue : rien à tracer pour eux.
+  // CARNET runs (MIN-84) have no issue, so there is nothing to record for them.
   const issueIds = [
     ...new Set(opts.runs.map((r) => r.issueId).filter((id): id is string => id != null)),
   ];
@@ -282,8 +280,8 @@ export async function recordForgePrActionEvents(opts: {
   );
 }
 
-/** Action de forge → type de notification (null = rien à annoncer : refuser une
-    PR est déjà visible dans le ticket qui repasse « à faire »). */
+/** Forge action → notification type (null = nothing to announce: rejecting a
+    PR is already visible in the ticket when it returns to “to do”). */
 function notificationTypeFor(type: PrActionEventType): NotificationType | null {
   if (type === "pr_accepted") return "pr_merged";
   if (type === "pr_approved" || type === "pr_changes_requested") return "pr_reviewed";
@@ -291,18 +289,18 @@ function notificationTypeFor(type: PrActionEventType): NotificationType | null {
 }
 
 /**
- * Inbox (MIN-138) : prévient l'AUTEUR du run quand quelqu'un approuve, demande
- * des changements ou fusionne SA pull request directement sur la forge. Sans ça
- * il ne l'apprend qu'en ouvrant la page.
+ * Inbox (MIN-138): notify the run AUTHOR when someone approves, requests
+ * changes, or merges THEIR pull request directly on the forge. Otherwise they
+ * only learn about it by opening the page.
  *
- * Appelé juste après `recordForgePrActionEvents`, derrière les MÊMES gardes
- * anti-écho (bot GitHub / compte de service GitLab) : une action faite depuis
- * minddy est déjà connue de celui qui l'a faite.
+ * Called immediately after `recordForgePrActionEvents`, behind the SAME echo
+ * guards (GitHub bot / GitLab service account): an action performed from minddy
+ * is already known to the person who performed it.
  *
- * **Sans `replaceUnread`**, contrairement aux notifications d'agent : les types
- * frères d'`insertNotifications` ne couvrent que la famille agent, et deux
- * reviews successives sont deux FAITS distincts, pas l'état d'un run qui se
- * réécrit. Best-effort, comme tout le reste de ce module.
+ * **Without `replaceUnread`**, unlike agent notifications: the sibling types
+ * of `insertNotifications` cover only the agent family, and two successive
+ * reviews are two distinct FACTS, not the state of a run being rewritten. Best
+ * effort, like everything else in this module.
  */
 export async function notifyForgePrAction(opts: {
   runs: SyncedPrRun[];
@@ -311,8 +309,8 @@ export async function notifyForgePrAction(opts: {
 }): Promise<void> {
   const notificationType = notificationTypeFor(opts.type);
   if (!notificationType) return;
-  // Un run carnet n'a pas d'issue où renvoyer, un run importé pas d'auteur.
-  // Dédoublonné par (destinataire, issue) : plusieurs runs partagent une PR.
+  // A CARNET run has no issue to notify, and an imported run has no author.
+  // Deduplicated by (recipient, issue): multiple runs can share a PR.
   const seen = new Set<string>();
   const rows = opts.runs
     .filter((r) => r.createdBy && r.issueId)
@@ -327,8 +325,8 @@ export async function notifyForgePrAction(opts: {
       project_id: r.projectId,
       type: notificationType,
       issue_id: r.issueId,
-      // L'acteur est un compte de la forge, pas un utilisateur minddy : l'inbox
-      // retombe sur l'icône du type, comme pour un retour du board public.
+      // The actor is a forge account, not a minddy user: the inbox falls back to
+      // the type icon, as it does for a return from the public board.
       actor_id: null,
     }));
   if (rows.length === 0) return;
@@ -340,17 +338,17 @@ export async function notifyForgePrAction(opts: {
 }
 
 /**
- * Membre au nom de qui écrire sur le ticket d'une PR sans run (MIN-143) : celui
- * qui a LIÉ le dépôt au projet de ce ticket.
+ * The member on whose behalf to write to the ticket for a PR without a run
+ * (MIN-143): the one who LINKED the repository to that ticket's project.
  *
- * `updateIssueFields` traverse la RLS mais refait le contrôle d'accès lui-même,
- * il lui faut donc un membre réel. Celui qui a posé la liaison est le seul dont
- * on sache qu'il appartient à CE projet et qu'il a voulu ce dépôt — c'est déjà
- * l'acteur technique de la synchro d'issues (MIN-97). La forge, elle, est
- * créditée à l'écran par `forgeSync`.
+ * `updateIssueFields` bypasses RLS but performs its own access check, so it
+ * needs a real member. The person who created the link is the only one known to
+ * belong to THIS project and to have intended this repository — they are already
+ * the technical actor for issue sync (MIN-97). The forge itself is credited in
+ * the UI by `forgeSync`.
  *
- * Null quand le ticket a disparu, quand aucune liaison ne joint ce dépôt à son
- * projet, ou quand la liaison n'a pas d'auteur : on ne devine pas d'acteur.
+ * Null when the ticket has disappeared, when no link joins this repository to
+ * its project, or when the link has no author: we do not guess an actor.
  */
 async function repoWriteActor(opts: {
   provider: ForgeProvider;
@@ -378,31 +376,31 @@ async function repoWriteActor(opts: {
 }
 
 /**
- * Effets « ticket » d'un événement de forge sur une PR/MR qui n'a AUCUN run
- * (MIN-143) : statut aligné, action tracée.
+ * “Ticket” effects of a forge event on a PR/MR with NO run (MIN-143): align the
+ * status and record the action.
  *
- * Sans ça, le même geste donne deux résultats selon l'endroit où on le fait :
- * fusionner une PR humaine DEPUIS minddy passe son ticket en terminé (les routes
- * lisent `pull_requests.issue_id`), le fusionner sur GitHub ne faisait rien —
- * tout le chemin webhook partait des runs, qu'une PR humaine n'a pas.
+ * Without this, the same gesture has two outcomes depending on where it is
+ * performed: merging a human PR FROM minddy moves its ticket to done (the routes
+ * read `pull_requests.issue_id`), while merging it on GitHub did nothing — the
+ * entire webhook path started from runs, which a human PR does not have.
  *
- * Ce qui reste dehors, volontairement : la NOTIFICATION. `notifyForgePrAction`
- * prévient l'auteur du run ; une PR humaine n'en a pas, et savoir quel compte de
- * forge est quel membre minddy est le chantier d'identité que MIN-143 parque.
+ * Deliberately excluded: the NOTIFICATION. `notifyForgePrAction` notifies the
+ * run author; a human PR has none, and determining which minddy member owns
+ * which forge account is the identity work that MIN-143 defers.
  *
- * Best-effort de bout en bout, comme le reste de ce module.
+ * Best effort end to end, like the rest of this module.
  */
 export async function applyForgePrToIssue(opts: {
   provider: ForgeProvider;
   repoFullName: string;
   prNumber: number;
-  /** Nouvel état de la PR, ou null si l'événement n'en décrit aucun. */
+  /** New PR state, or null if the event describes none. */
   prState: AgentRun["pr_state"] | null;
-  /** Action à tracer, ou null (action non tracée, ou écho d'un geste in-app). */
+  /** Action to record, or null (unrecorded action, or an echo of an in-app gesture). */
   actionType: PrActionEventType | null;
-  /** Id du compte de l'acteur chez la forge — sert à reconnaître l'écho (MIN-154). */
+  /** Forge account ID of the actor — used to recognize echoes (MIN-154). */
   accountId: string | null;
-  /** Login de l'acteur chez la forge — il tient lieu d'acteur dans la timeline. */
+  /** Forge login of the actor — it serves as the actor in the timeline. */
   login: string | null;
 }): Promise<void> {
   if (!opts.prState && !opts.actionType) return;
@@ -412,7 +410,7 @@ export async function applyForgePrToIssue(opts: {
     repoFullName: opts.repoFullName,
     number: opts.prNumber,
   });
-  // Pas de ticket rattaché : c'est le cas NORMAL d'une PR humaine, pas une panne.
+  // No linked ticket: this is NORMAL for a human PR, not a failure.
   if (!pr?.issue_id) return;
   const issueId = pr.issue_id;
 
@@ -432,11 +430,11 @@ export async function applyForgePrToIssue(opts: {
     }
   }
 
-  // L'activité, elle, n'a jamais eu besoin d'acteur minddy : `actor_id` est null
-  // et le login de la forge voyage dans `from_value` (cf. forgeActorValue).
-  // Sauf écho : depuis MIN-144, fusionner une PR humaine DEPUIS minddy porte le
-  // compte git de la personne, et l'appelant ne peut plus le distinguer d'un
-  // merge fait sur la forge — la route l'a déjà tracé.
+  // Activity has never needed a minddy actor: `actor_id` is null and the forge
+  // login travels in `from_value` (see `forgeActorValue`).
+  // Except for echoes: since MIN-144, merging a human PR FROM minddy uses the
+  // person's git account, and the caller can no longer distinguish it from a
+  // merge performed on the forge — the route has already recorded it.
   if (
     opts.actionType &&
     !(await isPrActionEcho({
@@ -469,27 +467,27 @@ export async function applyForgePrToIssue(opts: {
 }
 
 /**
- * Trace sur le(s) ticket(s) d'une PR un geste de forge SANS effet d'état — une
- * review, un commentaire de fil, une remarque de ligne. Le pendant, pour les
- * gestes qui ne changent rien à la PR elle-même, de ce que `handlePullRequest`
- * fait autour de `syncPrState`.
+ * Record a forge gesture with NO state effect on a PR's ticket(s) — a review,
+ * thread comment, or line comment. This is the counterpart, for gestures that
+ * do not change the PR itself, to what `handlePullRequest` does around
+ * `syncPrState`.
  *
- * Une seule règle à retenir : la PR de Numo passe par ses RUNS (ils portent le
- * ticket, et l'auteur du run mérite sa notification), une PR humaine par la PR
- * elle-même (MIN-143, `applyForgePrToIssue`). Ce garde `runs.length === 0`
- * manquait au chemin des reviews : approuver une PR humaine sur GitHub ne
- * laissait aucune trace sur son ticket, là où la fusionner en laissait une.
+ * One rule to remember: Numo's PR goes through its RUNS (they carry the ticket,
+ * and the run author deserves the notification), while a human PR goes through
+ * the PR itself (MIN-143, `applyForgePrToIssue`). The `runs.length === 0` guard
+ * was missing from the review path: approving a human PR on GitHub left no trace
+ * on its ticket, while merging it did.
  *
- * Best-effort de bout en bout, comme le reste de ce module.
+ * Best effort end to end, like the rest of this module.
  */
 export async function recordForgePrGesture(opts: {
   provider: ForgeProvider;
   repoFullName: string;
   prNumber: number;
   type: PrActionEventType;
-  /** Id du compte de l'acteur chez la forge — la clé de l'anti-écho (MIN-154). */
+  /** Forge account ID of the actor — the echo-prevention key (MIN-154). */
   accountId: string | null;
-  /** Login de l'acteur chez la forge — il tient lieu d'acteur dans la timeline. */
+  /** Forge login of the actor — it serves as the actor in the timeline. */
   login: string | null;
 }): Promise<void> {
   const runs = await findRunsForPr({
@@ -517,6 +515,6 @@ export async function recordForgePrGesture(opts: {
     provider: opts.provider,
     login: opts.login,
   });
-  // Inbox : sans type de notification associé (commentaires), c'est un no-op.
+  // Inbox: without an associated notification type (comments), this is a no-op.
   await notifyForgePrAction({ runs, type: opts.type, actorLogin: opts.login });
 }

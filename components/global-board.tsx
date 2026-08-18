@@ -72,7 +72,7 @@ function toIdMaps<T extends { id: string }>(
 const NUMO_GENERATION_TIMEOUT_MS = 120_000;
 
 /**
- * The cross-project "Tous les tickets" board (MIN-29). A real kanban: issues
+ * The cross-project “All tickets” board (MIN-29). A real kanban: issues
  * from every project are grouped by status, each card is a fully interactive
  * project card (drag to change status, inline pickers, origin project chip),
  * and clicking one opens the full side panel in place — using that issue's own
@@ -155,12 +155,12 @@ function GlobalBoardInner() {
       consumeViewParam();
       return;
     }
-    // `?view=<id>` désigne une VUE, donc pas le cycle — et le mode cycle, lui,
-    // est mémorisé (localStorage). Sans cette sortie, une vue enregistrée
-    // ouverte alors que le cycle était en mémoire sélectionnait bien la vue
-    // dessous, mais affichait le cycle par-dessus : le raccourci n'emmenait pas
-    // là où il disait. C'est le même geste que le clic sur une pastille de vue
-    // dans la barre d'outils, qui quitte le cycle avant de sélectionner.
+    // `?view=<id>` designates a VIEW, therefore not the cycle — and the cycle mode, itself,
+    // is stored (localStorage). Without this output, a saved view
+    // opened while the cycle was in memory correctly selected the view
+    // below, but displayed the cycle above: the shortcut did not take
+    // where he said. It's the same gesture as clicking on a view pad
+    // in the toolbar, which exits the cycle before selecting.
     if (rawViewParam) switchCycleMode(false);
   }, [rawViewParam, switchCycleMode, consumeViewParam]);
 
@@ -223,7 +223,7 @@ function GlobalBoardInner() {
   };
 
   // Let Numo shape the currently selected global view: open the chat in global
-  // mode carrying the active view as context so "cette vue" resolves.
+  // mode carrying the active view as context so "this view" resolves.
   const handleAskNumo = () => {
     openAssistant({
       projectId: null,
@@ -370,10 +370,10 @@ function GlobalBoardInner() {
     cycleIssues.length > 0 &&
     cycleIssues.every((i) => ["done", "canceled", "duplicate"].includes(i.status));
 
-  // « Enregistrer la vue actuelle » (⌘K) : le mode cycle et la vue active sont
-  // deux états gardés hors de l'adresse (localStorage), et `?view=` les
-  // rétablit tous les deux — "cycle" est l'instruction que cette page consomme
-  // en mode cycle, un id de vue sinon.
+  // “Save current view” (⌘K): cycle mode and active view are
+  // two states kept outside the address (localStorage), and `?view=` them
+  // restores both — "cycle" is the instruction this page consumes
+  // in cycle mode, a view id otherwise.
   usePublishCurrentView({
     href: buildViewHref(pathname, searchParams.toString(), {
       view: cycleMode ? "cycle" : activeViewId,
@@ -382,7 +382,7 @@ function GlobalBoardInner() {
   });
 
   // Numo rides along: the cycle while it's on screen ("remplis mon cycle"),
-  // otherwise the active global view so "cette vue" resolves to it.
+  // otherwise the active global view so "this view" resolves to it.
   useAssistantContext(
     cycleMode && selectedCycle && cycleLabel
       ? { cycleId: selectedCycle.id, cycleLabel }
@@ -487,18 +487,18 @@ function GlobalBoardInner() {
   };
 
   /**
-   * Rien à montrer NULLE PART — pas « rien dans cette vue ». Aucun projet, ou
-   * aucun ticket dans aucun d'eux : la barre d'outils (vues, filtres, tri) n'a
-   * alors rien sur quoi mordre, et l'écran se réduit à ce qu'il y a à faire.
-   * Hors mode cycle, qui a déjà ses propres écrans d'attente.
+   * Nothing to show ANYWHERE — not “nothing in this view.” No project, or
+   * no tickets in any of them: the toolbar (views, filters, sorting) has no
+   * then nothing to bite on, and the screen is reduced to what there is to do.
+   * Excluding cycle mode, which already has its own waiting screens.
    */
   const nothingAnywhere = !cycleMode && (projects.length === 0 || issues.length === 0);
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 flex-col gap-3 px-6 pt-4">
-        {/* Le titre de la page saute dans le seul cas où il n'y a rien du tout :
-            l'écran se réduit alors à ce qu'il y a à faire. */}
+        {/* The page title jumps in the only case where there is nothing at all:
+ the screen is then reduced to what there is to do. */}
         {cycleMode && cycles?.enabled && selectedCycle ? (
           // Title line: date-selector left, Ask Numo right — the gauges live
           // on the pills row below.
@@ -515,8 +515,8 @@ function GlobalBoardInner() {
             {cycleMode ? tBoard("cycleTab") : t("allTitle")}
           </h1>
         )}
-        {/* Rien nulle part : pas de barre d'outils au-dessus d'un écran qui
-            n'a qu'une chose à proposer. */}
+        {/* Nothing anywhere: no toolbar above a screen that
+ has only one thing to offer. */}
         {!nothingAnywhere && (
           <BoardToolbar
             tabOrderScope="global"
@@ -593,9 +593,9 @@ function GlobalBoardInner() {
                 onAddRelation={
                   selectedPhase === "current" ? handleAddRelation : undefined
                 }
-                // Vue cycle : pas de pastille (tout y est), mais une sélection
-                // doit pouvoir sortir du cycle d'un coup — seulement sur le
-                // cycle en cours, sortir d'un cycle passé n'a pas de sens.
+                // Cycle view: no tablet (everything is there), but a selection
+                // must be able to exit the cycle suddenly — only on the
+                // current cycle, exiting a past cycle makes no sense.
                 bulkCycleId={
                   selectedPhase === "current" ? (selectedCycle?.id ?? null) : null
                 }
@@ -612,11 +612,11 @@ function GlobalBoardInner() {
           </div>
         )
       ) : nothingAnywhere ? (
-        /* Vide POUR DE BON, pas « vide dans cette vue » : soit il n'y a aucun
-           projet — et alors la seule chose à faire est d'en créer un —, soit il
-           y en a mais pas un seul ticket, et c'est le même écran que sur le
-           board d'un projet. Le ticket se crée depuis le dialog partagé, qui
-           demande dans QUEL projet : ici, aucun n'est sous les yeux. */
+        /* Empty FOR GOOD, not “empty in this view”: either there is no
+ project — and then the only thing to do is to create one — or there
+ is but not a single ticket, and it is the same screen as on the
+ board of a project. The ticket is created from the shared dialog, which
+ asks WHICH project: here, none is in front of you. */
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
           <div className="mx-auto max-w-5xl">
             {projects.length === 0 ? (
@@ -643,10 +643,10 @@ function GlobalBoardInner() {
           </div>
         </div>
       ) : (
-        /* Aucun ticket ne passe les filtres : le board reste debout, colonnes
-           vides. « Vide dans cette vue » n'est pas une impasse — c'est un
-           réglage de filtre, et l'écran qui le montre est le board lui-même.
-           Même geste que sur le board d'un projet. */
+        /* No ticket passes the filters: the board remains standing, columns
+ empty. “Empty in this view” is not a dead end — it's a
+ filter setting, and the screen that shows it is the board itself.
+ Same gesture as on a project board. */
         <div className="min-h-0 flex-1 pt-3">
           <GlobalKanbanBoard
             issues={filtered}

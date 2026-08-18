@@ -12,27 +12,27 @@ import type { Locale } from "@/i18n/config";
 
 /**
  * Bandeau de consentement aux cookies analytiques. Ne s'affiche que tant
- * qu'aucun choix n'a été fait, et jamais côté serveur (le localStorage n'est lu
- * qu'après montage, sinon le HTML pré-rendu afficherait le bandeau à tout le
- * monde le temps de l'hydratation).
+ * that no choice was made, and never on the server side (the localStorage is not read
+ * only after editing, otherwise the pre-rendered HTML would display the banner at all times.
+ * world the time of hydration).
  *
- * ## Et jamais dans l'app de bureau (MIN-291)
+ * ## And never in the desktop app (MIN-291)
  *
- * Une carte flottante qui demande la permission de mesurer est un objet de
- * SITE : elle s'adresse à quelqu'un qui vient d'arriver de nulle part et à qui
- * on doit une information avant de rien écrire chez lui. Dans une app qu'on a
- * téléchargée, signée, installée et ouverte, elle n'a plus personne à informer
- * de cette façon-là — elle dit seulement « ceci est un site web dans une
- * fenêtre ».
+ * A floating card that requests permission to measure is an object of
+ * SITE: it is aimed at someone who has just arrived from nowhere and to whom
+ * we need information before writing anything to him. In an app that we have
+ * downloaded, signed, installed and opened, she no longer has anyone to inform
+ * that way — it just says “this is a website in a
+ * window ".
  *
- * Ce qui ne disparaît pas, c'est le CHOIX. Il déménage dans les réglages
- * (components/settings/account-analytics-section.tsx), où toute app de bureau le
- * met, et il y est réversible — ce qu'il n'était pas jusqu'ici, une fois le
- * bandeau répondu. Tant qu'il n'est pas fait, le consentement vaut `null` et
- * PostHog reste sans cookie ni identité, exactement comme pour un visiteur du
- * web qui n'a pas encore tranché : **rien n'est mesuré en douce**. La
- * contrepartie est réelle et assumée — la mesure d'audience est éteinte par
- * défaut sur l'app de bureau.
+ * What doesn't go away is CHOICE. It moves to the settings
+ * (components/settings/account-analytics-section.tsx), where any desktop app
+ * puts, and it is reversible - which it was not until now, once the
+ * headband replied. Until it is given, consent is worth `null` and
+ * PostHog remains without cookies or identity, exactly as for a visitor to the
+ * web which has not yet decided: **nothing is measured quietly**. There
+ * consideration is real and assumed — the audience measurement is extinguished by
+ * default on the desktop app.
  */
 export function CookieBanner() {
   const t = useTranslations("CookieBanner");
@@ -45,10 +45,10 @@ export function CookieBanner() {
   }, []);
 
   const choose = (consent: CookieConsent) => {
-    // Tracké AVANT `writeConsent` : sur un refus, celui-ci déclenche
-    // `opt_out_capturing()` et l'événement ne partirait plus. Il est donc émis
-    // dans le mode pré-choix — anonyme et sans écriture sur l'appareil — ce qui
-    // permet de connaître le taux de refus sans rien conserver de la personne
+    // Tracked BEFORE `writeConsent`: upon refusal, this triggers
+    // `opt_out_capturing()` and the event would no longer run. It is therefore issued
+    // in pre-choice mode — anonymous and without writing to the device — which
+    // allows you to know the refusal rate without keeping anything about the person
     // qui refuse.
     track("cookie_consent_choice", { choice: consent });
     writeConsent(consent);
@@ -61,29 +61,28 @@ export function CookieBanner() {
     <div
       role="dialog"
       aria-label={t("title")}
-      // Le padding bas : la page est à fond perdu depuis que le root layout
-      // déclare `viewport-fit=cover`, donc `bottom-4` compte désormais depuis le
-      // bord PHYSIQUE — 16 px, soit moins que la barre d'indicateur d'accueil.
-      // Le padding remonte la carte au-dessus d'elle. Même geste que le FAB de
-      // Numo et le bandeau de nouvelle version.
+      // Bottom padding: the page is fully bleed since the root layout
+      // declares `viewport-fit=cover`, so `bottom-4` now counts from the
+      // PHYSICAL edge — 16 px, less than the home indicator bar.
+      // The padding raises the card above it. Same gesture as the FAB of
+      // Numo and the new version headband.
       //
-      // Ne PAS abréger un utilitaire à valeur arbitraire par des points de
-      // suspension dans un commentaire : Tailwind scanne le fichier entier,
-      // commentaires compris, et génère une règle avec les points dedans —
-      // qui ne compile pas. On écrit la classe en entier, ou pas du tout.
+      // Do NOT abbreviate an arbitrary-valued utility with points
+      // suspension in a comment: Tailwind scans the entire file,
+      // comments included, and generates a rule with the points in it —
+      // which does not compile. We write the entire class, or not at all.
       className="fixed inset-x-4 bottom-4 z-50 pb-[env(safe-area-inset-bottom)] md:left-auto md:right-6 md:max-w-sm"
     >
       <div className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-lg">
         <p className="text-sm font-semibold text-card-foreground">{t("title")}</p>
         <p className="text-xs text-muted-foreground">
           {t("description")}{" "}
-          {/* URL ABSOLUE, et une balise <a> plutôt qu'un <Link> : ce bandeau est
-              monté par le root layout, donc aussi sur un board de feedback servi
-              depuis le domaine de son éditeur (MIN-36). Là-bas, le proxy réécrit
-              tout ce qu'il ne reconnaît pas vers /f/<token>/… : un `/cookies`
-              relatif partait en 404, et le consentement se recueillait sans que
-              la personne puisse lire à quoi elle consent. Même correctif que la
-              mention d'information du board (app/f/[token]/feedback-auth.tsx). */}
+          {/* ABSOLUTE URL, and a <a> tag rather than a <Link>: this banner is
+ mounted by the root layout, therefore also on a feedback board served
+ from the domain of its publisher (MIN-36). There, the proxy rewrites
+ everything it does not recognize to /f/<token>/…: a relative `/cookies`
+ was sent to 404, and consent was collected without the person being able to read what they were consenting to. Same fix as the
+ board information mention (app/f/[token]/feedback-auth.tsx). */}
           <a
             href={`${SITE_URL}${localizedHref("/cookies", locale)}`}
             target="_blank"

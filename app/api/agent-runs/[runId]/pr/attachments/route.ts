@@ -8,13 +8,13 @@ import {
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 
 /**
- * FAÇADE (MIN-162) de l'hébergement d'une pièce jointe — la route par PR est
- * `/api/pull-requests/[prId]/attachments`. Même raison que la façade voisine :
- * la vue diff ne connaît qu'une `PrEndpoint`, pas un id de PR.
+ * FACADE (MIN-162) of hosting an attachment — the route by PR is
+ * `/api/pull-requests/[prId]/attachments`. Same reason as the neighboring facade:
+ * the diff view only knows a `PrEndpoint`, not a PR id.
  *
- * Une façade doit porter les mêmes gardes que ce qu'elle expose, sans quoi elle
- * en est le contournement : autorisation AVANT de bufferiser le corps, puis le
- * même débit borné que la route par PR (MIN-348).
+ * A facade must bear the same guards as what it displays, otherwise it
+ * is the workaround: authorization BEFORE buffering the body, then
+ * same limited flow as the road via PR (MIN-348).
  */
 
 type RouteContext = { params: Promise<{ runId: string }> };

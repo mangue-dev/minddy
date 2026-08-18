@@ -10,8 +10,8 @@ import { SectionCta } from "@/components/marketing/section-cta";
 import { StructuredData } from "@/components/marketing/structured-data";
 import { PRICING_FAQ_KEYS } from "@/components/marketing/faq-keys";
 
-/** Page tarifs publique (MIN-73) : les cartes de plans, le détail ligne à ligne,
-    et les seules questions qui portent sur l'argent. */
+/** Public price page (MIN-73): plan maps, line by line details,
+ and the only questions that relate to money. */
 
 export async function generateMetadata(): Promise<Metadata> {
   return publicPageMetadata({ routeKey: "pricing", locale: (await getLocale()) as Locale });
@@ -31,9 +31,9 @@ export default async function PricingPage() {
 
   return (
     <>
-      {/* `Offer` (dérivées de BILLING_PLANS) + `FAQPage` : la page tarifs est
-          la seule qui puisse prétendre à un rich result prix, et elle n'avait
-          aucune donnée structurée (MIN-88). */}
+      {/* `Offer` (derived from BILLING_PLANS) + `FAQPage`: the pricing page is
+ the only one that can claim a rich result price, and it had
+ no structured data (MIN-88). */}
       <StructuredData variant="pricing" />
       <section className="pt-24 pb-16 sm:pt-28 sm:pb-20">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
@@ -46,15 +46,15 @@ export default async function PricingPage() {
             </p>
           </header>
 
-          {/* Sur cette page les cartes suivent directement le `<h1>` : elles
-              prennent le niveau `h2`, sinon la hiérarchie saute un cran. */}
+          {/* On this page the cards directly follow the `<h1>`: they
+ take the `h2` level, otherwise the hierarchy jumps a notch. */}
           <PricingPlans headingLevel={2} />
         </div>
       </section>
 
-      {/* Juste après les cartes, avant le tableau : c'est la réponse à la
-          question que les prix viennent de poser (MIN-149). L'usage inclus est
-          une commodité ; qui a déjà une clé n'a pas à être compté. */}
+      {/* Just after the cards, before the board: this is the answer to the
+ question that prices just asked (MIN-149). The included usage is
+ a convenience; who already has a key does not have to be counted. */}
       <SectionByok />
 
       <section className="border-t border-border py-16 sm:py-20">
@@ -81,8 +81,8 @@ export default async function PricingPage() {
         </div>
       </section>
 
-      {/* Même dernière relance que la landing, composant compris : les deux
-          pages se terminent sur la même demande. */}
+      {/* Same last reminder as the landing, both component included:
+ pages end on the same request. */}
       <SectionCta />
     </>
   );

@@ -3,30 +3,30 @@ import { KeyRound, Layers, Lock } from "lucide-react";
 import { AGENT_PROVIDERS } from "@/lib/agent-providers";
 
 /**
- * « Votre clé, votre inférence » — l'argument central de la page tarifs
+ * “Your key, your inference” — the central argument of the pricing page
  * (MIN-149).
  *
- * Il était enterré en dernière question de la FAQ, formulé comme une concession
- * (« oui, on peut utiliser sa propre clé »). Pour la cible — un dev qui code
- * avec des agents toute la journée et qui a DÉJÀ une clé — c'est le titre :
- * l'abonnement achète minddy, l'inférence de l'agent peut rester chez lui. Dit
- * ici, il retire aussi de la page la conversation « tant d'euros pour tant de
- * dollars d'usage inclus », et découple la marge du prix des modèles.
+ * It was buried in the last question of the FAQ, formulated as a concession
+ * (“yes, you can use your own key”). For the target — a dev who codes
+ * with agents all day and who ALREADY has a key — it's the title:
+ * subscription buys minddy, the agent's inference can stay at home. Said
+ * here, he also removes from the page the conversation "so many euros for so many
+ * usage dollars included", and decouples the margin from the price of the models.
  *
- * CE QU'IL NE FAUT PAS LUI FAIRE DIRE. Le BYOK ne couvre que la boucle de
- * l'agent de code — `resolveAgentApiKey` (lib/server/agent/model.ts) n'est
- * appelé que par `execute.ts`. Numo dans l'app, la review de PR, la dictée et le
- * feedback tournent sur la clé plateforme et se décomptent de l'usage inclus. Et
- * la clé ne lève pas la garde de plan : `checkAgentQuota` refuse un run sans
- * `allowAgents`. Ces deux réserves tiennent dans la note de bas de section, et
- * elles y restent tant que le code n'a pas changé.
+ * WHAT NOT TO MAKE HIM SAY. The BYOK only covers the loop of
+ * the code agent — `resolveAgentApiKey` (lib/server/agent/model.ts) is
+ * only called by `execute.ts`. Numo in the app, the PR review, the dictation and the
+ * feedback run on the platform key and are deducted from the usage included. And
+ * the key does not raise the plan guard: `checkAgentQuota` refuses a run without
+ * `allowAgents`. These two reservations fit in the footnote of the section, and
+ * they remain there as long as the code has not changed.
  *
- * Les providers viennent du registre (`AGENT_PROVIDERS`), comme le wizard des
- * réglages : en ajouter un le fait apparaître ici. Le générique est écarté de la
- * liste (`requiresBaseUrl`) — ce n'est pas une marque, il se dit en prose.
+ * The providers come from the registry (`AGENT_PROVIDERS`), like the wizard des
+ * settings: adding one makes it appear here. The generic is left out of the
+ * list (`requiresBaseUrl`) — it's not a brand, it's said in prose.
  *
- * Pas de logos : `ProviderLogo` est un composant client qui tire
- * `@lobehub/icons`, et cette page est publique.
+ * No logos: `ProviderLogo` is a client component that pulls
+ * `@lobehub/icons`, and this page is public.
  */
 
 const POINTS = [
@@ -84,8 +84,8 @@ export async function SectionByok() {
           </ul>
         </div>
 
-        {/* Les deux réserves, sous le cadre et non dedans : elles bornent
-            l'argument, elles ne le portent pas. */}
+        {/* The two reservations, under the frame and not inside: they limit
+ the argument, they do not carry it. */}
         <p className="mx-auto mt-6 max-w-2xl text-center text-xs leading-relaxed text-muted-foreground">
           {t("byokNote")}
         </p>

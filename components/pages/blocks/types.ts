@@ -1,24 +1,24 @@
-// Le DESCRIPTEUR d'un bloc de page : l'objet qui déclare, en un seul endroit,
-// les six choses qu'un bloc est réellement.
+// The DESCRIPTOR of a page block: the object which declares, in a single place,
+// the six things a block actually is.
 //
-// Un bloc n'est pas un nœud tiptap. C'est le nœud, PLUS son entrée dans le menu
-// « / », PLUS son entrée dans « transformer en », PLUS son icône, PLUS ses
-// libellés FR/EN, PLUS sa sérialisation markdown dans les deux sens. Tiptap rend
-// le nœud modulaire et ne dit rien des cinq autres : si elles vivent dans six
-// fichiers, ajouter un bloc tableau dans six mois voudra dire six éditions, et
-// un oubli — un bloc insérable mais absent de « transformer en », traduit d'un
-// seul côté, ou perdu à l'aller-retour markdown.
+// A block is not a tiptap node. This is the node, PLUS its entry in the menu
+// “/”, PLUS its entry in “transform into”, PLUS its icon, PLUS its
+// labels FR/EN, PLUS its markdown serialization in both directions. Tiptap makes
+// the modular node and says nothing about the other five: if they live in six
+// files, add a table block in six months will mean six editions, and
+// an oversight — an insertable block but missing “transform into”, translated from a
+// single side, or lost on the round trip markdown.
 //
-// D'où la règle du dossier : UN FICHIER PAR BLOC, qui exporte un `PageBlock`, et
-// un registre unique (./index.ts) que le menu « / », le menu ⋯ et le sérialiseur
-// parcourent tous les trois. Aucun consommateur n'importe un bloc nommément.
+// Hence the folder rule: ONE FILE PER BLOCK, which exports a `PageBlock`, and
+// a single register (./index.ts) as the “/” menu, the ⋯ menu and the serializer
+// iterate over all three. No consumer imports a block by name.
 //
-// Ce que le compilateur tient déjà, sans test : un descripteur auquel il manque
-// un champ ne compile pas, et `labelKey` est typé `MessageKey<"Pages">` — une
-// clé i18n absente du catalogue anglais est une
-// erreur de type, pas un `Pages.slashTableau` affiché à l'écran.
-// Ce qu'il ne tient pas, et que lib/pages-blocks.test.ts tient : la présence de
-// la clé dans le catalogue FRANÇAIS, et le fait que le markdown du bloc revienne
+// What the compiler already has, without testing: a descriptor that is missing
+// a field does not compile, and `labelKey` is typed `MessageKey<"Pages">` — a
+// i18n key missing from the English catalog is a
+// type error, not a `Pages.slashTableau` displayed on screen.
+// What it does not hold, and that lib/pages-blocks.test.ts holds: the presence of
+// the key in the FRENCH catalog, and the fact that the markdown of the block returns
 // intact d'un aller-retour.
 
 import type { Editor, Extensions, Range } from "@tiptap/core";
@@ -26,23 +26,23 @@ import type { LucideIcon } from "lucide-react";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
- * L'attribut qui porte l'ID stable d'un bloc. `blockId` et pas `id` : le
- * document part en JSON dans la base, et un champ nommé `id` au milieu d'un
- * arbre de nœuds se confond avec l'id de la PAGE à la première relecture.
+ * The attribute that carries the stable ID of a block. `blockId` and not `id`: the
+ * document leaves JSON in the database, and a field named `id` in the middle of a
+ * tree of nodes merges with the id of the PAGE on the first reread.
  *
- * C'est lui qui donne à la poignée sa cible, au lien de bloc son ancre, à la
- * sauvegarde sa fusion par bloc (MIN-271) et aux futurs commentaires la leur.
+ * It is he who gives the handle its target, the block link its anchor, the
+ * saves its merger by block (MIN-271) and future comments theirs.
  *
- * Il vit dans ce module-FEUILLE, et pas dans le registre, pour que les actions
- * du chrome (components/pages/block-actions.ts) puissent le lire sans importer
- * le catalogue — le registre, lui, importe ces actions pour ses raccourcis, et
- * deux modules qui s'importent l'un l'autre finissent toujours par se lever
- * dans le mauvais ordre.
+ * It lives in this SHEET-module, and not in the register, so that the actions
+ * from chrome (components/pages/block-actions.ts) can read it without importing
+ * the catalog — the registry imports these actions for its shortcuts, and
+ * two modules which import each other always end up raising
+ * in the wrong order.
  */
 export const BLOCK_ID_ATTRIBUTE = "blockId";
 
-/** L'identité d'un bloc dans le CATALOGUE — pas le nom de son nœud tiptap :
-    les trois titres sont trois blocs pour un seul nœud `heading`. */
+/** The identity of a block in the CATALOG — not the name of its tiptap node:
+ the three titles are three blocks for a single `heading` node. */
 export type PageBlockId =
   | "paragraph"
   | "heading1"
@@ -59,20 +59,20 @@ export type PageBlockId =
   | "image"
   | "file";
 
-/** Les sections du menu « / », dans cet ordre. */
+/** The sections of the “/” menu, in this order. */
 export type SlashGroup = "basic" | "lists" | "advanced";
 
 /* ── Markdown ─────────────────────────────────────────────────────────── */
 
-/** Le minimum de l'état de sérialisation de prosemirror-markdown qu'un bloc
-    touche. Le paquet ne publie pas ses types côté tiptap-markdown ; on déclare
-    donc ce qu'on utilise plutôt que de tout passer en `any`. */
+/** The minimum serialization state of prosemirror-markdown that a
+ block touches. The package does not publish its types on the tiptap-markdown side; we therefore declare
+ what we use rather than passing everything in `any`. */
 export interface MarkdownState {
   write(text: string): void;
   text(text: string, escape?: boolean): void;
-  /** Échappe ce qui a un sens en markdown. `startOfLine` n'est utile qu'aux
-      textes posés en début de bloc ; un texte de lien ou un texte alternatif
-      n'en a pas besoin. */
+  /** Escape what makes sense in markdown. `startOfLine` is only useful for
+ texts placed at the start of the block; link text or alt text
+ doesn't need it. */
   esc(text: string, startOfLine?: boolean): string;
   ensureNewLine(): void;
   renderContent(node: MarkdownNode): void;
@@ -91,7 +91,7 @@ export interface MarkdownState {
   ): void;
 }
 
-/** Le minimum du nœud ProseMirror qu'un sérialiseur de bloc touche. */
+/** The minimum of the ProseMirror node that a block serializer touches. */
 export interface MarkdownNode {
   type: { name: string };
   attrs: Record<string, unknown>;
@@ -102,107 +102,106 @@ export interface MarkdownNode {
 
 export interface PageBlockMarkdown {
   /**
-   * Ce que ce bloc écrit en markdown — un exemple MINIMAL et complet.
-   *
-   * Ce n'est pas de la documentation : c'est la fixture que
-   * lib/pages-blocks.test.ts relit dans un vrai éditeur, resérialise, et exige
-   * identique. Un bloc dont la sérialisation part d'un côté seulement fait
-   * tomber ce test, pas un aller-retour découvert six mois plus tard sur une
-   * vraie page.
-   */
+ * What this block writes in markdown — a MINIMAL and complete example.
+ *
+ * This is not documentation: it's the fixture that
+ * lib/pages-blocks.test.ts rereads in a real editor, reserializes, and requires
+ * identical. A block whose serialization starts on one side only makes
+ * fail this test, not a round trip discovered six months later on a
+ * real page.
+ */
   sample: string;
 
   /**
-   * Sérialisation propre au bloc (sens ÉCRITURE). Le registre la greffe sur le
-   * nœud, dans son `storage.markdown` — c'est là que tiptap-markdown la lit.
-   *
-   * Absente = le nœud sait déjà le faire : soit tiptap-markdown fournit la
-   * règle (les nœuds standards), soit le nœud la porte lui-même (les tâches du
-   * carnet, cf. components/scratchpad/task-nodes.ts). Le `sample` est ce qui
-   * le prouve, dans les deux cas.
-   */
+ * Serialization specific to the block (WRITE direction). The registry grafts it onto the
+ * node, in its `storage.markdown` — that's where tiptap-markdown reads it.
+ *
+ * Absent = the node already knows how to do it: either tiptap-markdown provides the
+ * rule (the standard nodes), or the node carries it itself (the tasks du
+ * notebook, see components/scratchpad/task-nodes.ts). The `sample` is what
+ * proves it, in both cases.
+ */
   toMarkdown?: (state: MarkdownState, node: MarkdownNode) => void;
 
   /**
-   * Lecture : la règle markdown-it qui rend ce bloc depuis du markdown, quand
-   * markdown-it ne la connaît pas. Reçoit l'instance markdown-it de
-   * tiptap-markdown (typée `unknown` : ses types sont ceux d'une dépendance
-   * transitive, cf. components/scratchpad/task-markdown.ts).
-   *
-   * Deux pièges, vérifiés tous les deux en écrivant un bloc bidon :
-   *
-   * - le chemin de lecture est markdown-it → **HTML** → `parseHTML` du nœud. Une
-   *   règle qui pose des attributs sur un `paragraph_open` ne donne rien : ils
-   *   n'arrivent pas jusqu'au HTML. Émettre un token `html_block`, comme le fait
-   *   blocks/subpage.ts ;
-   * - ce HTML doit porter une balise que **personne d'autre ne réclame**. Un
-   *   `<p data-type="…">` est happé par la règle `p` du paragraphe, qui en jette
-   *   les attributs au passage — le bloc se relit alors en paragraphe, sans un
-   *   mot d'erreur. Un `<div data-type="…">` passe.
-   */
+ * Reading: the markdown-it rule that renders this block from markdown, when
+ * markdown-it does not know it. Receives the markdown-it instance of
+ * tiptap-markdown (typed `unknown`: its types are those of a transitive dependency
+ *, cf. components/scratchpad/task-markdown.ts).
+ *
+ * Two traps, both checked in writing a bogus block:
+ *
+ * - the reading path is markdown-it → **HTML** → `parseHTML` of the node. A
+ * rule that sets attributes on a `paragraph_open` does nothing: they
+ * do not reach the HTML. Issue a `html_block` token, like
+ * blocks/subpage.ts ;
+ * does - this HTML must carry a tag that **no one else claims**. A
+ * `<p data-type="…">` is caught by the `p` rule of the paragraph, which throws
+ * the attributes in passing — the block is then reread as a paragraph, without a
+ * error word. A `<div data-type="…">` passes.
+ */
   fromMarkdown?: (markdownit: unknown) => void;
 }
 
-/* ── Le descripteur ───────────────────────────────────────────────────── */
+/* ── The descriptor ────────────────────────── ─────────────────────────── */
 
 export interface PageBlock {
-  /** Identité dans le catalogue. Unique sur tout le registre. */
+  /** Identity in the catalog. Unique across the entire register. */
   id: PageBlockId;
 
-  /** Le nom du NŒUD tiptap sous ce bloc (`"heading"` pour les trois titres). */
+  /** The name of the tiptap NODE under this block (`"heading"` for all three titles). */
   nodeName: string;
 
   /**
-   * Les extensions tiptap que ce bloc apporte. Vide quand un autre bloc du même
-   * nœud les apporte déjà — le titre 1 monte `Heading`, les titres 2 et 3 se
-   * greffent dessus. Le registre dédoublonne par nom d'extension et le test
-   * structurel vérifie qu'aucun nœud du catalogue n'est orphelin.
-   */
+ * The tiptap extensions that this block provides. Empty when another block of the same
+ * node already brings them — title 1 rises `Heading`, titles 2 and 3 graft on it. The registry deduplicates by extension name and the structural test
+ * checks that no node in the catalog is orphaned.
+ */
   extensions: Extensions;
 
   icon: LucideIcon;
   labelKey: MessageKey<"Pages">;
 
-  /** Le menu « / » : où le bloc apparaît, et sur quoi il se cherche. Les
-      aliases portent les DEUX langues — c'est une saisie, pas un affichage. */
+  /** The “/” menu: where the block appears, and what it is looking for.
+ aliases carry BOTH languages ​​— it's an entry, not a display. */
   slash: { group: SlashGroup; order: number; keywords: string[] };
 
   /**
-   * Convertir la sélection courante VERS ce bloc — le menu « transformer en ».
-   * `false` quand ça n'a pas de sens : une sous-page ne se transforme pas
-   * depuis un paragraphe, elle s'insère.
-   */
+ * Convert the current selection TO this block — the “transform to” menu.
+ * `false` when it doesn't make sense: a subpage does not transform
+ * from a paragraph, it is inserted.
+ */
   turnInto: ((editor: Editor) => boolean) | false;
 
   /**
-   * Poser le bloc à la place de la saisie « /… ». Facultatif : sans lui, le
-   * registre le déduit de `turnInto` (effacer la plage, puis convertir), ce qui
-   * couvre tous les blocs qui sont une transformation du paragraphe courant.
-   */
+ * Place the block in place of the “/…” entry. Optional: without it, the
+ * register infers it from `turnInto` (clear the range, then convert), which
+ * covers all blocks that are a transformation of the current paragraph.
+ */
   insert?: (editor: Editor, range: Range) => void;
 
-  /** Est-ce CE bloc qui porte la sélection ? Sert à cocher l'entrée courante de
-      « transformer en » — d'où le besoin d'un test par bloc et pas par nœud :
-      `heading` est actif pour les trois titres, `heading1` pour un seul. */
+  /** Is it THIS block that carries the selection? Used to check the current entry of
+ “transform into” — hence the need for a test per block and not per node:
+ `heading` is active for the three titles, `heading1` for only one. */
   isActive: (editor: Editor) => boolean;
 
   /**
-   * Le raccourci de CONVERSION vers ce bloc. Déclaré ICI et nulle part ailleurs :
-   * le registre en fait la liaison clavier (`PageBlockShortcuts`) ET le libellé
-   * affiché à droite de l'entrée « transformer en ». Un raccourci qu'on lirait
-   * dans le menu sans qu'il fonctionne, ou l'inverse, n'est donc pas
-   * représentable.
-   *
-   * Les combinaisons reprennent celles du carnet et des extensions tiptap —
-   * `⌘⌥1..3` pour les titres, `⌘⇧7/8/9` pour les listes : un utilisateur qui
-   * passe d'une note à une page ne réapprend rien. Le registre les REDÉCLARE
-   * plutôt que de laisser faire chaque extension, pour leur donner à toutes la
-   * même sémantique de bascule (le raccourci du bloc actif ramène au paragraphe).
-   */
+ * The CONVERT shortcut to this block. Declared HERE and nowhere else:
+ * the register makes the keyboard connection (`PageBlockShortcuts`) AND the label
+ * displayed to the right of the “transform to” entry. A shortcut that would read
+ * in the menu without it working, or vice versa, is therefore not
+ * representable.
+ *
+ * The combinations are those of the notebook and tiptap extensions —
+ * `⌘⌥1..3` for titles, `⌘⇧7/8/9` for lists: a user who
+ * moves from a note to a page does not relearn anything. The register REDECLARES them
+ * rather than letting each extension do so, to give them all the same
+ * toggle semantics (the active block shortcut returns to the paragraph).
+ */
   shortcut?: {
-    /** La combinaison en notation ProseMirror (`Mod-Alt-1`). */
+    /** The combination in ProseMirror notation (`Mod-Alt-1`). */
     keys: string;
-    /** Ce que le menu AFFICHE (`⌘⌥1`). */
+    /** What the menu DISPLAYS (`⌘⌥1`). */
     display: string;
   };
 

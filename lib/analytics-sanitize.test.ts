@@ -18,7 +18,7 @@ describe("sanitizeAnalyticsEventName", () => {
   });
 
   it("rejette tout ce qui n'est pas un nom exploitable", () => {
-    // Une chaîne vide crée une définition d'événement parasite dans PostHog.
+    // An empty string creates a spurious event definition in PostHog.
     expect(sanitizeAnalyticsEventName("")).toBe("");
     expect(sanitizeAnalyticsEventName("issue created")).toBe("");
     expect(sanitizeAnalyticsEventName("issue.created")).toBe("");
@@ -40,7 +40,7 @@ describe("sanitizeAnalyticsProps", () => {
     ).toEqual({ count: 3, ok: true, status: "todo", missing: null });
   });
 
-  it("écarte les valeurs non sérialisables", () => {
+  it("discards non-serializable values", () => {
     expect(
       sanitizeAnalyticsProps({
         nested: { a: 1 },
@@ -53,33 +53,33 @@ describe("sanitizeAnalyticsProps", () => {
     ).toEqual({});
   });
 
-  it("écarte les clés réservées de PostHog et les clés mal formées", () => {
+  it("discards reserved PostHog keys and malformed keys", () => {
     expect(sanitizeAnalyticsProps({ $set: "x", "bad key": 1, "a.b": 2 })).toEqual({});
   });
 
-  it("borne les textes à 512 caractères", () => {
+  it("limits text to 512 characters", () => {
     const out = sanitizeAnalyticsProps({ reason: "x".repeat(1000) });
     expect(String(out.reason)).toHaveLength(512);
   });
 
-  it("neutralise les caractères de contrôle", () => {
+  it("neutralizes control characters", () => {
     expect(sanitizeAnalyticsProps({ reason: "a\nb\tc" })).toEqual({ reason: "a b c" });
   });
 
-  it("plafonne le nombre de clés", () => {
+  it("caps the number of keys", () => {
     const many = Object.fromEntries(
       Array.from({ length: 40 }, (_, i) => [`k${i}`, i])
     );
     expect(Object.keys(sanitizeAnalyticsProps(many))).toHaveLength(24);
   });
 
-  it("tolère l'absence de props", () => {
+  it("tolerates missing props", () => {
     expect(sanitizeAnalyticsProps(undefined)).toEqual({});
   });
 });
 
 describe("tranches", () => {
-  it("lengthBucket mesure sans révéler le contenu", () => {
+  it("lengthBucket measures without revealing the content", () => {
     expect(lengthBucket("")).toBe("empty");
     expect(lengthBucket(null)).toBe("empty");
     expect(lengthBucket("court")).toBe("xs");

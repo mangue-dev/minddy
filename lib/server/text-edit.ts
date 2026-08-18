@@ -1,33 +1,31 @@
 import { applyEdit, ReplaceError } from "@/lib/server/agent/edit";
 
 /**
- * Éditer EN PLACE un texte de ticket — plan ou description (MIN-186).
+ * Edit IN PLACE a ticket text — plan or description (MIN-186).
  *
- * Mettre à jour trois phrases d'un plan de 21 000 caractères coûtait, côté MCP,
- * la ré-émission du document entier : la seule écriture disponible remplaçait
- * tout. D'où ce patch `old_string` → `new_string`, sur le modèle du tool `Edit`
- * que tout agent de code connaît.
+ * Updating three sentences of a 21,000 character plan cost, on the MCP side,
+ * re-issuing the entire document: the only writing available replaced
+ * everything. Hence this patch `old_string` → `new_string`, based on the model of the tool `Edit`
+ * that every code agent knows.
  *
- * Le moteur n'est pas nouveau : c'est celui de l'agent de code
- * ([lib/server/agent/edit.ts](edit.ts)), déjà éprouvé sur des fichiers, et pur.
- * Ce module ne fait que deux choses qu'il ne peut pas faire : il refuse un champ
- * vide, et il RÉÉCRIT les refus. Les messages de `replace()` parlent de « the
- * file » et proposent `write_file` — un modèle qui édite un plan de ticket n'a
- * ni l'un ni l'autre sous la main, et suivre ce conseil-là le renverrait droit
- * vers la réécriture totale qu'on cherche à éviter.
+ * The engine is not new: it is that of the code agent code
+ * ([lib/server/agent/edit.ts](edit.ts)), already proven on files, and pure.
+ * This module only does two things that it cannot do: it refuses an empty
+ * field, and it REWRITE refusals. The `replace()` posts talk about "the
+ * file" and suggest `write_file` — a template that edits a ticket plan has neither on hand, and following that advice would send it straight to the total rewrite we're looking for to avoid.
  *
- * La contrepartie du patch est le vrai bénéfice : une réécriture complète écrase
- * en silence ce qu'un autre client a changé entre-temps, un `old_string` périmé
- * échoue bruyamment.
+ * The counterpart of the patch is the real benefit: a complete rewrite silently overwrites
+ * what another client has changed in the meantime, an outdated `old_string`
+ * fails loudly.
  */
 
 export type IssueTextField = "plan" | "description";
 
 export interface IssueTextEditOk {
   ok: true;
-  /** Le champ complet après édition, à écrire tel quel. */
+  /** The complete field after editing, to be written as is. */
   content: string;
-  /** Diff unifié, indentation commune retirée. */
+  /** Unified diff, common indentation removed. */
   diff: string;
   additions: number;
   deletions: number;
@@ -35,7 +33,7 @@ export interface IssueTextEditOk {
 
 export interface IssueTextEditRefusal {
   ok: false;
-  /** Code d'erreur MCP (stable, en anglais, comme le reste de la surface). */
+  /** MCP error code (stable, in English, like the rest of the surface). */
   code: "invalid_params" | "text_not_found" | "text_ambiguous";
   message: string;
 }
@@ -43,23 +41,23 @@ export interface IssueTextEditRefusal {
 export type IssueTextEditResult = IssueTextEditOk | IssueTextEditRefusal;
 
 /**
- * Les tools de la surface appelante, NOMMÉS. Trois surfaces servent ce patch —
- * le MCP, le chat Numo, l'agent de code — et elles ne nomment pas les mêmes
- * tools : `minddy_get_issue` ici, `get_issue` là, `read_issue` ailleurs.
- * Un message de refus qui envoie vers un tool absent de la surface, c'est un
- * round brûlé sur un « Unknown tool ». D'où ce paramètre, obligatoire : il n'y
- * a pas de défaut raisonnable, seulement un jeu de noms juste par appelant.
+ * The tools of the calling surface, NAMED. Three surfaces serve this patch —
+ * the MCP, the Numo chat, the code agent — and they do not name the same
+ * tools: `minddy_get_issue` here, `get_issue` there, `read_issue` elsewhere.
+ * A refusal message which sends to a tool absent from the surface, it's a
+ * round burned on an “Unknown tool”. Hence this parameter, mandatory: there
+ * is no reasonable default, only one set of names just per caller.
  */
 export interface IssueTextTools {
-  /** Ce qui relit le ticket — d'où `old_string` doit être recopié. */
+  /** Which rereads the ticket — hence `old_string` must be copied. */
   read: string;
-  /** Ce qui AJOUTE un bloc à un plan. */
+  /** Which ADDS a block to a plan. */
   appendToPlan: string;
-  /** Ce qui remplace le champ EN ENTIER, par champ. */
+  /** Which replaces the ENTIRE field, per field. */
   replaceWhole: Record<IssueTextField, string>;
 }
 
-/** Ce que le modèle doit faire à la place, quand le patch n'est pas la voie. */
+/** What the model should do instead, when patching is not the way. */
 const otherWay = (field: IssueTextField, tools: IssueTextTools): string =>
   field === "plan"
     ? `Use ${tools.appendToPlan} to ADD a block, or ${tools.replaceWhole.plan} to write the whole plan.`
@@ -74,7 +72,7 @@ export function editIssueText({
   tools,
 }: {
   field: IssueTextField;
-  /** Le champ tel qu'il est stocké MAINTENANT ("" quand il n'y en a pas). */
+  /** The field as it is stored NOW ("" when there is none). */
   current: string;
   oldString: string;
   newString: string;
@@ -94,11 +92,11 @@ export function editIssueText({
 }
 
 /**
- * Le même patch, pour un texte qui n'est PAS un champ de ticket — le corps d'une
- * page (MIN-273). Seuls changent le mot qui nomme le texte et le conseil de
- * repli : le moteur, les refus et leurs codes sont les mêmes, et c'est le point.
- * Une page corrigée par Numo doit échouer exactement comme un plan corrigé par
- * Numo, avec le même vocabulaire d'erreur des deux côtés.
+ * The same patch, for text that is NOT a ticket field — the body of a
+ * page (MIN-273). Only the word that names the text and the advice of
+ * change: the engine, the refusals and their codes are the same, and that's the point.
+ * A page corrected by Numo must fail exactly like a plan corrected by
+ * Numo, with the same error vocabulary on both sides.
  */
 export function editTextPassage({
   field,
@@ -110,17 +108,17 @@ export function editTextPassage({
   otherWay: fallback,
   subject = "issue",
 }: {
-  /** Le mot qui nomme le texte dans les messages : « plan », « body »… */
+  /** The word that names the text in messages: “plan”, “body”… */
   field: string;
   current: string;
   oldString: string;
   newString: string;
   replaceAll?: boolean;
-  /** Le tool qui relit le texte, d'où `old_string` doit être recopié. */
+  /** The tool that rereads the text, from which `old_string` must be copied. */
   read: string;
-  /** Ce qu'il faut faire à la place quand le patch n'est pas la voie. */
+  /** What to do instead when patching isn't the way. */
   otherWay: string;
-  /** Ce que porte le texte : « issue », « page ». */
+  /** What the text says: “issue”, “page”. */
   subject?: string;
 }): IssueTextEditResult {
   if (!current.trim()) {

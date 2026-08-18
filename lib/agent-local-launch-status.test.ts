@@ -4,10 +4,10 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * Les deux composeurs rendent un `AgentEventFeed` avant que le POST ait créé la
- * run. Cette surface ne peut pas être rendue sous Vitest sans le graphe client,
- * mais son contrat est simple et important : le choix local doit atteindre la
- * bulle optimiste, qui décide entre « sandbox » et « ton Mac ».
+ * Both composers return a `AgentEventFeed` before POST has created the
+ * run. This surface cannot be rendered under Vitest without the client graph,
+ * but its contract is simple and important: the local choice must reach the
+ * optimistic bubble, which decides between “sandbox” and “your Mac”.
  */
 const issueComposer = readFileSync(
   join(__dirname, "../components/agent/agent-conversation.tsx"),

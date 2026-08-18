@@ -30,8 +30,8 @@ describe("buildPageAgentPrompt", () => {
       `https://www.minddy.app/projects/${input.projectId}/pages/${input.pageId}`
     );
     expect(text).toContain("minddy_get_page");
-    // Les deux ids sont écrits EN CLAIR, en arguments : un agent ne doit pas
-    // avoir à les découper de l'URL pour appeler l'outil.
+    // The two ids are written CLEARLY, in arguments: an agent must not
+    // have to split them from the URL to call the tool.
     expect(text).toContain(`project_id "${input.projectId}"`);
     expect(text).toContain(`page_id "${input.pageId}"`);
   });
@@ -55,11 +55,11 @@ describe("buildPageAgentPrompt", () => {
       instructions: "  Transforme les décisions de cette page en tickets.  ",
     });
     expect(text).toContain("what I want you to do with this page");
-    // Verbatim, dans sa langue — mais sans les blancs de saisie autour.
+    // Verbatim, in his language — but without the surrounding input blanks.
     expect(text).toContain("Transforme les décisions de cette page en tickets.");
     expect(text).not.toContain("  Transforme");
-    // L'ordre porte le sens : on nomme la page, on dit quoi en faire, puis on
-    // donne de quoi la lire.
+    // The order carries the meaning: we name the page, we say what to do with it, then we
+    // gives something to read about it.
     expect(text.indexOf('minddy page "Roadmap Q3"')).toBeLessThan(
       text.indexOf("Transforme les décisions")
     );

@@ -10,8 +10,8 @@ import {
 } from "./issue-sync-core";
 import { forgeIssueResource } from "./forge-resource";
 
-// Les fonctions PURES de la synchro d'issues (MIN-97) — la partie qui écrit en
-// base vit dans issue-sync.ts et n'est pas testable en node (server-only).
+// The PURES functions of the output sync (MIN-97) — the part that writes in
+// base lives in issue-sync.ts and is not testable in node (server-only).
 
 describe("statusForRemoteAction", () => {
   it("mappe la fermeture des deux vocabulaires vers done", () => {
@@ -19,19 +19,19 @@ describe("statusForRemoteAction", () => {
     expect(statusForRemoteAction("close")).toBe("done"); // GitLab
   });
 
-  it("mappe la réouverture vers backlog, jamais triage", () => {
+  it("maps reopening to backlog, never triage", () => {
     expect(statusForRemoteAction("reopened")).toBe("backlog");
     expect(statusForRemoteAction("reopen")).toBe("backlog");
   });
 
-  it("ne change rien pour une ouverture ou une action inconnue", () => {
+  it("changes nothing for an opening or unknown action", () => {
     expect(statusForRemoteAction("opened")).toBeNull();
     expect(statusForRemoteAction("open")).toBeNull();
     expect(statusForRemoteAction("labeled")).toBeNull();
     expect(statusForRemoteAction("")).toBeNull();
   });
 
-  it("fait atterrir les issues importées en triage", () => {
+  it("lands imported issues in triage", () => {
     expect(REMOTE_LANDING_STATUS).toBe("triage");
   });
 });
@@ -55,22 +55,22 @@ describe("statusForRemoteReconcile", () => {
   const open = { ...base, state: "open" as const };
 
   it("lit l'état porté par le payload, même sur une action muette", () => {
-    // C'est ce qui rattrape une fermeture dont le webhook s'est perdu : un
-    // `edited` qui arrive après elle porte quand même `state: closed`.
+    // This is what catches a closure whose webhook is lost: a
+    // `edited` which arrives after it still carries `state: closed`.
     expect(statusForRemoteReconcile(closed, "in_progress")).toBe("done");
   });
 
-  it("NE REQUALIFIE PAS un ticket déjà clos autrement — le piège du canceled", () => {
-    // Les trois valent « fermé » côté forge : tant qu'elle dit fermé, elle ne
-    // dit rien de plus que ce que minddy sait déjà.
+  it("does NOT RECLASSIFY an otherwise closed ticket — the canceled trap", () => {
+    // All three are worth “closed” on the forge side: as long as it says closed, it does not
+    // says nothing more than what minddy already knows.
     expect(statusForRemoteReconcile(closed, "canceled")).toBeNull();
     expect(statusForRemoteReconcile(closed, "duplicate")).toBeNull();
     expect(statusForRemoteReconcile(closed, "done")).toBeNull();
   });
 
-  it("ne touche à rien quand les deux côtés s'accordent sur « ouvert »", () => {
-    // Sinon toute édition d'une issue ouverte ramènerait à backlog un ticket
-    // qu'on venait de passer en in_progress dans minddy.
+  it("changes nothing when both sides agree on « open »", () => {
+    // Otherwise any edition of an open issue would return a ticket to the backlog
+    // that we had just switched to in_progress in minddy.
     for (const status of ["triage", "backlog", "todo", "in_progress", "in_review"] as const) {
       expect(statusForRemoteReconcile(open, status), status).toBeNull();
     }
@@ -81,7 +81,7 @@ describe("statusForRemoteReconcile", () => {
     expect(statusForRemoteReconcile(open, "canceled")).toBe("backlog");
   });
 
-  it("retombe sur l'action quand le provider n'a pas donné d'état", () => {
+  it("falls back to the action when the provider gave no state", () => {
     expect(statusForRemoteReconcile(base, "todo")).toBeNull();
     expect(statusForRemoteReconcile({ ...base, action: "closed" }, "todo")).toBe("done");
     expect(statusForRemoteReconcile({ ...base, action: "closed" }, "canceled")).toBeNull();
@@ -89,9 +89,9 @@ describe("statusForRemoteReconcile", () => {
   });
 
   it("boucle d'écho : l'aller-retour d'une fermeture s'arrête au premier retour", () => {
-    // minddy passe le ticket en done → issue-push ferme l'issue → GitHub renvoie
-    // `issues.closed`. Le ticket est déjà done : plus rien à écrire, donc plus
-    // rien à repousser. Idem pour une annulation, qui ferme aussi côté forge.
+    // minddy passes the ticket as done → issue-push closes the issue → GitHub returns
+    // `issues.closed`. The ticket is already done: nothing more to write, therefore no more
+    // nothing to push back. The same goes for a cancellation, which also closes on the forge side.
     expect(remoteStateForStatus("done").open).toBe(false);
     expect(statusForRemoteReconcile({ ...closed, action: "closed" }, "done")).toBeNull();
     expect(
@@ -118,7 +118,7 @@ describe("remoteStateForStatus", () => {
 });
 
 describe("forgeIssueResource", () => {
-  it("nomme la ressource « dépôt#numéro » et embarque la marque de la forge", () => {
+  it("names the resource « repository#number » and includes the forge brand", () => {
     const resource = forgeIssueResource({
       provider: "github",
       repoFullName: "acme/app",
@@ -128,11 +128,11 @@ describe("forgeIssueResource", () => {
     expect(resource?.kind).toBe("link");
     expect(resource?.file_name).toBe("acme/app#42");
     expect(resource?.url).toBe("https://github.com/acme/app/issues/42");
-    // Embarquée, donc aucun aller-retour réseau par ticket importé.
+    // Embedded, therefore no network round trip per imported ticket.
     expect(resource?.icon_data_url).toMatch(/^data:image\/webp;base64,/);
   });
 
-  it("retombe sur le nom du provider quand le dépôt est inconnu", () => {
+  it("falls back to the provider name when the repository is unknown", () => {
     expect(
       forgeIssueResource({
         provider: "gitlab",
@@ -143,7 +143,7 @@ describe("forgeIssueResource", () => {
     ).toBe("GitLab #7");
   });
 
-  it("ne fabrique rien sans URL — une ressource sans lien n'en est pas une", () => {
+  it("creates nothing without a URL — a resource without a link is not one", () => {
     expect(
       forgeIssueResource({
         provider: "github",
@@ -171,7 +171,7 @@ describe("normalizeGithubIssueEvent", () => {
     sender: { login: "octocat", type: "User" },
   };
 
-  it("ramène un payload issues.opened à la forme neutre", () => {
+  it("reduces an issues.opened payload to the neutral form", () => {
     expect(normalizeGithubIssueEvent(opened)).toEqual({
       provider: "github",
       repoFullName: "acme/app",
@@ -188,7 +188,7 @@ describe("normalizeGithubIssueEvent", () => {
     });
   });
 
-  it("retombe sur le champ historique `assignee` quand la liste est vide", () => {
+  it("falls back to the historical `assignee` field when the list is empty", () => {
     const legacy = {
       ...opened,
       issue: { ...opened.issue, assignees: [], assignee: { login: "hubot" } },
@@ -196,7 +196,7 @@ describe("normalizeGithubIssueEvent", () => {
     expect(normalizeGithubIssueEvent(legacy)?.assigneeLogins).toEqual(["hubot"]);
   });
 
-  it("survit à une issue sans labels ni assignés", () => {
+  it("survives an issue without labels or assignees", () => {
     const bare = {
       ...opened,
       issue: { number: 42, title: "t", state: "closed" },
@@ -207,7 +207,7 @@ describe("normalizeGithubIssueEvent", () => {
     expect(remote?.state).toBe("closed");
   });
 
-  it("rejette une pull request déguisée en issue", () => {
+  it("rejects a pull request disguised as an issue", () => {
     const asPr = {
       ...opened,
       issue: { ...opened.issue, pull_request: { url: "https://api.github.com/..." } },
@@ -215,7 +215,7 @@ describe("normalizeGithubIssueEvent", () => {
     expect(normalizeGithubIssueEvent(asPr)).toBeNull();
   });
 
-  it("rejette un payload sans dépôt ni numéro exploitable", () => {
+  it("rejects a payload without a usable repository or number", () => {
     expect(normalizeGithubIssueEvent({ action: "opened" })).toBeNull();
     expect(
       normalizeGithubIssueEvent({ ...opened, repository: { full_name: "acme/app" } }),
@@ -238,8 +238,8 @@ describe("normalizeGitlabIssueEvent", () => {
       action: "close",
       state: "closed",
     },
-    // GitLab porte les deux à la RACINE du hook, et nomme ses labels `title`
-    // là où GitHub écrit `name`.
+    // GitLab takes both to the ROOT of the hook, and names its labels `title`
+    // where GitHub writes `name`.
     labels: [{ id: 1, title: "bug" }, { id: 2, title: "severity::2" }],
     assignees: [{ username: "tanuki" }],
   };
@@ -255,7 +255,7 @@ describe("normalizeGitlabIssueEvent", () => {
       url: "https://gitlab.com/acme/group/app/-/issues/12",
       action: "close",
       actorLogin: "tanuki",
-      // `opened` de GitLab devient l'`open` de la forme neutre.
+      // `opened` of GitLab becomes the `open` of the neutral form.
       state: "closed",
       labels: ["bug", "severity::2"],
       assigneeLogins: ["tanuki"],
@@ -271,7 +271,7 @@ describe("normalizeGitlabIssueEvent", () => {
     ).toBe("open");
   });
 
-  it("retombe sur les labels d'object_attributes si la racine n'en porte pas", () => {
+  it("falls back to labels from object_attributes when the root has none", () => {
     const { labels: _root, ...withoutRootLabels } = closed;
     expect(
       normalizeGitlabIssueEvent({
@@ -284,7 +284,7 @@ describe("normalizeGitlabIssueEvent", () => {
     ).toEqual(["documentation"]);
   });
 
-  it("rejette une issue confidentielle", () => {
+  it("rejects a confidential issue", () => {
     expect(
       normalizeGitlabIssueEvent({ ...closed, object_kind: "confidential_issue" }),
     ).toBeNull();

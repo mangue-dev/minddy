@@ -1,37 +1,36 @@
 /**
- * Le `diff_hunk` d'un commentaire de review, prêt à se rendre — l'extrait de code
- * SUR LEQUEL le commentaire a été posé.
+ * The `diff_hunk` of a review comment, ready to go — the code snippet
+ * ON WHICH the comment was posted.
  *
- * Les deux forges livrent cet extrait en texte unifié brut, en-tête `@@` compris
- * et sans numéros de ligne. Le rendre tel quel donne un pavé monospace où rien ne
- * dit quelle ligne est commentée, ni laquelle est ajoutée. Or c'est tout
- * l'intérêt : un commentaire de ligne sans son code est une phrase sans sujet.
+ * Both forges deliver this snippet in plain unified text, header `@@` including
+ * and without line numbers. Making it as is results in a monospace tile where nothing says which line is commented out, nor which one is appended. But that's all
+ * the point: a line comment without its code is a sentence without a subject.
  *
- * Deux lectures, et c'est `hunkPatch` qui sert le rendu : il rend le fragment
- * analysable par la lib de diff, donc COLORÉ et en mode diff comme l'onglet
- * Fichiers. `hunkPreview` reste la lecture nue du fragment, pour qui a besoin des
- * lignes plutôt que d'un patch.
+ * Two readings, and it's `hunkPatch` which serves the rendering: it makes the fragment
+ * analyzable by the diff lib, therefore COLORED and in mode diff like tab
+ * Files. `hunkPreview` remains the bare reading of the fragment, for those who need the
+ * lines rather than a patch.
  *
- * Pur et sans dépendance, comme `pr-review-threads` : la même règle sert le fil de
- * conversation et tout autre rendu qui aurait besoin du contexte.
+ * Pure and without dependence, like `pr-review-threads`: the same rule serves the thread of
+ * conversation and any other rendering which would need the context.
  */
 
 export interface HunkPreviewLine {
-  /** Ajoutée, retirée, ou contexte inchangé — ce qui décide de la couleur. */
+  /** Added, removed, or unchanged context — which decides the color. */
   type: "add" | "del" | "context";
-  /** La ligne SANS son marqueur `+`/`-`/espace. */
+  /** The line WITHOUT its `+`/`-`/space marker. */
   content: string;
-  /** Numéro côté base, `null` sur une ligne ajoutée. */
+  /** Base side number, `null` on an added line. */
   oldLine: number | null;
-  /** Numéro côté tête, `null` sur une ligne retirée. */
+  /** Head side number, `null` on a removed line. */
   newLine: number | null;
 }
 
-/** `@@ -12,7 +12,9 @@` → les deux points de départ. Le reste de la ligne (le nom
-    de la fonction englobante, que GitHub y colle) ne sert pas au calcul. */
+/** `@@ -12,7 +12,9 @@` → both starting points. The rest of the line (the name
+ of the enclosing function, which GitHub pastes there) is not used for the calculation. */
 const HEADER = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/;
 
-/** Le hunk analysé : ses lignes numérotées, et le point de départ des deux côtés. */
+/** The analyzed hunk: its numbered lines, and the starting point on both sides. */
 interface ParsedHunk {
   lines: HunkPreviewLine[];
   oldStart: number;
@@ -50,16 +49,16 @@ function parseHunk(diffHunk: string): ParsedHunk | null {
 
   const lines: HunkPreviewLine[] = [];
   for (const line of raw.slice(start + 1)) {
-    // `\ No newline at end of file` : une annotation de git, pas une ligne de code.
+    // `\ No newline at end of file`: a git annotation, not a line of code.
     if (line.startsWith("\\")) continue;
     if (line.startsWith("+")) {
       lines.push({ type: "add", content: line.slice(1), oldLine: null, newLine: newLine++ });
     } else if (line.startsWith("-")) {
       lines.push({ type: "del", content: line.slice(1), oldLine: oldLine++, newLine: null });
     } else {
-      // Ligne de contexte. Le préfixe est une espace — sauf sur la dernière ligne
-      // d'un hunk, que certaines API rendent vide : `slice(1)` la laisse vide,
-      // ce qui est exactement son contenu.
+      // Context line. The prefix is ​​a space — except on the last line
+      // of a hunk, which certain APIs make empty: `slice(1)` leaves it empty,
+      // what exactly is its content.
       lines.push({
         type: "context",
         content: line.startsWith(" ") ? line.slice(1) : line,
@@ -72,12 +71,12 @@ function parseHunk(diffHunk: string): ParsedHunk | null {
 }
 
 /**
- * Les dernières lignes du hunk, numérotées. La FIN et non le début : les deux
- * forges terminent l'extrait sur la ligne commentée — c'est elle qu'on veut voir,
- * avec juste assez de contexte au-dessus pour la situer.
+ * The last lines of the hunk, numbered. The END and not the beginning: both
+ * forges end the extract on the commented line — that's the one we want to see,
+ * with just enough context above to locate it.
  *
- * Vide quand il n'y a pas de hunk (GitLab n'en sert aucun) : l'appelant retombe
- * alors sur l'ancre `fichier:ligne` seule, ce qu'il faisait déjà.
+ * Empty when there is no hunk (GitLab does not use any): the caller falls
+ * then on the anchor `fichier:ligne` alone, which it was already doing.
  */
 export function hunkPreview(diffHunk: string, maxLines = 4): HunkPreviewLine[] {
   const parsed = parseHunk(diffHunk);
@@ -86,22 +85,22 @@ export function hunkPreview(diffHunk: string, maxLines = 4): HunkPreviewLine[] {
 }
 
 /**
- * Le même extrait, mais réécrit en DIFF UNIFIÉ complet — la forme que
- * `parsePatchFiles` sait analyser, donc celle qui ouvre à cet extrait le rendu de
- * l'onglet Fichiers : coloration Shiki, marquage mot-à-mot, gouttière.
+ * The same extract, but rewritten in complete UNIFIED DIFF — the form that
+ * `parsePatchFiles` can analyze, therefore the one which opens the rendering of
+ to this extract * the Files tab: Shiki coloring, word-for-word marking, gutter.
  *
- * C'est tout l'objet de la fonction : le `diff_hunk` des forges est un FRAGMENT
- * (un `@@` et ses lignes, sans nom de fichier), et la lib de diff ne prend que des
- * fichiers. On lui rend donc le fichier autour — le vrai chemin, pour que
- * l'extension décide de la grammaire, exactement comme `toUnifiedDiff` le fait
- * pour un fichier de PR.
+ * That's the whole point of the function: the forges' `diff_hunk` is a FRAGMENT
+ * (a `@@` and its lines, without a filename), and the diff lib only takes
+ * files. We therefore return the file around it — the real path, so that
+ * the extension decides the grammar, exactly as `toUnifiedDiff` does
+ * for a file of PR.
  *
- * L'en-tête est RECALCULÉ sur la tranche gardée, pas recopié : les numéros de
- * ligne affichés viennent de là, et ceux du hunk d'origine parleraient des lignes
- * qu'on vient d'écarter.
+ * The header is RECALCULATED on the guarded slice, not copied: the numbers de
+ * lines displayed come from there, and those of the original hunk would talk about the lines
+ * that we just discarded.
  *
- * Chaîne vide quand il n'y a rien à rendre (pas de hunk, ou un hunk vide) :
- * l'appelant n'affiche alors pas d'extrait.
+ * Empty string when there is nothing to return (no hunk, or an empty hunk):
+ * the caller then does not display a snippet.
  */
 export function hunkPatch(path: string, diffHunk: string, maxLines = 4): string {
   const parsed = parseHunk(diffHunk);
@@ -109,8 +108,8 @@ export function hunkPatch(path: string, diffHunk: string, maxLines = 4): string 
   const kept = maxLines > 0 ? parsed.lines.slice(-maxLines) : parsed.lines;
   if (kept.length === 0) return "";
 
-  // Le curseur au DÉBUT de la tranche : chaque ligne écartée a fait avancer le
-  // côté auquel elle appartient, et seulement celui-là.
+  // The cursor at the START of the slice: each line pushed aside moved the
+  // side to which it belongs, and only that one.
   let oldStart = parsed.oldStart;
   let newStart = parsed.newStart;
   for (const line of parsed.lines.slice(0, parsed.lines.length - kept.length)) {
@@ -123,8 +122,8 @@ export function hunkPatch(path: string, diffHunk: string, maxLines = 4): string 
   const body = kept
     .map((l) => (l.type === "add" ? "+" : l.type === "del" ? "-" : " ") + l.content)
     .join("\n");
-  // Convention de git pour un côté vide : le numéro est celui de la ligne APRÈS
-  // laquelle ça s'insère, donc un cran en dessous du curseur.
+  // Git convention for an empty side: the number is that of the AFTER line
+  // which one is inserted, so a notch below the cursor.
   const oldAt = oldCount === 0 ? Math.max(0, oldStart - 1) : oldStart;
   const newAt = newCount === 0 ? Math.max(0, newStart - 1) : newStart;
 

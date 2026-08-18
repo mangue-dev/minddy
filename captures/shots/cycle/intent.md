@@ -1,47 +1,47 @@
-# La quinzaine en cours
+# The current fortnight
 
-Emplacement de landing : `featureCycle`. Doit montrer ce qui distingue le cycle
-de minddy : il est **personnel et cross-projet**, pas un sprint d'équipe.
+Landing location: `featureCycle`. Must show what distinguishes the cycle
+from minddy: it is **personal and cross-project**, not a team sprint.
 
-## Ce que l'image doit montrer
+## What the image must show
 
-- L'en-tête de cycle : « Cycle en cours » avec ses dates, et les **deux
-  anneaux** — complétion et capacité. C'est ça, la « progression visible ».
-- Des tickets de **deux projets** dans la même liste, chacun préfixé de son
-  projet (`Aurora AUR-1`, `Beacon BCN-8`) — le cœur du sujet.
-- Assez de tickets terminés pour que l'anneau de complétion soit crédible.
+- The cycle header: “Current cycle” with its dates, and the **two
+rings** — completion and capacity. This is “visible progression”.
+- Tickets from **two projects** in the same list, each prefixed with its own
+project (`Aurora AUR-1`, `Beacon BCN-8`) — the heart of the matter.
+- Enough completed tickets for the completion ring to be believable.
 
-## Où
+## Where
 
-`/all?view=cycle` sur `https://www.minddy.app`, connecté en Camille Roy.
-Fenêtre 1736 × 1085 (16/10), la même que les autres captures.
+`/all?view=cycle` on `https://www.minddy.app`, connected to Camille Roy.
+Window 1736 × 1085 (16/10), the same as the other captures.
 
-## Le cadrage, et pourquoi il est décalé
+## The framing, and why it is shifted
 
-Le cycle contient 12 tickets répartis ainsi : Backlog 0, À faire 2, En cours 4,
-En revue 1, Terminé 5. Cadré au bord gauche, l'image s'ouvrirait sur une
-colonne **vide** et laisserait « Terminé » — les 5 tickets finis, donc toute la
-preuve de progression — hors champ.
+The cycle contains 12 tickets distributed as follows: Backlog 0, To do 2, In progress 4,
+Review 1, Done 5. Framed at the left edge, the image would open to an
+**empty** column and leave “Finished” — the five finished tickets, and therefore the entire
+proof of progress — outside the frame.
 
-Le script fait donc défiler le board d'**exactement un pas de colonne** (364 px)
-avant de photographier. Les colonnes visibles deviennent À faire, En cours,
-En revue, Terminé, et le bord droit retombe pile sur la gouttière suivante.
-C'est un geste qu'un utilisateur fait, pas un trucage.
+The script therefore scrolls the board by **exactly one column step** (364 px)
+before photographing. The visible columns become To Do, In Progress,
+In review, Done, and the right edge falls right on the next gutter.
+It's a gesture that a user makes, not a trick.
 
-## Déclinaisons
+## Variations
 
 fr/light, fr/dark, en/light, en/dark
 
-## Pièges connus
+## Known pitfalls
 
-- **Les cycles sont opt-in.** Sans `cycles_enabled: true` dans les métadonnées
-  du compte, la ligne existe en base mais l'application affiche « Activer les
-  cycles » et l'écran reste vide. Le premier seed avait posé la cadence sans
-  le drapeau.
-- **La fenêtre du cycle périme.** Elle est calculée côté serveur à l'heure
-  réelle : la quinzaine semée court jusqu'au **3 août 2026**. Après, relancer
-  `003-projet-beacon.mjs` puis `004-cycle.mjs` avant de recapturer.
-- **Les dates affichées dans l'en-tête décalent d'un jour** par rapport à la
-  ligne en base (`19 juil. – 1 août` pour une fenêtre `2026-07-20 → 2026-08-03`
-  exclusive). Sans effet sur la capture, mais c'est peut-être un vrai décalage
-  de rendu côté produit.
+- **Cycles are opt-in.** Without `cycles_enabled: true` in the metadata
+of the account, the line exists in base but the application displays “Activate
+cycles” and the screen remains blank. The first seed had set the pace without
+the flag.
+- **The cycle window expires.** It is calculated on the server side per hour
+at the current time: the current fortnight runs until **August 3, 2026**. Afterwards, restart
+`003-projet-beacon.mjs` then `004-cycle.mjs` before recapture.
+- **The dates displayed in the header shift by one day** compared with the
+database value (`19 juil. – 1 août` for a `2026-07-20 → 2026-08-03` window,
+exclusive). This has no effect on the capture, but it may indicate a real
+rendering lag in the product.

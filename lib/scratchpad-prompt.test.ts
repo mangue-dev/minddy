@@ -22,11 +22,11 @@ describe("sectionHeadingChain", () => {
       sectionHeadingChain([
         { level: 1, text: "Pull requests" },
         { level: 2, text: "Sidebar" },
-        { level: 3, text: "Détail" }, // fermée par la suivante
+        { level: 3, text: "Détail" }, // closed with the following
         { level: 2, text: "MCP et Numo" },
       ])
     ).toEqual(["# Pull requests", "## MCP et Numo"]);
-    // Une section de premier rang plus loin dans la note ferme la précédente.
+    // A leading section later in the note closes the previous one.
     expect(
       sectionHeadingChain([
         { level: 1, text: "Pull requests" },
@@ -191,9 +191,9 @@ describe("buildScratchpadPrompt", () => {
     );
   });
 
-  // Le composer du carnet est pré-rempli avec le prompt COMPLET, et le serveur
-  // emballe toute demande d'un run carnet : sans idempotence, une tâche lancée
-  // depuis le carnet arriverait à l'agent emballée deux fois.
+  // The notebook composer is pre-filled with the FULL prompt, and the server
+  // wrap any request for a run notebook: without idempotence, a task launched
+  // since the notebook would arrive at the agent packaged twice.
   it("leaves an already-built prompt alone, whatever the scope", () => {
     for (const notes of [
       "## Deploy\n\n- [~] restart the cron",
@@ -202,7 +202,7 @@ describe("buildScratchpadPrompt", () => {
     ]) {
       const built = buildScratchpadPrompt(notes, { section: true, mcp: false });
       expect(buildScratchpadPrompt(built, { mcp: false })).toBe(built);
-      // Et l'emballage serveur (mêmes options qu'execute.ts) ne l'imbrique pas.
+      // And the server wrapper (same options as execute.ts) doesn't nest it.
       expect(built.match(/<notes>/g)).toHaveLength(1);
     }
   });

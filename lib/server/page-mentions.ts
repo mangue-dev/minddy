@@ -12,41 +12,41 @@ import { notificationActorSource } from "@/lib/notification-actor";
 import type { Member } from "@/lib/types";
 
 /**
- * Prévenir les gens cités dans une PAGE (MIN-278).
+ * Notify people mentioned in a PAGE (MIN-278).
  *
- * Le jumeau de `notifyDescriptionMentions` : mêmes règles, même point
- * d'insertion, et donc les mêmes préférences de compte (le filtre de MIN-82 vit
- * dans `insertNotifications`, où tous les producteurs convergent). Ce qui
- * change tient en deux lignes — la cible est une page, et elle porte en plus le
- * BLOC où la citation a été posée, pour que le clic tombe sur le paragraphe.
+ * The twin of `notifyDescriptionMentions`: same rules, same insertion point
+ *, and therefore the same account preferences (the MIN-82 filter lives
+ * in `insertNotifications`, where all producers converge). What
+ * changes fits in two lines — the target is a page, and it also carries the
+ * BLOCK where the citation was placed, so that the click falls on the paragraph.
  *
- * La liste des citables est reconstruite ICI, depuis `project_members`, et pas
- * depuis ce que le client a envoyé : prévenir quelqu'un d'une page qu'il ne peut
- * pas ouvrir ne lui rendrait pas service, et lui apprendrait son existence.
+ * The list of quotables is reconstructed HERE, from `project_members`, and not
+ * from what the client sent: warning someone of a page that they cannot
+ * would not open would be doing them a disservice, and would make them aware of its existence.
  */
 export async function notifyPageMentions(
   service: SupabaseClient,
   params: {
     projectId: string;
     pageId: string;
-    /** L'auteur de l'écriture — jamais notifié de sa propre citation. */
+    /** The author of the writing — never notified of his own citation. */
     actorId: string | null;
-    /** Le document tel qu'il vient d'être écrit. */
+    /** The document as it was just written. */
     doc: unknown;
-    /** Celui d'avant, à la modification. Absent = création. */
+    /** The one before, upon modification. Absent = creation. */
     previousDoc?: unknown;
-    /** L'écriture est un geste d'AGENT : la ligne nomme alors l'agent et non
-        le compte qui l'a permis (cf. `actorLabel` plus bas). */
+    /** The writing is an AGENT gesture: the line then names the agent and not
+ the account which authorized it (see `actorLabel` below). */
     viaAssistant?: boolean;
-    /** La clé MCP derrière l'écriture, quand elle vient de là : c'est SON agent
-        que l'inbox nomme — « Claude Code (mcp) », pas « Numo ». */
+    /** The MCP key behind the writing, when it comes from there: it is HIS agent
+ that the inbox names — “Claude Code (mcp)”, not “Numo”. */
     mcpKeyId?: string | null;
   },
 ): Promise<void> {
-  // Le raccourci d'`notifyDescriptionMentions`, et il compte plus encore ici :
-  // ce chemin s'ouvre à CHAQUE sauvegarde, donc une seconde après la dernière
-  // frappe. Sans arobase dans le document, il n'y a rien à chercher — et deux
-  // requêtes (les membres, puis leurs comptes) à ne pas faire.
+  // The shortcut for `notifyDescriptionMentions`, and it matters even more here:
+  // this path opens with EACH save, so one second after the last one
+  // struck. Without an at sign in the document, there is nothing to search for — and two
+  // requests (members, then their accounts) not to do.
   if (!pageBlockTexts(params.doc).some((block) => block.text.includes("@"))) {
     return;
   }
@@ -67,8 +67,8 @@ export async function notifyPageMentions(
   });
   if (mentions.length === 0) return;
 
-  // QUI a cité, tel que la ligne le dira — sans ça, « Untel vous a mentionné »
-  // d'une phrase qu'Untel n'a jamais écrite (cf. `notificationActorSource`).
+  // WHO cited, as the line will say — without that, “So-and-so mentioned you”
+  // from a sentence that So-and-so never wrote (see `notificationActorSource`).
   const actorSource = notificationActorSource(params);
   const rows: NotificationRow[] = mentions.map((mention) => ({
     user_id: mention.userId,

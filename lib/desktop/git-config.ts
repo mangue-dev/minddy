@@ -4,37 +4,37 @@ import path from "node:path";
 import { parseGitDirPointer, type LocalRepoFacts } from "./local-repo";
 
 /**
- * CE QUE LE DISQUE DIT D'UN DOSSIER CANDIDAT (MIN-359).
+ * WHAT THE DISC SAYS ABOUT A CANDIDATE FILE (MIN-359).
  *
- * Séparé de [local-repo.ts](local-repo.ts), qui reste sans IO, et séparé aussi de
- * `desktop/src/`, qui importe `electron` : **c'est ce placement qui rend ce
- * fichier testable.** `vitest.config.ts` ne collecte que `lib/**`, et un module
- * qui importe `electron` ne s'y importe pas — or la lecture ci-dessous est
- * précisément la partie qu'aucune relecture ne valide (voir le double saut du
- * worktree). Elle a donc son test contre de vrais dépôts,
+ * Separated from [local-repo.ts](local-repo.ts), which remains without IO, and also separated from
+ * `desktop/src/`, which matters `electron`: **it is this placement which makes this
+ * testable file.** `vitest.config.ts` only collects `lib/**`, and a module
+ * which imports `electron` does not matter — but the reading below is
+ * precisely the part that no rereading validates (see the double jump of the
+ * worktree). It therefore has its test against real deposits,
  * [git-config.git.test.ts](git-config.git.test.ts).
  *
- * ⚠ **Ce module importe `node:fs` : il n'a rien à faire dans un composant
- * client.** Il n'est appelé que par le main process de la coquille.
+ * ⚠ **This module imports `node:fs`: it has nothing to do in a component
+ * client.** It is only called by the main process of the shell.
  *
  * ## On lit `.git/config`, on ne lance pas `git`
  *
- * Sur un Mac sans Command Line Tools, la moindre invocation de `git` fait surgir
- * la fenêtre d'installation de Xcode. Au milieu d'un geste de réglage, personne
- * ne comprend d'où elle sort — et l'app n'a aucun moyen de la refermer. Le
- * fichier suffit, il est là par construction, et sa lecture ne dépend de rien.
+ * On a Mac without Command Line Tools, the slightest invocation of `git` brings up
+ * the Xcode installation window. In the middle of an adjustment gesture, no one
+ * doesn't understand where it's coming from — and the app has no way to close it. THE
+ * file is enough, it is there by construction, and its reading does not depend on anything.
  *
- * ## Le `.git` n'est pas toujours un dossier
+ * ## The `.git` is not always a folder
  *
- * Dans un **worktree** et dans un **sous-module**, `.git` est un FICHIER portant
- * `gitdir: <chemin>` — et dans un worktree, la configuration ne vit pas là : le
- * fichier `commondir` renvoie au `.git` du dépôt principal, seul endroit où les
- * remotes sont déclarés. On suit donc les deux sauts. Sans eux, attacher un
- * worktree — exactement ce que fait quelqu'un qui travaille sur deux branches à
- * la fois — serait refusé comme « pas un dépôt ».
+ * In a **worktree** and in a **submodule**, `.git` is a FILE carrying
+ * `gitdir: <chemin>` — and in a worktree, the configuration does not live there: the
+ * file `commondir` refers to `.git` of the main repository, the only place where
+ * remotes are declared. We therefore follow the two jumps. Without them, attach a
+ * worktree — exactly what someone who works on two branches does
+ * both — would be rejected as “not a deposit”.
  */
 
-/** L'état d'un dossier, tel que `localRepoVerdict` le veut. */
+/** The state of a file, as `localRepoVerdict` wants it to be. */
 export function readGitFacts(dir: string): LocalRepoFacts {
   try {
     if (!statSync(dir).isDirectory()) return { isDirectory: false, gitConfig: null };
@@ -44,7 +44,7 @@ export function readGitFacts(dir: string): LocalRepoFacts {
   return { isDirectory: true, gitConfig: readGitConfig(dir) };
 }
 
-/** Le `.git/config` du dossier, en suivant worktree et sous-module. */
+/** The `.git/config` of the folder, following worktree and submodule. */
 export function readGitConfig(dir: string): string | null {
   const dotGit = path.join(dir, ".git");
   let gitDir: string;
@@ -60,13 +60,13 @@ export function readGitConfig(dir: string): string | null {
     return null;
   }
 
-  // `commondir` n'existe QUE dans un worktree.
+  // `commondir` ONLY exists in a worktree.
   let configDir = gitDir;
   try {
     const common = readFileSync(path.join(gitDir, "commondir"), "utf8").trim();
     if (common) configDir = path.resolve(gitDir, common);
   } catch {
-    // Pas un worktree : la configuration est dans le gitdir lui-même.
+    // Not a worktree: the configuration is in the gitdir itself.
   }
 
   try {
@@ -77,16 +77,16 @@ export function readGitConfig(dir: string): string | null {
 }
 
 /**
- * Le chemin PHYSIQUE d'un dossier — liens symboliques résolus.
+ * The PHYSICAL path of a folder — symbolic links resolved.
  *
- * Ce n'est pas de la coquetterie, et le dépôt l'a déjà payé une fois : la
- * préparation du dépôt courant compare le chemin qu'on lui donne à ce que rend
- * `git rev-parse --show-toplevel`, **qui est physique**
- * ([current-repo.git.test.ts](../server/agent/current-repo.git.test.ts) le dit
- * en toutes lettres). Ranger le chemin tel que le panneau système l'a rendu —
- * `/tmp/…` alors que le vrai est `/private/tmp/…`, ou n'importe quel raccourci
- * que quelqu'un s'est fait dans son home — ferait échouer le premier tour sur
- * une comparaison de chaînes, et le message ne parlerait pas de liens
+ * This is not coquetry, and the deposit has already paid for it once: the
+ * preparation of the current repository compares the path given to it to what is rendered
+ * `git rev-parse --show-toplevel`, **which is physical**
+ * ([current-repo.git.test.ts](../server/agent/current-repo.git.test.ts) says so
+ * in full). Arrange the path as the system panel rendered it —
+ * `/tmp/…` while the real one is `/private/tmp/…`, or any shortcut
+ * that someone did in his home — would cause the first round to fail on
+ * a string comparison, and the message would not talk about links
  * symboliques.
  */
 export function realRepoPath(dir: string): string | null {

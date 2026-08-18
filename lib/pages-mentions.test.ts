@@ -5,12 +5,12 @@ import { BLOCK_ID_ATTRIBUTE } from "@/components/pages/blocks/types";
 import type { Member } from "./types";
 
 /**
- * MIN-278 — ce qui, dans une page, prévient quelqu'un.
+ * MIN-278 — what, on a page, warns someone.
  *
- * Logique pure, donc rien à monter : le document entre, les citations sortent.
- * Ce que ces cas gardent, c'est le DÉBIT autant que la justesse — trois des
- * quatre disent quand il ne faut PAS notifier, et c'est le point du ticket : une
- * page se réenregistre une seconde après chaque frappe.
+ * Pure logic, so nothing to edit: the document goes in, the quotes go out.
+ * What these cases keep is the THROUGHPUT as well as the correctness — three of
+ * four say when NOT to notify, and that's the point of the ticket: a
+ * page re-saves one second after each keystroke.
  */
 
 const CLEMENT = "user-clement";
@@ -21,7 +21,7 @@ const members: Member[] = [
   { user_id: BOB, full_name: "Bob" },
 ] as unknown as Member[];
 
-/** Un document d'un bloc par entrée : « [id, texte] ». */
+/** A document of one block per entry: “[id, text]”. */
 const doc = (blocks: Array<[string | null, string]>) => ({
   type: "doc",
   content: blocks.map(([blockId, text]) => ({
@@ -32,17 +32,17 @@ const doc = (blocks: Array<[string | null, string]>) => ({
 });
 
 describe("l'attribut d'id de bloc", () => {
-  // La constante est RECOPIÉE (ce module doit rester montable hors navigateur,
-  // et le registre de blocs tire tiptap) : c'est ce test qui tient la copie en
-  // phase avec l'original. Sans lui, renommer l'attribut ferait perdre l'ancre
-  // de bloc de toutes les notifications, en silence.
-  it("est le même que celui du registre de blocs", () => {
+  // The constant is COPIED (this module must remain mountable outside the browser,
+  // and the block register draws tiptap): it is this test which holds the copy in
+  // phase with the original. Without it, renaming the attribute would lose the anchor
+  // block all notifications, silently.
+  it("is the same as the block registry's", () => {
     expect(PAGE_BLOCK_ID_ATTRIBUTE).toBe(BLOCK_ID_ATTRIBUTE);
   });
 });
 
 describe("pageBlockTexts", () => {
-  it("aplatit un nœud de MENTION en « @libellé »", () => {
+  it("flattens a MENTION node to « @label »", () => {
     const flattened = pageBlockTexts({
       type: "doc",
       content: [
@@ -60,8 +60,8 @@ describe("pageBlockTexts", () => {
         },
       ],
     });
-    // Un nœud de mention est ATOMIQUE : sans cette traduction, la mention posée
-    // au sélecteur — le cas le plus courant — serait invisible au scanner.
+    // A mention node is ATOMICAL: without this translation, the mention placed
+    // to the selector — the most common case — would be invisible to the scanner.
     expect(flattened).toEqual([{ blockId: "b1", text: "à  @Clément  de trancher" }]);
   });
 
@@ -75,7 +75,7 @@ describe("pageBlockTexts", () => {
 });
 
 describe("newPageMentions", () => {
-  it("notifie une citation NOUVELLE, et lui donne son bloc", () => {
+  it("notifies a NEW mention and gives it its block", () => {
     expect(
       newPageMentions({
         members,
@@ -88,10 +88,10 @@ describe("newPageMentions", () => {
     ).toEqual([{ userId: CLEMENT, blockId: "b2" }]);
   });
 
-  it("ne renotifie PAS à la sauvegarde suivante", () => {
+  it("does not notify again on the next save", () => {
     const before = doc([["b1", "@Clément peux-tu trancher ça"]]);
-    // Corriger une virgule dix lignes plus bas ne doit repinger personne : sans
-    // ce diff, l'éditeur enregistrant chaque seconde, une page en ferait dix.
+    // Correcting a comma ten lines below should not bother anyone: without
+    // this diff, the editor recording every second, one page would make ten.
     const after = doc([
       ["b1", "@Clément peux-tu trancher ça ?"],
       ["b2", "une ligne de plus"],
@@ -111,7 +111,7 @@ describe("newPageMentions", () => {
   });
 
   it("ignore un nom qui n'est pas membre du projet", () => {
-    // `members` est la liste de ceux qui ONT accès : prévenir quelqu'un d'une
+    // `members` is the list of those who HAVE access: warn someone of a
     // page qu'il ne peut pas ouvrir lui apprendrait son existence.
     expect(
       newPageMentions({
@@ -122,7 +122,7 @@ describe("newPageMentions", () => {
     ).toEqual([]);
   });
 
-  it("garde le PREMIER bloc quand la même personne est citée deux fois", () => {
+  it("keeps the FIRST block when the same person is mentioned twice", () => {
     expect(
       newPageMentions({
         members,

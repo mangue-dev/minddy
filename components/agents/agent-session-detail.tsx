@@ -15,18 +15,18 @@ import type { AgentRunSummary, AgentSessionListItem } from "@/lib/agent-api";
 import type { AgentComposeIntent } from "@/lib/agent-compose-draft";
 
 /**
- * Panneau de détail d'une conversation d'agent (page Agents) : un en-tête épuré
- * (retour mobile · titre cliquable · bouton « Ouvrir la pull request ») au-dessus
- * de la MÊME conversation que la modal (`AgentConversation`, inline ici).
+ * Agent conversation detail panel (Agents page): a clean header
+ * (mobile return · clickable title · “Open pull request” button) above
+ * of the SAME conversation as the modal (`AgentConversation`, inline here).
  *
- * Le volet ouvre LE run de la ligne choisie, et lui seul — un run est une
- * conversation. L'en-tête porte son titre, précédé de l'identifiant du ticket
- * quand il y en a un (`agentSessionTitle`, le même nom que dans la colonne) ;
- * cliquer dessus ouvre la sidebar du ticket EN INLINE sur la page (pas de
- * navigation vers le Kanban).
+ * The pane opens THE run of the chosen line, and only it — a run is a
+ * conversation. The header bears its title, preceded by the ticket ID
+ * when there is one (`agentSessionTitle`, the same name as in the column);
+ * clicking on it opens the ticket sidebar INLINE on the page (no
+ * navigation to Kanban).
  *
- * Conversation SANS TICKET (MIN-84, `issue` null) : même volet, titre non
- * cliquable (résumé de son premier message), ancrée sur `noteRunId`.
+ * Conversation WITHOUT TICKET (MIN-84, `issue` null): same section, title no
+ * clickable (summary of its first message), anchored on `noteRunId`.
  */
 export function AgentSessionDetail({
   item,
@@ -39,29 +39,29 @@ export function AgentSessionDetail({
 }: {
   item: AgentSessionListItem;
   onBack: () => void;
-  /** Ouvre l'issue liée dans le panneau latéral, par-dessus la page (pas de navigation). */
+  /** Opens the linked issue in the side panel, above the page (no navigation). */
   onOpenIssue: (issueId: string, projectId: string) => void;
   /**
-   * Ouvre la conversation en phase COMPOSE (brouillon de lancement) : composer
-   * pré-écrit + picker de modèle, sans rouvrir la dernière run. `item` est alors une
-   * entrée synthétique (aucune run réelle) — voir la page Agents.
+   * Opens the conversation in the COMPOSE phase (launch draft): compose
+   * pre-written + model picker, without reopening the last run. `item` is then a
+   * synthetic entry (no real run) — see the Agents page.
    */
   compose?: boolean;
-  /** Prompt pré-écrit amorçant le composer en compose (relayé à la conversation). */
+  /** Pre-written prompt initiating the composition in composition (relayed to the conversation). */
   composeInitialText?: string;
   /**
-   * Ce que demandait le point d'entrée : `plan` (cadrage) ne fait pas démarrer le
-   * ticket au lancement, `implement` si. Relayé tel quel à la conversation.
+   * What the entry point asked for: `plan` (framing) does not start the
+   * ticket at launch, `implement` if. Relayed as is to the conversation.
    */
   composeIntent?: AgentComposeIntent;
-  /** Relayé à la conversation : une run neuve vient d'être lancée depuis le compose. */
+  /** Relayed in the conversation: a new run has just been launched from the compound. */
   onLaunched?: (run: AgentRunSummary) => void;
 }) {
   const t = useTranslations("Agents");
   const router = useRouter();
 
-  // Garde-fou : sans projet joint (RLS aberrante), rien à afficher. Une session
-  // sans ISSUE est légitime : c'est une session carnet.
+  // Safeguard: without attached project (abnormal RLS), nothing to display. One session
+  // without ISSUE is legitimate: it is a notebook session.
   if (!item.project) {
     return (
       <div className="flex flex-1 items-center justify-center p-6">
@@ -86,11 +86,11 @@ export function AgentSessionDetail({
   );
 
   /**
-   * L'orbe du projet ouvre l'en-tête des TROIS formes de session (ticket, sujet
-   * libre, relecture de PR). C'est la question qu'on se pose en arrivant sur une
-   * conversation — de quel dépôt parle-t-on ? —, et elle vaut pour les trois. Ce
-   * qu'elle remplace (l'icône du TYPE de session) se lit déjà dans la colonne, au
-   * survol de la ligne.
+   * The project orb opens the header of the THREE session forms (ticket, topic
+   * free, PR proofreading). This is the question we ask ourselves when arriving at a
+   * conversation — what deposit are we talking about? —, and it applies to all three. This
+   * that it replaces (the session TYPE icon) is already read in the column, at
+   * hovering over the line.
    */
   const projectOrb = (
     <ProjectOrb
@@ -104,16 +104,16 @@ export function AgentSessionDetail({
     item.pr_state === "merged" || item.pr_state === "closed" ? item.pr_state : null;
 
   const prActions =
-    // En compose : pas de bouton PR (aucune run lancée ; la PR héritée n'existe
-    // qu'une fois le 1er message envoyé). Sinon, deux cas selon ce que la PR
-    // attend encore :
-    //  • VIVANTE (ouverte, brouillon) → l'action, « voir la pull request » ;
-    //  • FINIE (fusionnée, fermée) → son ÉTAT, dans le badge de la page Pull
-    //    requests. Il n'y a plus rien à y faire, et un bouton d'action mentirait
-    //    sur ce qui reste possible. Le badge reste cliquable — la PR se consulte.
+    // In composition: no PR button (no run launched; legacy PR does not exist
+    // once the first message has been sent). Otherwise, two cases depending on what the PR
+    // still waiting:
+    // • LIVE (open, draft) → the action, “see the pull request”;
+    // • FINISHED (merged, closed) → its STATUS, in the badge of the Pull page
+    // requests. There is nothing more to do about it, and an action button would lie
+    // on what remains possible. The badge remains clickable — the PR can be consulted.
     //
-    // C'est le MÊME badge qu'ailleurs (`PrStateBadge`), aux couleurs de GitHub :
-    // violet fusionnée, rouge fermée. Cet en-tête peignait sa propre version.
+    // It's the SAME badge as elsewhere (`PrStateBadge`), in GitHub colors:
+    // merged purple, closed red. This header painted its own version.
     compose || item.pr_number == null ? undefined : closedState ? (
       <button
         type="button"
@@ -135,11 +135,11 @@ export function AgentSessionDetail({
       </Button>
     );
 
-  // ── Session de RELECTURE (MIN-168) : conversation d'UN run, en-tête = la PR ──
-  // Même volet qu'une session carnet — le run EST la session, il n'y a pas de
-  // lignée à parcourir —, avec le badge et le lien de la pull request relue. La
-  // reprise conversationnelle passe donc par le même chemin (`noteRunId` +
-  // /steer) : répondre ici fait poster un nouveau commentaire sur la PR.
+  // ── REVIEW Session (MIN-168): ONE run conversation, header = PR ──
+  // Same aspect as a notebook session — the run IS the session, there is no
+  // lineage to go through —, with the badge and the link of the reread pull request. There
+  // conversational resumption therefore goes through the same path (`noteRunId` +
+  // /steer): replying here posts a new comment on the PR.
   const reviewed = item.pullRequest;
   if (!issue && reviewed) {
     return (
@@ -159,10 +159,10 @@ export function AgentSessionDetail({
             </div>
           }
           headerActions={
-            // Vers la PR DANS minddy (`?pr=`), comme partout ailleurs — la carte,
-            // le panneau du ticket, l'en-tête d'une session de code. Ce bouton
-            // partait sur la forge : le seul de l'app à sortir de minddy pour
-            // montrer une pull request qu'on sait afficher.
+            // Towards the PR IN minddy (`?pr=`), like everywhere else — the map,
+            // the ticket panel, the header of a code session. This button
+            // left for the forge: the only one in the app to come out of minddy for
+            // show a pull request that we know how to display.
             <Button
               type="button"
               size="sm"
@@ -178,7 +178,7 @@ export function AgentSessionDetail({
     );
   }
 
-  // ── Session SANS TICKET : conversation d'UN run, en-tête = son sujet ───────
+  // ── Session WITHOUT TICKET: conversation about ONE run, header = its subject ───────
   if (!issue) {
     return (
       <div className="flex h-full min-h-0 flex-col">
@@ -208,8 +208,8 @@ export function AgentSessionDetail({
     <div className="flex min-w-0 flex-1 items-center gap-2">
       {backButton}
       {projectOrb}
-      {/* Le MÊME nom que dans la colonne — « MIN-42: Corriger la redirection ».
-          Cliquable → ouvre la sidebar du ticket en inline sur la page. */}
+      {/* The SAME name as in the column — “MIN-42: Fix redirection”.
+ Clickable → opens the ticket sidebar inline on the page. */}
       <button
         type="button"
         onClick={() => onOpenIssue(issue.id, project.id)}
@@ -222,9 +222,9 @@ export function AgentSessionDetail({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* La chaîne d'automatisation du ticket (MIN-147) : c'est ELLE qui a lancé
-          la session qu'on regarde, et c'est d'ici qu'on la continue ou l'arrête —
-          sans avoir à repasser par le panneau du ticket. */}
+      {/* The ticket automation chain (MIN-147): it was SHE who launched
+ the session we are watching, and it is from here that we continue or stop it —
+ without having to go back through the ticket panel. */}
       <div className="shrink-0 px-4 pt-3 empty:hidden">
         <ChainStatusBar issueId={issue.id} />
       </div>
@@ -233,15 +233,15 @@ export function AgentSessionDetail({
         issueId={issue.id}
         issueIdentifier={identifier}
         projectId={project.id}
-        // LE run de la ligne, et rien d'autre : c'est lui la conversation qu'on a
-        // choisie. Auparavant on laissait la conversation résoudre elle-même « la
-        // plus active du ticket » (`initialRunId=null`), parce que la ligne
-        // désignait un TICKET et non un échange ; ouvrir aujourd'hui autre chose
-        // que la ligne cliquée serait un mensonge. L'ancrage `issueId` reste, lui :
-        // c'est de lui que viennent la lignée (une run passée n'est pas
-        // reprennable), les branches et le lancement d'une run neuve.
-        // En COMPOSE (brouillon de lancement), `initialCompose` force le composer
-        // vierge quoi qu'il arrive — le run n'existe pas encore.
+        // THE run of the line, and nothing else: he is the conversation we have
+        // chosen. Previously we allowed the conversation to resolve itself “the
+        // most active ticket" (`initialRunId=null`), because the line
+        // designated a TICKET and not an exchange; open something else today
+        // that the clicked line would be a lie. The `issueId` anchor remains:
+        // it is from him that the lineage comes (a past run is not
+        // resumable), branches and the launch of a new run.
+        // In COMPOSE (launch draft), `initialCompose` forces it to be composed
+        // blank no matter what — the run doesn't exist yet.
         initialRunId={compose ? null : item.runId}
         initialCompose={compose}
         initialComposeText={compose ? composeInitialText : undefined}

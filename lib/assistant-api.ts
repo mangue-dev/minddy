@@ -3,8 +3,8 @@
 import { createSerialQueue } from "./serial-queue";
 import type { Conversation } from "./assistant-types";
 
-/** Toutes les conversations de l'utilisateur, la plus récente d'abord, projets
- *  confondus — l'historique de Numo ne filtre plus par portée (MIN-353). */
+/** All user conversations, most recent first, projects
+ * combined — Numo history no longer filters by scope (MIN-353). */
 export async function fetchConversations(): Promise<Conversation[]> {
   const res = await fetch("/api/assistant/conversations");
   if (!res.ok) return [];
@@ -21,8 +21,8 @@ export async function deleteConversation(
   return res.ok;
 }
 
-/** La conversation ouverte, et sa portée (MIN-353). Le pointeur vit en base :
- *  il survit au rechargement, à l'onglet d'à côté et à l'app de bureau. */
+/** Open conversation, and its scope (MIN-353). The pointer lives in base:
+ * it survives reloading, the next tab and the desktop app. */
 export interface ActiveConversationRef {
   conversationId: string | null;
   projectId: string | null;
@@ -35,19 +35,19 @@ export async function fetchActiveConversation(): Promise<ActiveConversationRef> 
 }
 
 /**
- * Les écritures du pointeur, BOUT À BOUT.
+ * Pointer writes, END TO END.
  *
- * Elles se suivent de près et s'annulent l'une l'autre : « nouvelle
- * conversation » efface, le premier message écrit. Lancées en parallèle, rien ne
- * garantit qu'elles arrivent dans l'ordre où elles sont parties — un DELETE
- * traité après le PUT laisse la base sans pointeur alors que le fil est vivant.
- * Et ignorer la réponse d'une écriture périmée n'y changerait rien : le serveur
- * l'a déjà appliquée. Seul l'ordre d'ÉMISSION se contrôle, d'où la file.
+ * They follow each other closely and cancel each other: “new
+ * conversation” clears, the first message written. Launched in parallel, nothing
+ * guarantees that they arrive in the order in which they left — a DELETE
+ * processed after the PUT leaves the base without a pointer while the thread is alive.
+ * And ignoring the response of a stale write would not change anything: the server
+ * has already applied it. Only the TRANSMIT order is controlled, hence the queue.
  */
 const pointerWrites = createSerialQueue();
 
-/** `null` efface le pointeur (« nouvelle conversation »). Best-effort : perdre
- *  l'écriture ne coûte qu'une reprise ratée, jamais un message. */
+/** `null` clears the pointer (“new conversation”). Best-effort: lose
+ * writing only costs a failed restart, never a message. */
 export function setActiveConversation(
   conversationId: string | null
 ): Promise<void> {
@@ -63,7 +63,7 @@ export function setActiveConversation(
           : {}),
       });
     } catch {
-      // Réseau coupé — le pointeur se remettra à jour au prochain message.
+      // Network cut — the pointer will update at the next message.
     }
   });
 }

@@ -8,8 +8,8 @@ import { mergePosts } from "@/lib/server/feedback/merge";
 
 type RouteContext = { params: Promise<{ id: string; postId: string }> };
 
-/** POST { canonical_id } — fusion manuelle 1-clic : CE post devient le doublon
-    du canonique (votes unis par identité, redirect). */
+/** POST { canonical_id } — 1-click manual merge: THIS post becomes the duplicate
+ of the canonical (votes united by identity, redirect). */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id, postId } = await params;
   const guard = await requireProjectMember(request, id);
@@ -22,11 +22,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   }
-  // `null` est du JSON valide : lire body.canonical_id dessus ferait un 500.
+  // `null` is valid JSON: reading body.canonical_id on it would make a 500.
   if (!body || typeof body !== "object") {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
-  // Un uuid fait 36 caractères — au-delà de 64, ce n'est pas un id.
+  // A uuid is 36 characters long — beyond 64, it is not an id.
   const canonicalId =
     typeof body.canonical_id === "string" && body.canonical_id.length <= 64
       ? body.canonical_id

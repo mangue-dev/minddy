@@ -3,8 +3,8 @@
 // but legacy rows may still be a bare "YYYY-MM-DD". Both parse to a local Date
 // here so the whole UI renders them uniformly.
 
-/** Une valeur héritée « YYYY-MM-DD » : un jour calendaire, sans heure ni
-    fuseau. Exporté parce que lib/due-soon.ts doit reconnaître la même forme. */
+/** A legacy value “YYYY-MM-DD”: a calendar day, with no time or
+ time zone. Exported because lib/due-soon.ts must recognize the same form. */
 export const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Parse a stored due/target value into a local Date, or null when unset/invalid. */
@@ -32,42 +32,42 @@ export function isDueDateOverdue(d: Date, now: number = Date.now()): boolean {
   return endOfDay.getTime() < now;
 }
 
-/* ── Échéance en relatif ─────────────────────────────────────────────────── */
+/* ── Deadline in relative ───────────────────────── ────────────────────────── */
 
 const DAY_MS = 86_400_000;
 const HOUR_MS = 3_600_000;
 
-/** Minuit local du jour d'une date — le repère des comptes en JOURS. */
+/** Local midnight of the day of a date — the marker for counts in DAYS. */
 function startOfLocalDay(d: Date): number {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 }
 
-/** Jours calendaires entre deux instants, dans le fuseau du navigateur.
-    `Math.round` absorbe les journées de 23 h ou 25 h des changements d'heure. */
+/** Calendar days between two moments, in the browser's time zone.
+ `Math.round` absorbs the 23h or 25h days of time changes. */
 export function calendarDaysBetween(from: Date, to: Date): number {
   return Math.round((startOfLocalDay(to) - startOfLocalDay(from)) / DAY_MS);
 }
 
 /**
- * Ce qu'il y a à DIRE d'une échéance, en relatif — la mise en mots (et sa
- * traduction) reste au composant.
+ * What there is to SAY about a deadline, in relative terms - the putting into words (and its
+ * translation) remains in the component.
  *
- * `named` couvre hier / aujourd'hui / demain, les trois jours qui ont un nom :
- * on les nomme plutôt que de les compter, en ajoutant l'heure si le ticket en
- * porte une (« demain à 14:00 »). Au-delà, `counted` donne un écart.
+ * `named` covers yesterday / today / tomorrow, the three days which have a name:
+ * we names them rather than counting them, adding the time if the en
+ * ticket has one (“tomorrow at 2:00 p.m.”). Beyond that, `counted` gives a deviation.
  */
 export type RelativeDue =
   | { kind: "named"; day: "yesterday" | "today" | "tomorrow"; time: Date | null }
   | { kind: "counted"; days: number; hours: number; past: boolean };
 
 /**
- * L'écart entre maintenant et une échéance, prêt à être mis en mots.
+ * The gap between now and a deadline, ready to be put into words.
  *
- * Deux unités de mesure cohabitent, et c'est voulu : une échéance SANS heure se
- * compte en jours calendaires (une échéance au 30 est « dans 3 jours » le 27,
- * quelle que soit l'heure qu'il est), tandis qu'une échéance AVEC heure se
- * compte en durée réelle, ce qui permet le « dans 2 jours et 3 heures » qu'un
- * compte de jours seul ne saurait pas dire.
+ * Two units of measurement coexist, and this is intentional: a deadline WITHOUT time se
+ * counts in calendar days (a deadline on the 30th is "in 3 days" on 27,
+ * whatever time it is), while a deadline WITH time is
+ * counts in real duration, which allows the "in 2 days and 3 hours" which a
+ * count of days alone would not be able to say.
  */
 export function relativeDue(d: Date, now: Date = new Date()): RelativeDue {
   const time = dueDateHasTime(d) ? d : null;
@@ -78,14 +78,14 @@ export function relativeDue(d: Date, now: Date = new Date()): RelativeDue {
     return { kind: "named", day, time };
   }
 
-  // Sans heure, la durée réelle mentirait : à 14 h, une échéance à J+3 est à
-  // 2 jours et 10 heures de minuit, mais elle reste « dans 3 jours ».
+  // Without a time, the real duration would lie: at 2 p.m., a deadline of D+3 is due
+  // 2 days and 10 hours of midnight, but it remains “in 3 days”.
   if (!time) return { kind: "counted", days: Math.abs(days), hours: 0, past: days < 0 };
 
   const diff = d.getTime() - now.getTime();
-  // Arrondir à l'heure AVANT de découper, jamais après : tronquer dirait « dans
-  // 2 jours et 2 heures » d'une échéance à 2 j 2 h 59, et arrondir les heures
-  // seules pourrait produire un « 2 jours et 24 heures » qui n'existe pas.
+  // Round to the hour BEFORE cutting, never after: truncating would say “in
+  // 2 days and 2 hours » of a deadline at 2 d 2 h 59, and round the hours
+  // alone could produce a “2 days and 24 hours” which does not exist.
   const hoursLeft = Math.round(Math.abs(diff) / HOUR_MS);
   return {
     kind: "counted",

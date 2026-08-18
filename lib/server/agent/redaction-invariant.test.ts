@@ -7,34 +7,34 @@ import { LIVE_AGENT_ENGINES, type LiveAgentEngine } from "@/lib/agent-engines";
 import { redactDeep, SecretRedactor } from "./redact";
 
 /**
- * MIN-328 — LA SUBSTITUTION DES SECRETS, MOTEUR PAR MOTEUR.
+ * MIN-328 — THE SUBSTITUTION OF SECRETS, ENGINE BY ENGINE.
  *
- * L'invariant de MIN-239 tient en une phrase : **le token de forge n'atteint
- * jamais le modèle, et n'entre jamais dans ce qu'on persiste**. Il était vrai
- * quand il n'y avait qu'un harnais — la boucle maison fabriquait elle-même chaque
- * message `role:"tool"` et le substituait au passage. Un second moteur est arrivé,
- * il est devenu LE moteur, et il exécute ses tools sans repasser par nous :
- * l'invariant est resté écrit en commentaire pendant que le chemin qu'il décrivait
- * n'était plus emprunté par personne. Personne ne l'a vu, parce qu'un secret qui
+ * The invariant of MIN-239 is in one sentence: **the forge token does not reach
+ * never the model, and never enter into what we persist**. It was true
+ * when there was only one harness — the homemade buckle made each
+ * message `role:"tool"` and substituted it in passing. A second engine arrived,
+ * it has become THE engine, and it executes its tools without going through us again:
+ * the invariant remained written as a comment while the path it described
+ * was no longer borrowed by anyone. Nobody saw it, because a secret that
  * passe ne casse rien.
  *
- * D'où ce test, et sa forme : il itère sur `LIVE_AGENT_ENGINES`, les moteurs qui
- * peuvent encore jouer un tour. Un moteur DE PLUS sans entrée dans la table
- * ci-dessous fait tomber la suite — c'est exactement comme ça
- * que celui-ci est passé, et c'est le seul endroit du dépôt qui le remarquerait.
+ * Hence this test, and its form: it iterates on `LIVE_AGENT_ENGINES`, the engines which
+ * can still play a trick. AN MORE engine without entry into the table
+ * below drops the sequel — it's exactly like that
+ * that it has passed, and it is the only place in the depot that would notice it.
  *
- * Lexical plutôt qu'à l'exécution, comme [engine-wiring.test.ts](engine-wiring.test.ts) :
- * ces chemins demandent une microVM, un serveur opencode et un fournisseur. Le
- * COMPORTEMENT, lui, est prouvé ailleurs, sur le vrai code — `llm-proxy.test.ts`
- * (le corps sortant), `supervisor.test.ts` (le journal poussé), et ce fichier-ci
- * pour la substitution en profondeur.
+ * Lexical rather than runtime, like [engine-wiring.test.ts](engine-wiring.test.ts):
+ * These paths require a microVM, an opencode server, and a provider. THE
+ * BEHAVIOR is proven elsewhere, on the real code — `llm-proxy.test.ts`
+ * (the outgoing body), `supervisor.test.ts` (the pushed log), and this file
+ * for depth substitution.
  */
 
 function read(file: string): string {
   return readFileSync(join(__dirname, file), "utf8");
 }
 
-/** Ce qui doit être vrai, pour chaque moteur, sur le chemin qui mène au modèle. */
+/** Which must be true, for each engine, on the path to the model. */
 const CHECKS: Record<LiveAgentEngine, Array<{ what: string; file: string; contains: string }>> = {
   opencode: [
     {
@@ -43,9 +43,9 @@ const CHECKS: Record<LiveAgentEngine, Array<{ what: string; file: string; contai
       contains: "if (opts.redact) body = opts.redact(body)",
     },
     {
-      // Le champ seul, pas l'appel entier : l'appel a gagné une option en MIN-357
-      // (la clé du modèle sur un tour local) et en gagnera d'autres. Ce qu'on
-      // garde ici est que le registre y ARRIVE, pas la forme du jour.
+      // The field alone, not the entire call: the call gained an option in MIN-357
+      // (the key to the model on a local tour) and will win others. What we
+      // guard here is that the register ARRIVES there, not the form of the day.
       what: "le superviseur donne bien son registre au proxy",
       file: "vm/supervisor.ts",
       contains: "redact: secrets.redact,",
@@ -65,8 +65,8 @@ const CHECKS: Record<LiveAgentEngine, Array<{ what: string; file: string; contai
 
 describe("chaque moteur substitue les secrets avant le modèle", () => {
   it("aucun moteur déclaré n'est laissé sans garde", () => {
-    // Le cœur du test : ajouter un moteur sans dire ce qui le protège échoue ICI,
-    // avec le nom du moteur, plutôt que six mois plus tard dans un audit.
+    // The heart of the test: adding a motor without saying what protects it fails HERE,
+    // with the name of the engine, rather than six months later in an audit.
     for (const engine of LIVE_AGENT_ENGINES) {
       expect(CHECKS[engine], `le moteur "${engine}" n'a aucune garde déclarée`).toBeTruthy();
       expect(CHECKS[engine].length).toBeGreaterThan(0);
@@ -83,12 +83,12 @@ describe("chaque moteur substitue les secrets avant le modèle", () => {
 });
 
 /**
- * MIN-328 — « EN PROFONDEUR » ÉTAIT UN COMMENTAIRE, PAS UN CODE.
+ * MIN-328 — “IN DEPTH” WAS A COMMENT, NOT CODE.
  *
- * `redactPayload` annonçait une substitution en profondeur et ne traitait que le
- * premier niveau. Les payloads d'opencode sont imbriqués par construction
- * (`{ part: { state: { output } } }`, des tableaux de parts) : le secret passait,
- * et se persistait dans `agent_run_events`, relisible par tout membre du projet.
+ * `redactPayload` announced a deep substitution and only processed the
+ * first level. Opencode payloads are nested by construction
+ * (`{ part: { state: { output } } }`, share tables): the secret passed,
+ * and persisted in `agent_run_events`, rereadable by any member of the project.
  */
 describe("la substitution descend dans les payloads imbriqués", () => {
   const TOKEN = "ghs_16C7e42F292c6912E7710c838347Ae178B4a";
@@ -109,7 +109,7 @@ describe("la substitution descend dans les payloads imbriqués", () => {
     );
     expect(JSON.stringify(out)).not.toContain(TOKEN);
     expect(JSON.stringify(out)).toContain("[redacted]");
-    // La FORME est intacte : le fil et le journal se relisent comme avant.
+    // The FORM is intact: the thread and the newspaper are reread as before.
     expect(out).toMatchObject({
       name: "bash",
       state: { parts: [{ text: "token [redacted]" }, { text: "rien à cacher" }] },
@@ -123,17 +123,17 @@ describe("la substitution descend dans les payloads imbriqués", () => {
 });
 
 /**
- * MIN-327 — DEUX TOKENS DANS LE MÊME TOUR, DONC DEUX À SUBSTITUER.
+ * MIN-327 — TWO TOKENS IN THE SAME ROUND, SO TWO TO SUBSTITUTE.
  *
- * Depuis que le token de la microVM n'est plus celui de la fonction (`vmTarget`
- * contre `target` dans `execute.ts`), le registre de secrets doit porter les
- * DEUX : c'est celui de la VM qui est dans `.git/config` et que `git remote -v`
- * sort, c'est celui de la fonction qui apparaît dans un message d'erreur de la
- * forge. En enregistrer un seul rendrait la substitution vraie sur la moitié des
- * chemins — le mode d'échec exact de MIN-328, où un secret qui passe ne casse
- * rien et ne se voit nulle part.
+ * Since the microVM token is no longer that of the function (`vmTarget`
+ * against `target` in `execute.ts`), the secret register must bear the
+ * TWO: it is that of the VM which is in `.git/config` and which `git remote -v`
+ * sort, it is that of the function which appears in an error message of the
+ * wrought. Saving just one would make the substitution true on half of the
+ * paths — the exact failure mode of MIN-328, where a passing secret doesn't break
+ * nothing and is nowhere to be seen.
  *
- * Lexical, comme le reste du fichier : le chemin réel demande une microVM.
+ * Lexical, like the rest of the file: the actual path requests a microVM.
  */
 describe("le registre porte le token de la VM comme celui de la fonction", () => {
   const source = read("execute.ts");
@@ -149,10 +149,10 @@ describe("le registre porte le token de la VM comme celui de la fonction", () =>
   });
 
   it("ne laisse aucune URL de clone descendre dans la VM sans venir de `vmTarget`", () => {
-    // Les trois gestes qui écrivent une URL token-authentifiée DANS la microVM :
-    // le clone d'un run ordinaire, celui d'une relecture, et le job de la boucle.
-    // `target.authUrl` y serait le bug d'origine — un token de fonction dans un
-    // `.git/config` que le modèle peut lire.
+    // The three gestures that write a token-authenticated URL INTO the microVM:
+    // the clone of an ordinary run, that of a replay, and the loop job.
+    // `target.authUrl` would be the original bug — a function token in a
+    // `.git/config` that the model can read.
     for (const geste of [
       "await cloneRepo(sandboxHost(fresh, cloudLayout()), {\n          authUrl: vmTarget.authUrl,",
       "authUrl: vmTarget.authUrl,\n            baseBranch,",

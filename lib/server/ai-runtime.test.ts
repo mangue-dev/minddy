@@ -27,7 +27,7 @@ describe("resolveAiRuntime", () => {
     config.set("assistant_model", "platform/chat");
   });
 
-  it("retombe intégralement sur Minddy quand la surface est décochée", async () => {
+  it("falls back entirely to Minddy when the surface is unchecked", async () => {
     getUserByok.mockResolvedValue(null);
     await expect(
       resolveAiRuntime({ userId: "u1", modelKey: "assistant_model" }),
@@ -40,7 +40,7 @@ describe("resolveAiRuntime", () => {
     expect(getUserByok).toHaveBeenCalledWith("u1", "assistant");
   });
 
-  it("ne prend jamais la clé plateforme sans opt-in de service managé", async () => {
+  it("never uses the platform key without managed-service opt-in", async () => {
     process.env.MINDDY_MANAGED_AI = "";
     getUserByok.mockResolvedValue(null);
 
@@ -49,7 +49,7 @@ describe("resolveAiRuntime", () => {
     ).rejects.toMatchObject({ name: "ManagedAiUnavailableError" });
   });
 
-  it("fait hériter OpenRouter BYOK du modèle plateforme du même appel", async () => {
+  it("makes OpenRouter BYOK inherit the platform model for the same call", async () => {
     getUserByok.mockResolvedValue({
       provider: "openrouter",
       apiKey: "user-key",
@@ -61,7 +61,7 @@ describe("resolveAiRuntime", () => {
     ).resolves.toMatchObject({ mode: "byok", apiKey: "user-key", model: "platform/chat" });
   });
 
-  it("préfère le modèle explicite du compte sur un provider natif", async () => {
+  it("prefers the account's explicit model for a native provider", async () => {
     getUserByok.mockResolvedValue({
       provider: "anthropic",
       apiKey: "anthropic-key",
@@ -77,7 +77,7 @@ describe("resolveAiRuntime", () => {
     });
   });
 
-  it("utilise le défaut provider × feature configuré par l'admin", async () => {
+  it("uses the provider × feature default configured by the admin", async () => {
     config.set("byok_default_openai_transcription_model", "whisper-admin");
     getUserByok.mockResolvedValue({
       provider: "openai",
@@ -90,7 +90,7 @@ describe("resolveAiRuntime", () => {
     ).resolves.toMatchObject({ mode: "byok", model: "whisper-admin" });
   });
 
-  it("fait hériter une automatisation OpenRouter du modèle d'automatisation plateforme", async () => {
+  it("makes an OpenRouter automation inherit the platform automation model", async () => {
     config.set("automation_agent_model", "platform/automation");
     getUserByok.mockResolvedValue({
       provider: "openrouter",
@@ -152,7 +152,7 @@ describe("fetchAiChat", () => {
     fetchMock.mockRestore();
   });
 
-  it("ne retente pas un 400 sans rapport avec le plafond", async () => {
+  it("does not retry a 400 unrelated to the cap", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(new Response("invalid tool schema", { status: 400 }));
@@ -170,7 +170,7 @@ describe("fetchAiChat", () => {
     fetchMock.mockRestore();
   });
 
-  it("retente avec reasoning none après le rejet explicite des function tools", async () => {
+  it("retries with reasoning none after an explicit function-tools rejection", async () => {
     const openAiRuntime = {
       ...runtime,
       provider: "openai" as const,

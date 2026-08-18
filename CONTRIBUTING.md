@@ -1,134 +1,134 @@
-# Contribuer à minddy
+# Contribute to minddy
 
-Merci de contribuer. Toute participation est soumise au
-[Code of Conduct](CODE_OF_CONDUCT.md). Les questions d'utilisation vont dans
+Thank you for contributing. Any participation is subject to
+[Code of Conduct](CODE_OF_CONDUCT.md). Usage questions go into
 [GitHub Discussions](https://github.com/mangue-dev/minddy-issues/discussions),
-les bugs et améliorations dans les formulaires d'issue, et les vulnérabilités
-exclusivement par le canal privé de [SECURITY.md](SECURITY.md).
+bugs and improvements in issue forms, and vulnerabilities
+exclusively through the private channel of [SECURITY.md](SECURITY.md).
 
-Avant un changement non trivial, ouvrez une issue et attendez que le périmètre
-soit accepté. Une issue ouverte n'est pas une réservation : indiquez que vous
-souhaitez la traiter, gardez le travail visible et prévenez si vous l'abandonnez.
-La gouvernance, les délais de décision et les rôles de revue sont décrits dans
+Before a non-trivial change, open an exit and wait for the perimeter
+be accepted. An open issue is not a reservation: indicate that you
+want to process it, keep the work visible and warn if you abandon it.
+Governance, decision deadlines and review roles are described in
 [GOVERNANCE.md](GOVERNANCE.md).
 
-## Licence et DCO
+## License and DCO
 
-Les contributions sont distribuées sous **AGPL-3.0-only**. Aucun CLA ni aucune
-cession de copyright n'est demandé. Chaque commit doit toutefois porter le DCO
-suivant, qui atteste que vous avez le droit de soumettre votre contribution sous
-cette licence :
+Contributions are distributed under **AGPL-3.0-only**. No CLA or any
+assignment of copyright is not requested. However, each commit must carry the DCO
+following, which certifies that you have the right to submit your contribution under
+this license:
 
 ```
-Signed-off-by: Prénom Nom <email@example.com>
+Signed-off-by: First Name Last Name <email@example.com>
 ```
 
-Utilisez `git commit -s` pour l'ajouter. La politique complète, y compris les
-notices et la règle applicable aux opérateurs d'instances modifiées, est dans
+Use `git commit -s` to add it. The complete policy, including
+notices and the rule applicable to operators of modified instances, is in
 [docs/licensing.md](docs/licensing.md).
 
-Le sign-off est requis sur **chaque commit**, y compris après un rebase. Pour
-corriger le dernier commit, utilisez `git commit --amend --signoff`; pour une
-série, rebasez-la et signez chaque commit. Le workflow DCO bloque la fusion s'il
-manque une ligne valide. Le sign-off atteste vos droits, il ne remplace pas
-l'auteur et ne cède pas votre copyright.
+Sign-off is required on **every commit**, including after a rebase. For
+fix last commit, use `git commit --amend --signoff`; for one
+series, rebase it and sign each commit. The DCO workflow blocks the merge if it
+Missing a valid line. The sign-off certifies your rights, it does not replace
+the author and does not transfer your copyright.
 
-## ⚠ Ce dépôt exécute du code dès l'installation
+## ⚠ This repository executes code upon installation
 
-À lire avant de cloner une pull request sur sa machine. Ce n'est pas une
-précaution de principe : **ouvrir ce dépôt et le faire tourner suffit à exécuter
-le code qu'il contient**, sans jamais ouvrir un fichier de test.
+Read before cloning a pull request on your machine. It's not a
+principle precaution: **opening this repository and running it is enough to execute
+the code it contains**, without ever opening a test file.
 
-Trois chemins, tous déclenchés par des commandes qu'on tape sans y penser :
+Three paths, all triggered by commands that we type without thinking:
 
-| Commande | Ce qui s'exécute |
+| Order | What runs |
 | --- | --- |
-| `pnpm install` / `npm install` | les scripts d'installation des dépendances autorisées (`pnpm.onlyBuiltDependencies` : `esbuild`) |
-| `npm run test` (`vitest`) | [scripts/build-pages-md.mjs](scripts/build-pages-md.mjs), lancé en sous-process par [test/build-pages-md-setup.ts](test/build-pages-md-setup.ts) **avant le premier test** |
-| `npm run dev`, `npm run build` | `predev`/`prebuild` → [scripts/build-agent-vm.mjs](scripts/build-agent-vm.mjs) et `build-pages-md.mjs` |
+| `pnpm install` / `npm install` | installation scripts for authorized dependencies (`pnpm.onlyBuiltDependencies`: `esbuild`) |
+| `npm run test` (`vitest`) | [scripts/build-pages-md.mjs](scripts/build-pages-md.mjs), launched as a subprocess by [test/build-pages-md-setup.ts](test/build-pages-md-setup.ts) **before the first test** |
+| `npm run dev`, `npm run build` | `predev`/`prebuild` → [scripts/build-agent-vm.mjs](scripts/build-agent-vm.mjs) and `build-pages-md.mjs` |
 
-Sur le poste d'un mainteneur, ce code s'exécute **à côté d'un `.env` qui porte
-la clé `service_role` de production**. Un fichier de `scripts/` modifié dans une
-PR, ou une dépendance ajoutée au lockfile, lit ce fichier aussi facilement que
+On a maintainer's workstation, this code runs **next to a `.env` which carries
+the production key `service_role`**. A `scripts/` file modified in a
+PR, or a dependency added to the lockfile, reads this file as easily as
 `cat`.
 
-**La conséquence pratique : ne vérifiez pas une PR en la lançant sur votre poste
-de travail.** La CI est là pour ça — elle joue exactement ces gates dans un
-runner jetable qui ne voit aucun secret. Si vous devez malgré tout exécuter une
-PR localement :
+**The practical consequence: do not check a PR by launching it on your computer
+of work.** The CI is there for that — it plays exactly these gates in a
+Disposable runner who sees no secrets. If you still need to carry out a
+PR locally:
 
-1. Lisez d'abord le diff de `scripts/`, `package.json`, les lockfiles,
-   `vitest.config.ts` et `test/` — c'est là que vit ce qui s'exécute tout seul.
-2. Faites-le dans un conteneur ou une VM jetable, sur un clone **sans `.env`**.
-3. À défaut, retirez `.env` du dossier le temps de l'essai. Un `.env.example`
-   suffit à faire tourner la suite : elle est pure, elle ne parle à rien.
+1. First read the diff of `scripts/`, `package.json`, lockfiles,
+`vitest.config.ts` and `test/` — this is where what runs on its own lives.
+2. Do it in a container or disposable VM, on a clone **without `.env`**.
+3. Failing this, remove `.env` from the folder for the duration of the test. A `.env.example`
+is enough to keep things moving: it is safe and speaks to nothing.
 
-## La CI est le pipeline
+## CI is the pipeline
 
-[.github/workflows/ci.yml](.github/workflows/ci.yml) joue, sur chaque pull
-request et chaque push sur `main`/`production` :
+[.github/workflows/ci.yml](.github/workflows/ci.yml) plays, on each pull
+request and each push on `main`/`production`:
 
 - `pnpm run check:public-repo`
 - `pnpm run lint`
 - `pnpm run typecheck`
 - `node scripts/build-desktop.mjs`
 - `pnpm run test`
-- `node scripts/audit.mjs` — vulnérabilités high/critical sur les **trois**
-  lockfiles du dépôt (`pnpm-lock.yaml`, `package-lock.json`,
-  `desktop/package-lock.json`), arbre entier
+- `node scripts/audit.mjs` — high/critical vulnerabilities on **three**
+repository lockfiles (`pnpm-lock.yaml`, `package-lock.json`,
+  `desktop/package-lock.json`), entire tree
 
-Le workflow se déclenche sur `pull_request` et **jamais** sur
-`pull_request_target` : le job qui exécute du code de fork tourne sans accès aux
-secrets du dépôt, avec un `GITHUB_TOKEN` en lecture seule. Aucun `secrets.*` ne
-doit apparaître dans ce fichier. Un job qui a besoin d'un secret est un job qui
-ne doit pas exécuter du code de PR.
+The workflow is triggered on `pull_request` and **never** on
+`pull_request_target`: the job that executes fork code runs without access to
+repository secrets, with a read-only `GITHUB_TOKEN`. No `secrets.*`
+must appear in this file. A job that needs a secret is a job that
+should not run PR code.
 
-[`deploy.sh`](deploy.sh) est l'assistant unique du mainteneur. Il détecte les
-périmètres modifiés, propose automatiquement cœur public, web Cloud et macOS,
-ou permet « tout » et un choix manuel. Il orchestre les workflows reproductibles
-décrits dans [docs/releases.md](docs/releases.md), attend l'approbation de la
-promotion et le verdict de chaque périmètre. Seul le workflow protégé avance
-`production` ; seul son SHA peut recevoir un tag public. La commande ne lit
-jamais `.env`, et la CI ci-dessus reste le pipeline versionné commun.
+[`deploy.sh`](deploy.sh) is the maintainer's one-stop helper. It detects the
+modified perimeters, automatically offers public core, web Cloud and macOS,
+or allows “all” and a manual choice. It orchestrates repeatable workflows
+described in [docs/releases.md](docs/releases.md), awaits approval of the
+promotion and the verdict of each perimeter. Only the protected workflow advances
+`production` ; only its SHA can receive a public tag. The command does not read
+never `.env`, and the above CI remains the common versioned pipeline.
 
-## Préparer une pull request
+## Prepare a pull request
 
-1. Partez d'une branche à jour et gardez un seul objectif par pull request.
-2. Ajoutez ou adaptez les tests, la documentation et les catalogues de langue.
-3. Exécutez `pnpm lint`, `pnpm typecheck` et `pnpm test` dans un environnement
-   sans secret.
-4. Décrivez le pourquoi, les changements, les vérifications, les risques et la
-   licence de toute nouvelle dépendance ou ressource dans le modèle de PR.
-5. Signez chaque commit avec `git commit -s`.
+1. Start from an up-to-date branch and keep a single goal per pull request.
+2. Add or adapt tests, documentation, and language catalogs.
+3. Run `pnpm lint`, `pnpm typecheck` and `pnpm test` in an environment
+   without secrets.
+4. Describe the why, changes, checks, risks and
+license any new dependencies or resources in the PR model.
+5. Sign each commit with `git commit -s`.
 
-Une contribution externe est d'abord relue sans exécuter son code. Un
-mainteneur autorise ensuite la CI du fork, demande les corrections nécessaires
-et vérifie le DCO, les checks et les conversations avant fusion. Une approbation
-code owner est obligatoire ; l'auteur n'approuve pas sa propre PR. La fusion se
-fait par squash. Les mainteneurs peuvent refuser un changement hors périmètre,
-insuffisamment sûr ou dont le coût de maintenance dépasse le bénéfice, même si
-son implémentation fonctionne.
+An external contribution is first reread without executing its code. A
+maintainer then authorizes the fork CI, requests the necessary corrections
+and verifies the DCO, checks and conversations before merging. An approval
+owner code is mandatory; the author does not endorse his own PR. The merger
+made by squash. Maintainers can refuse an out-of-scope change,
+insufficiently secure or whose maintenance cost exceeds the benefit, even if
+its implementation works.
 
-## Travailler dans le dépôt
+## Work in the depot
 
-- **Gestionnaire de paquets : pnpm.** C'est lui qui installe réellement
-  (`node_modules` est un store pnpm). Le dépôt tient aussi un
-  `package-lock.json` : après un `pnpm add`, resynchroniser avec
-  `npm install --package-lock-only --legacy-peer-deps` (un conflit de peers
-  tiptap préexistant bloque npm sans ce drapeau).
-- **Un comportement neuf vient avec son test.** `npx vitest run` (18 s).
-  Le typecheck ne le remplace pas.
-- **Chaînes visibles** : elles passent par next-intl et vivent en double dans
-  `messages/en.json` et `messages/fr.json`, avec les mêmes clés et les mêmes
-  placeholders. Après y avoir touché : `npx vitest run lib/i18n-contract.test.ts`.
-- Les conventions détaillées du dépôt sont dans [CLAUDE.md](CLAUDE.md), son
-  architecture de sécurité dans [SECURITY.md](SECURITY.md).
+- **Package manager: pnpm.** This is what actually installs
+(`node_modules` is a pnpm store). The depot also holds a
+`package-lock.json`: after a `pnpm add`, resynchronize with
+  `npm install --package-lock-only --legacy-peer-deps` (a peer conflict
+pre-existing tiptap blocks npm without this flag).
+- **A new behavior comes with its test.** `npx vitest run` (18 s).
+Typecheck does not override it.
+- **Visible strings**: they pass through next-intl and live as a duplicate in
+`messages/en.json` and `messages/fr.json`, with the same keys and the same
+placeholders. After touching it: `npx vitest run lib/i18n-contract.test.ts`.
+- The detailed conventions of the deposit are in [CLAUDE.md](CLAUDE.md), its
+security architecture in [SECURITY.md](SECURITY.md).
 
-Les mises à jour de dépendances suivent [GOVERNANCE.md](GOVERNANCE.md) : origine
-et licence vérifiées, lockfiles synchronisés, aucune fusion automatique d'une
-version majeure, CI et audit high/critical obligatoires.
+Dependency updates follow [GOVERNANCE.md](GOVERNANCE.md): origin
+and license verified, lockfiles synchronized, no automatic merging of a
+major version, CI and high/critical audit required.
 
-## Signaler une faille
+## Report a vulnerability
 
-Ne pas ouvrir d'issue publique : écrire au contact indiqué en fin de
-[SECURITY.md](SECURITY.md), qui décrit aussi la procédure d'incident.
+Do not open a public exit: write to the contact indicated at the end of the
+[SECURITY.md](SECURITY.md), which also describes the incident procedure.

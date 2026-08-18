@@ -7,12 +7,12 @@ import {
 } from "@/lib/server/agent/pr-actions";
 
 /**
- * FAÇADE (MIN-143) du fil de conversation d'une PR : la route par PR est
- * `/api/pull-requests/[prId]/comments`. Celle-ci résout le run → sa PR et
- * délègue — gardée pour les deep-links `?run=` et la page `/agents`.
+ * FACING (MIN-143) of the conversation thread of a PR: the route by PR is
+ * `/api/pull-requests/[prId]/comments`. This resolves the run → its PR and
+ * delegates — kept for deep-links `?run=` and page `/agents`.
  *
- *  GET  → commentaires de la PR (`{ comments: [] }` si le run n'en a pas).
- *  POST → { body } ajoute un commentaire.
+ * GET → comments from the PR (`{ comments: [] }` if the run does not have one).
+ *  POST → { body } adds a comment.
  */
 
 type RouteContext = { params: Promise<{ runId: string }> };
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  // `?.` : un corps JSON `null` est valide côté parseur mais n'a pas de champs.
+  // `?.`: a JSON body `null` is valid on the parser side but has no fields.
   const body = typeof payload?.body === "string" ? payload.body.trim() : "";
   if (!body) return NextResponse.json({ error: "Comment required" }, { status: 400 });
 

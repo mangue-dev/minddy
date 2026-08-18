@@ -10,12 +10,12 @@ import {
 } from "@/lib/server/issue-reads";
 
 /**
- * Boîte à outils commune des tools MCP : résultats ok/fail (JSON dans un bloc
- * text, codes d'erreur stables en anglais — pas de i18n, comme l'API
- * publique), résolution de l'utilisateur depuis AuthInfo, rate limit, et
- * garde d'accès projet/ticket. Toute requête issue est épinglée
- * `.eq("project_id")` — l'équivalent d'assertIssueInProject côté Numo,
- * puisqu'il n'y a pas de session RLS ici.
+ * Common MCP tools toolkit: ok/fail results (JSON in block
+ * text, stable error codes in English — no i18n, like public API
+ *), user resolution from AuthInfo, rate limit, and
+ * project/ticket guard. Any resulting request is pinned
+ * `.eq("project_id")` — the equivalent of assertIssueInProject on the Numo side,
+ * since there is no RLS session here.
  */
 
 export interface ToolResult {
@@ -35,7 +35,7 @@ export function fail(code: string, message: string): ToolResult {
   };
 }
 
-/** Extra passé par le SDK aux callbacks de tools — seul authInfo nous sert. */
+/** Extra passed through the SDK to the tools callbacks — only authInfo is useful to us. */
 export interface ToolExtra {
   authInfo?: AuthInfo;
 }
@@ -47,9 +47,9 @@ export function getUserId(extra: ToolExtra): string | null {
 
 const RATE_LIMIT = { limit: 120, windowMs: 60_000 };
 
-/** Garde combinée auth + rate limit, à appeler en tête de chaque tool.
-    keyId = la clé API qui agit — les écritures l'enregistrent comme acteur
-    (la timeline affiche « nom de la clé (mcp) », pas l'utilisateur). */
+/** Combined auth + rate limit guard, to be called at the top of each tool.
+ keyId = the API key that is acting — writes record it as actor
+ (the timeline shows "key name (mcp)", not the user). */
 export function requireUser(
   extra: ToolExtra
 ): { userId: string; keyId: string | null } | { error: ToolResult } {
@@ -93,10 +93,10 @@ export async function resolveProject(
   return { access };
 }
 
-/** Garde combinée auth + rate limit + accès projet des tools scopés projet.
-    Partagée par les deux modules de tools (les tickets et compagnie dans
-    tools.ts, les pages dans page-tools.ts) : un tool qui se garderait autrement
-    serait un tool à qui on aurait oublié le rate limit. */
+/** Combined auth + rate limit + project access to project scoped tools.
+ Shared by the two tool modules (the tickets and company in
+ tools.ts, the pages in page-tools.ts): a tool which would otherwise be kept
+ would be a tool for which the rate limit would have been forgotten. */
 export async function requireProject(
   extra: ToolExtra,
   projectId: unknown
@@ -111,7 +111,7 @@ export async function requireProject(
   return { userId: auth.userId, keyId: auth.keyId, access: project.access };
 }
 
-/** Les annotations MCP, les mêmes pour tous les tools de la surface. */
+/** MCP annotations, the same for all tools on the surface. */
 export const READ_ONLY = { readOnlyHint: true, openWorldHint: false } as const;
 export const WRITE = {
   readOnlyHint: false,
@@ -123,10 +123,10 @@ export const WRITE_IDEMPOTENT = { ...WRITE, idempotentHint: true } as const;
 export type ResolvedIssue = ResolvedIssueRef;
 
 /**
- * Résout une référence de ticket — UUID, identifiant « MIND-42 » ou numéro
- * nu — vers son id, épinglée au projet. Enveloppe fine du résolveur partagé
- * (`lib/server/issue-reads.ts`, également utilisé par les tools ticket de
- * l'agent de code) : elle ne fait que rendre les codes d'erreur du MCP.
+ * Resolves a ticket reference — UUID, identifier "MIND-42" or number
+ * bare — to its id, pinned to the project. Thin wrapper of the shared resolver
+ * (`lib/server/issue-reads.ts`, also used by the tools ticket of
+ * the code agent): it only renders the error codes of the MCP.
  */
 export async function resolveIssueRef(
   access: ProjectAccess,

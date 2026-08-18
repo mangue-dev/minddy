@@ -11,9 +11,9 @@ import {
 } from "./repo-instructions";
 
 /**
- * MIN-115, partie 2 : un dépôt qui range ses conventions dans `apps/web/AGENTS.md`
- * ne les voyait jamais appliquées. La recherche est ici, pure — `execute.ts` ne
- * fait que lire les chemins qu'elle nomme.
+ * MIN-115, part 2: a repository that stores its conventions in `apps/web/AGENTS.md`
+ * never saw them applied. The search is here, pure — `execute.ts` ne
+ * just reads the paths it names.
  */
 
 describe("instructionFilesFor", () => {
@@ -67,10 +67,10 @@ describe("formatBootInstructions", () => {
 });
 
 /**
- * Le cœur de la partie 2 : ce que l'agent reçoit quand il édite dans un
- * sous-dossier, et surtout ce qu'il ne reçoit PAS deux fois. `read` remplace ici
- * la sandbox, et compte ses appels — un chemin relu à chaque édition coûterait un
- * aller-retour de microVM par fichier touché.
+ * The heart of part 2: what the agent receives when it edits in a
+ * subfolder, and above all what it does NOT receive twice. `read` here replaces
+ * the sandbox, and counts its calls — a path reread on each edition would cost one
+ * microVM round trip per affected file.
  */
 function repo(files: Record<string, string>) {
   const reads: string[] = [];
@@ -120,7 +120,7 @@ describe("collectTouchedInstructions", () => {
     const files = { "apps/web/AGENTS.md": "Web rules." };
     const first = repo(files);
     await collectTouchedInstructions(["apps/web/a.tsx"], first.state, first.read);
-    // Chunk suivant, même run : `state` a été persisté puis rechargé tel quel.
+    // Next chunk, same run: `state` was persisted then reloaded as is.
     const next = { reads: [] as string[], state: { ...first.state, paths: [...first.state.paths] } };
     const block = await collectTouchedInstructions(["apps/web/b.tsx"], next.state, async (p) => {
       next.reads.push(p);
@@ -140,7 +140,7 @@ describe("collectTouchedInstructions", () => {
     const { state, read } = repo({ "apps/web/AGENTS.md": "y".repeat(10_000) });
     const block = await collectTouchedInstructions(["apps/web/a.tsx"], state, read);
     expect(state.bytes).toBe(TOUCHED_INSTRUCTIONS_MAX_BYTES);
-    // Et le chemin reste lisible : c'est par lui que l'agent lira le reste.
+    // And the path remains readable: it is through it that the agent will read the rest.
     expect(block).toContain("read apps/web/AGENTS.md in full");
   });
 
@@ -158,13 +158,12 @@ describe("collectTouchedInstructions", () => {
 });
 
 /**
- * MIN-247 — LA LECTURE DÉCLENCHE AUSSI, ET C'EST LE MÊME ÉTAT.
+ * MIN-247 — READ ALSO TRIGGERED, AND IT'S THE SAME STATE.
  *
- * L'édition arrivait trop tard : un agent lit dix fichiers d'un paquet pour
- * comprendre comment il est écrit, PUIS édite. Les conventions du paquet ne lui
- * étaient servies qu'après la première version. Ce qui compte ici, c'est que le
- * deuxième geste n'ait RIEN dupliqué — un seul état, un seul budget, une seule
- * lecture par chemin.
+ * Editing came too late: an agent reads ten files from a package to
+ * understand how it's written, THEN edits. Package conventions were not served until after the first release. What matters here is that the
+ * second gesture has NOT duplicated ANYTHING — a single report, a single budget, a single
+ * reading by path.
  */
 describe("collectTouchedInstructions — la lecture", () => {
   it("annonce le geste : « lu » ne dit pas « édité »", async () => {
@@ -174,7 +173,7 @@ describe("collectTouchedInstructions — la lecture", () => {
     const edite = await collectTouchedInstructions(["apps/web/a.tsx"], edit.state, edit.read, "edited");
     expect(lu).toContain("The file you just read");
     expect(edite).toContain("The directory you just edited");
-    // Même contenu, même chemin nommé : seule la phrase d'ouverture change.
+    // Same content, same named path: only the opening sentence changes.
     expect(lu).toContain('<REPO_INSTRUCTIONS path="apps/web/AGENTS.md">');
     expect(edite).toContain('<REPO_INSTRUCTIONS path="apps/web/AGENTS.md">');
   });
@@ -185,8 +184,8 @@ describe("collectTouchedInstructions — la lecture", () => {
       await collectTouchedInstructions(["apps/web/a.tsx"], state, read, "read"),
     ).toContain("Web rules.");
     const readsAfterFirst = reads.length;
-    // L'édition qui suit ne les re-sert pas : c'est le même `state`, donc le même
-    // « une fois par chemin et par run ». L'inverse tient aussi, par construction.
+    // The following edition does not re-serve them: it is the same `state`, therefore the same
+    // “once per path per run”. The opposite also holds, by construction.
     expect(
       await collectTouchedInstructions(["apps/web/a.tsx"], state, read, "edited"),
     ).toBeNull();
@@ -200,25 +199,25 @@ describe("collectTouchedInstructions — la lecture", () => {
     });
     state.bytes = REPO_INSTRUCTIONS_MAX_BYTES - 100;
     const block = await collectTouchedInstructions(["apps/web/a.tsx"], state, read, "read");
-    // Ce qui reste du budget est servi, et pas un octet de plus : une lecture ne
-    // s'accorde pas une enveloppe à elle.
+    // What remains of the budget is served, and not a byte more: a reading does not
+    // don't give yourself an envelope.
     expect(block).not.toBeNull();
     expect(state.bytes).toBeLessThanOrEqual(REPO_INSTRUCTIONS_MAX_BYTES);
   });
 });
 
 /**
- * MIN-364 (lot 6 de l'audit du 15/08) — LE DOCUMENT SERVI À OPENCODE.
+ * MIN-364 (lot 6 of the audit of 08/15) — THE DOCUMENT SERVED AT OPENCODE.
  *
- * Il remplace la liste de chemins qu'on donnait à la clé `instructions`, et il
- * répare les deux pertes du §5.4 : les fichiers imbriqués n'étaient jamais lus
- * (le mécanisme paresseux n'a plus de point d'accroche depuis que les tools de
- * fichier appartiennent à opencode), et la note de frontière manquait sur le
- * chemin local (`readRepoInstructions` n'y est pas appelé, faute de `host`).
+ * It replaces the list of paths that were given to the key `instructions`, and it
+ * repairs the two losses of the §5.4: nested files were never read
+ * (the lazy mechanism no longer has a hook since the tools of
+ * file belong to opencode), and the boundary note was missing on the
+ * local path (`readRepoInstructions` is not called there, due to lack of `host`).
  *
- * Pourquoi un document et pas N chemins : opencode lit EN ENTIER ce qu'on lui
- * nomme. Trente `AGENTS.md` de monorepo entreraient au complet dans le prompt
- * système, à chaque round. Ici c'est nous qui lisons, donc nous qui plafonnons.
+ * Why a document and not N paths: opencode reads ENTIRELY what we name
+ *. Thirty `AGENTS.md` monorepo's would go into the prompt
+ * system each round. Here we are the ones reading, therefore we are the ones capping.
  */
 describe("formatServedInstructions", () => {
   it("emballe chaque fichier sous son chemin, dans l'ordre reçu", () => {
@@ -230,7 +229,7 @@ describe("formatServedInstructions", () => {
       doc.indexOf('<REPO_INSTRUCTIONS path="apps/web/AGENTS.md">'),
     );
     expect(doc).toContain("Règles du web.");
-    // L'ordre EST la règle de surcharge, et le document le dit au modèle.
+    // The order IS the overloading rule, and the document tells the model that.
     expect(doc).toContain("the deeper ones win over the ones above them");
   });
 
@@ -248,7 +247,7 @@ describe("formatServedInstructions", () => {
     ])!;
     expect(doc).not.toContain("x".repeat(SERVED_INSTRUCTIONS_FILE_MAX_BYTES + 1));
     expect(doc).toContain("[truncated");
-    // Le second est servi quand même : c'est tout l'intérêt du cap PAR fichier.
+    // The second is served anyway: that's the whole point of the PAR file cap.
     expect(doc).toContain("Règles du web.");
   });
 
@@ -261,7 +260,7 @@ describe("formatServedInstructions", () => {
     const served = [...doc.matchAll(/<REPO_INSTRUCTIONS path="/g)].length;
     expect(served).toBeGreaterThan(0);
     expect(served).toBeLessThan(files.length);
-    // Le corps reste sous le cap global (l'en-tête et les balises s'y ajoutent).
+    // The body stays under the global cap (the header and tags are added to it).
     expect(doc.length).toBeLessThan(REPO_INSTRUCTIONS_MAX_BYTES * 1.2);
   });
 

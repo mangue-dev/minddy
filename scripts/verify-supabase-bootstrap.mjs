@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** MIN-379 — vérifie une instance après `scripts/bootstrap-supabase.mjs`. */
+/** MIN-379 — checks an instance after `scripts/bootstrap-supabase.mjs`. */
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -29,7 +29,7 @@ const REQUIRED_APP_CONFIG = [
 const REQUIRED_TABLES = ["projects", "issues", "attachments", "feedback_posts", "pages", "agent_runs"];
 
 function fail(message) {
-  throw new Error(`Vérification Supabase échouée : ${message}`);
+  throw new Error(`Supabase verification failed: ${message}`);
 }
 
 export function parseArgs(argv) {
@@ -38,7 +38,7 @@ export function parseArgs(argv) {
 
 function query(dbUrl, sql, { dryRun = false, local = false } = {}) {
   if (dryRun) {
-    console.log("→ interrogerait PostgreSQL avec psql pour les extensions, schémas, tables, config et policies.");
+    console.log("→ would query PostgreSQL with psql for extensions, schemas, tables, config, and policies.");
     return {};
   }
   const command = local ? "docker" : "psql";
@@ -49,25 +49,25 @@ function query(dbUrl, sql, { dryRun = false, local = false } = {}) {
     cwd: ROOT_DIR,
     encoding: "utf8",
   });
-  if (result.error?.code === "ENOENT") fail(`${command} est absent. Installez-le pour vérifier l'instance.`);
-  if (result.status !== 0) fail(`${local ? "la base locale Docker" : "psql"} a échoué : ${(result.stderr || result.stdout).trim()}`);
+  if (result.error?.code === "ENOENT") fail(`${command} is missing. Install it to verify the instance.`);
+  if (result.status !== 0) fail(`${local ? "the local Docker database" : "psql"} failed: ${(result.stderr || result.stdout).trim()}`);
   try {
     return JSON.parse(result.stdout.trim());
   } catch {
-    fail(`psql a renvoyé une réponse illisible : ${result.stdout.trim()}`);
+    fail(`psql returned an unreadable response: ${result.stdout.trim()}`);
   }
 }
 
 export function checkLocalConfig(path = CONFIG_PATH) {
   const content = readFileSync(path, "utf8");
   const missing = REQUIRED_CONFIG.filter((entry) => !content.includes(entry));
-  if (missing.length > 0) fail(`supabase/config.toml ne contient pas : ${missing.join(", ")}.`);
+  if (missing.length > 0) fail(`supabase/config.toml does not contain: ${missing.join(", ")}.`);
 }
 
 export function verificationSql() {
   const schemas = ["auth", "storage", "realtime", "extensions"];
-  // Les buckets publics sont lus par leur endpoint Storage, pas grâce à une
-  // policy SELECT. Seul l'upload direct dans `attachments` doit rester ouvert.
+  // Public buckets are read by their Storage endpoint, not through a
+  // policy SELECT. Only the direct upload in `attachments` should remain open.
   const policyNames = ["attachments insert"];
   return `
 with checks as (
@@ -91,7 +91,7 @@ select json_object_agg(name, missing) from checks;`;
 export async function main(argv = process.argv.slice(2)) {
   const options = parseArgs(argv);
   if (options.dryRun) {
-    console.log("→ vérifierait supabase/config.toml, PostgreSQL et la Storage API.");
+    console.log("→ would check supabase/config.toml, PostgreSQL, and the Storage API.");
     return;
   }
   checkLocalConfig();
@@ -101,7 +101,7 @@ export async function main(argv = process.argv.slice(2)) {
     fail(failures.map(([name, missing]) => `${name} : ${missing.join(", ")}`).join(" ; "));
   }
   await reconcileBuckets(options);
-  console.log(`✓ Vérification passée : ${Object.keys(EXPECTED_BUCKETS).join(", ")}, vector, Realtime et valeurs applicatives.`);
+  console.log(`✓ Verification passed: ${Object.keys(EXPECTED_BUCKETS).join(", ")}, vector, Realtime, and application values.`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

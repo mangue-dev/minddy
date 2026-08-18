@@ -22,16 +22,11 @@ import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 
 /**
- * Réglages du compte → « Données personnelles » (MIN-119).
+ * Account settings → “Personal data” (MIN-119).
  *
- * Les deux droits que le RGPD veut exerçables sans écrire à personne : emporter
- * ses données (art. 15 et 20) et effacer son compte (art. 17).
- *
- * L'écran de suppression affiche d'abord ce qui va disparaître — projets
- * possédés, tickets, membres qui perdent leur accès — parce que la cascade est
- * plus large que ce que « supprimer mon compte » laisse imaginer, et qu'un
- * effacement irréversible ne se confirme à l'aveugle. La saisie de l'adresse est
- * le dernier cran d'arrêt.
+ * The two rights that the GDPR wants to be exercised without writing to anyone: take away
+ * your data (art. 15 and 20) and delete your account (art. 17) the blind man. Entering the address is
+ * the last detent.
  */
 
 interface DeletionPreview {
@@ -56,18 +51,18 @@ export function AccountDataSection() {
 
   const email = user?.email ?? "";
   /**
-   * Le compte peut-il produire un mot de passe ? (MIN-345) Le serveur redemande
-   * une preuve avant d'effacer : le mot de passe quand il y en a un, une
-   * connexion récente sinon. L'écran doit demander la même chose, sinon il
-   * envoie un corps incomplet et récolte un 403 que personne ne comprend.
-   */
+ * Can the account produce a password? (MIN-345) The server asks again for
+ * proof before deleting: the password when there is one, a
+ * recent connection otherwise. The screen should ask the same thing, otherwise it
+ * sends an incomplete body and gets a 403 that no one understands.
+ */
   const providers = user?.app_metadata?.providers;
   const hasPassword = Array.isArray(providers)
     ? providers.includes("email")
     : user?.app_metadata?.provider === "email";
 
-  // L'aperçu est chargé au montage, pas à l'ouverture du dialogue : c'est ce
-  // qu'on veut lire AVANT de cliquer, pas après.
+  // The preview is loaded during editing, not when opening the dialog: that's what
+  // that we want to read BEFORE clicking, not after.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -77,7 +72,7 @@ export function AccountDataSection() {
         const data = (await response.json()) as DeletionPreview;
         if (!cancelled) setPreview(data);
       } catch {
-        // Silencieux : l'aperçu enrichit l'écran, son absence ne le casse pas.
+        // Silent: the preview enriches the screen, its absence does not break it.
       }
     })();
     return () => {
@@ -125,8 +120,8 @@ export function AccountDataSection() {
         const body = (await response.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error ?? t("genericError"));
       }
-      // Le compte n'existe plus : la session pendante doit partir avec lui,
-      // sinon la page suivante tourne sur un jeton qui ne désigne personne.
+      // The account no longer exists: the pending session must leave with it,
+      // otherwise the next page turns to a token which does not designate anyone.
       await signOut();
       window.location.href = "/";
     } catch (e) {
@@ -161,8 +156,8 @@ export function AccountDataSection() {
         />
       </SettingsGroup>
 
-      {/* La carte porte le ton : l'encart destructif qu'elle contenait dessinait
-          une seconde bordure rouge à l'intérieur de la première. */}
+      {/* The card bears the tone: the destructive insert it contained drew
+ a second red border inside the first. */}
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountDataDelete}
         icon={Trash2}

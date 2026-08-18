@@ -1,20 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * `resolveCategoryIdsByName` — la passe qui transforme des NOMS d'étiquettes en
- * catégories du projet, partagée par l'import en masse et par la synchro d'un
- * dépôt lié.
+ * `resolveCategoryIdsByName` — the pass that transforms label NAMES into
+ * categories of the project, shared by the mass import and by the synchronization of a
+ * linked deposit.
  *
- * Ce qui se teste ici n'est pas « est-ce que ça crée une catégorie » — ça, ça se
- * voit. C'est l'ACCORD entre les deux moitiés de la fonction : le nom qu'elle
- * ÉCRIT en base et la clé sous laquelle elle l'INDEXE. Les deux passent par la
- * même troncature à 200 caractères, et le jour où elles ont divergé, rien n'a
- * levé : la catégorie était créée, jamais rattachée, et une NOUVELLE repartait
- * au passage suivant — à chaque webhook, `categories` n'ayant aucune unicité sur
- * `(project_id, name)`. Une fuite lente que personne ne regarde.
+ * What is being tested here is not “does this create a category” — that is
+ * see. It is the AGREEMENT between the two halves of the function: the name it
+ * WRITTEN in base and the key under which it INDEXES it. Both pass through
+ * same truncation at 200 characters, and the day they diverged, nothing
+ * lifted: the category was created, never attached, and a NEW one started again
+ * in the next pass — at each webhook, `categories` having no uniqueness on
+ * `(project_id, name)`. A slow leak that no one watches.
  *
- * Le double PostgREST applique le filtre `project_id` pour de vrai : sans ça, le
- * test ne dirait rien de la requête qu'on écrit.
+ * The double PostgREST applies the `project_id` filter for real: without that, the
+ * test would say nothing about the query we write.
  */
 
 interface Row extends Record<string, unknown> {
@@ -22,16 +22,16 @@ interface Row extends Record<string, unknown> {
 }
 
 let categoryRows: Row[] = [];
-/** Forcer l'échec de la prochaine écriture, pour la branche « la base refuse ». */
+/** Force the next write to fail, for the “base refuses” branch. */
 let failInsert = false;
-/** Combien de SELECT ont eu lieu — une liste vide ne doit en faire aucun. */
+/** How many SELECTs occurred — an empty list should do none. */
 let selects = 0;
 
 let nextId = 0;
 const newId = () => `cat-${++nextId}`;
 
-/** Double de chaîne PostgREST, réduit à ce que `categories` touche : un select
-    filtré, un insert qui rend les lignes écrites (`.select()` en retour). */
+/** Double PostgREST string, reduced to what `categories` touches: a select
+    filtered, an insert which makes the lines written (`.select()` in return). */
 function table() {
   const filters: ((row: Row) => boolean)[] = [];
   let staged: Record<string, unknown>[] | null = null;
@@ -74,7 +74,7 @@ const { CATEGORY_COLORS } = await import("@/lib/category-colors");
 
 const PROJECT = "project-1";
 
-/** Une catégorie déjà en base, comme la migration l'écrirait. */
+/** A category already in base, as migration would write it. */
 function seed(name: string, projectId = PROJECT): Row {
   const row: Row = { id: newId(), project_id: projectId, name, color: "#6b7280" };
   categoryRows.push(row);
@@ -148,7 +148,7 @@ describe("resolveCategoryIdsByName — rapprochement", () => {
 });
 
 describe("resolveCategoryIdsByName — un nom plus long que la borne", () => {
-  // 250 caractères : hors de portée de GitHub (50) et d'un CSV parsé (60),
+  // 250 characters: beyond the reach of GitHub (50) and a parsed CSV (60),
   // atteignable par un titre de label GitLab (255).
   const LONG = "a".repeat(250);
 
@@ -156,7 +156,7 @@ describe("resolveCategoryIdsByName — un nom plus long que la borne", () => {
     const resolved = await resolveCategoryIdsByName(PROJECT, [LONG]);
 
     expect(categoryRows[0].name).toBe("a".repeat(200));
-    // Le point de tout : l'appelant cherche avec le label BRUT.
+    // The point of everything: the caller is looking with the BRUT label.
     expect(resolved!.idByKey.get(categoryKey(LONG))).toBe(categoryRows[0].id);
   });
 
@@ -172,7 +172,7 @@ describe("resolveCategoryIdsByName — un nom plus long que la borne", () => {
   });
 
   it("retrouve une ligne écrite AVANT la borne, sans lui fabriquer un doublon coupé", async () => {
-    // MIN-118 a posé la troncature ; les lignes d'avant peuvent dépasser.
+    // MIN-118 posed the truncation; the front lines may protrude.
     const legacy = seed(LONG);
     const resolved = await resolveCategoryIdsByName(PROJECT, [LONG]);
 

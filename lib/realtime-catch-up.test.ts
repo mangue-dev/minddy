@@ -7,8 +7,8 @@ import {
 } from "./realtime-catch-up";
 
 /**
- * Le périmètre de rattrapage, en réduction : des clés exactes, des clés-préfixes
- * partagées entre projets, et des agrégats à clé composée.
+ * The catch-up scope, reduced: exact keys, prefix keys
+ * shared between projects, and composite key aggregates.
  */
 const SCOPE = [
   ["notifications"],
@@ -19,10 +19,10 @@ const SCOPE = [
 ];
 
 /**
- * Ce qu'un cache réel contient au bout d'une journée : des requêtes visées par
- * un préfixe, des requêtes visées à l'identique, et des voisines qui ne doivent
- * PAS bouger — dont celles dont la clé commence par la même chaîne sans être
- * le même préfixe (`["views", "p2"]` face à `["views", "global"]`).
+ * What a real cache contains at the end of a day: requests targeted by
+ * a prefix, requests targeted identically, and neighbors which must
+ * NOT move — including those whose key begins with the same string without being
+ * the same prefix (`["views", "p2"]` versus `["views", "global"]`).
  */
 const CACHE_KEYS = [
   ["notifications"],
@@ -40,7 +40,7 @@ const CACHE_KEYS = [
   ["projects"],
 ];
 
-/** Ce que la boucle d'origine invalidait — une clé après l'autre, en préfixe. */
+/** What the original loop invalidated — one key after another, prefixed. */
 function invalidatedByLoop(scope: unknown[][], cacheKeys: unknown[][]) {
   const hit = new Set<string>();
   for (const key of scope) {
@@ -84,8 +84,8 @@ describe("createCatchUpQueue", () => {
     const flushes: ((k: readonly unknown[]) => boolean)[] = [];
     const queue = createCatchUpQueue((matches) => flushes.push(matches));
 
-    // Une coupure ferme tous les canaux d'un coup ; les rejoins arrivent au fil
-    // des ACK, chacun avec son propre périmètre.
+    // A cut closes all channels at once; the joins arrive at the wire
+    // ACKs, each with its own scope.
     queue.push([["issues", "p1"], ["comments"]]);
     vi.advanceTimersByTime(20);
     queue.push([["issues", "p2"], ["comments"]]);
@@ -96,7 +96,7 @@ describe("createCatchUpQueue", () => {
     vi.advanceTimersByTime(CATCH_UP_COALESCE_MS);
     expect(flushes).toHaveLength(1);
 
-    // …et le balayage unique couvre les trois périmètres empilés.
+    // …and the single sweep covers all three stacked perimeters.
     const matches = flushes[0];
     expect(matches(["issues", "p1"])).toBe(true);
     expect(matches(["issues", "p2", "todo"])).toBe(true);
@@ -137,10 +137,10 @@ describe("sur un vrai QueryClient", () => {
   });
 
   /**
-   * Le piège du ticket : la couverture doit être identique, pas seulement plus
-   * rapide. On le vérifie sur le vrai `invalidateQueries` — requêtes INACTIVES
-   * comprises, puisque c'est ce que `type: "active"` aurait cassé.
-   */
+ * The ticket catch: coverage needs to be the same, not just faster
+ *. We check it on the real `invalidateQueries` — INACTIVE
+ * requests included, since this is what `type: "active"` would have broken.
+ */
   it("marque les mêmes requêtes que la boucle, actives et inactives", async () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false, gcTime: Infinity } },

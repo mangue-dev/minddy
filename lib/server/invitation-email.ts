@@ -9,36 +9,36 @@ import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { orbSeedOr, projectOrbGradient } from "@/lib/project-orb-colors";
 
 /**
- * L'email d'invitation à un projet (MIN-197) — Resend en fetch brut, comme
- * `lib/server/feedback/otp-email.ts` : pas de SDK, pas de moteur de template.
+ * The project invitation email (MIN-197) — Resend via raw fetch, like
+ * `lib/server/feedback/otp-email.ts`: no SDK, no template engine.
  *
- * C'est le SEUL email que minddy envoie à quelqu'un qui n'est pas encore
- * utilisateur. Il ne porte donc aucun secret : le `token` du lien n'ouvre rien,
- * il ne fait qu'afficher « X vous invite sur *Projet* » au-dessus du formulaire
- * de connexion. Ce qui rattache la personne au projet, c'est l'email vérifié de
- * sa session (`attachPendingInvitations`), pas ce qu'elle a dans l'URL.
+ * This is the ONLY email that minddy sends to someone who is not yet a
+ * user. It therefore carries no secrets: the link's `token` opens nothing;
+ * it only displays “X invites you to *Project*” above the sign-up form.
+ * What ties the person to the project is the verified email on their session
+ * (`attachPendingInvitations`), not anything in the URL.
  *
- * Resend n'est contacté qu'avec `EMAIL_PROVIDER=resend`, sa clé et un expéditeur
- * explicite. `EMAIL_PROVIDER=console` écrit le lien en développement seulement.
+ * Resend is contacted only when `EMAIL_PROVIDER=resend`, its API key, and an
+ * explicit sender are configured. `EMAIL_PROVIDER=console` logs the link only
+ * in development.
  *
- * **Le gabarit est en tableaux et en styles en ligne, à dessein.** Un client
- * mail n'est pas un navigateur : Outlook rend le HTML avec le moteur de Word
- * (ni flexbox, ni grille, ni `border-radius`), Gmail supprime `<style>` sur
- * certains chemins, et personne ne lit `oklch()`. D'où les couleurs de minddy
- * converties en hexadécimal (`lib/project-orb-colors.ts`) et les images en URL
- * absolue sur `SITE_URL` — jamais sur l'`origin` du déploiement, qui peut être
- * une preview inaccessible depuis la boîte de réception.
+ * **The template deliberately uses tables and inline styles.** A mail client
+ * is not a browser: Outlook renders HTML with the Word engine (no flexbox, grid,
+ * or `border-radius`), Gmail removes `<style>` on some paths, and no client reads
+ * `oklch()`. That is why minddy's colors are converted to hexadecimal
+ * (`lib/project-orb-colors.ts`) and image URLs are absolute on `SITE_URL` — never
+ * on the deployment `origin`, which may be a preview inaccessible to the recipient.
  */
 
 const RESEND_URL = "https://api.resend.com/emails";
-/** La palette de minddy (`app/globals.css` + jetons mangue-ui, thème clair),
-    en hexadécimal parce qu'un client mail ne lit pas `oklch()`. */
+/** Minddy's palette (`app/globals.css` + mango-ui tokens, light theme),
+ * in hexadecimal because email clients do not read `oklch()`. */
 const INK = "#16181e"; // --primary
 const TITLE = "#0a0a0a"; // --foreground
 const MUTED = "#606369"; // --muted-foreground
-const FAINT = "#8b8e96"; // le pied de page, un cran sous --muted-foreground
+const FAINT = "#8b8e96"; // footer text, one step lighter than --muted-foreground
 const BORDER = "#d9dce5"; // --border
-const HAIRLINE = "#eceef3"; // le filet interne à la carte, plus discret
+const HAIRLINE = "#eceef3"; // subtle inner rule on the card
 const PAGE = "#f5f7fb"; // --background
 const CARD = "#ffffff"; // --card
 const ON_INK = "#fafafa"; // --primary-foreground
@@ -48,26 +48,26 @@ const FONT =
 
 export interface SendInvitationEmailParams {
   to: string;
-  /** Nom affiché de qui invite. Vide = compte sans nom ni email lisible : on
-      retombe sur « Quelqu'un », dans la langue du mail. */
+  /** Display name of the inviter. Empty means an unnamed account or an unreadable email;
+   * it falls back to “Someone” in the email's language. */
   inviterName: string;
   projectName: string;
-  /** Identifiant du projet — la graine de son orbe quand le tirage n'a jamais
-      été relancé (cf. `projectOrbSeed`). */
+  /** Project identifier — the orb seed used when the color has never been reset
+   * (see `projectOrbSeed`). */
   projectId: string;
-  /** `projects.orb_seed` : la graine relancée, quand elle l'a été. Le mail doit
-      peindre la couleur de l'app, pas celle d'avant. */
+  /** `projects.orb_seed`: the reset seed, when one exists. The email should use
+   * the app's current color, not the previous one. */
   projectOrbSeed?: string | null;
-  /** L'icône importée du projet, quand il en a une (`projects.icon_url`) ;
-      sinon l'orbe dégradé, exactement comme `<ProjectOrb>`. */
+  /** The project's imported icon, when present (`projects.icon_url`); otherwise
+   * the fallback orb, exactly like `<ProjectOrb>`. */
   projectIconUrl?: string | null;
   token: string;
   locale: "fr" | "en";
-  /** Origine du site pour ce déploiement (dev/preview/prod). */
+  /** Site origin for this deployment (dev/preview/prod). */
   origin?: string;
 }
 
-/** `<`, `&`, `"` dans un nom de projet ou d'invitant — jamais dans nos mains. */
+/** Escape `<`, `&`, and `"` in a project or inviter name — never trust either input. */
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -77,22 +77,21 @@ function escapeHtml(value: string): string {
 }
 
 /**
- * Le lien d'un email d'invitation mène à l'INSCRIPTION (MIN-300), pas à la
- * connexion : arriver par une invitation, c'est très majoritairement ne pas
- * avoir de compte (MIN-197). L'écran ouvrait déjà l'onglet « inscription » dans
- * ce cas ; maintenant que c'est un parcours à part, le lien y va directement.
- * Le wizard porte le retour vers `/login` pour qui a déjà un compte, et le
- * token le suit.
+ * An invitation email links to SIGN-UP (MIN-300), not login: most people who
+ * arrive through an invitation do not have an account yet (MIN-197). The screen
+ * already opened the “sign-up” tab in that case; now that it is a separate flow,
+ * the link goes there directly. The wizard carries the return to `/login` for
+ * people who already have an account, and passes the token along.
  */
 export function invitationLink(token: string, origin: string = SITE_URL): string {
   return `${origin.replace(/\/$/, "")}/signup?invite=${encodeURIComponent(token)}`;
 }
 
 /**
- * L'icône du projet, 48 px, coins arrondis — l'image importée si elle en a une,
- * sinon l'orbe. On n'accepte qu'une URL `https://` : une image en `http` fait
- * hurler les clients mail, et une `data:` est soit ignorée, soit un motif de
- * spam.
+ * The project icon, 48 px with rounded corners — the imported image when there
+ * is one, otherwise the orb. We accept only an `https://` URL: an `http` image
+ * makes mail clients complain, and a `data:` URL is either ignored or treated as
+ * a spam signal.
  */
 function projectIconHtml(params: SendInvitationEmailParams): string {
   const url = params.projectIconUrl?.trim();
@@ -103,8 +102,8 @@ function projectIconHtml(params: SendInvitationEmailParams): string {
   const orb = projectOrbGradient(
     orbSeedOr(params.projectId, params.projectOrbSeed),
   );
-  // Outlook ignore `border-radius` et `linear-gradient` : il lui reste l'aplat,
-  // en carré. C'est la dégradation qu'on accepte — pas une case vide.
+  // Outlook ignores `border-radius` and `linear-gradient`: it still gets the solid
+  // color, in a square. That degradation is acceptable — an empty box is not.
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="48" style="width:48px;border-collapse:separate;">
               <tr><td height="48" bgcolor="${orb.base}" style="width:48px;height:48px;border-radius:12px;background-color:${orb.base};background-image:linear-gradient(135deg,${orb.from} 0%,${orb.to} 100%);font-size:0;line-height:48px;">&nbsp;</td></tr>
             </table>`;
@@ -137,8 +136,8 @@ export async function sendInvitationEmail(
     ? `${inviter} vous invite sur « ${params.projectName} »`
     : `${inviter} invited you to "${params.projectName}"`;
 
-  // Le texte qui suit l'objet dans la liste des messages. Sans lui, les clients
-  // y recopient le début du corps — ici « minddy », le mot du logo.
+  // The text shown after the subject in a message list. Without it, clients may
+  // copy the beginning of the body — here “minddy”, the word from the logo.
   const preheader = fr
     ? `Rejoignez « ${params.projectName} » sur minddy.`
     : `Join "${params.projectName}" on minddy.`;

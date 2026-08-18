@@ -5,39 +5,39 @@ import { getAnalyticsClient, onAnalyticsReady, trackEvent } from "./analytics";
 import type { AnalyticsEventName, AnalyticsPropsFor } from "./analytics-events";
 
 /**
- * Le point d'entrée UNIQUE des événements analytics côté client (MIN-78).
+ * The SINGLE entry point for client-side analytics events (MIN-78).
  *
- * `track` est générique sur le catalogue : un nom inventé ou une prop hors
- * contrat est une erreur de COMPILATION, pas un événement silencieusement perdu.
- * L'allowlist runtime reste en filet (un `as any` quelque part, du code
- * dynamique) et la sanitisation garantit qu'aucune valeur non primitive ni
- * aucun texte trop long ne parte.
+ * `track` is generic on the catalog: an invented name or a prop outside
+ * contract is a COMPILATION error, not a silently lost event.
+ * The runtime allowlist remains in net (a `as any` somewhere, dynamic code
+ *) and the sanitization guarantees that no non-primitive value nor
+ * any text that is too long is left.
  *
- * Toutes les méthodes sont sûres quand PostHog n'est pas initialisé (pas de
- * clé, hôte local, consentement refusé) : `getAnalyticsClient()` renvoie alors
- * `null` et les appels ne font rien.
+ * All methods are safe when PostHog is not initialized (not from
+ * key, localhost, consent denied): `getAnalyticsClient()` then returns
+ * `null` and calls do nothing.
  *
- * Le client est LU au moment de l'appel, jamais capturé par un hook (MIN-94) :
- * passer par `usePostHog()` obligeait à importer `posthog-js/react` ici, donc à
- * embarquer les 227 Ko du client dans le bundle initial de chaque page publique
- * — ce hook est monté jusque dans le bandeau cookies du root layout.
+ * Client is READ at call time, never captured by a hook (MIN-94) :
+ * going through `usePostHog()` required importing `posthog-js/react` here, therefore
+ * embedding the 227 KB of the client in the initial bundle of each public page
+ * — this hook is mounted up to the cookies banner of the root layout.
  */
 export function useAnalytics() {
-  // Délègue à `trackEvent` : une seule implémentation (catalogue + allowlist +
-  // sanitisation) partagée avec le code hors React, sur le même client.
+  // Delegates to `trackEvent`: a single implementation (catalog + allowlist +
+  // sanitization) shared with non-React code, on the same client.
   const track = useCallback(
     <E extends AnalyticsEventName>(event: E, props?: AnalyticsPropsFor<E>) =>
       trackEvent(event, props),
     []
   );
 
-  // ── État (identité, groupe, propriétés) ─────────────────────────────────
-  // Ces appels sont DIFFÉRÉS jusqu'à l'init de PostHog via `onAnalyticsReady`.
-  // Sans ça ils arrivaient trop tôt et se perdaient : Supabase émet
-  // `INITIAL_SESSION` dès le montage, alors que l'init attend que le navigateur
-  // soit inactif — l'utilisateur restait donc anonyme toute la session.
+  // ── State (identity, group, properties) ─────────────────────────────────
+  // These calls are DEFERRED until PostHog init via `onAnalyticsReady`.
+  // Without that they arrived too early and got lost: Supabase issues
+  // `INITIAL_SESSION` upon mounting, while the init waits for the browser
+  // be inactive — the user therefore remained anonymous for the entire session.
 
-  /** Rattache les événements suivants à un compte (après connexion). */
+  /** Attaches the following events to an account (after login). */
   const identify = useCallback(
     (userId: string, traits?: Record<string, unknown>, traitsOnce?: Record<string, unknown>) => {
       onAnalyticsReady(() => getAnalyticsClient()?.identify(userId, traits, traitsOnce));
@@ -45,16 +45,16 @@ export function useAnalytics() {
     []
   );
 
-  /** Déconnexion : repart d'une identité anonyme neuve. */
+  /** Disconnection: starts with a new anonymous identity. */
   const reset = useCallback(() => {
     onAnalyticsReady(() => getAnalyticsClient()?.reset());
   }, []);
 
   /**
-   * Analytics de groupe — associe les événements suivants à un projet, pour
-   * pouvoir découper les entonnoirs et la rétention par projet. `resetGroups`
-   * coupe l'association (sortie du projet / déconnexion).
-   */
+ * Group Analytics — associates the following events with a project, so
+ * can break down funnels and retention by project. `resetGroups`
+ * cuts the association (exit from the project / disconnection).
+ */
   const group = useCallback(
     (groupType: string, groupKey: string, props?: Record<string, unknown>) => {
       onAnalyticsReady(() => getAnalyticsClient()?.group(groupType, groupKey, props));
@@ -66,17 +66,17 @@ export function useAnalytics() {
   }, []);
 
   /**
-   * Projet courant attaché en PROPRIÉTÉ à tous les événements suivants.
-   *
-   * Doublon volontaire du groupe : l'analytics de groupe est un add-on PAYANT
-   * chez PostHog, alors qu'une propriété d'événement est gratuite et se découpe
-   * avec un simple « breakdown ». Sans ça, tant qu'on ne souscrit pas, la
-   * dimension projet serait présente dans les données mais inexploitable.
-   *
-   * Le groupe reste posé en parallèle : il ne coûte rien tant que l'add-on
-   * n'est pas activé (la facturation démarre à la souscription, pas à l'envoi),
-   * et le jour où il le serait, tout est déjà en place.
-   */
+ * Current project attached as PROPERTY to all following events.
+ *
+ * Voluntary duplicate of the group: group analytics is a PAID add-on
+ * at PostHog, while an event property is free and can be split
+ * with a simple "breakdown". Without that, as long as we do not subscribe, the
+ * project dimension would be present in the data but unusable.
+ *
+ * The group remains in parallel: it costs nothing as long as the add-on
+ * is not activated (billing starts upon subscription, not upon sending),
+ * and the day it would be, everything is already in place.
+ */
   const setProjectContext = useCallback(
     (projectId: string | null) => {
       onAnalyticsReady(() => {
@@ -89,10 +89,10 @@ export function useAnalytics() {
   );
 
   /**
-   * Propriétés de personne aux jalons d'activation (`first_issue_at`,
-   * `mcp_connected`…). Passe par l'API native plutôt que par `track({ $set })`
-   * car le sanitizer rejette les clés préfixées par `$`.
-   */
+ * Person properties at activation milestones (`first_issue_at`,
+ * `mcp_connected`…). Goes through the native API rather than `track({ $set })`
+ * because the sanitizer rejects keys prefixed with `$`.
+ */
   const setPersonProperties = useCallback(
     (set?: Record<string, unknown>, setOnce?: Record<string, unknown>) => {
       onAnalyticsReady(() => getAnalyticsClient()?.setPersonProperties(set, setOnce));

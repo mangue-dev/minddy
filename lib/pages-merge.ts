@@ -1,41 +1,41 @@
 /**
- * La FUSION PAR BLOC d'un document de page (MIN-271) — logique pure, aucune IO.
+ * BLOCK MERGE of a page document (MIN-271) — pure logic, no IO.
  *
- * Une page est partagée par tout le projet, et deux personnes peuvent l'ouvrir
- * en même temps. Le garde-fou est un compteur : chaque écriture du corps envoie
- * la `version` sur laquelle elle s'appuie, et le serveur refuse (409) si elle a
- * bougé. Reste à savoir quoi faire du refus — et c'est tout ce module.
+ * A page is shared by the entire project, and two people can open it
+ * at the same time. The guardrail is a counter: each body writing sends
+ * the `version` on which it relies, and the server refuses (409) if it has
+ * moved. It remains to know what to do with the refusal — and that's what this module is all about.
  *
- * Le document est un ARBRE, pas une liste de lignes : on ne fusionne donc pas
- * « le bloc B » isolément, on fusionne le document entier en comparant les
- * blocs de PREMIER NIVEAU par leur `blockId` (posé par `UniqueID`, MIN-267).
- * C'est la granularité que l'utilisateur perçoit — un paragraphe, un titre, une
- * liste — et la seule qui survive au glisser-déposer : déplacer un bloc réécrit
- * deux endroits de l'arbre à la fois, ce qu'aucune sauvegarde « par bloc » au
- * sens littéral ne saurait représenter.
+ * The document is a TREE, not a list of lines: we therefore do not merge
+ * “block B” in isolation, we merge the entire document by comparing the
+ * FIRST LEVEL blocks by their `blockId` (set by `UniqueID`, MIN-267).
+ * It's the granularity that the user perceives — a paragraph, a title, a
+ * list — and the only one that survives drag and drop: moving a rewritten block
+ * two places in the tree at the same time, which means that no "block" saving is possible
+ * literal meaning cannot represent.
  *
  * Trois documents entrent :
- *   `base`   — celui sur lequel je me suis appuyé (ma dernière synchro) ;
- *   `mine`   — ce que j'ai à l'écran ;
- *   `theirs` — ce que le serveur porte maintenant.
+ * `base` — the one I relied on (my last sync);
+ * `mine` — what I have on the screen;
+ * `theirs` — what the server is carrying now.
  *
- * Et la règle tient en une phrase : **le distant gagne, jamais en silence.**
- * Un bloc que je suis seul à avoir touché est repris tel quel (fusion muette,
- * c'est le cas courant : B chez moi, C chez l'autre). Un bloc que nous avons
- * touché tous les deux garde la version DISTANTE dans le document, et la mienne
- * ressort dans `conflicts` — l'appelant la propose en restauration
- * (`applyRestore`). Choisir la mienne en silence effacerait le travail de
- * l'autre, ce que cette feature existe précisément pour empêcher.
+ * And the rule is contained in one sentence: **the distant wins, never in silence.**
+ * A block that I am the only one to have touched is taken as is (mute merge,
+ * this is the common case: B at mine, C at the other). A block we have
+ * touched both keeps the REMOTE version in the document, and mine
+ * appears in `conflicts` — the caller offers it for restoration
+ * (`applyRestore`). Choosing mine silently would erase the work of
+ * the other, what this feature exists precisely to prevent.
  *
- * Ce que ce module ne fait PAS : fusionner l'INTÉRIEUR d'un bloc. Deux
- * personnes qui tapent dans le même paragraphe à la même seconde relèvent du
- * caractère par caractère, donc de `prosemirror-collab` — hors v1. C'est
- * justement ce cas-là qui devient un conflit signalé.
+ * What this module does NOT do: merge the INSIDE of a block. Two
+ * people who type in the same paragraph at the same second fall under the
+ * character by character, therefore from `prosemirror-collab` — excluding v1. It is
+ * precisely this case which becomes a reported conflict.
  */
 
 import { BLOCK_ID_ATTRIBUTE } from "@/components/pages/blocks";
 
-/** Un nœud ProseMirror en JSON, vu de l'extérieur. */
+/** A ProseMirror node in JSON, seen from the outside. */
 export interface PageNodeJSON {
   type?: string;
   attrs?: Record<string, unknown> | null;
@@ -43,19 +43,19 @@ export interface PageNodeJSON {
   [key: string]: unknown;
 }
 
-/** Le document, tel qu'il est stocké dans `pages.content`. */
+/** The document, as stored in `pages.content`. */
 export interface PageDocJSON extends PageNodeJSON {
   type?: string;
   content?: PageNodeJSON[];
 }
 
 /**
- * Un bloc que les deux côtés ont touché.
+ * A block that both sides have touched.
  *
- * `mine` est ce que J'AVAIS — le contenu offert en restauration —, `null`
- * quand mon geste était une suppression. `theirs` est ce qui a été retenu dans
- * le document fusionné, `null` quand c'est une suppression distante qui a
- * gagné.
+ * `mine` is what I HAD — the content offered in catering —, `null`
+ * when my action was a suppression. `theirs` is what was retained in
+ * the merged document, `null` when it was a remote deletion which
+ * won.
  */
 export interface PageBlockConflict {
   id: string;
@@ -64,14 +64,14 @@ export interface PageBlockConflict {
 }
 
 export interface PageMergeResult {
-  /** Le document à adopter. Toujours défini, même en présence de conflits. */
+  /** The document to adopt. Always defined, even in the presence of conflicts. */
   doc: PageDocJSON;
-  /** Les blocs contestés, dans l'ordre du document. Vide = fusion muette. */
+  /** The contested blocks, in document order. Empty = silent merge. */
   conflicts: PageBlockConflict[];
   /**
-   * La fusion apporte-t-elle quelque chose que le serveur n'a pas ? C'est ce
-   * qui décide du REJEU : sans ça, un conflit où je n'ai rien à sauver
-   * relancerait une écriture identique à ce qui est déjà en base.
+   * Does the merge bring something that the server doesn't have? This is what
+   * who decides the REPLAY: without that, a conflict where I have nothing to save
+   * would restart a writing identical to what is already in base.
    */
   changed: boolean;
 }
@@ -79,14 +79,14 @@ export interface PageMergeResult {
 /* ─── Lecture du document ──────────────────────────────────────────────────── */
 
 /**
- * Les blocs de premier niveau, chacun avec sa CLÉ.
+ * The first level blocks, each with its KEY.
  *
- * La clé est le `blockId` quand il y en a un. Un bloc qui n'en porte pas —
- * document écrit avant MIN-267, ou collé depuis une source qui n'en pose pas —
- * prend une clé de position (`@3`). Elle vaut ce qu'elle vaut : deux documents
- * dont les blocs anonymes ont bougé ne se compareront pas finement. C'est
- * préférable à les laisser sans clé du tout, ce qui les ferait tous se
- * confondre et disparaître à la première fusion.
+ * The key is the `blockId` when there is one. A block that does not carry any —
+ * document written before MIN-267, or pasted from a source that does not pose one —
+ * takes a position key (`@3`). It's worth what it's worth: two documents
+ * whose anonymous blocks have moved will not compare finely. It is
+ * better than leaving them without a key at all, which would cause them all to
+ * confuse and disappear at the first merger.
  */
 function blockKey(node: PageNodeJSON, index: number): string {
   const id = node.attrs?.[BLOCK_ID_ATTRIBUTE];
@@ -107,9 +107,9 @@ function indexBlocks(doc: PageDocJSON | null | undefined): Indexed {
   const byKey = new Map<string, PageNodeJSON>();
   topLevel(doc).forEach((node, index) => {
     let key = blockKey(node, index);
-    // Un id dupliqué (copier-coller d'un bloc dans un client qui n'a pas
-    // regénéré son id) rendrait la map ambiguë : le second prend une clé de
-    // position, ce qui le traite comme un bloc anonyme plutôt que comme le
+    // A duplicate id (copy-paste from a block into a client that does not have
+    // regenerated its id) would make the map ambiguous: the second takes a key from
+    // position, which treats it as an anonymous block rather than the
     // jumeau du premier.
     if (byKey.has(key)) key = `@${index}`;
     keys.push(key);
@@ -118,8 +118,8 @@ function indexBlocks(doc: PageDocJSON | null | undefined): Indexed {
   return { keys, byKey };
 }
 
-/** Égalité structurelle. Les documents viennent du même sérialiseur, mais
-    l'ordre des clés d'un objet JSON n'est garanti par personne. */
+/** Structural equality. The documents come from the same serializer, but
+    the key order of a JSON object is not guaranteed by anyone. */
 export function sameNode(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (a === null || b === null) return false;
@@ -140,11 +140,11 @@ export function sameNode(a: unknown, b: unknown): boolean {
   return true;
 }
 
-/* ─── La fusion ────────────────────────────────────────────────────────────── */
+/* ─── The merger ─────────────────────────────── ─────────────────────────────── */
 
-/** Le sort d'un bloc, une fois les deux côtés lus. */
+/** Comes out in one block, once both sides have been read. */
 interface Decision {
-  /** Le nœud retenu, `null` quand le bloc quitte le document. */
+  /** The retained node, `null` when the block leaves the document. */
   node: PageNodeJSON | null;
   conflict: PageBlockConflict | null;
 }
@@ -163,18 +163,18 @@ function decide(
     const theirsChanged = !inBase || !sameNode(theirs, base);
     if (mineChanged && !theirsChanged) return { node: mine, conflict: null };
     if (!mineChanged && theirsChanged) return { node: theirs, conflict: null };
-    // Les deux ont écrit dans le même bloc : le distant reste, le mien est
-    // offert. C'est LE cas que le CRDT aurait fusionné caractère par
-    // caractère, et celui qu'on préfère signaler plutôt que trancher.
+    // Both wrote in the same block: the distant one remains, mine is
+    // offered. This is THE case that the CRDT would have merged character by
+    // character, and the one we prefer to point out rather than decide.
     return { node: theirs, conflict: { id: key, mine, theirs } };
   }
 
   if (mine !== undefined) {
-    // Un bloc que j'ai AJOUTÉ (absent de la base) n'est en concurrence avec
-    // rien : il entre dans le document fusionné.
+    // A block that I ADDED (absent from the base) does not compete with
+    // nothing: it enters the merged document.
     if (!inBase) return { node: mine, conflict: null };
-    // Ils l'ont supprimé. Si je l'ai seulement laissé tel quel, la suppression
-    // passe sans bruit ; si je l'avais modifié, elle gagne quand même — mais
+    // They deleted it. If I just left it as is, deleting
+    // passes without noise; if I had changed it, she still wins — but
     // pas en silence.
     const mineChanged = !sameNode(mine, base);
     return {
@@ -185,9 +185,9 @@ function decide(
 
   if (theirs !== undefined) {
     if (!inBase) return { node: theirs, conflict: null };
-    // Je l'ai supprimé. Ils l'ont modifié → leur version reste, et je le
-    // découvre : `mine: null` dit que mon geste était une suppression, donc
-    // que « restaurer la mienne » veut dire la retirer.
+    // I deleted it. They modified it → their version remains, and I
+    // discovers: `mine: null` says that my action was a deletion, therefore
+    // that “to restore mine” means to remove it.
     const theirsChanged = !sameNode(theirs, base);
     return {
       node: theirs,
@@ -198,7 +198,7 @@ function decide(
   return { node: null, conflict: null };
 }
 
-/** L'ordre relatif des blocs communs a-t-il bougé entre deux versions ? */
+/** Has the relative order of common blocks changed between two versions? */
 function reordered(before: string[], after: string[]): boolean {
   const kept = new Set(after);
   const left = before.filter((key) => kept.has(key));
@@ -208,13 +208,13 @@ function reordered(before: string[], after: string[]): boolean {
 }
 
 /**
- * Fusionne mon document et celui du serveur, sur la base commune.
+ * Merge my document and that of the server, on the common base.
  *
- * L'ORDRE vient d'un seul côté : celui qui a réordonné. Un glisser-déposer
- * réécrit tout l'ordre de la fratrie, donc entrelacer deux ordres produirait
- * une suite que personne n'a voulue. Quand un seul des deux a bougé, sa suite
- * fait foi ; quand les deux ont bougé (ou aucun), c'est celle du serveur, et
- * les blocs que l'autre côté a ajoutés s'y glissent derrière leur voisin.
+ * ORDER comes from one side only: the one who reordered. Drag and drop
+ * rewrites the entire sibling order, so interleaving two orders would produce
+ * a sequel that no one wanted. When only one of the two has moved, its continuation
+ * is authentic; when both have moved (or neither), it is that of the server, and
+ * the blocks that the other side added slide in behind their neighbor.
  */
 export function mergeDocs(
   base: PageDocJSON | null | undefined,
@@ -223,8 +223,8 @@ export function mergeDocs(
 ): PageMergeResult {
   const server: PageDocJSON = theirs ?? { type: "doc", content: [] };
 
-  // Rien à fusionner : je n'ai rien touché depuis ma base, ou j'ai déjà
-  // exactement ce que le serveur porte.
+  // Nothing to merge: I haven't touched anything from my base, or I have already
+  // exactly what the waiter is wearing.
   if (!mine || sameNode(mine, server)) {
     return { doc: server, conflicts: [], changed: false };
   }
@@ -241,8 +241,8 @@ export function mergeDocs(
     decisions.set(key, decide(key, b.byKey.get(key), m.byKey.get(key), s.byKey.get(key)));
   }
 
-  // Qui a bougé l'ordre ? La question ne se pose que sur les blocs que la base
-  // connaissait : un ajout n'est pas un déplacement.
+  // Who moved the order? The question only arises on the blocks that the base
+  // knew: an addition is not a move.
   const mineMoved = base ? reordered(b.keys, m.keys) : false;
   const theirsMoved = base ? reordered(b.keys, s.keys) : false;
   const spineFromMine = mineMoved && !theirsMoved;
@@ -252,9 +252,9 @@ export function mergeDocs(
   const kept = (key: string) => decisions.get(key)?.node != null;
   const order = spine.filter(kept);
 
-  // Ce que l'autre côté a ajouté se glisse DERRIÈRE son voisin de gauche, celui
-  // avec lequel il a été écrit. Ajouter en fin de document mettrait un
-  // paragraphe inséré au milieu d'un chapitre tout en bas de la page.
+  // What the other side added slips BEHIND its neighbor on the left, the one
+  // with which it was written. Adding at the end of the document would put a
+  // paragraph inserted in the middle of a chapter at the very bottom of the page.
   const placed = new Set(order);
   for (let i = 0; i < other.length; i += 1) {
     const key = other[i];
@@ -277,9 +277,9 @@ export function mergeDocs(
     const conflict = decisions.get(key)?.conflict;
     if (conflict) conflicts.push(conflict);
   }
-  // Les blocs SORTIS du document peuvent eux aussi être contestés (ils m'ont
-  // supprimé un bloc que j'avais modifié) : ils n'ont plus de place dans
-  // l'ordre, mais ils ont toute leur place dans le bandeau.
+  // Blocks EXIT from the document can also be contested (they told me
+  // deleted a block that I had modified): they no longer have room in
+  // order, but they have their place in the banner.
   for (const [key, decision] of decisions) {
     if (decision.conflict && !placed.has(key)) conflicts.push(decision.conflict);
   }
@@ -288,17 +288,17 @@ export function mergeDocs(
   return { doc, conflicts, changed: !sameNode(doc, server) };
 }
 
-/* ─── La restauration ──────────────────────────────────────────────────────── */
+/* ─── Catering ──────────────────────────── ──────────────────────────── */
 
 /**
- * Remet MA version d'un bloc contesté dans le document fusionné.
+ * Returns MY version of a contested block to the merged document.
  *
- * C'est le geste du bandeau, et il est explicite par construction : la fusion
- * a retenu la version distante, l'utilisateur voit laquelle et décide. Un bloc
- * dont mon geste était une suppression sort du document ; un bloc que le
- * distant a supprimé revient à sa place d'origine, calculée sur le document
- * fusionné plutôt que sur un index figé — d'autres restaurations ont pu passer
- * avant.
+ * This is the gesture of the blindfold, and it is explicit by construction: the fusion
+ * has retained the remote version, the user sees which one and decides. A block
+ * of which my gesture was a deletion leaves the document; a block that the
+ * remote deleted returns to its original place, calculated on the document
+ * merged rather than on a fixed index — other restorations were able to pass
+ * Before.
  */
 export function applyRestore(
   doc: PageDocJSON,
@@ -319,8 +319,8 @@ export function applyRestore(
     return { ...doc, content };
   }
 
-  // Le bloc n'est plus là : le distant l'avait supprimé. On le replace derrière
-  // le voisin de gauche qu'il avait chez moi.
+  // The block is no longer there: the remote had deleted it. We put it back behind
+  // the neighbor on the left that he had at my house.
   const mineKeys = indexBlocks(mineOrder).keys;
   const position = mineKeys.indexOf(conflict.id);
   let insertAt = 0;

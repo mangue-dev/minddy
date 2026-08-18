@@ -1,173 +1,173 @@
-# La coquille macOS de minddy
+# Minddy's macOS shell
 
-Une seule fenêtre, qui charge `https://www.minddy.app` — ou
-`https://preview.minddy.app`, au choix de la personne (voir « Le canal »).
-**Aucun écran à elle, aucun rendu local** : livrer une feature de minddy ne demande pas de re-signer un
-binaire, et l'app de bureau dit toujours la même chose que le web.
+A single window, which loads `https://www.minddy.app` — or
+`https://preview.minddy.app`, of the person's choice (see “The channel”).
+**No screen of its own, no local rendering**: delivering a Minddy feature does not require re-signing a
+binary, and the desktop app still says the same thing as the web.
 
-Cadrage complet : [docs/desktop-electron.md](../docs/desktop-electron.md) §2 et
-§3. Ticket : MIN-291.
+Complete framework: [docs/desktop-electron.md](../docs/desktop-electron.md) §2 and
+§3. Ticket: MIN-291.
 
-## Ce qui vit ici, et ce qui n'y vit pas
+## What lives here, and what does not live there
 
-Ce dossier ne contient que du **câblage Electron**. Toute décision — où la
-fenêtre a le droit de naviguer, ce que transporte un deep link
-d'authentification, ce que le pont expose — vit dans `lib/desktop/`, du côté du
-dépôt, et y est testée par `npx vitest run lib/desktop`.
+This folder contains only **Electron wiring**. Any decision — where the
+window has the right to navigate, which a deep link carries
+authentication, what the bridge exposes — lives in `lib/desktop/`, on the
+deposit, and is tested there by `npx vitest run lib/desktop`.
 
-Ce n'est pas un rangement : c'est ce qui permet à la garde de navigation d'avoir
-un test, et au contrat entre le serveur (`app/auth/callback`) et le main process
-d'être vérifié en aller-retour plutôt que relu deux fois séparément.
+This is not storage: it is what allows the navigation guard to have
+a test, and the contract between the server (`app/auth/callback`) and the main process
+to be checked back and forth rather than reread twice separately.
 
 | | |
 | --- | --- |
-| `src/main.ts` | fenêtre, garde de navigation, `minddy://`, badge du dock, IPC |
-| `src/channel-store.ts` | le canal retenu sur disque (`userData/channel.json`) |
-| `src/preload.ts` | **toute** la surface exposée à la page (8 membres) |
-| `src/menu.ts` | le menu applicatif — il sert surtout à RETIRER ⌘W et ⌘R |
-| `src/updater.ts` | les mises à jour, et le renoncement franc hors app empaquetée |
-| `electron-builder.yml` | **l'identité de l'app** : nom, icône, `minddy://`, signature |
-| `build/` | l'icône `.icns` et les entitlements — des sources, pas des artefacts |
-| `lib/desktop/*` (hors d'ici) | les décisions, pures et testées |
+| `src/main.ts` | window, navigation guard, `minddy://`, dock badge, IPC |
+| `src/channel-store.ts` | the channel retained on disk (`userData/channel.json`) |
+| `src/preload.ts` | **entire** surface area exposed to the page (8 members) |
+| `src/menu.ts` | the application menu — it is mainly used to REMOVE ⌘W and ⌘R |
+| `src/updater.ts` | updates, and the frank renunciation outside the packaged app |
+| `electron-builder.yml` | **app identity**: name, icon, `minddy://`, signature |
+| `build/` | the `.icns` icon and entitlements — sources, not artifacts |
+| `lib/desktop/*` (out of here) | decisions, pure and tested |
 
-## Développer
+## Develop
 
 ```bash
-npm --prefix desktop install   # une fois — electron n'est pas une dépendance du web
-npm --prefix desktop start     # build esbuild + lancement de la fenêtre
+npm --prefix desktop install   # once — Electron is not a web dependency
+npm --prefix desktop start     # esbuild build + launch the window
 ```
 
-**Depuis le terminal intégré de VS Code, ça échoue** sur un
-`MODULE_NOT_FOUND: electron` qui n'a rien à voir avec l'installation : VS Code
-exporte `ELECTRON_RUN_AS_NODE=1` (il est lui-même une app Electron), et notre
-binaire démarre alors comme un simple Node, sans le module `electron`. Un
-terminal ordinaire n'a pas le problème ; dans celui de VS Code :
+**From the VS Code integrated terminal, it fails** on a
+`MODULE_NOT_FOUND: electron` which has nothing to do with the installation: VS Code
+exports `ELECTRON_RUN_AS_NODE=1` (it itself is an Electron app), and our
+binary then starts as a simple Node, without the `electron` module. A
+Ordinary terminal doesn't have the problem; in that of VS Code:
 
 ```bash
 env -u ELECTRON_RUN_AS_NODE npm --prefix desktop start
 ```
 
-`npm run typecheck` d'ici type-vérifie `src/` contre `electron` ; le typecheck du
-dépôt, lui, **exclut ce dossier** (tsconfig racine) — sans quoi il faudrait
-installer Electron pour compiler le site.
+`npm run typecheck` from here type-checks `src/` against `electron` ; the typecheck of
+deposit, **excludes this folder** (root tsconfig) — otherwise it would be necessary
+install Electron to compile the site.
 
-Pour travailler contre un serveur local plutôt que la production :
+To work against a local server rather than production:
 
 ```bash
 MINDDY_DESKTOP_ORIGIN=http://localhost:3000 npm start
 ```
 
-La variable n'existe que pour ça. En production l'origine est en dur : une app de
-bureau dont on détourne l'origine par une variable d'environnement est une app
-dont on détourne l'écran de connexion.
+The variable only exists for that. In production the origin is hard: an app for
+office whose origin is diverted by an environment variable is an app
+from which the login screen is hijacked.
 
-## Le canal (MIN-352)
+## The channel (MIN-352)
 
-La coquille charge l'une de DEUX origines, et rien d'autre :
+The shell loads one of TWO origins, and nothing else:
 
-| Canal | Origine | Ce que c'est |
+| Channel | Origin | What it is |
 | --- | --- | --- |
-| `stable` | `www.minddy.app` | la production — le défaut |
-| `preview` | `preview.minddy.app` | le dernier commit de `main`, avant promotion |
+| `stable` | `www.minddy.app` | production — the defect |
+| `preview` | `preview.minddy.app` | the last commit of `main`, before promotion |
 
-**Les deux servent le même projet Supabase** : mêmes comptes, mêmes projets,
-mêmes tickets. Basculer ne duplique rien. La seule chose qui ne suit pas est la
-session — les cookies sont par origine, donc le premier passage sur la preview
-demande de se reconnecter une fois ; revenir au stable retrouve la session de
-production, restée intacte.
+**Both serve the same Supabase project**: same accounts, same projects,
+same tickets. Switching doesn't duplicate anything. The only thing that doesn't follow is the
+session — cookies are by origin, so the first pass on the preview
+asks to reconnect once; return to stable finds the session
+production, remained intact.
 
-Le choix se fait à **deux endroits, et c'est délibéré** : dans Compte →
-Préférences (là où on le cherche) et dans le menu `minddy` (la case « Preview
-Latest Features »). Le second n'est pas un doublon de confort : l'écran de
-réglages est SERVI par l'origine qu'il commande — si la preview ne charge pas, il
-n'y a plus d'écran de réglages du tout, et le menu est la seule chose qui reste
-pour revenir en production.
+The choice is made in **two places, and it is deliberate**: in Account →
+Preferences (where you look for it) and in the `minddy` menu (the “Preview” box
+Latest Features”). The second is not a duplicate of comfort: the screen of
+settings is SERVED by the origin it controls — if the preview does not load, it
+There is no settings screen at all, and the menu is the only thing left
+to return to production.
 
-Il est retenu dans `userData/channel.json`, donc **par machine et par profil**,
-jamais dans le compte : un réglage qui décide quelle page servir doit se lire
-avant d'avoir servi la moindre page. `MINDDY_DESKTOP_ORIGIN` gagne sur lui — sur
-`localhost` il n'y a pas deux canaux.
+It is retained in `userData/channel.json`, therefore **by machine and by profile**,
+never in the account: a setting that decides which page to serve should read
+before having used a single page. `MINDDY_DESKTOP_ORIGIN` wins on him — on
+`localhost` there are not two channels.
 
-Décisions dans [lib/desktop/channel.ts](../lib/desktop/channel.ts), testées.
+Decisions in [lib/desktop/channel.ts](../lib/desktop/channel.ts), tested.
 
-**Un prérequis côté Supabase**, le même qu'au paragraphe suivant : l'allowlist
-« Redirect URLs » doit aussi accepter `https://preview.minddy.app/auth/callback?**`,
-sans quoi Google, GitHub et les liens magiques échouent sur ce canal.
+**A prerequisite on the Supabase side**, the same as in the following paragraph: the allowlist
+“Redirect URLs” must also accept `https://preview.minddy.app/auth/callback?**`,
+otherwise Google, GitHub and magic links fail on this channel.
 
-## L'authentification, en une phrase
+## Authentication, in one sentence
 
-Google refuse OAuth depuis un navigateur embarqué, et un lien magique s'ouvre de
-toute façon dans le navigateur par défaut. Donc : l'app demande l'URL sans
-naviguer, l'ouvre avec `shell.openExternal`, `/auth/callback` **transmet** le code
-(ou le `token_hash`) à `minddy://auth?…` au lieu de poser un cookie, et c'est
-l'app qui ouvre la session. Un seul chemin, trois entrées.
+Google refuses OAuth from an embedded browser, and a magic link opens
+anyway in the default browser. So: the app asks for the URL without
+navigate, opens it with `shell.openExternal`, `/auth/callback` **transmits** the code
+(or the `token_hash`) to `minddy://auth?…` instead of setting a cookie, and that's
+the app that opens the session. One path, three entrances.
 
-**Un prérequis côté Supabase** : l'allowlist « Redirect URLs » du projet doit
-accepter le callback **avec sa query** — `https://www.minddy.app/auth/callback?**`
-(ou un motif équivalent). Sans ça GoTrue refuse le `redirectTo` marqué
-`desktop=1`, retombe sur le Site URL, et le tour se termine dans le navigateur au
-lieu de revenir dans l'app. C'est un réglage de tableau de bord, il n'est pas
-dans le dépôt.
+**A prerequisite on the Supabase side**: the “Redirect URLs” allowlist of the project must
+accept the callback **with its query** — `https://www.minddy.app/auth/callback?**`
+(or an equivalent reason). Otherwise GoTrue refuses the marked `redirectTo`
+`desktop=1`, falls back to the Site URL, and the round ends in the browser at
+instead of returning to the app. This is a dashboard adjustment, it is not
+in the deposit.
 
-## Empaqueter (MIN-292)
+## Package (MIN-292)
 
 ```bash
-npm --prefix desktop run pack   # un .app NON signé, dans desktop/release/mac-*/
-npm --prefix desktop run dist   # les .dmg et .zip, signés et notarisés
+npm --prefix desktop run pack   # an unsigned .app in desktop/release/mac-*/
+npm --prefix desktop run dist   # signed and notarized .dmg and .zip files
 ```
 
-**L'icône n'a plus d'étape à elle.** Sa source est `build/icon.icon`, le dossier
-rendu par Icon Composer : on l'ouvre, on l'enregistre, et le build suivant la
-reprend. electron-builder appelle `actool` dessus et pose les DEUX icônes que
-macOS attend depuis Tahoe — `Assets.car` + `CFBundleIconName` pour macOS 26 et
-au-delà (verre, sombre, teintée), et un `icon.icns` dérivé de la même sortie pour
-les versions antérieures. **Ça exige Xcode 26 ou plus** sur la machine de build :
-en deçà, `actool` fait échouer la fabrication, en le disant.
+**The icon no longer has its own step.** Its source is `build/icon.icon`, the folder
+rendered by Icon Composer: we open it, we save it, and the build following the
+resumes. electron-builder calls `actool` on it and places the TWO icons that
+macOS waits from Tahoe — `Assets.car` + `CFBundleIconName` for macOS 26 and
+beyond (glass, dark, tinted), and a `icon.icns` derived from the same output for
+earlier versions. **This requires Xcode 26 or higher** on the build machine:
+below, `actool` causes manufacturing to fail, by saying so.
 
-**L'identité de l'app vit dans [electron-builder.yml](electron-builder.yml), et
-nulle part dans le code.** Le nom sous l'icône, celui de la barre de menus,
-l'icône, `CFBundleIdentifier` et le schéma `minddy://` sont lus dans
-l'`Info.plist` du bundle : rien de tout ça ne se corrige à l'exécution. C'est
-aussi ce qui rend le deep link d'authentification testable — hors bundle,
-LaunchServices inscrit `Electron.app`, pas nous.
+**The app identity lives in [electron-builder.yml](electron-builder.yml), and
+nowhere in the code.** The name under the icon, that of the menu bar,
+icon, `CFBundleIdentifier` and pattern `minddy://` are read into
+the `Info.plist` of the bundle: none of this is corrected at runtime. It's
+also what makes the authentication deep link testable — outside the bundle,
+LaunchServices registers `Electron.app`, not us.
 
-`app.setName("minddy")` (main.ts) ne fait pas double emploi : lui nomme le
-dossier de DONNÉES (`~/Library/Application Support/minddy/`), et il devait être
-posé avant qu'il existe des installations.
+`app.setName("minddy")` (main.ts) does not duplicate: it names it
+DATA folder (`~/Library/Application Support/minddy/`), and it had to be
+installed before there were any facilities.
 
 ### Push APNs (MIN-356)
 
-Le bundle `app.minddy.desktop` porte la capability Push Notifications et
-`com.apple.developer.aps-environment=production`. Le profil/certificat utilisé
-pour signer doit donc autoriser cette capability ; un build de développement
-non empaqueté ne tente volontairement pas de s'inscrire.
+The `app.minddy.desktop` bundle carries the Push Notifications capability and
+`com.apple.developer.aps-environment=production`. The profile/certificate used
+to sign must therefore authorize this capability; a development build
+unpackaged intentionally does not attempt to register.
 
-Le provider serveur utilise une clé APNs token-based `.p8`. Poser
-`APNS_TEAM_ID`, `APNS_KEY_ID` et `APNS_PRIVATE_KEY` dans l'environnement du site
-(`APNS_BUNDLE_ID` reste optionnel tant que l'identifiant du bundle ne change
-pas). La clé privée ne va jamais dans l'app. Une livraison complète de MIN-356
-demande donc les trois pièces ensemble : migration Supabase, variables serveur,
-puis binaire signé/notarisé republié. Sans configuration serveur, l'inbox reste
-fonctionnelle mais APNs est un no-op ; une ancienne coquille garde le relais
-temps réel tant qu'elle tourne.
+The server provider uses a token-based APNs key `.p8`. Ask
+`APNS_TEAM_ID`, `APNS_KEY_ID` and `APNS_PRIVATE_KEY` in the site environment
+(`APNS_BUNDLE_ID` remains optional until the bundle identifier changes
+not). The private key never goes into the app. A complete delivery of MIN-356
+therefore requires the three pieces together: Supabase migration, server variables,
+then signed/notarized binary republished. Without server configuration, the inbox remains
+functional but APNs is a no-op; an old shell keeps the relay
+real time as long as it is running.
 
-**Le `.zip` accompagne le `.dmg` et n'est pas décoratif** : le `.dmg` sert au
-premier téléchargement, Squirrel.Mac ne sait lire que le `.zip`. Publier l'un
-sans l'autre donne une app qui s'installe et ne se met jamais à jour, sans rien
-dire. Et Squirrel **exige une app signée** — d'où le refus de
-`scripts/publish-desktop.mjs` devant un bundle non signé.
+**The `.zip` accompanies the `.dmg` and is not decorative**: the `.dmg` is used to
+first download, Squirrel.Mac can only read `.zip`. Publish one
+without the other gives an app that installs and never updates, without anything
+say. And Squirrel **requires a signed app** — hence the refusal to
+`scripts/publish-desktop.mjs` in front of an unsigned bundle.
 
-**Quand faut-il republier ?** Presque jamais — l'app est une fenêtre sur le site,
-donc `npm run deploy` suffit à changer ce qu'elle affiche. Le déploiement le dit
-tout seul : il compare une empreinte de ce qui entre RÉELLEMENT dans le binaire
-(la liste déborde de ce dossier : `lib/public-routes.ts` en fait partie) à la
-dernière publication enregistrée dans `released.json`. `npm run desktop:check`
-donne la même réponse à la demande.
+**When should you republish?** Almost never — the app is a window into the site,
+so `npm run deploy` is enough to change what it displays. The deployment says so
+all by itself: it compares a fingerprint of what REALLY goes into the binary
+(the list overflows from this folder: `lib/public-routes.ts` is one of them) at the
+last post saved in `released.json`. `npm run desktop:check`
+gives the same response to the request.
 
-Les deux marches à marche :
-**[docs/desktop-release.md](../docs/desktop-release.md)** pour livrer,
-et la procédure interne de signature pour le compte Apple et le certificat.
+The two steps:
+**[docs/desktop-release.md](../docs/desktop-release.md)** to deliver,
+and the internal signing procedure for the Apple account and certificate.
 
-## Ce qui n'est pas fait ici
+## What is not done here
 
-L'agent qui tourne sur la machine : **MIN-293**.
+The agent running the machine: **MIN-293**.

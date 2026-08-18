@@ -7,30 +7,30 @@ import {
 } from "@/lib/server/agent/harness-bundle";
 
 /**
- * `GET /api/desktop/harness/bundle` — LES OCTETS DU HARNESS (MIN-293).
+ * `GET /api/desktop/harness/bundle` — THE HARNESS BYTES (MIN-293).
  *
- * La seconde moitié de la livraison, séparée du manifeste
- * ([../route.ts](../route.ts)) pour une raison qui n'est pas de rangement : le
- * manifeste est demandé à CHAQUE tour, les octets seulement quand l'empreinte a
- * changé. Les servir ensemble ferait passer 280 Ko par tour pour deux cents
- * octets d'information utile.
+ * The second half of the delivery, separated from the manifest
+ * ([../route.ts](../route.ts)) for a reason that is not storage: the
+ * manifest is requested EVERY round, the bytes only when the fingerprint has
+ * exchange. Serving them together would make 280 KB per turn for two hundred
+ * useful bytes.
  *
- * ## L'en-tête d'empreinte n'est pas la garantie
+ * ## Imprint header is not the guarantee
  *
- * `x-minddy-harness-sha256` est là pour que le téléchargement se vérifie sans un
- * second aller-retour, et c'est tout. **Ce qui protège vraiment est la
- * revérification sur le fichier du disque, juste avant le fork** : le bundle est
- * le seul code non signé par Apple que l'app exécute, il vit sous `userData` et
- * il est inscriptible par le modèle sous le même UID. Un contrôle qui n'aurait
- * lieu qu'au téléchargement laisserait un tour réécrire le harness du tour
- * suivant — voir [lib/desktop/harness-bundle.ts](../../../../../lib/desktop/harness-bundle.ts).
+ * `x-minddy-harness-sha256` is there so that the download is verified without a
+ * second round trip, and that's it. **What really protects is
+ * rechecking the disk file, just before the fork**: the bundle is
+ * the only code not signed by Apple that the app executes, it lives under `userData` and
+ * it is writable by the model under the same UID. A control that would not have
+ * instead of downloading would let a tour rewrite the harness of the tour
+ * following turn — see [lib/desktop/harness-bundle.ts](../../../../../lib/desktop/harness-bundle.ts).
  *
- * ## `text/plain`, pas `text/javascript`
+ * ## `text/plain`, not `text/javascript`
  *
- * Rien ici ne doit ressembler à un script qu'un navigateur pourrait charger. Le
- * seul client est un `fetch` du main process, qui écrit le corps sur le disque ;
- * un `content-type` exécutable et un `content-disposition` absent seraient une
- * invitation à s'en servir autrement. Le `nosniff` va avec.
+ * Nothing here should look like a script that a browser might load. THE
+ * only client is a `fetch` of the main process, which writes the body to disk;
+ * an executable `content-type` and an absent `content-disposition` would be a
+ * invitation to use it differently. The `nosniff` goes with it.
  */
 
 export const runtime = "nodejs";

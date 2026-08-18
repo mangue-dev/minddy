@@ -4,50 +4,50 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { CONTACT_EMAIL } from "@/lib/site";
 
 /**
- * Export des données d'un compte (MIN-119, RGPD art. 15 et 20).
+ * Export of account data (MIN-119, GDPR art. 15 and 20).
  *
- * Ce que l'export contient est exactement ce que la suppression du compte
- * détruit (`lib/server/account-deletion.ts`), plus ce que la personne a écrit
- * ailleurs. Cette symétrie est volontaire : l'export est ce qu'on emporte avant
- * de partir, il n'aurait aucun sens qu'il soit plus étroit que l'effacement.
+ * What the export contains is exactly what deleting the account
+ * destroys (`lib/server/account-deletion.ts`), plus what the person has written
+ * elsewhere. This symmetry is voluntary: the export is what we take before
+ * leaving, it would make no sense for it to be narrower than deletion.
  *
- * Concrètement :
- *   • le contenu INTÉGRAL des projets dont elle est propriétaire — ce sont ceux
- *     que la suppression du compte emporte, membres compris ;
- *   • ses contributions dans les projets des autres — tickets qu'elle a créés ou
- *     qui lui sont assignés, commentaires qu'elle a écrits ;
- *   • tout ce qui est strictement personnel : cycles, bloc-notes, conversations
- *     avec l'assistant, notifications, statistiques, préférences.
+ * Concretely:
+ * • the ENTIRE content of the projects it owns — these are those
+ * that the deletion of the account takes away, members included;
+ * • her contributions in the projects of others — tickets that she created or
+ * that are assigned to her, comments that she wrote;
+ * • everything that is strictly personal: cycles, notepads, conversations
+ * with the assistant, notifications, statistics, preferences.
  *
- * Ce que l'export ne contient PAS, et pourquoi :
- *   • le contenu des projets des autres qu'elle n'a pas écrit — ce n'est pas sa
- *     donnée au sens de l'article 20, et l'application le lui montre déjà ;
- *   • les octets des pièces jointes — l'export est un JSON ; les fichiers restent
- *     téléchargeables depuis l'application tant que le compte existe ;
- *   • le moindre secret. Aucune clé, aucun jeton, aucune empreinte ne sort
- *     d'ici : un export est un fichier qui traîne dans un dossier de
- *     téléchargements. Des clés API on ne donne que le préfixe déjà affiché à
- *     l'écran, des connexions Git que le nom du compte relié.
+ * What the export does NOT contain, and why:
+ * • the content of other people's projects that she did not write — it is not her
+ * given within the meaning of article 20, and the application already shows it to her ;
+ * • the bytes of the attachments — the export is a JSON; the files remain
+ * downloadable from the application as long as the account exists;
+ * • the slightest secret. No key, no token, no fingerprint comes out
+ * from here: an export is a file that hangs in a folder of
+ * downloads. API keys we only give the prefix already displayed on
+ * the screen, Git connections only the name of the linked account.
  */
 
-/** Version du format. À incrémenter si la forme du document change. */
+/** Format version. To be incremented if the shape of the document changes. */
 export const EXPORT_FORMAT_VERSION = 2;
 
 type Row = Record<string, unknown>;
 
 /**
- * Forme minimale d'une réponse PostgREST. Le client Supabase n'est pas typé par
- * un schéma généré ici : les lignes arrivent déjà en `unknown` et repartent en
- * JSON, donc on les traite comme telles plutôt que d'écrire une interface par
- * table pour un document qui n'en lit aucun champ.
+ * Minimum form of a PostgREST response. The Supabase client is not typed by
+ * a schema generated here: the lines already arrive in `unknown` and leave in
+ * JSON, so we treat them as such rather than writing an interface by
+ * table for a document that does not read any fields.
  */
 interface QueryResult {
   data: unknown;
   error: { message: string } | null;
 }
 
-/** Remonte l'erreur plutôt que de rendre un lot vide — un export tronqué en
-    silence est pire que pas d'export du tout. */
+/** Report the error rather than returning an empty batch — a truncated export in
+ silence is worse than no export at all. */
 function unwrap(table: string, result: QueryResult): unknown {
   if (result.error) throw new Error(`${table}: ${result.error.message}`);
   return result.data;
@@ -61,11 +61,11 @@ function one(table: string, result: QueryResult): Row | null {
   return (unwrap(table, result) as Row | null) ?? null;
 }
 
-// `deleted_at` en fait partie : l'export donne TOUT ce que le compte détient,
-// corbeille comprise (MIN-133) — la filtrer amputerait un export RGPD de données
-// encore bien présentes. La colonne dit lesquelles étaient en attente de purge.
-// Le corps des pages est dedans : sans lui, l'export dirait qu'un wiki existe
-// sans en donner une ligne.
+// `deleted_at` is one of them: the export gives EVERYTHING that the account holds,
+// trash included (MIN-133) — filtering it would cut off a GDPR export of data
+// still very present. The column says which ones were awaiting purge.
+// The body of the pages is in: without it, the export would say that a wiki exists
+// without giving a line.
 const PAGE_COLUMNS =
   "id, project_id, parent_id, title, icon, content, position, favorite, " +
   "created_by, updated_by, created_at, updated_at, deleted_at";
@@ -77,7 +77,7 @@ const ISSUE_COLUMNS =
 export interface AccountExport {
   format_version: number;
   exported_at: string;
-  /** Ce que le lecteur doit savoir pour comprendre le fichier. */
+  /** What the reader needs to know to understand the file. */
   readme: Record<string, string>;
   account: Row;
   preferences: Row | null;
@@ -107,9 +107,9 @@ export interface AccountExport {
 }
 
 /**
- * Rassemble l'export d'un compte. Lecture en clé de service : la personne a le
- * droit de tout voir de ses propres données, et repasser par RLS obligerait à
- * porter sa session jusqu'ici pour rien.
+ * Collects an account's export. Reading in service key: the person has the
+ * right to see everything about their own data, and going back through RLS would require
+ * to carry their session up to here for nothing.
  */
 export async function buildAccountExport(userId: string): Promise<AccountExport> {
   const service = getServiceClient();
@@ -120,7 +120,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
   }
   const user = authUser.user;
 
-  // Projets possédés — l'export en donne le contenu entier, puisque leur
+  // Owned projects — the export gives the entire content, since their
   // suppression suivra celle du compte.
   const ownedProjects = list(
     "projects",
@@ -178,9 +178,9 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       )
       .eq("created_by", userId)
       .order("created_at"),
-    // Les fichiers POSÉS DANS une page (MIN-280). Une table à part des
-    // ressources, donc une ligne à part ici : les oublier ferait un export qui
-    // ne voit pas la moitié de ce que la personne a téléversé.
+    // Files PLACED IN a page (MIN-280). A table apart from
+    // resources, so a separate line here: forgetting them would make an export which
+    // doesn't see half of what the person uploaded.
     service
       .from("page_files")
       .select(
@@ -188,10 +188,10 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       )
       .eq("created_by", userId)
       .order("created_at"),
-    // Le WIKI des projets possédés (MIN-283). Corps compris : une page EST son
-    // document, et un export qui n'en donnerait que les titres ne serait pas un
-    // export. Les pages corbeillées y sont, comme les tickets — la colonne
-    // `deleted_at` dit lesquelles attendaient la purge.
+    // The WIKI of owned projects (MIN-283). Body included: a page IS its
+    // document, and an export which only gives the titles would not be a
+    // export. The trashed pages are there, like the tickets — the column
+    // `deleted_at` says which ones were waiting for the purge.
     ownedIds.length
       ? service
           .from("pages")
@@ -221,11 +221,11 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       )
       .eq("user_id", userId)
       .order("created_at"),
-    // Appareils abonnés aux notifications push (MIN-183). NI `endpoint`, NI
-    // `p256dh`/`auth` : ce trio EST la capacité de pousser une notification à
-    // cette personne, et le ressortir dans un fichier téléchargeable en ferait
-    // un secret de plus à protéger, pour aucune information supplémentaire —
-    // le libellé dit déjà quel appareil c'est.
+    // Devices subscribed to push notifications (MIN-183). NEITHER `endpoint`, NOR
+    // `p256dh`/`auth`: this trio IS the ability to push a notification to
+    // this person, and bringing it out in a downloadable file would make it
+    // one more secret to protect, for no additional information —
+    // the label already says what device it is.
     service
       .from("push_subscriptions")
       .select("transport, device_label, enabled, created_at, last_push_at")
@@ -244,18 +244,18 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       )
       .eq("user_id", userId)
       .maybeSingle(),
-    // Consommation d'IA : ce qui a été utilisé, pas ce que ça a coûté. Le
+    // AI consumption: what was used, not what it cost. THE
     // montant en dollars du ledger reste interne (l'usage se dit en pourcentage
-    // du budget côté produit), et il ne dit rien de plus à la personne sur
-    // ELLE — c'est une donnée de facturation de minddy, pas la sienne.
+    // of the budget on the product side), and it doesn't tell the person anything more about
+    // HER — this is Minddy's billing data, not hers.
     service
       .from("ai_usage")
       .select("feature, model, total_tokens, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(5000),
-    // Clés API : le préfixe est déjà ce que montrent les réglages. `key_hash`
-    // ne sort JAMAIS — c'est le secret, même sous forme d'empreinte.
+    // API keys: the prefix is ​​already what the settings show. `key_hash`
+    // NEVER comes out — that's the secret, even in the form of a print.
     service
       .from("api_keys")
       .select("name, key_prefix, created_at, last_used_at, revoked_at")
@@ -271,8 +271,8 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       .select("provider, account_login, account_type, repository_selection, created_at")
       .eq("user_id", userId)
       .order("created_at"),
-    // Compte git personnel (MIN-144) : le login et le fournisseur, jamais les
-    // tokens — mêmes règles que la ligne au-dessus.
+    // Personal git account (MIN-144): the login and the provider, never them
+    // tokens — same rules as the line above.
     service
       .from("git_user_identities")
       .select("provider, account_login, provider_account_id, created_at")
@@ -344,8 +344,8 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
   const codeRowsFor = (table: string, result: QueryResult, id: string): Row[] =>
     list(table, result).filter((row) => row.conversation_id === id);
 
-  // Un ticket d'un projet possédé peut aussi avoir été créé par la personne :
-  // dédoublonné pour ne pas le sortir deux fois.
+  // A ticket from an owned project can also have been created by the person:
+  // deduplicated so as not to output it twice.
   const issuesById = new Map<string, Row>();
   for (const issue of [...list("issues", ownedIssues), ...list("issues", myIssues)]) {
     issuesById.set(issue.id as string, issue);

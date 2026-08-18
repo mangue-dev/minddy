@@ -13,33 +13,30 @@ import type { ImportedIssue, ImportSource } from "@/lib/import/types";
  * createIssueForProject: an import must not fire per-issue side effects (stats
  * ledger, Smart Assign, webhooks, sub_issue_added events) nor pay N sequential
  * round-trips. Issues get one `imported` timeline event instead of `created` —
- * a type the webhook dispatcher doesn't map, so nothing is delivered outside.
+ * a type the webhook dispatcher doesn't map, so nothing is delivered outside. :
  *
- * TENIR À 1 000 TICKETS ET AU-DELÀ tient à deux choix, et il faut les garder :
+ * 1. The identifiers are taken HERE (`randomUUID`), not returned by the base.
+ * So a ticket knows the id of its parent BEFORE being inserted: more
+ * second pass of links (it was an UPDATE by subticket), more de
+ * table number → id to rebuild. Categories and events are built in the same vein.
+ * 2. Numbers are reserved in ONE call (`next_issue_numbers`), not one per
+ * ticket. This was the dominant position: 1,000 tickets = 1,000 RPC.
  *
- *  1. Les identifiants sont tirés ICI (`randomUUID`), pas rendus par la base.
- *     Du coup un ticket connaît l'id de son parent AVANT d'être inséré : plus
- *     de seconde passe de liens (c'était un UPDATE par sous-ticket), plus de
- *     table numéro → id à reconstruire. Les catégories et les événements se
- *     construisent dans la même foulée.
- *  2. Les numéros sont réservés en UN appel (`next_issue_numbers`), pas un par
- *     ticket. C'était le poste dominant : 1 000 tickets = 1 000 RPC.
- *
- * Un import de 1 000 tickets tient désormais en une douzaine d'allers-retours,
- * tous par lots, au lieu d'un bon millier.
+ * An import of 1,000 tickets now takes a dozen round trips,
+ * all in batches, instead of a good thousand.
  *
  * Callers MUST have verified the actor's access beforehand (writes bypass RLS).
  *
  * Not transactional: a failure mid-way leaves the already-inserted chunks in
- * place (visible, deletable) and unused reserved numbers become plain gaps in
- * the CLÉ numbering — both harmless, so no compensation logic.
+ * place (visible, deleteable) and unused reserved numbers become plain gaps in
+ * the KEY numbering — both harmless, so no compensation logic.
  */
 
 export interface ImportOutcome {
   created: number;
   categoriesCreated: number;
   subIssuesLinked: number;
-  /** Tickets rendus à un membre du projet — ce que le rapprochement a sauvé. */
+  /** Tickets returned to a project member — what reconciliation saved. */
   assigned: number;
 }
 
@@ -52,10 +49,10 @@ const dbError = (step: string, message: string): ImportCommitResult => {
   return { ok: false, status: 500, errorKey: "databaseError" };
 };
 
-/** Lignes par INSERT. Au-delà, la requête devient lourde à sérialiser sans
- *  gagner de temps réseau. */
+/** Rows by INSERT. Beyond that, the request becomes cumbersome to serialize without
+ * saving network time. */
 const INSERT_CHUNK = 200;
-/** Lignes par INSERT pour les tables de jointure, plus étroites. */
+/** Rows by INSERT for join tables, narrower. */
 const LINK_CHUNK = 1000;
 
 export async function importIssuesIntoProject({
@@ -78,11 +75,11 @@ export async function importIssuesIntoProject({
   }
 
   // ── Categories: match existing labels case-insensitively, create the rest ──
-  // Le rapprochement fin (« Bugs » → la catégorie « Bug » du projet) a déjà eu
-  // lieu au mapping : ce qui arrive ici est le nom VOULU. `resolveCategoryIdsByName`
-  // fait le reste — et c'est la MÊME passe que celle de la synchro d'un dépôt
-  // lié, pour que le backfill et les webhooks qui le suivent ne se fabriquent
-  // pas deux catégories « Bug ».
+  // The fine reconciliation (“Bugs” → the “Bug” category of the project) has already been
+  // place the mapping: what happens here is the DESIRED name. `resolveCategoryIdsByName`
+  // does the rest — and it's the SAME pass as that of syncing a repository
+  // linked, so that the backfill and the webhooks that follow it are not created
+  // not two “Bug” categories.
   const resolved = await resolveCategoryIdsByName(
     projectId,
     issues.flatMap((issue) => issue.labels)
@@ -111,8 +108,8 @@ export async function importIssuesIntoProject({
   let assigned = 0;
 
   const rows = issues.map((issue, i) => {
-    // Les liens ont été validés contre le lot au parsing (parent présent, un
-    // seul niveau) : il ne reste qu'à résoudre la clé en identifiant.
+    // The links have been validated against the batch during analysis (parent present, a
+    // single level): all that remains is to resolve the key by identifier.
     const parentId = issue.parentExternalKey
       ? (idByExternalKey.get(normalizeToken(issue.parentExternalKey)) ?? null)
       : null;
@@ -128,20 +125,20 @@ export async function importIssuesIntoProject({
       status: issue.status,
       priority: issue.priority,
       effort: issue.effort,
-      // L'appelant a vérifié que l'assigné est un membre du projet
-      // (`sanitizeMapping`) : la colonne porte une FK vers auth.users.
+      // The caller has verified that the assignee is a member of the project
+      // (`sanitizeMapping`): the column carries an FK to auth.users.
       assignee_id: issue.assigneeId,
       due_date: issue.dueDate,
-      // L'objectif est un id réel, créé et validé par l'appelant (amorce par
-      // brief, MIN-172) : rien à résoudre ici.
+      // The objective is a real id, created and validated by the caller (primed by
+      // brief, MIN-172): nothing to resolve here.
       objective_id: issue.objectiveId ?? null,
       parent_id: parentId && parentId !== ids[i] ? parentId : null,
       created_by: actorId,
       position: positionBase + i,
     };
     if (issue.createdAt) row.created_at = issue.createdAt;
-    // Backfill d'un dépôt lié (MIN-97) : l'identité distante voyage avec la
-    // ligne, l'index UNIQUE partiel garantit qu'on ne l'importe qu'une fois.
+    // Backfill of a linked repository (MIN-97): the remote identity travels with the
+    // line, the partial UNIQUE index guarantees that it is only imported once.
     if (issue.remote) {
       row.remote_provider = issue.remote.provider;
       row.remote_repo_id = issue.remote.repoId;
@@ -155,8 +152,8 @@ export async function importIssuesIntoProject({
     return row;
   });
 
-  // Les parents d'abord : un enfant inséré avant son parent violerait la FK
-  // `parent_id`, et l'ordre du fichier ne garantit rien.
+  // Parents first: a child inserted before his parent would violate CF
+  // `parent_id`, and the order of the file does not guarantee anything.
   const order = rows
     .map((_, i) => i)
     .sort((a, b) => Number(rows[a].parent_id != null) - Number(rows[b].parent_id != null));
@@ -186,10 +183,10 @@ export async function importIssuesIntoProject({
     if (error) console.error("[import-issues] categories attach failed:", error.message);
   }
 
-  // ── Resources (best-effort, comme les catégories : les tickets existent) ──
-  // Le backfill d'un dépôt lié y pose le LIEN de l'issue distante — un lien,
-  // donc aucun objet de stockage à nettoyer si l'insert échoue. Par lot comme
-  // tout le reste du module : chaque ticket a son parent, mais un seul INSERT.
+  // ── Resources (best-effort, like categories: tickets exist) ──
+  // The backfill of a linked repository places the LINK of the remote issue there — a link,
+  // so no storage objects to clean up if the insert fails. By batch as
+  // all the rest of the module: each ticket has its parent, but only one INSERT.
   const resourceEntries = issues.flatMap((issue, i) =>
     (issue.resources ?? []).map((resource) => ({
       parent: { projectId, issueId: ids[i], createdBy: actorId },
@@ -205,8 +202,8 @@ export async function importIssuesIntoProject({
   }
 
   // ── Timeline: one `imported` event per issue (to_value = source) ──
-  // Backfill d'un dépôt lié (MIN-97) : l'événement est estampillé forge pour que
-  // la timeline crédite GitHub/GitLab, pas le owner qui a activé la synchro.
+  // Backfill of a linked repository (MIN-97): the event is stamped forge so that
+  // the timeline credits GitHub/GitLab, not the owner who activated the sync.
   const forge = source === "github" || source === "gitlab" ? source : null;
   const events: EventRow[] = ids.map((id) => ({
     issue_id: id,

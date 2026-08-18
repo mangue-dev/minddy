@@ -5,80 +5,80 @@ import type { ComponentType, CSSProperties, Ref } from "react";
 import { cn } from "mangue-ui";
 
 /**
- * N'IMPORTE QUELLE icône lucide, posée sur un BLOC isométrique — sans avoir à la
- * redessiner à la main.
+ * ANY lucid icon, placed on an isometric BLOCK — without having to
+ * redraw by hand.
  *
- * CE QUI A CHANGÉ, ET POURQUOI. Jusqu'ici l'icône était COUCHÉE dans le plan du
- * sol : `rotateX(60deg) rotateZ(-45deg)`, la projection exacte du terrain
- * isométrique, donc géométriquement juste. C'est là qu'était le problème — cette
- * projection écrase le dessin de moitié ET le tourne de 45°. Les seules icônes
- * qui y survivaient sont celles faites de bandes horizontales ou de carrés
- * concentriques (`Layers`, `LayoutList`, `Command`) ; tout ce dont le sens tient
- * à la silhouette ou à l'orientation devenait méconnaissable — `Mic`, `BellRing`,
- * `Search`, `Upload`, et pire que tout les CHIFFRES des cartes numérotées. Une
- * illustration qui demande un effort de lecture ne sert plus d'ancrage visuel :
- * elle en coûte un.
+ * WHAT HAS CHANGED, AND WHY. Until now the icon was LAYERED in the plane of the
+ * ground: `rotateX(60deg) rotateZ(-45deg)`, the exact projection of the ground
+ * isometric, therefore geometrically correct. That's where the problem was—this
+ * projection crushes the drawing in half AND rotates it 45°. The only icons
+ * that survived there are those made of horizontal strips or squares
+ * concentric (`Layers`, `LayoutList`, `Command`); everything whose meaning holds
+ * the silhouette or orientation became unrecognizable — `Mic`, `BellRing`,
+ * `Search`, `Upload`, and worst of all the FIGURES on the numbered cards. A
+ * illustration that demands reading effort is no longer a visual anchor:
+ * it costs one.
  *
- * L'isométrie a donc quitté l'icône pour le SOLIDE qui la porte. Le tracé est
- * rendu de face, intact, sur la face avant d'un bloc extrudé vers l'arrière-
- * gauche. On garde l'ancrage — un objet, dans le plan de l'app — et on récupère
- * la lisibilité entière, chiffres compris.
+ * Isometry has therefore left the icon for the SOLID which carries it. The route is
+ * rendered from the front, intact, on the front face of a block extruded towards the rear-
+ * LEFT. We keep the anchor — an object, in the app plan — and we recover
+ * full readability, including numbers.
  *
- * CE QUI FAIT UN BLOC ET PAS UN RECTANGLE, deux choses, et elles ne sont pas
- * décoratives :
+ * WHAT MAKES A BLOCK AND NOT A RECTANGLE, two things, and they are not
+ * decorative:
  *
- *  - UNE SEULE MATIÈRE. Peindre la face en `--card` et l'extrusion en teinte de
- *    marque donne deux matériaux, donc un rectangle blanc avec une ombre bleue
- *    derrière. Les trois faces sont de la MÊME teinte à trois valeurs : c'est
- *    l'écart de valeur, pas le contour, qui fait lire un volume. La face avant
- *    est la plus claire, pour que le tracé y ressorte ; les faces qui s'éloignent
- *    montent en densité.
- *  - DES ARÊTES VIVES. Aucun arrondi — un `rx` de quelques unités suffit à faire
- *    une pastille de ce qui doit être une pierre. Jonctions en `miter`, et les
- *    arêtes tracées en filet non mis à l'échelle (`non-scaling-stroke`) : un
- *    pixel à toutes les tailles, net sur une tuile de 44 px comme sur une
+ * - ONE SINGLE MATERIAL. Paint the face in `--card` and the extrusion in shade of
+ * mark gives two materials, so a white rectangle with a blue shadow
+ * behind. The three faces are of the SAME three-value shade: this is
+ * the difference in value, not the contour, which makes a volume read. The front side
+ * is the clearest, so that the outline stands out; the faces that move away
+ * increase in density.
+ * - SHARP EDGES. No rounding — a `rx` of a few units is enough to do
+ * a pellet of what must be a stone. Junctions in `miter`, and
+ * unscaled meshed edges (`non-scaling-stroke`): a
+ * pixel at all sizes, sharp on a 44 px tile as on a
  *    illustration de 144.
  *
- * Le TERRAIN en pointillés qui portait les états vides a disparu avec la mise à
- * plat : il servait à donner un plan à une icône couchée. Le bloc porte son
- * propre volume, un quadrillage sous lui ne dirait plus rien.
+ * The dotted TERRAIN which carried the empty states disappeared with the update.
+ * flat: it was used to give a plan to a lying icon. The block carries its
+ * its own volume; a grid beneath it would say nothing.
  */
 
-/* ── Géométrie du bloc ────────────────────────────────────────────────────────
-   Un cube en isométrie 2:1 : la profondeur file en (−D, −D/2), donc un pas vers
-   l'arrière-gauche vaut un demi-pas vers le haut. On voit la face avant, le
-   dessus et le côté GAUCHE.
+/* ── Block geometry ──────────────────────────── ────────────────────────────
+   A cube in 2:1 isometry: the depth goes in (−D, −D/2), therefore a step towards
+   rear-left is worth a half step up. We see the front side, the
+   top and LEFT side.
 
-   La face est un VRAI carré de côté F. Largeur occupée F + D = 100 ; hauteur
-   F + D/2 = 91 — la silhouette d'un cube vu en 2:1 est toujours plus large que
-   haute, et c'est correct. La boîte épouse le dessin, d'où le viewBox 100×91 :
-   une bande vide ferait flotter le bloc dans sa case et chaque appelant la
-   rattraperait à sa façon.
+   The face is a TRUE square with side F. Occupied width F + D = 100; height
+   F + D/2 = 91 — the silhouette of a cube seen in 2:1 is always wider than
+   high, and that's correct. The box follows the design, hence the viewBox 100×91:
+   an empty strip would make the block float in its box and each caller would
+   would catch up in his own way.
 
-   D à 18 pour un côté de 82 : au-delà le volume mange l'icône et on ne lit plus
-   qu'un bloc ; en deçà il redevient une carte plate. */
+   D to 18 for a side of 82: beyond that the volume eats the icon and we no longer read
+   than a block; below that it becomes a flat card again. */
 const DEPTH = 18;
 const FACE = 100 - DEPTH;
 const VIEW_W = 100;
 const VIEW_H = FACE + DEPTH / 2;
 
-/** Les six sommets qui servent, nommés une fois pour que les tracés se lisent. */
+/** The six vertices which are used, named once so that the lines can be read. */
 const FACE_L = DEPTH;
 const FACE_T = DEPTH / 2;
 const FACE_B = FACE_T + FACE;
 const BACK_R = FACE;
 const BACK_B = FACE;
 
-/** Le jeu entre le tracé et le bord de la face. En POURCENTAGE : un padding en
- *  pourcent se rapporte à la LARGEUR du bloc parent sur les quatre côtés, donc
- *  l'inset reste régulier et la boîte du tracé reste carrée. */
+/** The clearance between the line and the edge of the face. In PERCENTAGE: padding in
+ * percent refers to the WIDTH of the parent block on all four sides, so
+ * the inset remains regular and the plot box remains square. */
 const ICON_INSET = "15%";
 
 /**
- * Toute icône SVG qui se laisse teinter, transformer et mesurer : les icônes
- * lucide, mais aussi le visage de Numo (`components/numo-face.tsx`), qui n'en
- * est pas une. Le contrat tient en quatre props — c'est tout ce dont la pose sur
- * le bloc a besoin.
+ * Any SVG icon that can be tinted, transformed and measured: icons
+ * lucid, but also the face of Numo (`components/numo-face.tsx`), who does not
+ * is not one. The contract is made up of four props — that's all the placement on
+ * the block needs.
  */
 export type SceneIcon = ComponentType<{
   className?: string;
@@ -88,11 +88,11 @@ export type SceneIcon = ComponentType<{
 }>;
 
 /**
- * La teinte du solide. La marque par défaut ; le rouge pour ce qui SUPPRIME —
- * la corbeille se reconnaît à sa couleur avant de se lire, et la peindre en
- * bleu comme le reste en ferait une section de plus.
+ * The color of solid. The default brand; red for what DELETES —
+ * the basket can be recognized by its color before being read, and paint it in
+ * blue like the rest would make it one more section.
  *
- * Les classes sont écrites en LITTÉRAUX : le scanner de Tailwind ne lit pas une
+ * Classes are written in LITERALS: the Tailwind scanner does not read a
  * classe construite par interpolation.
  */
 const TONE = {
@@ -115,10 +115,10 @@ const TONE = {
 export type SceneTone = keyof typeof TONE;
 
 /**
- * Une icône posée sur son bloc.
+ * An icon placed on its block.
  *
- * Le conteneur ne prend qu'une LARGEUR — la hauteur suit le rapport du solide.
- * La forcer autrement le déformerait ou le décalerait dans sa case.
+ * The container only takes up a WIDTH — the height follows the ratio of the solid.
+ * Forcing it otherwise would distort or shift it in its square.
  */
 export function IsoIcon({
   icon: Icon,
@@ -127,17 +127,17 @@ export function IsoIcon({
   style,
 }: {
   icon: SceneIcon;
-  /** Teinte du solide — `destructive` pour ce qui supprime. */
+  /** Solid color — `destructive` for what removes. */
   tone?: SceneTone;
   className?: string;
   style?: CSSProperties;
 }) {
   const ref = useRef<SVGSVGElement>(null);
   /**
-   * Le tracé d'une icône n'occupe pas tout son viewBox, et pas de la même façon
-   * d'une icône à l'autre : `Filter` descend jusqu'aux bords, `Target` laisse
-   * une marge. On MESURE donc le dessin une fois rendu, et on le recentre et
-   * l'agrandit pour qu'il remplisse la face du bloc — au maximum, jamais au-delà.
+   * The drawing of an icon does not occupy its entire viewBox, and not in the same way
+   * from one icon to another: `Filter` goes down to the edges, `Target` leaves
+   * a margin. We therefore MEASURE the drawing once rendered, and we refocus it and
+   * enlarges it so that it fills the face of the block — to the maximum, never beyond.
    */
   const [fit, setFit] = useState({ scale: 1, dx: 0, dy: 0 });
 
@@ -146,26 +146,26 @@ export function IsoIcon({
     if (!svg) return;
     try {
       const box = svg.getBBox();
-      // Le viewBox se LIT, il ne se suppose pas : 24 pour une icône lucide, mais
-      // 48×39 pour le visage de Numo. Son côté le plus long est ce que
-      // `preserveAspectRatio` fait tenir dans le carré, donc l'unité de mesure.
+      // The viewBox READS, it is not assumed: 24 for a lucid icon, but
+      // 48×39 for Numo’s face. Its longest side is what
+      // `preserveAspectRatio` fits in the square, therefore the unit of measurement.
       const vb = svg.viewBox.baseVal;
       const boxW = vb?.width || 24;
       const boxH = vb?.height || 24;
       const frame = Math.max(boxW, boxH);
-      // `getBBox` rend la géométrie SANS l'épaisseur du trait : elle déborde
-      // d'un demi-trait de chaque côté, sinon le contour toucherait le bord.
+      // `getBBox` renders the geometry WITHOUT the thickness of the line: it overflows
+      // half a line on each side, otherwise the outline would touch the edge.
       const span = Math.max(box.width, box.height) + 1.5;
       if (!(span > 0)) return;
       setFit({
         scale: frame / span,
-        // En pourcentage de l'élément : `translate` s'y rapporte, donc le
-        // recentrage tient quelle que soit la taille rendue.
+        // As a percentage of the element: `translate` relates to it, so the
+        // recentering holds regardless of the rendered size.
         dx: (((vb?.x ?? 0) + boxW / 2 - (box.x + box.width / 2)) / frame) * 100,
         dy: (((vb?.y ?? 0) + boxH / 2 - (box.y + box.height / 2)) / frame) * 100,
       });
     } catch {
-      // Pas encore rendu (display:none) — la valeur par défaut fait l'affaire.
+      // Not yet rendered (display:none) — the default does the trick.
     }
   }, [Icon]);
 
@@ -174,8 +174,8 @@ export function IsoIcon({
   return (
     <span
       className={cn("relative block", className)}
-      /* Le rapport en STYLE, pas en classe : une classe Tailwind construite par
-         interpolation n'est jamais générée, et il vaut mieux qu'il suive les
+      /* Report in STYLE, not class: a Tailwind class built by
+         interpolation is never generated, and it is better that it follows the
          constantes ci-dessus. */
       style={{ aspectRatio: `${VIEW_W} / ${VIEW_H}`, ...style }}
       aria-hidden
@@ -185,24 +185,24 @@ export function IsoIcon({
         className="absolute inset-0 size-full"
         shapeRendering="geometricPrecision"
       >
-        {/* Le dessus. */}
+        {/* The top. */}
         <path
           d={`M${FACE_L} ${FACE_T} L0 0 L${BACK_R} 0 L${VIEW_W} ${FACE_T} Z`}
           className={paint.top}
         />
-        {/* Le côté gauche — la face qui s'éloigne le plus, donc la plus dense. */}
+        {/* The left side — the side that is furthest away, therefore the densest. */}
         <path
           d={`M${FACE_L} ${FACE_T} L0 0 L0 ${BACK_B} L${FACE_L} ${FACE_B} Z`}
           className={paint.side}
         />
-        {/* La face avant : le carré qui porte le tracé, le plus clair des trois. */}
+        {/* The front side: the square which carries the outline, the lightest of the three. */}
         <path
           d={`M${FACE_L} ${FACE_T} L${VIEW_W} ${FACE_T} L${VIEW_W} ${FACE_B} L${FACE_L} ${FACE_B} Z`}
           className={paint.front}
         />
-        {/* Les arêtes : la silhouette, puis les trois qui se voient à l'intérieur
-            (haut et gauche de la face, et la jonction dessus/côté). Sans elles le
-            solide se dissout dans le fond. */}
+        {/* The edges: the silhouette, then the three that can be seen inside
+            (top and left of the face, and the top/side junction). Without them
+            solid dissolves into the bottom. */}
         <g
           className={paint.edge}
           fill="none"
@@ -224,7 +224,7 @@ export function IsoIcon({
           />
         </g>
       </svg>
-      {/* Le tracé, de face, inscrit dans la face avant du bloc. */}
+      {/* The outline, from the front, inscribed in the front face of the block. */}
       <span
         className="absolute"
         style={{
@@ -247,18 +247,18 @@ export function IsoIcon({
 }
 
 /**
- * Un TEXTE posé comme une icône — un chiffre, deux lettres.
+ * A TEXT placed like an icon — one number, two letters.
  *
- * `IsoIcon` ne sait dessiner qu'une chose : un composant SVG qui se laisse
- * teinter, transformer et MESURER. Un glyphe en est un ; il n'y a donc rien à
- * changer à la pose sur le bloc, juste à fabriquer le SVG. Les cartes numérotées
- * de la landing (le trajet d'un retour utilisateur) portent ainsi leur chiffre
- * comme les icônes des sections voisines, au lieu d'une pastille ronde qui les
- * faisait dériver du reste.
+ * `IsoIcon` only knows how to draw one thing: an SVG component that can be
+ * tint, transform and MEASURE. A glyph is one; so there is nothing to
+ * change to the pose on the block, just to make the SVG. Numbered cards
+ * of the landing (the journey of user feedback) thus carry their figure
+ * like the icons of neighboring sections, instead of a round dot which
+ * derived from the rest.
  *
- * Le cache tient l'IDENTITÉ du composant stable d'un rendu à l'autre : c'est la
- * dépendance de l'effet de mesure de `IsoIcon`; une fabrique appelée à chaque
- * rendu le relancerait indéfiniment.
+ * The cache keeps the IDENTITY of the component stable from one rendering to another: it is the
+ * dependence of the measurement effect of `IsoIcon`; a factory called every
+ * rendered would restart it indefinitely.
  */
 const GLYPHS = new Map<string, SceneIcon>();
 

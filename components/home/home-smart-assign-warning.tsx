@@ -9,27 +9,27 @@ import { useProjects } from "@/lib/projects-context";
 import { ProjectOrb } from "@/components/project-orb";
 import { orbSeedOr } from "@/lib/project-orb-colors";
 
-/** Même courbe que l'onboarding et l'assistant de création : une seule entrée,
-    courte, quand le résumé arrive — pour que l'avis se pose sous le composer au
-    lieu d'y apparaître d'un coup. */
+/** Same curve as onboarding and the creation assistant: a single entry,
+ short, when the summary arrives — so that the notice arises under the composer at
+ instead of appearing there all at once. */
 const MOTION = { duration: 0.22, ease: [0.16, 1, 0.3, 1] as const };
 
 /**
- * Smart Assign actif mais mal réglé (MIN-31) : un projet à plusieurs où au
- * moins un membre n'a pas de règle d'affectation. Sans règle, le modèle n'a
- * rien à faire correspondre et l'affectation retombe sur le owner — la
- * fonctionnalité a l'air de marcher tout en ne triant rien.
+ * Smart Assign active but incorrectly set (MIN-31): a project with several people or
+ * least one member has no assignment rule. Without a rule, the model has no
+ * nothing to match and the assignment falls on the owner — the
+ * functionality seems to work while not sorting anything.
  *
- * Forme : un avis, pas une alerte. Le mobilier des autres cartes de l'accueil
- * (`bg-card`, même rayon, même géométrie) ; l'ambre ne tient qu'au filet de la
- * bordure — un peu plus appuyé en clair, où il s'efface — et au triangle posé
- * dans la ligne de titre. Les projets concernés sont des puces qui s'enroulent
- * plutôt qu'une liste : il y en a un le plus souvent, et une liste d'un seul
- * élément n'est pas une liste.
+ * Form: a notice, not an alert. The furniture of the other reception cards
+ * (`bg-card`, same radius, same geometry); the amber only hangs on the net of the
+ * border - a little more pronounced in light, where it fades - and to the triangle placed
+ * in the title line. Affected projects are bullets that roll up
+ * rather than a list: there is most often one, and a list of only one
+ * element is not a list.
  *
- * La liste vient de GET /api/me/smart-assign-warnings — la même que la pastille
- * de la sidebar — et ne contient QUE les projets dont je suis owner (seul lui
- * peut écrire les règles). Rien à signaler → rien ne s'affiche.
+ * The list comes from GET /api/me/smart-assign-warnings — the same as the patch
+ * of the sidebar — and ONLY contains the projects of which I am the owner (only him
+ * can write the rules). Nothing to report → nothing displayed.
  */
 export function HomeSmartAssignWarning() {
   const t = useTranslations("Home");
@@ -46,9 +46,9 @@ export function HomeSmartAssignWarning() {
       className="flex flex-col gap-3 rounded-xl border border-amber-500/40 bg-card px-4 py-3.5 dark:border-amber-500/25"
     >
       <div className="flex flex-col gap-0.5">
-        {/* Le triangle est DANS la ligne de titre, pas dans une colonne à lui :
-            la description reprend au bord du bloc, comme partout ailleurs sur
-            l'accueil, au lieu d'être décalée sous une gouttière d'icône. */}
+        {/* The triangle is IN the title line, not in a column of its own:
+ the description resumes at the edge of the block, like everywhere else on
+ the welcome, instead of being shifted under an icon gutter. */}
         <p className="flex items-center gap-1.5 text-sm font-medium">
           <TriangleAlert
             className="size-4 shrink-0 text-amber-500"

@@ -16,21 +16,21 @@ import { getClientIp } from "@/lib/server/request-ip";
 type RouteContext = { params: Promise<{ token: string }> };
 
 /**
- * Atterrissage SSO du board public (MIN-37) : le backend du client signe un
- * JWT HS256 court avec le sso_secret du board et envoie l'utilisateur ici
- * (/f/<token>?sso=<jwt> redirige vers cette route). On vérifie, on consomme, on
- * upsert l'identité, on pose le cookie de session et on repart vers le board —
- * le JWT ne reste jamais dans l'URL finale.
+ * SSO landing of the public board (MIN-37): the client backend signs a
+ * JWT HS256 runs with the sso_secret of the board and sends the user here
+ * (/f/<token>?sso=<jwt> redirects to this route). We check, we consume, we
+ * upsert the identity, we set the session cookie and we go back to the board —
+ * the JWT never stays in the final URL.
  *
- * « On consomme » (MIN-345) : le jeton ne vaut qu'un passage. Il a beau ne
- * jamais rester dans l'URL FINALE, il a traversé celle-ci — donc le `Referer`,
- * l'historique du navigateur et le journal de qui se trouvait sur le chemin.
+ * “We consume” (MIN-345): the token is only worth one passage. Although he doesn't
+ * never stay in the FINAL URL, it crossed this one — so the `Referer`,
+ * browser history and log of who was on the path.
  */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { token } = await params;
-  // Domaine personnalisé (MIN-36) : les redirects repartent vers l'origin
-  // VISIBLE (host + proto forwardé) — sous rewrite, request.url porte le path
-  // interne /f/<token>/… qu'il ne faut pas montrer.
+  // Custom domain (MIN-36): redirects go back to the origin
+  // VISIBLE (host + forwarded proto) — under rewrite, request.url carries the path
+  // internal /f/<token>/… path that must not be exposed.
   const host = normalizeHost(request.headers.get("host") ?? request.nextUrl.host);
   const isCustomHost = Boolean(host) && !isPrimaryHost(host);
   const proto =
@@ -59,9 +59,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.redirect(failureUrl);
   }
 
-  // Usage unique (MIN-345) : la signature vérifiée ne dit que « ce jeton a été
-  // émis par le board », jamais « il n'a pas déjà servi ». Consommé AVANT
-  // d'ouvrir quoi que ce soit — un rejeu ne doit pas même toucher l'identité.
+  // Single-use (MIN-345): the verified signature only says “this token was
+  // issued by the board”, never “it has not already been used”. Consumed BEFORE
+  // to open anything — a replay should not even touch identity.
   if (
     !(await consumeSsoToken({
       boardId: ctx.board.id,

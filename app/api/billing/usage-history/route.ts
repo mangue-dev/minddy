@@ -9,7 +9,7 @@ import type { UsageHistoryEntry, UsageHistoryResponse } from "@/lib/billing-type
 
 const PAGE_SIZE = 25;
 
-/** feature du ledger → segment d'affichage (agent_code ET sandbox_compute → agents). */
+/** ledger feature → display segment (agent_code AND sandbox_compute → agents). */
 function segmentForFeature(feature: string): UsageSegmentId {
   return (
     USAGE_SEGMENTS.find((segment) =>
@@ -19,9 +19,9 @@ function segmentForFeature(feature: string): UsageSegmentId {
 }
 
 /**
- * GET /api/billing/usage-history?segment=agents&offset=0 — l'historique typé
- * de la fenêtre courante (MIN-72, retours) : un run du ledger par entrée,
- * groupé par la RPC `get_user_usage_history`, filtrable par segment.
+ * GET /api/billing/usage-history?segment=agents&offset=0 — typed history
+ * of the current window (MIN-72, returns): one run of the ledger per entry,
+ * grouped by RPC `get_user_usage_history`, filterable by segment.
  */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -62,10 +62,10 @@ export async function GET(request: NextRequest) {
       (entry): UsageHistoryEntry => ({
         runId: entry.run_id,
         segmentId: segmentForFeature(entry.feature),
-        // La feature telle quelle, pour que la ligne dise le geste et pas la
-        // famille. La RPC garde `min(feature)` par run : dans un run mixte,
-        // c'est celle que l'utilisateur reconnaît (`agent_code` avant
-        // `sandbox_compute`, `routine_code` avant `routine_compute`).
+        // The feature as is, so that the line says the gesture and not the
+        // family. The PRC keeps `min(feature)` per run: in a mixed run,
+        // it is the one that the user recognizes (`agent_code` before
+        // `sandbox_compute`, `routine_code` before `routine_compute`).
         feature: toUsageHistoryFeature(entry.feature),
         at: entry.first_at,
         projectName: entry.project_name,

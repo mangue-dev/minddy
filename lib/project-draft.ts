@@ -4,27 +4,27 @@ import type { ProjectIconChoice } from "@/components/project-icon-picker";
 import type { RepoProviderId } from "./repo-providers";
 
 /**
- * Le brouillon du wizard de création de projet.
+ * The draft of the project creation wizard.
  *
- * Le projet n'est créé qu'à la toute dernière étape : tout ce que l'utilisateur
- * remplit avant est cet objet-là. Il vit CÔTÉ SERVEUR (table `project_drafts`)
- * dès que le nom du projet est posé — c'est-à-dire dès qu'il y a quelque chose à
- * nommer dans la barre latérale, où le brouillon prend la place du projet qu'il
- * deviendra. Fermer la modale en route n'est donc plus un abandon : on repart de
- * l'étape où l'on s'était arrêté, d'une session à l'autre et d'un appareil à
- * l'autre.
+ * The project is only created at the very last step: everything that the user
+ * fills in before is this object. It lives ON THE SERVER SIDE (`project_drafts` table)
+ * as soon as the project name is set — that is, as soon as there is something to
+ * name in the sidebar, where the draft takes the place of the project it
+ * will become. Closing the modal en route is therefore no longer an abandonment: we start again from
+ * the step where we stopped, from one session to another and from one device to
+ * the other.
  *
- * Ce module ne porte que la FORME du brouillon et la traduction ligne ↔ objet ;
- * les allers-retours réseau sont dans lib/project-drafts-api.ts.
+ * This module only carries the FORM of the draft and the line ↔ object translation ;
+ * the network round trips are in lib/project-drafts-api.ts.
  *
- * Reste ici un usage de `sessionStorage`, et un seul : l'étape « Relier un
- * dépôt » peut quitter la page en plein écran (installation de l'app GitHub,
- * autorisation OAuth GitLab), et le callback revient sur `/home?setup=git` sans
- * rien pouvoir dire du brouillon qu'on était en train de remplir. On y garde
- * donc un POINTEUR — l'id, rien d'autre : la saisie, elle, est déjà en base.
+ * There remains one use of `sessionStorage` here, and only one: the step "Connect a
+ * repository" can leave the page in full screen (installation of the app GitHub,
+ * OAuth GitLab authorization), and the callback returns to `/home?setup=git` without
+ * being able to say anything about the draft that we were filling out. We keep
+ * so a POINTER — the id, nothing else: the entry is already in the base.
  */
 
-/** Les étapes du wizard, dans l'ordre du parcours complet. */
+/** The wizard stages, in the order of the complete course. */
 export const PROJECT_WIZARD_STEPS = [
   "origin",
   "project",
@@ -35,12 +35,11 @@ export const PROJECT_WIZARD_STEPS = [
 ] as const;
 export type ProjectWizardStep = (typeof PROJECT_WIZARD_STEPS)[number];
 
-/** D'où on part (MIN-171) — la première question du wizard. */
+/** Where do we start from (MIN-171) — the wizard's first question. */
 export type ProjectOrigin = "new" | "existing";
 
 /**
- * Le parcours RETENU. L'amorce dépend de l'origine — tant qu'elle n'est pas
- * choisie, l'étape n'a pas de contenu et ne compte pas dans le stepper.
+ * The route KEPT. The seed depends on the origin — until it is chosen, the step has no content and does not count towards the stepper.
  */
 export function stepsFor(origin: ProjectOrigin | null): ProjectWizardStep[] {
   return origin
@@ -48,12 +47,12 @@ export function stepsFor(origin: ProjectOrigin | null): ProjectWizardStep[] {
     : ["origin", "project", "icon", "git", "finish"];
 }
 
-/** L'index où rouvrir le wizard pour ce brouillon (0 si l'étape est inconnue). */
+/** The index to reopen the wizard for this draft (0 if the step is unknown). */
 export function stepIndexOf(draft: ProjectDraft): number {
   return Math.max(0, stepsFor(draft.origin).indexOf(draft.step));
 }
 
-/** Le dépôt choisi dans le wizard, pas encore lié (le projet n'existe pas). */
+/** The repository chosen in the wizard, not yet linked (the project does not exist). */
 export interface DraftRepo {
   connectionId: string;
   provider: RepoProviderId;
@@ -62,10 +61,10 @@ export interface DraftRepo {
 }
 
 /**
- * L'amorce retenue, jouée APRÈS la création (le projet n'existe pas encore).
+ * The retained primer, played AFTER creation (the project does not yet exist).
  *
- * `import` ne porte PAS le CSV : le fichier pèse jusqu'à `MAX_IMPORT_CSV_BYTES`
- * (5 Mo) et ne se sérialise pas. La reprise le redemande, en le disant.
+ * `import` does NOT carry the CSV: the file weighs up to `MAX_IMPORT_CSV_BYTES`
+ * (5 MB) and is not serialized. The recovery asks for it again, saying it.
  */
 export type DraftSeed =
   | { kind: "brief"; text: string }
@@ -73,35 +72,35 @@ export type DraftSeed =
   | { kind: "import" };
 
 export interface ProjectDraft {
-  /** Id du futur projet, tiré côté client : c'est la graine de l'orbe par défaut. */
+  /** Id of the future project, taken from the client side: this is the seed of the default orb. */
   id: string;
   /**
-   * La graine de l'orbe, si le tirage a été RELANCÉ pendant le wizard. `null` =
-   * jamais relancé, et c'est l'id qui sert (cf. `projectOrbSeed`). Elle est
-   * retenue ici pour que l'aperçu et le projet créé montrent la même couleur.
-   */
+ * The seed of the orb, if the draw was RESTART during the wizard. `null` =
+ * never restarted, and it is the id that is used (see `projectOrbSeed`). It is
+ * retained here so that the preview and the created project show the same color.
+ */
   orbSeed: string | null;
   name: string;
   key: string;
   keyTouched: boolean;
-  /** L'étape où l'on s'est arrêté, par son id — un index ne survivrait pas à un
-      parcours dont les étapes dépendent des réponses. */
+  /** The step where we stopped, by its id — an index would not survive a
+ journey whose steps depend on the answers. */
   step: ProjectWizardStep;
   origin: ProjectOrigin | null;
   seed: DraftSeed | null;
   /**
-   * L'icône choisie, à rejouer à la création. Un fichier y voyage en data URL
-   * WebP déjà compressée par le serveur — quelques dizaines de Ko.
-   */
+ * The chosen icon, to be replayed upon creation. A file travels there in data URL
+ * WebP already compressed by the server — a few dozen KB.
+ */
   icon: ProjectIconChoice;
   repo: DraftRepo | null;
   smartAssignEnabled: boolean;
   autoAssignEnabled: boolean;
-  /** Dernière écriture (ISO) — l'ordre de la barre latérale, du plus récent. */
+  /** Last written (ISO) — the order of the sidebar, from most recent. */
   updatedAt: string;
 }
 
-/** La ligne telle que la table la garde : deux colonnes lues, le reste en jsonb. */
+/** The row as the table keeps it: two columns read, the rest in jsonb. */
 export interface ProjectDraftRow {
   id: string;
   name: string;
@@ -110,13 +109,13 @@ export interface ProjectDraftRow {
   updated_at: string;
 }
 
-/** Ce que le wizard sait de lui-même — tout le brouillon sauf sa date. */
+/** What the wizard knows about himself — the entire draft except its date. */
 export type ProjectDraftInput = Omit<ProjectDraft, "updatedAt">;
 
 /**
- * Relit une ligne. Défensif de bout en bout : un brouillon écrit par une version
- * précédente du wizard n'a pas forcément tous les champs, et le projet vaut
- * mieux sans icône ni amorce qu'un wizard qui plante en le rouvrant.
+ * Rereads a line. End-to-end defensive: a draft written by a previous version
+ * of the wizard does not necessarily have all the fields, and the project is worth
+ * better without an icon or primer than a wizard which crashes when reopening it.
  */
 export function projectDraftFromRow(row: ProjectDraftRow): ProjectDraft {
   const data = (row.data ?? {}) as Record<string, unknown>;
@@ -131,15 +130,15 @@ export function projectDraftFromRow(row: ProjectDraftRow): ProjectDraft {
     seed: normalizeSeed(data.seed),
     icon: normalizeIconChoice(data.icon),
     repo: normalizeRepo(data.repo),
-    // Smart Assign est proposé ACTIVÉ par le wizard : un brouillon muet doit
-    // retomber sur le même défaut, pas sur `false`.
+    // Smart Assign is proposed ACTIVATED by the wizard: a silent draft must
+    // fall back on the same default, not on `false`.
     smartAssignEnabled: data.smartAssignEnabled !== false,
     autoAssignEnabled: data.autoAssignEnabled === true,
     updatedAt: row.updated_at,
   };
 }
 
-/** L'inverse : ce que la route reçoit. `name` et `step` colonnés, le reste en jsonb. */
+/** The opposite: what the road receives. `name` and `step` columned, the rest in jsonb. */
 export function projectDraftToRow(draft: ProjectDraftInput): {
   id: string;
   name: string;
@@ -164,12 +163,12 @@ export function projectDraftToRow(draft: ProjectDraftInput): {
   };
 }
 
-/** L'aperçu à montrer dans la barre latérale : l'icône choisie, ou rien. */
+/** The preview to show in the sidebar: the chosen icon, or nothing. */
 export function draftIconUrl(draft: ProjectDraft): string | null {
   return draft.icon.kind === "none" ? null : draft.icon.previewUrl;
 }
 
-/** La graine de l'orbe du brouillon — le pendant de `projectOrbSeed`. */
+/** The draft orb seed — the counterpart to `projectOrbSeed`. */
 export function draftOrbSeed(draft: ProjectDraft): string {
   return draft.orbSeed || draft.id;
 }
@@ -212,17 +211,17 @@ function normalizeRepo(value: unknown): DraftRepo | null {
   return null;
 }
 
-/* ─── Le pointeur de l'aller-retour git ─────────────────────────────────── */
+/* ─── The git round trip pointer ─────────────────────────────────── */
 
 const PENDING_KEY = "minddy:project-draft-id";
 
-/** Le brouillon qu'on était en train de remplir avant de partir chez le provider. */
+/** The draft that we were filling out before going to the provider. */
 export function setPendingDraftId(id: string): void {
   if (typeof window === "undefined") return;
   try {
     window.sessionStorage.setItem(PENDING_KEY, id);
   } catch {
-    /* sessionStorage indisponible (navigation privée / désactivé) — ignore. */
+    /* sessionStorage unavailable (private browsing / disabled) — ignore. */
   }
 }
 

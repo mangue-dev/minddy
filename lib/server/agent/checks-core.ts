@@ -1,11 +1,11 @@
 /**
- * Normalisation des checks CI d'une PR/MR (MIN-138) — pur, sans I/O ni
- * `server-only`, donc testable en node (même patron que `branch-cleanup-core.ts`
- * et `mr-position.ts`). Les appelants (`pr.ts`, `mr.ts`) font les appels réseau
- * et passent ici les objets bruts.
+ * Standardization of CI checks of a PR/MR (MIN-138) — pure, without I/O or
+ * `server-only`, therefore testable in node (same pattern as `branch-cleanup-core.ts`
+ * and `mr-position.ts`). Callers (`pr.ts`, `mr.ts`) make network calls
+ * and pass the raw objects here.
  *
- * Le vocabulaire commun est réduit à quatre états, parce que c'est tout ce que
- * l'affichage sait dire : en cours, réussi, échoué, neutre. Les nuances des deux
+ * The common vocabulary is reduced to four states, because that's all that
+ * the display can say: in progress, successful, failed, neutral. The nuances of both
  * forges (`cancelled`, `timed_out`, `skipped`, `manual`…) s'y replient.
  */
 
@@ -14,37 +14,37 @@ export type CheckState = "pending" | "success" | "failure" | "neutral";
 export interface PullRequestCheck {
   name: string;
   state: CheckState;
-  /** Page du check chez la forge, quand elle existe. */
+  /** Check page at the forge, when it exists. */
   url: string | null;
-  /** L'intégration qui a produit le check — « GitHub Actions », « Socket
-      Security »… `null` quand le NOM du check la porte déjà (les commit statuses
+  /** The integration that produced the check — “GitHub Actions”, “Socket
+      Security »… `null` when the NAME of the check already carries it (the commit statuses
       s'appellent « Vercel – ui »). */
   appName: string | null;
-  /** Son logo, servi par la forge. `null` = pas de logo à afficher (GitLab n'en
-      expose aucun) : l'UI retombe sur l'icône de la forge. */
+  /** Its logo, served by the forge. `null` = no logo to display (GitLab does not
+      exposes none): the UI falls back to the forge icon. */
   appAvatarUrl: string | null;
-  /** Le résultat en une ligne, tel que la forge le formule (« Deployment has
-      completed »). Vide pour la plupart des jobs GitHub Actions : eux ne se
-      racontent que par leur état et leur durée. */
+  /** The result in one line, as the forge formulates it (“Deployment has
+      completed”). Empty for most GitHub Actions jobs: they are not
+      tell only by their condition and duration. */
   description: string | null;
-  /** Durée mesurée, quand la forge donne les deux bornes. */
+  /** Duration measured, when the forge gives the two limits. */
   durationMs: number | null;
 }
 
 export interface ChecksSummary {
   checks: PullRequestCheck[];
   /**
-   * État agrégé : un échec l'emporte sur tout, puis un check en cours, sinon
-   * réussi. `null` = aucun check du tout (dépôt sans CI) — distinct de
-   * `checks: null` côté API, qui veut dire « on n'a pas pu lire ».
+   * Aggregated state: a failure trumps all, then a check in progress, otherwise
+   * successful. `null` = no check at all (deposit without CI) — distinct from
+   * `checks: null` on the API side, which means “we could not read”.
    */
   state: CheckState | null;
-  /** Checks non bloquants (réussis OU neutres) — le `n` de « n/m réussis ». */
+  /** Non-blocking checks (successful OR neutral) — the `n` of “n/m passed”. */
   passing: number;
   total: number;
 }
 
-/** Ordre d'affichage : ce qui demande une action d'abord. */
+/** Display order: what requires action first. */
 const SEVERITY: Record<CheckState, number> = {
   failure: 0,
   pending: 1,
@@ -52,7 +52,7 @@ const SEVERITY: Record<CheckState, number> = {
   success: 3,
 };
 
-/** L'App GitHub derrière un check run (GitHub Actions, Vercel, Socket Security…). */
+/** The GitHub App behind a check run (GitHub Actions, Vercel, Socket Security, etc.). */
 export interface RawCheckApp {
   id?: number;
   slug?: string;
@@ -60,7 +60,7 @@ export interface RawCheckApp {
   owner?: { avatar_url?: string | null } | null;
 }
 
-/** Check run GitHub (`GET /commits/{sha}/check-runs`, `filter=latest` par défaut). */
+/** Check run GitHub (`GET /commits/{sha}/check-runs`, `filter=latest` by default). */
 export interface RawCheckRun {
   name?: string;
   status?: string; // queued | in_progress | completed | waiting | requested | pending
@@ -68,8 +68,8 @@ export interface RawCheckRun {
   html_url?: string | null;
   details_url?: string | null;
   app?: RawCheckApp | null;
-  /** Le résultat tel que l'App le formule. `title` est vide sur les jobs GitHub
-      Actions, rempli par les intégrations qui ont quelque chose à dire. */
+  /** The result as the App formulates it. `title` is empty on GitHub jobs
+      Actions, filled by integrations that have something to say. */
   output?: { title?: string | null } | null;
   started_at?: string | null;
   completed_at?: string | null;
@@ -81,8 +81,8 @@ export interface RawCommitStatus {
   state?: string; // pending | success | failure | error
   target_url?: string | null;
   description?: string | null;
-  /** Logo de l'intégration, déjà servi par GitHub sous sa forme canonique
-      (`https://avatars.githubusercontent.com/in/{app_id}` — mesuré). */
+  /** Integration logo, already served by GitHub in its canonical form
+      (`https://avatars.githubusercontent.com/in/{app_id}` — measured). */
   avatar_url?: string | null;
   creator?: { avatar_url?: string | null } | null;
 }
@@ -93,7 +93,7 @@ export interface RawPipeline {
   status?: string; // created | waiting_for_resource | preparing | pending | running | success | failed | canceled | skipped | manual | scheduled
   web_url?: string | null;
   ref?: string | null;
-  /** Nom du pipeline quand le projet en donne un (`workflow:name`). */
+  /** Name of the pipeline when the project gives one (`workflow:name`). */
   name?: string | null;
 }
 
@@ -101,11 +101,11 @@ export interface RawPipeline {
 const GITLAB_CI_APP = "GitLab CI/CD";
 
 /**
- * Logo d'une App GitHub. Ce n'est PAS `app.owner.avatar_url` : celui-là est
- * l'avatar du COMPTE propriétaire (l'organisation `github` pour GitHub Actions,
- * donc l'octocat au lieu du logo Actions). Le logo de l'App vit sous `/in/{id}`,
- * et c'est exactement l'URL que GitHub sert lui-même dans l'`avatar_url` des
- * commit statuses (mesuré : `in/8329` pour Vercel). `s=48` parce qu'on l'affiche
+ * Logo of a GitHub App. This is NOT `app.owner.avatar_url`: this one is
+ * the avatar of the owner ACCOUNT (the `github` organization for GitHub Actions,
+ * therefore the octocat instead of the Actions logo). The App logo lives under `/in/{id}`,
+ * and this is exactly the URL that GitHub itself serves in the `avatar_url` of
+ * commit statuses (measured: `in/8329` for Vercel). `s=48` because we display it
  * en 20 px : sans lui, GitHub renvoie l'original en 460 px.
  */
 function githubAppAvatar(app: RawCheckApp | null | undefined): string | null {
@@ -114,9 +114,9 @@ function githubAppAvatar(app: RawCheckApp | null | undefined): string | null {
 }
 
 /**
- * Durée entre deux bornes ISO. `null` dès que l'une manque ou que l'écart n'est
- * pas positif : GitHub date un job sauté avec un `completed_at` ANTÉRIEUR à son
- * `started_at` (mesuré), et « 0 s » ne dit rien de plus que rien.
+ * Duration between two ISO terminals. `null` as soon as one is missing or the gap is
+ * not positive: GitHub dates a skipped job with a `completed_at` PRIOR to its
+ * `started_at` (measured), and “0 s” means nothing more than nothing.
  */
 function elapsedMs(start?: string | null, end?: string | null): number | null {
   if (!start || !end) return null;
@@ -124,13 +124,13 @@ function elapsedMs(start?: string | null, end?: string | null): number | null {
   return Number.isFinite(ms) && ms > 0 ? ms : null;
 }
 
-/** Chaîne non vide, débarrassée de ses espaces — sinon `null`. */
+/** Non-empty string, stripped of spaces — otherwise `null`. */
 function text(value: string | null | undefined): string | null {
   return value?.trim() || null;
 }
 
 function checkRunState(run: RawCheckRun): CheckState {
-  // Tant que le run n'est pas `completed`, il n'a pas de conclusion : en cours.
+  // As long as the run is not `completed`, it has no conclusion: in progress.
   if (run.status !== "completed") return "pending";
   switch (run.conclusion) {
     case "success":
@@ -139,9 +139,9 @@ function checkRunState(run: RawCheckRun): CheckState {
     case "skipped":
       return "neutral";
     default:
-      // `failure`, `cancelled`, `timed_out`, `action_required`, `stale`, et une
-      // conclusion inconnue : rien de tout cela n'est un succès, et un état
-      // inventé par GitHub demain ne doit pas passer pour vert.
+      // `failure`, `cancelled`, `timed_out`, `action_required`, `stale`, and one
+      // unknown conclusion: none of this is a success, and a state
+      // invented by GitHub tomorrow should not be considered green.
       return "failure";
   }
 }
@@ -153,7 +153,7 @@ function commitStatusState(status: RawCommitStatus): CheckState {
     case "pending":
       return "pending";
     default:
-      // `failure` et `error`.
+      // `failure` and `error`.
       return "failure";
   }
 }
@@ -164,7 +164,7 @@ function pipelineState(status: string | undefined): CheckState {
       return "success";
     case "skipped":
     case "manual":
-      // Un job manuel non déclenché n'est pas un échec : il attend une décision
+      // A manual job not triggered is not a failure: it awaits a decision
       // humaine que minddy ne prend pas.
       return "neutral";
     case "failed":
@@ -190,18 +190,18 @@ function summarize(checks: PullRequestCheck[]): ChecksSummary {
   return {
     checks: sorted,
     state,
-    // Neutre compte comme non bloquant : « 5/5 » sur une CI dont deux jobs sont
-    // sautés dit la vérité, « 3/5 » ferait croire à deux échecs.
+    // Neutral counts as non-blocking: “5/5” on a CI whose two jobs are
+    // sautéed tells the truth, “3/5” would make it seem like two failures.
     passing: sorted.filter((c) => c.state === "success" || c.state === "neutral").length,
     total: sorted.length,
   };
 }
 
 /**
- * GitHub : fusionne les check runs (GitHub Actions & co) et les commit statuses
- * (l'API historique, encore utilisée par beaucoup d'intégrations). Un même nom
- * peut arriver des deux côtés — le check run gagne, il porte l'état le plus
- * détaillé et c'est lui que GitHub affiche.
+ * GitHub: merges check runs (GitHub Actions & co) and commit statuses
+ * (the historical API, still used by many integrations). Same name
+ * can happen on both sides — the check run wins, it carries the highest state
+ * detailed and this is what GitHub displays.
  */
 export function summarizeGithubChecks(
   runs: RawCheckRun[],
@@ -215,12 +215,12 @@ export function summarizeGithubChecks(
       name,
       state: commitStatusState(s),
       url: s.target_url ?? null,
-      // Le contexte d'un status NOMME déjà son intégration (« Vercel – ui ») :
-      // répéter le login du bot qui l'a posé (« vercel[bot] ») n'ajoute rien.
+      // The context of a status already NAMES its integration (“Vercel – ui”):
+      // repeating the login of the bot that installed it (“vercel[bot]”) adds nothing.
       appName: null,
       appAvatarUrl: s.avatar_url ?? s.creator?.avatar_url ?? null,
       description: text(s.description),
-      // L'API historique ne date que la pose du status, pas le travail derrière.
+      // The historical API only dates the status installation, not the work behind it.
       durationMs: null,
     });
   }
@@ -241,16 +241,16 @@ export function summarizeGithubChecks(
 }
 
 /**
- * GitLab : une MR porte une LISTE de pipelines, du plus récent au plus ancien,
- * et seul le dernier par ref décrit l'état courant — garder les précédents
- * ferait traîner indéfiniment l'échec d'un push déjà corrigé. Le nom affiché est
- * le numéro de pipeline : GitLab n'expose pas ici le détail par job (il faudrait
- * un appel par pipeline, pour une vue que minddy ne déplie pas).
+ * GitLab: an MR carries a LIST of pipelines, from the most recent to the oldest,
+ * and only the last one by ref describes the current state — keep the previous ones
+ * would drag out the failure of an already corrected push indefinitely. The name displayed is
+ * the pipeline number: GitLab does not present the details by job here (it would be necessary
+ * a call by pipeline, for a view that minddy does not unfold).
  *
- * Aucun logo par intégration de ce côté — chez GitLab, le CI EST GitLab : l'UI
- * retombe sur l'icône de la forge. Aucune durée non plus : cette liste ne donne
- * que `created_at`/`updated_at`, et leur écart n'est pas la durée du pipeline
- * (une relance le rallonge après coup).
+ * No logo by integration on this side — at GitLab, the CI IS GitLab: the UI
+ * falls on the forge icon. No duration either: this list does not give
+ * than `created_at`/`updated_at`, and their gap is not the duration of the pipeline
+ * (a raise extends it afterwards).
  */
 export function summarizeGitlabPipelines(pipelines: RawPipeline[]): ChecksSummary {
   const latest = pipelines[0];
@@ -262,8 +262,8 @@ export function summarizeGitlabPipelines(pipelines: RawPipeline[]): ChecksSummar
       url: latest.web_url ?? null,
       appName: GITLAB_CI_APP,
       appAvatarUrl: null,
-      // À défaut d'un résultat en une ligne, ce que le pipeline a fait tourner :
-      // son nom quand le projet en donne un, sinon la branche.
+      // In the absence of a one-line result, what the pipeline ran:
+      // its name when the project gives one, otherwise the branch.
       description: text(latest.name) ?? text(latest.ref),
       durationMs: null,
     },

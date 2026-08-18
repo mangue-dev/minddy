@@ -4,8 +4,8 @@ import { microphoneRequestAllowed } from "./media-guard";
 const ORIGIN = "https://www.minddy.app";
 
 describe("microphoneRequestAllowed", () => {
-  it("laisse passer une dictée de notre origine", () => {
-    // La forme exacte que passe Chromium : l'origine porte un slash final.
+  it("allows dictation from our origin through", () => {
+    // The exact form that Chromium passes: the origin has a final slash.
     expect(
       microphoneRequestAllowed(
         { securityOrigin: `${ORIGIN}/`, mediaTypes: ["audio"] },
@@ -14,7 +14,7 @@ describe("microphoneRequestAllowed", () => {
     ).toBe(true);
   });
 
-  it("retombe sur l'URL de la frame quand l'origine manque", () => {
+  it("falls back to the frame URL when the origin is missing", () => {
     expect(
       microphoneRequestAllowed(
         { requestingUrl: `${ORIGIN}/projects/x`, mediaTypes: ["audio"] },
@@ -23,7 +23,7 @@ describe("microphoneRequestAllowed", () => {
     ).toBe(true);
   });
 
-  it("refuse la caméra, seule ou accompagnée", () => {
+  it("rejects the camera, alone or accompanied", () => {
     expect(
       microphoneRequestAllowed(
         { securityOrigin: `${ORIGIN}/`, mediaTypes: ["video"] },
@@ -38,7 +38,7 @@ describe("microphoneRequestAllowed", () => {
     ).toBe(false);
   });
 
-  it("refuse une demande qui ne dit pas ce qu'elle ouvre", () => {
+  it("rejects a request that does not say what it opens", () => {
     expect(
       microphoneRequestAllowed({ securityOrigin: `${ORIGIN}/` }, ORIGIN)
     ).toBe(false);
@@ -57,7 +57,7 @@ describe("microphoneRequestAllowed", () => {
         ORIGIN
       )
     ).toBe(false);
-    // Sous-domaine et même hôte en clair : des tierces parties comme les autres.
+    // Subdomain and same host in plain text: third parties like the others.
     expect(
       microphoneRequestAllowed(
         { securityOrigin: "https://docs.minddy.app/", mediaTypes: ["audio"] },
@@ -72,7 +72,7 @@ describe("microphoneRequestAllowed", () => {
     ).toBe(false);
   });
 
-  it("refuse une demande sans provenance, ou illisible", () => {
+  it("rejects a request without provenance or an unreadable one", () => {
     expect(microphoneRequestAllowed({ mediaTypes: ["audio"] }, ORIGIN)).toBe(
       false
     );

@@ -5,9 +5,9 @@ import { updateSavedView } from "@/lib/server/saved-views";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** PATCH /api/me/saved-views/[id] — renommer, ou réenregistrer sur une autre
-    adresse. RLS fait la garde : la vue d'un autre compte est invisible, donc
-    introuvable. */
+/** PATCH /api/me/saved-views/[id] — rename, or resave to another
+ address. RLS is on guard: the view of another account is invisible, therefore
+ not found. */
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
@@ -35,7 +35,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   return NextResponse.json(result.view);
 }
 
-/** DELETE /api/me/saved-views/[id] — oublier une vue enregistrée. */
+/** DELETE /api/me/saved-views/[id] — forget a saved view. */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);

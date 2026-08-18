@@ -36,95 +36,95 @@ import type { PrLivePart } from "@/lib/pr-live";
 import type { PrActionEventType } from "@/lib/pr-events";
 
 /**
- * POST /api/webhooks/github — récepteur webhook de la GitHub App (MIN-47/MIN-46).
+ * POST /api/webhooks/github — webhook receiver from the GitHub App (MIN-47/MIN-46).
  *
- * On vérifie la signature HMAC (`X-Hub-Signature-256`) puis on synchronise l'état
- * des Pull Requests du dépôt :
- *  - `pull_request` → INGÈRE la PR dans `pull_requests` (MIN-143 : de Numo ou
- *    d'un humain, c'est le même fait du dépôt), met à jour `agent_runs.pr_state`
- *    (la review in-app reflète le vrai état côté GitHub) ET trace dans l'activité
- *    de l'issue liée ce qui a été fait DIRECTEMENT sur GitHub : ouvrir (`opened`),
- *    pousser des commits (`synchronize`), accepter ou refuser (`closed`).
- *  - `pull_request_review` → trace « approuvé la PR » / « demandé des changements »,
- *    et « commenté la PR » quand la review porte un message. Les reviews
- *    « dismissed » sont ignorées.
- *  - `pull_request_review_comment` → trace « commenté le code de la PR ». Une
- *    review de N remarques arrive en N events : ils se regroupent en une ligne
+ * We check the HMAC signature (`X-Hub-Signature-256`) then we synchronize the state
+ * Pull Requests from the repository:
+ * - `pull_request` → INGEST the PR in `pull_requests` (MIN-143: from Numo or
+ * of a human, it's the same fact of the repository), updates `agent_runs.pr_state`
+ * (the in-app review reflects the real state on the GitHub side) AND trace in the activity
+ * of the related issue what was done DIRECTLY on GitHub: open (`opened`),
+ *    push commits (`synchronize`), accept or reject (`closed`).
+ * - `pull_request_review` → trace “approved the PR” / “requested changes”,
+ * and “commented on the PR” when the review carries a message. Reviews
+ * “dismissed” are ignored.
+ * - `pull_request_review_comment` → trace “commented the PR code”. A
+ * review of N remarks arrives in N events: they are grouped in one line
  *    (`collapsesInBurst`).
- *  - `pull_request_review_thread` (resolved/unresolved) → n'écrit RIEN : la
- *    résolution d'un fil vit chez la forge (MIN-139), pas chez minddy. L'event
- *    n'est là que pour le direct — sans lui, résoudre un fil sur github.com ne
- *    se voyait dans le panneau ouvert qu'au rechargement.
- *  - `check_suite` (completed) / `status` → idem : rien à écrire, la CI n'est pas
- *    en base. Ils poussent le direct pour que le bandeau CI se mette à jour sans
- *    attendre le tour de poll suivant.
- *  - `issue_comment` (sur une PR) → trace « commenté la PR », et déclenche la
- *    relecture de Numo si le message le MENTIONNE (MIN-162). Écrire `@numo`
- *    depuis github.com fait donc la même chose que l'écrire depuis minddy — sauf
- *    que la dépense est portée par le owner du projet du ticket lié, faute d'un
- *    compte minddy derrière l'auteur (cf. `lib/server/agent/pr-mention`).
- *  - `issues` (opened/closed/reopened) → synchronisation unidirectionnelle des
- *    issues du dépôt vers les projets qui l'ont activée (MIN-97). Sens unique :
- *    minddy n'écrit jamais chez GitHub.
- * Tout autre event (ping, push…) est simplement acquitté.
+ * - `pull_request_review_thread` (resolved/unresolved) → writes NOTHING: the
+ * resolution of a thread lives at the forge (MIN-139), not at minddy. The event
+ * is only there for live — without it, resolving a thread on github.com would not work.
+ * was seen in the open panel only when reloading.
+ * - `check_suite` (completed) / `status` → same: nothing to write, the CI is not
+ * in base. They push the direct so that the CI banner updates without
+ * wait for the next poll round.
+ * - `issue_comment` (on a PR) → traces “commented the PR”, and triggers the
+ * rereading of Numo if the message MENTIONS it (MIN-162). Write `@numo`
+ * from github.com therefore does the same thing as writing it from minddy — except
+ * that the expense is borne by the project owner of the linked ticket, due to lack of
+ * minddy account behind the author (see `lib/server/agent/pr-mention`).
+ *  - `issues` (opened/closed/reopened) → one-way synchronization of
+ * from the repository to the projects that activated it (MIN-97). One Way :
+ * minddy never writes at GitHub.
+ * Any other event (ping, push, etc.) is simply acknowledged.
  *
- * DIRECT (MIN-161) : chaque chemin pousse en plus un `changed` sur le topic de
- * la PR (`broadcastPrChanged*`), qui NOMME les parties touchées — le panneau
- * ouvert va relire chez la forge, avec le token de celui qui regarde. Cette
- * émission passe AVANT les gardes `isBot` / `isPrActionEcho` : ces gardes
- * protègent l'ACTIVITÉ et les notifications du doublon, mais le fait que la PR
- * ait bougé est vrai dans tous les cas, y compris quand l'acteur est le bot ou
- * quand c'est l'écho de notre propre écriture. Coût assumé : un aller-retour de
- * forge en trop pour l'auteur du geste, absorbé par le coalescing client.
+ * DIRECT (MIN-161): each path also pushes a `changed` on the topic of
+ * the PR (`broadcastPrChanged*`), which NAMES the affected parts — the panel
+ * open will reread at the forge, with the token of the one who looks. This
+ * broadcast passes BEFORE the guards `isBot` / `isPrActionEcho`: these guards
+ * protect ACTIVITY and notifications from duplicate, but the fact that PR
+ * moved is true in all cases, including when the actor is the bot or
+ * when it is the echo of our own writing. Cost assumed: a round trip of
+ * too much forge for the author of the gesture, absorbed by customer coalescing.
  *
- * PRÉREQUIS D'INSTALLATION — les événements auxquels la GitHub App s'abonne
- * (page de réglages de l'App). Aucun n'exige de permission au-delà des Pull
- * requests déjà accordées ; sans eux, l'event n'est jamais livré :
- *   `issue_comment`, `pull_request_review_comment` — les commentaires, sans quoi
- *     les lignes d'activité correspondantes n'apparaissent pas ;
- *   `pull_request_review_thread` — la résolution d'un fil en direct ;
- *   `check_suite`, `status` — la CI en direct.
+ * INSTALLATION PREREQUISITES — events the GitHub App subscribes to
+ * (App settings page). None require permission beyond Pull
+ * requests already granted; without them, the event is never delivered:
+ * `issue_comment`, `pull_request_review_comment` — comments, otherwise
+ * the corresponding activity lines do not appear;
+ * `pull_request_review_thread` — the resolution of a live thread;
+ * `check_suite`, `status` — the live CI.
  *
- * Anti-doublon : les actions minddy in-app (merge/close/demande de changements)
- * sont déjà tracées côté route avec l'acteur HUMAIN précis. Leur écho webhook est
- * émis par le BOT de la GitHub App (`sender.type === "Bot"`) → on l'ignore ici.
- * Seules les actions faites par un HUMAIN sur GitHub produisent une activité.
+ * Anti-duplicate: minddy in-app actions (merge/close/request changes)
+ * are already drawn on the road side with the precise HUMAN actor. Their webhook echo is
+ * issued by the GitHub App BOT (`sender.type === "Bot"`) → we ignore it here.
+ * Only actions done by a HUMAN on GitHub produce activity.
  *
- * Fail-closed : signature invalide → 401. Secret non déployé → 503 sans rien
- * traiter (GitHub re-livrera une fois le secret en place), aligné sur le
- * récepteur GitLab. Une livraison déjà vue (`X-GitHub-Delivery`) est acquittée
- * sans être rejouée (MIN-333).
+ * Fail-closed: invalid signature → 401. Secret not deployed → 503 without anything
+ * process (GitHub will re-deliver once the secret is in place), aligned with the
+ * GitLab receiver. A delivery already seen (`X-GitHub-Delivery`) is acknowledged
+ * without being replayed (MIN-333).
  *
- * Le secret, lui, est celui de l'App — pas celui d'un dépôt : contrairement à
- * GitLab, l'endpoint est déclaré au niveau de l'App et son secret ne se lit que
- * dans les réglages de l'App, jamais dans ceux d'un dépôt installé. C'est
- * pourquoi seul le côté GitLab a eu besoin d'un secret par dépôt (MIN-333).
+ * The secret is that of the App — not that of a repository: unlike
+ * GitLab, the endpoint is declared at the App level and its secret can only be read
+ * in the App settings, never in those of an installed repository. It is
+ * why only the GitLab side needed a secret per repository (MIN-333).
  */
 
 interface GithubActor {
-  /** Id du compte — la clé d'identité, immuable au renommage (MIN-154). */
+  /** Account Id — the identity key, immutable upon renaming (MIN-154). */
   id?: number;
   login?: string;
   type?: string;
 }
 
-/** L'id du compte de forge de l'acteur, en texte (colonne `provider_account_id`). */
+/** The actor's forge account ID as text (column `provider_account_id`). */
 function actorAccountId(actor: GithubActor | undefined | null): string | null {
   return actor?.id != null ? String(actor.id) : null;
 }
 
-/** L'acteur est le bot de la GitHub App → l'action vient de Numo (écho d'une
-    action d'agent déjà tracée) : on ne re-trace pas.
+/** The actor is the GitHub App bot → the action comes from Numo (echo of an
+    agent action already traced): we do not re-trace.
 
-    Ne suffit PLUS à reconnaître un geste HUMAIN fait depuis minddy : depuis
-    MIN-144 il part du compte git de la personne, donc l'acteur du hook est le
-    même que si elle avait cliqué sur github.com. C'est `isPrActionEcho` qui
-    tranche ce cas-là, sur l'événement déjà tracé par la route. */
+    No longer enough to recognize a HUMAN gesture made since minddy: since
+    MIN-144 it starts from the person's git account, so the hook actor is the
+    same as if she had clicked on github.com. It is `isPrActionEcho` which
+    decides this case, on the event already traced by the road. */
 function isBot(actor: GithubActor | undefined | null): boolean {
   return actor?.type === "Bot";
 }
 
-/** La PR telle que GitHub la livre dans un event `pull_request`. */
+/** The PR such as GitHub delivers it in a `pull_request` event. */
 interface PullRequestPayload {
   number?: number;
   merged?: boolean;
@@ -150,10 +150,10 @@ interface PullRequestEvent {
 }
 
 /**
- * Actions qui décrivent un état de PR à INGÉRER (MIN-143). Plus large que
- * `githubPrStateForAction`, qui ne pilote que le cycle de vie des runs et du
- * ticket : ici on tient à jour la PR elle-même — son titre, sa tête, son état —
- * et une PR modifiée ou repoussée est une PR qui a changé.
+ * Actions that describe a RA condition to be INGESTED (MIN-143). Wider than
+ * `githubPrStateForAction`, which only controls the life cycle of runs and
+ * ticket: here we keep the PR itself up to date — its title, its head, its status —
+ * and a modified or postponed PR is a PR that has changed.
  */
 const INGESTED_PR_ACTIONS = new Set([
   "opened",
@@ -166,10 +166,10 @@ const INGESTED_PR_ACTIONS = new Set([
 ]);
 
 /**
- * Enregistre la PR chez minddy — de Numo ou d'un humain, c'est le même fait du
- * dépôt (MIN-143). Le rattachement au ticket vient de ce que la PR dit d'elle
- * (branche, titre, ligne de fermeture) ; s'il ne donne rien, on ne touche PAS au
- * rattachement existant : un run a pu le poser, lui.
+ * Saves PR at minddy — from Numo or a human, it's the same fact from
+ * depot (MIN-143). The connection to the ticket comes from what the PR says about it
+ * (branch, title, closing line); if it yields nothing, we do not touch the
+ * existing attachment: a run was able to pose him.
  */
 async function ingestPullRequest(
   repoFullName: string,
@@ -204,7 +204,7 @@ async function ingestPullRequest(
 
 interface PullRequestReviewEvent {
   action?: string;
-  /** `body` sépare la review qui PORTE un message de la simple enveloppe de
+  /** `body` separates the review which CARRYS a message from the simple envelope of
       remarques de ligne (cf. `prActionForReview`). */
   review?: { state?: string; body?: string | null; user?: GithubActor };
   pull_request?: { number?: number };
@@ -212,19 +212,19 @@ interface PullRequestReviewEvent {
   sender?: GithubActor;
 }
 
-/** Commentaire de FIL. GitHub sert les issues et les PR sur le même event —
-    `issue.pull_request` est ce qui les distingue (cf. `isPullRequestComment`). */
+/** Comment from FIL. GitHub serves issues and PRs on the same event —
+    `issue.pull_request` is what distinguishes them (see `isPullRequestComment`). */
 interface IssueCommentEvent {
   action?: string;
   issue?: { number?: number; pull_request?: unknown } | null;
-  /** `body` sert la mention `@numo` (MIN-162) : c'est le seul signal qu'on ait
-      d'un appel à Numo écrit depuis github.com. */
+  /** `body` serves the mention `@numo` (MIN-162): this is the only signal we have
+      from a call to Numo written from github.com. */
   comment?: { body?: string | null; user?: GithubActor } | null;
   repository?: { full_name?: string };
   sender?: GithubActor;
 }
 
-/** Remarque de LIGNE (commentaire de review ancré dans le diff). */
+/** LINE note (review comment anchored in the diff). */
 interface PullRequestReviewCommentEvent {
   action?: string;
   comment?: { user?: GithubActor } | null;
@@ -239,21 +239,21 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
   const repoFullName = payload.repository?.full_name;
   if (number == null || !repoFullName) return;
 
-  // Ingestion D'ABORD (MIN-143) : la PR existe chez minddy, qu'elle vienne de
-  // Numo ou d'un humain. Les gardes qui suivent — l'état pilotant, puis les
-  // runs — ne parlent que du cycle de vie de l'agent, et une PR humaine n'en a
-  // pas. C'est aussi ce qui rend le rattachement au ticket LISIBLE plus bas :
-  // `applyForgePrToIssue` relit la ligne qu'on vient d'écrire.
+  // Ingestion FIRST (MIN-143): RA exists in minddy, whether it comes from
+  // Numo or a human. The guards who follow — the leading state, then the
+  // runs — only talk about the agent's lifecycle, and a human PR doesn't have any
+  // not. This is also what makes the connection to the ticket READABLE lower:
+  // `applyForgePrToIssue` rereads the line just written.
   const ingested =
     payload.pull_request && INGESTED_PR_ACTIONS.has(action)
       ? await ingestPullRequest(repoFullName, number, payload.pull_request)
       : null;
 
-  // Inbox : le projet apprend qu'une pull request attend des yeux. Ici, juste
-  // après l'ingestion, et pas plus bas avec les autres notifications : celles-ci
-  // partent à l'auteur d'un RUN, or une PR humaine n'en a pas — c'est justement
-  // celle dont personne n'était prévenu. Le bot de l'App est écarté : quand il
-  // ouvre, c'est Numo, et l'annonce est déjà partie côté agent.
+  // Inbox: The project learns that a pull request is waiting for eyes. Here, right
+  // after ingestion, and not lower with the other notifications: these
+  // go to the author of a RUN, but a human PR does not have one - it is precisely
+  // the one that no one knew about. The App bot is removed: when it
+  // opens, it's Numo, and the ad has already gone out on the agent side.
   if (action === "opened" && !isBot(payload.sender)) {
     await notifyPullRequestOpened(ingested, {
       actor: {
@@ -263,18 +263,18 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
     });
   }
 
-  // Direct : l'en-tête a bougé, et un `synchronize` a poussé des commits. Émis
-  // ICI, avant les gardes de cycle de vie plus bas — une PR sans run, un acteur
-  // bot, un écho de notre propre geste : dans tous ces cas la PR a bougé pour de
-  // vrai. On réutilise la ligne qu'on vient d'écrire plutôt que de la relire.
+  // Direct: the header moved, and a `synchronize` pushed commits. Issued
+  // HERE, before the lower lifecycle guards — a PR without a run, an actor
+  // bot, an echo of our own gesture: in all these cases the PR moved to
+  // TRUE. We reuse the line we just wrote rather than rereading it.
   //
-  // Le FIL en fait partie, et pas seulement l'en-tête : depuis MIN-159 la
-  // conversation porte l'ACTIVITÉ de la PR, lue dans la timeline de la forge
-  // (`prCommentsResponse` → `listTimeline`). « a poussé 3 commits », « a
-  // fusionné », « a renommé », « a mis en revue » : chacun de ces faits naît
-  // d'un event `pull_request` et se rend DANS le fil. Sans `conversation`, le
-  // commit poussé apparaissait dans l'onglet Commits mais pas dans la
-  // conversation, jusqu'au rechargement.
+  // The FIL is part of it, and not just the header: since MIN-159 the
+  // conversation carries the ACTIVITY of the PR, read in the timeline of the forge
+  // (`prCommentsResponse` → `listTimeline`). “pushed 3 commits”, “has
+  // merged”, “renamed”, “reviewed”: each of these facts is born
+  // of an event `pull_request` and goes INTO the thread. Without `conversation`, the
+  // pushed commit appeared in the Commits tab but not in the
+  // conversation until the next reload.
   const liveParts: PrLivePart[] =
     action === "synchronize"
       ? ["pr", "conversation", "commits"]
@@ -291,16 +291,16 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
   }
 
   const merged = !!payload.pull_request?.merged;
-  // L'état vient du PAYLOAD, pas de l'action seule (MIN-164) : une PR rouverte
-  // peut être restée brouillon, et `reopened` valait « ouverte » en dur.
+  // Status comes from PAYLOAD, not action alone (MIN-164): a reopened PR
+  // may have remained messy, and `reopened` was “open” in hard copy.
   const prState = githubPrStateForAction(action, payload.pull_request ?? {});
-  // Activité : ouvrir, pousser des commits, accepter (merge) ou refuser (close)
-  // depuis GitHub. Le geste in-app fait par Numo passe par le bot de l'App →
-  // ignoré (déjà tracé côté agent ou route).
+  // Activity: open, push commits, accept (merge) or refuse (close)
+  // from GitHub. The in-app gesture made by Numo goes through the App bot →
+  // ignored (already drawn on the agent or route side).
   const actionType = prActionForPullRequest(action, merged);
-  // Deux axes indépendants (même forme que le récepteur GitLab) : `synchronize`
-  // ne change AUCUN état de run — il ne fait que raconter. Le sortir ici, comme
-  // le faisait le `if (!prState) return`, revenait à ne jamais le tracer.
+  // Two independent axes (same shape as the GitLab receiver): `synchronize`
+  // doesn't change ANY run state — it just tells. Take it out here, like
+  // did it `if (!prState) return`, amounted to never tracing it.
   if (!prState && !actionType) return;
 
   const runs = prState
@@ -315,10 +315,10 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
 
   const byHuman = !isBot(payload.sender);
 
-  // AUCUN run derrière cette PR : c'est une PR humaine (MIN-143). Elle peut
-  // porter un ticket quand même — par son nom de branche, son titre ou une ligne
-  // de fermeture. Le fusionner sur GitHub doit produire ce que le fusionner
-  // depuis minddy produit, sinon le même geste a deux effets selon l'endroit.
+  // NO run behind this PR: it is a human PR (MIN-143). She can
+  // ticket anyway — by branch name, title or line
+  // closing. Merging it on GitHub should produce what merging it does
+  // since minddy produces, otherwise the same gesture has two effects depending on the location.
   if (runs.length === 0) {
     await applyForgePrToIssue({
       provider: "github",
@@ -332,19 +332,19 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
     return;
   }
 
-  // Aligne le statut des issues sur le nouvel état PR (MIN-46) :
+  // Aligns the status of the issues with the new PR state (MIN-46):
   // merged→done, closed→todo, ouverte→in_review, brouillon→in_progress.
   if (prState) {
     for (const run of runs) {
-      // `issueId` null = run carnet (MIN-84) : aucune issue à aligner.
+      // `issueId` null = run notebook (MIN-84): no issue to align.
       if (run.createdBy && run.issueId) {
         await syncIssueStatusFromPr({ issueId: run.issueId, actorId: run.createdBy, prState });
       }
     }
   }
-  // `byHuman` ne dit plus « fait sur GitHub » depuis MIN-144 : un merge/close
-  // lancé depuis minddy porte lui aussi un compte humain. L'écho se lit donc sur
-  // l'événement que la route vient d'écrire.
+  // `byHuman` no longer says “made on GitHub” since MIN-144: a merge/close
+  // launched from minddy also has a human account. The echo is therefore read on
+  // the event that the road has just written.
   const echo =
     !!actionType &&
     byHuman &&
@@ -364,18 +364,18 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
       provider: "github",
       login: payload.sender?.login ?? null,
     });
-    // Inbox : l'auteur du run apprend que sa PR a été fusionnée (MIN-138).
+    // Inbox: the author of the run learns that his PR has been merged (MIN-138).
     await notifyForgePrAction({ runs, type: actionType, actorLogin: payload.sender?.login ?? null });
   }
 }
 
 /**
- * Trace un geste de forge SANS effet d'état — review, commentaire de fil,
- * remarque de ligne. Le bot de l'App est écarté ici : quand il agit, c'est Numo,
- * et Numo trace ses propres gestes avec sa propre identité.
+ * Trace a forge gesture WITHOUT state effect — review, thread comment,
+ * line remark. The App bot is excluded here: when it acts, it's Numo,
+ * and Numo traces his own gestures with his own identity.
  *
- * `recordForgePrGesture` porte le reste (runs ou PR humaine, anti-écho,
- * regroupement des rafales) — il est partagé avec le récepteur GitLab.
+ * `recordForgePrGesture` carries the rest (runs or human PR, anti-echo,
+ * burst grouping) — it is shared with the GitLab receiver.
  */
 async function recordGithubGesture(opts: {
   type: PrActionEventType | null;
@@ -395,8 +395,8 @@ async function recordGithubGesture(opts: {
 }
 
 /**
- * Direct d'un event qui ne connaît qu'un numéro dans un dépôt. Sorti pour que
- * chaque handler le pousse en une ligne, AVANT ses propres gardes d'anti-écho.
+ * Live from an event that only knows one number in a repository. Out so that
+ * each handler pushes it in a line, BEFORE its own anti-echo guards.
  */
 async function broadcastGithubPr(
   repoFullName: string | undefined,
@@ -408,16 +408,16 @@ async function broadcastGithubPr(
 }
 
 async function handlePullRequestReview(payload: PullRequestReviewEvent): Promise<void> {
-  // Une review bouge TROIS surfaces : son message va dans le fil, ses remarques
-  // dans le diff, et son verdict change le compteur d'approbations que
-  // `prDetailResponse` sert avec l'en-tête.
+  // A review moves THREE surfaces: its message goes in the thread, its remarks
+  // in the diff, and its verdict changes the approval counter that
+  // `prDetailResponse` is used with the header.
   //
-  // Le direct part sur les TROIS actions (submitted/edited/dismissed), comme
-  // pour les remarques de ligne, et AVANT le garde ci-dessous : RETIRER une
-  // approbation (`dismissed`) change le compteur de l'en-tête autant que la
-  // poser, et pose un `review_dismissed` dans le fil ; `edited` en réécrit le
-  // corps. L'ACTIVITÉ, elle, ne trace que la review soumise — dénoncer sa
-  // propre review n'est pas un geste à raconter sur le ticket.
+  // The direct starts on the THREE actions (submitted/edited/dismissed), like
+  // for line remarks, and BEFORE the guard below: REMOVE one
+  // approval (`dismissed`) changes the header counter as much as the
+  // ask, and puts a `review_dismissed` in the thread; `edited` rewrites it
+  // body. The ACTIVITY only traces the submitted review — denouncing its
+  // own review is not a gesture to be written on the ticket.
   await broadcastGithubPr(payload.repository?.full_name, payload.pull_request?.number, [
     "conversation",
     "reviewComments",
@@ -438,17 +438,17 @@ async function handleIssueComment(payload: IssueCommentEvent): Promise<void> {
   const number = payload.issue?.number;
   const repoFullName = payload.repository?.full_name;
 
-  // Direct : posté, modifié ou supprimé, le fil a changé.
+  // Direct: posted, edited or deleted, thread has changed.
   await broadcastGithubPr(repoFullName, number, ["conversation"]);
   await recordGithubGesture({ type: "pr_commented", number, repoFullName, actor });
 
-  // `@numo` écrit DEPUIS github.com (MIN-162). Deux gardes avant d'y toucher :
-  //  · le bot de l'App, c'est Numo lui-même — le laisser s'appeler ferait boucler
-  //    la passe sur sa propre synthèse ;
-  //  · un commentaire posté depuis minddy revient ici par écho quelques secondes
-  //    plus tard, et la route a déjà lancé la passe. `isPrActionEcho` le
-  //    reconnaît sur l'événement qu'elle vient d'écrire — le même garde que pour
-  //    l'activité, sur le même geste.
+  // `@numo` written FROM github.com (MIN-162). Two guards before touching it:
+  // · the App bot is Numo itself — letting it call itself would loop
+  // the pass on its own synthesis;
+  // · a comment posted from minddy comes back here by echo for a few seconds
+  // later, and the road has already launched the pass. `isPrActionEcho` on
+  // recognizes the event she has just written — the same guard as for
+  // activity, on the same gesture.
   if (
     payload.action !== "created" ||
     number == null ||
@@ -486,10 +486,10 @@ async function handleIssueComment(payload: IssueCommentEvent): Promise<void> {
 async function handlePullRequestReviewComment(
   payload: PullRequestReviewCommentEvent,
 ): Promise<void> {
-  // Le direct part sur les TROIS actions (created/edited/deleted) : une remarque
-  // modifiée ou retirée change le diff autant qu'une remarque posée. L'activité,
-  // elle, ne trace que la création — modifier son propre message n'est pas un
-  // geste à raconter sur le ticket.
+  // The direct starts on the THREE actions (created/edited/deleted): a note
+  // modified or removed changes the diff as much as a comment made. The activity,
+  // she only traces creation — modifying one's own message is not a
+  // gesture to tell on the ticket.
   await broadcastGithubPr(
     payload.repository?.full_name,
     payload.pull_request?.number,
@@ -504,8 +504,8 @@ async function handlePullRequestReviewComment(
   });
 }
 
-/** Fil de remarques résolu ou rouvert sur github.com (MIN-139) — direct SEUL :
-    la résolution vit chez la forge, minddy n'en garde rien. */
+/** Resolved or reopened thread on github.com (MIN-139) — direct ONLY:
+    the resolution lives at the forge, minddy keeps nothing of it. */
 interface PullRequestReviewThreadEvent {
   action?: string;
   pull_request?: { number?: number };
@@ -524,16 +524,16 @@ async function handlePullRequestReviewThread(
 }
 
 /**
- * CI terminée — `check_suite` (GitHub Actions et compagnie) ou `status` (l'API
- * historique, ce qu'utilisent encore beaucoup d'intégrations).
+ * CI completed — `check_suite` (GitHub Actions and company) or `status` (the API
+ * history, which many integrations still use).
  *
- * Direct SEUL, comme les fils de remarques : l'état de la CI n'est pas en base,
- * il est lu chez la forge à chaque GET du détail (`prDetailResponse`). Le
- * `CHECKS_POLL_MS` de 15 s reste en place — ces events ne sont pas garantis, et
- * c'est lui le filet.
+ * Direct ONLY, like the comments threads: the state of the CI is not in base,
+ * it is read at the forge at each GET of the detail (`prDetailResponse`). THE
+ * `CHECKS_POLL_MS` of 15 s remains in place — these events are not guaranteed, and
+ * he is the net.
  *
- * L'ancrage est le SHA et pas le numéro de PR : `status` n'en porte aucun, et
- * `check_suite.pull_requests` omet les PR issues d'un fork. Le repli couvre les
+ * The anchor is the SHA and not the PR number: `status` carries none, and
+ * `check_suite.pull_requests` omits PRs resulting from a fork. The fallback covers the
  * deux.
  */
 interface CheckSuiteEvent {
@@ -573,8 +573,8 @@ async function broadcastChecksChanged(
 }
 
 async function handleCheckSuite(payload: CheckSuiteEvent): Promise<void> {
-  // Seule la fin d'une suite change ce que le bandeau affiche : `requested` et
-  // `rerequested` ne font qu'annoncer un travail dont l'état est déjà « en cours ».
+  // Only the end of a sequence changes what the banner displays: `requested` and
+  // `rerequested` only announces a job whose state is already “in progress”.
   if (payload.action !== "completed") return;
   await broadcastChecksChanged(
     payload.repository?.full_name,
@@ -586,22 +586,22 @@ async function handleCheckSuite(payload: CheckSuiteEvent): Promise<void> {
 }
 
 async function handleStatus(payload: StatusEvent): Promise<void> {
-  // `pending` est le départ d'un check, pas son résultat — mais il fait passer le
-  // bandeau à « en cours », ce que le lecteur doit voir aussi.
+  // `pending` is the start of a check, not its result — but it passes the
+  // banner to “in progress”, which the reader should also see.
   await broadcastChecksChanged(payload.repository?.full_name, payload.sha, []);
 }
 
 /**
- * Actions `issues` synchronisées. Le ticket minddy REFLÈTE désormais l'issue
- * distante : les éditions de titre et de corps, les labels et les assignations
- * comptent donc autant que l'ouverture et la fermeture — c'est exactement ce
- * que la v1 de MIN-97 laissait tomber.
+ * `issues` actions synchronized. The minddy ticket now REFLECTS the outcome
+ * remote: title and body edits, labels and assignments
+ * therefore count as much as opening and closing - that's exactly what
+ * that v1 of MIN-97 dropped.
  *
- * La liste reste FERMÉE, elle n'est pas devenue « tout ce qui arrive » : GitHub
- * envoie aussi `pinned`, `locked`, `transferred`, `deleted`, `milestoned`,
- * `typed`… dont aucune ne change ce que minddy recopie. Les laisser passer
- * ferait une réconciliation complète — donc plusieurs requêtes — pour un
- * épinglage.
+ * The list remains CLOSED, it has not become “whatever happens”: GitHub
+ * also sends `pinned`, `locked`, `transferred`, `deleted`, `milestoned`,
+ * `typed`… none of which changes what minddy copies. Let them pass
+ * would make a complete reconciliation — therefore several requests — for a
+ * pinning.
  */
 const SYNCED_ISSUE_ACTIONS = new Set([
   "opened",
@@ -624,12 +624,12 @@ export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const secret = process.env.GITHUB_WEBHOOK_SECRET;
 
-  // FAIL-CLOSED intégral (MIN-118), aligné sur le récepteur GitLab : sans
-  // secret déployé, AUCUN event n'est traité — même ceux qui ne font que
-  // refléter un état déjà décidé côté GitHub. Un `pr_state` forgé déclenche
-  // quand même des écritures (sync du statut d'issue, notifications) ; le
-  // fail-open partiel historique laissait cette porte ouverte. 503 plutôt que
-  // 200 : GitHub re-livrera une fois le secret déployé.
+  // Full FAIL-CLOSED (MIN-118), aligned to GitLab receiver: without
+  // secret deployed, NO events are processed — even those that only
+  // reflect a state already decided on GitHub side. A forged `pr_state` triggers
+  // still writes (sync of issue status, notifications); THE
+  // historical partial fail-open left this door open. 503 rather than
+  // 200: GitHub will re-deliver once the secret is deployed.
   if (!secret) {
     console.error("[webhooks/github] GITHUB_WEBHOOK_SECRET is not set — event refused");
     return NextResponse.json({ error: "webhook secret not configured" }, { status: 503 });
@@ -644,9 +644,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "invalid signature" }, { status: 401 });
   }
 
-  // Rejeu : la même livraison, déjà traitée (MIN-333). Après la vérification —
-  // marquer une livraison sans signature valide reviendrait à pouvoir faire
-  // taire l'événement réel qui la porte.
+  // Replay: the same delivery, already processed (MIN-333). After verification —
+  // marking a delivery without a valid signature would mean being able to
+  // silence the real event which carries it.
   if (
     await isReplayedForgeDelivery("github", request.headers.get("x-github-delivery"))
   ) {
@@ -677,7 +677,7 @@ export async function POST(request: NextRequest) {
       await handleIssues(JSON.parse(rawBody));
     }
   } catch (err) {
-    // Best-effort : on acquitte quand même pour que GitHub ne re-livre pas.
+    // Best effort: we still pay so that GitHub does not re-deliver.
     console.error(`[webhooks/github] ${event} handling failed:`, (err as Error).message);
   }
 

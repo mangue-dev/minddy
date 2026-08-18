@@ -188,8 +188,8 @@ export function ObjectiveDialog({
   members: Member[];
   /** When set, the dialog edits this objective; otherwise it creates one. */
   objective?: Objective | null;
-  /** Nom prérempli à l'ouverture, en création : l'ajout rapide depuis un picker
-   *  d'objectif y passe le texte déjà tapé dans la recherche. */
+  /** Pre-filled name when opening, in creation: quick addition from an objective picker
+ * passes the text already typed in the search. */
   initialName?: string;
   onCreate: (input: CreateObjectiveInput) => Promise<unknown>;
   onUpdate: (id: string, updates: ObjectiveUpdateInput) => Promise<unknown>;
@@ -224,11 +224,11 @@ export function ObjectiveDialog({
   // Remount the markdown editor to swap its content (it only reads `value` on
   // mount and commits on blur) when the dialog opens on a new/other objective.
   const [editorKey, setEditorKey] = useState(0);
-  // Une prise en cours de transcription (l'audio est parti, le texte n'est pas
-  // revenu) : avec la suite Numo, c'est la fenêtre où fermer perd la dictée.
+  // A take being transcribed (the audio is gone, the text is not
+  // income): with the Numo suite, this is the window where closing loses dictation.
   const [transcribing, setTranscribing] = useState(false);
-  // ⌘/Ctrl + Entrée valide l'objectif, d'où qu'on soit dans le formulaire — y
-  // compris depuis la description, que le champ de nom ne couvre pas.
+  // ⌘/Ctrl + Enter validates the objective, wherever you are in the form — y
+  // understood from the description, which the name field does not cover.
   const submitShortcut = useSubmitShortcut();
 
   // Drafts, resources and voice dictation share the same two conditions: each
@@ -306,19 +306,19 @@ export function ObjectiveDialog({
     closeAndReset();
   };
 
-  // « Abandonner » : on ferme SANS garder, et le brouillon d'origine s'en va
-  // avec — sinon on retrouverait dans la rangée de reprise celui qu'on croyait
-  // avoir abandonné. Même geste que la création réussie, qui consomme aussi le
-  // brouillon dont elle vient.
+  // “Abandon”: we close WITHOUT keeping, and the original draft goes away
+  // with — otherwise we would find in the repeat row the one we thought
+  // have given up. Same gesture as successful creation, which also consumes the
+  // draft it came from.
   const discardDraftAndClose = () => {
     if (activeDraftId) drafts.remove(activeDraftId);
     closeAndReset();
   };
 
   const handleOpenChange = (next: boolean) => {
-    // Une dictée en vol travaille SUR ce formulaire : le transcript, puis le
-    // patch de Numo, vont y atterrir. Fermer maintenant les jetterait — on
-    // refuse, en le disant (une Échap sans effet passerait pour une panne).
+    // An in-flight dictation works ON this form: the transcript, then the
+    // Numo patch, will land there. Closing now would throw them away — we
+    // refuse, saying so (an Escape without effect would pass for a failure).
     if (!next && (transcribing || numoBusy)) {
       toast.info(t("dictationInFlight"), { id: "dictation-in-flight" });
       return;
@@ -454,16 +454,16 @@ export function ObjectiveDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        {/* Mêmes trois marges que le dialog de création de ticket : 32 px au
-          large, 20 px sous `sm` (le modal ne fait plus que la fenêtre moins
-          32 px), et rien sous 480 px — mangue-ui bascule alors en bottom sheet
-          (vaul) qui pose déjà ses propres 16 px sur le contenu. */}
+        {/* Same three margins as the ticket creation dialog: 32 px at
+ wide, 20 px under `sm` (the modal now only makes the window less
+ 32 px), and nothing under 480 px — mangue-ui then switches to bottom sheet
+ (vaul) which already sets its own 16 px on content. */}
         <DialogContent
           className="p-8 max-sm:p-5 data-vaul-drawer:p-0 sm:max-w-2xl"
           onInteractOutside={keepOverlayOpenForPopper}
         >
-          {/* Titre lecteur d'écran : à l'édition, le nom de l'objectif dit
-              mieux de quoi il s'agit qu'un intitulé générique. */}
+          {/* Screen reader title: when editing, the name of the objective says
+ better what it is than a generic title. */}
           <DialogTitle className="sr-only">
             {objective ? objective.name : t("newObjective")}
           </DialogTitle>
@@ -560,8 +560,8 @@ export function ObjectiveDialog({
             </div>
 
             {/* Bottom bar — voice dictation at left, create controls at right,
-              like the create-issue dialog : elle passe à la ligne sous `sm`,
-              où le bouton prend une ligne à lui, pleine largeur. */}
+ like the create-issue dialog: it goes to the line under `sm`,
+ where the button takes a line of its own, full width. */}
             <div className="mt-6 flex flex-wrap items-center gap-3 sm:mt-8">
               {composerEnabled &&
                 (numoBusy ? (
@@ -612,9 +612,9 @@ export function ObjectiveDialog({
                   {tCommon("cancel")}
                 </Button>
                 {showSplit ? (
-                  /* L'infobulle s'accroche à l'action, pas au chevron : ses
-                     props traversent `SplitButton` jusqu'au bouton de gauche,
-                     le seul que ⌘↵ actionne. */
+                  /* The tooltip attaches to the action, not the chevron: its
+ props pass through `SplitButton` to the left button,
+ the only one that ⌘↵ activates. */
                   <SendShortcutTooltip
                     scope="form"
                     label={t("createInProject", { project: currentProject!.name })}
@@ -668,9 +668,9 @@ export function ObjectiveDialog({
             </div>
           </form>
 
-          {/* Numo reprend la dictée : le liseré souligne le bord du modal
-            pendant qu'il travaille — même signal que l'icône Numo « thinking »
-            qui remplace le micro plus haut. */}
+          {/* Numo resumes dictation: the border highlights the edge of the modal
+ while he works — same signal as the Numo “thinking”
+ icon which replaces the microphone higher up. */}
           <AgentBeamOverlay active={numoBusy} />
         </DialogContent>
       </Dialog>

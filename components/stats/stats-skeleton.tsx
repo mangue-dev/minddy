@@ -2,9 +2,9 @@
 
 import { Skeleton } from "mangue-ui";
 
-/** Squelette calqué sur la vraie mise en page (MIN-85) : le bandeau du présent,
- *  la carte d'activité, puis deux sections — pour que le chargement annonce la
- *  page qui arrive plutôt qu'une grille de carrés qui n'existe nulle part. */
+/** Skeleton modeled on the real layout (MIN-85): the banner of the present,
+ * the activity card, then two sections - so that the loading announces the
+ * page which arrives rather than a grid of squares which does not exist anywhere. */
 export function StatsSkeleton() {
   return (
     <div aria-hidden>

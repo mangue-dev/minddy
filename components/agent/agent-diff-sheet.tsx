@@ -18,18 +18,18 @@ import { useAgentRunDiffQuery } from "@/lib/use-agent-runs";
 import type { PullRequestFile } from "@/lib/agent-api";
 
 /**
- * Vue diff DANS la conversation de l'agent : les modifications de la session sans
- * quitter le fil ni attendre la PR. Ouverte en cliquant un fichier des blocs
- * « fichiers changés » (fil comme en-tête), dans un Sheet posé PAR-DESSUS la
- * conversation — qui vit elle-même parfois en Sheet (modal d'issue) : Radix
+ * Diff view IN agent conversation: session changes without
+ * leave the thread nor wait for the PR. Open by clicking a block file
+ * “changed files” (wire as header), in a Sheet placed ABOVE the
+ * conversation — which itself sometimes lives in Sheet (outcome modal): Radix
  * empile.
  *
- * En cloud, le contenu vient de /api/agent-runs/[runId]/diff : microVM pendant
- * le tour, forge au repos. En local, cette route ne peut pas lire le disque de
- * l'utilisateur : le harness envoie donc un patch borné sur un canal dédié, puis
- * le conserve dans l'event `files_changed` de fin de tour.
+ * In the cloud, the content comes from /api/agent-runs/[runId]/diff: microVM during
+ * the lathe, forge at rest. Locally, this route cannot read the disk of
+ * the user: the harness therefore sends a limited patch on a dedicated channel, then
+ * keeps it in the end-of-turn event `files_changed`.
  *
- * Lecture seule : la review (commentaires ancrés) vit sur la page Pull requests.
+ * Read only: the review (anchored comments) lives on the Pull requests page.
  */
 export function AgentDiffSheet({
   runId,
@@ -46,16 +46,16 @@ export function AgentDiffSheet({
   runId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** L'agent travaille : le diff se re-poll (il avance pendant le tour). */
+  /** The agent works: the diff re-pollls (it advances during the turn). */
   working: boolean;
-  /** Branche d'origine → branche de session, affichées sous le titre. */
+  /** Original branch → session branch, displayed below the title. */
   baseBranch: string | null;
   branchName: string | null;
-  /** Fichier par lequel on est entré : la vue s'ouvre dessus. */
+  /** File through which we entered: the view opens on it. */
   focusPath?: string | null;
-  /** Le dépôt vit sur la machine : le serveur ne peut pas relire son patch. */
+  /** The repository lives on the machine: the server cannot reread its patch. */
   local?: boolean;
-  /** Patch remonté par le harness local (direct + events de fin de tour). */
+  /** Patch raised by the local harness (direct + end of turn events). */
   localFiles?: PullRequestFile[];
   localTruncated?: boolean;
 }) {
@@ -68,12 +68,12 @@ export function AgentDiffSheet({
   const loading = local ? false : remote.loading;
 
   /**
-   * On arrive SUR le fichier cliqué. L'ancre n'existe qu'une fois le diff peint,
-   * et le diff arrive après l'ouverture du Sheet : le saut attend donc les deux.
+   * We arrive ON the clicked file. The anchor only exists once the diff is painted,
+   * and the diff arrives after the opening of the Sheet: the jump therefore waits for both.
    *
-   * Une seule fois par ouverture (`jumped`), et c'est le point : le diff se
-   * re-poll toutes les 7 secondes pendant le tour, et re-sauter à chaque réponse
-   * arracherait la vue sous les yeux de qui est en train de lire ailleurs.
+   * Only once per opening (`jumped`), and that's the point: the difference
+   * re-poll every 7 seconds during the round, and re-jump with each response
+   * would take away the sight before the eyes of anyone who is reading elsewhere.
    */
   const jumped = useRef<string | null>(null);
   useEffect(() => {
@@ -83,8 +83,8 @@ export function AgentDiffSheet({
     }
     if (!focusPath || files.length === 0 || jumped.current === focusPath) return;
     const node = document.getElementById(fileAnchorId(focusPath));
-    // Pas dans ce diff (fichier tout juste touché, diff pas encore rafraîchi) :
-    // on ne marque rien et la prochaine réponse retentera le saut.
+    // Not in this diff (file just touched, diff not yet refreshed):
+    // we don't mark anything and the next answer will try the jump again.
     if (!node) return;
     jumped.current = focusPath;
     node.scrollIntoView({ block: "start" });
@@ -92,18 +92,18 @@ export function AgentDiffSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      {/* Largeur forcée en `!` : les classes par défaut du Sheet (`data-[side=right]:w-3/4`,
-          `…sm:max-w-sm`) portent une spécificité supérieure — sans important, la vue
-          diff retomberait sur max-w-sm, illisible pour un diff. */}
+      {/* Forced width in `!`: the default classes of the Sheet (`data-[side=right]:w-3/4`,
+          `…sm:max-w-sm`) carry a higher specificity - without important, the view
+          diff would fall back to max-w-sm, unreadable for a diff. */}
       <SheetContent
         side="right"
         className="flex !w-full flex-col gap-0 sm:!w-[92%] sm:!max-w-[880px]"
       >
         <SheetHeader className="shrink-0 border-b border-border pr-12">
           <SheetTitle>{t("diffTitle")}</SheetTitle>
-          {/* Ce que la ligne dit d'abord, c'est OÙ va ce diff (origine → session).
-              Quand il vient de la sandbox, elle dit aussi ce qu'il contient de
-              plus que la forge : le travail du tour, pas encore poussé. */}
+          {/* What the line first says is WHERE this diff is going (origin → session).
+              When it comes from the sandbox, it also says what it contains
+              more than the forge: the work of the lathe, not yet advanced. */}
           {local ? (
             <SheetDescription className="truncate text-xs">
               {branchName ? <span className="font-mono">{branchName}</span> : null}
@@ -123,10 +123,10 @@ export function AgentDiffSheet({
             <SheetDescription>{live ? t("diffLive") : t("diffDescription")}</SheetDescription>
           )}
         </SheetHeader>
-        {/* Pas de padding en HAUT du conteneur qui défile : `position: sticky` se
-            cale sur son contenu, pas sur son bord, et l'en-tête de fichier du
-            diff s'arrêterait 16 px trop bas (MIN-182). Il est rendu à chaque
-            branche, où il défile avec le contenu. */}
+        {/* No padding at the TOP of the scrolling container: `position: sticky` is
+            holds on its contents, not on its edge, and the file header of the
+            diff would stop 16 px too low (MIN-182). It is given to each
+            branch, where it scrolls with the content. */}
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
           {loading ? (
             <div className="flex h-full items-center justify-center">
@@ -137,13 +137,13 @@ export function AgentDiffSheet({
               {t(local ? "diffEmptyLocal" : "diffEmpty")}
             </p>
           ) : (
-            // Vue diff de la CONVERSATION : elle n'a qu'un run à donner — sa
-            // session n'a parfois aucune PR (compare base…branche). Elle passe
-            // donc par la façade indexée par le run (MIN-143).
-            // L'enveloppe sert ici les IMAGES : une capture collée dans une
-            // remarque de ligne n'est pas servable telle quelle (MIN-162), et
-            // elle passe par la façade indexée par le run. Le composer, lui, ne
-            // s'ouvre pas — cette vue est en lecture seule.
+            // Diff view of the CONVERSATION: she only has one run to give — her
+            // session sometimes has no PR (compare base…branch). She passes
+            // therefore by the facade indexed by the run (MIN-143).
+            // The envelope here serves the IMAGES: a capture pasted in a
+            // line remark is not serviceable as is (MIN-162), and
+            // it passes through the facade indexed by the run. Composing it does not
+            // does not open — this view is read-only.
             <>
               {local && localTruncated ? (
                 <p className="pt-4 text-xs text-muted-foreground">{t("diffLocalTruncated")}</p>

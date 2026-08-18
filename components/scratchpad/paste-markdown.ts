@@ -4,45 +4,45 @@ import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { containsMarkdownTaskLine } from "@/lib/scratchpad";
 
 /**
- * Coller une liste de tâches markdown dans le carnet donne des TÂCHES — même
- * quand le presse-papier porte aussi une version HTML.
+ * Pasting a markdown task list into the notebook gives TASKS — even
+ * when the clipboard also has an HTML version.
  *
- * tiptap-markdown ne relit le texte collé en markdown que par
- * `clipboardTextParser`, et ProseMirror ne consulte ce parseur QUE si le
- * presse-papier n'a rien d'autre que du texte :
+ * tiptap-markdown only rereads text pasted as markdown by
+ * `clipboardTextParser`, and ProseMirror ONLY consults this parser if the
+ * clipboard has nothing but text:
  *
- *     asText = !!text && (plainText || inCode || !html)   // parseFromClipboard
+ * asText = !!text && (plainText || inCode || !html) // parseFromClipboard
  *
- * Or presque toute source riche — un éditeur, une page web, un chat qui rend le
- * markdown — dépose aussi un `text/html`, et c'est lui qui gagne. Les `- [ ]` y
- * sont déjà rendus (en simples puces, quand la source ne connaît pas les listes
- * de tâches), et le carnet reprend ces puces telles quelles : les cases à cocher
- * se perdent en chemin, sans que rien ne le signale.
+ * But almost any rich source — an editor, a web page, a chat that renders the
+ * markdown — also drops a `text/html`, and it is he who wins. The `- [ ]` y
+ * are already rendered (in simple bullet points, when the source does not know the lists
+ * of tasks), and the notebook contains these bullet points as they are: the check boxes
+ * are lost along the way, without anything indicating this.
  *
- * On reprend donc la main quand le TEXTE BRUT porte des marqueurs de tâche : le
- * presse-papier est alors du markdown, quoi qu'en dise son HTML, et on le relit
- * par le même chemin que tiptap-markdown emploie pour un collage sans HTML
- * (même parseur, même `parseSlice`) — la note est un document markdown, et ses
- * tâches sont sa matière première.
+ * We therefore regain control when the RAW TEXT carries task markers: the
+ * clipboard is then markdown, whatever its HTML says, and we reread it
+ * by the same path that tiptap-markdown uses for a collage without HTML
+ * (same parser, same `parseSlice`) — the note is a markdown document, and its
+ * tasks are its raw material.
  *
- * Hors de ce cas, rien ne change : coller une page web reste un collage riche.
+ * Outside of this case, nothing changes: pasting a web page remains a rich collage.
  */
 
-/** Le `<body>` enveloppe est celui de tiptap-markdown : sans lui, le parseur du
- *  navigateur déplace les nœuds de tête et mange les blancs de bord. */
+/** The `<body>` envelope is that of tiptap-markdown: without it, the
+ * browser parser moves the head nodes and eats the edge blanks. */
 function elementFromString(value: string): HTMLElement {
   return new window.DOMParser().parseFromString(`<body>${value}</body>`, "text/html")
     .body;
 }
 
-/** tiptap-markdown ajoute son parseur au storage sans augmenter les types de TipTap. */
+/** tiptap-markdown adds its parser to storage without increasing TipTap types. */
 interface MarkdownStorage {
   markdown: {
     parser: { parse(content: string, options?: { inline?: boolean }): string };
   };
 }
 
-/** Le curseur est-il DANS un item de liste (tâche ou puce) ? */
+/** Is the cursor IN a list item (task or bullet)? */
 function inListItem(editor: Editor): boolean {
   const $from = editor.state.selection.$from;
   for (let depth = $from.depth; depth > 0; depth--) {
@@ -53,20 +53,20 @@ function inListItem(editor: Editor): boolean {
 }
 
 /**
- * Relit `text` en markdown et l'insère à la sélection. Rend `false` — sans rien
- * toucher — quand ce texte ne porte pas de tâche, ou quand il ne donne rien.
+ * Reads `text` in markdown and inserts it into the selection. Returns `false` — without anything
+ * touch — when this text does not carry a task, or when it gives nothing.
  *
- * **Ce qui décide de la forme du collage, c'est où est le curseur**, et c'est
- * toute la différence entre une sous-tâche importée et une sous-tâche perdue :
+ * **What decides the shape of the paste is where the cursor is**, and that is
+ * all the difference between an imported subtask and a lost subtask:
  *
- *  - DANS une liste, la tranche reste « ouverte » : sa première tâche se fond
- *    dans celle qu'on est en train d'écrire (ou remplace la tâche vide où l'on
- *    vient d'appuyer sur Entrée), et la suite s'accroche à la liste en place.
- *  - AILLEURS — dans un paragraphe de prose, sur une ligne vide, dans un titre —
- *    cette ouverture APLATISSAIT l'arbre : la première tâche fusionnait avec le
- *    paragraphe, et ses sous-tâches, ayant perdu le parent qui les portait,
- *    remontaient au premier niveau. La liste arrive donc en BLOC
- *    (`openStart`/`openEnd` à 0), entière, avec ses niveaux.
+ * - IN a list, the slice remains "open": its first task merges
+ * into the one we are currently writing (or replaces the empty task where we
+ * just pressed Enter), and the rest clings to the list in place.
+ * - ELSEWHERE — in a paragraph of prose, on an empty line, in a title —
+ * this opening FLATTENED the tree: the first task merged with the
+ * paragraph, and its subtasks, having lost the parent which carried them,
+ * went back to the first level. The list therefore arrives in BLOCK
+ * (`openStart`/`openEnd` to 0), entire, with its levels.
  */
 export function pasteScratchpadMarkdown(editor: Editor, text: string): boolean {
   if (!containsMarkdownTaskLine(text)) return false;
@@ -108,7 +108,7 @@ export const PasteMarkdownTasks = Extension.create({
             const data = event.clipboardData;
             if (!data) return false;
             const text = data.getData("text/plain");
-            // Sans HTML concurrent, tiptap-markdown a déjà fait le travail.
+            // Without concurrent HTML, tiptap-markdown has already done the job.
             if (!text || !data.getData("text/html")) return false;
             return pasteScratchpadMarkdown(editor, text);
           },

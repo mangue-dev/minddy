@@ -6,89 +6,89 @@ import { vmBundlePath, vmJobPath, type VmJob } from "./vm/protocol";
 import type { Sandbox } from "./sandbox";
 
 /**
- * LE DÉMARRAGE DE LA BOUCLE DANS LA MICROVM (MIN-224) — le dernier geste de la
- * fonction avant qu'elle ne rende la main.
+ * STARTING THE LOOP IN THE MICROVM (MIN-224) — the last gesture of the
+ * function before she gives up.
  *
- * Trois écritures et un lancement : le bundle du harness, le job du tour, puis
- * `node main.js` en `detached: true`. La fonction ne l'attend PAS ; elle persiste
- * l'identifiant de la commande et retourne. À partir de là, la conversation vit
- * dans la VM, et la fonction n'existe plus que comme plan de contrôle.
+ * Three writings and a launch: the harness bundle, the tour job, then
+ * `node main.js` to `detached: true`. The function does NOT expect it; she persists
+ * the order ID and returns. From there, the conversation lives
+ * in the VM, and the function only exists as a control plane.
  *
- * PAS DE `timeoutMs` SUR LA COMMANDE, et c'est délibéré. Le SDK le fait respecter
- * à l'exec, y compris sur une commande détachée : en poser un plafonnerait le
- * tour, ce que la migration existe précisément pour supprimer. Le plafond du tour
- * est celui que la boucle se donne (`VM_TURN_SOFT_DEADLINE_MS`), parce qu'une
- * boucle qui s'arrête écrit son checkpoint — là où une commande tuée par la
+ * NO `timeoutMs` ON THE ORDER, and this is deliberate. The SDK enforces it
+ * to the exec, including on a detached command: placing one would cap the
+ * turn, what migration exists precisely to remove. The tower ceiling
+ * is the one that the loop gives itself (`VM_TURN_SOFT_DEADLINE_MS`), because a
+ * loop that stops writes its checkpoint — where a command killed by the
  * plateforme ne laisse rien.
  *
- * TOUT VIT HORS DU DÉPÔT. Le harness et le modèle partagent désormais le
- * même disque : sans ça, le `git add -A` de fin de tour emporterait le bundle ET
- * le job — donc l'historique complet de la conversation — dans un commit du dépôt
- * de l'utilisateur, puis dans sa pull request.
+ * EVERYTHING LIVES OUTSIDE THE DEPOSIT. The harness and the model now share the
+ * same disc: without that, the `git add -A` at the end of the turn would take the bundle AND
+ * the job — therefore the complete history of the conversation — in a commit to the repository
+ * of the user, then in his pull request.
  */
 
 /**
- * OÙ LE BUNDLE SE LIT, ET POURQUOI PLUS ICI (MIN-293).
+ * WHERE THE BUNDLE READS, AND WHY MORE HERE (MIN-293).
  *
- * La lecture mémoïsée et son message d'erreur vivaient dans ce fichier, qui en
- * était le seul lecteur. Il y en a un second depuis que la machine de
- * l'utilisateur le télécharge, et il a besoin d'une chose de plus : l'EMPREINTE.
- * Les deux sont donc rassemblés dans [harness-bundle.ts](harness-bundle.ts) —
- * une seule lecture, un seul cache, un seul message quand `npm run build:agent-vm`
- * n'a pas tourné. Deux copies auraient fini par servir deux bundles différents à
- * la microVM et au Mac, ce qui est exactement le genre d'écart qui ne se voit
+ * The stored reading and its error message lived in this file, which
+ * was the only reader. There is a second one since the machine of
+ * the user downloads it, and he needs one more thing: THE FINGERPRINT.
+ * The two are therefore collected in [harness-bundle.ts](harness-bundle.ts) —
+ * a single read, a single cache, a single message when `npm run build:agent-vm`
+ * did not turn. Two copies would have ended up serving two different bundles to
+ * microVM and Mac, which is exactly the kind of gap you don't see
  * qu'en production.
  */
 
 /**
- * Écrit le harness dans la microVM et lance le tour. Rend l'identifiant de la
- * commande, à persister sur la ligne du run : c'est lui, et lui seul, qui
- * permettra au chien de garde de constater que le process est mort — un constat,
- * pas une présomption après vingt minutes de silence.
+ * Write the harness in the microVM and run the trick. Returns the identifier of the
+ * command, to persist on the line of the run: it is he, and he alone, who
+ * will allow the watchdog to see that the process is dead — an observation,
+ * not a presumption after twenty minutes of silence.
  *
- * LÈVE si l'un des trois gestes échoue. L'appelant traite ça comme une erreur
- * d'amorçage : la session reste reprennable, avec l'erreur visible. Un run qu'on
- * croirait lancé alors que rien ne tourne serait bien pire — il resterait
- * `running` jusqu'à ce que quelqu'un s'en aperçoive.
+ * RISE if any of the three actions fail. The caller treats this as an error
+ * boot: the session remains resumeable, with the error visible. A run that we
+ * would think it was launched when nothing is working would be much worse — it would remain
+ * `running` until someone notices.
  */
 export async function startVmLoop(
   sandbox: Sandbox,
   /**
-   * Le job SANS `bootstrapMs` : ce champ appartient à cette fonction, et à elle
-   * seule. L'appelant ne peut donc ni l'oublier ni en inventer un — c'est ici
-   * qu'on sait ce que l'amorçage a duré, parce que c'est ici qu'il se termine.
+   * The job WITHOUT `bootstrapMs`: this field belongs to this function, and to it
+   * alone. The caller can therefore neither forget it nor invent one - it's here
+   * that we know how long the initiation lasted, because this is where it ends.
    */
   job: Omit<VmJob, "bootstrapMs">,
   /**
-   * Quand la fonction a commencé à travailler sur ce tour (`callStart`). Sert à
-   * mesurer l'amorçage, que la boucle ajoutera à son propre wall-clock : la
-   * microVM tournait déjà pendant qu'on la réveillait (cf. `VmJob.bootstrapMs`).
+   * When the function started working on this round (`callStart`). Used to
+   * measure the boot, which the loop will add to its own wall-clock: the
+   * microVM was already running when we woke it up (see `VmJob.bootstrapMs`).
    */
   callStartMs: number,
 ): Promise<string> {
   /**
-   * LE LAYOUT EST CONTRÔLÉ D'ABORD, avant même de lire le bundle (MIN-354). Le
-   * harness le refuse aussi (`parseVmJob`), mais seulement une fois la microVM
-   * réveillée et le dépôt cloné : le dire ici fait échouer l'amorçage — quelque
-   * chose que la fonction journalise et dont la session se reprend — plutôt
-   * qu'un tour lancé pour rien. Et `repoDir` est la racine de sécurité des
-   * garde-fous d'écriture : elle se contrôle là où on l'écrit.
+   * THE LAYOUT IS CHECKED FIRST, even before reading the bundle (MIN-354). THE
+   * harness also refuses it (`parseVmJob`), but only once the microVM
+   * woken up and the repository cloned: saying it here causes the boot to fail — somehow
+   * something that the function logs and from which the session resumes — rather
+   * just a trick thrown for nothing. And `repoDir` is the security root of
+   * writing safeguards: it is controlled where it is written.
    */
   assertUsableLayout(job.layout);
 
   /**
-   * LES CHEMINS VIENNENT DU JOB, et c'est lui qui les porte parce que c'est lui
-   * que le harness lira. Trois écritures et un lancement au même endroit : si le
-   * layout change, rien ici ne peut se désynchroniser de ce que le harness croit.
+   * THE PATHS COME FROM THE JOB, and it is he who carries them because it is he
+   * that the harness will read. Three writes and one launch in the same place: if the
+   * layout changes, nothing here can get out of sync with what the harness believes.
    */
   const { harnessDir } = job.layout;
   const bundlePath = vmBundlePath(job.layout);
   const jobPath = vmJobPath(job.layout);
 
-  // La lecture/mémoïsation du bundle vit dans la fonction, l'ouverture du
-  // répertoire vit dans la microVM : ces deux travaux sont indépendants. Les
-  // sérialiser ajoutait un aller-retour sandbox entier avant la première ligne
-  // du harness, surtout visible sur le démarrage cloud.
+  // The reading/memorization of the bundle lives in the function, the opening of the
+  // directory lives in the microVM: these two jobs are independent. THE
+  // serialize added an entire sandbox round trip before the first line
+  // of the harness, especially visible on the cloud startup.
   const [bundle] = await Promise.all([
     harnessBundleSource(),
     sandbox.mkDir(harnessDir).catch(() => {}),
@@ -96,26 +96,26 @@ export async function startVmLoop(
   await sandbox.writeFiles([{ path: bundlePath, content: bundle }]);
 
   /**
-   * DEUX ÉCRITURES ET PAS UNE, et c'est le prix de la mesure. Le job doit porter
-   * la durée de l'amorçage, donc il ne peut être sérialisé qu'APRÈS ce qui la
-   * compose — le réveil de la microVM, le clone, et les 280 Ko de bundle
-   * ci-dessus. Un seul `writeFiles` obligerait à figer le chiffre avant sa plus
+   * TWO SCRIPTURES AND NOT ONE, and that is the price of measure. The job must cover
+   * the duration of the boot, so it can only be serialized AFTER what the
+   * compose — waking up the microVM, the clone, and the 280 KB bundle
+   * above. A single `writeFiles` would require freezing the number before its most
    * grosse part.
    *
-   * L'aller-retour de plus coûte ~200 ms sur un amorçage qui se compte en
-   * secondes (~22 s à froid). Ce qui reste hors de la mesure — cette écriture-ci
-   * et le lancement — se compte en centaines de millisecondes, et on le
-   * SOUS-facture : c'est le bon sens de l'erreur.
+   * The additional round trip costs ~200 ms on a boot which is counted in
+   * seconds (~22 s cold). What remains beyond measure — this writing
+   * and the launch — is counted in hundreds of milliseconds, and we
+   * UNDER-billing: this is the common sense of error.
    */
   const withBootstrap: VmJob = { ...job, bootstrapMs: Date.now() - callStartMs };
-  // Le job porte l'historique de la conversation : c'est le plus gros des deux,
-  // et c'est pour lui que `harnessDir` est hors du dépôt.
+  // The job carries the history of the conversation: it is the larger of the two,
+  // and it is for him that `harnessDir` is out of the repository.
   await sandbox.writeFiles([{ path: jobPath, content: JSON.stringify(withBootstrap) }]);
 
   const command = await sandbox.runCommand({
     cmd: "node",
-    // Le chemin du job en ARGUMENT : c'est la seule chose que le harness ne peut
-    // pas apprendre du job lui-même (cf. `vmJobPath`).
+    // The path to the job in ARGUMENT: it's the only thing that the harness cannot
+    // not learn from the job itself (see `vmJobPath`).
     args: [bundlePath, jobPath],
     cwd: harnessDir,
     detached: true,

@@ -33,40 +33,38 @@ import { SITE_NAME } from "@/lib/site";
 import type { Page, PageWriteKind } from "@/lib/pages";
 
 /**
- * LES GESTES d'un agent sur les pages (MIN-273), une seule fois.
+ * THE GESTURES of an agent on the pages (MIN-273), only once.
  *
- * Six à l'origine, sept depuis MIN-276 : chercher. C'est celui qui manquait le
- * plus — l'arbre dit ce qui existe, pas ce qui parle de quoi.
+ * Six originally, seven since MIN-276: search. This is the one that was missing the
+ * more — the tree says what exists, not what speaks of what.
  *
- * Trois surfaces les servent — le serveur MCP (`minddy_*_page`), le chat Numo
- * (`*_page`) et l'agent de code —, et c'est justement pourquoi la logique ne vit
- * dans aucune des trois : un agent qui lit une page dans le chat et la corrige
- * depuis le MCP doit voir le MÊME document, refusé de la même façon. Les
- * adaptateurs ne font donc que traduire les arguments et les codes d'erreur.
+ * Three surfaces serve them — the MCP server (`minddy_*_page`), the Numo
+ * chat (`*_page`) and the code agent —, and it is precisely why the logic does not live
+ * in any of the three: an agent who reads a page in the chat and corrects it
+ * from the MCP must see the SAME document, refused in the same way. The
+ * adapters therefore only translate the arguments and error codes.
  *
- * Deux règles tiennent tout le module :
+ * Two rules hold the entire module:
  *
- * 1. **l'agent ne voit que du markdown.** Le JSON ProseMirror ne sort jamais
- *    d'ici : la projection (`lib/server/pages-projection.ts`) le traduit dans les
- *    deux sens, et c'est ce qui fait que MIN-269 est une dépendance stricte et
- *    pas une commodité.
- * 2. **l'écriture passe par le même noyau que l'UI** (`lib/server/pages.ts`) :
- *    même garde d'accès, même garde de cycle, même compteur de `version`. Un
- *    chemin parallèle aurait ses propres trous.
- * 3. **toute écriture d'ici est signée `kind: "agent"`** (MIN-277). C'est le
- *    seul endroit du dépôt qui le sait : l'`actorId` qui arrive est celui d'un
- *    compte humain — le porteur de la clé MCP, l'utilisateur de Numo, le
- *    propriétaire du projet —, et le laisser signer seul afficherait « modifiée
- *    par Clément » sur une page que Clément n'a pas écrite. Le geste est
- *    automatisé, il porte donc le nom de minddy, dans l'en-tête comme dans
- *    l'historique.
+ * 1. **the agent only sees markdown.** The JSON ProseMirror does not output never
+ * from here: the projection (`lib/server/pages-projection.ts`) translates it in both ways, and that's what makes MIN-269 a strict dependency and
+ * not a convenience.
+ * 2. **writing goes through the same core as the UI** (`lib/server/pages.ts`):
+ * same access guard, same cycle guard, same `version` counter. A
+ * parallel path would have its own holes.
+ * 3. **all writing here is signed `kind: "agent"`** (MIN-277). It's the
+ * only place in the repository that knows: the `actorId` that arrives is that of a
+ * human account — the bearer of the MCP key, the Numo user, the
+ * owner of the project —, and letting him sign alone would display "modified
+ * by Clément" on a page that Clément did not write. The gesture is
+ * automated, so it has the name minddy, in the header as in
+ * the history.
  *
- * Ce qui n'est PAS exposé, et c'est une décision : la corbeille. Un agent qui
- * efface des pages est un risque sans contrepartie, et supprimer reste un geste
- * humain — l'UI le fait très bien.
+ * Which is NOT exposed, and it is a decision: the trash. An agent who
+ * deletes pages is an unrequited risk, and deleting remains a human gesture — the UI does it very well.
  */
 
-/* ─── Résultats ────────────────────────────────────────────────────────────── */
+/* ─── Results ─────────────────────────────── ─────────────────────────────── */
 
 export type PageToolCode =
   | "invalid_params"
@@ -100,8 +98,8 @@ const CODES: Record<PageErrorKey, PageToolCode> = {
   databaseError: "database_error",
 };
 
-/** Les refus du noyau, dits en anglais et en codes stables — comme le reste de
-    la surface agent (cf. lib/server/mcp/tool-helpers.ts). */
+/** Kernel refusals, said in English and in stable codes — like the rest of
+ the agent surface (see lib/server/mcp/tool-helpers.ts). */
 const MESSAGES: Record<PageErrorKey, string> = {
   projectNotFound: "Project not found or not accessible.",
   pageNotFound: "Page not found in this project.",
@@ -130,16 +128,16 @@ function refuse<T>(errorKey: PageErrorKey): PageToolResult<T> {
 }
 
 /**
- * Le plafond du markdown accepté en ENTRÉE. Le noyau borne déjà le JSON stocké
- * (1 Mo), mais il le fait APRÈS la projection : refuser tôt évite de monter un
- * éditeur sur un document qu'on n'écrira pas, et rend un message qui parle de ce
- * que l'agent a envoyé plutôt que de sa traduction.
+ * The markdown limit accepted in INPUT. The kernel already bounds the stored JSON
+ * (1 MB), but it does it AFTER projection: refusing early avoids mounting a
+ * editor on a document that will not be written, and returns a message that talks about this
+ * that the agent sent rather than its translation.
  */
 export const MAX_PAGE_MARKDOWN = 400_000;
 
 /* ─── Ce que l'agent lit ───────────────────────────────────────────────────── */
 
-/** Une page dans l'arbre, sans son corps. */
+/** A page in the tree, without its body. */
 export interface PageTreeEntry {
   page_id: string;
   title: string;
@@ -149,62 +147,61 @@ export interface PageTreeEntry {
   updated_at: string;
 }
 
-/** Une page lue en entier : son en-tête, son corps en markdown, ses enfants. */
+/** A page read in its entirety: its header, its body in markdown, its children. */
 export interface PageRead extends PageTreeEntry {
   /**
-   * QUI a écrit en dernier (MIN-277), et de quelle nature était le geste.
-   *
-   * Un agent qui relit une page doit savoir si un humain y est passé depuis son
-   * dernier tour : c'est la différence entre « je reprends mon texte » et « je
-   * m'apprête à écraser celui de quelqu'un ». Le nom suit la règle d'identité —
-   * « minddy » quand la dernière écriture vient d'un agent, quel que soit le
-   * compte qui l'a permise.
-   */
+ * WHO wrote last (MIN-277), and what nature was the gesture.
+ *
+ * An agent who rereads a page must know if a human has passed through it since his
+ * last turn: it's the difference between "I'm resuming my text" and "I
+ * I'm about to crush someone's." The name follows the identity rule —
+ * “minddy” when the last write came from an agent, regardless of the
+ * account that allowed it.
+ */
   last_edited_by: string;
   last_edited_kind: PageWriteKind;
-  /** Le corps SEUL, en markdown (le titre et l'icône sont au-dessus). */
+  /** The body ALONE, in markdown (the title and icon are above). */
   markdown: string;
-  /** Le compteur d'écritures du corps — à repasser pour écrire sans écraser. */
+  /** The body writing counter — to be ironed to write without overwriting. */
   version: number;
-  /** Les sous-pages DIRECTES, pour descendre l'arbre sans un second appel. */
+  /** DIRECT subpages, to go down the tree without a second call. */
   subpages: Array<{ page_id: string; title: string; icon: string | null }>;
   /**
-   * QUI s'appuie sur cette page (MIN-279) — tickets, objectifs et autres pages,
-   * par la ressource comme par la mention.
-   *
-   * C'est ce qui manque le plus à un agent qui ouvre une spec : sans ça, « que
-   * casse-t-on en changeant cette décision ? » se répond en fouillant tout le
-   * projet, ou ne se répond pas. Le lien allait dans un seul sens.
-   */
+ * WHICH relies on this page (MIN-279) — tickets, objectives and other pages,
+ * by the resource as well as by the mention.
+ *
+ * This is what an agent who opens a spec misses the most: without that, "what
+ * does we break by changing this decision? » is answered by searching the entire
+ * project, or is not answered. The link went one way.
+ */
   backlinks: PageBacklink[];
   /**
-   * Les fils de discussion de la page (MIN-282).
-   *
-   * C'est souvent là qu'est la vraie contrainte : une spec dit ce qui a été
-   * décidé, ses commentaires disent ce qui est contesté et n'a pas encore été
-   * réécrit. Un agent qui réécrit une page sans les avoir lus tranche sans le
-   * savoir un débat en cours.
-   */
+ * The threads of the page (MIN-282).
+ *
+ * This is often where the real constraint is: a spec says what has been
+ * decided, its comments say what is contested and has not yet been
+ * rewritten. An agent who rewrites a page without having read them decides without knowing a debate in progress.
+ */
   threads: PageThreadForAgent[];
 }
 
-/** Un fil, tel qu'un agent le lit : ce dont il parle, et ce qui s'y est dit. */
+/** A thread, as an agent reads it: what he is talking about, and what was said there. */
 export interface PageThreadForAgent {
-  /** L'adresse du fil, à repasser en `parent_comment_id` pour répondre DEDANS
-      plutôt que d'en ouvrir un second à côté. */
+  /** The address of the thread, to return to `parent_comment_id` to respond DEDANS
+ rather than opening a second one next to it. */
   thread_id: string;
-  /** L'extrait commenté, figé au moment du commentaire. Null = sur la page. */
+  /** The commented extract, frozen at the time of the comment. Null = on the page. */
   quote: string | null;
-  /** L'ancre, à repasser à `minddy_add_page_comment` pour répondre au même
-      endroit. Null = un commentaire sur la page entière. */
+  /** The anchor, to return to `minddy_add_page_comment` to respond to the same
+ location. Null = a comment on the entire page. */
   block_id: string | null;
   messages: { author: string; body: string; at: string }[];
 }
 
-/** L'écriture, telle qu'un agent la relit : de quoi confirmer, pas le document. */
+/** The writing, as an agent rereads it: enough to confirm, not the document. */
 export interface PageWritten extends PageTreeEntry {
   version: number;
-  /** Longueur du corps en markdown, après écriture. */
+  /** Body length in markdown, after writing. */
   markdown_length: number;
 }
 
@@ -226,7 +223,7 @@ function entry(page: {
 
 /* ─── Lecture ──────────────────────────────────────────────────────────────── */
 
-/** L'arbre des pages du projet, à plat, sans les corps. */
+/** The project's page tree, flat, without bodies. */
 export async function listPagesForAgent({
   projectId,
   actorId,
@@ -239,7 +236,7 @@ export async function listPagesForAgent({
   return { ok: true, data: { pages: result.pages.map(entry) } };
 }
 
-/** Une page en markdown, en-tête et sous-pages directes comprises. */
+/** A markdown page, header and direct subpages included. */
 export async function readPageForAgent({
   pageId,
   projectId,
@@ -247,13 +244,10 @@ export async function readPageForAgent({
   withBacklinks = true,
 }: {
   pageId: string;
-  /** Le projet attendu : une page d'un AUTRE projet accessible ne répond pas ici. */
+  /** The expected project: a page from ANOTHER accessible project does not respond here. */
   projectId?: string;
   actorId: string;
-  /** Coupé par les LECTURES INTERNES (l'ajout d'un bloc, la réécriture d'un
-      passage) : elles ne veulent que le markdown et la version, et payer les
-      requêtes de rétroliens à chaque édition serait payer pour une liste que
-      personne ne lit. */
+  /** Cut off by INTERNAL READS (adding a block, rewriting a passage): they only want the markdown and the version, and paying for trackback requests on each edit would be paying for a list that no one reads. */
   withBacklinks?: boolean;
 }): Promise<PageToolResult<PageRead>> {
   const result = await getPage(pageId, actorId);
@@ -265,9 +259,9 @@ export async function readPageForAgent({
     (page.content as JSONContent | null) ?? null
   );
 
-  // Les enfants viennent de la LISTE du projet : une requête de plus, mais elle
-  // est déjà indexée et sans corps, et elle évite à l'agent un second appel
-  // rien que pour savoir si la page a une descendance.
+  // The children come from the project LIST: one more request, but it
+  // is already indexed and without a body, and it saves the agent from a second call
+  // just to know if the page has descendants.
   const siblings = await listPages(page.project_id, actorId);
   const subpages = siblings.ok
     ? siblings.pages
@@ -275,10 +269,10 @@ export async function readPageForAgent({
         .map((p) => ({ page_id: p.id, title: p.title, icon: p.icon }))
     : [];
 
-  // La CLÉ du projet, pour que les rétroliens de tickets se lisent « MIN-42 »
-  // et pas en UUID — c'est sous cette forme que l'agent les repassera aux autres
-  // outils. Client SERVICE pour la lecture elle-même : la garde d'accès vient
-  // d'être faite par `getPage`, et la RLS ne s'applique pas ici.
+  // The KEY to the project, so ticket trackbacks read “MIN-42”
+  // and not in UUID — it is in this form that the agent will pass them on to others
+  // tools. SERVICE client for the reading itself: the access guard comes
+  // to be made by `getPage`, and RLS does not apply here.
   let backlinks: PageBacklink[] = [];
   let threads: PageThreadForAgent[] = [];
   if (withBacklinks) {
@@ -290,9 +284,9 @@ export async function readPageForAgent({
         projectKey: (projectAccess?.project.key as string | undefined) ?? "",
       }
     );
-    // Les FILS (MIN-282), sous la même garde que les rétroliens : les deux
-    // répondent à « sur quoi ce texte engage-t-il ? », et les lectures internes
-    // (ajouter un bloc, corriger un passage) n'en veulent aucun.
+    // The WIRES (MIN-282), under the same care as the trackbacks: both
+    // answer “what does this text commit to?” ”, and internal readings
+    // (add a block, correct a passage) don't want any.
     threads = await readThreads(page.id);
   }
 
@@ -312,11 +306,11 @@ export async function readPageForAgent({
 }
 
 /**
- * Les fils d'une page, auteurs NOMMÉS.
+ * The threads of a page, authors NAMED.
  *
- * Les noms sortent des comptes, comme partout ailleurs — jamais l'email brut
- * (lib/display-name.ts) —, et une écriture d'agent se dit « minddy » : la règle
- * d'identité vaut pour ce que lit un agent comme pour ce que lit un humain.
+ * The names come out of the accounts, like everywhere else — never the raw email
+ * (lib/display-name.ts) —, and an agent's writing is called "minddy": the rule
+ * of identity is valid for what an agent reads as well as for what a human reads.
  */
 async function readThreads(pageId: string): Promise<PageThreadForAgent[]> {
   const service = getServiceClient();
@@ -337,8 +331,8 @@ async function readThreads(pageId: string): Promise<PageThreadForAgent[]> {
   }));
 }
 
-/** Les refus du noyau des commentaires, traduits dans le vocabulaire des outils
-    de page (codes stables, messages en anglais). */
+/** Refusals from the comments core, translated into the vocabulary of page tools
+ (stable codes, messages in English). */
 const COMMENT_REFUSALS: Record<
   "commentEmpty" | "pageNotFound" | "commentNotFound" | "databaseError",
   { ok: false; code: PageToolCode; message: string }
@@ -368,16 +362,16 @@ const COMMENT_REFUSALS: Record<
 };
 
 /**
- * COMMENTER une page, ou l'un de ses blocs, en tant qu'agent (MIN-282).
+ * COMMENT on a page, or one of its blocks, as an agent (MIN-282).
  *
- * Le seul geste d'écriture des pages qui ne touche pas au document : répondre à
- * une objection, en poser une, dire pourquoi on n'a pas fait ce qui était
- * demandé. Sans lui, un agent lisait des questions sans pouvoir y répondre.
+ * The only gesture of writing pages which does not touch the document: respond to
+ * an objection, raise one, say why we did not do what was done
+ *asked. Without it, an agent read questions without being able to answer them.
  *
- * L'ancre est le `block_id` d'un fil déjà lu (`threads`) : un agent ne
- * fabrique pas d'ancre, il en reprend une — les ids de blocs ne sont pas dans le
- * markdown qu'il lit, et une ancre inventée ferait un fil détaché à la seconde
- * où il est écrit.
+ * The anchor is the `block_id` of a thread already read (`threads`): an agent does not
+ * create an anchor, it takes one — the block ids are not in the
+ * markdown it reads, and an invented anchor would make a detached thread at the second
+ * where it is written.
  */
 export async function addPageCommentForAgent({
   pageId,
@@ -398,16 +392,16 @@ export async function addPageCommentForAgent({
   viaAssistant?: boolean;
   mcpKeyId?: string | null;
 }): Promise<PageToolResult<{ page_id: string; comment_id: string }>> {
-  // La page d'abord : le contrôle d'accès et la garde « ce projet-ci » sont les
-  // mêmes que pour une lecture, et ils doivent l'être — un commentaire sur une
+  // The page first: access control and custody of “this project” are the
+  // same as for a reading, and they must be — a comment on a
   // page invisible en apprendrait l'existence.
   const found = await getPage(pageId, actorId);
   if (!found.ok) return refuse(found.errorKey);
   if (projectId && found.page.project_id !== projectId) return refuse("pageNotFound");
 
-  // L'extrait : on le RELIT dans le document plutôt que de le demander à
-  // l'agent. Un extrait dicté serait une citation qu'il aurait pu reformuler,
-  // affichée à l'humain comme le texte de sa page.
+  // The extract: we RE-READ it in the document rather than asking it to
+  // the agent. A dictated extract would be a quote that he could have reformulated,
+  // displayed to the human as the text of its page.
   const quote = blockId
     ? (pageBlockTexts((found.page.content as JSONContent | null) ?? null).find(
         (block) => block.blockId === blockId
@@ -432,11 +426,11 @@ export async function addPageCommentForAgent({
 }
 
 /**
- * Le nom du dernier auteur, tel que la règle d'identité de minddy l'impose.
+ * The name of the last author, as required by minddy's identity rule.
  *
- * Une écriture d'agent porte l'id du compte qui l'a permise ; on ne le lit
- * pas — le rendre ferait passer pour sien, aux yeux de l'agent suivant, un
- * texte que personne n'a écrit.
+ * An agent write carries the id of the account that authorized it; we don't read it
+ * — returning it would make it appear as his, in the eyes of the next agent, a
+ * text that no one wrote.
  */
 async function lastWriterName(page: Page): Promise<string> {
   if (page.updated_kind === "agent") return SITE_NAME;
@@ -447,29 +441,29 @@ async function lastWriterName(page: Page): Promise<string> {
   return user ? displayName(toNamed(user), "") : "";
 }
 
-/** Une page trouvée : de quoi décider laquelle ouvrir, sans l'ouvrir. */
+/** A page found: enough to decide which one to open, without opening it. */
 export interface PageSearchResult {
   page_id: string;
   title: string;
   icon: string | null;
-  /** Le chemin des ancêtres, du plus haut au parent direct — « Specs › API ».
-      Deux pages « Notes » dans un wiki, c'est le chemin qui les distingue. */
+  /** The path of ancestors, from the highest to the direct parent — “Specs › API”.
+ Two “Notes” pages in a wiki, it is the path that distinguishes them. */
   path: string[];
-  /** Le passage du corps qui a répondu. Vide quand seul le titre a répondu. */
+  /** The passage of the body that responded. Empty when only the title responded. */
   excerpt: string;
   updated_at: string;
 }
 
 /**
- * Chercher dans le wiki, titre ET contenu (MIN-276).
+ * Search the wiki, title AND content (MIN-276).
  *
- * C'est l'outil qui manquait le plus à un agent : sans lui, « où a-t-on écrit
- * la décision sur X » se répond en lisant le wiki entier, ou ne se répond pas.
- * L'arbre (`list_pages`) dit ce qui existe, pas ce qui parle de quoi.
+ * This is the tool that an agent lacked the most: without it, "where was it written
+ * the decision on X" can be answered by reading the entire wiki, or not answered not.
+ * The tree (`list_pages`) says what exists, not what speaks of what.
  *
- * Le chemin d'ancêtres est reconstruit ici, à partir de la liste à plat que le
- * noyau rend déjà — une requête de plus, sans corps, contre un aller-retour par
- * page côté agent.
+ * The ancestor path is reconstructed here, from the flat list that the
+ * kernel already renders — one more request, without a body, versus a round trip by
+ * agent side page.
  */
 export async function searchPagesForAgent({
   projectId,
@@ -503,8 +497,8 @@ export async function searchPagesForAgent({
   const pathOf = (parentId: string | null): string[] => {
     const path: string[] = [];
     let cursor = parentId;
-    // Le garde-fou vaut mieux qu'une confiance : la profondeur est illimitée,
-    // et une boucle dans les données ferait tourner cette remontée sans fin.
+    // A safeguard is better than trust: the depth is unlimited,
+    // and a loop in the data would run this loop endlessly.
     while (cursor && path.length < 20) {
       const parent = byId.get(cursor);
       if (!parent) break;
@@ -530,27 +524,27 @@ export async function searchPagesForAgent({
   };
 }
 
-/* ─── Écriture ─────────────────────────────────────────────────────────────── */
+/* ─── Writing ─────────────────────────────── ──────────────────────────────── */
 
 /**
- * Le corps, lu depuis le markdown de l'agent.
+ * The body, read from the agent's markdown.
  *
- * `consumeHead` décide du sort d'un `# ` en tête : CONSOMMÉ comme titre (et son
- * émoji comme icône), ou gardé comme du contenu. C'est le point délicat de tout
- * ce module, et il ne se voit qu'au deuxième aller-retour.
+ * `consumeHead` decides the fate of a `# ` at the head: CONSUMED as title (and its
+ * emoji as icon), or kept as content. This is the delicate point of all
+ * this module, and it is only seen on the second round trip.
  *
- * À la CRÉATION sans titre, consommer est le service rendu : Numo écrit une page
- * entière d'un seul jet, en-tête compris, comme le fait `markdownToPage`
- * (MIN-269). Le champ `title` est requis côté outil (un petit modèle ne remplit
- * pas un champ optionnel), donc « je n'ai pas de titre à part » s'écrit
- * forcément `""` — d'où le titre vide traité comme absent.
+ * At CREATION without title, consuming is the service provided: Numo writes an entire page
+ * in one go, header included, as does `markdownToPage`
+ * (MIN-269). The `title` field is required on the tool side (a small model does not fill in
+ * an optional field), so "I don't have a separate title" is written as
+ * necessarily `""` — hence the empty title being treated as absent.
  *
- * À la MISE À JOUR, jamais. Un bloc titre de niveau 1 est un bloc de page
- * parfaitement légitime : `minddy_get_page` rend donc des corps qui COMMENCENT
- * par `# `, et les renvoyer tels quels à `minddy_update_page` ferait remonter
- * cette première ligne dans le titre de la page — un document qui perd son
- * premier titre à chaque écriture, sans que rien ne le dise. Sur une page qui
- * existe, un corps est un corps.
+ * UPDATE, never. A level 1 title block is a perfectly legitimate
+ * page block: `minddy_get_page` therefore renders bodies that BEGIN
+ * with `# `, and returning them as is to `minddy_update_page` would bring up
+ * this first line in the page title — a document which loses its
+ * first title each time it is written, without anything saying so. On a page that
+ * exists, a body is a body.
  */
 async function readBody(
   markdown: string,
@@ -598,9 +592,9 @@ export async function createPageForAgent({
   icon?: string | null;
   markdown?: string;
   parentPageId?: string | null;
-  /** La clé MCP derrière l'appel, quand la surface en a une (MIN-278) : c'est
-      elle qui NOMME l'agent dans l'activité de la page et dans les citations
-      qu'il y pose. Absente sur le chat et sur l'agent de code, qui sont Numo. */
+  /** The MCP key behind the call, when the surface has one (MIN-278): it is
+ which NAMES the agent in the activity of the page and in the quotes
+ that he places there. Absent on chat and code agent, which are Numo. */
   mcpKeyId?: string | null;
 }): Promise<PageToolResult<PageWritten>> {
   const input: Record<string, unknown> = {
@@ -639,13 +633,12 @@ export async function createPageForAgent({
 }
 
 /**
- * Remplacer le corps, le titre, l'icône. Les champs absents ne bougent pas.
+ * Replace body, title, icon. Absent fields don't move.
  *
- * `version` est le garde-fou de l'écriture concurrente (MIN-271) : passée, elle
- * fait échouer l'écriture si quelqu'un — un humain dans l'éditeur, un autre
- * agent — a écrit le corps entre-temps. C'est le même verrou que celui de
- * l'éditeur, et c'est pour ça qu'un agent qui remplace un corps devrait toujours
- * la passer.
+ * `version` is the concurrent write guardrail (MIN-271): passed, it
+ * causes the write to fail if someone — a human in the editor, another
+ * agent — has written the body in the meantime. This is the same lock as that of
+ * the editor, and that's why an agent replacing a body should always pass it.
  */
 export async function updatePageForAgent({
   pageId,
@@ -678,9 +671,9 @@ export async function updatePageForAgent({
     return refuse("noFieldsToUpdate");
   }
 
-  // La garde de projet ne peut pas vivre dans le noyau (il travaille par id de
-  // page) : on relit la page pour la poser, et cette lecture sert aussi de 404
-  // franc avant d'écrire.
+  // Project guard cannot live in core (it works by id of
+  // page): we reread the page to place it, and this reading also serves as a 404
+  // frank before writing.
   if (projectId) {
     const current = await getPage(pageId, actorId);
     if (!current.ok) return refuse(current.errorKey);
@@ -690,7 +683,7 @@ export async function updatePageForAgent({
   const input: Record<string, unknown> = {};
   let body = "";
   if (markdown !== undefined) {
-    // Pas de consommation d'en-tête sur une page qui existe : cf. `readBody`.
+    // No header consumption on a page that exists: cf. `readBody`.
     const read = await readBody(markdown, { consumeHead: false });
     if (!read.ok) return read;
     input.content = read.content ?? { type: "doc", content: [] };
@@ -720,13 +713,13 @@ export async function updatePageForAgent({
 }
 
 /**
- * Ajouter un bloc EN FIN de page, sans renvoyer le document.
+ * Add a block AT THE END of the page, without returning the document.
  *
- * La page est relue, le bloc collé au bout du markdown, et l'écriture repart
- * avec la `version` qui vient d'être lue : si quelqu'un a écrit dans
- * l'intervalle, l'ajout est refusé plutôt que d'écraser. C'est le même patron
- * que `minddy_append_to_plan`, à la fusion près — un plan est un champ texte,
- * une page un document versionné.
+ * The page is reread, the block pasted at the end of the markdown, and the writing starts again
+ * with the `version` which has just been read: if someone has written in
+ * interval, addition is disallowed rather than overwriting. It's the same pattern
+ * as `minddy_append_to_plan`, except for the merge — a plan is a text field,
+ * a page is a versioned document.
  */
 export async function appendToPageForAgent({
   pageId,
@@ -770,7 +763,7 @@ export async function appendToPageForAgent({
   });
 }
 
-/** Réécrire UN passage du corps : `old_string` → `new_string`. */
+/** Rewrite ONE passage of the body: `old_string` → `new_string`. */
 export async function editPageTextForAgent({
   pageId,
   projectId,
@@ -787,8 +780,8 @@ export async function editPageTextForAgent({
   oldString: string;
   newString: string;
   replaceAll?: boolean;
-  /** Les noms que porte la surface appelante, pour que les refus renvoient vers
-      des tools qui existent chez elle (cf. IssueTextTools). */
+  /** The names that the calling surface bears, so that refusals refer to
+ tools that exist on it (see IssueTextTools). */
   tools: { read: string; replaceWhole: string };
   /** Cf. `createPageForAgent`. */
   mcpKeyId?: string | null;
@@ -834,8 +827,8 @@ export async function editPageTextForAgent({
   };
 }
 
-/** Le corps seul, écrit sur une version lue. Le titre et l'icône ne bougent
-    pas : un `# ` en tête d'un ajout est du CONTENU, pas un renommage. */
+/** The body alone, written on a read version. The title and the icon do not move
+: a `# ` at the top of an addition is CONTENT, not a renaming. */
 async function writeBody({
   pageId,
   actorId,

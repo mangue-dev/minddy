@@ -8,27 +8,26 @@ import { forgeFor } from "@/lib/server/agent/forge";
 import { selectAgentBranches, type AgentBranch } from "./branch-cleanup-core";
 
 /**
- * Gestion des branches d'agent (MIN-102) : lister TOUTES les branches que les
- * runs du projet ont poussées et qui vivent encore sur le dépôt — PR fusionnée,
- * refusée, ouverte, ou aucune PR — puis supprimer celles qu'on désigne.
+ * Agent branch management (MIN-102): list ALL branches that the project runs have pushed and which still live on the repository — merged PR,
+ * refused, open, or no PR — then delete the ones designated.
  *
- * Le client n'est JAMAIS cru : `deleteAgentBranches` recalcule l'aperçu et
- * n'accepte que son intersection. Envoyer `main` dans le POST ne supprime donc
- * rien, même avec les droits owner — la liste servie est la seule autorité.
+ * The client is NEVER believed: `deleteAgentBranches` recalculates the preview and
+ * only accepts its intersection. Sending `main` in the POST therefore deletes
+ * nothing, even with owner rights — the list served is the only authority.
  *
- * Client service : on lit `agent_runs` de tous les runs du projet (y compris
- * ceux d'autres membres) et on mint un token de forge ; le contrôle d'accès est
- * fait par la route appelante (owner du projet uniquement).
+ * Client service: we read `agent_runs` from all the runs of the project (including
+ * those of other members) and we mint a forge token; access control is
+ * done by the calling route (project owner only).
  */
 
-/** Le ticket derrière une branche d'agent (null pour un run carnet, MIN-84). */
+/** The ticket behind an agent branch (null for a notebook run, MIN-84). */
 export interface BranchIssueRef {
   issueId: string;
   identifier: string;
   title: string;
 }
 
-/** Une branche de l'aperçu : la sélection pure + le ticket qui l'a produite. */
+/** A branch of the overview: the pure selection + the ticket that produced it. */
 export interface AgentBranchInfo extends AgentBranch {
   issue: BranchIssueRef | null;
 }
@@ -37,16 +36,16 @@ export interface AgentBranchesPreview {
   provider: RepoProviderId;
   repoFullName: string;
   branches: AgentBranchInfo[];
-  /** Une des deux listes paginées de la forge (PR, branches) a été coupée :
-      l'aperçu n'est pas exhaustif, et l'UI le dit. */
+  /** One of the two paginated lists of the forge (PR, branches) has been cut:
+ the preview is not exhaustive, and the UI says so. */
   truncated: boolean;
 }
 
-/** Résultat de la suppression d'UNE branche — rendu tel quel dans l'UI. */
+/** Result of deleting ONE branch — rendered as is in the UI. */
 export interface BranchDeletionResult {
   branch: string;
   ok: boolean;
-  /** La référence n'existait déjà plus : succès, pas panne. */
+  /** The reference already no longer existed: success, not failure. */
   alreadyGone?: boolean;
   error?: string;
 }
@@ -58,14 +57,13 @@ interface RunRow {
 }
 
 /**
- * Branches enregistrées par les runs d'agent du projet → le ticket qui les a
- * produites (null pour un run carnet, qui n'a pas d'issue). C'est la liste des
- * branches que minddy s'autorise à toucher : tout ce qui n'y est pas appartient
- * à quelqu'un d'autre.
+ * Branches recorded by the project agent runs → the ticket that produced them (null for a notebook run, which has no exit). This is the list of
+ * branches that minddy allows herself to touch: everything that is not there belongs
+ * to someone else.
  *
- * L'ordre d'insertion est celui des runs, du plus récent au plus ancien : la
- * sélection s'en sert pour ranger les branches SANS PR, qui n'ont pas de date
- * de PR à comparer.
+ * The order of insertion is that of the runs, from the most recent to the oldest: the
+ * selection is used to arrange the branches WITHOUT PR, which do not have a PR date
+ * to compare.
  */
 export async function listAgentBranchesForProject(
   projectId: string,
@@ -104,12 +102,12 @@ export async function listAgentBranchesForProject(
 
 type CloneTarget = NonNullable<Awaited<ReturnType<typeof resolveRepoCloneTarget>>>;
 
-/** Au-delà, `listBranches` a rendu la main sur son propre plafond de pagination
-    (MAX_BRANCH_PAGES × 100) : des branches d'agent ont pu passer à la trappe. */
+/** Beyond that, `listBranches` took control of its own pagination ceiling
+ (MAX_BRANCH_PAGES × 100): agent branches were able to fall by the wayside. */
 const BRANCH_PAGE_LIMIT = 500;
 
-/** L'aperçu à partir d'une cible DÉJÀ résolue — la suppression réutilise la
-    sienne plutôt que de minter un second token pour le même ménage. */
+/** Preview from an ALREADY resolved target — deletion reuses its own
+ rather than mining a second token for the same household. */
 async function previewFor(
   projectId: string,
   target: CloneTarget,
@@ -121,8 +119,8 @@ async function previewFor(
       token: target.token,
       repoFullName: target.repoFullName,
     }),
-    // Ce qui existe VRAIMENT côté dépôt : sans ça, une branche supprimée depuis
-    // longtemps réapparaîtrait dans la liste dès qu'elle n'a pas de PR.
+    // What REALLY exists on the repository side: without that, a branch since deleted
+    // long time would reappear in the list as soon as it has no PR.
     forge.listBranches({
       token: target.token,
       repoFullName: target.repoFullName,
@@ -145,8 +143,8 @@ async function previewFor(
 }
 
 /**
- * Aperçu des branches d'agent du projet, ou null s'il n'a aucun dépôt lié.
- * Lève les erreurs de la forge (la route les traduit en 502).
+ * Preview the project's agent branches, or null if it has no repositories linked.
+ * Throws forge errors (the route translates them to 502).
  */
 export async function previewAgentBranches(
   projectId: string,
@@ -157,12 +155,12 @@ export async function previewAgentBranches(
 }
 
 /**
- * Supprime les branches demandées, une par une et EN SÉQUENCE (l'API de la forge
- * n'aime pas les rafales, et un échec ne doit pas emporter les suivantes).
+ * Deletes the requested branches, one by one and IN SEQUENCE (the forge API
+ * does not like bursts, and a failure should not carry away the following ones).
  *
- * Recalcule l'aperçu et n'accepte que son intersection : une branche absente de
- * la liste servie ressort en échec explicite plutôt que d'être supprimée sur
- * parole. Renvoie null si le projet n'a pas (ou plus) de dépôt lié.
+ * Recalculates the preview and accepts only its intersection: an absent branch from
+ * the served list comes out as an explicit failure rather than being deleted on
+ * word. Returns null if the project has no (or no more) linked repositories.
  */
 export async function deleteAgentBranches(
   projectId: string,

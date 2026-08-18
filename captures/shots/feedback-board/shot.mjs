@@ -1,11 +1,11 @@
 /**
- * feedbackBoard — le board public d'Aurora, vu par un visiteur déconnecté.
+ * feedbackBoard — Aurora's public board, viewed by a disconnected visitor.
  *
- * Voir `intent.md`, notamment pour la « réponse d'équipe dépliée » du
- * catalogue : la liste du board n'en rend aucune, c'est la page d'un retour
- * qui la porte.
+ * See `intent.md`, especially for the “unfolded team response” of the
+ * catalog: the board list does not show any, it is a return page
+ * who wears it.
  *
- *   node captures/shots/feedback-board/shot.mjs             # produit les PNG
+ * node captures/shots/feedback-board/shot.mjs # produces the PNGs
  *   node captures/shots/feedback-board/shot.mjs --publish   # + livre
  */
 import { openPage, settle, shoot, CAPTURE } from "../../lib/browser.mjs";
@@ -16,7 +16,7 @@ const OUT = "captures/shots/feedback-board/out";
 const BOARD = "/f/CTxGSyqeTTB85z8crWBwyw";
 const VIEWPORT = { width: 1736, height: 1085 };
 
-/** Les retours attendus, du plus voté au moins voté. Titres = données. */
+/** The expected returns, from the most voted to the least voted. Titles = data. */
 const TOP = [
   { title: "Let me use my own domain for the status page", votes: 24 },
   { title: "Slack alerts when an incident opens", votes: 18 },
@@ -32,7 +32,7 @@ const VARIANTS = [
 ];
 
 async function capture({ locale, theme }) {
-  // DÉCONNECTÉ : connecté, l'en-tête montrerait l'identité du visiteur et la
+  // DISCONNECTED: When logged in, the header would show the visitor's identity and
   // page n'aurait plus l'air publique.
   const { browser, page } = await openPage({
     theme,
@@ -44,8 +44,8 @@ async function capture({ locale, theme }) {
     await page.goto(`${CAPTURE.baseUrl}${BOARD}`, { waitUntil: "domcontentloaded" });
     await settle(page, { expect: `text=${TOP[0].title}` });
 
-    // Le dernier retour de la liste prouve qu'elle est rendue en entier, pas
-    // seulement sa tête.
+    // The last return of the list proves that it is rendered in full, not
+    // only his head.
     await page
       .getByText("An RSS feed of incidents", { exact: false })
       .first()
@@ -56,11 +56,11 @@ async function capture({ locale, theme }) {
       const items = [...document.querySelectorAll("main li")];
       return {
         missing: top.filter((p) => !text.includes(p.title)).map((p) => p.title),
-        // Le tri par votes est le sujet : le premier retour doit être le plus voté.
+        // Sorting by votes is the subject: the first return must be the most voted.
         firstIsTop: (items[0]?.textContent || "").includes(top[0].title),
         votes: top.filter((p) => !text.includes(String(p.votes))).map((p) => p.votes),
         count: items.length,
-        // Un visiteur déconnecté ne doit voir aucune trace de compte.
+        // A logged out visitor should not see any trace of an account.
         leaksSession: text.includes("Camille") || /captures-demo/.test(text),
       };
     }, TOP);

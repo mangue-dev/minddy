@@ -23,15 +23,15 @@ import type { Page } from "@/lib/pages";
  * access the project, and a personal view (user_id not null) is only its
  * owner's; anything else reads as not found, the same signal RLS gives.
  *
- * ── Une PAGE du wiki est une cible de plus (MIN-283) ──────────────────────
+ * ── A Wiki PAGE is another target (MIN-283) ──────────────────────
  *
- * La même table, la même colonne `token`, le même hachage scrypt, le même
- * cookie de déverrouillage : une page publiée n'apporte que sa cible
- * (`page_id`) et le seul réglage qui n'ait de sens que pour elle
+ * The same table, the same `token` column, the same scrypt hash, the same
+ * unlocking cookie: a published page only brings its target
+ * (`page_id`) and the only setting that only makes sense for her
  * (`include_children`). Tout ce qui touche au SECRET —
- * hacher, vérifier, déverrouiller — est écrit une seule fois ci-dessous et
- * sert aux deux ; c'est la raison d'être de l'élargissement, et la seule chose
- * à ne jamais dupliquer si une troisième cible apparaît un jour.
+ * hash, verify, unlock — is written only once below and
+ * serves both; this is the reason for enlargement, and the only thing
+ * never duplicate if a third target one day appears.
  */
 
 export type ViewShareResult =
@@ -58,15 +58,15 @@ export function unlockCookieValue(token: string, passwordHash: string): string {
 }
 
 /**
- * Le cookie présenté ouvre-t-il CE partage ? En temps constant (MIN-347).
+ * Does the presented cookie open THIS share? In constant time (MIN-347).
  *
- * La valeur du cookie EST le secret qui donne accès : la comparer avec `===`
- * s'arrête au premier octet qui diffère, et cette durée-là se mesure. C'était la
- * seule comparaison de secret du dépôt qui n'était pas en temps constant, sur
- * une porte anonyme qu'on peut interroger autant qu'on veut.
+ * The value of the cookie IS the secret that gives access: compare it with `===`
+ * stops at the first byte that differs, and this duration is measured. It was the
+ * only comparison of repository secrecy which was not in constant time, on
+ * an anonymous door that you can question as much as you want.
  *
- * Longueurs comparées d'abord : `timingSafeEqual` LÈVE sur deux tampons de
- * tailles différentes, et la longueur attendue est publique (64 caractères hex).
+ * Lengths compared first: `timingSafeEqual` LEVE on two buffers of
+ * different sizes, and the expected length is public (64 hex characters).
  */
 export function unlockCookieMatches(
   cookie: string | null | undefined,
@@ -81,15 +81,15 @@ export function unlockCookieMatches(
 
 /** Longueur minimale d'un mot de passe de partage (MIN-347).
 
-    Un partage protégé est une porte ANONYME : personne n'est identifié derrière,
-    et le seul secret est ce mot de passe-là. Il n'en avait aucune, donc « 1 »
-    était un réglage acceptable — c'est-à-dire un partage annoncé comme protégé
-    et ouvert de fait. Huit caractères contre un scrypt salé, avec le compteur
-    persistant de `share_unlock_attempts` par-dessus : c'est ce qui rend le
+    A protected share is an ANONYMOUS door: no one is identified behind it,
+    and the only secret is this password. He had none, so “1”
+    was an acceptable setting — that is, a share declared as protected
+    and open in fact. Eight characters against a salty scrypt, with the counter
+    persistent of `share_unlock_attempts` on top: this is what makes the
     balayage en ligne sans objet.
 
-    La valeur vit dans un module isomorphe : les dialogues l'annoncent, cette
-    fonction la fait respecter. */
+    Value lives in an isomorphic module: the dialogues announce it, this
+    function enforces it. */
 export { MIN_SHARE_PASSWORD_LENGTH };
 
 export function hashSharePassword(password: string): { salt: string; hash: string } {
@@ -116,7 +116,7 @@ interface ShareRow {
   password_salt: string | null;
   password_hash: string | null;
   created_by: string | null;
-  /** Cible page (MIN-283) : la branche part avec elle, ou ne part pas. */
+  /** Target page (MIN-283): the branch leaves with it, or does not leave. */
   include_children: boolean;
 }
 
@@ -152,9 +152,9 @@ async function resolveShareView(
 }
 
 /**
- * Résolution vue → share pour la gestion du domaine personnalisé (MIN-36).
- * Même règle d'accès que le partage, plus isOwner : attacher un domaine touche
- * l'infra Vercel, la mutation est réservée au owner du projet côté route.
+ * Resolution view → share for custom domain management (MIN-36).
+ * Same access rule as sharing, plus isOwner: attach a domain key
+ * Vercel infrastructure, the transfer is reserved for the owner of the road side project.
  */
 export async function resolveShareForDomain(
   viewId: string,
@@ -295,8 +295,8 @@ export async function deleteViewShare(
   if (!resolved.ok) return resolved;
 
   const service = getServiceClient();
-  // Le cascade DB emporte l'éventuelle ligne custom_domains mais pas
-  // l'attachement Vercel (MIN-36) — capturé avant, détaché après.
+  // The DB cascade carries the possible custom_domains line but not
+  // the Vercel attachment (MIN-36) — captured before, detached after.
   const { data: shareRow } = await service
     .from("view_shares")
     .select("id")
@@ -313,11 +313,11 @@ export async function deleteViewShare(
   return { ok: true, share: null };
 }
 
-/** Le projet, tel que les deux surfaces publiques le nomment.
+/** The project, as the two public surfaces call it.
 
-    `icon_url` en fait partie : une page publiée porte le LOGO du projet dans son
-    en-tête, comme le board de retours (MIN-283). Sur un document qu'on envoie à
-    un client, c'est la seule chose qui dise de qui il vient. */
+    `icon_url` is one of them: a published page bears the LOGO of the project in its
+    header, like the feedback board (MIN-283). On a document sent to
+    a customer is the only thing that says who it comes from. */
 export interface PublicShareProject {
   id: string;
   key: string;
@@ -334,7 +334,7 @@ export interface PublicShareContext {
   project: PublicShareProject;
 }
 
-/** Ce que /p/[token] a besoin de savoir pour rendre une page publiée (MIN-283). */
+/** What /p/[token] needs to know to make a page published (MIN-283). */
 export interface PublicPageShareContext {
   share: ShareRow;
   page: Page;
@@ -342,12 +342,12 @@ export interface PublicPageShareContext {
 }
 
 /**
- * Un token de partage, résolu sur SA cible.
+ * A sharing token, resolved on ITS target.
  *
- * Le token est tiré du même chapeau pour les deux, et il est unique dans la
- * table : c'est donc ici, et nulle part ailleurs, qu'on apprend de quoi il
- * s'agit. Les deux routes publiques appellent la même fonction et refusent ce
- * qui n'est pas pour elles — un token de page ouvert sur `/share/…` est un 404,
+ * The token is drawn from the same hat for both, and it is unique in the
+ * table: it is therefore here, and nowhere else, that we learn what it is
+ * is about. Both public routes call the same function and refuse this
+ * which is not for them — a page token opened on `/share/…` is a 404,
  * pas un rendu de travers.
  */
 export type PublicShareTarget =
@@ -370,9 +370,9 @@ export async function getPublicShareTarget(
   const share = row as ShareRow;
 
   if (row.page_id) {
-    // Une page à la CORBEILLE cesse d'être publique à la seconde : le lien
-    // répond 404 sans qu'on ait à dépublier à la main. La ligne de partage,
-    // elle, survit — restaurer la page rend le lien, avec le même token.
+    // A page in the CORBEILLE ceases to be public by the second: the link
+    // responds 404 without having to unpublish manually. The dividing line,
+    // it survives — restoring the page returns the link, with the same token.
     const { data: page } = await service
       .from("pages")
       .select("*")
@@ -397,7 +397,7 @@ export async function getPublicShareTarget(
 }
 
 /** Resolve a share URL token → share + view + live project, or null (→ 404).
-    Un token de page en rend `null` : ce n'est pas cette porte-là. */
+    A page token makes it `null`: it's not that door. */
 export async function getPublicShareByToken(
   token: string
 ): Promise<PublicShareContext | null> {
@@ -425,7 +425,7 @@ async function livePublicProject(
   return (data as PublicShareProject | null) ?? null;
 }
 
-/* ── La PAGE comme cible (MIN-283) ───────────────────────────────────────── */
+/* ── The PAGE as a target (MIN-283) ──────────────────── ───────────────────── */
 
 export type PageShareResult =
   | { ok: true; share: PageShare | null }
@@ -440,7 +440,7 @@ export type PageShareResult =
         | "databaseError";
     };
 
-/** La ligne de partage rendue au propriétaire : le lien et ses réglages. */
+/** The dividing line returned to the owner: the link and its settings. */
 function toPageShare(row: ShareRow): PageShare {
   return {
     level: row.level,
@@ -450,9 +450,9 @@ function toPageShare(row: ShareRow): PageShare {
 }
 
 /**
- * La page doit exister, ne pas être à la corbeille, et son projet être
- * accessible à l'acteur. Tout le reste se lit « page introuvable » — le même
- * signal que donnerait RLS, et le seul qui ne dise rien de ce qui existe
+ * The page must exist, not be in the trash, and its project must be
+ * accessible to the actor. Everything else reads “page not found” — the same
+ * signal that RLS would give, and the only one that says nothing about what exists
  * ailleurs.
  */
 async function resolveSharePage(
@@ -493,12 +493,12 @@ export async function getPageShare(
 }
 
 /**
- * Publier une page, ou changer les réglages de sa publication.
+ * Publish a page, or change its publication settings.
  *
- * Le token SURVIT aux changements de niveau et de réglages, comme pour une vue :
- * seule une dépublication (delete) puis une republication forge une nouvelle
- * URL. Un lien déjà envoyé à un client ne doit pas mourir parce qu'on a coché
- * « inclure les sous-pages ».
+ * The token SURVIVES changes in level and settings, like a view:
+ * only a depublication (delete) then a republication creates a new
+ * URL. A link already sent to a customer should not die because we checked
+ * “include subpages”.
  */
 export async function upsertPageShare({
   pageId,
@@ -528,8 +528,8 @@ export async function upsertPageShare({
   }
   const existing = existingRow as ShareRow | null;
 
-  // Même règle que pour une vue : « password » n'exige un mot de passe que
-  // s'il n'y en a pas encore ; en fournir un le change.
+  // Same rule as for a view: “password” only requires a password
+  // if there is none yet; providing one changes it.
   let password_salt: string | null = null;
   let password_hash: string | null = null;
   if (level === "password") {
@@ -570,7 +570,7 @@ export async function upsertPageShare({
   return { ok: true, share: { level, token, include_children } };
 }
 
-/** Cesser de publier : le lien cesse de répondre, immédiatement. */
+/** Stop posting: The link stops responding, immediately. */
 export async function deletePageShare(
   pageId: string,
   actorId: string

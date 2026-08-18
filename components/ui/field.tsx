@@ -4,27 +4,24 @@ import type { ComponentProps } from "react";
 import { cn } from "mangue-ui";
 
 /**
- * `Field` — la primitive de MISE EN PAGE de formulaire de shadcn/ui, recopiée
- * ici (MIN-167).
+ * `Field` — the shadcn/ui form LAYOUT primitive, copied
+ * here (MIN-167).
  *
- * Pourquoi elle n'est pas dans `mangue-ui` : la lib a été extraite d'AutoKap
- * avant que shadcn n'ajoute `Field`. Elle expose donc d'excellents CONTRÔLES
- * (Switch, Select, Input, Card…) mais aucune grammaire pour les POSER — pas de
- * `Field`, pas de `FormRow`. Résultat : chaque écran de réglages écrivait son
- * propre `flex`, et six auteurs en ont écrit six différents. C'est la cause
- * racine que MIN-167 corrige.
+ * Why it is not in `mangue-ui`: the lib has been checked out from AutoKap
+ * before shadcn added `Field`. It therefore exposes excellent CONTROLS
+ * (Switch, Select, Input, Card…) but no grammar for SETTING them — no
+ * `Field`, no `FormRow`. Result: each settings screen wrote its own
+ * `flex`, and six authors wrote six different ones. This is the root cause
+ * that MIN-167 fixes.
  *
- * Deux écarts assumés avec l'original :
- * - `cva` est remplacé par des tables de classes (aucune dépendance ajoutée —
- *   le dépôt maintient deux lockfiles, cf. CLAUDE.md) ;
- * - le `Label` de Radix est remplacé par un `<label>` stylé : on n'a besoin ni
- *   de son `asChild`, ni de sa propagation de clic (les contrôles portent déjà
- *   un `id`).
+ * Two assumed deviations from the original:
+ * - `cva` is replaced by class tables (no dependencies added —
+ * the repository maintains two lockfiles, c. already
+ * a `id`).
  *
- * L'orientation `responsive` est ce que demandait le ticket : clé à gauche,
- * valeur à droite sur une même ligne, empilées en dessous de `@md`. Elle
- * s'appuie sur une CONTAINER query — la largeur du groupe, pas celle de la
- * fenêtre — donc `Field responsive` doit vivre sous un `FieldGroup`.
+ * The `responsive` orientation is what the ticket asked for: key on the left,
+ * value on the right on the same line, stacked below `@md`. It relies on a CONTAINER query — the width of the group, not the width of the
+ * window — so `Field responsive` must live under a `FieldGroup`.
  */
 
 type FieldOrientation = "vertical" | "horizontal" | "responsive";
@@ -36,7 +33,7 @@ const ORIENTATION: Record<FieldOrientation, string> = {
     "flex-col items-stretch @md/field-group:flex-row @md/field-group:items-center @md/field-group:justify-between",
 };
 
-/** Groupe de champs. Porte la container query dont vit `responsive`. */
+/** Group of fields. Carries the container query that `responsive` lives on. */
 function FieldGroup({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
@@ -47,7 +44,7 @@ function FieldGroup({ className, ...props }: ComponentProps<"div">) {
   );
 }
 
-/** Un champ : le contenu (libellé + indice) d'un côté, le contrôle de l'autre. */
+/** A field: the content (label + index) on one side, the control on the other. */
 function Field({
   className,
   orientation = "vertical",
@@ -67,7 +64,7 @@ function Field({
   );
 }
 
-/** La colonne de gauche : libellé, titre, description. Rétrécit, ne déborde pas. */
+/** The left column: label, title, description. Shrinks, does not overflow. */
 function FieldContent({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
@@ -78,7 +75,7 @@ function FieldContent({ className, ...props }: ComponentProps<"div">) {
   );
 }
 
-/** Libellé cliquable d'un contrôle. */
+/** Clickable label of a control. */
 function FieldLabel({ className, ...props }: ComponentProps<"label">) {
   return (
     <label
@@ -94,7 +91,7 @@ function FieldLabel({ className, ...props }: ComponentProps<"label">) {
   );
 }
 
-/** Titre d'un champ qui n'a pas de contrôle unique à désigner (pas un `<label>`). */
+/** Title of a field that has no unique control to designate (not a `<label>`). */
 function FieldTitle({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
@@ -108,7 +105,7 @@ function FieldTitle({ className, ...props }: ComponentProps<"div">) {
   );
 }
 
-/** L'indice sous le libellé : ce que le réglage fait, en une phrase. */
+/** The hint under the label: what the setting does, in one sentence. */
 function FieldDescription({ className, ...props }: ComponentProps<"p">) {
   return (
     <p
@@ -122,7 +119,7 @@ function FieldDescription({ className, ...props }: ComponentProps<"p">) {
   );
 }
 
-/** Le message d'erreur d'un champ. */
+/** The error message for a field. */
 function FieldError({ className, ...props }: ComponentProps<"p">) {
   return (
     <p
@@ -134,7 +131,7 @@ function FieldError({ className, ...props }: ComponentProps<"p">) {
   );
 }
 
-/** Filet entre deux champs — le liseré, pas le `Separator` plein. */
+/** Rule between two fields — the border, not the solid `Separator`. */
 function FieldSeparator({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
@@ -146,7 +143,7 @@ function FieldSeparator({ className, ...props }: ComponentProps<"div">) {
   );
 }
 
-/** Sous-ensemble nommé de champs (`<fieldset>` + sa légende). */
+/** Named subset of fields (`<fieldset>` + its caption). */
 function FieldSet({ className, ...props }: ComponentProps<"fieldset">) {
   return (
     <fieldset

@@ -33,15 +33,15 @@ export type IssueEffort = "xs" | "s" | "m" | "l" | "xl";
 export interface StatusMeta {
   value: IssueStatus;
   /**
-   * LEGACY — ne PAS afficher un statut avec ça. Le glyphe d'un statut est
-   * `<StatusIndicator status={…} />` (components/issue-indicators.tsx) : les
-   * anneaux/camemberts/disques du design Figma, utilisés par les cartes, les
-   * colonnes, tous les pickers et la command palette. Ces icônes lucide sont le
-   * jeu d'avant ce design ; elles ne survivent que parce que `StatusMeta` est
-   * aussi la forme des colonnes du kanban (où seul `value` compte).
-   */
+ * LEGACY — do NOT show status with this. The glyph for a status is
+ * `<StatusIndicator status={…} />` (components/issue-indicators.tsx): the
+ * rings/pie charts/disks of the Figma design, used by the cards, the
+ * columns, all pickers and the palette command. These lucid icons are the
+ * game before this design; they only survive because `StatusMeta` is
+ * also the shape of the kanban columns (where only `value` counts).
+ */
   icon: LucideIcon;
-  /** LEGACY, comme `icon` — la couleur vit dans StatusIndicator. */
+  /** LEGACY, like `icon` — color lives in StatusIndicator. */
   color: string;
 }
 
@@ -82,24 +82,24 @@ export const isClosedStatus = (status: IssueStatus): boolean =>
 // Labels are i18n'd — resolve via useTranslations("Priority")(value).
 export interface PriorityMeta {
   value: IssuePriority;
-  /** LEGACY, comme `StatusMeta.icon` — afficher une priorité passe par
-   *  `<PriorityIndicator priority={…} />` (barres de signal remplies par le bas,
-   *  carré rouge « ! » pour urgent). */
+  /** LEGACY, like `StatusMeta.icon` — displaying priority goes through
+ * `<PriorityIndicator priority={…} />` (signal bars filled from below,
+ * red square “!” for urgent). */
   icon: LucideIcon;
-  /** LEGACY, comme `icon` — la couleur vit dans PriorityIndicator. */
+  /** LEGACY, like `icon` — color lives in PriorityIndicator. */
   color: string;
 }
 
-// Ordre CROISSANT — première option = la plus basse, dernière = la plus haute.
-// C'est la convention de TOUS les sélecteurs de l'app (tickets, objectifs,
-// retours) : `EFFORTS` monte de xs à xl, les statuts montent de l'arrivée au
-// terminal, la priorité monte de « aucune » à « urgente ». Le sélecteur est une
-// échelle qu'on lit de haut en bas, et une échelle qui descend d'un axe à
-// l'autre force à relire l'ordre à chaque champ.
+// ASCENDING order — first option = lowest, last = highest.
+// This is the convention for ALL selectors in the app (tickets, objectives,
+// returns): `EFFORTS` goes from xs to xl, the statuses go up from arrival to
+// terminal, the priority increases from “none” to “urgent”. The selector is a
+// scale that is read from top to bottom, and a scale that goes down from one axis to
+// the other forces the order to be reread in each field.
 //
-// C'est l'ordre d'AFFICHAGE, pas celui du tri : classer des tickets PAR
-// priorité met l'urgent en tête, et ces deux tris-là ont leurs propres tables
-// (`PRIORITY_ORDER` dans lib/view-filter.ts, `PRIORITY_RANK` dans lib/cycle.ts).
+// This is the DISPLAY order, not the sorting order: classify tickets BY
+// priority puts the urgent first, and these two sorts have their own tables
+// (`PRIORITY_ORDER` in lib/view-filter.ts, `PRIORITY_RANK` in lib/cycle.ts).
 export const PRIORITIES: PriorityMeta[] = [
   { value: "none", icon: Minus, color: "text-muted-foreground" },
   { value: "low", icon: SignalLow, color: "text-sky-500" },

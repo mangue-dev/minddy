@@ -24,18 +24,18 @@ interface ConversationWithProject extends Conversation {
 }
 
 /**
- * L'historique de Numo : TOUTES les conversations de l'utilisateur, projets
- * confondus, chacune sous-titrée de son projet.
+ * Numo history: ALL user conversations, projects
+ * combined, each subtitled with its project.
  *
- * Pas de filtre par portée, et c'est délibéré (MIN-353) : la conversation ouverte
- * porte sa propre portée et ne suit plus l'URL, donc filtrer sur l'URL rendrait
- * injoignable la première conversation qu'on cherche — celle qu'on vient de
+ * No filter by scope, and this is deliberate (MIN-353): the open conversation
+ * carries its own scope and no longer follows the URL, so filtering on the URL would render
+ * unreachable the first conversation we are looking for — the one we have just had
  * quitter en changeant de page.
  */
 interface ConversationListProps {
   activeConversationId: string | null;
-  /** `projectId` = la portée de la conversation choisie, telle qu'elle est en
-   *  base. C'est elle qui devient celle de Numo à l'ouverture (MIN-353). */
+  /** `projectId` = the scope of the chosen conversation, as it is in
+   * base. It is she who becomes Numo's at the opening (MIN-353). */
   onSelect: (conversationId: string, projectId: string | null) => void;
   onNew: () => void;
   refreshKey?: number;
@@ -87,8 +87,8 @@ export function ConversationList({
   );
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
-  // La liste part VIDE : sans ce drapeau, « aucune conversation » s'affiche le
-  // temps du fetch, y compris quand il y en a des dizaines.
+  // The list leaves EMPTY: without this flag, “no conversation” is displayed on
+  // fetch time, even when there are dozens.
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -150,9 +150,8 @@ export function ConversationList({
           </Button>
         )}
 
-        {/* Aucune conversation : la même scène que partout ailleurs, à la
-            taille du popover — le titre passe en encre, comme les autres états
-            vides, au lieu d'une ligne grise qu'on prend pour une note. */}
+        {/* No conversation: the same scene as everywhere else, at the
+ size of the popover — the title goes into ink, like the other empty states, instead of a gray line that we take for a note. */}
         {loaded && conversations.length === 0 && (
           <EmptyScene
             size="compact"
@@ -237,10 +236,10 @@ export function ConversationList({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t("deleteConfirm.cancel")}</AlertDialogCancel>
-            {/* `variant`, et non un `className` de couleur : AlertDialogAction
-                pose les classes du bouton sur un Slot parent, donc la couleur
-                écrite ici ne passe pas par tailwind-merge et perdait contre
-                celle du variant — la suppression s'affichait en bouton bleu. */}
+            {/* `variant`, not a colored `className`: AlertDialogAction
+ places the button classes on a parent Slot, so the color
+ written here does not pass through tailwind-merge and would lose against
+ that of the variant — the deletion was displayed as a blue button. */}
             <AlertDialogAction variant="destructive" onClick={handleConfirmDelete}>
               {t("deleteConfirm.confirm")}
             </AlertDialogAction>

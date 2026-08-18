@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-324 — le maillon que les trois callbacks de forge avaient sauté : le
- * `state` dit où l'on va, la session dit qui revient. Deux tests portent tout le
- * correctif : « une absence de session n'autorise rien » et « un `state` d'un
- * autre compte ne vaut pas identité ».
+ * MIN-324 — the link that the three forge callbacks had skipped: the
+ * `state` says where we are going, the session says who is coming back. Two tests carry all the
+ * correction: "an absence of session authorizes nothing" and "a `state` of a
+ * other account does not constitute identity".
  */
 
 const getClaims = vi.fn();
@@ -34,15 +34,15 @@ describe("sessionMatchesState", () => {
     expect(sessionMatchesState("", "")).toBe(false);
   });
 
-  it("refuse une session absente face à un state valide", () => {
+  it("rejects a missing session with a valid state", () => {
     expect(sessionMatchesState(null, "user-1")).toBe(false);
   });
 
-  it("refuse un state sans utilisateur face à une session valide", () => {
+  it("rejects a state without a user with a valid session", () => {
     expect(sessionMatchesState("user-1", null)).toBe(false);
   });
 
-  it("refuse deux identifiants différents — c'est l'attaque", () => {
+  it("rejects two different identifiers — that is the attack", () => {
     expect(sessionMatchesState("victime", "attaquant")).toBe(false);
   });
 
@@ -64,7 +64,7 @@ describe("readForgeCallbackSession", () => {
     expect(session.userId).toBeNull();
   });
 
-  it("rend null — pas une exception — si Supabase est injoignable", async () => {
+  it("returns null — not an exception — when Supabase is unreachable", async () => {
     getClaims.mockRejectedValue(new Error("fetch failed"));
     const session = await readForgeCallbackSession({} as never);
     expect(session.userId).toBeNull();

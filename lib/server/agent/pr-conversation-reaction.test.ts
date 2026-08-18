@@ -8,18 +8,18 @@ import {
 import { setMergeRequestNoteAward } from "./mr";
 
 /**
- * MIN-147 : réagir marche PARTOUT dans une PR, plus seulement sur les
- * commentaires ancrés à une ligne de code.
+ * MIN-147: react works EVERYWHERE in a PR, no longer only on
+ * comments anchored to a line of code.
  *
- * Ce qui se joue ici est une question d'ADRESSE. Trois surfaces se rendent
- * exactement pareil à l'écran — un commentaire de review, un message du fil, le
- * corps de la PR — et les forges les rangent à trois endroits différents. Un
- * `PR_BODY_COMMENT_ID` (zéro) traverse toute la chaîne pour désigner le corps ;
- * ces tests vérifient qu'il atterrit sur la bonne URL de chaque côté, et qu'un id
- * de commentaire ordinaire, lui, ne bascule pas.
+ * What is at stake here is a question of ADDRESS. Three surfaces render
+ * exactly the same on the screen — a review comment, a thread message, the
+ * body of the PR — and the forges store them in three different places. A
+ * `PR_BODY_COMMENT_ID` (zero) traverses the entire chain to designate the body;
+ * these tests verify that it lands on the correct URL on each side, and that an ordinary comment id
+ * does not switch.
  *
- * Une adresse fausse ne se voit pas en relisant : elle répond 404 (ou pire, pose
- * la réaction sur le mauvais objet) le jour où quelqu'un clique.
+ * An address false is not seen when rereading: it responds 404 (or worse, puts
+ * the reaction on the wrong object) the day someone clicks.
  */
 
 const REPO = "mangue-dev/minddy-issues";
@@ -54,8 +54,8 @@ beforeEach(() => {
       if (url === "https://gitlab.com/api/v4/user") {
         return new Response(JSON.stringify({ username: "mangue-dev" }), { status: 200 });
       }
-      // Toute liste d'awards / de réactions est vide : on ne teste ici que
-      // l'adressage, pas la bascule (couverte par `pr-reaction.test.ts`).
+      // Any list of awards / reactions is empty: we only test here
+      // addressing, not the flip-flop (covered by `pr-reaction.test.ts`).
       return new Response(JSON.stringify([]), { status: 200 });
     }),
   );
@@ -94,7 +94,7 @@ it("GitHub : le corps de la PR s'adresse en `issues/{number}` — pas en comment
     login: "mangue-dev",
   });
 
-  // Une PR EST une issue chez GitHub : son corps se réagit sur l'issue elle-même.
+  // A PR IS an issue at GitHub: his body reacts to the issue itself.
   expect(posted()).toEqual([
     `https://api.github.com/repos/${REPO}/issues/${NUMBER}/reactions`,
   ]);
@@ -146,8 +146,8 @@ it("GitHub : les réactions du corps sortent sous l'id zéro, celles des message
   });
 
   expect(reactions).toEqual([
-    // `EYES` est tombé : un groupe à zéro survit un instant au retrait de sa
-    // dernière réaction, et l'afficher rendrait un emoji que personne n'a posé.
+    // `EYES` has fallen: a group with zero survives for an instant the removal of its
+    // last reaction, and displaying it would render an emoji that no one asked.
     { commentId: PR_BODY_COMMENT_ID, content: "+1", count: 2, mine: true },
     { commentId: 512, content: "rocket", count: 1, mine: false },
   ]);
@@ -157,8 +157,8 @@ it("GitHub : sans acteur, aucune réaction n'est « la mienne » — les comptes
   graphql = {
     repository: {
       pullRequest: {
-        // Le `viewerHasReacted` du token d'installation est celui du BOT : le
-        // rendre tel quel allumerait chez chacun une réaction que personne n'a posée.
+        // The `viewerHasReacted` of the installation token is that of the BOT: the
+        // making it as it is would trigger a reaction in everyone that no one has asked.
         reactionGroups: [
           { content: "THUMBS_UP", viewerHasReacted: true, reactors: { totalCount: 3 } },
         ],
@@ -217,8 +217,8 @@ it("GitHub : le corps n'est compté qu'une fois, même quand les messages pagine
     viewerIsActor: true,
   });
 
-  // Le corps est porté par la PR, pas par la pagination de ses commentaires :
-  // le relire à chaque page doublerait son compte à l'écran.
+  // The body is carried by the PR, not by the pagination of its comments:
+  // rereading it on each page would double its screen count.
   expect(page).toBe(2);
   expect(reactions).toEqual([
     { commentId: PR_BODY_COMMENT_ID, content: "hooray", count: 1, mine: false },

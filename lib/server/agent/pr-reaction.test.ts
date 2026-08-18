@@ -3,20 +3,19 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { setPullRequestReviewCommentReaction } from "./pr";
 
 /**
- * MIN-145 : le RETRAIT d'une réaction est le seul geste qui doit retrouver, dans
- * une liste, laquelle des réactions est « la mienne » — la REST GitHub ne sait
- * pas supprimer sans id, et ne distingue les réactions que par leur auteur.
+ * MIN-145: WITHDRAWAL of a reaction is the only gesture which must find, in
+ * a list, which of the reactions is "mine" — the GitHub REST does not know how to delete without an id, and only distinguishes reactions by their author.
  *
- * Ce qui se joue ici tient en une phrase : **le login qu'on passe est un cache,
- * le token est l'autorité.** `git_user_identities.account_login` est écrit à la
- * connexion du compte et jamais rafraîchi ; qui renomme son compte GitHub garde
- * un token valide, voit sa réaction allumée (`viewerHasReacted` vient du token),
- * et ne pourrait plus jamais la retirer si le nom stocké faisait foi. Le retrait
- * répondrait `ok` sans rien retirer : un clic sans effet, sans message, à
- * répéter indéfiniment.
+ * What is happening here is in one sentence: **the login we pass is a cache,
+ * the token is the authority.** `git_user_identities.account_login` is written at the
+ * account connection and never refreshed; who renames their GitHub account keeps
+ * a valid token, sees its reaction lit (`viewerHasReacted` comes from the token),
+ * and could never withdraw it again if the stored name was authentic. Removing
+ * would respond to `ok` without removing anything: a click with no effect, no message, to
+ * repeat indefinitely.
  *
- * Les charges utiles imitent `GET /repos/…/pulls/comments/{id}/reactions` : c'est
- * la forme qu'on parse (`user.login`, `content`, `id`).
+ * Payloads mimic `GET /repos/…/pulls/comments/{id}/reactions`: this is
+ * the form that we parse (`user.login`, `content`, `id`).
  */
 
 const COMMENT = 42;
@@ -76,13 +75,13 @@ it("retire la réaction du login passé, sans demander qui porte le token", asyn
   await remove("mangue-dev");
 
   expect(deletions()).toEqual([`${REACTIONS_URL}/7`]);
-  // Le nom suffit dans le cas courant : pas d'aller-retour de plus.
+  // The name is enough in the current case: no more round trips.
   expect(askedWhoIAm()).toBe(false);
 });
 
 it("retrouve la sienne après un renommage de compte, et n'emporte pas celle du bot", async () => {
-  // Le compte s'appelle maintenant `mangue-new` ; minddy a mémorisé `mangue-old`
-  // le jour de la connexion, et rien ne l'a jamais corrigé.
+  // The account is now called `mangue-new`; minddy has memorized `mangue-old`
+  // on login day, and nothing ever fixed it.
   currentLogin = "mangue-new";
   reactions = [
     { id: 3, content: "+1", user: { login: "minddy-app[bot]" } },
@@ -100,9 +99,9 @@ it("ne retire rien quand la réaction est celle de quelqu'un d'autre", async () 
 
   await remove("mangue-dev");
 
-  // Le nom stocké pouvait être périmé : on a posé la question…
+  // The stored name could be out of date: we asked the question…
   expect(askedWhoIAm()).toBe(true);
-  // …et la réponse ne change rien, celle du bot reste au bot.
+  // …and the response doesn't change anything, the bot's response stays with the bot.
   expect(deletions()).toEqual([]);
 });
 
@@ -111,15 +110,15 @@ it("ne demande rien quand il n'y a plus aucune réaction à départager", async 
 
   await remove("mangue-dev");
 
-  // « Déjà retirée » est le cas courant du double-clic : il ne doit pas coûter
+  // “Already removed” is the common case of double-clicking: it should not cost
   // un appel de plus.
   expect(askedWhoIAm()).toBe(false);
   expect(deletions()).toEqual([]);
 });
 
 it("refuse d'agir sans login, avant tout appel réseau", async () => {
-  // Le garde-fou du ticket : un appelant sans acteur (donc sur le token
-  // d'installation) poserait la réaction sous `minddy-app[bot]`.
+  // The safeguard of the ticket: a caller without an actor (therefore on the token
+  // installation) would place the reaction under `minddy-app[bot]`.
   await expect(remove(null)).rejects.toThrow(/login/i);
   expect(calls).toEqual([]);
 });

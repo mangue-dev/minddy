@@ -4,18 +4,18 @@ import { describe, expect, it } from "vitest";
 import { createCookieSink } from "./api-auth";
 
 /**
- * L'évier à cookies (MIN-293) — le maillon qui empêche une LECTURE de session de
- * la détruire.
+ * The cookie sink (MIN-293) — the link that prevents a READ session from
+ * from destroying it.
  *
- * Lire une session expirée la RENOUVELLE, et GoTrue fait tourner le jeton de
- * rafraîchissement au passage : le couple neuf doit revenir au navigateur, ou
- * l'ancien jeton — celui que le navigateur garde — est mort. Un adaptateur qui
- * jetait ce qu'on lui donnait à écrire déconnectait donc les gens en silence, à
- * retardement, depuis une route qui ne fait que lire (`/feedback`).
+ * Read an expired session RENEWS it, and GoTrue spins the token from
+ * refresh in passing: the new pair must return to the browser, or
+ * the old token — the one the browser keeps — is dead. An adapter which
+ * threw away what it was given to write therefore disconnected people silently, at
+ * delayed, from a route which only reads (`/feedback`).
  *
- * Ce qui compte ici et qui se tient sans GoTrue : ce que la lib remet à écrire
- * ressort bien sur la réponse rendue, **redirection comprise** — c'est la forme
- * que prennent toutes les sorties de cette route-là.
+ * What matters here and which stands without GoTrue: what the lib puts back to write
+ * stands out clearly on the response returned, **redirection included** - this is the form
+ * that all the exits of this route take.
  */
 const OPTIONS = { path: "/", httpOnly: true, sameSite: "lax" as const };
 
@@ -33,8 +33,8 @@ describe("createCookieSink", () => {
 
     expect(response.cookies.get("sb-access-token")?.value).toBe("neuf");
     expect(response.cookies.get("sb-refresh-token")?.value).toBe("aussi-neuf");
-    // Une redirection porte des cookies comme une autre réponse, et reste une
-    // redirection : c'est toute la raison d'être de ce report.
+    // A redirect carries cookies like another response, and remains a
+    // redirection: this is the whole reason for this postponement.
     expect(response.status).toBe(302);
     expect(response.headers.get("location")).toBe("https://feedback.minddy.app/");
   });

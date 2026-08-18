@@ -39,18 +39,17 @@ import type {
   IssueUpdateInput,
 } from "./types";
 
-/** Cache key for the aggregate cross-project board (MIN-29). Défini dans
-    lib/optimistic/issue-writes.ts (que ce module importe), ré-exporté ici où
-    tout le reste de l'app va le chercher. */
+/** Cache key for the aggregate cross-project board (MIN-29). Defined in
+ lib/optimistic/issue-writes.ts (which this module imports), re-exported here where
+ everything else in the app will fetch it. */
 export { GLOBAL_BOARD_KEY };
 
 /**
  * The cross-project "My/All" kanban's data + writes. Edits go through the
  * by-id issue APIs (which are project-agnostic) and patch this aggregate cache
- * AND the touched project's `["issues", projectId]` cache in place — la ligne
- * serveur y est fusionnée au retour du PATCH plutôt qu'invalidée (MIN-156) :
- * `/api/me/board` est une route lourde, et chaque refetch inutile était une
- * fenêtre de plus pour qu'une réponse en retard écrase l'édition en cours.
+ * AND the touched project's `["issues", projectId]` cache in place — the line
+ * server is merged there when the PATCH returns rather than invalidated (MIN-156):
+ * `/api/me/board` is a heavy road, and each unnecessary refetch was one more window for a late response to overwrite the current edit.
  * Mirrors useIssuesQuery, including self-assign-on-start.
  */
 export function useGlobalBoardQuery() {
@@ -63,10 +62,10 @@ export function useGlobalBoardQuery() {
   const { data, isPending } = useQuery({
     queryKey: GLOBAL_BOARD_KEY,
     queryFn: globalBoardQueryFn,
-    // Pas de staleTime court : depuis MIN-89 le pont temps réel invalide cette
-    // clé sur tout changement de ticket de N'IMPORTE lequel de mes projets (il
-    // ne s'abonnait qu'au projet de l'URL, d'où ce rattrapage à l'horloge).
-    // On garde donc le défaut global de 5 min — l'événement porte la fraîcheur.
+    // No short staleTime: since MIN-89 the real-time bridge invalidates this
+    // key on any ticket change of ANY of my projects (it
+    // only subscribed to the project URL, hence this clock catch-up).
+    // We therefore keep the global default of 5 min — the event carries freshness.
   });
 
   const invalidate = useCallback(
@@ -118,8 +117,8 @@ export function useGlobalBoardQuery() {
         ...(assignee ? { assignee_id: assignee } : {}),
         ...(leavesCycleOnStatus(current, updates.status) ? { cycle_id: null } : {}),
       };
-      // Inscription au registre AVANT le patch (MIN-156) : à partir de là,
-      // aucune réponse de fetch partie plus tôt ne peut rejouer l'état d'avant.
+      // Registration in the registry BEFORE the patch (MIN-156): from there,
+      // no fetch response left earlier can replay the state before.
       const handle = issueWrites.begin({
         kind: "patch",
         id: issueId,
@@ -143,17 +142,17 @@ export function useGlobalBoardQuery() {
           )
         : null;
       try {
-        // La ligne serveur entre dans les caches au lieu de les invalider :
-        // c'est CE refetch-là qui, multiplié par N en édition groupée, ouvrait
-        // la fenêtre de course. Le realtime porte le changement aux autres
-        // clients ; ici le cache est déjà exact.
+        // The server line enters the caches instead of invalidating them:
+        // it is THIS refetch which, multiplied by N in grouped edition, opened
+        // the race window. Realtime brings change to others
+        // customers; here the cache is already exact.
         const issue = await request;
         mergeServerIssue(queryClient, projectId, issue);
         issueWrites.settle(handle, issue);
       } catch (err) {
-        // Rollback ciblé : seuls les champs de CETTE écriture reviennent en
-        // arrière. Restaurer le board entier écrasait aussi les patchs
-        // optimistes des N-1 autres écritures du lot.
+        // Targeted Rollback: only the fields of THIS writing return
+        // back. Restoring the entire board also overwrote the patches
+        // optimistic of N-1 other writes in the batch.
         issueWrites.fail(handle);
         rec?.retract();
         if (before) {
@@ -184,8 +183,8 @@ export function useGlobalBoardQuery() {
       patch: { status?: Issue["status"]; position: number },
       projectId: string
     ) => {
-      // Un simple réordonnancement dans la même colonne n'est pas un
-      // changement d'état : seul un vrai passage de colonne est tracké.
+      // A simple reordering in the same column is not a
+      // state change: only a real column passage is tracked.
       const from = queryClient
         .getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)
         ?.issues.find((i) => i.id === issueId)?.status;
@@ -232,8 +231,8 @@ export function useGlobalBoardQuery() {
         : null;
       try {
         await request;
-        // Le PUT ne renvoie pas la ligne : le jeu écrit EST la vérité, rien à
-        // refetcher (le realtime réconcilie les autres clients).
+        // The PUT does not return the line: the written game IS the truth, nothing to
+        // refetcher (realtime reconciles the other clients).
         issueWrites.settle(handle);
       } catch (err) {
         issueWrites.fail(handle);
@@ -290,13 +289,13 @@ export function useGlobalBoardQuery() {
     [queryClient, invalidate, record]
   );
 
-  // Optimistic (MIN-40): insère la carte dans le board agrégé ET dans le cache
-  // du projet immédiatement, remplace par la ligne serveur au succès, retire +
-  // toast à l'échec. Le realtime réconcilie ; pas de refetch local.
+  // Optimistic (MIN-40): inserts the card in the aggregate board AND in the cache
+  // from the project immediately, replace with the server line on success, remove +
+  // toast to failure. Realtime reconciles; no local refetch.
   const createIssue = useCallback(
     async (projectId: string, input: CreateIssueInput) => {
-      // Smart-fill (MIN-260) : le serveur remplit le ticket AVANT d'insérer la
-      // ligne, donc pas de carte optimiste — elle serait vide le temps du
+      // Smart-fill (MIN-260): the server fills the ticket BEFORE inserting the
+      // line, so no optimistic map — it would be empty for the duration of
       // remplissage. Cf. [create-issue-deferred](create-issue-deferred.ts).
       if (input.smart_fill) {
         createIssueDeferred({ queryClient, projectId, input, record });
@@ -310,10 +309,10 @@ export function useGlobalBoardQuery() {
       );
       const handle = issueWrites.begin({ kind: "insert", row: optimistic });
       insertIssueEverywhere(queryClient, projectId, optimistic);
-      // Même contrat que sur le board d'un projet : la carte nomme sa ligne, le
-      // direct reconnaît l'écho de notre création et ne l'ajoute pas une seconde
-      // fois — ici le doublon ne se résorbait même pas, `/api/me/board` étant
-      // trop lourd pour être rejoué dans la seconde (lib/optimistic-issue.ts).
+      // Same contract as on a project board: the card names its line, the
+      // direct recognizes the echo of our creation and does not add it for a second
+      // times — here the duplicate was not even resolved, `/api/me/board` being
+      // too heavy to be replayed in the second (lib/optimistic-issue.ts).
       void createIssueApi(projectId, { ...input, id: optimistic.id }).then(
         (issue) => {
           insertIssueEverywhere(queryClient, projectId, issue);

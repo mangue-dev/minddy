@@ -1,1 +1,1 @@
-# Les scripts de seed arrivent ici, numérotés et idempotents.
+# The seed scripts arrive here, numbered and idempotent.

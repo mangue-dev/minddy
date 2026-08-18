@@ -7,13 +7,13 @@ import {
 } from "@/lib/server/agent/pr-actions";
 
 /**
- * Le diff d'UN commit de la pull request — ce que CE commit change, contre son
+ * The diff of ONE commit of the pull request — what THIS commit changes, versus its
  * parent.
  *  GET → { files, additions, deletions, url, parentSha, message, author… }
  *
- * Le SHA est validé deux fois : sa FORME ici (il finit dans une URL de forge),
- * son APPARTENANCE à cette PR côté `prCommitDiffResponse` — sans quoi la route
- * servirait le diff de n'importe quel commit du dépôt.
+ * The SHA is validated twice: its FORM here (it ends in a forge URL),
+ * its BELONGING to this PR on the `prCommitDiffResponse` side — otherwise the road
+ * would serve the diff of any commit in the repository.
  */
 
 type RouteContext = { params: Promise<{ prId: string; sha: string }> };

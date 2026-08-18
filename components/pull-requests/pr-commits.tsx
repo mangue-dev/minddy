@@ -21,19 +21,19 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Onglet Commits d'une pull request : ce qui la COMPOSE, dans l'ordre où le
- * travail s'est fait — la vue que minddy n'avait pas et qui obligeait à ouvrir
- * la forge pour savoir en combien de temps, et en combien de gestes, une PR
- * était arrivée là.
+ * Commits tab of a pull request: what COMPOSES it, in the order in which the
+ * work was done — the view that minddy did not have and which forced us to open
+ * the forge to know in how long, and in how many gestures, a PR
+ * had arrived there.
  *
- * Rendu calqué sur GitHub, parce que c'est un standard et pas un endroit à
- * personnaliser : groupes par jour, titre du commit, auteur + date relative,
- * SHA court en monospace (copiable), et le lien vers la forge. Le corps du
- * message — quand il y en a un — se déplie derrière le « … » de GitHub plutôt
- * que d'étirer chaque ligne à la hauteur de son plus long commit.
+ * Rendering modeled on GitHub, because it is a standard and not a place to
+ * customize: groups by day, commit title, author + relative date,
+ * SHA runs in a minivan (copiable), and the link to the forge. The body of
+ * message — when there is one — unfolds behind the “…” of GitHub instead
+ * than stretching each line to the height of its longest commit.
  */
 
-/** Titre (1re ligne) et corps (le reste) d'un message de commit. */
+/** Title (1st line) and body (the rest) of a commit message. */
 function splitMessage(message: string): { title: string; body: string } {
   const newline = message.indexOf("\n");
   if (newline === -1) return { title: message.trim(), body: "" };
@@ -43,15 +43,15 @@ function splitMessage(message: string): { title: string; body: string } {
   };
 }
 
-/** Les 7 premiers caractères, comme partout ailleurs dans git. */
+/** The first 7 characters, like everywhere else in git. */
 function shortSha(sha: string): string {
   return sha.slice(0, 7);
 }
 
 /**
- * Clé de groupe = le JOUR local du commit. Les commits sans date tombent tous
- * dans le même groupe vide : le rendu leur donne alors l'en-tête « Commits »
- * nu plutôt qu'une date inventée.
+ * Group key = the local DAY of the commit. Undated commits all fall
+ * in the same empty group: rendering then gives them the “Commits” header
+ * naked rather than a made-up date.
  */
 function dayKey(authoredAt: string | null): string {
   if (!authoredAt) return "";
@@ -62,12 +62,12 @@ function dayKey(authoredAt: string | null): string {
 
 interface CommitDay {
   key: string;
-  /** La date du groupe, ou null quand aucun de ses commits n'en porte une. */
+  /** The group's date, or null when none of its commits have one. */
   date: Date | null;
   commits: PullRequestCommit[];
 }
 
-/** Groupe consécutif par jour — la liste arrive déjà triée du plus récent. */
+/** Consecutive group per day — the list arrives already sorted from most recent. */
 function groupByDay(commits: PullRequestCommit[]): CommitDay[] {
   const days: CommitDay[] = [];
   for (const commit of commits) {
@@ -86,7 +86,7 @@ function groupByDay(commits: PullRequestCommit[]): CommitDay[] {
   return days;
 }
 
-/** Le SHA court, cliquable pour le copier — le geste qu'on vient chercher ici. */
+/** The short SHA, clickable to copy it — the gesture we are looking for here. */
 function ShaButton({ sha }: { sha: string }) {
   const t = useTranslations("PullRequests");
   const [copied, setCopied] = useState(false);
@@ -117,10 +117,10 @@ function ShaButton({ sha }: { sha: string }) {
 }
 
 /**
- * Le poids du commit, et la porte d'entrée de son diff : ce que ce commit-là
- * change, tout seul, dans le panneau latéral. C'est le chiffre qu'on regarde
- * avant de décider si le commit mérite qu'on l'ouvre — autant qu'il soit le
- * bouton qui l'ouvre.
+ * The weight of the commit, and the entry point for its diff: what this commit is
+ * changes, by itself, in the side panel. This is the number we look at
+ * before deciding whether the commit is worth opening — it might as well be
+ * button that opens it.
  */
 function CommitStats({
   additions,
@@ -162,7 +162,7 @@ function CommitRow({
 }: {
   commit: PullRequestCommit;
   provider: RepoProviderId;
-  /** Ouvre le diff de CE commit dans le panneau latéral. */
+  /** Open the diff of THIS commit in the side panel. */
   onOpenDiff: (sha: string) => void;
 }) {
   const t = useTranslations("PullRequests");
@@ -171,11 +171,11 @@ function CommitRow({
   const [showBody, setShowBody] = useState(false);
   const { title, body } = useMemo(() => splitMessage(commit.message), [commit.message]);
 
-  // TOUS les auteurs, principal en tête (MIN-159) : un commit co-signé en a
-  // plusieurs, et c'est le cas courant dès qu'un agent a tenu le clavier. Le
-  // repli — la forge n'a pas répondu, ou la réponse en cache date d'avant le
-  // déploiement qui a ajouté le champ — est l'auteur principal seul, exactement
-  // ce que cette vue affichait avant.
+  // ALL authors, principal first (MIN-159): a co-signed commit has
+  // several, and this is the common case as soon as an agent has held the keyboard. THE
+  // fallback — the forge did not respond, or the cached response dates from before
+  // deployment that added the field — is the primary author alone, exactly
+  // what this view displayed before.
   const authors =
     commit.authors?.length
       ? commit.authors
@@ -194,9 +194,9 @@ function CommitRow({
       <AuthorStack authors={authors} className="mt-0.5" />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex min-w-0 items-start gap-1.5">
-          {/* Le titre ouvre le diff, comme il ouvre le commit sur GitHub : c'est
-              le geste qu'on tente d'abord, et l'indicateur +/− à droite fait la
-              même chose pour qui vise le chiffre. */}
+          {/* The title opens the diff, as it opens the commit on GitHub: it is
+              the gesture we attempt first, and the +/− indicator on the right makes the
+              same thing for those aiming for the figure. */}
           <button
             type="button"
             onClick={() => onOpenDiff(commit.sha)}
@@ -204,8 +204,8 @@ function CommitRow({
           >
             {title || t("commitNoMessage")}
           </button>
-          {/* Le « … » de GitHub : le corps du message est souvent long et
-              rarement lu — il se déplie, il n'occupe pas la liste. */}
+          {/* The “…” of GitHub: the body of the message is often long and
+              rarely read — it unfolds, it does not occupy the list. */}
           {body ? (
             <Button
               variant="ghost"
@@ -248,9 +248,9 @@ function CommitRow({
           ) : null}
         </p>
       </div>
-      {/* Signature : affichée seulement quand la forge l'a VÉRIFIÉE. `null` veut
-          dire « on ne sait pas » (GitLab), et un « non vérifié » sur tous les
-          commits d'une MR ferait passer un silence pour un défaut. */}
+      {/* Signature: only displayed when the forge has VERIFIED it. `null` wants
+          say “we don’t know” (GitLab), and an “unverified” on all
+          commits to an MR would make silence look like a defect. */}
       {commit.verified ? (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -266,8 +266,8 @@ function CommitRow({
         </Tooltip>
       ) : null}
       <div className="flex shrink-0 items-center">
-        {/* Muet quand la forge n'a pas su donner les chiffres : « +0 −0 » se
-            lirait comme un commit vide, et ce n'est pas ce qu'on sait. */}
+        {/* Silent when the forge was unable to give the numbers: “+0 −0” is
+            would read as an empty commit, and that's not what we know. */}
         {commit.additions != null && commit.deletions != null ? (
           <CommitStats
             additions={commit.additions}
@@ -310,7 +310,7 @@ export function PrCommits({
 }: {
   prId: string;
   commits: PullRequestCommit[];
-  /** La PR a plus de commits que minddy n'en liste d'un coup. */
+  /** The PR has more commits than minddy can list in one go. */
   truncated: boolean;
   loading: boolean;
   provider: RepoProviderId;
@@ -321,8 +321,8 @@ export function PrCommits({
     () => groupByDay(newestFirstPullRequestCommits(commits)),
     [commits],
   );
-  // Le commit dont on regarde le diff, et l'ouverture du panneau — deux états
-  // et non un : le sha doit SURVIVRE à la fermeture, que Radix anime.
+  // The commit whose diff we look at, and the opening of the panel — two states
+  // and not one: the sha must SURVIVE the closure, which Radix animates.
   const [diffSha, setDiffSha] = useState<string | null>(null);
   const [diffOpen, setDiffOpen] = useState(false);
   const openDiff = (sha: string) => {

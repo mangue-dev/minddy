@@ -3,13 +3,13 @@ import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 
 /**
- * LE CHECKOUT ISOLÉ D'UN TOUR LOCAL.
+ * CHECKOUT ISOLATED FROM A LOCAL TOWER.
  *
- * Le dépôt attaché reste le point d'ancrage humain : c'est lui qui porte les
- * remotes, les credentials et, potentiellement, du travail non commité. Un
- * worktree est créé sous la racine propre au run, sur un HEAD détaché. Ainsi le
- * harnais peut utiliser le chemin normal de livraison (commit + push) sans
- * déplacer la branche, l'index ou l'arbre de travail de la personne.
+ * The attached repository remains the human anchor point: it is he who carries the
+ * remotes, credentials and, potentially, uncommitted work. A
+ * worktree is created under the run's own root, on a detached HEAD. So the
+ * harness can use the normal delivery path (commit + push) without
+ * moving the person's branch, index or working tree.
  */
 
 export function localWorktreePath(runRoot: string): string {
@@ -21,11 +21,11 @@ export type LocalWorktreeResult =
   | { readonly ok: false; readonly message: string };
 
 /**
- * Crée ou retrouve le worktree d'un run.
+ * Creates or finds the worktree of a run.
  *
- * `git worktree add --detach` est volontaire : la branche de livraison n'est
- * pas checkoutée dans le dépôt attaché et ne peut donc pas déplacer le travail
- * de quelqu'un. Le harnais pousse ensuite son HEAD détaché vers `workBranch`.
+ * `git worktree add --detach` is voluntary: the commit branch is not
+ * checked out in the attached repository and therefore cannot move someone's work
+ *. The harness then pushes its detached HEAD towards `workBranch`.
  */
 export function prepareLocalWorktree(opts: {
   sourceRepo: string;
@@ -39,8 +39,8 @@ export function prepareLocalWorktree(opts: {
   const wanted = path.resolve(destination);
 
   try {
-    // Une racine supprimée par le ménage laisse une entrée administrative dans
-    // le dépôt source. Git sait les retirer, sans toucher au checkout humain.
+    // A root deleted by the household leaves an administrative entry in
+    // the source repository. Git knows how to remove them, without touching human checkout.
     git(source, ["worktree", "prune"]);
     const registered = git(source, ["worktree", "list", "--porcelain"])
       .split("\n")
@@ -59,27 +59,27 @@ export function prepareLocalWorktree(opts: {
     const base = localBaseRef(source, opts.runRoot, opts.baseBranch, opts.authUrl);
     git(source, ["worktree", "add", "--detach", destination, base]);
 
-    // Une session reprise peut avoir déjà poussé sa branche depuis une autre
-    // machine. Reprendre ce tip est le pendant local de `cloneRepo`; l'absence
-    // de branche est normale pour le premier tour et laisse la base checkoutée.
+    // A resumed session may have already pushed its branch from another
+    // machine. Resume this tip is the local counterpart of `cloneRepo`; the absence
+    // branch is normal for the first round and leaves the base checkouted.
     if (opts.authUrl?.trim() && opts.workBranch.trim()) {
       const fetched = tryGit(destination, ["fetch", "--quiet", opts.authUrl, opts.workBranch]);
       if (fetched) git(destination, ["checkout", "--detach", "FETCH_HEAD"]);
     }
     return { ok: true, path: destination, reused: false };
   } catch {
-    // Les diagnostics bruts de git peuvent contenir l'URL authentifiée. Le
-    // journal du lanceur ne reçoit donc qu'un motif sans secret.
+    // Raw git diagnostics may contain the authenticated URL. THE
+    // launcher log therefore only receives a pattern without secrets.
     return { ok: false, message: "Git could not create the isolated worktree." };
   }
 }
 
 /**
- * Une branche proposée par le picker peut ne pas encore exister localement. On
- * la ramène alors sous une ref privée à minddy, sans créer ou déplacer une
- * branche visible dans le checkout attaché. C'est la même promesse que le mode
- * checkout courant, mais le worktree peut ensuite partir exactement de la base
- * demandée plutôt que du HEAD de la personne.
+ * A branch proposed by the picker may not yet exist locally. On
+ * then brings it back under a private ref to minddy, without creating or moving a
+ * branch visible in the attached checkout. This is the same promise as the current checkout mode
+ *, but the worktree can then start exactly from the requested base
+ * rather than the HEAD of the person.
  */
 function localBaseRef(
   sourceRepo: string,

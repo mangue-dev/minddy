@@ -5,56 +5,56 @@ import type { HarnessLayout } from "../harness-layout";
 import type { RepoHost, ShellOptions, ShellResult } from "../repo-host";
 
 /**
- * Les mêmes quatre primitives que `sandboxHost`, mais SUR PLACE (MIN-224) : la
- * boucle tourne dans la microVM, donc le disque du dépôt est le disque local et
- * le shell est le shell local.
+ * The same four primitives as `sandboxHost`, but ON-SITE (MIN-224): the
+ * loop runs in the microVM, so the repository disk is the local disk and
+ * the shell is the local shell.
  *
- * CE QUE ÇA SUPPRIME, et c'est tout le sujet du ticket : chaque geste sur le
- * dépôt cesse d'être un aller-retour RPC vers `iad1`. Le cadrage a mesuré un
- * `runCommand("true")` à 211 ms de médiane depuis la France, et les dix mêmes
- * commandes ENCHAÎNÉES dans la VM à 227 ms au total — le transport était
- * l'essentiel du coût. Le gain exact intra-région reste à mesurer (MIN-221 §5),
- * et le dossier de la migration ne repose pas dessus.
+ * WHAT THIS IS DELETED, and that's the whole point of the ticket: every gesture on the
+ * deposit ceases to be an RPC round trip to `iad1`. The scoping measured a
+ * `runCommand("true")` at 211 ms median from France, and the same ten
+ * commands CHAINED in the VM at 227 ms total — the transport was
+ * the bulk of the cost. The exact intra-regional gain remains to be measured (MIN-221 §5),
+ * and the migration case does not rely on it.
  *
- * CE QUE ÇA NE CHANGE PAS. `resolveWithin` et `assertNotGit` gardent le même
- * sens : ce sont des fonctions de chemin appliquées aux arguments du modèle avant
- * de toucher le disque, et le harness qui tourne dans la machine qu'il garde ne
- * leur retire rien. Ce qui change vraiment, c'est que la microVM cesse d'être
- * « jetable et sans conséquence » : un `rm -rf /vercel/sandbox` du modèle tue
- * maintenant son propre tour. Désagrément, pas faille — rien de durable n'y vit,
- * la branche est poussée — mais l'argument ne peut plus être invoqué tel quel.
+ * WHAT IT DOES NOT CHANGE. `resolveWithin` and `assertNotGit` keep the same
+ * meaning: they are path functions applied to the model arguments before
+ * touching the disk, and the harness that turns in the machine it guards does not
+ * take anything away from them. What really changes is that the microVM ceases to be
+ * "disposable and inconsequential": a `rm -rf /vercel/sandbox` of the kill
+ * model now takes its own turn. Inconvenience, not flaw — nothing durable lives there,
+ * the branch is pushed — but the argument can no longer be invoked as is.
  *
- * PAS DE `exec` DE `node:child_process`, et c'est délibéré. `exec` bufferise dans
- * une chaîne plafonnée (`maxBuffer`, 1 Mo par défaut) et LÈVE au-delà, en jetant
- * ce qui avait été produit : un `npm test` bavard rendrait une erreur au lieu de
- * sa sortie. `spawn` + accumulation nous laisse décider, et c'est
- * `command-output.ts` qui décide déjà (cap, spill sur disque).
+ * NO `exec` OF `node:child_process`, and this is deliberate. `exec` buffers in
+ * a capped string (`maxBuffer`, 1 MB by default) and LIFTS beyond that, discarding
+ * what had been produced: a chatty `npm test` would return an error instead of
+ * its output. `spawn` + accumulation lets us decide, and it's
+ * `command-output.ts` which already decides (cap, spill on disk).
  */
 
 /**
- * Ce qu'on garde d'un flux, par flux. Très au-dessus de ce que le modèle lira
- * (`formatRunCommandResult` cape bien plus bas, et dépose le reste sur disque) :
- * ce plafond-ci n'est pas une politique d'affichage, c'est le garde-fou mémoire
- * d'un process qui doit vivre des heures. Un watcher oublié en avant-plan ne doit
- * pas faire grossir le tas du harness jusqu'à l'OOM.
+ * What we keep from a flow, by flow. Very above what the model will read
+ * (`formatRunCommandResult` caps much lower, and deposits the rest on disk):
+ * this ceiling is not a display policy, it is the memory safeguard
+ * of a process which must live for hours. A watcher forgotten in the foreground must
+ * not cause the harness pile to grow to OOM.
  */
 const MAX_STREAM_BYTES = 32 * 1024 * 1024;
 
-/** Délai de grâce entre le SIGTERM d'un timeout et le SIGKILL. */
+/** Grace period between the SIGTERM of a timeout and the SIGKILL. */
 const KILL_GRACE_MS = 2_000;
 
 /**
- * Lance `sh -c <command>` et rend exitCode + stdout + stderr, comme la sandbox.
+ * Runs `sh -c <command>` and returns exitCode + stdout + stderr, like the sandbox.
  *
- * Les trois écarts avec `child_process.exec`, tous voulus :
+ * The three deviations from `child_process.exec`, all wanted:
  *
- * - la sortie est accumulée en buffers et bornée par `MAX_STREAM_BYTES` — TRONQUÉE,
- *   jamais transformée en erreur ;
- * - un timeout TUE proprement (SIGTERM, grâce, SIGKILL) et rend ce qui avait déjà
- *   été écrit, avec un exitCode non nul : le modèle doit lire la sortie partielle
- *   d'un test qui a bouclé, pas un message vide ;
- * - un `signal` déjà abandonné rend tout de suite, sans lancer le process. C'est
- *   ce que l'abandon d'un sous-agent attend.
+ * - the output is accumulated in buffers and bounded by `MAX_STREAM_BYTES` — TRUNCATED,
+ * never transformed into an error;
+ * - a timeout KILLS properly (SIGTERM, thanks, SIGKILL) and returns what had already
+ * been written, with a non-zero exitCode: the model must read the partial output
+ * from a test which has completed, not an empty message;
+ * - an already abandoned `signal` returns immediately, without launching the process. This is
+ * what abandoning a subagent expects.
  */
 function execLocal(defaultCwd: string, command: string, opts?: ShellOptions): Promise<ShellResult> {
   return new Promise((resolve, reject) => {
@@ -65,8 +65,8 @@ function execLocal(defaultCwd: string, command: string, opts?: ShellOptions): Pr
     const child = spawn("sh", ["-c", command], {
       cwd: opts?.cwd ?? defaultCwd,
       env: opts?.env ? { ...process.env, ...opts.env } : process.env,
-      // Groupe de process à part : un `npm test` qui a lui-même lancé des enfants
-      // ne doit pas leur survivre quand on le tue. `-pid` frappe le groupe entier.
+      // Separate process group: a `npm test` which itself launched children
+      // must not survive them when killed. `-pid` hits the entire group.
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -120,34 +120,34 @@ function execLocal(defaultCwd: string, command: string, opts?: ShellOptions): Pr
       resolve({
         exitCode,
         stdout: Buffer.concat(out).toString("utf8"),
-        // Le timeout se DIT dans stderr, comme la sandbox le fait : sans ça, une
-        // commande tuée à 180 s rendait un exit 143 nu, que le modèle relit comme
-        // un échec de la commande elle-même.
+        // The timeout is SOLD in stderr, like the sandbox does: without that, a
+        // command killed at 180 s returned a bare exit 143, which the model rereads as
+        // a failure of the command itself.
         stderr: timedOut
           ? `${stderrText}${stderrText.endsWith("\n") || !stderrText ? "" : "\n"}Command timed out after ${opts?.timeoutMs} ms and was killed.`
           : stderrText,
       });
     };
 
-    // `sh -c` introuvable, cwd inexistant : ça n'est pas une commande qui échoue,
-    // c'est un lancement impossible. L'appelant le traite comme une erreur de tool.
+    // `sh -c` not found, cwd does not exist: this is not a command that fails,
+    // this is an impossible launch. The caller treats it as a tool error.
     child.on("error", (e) => {
       if (timer) clearTimeout(timer);
       opts?.signal?.removeEventListener("abort", onAbort);
       reject(e);
     });
-    // `close` et pas `exit` : `exit` peut arriver avant que les pipes ne soient
-    // drainés, et on rendrait alors une sortie amputée de sa fin.
+    // `close` and not `exit`: `exit` can happen before the pipes are
+    // drained, and we would then return an output without its end.
     child.on("close", (code, signal) => done(code ?? (signal ? 143 : 1)));
   });
 }
 
 /**
- * Les mains locales du harness sur le dépôt du run.
+ * The harness's local hands on the run repository.
  *
- * `layout` vient du JOB depuis MIN-354 : le harness ne décide plus où il
- * travaille, il l'apprend — et deux runs sur une même machine ont deux layouts
- * disjoints, donc deux dépôts, deux dossiers de sorties et deux harness.
+ * `layout` comes from the JOB since MIN-354: the harness no longer decides where it
+ * works, it learns it — and two runs on the same machine have two layouts
+ * disjoint, therefore two repositories, two output folders and two harness.
  */
 export function localHost(layout: HarnessLayout): RepoHost {
   return {
@@ -157,10 +157,10 @@ export function localHost(layout: HarnessLayout): RepoHost {
       try {
         return await readFile(absPath, "utf8");
       } catch (err) {
-        // ENOENT est la réponse attendue (« le fichier n'existe pas »), et c'est
-        // le contrat de `sandbox.readFileToBuffer`. Le reste — EACCES, EISDIR —
-        // est une vraie erreur : la rendre comme « absent » ferait écrire par
-        // `edit_file` un fichier que le modèle croyait vide.
+        // ENOENT is the expected response ("the file does not exist"), and it is
+        // the `sandbox.readFileToBuffer` contract. The rest — EACCES, EISDIR —
+        // is a real error: making it "absent" would cause it to be written by
+        // `edit_file` a file that the model believed to be empty.
         if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
         throw err;
       }

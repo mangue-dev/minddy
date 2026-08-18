@@ -13,10 +13,10 @@ import type { SavedView } from "./types";
 export const savedViewsQueryKey = ["saved-views"] as const;
 
 /**
- * Mes vues enregistrées (la palette de commandes). Elles vivent en base pour
- * suivre le compte d'un appareil à l'autre ; la liste est courte et ne change
- * qu'à la main, donc une simple invalidation après écriture suffit — pas de
- * temps réel.
+ * My saved views (the command palette). They live on base to
+ * follow the account from one device to another; the list is short and only changes
+ * by hand, so a simple invalidation after writing is enough — no
+ * real time.
  */
 export function useSavedViewsQuery(enabled = true) {
   const queryClient = useQueryClient();

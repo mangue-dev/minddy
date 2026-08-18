@@ -64,8 +64,8 @@ export function AccountNotificationsSection() {
       title={t("title")}
       description={t("description")}
     >
-      {/* L'interrupteur est À DROITE du libellé, comme partout ailleurs dans le
-          produit : c'était le seul endroit qui le mettait devant. */}
+      {/* The switch is TO THE RIGHT of the label, like everywhere else in the
+ product: that was the only place that put it in front. */}
       {CATEGORIES.map((category) => (
         <SettingsRow
           key={category}

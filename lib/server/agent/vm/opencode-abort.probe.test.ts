@@ -1,32 +1,32 @@
 /**
- * MIN-286 — sonde du ROUND COUPÉ EN VOL : qui facture quoi quand on abort ?
+ * MIN-286 — ROUND probe CUT IN FLIGHT: who charges what when we abort?
  *
- * Ne tourne PAS avec `npm test` : `describe.skipIf` la saute tant que
- * `MDY_OPENCODE_ABORT_PROBE=1` n'est pas posé. Elle dépense un vrai round sur un
- * vrai modèle (~0,003 $) et a besoin d'`OPENROUTER_API_KEY`.
+ * Does NOT run with `npm test`: `describe.skipIf` skips it as long as
+ * `MDY_OPENCODE_ABORT_PROBE=1` is not posed. She spends a real round on a
+ * real model (~$0.003) and needs `OPENROUTER_API_KEY`.
  *
- *   MDY_OPENCODE_ABORT_PROBE=1 MDY_OPENCODE_BIN=/chemin/vers/opencode \
- *   npx vitest run lib/server/agent/vm/opencode-abort.probe.test.ts --testTimeout=600000
+ * MDY_OPENCODE_ABORT_PROBE=1 MDY_OPENCODE_BIN=/path/to/opencode \
+ * npx vitest run lib/server/agent/vm/opencode-abort.probe.test.ts --testTimeout=600000
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * CE QU'ELLE A ÉTABLI le 2026-08-12, et qui décide du code de `recordOrphans`
+ * ─────────────────────── ──────────────────────── ──────────────────────────────
+ * WHAT SHE ESTABLISHED on 2026-08-12, and who decides the code of `recordOrphans`
  *
- * 1. **Opencode ne facture RIEN d'un round avorté.** Le message assistant reste
- *    à `finish: null`, `cost: 0`, `tokens: {input: 0, output: 0}`, avec
- *    `error: MessageAbortedError` — et pourtant 179 caractères avaient déjà été
- *    écrits. Notre traducteur exige un `finish` pour écrire au ledger (à raison :
- *    sans lui il écrirait une ligne vide puis une vraie). La dépense sortait donc
- *    des compteurs sur un geste déclenchable à volonté.
- * 2. **Le proxy, lui, voit tout.** Il ne passe pas de signal à son `fetch` amont :
- *    quand opencode s'en va, la boucle de lecture continue jusqu'à la dernière
- *    frame — **1 221 ms plus tard**, sans une erreur de socket — et cette frame
- *    porte `usage` avec le coût facturé (relevé : `cost: 0.002827`, 2 032 tokens
- *    de prompt, 159 de complétion) et le `generation_id`.
+ * 1. **Opencode charges NOTHING for an aborted round.** The assistant message remains
+ * at `finish: null`, `cost: 0`, `tokens: {input: 0, output: 0}`, with
+ * `error: MessageAbortedError` — and yet 179 characters had already been
+ * written. Our translator requires a `finish` to write to the ledger (right:
+ * without it he would write an empty line then a real one). The expenditure therefore came out
+ * from the counters on a gesture that can be triggered at will.
+ * 2. **The proxy sees everything.** It does not pass a signal to its upstream `fetch`:
+ * when opencode leaves, the reading loop continues until the last
+ * frame — **1221 ms later**, without a socket error — and this frame
+ * carries `usage` with the cost charged (read: `cost: 0.002827`, 2032 tokens
+ * prompt, 159 completion) and the `generation_id`.
  *
- * D'où la forme du correctif : `proxy.settle()` puis `proxy.drain()` en fin de
- * tour, et une ligne de ledger au montant du FOURNISSEUR — pas une estimation.
- * C'est le défaut que MIN-216 avait fermé côté boucle maison, rouvert par le
- * changement de moteur et refermé ici.
+ * Hence the form of the fix: `proxy.settle()` then `proxy.drain()` at the end of
+ * turn, and a ledger line at the SUPPLIER amount — not an estimate.
+ * This is the fault that MIN-216 had closed on the home loop side, reopened by the
+ * motor change and closed here.
  */
 import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
@@ -40,7 +40,7 @@ const LIVE = process.env.MDY_OPENCODE_ABORT_PROBE === "1";
 const VERSION = process.env.MDY_OPENCODE_VERSION ?? "1.18.16";
 const PORT = Number(process.env.MDY_OPENCODE_ABORT_PORT ?? 4393);
 const MODEL = process.env.MDY_OPENCODE_ABORT_MODEL ?? "anthropic/claude-haiku-4.5";
-/** Assez pour que le modèle ait commencé à écrire, assez peu pour qu'il n'ait pas fini. */
+/** Enough that the model has started writing, little enough that it hasn't finished. */
 const ABORT_AFTER_MS = Number(process.env.MDY_OPENCODE_ABORT_AFTER_MS ?? 2500);
 
 function loadEnv(): void {
@@ -90,9 +90,9 @@ describe.skipIf(!LIVE)("un round coupé en vol", () => {
         bin = path.join(root, "node_modules", ".bin", "opencode");
       }
 
-      // LE VRAI PROXY, celui de production. C'est lui qu'on met à l'épreuve : la
-      // clé est posée dans sa config amont ici, là où le firewall la pose en
-      // production — le proxy n'en connaît toujours aucune.
+      // THE REAL PROXY, the production one. This is the one under test: the key
+      // is placed in its upstream config here, where the firewall places it in
+      // production — the proxy itself still knows none of it.
       proxy = await startLlmProxy({
         job: {
           baseUrl: "https://openrouter.ai/api/v1",
@@ -167,7 +167,7 @@ describe.skipIf(!LIVE)("un round coupé en vol", () => {
       await new Promise((r) => setTimeout(r, ABORT_AFTER_MS));
       await fetch(q(`/session/${session.id}/abort`), { method: "POST" });
 
-      // ── 1. Ce qu'opencode dit du round : rien de facturable ────────────────
+      // ── 1. What opencode says about the round: nothing billable ────────────
       await new Promise((r) => setTimeout(r, 2_000));
       const messages = (await (await fetch(q(`/session/${session.id}/message`))).json()) as Array<{
         info: { role: string; finish?: string | null; cost?: number };
@@ -179,13 +179,13 @@ describe.skipIf(!LIVE)("un round coupé en vol", () => {
         .filter((p) => p.type === "text")
         .map((p) => p.text ?? "")
         .join("");
-      // Le modèle avait commencé : sans ça la sonde ne prouverait rien.
+      // The model had started: without it the probe would prove nothing.
       expect(written.length, "le round a été coupé trop tôt pour prouver quoi que ce soit")
         .toBeGreaterThan(20);
       expect(assistant!.info.finish ?? null, "opencode facturerait donc ce round").toBeNull();
       expect(assistant!.info.cost ?? 0).toBe(0);
 
-      // ── 2. Ce que le proxy en a gardé : le coût réel ───────────────────────
+      // ── 2. What the proxy kept: the real cost ───────────────────────
       await proxy.settle(10_000);
       const orphans = proxy.drain();
       expect(orphans.length, "le proxy n'a rien retenu du round coupé").toBeGreaterThan(0);

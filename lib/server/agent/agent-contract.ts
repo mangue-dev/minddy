@@ -4,42 +4,42 @@ import type { AiFeature, AiUsageBillTo } from "@/lib/server/ai-usage-shape";
 import type { AgentFileChangeStatus } from "@/lib/agent-api";
 
 /**
- * LE VOCABULAIRE DU HARNESS, ET RIEN D'AUTRE (MIN-286).
+ * THE VOCABULARY OF HARNESS, AND NOTHING ELSE (MIN-286).
  *
- * Ces types vivaient dans `agent-loop.ts`, avec la boucle maison. La boucle est
- * partie ; eux restent, parce qu'ils ne lui appartenaient pas : ce sont les mots
- * que se disent le superviseur d'opencode, le plan de contrôle, le fil et le
- * ledger. Un event, une ligne d'usage, une charge de direct, une étape de plan.
+ * These guys lived in `agent-loop.ts`, with the house loop. The loop is
+ * part; they remain, because they did not belong to it: these are the words
+ * that the opencode supervisor, the control plane, the thread and the
+ * ledger say to each other. An event, a usage line, a direct load, a plan step.
  *
- * Module SANS dépendance sortante — ni base, ni réseau, ni fournisseur. C'est ce
- * qui lui permet d'entrer dans le bundle de la microVM sans y faire entrer un
- * client Supabase avec lui (cf. `vm-bundle-secrets.test.ts`).
+ * Module WITHOUT outgoing dependency — neither base, nor network, nor provider. It is this
+ * which allows it to enter the microVM bundle without bringing a
+ * Supabase client with it (see `vm-bundle-secrets.test.ts`).
  */
 
-/** Une partie de contenu, au format des content parts OpenAI/OpenRouter. */
+/** A part of content, in OpenAI/OpenRouter content parts format. */
 export type AgentContentPart =
   | { type: "text"; text: string }
   | { type: "image_url"; image_url: { url: string } };
 
 /**
- * Une image renvoyée par un tool, prête à devenir une partie `image_url`.
- * `url` est une DATA URL (`data:image/png;base64,…`), jamais une URL signée :
- * elle est rejouée des heures plus tard, quand l'URL signée a expiré depuis
- * longtemps.
+ * An image returned by a tool, ready to become a game `image_url`.
+ * `url` is a DATA URL (`data:image/png;base64,…`), never a signed URL:
+ * it is replayed hours later, when the signed URL has expired for
+ * a long time.
  */
 export interface AgentToolImage {
   url: string;
-  /** Nom du fichier — pour les traces et les events, jamais envoyé au modèle. */
+  /** File name — for traces and events, never sent to the model. */
   name?: string;
 }
 
 /**
- * Un fichier touché, annoncé au fil PENDANT le tour.
+ * A file touched, announced to the wire DURING the turn.
  *
- * Le `status` n'est CERTAIN que là où le tool le porte. Ailleurs on annonce
- * `modified`, et l'event `files_changed` de fin de tour, dérivé de
- * `git diff --name-status`, rectifie : le fil montre du PROVISOIRE en attendant
- * l'autorité.
+ * The `status` is only CERTAIN where the tool carries it. Elsewhere we announce
+ * `modified`, and the end-of-turn event `files_changed`, derived from
+ * `git diff --name-status`, corrects: the thread shows PROVISIONAL while waiting for
+ * the authority.
  */
 export type AgentLiveEdit = {
   path: string;
@@ -48,17 +48,17 @@ export type AgentLiveEdit = {
 };
 
 /**
- * Statistiques Git exactes du tour en cours. Elles voyagent avec le direct quand
- * le dépôt vit sur la machine de l'utilisateur : le serveur ne peut pas le lire
- * à sa place, donc la route de diff ne peut pas produire les compteurs `+ / −`.
+ * Exact Git statistics for the current round. They travel with direct when
+ * the repository lives on the user's machine: the server cannot read it
+ * in its place, so the diff route cannot produce the counters `+ / −`.
  */
 export type AgentLiveFileStat = AgentLiveEdit & {
   additions: number;
   deletions: number;
 };
 
-/** Patch local à la forme des fichiers de forge, mais produit par Git sur la
- * machine qui exécute le tour. Borné avant de franchir le plan de contrôle. */
+/** Local patch in the form of forge files, but produced by Git on the
+ * machine running the trick. Bounded before crossing the control plane. */
 export interface AgentLiveDiffFile {
   filename: string;
   status: "added" | "removed" | "renamed" | "modified";
@@ -71,19 +71,19 @@ export interface AgentLiveDiffFile {
 export interface AgentLiveDiff {
   files: AgentLiveDiffFile[];
   truncated: boolean;
-  /** Instantané complet de la session (dépôt courant), et non delta du tour. */
+  /** Complete snapshot of the session (current deposit), not delta of the round. */
   snapshot?: boolean;
 }
 
 /**
- * Un message du protocole chat OpenRouter. `content` accepte un TABLEAU DE PARTIES
- * (texte + image, MIN-111) : c'est ce qui permet à une maquette jointe au ticket
- * d'arriver dans les yeux du modèle.
+ * A message from the OpenRouter chat protocol. `content` accepts an ARRAY OF PARTS
+ * (text + image, MIN-111): this is what allows a model attached to the ticket
+ * to arrive in the eyes of the model.
  *
- * Ne sert plus qu'à DEUX choses depuis la suppression de la boucle : l'amorce du
- * tour, que la fonction assemble avant d'en tirer le prompt d'opencode, et la
- * relecture des vieux checkpoints (`AgentCheckpoint.messages`), dont plus personne
- * ne sait rejouer la conversation — cf. `priorConversationLost` dans execute.ts.
+ * Only serves TWO purposes since the loop was removed: the start of the
+ * turn, which the function assembles before drawing the opencode prompt, and the
+ * rereading of the old checkpoints (`AgentCheckpoint.messages`), of which no one
+ * knows how to replay the conversation anymore — cf. `priorConversationLost` in execute.ts.
  */
 export interface AgentChatMessage {
   role: "system" | "user" | "assistant" | "tool";
@@ -106,8 +106,8 @@ export type AgentEventType =
   | "plan_update"
   | "files_changed"
   | "question"
-  /** Budget d'usage mensuel épuisé en cours de run : la session s'arrête et le fil
-   *  affiche les issues possibles (monter de plan, attendre, passer en BYOK). */
+  /** Monthly usage budget exhausted during the run: the session stops and the thread
+ * displays the possible outcomes (upgrade plan, wait, switch to BYOK). */
   | "quota_exhausted";
 
 export type EmitAgentEvent = (
@@ -116,11 +116,11 @@ export type EmitAgentEvent = (
 ) => Promise<void> | void;
 
 /**
- * L'exécution d'un tool de domaine, telle que le pont la sert à opencode.
+ * The execution of a domain tool, such as the bridge is used for opencode.
  *
- * `callId` RATTACHE ce que le tool engendre à sa ligne du fil : les events d'une
- * session fille portent le `parent_call_id` de la délégation qui l'a ouverte, et
- * le fil les replie dessous au lieu d'ouvrir une bulle par event.
+ * `callId` ATTACHES what the tool generates to its thread line: the events of a
+ * child session carry the `parent_call_id` of the delegation which opened it, and
+ * the thread folds them underneath instead of opening a bubble by event.
  */
 export type ExecuteAgentTool = (
   name: string,
@@ -129,60 +129,60 @@ export type ExecuteAgentTool = (
 ) => Promise<{
   result: unknown;
   success: boolean;
-  /** Étiquette d'échec, reportée telle quelle sur l'event `tool_result` : un refus
-   *  du harness doit être COMPTABLE en base, pas seulement lisible dans le preview
-   *  (cf. `forbidden_command` du garde-fou git, MIN-108). */
+  /** Failure label, reported as is on the `tool_result` event: a refusal
+ * of the harness must be ACCOUNTABLE in base, not only readable in the preview
+ * (see `forbidden_command` of the git guardrail, MIN-108). */
   reason?: string;
-  /** Images à MONTRER au modèle (MIN-111) — les octets voyagent ici et JAMAIS dans
-   *  `result` : celui-ci est sérialisé, capé et recopié dans l'event `tool_result`,
-   *  où une data URL n'aurait rien à faire. */
+  /** Images to SHOW to the model (MIN-111) — the bytes travel here and NEVER in
+ * `result`: this is serialized, capped and copied into the event `tool_result`,
+ * where a data URL would have nothing to do. */
   images?: AgentToolImage[];
   /**
-   * Ce que le harness a de LONG à dire sur cet appel (MIN-247). Le `result` d'un
-   * tool est élidé EN SON MILIEU au-delà d'un gabarit — parfait pour une sortie de
-   * commande dont le verdict est en queue, ruineux pour un document qu'on donne à
-   * LIRE EN ENTIER. Le seul usage à ce jour est la porte de `create_pr`, qui rend
-   * le diff du tour : un diff amputé de son milieu ne se relit pas, et c'est
-   * précisément la relecture qu'on essaie de faire avoir lieu.
-   */
+ * What the harness has LONG to say about this call (MIN-247). The `result` of a
+ * tool is elided IN ITS MIDDLE beyond a template - perfect for an output of
+ * command whose verdict is in the queue, ruinous for a document that is given to
+ * READ IN ENTIRETY. The only use to date is the `create_pr` gate, which makes
+ * the diff of the turn: a diff cut out of its middle does not reread, and this is
+ * precisely the rereading that we are trying to make take place.
+ */
   followUp?: string;
 }>;
 
-/** État du round EN COURS d'écriture, poussé au fil ouvert (jamais persisté). */
+/** Round state BEING written, pushed to the open thread (never persisted). */
 export interface AgentLiveProgress {
-  /** Réponse du modèle telle qu'écrite jusqu'ici (texte COMPLET, pas un delta). */
+  /** Model response as written so far (FULL text, not a delta). */
   text: string;
-  /** Appels d'outils déjà amorcés dans ce round : >0 ⇒ le texte est de la
-   *  narration, le tour continue. 0 ⇒ c'est peut-être la réponse finale. */
+  /** Tool calls already started in this round: >0 ⇒ the text is from the
+ * narration, the round continues. 0 ⇒ this may be the final answer. */
   tools: number;
   /**
-   * Le modèle est EN TRAIN de raisonner (MIN-122) : le fil affiche un indicateur
-   * compact + un compteur. Le TEXTE du raisonnement ne voyage pas ici — il n'est
-   * pas streamé à l'écran, seulement persisté replié en fin de round.
-   */
+ * The model is reasoning (MIN-122): the thread displays a compact
+ * indicator + a counter. The TEXT of the reasoning does not travel here — it is not
+ * streamed to the screen, only persisted folded at the end of the round.
+ */
   reasoningActive: boolean;
-  /** Millisecondes de réflexion accumulées dans ce round (0 si pas de raisonnement). */
+  /** Milliseconds of reflection accumulated in this round (0 if no reasoning). */
   reasoningMs: number;
   /**
-   * Fichiers touchés jusqu'ici par le tour, PROVISOIRES (MIN-248 bis) : ils sont
-   * portés par chaque charge du direct, pas seulement par celle de l'édition —
-   * une charge est un instantané complet, et ce qu'elle tait, le fil l'efface.
-   * L'event `files_changed` de fin de tour, dérivé de git, prend le relais.
-   */
+ * Files touched so far by the round, PROVISIONAL (MIN-248 bis): they are
+ * carried by each charge of the live, not only by that of the edition —
+ * a charge is a complete snapshot, and what it silences, the thread erases.
+ * The event `files_changed`, derived from git, takes over.
+ */
   files?: AgentLiveEdit[];
-  /** La liste a été bornée (`CHANGED_FILES_CAP`) : le fil le dit plutôt que de
-   *  laisser lire une liste tronquée comme une liste complète. */
+  /** The list has been bounded (`CHANGED_FILES_CAP`): the thread says this rather than
+ * letting a truncated list be read as a complete list. */
   filesTruncated?: boolean;
-  /** Compteurs Git exacts des fichiers du tour, quand le harnais peut les lire. */
+  /** Exact Git counters of tour files, when the harness can read them. */
   fileStats?: AgentLiveFileStat[];
 }
 
 export type EmitAgentLive = (progress: AgentLiveProgress) => void;
 
 /**
- * Une ligne de ledger, telle que le harness la produit — la MÊME forme
- * qu'`AiUsageInput`, redite ici pour que ce module ne dépende pas de celui qui
- * écrit (cf. l'en-tête).
+ * A ledger line, such as the harness produces it — the SAME form
+ * as `AiUsageInput`, repeated here so that this module does not depend on who
+ * writes (see the header).
  */
 export interface AgentUsageLine {
   runId: string;
@@ -194,7 +194,7 @@ export interface AgentUsageLine {
   promptTokens?: number | null;
   completionTokens?: number | null;
   totalTokens?: number | null;
-  /** Prompt caching (MIN-242) : tokens relus au cache, tokens écrits dedans. */
+  /** Prompt caching (MIN-242): tokens read back to the cache, tokens written there. */
   cachedTokens?: number | null;
   cacheWriteTokens?: number | null;
   cost?: number | null;
@@ -203,11 +203,11 @@ export interface AgentUsageLine {
 }
 
 /**
- * Où part une ligne de ledger. Injecté, et OBLIGATOIRE : c'est ce qui fait que le
- * harness ne connaît pas le chemin de la base (MIN-224). Deux implémentations —
- * `recordAiUsage` dans la fonction, `POST /api/agent-vm/usage` dans la microVM.
+ * Where does a ledger line start. Injected, and MANDATORY: this is what makes the
+ * harness not know the path to the base (MIN-224). Two implementations —
+ * `recordAiUsage` in the function, `POST /api/agent-vm/usage` in the microVM.
  *
- * Best-effort des deux côtés : elle ne doit jamais faire échouer un round.
+ * Best-effort on both sides: it should never fail a round.
  */
 export type RecordAgentUsage = (line: AgentUsageLine) => Promise<void>;
 
@@ -219,7 +219,7 @@ export interface PlanStep {
 
 const PLAN_STATUSES = new Set<PlanStepStatus>(["pending", "in_progress", "completed", "cancelled"]);
 
-/** Normalise l'argument `plan` du tool update_plan en étapes valides (borné). */
+/** Normalizes the `plan` argument of tool update_plan into valid steps (bounded). */
 export function normalizePlan(raw: unknown): PlanStep[] {
   if (!Array.isArray(raw)) return [];
   return raw
@@ -235,9 +235,9 @@ export function normalizePlan(raw: unknown): PlanStep[] {
 }
 
 /**
- * Un tool de PLATEFORME, exécuté hors du dépôt : ticket, carnet, pull request,
- * scratchpad. Le pont de la microVM le sert par un POST vers le plan de contrôle,
- * qui le route par NOM et par ANCRAGE (`runPlatformTool`, MIN-326).
+ * A PLATFORM tool, executed outside the repository: ticket, notebook, pull request,
+ * scratchpad. The microVM bridge serves it by a POST to the control plane,
+ * which routes it by NAME and by ANCHOR (`runPlatformTool`, MIN-326).
  */
 export type PlatformToolHandler = (
   name: string,
@@ -246,8 +246,8 @@ export type PlatformToolHandler = (
   result: unknown;
   success: boolean;
   images?: AgentToolImage[];
-  /** Ce que le harness a de LONG à dire sur cet appel — servi après le round, là
-   *  où un `result` serait élidé par le milieu. Aujourd'hui : le contrôle du plan
-   *  accroché à `write_issue_plan` (`gateWritePlan`). */
+  /** What the harness has LONG to say about this call — served after the round, where
+ * where a `result` would be elided in the middle. Today: plan control
+ * hooked to `write_issue_plan` (`gateWritePlan`). */
   followUp?: string;
 }>;

@@ -4,18 +4,18 @@ import { cloudLayout, layoutForRoot } from "../harness-layout";
 import { parseVmJob, vmBundlePath, vmJobPath, VM_PROTOCOL_VERSION } from "./protocol";
 
 /**
- * MIN-354 — LE CONTRAT ENTRE LA FONCTION ET LE HARNESS, ET SON NUMÉRO.
+ * MIN-354 — THE CONTRACT BETWEEN THE FUNCTION AND THE HARNESS, AND ITS NUMBER.
  *
- * Ce que ce fichier garde n'existait pas avant : jusqu'ici le harness était
- * ÉCRIT par le déploiement qui le lançait, à chaque tour, donc le job et le
- * bundle ne pouvaient pas être d'âges différents. Ils le peuvent dès que le
- * bundle est téléchargé puis MIS EN CACHE sur une machine.
+ * What this file keeps did not exist before: until now the harness was
+ * WRITTEN by the deployment which launched it, each turn, therefore the job and the
+ * bundle could not be of different ages. They can do so as soon as the
+ * bundle is downloaded and then CACHED on a machine.
  *
- * Un bundle d'hier qui lit un job d'aujourd'hui ne lève pas : JSON.parse réussit,
- * les champs connus sont lus, les autres ignorés — et le tour part avec les
- * anciens chemins. Sur ce lot précisément : il écrirait dans `/vercel/sandbox`
- * sur un Mac, c'est-à-dire nulle part. Le refus explicite est la seule forme qui
- * transforme ce silence en quelque chose qu'on voit.
+ * A bundle from yesterday that reads a job from today does not throw: JSON.parse succeeds,
+ * the known fields are read, the others ignored — and the turn starts with the
+ * old paths. On this lot precisely: it would write to `/vercel/sandbox`
+ * on a Mac, that is to say nowhere. Explicit refusal is the only form that
+ * transforms this silence into something we see.
  */
 
 const job = (over: Record<string, unknown> = {}) => ({
@@ -35,7 +35,7 @@ describe("parseVmJob", () => {
   });
 
   it("REFUSE une version qu'il ne connaît pas, et dit laquelle il parle", () => {
-    // Le cas réel : un harness en cache, plus vieux que la fonction qui le lance.
+    // The real case: a cached harness, older than the function that launches it.
     expect(() => parseVmJob(job({ protocolVersion: VM_PROTOCOL_VERSION + 1 }))).toThrow(
       new RegExp(`unsupported protocol version.+${VM_PROTOCOL_VERSION}`, "s"),
     );
@@ -46,8 +46,8 @@ describe("parseVmJob", () => {
   });
 
   it("refuse un job sans layout plutôt que de retomber sur `/vercel`", () => {
-    // Un repli silencieux serait exactement la tolérance que la version existe
-    // pour supprimer : le tour tournerait, ailleurs que là où on croit.
+    // A silent fallback would be exactly the tolerance that the version exists
+    // to delete: the trick would turn, somewhere other than where we believe.
     expect(() => parseVmJob(job({ layout: undefined }))).toThrow(/layout/i);
   });
 
@@ -57,10 +57,10 @@ describe("parseVmJob", () => {
   });
 
   /**
-   * MIN-358 — le mode du dépôt n'a PAS de défaut, et c'est asymétrique à dessein :
-   * `current` est celui qu'on ne veut surtout pas jouer par accident, et c'est
-   * justement celui qu'un job d'une forme inattendue tairait.
-   */
+ * MIN-358 — the deposit mode has NO default, and it is asymmetrical on purpose:
+ * `current` is the one you don't want to play by accident, and it is
+ * precisely the one that a job of an unexpected form would leave out.
+ */
   it("refuse un job qui ne dit pas dans quel dépôt il écrit", () => {
     expect(() => parseVmJob(job({ repoMode: undefined }))).toThrow(/repoMode/i);
     expect(() => parseVmJob(job({ repoMode: "worktree" as never }))).toThrow(/repoMode/i);

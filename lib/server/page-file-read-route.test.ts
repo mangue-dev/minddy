@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-340 — la porte de lecture d'un fichier de page est l'URL la plus exposée
- * du dépôt : elle est portée par `minddy.app`, elle est STABLE (elle vit des
- * mois dans un corps de document), et elle n'a aucun paramètre à ajouter pour
- * répondre. C'est celle qu'on envoie à quelqu'un.
+ * MIN-340 — the reading gate of a page file is the most exposed URL
+ * of the repository: it is carried by `minddy.app`, it is STABLE (it lives for
+ * months in a document body), and it has no parameters to add to
+ * respond. It's the one we send to someone.
  *
- * Ce qu'elle décide, et que ce test épingle : la DISPOSITION. Le type de la
- * ligne est passé à la signature, et hors allowlist la signature repart en
- * « pièce jointe » (lib/server/attachments.ts) — un `.png` qui contient du HTML
- * se télécharge au lieu de s'ouvrir.
+ * What it decides, and which this test pinpoints: the DISPOSITION. The type of the
+ * line is passed to the signature, and out of allowlist the signature goes back to
+ * "attachment" (lib/server/attachments.ts) — a `.png` that contains HTML
+ * downloads instead of opening.
  */
 
 const getAuthedUser = vi.fn();
@@ -44,7 +44,7 @@ function request(query = "") {
   return { nextUrl: new URL(url), headers: new Headers() } as never;
 }
 
-/** Les options passées à la signature — c'est là que tout se joue. */
+/** The options passed to the signature — this is where everything comes into play. */
 function signOptions() {
   return signedAttachmentUrl.mock.calls[0][2] as {
     download: string | boolean;
@@ -65,7 +65,7 @@ beforeEach(() => {
 });
 
 describe("GET /api/projects/[id]/pages/files/[fileId]", () => {
-  it("affiche une image, et redirige vers l'URL signée", async () => {
+  it("displays an image and redirects to the signed URL", async () => {
     const response = await GET(request(), params);
     expect(response.status).toBe(302);
     expect(response.headers.get("location")).toBe("https://signed.test/objet");
@@ -73,9 +73,9 @@ describe("GET /api/projects/[id]/pages/files/[fileId]", () => {
     expect(signOptions().mimeType).toBe("image/png");
   });
 
-  it("passe à la signature le type de la LIGNE, quel qu'il soit", async () => {
-    // Le type y a été déduit des octets à l'envoi : c'est lui qui fait foi, et
-    // c'est la signature qui en tire la disposition.
+  it("passes the ROW type to the signer regardless of its value", async () => {
+    // The type was deduced from the bytes when sending: it is this which is authentic, and
+    // it is the signature which determines the disposition.
     getPageFilePath.mockResolvedValue({
       storage_path: `projects/${PROJECT}/pages/p/f/capture.png`,
       file_name: "capture.png",
@@ -85,7 +85,7 @@ describe("GET /api/projects/[id]/pages/files/[fileId]", () => {
     expect(signOptions().mimeType).toBe("text/html");
   });
 
-  it("nomme le fichier quand on demande à l'enregistrer", async () => {
+  it("names the file when asked to download it", async () => {
     await GET(request("?download=1"), params);
     expect(signOptions().download).toBe("capture.png");
   });

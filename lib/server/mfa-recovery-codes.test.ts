@@ -1,18 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-347 — le stockage des codes de récupération 2FA.
+ * MIN-347 — storage of 2FA recovery codes.
  *
- * Ce sont les codes qui CONTOURNENT le second facteur : ce qui est écrit en base
- * vaut le facteur lui-même. Avant, c'était un sha256 nu, non salé, sur des codes
- * de 40 bits — un balayage hors ligne de quelques secondes si la table fuit, et
- * les dix codes du compte tombant dans le même passage.
+ * These are the codes that BYPASS the second factor: what is written in base
+ * is worth the factor itself. Before, it was a bare, unsalted sha256 on 40-bit
+ * codes — a few seconds offline scan if the table leaked, and
+ * all ten account codes falling in the same pass.
  *
- * Ce que ces cas gardent :
- *  - ce qui est PERSISTÉ n'est ni le code, ni une empreinte rapide ;
- *  - deux codes identiques ne portent jamais la même empreinte (le sel est par
- *    code, pas global) ;
- *  - un code ne passe qu'UNE fois, et une ligne au format d'avant est morte.
+ * What these cases keep:
+ * - which is PERSISTED is neither the code nor a quick hash ;
+ * - two identical codes never carry the same hash (the salt is per
+ * code, not global);
+ * - a code only passes ONE time, and a line in the format before is dead.
  */
 
 interface Row {
@@ -40,7 +40,7 @@ function table() {
       return api;
     },
     maybeSingle: async () => ({ data: match()[0] ?? null, error: null }),
-    // `select().eq().is()` s'attend directement : le builder est thenable.
+    // `select().eq().is()` expects directly: the builder is thenable.
     then: (resolve: (v: { data: Row[]; error: null }) => unknown) =>
       resolve({ data: match(), error: null }),
     insert: async (values: Omit<Row, "id" | "used_at">[]) => {
@@ -101,8 +101,8 @@ describe("issueRecoveryCodes", () => {
       expect(code).toMatch(/^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/);
       const stored = rows[i].code_hash;
       expect(stored).not.toContain(code);
-      // Un sha256 hex nu fait 64 caractères et rien d'autre : la forme suffit à
-      // dire que ce n'en est plus un.
+      // A bare sha256 hex is 64 characters and nothing else: the form is enough to
+      // say that it is no longer one.
       expect(stored).not.toMatch(/^[0-9a-f]{64}$/);
       expect(stored).toMatch(/^scrypt\$\d+\$[0-9a-f]{32}\$[0-9a-f]{64}$/);
     }
@@ -127,7 +127,7 @@ describe("consumeRecoveryCode", () => {
     const codes = await issueRecoveryCodes("user-1");
     expect(await consumeRecoveryCode("user-1", codes[3])).toBe(true);
     expect(await consumeRecoveryCode("user-1", codes[3])).toBe(false);
-    // Les autres codes de la série survivent à la consommation d'un seul.
+    // Other codes in the series survive the consumption of a single one.
     expect(await consumeRecoveryCode("user-1", codes[4])).toBe(true);
   });
 
@@ -146,8 +146,8 @@ describe("consumeRecoveryCode", () => {
   });
 
   it("ne consomme pas une ligne restée au format d'avant", async () => {
-    // Défense en profondeur : la migration les efface, mais si l'une survivait,
-    // elle ne doit pas rouvrir la porte du sha256 nu.
+    // Defense in depth: migration erases them, but if one survives,
+    // she must not reopen the door of the naked sha256.
     const { createHash } = await import("node:crypto");
     rows.push({
       id: "legacy",

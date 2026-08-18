@@ -7,26 +7,26 @@ import { EXPORT_HEADERS } from "@/lib/export/issues-csv";
 import { MCP_ENDPOINT, SITE_URL } from "@/lib/site";
 
 /**
- * `/llms.txt` (MIN-88) — et il parle du SERVEUR MCP, pas du produit.
+ * `/llms.txt` (MIN-88) — and it talks about the MCP SERVER, not the product.
  *
- * Google a publié le 15 mai 2026 un guide d'optimisation pour l'IA qui dit
- * explicitement que `llms.txt`, le balisage « IA » et les versions Markdown ne
- * servent à rien pour AI Overviews ou AI Mode : c'est le même index et le même
- * classement que la recherche classique. Un `llms.txt` marketing serait donc un
- * fichier que personne ne lit.
+ * Google published an optimization guide for AI on May 15, 2026 which says
+ * explicitly that `llms.txt`, “AI” markup and Markdown versions do not
+ * are of no use for AI Overviews or AI Mode: it is the same index and the same
+ * classification than traditional search. A marketing `llms.txt` would therefore be a
+ * file that nobody reads.
  *
- * Le format a en revanche fait ses preuves sur un usage précis, celui pour
- * lequel Stripe, Vercel, Cloudflare et Anthropic le publient : permettre à un
- * assistant de code d'écrire une intégration JUSTE du premier coup. C'est
- * exactement le besoin de minddy — l'agent qu'on veut brancher est le même
- * genre d'agent que celui qui lit ce fichier.
+ * The format, on the other hand, has proven itself for a specific use, that for
+ * which Stripe, Vercel, Cloudflare and Anthropic publish it: allowing a
+ * code wizard to write an integration RIGHT the first time. It is
+ * exactly what Minddy needs — the agent we want to connect is the same
+ * kind of agent as the one reading this file.
  *
- * Il ne contient donc que ce qui sert à cela : l'endpoint, le mode
- * d'authentification, la hiérarchie des objets, et la liste des outils. Le
- * détail des paramètres vit dans `/llms-full.txt`.
+ * It therefore only contains what is used for this: the endpoint, the mode
+ * authentication, the hierarchy of objects, and the list of tools. THE
+ * Parameter details live in `/llms-full.txt`.
  *
- * Tout est DÉRIVÉ de `lib/server/mcp/` : ce fichier ne peut pas décrire une API
- * que le serveur n'expose plus.
+ * Everything is DERIVED from `lib/server/mcp/`: this file cannot describe an API
+ * that the server no longer exposes.
  */
 export function GET(): Response {
   const tools = mcpToolCatalog();
@@ -114,10 +114,10 @@ grammar: ${SITE_URL}/llms-full.txt
 }
 
 /**
- * La hiérarchie, en trois lignes. Volontairement écrite ici et non dérivée des
- * instructions MCP : celles-ci font 3 800 caractères d'une seule traite, ce qui
- * est le bon format pour un modèle en cours de session mais illisible en tête
- * d'un fichier d'intégration. `/llms-full.txt` sert la version intégrale.
+ * The hierarchy, in three lines. Deliberately written here rather than derived
+ * from the MCP instructions: those are 3,800 characters in one continuous block,
+ * which is the right format for a model during a session but unreadable at the
+ * top of an integration file. `/llms-full.txt` serves the full version.
  */
 const MCP_SERVER_MODEL = `- **Project**: the workspace. Everything else belongs to one.
 - **Objective**: groups a project's issues around a goal.

@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { isAllowedRedirectUri } from "@/lib/server/oauth/clients";
 
 /**
- * Le filtre des redirect_uris de l'inscription dynamique (RFC 7591). Il porte
- * deux exigences opposées, d'où le test : accepter le schéma privé d'une app
- * de bureau — sans lui Cursor ne s'authentifie pas — sans jamais laisser
- * passer un schéma exécutable, puisque le callback finit dans un `Location:`
- * et dans le `href` de l'interstitiel de succès.
+ * The dynamic registration redirect_uris filter (RFC 7591). It carries
+ * two opposing requirements, hence the test: accept the private schema of a desktop app
+ * - without it Cursor does not authenticate - without ever letting
+ * pass an executable schema, since the callback ends in a `Location:`
+ * and in the `href` of the success interstitial.
  */
 
 describe("isAllowedRedirectUri", () => {

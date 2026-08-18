@@ -12,14 +12,14 @@ import { votePost } from "@/lib/server/feedback/votes";
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * POST /api/v1/feedback/[id]/vote — vote au nom d'un utilisateur final
- * (Bearer mdy_…). Même contrat d'identité que POST /api/v1/feedback : le
- * serveur du client se porte garant (external_id et/ou email). 1 identité =
- * 1 voix — revoter est idempotent. Un post mergé ne se vote pas : voter le
- * canonique à la place (son id est retourné dans l'erreur).
+ * POST /api/v1/feedback/[id]/vote — vote on behalf of an end user
+ * (Bearer mdy_…). Same identity contract as POST /api/v1/feedback: the
+ * client's server acts as guarantor (external_id and/or email). 1 identity =
+ * 1 vote — revote is idempotent. A merged post cannot be voted on: vote on it
+ * canonical instead (its id is returned in error).
  */
-// Bornes d'identité (MIN-118) — mêmes plafonds que POST /api/v1/feedback :
-// 254 = RFC 5321 pour l'email, external_id et name restent courts.
+// Identity terminals (MIN-118) — same limits as POST /api/v1/feedback:
+// 254 = RFC 5321 for email, external_id and name remain short.
 const USER_EXTERNAL_ID_MAX = 255;
 const USER_EMAIL_MAX = 254;
 const USER_NAME_MAX = 200;
@@ -41,8 +41,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   let body: Record<string, unknown>;
   try {
-    // Un corps non-objet (`null`, chaîne, tableau) est du JSON valide : refusé
-    // ici plutôt que de crasher sur un accès de champ plus bas.
+    // A non-object body (`null`, string, array) is valid JSON: refused
+    // here rather than crashing on a lower field access.
     const parsed: unknown = await request.json();
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       return publicApiError(400, "invalid_json", "Request body must be a JSON object.");

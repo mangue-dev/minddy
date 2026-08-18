@@ -6,7 +6,7 @@ function rect(left: number, top: number, width: number, height: number): ClientR
   return { left, top, width, height, right: left + width, bottom: top + height };
 }
 
-/** Une cible de dépôt : une colonne (pas de `columnStatus`) ou une carte. */
+/** A drop target: a column (no `columnStatus`) or a card. */
 function droppable(id: string, columnStatus?: string): DroppableContainer {
   return {
     id,
@@ -19,8 +19,8 @@ function droppable(id: string, columnStatus?: string): DroppableContainer {
 }
 
 /**
- * Deux colonnes côte à côte de 400 px de haut. « À faire » porte trois cartes de
- * 100 px espacées de 20 ; « En cours » n'en porte aucune.
+ * Two side-by-side columns 400 px high. “To do” carries three cards of
+ * 100 px spaced 20 apart; “In progress” carries none.
  */
 const RECTS = new Map<string, ClientRect>([
   ["todo", rect(0, 0, 300, 400)],
@@ -58,13 +58,13 @@ describe("ce que le pointeur désigne sur un board", () => {
   });
 
   it("désigne la carte la plus proche dans le vide entre deux cartes", () => {
-    // y = 122 : dans la gouttière a/b, la carte tenue chevauchant surtout b.
+    // y = 122: in the gutter a/b, the held card overlapping especially b.
     expect(collide({ x: 150, y: 122 }, rect(10, 120, 280, 100))).toEqual(["b"]);
   });
 
   it("désigne la dernière carte sous le bas de la pile, jamais la colonne", () => {
-    // Le grand rectangle de la colonne gagnait ici, et le repère de dépôt
-    // sautait en fin de colonne alors que le geste visait la 3e carte.
+    // The large rectangle of the column gained here, and the deposit mark
+    // jumped at the end of the column while the gesture was aimed at the 3rd card.
     expect(collide({ x: 150, y: 370 }, rect(10, 320, 280, 100))).toEqual(["c"]);
   });
 
@@ -75,15 +75,15 @@ describe("ce que le pointeur désigne sur un board", () => {
   });
 
   it("reste dans la colonne du pointeur même si les cartes voisines sont plus proches", () => {
-    // Pointeur dans « En cours » (vide), carte tenue à cheval sur « À faire » :
-    // aux coins, les cartes de gauche gagnaient — et le survol partait à côté.
+    // Pointer in “In progress” (empty), card held astride “To do”:
+    // at the corners, the cards on the left won — and the flyover went next.
     expect(collide({ x: 330, y: 180 }, rect(60, 130, 280, 100))).toEqual([
       "in_progress",
     ]);
   });
 
   it("répond quand même hors de toute colonne", () => {
-    // Gouttière entre les deux colonnes : `closestCorners` tranche.
+    // Gutter between the two columns: `closestCorners` slice.
     expect(collide({ x: 310, y: 180 }, rect(160, 130, 280, 100))).toHaveLength(1);
   });
 });

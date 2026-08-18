@@ -6,40 +6,40 @@ import { isIP } from "node:net";
 import type { LookupFunction } from "node:net";
 
 /**
- * Une requête HTTP qui se connecte à l'adresse IP qu'on lui donne (MIN-336).
+ * An HTTP request that connects to the IP address given to it (MIN-336).
  *
- * C'est la brique qui manque à `fetch` : on peut lui donner une URL, pas une
- * destination. Vérifier le DNS puis appeler `fetch` laisse une seconde
- * résolution se produire, et un domaine qui répond deux adresses différentes
- * (une publique pour le contrôle, une privée pour la connexion) traverse le
- * garde-fou sans le déclencher — c'est le rebinding DNS, un TOCTOU sur le
- * résolveur.
+ * This is the building block that `fetch` is missing: we can give it a URL, not a
+ * destination. Checking the DNS then calling `fetch` * lets a second
+ * resolution occur, and a domain that responds to two different
+ * addresses (one public for control, one private for connection) passes through the
+ * guardrail without triggering it — that's DNS rebinding, a TOCTOU on the
+ * resolver.
  *
- * `node:http` accepte, lui, une fonction `lookup` : le nom d'hôte reste celui
- * de l'URL (donc l'en-tête `Host` et le SNI TLS sont justes, le certificat est
- * validé contre le vrai domaine) mais la socket part vers l'adresse qu'on a
- * validée, et vers elle seule.
+ * `node:http` accepts a `lookup` function: the host name remains that
+ * of the URL (so the `Host` header and the TLS SNI are correct, the certificate is
+ * validated against the real domain) but the socket goes to the address that we have
+ * validated, and to it alone.
  *
- * Le garde-fou qui décide de cette adresse vit dans
- * [safe-fetch.ts](./safe-fetch.ts) — ici on ne fait qu'obéir.
+ * The guardrail which decides on this address lives in
+ * [safe-fetch.ts](./safe-fetch.ts) — here we only obey.
  */
 
 export interface PinnedResponse {
   status: number;
   headers: Headers;
-  /** Corps en flux : à lire avec un plafond, ou à jeter par `destroy()`. */
+  /** Body in flow: read with a cap, or discard by `destroy()`. */
   stream: NodeJS.ReadableStream;
   destroy(): void;
 }
 
 export interface PinnedRequestOptions {
-  /** L'adresse IP validée. La socket ne parlera à personne d'autre. */
+  /** The validated IP address. The socket will not talk to anyone else. */
   address: string;
   headers: Record<string, string>;
   signal: AbortSignal;
-  /** `GET` par défaut. */
+  /** `GET` by default. */
   method?: string;
-  /** Corps de requête, pour les méthodes qui en portent un. */
+  /** Request body, for methods that carry one. */
   body?: string | Buffer;
 }
 
@@ -50,8 +50,8 @@ export function pinnedRequest(
   const transport = url.protocol === "https:" ? https : http;
   const family = isIP(address);
 
-  // Node appelle `lookup` avec `{ all: true }` selon les chemins ; les deux
-  // formes de callback doivent répondre la même adresse.
+  // Node calls `lookup` with `{ all: true }` depending on the paths; both
+  // callback forms must respond to the same address.
   const lookup = ((hostname, options, callback) => {
     if ((options as { all?: boolean }).all) {
       (callback as unknown as (
@@ -67,7 +67,7 @@ export function pinnedRequest(
     const request = transport.request(
       {
         protocol: url.protocol,
-        // Les crochets d'une IPv6 littérale appartiennent à l'URL, pas à l'API.
+        // The brackets in an IPv6 literal belong to the URL, not the API.
         hostname: url.hostname.replace(/^\[|\]$/g, ""),
         port: url.port || (url.protocol === "https:" ? 443 : 80),
         path: `${url.pathname}${url.search}`,
@@ -75,9 +75,9 @@ export function pinnedRequest(
         headers,
         lookup,
         signal,
-        // Sans ça, l'agent global mutualise les sockets par nom d'hôte : une
-        // connexion déjà ouverte vers une adresse non validée serait réutilisée
-        // et notre `lookup` ne serait jamais appelé.
+        // Without that, the global agent pools sockets by host name: one
+        // connection already open to an unvalidated address would be reused
+        // and our `lookup` would never be called.
         agent: false,
       },
       (response) => {

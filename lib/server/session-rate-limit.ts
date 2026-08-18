@@ -69,12 +69,12 @@ export function checkSessionRateLimit(
 }
 
 /**
- * Le limiteur ET son refus, en un appel : `null` = passe, sinon la 429 à rendre.
+ * The limiter AND its refusal, in one call: `null` = passes, otherwise the 429 to be returned.
  *
- * La même dizaine de lignes était recopiée route par route (MIN-348 en a
- * branché huit de plus) ; une garde qu'on recopie est une garde qu'on finit par
- * poser à moitié — sans l'en-tête `Retry-After`, ou après le travail coûteux
- * qu'elle devait éviter.
+ * The same ten lines were copied route by route (MIN-348 in a
+ * connected eight more); a guard that you copy is a guard that you end up
+ * half-posting — without the header `Retry-After`, or after the costly work
+ * that it had to avoid.
  */
 export function rateLimitRefusal(
   key: string,

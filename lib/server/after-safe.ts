@@ -3,28 +3,27 @@ import "server-only";
 import { after } from "next/server";
 
 /**
- * `after()` qui ne LÈVE pas hors d'une requête.
+ * `after()` which does not RISE out of a request.
  *
- * Les travaux de fond de minddy (Smart Assign, capture de cycle, synchro du
- * feedback, automatisations) sont programmés depuis `updateIssueFields`, et
- * `after()` exige un contexte de requête. Tant que ce cœur d'écriture n'était
- * appelé que par des routes, la question ne se posait pas.
+ * The background work of minddy (Smart Assign, cycle capture, sync du
+ * feedback, automations) are scheduled from `updateIssueFields`, and
+ * `after()` requires a query context. As long as this writing core was
+ * only called by routes, the question did not arise.
  *
- * MIN-147 l'a changée : le moteur d'automatisations écrit sur le ticket depuis
- * une CASCADE — une chaîne dont l'étape se termine en rappelle une autre, hors
- * de toute requête — et par `launchAgentRun`, qui aligne le statut au démarrage
- * d'un run. Là, `after()` lève ; et comme il lève AVANT le crochet suivant, il
- * emportait avec lui tout ce qui restait à programmer, plus l'écriture elle-même.
+ * MIN-147 changed it: the automation engine writes to the ticket from
+ * a CASCADE — a chain whose step ends recalls another, outside
+ * of any request — and by `launchAgentRun`, which aligns the status to the start
+ * of a run. There, `after()` raises; and since it raises BEFORE the next hook, it
+ * took with it everything that remained to be programmed, plus the writing itself.
  *
- * Le repli exécute le travail TOUT DE SUITE plutôt qu'après la réponse : sans
- * requête, il n'y a pas de réponse à attendre. Le contrat des appelants est
- * inchangé — hors chemin critique, best-effort, jamais de throw vers l'appelant.
+ * The fallback executes the work RIGHT AWAY rather than after the response: without a
+ * query, there is no response to wait for. The callers' contract is
+ * unchanged — excluding critical path, best-effort, never throw to the caller.
  *
- * Le crochet ATTEND la promesse du travail : `after()` passe ce que rend son
- * callback au `waitUntil` de la plateforme, et c'est cette promesse-là qui
- * maintient l'invocation en vie après la réponse. La détacher (`void p.catch`)
- * rendrait la main tout de suite, la lambda gèlerait, et le travail mourrait en
- * vol — sur une requête HTTP sortante, en « TypeError: fetch failed ».
+ * The hook WAITS for the job promise: `after()` passes what its
+ * callback to the `waitUntil` of the platform, and it is this promise that
+ * keeps the invocation alive after the response. Detaching it (`void p.catch`)
+ * would give up immediately, the lambda would freeze, and the job would die in flight — on an outgoing HTTP request, in "TypeError: fetch failed".
  */
 export function afterOrNow(work: () => void | Promise<void>): void {
   const run = async () => {
@@ -37,7 +36,7 @@ export function afterOrNow(work: () => void | Promise<void>): void {
   try {
     after(run);
   } catch {
-    // Hors contexte de requête : on fait le travail maintenant.
+    // Out of query context: we do the work now.
     void run();
   }
 }

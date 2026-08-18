@@ -4,9 +4,8 @@ import { useTranslations } from "next-intl";
 import { SharePasswordForm } from "@/components/share-password-form";
 import { unlockPageShare } from "./actions";
 
-/** La porte d'une page publiée protégée par mot de passe (MIN-283). Le
-    formulaire est celui de la vue partagée ; seul le libellé change, parce
-    qu'il s'agit d'un document et pas d'un tableau. */
+/** The door to a password-protected published page (MIN-283). THE
+ form is that of the shared view; only the wording changes, because it is a document and not a table. */
 export function PagePasswordForm({ token }: { token: string }) {
   const t = useTranslations("PublicPage");
   return (

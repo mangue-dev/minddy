@@ -3,16 +3,16 @@ import { buildTimelineItems } from "@/lib/use-issue-timeline";
 import type { Comment, IssueEvent } from "@/lib/types";
 
 /**
- * LA TIMELINE D'UN TICKET COMMENCE PAR SA NAISSANCE — toujours.
+ * A TICKET'S TIMELINE STARTS WITH ITS BIRTH — always.
  *
- * L'événement `created` est une écriture à part, et une écriture à part peut
- * manquer : elle a échoué, ou la ligne est née d'un insert direct (le monde de
- * démo). Le ticket, lui, sait toujours quand il est né — c'est sa propre
- * colonne. Sans le repli testé ici, ces tickets-là affichent « Aucune activité »,
- * ce qui est faux de tout ticket qui existe.
+ * The event `created` is a separate write, and a separate write can
+ * miss: it failed, or the line was born from a direct insert (the world de
+ * demo). The ticket always knows when it was born — it's its own
+ * column. Without the fallback tested here, these tickets display "No activity",
+ * which is false for any ticket that exists.
  *
- * Le repli est un REPLI : dès que le journal porte sa ligne de naissance
- * (`created` ou `imported`), c'est elle qui parle, et rien ne se dédouble.
+ * The fallback is a FALLBACK: as soon as the log bears its birth line
+ * (`created` or `imported`), it is she who speaks, and nothing is duplicated.
  */
 
 const BIRTH = { createdAt: "2026-08-10T10:00:00+00:00", createdBy: "member-1" };
@@ -43,7 +43,7 @@ const kinds = (items: ReturnType<typeof buildTimelineItems>) =>
   items.map((i) => (i.kind === "event" ? `${i.event.type}@${i.at}` : `comment@${i.at}`));
 
 describe("buildTimelineItems — la ligne de naissance", () => {
-  it("reconstitue « a créé » quand le journal ne la porte pas", () => {
+  it("reconstructs « created » when the log does not contain it", () => {
     const items = buildTimelineItems({
       events: [event({ created_at: "2026-08-10T11:00:00+00:00" })],
       comments: [],
@@ -58,7 +58,7 @@ describe("buildTimelineItems — la ligne de naissance", () => {
     expect(items[0].kind === "event" && items[0].event.actor_id).toBe("member-1");
   });
 
-  it("donne quelque chose à lire à un ticket sans le moindre événement", () => {
+  it("gives a ticket with no events anything to read", () => {
     const items = buildTimelineItems({
       events: [],
       comments: [],
@@ -69,7 +69,7 @@ describe("buildTimelineItems — la ligne de naissance", () => {
     expect(kinds(items)).toEqual(["created@2026-08-10T10:00:00+00:00"]);
   });
 
-  it("ne double PAS la naissance déjà journalisée", () => {
+  it("does not duplicate an already logged birth", () => {
     const created = event({
       created_at: "2026-08-10T10:00:02+00:00",
       type: "created",
@@ -85,7 +85,7 @@ describe("buildTimelineItems — la ligne de naissance", () => {
     expect(kinds(items)).toEqual(["created@2026-08-10T10:00:02+00:00"]);
   });
 
-  it("tient un ticket IMPORTÉ pour né, lui aussi", () => {
+  it("also treats an IMPORTED ticket as born", () => {
     const imported = event({
       created_at: "2026-08-10T10:00:02+00:00",
       type: "imported",
@@ -101,9 +101,9 @@ describe("buildTimelineItems — la ligne de naissance", () => {
     expect(kinds(items)).toEqual(["imported@2026-08-10T10:00:02+00:00"]);
   });
 
-  it("attend le chargement avant de se replier", () => {
-    // `undefined` = requête en vol. Une ligne de naissance affichée ici serait
-    // remplacée une fraction de seconde plus tard par la vraie.
+  it("waits for loading before collapsing", () => {
+    // `undefined` = in-flight request. A birthline displayed here would be
+    // replaced a fraction of a second later by the real one.
     const items = buildTimelineItems({
       events: undefined,
       comments: [],
@@ -114,9 +114,9 @@ describe("buildTimelineItems — la ligne de naissance", () => {
     expect(items).toEqual([]);
   });
 
-  it("range commentaires et événements au même instant, quelle que soit l'écriture de l'heure", () => {
-    // `+00:00` de PostgREST contre `Z` d'un ISO client : même instant, deux
-    // typographies — un tri de CHAÎNES mettrait le `Z` en dernier.
+  it("orders comments and events at the same instant regardless of time formatting", () => {
+    // `+00:00` of PostgREST against `Z` of a client ISO: same moment, two
+    // typographies — a STRING sort would put the `Z` last.
     const items = buildTimelineItems({
       events: [event({ created_at: "2026-08-10T12:00:00.000Z" })],
       comments: [comment("2026-08-10T12:00:01+00:00")],

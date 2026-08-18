@@ -2,11 +2,11 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022", "dom"],
-    // Comme le tsconfig racine, et pour la même raison : ces fichiers sont
-    // BUNDLÉS par esbuild (scripts/build-desktop.mjs), qui décide seul du format
-    // de sortie. En `node16`, `tsc` refusait les imports de type venant de
-    // `lib/` — du code ESM lu depuis un module CJS — alors que rien de tout ça
-    // n'existe encore au moment où le bundle est écrit.
+    // Like the root tsconfig, and for the same reason: these files are
+    // BUNDLED by esbuild (scripts/build-desktop.mjs), which alone decides the
+    // output format. With `node16`, `tsc` rejected type imports from
+    // `lib/` — ESM code read from a CJS module — although none of this
+    // exists yet when the bundle is written.
     "module": "preserve",
     "moduleResolution": "bundler",
     "strict": true,

@@ -3,13 +3,13 @@ import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
 import { greetingPool, pickGreeting } from "./home-greeting";
 
-/** Un jour donné, à une heure donnée, en local — `new Date(y, m, d, h)` lit bien
-    le fuseau de la machine, celui-là même que `greetingPool` interroge. */
+/** On a given day, at a given time, locally — `new Date(y, m, d, h)` reads
+ the machine's time zone, the same one that `greetingPool` queries. */
 const at = (year: number, month: number, day: number, hour: number) =>
   new Date(year, month - 1, day, hour, 30);
 
-// Juillet 2026 : le 6 est un lundi, le 8 un mercredi, le 10 un vendredi, le 11
-// un samedi, le 12 un dimanche.
+// July 2026: the 6th is a Monday, the 8th is a Wednesday, the 10th is a Friday, the 11th
+// a Saturday, the 12th a Sunday.
 const MONDAY = 6;
 const WEDNESDAY = 8;
 const FRIDAY = 10;
@@ -50,11 +50,11 @@ describe("greetingPool", () => {
     expect(keys(WEDNESDAY, 10)).not.toContain("greetWeekend");
 
     expect(keys(MONDAY, 9)).toContain("greetMonday");
-    // « Nouvelle semaine » à 20 h un lundi n'est plus une nouvelle.
+    // “New week” at 8 p.m. on a Monday is no longer news.
     expect(keys(MONDAY, 20)).not.toContain("greetMonday");
 
     expect(keys(FRIDAY, 15)).toContain("greetFriday");
-    // Le vendredi à 23 h, la fin de semaine n'est plus à annoncer.
+    // Friday at 11 p.m., the weekend is no longer to be announced.
     expect(keys(FRIDAY, 23)).not.toContain("greetFriday");
   });
 });
@@ -76,11 +76,11 @@ describe("pickGreeting", () => {
 });
 
 describe("catalogue", () => {
-  // Le test de contrat i18n (lib/i18n-contract.test.ts) vérifie que les clés
-  // APPELÉES existent ; ici elles transitent par une table, donc c'est à
+  // The i18n contract test (lib/i18n-contract.test.ts) checks that the keys
+  // CALLED exist; here they pass through a table, so it is
   // l'inverse qu'on veille : que chaque formule du vivier ait bien ses deux
-  // messages, dans les deux langues. Une clé manquante afficherait
-  // « Home.greetX » en gros et en gras au sommet de l'accueil.
+  // messages, in both languages. A missing key would show
+  // “Home.greetX” in big, bold letters at the top of the home page.
   const variants = [
     ...new Map(
       DAYS.flatMap((day) =>
@@ -93,10 +93,10 @@ describe("catalogue", () => {
     ).values(),
   ];
 
-  // `Home` ne porte plus seulement des chaînes depuis qu'il tient aussi le
-  // vivier d'astuces (`Home.tips`, un objet). D'où la valeur en `unknown`, puis
-  // le filtre sur le type : les `toBeTypeOf("string")` plus bas restent ainsi
-  // des tests de présence de la clé, et non des lectures de sous-objet.
+  // `Home` no longer only wears chains since he also holds the
+  // pool of tips (`Home.tips`, an object). Hence the value in `unknown`, then
+  // the filter on the type: the lower `toBeTypeOf("string")` remain like this
+  // tests for key presence, not sub-object reads.
   const message = (
     catalog: typeof en | typeof fr,
     key: string,
@@ -124,9 +124,9 @@ describe("catalogue", () => {
   });
 
   it("dit la même chose des deux côtés, nom en moins", () => {
-    // Le garde-fou du registre : la forme sans nom est la formule amputée de son
-    // « , {name} », pas une phrase différente. Deux textes sans rapport
-    // signaleraient une paire mal appariée dans le vivier.
+    // The safeguard of the register: the form without a name is the formula deprived of its sound
+    // “,{name}”, not a different phrase. Two unrelated texts
+    // would report a mismatched pair in the pool.
     for (const variant of variants) {
       for (const catalog of [en, fr] as const) {
         const named = message(catalog, variant.key)!;

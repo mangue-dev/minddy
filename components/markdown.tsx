@@ -28,19 +28,19 @@ type HastNode = {
 
 /** Rehype plugin: turn "@Display Name" / "@numo" / "@MIN-42" tokens into
     <span data-mention-*> so the renderer can swap in a MentionChip. Runs on the
-    HTML AST, so surrounding markdown formatting is preserved. La règle de ce
-    qui EST une mention vient de lib/mention-scan — la même qu'applique le champ
-    pendant qu'on écrit. */
+    HTML AST, so surrounding markdown formatting is preserved. The rule of this
+    which IS a mention comes from lib/mention-scan — the same one that applies the field
+    while we write. */
 function rehypeMentions(scan: MentionScan) {
   const split = (value: string): HastNode[] =>
     scan(value).map((seg) => {
       if (seg.mention === undefined) return { type: "text", value: seg.text };
       const mention = seg.mention;
-      // `member` en test, et non « pas numo » : le scanner sait aussi rendre des
-      // comptes de FORGE (MIN-162), qu'aucune liste de membres minddy ne produit
-      // ici — un commentaire de ticket ne cite que des gens d'ici. Ticket et
-      // objectif n'y arrivent pas non plus : c'est le scanner d'une DESCRIPTION
-      // qui les produit, et une description se rend dans son éditeur.
+      // `member` in test, and not “not numo”: the scanner also knows how to render
+      // FORGE accounts (MIN-162), which no list of minddy members produces
+      // here — a ticket comment only quotes people from here. Ticket and
+      // objective do not succeed either: it is the scanner of a DESCRIPTION
+      // who produces them, and a description goes to its editor.
       const properties =
         mention.type === "member"
           ? {
@@ -55,8 +55,8 @@ function rehypeMentions(scan: MentionScan) {
 
   const walk = (node: HastNode) => {
     if (!node.children) return;
-    // Du code se cite littéralement : « `@numo` » montre le geste à faire, il ne
-    // le fait pas.
+    // Code is quoted literally: “`@numo`” shows the gesture to be made, it does not
+    // doesn't do it.
     if (node.tagName === "code" || node.tagName === "pre") return;
     const next: HastNode[] = [];
     for (const child of node.children) {
@@ -74,14 +74,14 @@ function rehypeMentions(scan: MentionScan) {
 }
 
 /**
- * Une balise rendue telle quelle, juste habillée.
+ * A beacon rendered as is, just dressed up.
  *
- * react-markdown passe TOUJOURS le nœud hast en prop à un composant de
- * remplacement (`passNode: true`, codé en dur — il n'y a pas d'option pour
- * l'éteindre). Laissé dans le spread, il finit dans le DOM : chaque paragraphe,
- * chaque cellule, chaque titre d'un commentaire portait un attribut
- * `node="[object Object]"`. Il se retire ici, une bonne fois, plutôt que dans
- * quinze fermetures qui répéteraient la même destructuration.
+ * react-markdown ALWAYS passes the hast node as a prop to a component
+ * replacement (`passNode: true`, hardcoded — there is no option to
+ * turn it off). Left in the spread, it ends up in the DOM: each paragraph,
+ * every cell and every comment title carried an attribute
+ * `node="[object Object]"`. He retires here, once and for all, rather than in
+ * fifteen closures which would repeat the same destructuring.
  */
 function styled<T extends keyof JSX.IntrinsicElements>(tag: T, className: string) {
   const Tag = tag as ElementType;
@@ -91,13 +91,13 @@ function styled<T extends keyof JSX.IntrinsicElements>(tag: T, className: string
 }
 
 /**
- * Chaîne rehype, dans un ORDRE qui est une propriété de sécurité. Le chemin
- * normal ne branche volontairement pas `rehypeRaw` : les balises HTML collées
- * dans un commentaire restent du texte, et ne deviennent jamais des nœuds.
- * `allowRawHtml` est une porte explicite pour une surface qui aurait une raison
- * de confiance distincte. Le sanitizer vient avant les mentions dans les deux
- * cas, afin qu'un `data-mention-*` écrit à la main ne se fasse pas passer pour
- * une vraie mention.
+ * Rehype string, in an ORDER which is a security property. The path
+ * normal deliberately does not connect `rehypeRaw`: HTML tags pasted
+ * in a comment remain text, and never become nodes.
+ * `allowRawHtml` is an explicit gate for a surface that would have a reason
+ * of distinct trust. The sanitizer comes before the mentions in both
+ * case, so that a handwritten `data-mention-*` does not pass itself off as
+ * a real mention.
  */
 function rehypeChain(
   scan: MentionScan | undefined,
@@ -116,10 +116,10 @@ function rehypeChain(
     chip as the Numo composer's (components/mention-chip). The array may be
     empty: it says "this surface carries mentions", and "@numo" is citable there
     even when nobody else is.
-    Un commentaire ne cite que des GENS : les tickets et les objectifs ne se
-    citent que dans une description, qui n'a pas de rendu en lecture seule — sa
-    surface d'affichage EST son éditeur (components/markdown-editor), où les
-    pilules viennent du nœud tiptap. */
+    A comment only quotes PEOPLE: tickets and objectives do not
+    cite that in a description, which does not have read-only rendering — its
+    display surface IS its editor (components/markdown-editor), where the
+    pills come from the tiptap node. */
 export function Markdown({
   children,
   className,
@@ -132,11 +132,11 @@ export function Markdown({
   /** Deliberately opt-in: user-authored comments must not execute/render HTML. */
   allowRawHtml?: boolean;
 }) {
-  // null hors d'une vue de PR : les images d'un commentaire de ticket sont déjà
-  // servies par minddy, elles n'ont rien à proxifier.
+  // null outside of a PR view: images in a ticket comment are already
+  // served by minddy, they have nothing to proxify.
   const imageEndpoint = usePrEndpoint();
-  // Pas de membres = surface sans mentions : la chaîne rehype s'arrête au
-  // sanitizer, et un « @quelquechose » y reste du texte.
+  // No members = surface without mentions: the rehype channel stops at
+  // sanitizer, and a “@something” remains there.
   const scan = useMemo(
     () => (members ? mentionScanner(members) : undefined),
     [members],
@@ -149,11 +149,11 @@ export function Markdown({
       )}
     >
       <ReactMarkdown
-        // `remarkBreaks` : un simple retour à la ligne EST un retour à la ligne.
-        // C'est la règle des commentaires GitHub (pas celle des fichiers .md), et
-        // c'est celle de toutes les surfaces d'ici — commentaires de ticket, de PR,
-        // plans. Sans lui, un message écrit en trois lignes se rendait en un seul
-        // paragraphe : la différence de « rendu de texte » la plus visible.
+        // `remarkBreaks`: a single newline IS a newline.
+        // This is the rule for GitHub comments (not for .md files), and
+        // it's that of all the surfaces here — ticket comments, PR,
+        // plans. Without it, a message written in three lines would be delivered in just one
+        // paragraph: the most visible difference in “text rendering”.
         remarkPlugins={[remarkGfm, remarkBreaks]}
         rehypePlugins={rehypeChain(scan, allowRawHtml)}
         components={{
@@ -166,15 +166,15 @@ export function Markdown({
               {...props}
             />
           ),
-          /* Une liste imbriquée se resserre (`[&_ul]`, `[&_ol]`) : l'espacement
-             entre paragraphes ferait, en cascade, une liste qui se délite. */
+          /* A nested list gets tighter (`[&_ul]`, `[&_ol]`): spacing
+             between paragraphs would cascade into a list that falls apart. */
           ul: styled("ul", "my-3 list-disc pl-5 [&_ol]:my-1 [&_ul]:my-1"),
           ol: styled("ol", "my-3 list-decimal pl-5 [&_ol]:my-1 [&_ul]:my-1"),
-          /* Une case à cocher remplace la puce et se pose dans la gouttière,
-             comme chez GitHub — sinon la ligne porte les deux. Le sélecteur est
-             STRUCTUREL (`:has`) plutôt que fondé sur la classe `task-list-item`,
-             que le sanitizer retire. Le seul `input` qu'il laisse passer est
-             justement une case à cocher désactivée : pas d'ambiguïté. */
+          /* A check box replaces the chip and is placed in the gutter,
+             like at GitHub — otherwise the line carries both. The selector is
+             STRUCTURAL (`:has`) rather than based on class `task-list-item`,
+             that the sanitizer removes. The only `input` that it lets pass is
+             precisely a disabled checkbox: no ambiguity. */
           li: styled("li", "my-1 [&:has(>input)]:list-none [&>input]:-ml-5"),
           input: styled(
             "input",
@@ -186,16 +186,16 @@ export function Markdown({
             "kbd",
             "rounded border border-border bg-muted px-1 font-mono text-[0.85em]",
           ),
-          /* Images de commentaire (badges CI, captures collées) : elles arrivent
-             surtout en HTML brut, et ne se rendaient donc pas du tout avant
-             `rehypeRaw`. Bornées à la largeur du fil — une capture de rétine
-             pousserait la carte hors de l'écran.
+          /* Comment images (CI badges, pasted captures): they are coming
+             especially in raw HTML, and therefore did not render at all before
+             `rehypeRaw`. Bounded to the width of the wire — a retinal capture
+             would push the map off the screen.
 
-             Une capture collée sur la forge, elle, passe par le proxy de la PR
+             A capture pasted on the forge goes through the PR proxy
              quand on nous a dit de quelle PR ce texte vient : son URL d'origine
-             répond 404 à qui n'a pas de session GitHub (MIN-162). Le geste est
-             le même pour une balise markdown et pour un `<img>` brut — les deux
-             arrivent ici, après `rehypeRaw`. */
+             responds 404 to who does not have a GitHub session (MIN-162). The gesture is
+             the same for a markdown tag and for a raw `<img>` — both
+             arrive here, after `rehypeRaw`. */
           img: ({ node, ...props }) => (
             <img
               className="inline-block max-w-full rounded-md"
@@ -229,13 +229,13 @@ export function Markdown({
           tr: styled("tr", "border-b border-border/60 last:border-0"),
           th: styled("th", "max-w-80 px-2.5 py-1.5 font-medium text-foreground"),
           td: styled("td", "max-w-80 px-2.5 py-1.5 align-top"),
-          /* Six niveaux, et une échelle qui se VOIT — les trois anciens tombaient
-             tous entre 14 et 16 px, ce qui faisait lire un plan ou une synthèse de
-             review comme un bloc plat. Les tailles sont en `em` (et non en pas
-             Tailwind) pour rester relatives au corps du texte : une surface qui
-             réduit sa base réduit ses titres avec elle. Les proportions sont
-             celles de GitHub, resserrées : sur un corps à 14 px, le 2em de son h1
-             dépasserait le titre de la page. */
+          /* Six levels, and a ladder that IS SEEN — the three old ones fell
+             all between 14 and 16 px, which made it read a plan or a summary of
+             review as a flat block. The sizes are in `em` (and not in steps
+             Tailwind) to remain relative to the body of the text: a surface which
+             reduces its base reduces its titles with it. The proportions are
+             those of GitHub, tightened: on a body at 14 px, the 2nd of its h1
+             would go beyond the title of the page. */
           h1: styled("h1", "mt-5 mb-2 text-[1.5em] leading-tight font-semibold"),
           h2: styled("h2", "mt-5 mb-2 text-[1.3em] leading-tight font-semibold"),
           h3: styled("h3", "mt-4 mb-2 text-[1.15em] leading-snug font-semibold"),

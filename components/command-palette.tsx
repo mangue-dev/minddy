@@ -2,25 +2,25 @@
 
 // The minddy command palette (built on @clement/command-palette, extracted from
 // minddy v1). Opened by the header search pill and by ⌘K / ⌘P (VS Code reflex) /
-// F. It consumes the same `paletteGroups` the mobile nav uses (créer, aller à,
-// projets, pages, issues, objectifs, compte) so both stay in sync by construction.
+// F. It consumes the same `paletteGroups` the mobile nav uses (create, go to,
+// projects, pages, issues, objectives, account) so both stay in sync by construction.
 // On top of that: tickets carry their status icon and a ⌘; action menu (statut,
-// priorité, effort, assigné, copier le prompt, copier l'identifiant) wired to the
+// priority, effort, assigned, copy prompt, copy id) wired to the
 // real API (updateIssueApi + react-query invalidation); the theme options collapse
-// into a single "Changer le thème" submenu; "Se déconnecter" is omitted.
+// into a single “Change theme” submenu; “Log out” is omitted.
 //
 // Bulk mode (MIN-75): a board's selection pill opens the palette via
 // useBulkActions; the list then shows the selection's options (Numo, change
 // status/priority/effort/assignee/objectif, cycle in/out, lier deux tickets,
 // delete) as plain rows in place of the normal content — configurable fields
-// open the same inline form as "Changer le thème". The rows that depend on a
+// open the same inline form as "Change theme". The rows that depend on a
 // single project (objectif, lien) or on a cycle are wired by the board only
 // when the selection allows them, so an impossible action is never offered.
 //
 // Cross-project (MIN-91): the rows now cover every project, so a ticket's ⌘;
 // actions can't assume it belongs to the project in the URL. Members and
 // categories come from the ticket's OWN project (via the search index), the
-// caches invalidated after a write are that project's, and « copier le prompt »
+// caches invalidated after a write are that project's, and “copy prompt”
 // fetches the full ticket when the row is a light index row.
 //
 // Open state is owned by AppShellChrome (so the header pill and the shortcuts
@@ -98,49 +98,49 @@ import type {
 import type { PaletteGroup } from "@/components/header-search-pill";
 import "./command-palette.css";
 
-/** Boosts de recherche par groupe — même philosophie que minddy v1 :
- *  les commandes restent au-dessus des données à pertinence égale. */
+/** Search boosts by group — same philosophy as minddy v1:
+ * the commands remain on top of the data with equal relevance. */
 const GROUP_BOOSTS: Record<string, number> = {
   create: 300,
   goto: 250,
   projects: 200,
   pages: 150,
-  // Les réglages sont de la navigation, comme les pages, mais on les cherche
-  // moins souvent qu'un board : juste en dessous. Le projet passe devant le
-  // compte parce que ces lignes-là n'existent QUE quand on est dans un projet —
-  // les avoir demandées, c'est déjà avoir dit lesquelles.
+  // The settings are navigation, like the pages, but we look for them
+  // less often than a board: just below. The project goes ahead of
+  // counts because these lines ONLY exist when we are in a project —
+  // having asked them is already having said which ones.
   "settings-project": 135,
   "settings-account": 130,
-  // Les vues enregistrées passent devant tout : ce sont les seules lignes que
-  // l'utilisateur a lui-même fabriquées pour y revenir vite. Le boost suit la
-  // position du groupe (cf. `categories`), pour qu'une recherche ne les
-  // renvoie pas là où l'affichage ne les met plus.
+  // Saved views come before everything: they are the only lines that
+  // the user has made it himself to come back to it quickly. The boost follows the
+  // position of the group (see `categories`), so that a search does not
+  // does not return where the display no longer puts them.
   views: 320,
   account: 100,
   issues: 80,
   objectives: 80,
-  // Le wiki est de la DONNÉE, comme les tickets et les objectifs — pas de la
-  // navigation, malgré le mot « pages » qu'il partage avec le groupe du dessus
-  // (MIN-276). Même palier qu'eux : à pertinence égale, ce qu'on a écrit ne
-  // passe ni devant ni derrière ce qu'on a à faire. Le classement titre >
-  // contenu, lui, ne se joue pas ici : il vient du moteur, qui note un match de
-  // titre au-dessus d'un match de description (l'extrait).
+  // The wiki is DATA, like tickets and goals — not data.
+  // navigation, despite the word “pages” which it shares with the group above
+  // (MIN-276). Same level as them: with equal relevance, what we have written does not
+  // go neither ahead nor behind what we have to do. The title ranking >
+  // content itself is not decided here: it comes from the engine, which puts a
+  // title match above a description match (the excerpt).
   "wiki-pages": 80,
 };
 
-/** Icône de statut d'un ticket : le MÊME indicateur que les cartes du board et
- *  le panneau latéral (anneau pointillé, camembert de progression, disque plein
- *  au glyphe évidé — cf. components/issue-indicators.tsx). Les glyphes lucide de
- *  `STATUS_MAP` / `PRIORITY_MAP` sont le jeu d'avant le design Figma : la palette
- *  était la dernière surface à les afficher, ils ne sont plus lus nulle part. */
+/** Ticket status icon: the SAME indicator as board cards and
+ * the side panel (dotted ring, progression pie, solid disk
+ * to the hollowed-out glyph — cf. components/issue-indicators.tsx). The lucid glyphs of
+ * `STATUS_MAP` / `PRIORITY_MAP` are the game before Figma design: the palette
+ * was the last surface to display them, they are no longer read anywhere. */
 function statusIcon(status: IssueStatus) {
   return <StatusIndicator status={status} className="size-4" />;
 }
 
-/** Les mêmes indicateurs, en COMPOSANTS, pour les slots qui attendent un type
- *  d'icône (`ContextualAction.icon`, rendu `<action.icon className=… />`).
- *  Mis en cache par valeur pour garder une identité de composant stable d'un
- *  rendu à l'autre — sinon la ligne d'action se remonte à chaque frappe. */
+/** The same indicators, in COMPONENTS, for slots that expect a type
+ * icon (`ContextualAction.icon`, rendered `<action.icon className=… />`).
+ * Cached by value to keep a stable component identity of a
+ * returned to the other — otherwise the line of action goes back with each strike. */
 type IconOf<T> = (value: T) => ComponentType<{ className?: string }>;
 
 function cachedIndicator<T>(
@@ -170,18 +170,18 @@ const priorityActionIcon = cachedIndicator<IssuePriority>(
   )
 );
 
-/** Un ticket tel que la palette le reçoit : ligne complète du board (projet
- *  courant) ou ligne légère de l'index cross-projet (MIN-91). */
+/** A ticket such as the palette receives it: complete line of the board (project
+ * current) or light line of the cross-project index (MIN-91). */
 type PaletteIssue = Issue | SearchIndexIssue;
 
-/** Seules les lignes du board portent `category_ids` (ajouté par mapIssueRow) —
- *  c'est ce qui distingue un ticket complet d'une ligne d'index, dépourvue de
- *  description et de plan. */
+/** Only board rows have `category_ids` (added by mapIssueRow) —
+ * this is what distinguishes a complete ticket from an index line, devoid of
+ * description and plan. */
 function isFullIssue(issue: PaletteIssue): issue is Issue {
   return "category_ids" in issue;
 }
 
-/** Visage de Numo en icône d'action statique (pas de clignement dans la popover). */
+/** Numo's face as a static action icon (no blinking in the popover). */
 const NumoActionIcon = (props: SVGProps<SVGSVGElement>) => (
   <NumoIcon animated={false} {...props} />
 );
@@ -219,19 +219,19 @@ export function CommandPalette({
   const { projects } = useProjects();
   const { theme, setTheme } = useTheme();
 
-  // Vues enregistrées : l'écran courant, retenu sous un nom, ré-ouvrable depuis
-  // n'importe quel appareil. La liste ne se charge qu'à l'ouverture de la
-  // palette — fermée, elle ne rend rien, et c'est le seul endroit qui la lit.
+  // Saved views: the current screen, retained under a name, re-openable from
+  // any device. The list only loads when you open the
+  // palette — closed, it renders nothing, and it is the only place that reads it.
   const { savedViews, createSavedView, renameSavedView, deleteSavedView } =
     useSavedViewsQuery(open);
   const currentView = useCurrentView();
 
-  // Sélection groupée (MIN-75) : une board publie sa sélection via le contexte.
-  // La pill « Actions » ouvre ⌘K en MODE BULK — la palette affiche alors les
-  // options de la sélection (Numo, changer statut/priorité/effort/assigné,
-  // supprimer) comme des lignes normales, à la place du contenu habituel. Les
-  // champs configurables ouvrent le formulaire inline (le « sous-menu », comme
-  // « Changer le thème »).
+  // Group selection (MIN-75): a board publishes its selection via context.
+  // The “Actions” pill opens ⌘K in BULK MODE — the palette then displays the
+  // selection options (Number, change status/priority/effort/assigned,
+  // delete) like normal lines, instead of the usual content. THE
+  // configurable fields open the inline form (the “submenu”, like
+  // “Change the theme”).
   const { request: bulkRequest, openSignal } = useBulkActions();
   const [bulkMode, setBulkMode] = useState(false);
 
@@ -271,9 +271,9 @@ export function CommandPalette({
   const { members } = useMembersQuery(currentProjectId, !!currentProjectId);
   const { categories: projectCategories } = useCategoriesQuery(currentProjectId);
 
-  // Catégories de TOUS mes projets (ids uuid → uniques globalement, donc une
-  // seule map suffit). Celles du projet courant écrasent l'index : mêmes
-  // données, mais tenues à jour par le realtime.
+  // Categories of ALL my projects (uuid ids → globally unique, so one
+  // only map is enough). Those of the current project overwrite the index: same
+  // data, but kept up to date by realtime.
   const categoryNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const list of Object.values(searchIndex?.categories ?? {})) {
@@ -283,8 +283,8 @@ export function CommandPalette({
     return map;
   }, [searchIndex, projectCategories]);
 
-  // Membres du projet DU TICKET — la palette liste maintenant des tickets de
-  // tous les projets, donc l'assigné ne peut plus venir du projet de l'URL.
+  // Members of the DU TICKET project — the palette now lists tickets for
+  // all projects, so the assignee can no longer come from the URL project.
   const membersForProject = useCallback(
     (projectId: string): Member[] => {
       if (projectId === currentProjectId && members.length > 0) return members;
@@ -293,7 +293,7 @@ export function CommandPalette({
     [currentProjectId, members, searchIndex]
   );
 
-  // Global open shortcuts. ⌘K / ⌘P toggle from anywhere (modifier combos are
+  // Global open shortcuts. ⌘K / ⌘P toggle from anywhere (edit combos are
   // safe even inside inputs — the standard "summon" behaviour, and it captures
   // the VS Code reflex); ⌘P also overrides the browser print dialog. F opens
   // when not editing text (the documented "search" key). Escape / click-outside
@@ -332,30 +332,30 @@ export function CommandPalette({
     return () => window.removeEventListener("keydown", onKey);
   }, [onOpenChange, track]);
 
-  // Une pill de board a demandé les actions groupées → on ouvre la palette en
-  // mode bulk (elle affichera alors les options de la sélection).
+  // A board pill has requested grouped actions → we open the palette by
+  // bulk mode (it will then display the selection options).
   useEffect(() => {
     if (openSignal === 0) return;
     onOpenChange(true);
     setBulkMode(true);
   }, [openSignal, onOpenChange]);
 
-  // Toute fermeture (Échap, clic dehors, ⌘K) sort du mode bulk : la prochaine
-  // ouverture ⌘K/⌘P retrouve la palette normale.
+  // Any closure (Escape, click outside, ⌘K) exits bulk mode: the next
+  // opening ⌘K/⌘P finds the normal palette.
   useEffect(() => {
     if (!open) setBulkMode(false);
   }, [open]);
 
-  // Les groupes cmdk deviennent les catégories de la palette (ordre préservé),
-  // plus « Vues enregistrées », qui n'existe QUE dans la palette : ni la nav
-  // mobile ni la sidebar ne servent ces lignes.
+  // The cmdk groups become the categories of the palette (order preserved),
+  // plus “Saved views”, which ONLY exists in the palette: neither the nav
+  // mobile nor the sidebar serve these lines.
   //
-  // Elle passe EN TÊTE, et c'est la position qui compte : à requête vide, la
-  // liste suit l'ordre des catégories (`buildCategoryOrder`), pas les
-  // `searchBoost` — ceux-là ne classent qu'une recherche en cours. En queue,
-  // les vues enregistrées se retrouvaient sous les tickets et les pages, donc
-  // sous des milliers de lignes : l'inverse exact d'un accès rapide qu'on s'est
-  // fabriqué soi-même.
+  // It goes AT THE HEAD, and it is the position that counts: with an empty request, the
+  // list follows the order of the categories (`buildCategoryOrder`), not the
+  // `searchBoost` — these only categorize a current search. In tail,
+  // saved views were found under tickets and pages, so
+  // under thousands of lines: the exact opposite of the rapid access that we have
+  // made yourself.
   const categories = useMemo<CategoryDefinition[]>(
     () => [
       {
@@ -378,11 +378,11 @@ export function CommandPalette({
   const isFr = locale.startsWith("fr");
   const themeLabel = isFr ? "Changer le thème" : "Change theme";
 
-  // Chaque PaletteItem cmdk devient un item de la palette. metaText (identifiant
-  // PQ-42, nom du projet) devient le contextLabel dim ; les tickets reçoivent
-  // l'icône (colorée) de leur statut. Les 3 options de thème à plat sont
-  // remplacées par un seul « Changer le thème » (sous-menu select) et
-  // « Se déconnecter » est retiré.
+  // Each cmdk PaletteItem becomes an item in the palette. metaText (id
+  // PQ-42, project name) becomes the contextLabel dim; tickets receive
+  // the (colored) icon of their status. The 3 flat theme options are
+  // replaced by a single “Change theme” (select submenu) and
+  // “Log out” is removed.
   const items = useMemo<CpPaletteItem[]>(() => {
     const HIDDEN_KEYS = new Set(["cmd-light", "cmd-dark", "cmd-system", "cmd-signout"]);
 
@@ -406,13 +406,13 @@ export function CommandPalette({
             contextLabel: it.metaText,
             filterCategory: cat,
             entityType: it.entityType,
-            // Projet de la ligne : le moteur boost celles du projet courant
-            // (SearchContext.currentContextId), sans exclure les autres.
+            // Line project: the motor boosts those of the current project
+            // (SearchContext.currentContextId), without excluding others.
             contextId: it.contextId,
             data: it.data,
             execute: () => {
-              // `it.key` est un identifiant stable (cmd-*, id de ticket) —
-              // jamais le libellé traduit, qui fragmenterait les stats.
+              // `it.key` is a stable identifier (cmd-*, ticket id) —
+              // never the translated wording, which would fragment the stats.
               track("command_executed", { command_id: it.key, category: cat });
               it.onSelect?.();
             },
@@ -420,7 +420,7 @@ export function CommandPalette({
         });
     });
 
-    // « Changer le thème » : Enter/⌘; ouvre le select inline (provider "theme")
+    // “Change theme”: Enter/⌘; opens the select inline (provider "theme")
     mapped.push({
       id: "cmd-theme",
       title: themeLabel,
@@ -430,10 +430,10 @@ export function CommandPalette({
       entityType: "theme",
     });
 
-    // Les vues enregistrées, EN PREMIER dans leur groupe — c'est ce qu'on vient
-    // y chercher. Enter ouvre l'adresse retenue ; ⌘; donne renommer et oublier.
-    // (Le tri d'affichage ne classe que les catégories entre elles : dans un
-    // groupe, l'ordre du tableau est l'ordre à l'écran.)
+    // Saved views, FIRST in their group — that's what we come from
+    // search there. Enter opens the selected address; ⌘; gives rename and forget.
+    // (Display sorting only classifies the categories among themselves: in a
+    // group, the order of the table is the order on the screen.)
     for (const view of savedViews) {
       mapped.push({
         id: `saved-view-${view.id}`,
@@ -441,9 +441,9 @@ export function CommandPalette({
         icon: <Bookmark className="size-4" />,
         filterCategory: "views",
         entityType: "saved-view",
-        // Pas d'étoile : une vue enregistrée EST déjà un raccourci qu'on s'est
-        // fabriqué. La mettre en favori épinglerait un signet sur un signet — et
-        // laisserait son id dans le compte une fois la vue oubliée.
+        // No stars: a saved view IS already a shortcut that we have
+        // made. Bookmarking it would pin a bookmark to a bookmark — and
+        // would leave its id in the account once the view is forgotten.
         favoritable: false,
         data: view,
         execute: () => {
@@ -453,10 +453,10 @@ export function CommandPalette({
       });
     }
 
-    // « Enregistrer la vue actuelle » ferme le groupe : on l'utilise une fois
-    // par vue, quand on rouvre les vues tous les jours. Pas d'`execute` → la
-    // sélectionner ouvre le champ de nom inline (provider "saved-view-actions"),
-    // comme les champs du mode groupé. L'écran n'est lu qu'à la validation.
+    // “Save current view” closes the group: we use it once
+    // per view, when we reopen the views every day. No `execute` → the
+    // select opens the inline name field (provider "saved-view-actions"),
+    // like the grouped mode fields. The screen is only read upon validation.
     mapped.push({
       id: "cmd-save-view",
       title: tNav("saveCurrentView"),
@@ -481,11 +481,11 @@ export function CommandPalette({
     return mapped;
   }, [groups, themeLabel, track, savedViews, router, tNav]);
 
-  // === Actions contextuelles des tickets (⌘; / →) ===
-  // Chaque action ouvre un formulaire inline à un champ : le select s'ouvre
-  // auto-focus, choisir une option auto-soumet → PATCH, la ligne serveur est
-  // écrite dans les caches du projet DU TICKET, du board agrégé et de l'index
-  // cross-projet (jamais une invalidation — MIN-156), toast.
+  // === Contextual issue actions (⌘; / →) ===
+  // Each action opens an inline form with one field: the select opens
+  // auto-focus, choose an auto-submit option → PATCH, the server line is
+  // written in the caches of the TICKET project, the aggregated board and the index
+  // cross-project (never an invalidation — MIN-156), toast.
   const issueProvider = useMemo<ActionProvider>(() => {
     const update = async (
       issue: PaletteIssue,
@@ -507,13 +507,13 @@ export function CommandPalette({
         issueWrites.fail(handle);
         throw err;
       }
-      // L'index est la source de la ligne dès qu'on n'est pas dans le projet du
-      // ticket : sans ce patch, l'icône de statut resterait l'ancienne.
+      // The index is the source of the line as soon as we are not in the project of the
+      // ticket: without this patch, the status icon would remain the old one.
       patchSearchIndexIssue(queryClient, issue.id, updates as Partial<SearchIndexIssue>);
       mergeServerIssue(queryClient, issue.project_id, updated);
       issueWrites.settle(handle, updated);
       toast.success(message);
-      // closeMenu:false → retour à la recherche, l'icône de statut se met à jour
+      // closeMenu:false → return to search, status icon updates
       return { success: true, closeMenu: false };
     };
 
@@ -522,8 +522,8 @@ export function CommandPalette({
       label: string,
       options: FormSelectOption[]
     ) => ({
-      // Pas de prefill : le champ vide reçoit l'autofocus, donc le dropdown
-      // s'ouvre immédiatement et Enter sur une option auto-soumet.
+      // No prefill: the empty field receives autofocus, therefore the dropdown
+      // opens immediately and Enter on an auto-submit option.
       fields: [{ key, type: "select" as const, label, options }],
     });
 
@@ -564,7 +564,7 @@ export function CommandPalette({
           },
         });
 
-        // — Priorité —
+        // - Priority -
         actions.push({
           id: "issue.priority",
           label: tIssueUI("changePriorityAria"),
@@ -592,10 +592,10 @@ export function CommandPalette({
         });
 
         // — Effort —
-        // Triangle : le glyphe d'effort du board (EffortIndicator = triangle +
-        // lettre). L'indicateur complet ne rentrerait pas dans ce slot de 16 px,
-        // et les options n'en portent pas non plus sur les cartes — la lettre
-        // (XS…XL) EST l'information.
+        // Triangle: the board's effort glyph (EffortIndicator = triangle +
+        // letter). The full indicator would not fit in this 16 px slot,
+        // and the options do not carry any on the cards either — the letter
+        // (XS…XL) IS the information.
         actions.push({
           id: "issue.effort",
           label: tIssueUI("changeEffortAria"),
@@ -621,7 +621,7 @@ export function CommandPalette({
           },
         });
 
-        // — Assigné —
+        // — Assigned —
         actions.push({
           id: "issue.assignee",
           label: tIssueUI("changeAssigneeAria"),
@@ -651,7 +651,7 @@ export function CommandPalette({
           },
         });
 
-        // — Copier le prompt (le ⇧P du board : XML agent + auto-start MIN-20) —
+        // — Copy the prompt (the ⇧P of the board: XML agent + auto-start MIN-20) —
         actions.push({
           id: "issue.copy-prompt",
           label: tIssueUI("copyAsPrompt"),
@@ -660,8 +660,8 @@ export function CommandPalette({
           priority: 5,
           execute: async (): Promise<ActionResult> => {
             const project = projects.find((p) => p.id === issue.project_id);
-            // Le prompt décrit le ticket ENTIER (description, échéance…) : une
-            // ligne d'index n'en porte pas, donc on va chercher le ticket.
+            // The prompt describes the ENTIRE ticket (description, deadline, etc.): a
+            // index line does not have one, so we go and get the ticket.
             let full: Issue;
             try {
               full = isFullIssue(issue) ? issue : await fetchIssueApi(issue.id);
@@ -672,7 +672,7 @@ export function CommandPalette({
             const autoStart =
               resolvePromptCopyAutoStart(user?.user_metadata) &&
               shouldAutoStartOnPromptCopy(full.status);
-            // Le XML copié reflète l'état APRÈS auto-start (comme sur le board)
+            // The copied XML reflects the state AFTER auto-start (as on the board)
             const promptIssue = autoStart
               ? { ...full, status: "in_progress" as const }
               : full;
@@ -684,14 +684,14 @@ export function CommandPalette({
               projectId: full.project_id,
               projectKey: project?.key ?? "",
               categories: promptCategories,
-              // Relations non résolues ici (données board) — bloc omis du prompt
+              // Unresolved relationships here (board data) — block omitted from prompt
               resourceCount: full.resource_count,
             });
             await navigator.clipboard.writeText(prompt);
-            // Copier un prompt, c'est prendre le ticket en main : la chaîne qui
-            // l'attendait en sursis s'annule (MIN-147). Ici comme dans le menu
-            // du board — et même quand l'auto-start est éteint, auquel cas le
-            // ticket ne bouge pas et rien d'autre ne le signalerait.
+            // Copying a prompt means taking the ticket in hand: the chain that
+            // waiting for him on reprieve is canceled (MIN-147). Here as in the menu
+            // of the board — and even when the auto-start is off, in which case the
+            // ticket is not moving and nothing else would signal it.
             handOffIssueApi(full.id);
             if (autoStart) {
               const handle = issueWrites.begin({
@@ -742,7 +742,7 @@ export function CommandPalette({
     };
   }, [queryClient, membersForProject, projects, user, categoryNameById, tIssueUI, tStatus, tPriority, tField]);
 
-  // === « Changer le thème » : un seul item, le select inline fait le sous-menu ===
+  // === “Change the theme”: a single item, the inline select makes the submenu ===
   const themeProvider = useMemo<ActionProvider>(() => {
     const THEME_OPTIONS: { value: string; label: string; icon: typeof Sun }[] = [
       { value: "light", label: tNav("themeLight"), icon: Sun },
@@ -784,16 +784,16 @@ export function CommandPalette({
     };
   }, [theme, setTheme, tNav, themeLabel]);
 
-  // === Vues enregistrées : enregistrer, renommer, oublier ===
-  // Un seul provider pour les deux lignes du groupe, parce qu'elles sont les
-  // deux faces du même geste : « Enregistrer la vue actuelle » demande un nom,
-  // une vue enregistrée se renomme ou s'oublie.
+  // === Saved views: save, rename, forget ===
+  // A single provider for the two lines of the group, because they are the
+  // two sides of the same gesture: “Save current view” asks for a name,
+  // a saved view is renamed or forgotten.
   const savedViewProvider = useMemo<ActionProvider>(() => {
-    // Le formulaire inline s'affiche « <libellé de l'action> : <champ> ». Le
-    // libellé du CHAMP sert de texte de substitution (il l'emporte sur
-    // `placeholder`), donc on y met l'exemple — « Enregistrer la vue actuelle :
-    // Nom de la vue » redisait deux fois la même chose, et la question posée
-    // n'était nulle part.
+    // The inline form displays “<action label>: <field>”. TEA
+    // wording of the FIELD serves as replacement text (it overrides
+    // `placeholder`), so we put the example there — “Save the current view:
+    // View name” said the same thing twice, and the question asked
+    // was nowhere.
     const nameField = (initial?: string) => ({
       fields: [
         {
@@ -814,20 +814,20 @@ export function CommandPalette({
           return [
             {
               id: "saved-view.create",
-              // Pas « Enregistrer la vue actuelle » : ça, c'est le nom de la
-              // LIGNE qu'on vient de choisir. Une fois dedans, l'écran ne
-              // répète pas le geste, il pose la question qui reste.
+              // Not “Save current view”: that’s the name of the
+              // LINE that we have just chosen. Once inside, the screen does not
+              // doesn't repeat the gesture, he asks the remaining question.
               label: tNav("nameThisView"),
               icon: BookmarkPlus,
               category: "primary",
               requiresForm: {
-                // `getActions` s'exécute à l'ouverture du menu : le nom proposé
-                // est celui de l'écran À CET INSTANT, pas celui d'un rendu
-                // précédent.
+                // `getActions` is executed when the menu is opened: the proposed name
+                // is that of the screen AT THIS MOMENT, not that of a rendering
+                // previous.
                 ...nameField(currentView.resolveLabel() ?? undefined),
                 onSubmit: async (values): Promise<ActionResult> => {
-                  // L'adresse est résolue MAINTENANT, dans le gestionnaire : la
-                  // page a pu changer de sélection depuis l'ouverture de ⌘K.
+                  // The address is resolved NOW, in the manager: the
+                  // page may have changed selection since opening ⌘K.
                   const href = currentView.resolveHref();
                   try {
                     const view = await createSavedView({
@@ -869,7 +869,7 @@ export function CommandPalette({
                   toast.error((err as Error).message);
                   return { success: false, closeMenu: false };
                 }
-                // closeMenu:false → retour à la liste, la ligne porte le
+                // closeMenu:false → return to the list, the line bears the
                 // nouveau nom.
                 return { success: true, closeMenu: false };
               },
@@ -898,11 +898,11 @@ export function CommandPalette({
     };
   }, [currentView, createSavedView, renameSavedView, deleteSavedView, track, tNav]);
 
-  // === Sélection groupée (MIN-75) : options comme lignes normales de la palette ===
-  // En mode bulk, `bulkItems` REMPLACE la liste habituelle. Numo et Supprimer
-  // s'exécutent directement (`execute`) ; les champs configurables portent
-  // entityType "bulk-field" et n'ont pas d'`execute` → les sélectionner ouvre le
-  // formulaire inline (le « sous-menu », comme « Changer le thème »), servi par
+  // === Group selection (MIN-75): options like normal palette lines ===
+  // In bulk mode, `bulkItems` REPLACES the usual list. Number and Delete
+  // execute directly (`execute`); the configurable fields carry
+  // entityType "bulk-field" and do not have `execute` → selecting them opens the
+  // inline form (the “submenu”, like “Change theme”), served by
   // `bulkFieldProvider`.
   const bulkItems = useMemo<CpPaletteItem[]>(() => {
     if (!bulkRequest) return [];
@@ -957,8 +957,8 @@ export function CommandPalette({
       } as CpPaletteItem,
     ];
 
-    // L'objectif est propre à un projet : la ligne n'existe que si toute la
-    // sélection tient dans le même (le board la retire sinon).
+    // The objective is specific to a project: the line only exists if the entire
+    // selection fits in the same (the board removes it otherwise).
     if (objectives && objectives.length > 0) {
       list.push({
         id: "bulk-objective",
@@ -969,8 +969,8 @@ export function CommandPalette({
       } as CpPaletteItem);
     }
 
-    // Cycle : les deux sens cohabitent sur une sélection mixte — chacun ne
-    // touche que les tickets qu'il concerne.
+    // Cycle: the two directions coexist on a mixed selection — each does not
+    // only touches the tickets it concerns.
     if (cycle && cycle.addable > 0) {
       list.push({
         id: "bulk-cycle-add",
@@ -1000,8 +1000,8 @@ export function CommandPalette({
       });
     }
 
-    // Lier : une relation a exactement deux bouts, donc la ligne n'apparaît
-    // qu'à deux tickets sélectionnés (et du même projet — cf. le board).
+    // Link: a relationship has exactly two ends, so the line does not appear
+    // only to two selected tickets (and from the same project — see the board).
     if (onLink) {
       list.push({
         id: "bulk-link",
@@ -1032,7 +1032,7 @@ export function CommandPalette({
           ) {
             onDelete();
           } else {
-            // Annulation : garder la palette ouverte sur la liste bulk.
+            // Cancellation: keep the pallet open on the bulk list.
             return false;
           }
         },
@@ -1042,7 +1042,7 @@ export function CommandPalette({
     return list;
   }, [bulkRequest, tBulk, tCycles, tIssueUI]);
 
-  // Un seul groupe, intitulé du nombre de tickets sélectionnés.
+  // A single group, titled with the number of tickets selected.
   const bulkCategories = useMemo<CategoryDefinition[]>(
     () =>
       bulkRequest
@@ -1051,9 +1051,9 @@ export function CommandPalette({
     [bulkRequest, tBulk]
   );
 
-  // Formulaire inline (le « sous-menu ») pour les champs configurables. Chaque
-  // item "bulk-field" a une action primaire à formulaire, sans `execute` : la
-  // sélectionner ouvre le select inline, dont la validation applique le patch.
+  // Inline form (the “submenu”) for configurable fields. Each
+  // item "bulk-field" has a primary form action, without `execute`: the
+  // select opens the inline select, whose validation applies the patch.
   const bulkFieldProvider = useMemo<ActionProvider>(() => {
     const selectField = (
       key: string,
@@ -1071,7 +1071,7 @@ export function CommandPalette({
         const fieldKey = (item.data as { field?: string } | undefined)?.field;
         if (!fieldKey) return [];
 
-        // closeMenu:false → retour à la liste bulk, on peut enchaîner un autre champ.
+        // closeMenu:false → return to the bulk list, we can chain another field.
         const update = async (
           patch: Parameters<typeof req.onUpdate>[0],
           message: string
@@ -1227,8 +1227,8 @@ export function CommandPalette({
     [issueProvider, themeProvider, savedViewProvider, bulkFieldProvider]
   );
 
-  // En mode bulk, la palette affiche les options de la sélection à la place du
-  // contenu normal (navigation, création…).
+  // In bulk mode, the palette displays the selection options instead of the
+  // normal content (navigation, creation, etc.).
   const showBulk = bulkMode && !!bulkRequest;
   const paletteItems = showBulk ? bulkItems : items;
   const paletteCategories = showBulk ? bulkCategories : categories;
@@ -1241,8 +1241,8 @@ export function CommandPalette({
       categories={paletteCategories}
       providers={providers}
       locale={locale}
-      // Le projet de la page est un BOOST de pertinence, pas un filtre : ses
-      // tickets et objectifs remontent, ceux des autres projets restent là.
+      // The page project is a BOOST of relevance, not a filter: its
+      // tickets and objectives go up, those of other projects remain there.
       actionContext={currentProjectId ? { contextId: currentProjectId } : undefined}
       storagePrefix="minddy-cp"
       actionsShortcutKey=";"

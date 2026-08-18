@@ -7,15 +7,15 @@ import { listPageVersions } from "@/lib/server/page-versions";
 type RouteContext = { params: Promise<{ id: string; pageId: string }> };
 
 /**
- * GET — l'historique d'une page (MIN-277), du plus récent au plus ancien.
+ * GET — the history of a page (MIN-277), from newest to oldest.
  *
- * Sans les corps : la liste ne montre que qui a écrit et quand, et l'aperçu
- * d'une version est un second appel. Charger vingt documents ProseMirror pour
- * peindre vingt lignes de dates serait la requête la plus lourde de l'écran.
+ * Without bodies: the list only shows who wrote and when, and the preview
+ * of a version is a second call. Load twenty ProseMirror documents to
+ * painting twenty date lines would be the heaviest request on the screen.
  *
- * Les auteurs sont RÉSOLUS ici (nom d'affichage, jamais l'email brut), et une
- * écriture d'agent revient au nom de minddy — la règle d'identité vaut aussi
- * dans un historique.
+ * Authors are RESOLVED here (display name, never raw email), and a
+ * agent writing returns to minddy's name — the identity rule also applies
+ * in a history.
  */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { pageId } = await params;

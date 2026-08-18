@@ -1,18 +1,17 @@
 /**
- * Les langues que la traduction des retours sait nommer.
+ * The languages ​​that the feedback translation knows how to name.
  *
- * Un JEU FERMÉ, et pas « toute langue que le modèle voudra bien renvoyer » : ces
- * codes sont stockés en base, comparés à la langue de l'équipe et cochés dans un
- * réglage. Laisser le modèle inventer `pt-BR`, `Portuguese` et `por` pour la
- * même chose ferait trois langues distinctes de la liste blanche, dont deux ne
- * correspondraient jamais à rien.
+ * A CLOSED GAME, and not "any language that the model wants to return": these
+ * codes are stored in the database, compared to the team's language and checked in a
+ * setting. Letting the model invent `pt-BR`, `Portuguese` and `por` for the
+ * same would make three separate whitelisted languages, two of which would never match anything.
  *
- * ISO 639-1, deux lettres, sans région : `fr` et non `fr-CA`. Un retour
- * québécois et un retour belge se lisent avec la même équipe.
+ * ISO 639-1, two letters, without region: `fr` and not `fr-CA`. A return
+ * from Quebec and a return from Belgium can be read with the same team.
  *
- * Les NOMS ne sont pas ici : `Intl.DisplayNames` les rend déjà, dans la langue
- * de qui regarde et sans catalogue à tenir — c'est exactement le genre de table
- * qui pourrit dès qu'on ajoute une entrée. Voir {@link languageLabel}.
+ * The NAMES are not here: `Intl.DisplayNames` already renders them, in the language
+ * of whoever is looking and without a catalog to keep — that's exactly the kind of table
+ * which rots as soon as an entry is added. See {@link languageLabel}.
  */
 export const FEEDBACK_LANGUAGES = [
   "en",
@@ -41,12 +40,12 @@ export function isFeedbackLanguage(value: unknown): value is FeedbackLanguage {
 }
 
 /**
- * Ramène ce qu'un modèle a répondu à un code du jeu, ou `null`.
+ * Returns what a model responded to a game code, or `null`.
  *
- * Tolérant à l'entrée, strict à la sortie : `PT-BR`, `pt_BR` et ` pt ` donnent
- * tous `pt`, et `Portuguese` donne `null` — on ne devine pas un code à partir
- * d'un nom, on refuse. Le prompt demande explicitement un code ISO ; ce qui
- * n'en est pas un est une réponse hors contrat, pas une variante à rattraper.
+ * Tolerant on entry, strict on exit: `PT-BR`, `pt_BR` and ` pt ` give
+ * all `pt`, and `Portuguese` gives `null` — we do not guess a code from
+ * of a name, we refuse. The prompt explicitly asks for an ISO code; what
+ * is not one is a non-contractual response, not a variant to be caught.
  */
 export function normalizeLanguage(value: unknown): FeedbackLanguage | null {
   if (typeof value !== "string") return null;
@@ -55,21 +54,21 @@ export function normalizeLanguage(value: unknown): FeedbackLanguage | null {
 }
 
 /**
- * Le nom d'une langue dans la langue de qui lit — « Deutsch » devient
- * « allemand » pour un francophone, « German » pour un anglophone.
+ * The name of a language in the language of the person reading — “Deutsch” becomes
+ * “German” for a French speaker, “German” for an English speaker.
  *
- * **Avec une majuscule**, que le français ne met pas. `Intl.DisplayNames` rend
- * le nom tel qu'il s'écrit DANS UNE PHRASE, or il n'apparaît jamais dans une
- * phrase ici : c'est une option de liste, une case à cocher, une étiquette. À
- * côté de « Français » posé par le sélecteur de langue de l'app, un « anglais »
- * en minuscule se lit comme une coquille.
+ * **With a capital letter**, which French does not use. `Intl.DisplayNames` renders
+ * the name as it is written IN A SENTENCE, but it never appears in a
+ * sentence here: it is a list option, a checkbox, a label. HAS
+ * next to "French" set by the language selector of the app, an "English"
+ * in lower case reads like a typo.
  *
- * La bascule de casse est faite avec la locale (`toLocaleUpperCase`) et non
- * sans : en turc, la majuscule de `i` est `İ`, et `I` serait une autre lettre.
- * Les écritures sans casse (japonais, arabe) traversent inchangées.
+ * The case switch is made with the locale (`toLocaleUpperCase`) and not
+ * without: in Turkish, the uppercase of `i` is `İ`, and `I` would be another letter.
+ * Caseless scripts (Japanese, Arabic) pass through unchanged.
  *
- * Le code brut en repli : un environnement sans `Intl.DisplayNames` (ou une
- * locale qu'il ne connaît pas) doit afficher `de`, jamais rien.
+ * Raw fallback code: a zero environment `Intl.DisplayNames` (or a local
+ * that it doesn't know) should display `de`, never anything.
  */
 export function languageLabel(code: string, locale: string): string {
   try {

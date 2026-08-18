@@ -6,8 +6,8 @@ import {
   type RawCommitStatus,
 } from "./checks-core";
 
-// La partie PURE des checks CI (MIN-138) — les appels réseau vivent dans pr.ts /
-// mr.ts et ne sont pas testables en node (server-only).
+// The PURE part of CI checks (MIN-138) — network calls live in pr.ts /
+// mr.ts and are not testable in node (server-only).
 
 const run = (over: Partial<RawCheckRun> & { name: string }): RawCheckRun => ({
   status: "completed",
@@ -30,7 +30,7 @@ describe("summarizeGithubChecks", () => {
     );
     expect(s.state).toBe("failure");
     expect(s.passing).toBe(1);
-    // Ce qui demande une action passe en tête de liste.
+    // What requires action goes to the top of the list.
     expect(s.checks[0].name).toBe("lint");
   });
 
@@ -110,12 +110,12 @@ describe("summarizeGithubChecks", () => {
 
   it("le logo de l'App n'est PAS l'avatar de son propriétaire (l'org `github`)", () => {
     const owned = { owner: { avatar_url: "https://avatars/u/9919" } };
-    // Avec un id, c'est le logo de l'App qui gagne…
+    // With an id, it’s the App logo that wins…
     expect(
       summarizeGithubChecks([run({ name: "a", app: { id: 15368, ...owned } })], [])
         .checks[0].appAvatarUrl,
     ).toBe("https://avatars.githubusercontent.com/in/15368?s=48");
-    // …et sans id, l'avatar du propriétaire vaut mieux que rien.
+    // …and without an id, the owner's avatar is better than nothing.
     expect(
       summarizeGithubChecks([run({ name: "a", app: owned })], [])
         .checks[0].appAvatarUrl,
@@ -125,7 +125,7 @@ describe("summarizeGithubChecks", () => {
   it("une durée absente, nulle ou négative ne s'affiche pas", () => {
     const noEnd = run({ name: "a", started_at: "2026-08-01T15:25:57Z" });
     expect(summarizeGithubChecks([noEnd], []).checks[0].durationMs).toBeNull();
-    // GitHub date un job sauté avec une fin ANTÉRIEURE à son début (mesuré).
+    // GitHub dates a skipped job with an end BEFORE its (measured) start.
     const skipped = run({
       name: "b",
       started_at: "2026-08-01T12:19:20Z",
@@ -149,7 +149,7 @@ describe("summarizeGithubChecks", () => {
     const c = s.checks[0];
     expect(c.appAvatarUrl).toBe("https://avatars.githubusercontent.com/in/8329?v=4");
     expect(c.description).toBe("Deployment has completed");
-    // Le contexte nomme déjà l'intégration : pas de « vercel[bot] » en plus.
+    // The context already names the integration: no more “vercel[bot]”.
     expect(c.appName).toBeNull();
     expect(c.durationMs).toBeNull();
   });
@@ -192,7 +192,7 @@ describe("summarizeGitlabPipelines", () => {
     ]).checks[0];
     expect(named.appName).toBe("GitLab CI/CD");
     expect(named.description).toBe("Ruby 3.3");
-    // Pas de logo par intégration chez GitLab : l'UI retombe sur l'icône de la forge.
+    // No logo by integration at GitLab: the UI falls back on the forge icon.
     expect(named.appAvatarUrl).toBeNull();
     expect(
       summarizeGitlabPipelines([{ id: 20, status: "success", ref: "main" }]).checks[0]
@@ -204,7 +204,7 @@ describe("summarizeGitlabPipelines", () => {
     expect(summarizeGitlabPipelines([{ id: 1, status: "running" }]).state).toBe("pending");
     expect(summarizeGitlabPipelines([{ id: 1, status: "failed" }]).state).toBe("failure");
     expect(summarizeGitlabPipelines([{ id: 1, status: "canceled" }]).state).toBe("failure");
-    // Un job manuel non déclenché attend une décision humaine : pas un échec.
+    // An untriggered manual job awaits a human decision: not a failure.
     expect(summarizeGitlabPipelines([{ id: 1, status: "manual" }]).state).toBe("success");
     expect(summarizeGitlabPipelines([{ id: 1, status: "skipped" }]).checks[0].state).toBe(
       "neutral",

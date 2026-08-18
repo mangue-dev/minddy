@@ -3,8 +3,8 @@
 import { trackEvent } from "./analytics";
 
 /**
- * Les six types que la corbeille recueille (MIN-133 ; routines : MIN-201 ;
- * pages : MIN-266, dont la ligne représente la page ET ses sous-pages).
+ * The six types that the recycle bin collects (MIN-133; routines: MIN-201;
+ * pages: MIN-266, whose line represents the page AND its subpages).
  */
 export type TrashType =
   | "issue"
@@ -25,7 +25,7 @@ export interface TrashItem {
   type: TrashType;
   id: string;
   title: string;
-  /** « MIN-42 » pour un ticket, la clé du projet pour un projet, sinon null. */
+  /** “MIN-42” for a ticket, the project key for a project, otherwise null. */
   identifier: string | null;
   project_id: string | null;
   project_name: string | null;
@@ -36,7 +36,7 @@ export interface TrashItem {
 
 export interface TrashPayload {
   items: TrashItem[];
-  /** Jours de conservation, dictés par le serveur (lib/server/trash.ts). */
+  /** Retention days, dictated by the server (lib/server/trash.ts). */
   retention_days: number;
 }
 

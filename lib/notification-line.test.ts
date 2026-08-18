@@ -34,7 +34,7 @@ function notification(patch: Partial<MyNotification>): MyNotification {
 }
 
 describe("notificationActor", () => {
-  it("nomme Smart Assign avant tout le reste", () => {
+  it("names Smart Assign before anything else", () => {
     const n = notification({ via_smart_assign: true, actor_name: "Léa" });
     expect(notificationActor(n, LABELS)).toBe("Smart Assign");
   });
@@ -97,19 +97,19 @@ describe("notificationTitle", () => {
     ).toBe("Réparer le board");
   });
 
-  it("donne un titre à une page qui n'en a pas", () => {
+  it("gives a title to a page that has none", () => {
     expect(
       notificationTitle(notification({ page_id: "pg1", page_title: "" }), LABELS)
     ).toBe("Page sans titre");
   });
 
-  it("ne fait pas passer une conversation générale sans titre pour un ticket", () => {
+  it("does not mistake an untitled general conversation for a ticket", () => {
     expect(
       notificationTitle(notification({ agent_conversation_id: "c1" }), LABELS)
     ).toBe("Conversation avec Numo");
   });
 
-  it("retombe sur le repli quand le ticket n'a pas de titre", () => {
+  it("falls back when the ticket has no title", () => {
     expect(notificationTitle(notification({ issue_id: "i1" }), LABELS)).toBe(
       "un ticket"
     );

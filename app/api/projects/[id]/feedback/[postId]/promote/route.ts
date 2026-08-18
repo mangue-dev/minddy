@@ -8,11 +8,11 @@ import { promoteFeedbackPost } from "@/lib/server/feedback/promote";
 
 type RouteContext = { params: Promise<{ id: string; postId: string }> };
 
-/** POST — promotion en issue : crée une issue liée dont la description embarque
-    le retour et son compteur de votes. Le corps est FACULTATIF : les champs
-    que l'humain a remplis dans le formulaire de création (effort, priorité,
-    assigné, statut…) l'emportent sur les valeurs par défaut ; sans corps, la
-    promotion reste celle d'avant, un ticket au backlog. */
+/** POST — issue promotion: creates a linked issue whose description embeds
+ the return and its vote counter. The body is OPTIONAL: the fields
+ that the human filled in the creation form (effort, priority, assigned
+, status…) take precedence over the default values; without a body, the
+ promotion remains the one before, a ticket in the backlog. */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id, postId } = await params;
   const guard = await requireProjectMember(request, id);
@@ -27,8 +27,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("feedbackAlreadyPromoted") }, { status: 409 });
   }
 
-  // Un corps absent ou illisible n'est pas une erreur : c'est la promotion
-  // « telle quelle », celle que Numo et les appels historiques envoient.
+  // A missing or illegible body is not an error: it is promotion
+  // “as is”, the one that Numo and historical calls send.
   const body = (await request.json().catch(() => null)) as unknown;
   const input =
     body && typeof body === "object" && !Array.isArray(body)

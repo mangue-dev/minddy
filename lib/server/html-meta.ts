@@ -1,35 +1,35 @@
 /**
- * Lire le `<head>` d'une page distante sans se faire piéger par elle (MIN-336).
+ * Read the `<head>` of a remote page without being tricked by it (MIN-336).
  *
- * Ce module analyse du HTML **choisi par un utilisateur**. La contrainte n'est
- * donc pas la justesse du parsing — un `<link>` mal formé n'est pas grave — mais
- * le **temps** : chaque fonction ici doit être linéaire en la taille de
- * l'entrée, quelle que soit cette entrée.
+ * This module parses HTML **chosen by a user**. The constraint is
+ * so not the correctness of the parsing — a poorly formed `<link>` is not serious — but
+ * **time**: each function here must be linear in the size of
+ * the input, whatever that input is.
  *
- * Les regex qui vivaient ici ne l'étaient pas. `/<link\b[^>]*>/g` sur un
- * mégaoctet sans le moindre `>` repart d'un `[^>]*` complet à chaque `<link`
- * rencontré : 66 secondes d'event loop bloqué, sur une instance partagée par
- * tout le monde. `/<meta[^>]*property\s*=\s*["']og:title["'][^>]*>/` était pire
- * — deux `[^>]*` autour d'un littéral, un backtracking cubique, 25 secondes
- * pour 52 Ko.
+ * The regex that lived here were not. `/<link\b[^>]*>/g` on a
+ * megabyte without the slightest `>` restarts with a complete `[^>]*` for each `<link`
+ * encountered: 66 seconds of event loop blocked, on an instance shared by
+ * everyone. `/<meta[^>]*property\s*=\s*["']og:title["'][^>]*>/` was worse
+ * — two `[^>]*` around a literal, cubic backtracking, 25 seconds
+ * for 52 KB.
  *
- * D'où la forme du code : des `indexOf` et des curseurs, pas de quantificateur
- * imbriqué. Un balayage, une seule fois, sans retour en arrière — et des bornes
- * explicites sur la longueur d'une balise et d'un titre, pour qu'une page
- * pathologique coûte le prix de sa taille et rien de plus.
+ * Hence the form of the code: `indexOf` and sliders, no nested
+ * quantifier. A scan, only once, without going back — and explicit bounds
+ * on the length of a tag and a title, so that a pathological
+ * page costs the price of its size and nothing more.
  */
 
-/** Au-delà, ce n'est plus une balise de `<head>` mais une charge. */
+/** Beyond that, it is no longer a `<head>` tag but a charge. */
 const MAX_TAG_LENGTH = 8 * 1024;
-/** Un titre plus long que ça est tronqué : personne n'en lira la suite. */
+/** A title longer than that is truncated: no one will read the rest. */
 const MAX_TITLE_LENGTH = 4 * 1024;
 
 /**
- * Le contenu (entre le nom et le `>`) de chaque balise ouvrante portant ce nom.
+ * The content (between the name and `>`) of each start tag with this name.
  *
- * Linéaire : le curseur ne recule jamais. Après une balise, on repart APRÈS son
- * `>` — donc les `<link` empilés avant un même `>` ne sont lus qu'une fois — et
- * une balise jamais fermée arrête le balayage au lieu de le refaire.
+ * Linear: the cursor never moves back. After a tag, we start again AFTER its
+ * `>` — so the `<link` stacked before the same `>` are only read once — and
+ * a tag never closed stops the scanning instead of starting it again.
  */
 export function* scanTags(html: string, name: string): Generator<string> {
   const needle = `<${name}`;
@@ -39,9 +39,9 @@ export function* scanTags(html: string, name: string): Generator<string> {
     const start = lower.indexOf(needle, from);
     if (start === -1) return;
     const end = html.indexOf(">", start + needle.length);
-    if (end === -1) return; // plus aucune balise complète après ce point
+    if (end === -1) return; // no more complete tags after this point
     from = end + 1;
-    // `<linkedin>` n'est pas un `<link>` : le nom doit être suivi d'un délimiteur.
+    // `<linkedin>` is not a `<link>`: the name must be followed by a delimiter.
     const next = html[start + needle.length];
     if (next !== undefined && next !== ">" && next !== "/" && !/\s/.test(next)) continue;
     if (end - start > MAX_TAG_LENGTH) continue;
@@ -50,9 +50,9 @@ export function* scanTags(html: string, name: string): Generator<string> {
 }
 
 /**
- * Les attributs d'une balise, nom en minuscules. Première occurrence gagnante,
- * valeurs entre guillemets simples, doubles ou nues. Un seul passage, sans
- * regex sur l'entrée.
+ * The attributes of a tag, name in lowercase. First winning occurrence,
+ * values ​​in single, double, or bare quotes. Single pass, without
+ * regex on input.
  */
 export function parseAttributes(tag: string): Map<string, string> {
   const attributes = new Map<string, string>();
@@ -63,7 +63,7 @@ export function parseAttributes(tag: string): Map<string, string> {
     const nameStart = i;
     while (i < tag.length && !isSpace(tag[i]) && tag[i] !== "=" && tag[i] !== "/") i++;
     if (i === nameStart) {
-      i++; // caractère isolé (`/`, `=` orphelin) : on avance, sinon on boucle
+      i++; // isolated character (`/`, orphan `=`): we move forward, otherwise we loop
       continue;
     }
     const name = tag.slice(nameStart, i).toLowerCase();
@@ -92,7 +92,7 @@ export function parseAttributes(tag: string): Map<string, string> {
   return attributes;
 }
 
-/** Le texte brut d'un `<title>` (entités non décodées), borné en longueur. */
+/** The plain text of a `<title>` (undecoded entities), bounded in length. */
 export function extractTitleText(html: string): string | null {
   const lower = html.toLowerCase();
   let from = 0;
@@ -110,8 +110,8 @@ export function extractTitleText(html: string): string | null {
   }
 }
 
-/** Le `content` de la première balise `<meta>` déclarant cette propriété
-    Open Graph (`property=` ou, chez les approximatifs, `name=`). */
+/** The `content` of the first `<meta>` tag declaring this property
+ Open Graph (`property=` or, for approximates, `name=`). */
 export function extractMetaContent(html: string, property: string): string | null {
   for (const tag of scanTags(html, "meta")) {
     const attributes = parseAttributes(tag);

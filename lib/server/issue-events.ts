@@ -10,7 +10,7 @@ export interface EventRow {
   issue_id?: string | null;
   objective_id?: string | null;
   feedback_post_id?: string | null;
-  /** Une PAGE du wiki (MIN-278) : créée, modifiée, corbeillée, restaurée. */
+  /** A wiki PAGE (MIN-278): created, modified, trashed, restored. */
   page_id?: string | null;
   /** NULL when the action comes from an integration (no user behind it). */
   actor_id: string | null;
@@ -50,21 +50,21 @@ export interface EventRow {
       actor_id stays set — the write needs a project member behind it. */
   forge_sync?: string | null;
   /**
-   * L'INSTANT DU GESTE, quand il n'est pas celui de l'insert.
-   *
-   * Par défaut la colonne prend `now()`, et c'est le bon choix : le geste vient
-   * d'avoir lieu. Mais un événement écrit APRÈS la réponse (`after()`) est
-   * horodaté à son insert, pas à son geste — et il se fait alors doubler par
-   * tout ce qui s'écrit avant la réponse (Smart Assign, les relations). La
-   * timeline raconte l'ordre des ÉCRITURES au lieu de l'ordre des gestes.
-   *
-   * D'où ce champ : un appelant qui diffère ses événements fige l'instant au
-   * moment du geste et le transmet ici. Laissé vide partout ailleurs.
-   */
+ * THE TIME OF THE GESTURE, when it is not that of the insert.
+ *
+ * By default the column takes `now()`, and this is the right choice: the gesture has just taken place
+ *. But an event written AFTER the response (`after()`) is
+ * timestamped at its insert, not at its gesture — and it is then doubled by
+ * everything written before the response (Smart Assign, relationships). The
+ * timeline tells the order of WRITINGs instead of the order of gestures.
+ *
+ * Hence this field: a caller who defers its events freezes the moment at the
+ * moment of the gesture and transmits it here. Left empty everywhere else.
+ */
   created_at?: string;
 }
 
-/** Fige l'instant du geste sur un lot d'événements (cf. `created_at` ci-dessus). */
+/** Freezes the moment of the gesture on a batch of events (see `created_at` above). */
 export function stampOccurredAt(rows: EventRow[], at: string): EventRow[] {
   return rows.map((r) => ({ created_at: at, ...r }));
 }
@@ -76,9 +76,9 @@ export function stampViaAssistant(rows: EventRow[], viaAssistant: boolean): Even
 }
 
 /** Stamp a batch of events as written by a project AUTOMATION (MIN-147, no-op
-    when false). Se CUMULE avec `stampViaAssistant` : une étape de chaîne est
-    bien un geste de Numo, mais la timeline doit nommer la RÈGLE — sans ça un
-    statut posé par la boucle est indiscernable d'un run lancé à la main. */
+ when false). CUMULATES with `stampViaAssistant`: a chain step is
+ indeed a gesture of Numo, but the timeline must name the RULE — without that a
+ status posed by the loop is indistinguishable from a run launched by hand. */
 export function stampViaAutomation(rows: EventRow[], viaAutomation: boolean): EventRow[] {
   if (!viaAutomation) return rows;
   return rows.map((r) => ({ ...r, via_automation: true }));
@@ -238,16 +238,16 @@ export async function insertEvents(
     console.error("[issue-events] insert failed:", error.message);
     return;
   }
-  // insertEvents est l'entonnoir unique des événements d'issue : c'est le
-  // point de dispatch des webhooks d'intégration (non bloquant, via after()).
-  // Les événements d'objectif ne portent pas de webhooks — on ne dispatche que
-  // les rows rattachées à une issue.
+  // insertEvents is the single funnel of issue events: it is the
+  // dispatch point for integration webhooks (non-blocking, via after()).
+  // Objective events do not carry webhooks — we only dispatch
+  // the rows attached to an issue.
   const issueRows = rows.filter((r) => !!r.issue_id);
   if (issueRows.length > 0) dispatchWebhooksForEvents(service, issueRows);
 }
 
-// Champs d'objectif suivis avec from/to (le journal d'activité du panneau
-// d'objectif). `name` réutilise le libellé « title » côté describe.
+// Goal fields tracked with from/to (the panel activity log
+// objective). `name` reuses the “title” label on the describe side.
 const OBJECTIVE_SCALAR_FIELDS = [
   "status",
   "lead_user_id",

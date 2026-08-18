@@ -8,15 +8,15 @@ import {
 } from "./usage-claim";
 
 /**
- * MIN-329 — ce que la microVM annonce avoir dépensé n'est pas ce qu'on écrit.
+ * MIN-329 — what the microVM announces having spent is not what we write.
  *
- * Le ticket part d'un `cost` négatif : la ligne de ledger faisait DESCENDRE la
- * consommation du mois, et le plafond de dépense sautait pour tout le compte. Ces
- * tests tiennent les deux moitiés de la réponse — les bornes (signe, finitude,
- * plafond dur) et le plafond CALCULÉ à partir des tokens et du tarif du modèle.
+ * The ticket starts from a negative `cost`: the ledger line brought down the
+ * consumption of the month, and the spending ceiling jumped for the entire account. These
+ * tests hold both halves of the answer — the bounds (sign, finiteness,
+ * hard ceiling) and the ceiling CALCULATED from the tokens and the model price.
  */
 
-/** deepseek-v4-flash, ordre de grandeur : entrée $0,30/Mtok, sortie $1,20/Mtok. */
+/** deepseek-v4-flash, order of magnitude: input $0.30/Mtok, output $1.20/Mtok. */
 const PRICE = {
   pricing: { inputUsdPerMTok: 0.3, outputUsdPerMTok: 1.2 },
   cachePricing: { readUsdPerMTok: 0.03, writeUsdPerMTok: 0.375 },
@@ -32,14 +32,14 @@ const claim = (over: Record<string, unknown> = {}) => ({
 
 describe("les bornes du montant", () => {
   it("REFUSE un montant négatif — c'est le ticket", () => {
-    // Un montant négatif n'annule pas une dépense : il en efface d'autres. Le
-    // refus est net, pas un `Math.max(0, …)` silencieux.
+    // A negative amount does not cancel an expense: it erases others. THE
+    // reject is clear, not a silent `Math.max(0, …)`.
     const v = checkUsageClaim(claim({ cost: -1000 }), PRICE);
     expect(v.ok).toBe(false);
   });
 
   it("refuse NaN et Infinity plutôt que de les traiter comme une absence", () => {
-    // `null` est légitime (le fournisseur n'a rien rapporté) ; NaN est un mensonge.
+    // `null` is legitimate (the provider has not reported anything); NaN is a lie.
     expect(checkUsageClaim(claim({ cost: Number.NaN }), PRICE).ok).toBe(false);
     expect(checkUsageClaim(claim({ cost: Number.POSITIVE_INFINITY }), PRICE).ok).toBe(false);
   });
@@ -59,16 +59,16 @@ describe("les bornes du montant", () => {
     expect(
       checkUsageClaim(claim({ completionTokens: MAX_USAGE_TOKENS + 1 }), PRICE).ok,
     ).toBe(false);
-    // …et un compteur impossible n'est pas une absence : sans ce refus, la ligne
-    // passerait avec un compteur en moins, donc un plafond calculé plus bas.
+    // …and an impossible counter is not an absence: without this refusal, the line
+    // would pass with one meter less, therefore a lower calculated ceiling.
     expect(checkUsageClaim(claim({ totalTokens: Number.NaN }), PRICE).ok).toBe(false);
   });
 });
 
 describe("le plafond calculé sur les tokens", () => {
   it("laisse passer un montant plausible, tel qu'il a été rapporté", () => {
-    // 100k entrée + 10k sortie ≈ 0,042 $ : la valeur du fournisseur EST la
-    // facture (remises de cache comprises), on ne la remplace pas par la nôtre.
+    // 100k input + 10k output ≈ $0.042: the provider value IS the
+    // invoice (cache discounts included), we do not replace it with ours.
     const v = checkUsageClaim(claim(), PRICE);
     expect(v).toMatchObject({ ok: true, cost: 0.042, estimated: false });
     expect(v).not.toHaveProperty("clampedFrom");
@@ -78,16 +78,16 @@ describe("le plafond calculé sur les tokens", () => {
     const v = checkUsageClaim(claim({ cost: 40 }), PRICE);
     expect(v.ok).toBe(true);
     if (!v.ok) return;
-    // Le chiffre écrit est le NÔTRE, et il se dit calculé : l'admin finance ne
-    // doit jamais confondre un montant calculé avec un montant relevé.
+    // The written figure is OURS, and it is said to be calculated: the finance admin does not
+    // must never confuse a calculated amount with a recorded amount.
     expect(v.cost).toBe(maxPlausibleCostUsd(v, PRICE));
     expect(v.estimated).toBe(true);
     expect(v.clampedFrom).toBe(40);
   });
 
   it("ne plafonne pas les lignes minuscules, où la tolérance ne mesure rien", () => {
-    // 1 token de sortie « coûte » 0,0000012 $ : sans plancher, le moindre frais
-    // fixe du fournisseur ferait couper une ligne parfaitement honnête.
+    // 1 exit token “costs” $0.0000012: no floor, no fees
+    // fixed from the provider would cut a perfectly honest line.
     const v = checkUsageClaim(
       { promptTokens: 0, completionTokens: 1, totalTokens: 1, cost: 0.02 },
       PRICE,
@@ -101,9 +101,9 @@ describe("le plafond calculé sur les tokens", () => {
   });
 
   it("refuse un montant SANS tokens plutôt que de l'écrire à zéro", () => {
-    // Les deux issues seraient mauvaises : plafonner écrirait 0 sur une ligne
-    // honnête, ne pas plafonner offrirait le plein plafond dur à qui omet ses
-    // compteurs. Un relevé de fournisseur porte toujours ses tokens.
+    // Both outcomes would be bad: capping would write 0 on a line
+    // honest, not capping would offer the full hard ceiling to those who omit their
+    // counters. A supplier statement always carries its tokens.
     const v = checkUsageClaim({ cost: 5 }, PRICE);
     expect(v.ok).toBe(false);
   });
@@ -125,7 +125,7 @@ describe("le majorant lui-même", () => {
       },
       PRICE,
     );
-    // 0,375 $/Mtok en écriture > 0,30 $/Mtok en entrée.
+    // $0.375/Mtok in writing > $0.30/Mtok in input.
     expect(withWrite).toBe(0.375);
   });
 

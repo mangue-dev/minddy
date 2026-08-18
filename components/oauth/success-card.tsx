@@ -4,9 +4,9 @@ import { OAuthLogoPair } from "@/components/oauth/logo-pair";
 import { AutoRedirect } from "@/components/oauth/auto-redirect";
 
 /**
- * Carte « connexion réussie » — interstitiel affiché après le consentement,
- * juste avant le retour vers le client (redirection automatique + lien
- * manuel).
+ * “Connection successful” card — interstitial displayed after consent,
+ * just before returning to the client (automatic redirection + link
+ * manual).
  */
 export async function OAuthSuccessCard({
   clientName,

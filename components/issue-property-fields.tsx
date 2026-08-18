@@ -224,7 +224,7 @@ export function CategoryValue({
   categories: Category[];
   value: string[];
   onChange: (ids: string[]) => void;
-  /** Projet où l'ajout rapide crée l'étiquette (absent : pas de ligne « Ajouter »). */
+  /** Project where quick add creates the label (absent: no “Add” line). */
   projectId?: string | null;
 }) {
   const t = useTranslations("IssueUI");
@@ -279,8 +279,8 @@ export function DueDateValue({
 }: {
   value: string | null;
   onChange: (v: string | null) => void;
-  /** Passer ces deux-là ouvre le mode récurrent (MIN-136) — les tickets l'ont,
-      la date cible d'un objectif non. */
+  /** Skipping these two opens recurring mode (MIN-136) — tickets have it,
+ the target date of an objective no. */
   recurrence?: RecurrenceCadence | null;
   onRecurrenceChange?: (next: {
     due_date: string | null;
@@ -313,7 +313,7 @@ export function ObjectiveValue({
   value: string | null;
   objectives: Objective[];
   onChange: (v: string | null) => void;
-  /** Projet où l'ajout rapide crée l'objectif (absent : pas de ligne « Ajouter »). */
+  /** Project where quick add creates the objective (missing: no “Add” line). */
   projectId?: string | null;
 }) {
   const t = useTranslations("IssueUI");

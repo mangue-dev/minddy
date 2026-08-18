@@ -7,21 +7,21 @@ import { SITE_NAME, SITE_URL } from "@/lib/site";
 import type { PublicSiteTab } from "@/lib/feedback/types";
 
 /**
- * Chrome commun des pages publiques anonymes (vue partagée /share/[token],
- * board de feedback /f/[token]) : header avec un slot gauche, des onglets de
- * navigation optionnels (Feedback + vues partagées — le « site public » du
- * projet), un slot d'actions à droite et la mention « made with minddy ».
- * Deux modes de hauteur : fullHeight (h-dvh, le contenu gère son overflow —
- * kanban) ou page scrollable naturelle (min-h-dvh — board de feedback).
+ * Common chrome for anonymous public pages (shared view /share/[token],
+ * feedback board /f/[token]): header with a slot on the left, tabs of
+ * optional navigation (Feedback + shared views — the “public site” of the
+ * project), an actions slot on the right and the mention “made with minddy”.
+ * Two height modes: fullHeight (h-dvh, the content manages its overflow —
+ * kanban) or natural scrollable page (min-h-dvh — feedback board).
  *
- * PIED DE PAGE LÉGAL (RGPD art. 13). Il tient en un lien, et il est ici plutôt
- * que dans le board parce que le besoin est le même sur les deux surfaces : ce
- * sont des pages où minddy traite les données de gens qui n'ont pas de compte
- * chez lui. La mention au point de collecte du board ne vit, elle, que dans le
- * dialogue de vérification par email — un visiteur arrivé par SSO ne le voit
- * jamais (son identité est posée par le backend de l'éditeur), et un simple
- * lecteur non plus, alors qu'il reçoit le bandeau cookies. URL absolue : sur un
- * domaine personnalisé, `/privacy` ne mène nulle part.
+ * LEGAL FOOOTER (GDPR art. 13). It is a link, and it is here rather
+ * than in the board because the need is the same on both surfaces: this
+ * are pages where minddy processes the data of people who do not have an account
+ * with him. The mention at the collection point of the board only lives in the
+ * email verification dialog — a visitor arriving by SSO never sees it
+ * (his identity is set by the editor's backend), and a simple
+ * reader neither, even though he receives the cookies banner. Absolute URL: on a
+ * custom domain, `/privacy` leads nowhere.
  */
 export async function PublicPageShell({
   heading,
@@ -31,14 +31,14 @@ export async function PublicPageShell({
   contained = false,
   children,
 }: {
-  /** Slot gauche du header (titre, orbe + nom du projet…). */
+  /** Left slot of the header (title, orb + project name, etc.). */
   heading?: ReactNode;
-  /** Onglets sous le header (board + vues partagées). */
+  /** Tabs under the header (board + shared views). */
   tabs?: PublicSiteTab[];
-  /** Slot droit du header (identité, connexion…). */
+  /** Right slot of the header (identity, connection, etc.). */
   actions?: ReactNode;
   fullHeight?: boolean;
-  /** Contraint header et onglets à la même largeur max que le contenu. */
+  /** Constrain header and tabs to the same max width as the content. */
   contained?: boolean;
   children: ReactNode;
 }) {
@@ -54,19 +54,19 @@ export async function PublicPageShell({
             "flex items-center justify-between gap-3 px-4 py-3 desktop:px-6"
           )}
         >
-          {/* min-w-0 pour que le titre tronque au lieu de pousser les actions
-              (sur mobile, tout se chevauchait). */}
+          {/* min-w-0 to make the title truncate instead of pushing actions
+ (on mobile everything overlapped). */}
           <div className="min-w-0 flex-1">{heading ?? <span />}</div>
           <div className="flex shrink-0 items-center gap-3 sm:gap-4">
             {actions}
-            {/* Lien absolu : sur un domaine personnalisé (MIN-36), "/" serait
-                la racine du site du client, pas minddy. */}
+            {/* Absolute link: on a custom domain (MIN-36), "/" would be
+ the root of the client's site, not minddy. */}
             <a
               href={SITE_URL}
               className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
               <MinddyLogo className="size-3.5" />
-              {/* Sur mobile, le logo suffit — le libellé prendrait la place du titre. */}
+              {/* On mobile, the logo is enough — the wording would take the place of the title. */}
               <span className="hidden sm:inline">
                 {t("madeWith")} <span className="font-semibold">{SITE_NAME}</span>
               </span>

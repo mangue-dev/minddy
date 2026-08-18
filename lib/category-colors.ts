@@ -18,12 +18,12 @@ export const CATEGORY_COLORS = [
 export const DEFAULT_CATEGORY_COLOR = CATEGORY_COLORS[9];
 
 /**
- * Couleur d'une catégorie créée à la volée depuis un picker (MIN — ajout
- * rapide) : tirée au hasard PARMI CELLES QUE LE PROJET N'UTILISE PAS ENCORE.
- * L'ajout rapide ne demande pas de couleur, et un gris par défaut ferait des
- * étiquettes indistinguables ; tant qu'il reste du choix, deux catégories
- * voisines ne sortent donc jamais de la même pastille. Palette épuisée : au
- * hasard dans la palette entière (on recolore dans les paramètres).
+ * Color of a category created on the fly from a picker (MIN — quick addition
+ *): drawn at random FROM THOSE THAT THE PROJECT IS NOT YET USING.
+ * Quick addition does not require a color, and a gray by default would make the
+ * labels indistinguishable; as long as there is a choice, two neighboring categories
+ * therefore never come out of the same tablet. Palette exhausted: au
+ * random in the entire palette (we recolor in the settings).
  */
 export function pickFreeCategoryColor(used: Iterable<string>): string {
   const taken = new Set(used);
@@ -32,8 +32,8 @@ export function pickFreeCategoryColor(used: Iterable<string>): string {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-/** hex → clé de nom traduit (namespace `Categories.colors`). Sert aux libellés
-    de lecteur d'écran des pastilles, qui annonçaient le hex brut. */
+/** hex → translated name key (namespace `Categories.colors`). Used for the labels
+ as a screen reader for the pastilles, which announced the raw hex. */
 export const CATEGORY_COLOR_NAMES: Record<string, MessageKey<"Categories.colors">> = {
   "#ef4444": "red",
   "#f97316": "orange",

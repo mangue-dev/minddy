@@ -10,30 +10,30 @@ import { promptWithAttachments } from "@/lib/server/agent/prompt-attachments";
 import type { AttachmentInput } from "@/lib/types";
 
 /**
- * Liste GLOBALE des conversations de l'agent de code (Numo), tous projets
- * accessibles confondus — alimente la page Agents. RLS `agent_runs` =
- * can_access_project (et créateur seul pour les runs carnet) → le cookie client
- * suffit, aucun filtre projet manuel.
+ * GLOBAL list of code agent (Numo) conversations, all projects
+ * accessible together — powers the Agents page. RLS `agent_runs` =
+ * can_access_project (and creator alone for notebook runs) → the client cookie
+ * is enough, no manual project filter.
  *
- * **UN RUN = UNE CONVERSATION**, sans exception. Les runs successifs d'un même
- * ticket étaient dédoublonnés ici et rangés derrière un sélecteur, au milieu de
- * l'en-tête de la conversation : la colonne montrait UNE ligne par ticket, et les
- * autres échanges se trouvaient en dépliant un menu que rien n'annonçait. Ils
- * paraissent désormais côte à côte, chacun sous son propre titre — celui que le
- * titreur a écrit au lancement (`agent_runs.title`), rendu à l'écran précédé de
- * l'identifiant du ticket.
+ * **ONE RUN = ONE CONVERSATION**, no exceptions. The successive runs of the same
+ * ticket were duplicated here and stored behind a selector, in the middle of
+ * the conversation header: the column showed ONE line per ticket, and the
+ * other exchanges were found by unfolding a menu that nothing announced. They
+ * now appear side by side, each under its own title — the one that the
+ * titler wrote at launch (`agent_runs.title`), rendered on the screen preceded by
+ * the ticket identifier.
  *
- * `working` dit que CE run travaille (queued/running) — le spinner de la ligne ;
- * `lastCompletedAt` est sa fin à lui, comparée au curseur de lecture du TICKET
- * (les états lus restent indexés par ticket : deux conversations du même ticket
- * se vident donc ensemble).
+ * `working` says THIS run is working (queued/running) — the spinner of the line;
+ * `lastCompletedAt` is its end, compared to the TICKET reading cursor
+ * (read states remain indexed by ticket: two conversations from the same ticket
+ * therefore become read together).
  *
- * POST = lancement d'un run sans ticket : { projectId, prompt, model?, baseBranch? }.
+ * POST = launch a run without a ticket: { projectId, prompt, model?, baseBranch? }.
  */
 
 export const runtime = "nodejs";
-// Le kick de launch draine le premier chunk dans after() : même fenêtre que la
-// route cron (270 s de budget) — même raison que le 300 de /api/issues/[id]/agent.
+// The launch kick drains the first chunk into after(): same window as the
+// cron route (270 s budget) — same reason as 300 from /api/issues/[id]/agent.
 export const maxDuration = 300;
 
 const WORKING_STATUSES = ["queued", "running"];
@@ -65,14 +65,14 @@ interface RunRow {
     name: string;
     icon_url: string | null;
     orb_seed: string | null;
-    /** Lu pour ÉCARTER les sessions d'un projet à la corbeille — jamais rendu. */
+    /** Read to DISCARD sessions from a project to the trash — never returned. */
     deleted_at: string | null;
   } | null;
-  /** PR RELUE par ce run (MIN-168). Null partout ailleurs. */
+  /** PR REVIEWED by this run (MIN-168). Null everywhere else. */
   pull_request: { id: string; number: number; title: string | null; url: string | null } | null;
 }
 
-/** Cap de l'excerpt de note renvoyé comme titre d'une session carnet. */
+/** Heading of the note exception returned as the title of a notebook session. */
 const NOTE_EXCERPT_MAX = 200;
 
 function noteExcerpt(prompt: string | null): string | null {
@@ -82,18 +82,18 @@ function noteExcerpt(prompt: string | null): string | null {
 }
 
 export interface AgentSessionListItem {
-  /** Identite durable de la conversation, distincte de son execution courante. */
+  /** Durable identity of the conversation, distinct from its current execution. */
   conversationId: string;
-  /** Execution courante. Conserve pour les routes du moteur pendant la migration. */
+  /** Current execution. Preserves for engine routes during migration. */
   runId: string;
   status: AgentRunStatus;
   model: string | null;
   triggered_by: RunRow["triggered_by"];
   /**
-   * Le titre écrit au lancement par le petit modèle (le titre de la PR pour une
-   * relecture, qui en a déjà un). `null` quand il manque : un run lancé avant
-   * `agent_runs.title`, ou dont la génération a échoué — la conversation retombe
-   * alors sur le titre du ticket, et une conversation carnet sur l'excerpt de sa
+   * The title written at launch by the small model (the title of the PR for a
+   * proofreading, which already has one). `null` when it is missing: a run launched before
+   * `agent_runs.title`, or whose generation failed — the conversation drops
+   * then on the title of the ticket, and a notebook conversation on the exception of its
    * note.
    */
   title: string | null;
@@ -105,10 +105,10 @@ export interface AgentSessionListItem {
   /** Null = conversation carnet (MIN-84) ou de RELECTURE (MIN-168). */
   issue: RunRow["issue"];
   /**
-   * La pull request que cette conversation RELIT (MIN-168) — non nul ⇒ badge
-   * « Analyse de PR » et titre de la PR, là où une conversation de ticket montre
-   * son identifiant. Ce n'est PAS la PR qu'un run de code aurait ouverte : celle-là
-   * vit dans `pr_number` / `pr_url` / `pr_state`, et les deux ne se mélangent pas.
+   * The pull request that this conversation RELIT (MIN-168) — not null ⇒ badge
+   * “PR Analysis” and PR title, where a ticket conversation shows
+   * its identifier. This is NOT the PR that a code run would have opened: this one
+   * lives in `pr_number` / `pr_url` / `pr_state`, and the two don't mix.
    */
   pullRequest: { id: string; number: number; title: string | null; url: string | null } | null;
   project: {
@@ -120,16 +120,16 @@ export interface AgentSessionListItem {
   } | null;
   /** CE run travaille (queued/running) → « Numo travaille ». */
   working: boolean;
-  /** Cette conversation est épinglée par l'utilisateur courant. */
+  /** This conversation is pinned by the current user. */
   pinned: boolean;
   /**
-   * Fin d'agent de ce run, ou `null`. Comparé au `last_read_at` de l'utilisateur
-   * → bulle bleue « terminé, non lu ».
+   * End of agent of this run, or `null`. Compared to user's `last_read_at`
+   * → blue bubble “finished, unread”.
    */
   lastCompletedAt: string | null;
   /**
-   * Ce run attend une réponse de l'utilisateur (tour terminé sur ask_user) →
-   * point JAUNE au lieu du bleu, mêmes règles de lecture.
+   * This run waits for a response from the user (round ended on ask_user) →
+   * YELLOW point instead of blue, same reading rules.
    */
   awaitingInput: boolean;
 }
@@ -143,9 +143,9 @@ export async function GET(request: NextRequest) {
     .select(
       "id, conversation_id, issue_id, pull_request_id, status, model, triggered_by, prompt, title, pr_number, pr_url, pr_state, created_at, updated_at, completed_at, awaiting_input, conversation:agent_conversations(title, visibility), issue:issues(id, number, title), project:projects(id, key, name, icon_url, orb_seed, deleted_at), pull_request:pull_requests(id, number, title, url)",
     )
-    // Un passage de ROUTINE (MIN-185) n'est PAS une conversation : il vit dans
-    // sa routine, sous « Exécutions précédentes », et nulle part ailleurs. Sans
-    // ce filtre, une routine quotidienne noierait cette colonne en une semaine.
+    // A passage from ROUTINE (MIN-185) is NOT a conversation: it lives in
+    // his routine, under “Previous Executions”, and nowhere else. Without
+    // this filter, a daily routine would drown this column in a week.
     .is("routine_id", null)
     .order("created_at", { ascending: false });
 
@@ -162,38 +162,38 @@ export async function GET(request: NextRequest) {
     (pinRows ?? []).map((row) => row.conversation_id as string),
   );
 
-  // Un run dont l'issue est à la corbeille (MIN-133) : `issue_id` est renseigné
-  // mais la ressource imbriquée revient nulle, la policy `issues_select` l'ayant
-  // écartée. Le laisser passer le ferait lire comme une session CARNET — même
-  // forme (issue nulle), titre de repli compris — pour un ticket qui n'existe
-  // plus à l'écran. Restaurer le ticket ramène sa session telle quelle.
-  // Même raisonnement pour une session de RELECTURE dont la PR n'est plus
-  // lisible (dépôt délié depuis) : sans elle, la session n'a plus ni titre ni
-  // badge et se lirait comme une session carnet, pour une PR qui n'est plus là.
-  // Même raisonnement, un cran plus haut, pour un PROJET à la corbeille : sa
-  // ligne reste en base et la policy `projects_select` ne regarde que l'accès, si
-  // bien que ses sessions revenaient dans la liste — sous un en-tête portant le
-  // nom d'un projet que l'utilisateur ne voit plus nulle part ailleurs. Le
-  // restaurer les ramène, comme le reste de son contenu.
+  // A run whose outcome is in the trash (MIN-133): `issue_id` is entered
+  // but the nested resource returns null, the policy `issues_select` having it
+  // discarded. Leaving it through would make it read like a NOTEBOOK session — even
+  // form (void outcome), fallback title included — for a ticket that does not exist
+  // more on screen. Restoring the ticket returns its session as is.
+  // Same reasoning for a REREADING session whose PR is no longer
+  // readable (deposit untied since): without it, the session no longer has either title or
+  // badge and would read like a notebook session, for a PR who is no longer there.
+  // Same reasoning, a notch higher, for a PROJECT in the trash: its
+  // line remains in base and the `projects_select` policy only looks at access, if
+  // although its sessions reappeared in the list — under a header bearing the
+  // name of a project that the user no longer sees anywhere else. THE
+  // restoring brings them back, like the rest of its contents.
   const rows = ((data ?? []) as unknown as RunRow[]).filter(
     (r) =>
       (r.issue_id === null || r.issue !== null) &&
       (r.pull_request_id === null || r.pull_request !== null) &&
       !r.project?.deleted_at,
   );
-  // Un run, une conversation — aucun regroupement. Ce qui se lisait autrefois sur
-  // le représentant d'un ticket (l'état de sa dernière run, sa PR, sa fin) se lit
-  // maintenant sur chaque ligne, pour ce run-là et lui seul.
+  // One run, one conversation — no regrouping. What was once read on
+  // the representative of a ticket (the status of its last run, its PR, its end) reads
+  // now on each line, for this run and him alone.
   const items: AgentSessionListItem[] = rows.map((r) => ({
     conversationId: r.conversation_id,
     runId: r.id,
     status: r.status,
     model: r.model,
     triggered_by: r.triggered_by,
-    // Le titre de la PR pour une relecture (elle en a déjà un d'écrit), sinon
-    // celui du titreur. À défaut — run d'avant `agent_runs.title`, ou génération
-    // ratée —, l'excerpt de la note ; une conversation de ticket, elle, retombe
-    // sur le titre du ticket, que le client a déjà sous la main.
+    // The title of the PR for a reread (she already has one written), otherwise
+    // that of the titrator. Failing — run before `agent_runs.title`, or generation
+    // failed -, the exception of the note; a ticket conversation falls away
+    // on the title of the ticket, which the customer already has on hand.
     title:
       r.pull_request?.title?.trim() ||
       r.conversation?.title?.trim() ||
@@ -206,8 +206,8 @@ export async function GET(request: NextRequest) {
     updated_at: r.updated_at,
     issue: r.issue,
     pullRequest: r.pull_request,
-    // Sans son `deleted_at`, qui n'a servi qu'au filtre ci-dessus : la réponse
-    // ne porte que ce que la liste peint.
+    // Without its `deleted_at`, which was only used for the filter above: the answer
+    // only wears what the listing paints.
     project: r.project
       ? {
           id: r.project.id,
@@ -223,9 +223,9 @@ export async function GET(request: NextRequest) {
     awaitingInput: r.status === "completed" && r.awaiting_input,
   }));
 
-  // Les épingles passent devant les conversations ordinaires. À l'intérieur de
-  // chaque groupe, l'ordre reste celui de création : la liste ne se réordonne
-  // pas au gré des synchronisations PR / webhooks.
+  // Pins take precedence over ordinary conversations. Inside
+  // each group, the order remains that of creation: the list is not reordered
+  // not according to PR / webhooks synchronizations.
   const sessions = items.sort((a, b) => {
     if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
     return a.created_at < b.created_at ? 1 : -1;
@@ -233,8 +233,8 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ sessions });
 }
 
-// Bornes du POST carnet : la note est un texte libre (persistée en `prompt` du
-// run), le modèle et la branche des identifiants courts.
+// POST notebook terminals: the note is a free text (persisted in `prompt` of the
+// run), model and branch of short identifiers.
 const MAX_PROMPT_LENGTH = 20_000;
 const MAX_MODEL_LENGTH = 200;
 const MAX_BRANCH_LENGTH = 255;
@@ -268,10 +268,10 @@ function launchErrorResponse(result: Extract<LaunchResult, { ok: false }>) {
 }
 
 /**
- * Lance un run SANS TICKET (MIN-84, dit « carnet » — le carnet en fut le
- * premier point d'entrée) : ancré à un projet (le dépôt à cloner) + un texte
- * libre comme instruction, quel qu'en soit le sujet. Membre du projet requis —
- * le run est ensuite personnel (RLS : créateur seul).
+ * Launch a run WITHOUT A TICKET (MIN-84, called “carnet” — the notebook was the
+ * first entry point): anchored to a project (the repository to clone) + a text
+ * free as instruction, whatever the subject. Project member required —
+ * the run is then personal (RLS: creator alone).
  */
 export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -285,14 +285,14 @@ export async function POST(request: NextRequest) {
     baseBranch?: string;
     mentions?: unknown;
     attachments?: unknown;
-    /** La conversation démarre sur la MACHINE de l'utilisateur (MIN-359). Une
-     *  demande, que `localExecRequested` valide côté serveur. */
+    /** The conversation starts on the user's MACHINE (MIN-359). A
+     * request, which `localExecRequested` validates on the server side. */
     localExec?: unknown;
     localWorktree?: unknown;
   };
   try {
     const parsed: unknown = await request.json();
-    // Corps non-objet (null, chaîne…) : refusé ici plutôt que de crasher plus bas.
+    // Non-object body (null, string…): refused here rather than crashing further down.
     if (!parsed || typeof parsed !== "object") throw new Error("not an object");
     body = parsed as typeof body;
   } catch {
@@ -302,7 +302,7 @@ export async function POST(request: NextRequest) {
   const projectId = typeof body.projectId === "string" ? body.projectId.trim() : "";
   const prompt =
     typeof body.prompt === "string" ? body.prompt.trim().slice(0, MAX_PROMPT_LENGTH) : "";
-  // Un uuid fait 36 caractères : au-delà de la marge, corps forgé.
+  // A uuid is 36 characters long: beyond the margin, forged body.
   if (!projectId || projectId.length > 64) {
     return NextResponse.json({ error: "projectId required" }, { status: 400 });
   }
@@ -326,9 +326,9 @@ export async function POST(request: NextRequest) {
     typeof body.baseBranch === "string" && body.baseBranch.trim()
       ? body.baseBranch.trim().slice(0, MAX_BRANCH_LENGTH)
       : undefined;
-  // Niveau de raisonnement du composer (MIN-122). Une valeur inconnue est
-  // IGNORÉE plutôt que refusée : le lancement retombe alors sur le défaut perso,
-  // comme la route d'un ticket.
+  // Level of reasoning of the composer (MIN-122). An unknown value is
+  // IGNORED rather than refused: the launch then falls back on the personal fault,
+  // like the route of a ticket.
   const reasoningLevel = isReasoningLevel(body.reasoningLevel)
     ? body.reasoningLevel
     : undefined;

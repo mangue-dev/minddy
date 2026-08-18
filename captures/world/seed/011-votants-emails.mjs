@@ -1,21 +1,21 @@
 /**
- * 011 — des adresses crédibles pour les votants du board de retours.
+ * 011 — credible addresses for feedback board voters.
  *
- * Pour quelle capture : `feedbackInbox`. La vue équipe affiche l'auteur d'un
- * retour sous la forme « Auteur : <email> » (feedback-team-page.tsx). Avec les
- * adresses posées par 007, la capture publiée sur la landing portait
- * « captures-demo+voter07@minddy.app » en toutes lettres.
+ * For which capture: `feedbackInbox`. The team view displays the author of a
+ * return in the form “Author: <email>” (feedback-team-page.tsx). With the
+ * addresses posed by 007, the capture published on the landing was
+ * “captures-demo+voter07@minddy.app” in full.
  *
- * CE QUE ÇA NE CHANGE PAS. Les garde-fous ne reconnaissent pas ces lignes à
- * leur adresse : `feedback_users` est ancré par `project_id` (config.mjs), pas
- * par le motif d'email — contrairement aux comptes `auth.users`, qui gardent
- * le leur. Les pseudonymes publics, les votes et les retours ne bougent pas.
+ * WHAT IT DOES NOT CHANGE. The guardrails do not recognize these lines at
+ * their address: `feedback_users` is anchored by `project_id` (config.mjs), not
+ * by the email reason — unlike `auth.users` accounts, which keep
+ * theirs. Public pseudonyms, votes and feedback do not change.
  *
- * Les domaines sont fictifs et sans rapport avec des entreprises réelles.
+ * The domains are fictitious and unrelated to real companies.
  *
- * Idempotent : une identité qui porte déjà son adresse cible est laissée telle
- * quelle. Relancer 007 ne défait rien — il ne touche qu'aux votants MANQUANTS,
- * reconnus à leur pseudonyme.
+ * Idempotent: an identity that already has its target address is left as it is
+ * what. Rerolling 007 doesn't undo anything — it only affects MISSING voters,
+ * recognized by their pseudonym.
  *
  *   node captures/world/seed/011-votants-emails.mjs --dry-run
  *   node captures/world/seed/011-votants-emails.mjs
@@ -28,8 +28,8 @@ const DRY_RUN = process.argv.includes("--dry-run");
 const TARGET_PROJECT = "AUR";
 
 /**
- * Une adresse par pseudonyme, dans l'ordre de 007. Des gens qui suivent une
- * page de statut : des équipes techniques, sur des domaines inventés.
+ * One address per pseudonym, in the order of 007. People who follow a
+ * status page: technical teams, on invented domains.
  */
 const EMAILS = {
   "Amber Otter 41": "maya.kordell@fjordlabs.io",

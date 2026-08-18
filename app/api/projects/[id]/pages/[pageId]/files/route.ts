@@ -11,20 +11,20 @@ import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
 type RouteContext = { params: Promise<{ id: string; pageId: string }> };
 
 /**
- * POST /api/projects/[id]/pages/[pageId]/files — déposer un fichier dans une page
+ * POST /api/projects/[id]/pages/[pageId]/files — drop a file into a page
  * (MIN-280). `multipart/form-data`, champ `file`.
  *
- * L'envoi passe par le SERVEUR, là où celui d'une ressource de ticket va
- * directement du navigateur au bucket. Ce n'est pas une incohérence, c'est la
- * différence de durée de vie entre les deux : une ressource abandonnée dans un
- * composeur laisse un orphelin toléré, tandis qu'un fichier de page est rattaché
- * à un DOCUMENT, relu chaque nuit par le balayage des orphelins — et un balayage
- * ne peut rien contre un objet dont aucune ligne ne dit à quelle page il
- * appartenait. Ici, l'objet et sa ligne naissent dans le même appel ou pas du
- * tout (lib/server/page-files.ts).
+ * The submission goes through the SERVER, where that of a ticket resource goes
+ * directly from the browser to the bucket. This is not an inconsistency, it is the
+ * difference in lifespan between the two: a resource abandoned in one
+ * composer leaves a tolerated orphan, while a page file is attached
+ * to a DOCUMENT, reread every night by the scanning of the orphans — and a scanning
+ * can do nothing against an object for which no line says on which page it is
+ * belonged. Here, the object and its line are born in the same call or not of the
+ * everything (lib/server/page-files.ts).
  *
- * L'accès est celui de la page : membre du projet, et la page doit y vivre. Une
- * page à la corbeille refuse — on n'écrit pas dans un document supprimé.
+ * Access is that of the page: member of the project, and the page must live there. A
+ * page to trash refuses — you do not write to a deleted document.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id: projectId, pageId } = await params;
@@ -36,10 +36,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
   }
 
-  // Dix mégaoctets par appel, ramenés EN MÉMOIRE le temps de la requête : sans
-  // débit borné, une boucle suffit à remplir la fonction et le bucket (MIN-348).
-  // La garde est posée avant de lire le corps multipart, sinon elle arrive après
-  // la dépense qu'elle devait éviter.
+  // Ten megabytes per call, stored in MEMORY during the request: without
+  // bounded flow, one loop is enough to complete the function and the bucket (MIN-348).
+  // The guard is placed before reading the multipart body, otherwise it arrives after
+  // the expense she had to avoid.
   const refused = rateLimitRefusal(auth.user.id, "page-file-upload", { limit: 20 });
   if (refused) return refused;
 
@@ -66,8 +66,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (!file) {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
-  // La taille est revérifiée ICI et pas seulement chez le client : le client
-  // rend le service d'un message immédiat, le serveur rend la garantie.
+  // The size is rechecked HERE and not only at the customer: the customer
+  // renders the service of an immediate message, the server renders the guarantee.
   if (file.size > MAX_PAGE_FILE_BYTES) {
     return NextResponse.json({ error: t("pageFileTooLarge") }, { status: 413 });
   }
@@ -86,9 +86,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     });
     return NextResponse.json({
       id: row.id,
-      // L'adresse que le bloc rangera dans le document. Elle est rendue par le
-      // SERVEUR plutôt que refabriquée par le client : le jour où la forme de
-      // l'URL bouge, elle bouge à un seul endroit.
+      // The address that the block will store in the document. It is rendered by the
+      // SERVER rather than remanufactured by the client: the day when the form of
+      // the URL moves, it moves in one place.
       src: pageFileUrl(projectId, row.id),
       file_name: row.file_name,
       mime_type: row.mime_type,

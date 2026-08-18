@@ -4,14 +4,14 @@ import { SignupWizard } from "@/components/auth/signup-wizard";
 import { resolveInvitationToken } from "@/lib/server/invitation-token";
 
 /**
- * L'inscription est un parcours à part depuis MIN-300 : sa propre route, son
- * propre écran, trois étapes. Elle était un onglet de `/login` — un `?mode=`
+ * Registration is a separate journey since MIN-300: its own route, its
+ * own screen, three steps. She was a tab of `/login` — a `?mode=`
  * qui changeait cinq champs de place.
  *
- * Comme `/login`, la PAGE est un server component : le `?invite=<token>` d'un
- * email d'invitation se résout en clé service (MIN-197) — l'invité n'a pas de
- * session, et n'aurait de toute façon pas accès au projet dont on affiche le
- * nom. Token absent, inconnu ou expiré → `null`, et l'écran est l'ordinaire.
+ * Like `/login`, the PAGE is a server component: the `?invite=<token>` of a
+ * invitation email resolves to service key (MIN-197) — the guest has no
+ * session, and would in any case not have access to the project whose display is displayed.
+ * name. Token missing, unknown or expired → `null`, and the screen is the ordinary.
  */
 export default async function SignupPage({
   searchParams,

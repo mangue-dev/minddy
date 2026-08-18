@@ -4,11 +4,11 @@ import type { Locale } from "@/i18n/config";
 import { socialMetadata } from "@/lib/seo";
 
 /**
- * `/login` est publique (il faut bien pouvoir s'y connecter) mais n'a aucun
- * contenu à indexer : c'est un formulaire. `index: false, follow: true`
- * (MIN-88) — hors des résultats de recherche, mais les liens qu'elle porte
- * restent suivis. Le `canonical` la protège de ses propres variantes
- * (`?redirect=…`, `?mode=signup`), qui sont toutes la même page.
+ * `/login` is public (you must be able to connect to it) but has no
+ * content to index: it is a form. `index: false, follow: true`
+ * (MIN-88) — out of search results, but the links it carries
+ * remain followed. The `canonical` protects it from its own variants
+ * (`?redirect=…`, `?mode=signup`), which are all the same page.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const [t, ta, locale] = await Promise.all([
@@ -23,10 +23,10 @@ export async function generateMetadata(): Promise<Metadata> {
     description,
     alternates: { canonical: "/login" },
     robots: { index: false, follow: true },
-    // Bloc social explicite : `/login` est publique et se colle (« inscris-toi
-    // ici »), et Next remplace l'objet `openGraph` du parent au lieu de le
-    // compléter — sans celui-ci, l'aperçu du lien disait « minddy — A minimal
-    // issue tracker », comme la landing.
+    // Explicit social block: `/login` is public and sticks (“register
+    // here"), and Next replaces the parent's `openGraph` object instead of
+    // complete — without it, the link preview said “minddy — A minimal
+    // issue tracker”, like the landing.
     ...socialMetadata({ title, description, url: "/login", locale: locale as Locale }),
   };
 }

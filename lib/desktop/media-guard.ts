@@ -1,48 +1,48 @@
 /**
- * Le micro, et rien d'autre (MIN-294).
+ * The microphone, and nothing else (MIN-294).
  *
- * La coquille refuse par défaut tout ce que la page demande au système
- * (`ALLOWED_PERMISSIONS`, desktop/src/main.ts). La dictée vocale — le bouton
- * micro de Numo, du dialog « nouveau ticket », du carnet — passe par
- * `getUserMedia`, donc par la permission `media` : tant qu'elle n'était pas dans
- * la liste, Electron répondait non AVANT que macOS soit consulté. D'où le
- * symptôme, qui n'en avait pas l'air : « micro refusé, et aucune fenêtre de
- * demande ne s'est ouverte ». Il n'y avait personne à qui la demander.
+ * The shell refuses by default everything that the page requests from the system
+ * (`ALLOWED_PERMISSIONS`, desktop/src/main.ts). Voice dictation — the button
+ * microphone of Numo, of the “new ticket” dialog, of the notebook — goes through
+ * `getUserMedia`, therefore through the permission `media`: as long as it was not in
+ * the list, Electron answered no BEFORE macOS was consulted. Hence the
+ * symptom, which didn't seem like it: "microphone refused, and no __
+ * request window opened". There was no one to ask.
  *
- * `media` couvre la caméra ET le micro, dans la même permission. On ne peut donc
- * pas se contenter de l'ouvrir : ce module dit ce qu'on accepte d'en laisser
- * passer — de l'audio, depuis notre origine, et c'est tout.
+ * `media` covers the camera AND the microphone, in the same permission. We cannot therefore
+ * just open it: this module says what we agree to let
+ * pass through — audio, from our origin, and that's it.
  *
- * Module PUR : la décision se prend et se teste ici ; `desktop/src/main.ts` ne
- * fait que la câbler sur `setPermissionRequestHandler`, puis demander à macOS.
+ * PUR module: the decision is made and tested here; `desktop/src/main.ts` does not
+ * just wire it to `setPermissionRequestHandler`, then ask macOS.
  */
 
 import { navigationDecision } from "./nav-guard";
 
-/** Ce qu'Electron passe en `details` d'une demande `media`, réduit à ce qui décide. */
+/** What Electron passes into `details` of a `media` request, reduced to what decides. */
 export interface MediaAccessRequest {
-  /** L'origine du document qui demande — absente sur certaines demandes. */
+  /** The origin of the requesting document — missing on some requests. */
   securityOrigin?: string;
-  /** La dernière URL chargée par la frame demandeuse : le repli de l'origine. */
+  /** The last URL loaded by the requesting frame: the fallback of the origin. */
   requestingUrl?: string;
-  /** `["audio"]` pour une dictée ; `["video"]` ou les deux pour une caméra. */
+  /** `["audio"]` for a dictation; `["video"]` or both for a camera. */
   mediaTypes?: readonly ("audio" | "video")[];
 }
 
 /**
- * Laisse-t-on cette demande atteindre le micro du Mac ?
+ * Do we let this request reach the Mac's microphone?
  *
- * Trois conditions, et il les faut toutes :
+ * Three conditions, and we need them all:
  *
- * - **De l'audio, et rien que de l'audio.** Une demande qui porte `video`, même
- *   accompagnée d'`audio`, est refusée en bloc plutôt que rabotée : minddy n'a
- *   pas de caméra, et une demande qui en veut une ne vient pas de minddy.
- * - **Une liste explicite.** `mediaTypes` absent ou vide, c'est une demande dont
- *   on ne sait pas ce qu'elle ouvre — on ne signe pas à blanc.
- * - **Notre origine.** La fenêtre charge du code DISTANT ; la garde de
- *   navigation empêche d'y arriver, celle-ci empêche qu'un document qui y serait
- *   quand même arrivé (une frame, une page ouverte avant une mise à jour de la
- *   garde) allume le micro.
+ * - **Audio, and only audio.** A request that carries `video`, even
+ * accompanied by `audio`, is refused altogether rather than flattened: minddy has
+ * no camera, and a request that wants one does not come from minddy.
+ * - **An explicit list.** `mediaTypes` absent or empty, it is a request dont
+ * we don't know what it opens - we don't sign blank.
+ * - **Our origin.** The window loads REMOTE code; the guard of
+ * navigation prevents you from getting there, this prevents a document which would be there
+ * even if it arrived (a frame, a page opened before an update of the
+ * guard) from turning on the microphone.
  */
 export function microphoneRequestAllowed(
   request: MediaAccessRequest,

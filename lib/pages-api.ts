@@ -7,24 +7,24 @@ import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
 
 /**
- * Le client HTTP des pages (MIN-266) — de quoi lire et écrire une page depuis
- * le navigateur, sans rien savoir de la forme des routes.
+ * The HTTP client for pages (MIN-266) — enough to read and write a page from
+ * the browser, without knowing anything about the shape of the routes.
  *
- * La LISTE ne porte pas le corps des documents (le serveur ne l'envoie pas) :
- * c'est elle qui alimente l'arbre de la sidebar, une fois pour tout le projet.
- * Le corps arrive page par page, à l'ouverture.
+ * The LIST does not carry the body of the documents (the server does not send it):
+ * it is what feeds the sidebar tree, once for the entire project.
+ * The body arrives page by page, upon opening.
  */
 
-/** Une page sans son corps — ce que rend la liste. */
+/** A page without its body — what the list renders. */
 export type PageSummary = Omit<Page, "content">;
 
 /**
- * Une erreur qui garde son CODE.
+ * An error that keeps its CODE.
  *
- * Le refus de cycle (409) ne se distingue pas d'une autre panne par son
- * message — il est traduit côté serveur, donc illisible pour du code. L'arbre a
- * pourtant besoin de faire la différence : un 409 se rattrape (on remet la page
- * où elle était et on le dit), une panne réseau non.
+ * The cycle refusal (409) is indistinguishable from another failure by its
+ * message — it is translated on the server side, therefore unreadable for code. The tree has
+ * yet needs to make the difference: a 409 catches up (we put the page
+ * back where it was and we say so), a network failure does not.
  */
 export class PageApiError extends Error {
   constructor(
@@ -37,12 +37,12 @@ export class PageApiError extends Error {
 }
 
 /**
- * L'écriture refusée parce que la page a bougé sous nos pieds (MIN-271).
+ * The writing refused because the page moved under our feet (MIN-271).
  *
- * Elle porte la page du SERVEUR, corps compris : c'est ce qui permet de
- * fusionner par bloc tout de suite (`lib/pages-merge.ts`) au lieu d'aller
- * redemander le document — un aller-retour de plus, exactement au moment où
- * deux personnes écrivent en même temps.
+ * It carries the page from the SERVER, body included: this is what allows to
+ * to merge by block immediately (`lib/pages-merge.ts`) instead to go
+ * request the document again — one more round trip, exactly at the moment when
+ * two people are writing at the same time.
  */
 export class PageConflictError extends PageApiError {
   constructor(
@@ -54,9 +54,8 @@ export class PageConflictError extends PageApiError {
   }
 }
 
-/** Le déplacement refusé parce qu'il fermerait une boucle (lib/server/pages.ts).
-    Un 409 de VERSION porte sa page : ce n'est pas le même refus, et l'arbre ne
-    doit pas dire « boucle » à quelqu'un qui vient simplement d'être doublé. */
+/** The move refused because it would close a loop (lib/server/pages.ts).
+ A 409 of VERSION carries its page: it is not the same refusal, and the tree should not say "loop" to someone who has simply been overtaken. */
 export function isPageCycleError(error: unknown): boolean {
   return (
     error instanceof PageApiError &&
@@ -82,7 +81,7 @@ async function json<T>(response: Response, fallback: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-/** Toutes les pages vivantes du projet, à plat (`buildPageTree` fait l'arbre). */
+/** All living pages of the project, flat (`buildPageTree` makes the tree). */
 export async function fetchPagesApi(projectId: string): Promise<PageSummary[]> {
   return json(
     await fetch(`/api/projects/${projectId}/pages`),
@@ -90,7 +89,7 @@ export async function fetchPagesApi(projectId: string): Promise<PageSummary[]> {
   );
 }
 
-/** Une page avec son corps. */
+/** A page with his body. */
 export async function fetchPageApi(
   projectId: string,
   pageId: string
@@ -108,11 +107,11 @@ export interface CreatePageInput {
   parent_id?: string | null;
   content?: unknown;
   /**
-   * Le corps en MARKDOWN, projeté en JSON par le serveur (`content` l'emporte
-   * si les deux sont là). C'est par là que passe le brief collé du wizard de
-   * projet : projeter au serveur évite de tirer le schéma de page dans le
-   * bundle de l'appelant.
-   */
+ * The body in MARKDOWN, projected in JSON by the server (`content` wins
+ * if both are there). This is where the pasted brief from the
+ * project wizard goes: projecting to the server avoids pulling the page schema into the
+ * bundle of the caller.
+ */
   markdown?: string;
 }
 
@@ -134,22 +133,20 @@ export interface UpdatePageInput {
   title?: string;
   icon?: string | null;
   /**
-   * Déplacement. Le serveur REFUSE (409) de mettre une page sous un de ses
-   * propres descendants : la profondeur est illimitée, une boucle ferait partir
-   * l'arbre en récursion infinie.
-   */
+ * Move. The server REFUSES (409) to put a page under one of its own descendants: the depth is unlimited, a loop would send the tree into infinite recursion.
+ */
   parent_id?: string | null;
-  /** Index fractionnaire calculé par `positionBetween` (lib/pages.ts). */
+  /** Fractional index calculated by `positionBetween` (lib/pages.ts). */
   position?: string;
   content?: unknown;
-  /** Épinglée en tête de la barre secondaire — partagé par le projet. */
+  /** Pinned to the top of the secondary bar — shared by the project. */
   favorite?: boolean;
   /**
-   * La version sur laquelle ce corps s'appuie (MIN-271). Envoyée AVEC un
-   * `content`, elle en fait une écriture conditionnelle : le serveur répond
-   * 409 (`PageConflictError`) plutôt que d'écraser ce qu'un autre a écrit
-   * entre-temps. Sans elle, le dernier qui enregistre gagne, en silence.
-   */
+ * The version this body is based on (MIN-271). Sent WITH a
+ * `content`, it makes it a conditional write: the server responds
+ * 409 (`PageConflictError`) rather than overwriting what someone else has written
+ * in the meantime. Without it, the last one to save wins, silently.
+ */
   version?: number;
 }
 
@@ -169,15 +166,15 @@ export async function updatePageApi(
 }
 
 /**
- * L'écriture de la DERNIÈRE CHANCE, quand l'onglet s'en va.
+ * The writing of the LAST CHANCE, when the tab leaves.
  *
- * Un `fetch` ordinaire lancé depuis `pagehide` est annulé avec le document : la
- * seconde de frappe qui n'était pas encore partie était perdue à chaque
- * rafraîchissement, et la page rouvrait sur la version d'avant. `keepalive` dit
- * au navigateur de mener la requête à son terme même une fois la page détruite.
+ * An ordinary `fetch` launched from `pagehide` is canceled with the document: the
+ * second of typing which had not yet left was lost at each
+ * refresh, and the page reopened to the previous version. `keepalive` tells
+ * the browser to complete the request even once the page is destroyed.
  *
- * Ni promesse ni erreur à récupérer : il n'y a plus personne pour les lire.
- * `sendBeacon` ne convient pas — il ne sait pas faire un PATCH.
+ * Neither promise nor error to recover: there is no one left to read them.
+ * `sendBeacon` is not suitable — it does not know how to make a PATCH.
  */
 export function updatePageOnUnload(
   projectId: string,
@@ -193,8 +190,8 @@ export function updatePageOnUnload(
 }
 
 /**
- * Copie — récursive elle aussi : la page ET ses sous-pages, liens internes
- * réécrits vers la copie. Rend la RACINE de la copie.
+ * Copy — also recursive: the page AND its subpages, internal links
+ * rewritten to the copy. Returns the ROOT of the copy.
  */
 export async function duplicatePageApi(
   projectId: string,
@@ -208,7 +205,7 @@ export async function duplicatePageApi(
   );
 }
 
-/** Corbeille — récursive : la page ET ses sous-pages. Rien n'est détruit. */
+/** Trash — recursive: the page AND its subpages. Nothing is destroyed. */
 export async function trashPageApi(
   projectId: string,
   pageId: string
@@ -222,12 +219,12 @@ export async function trashPageApi(
 }
 
 /**
- * DÉTRUIT une page restée vide — pas de corbeille, rien à restaurer.
+ * DESTROYS a page that remains empty - no trash, nothing to restore.
  *
- * Le seul appelant est le départ d'une page qu'on vient de créer et où l'on n'a
- * rien écrit (lib/pages-draft.ts). Le serveur revérifie qu'elle est bien vide
- * et sans sous-page, et répond 409 sinon : ce chemin ne peut pas faire
- * disparaître du contenu.
+ * The only caller is the start of a page that we have just created and where we have
+ * nothing written (lib/pages-draft.ts). The server rechecks that it is indeed empty
+ * and without subpage, and responds 409 otherwise: this path cannot make
+ * disappear from the content.
  */
 export async function discardPageApi(
   projectId: string,
@@ -242,9 +239,9 @@ export async function discardPageApi(
 }
 
 /**
- * La même destruction, quand l'onglet s'en va — même raison que
- * `updatePageOnUnload` : un `fetch` ordinaire lancé depuis `pagehide` meurt
- * avec le document.
+ * The same destruction, when the tab leaves — same reason as
+ * `updatePageOnUnload`: an ordinary `fetch` launched from `pagehide` dies
+ * with the document.
  */
 export function discardPageOnUnload(projectId: string, pageId: string): void {
   void fetch(`/api/projects/${projectId}/pages/${pageId}?discard=1`, {
@@ -253,7 +250,7 @@ export function discardPageOnUnload(projectId: string, pageId: string): void {
   }).catch(() => {});
 }
 
-/** Le retour en arrière immédiat (un « Annuler » de toast). */
+/** Immediate rollback (an “Undo” toast). */
 export async function restorePageApi(
   projectId: string,
   pageId: string
@@ -268,7 +265,7 @@ export async function restorePageApi(
 
 /* ─── L'historique (MIN-277) ───────────────────────────────────────────────── */
 
-/** Les états antérieurs d'une page, du plus récent au plus ancien, sans corps. */
+/** The previous states of a page, from newest to oldest, without body. */
 export async function fetchPageVersionsApi(
   projectId: string,
   pageId: string
@@ -280,7 +277,7 @@ export async function fetchPageVersionsApi(
   return data.versions;
 }
 
-/** UNE version, corps compris — ce que l'aperçu en lecture seule monte. */
+/** ONE version, including body — what the read-only preview shows. */
 export async function fetchPageVersionApi(
   projectId: string,
   pageId: string,
@@ -295,11 +292,11 @@ export async function fetchPageVersionApi(
 }
 
 /**
- * Remet une version en place. Rend la page écrite, corps compris.
+ * Returns a version. Returns the written page, body included.
  *
- * Une écriture comme une autre : elle incrémente la `version` de la page — donc
- * l'éditeur ouvert doit se recharger dessus plutôt que continuer sur la sienne,
- * qui est désormais périmée.
+ * A writing like any other: it increments the `version` of the page — therefore
+ * the open editor must reload on it rather than continuing on its own,
+ * which is now expired.
  */
 export async function restorePageVersionApi(
   projectId: string,
@@ -315,18 +312,17 @@ export async function restorePageVersionApi(
   );
 }
 
-/* ─── L'activité (MIN-278) ─────────────────────────────────────────────────── */
+/* ─── Activity (MIN-278) ───────────────────────── ────────────────────────── */
 
 /**
- * Le journal d'une page — créée, modifiée, mise à la corbeille, restaurée —
- * dans l'ordre chronologique, avec ses acteurs déjà résolus par le serveur.
+ * The log of a page — created, modified, trashed, restored —
+ * in chronological order, with its actors already resolved by the server.
  *
- * Les lignes sont des `IssueEvent` et ce n'est pas un abus de nom : la table est
- * la même (`issue_events`, polymorphe depuis les objectifs), et c'est ce qui
- * permet de les rendre avec le composant d'activité existant plutôt qu'un
- * second, à tenir en phase avec le premier.
+ * The rows are `IssueEvent` and this is not a misnomer: the table is
+ * the same (`issue_events`, polymorphic from the objectives), and this is what
+ * allows them to be rendered with the existing activity component rather than a second one, to keep in phase with the first.
  */
-/** Qui cite cette page (MIN-279) — ressources ET mentions, fondues. */
+/** Who cites this page (MIN-279) — resources AND mentions, faded. */
 export async function fetchPageBacklinksApi(
   projectId: string,
   pageId: string
@@ -347,10 +343,9 @@ export async function fetchPageEventsApi(
   );
 }
 
-/* ── Les COMMENTAIRES d'une page (MIN-282) ──────────────────────────────────
-   Le fil ENTIER en une requête : ce qui se lit où — à côté de son bloc, ou dans
-   l'activité de la page — est une décision d'affichage (lib/page-comments.ts),
-   pas une requête de plus. */
+/* ── One-page COMMENTS (MIN-282) ──────────────────────────────────__keep in a request: what is read where — next to its block, or in
+ the activity of the page — is a display decision (lib/page-comments.ts),
+ not one more request. */
 
 export async function fetchPageCommentsApi(
   projectId: string,
@@ -367,16 +362,16 @@ export async function addPageCommentApi(
   pageId: string,
   input: {
     body: string;
-    /** L'ancre : le bloc commenté. Absente = un commentaire sur la page. */
+    /** The anchor: the commented block. Absent = a comment on the page. */
     blockId?: string | null;
-    /** L'extrait sélectionné, figé avec le commentaire. */
+    /** The selected extract, frozen with the comment. */
     quote?: string | null;
     parentId?: string | null;
     mentionedUserIds?: string[];
   }
 ): Promise<PageComment> {
-  // Que des métadonnées : la longueur en tranche, jamais le texte — la même
-  // règle que les trois autres fils (lib/comments-api.ts).
+  // Only metadata: the length in slices, never the text — the same
+  // rule that the other three threads (lib/comments-api.ts).
   trackEvent("comment_added", {
     target: "page",
     length_bucket: lengthBucket(input.body),
@@ -434,9 +429,9 @@ export async function deletePageCommentApi(
   trackEvent("comment_deleted", { target: "page" });
 }
 
-/* ── Publier et exporter (MIN-283) ───────────────────────────────────────── */
+/* ── Publish and export (MIN-283) ──────────────────── ───────────────────── */
 
-/** L'état de publication d'une page (`null` = privée). */
+/** The publishing state of a page (`null` = private). */
 export async function fetchPageShareApi(
   projectId: string,
   pageId: string
@@ -486,13 +481,13 @@ export async function deletePageShareApi(
 }
 
 /**
- * Télécharger une page en markdown — seule (`.md`) ou avec sa branche (`.zip`).
+ * Download a page in markdown — alone (`.md`) or with its branch (`.zip`).
  *
- * Le fichier passe par un blob et une ancre programmée plutôt que par une
- * navigation : la route exige la session, et un `window.open` sur un
- * `Content-Disposition: attachment` laisse un onglet vide derrière lui sur
- * plusieurs navigateurs. Le NOM vient du serveur (`Content-Disposition`), seul
- * endroit qui connaisse la règle des noms de fichiers.
+ * The file goes through a blob and a programmed anchor rather than through a
+ * navigation: the route requires the session, and a `window.open` on a
+ * `Content-Disposition: attachment` leaves an empty tab behind on
+ * multiple browsers. The NAME comes from the server (`Content-Disposition`), only
+ * place that knows the file name rule.
  */
 export async function downloadPageExportApi(
   projectId: string,
@@ -514,6 +509,6 @@ export async function downloadPageExportApi(
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
-  // Révoqué au tick suivant : Safari lit l'URL APRÈS le clic.
+  // Revoked on next tick: Safari reads the URL AFTER the click.
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }

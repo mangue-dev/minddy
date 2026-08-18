@@ -13,11 +13,10 @@ import {
 } from "./network-policy";
 
 /**
- * Ce que ce test garde n'est pas une forme d'objet — c'est la frontière mesurée
- * du 2026-08-07 (cf. docs/orchestrateur-process-long.md §1). Un `startsWith` posé
- * ici « pour faire plus simple » recréditerait `/api/v1/key`, la route de
- * provisioning d'OpenRouter, et la microVM pourrait émettre ses propres clés.
- * Rien dans le produit ne le dirait ; ce fichier, si.
+ * What this test keeps is not an object shape — it is the measured boundary
+ * of 2026-08-07 (see docs/orchestrateur-process-long.md §1). A `startsWith` placed
+ * here "to make it simpler" would re-credit `/api/v1/key`, the OpenRouter provisioning route, and the microVM could issue its own keys.
+ * Nothing in the product would say so; this file, if.
  */
 
 const OPENROUTER = "https://openrouter.ai/api/v1";
@@ -44,7 +43,7 @@ describe("buildAgentNetworkPolicy — la route créditée", () => {
   it("cible le chemin EXACT de complétion, jamais un préfixe", () => {
     const [rule] = rulesFor("openrouter.ai");
     expect(rule.match?.path).toEqual({ exact: "/api/v1/chat/completions" });
-    // Le mot qui compte : un `startsWith` créditerait /api/v1/key.
+    // The word that counts: a `startsWith` would credit /api/v1/key.
     expect(JSON.stringify(rule.match?.path)).not.toContain("startsWith");
   });
 
@@ -57,7 +56,7 @@ describe("buildAgentNetworkPolicy — la route créditée", () => {
     const built = policy();
     const [rule] = rulesFor("openrouter.ai");
     expect(rule.transform).toEqual([{ headers: { authorization: "Bearer sk-or-v1-secret" } }]);
-    // La clé n'apparaît qu'UNE fois dans toute la politique : dans ce transform.
+    // The key only appears ONCE in the entire policy: in this transform.
     const occurrences = JSON.stringify(built).split("sk-or-v1-secret").length - 1;
     expect(occurrences).toBe(1);
   });
@@ -109,12 +108,12 @@ describe("buildAgentNetworkPolicy — le plan de contrôle", () => {
     expect(agentVmUrl(`${ORIGIN}/`, "/checkpoint")).toBe(
       "https://www.minddy.app/api/agent-vm/checkpoint",
     );
-    // …et cette URL matche bien la règle qui la fait forwarder.
+    // …and this URL matches the rule that makes it forward.
     const path = new URL(agentVmUrl(ORIGIN, "events")).pathname;
     const [rule] = rulesFor("www.minddy.app");
-    // Affirmé avant d'être lu : sans `match.path`, la ligne suivante partait en
-    // TypeError sur `undefined`, et le test disait « cannot read startsWith »
-    // au lieu de « la règle a perdu son chemin ».
+    // Asserted before being read: without `match.path`, the following line started
+    // TypeError on `undefined`, and the test said “cannot read startsWith”
+    // instead of “the rule has lost its way”.
     const matchPath = rule.match?.path;
     expect(matchPath, "la règle doit porter un `match.path`").toBeDefined();
     const prefix = (matchPath as { startsWith: string }).startsWith;
@@ -126,8 +125,8 @@ describe("buildAgentNetworkPolicy — le reste d'Internet", () => {
   it("garde le catch-all ouvert et SANS injection", () => {
     const allow = policy().allow;
     if (!allow || Array.isArray(allow)) throw new Error("expected a record-form allow list");
-    // `npm install` sur le dépôt d'un utilisateur doit passer : on ferme le
-    // chemin du secret, pas celui de la donnée (cadrage §1).
+    // `npm install` on a user's deposit must pass: we close the
+    // path to secrets, not that of data (framing §1).
     expect(allow["*"]).toEqual([]);
   });
 
@@ -182,8 +181,8 @@ describe("l'admission du plan de contrôle — le locataire avant le nom (MIN-33
   });
 
   it("refuse une sandbox d'un autre compte Vercel, même parfaitement nommée", () => {
-    // L'attaque de MIN-331 : un OIDC valide, une `aud` que l'attaquant a posée
-    // lui-même dans son `forwardURL`, et le nom d'un vrai run de chez nous.
+    // The MIN-331 attack: a valid OIDC, a `aud` that the attacker placed
+    // itself in its `forwardURL`, and the name of a real run from us.
     for (const foreign of [
       { ...OURS, teamId: "team_attacker" },
       { ...OURS, projectId: "prj_attacker" },

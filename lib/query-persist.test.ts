@@ -9,9 +9,9 @@ import {
 } from "./use-agent-runs";
 import { agentActivityQueryKey } from "@/components/agent/agent-activity-context";
 
-// Le filtre de persistance décide ce qui part sur le disque (MIN-89). Un faux
-// positif ici, c'est soit le quota localStorage saturé par l'index du palette,
-// soit un run d'agent terminé réaffiché comme actif au rechargement.
+// The persistence filter decides what goes to disk (MIN-89). A fake
+// positive here, it is either the localStorage quota saturated by the palette index,
+// or a completed agent run redisplayed as active on reload.
 describe("isPersistableKey", () => {
   it("persiste les caches de contenu", () => {
     expect(isPersistableKey(["projects"])).toBe(true);
@@ -25,26 +25,26 @@ describe("isPersistableKey", () => {
     expect(isPersistableKey(["me", "search-index"])).toBe(false);
   });
 
-  // Les clés ci-dessous sont celles de lib/use-agent-runs.ts. Une liste
-  // d'exclusion écrite « au jugé » (agent-runs pour agent-sessions, par
-  // exemple) ne filtre rien tout en ayant l'air de filtrer — c'est exactement
+  // The keys below are from lib/use-agent-runs.ts. A list
+  // written exclusion “judgmentally” (agent-runs for agent-sessions, by
+  // example) filters nothing while appearing to filter — this is exactly
   // ce que ce test verrouille.
   it("exclut les flux d'agent — périmés en secondes", () => {
     expect(isPersistableKey(issueAgentRunsQueryKey("i1"))).toBe(false);
     expect(isPersistableKey(agentRunQueryKey("r1"))).toBe(false);
     expect(isPersistableKey(["agent-run-events", "r1"])).toBe(false);
     expect(isPersistableKey(agentRunDiffQueryKey("r1"))).toBe(false);
-    // Segment DISTINCT de ["agent-run-diff"] : la comparaison se fait segment
-    // par segment, donc le préfixe du diff ne l'attrapait pas (MIN-303).
+    // DISTINCT segment of ["agent-run-diff"]: the comparison is done segment
+    // per segment, so the diff prefix didn't catch it (MIN-303).
     expect(isPersistableKey(agentRunDiffStatQueryKey("r1"))).toBe(false);
     expect(isPersistableKey(allAgentSessionsQueryKey)).toBe(false);
   });
 
-  // Le sondage d'activité tourne toutes les 4 s quand un agent travaille : il
-  // était sérialisé sur le disque à chaque tick, parce que le filtre visait un
-  // ["agent-activity"] que personne ne pose (MIN-303). La clé est IMPORTÉE de
-  // son module, pas recopiée : c'est la seule façon que ce test prouve quelque
-  // chose. Écrite à la main, elle passait tout en ne filtrant rien.
+  // The activity poll runs every 4 s when an agent is working: it
+  // was serialized to disk every tick, because the filter was targeting a
+  // ["agent-activity"] that no one asks (MIN-303). The key is IMPORTED from
+  // its module, not copied: this is the only way that this test proves something
+  // thing. Written by hand, it passed without filtering anything.
   it("exclut le sondage d'activité d'agent, sur sa vraie clé", () => {
     expect(isPersistableKey(agentActivityQueryKey("p1"))).toBe(false);
     expect(isPersistableKey(agentActivityQueryKey(null))).toBe(false);
@@ -65,20 +65,20 @@ describe("isPersistableKey", () => {
     expect(isPersistableKey(["version"])).toBe(false);
   });
 
-  // Le CORPS d'une page va jusqu'à 1 Mo ; le quota est de ~5 Mo. Et la LISTE,
-  // qui ne porte pas les corps, doit rester persistée — c'est elle qui peint
-  // l'arbre au rechargement. Un préfixe écrit « au jugé » confondrait les deux.
+  // The BODY of a page is up to 1 MB; the quota is ~5 MB. And the LIST,
+  // who does not carry bodies, must remain persistent — it is she who paints
+  // the tree on reload. A prefix written “judgment” would confuse the two.
   it("exclut le corps d'une page, mais garde la liste des pages", () => {
     expect(isPersistableKey(["page", "pg1"])).toBe(false);
     expect(isPersistableKey(["pages", "p1"])).toBe(true);
   });
 
   it("ne confond pas un préfixe avec une clé voisine", () => {
-    // ["me","board"] partage son premier segment avec ["me","search-index"] :
-    // le filtre doit comparer le préfixe entier, pas seulement key[0].
+    // ["me","board"] shares its first segment with ["me","search-index"]:
+    // the filter should compare the entire prefix, not just key[0].
     expect(isPersistableKey(["me", "cycle"])).toBe(true);
     expect(isPersistableKey(["me", "scratchpad"])).toBe(true);
-    // Un nom qui commence pareil sans être le même segment reste persistable.
+    // A name that starts the same without being the same segment remains persistent.
     expect(isPersistableKey(["agent-reads"])).toBe(true);
   });
 });

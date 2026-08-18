@@ -5,14 +5,14 @@ import {
 } from "./repo-capability";
 
 /**
- * Le droit d'un compte git sur un dépôt (MIN-144), lu sur les charges RÉELLES
- * des deux forges. C'est ce verdict qui décide si minddy offre « Fusionner » ou
- * explique pourquoi il ne l'offre pas — se tromper ici, c'est soit un bouton qui
- * échoue en 403, soit un geste retiré à quelqu'un qui y avait droit.
+ * The right of an account lies on a deposit (MIN-144), read on the ACTUAL charges
+ * of the two forges. It's this verdict that decides whether minddy offers "Merge" or
+ * explains why he doesn't offer it — to be wrong here, it's either a button that
+ * fails in 403, or a gesture taken away from someone who was entitled to it.
  */
 
 describe("githubCapabilityFromRepo", () => {
-  it("donne write à qui peut pousser", () => {
+  it("gives write to anyone who can push", () => {
     expect(
       githubCapabilityFromRepo({
         full_name: "acme/app",
@@ -21,13 +21,13 @@ describe("githubCapabilityFromRepo", () => {
     ).toBe("write");
   });
 
-  it("donne write à un admin (un owner d'org n'a pas toujours push explicite)", () => {
+  it("gives write to an admin (an org owner does not always have explicit push)", () => {
     expect(
       githubCapabilityFromRepo({ permissions: { admin: true, push: false, pull: true } }),
     ).toBe("write");
   });
 
-  it("donne read sur un dépôt public sans droit d'écriture", () => {
+  it("gives read for a public repository without write access", () => {
     expect(
       githubCapabilityFromRepo({
         permissions: { admin: false, maintain: false, push: false, triage: false, pull: true },
@@ -35,17 +35,17 @@ describe("githubCapabilityFromRepo", () => {
     ).toBe("read");
   });
 
-  it("ne promeut pas à write quand `permissions` manque", () => {
+  it("does not promote to write when `permissions` is missing", () => {
     expect(githubCapabilityFromRepo({ full_name: "acme/app" })).toBe("read");
     expect(githubCapabilityFromRepo(null)).toBe("read");
-    // Un 404 ne passe jamais par ici (l'appelant tranche avant), mais son corps
+    // A 404 never passes by here (the caller cuts before), but its body
     // ne doit surtout pas se lire comme un droit.
     expect(githubCapabilityFromRepo({ message: "Not Found" })).toBe("read");
   });
 });
 
 describe("gitlabCapabilityFromProject", () => {
-  it("donne write à un Developer (30)", () => {
+  it("gives write to a Developer (30)", () => {
     expect(
       gitlabCapabilityFromProject({
         id: 42,
@@ -54,7 +54,7 @@ describe("gitlabCapabilityFromProject", () => {
     ).toBe("write");
   });
 
-  it("donne write à un Maintainer (40)", () => {
+  it("gives write to a Maintainer (40)", () => {
     expect(
       gitlabCapabilityFromProject({
         permissions: { project_access: { access_level: 40 }, group_access: null },
@@ -62,7 +62,7 @@ describe("gitlabCapabilityFromProject", () => {
     ).toBe("write");
   });
 
-  it("donne read à un Reporter (20)", () => {
+  it("gives read to a Reporter (20)", () => {
     expect(
       gitlabCapabilityFromProject({
         permissions: { project_access: { access_level: 20 }, group_access: null },
@@ -70,8 +70,8 @@ describe("gitlabCapabilityFromProject", () => {
     ).toBe("read");
   });
 
-  it("prend le MAX du projet et du groupe", () => {
-    // Cas courant : Maintainer du groupe, aucun accès direct au projet.
+  it("uses the MAX of the project and group", () => {
+    // Common case: Maintainer of the group, no direct access to the project.
     expect(
       gitlabCapabilityFromProject({
         permissions: { project_access: null, group_access: { access_level: 40 } },

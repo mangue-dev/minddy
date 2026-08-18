@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { agentToolsFor, SUBAGENT_CONTROL_TOOLS } from "./tools";
 
 /**
- * MIN-115 : le jeu de tools d'un run n'est plus fixe. Les modèles `gpt-*`
- * reçoivent `apply_patch` À LA PLACE d'`edit_file` / `apply_edits` / `write_file`,
- * les autres gardent exactement ce qu'ils avaient. C'est le test qui remplace
- * « lancer une session et regarder » : servir les deux jeux ensemble, ou aucun,
- * ne se verrait qu'en production.
+ * MIN-115: the toolset of a run is no longer fixed. The `gpt-*` models
+ * receive `apply_patch` INSTEAD of `edit_file` / `apply_edits` / `write_file`,
+ * the others keep exactly what they had. This is the test that replaces
+ * “start a session and watch”: serve both games together, or neither,
+ * would only be visible in production.
  */
 
 const names = (opts: Parameters<typeof agentToolsFor>[0]) =>
@@ -22,9 +22,9 @@ describe("agentToolsFor — web_search (inchangé)", () => {
   });
 
   /**
-   * MIN-245 : le plafond du tour est CHIFFRÉ dans la description. Sans ça, le
-   * modèle apprend la limite en heurtant le mur — un round brûlé, alors que la
-   * valeur voyage déjà jusqu'ici (`VmJob.webSearchMax`).
+   * MIN-245: the round cap is ENCIMED in the description. Without that, the
+   * model learns the limit by hitting the wall — a burnt round, while the
+   * value already travels here (`VmJob.webSearchMax`).
    */
   it("chiffre le plafond du tour quand on le lui donne", () => {
     const description = (webSearchMax?: number) =>
@@ -33,7 +33,7 @@ describe("agentToolsFor — web_search (inchangé)", () => {
       )!.function.description;
     expect(description(5)).toContain("5 searches for this turn");
     expect(description(5)).toMatch(/costs real money/);
-    // Sans plafond connu, on ne CHIFFRE rien plutôt que d'inventer un nombre.
+    // Without a known ceiling, we don't CUMBER anything rather than inventing a number.
     expect(description()).not.toMatch(/searches for this turn/);
   });
 });
@@ -50,9 +50,9 @@ describe("agentToolsFor — projets locaux", () => {
 });
 
 /**
- * MIN-125 : les tools minddy ne sont plus découpés par ancrage. Les DEUX ancrages
- * servent les douze — tickets ET carnet — et l'ancrage ne décide plus que de la
- * CIBLE PAR DÉFAUT, dite dans la description des tools qui prennent `issue`.
+ * MIN-125: minddy tools are no longer cut by anchoring. The TWO anchors
+ * serve the twelve — tickets AND notebook — and the anchorage only decides on the
+ * DEFAULT TARGET, said in the description of tools which take `issue`.
  */
 const MINDDY_TOOLS = [
   "search_issues",
@@ -75,7 +75,7 @@ describe("agentToolsFor — tools minddy servis aux deux ancrages", () => {
       const served = names({ anchor, webSearch: true, model: "openai/gpt-5.6-luna" });
       for (const tool of MINDDY_TOOLS) expect(served).toContain(tool);
       expect(served).toContain("create_pr");
-      // Un même nom servi deux fois est un tool-call ambigu.
+      // The same name used twice is an ambiguous tool-call.
       expect(new Set(served).size).toBe(served.length);
     });
   }
@@ -97,16 +97,16 @@ describe("agentToolsFor — tools minddy servis aux deux ancrages", () => {
       expect(describeTool("notebook", name)).toMatch(/`issue` is REQUIRED/);
       expect(describeTool("notebook", name)).toMatch(/search_issues/);
     }
-    // Les autres tools ticket n'ont pas de cible : pas de phrase de ciblage.
+    // The other tool tickets have no target: no targeting phrase.
     for (const name of ["search_issues", "create_issue", "read_resource"]) {
       expect(describeTool("notebook", name)).not.toMatch(/`issue` is (OPTIONAL|REQUIRED)/);
     }
   });
 
   /**
-   * MIN-245 : là où la prose dit « REQUIRED », le SCHÉMA le dit aussi. Un appel
-   * vide était valide au schéma et n'était refusé qu'à l'exécution
-   * (`issue-tools.ts`) — un round brûlé par occurrence.
+   * MIN-245: Where the prose says “REQUIRED”, the DIAGRAM says so too. A call
+   * empty was valid for the schema and was only refused at runtime
+   * (`issue-tools.ts`) — one round burned per occurrence.
    */
   it("rend `issue` obligatoire AU SCHÉMA sur un run de carnet", () => {
     const params = (anchor: "issue" | "notebook" | "pr", name: string) =>
@@ -121,22 +121,22 @@ describe("agentToolsFor — tools minddy servis aux deux ancrages", () => {
       "edit_issue_text",
     ]) {
       expect(params("notebook", name).required).toContain("issue");
-      // Ce que le tool exigeait déjà ne disparaît pas au passage.
+      // What the tool already required does not disappear in passing.
       const before = params("issue", name).required ?? [];
       for (const field of before) expect(params("notebook", name).required).toContain(field);
-      // Ancrage ticket : `issue` est OPTIONNEL, et le schéma doit le rester.
+      // Ticket anchor: `issue` is OPTIONAL, and the schema must remain so.
       expect(params("issue", name).required ?? []).not.toContain("issue");
     }
 
-    // Ancrage PR : le défaut est CONDITIONNEL (le ticket de la PR, quand elle en
-    // porte un). Le rendre obligatoire casserait le cas normal.
+    // PR anchoring: the defect is CONDITIONAL (the ticket of the PR, when it
+    // wears a). Making it mandatory would break the normal case.
     expect(params("pr", "read_issue").required ?? []).not.toContain("issue");
   });
 
   /**
-   * MIN-245 : une relecture voit `linked_feedback` dans `read_issue` — elle doit
-   * pouvoir l'ouvrir. Exposer des identifiants sans le lecteur qui va avec est
-   * exactement le genre d'incohérence qui fait halluciner un appel.
+   * MIN-245: a replay sees `linked_feedback` in `read_issue` — it should
+   * be able to open it. Exposing credentials without the reader that goes with them is
+   * exactly the kind of inconsistency that makes a call hallucinate.
    */
   it("donne `read_feedback` à une relecture, qui voit `linked_feedback`", () => {
     const served = names({ anchor: "pr", webSearch: false });
@@ -176,15 +176,15 @@ describe("agentToolsFor — tools minddy servis aux deux ancrages", () => {
 });
 
 /**
- * MIN-111 : `read_resource` est toujours servi, mais il n'ANNONCE une image
- * regardable que sur un run dont le modèle en accepte. La description du tool est
- * ce que le modèle lit en premier — la laisser promettre une capacité absente
- * ferait « je vois la maquette » sur des métadonnées.
+ * MIN-111: `read_resource` is always served, but it ANNOUNCES a viewable image
+ * only on a run whose model accepts one. The tool description is what the model
+ * reads first — letting it promise an absent capability would make it say “I can
+ * see the mockup” about metadata.
  */
 /**
- * MIN-287 : l'agent n'avait AUCUN tool d'objectif, là où le MCP en a cinq. Il
- * travaillait donc sur un ticket sans savoir à quel but il sert, et un ticket
- * qu'il créait tombait hors de toute barre de progression.
+ * MIN-287: the agent had NO objective tool, while the MCP has five. It therefore
+ * worked on a ticket without knowing which goal it served, and a ticket it
+ * created fell outside every progress bar.
  */
 describe("agentToolsFor — les objectifs", () => {
   const OBJECTIVE_TOOLS = [
@@ -220,7 +220,7 @@ describe("agentToolsFor — les objectifs", () => {
     for (const name of ["create_issue", "update_issue"]) {
       expect(Object.keys(params(name).properties)).toContain("objective");
     }
-    // `update_issue` sait détacher ; `create_issue` n'a rien à détacher.
+    // `update_issue` can detach; `create_issue` has nothing to detach.
     expect(
       JSON.stringify(params("update_issue").properties.objective),
     ).toMatch(/null to detach/);
@@ -238,7 +238,7 @@ describe("agentToolsFor — les objectifs", () => {
     for (const name of ["create_issue", "update_issue", "read_objective", "comment_objective"]) {
       expect(objectiveRef(name)).toMatch(/list_objectives/);
     }
-    // Et `create_objective` dit que ce n'est pas à lui d'inventer un but.
+    // And `create_objective` says it's not up to him to invent a goal.
     expect(
       tools.find((t) => t.function.name === "create_objective")!.function.description,
     ).toMatch(/ONLY when the user asks/);
@@ -274,11 +274,11 @@ describe("agentToolsFor — read_resource et les images", () => {
 });
 
 /**
- * MIN-112 : la hiérarchie à UN niveau est STRUCTURELLE. Un sous-agent n'a pas
- * `spawn_agent` dans son jeu de tools — ce n'est pas une consigne de prompt qu'un
- * modèle peut décider d'ignorer. Même chose pour le ticket, le carnet et la PR :
- * ils appartiennent au parent, et le seul moyen fiable de le garantir est de ne pas
- * les servir. Ce test remplace « lancer une session et regarder ce qu'elle fait ».
+ * MIN-112: ONE-level hierarchy is STRUCTURAL. A subagent does not have
+ * `spawn_agent` in its set of tools — it is not a prompt instruction but a
+ * model can decide to ignore. Same thing for the ticket, the notebook and the PR:
+ * they belong to the parent, and the only reliable way to guarantee this is not to
+ * serve them. This test replaces “launch a session and see what it does”.
  */
 const _SUBAGENT_READERS = ["read_file", "list_dir", "glob", "grep"];
 const _MINDDY_AND_CONTROL = [
@@ -292,11 +292,11 @@ const _MINDDY_AND_CONTROL = [
   "list_agents",
 ];
 /**
- * MIN-168 : le jeu d'une session de RELECTURE. Ce qui compte ici n'est pas ce
- * qu'il contient mais ce qu'il ne contient PAS : la lecture seule d'une review
- * est une propriété du JEU DE TOOLS, pas une phrase de prompt qu'un modèle peut
- * ignorer. Un `edit_file` qui reviendrait par erreur dans ce jeu suffirait à
- * faire écrire l'agent dans le dépôt de quelqu'un.
+ * MIN-168: the game of a REREADING session. What matters here is not
+ * what it contains but what it does NOT contain: reading only a review
+ * is a property of the TOOLSET, not a prompt phrase that a template can
+ * ignore. A `edit_file` which returns by mistake in this game would be enough to
+ * have the agent write into someone's filing.
  */
 describe("agentToolsFor — ancrage pull request", () => {
   const served = names({ anchor: "pr", webSearch: true, model: "openai/gpt-5.6-luna" });
@@ -341,8 +341,8 @@ describe("agentToolsFor — ancrage pull request", () => {
   });
 
   it("offre les lecteurs minddy et les trois écritures de PR", () => {
-    // Les lecteurs de fichiers et le shell sont RENDUS PAR OPENCODE depuis
-    // MIN-286 : ils ne sont plus déclarés ici, donc plus à vérifier ici.
+    // File readers and shell are RENDERED BY OPENCODE since
+    // MIN-286: they are no longer declared here, so no more checking here.
     for (const tool of [
       "search_issues",
       "read_issue",
@@ -362,8 +362,8 @@ describe("agentToolsFor — ancrage pull request", () => {
     );
     const d = readIssue?.function.description ?? "";
     expect(d).toContain("this pull request implements");
-    // Beaucoup de PR n'ont pas de ticket (MIN-143) : promettre un défaut qui
-    // n'existe pas ferait brûler un round au premier `read_issue` sans argument.
+    // Many PRs do not have a ticket (MIN-143): promising a defect that
+    // does not exist would burn a round at the first `read_issue` without argument.
     expect(d).toContain("MANY PULL REQUESTS HAVE NO TICKET");
     expect(d).toMatch(/never requires a ticket/);
   });

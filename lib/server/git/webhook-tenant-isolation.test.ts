@@ -2,23 +2,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RemoteIssue } from "@/lib/server/git/issue-sync-core";
 
 /**
- * Le cloisonnement des récepteurs de webhook de forge (MIN-333).
+ * The partitioning of forge webhook receivers (MIN-333).
  *
- * Deux défauts, un seul fichier : ils tombaient tous les deux du même endroit —
- * le récepteur croyait ce que la charge utile disait d'elle-même.
+ * Two faults, one file: they both fell from the same place —
+ * the receiver believed what the payload said about itself.
  *
- *  1. **Le secret GitLab était global.** Le même jeton était écrit dans le hook
- *     de chaque locataire, et GitLab MONTRE le jeton d'un hook à qui peut
- *     l'éditer : tout mainteneur d'un dépôt lié pouvait le lire chez lui, puis
- *     signer des événements pour les dépôts des autres. Le secret est désormais
- *     propre au dépôt — celui d'un locataire ne signe rien chez son voisin.
- *  2. **Le dépôt était résolu par son NOM.** Un nom se libère chez la forge dès
- *     qu'on renomme, et se réattribue à qui le demande : le repreneur d'un nom
- *     héritait des tickets de son ancien porteur. Le routage passe sur l'id
- *     numérique, qui, lui, ne se réattribue jamais.
+ * 1. **The GitLab secret was global.** The same token was written in the hook
+ * of each tenant, and GitLab SHOWS the token of a hook to anyone who can
+ * edit it: any maintainer of a linked repository could read it at home, then
+ * sign events for others' repositories. The secret is now
+ * specific to the deposit - that of a tenant does not sign anything with his neighbor.
+ * 2. **The deposit was resolved by its NAME.** A name is released at the forge as soon as
+ * which is renamed, and reallocated to whoever asks: the buyer of a name
+ * inherited tickets from its former holder. Routing passes to the numeric id
+ *, which is never reallocated.
  *
- * Les deux moitiés se testent ensemble parce qu'elles se tiennent : le secret
- * est cherché par id de dépôt, et le fan-out aussi.
+ * The two halves test together because they hold together: the secret
+ * is searched by repository id, and the fan-out too.
  */
 
 process.env.GIT_TOKEN_ENCRYPTION_SECRET = "test-secret-for-forge-envelopes-32ch";
@@ -27,13 +27,13 @@ interface Row extends Record<string, unknown> {}
 
 let linkRows: Row[] = [];
 let issueRows: Row[] = [];
-/** Les tickets créés — la sonde du fan-out : qui a reçu l'issue distante ? */
+/** Tickets created — the fan-out probe: who received the remote issue? */
 let creates: Record<string, unknown>[] = [];
 
 /**
- * Double de table PostgREST, réduit à ce que ce fichier exerce : `eq`, `is`,
- * `in`, plus un `update` qui écrit VRAIMENT dans les lignes (la rotation de
- * secret se lit ensuite, c'est tout l'intérêt).
+ * PostgREST table duplicate, reduced to what this file exerts: `eq`, `is`,
+ * `in`, plus a `update` which ACTUALLY writes to the lines (the rotation of
+ * secret then reads, that's the whole point).
  */
 function table(rows: () => Row[]) {
   const filters: ((row: Row) => boolean)[] = [];
@@ -52,7 +52,7 @@ function table(rows: () => Row[]) {
     filters.push((row) => values.includes(row[column]));
     return query;
   };
-  // `update` est différé jusqu'à l'await : les filtres arrivent APRÈS lui
+  // `update` is deferred until await: the filters arrive AFTER it
   // (`.update(patch).eq(...)`), comme chez PostgREST.
   let patch: Record<string, unknown> | null = null;
   query.update = (values: Record<string, unknown>) => {
@@ -123,7 +123,7 @@ const { listIssueSyncTargets, syncRemoteIssueEvent } = await import(
   "@/lib/server/git/issue-sync"
 );
 
-/** Une liaison, telle que `project_git_links` la porte. */
+/** A binding, such as `project_git_links` carries it. */
 function link(overrides: Row = {}): Row {
   return {
     id: "link-1",
@@ -167,8 +167,8 @@ beforeEach(() => {
   delete process.env.GITLAB_WEBHOOK_SECRET;
 });
 
-describe("secret de webhook par dépôt", () => {
-  it("mint un secret propre au dépôt et le persiste chiffré", async () => {
+describe("webhook secret per repository", () => {
+  it("mints a repository-specific secret and stores it encrypted", async () => {
     linkRows = [link()];
     const secret = await ensureRepoWebhookSecret({
       provider: "gitlab",
@@ -177,16 +177,16 @@ describe("secret de webhook par dépôt", () => {
 
     expect(secret).toHaveLength(64);
     const stored = linkRows[0].webhook_secret_encrypted as string;
-    // Chiffré, pas en clair : la colonne ne doit jamais porter le jeton lisible.
+    // Encrypted, not in plain text: the column must never carry the readable token.
     expect(stored).toBeTruthy();
     expect(stored).not.toContain(secret);
-    // Relire ne régénère pas : le hook posé chez GitLab porte CETTE valeur.
+    // Reread does not regenerate: the hook installed at GitLab carries THIS value.
     await expect(
       ensureRepoWebhookSecret({ provider: "gitlab", externalRepoId: "1001" }),
     ).resolves.toBe(secret);
   });
 
-  it("deux dépôts, deux secrets — et celui de l'un ne signe rien chez l'autre", async () => {
+  it("two repositories, two secrets — neither one signs for the other", async () => {
     linkRows = [
       link({ id: "link-a", project_id: "project-a", external_repo_id: "1001" }),
       link({ id: "link-b", project_id: "project-b", external_repo_id: "2002" }),
@@ -201,9 +201,9 @@ describe("secret de webhook par dépôt", () => {
     });
     expect(a).not.toBe(b);
 
-    // LE défaut de MIN-333, dans sa forme la plus courte : le mainteneur du
-    // dépôt A lit son propre jeton dans les réglages de son hook, et s'en sert
-    // pour signer un événement destiné au dépôt B.
+    // THE flaw of MIN-333, in its shortest form: the maintainer of
+    // repository A reads its own token in its hook settings, and uses it
+    // to sign an event intended for repository B.
     const candidatesB = await loadWebhookSecrets({
       provider: "gitlab",
       externalRepoId: "2002",
@@ -212,7 +212,7 @@ describe("secret de webhook par dépôt", () => {
     expect(verifyWebhookToken(b, candidatesB)).toBe("own");
   });
 
-  it("deux projets sur le MÊME dépôt partagent le secret — ils partagent le hook", async () => {
+  it("two projects on the SAME repository share the secret — they share the hook", async () => {
     linkRows = [
       link({ id: "link-a", project_id: "project-a" }),
       link({ id: "link-b", project_id: "project-b" }),
@@ -221,8 +221,8 @@ describe("secret de webhook par dépôt", () => {
       provider: "gitlab",
       externalRepoId: "1001",
     });
-    // En générer un second invaliderait le hook du voisin : chez GitLab, le hook
-    // vit sur le dépôt, il n'y en a qu'un.
+    // Generating a second one would invalidate the neighbor's hook: at GitLab, the hook
+    // lives on the depot, there is only one.
     expect(linkRows.map((r) => r.webhook_secret_encrypted)).toEqual([
       linkRows[0].webhook_secret_encrypted,
       linkRows[0].webhook_secret_encrypted,
@@ -234,21 +234,21 @@ describe("secret de webhook par dépôt", () => {
     expect(candidates.own).toEqual([first]);
   });
 
-  it("le repli global est reconnu comme tel, pour être roté", async () => {
+  it("the global fallback is recognized as such so it can be rotated", async () => {
     process.env.GITLAB_WEBHOOK_SECRET = "legacy-global-secret";
     linkRows = [link()];
     const candidates = await loadWebhookSecrets({
       provider: "gitlab",
       externalRepoId: "1001",
     });
-    // Un hook posé avant MIN-333 porte encore l'ancien jeton : le refuser
-    // couperait la synchro le temps d'une rotation.
+    // A hook placed before MIN-333 still carries the old token: refuse it
+    // would cut the sync for one rotation.
     expect(verifyWebhookToken("legacy-global-secret", candidates)).toBe("legacy");
     expect(candidates.connectionId).toBe("conn-1");
     expect(verifyWebhookToken("n'importe quoi", candidates)).toBe("rejected");
   });
 
-  it("sans repli déployé, un dépôt sans secret n'accepte plus rien", async () => {
+  it("without a deployed fallback, a repository without a secret accepts nothing", async () => {
     linkRows = [link()];
     const candidates = await loadWebhookSecrets({
       provider: "gitlab",
@@ -260,7 +260,7 @@ describe("secret de webhook par dépôt", () => {
     expect(verifyWebhookToken(null, candidates)).toBe("rejected");
   });
 
-  it("la rotation remplace le secret de TOUTES les liaisons du dépôt", async () => {
+  it("rotation replaces the secret for ALL repository links", async () => {
     linkRows = [
       link({ id: "link-a", project_id: "project-a" }),
       link({ id: "link-b", project_id: "project-b" }),
@@ -281,7 +281,7 @@ describe("secret de webhook par dépôt", () => {
     expect(candidates.own).toEqual([after]);
   });
 
-  it("compare à temps constant, et refuse un préfixe", () => {
+  it("compares in constant time and rejects a prefix", () => {
     expect(webhookSecretMatches("abc", "abc")).toBe(true);
     expect(webhookSecretMatches("ab", "abc")).toBe(false);
     expect(webhookSecretMatches("abcd", "abc")).toBe(false);
@@ -289,8 +289,8 @@ describe("secret de webhook par dépôt", () => {
   });
 });
 
-describe("routage du dépôt par son identifiant", () => {
-  it("route sur l'id, même quand le dépôt a été renommé chez la forge", async () => {
+describe("repository routing by identifier", () => {
+  it("routes by id even when the repository was renamed on the forge", async () => {
     linkRows = [link({ repo_full_name: "acme/ancien-nom" })];
 
     const targets = await listIssueSyncTargets({
@@ -304,26 +304,26 @@ describe("routage du dépôt par son identifiant", () => {
     expect(creates[0].projectId).toBe("project-1");
   });
 
-  it("NE route PAS un dépôt qui a repris le nom d'un autre", async () => {
-    // Le cœur du défaut : `acme/app` a été libéré par son porteur, et quelqu'un
-    // d'autre l'a repris. Son dépôt à lui porte un autre id — donc rien.
+  it("does NOT route a repository that took another's name", async () => {
+    // The heart of the defect: `acme/app` was released by its bearer, and someone
+    // someone else took it over. His deposit has another id — so nothing.
     linkRows = [link({ external_repo_id: "1001", repo_full_name: "acme/app" })];
 
     await syncRemoteIssueEvent(remote({ repoId: "9999", repoFullName: "acme/app" }));
     expect(creates).toEqual([]);
   });
 
-  it("le nom stocké suit le renommage — il ne sert plus qu'à s'afficher", async () => {
+  it("the stored name follows the rename — it is only for display now", async () => {
     linkRows = [link({ repo_full_name: "acme/ancien", repo_owner: "acme" })];
     await syncRemoteIssueEvent(remote({ repoFullName: "nouvelle-org/app" }));
     expect(linkRows[0].repo_full_name).toBe("nouvelle-org/app");
     expect(linkRows[0].repo_owner).toBe("nouvelle-org");
-    // `repo_name` est un nom d'AFFICHAGE côté GitLab, que la charge utile d'une
-    // issue ne porte pas : on ne réécrit pas ce qu'on ne sait pas dire juste.
+    // `repo_name` is a DISPLAY name on the GitLab side, that the payload of a
+    // issue does not carry: we do not rewrite what we cannot say correctly.
     expect(linkRows[0].repo_name).toBe("app");
   });
 
-  it("ne sert que les liaisons dont la synchro est ACTIVE", async () => {
+  it("serves only links whose sync is ACTIVE", async () => {
     linkRows = [link({ issue_sync_enabled: false })];
     await syncRemoteIssueEvent(remote());
     expect(creates).toEqual([]);

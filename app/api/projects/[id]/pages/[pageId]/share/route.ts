@@ -11,19 +11,19 @@ import {
 type RouteContext = { params: Promise<{ id: string; pageId: string }> };
 
 /**
- * La PUBLICATION d'une page (MIN-283) — une cible de plus pour le partage
- * public de MIN-26, donc la même forme de route que `/api/views/[id]/share` :
- * GET l'état, PUT publier ou re-régler, DELETE dépublier.
+ * PUBLICATION of a page (MIN-283) — one more target for sharing
+ * public of MIN-26, therefore the same route form as `/api/views/[id]/share`:
+ * GET status, PUT publish or re-set, DELETE unpublish.
  *
- * Le `projectId` de l'URL n'est pas relu ici : l'accès se contrôle sur le
- * projet de la PAGE (lib/server/view-shares.ts), qui est la seule vérité —
- * accepter un id de projet dans le chemin et s'y fier ouvrirait exactement le
- * trou que la vérification par la page ferme.
+ * The `projectId` of the URL is not reread here: access is controlled on the
+ * PAGE project (lib/server/view-shares.ts), which is the only truth —
+ * accepting a project id in the path and relying on it would open exactly the
+ * hole that the verification by the page closes.
  */
 
-// Borne du mot de passe, alignée sur la route de partage d'une vue (MIN-118) :
-// scrypt hache ce qu'on lui donne, et un refus vaut mieux qu'une troncature
-// silencieuse — un mot de passe tronqué ne déverrouillerait jamais rien.
+// Password terminal, aligned with the view sharing route (MIN-118):
+// scrypt hashes what it is given, and refusal is better than truncation
+// silent — a truncated password would never unlock anything.
 const MAX_PASSWORD_LENGTH = 256;
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
@@ -40,10 +40,10 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 }
 
 /**
- * PUT — publier (ou re-régler) : { level, password?, include_children? }.
+ * PUT — publish (or re-set): { level, password?, include_children? }.
  *
- * Aucun réglage d'indexation : une page publiée porte `noindex`, toujours. Le
- * lien EST le secret (cf. la migration `page_shares_no_indexing`).
+ * No indexing settings: a published page always has `noindex`. THE
+ * link IS the secret (see the `page_shares_no_indexing` migration).
  */
 export async function PUT(request: NextRequest, { params }: RouteContext) {
   const { pageId } = await params;
@@ -85,7 +85,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
   return NextResponse.json({ share: result.share });
 }
 
-/** DELETE — cesser de publier : le lien cesse de répondre immédiatement. */
+/** DELETE — stop posting: The link stops responding immediately. */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { pageId } = await params;
   const auth = await getAuthedUser(request);

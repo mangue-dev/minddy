@@ -1,25 +1,25 @@
-// L'issue distante, posée en RESSOURCE du ticket minddy — le lien qu'on ouvre
-// depuis le panneau, à côté des fichiers et des autres liens.
+// The remote issue, placed as a RESOURCE of the minddy ticket — the link that we open
+// from the panel, next to files and other links.
 //
-// Le badge de `RemoteIssueIndicator` dit déjà « ce ticket vient de GitHub » à
-// côté de l'identifiant, mais il est petit, muet sur le dépôt, et il n'est pas
-// là où l'on cherche un lien. La ressource, elle, se lit « acme/app#42 » et vit
-// dans la liste qu'on parcourt.
+// The `RemoteIssueIndicator` badge already says “this ticket comes from GitHub” at
+// side of the identifier, but it is small, silent on the repository, and it is not
+// where we are looking for a link. The resource reads “acme/app#42” and lives
+// in the list we browse.
 //
-// L'icône est EMBARQUÉE, pas résolue : le chemin normal d'ajout de lien
-// (`resolveLinkResource`) télécharge le titre de la page et son favicon, ce qui
-// coûte un aller-retour réseau PAR ressource. Un backfill de 500 issues en
-// ferait 500, tous vers le même favicon. Ici la marque de la forge est connue
-// d'avance — deux WebP de 32 px, ~600 octets chacun, sous le plafond de
-// `MAX_ICON_DATA_URL_BYTES` (24 Ko) avec deux ordres de grandeur de marge.
+// The icon is EMBEDDED, not resolved: the normal path for adding a link
+// (`resolveLinkResource`) downloads the page title and its favicon, which
+// costs a network round trip PER resource. A backfill of 500 issues in
+// would make 500, all to the same favicon. Here the brand of the forge is known
+// in advance — two WebPs of 32 px, ~600 bytes each, under the ceiling of
+// `MAX_ICON_DATA_URL_BYTES` (24 KB) with two orders of magnitude of margin.
 //
-// La marque GitHub est rendue en gris neutre plutôt qu'en noir : la vignette
-// s'affiche sur `bg-muted`, qui est sombre en thème sombre — un octocat noir y
-// serait un carré vide. Le tanuki GitLab garde son orange, qui passe des deux
-// côtés. (Régénérer : rasteriser la marque officielle en WebP 32 px, cf. le
-// commentaire d'en-tête de `forge-resource.test.ts`.)
+// The GitHub brand is rendered in neutral gray rather than black: the thumbnail
+// displays on `bg-muted`, which is dark in dark theme — a black octocat there
+// would be an empty square. The GitLab tanuki keeps its orange, which changes from both
+// sides. (Regenerate: rasterize the official brand in WebP 32 px, cf. the
+//header comment of `forge-resource.test.ts`.)
 //
-// Module PUR : ni I/O ni server-only, pour rester testable en node.
+// PUR module: neither I/O nor server-only, to remain testable in node.
 
 import { getRepoProvider, type RepoProviderId } from "@/lib/repo-providers";
 import type { LinkResourceInput } from "@/lib/types";
@@ -32,13 +32,13 @@ const FORGE_ICON: Record<RepoProviderId, string> = {
 };
 
 /**
- * Le descripteur de ressource pour une issue distante, ou `null` si la forge
- * n'a pas donné d'URL (le champ est nullable des deux côtés, et une ressource
- * sans lien n'est pas une ressource).
+ * The resource descriptor for a remote issue, or `null` if the forge
+ * did not give a URL (the field is nullable on both sides, and an unbound resource
+ * is not a resource).
  *
- * Le libellé est « acme/app#42 » quand on connaît le dépôt, « GitHub #42 »
- * sinon — le webhook porte toujours `full_name`, le backfill part de la liaison,
- * mais aucun des deux ne le garantit sur toute la durée d'une liaison.
+ * The label is "acme/app#42" when we know the repository, "GitHub #42"
+ * otherwise — the webhook always carries `full_name`, the backfill starts from the link,
+ * but neither of them guarantees it over the entire duration of a link.
  */
 export function forgeIssueResource(params: {
   provider: RepoProviderId;

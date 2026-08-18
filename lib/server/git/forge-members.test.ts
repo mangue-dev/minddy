@@ -1,25 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * `buildForgeAssigneeIndex` — le pont « octocat » → le membre minddy qui a
- * connecté ce compte-là.
+ * `buildForgeAssigneeIndex` — the “octocat” bridge → the minddy member who has
+ * connected this account.
  *
- * Ce que ces tests épinglent n'est pas le rapprochement heureux, mais les deux
- * garde-fous, parce que ce sont eux qui coûtent cher quand ils sautent :
+ * What these tests pinpoint is not the happy rapprochement, but the two
+ * safeguards, because that they are the ones who cost a lot when they jump:
  *
- *  1. **Seuls les MEMBRES du projet** entrent dans l'index. `issues.assignee_id`
- *     porte une FK vers `auth.users`, pas vers `project_members` : assigner un
- *     login connu de minddy mais étranger au projet PASSERAIT en base, et le
- *     ticket atterrirait chez quelqu'un qui ne voit même pas le projet. Rien ne
- *     lèverait, personne ne le verrait.
- *  2. **Rien n'est deviné.** Pas de rapprochement par nom, contrairement à
- *     l'import CSV — ici on a une égalité exacte, et un mauvais assigné coûte
- *     plus cher qu'une absence d'assigné.
+ * 1. **Only MEMBERS of the project** enter the index. `issues.assignee_id`
+ * carries an FK to `auth.users`, not to `project_members`: assign a
+ * login known to minddy but foreign to the project WILL PASS into the database, and the
+ * ticket would land with someone who doesn't even see the project. Nothing
+ * would be raised, no one would see it.
+ * 2. **Nothing is guessed.** No matching by name, unlike
+ * CSV import — here we have an exact equality, and a wrong assignment costs
+ * more expensive than an absence assigned.
  *
- * Le troisième point est plus discret : la table interrogée n'est pas la même
- * selon la forge (`git_user_identities` côté GitHub, `git_connections` côté
- * GitLab, où la connexion OAuth EST l'identité). Se tromper de table rendrait un
- * index vide en silence — donc plus aucun assigné, sans erreur nulle part.
+ * The third point is more discreet: the queried table is not the same
+ * depending on the forge (`git_user_identities` on the GitHub side, `git_connections` on the
+ * GitLab side, where the OAuth connection IS identity). Getting the wrong table would make a
+ * index silently empty — so no more assigned, with no errors anywhere.
  */
 
 interface Row extends Record<string, unknown> {}
@@ -28,13 +28,13 @@ let projectRows: Row[] = [];
 let memberRows: Row[] = [];
 let identityRows: Row[] = [];
 let connectionRows: Row[] = [];
-/** Les tables réellement interrogées, dans l'ordre — la sonde du bon aiguillage. */
+/** The tables actually queried, in order — the correct referral probe. */
 let queried: string[] = [];
-/** Forcer l'échec du lookup d'identités (la branche « on rend un index vide »). */
+/** Force the identity lookup to fail (the “we return an empty index” branch). */
 let failIdentityLookup = false;
 
-/** Double de chaîne PostgREST, réduit à ce que le module touche : `eq`, `in`,
-    `select`, et la résolution en tableau ou en ligne unique. */
+/** Double PostgREST string, reduced to whatever the module touches: `eq`, `in`,
+ `select`, and resolution to array or single row. */
 function table(name: string, rows: () => Row[]) {
   const filters: ((row: Row) => boolean)[] = [];
   const query: Record<string, unknown> = {};
@@ -107,7 +107,7 @@ describe("buildForgeAssigneeIndex", () => {
     const index = await buildForgeAssigneeIndex({ projectId: PROJECT, provider: "github" });
 
     expect(index.get("octocat")).toBe(OWNER);
-    // Indexé en minuscules : la forge n'a pas la même casse d'un endpoint à l'autre.
+    // Indexed in lowercase: the forge does not have the same case from one endpoint to another.
     expect(index.get("hubot")).toBe("user-dev");
   });
 
@@ -160,7 +160,7 @@ describe("buildForgeAssigneeIndex", () => {
 
     const index = await buildForgeAssigneeIndex({ projectId: PROJECT, provider: "github" });
 
-    // Vide = personne n'est assigné, le comportement d'avant MIN-144. Pas une exception.
+    // Empty = no one is assigned, the behavior before MIN-144. Not an exception.
     expect(index.size).toBe(0);
   });
 
@@ -181,7 +181,7 @@ describe("matchForgeAssignee", () => {
   ]);
 
   it("prend le PREMIER assigné reconnu, dans l'ordre de la forge", () => {
-    // Les deux forges acceptent plusieurs assignés, minddy un seul.
+    // The two forges accept several assignees, minddy only one.
     expect(matchForgeAssignee(["hubot", "octocat"], index)).toBe("user-dev");
   });
 

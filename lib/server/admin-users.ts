@@ -9,16 +9,16 @@ import {
 } from "@/lib/onboarding";
 
 /**
- * Lecture partagée des comptes pour la console d'admin (MIN-90).
+ * Shared reading of accounts for the admin console (MIN-90).
  *
- * `/api/admin/users` (la liste paginée) et `/api/admin/overview` (l'entonnoir
- * d'onboarding et la répartition des plans) ont besoin des mêmes lignes : une
- * par compte `auth.users`, avec ses compteurs. Elles passent donc toutes deux
- * par ici — la RPC renvoie les ingrédients bruts, et l'onboarding se résout
- * avec le MÊME `resolveOnboardingState` que la home, jamais réimplémenté.
+ * `/api/admin/users` (the paginated list) and `/api/admin/overview` (the onboarding funnel
+ * and plan distribution) need the same lines: one
+ * per `auth.users` account, with its counters. So they both pass
+ * this way — the RPC returns the raw ingredients, and onboarding resolves
+ * with the SAME `resolveOnboardingState` as home, never reimplemented.
  */
 
-/** Une ligne brute de `get_admin_users_overview`. */
+/** A raw line of `get_admin_users_overview`. */
 export interface AdminUserRpcRow {
   user_id: string;
   email: string | null;
@@ -26,7 +26,7 @@ export interface AdminUserRpcRow {
   created_at: string;
   last_sign_in_at: string | null;
   email_confirmed_at: string | null;
-  /** Compte interne (équipe, démo, bot) : visible ici, jamais dans les stats. */
+  /** Internal account (team, demo, bot): visible here, never in the stats. */
   is_internal: boolean;
   projects_owned: number;
   projects_member: number;
@@ -44,7 +44,7 @@ export interface AdminUsersPage {
   total: number;
 }
 
-/** Une page de comptes, la plus récente inscription d'abord. */
+/** An accounts page, most recent registration first. */
 export async function fetchAdminUsers(params: {
   search?: string | null;
   limit: number;
@@ -59,19 +59,19 @@ export async function fetchAdminUsers(params: {
   if (error) throw new Error(error.message);
 
   const rows = (data ?? []) as AdminUserRpcRow[];
-  // `total_count` est porté par chaque ligne (window function) ; sans ligne, la
-  // recherche ne correspond à personne.
+  // `total_count` is carried by each line (window function); without line, the
+  // search does not match anyone.
   return { rows, total: rows.length > 0 ? Number(rows[0].total_count) || 0 : 0 };
 }
 
 /**
- * Les comptes qui ont posé une clé BYOK. L'étape « clé » de l'onboarding se
- * coche dessus (MIN-149) : sans cet ensemble, l'entonnoir d'admin compterait
- * bloqués sur cette étape des comptes qui l'ont franchie.
+ * Accounts that have set a BYOK key. The "key" stage of onboarding is
+ * checkmark above (MIN-149): without this set, the admin funnel would count
+ * blocked on this stage of the accounts which have passed it.
  *
- * Lue en entier plutôt que filtrée sur la page : `user_ai_keys` ne porte qu'une
- * ligne par compte en BYOK — un sous-ensemble minuscule des comptes — et une
- * seule lecture sert les deux routes d'admin quelle que soit leur pagination.
+ * Read in full rather than filtered on the page: `user_ai_keys` carries only one
+ * line per BYOK account — a tiny subset of accounts — and a single
+ * read serves both admin routes regardless of their pagination.
  */
 export async function fetchByokUserIds(): Promise<Set<string>> {
   const { data, error } = await getServiceClient().from("user_ai_keys").select("user_id");
@@ -79,7 +79,7 @@ export async function fetchByokUserIds(): Promise<Set<string>> {
   return new Set((data ?? []).map((row) => (row as { user_id: string }).user_id));
 }
 
-/** L'état d'onboarding d'un compte, résolu comme la home le résout. */
+/** The onboarding state of an account, resolved as the home resolves it. */
 export function onboardingOf(row: AdminUserRpcRow, byokUserIds: ReadonlySet<string>) {
   const meta = row.meta ?? {};
   const state = resolveOnboardingState({
@@ -90,9 +90,9 @@ export function onboardingOf(row: AdminUserRpcRow, byokUserIds: ReadonlySet<stri
     cyclesEnabled: resolveCyclePrefs(meta).enabled,
   });
   return {
-    // `eligible` mélange « l'onboarding a démarré » et « le compte est vide » ;
-    // pour l'admin seule la première moitié est un fait, d'où la lecture directe
-    // du filigrane posé au premier affichage.
+    // `eligible` mixes “onboarding has started” and “the account is empty”;
+    // for the admin only the first half is a fact, hence the direct reading
+    // of the watermark placed on the first display.
     started: meta[ONBOARDING_STARTED_META_KEY] === true,
     completed: state.completedCount,
     total: state.totalCount,
@@ -114,17 +114,16 @@ export function nameOf(row: AdminUserRpcRow): string {
 }
 
 /**
- * Marque (ou démarque) un compte comme INTERNE — équipe, démo, bot.
+ * Marks (or unmarks) an account as INTERNAL — team, demo, bot.
  *
- * Le drapeau vit dans `app_metadata`, comme le rôle admin : l'utilisateur ne
- * peut pas se l'attribuer lui-même.
+ * The flag lives in `app_metadata`, like the admin role: the user cannot assign it to himself.
  *
- * L'écriture est volontairement défensive sur DEUX points. On relit d'abord le
- * compte et on renvoie l'objet complet : si GoTrue venait à REMPLACER
- * `app_metadata` au lieu de le fusionner, envoyer le seul drapeau effacerait
- * `role: "admin"`. Et on retire le drapeau avec `null`, pas en omettant la clé :
- * la sémantique actuelle est une fusion, où une clé absente ne supprime rien.
- * Les deux comportements donnent le bon résultat.
+ * The writing is intentionally defensive on TWO points. We first reread the
+ * count and return the complete object: if GoTrue were to REPLACE
+ * `app_metadata` instead of merging it, sending the flag alone would erase
+ * `role: "admin"`. And we remove the flag with `null`, not by omitting the key:
+ * the current semantics are a merge, where an absent key does not delete anything.
+ * Both behaviors give the correct result.
  */
 export async function setUserInternal(
   userId: string,

@@ -1,41 +1,41 @@
-// Normalisation PURE des événements d'issue GitHub/GitLab (sans DB, sans import
-// server-only) : testable en node/vitest, comme plan-sync-core.ts. La partie qui
-// écrit en base vit dans issue-sync.ts, celle qui écrit chez la forge dans
+// PURE normalization of GitHub/GitLab issue events (without DB, without import
+// server-only): testable in node/vitest, like plan-sync-core.ts. The part that
+// written in base lives in issue-sync.ts, the one who writes at the forge in
 // issue-push.ts.
 //
-// Les deux forges parlent des vocabulaires différents (`closed`/`close`,
-// `number`/`iid`, `{name}`/`{title}`) — tout est ramené ici à une forme neutre
-// `RemoteIssue` que le reste du code consomme sans savoir d'où l'événement vient.
+// The two forges speak different vocabularies (`closed`/`close`,
+// `number`/`iid`, `{name}`/`{title}`) — everything is reduced here to a neutral form
+// `RemoteIssue` that the rest of the code consumes without knowing where the event comes from.
 //
-// Le sens de la synchro a CHANGÉ depuis MIN-97, qui était strictement
-// descendant (« le dépôt pousse ses issues dans minddy, jamais l'inverse ») :
-//  • descendant, le ticket est le REFLET de l'issue — titre, corps, labels,
-//    assigné et état la suivent (`statusForRemoteReconcile`) ;
-//  • montant, un seul champ remonte, l'état ouvert/fermé
-//    (`remoteStateForStatus`), parce que celui qui termine le travail peut
-//    très bien le dire depuis minddy.
-// Ce sont les deux seules fonctions de statut, et elles se lisent ensemble :
-// l'une est la réciproque de l'autre, c'est ce qui ferme la boucle d'écho.
+// The meaning of sync has CHANGED since MIN-97, which was strictly
+// descending (“the repository pushes its issues into minddy, never the other way around”):
+// • descending, the ticket is the REFLECTION of the outcome — title, body, labels,
+// assigned and state follow it (`statusForRemoteReconcile`);
+// • amount, a single field goes up, open/closed state
+// (`remoteStateForStatus`), because whoever completes the work can
+// very well say it from minddy.
+// These are the only two status functions, and they read together:
+// one is the reciprocal of the other, this is what closes the echo loop.
 
 import type { IssueStatusValue } from "@/lib/issue-validation";
 import type { RepoProviderId } from "@/lib/repo-providers";
 
 /**
- * Statut d'arrivée d'une issue importée. `triage` et pas `backlog` : c'est le
- * sas que minddy réserve déjà à tout ce qui vient de l'extérieur (API Feedback),
- * la page /triage existe pour ça, et ça évite de déclencher Smart Assign — donc
- * de la dépense IA — sur chaque issue du dépôt.
+ * Arrival status of an imported issue. `triage` and not `backlog`: it's the
+ * except that minddy already reserves for everything that comes from outside (API Feedback),
+ * the /triage page exists for that, and it avoids triggering Smart Assign — therefore
+ * of the AI expenditure — on each outcome of the repository.
  */
 export const REMOTE_LANDING_STATUS: IssueStatusValue = "triage";
 
-/** Action distante normalisée → statut minddy (null = rien à changer). */
+/** Standardized remote action → minddy status (null = nothing to change). */
 export function statusForRemoteAction(action: string): IssueStatusValue | null {
   switch (action) {
     // GitHub `closed` / GitLab `close`.
     case "closed":
     case "close":
       return "done";
-    // Réouverture → `backlog`, jamais `triage` : le ticket a déjà été vu.
+    // Reopening → `backlog`, never `triage`: the ticket has already been seen.
     case "reopened":
     case "reopen":
       return "backlog";
@@ -45,27 +45,25 @@ export function statusForRemoteAction(action: string): IssueStatusValue | null {
 }
 
 /**
- * Le statut que doit prendre un ticket DÉJÀ importé, ou `null` s'il ne bouge
- * pas. C'est la fonction qu'appelle la réconciliation, et elle raisonne sur
- * l'ÉTAT porté par le payload plutôt que sur l'action — un `edited`, un
- * `labeled` ou un `assigned` ne dit rien d'une transition, mais transporte
- * quand même `state`, ce qui rattrape au passage une fermeture dont le webhook
- * s'est perdu.
+ * The status that an ALREADY imported ticket should take, or `null` if it is not moving
+ *. This is the function called by reconciliation, and it reasons about
+ * the STATE carried by the payload rather than on the action — a `edited`, a
+ * `labeled` or a `assigned` says nothing about a transition, but carries
+ * all the same `state`, which in passing catches a closure whose webhook
+ * was lost.
  *
- * **Elle compare des états, pas des statuts**, et c'est tout l'intérêt : minddy
- * a huit statuts, la forge en a deux. Trois des huit valent « fermé ». Traduire
- * `closed` en `done` sans regarder où en est le ticket ferait basculer vers
- * « terminé » un ticket délibérément mis en « annulé » — à chaque édition de
- * l'issue distante, et sans que personne ne comprenne pourquoi. Tant que les
- * deux côtés s'accordent sur ouvert/fermé, on ne touche à rien.
+ * **It compares states, not statuses**, and that's the whole point: minddy
+ * has eight statuses, the forge has two. Three of the eight are “closed”. Translating
+ * `closed` into `done` without looking at where the ticket is would switch to
+ * "finished" a ticket deliberately set to "canceled" — each time the remote issue is edited, and without anyone understanding why. As long as both sides agree on open/closed, nothing is touched.
  */
 export function statusForRemoteReconcile(
   remote: RemoteIssue,
   current: IssueStatusValue,
 ): IssueStatusValue | null {
-  // Pas d'état dans la charge : on retombe sur la transition, quand il y en a
-  // une. Elle est soumise à la même règle d'accord (une fermeture qui trouve un
-  // ticket déjà clos ne le requalifie pas).
+  // No state in the load: we fall back on the transition, when there is one
+  // a. It is subject to the same rule of agreement (a closure which finds a
+  // ticket already closed does not reclassify it).
   const remoteOpen =
     remote.state != null
       ? remote.state === "open"
@@ -76,29 +74,28 @@ export function statusForRemoteReconcile(
           : null;
   if (remoteOpen === null) return null;
   if (remoteStateForStatus(current).open === remoteOpen) return null;
-  // Rouvert → `backlog`, jamais `triage` : le ticket a déjà été vu. Une issue
-  // ouverte qu'on n'a jamais importée passe, elle, par REMOTE_LANDING_STATUS.
+  // Reopened → `backlog`, never `triage`: the ticket has already been seen. A way out
+  // open that we have never imported goes through REMOTE_LANDING_STATUS.
   return remoteOpen ? "backlog" : "done";
 }
 
-/** L'état d'une issue distante, vu depuis minddy — la moitié montante de la
- *  synchro (`issue-push.ts`). */
+/** The state of a remote issue, seen from minddy — the rising half of the
+ * sync (`issue-push.ts`). */
 export interface RemoteState {
   open: boolean;
-  /** Fermée « sans suite » plutôt que « faite ». GitHub l'affiche
-   *  différemment (`state_reason`) ; GitLab n'a pas la nuance. */
+  /** Closed “no action” rather than “done”. GitHub displays it
+ * differently (`state_reason`); GitLab doesn't have the nuance. */
   notPlanned: boolean;
 }
 
 /**
- * Statut minddy → état de l'issue distante. Table TOTALE : chacun des huit
- * statuts dit quelque chose, et l'exhaustivité est vérifiée à la compilation —
- * un neuvième statut ne pourra pas se glisser ici en valant `undefined`, donc
- * en rouvrant silencieusement des issues.
+ * minddy status → remote issue status. TOTAL table: each of the eight
+ * statuses says something, and the completeness is checked at compilation —
+ * a ninth status will not be able to slip in here by being worth `undefined`, therefore
+ * by silently reopening issues.
  *
- * Les trois statuts clos de minddy ferment, mais pas de la même façon :
- * `done` est un travail fait, `canceled` et `duplicate` un travail qui n'aura
- * pas lieu — ce que GitHub sait dire, et affiche autrement.
+ * The three closed statuses of minddy close, but not in the same way:
+ * `done` is work done, `canceled` and `duplicate` work that will not happen — which GitHub knows to say, and displays otherwise.
  */
 const REMOTE_STATE_BY_STATUS: Record<IssueStatusValue, RemoteState> = {
   triage: { open: true, notPlanned: false },
@@ -114,14 +111,14 @@ const REMOTE_STATE_BY_STATUS: Record<IssueStatusValue, RemoteState> = {
 export const remoteStateForStatus = (status: IssueStatusValue): RemoteState =>
   REMOTE_STATE_BY_STATUS[status];
 
-/** Forme neutre d'un événement d'issue distante, quel que soit le provider. */
+/** Neutral form of a remote issue event, regardless of the provider. */
 export interface RemoteIssue {
   provider: RepoProviderId;
-  /** "owner/repo" (GitHub) ou "group/sub/project" (GitLab) — clé du fan-out. */
+  /** "owner/repo" (GitHub) or "group/sub/project" (GitLab) — fan-out key. */
   repoFullName: string;
-  /** Id numérique du dépôt, tel que stocké en `external_repo_id`. */
+  /** Numeric ID of the repository, as stored in `external_repo_id`. */
   repoId: string;
-  /** `number` GitHub / `iid` GitLab — le numéro visible dans l'URL. */
+  /** `number` GitHub / `iid` GitLab — the number visible in the URL. */
   number: number;
   title: string;
   body: string | null;
@@ -129,20 +126,20 @@ export interface RemoteIssue {
   /** Action brute du provider (`opened`, `close`…), lue par statusForRemoteAction. */
   action: string;
   actorLogin: string | null;
-  /** État courant porté par le payload, indépendant de l'action. `null` quand
-   *  le provider ne l'a pas donné — on ne l'invente pas. */
+  /** Current state carried by the payload, independent of the action. `null` when
+ * the provider did not give it — we are not inventing it. */
   state: "open" | "closed" | null;
-  /** Noms des labels de l'issue, tels que la forge les écrit. */
+  /** Names of the issue labels, as the forge writes them. */
   labels: string[];
-  /** Logins des assignés, dans l'ordre de la forge (les deux en acceptent
-   *  plusieurs, minddy un seul — cf. `matchForgeAssignee`). */
+  /** Logins of the assigned, in the order of the forge (both accept
+ * several, minddy only one — cf. `matchForgeAssignee`). */
   assigneeLogins: string[];
 }
 
 /**
- * Un label de forge est un objet — mais les deux ne le nomment pas pareil :
- * GitHub écrit `{name}`, GitLab `{title}`. Une charge peut aussi le donner en
- * chaîne nue (l'API REST de GitLab le fait sur certains endpoints).
+ * A forge label is an object — but the two don't name it the same:
+ * GitHub writes `{name}`, GitLab `{title}`. A load can also give it as
+ * bare string (the GitLab REST API does this on some endpoints).
  */
 function readLabels(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
@@ -159,7 +156,7 @@ function readLabels(raw: unknown): string[] {
   return names;
 }
 
-/** Les logins d'une liste d'assignés (`{login}` GitHub, `{username}` GitLab). */
+/** The logins of a list of assignees (`{login}` GitHub, `{username}` GitLab). */
 function readLogins(raw: unknown, key: "login" | "username"): string[] {
   if (!Array.isArray(raw)) return [];
   const logins: string[] = [];
@@ -181,7 +178,7 @@ interface GithubIssuesEvent {
     labels?: unknown;
     assignees?: unknown;
     assignee?: unknown;
-    /** Présent = c'est une pull request déguisée en issue → à ignorer. */
+    /** Present = this is a pull request disguised as an issue → to be ignored. */
     pull_request?: unknown;
   };
   repository?: { id?: number; full_name?: string };
@@ -189,9 +186,9 @@ interface GithubIssuesEvent {
 }
 
 /**
- * Payload `issues` de la GitHub App → forme neutre, ou null si inexploitable.
- * L'API issues de GitHub compte les pull requests parmi les issues : une entrée
- * portant `pull_request` est écartée (elle est déjà traitée par le handler PR).
+ * Payload `issues` of the GitHub App → neutral form, or null if unusable.
+ * The GitHub issues API counts pull requests among the issues: an entry
+ * carrying `pull_request` is discarded (it is already processed by the handler PR).
  */
 export function normalizeGithubIssueEvent(payload: unknown): RemoteIssue | null {
   const event = (payload ?? {}) as GithubIssuesEvent;
@@ -201,9 +198,9 @@ export function normalizeGithubIssueEvent(payload: unknown): RemoteIssue | null 
   const repoFullName = event.repository?.full_name;
   const repoId = event.repository?.id;
   if (typeof number !== "number" || !repoFullName || repoId == null) return null;
-  // `assignees` est la liste moderne, `assignee` le champ historique que GitHub
-  // continue de servir : le second n'est que le premier de la première, alors on
-  // ne s'en sert qu'à défaut, sans jamais compter deux fois la même personne.
+  // `assignees` is the modern list, `assignee` the historical field that GitHub
+  // continues to serve: the second is only the first of the first, so we
+  // only uses it in default, never counting the same person twice.
   const assignees = readLogins(issue.assignees, "login");
   const legacy = readLogins([issue.assignee], "login");
   return {
@@ -235,17 +232,17 @@ interface GitlabIssueEvent {
     state?: string;
     labels?: unknown;
   };
-  /** GitLab porte labels et assignés à la RACINE du hook, pas dans
-   *  `object_attributes` (qui ne recopie les labels que sur certaines versions). */
+  /** GitLab carries labels and assigned to the ROOT of the hook, not in
+ * `object_attributes` (which only copies the labels on certain versions). */
   labels?: unknown;
   assignees?: unknown;
 }
 
 /**
- * Payload `Issue Hook` de GitLab → forme neutre, ou null si inexploitable.
- * Les issues CONFIDENTIELLES arrivent avec `object_kind: "confidential_issue"`
- * — on ne les importe pas : leur contenu est restreint côté GitLab, le recopier
- * dans un projet minddy le rendrait visible à toute l'équipe.
+ * Payload `Issue Hook` from GitLab → neutral form, or null if unusable.
+ * CONFIDENTIAL issues arrive with `object_kind: "confidential_issue"`
+ * — we do not import them: their content is restricted on GitLab side, copy it
+ * in a minddy project would make it visible to the whole team.
  */
 export function normalizeGitlabIssueEvent(payload: unknown): RemoteIssue | null {
   const event = (payload ?? {}) as GitlabIssueEvent;
@@ -255,13 +252,13 @@ export function normalizeGitlabIssueEvent(payload: unknown): RemoteIssue | null 
   const repoFullName = event.project?.path_with_namespace;
   const repoId = event.project?.id;
   if (typeof iid !== "number" || !repoFullName || repoId == null) return null;
-  // GitLab dit « opened », GitHub « open » : la forme neutre tranche pour la
-  // seconde, sinon `statusForRemoteReconcile` aurait deux vocabulaires à connaître.
+  // GitLab says “opened”, GitHub “open”: the neutral form decides for the
+  // second, otherwise `statusForRemoteReconcile` would have two vocabularies to know.
   const rawState = attrs?.state;
   const state =
     rawState === "closed" ? "closed" : rawState === "opened" ? "open" : null;
-  // Les labels de la racine font foi : `object_attributes.labels` n'est pas
-  // servi par toutes les versions, et quand il l'est, il dit la même chose.
+  // The root labels are authentic: `object_attributes.labels` is not
+  // served by all versions, and when it is, it says the same thing.
   const labels = readLabels(event.labels);
   return {
     provider: "gitlab",

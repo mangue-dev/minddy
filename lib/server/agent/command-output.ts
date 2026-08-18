@@ -1,73 +1,72 @@
 import { headTail, TOOL_RESULT_MAX_CHARS } from "./prune";
 
 /**
- * Mise en forme de la sortie de `run_command` (MIN-107). PUR et testable —
- * `execute.ts` ne fait que l'appeler (il importe `server-only` et la base : rien
- * d'exécutable en test). Deux règles, une seule idée : **ne jamais perdre la fin**.
+ * Formatting the output of `run_command` (MIN-107). PURE and testable —
+ * `execute.ts` only calls it (it imports `server-only` and the base: nothing
+ * executable in test). Two rules, one idea: **never lose the ending**.
  *
- *  1. La troncature garde la QUEUE (`headTail`, milieu élidé) — le récapitulatif
- *     d'un test qui échoue, la dernière erreur d'un build, le résumé d'un lint
- *     sont toujours en bas. L'ancien `cap()` coupait par la tête : le modèle
- *     voyait cent coches vertes et `exitCode: 1`, sans savoir ce qui avait cassé.
- *  2. Au-delà du seuil, la sortie COMPLÈTE est déposée dans la sandbox et le
- *     chemin renvoyé (modèle d'OpenCode) : le modèle la relit à la demande avec
- *     `grep`/`read_file` au lieu de se défendre du harness avec `| tail`.
+ * 1. Truncation keeps the TAIL (`headTail`, elided middle) — the summary
+ * of a failing test, the last error of a build, the summary of a lint
+ * are still down. The old `cap()` cut through the head: the
+ * model saw a hundred green checkmarks and `exitCode: 1`, without knowing what broke.
+ * 2. Beyond the threshold, the COMPLETE output is dropped into the sandbox and the
+ * path returned (model of OpenCode): the model rereads it on demand with
+ * `grep`/`read_file` instead of defending itself from the harness with `| tail`.
  */
 
-/** Cap de stdout renvoyé au modèle (milieu élidé, tête ET queue gardées). */
+/** Heading of stdout returned to the model (middle elided, head AND tail kept). */
 export const RUN_COMMAND_STDOUT_CAP = 4000;
-/** Cap de stderr renvoyé au modèle. */
+/** Cap of stderr returned to the model. */
 export const RUN_COMMAND_STDERR_CAP = 2000;
 /**
- * LE DÉPÔT SUIT LA TRONCATURE, IL N'A PLUS DE SEUIL À LUI.
+ * THE DEPOSIT FOLLOWS THE TRUNCATION, IT NO LONGER HAS A THRESHOLD OF HIS OWN.
  *
- * Il en avait un — 8 000 caractères cumulés — plus haut que la somme des deux caps
- * (4 000 + 2 000). Entre les deux s'ouvrait une bande où le milieu de la sortie
- * était élidé sans que rien ne le rattrape : ni `full_output_path`, ni `note`. Un
- * `typecheck` à 7 000 caractères de stdout perdait ses erreurs du milieu, et le
- * prompt interdit par ailleurs de relancer la commande filtrée pour les retrouver
- * — on lui fermait la porte après lui avoir pris la clé.
+ * He had one — 8,000 cumulative characters — higher than the sum of the two caps
+ * (4,000 + 2,000). Between the two there was a band where the middle of the output
+ * was elided without anything catching up with it: neither `full_output_path` nor `note`. A
+ * `typecheck` with 7,000 characters of stdout lost its errors in the middle, and the
+ * prompt also prohibits rerunning the filtered command to find them
+ * — we closed the door after taking the key.
  *
- * La bonne question n'était pas « la sortie est-elle grosse ? » mais « va-t-on lui
- * en cacher un morceau ? ». C'est celle-ci qu'on pose maintenant, et elle a
- * exactement la même réponse que le `truncated` de `buildResult`.
+ * The right question wasn't "is the release big?" » but “are we going to hide a piece of it from him?” ". This is the one we ask now, and it has
+ * exactly the same answer as the `truncated` of `buildResult`.
  *
- * Il reste un cas résiduel, et il est DIT plutôt que couvert : le rétrécissement
- * de l'enveloppe (`formatRunCommandResult`) peut couper plus bas que les caps
- * nominaux, sur une sortie que `spillsToDisk` a laissée passer. `buildResult`
- * pose alors une `note` sans chemin, qui autorise explicitement la seule chose
- * qui reste — relancer la commande cadrée.
+ * There remains a residual case, and it is SAID rather than covered: the shrinkage
+ * of the envelope (`formatRunCommandResult`) can cut lower than the nominal caps
+ *, on an output that `spillsToDisk` has passed. `buildResult`
+ * then poses a pathless `note`, which explicitly allows the only thing
+ * that remains — rerun the framed command.
  */
 
-/** Sortie brute d'une commande (forme de `ShellResult`). */
+/** Raw output of a command (form of `ShellResult`). */
 export interface CommandOutput {
   exitCode: number;
   stdout: string;
   stderr: string;
 }
 
-/** Ce que le tool `run_command` renvoie au modèle. */
+/** What the `run_command` tool returns to the model. */
 export interface RunCommandResult {
   exitCode: number;
   stdout: string;
   stderr: string;
-  /** Chemin absolu de la sortie complète dans la sandbox (si déposée). */
+  /** Absolute path of the complete output in the sandbox (if filed). */
   full_output_path?: string;
-  /** Consigne de relecture, présente seulement avec `full_output_path`. */
+  /** Rereading instruction, present only with `full_output_path`. */
   note?: string;
 }
 
-/** La sortie mérite-t-elle d'être déposée en entier dans la sandbox ? Oui dès
- *  qu'un des deux flux dépasse SON cap — c'est-à-dire dès qu'on va en élider le
- *  milieu, et non plus au-delà d'un cumul indépendant des caps. */
+/** Does the output deserve to be deposited in full in the sandbox? Yes as soon as
+ * one of the two flows exceeds ITS cap — that is to say as soon as we elide the
+ * middle, and no longer beyond an independent accumulation of caps. */
 export function spillsToDisk(o: Pick<CommandOutput, "stdout" | "stderr">): boolean {
   return o.stdout.length > RUN_COMMAND_STDOUT_CAP || o.stderr.length > RUN_COMMAND_STDERR_CAP;
 }
 
 /**
- * Nom du fichier de dépôt : un slug de la commande (pour que le modèle reconnaisse
- * SA sortie dans `list_dir`) + un `seq` unique dans le run (l'appelant le tranche
- * par continuation, comme les autres compteurs de run).
+ * Name of the repository file: a slug of the command (so that the model recognizes
+ * ITS output in `list_dir`) + a unique `seq` in the run (calling it the slice
+ * by continuation, like other run counters).
  */
 export function toolOutputFileName(command: string, seq: number): string {
   const slug =
@@ -82,9 +81,9 @@ export function toolOutputFileName(command: string, seq: number): string {
 }
 
 /**
- * Document déposé dans la sandbox : la commande, son code de sortie, puis stdout
- * et stderr EN ENTIER sous des en-têtes repérables (un `grep` sur le fichier doit
- * pouvoir dire de quel flux vient la ligne trouvée).
+ * Document placed in the sandbox: the command, its exit code, then stdout
+ * and stderr IN ENTIRETY under recognizable headers (a `grep` on the file should
+ * be able to tell which stream the line found comes from).
  */
 export function fullOutputDocument(command: string, o: CommandOutput): string {
   return [
@@ -99,7 +98,7 @@ export function fullOutputDocument(command: string, o: CommandOutput): string {
   ].join("\n");
 }
 
-/** Plancher des caps quand il faut rétrécir pour tenir dans l'enveloppe. */
+/** Floor caps when it needs to shrink to fit in the envelope. */
 const MIN_STREAM_CAP = 500;
 
 function buildResult(
@@ -112,10 +111,10 @@ function buildResult(
   const stderr = headTail(o.stderr, stderrCap);
   const truncated = stdout !== o.stdout || stderr !== o.stderr;
   if (!truncated) return { exitCode: o.exitCode, stdout, stderr };
-  // Tronqué SANS dépôt : l'enveloppe a rétréci les caps sous ce que `spillsToDisk`
-  // avait jugé, ou l'écriture du fichier a échoué. Le dire, et lever la seule
-  // interdiction qui n'a plus de sens ici — sans fichier à relire, relancer la
-  // commande cadrée est le seul chemin qui reste vers le milieu perdu.
+  // Truncated WITHOUT deposit: the envelope has shrunk the caps under what `spillsToDisk`
+  // had judged, or the file writing failed. Say it, and raise your hand alone
+  // prohibition which no longer makes sense here — without a file to reread, restart the
+  // framed command is the only path left to the lost middle.
   if (!fullOutputPath) {
     return {
       exitCode: o.exitCode,
@@ -134,16 +133,15 @@ function buildResult(
 }
 
 /**
- * Résultat renvoyé au modèle. `fullOutputPath` = chemin du dépôt sur disque, ou
- * null (sortie courte, ou écriture échouée — best-effort : la troncature garde de
- * toute façon la queue).
+ * Result returned to the model. `fullOutputPath` = path to the repository on disk, or
+ * null (short exit, or failed write — best-effort: truncation keeps de
+ * in the queue anyway).
  *
- * Le résultat doit tenir dans `TOOL_RESULT_MAX_CHARS` UNE FOIS SÉRIALISÉ : la
- * boucle applique son propre `headTail` au JSON, et cette coupe-là élide le
- * MILIEU du document — c'est-à-dire la fin de stdout, exactement ce qu'on essaie
- * de sauver. L'échappement JSON (sauts de ligne, guillemets, séquences ANSI)
- * gonfle une sortie de commande de façon très variable : on rétrécit donc les
- * caps jusqu'à ce que ça rentre POUR DE VRAI, sans parier sur un ratio.
+ * The result must fit in `TOOL_RESULT_MAX_CHARS` ONCE SERIALIZED: the
+ * loop applies its own `headTail` to the JSON, and this cut elides the
+ * MIDDLE of the document — that is, the end of stdout, exactly what we're trying to save. JSON escaping (line breaks, quotes, ANSI sequences)
+ * inflates a command output in a very variable way: we therefore shrink the
+ * caps until it fits FOR REAL, without betting on a ratio.
  */
 export function formatRunCommandResult(
   o: CommandOutput,

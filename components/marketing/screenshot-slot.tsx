@@ -12,47 +12,47 @@ import {
 /**
  * Emplacement de capture (MIN-73, refondu par MIN-88).
  *
- * Réserve la place exacte de l'image via `aspect-ratio` — la mise en page ne
- * bougera pas quand les vraies captures arriveront. Tant que l'entrée du
- * catalogue n'a pas de capture publiée, on rend la consigne de capture à
- * l'écran : la landing reste lisible et la commande reste sous les yeux.
+ * Reserves the exact place of the image via `aspect-ratio` — the layout does not
+ * will not move when the real captures arrive. As long as the entrance to
+ * catalog does not have a published capture, we return the capture instruction to
+ * the screen: the landing remains readable and the command remains in front of your eyes.
  *
- * PAS D'ANGLES ARRONDIS SUR L'IMAGE. Le cadre les portait (`rounded-xl` sur le
- * conteneur qui rogne), et une capture d'application a du contenu jusque dans
- * ses coins : la barre latérale en haut à gauche, le bord d'une carte, un
- * compteur. L'arrondi mordait dedans — un rognage silencieux, différent d'une
- * capture à l'autre selon ce qui traînait dans l'angle. Une capture se montre
- * entière ou pas du tout ; c'est le filet qui délimite l'image, pas une découpe.
+ * NO ROUNDED CORNERS IN THE IMAGE. The frame carried them (`rounded-xl` on the
+ * container that is cropping), and an application capture has content all the way into
+ * its corners: the sidebar at the top left, the edge of a map, a
+ * counter. The round bit into it—a silent trimming, different from a
+ * capture to the other depending on what was lying around the corner. A capture is shown
+ * whole or not at all; it is the line which delimits the image, not a cut-out.
  *
- * ## Pourquoi un `<picture>` et plus `useTheme()` (MIN-88)
+ * ## Why a `<picture>` and more `useTheme()` (MIN-88)
  *
- * Le composant était client et calculait son `src` depuis `resolvedTheme`. Or
- * `resolvedTheme` vaut `"light"` au PREMIER rendu (le ThemeProvider de mangue-ui
- * ne lit `localStorage` qu'en `useEffect`). Trois conséquences, toutes mesurées
- * sur la prod : le HTML servi annonçait toujours la variante claire, l'en-tête
- * `Link` préchargeait donc 222 Ko de capture claire, et un visiteur en thème
- * sombre les téléchargeait pour rien avant de charger la sombre — en
- * remplaçant au passage l'élément LCP après hydratation.
+ * The component was a client and calculated its `src` from `resolvedTheme`. Gold
+ * `resolvedTheme` is `"light"` at the FIRST rendering (the ThemeProvider of mango-ui
+ * only reads `localStorage` as `useEffect`). Three consequences, all measured
+ * on production: the HTML served always announced the clear variant, the header
+ * `Link` therefore preloaded 222 KB of clear capture, and a theme visitor
+ * dark downloaded them for nothing before loading the dark — in
+ * replacing the LCP element after hydration.
  *
- * Deux `<source media="(prefers-color-scheme: …)">` règlent les trois d'un coup,
- * sans JavaScript ni cookie : le navigateur choisit UNE variante avant même que
- * React ne s'exécute. Un cookie de thème aurait marché aussi, mais il aurait été
- * faux à la première visite (personne n'a encore de cookie) et il aurait rendu
- * le HTML dépendant des cookies — donc non cacheable par le CDN, ce qui
- * annulait l'autre moitié du travail sur le LCP.
+ * Two `<source media="(prefers-color-scheme: …)">` solves all three at once,
+ * without JavaScript or cookies: the browser chooses ONE variant even before
+ * React won't run. A theme cookie would have worked too, but it would have been
+ * wrong on the first visit (no one has a cookie yet) and it would have returned
+ * the HTML depends on cookies — therefore not cacheable by the CDN, which
+ * canceled the other half of the work on the LCP.
  *
- * Reste le cas d'un visiteur qui a choisi explicitement un thème différent de
- * celui de son système : il verra la variante système. C'est un compromis
- * assumé — le site public n'a pas de sélecteur de thème, ce choix ne peut venir
- * que de l'app, et il ne coûte qu'une capture au mauvais fond.
+ * There remains the case of a visitor who has explicitly chosen a theme different from
+ * that of his system: he will see the system variant. It's a compromise
+ * assumed — the public site does not have a theme selector, this choice cannot come
+ * than the app, and it only costs one capture at the wrong bottom.
  *
- * ## Et le `srcset`
+ * ## And the `srcset`
  *
- * Les captures font 2208 px de large. Elles étaient servies en `unoptimized`,
- * donc sans `srcset` : un téléphone de 390 px téléchargeait les 2208 px et les
- * 222 Ko. `getImageProps` (le motif documenté par Next pour l'art direction)
- * rend les mêmes variantes de largeur qu'un `<Image>` normal, dans un
- * `<picture>` qui sait en plus choisir le thème.
+ * The captures are 2208 px wide. They were served in `unoptimized`,
+ * therefore without `srcset`: a 390 px phone downloaded the 2208 px and the
+ * 222 KB. `getImageProps` (the pattern documented by Next for art direction)
+ * renders the same width variants as a normal `<Image>`, in a
+ * `<picture>` who also knows how to choose the theme.
  */
 export async function ScreenshotSlot({
   id,
@@ -61,7 +61,7 @@ export async function ScreenshotSlot({
 }: {
   id: ScreenshotSlotId;
   className?: string;
-  /** À poser sur la capture du hero uniquement (chargement prioritaire). */
+  /** To be placed on the hero's capture only (priority loading). */
   priority?: boolean;
 }) {
   const slot = SCREENSHOT_SLOTS[id];
@@ -69,9 +69,9 @@ export async function ScreenshotSlot({
 
   const light = screenshotSrc(slot, { theme: "light", lang: locale });
   const dark = screenshotSrc(slot, { theme: "dark", lang: locale });
-  // Une variante manquante ne se rabat PAS sur l'autre pour le `src` de base
-  // (voir `screenshotSrc`) — mais entre deux fonds et rien du tout, montrer la
-  // seule variante publiée vaut mieux qu'un cadre vide.
+  // A missing variant does NOT fall back on the other for base `src`
+  // (see `screenshotSrc`) — but between two funds and nothing at all, show the
+  // single published variant is better than an empty frame.
   const fallback = light ?? dark;
 
   const sizes = "(min-width: 1024px) 960px, 100vw";
@@ -129,10 +129,10 @@ function Picture({
     sizes,
     priority,
     loading: priority ? undefined : ("lazy" as const),
-    // `<Image priority>` pose `fetchpriority="high"` lui-même ; `getImageProps`
-    // ne le fait pas. Sans lui, la capture du hero — l'élément LCP, mesuré —
-    // partait à la priorité par défaut d'une image, c'est-à-dire derrière les
-    // scripts et les feuilles de style (MIN-88).
+    // `<Image priority>` sets `fetchpriority="high"` itself; `getImageProps`
+    // don't do it. Without him, the capture of the hero - the LCP element, measured -
+    // went to the default priority of an image, that is to say behind the
+    // scripts and style sheets (MIN-88).
     fetchPriority: priority ? ("high" as const) : undefined,
   };
 
@@ -154,18 +154,18 @@ function Picture({
 }
 
 /*
- * PAS DE `<link rel="preload">` MANUEL, et c'est délibéré (MIN-88).
+ * NO MANUAL `<link rel="preload">`, and this is deliberate (MIN-88).
  *
- * `getImageProps` ne génère pas le préchargement que `<Image priority>` pose,
- * alors on l'a d'abord écrit à la main, en deux variantes filtrées par `media`.
- * Mesuré sur le HTML servi, il atterrissait à l'octet 32 000 — bien APRÈS le
- * `</head>` (octet 5 400) : React ne peut remonter dans l'en-tête que ce qu'il
- * découvre avant de vider le shell, et le hero arrive longtemps après. Le
- * scanner de préchargement du navigateur lit de toute façon en avance : il
- * trouve le `<picture>` aux mêmes octets, au même instant. Deux balises pour
- * rien, dans une page dont chaque kilo-octet retarde justement l'image.
+ * `getImageProps` does not generate the preload that `<Image priority>` poses,
+ * so we first wrote it by hand, in two variants filtered by `media`.
+ * Measured on the served HTML, it landed at byte 32,000 — well AFTER the
+ * `</head>` (byte 5,400): React can only report in the header what it
+ * discovers before emptying the shell, and the hero arrives long later. THE
+ * Browser preload scanner reads ahead anyway: it
+ * finds the `<picture>` at the same bytes, at the same time. Two tags for
+ * nothing, in a page where each kilobyte delays the image.
  *
- * `ReactDOM.preload()`, lui, remonte bien dans l'en-tête — mais il n'accepte
- * pas `media`, donc il faudrait précharger les DEUX thèmes et retélécharger ce
- * que le `<picture>` sert précisément à éviter.
+ * `ReactDOM.preload()`, it goes back into the header - but it does not accept
+ * not `media`, so you would have to preload BOTH themes and redownload this
+ * which the `<picture>` is precisely used to avoid.
  */

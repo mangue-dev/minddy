@@ -1,23 +1,23 @@
 /**
- * Fenêtre d'usage courante (MIN-72, plans annuels). La facturation peut être
- * ANNUELLE, mais l'usage se réinitialise TOUS LES MOIS : on découpe la période
- * Stripe en sous-cycles mensuels ancrés sur le jour de la période (le
- * `current_period_start`). Un abonné annuel paye une fois par an mais retrouve
- * son budget chaque mois, à la même date. Repris de la logique testée d'AutoKap.
+ * Commonly used window (MIN-72, annual plans). Billing can be
+ * ANNUAL, but usage is reset EVERY MONTH: we divide the period
+ * Stripe into monthly sub-cycles anchored on the day of the period (the
+ * `current_period_start`). An annual subscriber pays once a year but finds
+ * his budget every month, on the same date. Taken from the tested logic of AutoKap.
  *
- * L'annuel est détecté par la DURÉE de la période Stripe (> 45 j), pas par une
- * config d'env : la fenêtre reste correcte même si les price IDs annuels ne
- * sont pas encore renseignés. Module pur (dates UTC), sans dépendance serveur.
+ * The annual is detected by the DURATION of the Stripe period (> 45 d), not by a
+ * config of env: the window remains correct even if the annual price IDs do not
+ * are not yet entered. Pure module (UTC dates), without server dependency.
  */
 
 export interface UsageWindow {
-  /** Début de la fenêtre courante (ISO). */
+  /** Start of current window (ISO). */
   start: string;
-  /** Fin de la fenêtre = date du prochain reset (ISO). */
+  /** End of window = date of next reset (ISO). */
   end: string;
 }
 
-/** Au-delà de cette durée, la période Stripe est annuelle (mensuel ≤ 31 j). */
+/** Beyond this duration, the Stripe period is annual (monthly ≤ 31 days). */
 const YEARLY_MIN_PERIOD_MS = 45 * 24 * 60 * 60 * 1000;
 
 function isValidDate(value: Date): boolean {
@@ -28,8 +28,8 @@ function daysInUtcMonth(year: number, monthIndex: number): number {
   return new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
 }
 
-/** Date au même jour/heure que l'ancre, projetée sur (year, monthIndex), le jour
- *  clampé au dernier jour du mois cible (ex. ancre le 31 → 28/29 en février). */
+/** Date on the same day/time as the anchor, projected on (year, monthIndex), day
+ * clamped to the last day of the target month (e.g. anchor on 31 → 28/29 in February). */
 function anchoredUtcDate(anchor: Date, year: number, monthIndex: number): Date {
   const day = Math.min(anchor.getUTCDate(), daysInUtcMonth(year, monthIndex));
   return new Date(
@@ -45,17 +45,17 @@ function anchoredUtcDate(anchor: Date, year: number, monthIndex: number): Date {
   );
 }
 
-/** Début du sous-cycle mensuel courant pour un abonnement annuel. */
+/** Start of the current monthly sub-cycle for an annual subscription. */
 export function yearlyCycleStart(anchor: Date, now: Date): Date {
   let cycleStart = anchoredUtcDate(anchor, now.getUTCFullYear(), now.getUTCMonth());
   if (cycleStart.getTime() > now.getTime()) {
     cycleStart = anchoredUtcDate(anchor, now.getUTCFullYear(), now.getUTCMonth() - 1);
   }
-  // Jamais avant le début réel de l'abonnement.
+  // Never before the actual start of the subscription.
   return cycleStart.getTime() < anchor.getTime() ? new Date(anchor) : cycleStart;
 }
 
-/** Prochain reset mensuel (fin du sous-cycle courant) pour un abonnement annuel. */
+/** Next monthly reset (end of the current sub-cycle) for an annual subscription. */
 export function yearlyNextReset(anchor: Date, now: Date): Date {
   let nextReset = anchoredUtcDate(anchor, now.getUTCFullYear(), now.getUTCMonth());
   if (nextReset.getTime() <= now.getTime()) {
@@ -65,9 +65,9 @@ export function yearlyNextReset(anchor: Date, now: Date): Date {
 }
 
 /**
- * Fenêtre d'usage à partir d'une période Stripe stockée. Mensuel → la période
- * telle quelle. Annuel → le sous-cycle mensuel courant, `end` clampé à la fin
- * de la période annuelle (le renouvellement fera repartir les sous-cycles).
+ * Usage window from a stored Stripe period. Monthly → period
+ * as is. Annual → the current monthly sub-cycle, `end` clamped at the end
+ * of the annual period (renewal will restart the sub-cycles).
  */
 export function resolveUsageWindow(params: {
   periodStart: string;

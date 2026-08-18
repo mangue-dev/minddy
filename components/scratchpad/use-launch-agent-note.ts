@@ -9,23 +9,23 @@ import {
 import { buildScratchpadPrompt } from "@/lib/scratchpad-prompt";
 
 /**
- * « Lancer un agent » depuis le carnet (MIN-84) — le geste commun aux trois
- * portées (une tâche, une section, tout le carnet) : ferme le carnet (son
- * démontage flushe l'autosave, cf. scratchpad-editor.tsx), pose un brouillon
- * SANS ticket amorcé de la note (le prompt, librement éditable avant envoi) et
- * navigue vers le composer de la page Agents, où se choisissent projet, modèle
- * et branche.
+ * “Launch an agent” from the notebook (MIN-84) — the gesture common to the three
+ * scopes (a task, a section, the entire notebook): closes the notebook (its
+ * disassembly flushes the autosave, cf. scratchpad-editor.tsx), places a draft
+ * WITHOUT ticket initiated from the note (the prompt, freely editable before sending) and
+ * navigates to the composer of the Agents page, where you choose project, model
+ * and branch.
  *
- * Le brouillon porte le prompt COMPLET, celui de « copier le prompt » : cadrage
- * « ce sont des notes personnelles, pas une spec », sémantique des cases, et la
- * section nommée en clair. La note brute laissait lire « - [~] relancer le
- * cron » dans un composer qu'on est censé relire et corriger avant d'envoyer —
- * or ce n'était pas ce que l'agent allait recevoir : le serveur emballait dans
- * son dos. Ce qu'on voit est maintenant ce qui part (le serveur laisse passer
- * un prompt déjà emballé, cf. `isScratchpadPrompt`), et reste éditable.
+ * The draft carries the COMPLETE prompt, that of “copy the prompt”: framing
+ * “ these are personal notes, not a spec", semantics of the boxes, and the
+ * section named in plain text. The raw note read "- [~] restart the
+ * cron" in a composer that we are supposed to reread and correct before sending —
+ * but this was not what the agent was going to receive: the server was packing in
+ * its back. What we see is now what leaves (the server lets through
+ * a prompt already packaged, cf. `isScratchpadPrompt`), and remains editable.
  *
- * SANS le bloc MCP, comme le run carnet côté serveur : les tools natifs de numo
- * (read_scratchpad / update_scratchpad_task) le remplacent.
+ * WITHOUT the MCP block, like the run notebook on the server side: the native tools of numo
+ * (read_scratchpad / update_scratchpad_task) replace it.
  */
 export function useLaunchAgentNote(): (
   note: string,

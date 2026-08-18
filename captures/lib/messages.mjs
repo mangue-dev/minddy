@@ -1,13 +1,13 @@
 /**
- * captures/ — libellés de l'application, reconstruits depuis son catalogue.
+ * captures/ — labels of the application, reconstructed from its catalog.
  *
- * Une capture qui vérifie un texte visible ne doit pas le recopier en dur :
- * recopié, il survivrait à un changement de formulation et l'image continuerait
- * de passer en montrant autre chose. On lit donc `messages/<langue>.json`, la
- * même source que l'app.
+ * A capture that checks visible text must not hardcopy it:
+ * copied, it would survive a wording change and the image would continue
+ * to pass by showing something else. We therefore read `messages/<langue>.json`, the
+ * same source as the app.
  *
- * Le catalogue est en ICU. Ce module n'en implémente que ce dont les captures
- * ont besoin — le pluriel — et échoue bruyamment sur le reste plutôt que de
+ * The catalog is in ICU. This module only implements what the captures
+ * need — the plural — and fails loudly on the rest rather than
  * rendre un texte approximatif.
  */
 import { readFile } from "node:fs/promises";
@@ -16,7 +16,7 @@ import { ROOT } from "./env.mjs";
 
 const cache = new Map();
 
-/** Le catalogue d'une langue, lu une fois par exécution. */
+/** The catalog of a language, read once per execution. */
 export async function catalog(locale) {
   if (!cache.has(locale)) {
     cache.set(
@@ -28,14 +28,14 @@ export async function catalog(locale) {
 }
 
 /**
- * Rend un motif ICU pour un `count` donné : la branche `one` à 1, `other`
- * sinon, `#` remplacé par le nombre.
+ * Returns an ICU pattern for a given `count`: branch `one` to 1, `other`
+ * otherwise, `#` replaced by the number.
  *
- * Tolère un motif SANS pluriel (`{count} fichiers`) : plusieurs clés en ont
- * changé de forme en cours de route — `ToolCall.agentApplyEdits` est passée
- * d'une interpolation simple à un pluriel — et un script qui se contentait d'un
- * `.replace("{count}", …)` produisait alors le motif brut, introuvable dans la
- * page. Accepter les deux formes évite de refaire ce bug à la prochaine bascule.
+ * Tolerates a pattern WITHOUT plural (`{count} fichiers`): several keys have it
+ * changed form en route — `ToolCall.agentApplyEdits` passed
+ * from a simple interpolation to a plural — and a script which was satisfied with a
+ * `.replace("{count}", …)` then produced the raw pattern, not found in the
+ * page. Accepting both forms avoids repeating this bug on the next switch.
  */
 export function icuPlural(pattern, count) {
   if (typeof pattern !== "string") {
@@ -53,9 +53,9 @@ export function icuPlural(pattern, count) {
 }
 
 /**
- * Le libellé d'un appel d'outil, tel que l'app l'affiche.
+ * The label of a tool call, as displayed by the app.
  *
- *   await toolCallLabel("fr", "foundIssues", 3)   // « 3 tickets trouvés »
+ * await toolCallLabel("fr", "foundIssues", 3) // “3 tickets found”
  */
 export async function toolCallLabel(locale, key, count) {
   const messages = await catalog(locale);

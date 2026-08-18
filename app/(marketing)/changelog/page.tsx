@@ -11,20 +11,20 @@ import { ChangelogEntries } from "@/components/changelog-entries";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
- * `/changelog` — ce qui a été livré, du plus récent au plus ancien (MIN-93).
+ * `/changelog` — what was delivered, from newest to oldest (MIN-93).
  *
- * Une page de changelog vaut moins pour ce qu'elle raconte que pour ce qu'elle
- * prouve : que le produit bouge, et à quelle fréquence. C'est aussi la seule
- * page du site dont la fraîcheur est intrinsèque — et la fraîcheur est le
- * premier critère de Perplexity.
+ * A changelog page is worth less for what it says than for what it says
+ * proves: that the product moves, and how often. It is also the only
+ * site page whose freshness is intrinsic — and freshness is the
+ * first criterion of Perplexity.
  *
- * D'où deux choix : chaque entrée AFFICHE son âge — « il y a deux jours », qui
- * répond à la question qu'on se pose vraiment, la date exacte restant dans le
- * `<time datetime>` que lisent les analyseurs — et le `lastModified` du sitemap
- * est dérivé de la dernière entrée plutôt que tenu à la main.
+ * Hence two choices: each entry DISPLAYS its age — “two days ago”, which
+ * answers the question we really ask ourselves, the exact date remaining in the
+ * `<time datetime>` that the analyzers read — and the `lastModified` of the sitemap
+ * is derived from the last entry rather than handheld.
  *
- * Les entrées viennent de `lib/changelog.ts` — son en-tête explique pourquoi
- * elles sont écrites à la main plutôt que dérivées des issues `done`.
+ * Entries come from `lib/changelog.ts` — its header explains why
+ * they are handwritten rather than derived from `done` issues.
  */
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -35,8 +35,8 @@ export async function generateMetadata(): Promise<Metadata> {
     ...base,
     alternates: {
       ...base.alternates,
-      // Ce que cherche un lecteur de flux — et une partie des crawlers — quand
-      // il « découvre » un site : une balise `alternate` dans le `<head>`.
+      // What a feed reader — and some crawlers — are looking for when
+      // he “discovers” a site: a `alternate` tag in the `<head>`.
       types: { "application/rss+xml": [{ url: changelogFeedPath(locale), title: "minddy" }] },
     },
   };
@@ -55,10 +55,10 @@ export default async function ChangelogPage() {
             className="mb-6 text-4xl leading-[1.05] font-semibold tracking-tighter text-balance sm:text-5xl"
             text={t("heroTitle")}
           />
-          {/* Pas de sous-titre : « une entrée par livraison, la plus récente en
-              haut » décrivait à voix haute une liste datée qui se lit toute
-              seule, dix pixels plus bas. Le titre, le lien du flux, les
-              entrées. */}
+          {/* No subtitle: "one entry per delivery, the most recent in
+ top" described aloud a dated list which reads all
+ alone, ten pixels lower. The title, the feed link, the
+ entries. */}
           <Reveal delay={0.15}>
             <a
               href={changelogFeedPath(locale)}
@@ -73,8 +73,8 @@ export default async function ChangelogPage() {
 
       <section className="border-t border-border py-12 sm:py-16">
         <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
-          {/* Même liste que le modal « Nouveautés » de l'app, au composant
-              près : les deux surfaces disent la même chose. */}
+          {/* Same list as the “New features” modal of the app, in the component
+ except: both surfaces say the same thing. */}
           <ChangelogEntries
             locale={locale}
             entries={CHANGELOG_ENTRIES.map((entry) => ({

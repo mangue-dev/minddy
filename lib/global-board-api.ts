@@ -39,11 +39,11 @@ export async function fetchGlobalBoardApi(
 }
 
 /**
- * La `queryFn` de `["me","board"]`, partagée par ses trois observateurs (le
- * board « Tous les tickets », les mentionnables de Numo, le picker de la page
- * Agents). Comme pour les tickets d'un projet : instant de départ retenu,
- * réponse passée par le registre d'écritures en attente, pour qu'une réponse
- * en retard ne rejoue pas l'état d'avant l'édition (MIN-156).
+ * The `queryFn` of `["me","board"]`, shared by its three observers (the
+ * board “All tickets”, the mentionables of Numo, the picker of the page
+ * Agents). As for project tickets: starting time retained,
+ * response passed through the pending writes register, so that a late response
+ * does not replay the state before the edition (MIN-156).
  */
 export async function globalBoardQueryFn({
   signal,

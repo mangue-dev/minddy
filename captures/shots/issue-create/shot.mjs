@@ -1,12 +1,12 @@
 /**
- * workflowIssue — la modale de création, remplie avec AUR-2, avant le clic.
+ * workflowIssue — the creation modal, populated with AUR-2, before the click.
  *
- * Voir `intent.md` : cette capture a remplacé l'onglet Plan
- * (`shots/issue-plan`), qui montrait le travail de l'agent sous une légende
- * annonçant celui de l'utilisateur.
+ * See `intent.md`: this capture replaced the Plan tab
+ * (`shots/issue-plan`), which showed the agent's work under a caption
+ * announcing that of the user.
  *
- *   node captures/shots/issue-create/shot.mjs             # produit les PNG
- *   node captures/shots/issue-create/shot.mjs --publish   # + livre sur la landing
+ * node captures/shots/issue-create/shot.mjs # produces the PNGs
+ * node captures/shots/issue-create/shot.mjs --publish # + book on the landing
  */
 import { openPage, settle, shoot, CAPTURE, DEFAULT_VIEW_NAMES } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
@@ -15,14 +15,14 @@ const SLOT = "workflowIssue";
 const OUT = "captures/shots/issue-create/out";
 const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";
 
-/** 4/3, le rapport du cadre. Règle commune aux cinq emplacements 4/3. */
+/** 4/3, the executive report. Rule common to all five 4/3 locations. */
 const VIEWPORT = { width: 1447, height: 1085 };
 
 /**
- * Le ticket saisi est AUR-2, mot pour mot : le run de l'agent et la pull request
- * photographiés dans les deux temps suivants portent le MÊME ticket. Ce sont
- * aussi des données — donc identiques en français et en anglais, et à ce titre
- * les seules ancres de vérification qui ne cassent pas une variante sur deux.
+ * The ticket entered is AUR-2, verbatim: the agent run and the pull request
+ * photographed in the following two times carry the SAME ticket. These are
+ * also data — therefore identical in French and English, and as such
+ * the only verification anchors that do not break every other variation.
  */
 const ISSUE = {
   title: "Add keyboard shortcuts to the command palette",
@@ -34,10 +34,10 @@ const ISSUE = {
 };
 
 /**
- * Libellés accessibles de la rangée de propriétés, et le seul libellé d'option
- * qui soit traduit (la priorité — les efforts sont des lettres, les catégories
- * des données). Les raccourcis clavier S/P/E/L auraient évité cette table, mais
- * ils sont filtrés tant que le focus est dans le titre ou la description.
+ * Accessible labels of the property row, and the only option label
+ * that is translated (the priority — the efforts are letters, the categories
+ * data). The S/P/E/L keyboard shortcuts would have avoided this table, but
+ * they are filtered as long as the focus is in the title or description.
  */
 const ARIA = {
   fr: {
@@ -59,26 +59,26 @@ const ARIA = {
 };
 
 /**
- * Vrai tant qu'une surcouche flottante (sélecteur ouvert, infobulle) occupe
- * l'écran. Toutes passent par le même conteneur Radix, ce qui donne un seul
- * invariant pour la prise : RIEN ne flotte au-dessus de la modale.
+ * True as long as a floating overlay (open selector, tooltip) occupies
+ * the screen. All go through the same Radix container, resulting in a single
+ * invariant for the socket: NOTHING floats above the modal.
  *
- * Le seuil de 8 px écarte le doublon de 1 × 1 que Radix laisse dans le DOM pour
- * les lecteurs d'écran — il porte `role="tooltip"` sans rien afficher, et
- * l'interroger par ce rôle rendait le contrôle toujours vrai.
+ * The 8 px threshold discards the 1 × 1 duplicate that Radix leaves in the DOM for
+ * screen readers — it carries `role="tooltip"` without displaying anything, and
+ * querying it by this role made the control always true.
  */
 const FLOATING = () =>
   [...document.querySelectorAll("[data-radix-popper-content-wrapper]")].some(
     (el) => el.getBoundingClientRect().width > 8,
   );
 
-/** Attend que plus rien ne flotte. Silencieux : le contrôle final tranche. */
+/** Wait until nothing floats anymore. Silent: the final check decides. */
 async function settleOverlays(page) {
   await page.waitForFunction(FLOATING_SOURCE, undefined, { timeout: 5_000 }).catch(() => {});
   await page.waitForTimeout(250);
 }
 
-/** `waitForFunction` évalue dans la page : la fonction y part en source. */
+/** `waitForFunction` evaluates in the page: the function leaves there as a source. */
 const FLOATING_SOURCE = `() => !(${FLOATING.toString()})()`;
 
 const PUBLISH = process.argv.includes("--publish");
@@ -96,36 +96,36 @@ async function capture({ locale, theme }) {
     await page.goto(`${CAPTURE.baseUrl}/projects/${AURORA}`, { waitUntil: "domcontentloaded" });
     await settle(page, { expect: "text=AUR-1" });
 
-    // Le board est le décor : on le veut complet avant d'ouvrir la modale. Sa
-    // barre d'onglets arrive par une requête séparée, plus tard que les cartes.
+    // The board is the decor: we want it complete before opening the mode. Its
+    // tab bar arrives by a separate query, later than maps.
     await page
       .getByRole("button", { name: DEFAULT_VIEW_NAMES[locale], exact: true })
       .waitFor({ state: "visible", timeout: 15_000 });
 
-    // `c` — le raccourci de création, global (lib/create-context.tsx).
+    // `c` — the creation shortcut, global (lib/create-context.tsx).
     await page.keyboard.press("c");
     const dialog = page.getByRole("dialog", { name: words.dialog });
     await dialog.waitFor({ state: "visible", timeout: 10_000 });
 
-    // Le champ titre est `autoFocus` : on tape directement dedans.
+    // The title field is `autoFocus`: we type directly in it.
     await page.keyboard.type(ISSUE.title, { delay: 6 });
 
-    // La description est un éditeur ProseMirror, pas un textarea : on y entre
-    // au clic, sinon la frappe continue d'arriver dans le titre.
+    // The description is a ProseMirror editor, not a textarea: we enter
+    // on click, otherwise the typing continues to arrive in the title.
     const editor = dialog.locator('[contenteditable="true"]').first();
     await editor.click();
     await page.keyboard.type(ISSUE.description, { delay: 3 });
 
-    // ── Smart-fill : le couper, sinon il n'y a rien à remplir ───────────────
-    // MIN-260 a armé Smart-fill par DÉFAUT, et quand il est actif la rangée ne
-    // garde que les trois propriétés qu'il ne touche pas (statut, assigné,
-    // échéance) : priorité, effort, catégories et objectif sont RETIRÉS du DOM,
-    // pas grisés. Le script ne les trouvait donc plus.
+    // ── Smart-fill: cut it, otherwise there is nothing to fill ───────────────
+    // MIN-260 has Smart-fill armed by DEFAULT, and when active the row does not
+    // keeps only the three properties it does not touch (status, assigned,
+    // deadline): priority, effort, categories and objective are REMOVED from the DOM,
+    // not grayed out. The script therefore no longer found them.
     //
-    // La légende de la landing dit « Un titre, deux phrases, une priorité » :
-    // c'est la rangée entière que l'image doit montrer. On coupe donc la
-    // bascule — geste ponctuel, reposé à chaque ouverture, qui ne change aucun
-    // réglage de compte.
+    // The caption of the landing says “One title, two sentences, one priority”:
+    // This is the entire row that the image should show. We therefore cut the
+    // rocker — punctual gesture, rested at each opening, which does not change any
+    // account setting.
     const smartFill = dialog.getByRole("button", { name: words.smartFill });
     await smartFill.waitFor({ state: "visible", timeout: 10_000 });
     if ((await smartFill.getAttribute("aria-pressed")) === "true") {
@@ -135,10 +135,10 @@ async function capture({ locale, theme }) {
       .getByRole("button", { name: words.priority })
       .waitFor({ state: "visible", timeout: 10_000 });
 
-    // ── Les propriétés ──────────────────────────────────────────────────────
-    // La liste est reconstruite par cmdk au moment où elle s'ouvre : cliquer sur
-    // l'option dès qu'elle apparaît tombe une fois sur deux sur un nœud déjà
-    // détaché. On attend donc la liste, PUIS l'option.
+    // ── Properties ─────────────────────────── ───────────────────────────
+    // The list is rebuilt by cmdk when it opens: click on
+    // the option as soon as it appears falls every other time on a node already
+    // detached. So we wait for the list, THEN the option.
     const pick = async (trigger, option) => {
       await dialog.getByRole("button", { name: trigger }).click();
       const list = page.getByRole("listbox").last();
@@ -148,9 +148,9 @@ async function capture({ locale, theme }) {
       await item.click();
     };
 
-    // Les catégories D'ABORD : c'est un multi-select, il reste ouvert après la
-    // sélection et doit être refermé à la main. Les deux suivants se referment
-    // seuls, donc rien ne traîne au moment de la prise.
+    // The categories FIRST: it is a multi-select, it remains open after the
+    // selection and must be closed by hand. The next two close
+    // alone, so nothing is left behind when taken.
     await pick(words.categories, ISSUE.category);
     await page.keyboard.press("Escape");
     if (!(await dialog.isVisible())) {
@@ -163,24 +163,24 @@ async function capture({ locale, theme }) {
     await pick(words.priority, words.highPriority);
     await pick(words.effort, ISSUE.effort);
 
-    // ── Éteindre tout ce qui flotte ─────────────────────────────────────────
-    // Deux surcouches se disputent le milieu de la modale, et l'ordre compte.
+    // ── Turn off anything that floats ──────────────────── ─────────────────────
+    // Two overlays compete for the middle of the modal, and order matters.
     //
-    // 1. Le sélecteur ne se ferme pas dans la foulée du clic, et en se fermant
-    //    il REND LE FOCUS à son déclencheur.
-    // 2. Ce déclencheur porte une infobulle qui affiche son raccourci clavier
-    //    (« Effort E ») — ce que la landing ne dit plus, imprimé en plein
+    // 1. The selector does not close immediately after clicking, and when closing
+    // it RETURNED FOCUS to its trigger.
+    // 2. This trigger has a tooltip that displays its keyboard shortcut
+    // (“Effort E”) — what the landing no longer says, printed in full
     //    milieu de l'image. Elle s'ouvre au focus autant qu'au survol.
     //
-    // D'où la séquence : attendre la fermeture, PUIS relâcher le focus, PUIS
-    // sortir le curseur. Relâcher avant que le popover se ferme ne sert à rien,
-    // sa restitution de focus rallume l'infobulle juste après.
+    // Hence the sequence: wait for it to close, THEN release focus, THEN
+    // exit the cursor. Releasing before the popover closes is useless,
+    // restoring focus relights the tooltip immediately afterwards.
     await settleOverlays(page);
     await page.evaluate(() => document.activeElement?.blur());
     await page.mouse.move(60, 1000);
     await settleOverlays(page);
 
-    // ── Contrôles ───────────────────────────────────────────────────────────
+    // ── Controls ───────────────────────────── ──────────────────────────────
     const check = await dialog.evaluate((el, { title, description, category }) => {
       const text = el.textContent || "";
       const titleField = el.querySelector("textarea");
@@ -188,12 +188,12 @@ async function capture({ locale, theme }) {
         (b) => b.type === "submit",
       );
       return {
-        // La première phrase suffit : ProseMirror peut recouper les nœuds.
+        // The first sentence is enough: ProseMirror can intersect nodes.
         hasTitle: (titleField?.value || "").includes(title),
         hasDescription: text.includes(description.split(". ")[0]),
         hasCategory: text.includes(category),
-        // Sélecteur ouvert ou infobulle survivante : les deux se
-        // photographieraient par-dessus la modale.
+        // Open selector or surviving tooltip: both
+        // would photograph over the modal.
         floating: [
           ...document.querySelectorAll("[data-radix-popper-content-wrapper]"),
         ]
@@ -239,7 +239,7 @@ async function capture({ locale, theme }) {
     await shoot(page, path);
     return { path, locale, theme };
   } finally {
-    // Rien n'a été soumis : le contexte meurt avec le brouillon local.
+    // Nothing has been submitted: the context dies with the local draft.
     await browser.close();
   }
 }

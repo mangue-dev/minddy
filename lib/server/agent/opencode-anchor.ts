@@ -20,69 +20,69 @@ import {
 import type { FavoriteSubagentModel } from "./subagent-config";
 
 /**
- * L'ANCRAGE MINDDY SERVI À OPENCODE (MIN-286) — le texte que le superviseur écrit
- * dans `OPENCODE_ANCHOR_FILE` et qu'opencode ajoute à SON prompt système
- * (`instructions`, mesuré : le contenu du fichier atterrit dans le message système,
+ * THE MINDDY ANCHOR SERVED AT OPENCODE (MIN-286) — the text that the supervisor writes
+ * in `OPENCODE_ANCHOR_FILE` and that opencode adds to ITS system prompt
+ * (`instructions`, measured: the contents of the file land in the message system,
  * docs/harness-opencode.md §2.8).
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * CE QU'IL DIT, ET CE QU'IL NE REDIT PAS
+ * ─────────────────────── ─────────────────────── ───────────────────────────────
+ * WHAT IT SAYS, AND WHAT IT DOES NOT SAY
  *
- * Le prompt d'opencode décrit DÉJÀ ses tools de fichier et son shell : les
- * redécrire ici, moins bien, c'est se contredire dans le même message système. Ce
- * document ne porte donc que ce qu'opencode ne peut pas savoir :
+ * The opencode prompt ALREADY describes its file tools and its shell: the
+ * to redescribe here, less well, is to contradict itself in the same system message. This
+ * document therefore only carries what opencode cannot know:
  *
- *  1. **qui l'agent est** dans minddy, et à quoi cette session est ancrée
- *     (ticket / carnet / relecture) ;
- *  2. **les 32 tools de domaine** et leur doctrine (le plan du ticket appartient à
- *     l'utilisateur, un statut ne s'écrit jamais, une remarque de PR est rationnée) ;
- *  3. **ce que le HARNESS impose à ses tools à lui** : git nous appartient et le
- *     shell refuse ce qui détruit du travail, la recherche web est la nôtre et
- *     plafonnée, une question TERMINE le tour, la porte de livraison du premier
- *     `create_pr`.
+ * 1. **who the agent is** in minddy, and what this session is anchored to
+ * (ticket / notebook / reread);
+ * 2. **the 32 domain tools** and their doctrine (the ticket plan belongs to
+ * the user, a status is never written, a PR remark is rationed);
+ * 3. **what HARNESS imposes on its tools**: git belongs to us and the
+ * shell refuses which destroys work, web search is ours and
+ * capped, one question ENDS the round, the delivery gate of the first
+ * `create_pr`.
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * POURQUOI C'EST LE MÊME TEXTE QUE LA BOUCLE MAISON
+ * ─────────────────────── ──────────────────────── ──────────────────────────────
+ * WHY IS THIS THE SAME TEXT AS THE HOUSELOOP
  *
- * Tout ce qui est doctrine de produit vient des fragments partagés de
- * [prompt.ts](prompt.ts) — la table `PromptToolNames` étant la seule chose qui
- * varie. Une copie aurait divergé au premier ajustement, et la divergence se
- * serait lue dans le comportement des runs sans que personne ne sache pourquoi :
- * c'est exactement ce que la semaine de bascule doit pouvoir écarter (« mêmes
- * events, même ordre, mêmes coûts »).
+ * Everything that is product doctrine comes from the shared fragments of
+ * [prompt.ts](prompt.ts) — the `PromptToolNames` table being the only thing that
+ * varies. A copy would have diverged at the first adjustment, and the divergence se
+ * would be read in the behavior of the runs without anyone knowing why:
+ * this is exactly what the switch week must be able to rule out ("same
+ * events, same order, same costs").
  *
- * Ce qui est écrit ICI et nulle part ailleurs est ce que la MESURE a rendu
- * différent chez opencode, et rien d'autre :
- *  - `task` **bloque** le parent tant que la fille n'a pas rapporté (§2.14, faute
- *    d'`OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS`) — donc « tu n'attends jamais,
- *    tu ne sondes jamais » devient faux, et le dire faux ferait attendre le modèle
- *    devant un tool qui a déjà rendu ;
- *  - le modèle d'une fille est porté par le NOM de l'agent (`explore-<slug>`), pas
- *    par un argument ;
- *  - il n'y a pas d'édition par LOT (§3.2) ;
- *  - `run_background` est un tool de NOUS, pas d'opencode : son `bash` n'a pas de
- *    mode fond, donc le harnais le repose et le décrit (§3.2, lot 3).
+ * Which is written HERE and nowhere else is what MEASURE made
+ * different at opencode, and nothing else:
+ * - `task` **blocks** the parent until the daughter has reported (§2.14, fault
+ * of `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS`) — so “you never wait,
+ * you never probe" becomes false, and saying it false would make the model
+ * wait in front of a tool which has already rendered ;
+ * - the model of a girl is carried by the NAME of the agent (`explore-<slug>`), not
+ * by an argument ;
+ * - there is no BATCH editing (§3.2);
+ * - `run_background` is a US tool, no opencode: its `bash` does not have a
+ * background mode, so the harness rests it and describes it (§3.2, lot 3).
  */
 
 export interface OpencodeAnchorInput {
   locale?: string | null;
   anchor?: AgentAnchor;
-  /** Faux pour un passage de ROUTINE : pas de `question`, et le mandat de PR. */
+  /** False for a ROUTINE passage: no `question`, and the PR mandate. */
   interactive?: boolean;
   webSearch?: boolean;
   webSearchMax?: number;
   chain?: boolean;
   images?: boolean;
   /**
-   * LE TOUR JOUE-T-IL DANS LE CHECKOUT DE L'UTILISATEUR (MIN-358) ?
-   *
-   * Trois lignes du bloc git deviennent fausses en mode dépôt courant, et
-   * chacune coûte du travail humain quand elle n'est pas dite : le dépôt n'est
-   * plus jetable, `git status` n'est plus le diff du modèle, et l'historique
-   * n'est plus une fenêtre de six mois (cf. `gitOwnershipBlock`).
-   */
+ * DOES THE TURN PLAY IN THE USER CHECKOUT (MIN-358)?
+ *
+ * Three lines of the git block become false in current repository mode, and
+ * each costs human labor when not said: the repository is
+ * no longer disposable, `git status` is no longer the model diff, and the history
+ * is no longer a six-month window (see `gitOwnershipBlock`).
+ */
   currentRepo?: boolean;
-  /** La délégation est-elle offerte, et sur quels modèles ? Absent = pas de `task`. */
+  /** Is delegation offered, and on which models? Absent = no `task`. */
   subagents?: {
     favorites: Array<FavoriteSubagentModel & { multiplier?: number }>;
     models: boolean;
@@ -93,19 +93,19 @@ export interface OpencodeAnchorInput {
 const n = OPENCODE_TOOL_NAMES;
 
 /**
- * CE QUE LE HARNESS CHANGE AUX TOOLS D'OPENCODE. Uniquement des écarts : chaque
- * ligne existe parce qu'un modèle qui ne la lit pas se trompe pour de vrai — il
- * tente un `git commit` (refusé), il cherche une édition par lot (inexistante), il
- * attend une réponse après une question (le tour est fini), ou il appelle le
- * `websearch` d'opencode (éteint, et hors de nos compteurs).
+ * WHAT HARNESS CHANGES TO OPENCODE TOOLS. Only deviations: each
+ * line exists because a model that doesn't read it is actually wrong — it
+ * attempts a `git commit` (refused), it looks for a batch edit (non-existent), it
+ * waits for an answer after a question (the round is over), or it calls the
+ * `websearch` of opencode (turned off, and out of our counters).
  */
 function harnessDeltas(input: OpencodeAnchorInput): string {
   const routine = input.interactive === false;
   const lines = [
-    // La liste des refus est celle de `command-guard`, et elle N'EST PAS la même
-    // des deux côtés depuis D6 : `git commit` est rendu au modèle en mode dépôt
-    // courant. La redire ici sans le scope ferait dire au harnais l'inverse de ce
-    // qu'il exécute — le défaut du §1 de l'audit, une ligne plus bas.
+    // The denial list is that of `command-guard`, and it IS NOT the same
+    // on both sides from D6: `git commit` is returned to the model in deposit mode
+    // fluent. Repeating it here without the scope would make the harness say the opposite of what
+    // that it executes — the defect in §1 of the audit, one line below.
     input.currentRepo === true
       ? `- **Your shell enforces what git may not do here.** ${GIT_REFUSALS_CURRENT_REPO(n)} See Git and pull requests below for who delivers.`
       : `- **The harness owns git, and your shell enforces it.** \`${n.shell}\` REFUSES the commands that would destroy work or fight it — \`git commit\`, \`git push\`, \`git reset\`, \`git restore\`, \`git checkout -- <file>\`, \`git rebase\`, \`git cherry-pick\`, \`git stash drop/clear\`, \`git clean -f\`, \`--amend\` — and the call comes back as an error, wrapped in \`bash -c\` included. Read-only git and \`git add\` are free. See Git and pull requests below for what happens instead.`,
@@ -113,8 +113,8 @@ function harnessDeltas(input: OpencodeAnchorInput): string {
     `- **To rename or remove a file, use \`${n.shell}\`** (\`mv\`, \`rm\`): the end-of-turn commit picks them up like any other change.`,
     `- **There is no batch-edit tool.** One \`edit\` call changes one place; chain them rather than looking for a multi-edit. Read the file before editing it, and copy \`oldString\` verbatim from what \`${n.read}\` showed.`,
     `- ${grepPatternNote()}`,
-    // `bash` n'a pas de mode fond : ce tool-là vient de nous, donc le prompt
-    // d'opencode n'en dit rien et c'est ici qu'il se décrit.
+    // `bash` does not have a background mode: this tool comes from us, so the prompt
+    // of opencode says nothing about it and this is where it describes itself.
     `${backgroundToolNote(n)}`,
     `- **\`update_plan\` is this session's checklist**, and the only one: any local todo list is off, because your checklist MIRRORS onto the ticket's plan. Keep exactly one step \`in_progress\`; skip it for trivial or conversational turns.`,
   ];
@@ -129,10 +129,10 @@ function harnessDeltas(input: OpencodeAnchorInput): string {
   }
   if (!routine) {
     lines.push(
-      // MIN-364 (D7) : la question BLOQUE sur la machine de l'utilisateur, et il
-      // n'y a rien à faire pour ça — le tool d'opencode bloque déjà tout seul.
-      // Lui dire l'inverse le ferait tout finir avant de demander, et lire son
-      // propre tour comme perdu au moment où il demande.
+      // MIN-364 (D7): the question BLOCKS on the user's machine, and it
+      // there's nothing to do about that — the opencode tool already blocks itself.
+      // Telling him the opposite would make him finish everything before asking, and read his
+      // own turn as lost at the moment he asks.
       input.currentRepo === true
         ? `- **\`${n.ask}\` SUSPENDS your turn — it does not end it.** The call blocks, the user answers, and their answer comes back to you as the tool's own result: you keep your context, your plan and your open files. Ask the moment the answer changes what you would write, and put everything blocking the same piece of work in ONE call.`
         : `- **\`${n.ask}\` ENDS your turn.** It is not a blocking prompt: the questions go to the user, the session goes to sleep, and their answers open your next turn. So ask everything blocking the same piece of work in ONE call, and never call it for something you can decide yourself.`,
@@ -143,13 +143,12 @@ ${lines.join("\n")}`;
 }
 
 /**
- * La délégation chez opencode : le tool `task`, un agent par (mode × modèle).
+ * Delegation at opencode: the tool `task`, one agent per (mode × model).
  *
- * La doctrine est celle de MIN-112 — déléguer ce qui est large mais dont la
- * conclusion est courte, ne pas déléguer ce qui tient en deux appels, un seul
- * écrivain, le rapport comme unique livrable. Ce qui change, et c'est mesuré : le
- * tool **bloque**, il n'y a donc ni sondage ni réveil, et le modèle de la fille se
- * choisit en choisissant son `subagent_type`.
+ * The doctrine is that of MIN-112 — delegate what is broad but whose conclusion is short, do not delegate what takes two calls, one only
+ * writer, the report as the only deliverable. What changes, and it is measured: the
+ * tool **blocks**, there is therefore neither poll nor awakening, and the girl's model chooses
+ * by choosing her `subagent_type`.
  */
 function delegationSection(input: OpencodeAnchorInput): string {
   const subs = input.subagents;
@@ -181,9 +180,9 @@ function delegationSection(input: OpencodeAnchorInput): string {
 }
 
 /**
- * L'ancrage complet d'un tour. Une session de RELECTURE garde sa persona à elle
- * (MIN-168) : ni édition, ni git, ni pull request à ouvrir — servir l'ancrage du
- * dessous amputé lui ferait promettre des gestes qu'elle ne peut pas faire.
+ * The complete anchor of a turn. A REVIEW session keeps her persona to herself
+ * (MIN-168): neither editing, nor git, nor pull request to open — serving the anchor of the
+ * under amputated would make her promise gestures that she cannot do.
  */
 export function buildOpencodeAnchor(input: OpencodeAnchorInput): string {
   if (input.anchor === "pr") {
@@ -212,9 +211,9 @@ ${anchorRulesSection({ notebook, routine, n, currentRepo: input.currentRepo === 
 ${workflowSteps({
   routine,
   n,
-  // L'édition d'opencode est la nôtre, à un nom près : `edit.ts` est emprunté à
-  // opencode (docs §3.1), donc le conseil sur un `oldString` introuvable vaut mot
-  // pour mot — seul le nom du tool change.
+  // The opencode edit is ours, except for its name: `edit.ts` is borrowed from
+  // opencode (docs §3.1), so the advice for a missing `oldString` applies word
+  // for word—the tool name is the only thing that changes.
   failedEditAdvice: `If an \`edit\` fails because \`oldString\` wasn't found, re-read the file and copy the exact current text.`,
 })}
 
@@ -222,17 +221,17 @@ ${askingSection({ routine, n, currentRepo: input.currentRepo === true })}${chain
 }
 
 /**
- * Garde-fou de la table de noms : aucun nom de la boucle maison ne doit survivre
- * dans l'ancrage servi à opencode. Exporté pour que le test le rejoue sur toutes
- * les variantes plutôt que sur une seule.
+ * Guardrail for the name table: no name from the home-grown loop may survive
+ * in the anchor served to opencode. Exported so the test can replay it across
+ * every variant instead of checking only one.
  */
 export const LEGACY_TOOL_NAMES = [
   LOOP_TOOL_NAMES.read,
   LOOP_TOOL_NAMES.list,
   LOOP_TOOL_NAMES.shell,
-  // `background` n'est PAS dans cette liste : depuis le lot 3, `run_background`
-  // est servi par les deux moteurs sous le même nom (le harnais le repose dans la
-  // microVM), il ne trahit donc plus une copie du prompt de la boucle maison.
+  // `background` is NOT in this list: since batch 3, `run_background` is served
+  // by both engines under the same name (the harness restores it in the microVM),
+  // so it no longer reveals a copy of the home-grown loop's prompt.
   LOOP_TOOL_NAMES.ask,
   LOOP_TOOL_NAMES.spawn,
   "apply_edits",

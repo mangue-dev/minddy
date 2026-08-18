@@ -14,10 +14,10 @@ import {
 const PROVIDER_ICON = { github: Github, gitlab: Gitlab } as const;
 
 /**
- * Marque de la forge à côté de l'identifiant d'un ticket importé du dépôt lié
- * (MIN-97) : le survol nomme l'issue distante, le clic l'ouvre chez le provider.
- * Ne rend rien pour un ticket né dans minddy. Aucune requête : les champs
- * `remote_*` voyagent avec l'issue.
+ * Mark of the forge next to the identifier of a ticket imported from the linked repository
+ * (MIN-97): hovering names the remote issue, clicking opens it at the provider.
+ * Returns nothing for a ticket born in minddy. No query: fields
+ * `remote_*` travel with the issue.
  */
 export function RemoteIssueIndicator({
   issue,

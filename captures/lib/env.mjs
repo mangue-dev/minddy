@@ -1,7 +1,7 @@
 /**
- * Chargement de .env sans dépendance ni flag Node particulier.
- * Les scripts de capture tournent hors du runtime Next, qui charge .env tout
- * seul — ici il faut le faire à la main.
+ * Loading .env without dependency or particular Node flag.
+ * Capture scripts run outside of the Next runtime, which loads .env everything
+ * alone — here you have to do it by hand.
  */
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -11,7 +11,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 let loaded = false;
 
-/** Parse .env à la racine du repo et remplit process.env (sans écraser). */
+/** Parse .env at the root of the repo and fill process.env (without overwriting). */
 export function loadEnv() {
   if (loaded) return;
   loaded = true;
@@ -40,7 +40,7 @@ export function loadEnv() {
   }
 }
 
-/** Lit une variable requise, ou explique précisément ce qui manque. */
+/** Reads a required variable, or explains precisely what is missing. */
 export function requireEnv(name) {
   loadEnv();
   const value = process.env[name];

@@ -10,8 +10,8 @@ describe("buildPageTaskPrompt", () => {
     expect(prompt).toContain(
       "Work through the following task from the page “Post-mortem du 3 mars” of my project."
     );
-    // La chaîne de titres sort du bloc <notes> et se dit en clair : le bloc ne
-    // porte QUE le travail à faire.
+    // The title chain leaves the <notes> block and is stated in clear: the block does not
+    // carries ONLY the work to be done.
     expect(prompt).toContain(
       'This task is under the heading "Post-mortem > Suites" of that page.'
     );
@@ -51,12 +51,10 @@ describe("buildPageTaskPrompt", () => {
   });
 
   /**
-   * Ce qui compte pour le serveur : le prompt d'une page porte la MÊME
-   * signature que celui du carnet, donc `execute.ts` le laisse passer au lieu
-   * de l'emballer une seconde fois (cf. lib/server/agent/execute.ts). Et le
-   * réemballer ici ne fait rien non plus — le composer de la page Agents rend
-   * le texte éditable, il peut donc repasser par la fabrique.
-   */
+ * What matters for the server: the prompt of a page has the SAME
+ * signature as that of the notebook, so `execute.ts` lets it pass instead of
+ * wrapping it a second time (see lib/server/agent/execute.ts). And rewrapping it here doesn't do anything either — composing it from the Agents page makes the text editable, so it can go through the factory again.
+ */
   it("is recognised as an already-wrapped prompt, and survives a second pass", () => {
     const prompt = buildPageTaskPrompt(TASK, { page: "P" });
     expect(isScratchpadPrompt(prompt)).toBe(true);

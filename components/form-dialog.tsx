@@ -14,13 +14,13 @@ import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 
 /**
- * Le socle des petits formulaires modaux : même fermeture native (croix,
- * Échap, clic extérieur), même barre d'actions et, lorsqu'il est pertinent,
- * même micro relié au champ contrôlé par l'appelant.
+ * The base of small modal forms: same native closure (cross,
+ * Escape, outside click), same action bar and, when relevant,
+ * same microphone connected to the field controlled by the caller.
  *
- * Les gros composers (ticket, objectif, feedback) gardent leurs champs riches
- * et leur orchestration Numo ; ils peuvent réemployer `FormDialogActions` dès
- * que leurs actions n'ont plus besoin de commandes supplémentaires.
+ * The big composers (ticket, objective, feedback) keep their fields rich
+ * and their orchestration Numo; they can reuse `FormDialogActions` as soon as
+ * that their actions no longer need additional commands.
  */
 export function FormDialog({
   open,
@@ -57,7 +57,7 @@ export function FormDialog({
   contentProps?: Omit<ComponentProps<typeof DialogContent>, "children" | "className">;
   formClassName?: string;
   formProps?: Omit<ComponentProps<"form">, "children" | "className" | "onSubmit">;
-  /** Raccord direct : le transcript est livré au state qui pilote l'input. */
+  /** Direct connection: the transcript is delivered to the state which controls the input. */
   dictation?: {
     onTranscription: (text: string) => void;
     disabled?: boolean;
@@ -99,7 +99,7 @@ export function FormDialog({
   );
 }
 
-/** Barre commune, exportée pour les composers qui ne peuvent pas utiliser le shell. */
+/** Common bar, exported for composers who cannot use the shell. */
 export function FormDialogActions({
   submitLabel,
   submitDisabled,

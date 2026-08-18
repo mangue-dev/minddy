@@ -5,26 +5,26 @@ import { capability, requireCapability } from "@/lib/server/capabilities";
 import { isForgeTokenCryptoConfigured } from "./token-crypto";
 
 /**
- * Autorisation UTILISATEUR de la GitHub App (MIN-144) — les tokens
+ * GitHub App USER authorization (MIN-144) — tokens
  * *user-to-server*, distincts du token d'installation.
  *
  * Un token d'installation parle au nom de l'App (`minddy-app[bot]`) ; un token
- * user-to-server parle au nom de la PERSONNE, avec l'intersection de ses droits
- * et de ceux de l'installation. C'est ce qu'il faut pour qu'approuver une PR
- * depuis minddy coche vraiment la case verte de GitHub.
+ * user-to-server speaks on behalf of the PERSON, with the intersection of their rights
+ * and those of the installation. This is what it takes to approve a PR
+ * since minddy really checks the green box on GitHub.
  *
- * On réutilise l'App DÉJÀ INSTALLÉE — on lui ajoute seulement un client id /
- * secret et une *User authorization callback URL*. On n'active PAS « Request
- * user authorization (OAuth) during installation » : elle n'autoriserait que la
- * personne qui installe (or chaque membre doit autoriser SON compte, donc le
- * bouton explicite reste nécessaire de toute façon) et elle changerait la
- * redirection post-installation, donc `/api/git/github/setup` — le seul chemin
- * de liaison de dépôt qui marche.
+ * We reuse the ALREADY INSTALLED App — we only add a client id /
+ * secret and a *User authorization callback URL*. We do NOT activate “Request
+ * user authorization (OAuth) during installation”: it would only authorize the
+ * person who installs (and each member must authorize THEIR account, so the
+ * explicit button remains necessary anyway) and it would change the
+ * post-installation redirect, so `/api/git/github/setup` — the only path
+ * depot link that works.
  *
- * Piège : le refresh à 8 h n'existe QUE si l'App a « Expire user authorization
- * tokens » activé. Sinon l'échange ne renvoie ni `expires_in` ni
- * `refresh_token`, et le token est PERMANENT — `expiresAt` et `refreshToken`
- * valent alors null, ce qui n'est pas un état dégradé.
+ * Trap: the refresh at 8 a.m. ONLY exists if the App has “Expires user authorization
+ * tokens” enabled. Otherwise the exchange returns neither `expires_in` nor
+ * `refresh_token`, and the token is PERMANENT — `expiresAt` and `refreshToken`
+ * are then null, which is not a degraded state.
  */
 
 const GITHUB_OAUTH_BASE = "https://github.com";
@@ -42,10 +42,10 @@ function getClientSecret(): string {
 }
 
 /**
- * L'autorisation utilisateur est-elle déployée ? Distinct de
- * `isGithubAppConfigured()` : une installation peut très bien marcher (liaison
- * de dépôt, agent) sans que l'App porte de client id — c'est même l'état d'avant
- * MIN-144. L'UI s'en sert pour ne pas offrir un bouton qui répondrait 400.
+ * Is user authorization deployed? Distinct from
+ * `isGithubAppConfigured()`: an installation can work very well (connection
+ * deposit, agent) without the App carrying a client id — this is even the state before
+ * MIN-144. The UI uses this to not offer a button that would respond 400.
  */
 export function isGithubUserAuthConfigured(): boolean {
   return !!(
@@ -57,9 +57,9 @@ export function isGithubUserAuthConfigured(): boolean {
 }
 
 /**
- * URL d'autorisation vers laquelle minddy envoie l'utilisateur. SANS `scope` :
- * les permissions d'une GitHub App viennent de l'App elle-même, pas de la
- * requête — en demander un déclencherait le flux OAuth classique.
+ * Authorization URL that minddy sends the user to. WITHOUT `scope`:
+ * A GitHub App's permissions come from the App itself, not from the
+ * request — requesting one would trigger the classic OAuth flow.
  */
 export function getGithubUserAuthorizeUrl(opts: {
   redirectUri: string;
@@ -92,9 +92,9 @@ interface RawTokenResponse {
 }
 
 /**
- * POST github.com/login/oauth/access_token (form-encoded). Partagé par l'échange
- * et le refresh. GitHub répond en `application/x-www-form-urlencoded` par
- * défaut, y compris pour les erreurs : d'où le `Accept: application/json`.
+ * POST github.com/login/oauth/access_token (form-encoded). Shared by exchange
+ * and refresh it. GitHub responds in `application/x-www-form-urlencoded` with
+ * default, including for errors: hence the `Accept: application/json`.
  */
 async function requestUserToken(
   params: Record<string, string>,
@@ -115,8 +115,8 @@ async function requestUserToken(
     body,
   });
   const data = (await response.json().catch(() => ({}))) as RawTokenResponse;
-  // GitHub répond 200 avec un corps `{ error }` sur un code périmé : le status
-  // ne suffit pas à décider, la présence du token si.
+  // GitHub responds 200 with a body `{ error }` on outdated code: the status
+  // is not enough to decide, the presence of the token is.
   if (!response.ok || !data.access_token) {
     throw new Error(
       data.error_description ||
@@ -135,7 +135,7 @@ async function requestUserToken(
   };
 }
 
-/** Échange le `code` du callback contre un jeu de tokens utilisateur. */
+/** Exchanges the `code` of the callback for a set of user tokens. */
 export async function exchangeGithubUserCode(opts: {
   code: string;
   redirectUri: string;
@@ -146,7 +146,7 @@ export async function exchangeGithubUserCode(opts: {
   );
 }
 
-/** Rafraîchit un token user-to-server (durée de vie 8 h chez GitHub). */
+/** Refreshes a user-to-server token (lifespan 8 hours at GitHub). */
 export async function refreshGithubUserToken(
   refreshToken: string,
 ): Promise<GithubUserTokenSet> {
@@ -162,7 +162,7 @@ export interface GithubUserAccount {
   avatarUrl: string | null;
 }
 
-/** Identifie le compte autorisé (`GET /user` avec le token utilisateur). */
+/** Identifies the authorized account (`GET /user` with the user token). */
 export async function getGithubUserAccount(
   token: string,
 ): Promise<GithubUserAccount> {

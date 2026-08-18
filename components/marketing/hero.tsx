@@ -8,31 +8,31 @@ import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
 
 /**
- * Hero de la landing (MIN-73). Promesse en une phrase, deux actions, une image.
- * Le mot accentué passe en Instrument Serif italique — la même respiration
- * typographique que le reste de la marque.
+ * Hero of the landing (MIN-73). Promise in one sentence, two actions, one image.
+ * The accented word changes to Instrument Serif italic — the same breath
+ * typographical than the rest of the brand.
  *
- * CE QU'IL PROMET (MIN-148). Le titre portait le tracker (« Un tracker complet,
- * et pourtant évident ») et l'image montrait un board : les deux premiers écrans
- * nous plaçaient sur le terrain de Linear, où un board ressemble forcément à un
- * board. Il porte maintenant la boucle — vous écrivez le ticket, l'agent prend
- * la suite — et l'image la montre (`agent-loop-figure.tsx`). Le tracker n'a pas
- * disparu : il est passé juste dessous, en réassurance (`section-tracker.tsx`).
+ * WHAT HE PROMISES (MIN-148). The title bore the tracker (“A complete tracker,
+ * and yet obvious") and the image showed a board: the first two screens
+ * placed us on the Linear field, where a board necessarily looks like a
+ * board. It now wears the buckle — you write the ticket, the agent takes
+ * the rest — and the image shows it (`agent-loop-figure.tsx`). The tracker does not have
+ * disappeared: it passed just below, in reinsurance (`section-tracker.tsx`).
  *
- * Le shader n'est PAS rendu ici : il est posé au niveau de la page pour partir
- * du haut du document et passer derrière la navbar (voir `hero-shader.tsx`).
+ * The shader is NOT rendered here: it is placed at page level to leave
+ * from the top of the document and go behind the navbar (see `hero-shader.tsx`).
  *
- * Animation d'entrée : le titre se dévoile mot à mot puis le reste enchaîne en
- * cascade. Contrairement aux sections plus bas, rien n'est déclenché au scroll
- * — le hero est déjà à l'écran quand la page arrive, l'attendre coûterait le
- * temps d'hydratation pour rien. Tout est donc du CSS joué dès le premier
- * rendu, sans une ligne de JavaScript (voir `app/globals.css`).
+ * Entrance animation: the title is revealed word for word then the rest continues in
+ * cascade. Unlike the sections below, nothing is triggered by scrolling
+ * — the hero is already on the screen when the page arrives, waiting for him would cost
+ * hydration time for nothing. Everything is therefore CSS played from the first
+ * rendered, without a line of JavaScript (see `app/globals.css`).
  */
 
 /**
- * Découpe un fragment de titre en mots animés, en poursuivant la numérotation
- * du fragment précédent (`start`) pour que la cascade traverse le passage en
- * italique sans repartir de zéro.
+ * Cut a title fragment into animated words, continuing the numbering
+ * of the previous fragment (`start`) so that the cascade crosses the passage in
+ * italics without starting from scratch.
  */
 function HeroWords({
   text,
@@ -66,7 +66,7 @@ function HeroWords({
   );
 }
 
-/** Nombre de mots d'un fragment — sert à chaîner les index de la cascade. */
+/** Number of words in a fragment — used to chain the indexes of the cascade. */
 function wordCount(text: string) {
   return text.split(/\s+/).filter(Boolean).length;
 }
@@ -77,8 +77,8 @@ export async function Hero() {
 
   const titleBefore = t("heroTitleBefore");
   const titleAccent = t("heroTitleAccent");
-  // Le titre part à 0 s : c'est l'élément LCP, tout retard sur lui est un retard
-  // sur la métrique. Le reste s'échelonne derrière sa dernière syllabe.
+  // The title starts at 0 s: it is the LCP element, any delay on it is a delay
+  // on the metric. The rest is spread out behind its last syllable.
   const accentStart = wordCount(titleBefore);
   const afterTitle = 0.06 * (accentStart + wordCount(titleAccent)) + 0.18;
 
@@ -86,11 +86,11 @@ export async function Hero() {
     <section className="pt-10 pb-16 sm:pb-24">
       <div className="relative mx-auto w-full max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-3xl pt-10 text-center sm:pt-16">
-          {/* Le badge « Serveur MCP inclus dès le plan gratuit » a été retiré :
-              il annonçait un détail d'offre au-dessus d'un titre que le
-              visiteur n'a pas encore lu, et poussait le `<h1>` — l'élément LCP
-              — d'une ligne vers le bas. Le sujet est traité là où il se pose :
-              la section Agents, la page `/mcp` et le tableau des tarifs. */}
+          {/* The “MCP Server included in the free plan” badge has been removed:
+              he announced an offer detail above a title that the
+              visitor has not yet read, and pushed the `<h1>` — the LCP element
+              — one line down. The subject is treated where it arises:
+              the Agents section, the `/mcp` page and the pricing table. */}
           <h1
             className="text-4xl leading-[1.05] font-semibold tracking-tighter text-balance sm:text-6xl"
             aria-label={`${titleBefore} ${titleAccent}`}
@@ -116,54 +116,54 @@ export async function Hero() {
             style={{ "--hero-d": afterTitle + 0.12 } as CSSProperties}
             className="hero-reveal mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
           >
-            {/* L'ACTION PREMIÈRE EST LE TÉLÉCHARGEMENT (MIN-292).
+            {/* THE FIRST ACTION IS DOWNLOAD (MIN-292).
 
-                Elle a pris la place de « Commencer gratuitement », et ce qui
-                rendait ce choix impossible a été levé au même moment : l'app
-                s'ouvrait sur l'écran de CONNEXION, donc télécharger sans compte
-                menait dans le mur. Elle s'ouvre désormais sur l'inscription
-                (`login-form.tsx`), et le geste se termine là où il promettait
+                It took the place of “Start Free”, and what
+                made this choice impossible was lifted at the same time: the app
+                opened on the LOGIN screen, so download without account
+                led into the wall. It now opens for registration
+                (`login-form.tsx`), and the gesture ends where it promised
                 d'aller.
 
-                Elle vise la PAGE et non `/api/desktop/download` : lâcher 120 Mo
-                sur le clic de quelqu'un qui vient de lire un titre serait
-                brutal, et la page porte ce que le bouton ne peut pas dire — la
-                puce Intel, la configuration requise, et les notifications qui
-                s'arrêtent quand on quitte l'app. */}
+                It targets the PAGE and not `/api/desktop/download`: release 120 MB
+                on the click of someone who has just read a title would be
+                brutal, and the page says what the button cannot say — the
+                Intel chip, system requirements, and notifications that
+                stop when you exit the app. */}
             <Button asChild size="lg">
               <a href={href("/download")}>
                 <Download data-icon="inline-start" />
                 {t("heroCtaDownload")}
               </a>
             </Button>
-            {/* L'action secondaire ne vise plus /pricing : demander le prix à
-                quelqu'un qui vient de lire le titre arrive trop tôt, et la note
-                juste en dessous répond déjà (« gratuit jusqu'à 2 projets »).
-                Elle envoie au parcours ticket → pull request, la question
-                qu'on se pose réellement à cet instant.
+            {/* The secondary action no longer targets /pricing: request the price from
+                someone who has just read the title arrives too early, and the note
+                just below already answers (“free up to 2 projects”).
+                It sends the ticket → pull request route, the question
+                that we really ask ourselves at this moment.
 
-                Et elle n'est plus `TrackedCta` : `landing_cta_clicked` compte
-                les entrées vers l'INSCRIPTION, or c'est devenu un défilement
-                dans la page. L'y laisser gonflerait « hero » avec des gens qui
-                voulaient seulement lire la suite. */}
+                And she is no longer `TrackedCta`: `landing_cta_clicked` counts
+                entries to REGISTRATION, but it became a scroll
+                in the page. Leaving him there would inflate “hero” with people who
+                just wanted to read more. */}
             <Button asChild size="lg" variant="outline">
               <a href={href("/#workflow")}>{t("heroCtaSecondary")}</a>
             </Button>
           </div>
 
-          {/* La note d'offre, et l'entrée par le NAVIGATEUR — qui a échangé sa
-              place avec le téléchargement (MIN-292).
+          {/* The offer note, and the entry by the BROWSER — who exchanged his
+              place with the download (MIN-292).
 
-              Elle descend d'un bouton à une note, mais elle ne DISPARAÎT pas, et
-              c'est ce qui compte : la landing est vue depuis Windows, Linux et
-              les téléphones, où le bouton du dessus ne mène nulle part. Elle
-              reste par ailleurs un bouton plein dans la barre de navigation, à
-              l'écran en permanence.
+              It goes down from one button to one note, but it doesn't DISAPPEAR, and
+              that's what matters: the landing is seen from Windows, Linux and
+              phones, where the top button leads nowhere. She
+              there also remains a full button in the navigation bar,
+              the screen permanently.
 
-              Elle garde son `TrackedCta` : `landing_cta_clicked` compte les
-              entrées vers l'INSCRIPTION, et celle-ci en est une — la déplacer
-              sans la tracker aurait fait chuter « hero » à zéro dans les
-              statistiques sans qu'aucun visiteur n'ait changé de comportement. */}
+              She keeps her `TrackedCta`: `landing_cta_clicked` counts the
+              entries to REGISTRATION, and this is one — move it
+              without the tracker would have dropped “hero” to zero in the
+              statistics without any visitor having changed their behavior. */}
           <p
             style={{ "--hero-d": afterTitle + 0.22 } as CSSProperties}
             className="hero-reveal mt-4 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-muted-foreground"
@@ -182,13 +182,13 @@ export async function Hero() {
           </p>
         </div>
 
-        {/* SANS DÉLAI, contrairement au reste de la cascade (MIN-88). C'était
-            une capture, donc le second candidat LCP : mesuré, sa place en fin de
-            cascade (≈ 0,95 s d'attente) pesait ~1,2 s de « render delay ». La
-            figure n'est plus une image et le titre reste le seul candidat
-            sérieux, mais on garde le départ à 0 s et le plancher d'opacité de
-            `hero-reveal-media` : rien à y gagner à retarder ce qui est déjà
-            gratuit, et le titre reste éligible dès la première frame. */}
+        {/* WITHOUT DELAY, unlike the rest of the waterfall (MIN-88). It was
+            a capture, therefore the second LCP candidate: measured, its place at the end of
+            cascade (≈ 0.95 s wait) weighed ~1.2 s render delay. There
+            figure is no longer an image and the title remains the only candidate
+            serious, but we keep the start at 0 s and the opacity floor of
+            `hero-reveal-media`: nothing to be gained by delaying what is already
+            free, and the title remains eligible from the first frame. */}
         <div className="hero-reveal hero-reveal-media mt-14 sm:mt-20">
           <AgentLoopFigure />
         </div>

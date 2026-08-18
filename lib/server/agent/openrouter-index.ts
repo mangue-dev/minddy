@@ -4,83 +4,83 @@ import type { ModelPricing } from "@/lib/model-multiplier";
 import { isReasoningLevel, type ModelReasoning, type ReasoningLevel } from "@/lib/agent-reasoning";
 
 /**
- * L'index OpenRouter : UNE lecture de `/models`, mise en cache au niveau du
- * process, d'où sortent toutes les questions qu'on pose à un modèle avant de
- * l'employer.
+ * The OpenRouter index: A reading of `/models`, cached at the
+ * process, from which come all the questions we ask a model before
+ * using it.
  *
- * Trois lecteurs, un seul aller-retour :
- *  - le catalogue du picker (`models-catalog.ts`) — nom d'affichage + filtre
- *    tool-calling ;
- *  - la boucle de l'agent (`model.ts`) — fenêtre de contexte (seuil de
- *    compaction) et entrée image (MIN-111) ;
- *  - le sélecteur de RAISONNEMENT — les paliers que chaque modèle accepte,
- *    publiés modèle par modèle (`reasoning.supported_efforts`) ;
- *  - le plafond de plan (`model-plan.ts`) — les prix, donc le multiplicateur.
- * Chacun tirait sa propre requête vers la même URL avant : trois caches à durée
- * de vie différente, qui pouvaient se contredire sur le même modèle.
+ * Three readers, a single round trip :
+ * - the picker catalog (`models-catalog.ts`) — display name + filter
+ * tool-calling ;
+ * - the agent loop (`model.ts`) — context window (threshold of
+ * compaction) and image input (MIN-111) ;
+ * - the REASONING selector — the tiers that each model accepts,
+ * published model by model (`reasoning.supported_efforts`);
+ * - the plan cap (`model-plan.ts`) — the prices, therefore the multiplier.
+ * Each drew their own request to the same URL before: three caches with different durations
+ * of different lives, which could contradict each other on the same model.
  *
- * Best-effort de bout en bout : un échec laisse l'index tel quel (périmé, ou
- * vide) et les appelants retombent sur leur défaut conservateur. Le catalogue
- * public d'OpenRouter s'ouvre sans clé — le `Bearer` n'est qu'une politesse
- * d'attribution quand on en a une.
+ * Best-effort from end to end: a failure leaves the index as is (stale, or
+ * empty) and the callers fall back on their conservative default. OpenRouter's public catalog
+ * opens without a key — `Bearer` is just a courtesy
+ * attribution when you have one.
  */
 
 const MODELS_URL = "https://openrouter.ai/api/v1/models";
 
-/** Même durée que l'ancien cache du catalogue : la liste bouge lentement. */
+/** Same duration as the old catalog cache: the list moves slowly. */
 const TTL_MS = 60 * 60 * 1000;
 
 export interface OpenRouterModelInfo {
   id: string;
-  /** Nom d'affichage publié par OpenRouter (`name`), sinon l'id. */
+  /** Display name published by OpenRouter (`name`), otherwise the id. */
   name: string;
   contextLength: number | null;
-  /** `architecture.input_modalities` contient `image` → on peut lui MONTRER une maquette. */
+  /** `architecture.input_modalities` contains `image` → we can SHOW him a model. */
   imageInput: boolean;
   /**
-   * `architecture.output_modalities` ne contient QUE `text`. Un modèle qui rend
-   * de l'image, de l'audio ou de la vidéo n'a rien à faire dans un picker
-   * d'agent de code — et `supported_parameters` ne suffit pas à l'écarter :
-   * `google/gemini-3-pro-image` et `openai/gpt-audio` déclarent `tools`.
-   */
+ * `architecture.output_modalities` contains ONLY `text`. A model that renders
+ * image, audio, or video has no place in a code agent picker
+ * — and `supported_parameters` is not enough to rule it out:
+ * `google/gemini-3-pro-image` and `openai/gpt-audio` declare `tools`.
+ */
   textOutput: boolean;
   /**
-   * Ce n'est pas un modèle mais un AIGUILLAGE : `openrouter/auto` et ses cousins
-   * (`fusion`, `free`, `pareto-code`…), et les alias `~éditeur/famille-latest`
-   * qui redirigent vers le dernier modèle d'une famille. OpenRouter les publie
-   * dans `/models` avec `architecture.tokenizer: "Router"`, et les alias portent
-   * en plus un `alias_target`. On les garde dans l'index — un id collé à la main
-   * doit rester chiffrable — mais le catalogue ne les propose pas : ce qu'ils
-   * exécutent change sous les pieds de l'utilisateur, prix et paliers de
-   * raisonnement compris.
-   */
+ * This is not a model but a SWITCH: `openrouter/auto` and its cousins
+ * (`fusion`, `free`, `pareto-code`…), and the aliases `~éditeur/famille-latest`
+ * which redirect to the latest model of a family. OpenRouter publishes them
+ * in `/models` with `architecture.tokenizer: "Router"`, and the aliases carry
+ * in addition to a `alias_target`. We keep them in the index - an id stuck in the hand
+ * must remain encryptable - but the catalog does not offer them: what they
+ * execute changes under the user's feet, prices and levels of
+ * reasoning understood.
+ */
   router: boolean;
   /**
-   * `supported_parameters` contient `tools`. Un modèle qui ne déclare AUCUN
-   * paramètre est réputé compatible : l'absence d'annonce n'est pas un refus.
-   */
+ * `supported_parameters` contains `tools`. A model that declares NO
+ * parameter is deemed compatible: the absence of an announcement is not a refusal.
+ */
   tools: boolean;
-  /** Prix publiés, convertis au million de tokens. `null` si illisibles. */
+  /** Published prices, converted to the million tokens. `null` if unreadable. */
   pricing: ModelPricing | null;
   /**
-   * Prix du CACHE de prompt, quand OpenRouter les publie (MIN-286) — `null`
-   * sinon, ce qui est le cas courant.
-   *
-   * Hors du multiplicateur exprès : celui-ci compare des modèles entre eux et
-   * n'a que faire du cache. Ces deux prix-là servent à FACTURER — un round
-   * d'agent relit son historique, donc la majorité de ses tokens d'entrée sont
-   * des lectures de cache, à un dixième du prix plein. Les compter au tarif
-   * d'entrée gonflerait la facture d'un ordre de grandeur.
-   */
+ * Price of the prompt CACHE, when OpenRouter publishes them (MIN-286) — `null`
+ * otherwise, which is the common case.
+ *
+ * Outside of the express multiplier: this compares models with each other and
+ * doesn't care about the cache. These two prices are used to CHARGE — a round
+ * of agent rereads its history, so the majority of its input tokens are
+ * cache reads, at a tenth of the full price. Counting them at the entry rate
+ * would inflate the bill by an order of magnitude.
+ */
   cachePricing: { readUsdPerMTok: number; writeUsdPerMTok: number } | null;
   /**
-   * Ce que CE modèle accepte comme niveaux de raisonnement (MIN-122, affiné) —
-   * `null` quand il n'en publie rien, ce qui veut dire deux choses différentes
-   * qu'OpenRouter ne distingue pas : il ne raisonne pas, ou il ne le dit pas. Le
-   * sélecteur retombe dans les deux cas sur les paliers génériques, et c'est le
-   * repli sûr : un palier de trop est rabattu par OpenRouter, un palier manquant
-   * serait un réglage qu'on cacherait sans raison.
-   */
+ * What THIS model accepts as levels of reasoning (MIN-122, refined) —
+ * `null` when it does not publish anything, which means two different things
+ * that OpenRouter does not distinguish: it does not reason, or it does not say it. The
+ * selector falls in both cases on the generic levels, and it is the
+ * safe fallback: one level too many is reduced by OpenRouter, a missing level
+ * would be a setting that would be hidden for no reason.
+ */
   reasoning: ModelReasoning | null;
 }
 
@@ -89,12 +89,12 @@ let loadedAt = 0;
 let inFlight: Promise<void> | null = null;
 
 /**
- * `"0.0000012"` (USD/token) → 1.2 (USD/Mtok). Tolère un nombre déjà typé.
+ * `"0.0000012"` (USD/token) → 1.2 (USD/Mtok). Tolerates an already typed number.
  *
- * L'arrondi à 6 décimales n'est pas de la coquetterie : `1e-7 * 1e6` ne fait pas
- * exactement 0,1 en flottant, et ces miettes se propageaient jusque dans le
- * multiplicateur affiché. Au millionième de dollar près, on est déjà bien
- * en-dessous de ce que le moindre prix publié distingue.
+ * Rounding to 6 decimal places is not vanity: `1e-7 * 1e6` does not make
+ * exactly 0.1 when floating, and these crumbs propagated into the
+ * multiplier displayed. To the nearest millionth of a dollar, we are already well
+ * below what the lowest published price distinguishes.
  */
 function perMillionTokens(raw: unknown): number | null {
   const n = typeof raw === "string" ? Number(raw) : typeof raw === "number" ? raw : NaN;
@@ -102,13 +102,11 @@ function perMillionTokens(raw: unknown): number | null {
 }
 
 /**
- * L'objet `reasoning` d'un modèle, ramené à ce que le sélecteur sait montrer.
+ * The `reasoning` object of a model, reduced to what the selector knows how to show.
  *
- * `supported_efforts` arrive du plus lourd au plus léger et parle le vocabulaire
- * d'OpenRouter : on le retourne (nos listes vont du moins cher au plus cher) et
- * on traduit `none` en `off`, le nôtre. Toute valeur inconnue est JETÉE plutôt
- * que devinée — un palier qu'on ne sait pas nommer ne peut pas s'afficher, et il
- * ne doit pas non plus se sélectionner.
+ * `supported_efforts` comes from the heaviest to the lightest and speaks the vocabulary
+ * of OpenRouter: we return it (our lists go from the least expensive to the most expensive) and
+ * we translate `none` into `off`, ours. Any unknown value is DISCARDED rather than guessed — a level that cannot be named cannot be displayed, and it must not be selected either.
  */
 function parseReasoning(raw: {
   mandatory?: boolean;
@@ -158,8 +156,8 @@ async function fetchIndex(apiKey?: string): Promise<void> {
     const output = perMillionTokens(m.pricing?.completion);
     const cacheRead = perMillionTokens(m.pricing?.input_cache_read);
     const cacheWrite = perMillionTokens(m.pricing?.input_cache_write);
-    // Un modèle qui ne déclare AUCUNE sortie est réputé textuel : l'absence
-    // d'annonce ne doit pas le faire disparaître du picker.
+    // A model that declares NO output is deemed textual: the absence
+    // announcement should not make it disappear from the picker.
     const outputs = m.architecture?.output_modalities ?? [];
     next.set(m.id, {
       id: m.id,
@@ -174,17 +172,17 @@ async function fetchIndex(apiKey?: string): Promise<void> {
         input != null && output != null
           ? { inputUsdPerMTok: input, outputUsdPerMTok: output }
           : null,
-      // Les deux ensemble ou rien : un prix de lecture sans prix d'écriture
-      // ferait payer l'écriture au tarif plein, ce qui est pire que de laisser
-      // opencode retomber sur le prix d'entrée pour les deux.
+      // Both together or nothing: a reading prize without a writing prize
+      // would charge full price for writing, which is worse than letting
+      // opencode fall back on the entry price for both.
       cachePricing:
         cacheRead != null && cacheWrite != null
           ? { readUsdPerMTok: cacheRead, writeUsdPerMTok: cacheWrite }
           : null,
     });
   }
-  // Remplacement atomique : un index à moitié réécrit ferait passer un modèle
-  // pour inconnu le temps de la boucle — donc pour « prix inconnu », donc autorisé.
+  // Atomic replacement: a half-rewritten index would pass a pattern
+  // for unknown the time of the loop — therefore for “unknown price”, therefore authorized.
   if (next.size > 0) {
     index.clear();
     for (const [id, info] of next) index.set(id, info);
@@ -193,9 +191,9 @@ async function fetchIndex(apiKey?: string): Promise<void> {
 }
 
 /**
- * Charge l'index s'il est absent ou périmé. Ne lève jamais, et déduplique les
- * appels concurrents : au démarrage d'une invocation, le catalogue, la boucle et
- * le plafond le demandent tous les trois dans la même milliseconde.
+ * Loads the index if it is missing or out of date. Never raises, and deduplicates, the
+ * concurrent calls: at the start of an invocation, the catalog, the loop and
+ * the cap request all three in the same millisecond.
  */
 export async function loadOpenRouterIndex(apiKey?: string): Promise<void> {
   if (index.size > 0 && Date.now() - loadedAt < TTL_MS) return;
@@ -212,14 +210,14 @@ export async function loadOpenRouterIndex(apiKey?: string): Promise<void> {
 }
 
 /**
- * Ce que l'index sait d'un modèle, ou `null`.
+ * What the index knows about a model, or `null`.
  *
- * Le repli sur l'id NU (`anthropic/claude-opus-5:nitro` → `anthropic/claude-opus-5`)
- * n'est pas une commodité d'affichage : les suffixes de routage d'OpenRouter
- * (`:nitro`, `:floor`, `:online`…) désignent le même modèle au même prix, et sans
- * ce repli il suffirait d'en coller un pour rendre un modèle « de prix inconnu »,
- * donc hors plafond. Les variantes qui ont un vrai prix à elles (`:free`) sont
- * listées telles quelles et gagnent par l'égalité exacte, testée d'abord.
+ * Falling back to the NU id (`anthropic/claude-opus-5:nitro` → `anthropic/claude-opus-5`)
+ * is not a display convenience: OpenRouter routing suffixes
+ * (`:nitro`, `:floor`, `:online`…) designate the same model at the same price, and without
+ * this fallback it would be enough to paste one to make a model "of unknown price",
+ * therefore out ceiling. Variants that have a real price of their own (`:free`) are
+ * listed as is and win by exact equality, tested first.
  */
 export async function getOpenRouterModelInfo(
   model: string,
@@ -232,7 +230,7 @@ export async function getOpenRouterModelInfo(
   return colon > 0 ? index.get(model.slice(0, colon)) ?? null : null;
 }
 
-/** Tout le catalogue, dans l'ordre où OpenRouter le publie. Vide si illisible. */
+/** The entire catalog, in the order OpenRouter publishes it. Blank if illegible. */
 export async function listOpenRouterIndex(apiKey?: string): Promise<OpenRouterModelInfo[]> {
   await loadOpenRouterIndex(apiKey);
   return [...index.values()];

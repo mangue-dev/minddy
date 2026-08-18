@@ -10,19 +10,19 @@ import { formatModelName } from "@/lib/model-display";
 import type { PrReviewRunSummary } from "@/lib/pr-review-session";
 
 /**
- * La relecture de Numo DANS le fil de la pull request (MIN-168) : une carte qui
- * dit si l'agent travaille, et qui OUVRE SA SESSION au clic.
+ * Numo's reread IN the pull request thread (MIN-168): a card which
+ * says if the agent is working, and which OPENS ITS SESSION when clicked.
  *
- * Elle ne déplie plus son propre déroulé sur place, et c'est le point du ticket :
- * une relecture n'est plus une passe à part avec son fil maison, c'est une
- * session de l'agent. Son déroulé — ce qu'il a lu, les commandes qu'il a lancées,
- * les fichiers qu'il a ouverts hors diff — est celui de n'importe quelle session,
- * et `/agents` sait déjà le rendre. En recopier une version pauvre ici obligeait à
- * comprendre deux fois la même chose.
+ * It no longer unfolds its own unfolding on site, and that's the point of the ticket :
+ * a replay is no longer a separate pass with its house thread, it is a
+ * agent session. Its sequence - what it read, the commands it launched,
+ * the files it opened outside diff - is that of any session,
+ * and `/agents` already knows how to render it. Copying a poor version here required
+ * to understand the same thing twice.
  *
- * Ce que le fil garde : le VERDICT, qui arrive comme un commentaire normal de la
- * PR, écrit par Numo. Cette carte n'est que la porte d'entrée de la session qui
- * l'a produit.
+ * What the thread keeps: the VERDICT, which arrives as a normal comment from the
+ * PR, written by Numo. This card is just the gateway to the session that
+ * produced it.
  */
 export function PrReviewCard({ run }: { run: PrReviewRunSummary }) {
   const t = useTranslations("PullRequests");

@@ -60,16 +60,16 @@ export const TASK_MARKER_BY_STATE: Record<PlanTaskState, string> = {
   cancelled: "[-]",
 };
 
-/** Une ligne de tâche markdown : une puce (`-`, `*`, `+`) puis l'un des quatre
- *  marqueurs du carnet. Le `m` fait porter `^`/`$` sur chaque ligne. */
+/** A markdown task line: a bullet (`-`, `*`, `+`) then one of the four
+ * markers in the notebook. The `m` causes `^`/`$` to be carried on each line. */
 const MARKDOWN_TASK_LINE = /^[ \t]*[-*+][ \t]+\[[ xX~-]\](?=[ \t]|$)/m;
 
 /**
- * Le texte porte-t-il au moins une ligne de tâche markdown ?
+ * Does the text have at least one line of markdown task?
  *
- * Sert au COLLAGE dans le carnet (components/scratchpad/paste-markdown.ts) : un
- * presse-papier qui porte ces marqueurs porte du markdown, quoi qu'en dise sa
- * version HTML — et c'est en markdown qu'il faut le relire.
+ * Used for PASTE in the notebook (components/scratchpad/paste-markdown.ts): a
+ * clipboard which carries these markers carries markdown, whatever it says sa
+ * HTML version — and you have to reread it in markdown.
  */
 export function containsMarkdownTaskLine(text: string): boolean {
   return MARKDOWN_TASK_LINE.test(text);
@@ -157,19 +157,19 @@ export function splitScratchpadSections(content: string): ScratchpadSection[] {
 }
 
 /**
- * La section du `headingIndex`-ième titre du carnet (0-based, dans l'ordre du
- * document ; un `#` en bloc de code n'est pas un titre et ne compte pas) —
- * SOUS-SECTIONS COMPRISES : du titre jusqu'au prochain titre de rang égal ou
- * supérieur, ou la fin de la note.
+ * The `headingIndex`th section heading in the notebook (0-based, in document
+ * order; a `#` in a code block is not a heading and does not count) —
+ * INCLUDING SUBSECTIONS: from the heading to the next heading at the same or
+ * a higher level, or to the end of the note.
  *
- * `splitScratchpadSections` coupe à CHAQUE titre : c'est ce qu'il faut pour
- * ranger les tâches par titre (l'aperçu de l'accueil, la liste des sections
- * connues du MCP), mais pas pour les gestes qui prennent « cette section » —
- * copier en prompt, lancer un agent. Un `# Pull requests` qui n'a que des
- * `## …` en dessous en ressortait vide, et le geste ne portait alors sur rien.
- * Ici la section est un SOUS-ARBRE, comme dans `removeSettledTasks`.
+ * `splitScratchpadSections` splits at EVERY heading: that is what is needed to
+ * group tasks by heading (the home preview, the MCP's list of known sections),
+ * but not for actions that operate on “this section” — copying it as a prompt
+ * or launching an agent. A `# Pull requests` with only `## …` headings below
+ * it would otherwise come out empty, leaving the action with nothing to do.
+ * Here the section is a SUBTREE, as in `removeSettledTasks`.
  *
- * Null si le carnet n'a pas autant de titres.
+ * Returns null when the notebook has fewer headings.
  */
 export function scratchpadSectionSubtree(
   content: string,
@@ -204,8 +204,8 @@ export function scratchpadSectionSubtree(
       }
       continue;
     }
-    // Un titre plus profond appartient à la section ; un titre de même rang (ou
-    // plus haut) la ferme.
+    // A deeper heading belongs to the section; a heading at the same or a
+    // higher level closes it.
     if (heading[1].length <= rank) return sectionSlice(lines, start, i);
   }
 
@@ -226,28 +226,28 @@ function sectionSlice(
 }
 
 export interface ScratchpadPreviewSection {
-  /** Titre de la section, ou null pour ce qui précède le premier titre. */
+  /** Section title, or null for the content before the first heading. */
   title: string | null;
-  /** Ses tâches encore à faire, dans l'ordre du carnet. */
+  /** Its remaining tasks, in notebook order. */
   tasks: PlanTask[];
 }
 
 /**
- * Ce qui RESTE à faire dans la note, groupé par section — de quoi en donner un
- * aperçu court sans l'ouvrir. Sans consommateur depuis que l'accueil s'est
- * réduit au salut et au composer ; gardé (et couvert) pour la prochaine surface
- * qui voudra résumer le carnet.
+ * What REMAINS to do in the note, grouped by section — enough for a short
+ * preview without opening it. Unused since the home screen was reduced to the
+ * greeting and composer; retained (and covered) for the next surface that wants
+ * to summarize the notebook.
  *
- * « Reste » = ni terminé, ni annulé, ni une question : sous un titre
- * `## Questions`, une case cochée répond à une question, elle ne livre pas un
- * travail, et `parsePlan` la marque comme telle (lib/plan.ts). Les sections
- * vidées de leurs tâches tombent : un titre seul ne dit rien à qui passe.
+ * “Remaining” means neither completed, cancelled, nor a question: under a
+ * `## Questions` heading, a checked box answers a question rather than
+ * delivering work, and `parsePlan` marks it accordingly (lib/plan.ts). Sections
+ * emptied of tasks are dropped: a heading on its own tells the reader nothing.
  *
- * La note est parsée UNE fois, entière, puis les tâches sont rangées dans leur
- * section par numéro de ligne — et non chaque section parsée pour elle-même.
- * C'est ce qui garde le compte de l'aperçu égal à celui de la pastille du header
- * (`planProgress`) : une section `## Questions` porte jusqu'à ses sous-titres, et
- * un `### Détail` parsé isolément aurait recompté ses questions comme du travail.
+ * The note is parsed ONCE, in full, and tasks are then assigned to their
+ * section by line number — rather than parsing each section independently.
+ * This keeps the preview count equal to the header badge (`planProgress`): a
+ * `## Questions` section extends through its subsections, whereas parsing an
+ * isolated `### Detail` would count its questions as work again.
  */
 export function scratchpadPreview(content: string): ScratchpadPreviewSection[] {
   const left = parsePlan(content).tasks.filter(
@@ -290,32 +290,32 @@ export function cleanDictatedTaskLine(value: string, max = 1000): string {
 export interface NewTask {
   text: string;
   state: PlanTaskState;
-  /** Profondeur d'imbrication (0 = premier niveau). Voir TASK_INDENT. */
+  /** Nesting depth (0 = top level). See TASK_INDENT. */
   depth?: number;
 }
 
 /**
- * Ce qui sépare un niveau d'imbrication du suivant dans le markdown du carnet :
- * DEUX espaces, l'unité que lit `parsePlan` (`indentDepth`) et celle que produit
- * l'éditeur (`renderList` de prosemirror-markdown, cf. task-nodes.ts). Une
- * sous-tâche écrite avec un autre pas se relit à la mauvaise profondeur.
+ * What separates one nesting level from the next in the notebook markdown:
+ * TWO spaces, the unit read by `parsePlan` (`indentDepth`) and produced by the
+ * editor (`renderList` from prosemirror-markdown; see task-nodes.ts). A
+ * subtask written with a different step is read back at the wrong depth.
  */
 export const TASK_INDENT = "  ";
 
-/** Une ligne de tâche, telle qu'elle s'écrit dans le carnet. */
+/** A task line as written in the notebook. */
 export interface ScratchpadTaskLine {
-  /** 0 = premier niveau. Voir TASK_INDENT. */
+  /** 0 = top level. See TASK_INDENT. */
   depth: number;
   state: PlanTaskState;
   text: string;
 }
 
 /**
- * Le markdown d'un bout d'arbre de tâches — la brique commune à tous les gestes
- * qui SORTENT une tâche du carnet (copier en prompt, lancer un agent, promouvoir
- * en ticket) et à ceux qui en AJOUTENT une. Les profondeurs sont écrites telles
- * quelles ; c'est à l'appelant de les avoir ramenées à 0 s'il le faut
- * (`taskSubtreeLines` le fait).
+ * Markdown for a task-tree fragment — the shared building block for every
+ * action that TAKES a task OUT of the notebook (copying it as a prompt,
+ * launching an agent, promoting it to a ticket) and for actions that ADD one.
+ * Depths are written as-is; the caller must normalize them to 0 when needed
+ * (`taskSubtreeLines` does this).
  */
 export function taskLinesMarkdown(lines: ScratchpadTaskLine[]): string {
   return lines
@@ -329,12 +329,12 @@ export function taskLinesMarkdown(lines: ScratchpadTaskLine[]): string {
 }
 
 /**
- * La tâche `index` ET tout ce qu'elle porte, en profondeur : ses sous-tâches,
- * les leurs, sans limite de niveau. Les tâches d'un plan sont dans l'ordre du
- * document, donc le sous-arbre est la tranche qui suit la racine tant que la
- * profondeur reste STRICTEMENT plus grande que la sienne.
+ * The task at `index` AND everything it contains by depth: its subtasks and
+ * theirs, with no limit on nesting. Plan tasks are in document order, so the
+ * subtree is the slice after the root while the depth remains STRICTLY greater
+ * than the root's.
  *
- * Tableau vide si l'index ne désigne aucune tâche.
+ * Returns an empty array when the index does not identify a task.
  */
 export function taskSubtree(tasks: PlanTask[], index: number): PlanTask[] {
   const at = tasks.findIndex((task) => task.index === index);
@@ -348,18 +348,17 @@ export function taskSubtree(tasks: PlanTask[], index: number): PlanTask[] {
 }
 
 /**
- * Le sous-arbre de la tâche `index`, prêt à SORTIR du carnet.
+ * The subtree of task `index`, ready to LEAVE the notebook.
  *
- * La règle de la hiérarchie : **le parent emporte ses enfants, l'enfant
- * n'emporte pas son parent.** Plus le geste est haut dans l'arbre, plus il
- * emporte ; il ne remonte jamais. D'où la renormalisation des profondeurs sur la
- * racine : une sous-tâche copiée seule part à plat, comme une tâche à elle
- * seule, sans traîner l'indentation de l'endroit d'où elle vient — qui, hors de
- * son parent, ne veut plus rien dire (et à partir de quatre espaces se relit
- * comme un bloc de code).
+ * The hierarchy rule: **a parent carries its children; a child does not carry
+ * its parent.** The higher the action starts in the tree, the more it carries;
+ * it never moves upward. That is why depths are renormalized at the root: a
+ * subtask copied on its own starts flat, like a task by itself, without dragging
+ * along the indentation from its original location — which means nothing
+ * outside its parent (and is read as a code block from four spaces onward).
  *
- * `map` permet de sortir les tâches dans leur état d'APRÈS le geste (une
- * passation démarre le travail, racine et descendance comprises).
+ * `map` allows tasks to leave in their state AFTER the action (a handoff starts
+ * the work, including the root and its descendants).
  */
 export function taskSubtreeLines(
   tasks: PlanTask[],
@@ -382,8 +381,8 @@ export function taskSubtreeLines(
  * section doesn't exist so the caller can report it. Without `section`, they go
  * at the end of the document. Task text is flattened to a single line.
  *
- * `depth` imbrique la tâche sous celle qui la précède (0 = premier niveau) —
- * la seule façon d'AJOUTER une sous-tâche sans réécrire le carnet entier.
+ * `depth` nests the task under the preceding one (0 = top level) — the only way
+ * to ADD a subtask without rewriting the entire notebook.
  */
 export function appendScratchpadTasks(
   content: string,
@@ -392,9 +391,9 @@ export function appendScratchpadTasks(
 ): string | null {
   const block = taskLinesMarkdown(
     tasks.map((task) => ({
-      // Pas de renormalisation ici : les profondeurs sont celles voulues par
-      // l'appelant, et une première tâche à `depth: 1` reste une sous-tâche de
-      // ce qui la précède DÉJÀ dans le carnet.
+      // Do not normalize here: these are the depths requested by the caller,
+      // and a first task at `depth: 1` remains a subtask of what ALREADY
+      // precedes it in the notebook.
       depth: Math.max(0, Math.trunc(task.depth ?? 0)),
       state: task.state,
       text: task.text,
@@ -448,17 +447,17 @@ export function appendScratchpadTasks(
 
 /**
  * Drop every SETTLED task line — completed ('- [x]') and cancelled ('- [-]'),
- * les deux façons d'en avoir fini avec une tâche — AND collapse any heading
- * section that clearing those tasks leaves empty, so vider une section retire
- * son titre au lieu d'y laisser un intertitre orphelin.
+ * the two ways to finish a task — AND collapse any heading section that
+ * clearing those tasks leaves empty, so emptying a section removes its heading
+ * instead of leaving an orphaned subheading.
  *
- * MÊME RÈGLE POUR LES SOUS-TÂCHES, un cran plus bas : une tâche cochée qui
- * porte encore du travail RESTE. La retirer laisserait ses sous-tâches
- * suspendues dans le vide — indentées sous plus rien, donc relues au niveau du
- * dessus, ou pire, à partir de quatre espaces, comme un bloc de code. Une tâche
- * ne s'en va donc que si TOUT son sous-arbre est réglé, et elle s'en va alors
- * avec lui. C'est la règle de la hiérarchie, prise par l'autre bout : le parent
- * emporte ses enfants, y compris quand il s'agit de les effacer.
+ * THE SAME RULE APPLIES TO SUBTASKS, one level down: a checked task that still
+ * carries work REMAINS. Removing it would leave its subtasks suspended in
+ * empty space — indented under nothing, so they would be read at the level
+ * above, or worse, as a code block from four spaces onward. A task therefore
+ * leaves only when its ENTIRE subtree is settled, and it leaves with that
+ * subtree. This is the hierarchy rule from the other direction: a parent
+ * carries its children, including when they are being deleted.
  *
  * A heading is dropped whole (heading + its emptied sub-headings + their blank
  * lines and '---' separators) only when its ENTIRE subtree — down to the next
@@ -480,8 +479,8 @@ export function removeSettledTasks(content: string): {
   for (let i = 0; i < parsed.tasks.length; i++) {
     const task = parsed.tasks[i];
     if (!settled(task)) continue;
-    // Le sous-arbre entier doit être réglé, sinon la tâche reste : elle porte
-    // encore le travail de ses enfants.
+    // The entire subtree must be settled, otherwise the task remains because it
+    // still carries its children's work.
     let clear = true;
     for (
       let j = i + 1;

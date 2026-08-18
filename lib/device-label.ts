@@ -1,20 +1,20 @@
-// Le nom qu'on donne à un appareil abonné aux notifications push (MIN-183).
+// The name given to a device subscribed to push notifications (MIN-183).
 //
-// Une liste d'appareils ne sert à rien si on ne reconnaît pas le sien : c'est
-// exactement le geste qu'on vient y faire (« retirer l'ancien téléphone »).
-// L'endpoint, seule identité réelle d'un abonnement, est une URL opaque de 200
-// caractères — illisible. D'où ce libellé, dérivé du user-agent.
+// A list of devices is useless if you don't recognize yours: it's
+// exactly what we are doing there (“removing the old phone”).
+// The endpoint, the only real identity of a subscription, is an opaque URL of 200
+// characters — unreadable. Hence this wording, derived from the user-agent.
 //
-// Il est calculé CÔTÉ SERVEUR, depuis l'en-tête `user-agent` de la requête
-// d'abonnement : rien à croire d'un corps de requête, et un seul endroit où la
-// règle vit. Fonction pure, donc testable.
+// It is calculated ON THE SERVER SIDE, from the `user-agent` header of the request
+// subscription: nothing to believe in a request body, and a single place where the
+// rule lives. Pure function, therefore testable.
 //
-// Ce n'est PAS de la détection de navigateur au sens fonctionnel : rien ne
-// dépend de ce que ça rend. C'est une étiquette lue par un humain, et son repli
-// (« Cet appareil ») est un résultat acceptable, pas un échec.
+// This is NOT browser detection in the functional sense: nothing
+// depends on what it renders. It is a label read by a human, and its fallback
+// (“This device”) is an acceptable result, not a failure.
 
-/** L'ordre compte : chaque famille se déclare en se faisant passer pour les
- *  précédentes. Edge dit « Chrome » et « Safari », Chrome dit « Safari ». */
+/** The order counts: each family declares itself by pretending to be the previous
+ *. Edge says “Chrome” and “Safari”, Chrome says “Safari”. */
 const BROWSERS: readonly { name: string; test: RegExp }[] = [
   { name: "minddy", test: /\bminddy-desktop\//i },
   { name: "Edge", test: /\bEdg(?:e|A|iOS)?\//i },
@@ -25,7 +25,7 @@ const BROWSERS: readonly { name: string; test: RegExp }[] = [
   { name: "Safari", test: /\bSafari\//i },
 ];
 
-/** Même piège dans l'autre sens : un Android se présente aussi comme « Linux ». */
+/** Same trap in the other direction: an Android also presents itself as “Linux”. */
 const PLATFORMS: readonly { name: string; test: RegExp }[] = [
   { name: "iPhone", test: /\biPhone\b/i },
   { name: "iPad", test: /\biPad\b/i },
@@ -35,16 +35,16 @@ const PLATFORMS: readonly { name: string; test: RegExp }[] = [
   { name: "Linux", test: /\bLinux\b|\bX11\b/i },
 ];
 
-/** Ce qu'on affiche quand le user-agent ne dit rien d'exploitable. Volontairement
- *  en anglais : la liste des appareils est traduite, mais ce libellé-ci est
- *  STOCKÉ, une fois, et la langue de l'abonnement n'est pas celle de qui le
- *  relira six mois plus tard. La carte le remplace par sa propre traduction. */
+/** What we display when the user-agent says nothing usable. Voluntarily
+ * in English: the list of devices is translated, but this wording is
+ * STORED, once, and the language of the subscription is not that of which the
+ * will be read again six months later. The map replaces it with its own translation. */
 export const UNKNOWN_DEVICE_LABEL = "Unknown device";
 
 /**
- * « Chrome sur macOS », « Safari sur iPhone » — ou le repli. La préposition est
- * en français dans les deux langues, comme partout où minddy nomme une chose
- * stockée : c'est une étiquette, pas une phrase d'interface.
+ * “Chrome on macOS”, “Safari on iPhone” — or the fallback. The preposition is
+ * in French in both languages, like anywhere minddy names a thing
+ * stored: it's a label, not an interface phrase.
  */
 export function deviceLabelFromUserAgent(ua: string | null | undefined): string {
   if (!ua || !ua.trim()) return UNKNOWN_DEVICE_LABEL;
@@ -54,9 +54,9 @@ export function deviceLabelFromUserAgent(ua: string | null | undefined): string 
   return browser ?? platform ?? UNKNOWN_DEVICE_LABEL;
 }
 
-/** Vrai quand le libellé désigne un appareil de poche — la carte y met une
- *  icône de téléphone plutôt qu'un écran. Lit le libellé et non le user-agent :
- *  c'est tout ce qui reste stocké côté client. */
+/** True when the label designates a handheld device — the card puts a
+ * phone icon there rather than a screen. Reads the label and not the user-agent:
+ * this is all that remains stored on the client side. */
 export function isMobileDeviceLabel(label: string | null | undefined): boolean {
   if (!label) return false;
   return /\b(iPhone|iPad|Android)\b/i.test(label);

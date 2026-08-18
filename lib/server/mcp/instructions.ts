@@ -1,11 +1,10 @@
 /**
- * Le mode d'emploi que le serveur MCP renvoie à son client, à l'initialisation.
+ * The instructions that the MCP server sends back to its client, upon initialization.
  *
- * Sorti de `app/api/mcp/route.ts` (MIN-88) parce qu'il sert maintenant deux
- * fois : au handshake MCP, et dans `/llms.txt` — le fichier que lisent les
- * assistants de code quand on leur demande de brancher minddy. Deux copies
- * auraient divergé au premier ajout d'outil, et un `llms.txt` qui décrit une
- * API périmée est pire que pas de `llms.txt` du tout.
+ * Removed from `app/api/mcp/route.ts` (MIN-88) because it is now used twice: in the MCP handshake, and in `/llms.txt` — the file that the
+ * code assistants read when asked to plug in minddy. Two copies
+ * would have diverged at the first tool addition, and a `llms.txt` that describes a stale
+ * API is worse than no `llms.txt` at all.
  */
 export const MCP_SERVER_INSTRUCTIONS =
 "minddy is a minimal issue tracker (Linear-like). Hierarchy: a project is the " +

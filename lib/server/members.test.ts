@@ -1,24 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-197 — on invite une ADRESSE, pas un compte.
+ * MIN-197 — we invite an ADDRESS, not an account.
  *
- * La règle que ces tests épinglent tient en deux moitiés, et c'est leur
- * ARTICULATION qui est fragile :
+ * The rule that these tests pin down is in two halves, and it is their
+ * JOINT that is fragile:
  *
- *   1. `inviteMember` insère la ligne même quand l'adresse n'a pas de compte —
- *      `invited_user_id` reste null, et un email part avec le token.
- *   2. `attachPendingInvitations` réclame cette ligne pour un compte, plus tard,
- *      sur son email VÉRIFIÉ.
+ * 1. `inviteMember` inserts the line even when the address does not have an account —
+ * `invited_user_id` remains null, and an email leaves with the token.
+ * 2. `attachPendingInvitations` requests this line for an account, later,
+ * on its email CHECKED.
  *
- * Rater la seconde moitié ne casse rien de visible : l'invitation existe, l'email
- * est parti, l'invité s'inscrit — et ne voit jamais rien, parce que l'inbox lit
- * `invited_user_id`. D'où les assertions sur les FILTRES du rattachement (email
- * non confirmé, ligne déjà rattachée, invitation expirée), et pas seulement sur
- * son résultat heureux.
+ * Missing the second half doesn't break anything visible: the invitation exists, the email
+ * is gone, the invitee signs up — and never sees anything, because the inbox reads
+ * `invited_user_id`. Hence the assertions on the FILTERS of the attachment (email
+ * unconfirmed, line already attached, invitation expired), and not only on
+ * its happy result.
  *
- * Le double PostgREST applique les filtres pour de vrai : un test qui ne les
- * appliquerait pas ne dirait rien de la requête qu'on écrit.
+ * The double PostgREST applies the filters for real: a test which does not apply them
+ * would not apply would say nothing about the query we write.
  */
 
 interface Row extends Record<string, unknown> {
@@ -30,16 +30,16 @@ let memberRows: Row[] = [];
 let invitationRows: Row[] = [];
 /** Comptes minddy existants, par email — ce que `findAuthUserByEmail` voit. */
 let accounts = new Map<string, { id: string }>();
-/** Les travaux d'arrière-plan programmés, à attendre explicitement. */
+/** Scheduled background jobs to wait for explicitly. */
 let background: Promise<unknown>[] = [];
 
 let nextId = 0;
 const newId = () => `row-${++nextId}`;
 
-/** Double de chaîne PostgREST : accumule les filtres, puis lit/insère/modifie. */
+/** PostgREST string double: accumulate filters, then read/insert/modify. */
 function table(name: string, rows: () => Row[]) {
   const filters: ((row: Row) => boolean)[] = [];
-  /** `limit(n)` : tronque après les filtres, comme PostgREST. */
+  /** `limit(n)`: truncates after filters, like PostgREST. */
   let cap: number | null = null;
   type Payload = Record<string, unknown>;
   let staged:
@@ -93,7 +93,7 @@ function table(name: string, rows: () => Row[]) {
     return query;
   };
 
-  /** L'insertion, avec l'index unique partiel de `project_invitations`. */
+  /** The insertion, with the partial unique index of `project_invitations`. */
   const runInsert = (payload: Payload) => {
     if (
       name === "project_invitations" &&
@@ -106,7 +106,7 @@ function table(name: string, rows: () => Row[]) {
     ) {
       return { data: null, error: { code: "23505", message: "duplicate key" } };
     }
-    // Les défauts de la migration MIN-197, posés par la base.
+    // The defects of the MIN-197 migration, posed by the base.
     const row: Row = {
       id: newId(),
       created_at: new Date().toISOString(),
@@ -159,12 +159,12 @@ vi.mock("@/lib/supabase-service", () => ({
   }),
 }));
 
-/** Les comptes que l'API admin rend, par id — ce que voit `fetchAuthUsersById`.
-    Vide = on retombe sur le compte générique des tests d'invitation, qui n'a pas
-    d'email confirmé (il n'en a pas besoin : il est l'INVITANT, pas l'invité). */
+/** The accounts that the admin API renders, by id — what `fetchAuthUsersById`.
+ sees Empty = we fall back on the generic account of the invitation tests, which does not have
+ a confirmed email (he does not need one: he is the INVITER, not the guest). */
 let adminAccounts = new Map<string, Record<string, unknown>>();
-/** Combien de fois l'API admin a été touchée — la sonde du rattrapage existe
-    pour que ce compteur reste à zéro quand il n'y a rien à réclamer. */
+/** How many times the admin API was hit — the catchup probe exists
+ so that this counter remains at zero when there is nothing to claim. */
 let adminLookups = 0;
 
 vi.mock("@/lib/server/auth-users", () => ({
@@ -189,7 +189,7 @@ vi.mock("@/lib/server/entitlements", () => ({
   ensureMemberSlotAvailable: async () => undefined,
 }));
 
-// La notification push est hors sujet ici : coupée, `pushInvitation` ne fait rien.
+// Push notification is off topic here: cut, `pushInvitation` does nothing.
 vi.mock("@/lib/server/push/vapid", () => ({ isPushConfigured: () => false }));
 vi.mock("@/lib/server/push/send", () => ({ sendPushToUser: async () => undefined }));
 
@@ -198,8 +198,8 @@ vi.mock("@/lib/server/invitation-email", () => ({
   sendInvitationEmail: (params: Record<string, unknown>) => sendInvitationEmail(params),
 }));
 
-// Le crochet d'arrière-plan, rendu observable : on garde la promesse pour
-// pouvoir l'attendre — sans jamais la détacher, comme le vrai `afterOrNow`.
+// The background hook, made observable: we keep the promise for
+// be able to wait for it — without ever detaching it, like the real `afterOrNow`.
 vi.mock("@/lib/server/after-safe", () => ({
   afterOrNow: (work: () => void | Promise<void>) => {
     background.push(Promise.resolve(work()));
@@ -299,10 +299,10 @@ describe("inviteMember — une adresse sans compte", () => {
     expect(result.invitation).not.toHaveProperty("token");
   });
 
-  // L'énumération de comptes : `invited_user_id` rendu au client dirait, pour
-  // n'importe quelle adresse qu'on saisit, si elle a un compte minddy. Les deux
-  // cas sont vérifiés — l'adresse inconnue ET celle qui a un compte, puisque
-  // c'est justement la DIFFÉRENCE entre les deux réponses qui serait l'oracle.
+  // The account enumeration: `invited_user_id` returned to the client would say, for
+  // any address you enter, if she has a minddy account. Both
+  // cases are checked — the unknown address AND the one which has an account, since
+  // it is precisely the DIFFERENCE between the two answers that would be the oracle.
   it("ne rend PAS invited_user_id, compte ou pas", async () => {
     const unknown = await inviteMember({
       projectId: PROJECT,
@@ -321,7 +321,7 @@ describe("inviteMember — une adresse sans compte", () => {
     if (!unknown.ok || !known.ok) return;
     expect(unknown.invitation).not.toHaveProperty("invited_user_id");
     expect(known.invitation).not.toHaveProperty("invited_user_id");
-    // La colonne est bien écrite en base : c'est la RÉPONSE qui la tait.
+    // The column is well written in base: it is the RESPONSE which silences it.
     expect(invitationRows[1].invited_user_id).toBe(account);
   });
 
@@ -341,10 +341,10 @@ describe("inviteMember — une adresse sans compte", () => {
     expect(invitationRows).toHaveLength(1);
   });
 
-  // La contrepartie du 409 ci-dessus. L'index unique partiel ne connaît que
-  // `status = 'pending'`, et rien ne repasse une invitation périmée à un autre
-  // statut : sans le ménage fait avant l'insertion, une adresse restait bannie
-  // du projet entre son expiration (30 j) et la purge de `retention.ts` (90 j).
+  // The counterpart of 409 above. The partial unique index only knows
+  // `status = 'pending'`, and nothing passes an expired invitation to another
+  // status: without the cleaning done before insertion, an address remained banned
+  // of the project between its expiration (30 days) and the purge of `retention.ts` (90 days).
   it("réinvite une adresse dont l'invitation a expiré", async () => {
     await inviteMember({ projectId: PROJECT, actorId: OWNER, email: "a@example.test" });
     invitationRows[0].expires_at = new Date(Date.now() - 86_400_000).toISOString();
@@ -456,15 +456,15 @@ describe("attachPendingInvitations", () => {
 });
 
 /**
- * Le rattrapage des sessions qui ne passent pas par /auth/callback — une
- * connexion par mot de passe. Ce qu'on épingle surtout, c'est que la
- * confirmation d'email se REVÉRIFIE côté service : l'objet passé ici vient des
- * claims du JWT et ne porte pas `email_confirmed_at`, donc croire ce qu'on lui
- * donne reviendrait à ne plus avoir de garde du tout.
+ * Catch-up for sessions that do not go through /auth/callback — a
+ * password connection. What we particularly note is that the
+ * email confirmation is REVERIFIED on the service side: the object passed here comes from the
+ * claims of the JWT and does not carry `email_confirmed_at`, so believing what we give it
+ * would amount to no longer having custody of the all.
  */
 describe("claimPendingInvitationsLate", () => {
   const LATE = "66666666-6666-4666-8666-666666666666";
-  /** Ce que rend `getAuthedUser` : un id, un email, et rien de vérifiable. */
+  /** What `getAuthedUser` renders: an id, an email, and nothing verifiable. */
   const SESSION = { id: LATE, email: "Tardive@Example.test" };
 
   const seed = (patch: Partial<Row> = {}) => {
@@ -494,7 +494,7 @@ describe("claimPendingInvitationsLate", () => {
     expect(invitationRows[0].invited_user_id).toBe(LATE);
   });
 
-  // La garde ne peut pas venir de la session : le compte fait foi.
+  // The custody cannot come from the session: the account is authentic.
   it("ne rattache rien si le compte n'a pas d'email confirmé", async () => {
     seed();
     adminAccounts.set(LATE, {

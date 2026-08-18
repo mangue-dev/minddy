@@ -8,19 +8,19 @@ import { listFeedbackForIssue } from "@/lib/server/feedback/team-queries";
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * GET /api/issues/[id]/feedback — les retours du board que ce ticket met en
- * œuvre (MIN-196), pour la section « Relations » du panneau latéral.
+ * GET /api/issues/[id]/feedback — the board feedback that this ticket highlights
+ * work (MIN-196), for the “Relationships” section of the side panel.
  *
- * Une route à part plutôt qu'un champ de la liste des retours du projet : le
- * panneau s'ouvre sur UN ticket et n'a besoin que de ses zéro à trois lignes,
- * là où `/api/projects/[id]/feedback` en charge jusqu'à cinq cents, corps
- * compris. Ce qui est bon marché pour la page des retours ne l'est pas pour un
- * panneau qu'on ouvre et ferme vingt fois.
+ * A separate route rather than a field in the project feedback list: the
+ * panel opens on ONE ticket and only needs its zero to three lines,
+ * where `/api/projects/[id]/feedback` supports up to five hundred, body
+ * Understood. What is cheap for the returns page is not cheap for a
+ * panel that is opened and closed twenty times.
  *
- * En LECTURE SEULE, et c'est délibéré : le lien se défait depuis le retour,
- * jamais depuis le ticket. Un ticket ignore combien de demandes il porte, et
- * les détacher d'ici retirerait à quelqu'un le suivi de la sienne sans que
- * l'écran qui le montre soit sous les yeux.
+ * In READ ONLY, and this is deliberate: the link is undone since the return,
+ * never from the ticket. A ticket does not know how many requests it carries, and
+ * detaching them from here would remove someone from following their own without
+ * the screen which shows it is in front of your eyes.
  */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -28,9 +28,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  // Le ticket résout le projet ; l'accès se vérifie dessus. `feedback_posts`
-  // étant RLS deny-all, la lecture qui suit passe par le service client — sans
-  // ce contrôle explicite, elle n'aurait aucune garde.
+  // The ticket resolves the project; access is verified above. `feedback_posts`
+  // being RLS deny-all, the following reading goes through customer service — without
+  // this explicit control, she would have no custody.
   const service = getServiceClient();
   const { data: issue } = await service
     .from("issues")
@@ -43,8 +43,8 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   }
   const access = await getProjectAccess(auth.user.id, issue.project_id as string);
   if (!access) {
-    // Invisible plutôt qu'interdit : la même réponse que celle d'un ticket qui
-    // n'existe pas, pour ne pas confirmer l'existence de celui-là.
+    // Invisible rather than prohibited: the same response as that of a ticket which
+    // does not exist, so as not to confirm the existence of that one.
     return NextResponse.json({ error: t("issueNotFound") }, { status: 404 });
   }
 

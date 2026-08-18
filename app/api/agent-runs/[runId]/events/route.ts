@@ -6,12 +6,12 @@ import { getRun } from "@/lib/server/agent/runs";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
- * Flux d'événements d'un run (MIN-46) pour le live view. `?after=<seq>` renvoie
- * les events strictement postérieurs (polling incrémental) ; sans lui, tous.
+ * Event flow of a run (MIN-46) for live view. `?after=<seq>` returns
+ * strictly posterior events (incremental polling); without him, all.
  *
- * Lecture = qui peut lire le run (MIN-332). Les events sont lus en clé service,
- * donc la policy `agent_run_events_select` ne garde rien ici : c'est ce contrôle
- * qui la remplace, et il doit dire la même chose qu'elle.
+ * Read = who can read the run (MIN-332). The events are read in service key,
+ * so the policy `agent_run_events_select` does not keep anything here: it is this control
+ * who replaces her, and he must say the same thing as her.
  */
 
 type RouteContext = { params: Promise<{ runId: string }> };

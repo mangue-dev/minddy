@@ -19,55 +19,51 @@ import type { PullRequestRef } from "./pr";
 import type { RepoCloneTarget } from "./repo-access";
 
 /**
- * L'ATTERRISSAGE D'UN TOUR sur la pull request et sur le ticket : ouvrir,
- * rouvrir, enregistrer, commenter, tracer — et les mots exacts avec lesquels tout
- * ça se raconte.
+ * THE LANDING OF A TOWER on the pull request and on the ticket: open,
+ * reopen, save, comment, trace — and the exact words with which everything
+ * is told.
  *
- * EXTRAIT D'`execute.ts` PAR MIN-224, et pour une raison précise. La boucle
- * tourne désormais dans la microVM, mais elle n'a ni la forge ni la base : c'est
- * la fonction qui fait atterrir le tour, par le plan de contrôle. Il y a donc
- * DEUX appelants — l'ancienne forme (`executeAgentRun`) et la nouvelle
- * (`vm-rest.ts`) —, et le critère de bascule du cadrage est que « le fil raconte
- * la même chose » des deux côtés.
+ * EXTRACT FROM`execute.ts` BY MIN-224, and for a specific reason. The
+ * loop now runs in the microVM, but it has neither the forge nor the base: it is
+ * the function that lands the round, by the control plane. So there are
+ * TWO callers — the old form (`executeAgentRun`) and the new
+ * (`vm-rest.ts`) —, and the framing toggle criterion is that "the thread tells
+ * the same thing" on both sides.
  *
- * Recopier ces gestes-là aurait rendu ce critère invérifiable : deux copies d'une
- * réouverture de PR divergent au premier correctif porté d'un seul côté, et la
- * divergence ne se voit que sur une PR refusée, plusieurs jours plus tard. Ici il
- * n'y a qu'une implémentation, et les deux moteurs l'appellent.
+ * Copying these gestures would have made this criterion unverifiable: two copies of a
+ * reopening of PR diverge on the first patch carried on only one side, and the
+ * divergence is only seen on a PR refused, several days later. Here there
+ * is only one implementation, and both engines call it.
  */
 
 
 /**
- * Ce qu'il faut savoir du run pour le faire atterrir. Un objet explicite plutôt
- * que des closures : depuis MIN-224 il y a DEUX appelants, et un contexte qu'on
- * se passe est la seule forme qui marche des deux côtés.
- *
- * `prState` est MUTÉ ici — c'est l'état vivant de la pull request pendant le
- * tour, et la fin de tour doit lire celui qui est à jour, pas celui figé au
+ * What you need to know about the run to land it. An explicit object rather than closures: since MIN-224 there are TWO callers, and a context that happens is the only form that works on both sides. the
+ * round, and the end of the round must read the one that is up to date, not the one frozen at
  * claim.
  */
 export interface PrLandingContext {
   run: AgentRun;
   target: RepoCloneTarget;
   forge: Forge;
-  /** Ticket ANCRE du run, quand il y en a un. Null = run carnet ou relecture :
-   *  aucun ticket à synchroniser, à commenter ni à tracer. */
+  /** ANCHOR ticket of the run, when there is one. Null = run notebook or reread:
+ * no tickets to synchronize, comment or trace. */
   issue: { identifier: string } | null;
   workBranch: string;
   baseBranch: string;
   /** Langue du commentaire de ticket : celle du lanceur. */
   locale: Locale;
-  /** L'émetteur d'events du moteur appelant : `appendEvent` sérialisé dans la
-   *  fonction, un POST vers `/events` depuis la microVM. Même type que celui de
-   *  la boucle, pour qu'aucun des deux n'ait à en fabriquer un second. */
+  /** The calling engine's event emitter: `appendEvent` serialized in the
+ * function, a POST to `/events` from the microVM. Same type as that of
+ * the loop, so that neither has to make a second one. */
   emit: EmitAgentEvent;
   prState: { number: number | null; url: string | null; state: AgentRun["pr_state"] };
 }
 
-/** Base de seq des lignes `sandbox_compute` (hors de la bande des appels LLM). */
+/** Base seq of `sandbox_compute` lines (outside the LLM call band). */
 export const SANDBOX_USAGE_SEQ_BASE = 1_000_000_000;
 
-/** Note de fil quand le push de fin de tour échoue (visible dans la conversation). */
+/** Thread note when end of turn push fails (visible in conversation). */
 export const PUSH_FAILED_STRINGS: Record<Locale, (detail: string) => string> = {
   fr: (detail) =>
     `Le push de fin de tour a échoué — la branche distante n'a PAS reçu le travail de ce tour. Le travail reste dans la sandbox et sera re-poussé au prochain tour. Détail : ${detail}`,
@@ -75,12 +71,12 @@ export const PUSH_FAILED_STRINGS: Record<Locale, (detail: string) => string> = {
     `The turn-end push failed — the remote branch did NOT receive this turn's work. The work is kept in the sandbox and will be pushed again next turn. Detail: ${detail}`,
 };
 
-/** Terme provider affiché dans les notes/commentaires (marques, non localisées). */
+/** Provider term displayed in notes/comments (brands, not localized). */
 export function prTerm(provider: RepoProviderId): string {
   return provider === "gitlab" ? "merge request" : "pull request";
 }
 
-/** Référence provider d'une PR/MR : `#12` sur GitHub, `!12` sur GitLab. */
+/** Provider reference of a PR/MR: `#12` on GitHub, `!12` on GitLab. */
 export function prRef(provider: RepoProviderId, n: number): string {
   return provider === "gitlab" ? `!${n}` : `#${n}`;
 }
@@ -89,7 +85,7 @@ function capitalized(term: string): string {
   return term.charAt(0).toUpperCase() + term.slice(1);
 }
 
-/** Note de fil quand la PR a été fusionnée PENDANT le tour (travail hors PR). */
+/** Thread note when the PR was merged DURING the round (non-PR work). */
 export const MERGED_DURING_TURN_STRINGS: Record<Locale, (ref: string, term: string) => string> = {
   fr: (ref, term) =>
     `La ${term} ${ref} a été fusionnée pendant ce tour : le nouveau travail a été poussé sur la branche mais n'appartient plus à aucune ${term}. Lance une nouvelle session pour continuer — elle repartira d'une branche neuve.`,
@@ -121,13 +117,13 @@ const COMMENT_STRINGS: Record<
 };
 
 /**
- * Réglages de compte qui pilotent le run, lus en UN appel (`getAccountSettings`
- * porte déjà les deux) :
- *  - `locale` : langue du résumé de l'agent et du commentaire d'issue. Celle du
- *    lanceur, défaut owner du projet, puis défaut de l'app.
- *  - `numoDefaultStatus` : statut d'atterrissage d'un ticket créé par l'agent
- *    (Compte → Préférences). Il ne vient QUE du lanceur — c'est SON réglage ;
- *    sans lanceur, le défaut historique (`triage`), jamais celui de l'owner.
+ * Account settings that drive the run, read in ONE call (`getAccountSettings`
+ * already carries both):
+ * - `locale`: language of the agent summary and outcome comment. That of the
+ * launcher, project owner default, then app default.
+ * - `numoDefaultStatus`: landing status of a ticket created by the agent
+ * (Account → Preferences). It ONLY comes from the launcher — it's HIS setting;
+ * without a launcher, the historical default (`triage`), never that of the owner.
  */
 export async function resolveRunPrefs(
   run: AgentRun,
@@ -156,15 +152,15 @@ export async function resolveRunPrefs(
       }
     }
   } catch {
-    // ignore — on retombe sur le défaut
+    // ignore — we fall back on the default
   }
   return { locale: defaultLocale, numoDefaultStatus: DEFAULT_NUMO_STATUS };
 }
 
 /**
- * Poste un commentaire d'issue sur ÉVÉNEMENT PR uniquement (création/réouverture),
- * attribué à Numo. Les tours de conversation ordinaires ne commentent plus le
- * ticket : tout vit dans la conversation de la session.
+ * Posts an issue comment on PR EVENT only (creation/reopening),
+ * assigned to Numo. Ordinary conversation turns no longer comment on the
+ * ticket: everything lives in the session conversation.
  */
 export async function postPrComment(
   run: AgentRun,
@@ -192,13 +188,13 @@ export async function postPrComment(
   }
 }
 /**
- * Trace un geste de Numo sur la PR dans le journal d'activité du ticket.
+ * Traces a gesture by Numo on the PR in the ticket activity log.
  *
- * L'acteur en base est l'auteur du run (il faut un utilisateur réel), mais
- * `via_assistant` fait dire NUMO à la timeline — c'est lui qui a agi, et la
- * règle d'identité vaut dans les deux sens. `from_value` ne porte pas de
- * login mais le PROVIDER (cf. `forgeActorValue`), sans quoi une merge request
- * GitLab se raconterait en vocabulaire GitHub.
+ * The base actor is the author of the run (a real user is needed), but
+ * `via_assistant` makes the timeline say NUMO — he is the one who acted, and the
+ * identity rule applies both ways. `from_value` does not carry a
+ * login but the PROVIDER (see `forgeActorValue`), otherwise a merge request
+ * GitLab would be told in GitHub vocabulary.
  */
 export async function recordAgentPrEvent(
   ctx: PrLandingContext,
@@ -220,12 +216,12 @@ export async function recordAgentPrEvent(
 }
 
 /**
- * « Numo a commité sur la PR #12 » — un push qui a fait AVANCER la branche
- * distante, et seulement quand une PR le porte : avant elle, les commits
- * n'appartiennent à rien que le ticket puisse nommer.
+ * "Numo committed to PR #12" — a push that ADVANCED the remote branch
+ *, and only when a PR carries it: before it, the commits
+ * do not belong to anything the ticket can name.
  *
- * `remoteUpdated` et non `pushed` : un push qui ne pousse rien de neuf (le
- * remote était déjà à jour) n'est pas un fait.
+ * `remoteUpdated` and not `pushed`: a push that does not push anything new (the
+ * remote was already up to date) is not a fact.
  */
 export async function notePrCommits(
   ctx: PrLandingContext,
@@ -235,8 +231,8 @@ export async function notePrCommits(
   await recordAgentPrEvent(ctx, "pr_committed", ctx.prState.number);
 }
 
-/** Enregistre une PR ouverte/rouverte : état local + stamp + statut d'issue +
- *  event live + commentaire d'issue (le SEUL commentaire du nouveau modèle). */
+/** Records an opened/reopened PR: local state + stamp + issue status +
+ * live event + issue comment (the ONLY comment of the new model). */
 export async function registerPr(
   ctx: PrLandingContext,
   pr: PullRequestRef,
@@ -245,10 +241,10 @@ export async function registerPr(
   const { run, target, issue, workBranch, baseBranch, locale, emit, prState } = ctx;
   prState.number = pr.number;
   prState.url = pr.url;
-  // Le MÊME calcul que celui qui alimente `pull_requests` dix lignes plus
-  // bas (MIN-164) : le run le refaisait à la main, sans lire `draft`, et les
-  // deux colonnes d'état divergeaient dès qu'une PR brouillon passait par
-  // ici — rouverte, ou déjà ouverte par un humain sur la branche du run.
+  // The SAME calculation that powers `pull_requests` ten more lines
+  // low (MIN-164): the run did it again by hand, without reading `draft`, and the
+  // two status columns diverged as soon as a draft PR passed through
+  // here — reopened, or already opened by a human on the run branch.
   prState.state = prStateFromRef(pr);
   await emit("pr_opened", { number: pr.number, url: pr.url });
   await stampRun(run.id, {
@@ -256,11 +252,11 @@ export async function registerPr(
     pr_url: pr.url,
     pr_state: prState.state,
   });
-  // La PR est une ENTITÉ (MIN-143) : elle entre dans `pull_requests` ici,
-  // sans attendre l'écho du webhook — qui n'arrive jamais en dev, et que la
-  // page Pull Requests lit désormais au lieu d'`agent_runs`. Le run, lui, est
-  // la meilleure source du ticket : il le SAIT, là où l'ingestion webhook
-  // doit le déduire du nom de branche.
+  // The PR is an ENTITY (MIN-143): it enters `pull_requests` here,
+  // without waiting for the webhook echo — which never arrives in dev, and the
+  //Pull Requests page now reads instead of `agent_runs`. The run is
+  // the best source of the ticket: he KNOWS it, where webhook ingestion
+  // must infer it from the branch name.
   const prRow = await upsertPullRequest({
     provider: target.provider,
     repoFullName: target.repoFullName,
@@ -278,13 +274,13 @@ export async function registerPr(
     updatedAt: pr.updatedAt,
     issueId: run.issue_id,
   });
-  // Inbox : le projet apprend qu'une pull request attend des yeux. Ici et
-  // pas au webhook — celui-ci n'arrive jamais en dev, et l'ouverture faite
-  // par Numo porte le compte de l'App, que les récepteurs écartent comme
-  // écho. La réouverture, elle, ne s'annonce pas : la PR était déjà connue.
+  // Inbox: the project learns that a pull request is waiting for eyes. Here and
+  // not to the webhook — this never arrives in dev, and the opening is done
+  // by Numo carries the account of the App, which the receivers dismiss as
+  // echo. The reopening is not announced: the PR was already known.
   if (kind === "opened") await notifyPullRequestOpened(prRow);
-  // Run CARNET : aucun ticket à synchroniser ni à commenter — la PR vit dans
-  // la conversation de la session (et sur la page Pull requests).
+  // Run NOTEBOOK: no tickets to synchronize or comment on — PR lives in
+  // the session conversation (and on the Pull requests page).
   if (issue && run.issue_id) {
     if (run.created_by) {
       await syncIssueStatusFromPr({
@@ -293,13 +289,13 @@ export async function registerPr(
         prState: prState.state,
       });
     }
-    // « Numo a ouvert la pull request #12 » dans le journal d'activité. Émis
-    // ICI et pas par le webhook : la PR part du token de l'App (GitHub) ou du
-    // compte qui a lié le dépôt (GitLab), donc l'écho porte une identité de
-    // machine ou celle d'un tiers — or c'est Numo qui a ouvert. Les deux
-    // récepteurs écartent d'ailleurs leur propre écho.
-    // Ouvrir et ROUVRIR sont deux faits distincts (MIN-164) : la réouverture
-    // ne se racontait pas du tout, et le ticket repassait en revue sans que
+    // “Numo opened pull request #12” in the activity log. Issued
+    // HERE and not through the webhook: the PR starts from the App token (GitHub) or from the
+    // account that linked the repository (GitLab), so the echo carries an identity of
+    // machine or that of a third party — but it was Numo who opened it. Both
+    // receivers also reject their own echo.
+    // Open and REOPEN are two distinct facts (MIN-164): reopening
+    // was not told at all, and the ticket was reviewed again without
     // rien ne dise ce qui l'y avait remis.
     await recordAgentPrEvent(ctx, kind === "opened" ? "pr_opened" : "pr_reopened", pr.number);
     await postPrComment(run, issue.identifier, kind, pr.url, locale, target.provider);
@@ -307,10 +303,9 @@ export async function registerPr(
 }
 
 /**
- * Recale `prState` sur la BASE : les actions in-app (merge/reject pendant que
- * l'agent tourne) et le webhook GitHub stampent `agent_runs.pr_state`, invisible
- * du snapshot pris au claim. Sans ce recalage, un reject mid-turn ne serait
- * jamais rouvert au push, et un merge mid-turn passerait inaperçu.
+ * Restores `prState` on the BASE: in-app actions (merge/reject while
+ * the agent is running) and the GitHub webhook stamps `agent_runs.pr_state`, invisible
+ * of the snapshot taken at the claim. Without this adjustment, a mid-turn reject would never be reopened to push, and a mid-turn merge would go unnoticed.
  */
 export async function refreshPrStateFromDb(ctx: PrLandingContext): Promise<void> {
   const db = await getRun(ctx.run.id).catch(() => null);
@@ -321,12 +316,12 @@ export async function refreshPrStateFromDb(ctx: PrLandingContext): Promise<void>
 }
 
 /**
- * La session suit une PR REFUSÉE et un push vient de faire AVANCER le remote →
- * on la ROUVRE (règle produit : on réitère toujours la dernière PR du ticket,
- * jamais de doublon). Appelé après CHAQUE push. Décision sur `remoteUpdated` (le
- * remote a bougé), pas `committed` : un commit posé à un appel précédent (push
- * 5xx) part avec un arbre propre au suivant. Une PR mergée n'est jamais
- * ressuscitée (le reopen échoue → on n'insiste pas). Best-effort.
+ * The session follows a REFUSED PR and a push has just ADVANCED the remote →
+ * we REOPEN it (product rule: we always repeat the last PR of the ticket,
+ * never a duplicate). Called after EACH push. Decision on `remoteUpdated` (the
+ * remote has moved), not `committed`: a commit made in a previous call (push
+ * 5xx) leaves with a tree specific to the next one. A merged PR is never
+ * resurrected (the reopen fails → we do not insist). Best-effort.
  */
 export async function reopenIfRejectedWorkPushed(
   ctx: PrLandingContext,
@@ -350,39 +345,39 @@ export async function reopenIfRejectedWorkPushed(
 }
 
 /**
- * LA MOITIÉ FORGE DE `create_pr` : ce qui se passe une fois que le travail EST
- * POUSSÉ. PR déjà vivante → no-op informatif (le push l'a mise à jour) ; PR
- * refusée → réouverture (règle produit : on réitère la dernière PR du ticket,
- * jamais de doublon) ; sinon → création. Une PR mergée n'est jamais réutilisée.
+ * FORGED HALF OF `create_pr`: What happens after the job IS
+ * PUSHED. PR already alive → informative no-op (the push updated it); PR
+ * refused → reopening (product rule: we repeat the last PR of the ticket,
+ * never a duplicate); otherwise → creation. A merged PR is never reused.
  *
- * SÉPARÉE DU PUSH par MIN-224, et la coupure tombe au bon endroit : le dépôt vit
- * dans la microVM, la forge et son token vivent dans la fonction. L'ancienne
- * forme pousse puis appelle ceci en direct ; la nouvelle pousse DANS la VM puis
- * appelle ceci par le plan de contrôle. Une seule implémentation des quatre cas
- * ci-dessous, qui sont exactement ceux qu'on ne veut pas voir diverger.
+ * SEPARATED FROM PUSH by MIN-224, and the cut falls in the right place: the repository lives
+ * in the microVM, the forge and its token live in the function. The old
+ * form pushes then calls this live; the new one pushes INTO the VM then
+ * calls this by the control plane. A single implementation of the four cases
+ * below, which are exactly the ones we don't want to diverge.
  */
 export async function openPullRequestAfterPush(
   ctx: PrLandingContext,
   opts: {
-    /** Ce que `commitAndPush` a rendu — c'est lui qui décide s'il y a matière. */
+    /** What `commitAndPush` returned — it is he who decides if there is material. */
     pushed: { pushed: boolean; remoteUpdated: boolean; headSha: string };
-    /** Titre demandé par le modèle, déjà rempli par défaut le cas échéant. */
+    /** Title requested by the model, already filled in by default if applicable. */
     prTitle: string;
     body?: string;
-    /** Cible fraîche (token re-résolu par l'appelant). */
+    /** Fresh target (token re-resolved by caller). */
     fresh: RepoCloneTarget;
-    /** Ce qu'on doit dire au modèle des jobs de fond tués avant l'indexation. */
+    /** What we should tell the model about background jobs killed before indexing. */
     jobsNote: string;
-    /** Appelé au premier push RÉEL — enregistre la branche sur la ligne du run. */
+    /** Called on first REAL push — saves the branch on the run line. */
     noteBranchPushed: (pushed: { pushed: boolean }) => Promise<void>;
   },
 ): Promise<{ result: unknown; success: boolean }> {
   const { forge, issue, workBranch, baseBranch, prState } = ctx;
   const { pushed, prTitle, body, fresh, jobsNote, noteBranchPushed } = opts;
   const andJobs = (text: string) => (jobsNote ? `${text} ${jobsNote}` : text);
-  // Rien de commité par-dessus la base : on s'arrête AVANT de toucher au dépôt
-  // (MIN-123). Pousser créerait une branche vide pour rien — et la forge
-  // refuserait la PR (422) juste après, en la laissant derrière elle.
+  // Nothing committed above the base: we stop BEFORE touching the repository
+  // (MIN-123). Pushing would create an empty branch for nothing — and the forge
+  // would refuse the PR (422) immediately afterwards, leaving it behind.
   if (!pushed.pushed) {
     return {
       result: {
@@ -394,9 +389,9 @@ export async function openPullRequestAfterPush(
     };
   }
   await noteBranchPushed(pushed);
-  // `create_pr` sur une PR qui existe DÉJÀ : ce push l'alimente, il se trace
-  // comme les autres. Sur une PR encore à ouvrir, `prState.number` est nul et
-  // rien ne se trace — c'est `registerPr` qui dira « a ouvert la PR ».
+  // `create_pr` on a PR that ALREADY exists: this push feeds it, it is traced
+  // like the others. On a PR yet to be opened, `prState.number` is null and
+  // nothing is traced — it is `registerPr` which will say “opened the PR”.
   await notePrCommits(ctx, pushed);
   if (prState.number != null) {
     const current = await forge
@@ -451,8 +446,8 @@ export async function openPullRequestAfterPush(
         };
       }
     }
-    // PR illisible / réouverture impossible (branche tête supprimée puis
-    // recréée par notre push…) → on retombe sur une création propre.
+    // PR unreadable / reopening impossible (head branch deleted then
+    // recreated by our push…) → we land on our own creation.
   }
   const prBody = `${body?.trim() || prTitle}\n\n---\n🤖 Généré par l'agent numo (minddy) · ${issue ? `issue ${issue.identifier}` : "note du carnet"}`;
   try {

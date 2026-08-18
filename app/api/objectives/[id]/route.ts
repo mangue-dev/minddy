@@ -54,13 +54,13 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
 }
 
 /**
- * DELETE /api/objectives/[id] — passage en corbeille (MIN-133).
+ * DELETE /api/objectives/[id] — move to trash (MIN-133).
  *
- * Les tickets liés ne sont PLUS détachés : `objective_id` reste, l'objectif
- * disparaît simplement des lectures (policy `objectives_select`), et les cartes
- * cessent d'afficher son nom faute de le trouver dans la liste. Restaurer le
- * rend à ses tickets exactement comme il était — un détachement, lui, aurait
- * été irréversible.
+ * Linked tickets are NO LONGER detached: `objective_id` remains, the objective
+ * simply disappears from the readings (policy `objectives_select`), and the cards
+ * stop displaying their name because they cannot find it in the list. Restore the
+ * returns his tickets exactly as he was - a detachment, for his part, would have
+ * been irreversible.
  */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;

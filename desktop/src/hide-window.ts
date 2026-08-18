@@ -4,17 +4,16 @@ import { hideWindowStep } from "@/lib/desktop/hide-window";
 import { trace } from "./trace";
 
 /**
- * Cacher la fenêtre — le SEUL chemin (MIN-353).
+ * Hide the window — the ONLY path (MIN-353).
  *
- * Trois gestes y mènent et ils doivent se comporter pareil : le feu rouge
- * (`close`, intercepté dans main.ts), ⌘W (menu.ts), et tout ce qu'on y
- * ajouterait. Un `window.hide()` écrit en direct quelque part, c'est le bug du
- * plein écran qui revient à cet endroit-là seulement — c'est exactement comme ça
- * qu'il a survécu à sa première correction.
+ * Three gestures lead there and they should behave the same: the red light
+ * (`close`, intercepted in main.ts), ⌘W (menu.ts), and whatever we y
+ * would add. A `window.hide()` written live somewhere is the bug of the
+ * full screen which returns to that place only — that's exactly how it survived its first fix.
  *
- * La règle est dans `lib/desktop/hide-window.ts`, avec la raison. Ici, le
- * câblage : `leave-full-screen` est le seul moment où macOS a fini de refermer
- * le Space, donc le seul où cacher est sans effet de bord.
+ * The rule is in `lib/desktop/hide-window.ts`, with the reason. Here, the
+ * wiring: `leave-full-screen` is the only moment when macOS has finished closing
+ * the Space, therefore the only one where hiding is without side effects.
  */
 export function hideWindow(window: BrowserWindow): void {
   if (window.isDestroyed()) return;
@@ -30,12 +29,12 @@ export function hideWindow(window: BrowserWindow): void {
     return;
   }
 
-  // `once` : la sortie de plein écran arrive aussi quand quelqu'un appuie sur
-  // Échap ou reprend la fenêtre par le menu Présentation. Un abonnement
-  // permanent cacherait la fenêtre à chacune de ces sorties-là.
+  // `once`: full screen exit also happens when someone presses
+  // Escape or resume the window using the Presentation menu. A subscription
+  // permanent would hide the window at each of these exits.
   window.once("leave-full-screen", () => {
-    // La transition dure le temps d'une animation ; ⌘Q peut tomber pendant
-    // (`before-quit` détruit la fenêtre), et on n'appelle rien sur un objet mort.
+    // The transition lasts for the duration of an animation; ⌘Q may fall during
+    // (`before-quit` destroys the window), and we don't call anything on a dead object.
     if (!window.isDestroyed()) window.hide();
   });
   window.setFullScreen(false);

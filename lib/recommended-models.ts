@@ -1,61 +1,56 @@
 /**
- * Les modèles CONSEILLÉS : la courte liste qu'un utilisateur voit en ouvrant le
- * picker, avant d'avoir tapé quoi que ce soit.
+ * RECOMMENDED templates: the short list that a user sees when opening the
+ * picker, before typing anything.
  *
- * Le catalogue OpenRouter compte plus de 300 modèles de texte. Les montrer par
- * ordre alphabétique, c'est ouvrir sur `agentica-org/…` et `ai21/…` — un rang
- * qui ne dit rien de ce qui marche, et qui laisse le choix entier à charge de
- * quelqu'un qui voulait juste lancer un agent. La liste ci-dessous est un AVIS :
- * ce que minddy conseille, dans l'ordre.
+ * The OpenRouter catalog has more than 300 text templates. Showing them in
+ * alphabetical order is opening on `agentica-org/…` and `ai21/…` — a rank
+ * that says nothing about what works, and leaves the entire choice up to
+ * someone who just wanted to run an agent. The list below is an OPINION:
+ * what minddy advises, in order.
  *
- * **Le critère est le coût autant que la capacité**, et c'est le plan qui le
- * fixe. Le Pro est à 20 €/mois pour 15 $ d'usage inclus, et le plafond de
- * multiplicateur va de ×15 (Go) à ×40 (Pro) — cf. `lib/billing-plans.ts`. Un
- * modèle au-delà de ×40 n'est lançable par personne : il n'a rien à faire ici,
- * si capable soit-il. La liste vise donc la frontière de Pareto entre ce qui
- * code bien et ce qui se paye, l'essentiel sous le plafond Go.
+ * **The criterion is cost as much as capacity**, and it is the plan that sets it
+ *. The Pro is €20/month for $15 usage included, and the
+ * multiplier ceiling goes from ×15 (GB) to ×40 (Pro) — cf. `lib/billing-plans.ts`. A
+ * model beyond ×40 cannot be launched by anyone: it has nothing to do here,
+ * however capable it may be. The list therefore targets the Pareto frontier between what codes well and what is affordable, most of it under the Go ceiling.
  *
- * Ce n'est PAS un filtre : le reste du catalogue reste accessible à la
- * recherche, et l'admin peut réécrire la liste sans déploiement
- * (`app_config.recommended_models`, cf. `lib/ai-model-config.ts`). D'où la
- * forme — de simples ids.
+ * This is NOT a filter: the rest of the catalog remains accessible to the search, and the admin can rewrite the list without deployment
+ * (`app_config.recommended_models`, cf. `lib/ai-model-config.ts`). Hence the
+ * form — simple ids.
  *
- * C'est un ENSEMBLE, pas une séquence : l'ordre d'affichage est CALCULÉ, du
- * moins cher au plus cher (`resolveRecommended`). Le seul qui reste vrai — les
- * prix d'OpenRouter bougent, et un rang figé le jour où on l'a écrit finirait
- * par annoncer une échelle de coût qui n'existe plus. L'ordre du tableau
- * ci-dessous n'est donc qu'une commodité de lecture.
+ * It's a SET, not a sequence: the display order is CALCULATED, from least expensive to most expensive (`resolveRecommended`). The only one that remains true — the OpenRouter prices move, and a rank frozen on the day we wrote it would end up announcing a cost scale that no longer exists. The order of the table
+ * below is therefore only for reading convenience.
  *
- * AUCUN import server-only ici : ce module est tiré dans le client.
+ * NO server-only import here: this module is pulled into the client.
  */
 
 /**
- * Le repli produit, écrit en code. Les multiplicateurs en commentaire sont
- * relatifs au défaut de minddy (`deepseek/deepseek-v4-flash`), tels que les
- * prix OpenRouter les donnaient en août 2026 — indicatifs, pas contractuels :
- * c'est `lib/model-multiplier.ts` qui les recalcule pour de bon, et le picker
- * qui les affiche.
+ * The fallback produced, written in code. The multipliers in the comments are
+ * relating to the minddy default (`deepseek/deepseek-v4-flash`), such as the
+ * OpenRouter prices gave them in August 2026 — indicative, not contractual:
+ * it is `lib/model-multiplier.ts` which recalculates them for good, and the picker
+ * which displays them.
  *
- * Rangé ici du moins cher au plus cher pour qu'il se relise, mais c'est le prix
- * du jour qui fixe l'ordre réel à l'affichage : ces commentaires vieilliront,
- * pas le tri.
+ * Arranged here from the least expensive to the most expensive so that it can be read again, but it is the price
+ * of the day which sets the real order on display: these comments will age,
+ * not the sort.
  */
 export const DEFAULT_RECOMMENDED_MODELS: string[] = [
-  // ×0,4 — 1 M de contexte pour un cinquième du défaut. Le cran « mécanique ».
+  // ×0.4 — 1M context for one fifth of the default. The “mechanical” notch.
   "qwen/qwen3.7-flash",
-  // ×1 — le défaut de minddy, et la référence de l'échelle.
+  // ×1 — minddy's default, and the scale reference.
   "deepseek/deepseek-v4-flash",
   // ×1,1
   "z-ai/glm-4.7-flash",
-  // ×3,6 — 1 M de contexte, le moins cher des vraiment capables.
+  // ×3.6 — 1M context, the cheapest of the truly capable.
   "minimax/minimax-m3",
   // ×3,8
   "qwen/qwen3.7-plus",
-  // ×4 — meilleur open-weights sur SWE-bench Pro, et sur le code au long cours.
+  // ×4 — best open-weights on SWE-bench Pro, and on long-term code.
   "z-ai/glm-5.2",
   // ×4,2
   "google/gemini-3.1-flash-lite",
-  // ×4,5 — en tête sur SWE-bench Verified, à un neuvième du prix de Sonnet.
+  // ×4.5 — leading on SWE-bench Verified, one-ninth of Sonnet's price.
   "deepseek/deepseek-v4-pro",
   // ×5,4
   "openai/gpt-5.1-codex-mini",
@@ -63,26 +58,26 @@ export const DEFAULT_RECOMMENDED_MODELS: string[] = [
   "google/gemini-3.5-flash-lite",
   // ×10
   "moonshotai/kimi-k2.7-code",
-  // ×14 — le dernier qui passe sous le plafond du plan Go.
+  // ×14 — the last one that goes under the Go plan ceiling.
   "anthropic/claude-haiku-4.5",
-  // ×19 — au-delà de Go : visible et grisé là-bas, lançable en Pro.
+  // ×19 — beyond Go: visible and grayed out there, launchable in Pro.
   "x-ai/grok-4.5",
-  // ×29 — le haut de gamme qu'un Pro peut encore se payer (plafond ×40).
+  // ×29 — the top of the range that a Pro can still afford (ceiling ×40).
   "anthropic/claude-sonnet-5",
 ];
 
 /**
- * Liste lisible tirée de la valeur `app_config`, ou `null` quand il n'y a RIEN
- * d'exploitable (vide, JSON illisible, pas un tableau, aucun id valide).
+ * Readable list taken from the value `app_config`, or `null` when there is NOTHING
+ * usable (empty, unreadable JSON, not an array, no valid id).
  *
- * `null` est un verdict, pas une erreur : le serveur y répond par le repli — un
- * réglage cassé ne doit pas vider le picker — et l'API admin par un 400, pour
- * que personne n'enregistre une liste qui ne servira jamais. Même parseur des
- * deux côtés, comme pour les favoris de sous-agents : ce que l'écran d'admin
- * accepte est exactement ce que le picker lira.
+ * `null` is a verdict, not an error: the server responds with a fallback — a
+ * broken setting should not empty the picker — and the admin API with a 400, so that
+ * no one saves a list that will never be used. Same parser of
+ * both sides, as for subagent favorites: what the admin
+ * screen accepts is exactly what the picker will read.
  *
- * Les doublons sont écrasés plutôt que refusés : deux fois le même id dans un
- * `CommandItem` donnerait deux lignes identiques dont une seule réagit.
+ * Duplicates are overwritten rather than refused: twice the same id in a
+ * `CommandItem` would give two identical lines of which only one reacts.
  */
 export function parseRecommendedModels(raw: string | null | undefined): string[] | null {
   if (!raw?.trim()) return null;

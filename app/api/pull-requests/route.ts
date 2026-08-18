@@ -22,31 +22,31 @@ import {
 } from "@/lib/server/agent/pull-requests";
 
 /**
- * Liste GLOBALE des pull requests des dépôts liés, tous projets accessibles
- * confondus (MIN-66, élargie par MIN-143).
+ * GLOBAL list of pull requests from linked repositories, all projects accessible
+ * combined (MIN-66, expanded by MIN-143).
  *
- * Elle partait d'`agent_runs` et ne montrait donc que les PR de Numo — la moitié
- * du dépôt, sans le dire. Elle part maintenant de `pull_requests`, où une PR est
- * une ligne : celles de Numo y sont, celles des humains aussi. Le run n'est plus
- * le porteur, il est une DÉCORATION (« Numo retravaille », « relancer Numo »),
- * jointe quand elle existe.
+ * It started from `agent_runs` and therefore only showed Numo's PRs — half
+ * of the deposit, without saying it. It now starts from `pull_requests`, where a PR is
+ * a line: those of Numo are there, those of humans too. The run is no more
+ * the wearer, he is a DECORATION (“Numo reworks”, “relaunch Numo”),
+ * attached when one exists.
  *
- * L'accès : RLS de `project_git_links` (le cookie client suffit) pour savoir
- * quels dépôts sont visibles, puis RLS de `pull_requests` pour les lignes.
+ * Access: RLS of `project_git_links` (the client cookie is enough) to know
+ * which repositories are visible, then RLS of `pull_requests` for the rows.
  */
 
 export const runtime = "nodejs";
-// Un rattrapage BLOQUANT (dépôt jamais balayé) fait un aller-retour paginé chez
-// la forge avant de répondre : la fenêtre par défaut d'une route ne suffit pas.
+// A BLOCKING catch-up (deposit never scanned) makes a paginated round trip at
+// the forge before responding: the default window of a route is not enough.
 export const maxDuration = 120;
 
-/** Combien de PR au maximum par réponse. Un dépôt actif en a des centaines. */
+/** How many PRs at most per answer. An active repository has hundreds. */
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 500;
 
-// « Numo retravaille » = l'agent TRAVAILLE (queued/running). Un run au REPOS n'est
-// PAS en train de retravailler la PR — sinon la PR resterait « en cours » pour
-// toujours et les actions merge/reject seraient bloquées indéfiniment.
+// “Numo rework” = the agent WORKS (queued/running). A REST run is not
+// NOT reworking the PR — otherwise the PR would remain “in progress” for
+// always and merge/reject actions would be blocked indefinitely.
 const WORKING_STATUSES = ["queued", "running"];
 
 interface RunRow {
@@ -58,15 +58,15 @@ interface RunRow {
 }
 
 export interface PullRequestListItem {
-  /** Identité de l'item — la PR, plus le run qui l'a ouverte (MIN-143). */
+  /** Item identity — the PR, plus the run that opened it (MIN-143). */
   prId: string;
   pr_number: number;
   pr_url: string | null;
   pr_state: PullRequestState;
-  /** Provider du dépôt — pilote le vocabulaire PR/MR et les liens (MIN-69). */
+  /** Repository Provider — controls PR/MR vocabulary and links (MIN-69). */
   provider: RepoProviderId;
   title: string | null;
-  /** Qui a ouvert la PR — ce qui distingue une PR de Numo d'une PR humaine. */
+  /** Who opened the PR — what distinguishes a Numo PR from a human PR. */
   author: { login: string; avatar_url: string | null } | null;
   head_branch: string | null;
   created_at: string;
@@ -80,19 +80,19 @@ export interface PullRequestListItem {
     orb_seed: string | null;
   } | null;
   /**
-   * Run CANONIQUE de la PR (le plus ancien), ou null : une PR humaine n'en a
-   * aucun. C'est lui qui porte les deep-links `?run=` historiques.
+   * CANONICAL run of the PR (oldest), or null: a human PR has none
+   * none. It is he who carries the historical `?run=` deep-links.
    */
   runId: string | null;
-  /** Un run qui TRAVAILLE (queued/running) sur cette PR = « Numo retravaille ». */
+  /** A run that WORKS (queued/running) on ​​this PR = “Numo is working again”. */
   activeRunId: string | null;
-  /** Un run ACTIF occupe l'issue → pas de nouvelle demande de changements (MIN-68). */
+  /** An ACTIVE run occupies the issue → no new change request (MIN-68). */
   busyRunId: string | null;
-  /** TOUS les runs qui portent cette PR — un deep-link `?run=` matche n'importe lequel. */
+  /** ALL runs that carry this PR — a deep-link `?run=` matches any one. */
   runIds: string[];
 }
 
-/** États servis par le filtre. `open` inclut les brouillons (c'en sont). */
+/** States served by the filter. `open` includes drafts (they are). */
 const STATE_FILTERS: Record<string, PullRequestState[]> = {
   open: ["open", "draft"],
   merged: ["merged"],
@@ -100,10 +100,10 @@ const STATE_FILTERS: Record<string, PullRequestState[]> = {
 };
 
 /**
- * Rattrapage d'un dépôt. BLOQUANT s'il n'a jamais été balayé — sans ça la page
- * s'afficherait vide sur un dépôt qu'on vient de lier. Simplement PÉRIMÉ, il
- * part dans `after()` : la réponse ne fait pas attendre l'utilisateur pour un
- * webhook perdu, et le prochain affichage sera juste.
+ * Catching up on a deposit. BLOCKING if it has never been scanned — otherwise the page
+ * would appear empty on a repository that has just been linked. Simply OUT OF DATE, it
+ * part in `after()`: the response does not make the user wait for a
+ * lost webhook, and the next display will be correct.
  */
 async function sweepRepo(userId: string, repo: VisibleRepo): Promise<boolean> {
   try {
@@ -124,21 +124,21 @@ async function sweepRepo(userId: string, repo: VisibleRepo): Promise<boolean> {
       `[pull-requests] sweep ${repo.repoFullName} failed:`,
       (err as Error).message,
     );
-    // On tamponne quand même : une forge en panne ne doit pas faire re-tenter le
-    // balayage à CHAQUE affichage de la page. La liste reste celle d'avant, et
-    // la prochaine fenêtre réessaiera.
+    // We stamp all the same: a broken down forge should not make the user try again.
+    // scan EACH view of the page. The list remains as before, and
+    // the next window will try again.
     await stampRepoSync(repo.provider, repo.repoFullName);
     return false;
   }
 }
 
 /**
- * PR visée par un deep-link (`?pr=` direct, `?run=` historique) quand la page
- * ne la contient pas — la liste est bornée, un lien ne l'est pas.
+ * PR targeted by a deep-link (direct `?pr=`, historical `?run=`) when the page
+ * does not contain it — the list is limited, a link is not.
  *
- * Elle est lue en clé de service, donc l'accès se revérifie ici : la PR doit
- * appartenir à un dépôt que cet utilisateur voit. Renvoie null si elle est déjà
- * dans la page, introuvable, ou hors de son périmètre.
+ * It is read in service key, so access is rechecked here: the PR must
+ * belong to a repository that this user sees. Returns null if it is already
+ * in the page, not found, or outside its scope.
  */
 async function pinnedRow(
   supabase: SupabaseClient,
@@ -162,8 +162,8 @@ async function pinnedRow(
   const visible = new Set(repos.map((r) => repoSyncKey(r.provider, r.repoFullName)));
   if (!visible.has(repoSyncKey(rowProvider(found), found.repo_full_name))) return null;
 
-  // Le ticket voyage avec, lu par le client AUTHENTIFIÉ : sa RLS le rend null
-  // s'il est à la corbeille, exactement comme sur les lignes de la page.
+  // The ticket travels with it, read by the AUTHENTIFIED customer: its RLS makes it null
+  // if it is in the trash, exactly as on the lines of the page.
   let issue: PullRequestWithIssue["issue"] = null;
   if (found.issue_id) {
     const { data } = await supabase
@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
 
   const params = request.nextUrl.searchParams;
   const stateParam = params.get("state") ?? "open";
-  const states = STATE_FILTERS[stateParam] ?? null; // null = tous les états
+  const states = STATE_FILTERS[stateParam] ?? null; // null = all states
   const limit = Math.min(
     Math.max(Number.parseInt(params.get("limit") ?? "", 10) || DEFAULT_LIMIT, 1),
     MAX_LIMIT,
@@ -202,10 +202,10 @@ export async function GET(request: NextRequest) {
   // ── Rattrapage ────────────────────────────────────────────────────────────
   const syncs = await readRepoSyncStates(repos);
   const seen = new Set<string>();
-  // Coupure vue par un balayage BLOQUANT de cette requête : `syncs` a été lu
-  // AVANT lui et dit encore « jamais balayé » pour ce dépôt. Sans ce report, le
-  // tout premier affichage d'un dépôt de plus de MAX_PR_PAGES × 100 PR se
-  // tairait sur la coupure — précisément le mensonge par omission qu'on corrige.
+  // Cut seen by a BLOCKING scan of this request: `syncs` has been read
+  // BEFORE him and still said “never swept” for this deposit. Without this postponement, the
+  // very first display of a deposit of more than MAX_PR_PAGES × 100 PR se
+  // would be silent about the cut — precisely the lie by omission that is being corrected.
   let sweptTruncated = false;
   for (const repo of repos) {
     const key = repoSyncKey(repo.provider, repo.repoFullName);
@@ -217,10 +217,10 @@ export async function GET(request: NextRequest) {
     else if (await sweepRepo(auth.user.id, repo)) sweptTruncated = true;
   }
 
-  // ── Les PR ────────────────────────────────────────────────────────────────
+  // ── PR ──────────────────────────────── ────────────────────────────────
   let rows: PullRequestWithIssue[];
   try {
-    // +1 pour savoir s'il en reste, sans compter la table entière.
+    // +1 for knowing if there are any left, not including the entire table.
     rows = await listPullRequestsForUser(auth.supabase, repos, {
       limit: limit + 1,
       states: states ?? undefined,
@@ -231,17 +231,17 @@ export async function GET(request: NextRequest) {
   const hasMore = rows.length > limit;
   const page = hasMore ? rows.slice(0, limit) : rows;
 
-  // Deep-link ÉPINGLÉ. Sans ça, une PR plus ancienne que la page (un ticket
-  // clos il y a des mois) manquerait de la liste, et la page retomberait
-  // silencieusement sur la première — c'est-à-dire ouvrirait la PR d'un autre
-  // ticket sans rien signaler.
+  // Deep-link PINED. Without that, a PR older than the page (a ticket
+  // closed months ago) would be missing from the list, and the page would fall back
+  // silently on the first — i.e. would open the PR of another
+  // ticket without signaling anything.
   const pinned = await pinnedRow(auth.supabase, params, repos, page);
   if (pinned) page.unshift(pinned);
 
-  // ── Les runs, en décoration ───────────────────────────────────────────────
-  // RLS `agent_runs` = can_access_project : on ne voit que les siens. Restreint
-  // aux numéros de CETTE page — la liste des runs d'un compte actif est longue,
-  // et on n'a besoin que de ceux qui décorent ce qu'on affiche.
+  // ── Runs, as decoration ─────────────────────── ────────────────────────
+  // RLS `agent_runs` = can_access_project: we only see ours. Restricted
+  // to the numbers on THIS page — the list of runs for an active account is long,
+  // and we only need those who decorate what we display.
   const numbers = [...new Set(page.map((p) => p.number))];
   const runsByPr = new Map<string, RunRow[]>();
   if (numbers.length > 0) {
@@ -269,9 +269,9 @@ export async function GET(request: NextRequest) {
     const provider = rowProvider(row);
     const runs = runsByPr.get(`${provider}:${row.repo_full_name}:${row.number}`) ?? [];
     const working = runs.filter((r) => WORKING_STATUSES.includes(r.status));
-    // `issue_id` renseigné mais ressource imbriquée nulle = ticket à la corbeille
-    // (MIN-133). La PR reste dans la liste, simplement DÉTACHÉE : elle existe
-    // chez la forge, et la cacher serait à nouveau montrer la moitié du dépôt.
+    // `issue_id` entered but zero nested resource = ticket in the trash
+    // (MIN-133). RA remains in the list, simply DETACHED: it exists
+    // at the forge, and hiding it would again show half the deposit.
     const issue = row.issue;
     return {
       prId: row.id,
@@ -298,12 +298,12 @@ export async function GET(request: NextRequest) {
     };
   });
 
-  // Une pagination de forge coupée doit se VOIR : la liste n'est pas exhaustive,
-  // et le taire, c'est mentir par omission — exactement ce que MIN-143 corrige.
+  // A cut forge pagination must be SEEN: the list is not exhaustive,
+  // and to keep silent is to lie by omission — exactly what MIN-143 corrects.
   const truncated = sweptTruncated || [...seen].some((key) => syncs.get(key)?.truncated);
 
-  // Vide POUR CET ÉTAT ne veut pas dire vide tout court : une seule ligne, tous
-  // états confondus, suffit à trancher — et on ne la demande que dans ce cas.
+  // Empty FOR THIS STATE does not simply mean empty: one line, all
+  // states combined, is enough to decide — and we only ask it in this case.
   const anyPr =
     page.length > 0
       ? true

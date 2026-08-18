@@ -34,34 +34,33 @@ import {
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
- * Le tableau de correspondance de l'aperçu d'import : où va chaque colonne du
- * fichier, et ce que devient chaque valeur — statut, priorité, effort, mais
- * aussi CHAQUE PERSONNE et CHAQUE ÉTIQUETTE.
+ * The import preview mapping table: where each column in the
+ * file goes, and what each value becomes — status, priority, effort, but
+ * also EACH PERSON and EACH LABEL.
  *
- * C'est le seul endroit où l'import devient réparable. Avant, ce qu'aucune
- * table d'alias ne reconnaissait tombait sans recours : une colonne « Niveau »
- * ignorée, un statut « Bloqué » ramené à backlog, un assigné perdu, une
- * catégorie « Bugs » créée à côté du « Bug » qui existait déjà. La détection
- * remplit ce tableau, le modèle le complète, l'utilisateur tranche : les trois
- * écrivent le MÊME objet (`ImportMapping`), qui est aussi ce qui part au
- * serveur pour être rejoué.
+ * This is the only place where the import becomes repairable. Before, what no
+ * alias table recognized fell without recourse: a "Level"
+ * column ignored, a "Blocked" status brought back to backlog, a lost assignee, a
+ * "Bugs" category created next to the "Bug" which already existed. The detection
+ * fills this table, the model completes it, the user decides: the three
+ * write the SAME object (`ImportMapping`), which is also what goes to the
+ * server to be replayed.
  *
- * Les sections sont DÉPLIÉES et posées en grille : à deux colonnes dès que le
- * conteneur a la largeur (le wizard), à une seule sinon (le panneau des
- * réglages). Elles étaient empilées dans un accordéon replié par défaut —
- * l'écran le plus important de l'import demandait donc un clic pour exister, et
- * une fois ouvert, six sections en file indienne dans une colonne étroite : on
- * ne voyait jamais plus d'une question à la fois. La grille est une requête de
- * CONTENEUR, pas de fenêtre : c'est la place réellement disponible qui décide,
- * et le même composant sert les deux surfaces sans savoir laquelle l'affiche.
+ * The sections are UNFOLDED and placed in a grid: two columns as soon as the
+ * container has the width (the wizard), only one otherwise (the
+ * settings panel). They were stacked in a folded accordion by default —
+ * the most important screen of the import therefore required a click to exist, and
+ * once opened, six sections in single file in a narrow column: on
+ * never saw more than one question at a time. The grid is a request for
+ * CONTAINER, not window: it is the space actually available which decides,
+ * and the same component serves the two surfaces without knowing which one displays it.
  *
- * Tout lit `stats`, jamais les lignes : sur un fichier de 2 000 lignes et 30
- * colonnes, rebalayer à chaque changement de sélecteur se verrait à l'écran.
+ * Everything reads `stats`, never the lines: on a file of 2,000 lines and 30
+ * columns, rescanning each time the selector changes would be seen on screen.
  */
 
-/** Radix refuse un `SelectItem` de valeur vide : les deux réponses qui ne sont
- *  pas une cible passent par un jeton. `UNSET` = pas d'entrée au dictionnaire,
- *  `DROP` = une entrée vide, c'est-à-dire « ne pas reprendre ». */
+/** Radix refuses an empty `SelectItem`: the two responses that are not a target pass through a token. `UNSET` = no dictionary entry,
+ * `DROP` = an empty entry, i.e. “do not resume”. */
 const UNSET = "__unset__";
 const DROP = "__drop__";
 
@@ -75,10 +74,10 @@ export function ImportMappingEditor({
   aiPending,
   className,
   /**
-   * Le panneau des réglages garde l'accordéon : le tableau y est une pièce
-   * parmi d'autres dans une page qui défile. Le wizard, lui, a une étape
-   * entière pour lui — l'y replier n'aurait caché que ce qu'on vient d'ouvrir.
-   */
+ * The settings panel keeps the accordion: the table there is one piece
+ * among others in a scrolling page. The wizard has an entire
+ * step for him — folding it there would only have hidden what we have just opened.
+ */
   collapsible = true,
 }: {
   stats: TableStats;
@@ -86,9 +85,9 @@ export function ImportMappingEditor({
   members: ImportMember[];
   categories: string[];
   onChange: (next: ImportMapping) => void;
-  /** Le modèle a proposé quelque chose et c'est fusionné dans le plan affiché. */
+  /** The model suggested something and it's merged into the displayed plan. */
   aiApplied: boolean;
-  /** L'appel est en vol — le tableau reste utilisable pendant. */
+  /** The call is in flight — the table remains usable during. */
   aiPending: boolean;
   className?: string;
   collapsible?: boolean;
@@ -100,8 +99,8 @@ export function ImportMappingEditor({
   const values = useMemo(() => collectValueOptions(stats, mapping), [stats, mapping]);
 
   const usedColumns = mapping.columns.filter((f) => f !== "ignore").length;
-  // Une valeur sans réponse est ce que ce tableau existe pour montrer : elle se
-  // compte par section (la pastille de la section) et en tout (le résumé).
+  // An unanswered value is what this table exists to show: it is
+  // count per section (the section badge) and overall (the summary).
   const unresolvedStatus = values.status.filter(
     (v) => !mapping.statusValues[normalizeToken(v)]
   ).length;
@@ -136,8 +135,8 @@ export function ImportMappingEditor({
 
   const memberName = (m: ImportMember) => m.name || m.email || m.userId.slice(0, 8);
 
-  /** Ce que le tableau dit de lui-même — en tête de l'accordéon replié comme en
-   *  tête de l'étape du wizard : le même état, au même endroit. */
+  /** What the table says about itself — at the head of the folded accordion as in
+ * head of the wizard step: the same state, in the same place. */
   const summary = (
     <span className="flex items-center gap-2 text-xs text-muted-foreground">
       {aiPending && (
@@ -166,20 +165,20 @@ export function ImportMappingEditor({
     </span>
   );
 
-  /* Les sections, sans leur contenant : la grille est une requête de CONTENEUR,
-     donc c'est la largeur du bloc — pas celle de la fenêtre — qui décide s'il y
-     a une ou deux colonnes. Les colonnes du fichier tiennent toute la largeur :
-     c'est la question qui commande toutes les autres (une colonne rangée
-     ailleurs fait disparaître ses valeurs des sections d'à côté). */
+  /* The sections, without their container: the grid is a request for CONTAINER,
+ so it is the width of the block - not that of the window - which decides whether there
+ has one or two columns. The columns of the file take up the entire width:
+ this is the question that controls all the others (a column stored
+ elsewhere causes its values ​​to disappear from the adjacent sections). */
   const sections = (
     <div className={cn("@container", collapsible && "border-t border-border")}>
       <div className="grid grid-cols-1 items-start gap-x-6 gap-y-5 p-3 @xl:grid-cols-2">
         <Section
           title={t("importMappingColumnsTitle")}
           className="@xl:col-span-2"
-          /* Et deux colonnes DANS la section, puisqu'elle en occupe deux : un
-             fichier Jira a trente en-têtes, une file indienne de trente lignes
-             écraserait tout ce qui la suit hors de l'écran. */
+          /* And two columns IN the section, since it takes up two: a
+ Jira file has thirty headers, a single file of thirty lines
+ would overwrite everything after it off the screen. */
           bodyClassName="@xl:grid @xl:grid-cols-2 @xl:gap-x-6"
         >
           {stats.map((col) => (
@@ -197,10 +196,9 @@ export function ImportMappingEditor({
                 <SelectTrigger size="sm" className="w-40 shrink-0">
                   <SelectValue />
                 </SelectTrigger>
-                {/* Un champ simple déjà pris par une AUTRE colonne ne se
-                    propose plus : `applyMapping` ne lirait jamais la seconde,
-                    et rien à l'écran ne le dirait. Voir
-                    `fieldsAvailableForColumn`. */}
+                {/* A simple field already taken by ANOTHER column is no longer suggested: `applyMapping` would never read the second,
+ and nothing on the screen would say so. See
+ `fieldsAvailableForColumn`. */}
                 <SelectContent>
                   {fieldsAvailableForColumn(mapping.columns, col.index).map((field) => (
                     <SelectItem key={field} value={field}>
@@ -238,13 +236,13 @@ export function ImportMappingEditor({
           values={values.effort}
           dict={mapping.effortValues}
           options={ISSUE_EFFORTS}
-          // Les tailles ne se traduisent pas : « XS » se lit pareil partout.
+          // Sizes do not translate: “XS” reads the same everywhere.
           label={(v: IssueEffortValue) => EFFORT_MAP[v].label}
           unsetLabel={t("importValueNone")}
           onSet={(raw, target) => setValue("effortValues", raw, target)}
         />
-        {/* Personnes : le fichier nomme, le projet a des membres. Sans
-            correspondance, le nom descend en bas de la description. */}
+        {/* People: the file is named, the project has members. Without a
+ match, the name moves to the bottom of the description. */}
         <ValueSection
           title={t("importValuesAssignee")}
           flagUnset
@@ -263,7 +261,7 @@ export function ImportMappingEditor({
           unsetLabel={t("importValueNoMember")}
           onSet={(raw, target) => setValue("assigneeValues", raw, target)}
         />
-        {/* Étiquettes : ramenées sur une catégorie existante, ou créées. */}
+        {/* Labels: brought back to an existing category, or created. */}
         <ValueSection
           title={t("importValuesLabels")}
           values={values.labels}
@@ -306,7 +304,7 @@ export function ImportMappingEditor({
   );
 }
 
-/** Un bloc de questions, avec son titre. */
+/** A block of questions, with its title. */
 function Section({
   title,
   className,
@@ -327,14 +325,13 @@ function Section({
 }
 
 /**
- * Une ligne « ce que dit le fichier → ce que minddy en fait ».
+ * A line "what the file says → what minddy does with it".
  *
- * Une ligne sans réponse se signale SUR ELLE-MÊME : fond ambré discret,
- * astérisque contre son libellé. Le compte en tête de section disait combien il
- * en restait sans jamais dire lesquelles — sur une section de vingt étiquettes,
- * « 3 valeurs à placer » oblige à comparer chaque sélecteur au voisin pour
- * retrouver les trois. Le total reste en tête du tableau, où il répond à une
- * autre question : reste-t-il quelque chose à faire ici.
+ * An unanswered line reports ON ITSELF: discreet amber background,
+ * asterisk against its wording. The count at the head of the section said how many there
+ * remained without ever saying which ones — on a section of twenty labels,
+ * "3 values ​​to place" requires comparing each selector to the neighbor to
+ * find all three. The total remains at the top of the table, where it answers another question: is there anything left to do here.
  */
 function Row({
   label,
@@ -359,8 +356,8 @@ function Row({
         <p className="truncate text-sm">
           {label}
           {unresolved && (
-            // `aria-hidden` sur le signe, le mot en `sr-only` juste après :
-            // « astérisque » lu à voix haute n'apprend rien à personne.
+            // `aria-hidden` on the sign, the word `sr-only` just after:
+            // “asterisk” read aloud doesn’t teach anyone anything.
             <>
               <span
                 className="ml-0.5 font-medium text-amber-600 dark:text-amber-500"
@@ -380,7 +377,7 @@ function Row({
   );
 }
 
-/** Les valeurs distinctes d'une colonne à dictionnaire, et leur cible. */
+/** The distinct values ​​of a dictionary column, and their target. */
 function ValueSection<T extends string>({
   title,
   flagUnset = false,
@@ -394,20 +391,20 @@ function ValueSection<T extends string>({
 }: {
   title: string;
   /**
-   * Une valeur sans réponse est un TROU dans ce plan-là. Vrai pour les statuts,
-   * les priorités et les personnes, où « rien » veut dire qu'on a renoncé à
-   * placer quelque chose que le fichier disait. Faux pour les efforts et les
-   * étiquettes, dont l'absence de réponse est une réponse : pas d'effort, ou
-   * une catégorie créée telle quelle.
-   */
+ * An unanswered value is a HOLE in this plan. True for statuses,
+ * priorities and people, where "nothing" means that we gave up to
+ * place something that the file said. False for efforts and
+ * labels, the absence of an answer is an answer: no effort, or
+ * a category created as is.
+ */
   flagUnset?: boolean;
   values: string[];
   dict: Record<string, T>;
   options: readonly T[];
   label: (value: T) => string;
-  /** Ce que devient une valeur laissée sans réponse — dit, jamais deviné. */
+  /** What happens to a value left unanswered — said, never guessed. */
   unsetLabel: string;
-  /** Libellé du choix « ne pas reprendre », quand il a un sens (étiquettes). */
+  /** Wording of the “do not repeat” choice, when it makes sense (labels). */
   droppable?: string;
   onSet: (raw: string, target: string) => void;
 }) {

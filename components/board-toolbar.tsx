@@ -551,13 +551,13 @@ function ViewNameDialog({
   const [busy, setBusy] = useState(false);
   const tc = useTranslations("Common");
   const t = useTranslations("Board");
-  // ⌘/Ctrl + Entrée valide la vue — depuis le nom comme depuis la consigne
-  // à Numo, où Entrée seule passe à la ligne.
+  // ⌘/Ctrl + Enter validates the view — from the name as well as from the instruction
+  // to Numo, where Enter only moves to line.
   const submitShortcut = useSubmitShortcut();
 
-  // Repartir de `initialName` à chaque ouverture. `open` est piloté depuis le
-  // parent (poser `renameTarget` suffit à ouvrir) : Radix n'appelle alors PAS
-  // `onOpenChange`, donc le semer là laissait le champ « Renommer » vide.
+  // Start from `initialName` each time you open. `open` is controlled from the
+  // parent (setting `renameTarget` is enough to open): Radix then does NOT call
+  // `onOpenChange`, so seeding it there left the “Rename” field empty.
   useEffect(() => {
     if (!open) return;
     setName(initialName);
@@ -685,9 +685,9 @@ export function BoardToolbar({
   const [renameTarget, setRenameTarget] = useState<View | null>(null);
   const [shareTarget, setShareTarget] = useState<View | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<View | null>(null);
-  // Clic droit sur une pill (MIN-135) : la vue visée + le point d'ancrage du
-  // menu. C'est la vue CLIQUÉE, pas l'active — le menu « ⋯ », lui, reste sur
-  // l'active. `view: null` = la pill « Cycle », qui n'est pas une vue.
+  // Right click on a pill (MIN-135): the targeted view + the anchor point of the
+  // menu. This is the CLICKED view, not the active one — the “⋯” menu remains on
+  // activates it. `view: null` = the “Cycle” pill, which is not a view.
   const [viewMenu, setViewMenu] = useState<{
     view: View | null;
     x: number;
@@ -744,13 +744,13 @@ export function BoardToolbar({
     });
   };
 
-  // ── Menu contextuel d'une pill (MIN-135) ────────────────────────────────
-  // Les mêmes entrées que le bouton « ⋯ », mais portées par la vue cliquée.
-  // Les dialogs (renommer / partager / supprimer) plus bas acceptent déjà
-  // n'importe quelle vue, comme les handlers de useBoardViews.
-  // Toute pill ouvre le menu, y compris « Mes tickets » et « Cycle » : la liste
-  // d'actions est la même partout, ce qui ne s'applique pas y est grisé. Un
-  // menu qui apparaît parfois seulement se lit comme un bug.
+  // ── Context menu of a pill (MIN-135) ────────────────────────────────
+  // The same inputs as the “⋯” button, but carried by the clicked view.
+  // The dialogs (rename / share / delete) below already accept
+  // any view, such as useBoardViews handlers.
+  // Any pill opens the menu, including “My tickets” and “Cycle”: the list
+  // of actions is the same everywhere, what does not apply is grayed out. A
+  // menu that sometimes only appears reads like a bug.
   const openViewMenu = (view: View | null, e: React.MouseEvent) => {
     e.preventDefault();
     setViewMenu({ view, x: e.clientX, y: e.clientY });
@@ -758,8 +758,8 @@ export function BoardToolbar({
   const viewMenuActions = useMemo<ContextMenuAction[]>(() => {
     if (!viewMenu) return [];
     const view = viewMenu.view;
-    // Ni la pill « Cycle » (pas une vue) ni la vue système ne se renomment ou
-    // ne se suppriment ; la vue système se partage, la pill « Cycle » non.
+    // Neither the “Cycle” pill (not a view) nor the system view is renamed or
+    // are not deleted; the system view is shared, the “Cycle” pill is not.
     const editable = view !== null && view.kind !== "my";
     const actions: ContextMenuAction[] = [
       {
@@ -785,7 +785,7 @@ export function BoardToolbar({
       icon: <Trash2 className="size-4" />,
       variant: "destructive",
       separatorBefore: true,
-      // Un board garde au moins une vue custom (même règle que le « ⋯ »).
+      // A board keeps at least one custom view (same rule as “⋯”).
       disabled: !editable || customCount <= 1,
       onSelect: () => view && setDeleteTarget(view),
     });
@@ -1113,9 +1113,8 @@ function ViewChip({
   active: boolean;
   generating: boolean;
   onSelect: () => void;
-  /** Clic droit sur la pill : ouvre le menu d'actions de CETTE vue (MIN-135).
-      Le MouseSensor de dnd-kit ignore le bouton droit, la réorganisation par
-      glissement n'est donc pas concernée. */
+  /** Right click on the pill: opens the actions menu of THIS view (MIN-135).
+ The dnd-kit MouseSensor ignores the right button, so reordering by sliding is not affected. */
   onContextMenu: (e: React.MouseEvent) => void;
 }) {
   const t = useTranslations("Board");
@@ -1159,7 +1158,7 @@ function CycleTab({
   active: boolean;
   external?: boolean;
   onSelect: () => void;
-  /** Clic droit : le même menu que les vues, entièrement grisé (MIN-135). */
+  /** Right click: the same menu as the views, entirely grayed out (MIN-135). */
   onContextMenu: (e: React.MouseEvent) => void;
 }) {
   const t = useTranslations("Board");

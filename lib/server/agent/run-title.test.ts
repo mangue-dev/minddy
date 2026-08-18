@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import { agentRunTitleSource } from "./run-title";
 
 /**
- * Ce qu'on donne au titreur pour nommer une conversation. Le ticket d'abord, la
- * consigne ensuite : c'est l'assemblage des deux qui distingue trois
- * conversations du même ticket, là où le seul titre du ticket les nommait toutes
- * pareil et où la seule consigne (« implémente ça ») ne nomme rien.
+ * What we give to the titrator to name a conversation. The ticket first, the
+ * then records: it is the assembly of the two which distinguishes three
+ * conversations of the same ticket, where the sole title of the ticket named them all
+ * the same and where the only instruction ("implement this") names nothing.
  */
 describe("agentRunTitleSource", () => {
   it("assemble le ticket et la consigne", () => {
@@ -19,7 +19,7 @@ describe("agentRunTitleSource", () => {
   });
 
   it("se contente du ticket quand le lancement n'a pas de consigne", () => {
-    // Le bouton « Implémenter » nu : rien n'a été écrit, le ticket EST la mission.
+    // The bare “Implement” button: nothing has been written, the ticket IS the mission.
     expect(agentRunTitleSource({ issueTitle: "Export CSV des tickets" })).toBe(
       "Export CSV des tickets",
     );
@@ -35,7 +35,7 @@ describe("agentRunTitleSource", () => {
   });
 
   it("rend null quand il n'y a rien à résumer", () => {
-    // L'appelant saute alors l'appel au modèle plutôt que de lui poster du vide.
+    // The caller then skips the call to the model rather than posting it empty.
     expect(agentRunTitleSource({})).toBeNull();
     expect(agentRunTitleSource({ issueTitle: " ", prompt: null })).toBeNull();
   });

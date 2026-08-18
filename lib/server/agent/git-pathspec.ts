@@ -1,66 +1,63 @@
 /**
- * Construction des pathspecs git pour les tools `grep`/`glob` de l'agent (MIN-46).
- * Logique PURE (aucun shell), extraite de sandbox.ts pour être testable.
+ * Construction of git pathspecs for the agent's `grep`/`glob` tools (MIN-46).
+ * PURE logic (no shell), extracted from sandbox.ts to be testable.
  *
- * PIÈGE corrigé : git traite plusieurs pathspecs comme une UNION (OR), pas une
- * intersection. Passer `-- 'path' ':(glob)pattern'` élargit donc la recherche
- * (tout ce qui est sous `path`, PLUS tout ce qui matche `pattern` dans le dépôt)
- * au lieu de la restreindre. Quand `path` ET `glob` sont fournis, on fusionne en
- * UN SEUL pathspec `:(glob)<path>/<glob>` → vraie intersection « glob dans path ».
+ * TRAP fixed: git treats multiple pathspecs as a UNION (OR), not an intersection. Passing `-- 'path' ':(glob)pattern'` therefore broadens the search
+ * (everything under `path`, PLUS anything matching `pattern` in the repository)
+ * instead of restricting it. When `path` AND `glob` are provided, we merge into
+ * ONE SINGLE pathspec `:(glob)<path>/<glob>` → real intersection “glob in path”.
  *
- * DEUXIÈME PIÈGE, mesuré sur un vrai run (MIN-116) : le `:(glob)` de git ne
- * développe PAS les accolades. `**\/*.{ts,tsx}` — la forme que le modèle écrit
- * spontanément, c'est la convention ripgrep / Claude Code — ne matche alors AUCUN
- * fichier, git sort en code 1, et le tool rend « (no matches) », indiscernable
- * d'une vraie absence. Sur le run de vérification, 7 `grep` sur 13 ont menti comme
- * ça, jusqu'à `grep "Issue"` qui répondait qu'il n'y avait rien. On développe donc
- * les accolades NOUS-MÊMES : une alternative = un pathspec, et l'union OR de git
- * (le piège du dessus) donne ici exactement la bonne sémantique.
+ * SECOND TRAP, measured on a real run (MIN-116): git's `:(glob)` does
+ * does NOT expand braces. `**\/*.{ts,tsx}` — the form that the model writes
+ * spontaneously, this is the ripgrep / Claude Code convention — then matches NO
+ * file, git outputs code 1, and the tool renders “(no matches)”, indistinguishable
+ * from a real absence. On the verification run, 7 `grep` out of 13 lied like
+ * that, until `grep "Issue"` who replied that there was nothing. We therefore develop
+ * the braces OURSELVES: an alternative = a pathspec, and the OR union of git
+ * (the trap above) gives exactly the right semantics here.
  *
- * TROISIÈME PIÈGE, même famille, mesuré sur MIN-226 : `path` désigne un SOUS-ARBRE,
- * et l'intersection le suppose. Quand le modèle veut chercher dans UN fichier, il
- * remplit les deux champs du même chemin (`path` = `glob` = `components/foo.tsx`)
- * — la lecture naturelle de « où chercher » + « quoi chercher ». On fabriquait
- * alors `:(glob)components/foo.tsx/components/foo.tsx`, qui ne matche rien : git
- * sort en 1, le tool répond « (no matches) », et le modèle enregistre que ce
- * fichier ne contient pas ce qu'il y cherchait. Sur le run qui a écrit le plan de
- * MIN-226, les 5 sondes de cette forme ont menti — dont celle qui aurait trouvé
- * le troisième appelant du composant qu'on supprimait.
+ * THIRD TRAP, same family, measured on MIN-226: `path` denotes a SUBTREE,
+ * and the intersection assumes this. When the model wants to search ONE file, it
+ * fills both fields in the same path (`path` = `glob` = `components/foo.tsx`)
+ * — the natural reading of "where to search" + "what to search". We made
+ * then `:(glob)components/foo.tsx/components/foo.tsx`, which matches nothing: git
+ * comes out as 1, the tool responds “(no matches)”, and the model records that this
+ * file does not contain what it was looking for. On the run which wrote the plan for
+ * MIN-226, the 5 probes of this form lied — including the one which would have found
+ * the third caller of the component that was being deleted.
  *
- * Un `path` de FICHIER ne s'intersecte donc plus : il gagne, et le glob tombe.
- * C'est la seule direction sûre — au pire on cherche plus large que demandé, et
- * jamais on ne répond « rien » sur du code qui existe.
+ * A FILE `path` does not intersect so no more: he wins, and the glob falls.
+ * This is the only safe direction — at worst we search wider than asked, and
+ * we never answer “nothing” on code that exists.
  */
 
-/** Combine un sous-arbre et un glob en un chemin unique (glob dans le sous-arbre). */
+/** Combines a subtree and a glob into a single path (glob in subtree). */
 function joinWithin(path: string, glob: string): string {
   const base = path.replace(/^\/+|\/+$/g, "");
   return base ? `${base}/${glob}` : glob;
 }
 
 /**
- * Rend un glob récursif s'il ne contient PAS de `/` : convention ripgrep/Claude
- * Code où `*.ts` matche à toute profondeur. En pathspec `:(glob)` git, `*` ne
- * traverse pas `/`, donc un `*.ts` nu ne matcherait que la racine — surprenant
- * pour le modèle. On préfixe alors par un segment doublestar récursif.
+ * Makes a glob recursive if it does NOT contain a `/`: ripgrep convention/Claude
+ * Code where `*.ts` matches at any depth. In `:(glob)` git pathspec, `*` does not pass through `/`, so a bare `*.ts` would only match the root — surprising
+ * for the pattern. We then prefix with a recursive doublestar segment.
  */
 function recursive(glob: string): string {
   return glob.includes("/") ? glob : `**/${glob}`;
 }
 
 /**
- * Plafond du produit d'expansion. Un glob réaliste en produit une poignée
- * (`{ts,tsx,js,jsx,mjs,cjs,json,md}` = 8) ; au-delà, l'entrée est pathologique et
- * on rend le motif tel quel plutôt que de fabriquer des centaines de pathspecs.
+ * Expansion product cap. A realistic glob produces a handful
+ * (`{ts,tsx,js,jsx,mjs,cjs,json,md}` = 8); beyond that, the entry is pathological and
+ * we render the pattern as is rather than creating hundreds of pathspecs.
  */
 const MAX_BRACE_ALTERNATIVES = 64;
-/** Garde-fou de profondeur d'imbrication (`{a,{b,c}}`) — même esprit. */
+/** Nesting depth guardrail (`{a,{b,c}}`) — same spirit. */
 const MAX_BRACE_ROUNDS = 10;
 
 /**
- * Développe les accolades d'un glob : `*.{ts,tsx}` → `*.ts` + `*.tsx`. Les groupes
- * imbriqués sont développés de proche en proche ; un motif sans accolade (ou dont
- * les accolades ne sont pas équilibrées) ressort tel quel, à l'identique.
+ * Expands the braces of a glob: `*.{ts,tsx}` → `*.ts` + `*.tsx`. The nested
+ * groups are expanded step by step; a pattern without braces (or whose braces are not balanced) appears as is, identically.
  */
 export function expandBraces(pattern: string): string[] {
   let level = [pattern];
@@ -86,9 +83,9 @@ export function expandBraces(pattern: string): string[] {
 }
 
 /**
- * Premier groupe `{…}` ÉQUILIBRÉ du motif, avec ses alternatives de niveau 1.
- * Ignore ce qui est échappé (`\{`) et le contenu d'une classe `[…]` — une virgule
- * y appartient à la classe, pas au groupe.
+ * First BALANCED group `{…}` of the pattern, with its level 1 alternatives.
+ * Ignores what is escaped (`\{`) and the contents of a class `[…]` — a comma
+ * belongs to the class, not to the group.
  */
 function firstBraceGroup(
   p: string,
@@ -126,7 +123,7 @@ function firstBraceGroup(
   return null;
 }
 
-/** Tranche `p[from, to)` aux positions de virgule données. */
+/** Slice `p[from, to)` at the given comma positions. */
 function sliceAt(p: string, from: number, to: number, commas: number[]): string[] {
   const out: string[] = [];
   let cursor = from;
@@ -138,33 +135,33 @@ function sliceAt(p: string, from: number, to: number, commas: number[]): string[
   return out;
 }
 
-/** Un glob → ses alternatives d'accolades, chacune rendue récursive si besoin. */
+/** A glob → its brace alternatives, each made recursive if necessary. */
 function globAlternatives(glob: string): string[] {
   return expandBraces(glob).map(recursive);
 }
 
 /**
- * Métacaractères de glob : leur présence dit qu'on parle d'un MOTIF, pas d'un chemin.
+ * Glob metacharacters: their presence says that we are talking about a PATTERN, not a path.
  *
- * `[` et `]` en sont volontairement ABSENTS. Ce sont bien des métacaractères de
- * glob (une classe de caractères), mais dans un dépôt Next.js ils écrivent
- * d'abord un segment de route — `app/(app)/projects/[id]/page.tsx` — et les
- * compter comme motif rendait la garde aveugle au chemin même derrière lequel le
- * bug s'était caché. Un `path` qui serait une vraie classe de caractères sans
- * aucun `*`/`?`/`{}` est un cas de laboratoire ; une route dynamique est le cas
- * courant.
+ * `[` and `]` are deliberately ABSENT. These are indeed
+ * glob metacharacters (a character class), but in a Next.js repository they write
+ * first a route segment — `app/(app)/projects/[id]/page.tsx` — and counting
+ * as a pattern made the guard blind to the very path behind which the
+ * bug had hidden. A `path` that would be a real character class without
+ * any `*`/`?`/`{}` is a laboratory case; a dynamic route is the common case
+ *.
  */
 const GLOB_META = /[*?{}]/;
 
 /**
- * `path` désigne-t-il un fichier précis plutôt qu'un sous-arbre ? Question posée
- * SANS toucher au disque (ce module est pur), donc tranchée sur la forme : aucun
- * métacaractère, et un dernier segment qui porte une extension.
+ * Does `path` designate a specific file rather than a subtree? Question asked
+ * WITHOUT touching the disk (this module is pure), therefore decided on the form: none
+ * metacharacter, and a last segment which carries an extension.
  *
- * Se tromper ici est sans gravité, et c'est voulu : un faux positif (un dossier
- * nommé `app/v1.2`) fait tomber le glob et cherche dans tout le sous-arbre —
- * plus large que demandé, jamais moins. C'est l'inverse exact du défaut qu'on
- * répare, et il n'y a pas de symétrie à chercher entre les deux.
+ * Making a mistake here is not serious, and it is intended: a false positive (a folder
+ * named `app/v1.2`) drops the glob and searches the entire subtree —
+ * larger than requested, never less. It is the exact opposite of the defect that
+ * repairs, and there is no symmetry to be sought between the two.
  */
 function looksLikeFile(path: string): boolean {
   if (GLOB_META.test(path)) return false;
@@ -173,21 +170,21 @@ function looksLikeFile(path: string): boolean {
 }
 
 /**
- * Le glob doit-il être ABANDONNÉ au profit du seul `path` ? Deux cas, et tous
- * deux veulent dire « cherche là-dedans » :
+ * Should the glob be ABANDONED in favor of just `path`? Two cases, and both
+ * both mean "search in there":
  *
- *  - `path` nomme un fichier — il n'y a rien à filtrer sous un fichier ;
- *  - les deux champs portent le même chemin — l'imbriquer sous lui-même ne
- *    matcherait rien, que ce chemin soit un fichier ou un dossier.
+ * - `path` names a file — there is nothing to filter under a file ;
+ * - both fields have the same path — nest it under itself ne
+ * would match nothing, whether this path is a file or a folder.
  */
 function globIsMoot(path: string, glob: string): boolean {
   return path === glob || looksLikeFile(path);
 }
 
 /**
- * Pathspecs (NON quotés) pour `git grep`. Intersecte `path` et `glob` quand les
- * deux sont fournis, et rend UN pathspec par alternative d'accolade (union OR de
- * git). Tableau à quoter par l'appelant.
+ * Pathspecs (UNquoted) for `git grep`. Intersects `path` and `glob` when both
+ * are provided, and returns ONE pathspec per curly brace alternative (OR union of
+ * git). Table to be quoted by the caller.
  */
 export function grepPathspecs(path?: string | null, glob?: string | null): string[] {
   const p = path?.trim();
@@ -199,11 +196,11 @@ export function grepPathspecs(path?: string | null, glob?: string | null): strin
   return [];
 }
 
-/** Pathspecs (NON quotés) pour `git ls-files` (tool `glob`) — au moins un. */
+/** Pathspecs (UNquoted) for `git ls-files` (tool `glob`) — at least one. */
 export function globPathspecs(pattern: string, path?: string | null): string[] {
   const p = path?.trim();
-  // Même garde qu'au-dessus : `glob(pattern, path)` où `path` est un fichier
-  // (ou le motif lui-même) ne peut désigner que ce fichier.
+  // Same guard as above: `glob(pattern, path)` where `path` is a file
+  // (or the pattern itself) can only refer to this file.
   if (p && globIsMoot(p, pattern.trim())) return [p];
   return globAlternatives(pattern).map((alt) => `:(glob)${p ? joinWithin(p, alt) : alt}`);
 }

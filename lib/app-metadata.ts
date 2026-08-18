@@ -3,25 +3,24 @@ import { getTranslations } from "next-intl/server";
 import { SITE_NAME } from "@/lib/site";
 
 /**
- * Métadonnées des pages de l'app interne (MIN-95).
+ * Metadata of the pages of the internal app (MIN-95).
  *
- * Chaque page derrière l'authentification recopiait les mêmes quatre lignes de
- * `getTranslations` pour ne poser qu'un titre ; aucune ne posait de
- * description. Une page = une clé, désormais : le namespace `Meta` porte le
- * couple `<clé>` / `<clé>Description`, et cette fabrique en fait le `Metadata`
- * que Next attend.
+ * Each page behind the authentication copied the same four lines of
+ * `getTranslations` to put only one title; none had a
+ * description. One page = one key, from now on: the namespace `Meta` carries the
+ * pair `<key>` / `<key>Description`, and this actually produces the `Metadata`
+ * that Next expects.
  *
- * Le `robots: noindex` n'est PAS posé ici — `app/(app)/layout.tsx` le porte une
- * fois pour tout le segment authentifié, et Next fusionne les métadonnées champ
- * par champ en descendant l'arbre.
+ * The `robots: noindex` is NOT placed here — `app/(app)/layout.tsx` carries it once for the entire authenticated segment, and Next merges the metadata field
+ * by field down the tree.
  *
- * Une description sur une page non indexée ne pèse évidemment rien pour un
- * moteur de recherche. Elle est là pour qu'il n'y ait pas d'exception à retenir
- * — une page, un titre, une description — et parce que le même catalogue sert
- * les pages publiques, elles, bel et bien indexées.
+ * A description on an unindexed page obviously weighs nothing for a
+ * search engine. It is there so that there are no exceptions to remember
+ * — a page, a title, a description — and because the same catalog serves
+ * the public pages, which are indeed indexed.
  */
 
-/** Les clés du namespace `Meta` qui décrivent une page. */
+/** The keys in the `Meta` namespace that describe a page. */
 export type MetaPageKey =
   | "home"
   | "inbox"
@@ -49,16 +48,16 @@ export type MetaPageKey =
   | "resetPassword";
 
 /**
- * @param scope Contexte dynamique accolé au titre — le nom du projet sur les
- * sous-pages d'un projet : « Triage » + « Acme » donne « Triage · Acme · minddy ».
+ * @param scope Dynamic context attached to the title — the name of the project on the
+ * subpages of a project: "Triage" + "Acme" gives "Triage · Acme · minddy".
  *
- * La marque est recomposée à la main dans ce cas, au lieu d'être laissée au
- * template « %s · minddy » du root layout : Next résout un `title` chaîne en
- * `{ absolute, template: null }`, si bien qu'un layout intermédiaire qui pose un
- * titre — celui du projet — ANNULE le template pour tout son sous-arbre. Les
- * sous-pages d'un projet sortaient donc « Triage · Acme », sans marque, là où
- * toutes les autres pages du site la portent. Un `absolute` explicite ne dépend
- * plus de l'endroit où la page se trouve dans l'arbre.
+ * The mark is recomposed by hand in this case, instead of being left au
+ * template "%s · minddy" of the root layout: Next resolves a `title` string to
+ * `{ absolute, template: null }`, so that an intermediate layout which sets a
+ * title — that of the project — CANCELS the template for its entire subtree. The
+ * subpages of a project therefore left “Triage · Acme”, without a brand, where
+ * all the other pages of the site carry it. An explicit `absolute` no longer depends on
+ * where the page is in the tree.
  */
 export async function appPageMetadata(
   key: MetaPageKey,

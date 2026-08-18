@@ -43,24 +43,24 @@ export function ProjectMembers({
   const tb = useTranslations("Billing");
   const { members, invitations, isOwner, loading, invite, cancelInvitation, removeMember } =
     useMembersQuery(projectId, enabled);
-  // Le plan plafonne le nombre d'INVITÉS d'un projet, il ne ferme plus la porte
-  // (MIN-199) : le formulaire est donc toujours là, avec son compteur, et ne se
-  // désarme qu'une fois la dernière place prise. Le compte suit celui du
-  // serveur (`ensureMemberSlotAvailable`) : les membres hors owner, plus les
-  // invitations encore en attente.
+  // The plan caps the number of GUESTS in a project, it no longer closes the door
+  // (MIN-199): the form is therefore still there, with its counter, and is not
+  // disarms only once the last place is taken. The account follows that of
+  // server (`ensureMemberSlotAvailable`): members other than owner, plus
+  // invitations still pending.
   const { maxMembersPerProject } = usePlanGates();
   const guestsUsed =
     members.filter((m) => !m.is_owner).length + invitations.length;
-  // Un projet peut dépasser son plafond (abonnement expiré) : on ne retire
-  // personne, on refuse seulement la suivante — d'où le `>=`.
+  // A project can exceed its ceiling (expired subscription): we cannot withdraw
+  // person, we only refuse the next one — hence the `>=`.
   const limitReached =
     maxMembersPerProject != null && guestsUsed >= maxMembersPerProject;
 
   const [email, setEmail] = useState("");
   const [inviting, setInviting] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
-  // Retirer un membre est irréversible côté serveur (la ligne `project_members`
-  // est supprimée) : on passe par une confirmation explicite.
+  // Removing a member is irreversible on the server side (the `project_members` line
+  // is deleted): we go through an explicit confirmation.
   const [removeTarget, setRemoveTarget] = useState<Member | null>(null);
 
   const handleInvite = async (e: React.FormEvent) => {
@@ -79,7 +79,7 @@ export function ProjectMembers({
     }
   };
 
-  /** Renvoie `false` si l'appel a échoué — l'appelant garde alors son dialogue ouvert. */
+  /** Returns `false` if the call failed — the caller then keeps its dialog open. */
   const withBusy = async (id: string, fn: () => Promise<void>) => {
     setBusyId(id);
     try {
@@ -119,10 +119,8 @@ export function ProjectMembers({
           <p className="-mt-2 text-xs text-muted-foreground">
             {t("inviteHint")}
           </p>
-          {/* Tant que la liste charge, `guestsUsed` vaut 0 parce qu'on n'a
-              encore RIEN reçu — pas parce que le projet est vide. Afficher le
-              compteur là annoncerait « 0 invité sur 2 » à un projet plein, une
-              demi-seconde, à chaque ouverture de l'onglet. */}
+          {/* As long as the list loads, `guestsUsed` is 0 because we haven't received ANYTHING yet — not because the project is empty. Showing the
+ counter there would announce "0 guests of 2" to a full project, a half second, each time the tab is opened. */}
           {!loading && maxMembersPerProject != null && (
             <p className="-mt-3 text-xs text-muted-foreground">
               {limitReached ? (
@@ -186,13 +184,11 @@ export function ProjectMembers({
       {isOwner && invitations.length > 0 && (
         <div className="flex flex-col gap-1">
           <p className="text-sm font-medium">{t("pendingInvitations")}</p>
-          {/* L'attente est dite UNE fois, pour la liste entière, et jamais par
-              ligne (MIN-197). Un état par ligne — « en attente d'inscription »
-              contre « en attente de réponse » — répondrait à la question « cette
-              adresse a-t-elle un compte minddy ? » pour n'importe quelle adresse
-              qu'on saisit : un oracle d'énumération de comptes. L'invitant a
-              besoin de savoir qu'une invitation peut attendre une inscription ;
-              il n'a pas besoin de savoir LAQUELLE le fait. */}
+          {/* The wait is said ONCE, for the entire list, and never by
+ line (MIN-197). A status per line — “waiting for registration”
+ versus “waiting for response” — would answer the question “does this
+ address have a minddy account?” » for any address
+ that we enter: an account enumeration oracle. The inviter needs to know that an invitation can wait for a registration; he does not need to know WHICH one does. */}
           <p className="text-xs text-muted-foreground">
             {t("pendingInvitationsHint")}
           </p>

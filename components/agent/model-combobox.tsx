@@ -32,41 +32,41 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Picker de modèle recherchable de l'agent (MIN-46). Recherche dans le catalogue
- * du provider ACTIF (BYOK ou clé plateforme), chaque entrée avec son logo et son
- * nom reformaté (`formatModelName`). `value` vaut "" pour « mon défaut », sinon
- * l'id du modèle. Saisie libre autorisée (`freeTextLabel`) : indispensable pour
- * un provider générique dont `/models` peut être vide/indisponible. On
- * filtre/score nous-mêmes (`shouldFilter={false}`) et on tronque à MAX_RESULTS.
+ * Agent Searchable Model Picker (MIN-46). Catalog search
+ * of the ACTIVE provider (BYOK or platform key), each entry with its logo and its
+ * reformatted name (`formatModelName`). `value` is "" for "my default", otherwise
+ * the model id. Free entry authorized (`freeTextLabel`): essential for
+ * a generic provider whose `/models` may be empty/unavailable. We
+ * filter/score ourselves (`shouldFilter={false}`) and we truncate to MAX_RESULTS.
  *
- * À L'OUVERTURE, la liste n'est pas le catalogue : c'est la courte sélection des
- * modèles CONSEILLÉS (`recommended`, réglée dans /admin, cf.
- * lib/recommended-models.ts). Trois cents modèles rangés par ordre alphabétique
- * ouvrent sur `agentica-org/…` — un rang qui ne dit rien de ce qui marche, et
- * qui laisse le choix entier à charge de quelqu'un qui voulait juste lancer un
- * agent. Rien n'est CACHÉ pour autant : taper cherche dans tout le catalogue, et
- * une dernière ligne l'ouvre en entier sans rien taper. Quand le serveur ne
- * renvoie aucun conseil applicable (BYOK aux ids natifs, catalogue admin, liste
- * vidée), on retombe sur le catalogue entier — le comportement d'avant.
+ * WHEN OPENING, the list is not the catalog: it is the short selection of
+ * RECOMMENDED models (`recommended`, set in /admin, cf.
+ * lib/recommended-models.ts). Three hundred models arranged in alphabetical order
+ * open on `agentica-org/…` — a rank that says nothing about what works, and
+ * which leaves the entire choice up to someone who just wanted to launch a
+ * agent. Nothing is HIDDEN though: type searches in the entire catalog, and
+ * a last line opens it in full without typing anything. When the server does not
+ * returns no applicable advice (BYOK to native ids, admin catalog, list
+ * emptied), we fall back on the entire catalog — the behavior before.
  *
- * Chaque modèle porte son COÛT relatif au modèle par défaut de minddy (« ×2,4 »,
- * cf. lib/model-multiplier.ts), et ceux qui dépassent le plafond du plan sont
- * GRISÉS, pas cachés : savoir qu'un modèle existe et ce qu'il coûte est
- * précisément ce qui donne une raison de changer de plan. Le serveur les refuse
- * de son côté (`ensureModelInPlan`) — le grisé est une politesse, pas la serrure.
+ * Each model carries its COST relative to the default minddy model (“×2.4”,
+ * cf. lib/model-multiplier.ts), and those that exceed the plan ceiling are
+ * GRAYED, not hidden: knowing that a model exists and what it costs is
+ * precisely what gives a reason to change plans. The server refuses them
+ * for its part (`ensureModelInPlan`) — the gray is a courtesy, not the lock.
  *
- * Les deux vont ensemble mais ne dépendent pas l'un de l'autre : le « ×N »
- * s'affiche dès que le catalogue situe le modèle, le grisé n'apparaît que s'il
- * envoie AUSSI un plafond. C'est ce qui donne son échelle de coût au dashboard
- * admin, où l'on choisit ce que minddy paye sans qu'aucun plan s'applique. En
- * BYOK, en revanche, le catalogue ne situe rien du tout et il n'y a donc rien à
- * montrer : l'utilisateur paye ses propres tokens, et une échelle indexée sur le
- * défaut de minddy ne parlerait pas de sa facture.
+ * The two go together but do not depend on each other: the “×N”
+ * is displayed as soon as the catalog locates the model, the gray only appears if it
+ * ALSO sends a cap. This is what gives the dashboard its cost scale
+ * admin, where you choose what minddy pays without any plan applying. In
+ * BYOK, on ​​the other hand, the catalog does not locate anything at all and there is therefore nothing to
+ * show: the user pays their own tokens, and a scale indexed to the
+ * default minddy wouldn't talk about her bill.
  */
 
 const MAX_RESULTS = 50;
 
-/** Nom affichable d'un plan : son id capitalisé (« go » → « Go »). */
+/** Displayable name of a plan: its capitalized id (“go” → “Go”). */
 function planLabel(id: string | null): string {
   return id ? id.charAt(0).toUpperCase() + id.slice(1) : "";
 }
@@ -85,31 +85,31 @@ export function ModelCombobox({
   variant = "field",
   scope = "user",
 }: {
-  /** "" = suit mon modèle par défaut ; sinon un id de modèle. */
+  /** "" = follows my default template; otherwise a model id. */
   value: string;
   onChange: (value: string) => void;
   defaultLabel: string;
-  /** Modèle vers lequel « le défaut » résout (affiché en aparté sur l'option défaut). */
+  /** Model to which “the default” resolves (displayed separately on the default option). */
   defaultModelId?: string | null;
   placeholder: string;
   emptyLabel: string;
   loadingLabel: string;
-  /** Libellé de l'option « utiliser tel quel » (saisie libre). */
+  /** Wording of the “use as is” option (free entry). */
   freeTextLabel: (query: string) => string;
   disabled?: boolean;
   /**
-   * Tooltip affiché quand le picker est verrouillé (variante `compact`) : le modèle
-   * est figé pour la session, ex. « pour en changer, lancez un nouvel agent ».
+   * Tooltip displayed when the picker is locked (variant `compact`): the model
+   * is fixed for the session, e.g. “to change it, launch a new agent”.
    */
   disabledTooltip?: string;
   /**
-   * `field` (défaut) : trigger pleine largeur façon champ de formulaire.
-   * `compact` : petit pill (logo + nom) pour la barre d'un composer de chat.
+   * `field` (default): full width trigger like form field.
+   * `compact`: small pill (logo + name) for the bar of a chat composer.
    */
   variant?: "field" | "compact";
   /**
-   * Catalogue interrogé. `user` (défaut) = le provider actif du compte ;
-   * `platform` = la clé plateforme OpenRouter, pour la config admin.
+   * Catalog queried. `user` (default) = the active provider of the account;
+   * `platform` = the OpenRouter platform key, for the admin config.
    */
   scope?: AgentModelsScope;
 }) {
@@ -119,15 +119,15 @@ export function ModelCombobox({
   const t = useTranslations("Agent");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  // « Voir tous les modèles » : dépliage explicite, remis à plat à la fermeture
-  // comme la recherche — rouvrir le picker doit toujours rouvrir sur les conseils.
+  // “See all models”: explicit unfolding, flattened when closed
+  // like search — reopen the picker should always reopen on advice.
   const [showAll, setShowAll] = useState(false);
 
   /**
-   * Les conseils tels qu'on peut les AFFICHER : l'ordre de l'admin, résolu sur
-   * le catalogue. Le modèle actuellement choisi y est joint s'il n'en fait pas
-   * partie — sans lui, le picker s'ouvrirait sur une liste où rien n'est coché,
-   * alors qu'un modèle est bel et bien sélectionné.
+   * The advice as it can be DISPLAYED: the order of the admin, resolved on
+   * the catalog. The currently chosen model is attached if it does not
+   * part — without it, the picker would open on a list where nothing is checked,
+   * while a model is indeed selected.
    */
   const shortlist = useMemo(() => {
     if (recommended.length === 0) return [];
@@ -137,8 +137,8 @@ export function ModelCombobox({
     return current && !recommended.includes(value) ? [...list, current] : list;
   }, [models, recommended, value]);
 
-  // Liste courte tant qu'il y a des conseils, qu'on ne cherche pas et qu'on n'a
-  // pas déplié.
+  // Short list as long as there is advice, we don't seek and we don't have
+  // not unfolded.
   const collapsed = shortlist.length > 0 && !query.trim() && !showAll;
 
   const results = useMemo(() => {
@@ -164,18 +164,18 @@ export function ModelCombobox({
   const trimmed = query.trim();
   const showFreeText = trimmed.length > 0 && !models.some((m) => m.id === trimmed);
 
-  // Le plafond ne s'affiche que si le catalogue en renvoie un ET qu'au moins un
-  // modèle est situé dessus : sur une liste sans prix (index illisible), une
-  // note « au-delà de ×4… » n'expliquerait rien qui se voie.
+  // The ceiling is only displayed if the catalog returns one AND at least one
+  // model is located above: on a list without price (illegible index), a
+  // note “beyond ×4…” would not explain anything that is visible.
   const allowed = (m: AgentModel) =>
     maxMultiplier == null || isMultiplierWithinPlan(m.multiplier, maxMultiplier);
   const showCapHint =
     maxMultiplier != null && results.some((m) => m.multiplier != null && !allowed(m));
 
   /**
-   * Le « ×N » d'une ligne — muet tant que le catalogue ne situe pas ce modèle.
-   * `alwaysAllowed` pour l'option « défaut », qui échappe au plafond : sans lui,
-   * un défaut d'instance cher porterait la couleur des lignes refusées tout en
+   * The “×N” of a line — silent until the catalog locates this model.
+   * `alwaysAllowed` for the “default” option, which escapes the ceiling: without it,
+   * an expensive instance default would carry the color of the refused lines while
    * restant cliquable.
    */
   const multiplierBadge = (m: AgentModel, alwaysAllowed = false) =>
@@ -197,12 +197,12 @@ export function ModelCombobox({
     setOpen(false);
   };
 
-  /** Une ligne de modèle — rendue telle quelle, ou dans le groupe des conseils. */
+  /** A model line — rendered as is, or in the tips group. */
   const modelRow = (m: AgentModel) => (
     <CommandItem
       key={m.id}
       value={m.id}
-      // Hors plafond : la ligne reste LISIBLE (opacité de cmdk) mais n'est ni
+      // Outside the ceiling: the line remains READABLE (cmdk opacity) but is neither
       // cliquable ni navigable au clavier.
       disabled={!allowed(m)}
       onSelect={() => select(m.id)}
@@ -214,10 +214,10 @@ export function ModelCombobox({
     </CommandItem>
   );
 
-  // Rendu de l'option « défaut » : libellé + modèle résolu (logo + nom) en aparté.
-  // Son multiplicateur s'affiche comme celui des autres, mais elle n'est JAMAIS
-  // grisée : c'est un défaut de minddy, et minddy ne se refuse pas les siens
-  // (`pr_review_model` vaut délibérément un modèle cher).
+  // Rendering of the “default” option: wording + resolved model (logo + name) separately.
+  // Its multiplier is displayed like that of the others, but it is NEVER
+  // grayed out: it's a fault of Minddy, and Minddy does not refuse hers
+  // (`pr_review_model` is deliberately worth an expensive model).
   const defaultEntry = defaultModelId ? models.find((m) => m.id === defaultModelId) : undefined;
   const defaultRow = (
     <span className="flex min-w-0 flex-1 items-center gap-2">
@@ -232,9 +232,9 @@ export function ModelCombobox({
     </span>
   );
 
-  // Verrouillé (agent lancé) : chip statique + tooltip, SANS popover. Le <span>
-  // extérieur porte le hover (un bouton `disabled` n'émet pas d'événement pointer,
-  // donc le tooltip ne s'ouvrirait pas si on le mettait sur le bouton).
+  // Locked (agent launched): static chip + tooltip, WITHOUT popover. The <span>
+  // outside carries the hover (a `disabled` button does not emit a pointer event,
+  // so the tooltip would not open if you put it on the button).
   if (variant === "compact" && disabled && disabledTooltip) {
     const shown = value || defaultModelId || "";
     return (
@@ -281,8 +281,8 @@ export function ModelCombobox({
                 ? logoFor(defaultModelId)
                 : null}
             <span className="max-w-[9rem] truncate">
-              {/* Toujours le nom réel du modèle : même quand on suit « le défaut »,
-                  on affiche le modèle résolu (fallback sur le libellé si inconnu). */}
+              {/* Always the real name of the model: even when we follow “the default”,
+ we display the resolved model (fallback on the label if unknown). */}
               {value
                 ? formatModelName(value)
                 : defaultModelId
@@ -312,17 +312,16 @@ export function ModelCombobox({
           </Button>
         )}
       </PopoverTrigger>
-      {/* La liste se dimensionne sur SON contenu, pas sur le déclencheur : les
-          noms de modèles sont longs, et le picker vit désormais dans une rangée
-          de réglages où le bouton fait la largeur qu'il veut. `PopoverContent`
-          est déjà `w-max min-w-(--radix-popover-trigger-width)` — on ne lui
-          impose donc qu'un plafond, pour qu'un id à rallonge ne sorte pas de
-          l'écran. Épingler la largeur au déclencheur (ce que faisait
-          `w-[var(--radix-popover-trigger-width)]`) écrasait tout. */}
-      {/* `rounded-xl` (20px) et non le `rounded-lg` par défaut du popover :
-          c'est `Command` qui peint cette surface et il s'impose déjà 20px.
-          Avec le retrait de 8px de la liste, les options (12px) sont alors
-          concentriques — 20 − 8 = 12. */}
+      {/* The list is sized on ITS content, not on the trigger: the
+ model names are long, and the picker now lives in a row
+ of settings where the button is the width it wants. `PopoverContent`
+ is already `w-max min-w-(--radix-popover-trigger-width)` — we therefore only impose a ceiling on it, so that an extended id does not leave
+ the screen. Pinning the width to the trigger (which
+ `w-[var(--radix-popover-trigger-width)]` did) overwrote everything. */}
+      {/* `rounded-xl` (20px) and not the default `rounded-lg` of the popover:
+ it is `Command` which paints this surface and it is already 20px.
+ With the removal of 8px from the list, the options (12px) are then
+ concentric — 20 − 8 = 12. */}
       <PopoverContent
         className={cn(
           "rounded-xl p-0",
@@ -332,19 +331,19 @@ export function ModelCombobox({
       >
         <Command shouldFilter={false}>
           <CommandInput value={query} onValueChange={setQuery} placeholder={placeholder} />
-          {/* `p-1` et non `px-1` : par-dessus le `p-1` de `Command`, ça fait le
-              MÊME retrait de 8px des quatre côtés — celui du champ de recherche.
-              Un padding horizontal seul laissait la dernière option à 4px du bas
-              et à 8px des côtés, et aucun rayon ne peut être juste là-dessous. */}
+          {/* `p-1` and not `px-1`: on top of the `p-1` of `Command`, it does the
+ SAME removal of 8px from all four sides — that of the search field.
+ A horizontal padding alone left the last option 4px from the bottom
+ and 8px from the sides, and no ray can be right below there. */}
           <CommandList className="p-1">
             <CommandItem value="__default__" onSelect={() => select("")}>
               {defaultRow}
               <Check className={cn("size-4 shrink-0", value ? "opacity-0" : "opacity-100")} />
             </CommandItem>
-            {/* Groupé sous son titre quand c'est la sélection conseillée : la
-                liste est courte, et le titre est ce qui dit POURQUOI. `p-0` : le
-                padding du groupe décalerait ses options de celle du défaut,
-                juste au-dessus (la liste porte déjà son `px-1`). */}
+            {/* Grouped under its title when it is the recommended selection: the
+ list is short, and the title is what says WHY. `p-0`: the
+ padding of the group would shift its options from that of the default,
+ just above (the list already has its `px-1`). */}
             {collapsed ? (
               <CommandGroup className="p-0" heading={t("modelRecommended")}>
                 {results.map(modelRow)}
@@ -352,15 +351,15 @@ export function ModelCombobox({
             ) : (
               results.map(modelRow)
             )}
-            {/* Le catalogue entier, sans avoir à deviner quoi taper. Une option
-                de la liste plutôt qu'un bouton en pied : elle se navigue au
-                clavier, dans la continuité des modèles au-dessus. */}
+            {/* The entire catalog, without having to guess what to type. An option
+ of the list rather than a button at the bottom: it is navigated using
+ keyboard, in continuity with the models above. */}
             {collapsed ? (
               <CommandItem value="__all__" onSelect={() => setShowAll(true)}>
                 <ListPlus className="size-4 shrink-0 text-muted-foreground" />
-                {/* Pas de compte annoncé : le dépliage tronque à MAX_RESULTS,
-                    et promettre « les 321 modèles » pour en montrer 50 serait
-                    faux. Ce qui les atteint tous, c'est la recherche. */}
+                {/* No account announced: unfolding truncates to MAX_RESULTS,
+ and promising "all 321 models" to show 50 would be
+ false. What reaches them all is research. */}
                 <span className="flex-1 truncate text-muted-foreground">{t("modelShowAll")}</span>
               </CommandItem>
             ) : null}
@@ -386,10 +385,9 @@ export function ModelCombobox({
               </div>
             ) : null}
           </CommandList>
-          {/* Ce qui explique le grisé. En pied de liste et hors du scroll : un
-              tooltip par ligne était impossible (une option désactivée n'émet
-              aucun événement pointer), et la raison doit rester lisible pendant
-              qu'on parcourt le catalogue. */}
+          {/* Which explains the graying. At the bottom of the list and outside the scroll: a
+ tooltip per line was impossible (a disabled option does not emit
+ any pointer event), and the reason must remain readable while browsing the catalog. */}
           {showCapHint && maxMultiplier != null ? (
             <p className="border-t px-3 py-2 text-xs text-muted-foreground">
               {t("modelPlanCap", { plan: planLabel(planId), limit: maxMultiplier })}

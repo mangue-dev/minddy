@@ -24,71 +24,71 @@ import {
 import { isManagedAiEnabled } from "@/lib/managed-services";
 
 /**
- * Catalogue de modèles de l'agent de code (MIN-46), résolu selon le provider
- * ACTIF d'un compte (son BYOK unique, ou la clé plateforme OpenRouter). Source
- * unique partagée par la route `/api/agent/models` (picker UI) ET le tool
- * `list_agent_models` de Numo (assistant) — même liste, même cache, même défaut.
+ * Code agent template catalog (MIN-46), resolved according to the provider
+ * ASSET of an account (its unique BYOK, or the OpenRouter platform key). Source
+ * unique shared by the route `/api/agent/models` (UI picker) AND the tool
+ * `list_agent_models` of Numo (wizard) — same list, same cache, same default.
  *
- * On ne renvoie que `{ id, name, multiplier? }` par modèle (+ le slug provider,
- * le défaut effectif et le plafond du plan) : le picker reformate via
- * `formatModelName`, et Numo n'a besoin que de l'id exact pour forcer un modèle
- * au lancement. Cache process par `provider|baseUrl` (la liste est identique
- * pour tous les comptes d'un même endpoint) ; sur échec on sert le cache périmé,
- * sinon une liste vide (la saisie libre reste autorisée en aval).
+ * We only return `{ id, name, multiplier? }` per model (+ the slug provider,
+ * the effective default and the plan cap): the picker reformats via
+ * `formatModelName`, and Numo only needs the exact id to force a model
+ * at launch. Process cache by `provider|baseUrl` (the list is identical
+ * for all accounts of the same endpoint); on failure we serve the expired cache,
+ * otherwise an empty list (free entry remains authorized downstream).
  *
- * Le multiplicateur, lui, n'est JAMAIS caché avec la liste : il se recalcule à
- * chaque appel depuis le baseline du moment (`app_config.agent_model`, qu'un
- * admin change quand il veut). Figé dans le cache, il aurait continué une heure
- * durant à situer les modèles sur une échelle qui n'existe plus.
+ * The multiplier is NEVER hidden with the list: it is recalculated at
+ * each call from the current baseline (`app_config.agent_model`, that a
+ * admin changes whenever he wants). Frozen in the cache, it would have continued for an hour
+ * to locate the models on a scale that no longer exists.
  */
 
 export interface AgentModelEntry {
   id: string;
   name: string;
   /**
-   * Les paliers de raisonnement que ce modèle accepte (MIN-122, affiné), tels
-   * qu'il les publie. Absent hors OpenRouter : les autres endpoints n'ont pas
-   * d'index de capacités, et le sélecteur retombe alors sur les paliers
-   * génériques — le même repli conservateur que pour l'entrée image.
-   */
+ * The reasoning levels that this model accepts (MIN-122, refined), such as
+ * that it publishes. Absent outside OpenRouter: the other endpoints do not have
+ * a capacity index, and the selector then falls back to the generic
+ * levels — the same conservative fallback as for the image.
+ */
   reasoning?: ModelReasoning | null;
   /**
-   * Coût d'usage relatif au modèle par défaut de minddy (cf.
-   * lib/model-multiplier.ts). Absent quand il ne veut rien dire : provider BYOK
-   * (prix inconnus de nous, et de toute façon payés par l'utilisateur), modèle
-   * hors catalogue OpenRouter, ou baseline gratuit.
-   */
+ * Usage cost relating to the default minddy model (cf.
+ * lib/model-multiplier.ts). Absent when it means nothing: provider BYOK
+ * (prices unknown to us, and paid by the user anyway), model
+ * outside the OpenRouter catalog, or free baseline.
+ */
   multiplier?: number;
 }
 
 export interface AgentModelsCatalog {
   provider: AgentProviderId;
-  /** Modèle par défaut du provider actif (frontier BYOK ou défaut racine), ou null (générique). */
+  /** Default model of the active provider (BYOK border or root default), or null (generic). */
   defaultModel: string | null;
   models: AgentModelEntry[];
   /**
-   * Plafond de multiplicateur du plan, ou `null` quand aucun ne s'applique :
-   * BYOK (l'utilisateur paye ses tokens) et catalogue admin. `null` = le picker
-   * n'affiche ni multiplicateur ni grisé.
-   */
+ * Plan multiplier cap, or `null` when none applies:
+ * BYOK (user pays for tokens) and admin catalog. `null` = the picker
+ * does not display a multiplier nor is it grayed out.
+ */
   maxMultiplier?: number | null;
-  /** Plan du compte — pour nommer le plafond dans l'UI (« votre plan Go »). */
+  /** Account Plan — to name the limit in the UI (“your Go plan”). */
   planId?: string;
   /**
-   * Les ids CONSEILLÉS, dans l'ordre voulu par l'admin, et restreints à ceux que
-   * ce catalogue contient vraiment. C'est ce que le picker montre à l'ouverture,
-   * avant toute frappe (cf. lib/recommended-models.ts).
-   *
-   * Absent sur le catalogue ADMIN : là-bas on règle `app_config`, y compris des
-   * modèles de transcription ou d'embedding qu'on ne conseille à personne — une
-   * liste de conseils y masquerait justement ce qu'on est venu chercher.
-   */
+ * RECOMMENDED ids, in the order desired by the admin, and restricted to those that
+ * this catalog really contains. This is what the picker shows when opening,
+ * before any keystroke (see lib/recommended-models.ts).
+ *
+ * Absent in the ADMIN catalog: there we set `app_config`, including
+ * transcription or embedding models that we do not advise anyone — a
+ * list of advice would hide precisely what we came to look for.
+ */
   recommended?: string[];
   /**
-   * Adresse non secrète que seule l'application de bureau emploie pour découvrir
-   * le catalogue local. Le serveur ne la joint jamais : `models` reste vide ici
-   * et le bridge Electron fait l'appel sur loopback.
-   */
+ * Non-secret address that only the desktop application uses to discover
+ * the local catalog. The server never joins it: `models` remains empty here
+ * and the Electron bridge makes the call on loopback.
+ */
   localEndpoint?: {
     provider: Extract<AgentProviderId, "local_openai" | "ollama">;
     baseUrl: string;
@@ -98,40 +98,40 @@ export interface AgentModelsCatalog {
 const TTL_MS = 60 * 60 * 1000;
 const cache = new Map<string, { at: number; models: AgentModelEntry[] }>();
 
-/** Écarte les modèles non conversationnels (embeddings, audio, image…). */
+/** Discard non-conversational models (embeddings, audio, image, etc.). */
 const NON_CHAT_RE = /(embed(?:ding)?|whisper|tts|dall-e|moderation|audio|image|imagen|veo|realtime|transcribe|rerank)/i;
 
 /**
- * La liste telle qu'on la PROPOSE : sans ses doublons de version, et rangée.
+ * The list as PROPOSED: without its version duplicates, and row.
  *
- * Le dédoublonnage vaut pour les quatre stratégies et pas seulement pour
- * OpenRouter : `/v1/models` d'OpenAI publie `gpt-4o` à côté de trois
- * `gpt-4o-2024-…`, et celui d'Anthropic ne publie que des ids datés — auquel cas
- * la règle ne retire rien, faute d'id nu en face. C'est exactement ce qu'on veut :
- * elle ne range que là où il y a un doublon.
+ * The deduplication is valid for the four strategies and not only for
+ * OpenRouter: `/v1/models` from OpenAI publishes `gpt-4o` alongside of three
+ * `gpt-4o-2024-…`, and Anthropic's only publishes dated ids — in which case
+ * the rule does not remove anything, for lack of a bare id opposite. This is exactly what we want:
+ * it only stores where there is a duplicate.
  */
 function sortById(models: AgentModelEntry[]): AgentModelEntry[] {
   return dedupeModelVariants(models).sort((a, b) => a.id.localeCompare(b.id));
 }
 
 /**
- * OpenRouter : le catalogue vient de l'index partagé (`openrouter-index.ts`),
- * filtré au tool-calling. Une seule lecture de `/models` sert ici, les capacités
- * de la boucle et les prix du plafond de plan.
+ * OpenRouter: the catalog comes from the shared index (`openrouter-index.ts`),
+ * filtered on tool-calling. Only one reading of `/models` is used here, the loop's abilities
+ * and the plan cap prices.
  *
- * Deux exclusions en plus du tool-calling, et aucune des deux ne se lit dans
+ * Two exclusions in addition to tool-calling, and neither reads in
  * `supported_parameters` :
- *  - les AIGUILLAGES (`openrouter/auto`, `~anthropic/claude-opus-latest`…) — ce
- *    ne sont pas des modèles, et ce qu'ils exécutent change sans prévenir ;
- *  - tout ce qui rend autre chose que du TEXTE (image, audio, vidéo). Le filtre
- *    par id de `NON_CHAT_RE` ne suffit pas et n'a jamais couru ici : `gpt-audio`
- *    et `gemini-3-pro-image` déclarent tous deux `tools`.
- * L'index, lui, les garde : un id collé à la main doit rester chiffrable.
+ * - SWITCHES (`openrouter/auto`, `~anthropic/claude-opus-latest`…) — this
+ * are not models, and what they execute changes without warning;
+ * - anything that renders something other than TEXT (image, audio, video). The filter
+ * by id of `NON_CHAT_RE` is not sufficient and has never run here: `gpt-audio`
+ * and `gemini-3-pro-image` both declare `tools`.
+ * The index keeps them: one id pasted by hand must remain encryptable.
  *
- * Les DOUBLONS DE VERSION (instantanés datés, pré-versions, tarif `:batch` — à
- * lui seul un cinquième de la liste ici) tombent un cran plus loin, dans
- * `sortById`, avec ceux des autres providers : même raison que les aiguillages,
- * et même limite — on range ce qu'on PROPOSE, pas ce qu'on accepte.
+ * VERSION DOUBLES (dated snapshots, pre-releases, price `:batch` — at
+ * alone a fifth of the list here) fall a notch further, into
+ * `sortById`, with those of other providers: same reason as referrals,
+ * and same limit — we put away what we OFFER, not what we accept.
  */
 async function listOpenRouter(apiKey?: string): Promise<AgentModelEntry[]> {
   const index = await listOpenRouterIndex(apiKey);
@@ -143,7 +143,7 @@ async function listOpenRouter(apiKey?: string): Promise<AgentModelEntry[]> {
   );
 }
 
-/** Endpoint OpenAI-compatible `/models` (OpenAI, Google, générique). */
+/** OpenAI-compatible `/models` endpoint (OpenAI, Google, generic). */
 async function listOpenAICompat(baseUrl: string, apiKey: string): Promise<AgentModelEntry[]> {
   const res = await fetch(`${baseUrl}/models`, {
     headers: { Authorization: `Bearer ${apiKey}` },
@@ -151,7 +151,7 @@ async function listOpenAICompat(baseUrl: string, apiKey: string): Promise<AgentM
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const body = (await res.json()) as { data?: Array<{ id: string }> };
   const models = (body.data ?? [])
-    .map((m) => m.id?.replace(/^models\//, "")) // Gemini préfixe `models/…`
+    .map((m) => m.id?.replace(/^models\//, "")) // Gemini prefix `models/…`
     .filter((id): id is string => !!id && !NON_CHAT_RE.test(id))
     .map((id) => ({ id, name: id }));
   return sortById(models);
@@ -184,24 +184,24 @@ async function loadModels(
     case "openai":
       return listOpenAICompat(baseUrl, apiKey);
     case "generic":
-      // Endpoint arbitraire : peut ne pas exposer /models → l'échec est toléré.
+      // Arbitrary endpoint: may not expose /models → failure is tolerated.
       return listOpenAICompat(baseUrl, apiKey);
     case "none":
-      // Les endpoints locaux ne sont jamais joints depuis le cloud. Le champ de
-      // modèle reste libre dans le picker : l'utilisateur saisit l'id exposé par
-      // Ollama, LM Studio, vLLM… sur sa propre machine.
+      // Local endpoints are never reached from the cloud. The field of
+      // model remains free in the picker: the user enters the id exposed by
+      // Ollama, LM Studio, vLLM… on your own machine.
       return [];
   }
 }
 
 /**
- * Situe chaque modèle sur l'échelle du baseline, joint le plafond du plan et la
- * liste des conseillés. `limit` absent (BYOK) → ni multiplicateur affiché, ni
- * modèle grisé ; les conseils, eux, restent — ils ne parlent pas d'argent.
+ * Locates each model on the baseline scale, attaches the ceiling of the plan and the
+ * list of recommended ones. `limit` absent (BYOK) → neither multiplier displayed nor
+ * grayed out model; the advice remains — they don't talk about money.
  *
- * Tout ce qui sort d'ici est recalculé à chaque appel, jamais mis en cache avec
- * la liste : le baseline comme les conseils sont des lignes `app_config` qu'un
- * admin change sans déploiement.
+ * Everything that comes out of here is recalculated on each call, never cached with
+ * the list: the baseline like the advice are lines `app_config` that a
+ * admin changes without deployment.
  */
 async function withMultipliers(
   models: AgentModelEntry[],
@@ -219,13 +219,13 @@ async function withMultipliers(
 }
 
 /**
- * Situe chaque modèle sur l'échelle du baseline, SANS rien plafonner.
+ * Locates each model on the baseline scale, WITHOUT capping anything.
  *
- * Les deux gestes sont séparés parce qu'ils ne répondent pas à la même
- * question : le multiplicateur DIT un coût, le plafond REFUSE une dépense. Le
- * dashboard admin veut le premier sans le second — il choisit les modèles que
- * minddy paye, donc l'échelle de coût y est exactement l'information utile,
- * alors qu'aucun plan ne s'y applique.
+ * The two gestures are separated because they do not respond to the same
+ * question: the multiplier SAYS a cost, the ceiling REFUSES an expense. The
+ * dashboard admin wants the first without the second — it chooses the models that
+ * minddy pays for, so the cost scale there is exactly the useful information,
+ * even though no plan applies to it.
  */
 async function attachMultipliers(
   models: AgentModelEntry[],
@@ -241,29 +241,28 @@ async function attachMultipliers(
 }
 
 /**
- * Les conseils, réduits à ce que CE catalogue propose vraiment, et rangés DU
- * MOINS CHER AU PLUS CHER.
+ * The advice, reduced to what THIS catalog really offers, and arranged FROM
+ * CHEAPEST TO MOST EXPENSIVE.
  *
- * L'ordre est calculé, pas rangé à la main. C'est le seul qui reste vrai : les
- * prix d'OpenRouter bougent, et un ordre figé dans `app_config` le jour où on
- * l'a écrit finirait par annoncer une échelle de coût qui n'existe plus. Le
- * réglage admin est donc un ENSEMBLE — quels modèles on conseille — pas une
- * séquence.
+ * The order is calculated, not arranged by hand. This is the only one that remains true: OpenRouter's
+ * prices move, and an order frozen in `app_config` the day it was written would end up announcing a cost scale that no longer exists. The
+ * admin setting is therefore a SET - which models we recommend - not a
+ * sequence.
  *
- * Le critère est le prix moyen entrée/sortie, exactement celui du
- * multiplicateur affiché (`averageUsdPerMTok`) : la liste est rangée dans
- * l'ordre des « ×N » qu'on lit en face. Prix inconnu → en fin de liste, faute de
- * savoir où le mettre.
+ * The criterion is the average entry/exit price, exactly that of the
+ * multiplier displayed (`averageUsdPerMTok`): the list is sorted in
+ * the order of the “×N” that we read opposite. Unknown price → at the end of the list, due to lack of
+ * knowing where to put it.
  *
- * L'intersection avec le catalogue n'est pas une précaution de style : sur un
- * provider BYOK, les ids sont natifs (`claude-sonnet-5`, pas
- * `anthropic/claude-sonnet-5`) et aucun conseil ne tombe juste. La liste ressort
- * alors VIDE, et le picker rouvre sur le catalogue entier — le bon repli : mieux
- * vaut trop de modèles qu'une liste de conseils dont aucun n'est lançable.
+ * The intersection with the catalog is not a style precaution: on a
+ * provider BYOK, the ids are native (`claude-sonnet-5`, not
+ * `anthropic/claude-sonnet-5`) and no advice is right. The list comes out
+ * then EMPTY, and the picker reopens on the entire catalog — the correct fallback: better
+ * is worth too many models than a list of tips none of which can be launched.
  *
- * Jamais caché avec la liste de modèles, pour la même raison que les
- * multiplicateurs : un admin change ce réglage quand il veut, et une heure de
- * cache le ferait mentir.
+ * Never hidden with the list of models, for the same reason as
+ * multipliers: an admin changes this setting whenever he wants, and an hour of
+ * cache would make it lie.
  */
 async function resolveRecommended(
   models: AgentModelEntry[],
@@ -276,36 +275,36 @@ async function resolveRecommended(
     [];
   const available = new Set(models.map((m) => m.id));
   const applicable = ids.filter((id) => available.has(id));
-  // Un provider natif BYOK n'a aucune raison de joindre OpenRouter pour ranger
-  // ses propres modèles. Sans grille de prix commune, l'ordre explicite de la
-  // configuration est le seul ordre honnête disponible.
+  // A BYOK native provider has no reason to join OpenRouter to store
+  // its own models. Without a common price grid, the explicit order of the
+  // configuration is the only honest order available.
   if (!useOpenRouterPricing) return applicable;
   const index = await listOpenRouterIndex();
   const price = new Map(
     index.map((m) => [m.id, m.pricing ? averageUsdPerMTok(m.pricing) : null] as const),
   );
   // Prix inconnu → `Infinity`, donc en fin de liste. `localeCompare` en second
-  // critère : deux modèles au même prix (les familles se tarifent par paliers)
-  // garderaient sinon l'ordre d'écriture de la ligne `app_config`, qui n'est
-  // plus censé vouloir dire quoi que ce soit.
+  // criterion: two models at the same price (families price in stages)
+  // would otherwise keep the writing order of the `app_config` line, which is not
+  // no longer supposed to mean anything.
   const cost = (id: string) => price.get(id) ?? Infinity;
   return applicable
     .sort((a, b) => cost(a) - cost(b) || a.localeCompare(b));
 }
 
 /**
- * Catalogue de modèles du provider ACTIF de l'utilisateur (BYOK ou clé
- * plateforme OpenRouter). Sans BYOK ni service managé, le catalogue reste vide :
- * même l'index public d'OpenRouter est un appel tiers que l'instance n'a pas
- * demandé. Ne lève jamais : sur échec upstream, renvoie le cache périmé s'il
- * existe, sinon une liste vide.
+ * Model catalog of the user's ACTIVE provider (BYOK or key
+ * OpenRouter platform). Without BYOK or a managed service, the catalog remains empty:
+ * even OpenRouter's public index is a third-party call that the instance did not
+ * request. Never raises: on upstream failure, returns the expired cache if it
+ * exists, otherwise an empty list.
  *
- * Les multiplicateurs et le plafond ne sont joints QU'en mode plateforme : en
- * BYOK, l'utilisateur paye ses propres tokens — lui afficher une échelle de coût
- * minddy et griser la moitié du catalogue serait faux deux fois.
+ * The multipliers and the cap are ONLY joined in platform mode: en
+ * BYOK, the user pays for his own tokens — show him a cost scale
+ * minddy and graying out half the catalog would be wrong twice.
  */
 export async function getAgentModelsForUser(userId: string): Promise<AgentModelsCatalog> {
-  // Provider actif : BYOK du compte, ou clé plateforme OpenRouter.
+  // Active Provider: BYOK of the account, or OpenRouter platform key.
   let provider: AgentProviderId = DEFAULT_AGENT_PROVIDER;
   let baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER)!;
   let apiKey = "";
@@ -313,8 +312,8 @@ export async function getAgentModelsForUser(userId: string): Promise<AgentModels
   let endpointConfigured = true;
   try {
     // Cette lecture ne sonde jamais un endpoint local (`listStrategy: none`) ;
-    // elle sert seulement à rendre le bon provider et à garder le picker dans le
-    // même namespace que le run local.
+    // it only serves to return the correct provider and to keep the picker in the
+    // same namespace as the local run.
     const endpoint = await resolveAgentApiKey(userId, "agent", { allowLocal: true });
     provider = endpoint.provider;
     baseUrl = normalizeBaseUrl(endpoint.baseUrl);
@@ -324,8 +323,8 @@ export async function getAgentModelsForUser(userId: string): Promise<AgentModels
     endpointConfigured = false;
   }
 
-  // Défaut effectif du provider actif : frontier du provider BYOK, sinon défaut
-  // racine (quota minddy / OpenRouter BYOK) ; null pour un générique.
+  // Actual fault of the active provider: BYOK provider border, otherwise fault
+  // root (quota minddy / OpenRouter BYOK); null for a generic.
   const providerDefault = await resolveProviderDefaultModel(provider);
   const defaultModel =
     providerDefault ?? (provider === "generic" || isLocalAgentProvider(provider) ? null : await getRootDefaultModel());
@@ -371,12 +370,12 @@ export async function getAgentModelsForUser(userId: string): Promise<AgentModels
 }
 
 /**
- * Catalogue de la review de PR : celui de la clé PLATEFORME, plus le plafond du
- * compte. La review tourne toujours sur cette clé, donc toujours sur le quota
- * minddy — le plafond s'y applique même à un compte en BYOK, qui verra donc des
- * multiplicateurs ici alors que son picker d'agent n'en montre aucun. Ce n'est
- * pas une incohérence : ce sont deux dépenses différentes, l'une la sienne,
- * l'autre celle de minddy.
+ * Catalog of the PR review: that of the PLATFORM key, plus the ceiling of
+ * counts. The review always runs on this key, therefore always on the quota
+ * minddy — the ceiling even applies to a BYOK account, which will therefore see __
+ * multipliers here while its agent picker shows none. This is
+ * not an inconsistency: they are two different expenses, one his,
+ * the other minddy's.
  */
 export async function getPrReviewModelCatalog(userId: string): Promise<AgentModelsCatalog> {
   const [models, limit] = await Promise.all([
@@ -391,32 +390,32 @@ export async function getPrReviewModelCatalog(userId: string): Promise<AgentMode
 }
 
 /**
- * Catalogue de la clé PLATEFORME (OpenRouter), pour le dashboard admin.
+ * Catalog of the PLATFORM key (OpenRouter), for the admin dashboard.
  *
- * Différence assumée avec `getAgentModelsForUser` : on ignore le BYOK de l'admin
- * qui regarde. Les modèles d'`app_config` tournent tous sur la clé plateforme —
- * proposer le catalogue Anthropic d'un admin en BYOK ferait écrire des ids
- * inutilisables au runtime.
+ * Difference assumed with `getAgentModelsForUser`: we ignore the BYOK of the admin
+ * who is watching. The `app_config` models all run on the platform key —
+ * proposing the Anthropic catalog of an admin in BYOK would cause ids
+ * to be written unusable in runtime.
  *
- * Le filtre tool-calling est CONSERVÉ : presque tous les réglages admin
- * (Numo, assignation, classification, analyse) forcent un tool call et casseraient
- * sur un modèle qui n'en fait pas. Restent deux réglages non conversationnels —
- * transcription et embeddings — que le catalogue d'OpenRouter n'expose de toute
- * façon PAS (son `/models` ne liste que des modèles de chat) : ils se règlent par
- * la saisie libre du picker, et c'est le seul chemin possible.
+ * The tool-calling filter is PRESERVED: almost all settings admin
+ * (Number, assignment, classification, analysis) force a tool call and would break
+ * on a model that does not do so. There remain two non-conversational settings —
+ * transcription and embeddings — which the OpenRouter catalog does NOT expose in any way
+ * (its `/models` only lists chat models): they are adjusted by
+ * the free entry of the picker, and this is the only way possible.
  *
- * Même contrat de robustesse que le catalogue utilisateur : ne lève jamais.
+ * Same robustness contract as the user catalog: never raises.
  */
 /**
- * Le catalogue du dashboard admin : celui de la clé plateforme, chaque modèle
- * SITUÉ sur l'échelle de coût de minddy.
+ * The catalog of the admin dashboard: that of the platform key, each model
+ * LOCATED on the minddy cost scale.
  *
- * Le multiplicateur y est l'information de travail : c'est là qu'on choisit les
- * modèles que minddy paye, et notamment la sélection conseillée, dont l'ordre
- * suit ces prix. En revanche aucun plafond n'est joint (`maxMultiplier: null`) —
- * un plan de facturation ne s'applique pas à un réglage d'instance, et griser
- * les modèles chers d'un écran d'admin n'aurait pas de sens. Pas de
- * `recommended` non plus : on vient y régler `app_config`, pas suivre un conseil.
+ * The multiplier is the working information: this is where we choose the
+ * models that minddy pays for, and in particular the selection recommended, whose order
+ * follows these prices. However, no ceiling is attached (`maxMultiplier: null`) —
+ * a billing plan does not apply to an instance setting, and graying out
+ * expensive models on an admin screen would not make sense. No
+ * `recommended` either: we come to settle `app_config`, not follow advice.
  */
 export async function getAdminModelCatalog(): Promise<AgentModelsCatalog> {
   const [models, baseline] = await Promise.all([getPlatformModelCatalog(), getBaselinePricing()]);

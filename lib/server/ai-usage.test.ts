@@ -1,21 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-131 — qui paye quoi, dans le ledger `ai_usage`.
+ * MIN-131 — who pays what, in the ledger `ai_usage`.
  *
- * La règle produit : chacun paye SON usage. Le repli sur le owner du projet
- * existe toujours (sans lui, une passe de fond ne compte dans le budget de
- * personne alors que c'est le budget du owner qui l'autorise — MIN-87), mais il
- * doit se DEMANDER. Ce qu'on garde ici, ce sont les trois issues possibles d'une
- * écriture, dont la première est la régression à ne jamais revoir : un membre
- * agissant sur le projet d'un autre paye lui-même, quoi qu'il arrive.
+ * The rule produces: everyone pays HIS usage. The fallback on the project owner
+ * still exists (without it, a background pass does not count in the budget of
+ * anyone while it is the owner's budget which authorizes it — MIN-87), but it
+ * must be ASKED. What we keep here are the three possible outcomes of a
+ * writing, the first of which is the regression never to be seen again: a member
+ * acting on the project of another pays himself, whatever happens.
  *
- * La substitution, quand elle a lieu, se lit dans `billed_reason` — sans quoi on
- * ne peut ni auditer le ledger ni répondre à « pourquoi ai-je payé ça ? ».
+ * The substitution, when it takes place, is read in `billed_reason` — otherwise we
+ * cannot audit the ledger or respond to “why did I pay that?” .
  */
 
-// Le service client est le seul contact avec le monde extérieur : on le remplace
-// par un double qui sert les owners et capture les lignes insérées.
+// Customer service is the only contact with the outside world: we replace it
+// by a double which serves the owners and captures the inserted lines.
 const inserted: Record<string, unknown>[] = [];
 let projects: { id: string; owner_id: string | null }[] = [];
 
@@ -60,8 +60,8 @@ afterEach(() => {
 
 describe("imputation des lignes ai_usage", () => {
   it("impute au MEMBRE qui agit, jamais au owner du projet où il agit", async () => {
-    // Le projet appartient à quelqu'un d'autre — et le membre le sait pour son
-    // budget : c'est le sien qui a autorisé l'appel, c'est le sien qui paye.
+    // The project belongs to someone else — and the member knows it for his or her
+    // budget: it's his that authorized the call, it's his that pays.
     const projectId = "aaaaaaaa-0001-4000-8000-000000000000";
     projects = [{ id: projectId, owner_id: OWNER }];
 
@@ -92,14 +92,14 @@ describe("imputation des lignes ai_usage", () => {
     });
 
     expect(inserted[0].user_id).toBe(OWNER);
-    // Imputé, mais reconnaissable comme un repli : la substitution est visible.
+    // Imputed, but recognizable as a fallback: the substitution is visible.
     expect(inserted[0].billed_reason).toBe("project_owner");
     expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it("n'impute à personne SANS BRUIT : un repli sans owner logue et se marque", async () => {
     const projectId = "aaaaaaaa-0003-4000-8000-000000000000";
-    projects = []; // projet supprimé / introuvable
+    projects = []; // project deleted / not found
 
     await recordAiUsage({
       runId: newRunId(),
@@ -129,9 +129,9 @@ describe("imputation des lignes ai_usage", () => {
   });
 
   it("n'impute à personne EN SILENCE quand la plateforme offre l'appel", async () => {
-    // MIN-150 — la démo de dictée de la landing tourne sans compte : il n'y a
-    // personne à qui imputer, et ce n'est pas une anomalie. Confondre les deux
-    // reviendrait à s'habituer à voir cette erreur-là dans les journaux.
+    // MIN-150 — the landing dictation demo runs without account: there is no
+    // no one to blame, and this is not an anomaly. Confuse the two
+    // would mean getting used to seeing this error in the logs.
     await recordAiUsage({
       runId: newRunId(),
       feature: "transcription",
@@ -145,8 +145,8 @@ describe("imputation des lignes ai_usage", () => {
   });
 
   it("tranche ligne par ligne dans un lot mixte", async () => {
-    // Un même insert peut porter des lignes de provenances différentes : la
-    // résolution est par ligne, pas par lot — un repli ne déteint pas sur ses
+    // The same insert can carry lines from different origins: the
+    // resolution is per line, not per batch — a fallback does not rub off on its
     // voisines.
     const projectId = "aaaaaaaa-0004-4000-8000-000000000000";
     projects = [{ id: projectId, owner_id: OWNER }];

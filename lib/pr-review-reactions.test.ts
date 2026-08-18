@@ -10,9 +10,9 @@ import {
 } from "@/lib/pr-review-reactions";
 
 /**
- * MIN-139 : les réactions traversent deux forges qui ne les nomment pas pareil et
- * un réseau. Tout ce qui suit garde une seule chose : qu'un 👍 posé quelque part
- * reste un 👍 partout.
+ * MIN-139: the reactions cross two forges which do not name them the same and
+ * a network. Everything that follows keeps only one thing: that a 👍 placed somewhere
+ * remains a 👍 everywhere.
  */
 describe("vocabulaire des réactions", () => {
   it("nomme et dessine les huit réactions, sans trou ni doublon", () => {
@@ -22,8 +22,8 @@ describe("vocabulaire des réactions", () => {
       expect(REVIEW_REACTION_EMOJI[content]).toBeTruthy();
       expect(GITLAB_AWARD_NAMES[content]).toBeTruthy();
     }
-    // Deux réactions GitHub qui tomberaient sur le même award GitLab en
-    // fusionneraient les comptes — le genre de faute qu'on ne voit qu'en prod.
+    // Two GitHub reactions which would fall on the same GitLab award in
+    // would merge the accounts — the kind of mistake you only see in production.
     expect(new Set(Object.values(GITLAB_AWARD_NAMES)).size).toBe(8);
   });
 
@@ -34,8 +34,8 @@ describe("vocabulaire des réactions", () => {
   });
 
   it("ignore un award que la palette ne sait pas afficher", () => {
-    // GitLab décerne tout l'alphabet emoji ; le compter sous un mauvais glyphe
-    // serait pire que ne pas le compter.
+    // GitLab awards the entire emoji alphabet; count it under the wrong glyph
+    // would be worse than not counting it.
     expect(reactionFromGitlabName("shrug")).toBeNull();
     expect(reactionFromGitlabName("")).toBeNull();
   });
@@ -58,8 +58,8 @@ describe("groupReactionsByComment", () => {
   });
 
   it("indexe par commentaire et garde l'ordre canonique, pas celui de la forge", () => {
-    // Les forges rendent leurs groupes dans un ordre variable : un 👍 qui change
-    // de place entre deux rafraîchissements se clique de travers.
+    // The forges render their groups in a variable order: a 👍 which changes
+    // space between two refreshes clicks crooked.
     const byComment = groupReactionsByComment([
       reaction({ content: "rocket" }),
       reaction({ content: "+1", count: 3, mine: true }),

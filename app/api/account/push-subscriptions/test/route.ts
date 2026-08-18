@@ -12,16 +12,16 @@ import { toPushLocale } from "@/lib/server/push/payload";
 import { sendPushToUser } from "@/lib/server/push/send";
 
 /**
- * POST /api/account/push-subscriptions/test — fait sonner UN appareil (MIN-183).
+ * POST /api/account/push-subscriptions/test — rings ONE device (MIN-183).
  *
- * Sans ce bouton, la seule façon de savoir si un appareil marche est d'attendre
- * qu'il se passe quelque chose, puis de ne pas savoir interpréter le silence :
- * permission refusée ? worker mort ? notifications coupées par le système ? Le
- * test transforme ça en une réponse immédiate — et un 410 y devient une purge
- * visible plutôt qu'un mystère.
+ * Without this button, the only way to know if a device is working is to wait
+ * that something is happening, then not knowing how to interpret the silence:
+ * permission denied ? worker dead? notifications cut off by the system? THE
+ * test turns that into an immediate response — and a 410 becomes a purge
+ * visible rather than a mystery.
  *
- * La notification part dans la langue de l'APPAREIL, pas dans celle de l'onglet
- * qui déclenche le test : ce qu'on vérifie, c'est ce que cet appareil recevra
+ * The notification is sent in the language of the DEVICE, not that of the tab
+ * which triggers the test: what we check is what this device will receive
  * vraiment.
  */
 export async function POST(request: NextRequest) {
@@ -40,8 +40,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
 
-  // Client AUTHENTIFIÉ pour la vérification de propriété : la RLS rend la ligne
-  // d'un autre compte introuvable, sans qu'on ait à y penser.
+  // AUTHENTICATED customer for ownership verification: the RLS renders the line
+  // from another untraceable account, without us having to think about it.
   const { data: device, error } = await auth.supabase
     .from("push_subscriptions")
     .select("id, transport, locale, enabled")
@@ -60,8 +60,8 @@ export async function POST(request: NextRequest) {
   if (!configured) {
     return NextResponse.json({ error: t("pushNotConfigured") }, { status: 503 });
   }
-  // `sendPushToUser` ne vise que les appareils actifs : un appareil éteint ne
-  // sonnerait pas, et le silence se lirait comme une panne.
+  // `sendPushToUser` only targets active devices: a turned off device does not
+  // would not ring, and the silence would read like a breakdown.
   if (!device.enabled) {
     return NextResponse.json({ error: t("pushDeviceDisabled") }, { status: 409 });
   }
@@ -73,8 +73,8 @@ export async function POST(request: NextRequest) {
     namespace: "Push",
   });
 
-  // Service : c'est lui qui porte l'entretien du parc (purge d'un 410, remise à
-  // zéro du compteur d'échecs), et ces écritures-là ne passent pas par la RLS.
+  // Service: it is he who is responsible for the maintenance of the fleet (purging of a 410, reconditioning
+  // zero of the failure counter), and these writes do not go through the RLS.
   const tally = await sendPushToUser(
     getServiceClient(),
     auth.user.id,
@@ -88,8 +88,8 @@ export async function POST(request: NextRequest) {
   );
 
   if (tally.sent > 0) return NextResponse.json({ ok: true });
-  // 404/410 : l'abonnement n'existe plus chez le service de push, et l'envoi
-  // vient de supprimer sa ligne. Le dire franchement — la liste va bouger.
+  // 404/410: the subscription no longer exists with the push service, and sending
+  // just deleted his line. To put it bluntly — the list will move.
   if (tally.gone > 0) {
     return NextResponse.json({ error: t("pushDeviceGone") }, { status: 410 });
   }

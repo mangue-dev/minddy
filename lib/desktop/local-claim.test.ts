@@ -16,7 +16,7 @@ describe("localClaimProjectIds", () => {
       .toEqual([id]);
   });
 
-  it("borne une annonce de machine", () => {
+  it("bounds a machine announcement", () => {
     const store = Object.fromEntries(
       Array.from({ length: 60 }, (_, n) => [
         `11111111-2222-4333-8444-${String(n).padStart(12, "0")}`,
@@ -28,7 +28,7 @@ describe("localClaimProjectIds", () => {
 });
 
 describe("nextLocalClaimDelay", () => {
-  it("enchaîne un claim gagné et espace les états sans travail ou en panne", () => {
+  it("chains a successful claim and spaces out idle or failed states", () => {
     expect(nextLocalClaimDelay("claimed")).toBe(0);
     expect(nextLocalClaimDelay("idle")).toBe(LOCAL_CLAIM_IDLE_DELAY_MS);
     expect(nextLocalClaimDelay("refused")).toBe(LOCAL_CLAIM_REFUSED_DELAY_MS);

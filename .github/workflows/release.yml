@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "SemVer déjà préparée dans package.json et CHANGELOG.md (sans préfixe v)"
+        description: "SemVer already prepared in package.json and CHANGELOG.md (without v prefix)""
         required: true
         type: string
       sha:
-        description: "SHA exact de production à taguer"
+        description: "Exact production SHA to tag""
         required: true
         type: string
 
@@ -46,8 +46,8 @@ jobs:
           test -z "$(git tag --list "v$RELEASE_VERSION")"
           node -e "import('./scripts/release-lib.mjs').then(({ assertVersion, changelogSection }) => { const fs = require('node:fs'); assertVersion(process.env.RELEASE_VERSION); changelogSection(fs.readFileSync('CHANGELOG.md', 'utf8'), process.env.RELEASE_VERSION); })"
 
-      # Cette barrière précède volontairement l'installation : le code d'une
-      # dépendance ou d'un script du dépôt n'a encore rien exécuté.
+      # This barrier deliberately precedes the installation: the code of a
+      # dependency or a script in the repository has not executed anything yet.
       - name: Public repository check
         run: node scripts/check-public-repo.mjs
 
@@ -68,9 +68,9 @@ jobs:
       - run: pnpm run test:release
       - run: node scripts/audit.mjs
 
-      # Le build est refait sans .env ni secret. Les valeurs publiques neutres
-      # permettent à Next de produire la même surface que sur une instance,
-      # sans joindre un service externe.
+      # The build is redone without .env or secrets. Neutral public values
+      # allow Next to produce the same surface as on an instance,
+      # without contacting an external service.
       - name: Reproducible web build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://supabase.invalid
@@ -89,8 +89,8 @@ jobs:
         with:
           subject-path: .release/*
 
-      # Le tag n'existe qu'après tous les contrôles et tous les builds. Un échec
-      # avant cette étape laisse donc production intact et peut être rejoué.
+      #The tag only exists after all checks and builds. A failure
+      #before this step therefore leaves production intact and can be replayed.
       - name: Create annotated tag
         env:
           GH_TOKEN: ${{ github.token }}

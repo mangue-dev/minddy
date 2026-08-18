@@ -1,42 +1,42 @@
 /**
- * Les AUTEURS d'un commit — au pluriel, parce qu'un commit en a souvent
+ * The AUTHORS of a commit — plural, because a commit often has them
  * plusieurs.
  *
- * Git ne connaît qu'un auteur ; la convention `Co-authored-by:` en trailer du
- * message ajoute les autres, et c'est elle que les forges lisent pour afficher
- * plusieurs avatars. Dans minddy c'est le cas COURANT : tout commit écrit avec
- * Numo, ou avec un agent de code, porte son co-signataire.
+ * Git only knows one author; the `Co-authored-by:` convention in trailer of the
+ * message adds the others, and it is this that the forges read to display
+ * several avatars. In minddy this is the COMMON case: any commit written with
+ * Numo, or with a code agent, carries his co-signer.
  *
- * Pur et partagé client/serveur, comme `pr-review-threads` : la même liste sert
- * l'onglet Commits et l'activité de la PR, et les laisser diverger ferait dire
- * deux choses différentes du même commit dans la même page.
+ * Pure and shared client/server, like `pr-review-threads`: the same list is used
+ * Commits tab and PR activity, and letting them diverge would mean
+ * two different things from the same commit in the same page.
  */
 
 export interface CommitAuthor {
   /**
-   * Le compte de forge, quand elle a su rattacher l'email à un utilisateur.
-   * `null` = personne de connu derrière ce nom : l'affichage retombe sur `name`
-   * et sur un avatar dérivé de lui, comme partout ailleurs dans minddy.
+   * The forge account, when she knew how to link the email to a user.
+   * `null` = known person behind this name: the display falls to `name`
+   * and on an avatar derived from him, like everywhere else in minddy.
    */
   login: string | null;
-  /** Le nom écrit dans le commit ou son trailer — toujours présent. */
+  /** The name written in the commit or its trailer — always present. */
   name: string;
-  /** L'avatar du COMPTE. Jamais l'identicon que la forge fabrique pour un email
-      inconnu : il se lirait comme la photo de quelqu'un. */
+  /** The ACCOUNT avatar. Never the identicon that the forge makes for an email
+      unknown: it would read like someone's photo. */
   avatar_url: string | null;
 }
 
 /**
- * `Co-authored-by: Nom <email>` — la convention, telle que GitHub et GitLab la
- * lisent. Insensible à la casse du mot-clé (`Co-Authored-By` est aussi répandu
- * que la forme minuscule), tolérante aux espaces, et sans email nul part :
- * un trailer sans `<…>` n'en est pas un.
+ * `Co-authored-by: Nom <email>` — the convention, such as GitHub and GitLab
+ * read. Insensitive to the case of the keyword (`Co-Authored-By` is also common
+ * than the lowercase form), space tolerant, and without email anywhere:
+ * a trailer without `<…>` is not one.
  *
- * Repli du chemin riche : côté GitHub, la forge résout elle-même ces trailers en
- * COMPTES (avec avatars) et c'est sa réponse qui gagne. Ici on n'a que ce qui est
- * écrit dans le message — des noms. C'est ce qui reste quand GraphQL n'a pas
- * répondu, et tout ce que GitLab donnera jamais : son API ne sert aucun compte
- * sur ses commits.
+ * Fallback from the rich path: on the GitHub side, the forge resolves these trailers itself by
+ * ACCOUNTS (with avatars) and his answer wins. Here we only have what is
+ * written in the message — names. This is what's left when GraphQL doesn't have
+ * answered, and all GitLab will ever give: its API serves no account
+ * on his commits.
  */
 const CO_AUTHOR = /^\s*co-authored-by:\s*(.+?)\s*<([^>]+)>\s*$/i;
 
@@ -52,8 +52,8 @@ export function parseCoAuthorTrailers(message: string): Array<CommitAuthor & { e
   return out;
 }
 
-/** Deux entrées désignent la même personne si leur email — sinon leur nom —
-    coïncide. L'email est la clé de la forge ; le nom est ce qui reste sans lui. */
+/** Two entries designate the same person if their email — otherwise their name —
+    coincides. Email is the key to the forge; the name is what remains without it. */
 function identityKey(author: { login?: string | null; name: string; email?: string | null }): string {
   if (author.email) return `email:${author.email.toLowerCase()}`;
   if (author.login) return `login:${author.login.toLowerCase()}`;
@@ -61,19 +61,19 @@ function identityKey(author: { login?: string | null; name: string; email?: stri
 }
 
 /**
- * La liste d'auteurs à AFFICHER, auteur principal en tête.
+ * The list of authors to DISPLAY, main author at the top.
  *
- * `fromForge` est la réponse de la forge quand elle sait résoudre les trailers
- * elle-même (GitHub le fait en GraphQL, dédoublonnage compris) : elle gagne
- * entière, parce qu'elle seule porte les comptes et leurs avatars.
+ * `fromForge` is the response from the forge when it knows how to resolve trailers
+ * itself (GitHub does it in GraphQL, deduplication included): it wins
+ * entire, because it alone carries the accounts and their avatars.
  *
- * Sinon on reconstruit : l'auteur du commit, puis ses co-signataires lus dans le
- * message. Le dédoublonnage compte — l'auteur principal est très souvent
- * re-déclaré en trailer, et l'afficher deux fois donnerait deux avatars pour une
+ * Otherwise we reconstruct: the author of the commit, then his co-signatories read in the
+ * message. Deduplication matters — the primary author is very often
+ * re-declared in trailer, and displaying it twice would give two avatars for one
  * seule personne.
  *
- * Vide seulement si le commit n'a ni auteur ni nom : l'appelant retombe alors sur
- * ce qu'il affichait avant.
+ * Empty only if the commit has neither author nor name: the caller then falls back to
+ * what he displayed before.
  */
 export function commitAuthors(
   commit: {
@@ -104,8 +104,8 @@ export function commitAuthors(
   for (const co of parseCoAuthorTrailers(commit.message)) {
     const key = identityKey(co);
     if (seen.has(key)) continue;
-    // Sans email commun, le nom reste le seul recours contre le doublon : un
-    // trailer qui répète mot pour mot le nom de l'auteur est le même humain.
+    // Without a common email, the name remains the only recourse against the duplicate: a
+    // trailer which repeats word for word the name of the author is the same human.
     if (out.some((a) => a.name.toLowerCase() === co.name.toLowerCase())) continue;
     seen.add(key);
     out.push({ login: co.login, name: co.name, avatar_url: co.avatar_url });
@@ -114,9 +114,9 @@ export function commitAuthors(
 }
 
 /**
- * Les auteurs de PLUSIEURS commits, dédoublonnés — ce que dit une poussée
- * repliée (« untel et untel ont poussé 5 commits »). L'ordre de première
- * apparition est conservé : c'est celui de l'histoire.
+ * Authors of MULTIPLE commits, deduplicated — what a push says
+ * folded (“so-and-so pushed 5 commits”). The order of first
+ * appearance is preserved: it is that of history.
  */
 export function mergeCommitAuthors(lists: CommitAuthor[][]): CommitAuthor[] {
   const seen = new Set<string>();

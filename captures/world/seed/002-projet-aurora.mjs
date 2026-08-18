@@ -1,21 +1,21 @@
 /**
- * 002 — le projet « Aurora » et son board.
+ * 002 — the “Aurora” project and its board.
  *
- * Pour quelle capture : `heroBoard` (la capture principale de la landing — le
- * board groupé par statut), `featurePalette` (la palette ⌘K, qui remonte ces
- * tickets) et `workflowIssue` (le détail d'un ticket avec son plan
- * d'implémentation, tâches cochées / en cours / à faire).
+ * Used by `heroBoard` (the main landing-page capture — the board grouped by
+ * status), `featurePalette` (the ⌘K palette, which returns to these tickets),
+ * and `workflowIssue` (the ticket detail view with its implementation plan and
+ * tasks checked off, in progress, or still to do).
  *
- * Aurora est un produit fictif. Les titres sont en anglais : les captures
- * existent en FR et en EN, et les mêmes données servent les deux variantes.
+ * Aurora is a fictitious product. The titles are in English: the captures
+ * exist in FR and EN, and the same data serves both variants.
  *
- * Idempotent : le projet est réutilisé s'il existe, et seuls les tickets
- * absents sont créés (comparaison par titre).
+ * Idempotent: the project is reused if it exists, and only the tickets
+ * absent are created (comparison by title).
  *
- * Accord de l'utilisateur : lot « compte + projet + board », données en anglais.
+ * User agreement: “account + project + board” batch, data in English.
  *
- *   node captures/world/seed/002-projet-aurora.mjs --dry-run   # décrit, n'écrit rien
- *   node captures/world/seed/002-projet-aurora.mjs             # applique
+ * node captures/world/seed/002-projet-aurora.mjs --dry-run # describes, writes nothing
+ * node captures/world/seed/002-projet-aurora.mjs # apply
  */
 import { openDemoWorld, createPlan, callRpc } from "../../lib/guards.mjs";
 import { categoryLabel, ensureCategories } from "./_categories.mjs";
@@ -25,20 +25,20 @@ const DRY_RUN = process.argv.includes("--dry-run");
 
 const PROJECT = { name: "Aurora", key: "AUR" };
 
-/** Clé courte → email, pour rattacher les tickets sans coller d'identifiants ici. */
+/** Short key → email, to attach tickets without pasting identifiers here. */
 const PEOPLE = {
   camille: "captures-demo@minddy.app",
   alice: "captures-demo+alice@minddy.app",
   tom: "captures-demo+tom@minddy.app",
 };
 
-/** Collègues ajoutés au projet. Le propriétaire n'est PAS dans project_members. */
+/** Colleagues added to the project. The owner is NOT in project_members. */
 const MEMBERS = ["alice", "tom"];
 
 /**
- * Le plan d'implémentation porté par un ticket. C'est lui que photographie
- * `workflowIssue` : il doit montrer un vrai plan d'ingénierie, avec des tâches
- * terminées, une en cours, et le reste à faire.
+ * The implementation plan attached to a ticket. This is the one photographed
+ * by `workflowIssue`: it must show a real engineering plan, with completed
+ * tasks, one task in progress, and the rest still to do.
  */
 const PALETTE_PLAN = `Add a discoverable shortcut layer to the command palette, so the actions people
 run twenty times a day stop needing the mouse.
@@ -57,14 +57,14 @@ truth and a new action can never ship without its hint.
 - [ ] Verify: open the palette, type \`assign\`, press the displayed hint — the action runs and the palette closes`;
 
 /**
- * Le board. Les dates sont antérieures au 15 juillet 2026, l'instant figé des
- * captures (`CAPTURE.frozenNow`), pour que les mentions « il y a 3 jours »
- * soient stables et crédibles d'un run à l'autre.
+ * The board. The dates are before July 15, 2026, the frozen moment of
+ * captures (`CAPTURE.frozenNow`), so that the mentions “3 days ago”
+ * are stable and credible from one run to the next.
  *
- * CHAQUE ticket porte une description et au moins une catégorie : c'est la
- * carte du hero qui les rend (aperçu sur trois lignes sous le titre, pastille
- * colorée + nom en bas à droite), et une carte sans elles paraît vide. Les
- * catégories sont désignées par clé courte — voir `_categories.mjs`.
+ * EACH ticket has a description and at least one category: this is what the
+ * hero card displays (a three-line preview under the title and a colored dot
+ * with its name in the bottom-right corner), and a card without them looks
+ * empty. Categories are designated by short key — see `_categories.mjs`.
  */
 const ISSUES = [
   {
@@ -225,7 +225,7 @@ const ISSUES = [
   },
 ];
 
-/** Résout les emails de la famille de démo en identifiants de comptes. */
+/** Resolves demo family emails to account IDs. */
 function resolvePeople(world) {
   const byEmail = new Map(world.demoUsers.map((u) => [u.email, u.id]));
   const ids = {};
@@ -276,7 +276,7 @@ async function main() {
   const people = resolvePeople(world);
   const owner = people.camille;
 
-  // ── Le projet ──────────────────────────────────────────────────────────────
+  // ── The project ─────────────────────────────── ───────────────────────────────
   let project = world.demoProjects.find((p) => p.key === PROJECT.key && !p.deleted_at);
   if (!project) {
     const plan = createPlan(world);
@@ -289,11 +289,11 @@ async function main() {
     console.log(`  → projet ${project.key} déjà là, réutilisé`);
   }
 
-  // Les catégories ne viennent plus d'un trigger : c'est l'app qui les sème, et
-  // les seeds écrivent en base sans passer par elle. Voir `_categories.mjs`.
+  // The categories no longer come from a trigger: it is the app that sows them, and
+  // the seeds write in base without going through it. See `_categories.mjs`.
   await ensureCategories(world, project.id);
 
-  // ── Les collègues ──────────────────────────────────────────────────────────
+  // ── Colleagues ───────────────────────────── ─────────────────────────────
   const { data: existingMembers, error: memberError } = await world.admin
     .from("project_members")
     .select("user_id")
@@ -308,7 +308,7 @@ async function main() {
     added_by: owner,
   }));
 
-  // ── Les tickets ────────────────────────────────────────────────────────────
+  // ── Tickets ────────────────────────────── ──────────────────────────────
   const { data: existingIssues, error: issueError } = await world.admin
     .from("issues")
     .select("title")
@@ -319,8 +319,8 @@ async function main() {
   const missingIssues = [];
   for (const [index, issue] of ISSUES.entries()) {
     if (known.has(issue.title)) continue;
-    // Le numéro vient de la base, jamais d'un compteur local : c'est lui qui
-    // alimente l'identifiant affiché AUR-42, et il doit rester atomique.
+    // The number comes from the database, never from a local counter: it
+    // supplies the displayed identifier AUR-42 and must remain atomic.
     const number = await callRpc(world, "next_issue_number", { p_project_id: project.id });
     missingIssues.push({
       project_id: project.id,
@@ -354,10 +354,10 @@ async function main() {
     );
   }
 
-  // ── Descriptions et catégories ─────────────────────────────────────────────
-  // Seconde passe obligatoire : un rattachement de catégorie ne peut pas être
-  // inséré dans le même plan que le ticket qu'il vise. Elle rattrape aussi les
-  // tickets semés avant que ces champs n'existent dans ce fichier.
+  // ── Descriptions and categories ────────────────────── ───────────────────────
+  // Mandatory second pass: a category attachment cannot be inserted in the
+  // same plan as the ticket it targets. It also catches up with tickets seeded
+  // before these fields existed in this file.
   await syncIssueMetadata(world, project, ISSUES);
 }
 

@@ -45,22 +45,22 @@ describe("issues CSV export", () => {
     const body = csv.split("\r\n")[1];
     expect(body).toContain('"The ""login"" screen, at last"');
     expect(body).toContain('"Line one\nLine two"');
-    // Les étiquettes sont jointes par « , » : la cellule est donc citée.
+    // Labels are joined by “,”: the cell is therefore cited.
     expect(body).toContain('"Bug, UI"');
-    // Une valeur sans virgule, guillemet ni retour ligne reste nue.
+    // A value without commas, quotes or newlines remains bare.
     expect(body).toContain(",in_progress,urgent,s,");
   });
 
   it("neutralises a cell a spreadsheet would run as a formula", () => {
-    // Le contenu vient d'un titre de ticket, donc de n'importe quel membre du
-    // projet : sans cette apostrophe, ouvrir l'export d'un collègue exécute ce
-    // qu'il a écrit (MIN-348).
+    // The content comes from a ticket title, therefore from any member of the
+    // project: without this apostrophe, opening a colleague's export executes this
+    // that he wrote (MIN-348).
     const csv = buildIssuesCsv([
       row({ title: '=HYPERLINK("http://evil","cliquez")', description: "- une puce" }),
     ]);
     const body = csv.split("\r\n")[1];
     expect(body).toContain(`"'=HYPERLINK(""http://evil"",""cliquez"")"`);
-    // `-`, `+`, `@`, tabulation et retour chariot suivent la même règle.
+    // `-`, `+`, `@`, tab and carriage return follow the same rule.
     expect(body).toContain(`"'- une puce"`);
 
     for (const lead of ["+1", "@SUM(A1)", "\tcaché", "\rcaché"]) {
@@ -135,7 +135,7 @@ describe("minddy export, read back by minddy", () => {
     expect(first.createdAt).toBe("2026-01-05T10:00:00.000Z");
     expect(first.externalKeys).toEqual(["MIN-1"]);
 
-    // « none » est une priorité, pas une valeur intraduisible.
+    // “none” is a priority, not an untranslatable value.
     expect(second.priority).toBe("none");
     expect(second.status).toBe("done");
     expect(second.completedAt).toBe("2026-01-20T18:30:00.000Z");
@@ -146,8 +146,8 @@ describe("minddy export, read back by minddy", () => {
   });
 
   it("gives back the text, not the apostrophe that protected it", () => {
-    // L'échappement anti-formule ne doit pas survivre à l'aller-retour : une
-    // description qui commence par une puce markdown revient telle quelle.
+    // The anti-formula escape must not survive the round trip: one
+    // description that starts with a markdown bullet returns as is.
     const csv = buildIssuesCsv([row({ title: "=1+1", description: "- une puce" })]);
     const read = mapCsvToIssues(csv, undefined, TEAM);
     if (!read.ok) throw new Error(`expected ok, got ${read.error}`);
@@ -156,8 +156,8 @@ describe("minddy export, read back by minddy", () => {
   });
 
   it("does not carry the departure project's context into the arrival one", () => {
-    // `Project` et `Objective` sont écrits, jamais relus : sans ça, le nom du
-    // projet de départ finirait en catégorie ou en bas des descriptions.
+    // `Project` and `Objective` are written, never read again: otherwise, the name of the
+    // starting project would end up in category or at the bottom of the descriptions.
     for (const issue of result.issues) {
       expect(issue.labels).not.toContain("minddy");
       expect(issue.description ?? "").not.toContain("Q3 stability");
@@ -169,9 +169,9 @@ describe("minddy export, read back by minddy", () => {
     if (!known.ok) throw new Error("expected ok");
     expect(mappingHasGaps(known.stats, known.mapping, known.source)).toBe(false);
 
-    // Un export venu d'un AUTRE espace de travail : les colonnes restent les
-    // nôtres, mais « Marie Dupont » n'est membre de rien ici — la seule chose
-    // qui vaille encore un appel au modèle.
+    // An export from ANOTHER workspace: the columns remain the
+    // ours, but “Marie Dupont” is not a member of anything here — the only thing
+    // which is still worth a call to the model.
     const strangers = prepareImport(EXPORTED);
     if (!strangers.ok) throw new Error("expected ok");
     expect(mappingHasGaps(strangers.stats, strangers.mapping, strangers.source)).toBe(true);

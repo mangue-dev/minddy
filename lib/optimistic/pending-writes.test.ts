@@ -13,7 +13,7 @@ const row = (id: string, status: string, updatedAt = "t0"): Row => ({
   updated_at: updatedAt,
 });
 
-/** Horloge simulée : `clock.at` est l'instant que `now()` renvoie. */
+/** Simulated clock: `clock.at` is the time that `now()` returns. */
 function fixture(retentionMs = 30_000) {
   const clock = { at: 1_000 };
   const writes = createPendingWrites<Row>({
@@ -24,26 +24,26 @@ function fixture(retentionMs = 30_000) {
 }
 
 describe("createPendingWrites", () => {
-  it("garde le patch quand la réponse est partie avant la confirmation", () => {
+  it("keeps the patch when the response was sent before confirmation", () => {
     const { clock, writes } = fixture();
-    const startedAt = clock.at; // le GET part…
+    const startedAt = clock.at; // the GET leaves…
     const handle = writes.begin({ kind: "patch", id: "a", patch: { status: "done" } });
     clock.at += 50;
-    writes.settle(handle); // …et le PATCH est confirmé APRÈS son départ.
+    writes.settle(handle); // …and the PATCH is confirmed AFTER it leaves.
 
-    // La réponse porte encore l'ancien état : l'overlay le corrige.
+    // The response still has the old state: the overlay corrects it.
     expect(writes.apply([row("a", "todo")], startedAt)).toEqual([
       { id: "a", status: "done", updated_at: "t0" },
     ]);
   });
 
-  it("relâche le patch quand la réponse est partie après la confirmation", () => {
+  it("releases the patch when the response was sent after confirmation", () => {
     const { clock, writes } = fixture();
     const handle = writes.begin({ kind: "patch", id: "a", patch: { status: "done" } });
     clock.at += 50;
     writes.settle(handle);
     clock.at += 10;
-    const startedAt = clock.at; // GET parti APRÈS la confirmation : il fait foi.
+    const startedAt = clock.at; // GET gone AFTER confirmation: it is authentic.
 
     const rows = [row("a", "todo")];
     expect(writes.apply(rows, startedAt)).toBe(rows);
@@ -60,7 +60,7 @@ describe("createPendingWrites", () => {
     expect(writes.apply(rows, startedAt)).toBe(rows);
   });
 
-  it("fait gagner la dernière écriture sur un même id", () => {
+  it("lets the latest write win for the same id", () => {
     const { clock, writes } = fixture();
     const startedAt = clock.at;
     writes.begin({ kind: "patch", id: "a", patch: { status: "in_progress" } });
@@ -72,14 +72,14 @@ describe("createPendingWrites", () => {
     ]);
   });
 
-  it("purge les entrées confirmées passé le délai de rétention", () => {
+  it("purges confirmed entries after the retention period", () => {
     const { clock, writes } = fixture(30_000);
     const startedAt = clock.at;
     const handle = writes.begin({ kind: "patch", id: "a", patch: { status: "done" } });
     clock.at += 50;
     writes.settle(handle, row("a", "done", "t1"));
 
-    // Toujours là juste après la confirmation…
+    // Still there just after confirmation...
     expect(writes.apply([row("a", "todo")], startedAt)[0].status).toBe("done");
     expect(writes.wasJustWritten("a", { id: "a", updated_at: "t1" })).toBe(true);
 
@@ -89,42 +89,42 @@ describe("createPendingWrites", () => {
     expect(writes.wasJustWritten("a", { id: "a", updated_at: "t1" })).toBe(false);
   });
 
-  // La diffusion part du trigger AU COMMIT : elle arrive typiquement AVANT la
-  // réponse HTTP du PATCH, donc avant qu'aucune empreinte n'ait été mémorisée.
-  it("reconnaît l'écho d'une écriture encore en vol, sans empreinte", () => {
+  // The broadcast starts from the TO COMMIT trigger: it typically arrives BEFORE the
+  // HTTP response from the PATCH, therefore before any fingerprint has been memorized.
+  it("recognizes the echo of an in-flight write without a fingerprint", () => {
     const { clock, writes } = fixture();
     const handle = writes.begin({ kind: "patch", id: "a", patch: { status: "done" } });
 
-    // Pas encore de `settle` : ni id ni updated_at mémorisés.
+    // No `settle` yet: neither id nor updated_at stored.
     expect(writes.wasJustWritten("a", { id: "a", updated_at: "t9" })).toBe(true);
-    // Une ligne de liaison sans `updated_at` compte aussi (issue_categories).
+    // A connecting line without `updated_at` also counts (issue_categories).
     expect(writes.wasJustWritten("a")).toBe(true);
-    // Une autre ligne, elle, n'est pas la nôtre.
+    // Another line is not ours.
     expect(writes.wasJustWritten("b", { id: "b", updated_at: "t9" })).toBe(false);
 
     clock.at += 50;
     writes.settle(handle, row("a", "done", "t1"));
-    // Confirmée : seule l'empreinte exacte matche désormais.
+    // Confirmed: only the exact fingerprint now matches.
     expect(writes.wasJustWritten("a", { id: "a", updated_at: "t1" })).toBe(true);
     expect(writes.wasJustWritten("a", { id: "a", updated_at: "t2" })).toBe(false);
   });
 
-  it("ne duplique pas un insert que la réponse contient déjà", () => {
+  it("does not duplicate an insert already contained in the response", () => {
     const { clock, writes } = fixture();
     const startedAt = clock.at;
     writes.begin({ kind: "insert", row: row("new", "todo") });
 
-    // Réponse sans la ligne : on l'ajoute.
+    // Response without the line: we add it.
     expect(writes.apply([row("a", "todo")], startedAt).map((r) => r.id)).toEqual([
       "a",
       "new",
     ]);
-    // Réponse qui la contient déjà : elle fait foi, pas de doublon.
+    // Answer which already contains it: it is authentic, no duplicate.
     const withRow = [row("a", "todo"), row("new", "todo")];
     expect(writes.apply(withRow, startedAt)).toBe(withRow);
   });
 
-  it("applique un remove puis le relâche une fois la réponse à jour", () => {
+  it("applies a remove and releases it once the response is current", () => {
     const { clock, writes } = fixture();
     const startedAt = clock.at;
     const handle = writes.begin({ kind: "remove", id: "a" });
@@ -136,7 +136,7 @@ describe("createPendingWrites", () => {
     clock.at += 50;
     writes.settle(handle);
     clock.at += 10;
-    // La ligne a vraiment disparu côté serveur : la réponse suivante s'impose.
+    // The line has really disappeared on the server side: the following response is required.
     const rows = [row("b", "todo")];
     expect(writes.apply(rows, clock.at)).toBe(rows);
   });

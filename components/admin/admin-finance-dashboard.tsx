@@ -29,28 +29,28 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * `/admin` → onglet « Finances » (MIN-92). L'écran répond à UNE question : est-ce
- * qu'on gagne de l'argent ? D'où les deux moitiés de l'équation côte à côte —
- * ce qui rentre (Stripe, encaissé net de frais et de remboursements) et ce qui
- * sort (OpenRouter, converti au taux de chaque journée).
+ * `/admin` → “Finances” tab (MIN-92). The screen answers ONE question: is it
+ * that we make money? Hence the two halves of the equation side by side —
+ * what comes in (Stripe, collected net of fees and reimbursements) and what
+ * sort (OpenRouter, converted at each day's rate).
  *
- * Le graphique est DIVERGENT : le revenu monte au-dessus de la ligne de base, le
- * coût descend en dessous, sur UNE SEULE échelle en euros. Deux échelles
- * distinctes (un axe par série) donneraient une image de la marge purement
- * décorative — on lirait un croisement là où il n'y en a pas.
+ * The graph is DIVERGENT: income rises above the baseline,
+ * cost goes below, on ONE scale in euros. Two scales
+ * distinct (one axis per series) would give an image of the margin purely
+ * decorative — one would read a crossing where there is none.
  *
- * Reprend le chrome de `/statistics` (`stats-chrome`), comme la vue d'ensemble :
- * un admin n'a pas à apprendre une deuxième grammaire visuelle.
+ * Takes the chrome from `/statistics` (`stats-chrome`), like the overview:
+ * an admin doesn't have to learn a second visual grammar.
  *
- * Accès verrouillé côté serveur par `app/(app)/admin/layout.tsx` + l'API.
+ * Access locked on the server side by `app/(app)/admin/layout.tsx` + the API.
  */
 
 /**
- * Le translator du namespace `Admin`, tel que le passent les sous-composants
- * de ce fichier. Le namespace n'est pas décoratif : `ReturnType<typeof
- * useTranslations>` (sans argument) type `t` sur les 2 600 clés du catalogue,
- * et TypeScript abandonne alors sur un « type instantiation is excessively
- * deep » (TS2589) — donc plus aucune vérification sur ces appels.
+ * The translator of the `Admin` namespace, as passed by subcomponents
+ * of this file. The namespace is not decorative: `ReturnType<typeof
+ * useTranslations>` (without an argument) types `t` against the 2,600 keys in the catalog,
+ * and TypeScript then gives up on a “type instantiation is excessively
+ * deep” (TS2589) — so no more checks on these calls.
  */
 type AdminT = ReturnType<typeof useTranslations<"Admin">>;
 
@@ -60,38 +60,38 @@ const FEATURES = [
   "dictation",
   "transcription",
   "smart_assign",
-  // Smart-fill (MIN-260) : l'autre moitié de la ligne « Automatisations » côté
-  // utilisateur, mais sa propre feature ici — c'est la finance, on lit les
-  // coûts un par un.
+  // Smart-fill (MIN-260): the other half of the “Automations” line on the
+  // user, but its own feature here — it's finance, we read the
+  // costs one by one.
   "smart_fill",
   "feedback_classify",
   "feedback_analyze",
-  // Retour dicté (board public + dashboard) : l'écoute ET le rangement par Numo
-  // sous un même run, donc « coût moyen / run » = le prix d'une prise.
+  // Dictated feedback (public board + dashboard): listening AND storage by Numo
+  // under the same run, so “average cost / run” = the price of a catch.
   "feedback_voice",
   "embedding",
   "agent_code",
-  // Temps machine de la sandbox, pas un appel LLM : la colonne Tokens reste
-  // vide pour ces lignes.
+  // Sandbox machine time, not an LLM call: the Tokens column remains
+  // blank for these lines.
   "sandbox_compute",
-  // Recherche web (plugin OpenRouter) : le coût inclut le forfait de recherche
-  // en plus des tokens du sous-appel.
+  // Web search (OpenRouter plugin): the cost includes the search package
+  // in addition to the sub-call tokens.
   "web_search",
-  // Review d'une PR par Numo (MIN-141) : un appel, sur un modèle plus cher que
-  // celui de l'agent — c'est la ligne qui répond à « combien coûte une review ? ».
+  // Review of a PR by Numo (MIN-141): a call, on a more expensive model than
+  // that of the agent — this is the line that answers “how much does a review cost?” ".
   "pr_review",
-  // Une ROUTINE (MIN-185) : le même moteur qu'`agent_code`/`sandbox_compute`,
-  // sur ses propres lignes — c'est ici qu'on lit ce que coûte, en dollars, ce
-  // qui tourne tout seul chez les comptes.
+  // A ROUTINE (MIN-185): the same engine as `agent_code`/`sandbox_compute`,
+  // on its own lines — this is where you read what the cost, in dollars, of this
+  // which runs by itself in the accounts.
   "routine_code",
   "routine_compute",
-  // Correspondance des colonnes d'un import CSV (MIN-98) : un appel par fichier.
+  // CSV import column mapping (MIN-98): one call per file.
   "import_map",
-  // Découpe d'un brief en objectifs + tickets (MIN-172) : un appel par brief.
+  // Breaking a brief into objectives + tickets (MIN-172): one call per brief.
   "brief_split",
-  // Démo de dictée de la landing (MIN-150) : la SEULE ligne que personne ne
-  // paye — un visiteur sans compte, à qui la plateforme offre le passage. Un
-  // run = une démo jouée, donc « coût moyen / run » est le prix d'un passage.
+  // Landing Dictation Demo (MIN-150): the ONLY line that no one
+  // pays — a visitor without an account, to whom the platform offers passage. A
+  // run = a demo played, so “average cost/run” is the price of a run.
   "landing_demo",
 ] as const;
 type Feature = (typeof FEATURES)[number];
@@ -99,10 +99,10 @@ type Feature = (typeof FEATURES)[number];
 const WINDOWS = [7, 30, 90] as const;
 
 /**
- * Les deux pôles du graphique. Paire validée (méthode data-viz) : séparation
- * CVD ΔE 10,1 et contraste ≥ 3:1 sur fond clair ET sombre, avec les mêmes
- * teintes dans les deux modes. La position au-dessus / en dessous de la ligne
- * de base reste l'encodage principal — la couleur ne fait que confirmer.
+ * The two poles of the graph. Validated pair (data-viz method): separation
+ * CVD ΔE 10.1 and contrast ≥ 3:1 on bright AND dark background, with the same
+ * tints in both modes. The position above/below the line
+ * Basic remains the primary encoding — color only confirms.
  */
 const REVENUE_COLOR = "bg-emerald-600";
 const COST_COLOR = "bg-orange-600";
@@ -148,15 +148,15 @@ interface RunCall {
   total_tokens: number | null;
   cost: number | null;
   /**
-   * Coût CALCULÉ, pas rapporté (MIN-216) : un essai de stream abandonné est
-   * facturé sans que l'objet `usage` n'arrive jamais. Affiché « ≈ » — la marge
-   * du mois ne doit pas se comparer à des dollars qu'on n'a jamais relevés.
+   * CALCULATED cost, not reported (MIN-216): an abandoned stream test is
+   * billed without the `usage` object ever arriving. Shown “≈” — the margin
+   * of the month should not be compared to dollars that have never been recorded.
    */
   estimated?: boolean;
   created_at: string;
 }
 
-/** Coût USD : beaucoup d'appels valent une fraction de centime → précision élevée. */
+/** Cost USD: many calls are worth a fraction of a cent → high accuracy. */
 function fmtCost(n: number | null | undefined): string {
   const v = n ?? 0;
   if (v === 0) return "$0";
@@ -192,8 +192,8 @@ export function AdminFinanceDashboard() {
   const featureLabel = useCallback(
     (feature: string) =>
       FEATURES.includes(feature as Feature)
-        ? // `feature` vient de l'API : clé assemblée à l'exécution, gardée par
-          // le `FEATURES.includes` juste au-dessus.
+        ? // `feature` comes from the API: key assembled at runtime, kept by
+          // the `FEATURES.includes` just above.
           t(`finance.features.${feature}` as MessageKey<"Admin">)
         : feature,
     [t],
@@ -235,7 +235,7 @@ export function AdminFinanceDashboard() {
     };
   }, [days, load]);
 
-  /** Le bouton « Actualiser » : contourne le cache serveur et retape Stripe. */
+  /** The “Refresh” button: bypasses the server cache and retypes Stripe. */
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -256,9 +256,9 @@ export function AdminFinanceDashboard() {
   );
 
   return (
-    /* La largeur et les marges viennent du shell (`admin-dashboard`) : les
-       onglets partagent un seul conteneur, sinon leurs contenus ne s'alignent
-       pas d'un onglet à l'autre. */
+    /* The width and margins come from the shell (`admin-dashboard`): the
+ tabs share a single container, otherwise their contents do not align
+ across tabs. */
     <div>
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -322,8 +322,8 @@ export function AdminFinanceDashboard() {
             <FeatureTable rows={byFeature} featureLabel={featureLabel} t={t} />
           </StatsSection>
 
-          {/* Les runs sont une info de consultation PONCTUELLE : ils ne prennent
-              plus toute la page, ils attendent qu'on les demande. */}
+          {/* The runs are POINTUAL consultation information: they do not take
+ plus the whole page, they wait to be requested. */}
           <StatsSection title={t("finance.logs")}>
             <RecentRunsAccordion
               runs={stats.recent_runs}
@@ -337,7 +337,7 @@ export function AdminFinanceDashboard() {
   );
 }
 
-// ── les chiffres réels du mois ───────────────────────────────────────────────
+// ── the actual figures for the month ─────────────────────── ────────────────────────
 
 function MoneyTiles({
   finance,
@@ -407,7 +407,7 @@ function MoneyTiles({
   );
 }
 
-/** Provenance et fraîcheur : le taux avec SA date, Stripe avec son horodatage. */
+/** Origin and freshness: the rate with its date, Stripe with its timestamp. */
 function FreshnessBar({
   finance,
   refreshing,
@@ -435,7 +435,7 @@ function FreshnessBar({
 
   return (
     <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
-      {/* Un montant converti sans son taux n'est pas vérifiable ; la date rend
+      {/* An amount converted without its rate is not verifiable; the date returns
           visible un cron de change en panne. */}
       <span>
         {finance.fx
@@ -470,12 +470,12 @@ function FreshnessBar({
   );
 }
 
-// ── le graphique divergent ───────────────────────────────────────────────────
+// ── the divergent graph ───────────────────────── ──────────────────────────
 
 /**
- * Une colonne par jour : le revenu monte, le coût descend, autour d'une ligne de
- * base commune. UNE échelle en euros pour les deux directions — c'est ce qui
- * rend la comparaison honnête, et donc la marge lisible.
+ * One column per day: income goes up, cost goes down, around a line of
+ * common basis. ONE euro scale for both directions — that's what
+ * makes the comparison honest, and therefore the margin readable.
  */
 function MarginChart({
   days,
@@ -523,8 +523,8 @@ function MarginChart({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Deux séries → légende systématique : l'identité ne repose jamais sur
-          la seule couleur. */}
+      {/* Two series → systematic legend: identity is never based on
+ the only color. */}
       <div className="flex items-center gap-4 text-xs">
         <span className="flex items-center gap-1.5">
           <span className={cn("size-2.5 rounded-[2px]", REVENUE_COLOR)} aria-hidden />
@@ -542,16 +542,15 @@ function MarginChart({
             const revenueHeight = (day.revenueEur / scale) * 100;
             const costHeight = ((day.costEur ?? 0) / scale) * 100;
             return (
-              // La cible de survol est la COLONNE entière : viser une barre de
-              // 2 px un jour presque vide serait impossible.
+              // The hover target is the entire COLUMN: aim for a bar of
+              // 2 px on an almost empty day would be impossible.
               <Tooltip key={day.day}>
                 <TooltipTrigger asChild>
                   <div className="flex min-w-[3px] flex-1 flex-col">
-                    {/* 96 px par moitié, pas 56 : une bande à une seule série
-                        (la vue d'ensemble) peut être basse, un graphique
-                        divergent partage sa hauteur en deux et perdrait ses
-                        valeurs intermédiaires — une journée à 30 % du maximum
-                        doit rester une barre, pas un tiret. */}
+                    {/* 96 px per half, not 56: a strip with a single series
+ (the overview) may be low, a diverging graph
+ splits its height in two and would lose its intermediate values ​​— a day at 30% of the maximum
+ should remain a bar, not a dash. */}
                     <div className="flex h-24 items-end">
                       <div
                         className={cn(
@@ -565,7 +564,7 @@ function MarginChart({
                         }
                       />
                     </div>
-                    {/* La ligne de base : le zéro est une vraie ligne, pas une
+                    {/* The baseline: zero is a real line, not a
                         limite implicite entre deux blocs de couleur. */}
                     <div className="h-px w-full bg-border" />
                     <div className="flex h-24 items-start">
@@ -609,12 +608,12 @@ function MarginChart({
   );
 }
 
-// ── garde-fou de dépense ─────────────────────────────────────────────────────
+// ── expenditure safeguard ────────────────────────── ───────────────────────────
 
 /**
- * Le plafond mensuel de la CLÉ minddy. Le saturer coupe Numo, la dictée et le
- * traitement du feedback jusqu'au mois suivant — c'est le vrai risque, pas la
- * panne de crédits (l'auto-refill OpenRouter s'en charge).
+ * The monthly limit of the minddy KEY. Saturating it cuts off Numo, dictation and
+ * processing feedback until the following month — that's the real risk, not the
+ * credits shortage (OpenRouter auto-refill takes care of this).
  */
 function SpendCap({
   finance,
@@ -637,9 +636,9 @@ function SpendCap({
   }
 
   const percent = cap.percent ?? 0;
-  // 90 % est le seuil qui déclenche la notification push (cron spend-guard) :
-  // la barre change de couleur au même endroit, pour que l'écran et l'alerte
-  // racontent la même histoire.
+  // 90% is the threshold that triggers the push notification (cron spend-guard):
+  // the bar changes color in the same place, so that the screen and alert
+  // tell the same story.
   const alerting = percent >= 90;
 
   return (
@@ -722,9 +721,9 @@ function FeatureTable({
     );
   }
   return (
-    /* `bg-card` comme les autres sections : sans lui le tableau laissait voir le
-       fond de page et flottait à côté des cartes voisines. Pas de `StatsCard`
-       ici — sa marge intérieure décollerait le tableau de sa bordure. */
+    /* `bg-card` like the other sections: without it the table showed the
+ background and floated next to neighboring cards. No `StatsCard`
+ here — its padding would remove the table from its border. */
     <div className="overflow-x-auto rounded-xl border border-border bg-card">
       <table className="w-full text-sm">
         <thead>
@@ -766,9 +765,9 @@ function FeatureTable({
   );
 }
 
-// ── les logs, rangés ─────────────────────────────────────────────────────────
+// ── the logs, put away ──────────────────────────── ─────────────────────────────
 
-/** Accordéon replié par défaut, sur le patron de `usage-history-section`. */
+/** Accordion folded by default, on the pattern of `usage-history-section`. */
 function RecentRunsAccordion({
   runs,
   featureLabel,
@@ -920,8 +919,8 @@ function RunRowItem({
                       <td className="py-1 pr-3 tabular-nums text-muted-foreground">
                         {c.seq + 1}
                       </td>
-                      {/* Le modèle se lit par sa marque, pas par son slug
-                          OpenRouter : logo + nom formaté, l'id brut au survol. */}
+                      {/* The model is read by its brand, not by its slug
+ OpenRouter: logo + formatted name, raw id on hover. */}
                       <td className="py-1 pr-3">
                         {c.model ? (
                           <ModelBadge model={c.model} size={12} />

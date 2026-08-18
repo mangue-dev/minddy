@@ -45,7 +45,7 @@ describe("carrySessionCookies", () => {
       value: "base64-part-1",
       path: "/",
       secure: true,
-      // Le client Supabase du navigateur les relit en JavaScript.
+      // The browser's Supabase client reads them back in JavaScript.
       httpOnly: false,
       sameSite: "lax",
       expirationDate: 1_800_000_000,
@@ -53,8 +53,8 @@ describe("carrySessionCookies", () => {
   });
 
   it("déduit `secure` de l'origine d'ARRIVÉE, pas de celle de départ", () => {
-    // Le dév local est en HTTP nu : un `Secure` inconditionnel y ferait
-    // disparaître la session qu'on vient de reporter.
+    // Local dev is in bare HTTP: an unconditional `Secure` would do that
+    // disappear the session that has just been postponed.
     const [carried] = carrySessionCookies(source, "http://localhost:3000");
     expect(carried.secure).toBe(false);
   });
@@ -70,8 +70,8 @@ describe("carrySessionCookies", () => {
 
 describe("staleSessionCookies", () => {
   it("efface les morceaux que la nouvelle session ne réécrira pas", () => {
-    // Trois morceaux à l'arrivée, deux qui arrivent : sans ça le `.2` de
-    // l'ancienne se recolle à la nouvelle, et la session devient illisible.
+    // Three pieces on arrival, two arriving: without that the `.2` of
+    // the old one sticks to the new one, and the session becomes unreadable.
     const target: SourceCookie[] = [
       { name: `sb-${REF}-auth-token.0`, value: "vieux" },
       { name: `sb-${REF}-auth-token.1`, value: "vieux" },

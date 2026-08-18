@@ -1,18 +1,18 @@
 #!/usr/bin/env node
-// Vide les caches de build et dit ce qu'on a récupéré.
-// Les tailles sont mesurées avant la suppression : après, il n'y a plus rien à peser.
+// Clear build caches and report what we got.
+// Sizes are measured before deletion: afterward, there is nothing to weigh.
 
 import { lstatSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 const TARGETS = [".next", ".turbo", "node_modules/.cache"];
 
-// Les *.tsbuildinfo de la racine (le glob du shell ne s'applique plus ici).
+// The *.tsbuildinfo of the root (the shell glob no longer applies here).
 for (const entry of readdirSync(process.cwd(), { withFileTypes: true })) {
   if (entry.isFile() && entry.name.endsWith(".tsbuildinfo")) TARGETS.push(entry.name);
 }
 
-/** Taille sur disque, sans suivre les liens symboliques. 0 si le chemin n'existe pas. */
+/** Size on disk, without following symbolic links. 0 if the path does not exist. */
 function sizeOf(path) {
   const stat = lstatSync(path, { throwIfNoEntry: false });
   if (!stat) return 0;
@@ -50,7 +50,7 @@ for (const target of TARGETS) {
 }
 
 if (removed.length === 0) {
-  console.log("Rien à retirer : les caches sont déjà vides.");
+  console.log("Nothing to remove: caches are already empty.");
   process.exit(0);
 }
 
@@ -63,4 +63,4 @@ removed.forEach(({ target }, index) => {
 });
 
 const total = removed.reduce((sum, { bytes }) => sum + bytes, 0);
-console.log(`\n${human(total)} libérés.`);
+console.log(`\n${human(total)} freed.`);

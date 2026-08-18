@@ -19,122 +19,122 @@ import type { NormalizedUsage } from "@/lib/server/ai-usage";
 import type { RedactText } from "../redact";
 
 /**
- * LE PROXY LOCAL DU SUPERVISEUR (MIN-286, lot 2) — les quarante lignes qui
+ * THE SUPERVISOR'S LOCAL PROXY (MIN-286, lot 2) — the forty lines that
  * rendent au ledger ce qu'opencode ne dit pas.
  *
- * Opencode parle au fournisseur par une `baseURL` ; on la fait pointer sur
- * `127.0.0.1` **dans la microVM**, et ce serveur-ci relaie vers la vraie. Le
- * trafic sort donc toujours de la VM avec le PLACEHOLDER, le firewall pose la
- * clé après la sortie comme aujourd'hui, `network-policy.ts` ne change pas d'une
- * ligne et aucun secret n'entre dans le process où le modèle exécute du shell.
+ * Opencode speaks to the provider with a `baseURL`; we make it point to
+ * `127.0.0.1` **in the microVM**, and this server relays to the real one. THE
+ * traffic therefore always leaves the VM with the PLACEHOLDER, the firewall places the
+ * key after exit like today, `network-policy.ts` does not change one
+ * line and no secrets enter the process where the model executes from the shell.
  *
- * ET SUR LA MACHINE DE L'UTILISATEUR, C'EST CE PROCESS QUI POSE LA CLÉ (MIN-357).
- * Il n'y a pas de firewall sur un Mac : la clé descend jusqu'ici — et pas plus
- * bas — demandée au plan de contrôle au démarrage du tour, gardée en mémoire, et
- * posée sur la seule route servie (cf. `LlmProxyOptions.apiKey` et
- * `resolveProxyTarget`). C'est ce qui fait de la garde de chemin, ci-dessous, une
- * pièce de sécurité et plus une commodité.
+ * AND ON THE USER'S MACHINE, IT IS THIS PROCESS WHICH SET THE KEY (MIN-357).
+ * There is no firewall on a Mac: the key goes down here — and no more
+ * low — requested from the control plane at the start of the tour, kept in memory, and
+ * placed on the only route served (see `LlmProxyOptions.apiKey` and
+ * `resolveProxyTarget`). This is what makes the path guard, below, a
+ * safety piece and more a convenience.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * TROIS CHOSES QUI NE SE FONT QUE LÀ, et c'est pour elles qu'il existe
+ * THREE THINGS THAT ARE ONLY DONE THERE, and it is for them that it exists
  *
- * 1. **Le `generation_id`.** Un message assistant d'opencode porte
+ * 1. **The `generation_id`.** An opencode wizard message carries
  *    `id, sessionID, role, time, parentID, modelID, providerID, mode, agent,
- *    path, cost, tokens, finish` — et c'est tout (dossier §2.6). L'identifiant de
- *    génération du fournisseur, celui par lequel on réconcilie une facture et par
- *    lequel un support client remonte un appel, n'existe nulle part. Il est dans
- *    la RÉPONSE, que ce proxy voit passer.
- * 2. **Le coût RÉELLEMENT facturé.** `usage: {include: true}` demande à OpenRouter
- *    le coût de la génération dans la dernière frame du flux. Opencode, lui,
- *    CALCULE le sien (nos prix × tokens depuis le lot 1). La sonde du lot 0 a
- *    mesuré un écart nul sur cinq générations — mais l'écart nul d'un jour n'est
- *    pas une garantie, et c'est le chiffre du fournisseur qui fait foi le jour où
- *    ils divergent. C'est aussi ce qui rend le ledger IDENTIQUE entre les deux
- *    moteurs, ce qui est le critère de bascule du lot 3.
- * 3. **Le niveau de raisonnement des couches compat.** Mesuré au lot 1 :
- *    `reasoning_effort` à plat est RETIRÉ du corps par opencode ; seule la forme
- *    imbriquée (OpenRouter) survit. Un BYOK openai / google perdrait
- *    donc son raisonnement en silence — le round part, il coûte, il pense moins.
- *    Anthropic a le même problème avec sa forme `thinking`. Le champ est
- *    réinjecté ici, dans la forme model-aware que le registre déclare
- *    ([agent-providers.ts](../../../agent-providers.ts), `reasoningField`) — et
- *    dans CELLE-LÀ SEULEMENT : un corps qui porte les deux formes à la fois part
+ * path, cost, tokens, finish` — and that's it (file §2.6). The identifier of
+ * generation of the supplier, the one by which an invoice is reconciled and by
+ * which customer support escalates a call, does not exist anywhere. He is in
+ * the RESPONSE, which this proxy sees.
+ * 2. **The cost ACTUALLY charged.** `usage: {include: true}` asks OpenRouter
+ * the cost of generation in the last frame of the flow. Opencode, he
+ * CALCULATE yours (our prices × tokens from batch 1). The batch 0 probe has
+ * measured a zero gap over five generations — but the zero gap of one day is not
+ * not a guarantee, and it is the supplier's figure which is authentic on the day
+ * they diverge. This is also what makes the ledger IDENTICAL between the two
+ * engines, which is the changeover criterion for lot 3.
+ * 3. **The level of reasoning of the compat. layers** Measured in batch 1:
+ * `reasoning_effort` flat is REMOVED from body by opencode; only the form
+ * nested (OpenRouter) survives. An openai/google BYOK would lose
+ * so his reasoning in silence - the round leaves, it costs, it thinks less.
+ * Anthropic has the same problem with its `thinking` form. The field is
+ * reinjected here, in the model-aware form that the registry declares
+ * ([agent-providers.ts](../../../agent-providers.ts), `reasoningField`) — and
+ * in THIS ONE ONLY: a body which bears both forms at the same time leaves
  *    en 400 chez OpenRouter (« both provided with conflicting values »), donc
- *    l'autre est retirée du corps avant le relais.
+ * the other is removed from the body before the relay.
  *
- * CE QU'IL NE FAIT PAS : décider. Il observe et il complète le corps ; le ledger,
- * les plafonds et l'appariement restent au superviseur.
+ * WHAT IT DOES NOT DO: decide. He observes and completes the body; the ledger,
+ * caps and matching remain with the supervisor.
  */
 
-/** Ce qu'une génération a laissé voir en passant. */
+/** What a generation has let us see in passing. */
 export interface CapturedGeneration {
   /** L'`id` du fournisseur — `gen-…` chez OpenRouter. */
   id: string | null;
-  /** Le modèle tel que le fournisseur le renvoie (il peut préciser une variante). */
+  /** The model as the supplier returns it (he can specify a variant). */
   model: string;
-  /** Tokens de sortie, quand le fournisseur les compte. */
+  /** Output tokens, when the provider counts them. */
   outputTokens: number | null;
-  /** Le coût FACTURÉ, quand le fournisseur le rend (`usage: {include: true}`). */
+  /** The cost CHARGED, when the supplier renders it (`usage: {include: true}`). */
   costUsd: number | null;
   /**
-   * L'usage COMPLET du fournisseur, gardé pour les rounds dont opencode ne dira
-   * jamais rien (`drain`). Sur un round ordinaire il ne sert pas : les tokens
-   * viennent du message assistant, qui les tient déjà.
+   * FULL usage of the provider, kept for the rounds which opencode will not say
+   * never anything (`drain`). On an ordinary round it is not useful: tokens
+   * come from the message assistant, which already holds them.
    */
   usage: NormalizedUsage | null;
 }
 
-/** Ce que le superviseur tient du proxy. */
+/** What the supervisor gets from the proxy. */
 export interface LlmProxy {
-  /** `http://127.0.0.1:<port>` — la `baseURL` à donner à opencode. */
+  /** `http://127.0.0.1:<port>` — the `baseURL` to give to opencode. */
   readonly url: string;
   /**
-   * La génération de CE round, retirée de la file.
+   * The generation of THIS round, removed from the queue.
    *
-   * L'appariement se fait par modèle, puis par tokens de sortie quand ils
-   * concordent, sinon dans l'ordre d'arrivée. Il est donc EXACT en séquentiel, et
-   * seulement probable quand deux filles tournent en parallèle SUR LE MÊME
-   * MODÈLE — auquel cas deux `generation_id` d'un même run et d'un même modèle
-   * peuvent s'échanger. Ce qui se joue là est une référence de réconciliation, pas
-   * une dépense : les tokens et le coût viennent du round, pas de l'appariement.
+   * Matching is done by model, then by output tokens when they
+   * agree, otherwise in the order of arrival. It is therefore EXACT sequentially, and
+   * only likely when two girls are running in parallel ON THE SAME
+   * MODEL — in which case two `generation_id` of the same run and the same model
+   * can be exchanged. What is at stake here is a reference of reconciliation, not
+   * an expense: the tokens and cost come from the round, not from the pairing.
    */
   take(round: { model: string; outputTokens: number }): CapturedGeneration | null;
   /**
-   * LES GÉNÉRATIONS QUE PLUS AUCUN ROUND NE VIENDRA PRENDRE, retirées de la file.
+   * THE GENERATIONS THAT NO MORE ROUND WILL COME TO TAKE, removed from the queue.
    *
-   * C'est ce qu'un round COUPÉ EN VOL laisse derrière lui, et c'est le seul
-   * endroit du harness où sa dépense existe encore. Mesuré le 2026-08-12
-   * (dossier §2.23) : opencode ne facture RIEN d'un round avorté — `finish: null`,
-   * `cost: 0`, `tokens: 0`, `error: MessageAbortedError` — alors que 179 caractères
-   * étaient déjà écrits et que le fournisseur, lui, a bel et bien facturé
-   * 0,002827 $. Sans ce drain, un « Stop », un plafond ou une deadline sortiraient
-   * la dépense du ledger, du quota et de la facture, sur un geste déclenchable à
-   * volonté — le défaut exact que MIN-216 avait fermé côté boucle maison.
+   * This is what a CUT IN FLIGHT round leaves behind, and it's the only
+   * place of the harness where its expenditure still exists. Measured on 2026-08-12
+   * (file §2.23): opencode charges NOTHING for an aborted round — `finish: null`,
+   * `cost: 0`, `tokens: 0`, `error: MessageAbortedError` — while 179 characters
+   * were already written and the supplier actually invoiced
+   * $0.002827. Without this drain, a “Stop”, a ceiling or a deadline would emerge
+   * the expenditure of the ledger, the quota and the invoice, on a triggerable gesture
+   * will — the exact fault that MIN-216 had closed on the home loop side.
    *
-   * Ce que ce proxy a de plus que tout le reste : **il ne coupe pas l'amont quand
-   * le client s'en va**. Le `fetch` vers le fournisseur n'a pas de signal, la
-   * boucle de lecture continue jusqu'au bout du flux (mesuré : 1 221 ms après le
-   * départ du client, sans une erreur de socket), et la dernière frame — celle qui
-   * porte `usage` et son coût — arrive donc quand même. La ligne écrite n'est pas
-   * une estimation : c'est le chiffre du fournisseur.
+   * What this proxy has more than everything else: **it does not cut upstream when
+   * the customer leaves**. The `fetch` to the supplier has no signal, the
+   * continuous playback loop until the end of the stream (measured: 1221 ms after the
+   * leaving the client, without a socket error), and the last frame — the one that
+   * carries `usage` and its cost — therefore arrives anyway. The written line is not
+   * an estimate: this is the supplier's figure.
    */
   drain(): CapturedGeneration[];
   /**
-   * Attend que les relais ENCORE EN VOL se terminent, au plus `timeoutMs`.
+   * Waits for STILL IN FLIGHT relays to complete, at most `timeoutMs`.
    *
-   * À appeler avant `drain`, et c'est une question de course, pas de prudence :
-   * quand le client coupe, l'amont continue — mesuré à **1 221 ms** de plus
-   * jusqu'à sa dernière frame. Drainer tout de suite après un `abort` ne
-   * trouverait donc rien, et la dépense repartirait par le trou qu'on vient de
-   * boucher. Le plafond, lui, existe pour le cas inverse : un fournisseur qui ne
-   * fermerait jamais son flux ne doit pas retenir la fin du tour.
+   * To call before `drain`, and it's a matter of racing, not caution:
+   * when the client cuts off, the upstream continues — measured at **1221 ms** longer
+   * until its last frame. Drain immediately after a `abort` does not
+   * would therefore find nothing, and the expense would go back through the hole that we have just
+   * butcher. The ceiling exists for the opposite case: a supplier who does not
+   * would never close its flow must not hold the end of the round.
    */
   settle(timeoutMs: number): Promise<void>;
   close(): Promise<void>;
 }
 
 export interface LlmProxyJob {
-  /** La vraie base URL du fournisseur (sans `/chat/completions`). */
+  /** The real base URL of the provider (without `/chat/completions`). */
   baseUrl: string;
   provider: AgentProviderId;
   reasoningLevel: ReasoningLevel;
@@ -142,63 +142,63 @@ export interface LlmProxyJob {
 
 export interface LlmProxyOptions {
   job: LlmProxyJob;
-  /** 0 = un port libre choisi par l'OS (le défaut, et ce que font les tests). */
+  /** 0 = a free port chosen by the OS (the default, and what the tests do). */
   port?: number;
-  /** Injecté pour les tests : le fournisseur, sans réseau. */
+  /** Injected for testing: the provider, without network. */
   fetchImpl?: typeof fetch;
   /**
-   * LA CLÉ DU MODÈLE, QUAND C'EST À NOUS DE LA POSER (MIN-357) — présente
-   * SEULEMENT quand le tour joue sur la machine de l'utilisateur.
+   * THE KEY TO THE MODEL, WHEN IT IS UP TO US TO ASK IT (MIN-357) — presents
+   * ONLY when the trick plays on the user's machine.
    *
-   * En microVM, ce champ est absent et rien ne change : la boucle envoie le
-   * placeholder, le firewall pose la vraie clé après la sortie de la VM, et ce
-   * process ne détient rien. Sur un Mac il n'y a pas de firewall, donc la clé
-   * doit bien exister quelque part — et « quelque part », c'est ICI, dans la
-   * mémoire du proxy, pas dans `job.json` ni dans `OPENCODE_CONFIG_CONTENT`
-   * (qui entre dans l'environnement du serveur opencode, donc lisible par un
-   * simple `env` du shell du modèle).
+   * In microVM, this field is absent and nothing changes: the loop sends the
+   * placeholder, the firewall places the real key after exiting the VM, and this
+   * process holds nothing. On a Mac there is no firewall, so the key
+   * must exist somewhere — and “somewhere” is HERE, in the
+   * proxy memory, not in `job.json` nor in `OPENCODE_CONFIG_CONTENT`
+   * (which enters the opencode server environment, therefore readable by a
+   * simple `env` of the model shell).
    *
-   * DEMANDÉE UNE FOIS, AU DÉMARRAGE, et gardée en closure. Le plan de contrôle
-   * ne rend qu'une clé MINTÉE À PLAFOND DUR (`/llm-key`, control-plane.ts) : ce
-   * qui borne le dégât n'est pas la cachette — le modèle peut appeler ce proxy
-   * depuis son propre shell, il écoute sur `127.0.0.1` — c'est le plafond que
-   * le fournisseur tient. D'où le refus de démarrer sans clé, plus bas : un tour
-   * local sans plafond n'est pas un tour dégradé, c'est un tour qui ne doit pas
+   * REQUESTED ONCE, AT STARTUP, and kept closed. The control plan
+   * only returns a HARD CEILING MINTED key (`/llm-key`, control-plane.ts): this
+   * which limits the damage is not the hiding place — the model can call this proxy
+   * from its own shell, it listens on `127.0.0.1` — this is the ceiling that
+   * the supplier holds. Hence the refusal to start without a key, lower: one turn
+   * premises without a ceiling is not a degraded turn, it is a turn which should not
    * avoir lieu.
    */
   apiKey?: () => Promise<string | null>;
-  /** Ouvre le port pendant le mint ; chaque relais attend tout de même la clé. */
+  /** Opens port during mint; each relay still waits for the key. */
   deferApiKey?: boolean;
   /** Jalons locaux de diagnostic, sans corps, URL ni secret. */
   onTiming?: (stage: string) => void;
   /**
-   * LA SUBSTITUTION DES SECRETS, AVANT LE MODÈLE (MIN-328) — et c'est ICI qu'elle
+   * THE SUBSTITUTION OF SECRETS, BEFORE THE MODEL (MIN-328) — and it is HERE that it
    * doit vivre sous ce moteur.
    *
-   * L'invariant de MIN-239 (« le modèle ne voit plus le token du tout ») tenait
-   * parce que la boucle maison fabriquait elle-même chaque message `role:"tool"`
-   * et le substituait au passage. Opencode, lui, exécute ses tools DANS la
-   * microVM et construit le corps de la requête sans repasser par nous : un
-   * `bash("cat .git/config")` remontait donc au modèle intact, qui pouvait
-   * ensuite le recopier dans un fichier, un commit ou sa réponse.
+   * The invariant of MIN-239 (“the model no longer sees the token at all”) held
+   * because the home loop produced each `role:"tool"` message itself
+   * and substituted it in passing. Opencode executes its tools IN the
+   * microVM and constructs the body of the request without going through us again: a
+   * `bash("cat .git/config")` therefore went back to the intact model, which could
+   * then copy it into a file, a commit or its response.
    *
-   * Ce proxy est le SEUL point de passage obligé entre opencode et le
-   * fournisseur : la substitution posée sur le corps sortant vaut pour toutes les
-   * sorties de tools, présentes et à venir, sans rien savoir d'elles. Elle porte
-   * sur le JSON sérialisé — un token de forge est alphanumérique, il ne subit
-   * aucun échappement JSON et se retrouve tel quel dans la chaîne.
+   * This proxy is the ONLY mandatory crossing point between opencode and the
+   * supplier: the substitution placed on the outgoing body applies to all
+   * tool releases, present and future, without knowing anything about them. She wears
+   * on serialized JSON — a forge token is alphanumeric, it does not undergo
+   * no JSON escape and is found as is in the string.
    */
   redact?: RedactText;
 }
 
 /**
- * LE CORPS D'UNE REQUÊTE, COMPLÉTÉ — pur, donc testable sans serveur.
+ * THE BODY OF A REQUEST, COMPLETED — pure, therefore testable without a server.
  *
  * On AJOUTE, on ne remplace pas : opencode a construit ce corps (messages, tools,
- * `stream`, et la forme imbriquée du raisonnement quand elle passe), et ce n'est
- * pas notre travail de le refaire. Un champ déjà présent reste tel quel — c'est ce
- * qui fait qu'une version future d'opencode qui se mettrait à envoyer `usage`
- * elle-même ne se retrouve pas avec deux vérités.
+ * `stream`, and the nested form of the reasoning when it passes), and this is not
+ * not our job to do it again. A field already present remains as it is — this is what
+ * which causes a future version of opencode to start sending `usage`
+ * she herself does not end up with two truths.
  */
 export function patchCompletionBody(
   body: Record<string, unknown>,
@@ -207,53 +207,53 @@ export function patchCompletionBody(
   return translateLegacyAiChatBody(body, job.provider, job.reasoningLevel);
 }
 
-/** Les en-têtes que le registre ajoute, et qu'opencode ne connaît pas. */
+/** Headers that the registry adds, and that opencode does not know about. */
 export function extraHeaders(job: LlmProxyJob): Record<string, string> {
   return aiChatProviderHeaders(job.provider, "Numo agent (minddy)");
 }
 
-/** Ce qu'une requête entrante a le droit de devenir : une URL, ou un refus. */
+/** What an incoming request has the right to become: a URL, or a refusal. */
 export type ProxyRoute =
   | { ok: true; url: string }
   | { ok: false; status: 400 | 404 | 405; message: string };
 
 /**
- * LE PROXY SERT UNE ROUTE, IL N'EST PAS UN RELAIS GÉNÉRIQUE (MIN-357) — et
- * c'est la ligne qui décide si le verrou de la clé tient ou tombe entièrement.
+ * THE PROXY SERVES A ROUTE, IT IS NOT A GENERIC RELAY (MIN-357) — and
+ * this is the line that decides whether the key lock holds or falls entirely.
  *
- * L'ANCIENNE FORME ÉTAIT UN TEST DE SUFFIXE SUR UNE REQUEST-TARGET BRUTE
- * (`path.split("?")[0].endsWith("/chat/completions")`). Mesuré :
+ * THE OLD FORM WAS A SUFFIX TEST ON A RAW REQUEST-TARGET
+ * (`path.split("?")[0].endsWith("/chat/completions")`). Measure :
  *
  * ```
  * '/../v1/keys#/chat/completions'.endsWith('/chat/completions')  → true
  * new URL('https://openrouter.ai/api/v1' + ce_chemin).pathname   → /api/v1/keys
  * ```
  *
- * `fetch` normalise les `..` et jette le fragment : ce que le test regarde et ce
- * que le relais appelle ne sont PAS le même chemin. Tant que la clé était posée
- * par le firewall après la sortie de la VM, ça ne rendait rien (le placeholder
- * repartait en 401) ; le jour où ce proxy porte la vraie clé, **le modèle
- * s'émet une clé sans plafond depuis son propre shell** et le verrou 2 tombe
- * entièrement. Même faille sur `/api/v1/credits` et `/api/v1/generation`.
+ * `fetch` normalizes the `..` and throws away the fragment: what the test looks at and what
+ * that the relay is calling are NOT the same path. As long as the key was placed
+ * by the firewall after exiting the VM, it did not return anything (the placeholder
+ * left again in 401); the day this proxy carries the real key, **the model
+ * issues a key without cap from its own shell** and lock 2 falls
+ * entirely. Same flaw on `/api/v1/credits` and `/api/v1/generation`.
  *
- * D'où les quatre gardes, dans cet ordre, et aucune n'est décorative :
+ * Hence the four guards, in this order, and none are decorative:
  *
- * 1. **400 sur `#`, `..`, `//` et sur tout chemin ne commençant pas par `/`.**
- *    C'est le refus de tout ce qui rend une chaîne et son URL différentes —
- *    fragment jeté, segments normalisés, et le `//` qui change carrément
- *    d'hôte (`new URL('https://a/api' + '//evil.com/x')`). On refuse la FORME
- *    plutôt que d'essayer de deviner ce qu'elle deviendra.
- * 2. **Égalité stricte sur `url.pathname`**, jamais un suffixe ni un préfixe :
- *    c'est le même mot qui met `/api/v1/keys` hors de portée dans la politique
- *    réseau (`path: { exact }`, network-policy.ts), et pour la même raison.
- * 3. **L'origine, comparée aussi.** Redondante avec la garde 1 aujourd'hui ;
- *    gratuite, et c'est elle qui tient si quelqu'un assouplit l'autre.
- * 4. **`POST` exigé.** La route de complétion est un POST ; un GET sur elle est
- *    une sonde, pas un round.
+ * 1. **400 on `#`, `..`, `//` and on any path not starting with `/`.**
+ * It's the denial of everything that makes a channel and its URL different —
+ * discarded fragment, normalized segments, and the `//` which completely changes
+ * (`new URL('https://a/api' + '//evil.com/x')`). We refuse FORM
+ * rather than trying to guess what it will become.
+ * 2. **Strict equality on `url.pathname`**, never a suffix or a prefix:
+ * it's the same word that puts `/api/v1/keys` out of reach in politics
+ * network (`path: { exact }`, network-policy.ts), and for the same reason.
+ * 3. **The origin, also compared.** Redundant with guard 1 today;
+ * free, and it is this which holds if someone softens the other.
+ * 4. **`POST` required.** The completion route is a POST; a GET on it is
+ * a probe, not a round.
  *
- * CE QUE ÇA REFUSE ET QUI PASSAIT AVANT : tout le reste du fournisseur. C'est
- * tenable parce qu'opencode n'appelle qu'elle — le provider est
- * `@ai-sdk/openai-compatible` et le catalogue de modèles est DÉCLARÉ dans la
+ * WHAT IT REFUSES AND WHICH CAME BEFORE: everything else from the supplier. It is
+ * tenable because opencode only calls it — the provider is
+ * `@ai-sdk/openai-compatible` and the model catalog is DECLARED in the
  * config (`providerModels`), donc rien ne va chercher `/models` en ligne.
  */
 export function resolveProxyTarget(
@@ -290,19 +290,19 @@ export function resolveProxyTarget(
 }
 
 /**
- * LE LECTEUR DE RÉPONSES — l'`id` et l'`usage`, lus au vol dans un flux SSE.
+ * THE RESPONSE READER — the `id` and the `usage`, read on the fly in an SSE stream.
  *
- * Il ne bufferise pas la réponse : il en lit les lignes `data:` au passage et ne
- * garde que deux nombres et deux chaînes. Un tour peut rendre des mégaoctets de
- * texte ; les retenir pour y chercher un identifiant serait le meilleur moyen de
- * faire tomber une microVM à 4 Go sur un run bavard.
+ * It does not buffer the response: it reads the `data:` lines in passing and does not
+ * keeps only two numbers and two strings. One round can render megabytes of
+ * text ; retaining them to look for an identifier would be the best way to
+ * dropping a microVM to 4 GB on a verbose run.
  */
 export class GenerationSniffer {
   private buffer = "";
   private current: CapturedGeneration | null = null;
   private readonly done: CapturedGeneration[] = [];
 
-  /** Un morceau de réponse, tel qu'il arrive du fournisseur. */
+  /** A piece of response, as it arrives from the supplier. */
   push(chunk: string): void {
     this.buffer += chunk;
     let index = this.buffer.indexOf("\n");
@@ -313,7 +313,7 @@ export class GenerationSniffer {
     }
   }
 
-  /** La réponse est finie : ce qui restait devient une génération. */
+  /** The answer is finite: what remained becomes a generation. */
   end(): void {
     if (this.buffer) {
       this.line(this.buffer);
@@ -325,7 +325,7 @@ export class GenerationSniffer {
   private line(raw: string): void {
     const line = raw.trim();
     if (!line) return;
-    // Une réponse NON streamée est un seul objet JSON : la même lecture marche,
+    // A NON-streamed response is a single JSON object: the same reading works,
     // parce qu'on ne cherche que des champs de haut niveau.
     const payload = line.startsWith("data:") ? line.slice(5).trim() : line;
     if (!payload || payload === "[DONE]") return;
@@ -333,8 +333,8 @@ export class GenerationSniffer {
     try {
       parsed = JSON.parse(payload) as Record<string, unknown>;
     } catch {
-      // Du texte d'erreur, une frame partielle, un commentaire SSE : rien à lire,
-      // et surtout rien qui doive interrompre le relais.
+      // Error text, partial frame, SSE comment: nothing to read,
+      // and above all nothing that should interrupt the relay.
       return;
     }
     const gen = (this.current ??= {
@@ -355,16 +355,16 @@ export class GenerationSniffer {
   }
 
   /**
-   * UNE GÉNÉRATION SANS AUCUNE TRACE N'EN EST PAS UNE (MIN-286).
+   * A GENERATION WITHOUT ANY TRACE IS NOT ONE (MIN-286).
    *
-   * `line()` alloue dès la PREMIÈRE ligne JSON lisible, sans exiger d'`id` ni
-   * d'`usage` : un corps d'erreur du fournisseur (`{"error":{…}}` sur un 429, une
-   * frame d'erreur au milieu d'un 200) fabriquait donc une génération fantôme.
-   * Elle ne coûtait pas rien : `takeGeneration` apparie sur le modèle, et un
-   * fantôme a le modèle VIDE, donc il matche tout et se fait prendre en premier —
-   * le round repartait sans son coût facturé ni son `generation_id`, et la vraie
-   * génération restait dans la file jusqu'à `recordOrphans`, qui l'écrivait une
-   * SECONDE fois. Un round facturé deux fois, sur une réponse d'erreur.
+   * `line()` allocates from the FIRST readable JSON line, without requiring `id` or
+   * d'`usage`: an error body from the provider (`{"error":{…}}` on a 429, a
+   * error frame in the middle of a 200) therefore produced a ghost generation.
+   * It didn't cost anything: `takeGeneration` matches the model, and a
+   * ghost has the EMPTY model, so he matches everything and gets caught first —
+   * the round left without its invoiced cost nor its `generation_id`, and the real
+   * generation remained in the queue until `recordOrphans`, which wrote it once
+   * SECOND time. A round billed twice, on an error response.
    */
   private flush(): void {
     const gen = this.current;
@@ -374,15 +374,15 @@ export class GenerationSniffer {
     this.done.push(gen);
   }
 
-  /** Ce qui a été vu et pas encore consommé. */
+  /** What has been seen and not yet consumed. */
   captured(): CapturedGeneration[] {
     return this.done;
   }
 }
 
 /**
- * L'APPARIEMENT round → génération. Pur, et sorti du serveur pour ça : c'est la
- * seule partie qui puisse se tromper, donc la seule qui mérite un test à part.
+ * THE PAIRING round → generation. Pure, and taken out of the server for that: it's the
+ * the only part that could be wrong, therefore the only one that deserves a separate test.
  */
 export function takeGeneration(
   pool: CapturedGeneration[],
@@ -396,28 +396,28 @@ export function takeGeneration(
   return pool.splice(index, 1)[0];
 }
 
-/** Démarre le proxy. Rend son URL, sa file de générations et son arrêt. */
+/** Starts the proxy. Returns its URL, build queue, and shutdown. */
 export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
   const { job } = opts;
   const http = opts.fetchImpl ?? fetch;
   /**
-   * La file COMMUNE, alimentée par un lecteur PAR REQUÊTE. Un lecteur partagé
-   * mélangerait deux réponses en vol — et deux filles en parallèle, c'est
-   * exactement ce que le tour fait quand le modèle délègue.
+   * The COMMON queue, powered by a PER REQUEST reader. A shared drive
+   * would mix two responses in flight — and two girls in parallel, that's
+   * exactly what the trick does when the model delegates.
    */
   const pool: CapturedGeneration[] = [];
-  /** Relais commencés et pas finis — ce que `settle` attend. */
+  /** Relays started and not finished — what `settle` expects. */
   let inFlight = 0;
 
   /**
-   * LA CLÉ, PRISE AVANT LE PREMIER OCTET DE SERVEUR. Le port n'existe pas encore
-   * quand cette ligne s'exécute : il n'y a donc aucune fenêtre pendant laquelle
-   * ce proxy écoute sans savoir quoi poser sur `authorization`.
+   * THE KEY, TAKEN BEFORE THE FIRST SERVER BYTE. The port does not exist yet
+   * when this line is executed: there is therefore no window during which
+   * this proxy listens without knowing what to ask on `authorization`.
    *
-   * L'échec LÈVE, et remonte jusqu'au rapport de fin de tour (`main.ts`) : sans
-   * clé plafonnée, un tour local n'a plus aucun garde-fou de dépense — le
-   * compute de microVM, dernier filet dans le cloud, vaut structurellement zéro
-   * sur la machine de quelqu'un. Mieux vaut un tour qui ne part pas et le dit.
+   * The failure RISES, and goes back to the end of turn report (`main.ts`): without
+   * capped key, a local tour no longer has any spending safeguards — the
+   * microVM compute, the last net in the cloud, is structurally worth zero
+   * on someone's machine. Better a ride that doesn't leave and says so.
    */
   const apiKeyPromise = opts.apiKey
     ? isLocalAgentProvider(job.provider)
@@ -428,9 +428,9 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
 
   const server = createServer((req, res) => {
     void relay(req, res).catch((err) => {
-      // Le proxy est sur le chemin critique du modèle : une panne ici doit se
-      // dire au client HTTP (donc à opencode, qui la retentera), pas faire
-      // tomber le process qui tient tout le tour.
+      // The proxy is on the critical path of the model: a failure here must occur
+      // tell the HTTP client (therefore to opencode, which will try it again), not do
+      // fall the process which holds all the trick.
       if (!res.headersSent) res.writeHead(502, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: { message: `proxy: ${(err as Error).message}` } }));
     });
@@ -448,13 +448,13 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
   async function relayOnce(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const route = resolveProxyTarget(req.method, req.url, job.baseUrl);
     if (!route.ok) {
-      // Le corps est LU QUAND MÊME avant de refuser : un client qui a commencé à
-      // écrire et à qui on répond sans vider la socket se retrouve avec une
-      // connexion à moitié consommée, et opencode retente sur un tuyau cassé.
+      // The body is READ ANYWAY before refusing: a client who has started to
+      // write and who is responded to without emptying the socket ends up with a
+      // connection half consumed, and opencode tries again on a broken pipe.
       await readBody(req).catch(() => {});
-      // Un refus ici n'est jamais anodin : c'est soit un opencode qui a changé de
-      // route, soit quelqu'un qui essaie de se servir du proxy. Ça se lit dans un
-      // log, borné parce que la request-target vient d'en face.
+      // A refusal here is never trivial: it is either an opencode that has changed
+      // route, or someone trying to use the proxy. It can be read in a
+      // log, bounded because the request-target comes from opposite.
       console.error(`[llm-proxy] refused ${req.method} ${(req.url ?? "").slice(0, 200)}`);
       res.writeHead(route.status, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: { message: route.message } }));
@@ -462,41 +462,41 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
     }
     const raw = await readBody(req);
 
-    // Il n'y a plus qu'une route servie : ce qui arrive ici EST une complétion,
-    // et les trois gestes qui suivent n'ont plus de condition à porter.
+    // There is only one road left: what happens here IS a completion,
+    // and the three gestures that follow no longer have any conditions to carry.
     let body: string | undefined = raw.length > 0 ? raw.toString("utf8") : undefined;
     if (body) {
       try {
         body = JSON.stringify(patchCompletionBody(JSON.parse(body), job));
       } catch {
         // Un corps qu'on ne sait pas lire se relaie TEL QUEL : un round qui part
-        // sans notre complément vaut infiniment mieux qu'un round qui ne part pas.
+        // without our complement is infinitely better than a round that doesn't go away.
       }
-      // APRÈS le complément, et sur le corps ENTIER : les sorties de tools
-      // d'opencode entrent dans ce corps sans être jamais passées par nous
-      // (MIN-328). Le corps qu'on ne sait pas lire est substitué lui aussi — la
-      // substitution est textuelle, elle n'a pas besoin de comprendre la forme.
+      // AFTER the complement, and on the WHOLE body: the tools output
+      // of opencode enter this body without ever having passed through us
+      // (MIN-328). The body that we cannot read is also substituted — the
+      // substitution is textual, it does not need to understand the form.
       if (opts.redact) body = opts.redact(body);
     }
 
     const headers: Record<string, string> = { ...extraHeaders(job) };
     for (const [key, value] of Object.entries(req.headers)) {
-      // `host` désignerait le proxy ; `content-length` ne vaut plus après le
-      // complément ; `accept-encoding` ferait revenir un corps compressé qu'on
-      // relaierait sans son en-tête (undici décompresse et garde l'en-tête).
+      // `host` would designate the proxy; `content-length` is no longer valid after
+      // complement ; `accept-encoding` would bring back a compressed body that we
+      // would relay without its header (undici decompresses and keeps the header).
       if (
         ["host", "content-length", "connection", "accept-encoding"].includes(key) ||
-        // Sur une machine, opencode porte toujours le placeholder dans ce champ.
-        // Sans clé locale, le relayer ferait échouer des serveurs qui n'attendent
-        // aucune authentification ; avec clé, celle-ci l'écrase plus bas.
+        // On a machine, opencode always carries the placeholder in this field.
+        // Without a local key, relaying it would cause servers that are not waiting to fail
+        // no authentication; with key, it crushes it further down.
         (opts.apiKey && key === "authorization")
       ) continue;
       if (typeof value === "string") headers[key] = value;
     }
-    // LA CLÉ ÉCRASE LE PLACEHOLDER, et seulement sur cette route-là (MIN-357).
-    // Sans clé — le cas de la microVM — c'est le placeholder d'opencode qui part,
-    // et le firewall le remplace après la sortie : la ligne ci-dessous est la
-    // SEULE différence entre les deux mondes.
+    // THE KEY CRUSHES THE PLACEHOLDER, and only on this route (MIN-357).
+    // Without a key — the case of the microVM — it is the opencode placeholder that leaves,
+    // and the firewall replaces it after exit: the line below is the
+    // ONLY difference between the two worlds.
     const relayKey = apiKey ?? (opts.apiKey ? await apiKeyPromise : null);
     if (relayKey) headers.authorization = `Bearer ${relayKey}`;
 
@@ -538,10 +538,10 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
       return;
     }
     /**
-     * ON NE LIT QUE LES RÉPONSES QUI ONT ABOUTI. Un 4xx/5xx du fournisseur porte
-     * un corps JSON (`{"error":{…}}`) que le lecteur prendrait pour le début d'une
-     * génération : rien à facturer, mais une entrée de plus dans la file, au
-     * modèle vide — donc appariable à n'importe quel round (cf. `flush`).
+     * ONLY READ RESPONSES THAT ARE SUCCESSFUL. A 4xx/5xx from the supplier carries
+     * a JSON body (`{"error":{…}}`) that the reader would take to be the start of a
+     * generation: nothing to bill, but one more entry in the queue, at
+     * empty model — therefore matchable to any round (see `flush`).
      */
     const sniff = upstream.status < 400;
     const sniffer = new GenerationSniffer();
@@ -555,7 +555,7 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
         firstChunk = false;
         opts.onTiming?.("llm-upstream-first-byte");
       }
-      // On ÉCRIT D'ABORD : le flux du modèle ne doit pas attendre notre lecture.
+      // We WRITE FIRST: the flow of the model must not wait for our reading.
       res.write(value);
       if (sniff) sniffer.push(decoder.decode(value, { stream: true }));
     }
@@ -581,7 +581,7 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
     close: () =>
       new Promise<void>((resolve) => {
         server.close(() => resolve());
-        // Un flux SSE ouvert garderait le serveur en vie : le tour est fini, on
+        // An open SSE flow would keep the server alive: the trick is over, we
         // ne l'attend pas.
         server.closeAllConnections?.();
       }),
@@ -589,8 +589,8 @@ export async function startLlmProxy(opts: LlmProxyOptions): Promise<LlmProxy> {
 }
 
 /**
- * La clé du tour, ou rien du tout. Le message est ce qu'un utilisateur lira dans
- * son fil quand un tour local n'aura pas pu démarrer : il doit dire la CAUSE,
+ * The key to the trick, or nothing at all. The message is what a user will read in
+ * his thread when a local tour has not been able to start: he must say the CAUSE,
  * pas « proxy error ».
  */
 async function requireApiKey(fetchKey: () => Promise<string | null>): Promise<string> {
@@ -599,7 +599,7 @@ async function requireApiKey(fetchKey: () => Promise<string | null>): Promise<st
   return key;
 }
 
-/** Une absence de clé est un contrat permis uniquement pour un endpoint local. */
+/** A lack of key is a contract permitted only for a local endpoint. */
 async function optionalApiKey(fetchKey: () => Promise<string | null>): Promise<string | null> {
   return (await fetchKey())?.trim() || null;
 }

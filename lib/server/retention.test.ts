@@ -4,19 +4,19 @@ import { RETENTION_DAYS, cutoff } from "./retention";
 import { TRASH_RETENTION_DAYS } from "../trash-retention";
 
 /**
- * MIN-119 — les durées de conservation.
+ * MIN-119 — retention periods.
  *
- * Ce que ces tests protègent n'est pas l'arithmétique (elle est triviale) mais
- * le CONTRAT : la politique de confidentialité annonce des durées au public, et
- * `RETENTION_DAYS` est ce qui les applique. Une valeur qui bouge ici sans que la
- * politique bouge, c'est une promesse qu'on ne tient plus — donc les valeurs
- * elles-mêmes sont figées par un test, avec la phrase publique en regard.
+ * What these tests protect is not arithmetic (it is trivial) but
+ * the CONTRACT: the confidentiality policy announces durations to the public, and
+ * `RETENTION_DAYS` is what enforces them. A value that moves here without the
+ * policy moving, it's a promise that we no longer keep - so the values
+ * themselves are frozen by a test, with the public sentence next to it.
  */
 
 const NOW = new Date("2026-07-30T12:00:00.000Z");
 
 describe("cutoff", () => {
-  it("recule du nombre de jours demandé", () => {
+  it("moves back by the requested number of days", () => {
     expect(cutoff(30, NOW)).toBe("2026-06-30T12:00:00.000Z");
   });
 
@@ -26,13 +26,13 @@ describe("cutoff", () => {
     );
   });
 
-  it("rend la date du jour pour zéro jour", () => {
+  it("returns today's date for zero days", () => {
     expect(cutoff(0, NOW)).toBe(NOW.toISOString());
   });
 });
 
 describe("RETENTION_DAYS", () => {
-  // Chaque ligne : la valeur, et ce que la politique de confidentialité en dit.
+  // Each line: the value, and what the privacy policy says about it.
   it.each([
     ["readNotifications", 180, "notifications lues : 6 mois"],
     ["pendingInvitations", 90, "invitations en attente : 90 jours"],
@@ -53,14 +53,14 @@ describe("RETENTION_DAYS", () => {
     expect(RETENTION_DAYS[key]).toBe(days);
   });
 
-  // La durée affichée sur chaque ligne de la corbeille et celle qu'applique le
-  // balayage nocturne sont la MÊME constante. Si les deux se remettaient à
-  // vivre séparément, l'écran promettrait un délai que le cron ne tiendrait pas.
-  it("la corbeille applique la durée que l'écran annonce", () => {
+  // The duration displayed on each line of the trash and that applied by the
+  // night scan are the SAME constant. If the two got back together
+  // live separately, the screen would promise a deadline that the cron would not meet.
+  it("the trash applies the duration announced by the screen", () => {
     expect(RETENTION_DAYS.trash).toBe(TRASH_RETENTION_DAYS);
   });
 
-  it("ne conserve rien indéfiniment ni rétroactivement", () => {
+  it("keeps nothing indefinitely or retroactively", () => {
     for (const days of Object.values(RETENTION_DAYS)) {
       expect(days).toBeGreaterThan(0);
       expect(Number.isFinite(days)).toBe(true);

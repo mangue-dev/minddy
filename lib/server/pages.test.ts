@@ -1,24 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-266 — la surface serveur des pages, par-dessus une table en mémoire.
+ * MIN-266 — the server surface of the pages, over a table in memory.
  *
- * On ne moque QUE ce qui sort du process : la table `pages` et le contrôle
- * d'accès au projet. Le vrai `lib/server/pages.ts` tourne au-dessus — c'est lui
- * qu'on veut voir refuser un cycle, corbeiller un sous-arbre entier et le
- * rendre.
+ * We ONLY mock what comes out of the process: the `pages` table and project
+ * access control. The real `lib/server/pages.ts` runs underneath; it is the
+ * code we want to see reject a cycle, trash an entire subtree, and restore it.
  *
- * Ce que ces tests gardent, dans l'ordre de ce qui coûte le plus cher à rater :
+ * What these tests keep, in the order of what costs the most to miss :
  *
- * - le CYCLE. Profondeur illimitée + reparentage libre = une boucle possible,
- *   et toute descente de l'arbre part alors en récursion infinie. 409, et
- *   AUCUNE écriture — pas même les autres champs du même PATCH.
- * - la corbeille RÉCURSIVE. Le geste qui l'appelle le plus souvent est
- *   l'effacement d'un bloc sous-page dans le corps du parent (MIN-272) :
- *   laisser les descendants vivants ferait surgir vingt pages orphelines à la
- *   racine de la sidebar pour une ligne de texte effacée.
- * - la RESTAURATION d'une page dont le parent est resté à la corbeille : elle
- *   remonte à la racine. Sans ça, elle revient invisible — pire que supprimée.
+ * - the CYCLE. Unlimited depth + free reparenting = a possible loop,
+ * and any descent of the tree then goes into infinite recursion. 409, and
+ * NO writing — not even other fields in the same PATCH.
+ * - the RECURSIVE trash. The gesture that calls it most often is
+ * the deletion of a sub-page block in the body of the parent (MIN-272):
+ * leaving the descendants alive would cause twenty orphan pages to appear at the
+ * root of the sidebar for a deleted line of text.
+ * - RESTORATION of a page whose parent remained in the trash: it
+ * goes back to the root. Without it, it returns invisible — worse than deleted.
  */
 
 interface Row {
@@ -43,26 +42,26 @@ interface Row {
 
 const h = vi.hoisted(() => ({
   rows: [] as Record<string, unknown>[],
-  /** L'HISTORIQUE (MIN-277) — `page_versions`, la seconde table du module. */
+  /** HISTORY (MIN-277) — `page_versions`, the second table of the module. */
   versions: [] as Record<string, unknown>[],
-  /** Projets auxquels l'acteur a accès. Vide = tout est « introuvable ». */
+  /** Projects to which the actor has access. Empty = everything is “not found”. */
   access: new Set<string>(),
   seq: 0,
 }));
 
 /**
- * Faux PostgREST : un tableau en mémoire et les quelques opérateurs que
- * lib/server/pages.ts utilise (eq, is, in, or, order + insert/update/delete).
- * Chaque requête est « thenable » comme celles de postgrest-js, ce qui permet de
- * l'attendre directement ou de la terminer par `single()` / `maybeSingle()`.
+ * False PostgREST: an array in memory and the few operators that
+ * lib/server/pages.ts uses (eq, is, in, or, order + insert/update/delete).
+ * Each request is "thenable" like those of postgrest-js, which allows
+ * wait for it directly or end it with `single()` / `maybeSingle()`.
  */
 vi.mock("@/lib/supabase-service", () => {
   type Filter = (row: Record<string, unknown>) => boolean;
 
-  // Deux tables, et il en faut bien deux : une ligne d'historique porte un
-  // `project_id` et pas de `deleted_at`, donc mêlée aux pages elle sortirait
-  // dans la liste de la sidebar — un faux positif qui ferait douter des tests
-  // plutôt que du code.
+  // Two tables, and you need two: a history line carries a
+  // `project_id` and no `deleted_at`, so mixed with the pages it would come out
+  // in the sidebar list — a false positive which would cast doubt on the tests
+  // rather than code.
   const from = (table: string) => {
     const pages = table === "pages";
     const filters: Filter[] = [];
@@ -76,8 +75,8 @@ vi.mock("@/lib/supabase-service", () => {
 
     const run = (): { data: Record<string, unknown>[] | null; error: null } => {
       if (mode === "insert") {
-        // Un objet OU un tableau : la duplication écrit toute une branche d'un
-        // coup (MIN-272), et une copie à moitié posée serait un arbre faux.
+        // An object OR an array: duplication writes an entire branch of a
+        // shot (MIN-272), and a half-posed copy would be a false tree.
         const inserted = (Array.isArray(payload) ? payload : [payload]).map(
           (values) => {
             h.seq += 1;
@@ -102,8 +101,8 @@ vi.mock("@/lib/supabase-service", () => {
                 }
               : {
                   id: `version-${h.seq}`,
-                  // Le vrai `default now()` : la coalescence lit cette colonne,
-                  // et un horodatage figé ferait passer le test pour vrai.
+                  // The real `default now()`: coalescence reads this column,
+                  // and a frozen timestamp would make the test pass as true.
                   created_at: new Date().toISOString(),
                   ...values,
                 };
@@ -131,10 +130,10 @@ vi.mock("@/lib/supabase-service", () => {
           return (less ? -1 : 1) * (ascending ? 1 : -1);
         });
       }
-      // Des COPIES, comme PostgREST : la ligne rendue par une lecture ne doit pas
-      // être l'objet que la prochaine écriture mutera. Sans ça, l'état « d'avant »
-      // que le noyau garde en main pour l'archiver (MIN-277) se trouvait modifié
-      // par l'écriture qu'il précède — un alias que la vraie base n'a pas.
+      // COPIES, like PostgREST: the line rendered by a read must not
+      // be the object that the next write will mutate. Without that, the state “before”
+      // that the kernel keeps in hand for archiving (MIN-277) was modified
+      // by the writing it precedes — an alias that the real base does not have.
       return { data: rows.map((row) => ({ ...row })), error: null };
     };
 
@@ -175,7 +174,7 @@ vi.mock("@/lib/supabase-service", () => {
       return query;
     };
     query.or = (expression: string) => {
-      // « id.eq.X,deleted_root_id.eq.X » — la seule forme utilisée.
+      // “id.eq.X,deleted_root_id.eq.X” — the only form used.
       const clauses = expression.split(",").map((clause) => clause.split("."));
       filters.push((row) =>
         clauses.some(([column, , value]) => row[column] === value)
@@ -204,14 +203,14 @@ vi.mock("@/lib/supabase-service", () => {
 });
 
 /**
- * Ce qu'une écriture FAIT SAVOIR (MIN-278) sort du module, et sort du process :
- * lignes d'activité, notifications de mention, notification d'écriture d'agent.
- * On l'espionne ici, on l'exerce dans ses propres tests — et sans ce mock, le
- * faux PostgREST de ce fichier (deux tables, `pages` et `page_versions`) rangerait
- * les `issue_events` parmi les versions, et l'historique compterait faux.
+ * What a write MAKES KNOW (MIN-278) leaves the module, and leaves the process:
+ * activity lines, mention notifications, agent write notification.
+ * We spy on it here, we exercise it in our own tests — and without this mock, the
+ * false PostgREST of this file (two tables, `pages` and `page_versions`) would rank
+ * the `issue_events` among the versions, and the history would count false.
  */
-// Signatures explicites : sans elles, `mock.calls` est typé sur un tuple vide
-// et lire `c[1]` ne compile pas (même remarque que notifications.test.ts).
+// Explicit signatures: without them, `mock.calls` is typed on an empty tuple
+// and reading `c[1]` does not compile (same remark as notifications.test.ts).
 const announce = vi.hoisted(() => ({
   recordPageEvent: vi.fn<
     (
@@ -261,8 +260,8 @@ vi.mock("@/lib/server/project-access", () => ({
 }));
 
 /**
- * Les NOMS des comptes, seule chose qui sorte encore du process côté historique
- * (l'API admin de GoTrue). Le reste de `auth-users` reste le vrai.
+ * The NAMES of the accounts, the only thing that still comes out of the process on the historical side
+ * (the GoTrue admin API). The rest of `auth-users` remains the real one.
  */
 vi.mock("@/lib/server/auth-users", async (importActual) => ({
   ...(await importActual<typeof import("./auth-users")>()),
@@ -295,7 +294,7 @@ import { buildPageTree } from "@/lib/pages";
 const ACTOR = "user-1";
 const PROJECT = "project-1";
 
-/** Crée une page et rend son id — le chemin normal, jamais un insert à la main. */
+/** Creates a page and renders its id — the normal path, never a hand insert. */
 async function create(title: string, parentId: string | null = null) {
   const result = await createPage({
     projectId: PROJECT,
@@ -359,12 +358,11 @@ describe("createPage", () => {
     expect(result).toMatchObject({ ok: false, status: 404, errorKey: "projectNotFound" });
   });
 
-  /* ── Le corps donné en MARKDOWN (MIN-170) ────────────────────────────────
-     C'est par là que le brief collé du wizard de projet devient la page
-     « Brief initial ». Ce qui se joue ici et qu'aucun type ne voit : le
-     markdown est bien PROJETÉ (donc un titre reste un titre, pas une ligne de
-     texte), et il n'atteint jamais la table — `markdown` n'est pas une colonne
-     de `pages`, et l'y laisser filer ferait échouer l'insertion entière. */
+  /* ── The body given in MARKDOWN (MIN-170) ────────────────────────────────__keep becomes the
+ “Initial Brief” page. What is happening here and that no guy sees: the
+ markdown is indeed PROJECTED (so a title remains a title, not a line of
+ text), and it never reaches the table — `markdown` is not a column
+ of `pages`, and letting it slip there would cause it to fail the entire insertion. */
   it("projette un corps donné en markdown", async () => {
     const result = await createPage({
       projectId: PROJECT,
@@ -383,9 +381,9 @@ describe("createPage", () => {
   });
 
   it("garde le JSON quand les deux formats sont là", async () => {
-    // `content` est le format natif : un appelant qui l'envoie a déjà fait la
-    // projection, et la refaire depuis un markdown de secours écraserait
-    // exactement ce qu'il vient d'écrire.
+    // `content` is the native format: a caller who sends it has already made the
+    // projection, and redoing it from a backup markdown would overwrite
+    // exactly what he just wrote.
     const content = {
       type: "doc",
       content: [{ type: "paragraph", content: [{ type: "text", text: "natif" }] }],
@@ -441,14 +439,14 @@ describe("updatePage", () => {
 
     expect(result.page).toMatchObject({ title: "Guide d'équipe", icon: "📘", version: 2 });
 
-    // Un renommage seul ne compte pas comme une écriture du corps.
+    // A rename alone does not count as a body write.
     const renamed = await updatePage({ pageId: id, actorId: ACTOR, input: { title: "Guide" } });
     if (!renamed.ok) throw new Error("écriture refusée");
     expect(renamed.page.version).toBe(2);
   });
 
   it("REFUSE de mettre une page sous un de ses descendants, sans rien écrire", async () => {
-    // A → B → C : reparenter A sous C fermerait la boucle.
+    // A → B → C: reparenting A under C would close the loop.
     const a = await create("A");
     const b = await create("B", a);
     const c = await create("C", b);
@@ -460,7 +458,7 @@ describe("updatePage", () => {
     });
 
     expect(result).toMatchObject({ ok: false, status: 409, errorKey: "pageCycle" });
-    // Le refus est TOTAL : le titre de la même requête n'est pas passé non plus.
+    // The refusal is TOTAL: the title of the same request is not passed either.
     expect(rowOf(a)).toMatchObject({ parent_id: null, title: "A" });
     expect(rowOf(c).parent_id).toBe(b);
   });
@@ -480,16 +478,16 @@ describe("updatePage", () => {
     if (!result.ok) throw new Error(`déplacement refusé : ${result.errorKey}`);
 
     expect(result.page.parent_id).toBeNull();
-    // En fin de la fratrie RACINE, donc après A — et non à la place qu'elle
-    // occupait sous A, qui n'a plus de sens ici.
+    // At the end of the ROOT's siblings, therefore after A — not in the position
+    // it occupied under A, which no longer makes sense here.
     expect(result.page.position > rowOf(a).position).toBe(true);
     expect(rowOf(sibling).parent_id).toBe(a);
   });
 
   it("REFUSE un corps trop profond, là où le peser faisait tomber la requête", async () => {
-    // Le garde-fou de taille était `JSON.stringify(content).length` : sur ce
-    // document-ci il lève un RangeError avant d'avoir pu peser quoi que ce soit,
-    // et c'est la requête entière qui tombait (MIN-348).
+    // The size guardrail was `JSON.stringify(content).length`: for this
+    // document, stringification raises a RangeError before anything can be
+    // measured, and the entire request failed (MIN-348).
     const id = await create("A");
     let bomb: unknown = {};
     for (let i = 0; i < 100_000; i++) bomb = { type: "doc", content: [bomb] };
@@ -501,14 +499,14 @@ describe("updatePage", () => {
     });
 
     expect(result).toMatchObject({ ok: false, status: 400, errorKey: "pageTooDeep" });
-    // Rien n'a été écrit : la page garde sa version.
+    // Nothing has been written: the page keeps its version.
     expect(rowOf(id).version).toBe(1);
   });
 
   it("REFUSE un `src` au protocole hostile, plutôt que de le ranger (MIN-350)", async () => {
-    // Le `src` d'un bloc fichier ressort dans le `href` d'une vraie ancre, que
-    // le clic ordinaire suit vraiment (components/pages/blocks/file-view.tsx).
-    // La porte est ici, sur le chemin de TOUTES les surfaces d'écriture.
+    // The `src` of a file block appears in the `href` of a real anchor, which
+    // ordinary click really follows (components/pages/blocks/file-view.tsx).
+    // The door is here, in the way of ALL writing surfaces.
     const id = await create("A");
     const result = await updatePage({
       pageId: id,
@@ -598,7 +596,7 @@ describe("trashPage", () => {
 
     expect(rowOf(a)).toMatchObject({ deleted_by: ACTOR, deleted_root_id: null });
     expect(rowOf(a).deleted_at).toBeTruthy();
-    // Les descendants pointent la racine : la corbeille n'affiche qu'une ligne.
+    // Descendants point to the root: the trash can only displays one line.
     expect(rowOf(b).deleted_root_id).toBe(a);
     expect(rowOf(c).deleted_root_id).toBe(a);
     expect(rowOf(elsewhere).deleted_at).toBeNull();
@@ -611,8 +609,8 @@ describe("trashPage", () => {
 
     await trashPage(a, ACTOR);
 
-    // B garde SA racine (null) : restaurer A ne le ramène pas, personne ne l'a
-    // demandé — il est restaurable pour lui-même.
+    // B keeps ITS root (null): restoring A does not bring it back, no one has it
+    // asked — it is restorable for itself.
     expect(rowOf(b).deleted_root_id).toBeNull();
   });
 
@@ -629,9 +627,9 @@ describe("discardPage", () => {
     const id = await create("");
 
     expect(await discardPage(id, ACTOR)).toEqual({ ok: true });
-    // Pas de ligne marquée : la ligne n'existe plus. C'est tout l'intérêt —
-    // une page qu'on a créée puis quittée sans y écrire n'a pas à venir
-    // encombrer la corbeille.
+    // No line marked: the line no longer exists. That's the whole point —
+    // A page that we created and then left untouched does not need to clutter
+    // the trash.
     expect(h.rows.find((row) => row.id === id)).toBeUndefined();
   });
 
@@ -705,8 +703,9 @@ describe("discardPage", () => {
     });
 
     expect(await discardPage(child, ACTOR)).toEqual({ ok: true });
-    // Un bloc qui cite une ligne détruite est un lien mort dans le document du
-    // parent : il part avec elle, comme à la corbeille (MIN-272).
+    // A block that cites a destroyed page is a dead link in the parent document:
+    // it leaves with the page, just as it does when the page enters the trash
+    // (MIN-272).
     expect(JSON.stringify(rowOf(parent).content)).not.toContain(child);
   });
 
@@ -737,7 +736,7 @@ describe("restorePage", () => {
         deleted_root_id: null,
       });
     }
-    // L'arbre est retrouvé tel quel : rien n'a été détaché.
+    // The tree is found as is: nothing has been detached.
     expect(rowOf(b).parent_id).toBe(a);
     expect(rowOf(c).parent_id).toBe(b);
   });
@@ -746,14 +745,14 @@ describe("restorePage", () => {
     const parent = await create("Parent");
     const child = await create("Enfant", parent);
 
-    // On corbeille l'enfant seul, puis le parent : deux suppressions distinctes.
+    // We trash the child alone, then the parent: two distinct deletions.
     await trashPage(child, ACTOR);
     await trashPage(parent, ACTOR);
 
     expect(await restorePage(child, ACTOR)).toMatchObject({ ok: true, restored: 1 });
 
-    // Revenir sous un parent invisible ferait une page introuvable dans la
-    // sidebar : mal placée vaut mieux qu'absente.
+    // Going back under an invisible parent would make a page not found in the
+    // sidebar: poorly placed is better than absent.
     expect(rowOf(child).parent_id).toBeNull();
     expect(rowOf(parent).deleted_at).toBeTruthy();
   });
@@ -783,18 +782,18 @@ describe("getPage", () => {
 });
 
 /**
- * MIN-272 — le MIROIR : le bloc `subpage` dans le corps du parent.
+ * MIN-272 — the MIRROR: the `subpage` block in the parent's body.
  *
- * La même information est portée à deux endroits, et c'est là que sont tous les
- * pièges. `parent_id` fait la vérité, le bloc n'en est qu'une vue — et c'est le
- * serveur qui tient la vue à jour, parce que le geste part le plus souvent de la
- * sidebar, sans que personne n'ait le parent ouvert.
+ * The same information is carried in two places, and that's where all the
+ * traps are. `parent_id` is the truth, the block is only a view of it — and it is the
+ * server which keeps the view up to date, because the gesture most often starts from the
+ * sidebar, without anyone having the parent open.
  *
- * Le pendant côté document (détection de la suppression du bloc dans l'éditeur,
- * fonctions pures) est dans lib/pages-subpage.test.ts.
+ * The document side counterpart (deletion detection of the block in the editor,
+ * pure functions) is in lib/pages-subpage.test.ts.
  */
 describe("le bloc sous-page dans le corps du parent (MIN-272)", () => {
-  /** Un corps qui cite `pageId`, entouré d'un peu de texte. */
+  /** A body that quotes `pageId`, surrounded by some text. */
   const bodyCiting = (pageId: string) => ({
     type: "doc",
     content: [
@@ -823,8 +822,8 @@ describe("le bloc sous-page dans le corps du parent (MIN-272)", () => {
       "paragraph",
       "paragraph",
     ]);
-    // La version BOUGE : c'est elle qui envoie en fusion (MIN-271) le client
-    // qui aurait ce parent ouvert, et sa suppression y passe sans bruit.
+    // The MOVED version: this is what sends the client into a merge (MIN-271)
+    // when the parent is open, so the deletion is applied without noise.
     expect(rowOf(parent).version).toBe(before + 1);
     expect(rowOf(child).parent_block_removed).toBe(true);
   });
@@ -848,15 +847,15 @@ describe("le bloc sous-page dans le corps du parent (MIN-272)", () => {
       "subpage",
     ]);
     expect(nodes[2].attrs?.pageId).toBe(child);
-    // La marque ne survit pas : c'est le prochain passage à la corbeille qui
-    // dira ce qu'il en est alors.
+    // The brand does not survive: it is the next move to the trash that
+    // will say what it is then.
     expect(rowOf(child).parent_block_removed).toBe(false);
   });
 
   it("n'INVENTE pas de bloc pour une page née dans la sidebar", async () => {
-    // Le piège du sens inverse : une page créée depuis l'arbre n'a jamais eu de
-    // bloc chez son parent. La restaurer ne doit pas en faire apparaître un
-    // dans un document que personne n'a écrit comme ça.
+    // The opposite-direction trap: a page created from the tree has never had a
+    // block in its parent. Restoring it must not add one to a document that no
+    // one wrote that way.
     const parent = await create("Guide");
     const child = await create("Chapitre", parent);
     await updatePage({
@@ -879,9 +878,9 @@ describe("le bloc sous-page dans le corps du parent (MIN-272)", () => {
   });
 
   it("ne touche qu'au corps de la RACINE du geste, pas à ceux des descendants", async () => {
-    // Les blocs des descendants vivent dans des corps qui partent à la
-    // corbeille en même temps : les réécrire serait du travail pour rien, et
-    // ferait revenir des pages amputées de leurs liens à la restauration.
+    // Descendant blocks live in bodies that enter the trash at the same time:
+    // rewriting them would do needless work and could restore pages without
+    // their links.
     const parent = await create("Guide");
     const child = await create("Chapitre", parent);
     const grand = await create("Section", child);
@@ -908,7 +907,7 @@ describe("le bloc sous-page dans le corps du parent (MIN-272)", () => {
     });
 
     await trashPage(child, ACTOR);
-    // Quelqu'un repose un bloc vers la même page avant qu'on restaure.
+    // Someone moves a block back to the same page before we restore.
     await updatePage({
       pageId: parent,
       actorId: ACTOR,
@@ -921,8 +920,8 @@ describe("le bloc sous-page dans le corps du parent (MIN-272)", () => {
   });
 
   it("laisse la page partir à la corbeille même si le corps du parent est illisible", async () => {
-    // Le miroir est un confort, pas une condition : refuser la suppression
-    // parce que la vue n'a pas suivi serait le mauvais échange.
+    // The mirror is a convenience, not a condition: refusing deletion because
+    // the view failed to follow would be the wrong trade-off.
     const parent = await create("Guide");
     const child = await create("Chapitre", parent);
     rowOf(parent).content = null as unknown as Row["content"];
@@ -935,12 +934,12 @@ describe("le bloc sous-page dans le corps du parent (MIN-272)", () => {
 });
 
 /**
- * MIN-272 — la DUPLICATION d'une page.
+ * MIN-272 — the DUPLICATION of a page.
  *
- * Ce qui coûte cher à rater tient en une phrase : une copie dont les blocs
- * pointent encore vers les ORIGINAUX. On aurait deux arbres dans la sidebar et
- * un seul jeu de liens — une copie qu'on croit indépendante et qui renvoie
- * ailleurs, ce qu'on ne découvre qu'en cliquant.
+ * What is expensive to miss can be summed up in one sentence: a copy whose blocks
+ * still point to the ORIGINALS. We would have two trees in the sidebar and
+ * a single set of links — a copy that we believe to be independent and which sends
+ * elsewhere, which we only discover by clicking.
  */
 describe("duplicatePage (MIN-272)", () => {
   const bodyCiting = (...pageIds: string[]) => ({
@@ -967,9 +966,9 @@ describe("duplicatePage (MIN-272)", () => {
     expect(result.page.id).not.toBe(root);
     expect(result.page.title).toBe("Guide");
     expect(result.page.parent_id).toBeNull();
-    // Trois pages copiées, donc six en tout.
+    // Three pages copied, so six in total.
     expect(h.rows).toHaveLength(6);
-    // La racine de la copie passe APRÈS l'originale dans sa fratrie.
+    // The root of the copy goes AFTER the original in its siblings.
     expect(result.page.position > rowOf(root).position).toBe(true);
   });
 
@@ -987,16 +986,16 @@ describe("duplicatePage (MIN-272)", () => {
 
     const [cited] = citedBy(result.page.id);
     expect(cited).not.toBe(child);
-    // Et ce qu'il cite est bien LA copie de l'enfant : même titre, parent copié.
+    // And what he cites is indeed THE child's copy: same title, parent copied.
     expect(rowOf(cited!).title).toBe("Chapitre");
     expect(rowOf(cited!).parent_id).toBe(result.page.id);
-    // L'original n'a pas bougé d'un cheveu.
+    // The original hasn't moved a bit.
     expect(citedBy(root)).toEqual([child]);
   });
 
   it("laisse INTACT un lien qui sort de la branche copiée", async () => {
-    // Une page du projet qui n'est pas dans la copie doit continuer d'être
-    // citée telle quelle : on copie une branche, pas le monde autour.
+    // A project page that is not in the copy must continue to be
+    // quoted as is: we copy a branch, not the world around it.
     const ailleurs = await create("Ailleurs");
     const root = await create("Guide");
     const child = await create("Chapitre", root);
@@ -1039,19 +1038,18 @@ describe("duplicatePage (MIN-272)", () => {
   });
 });
 
-/* ─── Le texte de recherche (MIN-276) ─────────────────────────────────────────
-   La colonne `search_text` est la projection markdown du corps, et c'est la
-   SEULE chose que la recherche lit. Ce qui la rend fragile : elle est écrite
-   par un rattrapage, après la réponse (`afterOrNow`), donc rien ne la réclame
-   au moment de l'écriture. Ces cas-ci vérifient qu'elle atterrit vraiment, sur
-   chacun des chemins ; que le rattrapage soit APPELÉ partout est vérifié à
-   part, dans pages-search-paths.test.ts, sur l'arbre syntaxique du module.
+/* ─── The search text (MIN-276) ─────────────────────────────────────────────
+   The `search_text` column is the body's Markdown projection, and it is the
+   ONLY thing the search reads. It is fragile because a catch-up writes it after
+   the response (`afterOrNow`), so nothing requires it at write time. These cases
+   verify that it lands on every path; that the catch-up is CALLED everywhere is
+   checked separately in pages-search-paths.test.ts, using the module's syntax tree.
 
-   `vi.waitFor` parce que le travail est justement différé : hors d'une requête,
-   `afterOrNow` le lance tout de suite mais ne l'attend pas — c'est son contrat,
-   et le simuler autrement testerait autre chose que ce qui tourne. */
+   `vi.waitFor` is necessary because the work is deliberately deferred:
+   outside a request, `afterOrNow` starts it immediately but does not await it.
+   That is its contract, and simulating it differently would test something else. */
 
-/** Le corps de la page, tel que la recherche le lira. */
+/** The body of the page, as search will read it. */
 const searchTextOf = (id: string) =>
   (rowOf(id) as unknown as Record<string, unknown>).search_text as
     | string
@@ -1115,10 +1113,10 @@ describe("le texte de recherche", () => {
   });
 
   it("suit le corps du PARENT quand une sous-page part à la corbeille", async () => {
-    // Le miroir du bloc sous-page (MIN-272) écrit le corps du parent sans que
-    // personne ne l'ait ouvert : c'est une écriture de contenu comme une autre,
-    // et le texte indexé doit la suivre — sinon le parent reste trouvable par
-    // un bloc qui n'existe plus.
+    // The subpage mirror (MIN-272) writes the parent's body even when no one has
+    // opened it. It is content writing like any other, and the indexed text must
+    // follow it — otherwise the parent remains searchable by a block that no
+    // longer exists.
     const root = await create("Guide");
     const child = await create("Chapitre", root);
     await updatePage({
@@ -1145,9 +1143,9 @@ describe("le texte de recherche", () => {
   });
 
   it("ne repart pas pour un simple renommage", async () => {
-    // Le titre entre dans l'index par la colonne générée : il n'a aucun texte à
-    // rejouer, et monter un éditeur serveur pour un renommage serait payer la
-    // projection pour rien.
+    // The title enters the index through the generated column: it has no text to
+    // play again, and set up a server editor for renaming would pay the
+    // projection for nothing.
     const page = await create("Guide");
     await updatePage({
       pageId: page,
@@ -1163,20 +1161,20 @@ describe("le texte de recherche", () => {
   });
 });
 
-/* ─── L'auteur, et l'historique (MIN-277) ──────────────────────────────────── */
+/* ─── The author and the history (MIN-277) ─────────────────────────────────── */
 
-describe("qui a écrit, et ce que l'écriture a recouvert", () => {
+describe("who wrote, and what the writing covered", () => {
   const OTHER = "user-2";
   const doc = (text: string) => ({
     type: "doc",
     content: [{ type: "paragraph", content: [{ type: "text", text }] }],
   });
 
-  /** Les versions d'une page, du plus ancien au plus récent, en base. */
+  /** The versions of a page, from oldest to newest, in the database. */
   const versionsOf = (pageId: string) =>
     h.versions.filter((row) => row.page_id === pageId);
 
-  /** L'archivage part par `afterOrNow`, donc après le retour de l'écriture. */
+  /** Archiving runs through `afterOrNow`, so it happens after the write returns. */
   async function expectVersions(pageId: string, count: number) {
     await vi.waitFor(() => {
       expect(versionsOf(pageId)).toHaveLength(count);
@@ -1187,9 +1185,9 @@ describe("qui a écrit, et ce que l'écriture a recouvert", () => {
     const id = await create("Guide");
     expect(rowOf(id)).toMatchObject({ updated_by: ACTOR, updated_kind: "human" });
 
-    // Un geste d'agent porte l'id du compte qui l'a permis, et c'est bien pour
-    // ça qu'il faut la seconde colonne : sans elle, la page dirait « modifiée
-    // par Clément » d'un texte que Clément n'a pas écrit.
+    // An agent gesture carries the id of the account that authorized it. That is
+    // why the second column matters: without it, the page would say “modified by
+    // Clément” for text that Clément did not write.
     await updatePage({
       pageId: id,
       actorId: ACTOR,
@@ -1198,7 +1196,7 @@ describe("qui a écrit, et ce que l'écriture a recouvert", () => {
     });
     expect(rowOf(id)).toMatchObject({ updated_by: ACTOR, updated_kind: "agent" });
 
-    // Un simple renommage compte : « modifiée par », pas « corps écrit par ».
+    // A simple rename counts: “modified by”, not “body written by”.
     await updatePage({ pageId: id, actorId: OTHER, input: { title: "Autre" } });
     expect(rowOf(id)).toMatchObject({ updated_by: OTHER, updated_kind: "human" });
   });
@@ -1211,9 +1209,9 @@ describe("qui a écrit, et ce que l'écriture a recouvert", () => {
       input: { content: doc("le texte de Clément") },
     });
 
-    // Épingler une page (le favori est partagé par le projet) ou la glisser
-    // dans l'arbre ne dit rien de son contenu. Signer ces gestes ferait dire à
-    // l'en-tête « modifiée par » quelqu'un qui n'a pas ouvert la page.
+    // Pin a page (the favorite is shared by the project) or drag it
+    // in the tree says nothing about its content. Signing these gestures would mean
+    // the header “edited by” someone who didn't open the page.
     await updatePage({ pageId: id, actorId: OTHER, input: { favorite: true } });
     expect(rowOf(id)).toMatchObject({ favorite: true, updated_by: ACTOR });
 
@@ -1229,7 +1227,7 @@ describe("qui a écrit, et ce que l'écriture a recouvert", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(h.versions).toHaveLength(0);
-    // La copie est une écriture NEUVE, de celui qui l'a demandée.
+    // The copy is a NEW handwriting, from the person who requested it.
     expect(rowOf(copy.page.id)).toMatchObject({
       updated_by: ACTOR,
       updated_kind: "human",
@@ -1245,8 +1243,8 @@ describe("qui a écrit, et ce que l'écriture a recouvert", () => {
     });
     await expectVersions(id, 1);
 
-    // L'agent écrase. Ce qu'on veut retrouver, c'est le texte D'AVANT, au nom
-    // de celui qui l'avait écrit — c'est tout l'objet de MIN-277.
+    // The agent overwrites the page. We need to find the text FROM BEFORE under
+    // the name of the person who wrote it — that is the whole point of MIN-277.
     await updatePage({
       pageId: id,
       actorId: ACTOR,
@@ -1265,9 +1263,9 @@ describe("qui a écrit, et ce que l'écriture a recouvert", () => {
     await updatePage({ pageId: id, actorId: ACTOR, input: { content: doc("un") } });
     await expectVersions(id, 1);
 
-    // Dix secondes plus tard, le même auteur : l'état intermédiaire ne vaut pas
-    // une ligne. L'éditeur enregistre à la seconde — sans cette règle, un
-    // paragraphe écrit d'une traite ferait quarante versions.
+    // Ten seconds later, the same author writes again: the intermediate state is
+    // not worth a history entry. The editor records every second; without this
+    // rule, a paragraph written in one pass would create forty versions.
     await updatePage({ pageId: id, actorId: ACTOR, input: { content: doc("deux") } });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(versionsOf(id)).toHaveLength(1);
@@ -1278,9 +1276,8 @@ describe("qui a écrit, et ce que l'écriture a recouvert", () => {
     await updatePage({ pageId: id, actorId: ACTOR, input: { content: doc("un") } });
     await expectVersions(id, 1);
 
-    // Même fenêtre de cinq minutes, mais quelqu'un d'autre écrit : l'état de
-    // Clément est archivé quoi qu'il arrive. C'est exactement celui qu'on
-    // viendra chercher.
+    // The same five-minute window, but someone else writes: Clément's state is
+    // archived regardless. That is exactly the version we will need to retrieve.
     await updatePage({ pageId: id, actorId: OTHER, input: { content: doc("deux") } });
     await expectVersions(id, 2);
     expect(versionsOf(id).at(-1)).toMatchObject({ author_id: ACTOR });
@@ -1303,8 +1300,8 @@ describe("qui a écrit, et ce que l'écriture a recouvert", () => {
     const list = await listPageVersions(id, ACTOR);
     if (!list.ok) throw new Error(list.errorKey);
     expect(list.data.map((v) => v.version)).toEqual([3, 2, 1]);
-    // L'écriture de l'agent se reconnaît dans la liste : elle porte « minddy »
-    // et non le nom du compte qui l'a permise.
+    // The agent’s handwriting can be recognized in the list: it bears “minddy”
+    // and not the name of the account that enabled it.
     expect(list.data[0]).toMatchObject({ author_kind: "agent", author_name: "minddy" });
     expect(list.data[2]).toMatchObject({
       author_kind: "human",
@@ -1323,8 +1320,8 @@ describe("qui a écrit, et ce que l'écriture a recouvert", () => {
   });
 
   it("garde l'historique consultable sur une page CORBEILLÉE", async () => {
-    // C'est justement là qu'on va chercher : « ça a disparu, remonte à avant »
-    // est le geste d'après l'incident.
+    // This is precisely where we are going to look: “it has disappeared, goes back to before”
+    // is the gesture after the incident.
     const id = await create("Guide");
     await updatePage({ pageId: id, actorId: ACTOR, input: { content: doc("texte") } });
     await expectVersions(id, 1);
@@ -1359,12 +1356,12 @@ describe("qui a écrit, et ce que l'écriture a recouvert", () => {
     const restored = await restorePageVersion(id, wanted.id, OTHER);
     if (!restored.ok) throw new Error(restored.errorKey);
     expect(JSON.stringify(restored.data.content)).toContain("la bonne version");
-    // Le titre revient avec le corps : ce sont trois champs d'un même état.
+    // The title returns with the body: these are three fields of the same state.
     expect(restored.data.title).toBe("Décision");
     expect(rowOf(id)).toMatchObject({ updated_by: OTHER, updated_kind: "human" });
 
-    // Et l'état d'avant la restauration — celui de l'agent — est archivé, hors
-    // coalescence : restaurer par erreur se défait.
+    // And the state before the restoration — that of the agent — is archived, excluding
+    // coalescence: restore by mistake undoes.
     await expectVersions(id, 3);
     expect(versionsOf(id).at(-1)).toMatchObject({ author_kind: "agent" });
   });
@@ -1385,14 +1382,14 @@ describe("qui a écrit, et ce que l'écriture a recouvert", () => {
 });
 
 /**
- * MIN-278 — ce qu'une écriture de page FAIT SAVOIR.
+ * MIN-278 — what a page write MAKES KNOWN.
  *
- * Ici on garde le BRANCHEMENT, et lui seul : quel geste pose quelle ligne, qui
- * est prévenu, et surtout ce qui ne doit RIEN déclencher. La règle de ce qu'est
- * une mention vit dans lib/pages-mentions.test.ts ; la coalescence des lignes
- * d'activité et le déplacement des notifications, dans les modules qui les
- * portent. Ce qu'aucun des trois ne dit, c'est si le noyau les appelle — et
- * c'est justement ce qui s'oublie en ajoutant un chemin d'écriture.
+ * Here we keep only the CONNECTION: which gesture creates which line, who is
+ * notified, and especially what must not trigger ANYTHING. The rule for what
+ * constitutes a mention lives in lib/pages-mentions.test.ts; activity-line
+ * coalescing and notification routing live in the modules that implement them.
+ * None of those three says whether the kernel calls them — and that is exactly
+ * what gets forgotten when a write path is added.
  */
 describe("ce qu'une écriture fait savoir (MIN-278)", () => {
   const OTHER = "user-2";
@@ -1401,7 +1398,7 @@ describe("ce qu'une écriture fait savoir (MIN-278)", () => {
     content: [{ type: "paragraph", content: [{ type: "text", text }] }],
   });
 
-  /** Les annonces partent par `afterOrNow`, donc après le retour de l'écriture. */
+  /** Announcements are dispatched through `afterOrNow`, after the write returns. */
   const settled = () => vi.waitFor(() => expect(announce.recordPageEvent).toHaveBeenCalled());
 
   const events = () => announce.recordPageEvent.mock.calls.map((c) => c[1]);
@@ -1425,8 +1422,8 @@ describe("ce qu'une écriture fait savoir (MIN-278)", () => {
 
     await trashPage(parent, ACTOR);
     await settled();
-    // Deux pages sont parties, une seule ligne : sinon corbeiller un dossier de
-    // vingt pages ferait vingt lignes pour un geste.
+    // Two pages are gone, only one line: otherwise trash a file of
+    // twenty pages would make twenty lines for one gesture.
     expect(events()).toEqual([
       { pageId: parent, actorId: ACTOR, kind: "human", type: "page_trashed" },
     ]);
@@ -1437,10 +1434,10 @@ describe("ce qu'une écriture fait savoir (MIN-278)", () => {
   });
 
   it("garde la NATURE du geste quand c'est l'agent qui corbeille ou restaure", async () => {
-    // La corbeille est ouverte à Numo (`move_to_trash`, type `page`). Sans le
-    // mot « agent », la ligne dirait « Clément a mis la page à la corbeille »
-    // d'un geste que Clément n'a pas fait — la fausse attribution que le reste
-    // du ticket évite déjà sur les écritures.
+    // The Recycle Bin is open to Numo (`move_to_trash`, type `page`). Without the
+    // word “agent”, the line would say “Clément put the page in the trash” for a
+    // gesture Clément did not make — the false attribution that the rest of the
+    // ticket already avoids for writes.
     const id = await create("Guide");
     announce.recordPageEvent.mockClear();
 
@@ -1462,8 +1459,8 @@ describe("ce qu'une écriture fait savoir (MIN-278)", () => {
     await updatePage({ pageId: id, actorId: ACTOR, input: { favorite: true } });
     await updatePage({ pageId: id, actorId: ACTOR, input: { parent_id: parent } });
 
-    // Réordonner la sidebar n'est pas modifier une page : la même frontière que
-    // celle de la signature « modifiée par » (MIN-277).
+    // Reordering the sidebar does not modify a page: it falls on the same side
+    // of the “modified by” boundary as pinning (MIN-277).
     expect(announce.recordPageEvent).not.toHaveBeenCalled();
   });
 
@@ -1480,8 +1477,8 @@ describe("ce qu'une écriture fait savoir (MIN-278)", () => {
     });
 
     await vi.waitFor(() => expect(announce.notifyAgentPageWrite).toHaveBeenCalledTimes(1));
-    // `actorId` EST le destinataire : les six outils d'écriture tournent sous
-    // l'id du compte qui les a permis.
+    // `actorId` IS the recipient: the six writing tools run under
+    // the id of the account that allowed them.
     expect(announce.notifyAgentPageWrite.mock.calls[0][1]).toEqual({
       projectId: PROJECT,
       pageId: id,
@@ -1490,11 +1487,11 @@ describe("ce qu'une écriture fait savoir (MIN-278)", () => {
   });
 
   it("porte l'identité de l'AGENT jusqu'aux citations et à l'activité", async () => {
-    // Le fond du problème (MIN-278) : l'écriture d'un agent passe sous l'id du
-    // compte qui l'a permise. Sans ces deux mots, une citation posée par Numo se
-    // lirait « Clément vous a mentionné » — d'une phrase que Clément n'a pas
-    // écrite. Et par le MCP, on connaît le nom de l'agent : c'est lui qui doit
-    // descendre jusqu'à la ligne, comme sur la timeline d'un ticket.
+    // The root of the problem (MIN-278): an agent's write uses the id of the
+    // account that authorized it. Without these two fields, a quote created by
+    // Numo would read “Clément mentioned you” even though Clément did not write
+    // the sentence. Through MCP we know the agent's name, so that identity must
+    // reach the activity line, as it does on a ticket timeline.
     const id = await create("Guide");
     announce.notifyPageMentions.mockClear();
     announce.recordPageEvent.mockClear();
@@ -1530,8 +1527,8 @@ describe("ce qu'une écriture fait savoir (MIN-278)", () => {
     const second = announce.notifyPageMentions.mock.calls[1][1];
     expect(second.pageId).toBe(id);
     expect(second.doc).toMatchObject(doc("un"));
-    // Sans cet état d'avant, chaque enregistrement re-notifierait toutes les
-    // mentions de la page — une rafale d'autosaves en ferait dix.
+    // Without this state before, each record would re-notify all the
+    // mentions of the page — a burst of autosaves would make ten.
     expect(second.previousDoc).toBeDefined();
   });
 
@@ -1541,8 +1538,8 @@ describe("ce qu'une écriture fait savoir (MIN-278)", () => {
     await vi.waitFor(() => expect(announce.notifyPageMentions).toHaveBeenCalledTimes(2));
     announce.notifyPageMentions.mockClear();
 
-    // Recopier un texte n'est pas citer quelqu'un : dupliquer une page
-    // repingerait tous les noms qu'elle porte.
+    // Copying a text is not quoting someone: duplicating a page
+    // would repin all the names it bears.
     await duplicatePage(id, ACTOR);
     await vi.waitFor(() =>
       expect(announce.recordPageEvent).toHaveBeenCalledWith(

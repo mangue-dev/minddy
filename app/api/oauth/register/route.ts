@@ -10,11 +10,11 @@ import { getClientIp } from "@/lib/server/request-ip";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 
 /**
- * Dynamic Client Registration (RFC 7591) — endpoint public, non authentifié
- * par design : les clients MCP (Claude, ChatGPT, Cursor…) s'enregistrent
- * seuls. Clients publics uniquement (auth "none"), la sécurité repose sur
- * PKCE + redirect_uris stricts. Erreurs au format RFC 7591 §3.2.2 — pas de
- * i18n, anglais simple.
+ * Dynamic Client Registration (RFC 7591) — public, unauthenticated endpoint
+ * by design: MCP clients (Claude, ChatGPT, Cursor, etc.) register
+ * alone. Public clients only (auth "none"), security relies on
+ * PKCE + strict redirect_uris. Errors follow RFC 7591 §3.2.2 — no i18n,
+ * plain English.
  */
 
 const HEADERS = { ...OAUTH_CORS_HEADERS, ...NO_STORE_HEADERS };
@@ -25,8 +25,8 @@ const registrationError = (code: string, description: string) =>
     { status: 400, headers: HEADERS }
   );
 
-// Endpoint public : chaque chaîne et chaque tableau est borné dès le schéma
-// (MIN-118) — les valeurs légitimes sont toutes bien en dessous.
+// Public endpoint: each string and each table is bounded from the diagram
+// (MIN-118) — legitimate values ​​are all well below.
 const BODY_SCHEMA = z.object({
   redirect_uris: z.array(z.string().max(2000)).min(1).max(10),
   client_name: z.string().max(400).optional(),
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       "Only the 'code' response type is supported."
     );
   }
-  // Nom : trim, sans caracteres de controle, borne — jamais rendu comme HTML.
+  // Name: trim, strip control characters, bound the length — never rendered as HTML.
   const clientName =
     (body.client_name ?? "")
       // eslint-disable-next-line no-control-regex

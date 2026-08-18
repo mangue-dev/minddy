@@ -14,15 +14,15 @@ import {
 } from "./opencode-probe-rig";
 
 /**
- * MESURE LOCALE DU PREMIER APPEL MODELE (MIN-368).
+ * LOCAL MEASUREMENT OF THE FIRST MODEL CALL (MIN-368).
  *
- * Cette sonde emploie le binaire OpenCode réellement installé et un fournisseur
- * OpenAI-compatible local : aucun token ni secret ne quitte donc la machine.
- * Elle ne s'exécute que sur demande, car démarrer le binaire natif est beaucoup
- * trop cher pour la suite unitaire :
+ * This probe uses the OpenCode binary actually installed and a provider
+ * OpenAI-compatible local: no token or secret therefore leaves the machine.
+ * It only runs on request, because starting the native binary is much
+ * too expensive for the unitary suite:
  *
  * MDY_OPENCODE_STARTUP_PROBE=1 MDY_OPENCODE_BIN=<...>/bin/opencode \
- *   npx vitest run lib/server/agent/vm/opencode-startup.probe.test.ts
+ * npx vitest run lib/server/agent/vm/opencode-startup.probe.test.ts
  */
 const LIVE = process.env.MDY_OPENCODE_STARTUP_PROBE === "1";
 
@@ -65,9 +65,9 @@ describe.skipIf(!LIVE)("démarrage réel d'OpenCode", () => {
     expect(await waitFor(() => provider.seen.length > 0, 30_000, 20)).toBe(true);
     const firstModelRequestMs = performance.now() - promptStartedAt;
 
-    // Ces nombres sont la mesure, non une limite rigide : le matériel et le
-    // cache disque changent. Les écrire rend immédiatement visible une
-    // régression sur un Mac sans transformer une fluctuation de CI en échec.
+    // These numbers are the measure, not a rigid limit: the material and the
+    // disk cache change. Writing them down immediately makes a
+    // regression on a Mac without turning a CI fluctuation into a failure.
     console.log(
       `[opencode-startup-probe:${label}] server-ready=${Math.round(serverReadyMs)}ms ` +
         `first-model-request=${Math.round(firstModelRequestMs)}ms`,

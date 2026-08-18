@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { authErrorKey, authErrorMessage } from "@/lib/auth-errors";
 
-/** Un refus GoTrue tel qu'il arrive dans un `catch`. */
+/** A GoTrue denial as it happens in a `catch`. */
 const authError = (code: string | undefined, message: string) =>
   Object.assign(new Error(message), code ? { code } : {});
 
@@ -23,8 +23,8 @@ describe("authErrorKey", () => {
     );
   });
 
-  it("retombe sur le message quand le code manque", () => {
-    // Les versions plus anciennes de GoTrue ne posent pas de `code`.
+  it("falls back to the message when the code is missing", () => {
+    // Older versions of GoTrue do not set `code`.
     expect(
       authErrorKey(new Error("Password is known to be weak and easy to guess"))
     ).toBe("errorWeakPassword");
@@ -40,7 +40,7 @@ describe("authErrorKey", () => {
     ).toBe("errorEmailNotConfirmed");
   });
 
-  it("rend null sur ce qu'il ne connaît pas", () => {
+  it("returns null for what it does not know", () => {
     expect(authErrorKey(new Error("fetch failed"))).toBeNull();
     expect(authErrorKey(authError("some_new_code", "Something new"))).toBeNull();
     expect(authErrorKey(null)).toBeNull();
@@ -57,9 +57,9 @@ describe("authErrorMessage", () => {
     );
   });
 
-  it("ne montre jamais un message qui ne dit rien — le « {} » observé en vrai", () => {
-    // supabase-js recopie `msg` du corps de la réponse ; sans lui, il stringifie
-    // le corps. Une réponse d'erreur au corps vide donnait donc « {} » sous le
+  it("never shows a message that says nothing — the « {} » seen in reality", () => {
+    // supabase-js copies `msg` from the response body; without it, it stringifies
+    // the body. An error response to the empty body therefore gave “{}” under the
     // formulaire d'inscription.
     expect(authErrorMessage(new Error("{}"), translate)).toBe("traduit:errorUnexpected");
     expect(authErrorMessage(new Error("   "), translate)).toBe("traduit:errorUnexpected");
@@ -67,14 +67,14 @@ describe("authErrorMessage", () => {
   });
 
   it("garde le message d'origine sur un refus inconnu", () => {
-    // Une phrase anglaise EXACTE vaut mieux qu'une phrase française inventée :
-    // le trou reste visible, donc comblable.
+    // An EXACT English sentence is better than an invented French sentence:
+    // the hole remains visible, therefore fillable.
     expect(authErrorMessage(new Error("Database error saving new user"), translate)).toBe(
       "Database error saving new user"
     );
   });
 
-  it("dit toujours quelque chose, même sans erreur exploitable", () => {
+  it("always says something, even without a usable error", () => {
     expect(authErrorMessage({}, translate)).toBe("traduit:errorUnexpected");
     expect(authErrorMessage(undefined, translate)).toBe("traduit:errorUnexpected");
   });

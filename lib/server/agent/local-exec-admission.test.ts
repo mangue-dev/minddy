@@ -6,22 +6,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { signLocalExecToken, resolveLocalExecSecret } from "./local-exec-token";
 
 /**
- * MIN-355 — LA DEUXIÈME VOIE D'ADMISSION, exercée sur la vraie porte.
+ * MIN-355 — THE SECOND WAY OF ADMISSION, exercised on the real gate.
  *
- * `defineSandboxProxy(handler, invalidRequestHandler?)` appelle son SECOND
- * argument avec la requête originale, corps non consommé, quand les en-têtes
- * `vercel-forwarded-*` manquent. C'est là que passe un tour qui joue sur la
- * machine de l'utilisateur — donc un `catch` sur la porte existante, ni route
- * jumelle ni fork.
+ * `defineSandboxProxy(handler, invalidRequestHandler?)` calls its SECOND
+ * argument with the original request, body not consumed, when the headers
+ * `vercel-forwarded-*` are missing. This is where a trick takes place that plays on the user's
+ * machine — so a `catch` on the existing door, neither route
+ * twin nor fork.
  *
- * Le test importe la ROUTE et lui envoie de vraies requêtes : `app/**` est hors du
- * périmètre de `vitest.config.ts` (`include: ["lib/**"]`), mais rien n'empêche un
- * test de `lib/` de l'importer — et un test lexical n'aurait pas dit si le jeton
- * est vraiment lu, ni si le corps arrive intact de l'autre côté.
+ * The test imports the ROUTE and sends real requests to it: `app/**` is outside the
+ * scope of `vitest.config.ts` (`include: ["lib/**"]`), but nothing prevents a
+ * test of `lib/` from importing it — and a lexical test would not have said if the token
+ * is really read, nor if the body arrives intact on the other side.
  *
- * Seul le module de plan de contrôle est moqué : c'est ce qui SORT (base, ledger,
- * tools). L'admission, la dérivation de la surface et le plafond de corps, eux,
- * sont le vrai chemin.
+ * Only the control plane module is mocked: this is what OUT (base, ledger,
+ * tools). Inlet, surface bypass and body cap,
+ * are the real path.
  */
 
 const h = vi.hoisted(() => ({
@@ -29,7 +29,7 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/server/agent/control-plane", () => ({
-  // Petit exprès : le 413 se prouve alors avec un corps de quelques octets.
+  // Small express: the 413 is then proven with a body of a few bytes.
   CONTROL_PLANE_MAX_BODY_BYTES: 120,
   handleControlPlaneRequest: vi.fn(async (opts: Record<string, unknown>) => {
     h.seen.push(opts);
@@ -76,7 +76,7 @@ describe("la voie locale du plan de contrôle", () => {
       body: { type: "assistant_message" },
       local: { gen: 2 },
     });
-    // Le run vient du CLAIM, jamais du corps — comme sur la voie de la microVM.
+    // The run comes from the CLAIM, never from the body — like on the microVM path.
     expect(h.seen[0].sandboxName).toBeUndefined();
   });
 
@@ -96,8 +96,8 @@ describe("la voie locale du plan de contrôle", () => {
   });
 
   it("rend le corps INTACT — le second argument le reçoit non consommé", async () => {
-    // C'est l'inconnue que le cadrage avait laissée ouverte : si le proxy avait
-    // déjà lu le flux, un checkpoint ne passerait jamais par cette voie.
+    // This is the unknown that the framing had left open: if the proxy had
+    // already read the flow, a checkpoint would never go through this route.
     const checkpoint = { messages: [], note: "x".repeat(8) };
     await POST(post("/checkpoint", { checkpoint }, { authorization: bearer() }));
     expect(h.seen[0]?.body).toEqual({ checkpoint });
@@ -139,10 +139,10 @@ describe("la voie locale du plan de contrôle", () => {
 });
 
 /**
- * ET UNE SEULE PORTE. Ce qui suit se lit dans la SOURCE parce que c'est une
- * propriété du fichier, pas de son comportement : deux copies du plafond de corps
- * se comporteraient identiquement le jour où on les écrit, et différemment le jour
- * où on n'en change qu'une.
+ * AND ONLY ONE DOOR. The following reads in the SOURCE because it is a
+ * property of the file, not of its behavior: two copies of the body cap
+ * would behave identically on the day they are written, and differently on the day
+ * when only one is changed.
  */
 describe("le 413, le parsing et l'appel du module ne sont écrits qu'une fois", () => {
   const source = readFileSync(

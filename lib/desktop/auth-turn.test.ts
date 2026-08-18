@@ -8,9 +8,9 @@ import {
 } from "./auth-turn";
 
 /**
- * MIN-345 — ce que le nonce doit refuser. Le cas qui compte est le premier :
- * un `minddy://auth?code=…` que le système livre à l'app sans qu'elle ait rien
- * demandé, et qui la connectait au compte de son expéditeur.
+ * MIN-345 — what the nonce should refuse. The case that counts is the first:
+ * a `minddy://auth?code=…` that the system delivers to the app without it having anything
+ * requested, and which connected it to the account of its sender.
  */
 
 beforeEach(() => {

@@ -2,15 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * MIN-278 — QUI a cité, tel que la ligne le dira.
+ * MIN-278 — WHO cited, as the line will tell.
  *
- * La règle de ce qui EST une citation vit à côté et se teste seule
- * (lib/pages-mentions.test.ts, logique pure). Ce qui se joue ici, c'est
- * l'IDENTITÉ posée sur la notification : une page peut être écrite par un
- * humain, par le chat Numo, ou par un agent tenant une clé MCP, et les trois ne
- * se nomment pas pareil. `actor_id` seul dirait toujours « Untel » — le compte
- * sous lequel l'écriture est passée —, y compris d'une phrase qu'Untel n'a
- * jamais tapée.
+ * The rule of what IS a quote lives next door and is tested alone
+ * (lib/pages-mentions.test.ts, pure logic). What is at stake here is
+ * the IDENTITY placed on the notification: a page can be written by a
+ * human, by the Numo cat, or by an agent holding an MCP key, and the three are not named the same. `actor_id` alone would always say “So-and-so” — the account
+ * under which the entry was made —, including a sentence that So-and-so never typed.
  */
 
 const H = vi.hoisted(() => ({
@@ -43,7 +41,7 @@ const { notifyPageMentions } = await import("./page-mentions");
 
 const service = {} as SupabaseClient;
 
-/** Un document d'un bloc, avec son ancre. */
+/** A one-block document, with its anchor. */
 const doc = (text: string) => ({
   type: "doc",
   content: [
@@ -81,9 +79,9 @@ describe("notifyPageMentions", () => {
   });
 
   it("nomme NUMO quand c'est l'agent qui a posé la citation", async () => {
-    // Le chat et l'agent de code écrivent sous l'id du compte qui les a permis :
-    // sans ce drapeau, Bob lirait « Clément vous a mentionné » d'une phrase que
-    // Clément n'a pas écrite.
+    // The chat and the code agent write under the id of the account which authorized them:
+    // without this flag, Bob would read “Clément mentioned you” from a sentence that
+    // Clément did not write.
     await notifyPageMentions(service, {
       projectId: "p1",
       pageId: "page-1",
@@ -96,9 +94,9 @@ describe("notifyPageMentions", () => {
   });
 
   it("nomme l'agent de la CLÉ quand l'écriture vient du MCP", async () => {
-    // Là on connaît son nom : la ligne dit « Claude Code (mcp) », comme la
-    // timeline d'un ticket écrit par le même agent. `via_assistant` ne doit PAS
-    // s'y ajouter — l'inbox le teste d'abord et retomberait sur « Numo ».
+    // There we know his name: the line says “Claude Code (mcp)”, like the
+    // timeline of a ticket written by the same agent. `via_assistant` must NOT
+    // add to it — the inbox tests it first and would fall back on “Numo”.
     await notifyPageMentions(service, {
       projectId: "p1",
       pageId: "page-1",

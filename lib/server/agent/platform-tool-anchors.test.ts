@@ -9,25 +9,25 @@ import {
 } from "./platform-tool-names";
 
 /**
- * MIN-326 — LE JEU D'OUTILS EST UNE PROPRIÉTÉ DE L'ANCRAGE, et il n'y en a qu'un.
+ * MIN-326 — TOOLSET IS A PROPERTY OF THE ANCHOR, and there is only one.
  *
- * Deux endroits décident de ce qu'un run peut appeler : celui qui l'ANNONCE au
- * modèle (`agentToolsFor`, dont la microVM tire ses fichiers de tools) et celui
- * qui le SERT (`runPlatformTool` du plan de contrôle, par la table de
- * `platform-tool-names.ts`). Tant qu'ils ne venaient pas de la même source, le
- * second était un routage par NOM : une session de relecture, dont tout ce
- * qu'elle lit vient d'un fork inconnu, appelait `create_routine` par un POST
- * depuis son shell.
+ * Two places decide what a run can call: the one that ANNOUNCES it to the
+ * model (`agentToolsFor`, from which the microVM draws its tools files) and the one
+ * which SERVES it (`runPlatformTool` from the control plane, by the table de
+ * `platform-tool-names.ts`). As long as they didn't come from the same source, the
+ * second was a NAME routing: a replay session, from which everything
+ * it reads comes from an unknown fork, called `create_routine` by a POST
+ * from its shell.
  *
- * Ce test les confronte nom par nom. Il échoue quand on ajoute un tool sans
- * décider de son ancrage — c'est exactement ce qu'on lui demande.
+ * This test matches them name by name. It fails when we add a tool without
+ * deciding its anchoring — that's exactly what we're asking it to do.
  */
 
 const ANCHORS: AgentAnchor[] = ["issue", "notebook", "pr"];
 
-/** Tout ce que l'ancrage ANNONCE, toutes options ouvertes : `web_search` servi,
- *  run de chaîne (`report_verdict`) et interactif (`create_routine`, `ask_user`).
- *  Un tool qu'aucune combinaison n'annonce n'a rien à faire dans la table. */
+/** Everything that the anchor ANNOUNCES, all options open: `web_search` served,
+ * string run (`report_verdict`) and interactive (`create_routine`, `ask_user`).
+ * A tool that no combination announces has nothing to do in the table. */
 const announced = (anchor: AgentAnchor) =>
   new Set(
     agentToolsFor({ anchor, webSearch: true, chain: true, interactive: true })
@@ -36,10 +36,10 @@ const announced = (anchor: AgentAnchor) =>
   );
 
 /**
- * Les noms d'AVANT que la table garde alors que plus personne ne les annonce :
- * un checkpoint repris rejoue l'ancien appel, et il doit continuer de marcher là
- * où son successeur marche. `read_attachment` est le `read_resource` d'avant
- * MIN-184. Toute autre divergence est un défaut.
+ * The BEFORE names that the table keeps when no one announces them anymore:
+ * a resumed checkpoint replays the old call, and it must continue walking there
+ * where its successor walks. `read_attachment` is the `read_resource` before
+ * MIN-184. Any other discrepancy is a default.
  */
 const LEGACY_ALIASES = new Set(["read_attachment"]);
 
@@ -48,10 +48,10 @@ describe("la table des tools par ancrage — annoncé et servi ne divergent pas"
     it(`sert exactement ce que l'ancrage « ${anchor} » annonce`, () => {
       const served = PLATFORM_TOOLS_BY_ANCHOR[anchor];
       const offered = announced(anchor);
-      // Rien d'annoncé qui ne soit servi : le modèle verrait un tool qui refuse.
+      // Nothing announced that is not served: the model would see a tool that refuses.
       expect([...offered].filter((name) => !served.has(name))).toEqual([]);
-      // Rien de servi qui ne soit annoncé, alias historiques mis à part : c'est
-      // par là qu'un tool d'écriture entrait dans une session de relecture.
+      // Nothing served that is not announced, historical aliases aside: it is
+      // this way a writing tool entered a proofreading session.
       expect([...served].filter((name) => !offered.has(name) && !LEGACY_ALIASES.has(name))).toEqual(
         [],
       );
@@ -59,9 +59,9 @@ describe("la table des tools par ancrage — annoncé et servi ne divergent pas"
   }
 
   it("ferme la RELECTURE aux écritures minddy, nommément", () => {
-    // La liste noire est écrite en toutes lettres : la comparaison ci-dessus
-    // suivrait `agentToolsFor` si quelqu'un y ajoutait une écriture pour la
-    // relecture. Celle-ci dit ce que le produit PROMET — zéro écriture.
+    // The blacklist is written in full: the comparison above
+    // would follow `agentToolsFor` if someone added a write to it for
+    // proofreading. This says what the product PROMISES — zero writing.
     for (const name of [
       "update_issue",
       "create_issue",
@@ -108,7 +108,7 @@ describe("l'ancrage se lit sur la ligne du run", () => {
     expect(anchorForRun({ issue_id: "i-1", pull_request_id: null })).toBe("issue");
     expect(anchorForRun({ issue_id: null, pull_request_id: "pr-1" })).toBe("pr");
     expect(anchorForRun({ issue_id: null, pull_request_id: null })).toBe("notebook");
-    // Le ticket l'emporte, comme dans `execute.ts`.
+    // The ticket wins, as in `execute.ts`.
     expect(anchorForRun({ issue_id: "i-1", pull_request_id: "pr-1" })).toBe("issue");
   });
 });

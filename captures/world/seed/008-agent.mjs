@@ -1,26 +1,26 @@
 /**
- * 008 — un run de l'agent de code sur un ticket.
+ * 008 — a code agent run on a ticket.
  *
- * Pour quelle capture : `workflowAgent` — « un run d'agent : fil d'exécution
- * avec appels d'outils (lecture de fichiers, édition), et l'issue rattachée en
- * en-tête ».
+ * For which capture: `workflowAgent` — “an agent run: execution thread
+ * with tool calls (reading files, editing), and the associated outcome in
+ * header”.
  *
- * LE STATUT N'EST PAS LIBRE. Le run est semé en `completed` + `awaiting_input`,
- * c'est-à-dire « l'agent a fini son tour et attend la suite » — le fil est
- * complet, le composer est prêt. Les deux statuts qui ressembleraient
- * davantage à « en cours » sont interdits ici :
- *   - `queued`  : le cron de drain le réclamerait au prochain passage ;
- *   - `running` : `requeueStuckRuns` remet en file tout run démarré depuis plus
+ * THE STATUS IS NOT FREE. The run is seeded in `completed` + `awaiting_input`,
+ * that is to say “the agent has finished his turn and is waiting for the continuation” — the thread is
+ * complete, the composer is ready. The two statuses which would resemble
+ * more than “in progress” are prohibited here:
+ * - `queued`: the drain cron would request it on the next pass;
+ * - `running`: `requeueStuckRuns` re-queues any run started more recently
  *                 de 6 minutes (lib/server/agent/runs.ts).
- * Dans les deux cas l'agent serait RÉELLEMENT lancé : microVM, appels LLM
- * facturés, et tentative d'écriture sur un dépôt. Un état au repos est le seul
- * qui tienne dans la durée.
+ * In both cases the agent would REALLY be launched: microVM, LLM calls
+ * billed, and attempt to write to a deposit. A state at rest is the only
+ * which lasts over time.
  *
- * Pas de pull request : `pr_number` reste nul. Le diff affiché par minddy est
- * lu EN DIRECT chez GitHub/GitLab (app/api/agent-runs/[runId]/pr) — aucune
- * donnée en base ne peut le fabriquer.
+ * No pull request: `pr_number` remains null. The diff displayed by minddy is
+ * read LIVE at GitHub/GitLab (app/api/agent-runs/[runId]/pr) — none
+ * given in base cannot manufacture it.
  *
- * Idempotent : un run existant sur le ticket visé est laissé tel quel.
+ * Idempotent: an existing run on the targeted ticket is left as is.
  *
  *   node captures/world/seed/008-agent.mjs --dry-run
  *   node captures/world/seed/008-agent.mjs
@@ -31,7 +31,7 @@ import { currentCycleWindow, spreadInWindow } from "./_cycle-window.mjs";
 
 const DRY_RUN = process.argv.includes("--dry-run");
 
-/** Le ticket travaillé : celui qui porte déjà un plan d'implémentation. */
+/** The worked ticket: the one that already has an implementation plan. */
 const TARGET = { project: "AUR", number: 2 };
 
 const RUN = {
@@ -42,9 +42,9 @@ const RUN = {
 };
 
 /**
- * Le fil d'exécution. Les formes de `payload` sont celles qu'émet la boucle
+ * The execution thread. The forms of `payload` are those that the loop emits
  * de l'agent (lib/server/agent/agent-loop.ts) : `tool_call` porte l'argument
- * résumé par `toolArgSummary`, `tool_result` un aperçu tronqué.
+ * summarized by `toolArgSummary`, `tool_result` a truncated preview.
  */
 const EVENTS = [
   { type: "status", payload: { status: "running", continuation: 0 } },
@@ -200,8 +200,8 @@ async function main() {
       project_id: project.id,
       issue_id: issue.id,
       created_by: people.camille,
-      // Au repos : ni le drain (qui ne réclame que `queued`) ni le sweeper
-      // (qui ne relève que `running`) ne peuvent le reprendre.
+      // At rest: neither the drain (which only requires `queued`) nor the sweeper
+      // (which only relates to `running`) cannot take it back.
       status: "completed",
       awaiting_input: true,
       triggered_by: "button",
@@ -226,7 +226,7 @@ async function main() {
   const inserted = await runPlan.apply({ confirmed: true });
   const run = inserted.agent_runs[0];
 
-  // Les événements s'ancrent sur le run : ils ne peuvent partir qu'après lui.
+  // The events are anchored on the run: they can only leave after it.
   const base = Date.parse(startedAt);
   const eventPlan = createPlan(world);
   eventPlan.insert(
@@ -236,7 +236,7 @@ async function main() {
       seq: i + 1,
       type: event.type,
       payload: event.payload,
-      // 40 s entre chaque étape : un rythme d'agent crédible à la lecture.
+      // 40 seconds between each step: a credible agent pace when reading.
       created_at: new Date(base + i * 40_000).toISOString(),
     })),
     "événement",

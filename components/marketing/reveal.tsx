@@ -4,43 +4,43 @@ import { useCallback, type CSSProperties, type ReactNode, type Ref } from "react
 import { cn } from "mangue-ui/lib/utils";
 
 /**
- * Apparitions au scroll de la landing (MIN-73).
+ * Appearances in the landing scroll (MIN-73).
  *
- * Deux contraintes ont dicté la forme :
+ * Two constraints dictated the form:
  *
- * 1. Les sections de la landing sont des Server Components (elles traduisent
- *    avec `getTranslations`). On ne peut donc pas y poser un `whileInView` de
- *    framer-motion sans les basculer côté client. Ici les composants clients ne
- *    portent QUE l'observer : le contenu leur arrive en `children` déjà rendu
- *    par le serveur et ne traverse jamais la frontière.
- * 2. Le site public n'a aucune raison d'embarquer une librairie d'animation.
- *    L'animation elle-même est en CSS (`app/globals.css`), le JS se limite à
- *    poser `data-revealed` une fois.
+ * 1. The landing sections are Server Components (they translate to
+ * with `getTranslations`). We cannot therefore place a `whileInView` de
+ * framer-motion without switching them to the client side. Here the client components do
+ * ONLY observe it: the content arrives to them in `children` already rendered
+ * by the server and never crosses the border.
+ * 2. The public site has no reason to embed an animation library.
+ * The animation itself is in CSS (`app/globals.css`), the JS is limited to
+ * set `data-revealed` once.
  *
- * Sans JS, rien n'est masqué : `reveal-ready` — la classe qui met l'opacité à 0
- * — n'est ajoutée qu'au montage. Le rendu serveur est donc la page complète, et
- * `prefers-reduced-motion` désactive tout côté CSS.
+ * Without JS, nothing is hidden: `reveal-ready` — the class which sets the opacity to 0
+ * — is only added during editing. The server rendering is therefore the complete page, and
+ * `prefers-reduced-motion` disables all CSS side.
  *
- * ## Ces frontières clientes ne coûtent presque rien (MIN-100, mesuré)
+ * ## These client borders cost almost nothing (MIN-100, measured)
  *
- * On les soupçonnait de porter les 264 Ko de charge RSC inline de la landing —
- * 48 instances, chacune une référence de module client dans le flux. Décompte
- * réel des rangées du flux : **13,9 Ko bruts pour toutes**, soit 6 % de la
- * charge, ~2 Ko gzippés. Les enfants, eux, sont sérialisés de toute façon : ils
- * font partie de l'arbre que RSC décrit, frontière ou pas.
+ * They were suspected of carrying the 264 KB inline RSC payload of the landing —
+ * 48 instances, each a client module reference in the flow. Count
+ * actual flow rows: **13.9 KB raw for all**, or 6% of the
+ * load, ~2 KB gzipped. The children are serialized anyway: they
+ * are part of the tree that RSC describes, border or not.
  *
- * Les 264 Ko venaient d'ailleurs (le catalogue i18n entier, cf.
- * `lib/public-client-messages.ts`). Donc : rien à sacrifier ici, et surtout pas
- * la peine de tout réécrire en `animation-timeline: view()` ou de remplacer les
- * 48 observers par un seul — le gain serait de l'ordre du kilo-octet.
+ * The 264 KB came from elsewhere (the entire i18n catalog, cf.
+ * `lib/public-client-messages.ts`). So: nothing to sacrifice here, and especially not
+ * the trouble of rewriting everything in `animation-timeline: view()` or replacing the
+ * 48 observers by a single one — the gain would be of the order of a kilobyte.
  */
 
-/** Éléments qu'on peut vouloir animer. Volontairement restreint : `Reveal`
-    REMPLACE une balise existante (`as="header"`) plutôt que d'en ajouter une,
-    pour ne pas insérer de `<div>` au milieu d'une grille ou d'un flex. */
-// `h1` et `dl` sont arrivés avec /download (MIN-292) : un titre dont une partie
-// est en serif italique ne peut pas passer par `RevealHeading`, qui découpe le
-// texte mot à mot, et une fiche technique est une liste de définitions.
+/** Elements that we may want to animate. Intentionally restricted: `Reveal`
+ REPLACES an existing tag (`as="header"`) rather than adding one,
+ to avoid inserting a `<div>` in the middle of a grid or flex. */
+// `h1` and `dl` arrived with /download (MIN-292): a title of which part
+// is in serif italic cannot go through `RevealHeading`, which cuts out the
+// text verbatim, and a datasheet is a list of definitions.
 type RevealTag =
   | "div"
   | "header"
@@ -55,14 +55,13 @@ type RevealTag =
   | "h1";
 
 /**
- * Ref de rappel qui branche l'observer sur l'élément. Une seule fonction pour
- * `Reveal`, `RevealGroup` et `RevealHeading` : ils partagent le même
- * déclenchement, seule la règle CSS qui en découle change.
+ * Callback ref that plugs the observer into the element. A single function for
+ * `Reveal`, `RevealGroup` and `RevealHeading`: they share the same
+ * trigger, only the resulting CSS rule changes.
  *
- * `rootMargin` bas négatif : le bloc part quand son haut a franchi 90 % de la
- * hauteur du viewport, donc un peu avant d'être réellement lu. Un margin
- * négatif en HAUT retarderait au contraire les blocs déjà à l'écran au
- * chargement — exactement ceux qui doivent enchaîner avec la cascade du hero.
+ * `rootMargin` low negative: the block leaves when its top has crossed 90% of the
+ * height of the viewport, so a little before being actually read. A negative margin
+ * at HIGH would, on the contrary, delay the blocks already on the screen before loading — exactly those which should continue with the hero's stunt.
  */
 function useRevealRef(): Ref<HTMLElement> {
   return useCallback((el: HTMLElement | null) => {
@@ -88,15 +87,15 @@ function useRevealRef(): Ref<HTMLElement> {
 
 interface RevealProps {
   children: ReactNode;
-  /** Balise rendue — à choisir pour remplacer l'élément existant, pas l'envelopper. */
+  /** Rendered tag — choose to replace the existing element, not wrap it. */
   as?: RevealTag;
   className?: string;
   id?: string;
-  /** Retard avant le départ, en secondes. */
+  /** Delay before departure, in seconds. */
   delay?: number;
 }
 
-/** Un bloc qui monte et se dévoile quand il entre dans le viewport. */
+/** A block that rises and is revealed when it enters the viewport. */
 export function Reveal({ children, as: Tag = "div", className, id, delay = 0 }: RevealProps) {
   const ref = useRevealRef();
 
@@ -113,15 +112,15 @@ export function Reveal({ children, as: Tag = "div", className, id, delay = 0 }: 
 }
 
 interface RevealGroupProps extends RevealProps {
-  /** Décalage entre deux enfants, en secondes (0.09 par défaut). */
+  /** Offset between two children, in seconds (0.09 by default). */
   step?: number;
 }
 
 /**
- * Même chose, mais ce sont les ENFANTS DIRECTS qui entrent, en cascade — un
- * seul observer pour toute une grille de cartes. À poser sur le conteneur qui
- * existe déjà (la grille, la liste) : aucun élément n'est ajouté au DOM, donc
- * la mise en page ne bouge pas.
+ * Same thing, but it's the DIRECT CHILDREN that come in, in cascade — a single
+ * observe for an entire grid of cards. To place on the container which
+ * already exists (the grid, the list): no element is added to the DOM, therefore
+ * the layout does not move.
  */
 export function RevealGroup({
   children,
@@ -151,20 +150,20 @@ export function RevealGroup({
 }
 
 interface RevealHeadingProps {
-  /** Texte du titre. Découpé en mots, qui entrent les uns après les autres. */
+  /** Title text. Cut into words, which come in one after the other. */
   text: string;
   as?: "h1" | "h2" | "h3";
   className?: string;
-  /** Décalage entre deux mots, en secondes. */
+  /** Offset between two words, in seconds. */
   step?: number;
 }
 
 /**
- * Titre de section qui se dévoile mot à mot — la signature d'apparition de la
- * page, reprise du hero pour que les deux se répondent.
+ * Section title which is revealed word for word — the appearance signature of the
+ * page, taken from the hero so that the two respond to each other.
  *
- * Le titre complet reste dans `aria-label` et la découpe est `aria-hidden` :
- * une synthèse vocale lit une phrase, pas une suite de mots isolés.
+ * The full title remains in `aria-label` and the cutout is `aria-hidden` :
+ * a speech synthesis reads a sentence, not a series of isolated words.
  */
 export function RevealHeading({
   text,
@@ -173,9 +172,9 @@ export function RevealHeading({
   step,
 }: RevealHeadingProps) {
   const ref = useRevealRef();
-  // Compté à part et pas déduit de l'index du tableau : `split` avec capture
-  // produit aussi les séparateurs (et une chaîne vide si le texte commence par
-  // un blanc), qui ne doivent pas consommer de rang dans la cascade.
+  // Counted separately and not deducted from the array index: `split` with capture
+  // also produces the separators (and an empty string if the text starts with
+  // a blank), which must not consume a rank in the cascade.
   let wordIndex = 0;
 
   return (
@@ -186,8 +185,8 @@ export function RevealHeading({
       aria-label={text}
     >
       <span aria-hidden="true">
-        {/* La capture du séparateur garde les espaces dans le flux : sans eux,
-            des <span> inline-block collés supprimeraient les blancs. */}
+        {/* Capturing the separator keeps spaces in the stream: without them,
+ pasted inline-blocks would remove whitespace. */}
         {text.split(/(\s+)/).map((token, index) => {
           if (token === "") return null;
           if (/^\s+$/.test(token)) return token;

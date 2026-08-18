@@ -14,23 +14,23 @@ import {
 } from "@/lib/server/feedback/posts";
 
 /**
- * POST /api/v1/feedback — API publique d'intégration (Bearer mdy_…, mêmes clés
- * que /api/v1/issues qui reste la création directe d'issues). Dépose un post de
- * feedback au nom d'un utilisateur final : le serveur du client se porte
- * garant de l'identité transmise (jamais d'anonyme — external_id et/ou email
- * requis). Le post entre dans le pipeline standard (embedding à la soumission,
- * dédup IA horaire) et apparaît sur le board public s'il est activé.
+ * POST /api/v1/feedback — Public integration API (Bearer mdy_…, same keys
+ * than /api/v1/issues which remains the direct creation of issues). Post a post
+ * feedback on behalf of an end user: the client's server is
+ * guarantor of the identity transmitted (never anonymous — external_id and/or email
+ * required). The post enters the standard pipeline (embedding to submission,
+ * hourly AI deduplication) and appears on the public board if activated.
  *
- * Payload : { title, body?, user: { external_id?, email?, name? }, analyze? }
+ * Payload: { title, body?, user: { external_id?, email?, name? }, parse? }
  *
- * `analyze` (MIN-106, défaut true) : passer false garde le post hors de la passe
- * de revue de Numo — pour un client qui fait tourner son propre classifier. Le
- * post est alors publié tel quel, sans modération, sans catégories et sans
- * fusion automatique (c'est un seul appel qui fait les trois).
+ * `analyze` (MIN-106, default true): passing false keeps the post out of the pass
+ * Numo Review — for a customer running their own classifier. THE
+ * post is then published as is, without moderation, without categories and without
+ * automatic merger (it's a single call that does all three).
  */
-// Bornes d'identité (MIN-118) : 254 = longueur maximale d'une adresse
-// (RFC 5321) ; external_id et name sont des identifiants/noms courts côté
-// client, jamais du texte libre. Au-delà, on refuse — même DX stricte que
+// Identity terminals (MIN-118): 254 = maximum length of an address
+// (RFC 5321); external_id and name are short side identifiers/names
+// customer, never free text. Beyond that, we refuse — even strict DX as
 // title/body.
 const USER_EXTERNAL_ID_MAX = 255;
 const USER_EMAIL_MAX = 254;
@@ -53,8 +53,8 @@ export async function POST(request: NextRequest) {
 
   let body: Record<string, unknown>;
   try {
-    // Un corps non-objet (`null`, chaîne, tableau) est du JSON valide : refusé
-    // ici plutôt que de crasher sur un accès de champ plus bas.
+    // A non-object body (`null`, string, array) is valid JSON: refused
+    // here rather than crashing on a lower field access.
     const parsed: unknown = await request.json();
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       return publicApiError(400, "invalid_json", "Request body must be a JSON object.");
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Opt-out de la revue Numo (MIN-106), pour un client qui classe lui-même.
+  // Opt-out of the Numo magazine (MIN-106), for a customer who classifies himself.
   const analyzeOption = readAnalyzeOption(body.analyze);
   if (!analyzeOption.ok) {
     return publicApiError(
@@ -163,9 +163,9 @@ export async function POST(request: NextRequest) {
       id: result.post.id,
       title: result.post.title,
       status: result.post.status,
-      // Conséquence observable d'`analyze` : 'published' = déjà sur le board,
-      // 'pending' = retenu le temps de la revue. C'est ce qui dit à
-      // l'intégrateur que son drapeau a bien été pris en compte.
+      // Observable consequence of `analyze`: 'published' = already on the board,
+      // 'pending' = held for the duration of the review. This is what says to
+      // the integrator that its flag has been taken into account.
       review_state: result.post.review_state,
       votes: result.post.vote_count,
       user: { pseudonym: feedbackUser.pseudonym },

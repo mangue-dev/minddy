@@ -21,9 +21,9 @@ const COMMENT_BODY_MAX = 10_000;
  * issue/objective comments, which go through /api/comments/[id] on the RLS
  * client) these run on the service client, gated by project membership.
  *
- * Qui a le droit de quoi vit dans `lib/server/feedback/comment-guard.ts` — c'est
- * une règle de permission, elle mérite d'être exerçable ailleurs que par une
- * requête HTTP.
+ * Who has the right to what lives in `lib/server/feedback/comment-guard.ts` — it's
+ * a rule of permission, it deserves to be exercised elsewhere than by a
+ * HTTP request.
  */
 
 /** PATCH — edit the comment body (author-only, own non-Numo comment). */
@@ -95,10 +95,10 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("commentNotFound") }, { status: own.status });
   }
 
-  // Snapshot storage paths first — the root's replies cascade with it. Une
-  // ressource LIEN n'a pas d'objet (`storage_path` nul, MIN-184) : l'écarter
-  // ici, sinon la liste porterait un null que `storage.remove()` refuse EN
-  // BLOC — un seul lien sur le fil, et plus aucun fichier ne serait effacé.
+  // Snapshot storage paths first — the root's replies cascade with it. A
+  // LINK resource has no object (`storage_path` null, MIN-184): discard it
+  // here, otherwise the list would carry a null which `storage.remove()` refuses EN
+  // BLOCK — just one link on the thread, and no more files would be deleted.
   const { data: replies } = await service
     .from("comments")
     .select("id")

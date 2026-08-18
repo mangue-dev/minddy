@@ -33,96 +33,94 @@ import { headTail } from "./prune";
 import type { AgentToolImage } from "./agent-contract";
 
 /**
- * Tools TICKET de l'agent de code : les tickets du PROJET du run. Servis aux deux
- * ancrages (MIN-125) — un run de carnet doit pouvoir chercher et lire un ticket,
- * un run de ticket doit pouvoir en viser un autre. L'ancrage ne décide plus que de
- * la CIBLE PAR DÉFAUT : le ticket du run quand il y en a un, sinon `issue` est
- * obligatoire et se résout avec `search_issues`.
- *  - `search_issues`    → trouver un ticket du projet (searchIssues, partagé
- *                          avec Numo/MCP).
- *  - `read_issue`       → tout le ticket (getIssue) + plan parsé en tâches +
- *                          derniers commentaires.
- *  - `read_resource`    → une ressource : l'url et le titre pour un LIEN ;
- *                          l'id et le titre pour une PAGE du wiki (le document
- *                          se lit ensuite par `read_page`) ; pour un
- *                          FICHIER, texte inline quand c'est lisible, l'IMAGE
- *                          ELLE-MÊME quand c'est une maquette et que le modèle du
- *                          run la voit (MIN-111), sinon URL signée courte
- *                          (curl-able depuis la sandbox).
- *  - `update_issue`     → titre, description, effort, et le RATTACHEMENT à un
- *                          objectif (MIN-287). JAMAIS le statut ni la
- *                          priorité : ce sont des décisions de l'utilisateur, et le
- *                          tool REFUSE explicitement l'argument plutôt que de
- *                          l'avaler (un champ hors schéma est vite halluciné).
- *  - `write_issue_plan` → écrit le plan markdown du ticket (updateIssueFields,
- *                          via_assistant) SANS lancer l'implémentation.
- *  - `append_to_plan`   → ajoute un bloc au plan existant sans toucher au reste.
- *  - `edit_issue_text`  → réécrit UN passage du plan ou de la description
- *                          (old_string → new_string), comme `edit_file` sur un
- *                          fichier. Les deux (MIN-186) partagent leur cœur avec
- *                          le MCP et Numo : `appendToPlan` et `editIssueText`.
- *  - `create_issue`     → crée un ticket du projet, au statut d'atterrissage choisi
- *                          par le lanceur (Compte → Préférences), comme Numo chat.
- *  - `create_routine`   → pose une ROUTINE (MIN-185) : un run programmé qui
- *                          revient tout seul. Même fabrique que les trois autres
- *                          portes ; l'appelant est le lanceur du run, donc un
- *                          run lancé par un non-propriétaire se voit refuser.
- * Service client : l'accès a été contrôlé au lancement du run (membre du projet),
- * et toute lecture/écriture est épinglée au projet du run.
+ * Tools TICKET of the code agent: the PROJECT tickets of the run. Served at both
+ * anchors (MIN-125) — a notebook run must be able to search and read a ticket,
+ * a ticket run must be able to aim at another. The anchor only decides to
+ * the DEFAULT TARGET: the run ticket when there is one, otherwise `issue` is
+ * mandatory and is resolved with `search_issues`.
+ * - `search_issues` → find a project ticket (searchIssues, shared
+ * with Numo/MCP).
+ * - `read_issue` → whole ticket (getIssue) + plan parsed into tasks +
+ * last comments.
+ * - `read_resource` → one resource: the url and title for a LINK;
+ * the id and title for a wiki PAGE (the document
+ * is then read as `read_page`); for a
+ * FILE, inline text when it's readable, the IMAGE
+ * ITSELF when it's a mockup and the model of the
+ * run sees it (MIN-111), otherwise short signed URL
+ * (curl-able from the sandbox).
+ * - `update_issue` → title, description, effort, and ATTACHMENT to a
+ * objective (MIN-287). NEVER the status or the
+ * priority: these are user decisions, and the
+ * tool explicitly REFUSES the argument rather than
+ * swallowing it (a field outside the schema is quickly hallucinated).
+ * - `write_issue_plan` → writes the markdown plan of the ticket (updateIssueFields,
+ * via_assistant) WITHOUT launching the implementation.
+ * - `append_to_plan` → adds a block to the existing plan without touching the rest.
+ * - `edit_issue_text` → rewrites ONE passage of the plan or the description
+ * (old_string → new_string), like `edit_file` on a
+ * file. Both (MIN-186) share their core with
+ * the MCP and Numo: `appendToPlan` and `editIssueText`.
+ * - `create_issue` → creates a project ticket, with the landing status chosen
+ * by the launcher (Account → Preferences), like Numo chat.
+ * - `create_routine` → sets a ROUTINE (MIN-185): a scheduled run which
+ * returns by itself. Same manufacturer as the other three
+ * doors; the caller is the launcher of the run, so a
+ * run launched by a non-owner is refused.
+ * Customer service: access was controlled at run launch (project member),
+ * and any read/write is pinned to the run's project.
  */
 
 export interface IssueToolContext {
-  /** Ticket du run — cible PAR DÉFAUT des tools ticket. Null sur un run de carnet :
-   *  `issue` devient alors obligatoire. */
+  /** Run ticket — DEFAULT target of ticket tools. Null on a notebook run:
+ * `issue` then becomes mandatory. */
   anchorIssueId: string | null;
   projectId: string;
   projectKey: string;
-  /** Propriétaire du run — acteur des écritures (plan, champs, création). */
+  /** Run owner — writing actor (plan, fields, creation). */
   actorId: string | null;
-  /** Statut d'atterrissage d'un ticket créé, réglage de compte du LANCEUR
-   *  (`user_metadata.numo_default_status`) — jamais un paramètre du modèle. */
+  /** Landing status of a created ticket, LAUNCHER account setting
+ * (`user_metadata.numo_default_status`) — never a template parameter. */
   numoDefaultStatus: NumoDefaultStatus;
-  /** Le modèle du run accepte-t-il une image en entrée ? (cf. `supportsImageInput`).
-   *  Faux → `read_resource` se comporte exactement comme avant MIN-111. */
+  /** Does the run model accept an image as input? (see `supportsImageInput`).
+ * False → `read_resource` behaves exactly as before MIN-111. */
   imageInput?: boolean;
-  /** Run COURANT — la ligne sur laquelle `report_verdict` écrit son verdict. */
+  /** Run CURRENT — the line on which `report_verdict` writes its verdict. */
   runId?: string | null;
-  /** Chaîne d'automatisation du run (MIN-147). C'est elle qui décide si
-   *  `report_verdict` est servi : hors chaîne, personne ne lit un verdict. */
+  /** Run automation chain (MIN-147). It is she who decides whether
+ * `report_verdict` is served: outside the chain, no one reads a verdict. */
   chainId?: string | null;
 }
 
-/** Noms des tools de ce module. Ils vivent dans `platform-tool-names.ts` depuis
- *  MIN-224 — le ROUTAGE descend dans la microVM, l'EXÉCUTION reste ici — et sont
- *  ré-exportés pour que rien n'ait à changer d'import. */
+/** Names of the tools in this module. They live in `platform-tool-names.ts` since
+ * MIN-224 — ROUTING goes down to the microVM, EXECUTION stays here — and are
+ * re-exported so nothing has to change import. */
 export { ISSUE_TOOL_NAMES } from "./platform-tool-names";
 
-/** Derniers commentaires renvoyés par défaut (le fil complet sur demande). */
+/** Latest comments returned by default (the full thread on request). */
 const COMMENTS_DEFAULT_LIMIT = 15;
-/** Cap par corps de commentaire injecté. */
+/** Cap per injected comment body. */
 const COMMENT_BODY_MAX_CHARS = 2000;
-/** Cap du corps d'un retour : plus généreux qu'un commentaire, parce que c'est
-    l'ÉNONCÉ du besoin — le tronquer, c'est perdre le cas d'usage décrit à la
-    fin. Reste sous le cap de la boucle (headTail 6000). */
+/** Heading of the body of a return: more generous than a comment, because it is
+ the STATEMENT of the need — to truncate it is to lose the use case described at the
+ end. Stays under the heading of the loop (headTail 6000). */
 const FEEDBACK_BODY_MAX_CHARS = 4000;
-/** Cap du contenu texte inline d'une pièce jointe — aligné sur le cap des
-    résultats de tools de la boucle (headTail 6000) : au-delà, le contenu serait
-    élidé au milieu de toute façon ; l'URL signée est la voie pour le fichier entier. */
+/** Heading of an attachment's inline text content — aligned with the heading of the loop's tools results (headTail 6000): beyond that, the content would be elided in the middle anyway; the signed URL is the path for the entire file. */
 const ATTACHMENT_INLINE_MAX_CHARS = 6000;
-/** Taille max d'une pièce jointe téléchargée pour lecture inline. */
+/** Max size of an attachment downloaded for inline reading. */
 const ATTACHMENT_INLINE_MAX_BYTES = 256 * 1024;
 /**
- * Formats d'image qu'on MONTRE au modèle (MIN-111). Liste fermée : ce sont ceux
- * que les providers multimodaux acceptent tous. Un SVG est du texte, il passe par
- * la lecture inline ; un TIFF ou un HEIC ne se montre pas — URL signée, comme avant.
+ * Image formats that are SHOWN to the model (MIN-111). Closed list: these are the ones
+ * that multimodal providers all accept. An SVG is text, it goes through
+ * inline reading; a TIFF or HEIC does not show — URL signed, as before.
  */
 const VIEWABLE_IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 /**
- * Taille max d'une image montrée au modèle, en octets SOURCE. La base64 pèse 4/3 —
- * 750 Ko de PNG font ~1 Mo dans le message, et l'historique EST le checkpoint
- * (plafonné à 8 Mo, avec `capHistoryImages` qui n'en garde que trois). Une maquette
- * d'écran tient très largement dedans ; au-delà, on renvoie l'URL signée avec une
- * note qui le dit.
+ * Max size of an image shown to the model, in SOURCE bytes. Base64 weighs 4/3 —
+ * 750 KB of PNG is ~1 MB in the message, and the history IS the checkpoint
+ * (capped at 8 MB, with `capHistoryImages` only keeping three). A screen model
+ * fits very comfortably inside; beyond that, we return the URL signed with a
+ * note that says so.
  */
 const ATTACHMENT_IMAGE_MAX_BYTES = 750 * 1024;
 
@@ -130,16 +128,16 @@ function cap(str: string, max: number): string {
   return str.length <= max ? str : `${str.slice(0, max)}… [truncated]`;
 }
 
-/** Les noms que porte l'agent de code, pour que les refus du patch renvoient
- *  vers des tools qui existent DANS LE RUN (cf. IssueTextTools). */
+/** The names that the code agent bears, so that patch refusals return
+ * to tools that exist IN THE RUN (see IssueTextTools). */
 const AGENT_TEXT_TOOLS: IssueTextTools = {
   read: "read_issue",
   appendToPlan: "append_to_plan",
   replaceWhole: { plan: "write_issue_plan", description: "update_issue" },
 };
 
-/** Cap du diff rendu par `edit_issue_text` : confirmer l'atterrissage de
-    l'édition, pas re-transporter le document qu'on vient d'éviter de réécrire. */
+/** Cap of the diff rendered by `edit_issue_text`: confirm the landing of
+ the edition, not re-transport the document that we have just avoided rewriting. */
 const EDIT_DIFF_MAX_CHARS = 2000;
 
 /** MIME texte → contenu lisible inline (miroir du helper MCP). */
@@ -159,10 +157,10 @@ function isTextMime(mime: string): boolean {
 type ToolOutcome = { result: unknown; success: boolean; images?: AgentToolImage[] };
 
 /**
- * Ticket VISÉ par un tool : celui que `args.issue` désigne, sinon celui du run.
- * Passer par le résolveur même pour l'ancrage coûte une requête minuscule et
- * rapporte l'identifiant (l'agent en a besoin pour parler du ticket) tout en
- * ré-épinglant la cible au projet du run.
+ * Ticket TARGETED by a tool: the one that `args.issue` designates, otherwise the one in the run.
+ * Going through the resolver itself for anchoring costs a tiny query and
+ * reports the identifier (the agent needs it to talk about the ticket) while
+ * re-pinning the target to run project.
  */
 async function resolveTarget(
   ctx: IssueToolContext,
@@ -212,7 +210,7 @@ async function readIssue(
   );
   if ("error" in detail) return { result: { error: detail.error }, success: false };
 
-  // Assignee en nom d'affichage (jamais l'email brut) — l'uuid seul est muet.
+  // Assigned as display name (never the raw email) — the uuid alone is silent.
   const assigneeId = (detail.issue.assignee_id as string | null) ?? null;
   let assigneeName: string | null = null;
   if (assigneeId) {
@@ -220,10 +218,10 @@ async function readIssue(
     if (users) assigneeName = displayName(toNamed(users.get(assigneeId)), "User");
   }
 
-  // L'OBJECTIF du ticket (MIN-287) : `objective_id` seul est un uuid muet, et
-  // un agent qui ne sait pas à quel but sert le ticket qu'il implémente le lit
-  // hors de son intention. Le nom et le statut sont ce qui rend le rattachement
-  // lisible — et son absence, actionnable.
+  // The PURPOSE of the ticket (MIN-287): `objective_id` alone is a silent uuid, and
+  // an agent who does not know the purpose of the ticket he is implementing reads it
+  // out of his intention. Name and status are what makes connection
+  // readable — and its absence, actionable.
   const objectiveId = (detail.issue.objective_id as string | null) ?? null;
   let objective: { id: string; name: string; status: unknown } | null = null;
   if (objectiveId) {
@@ -238,8 +236,8 @@ async function readIssue(
     }
   }
 
-  // Plan parsé en tâches indexées : c'est la forme actionnable (« plan prêt,
-  // plus qu'à l'appliquer ») — les états [ ]/[~]/[x]/[-] deviennent lisibles.
+  // Plan parsed into indexed tasks: this is the actionable form (“ready plan,
+  // just apply it") — the states [ ]/[~]/[x]/[-] become readable.
   const plan = detail.issue.plan;
   const parsed = typeof plan === "string" && plan ? parsePlan(plan) : null;
 
@@ -255,8 +253,8 @@ async function readIssue(
     result: {
       issue: {
         ...detail.issue,
-        // Sur un AUTRE ticket que celui du run, c'est par là que l'agent apprend
-        // comment le nommer (« MIN-7 ») — jamais par son uuid.
+        // On an OTHER ticket than the run ticket, this is how the agent learns
+        // how to name it (“MIN-7”) — never by its uuid.
         identifier: target.issue.identifier,
         ...(assigneeName ? { assignee_name: assigneeName } : {}),
         ...(objective
@@ -292,19 +290,19 @@ async function readIssue(
 }
 
 /**
- * `read_feedback` (MIN-196) — la DEMANDE derrière le ticket, dans les mots de
- * qui l'a formulée, avec sa conversation.
+ * `read_feedback` (MIN-196) — the REQUEST behind the ticket, in the words of
+ * who made it, with his conversation.
  *
- * L'agent arrive ici par `read_issue`, qui liste les retours du ticket dans
- * `linked_feedback` : c'est de là que vient l'id. Le périmètre est le PROJET du
- * run, comme pour les pièces jointes — un retour d'un autre projet est refusé.
+ * The agent arrives here by `read_issue`, which lists the returns of the ticket in
+ * `linked_feedback`: this is where the id comes from. The scope is the PROJECT of the
+ * run, as for attachments — a return from another project is refused.
  *
- * Chaque commentaire porte sa visibilité, parce que les deux ne s'écoutent pas
- * pareil : un commentaire PUBLIC vient d'un utilisateur du produit qui décrit
- * son cas — c'est la matière la plus proche du besoin réel — tandis qu'une note
- * INTERNE est une décision d'équipe, qui peut contredire la demande. Les
- * confondre, c'est prendre l'arbitrage de l'équipe pour le besoin de l'usager,
- * ou l'inverse.
+ * Each comment carries its visibility, because the two do not listen to each other
+ * same: a PUBLIC comment comes from a user of the product who describes
+ * its case — it is the subject closest to the real need — while an INTERNAL
+ * note is a team decision, which may contradict the request. The
+ * to confuse is to take the arbitration of the team for the needs of the user,
+ * or the opposite.
  */
 async function readFeedback(
   ctx: IssueToolContext,
@@ -355,8 +353,8 @@ async function readFeedback(
               toNamed(c.author_id && users ? users.get(c.author_id as string) : null),
               "User",
             ),
-      // « board visitor » = quelqu'un HORS de l'équipe. C'est ce qui distingue
-      // un besoin rapporté d'un arbitrage interne.
+      // “board visitor” = someone OUTSIDE the team. This is what distinguishes
+      // a reported need for internal arbitration.
       from: visitor ? "board visitor" : "team",
       visibility: (c.visibility as string) ?? "internal",
       body: cap(String(c.body ?? ""), COMMENT_BODY_MAX_CHARS),
@@ -369,8 +367,8 @@ async function readFeedback(
       feedback: {
         id: detail.id,
         title: detail.title,
-        // Le texte SOUMIS à côté du canonique : l'équipe réécrit souvent le
-        // titre et le corps, et l'original est ce que la personne a tapé.
+        // The SUBMITTED text next to the canonical: the team often rewrites the
+        // title and body, and the original is what the person typed.
         body: cap(String(detail.body ?? ""), FEEDBACK_BODY_MAX_CHARS),
         submitted_title: detail.submitted_title,
         submitted_body: cap(String(detail.submitted_body ?? ""), FEEDBACK_BODY_MAX_CHARS),
@@ -389,8 +387,8 @@ async function readResource(
   ctx: IssueToolContext,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
-  // `attachment_id` reste accepté : un checkpoint écrit avant MIN-184 rejoue
-  // l'ancien appel avec l'ancien argument, et le rejeu doit aboutir.
+  // `attachment_id` remains accepted: a checkpoint written before MIN-184 replays
+  // the old call with the old argument, and the replay should succeed.
   const resourceId =
     typeof args.resource_id === "string"
       ? args.resource_id
@@ -402,10 +400,10 @@ async function readResource(
   }
 
   const service = getServiceClient();
-  // Périmètre = le PROJET du run, pas le seul ticket d'ancrage : les ids que
-  // `read_issue` renvoie sur un autre ticket doivent être ouvrables. Le parent
-  // est relu puis épinglé au projet — une ressource d'un autre projet est
-  // introuvable, exactement comme avant.
+  // Scope = the PROJECT of the run, not the only anchor ticket: the ids that
+  // `read_issue` returns to another ticket must be open. The parent
+  // is reread then pinned to the project — a resource from another project is
+  // not found, exactly like before.
   const { data: row } = await service
     .from("attachments")
     .select(
@@ -416,9 +414,9 @@ async function readResource(
   if (!row) {
     return { result: { error: "Resource not found." }, success: false };
   }
-  // Une ressource pend d'un ticket OU d'un objectif : le ticket passe par
-  // `assertIssueInProject` (qui vérifie aussi qu'il n'est pas à la corbeille),
-  // l'objectif par le `project_id` que la ligne porte elle-même.
+  // A resource depends on a ticket OR an objective: the ticket goes through
+  // `assertIssueInProject` (which also checks that it is not in the trash),
+  // the objective by the `project_id` that the line itself carries.
   const inProject = row.issue_id
     ? (await assertIssueInProject(service, row.issue_id as string, ctx.projectId)).ok
     : row.project_id === ctx.projectId;
@@ -426,10 +424,10 @@ async function readResource(
     return { result: { error: "Resource not found in this project." }, success: false };
   }
 
-  // Une page du wiki (MIN-275) : son corps se lit par `read_page`, qui rend du
-  // markdown — le recopier ici ferait une seconde porte à tenir. Lecture en clé
-  // service, donc une page corbeillée remonte aussi : c'est `deleted_at` qui le
-  // dit, pas une absence.
+  // A page from the wiki (MIN-275): its body reads `read_page`, which renders
+  // markdown — copying it here would make a second door to hold. Reading in key
+  // service, so a trashed page also comes up: it's `deleted_at` which
+  // said, not an absence.
   if (row.kind === "page") {
     const page = joinedPage(row.page);
     return {
@@ -446,7 +444,7 @@ async function readResource(
     };
   }
 
-  // Un lien n'a pas d'octets : ni URL signée, ni contenu inline.
+  // A link has no bytes: neither signed URL nor inline content.
   if (row.kind === "link") {
     return {
       result: {
@@ -479,10 +477,10 @@ async function readResource(
     download_url_expires_in_seconds: 600,
   };
 
-  // Une MAQUETTE se regarde (MIN-111). L'image part en data URL dans le message :
-  // l'URL signée, elle, expire en 10 minutes alors que le checkpoint est rejoué
-  // des heures plus tard. C'est le seul chemin par lequel l'agent VOIT ce que
-  // quelqu'un a déposé sur le ticket, au lieu d'en lire la fiche signalétique.
+  // A MODEL looks at itself (MIN-111). The image is sent as a data URL in the message:
+  // the signed URL expires in 10 minutes while the checkpoint is replayed
+  // hours later. It is the only way by which the agent SEES what
+  // someone filed on the ticket, instead of reading the data sheet.
   if (VIEWABLE_IMAGE_MIMES.has(mime) && ctx.imageInput) {
     if (size > ATTACHMENT_IMAGE_MAX_BYTES) {
       return {
@@ -501,8 +499,8 @@ async function readResource(
         images: [{ url: `data:${mime};base64,${buf.toString("base64")}`, name: fileName }],
       };
     }
-    // Téléchargement raté ou taille réelle au-dessus du cap → on retombe sur
-    // l'URL signée, en le disant (le modèle ne doit pas croire qu'il a vu l'image).
+    // Failed download or real size above the cap → we fall back on
+    // the signed URL, saying so (the model must not believe it has seen the image).
   }
 
   if (isTextMime(mime) && size <= ATTACHMENT_INLINE_MAX_BYTES) {
@@ -512,11 +510,11 @@ async function readResource(
       return {
         result: {
           ...meta,
-          // La coupe garde la TÊTE ET LA QUEUE (MIN-247). Elle coupait par la
-          // tête, ce qui est exactement le défaut que MIN-107 avait nommé pour
-          // `run_command` et jamais porté ici : sur un log, une trace, un
-          // export, la fin est la partie utile — et une pièce jointe déposée
-          // sur un ticket est presque toujours l'un des trois.
+          // The cup keeps the HEAD AND THE TAIL (MIN-247). She cut through the
+          // head, which is exactly the fault that MIN-107 had named for
+          // `run_command` and never worn here: on a log, a trace, a
+          // export, the end is the useful part — and an attachment filed
+          // on a ticket is almost always one of three.
           content: headTail(text, ATTACHMENT_INLINE_MAX_CHARS),
           ...(text.length > ATTACHMENT_INLINE_MAX_CHARS
             ? {
@@ -541,10 +539,10 @@ async function readResource(
 }
 
 /**
- * Champs qu'un agent n'écrit PAS, et pourquoi le refus est explicite plutôt que
- * silencieux : `status` et `priority` sont hors schéma, mais un champ hors schéma
- * est régulièrement halluciné — avalé sans rien dire, le modèle croirait avoir
- * fermé un ticket. Il reçoit donc une erreur qui lui dit quoi faire à la place.
+ * Fields that an agent does NOT write, and why the denial is explicit rather than
+ * silent: `status` and `priority` are out-of-schema, but an out-of-schema field
+ * is regularly hallucinated — swallowed without saying anything, the model would believe it has
+ * closed a ticket. So it receives an error that tells it what to do instead.
  */
 const REFUSED_UPDATE_FIELDS: Record<string, string> = {
   status:
@@ -577,7 +575,7 @@ async function updateIssue(
     changed.push("description");
   }
   if (args.effort !== undefined) {
-    // `null` efface l'estimation — c'est la seule façon de la retirer.
+    // `null` clears the estimate — this is the only way to remove it.
     if (args.effort !== null && !isEffort(args.effort)) {
       return {
         result: { error: "effort must be one of: xs, s, m, l, xl (or null to clear it)." },
@@ -587,9 +585,9 @@ async function updateIssue(
     input.effort = args.effort;
     changed.push("effort");
   }
-  // Le rattachement à un OBJECTIF (MIN-287) : `null` détache. C'est le geste qui
-  // fait entrer le ticket dans une barre de progression et dans le remplissage
-  // de cycle — sans lui, l'humain repasse derrière l'agent pour ranger.
+  // Attachment to an OBJECTIVE (MIN-287): `null` detaches. It is the gesture that
+  // enters the ticket into a progress bar and into the fill
+  // cycle — without it, the human goes back behind the agent to tidy up.
   if (args.objective !== undefined) {
     if (args.objective === null) {
       input.objective_id = null;
@@ -676,9 +674,9 @@ async function writeIssuePlan(
 }
 
 /**
- * Le plan et la description d'un ticket TELS QU'ILS SONT STOCKÉS — ce que les
- * deux écritures chirurgicales ci-dessous lisent avant de patcher : ce qu'on
- * n'a pas relu, on ne peut pas l'écraser sans le voir.
+ * The plan and description of a ticket AS STORED — what the
+ * two surgical scripts below read before patching: what we
+ * didn't read again, we can't overwrite it without seeing it.
  */
 async function readIssueText(
   issueId: string,
@@ -785,8 +783,8 @@ async function editIssueTextTool(
   });
   if (!edit.ok) return { result: { error: edit.message }, success: false };
 
-  // La description est TRONQUÉE en silence au-delà de sa borne : la vérifier
-  // ici est la seule façon de le dire au modèle.
+  // The description is silently TRUNCATED beyond its limit: check it
+  // here is the only way to tell the model.
   const limit = field === "plan" ? MAX_PLAN_LENGTH : MAX_DESCRIPTION_LENGTH;
   if (edit.content.length > limit) {
     return {
@@ -839,8 +837,8 @@ async function createIssue(
   const title = typeof args.title === "string" ? args.title.trim() : "";
   if (!title) return { result: { error: "title is required." }, success: false };
 
-  // Un ticket créé hors de tout objectif est un ticket qu'un humain devra
-  // ranger : le rattachement se fait ICI, à la création (MIN-287).
+  // A ticket created without any objective is a ticket that a human will have to
+  // put away: the connection is made HERE, at creation (MIN-287).
   let objectiveId: string | null = null;
   if (typeof args.objective === "string" && args.objective.trim()) {
     const objective = await resolveObjectiveRef(ctx.projectId, args.objective);
@@ -856,8 +854,8 @@ async function createIssue(
     viaAssistant: true,
     input: {
       title,
-      // Statut d'atterrissage = le réglage de compte du lanceur, comme toute
-      // création qui passe par Numo. Jamais un paramètre du modèle.
+      // Landing Status = the launcher's account setting, like any
+      // creation that goes through Numo. Never a model parameter.
       status: ctx.numoDefaultStatus,
       ...(typeof args.description === "string" && args.description.trim()
         ? { description: args.description }
@@ -896,16 +894,16 @@ async function createIssue(
 }
 
 /**
- * `create_routine` (MIN-185) depuis un run d'agent : la MÊME fabrique que le
- * wizard, le chat et le MCP.
+ * `create_routine` (MIN-185) from an agent run: the SAME factory as the
+ * wizard, chat and MCP.
  *
- * L'appelant est le `created_by` du run — pas le owner du projet. Un run lancé
- * par un membre non-propriétaire se voit donc refuser la création, et le message
- * de refus doit le dire assez clairement pour que l'agent le RAPPORTE au lieu de
- * réessayer avec d'autres paramètres.
+ * The caller is the `created_by` of the run — not the project owner. A run launched
+ * by a non-owner member is therefore refused creation, and the refusal message
+ * must say this clearly enough for the agent to REPORT it instead of
+ * retrying with other parameters.
  *
- * Le tool n'est pas servi à un run de routine (drapeau `interactive` de
- * `agentToolsFor`) : une routine ne s'auto-réplique pas.
+ * The tool is not used in a routine run (`interactive` flag of
+ * `agentToolsFor`): a routine does not self-replicate.
  */
 async function createRoutineTool(
   ctx: IssueToolContext,
@@ -960,7 +958,7 @@ async function createRoutineTool(
   };
 }
 
-/** Refus de la fabrique, dit en clair pour que l'agent le rapporte tel quel. */
+/** Refusal from the factory, said in clear so that the agent reports it as is. */
 function routineToolError(r: {
   errorKey: string;
   modelLimit?: { model: string; multiplier: number; limit: number; planId: string };
@@ -985,20 +983,20 @@ function routineToolError(r: {
   }
 }
 
-/** Cap du verdict écrit en base — un rapport, pas une dissertation. */
+/** Cap of the written verdict in base — a report, not a dissertation. */
 const VERDICT_SUMMARY_MAX_CHARS = 2000;
 const VERDICT_BLOCKER_MAX_CHARS = 400;
 const VERDICT_MAX_BLOCKERS = 20;
 
 /**
- * `report_verdict` (MIN-147) : ce que l'étape de vérification d'une chaîne
- * conclut. Écrit sur `agent_runs.verdict` du run COURANT — c'est ce que le
- * moteur lit pour décider entre « on continue », « on reprend une fois » et
- * « on rend la main en triage ».
+ * `report_verdict` (MIN-147): What the verifying a string
+ * step concludes. Written on `agent_runs.verdict` of the CURRENT run — this is what the
+ * engine reads to decide between "we continue", "we resume once" and
+ * "we give up in triage".
  *
- * Servi uniquement quand le run porte une chaîne (`agentToolsFor({ chain })`) ;
- * le refus ci-dessous n'attrape donc qu'un appel halluciné, mais il vaut mieux
- * une erreur explicite qu'un verdict écrit nulle part.
+ * Used only when the run carries a string (`agentToolsFor({ chain })`) ;
+ * the refusal below therefore only catches a hallucinatory appeal, but it is better
+ * an explicit error than a verdict written nowhere.
  */
 async function reportVerdict(
   ctx: IssueToolContext,
@@ -1038,7 +1036,7 @@ async function reportVerdict(
   return { result: { ok: true, recorded: args.ok ? "pass" : "fail" }, success: true };
 }
 
-/** Exécute un tool ticket. L'appelant a déjà routé sur `ISSUE_TOOL_NAMES`. */
+/** Runs a tool ticket. The caller has already routed to `ISSUE_TOOL_NAMES`. */
 export async function executeIssueTool(
   ctx: IssueToolContext,
   name: string,
@@ -1051,8 +1049,8 @@ export async function executeIssueTool(
       case "read_issue":
         return await readIssue(ctx, args);
       case "read_resource":
-      // Alias d'exécution : un run repris rejoue un checkpoint écrit sous
-      // l'ancien nom (cf. content.test.ts), et ce rejeu doit aboutir.
+      // Execution alias: a resumed run replays a checkpoint written under
+      // the old name (see content.test.ts), and this replay must succeed.
       case "read_attachment":
         return await readResource(ctx, args);
       case "read_feedback":
@@ -1071,9 +1069,9 @@ export async function executeIssueTool(
         return await createRoutineTool(ctx, args);
       case "report_verdict":
         return await reportVerdict(ctx, args);
-      // Les pages du projet : même contexte, exécuteur voisin (MIN-273).
+      // The project pages: same context, neighboring executor (MIN-273).
       case "list_pages":
-      // `search_pages` était servi au modèle et routé par `ISSUE_TOOL_NAMES`,
+      // `search_pages` was served to the model and routed by `ISSUE_TOOL_NAMES`,
       // mais absent d'ici : chaque appel repartait en « Unknown issue tool ».
       case "search_pages":
       case "read_page":
@@ -1086,7 +1084,7 @@ export async function executeIssueTool(
           name,
           args,
         );
-      // Les objectifs du projet : même contexte, exécuteur voisin (MIN-287).
+      // The objectives of the project: same context, neighboring executor (MIN-287).
       case "list_objectives":
       case "read_objective":
       case "create_objective":

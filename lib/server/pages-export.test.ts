@@ -2,12 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import { unzipSync, strFromU8 } from "fflate";
 
 /**
- * MIN-283 — l'export, du côté qui touche à la base : ce qui part vraiment dans
- * l'archive, et ce qui n'y part pas.
+ * MIN-283 — export, from the side that touches the base: what really goes into
+ * the archive, and what does not go there.
  *
- * La projection markdown est stubbée : ce n'est pas elle qu'on teste ici (MIN-269
- * la joue bloc par bloc, aller-retour compris), c'est le CHAÎNAGE — la branche
- * retenue, la corbeille exclue, l'archive relue.
+ * The markdown projection is stubbed: it is not what we are testing here (MIN-269
+ * the play block by block, round trip included), it is the CHAINING — the branch
+ * retained, the trash excluded, the archive reread.
  */
 
 const rows = {
@@ -25,8 +25,8 @@ const rows = {
 
 let access: unknown = { isOwner: true };
 
-/** Ce que la base a été priée de rendre — l'objet du contrôle de MIN-348 : la
-    liste du projet ne demande PAS les corps, et ceux-ci ne sont lus que pour la
+/** What the base was asked to return — the object of MIN-348's control: the
+    project list does NOT ask for bodies, and these are only read for
     branche. */
 const reads = { selects: [] as string[], bodyIds: [] as string[][] };
 
@@ -79,7 +79,7 @@ function branchRows() {
       content: null,
       position: "b",
     },
-    // Une page d'une AUTRE branche du même projet : elle ne doit pas suivre.
+    // A page from ANOTHER branch of the same project: it should not follow.
     {
       id: "voisine",
       parent_id: "hors-branche",
@@ -110,15 +110,15 @@ describe("exportPage", () => {
     if (!result.ok) return;
     expect(result.fileName).toBe("Guide.zip");
 
-    // Relue : c'est le seul contrôle qui prouve qu'on a produit un vrai zip.
+    // Reread: this is the only check that proves that we have produced a real zip.
     const entries = unzipSync(result.body);
     expect(Object.keys(entries).sort()).toEqual([
       "Guide/Intro.md",
       "Guide/index.md",
     ]);
     expect(strFromU8(entries["Guide/index.md"])).toContain("corps de Guide");
-    // La racine de l'archive est la page exportée : son parent réel, qui n'est
-    // pas de la branche, ne la fait pas descendre d'un cran.
+    // The root of the archive is the exported page: its real parent, which is not
+    // Don't take the branch, don't take it down a notch.
     expect(Object.keys(entries).every((p) => p.startsWith("Guide/"))).toBe(true);
   });
 
@@ -130,15 +130,15 @@ describe("exportPage", () => {
     const result = await exportPage({ pageId: "root", actorId: "u", branch: true });
     expect(result.ok).toBe(true);
 
-    // La liste du projet est un SQUELETTE : sans elle, exporter une page d'un
+    // The project list is a SKELETON: without it, export a page from a
     // wiki de mille documents en chargeait mille corps (MIN-348).
     const listSelect = reads.selects.find(
       (s) => s.includes("parent_id") && !s.includes("project_id")
     );
     expect(listSelect).toBeDefined();
     expect(listSelect).not.toContain("content");
-    // Et les corps demandés sont ceux de la branche, la racine exceptée (elle
-    // est déjà lue). La voisine n'y est pas.
+    // And the bodies requested are those of the branch, except the root (it
+    // is already read). The neighbor is not there.
     expect(reads.bodyIds.flat()).toEqual(["kid"]);
   });
 

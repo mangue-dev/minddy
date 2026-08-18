@@ -1,17 +1,17 @@
 // @vitest-environment jsdom
 //
-// Le garde-fou de la PORTE d'écriture des pages (MIN-350).
+// The guardrail of the DOOR for writing pages (MIN-350).
 //
-// Deux choses, et la première est celle qui se périme : `lib/page-content-schema.ts`
-// écrit à la main la liste des nœuds, des marques et de leurs attributs, parce
-// qu'un serveur ne peut pas monter un éditeur tiptap à chaque sauvegarde pour la
-// demander au registre. Cette liste doit donc être tenue égale au registre — et
-// c'est ce fichier qui la tient, en montant le VRAI schéma sous jsdom, comme
+// Two things, and the first is the one that expires: `lib/page-content-schema.ts`
+// handwrite the list of nodes, marks and their attributes, because
+// that a server cannot mount a tiptap editor on each backup for
+// ask the registry. This list must therefore be kept equal to the register — and
+// it is this file that holds it, by mounting the REAL schema under jsdom, like
 // lib/pages-blocks.test.ts.
 //
-// Un bloc ajouté sans son entrée dans la liste fait tomber ce test. C'est la
-// seule façon d'avoir les deux : une validation qui ne coûte rien à l'écriture,
-// et une liste qui ne dérive pas.
+// A block added without its entry in the list causes this test to fail. This is the
+// only way to have both: a validation that costs nothing to write,
+// and a list that does not drift.
 
 import { describe, expect, it } from "vitest";
 import { Editor } from "@tiptap/core";
@@ -43,30 +43,30 @@ function sorted(table: Record<string, readonly string[]>) {
   );
 }
 
-describe("la liste écrite à la main et le registre", () => {
-  it("disent exactement les mêmes nœuds et les mêmes attributs", () => {
+describe("the hand-written list and the registry", () => {
+  it("contain exactly the same nodes and attributes", () => {
     expect(sorted(PAGE_NODE_ATTRIBUTES)).toEqual(schema().nodes);
   });
 
-  it("disent exactement les mêmes marques et les mêmes attributs", () => {
+  it("contain exactly the same marks and attributes", () => {
     expect(sorted(PAGE_MARK_ATTRIBUTES)).toEqual(schema().marks);
   });
 });
 
 describe("les adresses", () => {
   it("accepte ce que minddy sert et ce qu'un auteur cite légitimement", () => {
-    // Nos fichiers sont RELATIFS (lib/page-files.ts), et une image externe est
-    // un cas normal et documenté (blocks/image.ts).
+    // Our files are RELATIVE (lib/page-files.ts), and an external image is
+    // a normal and documented case (blocks/image.ts).
     expect(isSafePageUrl("/api/projects/x/pages/files/y")).toBe(true);
     expect(isSafePageUrl("https://exemple.org/graphe.png")).toBe(true);
     expect(isSafePageUrl("//exemple.org/graphe.png")).toBe(true);
     expect(isSafePageUrl("mailto:contact@minddy.app")).toBe(true);
   });
 
-  it("refuse un protocole qui exécute, blancs et casse compris", () => {
+  it("rejects an executable protocol, including whitespace and casing", () => {
     expect(isSafePageUrl("javascript:alert(1)")).toBe(false);
-    // Les navigateurs suivent celles-ci : la normalisation retire blancs et
-    // caractères de contrôle AVANT de lire le protocole.
+    // Browsers follow these: normalization removes whitespace and
+    // control characters BEFORE reading the protocol.
     expect(isSafePageUrl("java\tscript:alert(1)")).toBe(false);
     expect(isSafePageUrl(" JavaScript:alert(1)")).toBe(false);
     expect(isSafePageUrl("java\nscript:alert(1)")).toBe(false);
@@ -78,7 +78,7 @@ describe("les adresses", () => {
 });
 
 describe("le corps", () => {
-  it("refuse tout le document dès qu'une adresse est hostile", () => {
+  it("rejects the entire document as soon as an address is hostile", () => {
     expect(
       checkPageContent({
         type: "doc",
@@ -109,7 +109,7 @@ describe("le corps", () => {
     ).toEqual({ ok: false, reason: "unsafe-url" });
   });
 
-  it("refuse un nœud et une marque que personne ne sait rendre", () => {
+  it("rejects a node and a mark that no surface can render", () => {
     expect(
       checkPageContent({ type: "doc", content: [{ type: "script" }] })
     ).toEqual({ ok: false, reason: "unknown-node" });
@@ -126,7 +126,7 @@ describe("le corps", () => {
     ).toEqual({ ok: false, reason: "unknown-node" });
   });
 
-  it("refuse une racine qui n'est pas un document", () => {
+  it("rejects a root that is not a document", () => {
     expect(checkPageContent({ type: "paragraph" })).toEqual({
       ok: false,
       reason: "unknown-node",
@@ -134,9 +134,9 @@ describe("le corps", () => {
   });
 
   it("RETIRE un attribut inconnu au lieu de refuser la page", () => {
-    // C'est déjà ce que fait ProseMirror en chargeant le document ; refuser
-    // rendrait tout déploiement de l'éditeur capable de bloquer un onglet resté
-    // ouvert sur la version d'avant.
+    // This is already what ProseMirror does by loading the document; refuse
+    // would make any deployment of the editor capable of blocking a left tab
+    // open on the previous version.
     const checked = checkPageContent({
       type: "doc",
       content: [

@@ -181,24 +181,24 @@ export type NotificationType =
   | "pr_reviewed"
   /** A PR the agent opened for me was merged on the forge. */
   | "pr_merged"
-  /** Une pull request vient de s'ouvrir sur un dépôt lié à un de mes projets —
-      de Numo ou d'un humain, elle attend des yeux dans les deux cas. */
+  /** A pull request has just opened on a repository linked to one of my projects —
+ from Numo or a human, it is waiting for eyes in both cases. */
   | "pr_opened"
-  /** Une chaîne d'automatisation attend un feu vert humain (MIN-147). */
+  /** An automation chain is waiting for a human green light (MIN-147). */
   | "automation_paused"
-  /** Une chaîne d'automatisation s'est arrêtée : budget, quota, vérif en échec. */
+  /** An automation chain has stopped: budget, quota, check failed. */
   | "automation_stopped"
-  /** Un passage de routine s'est terminé sans rien pousser — le cas où ni la PR
-      ni l'échec ne parlent, et où la routine ne disait donc rien du tout. */
+  /** A routine pass completed without pushing anything — the case where neither the PR
+ nor the failure spoke, and the routine therefore said nothing at all. */
   | "routine_done"
-  /** On m'a cité dans une PAGE du wiki (MIN-278) — la même phrase que dans un
-      commentaire de ticket, qui elle prévenait déjà. */
+  /** I was quoted in a wiki PAGE (MIN-278) — the same sentence as in a
+ ticket comment, which she already warned about. */
   | "page_mention"
-  /** L'agent a écrit dans une page. Au seul lanceur du run : une page réécrite
-      en silence est le pendant du problème que MIN-277 a outillé. */
+  /** The agent wrote in a page. To the only launcher of the run: a page rewritten
+ in silence is the counterpart of the problem that MIN-277 has equipped. */
   | "page_agent_edit"
-  /** On a commenté une page que j'ai écrite, ou un fil auquel j'ai participé
-      (MIN-282) — le pendant exact de `comment` sur un ticket. */
+  /** Someone commented on a page I wrote, or a thread I participated in
+ (MIN-282) — the exact counterpart of `comment` on a ticket. */
   | "page_comment";
 
 /** A notification enriched for the Inbox UI. */
@@ -208,7 +208,7 @@ export interface MyNotification {
   read_at: string | null;
   created_at: string;
   issue_id: string | null;
-  /** Conversation de code visee, y compris lorsqu'elle n'a aucun ticket. */
+  /** Targeted code conversation, including when it has no tickets. */
   agent_conversation_id: string | null;
   agent_conversation_title: string | null;
   issue_number: number | null;
@@ -223,13 +223,12 @@ export interface MyNotification {
       a scheduled run has no ticket; its executions live in the routine. */
   routine_id: string | null;
   routine_title: string | null;
-  /** Set instead of all of the above when it points at a PULL REQUEST : elle se
-      lit sur la page Pull requests, qui n'appartient à aucun projet. */
+  /** Set instead of all of the above when it points at a PULL REQUEST: it reads on the Pull requests page, which does not belong to any project. */
   pull_request_id: string | null;
   pull_request_number: number | null;
   pull_request_title: string | null;
-  /** Set instead of all of the above when it points at a PAGE (MIN-278) — le
-      wiki du projet ; `block_id` affine la cible au bloc quand on le connaît. */
+  /** Set instead of all of the above when it points at a PAGE (MIN-278) — the
+ project wiki; `block_id` refines the target to the block when it is known. */
   page_id: string | null;
   page_title: string | null;
   block_id: string | null;
@@ -251,46 +250,46 @@ export interface MyNotification {
   api_key_name: string | null;
   /** The assignment was made by Smart Assign (no human actor). */
   via_smart_assign: boolean;
-  /** La ligne vient d'une automatisation de projet (MIN-147) — même raison que
-      `via_smart_assign` : sans ça l'inbox lit un acteur nul et dit « Quelqu'un ». */
+  /** The line comes from a project automation (MIN-147) — same reason as
+ `via_smart_assign`: otherwise the inbox reads a null actor and says "Someone". */
   via_automation: boolean;
   /** First characters of the comment that triggered a mention/comment row. */
   comment_excerpt: string | null;
 }
 
 /**
- * Un appareil abonné aux notifications push (MIN-183) — une entrée par
- * navigateur, telle que la carte des réglages la montre.
+ * A device subscribed to push notifications (MIN-183) — an entry by
+ * browser, as the settings map shows.
  *
- * `p256dh` / `auth` n'y sont PAS : ce sont les clés du chiffrement de bout en
- * bout, des secrets d'appareil qui ne sortent jamais du serveur (voir
- * lib/server/push/columns.ts). `endpoint`, lui, sort — c'est ce que le client
- * compare au sien pour reconnaître « cet appareil-ci ».
+ * `p256dh` / `auth` are NOT there: these are the end encryption keys en
+ * end, device secrets that never leave the server (see
+ * lib/server/push/columns.ts). `endpoint` comes out — this is what the client
+ * compares to his own to recognize “this device”.
  */
 export interface PushDevice {
   id: string;
   endpoint: string;
-  /** Le protocole qui joint cet appareil : VAPID sur le web, APNs dans l'app macOS. */
+  /** The protocol that joins this device: VAPID on the web, APNs in the macOS app. */
   transport: "web" | "apns";
-  /** « Chrome sur macOS » — calculé côté serveur (lib/device-label.ts). */
+  /** “Chrome on macOS” — calculated server-side (lib/device-label.ts). */
   device_label: string | null;
-  /** La langue de l'appareil, figée à l'abonnement : le téléphone en français
-      et le portable de travail en anglais sont deux appareils. */
+  /** The language of the device, fixed at the subscription: the telephone in French
+ and the work laptop in English are two devices. */
   locale: string;
-  /** Éteint sans être désinscrit : la permission reste acquise, un clic rallume. */
+  /** Turned off without being unsubscribed: permission remains granted, one click turns it back on. */
   enabled: boolean;
   created_at: string;
   last_seen_at: string;
   last_push_at: string | null;
 }
 
-// ── Statistiques utilisateur (MIN-12) ────────────────────────────────────────
+// ── User statistics (MIN-12) ──────────────────── ────────────────────
 export interface StatsTotals {
   created: number;
   completed: number;
   projects: number;
-  /** Tâches cochées dans le carnet, cumulées : le carnet étant une note libre
-   *  (on y coche puis on supprime), ce total vient du ledger, pas de la note. */
+  /** Tasks checked in the notebook, cumulative: the notebook being a free note
+ * (we check it then we delete), this total comes from the ledger, not the note. */
   tasksCompleted: number;
 }
 
@@ -303,71 +302,71 @@ export interface StatProjectBucket {
 }
 
 export interface HeatmapDay {
-  /** Jour local (fuseau du user), format YYYY-MM-DD. */
+  /** Local day (user timezone), format YYYY-MM-DD. */
   date: string;
-  /** Tout ce qui a été terminé ce jour-là = `issues` + `tasks`. */
+  /** Whatever was completed that day = `issues` + `tasks`. */
   count: number;
-  /** Tickets passés en Terminé ce jour-là. */
+  /** Tickets changed to Done that day. */
   issues: number;
-  /** Tâches cochées dans le carnet ce jour-là. */
+  /** Tasks checked in the notebook that day. */
   tasks: number;
 }
 
 export interface StatsHeatmap {
   tz: string;
-  /** Premier jour de la grille (un dimanche), YYYY-MM-DD. */
+  /** First day of the schedule (a Sunday), YYYY-MM-DD. */
   start: string;
-  /** Dernier jour de la grille (aujourd'hui dans `tz`), YYYY-MM-DD. */
+  /** Last day of the grid (today in `tz`), YYYY-MM-DD. */
   end: string;
-  /** Compte max sur un jour (échelle d'intensité). */
+  /** Max count over one day (intensity scale). */
   max: number;
-  /** Série DENSE start→end (un point par jour, count 0 inclus). */
+  /** DENSE start→end series (one point per day, count 0 included). */
   days: HeatmapDay[];
 }
 
 export interface StatsWorkload {
-  /** Issues ouvertes qui me sont assignées (live). */
+  /** Open issues assigned to me (live). */
   assignedOpen: number;
   inProgress: number;
 }
 
-/** Élan récent : ce qui a été terminé sur 7 jours glissants, et la même mesure
- *  sur les 7 jours d'avant pour donner la tendance. */
+/** Recent momentum: what was completed over 7 rolling days, and the same measurement
+ * over the 7 days before to give the trend. */
 export interface StatsWeek {
-  /** Tickets terminés + tâches cochées sur les 7 derniers jours (aujourd'hui inclus). */
+  /** Completed tickets + checked tasks over the last 7 days (today included). */
   completed: number;
-  /** Part des tickets dans `completed`. */
+  /** Share of tickets in `completed`. */
   issues: number;
-  /** Part des tâches du carnet dans `completed`. */
+  /** Share of notebook tasks in `completed`. */
   tasks: number;
-  /** Même total sur les 7 jours précédents — la base de comparaison. */
+  /** Same total over the previous 7 days — the basis for comparison. */
   previous: number;
 }
 
-/** Temps médian de complétion pour un niveau d'effort (MIN-58). */
+/** Median completion time for an effort level (MIN-58). */
 export interface StatsCycleEffort {
   effort: "xs" | "s" | "m" | "l" | "xl";
-  /** Médiane du « cycle time » (premier in_progress → done), en secondes : un
-   *  ticket laissé ouvert trois semaines la décale d'un rang, pas de trois
-   *  semaines — ce que la moyenne ne sait pas faire sur une traîne longue. */
+  /** Median of the “cycle time” (first in_progress → done), in seconds: one
+ * ticket left open three weeks shifts it by one rank, not three
+ * weeks — which the average cannot do on a long tail. */
   medianSeconds: number;
-  /** Nombre de tickets terminés dans cette médiane. */
+  /** Number of tickets completed in this median. */
   sample: number;
 }
 
-/** Statistiques liées aux cycles (MIN-58), toutes scopées à l'utilisateur. */
+/** Statistics related to cycles (MIN-58), all scoped to the user. */
 export interface StatsCycles {
-  /** Écart moyen complétion↔échéance, en jours ; négatif = en avance, positif =
-   *  en retard. null s'il n'y a aucun ticket terminé avec une échéance. */
+  /** Average completion↔deadline gap, in days; negative = early, positive =
+ * late. null if there are no completed tickets with a deadline. */
   avgCompletionOffsetDays: number | null;
-  /** Nombre de tickets dans la moyenne de cadence. */
+  /** Number of tickets in the average rate. */
   completionOffsetSample: number;
-  /** Nombre moyen de tickets par cycle démarré ; null si aucun cycle. */
+  /** Average number of tickets per cycle started; null if no cycle. */
   avgIssuesPerCycle: number | null;
-  /** Nombre de cycles démarrés pris en compte. */
+  /** Number of started cycles taken into account. */
   cycleCount: number;
-  /** Durée médiane de complétion par effort (xs→xl), efforts sans échantillon
-   *  omis. */
+  /** Median completion time per effort (xs→xl), efforts without sample
+ * omitted. */
   byEffort: StatsCycleEffort[];
 }
 
@@ -386,7 +385,7 @@ export interface IssueEvent {
       (the event's parent — issue_events_parent_ck). */
   issue_id: string | null;
   objective_id?: string | null;
-  /** Une PAGE du wiki (MIN-278) : créée, modifiée, mise à la corbeille. */
+  /** A wiki PAGE (MIN-278): created, modified, trashed. */
   page_id?: string | null;
   actor_id: string | null;
   type: string;
@@ -409,22 +408,22 @@ export interface IssueEvent {
   /** True when the assignment was made by Smart Assign — the timeline shows
       "Smart Assign" as the actor. */
   via_smart_assign?: boolean;
-  /** Le modèle a choisi cet assigné d'après les règles d'attribution. False
-      quand Smart Assign a tranché sans IA (projet solo, aucune règle écrite,
-      appel en échec) : la timeline ne dit pas la même phrase. */
+  /** The model chose this assignee according to the assignment rules. False
+ when Smart Assign has decided without AI (solo project, no written rule,
+ call failed): the timeline does not say the same sentence. */
   smart_assign_ai?: boolean;
-  /** Smart-fill (MIN-260) a rempli le ticket à sa création — la timeline
-      affiche « Smart-fill » comme acteur, pas la personne qui a écrit le
-      ticket : elle n'a pas posé ces propriétés-là. `to_value` porte la liste
-      des champs remplis, séparés par des virgules. */
+  /** Smart-fill (MIN-260) filled the ticket when it was created — the
+ timeline shows “Smart-fill” as an actor, not the person who wrote the
+ ticket: she did not set these properties. `to_value` carries the list
+ of filled fields, separated by commas. */
   via_smart_fill?: boolean;
-  /** L'événement a été produit par une automatisation de projet (MIN-147) — la
-      timeline affiche l'automatisation comme acteur, pas l'utilisateur dont
-      l'id sert techniquement d'auteur de l'écriture. */
+  /** The event was produced by a project automation (MIN-147) — the
+ timeline shows the automation as the actor, not the user whose id
+ technically serves as the author of the entry. */
   via_automation?: boolean;
-  /** Provider ('github' | 'gitlab') quand l'événement vient de la synchro des
-      issues du dépôt lié (MIN-97) — la timeline affiche la forge comme acteur,
-      pas le membre dont l'id sert techniquement d'auteur de l'écriture. */
+  /** Provider ('github' | 'gitlab') when the event comes from the synchronization of
+ from the linked repository (MIN-97) — the timeline displays the forge as actor,
+ not the member whose id technically serves as author of the writing. */
   forge_sync?: string | null;
   created_at: string;
 }
@@ -474,8 +473,8 @@ export interface Project {
   /** Icon imported from the live site's favicon (public storage URL); the UI
       falls back to the generated orb when null. */
   icon_url: string | null;
-  /** Graine de l'orbe générée, quand le tirage a été relancé. `null` = jamais
-      relancé, et la graine reste l'id — toujours lire via `projectOrbSeed()`. */
+  /** Seed of the orb generated, when the draw was restarted. `null` = never
+ restarted, and the seed remains the id — always read via `projectOrbSeed()`. */
   orb_seed: string | null;
   /** Smart Assign: auto-assign unassigned issues past triage (opt-in, owner-set). */
   smart_assign_enabled: boolean;
@@ -490,19 +489,19 @@ export interface Project {
   /** When the review is on but the owner's AI budget is spent: publish without
       review instead of holding the feedback back. */
   feedback_review_skip_over_budget: boolean;
-  /** Numo traduit les retours écrits dans une autre langue que celle de
-      l'équipe, pendant la même passe de revue. */
+  /** Numo translates feedback written in a language other than that of
+ the team, during the same review pass. */
   feedback_translate_enabled: boolean;
-  /** Langue de l'équipe (ISO 639-1) — celle vers laquelle on traduit. `null` =
-      jamais renseignée : la revue retombe sur la locale par défaut de l'app. */
+  /** Team language (ISO 639-1) — the one to which we translate. `null` =
+ never entered: the review falls back to the default locale of the app. */
   feedback_team_language: string | null;
-  /** Les langues qu'on lit sans aide, laissées telles quelles. */
+  /** Languages ​​that we read without help, left as they are. */
   feedback_no_translate_languages: string[];
-  /** Automatisations de projet (MIN-147) : l'interrupteur général de la boucle
-      Numo enchaînée. Off = les règles restent écrites mais rien ne se déclenche. */
+  /** Project automations (MIN-147): the general switch of the chained Numo
+ loop. Off = the rules remain written but nothing is triggered. */
   automations_enabled: boolean;
-  /** Les règles `quand … si … alors …`, telles que `parseAutomations` les lit.
-      Livrées par un préréglage, éditables ensuite. */
+  /** `when … if … then …` rules, such as `parseAutomations` reads.
+ Delivered by a preset, then editable. */
   automations: AutomationRule[];
   created_at: string;
   updated_at: string;
@@ -510,18 +509,18 @@ export interface Project {
 }
 
 export interface CreateProjectInput {
-  /** Id imposé par le client (wizard de création) — voir POST /api/projects. */
+  /** Id imposed by the client (creation wizard) — see POST /api/projects. */
   id?: string;
-  /** Graine de l'orbe relancée pendant le wizard, si elle l'a été (sinon `null`
-      et c'est l'id qui sert). */
+  /** Seed of the orb restarted during the wizard, if it was (otherwise `null`
+ and the id is used). */
   orb_seed?: string | null;
   name: string;
   key: string;
   color?: string | null;
   smart_assign_enabled?: boolean;
   auto_assign_enabled?: boolean;
-  /** Langue de l'interface au moment de la création (MIN — traduction des
-      retours) : elle devient la langue de l'équipe du projet. */
+  /** Language of the interface at the time of creation (MIN — translation of
+ returns): it becomes the language of the project team. */
   locale?: string;
 }
 
@@ -545,7 +544,7 @@ export interface Member {
   user_id: string;
   email: string | null;
   full_name: string | null;
-  /** Graine de l'avatar généré (public.user_avatars), jamais une URL d'image. */
+  /** Seed of the generated avatar (public.user_avatars), never an image URL. */
   avatar_seed: string;
   role: "owner" | "member";
   is_owner: boolean;
@@ -570,10 +569,10 @@ export interface IntegrationRef {
 }
 
 /**
- * Un ticket du cycle courant tel que le tableau de bord en a besoin (MIN-89) —
- * de quoi l'AFFICHER (identifiant, titre, statut) et l'ORDONNER (priorité,
- * effort, catégories pour le score reco). Ni description ni plan : la home ne
- * les rend jamais, et ce sont eux qui pèsent dans la charge utile du board.
+ * A ticket from the current cycle such as the dashboard needs (MIN-89) —
+ * enough to DISPLAY it (identification, title, status) and ORDER it (priority,
+ * effort, categories for the rec score). Neither description nor plan: the home never
+ * never returns them, and they are the ones that weigh in the payload of the board.
  */
 export interface HomeSummaryIssue {
   id: string;
@@ -583,24 +582,24 @@ export interface HomeSummaryIssue {
   status: IssueStatus;
   priority: IssuePriority;
   effort: IssueEffort | null;
-  /** Affichée par la section « Échéances proches » (MIN-96), qui s'en sert
-      aussi — avec `effort` — pour décider qui y entre. */
+  /** Displayed by the “Near Deadlines” section (MIN-96), which also uses
+ — along with `effort` — to decide who enters. */
   due_date: string | null;
   cycle_id: string | null;
   category_ids: string[];
-  /** Depuis combien de temps le ticket attend — affiché et trié par la section
-      « À trier » (MIN-104), qui met en haut ce qui a le plus patienté. */
+  /** How long the ticket has been waiting — displayed and sorted by the
+ “To sort” section (MIN-104), which puts what has been waiting the longest at the top. */
   created_at: string;
-  /** Dernier mouvement du ticket. C'est lui, et non `created_at`, que lit la
-      carte « En attente de moi » : un ticket en relecture attend depuis qu'il y
-      est entré, pas depuis qu'il a été écrit. */
+  /** Last movement of the ticket. It is he, not `created_at`, that the
+ card “Waiting for me” reads: a replay ticket has been waiting since
+ was entered, not since it was written. */
   updated_at: string;
 }
 
 /**
- * Un retour non encore tranché par l'équipe, tel que la section « À trier » de
- * l'accueil en a besoin (MIN-104) : de quoi le nommer, le peser (les voix) et le
- * dater. Ni le texte soumis ni les facettes — ça, c'est la page feedback.
+ * A return not yet decided by the team, such as the “To be sorted” section of
+ * the reception needs it (MIN-104): what to name it, weigh it (the votes) and date it
+ *. Neither the submitted text nor the facets — that's the feedback page.
  */
 export interface HomeSummaryFeedback {
   id: string;
@@ -611,84 +610,81 @@ export interface HomeSummaryFeedback {
 }
 
 /**
- * Un projet où Smart Assign tourne sans être vraiment réglé : il est actif, il
- * a plusieurs membres, et au moins l'un d'eux (le owner compris) n'a pas de
- * règle d'affectation. Sans règle, le modèle n'a rien à faire correspondre —
- * lib/server/smart-assign.ts retombe alors sur le owner.
+ * A project where Smart Assign is running without really being set: it is active, it
+ * has several members, and at least one of them (including the owner) does not have a
+ * assignment rule. Without a rule, the pattern has nothing to match —
+ * lib/server/smart-assign.ts then falls back to owner.
  */
 export interface SmartAssignConfigWarning {
   projectId: string;
   projectName: string;
-  /** Membres sans règle écrite. */
+  /** Members without written rules. */
   missingCount: number;
-  /** Taille de l'équipe, owner compris — toujours > 1 ici. */
+  /** Team size, including owner — always > 1 here. */
   memberCount: number;
 }
 
-/** Réponse de GET /api/me/smart-assign-warnings. */
+/** Response from GET /api/me/smart-assign-warnings. */
 export interface SmartAssignWarningsResponse {
   warnings: SmartAssignConfigWarning[];
 }
 
 /**
- * Ce qui attend d'être trié dans un projet — les deux moitiés de la file
- * « À trier » de l'accueil (MIN-104), comptées séparément parce que ce sont
- * exactement les deux compteurs que porteront les onglets Triage et Feedback
- * une fois qu'on sera ENTRÉ dans le projet. La ligne de projet de la sidebar
- * affiche leur somme, et il faut que ça tombe juste.
+ * What's waiting to be sorted in a project — the two halves of the
+ * "To be sorted" queue in Home (MIN-104), counted separately because they are
+ * exactly the two counters that the Sorting and Feedback tabs
+ * will carry once we ENTER the project. The sidebar project line
+ * displays their sum, and it has to be right.
  */
 export interface ProjectTriageCount {
   /** Tickets en statut `triage`. */
   triage: number;
-  /** Retours canoniques encore ouverts ou prévus (`open` | `planned`). */
+  /** Canonical returns still open or planned (`open` | `planned`). */
   feedback: number;
 }
 
 /**
- * Réponse de GET /api/me/triage-counts, indexée par id de projet. Un projet
- * dont la file est vide est ABSENT de la table plutôt que présent à zéro : le
- * cas courant est « rien à trier nulle part », et il ne coûte alors rien.
+ * Response from GET /api/me/triage-counts, indexed by project id. A project
+ * whose queue is empty is ABSENT from the table rather than present at zero: the common case is "nothing to sort anywhere", and it then costs nothing.
  */
 export interface TriageCountsResponse {
   counts: Record<string, ProjectTriageCount>;
 }
 
-/** Réponse de GET /api/me/summary — la charge utile du tableau de bord. */
+/** Response from GET /api/me/summary — the dashboard payload. */
 export interface HomeSummaryResponse {
   /**
-   * Compteur agrégé, calculé en SQL : aucune ligne ne traverse le réseau. Tous
-   * statuts confondus — l'onboarding demande « as-tu déjà créé un ticket ? »,
-   * pas « en as-tu un ouvert ? ».
-   */
+ * Aggregated counter, calculated in SQL: no lines cross the network. All
+ * statuses combined — onboarding asks “have you already created a ticket?” »,
+ * not “do you have one open?” .
+ */
   counts: { total: number };
   cycles: BoardCycles;
-  /** Tickets du cycle courant (vide quand il n'y a pas de cycle en cours). */
+  /** Tickets in the current cycle (empty when there is no active cycle). */
   cycleIssues: HomeSummaryIssue[];
   /**
-   * Tickets ouverts dont l'échéance approche (MIN-96), déjà triés du plus urgent
-   * au moins urgent. La fenêtre dépend de l'effort — lib/due-soon.ts — et le
-   * tri est fait ici parce que « jours restants » se compte dans le fuseau de
-   * l'utilisateur, que seul le serveur connaît (paramètre `tz`).
-   */
+ * Open tickets whose deadline is approaching (MIN-96), already sorted from most urgent
+ * to least urgent. The window depends on the effort — lib/due-soon.ts — and the
+ * sort is done here because "days remaining" is counted in the user's timezone, which only the server knows (`tz` parameter).
+ */
   dueSoon: HomeSummaryIssue[];
   /**
-   * File « À trier » (MIN-104), première moitié : les tickets en statut triage,
-   * tous projets confondus, le plus ancien d'abord. Tronquée — `triageTotal`
-   * donne le compte réel, d'où le « +N autres » de la section.
-   */
+ * “To be sorted” file (MIN-104), first half: tickets in triage status,
+ * all projects combined, the oldest first. Truncated — `triageTotal`
+ * gives the actual count, hence the “+N others” in the section.
+ */
   triage: HomeSummaryIssue[];
   triageTotal: number;
   /**
-   * File « À trier », seconde moitié : les retours que l'équipe n'a pas encore
-   * tranchés (`status = 'open'`), le plus ancien d'abord. Deux listes plutôt
-   * qu'une seule mêlée : la section réserve un plancher de lignes aux retours,
-   * sans quoi un triage en retard — toujours plus vieux — les enterrerait tous.
-   */
+ * “To be sorted” queue, second half: returns that the team has not yet decided (`status = 'open'`), oldest first. Two lists rather
+ * than a single scrum: the section reserves a floor of lines for returns,
+ * otherwise a late sorting — always older — would bury them all.
+ */
   newFeedback: HomeSummaryFeedback[];
   newFeedbackTotal: number;
-  /** Relations touchant un ticket du cycle — l'ordre reco tient compte des blocages. */
+  /** Relations touching a cycle ticket — the recommendation order accounts for blockers. */
   relations: IssueRelation[];
-  /** Statut des tickets bloquants situés HORS du cycle, indexé par id. */
+  /** Status of blocking tickets located OUTSIDE the cycle, indexed by id. */
   blockerStatuses: Record<string, IssueStatus>;
 }
 
@@ -739,12 +735,11 @@ export interface SearchIndexObjective {
 }
 
 /**
- * Une page du wiki comme la palette la liste (GET /api/me/search-index).
+ * A wiki page like the palette list (GET /api/me/search-index).
  *
- * Le TITRE seul, jamais le corps (MIN-276) : envoyer les documents de tous mes
- * projets dans le navigateur pour pouvoir les filtrer à la frappe serait payer
- * le wiki entier à chaque ouverture d'onglet. Le contenu se cherche côté
- * serveur, en différé — GET /api/me/pages/search.
+ * The TITLE alone, never the body (MIN-276): send the documents of all my
+ * projects in the browser to be able to filter them when typing would pay
+ * the entire wiki every time you open a tab. The content is searched on the server side, offline — GET /api/me/pages/search.
  */
 export interface SearchIndexPage {
   id: string;
@@ -755,11 +750,11 @@ export interface SearchIndexPage {
 }
 
 /**
- * Une page trouvée par son CONTENU (GET /api/me/pages/search, MIN-276).
+ * A page found by its CONTENT (GET /api/me/pages/search, MIN-276).
  *
- * `excerpt` est ce qui distingue ce résultat d'une ligne d'index : le passage
- * du corps qui a répondu. Sur une recherche par contenu, le titre seul ne dit
- * pas pourquoi la page sort — et c'est exactement la moitié qui manquait.
+ * `excerpt` is what distinguishes this result from an index row: the passage
+ * of the responding body. On a search by content, the title alone doesn't tell
+ * why the page comes up — and that's exactly half that was missing.
  */
 export interface PageSearchHit {
   id: string;
@@ -769,30 +764,30 @@ export interface PageSearchHit {
   icon: string | null;
   updated_at: string;
   excerpt: string;
-  /** Le score de Postgres (`ts_rank_cd`) — l'ordre du serveur, à conserver. */
+  /** The Postgres score (`ts_rank_cd`) — the order of the server, to keep. */
   rank: number;
 }
 
 /**
- * Ce qui CITE une page (MIN-279) — une ligne du panneau « Cité par ».
+ * What CITES a page (MIN-279) — a line in the "Cited by" panel.
  *
- * Une seule forme pour les trois genres de source, et pour les deux ORIGINES :
- * la ressource de genre `page` (MIN-275) et la mention dans un texte. Le panneau
- * ne les distingue pas — « qui s'appuie sur cette page ? » est une question ;
- * savoir si la réponse passe par une pilule ou par une phrase n'en est pas une.
+ * A single form for the three source genres, and for both ORIGINS:
+ * the genre resource `page` (MIN-275) and the mention in a text. The
+ * sign doesn't distinguish them — "who relies on this page?" » is a question ;
+ * whether the answer is a pill or a sentence is not a question.
  */
 export interface PageBacklink {
   kind: "issue" | "objective" | "page";
   id: string;
-  /** « MIN-42 » pour un ticket ; `null` pour un objectif ou une page. */
+  /** “MIN-42” for a ticket; `null` for a goal or page. */
   identifier: string | null;
-  /** Le titre d'un ticket ou d'une page, le nom d'un objectif. */
+  /** The title of a ticket or page, the name of an objective. */
   title: string;
-  /** L'émoji d'une page ; `null` ailleurs. */
+  /** The emoji of a page; `null` elsewhere. */
   icon: string | null;
-  /** La couleur d'un objectif — elle voyage avec lui partout. */
+  /** The color of a lens — it travels with it everywhere. */
   color: string | null;
-  /** Quand la citation a été posée : l'ordre à l'intérieur d'un genre. */
+  /** When the quote was asked: order within a genre. */
   at: string;
 }
 
@@ -800,22 +795,22 @@ export interface SearchIndexResponse {
   issues: SearchIndexIssue[];
   objectives: SearchIndexObjective[];
   pages: SearchIndexPage[];
-  /** Members by project id — the ⌘; « assigné » picker needs the members of the
-      *ticket's* project, which may not be the project the user is looking at. */
+  /** Members by project id — the ⌘; “assigned” picker needs the members of the
+ *ticket's* project, which may not be the project the user is looking at. */
   members: Record<string, Member[]>;
-  /** Categories by project id — « copier le prompt » lists category names. */
+  /** Categories by project id — “copy prompt” lists category names. */
   categories: Record<string, Category[]>;
   /** True when the row cap kicked in (oldest-updated rows were dropped). */
   truncated: boolean;
 }
 
 /**
- * Une invitation en attente, telle que l'API la rend. **Sans
- * `invited_user_id`**, et c'est le point : la colonne existe en base (elle
- * rattache l'invitation à un compte, cf. `attachPendingInvitations`), mais la
- * rendre au client dirait, pour n'importe quelle adresse qu'on saisit, si elle a
- * un compte minddy — un oracle d'énumération de comptes, ouvert à tout membre du
- * projet. Le serveur la lit, le client ne la voit pas.
+ * A pending invitation, as the API renders it. **Without
+ * `invited_user_id`**, and that's the point: the column exists in base (it
+ * attaches the invitation to an account, cf. `attachPendingInvitations`), but the
+ * return to the client would say, for any address that we enter, if it a
+ * a minddy account — an account enumeration oracle, open to any member of the
+ * project. The server reads it, the client does not see it.
  */
 export interface Invitation {
   id: string;
@@ -832,12 +827,12 @@ export interface MembersResponse {
 }
 
 /**
- * Ce qu'un `?invite=<token>` permet de dire sur l'écran de connexion (MIN-197).
- * Résolu côté serveur (`lib/server/invitation-token.ts`) et passé au formulaire.
+ * What a `?invite=<token>` allows to say on the login screen (MIN-197).
+ * Resolved on the server side (`lib/server/invitation-token.ts`) and passed to the form.
  */
 export interface InvitationPreview {
   projectName: string;
-  /** Vide si le compte de l'invitant n'a ni nom ni email lisible. */
+  /** Empty if the inviter's account has no name or readable email. */
   inviterName: string;
   invitedEmail: string;
 }
@@ -850,7 +845,7 @@ export interface MyInvitation {
   project_key: string;
   inviter_email: string | null;
   inviter_name: string | null;
-  /** Graine de l'avatar généré de l'invitant (public.user_avatars). */
+  /** Seed of the generated avatar of the inviter (public.user_avatars). */
   inviter_avatar_seed: string | null;
   created_at: string;
 }
@@ -889,23 +884,23 @@ export interface Issue {
   parent_id: string | null;
   duplicate_of_id: string | null;
   due_date: string | null;
-  /** Cadence de répétition (MIN-136), null pour un ticket ordinaire. Quand elle
-      est posée, `due_date` porte la PROCHAINE occurrence : le ticket passé en
-      `done` recrée son successeur et lui transmet la cadence. */
+  /** Repeat rate (MIN-136), null for an ordinary ticket. When it
+ is set, `due_date` carries the NEXT occurrence: the ticket passed to
+ `done` recreates its successor and transmits the cadence to it. */
   recurrence: RecurrenceCadence | null;
-  /** Id du premier ticket de la série, hérité par chaque occurrence — de quoi
-      retrouver l'historique d'une récurrence. Null hors série. */
+  /** Id of the first ticket in the series, inherited by each occurrence — enabling
+ to find the history of a recurrence. None out of series. */
   recurrence_series_id: string | null;
-  /** Forçage des automatisations sur CE ticket (MIN-147). Null = il suit les
-      règles du projet ; sinon il s'en retire, ou il joue un autre préréglage. */
+  /** Force automations on THIS ticket (MIN-147). Null = it follows the
+ project rules; otherwise it opts out, or plays another preset. */
   automation_override?: AutomationOverride | null;
   position: number;
   created_by: string | null;
   /** Set when the issue was created through a project integration (Feedback API). */
   integration_id?: string | null;
-  /** Issue distante dont ce ticket est le miroir (MIN-97) — posés ensemble à
-      l'import depuis le dépôt lié, tous null pour un ticket né dans minddy.
-      `remote_number` = `number` GitHub / `iid` GitLab. */
+  /** Remote issue of which this ticket is the mirror (MIN-97) — placed together at
+ the import from the linked repository, all null for a ticket born in minddy.
+ `remote_number` = `number` GitHub / `iid` GitLab. */
   remote_provider?: RepoProviderId | null;
   remote_repo_id?: string | null;
   remote_number?: number | null;
@@ -918,24 +913,24 @@ export interface Issue {
   cycle_id: string | null;
   category_ids: string[];
   /** Count of issue-LEVEL resources, files and links alike (the ones on
-      comments excluded). Only the board list endpoint populates it; undefined
-      elsewhere. Used by « copier le prompt » to flag resources in the XML
-      without a per-card fetch. */
+ comments excluded). Only the board list endpoint populates it; undefined
+ elsewhere. Used by “copy prompt” to flag resources in the XML
+ without a per-card fetch. */
   resource_count?: number;
 }
 
 /**
- * Ce qu'une CARTE de ticket affiche, et rien de plus (MIN-342).
+ * What a ticket CARD displays, and nothing more (MIN-342).
  *
- * `IssueCardBody` prenait un `Issue` entier. Sur les surfaces internes c'est
- * sans conséquence — mais un composant serveur sérialise dans son HTML tout ce
- * qu'il passe à un composant client, et sur `/share/[token]` cet HTML est lu
- * par un anonyme : `plan`, `created_by`, `position`, `cycle_id` partaient avec,
- * pour n'être jamais affichés.
+ * `IssueCardBody` took an entire `Issue`. On internal surfaces it is
+ * of no consequence — but a server component serializes in its HTML everything that
+ * that it passes to a client component, and on `/share/[token]` this HTML is read
+ * by an anonymous: `plan`, `created_by`, `position`, `cycle_id` left with,
+ * to never be displayed.
  *
- * D'où ce type : la carte déclare ce qu'elle lit, un `Issue` complet lui reste
- * assignable (les surfaces internes ne changent pas d'un caractère), et la
- * surface publique construit une PROJECTION explicite — `toPublicIssue` dans
+ * Hence this type: the card declares what it reads, a complete `Issue` remains assigned to it
+ * (internal surfaces do not change by one character), and the
+ * public surface constructs an explicit PROJECTION — `toPublicIssue` in
  * [lib/public-board-projection.ts](lib/public-board-projection.ts).
  */
 export interface IssueCardIssue {
@@ -952,9 +947,7 @@ export interface IssueCardIssue {
   due_date: string | null;
   recurrence: RecurrenceCadence | null;
   category_ids: string[];
-  /** Markdown du plan. Optionnel, et c'est le point : la carte n'en tire que
-      l'avancement (« 3/5 »), donc une projection publique l'omet — et le
-      document lui-même ne quitte jamais le serveur. */
+  /** Markdown of the plan. Optional, and that's the point: the card only gets progress ("3/5") from it, so a public showing omits it — and the document itself never leaves the server. */
   plan?: string | null;
   integration_id?: string | null;
   remote_provider?: RepoProviderId | null;
@@ -962,17 +955,17 @@ export interface IssueCardIssue {
   remote_url?: string | null;
 }
 
-/** L'objectif tel qu'une carte le montre : une pastille et un nom. */
+/** The objective as a map shows it: a tablet and a name. */
 export type IssueCardObjective = Pick<Objective, "id" | "name" | "color">;
 
-/** La catégorie telle qu'une carte la montre : une pastille et un nom. */
+/** The category as a map shows it: a sticker and a name. */
 export type IssueCardCategory = Pick<Category, "id" | "name" | "color">;
 
 /**
- * Une récurrence active du projet, telle que la page « Récurrences » des
- * paramètres en a besoin (MIN-136) : de quoi la nommer, dire sa cadence, sa
- * prochaine échéance et qui la porte. Un seul ticket vivant par série porte
- * une `recurrence` — c'est donc bien une ligne par récurrence.
+ * An active recurrence of the project, such as the "Recurrences" page of the
+ * parameters needs it (MIN-136): what to name it, say its cadence, its
+ * next deadline and who carries it. A single living ticket per series carries
+ * a `recurrence` — it is therefore indeed a line per recurrence.
  */
 export interface RecurringIssue {
   id: string;
@@ -1046,7 +1039,7 @@ export type IntegrationWebhookEvent =
   | "issue.status_changed"
   | "issue.updated";
 export type IntegrationWebhookScope = "integration" | "all";
-/** Usage dédié d'une clé mdy_ : création d'issues ou dépôt de feedback. */
+/** Dedicated use of an mdy_ key: creation of issues or submission of feedback. */
 export type IntegrationKind = "issues" | "feedback";
 
 export interface Integration {
@@ -1057,7 +1050,7 @@ export interface Integration {
   created_at: string;
   last_used_at: string | null;
   revoked_at: string | null;
-  /** NULL = webhook désactivé (events/scope conservés pour réactivation). */
+  /** NULL = webhook disabled (events/scope kept for reactivation). */
   webhook_url: string | null;
   webhook_events: IntegrationWebhookEvent[];
   webhook_scope: IntegrationWebhookScope;
@@ -1066,11 +1059,11 @@ export interface Integration {
 }
 
 export interface CreateIssueInput {
-  /** L'id que le client a DÉJÀ donné à sa carte optimiste (lib/optimistic-issue.ts).
-      La ligne naît avec : c'est ce qui permet au pont temps réel de reconnaître
-      la diffusion de NOTRE création et de ne pas la recopier à côté de la carte.
-      Absent (annulation d'une suppression, MCP, intégrations) = le serveur tire
-      l'id lui-même. */
+  /** The id that the client has ALREADY given to its optimistic card (lib/optimistic-issue.ts).
+ The line is born with: this is what allows the real-time bridge to recognize
+ the broadcast of OUR creation and not to copy it next to the card.
+ Absent (cancellation of a deletion, MCP, integrations) = the server pull
+ the id itself. */
   id?: string;
   title: string;
   description?: string | null;
@@ -1082,20 +1075,19 @@ export interface CreateIssueInput {
   objective_id?: string | null;
   parent_id?: string | null;
   due_date?: string | null;
-  /** Cadence de répétition (MIN-136) — exige une `due_date`, qui porte alors la
-      première occurrence. */
+  /** Repeat rate (MIN-136) — requires a `due_date`, which then has the first occurrence of
+. */
   recurrence?: RecurrenceCadence | null;
   /**
-   * Smart-fill (MIN-260) : le serveur lit le titre et la description et remplit
-   * lui-même priorité, effort, catégories et objectif AVANT d'insérer la ligne
-   * — ce qu'on a posé à la main gagne toujours. Envoyé par la seule modal de
-   * création, quand la bascule du compte est armée et que l'auteur ne l'a pas
-   * coupée pour ce ticket.
-   *
-   * Il change aussi la façon dont la carte arrive à l'écran : pas de carte
-   * optimiste (elle serait vide le temps du remplissage), un toast à la place.
-   * Cf. `createIssue` dans [use-issues-query](use-issues-query.ts).
-   */
+ * Smart-fill (MIN-260): the server reads the title and description and fills
+ * itself priority, effort, categories and objective BEFORE inserting the line
+ * — what is placed by hand always wins. Sent by the sole modal of
+ * creation, when the account toggle is armed and the author has not cut it for this ticket.
+ *
+ * It also changes the way the card arrives on the screen: no card
+ * optimistic (it would be empty during filling), a toast instead.
+ * See `createIssue` in [use-issues-query](use-issues-query.ts).
+ */
   smart_fill?: boolean;
   category_ids?: string[];
   /** Cross-project creation carries category NAMES, not IDs (a category ID is
@@ -1137,14 +1129,14 @@ export interface IssueUpdateInput {
   parent_id?: string | null;
   duplicate_of_id?: string | null;
   due_date?: string | null;
-  /** Cadence de répétition (MIN-136). Poser une cadence exige une échéance ;
-      effacer l'échéance coupe la récurrence. */
+  /** Repeat rate (MIN-136). Setting a cadence requires a deadline;
+ clearing the deadline cuts the recurrence. */
   recurrence?: RecurrenceCadence | null;
   position?: number;
   /** Setting a cycle assigns the issue to the cycle's owner as a side-effect
       (never bumps status); null removes it from its cycle. */
   cycle_id?: string | null;
-  /** Forçage des automatisations sur ce ticket (MIN-147) ; null = suit le projet. */
+  /** Force automations on this ticket (MIN-147); null = follows the project. */
   automation_override?: AutomationOverride | null;
 }
 
@@ -1166,8 +1158,8 @@ export interface ViewFilters {
 
 export interface ViewDisplay {
   hideDone?: boolean;
-  /** Sortir les tickets récurrents du tableau (MIN-136) : la maintenance qui
-      revient toutes les semaines n'est pas ce qu'on vient y lire. */
+  /** Remove recurring tickets from the table (MIN-136): the maintenance which
+ comes back every week is not what we read there. */
   hideRecurring?: boolean;
 }
 
@@ -1209,9 +1201,9 @@ export interface ViewUpdateInput {
 }
 
 /**
- * Une VUE ENREGISTRÉE — un écran retenu depuis la palette de commandes, à ne
- * pas confondre avec `View` juste au-dessus (les filtres d'un kanban). Celle-ci
- * ne connaît qu'une adresse interne, et elle est strictement personnelle.
+ * A SAVED VIEW — a screen retained from the command palette, not to
+ * with `View` just above (the filters of a kanban). This
+ * only knows an internal address, and it is strictly personal.
  */
 export interface SavedView {
   id: string;
@@ -1234,13 +1226,13 @@ export interface ViewShare {
 }
 
 /**
- * L'état de publication d'une PAGE du wiki (MIN-283), tel que son propriétaire
- * le lit. Même token, même table que le partage d'une vue — plus le seul
- * réglage qui n'ait de sens sur un document : la branche part-elle avec la
+ * The publishing status of a wiki PAGE (MIN-283), as its owner
+ * reads. Same token, same table as sharing a view — no longer the only
+ * setting that has no meaning on a document: does the branch start with the
  * page.
  *
- * Pas de réglage d'indexation : une page publiée est TOUJOURS `noindex`. Le
- * lien est le secret, comme pour une vue partagée.
+ * No indexing setting: a published page is ALWAYS `noindex`. The
+ * link is the secret, as for a shared view.
  */
 export interface PageShare {
   level: Exclude<ViewShareLevel, "private">;
@@ -1248,18 +1240,18 @@ export interface PageShare {
   include_children: boolean;
 }
 
-// ── Intégration git (MIN-47) ────────────────────────────────────────────────
+// ── Git integration (MIN-47) ──────────────────────── ────────────────────────
 
-/** Projet minddy liant une connexion git (affiché lors du disconnect). */
+/** Minddy project linking a git connection (displayed during disconnect). */
 export interface GitConnectionProjectRef {
   id: string;
   name: string;
 }
 
 /**
- * Une connexion git au niveau compte (git_connections), SANITISÉE : aucune
- * colonne de token n'est jamais exposée au client. `projects` = les projets qui
- * réutilisent cette connexion (pour prévenir « déconnecter délie ces projets »).
+ * An account-level git connection (git_connections), SANITIZED: no
+ * token column is ever exposed to the client. `projects` = projects that
+ * reuse this connection (to prevent "disconnecting unbinds these projects").
  */
 export interface GitConnection {
   id: string;
@@ -1273,10 +1265,10 @@ export interface GitConnection {
 }
 
 /**
- * Le compte git PERSONNEL d'un utilisateur (git_user_identities), SANITISÉ —
- * MIN-144. C'est lui qui signe les gestes humains sur une pull request, là où
- * `GitConnection` dit « l'App est installée sur ce compte ». Aucune colonne de
- * token n'est jamais exposée au client.
+ * A user's PERSONAL git account (git_user_identities), SANITIZED —
+ * MIN-144. It is he who signs the human gestures on a pull request, where
+ * `GitConnection` says “the App is installed on this account”. No column of
+ * token is ever exposed to the client.
  */
 export interface GitIdentity {
   id: string;
@@ -1285,15 +1277,15 @@ export interface GitIdentity {
   account_avatar_url: string | null;
   created_at: string;
   /**
-   * D'où vient ce compte. `identity` = sa propre ligne, qui se déconnecte ici
-   * (GitHub). `connection` = la connexion OAuth du compte, qui EST déjà
-   * l'identité (GitLab) : la déconnecter délierait les dépôts des projets, donc
-   * ça se fait dans « Comptes git connectés », pas ici.
-   */
+ * Where does this account come from. `identity` = its own line, which disconnects here
+ * (GitHub). `connection` = the OAuth connection of the account, which IS already
+ * identity (GitLab): disconnecting it would unlink the project repositories, so
+ * this is done in “Connected git accounts”, not here.
+ */
   source: "identity" | "connection";
 }
 
-/** La liaison projet ↔ dépôt (project_git_links), telle que renvoyée à l'UI. */
+/** The project ↔ repository link (project_git_links), as returned to the UI. */
 export interface ProjectGitLink {
   id: string;
   provider: RepoProviderId;
@@ -1304,24 +1296,24 @@ export interface ProjectGitLink {
   repo_full_name: string | null;
   default_branch: string | null;
   account_login: string | null;
-  /** Synchro unidirectionnelle des issues du dépôt → minddy (MIN-97). */
+  /** Unidirectional synchronization of depot exits → minddy (MIN-97). */
   issue_sync_enabled: boolean;
-  /** Dernier backfill réussi des issues ouvertes (null = jamais). */
+  /** Last successful backfill of open issues (null = never). */
   issue_sync_backfilled_at: string | null;
   created_at: string;
 }
 
 /**
- * État d'une branche d'agent, de la plus sûre à supprimer à la plus risquée :
- * PR fusionnée (travail livré), PR refusée (travail nulle part ailleurs), PR
- * ouverte, aucune PR (branche fraîche ou session au repos).
+ * State of an agent branch, from safest to delete to riskiest:
+ * PR merged (work delivered), PR refused (work nowhere else), PR
+ * open, no PR (fresh branch or session idle).
  */
 export type AgentBranchState = "merged" | "closed" | "open" | "none";
 
 /**
- * Une branche que minddy a poussée et qui vit encore sur le dépôt (MIN-102) :
- * `agent_runs` atteste de son origine. `issue` est null pour un run carnet, qui
- * n'est rattaché à aucun ticket ; `prNumber`/`prUrl` sont null sans PR.
+ * A branch that minddy pushed and which still lives on the repository (MIN-102):
+ * `agent_runs` attests to its origin. `issue` is null for a run notebook, which
+ * is not attached to any ticket; `prNumber`/`prUrl` are null without PR.
  */
 export interface AgentBranch {
   branch: string;
@@ -1336,14 +1328,14 @@ export interface AgentBranchesResponse {
   provider: RepoProviderId;
   repoFullName: string;
   branches: AgentBranch[];
-  /** Une liste paginée de la forge a été coupée : l'aperçu n'est pas exhaustif. */
+  /** A paginated list of the forge has been cut: the overview is not exhaustive. */
   truncated: boolean;
 }
 
 /**
- * Un projet où le ménage des branches a un sens : j'en suis owner, un dépôt y
- * est lié, et des runs d'agent y ont poussé des branches. Sert la command
- * palette, qui offre l'action depuis n'importe quelle page.
+ * A project where cleaning up branches makes sense: I am the owner, a repository y
+ * is linked, and agent runs have pushed branches there. Serves the command
+ * palette, which offers the action from any page.
  */
 export interface BranchCleanupTarget {
   project_id: string;
@@ -1351,7 +1343,7 @@ export interface BranchCleanupTarget {
   repo_full_name: string | null;
 }
 
-/** Sort de la suppression d'UNE branche (`alreadyGone` = elle avait disparu). */
+/** Exit of deleting ONE branch (`alreadyGone` = it had disappeared). */
 export interface BranchDeletionResult {
   branch: string;
   ok: boolean;
@@ -1359,7 +1351,7 @@ export interface BranchDeletionResult {
   error?: string;
 }
 
-/** Un dépôt candidat proposé dans le sélecteur (neutre GitHub/GitLab). */
+/** A candidate repository proposed in the selector (GitHub/GitLab neutral). */
 export interface CandidateRepo {
   external_repo_id: string;
   owner: string | null;
@@ -1368,95 +1360,95 @@ export interface CandidateRepo {
   default_branch: string | null;
 }
 
-// ── Console d'administration (MIN-90) ────────────────────────────────────────
-// Miroir exact de ce que renvoient `/api/admin/users` et `/api/admin/overview`.
-// Ces écrans sont réservés aux admins (`lib/server/admin.ts`) : à la différence
-// du reste de l'app, ils affichent l'email brut — c'est l'identifiant avec
-// lequel un admin travaille (support, override, recherche).
+// ── Admin console (MIN-90) ────────────────────────────────────────────────────
+// Exact mirror of what `/api/admin/users` and `/api/admin/overview` return.
+// These screens are reserved for admins (`lib/server/admin.ts`): unlike
+// from the rest of the app, they display the raw email — it's the identifier
+// an admin works with (support, overrides, search).
 
-/** Un compte, tel que la vue « Utilisateurs » du dashboard admin le montre. */
+/** An account, as shown in the “Users” view of the admin dashboard. */
 export interface AdminUserRow {
   userId: string;
-  /** Nom d'affichage résolu (lib/display-name), jamais l'email brut. */
+  /** Resolved display name (lib/display-name), never the raw email. */
   name: string;
   email: string | null;
-  /** Graine de l'avatar généré (public.user_avatars), jamais une URL d'image. */
+  /** Seed of the generated avatar (public.user_avatars), never an image URL. */
   avatarSeed: string;
   createdAt: string;
-  /** Dernière CONNEXION (ne bouge pas au rafraîchissement de jeton). */
+  /** Last CONNECTION (does not move on token refresh). */
   lastSignInAt: string | null;
-  /** Dernier signe de vie, connexion ou trace d'activité — cf. la migration. */
+  /** Last sign of life, connection or trace of activity — cf. migration. */
   lastActivityAt: string | null;
   emailConfirmed: boolean;
   /**
-   * Compte INTERNE (équipe, démo, bot) : il reste listé et administrable ici,
-   * mais ne compte dans aucune statistique de la vue d'ensemble.
-   */
+ * INTERNAL account (team, demo, bot): it remains listed and administrable here,
+ * but does not count in any overview statistics.
+ */
   internal: boolean;
-  /** Projets possédés + projets rejoints. */
+  /** Projects owned + projects joined. */
   projects: number;
   projectsOwned: number;
-  /** Tickets des projets auxquels il a accès. */
+  /** Tickets for projects to which he has access. */
   issues: number;
-  /** Tickets écrits de sa main. */
+  /** Tickets written in his hand. */
   issuesCreated: number;
   onboarding: {
-    /** L'onboarding lui a été présenté au moins une fois. */
+    /** Onboarding was presented to him at least once. */
     started: boolean;
     completed: number;
     total: number;
     allComplete: boolean;
     dismissed: boolean;
-    /** Étape en cours, null si tout est franchi. */
+    /** Step in progress, null if everything is completed. */
     currentStep: string | null;
   };
   billing: {
     planId: BillingPlanId;
-    /** Miroir de BillingPlanSource (lib/server/billing-accounts, server-only). */
+    /** Mirror of BillingPlanSource (lib/server/billing-accounts, server-only). */
     source: "admin_override" | "stripe" | "default";
     override: BillingPlanId | null;
     overrideNote: string | null;
-    /** Fin du plan offert (ISO) — null = sans limite, ou pas d'override. */
+    /** End of the free plan (ISO) — null = unlimited, or no override. */
     overrideExpiresAt: string | null;
     stripePlanId: string | null;
     stripeStatus: string | null;
   };
   usage: {
-    /** Budget mensuel inclus par son plan (USD de coût brut). */
+    /** Monthly budget included by their plan (gross cost USD). */
     budgetUsd: number;
-    /** Ce que le budget compte vraiment (fenêtre réelle + remise à zéro). */
+    /** What budget really matters (real window + reset). */
     spentUsd: number;
-    /** Dépense réelle du mois calendaire — intacte après une remise à zéro. */
+    /** Actual spending for the calendar month — intact after a reset. */
     spentMonthUsd: number;
     calls: number;
     blocked: boolean;
-    /** La DERNIÈRE remise à zéro admin, s'il y en a une : c'est elle qui fixe le
-     *  début de la fenêtre comptée. Le registre complet de la période se lit sur
-     *  `GET /api/admin/agent-quota?userId=`. */
+    /** The LAST admin reset, if there is one: it sets the
+ * start of the counted window. The full period register reads
+ * `GET /api/admin/agent-quota?userId=`. */
     resetAt: string | null;
   };
 }
 
 export interface AdminUsersResponse {
   users: AdminUserRow[];
-  /** Nombre de comptes correspondant à la recherche, avant pagination. */
+  /** Number of accounts matching the search, before pagination. */
   total: number;
 }
 
-/** Une remise à zéro du budget d'usage, telle que l'admin la voit. */
+/** A reset of the usage budget, as the admin sees it. */
 export interface AdminQuotaReset {
   id: string;
   at: string;
 }
 
 /**
- * `GET|POST|DELETE /api/admin/agent-quota` — le registre des remises à zéro de
- * la période de facturation en cours, et ce que le budget compte APRÈS le geste
- * (retirer une remise à zéro rouvre la fenêtre : le montant remonte).
+ * `GET|POST|DELETE /api/admin/agent-quota` — the register of resets of
+ * the current billing period, and what the budget counts AFTER the gesture
+ * (removing a reset reopens the window: the amount goes up).
  */
 export interface AdminQuotaResetsResponse {
   periodStart: string;
-  /** De la plus récente à la plus ancienne ; la première fait foi. */
+  /** From newest to oldest; the first is authentic. */
   resets: AdminQuotaReset[];
   usage: {
     spentUsd: number;
@@ -1464,7 +1456,7 @@ export interface AdminQuotaResetsResponse {
   };
 }
 
-/** Un jour de la série d'activité de la vue d'ensemble. */
+/** One day in the overview activity series. */
 export interface AdminOverviewDay {
   day: string;
   signups: number;
@@ -1472,9 +1464,8 @@ export interface AdminOverviewDay {
 }
 
 /**
- * Tout ce que porte cet objet EXCLUT les comptes internes — c'est le point de
- * la vue d'ensemble. `internalUsers` dit combien ont été mis de côté, pour
- * qu'un chiffre en baisse reste explicable.
+ * Everything this object carries EXCLUDES internal accounts — that's the point of
+ * the big picture. `internalUsers` says how many have been set aside, so that a falling figure remains explainable.
  */
 export interface AdminOverview {
   totalUsers: number;
@@ -1487,29 +1478,29 @@ export interface AdminOverview {
   totalProjects: number;
   totalIssues: number;
   days: AdminOverviewDay[];
-  /** Comptes par plan effectif (override admin → Stripe → free). */
+  /** Accounts by effective plan (admin override → Stripe → free). */
   plans: Array<{ planId: BillingPlanId; count: number }>;
   onboarding: {
-    /** Comptes à qui l'onboarding a été présenté. */
+    /** Accounts to which onboarding has been presented. */
     started: number;
-    /** Parmi eux, ceux qui ont franchi les quatre étapes. */
+    /** Among them, those who have completed the four stages. */
     completed: number;
-    /** Parmi eux, ceux qui l'ont explicitement passé. */
+    /** Among them, those who have explicitly passed it. */
     dismissed: number;
   };
 }
 
 /**
- * Une journée de la page Finances (MIN-92). La série est DENSIFIÉE côté SQL :
- * une journée sans appel IA est une barre à zéro, pas un trou.
+ * A day of the Finance page (MIN-92). The series is DENSIFIED on the SQL side:
+ * a day without an AI call is a zero bar, not a hole.
  */
 export interface AdminFinanceDay {
   /** `YYYY-MM-DD`, UTC. */
   day: string;
   costUsd: number;
-  /** `null` tant qu'aucun taux n'est connu — à distinguer de « zéro euro ». */
+  /** `null` as long as no rate is known — as distinguished from “zero euros”. */
   costEur: number | null;
-  /** Encaissements ENTIERS, au jour où ils tombent — jamais lissés. */
+  /** COMPLETE receipts, on the day they fall — never smoothed. */
   revenueEur: number;
   marginEur: number | null;
   usdEur: number | null;
@@ -1518,47 +1509,47 @@ export interface AdminFinanceDay {
 }
 
 /**
- * Le payload de `/api/admin/finance`. `days` porte la courbe (revenu lissé),
- * `month` porte les chiffres RÉELS non lissés des tuiles : les deux ne
- * s'additionnent pas, et c'est voulu.
+ * The payload of `/api/admin/finance`. `days` carries the curve (smoothed income),
+ * `month` carries the REAL unsmoothed numbers of the tiles: the two do not
+ * add up, and that is intended.
  */
 export interface AdminFinance {
   windowDays: number;
   days: AdminFinanceDay[];
   month: {
-    /** Encaissé net de frais Stripe ET de remboursements, sur le mois courant. */
+    /** Collected net of Stripe fees AND reimbursements, in the current month. */
     netCollectedEur: number;
     stripeFeesEur: number;
     costUsd: number;
     costEur: number | null;
     marginEur: number | null;
   };
-  /** Revenu récurrent théorique — indicateur, jamais la base de la marge. */
+  /** Theoretical recurring revenue — indicator, never the basis of the margin. */
   mrrEur: number;
   payingAccounts: number;
   byPlan: Array<{ planId: BillingPlanId; count: number; mrrEur: number }>;
-  /** Taux appliqué le plus récent, avec sa date (un cron muet devient visible). */
+  /** Most recent applied rate, with its date (a silent cron becomes visible). */
   fx: { day: string; usdEur: number } | null;
-  /** Plafond mensuel de la clé OpenRouter. `null` si illisible. */
+  /** Monthly cap for the OpenRouter key. `null` if unreadable. */
   cap: {
     limitUsd: number | null;
     usageUsd: number;
     remainingUsd: number | null;
     percent: number | null;
-    /** Premier jour du mois suivant : la remise à zéro du plafond. */
+    /** First day of the following month: reset of the ceiling. */
     resetDay: string;
     projectedExhaustionDay: string | null;
   } | null;
   stripe: {
     configured: boolean;
     reachable: boolean;
-    /** Clé `sk_test_` : l'API est la même, les montants ne sont pas réels. */
+    /** `sk_test_` key: the API is the same, the amounts are not real. */
     testMode: boolean;
-    /** Pagination du ledger interrompue par le garde-fou. */
+    /** Ledger paging interrupted by the guardrail. */
     truncated: boolean;
-    /** Au moins une ligne dans une devise autre que l'EUR a été ignorée. */
+    /** At least one line in a currency other than EUR was ignored. */
     ignoredCurrency: boolean;
   };
-  /** Instant de la lecture Stripe — l'UI en tire « actualisé il y a X min ». */
+  /** Instant of Stripe reading — the UI gets “refreshed X min ago”. */
   fetchedAt: string;
 }

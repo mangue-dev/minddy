@@ -7,15 +7,15 @@ import { ImportGuideBlock } from "@/components/import/import-guide";
 import { CsvImportPanel } from "@/components/settings/csv-import-panel";
 
 /**
- * Faire entrer un backlog existant, en entier (MIN-45, MIN-98) : la marche à
- * suivre du côté de l'outil qu'on quitte (`components/import/import-guide.tsx`),
- * puis le vrai dropzone. Le mapping se voit avant de valider.
+ * Enter an existing backlog, in its entirety (MIN-45, MIN-98): the procedure at
+ * follow on the side of the tool you are leaving (`components/import/import-guide.tsx`),
+ * then the real dropzone. The mapping is seen before validating.
  *
- * C'est la version PAGE du geste — l'onglet « Import » des réglages du projet.
- * En modale, l'import passe par `components/import/import-wizard-dialog.tsx`,
- * qui assemble les deux mêmes blocs en trois étapes : une page défile, une
- * modale non. Le wizard de création, lui, n'affiche que la marche à suivre :
- * son étape ne récolte qu'un fichier, le projet n'existant pas encore.
+ * This is the PAGE version of the gesture — the “Import” tab of the project settings.
+ * In modal, the import goes through `components/import/import-wizard-dialog.tsx`,
+ * which assembles the same two blocks in three steps: a page scrolls, a
+ * modal no. The creation wizard only displays the procedure to follow:
+ * its step only collects one file, the project does not yet exist.
  */
 export function ImportPanel({
   projectId,
@@ -26,9 +26,9 @@ export function ImportPanel({
 }: {
   projectId: string;
   className?: string;
-  /** CSV déjà tenu par l'appelant (dépôt sur la carte d'onboarding). */
+  /** CSV already held by the caller (deposited on the onboarding card). */
   initialFile?: File | null;
-  /** De quel outil vient le compte — l'onboarding en fait un événement. */
+  /** Which tool does the account come from — onboarding makes it an event. */
   onProviderSelected?: (guide: ImportGuide) => void;
   onImported?: (result: ImportCommitResponse) => void;
 }) {

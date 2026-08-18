@@ -11,46 +11,46 @@ import { consumeDesktopAuthTurn } from "@/lib/desktop/auth-turn";
 import type { DesktopAuthLink } from "@/lib/desktop/auth-link";
 
 /**
- * Le retour du tour d'authentification dans l'app de bureau (MIN-291).
+ * The return of the authentication trick in the desktop app (MIN-291).
  *
- * Monté dans la coquille des écrans d'auth, et là seulement : c'est le seul
- * endroit où l'app se trouve quand elle attend un deep link. Une session déjà
- * ouverte n'a rien à échanger — un lien magique cliqué alors qu'on est déjà
- * connecté ne fait donc rien, ce qui est le bon comportement.
+ * Mounted in the shell of the auth screens, and there only: it is the only
+ * where the app is when it is waiting for a deep link. One session already
+ * open has nothing to exchange — a magic link clicked when we are already
+ * connected therefore does nothing, which is the correct behavior.
  *
- * ## Ce qui décide de traiter un lien, ou non (MIN-345)
+ * ## What decides whether to process a link or not (MIN-345)
  *
- * macOS livre à l'app TOUT ce qui porte notre schéma, d'où qu'il vienne. Un
- * `minddy://auth?code=…` reçu du système est parfaitement lisible, et la
- * fenêtre l'échangeait — c'est-à-dire se connectait au compte de qui avait
- * envoyé le lien. Trois cas, désormais :
+ * macOS delivers EVERYTHING that carries our schema to the app, wherever it comes from. A
+ * `minddy://auth?code=…` received from the system is perfectly readable, and the
+ * window exchanged it — that is to say, connected to the account of who had
+ * sent the link. Three cases now:
  *
- * - **Un code qui rapporte le nonce du tour** (`turn`) : c'est la réponse à une
- *   demande partie d'ici, on enchaîne sans rien demander. Le cas normal.
- * - **Un code sans nonce, ou avec le mauvais** : ignoré, en silence. Il n'y a
- *   rien de vrai à dire à quelqu'un qui n'a rien fait, et l'échange échouerait
- *   de toute façon — le vérificateur PKCE de ce stockage ne va pas avec ce code.
- * - **Un jeton de lien e-mail** : il ne portera JAMAIS de nonce (le gabarit
- *   GoTrue compose l'URL, et le mail s'ouvre souvent sur un autre appareil).
- *   Celui-là se confirme à la main, ici, avant qu'aucune session ne naisse.
+ * - **A code which reports the nonce of the turn** (`turn`): this is the response to a
+ * ask to leave here, we move on without asking anything. The normal case.
+ * - **A code without a nonce, or with the wrong one**: ignored, silently. There is no
+ * nothing true to say to someone who has done nothing, and the exchange would fail
+ * anyway — the PKCE checker of this storage is wrong with this code.
+ * - **An email link token**: it will NEVER carry a nonce (the template
+ * GoTrue composes the URL, and the email often opens on another device).
+ * This one is confirmed by hand, here, before any session is born.
  *
- * ## Pourquoi un rechargement complet plutôt qu'une navigation cliente
+ * ## Why a full reload rather than client navigation
  *
- * Le lien peut arriver AVANT que React ne soit monté (macOS lance l'app avec son
- * `open-url` en poche ; le pont le rejoue à l'abonnement). Un rechargement remet
- * l'app entière — composants serveur compris, et le proxy avec eux — sur la
- * session qui vient de naître, sans qu'on ait à raisonner sur ce qui avait déjà
- * été rendu avec l'ancienne. C'est une connexion : un chargement de plus n'y
- * coûte rien, et ça retire toute une classe d'états intermédiaires.
+ * The link can arrive BEFORE React is mounted (macOS launches the app with its
+ * `open-url` in pocket; the bridge replays it upon subscription). A reload resets
+ * the entire app — including the server components, and the proxy with them — on the
+ * session which has just been born, without us having to reason about what had already
+ * been returned with the old one. It's a connection: one more load is no more
+ * costs nothing, and it removes a whole class of intermediate states.
  *
- * L'échec repart vers `/login?error=…` avec les codes déjà en place : les mêmes
- * phrases que le web pour les mêmes refus, aucune traduction de plus.
+ * The failure returns to `/login?error=…` with the codes already in place: the same
+ * sentences as the web for the same refusals, no more translation.
  */
 export function DesktopAuthBridge() {
   const t = useTranslations("Auth");
   const { completeDesktopSignIn } = useAuth();
   const [exchanging, setExchanging] = useState(false);
-  /** Le lien e-mail en attente d'un geste. */
+  /** The email link waiting for a gesture. */
   const [pending, setPending] = useState<DesktopAuthLink | null>(null);
 
   const exchange = useCallback(

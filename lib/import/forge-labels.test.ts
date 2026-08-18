@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { readForgeLabel, readForgeLabels } from "./forge-labels";
 
-// Les règles qui tirent une priorité et un effort des LABELS d'une issue de
-// forge. Module pur — c'est ici que se vérifie ce qu'on ose deviner, et
+// The rules that derive priority and effort from LABELS from an outcome of
+// forge. Pure module — it is here that what we dare to guess is verified, and
 // surtout ce qu'on refuse de deviner.
 
 describe("readForgeLabel — le label nomme son champ", () => {
@@ -66,10 +66,10 @@ describe("readForgeLabel — label nu", () => {
   });
 
   it("REFUSE un mot qui vaut deux champs à la fois", () => {
-    // « medium » est une priorité ET une taille : nu, il ne vaut rien.
+    // “medium” is a priority AND a size: naked, it’s worthless.
     expect(readForgeLabel("medium")).toBeNull();
     expect(readForgeLabel("moyenne")).toBeNull();
-    // Mais nommé, il n'est plus ambigu du tout.
+    // But named, it is no longer ambiguous at all.
     expect(readForgeLabel("size: medium")).toEqual({ field: "effort", value: "m" });
     expect(readForgeLabel("priority: medium")).toEqual({
       field: "priority",

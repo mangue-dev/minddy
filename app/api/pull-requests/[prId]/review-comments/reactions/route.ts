@@ -7,14 +7,14 @@ import {
 } from "@/lib/server/agent/pr-actions";
 
 /**
- * Réactions emoji d'un commentaire de review (MIN-139).
+ * Emoji reactions from a review comment (MIN-139).
  *
- * Route à part, et non un verbe de plus sur `../review-comments` : la cible n'est
- * pas la même — un COMMENTAIRE, pas le fil ni la liste. Les réactions se LISENT,
- * elles, avec les commentaires (le GET voisin les sert dans `reactions`) : un fil
- * se rend d'un bloc, et deux requêtes pour l'afficher se désynchroniseraient.
+ * Road apart, and not one more verb on `../review-comments`: the target is not
+ * not the same — a COMMENT, not the thread or the list. The reactions can be READ,
+ * them, with the comments (the neighboring GET serves them in `reactions`): a thread
+ * renders in one block, and two requests to display it would get out of sync.
  *
- *  POST → { comment_id, content, on }   pose (`on: true`) ou retire la réaction
+ * POST → { comment_id, content, on } post (`on: true`) or remove the reaction
  */
 
 type RouteContext = { params: Promise<{ prId: string }> };

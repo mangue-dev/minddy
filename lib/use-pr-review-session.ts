@@ -4,24 +4,21 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchPullRequestAiReviewApi } from "./agent-api";
 
 /**
- * La session de relecture d'une PR par Numo, du point de vue du fil de la PR
+ * Numo's PR review session, from the perspective of the PR thread
  * (MIN-168).
  *
- * Elle ne se DÉROULE plus ici. Avant, la passe avait son propre flux
- * d'événements et son propre topic de direct (`pr-review:{id}`), rejoués dans la
- * carte du fil ; depuis qu'elle est un run d'agent, son déroulé est celui de
- * n'importe quelle session — `agent_run_events`, le topic `agent-run:{id}`, et la
- * conversation de `/agents` qui sait déjà tout rendre. Le fil de la PR n'a plus
- * qu'à dire que l'agent travaille ou qu'il a fini, et à ouvrir la session.
+ * It no longer takes place here. Before, the pass had its own stream of events and its own live topic (`pr-review:{id}`), replayed in the thread map; since it is an agent run, its progress is that of
+ * any session — `agent_run_events`, the topic `agent-run:{id}`, and the
+ * conversation of `/agents` which already knows how to return everything. The PR thread now only has to say that the agent is working or that it has finished, and to open the session.
  *
- * D'où ce hook réduit à un poll : il n'y a plus de texte à suivre à la seconde,
- * seulement un statut qui bascule. Le poll ne tourne QUE pendant qu'une session
- * travaille — une session finie ne bouge plus tant que personne ne relance.
+ * Hence this hook is reduced to a poll: there is no longer any text to follow per second,
+ * only a status that switches. The poll ONLY runs while a session
+ * is working — a finished session doesn't move until someone restarts.
  */
 
 const QUERY_KEY = "pr-review-session";
 
-/** Cadence du suivi pendant qu'une session travaille. */
+/** Tracking cadence while a session is working. */
 const ACTIVE_POLL_MS = 5000;
 
 export function usePrReviewSession(prId: string, enabled = true) {
@@ -35,7 +32,7 @@ export function usePrReviewSession(prId: string, enabled = true) {
   const run = data?.run ?? null;
   return {
     run,
-    /** L'agent travaille en ce moment sur cette PR. */
+    /** The agent is currently working on this PR. */
     active: run?.working === true,
     reviewedHeadSha: data?.reviewedHeadSha ?? null,
     model: data?.model ?? null,

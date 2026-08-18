@@ -9,9 +9,9 @@ import {
 } from "./prompt";
 
 /**
- * Message d'amorce d'une run FROIDE qui hérite d'une PR (MIN-68). C'est la seule
- * mémoire qu'a la run neuve du travail déjà poussé sur la branche : si un morceau
- * saute, l'agent recommence le ticket à zéro par-dessus une PR en revue.
+ * Startup message for a COLD run which inherits a PR (MIN-68). It's the only one
+ * memory that the new run has of the work already pushed on the branch: if a piece
+ * jumps, the agent starts the ticket from scratch over a PR review.
  */
 
 const repo = {
@@ -30,8 +30,8 @@ describe("buildInheritedPrMessage", () => {
     expect(msg).toContain("MIN-42: add search");
     expect(msg).toContain(repo.workBranch);
     expect(msg).toMatch(/do NOT start the ticket over/i);
-    // Le diff n'est jamais inliné : l'agent lit la branche lui-même, et le fait
-    // avec une commande qui survit au clone shallow (pas de three-dot).
+    // The diff is never inlined: the agent reads the branch itself, and does so
+    // with a command that survives the shallow clone (no three-dot).
     expect(msg).toContain("git diff main");
     expect(msg).not.toContain("main...");
   });
@@ -73,7 +73,7 @@ describe("buildInheritedPrMessage", () => {
         previousSummary: "s".repeat(9000),
       },
     });
-    // Chacun est tronqué à 4000 : aucun des deux ne passe en entier.
+    // Each is truncated at 4000: neither passes in full.
     expect(msg).not.toContain("b".repeat(4100));
     expect(msg).not.toContain("s".repeat(4100));
     expect(msg.split("[truncated]").length - 1).toBe(2);
@@ -130,15 +130,15 @@ describe("buildInheritedPrMessage", () => {
       pr: { number: 12, state: "open", comments: [{ author: "alice", body: "x".repeat(9000) }] },
     });
     expect(msg).toContain("[truncated]");
-    // Le cap est à 2000 : 2100 « x » d'affilée ne peuvent pas survivre.
+    // The cap is 2000: 2100 “x”s in a row cannot survive.
     expect(msg).toContain("x".repeat(2000));
     expect(msg).not.toContain("x".repeat(2100));
   });
 
   /**
-   * Les commentaires de LIGNE sont la raison d'être de la review ancrée au code :
-   * sans leur ancre ni leur extrait de diff, l'agent lit « et le cas nul ? » sans
-   * savoir de quel code on parle — et corrige au hasard.
+   * LIGNE's comments are the reason for the review anchored to the code:
+   * without their anchor or diff snippet, the agent reads "what about the null case?" " without
+   * know what code we are talking about — and correct randomly.
    */
   describe("commentaires de ligne", () => {
     const thread = {
@@ -158,7 +158,7 @@ describe("buildInheritedPrMessage", () => {
       expect(msg).toContain("lib/search.ts:42");
       expect(msg).toContain("+return search(q, opts);");
       expect(msg).toContain("@alice: Et le cas nul ?");
-      // Un commentaire de ligne se répond en code, pas en prose.
+      // A line comment is answered in code, not in prose.
       expect(msg).toMatch(/CHANGING THE CODE/i);
     });
 
@@ -199,7 +199,7 @@ describe("buildInheritedPrMessage", () => {
       });
       expect(msg).toMatch(/OUTDATED/);
       expect(msg).not.toContain("lib/search.ts:42");
-      // Le hunk reste : c'est tout ce qui dit encore de quel code on parlait.
+      // The hunk remains: that's all that still says what code we were talking about.
       expect(msg).toContain("+return search(q, opts);");
     });
 
@@ -217,8 +217,8 @@ describe("buildInheritedPrMessage", () => {
         },
       });
       expect(msg).toContain("[hunk truncated]");
-      expect(msg).toContain("ctx-29"); // la fin — le code visé — survit
-      expect(msg).not.toContain("ctx-0\n"); // le début est coupé
+      expect(msg).toContain("ctx-29"); // the end — the intended code — survives
+      expect(msg).not.toContain("ctx-0\n"); // the beginning is cut
     });
 
     it("respecte le plafond de 10 fils, en gardant les plus RÉCENTS", () => {
@@ -245,12 +245,12 @@ describe("buildInheritedPrMessage", () => {
   });
 
   /**
-   * Le maillon entre « GitHub a des commentaires de ligne » et « l'agent les
-   * lit » : `execute.ts` passe la réponse BRUTE de l'API à `toPrLineThreads`, dont
-   * la sortie alimente l'amorce. On part donc d'objets GitHub tels quels.
+   * The link between “GitHub has line comments” and “the agent
+   * read": `execute.ts` passes the RAW response from the API to `toPrLineThreads`, of which
+   * the output powers the primer. We therefore start with GitHub objects as is.
    */
   describe("toPrLineThreads — de la réponse GitHub à l'amorce de l'agent", () => {
-    /** Un commentaire de review au format exact de l'API (relevé sur une vraie PR). */
+    /** A review comment in the exact API format (taken from a real PR). */
     const raw = (over: Partial<Parameters<typeof toPrLineThreads>[0][number]> = {}) => ({
       id: 1,
       body: "Et le cas nul ?",
@@ -304,7 +304,7 @@ describe("buildInheritedPrMessage", () => {
         },
       });
       expect(msg).toMatch(/OUTDATED/);
-      // Le hunk survit : sans lui l'agent ne saurait plus de quel code on parle.
+      // The hunk survives: without him the agent would no longer know what code we are talking about.
       expect(msg).toContain("+return search(q, opts);");
     });
 
@@ -326,9 +326,9 @@ describe("buildInheritedPrMessage", () => {
     });
 
     /**
-     * MIN-139 : un fil résolu est un point RÉGLÉ. Il reste dans l'amorce (il porte
-     * souvent la décision prise), mais MARQUÉ — sans quoi une session froide
-     * relirait une demande close comme une demande vivante et referait le travail.
+     * MIN-139: A resolved thread is a SET stitch. It remains in the primer (it carries
+     * often the decision made), but MARKED — otherwise a cold session
+     * would reread a closed request as a living request and do the work again.
      */
     it("marque RESOLVED un fil que la forge dit résolu, et laisse les autres nus", () => {
       const threads = toPrLineThreads(
@@ -342,7 +342,7 @@ describe("buildInheritedPrMessage", () => {
         pr: { number: 12, state: "open", comments: [], lineThreads: threads },
       });
       expect(msg).toMatch(/lib\/search\.ts:42 — RESOLVED/);
-      // Le fil ouvert, lui, ne porte aucun marqueur.
+      // The open thread does not carry any marker.
       expect(msg).toContain("lib/other.ts:42\n");
       expect(msg).toMatch(/don't redo it/i);
     });
@@ -360,9 +360,9 @@ describe("buildInheritedPrMessage", () => {
 });
 
 /**
- * Message de CONTEXTE d'amorce : le ticket est un snapshot (l'état vivant se relit
- * via read_issue) et ses pièces jointes sont annoncées avec leur id — sans quoi
- * l'agent ignorerait leur existence tant que l'utilisateur n'en parle pas.
+ * Bootstrap CONTEXT message: the issue is a snapshot (the live state is reread
+ * through read_issue), and its attachments are announced with their IDs—otherwise
+ * the agent would ignore them until the user mentioned them.
  */
 describe("buildAgentContextMessage", () => {
   const base = {
@@ -385,7 +385,7 @@ describe("buildAgentContextMessage", () => {
 
   it("écrit une PAGE du wiki en entier, avec de quoi l'ouvrir (MIN-275)", () => {
     // Comme un lien : le titre et l'id tiennent en une ligne, et les faire
-    // chercher par un appel de tool serait un aller-retour pour ce qu'on a déjà.
+    // searching with a tool call would be a round trip for what we already have.
     const msg = buildAgentContextMessage({
       ...base,
       resources: [
@@ -400,7 +400,7 @@ describe("buildAgentContextMessage", () => {
     expect(msg).toContain(
       "- Spécification des pages — a page of the project's wiki, read it with read_page id: page-1"
     );
-    // Ni taille ni type MIME : une page n'est pas un fichier.
+    // Neither size nor MIME type: a page is not a file.
     expect(msg).not.toMatch(/Spécification des pages \(/);
   });
 
@@ -422,9 +422,9 @@ describe("buildAgentContextMessage", () => {
 });
 
 /**
- * Variante SANS PR : depuis que l'héritage est indexé sur la branche (la création
- * de PR est une décision), une run froide peut reprendre une branche qui porte du
- * travail jamais mis en PR. Ce message est sa seule mémoire de ce passé.
+ * Variant WITHOUT PR: since the inheritance is indexed on the branch (the creation
+ * of PR is a decision), a cold run can resume a branch which carries
+ * work never put in PR. This message is his only memory of this past.
  */
 describe("buildInheritedBranchMessage", () => {
   it("porte la branche, l'absence de PR et l'ordre de ne pas repartir de zéro", () => {
@@ -432,7 +432,7 @@ describe("buildInheritedBranchMessage", () => {
     expect(msg).toContain(repo.workBranch);
     expect(msg).toMatch(/No pull request exists yet/i);
     expect(msg).toMatch(/do NOT start the ticket over/i);
-    // Même contrainte de clone shallow que le message PR.
+    // Same shallow clone constraint as the PR message.
     expect(msg).toContain("git diff main");
     expect(msg).not.toContain("main...");
   });
@@ -462,7 +462,7 @@ describe("buildAgentContextMessage — pièces jointes image", () => {
   it("marque les images comme ouvrables quand le run les voit", () => {
     const msg = buildAgentContextMessage({ ...ticket, images: true });
     expect(msg).toMatch(/mock\.png .*— an image: read_resource shows it to you/);
-    // Le fichier texte, lui, n'est pas annoncé comme une image.
+    // The text file is not announced as an image.
     expect(msg).toMatch(/spec\.md \(text\/markdown, 2 KB\) — id: att-1\n/);
   });
 
@@ -473,8 +473,8 @@ describe("buildAgentContextMessage — pièces jointes image", () => {
   });
 });
 /**
- * Le statut d'atterrissage vit dans le message de CONTEXTE, qui est de toute
- * façon propre au run (dépôt, branche, ticket).
+ * The landing status lives in the CONTEXT message, which is of all
+ * way specific to the run (deposit, branch, ticket).
  */
 describe("statut d'atterrissage annoncé dans le contexte", () => {
   const ticket = {
@@ -500,10 +500,10 @@ describe("statut d'atterrissage annoncé dans le contexte", () => {
 });
 
 /**
- * Délégation (MIN-112). Deux règles du fichier sont testées ici plutôt que relues :
- * le prompt ne décrit JAMAIS ce que le run n'a pas (sinon le modèle appelle un tool
- * absent et brûle un round), et le prompt d'un sous-agent est une persona à part —
- * pas celui du parent amputé, qui lui ferait chercher un ticket inexistant.
+ * Delegation (MIN-112). Two rules of the file are tested here rather than reread:
+ * the prompt NEVER describes what the run does not have (otherwise the model calls a tool
+ * absent and burns a round), and the prompt of a sub-agent is a separate persona —
+ * not that of the amputee parent, who would make him look for a non-existent ticket.
  */
 const _FAVORITES = [
   {
@@ -546,26 +546,26 @@ describe("buildPrReviewContextMessage", () => {
   });
 
   /**
-   * MIN-258. L'amorce disait « start with `git diff origin/main` », et se
-   * contredisait avec la liste « Files changed » juste en dessous : celle-là
-   * vient de la forge (diff à trois points), celui-ci comparait au tip VIVANT de
-   * la base. Une PR ouverte il y a trois jours, un commit fusionné dans `main`
-   * entre-temps, et ces fichiers apparaissaient INVERSÉS — la relecture les
-   * commentait publiquement comme des suppressions de la PR.
+   * MIN-258. The primer said "start with `git diff origin/main`", and
+   * contradicted with the “Files changed” list just below: this one
+   * comes from the forge (three-point diff), this one compared to the ALIVE tip of
+   * the base. A PR opened three days ago, a commit merged into `main`
+   * in the meantime, and these files appeared REVERSED — replaying them
+   * commented publicly as PR deletions.
    */
   it("ancre le diff sur la base de la forge, pas sur le tip vivant", () => {
     const msg = buildPrReviewContextMessage(base);
     expect(msg).toContain("`pr-base`");
     expect(msg).not.toMatch(/Start with `git diff origin\/main`/);
-    // Et `origin/main` reste NOMMÉ, pour ce qu'il est : le piège doit être dit,
-    // pas seulement évité — le modèle connaît la commande et la tenterait seul.
+    // And `origin/main` remains NAMED, for what it is: the trap must be said,
+    // not just avoided — the model knows the command and would attempt it alone.
     expect(msg).toMatch(/live tip of the base branch/);
     expect(msg).toMatch(/not part of this pull request/);
   });
 
-  // Le corps, le fil et la demande viennent de l'extérieur : chacun arrive
-  // marqué comme cité, sans quoi la demande — placée en TÊTE sous « What you
-  // were asked » — se lit comme la consigne de la session.
+  // The body, the thread and the request come from outside: each one arrives
+  // marked as cited, otherwise the request — placed at the HEAD under “What you
+  // were asked” — reads like the instructions for the session.
   it("marque comme cité tout ce qui vient de l'extérieur", () => {
     const msg = buildPrReviewContextMessage({
       ...base,
@@ -641,7 +641,7 @@ describe("buildPrReviewContextMessage", () => {
     expect(msg).toContain("2/3 checks passing");
     expect(msg).toContain("something is failing");
     expect(msg).toContain("typecheck");
-    // Les checks VERTS ne sont pas listés un par un : ils n'apprennent rien.
+    // GREEN checks are not listed one by one: they learn nothing.
     expect(msg).not.toContain("lint");
   });
 
@@ -664,21 +664,21 @@ describe("buildPrReviewContextMessage", () => {
       ...base,
       question: "@alice wrote this in a comment on this pull request:\n\n@numo pourquoi ce debounce ?",
     });
-    // EN TÊTE, littéralement : la demande ouvre le message, le contexte suit.
+    // AT THE HEAD, literally: the request opens the message, the context follows.
     expect(msg.startsWith("# What you were asked")).toBe(true);
     expect(msg).toContain("> @numo pourquoi ce debounce ?");
     expect(msg).toMatch(/Answer it first/);
   });
 
   it("DIT qu'il n'y a pas de ticket, plutôt que de le taire", () => {
-    // Une PR sans ticket est l'état NORMAL d'une PR humaine (MIN-143). Le prompt
-    // système fait du plan une référence de lecture : sans cette section, l'agent
+    // A PR without a ticket is the NORMAL state of a human PR (MIN-143). The prompt
+    // system makes the plan a reading reference: without this section, the agent
     // partirait chercher un ticket qui n'existe pas.
     const msg = buildPrReviewContextMessage(base);
     expect(msg).toContain("## No ticket");
     expect(msg).toMatch(/Do not go looking for one/);
     expect(msg).toMatch(/no default target/);
-    // Et l'inverse : avec un ticket, la section n'existe pas.
+    // And the opposite: with a ticket, the section does not exist.
     const withIssue = buildPrReviewContextMessage({
       ...base,
       issue: { identifier: "MIN-42", title: "Search" },

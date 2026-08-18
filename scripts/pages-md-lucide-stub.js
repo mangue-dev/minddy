@@ -1,16 +1,16 @@
-// `lucide-react` remplacé par un no-op dans le bundle de la projection (MIN-295).
+// `lucide-react` replaced by a no-op in the projection bundle (MIN-295).
 //
-// Chaque descripteur de bloc (components/pages/blocks/*.ts) porte l'icône de son
-// entrée du menu « / ». C'est une donnée de l'ÉDITEUR : la projection markdown
-// monte le même registre, mais en `headless` — elle n'a ni menu, ni rendu, ni
-// React. L'import n'en tirait pas moins le paquet entier, soit 971 Ko de tracés
-// SVG et le build de développement de React, chargés à froid dans la fonction
-// pour n'être jamais lus.
+// Each block descriptor (components/pages/blocks/*.ts) carries its icon
+// menu entry “/”. This is data from the PUBLISHER: markdown projection
+// mount the same register, but in `headless` — it has no menu, no rendering, no
+// React. The import nevertheless took out the entire package, i.e. 971 KB of traces
+// SVG and the React development build, cold loaded into the function
+// to never be read.
 //
-// Le proxy rend un composant inerte pour n'importe quel nom : le descripteur
-// garde un `icon` défini (personne ne le déréférence ici, mais un `undefined`
-// serait une différence de plus entre les deux montages), et un nouvel import
-// d'icône dans un bloc ne casse pas ce bundle.
+// The proxy makes a component inert for any name: the descriptor
+// keep a `icon` defined (no one dereferences it here, but a `undefined`
+// would be one more difference between the two montages), and a new import
+// icon in a block does not break this bundle.
 const Icon = () => null;
 Icon.displayName = "LucideIconStub";
 

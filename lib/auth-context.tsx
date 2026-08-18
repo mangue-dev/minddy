@@ -32,10 +32,10 @@ interface AuthContextValue {
     options?: { fullName?: string; avatarSeed?: string }
   ) => Promise<{ requiresEmailConfirmation: boolean }>;
   /**
-   * Envoie le lien de réinitialisation de mot de passe (MIN-297). Ne dit JAMAIS
-   * si l'adresse a un compte : GoTrue répond de la même façon dans les deux cas,
-   * et l'écran affiche la même phrase — un formulaire qui distingue les deux est
-   * un révélateur de comptes.
+   * Sends the password reset link (MIN-297). NEVER say
+   * if the address has an account: GoTrue responds the same way in both cases,
+   * and the screen displays the same sentence — a form that distinguishes the two is
+   * a revealer of accounts.
    */
   sendPasswordReset: (email: string) => Promise<void>;
   /** Wired for later — OAuth buttons aren't shown in the v1 foundations UI. */
@@ -44,9 +44,9 @@ interface AuthContextValue {
     redirectAfter?: string
   ) => Promise<void>;
   /**
-   * Termine une connexion revenue par deep link dans l'app de bureau (MIN-291),
-   * et rend la destination où aller ensuite. C'est ICI que le code est échangé,
-   * et nulle part ailleurs : le vérificateur PKCE est dans ce stockage-ci.
+   * Terminates a connection returned by deep link in the desktop app (MIN-291),
+   * and makes the destination where to go next. This is where the code is exchanged,
+   * and nowhere else: the PKCE verifier is in this storage.
    */
   completeDesktopSignIn: (link: DesktopAuthLink) => Promise<string>;
   signOut: () => Promise<void>;
@@ -55,13 +55,13 @@ interface AuthContextValue {
     data?: Record<string, unknown>;
   }) => Promise<void>;
   /**
-   * Écrit un patch dans `user_metadata` de façon MERGE-SAFE et SÉRIALISÉE. Les
-   * toggles de réglages écrivent chacun un champ ; sans sérialisation, deux
-   * toggles rapides lisent le même métadata de base et le dernier écrase le
-   * champ de l'autre. Ici chaque écriture est chaînée et fusionne le patch dans
-   * le métadonnées le plus frais — les toggles peuvent donc rester optimistes et
-   * NON verrouillés (plus de `disabled` pendant la sauvegarde GoTrue). Rejette
-   * si l'écriture échoue, pour que l'appelant puisse revert son état optimiste.
+   * Writes a patch to `user_metadata` in a MERGE-SAFE and SERIALIZED manner. THE
+   * settings toggles each write a field; without serialization, two
+   * quick toggles read the same base metadata and the last one overwrites the
+   * field of the other. Here each write is chained and merges the patch into
+   * the freshest metadata — so toggles can remain optimistic and
+   * NOT locked (more than `disabled` during GoTrue backup). Rejects
+   * if the write fails, so the caller can return to its optimistic state.
    */
   updateUserMetadata: (patch: Record<string, unknown>) => Promise<void>;
   /**
@@ -72,8 +72,8 @@ interface AuthContextValue {
    */
   refreshUser: () => Promise<void>;
   /**
-   * Enrôlement TOTP (MIN-132) : crée un facteur `unverified` et renvoie de quoi
-   * l'afficher — le QR en SVG inline, et le secret pour la saisie manuelle.
+   * TOTP enrollment (MIN-132): creates a factor `unverified` and returns what
+   * display it — the QR in SVG inline, and the secret for manual entry.
    */
   enrollTotp: (friendlyName: string) => Promise<{
     factorId: string;
@@ -81,25 +81,25 @@ interface AuthContextValue {
     secret: string;
   }>;
   /**
-   * Présente un code à six chiffres. C'est ce qui vérifie le facteur à
-   * l'enrôlement, et ce qui monte la session en `aal2` à chaque connexion —
-   * l'API GoTrue est la même dans les deux cas.
+   * Presents a six-digit code. This is what checks the factor
+   * enrollment, and what sets the session to `aal2` at each connection —
+   * the GoTrue API is the same in both cases.
    */
   verifyTotp: (factorId: string, code: string) => Promise<void>;
-  /** Retire un facteur — utilisé pour nettoyer un enrôlement abandonné. */
+  /** Removes a Postman — used to clean up an abandoned enlistment. */
   unenrollTotp: (factorId: string) => Promise<void>;
-  /** Le premier facteur TOTP du compte, vérifié ou non. */
+  /** The first TOTP factor of the account, verified or not. */
   firstTotpFactorId: () => Promise<string | null>;
   /**
-   * Vrai quand le compte a un facteur vérifié mais que la session est restée en
-   * `aal1` — il reste donc un code à présenter. Lecture LOCALE (le JWT et les
-   * facteurs de la session), aucun aller-retour réseau.
+   * True when the account has a verified factor but the session remains in
+   * `aal1` — there is therefore one code left to present. LOCAL reading (the JWT and the
+   * session factors), no network round trip.
    */
   needsMfaChallenge: () => Promise<boolean>;
   /**
-   * Révoque toutes les AUTRES sessions du compte. Appelé à l'activation de la
-   * 2FA : sans ça, un jeton déjà volé resterait valide jusqu'à son propre
-   * rafraîchissement, c'est-à-dire précisément ce qu'on vient de vouloir couper.
+   * Revokes all OTHER sessions from the account. Called for activation of the
+   * 2FA: without this, an already stolen token would remain valid until its own
+   * refreshment, that is to say precisely what we just wanted to cut.
    */
   signOutOtherSessions: () => Promise<void>;
 }
@@ -116,13 +116,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const { track, identify, reset } = useAnalytics();
 
-  // Snapshot du user le plus frais, lu par updateUserMetadata pour fusionner sur
-  // la bonne base (le state en closure serait périmé dans une chaîne d'écritures).
+  // Snapshot of freshest user, read by updateUserMetadata to merge on
+  // the correct basis (the state in closure would be out of date in a chain of writes).
   const userRef = useRef<User | null>(null);
   useEffect(() => {
     userRef.current = user;
   }, [user]);
-  // Chaîne d'écritures métadonnées sérialisées (voir updateUserMetadata).
+  // String of serialized metadata writes (see updateUserMetadata).
   const metaWriteChain = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
@@ -139,27 +139,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((event, s) => {
       resolved = true;
       window.clearTimeout(timeoutId);
-      // ⚠ Bail-out sur le JETON, pas sur l'objet (MIN-315). supabase-js ré-émet
-      // `SIGNED_IN` / `TOKEN_REFRESHED` au retour au premier plan et à chaque
-      // rafraîchissement de jeton, TOUJOURS avec des objets neufs. Or
-      // `AuthProvider` est le provider le plus haut de l'arbre : une session
-      // d'identité neuve re-rend tous ses consommateurs, et la cascade est
-      // vérifiable de bout en bout — `useProjectsQuery` lit `useAuth`, donc
-      // `ProjectsProvider` se re-rend, donc `CreateProvider`, donc le board,
-      // donc TOUTES les cartes. Et « au retour au premier plan » est le geste le
-      // plus fréquent dans une coquille de bureau.
+      // ⚠ Bail-out on the TOKEN, not on the item (MIN-315). supabase-js re-issues
+      // `SIGNED_IN` / `TOKEN_REFRESHED` when returning to the foreground and each time
+      // token refresh, ALWAYS with new objects. Gold
+      // `AuthProvider` is the highest provider in the tree: a session
+      // new identity re-makes all its consumers, and the cascade is
+      // verifiable end-to-end — `useProjectsQuery` reads `useAuth`, so
+      // `ProjectsProvider` returns, therefore `CreateProvider`, therefore the board,
+      // so ALL the cards. And “when returning to the foreground” is the gesture
+      // more common in an office shell.
       setSession((prev) => (prev?.access_token === s?.access_token ? prev : s));
-      // ⚠ **Pas de bail-out sur `user`** : `refreshUser` et
-      // `updateUserMetadata` s'appuient sur l'identité neuve pour propager les
-      // métadonnées.
+      // ⚠ **No bail-out on `user`**: `refreshUser` and
+      // `updateUserMetadata` rely on the new identity to propagate the
+      // metadata.
       setUser(s?.user ?? null);
       setLoading(false);
 
-      // Analytics (MIN-78) : rattache les événements suivants au compte. Les
-      // événements d'inscription/connexion eux-mêmes sont émis par le SERVEUR
-      // (app/auth/callback), qui distingue de façon fiable une première
-      // connexion — l'heuristique client « compte créé il y a moins d'une
-      // minute » d'AutoKap a été abandonnée pour cette raison.
+      // Analytics (MIN-78): attaches the following events to the account. THE
+      // registration/login events themselves are emitted by the SERVER
+      // (app/auth/callback), which reliably distinguishes a first
+      // connection — the customer heuristic “account created less than a year ago
+      // minute” from AutoKap was abandoned for this reason.
       if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && s?.user) {
         identify(
           s.user.id,
@@ -198,11 +198,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password: string,
       options?: { fullName?: string; avatarSeed?: string }
     ) => {
-      // Le lien de confirmation s'ouvrira dans le navigateur PAR DÉFAUT, quoi
-      // qu'on fasse — un mail ne s'ouvre pas dans Electron. Marqué `desktop=1`,
-      // le callback lui renverra le jeton au lieu de le consommer, et c'est
-      // l'app qui aura la session (MIN-291). Sans ce marqueur, s'inscrire depuis
-      // l'app connecterait le navigateur et laisserait l'app sur son écran de
+      // The confirmation link will open in the DEFAULT browser, what
+      // what we do — an email does not open in Electron. Marked `desktop=1`,
+      // the callback will return the token to it instead of consuming it, and that's
+      // the app that will have the session (MIN-291). Without this marker, register from
+      // the app would connect the browser and leave the app on its screen
       // connexion.
       const confirmUrl = new URL(`${window.location.origin}/auth/callback`);
       if (getDesktopBridge()) confirmUrl.searchParams.set(DESKTOP_CALLBACK_FLAG, "1");
@@ -210,25 +210,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email,
         password,
         options: {
-          // Pas de `?next=` ici (MIN-117) : c'est le TEMPLATE d'email GoTrue qui
-          // pose la destination finale (/auth/confirmed). Ce qui se joue dans
-          // cette URL, c'est l'ORIGINE — dev et previews doivent recevoir un lien
-          // vers la leur, pas vers la prod. GoTrue ne la retient que si elle
-          // figure dans l'allowlist « Redirect URLs » ; sinon il retombe sur le
-          // Site URL, et le lien de confirmation part vers le mauvais domaine.
+          // No `?next=` here (MIN-117): this is the GoTrue email TEMPLATE which
+          // sets the final destination (/auth/confirmed). What is at stake in
+          // this URL is the ORIGIN — dev and previews must receive a link
+          // towards theirs, not towards production. GoTrue only retains it if it
+          // appears in the “Redirect URLs” allowlist; otherwise it falls back on the
+          // Site URL, and the confirmation link goes to the wrong domain.
           emailRedirectTo: confirmUrl.toString(),
-          // `avatar_seed` : la marque tirée pendant le wizard (MIN-300). Elle
-          // ne peut pas s'écrire dans `user_avatars` maintenant — il n'y a pas
-          // encore de compte — donc elle voyage ici, et se pose à la première
+          // `avatar_seed`: the mark drawn during the wizard (MIN-300). She
+          // cannot be written in `user_avatars` now — there is no
+          // still counting — so she travels here, and lands at the first
           // session (`claimAvatarSeed`).
           data: {
             ...(options?.fullName ? { full_name: options.fullName } : {}),
             ...(options?.avatarSeed ? { avatar_seed: options.avatarSeed } : {}),
-            // `locale` : la langue de l'interface au moment de l'inscription.
-            // C'est ce que lira le template GoTrue de l'e-mail de confirmation
-            // — le tout premier envoi du compte, et le seul qui parte AVANT
-            // qu'une session ait pu recoller quoi que ce soit. Sans ce champ,
-            // cet e-mail-là sort en anglais quoi qu'il arrive.
+            // `locale`: the language of the interface at the time of registration.
+            // This is what the GoTrue template of the confirmation email will read
+            // — the very first sending of the account, and the only one that leaves BEFORE
+            // that a session could have put anything together. Without this field,
+            // this email comes out in English no matter what.
             locale: readInterfaceLocale(),
           },
         },
@@ -240,12 +240,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const sendPasswordReset = useCallback(async (email: string) => {
-    // Même URL que la confirmation d'inscription, et pour les mêmes raisons :
-    // c'est l'ORIGINE qui se joue ici (dev, preview ou prod), et le marqueur
-    // `desktop=1` fait repasser le jeton à l'app au lieu de connecter le
-    // navigateur système (MIN-291). La DESTINATION finale, elle, est posée par
-    // le gabarit d'e-mail — `next=/reset-password` (MIN-117, MIN-297) : rien de
-    // ce qu'on ajoute ici en query ne survit à l'allowlist de GoTrue.
+    // Same URL as the registration confirmation, and for the same reasons:
+    // it is the ORIGIN that is at stake here (dev, preview or prod), and the marker
+    // `desktop=1` passes the token back to the app instead of connecting the
+    // system browser (MIN-291). The final DESTINATION is posed by
+    // the email template — `next=/reset-password` (MIN-117, MIN-297): nothing
+    // what we add here in query does not survive the GoTrue allowlist.
     const callbackUrl = new URL(`${window.location.origin}/auth/callback`);
     if (getDesktopBridge()) callbackUrl.searchParams.set(DESKTOP_CALLBACK_FLAG, "1");
     const { error } = await getSupabase().auth.resetPasswordForEmail(email, {
@@ -262,14 +262,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (safeRedirect !== "/home") {
         callbackUrl.searchParams.set("next", safeRedirect);
       }
-      // Le marqueur voyage jusqu'au provider et revient avec lui : c'est la
-      // SEULE chose qui dira au callback que la session à ouvrir n'est pas celle
+      // The marker travels to the provider and returns with it: this is the
+      // ONLY thing that will tell the callback that the session to open is not the one
       // du navigateur qui l'appelle (MIN-291).
       if (desktop) {
         callbackUrl.searchParams.set(DESKTOP_CALLBACK_FLAG, "1");
-        // Et avec lui le nonce du tour (MIN-345) : au retour, la fenêtre ne
-        // traitera le deep link que s'il rapporte celui-ci. Un `minddy://auth`
-        // reçu du système, lui, n'en portera aucun.
+        // And with him the nuncio of the tour (MIN-345): on the return, the window does not
+        // will process the deep link only if it reports it. A `minddy://auth`
+        // received from the system, he will not carry any.
         callbackUrl.searchParams.set(DESKTOP_TURN_PARAM, beginDesktopAuthTurn());
       }
 
@@ -277,9 +277,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         provider,
         options: {
           redirectTo: callbackUrl.toString(),
-          // Google REFUSE OAuth depuis un navigateur embarqué. Dans l'app, on ne
-          // navigue donc pas : on demande l'URL, et le navigateur du système
-          // fait le tour. `skipBrowserRedirect` est ce qui rend cette URL au
+          // Google REFUSES OAuth from an embedded browser. In the app, we do not
+          // therefore do not navigate: we ask for the URL, and the system browser
+          // goes around. `skipBrowserRedirect` is what makes this URL au
           // lieu de nous y envoyer.
           ...(desktop ? { skipBrowserRedirect: true } : {}),
         },
@@ -297,8 +297,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.exchangeCodeForSession(link.code);
       if (error) throw error;
     } else {
-      // Le lien mail n'a PAS été consommé par le callback : il l'a transmis tel
-      // quel, précisément pour que la session naisse ici.
+      // The email link was NOT consumed by the callback: it transmitted it as
+      // which, precisely so that the session is born here.
       const { error } = await supabase.auth.verifyOtp({
         token_hash: link.tokenHash,
         type: link.type,
@@ -309,16 +309,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    // `scope: "local"` — SANS lui, supabase-js part en portée GLOBALE et révoque
-    // les jetons de TOUS les appareils du compte. Se déconnecter de son poste de
-    // dev fermait donc aussi la prod, le téléphone et la preview. Fermer une
-    // session ferme UNE session ; couper les autres est un geste distinct, et il
-    // a déjà son appel (`signOutOtherSessions`, à l'activation de la 2FA).
+    // `scope: "local"` — WITHOUT it, supabase-js goes GLOBAL in scope and revokes
+    // tokens from ALL devices in the account. Disconnect from your workstation
+    // dev therefore also closed production, telephone and preview. Close one
+    // session closes ONE session; cutting off others is a distinct gesture, and it
+    // already has its call (`signOutOtherSessions`, upon activation of 2FA).
     const { error } = await getSupabase().auth.signOut({ scope: "local" });
     if (error) throw error;
-    // Le cache React Query est persisté sur disque (MIN-89) : sans purge, le
-    // compte suivant sur cette machine réhydraterait les données de celui-ci
-    // avant que ses propres requêtes n'aboutissent.
+    // The React Query cache is persisted on disk (MIN-89): without purging, the
+    // next account on this machine would rehydrate the data of this one
+    // before his own requests are successful.
     clearPersistedQueryCache();
     window.location.href = "/login";
   }, []);
@@ -336,10 +336,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const updateUserMetadata = useCallback((patch: Record<string, unknown>) => {
-    // Chaîne : chaque écriture attend la précédente puis fusionne son patch dans
-    // le métadonnées le PLUS frais (userRef, mis à jour synchroniquement ici pour
-    // que le maillon suivant parte de la bonne base). La chaîne survit à un échec
-    // (catch) mais l'appelant, lui, voit le rejet et peut revert.
+    // Chain: each write waits for the previous one then merges its patch into
+    // the MOST fresh metadata (userRef, updated synchronously here to
+    // that the next link starts from the correct base). The channel survives a failure
+    // (catch) but the caller sees the rejection and can revert.
     const run = metaWriteChain.current.then(async () => {
       const currentMeta = (userRef.current?.user_metadata ?? {}) as Record<
         string,
@@ -358,20 +358,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return run;
   }, []);
 
-  // Recolle `user_metadata.locale` sur la langue de l'interface.
+  // Paste `user_metadata.locale` onto the interface language.
   //
-  // Ce champ ne sert PAS à l'app — elle lit le cookie `NEXT_LOCALE`. Il sert
-  // aux e-mails d'authentification, rendus par GoTrue sans requête ni cookie :
-  // `user_metadata` est tout ce qu'il sait du destinataire (voir
-  // `lib/interface-locale.ts` et `supabase/email-templates/`). Le réglage de
-  // langue des préférences l'écrit déjà lui-même ; les autres chemins, non —
-  // le sélecteur du pied de page public, Numo réglant la langue côté serveur,
-  // une connexion OAuth, et tous les comptes créés avant que ce champ existe.
+  // This field is NOT used by the app — it reads the `NEXT_LOCALE` cookie. It serves
+  // to authentication emails, delivered by GoTrue without request or cookie:
+  // `user_metadata` is all it knows about the recipient (see
+  // `lib/interface-locale.ts` and `supabase/email-templates/`). The setting of
+  // language of preferences already writes it itself; the other paths, no —
+  // the public footer selector, Numo setting the language on the server side,
+  // an OAuth connection, and any accounts created before this field existed.
   //
-  // D'où cette remise à niveau à chaque session : une écriture la toute
-  // première fois, plus rien ensuite (la comparaison coupe court). C'est ce
-  // qui répare le parc existant — mais seulement quand le compte rouvre l'app,
-  // ce qui laisse une réinitialisation de mot de passe demandée d'ici là partir
+  // Hence this refresher course at each session: a complete writing
+  // first time, nothing after that (the comparison cuts it short). This is what
+  // which repairs the existing fleet — but only when the account reopens the app,
+  // which leaves a requested password reset by then to go
   // en anglais.
   useEffect(() => {
     if (!user) return;
@@ -413,9 +413,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const verifyTotp = useCallback(async (factorId: string, code: string) => {
-    // `challengeAndVerify` = challenge + verify en un aller-retour. Le succès
-    // remplace la session courante par une session `aal2` ; `onAuthStateChange`
-    // la propage, donc rien à recopier ici.
+    // `challengeAndVerify` = challenge + verify in one round trip. Success
+    // replaces the current session with a `aal2` session; `onAuthStateChange`
+    // propagates it, so nothing to copy here.
     const { error } = await getSupabase().auth.mfa.challengeAndVerify({
       factorId,
       code,
@@ -446,10 +446,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   }, []);
 
-  // La value est MÉMOÏSÉE (MIN-315). Un littéral d'objet ici re-rendrait tous
-  // les consommateurs à chaque rendu de ce provider — et c'est le plus haut de
-  // l'arbre. Les handlers ci-dessus sont tous des `useCallback` : les seules
-  // dépendances qui bougent vraiment sont les trois états.
+  // The value is STORED (MIN-315). An object literal here would re-render all
+  // consumers with each rendering of this provider — and it is the highest of
+  // the tree. The handlers above are all `useCallback`: the only ones
+  // Dependencies that really move are the three states.
   const value = useMemo(
     () => ({
       user,
@@ -503,14 +503,14 @@ export function useAuth() {
 }
 
 /**
- * L'utilisateur connecté, ou `null` HORS provider — pour les surfaces qui
- * peuvent être montées des deux côtés de l'authentification.
+ * The logged in user, or `null` OUTSIDE provider — for surfaces that
+ * can be mounted on both sides of the authentication.
  *
- * Il y en a maintenant : une page publiée (MIN-283) monte le vrai éditeur de
- * page, donc les vues de nœud de l'éditeur, pour un visiteur anonyme. `useAuth`
- * y lève, et fait tomber la page entière — sur un composant qui ne lisait qu'une
- * préférence de compte. Même parti pris que `useTaskSurface` : hors contexte, la
- * vue rend ce qu'elle peut rendre plutôt que rien.
+ * There is now: a published page (MIN-283) mounts the real editor of
+ * page, therefore the editor node views, for an anonymous visitor. `useAuth`
+ * y lifts, and drops the entire page — on a component that only read one
+ * account preference. Same bias as `useTaskSurface`: out of context, the
+ * view renders what it can render rather than nothing.
  */
 export function useAuthOptional() {
   return useContext(AuthContext);

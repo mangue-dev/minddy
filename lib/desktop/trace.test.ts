@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { createTraceRing, TRACE_WINDOW_MS } from "./trace";
 
 /**
- * Le tampon tournant de la trace (MIN-307). Ce qui compte : il ne grandit pas,
- * il ne perd pas la fin, et son dump se lit — c'est un outil qu'on ouvre après
- * coup, sur une machine où le défaut vient d'avoir lieu.
+ * The spinning buffer of the trace (MIN-307). What matters: it doesn't grow,
+ * it doesn't lose the end, and its dump is read — it's a tool that you open after
+ *, on a machine where the fault has just occurred.
  */
 describe("createTraceRing", () => {
   it("garde la fenêtre courante et jette ce qui l'a quittée", () => {
@@ -25,7 +25,7 @@ describe("createTraceRing", () => {
 
     const kept = ring.entries(50);
     expect(kept).toHaveLength(3);
-    // Ce sont les DERNIÈRES qu'on garde : le défaut vient de se produire.
+    // These are the LAST ones we keep: the fault has just occurred.
     expect(kept.map((e) => e.kind)).toEqual(["m47", "m48", "m49"]);
   });
 

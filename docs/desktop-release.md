@@ -1,214 +1,214 @@
-# Livrer minddy : le site, l'app de bureau, et pourquoi ce n'est pas la même chose
+# Deliver minddy: the site, the desktop app, and why they are not the same thing
 
-> **Ticket** : MIN-292 · Voisins : la configuration de signature de l'instance
-> (compte Apple et certificat, une fois pour toutes),
-> [desktop-electron.md](desktop-electron.md) (le cadrage),
-> [desktop/README.md](../desktop/README.md) (le code de la coquille).
+> **Ticket**: MIN-292 · Neighbors: the instance signature configuration
+> (Apple account and certificate, once and for all),
+> [desktop-electron.md](desktop-electron.md) (framing),
+> [desktop/README.md](../desktop/README.md) (the shell code).
 
-**La question à laquelle cette page répond** : je viens de livrer une feature,
-est-ce que je dois republier l'app macOS ?
+**The question this page answers**: I have just delivered a feature,
+do I need to republish the macOS app?
 
-**La réponse courte** : presque jamais, et `npm run deploy` te le dit.
+**The short answer**: almost never, and `npm run deploy` tells you so.
 
 ---
 
-## Pourquoi il y a deux choses à livrer
+## Why there are two things to deliver
 
-L'app de bureau est **une fenêtre sur `www.minddy.app`**, sans aucun rendu local
-(§2 du cadrage). C'est la décision qui gouverne tout ce document : livrer une
-feature ne demande pas de re-signer un binaire, et l'app dit toujours la même
-chose que le web.
+The desktop app is **a window to `www.minddy.app`**, without any local rendering
+(§2 of the framework). This is the decision that governs this entire document: to deliver a
+feature does not ask to re-sign a binary, and the app always says the same
+thing than the web.
 
-| | Ce que c'est | Comment ça se livre | Qui le voit, et quand |
+| | What it is | How it is delivered | Who sees it, and when |
 | --- | --- | --- | --- |
-| **Le site** | tout ce qui s'affiche | `npm run deploy` | tout le monde, tout de suite — l'app comprise, au rechargement suivant |
-| **La coquille** | fenêtre, menu, `minddy://`, garde de navigation, notifications natives, mise à jour | build signé + notarisé, puis publication du flux | les installations existantes, sous 6 h, à leur prochain ⌘Q |
+| **The site** | all that appears | `npm run deploy` | everyone, right away — including the app, the next time you reload |
+| **The shell** | window, menu, `minddy://`, navigation guard, native notifications, update | build signed + notarized, then publication of the flow | existing installations, within 6 hours, to their next ⌘Q |
 
-Un déploiement du site **ne déclenche jamais** de mise à jour de l'app : tant
-qu'aucun binaire n'est republié, le flux annonce la même version et rien ne
-bouge chez personne.
+A deployment of the site **never triggers** an app update: as long as
+that no binary is republished, the flow announces the same version and nothing
+move at no one's house.
 
 ---
 
-## Ce qui oblige vraiment à republier
+## Which really requires republishing
 
-Pas « ai-je touché à `desktop/` ». Le bundle esbuild embarque aussi ce que ces
-fichiers importent, et **la liste déborde du dossier** — relevée sur le vrai
-bundle, pas devinée :
+Not “did I touch `desktop/`”. The esbuild bundle also includes what these
+files import, and **the list overflows the folder** — noted on the real
+bundle, not guessed:
 
 ```
 desktop/src/{main,menu,preload,updater}.ts
 lib/desktop/{auth-link,config,nav-guard,window-routes}.ts
-lib/public-routes.ts     ← la garde de navigation en dérive
-lib/site.ts              ← l'origine que la fenêtre charge
+lib/public-routes.ts     ← the navigation guard derives from it
+lib/site.ts              ← the origin loaded by the window
 lib/auth-redirect.ts
 lib/changelog.ts
 ```
 
-Plus ce qui n'entre pas par esbuild mais fabrique quand même le binaire :
-`desktop/electron-builder.yml`, les entitlements, l'icône, les versions
-d'Electron et d'electron-updater, et `scripts/build-desktop.mjs`.
+Plus what does not enter via esbuild but still produces the binary:
+`desktop/electron-builder.yml`, entitlements, icon, versions
+of Electron and electron-updater, and `scripts/build-desktop.mjs`.
 
-**La ligne qui surprend est `lib/public-routes.ts`.** Ajouter une page publique
-change le binaire : sans republication, les installations existantes ne sauront
-pas que cette page est publique et **l'afficheront dans la fenêtre** au lieu de
-l'ouvrir dans le navigateur. C'est la dérive normale d'une coquille qui vit chez
-les gens face à un site qui bouge tous les jours — mais autant la connaître.
+**The surprising line is `lib/public-routes.ts`.** Add a public page
+changes the binary: without republication, existing installations will not be able to
+not that this page is public and **will display it in the window** instead of
+open it in the browser. This is the normal drift of a shell that lives in
+people facing a site that moves every day — but they might as well get to know it.
 
-### Ce qui n'oblige à rien, et qu'il a fallu écarter explicitement
+### Which does not require anything, and which had to be explicitly excluded
 
-Trois contenus entrent dans le bundle sans rien dire de son comportement. Sans
-ces coupes, **chaque déploiement du site republierait l'app** — dix minutes de
-Mac immobilisé, et 120 Mo téléchargés par chaque utilisateur pour rien :
+Three contents enter the bundle without saying anything about its behavior. Without
+these cuts, **each deployment of the site would republish the app** — ten minutes of
+Mac immobilized, and 120 MB downloaded by each user for nothing:
 
-- **le numéro de version**, réécrit à chaque build depuis celui du dépôt ;
-- **`lib/changelog.ts`**, qui n'apporte qu'une date (`CHANGELOG_LAST_MODIFIED`) ;
-- **les `lastModified` de `lib/public-routes.ts`**, tenus à la main pour le
-  sitemap. La coquille ne lit que les CHEMINS.
+- **the version number**, rewritten for each build from that of the repository;
+- **`lib/changelog.ts`**, which only provides a date (`CHANGELOG_LAST_MODIFIED`);
+- **the `lastModified` of `lib/public-routes.ts`**, held by hand for
+  sitemap. The shell only reads PATHS.
 
-Elles vivent dans `NORMALIZE`, en tête de
-[scripts/desktop-fingerprint.mjs](../scripts/desktop-fingerprint.mjs), chacune
-avec sa raison.
+They live in `NORMALIZE`, at the head of
+[scripts/desktop-fingerprint.mjs](../scripts/desktop-fingerprint.mjs), each
+with his reason.
 
 ---
 
-## Le mécanisme : une empreinte, et un relevé
+## The mechanism: a print, and a reading
 
-[`desktop-fingerprint.mjs`](../scripts/desktop-fingerprint.mjs) demande à esbuild
-quels fichiers entrent réellement dans le bundle, les hache après normalisation,
-et rend une empreinte. C'est une liste **dérivée**, pas tenue à la main : un
-`import` ajouté demain sera pris en compte sans que personne y pense.
+[`desktop-fingerprint.mjs`](../scripts/desktop-fingerprint.mjs) asks esbuild
+which files actually go into the bundle, hashes them after normalization,
+and makes a print. This is a **derived** list, not maintained by hand: a
+`import` added tomorrow will be taken into account without anyone thinking about it.
 
-[`desktop/released.json`](../desktop/released.json) est le relevé de la dernière
-publication — version, date, empreinte, et le hash de chaque fichier. Il est
-**commité** : la réponse se lit dans un diff, et un déploiement hors ligne reste
-possible. Il est écrit par `publish-desktop.mjs` **après** l'envoi, jamais avant
-— un relevé qui annoncerait une publication ratée ferait sauter tous les
-déploiements suivants.
+[`desktop/released.json`](../desktop/released.json) is the statement of the last
+publication — version, date, fingerprint, and hash of each file. He is
+**committee**: the response is read in a diff, and an offline deployment remains
+possible. It is written by `publish-desktop.mjs` **after** sending, never before
+— a statement which would announce a failed publication would cause all the
+subsequent deployments.
 
 ```bash
-npm run desktop:check      # ce qui a changé depuis la publication
+npm run desktop:check      # what changed since publication
 ```
 
 ```
-Publiée : 0.9.2 (e5bb38213348)
-Actuelle : c28ea4e2f76e
+Published: 0.9.2 (e5bb38213348)
+Current: c28ea4e2f76e
 
-  modifié   desktop/src/main.ts
-  modifié   lib/desktop/window-routes.ts
+  modified   desktop/src/main.ts
+  modified   lib/desktop/window-routes.ts
 ```
 
 ---
 
-## Le flux normal : `npm run deploy`
+## The normal flow: `npm run deploy`
 
-L'étape desktop de `deploy.sh` utilise la version du cœur que l'assistant vient
-de publier, pour que l'app porte la version du site dont elle est tirée. La
-release macOS publique, sans dépendance au poste, est décrite dans
-[`releases.md`](releases.md) et tourne dans GitHub Actions ; `npm run deploy`
-la déclenche et attend son résultat.
+The desktop step of `deploy.sh` uses the version of the core that the wizard comes from
+to publish, so that the app carries the version of the site from which it is taken. The
+public macOS release, without dependency on the workstation, is described in
+[`releases.md`](releases.md) and runs in GitHub Actions; `npm run deploy`
+triggers it and waits for its result.
 
-1. Rien n'a bougé dans la coquille → `Desktop app: unchanged since 0.9.2 —
-   nothing to republish.` et le déploiement continue. **C'est le cas courant.**
-2. La coquille a changé → le mode automatique propose macOS ; le mode manuel
-   pose la question avec « oui » par défaut.
-3. Si macOS est retenu, `deploy.sh` attend d'abord la release du cœur, déclenche
-   le runner GitHub macOS, puis attend signature, notarisation, publication du
-   flux et ajout des artefacts à la release.
-4. Après succès, le bot committe `desktop/released.json` sur `main`. Ce relevé
-   rend la détection suivante exacte ; il n'est jamais écrit avant que les
-   binaires et leur manifeste soient réellement publiés.
+1. Nothing has changed in the shell → `Desktop app: unchanged since 0.9.2 —
+   nothing to republish.` and the deployment continues. **This is the common case.**
+2. The shell has changed → automatic mode offers macOS; manual mode
+   asks the question with “yes” by default.
+3. If macOS is retained, `deploy.sh` first waits for core release, triggers
+   the GitHub macOS runner, then waits for signature, notarization, publication of the
+   flow and adding artifacts to the release.
+4. After success, the bot commits `desktop/released.json` to `main`. This statement
+   makes the following detection accurate; it is never written before the
+   binaries and their manifest are actually published.
 
-`npm run desktop:release` reste une commande de diagnostic local qui ne doit ni
-publier le flux public ni servir de preuve de release. Le flux public passe
-exclusivement par `Public macOS release`, checkout le tag du cœur, puis obtient
-ses identifiants de signature et de publication depuis `public-release`.
+`npm run desktop:release` remains a local diagnostic command which should neither
+publish the public feed or serve as proof of release. The public stream passes
+exclusively by `Public macOS release`, checkout the heart tag, then get
+its signature and publication identifiers from `public-release`.
 
-### Combien de temps, et faut-il rester devant
+### How long, and should you stay ahead
 
-**C'est désormais un flux CI avec une attente distante.** La signature,
-l'attente du verdict Apple, **l'agrafage du ticket dans le bundle**, la
-fabrication du `.dmg` et du `.zip`, puis l'envoi tournent sur le runner GitHub
-macOS. Le poste du mainteneur peut dormir ; `npm run deploy` suit seulement le
-workflow et affiche son résultat.
+**It is now a CI flow with a remote wait.** The signature,
+waiting for the Apple verdict, **stapling the ticket in the bundle**,
+production of `.dmg` and `.zip`, then sending runs on the GitHub runner
+macOS. The maintainer's position can sleep; `npm run deploy` only follows the
+workflow and displays its result.
 
-Mesuré sur la première vraie publication (0.9.2) :
+Measured on the first real release (0.9.2):
 
 | | |
 | --- | --- |
-| soumission arm64 → soumission x64 | ~4 min (notarisation + `.dmg`/`.zip`) |
-| soumission x64 → manifeste écrit | ~1 min 20 |
-| **total, envoi compris** | **~10 min** |
+| arm64 submission → x64 submission | ~4 min (notarization + `.dmg`/`.zip`) |
+| x64 submission → written manifest | ~1 min 20 |
+| **total, shipping included** | **~10 mins** |
 
-La toute première soumission avait pris 25 minutes et fini sur un `HTTP 500` :
-c'était Apple qui allait mal ce jour-là, pas la norme. Le binaire, lui, avait été
-accepté.
+The very first submission took 25 minutes and ended with a `HTTP 500`:
+it was Apple that was going bad that day, not the norm. The binary had been
+accepted.
 
-Ce n'est pas à chaque déploiement, et c'est tout l'objet de l'empreinte : la
-plupart des livraisons ne touchent pas à la coquille et sautent l'étape. Si ça
-échoue, le cœur et le web déjà publiés restent valides ; le flux desktop conserve
-son manifeste précédent jusqu'à une relance réussie.
-
----
-
-## Ce que reçoit quelqu'un qui a l'app installée
-
-L'app lit `latest-mac.yml` **au lancement, puis toutes les 6 h**. Version plus
-récente → téléchargement du `.zip` en arrière-plan, puis installation **au
-prochain ⌘Q**. Jamais de redémarrage imposé sous les doigts de quelqu'un qui
-écrit un ticket.
-
-Le menu porte aussi « Check for Updates… » — la seule vérification qui a le droit
-de répondre « vous êtes à jour », parce que quelqu'un a posé la question. Celle
-qui tourne toute seule se tait : sinon la seule chose que l'app dirait à
-quelqu'un hors ligne serait qu'elle n'a pas pu se mettre à jour.
-
-**Le `.zip` n'est pas un doublon du `.dmg`** : Squirrel.Mac ne sait lire que lui.
-Le `.dmg` sert au premier téléchargement, le `.zip` à toutes les mises à jour
-suivantes. Publier l'un sans l'autre donne une app qui s'installe et ne se met
-jamais à jour, sans rien dire.
+It's not every deployment, and that's the whole point of the footprint: the
+Most deliveries do not touch the shell and skip the step. If that
+fails, the already published core and web remain valid; the desktop stream keeps
+its previous manifesto until a successful relaunch.
 
 ---
 
-## Les trois refus de la publication
+## What someone who has the app installed receives
 
-[`publish-desktop.mjs`](../scripts/publish-desktop.mjs) vérifie avant d'envoyer
-un octet, et il ne le fait pas par excès de prudence : **les trois pannes
-correspondantes sont muettes**. Rien ne casse à la publication, tout est cassé
-chez les gens.
+The app reads `latest-mac.yml` **on launch, then every 6 hours**. Plus version
+recent → download `.zip` in background, then install **at
+next ⌘Q**. Never a restart imposed under the fingers of someone who
+writes a ticket.
 
-1. **App non signée** → elle s'installe et ne se mettra jamais à jour
-   (Squirrel.Mac exige une signature).
-2. **Ticket de notarisation absent** → macOS refuse de l'ouvrir. Et le manque ne
-   se voit pas au build : quand les identifiants manquent, electron-builder écrit
-   `skipped macOS notarization` en `warn` au milieu de cent lignes et rend une app
-   d'apparence normale.
-3. **`app-update.yml` sans URL de flux** → l'app ne cherche nulle part. Ce
-   fichier est écrit à l'empaquetage, donc un `MINDDY_DESKTOP_FEED_URL` absent CE
-   jour-là ne se voit nulle part ailleurs.
+The menu also says “Check for Updates…” — the only check that has the right
+to answer "you are up to date", because someone asked the question. The one
+which runs on its own is silent: otherwise the only thing the app would say to
+someone offline would be that it was unable to update.
 
-Il ne publie par ailleurs **que ce que `latest-mac.yml` annonce** : le dossier
-`desktop/release/` n'est pas nettoyé entre deux builds, et un balayage naïf
-republierait les binaires d'une version précédente. Ce qu'il laisse au sol, il le
-dit — un plafond silencieux est un mensonge.
+**The `.zip` is not a duplicate of the `.dmg`**: Squirrel.Mac can only read it.
+The `.dmg` is used for the first download, the `.zip` for all updates
+following. Publishing one without the other results in an app that installs and does not
+never updated, without saying anything.
 
 ---
 
-## Où vivent les réglages
+## The three refusals of publication
 
-| Variable | Rôle | Qui la lit |
+[`publish-desktop.mjs`](../scripts/publish-desktop.mjs) checks before sending
+a byte, and he does not do it out of an abundance of caution: **the three failures
+corresponding are silent**. Nothing breaks when published, everything is broken
+in people.
+
+1. **Unsigned app** → it installs and will never update
+   (Squirrel.Mac requires a signature).
+2. **Notarization ticket missing** → macOS refuses to open it. And the lack
+   is not seen in the build: when the identifiers are missing, electron-builder writes
+   `skipped macOS notarization` to `warn` in the middle of a hundred lines and renders an app
+   normal in appearance.
+3. **`app-update.yml` without feed URL** → the app doesn't search anywhere. This
+   file is written at packaging, so a `MINDDY_DESKTOP_FEED_URL` missing CE
+   that day is not seen anywhere else.
+
+It also only publishes what `latest-mac.yml` announces**: the file
+`desktop/release/` is not cleaned between two builds, and naive scanning
+would republish binaries from a previous version. What he leaves on the ground, he
+says — a quiet ceiling is a lie.
+
+---
+
+## Where the settings live
+
+| Varies | Role | Who reads it |
 | --- | --- | --- |
-| `PUBLIC_DESKTOP_FEED_URL` | le dossier public du flux | workflow au build ; même valeur configurée pour `/api/desktop/download` |
-| `APPLE_API_KEY_P8`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER` | notarisation Apple | environnement GitHub `public-release` |
-| `MACOS_CERTIFICATE_P12_BASE64`, `MACOS_CERTIFICATE_PASSWORD` | signature Developer ID | environnement GitHub `public-release` |
-| `PUBLIC_DESKTOP_BLOB_READ_WRITE_TOKEN` | écrire le flux public | workflow GitHub uniquement |
+| `PUBLIC_DESKTOP_FEED_URL` | the public folder of the stream | build workflow; same value configured for `/api/desktop/download` |
+| `APPLE_API_KEY_P8`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER` | Apple notarization | GitHub environment `public-release` |
+| `MACOS_CERTIFICATE_P12_BASE64`, `MACOS_CERTIFICATE_PASSWORD` | signature Developer ID | GitHub environment `public-release` |
+| `PUBLIC_DESKTOP_BLOB_READ_WRITE_TOKEN` | write public feed | GitHub-only workflow |
 
-La valeur publique du flux est aussi configurée sur Vercel pour la route de
-téléchargement. Les secrets de signature, notarisation et écriture ne vivent ni
-dans `.env` ni dans le trousseau d'un mainteneur : ils appartiennent à
-l'organisation et ne sont exposés qu'au runner approuvé.
+The public value of the flow is also configured on Vercel for the route of
+download. The secrets of signing, notarization and writing do not live
+in `.env` nor in a maintainer's keychain: they belong to
+the organization and are only exposed to the approved runner.
 
-**Le piège à connaître** : l'URL de flux doit être présente **au
-moment du build**, pas seulement sur Vercel. C'est à l'empaquetage qu'elle entre
-dans l'`app-update.yml` du bundle ; le workflow la fournit depuis
-`PUBLIC_DESKTOP_FEED_URL`, sans `source .env`.
+**The trap to know**: the feed URL must be present **at
+moment of build**, not only on Vercel. It is in the packaging that it enters
+in the `app-update.yml` of the bundle; the workflow provides it from
+`PUBLIC_DESKTOP_FEED_URL`, without `source .env`.

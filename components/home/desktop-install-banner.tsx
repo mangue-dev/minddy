@@ -23,20 +23,20 @@ import {
 } from "@/lib/desktop/install-prompt";
 
 /**
- * « minddy existe en app Mac » — sur l'accueil WEB, une seule fois dans la vie
- * du compte (MIN-292).
+ * “minddy exists as a Mac app” — on the WEB home page, only once in a lifetime
+ * of the account (MIN-292).
  *
- * **Écarter, c'est écarter pour toujours.** Le refus est écrit dans le
- * `user_metadata` du compte et non dans le navigateur : sinon il reviendrait au
- * premier nettoyage de cache et sur la deuxième machine, et « non merci »
- * deviendrait « redemande-moi demain ». La règle complète — et le piège de
- * l'iPad qui se fait passer pour un Mac — vit dans
+ * **To reject is to dismiss forever.** The refusal is written in the
+ * `user_metadata` of the account and not in the browser: otherwise it would return to
+ * first cache clean and on the second machine, and “no thanks”
+ * would become “ask me again tomorrow”. The complete rule — and the trap of
+ * the iPad that masquerades as a Mac — lives in
  * [lib/desktop/install-prompt.ts](../../lib/desktop/install-prompt.ts).
  *
- * **Tout est lu APRÈS le montage.** Ni `navigator` ni `window.minddy`
- * n'existent au rendu serveur ; les supposer ferait diverger l'hydratation. La
- * bannière n'apparaît donc jamais au premier paint, ce qui tombe bien : une
- * proposition qui surgit sous les doigts de quelqu'un est une proposition qu'on
+ * **Everything is read AFTER editing.** Neither `navigator` nor `window.minddy`
+ * do not exist in server rendering; assuming them would cause the hydration to diverge. There
+ * banner therefore never appears at the first paint, which is good: a
+ * proposition that arises under someone's fingers is a proposition that we
  * clique par accident.
  */
 export function DesktopInstallBanner() {
@@ -44,11 +44,11 @@ export function DesktopInstallBanner() {
   const { user, updateUserMetadata } = useAuth();
   const { track } = useAnalytics();
   const [eligible, setEligible] = useState(false);
-  // Écarté sur-le-champ, sans attendre GoTrue : le geste doit être instantané.
+  // Discarded immediately, without waiting for GoTrue: the gesture must be instantaneous.
   const [dismissed, setDismissed] = useState(false);
-  // L'effet re-tourne quand GoTrue rend enfin le compte : sans ce verrou, la
-  // même bannière compterait deux « vue » pour un seul affichage, et le taux de
-  // conversion qu'on en tire serait faux de moitié.
+  // The effect returns when GoTrue finally gives the account: without this lock, the
+  // same banner would have two “views” for a single display, and the rate of
+  // The conversion that we draw from it would be wrong by half.
   const shownTracked = useRef(false);
 
   const alreadyDismissed = resolveDesktopPromptDismissed(user?.user_metadata);
@@ -78,20 +78,20 @@ export function DesktopInstallBanner() {
   const dismiss = () => {
     setDismissed(true);
     track("desktop_install_prompt_dismissed");
-    // En cas d'échec on ne remet pas la bannière : l'utilisateur a dit non, et
-    // la lui rendre parce que GoTrue a hoqueté serait lui redemander. Elle
-    // reviendra au prochain chargement, ce qui est le pire acceptable.
+    // In case of failure, we do not put the banner back: the user said no, and
+    // giving it back to him because GoTrue hiccupped would be asking him again. She
+    // will return on the next load, which is the worst acceptable.
     void updateUserMetadata({ [DESKTOP_PROMPT_DISMISSED_META_KEY]: true }).catch(
       () => {}
     );
   };
 
   return (
-    // Même coquille que les autres bandeaux de l'accueil
-    // (`pending-invitations-banner.tsx`) : la colonne qui les porte tient déjà
-    // les écarts, donc pas de marge propre.
+    // Same shell as the other welcome banners
+    // (`pending-invitations-banner.tsx`): the column that carries them already holds
+    // the differences, therefore no own margin.
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
-      {/* La vraie icône de l'app — celle qui a servi à fabriquer le `.icns`. */}
+      {/* The real icon of the app — the one used to make the `.icns`. */}
       <Image
         src="/web-app-manifest-192x192.png"
         alt=""
@@ -109,11 +109,11 @@ export function DesktopInstallBanner() {
             {t("desktopBannerCta")}
           </Link>
         </Button>
-        {/* Une VRAIE infobulle, pas l'attribut `title` : celui-ci n'apparaît
-            qu'après une seconde d'immobilité, ne se déclenche pas au clavier, et
-            se dessine dans le style du système plutôt que dans celui de l'app.
-            L'`aria-label` reste — c'est lui que lit un lecteur d'écran, et
-            l'infobulle ne le remplace pas. */}
+        {/* A REAL tooltip, not the `title` attribute: this one does not appear
+ after a second of immobility, does not trigger on the keyboard, and
+ is drawn in the style of the system rather than that of the app.
+ The `aria-label` remains — it is what a reader reads screen, and
+ the tooltip does not replace it. */}
         <Tooltip>
           <TooltipTrigger asChild>
             <IconButton

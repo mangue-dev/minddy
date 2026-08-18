@@ -9,10 +9,10 @@ import type {
 } from "@/lib/issue-validation";
 import type { ResourceInput } from "@/lib/types";
 
-/** D'où vient le lot importé : un CSV téléversé (dont un export minddy relu par
- *  minddy), le backfill d'un dépôt lié à l'activation de la synchro d'issues
- *  (MIN-97), ou la découpe d'un brief à l'amorce d'un projet (MIN-172) — cette
- *  valeur est celle que porte l'événement `imported` de la timeline. */
+/** Where does the imported batch come from: an uploaded CSV (including a minddy export reread by
+ * minddy), the backfill of a repository linked to the activation of issue sync
+ * (MIN-97), or the cutting of a brief at the start of a project (MIN-172) — this
+ * value is the one that carries the `imported` event from the timeline. */
 export type ImportSource =
   | "linear"
   | "jira"
@@ -23,11 +23,11 @@ export type ImportSource =
   | "brief";
 
 /**
- * Plafond par import — garde-fou contre un export raté qui inonderait un
- * projet, pas une limite technique : depuis que les numéros sont réservés en un
- * appel et les identifiants tirés côté serveur (`lib/server/import-issues.ts`),
- * le coût d'un import est en allers-retours par LOT, pas par ticket.
- * Le vrai plafond en pratique reste `MAX_IMPORT_CSV_BYTES`.
+ * Cap per import — guard against a failed export which would flood a
+ * project, not a technical limit: since the numbers are reserved in a
+ * call and the identifiers pulled server-side (`lib/server/import-issues.ts`),
+ * the cost of an import is round-trips per BATCH, not per ticket.
+ * The real ceiling in practice remains `MAX_IMPORT_CSV_BYTES`.
  */
 export const MAX_IMPORT_ISSUES = 5000;
 
@@ -43,7 +43,7 @@ export interface ImportedIssue {
   effort: IssueEffortValue | null;
   /** Label names — resolved to project categories (created on the fly). */
   labels: string[];
-  /** Membre du projet à qui rendre le ticket, `null` si personne ne correspond. */
+  /** Project member to return the ticket to, `null` if no one matches. */
   assigneeId: string | null;
   /** ISO date or datetime. */
   dueDate: string | null;
@@ -56,16 +56,16 @@ export interface ImportedIssue {
   /** Parent reference (matched against other rows' externalKeys, 1 level max). */
   parentExternalKey: string | null;
   /**
-   * Objectif d'arrivée — un id RÉEL, résolu par l'appelant avant l'écriture
-   * (l'amorce par brief crée ses objectifs d'abord, MIN-172). Il voyage avec la
-   * ligne plutôt qu'en seconde passe : `importIssuesIntoProject` tire les
-   * identifiants lui-même et n'en rend aucun, donc rattacher après coup
-   * demanderait de retrouver les tickets qu'on vient d'insérer. Absent d'un
-   * import CSV, qui n'a pas d'objectif à donner.
-   */
+ * Arrival objective — a REAL id, resolved by the caller before writing
+ * (brief bootstrap creates its objectives first, MIN-172). It travels with the
+ * line rather than in a second pass: `importIssuesIntoProject` pulls the
+ * identifiers itself and does not return any, so reattaching
+ * afterwards would require finding the tickets just inserted. Missing from a
+ * import CSV, which has no target to give.
+ */
   objectiveId?: string | null;
-  /** Identité de l'issue distante que ce ticket reflète (backfill d'un dépôt
-   *  lié, MIN-97). Absent pour un import CSV. */
+  /** Identity of the remote issue that this ticket reflects (backfill of a linked repository
+ *, MIN-97). Absent for a CSV import. */
   remote?: {
     provider: string;
     repoId: string;
@@ -73,30 +73,29 @@ export interface ImportedIssue {
     url: string | null;
   };
   /**
-   * Ressources à poser sur le ticket. Le backfill d'un dépôt lié y met le LIEN
-   * de l'issue distante ; un import CSV n'en a aucune (un fichier ne porte pas
-   * de pièce jointe). Ce sont des descripteurs DÉJÀ validés par l'appelant —
-   * l'import est un chemin serveur, il ne reçoit rien d'un navigateur.
-   */
+ * Resources to place on the ticket. The backfill of a linked repository puts the LIEN
+ * of the remote issue there; a CSV import has none (a file does not have an attachment). These are descriptors ALREADY validated by the caller —
+ * the import is a server path, it does not receive anything from a browser.
+ */
   resources?: ResourceInput[];
 }
 
-// ── Mapping : le plan de lecture d'un fichier ────────────────────────────────
+// ── Mapping: the reading plan of a file ────────────────────────────────
 
 /**
- * Ce qu'une colonne du CSV alimente dans minddy. Un `ImportMapping` en porte
- * un par colonne, dans l'ordre du fichier : c'est le SEUL contrat entre la
- * détection par en-têtes, la proposition du modèle et le tableau modifiable de
- * l'aperçu. Le mapper de lignes (`lib/import/apply.ts`) ne connaît que ça.
+ * What a CSV column feeds into minddy. A `ImportMapping` carries
+ * one per column, in file order: this is the ONLY contract between the
+ * detection by headers, the model proposal and the editable table of
+ * the preview. The row mapper (`lib/import/apply.ts`) only knows that.
  *
- * Plusieurs colonnes peuvent viser le même champ (Jira répète « Labels ») : la
- * première valeur non vide gagne pour les champs simples, toutes s'ajoutent
- * pour les champs de liste.
+ * Several columns can target the same field (Jira repeats "Labels"): the
+ * first non-empty value wins for simple fields, all add up
+ * for list fields.
  *
- * `extraLabels` et `extraNote` sont le rattrapage des colonnes dont minddy n'a
- * pas le champ (assigné, sprint, epic, propriété Notion maison) : plutôt que de
- * les perdre, on en fait des catégories quand la colonne a peu de valeurs
- * distinctes, une ligne en bas de la description sinon.
+ * `extraLabels` and `extraNote` are the catch-up of the columns for which minddy does not have
+ * not the field (assigned, sprint, epic, property Notion house): rather than
+ * losing them, we make categories when the column has little distinct
+ * values, one line at the bottom of the description otherwise.
  */
 export type ImportField =
   | "ignore"
@@ -106,21 +105,21 @@ export type ImportField =
   | "priority"
   | "effort"
   | "labels"
-  /** Qui s'en occupe — rapproché des membres du projet, cf. `lib/import/people.ts`. */
+  /** Who takes care of it — closer to the members of the project, cf. `lib/import/people.ts`. */
   | "assignee"
   | "dueDate"
   | "createdAt"
   | "completedAt"
   | "externalKey"
   | "parent"
-  /** Jira : une résolution « Won't Do » requalifie un statut « Done ». */
+  /** Jira: a “Won't Do” resolution reclassifies a “Done” status. */
   | "resolution"
-  /** Colonne orpheline dont les valeurs deviennent des catégories. */
+  /** Orphan column whose values ​​become categories. */
   | "extraLabels"
-  /** Colonne orpheline reportée en bas de la description, « En-tête : valeur ». */
+  /** Orphan column reported at the bottom of the description, “Header: value”. */
   | "extraNote";
 
-/** Ordre d'affichage dans le sélecteur du tableau de correspondance. */
+/** Display order in the lookup table selector. */
 export const IMPORT_FIELDS: ImportField[] = [
   "ignore",
   "title",
@@ -141,25 +140,25 @@ export const IMPORT_FIELDS: ImportField[] = [
 ];
 
 /**
- * Les champs que PLUSIEURS colonnes peuvent viser à la fois — et eux seuls.
+ * Fields that SEVERAL columns can target at once — and only them.
  *
- * C'est `applyMapping` qui tranche, pas une préférence d'affichage : il lit ces
- * champs-là avec `cells()`, qui prend TOUTES les colonnes, et tous les autres
- * avec `cell()`, qui s'arrête à la première valeur non vide. Une seconde colonne
- * de titre ou de description est donc du texte que personne ne lira jamais —
- * silencieusement, ce qui est le pire des deux. Le tableau de correspondance ne
- * propose pas un champ simple déjà pris ailleurs.
+ * It's `applyMapping` that decides, not a display preference: it reads these
+ * fields with `cells()`, which takes ALL columns, and all others
+ * with `cell()`, which stops at the first non-empty value. A second column
+ * title or description is therefore text that no one will ever read —
+ * silently, which is the worse of the two. The correspondence table does not
+ * offer a simple field already taken elsewhere.
  *
- * Les quatre exceptions ne sont pas des tolérances, ce sont des besoins :
- * - `labels` / `extraLabels` : Jira sort ses champs multi-valués en colonnes
- *   RÉPÉTÉES (« Labels », « Labels », …), et elles se concatènent ;
- * - `extraNote` : chaque colonne orpheline ajoute sa ligne en bas de la
- *   description, c'est tout l'intérêt ;
- * - `externalKey` : une ligne Jira répond À LA FOIS à sa clé (PROJ-12) et à son
- *   id numérique, parce que « Parent » référence l'une ou l'autre selon la
- *   version (cf. `lib/import/jira.ts`) — retirer la seconde casserait le
- *   rattachement des sous-tâches sur la moitié des exports.
- * - `ignore`, enfin, qui n'est pas un champ mais son absence.
+ * The four exceptions are not tolerances, they are needs:
+ * - `labels` / `extraLabels`: Jira outputs its multi-valued fields in columns
+ * REPEATED (“Labels”, “Labels”, …), and they concatenate;
+ * - `extraNote`: each orphan column adds its line at the bottom of the
+ * description, that's the whole point;
+ * - `externalKey`: a Jira line responds to BOTH its key (PROJ-12) and its
+ * numeric id, because "Parent" references one or the other depending on the
+ * version (see `lib/import/jira.ts`) — removing the second would break the
+ * attachment of subtasks on half of the exports.
+ * - `ignore`, finally, which is not a field but its absence.
  */
 export const MULTI_COLUMN_FIELDS = new Set<ImportField>([
   "ignore",
@@ -169,8 +168,8 @@ export const MULTI_COLUMN_FIELDS = new Set<ImportField>([
   "externalKey",
 ]);
 
-/** Table d'alias d'une source : les noms d'en-tête (normalisés) par champ, dans
- *  l'ordre de priorité — la première règle qui matche une colonne la prend. */
+/** A source's alias table: (normalized) header names per field, in
+ * priority order — the first rule that matches a column takes it. */
 export type ColumnAliases = [ImportField, string[]][];
 
 const IMPORT_FIELD_SET = new Set<string>(IMPORT_FIELDS);
@@ -178,48 +177,48 @@ export const isImportField = (value: unknown): value is ImportField =>
   typeof value === "string" && IMPORT_FIELD_SET.has(value);
 
 /**
- * Le plan complet de lecture d'un fichier : où va chaque colonne, et à quoi se
- * ramène chaque valeur des colonnes à énumération.
+ * The complete plan for reading a file: where each column goes, and what does
+ * return each value in the enumerated columns.
  *
- * Les dictionnaires sont la source de vérité UNIQUE des valeurs — ils sont
- * pré-remplis par les tables d'alias (`normalize.ts`) à la construction du plan,
- * puis complétés par le modèle et modifiables à la main. Une valeur absente du
- * dictionnaire est une valeur que personne n'a su placer : le mapper la signale
- * plutôt que de la deviner. Les clés sont normalisées (`normalizeToken`).
+ * Dictionaries are the SINGLE source of truth for values — they are
+ * pre-populated by alias tables (`normalize.ts`) when constructing the plan,
+ * then completed by the model and modifiable by hand. A value missing from the
+ * dictionary is a value that no one has been able to place: mapping it signals it
+ * rather than guessing it. Keys are normalized (`normalizeToken`).
  */
 export interface ImportMapping {
-  /** Un champ par colonne du fichier, dans l'ordre des en-têtes. */
+  /** One field per column of the file, in header order. */
   columns: ImportField[];
   statusValues: Record<string, IssueStatusValue>;
   priorityValues: Record<string, IssuePriorityValue>;
-  /** Les effort chiffrés (story points) restent gérés par la conversion. */
+  /** The quantified efforts (story points) remain managed by the conversion. */
   effortValues: Record<string, IssueEffortValue>;
   /**
-   * Nom de personne du fichier → `user_id` d'un membre du projet. Absent = on
-   * n'a reconnu personne : le ticket reste non assigné et le nom part en bas de
-   * la description, pour que l'information ne disparaisse pas.
-   */
+ * Personal name of file → `user_id` of a project member. Absent = on
+ * did not recognize anyone: the ticket remains unassigned and the name goes at the bottom of
+ * the description, so that the information does not disappear.
+ */
   assigneeValues: Record<string, string>;
   /**
-   * Étiquette du fichier → nom de catégorie à utiliser. Absent = on garde
-   * l'étiquette telle quelle (créée si le projet ne l'a pas). Chaîne vide = on
-   * ne la reprend pas. C'est ce qui évite de créer « Bugs » à côté du « Bug »
-   * qui existe déjà.
-   */
+ * File label → category name to use. Absent = we keep
+ * the label as is (created if the project does not have it). Empty string = on
+ * does not take it back. This is what avoids creating “Bugs” next to the “Bug”
+ * which already exists.
+ */
   labelValues: Record<string, string>;
 }
 
 /**
- * Ce que le projet d'arrivée apporte au rapprochement : ses membres (pour
- * rendre les tickets à leurs propriétaires) et ses catégories (pour ranger les
- * étiquettes importées dans celles qui existent plutôt que d'en créer des
- * jumelles). Sans ce contexte, un import ne peut que deviner.
+ * What the arrival project brings to the reconciliation: its members (to
+ * return the tickets to their owners) and its categories (to arrange the imported
+ * tags in those that exist rather than creating twin
+ * ones). Without this context, an import can only guess.
  */
 export interface ImportContext {
   members: ImportMember[];
-  /** Noms des catégories déjà présentes dans le projet. */
+  /** Names of categories already present in the project. */
   categories: string[];
-  /** Celui qui importe — c'est SON backlog, et souvent son nom dans le fichier. */
+  /** The one that matters — it's HIS backlog, and often its name in the file. */
   actorId: string;
 }
 
@@ -241,7 +240,7 @@ export type ImportWarningKey =
   | "skippedNoTitle"
   | "parentNotFound"
   | "flattenedSubIssue"
-  /** Un nom de personne qui ne correspond à aucun membre : gardé en description. */
+  /** A person's name that does not match any member: kept in description. */
   | "unknownAssignee";
 
 export interface ImportWarning {
@@ -259,7 +258,7 @@ export type ImportParseResult =
       source: ImportSource;
       issues: ImportedIssue[];
       warnings: ImportWarning[];
-      /** Le plan effectivement appliqué (détecté, ou celui reçu de l'appelant). */
+      /** The plan actually applied (detected, or that received from the caller). */
       mapping: ImportMapping;
     }
   | { ok: false; error: ImportParseError };

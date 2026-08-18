@@ -4,16 +4,16 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * Le préchauffage vit dans le main process Electron, hors du graphe Vitest.
- * On tient ici sa frontière de sécurité et son dédoublonnage : il ne doit
- * préparer que le binaire et le harness, jamais un job ou une clé de modèle.
+ * The preheating lives in the Electron main process, outside the Vitest graph.
+ * Here we have its security boundary and its deduplication: it must
+ * only prepare the binary and the harness, never a job or a model key.
  */
 const source = readFileSync(join(__dirname, "../../desktop/src/launcher.ts"), "utf8");
 
-describe("pré-chauffage de l'agent local", () => {
-  it("réchauffe le harness et opencode sans créer de job", () => {
+describe("local agent warm-up", () => {
+  it("warms up the harness and opencode without creating a job", () => {
     const start = source.indexOf("export function prewarmLocalAgent(origin: string): Promise<boolean>");
-    const end = source.indexOf("\n}\n\n/**\n * JOUE UNE AFFECTATION", start);
+    const end = source.indexOf("\n}\n\n/**\n * PLAY AN ASSIGNMENT", start);
     const warmup = source.slice(start, end);
 
     expect(warmup).toContain("ensureBundle(origin)");
@@ -22,7 +22,7 @@ describe("pré-chauffage de l'agent local", () => {
     expect(warmup).not.toContain("controlToken");
   });
 
-  it("partage le pré-vol opencode avec un envoi qui arrive immédiatement", () => {
+  it("shares the opencode preflight with a send that arrives immediately", () => {
     expect(source).toContain("const active = opencodePreflights.get(installDir);");
     expect(source).toContain("const task = ensureOpencodeOnce(installDir).finally(");
   });
@@ -39,7 +39,7 @@ describe("pré-chauffage de l'agent local", () => {
     expect(run).toContain("ensureOpencode(opencodeDir)");
   });
 
-  it("ne claim jamais avant que les prérequis machine soient prêts", () => {
+  it("never claims before machine prerequisites are ready", () => {
     const loop = source.slice(
       source.indexOf("export function startLocalClaimLoop"),
       source.indexOf("async function claimLocalTurn"),
@@ -52,7 +52,7 @@ describe("pré-chauffage de l'agent local", () => {
     expect(loop).toContain("if (ready) {");
   });
 
-  it("mémorise un pré-vol réussi sans refaire un téléchargement à chaque poll", () => {
+  it("remembers a successful preflight without downloading again on every poll", () => {
     expect(source).toContain("const localAgentReadyOrigins = new Set<string>();");
     expect(source).toContain("if (localAgentReadyOrigins.has(origin)) return Promise.resolve(true);");
     expect(source).toContain("if (ready) localAgentReadyOrigins.add(origin);");

@@ -23,21 +23,21 @@ import { OAuthConsentCard } from "@/components/oauth/consent-card";
 
 /**
  * Page de consentement OAuth (server component, layout (auth) minimal).
- * Le middleware force la connexion (redirect /login avec paramètres
- * préservés) ; ici on valide la requête (RFC 6749) et on rend la carte
- * d'autorisation partagée.
+ * The middleware forces the connection (redirect /login with parameters
+ * preserved); here we validate the request (RFC 6749) and return the card
+ * shared permission.
  *
- * Toute requête invalide — client inconnu, redirect_uri non enregistré, mais
- * aussi le moindre paramètre de protocole hors gabarit — s'arrête sur la carte
- * d'erreur. JAMAIS de redirection : l'inscription des clients est ouverte,
- * donc une URI « enregistrée » n'est qu'une URI qu'un inconnu a déposée, et
- * rediriger dessus ferait de cette page un redirecteur ouvert (MIN-346).
+ * Any invalid request — unknown client, redirect_uri not registered, but
+ * also the slightest protocol parameter out of template — stops on the card
+ * of error. NEVER redirected: customer registration is open,
+ * so a "registered" URI is just a URI that an unknown person filed, and
+ * redirecting to it would turn this page into an open redirector (MIN-346).
  */
 
 export const dynamic = "force-dynamic";
 
-// Écran de consentement : rien à indexer, et surtout rien à suivre — les seuls
-// liens qu'il porte sont les `redirect_uri` du client OAuth.
+// Consent screen: nothing to index, and above all nothing to follow — the only ones
+// The links it carries are the `redirect_uri` of the OAuth client.
 export async function generateMetadata(): Promise<Metadata> {
   return {
     ...(await appPageMetadata("oauthAuthorize")),
@@ -45,7 +45,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-/** Une phrase par motif : ce qui a échoué, et quoi faire. */
+/** One sentence per reason: what failed, and what to do. */
 const FAILURE_MESSAGE: Record<AuthorizeFailure, MessageKey<"OAuthConsent">> = {
   unknown_client: "unknownClient",
   invalid_redirect_uri: "invalidRedirect",
@@ -68,13 +68,13 @@ export default async function OAuthAuthorizePage({
   } = await supabase.auth.getUser();
 
   const raw = await searchParams;
-  // Rejeter les valeurs répétées (?scope=a&scope=b) : premières gagnent.
+  // Reject repeated values ​​(?scope=a&scope=b): first wins.
   const params: AuthorizeParams = Object.fromEntries(
     Object.entries(raw).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])
   );
 
   if (!user) {
-    // Filet de sécurité — le middleware fait normalement ce travail.
+    // Safety net — middleware normally does this job.
     const query = new URLSearchParams(
       Object.entries(params).filter(([, v]) => v !== undefined) as [string, string][]
     );
@@ -98,8 +98,8 @@ export default async function OAuthAuthorizePage({
   }
 
   const { client, redirectUri, codeChallenge, scope, resource, state } = validation;
-  // toNamed = même chaîne de résolution que partout ailleurs (display_name →
-  // full_name → name), donc un compte Google/GitHub s'affiche avec son nom.
+  // toNamed = same resolution string as everywhere else (display_name →
+  // full_name → name), so a Google/GitHub account is displayed with its name.
   const userLabel = displayName(toNamed(user));
 
   return (

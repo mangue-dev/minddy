@@ -23,22 +23,22 @@ import { refreshForgeAccountNames } from "@/lib/server/git/account-refresh";
 import { canonicalAppOrigin } from "@/lib/server/app-origin";
 
 /**
- * Le compte git PERSONNEL de l'utilisateur (MIN-144) — celui sous lequel partent
- * ses gestes humains sur une pull request.
+ * The user's PERSONAL git account (MIN-144) — the one under which they leave
+ * its human gestures on a pull request.
  *
- *  GET  → { identities, providers } (comptes autorisés + providers déployés).
+ * GET → { identities, providers } (authorized accounts + deployed providers).
  *  POST → { action:'start', provider, origin? } → { url } (page d'autorisation).
  *
- * À ne pas confondre avec `/api/account/git-connections`, qui parle de
- * l'INSTALLATION de la GitHub App (réutilisée par les projets pour lier un
- * dépôt). Les deux coexistent : installer l'App ne dit rien de qui agit.
+ * Not to be confused with `/api/account/git-connections`, which talks about
+ * INSTALLATION of the GitHub App (reused by projects to link a
+ * deposit). The two coexist: installing the App says nothing about who acts.
  *
- * Côté GitLab, la connexion OAuth de `git_connections` EST déjà l'identité de la
- * personne : rien de nouveau à stocker, le GET la remonte telle quelle et le
- * POST renvoie vers le callback existant.
+ * On the GitLab side, the OAuth connection of `git_connections` IS already the identity of the
+ * person: nothing new to store, the GET brings it back as is and the
+ * POST returns to the existing callback.
  */
 
-/** Origines d'où l'on peut lancer une autorisation (table close, cf. callback). */
+/** Origins from which an authorization can be launched (table closed, see callback). */
 const ORIGINS = new Set(["settings", "pr"]);
 
 function isProviderConfigured(provider: RepoProviderId): boolean {
@@ -52,8 +52,8 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  // Le login stocké est un instantané de la connexion du compte : on le recale
-  // avant de le lire, sinon un renommage chez la forge s'affiche à vie (MIN-154).
+  // The stored login is a snapshot of the account connection: we reset it
+  // before reading it, otherwise a rename at the forge is displayed for life (MIN-154).
   await refreshForgeAccountNames(auth.user.id);
   const identities = await listUserIdentities(auth.user.id);
   if (!identities) {
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 
   const providers = ACTIVE_PROVIDERS.map((p) => ({
     id: p.id,
-    // Sans ça, le bandeau offrirait un bouton qui répond 400 en self-host.
+    // Without that, the headband would offer a button that responds 400 in self-host.
     configured: isProviderConfigured(p.id),
   }));
   return NextResponse.json({ identities, providers });

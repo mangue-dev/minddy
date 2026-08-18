@@ -1,25 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * UNE RÉFÉRENCE SORTANTE RESTE CHEZ ELLE (MIN-339).
+ * AN OUTGOING REFERENCE STAY HOME (MIN-339).
  *
- * `issues` porte cinq colonnes qui pointent ailleurs — objectif, doublon,
- * assigné, cycle, forçage d'automatisation — et les cœurs d'écriture tournent
- * en clé service, RLS contournée. Rien, dans la base, n'oblige ces `uuid` à
- * désigner quelque chose du même projet : c'est ici que ça se joue.
+ * `issues` carries five columns that point elsewhere — goal, duplicate,
+ * assigned, cycle, automation force — and the write cores turn
+ * into service key, RLS bypassed. Nothing, in the database, obliges these `uuid` to
+ * to designate something from the same project: this is where it comes into play.
  *
- * Chaque cas vérifie DEUX choses, et la seconde est la vraie : l'appel est
- * refusé, **et l'UPDATE n'a pas eu lieu**. Un refus rendu après l'écriture
- * n'aurait rien refusé du tout — d'où `updateLog`, qui n'enregistre que les
- * écritures réellement parties vers la base.
+ * Each case checks TWO things, and the second is true: the call is
+ * refused, **and the UPDATE did not have location**. A refusal issued after writing
+ * would not have refused anything at all — hence `updateLog`, which only records the writes that actually went to the database.
  */
 
 interface Row extends Record<string, unknown> {}
 
 let db: Record<string, Row[]> = {};
-/** Les UPDATE réellement partis (table + valeurs), dans l'ordre. */
+/** The UPDATEs actually sent (table + values), in order. */
 let updateLog: Array<{ table: string; values: Row }> = [];
-/** Les INSERT réellement partis. */
+/** The INSERTs actually left. */
 let insertLog: Array<{ table: string; rows: Row[] }> = [];
 
 function makeQuery(table: string) {
@@ -30,7 +29,7 @@ function makeQuery(table: string) {
 
   const matching = () => (db[table] ?? []).filter((r) => filters.every((f) => f(r)));
 
-  /** La jointure `projects(...)` que lit l'instantané d'avant de update-issue. */
+  /** The `projects(...)` join that the prior snapshot of update-issue reads. */
   const hydrate = (row: Row | undefined) => {
     if (!row) return null;
     if (table === "issues" && columns.includes("projects(")) {
@@ -112,7 +111,7 @@ const service = {
 vi.mock("next/server", () => ({ after: () => {} }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => service }));
 
-// Tout ce qui SORT du cœur : neutralisé, ce n'est pas le sujet.
+// Everything that COMES OUT of the heart: neutralized, that's not the subject.
 vi.mock("@/lib/server/issue-events", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   insertEvents: async () => {},
@@ -154,9 +153,9 @@ const MEMBER = "user-member";
 const STRANGER = "user-stranger";
 
 /**
- * Deux projets, deux locataires. Je suis membre du mien (le propriétaire est
- * quelqu'un d'autre : c'est ce qui permet de tester `automation_override`) et
- * je n'ai RIEN à voir avec l'autre.
+ * Two projects, two tenants. I am a member of mine (the owner is
+ * someone else: this is what allows you to test `automation_override`) and
+ * I have NOTHING to do with the other.
  */
 beforeEach(() => {
   updateLog = [];
@@ -269,13 +268,13 @@ describe("updateIssueFields — références sortantes bornées au projet", () =
     const result = await patch({ cycle_id: "cycle-mine" });
 
     expect(result.ok).toBe(true);
-    // Ranger un ticket dans son cycle l'assigne à soi (MIN-32).
+    // Store a ticket in its cycle and assign it to you (MIN-32).
     expect(updateLog[0].values).toMatchObject({ cycle_id: "cycle-mine", assignee_id: ME });
   });
 
   it("refuse un forçage d'automatisation à un simple membre", async () => {
-    // C'est le budget, le plan et la clé BYOK du PROPRIÉTAIRE que les runs
-    // consomment — 403, pas 400 : la charge est valide, le droit ne l'est pas.
+    // It is the budget, the plan and the BYOK key of the OWNER that runs
+    // consume — 403, not 400: the charge is valid, the right is not.
     const result = await patch({ automation_override: { preset: "ship" } });
 
     expect(result).toMatchObject({ ok: false, status: 403, errorKey: "ownerOnly" });

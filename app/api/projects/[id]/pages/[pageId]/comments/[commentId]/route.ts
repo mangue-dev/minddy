@@ -6,16 +6,16 @@ type RouteContext = {
   params: Promise<{ id: string; pageId: string; commentId: string }>;
 };
 
-/** Même plafond que l'écriture (lib/server/page-comments.ts). */
+/** Same ceiling as writing (lib/server/page-comments.ts). */
 const MAX_COMMENT_LENGTH = 65_536;
 
 /**
- * PATCH — corriger son propre commentaire (MIN-282).
+ * PATCH — edit your own comment (MIN-282).
  *
- * Client de SESSION, comme /api/comments/[id] : la règle « seul l'auteur
- * réécrit » n'est pas ici, elle est dans la policy. Une écriture d'un autre ne
- * lève pas, elle ne touche AUCUNE ligne — d'où le 404, qui est aussi le signal
- * que donne l'invisibilité RLS.
+ * SESSION client, like /api/comments/[id]: the "only author" rule
+ * rewritten” is not here, it is in the policy. A writing of another
+ * does not raise, it does not touch ANY line — hence the 404, which is also the signal
+ * what does RLS invisibility give.
  */
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { commentId } = await params;
@@ -40,9 +40,9 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { data, error } = await auth.supabase
     .from("page_comments")
     .update({ body: text })
-    // L'auteur, en plus de la policy (`page_comments_update`, resserrée sur lui
-    // en 20261208090000) : la règle vaut quel que soit le chemin, et le filtre
-    // ici est ce qui la rend lisible depuis la route.
+    // The author, in addition to the policy (`page_comments_update`, tightened on him
+    // en 20261208090000): the rule is valid whatever the path, and the filter
+    // here is what makes it readable from the road.
     .eq("id", commentId)
     .eq("author_id", auth.user.id)
     .select("*")
@@ -58,10 +58,10 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   return NextResponse.json(data);
 }
 
-/** DELETE — retirer son propre commentaire ; une racine emporte ses réponses
-    (cascade `parent_id`). L'auteur seul — par la policy ET par le filtre, comme
-    le `PATCH` juste au-dessus : il ne l'avait pas, et la règle ne se lisait donc
-    que dans la migration (MIN-351). */
+/** DELETE — remove your own comment; a root carries its answers
+ (cascade `parent_id`). The author alone — by the policy AND by the filter, like
+ the `PATCH` just above: he did not have it, and the rule therefore only read
+ in the migration (MIN-351). */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { commentId } = await params;
   const auth = await getAuthedUser(request);

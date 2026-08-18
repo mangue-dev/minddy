@@ -1,18 +1,18 @@
 "use client";
 
-// Menu d'actions d'un ticket : un vrai dropdown Radix (le même que les dropdowns
-// classiques de l'app), décliné en deux ancrages qui partagent le même corps —
-//   • IssueContextMenu — ancré à la position du pointeur (clic droit sur une carte,
-//     ou sur une pill de vue du board), avec un champ de recherche en tête pour
-//     filtrer les actions (désactivable sur les menus courts) ;
-//   • IssueActionsMenu — ancré à un trigger (le bouton « ⋯ » du panneau d'issue).
-// Une action portant des `children` devient un sous-menu en flyout latéral
-// (accordéon inline sur mobile, géré par mangue-ui).
+// Ticket actions menu: a real Radix dropdown (the same as dropdowns
+// classics of the app), available in two anchors which share the same body —
+// • IssueContextMenu — anchored to the pointer position (right click on a card,
+// or on a board view pill), with a search field at the top to
+// filter actions (can be deactivated in short menus);
+// • IssueActionsMenu — anchored to a trigger (the “⋯” button of the issue panel).
+// An action carrying `children` becomes a side flyout submenu
+// (inline accordion on mobile, managed by mangue-ui).
 //
-// La recherche (quand elle est activée) filtre les entrées de premier niveau
-// (label + keywords), comme l'ancienne version cmdk. Le filtrage garde le focus
-// dans le champ ; ↓ descend dans la liste, Entrée déclenche la première entrée,
-// Échap ferme.
+// Search (when enabled) filters top level entries
+// (label + keywords), like the old cmdk version. Filtering keeps the focus
+// in the field; ↓ goes down the list, Enter triggers the first entry,
+// Close escape.
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
@@ -33,25 +33,25 @@ import { DropdownSearchRow, searchInputClass } from "@/components/search-menu";
 export interface ContextMenuAction {
   id: string;
   label: string;
-  /** Termes de recherche additionnels (synonymes, anglais/français…). */
+  /** Additional search terms (synonyms, English/French, etc.). */
   keywords?: string[];
   icon?: React.ReactNode;
-  /** Touche du raccourci correspondant, affichée à droite (ex. "⇧P"). */
+  /** Corresponding shortcut key, displayed on the right (e.g. “⇧P”). */
   shortcut?: string;
-  /** Sépare l'entrée du groupe précédent (ignoré si elle ouvre la liste). */
+  /** Separates the entry from the previous group (ignored if it opens the list). */
   separatorBefore?: boolean;
-  /** `destructive` = rouge, pour les actions irréversibles (supprimer). */
+  /** `destructive` = red, for irreversible actions (delete). */
   variant?: "default" | "destructive";
-  /** Entrée montrée mais inerte (l'action existe, elle n'est juste pas
-      possible ici — ex. supprimer la dernière vue d'un board). */
+  /** Input shown but inert (the action exists, it just isn't
+ possible here — e.g. delete the last view of a board). */
   disabled?: boolean;
-  /** Sous-actions : quand présentes, l'action devient un sous-menu en flyout
-      au lieu de déclencher `onSelect`. */
+  /** Sub-actions: when present, the action becomes a flyout sub-menu
+ instead of triggering `onSelect`. */
   children?: ContextMenuAction[];
   onSelect?: () => void;
 }
 
-/** L'entrée matche la recherche si son label ou un de ses keywords la contient. */
+/** The entry matches the search if its label or one of its keywords contains it. */
 function actionMatches(action: ContextMenuAction, query: string): boolean {
   if (!query) return true;
   const haystack = [action.label, ...(action.keywords ?? [])]
@@ -60,7 +60,7 @@ function actionMatches(action: ContextMenuAction, query: string): boolean {
   return haystack.includes(query);
 }
 
-/** Feuille : un item cliquable, avec éventuellement un raccourci à droite. */
+/** Sheet: a clickable item, possibly with a shortcut on the right. */
 function LeafItem({ action }: { action: ContextMenuAction }) {
   return (
     <DropdownMenuItem
@@ -79,7 +79,7 @@ function LeafItem({ action }: { action: ContextMenuAction }) {
   );
 }
 
-/** Branche ou feuille selon la présence d'enfants. */
+/** Branch or leaf depending on the presence of children. */
 function ActionNode({ action }: { action: ContextMenuAction }) {
   if (action.children && action.children.length > 0) {
     return (
@@ -113,9 +113,9 @@ function ActionMenuBody({
   const [query, setQuery] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  // Repartir d'une recherche vide à chaque fermeture ; à l'ouverture, poser le
-  // focus sur la recherche (Radix focalise le premier item par défaut ; on
-  // reprend la main après lui via un rAF).
+  // Start from an empty search each time you close; when opening, place the
+  // focus on the search (Radix focuses on the first item by default; we
+  // takes over after him via an rAF).
   React.useEffect(() => {
     if (!open) {
       setQuery("");
@@ -129,8 +129,8 @@ function ActionMenuBody({
   const q = searchable ? query.trim().toLowerCase() : "";
   const visible = actions.filter((a) => actionMatches(a, q));
 
-  // Le contenu est portalisé au <body> ; on y récupère les items focusables pour
-  // router le clavier depuis le champ de recherche vers la liste.
+  // The content is portaled to <body>; we retrieve the focusable items to
+  // route the keyboard from the search field to the list.
   const items = () =>
     Array.from(
       document.querySelectorAll<HTMLElement>(
@@ -139,7 +139,7 @@ function ActionMenuBody({
     );
 
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Escape") return; // laisse Radix fermer le menu
+    if (e.key === "Escape") return; // let Radix close the menu
     if (e.key === "ArrowDown") {
       e.preventDefault();
       e.stopPropagation();
@@ -159,8 +159,8 @@ function ActionMenuBody({
       items()[0]?.click();
       return;
     }
-    // Empêche la frappe (lettres, Backspace, espace…) de déclencher le
-    // typeahead de Radix : seul le champ de recherche la reçoit.
+    // Prevents typing (letters, Backspace, space, etc.) from triggering the
+    // Radix typeahead: only the search field receives it.
     e.stopPropagation();
   };
 
@@ -189,9 +189,9 @@ function ActionMenuBody({
       ) : (
         visible.map((action, i) => (
           <React.Fragment key={action.id}>
-            {/* Un séparateur en tête de liste (groupe précédent entièrement
-                filtré) serait une barre orpheline : on ne le rend qu'entre deux
-                entrées visibles. */}
+            {/* A separator at the top of the list (previous group entirely
+ filtered) would be an orphan bar: we only make it between two visible
+ entries. */}
             {action.separatorBefore && i > 0 && <DropdownMenuSeparator />}
             <ActionNode action={action} />
           </React.Fragment>
@@ -207,12 +207,12 @@ export function IssueContextMenu({
   actions,
   searchable = true,
 }: {
-  /** Coordonnées viewport du clic droit ; null = menu fermé. */
+  /** Right-click viewport coordinates; null = menu closed. */
   position: { x: number; y: number } | null;
   onClose: () => void;
   actions: ContextMenuAction[];
-  /** Champ de recherche en tête. À couper sur les menus de deux ou trois
-      entrées (pills de vues), où il ne ferait que du bruit. */
+  /** Search field at the top. To cut on menus of two or three
+ entries (view pills), where it would only make noise. */
   searchable?: boolean;
 }) {
   return (
@@ -231,13 +231,13 @@ export function IssueContextMenu({
         align="start"
         side="bottom"
         className="min-w-64"
-        // Le trigger est invisible et hors flux : ne pas y renvoyer le focus à
-        // la fermeture (évite un saut de scroll vers le point du clic).
+        // The trigger is invisible and out of flow: do not return the focus to it
+        // closing (avoids a scroll jump to the point of the click).
         onCloseAutoFocus={(e) => e.preventDefault()}
-        // Le menu est portalisé mais rendu, dans l'arbre React, à l'intérieur de
-        // la carte cliquable (onClick = ouvrir le ticket). Les événements React
-        // remontent l'arbre des composants malgré le portail : on stoppe donc la
-        // propagation ici pour qu'un clic sur une option n'ouvre pas la carte.
+        // The menu is portalized but rendered, in the React tree, inside
+        // the clickable card (onClick = open the ticket). React events
+        // go up the component tree despite the portal: we therefore stop the
+        // spread here so that clicking on an option does not open the map.
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.stopPropagation()}
       >
@@ -252,9 +252,9 @@ export function IssueContextMenu({
 }
 
 /**
- * Les mêmes actions, ancrées à un bouton — le « ⋯ » de l'en-tête du panneau
- * d'issue. Pas de champ de recherche par défaut : la liste y est courte et se
- * balaie d'un regard (le typeahead natif de Radix suffit), là où le clic droit
+ * The same actions, anchored to a button — the “⋯” in the panel header
+ * of outcome. No search field by default: the list is short and is
+ * scans with a glance (the native typeahead of Radix is ​​sufficient), where the right click
  * sert de palette.
  */
 export function IssueActionsMenu({
@@ -269,10 +269,10 @@ export function IssueActionsMenu({
   align?: "start" | "center" | "end";
   searchable?: boolean;
   /**
-   * Prévenu à chaque ouverture / fermeture. L'état reste INTERNE : l'appelant
-   * n'a pas à le tenir pour savoir, et le seul besoin connu est de garder
-   * visible un chrome qui n'apparaît qu'au survol (le ⋯ d'une ligne d'arbre
-   * disparaîtrait sous le menu qu'il vient d'ouvrir).
+   * Notified each time it opens/closes. The state remains INTERNAL: the caller
+   * doesn't have to hold it to know, and the only known need is to keep
+   * visible a chrome which only appears on hover (the ⋯ of a tree line
+   * would disappear under the menu it has just opened).
    */
   onOpenChange?: (open: boolean) => void;
 }) {

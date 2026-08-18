@@ -3,16 +3,16 @@ import { describe, expect, it } from "vitest";
 import { StripeApiError, isMissingCustomerError } from "./stripe";
 
 /**
- * Ce qui distingue une RÉFÉRENCE PÉRIMÉE d'une panne (MIN-293).
+ * What distinguishes an OUTDATED REFERENCE from a breakdown (MIN-293).
  *
- * La première se répare — on refait un client et on rejoue — la seconde doit
- * remonter. Confondre les deux dans un sens rend un 500 sur un clic
- * « passer au plan supérieur » ; dans l'autre, ça masque une panne de Stripe
- * derrière une création de client silencieuse. D'où ce tri, testé pour lui-même.
+ * The first can be repaired — we redo a client and play again — the second must
+ * come back up. Confusing the two in one direction makes a 500 on one click
+ * “upgrade”; in the other, it hides a Stripe
+ * outage behind a silent client creation. Hence this sorting, tested for itself.
  */
 describe("isMissingCustomerError", () => {
   it("reconnaît le client disparu, tel que Stripe le renvoie", () => {
-    // La forme exacte vue en local avec un `cus_…` d'un ancien compte de test.
+    // The exact form seen locally with a `cus_…` from an old test account.
     const error = new StripeApiError(
       "No such customer: 'cus_V4EEzdira1cX7A'",
       "resource_missing",
@@ -33,8 +33,8 @@ describe("isMissingCustomerError", () => {
   });
 
   it("ne prend PAS un autre objet manquant pour un client", () => {
-    // Un price mal configuré est un défaut de NOTRE côté : refaire un client n'y
-    // changerait rien, et le rejeu masquerait la vraie cause.
+    // A poorly configured price is a fault on OUR side: redoing a customer does not
+    // would change nothing, and replay would mask the real cause.
     const error = new StripeApiError(
       "No such price: 'price_x'",
       "resource_missing",

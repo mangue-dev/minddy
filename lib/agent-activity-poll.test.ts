@@ -6,12 +6,12 @@ import {
 } from "@/components/agent/agent-activity-context";
 
 /**
- * Le sondage d'activité pilote les halos d'agent sur les cartes. Une erreur
- * réseau ne doit pas devenir « aucun agent ne travaille » : ce serait un
- * mensonge d'affichage, et la détente d'un démontage de carte (MIN-301).
+ * Activity poll drives agent halos on maps. A
+ * network error should not become "no agent working": this would be a
+ * display lie, and triggering a card teardown (MIN-301).
  *
- * Testé sur un `QueryObserver` — le même moteur que `useQuery`, sans React (la
- * suite tourne sur node nu).
+ * Tested on a `QueryObserver` — the same engine as `useQuery`, without React (the
+ * suite runs on bare node).
  */
 
 const okResponse = (payload: unknown) =>
@@ -24,7 +24,7 @@ afterEach(() => {
 });
 
 describe("fetchAgentActivity", () => {
-  it("lève sur une réponse en échec, au lieu de rendre des listes vides", async () => {
+  it("throws on a failed response instead of returning empty lists", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => errorResponse(503)));
     await expect(fetchAgentActivity("p1")).rejects.toThrow("agent-activity 503");
   });
@@ -41,7 +41,7 @@ describe("fetchAgentActivity", () => {
     });
   });
 
-  it("interroge la route globale sans projet, celle du projet sinon", async () => {
+  it("queries the global route without a project, and the project route otherwise", async () => {
     const fetchMock = vi.fn(async (_url: string) => okResponse({}));
     vi.stubGlobal("fetch", fetchMock);
     await fetchAgentActivity(null);
@@ -53,8 +53,8 @@ describe("fetchAgentActivity", () => {
   });
 });
 
-describe("le sondage garde son dernier état connu", () => {
-  it("conserve workingIssueIds quand le sondage suivant échoue", async () => {
+describe("the poll keeps its last known state", () => {
+  it("preserves workingIssueIds when the next poll fails", async () => {
     let failing = false;
     vi.stubGlobal(
       "fetch",
@@ -83,7 +83,7 @@ describe("le sondage garde son dernier état connu", () => {
 
     const result = observer.getCurrentResult();
     expect(result.isError).toBe(true);
-    // Le point du ticket : les halos ne s'éteignent pas.
+    // The point of the ticket: halos don't go out.
     expect(result.data?.workingIssueIds).toEqual(["i1"]);
 
     unsubscribe();
@@ -92,7 +92,7 @@ describe("le sondage garde son dernier état connu", () => {
 });
 
 describe("agentActivityQueryKey", () => {
-  it("distingue le mode global du mode projet", () => {
+  it("distinguishes global mode from project mode", () => {
     expect(agentActivityQueryKey(null)).toEqual([
       "agent-active-issues",
       "__global__",

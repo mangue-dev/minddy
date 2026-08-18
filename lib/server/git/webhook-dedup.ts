@@ -4,27 +4,27 @@ import { getServiceClient } from "@/lib/supabase-service";
 import type { RepoProviderId } from "@/lib/repo-providers";
 
 /**
- * Anti-rejeu des livraisons de webhook de forge (MIN-333).
+ * Anti-replay of forge webhook deliveries (MIN-333).
  *
- * Les deux forges numérotent leurs livraisons — `X-GitHub-Delivery`,
- * `X-Gitlab-Event-UUID` — et re-livrent quand le récepteur a échoué. Sans garde,
- * la même charge utile pouvait être rejouée autant de fois que voulu par qui
- * l'avait capturée, et chaque rejeu refaisait le travail : synchro de statut,
- * notifications, passe de Numo sur une mention.
+ * Both forges number their deliveries — `X-GitHub-Delivery`,
+ * `X-Gitlab-Event-UUID` — and re-deliver when the receiver has failed. Without guard,
+ * the same payload could be replayed as many times as wanted by who
+ * had captured it, and each replay did the work again: status sync,
+ * notifications, Numo pass on a mention.
  *
- * La garde est un INSERT : la clé primaire `(provider, delivery_id)` la FAIT,
- * comme `stripe_webhook_events` le fait déjà pour Stripe. Pas de SELECT
- * préalable — deux livraisons concurrentes le passeraient toutes les deux.
+ * The guard is an INSERT: the primary key `(provider, delivery_id)` DOES it,
+ * like `stripe_webhook_events` already does for Stripe. No prior SELECT
+ * — two competing deliveries would both pass it.
  *
- * Deux replis assumés, dans le même sens (traiter plutôt que perdre) :
- *  · pas d'identifiant de livraison dans l'en-tête → on traite. Une charge sans
- *    identifiant n'est pas dédoublonnable, et refuser couperait les récepteurs
- *    exercés à la main.
- *  · la base répond une erreur qui n'est PAS un doublon (23505) → on traite. Le
- *    rejeu est une porte étroite ; perdre un événement de la forge, non.
+ * Two fallbacks assumed, in the same direction (process rather than lose):
+ * · no delivery identifier in the header → we process. A charge without
+ * identifier is not deduplicable, and refusing would cut off the receivers
+ * exercised by hand.
+ * · the base responds to an error which is NOT a duplicate (23505) → we process. The
+ * replay is a narrow door; losing a forge event, no.
  *
- * À appeler APRÈS la vérification du secret : sinon n'importe qui pourrait
- * marquer d'avance une livraison comme vue, et faire taire l'événement réel.
+ * To be called AFTER the secret check: otherwise anyone could
+ * mark a delivery as seen in advance, and silence the real event.
  */
 export async function isReplayedForgeDelivery(
   provider: RepoProviderId,

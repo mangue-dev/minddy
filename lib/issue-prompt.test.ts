@@ -82,7 +82,7 @@ describe("buildIssuePlanPrompt", () => {
     expect(prompt).toContain("task by task");
     expect(prompt).toContain("(1/3 tasks done)");
     expect(prompt).not.toContain("Write the implementation plan");
-    // Le plan lui-même n'est jamais inliné : l'agent le lit via le MCP.
+    // The plan itself is never inlined: the agent reads it via the MCP.
     expect(prompt).not.toContain("- [x] a");
     expect(prompt).toContain("minddy_get_issue");
     expect(prompt).toContain("minddy_update_issues");
@@ -161,7 +161,7 @@ describe("buildIssueVerifyPrompt", () => {
     expect(prompt).toContain("minddy_get_issue");
     expect(prompt).toContain("minddy_update_plan_task");
     expect(prompt).toContain("minddy_add_comment");
-    // Le plan n'est jamais inliné : l'agent le lit via le MCP.
+    // The plan is never tilted: the agent reads it via the MCP.
     expect(prompt).not.toContain("- [x] a");
   });
 
@@ -181,7 +181,7 @@ describe("buildIssueVerifyPrompt", () => {
     const prompt = buildIssueVerifyPrompt(input);
     expect(prompt).toContain("This issue has no implementation plan");
     expect(prompt).toContain("its comments are the whole specification");
-    // Rien à recaler : pas d'état de tâche à corriger sans plan.
+    // Nothing to correct: no task status to correct without a plan.
     expect(prompt).not.toContain("minddy_update_plan_task");
     expect(prompt).toContain("ask me for its comments");
   });

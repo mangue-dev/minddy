@@ -19,27 +19,27 @@ import {
 import { HelpHint } from "@/components/settings/help-hint";
 
 /**
- * La grammaire des écrans de réglages (MIN-167).
+ * The grammar of the settings screens (MIN-167).
  *
- * Avant : `SettingsSection` ne donnait qu'un `<h2>` et un `children`, donc chaque
- * onglet réinventait sa mise en page — interrupteur à gauche ici, à droite là,
- * libellé au-dessus du champ ailleurs. Six recettes pour la même chose.
+ * Before: `SettingsSection` only gave a `<h2>` and a `children`, so each
+ * tab reinvented its layout — switch left here, right there,
+ * label above field elsewhere. Six recipes for the same thing.
  *
- * Le patron retenu n'est pas inventé : c'est celui de l'onglet Feedback (MIN-37),
- * le seul onglet qui se lisait bien, hissé en primitives partagées. Trois niveaux,
- * et chacun est MARQUÉ — c'est ce qui manquait, tout était en `text-sm` :
+ * The pattern chosen is not invented: it is that of the Feedback tab (MIN-37),
+ * the only tab that read well, raised in shared primitives. Three levels,
+ * and each one is MARKED — that's what was missing, everything was in `text-sm` :
  *
- *     Titre de page      text-2xl font-display     « Paramètres »
- *     └─ Groupe (carte)  text-sm font-medium + icône, sur fond de carte
- *        └─ Rangée       libellé à gauche · contrôle à droite, filet entre deux
+ * Page title text-2xl font-display “Settings”
+ * └─ Group (card) text-sm font-medium + icon, on map background
+ * └─ Row labeled on the left · control on the right, net between two
  *
- * La rangée est en clé/valeur PAR DÉFAUT, pas en clé/valeur toujours : un
- * textarea de 500 caractères, un QR code d'enrôlement ou un dropzone CSV passent
- * en `orientation="vertical"`. La règle est de ne descendre le contrôle que
- * lorsqu'il ne tient manifestement pas au bout de la ligne.
+ * The row is in DEFAULT key/value, not in key/value always: a
+ * textarea of 500 characters, an enrollment QR code or a dropzone CSV pass
+ * into `orientation="vertical"`. The rule is to only lower the control
+ * when it clearly does not fit at the end of the line.
  */
 
-/** Carte de groupe : en-tête (icône, titre, indice, contrôle maître), corps, pied. */
+/** Group card: header (icon, title, index, master control), body, footer. */
 export function SettingsGroup({
   icon: Icon,
   anchor,
@@ -54,47 +54,45 @@ export function SettingsGroup({
   children,
 }: {
   icon?: LucideIcon;
-  /** Entrée du catalogue des réglages ([lib/settings-sections.ts]) : la carte
-   *  devient joignable depuis ⌘K, qui l'ouvre puis la déroule et la surligne.
-   *  Le type interdit une ancre absente du catalogue — l'inverse (une entrée du
-   *  catalogue que personne ne rend) est tenu par settings-sections.test.ts. */
+  /** Settings catalog entry ([lib/settings-sections.ts]): the map
+ * becomes reachable from ⌘K, who opens it then expands and highlights it.
+ * The type prohibits an anchor absent from the catalog — the opposite (an entry in the
+ * catalog that no one returns) is held by settings-sections.test.ts. */
   anchor?: SettingsSectionId;
   title: string;
   description?: string;
-  /** Prose longue, sortie de la page derrière un ⓘ. */
+  /** Long prose, taken off the page behind a ⓘ. */
   help?: ReactNode;
-  /** Contrôle à droite du titre — l'interrupteur maître du groupe. */
+  /** Control to the right of the title — the master switch of the group. */
   action?: ReactNode;
-  /** Pied de carte : le bouton « Enregistrer » d'un groupe qui se soumet. */
+  /** Footer: the “Save” button of a submitting group. */
   footer?: ReactNode;
   tone?: "default" | "destructive";
-  /** `rows` : des `SettingsRow` séparées par un filet. `block` : un contenu libre. */
+  /** `rows`: `SettingsRow` separated by a net. `block`: free content. */
   variant?: "rows" | "block";
   className?: string;
   children?: ReactNode;
 }) {
   const destructive = tone === "destructive";
-  // `Children.toArray` jette les `false` / `null` : sans ça, un corps fait de
-  // rangées toutes conditionnelles (`{enabled && <Row/>}`) reste « truthy » et
-  // la carte dessine un bandeau bordé vide sous son en-tête.
+  // `Children.toArray` throws away the `false` / `null`: without that, a body made of
+  // rows all conditional (`{enabled && <Row/>}`) remains “truthy” and
+  // the card draws an empty border under its header.
   const hasBody = Children.toArray(children).length > 0;
   return (
     <section
       id={anchor ? settingsSectionAnchor(anchor) : undefined}
       className={cn(
         "rounded-xl border bg-card text-card-foreground",
-        /* `scroll-mt` : le shell déroule la carte en la CENTRANT, mais une carte
-           plus haute que la fenêtre est alignée en haut — sous le header collant
-           sans cette marge. */
+        /* `scroll-mt`: the shell unrolls the card CENTERING it, but a card
+ higher than the window is aligned at the top — under the sticky header
+ without this margin. */
         anchor && "scroll-mt-20",
         destructive ? "border-destructive/30" : "border-border",
         className,
       )}
     >
-      {/* Sans indice, le titre est seul : l'aligner en haut le décalerait par
-          rapport à sa pastille d'icône, pour rien. Tout groupe DEVRAIT porter
-          un indice — ce repli n'est là que pour les rares en-têtes qui n'en ont
-          pas (certaines familles de l'écran admin). */}
+      {/* Without an index, the title is alone: ​​aligning it at the top would shift it by
+ in relation to its icon pad, for nothing. Every group SHOULD carry a hint — this fallback is only there for the rare headers that don't have one (some admin screen families). */}
       <header
         className={cn(
           "flex justify-between gap-4 p-4",
@@ -166,10 +164,10 @@ export function SettingsGroup({
 }
 
 /**
- * Rangée de réglage : libellé (+ ⓘ) et indice à gauche, contrôle à droite,
- * contenu déroulant en dessous. `htmlFor` en fait un vrai `<label>` — sans lui
- * c'est un titre, ce qui est le bon choix quand le contrôle n'est pas un champ
- * unique (un groupe de boutons, une liste de gestes).
+ * Setting row: label (+ ⓘ) and index on the left, control on the right,
+ * drop-down content below. `htmlFor` makes it a real `<label>` — without it
+ * it's a title, which is the right choice when the control is not a single field
+ * (a group of buttons, a list of gestures).
  */
 export function SettingsRow({
   label,
@@ -224,9 +222,9 @@ export function SettingsRow({
 }
 
 /**
- * Rangée d'inventaire : une chose qui existe déjà (un compte git, une app
- * connectée, un dépôt lié, un ticket récurrent) — icône ou avatar, nom, état en
- * dessous, geste à droite. Elle était recopiée à l'identique dans trois sections.
+ * Inventory row: a thing that already exists (a git account, a connected app
+ *, a linked repository, a recurring ticket) — icon or avatar, name, state in
+ * below, gesture to the right. It was copied identically in three sections.
  */
 export function SettingsListRow({
   icon: Icon,
@@ -234,7 +232,7 @@ export function SettingsListRow({
   title,
   subtitle,
   action,
-  /** L'état DIT pourquoi un geste n'est pas offert : le tronquer le rend inutile. */
+  /** The state SAYS why a gesture is not offered: truncating it makes it useless. */
   truncateSubtitle = true,
   className,
 }: {
@@ -272,7 +270,7 @@ export function SettingsListRow({
   );
 }
 
-/** Ce qui se dit quand il n'y a rien à montrer — ou pas encore. */
+/** What is said when there is nothing to show — or not yet. */
 export function SettingsEmpty({
   className,
   children,

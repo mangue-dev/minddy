@@ -7,12 +7,12 @@ import {
 } from "./reauth";
 
 /**
- * MIN-345 — supprimer un compte redemande une preuve.
+ * MIN-345 — deleting an account requires proof again.
  *
- * Ce geste emporte en cascade les projets possédés, leurs tickets et l'accès de
- * leurs membres. Une session ouverte trouvée sur un poste déverrouillé ne doit
- * pas suffire : le mot de passe quand le compte en a un, une authentification
- * récente quand il n'y en a pas.
+ * This gesture cascades the owned projects, their tickets and the access of
+ * their members. An open session found on an unlocked workstation must
+ * not be enough: the password when the account has one, recent authentication
+ * when there is none.
  */
 
 const NOW = 1_800_000_000;
@@ -44,7 +44,7 @@ describe("lastAuthenticationAt", () => {
     ).toBe(NOW - 10);
   });
 
-  /** Repli assumé : moins solide, mais il n'enferme personne dehors. */
+  /** Assumed withdrawal: less solid, but it does not lock anyone out. */
   it("retombe sur `iat` quand le jeton ne porte pas d'amr", () => {
     expect(lastAuthenticationAt({ iat: NOW })).toBe(NOW);
     expect(lastAuthenticationAt({})).toBeNull();
@@ -65,7 +65,7 @@ describe("isRecentlyAuthenticated", () => {
   });
 });
 
-// ── La route elle-même ───────────────────────────────────────────────────────
+// ── The road itself ─────────────────────────── ────────────────────────────
 
 const passwordOk = vi.fn(async () => true);
 const deleted: string[] = [];
@@ -106,8 +106,8 @@ function call(body: unknown): Promise<Response> {
   ) as unknown as Promise<Response>;
 }
 
-// Le débit de la route est compté PAR UTILISATEUR : un id neuf à chaque cas,
-// sinon les tests se plafonnent les uns les autres.
+// The flow of the road is counted PER USER: a new id in each case,
+// otherwise the tests limit each other.
 let seq = 0;
 
 beforeEach(() => {

@@ -8,22 +8,22 @@ const { insertAttachments, removeStorageObjects, ResourceScopeError } =
   await import("./attachments");
 
 /**
- * MIN-343 — LE FICHIER D'UN AUTRE.
+ * MIN-343 — ANOTHER'S FILE.
  *
- * Deux moitiés du même défaut, et les deux sont ici parce qu'elles se tiennent :
+ * Two halves of the same default, and both are here because they hold each other:
  *
- *  - à l'ENREGISTREMENT, rien ne vérifiait que le `storage_path` déclaré avait
- *    été téléversé par celui qui l'enregistre — seul le préfixe `projects/{id}/`
- *    l'était, et il dit le projet, pas la personne ;
- *  - à la SUPPRESSION, l'objet partait dès qu'UNE ligne le nommant disparaissait,
- *    même si une autre le nommait encore.
+ * - at SAVE, nothing checked that the `storage_path` declared had
+ * been uploaded by the person saving it — only the prefix `projects/{id}/`
+ * was, and it says the project, not the person ;
+ * - upon DELETION, the object was removed as soon as ONE line naming it disappeared,
+ * even if another one still named it.
  *
- * Enchaînées : un membre enregistre une ressource sur le fichier d'un collègue,
- * supprime sa propre ligne (le filtre `created_by` est respecté, il détruit bien
- * SA ligne), et l'objet du collègue s'en va avec.
+ * Chained: a member saves a resource on a colleague's file,
+ * deletes its own line (the `created_by` filter is respected, it destroys correctly
+ * SA line), and the colleague's object goes with it.
  *
- * Ce qu'on simule : le storage et les deux tables qui référencent ses objets.
- * Rien d'autre — les gardes testées sont dans `attachments.ts`, pas dans Supabase.
+ * What we simulate: the storage and the two tables which reference its objects.
+ * Nothing else — the guards tested are in `attachments.ts`, not in Supabase.
  */
 
 const PROJECT = "11111111-1111-4111-8111-111111111111";
@@ -37,9 +37,9 @@ function fake({
   referencedIn = {},
   referenceFails = false,
 }: {
-  /** chemin → téléverseur enregistré par le storage (absent = objet inconnu). */
+  /** path → uploader registered by storage (absent = unknown object). */
   owners?: Record<string, string | null>;
-  /** table → chemins qu'une ligne vivante nomme encore. */
+  /** table → paths that a live row still names. */
   referencedIn?: { attachments?: string[]; page_files?: string[] };
   referenceFails?: boolean;
 } = {}) {
@@ -95,10 +95,10 @@ const fileResource = {
   size_bytes: 12,
 };
 
-describe("enregistrer une ressource sur le fichier d'un autre", () => {
+describe("registering a resource on someone else's file", () => {
   const parent = { projectId: PROJECT, issueId: ISSUE, commentId: null };
 
-  it("refuse le chemin téléversé par quelqu'un d'autre", async () => {
+  it("rejects a path uploaded by someone else", async () => {
     const { client, inserted } = fake({ owners: { [PATH]: ALICE } });
     await expect(
       insertAttachments(client, {
@@ -107,11 +107,11 @@ describe("enregistrer une ressource sur le fichier d'un autre", () => {
         resources: [fileResource],
       })
     ).rejects.toBeInstanceOf(ResourceScopeError);
-    // Et rien n'est écrit : la ligne qui aurait servi à détruire n'existe pas.
+    // And nothing is written: the line which would have been used to destroy does not exist.
     expect(inserted).toHaveLength(0);
   });
 
-  it("laisse passer son propre téléversement", async () => {
+  it("allows its own upload through", async () => {
     const { client, inserted } = fake({ owners: { [PATH]: ALICE } });
     const rows = await insertAttachments(client, {
       ...parent,
@@ -122,9 +122,9 @@ describe("enregistrer une ressource sur le fichier d'un autre", () => {
     expect(inserted[0].storage_path).toBe(PATH);
   });
 
-  it("laisse passer un objet créé par minddy lui-même", async () => {
-    // Envoi côté serveur (MCP) ou copie inter-projets : le storage n'a pas de
-    // téléverseur à donner, et la ligne est écrite dans le même geste.
+  it("allows an object created by minddy itself through", async () => {
+    // Server-side sending (MCP) or inter-project copy: storage has no
+    // uploader to give, and the line is written in the same gesture.
     const { client } = fake({ owners: { [PATH]: null } });
     await expect(
       insertAttachments(client, {
@@ -135,7 +135,7 @@ describe("enregistrer une ressource sur le fichier d'un autre", () => {
     ).resolves.toHaveLength(1);
   });
 
-  it("ne demande rien au storage pour un lien", async () => {
+  it("does not ask storage for a link", async () => {
     const { client } = fake();
     await expect(
       insertAttachments(client, {
@@ -162,8 +162,8 @@ describe("supprimer les octets d'un objet encore référencé", () => {
   });
 
   it("garde l'objet qu'un fichier de page nomme encore", async () => {
-    // Deux tables référencent le même bucket : ne regarder que la sienne
-    // rendrait la garde vraie sur la moitié des chemins.
+    // Two tables reference the same bucket: only look at yours
+    // would make the guard true on half the paths.
     const { client, removed } = fake({ referencedIn: { page_files: [PATH] } });
     await removeStorageObjects(client, [PATH]);
     expect(removed).toHaveLength(0);
@@ -176,8 +176,8 @@ describe("supprimer les octets d'un objet encore référencé", () => {
     expect(removed).toEqual([[orphan]]);
   });
 
-  it("ne supprime rien quand il ne sait plus qui référence quoi", async () => {
-    // Un orphelin coûte des octets ; une suppression de trop coûte le fichier
+  it("deletes nothing when it no longer knows what references what", async () => {
+    // An orphan costs bytes; one deletion too much costs the file
     // de quelqu'un.
     const { client, removed } = fake({ referenceFails: true });
     await removeStorageObjects(client, [PATH]);

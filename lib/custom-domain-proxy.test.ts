@@ -3,20 +3,20 @@ import { NextRequest } from "next/server";
 import type { DomainTarget, PublicTokenKind } from "@/lib/custom-domain-lookup";
 
 /**
- * CE QU'UN DOMAINE CLIENT SERT, ET SOUS QUELLES EN-TÊTES (MIN-337).
+ * WHAT A CLIENT DOMAIN IS USED FOR, AND UNDER WHAT HEADERS (MIN-337).
  *
- * Deux défauts, tous deux invisibles à la lecture d'un fichier seul :
+ * Two faults, both invisible when reading a single file:
  *
- *   - `/f/`, `/share/` et `/p/` sont passants sur un domaine custom (le board a
- *     besoin de ses propres sous-chemins). Le token étant un identifiant
- *     GLOBAL, `feedback.acme.com/f/<token d'un concurrent>` rendait le board du
- *     concurrent — HTTPS valide, sous la marque d'Acme.
- *   - le `/` d'un domaine custom sert une page personnalisée par cookie, et
- *     tombait sous l'en-tête de cache CDN posé sur `/` pour la landing : le CDN
- *     pouvait servir à un visiteur la page d'un autre.
+ * - `/f/`, `/share/` and `/p/` are passing on a custom domain (the board has
+ * needs its own subpaths). The token being an identifier
+ * GLOBAL, `feedback.acme.com/f/<token d'un concurrent>` made the board of the
+ * competitor — valid HTTPS, under the Acme brand.
+ * - the `/` of a custom domain serves a personalized page per cookie, and
+ * fell under the CDN cache header placed on `/` for the landing: the CDN
+ * could serve to one visitor another's page.
  *
- * Le lookup est le seul module moqué : c'est la frontière réseau. Tout le reste
- * — le vrai proxy, ses préfixes, ses réécritures — s'exécute.
+ * The lookup is the only module mocked: it is the network boundary. Everything else
+ * — the real proxy, its prefixes, its rewrites — runs.
  */
 
 const DOMAIN_PROJECT = "project-acme";
@@ -61,7 +61,7 @@ describe("foreign tenants on a customer's domain", () => {
 
     expect(response.status).toBe(404);
     expect(lookupTokenProject).toHaveBeenCalledWith(kind, "tok-other");
-    // Pas de réécriture : la requête n'atteint jamais la page du voisin.
+    // No rewriting: the request never reaches the neighbor's page.
     expect(response.headers.get("x-middleware-rewrite")).toBeNull();
   });
 

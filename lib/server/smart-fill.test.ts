@@ -7,13 +7,13 @@ import {
 } from "./smart-fill";
 
 /**
- * LA WHITELIST, exercée sur ce qu'un petit modèle rend vraiment.
+ * THE WHITELIST, trained on what a small model really renders.
  *
- * Smart-fill écrit dans un ticket sans que personne ne relise : tout ce qu'il
- * pose est passé par `sanitizeSmartFill`, et c'est donc le seul endroit du
- * chemin où une réponse de travers peut être arrêtée. Les cas ci-dessous sont
- * ceux qu'on voit en vrai — un id inventé, un enum voisin mais faux, un ticket
- * rangé dans huit catégories, un `null` qui veut dire quelque chose.
+ * Smart-fill written in a ticket without anyone proofreading: everything it
+ * posts has gone through `sanitizeSmartFill`, and so this is the only place du
+ * path where a crooked response can be stopped. The cases below are
+ * those that we see in real life — an invented id, a similar but false enum, a ticket
+ * arranged in eight categories, a `null` which means something.
  */
 
 const CTX: SmartFillContext = {
@@ -50,8 +50,8 @@ describe("sanitizeSmartFill", () => {
   });
 
   it("rend un patch vide quand le modèle n'a rien rendu", () => {
-    // Pas de clé, HTTP en échec, JSON de travers : `forcedToolCall` rend `null`,
-    // et le ticket doit naître tel qu'il a été écrit.
+    // No key, HTTP failed, JSON wrong: `forcedToolCall` returns `null`,
+    // and the ticket must be born as it was written.
     expect(sanitizeSmartFill(null, CTX)).toEqual({});
   });
 
@@ -69,9 +69,9 @@ describe("sanitizeSmartFill", () => {
   });
 
   it("lit le sentinelle « none » de l'effort comme un null", () => {
-    // C'est la valeur que le SCHÉMA offre pour « rien d'estimable » : pas un
-    // type union, qui n'est pas accepté partout en appel de fonction strict et
-    // dont le refus ne se verrait pas (patch vide, tickets non remplis, silence).
+    // This is the value that the SCHEMA offers for “nothing valuable”: not one
+    // union type, which is not accepted everywhere in strict function calls and
+    // whose refusal would not be seen (empty patch, unfilled tickets, silence).
     expect(sanitizeSmartFill({ effort: "none" }, CTX)).toEqual({ effort: null });
   });
 
@@ -96,23 +96,23 @@ describe("sanitizeSmartFill", () => {
   });
 
   it("ne pose pas de champ catégories quand aucune ne survit", () => {
-    // Un `category_ids: []` écrirait « ce ticket n'a délibérément aucune
-    // catégorie » là où le modèle n'a fait que se tromper d'ids.
+    // A `category_ids: []` would write "this ticket deliberately has no
+    // category » where the model only got the ids wrong.
     expect(sanitizeSmartFill({ category_ids: ["inconnue"] }, CTX)).toEqual({});
     expect(sanitizeSmartFill({ category_ids: "Bug" }, CTX)).toEqual({});
   });
 
   it("refuse un objectif inventé, et n'en pose aucun", () => {
-    // Un ticket rangé sous le mauvais objectif coûte plus cher à défaire qu'un
+    // A ticket stored under the wrong objective costs more to undo than one
     // ticket sans objectif.
     expect(sanitizeSmartFill({ objective_id: "obj-fantôme" }, CTX)).toEqual({});
     expect(sanitizeSmartFill({ objective_id: "Refonte v2" }, CTX)).toEqual({});
   });
 
   it("avale le « none » d'objectif sans poser le champ", () => {
-    // La réponse « aucun objectif ne colle ». Le champ reste absent du patch,
-    // donc l'insert ne l'écrit pas — et aucun objectif ne peut porter cet id,
-    // ce sont des UUID.
+    // The answer “no objective fits”. The field remains missing from the patch,
+    // so the insert doesn't write it — and no lens can carry this id,
+    // these are UUIDs.
     expect(sanitizeSmartFill({ objective_id: "none" }, CTX)).toEqual({});
     expect(sanitizeSmartFill({ objective_id: null }, CTX)).toEqual({});
   });
@@ -141,8 +141,8 @@ describe("buildSmartFillPrompt", () => {
   });
 
   it("dit explicitement quoi répondre quand le projet n'a ni l'un ni l'autre", () => {
-    // Un modèle à qui on présente une liste vide invente ; à qui on dit « alors
-    // c'est vide », non.
+    // A model who is presented with an empty list invents; to whom we say “so
+    // it’s empty”, no.
     const prompt = buildSmartFillPrompt("Neuf", { categories: [], objectives: [] });
     expect(prompt).toContain("leave category_ids empty");
     expect(prompt).toContain('objective_id must be "none"');

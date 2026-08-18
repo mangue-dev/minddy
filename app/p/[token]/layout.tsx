@@ -2,10 +2,10 @@ import type { ReactNode } from "react";
 import { FullCatalogMessages } from "@/components/full-catalog-messages";
 
 /**
- * Page du wiki publiée en lecture (MIN-283). Même raison d'être que le layout
- * de la vue partagée : le root layout ne diffuse que les quatre namespaces du
- * site marketing (MIN-100), et cette route monte le VRAI éditeur de page —
- * placeholders, menu des blocs, libellés du dépliant, blocs image et fichier.
+ * Wiki page published for reading (MIN-283). Same reason as the layout
+ * of the shared view: the root layout only broadcasts the four namespaces of the
+ * marketing site (MIN-100), and this route goes up the REAL page editor —
+ * placeholders, block menu, leaflet labels, image and file blocks.
  */
 export default function PublicPageLayout({ children }: { children: ReactNode }) {
   return <FullCatalogMessages>{children}</FullCatalogMessages>;

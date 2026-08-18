@@ -6,15 +6,15 @@ import { eraseFeedbackUser } from "@/lib/server/feedback/erasure";
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * Les personnes déjà connues du projet, pour le sélecteur d'auteur de la saisie
- * interne — et leur effacement sur demande (DELETE, RGPD art. 17).
+ * People already known to the project, for the entry author selector
+ * internal — and their deletion on request (DELETE, GDPR art. 17).
  *
- * Saisir un retour au nom de quelqu'un demandait de retaper son email de tête,
- * à la lettre près : une faute et c'est une SECONDE identité qui naît, avec son
- * propre pseudonyme et sa propre voix. Ceux qui ont déjà écrit ou voté sont
- * donc proposés, et la saisie libre reste ouverte pour les nouveaux.
+ * Entering a return in someone's name required retyping their head email,
+ * to the letter: a mistake and a SECOND identity is born, with its
+ * own pseudonym and his own voice. Those who have already written or voted are
+ * therefore offered, and free entry remains open for new ones.
  *
- * Vraies identités (email, nom) : c'est la vue équipe, comme `team-queries`.
+ * Real identities (email, name): this is the team view, like `team-queries`.
  */
 
 const LIMIT = 20;
@@ -37,15 +37,15 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     .from("feedback_users")
     .select("id, email, name, pseudonym")
     .eq("project_id", id)
-    // Une identité effacée n'a plus ni email ni nom : la proposer reviendrait à
-    // offrir une ligne vide au sélecteur, et à laisser croire qu'on peut encore
-    // écrire au nom de quelqu'un qui a demandé à disparaître.
+    // A deleted identity no longer has either email or name: offering it would amount to
+    // offer an empty line to the selector, and let people believe that we can still
+    // write on behalf of someone who has asked to disappear.
     .is("erased_at", null)
     .order("created_at", { ascending: false })
     .limit(LIMIT);
   if (query) {
-    // `%` et `,` sont des métacaractères de la syntaxe `or` de PostgREST : les
-    // laisser passer laisserait une frappe changer la forme de la requête.
+    // `%` and `,` are metacharacters of the PostgREST `or` syntax:
+    // letting pass would let a keystroke change the form of the query.
     const needle = query.replace(/[%,()]/g, " ");
     select = select.or(`email.ilike.%${needle}%,name.ilike.%${needle}%`);
   }
@@ -55,12 +55,12 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 }
 
 /**
- * Effacement d'un participant, sur demande de l'intéressé (RGPD art. 17).
+ * Deletion of a participant, at the request of the interested party (GDPR art. 17).
  *
- * Garde `requireProjectMember` comme toutes les routes d'équipe du feedback :
- * qui peut faire tourner le token public du board ou effacer son secret SSO peut
- * honorer une demande d'effacement. En faire la seule exception réservée au
- * propriétaire ferait dépendre un droit d'une hiérarchie interne.
+ * Keeps `requireProjectMember` like all feedback team routes:
+ * who can rotate the board's public token or erase its SSO secret can
+ * honor an erasure request. Make it the only exception reserved for
+ * owner would make a right dependent on an internal hierarchy.
  */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;

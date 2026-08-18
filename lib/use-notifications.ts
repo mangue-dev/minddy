@@ -33,9 +33,9 @@ export function useNotifications() {
     [notifications]
   );
 
-  // Optimiste (MIN-40) : applique la mutation dans le cache tout de suite pour
-  // que le surlignage non-lu ET le badge de la sidebar bougent sans attendre.
-  // Rollback à l'échec ; le realtime réconcilie les autres onglets/clients.
+  // Optimistic (MIN-40): applies the mutation in the cache immediately to
+  // that the unread highlight AND the sidebar badge move without waiting.
+  // Rollback on failure; realtime reconciles the other tabs/clients.
   const mutate = useCallback(
     (apply: (old: MyNotification[]) => MyNotification[]) => {
       const previous =

@@ -12,45 +12,45 @@ import {
 import { launchAgentRun } from "@/lib/server/agent/launch";
 
 /**
- * L'HORLOGE des routines (MIN-185) : toutes les cinq minutes, les routines dont
- * l'échéance est passée partent.
+ * THE Routines CLOCK (MIN-185): every five minutes, the routines including
+ * the deadline has passed, leave.
  *
- * **Un cron dédié**, séparé d'`agent-drain` (dont la fenêtre de 800 s sert au
- * travail lui-même) et d'`automations` : lancer un run est court, et cinq
- * minutes suffisent à la granularité de « 9 h ». Même cadence que `smart-assign`.
+ * **A dedicated cron**, separate from `agent-drain` (whose 800 s window is used for
+ * work itself) and `automations`: launching a run is short, and five
+ * minutes are enough for the granularity of “9 a.m.”. Same cadence as `smart-assign`.
  *
- * **En SÉRIE**, jamais en parallèle : chaque tour crée un run, et l'`after()` du
- * lancement draine son premier chunk dans la même invocation. Dix routines
- * lancées d'un coup se marcheraient dessus sur la même fonction.
+ * **In SERIES**, never in parallel: each turn creates a run, and the `after()` of
+ * launch drains its first chunk in the same invocation. Ten routines
+ * launched at once would step on each other on the same function.
  *
- * **Un passage manqué n'est jamais rattrapé.** L'échéance est avancée AVANT le
- * lancement (`claimRoutine`, compare-and-set) et reste avancée même si le
- * lancement échoue : une routine quotidienne restée trois jours sans budget
- * repart demain, elle ne joue pas trois fois. Ce qu'on perd, c'est un passage ;
- * ce qu'on éviterait de justesse, c'est une rafale de trois runs payants sur un
- * budget déjà à sec.
+ * **A missed passage is never made up.** The deadline is brought forward BEFORE the
+ * launch (`claimRoutine`, compare-and-set) and remains advanced even if the
+ * launch fails: a daily routine left without a budget for three days
+ * leaves tomorrow, she doesn't play three times. What we lose is a passage;
+ * what we would narrowly avoid is a burst of three profitable runs on a
+ * budget already dry.
  *
- * **Un échec se DIT** : `last_error` porte un CODE (jamais une phrase — c'est
- * l'UI qui traduit), lu dans l'en-tête de la routine. Le budget épuisé se voit
- * ainsi à l'endroit où on va chercher pourquoi rien ne s'est passé.
+ * **A failure SAY**: `last_error` carries a CODE (never a sentence — it is
+ * the UI that translates), read in the routine header. The exhausted budget is visible
+ * so to the place where we go to look for why nothing happened.
  *
- * **Chaque passage part avec un PLAFOND DE DÉPENSE** (`routineRunBudgetUsd`),
- * une part du budget mensuel réglée sur la routine. Il n'y en avait pas : le
- * quota du compte bornait seul, donc un passage pouvait légitimement prendre
- * les 100 % du mois — et sur un plan à 5 $ d'usage, ne rien laisser au travail
- * à la main. Ce n'est pas un refus de lancer : le passage part, et c'est la
- * boucle qui s'arrête à la frontière, travail poussé et checkpoint gardé.
+ * **Each passage leaves with a SPENDING CAP** (`routineRunBudgetUsd`),
+ * a part of the monthly budget settled on routine. There was none: the
+ * quota of the account was limited alone, so a passage could legitimately take
+ * 100% of the month — and on a $5 usage plan, leave nothing at work
+ * by hand. It is not a refusal to throw: the passage leaves, and it is the
+ * loop that stops at the border, extensive work and guarded checkpoint.
  */
 
 export const runtime = "nodejs";
-// Le kick du lancement draine le premier chunk dans `after()`, comme la route de
-// lancement carnet : même fenêtre.
+// The launch kick drains the first chunk into `after()`, like the route to
+// launch notebook: same window.
 export const maxDuration = 300;
 
-/** Routines traitées par réveil. Au-delà, le réveil suivant (5 min) prend la suite. */
+/** Routines processed by alarm clock. Beyond that, the next awakening (5 min) takes place. */
 const MAX_PER_TICK = 10;
 
-/** Traduit un refus de lancement en code de `last_error`. */
+/** Translates a launch refusal into a `last_error` code. */
 function launchErrorCode(error: string): RoutineErrorCode {
   switch (error) {
     case "quotaExceeded":
@@ -72,27 +72,27 @@ function launchErrorCode(error: string): RoutineErrorCode {
 }
 
 async function runRoutine(routine: Routine): Promise<{ id: string; outcome: string }> {
-  // L'échéance d'abord : elle vaut réservation. Perdre la course (un second
-  // réveil concurrent est déjà passé) veut dire ne rien lancer du tout.
+  // The deadline first: it is worth a reservation. Lose the race (a second
+  // concurrent wake-up has already passed) means not launching anything at all.
   const claim = await claimRoutine(routine);
   if (!claim.claimed) return { id: routine.id, outcome: "raced" };
 
   const result = await launchAgentRun({
     projectId: routine.project_id,
-    // Acteur technique : le owner de la routine. Sa clé, son quota, sa langue.
+    // Technical actor: the owner of the routine. Its key, its quota, its language.
     userId: routine.owner_id,
     triggeredBy: "routine",
     prompt: routine.prompt,
-    // Le titre est celui de la routine, écrit UNE fois à sa création : pas de
-    // résumé à repayer à chaque passage (cf. `launch.ts`).
+    // The title is that of the routine, written ONCE at its creation: no
+    // summary to be paid for each visit (see `launch.ts`).
     title: routine.title,
     ...(routine.model ? { model: routine.model, forced: true } : {}),
     reasoningLevel: routine.reasoning_level,
     baseBranch: routine.base_branch,
     routineId: routine.id,
-    // Le plafond de CE passage (cf. `routineRunBudgetUsd`) : la boucle prend le
-    // plus serré entre lui et le quota du compte. C'est lui qui empêche un
-    // passage de prendre tout le mois.
+    // The ceiling of THIS passage (see `routineRunBudgetUsd`): the loop takes the
+    // tighter between it and the account quota. It is he who prevents
+    // passage to take the whole month.
     budgetUsd: await routineRunBudgetUsd(routine),
   });
 
@@ -100,7 +100,7 @@ async function runRoutine(routine: Routine): Promise<{ id: string; outcome: stri
     await stampRoutineError(routine.id, launchErrorCode(result.error));
     return { id: routine.id, outcome: result.error };
   }
-  // Le passage est parti : l'alerte du passage précédent n'a plus lieu d'être.
+  // The passage is gone: the alert of the previous passage is no longer relevant.
   await stampRoutineError(routine.id, null);
   return { id: routine.id, outcome: "launched" };
 }
@@ -116,7 +116,7 @@ async function handle(request: NextRequest) {
     try {
       results.push(await runRoutine(routine));
     } catch (err) {
-      // Une routine qui lève ne doit pas emporter les suivantes.
+      // A routine that lifts should not overwhelm the following ones.
       console.error(`[cron/routines] ${routine.id} threw:`, (err as Error).message);
       await stampRoutineError(routine.id, "launchFailed").catch(() => {});
       results.push({ id: routine.id, outcome: "threw" });

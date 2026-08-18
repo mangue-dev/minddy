@@ -4,20 +4,20 @@ import { clonePullRequest, PR_BASE_TAG, type RepoHost } from "./repo-host";
 import { cloudLayout } from "./harness-layout";
 
 /**
- * Le clone d'une session de RELECTURE (MIN-168), et surtout ce que MIN-258 y a
- * ajouté : l'ANCRE du diff.
+ * The clone of a REVIEW session (MIN-168), and especially what MIN-258 has in it
+ * added: the ANCHOR of the diff.
  *
- * Le défaut réparé : les deux côtés du clone sont à profondeur 1, donc sans
- * ancêtre commun, et le prompt se rabattait sur `git diff origin/<base>` en
- * l'appelant « the change, in full ». `origin/<base>` est le tip VIVANT de la
- * base : un commit fusionné dedans depuis l'ouverture de la PR y sort INVERSÉ, et
- * la relecture le commentait publiquement comme une suppression de la PR. On
- * amène donc la base du diff servi par la forge dans le clone (un commit, à
- * profondeur 1) et on la marque `pr-base`.
+ * The defect repaired: both sides of the clone are at depth 1, therefore without
+ * ancestor common, and the prompt fell back to `git diff origin/<base>` en
+ * calling it “the change, in full”. `origin/<base>` is the LIVING tip of the
+ * base: a commit merged into it since the opening of the PR comes out REVERSED, and
+ * the reread publicly commented it as a removal of the PR. On
+ * therefore brings the base of the diff served by the forge into the clone (a commit, at
+ * depth 1) and we mark it `pr-base`.
  *
- * Le décor est un `RepoHost` en mémoire qui n'exécute rien : ce qui compte ici
- * est la SUITE de commandes émise, et le fait qu'un échec d'ancre ne fasse pas
- * tomber un clone par ailleurs bon.
+ * The setting is a `RepoHost` in memory which does not execute anything: what matters here
+ * is the SEQUENCE of commands issued, and the fact that an anchor failure does not cause
+ * to drop an otherwise good clone.
  */
 function fakeHost(opts: { fails?: (cmd: string) => boolean } = {}) {
   const commands: string[] = [];
@@ -55,7 +55,7 @@ describe("clonePullRequest — l'ancre du diff", () => {
     const anchor = commands.at(-1) ?? "";
     expect(anchor).toContain(`git fetch --depth 1 '${BASE.authUrl}' '${SHA}'`);
     expect(anchor).toContain(`git tag -f '${PR_BASE_TAG}' '${SHA}'`);
-    // APRÈS le checkout de la tête : le tag ne doit pas décider de la position.
+    // AFTER the head checkout: the tag should not decide the position.
     expect(commands.findIndex((c) => c.includes("git checkout"))).toBeLessThan(
       commands.length - 1,
     );

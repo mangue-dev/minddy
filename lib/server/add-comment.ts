@@ -42,8 +42,8 @@ export type AddCommentResult =
       rawMessage?: string;
     };
 
-// Borne de longueur (MIN-118) : un commentaire est du markdown libre, borné
-// comme le plan d'un ticket. Au-delà on tronque — pas de clé d'erreur dédiée.
+// Length bound (MIN-118): a comment is free, bounded markdown
+// like the outline of a ticket. Beyond that we truncate — no dedicated error key.
 const MAX_COMMENT_LENGTH = 65_536;
 
 export async function addCommentToIssue({
@@ -409,9 +409,9 @@ export async function addCommentToFeedbackPost({
   mcpKeyId?: string | null;
   visibility?: CommentVisibility;
 }): Promise<AddCommentResult> {
-  // La visibilité EFFECTIVE. Sur un commentaire racine, c'est celle qu'on
-  // demande ; sur une réponse, c'est celle du fil, quoi qu'on ait demandé —
-  // voir plus bas. Un fil ne peut pas être public à moitié.
+  // ACTUAL visibility. On a root comment, this is the one we
+  // request ; on an answer, it's that of the thread, whatever we asked -
+  // see below. A thread can't be half public.
   let effectiveVisibility: CommentVisibility = visibility;
   const text = body.trim().slice(0, MAX_COMMENT_LENGTH);
   const mentioned = (mentionedUserIds ?? []).filter(

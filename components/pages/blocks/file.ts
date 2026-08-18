@@ -13,32 +13,31 @@ import type {
 } from "@/components/pages/blocks/types";
 
 /**
- * Le bloc FICHIER (MIN-280) — n'importe quel type, posé en ligne dans le
- * document avec son nom, son poids et son téléchargement.
+ * The FILE block (MIN-280) — any type, placed inline in the
+ * document with its name, its weight and its download.
  *
- * Sa projection markdown est un LIEN : `[rapport.pdf](/api/…)`. C'est la seule
- * forme que markdown offre, et elle a le bon goût d'être exactement ce qu'un
- * agent sait écrire sans rien apprendre.
+ * Its markdown projection is a LINK: `[rapport.pdf](/api/…)`. It is the only
+ * form that markdown offers, and it has the good taste of being exactly what an
+ * agent knows how to write without learning anything.
  *
- * Le sens LECTURE demande en revanche sa propre règle, et il faut voir pourquoi
- * : un paragraphe qui ne contient qu'un lien est une construction ordinaire (une
- * ligne « voir aussi »), et la traiter en bloc fichier ferait muter du texte que
- * personne n'a écrit comme tel. La règle ci-dessous ne prend donc QUE les liens
- * qui pointent vers un fichier de page — les autres restent des paragraphes,
- * intacts. Un `[rapport.pdf](https://exemple.org/…)` écrit par Numo reste un
- * lien de texte : c'en est un.
+ * The READING direction, on the other hand, requires its own rule, and we must see why
+ *: a paragraph which contains only one link is a construction ordinary (a
+ * “see also” line), and treating it as a bulk file would mutate text that
+ * no one wrote as such. The rule below therefore ONLY takes links
+ * that point to a page file — the others remain paragraphs,
+ * intact. A `[rapport.pdf](https://exemple.org/…)` written by Numo remains a
+ * text link: it is one.
  *
- * `size` et `mime` ne survivent pas au markdown (rien ne les y porte), et c'est
- * écrit avec les autres pertes assumées, en tête de lib/pages-markdown.ts. Ils
- * ne sont pas du contenu : la vue les relit du serveur si un jour elle en a
- * besoin, et sans eux la ligne dit déjà le nom et donne le fichier.
+ * `size` and `mime` do not survive markdown (nothing takes them there), and it's
+ * written with the other losses assumed, at the head of lib/pages-markdown.ts. They
+ * are not content: the view reads them back from the server if one day it needs them, and without them the line already says the name and gives the file.
  */
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     pageFile: {
-      /** Poser un bloc fichier. Sans `src`, c'est un emplacement en attente de
-          son téléversement (`uploadId`). */
+      /** Place a file block. Without `src`, it is a location waiting for
+ to be uploaded (`uploadId`). */
       insertPageFile: (attrs: {
         src?: string | null;
         name?: string | null;
@@ -64,7 +63,7 @@ export const PageFile = Node.create({
     return {
       src: {
         default: null,
-        // Normalisé comme celui du bloc image : un lien markdown écrit avec une
+        // Normalized like that of the image block: a markdown link written with a
         // origine (`[x](http://localhost:3000/api/…)`) entre par ici.
         parseHTML: (element) => normalizePageFileSrc(element.getAttribute("data-src")),
         renderHTML: (attributes) =>
@@ -91,14 +90,14 @@ export const PageFile = Node.create({
         renderHTML: (attributes) =>
           attributes.mime ? { "data-mime": attributes.mime as string } : {},
       },
-      /** Hors document — cf. le même attribut sur le bloc image. */
+      /** Out of document — cf. the same attribute on the image block. */
       uploadId: { default: null, rendered: false },
     };
   },
 
   parseHTML() {
-    // Un `div` et non un `p` : la règle du paragraphe happerait la balise et en
-    // jetterait les attributs au passage (cf. blocks/types.ts).
+    // A `div` and not a `p`: the paragraph rule would catch the tag and
+    // would throw away the attributes in passing (see blocks/types.ts).
     return [{ tag: 'div[data-type="pageFile"]' }];
   },
 
@@ -106,7 +105,7 @@ export const PageFile = Node.create({
     return ["div", { ...HTMLAttributes, "data-type": "pageFile" }];
   },
 
-  /** Cf. `storage.image.pick` : le sélecteur de fichier vient de la surface. */
+  /** See `storage.image.pick`: the file selector comes from the surface. */
   addStorage() {
     return { pick: null };
   },
@@ -142,8 +141,8 @@ export const fileBlock: PageBlock = {
     ],
   },
   turnInto: false,
-  // Cf. blocks/image.ts : `turnInto: false` oblige à porter son `insert`.
-  // `accept` vide — n'importe quel type, c'est tout le propos du bloc.
+  // Cf. blocks/image.ts: `turnInto: false` requires you to carry your `insert`.
+  // `accept` empty — any type, that's the whole point of the block.
   insert: (editor, range) => {
     editor.chain().focus().deleteRange(range).run();
     editor.storage.pageFile?.pick?.("");
@@ -152,9 +151,9 @@ export const fileBlock: PageBlock = {
   markdown: {
     sample: "[report.pdf](/api/projects/00000000-0000-4000-8000-000000000000/pages/files/22222222-2222-4222-8222-222222222222)",
     toMarkdown: (state: MarkdownState, node: MarkdownNode) => {
-      // L'adresse est ÉCHAPPÉE, et une adresse au protocole refusé n'écrit rien
-      // du tout (MIN-350) : ce lien-là est cliquable partout où le markdown est
-      // rendu, et `[nom](javascript:…)` en est un.
+      // The address is ESCAPED, and an address with a refused protocol writes nothing
+      // at all (MIN-350): this link is clickable wherever the markdown is
+      // rendered, and `[nom](javascript:…)` is one.
       const src = markdownLinkDestination(node.attrs.src);
       if (!src) return;
       const name =
@@ -166,11 +165,11 @@ export const fileBlock: PageBlock = {
   },
 };
 
-/* ── La règle markdown-it (sens lecture) ──────────────────────────────────── */
+/* ── The markdown-it rule (reading direction) ─────────────────────────────── */
 
-// Forme minimale des pièces de markdown-it qu'on touche — même parti pris que
-// blocks/subpage.ts : le paquet est une dépendance transitive de
-// tiptap-markdown, on ne s'y accroche pas par ses types.
+// Minimal form of markdown-it pieces that we touch — same bias as
+// blocks/subpage.ts: the package is a transitive dependency of
+// tiptap-markdown, so we do not depend on its types.
 interface MdToken {
   type: string;
   content: string;
@@ -191,9 +190,9 @@ interface MarkdownIt {
 }
 
 /**
- * Un paragraphe qui ne contient QUE le lien d'un fichier de page devient le HTML
- * que le nœud sait relire. Comme pour la sous-page, on passe par un `html_block`
- * : le chemin de lecture de tiptap-markdown est markdown-it → HTML → `parseHTML`.
+ * A paragraph that ONLY contains the link to a page file becomes the HTML
+ * that the node knows how to reread. As for the subpage, we go through a `html_block`
+ *: the reading path of tiptap-markdown is markdown-it → HTML → `parseHTML`.
  */
 function fileMarkdownIt(md: MarkdownIt): void {
   md.core.ruler.after("inline", "minddy-page-file", (state) => {
@@ -207,8 +206,8 @@ function fileMarkdownIt(md: MarkdownIt): void {
         continue;
       }
       const children = tokens[i].children;
-      // Exactement `[texte](url)`, et rien autour : trois jetons, pas un de
-      // plus. Un lien au milieu d'une phrase reste un lien de texte.
+      // Exactly `[texte](url)`, and nothing around: three tokens, not one
+      // more. A link in the middle of a sentence remains a text link.
       if (!children || children.length !== 3) continue;
       const [open, text, close] = children;
       if (

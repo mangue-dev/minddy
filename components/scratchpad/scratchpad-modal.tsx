@@ -111,10 +111,10 @@ function ScratchpadBody() {
     else toast(t("noSettled"));
   };
 
-  // Confier du travail à un agent, c'est le commencer — à la ligne (MIN-20/46,
-  // cf. scratchpad-task.tsx), à la section, et ici au carnet entier : les deux
-  // boutons d'en-tête passent « en cours » tout ce qui restait à faire. Copier
-  // suit l'option de compte, lancer un agent démarre toujours.
+  // Entrusting work to an agent means starting it — on the line (MIN-20/46,
+  // cf. scratchpad-task.tsx), to the section, and here to the entire notebook: both
+  // header buttons skip "in progress" everything that remained to be done. Copy
+  // follows the account option, launching an agent always starts.
   const startOnCopy = resolvePromptCopyAutoStart(user?.user_metadata);
   const liveMarkdown = () => (markdownRef.current?.() ?? content).trim();
 
@@ -124,7 +124,7 @@ function ScratchpadBody() {
       return;
     }
     const moved = startOnCopy ? (startAllRef.current?.() ?? 0) : 0;
-    // Relu APRÈS le déplacement : la note sort avec ses marqueurs d'après-geste.
+    // Reread AFTER the move: the note comes out with its post-gesture markers.
     await navigator.clipboard.writeText(buildScratchpadPrompt(liveMarkdown()));
     toast.success(
       moved > 0 ? t("copiedMovedToast", { count: moved }) : t("copiedToast")
@@ -141,21 +141,21 @@ function ScratchpadBody() {
     );
   };
 
-  // « Lancer un agent » (MIN-84) : la note part emballée dans le MÊME prompt que
-  // la copie (le hook s'en charge, cf. use-launch-agent-note.ts) vers le
-  // composer de la page Agents, qui fait choisir projet / modèle / branche avant
+  // “Launch an agent” (MIN-84): the note is packaged in the SAME prompt as
+  // copy it (the hook takes care of it, cf. use-launch-agent-note.ts) to the
+  // compose from the Agents page, which makes you choose project / model / branch before
   // l'envoi.
   const launchNote = useLaunchAgentNote();
-  // Une SECTION se nomme comme telle dans le prompt (« the following section of
-  // my working notes »), exactement comme sa copie juste au-dessus.
+  // A SECTION is named as such in the prompt (“the following section of
+  // my working notes”), exactly like its copy just above.
   const launchSection = (markdown: string) => launchNote(markdown, { section: true });
   const launchAll = () => {
     if (!liveMarkdown()) {
       toast(t("emptyCopyToast"));
       return;
     }
-    // AVANT `launchNote` : il ferme le carnet, et c'est ce démontage qui flushe
-    // l'autosave (scratchpad-editor.tsx) — les tâches démarrées partent avec.
+    // BEFORE `launchNote`: he closes the notebook, and it is this disassembly that flushes
+    // autosave (scratchpad-editor.tsx) — started tasks leave with it.
     startAllRef.current?.();
     launchNote(liveMarkdown());
   };
@@ -204,8 +204,8 @@ function ScratchpadBody() {
               </TooltipTrigger>
               <TooltipContent>{t("removeSettled")}</TooltipContent>
             </Tooltip>
-            {/* Lancer + copier côte à côte, dans cet ordre : parité avec les
-                boutons de section (robot à gauche du copy). */}
+            {/* Run + copy side by side, in this order: parity with the
+ section buttons (robot to the left of the copy). */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button

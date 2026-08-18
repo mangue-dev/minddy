@@ -4,55 +4,55 @@ import type { PermissionAsk } from "./opencode-permissions";
 import type { AgentEventType } from "@/lib/agent-api";
 
 /**
- * LE FLUX D'OPENCODE, TRADUIT EN NOTRE FIL (MIN-286, lot 1).
+ * THE OPENCODE FLOW, TRANSLATED INTO OUR WIRE (MIN-286, batch 1).
  *
- * Un module PUR : il prend un événement du `/event` d'opencode et rend ce que le
- * superviseur doit émettre. Aucune IO, aucun état de réseau — donc testable sur
- * des **fixtures réellement capturées** ([fixtures/opencode-turn.ndjson](fixtures/opencode-turn.ndjson),
- * un tour complet avec appel de tool), ce que la traduction faite au fil de l'eau
- * dans un client HTTP n'aurait jamais permis.
+ * A PUR module: it takes an event from opencode `/event` and renders what the
+ * supervisor must issue. No IO, no network state — therefore testable on
+ * **actually captured fixtures** ([fixtures/opencode-turn.ndjson](fixtures/opencode-turn.ndjson),
+ * a complete turn with call of tool), what the translation made over time
+ * in an HTTP client would never have allowed.
  *
- * CE QUE LA TRADUCTION DOIT TENIR, et c'est le critère de bascule du lot 3 : **le
- * fil raconte la même chose**. Mêmes types d'events, mêmes payloads, même ordre.
- * Un `tool_call` dont le payload change de forme casse l'affichage du fil ET la
- * relecture d'un run passé, puisque `agent_run_events` ne garde rien d'autre.
+ * WHAT THE TRANSLATION MUST HOLD, and this is the tipping point for lot 3: **the
+ * thread says the same thing**. Same types of events, same payloads, same order.
+ * A `tool_call` whose payload changes form breaks the display of the feed AND the
+ * replaying a past run, since `agent_run_events` does not keep anything else.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * CE QUI A ÉTÉ MESURÉ (serveur réel, tour complet capturé le 2026-08-12)
+ * WHAT WAS MEASURED (real server, full tour captured on 2026-08-12)
  *
  * - un appel de tool passe par **trois** `message.part.updated` : `pending`
- *   (l'input est encore vide), `running` (input complet, `time.start`), puis
- *   `completed` (output, `time.end`) ou `error`. C'est `running` qui vaut notre
- *   `tool_call` — sur `pending`, on ne saurait pas dire QUOI est appelé ;
- * - le texte de la réponse arrive en `message.part.delta` (`field: "text"`,
- *   `delta`), puis le part complet en `message.part.updated` ;
- * - le coût du round arrive sur `message.updated` du message assistant, deux fois
- *   (le même nombre) : d'où la déduplication par `messageID` + `finish` ;
- * - `session.status` alterne `busy`/`idle`, et `session.idle` clôt le tour.
+ * (the input is still empty), `running` (complete input, `time.start`), then
+ * `completed` (output, `time.end`) or `error`. It is `running` which is worth our
+ * `tool_call` — on `pending`, we cannot tell WHAT is called;
+ * - the text of the response arrives in `message.part.delta` (`field: "text"`,
+ * `delta`), then the complete part in `message.part.updated`;
+ * - the cost of the round arrives on `message.updated` of the assistant message, twice
+ * (the same number): hence the deduplication by `messageID` + `finish`;
+ * - `session.status` alternates `busy`/`idle`, and `session.idle` ends the round.
  *
- * LES NOMS SONT TRADUITS DANS LES DEUX SENS. Opencode appelle `read` ce que nous
- * appelons `read_file`, et lui passe `filePath` là où nous passons `path`. Le fil,
- * lui, sait afficher `read_file`/`path` — et la relecture d'un run d'il y a trois
- * mois aussi. Traduire ici est donc le seul endroit où ça ne coûte rien ; le faire
- * dans l'UI aurait obligé à y garder les deux vocabulaires pour toujours.
+ * NAMES ARE TRANSLATED IN BOTH DIRECTIONS. Opencode calls `read` which we
+ * let's call `read_file`, and pass `filePath` where we pass `path`. The thread,
+ * he knows how to display `read_file`/`path` — and replaying a run from three
+ * month too. Translating here is therefore the only place where it costs nothing; do it
+ * in the UI would have required keeping both vocabularies there forever.
  */
 
-/** Un événement du flux `/event`, tel qu'opencode le publie. */
+/** An event from the `/event` stream, as opencode publishes it. */
 export interface OpencodeEvent {
   type: string;
   properties?: Record<string, unknown>;
 }
 
-/** Ce que le superviseur doit émettre — un event de NOTRE fil. */
+/** What the supervisor should emit — an event from OUR thread. */
 export interface TranslatedEvent {
   type: AgentEventType;
   payload: Record<string, unknown>;
 }
 
-/** Le coût et les tokens d'un round, relevés sur le message assistant. */
+/** The cost and tokens of a round, noted on the assistant message. */
 export interface RoundUsage {
   messageId: string;
-  /** La session qui a payé ce round — la mère, ou une fille (cf. `sessionId`). */
+  /** The session that paid for this round — the mother, or a daughter (see `sessionId`). */
   sessionId: string;
   model: string;
   costUsd: number;
@@ -61,91 +61,91 @@ export interface RoundUsage {
   reasoningTokens: number;
   cacheReadTokens: number;
   cacheWriteTokens: number;
-  /** `stop`, `tool_calls`, `length`… — tel qu'opencode le rend. */
+  /** `stop`, `tool_calls`, `length`… — as opencode renders it. */
   finish: string | null;
 }
 
-/** Ce qu'un événement traduit produit : des events, du direct, du compte. */
+/** What a translated event produces: events, live, account. */
 export interface Translation {
   /**
-   * LA SESSION D'OÙ VIENT L'ÉVÉNEMENT, et c'est ce qui tient le lot 2.
+   * THE SESSION WHERE THE EVENT COMES FROM, and that’s what holds lot 2.
    *
-   * Le flux `/event` est celui du SERVEUR, pas d'une session : quand le modèle
-   * délègue (`task`), la fille ouvre sa propre session et ses événements
-   * arrivent ici, mêlés à ceux de la mère. Trois choses en dépendent, et chacune
-   * casse en silence sans ce champ : un `session.idle` de FILLE terminerait le
-   * tour de la mère, le texte de la fille entrerait dans la réponse (donc dans
-   * le message de commit), et sa dépense se rangerait dans la bande de seq du
-   * parent au lieu de la sienne.
+   * The `/event` flow is that of the SERVER, not of a session: when the model
+   * delegates (`task`), the girl opens her own session and events
+   * arrive here, mixed with those of the mother. Three things depend on it, and each
+   * breaks silently without this field: a `session.idle` of GIRL would end the
+   * mother's turn, the daughter's text would enter into the response (so in
+   * the commit message), and its expenditure would fall into the seq band of the
+   * parent instead of his own.
    */
   sessionId?: string;
   events: TranslatedEvent[];
-  /** Le texte du round tel qu'écrit jusqu'ici (COMPLET, pas un delta). */
+  /** The text of the round as written so far (FULL, not a delta). */
   liveText?: string;
   /**
-   * LE MODÈLE RÉFLÉCHIT EN CE MOMENT, et depuis combien de temps.
+   * THE MODEL IS THINKING RIGHT NOW, and for how long.
    *
-   * Ce que le fil en fait est ce qu'il faisait de la boucle maison (MIN-122) : une
-   * ligne compacte avec un compteur, JAMAIS le texte — il arrive replié avec
-   * l'event `thinking` de fin de part. C'est le seul signe de vie d'un modèle à
-   * `reasoning_level: high`, qui peut penser plusieurs minutes avant d'écrire son
-   * premier mot ; sans lui, le fil reste muet et le tour a l'air mort.
+   * What the wire does with it is what it did with the house loop (MIN-122): a
+   * compact line with a counter, NEVER the text — it arrives folded with
+   * the end of game `thinking` event. This is the only sign of life of a model
+   * `reasoning_level: high`, who can think for several minutes before writing his
+   * first word; without it, the thread remains silent and the trick looks dead.
    */
   reasoning?: { active: boolean; startedAt: number };
-  /** Un round assistant s'est terminé : sa ligne de ledger est prête. */
+  /** An assistant round has ended: his ledger line is ready. */
   usage?: RoundUsage;
-  /** Le tour est fini (`session.idle`). */
+  /** The round is over (`session.idle`). */
   idle?: boolean;
-  /** Le tour est mort (`session.error`) — le message est celui d'opencode. */
+  /** The trick is dead (`session.error`) — the message is that of opencode. */
   error?: string;
   /**
-   * LE ROUND A ÉTÉ COUPÉ (`MessageAbortedError`) — sans dire par qui.
+   * THE ROUND WAS CUT (`MessageAbortedError`) — without saying by whom.
    *
-   * Opencode publie la même chose pour une coupure VOULUE (notre `abort`) et pour
-   * une coupure SUBIE (flux du fournisseur tranché en vol). Le traducteur ne peut
-   * pas trancher : lui seul sait que c'est une coupure, l'appelant seul sait s'il
-   * l'a demandée. D'où ce drapeau plutôt qu'un `error` — cf. la garde du
-   * superviseur, qui n'en fait une panne que s'il n'a rien demandé.
+   * Opencode publishes the same thing for a DESIRED break (our `abort`) and for
+   * an outage SUFFERED (supplier flow cut in flight). The translator cannot
+   * cannot decide: only he knows that it is a cut, only the caller knows if he
+   * asked her. Hence this flag rather than a `error` — cf. the custody of
+   * supervisor, who only makes it a breakdown if he hasn't asked for anything.
    */
   aborted?: true;
   /**
-   * Un tool attend le verdict du harness (`permission.asked`). C'est là que
-   * `command-guard` et `repo-path` s'exécutent — cf.
+   * A tool awaits the verdict of the harness (`permission.asked`). This is where
+   * `command-guard` and `repo-path` are executed — cf.
    * [opencode-permissions.ts](opencode-permissions.ts).
    */
   permission?: PermissionAsk;
-  /** Le modèle pose ses questions (`question.asked`) : c'est notre `ask_user`. */
+  /** The model asks its questions (`question.asked`): this is our `ask_user`. */
   question?: { id: string; callId: string; questions: AskUserQuestion[] };
   /**
-   * UNE FILLE VIENT DE NAÎTRE, et voici à quel appel de `task` elle se rattache.
+   * A GIRL HAS JUST BEEN BORN, and this is what `task` call she is attached to.
    *
-   * C'est la seule frame qui le dise : le tool `task` pose sur son part une
-   * `state.metadata = {parentSessionId, sessionId, model}` (mesuré le
-   * 2026-08-12, sonde de délégation), et elle arrive AVANT le premier message de
-   * la fille. Sans ce rattachement, les events de la fille ne peuvent pas porter
-   * le `parent_call_id` sous lequel le fil les replie, et sa dépense ne sait pas
-   * dans quelle bande de `seq` s'écrire.
+   * This is the only frame that says it: the tool `task` places on its part a
+   * `state.metadata = {parentSessionId, sessionId, model}` (measured on
+   * 2026-08-12, delegation probe), and it arrives BEFORE the first message from
+   * the girl. Without this connection, the girl's events cannot carry
+   * the `parent_call_id` under which the thread folds them, and its expenditure does not know
+   * in which band of `seq` to be written.
    */
   child?: { sessionId: string; callId: string; agent: string; model?: string };
   /**
-   * UNE COMMANDE DU MODÈLE VIENT DE SE TERMINER, avec son code de sortie.
+   * A MODEL COMMAND HAS JUST COMPLETED, with its exit code.
    *
-   * C'est ce que lisait `run_command` chez nous, et ce dont la porte de
-   * livraison a besoin pour se taire quand le modèle a lancé les tests lui-même
-   * (MIN-262, `VerificationSink`). Le tool `bash` d'opencode le pose sur
-   * `state.metadata.exit` — un nombre, `null` quand la commande a été abandonnée
-   * ou tuée par le timeout. Absent = on ne conclut rien, ce qui est le sens
-   * prudent : la porte relance alors la suite entière.
+   * This is what `run_command` read at home, and what the door of
+   * delivery needs to shut up when the model started the tests itself
+   * (MIN-262, `VerificationSink`). The opencode tool `bash` places it on
+   * `state.metadata.exit` — a number, `null` when the command was aborted
+   * or killed by the timeout. Absent = we conclude nothing, which is the meaning
+   * careful: the door then restarts the entire sequence.
    */
   shell?: { command: string; exit: number };
 }
 
 /**
- * LES NOMS DE TOOLS, D'OPENCODE VERS LES NÔTRES.
+ * THE NAMES OF TOOLS, FROM OPENCODE TO OURS.
  *
- * `webfetch` n'y est pas : nous n'avons jamais eu ce tool, donc le fil n'a pas de
- * nom à lui opposer — il passe tel quel, et c'est un nom de plus au vocabulaire
- * plutôt qu'un nom traduit de travers. `question` non plus : il ne devient pas un
+ * `webfetch` is not there: we never had this tool, so the thread has no
+ * name to oppose to it - it passes as is, and it is one more name in the vocabulary
+ * rather than a mistranslated name. `question` either: it does not become a
  * `tool_call` mais un event `question`, qui a sa propre forme.
  */
 const TOOL_NAMES: Record<string, string> = {
@@ -154,18 +154,18 @@ const TOOL_NAMES: Record<string, string> = {
   edit: "edit_file",
   bash: "run_command",
   task: "spawn_agent",
-  // Ceux-là portent déjà notre nom : les écrire rend la table lisible d'un coup
-  // d'œil, et surtout vérifiable — « les 14 intégrés sont-ils tous traités ? ».
+  // These already bear our name: writing them makes the table immediately readable
+  // by eye, and above all verifiable — “are the 14 integrated ones all processed? ".
   glob: "glob",
   grep: "grep",
   apply_patch: "apply_patch",
 };
 
 /**
- * LES ARGUMENTS, de même. La table est par tool et par champ, parce que c'est la
- * seule forme qui se relise : `filePath → path` sur `read`, `include → glob` sur
- * `grep`. Un champ absent de la table passe tel quel — nos tools de domaine, eux,
- * ont exactement nos noms, puisque c'est nous qui les avons générés.
+ * ARGUMENTS, likewise. The table is by tool and by field, because it is the
+ * only form that can be reread: `filePath → path` on `read`, `include → glob` on
+ * `grep`. A field missing from the table passes as is — our domain tools, for their part,
+ * have our names exactly, since we generated them.
  */
 const TOOL_ARGS: Record<string, Record<string, string>> = {
   read: { filePath: "path" },
@@ -175,68 +175,68 @@ const TOOL_ARGS: Record<string, Record<string, string>> = {
   grep: { include: "glob" },
   task: { subagent_type: "mode", description: "task" },
   /**
-   * `patchText`, et c'est tout ce que ce tool prend (mesuré sur le binaire :
+   * `patchText`, and that's all this tool takes (measured on the binary:
    * `patchText: p.String.annotate({description: "The full patch text…"})`). Notre
-   * résumé, lui, lit `patch` pour compter les en-têtes `*** Update File:` du
-   * dialecte Codex — c'est de là que sortent le décompte et les chemins de la vue
-   * « fichiers changés ».
+   * summary reads `patch` to count the `*** Update File:` headers of the
+   * Codex dialect — that’s where counting and paths of sight come from
+   * “files changed”.
    *
-   * Sans cette ligne, `toolArgSummary` ne trouvait rien et le fil annonçait
-   * **« Patch de 0 fichier »** à chaque édition d'un run `gpt-*` — c'est-à-dire
-   * sur le seul chemin d'édition que ces modèles ont.
+   * Without this line, `toolArgSummary` found nothing and the thread announced
+   * **"Patch of 0 files"** each time a `gpt-*` run is edited — i.e.
+   * on the only editing path that these models have.
    */
   apply_patch: { patchText: "patch" },
 };
 
 /**
- * `metadata.files` d'une demande de permission → nos chemins, un par fichier.
+ * `metadata.files` of a permission request → our paths, one per file.
  *
- * C'est `apply_patch` qui en pose, et lui seul : sa demande est UNIQUE pour un
- * patch qui touche N fichiers, et son `metadata.filepath` n'est que
- * `chemins.join(", ")`. Mesuré sur le binaire (1.18.16) : chaque entrée est
+ * It is `apply_patch` who asks, and he alone: ​​his request is UNIQUE for a
+ * patch which affects N files, and its `metadata.filepath` is only
+ * `chemins.join(", ")`. Measured on binary (1.18.16): each input is
  * `{type: "add"|"update"|"delete", filePath, relativePath, patch, additions,
  * deletions, movePath?}`.
  *
- * On garde `filePath` (absolu) : c'est ce que le garde-fou compare au dépôt, et
- * ce que `repoRelative` sait ramener pour l'affichage — exactement comme le
- * `filepath` d'un `edit`. Une entrée illisible est ignorée plutôt que devinée :
- * la liste sert un garde-fou, une forme inattendue n'a pas à y entrer en
+ * We keep `filePath` (absolute): this is what the safeguard compares to the deposit, and
+ * what `repoRelative` knows how to bring back for display — exactly like the
+ * `filepath` of a `edit`. Unreadable input is ignored rather than guessed:
+ * the list serves as a safeguard, an unexpected form does not have to enter into it
  * silence.
  */
 /**
- * L'URL d'une demande de `webfetch` (MIN-360), et de celle-là seulement.
+ * The URL of a request for `webfetch` (MIN-360), and that one only.
  *
- * `metadata.url` d'abord ; à défaut le premier `patterns`, qui est la chaîne sur
- * laquelle opencode ferait matcher un « toujours » — donc la meilleure
- * approximation de la cible le jour où la métadonnée change de forme. Ce repli est
- * la raison pour laquelle le champ est réservé à `webfetch` : sur un `bash`,
- * `patterns` porte la COMMANDE, et la recopier en « url » serait un champ qui ment.
+ * `metadata.url` first; failing that the first `patterns`, which is the string on
+ * which opencode would match an “always” — therefore the best
+ * approximation of the target the day the metadata changes form. This fallback is
+ * the reason why the field is reserved for `webfetch`: on a `bash`,
+ * `patterns` carries the COMMAND, and copying it into “url” would be a lying field.
  *
- * Vide plutôt que deviné : une URL qu'on ne sait pas lire fait REFUSER le fetch
- * ([opencode-permissions.ts](opencode-permissions.ts)), et c'est la bonne issue.
+ * Empty rather than guessed: a URL that cannot be read causes the fetch to be REFUSED
+ * ([opencode-permissions.ts](opencode-permissions.ts)), and this is the correct outcome.
  */
 /**
- * LE CHEMIN D'UNE DEMANDE, ET IL N'EST PAS AU MÊME ENDROIT SELON LE TOOL (MIN-360).
+ * THE PATH OF A REQUEST, AND IT IS NOT IN THE SAME PLACE ACCORDING TO THE TOOL (MIN-360).
  *
- * Une écriture publie `metadata.filepath`, ABSOLU (mesure n°2 de
- * [opencode-permissions.ts](opencode-permissions.ts)). **Une LECTURE publie un
+ * A writing publishes `metadata.filepath`, ABSOLUTE (measure no. 2 of
+ * [opencode-permissions.ts](opencode-permissions.ts)). **A READING publishes a
  * `metadata` VIDE** : `ReadTool` appelle
  * `ask({permission: "read", patterns: [<chemin relatif au worktree>], always: ["*"],
- * metadata: {}})` — relevé dans le binaire 1.18.16.
+ * metadata: {}})` — found in binary 1.18.16.
  *
- * Sans ce repli, le verdict de lecture du chemin local ne verrait jamais un
- * chemin, et refuserait **100 % des lectures** en croyant garder les `.env`. Le
- * champ garde donc un seul sens — « le chemin dont cette demande parle » — et
- * c'est ici qu'on va le chercher là où il est.
+ * Without this fallback, the local path reading verdict would never see a
+ * path, and would refuse **100% of readings** while believing to keep the `.env`. THE
+ * field therefore retains only one meaning — “the path of which this request speaks” — and
+ * this is where we go to look for him where he is.
  */
 function permissionPath(
   props: Record<string, unknown>,
   metadata: Record<string, unknown>,
 ): string {
   if (typeof metadata.filepath === "string" && metadata.filepath.trim()) return metadata.filepath;
-  // `external_directory` porte son chemin dans `metadata.parentDir` (mesuré,
-  // MIN-364) : sans lui, la trace au fil dirait « l'agent est sorti du dossier »
-  // sans jamais dire où — donc exactement l'inverse de ce qu'on lui demande.
+  // `external_directory` carries its path into `metadata.parentDir` (measured,
+  // MIN-364): without it, the trace on the wire would say “the agent is removed from the file”
+  // without ever saying where - therefore exactly the opposite of what is asked of him.
   if (String(props.permission ?? "") === "external_directory") {
     return typeof metadata.parentDir === "string" ? metadata.parentDir.trim() : "";
   }
@@ -281,12 +281,12 @@ function permissionFiles(
   return out;
 }
 
-/** Le nom de tool que le fil connaît. */
+/** The tool name that the thread knows. */
 export function ourToolName(opencodeName: string): string {
   return TOOL_NAMES[opencodeName] ?? opencodeName;
 }
 
-/** Les arguments d'un tool, renommés pour que `toolArgSummary` les reconnaisse. */
+/** The arguments of a tool, renamed so that `toolArgSummary` recognizes them. */
 export function ourToolArgs(
   opencodeName: string,
   input: Record<string, unknown>,
@@ -296,7 +296,7 @@ export function ourToolArgs(
   return Object.fromEntries(Object.entries(input).map(([k, v]) => [table[k] ?? k, v]));
 }
 
-/** Longueur de l'aperçu persisté dans `tool_result` — la même que la boucle. */
+/** Length of preview persisted in `tool_result` — the same as the loop. */
 const PREVIEW_MAX = 400;
 
 function numberAt(source: unknown, ...path: string[]): number {
@@ -309,66 +309,66 @@ function numberAt(source: unknown, ...path: string[]): number {
 }
 
 /**
- * L'état d'un tour, entre deux événements. Le traducteur est pur, mais le flux ne
- * l'est pas : un `delta` ne porte que son fragment, et un `message.updated` répété
- * porte deux fois le même coût.
+ * The state of a turn, between two events. The translator is pure, but the flow is not
+ * is not: a `delta` only carries its fragment, and a repeated `message.updated`
+ * carries twice the same cost.
  */
 export interface TurnStreamState {
   /**
-   * Texte accumulé du round en cours, PAR SESSION puis par part.
+   * Accumulated text of the current round, PER SESSION then per part.
    *
-   * La double clé n'est pas de la prudence : une fille écrit son rapport
-   * pendant que la mère attend, et un seul sac ferait entrer ce rapport dans la
-   * réponse du tour — donc dans le message de commit, et dans ce que le fil
-   * affiche comme la parole de l'agent.
+   * The double key is not prudence: a girl writes her report
+   * while the mother waits, and just one bag would bring this report into the
+   * round response — so in the commit message, and in what the thread
+   * displays as the agent's word.
    */
   textByPart: Map<string, Map<string, string>>;
   /**
-   * Le texte du DERNIER round terminé, par session — la réponse du tour.
+   * The text of the LAST completed round, per session — the response of the round.
    *
-   * Il existe parce que `textByPart` est vidé à la fin de chaque round (le direct
-   * doit repartir de zéro, sinon deux rounds s'empilent à l'écran) et que la fin
-   * de round arrive AVANT `session.idle`. Sans cette copie, ce que le tour rend
-   * comme réponse est systématiquement vide : le fil n'affiche rien, et le
-   * message de commit se rabat sur sa forme générique.
+   * It exists because `textByPart` is emptied at the end of each round (the direct
+   * must start from scratch, otherwise two rounds pile up on the screen) and the end
+   * of round arrives BEFORE `session.idle`. Without this copy, what the trick renders
+   * as a response is systematically empty: the thread displays nothing, and the
+   * commit message falls back to its generic form.
    */
   lastRoundText: Map<string, string>;
   /**
-   * DE QUELLE NATURE EST CHAQUE PART, et c'est ce qui sépare la réflexion de la
-   * réponse.
+   * WHAT NATURE IS EACH PART, and this is what separates reflection from
+   * answer.
    *
-   * Opencode publie les deltas d'un part `reasoning` avec **le même
-   * `field: "text"`** que ceux d'un part `text` (lu dans le binaire 1.18.16 :
-   * `case "reasoning-delta"` appelle `updatePartDelta({… field:"text"})`). Une
-   * frame de delta ne dit donc RIEN de ce qu'elle transporte — seul le
-   * `message.part.updated` d'ouverture le dit, et il arrive avant.
+   * Opencode publishes deltas on the one hand `reasoning` with **the same
+   * `field: "text"`** than those on the one hand `text` (read in binary 1.18.16:
+   * `case "reasoning-delta"` calls `updatePartDelta({… field:"text"})`). A
+   * delta frame therefore says NOTHING about what it transports — only the
+   * The opening `message.part.updated` says it, and it happens before.
    *
-   * Sans cette table, la chaîne de pensée entrait dans le texte du round : elle
-   * s'affichait comme la parole de l'agent, elle repartait dans le message de
-   * commit, et le compteur de réflexion du fil restait éteint.
+   * Without this table, the chain of thought entered the text of the round: it
+   * was displayed as the agent's words, it returned in the message from
+   * commit, and the thread's reflection counter remained off.
    */
   partKind: Map<string, "text" | "reasoning">;
   /**
-   * LES MESSAGES QUI VIENNENT DE NOUS, pas du modèle.
+   * MESSAGES THAT COME FROM US, not from the model.
    *
-   * Un prompt posté sur la session est republié en `message.part.updated` de type
-   * `text`, dans le même flux et sous la même forme que la réponse. Sans ce
-   * filtre, la demande de l'utilisateur entrait dans le sac du round : elle
-   * ressortait en tête de « ce que le tour a répondu », donc dans le fil et dans
-   * le message de commit (mesuré sur la fixture de réflexion, où la réponse du
-   * tour commençait par « dis bonjour »).
+   * A prompt posted to the session is republished as `message.part.updated` of type
+   * `text`, in the same flow and in the same form as the response. Without this
+   * filter, the user's request entered the bag of the round: it
+   * came out at the top of “what the turn answered”, therefore in the thread and in
+   * the commit message (measured on the reflection fixture, where the response from the
+   * round started with “say hello”).
    */
   userMessages: Set<string>;
-  /** Début (ms) de chaque part de réflexion — la durée que le fil affiche. */
+  /** Start (ms) of each reflection part — the duration the thread displays. */
   reasoningStart: Map<string, number>;
-  /** Rounds dont le coût a déjà été compté (`messageID`). */
+  /** Rounds whose cost has already been counted (`messageID`). */
   billed: Set<string>;
-  /** `callID` déjà annoncés : `running` peut se répéter. */
+  /** `callID` already announced: `running` can be repeated. */
   announced: Set<string>;
   /**
-   * Arguments complets du tool, indexés par appel. Une permission `read` sur la
+   * Complete arguments of the tool, indexed by call. A `read` permission on the
    * RACINE publie `patterns: [""]` (`relative(root, root)`), donc son seul chemin
-   * exploitable est celui du part `running` qui la précède.
+   * exploitable is that of the part `running` which precedes it.
    */
   toolInputByCall: Map<string, Record<string, unknown>>;
 }
@@ -386,7 +386,7 @@ export function newTurnStreamState(): TurnStreamState {
   };
 }
 
-/** Le sac de texte d'une session, créé à la demande. */
+/** The text bag of a session, created on demand. */
 function partsOf(state: TurnStreamState, sessionId: string): Map<string, string> {
   let parts = state.textByPart.get(sessionId);
   if (!parts) {
@@ -397,10 +397,10 @@ function partsOf(state: TurnStreamState, sessionId: string): Map<string, string>
 }
 
 /**
- * D'où vient l'événement. `properties.sessionID` est posé sur TOUTES les frames
- * mesurées (fixture capturée) ; les deux replis lisent la même chose une couche
- * plus bas, pour qu'une frame d'une version future qui l'oublierait ne se range
- * pas silencieusement dans la session vide — c'est-à-dire dans celle de la mère.
+ * Where does the event come from? `properties.sessionID` is placed on ALL frames
+ * measured (fixation captured); both folds read the same one layer
+ * lower, so that a frame from a future version that forgets it does not get stored
+ * not silently in the empty session — that is, in the mother's.
  */
 function sessionOf(props: Record<string, unknown>): string {
   const direct = props.sessionID;
@@ -416,11 +416,11 @@ function sessionOf(props: Record<string, unknown>): string {
 }
 
 /**
- * Traduit UN événement. Rend ce qu'il faut émettre, et mute l'état de flux.
+ * Translated AN event. Renders what to emit, and mutes the stream state.
  *
- * Ne lève jamais : le flux vient d'un tiers, et une forme inattendue doit être
- * ignorée, pas tuer un tour de deux heures. Ce qui n'est pas reconnu ne produit
- * rien — c'est ce que `events: []` veut dire.
+ * Never rises: the flow comes from a third party, and an unexpected shape must be
+ * ignored, not kill a two-hour tour. What is not recognized does not produce
+ * nothing — that's what `events: []` means.
  */
 export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Translation {
   const props = event.properties ?? {};
@@ -436,9 +436,9 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
         return { sessionId, events: [] };
       }
       /**
-       * UN DELTA DE RÉFLEXION PORTE `field: "text"` LUI AUSSI (cf. `partKind`) :
-       * ce qui les sépare est le part, annoncé plus tôt. Il ne rejoint donc pas le
-       * sac du round — il fait battre le compteur de réflexion, et c'est tout.
+       * A REFLECTION DELTA ALSO HAS `field: "text"` (see `partKind`):
+       * what separates them is the part, announced earlier. It therefore does not join the
+       * bag of the round — it makes the thought meter tick, and that's it.
        */
       if (state.partKind.get(partId) === "reasoning") {
         return { sessionId, events: [], reasoning: reasoningTick(state, partId) };
@@ -452,14 +452,14 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
     case "message.part.updated": {
       const part = (props.part ?? {}) as Record<string, unknown>;
       const partId = String(part.id ?? "");
-      // Notre propre prompt, republié par la session : il n'a rien à faire dans
-      // ce que le tour a répondu (cf. `userMessages`).
+      // Our own prompt, republished by the session: it has nothing to do in
+      // what the turn responded (see `userMessages`).
       if (state.userMessages.has(String(part.messageID ?? ""))) {
         return { sessionId, events: [] };
       }
       if (part.type === "text") {
-        // Marqué même quand le texte est vide : c'est la frame d'OUVERTURE, celle
-        // qui arrive avant les deltas, et la seule qui dise de quoi ils sont faits.
+        // Marked even when the text is empty: it is the OPENING frame, the one
+        // which arrives before the deltas, and the only one which says what they are made of.
         if (partId) state.partKind.set(partId, "text");
         const text = typeof part.text === "string" ? part.text : "";
         if (partId && text) partsOf(state, sessionId).set(partId, text);
@@ -480,19 +480,19 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
       if (callId && Object.keys(input).length > 0) state.toolInputByCall.set(callId, input);
 
       /**
-       * LE RATTACHEMENT D'UNE FILLE, à lire sur TOUS les statuts du part `task`.
+       * THE ATTACHMENT OF A GIRL, to read on ALL statuses from `task`.
        *
-       * Mesuré : le premier `running` arrive sans `metadata` (la fille n'existe
-       * pas encore), le second la porte. Le lire hors du bloc `running` ci-dessous
-       * n'est donc pas de la prudence : c'est la seule frame utile, et elle est
-       * une répétition de celle qui a déjà été annoncée.
+       * Measured: the first `running` arrives without `metadata` (the girl does not exist
+       * not yet), the second carries it. Read it out of the `running` block below
+       * is therefore not prudence: it is the only useful frame, and it is
+       * a repeat of that which has already been announced.
        */
       const child =
         opencodeName === "task" ? childOf(stateNode, callId, input) : undefined;
 
       if (status === "running") {
-        // `pending` ne dit pas encore QUOI est appelé (`input: {}` mesuré) : un
-        // event émis là afficherait un appel sans argument, puis rien.
+        // `pending` does not yet say WHAT is called (`input: {}` measured): a
+        // event emitted there would show a call with no arguments, then nothing.
         if (!callId || state.announced.has(callId)) {
           return { sessionId, events: [], ...(child ? { child } : {}) };
         }
@@ -523,53 +523,53 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
     case "message.updated": {
       const info = (props.info ?? {}) as Record<string, unknown>;
       if (info.role !== "assistant") {
-        // Le seul endroit du flux qui dise le RÔLE d'un message : les frames de
-        // part, elles, n'en portent pas. On le retient donc au passage — c'est ce
-        // qui permettra d'écarter les parts de notre propre prompt.
+        // The only place in the flow that says the ROLE of a message: the message frames
+        // However, they don't wear any. We therefore remember it in passing — this is what
+        // which will allow us to dismiss the shares of our own prompt.
         if (info.role === "user" && typeof info.id === "string" && info.id) {
           state.userMessages.add(info.id);
         }
         return { sessionId, events: [] };
       }
       const finish = typeof info.finish === "string" ? info.finish : null;
-      // Un round non terminé arrive avec `cost: 0` et pas de `finish` : le
-      // compter écrirait une ligne de ledger vide, puis une deuxième au vrai
-      // coût. Et `message.updated` se répète à l'identique une fois terminé —
-      // d'où les deux gardes, qui ne font pas le même travail.
+      // An unfinished round arrives with `cost: 0` and no `finish`: the
+      // count would write an empty ledger line, then a second one to the real one
+      // cost. And `message.updated` repeats itself identically when finished —
+      // hence the two guards, who do not do the same job.
       if (!finish) return { sessionId, events: [] };
       const messageId = String(info.id ?? "");
       if (!messageId || state.billed.has(messageId)) return { sessionId, events: [] };
       state.billed.add(messageId);
 
-      // Un round fini : on GARDE son texte (c'est la réponse du tour) avant de
-      // vider le sac, pour que le suivant reparte à zéro. Et on ne vide que
-      // CETTE session : effacer celui des autres emporterait, en plein vol, le
-      // rapport qu'une fille est en train d'écrire.
+      // A round is finished: we KEEP our text (this is the answer for the round) before
+      // empty the bag, so that the next one starts from scratch. And we only empty
+      // THIS session: erasing that of others would take away, in mid-flight, the
+      // report that a girl is writing.
       const written = liveTextOf(state, sessionId);
       if (written.trim()) state.lastRoundText.set(sessionId, written);
       partsOf(state, sessionId).clear();
 
       /**
-       * LA NARRATION D'UN ROUND INTERMÉDIAIRE — ce que le modèle écrit ENTRE deux
-       * séries d'appels de tools, et qui n'existait nulle part sous opencode.
+       * THE NARRATION OF AN INTERMEDIATE ROUND — what the model writes BETWEEN two
+       * series of calls to tools, and which did not exist anywhere under opencode.
        *
-       * Le direct la montrait puis l'effaçait (le sac du round est vidé juste
-       * au-dessus, et rien ne prenait le relais) : à l'écran, le texte de l'agent
-       * apparaissait pendant quelques secondes puis disparaissait pour toujours.
-       * C'est le `thinking` sans `kind` de la boucle maison, au mot près — même
-       * type, même plafond de 2 000 caractères, même rendu en bulle.
+       * The direct showed it then erased it (the bag of the round is emptied just
+       * above, and nothing took over): on the screen, the agent's text
+       * appeared for a few seconds then disappeared forever.
+       * It's the `thinking` without `kind` of the home loop, to the word — same
+       * type, same limit of 2,000 characters, same bubble rendering.
        *
-       * Seuls les rounds qui CONTINUENT (`finish: "tool-calls"`) l'émettent : le
-       * texte du dernier round est la réponse du tour, et elle part en `summary`
-       * (plafonné à 8 000). Émettre les deux ferait deux bulles dès que la réponse
-       * dépasse 2 000 caractères — le dédoublonnage du fil se fait par égalité de
-       * texte, et deux plafonds différents ne s'égalent plus.
+       * Only rounds that CONTINUE (`finish: "tool-calls"`) emit it: the
+       * text of the last round is the response of the round, and it goes to `summary`
+       * (capped at 8,000). Emitting both would make two bubbles as soon as the response
+       * exceeds 2,000 characters — the deduplication of the thread is done by equality of
+       * text, and two different ceilings are no longer equal.
        *
-       * Le test porte donc sur `tool-calls` et PAS sur « différent de `stop` » :
-       * `tool-calls` est la seule fin qui laisse la session travailler. Toutes les
-       * autres (`length`, `content-filter`, `error`, `other`…) mettent la session
-       * au repos, donc terminent le tour — leur texte est la réponse, et la
-       * négation les faisait partir DEUX fois, en `thinking` puis en `summary`.
+       * The test therefore concerns `tool-calls` and NOT “different from `stop`”:
+       * `tool-calls` is the only end that lets the session work. All
+       * others (`length`, `content-filter`, `error`, `other`…) put the session
+       * at rest, so complete the round — their text is the answer, and the
+       * negation made them go TWICE, in `thinking` then in `summary`.
        */
       const narration = finish === "tool-calls" ? written.trim() : "";
 
@@ -592,46 +592,46 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
     }
 
     case "session.idle":
-      // `idle` vaut pour SA session : c'est l'appelant qui sait laquelle est la
-      // mère. Une fille au repos ne termine pas le tour.
+      // `idle` is valid for ITS session: it is the caller who knows which one is
+      // mother. A resting girl does not complete the round.
       return { sessionId, events: [], idle: true };
 
     case "session.error": {
       const error = (props.error ?? {}) as Record<string, unknown>;
       /**
-       * UNE COUPURE N'EST PAS UNE PANNE **QUAND ON L'A DEMANDÉE**, et opencode ne
-       * fait pas la différence : tout `abort` publie `session.error` avec
-       * `name: "MessageAbortedError"` (mesuré). Or nous coupons NOUS-MÊMES le tour
-       * dans trois cas voulus — le plafond de dépense, la question posée à
-       * l'utilisateur, la deadline. Sans filtre, chacun des trois écrivait un event
-       * `error` au fil et un `errorMessage: "Aborted"` au rapport, par-dessus le
+       * AN OUTAGE IS NOT A FAILURE **WHEN REQUESTED**, and opencode does not
+       * makes no difference: all `abort` publishes `session.error` with
+       * `name: "MessageAbortedError"` (measured). But we cut the turn OURSELVES
+       * in three desired cases — the spending ceiling, the question posed to
+       * the user, the deadline. Without filter, each of the three wrote an event
+       * `error` to the thread and a `errorMessage: "Aborted"` to the rapport, over the
        * vrai motif.
        *
-       * Mais le filtre ne peut pas être INCONDITIONNEL, et c'est ce qu'il était :
-       * une coupure que personne n'a demandée (flux du fournisseur tranché en vol)
-       * disparaissait avec lui, et le tour se rangeait en « terminé » sans une
-       * ligne — fil figé sur « Ouverture de la sandbox », run sans résumé ni
-       * erreur, dépense au ledger. Observé sur le run `ec9b2ed5` (2026-08-12,
-       * `openai/gpt-5.6-luna`) : 219 tokens facturés, message assistant SANS aucune
-       * part, `MessageAbortedError`, et rien nulle part.
+       * But the filter cannot be UNCONDITIONAL, and that's what it was:
+       * a cut that no one requested (provider feed cut in flight)
+       * disappeared with him, and the turn was classified as “finished” without a
+       * line — thread frozen on “Opening the sandbox”, run without summary or
+       * error, ledger expense. Observed on run `ec9b2ed5` (2026-08-12,
+       * `openai/gpt-5.6-luna`): 219 tokens billed, assistant message WITHOUT any
+       * part, `MessageAbortedError`, and nothing anywhere.
        *
-       * On rend donc la coupure au superviseur, qui est le seul à savoir s'il l'a
-       * demandée.
+       * We therefore return the cut to the supervisor, who is the only one to know if he has it
+       * requested.
        */
       if (error.name === "MessageAbortedError") {
         /**
-         * UN ROUND COUPÉ FERME SON SAC, comme un round terminé (MIN-286).
+         * A CUT ROUND CLOSES ITS BAG, like a finished round (MIN-286).
          *
-         * Le sac de texte n'était vidé qu'à la fin d'un round FACTURÉ
-         * (`message.updated` avec `finish`) — or un round avorté n'en a pas. Le
-         * fragment écrit avant la coupure restait donc dans le sac de la session,
-         * et un tour repris derrière (steering : `abort` puis nouveau prompt sur
-         * la MÊME session) recollait ce fragment devant tout ce qui suivait : le
-         * direct, la réponse du tour, le `summary` et le message de commit.
+         * The text bag was only emptied at the end of a CHARGED round
+         * (`message.updated` with `finish`) — but an aborted round does not have one. THE
+         * fragment written before the cut therefore remained in the bag of the session,
+         * and a lap resumed behind (steering: `abort` then new prompt on
+         * the SAME session) glued this fragment back together in front of everything that followed: the
+         * direct, the round response, the `summary` and the commit message.
          *
-         * Il est gardé comme dernier texte connu, exactement comme une fin de
-         * round : quand la coupure TERMINE le tour (« Stop », plafond, deadline),
-         * c'est encore ce que l'agent a dit de plus récent.
+         * It is kept as the last known text, exactly like the end of
+         * round: when the cut ENDS the round (“Stop”, ceiling, deadline),
+         * This is still the most recent thing the agent said.
          */
         const cut = liveTextOf(state, sessionId);
         if (cut.trim()) state.lastRoundText.set(sessionId, cut);
@@ -651,10 +651,10 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
     }
 
     /**
-     * UN TOOL SUSPENDU QUI ATTEND NOTRE VERDICT. Le payload mesuré :
+     * A SUSPENDED TOOL WHICH AWAITS OUR VERDICT. The measured payload:
      * `{id, sessionID, permission, patterns, metadata, always, tool:{messageID, callID}}`.
-     * Rien n'est émis au fil ici — un refus se raconte dans le `tool_result` du
-     * tool refusé, exactement comme la boucle maison le racontait.
+     * Nothing is sent to the wire here — a refusal is reported in the `tool_result` of the
+     * tool refused, exactly as the home loop told.
      */
     case "permission.asked": {
       const id = String(props.id ?? "");
@@ -683,8 +683,8 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
           ...(filepath ? { filepath } : {}),
           ...(files.length > 0 ? { files } : {}),
           ...(url ? { url } : {}),
-          // La délégation demande AVANT de résoudre l'agent : c'est ce qui permet
-          // de répondre autre chose qu'« Unknown agent type » (cf. `decideTask`).
+          // The delegation asks BEFORE resolving the agent: this is what allows
+          // to answer something other than “Unknown agent type” (see `decideTask`).
           ...(typeof metadata.subagent_type === "string"
             ? { subagentType: metadata.subagent_type }
             : {}),
@@ -693,11 +693,11 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
     }
 
     /**
-     * NOTRE `ask_user`, RENDU PAR LE TOOL NATIF. L'event du fil est le MÊME que
-     * celui de la boucle maison (`{id, questions}`, `id` = l'appel de tool) : le
-     * feed rend une carte de questions, et un run d'il y a trois mois se relit
-     * pareil. Seule la graphie du multi-choix change (`multiple` chez opencode,
-     * `multi_select` chez nous), et c'est ici qu'on la traduit.
+     * OUR `ask_user`, RENDERED BY THE NATIVE TOOL. The thread event is the SAME as
+     * that of the home loop (`{id, questions}`, `id` = the tool call): the
+     * feed returns a question card, and a run from three months ago is reread
+     * The same. Only the spelling of the multi-choice changes (`multiple` at opencode,
+     * `multi_select` with us), and this is where we translate it.
      */
     case "question.asked": {
       const id = String(props.id ?? "");
@@ -720,34 +720,34 @@ export function translateEvent(event: OpencodeEvent, state: TurnStreamState): Tr
 
     default:
       // `session.status`, `session.updated`, `session.diff`, `server.connected` :
-      // du bruit pour nous. Le fil n'a pas d'équivalent, et en inventer un
+      // noise for us. The thread has no equivalent, and inventing one
       // remplirait `agent_run_events` de lignes que personne ne lit.
       return { sessionId, events: [] };
   }
 }
 
 /**
- * LA RÉFLEXION QUI CONTINUE — ce qu'un delta de part `reasoning` apprend.
+ * THE THINKING THAT CONTINUES — what a delta of part `reasoning` learns.
  *
- * Il n'y a rien à ranger : le texte de la réflexion n'est ni streamé ni gardé
- * (il arrivera d'un coup, replié, avec le `thinking` de fin de part). Ce qui sort
- * d'ici est le seul fait utile : ça pense, et depuis quand.
+ * There is nothing to store: the text of the reflection is neither streamed nor kept
+ * (it will arrive suddenly, folded, with the end of part `thinking`). What comes out
+ * from here is the only useful fact: it thinks, and since when.
  */
 function reasoningTick(state: TurnStreamState, partId: string): { active: boolean; startedAt: number } {
   return { active: true, startedAt: state.reasoningStart.get(partId) ?? 0 };
 }
 
 /**
- * UN PART DE RÉFLEXION, à son ouverture puis à sa fermeture.
+ * A PART OF REFLECTION, when it opens and then when it closes.
  *
- * `time.start` / `time.end` viennent d'opencode, et c'est voulu : ce module reste
- * SANS HORLOGE, donc testable sur des fixtures rejouées à l'identique. La durée
- * affichée par le fil est ainsi celle qu'a mesurée le serveur, pas celle qu'a mise
- * notre traduction à passer.
+ * `time.start` / `time.end` come from opencode, and this is intended: this module remains
+ * WITHOUT CLOCK, therefore testable on fixtures replayed identically. The duration
+ * displayed by the thread is thus the one measured by the server, not the one put
+ * our translation to pass.
  *
- * Le part est aussi RETIRÉ du sac de texte : si un delta est arrivé avant la frame
- * d'ouverture (rien ne le garantit dans l'autre sens), la chaîne de pensée serait
- * déjà entrée dans la réponse du round.
+ * The part is also REMOVED from the text bag: if a delta arrived before the frame
+ * opening (nothing guarantees it in the other direction), the chain of thought would be
+ * already entered in the round's response.
  */
 function reasoningPart(
   state: TurnStreamState,
@@ -765,9 +765,9 @@ function reasoningPart(
   const end = typeof time.end === "number" ? time.end : 0;
   if (!end) return { sessionId, events: [], reasoning: reasoningTick(state, partId) };
 
-  // Le part est clos : sa trace part au fil sous le MÊME type et la MÊME forme que
-  // celle de la boucle maison (`thinking` + `kind: "reasoning"`), pour que le fil
-  // la replie comme avant et qu'un run d'il y a trois mois se relise pareil.
+  // The part is closed: its trace leaves on the wire under the SAME type and the SAME form as
+  // that of the house loop (`thinking` + `kind: "reasoning"`), so that the thread
+  // fold it as before and a run from three months ago reads the same again.
   const text = typeof part.text === "string" ? part.text.trim() : "";
   const durationMs = Math.max(0, end - (state.reasoningStart.get(partId) ?? end));
   return {
@@ -778,11 +778,11 @@ function reasoningPart(
 }
 
 /**
- * Le rattachement d'une fille, lu sur le part du `task` qui l'a lancée.
- * `undefined` tant qu'elle n'a pas de session — c'est-à-dire sur `pending` et sur
- * le premier `running` (mesuré : `metadata: null`).
+ * The attachment of a girl, read on the part of `task` who launched it.
+ * `undefined` as long as it has no session — that is, on `pending` and on
+ * the first `running` (measured: `metadata: null`).
  *
- * `input` est DÉJÀ traduit (`subagent_type` → `mode`), d'où la lecture par `mode`.
+ * `input` is ALREADY translated (`subagent_type` → `mode`), hence the reading as `mode`.
  */
 function childOf(
   stateNode: Record<string, unknown>,
@@ -803,12 +803,12 @@ function childOf(
 }
 
 /**
- * La commande et son code de sortie, lus sur le part d'un `bash` terminé.
+ * The command and its exit code, read from a completed `bash`.
  *
- * `undefined` dès qu'un des deux manque — et `exit` manque pour de vrai : la
- * source d'opencode y pose `null` quand la commande a été abandonnée ou tuée par
- * le timeout. Un code de sortie inconnu n'est pas un zéro, et le prendre pour
- * tel ferait taire la porte de livraison sur un tour non vérifié.
+ * `undefined` as soon as one of the two is missing — and `exit` is missing for real: the
+ * opencode source sets `null` there when the command has been aborted or killed by
+ * the timeout. An unknown exit code is not a zero, and take it as
+ * such would silence the delivery gate on an unverified turn.
  */
 function shellOf(
   stateNode: Record<string, unknown>,
@@ -821,18 +821,18 @@ function shellOf(
   return { command, exit };
 }
 
-/** Le texte du round EN COURS d'une session — la charge du direct. */
+/** The text of the CURRENT round of a session — the live charge. */
 export function liveTextOf(state: TurnStreamState, sessionId: string): string {
   return [...(state.textByPart.get(sessionId)?.values() ?? [])].join("");
 }
 
 /**
- * CE QUE LA SESSION A RÉPONDU — le round en cours s'il a écrit, le dernier round
- * terminé sinon.
+ * WHAT THE SESSION ANSWER — the current round if he wrote, the last round
+ * finished otherwise.
  *
- * Les deux cas arrivent vraiment : un tour qui finit sur du texte a déjà vu son
- * `message.updated` (donc le sac courant est vide, et c'est la copie qui parle),
- * un tour coupé en plein vol n'a que son sac courant.
+ * Both cases really happen: a turn that ends on text has already seen its
+ * `message.updated` (so the current bag is empty, and it is the copy that speaks),
+ * a turn cut in mid-flight only has its running bag.
  */
 export function replyOf(state: TurnStreamState, sessionId: string): string {
   const current = liveTextOf(state, sessionId);

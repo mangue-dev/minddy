@@ -29,7 +29,7 @@ describe("translateAiChatRequest", () => {
     expect(body).not.toHaveProperty("reasoning");
   });
 
-  it("désactive explicitement le raisonnement de GPT-5.6 avec des function tools", () => {
+  it("explicitly disables GPT-5.6 reasoning with function tools", () => {
     const withTools = translateAiChatRequest(
       {
         ...base,
@@ -47,7 +47,7 @@ describe("translateAiChatRequest", () => {
     expect(withoutTools.reasoning_effort).toBe("high");
   });
 
-  it("traduit OpenRouter avec ses extensions de comptage et raisonnement", () => {
+  it("translates OpenRouter with its counting and reasoning extensions", () => {
     const body = translateAiChatRequest({ ...base, stream: true }, "openrouter");
     expect(body).toMatchObject({
       max_completion_tokens: 1234,
@@ -101,7 +101,7 @@ describe("translateAiChatRequest", () => {
       ),
     ).toMatchObject({ thinking: { type: "disabled" } });
     // Fable 5 / Mythos 5 / Mythos Preview refusent `thinking: {type: "disabled"}`
-    // (400) : « off » n'y envoie AUCUN champ, le modèle garde son défaut.
+    // (400): “off” does not send ANY fields, the model keeps its default.
     for (const model of [
       "claude-fable-5",
       "claude-mythos-5",
@@ -114,7 +114,7 @@ describe("translateAiChatRequest", () => {
         ),
       ).not.toHaveProperty("thinking");
     }
-    // Opus 5 et Sonnet 5, eux, acceptent toujours le désactivation.
+    // Opus 5 and Sonnet 5 still accept deactivation.
     expect(
       translateAiChatRequest(
         { ...base, model: "claude-opus-5", reasoning: { effort: "off" } },
@@ -123,7 +123,7 @@ describe("translateAiChatRequest", () => {
     ).toMatchObject({ thinking: { type: "disabled" } });
   });
 
-  it("traduit Gemini vers reasoning_effort et son usage stream supporté", () => {
+  it("translates Gemini to reasoning_effort and its supported stream usage", () => {
     const body = translateAiChatRequest({ ...base, stream: true }, "google");
     expect(body).toMatchObject({
       max_completion_tokens: 1234,
@@ -133,7 +133,7 @@ describe("translateAiChatRequest", () => {
     expect(body).not.toHaveProperty("usage");
   });
 
-  it("reste conservateur sur un endpoint générique", () => {
+  it("stays conservative for a generic endpoint", () => {
     const body = translateAiChatRequest({ ...base, stream: true }, "generic");
     expect(body).toMatchObject({ max_tokens: 1234, stream: true });
     expect(body).not.toHaveProperty("max_completion_tokens");
@@ -143,7 +143,7 @@ describe("translateAiChatRequest", () => {
     expect(body).not.toHaveProperty("usage");
   });
 
-  it("exprime un budget fixe seulement là où il existe", () => {
+  it("expresses a fixed budget only where one exists", () => {
     const request = { ...base, reasoning: { maxTokens: 2048 } };
     expect(translateAiChatRequest(request, "openrouter")).toMatchObject({
       reasoning: { max_tokens: 2048, exclude: false },
@@ -154,7 +154,7 @@ describe("translateAiChatRequest", () => {
         "anthropic",
       ),
     ).toMatchObject({
-      // Le budget manuel doit rester strictement sous le plafond de sortie.
+      // The manual budget must remain strictly under the output ceiling.
       thinking: { type: "enabled", budget_tokens: 1233 },
     });
     expect(translateAiChatRequest(request, "openai")).not.toHaveProperty("reasoning");
@@ -207,7 +207,7 @@ describe("alternateOutputTokenBody", () => {
 });
 
 describe("repairRejectedAiChatBody", () => {
-  it("répare uniquement le rejet explicite tools + reasoning de Chat Completions", () => {
+  it("fixes only the explicit tools + reasoning rejection from Chat Completions", () => {
     const repaired = repairRejectedAiChatBody(
       JSON.stringify({
         model: "gpt-5.6-sol",

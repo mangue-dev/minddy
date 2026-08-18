@@ -45,17 +45,17 @@ import { runAction } from "./actions";
 import { captureChainStarted, finishChain, haltChain } from "./report";
 
 /**
- * Le MOTEUR des automatisations (MIN-147), calqué sur `lib/server/smart-assign.ts` :
- * un point d'entrée fire-and-forget qui ne fait rien d'autre que programmer le
- * travail après la réponse, et une exécution qui RE-VÉRIFIE TOUT au moment où
- * elle tourne. Le monde a pu bouger entre la programmation et l'exécution —
- * interrupteur coupé, projet supprimé, ticket re-trié, budget épuisé, run relancé
- * à la main — et chacun de ces cas doit être un no-op silencieux, pas une panne.
+ * The automations ENGINE (MIN-147), modeled after `lib/server/smart-assign.ts`:
+ * a fire-and-forget entry point that does nothing other than program the
+ * work after the response, and a runtime that RE-CHECKS EVERYTHING at the moment
+ * it turns. The world was able to move between programming and execution —
+ * switch cut, project deleted, ticket re-sorted, budget exhausted, run restarted
+ * by hand — and each of these cases must be a silent no-op, not a failure.
  *
- * Il ne joue QU'UNE règle par événement (cf. `nextRule`) : l'action lancée
- * produira elle-même l'événement suivant, soit en finissant son run (crochet de
- * fin de run), soit en changeant le statut (crochet de statut). C'est ce qui rend
- * la boucle observable — chaque étape laisse une trace en base avant la suivante.
+ * It only plays ONE rule per event (cf. `nextRule`): the action launched
+ * will itself produce the following event, either by finishing its run (
+ * end of run hook), or by changing the status (status hook). This is what makes
+ * the loop observable — each step leaves a base trace before the next one.
  */
 
 export interface AutomationRunParams {
@@ -63,23 +63,23 @@ export interface AutomationRunParams {
   projectId: string;
   event: AutomationEvent;
   /**
-   * Chaîne concernée quand l'appelant la connaît (crochet de fin de run,
-   * reprise humaine). Absent → celle du ticket, s'il en a une vivante.
-   */
+ * String concerned when the caller knows it (end of run hook,
+ * human recovery). Absent → that of the ticket, if he has a living one.
+ */
   chainId?: string | null;
   /**
-   * L'appel vient du BALAYEUR (cron) ou d'un « Lancer maintenant » : il réveille
-   * une chaîne en sursis. C'est le seul chemin qui a le droit de la démarrer, et
-   * il re-vérifie d'abord que la condition qui l'a ouverte tient toujours.
-   */
+ * The call comes from the SCANNER (cron) or a “Run now”: it wakes up
+ * a suspended chain. This is the only path that has the right to start it, and
+ * it first re-checks that the condition that opened it still holds.
+ */
   startPending?: boolean;
 }
 
 /**
- * Point d'entrée fire-and-forget. Hors du chemin critique, comme
- * `scheduleSmartAssign` — et avec le même filet que `update-issue` : hors d'une
- * requête (le moteur s'appelle lui-même en cascade), `after()` lève, et le
- * travail part alors directement.
+ * Fire-and-forget entry point. Off the critical path, like
+ * `scheduleSmartAssign` — and with the same net as `update-issue`: outside of a
+ * query (the engine cascades itself), `after()` raises, and the
+ * job then leaves directly.
  */
 export function scheduleAutomations(params: AutomationRunParams): void {
   const go = () =>
@@ -94,9 +94,9 @@ export function scheduleAutomations(params: AutomationRunParams): void {
 }
 
 /**
- * Les statuts qui disent « ce ticket n'est plus en travail » : rangé, abandonné,
- * ou fait à la main. `todo`, `in_progress` et `in_review` en sont absents — ce
- * sont ceux que la chaîne traverse elle-même.
+ * Statuses that say "this ticket is no longer in work": put away, abandoned,
+ * or handmade. `todo`, `in_progress` and `in_review` are absent — these
+ * are the ones that the chain passes through itself.
  */
 const CHAIN_STAND_DOWN_STATUSES: IssueStatus[] = [
   "backlog",
@@ -106,7 +106,7 @@ const CHAIN_STAND_DOWN_STATUSES: IssueStatus[] = [
   "done",
 ];
 
-/** Origines qui valent « quelqu'un a repris la main » — cf. `AUTOMATION_SOURCES`. */
+/** Origins that amount to “someone took back control” — cf. `AUTOMATION_SOURCES`. */
 const HUMAN_STAND_DOWN_SOURCES: AutomationSource[] = ["web", "numo"];
 
 interface IssueRow {
@@ -122,10 +122,10 @@ interface IssueRow {
 }
 
 /**
- * Acteur TECHNIQUE de la chaîne : l'assigné du ticket s'il est de l'équipe,
- * sinon le owner du projet. C'est de lui que viennent la clé BYOK, le quota, la
- * langue et les notifications — pas de qui a cliqué, puisque personne n'a cliqué.
- * L'acteur AFFICHÉ, lui, est l'automatisation (`via_automation`).
+ * TECHNICAL actor of the chain: the assignee of the ticket if he is from the team,
+ * otherwise the owner of the project. This is where the BYOK key, the quota, the
+ * language and the notifications come from — not from who clicked, since no one clicked.
+ * The DISPLAYED actor is the automation (`via_automation`).
  */
 async function resolveChainOwner(
   projectId: string,
@@ -144,9 +144,9 @@ async function resolveChainOwner(
 }
 
 /**
- * Le `user_metadata` du propriétaire du projet — c'est là que vit son préréglage
- * d'automatisation. Best-effort : un compte illisible vaut « aucun préréglage »
- * (donc aucune règle, donc rien ne se déclenche), jamais une panne.
+ * The project owner's `user_metadata` — this is where his
+ * automation preset lives. Best effort: an unreadable account is worth “no preset”
+ * (so no rule, so nothing is triggered), never a failure.
  */
 async function ownerMetadata(ownerId: string): Promise<Record<string, unknown> | null> {
   try {
@@ -168,14 +168,14 @@ async function categoryIdsOf(issueId: string): Promise<string[]> {
 }
 
 /**
- * Une vérification d'implémentation qui dit NON. Une reprise, et une seule : la
- * relance porte le rapport en consigne, donc elle sait quoi corriger ; un
- * deuxième échec sur le même sujet dit que le ticket a besoin d'un humain, pas
- * d'un tour de plus — arrêt, ticket en triage, rapport en commentaire.
+ * An implementation check that says NO. One restart, and only one: the
+ * restart carries the report on file, so it knows what to correct; a
+ * second failure on the same subject says the ticket needs a human, not
+ * one more turn — stop, ticket in triage, report in comment.
  *
- * Rend `true` quand il a pris la main : le moteur ne consulte alors pas les
- * règles (elles rejoueraient l'étape suivante d'un travail qu'on vient de juger
- * non fait).
+ * Returns `true` when it has taken control: the engine then does not consult the
+ * rules (they would replay the next step of a work that we have just judged
+ * not done).
  */
 async function handleFailedVerification(params: {
   chain: AgentChain;
@@ -183,10 +183,10 @@ async function handleFailedVerification(params: {
   verdict: AgentRunVerdict;
   issue: IssueRow;
   projectKey: string;
-  /** Modèle réglé pour la TAILLE de ce ticket. À passer comme sur le chemin
-   *  normal : une reprise reste une étape de la même chaîne, sur le même
-   *  ticket — la reprendre avec un autre modèle que celui que l'utilisateur a
-   *  choisi pour cette taille n'aurait aucune raison d'être. */
+  /** Model set for the SIZE of this ticket. To be passed as on the normal
+ * path: a restart remains a step in the same chain, on the same
+ * ticket — restarting it with a model other than the one the user has
+ * chosen for this size would have no reason to exist. */
   model: string | null;
 }): Promise<boolean> {
   const { chain, verdict, issue } = params;
@@ -196,8 +196,8 @@ async function handleFailedVerification(params: {
       verdictSummary: verdict.summary,
       verdictBlockers: verdict.blockers,
     });
-    // Le ticket remonte en triage : c'est l'endroit du produit qui dit
-    // « quelqu'un doit regarder ça », et la chaîne n'a plus rien à en faire.
+    // The ticket goes back to sorting: this is the place on the product that says
+    // “someone has to watch this,” and the channel doesn’t care anymore.
     await updateIssueFields({
       issueId: issue.id,
       actorId: chain.owner_id,
@@ -211,8 +211,8 @@ async function handleFailedVerification(params: {
   const retried = await retryChain(chain, rulesToReplayOnRetry(params.rules));
   if (!retried) return true;
 
-  // On rejoue la règle d'implémentation — celle que `retryChain` vient de
-  // démarquer — avec le rapport de vérification en consigne supplémentaire.
+  // We replay the implementation rule — the one that `retryChain` just came from
+  // demarcate — with the verification report as an additional deposit.
   const rule = findImplementRule(params.rules, {
     issue: factsOf(issue, await categoryIdsOf(issue.id)),
     playedRuleIds: retried.played_rule_ids,
@@ -242,20 +242,20 @@ async function handleFailedVerification(params: {
 }
 
 /**
- * Éteint une chaîne, quelle que soit sa forme. Une chaîne EN SURSIS s'annule en
- * silence : elle n'a rien joué, rien dépensé, et un rapport « la chaîne s'est
- * arrêtée » pour un travail jamais commencé serait du bruit sur le ticket. Une
- * chaîne qui TOURNE, elle, s'arrête en le disant.
+ * Turns off a string, regardless of its form. A SUSPENDED channel cancels in
+ * silence: it has played nothing, spent nothing, and a report "the channel has stopped
+ *" for a job never started would be noise on the ticket. A
+ * chain that RUNS, it stops when you say so.
  *
- * Sans ce point de passage, un projet désarmé pendant un sursis laissait la
- * chaîne `pending` pour toujours — et l'index unique par ticket avec elle.
+ * Without this checkpoint, a project disarmed during a reprieve left the
+ * chain `pending` forever — and the unique index per ticket with it.
  */
 async function shutDownChain(chain: AgentChain, reason: string): Promise<void> {
-  // Les TROIS statuts vivants, pas deux : `awaiting_human` était oublié, alors
-  // que `stopChain` l'accepte parfaitement. Désarmer le projet, perdre le
-  // budget, retirer le préréglage ou poser « ne pas automatiser » sur le ticket
-  // pendant qu'une chaîne était garée la laissait garée POUR TOUJOURS — et avec
-  // elle l'index unique du ticket, donc plus aucune automatisation possible.
+  // The THREE living statuses, not two: `awaiting_human` was forgotten, so
+  // that `stopChain` accepts it perfectly. Disarm the project, lose the
+  // budget, remove the preset or set “do not automate” on the ticket
+  // while a chain was parked left it parked FOREVER — and with
+  // it the unique index of the ticket, so no more automation possible.
   if (chain.status === "pending") await cancelPendingChain(chain.id, reason);
   else await haltChain(chain, reason);
 }
@@ -274,7 +274,7 @@ function factsOf(issue: IssueRow, categoryIds: string[]): AutomationIssueFacts {
 export async function runAutomations(params: AutomationRunParams): Promise<void> {
   const service = getServiceClient();
 
-  // ── Le monde, re-vérifié à l'exécution ────────────────────────────────────
+  // ── The world, re-checked at runtime ────────────────────────────────────
   const { data: project } = await service
     .from("projects")
     .select("id, key, owner_id, automations_enabled, automations")
@@ -286,18 +286,18 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
     ? await getChain(params.chainId)
     : await chainForIssue(params.issueId);
 
-  // Projet à la corbeille : la chaîne n'a plus d'objet. L'abandonner telle
-  // quelle la laissait vivante à jamais — et, pire, en tête de la file du
-  // balayeur (triée par ancienneté), où une poignée de chaînes mortes suffisait
-  // à affamer TOUTES les automatisations de la plateforme.
+  // Project trashed: the chain no longer has an object. abandon it like
+  // which left her alive forever — and, worse, at the head of the queue
+  // sweeper (sorted by seniority), where a handful of dead chains was enough
+  // to starve ALL automation from the platform.
   if (!project) {
     if (existing) await shutDownChain(existing, "gone");
     return;
   }
 
   if (!project.automations_enabled) {
-    // L'interrupteur a été coupé pendant qu'une chaîne tournait : on ne la laisse
-    // pas en suspens, on l'arrête en le disant.
+    // The switch was cut while a chain was running: we cannot leave it
+    // not in suspense, we stop it by saying it.
     if (existing) await shutDownChain(existing, "disabled");
     return;
   }
@@ -314,9 +314,9 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
     .eq("id", params.issueId)
     .is("deleted_at", null)
     .maybeSingle();
-  // Ticket à la corbeille : même raison, même remède. Et sans ça, une
-  // restauration avant la purge réveillait une chaîne vieille de plusieurs
-  // jours, qui lançait un run que plus personne n'attendait.
+  // Ticket in the trash: same reason, same remedy. And without that, a
+  // restoring before the purge woke up a several-year-old channel
+  // days, which launched a run that no one expected.
   if (!issueRow) {
     if (existing) await shutDownChain(existing, "gone");
     return;
@@ -325,78 +325,78 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
 
   const override = parseAutomationOverride(issue.automation_override);
   const ownerMeta = await ownerMetadata(project.owner_id as string);
-  // Cascade ticket > projet > compte : le forçage du ticket gagne, sinon les
-  // règles écrites sur le projet (API/MCP), sinon le préréglage du PROPRIÉTAIRE
-  // du projet — c'est lui qui paie et lui seul qui a pu armer ce projet.
+  // Cascade ticket > project > account: forcing the ticket wins, otherwise the
+  // rules written on the project (API/MCP), otherwise the OWNER preset
+  // of the project — it is he who pays and he alone who was able to arm this project.
   const rules = rulesForIssue(rulesForProject(project.automations, ownerMeta), override);
 
-  // Efforts couverts : un ticket d'une taille éteinte au compte ne déclenche
-  // rien. Testé APRÈS les règles (l'un dit quoi jouer, l'autre sur quoi), et
-  // AVANT tout le reste — c'est un refus, pas un arrêt : si une chaîne tournait
-  // déjà, elle a été ouverte quand la taille était autorisée, et on la laisse
-  // finir plutôt que de l'abandonner à mi-parcours.
+  // Efforts covered: a ticket of a size out of account does not trigger
+  // Nothing. Tested AFTER the rules (one says what to play, the other on what), and
+  // BEFORE everything else — it's a refusal, not a stop: if a chain was spinning
+  // already, it was opened when the size was authorized, and we leave it
+  // finish rather than abandoning it halfway.
   if (!existing && !isAutomationEffortEnabled(ownerMeta, issue.effort)) return;
   if (rules.length === 0) {
     if (existing) await shutDownChain(existing, "disabled");
     return;
   }
 
-  // ── L'HUMAIN A REPRIS LE TICKET ───────────────────────────────────────────
-  // La garde la plus importante du système, et celle qui manquait.
+  // ── THE HUMAN TOOK THE TICKET ───────────────────── ──────────────────────
+  // The most important guard in the system, and the one that was missing.
   //
-  // Le sursis ne protège que l'AMORÇAGE : à partir de l'étape 2, la chaîne
-  // décide sur des déclencheurs `run_finished`, dont les conditions ne portent
-  // que sur le ticket (effort, priorité, plan…) et JAMAIS sur son statut. Une
-  // chaîne engagée ne regardait donc plus jamais où en était son ticket — et le
-  // crochet de statut ne rattrapait rien, puisqu'il sort tôt quand un run
-  // travaille. Conséquence mesurée : on annule un ticket à la main, l'étape en
-  // cours finit, la suivante part quand même, et `syncIssueStatusOnAgentStart`
-  // ÉCRASE l'annulation en le repassant « en cours ».
+  // The reprieve only protects the BOOT: from step 2, the chain
+  // decides on `run_finished` triggers, whose conditions do not apply
+  // only on the ticket (effort, priority, plan, etc.) and NEVER on its status. A
+  // engaged channel therefore never again looked at where his ticket was — and the
+  // status hook didn't catch anything, since it exits early when a run
+  // work. Measured consequence: we cancel a ticket manually, the step in
+  // class ends, the next one leaves anyway, and `syncIssueStatusOnAgentStart`
+  // OVERWRITE the cancellation by returning it to “in progress”.
   //
-  // La règle : un geste HUMAIN qui sort le ticket du travail en cours retire la
-  // chaîne. Restreint aux origines humaines à dessein — le cycle de vie d'un run
-  // écrit lui aussi des statuts (`done` à la fusion d'une PR), et la boucle ne
-  // doit pas s'arrêter sur sa propre réussite.
+  // The rule: a HUMAN gesture which removes the ticket from the work in progress removes the
+  // chain. Restricted to human origins on purpose — the life cycle of a run
+  // also writes statuses (`done` when merging a PR), and the loop does not
+  // must not stop on its own success.
   if (
     existing &&
     params.event.type === "status_changed" &&
     HUMAN_STAND_DOWN_SOURCES.includes(params.event.source ?? "web") &&
     CHAIN_STAND_DOWN_STATUSES.includes(params.event.to)
   ) {
-    // Le run en cours part avec elle : le laisser finir, c'est continuer à
-    // dépenser sur un ticket que son propriétaire vient de ranger.
+    // The current run leaves with it: letting it finish means continuing to
+    // spend on a ticket that its owner has just put away.
     const working = await activeRunForChain(existing.id);
     if (working) await requestInterrupt(working.id);
     await shutDownChain(existing, "taken_over");
     return;
   }
 
-  // Un run de CETTE CHAÎNE travaille déjà : rien ne doit être décidé maintenant.
-  // Une conversation indépendante qui cite le même ticket n'est ni un verrou ni
-  // un signal de progression pour l'automatisation.
-  // Ce garde-fou est ICI, AVANT le réveil d'un sursis et avant les règles.
+  // A run of THIS CHANNEL is already working: nothing needs to be decided now.
+  // An independent conversation that cites the same ticket is neither a lock nor
+  // a progress signal for automation.
+  // This safeguard is HERE, BEFORE waking up from reprieve and before menstruation.
   //
-  // Avant le sursis, parce que réveiller d'abord et abandonner ensuite laissait
-  // une chaîne `running` à l'étape 0, sans run à elle : plus jamais balayée (elle
-  // n'est plus `pending`), plus jamais avancée (aucun run de chaîne ne finira), et
-  // occupant l'index unique du ticket pour toujours. Laissée `pending`, elle est
-  // simplement reproposée au balayage suivant.
+  // Before the reprieve, because waking up first and then giving up left
+  // a string `running` at step 0, without a run to it: never scanned again (it
+  // is no longer `pending`), never advanced again (no chain run will end), and
+  // occupying the ticket's unique index forever. Left `pending`, it is
+  // simply re-proposed on the next scan.
   //
-  // Avant les règles, parce qu'un changement de statut manuel pendant qu'un run
-  // tourne ne matche aucune règle : sans ce retour, la chaîne serait déclarée
-  // TERMINÉE alors que son étape court encore. (Sur le chemin normal, `stampRun`
-  // a déjà rendu le run terminal quand le crochet appelle : rien n'est actif et
+  // Before the rules, because a manual status change during a run
+  // turns does not match any rule: without this return, the string would be declared
+  // COMPLETED while its stage is still running. (On the normal path, `stampRun`
+  // has already made the run terminal when the hook calls: nothing is active and
   // ce test laisse passer.)
   if (existing && (await activeRunForChain(existing.id))) return;
 
-  // ── La chaîne EN SURSIS ───────────────────────────────────────────────────
-  // Sémantique du `for:` des alertes : la condition doit tenir EN CONTINU. Au
-  // réveil, le ticket doit toujours être dans le statut qui a ouvert la chaîne.
-  // C'est ce test qui couvre « j'ai copié le prompt d'implémentation » (la copie
-  // déplace le ticket en `in_progress`), « je l'ai remis en backlog », « je l'ai
-  // classé ». Les gestes manuels qui NE déplacent PAS le ticket — copier le
-  // prompt de plan, lancer un plan ou une vérification à la main — n'y sont pas
-  // visibles : ceux-là annulent la chaîne à la source (cf. `handOffToHuman`).
+  // ── The EN SURSIS channel ───────────────────────── ──────────────────────────
+  // Semantics of `for:` of alerts: the condition must hold CONTINUOUSLY. At
+  // wake up, the ticket must still be in the status that opened the channel.
+  // This is the test that covers “I copied the implementation prompt” (the copy
+  // move the ticket to `in_progress`), “I put it back in the backlog”, “I have it
+  // class ". Manual gestures that DO NOT move the ticket — copy the ticket
+  // plan prompt, launch a plan or a check manually — are not there
+  // visible: these cancel the chain at the source (see `handOffToHuman`).
   let live = existing;
   let startedFromPending = false;
   if (live && live.status === "pending") {
@@ -406,7 +406,7 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
         return;
       }
       const started = await startPendingChain(live.id);
-      if (!started) return; // un autre l'a réveillée, ou annulée
+      if (!started) return; // someone else woke her up, or canceled her
       live = started;
       startedFromPending = true;
     } else if (
@@ -414,9 +414,9 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
       live.pending_event &&
       params.event.to !== live.pending_event.to
     ) {
-      // Le ticket est parti ailleurs pendant le sursis : la chaîne en attente
-      // n'a plus lieu d'être. On l'annule EN SILENCE (elle n'a rien joué, rien
-      // dépensé) et on laisse le nouveau statut être évalué pour lui-même.
+      // The ticket went elsewhere during the reprieve: the waiting channel
+      // no longer relevant. We cancel it SILENTLY (she hasn't played anything, nothing
+      // spent) and we let the new status be evaluated for itself.
       await cancelPendingChain(live.id, "superseded");
       live = null;
     } else {
@@ -424,17 +424,17 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
     }
   }
 
-  // Une chaîne garée attend un HUMAIN : rien d'automatique ne la fait repartir.
-  // La route de reprise la remet en `running` AVANT de rappeler le moteur.
+  // A parked chain is waiting for a HUMAN: nothing automatic makes it leave.
+  // The resume route puts it back into `running` BEFORE recalling the engine.
   if (live && live.status !== "running") return;
 
   const categoryIds = await categoryIdsOf(issue.id);
   const facts = factsOf(issue, categoryIds);
   const projectKey = (project.key as string) ?? "";
 
-  // Analytique d'ouverture d'une chaîne qui sortait de SURSIS : elle part au
-  // vrai démarrage, pas à la mise en attente — une chaîne annulée pendant son
-  // sursis n'a jamais commencé, et ne doit donc rien compter.
+  // Analysis of the opening of a channel that left SURSIS: it goes to
+  // true startup, not on hold — a chain canceled while it is
+  // reprieve never started, and therefore should count for nothing.
   if (startedFromPending && live) {
     captureChainStarted(live, {
       effort: issue.effort,
@@ -442,7 +442,7 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
     });
   }
 
-  // ── Le verdict d'une vérification prime sur les règles ────────────────────
+  // ── The verdict of an audit takes precedence over the rules ────────────────────
   if (live && params.event.type === "run_finished" && params.event.intent === "verify") {
     const verdict = await lastVerdictOfChain(live.id);
     if (verdict && !verdict.ok) {
@@ -458,23 +458,23 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
     }
   }
 
-  // ── Ce qui reste à jouer ──────────────────────────────────────────────────
+  // ── What remains to play ───────────────────────── ─────────────────────────
   const rule = nextRule(rules, {
     event: params.event,
     issue: facts,
     playedRuleIds: live?.played_rule_ids ?? [],
   });
   if (!rule) {
-    // Plus rien à jouer — mais deux fins très différentes, qu'il faut distinguer
-    // ICI parce que c'est le seul endroit qui voit encore l'événement. Un run
-    // qui s'est terminé EN ÉCHEC ne matche aucune règle (les préréglages ne
-    // réagissent qu'à `outcome: "ok"`) : sans ce test, la chaîne se déclarait
-    // « allée au bout » — commentaire de rapport et analytics compris — alors
-    // que son étape venait de mourir. C'est aussi ce qui rend enfin exécutoire
-    // le motif `run_failed` (cf. `STOP_REASONS`), et ce que le routage de
-    // `requeueStuckRuns` vers `stampRun` promettait : un run abandonné par le
-    // balayeur ARRÊTE sa chaîne. (Sans chaîne, c'est simplement un événement
-    // qui n'intéresse aucune règle.)
+    // Nothing left to play — but two very different endings, which must be distinguished
+    // HERE because it's the only place that still sees the event. A run
+    // that ended FAILED does not match any rules (the presets do not
+    // only react to `outcome: "ok"`): without this test, the chain was declared
+    // “gone to the end” — report commentary and analytics included — then
+    // that his step had just died. This is also what finally makes it enforceable
+    // the `run_failed` pattern (see `STOP_REASONS`), and what the routing of
+    // `requeueStuckRuns` towards `stampRun` promised: a run abandoned by the
+    // sweeper STOPs its channel. (Without a string, it's just an event
+    // which does not concern any rule.)
     if (live) {
       if (params.event.type === "run_finished" && params.event.outcome === "failed") {
         await haltChain(live, "run_failed");
@@ -485,7 +485,7 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
     return;
   }
 
-  // ── La chaîne ─────────────────────────────────────────────────────────────
+  // ── The channel ────────────────────────────── ───────────────────────────────
   let chain = live;
   if (!chain) {
     const ownerId = await resolveChainOwner(
@@ -493,11 +493,11 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
       project.owner_id as string,
       issue.assignee_id,
     );
-    // ── Le SURSIS ───────────────────────────────────────────────────────────
-    // Un changement de statut ouvre la chaîne EN ATTENTE : elle ne démarrera
-    // qu'au bout du délai, et seulement si le ticket y est encore. Le sursis ne
-    // vaut que pour l'AMORÇAGE — la fin d'un run enchaîne l'étape suivante tout
-    // de suite, puisqu'on est déjà engagé (et qu'on a déjà payé).
+    // ── THE RESPONSIBILITY ───────────────────────────── ──────────────────────────────
+    // A change of status opens the WAITING channel: it will not start
+    // only at the end of the deadline, and only if the ticket is still there. The reprieve does not
+    // is only valid for STARTING — the end of a run continues the next step all
+    // immediately, since we are already committed (and have already paid).
     const delayMin = resolveAutomationStartDelayMinutes(ownerMeta);
     const deferred =
       delayMin > 0 && params.event.type === "status_changed"
@@ -516,11 +516,11 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
       preset: presetOfRules(rules),
       ...deferred,
     });
-    // Null = une autre chaîne est née entre-temps (index unique). On rend la
-    // main : c'est elle qui pilote maintenant.
+    // Null = another string was born in the meantime (unique index). We return the
+    // hand: she is the one driving now.
     if (!chain) return;
-    // En sursis : rien de plus ici. C'est le balayeur qui la rappellera, et
-    // l'analytique d'ouverture part au VRAI démarrage, pas à la mise en attente.
+    // On reprieve: nothing more here. It's the sweeper who will call her back, and
+    // the opening analytics starts at REAL startup, not when put on hold.
     if (deferred) return;
     captureChainStarted(chain, {
       effort: issue.effort,
@@ -528,17 +528,17 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
     });
   }
 
-  // ── Le garde-fou, juste avant de dépenser ─────────────────────────────────
-  // Un seul : le compteur d'étapes (anti-runaway). PAS de plafond de dépense —
-  // couper une chaîne au milieu n'est pas lisible pour qui la regarde ; c'est le
-  // quota du compte qui borne, globalement et visiblement.
+  // ── The safeguard, just before spending ─────────────────────────────────
+  // Only one: the step counter (anti-runaway). NO spending limit —
+  // cutting a string in the middle is not readable for anyone looking at it; this is the
+  // quota of the account which limits, globally and visibly.
   if (chain.step >= MAX_CHAIN_STEPS) {
     await haltChain(chain, "max_steps");
     return;
   }
 
-  // ── L'étape ───────────────────────────────────────────────────────────────
-  // Compare-and-set : si un autre l'a jouée entre-temps, on ne lance rien.
+  // ── The step ─────────────────────────────── ────────────────────────────────
+  // Compare-and-set: if someone else has played it in the meantime, we don't start anything.
   const advanced = await advanceChain(chain, rule.id);
   if (!advanced) return;
 
@@ -546,8 +546,8 @@ export async function runAutomations(params: AutomationRunParams): Promise<void>
     chain: advanced,
     action: rule.then[0],
     issue: { ...issue, project_key: projectKey },
-    // Modèle choisi par TAILLE de ticket (réglage de compte). Il l'emporte sur
-    // celui de la règle : c'est le réglage que l'utilisateur voit et manipule.
+    // Model chosen by ticket SIZE (account setting). He prevails over
+    // that of the rule: this is the setting that the user sees and manipulates.
     model: automationModelFor(ownerMeta, issue.effort),
   });
 }

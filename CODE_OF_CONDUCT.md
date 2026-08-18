@@ -1,51 +1,51 @@
-# Code de conduite
+# Code of Conduct
 
-## Notre engagement
+## Our commitment
 
-Nous nous engageons à faire de la communauté minddy un espace sans harcèlement,
-quels que soient l'expérience, l'identité, l'expression de genre, l'orientation
-sexuelle, le handicap, l'apparence, l'origine, l'âge, la religion ou la
-nationalité. Nous attendons de chacun une participation ouverte, respectueuse
-et constructive.
+We are committed to making the minddy community a harassment-free space,
+regardless of experience, identity, gender expression, orientation
+sexual orientation, disability, appearance, origin, age, religion or
+Nationality. We expect open, respectful participation from everyone.
+and constructive.
 
-## Comportements attendus
+## Expected behavior
 
-- faire preuve d'empathie, de patience et de respect ;
-- critiquer les idées et le code, jamais les personnes ;
-- accueillir les retours, reconnaître ses erreurs et chercher à réparer leurs
-  conséquences ;
-- respecter la vie privée, les limites et le temps des autres ;
-- privilégier ce qui sert durablement la communauté.
+- demonstrate empathy, patience and respect;
+- criticize ideas and the code, never people;
+- welcome feedback, recognize mistakes and seek to repair them
+consequences ;
+- respect the privacy, boundaries and time of others;
+- favor what serves the community sustainably.
 
-Sont notamment inacceptables : insultes, intimidation, harcèlement public ou
-privé, attention sexuelle non sollicitée, publication d'informations privées,
-menaces, discrimination, perturbation délibérée des échanges ou représailles
-envers une personne ayant signalé un incident de bonne foi.
+In particular, unacceptable: insults, intimidation, public harassment or
+private, unsolicited sexual attention, publication of private information,
+threats, discrimination, deliberate disruption of trade or retaliation
+towards a person who has reported an incident in good faith.
 
-## Périmètre
+## Perimeter
 
-Ce code s'applique dans tous les espaces du projet (dépôt, issues, pull
-requests, Discussions et événements) ainsi que lorsqu'une personne représente
-publiquement minddy. Un désaccord technique n'autorise pas à enfreindre ces
-règles.
+This code applies to all areas of the project (deposit, issues, pull
+requests, Discussions and events) as well as when a person represents
+publicly minddy. A technical disagreement does not authorize violation of these
+rules.
 
-## Signalement et application
+## Reporting and enforcement
 
-Signalez un incident en privé à [hello@minddy.app](mailto:hello@minddy.app), avec
-les liens, dates et éléments nécessaires. N'ouvrez pas d'issue publique. Les
-mainteneurs protègent autant que possible l'identité et la sécurité de la
-personne qui signale, examinent les faits sans conflit d'intérêts et peuvent
-demander des précisions.
+Report an incident privately to [hello@minddy.app](mailto:hello@minddy.app), with
+the necessary links, dates and elements. Do not open a public exit. THE
+maintainers protect the identity and security of the
+person who reports, examines the facts without conflict of interest and can
+ask for details.
 
-Selon la gravité et les antécédents, la réponse peut être un rappel privé, une
-demande de correction ou d'excuses, la modération d'un contenu, une exclusion
-temporaire ou une exclusion permanente. Une menace crédible ou une violation
-de la loi peut être transmise aux autorités compétentes. Les décisions
-d'application sont documentées de manière confidentielle et peuvent faire
-l'objet d'une demande de réexamen par un mainteneur non impliqué.
+Depending on the severity and history, the response may be a private recall,
+request for correction or apology, moderation of content, exclusion
+temporary or permanent exclusion. A credible threat or violation
+of the law can be transmitted to the competent authorities. The decisions
+applications are documented confidentially and can make
+subject to a request for review by an uninvolved maintainer.
 
 ## Attribution
 
-Ce texte est adapté du [Contributor Covenant, version
+This text is adapted from the [Contributor Covenant, version
 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct.html),
-distribué sous [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+distributed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).

@@ -6,49 +6,48 @@ import type {
 } from "@/lib/feedback/types";
 
 /**
- * Politique de revue d'un feedback (MIN-87) — le cœur de décision de la passe
- * IA, isolé en fonction PURE pour être testable sans base ni LLM.
+ * Feedback review policy (MIN-87) — the decision heart of the pass
+ * AI, isolated in PURE function to be testable without base or LLM.
  *
- * Une seule passe décide de tout, et l'ORDRE compte (c'est le défaut que MIN-87
- * corrige : avant, le dédoublonnage tournait avant la modération) :
+ * A single pass decides everything, and the ORDER counts (this is the default that MIN-87
+ * corrects: before, deduplication ran before moderation):
  *
- *   1. modérer — un junk part en `spam` et ne va nulle part ailleurs. Il ne peut
- *      donc plus être fusionné dans un vrai post, où sa voix gonflait le
- *      compteur du canonique et où il échappait ensuite à toute modération ;
- *   2. protéger — un contenu sensible (sécurité, données perso, légal) passe en
- *      privé et n'est JAMAIS fusionné automatiquement : un rapport de sécurité
- *      absorbé par une demande de fonctionnalité disparaîtrait de la vue de
- *      l'équipe. Au mieux une suggestion, que l'équipe tranche ;
- *   3. catégoriser — sauf sur un post qui part en fusion : le canonique porte
- *      déjà ses propres catégories, celles du tombstone ne seraient jamais lues ;
- *   4. dédoublonner — fusion auto au-dessus du seuil, suggestion au-dessus du
- *      plancher.
+ * 1. moderate — a junk goes to `spam` and goes nowhere else. It cannot
+ * therefore no longer be merged into a real post, where his voice inflated the
+ * counter of the canonical and where he then escaped any moderation;
+ * 2. protect — sensitive content (security, personal data, legal) becomes
+ * private and is NEVER merged automatically: a report security
+ * absorbed by a feature request would disappear from the view of
+ * the team. At best a suggestion, which the team decides;
+ * 3. categorize — except on a post that merges: the canonical already has
+ * already its own categories, those of the tombstone would never be read;
+ * 4. duplicate — auto merge above the threshold, suggestion above
+ * floor.
  *
- * L'IA ne rétrograde jamais une décision humaine : elle ne fait passer un post
- * de `pending` à `published`, jamais l'inverse, et ne classe en `spam` qu'un
- * post qu'aucune main n'a encore tranché.
+ * The AI never downgrades a human decision: it only moves a post
+ * from `pending` to `published`, never the other way around, and only classifies a
+ * as `spam` * post that no hand has decided yet.
  */
 
 /**
- * Ce qu'il advient d'un retour qui arrive : le revoir, le publier tel quel, ou
- * le retenir. Trois issues, deux réglages projet.
+ * What happens to a return that arrives: review it, publish it as is, or
+ * retain it. Three outcomes, two project settings.
  *
- * - `review` — le cas normal : Numo catégorise, filtre et modère avant publication.
- * - `publish` — publication directe, sans catégorie ni modération. Soit le owner
- *   a désarmé la revue, soit son budget IA est épuisé ET il a demandé qu'on
- *   bascule dans ce mode plutôt que de bloquer le board.
- * - `hold` — le retour reste en attente : la revue est armée mais ne peut pas
- *   tourner (budget épuisé). Fail-closed : rien de non modéré ne part sur un
- *   board public. L'équipe le voit dans « À revoir » et tranche à la main.
+ * - `review` — the normal case: Numo categorizes, filters and moderates before publication.
+ * - `publish` — direct publication, without category or moderation. Either the owner
+ * has disarmed the magazine, or his AI budget is exhausted AND he has requested that we
+ * switch to this mode rather than blocking the board.
+ * - `hold` — the return remains pending: the magazine is armed but cannot
+ * run (budget exhausted). Fail-closed: nothing unmoderated will be posted on a public board. The team sees it in “Rewatch” and decides by hand.
  */
 export type FeedbackReviewMode = "review" | "publish" | "hold";
 
 export function resolveFeedbackReviewMode(params: {
-  /** Revue armée : kill-switch d'instance ET réglage du projet. */
+  /** Armed review: instance kill-switch AND project tuning. */
   reviewEnabled: boolean;
-  /** Budget IA restant chez le owner du projet. */
+  /** AI budget remaining with the project owner. */
   hasBudget: boolean;
-  /** Réglage projet : publier sans revue quand le budget est épuisé. */
+  /** Project setting: publish without review when the budget is exhausted. */
   skipOverBudget: boolean;
 }): FeedbackReviewMode {
   if (!params.reviewEnabled) return "publish";
@@ -56,48 +55,48 @@ export function resolveFeedbackReviewMode(params: {
   return params.skipOverBudget ? "publish" : "hold";
 }
 
-/** Sortie du modèle, déjà normalisée (ids validés, bornes appliquées). */
+/** Model output, already normalized (ids validated, bounds applied). */
 export interface FeedbackReviewVerdict {
-  /** Id du post dont celui-ci est un doublon, ou null. */
+  /** Id of the post of which this is a duplicate, or null. */
   duplicateOf: string | null;
   /** Certitude du doublon, 0–1. */
   confidence: number;
-  /** Catégories du projet retenues (ids déjà validés). */
+  /** Project categories retained (ids already validated). */
   categoryIds: string[];
   isJunk: boolean;
   isSensitive: boolean;
   sensitivityKind: FeedbackSensitivityKind | null;
-  /** Motif court, visible équipe. */
+  /** Short pattern, visible team. */
   reason: string | null;
 }
 
-/** État du post au moment d'appliquer la décision (relu juste avant écriture). */
+/** Status of the post at the time of applying the decision (reread just before writing). */
 export interface FeedbackReviewSubject {
   source: FeedbackPostSource;
   isPublic: boolean;
   reviewState: FeedbackReviewState;
   /**
-   * Statut courant. Il entre dans la décision parce que `spam` en fait
-   * désormais partie : un retour déjà écarté — par l'équipe, ou par une passe
-   * précédente — ne doit plus être fusionné dans un vrai, où sa voix gonflerait
-   * le compteur du canonique.
-   */
+ * Current status. He enters the decision because `spam` actually
+ * now part: a return already dismissed - by the team, or by a previous pass
+ * - must no longer be merged into a real one, where his voice would inflate
+ * the canonical counter.
+ */
   status: FeedbackPostStatus;
 }
 
 export interface FeedbackReviewDecision {
   reviewState: FeedbackReviewState;
-  /** true → poser le statut `spam` (junk détecté, retour hors du board). */
+  /** true → set the status `spam` (junk detected, return off the board). */
   markSpam: boolean;
-  /** true → forcer `is_public` à false (anti-fuite du board public). */
+  /** true → force `is_public` to false (anti-leak from the public board). */
   forcePrivate: boolean;
   sensitivity: FeedbackSensitivityKind | null;
   moderationReason: string | null;
-  /** Catégories à poser (remplacement complet). Vide = ne rien toucher. */
+  /** Categories to install (complete replacement). Empty = don't touch anything. */
   categoryIds: string[];
-  /** Fusion automatique à exécuter, ou null. */
+  /** Automatic merge to execute, or null. */
   mergeTargetId: string | null;
-  /** Suggestion de fusion à proposer à l'équipe, ou null. */
+  /** Merge suggestion to propose to the team, or null. */
   suggestTargetId: string | null;
   suggestConfidence: number | null;
 }
@@ -110,23 +109,22 @@ export function decideFeedbackReview(params: {
 }): FeedbackReviewDecision {
   const { verdict, post, autoThreshold, suggestFloor } = params;
 
-  // Le verdict de junk ne s'applique qu'à un post encore en attente : une fois
-  // que l'équipe a publié (ou rejeté) un post, c'est sa décision qui fait foi.
+  // The junk verdict only applies to a post still pending: once
+  // that the team has published (or rejected) a post, its decision is binding.
   const rejectAsJunk = verdict.isJunk && post.reviewState === "pending";
 
   const sensitivity = verdict.isSensitive
     ? (verdict.sensitivityKind ?? "other")
     : null;
   /**
-   * Un contenu sensible quitte le board public, quel que soit le canal par
-   * lequel il est arrivé.
-   *
-   * La saisie interne en était exemptée — « l'équipe sait ce qu'elle publie ».
-   * Mais ce qu'elle saisit n'est pas ce qu'elle a écrit : c'est le retour d'un
-   * utilisateur, reçu par mail ou raconté au téléphone, recopié à la main. Les
-   * données personnelles et les rapports de sécurité passent par là AUSSI, et
-   * l'exemption les publiait sans filet. Un post déjà privé n'a rien à changer.
-   */
+ * Sensitive content leaves the public board, regardless of which channel it arrived through.
+ *
+ * Internal entry was exempt — "the team knows what it's posting."
+ * But what it enters is not what it wrote: it's the return from a
+ * user, received by email or told over the phone, copied by hand. The
+ * personal data and security reports go through this ALSO, and
+ * the exemption published them without a net. A post that is already private has nothing to change.
+ */
   const forcePrivate = verdict.isSensitive && post.isPublic;
 
   const reason = verdict.reason?.trim() || null;
@@ -136,8 +134,8 @@ export function decideFeedbackReview(params: {
     markSpam: rejectAsJunk,
     forcePrivate,
     sensitivity,
-    // On ne conserve un motif que quand il explique une action de modération —
-    // sinon le badge « sensible » s'afficherait avec un commentaire hors sujet.
+    // We only keep a reason when it explains a moderating action —
+    // otherwise the “sensitive” badge would be displayed with an off-topic comment.
     moderationReason: rejectAsJunk || verdict.isSensitive ? reason : null,
     categoryIds: [],
     mergeTargetId: null,
@@ -145,13 +143,13 @@ export function decideFeedbackReview(params: {
     suggestConfidence: null,
   };
 
-  // Un junk s'arrête ici : ni catégories, ni fusion, ni suggestion. Un retour
-  // DÉJÀ classé spam s'arrête au même endroit, et pour la même raison — il n'a
-  // rien à faire dans un vrai retour.
+  // A junk stops here: no categories, no merger, no suggestion. A return
+  // ALREADY classified as spam stops at the same place, and for the same reason — it didn't
+  // nothing to do in a real return.
   //
-  // Sa revue est bel et bien passée, elle : il sort donc de la file d'attente
-  // comme les autres, sinon « À revoir » le signalerait indéfiniment comme
-  // n'ayant pas été tranché — alors qu'il vient de l'être.
+  // His review has indeed passed, so he is leaving the queue
+  // like the others, otherwise “To see again” would signal it indefinitely as
+  // not having been decided — even though it has just been.
   if (rejectAsJunk || post.status === "spam") {
     if (post.reviewState === "pending") decision.reviewState = "published";
     return decision;
@@ -163,8 +161,8 @@ export function decideFeedbackReview(params: {
     verdict.duplicateOf && verdict.confidence >= suggestFloor
       ? verdict.duplicateOf
       : null;
-  // Fusion auto seulement si l'on est sûr ET que le post n'est pas sensible :
-  // un contenu sensible reste debout, l'équipe décide.
+  // Auto merge only if we are sure AND the post is not sensitive:
+  // sensitive content remains standing, the team decides.
   const autoMerge =
     duplicate !== null && !verdict.isSensitive && verdict.confidence >= autoThreshold;
 
@@ -175,7 +173,7 @@ export function decideFeedbackReview(params: {
     decision.suggestConfidence = verdict.confidence;
   }
 
-  // Catégoriser un tombstone n'a pas de lecteur : le canonique porte les siennes.
+  // Categorizing a tombstone has no reader: the canonical carries its own.
   if (!autoMerge) decision.categoryIds = verdict.categoryIds;
 
   return decision;

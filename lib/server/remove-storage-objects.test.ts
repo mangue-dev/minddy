@@ -7,25 +7,24 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 const { removeStorageObjects } = await import("./attachments");
 
 /**
- * MIN-184 — le ménage du bucket passe TOUT par ici, et un null y empoisonne le
- * lot entier.
+ * MIN-184 — bucket cleaning goes EVERYTHING through here, and a null poisons the whole lot.
  *
- * `storage.remove(paths)` poste un seul `{ prefixes: [...] }` : si un élément
- * n'est pas une chaîne, le service refuse la REQUÊTE, pas l'élément — et comme
- * l'erreur n'est que journalisée (un échec de ménage ne doit jamais faire
- * échouer l'écriture métier), plus rien n'est effacé, sans que personne le voie.
+ * `storage.remove(paths)` posts a single `{ prefixes: [...] }`: if an element
+ * is not a string, the service refuses the REQUEST, not the element — and since
+ * the error is only logged (a housekeeping failure should never make
+ * fail the business write), nothing is erased, without anyone seeing it.
  *
- * Depuis qu'une ressource peut être un LIEN, `storage_path` nul est une valeur
- * ORDINAIRE de la table : le moindre appelant qui relève des chemins sans
- * filtrer emporte le null avec lui. Les appelants filtrent (corbeille,
- * rétention, suppression de compte, suppression de ressource, suppression de
- * commentaire) ; ce test épingle la seconde ceinture, celle qui vaut pour
- * l'appelant qui viendra ensuite.
+ * Since a resource can be a LINK, `storage_path` null is a value
+ * ORDINARY of the table: the least caller that falls on paths without
+ * filter takes the null with it. Callers filter (trash,
+ * retention, delete account, delete resource, delete
+ * comment); this test pins the second belt, the one that is valid for
+ * the caller who will come next.
  */
 
-/** Depuis MIN-343, le goulot demande d'abord aux deux tables qui référencent le
-    bucket si une ligne nomme encore le chemin. Ici aucune ne le fait : le lot
-    passe entier, et c'est le null qui reste le sujet du fichier. */
+/** Since MIN-343, the bottleneck first asks the two tables that reference the
+ bucket if a row still names the path. Here none does: the lot
+ passes integer, and it is the null which remains the subject of the file. */
 const noReference = () => ({
   select: () => ({ in: async () => ({ data: [], error: null }) }),
 });

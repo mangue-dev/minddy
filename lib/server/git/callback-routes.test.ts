@@ -1,26 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-324 — les trois callbacks de forge, exercés branche par branche.
+ * MIN-324 — the three forge callbacks, exercised branch by branch.
  *
- * Deux choses à tenir, et elles sont indépendantes :
+ * Two things to hold, and they are independent:
  *
- *  1. **La confrontation `state` ↔ session.** Un `state` signé prouve qu'on l'a
- *     minté ; il ne prouve pas qui le présente. Sans session correspondante,
- *     aucune écriture — ni upsert d'installation, ni échange du `code` (le
- *     brûler ne servirait qu'à priver la victime du sien).
- *  2. **Les cookies rendus (MIN-293).** Ces routes sont les premières à ouvrir
- *     les cookies de session, avec un jeton qui peut être expiré : chaque
- *     sortie, y compris les redirections d'erreur, doit repasser par
- *     `applyCookies`. On le vérifie sur CHAQUE branche plutôt qu'en comptant les
- *     `return` du fichier.
+ * 1. **The confrontation `state` ↔ session.** One `state` signed proves that it was
+ * minted; it does not prove who presents it. Without a corresponding session,
+ * no writing — neither installation upsert, nor exchange of the `code` (burning the
+ * would only serve to deprive the victim of his).
+ * 2. **Cookies returned (MIN-293).** These routes are the first to open
+ * cookies session, with a token that may be expired: each
+ * output, including error redirects, must pass back through
+ * `applyCookies`. We check it on EACH branch rather than counting the
+ * `return` of the file.
  */
 
 process.env.GIT_STATE_SECRET = "test-git-state-secret-long-enough-32";
 
 const getClaims = vi.fn();
 
-/** Le cookie rafraîchi que le sink a collecté : sa présence prouve applyCookies. */
+/** The refreshed cookie that the sink collected: its presence proves applyCookies. */
 const REFRESHED = { name: "sb-access-token", value: "fresh", options: {} };
 
 vi.mock("@/lib/server/api-auth", () => ({
@@ -89,7 +89,7 @@ function signedIn(userId: string | null) {
   );
 }
 
-/** L'invariant cookies : vrai pour toute sortie, quelle que soit la branche. */
+/** The cookies invariant: true for all output, whatever the branch. */
 function expectCookiesApplied(response: { cookies: { get: (n: string) => unknown } }) {
   expect(response.cookies.get(REFRESHED.name)).toBeTruthy();
 }

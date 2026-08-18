@@ -42,14 +42,10 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Le TYPE d'une clé décide de ce qu'elle a le droit d'écrire — des tickets dans
- * le triage, ou des retours sur le board. C'est l'information la plus lourde de
- * la rangée, et elle se lisait en gris, dans le même badge que « Révoquée ».
- * Une teinte par type, pour qu'elle se prenne d'un coup d'œil.
- *
- * La forme est celle des badges de minddy (teinte à 10 %, bord à 20-30 %, jamais
- * un aplat), comme `PR_STATE_STYLES` — l'icône de la pastille porte déjà la même
- * distinction sans la couleur, donc rien ne repose sur elle seule.
+ * The TYPE of a key decides what it is allowed to write — tickets in
+ * triage, or feedback on the board. This is the heaviest information in the row, and it read gray, in the same badge as "Revoked." 20-30%, never
+ * a solid color), like `PR_STATE_STYLES` — the dot icon already bears the same
+ * distinction without the color, so nothing relies on it alone.
  */
 const KIND_STYLES: Record<IntegrationKind, { badge: string; avatar: string }> =
   {
@@ -64,10 +60,10 @@ const KIND_STYLES: Record<IntegrationKind, { badge: string; avatar: string }> =
     },
   };
 
-/** Reconfigurer le webhook sortant d'une intégration existante : les trois
-    mêmes écrans qu'à la création (`components/integrations/webhook-steps.tsx`),
-    sans étape à passer — on vient ici pour changer quelque chose. Une URL vidée
-    éteint le webhook, et garde les événements et le périmètre pour plus tard. */
+/** Reconfigure the webhook coming out of an existing integration: the three
+ same screens as when created (`components/integrations/webhook-steps.tsx`),
+ with no steps to go through — we come here to change something. A flushed URL
+ turns off the webhook, and saves events and scope for later. */
 function WebhookDialog({
   projectId,
   integration,
@@ -85,7 +81,7 @@ function WebhookDialog({
   const [saving, setSaving] = useState(false);
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
 
-  // Charger la config de l'intégration à l'ouverture (render-time, pas d'effet).
+  // Load the integration config when opened (render-time, no effect).
   if (integration && loadedFor !== integration.id) {
     setLoadedFor(integration.id);
     setWebhook({
@@ -103,8 +99,8 @@ function WebhookDialog({
     setSaving(true);
     try {
       await updateIntegrationWebhookApi(projectId, integration.id, {
-        // Renormalisée ici aussi : valider au clavier soumet sans passer par la
-        // sortie de champ. Vide reste vide — c'est ainsi qu'on éteint.
+        // Renormalized here too: validate on the keyboard submit without going through the
+        // field output. Empty stays empty — that's how you turn off.
         webhook_url: normalizeWebhookUrl(webhook.url) || null,
         webhook_events: webhook.events,
         webhook_scope: webhook.scope,
@@ -149,13 +145,13 @@ function WebhookDialog({
   );
 }
 
-/** Pastille d'état de la dernière livraison webhook (vert 2xx, rouge sinon). */
+/** Status badge of the last webhook delivery (green 2xx, red otherwise). */
 function WebhookStatusDot({ integration }: { integration: Integration }) {
   const t = useTranslations("Settings");
   const format = useFormatter();
   if (!integration.webhook_url) return null;
-  // « acceptée » ou « refusée », jamais le code HTTP du destinataire : le
-  // serveur ne le rend plus (MIN-341), il ne fait pas un scanner de ports.
+  // “accepted” or “refused”, never the recipient’s HTTP code: the
+  // server no longer renders it (MIN-341), it does not do a port scanner.
   const status = integration.webhook_last_status;
   const healthy = status === "ok";
   const label = status
@@ -242,8 +238,8 @@ export function ProjectIntegrations({
       title={t("integrationsTab")}
       description={t("integrationsSectionDesc")}
       variant="block"
-      /* Le geste vit en bout de titre ; quand il n'y a rien à lister, il descend
-         dans la scène et n'est pas montré deux fois. */
+      /* The gesture lives at the end of the title; when there is nothing to list, it moves down
+ in the scene and is not shown twice. */
       action={
         isOwner && integrations.length > 0 ? (
           <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
@@ -306,8 +302,8 @@ export function ProjectIntegrations({
               }
               action={
                 <>
-                  {/* Les deux états de la clé — ce qu'elle fait, et si elle vit
-                      encore — tenus à l'opposé de son nom. */}
+                  {/* The two states of the key — what it does, and whether it lives
+ yet — held opposite its name. */}
                   <Badge
                     variant="secondary"
                     className={cn("h-6", KIND_STYLES[integration.kind].badge)}
@@ -322,7 +318,7 @@ export function ProjectIntegrations({
                   <WebhookStatusDot integration={integration} />
                   {isOwner && !integration.revoked_at && (
                     <>
-                      {/* Les webhooks suivent des événements d'issues : réservés aux clés issues. */}
+                      {/* Webhooks follow issue events: reserved for issue keys. */}
                       {integration.kind === "issues" && (
                         <Button
                           type="button"

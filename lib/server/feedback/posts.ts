@@ -28,16 +28,16 @@ import { captureServerEvent } from "@/lib/server/posthog";
 import { lengthBucket } from "@/lib/analytics-sanitize";
 
 /**
- * Création des posts de feedback (MIN-37) — core partagé des trois canaux
- * (board public, API serveur-à-serveur, saisie interne). Double couche :
- * title/body = canonique éditable équipe ; submitted_* = brut sacré, écrit ici
- * une seule fois. L'embedding est calculé en best-effort AVANT l'insert
- * (timeout court) : tout échec insère embedding=null et la passe horaire
- * rattrape — la réponse ne dépend jamais de l'IA.
+ * Creation of feedback posts (MIN-37) — shared core of the three channels
+ * (public board, server-to-server API, internal input). Double layer:
+ * title/body = canonical editable team; submitted_* = sacred raw, written here
+ * only once. The embedding is calculated in best effort BEFORE the insert
+ * (short timeout): any failure inserts embedding=null and the time pass
+ * catches up — the response never depends on the AI.
  */
 
-// Réexportées : les appelants historiques (app/api/v1/feedback) les prennent
-// ici, mais elles sont désormais définies en pur dans lib/feedback/types.ts.
+// Re-exported: historical callers (app/api/v1/feedback) take them
+// here, but they are now defined pure in lib/feedback/types.ts.
 export { FEEDBACK_TITLE_MAX, FEEDBACK_BODY_MAX };
 
 const EMBED_TIMEOUT_MS = 2500;
@@ -64,12 +64,11 @@ export interface FeedbackPostRow {
   suggested_confidence: number | null;
   source: FeedbackPostSource;
   analyzed_at: string | null;
-  /** Échecs consécutifs de la passe de revue — 3 = abandon (MIN-87). */
+  /** Consecutive review pass failures — 3 = abort (MIN-87). */
   analysis_failures: number;
-  /** Langue du retour pris dans son ensemble, telle que la revue l'a lue. */
+  /** Language of the return taken as a whole, as the review read it. */
   source_language: string | null;
-  /** Traduction dans la langue de l'équipe — à CÔTÉ du texte, jamais à sa
-      place : le board public montre toujours le retour tel qu'il a été écrit. */
+  /** Translation into the team's language — NEXT to the text, never in its place: the public board always shows the feedback as it was written. */
   translated_title: string | null;
   translated_body: string | null;
   translated_language: string | null;
@@ -90,26 +89,26 @@ export async function createFeedbackPost(input: {
   title: string;
   body?: string | null;
   source: FeedbackPostSource;
-  /** Identité de l'auteur (feedback_users.id). Null uniquement pour les posts
-      créés par l'équipe elle-même sans auteur rattaché. */
+  /** Author identity (feedback_users.id). Null only for posts
+ created by the team itself without an attached author. */
   authorId: string | null;
-  /** Membre qui a saisi le feedback (canal interne uniquement). */
+  /** Member who entered the feedback (internal channel only). */
   createdByMember?: string | null;
-  /** Intégration à l'origine du post (canal API) — attribue l'événement
-      « créé » à l'intégration dans le fil d'activité. */
+  /** Embed at post origin (API channel) — assigns the
+ “created” event to the embed in the activity feed. */
   integrationId?: string | null;
-  /** false = retour privé : collecté par l'équipe mais jamais publié sur le
-      board. Par défaut public (choix explicite du visiteur au composeur). */
+  /** false = private feedback: collected by the team but never published on the
+ board. By default public (explicit choice of the visitor to the composer). */
   isPublic?: boolean;
   /**
-   * false = ne PAS soumettre ce post à la passe de revue de Numo (MIN-106) —
-   * pour un client qui fait tourner son propre classifier. Défaut true.
-   *
-   * La revue est UNE passe (MIN-87) qui modère, catégorise et dédoublonne en un
-   * seul appel : il n'y a pas de demi-mesure, `false` les coupe toutes les
-   * trois. Le post est donc publié tel quel, et marqué comme déjà traité pour
-   * que le cron ne vienne pas le reprendre plus tard.
-   */
+ * false = do NOT submit this post to Numo review pass (MIN-106) —
+ * for a client running their own classifier. Default true.
+ *
+ * The review is ONE pass (MIN-87) that moderates, categorizes and deduplicates in a single
+ * call: there are no half measures, `false` cuts them every
+ * three. The post is therefore published as is, and marked as already processed so that
+ * so that the cron does not come and take it again later.
+ */
   analyze?: boolean;
 }): Promise<CreateFeedbackPostResult> {
   const service = getServiceClient();
@@ -117,31 +116,31 @@ export async function createFeedbackPost(input: {
   const body = (input.body ?? "").trim().slice(0, FEEDBACK_BODY_MAX);
   if (!title) return { ok: false, status: 400, errorKey: "titleRequired" };
 
-  // Imputation au owner du projet, DEMANDÉE (MIN-131) : `authorId` est un
+  // Imputation to the project owner, REQUESTED (MIN-131): `authorId` is a
   // `feedback_users.id` (un visiteur du board), pas un compte auth — il n'y a
-  // donc aucun déclencheur nommable à facturer, et c'est bien le budget du owner
+  // therefore no nameable trigger to charge, and it is the owner's budget
   // qui autorise l'appel (`ownerHasUsageBudget`).
   const embedding = await embedText(body ? `${title}\n\n${body}` : title, {
     timeoutMs: EMBED_TIMEOUT_MS,
     record: { billTo: { projectOwner: input.projectId }, projectId: input.projectId },
   });
 
-  // Revue avant publication (MIN-54) : les soumissions board/API attendent la
-  // passe IA (modération + catégorisation) avant d'apparaître sur le board ; la
-  // saisie interne (équipe de confiance) est publiée d'emblée. Si la revue est
-  // désarmée — kill-switch d'instance ou réglage du projet — retenir les posts
-  // n'aurait aucun sens : personne ne viendrait les publier.
+  // Review before publication (MIN-54): board/API submissions await
+  // pass IA (moderation + categorization) before appearing on the board; there
+  // internal entry (trusted team) is published immediately. If the magazine is
+  // disarmed — instance kill-switch or project setting — retain posts
+  // would make no sense: no one would come and publish them.
   //
-  // `analyze: false` (MIN-106) rejoint ce cas par une troisième porte : le
-  // client a son propre classifier et refuse le nôtre POUR CE POST.
+  // `analyze: false` (MIN-106) joins this case by a third door: the
+  // client has his own classifier and refuses ours FOR THIS POST.
   const analyze = input.analyze !== false;
   const reviewEnabled = analyze && (await isFeedbackReviewEnabled(input.projectId));
   const heldForReview = input.source !== "internal" && reviewEnabled;
 
-  // Un post qu'on ne reverra pas doit être marqué COMME DÉJÀ TRAITÉ : le claim
-  // du cron sélectionne sur `analyzed_at is null or classified_at is null`, et
-  // un post laissé sans marqueur y remonterait à la première passe horaire —
-  // c'est-à-dire exactement l'analyse à laquelle le client a dit non.
+  // A post that will not be seen again must be marked AS ALREADY PROCESSED: the claim
+  // from the cron selects `analyzed_at is null or classified_at is null`, and
+  // a post left without a marker would go back to the first hourly pass —
+  // i.e. exactly the analysis the client said no to.
   const now = new Date().toISOString();
   const reviewMarkers = analyze ? {} : { analyzed_at: now, classified_at: now };
 
@@ -169,10 +168,10 @@ export async function createFeedbackPost(input: {
   }
   const post = data as FeedbackPostRow;
 
-  // Analytics (MIN-78). Le board public est visité par des ANONYMES : côté
-  // client, la plupart n'auront jamais tranché le bandeau cookies, et un retour
-  // envoyé depuis une intégration n'a pas de navigateur du tout. C'est donc ici
-  // qu'on compte. Ni le titre ni le corps ne partent — seulement leur volume.
+  // Analytics (MIN-78). The public board is visited by ANONYMS: side
+  // customer, most will never have cut the cookie strip, and a return
+  // sent from an integration has no browser at all. So it's here
+  // that we count. Neither the title nor the body goes away — only their volume.
   captureServerEvent({
     distinctId: input.authorId ?? input.createdByMember ?? "feedback:anonymous",
     event: "public_feedback_created",
@@ -183,14 +182,14 @@ export async function createFeedbackPost(input: {
       title_length_bucket: lengthBucket(title),
       body_length_bucket: lengthBucket(body),
       via_integration: !!input.integrationId,
-      // MIN-106 : sans ça on ne saurait jamais si l'option `analyze` sert.
+      // MIN-106: without that we would never know if the `analyze` option is useful.
       analyze,
       project_id: input.projectId,
     },
     groups: { project: input.projectId },
   });
 
-  // Activité : l'événement « créé » ancre le fil, attribué au bon canal.
+  // Activity: the “created” event anchors the thread, assigned to the correct channel.
   await emitFeedbackCreated(service, {
     postId: post.id,
     source: input.source,
@@ -198,11 +197,11 @@ export async function createFeedbackPost(input: {
     integrationId: input.integrationId ?? null,
   });
 
-  // Revue immédiate (MIN-87), après la réponse : un retour retenu pour revue
-  // apparaît sur le board en quelques secondes au lieu d'attendre le cron
-  // horaire. Le cron reste le filet de sécurité (LLM en panne, budget à sec) ; le
-  // claim empêche les deux de traiter le même post. Best-effort de bout en bout :
-  // hors contexte de requête, `after` lève — la revue attendra simplement le cron.
+  // Immediate review (MIN-87), after the response: a return held for review
+  // appears on the board in a few seconds instead of waiting for the cron
+  // hourly. The cron remains the safety net (LLM down, budget dry); THE
+  // claim prevents both from processing the same post. Best-effort end-to-end:
+  // out of query context, `after` raises — the journal will simply wait for the cron.
   if (analyze) {
     try {
       after(async () => {
@@ -213,13 +212,13 @@ export async function createFeedbackPost(input: {
         }
       });
     } catch {
-      // Pas de contexte de requête (script, worker) : le cron s'en chargera.
+      // No request context (script, worker): the cron will take care of it.
     }
   }
 
-  // Inbox (MIN-82) : un feedback qui ARRIVE (board public / API) prévient toute
-  // l'équipe — sans ça, on ne découvre les retours qu'en ouvrant le board. La
-  // saisie interne ne notifie pas (l'équipe est déjà au courant : elle l'écrit).
+  // Inbox (MIN-82): feedback that ARRIVES (public board / API) prevents any
+  // the team — without that, you only discover the feedback by opening the board. There
+  // internal entry does not notify (the team is already aware: it writes it).
   if (input.source !== "internal") {
     try {
       const members = await projectMemberIds(service, input.projectId);
@@ -241,7 +240,7 @@ export async function createFeedbackPost(input: {
 
   if (!input.authorId) return { ok: true, post };
 
-  // Soumettre = voter : l'auteur soutient évidemment son propre besoin.
+  // Submit = vote: the author obviously supports his own need.
   await service
     .from("feedback_votes")
     .upsert(
@@ -279,19 +278,19 @@ export type UpdateFeedbackFieldsResult =
     };
 
 /**
- * Édition de la couche canonique d'un post (titre, corps, statut manuel,
- * réponse d'équipe — jamais submitted_*), avec journal d'activité. Core partagé
- * par la route PATCH et l'outil Numo `respond_to_feedback`, pour une seule
- * source de vérité sur la validation et l'émission d'événements. Seuls les
- * champs présents dans `input` sont touchés.
+ * Editing the canonical layer of a post (title, body, manual status,
+ * team response — never submitted_*), with activity log. Shared core
+ * by the PATCH route and the Numo tool `respond_to_feedback`, for a single
+ * source of truth on validation and emitting events. Only the
+ * fields present in `input` are affected.
  */
 export async function updateFeedbackPostFields(params: {
   postId: string;
   actorId: string | null;
   input: Record<string, unknown>;
-  /** Journalise l'action comme venant de Numo (acteur "Numo" dans le fil). */
+  /** Logs the action as coming from Numo ("Numo" actor in the thread). */
   viaAssistant?: boolean;
-  /** Attribue l'action à l'agent MCP (via_mcp + clé) dans le fil. */
+  /** Assigns the action to the MCP agent (via_mcp + key) in the thread. */
   mcpKeyId?: string | null;
 }): Promise<UpdateFeedbackFieldsResult> {
   const service = getServiceClient();
@@ -322,25 +321,25 @@ export async function updateFeedbackPostFields(params: {
     }
     updates.status = input.status;
   }
-  // La réponse d'équipe n'est plus un champ du retour (MIN-196) : c'est un
-  // commentaire public de son fil, écrit par addCommentToFeedbackPost.
-  // Visibilité (MIN-37) : l'équipe peut basculer un post public/privé depuis le
-  // dashboard. false = retiré du board (list, détail non-auteur, suggestions).
+  // The team response is no longer a return field (MIN-196): it is a
+  // public comment to his thread, written by addCommentToFeedbackPost.
+  // Visibility (MIN-37): the team can switch a public/private post from the
+  // dashboard. false = removed from the board (list, non-author details, suggestions).
   if ("is_public" in input) {
     if (typeof input.is_public !== "boolean") {
       return { ok: false, status: 400, errorKey: "invalidRequest" };
     }
     updates.is_public = input.is_public;
   }
-  // État de publication (MIN-54) : l'équipe peut outrepasser la revue IA —
-  // publier un post en attente/rejeté, ou rejeter un post publié.
+  // Publication status (MIN-54): the team can override the IA review —
+  // publish a pending/rejected post, or reject a published post.
   if ("review_state" in input) {
     if (!isFeedbackReviewState(input.review_state)) {
       return { ok: false, status: 400, errorKey: "invalidRequest" };
     }
     updates.review_state = input.review_state;
-    // Un override manuel repositionne le post comme classé (il ne doit pas
-    // repasser dans la file de revue IA après décision humaine).
+    // A manual override repositions the post as classified (it should not
+    // return to the AI ​​review queue after human decision).
     if (before.classified_at === null) {
       updates.classified_at = new Date().toISOString();
     }

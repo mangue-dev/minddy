@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { hunkPatch, hunkPreview } from "@/lib/pr-diff-hunk";
 
-/** Un `diff_hunk` tel que GitHub le sert avec un commentaire de review. */
+/** A `diff_hunk` such as GitHub serves with a review comment. */
 const HUNK = [
   "@@ -10,6 +10,7 @@ export function probe() {",
   "   const a = 1;",
@@ -63,14 +63,14 @@ describe("hunkPatch", () => {
   });
 
   it("RECALCULE l'en-tête sur la tranche gardée — sinon les numéros mentent", () => {
-    // Une ligne de contexte écartée fait avancer les DEUX côtés d'un cran : le
-    // hunk part de 10, la tranche part donc de 11.
+    // A discarded context line moves BOTH sides one step forward: the
+    // hunk starts from 10, the slice therefore starts from 11.
     expect(hunkPatch("a.ts", HUNK, 4).split("\n")[3]).toBe("@@ -11,2 +11,3 @@");
   });
 
   it("dit un côté vide comme git le dit : le numéro d'AVANT, et un compte nul", () => {
-    // Les deux dernières lignes sont des ajouts : le côté base n'a plus rien, et
-    // s'insère après la ligne 12 (la dernière ligne supprimée).
+    // The last two lines are additions: the base side has nothing left, and
+    // inserts after line 12 (the last line deleted).
     expect(hunkPatch("a.ts", HUNK, 2).split("\n")[3]).toBe("@@ -12,0 +12,2 @@");
   });
 

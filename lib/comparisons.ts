@@ -3,60 +3,59 @@ import type { Namespace } from "@/lib/i18n-keys";
 import type { PublicRouteKey } from "@/lib/public-routes";
 
 /**
- * Les pages `/alternatives/<outil>` (MIN-93) — un comparatif par concurrent.
+ * Pages `/alternatives/<outil>` (MIN-93) — a comparison by competitor.
  *
- * ## Comment ces trois-là ont été choisis
+ * ## How these three were chosen
  *
- * Le plan demandait de trancher sur des données : les référents PostHog et les
- * réponses du board de feedback. Relevé le 27 juillet 2026, il n'y en a pas —
- * 12 pages vues externes pour 10 personnes depuis la mise en service du suivi,
- * et un seul billet de feedback, interne. Un choix « piloté par la donnée » sur
- * douze visites serait une décoration.
+ * The plan required deciding on data: the PostHog and the
+ * responses from the feedback board. Recorded on July 27, 2026, there are none —
+ * 12 external page views for 10 people since tracking was put into service,
+ * and only one feedback post, internal. A “data-driven” choice on
+ * twelve visits would be a decoration.
  *
- * Faute de mieux, on reprend donc les trois outils que la description du produit
- * nomme déjà (`Landing.metaDescription` dit « alternative simple à Linear ou
- * Jira ») et qui portent le volume de recherche sur « alternative à X ». À
- * refaire quand le trafic dira quelque chose.
+ * For lack of anything better, we therefore use the three tools that the product description
+ * already names (`Landing.metaDescription` says “simple alternative to Linear or
+ * Jira”) and which bring the search volume to “alternative to X”. TO
+ * redo when traffic says something.
  *
- * ## Ce qui est comparé, et ce qui ne l'est pas
+ * ## What is compared, and what is not
  *
- * Quatre lignes seulement : ce que coûte un collègue, ce que les agents de code
- * y font, ce qu'il faut configurer avant d'écrire un ticket, et pour qui
- * l'outil est fait. Aucune liste de fonctions, aucun prix recopié, aucune croix
- * sur le produit d'un concurrent.
+ * Only four lines: what a colleague costs, what code agents
+ * do there, what which must be configured before writing a ticket, and for whom
+ * the tool is made. No list of functions, no copied price, no cross
+ * on a competitor's product.
  *
- * C'est délibéré. Un tableau de trente croix est périmé au trimestre suivant, et
- * il suffit d'UNE croix fausse pour qu'un lecteur qui connaît l'autre outil
- * cesse de croire le reste de la page — donc aussi les modèles, qui citent en
- * priorité les sources qui reconnaissent leurs limites. Chaque page dit
- * d'ailleurs d'abord ce que l'autre fait mieux.
+ * This is deliberate. A table of thirty crosses is out of date in the following quarter, and
+ * it only takes ONE false cross for a reader who knows the other tool
+ * to stop believing the rest of the page - therefore also the models, which cite in priority the sources which recognize their limits. Each page says
+ * first of all what the other does better.
  *
- * ## Les deux erreurs à ne pas refaire
+ * ## The two mistakes not to make
  *
- * **Non, minddy n'est pas « un forfait pour toute l'équipe ».** La première
- * version de ces pages l'écrivait, et c'était faux : le owner paye les limites
- * de SES projets, mais chacun garde son propre plan pour les fonctions IA
- * (`lib/server/entitlements.ts` : « une limite structurelle se vérifie sur le
- * plan du OWNER ; une action IA se paye sur le plan de son ACTEUR »). Ce qui est
- * vrai, et c'est déjà une différence : un collègue qui vient suivre des tickets
- * ne coûte pas un siège de plus.
+ * **No, minddy is not “a package for the whole team”.** The first
+ * version of these pages wrote it, and it was wrong: the owner pays the limits
+ * of HIS projects, but each keeps its own plan for the IA functions
+ * (`lib/server/entitlements.ts`: "a structural limit is verified on the
+ * plan of the OWNER; an AI action is paid on the level of its ACTOR"). Which is
+ * true, and that's already a difference: a colleague who comes to follow tickets
+ * does not cost an extra seat.
  *
- * **Non, minddy n'est pas le seul à parler MCP.** Linear publie
- * `mcp.linear.app/mcp`, Atlassian son serveur Rovo en OAuth 2.1, Notion le
- * sien. La différence tenable est plus fine : chez minddy le ticket porte son
- * plan, et l'agent le coche au fil du travail.
+ * **No, minddy is not the only one talking about MCP.** Linear publishes
+ * `mcp.linear.app/mcp`, Atlassian its Rovo server in OAuth 2.1, Notion le
+ * its own. The tenable difference is finer: at Minddy the ticket carries its
+ * plan, and the agent checks it as the work progresses.
  */
 
 export interface Comparison {
   /** Segment d'URL : `/alternatives/<slug>`. */
   slug: string;
-  /** Nom propre du concurrent — jamais traduit, jamais dans le catalogue i18n. */
+  /** Proper name of the competitor — never translated, never in the i18n catalog. */
   name: string;
-  /** Entrée de `lib/public-routes.ts` qui sert cette page. */
+  /** `lib/public-routes.ts` entry that serves this page. */
   routeKey: PublicRouteKey;
-  /** Namespace i18n des textes propres à ce comparatif. */
+  /** Namespace i18n of texts specific to this comparison. */
   namespace: Namespace;
-  /** Sa page de tarifs publique : le lecteur doit pouvoir vérifier lui-même. */
+  /** Its public pricing page: the reader should be able to check for themselves. */
   pricingUrl: string;
 }
 
@@ -87,13 +86,13 @@ export const COMPARISONS = [
 export type ComparisonSlug = (typeof COMPARISONS)[number]["slug"];
 
 /**
- * Les lignes du tableau, dans l'ordre. Clés i18n : `Alternatives.row_<clé>` pour
- * le libellé, `Alternatives.minddy_<clé>` pour la cellule de minddy, et
- * `<namespace du concurrent>.them_<clé>` pour la sienne.
+ * The table rows, in order. i18n keys: `Alternatives.row_<key>` for
+ * the label, `Alternatives.minddy_<key>` for minddy's cell, and
+ * `<competitorNamespace>.them_<key>` for theirs.
  *
- * Que des cellules de TEXTE, aucune case à cocher : une croix dans la colonne
- * d'un concurrent se lit comme une accusation, et demande d'être sûr d'un
- * absent — ce qu'on ne peut pas être.
+ * Only TEXT cells, no checkboxes: a cross in a competitor's
+ * column reads like an accusation, and asks one to be sure of an absent
+ * — which one cannot be.
  */
 export const COMPARISON_ROWS = [
   "teammate",
@@ -104,7 +103,7 @@ export const COMPARISON_ROWS = [
 
 export type ComparisonRow = (typeof COMPARISON_ROWS)[number];
 
-/** Les trois arguments de chaque colonne de prose, de part et d'autre. */
+/** The three arguments of each column of prose, on both sides. */
 export const COMPARISON_POINTS = [1, 2, 3] as const;
 
 export function comparisonBySlug(slug: string): Comparison | null {

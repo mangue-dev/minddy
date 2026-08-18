@@ -32,37 +32,37 @@ import {
 import { isManagedAiEnabled } from "@/lib/managed-services";
 
 /**
- * Résolution du modèle et de l'endpoint de l'agent de code (MIN-46).
+ * Resolved code agent model and endpoint (MIN-46).
  *
- * MODÈLE — cascade à 3 niveaux, précédence run > user > racine :
- *   1. override du run (choisi au lancement, ou forcé par numo),
- *   2. défaut perso de l'user (user_agent_preferences.default_model),
- *   3. défaut frontier du provider BYOK (openai/anthropic/google) —
- *      app_config.byok_default_model_<provider> / registre des providers,
- *   4. défaut racine OpenRouter (app_config.agent_model / fallback code) —
- *      utilisé par le quota minddy ET par OpenRouter BYOK (même endpoint).
- * Seul le provider « generic » n'a aucun défaut fiable (namespace inconnu) :
- * sans (1) ni (2), on lève `AgentModelRequiredError` — l'utilisateur doit
- * choisir un modèle (le picker liste ceux de son provider).
+ * MODEL — 3-level cascade, precedence run > user > root:
+ * 1. run override (chosen at launch, or forced by numo),
+ * 2. user's personal default (user_agent_preferences.default_model),
+ * 3. BYOK provider border default (openai/anthropic/google) —
+ * app_config.byok_default_model_<provider> / provider register,
+ * 4. OpenRouter root default (app_config.agent_model / fallback code) —
+ * used by the minddy quota AND by OpenRouter BYOK (same endpoint).
+ * Only the “generic” provider has no reliable default (unknown namespace):
+ * without (1) nor (2), we raise `AgentModelRequiredError` — the user must
+ * choose a model (the picker lists those of its provider).
  *
- * ENDPOINT — un seul BYOK actif par compte : provider + base URL + clé de l'user
- * si présent (usage illimité, à ses frais), sinon la clé plateforme OpenRouter
- * OPENROUTER_API_KEY (plafonnée mensuellement, cf. quota.ts).
+ * ENDPOINT — only one active BYOK per account: provider + base URL + user key
+ * if present (unlimited use, at own expense), otherwise the OpenRouter platform key
+ * OPENROUTER_API_KEY (capped monthly, see quota.ts).
  */
 
-/** Défaut racine (admin) : app_config.agent_model ou le fallback code. */
+/** Root default (admin): app_config.agent_model or the fallback code. */
 export async function getRootDefaultModel(): Promise<string> {
   return (await getAppConfigValue(AGENT_MODEL_CONFIG_KEY))?.trim() || AGENT_ROOT_MODEL_FALLBACK;
 }
 
 /**
- * Défaut frontier d'un provider BYOK — réglable depuis /admin
- * (`byok_default_model_<provider>`), sinon celui du registre des providers.
+ * Border default of a BYOK provider — adjustable from /admin
+ * (`byok_default_model_<provider>`), otherwise that of the providers register.
  *
- * C'est le modèle que tourne un compte qui a posé sa clé sans jamais en choisir un :
- * il change à chaque génération de modèles, donc il ne peut pas vivre uniquement
- * dans le code. `undefined` reste possible — OpenRouter (qui reprend le défaut
- * racine) et le générique (namespace inconnu) n'en ont pas.
+ * This is the model used by an account which has installed its key without ever choosing one:
+ * it changes with each generation of templates, so it can't live only
+ * in the code. `undefined` remains possible — OpenRouter (which takes the default
+ * root) and the generic (unknown namespace) do not have them.
  */
 export async function resolveProviderDefaultModel(
   providerId: string | null | undefined,
@@ -73,7 +73,7 @@ export async function resolveProviderDefaultModel(
   return configured?.trim() || fallback;
 }
 
-/** Défaut perso de l'utilisateur, ou null s'il n'en a pas défini. */
+/** User's personal default, or null if they have not defined one. */
 export async function getUserDefaultModel(userId: string): Promise<string | null> {
   const supabase = getServiceClient();
   const { data } = await supabase
@@ -84,7 +84,7 @@ export async function getUserDefaultModel(userId: string): Promise<string | null
   return (data as { default_model: string | null } | null)?.default_model ?? null;
 }
 
-/** Défaut de raisonnement de l'utilisateur, ou null s'il n'en a pas défini. */
+/** User's reasoning fault, or null if they have not defined one. */
 export async function getUserDefaultReasoningLevel(
   userId: string,
 ): Promise<ReasoningLevel | null> {
@@ -99,14 +99,14 @@ export async function getUserDefaultReasoningLevel(
 }
 
 /**
- * Résout le niveau de raisonnement à FIGER sur un run (MIN-122). Cascade
- * run > user > `DEFAULT_REASONING_LEVEL` (`medium`) — pas de défaut racine : aucun
- * réglage admin ici.
+ * Fix reasoning level to FREEZE on a run (MIN-122). Cascade
+ * run > user > `DEFAULT_REASONING_LEVEL` (`medium`) — no root default: none
+ * admin setting here.
  *
- * Les quatre niveaux sont ouverts à TOUS, quota minddy compris : l'abonnement est
- * payé, il doit être utilisable en entier. Ce qui borne la dépense est le budget
- * lui-même (`checkAgentQuota` au lancement, et l'arrêt en cours de run quand il
- * est épuisé), pas une restriction sur le niveau.
+ * The four levels are open to ALL, minddy quota included: the subscription is
+ * paid, it must be fully usable. What limits the expense is the budget
+ * itself (`checkAgentQuota` at launch, and stopping mid-run when it
+ * is exhausted), not a restriction on the level.
  */
 export async function resolveReasoningLevel(opts: {
   perRunLevel?: string | null;
@@ -116,7 +116,7 @@ export async function resolveReasoningLevel(opts: {
   return perRun ?? (await getUserDefaultReasoningLevel(opts.userId)) ?? DEFAULT_REASONING_LEVEL;
 }
 
-/** Levée quand un provider BYOK non-OpenRouter n'a aucun modèle résolu. */
+/** Raised when a non-OpenRouter BYOK provider has no resolved model. */
 export class AgentModelRequiredError extends Error {
   code = "noModelForProvider" as const;
   constructor(public provider: string) {
@@ -125,25 +125,25 @@ export class AgentModelRequiredError extends Error {
   }
 }
 
-/** Modèle figé sur un run, et de qui vient ce choix. */
+/** Model frozen on a run, and who came from this choice. */
 export interface ResolvedAgentModel {
   model: string;
   /**
-   * Vrai quand le modèle vient de QUELQU'UN — override de run (choisi au
-   * lancement, ou forcé par Numo) ou défaut perso du compte. Faux quand il vient
-   * d'un défaut de minddy (frontier du provider, ou défaut racine).
-   *
-   * C'est la distinction que le plafond de plan applique (`ensureModelInPlan`) :
-   * minddy ne se refuse pas ses propres défauts.
-   */
+ * True when the model comes from SOMEONE — run override (chosen at
+ * launch, or forced by Numo) or personal account default. False when it comes
+ * from a minddy fault (provider boundary, or root fault).
+ *
+ * This is the distinction that the plan cap applies (`ensureModelInPlan`):
+ * minddy does not deny itself its own faults.
+ */
   chosenByUser: boolean;
 }
 
 /**
- * Résout le modèle à figer sur un run. `perRunModel` (override/forçage) gagne,
- * sinon le défaut perso, sinon le défaut frontier du provider BYOK, sinon —
- * quota minddy ou OpenRouter BYOK — le défaut racine. Lève
- * `AgentModelRequiredError` seulement pour un BYOK générique sans modèle.
+ * Resolves which model to freeze on a run. `perRunModel` (override/forcing) wins,
+ * otherwise the personal default, otherwise the border default of the BYOK provider, otherwise —
+ * quota minddy or OpenRouter BYOK — the root default. Raise
+ * `AgentModelRequiredError` only for generic BYOK without template.
  */
 export async function resolveAgentModel(opts: {
   perRunModel?: string | null;
@@ -153,9 +153,9 @@ export async function resolveAgentModel(opts: {
   const perRun = opts.perRunModel?.trim();
   if (perRun) return { model: perRun, chosenByUser: true };
 
-  // Une chaîne/routine est une feature distincte : son choix BYOK ne doit pas
-  // être écrasé par le défaut interactif de l'agent. Sans BYOK sur cette
-  // surface, elle continue naturellement sur la cascade historique Minddy.
+  // A channel/routine is a distinct feature: its BYOK choice must not
+  // be overwritten by the agent's interactive default. Without BYOK on this
+  // surface, it continues naturally on the historic Minddy waterfall.
   if (opts.surface === "automations") {
     const automationByok = await getUserByok(opts.userId, "automations");
     if (automationByok) {
@@ -190,43 +190,41 @@ export async function resolveAgentModel(opts: {
   const userDefault = await getUserDefaultModel(opts.userId);
   if (userDefault) return { model: userDefault, chosenByUser: true };
   const byok = await getUserByok(opts.userId, opts.surface ?? "agent");
-  // Défaut frontier du provider (openai/anthropic/google), réglable en /admin.
+  // Provider border fault (openai/anthropic/google), adjustable in /admin.
   const providerDefault = byok ? await resolveProviderDefaultModel(byok.provider) : undefined;
   if (providerDefault) return { model: providerDefault, chosenByUser: false };
-  // Générique BYOK : aucun défaut fiable → l'utilisateur doit choisir.
+  // Generic BYOK: no reliable default → user must choose.
   if (byok && byok.provider !== "openrouter") {
     throw new AgentModelRequiredError(byok.provider);
   }
-  // Quota minddy (plateforme) ou OpenRouter BYOK : défaut racine app_config.
+  // Quota minddy (platform) or OpenRouter BYOK: root default app_config.
   return { model: await getRootDefaultModel(), chosenByUser: false };
 }
 
-// ── Modèle de RELECTURE (MIN-141, porté ici par MIN-168) ────────────────────
-// Une session de review est un run comme les autres, mais son modèle ne se
-// résout pas comme celui d'un run de code : `pr_review_model` est
-// DÉLIBÉRÉMENT distinct d'`agent_model` — faire relire du code par le modèle qui
-// vient de l'écrire donne un second avis identique, et c'est toute la raison
-// d'être de la passe.
+// ── REREADING model (MIN-141, carried here by MIN-168) ────────────────────
+// A review session is a run like any other, but its model is not
+// does not resolve like a code run: `pr_review_model` is
+// DELIBERATELY distinct from `agent_model` — have code reread by the model which
+// just wrote it gives an identical second opinion, and that's the whole reason
+// to be in the pass.
 
-/** Clé `app_config` du modèle de review — le défaut de l'instance, réglable en /admin. */
+/** `app_config` key of the review template — the instance default, adjustable in /admin. */
 export const PR_REVIEW_MODEL_CONFIG_KEY = "pr_review_model";
 
 /**
- * Le modèle qui va relire, en trois temps : ce qui a été choisi POUR CETTE
- * SESSION, sinon le dernier choix du compte, sinon le défaut de l'instance.
+ * The model which will reread, in three steps: what was chosen FOR THIS
+ * SESSION, otherwise the last choice of the account, otherwise the default of the instance.
  *
- * Le catalogue est celui de la clé plateforme OpenRouter dans les trois cas — la
- * review tourne dessus, y compris pour un compte en BYOK (un id natif `gpt-…` n'y
- * serait pas routable). Elle se paye donc TOUJOURS sur le quota minddy, ce qui la
- * soumet aussi au plafond de modèle du plan — d'où `chosenByUser` : le plafond
- * porte sur les deux premiers temps (un modèle nommé par quelqu'un), jamais sur
- * le troisième. Le défaut d'instance vaut délibérément un modèle cher, et s'y
- * heurter laisserait un compte Go sans aucun chemin vers une review.
+ * The catalog is that of the OpenRouter platform key in the three cases — the
+ * review runs on it, including for a BYOK account (a native `gpt-…` id would not
+ * would be routable). It is therefore ALWAYS paid on the minddy quota, which also subjects it to the model ceiling of the plan - hence `chosenByUser`: the ceiling
+ * concerns the first two stages (a model named by someone), never on
+ * the third. The instance default is deliberately worth an expensive model, and running into it would leave a Go account with no path to a review.
  */
 export async function resolvePrReviewModel(opts: {
   perCall?: string | null;
   userId: string;
-  /** Vrai quand on vient de demander explicitement le défaut de l'instance. */
+  /** True when we have just explicitly requested the default of the instance. */
   ignoreRemembered?: boolean;
 }): Promise<ResolvedAgentModel> {
   const perCall = opts.perCall?.trim();
@@ -238,8 +236,8 @@ export async function resolvePrReviewModel(opts: {
   return { model: await getInstancePrReviewModel(), chosenByUser: false };
 }
 
-/** Le défaut de l'instance seul (sans le choix du compte) — ce que l'UI affiche
- *  en aparté sur l'option « modèle par défaut » du picker. */
+/** The default of the instance alone (without the choice of account) — what the UI displays
+ * as an aside on the “default model” option of the picker. */
 export async function getInstancePrReviewModel(): Promise<string> {
   return (
     (await getAppConfigValue(PR_REVIEW_MODEL_CONFIG_KEY))?.trim() ||
@@ -247,7 +245,7 @@ export async function getInstancePrReviewModel(): Promise<string> {
   );
 }
 
-/** Dernier modèle de review choisi par ce compte, ou null. */
+/** Last review template chosen by this account, or null. */
 export async function getUserPrReviewModel(userId: string): Promise<string | null> {
   const { data } = await getServiceClient()
     .from("user_agent_preferences")
@@ -258,10 +256,10 @@ export async function getUserPrReviewModel(userId: string): Promise<string | nul
 }
 
 /**
- * Retient le modèle choisi : la fois d'après, « faire vérifier par Numo » repart
- * de là. `null` efface le choix — c'est ce que veut dire « revenir au défaut de
- * minddy » dans le picker, et sans ça le choix retenu gagnerait pour toujours.
- * Best-effort — un choix non mémorisé ne doit pas empêcher la review.
+ * Retains the chosen model: the next time, “have Numo check” leaves
+ * from there. `null` erases the choice — that's what "revert to the default of
+ * minddy" in the picker means, and otherwise the selected choice would win forever.
+ * Best-effort — an unremembered choice should not prevent review.
  */
 export async function rememberPrReviewModel(
   userId: string,
@@ -276,18 +274,18 @@ export async function rememberPrReviewModel(
   }
 }
 
-// ── Endpoint (provider + base URL + clé) ─────────────────────────────────────
+// ── Endpoint (provider + base URL + key) ─────────────────────────────────────
 
 export interface UserByok {
   provider: AgentProviderId;
   apiKey: string;
-  /** Base URL effective (registre, ou custom pour 'generic'). */
+  /** Effective URL base (register, or custom for 'generic'). */
   baseUrl: string;
   enabledSurfaces: AiSurface[];
   featureModels: ByokFeatureModels;
 }
 
-/** Un endpoint privé n'est jamais un repli valable pour une microVM cloud. */
+/** A private endpoint is never a valid fallback for a cloud microVM. */
 export class LocalEndpointRequiresLocalRunError extends Error {
   code = "localEndpointRequiresLocalRun" as const;
   constructor() {
@@ -296,7 +294,7 @@ export class LocalEndpointRequiresLocalRunError extends Error {
   }
 }
 
-/** Un run BYOK figé ne change jamais de payeur si sa clé est retirée. */
+/** A frozen BYOK run never changes payer if its key is removed. */
 export class ByokCredentialUnavailableError extends Error {
   code = "byokCredentialUnavailable" as const;
   constructor() {
@@ -306,23 +304,22 @@ export class ByokCredentialUnavailableError extends Error {
 }
 
 /**
- * Une clé non validée est-elle reconnue MAINTENANT ? (MIN-344)
+ * Is an unvalidated key recognized NOW? (MIN-344)
  *
- * Le chemin normal pose `validated_at` à l'enregistrement. Restent deux cas où
- * la colonne est nulle : les lignes antérieures à MIN-344, et celles enregistrées
- * pendant une panne du fournisseur (verdict `unknown`). Plutôt que de les
- * condamner, on retente ici — au premier usage — et on pose la date si la clé
- * répond. Une clé qui ne répond pas reste inerte : le compte retombe sur la clé
- * plateforme et son plafond, ce qui est exactement le comportement voulu.
+ * The normal path sets `validated_at` to registration. There remain two cases where
+ * the column is null: lines before MIN-344, and those recorded
+ * during a supplier outage (`unknown` verdict). Rather than condemning them, we try again here — on first use — and set the date if the key
+ * responds. A key that does not respond remains inert: the account falls back to the key
+ * platform and its ceiling, which is exactly the desired behavior.
  *
- * Le résultat NÉGATIF est mémorisé quelques minutes : sans ça, un compte à clé
- * morte paierait un aller-retour réseau à chaque lecture d'endpoint — et il y en
- * a plusieurs par run.
+ * The NEGATIVE result is stored for a few minutes: without that, an account with a dead key
+ * would pay a network round trip for each endpoint reading — and it y en
+ * has several per run.
  */
 const UNVALIDATED_TTL_MS = 5 * 60 * 1000;
 const unvalidatedProbes = new Map<string, number>();
 
-/** Purge de test — cache de process, pas un état partagé. */
+/** Test purge — process cache, not shared state. */
 export function resetByokProbeCache(): void {
   unvalidatedProbes.clear();
 }
@@ -352,14 +349,14 @@ async function confirmsUnvalidatedKey(params: {
 }
 
 /**
- * BYOK actif de l'utilisateur (un seul), déchiffré et résolu en endpoint, ou
- * null. Ignore une ligne dont la base URL n'est pas résoluble (generic sans URL)
- * ou dont la clé ne déchiffre plus (secret tourné → « reconfigure ta clé »).
+ * Active BYOK of the user (only one), decrypted and resolved at endpoint, or
+ * null. Ignores a line whose URL base is not resolvable (generic without URL)
+ * or whose key no longer decrypts (secret turned → “reconfigure your key”).
  *
- * Ignore aussi — depuis MIN-344 — une clé que le fournisseur n'a jamais reconnue.
- * Une clé inventée levait tous les plafonds d'usage sans avoir jamais fait
- * tourner quoi que ce soit ; une ligne non validée ne vaut donc plus rien, ni
- * ici ni dans `checkAgentQuota`.
+ * Also ignores — since MIN-344 — a key that the provider has never recognized.
+ * An invented key raised all the usual ceilings without ever having done
+ * run anything; an unvalidated line is therefore no longer worth anything, neither
+ * here nor in `checkAgentQuota`.
  */
 export async function getUserByok(
   userId: string,
@@ -391,19 +388,19 @@ export async function getUserByok(
     row.key_encrypted === LOCAL_ENDPOINT_WITHOUT_API_KEY
       ? ""
       : decryptUserAiKey(row.key_encrypted);
-  // La clé reste obligatoire pour tous les providers cloud. Localement, Ollama
-  // et la plupart des serveurs OpenAI-compatibles n'en demandent aucune : le
-  // proxy retirera alors le placeholder d'opencode au lieu de l'envoyer.
+  // The key remains mandatory for all cloud providers. Locally, Ollama
+  // and most OpenAI-compatible servers do not require any: the
+  // proxy will then remove the placeholder from opencode instead of sending it.
   if (!apiKey && !localProvider) return null;
   const baseUrl = resolveProviderBaseUrl(row.provider, row.base_url);
   if (!baseUrl) return null;
-  // Une base URL custom cloud est revalidée à CHAQUE usage, pas seulement à
-  // l'enregistrement (MIN-341) : entre les deux, le DNS du domaine appartient
-  // toujours à celui qui l'a saisi, et rien n'empêche qu'il pointe désormais
-  // sur le réseau interne. Une URL devenue irrésoluble tombe dans le même cas
-  // que les autres lignes inutilisables — on l'ignore.
-  // Le serveur ne résout jamais une adresse locale : seuls le proxy LLM et le
-  // harness de l'app de bureau y accèdent.
+  // A custom cloud URL database is revalidated for EACH use, not just for
+  // the registration (MIN-341): between the two, the DNS of the domain belongs
+  // always to the one who seized it, and nothing prevents it from now on pointing
+  // on the internal network. A URL that has become unresolvable falls into the same situation
+  // that the other unusable lines — we ignore it.
+  // The server never resolves a local address: only the LLM proxy and the
+  // harness from the desktop app access it.
   if (row.base_url && !localProvider) {
     try {
       await assertPublicHttpUrl(baseUrl);
@@ -428,7 +425,7 @@ export async function getUserByok(
   };
 }
 
-/** True si l'utilisateur a un BYOK utilisable (→ usage illimité). */
+/** True if the user has a usable BYOK (→ unlimited use). */
 export async function userHasByokKey(
   userId: string,
   surface: AiSurface = "agent",
@@ -436,17 +433,17 @@ export async function userHasByokKey(
   return (await getUserByok(userId, surface)) != null;
 }
 
-// ── Capacités par modèle, lues dans l'index OpenRouter ──────────────────────
-// L'index lui-même vit dans `openrouter-index.ts` : une seule lecture de
-// /models pour le catalogue du picker, ces deux capacités et les prix (donc le
-// multiplicateur de plan). Les deux fonctions ci-dessous restent ici parce que
-// c'est ici que la boucle de l'agent va les chercher.
+// ── Capacities per model, read from the OpenRouter index ──────────────────────
+// The index itself lives in `openrouter-index.ts`: a single read of
+// /models for the picker catalog, these two capacities and the prices (so the
+// plan multiplier). The two functions below remain here because
+// this is where the agent loop will look for them.
 
 /**
- * Fenêtre de contexte (tokens) d'un modèle, pour dimensionner le seuil de
- * compaction (~75 %). Uniquement en provider OpenRouter (index /models qui porte
- * `context_length`) ; null sinon → l'appelant retombe sur le seuil par défaut.
- * Best-effort, caché au niveau process.
+ * Context window (tokens) of a model, to size the threshold of
+ * compaction (~75%). Only in OpenRouter provider (index /models which carries
+ * `context_length`); null otherwise → the caller falls back to the default threshold.
+ * Best-effort, hidden at the process level.
  */
 export async function getModelContextWindow(
   model: string,
@@ -458,12 +455,12 @@ export async function getModelContextWindow(
 }
 
 /**
- * Prix d'ENTRÉE du modèle (USD par million de tokens), pour dimensionner le seuil
- * de compaction : ce que le seuil borne est le coût de renvoyer l'historique à
- * chaque round, et ce coût-là n'a de sens qu'au prix du modèle
- * (`agentCompactThreshold`). Même source et mêmes limites que la fenêtre —
- * OpenRouter seulement ; `null` hors de là, et l'appelant retombe sur la valeur
- * calibrée plutôt que d'extrapoler sur une ignorance.
+ * INPUT price of the model (USD per million tokens), to size the threshold
+ * of compaction: what the threshold limits is the cost of returning the history to
+ * each round, and this cost only makes sense at the price of the model
+ * (`agentCompactThreshold`). Same source and same limits as window —
+ * OpenRouter only; `null` out of there, and the caller falls back on the calibrated
+ * value rather than extrapolating on an ignorance.
  */
 export async function getModelInputPrice(
   model: string,
@@ -475,14 +472,14 @@ export async function getModelInputPrice(
 }
 
 /**
- * TOUS les prix du modèle, cache compris — ce que la microVM emporte pour que
- * le harness opencode calcule un coût qui soit le NÔTRE (MIN-286,
- * cf. `VmModelPricing`). Même source et mêmes limites que les deux fonctions
- * ci-dessus : l'index OpenRouter, donc `null` en BYOK direct.
+ * ALL model prices, cache included — what the microVM takes so that
+ * the opencode harness calculates a cost that is OURS (MIN-286,
+ * cf. `VmModelPricing`). Same source and same limits as the two functions
+ * above: the OpenRouter index, therefore `null` in direct BYOK.
  *
- * `null` n'est pas un détail bénin ici : un modèle déclaré sans prix fait rendre
- * `cost: 0` à opencode. L'appelant doit alors écrire l'usage en `estimated`,
- * jamais un zéro au ledger.
+ * `null` is not a benign detail here: a model declared without price makes
+ * `cost: 0` to opencode. The caller must then write the usage in `estimated`,
+ * never a zero in the ledger.
  */
 export async function getModelPricing(
   model: string,
@@ -505,13 +502,13 @@ export async function getModelPricing(
 }
 
 /**
- * Le modèle du run accepte-t-il une image en entrée ? Décide si `read_resource`
- * RENVOIE la maquette au lieu d'en décrire les métadonnées (MIN-111), et si le
- * prompt annonce la capacité. Même source que la fenêtre de contexte : l'index
- * OpenRouter. Hors OpenRouter (BYOK direct openai/anthropic/google/generic), on
- * n'a pas d'index de capacités fiable → `false`, c.-à-d. le comportement d'avant
- * MIN-111 à l'octet près. Envoyer une image à un modèle qui n'en veut pas casse le
- * tour sur un 400 : le défaut conservateur est le bon.
+ * Does the run model accept an image as input? Decides whether `read_resource`
+ * RETURNS the mock instead of describing its metadata (MIN-111), and whether the
+ * prompt announces the capability. Same source as the context window: the index
+ * OpenRouter. Excluding OpenRouter (direct BYOK openai/anthropic/google/generic), on
+ * does not have a reliable capability index → ​​`false`, i.e. the behavior before
+ * MIN-111 to the nearest byte. Sending an image to a model who doesn't want it breaks the
+ * turn on 400: the conservative default is the right one.
  */
 export async function supportsImageInput(
   model: string,
@@ -540,8 +537,8 @@ export interface ResolvedAgentEndpoint {
 }
 
 /**
- * Résout l'endpoint effectif : BYOK de l'user si présent (provider + base URL +
- * clé), sinon la clé plateforme OpenRouter. Lève si aucune clé plateforme.
+ * Resolves the effective endpoint: BYOK the user if present (provider + base URL +
+ * key), otherwise the OpenRouter platform key. Raised if no platform key.
  */
 export async function resolveAgentApiKey(
   userId: string,

@@ -8,20 +8,20 @@ import {
 } from "@/lib/server/routines";
 
 /**
- * Les ROUTINES (MIN-185) de l'utilisateur — la porte HTTP de la fabrique.
+ * User ROUTINES (MIN-185) — the HTTP gate to the factory.
  *
- * `GET` liste celles de TOUS ses projets accessibles, possédés ou rejoints : un
- * membre voit ce qui tourne sur le dépôt qu'il partage. `POST` crée, et rend le
- * `403 ownerOnly` de la fabrique tel quel — c'est le budget du propriétaire qui
- * part tous les lundis, et l'UI n'offre le « + » qu'à lui.
+ * `GET` lists those of ALL its accessible, owned or joined projects: a
+ * member sees what is running on the repository they share. `POST` creates, and returns the
+ * `403 ownerOnly` of the factory as is — it is the owner's budget that
+ * leaves every Monday, and the UI only offers the “+” to him.
  *
- * Aucune validation ici : elle est dans `lib/server/routines.ts`, la même pour
- * les quatre portes. Cette route ne fait que lire un corps et traduire un statut.
+ * No validation here: it is in `lib/server/routines.ts`, the same for
+ * the four doors. This route only reads a body and translates a status.
  */
 
 export const runtime = "nodejs";
 
-/** Bornes du corps, comme la route de lancement carnet (MIN-118). */
+/** Body terminals, such as the notebook launch route (MIN-118). */
 const MAX_PROMPT_LENGTH = 20_000;
 const MAX_SHORT_FIELD = 255;
 
@@ -47,8 +47,8 @@ export function routineErrorResponse(result: {
   return NextResponse.json(
     {
       error: result.errorKey,
-      // `code` en double : c'est la clé que l'UI traduit, et les autres routes
-      // du dépôt la servent sous ce nom.
+      // `code` duplicate: this is the key that the UI translates, and the other routes
+      // of the depot serve it under this name.
       code: result.errorKey,
       modelLimit: result.modelLimit,
       scheduleCode: result.scheduleCode,
@@ -72,8 +72,8 @@ function num(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-/** Les jours d'une cadence — bornés en nombre, jamais en valeur (la fabrique
-    valide l'intervalle et la cohérence avec la fréquence). */
+/** The days of a cadence — limited in number, never in value (the factory
+ validates the interval and consistency with frequency). */
 function days(value: unknown): number[] {
   return Array.isArray(value)
     ? value.filter((v): v is number => typeof v === "number").slice(0, 31)
@@ -105,8 +105,8 @@ export async function POST(request: NextRequest) {
     model: str(body.model, MAX_SHORT_FIELD) || null,
     reasoningLevel: str(body.reasoningLevel, 32) || null,
     baseBranch: str(body.baseBranch, MAX_SHORT_FIELD) || null,
-    // Absent = le défaut de la fabrique (90 %). La borne 1–100 est la sienne
-    // aussi : une seule règle pour les quatre portes.
+    // Absent = factory defect (90%). Terminal 1–100 is his
+    // also: only one rule for the four doors.
     maxSpendPercent: num(body.maxSpendPercent),
     frequency: str(body.frequency, 32),
     hour: num(body.hour) ?? 9,

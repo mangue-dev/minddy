@@ -1,19 +1,19 @@
 import { NextResponse } from "next/server";
 
 /**
- * Le SHA du déploiement qui sert VRAIMENT le trafic (MIN-157).
+ * The SHA of the deployment that REALLY serves the traffic (MIN-157).
  *
- * Le client compare cette valeur à `NEXT_PUBLIC_GIT_COMMIT_SHA`, figée dans son
- * bundle au build (voir next.config.mjs) : un écart veut dire qu'un déploiement
- * plus récent est en ligne, et l'onglet propose de recharger.
+ * The client compares this value to `NEXT_PUBLIC_GIT_COMMIT_SHA`, fixed in its
+ * bundle to the build (see next.config.mjs): a gap means that a deployment
+ * newer is online, and the tab offers to reload.
  *
- * Pas d'authentification : le SHA du build est déjà dans le bundle client, et
- * celui de la prod est de toute façon public sur le dépôt.
+ * No authentication: the SHA of the build is already in the client bundle, and
+ * the production one is public on the repository anyway.
  *
- * `force-dynamic` + `no-store` sont l'essentiel du contrat. Une réponse mise en
- * cache — par le CDN de Vercel ou par le navigateur — serait celle de l'ANCIEN
- * déploiement, c'est-à-dire un SHA toujours égal à celui du bundle : la
- * détection ne se déclencherait jamais.
+ * `force-dynamic` + `no-store` are the essence of the contract. A response put into
+ * cache — by the Vercel CDN or by the browser — would be that of the OLD
+ * deployment, that is to say an SHA always equal to that of the bundle: the
+ * detection would never trigger.
  */
 export const dynamic = "force-dynamic";
 

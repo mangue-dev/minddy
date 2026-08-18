@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-279 — la dérivation des rétroliens, par-dessus deux tables en mémoire.
+ * MIN-279 — the derivation of trackbacks, over two tables in memory.
  *
- * On ne moque QUE ce qui sort du process (`pages` et `page_links`) : le vrai
- * `lib/server/page-links.ts` tourne au-dessus, scanner commun compris. C'est lui
- * qu'on veut voir réécrire une source EN ENTIER, et refuser les deux pièges qui
- * font qu'une table dérivée ment :
+ * We ONLY mock what comes out of the process (`pages` and `page_links`): the real
+ * `lib/server/page-links.ts` runs above, common scanner included. It is he
+ * that we want to see rewrite an ENTIRE source, and refuse the two traps which
+ * make a derived table lie:
  *
- *  - la citation RETIRÉE qui reste (le diff incrémental qu'on a refusé) ;
- *  - la page SANS TITRE, dont le libellé vide entre dans l'alternance du
- *    scanner comme une branche qui matche la chaîne vide — et fait alors de
- *    CHAQUE « @ » du texte une citation de la page qu'on vient d'ouvrir.
+ * - the REMOVED quote which remains (the incremental diff which we refused);
+ * - the page WITHOUT TITLE, whose empty label enters the alternation of
+ * scan as a branch which matches the empty string — and then makes of
+ * EACH “@” in the text a quote from the page that has just been opened.
  */
 
 interface LinkRow {
@@ -86,7 +86,7 @@ import { citedPageIds, sourceText, syncPageBodyLinks, syncPageLinks } from "./pa
 
 const service = getServiceClient();
 
-/** Un document ProseMirror d'un seul paragraphe, comme l'éditeur en écrit. */
+/** A single paragraph ProseMirror document, as the editor writes it. */
 const doc = (text: string) => ({
   type: "doc",
   content: [
@@ -104,10 +104,10 @@ beforeEach(() => {
   h.pages.push(
     { id: "spec", project_id: "p1", title: "Spec API", icon: "📘", content: null },
     { id: "guide", project_id: "p1", title: "Guide", icon: null, content: null },
-    // Une page NEUVE, encore sans titre : elle ne se cite pas, et surtout elle
-    // ne doit pas se faire citer par tout ce qui porte une arobase.
+    // A NEW page, still without title: it cannot be cited, and above all it
+    // should not be cited by anything bearing an at sign.
     { id: "draft", project_id: "p1", title: "", icon: null, content: null },
-    // Un AUTRE projet : ses titres n'entrent pas dans le scanner de p1.
+    // ANOTHER project: its titles do not enter p1's scanner.
     { id: "other", project_id: "p2", title: "Spec API", icon: null, content: null }
   );
 });
@@ -128,7 +128,7 @@ describe("citedPageIds", () => {
       "guide",
       "spec",
     ]);
-    // Deux fois la même page = un seul lien : c'est un état, pas un compteur.
+    // Twice the same page = only one link: it's a state, not a counter.
     expect(citedPageIds("@Guide puis @Guide", pages)).toEqual(["guide"]);
     expect(citedPageIds("aucune citation ici", pages)).toEqual([]);
   });
@@ -199,7 +199,7 @@ describe("syncPageLinks", () => {
       { kind: "issue", id: "i2", projectId: "p2" },
       "cf. @Spec API"
     );
-    // Le titre existe des deux côtés : c'est la page de p2 qui doit sortir.
+    // The title exists on both sides: it is the page of p2 which must come out.
     expect(linksOf("issue", "i2")).toEqual(["other"]);
   });
 
@@ -221,7 +221,7 @@ describe("syncPageBodyLinks", () => {
     await syncPageBodyLinks(service, ["guide"]);
     expect(linksOf("page", "guide")).toEqual(["spec"]);
 
-    // Idempotent : rejouer la dérivation ne peut pas la faire diverger — c'est
+    // Idempotent: replaying the derivation cannot make it diverge — it is
     // ce qui rend un rattrapage rejouable sans risque.
     await syncPageBodyLinks(service, ["guide"]);
     expect(linksOf("page", "guide")).toEqual(["spec"]);

@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 //
-// L'aller-retour markdown ⇄ éditeur du carnet, joué en entier sur un VRAI
-// éditeur TipTap (sans React : la vue de la tâche vit à part, cf. task-nodes.ts).
-// C'est le seul endroit d'où l'on voit ce que le carnet ENREGISTRE vraiment —
-// à l'écran, une sous-tâche a la même tête qu'elle soit imbriquée ou non, et les
-// deux défauts corrigés ici (liste « lâche », arbre aplati au collage) ne se
-// lisaient que dans le markdown, c'est-à-dire chez l'agent qui le reçoit.
+// The round trip markdown ⇄ notebook editor, played in full on a REAL
+// TipTap editor (without React: the task view lives separately, see task-nodes.ts).
+// This is the only place where you can see what the notebook actually RECORDS —
+// on the screen, a subtask has the same head whether it is nested or not, and the
+// two defects corrected here (“loose” list, tree flattened when gluing) are not
+// read only in the markdown, that is to say in the agent who receives it.
 import { afterEach, describe, expect, it } from "vitest";
 import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
@@ -24,14 +24,14 @@ import { taskLinesMarkdown } from "@/lib/scratchpad";
 import { parsePlan } from "@/lib/plan";
 
 /**
- * Les éditeurs ouverts par le fichier. Un `Editor` TipTap monte un
- * `DOMObserver` de ProseMirror qui se replanifie par `setTimeout` ; sans
- * `destroy()`, ce minuteur survit au fichier et se réveille une fois le
- * `document` de jsdom démonté — `ReferenceError: document is not defined`,
- * remonté par vitest comme une erreur non gérée de la SUITE, sur le fichier qui
- * tournait à cet instant. Il ne se déclenchait pas toujours : il lui fallait
- * assez de charge pour que le minuteur rate sa fenêtre. C'est le fichier qui
- * ouvre qui ferme.
+ * Editors opened by the file. A `Editor` TipTap mounts a
+ * `DOMObserver` from ProseMirror which reschedules with `setTimeout`; without
+ * `destroy()`, this timer survives the file and wakes up once the
+ * `document` of jsdom is unmounted — `ReferenceError: document is not defined`,
+ * remounted by vitest as an unhandled error of the SUITE, on the file which
+ * was running at that moment. It didn't always trigger: it needed
+ * enough charge for the timer to miss its window. This is the file that
+ * opens and closes.
  */
 const openEditors: Editor[] = [];
 
@@ -61,7 +61,7 @@ function md(editor: Editor): string {
   ).markdown.getMarkdown();
 }
 
-/** La position et le nœud de la `n`-ième tâche du document (ordre du document). */
+/** The position and node of the `n`-th task of the document (document order). */
 function taskAt(editor: Editor, n: number) {
   let seen = -1;
   let found: { pos: number; node: any } | null = null;
@@ -77,7 +77,7 @@ function taskAt(editor: Editor, n: number) {
 
 const NESTED = "- [ ] parent\n  - [~] child\n    - [x] grand\n- [ ] sib";
 
-describe("sérialisation du carnet", () => {
+describe("scratchpad serialization", () => {
   it("n'insère pas de ligne blanche entre les tâches", () => {
     expect(md(makeEditor("- [ ] a\n- [~] b"))).toBe("- [ ] a\n- [~] b");
   });
@@ -86,7 +86,7 @@ describe("sérialisation du carnet", () => {
     expect(md(makeEditor(NESTED))).toBe(NESTED);
   });
 
-  it("est stable d'un aller-retour au suivant", () => {
+  it("is stable from one round trip to the next", () => {
     const once = md(makeEditor(NESTED));
     expect(md(makeEditor(once))).toBe(once);
   });
@@ -98,21 +98,21 @@ describe("sérialisation du carnet", () => {
   });
 });
 
-describe("coller du markdown à sous-tâches", () => {
-  it("dans un carnet vide", () => {
+describe("pasting markdown into subtasks", () => {
+  it("in an empty scratchpad", () => {
     const e = makeEditor("");
     expect(pasteScratchpadMarkdown(e, NESTED)).toBe(true);
     expect(md(e)).toBe(NESTED);
   });
 
-  it("le curseur dans un paragraphe de prose — la liste arrive en bloc", () => {
+  it("places the cursor in a prose paragraph — the list arrives as a block", () => {
     const e = makeEditor("intro");
     e.commands.focus("end");
     pasteScratchpadMarkdown(e, NESTED);
     expect(md(e)).toBe(`intro\n\n${NESTED}`);
   });
 
-  it("le curseur sur la tâche vide qu'on vient d'ouvrir", () => {
+  it("places the cursor on the empty task just opened", () => {
     const e = makeEditor("- [ ] déjà là");
     e.commands.focus("end");
     e.commands.splitListItem("taskItem");
@@ -127,8 +127,8 @@ describe("coller du markdown à sous-tâches", () => {
   });
 });
 
-describe("un geste sur une tâche emporte ses sous-tâches", () => {
-  it("sort le sous-arbre entier, ramené au premier niveau", () => {
+describe("an action on a task carries its subtasks", () => {
+  it("extracts the entire subtree, brought to the top level", () => {
     const e = makeEditor(NESTED);
     expect(taskLinesMarkdown(taskItemLines(taskAt(e, 0).node))).toBe(
       "- [ ] parent\n  - [~] child\n    - [x] grand"
@@ -142,26 +142,26 @@ describe("un geste sur une tâche emporte ses sous-tâches", () => {
     );
   });
 
-  it("ne colle pas le texte des enfants à celui du parent", () => {
+  it("does not append the children's text to the parent's", () => {
     const e = makeEditor(NESTED);
     expect(taskItemLines(taskAt(e, 0).node)[0].text).toBe("parent");
   });
 
-  it("démarrer un parent démarre ce qu'il reste à faire en dessous", () => {
+  it("starting a parent starts what remains to do below it", () => {
     const e = makeEditor("- [ ] parent\n  - [ ] child\n  - [x] fait\n- [ ] sib");
     const { pos, node } = taskAt(e, 0);
     expect(startPendingTasks(e, pos, pos + node.nodeSize)).toBe(2);
     expect(md(e)).toBe("- [~] parent\n  - [~] child\n  - [x] fait\n- [ ] sib");
   });
 
-  it("un parent déjà en cours démarre quand même sa descendance", () => {
+  it("a parent already in progress still starts its descendants", () => {
     const e = makeEditor("- [~] parent\n  - [ ] child");
     const { pos, node } = taskAt(e, 0);
     expect(startPendingTasks(e, pos, pos + node.nodeSize)).toBe(1);
     expect(md(e)).toBe("- [~] parent\n  - [~] child");
   });
 
-  it("mais un enfant ne démarre pas son parent", () => {
+  it("but a child does not start its parent", () => {
     const e = makeEditor("- [ ] parent\n  - [ ] child");
     const { pos, node } = taskAt(e, 1);
     expect(startPendingTasks(e, pos, pos + node.nodeSize)).toBe(1);

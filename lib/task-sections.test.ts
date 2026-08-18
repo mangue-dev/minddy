@@ -1,20 +1,20 @@
 // @vitest-environment jsdom
 //
-// La section d'une tâche, jouée sur un VRAI document de page.
+// The section of a task, played on a REAL page document.
 //
-// C'est le seul canal par lequel une tâche confiée à un agent emporte de quoi
-// se situer (MIN-274) : « relancer le cron » sous « Déploiement » n'est pas la
-// même tâche que sous « Idées ». Rien ne signale l'erreur si ce chemin se
-// trompe — le prompt part quand même, il décrit juste autre chose. D'où ce
-// fichier : on monte le schéma réel des pages, on écrit du markdown, et on
-// demande à chaque tâche du document où elle croit vivre.
+// This is the only channel through which a task entrusted to an agent takes away something
+// locate (MIN-274): “restart the cron” under “Deployment” is not there
+// same task as under “Ideas”. Nothing indicates the error if this path is
+// mislead — the prompt still leaves, it just describes something else. Gentle
+// file: we create the actual layout of the pages, we write markdown, and we
+// asks each task in the document where it believes it lives.
 
 import { describe, expect, it } from "vitest";
 import { Editor } from "@tiptap/core";
 import { pageExtensions } from "@/components/pages/page-extensions";
 import { taskSectionHeadings } from "@/lib/task-sections";
 
-/** Un éditeur de PAGE sans vue de nœud, et le markdown chargé dedans. */
+/** A PAGE editor without a node view, and the markdown loaded into it. */
 function pageWith(markdown: string): Editor {
   const editor = new Editor({
     element: document.createElement("div"),
@@ -24,7 +24,7 @@ function pageWith(markdown: string): Editor {
   return editor;
 }
 
-/** La section de la `n`-ième tâche du document, dans l'ordre de lecture. */
+/** The section of the `n`-th task of the document, in reading order. */
 function sectionOf(editor: Editor, index: number): string[] {
   const found: number[] = [];
   editor.state.doc.descendants((node, pos) => {
@@ -62,8 +62,8 @@ describe("la section d'une tâche de page", () => {
       "# Post-mortem",
       "## Ce qui a cassé",
     ]);
-    // La section précédente est FERMÉE par sa sœur de même rang : la deuxième
-    // tâche n'en a jamais fait partie.
+    // The previous section is CLOSED by its sister of the same rank: the second
+    // task was never part of it.
     expect(sectionOf(editor, 1)).toEqual(["# Post-mortem", "## Suites"]);
     editor.destroy();
   });
@@ -78,8 +78,8 @@ describe("la section d'une tâche de page", () => {
     const editor = pageWith(
       "## Suites\n\n- [ ] relancer le cron\n  - [ ] vérifier les logs\n"
     );
-    // La sous-tâche est bien IMBRIQUÉE (sans quoi le cas ne prouverait rien) :
-    // c'est de son bloc de premier niveau qu'on remonte, pas d'elle-même.
+    // The subtask is NESTED (otherwise the case would prove nothing):
+    // it is from its first level block that we go back, not from itself.
     const depths: number[] = [];
     editor.state.doc.descendants((node, pos) => {
       if (node.type.name === "taskItem")

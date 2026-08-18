@@ -1,23 +1,23 @@
 /**
- * Les couleurs de l'orbe d'un projet — la pastille dégradée qui tient lieu
- * d'icône quand le projet n'a pas importé la sienne (MIN-62).
+ * The colors of a project's orb — the gradient patch that takes the place of
+ * the icon when the project has not imported its own (MIN-62).
  *
- * Le hachage vit ICI plutôt que dans `components/project-orb.tsx` parce qu'il a
- * désormais deux lecteurs : le composant, côté client, et l'email d'invitation,
- * côté serveur (MIN-197). Un module « use client » n'exporte vers le serveur que
- * des références client — `projectOrbStyle` importée de là lèverait à l'appel. Et
- * recopier le hachage le ferait dériver en silence : le même projet n'aurait
- * plus la même couleur dans le mail et dans l'app.
+ * The hash lives HERE rather than in `components/project-orb.tsx` because it a
+ * now two readers: the component, client side, and the invitation email,
+ * server side (MIN-197). A “use client” module only exports to the server
+ * client references — `projectOrbStyle` imported from there would raise when called. And
+ * copying the hash would cause it to drift silently: the same project would no longer have
+ * the same color in the email and in the app.
  */
 
 /**
- * La graine de l'orbe d'un projet.
+ * The seed of a project's orb.
  *
- * `orb_seed` ne porte une valeur que si le tirage a été RELANCÉ au moins une
- * fois ; sinon la graine reste l'identifiant du projet, comme depuis MIN-62.
- * C'est ce qui permet d'ajouter la relance sans repeindre les projets
- * existants — et ce qui rend ce petit résolveur obligatoire partout où une
- * orbe se dessine : passer `project.id` en direct, c'est ignorer une relance.
+ * `orb_seed` only carries a value if the draw has been RUNLED at least once
+ * times; otherwise the seed remains the project identifier, as since MIN-62.
+ * This is what allows you to add the restart without repainting the existing
+ * projects — and what makes this little resolver mandatory wherever an
+ * orb appears: passing `project.id` directly means ignoring an restart.
  */
 export function projectOrbSeed(project: {
   id: string;
@@ -27,27 +27,27 @@ export function projectOrbSeed(project: {
 }
 
 /**
- * La même règle, pour les surfaces qui ne portent pas la ligne de la base : le
- * board public et les pilules de mention transportent un projet en camelCase,
- * l'agent une projection réduite. Elles appellent ici plutôt que de recopier le
- * `??` — qui dériverait le jour où la règle changerait.
+ * The same rule, for surfaces that do not carry the baseline: the
+ * public board and the mention pills carry a project in camelCase,
+ * the agent a reduced projection. They call here rather than copying the
+ * `??` — which would be the day the rule changes.
  */
 export function orbSeedOr(id: string, seed: string | null | undefined): string {
   return seed || id;
 }
 
 /**
- * Hachage 32 bits d'une graine, SALÉ — la même graine et deux sels différents
- * donnent deux valeurs sans rapport l'une avec l'autre.
+ * 32-bit hash of a seed, SALTED — the same seed and two different salts
+ * give two unrelated values.
  *
- * C'est ce qui permet de tirer plusieurs traits indépendants d'une seule graine.
- * Le djb2 d'avant n'en donnait qu'un (`hash % 360`), et il ne se resalait pas :
- * ses bits de poids faible portaient déjà toute l'information, en tirer une
- * seconde valeur aurait donné une teinte et une saturation corrélées.
+ * This is what allows multiple independent traits to be drawn from a single seed.
+ * The djb2 before only gave one (`hash % 360`), and it didn't resalt:
+ * its least significant bits already carried all the information, getting a
+ * second value would have given a correlated hue and saturation.
  *
- * FNV-1a, puis l'avalanche finale de murmur3 : sans elle, deux uuid ne différant
- * que par leurs derniers caractères sortent voisins, ce qui est exactement le
- * cas d'usage ici (des graines tirées à la suite).
+ * FNV-1a, then the final avalanche of murmur3: without it, two uuids differing
+ * only by their last characters come out neighbors, which is exactly the
+ * use case here (seeds drawn in succession).
  */
 function hash32(seed: string, salt: number): number {
   let h = (2166136261 ^ Math.imul(salt, 0x9e3779b1)) >>> 0;
@@ -62,12 +62,12 @@ function hash32(seed: string, salt: number): number {
 }
 
 /**
- * Un réel de `[min, max)` tiré de la graine sur le sel donné.
+ * A real number of `[min, max)` taken from the seed on the given salt.
  *
- * Arrondi à trois décimales : ces valeurs partent dans des `style` en ligne, et
- * un flottant complet y écrirait dix-sept chiffres pour une teinte qu'aucun œil
- * ne distingue au millième. Trois décimales laissent bien plus de nuances que
- * l'écran n'en rend.
+ * Rounded to three decimal places: these values go into online `style`, and
+ * a full float would write seventeen digits there for a hue that none eye
+ * does not distinguish to the thousandth. Three decimal places leave many more nuances than
+ * the screen renders.
  */
 function pick(seed: string, salt: number, min: number, max: number): number {
   const value = min + (hash32(seed, salt) / 4294967296) * (max - min);
@@ -75,42 +75,42 @@ function pick(seed: string, salt: number, min: number, max: number): number {
 }
 
 /**
- * Le dessin complet d'une orbe, tiré de sa graine.
+ * The complete drawing of an orb, taken from its seed.
  *
- * **Sept traits, pas un.** La version d'origine ne tirait que la TEINTE : tout
- * le reste — saturation, clarté, écart entre les deux teintes, orientation du
- * conique, place du reflet — était écrit en dur. Deux orbes ne se distinguaient
- * donc que par leur position sur la roue, et l'œil ne sépare pas deux teintes à
- * moins d'une soixantaine de degrés : une relance sur trois retombait sur
- * quelque chose de très proche. En faisant varier les sept, deux tirages
- * voisins en teinte restent séparés par leur profondeur, leur orientation ou
- * leur éclat.
+ * **Seven strokes, not one.** The original version only drew the HUE: all
+ * the rest — saturation, clarity, distance between the two hues, orientation of the
+ * conical, square of the reflection — was written in hard. Two orbs were only distinguished
+ * by their position on the wheel, and the eye does not separate two hues at
+ * less than sixty degrees: one raise in three fell on
+ * something very close. By varying the seven, two prints
+ * neighbors in hue remain separated by their depth, their orientation or
+ * their brightness.
  *
- * Les bornes sont resserrées exprès. La clarté reste dans une bande qui se lit
- * sur fond clair COMME sur fond sombre, et la saturation ne descend pas là où
- * l'orbe virerait au gris — c'est une pastille de 14 à 20 px, pas une image.
+ * The terminals are tightened on purpose. Clarity stays in a band that reads
+ * on a light background AS well as a dark background, and the saturation doesn't go down where
+ * the orb would turn gray — it's a 14-20 px patch, not an image.
  */
 export interface ProjectOrbStyle {
   /** Teinte de base, [0,360). */
   hue: number;
-  /** Seconde teinte du dégradé — de l'analogue au presque complémentaire. */
+  /** Second shade of the gradient — from analogous to almost complementary. */
   hue2: number;
   /** Saturation OKLCH de l'aplat. */
   chroma: number;
-  /** Clarté OKLCH de l'aplat. */
+  /** OKLCH clarity of the solid color. */
   lightness: number;
-  /** Orientation du dégradé conique, en degrés. */
+  /** Orientation of the conical gradient, in degrees. */
   angle: number;
-  /** Centre du reflet, en pourcentage de la pastille. */
+  /** Center of reflection, as a percentage of the patch. */
   highlightX: number;
   highlightY: number;
 }
 
 export function projectOrbStyle(seed: string): ProjectOrbStyle {
   const hue = pick(seed, 1, 0, 360);
-  // L'écart signé entre les deux teintes : au-delà de ~30° il se voit, au-delà
-  // de ~170° les deux se croisent de l'autre côté de la roue et l'écart
-  // rétrécit à nouveau.
+  // The difference between the two shades: beyond ~30° it is visible, beyond
+  // by ~170° the two intersect on the other side of the wheel and the gap
+  // shrinks again.
   const spread =
     pick(seed, 2, 30, 170) * (hash32(seed, 3) % 2 === 0 ? 1 : -1);
   return {
@@ -125,8 +125,8 @@ export function projectOrbStyle(seed: string): ProjectOrbStyle {
 }
 
 /**
- * La couleur d'aplat de l'orbe, en OKLCH — ce qu'on peint quand on veut LA
- * couleur du projet sans son dégradé : le fond d'une pilule de mention.
+ * The solid color of the orb, in OKLCH — what we paint when we want LA
+ * color of the project without its gradient: the background of a mention pill.
  */
 export function projectOrbBaseColor(seed: string): string {
   const { lightness, chroma, hue } = projectOrbStyle(seed);
@@ -134,10 +134,10 @@ export function projectOrbBaseColor(seed: string): string {
 }
 
 /**
- * OKLCH → hexadécimal sRGB. L'app peint l'orbe en OKLCH, qu'aucun client mail
- * ne lit : on convertit une fois ici pour que le mail montre EXACTEMENT la
- * couleur de l'app, plutôt qu'une approximation écrite à la main qui vieillirait
- * mal. Chemin classique OKLab → LMS → sRGB linéaire → gamma.
+ * OKLCH → hexadecimal sRGB. The app paints the orb in OKLCH, which no mail
+ * client reads: we convert once here so that the email shows EXACTLY the
+ * color of the app, rather than a hand-written approximation which would age
+ * poorly. Classic path OKLab → LMS → linear sRGB → gamma.
  */
 export function oklchToHex(l: number, c: number, hue: number): string {
   const rad = (hue * Math.PI) / 180;
@@ -165,11 +165,8 @@ export function oklchToHex(l: number, c: number, hue: number): string {
 }
 
 /**
- * L'orbe réduit à ce qu'un client mail sait peindre : un aplat (que tout le
- * monde rend, Outlook compris) et un dégradé linéaire par-dessus (que les
- * autres rendent). Le conique flouté et le reflet du composant n'ont pas
- * d'équivalent là-bas — ces trois couleurs en gardent la teinte et la
- * profondeur.
+ * The orb is reduced to what an email client can paint: a solid color (that everyone renders, Outlook included) and a linear gradient on top (that the others render). The blurred conic and the reflection of the component have no equivalent there — these three colors keep the hue and the
+ * depth.
  */
 export function projectOrbGradient(seed: string): {
   base: string;

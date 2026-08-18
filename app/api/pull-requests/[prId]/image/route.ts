@@ -6,13 +6,13 @@ import {
 } from "@/lib/server/agent/pr-actions";
 
 /**
- * GET /api/pull-requests/[prId]/image?asset=<uuid> — une image collée dans un
- * commentaire de la PR (MIN-162).
+ * GET /api/pull-requests/[prId]/image?asset=<uuid> — an image pasted into an
+ * PR commentary (MIN-162).
  *
- * Sans ce détour, l'image ne s'affiche pas : l'URL que porte le corps markdown
- * exige une session GitHub que minddy n'a pas. Le pourquoi et la mesure sont
- * dans `lib/forge-image-assets` ; les gardes (identifiant contraint, cible
- * résolue par la forge, hôte vérifié, type MIME déduit du chemin) dans
+ * Without this detour, the image is not displayed: the URL carried by the markdown body
+ * requires a GitHub session which minddy does not have. The why and the measure are
+ * in `lib/forge-image-assets` ; the guards (constrained identifier, target
+ * resolved by forge, host checked, MIME type deduced from path) in
  * `prCommentImageResponse`.
  */
 

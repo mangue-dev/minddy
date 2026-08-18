@@ -9,9 +9,9 @@ import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { ISSUE_PRIORITIES, ISSUE_EFFORTS } from "@/lib/issue-validation";
 
 /**
- * GET /api/v1/issues/options — API publique d'intégration (Bearer mdy_…).
- * Expose les options du projet pour que l'app externe mappe son propre
- * formulaire de création : catégories vivantes + enums priorité/effort.
+ * GET /api/v1/issues/options — Public integration API (Bearer mdy_…).
+ * Exposes project options for the external app to map its own
+ * creation form: living categories + priority/effort enums.
  */
 export async function GET(request: NextRequest) {
   const auth = await authenticateIntegration(request);

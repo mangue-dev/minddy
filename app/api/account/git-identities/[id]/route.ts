@@ -6,11 +6,11 @@ import { deleteUserIdentity } from "@/lib/server/git/user-identities";
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * DELETE /api/account/git-identities/[id] — déconnecte le compte git personnel
- * (MIN-144). Ne touche QUE `git_user_identities` : le compte GitLab, lui, est la
- * connexion OAuth du compte, et la supprimer délierait les dépôts de tous les
- * projets qui l'utilisent — ça se fait dans « Comptes git connectés », où
- * l'avertissement est écrit.
+ * DELETE /api/account/git-identities/[id] — disconnects personal git account
+ * (MIN-144). ONLY touches `git_user_identities`: the GitLab account is the
+ * account's OAuth connection, and removing it would unbind the repositories of all
+ * projects that use it — this is done in “Connected git accounts”, where
+ * the warning is written.
  */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;

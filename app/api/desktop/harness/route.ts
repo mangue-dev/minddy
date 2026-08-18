@@ -4,35 +4,35 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { harnessBundleManifest } from "@/lib/server/agent/harness-bundle";
 
 /**
- * `GET /api/desktop/harness` — LE MANIFESTE DU HARNESS (MIN-293).
+ * `GET /api/desktop/harness` — THE HARNESS MANIFESTO (MIN-293).
  *
- * La première des deux surfaces par lesquelles une machine récupère le code
- * qu'elle va exécuter. Elle rend quatre nombres et deux chaînes, et c'est ce qui
- * permet de ne PAS retélécharger 280 Ko à chaque tour : le lanceur compare
- * l'empreinte à celle du fichier qu'il a déjà sous `userData`.
+ * The first of two surfaces by which a machine retrieves the code
+ * which she will execute. It returns four numbers and two strings, and that's what
+ * allows NOT to redownload 280 KB each turn: the launcher compares
+ * the fingerprint to that of the file he already has under `userData`.
  *
- * ## Ce qu'elle sert, et pourquoi elle est authentifiée
+ * ## What it is used for, and why it is authenticated
  *
- * Le bundle ne porte AUCUN secret, et un test le tient
+ * The bundle carries NO secrets, and a test holds it
  * ([vm-bundle-secrets.test.ts](../../../../lib/server/agent/vm-bundle-secrets.test.ts)) :
- * il est écrit dans chaque microVM, où le modèle exécute du shell. L'ouvrir en
- * anonyme ne divulguerait donc rien qu'un run ne divulgue déjà. Mais il n'y a
- * aucune raison de le laisser à la portée d'un aspirateur : la seule personne
- * qui en a besoin est quelqu'un de connecté, dans l'app de bureau, sur le point
- * de jouer un tour. Un membre de plus dans la liste des choses qu'on sert au
- * monde entier est un membre de plus à défendre.
+ * it is written in each microVM, where the model runs from the shell. Open it in
+ * anonymous would therefore not disclose anything that a run does not already disclose. But there is no
+ * no reason to leave it within reach of a vacuum cleaner: the only person
+ * who needs it is someone logged in, in the desktop app, on the verge
+ * to play a trick. One more member in the list of things we serve at
+ * whole world is one more member to defend.
  *
- * L'app appelle avec sa session (`session.defaultSession.fetch`), donc les
- * cookies de l'origine du canal actif : c'est ce qui garantit qu'une coquille en
- * preview reçoit le harness de la preview, et non celui de la production —
- * l'origine sert le manifeste ET le bundle ET le plan de contrôle, ou aucun des
+ * The app calls with its session (`session.defaultSession.fetch`), so the
+ * cookies of the origin of the active channel: this is what guarantees that a shell in
+ * preview receives the preview harness, not the production harness —
+ * the origin serves the manifest AND the bundle AND the control plane, or neither
  * trois.
  *
  * ## Pas de cache
  *
- * `force-dynamic` et rien à mettre en cache : le manifeste change à chaque
- * déploiement, et une empreinte périmée ferait refuser le fork au lieu de le
- * réparer. C'est deux cents octets, demandés une fois par tour.
+ * `force-dynamic` and nothing to cache: the manifest changes every time
+ * deployment, and an outdated fingerprint would cause the fork to be refused instead of
+ * fix. That's two hundred bytes, requested once per round.
  */
 
 export const runtime = "nodejs";
@@ -48,11 +48,11 @@ export async function GET(request: NextRequest) {
     });
   } catch (err) {
     /**
-     * LE BUNDLE MANQUE SUR CE DÉPLOIEMENT, et c'est une panne de build, pas une
-     * erreur de l'appelant : `npm run build:agent-vm` n'a pas tourné, ou
-     * `outputFileTracingIncludes` ne l'a pas embarqué. Un 503 le dit à la
-     * machine, qui refuse son tour AVANT le fork et l'écrit dans son journal —
-     * plutôt qu'un 500 anonyme dont personne ne saura quoi faire.
+     * THE BUNDLE IS MISSING ON THIS DEPLOYMENT, and it's a build failure, not a
+     * caller error: `npm run build:agent-vm` did not run, or
+     * `outputFileTracingIncludes` did not ship it. A 503 says it to the
+     * machine, which refuses its turn BEFORE the fork and writes it in its journal —
+     * rather than an anonymous 500 that no one will know what to do with.
      */
     console.error("[desktop-harness] bundle indisponible:", (err as Error).message);
     return NextResponse.json(

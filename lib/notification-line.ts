@@ -1,39 +1,39 @@
 /**
- * Ce qu'une notification DIT — de quoi on parle, et qui a fait quoi (MIN-291).
+ * What a notification SAYS — what we're talking about, and who did what (MIN-291).
  *
- * Ces deux phrases existaient déjà en deux exemplaires : dans la page d'inbox
- * (app/(app)/inbox/page.tsx) et dans la fabrique de charge utile poussée
- * (lib/server/push/payload.ts), qui prend soin de dire qu'elle réutilise les
- * clés de l'inbox « pour ne pas les laisser diverger ». L'app de bureau en
- * aurait fait un troisième — d'où l'extraction ici, du côté où les deux
- * surfaces clientes peuvent la lire.
+ * These two sentences already existed in duplicate: in the inbox
+ * page (app/(app)/inbox/page.tsx) and in the payload factory push
+ * (lib/server/push/payload.ts), which is careful to say that it reuses the
+ * keys from the inbox "so as not to let them diverge". The desktop app en
+ * would have made a third — hence the extraction here, on the side where both
+ * client surfaces can read it.
  *
- * Module PUR : les libellés traduits entrent en PARAMÈTRES. C'est ce qui le rend
- * lisible depuis une notification native (qui n'a pas de contexte React sous la
- * main au moment où elle se construit) comme depuis un composant.
+ * PUR module: the translated labels go into PARAMETERS. This is what makes it
+ * readable from a native notification (which doesn't have a React context under the
+ * main at the time it builds) as well as from a component.
  */
 
 import { mcpActorLabel } from "./mcp-agents";
 import type { MyNotification } from "./types";
 
-/** Les quelques mots traduits dont la ligne a besoin. */
+/** The few translated words the line needs. */
 export interface NotificationLabels {
   /** `Inbox.someone` — quand on ne sait vraiment pas qui a agi. */
   someone: string;
-  /** `Timeline.mcpFallback` — un agent MCP dont la clé ne porte pas de nom. */
+  /** `Timeline.mcpFallback` — an MCP agent whose key is not named. */
   mcpFallback: string;
-  /** `Inbox.somePageFallback` — une page sans titre en a quand même un. */
+  /** `Inbox.somePageFallback` — a page without a title still has one. */
   somePageFallback: string;
-  /** `Inbox.someIssueFallback`, déjà formaté avec le mot « ticket » / « issue ». */
+  /** `Inbox.someIssueFallback`, already formatted with the word “ticket” / “issue”. */
   someIssueFallback: string;
-  /** Une conversation générale de Numo dont le titreur n'a rien écrit. */
+  /** A general conversation from Numo about which the titler has not written anything. */
   someAgentConversationFallback: string;
 }
 
 /**
- * Qui a agi, dans les termes de la timeline : une action passée par le MCP est
- * celle de l'AGENT, une affectation automatique celle de Smart Assign — jamais
- * « Quelqu'un », qui ne renseigne personne.
+ * Who acted, in the terms of the timeline: an action passed by the MCP is
+ * that of the AGENT, an automatic assignment that of Smart Assign — never
+ * “Someone”, who does not inform anyone.
  */
 export function notificationActor(
   n: MyNotification,
@@ -47,9 +47,9 @@ export function notificationActor(
 }
 
 /**
- * De quoi on parle : le titre de la cible. L'ordre suit celui de
- * `notificationTargetPath` — une ligne ne porte qu'une cible, mais rien dans le
- * schéma ne l'impose, et les deux fonctions doivent en désigner la même.
+ * What we're talking about: the title of the target. The order follows that of
+ * `notificationTargetPath` — one line carries only one target, but nothing in the
+ * schema requires it, and the two functions must designate the same one.
  */
 export function notificationTitle(
   n: MyNotification,
@@ -57,17 +57,17 @@ export function notificationTitle(
 ): string {
   if (n.objective_id) return n.objective_name ?? "";
   if (n.feedback_post_id) return n.feedback_title ?? "";
-  // Une routine (MIN-185) : son titre EST la ligne — elle n'a pas de ticket à
-  // nommer, et le repli « un ticket » mentirait sur ce qui s'est passé.
+  // A routine (MIN-185): its title IS the line — it has no ticket
+  // name, and the fallback “a ticket” would lie about what happened.
   if (n.routine_id) return n.routine_title ?? "";
-  // Une pull request : son titre, précédé de son numéro par la référence
-  // affichée à côté — elle n'a pas forcément de ticket à nommer.
+  // A pull request: its title, preceded by its number by the reference
+  // displayed next to it — it does not necessarily have a ticket to name.
   if (n.pull_request_id) return n.pull_request_title ?? "";
   if (n.agent_conversation_id && !n.issue_id) {
     return n.agent_conversation_title || labels.someAgentConversationFallback;
   }
-  // Une PAGE du wiki (MIN-278) : son titre, et le repli explicite quand elle
-  // n'en a pas — une ligne sans titre ne dit plus de quoi on parle.
+  // A PAGE from the wiki (MIN-278): its title, and the explicit fallback when it
+  // doesn't have one — a line without a title no longer says what we're talking about.
   if (n.page_id) return n.page_title || labels.somePageFallback;
   return n.issue_title ?? labels.someIssueFallback;
 }

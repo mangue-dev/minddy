@@ -3,13 +3,13 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
- * Remplace l'ensemble des catégories d'un post de feedback (MIN-52) — full
- * replace : les ids non envoyés sont retirés. Ne garde que les catégories qui
- * appartiennent au projet du post. Pas de journal d'activité (contrairement aux
- * issues) : le jeu de catégories est directement visible sur le post.
+ * Replaces all categories of a feedback post (MIN-52) — full
+ * replace: unsent ids are removed. Only keeps categories that
+ * belong to the post project. No activity log (unlike
+ * issues): the set of categories is directly visible on the post.
  *
- * L'accès est vérifié par la route appelante (requireProjectMember +
- * getProjectFeedbackPost) ; ce cœur suppose (projectId, postId) déjà validés.
+ * Access is checked by the calling route (requireProjectMember +
+ * getProjectFeedbackPost); this core assumes (projectId, postId) already validated.
  */
 export type SetFeedbackCategoriesResult =
   | { ok: true; categoryIds: string[] }
@@ -27,7 +27,7 @@ export async function setFeedbackPostCategories({
   const requested = categoryIds.filter((v): v is string => typeof v === "string");
   const service = getServiceClient();
 
-  // On ne garde que les catégories qui existent dans le projet du post.
+  // We only keep the categories that exist in the post project.
   let valid: string[] = [];
   if (requested.length > 0) {
     const { data: cats } = await service
@@ -48,8 +48,8 @@ export async function setFeedbackPostCategories({
   }
 
   if (valid.length > 0) {
-    // upsert + ignoreDuplicates : tolère une requête concurrente ayant déjà
-    // inséré la même paire (post_id, category_id) — pas de 500 sur la PK.
+    // upsert + ignoreDuplicates: tolerates a concurrent request that already has
+    // inserted the same pair (post_id, category_id) — no 500 on the PK.
     const { error: insError } = await service
       .from("feedback_post_categories")
       .upsert(valid.map((category_id) => ({ post_id: postId, category_id })), {

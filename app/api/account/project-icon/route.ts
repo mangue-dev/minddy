@@ -11,20 +11,20 @@ import {
 
 /**
  * POST /api/account/project-icon → { icon_url }
- *  - multipart `file` → compresse l'image et renvoie une data URL WebP.
- *  - { site_url } → résout le favicon et renvoie son URL distante.
+ * - multipart `file` → compresses the image and returns a WebP URL data.
+ * - { site_url } → resolves the favicon and returns its remote URL.
  *
- * Aperçu, SANS projet et SANS rien stocker : le wizard de création (MIN-62)
- * montre l'icône à l'étape « Icône » alors que le projet n'existe pas encore,
- * et c'est seulement à la création que l'écriture réelle
- * (`/api/projects/[id]/icon`) la pose dans le bucket.
+ * Overview, WITHOUT a project and WITHOUT storing anything: the creation wizard (MIN-62)
+ * shows the icon in the “Icon” step even though the project does not yet exist,
+ * and it is only at creation that real writing
+ * (`/api/projects/[id]/icon`) places it in the bucket.
  *
- * `icon_url` est donc bon pour un <img> d'aperçu et assez court pour tenir dans
- * le brouillon de session — pas une URL stockée. Une image compressée pèse
- * quelques dizaines de Ko : la porter en data URL évite d'écrire dans le bucket
- * un fichier que l'abandon du wizard laisserait orphelin.
+ * `icon_url` is therefore good for an overview <img> and short enough to fit in
+ * the session draft — not a stored URL. A compressed image weighs
+ * a few tens of KB: carrying it as a data URL avoids writing to the bucket
+ * a file that abandoning the wizard would leave orphaned.
  *
- * Le fetch d'un site passe par les mêmes gardes anti-SSRF que l'import.
+ * A site fetch goes through the same anti-SSRF guards as the import.
  */
 export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -36,8 +36,8 @@ export async function POST(request: NextRequest) {
   );
 
   if (isUpload) {
-    // Même garde que la route projet : la compression d'une image est le seul
-    // travail de cet appel, et il est borné en débit (MIN-348).
+    // Same guard as the project route: the compression of an image is the only
+    // work of this call, and it is limited in flow (MIN-348).
     const refused = rateLimitRefusal(auth.user.id, "icon-upload", { limit: 20 });
     if (refused) return refused;
 
@@ -82,8 +82,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: t("iconInvalidUrl") }, { status: 400 });
   }
 
-  // Même motif que la route projet : une requête entrante en fait sortir
-  // plusieurs (la page, puis ses icônes), donc un débit borné (MIN-341).
+  // Same reason as the project route: an incoming request causes it to exit
+  // several (the page, then its icons), therefore a limited flow (MIN-341).
   const refusedImport = rateLimitRefusal(auth.user.id, "icon-import", { limit: 10 });
   if (refusedImport) return refusedImport;
 

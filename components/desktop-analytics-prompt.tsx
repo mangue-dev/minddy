@@ -23,42 +23,42 @@ import {
 import { useAnalytics } from "@/lib/use-analytics";
 
 /**
- * La question de la mesure d'audience, posée UNE FOIS, dans l'app de bureau
+ * The question of audience measurement, asked ONCE, in the desktop app
  * (MIN-291).
  *
- * Le bandeau de bas de page ne suit pas dans la fenêtre : c'est un objet de site
- * (voir components/cookie-banner.tsx). Mais la seule autre porte étant les
- * réglages, personne n'y serait jamais allé de lui-même, et la mesure serait
- * restée éteinte pour tout le monde sans que ce soit un choix. On pose donc la
- * question, à la façon d'une app : au centre, une fois, avec deux réponses
- * franches — et on n'y revient plus.
+ * The footer banner does not follow in the window: it is a site object
+ * (see components/cookie-banner.tsx). But the only other door being the
+ * adjustments, no one would ever have gone there on their own, and the measure would be
+ * remained extinct for everyone without it being a choice. We therefore pose the
+ * question, like an app: in the center, once, with two answers
+ * frank — and we never return to it.
  *
- * ## Trois décisions qui tiennent ensemble
+ * ## Three decisions that hold together
  *
- * **Dans l'app, pas sur l'écran de connexion.** Ce composant vit sous le shell
- * authentifié : demander avant que la personne soit entrée, c'est demander à
- * quelqu'un qui n'est pas encore là.
+ * **In the app, not on the login screen.** This component lives under the shell
+ * authenticated: asking before the person has entered is asking
+ * someone who isn't there yet.
  *
- * **Aucune sortie sans réponse** — ni croix, ni Échap, ni clic à côté. Ce n'est
- * pas pour forcer la main : les deux réponses sont côte à côte et de même poids.
- * C'est pour que la question ne se repose pas au lancement suivant, ce qui la
- * transformerait en harcèlement — le défaut même des bandeaux qu'on remplace.
+ * **No exit without response** — no cross, no escape, no click next to it. This is not
+ * not to force the hand: the two answers are side by side and of the same weight.
+ * This is so that the question does not arise again at the next launch, which
+ * would transform into harassment — the very defect of the blindfolds that are being replaced.
  *
- * **Et elle reste réversible**, dans les réglages, ce que le dialogue dit
- * lui-même plutôt que de le laisser deviner.
+ * **And it remains reversible**, in the settings, what the dialogue says
+ * himself rather than leaving him guessing.
  *
- * ## « Une fois » veut dire une fois, et le stockage local ne suffisait pas
+ * ## “Once” means once, and local storage was not enough
  *
- * Le choix vivait dans le seul localStorage. Dans un navigateur, ça tient — il
- * garde son stockage pour toujours. Ici, non : la question revenait à chaque
- * lancement, et à chaque reconnexion. Un profil neuf, une réinstallation, une
- * coquille de dév, et la modale bloquante repartait de zéro. C'est exactement le
- * harcèlement que le troisième point ci-dessus prétendait éviter.
+ * The choice lived in the only localStorage. In a browser, it holds — it
+ * keeps its storage forever. Here, no: the question came up every time
+ * launch, and at each reconnection. A new profile, a reinstallation, a
+ * dev shell, and the blocking modal started from scratch. This is exactly the
+ * harassment that the third point above purported to avoid.
  *
- * Le choix est donc AUSSI écrit dans le compte (`user_metadata`), et cet
- * écran-ci l'y lit d'abord : un appareil sans choix local mais dont le compte en
- * porte un l'ADOPTE en silence, sans redemander. Voir lib/cookie-consent.ts pour
- * le partage des rôles entre les deux stockages.
+ * The choice is therefore ALSO written in the account (`user_metadata`), and this
+ * This screen reads it first: a device without local choice but whose account in
+ * wears one ADOPTS it silently, without asking again. See lib/cookie-consent.ts for
+ * the sharing of roles between the two storages.
  */
 export function DesktopAnalyticsPrompt() {
   const t = useTranslations("Analytics");
@@ -67,30 +67,30 @@ export function DesktopAnalyticsPrompt() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    // Après le montage : ni le pont ni le stockage local n'existent au rendu
-    // serveur, et les supposer ferait diverger l'hydratation.
+    // After editing: neither the bridge nor the local storage exists when rendered
+    // server, and assuming them would cause the hydration to diverge.
     if (!isDesktop() || readConsent() !== null) return;
-    // La session arrive après le premier rendu : tant qu'elle n'est pas là, on
-    // ne sait pas encore si la question a déjà une réponse, et la poser serait
-    // la poser à quelqu'un qui y a peut-être déjà répondu.
+    // The session arrives after the first rendering: as long as it is not there, we
+    // does not yet know if the question is already answered, and asking it would be
+    // Ask it to someone who may have already answered it.
     if (!user) return;
     const fromAccount = resolveAnalyticsConsent(user.user_metadata);
-    // Adopté sur cet appareil : `writeConsent` prévient PostHog dans la foulée,
-    // donc la mesure part (ou reste coupée) sans rechargement ni question.
+    // Adopted on this device: `writeConsent` immediately warns PostHog,
+    // therefore the measurement leaves (or remains cut) without reloading or question.
     if (fromAccount) writeConsent(fromAccount);
     else setOpen(true);
   }, [user]);
 
   const choose = (consent: CookieConsent) => {
-    // Tracké AVANT `writeConsent`, comme le bandeau : sur un refus, celui-ci
-    // coupe la capture et l'événement ne partirait plus. Il part donc dans le
-    // mode pré-choix — anonyme, sans rien écrire sur l'appareil.
+    // Tracked BEFORE `writeConsent`, like the banner: on a refusal, this one
+    // cut the capture and the event would no longer leave. So he leaves in the
+    // pre-choice mode — anonymous, without writing anything to the device.
     track("cookie_consent_choice", { choice: consent });
     writeConsent(consent);
     setOpen(false);
-    // Le compte, pour que la question ne se repose pas sur le prochain profil.
-    // Détaché volontairement : l'écran est déjà fermé, et une panne de réseau ne
-    // doit pas rouvrir une modale bloquante sur un choix déjà fait ici.
+    // The account, so that the question does not arise on the next profile.
+    // Detached voluntarily: the screen is already closed, and a network failure does not
+    // must not reopen a blocking modal on a choice already made here.
     void updateUserMetadata({ [ANALYTICS_CONSENT_META_KEY]: consent }).catch(
       (e: unknown) => console.error("[analytics] consentement non enregistré:", e)
     );

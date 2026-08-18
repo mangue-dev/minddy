@@ -19,7 +19,7 @@ import { isForgePrEvent, forgePrActor } from "@/lib/pr-events";
 import { getRepoProvider } from "@/lib/repo-providers";
 import { REASONING_LEVELS } from "@/lib/agent-reasoning";
 
-/** `z.enum` veut un tuple non vide : le vocabulaire complet, dans son ordre. */
+/** `z.enum` wants a non-empty tuple: the complete vocabulary, in its order. */
 const REASONING_LEVELS_TUPLE = REASONING_LEVELS as [string, ...string[]];
 import {
   MAX_PLAN_LENGTH,
@@ -153,11 +153,11 @@ import { captureServerEvent } from "@/lib/server/posthog";
 import { durationBucket } from "@/lib/analytics-sanitize";
 
 /**
- * Tools MCP de minddy — nommage minddy_<verbe>_<nom>, surface volontairement
- * réduite : projets (lecture), tickets (+ plan), objectifs, commentaires.
- * Pas de Vues, pas de suppressions, pas de gestion membres/catégories.
- * Chaque tool ré-authentifie (requireUser) et re-vérifie l'accès projet —
- * il n'y a aucun état de session entre deux appels (transport stateless).
+ * MCP tools from minddy — naming minddy_<verbe>_<nom>, voluntarily reduced surface
+ *: projects (reading), tickets (+ plan), objectives, comments.
+ * No Views, no deletions, no member/category management.
+ * Each tool re-authenticates (requireUser) and re-verifies project access —
+ * there is no session state between two calls (stateless transport).
  */
 
 
@@ -165,12 +165,12 @@ import { durationBucket } from "@/lib/analytics-sanitize";
     swamp the model's context) — the signed download_url is the way in. */
 const MAX_INLINE_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10 MB
 
-/** Plafond par fichier du diff renvoyé par minddy_get_pull_request — aligné sur
-    le tool read_pull_request de Numo. */
+/** Per-file ceiling of the diff returned by minddy_get_pull_request — aligned with
+ Numo's read_pull_request tool. */
 const MAX_PATCH_CHARS = 4000;
 
-/** Refus de rattachement d'une PR → ce que le modèle doit en comprendre. Le
-    `code` du cœur partagé EST le code d'erreur MCP : un seul vocabulaire. */
+/** Refusal to attach a PR → what the model must understand. The
+ `code` of the shared core IS the MCP error code: only one vocabulary. */
 const LINK_REFUSALS: Record<PrLinkRefusal, string> = {
   pr_already_linked:
     "This pull request is already attached to another issue. The link is definitive: " +
@@ -182,9 +182,9 @@ const LINK_REFUSALS: Record<PrLinkRefusal, string> = {
     "This issue belongs to a project that does not link the repository of that pull request.",
 };
 
-/** Description rendue par une LISTE : de quoi choisir, pas de quoi lire —
-    même plafond que la description tronquée de minddy_list_issues. Le document
-    entier se lit par la lecture unitaire (minddy_get_objective). */
+/** Description rendered by a LIST: something to choose from, not enough to read —
+ same ceiling as the truncated description of minddy_list_issues. The entire
+ document is read by unit reading (minddy_get_objective). */
 const MAX_LIST_DESCRIPTION_CHARS = 200;
 
 function truncate(text: string | null | undefined, max: number): string | null {
@@ -192,11 +192,11 @@ function truncate(text: string | null | undefined, max: number): string | null {
   return text.length > max ? `${text.slice(0, max)}…` : text;
 }
 
-/** Métadonnées d'une ressource telles que les rendent les lectures MCP : un
-    lien porte son url, un fichier son nom/type/taille — ses octets restent
-    derrière minddy_get_resource. */
-/** La forme partagée avec le ticket et le chat (lib/server/resource-select.ts) :
-    trois formes, une par `kind`, et le titre d'une page relu de la jointure. */
+/** Metadata of a resource as rendered by MCP readings: a
+ link carries its url, a file its name/type/size — its bytes remain
+ behind minddy_get_resource. */
+/** The form shared with the ticket and the chat (lib/server/resource-select.ts):
+ three forms, one by `kind`, and the title of a page reread from the join. */
 const resourceMeta = resourceSummary;
 
 /** Text-ish MIME → return the file as readable text rather than a base64 blob. */
@@ -213,10 +213,10 @@ function isTextMime(mime: string): boolean {
   );
 }
 
-/** Ce qu'un échec de cœur DIT à l'agent. Les `errorKey` sont des clés du
- *  namespace i18n `ApiErrors` : nues, elles ne veulent rien dire hors de l'app,
- *  et les `params` que le cœur a calculés (la limite du plan) se perdaient en
- *  route. Ici on les rend en anglais, comme le reste de la surface MCP. */
+/** What a failure of heart SAYS to the agent. The `errorKey` are keys of the
+ * namespace i18n `ApiErrors`: naked, they mean nothing outside the app,
+ * and the `params` that the core calculated (the limit of the plan) were lost on the
+ * route. Here we render them in English, like the rest of the MCP surface. */
 const CORE_MESSAGES: Record<
   string,
   (params?: Record<string, string | number>) => string
@@ -231,12 +231,12 @@ interface CoreFailure {
   status: number;
   errorKey?: string;
   rawMessage?: string;
-  /** Valeurs ICU du message (ex. `limit` pour `issueLimitReached`). */
+  /** ICU values ​​of the message (e.g. `limit` for `issueLimitReached`). */
   params?: Record<string, string | number>;
 }
 
-/** Le message lisible d'un échec de cœur — celui de `coreFail`, réutilisé par
- *  les tools qui rendent leurs échecs PAR TICKET dans un tableau `failed`. */
+/** The readable message of a core failure — that of `coreFail`, reused by
+ * tools that render their failures BY TICKET in a `failed` array. */
 function coreMessage(r: CoreFailure, fallback = "Request failed"): string {
   const known = r.errorKey ? CORE_MESSAGES[r.errorKey] : undefined;
   return known ? known(r.params) : (r.rawMessage ?? r.errorKey ?? fallback);
@@ -244,10 +244,10 @@ function coreMessage(r: CoreFailure, fallback = "Request failed"): string {
 
 /** Map a lib/server/* core failure to a stable MCP error. */
 function coreFail(r: CoreFailure): ToolResult {
-  // 403 = une limite de PLAN, donc un refus définitif tant que rien ne change
-  // côté compte — jamais une panne. Le rendre en `database_error` disait
-  // « réessaie » à un agent qui n'aurait jamais pu réussir : il retentait sans
-  // fin et personne n'apprenait la cause. Même raisonnement, et même code
+  // 403 = a PLAN limit, therefore a definitive refusal as long as nothing changes
+  // account side — never a breakdown. Making it `database_error` said
+  // “try again” to an agent who could never have succeeded: he tried again without
+  // end and no one learned the cause. Same reasoning, and same code
   // stable, que l'API publique (app/api/v1/issues/route.ts).
   if (r.status === 403) return fail("plan_limit_reached", coreMessage(r));
   if (r.status === 409) return fail("conflict", coreMessage(r));
@@ -261,11 +261,11 @@ function coreFail(r: CoreFailure): ToolResult {
 }
 
 /**
- * Le plan et la description d'un ticket TELS QU'ILS SONT STOCKÉS — le point de
- * départ obligé des écritures chirurgicales (append, patch) : ce qu'on lit
- * d'abord, on ne peut pas l'écraser sans le voir. Les deux colonnes d'un coup,
- * en une seule chaîne littérale (`select` type ses colonnes en LISANT ce texte,
- * une concaténation lui rend le résultat opaque).
+ * The plan and description of a ticket AS THEY ARE STORED — the point of
+ * obligatory departure from surgical writings (append, patch): what we read
+ * firstly, we cannot overwrite it without seeing it. The two columns at once,
+ * in a single literal string (`select` types its columns by READING this text,
+ * a concatenation makes the result opaque).
  */
 async function readIssueText(
   issueId: string
@@ -283,8 +283,8 @@ async function readIssueText(
   };
 }
 
-/** Les tâches du plan après écriture, avec les index que reprend
- *  minddy_update_plan_task — le retour commun des trois tools de plan. */
+/** The plan tasks after writing, with the indexes taken by
+ * minddy_update_plan_task — the common return of the three plan tools. */
 function planTaskSummary(plan: string | null | undefined) {
   const parsed = parsePlan(plan ?? "");
   return {
@@ -297,13 +297,13 @@ function planTaskSummary(plan: string | null | undefined) {
   };
 }
 
-/** Plafond du diff renvoyé par minddy_edit_issue_text : de quoi confirmer que
- *  l'édition a atterri au bon endroit, sans re-transporter le document qu'on
- *  vient précisément d'éviter de réécrire. */
+/** Ceiling of the diff returned by minddy_edit_issue_text: enough to confirm that
+ * the edition landed in the right place, without re-transporting the document that we
+ * precisely avoided rewriting. */
 const MAX_EDIT_DIFF_CHARS = 2000;
 
-/** Les noms que porte CETTE surface, pour que les refus du patch renvoient vers
- *  des tools qui existent ici (cf. IssueTextTools). */
+/** The names that THIS surface bears, so that patch refusals refer to
+ * tools that exist here (see IssueTextTools). */
 const MCP_TEXT_TOOLS: IssueTextTools = {
   read: "minddy_get_issue",
   appendToPlan: "minddy_append_to_plan",
@@ -344,8 +344,8 @@ const PROJECT_ID = z
   .uuid()
   .describe("Project UUID. Use minddy_list_projects to discover ids.");
 
-/** Une routine (MIN-185) telle qu'un client MCP la relit — cadence en clair,
-    jamais une expression cron : c'est ce qu'il devra réafficher à l'utilisateur. */
+/** A routine (MIN-185) such that an MCP client rereads it — cadence in clear,
+ never a cron expression: this is what it must redisplay to the user. */
 function mcpRoutine(routine: Routine) {
   return {
     id: routine.id,
@@ -354,7 +354,7 @@ function mcpRoutine(routine: Routine) {
     model: routine.model,
     reasoning_level: routine.reasoning_level,
     base_branch: routine.base_branch,
-    /** Ce qu'UN passage peut dépenser, en % du budget mensuel du propriétaire. */
+    /** What ONE passage can spend, as a % of the owner's monthly budget. */
     max_spend_percent: routine.max_spend_percent,
     frequency: routine.frequency,
     hour: routine.hour,
@@ -365,13 +365,13 @@ function mcpRoutine(routine: Routine) {
     enabled: routine.enabled,
     next_run_at: routine.next_run_at,
     last_run_at: routine.last_run_at,
-    // CODE du dernier passage manqué ('quota', 'noRepo'…) : à traduire côté
-    // client, jamais à afficher tel quel.
+    // CODE of the last missed passage ('quota', 'noRepo'…): to translate next
+    // client, never to display as is.
     last_error: routine.last_error,
   };
 }
 
-/** Refus de la fabrique de routines → erreur MCP, avec le code qui va bien. */
+/** Refusal of the routine factory → MCP error, with the code which is fine. */
 function routineFailure(r: {
   errorKey: string;
   modelLimit?: { model: string; multiplier: number; limit: number; planId: string };
@@ -447,8 +447,8 @@ function mcpReadCtx(access: ProjectAccess): ReadContext {
   };
 }
 
-/** Résout un post de feedback par UUID, épinglé au projet — l'équivalent de
-    resolveIssueRef pour le feedback (pas d'identifiant KEY-N, seulement l'id). */
+/** Resolves a feedback post by UUID, pinned to the project — the equivalent of
+ resolveIssueRef for feedback (no KEY-N identifier, only the id). */
 async function resolveFeedbackPost(
   access: ProjectAccess,
   postId: unknown
@@ -468,12 +468,12 @@ async function resolveFeedbackPost(
   return { post: { id: post.id, title: post.title, issue_id: post.issue_id } };
 }
 
-/** Les 20 derniers événements d'activité d'un ticket OU d'un objectif, acteurs
-    résolus en libellés lisibles (membre, « Numo », « clé (mcp) », intégration) —
-    ordre chronologique, pour répondre à « qu'est-ce qui s'est passé ici ? ».
-    `issue_events` est polymorphe depuis l'activité des objectifs
-    (20260728091000_objective_activity.sql) : une ligne pend d'un ticket ou d'un
-    objectif, jamais des deux. */
+/** The last 20 activity events of a ticket OR goal, actors
+ resolved into readable labels (member, "Numo", "key (mcp)", integration) —
+ chronological order, to answer "what happened here?" ".
+ `issue_events` is polymorphic from the objective activity
+ (20260728091000_objective_activity.sql): a line hangs from a ticket or an objective
+, never from both. */
 async function recentActivity(
   parent: { issue_id: string } | { objective_id: string }
 ): Promise<Array<Record<string, unknown>>> {
@@ -512,9 +512,9 @@ async function recentActivity(
   const integrationNames = new Map((integrations ?? []).map((i) => [i.id, i.name]));
 
   return events.map((e) => {
-    // Action PR/MR venue d'un webhook provider : pas d'acteur minddy — le login
-    // provider tient lieu d'acteur, DÉCODÉ (le préfixe `gitlab:` de from_value
-    // est un encodage interne, cf. forgeActorValue, il ne doit pas fuir ici).
+    // PR/MR action from a webhook provider: no minddy actor — the login
+    // provider takes the place of an actor, DECODED (the `gitlab:` prefix of from_value
+    // is an internal encoding, cf. forgeActorValue, it should not leak here).
     const forge = isForgePrEvent(e as { type: string; actor_id: string | null })
       ? forgePrActor(e.from_value as string | null)
       : null;
@@ -537,8 +537,8 @@ async function recentActivity(
   });
 }
 
-/** Mode detailed de minddy_list_issues : noms (assigné, objectif, catégories)
-    à côté des UUID — principe « human-readable identifiers ». */
+/** Detailed mode of minddy_list_issues: names (assigned, objective, categories)
+ next to UUIDs — “human-readable identifiers” principle. */
 async function withNames(
   rows: Array<Record<string, unknown>>,
   access: ProjectAccess
@@ -572,17 +572,17 @@ async function withNames(
 }
 
 /**
- * Catégories demandées par NOM autant que par id.
+ * Categories requested by NAME as well as by id.
  *
- * Un agent qui crée un ticket connaît « bug » ou « infra », pas
- * `f3c1e2…`. Lui imposer un `minddy_list_categories` avant chaque création,
- * c'est exactement l'aller-retour qu'il saute — et le ticket arrive sans
- * catégorie. Les noms sont donc résolus ici, à la casse et aux espaces près.
+ * An agent who creates a ticket knows "bug" or "infra", not
+ * `f3c1e2…`. Impose a `minddy_list_categories` before each creation,
+ * this is exactly the round trip that it skips — and the ticket arrives without
+ * category. Names are therefore resolved here, up to case and spaces.
  *
- * Ce qui ne correspond à RIEN est rendu à l'appelant (`categories_unmatched`)
- * plutôt que jeté : le cœur, lui, filtre en silence
- * ([create-issue.ts](../create-issue.ts) — un `in()` sur le projet), et un nom
- * inventé qui disparaît sans un mot se lit « catégorie posée » côté agent.
+ * What matches NOTHING is returned to the caller (`categories_unmatched`)
+ * rather than thrown away: the heart, for its part, filters silently
+ * ([create-issue.ts](../create-issue.ts) — a `in()` on the project), and an invented name
+ * which disappears without a word reads “category posed” on the agent side.
  */
 async function resolveCategoryRefs(
   projectId: string,
@@ -615,8 +615,8 @@ async function resolveCategoryRefs(
   return { ids: [...resolved], unmatched };
 }
 
-/** Une relation demandée à la création d'un ticket : la cible peut être un
-    ticket qui existe déjà, ou `sub:N` — le Nième sous-ticket du MÊME appel. */
+/** A relationship requested when creating a ticket: the target can be a
+ ticket that already exists, or `sub:N` — the Nth sub-ticket of the SAME call. */
 const RELATION_INPUT = z.object({
   relation: z
     .enum(["blocks", "blocked_by", "related"])
@@ -634,13 +634,13 @@ const RELATION_INPUT = z.object({
 type RelationInput = z.infer<typeof RELATION_INPUT>;
 
 /**
- * Les relations demandées à la création, posées APRÈS que tout existe.
+ * The relationships requested at creation, placed AFTER everything exists.
  *
- * Deux raisons de ne pas les poser au fil de l'eau : un sous-ticket peut en
- * bloquer un autre créé plus tard dans le même appel (`sub:3` depuis `sub:1`),
- * et une relation qui échoue ne doit rien annuler — le ticket, lui, est écrit.
- * D'où le contrat rendu : `relations` pour ce qui a été posé, `relations_failed`
- * pour ce qui ne l'a pas été, jamais une erreur d'ensemble.
+ * Two reasons not to place them as they arise: a sub-ticket can en
+ * block another created later in the same call (`sub:3` since `sub:1`),
+ * and a relationship that fails should not cancel anything — the ticket is written.
+ * Hence the contract rendered: `relations` for what was placed, `relations_failed`
+ * for what was not, never an error set.
  */
 async function applyCreatedRelations(
   scope: { userId: string; keyId: string | null; access: ProjectAccess },
@@ -723,16 +723,16 @@ async function applyCreatedRelations(
 }
 
 /**
- * Enveloppe `registerTool` pour tracker CHAQUE appel d'outil MCP (MIN-78).
+ * `registerTool` wrapper to track EACH MCP tool call (MIN-78).
  *
- * Un décorateur unique plutôt que quarante `captureServerEvent` copiés dans les
- * handlers : la couverture est totale, elle ne peut pas dériver, et un outil
- * ajouté demain est instrumenté sans y penser. On mesure le nom de l'outil, sa
- * durée et son issue (succès / erreur applicative) — jamais les arguments, qui
- * portent des titres et des descriptions de tickets.
+ * A single decorator rather than forty `captureServerEvent` copied into the
+ * handlers: coverage is total, it cannot drift, and a tool
+ * added tomorrow is instrumented without thinking about it. We measure the name of the tool, its
+ * duration and its outcome (success / application error) — never the arguments, which
+ * carry titles and descriptions of tickets.
  *
- * C'est la seule fenêtre sur l'usage agent de minddy : par construction, aucun
- * navigateur n'est impliqué ici, donc aucun événement client ne le verrait.
+ * This is the only window on agent use of minddy: by construction, none
+ * browser is not involved here, so no client events would see it.
  */
 function withToolAnalytics(server: McpServer): McpServer {
   const original = server.registerTool.bind(server) as (
@@ -748,7 +748,7 @@ function withToolAnalytics(server: McpServer): McpServer {
         const result = (await (handler as (...a: unknown[]) => Promise<ToolResult>)(
           ...args
         )) as ToolResult;
-        // Les tools ne lèvent pas : ils renvoient `fail(...)`, marqué isError.
+        // The tools do not raise: they return `fail(...)`, marked isError.
         if (result?.isError) outcome = "error";
         return result;
       } catch (err) {
@@ -769,14 +769,14 @@ function withToolAnalytics(server: McpServer): McpServer {
     return original(name, config, tracked);
   };
 
-  // Proxy plutôt que mutation : le serveur MCP appartient à `mcp-handler`, on
-  // ne réécrit pas ses méthodes en place.
+  // Proxy rather than mutation: the MCP server belongs to `mcp-handler`, we
+  // don't rewrite its methods in place.
   return new Proxy(server, {
     get(target, prop, receiver) {
       if (prop === "registerTool") return wrapped;
-      // `Reflect.get` est ici l'API du piège, pas un contournement de typage :
-      // c'est le seul accès qui transmet `receiver`, donc le seul qui garde le
-      // `this` correct sur un getter du serveur. `target[prop]` le perdrait.
+      // `Reflect.get` is the trap API here, not a typing bypass:
+      // it is the only access which transmits `receiver`, therefore the only one which keeps the
+      // `this` correct on a server getter. `target[prop]` would lose it.
       // oxlint-disable-next-line anti-slop/no-reflect-get
       const value = Reflect.get(target, prop, receiver);
       return typeof value === "function" ? value.bind(target) : value;
@@ -787,8 +787,8 @@ function withToolAnalytics(server: McpServer): McpServer {
 export function registerMinddyTools(rawServer: McpServer): void {
   const server = withToolAnalytics(rawServer);
 
-  // Les PAGES (MIN-273) vivent dans leur propre module, mais s'enregistrent ici :
-  // c'est cet appel qui leur donne l'analytics des tools et leur place dans le
+  // PAGES (MIN-273) live in their own module, but register here:
+  // it is this call which gives them the analytics of the tools and their place in the
   // catalogue public (lib/server/mcp/catalog.ts).
   registerPageTools(server);
 
@@ -1020,8 +1020,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const ref = await resolveIssueRef(scope.access, args.issue);
       if ("error" in ref) return ref.error;
 
-      // La PR d'une issue est portée par sa run CANONIQUE — la plus ancienne à
-      // l'avoir ouverte ; les runs suivants (demandes de changements) la partagent.
+      // The PR of an issue is carried by its CANONICAL run — the oldest to
+      // have opened it; subsequent runs (change requests) share it.
       const { data: run, error } = await getServiceClient()
         .from("agent_runs")
         .select("pr_number")
@@ -1069,8 +1069,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
               number: prNumber,
             })
             .catch(() => []),
-          // État de résolution des fils (MIN-139) — best-effort, comme les
-          // commentaires : illisible = fils sans état, pas d'erreur.
+          // Thread resolution state (MIN-139) — best-effort, like
+          // comments: unreadable = stateless child, no error.
           forge
             .listReviewThreads({
               token: target.token,
@@ -1080,7 +1080,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
             .catch(() => []),
         ]);
         // Checks CI (MIN-138) — `null` = illisible (permission de l'App non
-        // acceptée) ou dépôt sans CI ; jamais bloquant pour la lecture de la PR.
+        // accepted) or deposit without CI; never blocking when reading the PR.
         const checks = pr.headSha
           ? await forge
               .listChecks({
@@ -1108,8 +1108,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
                   total: checks.total,
                   failing: checks.checks
                     .filter((c) => c.state === "failure")
-                    // `description` = ce que la forge dit de l'échec, quand elle
-                    // le formule : de quoi savoir QUOI corriger sans ouvrir le lien.
+                    // `description` = what the forge says about failure, when it
+                    // formulate it: enough to know WHAT to correct without opening the link.
                     .map((c) => ({ name: c.name, url: c.url, description: c.description })),
                 }
               : null,
@@ -1120,30 +1120,30 @@ export function registerMinddyTools(rawServer: McpServer): void {
               status: f.status,
               additions: f.additions,
               deletions: f.deletions,
-              // Plafonne le patch : un gros diff noierait le contexte du modèle.
+              // Cap the patch: a big diff would drown out the context of the model.
               patch:
                 f.patch && f.patch.length > MAX_PATCH_CHARS
                   ? f.patch.slice(0, MAX_PATCH_CHARS) + "\n… (diff truncated)"
                   : f.patch ?? null,
             })),
-            // La pagination de la forge a coupé la liste : le dire plutôt que de
-            // laisser conclure sur ce qui a été vu.
+            // The pagination of the forge cut the list: say it rather than
+            // let conclude on what has been seen.
             files_truncated: diff.truncated,
-            // Fils de review ancrés au code. Un fil périmé (`outdated`) n'a plus
-            // d'ancre fiable — son `diff_hunk` est la seule trace du code visé.
+            // Review threads anchored to the code. An expired thread (`outdated`) no longer has
+            // reliable anchor — its `diff_hunk` is the only trace of the targeted code.
             review_comments: groupReviewThreads(reviewComments, reviewThreads).map((thread) => ({
               id: thread.id,
               path: thread.root.path,
               line: thread.root.line,
               original_line: thread.root.original_line,
               side: thread.root.side,
-              // Remarque MULTI-LIGNES : `line` en est la dernière ligne, celle-ci
-              // la première. Sans elle, « ces dix lignes sont fausses » se lit
-              // comme un point sur la seule dernière (MIN-181).
+              // Note MULTI-LINES: `line` is the last line, this one
+              // the first. Without it, “these ten lines are false” reads
+              // as a point on the last one (MIN-181).
               start_line: thread.root.start_line,
               outdated: thread.root.line == null,
-              // `true` = le fil a été marqué résolu : le point est réglé.
-              // `false` inclut « état inconnu » — la forge ne l'a pas dit.
+              // `true` = the thread has been marked resolved: the point is set.
+              // `false` includes "unknown state" — the forge didn't say it.
               resolved: !!thread.resolution?.resolved,
               diff_hunk: thread.root.diff_hunk,
               url: thread.root.html_url,
@@ -1348,12 +1348,12 @@ export function registerMinddyTools(rawServer: McpServer): void {
         resourcesByObjective.set(id, list);
       }
 
-      // Progression : done/total restent des comptes bruts de tickets pour le
-      // label, mais percent est pondéré par l'effort en points Fibonacci
-      // (effortToPoints) avec crédit partiel par statut — même calcul que
-      // objectiveProgress dans lib/use-objectives-query.ts (MIN-56). `done`
-      // compte tous les statuts CLOS (done, canceled, duplicate), comme le
-      // pourcentage qui les crédite déjà à 100 % : un ticket annulé est réglé.
+      // Progress: done/total remain raw ticket counts for the
+      // label, but percent is weighted by effort in Fibonacci points
+      // (effortToPoints) with partial credit by status — same calculation as
+      // objectiveProgress in lib/use-objectives-query.ts (MIN-56). `done`
+      // counts all CLOS statuses (done, canceled, duplicate), as in
+      // percentage which already credits them at 100%: a canceled ticket is settled.
       const progress = new Map<
         string,
         { done: number; total: number; totalPoints: number; earnedPoints: number }
@@ -1384,9 +1384,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
           const atts = resourcesByObjective.get(o.id as string);
           return {
             ...o,
-            // Tronquée : une liste sert à CHOISIR. Le document entier est dans
-            // minddy_get_objective, et vingt descriptions complètes noieraient
-            // la réponse pour la seule qui intéresse l'appelant.
+            // Truncated: a list is used to CHOOSE. The entire document is in
+            // minddy_get_objective, and twenty complete descriptions would drown
+            // the answer for the only one that interests the caller.
             description: truncate(o.description as string | null, MAX_LIST_DESCRIPTION_CHARS),
             lead_name: o.lead_user_id
               ? displayName(toNamed(leads.get(o.lead_user_id)), "User")
@@ -1472,8 +1472,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
           recentActivity({ objective_id: objective.id as string }),
         ]);
 
-      // Ressources : `comment_id` null = portée par l'objectif lui-même, sinon
-      // par l'un de ses commentaires — même découpe que minddy_get_issue.
+      // Resources: `comment_id` null = carried by the objective itself, otherwise
+      // by one of his comments — same cut as minddy_get_issue.
       const resourcesByComment = new Map<string | null, Record<string, unknown>[]>();
       for (const row of attachmentRows ?? []) {
         const key = (row.comment_id as string | null) ?? null;
@@ -1482,8 +1482,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
         resourcesByComment.set(key, list);
       }
 
-      // Auteurs : un commentaire écrit par un agent est attribué à SA CLÉ, pas
-      // au propriétaire de la clé — même règle que sur un ticket.
+      // Authors: a comment written by an agent is attributed to HIS KEY, not
+      // to the owner of the key — same rule as on a ticket.
       const [users, keyActors] = await Promise.all([
         fetchAuthUsersById(service, [
           ...(comments ?? []).map((c) => c.author_id as string),
@@ -1495,8 +1495,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
         resolveApiKeyActors((comments ?? []).map((c) => c.api_key_id as string | null)),
       ]);
 
-      // Progression : mêmes comptes et même pondération par effort que
-      // minddy_list_objectives (et que la barre de l'UI).
+      // Progression: same accounts and same weighting by effort as
+      // minddy_list_objectives (and that UI bar).
       let done = 0;
       let totalPoints = 0;
       let earnedPoints = 0;
@@ -1555,7 +1555,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
     }
   );
 
-  // ── Écritures (pas de suppressions) ───────────────────────────────────
+  // ── Writes (no deletions) ───────────────────────────────────
 
   server.registerTool(
     "minddy_create_issue",
@@ -1710,8 +1710,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
         ...issueArgs
       } = args;
 
-      // Catégories résolues AVANT la création : les noms deviennent des ids, et
-      // ce qui ne correspond à rien est collecté pour être dit (le cœur, lui,
+      // Categories resolved BEFORE creation: names become ids, and
+      // what does not correspond to anything is collected to be said (the heart, for its part,
       // filtrerait en silence).
       const unmatchedCategories: string[] = [];
       const cats = await resolveCategoryRefs(
@@ -1740,13 +1740,13 @@ export function registerMinddyTools(rawServer: McpServer): void {
       );
       const created = { id: result.issue.id as string, identifier };
 
-      // Sous-tickets : créés dans l'ordre, échecs remontés individuellement —
-      // le parent existe déjà, on ne le rollback pas.
+      // Sub-tickets: created in order, failures reported individually —
+      // the parent already exists, we cannot rollback it.
       const subIssues: Array<Record<string, unknown>> = [];
       const subIssuesFailed: Array<{ title: string; error: string }> = [];
-      // Index 1-based → sous-ticket réellement créé, pour résoudre les 'sub:N'.
-      // Un sous-ticket qui a échoué n'y entre pas : les relations qui le visaient
-      // ressortiront en `relations_failed` plutôt que de viser à côté.
+      // 1-based index → ​​subticket actually created, to resolve 'sub:N'.
+      // A failed sub-ticket does not enter: the relationships that targeted it
+      // will come out as `relations_failed` rather than aiming aside.
       const subsByIndex = new Map<number, { id: string; identifier: string }>();
       const relationRequests: Array<{
         source: { id: string; identifier: string };
@@ -1800,8 +1800,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
         }
       }
 
-      // Relations en DERNIER : un sous-ticket peut en bloquer un autre créé
-      // après lui dans le même appel ('sub:3' depuis 'sub:1').
+      // Relations LAST: a sub-ticket can block another created
+      // after it in the same call ('sub:3' from 'sub:1').
       const relations = await applyCreatedRelations(
         scope,
         relationRequests,
@@ -1885,7 +1885,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
 
-      // Résoudre les références d'issues des champs AVANT la boucle.
+      // Resolve field issue references BEFORE the loop.
       const {
         category_ids,
         category_names,
@@ -1898,8 +1898,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
         parent?: string | null;
         duplicate_of?: string | null;
       };
-      // Les deux clés sont un REMPLACEMENT du jeu de catégories : leur PRÉSENCE
-      // décide, pas leur contenu — `category_ids: []` efface tout.
+      // The two keys are a REPLACEMENT of the set of categories: their PRESENCE
+      // decides, not their content — `category_ids: []` erases everything.
       const setsCategories =
         "category_ids" in args.fields || "category_names" in args.fields;
       let resolvedCategoryIds: string[] = [];
@@ -2022,7 +2022,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const plan = current.plan;
       const parsed = parsePlan(plan);
 
-      // Tout-ou-rien : valider chaque index avant de toucher au markdown.
+      // All-or-nothing: validate each index before touching markdown.
       const invalid = args.tasks
         .map((t) => t.task_index)
         .filter((i) => !parsed.tasks[i]);
@@ -2035,8 +2035,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
         );
       }
 
-      // Les numéros de ligne restent stables : setTaskState ne réécrit que le
-      // marqueur d'état, jamais la structure du document.
+      // Line numbers remain stable: setTaskState only rewrites the
+      // state marker, never the document structure.
       let nextPlan = plan;
       for (const t of args.tasks) {
         nextPlan = setTaskState(nextPlan, parsed.tasks[t.task_index].line, t.state);
@@ -2202,8 +2202,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
       });
       if (!edit.ok) return fail(edit.code, edit.message);
 
-      // La description est TRONQUÉE en silence par updateIssueFields au-delà de
-      // sa borne : la vérifier ici est la seule façon de le dire.
+      // Description is silently TRUNCATED by updateIssueFields beyond
+      // its terminal: checking it here is the only way to tell.
       const cap = field === "plan" ? MAX_PLAN_LENGTH : MAX_DESCRIPTION_LENGTH;
       if (edit.content.length > cap) {
         return fail(
@@ -2359,8 +2359,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const ref = await resolveIssueRef(scope.access, args.issue);
       if ("error" in ref) return ref.error;
 
-      // Les trois formes sont exclusives : un appel qui en porte deux (ou
-      // aucune) est une intention ambiguë, pas quelque chose à deviner.
+      // The three forms are exclusive: a call which carries two (or
+      //none) is an ambiguous intention, not something to be guessed at.
       const wantsLink = !!args.url?.trim();
       const wantsFile = !!args.content_base64;
       const wantsPage = !!args.page_id?.trim();
@@ -2389,8 +2389,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
 
       if (wantsPage) {
         const pageId = (args.page_id as string).trim();
-        // Le titre est relu ICI plutôt que demandé à l'appelant : c'est la
-        // seule source qui ne puisse pas mentir, et la photo qu'en garde la
+        // The title is reread HERE rather than asked of the caller: this is the
+        // only source that cannot lie, and the photo that the
         // ligne ne sert qu'aux lecteurs sans jointure.
         const { data: page } = await getServiceClient()
           .from("pages")
@@ -2556,17 +2556,17 @@ export function registerMinddyTools(rawServer: McpServer): void {
       if (error) return fail("database_error", error.message);
       if (!row) return fail("not_found", "Resource not found in this project.");
 
-      // Une page non plus : son corps se lit par minddy_get_page, qui rend du
-      // markdown — le recopier ici en ferait une seconde porte à tenir.
+      // A page either: its body is read by minddy_get_page, which renders
+      // markdown — copying it here would make it a second door to hold.
       if (row.kind === "page") {
-        // Lecture en clé SERVICE : la jointure remonte aussi une page
-        // corbeillée, d'où le `deleted_at` explicite plutôt qu'une absence.
+        // Reading in SERVICE key: the join also goes back a page
+        // trashed, hence the explicit `deleted_at` rather than an absence.
         const page = joinedPage(row.page);
         return ok({
           id: row.id,
           kind: "page",
           page_id: row.page_id,
-          // Le titre VIVANT quand la page est là, la photo de la ligne sinon.
+          // The ALIVE title when the page is there, the photo of the line otherwise.
           title: page?.title?.trim() || row.file_name,
           page_in_trash: !!page?.deleted_at,
           read_with: "minddy_get_page",
@@ -2576,7 +2576,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
         });
       }
 
-      // Un lien n'a pas d'octets : ni URL signée, ni contenu inline.
+      // A link has no bytes: neither signed URL nor inline content.
       if (row.kind === "link") {
         return ok({
           id: row.id,
@@ -2816,7 +2816,7 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
 
-      // Scope check : l'objectif doit appartenir au projet en question.
+      // Scope check: the objective must belong to the project in question.
       const { data: obj } = await getServiceClient()
         .from("objectives")
         .select("id")
@@ -2877,9 +2877,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
 
-      // Scope check : l'objectif doit appartenir au projet en question. Le cœur
-      // vérifie l'accès au PROJET de l'objectif, pas que c'est CE projet-là —
-      // sans ça, un objectif d'un autre projet accessible passerait.
+      // Scope check: the objective must belong to the project in question. The heart
+      // checks access to the PROJECT of the objective, not that it is THIS project —
+      // without that, an objective of another accessible project would pass.
       const { data: obj } = await getServiceClient()
         .from("objectives")
         .select("id")
@@ -2900,11 +2900,11 @@ export function registerMinddyTools(rawServer: McpServer): void {
     }
   );
 
-  // ── Scratchpad (Notes) — la note perso UNIQUE du propriétaire de la clé :
-  // un bloc-notes markdown de petites tâches du moment (« problems.md »
-  // intégré), mêmes cases à cocher que les plans (lib/plan.ts). Pas de
-  // project_id : c'est personnel et cross-projet. get lit, set REMPLACE tout le
-  // document — relire d'abord pour ne rien écraser.
+  // ── Scratchpad (Notes) — the UNIQUE personal note of the key owner:
+  // a markdown notebook of small tasks of the moment (“problems.md”
+  // integrated), same check boxes as plans (lib/plan.ts). No
+  // project_id: it's personal and cross-project. get lit, set REPLACES all
+  // document — reread first so as not to overwrite anything.
   server.registerTool(
     "minddy_get_scratchpad",
     {
@@ -3080,8 +3080,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
       const auth = requireUser(extra);
       if ("error" in auth) return auth.error;
       try {
-        // Logique partagée avec le tool `update_scratchpad_task` de l'agent de
-        // code (MIN-84) : mêmes index, mêmes gardes (rev périmé, all-or-nothing).
+        // Logic shared with the `update_scratchpad_task` tool of the security agent
+        // code (MIN-84): same indexes, same guards (rev expired, all-or-nothing).
         const result = await applyScratchpadTaskChanges(
           getServiceClient(),
           auth.userId,
@@ -3220,13 +3220,13 @@ export function registerMinddyTools(rawServer: McpServer): void {
     }
   );
 
-  // ── Cycles (MIN-32) — le cycle personnel cross-projet du propriétaire de
-  // la clé. Pas de project_id sur les lectures/fill (le cycle traverse les
-  // projets) ; add/remove résolvent leurs références d'issues dans UN projet,
-  // comme tous les autres tools — appeler une fois par projet si besoin.
-  // Mêmes cœurs que Numo (lib/server/cycles.ts) : parité par construction.
+  // ── Cycles (MIN-32) — the personal cross-project cycle of the owner of
+  // the key. No project_id on reads/fill (cycle crosses
+  // projects); add/remove resolve their issue references in ONE project,
+  // like all other tools — call once per project if necessary.
+  // Same cores as Numo (lib/server/cycles.ts): parity by construction.
 
-  /** Garde commune des tools cycle : auth + prefs (cycles activés). */
+  /** Common guard of cycle tools: auth + prefs (activated cycles). */
   async function requireCycle(
     extra: ToolExtra
   ): Promise<
@@ -3521,9 +3521,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
     async (args, extra) => {
       const scope = await requireProject(extra, args.project_id);
       if ("error" in scope) return scope.error;
-      // Le filtre part DANS la requête : le plafond de 500 de listTeamFeedback
-      // est appliqué après le tri par votes, donc filtrer la fenêtre renvoyée
-      // aurait rendu une liste vide sur les statuts sans voix — `spam` en
+      // The filter goes INTO the request: the listTeamFeedback ceiling of 500
+      // is applied after sorting by votes, so filter the returned window
+      // would have rendered an empty list on voiceless statuses — `spam` in
       // premier, celui qu'on vient justement de rendre demandable.
       const posts = await listTeamFeedback(scope.access.project.id, {
         statuses: args.status,
@@ -3536,9 +3536,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
           status: p.status,
           vote_count: p.vote_count,
           is_public: p.is_public,
-          // Sans lui, un retour encore dans la file de revue IA est
-          // indiscernable d'un retour publié (cf. la règle de visibilité
-          // annoncée dans la description).
+          // Without it, a return still in the AI ​​review queue is
+          // indistinguishable from a published return (see the visibility rule
+          // announced in the description).
           review_state: p.review_state,
           source: p.source,
           category_ids: p.category_ids,
@@ -3598,10 +3598,10 @@ export function registerMinddyTools(rawServer: McpServer): void {
           body: detail.body,
           submitted_title: detail.submitted_title,
           submitted_body: detail.submitted_body,
-          // La traduction vit À CÔTÉ du texte, jamais à sa place : le board
-          // public montre toujours l'original, la vue équipe préfère la
-          // traduction quand elle est dans SA langue. Le MCP est le canal
-          // équipe — il lui faut donc les deux, et la langue de chacune.
+          // The translation lives NEXT to the text, never in its place: the board
+          // public always shows the original, the team view prefers it
+          // translation when it is in ITS language. The MCP is the channel
+          // team — so he needs both, and the language of each.
           source_language: detail.source_language,
           translated_title: detail.translated_title,
           translated_body: detail.translated_body,
@@ -3629,9 +3629,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
               pseudonym: string;
             } | null;
             return {
-              // Un commentaire public écrit par un VISITEUR se nomme par son
-              // identité réelle (l'agent est côté équipe, comme la vue équipe) ;
-              // le board, lui, n'en montre jamais que l'avatar.
+              // A public comment written by a VISITOR is named by its name
+              // real identity (the agent is on the team side, like the team view);
+              // the board only ever shows the avatar.
               author: visitor
                 ? visitor.name?.trim() || visitor.email?.trim() || visitor.pseudonym
                 : c.via_assistant
@@ -3743,9 +3743,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
         );
       }
 
-      // Même verrou que la vue équipe (`statusLocked`) : un retour lié tient son
-      // statut de son ticket, que `status-sync` recopie à chaque transition.
-      // L'accepter ici offrirait un geste que la prochaine transition écrase.
+      // Same lock as the team view (`statusLocked`): a linked return holds its
+      // status of his ticket, which `status-sync` copies at each transition.
+      // Accepting it here would offer a gesture that the next transition overwrites.
       if (args.status !== undefined && ref.post.issue_id) {
         return fail(
           "status_follows_issue",
@@ -3919,10 +3919,10 @@ export function registerMinddyTools(rawServer: McpServer): void {
     }
   );
 
-  // ── Setup : le board public et les clés d'intégration (MIN-106) ──────────
-  // Ce que les outils ci-dessus ne pouvaient pas faire : brancher l'app de
-  // l'utilisateur SUR minddy. L'agent qui lit ceci est dans le dépôt du client —
-  // il peut écrire un `.env` et du code, ce que Numo, dans le chat, ne peut pas.
+  // ── Setup: the public board and the integration keys (MIN-106) ──────────
+  // What the tools above couldn't do: connect the app
+  // user ON minddy. The agent reading this is in the customer's depot —
+  // he can write a `.env` and code, which Numo, in chat, cannot.
 
   server.registerTool(
     "minddy_get_feedback_board",
@@ -4081,9 +4081,9 @@ export function registerMinddyTools(rawServer: McpServer): void {
           created_at: row.created_at,
           last_used_at: row.last_used_at,
           revoked: row.revoked_at !== null,
-          // Une intégration sans URL n'a pas de webhook : dire `null` plutôt
-          // qu'un objet à moitié rempli évite de faire croire à un webhook
-          // éteint mais configuré.
+          // An integration without a URL has no webhook: say `null` instead
+          // that a half-filled object avoids pretending to be a webhook
+          // off but configured.
           webhook: row.webhook_url
             ? {
                 url: row.webhook_url,
@@ -4264,8 +4264,8 @@ export function registerMinddyTools(rawServer: McpServer): void {
           url: result.integration.webhook_url,
           events: result.integration.webhook_events,
           scope: result.integration.webhook_scope,
-          // Éteindre le webhook, c'est ne plus rien avoir à implémenter : le
-          // contrat du récepteur ne suit que quand il y a une URL.
+          // Turning off the webhook means no longer having to implement anything: the
+          // receiver contract only follows when there is a URL.
           ...(result.integration.webhook_url
             ? { contract: integrationWebhookDoc() }
             : {}),
@@ -4276,11 +4276,11 @@ export function registerMinddyTools(rawServer: McpServer): void {
 
   // ── Routines (MIN-185) ──────────────────────────────────────────────
   //
-  // La description de `minddy_create_routine` est celle que `catalog.ts` rejoue
-  // dans `/llms.txt` : elle doit se suffire à elle-même, et surtout DIRE CE QUE
-  // N'EST PAS une routine. Un ticket récurrent, une automatisation de projet et
-  // une routine se ressemblent de loin ; sans cette phrase, un client crée la
-  // mauvaise des trois et personne ne s'en aperçoit avant que ça tourne.
+  // The description of `minddy_create_routine` is what `catalog.ts` replays
+  // in `/llms.txt`: it must be sufficient in itself, and above all SAY WHAT
+  // IS NOT a routine. A recurring ticket, project automation and
+  // a routine looks the same from a distance; without this phrase, a client creates the
+  // bad of the three and no one notices it until it turns.
   server.registerTool(
     "minddy_list_routines",
     {

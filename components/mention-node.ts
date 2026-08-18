@@ -1,21 +1,21 @@
-// Le NŒUD de mention, sans une ligne de React : le schéma, ses attributs, et sa
-// sérialisation markdown. La pilule (components/markdown-mention.tsx) se greffe
-// dessus par un `addNodeView`.
+// The NODE of mention, without a line of React: the schema, its attributes, and its
+// markdown serialization. The pill (components/markdown-mention.tsx) is grafted
+  // on top through an `addNodeView`.
 //
-// Ce découpage est celui des tâches du carnet (components/scratchpad/task-nodes.ts),
-// et pour la même raison : la projection markdown des pages (lib/pages-markdown.ts)
-// doit MONTER ce nœud pour lire un document qui en contient un, et elle tourne
-// hors navigateur. Un nœud exporté depuis un module « use client » n'y arrive pas
-// tel quel — côté serveur, un tel module ne rend que des références de client.
+// This breakdown is that of the notebook tasks (components/scratchpad/task-nodes.ts),
+// and for the same reason: the markdown projection of pages (lib/pages-markdown.ts)
+// must UP this node to read a document that contains one, and it spins
+// outside browser. A node exported from a “use client” module does not arrive there
+// as is — on the server side, such a module only renders client references.
 //
-// Rappel du contrat (cf. markdown-mention.tsx) : ce qui est STOCKÉ est du texte,
-// « @Nom » / « @MIN-42 », et la pilule s'en re-déduit à la relecture par
-// lib/mention-scan. Le nœud n'est qu'un habit ; le markdown, lui, ne perd rien.
+// Reminder of the contract (see markdown-mention.tsx): what is STORED is text,
+// “@Nom” / “@MIN-42”, and the pill is re-deduced upon rereading by
+// lib/mention-scan. The knot is only a garment; markdown loses nothing.
 
 import { Node } from "@tiptap/core";
 
-/** Les attributs que porte une mention posée. Ils suffisent à la redessiner
-    sans rien re-résoudre — une annulation ⌘Z restitue le nœud tel quel. */
+/** The attributes that a statement carries. They are enough to redraw
+ without resolving anything — a ⌘Z cancellation restores the node as it is. */
 export const MENTION_ATTRS = [
   "mentionType",
   "mentionId",
@@ -30,8 +30,8 @@ export const MentionNodeBase = Node.create({
   group: "inline",
   inline: true,
   atom: true,
-  // Insécable : le caret ne rentre pas dedans, et un retour arrière l'efface
-  // d'un bloc — comme la pilule d'un commentaire.
+  // Unbreakable: the caret does not fit in, and a backspace erases it
+  // in one block — like the pill of a comment.
   selectable: false,
   draggable: false,
 
@@ -75,7 +75,7 @@ export const MentionNodeBase = Node.create({
     ];
   },
 
-  /** Ce qu'une copie en texte brut emporte — l'arobase comprise. */
+  /** What a plain text copy carries — including the at sign. */
   renderText({ node }) {
     return `@${node.attrs.mentionLabel}`;
   },
@@ -83,10 +83,10 @@ export const MentionNodeBase = Node.create({
   addStorage() {
     return {
       markdown: {
-        // `false` : pas d'échappement. Un libellé qui contient une étoile ou un
-        // souligné doit repartir TEL QUEL — c'est sur lui que le scanner
-        // retrouvera la mention à la relecture, et « Jean\*Marc » ne serait plus
-        // le nom de personne.
+        // `false`: no escape. A label that contains a star or a
+        // underlined must leave AS IS — it is on him that the scanner
+        // will find the mention on rereading, and “Jean\*Marc” would no longer be
+        // the person's name.
         serialize(
           state: { text: (value: string, escape?: boolean) => void },
           node: { attrs: Record<string, string> },

@@ -4,36 +4,32 @@ import { Reveal, RevealHeading } from "./reveal";
 import { IsoTile, type IsoTileName } from "./iso-tile";
 
 /**
- * §5 — « Les pages » (MIN-254).
+ * §5 — “The pages” (MIN-254).
  *
- * Le wiki par projet n'était mentionné NULLE PART sur la landing. Il y est
- * entré d'abord comme une ligne de la bande « Et le reste est déjà là », ce qui
- * était deux fois faux : c'est une surface entière du produit — un éditeur, une
- * arborescence, une publication, un historique — et c'est surtout le seul
- * endroit où le « tout en un » se vérifie sans effort. Un visiteur qui garde
- * Notion ouvert à côté de son tracker est précisément celui à qui cette page
- * s'adresse.
+ * The wiki per project was NOT mentioned ANYWHERE on the landing. It is entered first as a line from the "And the rest is already there" tape, which was twice wrong: it is an entire surface of the product - an editor, a tree, a publication, a history - and above all it is the only place where the "all in one" is verified effortlessly. A visitor who keeps
+ * Notion open next to his tracker is precisely the one to whom this page
+ * is aimed.
  *
- * ELLE SUIT LA VITESSE ET PRÉCÈDE LES RETOURS, et cette place n'est pas
- * arbitraire : la ligne d'ouverture de la section suivante dit « jusqu'ici,
- * tout venait de vous ». Les pages sont le dernier lieu où c'est encore vrai —
- * ce que vous écrivez, ce que vos agents écrivent — avant que la page ne bascule
- * sur ce qui arrive de vos utilisateurs.
+ * IT FOLLOWS SPEED AND PRECEDES RETURNS, and this place is not
+ * arbitrary: the opening line of the following section says “so far,
+ * everything came from you”. Pages are the last place where this is still true —
+ * what you write, what your agents write — before the page switches
+ * to what comes in from your users.
  *
- * TOUT CE QUI EST DIT ICI EXISTE, et a été vérifié dans le code plutôt que
- * déduit du nom de la fonctionnalité :
- *   - les sous-pages sont un bloc de l'éditeur (`Pages.blockSubpage`), donc
- *     l'arborescence se construit en écrivant, pas dans un menu à part ;
- *   - une mention mène à un ticket, un objectif ou une autre page
- *     (`lib/mention-target.ts`) — c'est le lien entre le wiki et le tracker,
- *     et c'est ce qui fait qu'ils ne sont pas deux outils dans le même onglet ;
- *   - la publication a trois niveaux, privé / mot de passe / lien public, et
- *     peut emporter les sous-pages (`PublishPage`) ;
- *   - l'historique gardé 30 jours se restaure d'un clic
- *     (`components/pages/page-history.tsx`), et l'export sort en Markdown ou en
- *     PDF, une page ou une branche entière ;
- *   - les agents ont huit outils MCP sur les pages, lecture, recherche,
- *     écriture et commentaire compris (`lib/server/mcp/page-tools.ts`).
+ * EVERYTHING SAID HERE EXISTS, and has been verified in the code instead that
+ * deduced from the name of the feature:
+ * - the subpages are a block of the editor (`Pages.blockSubpage`), therefore
+ * the tree is built by writing, not in a separate menu;
+ * - a mention leads to a ticket, an objective or another page
+ * (`lib/mention-target.ts`) — this is the link between the wiki and the tracker,
+ * and this is what makes them not two tools in the same tab;
+ * - the publication has three levels, private / password / public link, and
+ * can take away the subpages (`PublishPage`);
+ * - the history kept for 30 days is restored with one click
+ * (`components/pages/page-history.tsx`), and the export is output in Markdown or in
+ * PDF, a page or an entire branch;
+ * - the agents have eight MCP tools on pages, reading, searching,
+ * including writing and commenting (`lib/server/mcp/page-tools.ts`).
  */
 
 const POINTS = [
@@ -70,8 +66,8 @@ export async function SectionPages() {
           </figcaption>
         </Reveal>
 
-        {/* Grille à filets : entrée d'un bloc — masquer les cartes une à une
-            découvrirait le fond `bg-border` du conteneur. */}
+        {/* Mesh grid: block entry — hiding cards one by one
+ would uncover the bottom `bg-border` of the container. */}
         <Reveal
           as="ul"
           className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2"

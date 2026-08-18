@@ -1,15 +1,15 @@
-// Linear CSV export — la table d'alias de ses colonnes. Colonnes utiles :
-// ID (ENG-42), Title, Description (markdown), Status (nom d'état), Priority
+// Linear CSV export — the alias table of its columns. Useful columns:
+// ID (ENG-42), Title, Description (markdown), Status (status name), Priority
 // (Urgent/High/…), Estimate (points), Labels (joints par ", "), Created /
 // Completed / Due Date, Parent issue (l'identifiant du parent).
 //
-// « Assignee » porte le nom d'affichage Linear : rapproché des membres du
-// projet d'arrivée (`lib/import/people.ts`), il rend le ticket à son
-// propriétaire quand c'est la même personne des deux côtés.
+// “Assignee” has the display name Linear: brought closer to the members of the
+// arrival project (`lib/import/people.ts`), he returns the ticket to his
+// owner when it is the same person on both sides.
 //
-// Ce que le fichier porte d'autre (Team, Creator, Cycle, Project, Milestone)
-// n'a pas de champ dans minddy : ces colonnes restent non assignées, et c'est
-// la passe du modèle qui décide de les récupérer en catégories ou en note de
+// What else the file carries (Team, Creator, Cycle, Project, Milestone)
+// has no field in minddy: these columns remain unassigned, and that's
+// the pass of the model which decides to recover them in categories or in note of
 // description (`lib/server/import-mapping-ai.ts`).
 
 import type { ColumnAliases } from "@/lib/import/types";
@@ -26,8 +26,8 @@ export const LINEAR_COLUMN_ALIASES: ColumnAliases = [
   ["createdAt", ["created"]],
   ["completedAt", ["completed"]],
   ["externalKey", ["id"]],
-  // « Parent » tout court n'est pas un en-tête Linear, mais un fichier lu comme
-  // tel sans en être un le porte souvent : le reconnaître ne coûte rien et
-  // évite de perdre toute la hiérarchie sur une détection un peu large.
+  // “Parent” for short is not a Linear header, but a file read like
+  // such without being one often carries it: recognizing it costs nothing and
+  // avoid losing the entire hierarchy on a slightly broad detection.
   ["parent", ["parent issue", "parent"]],
 ];

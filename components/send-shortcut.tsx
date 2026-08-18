@@ -1,25 +1,25 @@
 "use client";
 
-// Le raccourci d'ENVOI, dit une seule fois pour toute l'application.
+// The SEND shortcut, said only once for the entire application.
 //
-// Partout où l'on écrit un message — le composer de Numo, un commentaire de
-// ticket, une remarque de ligne sur une pull request, une réponse d'équipe, un
-// retour public — c'est ⌘/Ctrl + Entrée qui l'envoie, et Entrée seule qui passe
-// à la ligne. Un composer où l'on rédige plusieurs phrases ne peut pas partir
-// sur la touche qui sert à respirer.
+// Wherever you write a message — compose it from Numo, a comment from
+// ticket, a line remark on a pull request, a team response, a
+// public return — it's ⌘/Ctrl + Enter which sends it, and Enter only which passes
+// at the line. A composition where you write several sentences cannot leave
+// on the button used to breathe.
 //
-// Depuis MIN-287 c'est un DÉFAUT et non plus une loi : Compte → Préférences
-// permet de mettre l'envoi sur Entrée seule. La légende suit donc le compte —
-// et seulement là où la touche le suit aussi, d'où `scope` ci-dessous.
+// Since MIN-287 it is a DEFAULT and no longer a law: Account → Preferences
+// allows sending to enter only. The legend therefore follows the account —
+// and only where the key follows it too, hence `scope` below.
 //
-// La contrepartie d'un envoi qui n'est plus sur Entrée, c'est qu'il ne se
-// devine plus : le geste doit se LIRE au survol du bouton qui l'exécute. D'où
-// ces deux composants plutôt qu'un `title` recopié dix fois — le jour où le
-// raccourci change, il change ici.
+// The counterpart of a sending which is no longer on Enter is that it is no longer
+// guess more: the gesture must be READ when hovering over the button that executes it. Hence
+// these two components rather than a `title` copied ten times — the day the
+// when the shortcut changes, it changes here.
 //
-// La touche suit la plateforme (`useModKey`) : « ⌘ » sur un Mac, « Ctrl »
-// ailleurs. Deux pastilles séparées, comme la pill de recherche rend « ⌘ K » :
-// « ⌘↵ » dans une seule se lirait comme une touche unique.
+// The key follows the platform (`useModKey`): “⌘” on a Mac, “Ctrl”
+// elsewhere. Two separate pellets, like the search pill renders “⌘ K”:
+// “⌘↵” in a single would read as a single key.
 
 import type { ReactElement } from "react";
 import { Kbd } from "@/components/ui/kbd";
@@ -31,25 +31,25 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-/** Vrai si l'événement clavier est le raccourci d'envoi. Un seul endroit décide
-    de ce qu'« envoyer au clavier » veut dire, côté touche comme côté légende —
-    cet endroit est [lib/keyboard/send-shortcut.ts], réexporté ici pour que les
-    surfaces qui rendent la légende n'aient qu'un import à faire. */
+/** True if the keyboard event is the send shortcut. Only one place decides
+ what "send to keyboard" means, both on the key and legend sides —
+ this place is [lib/keyboard/send-shortcut.ts], re-exported here so that the
+ surfaces that render the legend only have to do one import. */
 export { isSendShortcut } from "@/lib/keyboard/send-shortcut";
 
 /**
- * De quel côté du réglage se trouve le bouton qu'on légende.
+ * On which side of the setting is the button being captioned.
  *
- * - `composer` (le défaut) : un message — commentaire, réponse, prompt, retour.
- *   La préférence de compte s'y applique, la légende la suit ;
- * - `form` : un formulaire dont le corps est un ÉDITEUR (créer un ticket, un
- *   objectif, une vue, une étape de wizard). Entrée y appartient au paragraphe
- *   suivant quoi qu'ait choisi le compte, donc la légende reste « ⌘ ↵ ».
+ * - `composer` (the default): a message — comment, reply, prompt, return.
+ * The account preference applies, the caption follows it;
+ * - `form`: a form whose body is a PUBLISHER (create a ticket, a
+ * objective, a view, a wizard step). Entry belongs to the paragraph
+ * following whatever the account has chosen, so the legend remains “⌘ ↵”.
  */
 export type SendShortcutScope = "composer" | "form";
 
-/** La ou les touches d'envoi, telles que les porte le clavier de la plateforme
-    et telles que les a réglées le compte. */
+/** The send key(s), as carried by the platform keyboard
+ and as set by the account. */
 export function SendShortcutKeys({
   size = "sm",
   scope = "composer",
@@ -59,8 +59,8 @@ export function SendShortcutKeys({
 }) {
   const mod = useModKey();
   const mode = useSendMode();
-  // Entrée seule : une seule pastille. Dire « ⌘ ↵ » à qui a choisi Entrée
-  // serait exact (⌘↵ envoie aussi) mais lui apprendrait le geste le plus long.
+  // Entry only: a single tablet. Say “⌘↵” to someone who chose Enter
+  // would be exact (⌘↵ also sends) but would teach him the longest gesture.
   if (scope === "composer" && mode === "enter") {
     return <Kbd size={size}>↵</Kbd>;
   }
@@ -73,15 +73,15 @@ export function SendShortcutKeys({
 }
 
 /**
- * Le bouton d'envoi et sa légende : « Commenter ⌘ ↵ ».
+ * The send button and its caption: “Comment ⌘ ↵”.
  *
- * Le libellé est celui du bouton lui-même — la répétition est voulue, c'est ce
- * qui rend l'infobulle lisible seule et permet à un bouton en icône (le rond
- * d'envoi de Numo) d'utiliser exactement le même composant.
+ * The wording is that of the button itself — the repetition is intended, it is this
+ * which makes the tooltip readable alone and allows a button as an icon (the round
+ * sending Numo) to use exactly the same component.
  *
- * Un `<button disabled>` natif n'émet plus d'événements de pointeur : sur un
- * bouton désactivé l'infobulle ne s'ouvre pas. C'est le bon comportement — le
- * raccourci n'enverrait rien non plus.
+ * A native `<button disabled>` no longer emits pointer events: on a
+ * disabled button the tooltip does not open. This is the correct behavior — the
+ * shortcut wouldn't send anything either.
  */
 export function SendShortcutTooltip({
   label,

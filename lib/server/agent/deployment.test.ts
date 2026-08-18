@@ -8,12 +8,12 @@ import {
 } from "./deployment";
 
 /**
- * Affinité de déploiement des runs (MIN-165).
+ * Run deployment affinity (MIN-165).
  *
- * Ce qui compte ici : le périmètre `null`. C'est lui qui décide si le drain de la
- * PROD reprend un run — se tromper dans ce sens, c'est exactement le bug d'origine,
- * un chunk de prod qui reprend le checkpoint d'un preview. Et c'est aussi le
- * périmètre du poste local, dont la recette de lancement dépend.
+ * What matters here: the `null` scope. It is he who decides if the drain of the
+ * PROD resumes a run - to be wrong in this sense, this is exactly the original bug,
+ * a chunk of prod which resumes the checkpoint of a preview. And it is also the
+ * perimeter of the local station, on which the launch recipe depends.
  */
 
 const NOW = Date.parse("2026-08-02T12:00:00.000Z");
@@ -34,13 +34,13 @@ describe("deploymentScopeFromEnv", () => {
 
   it("preview sans VERCEL_URL retombe sur la file commune", () => {
     // Ne devrait pas arriver (Vercel pose toujours VERCEL_URL) — mais un preview
-    // qui stamperait `""` créerait un run que PERSONNE ne draine.
+    // stamping `""` would create a run that NO ONE drains.
     expect(deploymentScopeFromEnv({ VERCEL_ENV: "preview" })).toBeNull();
     expect(deploymentScopeFromEnv({ VERCEL_ENV: "preview", VERCEL_URL: "  " })).toBeNull();
   });
 
   it("local (pas de VERCEL_ENV) draine la file commune", () => {
-    // Le drain lancé depuis le poste doit continuer de reprendre les runs de prod.
+    // The drain launched from the station must continue to resume production runs.
     expect(deploymentScopeFromEnv({})).toBeNull();
     expect(deploymentScopeFromEnv({ VERCEL_URL: "minddy-abc123.vercel.app" })).toBeNull();
   });
@@ -68,7 +68,7 @@ describe("previewKickTargets", () => {
     );
     const { urls } = previewKickTargets(rows, { now: NOW, staleAfterMs: PREVIEW_STALE_AFTER_MS });
     expect(urls).toHaveLength(PREVIEW_KICK_MAX_TARGETS);
-    expect(urls[0]).toBe("p0.vercel.app"); // les plus vieux d'abord (ordre du SELECT)
+    expect(urls[0]).toBe("p0.vercel.app"); // oldest first (SELECT order)
   });
 
   it("ignore la file commune — la prod vient de la drainer", () => {
@@ -97,8 +97,8 @@ describe("previewKickTargets", () => {
   });
 
   it("un run récent réveille encore son déploiement malgré un orphelin voisin", () => {
-    // Un run isolé qui a raté son tour ne condamne pas le déploiement : c'est la
-    // différence entre « ce preview est mort » et « ce run-là est perdu ».
+    // An isolated run which has missed its turn does not condemn the deployment: it is
+    // difference between “this preview is dead” and “this run is lost”.
     const { urls, stalledRunIds } = previewKickTargets(
       [
         { id: "old", deployment_url: "p1.vercel.app", not_before: ago(20 * 60_000) },

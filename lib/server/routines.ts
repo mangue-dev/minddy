@@ -24,28 +24,22 @@ import {
 } from "@/lib/routine-schedule";
 
 /**
- * La FABRIQUE des routines (MIN-185) — une seule, pour quatre portes.
+ * The FACTORY of routines (MIN-185) — just one, for four doors.
  *
- * Le wizard, le chat Numo, l'agent Numo et le MCP savent tous poser une
- * routine ; aucun des quatre ne valide quoi que ce soit. Tout est ici : la
- * garde de propriété, le dépôt lié, la cohérence de la cadence, le plafond de
- * modèle du plan, le calcul du prochain passage. Même doctrine que la fabrique
- * de tickets de MIN-170 — quatre validations qui se ressemblent finissent par
- * diverger, et c'est la porte la moins parcourue qui laisse passer.
+ * The wizard, the cat Numo, the agent Numo and the MCP all know how to set a
+ * routine; none of the four validate anything. Everything is here: the
+ * property guard, the linked deposit, the consistency of the cadence, the ceiling of
+ * plan model, the calculation of the next pass. Same doctrine as the MIN-170 ticket factory
+ * — four similar validations end up diverging, and it's the least traveled door that lets through.
  *
- * **Seul le OWNER du projet crée, modifie ou supprime une routine.** Une
- * routine engage un budget tous les lundis matin sans que personne ne clique :
- * c'est à celui qui paye de la poser. Un membre la VOIT (la RLS de lecture est
- * `can_access_project`) et lit ses exécutions, mais l'écriture lui est refusée
- * en `403 ownerOnly` — exactement comme les réglages de projet
- * (`update-project.ts`) et l'invitation de membres (`members.ts`).
- *
- * **Aucune policy d'écriture en base** : tout passe par le service client
- * derrière ces gardes, doctrine `agent_runs` / `agent_chains`.
- *
- * **`ensureModelInPlan` est appelé À L'ENREGISTREMENT**, pas au lancement : un
- * modèle hors plan doit se refuser devant quelqu'un, pas à 13 h dans un cron
- * dont personne ne lit les logs.
+ * **Only the OWNER of the project creates, modifies or deletes a routine.** A
+ * routine commits a budget every Monday morning without anyone clicking:
+ * it is up to the person who pays to set it. A member SEES it (read RLS is
+ * `can_access_project`) and reads its executions, but is denied writing
+ * in `403 ownerOnly` — just like project settings
+ * (`update-project.ts`) and inviting members (`members.ts`) *
+ * **`ensureModelInPlan` is called AT REGISTRATION**, not at launch: an out-of-plan model must be refused in front of someone, not at 1 p.m. in a cron
+ * for which no one reads the logs.
  */
 
 export interface Routine {
@@ -58,9 +52,9 @@ export interface Routine {
   reasoning_level: ReasoningLevel;
   base_branch: string | null;
   /**
-   * Part du budget d'usage mensuel du plan qu'UN passage a le droit de dépenser
-   * (1–100, 15 par défaut). Cf. `routineRunBudgetUsd`.
-   */
+ * Share of the plan's monthly usage budget that ONE passage has the right to spend
+ * (1–100, 15 by default). See `routineRunBudgetUsd`.
+ */
   max_spend_percent: number;
   frequency: RoutineFrequency;
   hour: number;
@@ -71,13 +65,13 @@ export interface Routine {
   enabled: boolean;
   next_run_at: string | null;
   last_run_at: string | null;
-  /** CODE du dernier passage manqué, jamais une phrase — l'UI traduit. */
+  /** CODE of the last missed passage, never a sentence — the UI translates. */
   last_error: RoutineErrorCode | string | null;
   created_at: string;
   updated_at: string;
 }
 
-/** Motifs de passage manqué, écrits par le cron et traduits par l'UI. */
+/** Missed passage reasons, written by the cron and translated by the UI. */
 export type RoutineErrorCode =
   | "quota"
   | "noRepo"
@@ -105,34 +99,34 @@ export type RoutineResult<T> =
       ok: false;
       status: number;
       errorKey: RoutineErrorKey;
-      /** Détail du refus de modèle, de quoi écrire la phrase complète. */
+      /** Details of the model refusal, enough to write the complete sentence. */
       modelLimit?: { model: string; multiplier: number; limit: number; planId: string };
-      /** Code de refus de la cadence (`invalidWeekday`, `invalidHour`…). */
+      /** Cadence refusal code (`invalidWeekday`, `invalidHour`…). */
       scheduleCode?: string;
     };
 
-/** Bornes d'écriture — au-delà on tronque, comme partout ailleurs (MIN-118). */
+/** Writing terminals — beyond that we truncate, like everywhere else (MIN-118). */
 const MAX_TITLE_LENGTH = 120;
 const MAX_PROMPT_LENGTH = 20_000;
 const MAX_MODEL_LENGTH = 200;
 const MAX_BRANCH_LENGTH = 255;
 
 /**
- * Ce qu'UN passage de cette routine a le droit de dépenser, en USD — le
- * `budget_usd` posé sur son run, que la boucle rend exécutoire.
+ * What ONE pass of this routine is allowed to spend, in USD — the
+ * `budget_usd` placed on its run, which the loop makes enforceable.
  *
- * `null` = pas de plafond propre, et c'est vrai dans deux cas :
- *  - **100 %**, le réglage qui dit « seul mon quota me borne » (l'ancien
- *    comportement, gardé accessible) ;
- *  - **BYOK**, où le budget du plan ne borne plus rien : l'utilisateur paye ses
- *    tokens, et un pourcentage d'un budget qui ne le concerne pas lui poserait
- *    un plafond qu'il n'a pas demandé. Même doctrine que le plafond de modèle
- *    (`ensureModelInPlan`), qui ne vaut lui aussi que sur le quota minddy.
+ * `null` = no own ceiling, and this is true in two cases :
+ * - **100%**, the setting which says "only my quota limits me" (the old
+ * behavior, kept accessible);
+ * - **BYOK**, where the budget of the plan no longer limits anything: the user pays his
+ * tokens, and a percentage of a budget which does not concern him would pose
+ * a cap that he did not ask for. Same doctrine as the model ceiling
+ * (`ensureModelInPlan`), which also only applies to the minddy quota.
  *
- * La base est le budget du PLAN et non le restant du mois : un plafond qui
- * fondrait avec la consommation ferait travailler la routine de moins en moins
- * loin à mesure que le mois avance, sans que son réglage ait bougé. Ce qui
- * borne le restant, c'est le quota — l'autre moitié du `min()` de la boucle.
+ * The basis is the PLAN budget and not the rest of the month: a ceiling which
+ * would melt with consumption would make the routine work less and less less
+ * far as the month progresses, without its setting having changed. What
+ * limits the remainder is the quota — the other half of the `min()` of the loop.
  */
 export async function routineRunBudgetUsd(routine: {
   owner_id: string;
@@ -147,14 +141,14 @@ export async function routineRunBudgetUsd(routine: {
 
 export interface CreateRoutineInput {
   projectId: string;
-  /** Qui demande. La garde owner porte sur LUI, quelle que soit la porte. */
+  /** Who asks. The owner's guard is on HIM, whatever the door. */
   actorId: string;
   /**
-   * PAS de titre : il est ÉCRIT par un petit modèle à partir de l'instruction,
-   * ici et nulle part ailleurs (cf. `titleFor`). Aucune porte n'en propose un —
-   * un nom donné à la main est un champ de plus à remplir pour un résultat
-   * moins bon, et il divergeait de l'instruction dès la première réécriture.
-   */
+ * NO title: it is WRITTEN by a small model from the instruction,
+ * here and nowhere else (cf. `titleFor`). No door offers one —
+ * a name given by hand is one more field to fill in for a worse result
+ *, and it diverged from the instruction from the first rewrite.
+ */
   prompt: string;
   model?: string | null;
   reasoningLevel?: string | null;
@@ -170,7 +164,7 @@ export interface CreateRoutineInput {
   enabled?: boolean;
 }
 
-/** Champs de cadence lus depuis une entrée brute, normalisés. */
+/** Cadence fields read from raw input, normalized. */
 function toSchedule(input: {
   frequency: string;
   hour: number;
@@ -180,16 +174,16 @@ function toSchedule(input: {
   timezone: string;
 }): RoutineSchedule {
   const frequency = isRoutineFrequency(input.frequency) ? input.frequency : "weekly";
-  // Dédoublonnés et triés dès l'entrée : deux fois le même jour n'est pas deux
-  // occurrences, et l'ordre de saisie n'a pas à survivre jusqu'à l'affichage.
+  // Deduplicated and sorted upon entry: twice on the same day is not two
+  // occurrences, and the order of entry does not have to survive until display.
   const uniq = (days: number[] | null | undefined) =>
     [...new Set(days ?? [])].sort((a, b) => a - b);
   return {
     frequency,
     hour: Number(input.hour),
     minute: Number(input.minute ?? 0),
-    // Les champs de jour n'existent QUE pour leur cadence : les laisser traîner
-    // d'une cadence à l'autre ferait passer `assertSchedule` pour un caprice.
+    // Daytime fields ONLY exist for their cadence: let them drag
+    // from one cadence to another would make `assertSchedule` seem like a whim.
     weekdays: frequency === "weekly" ? uniq(input.weekdays) : [],
     daysOfMonth: frequency === "monthly" ? uniq(input.daysOfMonth) : [],
     timezone: String(input.timezone ?? ""),
@@ -197,28 +191,28 @@ function toSchedule(input: {
 }
 
 /**
- * Le TITRE d'une routine : écrit par le petit modèle qui nomme déjà les
- * sessions carnet et les conversations de Numo, à partir de son instruction.
+ * The TITLE of a routine: written by the small model which already names the
+ * notebook sessions and Numo's conversations, from its instruction.
  *
- * Il n'est jamais demandé à l'utilisateur, et il se REFAIT à chaque fois que
- * l'instruction change : un nom saisi une fois cesse de décrire la routine dès
- * la première réécriture, et personne ne pense à le corriger. L'appel coûte
- * quelques centimes de millier de tokens, une fois par édition — à comparer au
- * titre que MIN-185 a justement retiré du lancement, qui se repayait à CHAQUE
+ * It is never requested from the user, and it REDOES each time
+ * the instruction changes: a name entered once stops describing the routine as soon as
+ * the first rewrite, and no one thinks to correct it. The call costs
+ * a few cents of a thousand tokens, once per edition — to compare to
+ * title that MIN-185 rightly removed from the launch, which was repaid for EACH
  * passage.
  *
- * La dépense est celle de la routine (`routine_code`), comme tout ce qu'elle
- * fait faire.
+ * The expense is that of routine (`routine_code`), like everything else it
+ * does.
  *
- * Repli si le modèle ne répond pas : la première phrase de l'instruction,
- * coupée. Une routine sans titre n'a pas de ligne lisible dans la colonne.
+ * Fallback if the model does not respond: the first sentence of the instruction,
+ * cut off. An untitled routine has no readable line in the column.
  */
 async function titleFor(prompt: string, userId: string, projectId: string): Promise<string> {
   const generated = await generateShortTitle({
     text: prompt,
     kind: "note",
-    // La langue du titre est celle de l'instruction, sans qu'on ait à la
-    // connaître ici — c'est la personne qui l'a écrite.
+    // The language of the title is that of the instruction, without having to
+    // know here — this is the person who wrote it.
     locale: "auto",
     usage: { feature: "routine_code", userId, projectId },
   }).catch(() => null);
@@ -227,7 +221,7 @@ async function titleFor(prompt: string, userId: string, projectId: string): Prom
   return (first || prompt.trim()).slice(0, MAX_TITLE_LENGTH);
 }
 
-/** Traduit un refus de cadence en résultat de fabrique. */
+/** Translates a cadence refusal into a factory result. */
 function scheduleRefusal(err: unknown): Extract<RoutineResult<never>, { ok: false }> | null {
   if (!(err instanceof RoutineScheduleError)) return null;
   return err.code === "unknownTimezone"
@@ -236,9 +230,9 @@ function scheduleRefusal(err: unknown): Extract<RoutineResult<never>, { ok: fals
 }
 
 /**
- * Le plafond de modèle du plan, appliqué au modèle CHOISI pour la routine. Le
- * plafond ne vaut que sur le quota minddy (en BYOK, l'utilisateur paye ses
- * tokens) : on lit donc le mode du compte, comme le lancement.
+ * The template cap of the plan, applied to the CHOSEN template for the routine. The
+ * ceiling only applies to the minddy quota (in BYOK, the user pays his
+ * tokens): we therefore read the account mode, like the launch.
  */
 async function refuseModelAbovePlan(
   userId: string,
@@ -268,21 +262,21 @@ async function refuseModelAbovePlan(
   }
 }
 
-/** Crée une routine. Owner du projet uniquement. */
+/** Creates a routine. Project owner only. */
 export async function createRoutine(
   input: CreateRoutineInput,
 ): Promise<RoutineResult<Routine>> {
   const access = await getProjectAccess(input.actorId, input.projectId);
   if (!access) return { ok: false, status: 404, errorKey: "projectNotFound" };
-  // La garde AVANT tout le reste : inutile de valider une cadence qu'on va
-  // refuser, et le refus doit être le même quelle que soit la porte.
+  // Guard BEFORE everything else: no need to validate a cadence that we are going to
+  // refuse, and the refusal must be the same regardless of the door.
   if (!access.isOwner) return { ok: false, status: 403, errorKey: "ownerOnly" };
 
   const prompt = input.prompt?.trim() ?? "";
   if (!prompt) return { ok: false, status: 400, errorKey: "promptRequired" };
 
-  // Sans dépôt lié, la routine n'aurait rien à cloner : on refuse ici plutôt
-  // que de laisser une routine se casser à chaque passage.
+  // Without a linked repository, the routine would have nothing to clone: ​​we rather refuse here
+  // than letting a routine break with each pass.
   const link = await getProjectLink(input.projectId);
   if (!link) return { ok: false, status: 409, errorKey: "noRepo" };
 
@@ -300,8 +294,8 @@ export async function createRoutine(
   const refusal = await refuseModelAbovePlan(input.actorId, model);
   if (refusal) return refusal;
 
-  // Le titre en DERNIER : après tous les refus, pour ne pas payer un appel de
-  // nommage à une routine qu'on s'apprête à refuser.
+  // The title LAST: after all the refusals, to avoid paying a call from
+  // naming a routine that we are about to refuse.
   const title = await titleFor(prompt, input.actorId, input.projectId);
   const enabled = input.enabled !== false;
   const service = getServiceClient();
@@ -309,8 +303,8 @@ export async function createRoutine(
     .from("agent_routines")
     .insert({
       project_id: input.projectId,
-      // Acteur technique = le owner, c'est-à-dire l'appelant (la garde ci-dessus
-      // le garantit). Écrit en colonne pour que le cron n'ait pas à re-joindre.
+      // Technical actor = the owner, that is to say the caller (the guard above
+      // guarantees it). Written in a column so the cron doesn't have to re-join.
       owner_id: input.actorId,
       title,
       prompt: prompt.slice(0, MAX_PROMPT_LENGTH),
@@ -321,9 +315,9 @@ export async function createRoutine(
       base_branch: input.baseBranch?.trim()
         ? input.baseBranch.trim().slice(0, MAX_BRANCH_LENGTH)
         : null,
-      // Ramené dans ses bornes plutôt que refusé : un plafond mal écrit par une
-      // des quatre portes ne doit pas empêcher de poser la routine — le CHECK
-      // de la base, lui, ne pardonnerait pas.
+      // Brought back within its limits rather than refused: a poorly written ceiling by a
+      // of the four doors should not prevent the routine from being established — the CHECK
+      // from the base, he would not forgive.
       max_spend_percent:
         input.maxSpendPercent == null
           ? DEFAULT_MAX_SPEND_PERCENT
@@ -335,8 +329,8 @@ export async function createRoutine(
       days_of_month: schedule.daysOfMonth,
       timezone: schedule.timezone,
       enabled,
-      // Une routine désarmée n'a pas d'échéance : l'index partiel du cron ne la
-      // voit pas, et la réactiver la recalcule.
+      // A disarmed routine has no deadline: the partial cron index does not
+      // doesn't see it, and reactivating it recalculates it.
       next_run_at: enabled ? next.toISOString() : null,
     })
     .select("*")
@@ -351,7 +345,7 @@ export async function createRoutine(
 export interface UpdateRoutineInput {
   routineId: string;
   actorId: string;
-  /** Réécrire l'instruction REFAIT le titre : cf. `titleFor`. */
+  /** Rewrite the instruction REDOES the title: cf. `titleFor`. */
   prompt?: string;
   model?: string | null;
   reasoningLevel?: string | null;
@@ -368,11 +362,11 @@ export interface UpdateRoutineInput {
 }
 
 /**
- * Modifie une routine. Owner seul.
+ * Modifies a routine. Owner alone.
  *
- * Toute touche à la cadence ou à `enabled` RECALCULE `next_run_at` : sans ça,
- * changer l'heure ne changerait rien avant le passage suivant — et réactiver
- * une routine la ferait partir sur une échéance périmée, donc immédiatement.
+ * Any key to the cadence or to `enabled` RECALCULATES `next_run_at`: without that,
+ * changing the time would not change anything before the next passage — and reactivating
+ * a routine would make it start on an expired deadline, so immediately.
  */
 export async function updateRoutine(
   input: UpdateRoutineInput,
@@ -381,7 +375,7 @@ export async function updateRoutine(
   const { data: current } = await service
     .from("agent_routines")
     .select("*")
-    // Une routine à la corbeille ne se modifie pas : elle se restaure d'abord.
+    // A trashed routine cannot be modified: it is first restored.
     .is("deleted_at", null)
     .eq("id", input.routineId)
     .maybeSingle();
@@ -397,9 +391,9 @@ export async function updateRoutine(
     const prompt = input.prompt.trim();
     if (!prompt) return { ok: false, status: 400, errorKey: "promptRequired" };
     updates.prompt = prompt.slice(0, MAX_PROMPT_LENGTH);
-    // Le titre SUIT l'instruction. Une routine dont on a réécrit le travail
-    // garderait sinon le nom de ce qu'elle faisait avant — et c'est ce nom-là
-    // qu'on lit dans la colonne pour décider si elle sert encore.
+    // The title FOLLOWS the instruction. A routine whose work has been rewritten
+    // would otherwise keep the name of what she did before — and that’s the name
+    // which we read in the column to decide if it is still useful.
     if (prompt !== routine.prompt) {
       updates.title = await titleFor(prompt, input.actorId, routine.project_id);
     }
@@ -422,9 +416,9 @@ export async function updateRoutine(
     updates.max_spend_percent = clampSpendPercent(input.maxSpendPercent);
   }
 
-  // La cadence se relit ENTIÈRE, en fusionnant l'existant et ce qui change :
-  // valider un champ isolé laisserait passer « mensuel + un jour de semaine »,
-  // qui n'est cohérent qu'à deux.
+  // The cadence is reread ENTIRELY, merging what exists and what changes:
+  // validating an isolated field would allow “monthly + a weekday” to pass,
+  // which is only consistent with two.
   const cadenceTouched =
     input.frequency !== undefined ||
     input.hour !== undefined ||
@@ -483,19 +477,19 @@ export async function updateRoutine(
 }
 
 /**
- * Supprime une routine — à la CORBEILLE (MIN-201), pas pour de bon.
+ * Deletes a routine — in the TRASH (MIN-201), not for good.
  *
- * C'était un `delete` sec, et il emportait tous ses passages avec elle
- * (`agent_runs.routine_id` cascade) : les conversations, les diffs et les pull
- * requests qui s'y lisent disparaissaient d'un clic, sans retour possible. La
- * routine part donc là où partent déjà les tickets, les objectifs, les retours
- * et les projets : marquée, sortie de l'app, restaurable 30 jours à l'identique
- * — cadence, instruction, modèle, échéance et historique inchangés, puisque rien
- * n'est détaché. C'est le balayage nocturne qui tranche ensuite.
+ * It was a dry `delete`, and it took all its passages with it
+ * (`agent_runs.routine_id` cascade): the conversations, the diffs and the pull
+ * requests that read there disappeared with a click, with no possible return. The
+ * routine therefore leaves where the tickets, objectives, returns
+ * and projects already leave: marked, exit from the app, restoreable for 30 days identically
+ * — cadence, instruction, model, deadline and history unchanged, since nothing
+ * is detached. It's the nightly scan that decides next.
  *
- * La garde owner ET l'écriture vivent dans `softDeleteItem` : deux
- * implémentations de « corbeiller une routine » — une ici, une pour l'écran de
- * corbeille et l'outil de Numo — finiraient par diverger.
+ * The owner guard AND the writing live in `softDeleteItem`: two
+ * implementations of “trash a routine” — one here, one for the screen of
+ * trash and the Numo tool — would end up diverge.
  */
 export async function deleteRoutine(input: {
   routineId: string;
@@ -503,8 +497,8 @@ export async function deleteRoutine(input: {
 }): Promise<{ ok: true } | Extract<RoutineResult<never>, { ok: false }>> {
   const result = await softDeleteItem("routine", input.routineId, input.actorId);
   if (result.ok) return { ok: true };
-  // La corbeille ne rend, pour une routine, que ces trois clés-là ; le repli
-  // couvre l'impossible plutôt que de laisser passer une clé que l'UI ne sait
+  // The basket only returns, for a routine, these three keys; the withdrawal
+  // cover the impossible rather than letting a key pass that the UI doesn't know
   // pas traduire.
   const errorKey: RoutineErrorKey =
     result.errorKey === "routineNotFound" || result.errorKey === "ownerOnly"
@@ -514,9 +508,9 @@ export async function deleteRoutine(input: {
 }
 
 /**
- * Une routine par son id, avec l'accès de l'appelant (lecture = membres). Une
- * routine à la corbeille n'existe plus pour personne (MIN-201) : elle se
- * restaure depuis la corbeille, elle ne se relit pas par son ancienne URL.
+ * A routine by its id, with caller access (read = members). A
+ * trash routine no longer exists for anyone (MIN-201): it is
+ * restored from the trash, it is not reread by its old URL.
  */
 export async function getRoutineForUser(
   routineId: string,
@@ -537,9 +531,9 @@ export async function getRoutineForUser(
 }
 
 /**
- * Les routines des projets accessibles à l'utilisateur — owner ET membres. La
- * lecture est ouverte : un membre doit pouvoir voir ce qui tourne sur le dépôt
- * qu'il partage, même s'il ne peut ni le poser ni l'arrêter.
+ * Project routines accessible to the user — owner AND members. The
+ * reading is open: a member must be able to see what is running on the repository
+ * that they share, even if they cannot put it down or stop it.
  */
 export async function listRoutinesForUser(userId: string): Promise<Routine[]> {
   const service = getServiceClient();
@@ -560,14 +554,14 @@ export async function listRoutinesForUser(userId: string): Promise<Routine[]> {
 
   const { data } = await service
     .from("agent_routines")
-    // Même garde que le balayage du cron : un projet à la corbeille sort de la
-    // liste. Le chemin « membre » ne peut pas filtrer `deleted_at` lui-même
-    // (`project_members` ne le porte pas), et sans cette jointure un membre
-    // lisait dans la colonne une routine dont le détail répond 404 —
-    // `getProjectAccess` écarte les projets corbeillés.
+    // Same guard as the cron scan: a trashed project leaves the
+    // list. Path "member" cannot filter `deleted_at` itself
+    // (`project_members` does not carry it), and without this join a member
+    // read in the column a routine whose detail corresponds to 404 —
+    // `getProjectAccess` discards trashed projects.
     .select("*, projects!inner(deleted_at)")
     .is("projects.deleted_at", null)
-    // Et la routine elle-même, corbeillée à son tour (MIN-201).
+    // And the routine itself, trashed in turn (MIN-201).
     .is("deleted_at", null)
     .in("project_id", [...ids])
     .order("created_at", { ascending: false });
@@ -577,24 +571,24 @@ export async function listRoutinesForUser(userId: string): Promise<Routine[]> {
 }
 
 /**
- * Les routines dont l'échéance est passée — le balayage du cron.
+ * Routines whose deadline has passed — scanning the cron.
  *
- * **Un projet à la CORBEILLE ne fait plus travailler personne.** La suppression
- * d'un projet est douce (`deleted_at`, MIN-133) : la routine, elle, survit à sa
- * ligne — et sans ce filtre elle partirait tous les lundis sur un projet que
- * son propriétaire croit supprimé, en dépensant son budget, sans figurer nulle
- * part dans l'écran (`listRoutinesForUser` écarte les projets corbeillés,
- * comme `getProjectAccess`). Même doctrine que le moteur d'automatisations,
- * qui écarte les projets corbeillés de son propre balayage.
+ * **A project in the TRASH no longer makes anyone work.** Deleting
+ * of a project is gentle (`deleted_at`, MIN-133): the routine survives sa
+ * line — and without this filter it would start every Monday on a project that
+ * its owner believes deleted, by spending his budget, without appearing anywhere
+ * share in the screen (`listRoutinesForUser` excludes trashed projects,
+ * like `getProjectAccess`). Same doctrine as the automation engine,
+ * which excludes trashed projects from its own scanning.
  *
- * **Une routine à la corbeille non plus** (MIN-201) : son échéance reste armée
- * pour que la restauration la rende telle quelle, et sans ce filtre elle
- * partirait pendant sa rétention comme si de rien n'était.
+ * **A routine in the trash either** (MIN-201): its deadline remains armed
+ * so that the restoration returns it as it is, and without this filter it
+ * would leave during its retention as if nothing had happened.
  *
- * La jointure est INTERNE et le filtre est DANS la requête, jamais après :
- * écartée en JS, une routine de projet corbeillé garderait sa place en tête de
- * la fenêtre (son échéance ne bouge plus, donc elle trie toujours première) et
- * affamerait les routines vivantes.
+ * The join is INTERNAL and the filter is IN the query, never after:
+ * discarded in JS, a trashed project routine would keep its place at the top of
+ * the window (its deadline does not moves more, so it always sorts first) and
+ * would starve live routines.
  */
 export async function dueRoutines(limit = 20): Promise<Routine[]> {
   const service = getServiceClient();
@@ -608,21 +602,21 @@ export async function dueRoutines(limit = 20): Promise<Routine[]> {
     .lte("next_run_at", new Date().toISOString())
     .order("next_run_at", { ascending: true })
     .limit(limit);
-  // La jointure ajoute une clé au retour : elle ne voyage pas plus loin.
+  // The join adds a key to the return: it does not travel further.
   return ((data ?? []) as Array<Routine & { projects?: unknown }>).map(
     ({ projects: _joined, ...routine }) => routine as Routine,
   );
 }
 
 /**
- * RÉSERVE une échéance : compare-and-set sur `next_run_at`. C'est le SEUL
- * verrou contre un double départ — deux crons qui se chevauchent lisent la même
- * routine, un seul gagne l'écriture, l'autre repart sans rien lancer. Même
- * doctrine que `claim_agent_run`.
+ * RESERVES a deadline: compare-and-set on `next_run_at`. This is the ONLY
+ * lock against a double start — two overlapping crons read the same
+ * routine, only one wins the write, the other leaves without casting anything. Same
+ * doctrine that `claim_agent_run`.
  *
- * On avance l'échéance AVANT de lancer, et on ne rattrape jamais les passages
- * manqués : une routine restée trois jours sans budget repart demain, elle ne
- * joue pas trois fois.
+ * We advance the deadline BEFORE launching, and we never make up for missed passages
+ *: a routine left for three days without a budget starts again tomorrow, it does not
+ * play three times.
  */
 export async function claimRoutine(
   routine: Routine,
@@ -631,12 +625,12 @@ export async function claimRoutine(
   const schedule = routineSchedule(routine);
   let next: string | null;
   try {
-    // Depuis MAINTENANT et non depuis l'échéance ratée : une routine réveillée
-    // en retard doit repartir sur la prochaine occurrence réelle.
+    // Since NOW and not since the missed deadline: a reawakened routine
+    // late must start again on the next real occurrence.
     next = nextRunAt(schedule, new Date()).toISOString();
   } catch {
-    // Cadence devenue illisible (fuseau retiré d'ICU, donnée bricolée) : on
-    // désarme plutôt que de la rejouer en boucle à chaque réveil du cron.
+    // Cadence become unreadable (time zone removed from ICU, data tinkered with): we
+    // disarm rather than replaying it in a loop each time the cron wakes up.
     next = null;
   }
 
@@ -645,7 +639,7 @@ export async function claimRoutine(
     .from("agent_routines")
     .update({ next_run_at: next, last_run_at: new Date().toISOString() })
     .eq("id", routine.id)
-    // Le compare-and-set : l'échéance qu'on a lue doit être encore là.
+    // The compare-and-set: the deadline that we read must still be there.
     .eq("next_run_at", routine.next_run_at)
     .select("id")
     .maybeSingle();
@@ -657,15 +651,15 @@ export async function claimRoutine(
 }
 
 /**
- * « Lancer maintenant » : le passage n'est pas celui du calendrier, mais c'en
- * est un — `last_run_at` le dit, et l'alerte du passage précédent s'éteint,
- * exactement comme le fait le cron quand son lancement part.
+ * "Launch now": the pass is not the one on the calendar, but it's in
+ * is a — `last_run_at` says so, and the alert for the previous pass goes off,
+ * exactly like the cron does when its launch leaves.
  *
- * Sans ça, un passage déclenché à la main laissait `last_run_at` sur l'échéance
- * d'avant, et les deux surfaces qui le rendent (`list_routines` du chat et du
- * MCP, toutes deux annoncées comme « quand elle a tourné pour la dernière
- * fois ») répondaient à côté. **`next_run_at` n'est pas touché** : essayer sa
- * routine un mardi ne fait pas sauter le lundi suivant.
+ * Without that, a hand-triggered pass left `last_run_at` on the previous
+ * deadline, and the two surfaces that render it (cat's `list_routines` and
+ * MCP, both announced as "when it ran for the last
+ * time") responded next to it. **`next_run_at` is not affected**: try your
+ * routine on a Tuesday does not skip the following Monday.
  */
 export async function stampRoutineLaunched(routineId: string): Promise<void> {
   const service = getServiceClient();
@@ -677,8 +671,8 @@ export async function stampRoutineLaunched(routineId: string): Promise<void> {
 }
 
 /**
- * Écrit le motif du dernier passage — un CODE, jamais une phrase. `null` efface
- * (un passage qui repart normalement doit effacer l'alerte de l'écran).
+ * Writes the reason for the last pass — a CODE, never a phrase. `null` clears
+ * (a passage that restarts normally should clear the alert from the screen).
  */
 export async function stampRoutineError(
   routineId: string,
@@ -692,7 +686,7 @@ export async function stampRoutineError(
   if (error) console.error("[routines] stamp error failed:", error.message);
 }
 
-/** La cadence d'une routine, telle que `describeSchedule`/`nextRunAt` l'attendent. */
+/** The cadence of a routine, such as `describeSchedule`/`nextRunAt` expects it. */
 export function routineSchedule(routine: Routine): RoutineSchedule {
   return {
     frequency: routine.frequency,
@@ -704,7 +698,7 @@ export function routineSchedule(routine: Routine): RoutineSchedule {
   };
 }
 
-/** Sanity: la cadence d'une routine est valide (utile aux appelants externes). */
+/** Sanity: the cadence of a routine is valid (useful to external callers). */
 export function isValidSchedule(schedule: RoutineSchedule): boolean {
   try {
     assertSchedule(schedule);

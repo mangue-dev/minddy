@@ -12,11 +12,11 @@ import { getClient } from "@/lib/server/oauth/clients";
 import { OAuthSuccessCard } from "@/components/oauth/success-card";
 
 /**
- * Interstitiel « connexion réussie » : affiché juste après le consentement,
- * avant la redirection automatique vers le callback du client (qui porte le
- * code). Anti open-redirect : `continue` n'est suivi que si sa base
- * (origin + pathname) correspond EXACTEMENT à un redirect_uri enregistré du
- * client — sinon carte d'erreur, aucune redirection.
+ * “Connection successful” interstitial: displayed just after consent,
+ * before the automatic redirection to the client callback (which bears the
+ * code). Anti open-redirect: `continue` is only followed if its base
+ * (origin + pathname) matches EXACTLY a registered redirect_uri of the
+ * client — otherwise error card, no redirection.
  */
 
 export const dynamic = "force-dynamic";
@@ -28,12 +28,12 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-/** La base d'une URI de callback, comparable telle quelle.
+/** The base of a callback URI, comparable as is.
 
-    Surtout PAS `origin` : sur un schéma privé d'app native (`cursor://…`), qui
-    n'est pas un « special scheme » au sens de l'URL Standard, `origin` vaut la
-    chaîne `"null"` — deux URI qui n'ont rien à voir se compareraient égales et
-    le contrôle ne contrôlerait plus rien. */
+ Especially NOT `origin`: on a private native app scheme (`cursor://…`), which
+ is not a “special scheme” in the sense of the Standard URL, `origin` is worth the
+ string `"null"` — two unrelated URIs would compare equal and the
+ control would no longer control anything. */
 const callbackBase = (url: URL) => `${url.protocol}//${url.host}${url.pathname}`;
 
 function continueMatchesClient(

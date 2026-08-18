@@ -44,16 +44,16 @@ export const maxDuration = 120;
 // The dictation session is throwaway: history lives on the client and dies
 // with the dialog / when the panel switches issue.
 
-// L'étape agentique post-dictée (transcript → patch d'issue) tourne sur son
-// propre modèle — rapide et pas cher, distinct du modèle global de Numo. Il se
-// règle en base (`dictate_model`, cf. lib/ai-model-config.ts).
+// The post-dictation agentic stage (transcript → issue patch) turns on its
+// own model — fast and cheap, distinct from Numo's overall model. He
+// rule in base (`dictate_model`, cf. lib/ai-model-config.ts).
 const RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 } as const;
 const MAX_TOOL_ROUNDS = 3;
 const MAX_HISTORY_TURNS = 12;
-// La dictée n'a plus de limite de durée : une prise peut valoir des milliers de
-// mots (~20 000 caractères ≈ une demi-heure de parole). Les tours d'historique
-// gardent le plafond serré d'origine — douze tours de 20 000 feraient un prompt
-// absurde, alors qu'un seul transcript long est le cas normal.
+// Dictation no longer has a duration limit: one take can be worth thousands of
+// words (~20,000 characters ≈ half an hour of speaking). History tours
+// keep the original tight cap — twelve spins of 20,000 would make a quick
+// absurd, when a single long transcript is the normal case.
 const MAX_TRANSCRIPT_CHARS = 20_000;
 const MAX_HISTORY_CHARS = 4000;
 
@@ -72,15 +72,15 @@ type Draft = {
 };
 
 /**
- * LES QUATRE CHAMPS QUE SMART-FILL POSE, retirés du tool quand il est armé
- * (MIN-260). Dicter « bug urgent sur le login » ne doit alors PAS poser la
- * priorité : le formulaire ne montre plus ces pickers, et un champ posé là
- * serait invisible — pire, il gagnerait sur Smart-fill (qui ne complète que le
- * vide), donc l'automatisation qu'on croit armée ne ferait plus rien.
+ * THE FOUR FIELDS THAT SMART-FILL PLACES, removed from the tool when it is armed
+ * (MIN-260). Dictating “urgent bug on the login” should then NOT pose the
+ * priority: the form no longer shows these pickers, and a field placed there
+ * would be invisible — worse, it would gain on Smart-fill (which only completes the
+ * empty), so the automation that we believe to be armed would no longer do anything.
  *
- * Ils sont retirés du SCHÉMA, pas filtrés après coup : un modèle à qui on ne
- * propose pas un argument ne le remplit pas, ne le raisonne pas, et ne le
- * facture pas. Filtrer la réponse aurait payé pour la jeter.
+ * They are removed from the DIAGRAM, not filtered after the fact: a model that is not
+ * does not propose an argument, does not fulfill it, does not reason it, and does not
+ * not bill. Filtering the response would have paid to throw it away.
  */
 const SMART_FILLED_FIELDS = ["priority", "effort", "objective_id", "category_ids"] as const;
 
@@ -131,10 +131,10 @@ const UPDATE_DRAFT_TOOL = {
   },
 };
 
-/** Le tool tel qu'il part au modèle : entier, ou amputé des champs que
- *  Smart-fill pose lui-même (cf. `SMART_FILLED_FIELDS`). Exporté pour son test :
- *  ce qu'on retire du schéma ne se voit nulle part à l'écran, et une régression
- *  ici rendrait juste la dictée « bizarrement bavarde » sans rien casser. */
+/** The tool as it comes from the model: entire, or amputated of the fields that
+ * Smart-fill installs itself (see `SMART_FILLED_FIELDS`). Exported for testing:
+ * what we remove from the diagram is nowhere to be seen on the screen, and a regression
+ * here would just make the dictation "oddly verbose" without breaking anything. */
 export function updateDraftTool(smartFill: boolean) {
   if (!smartFill) return UPDATE_DRAFT_TOOL;
   const properties = { ...UPDATE_DRAFT_TOOL.function.parameters.properties } as Record<
@@ -251,8 +251,8 @@ function buildDictatePrompt({
   mode: "create" | "edit";
   locale: string;
   userId: string;
-  /** Smart-fill est armé sur ce formulaire : priorité, effort, catégories et
-   *  objectif ne sont pas à la dictée (MIN-260). */
+  /** Smart-fill is armed on this form: priority, effort, categories and
+   * objective are not for dictation (MIN-260). */
   smartFill: boolean;
   timeZone: string;
 }): string {
@@ -332,7 +332,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  // Budget d'usage du plan (MIN-72) — pré-vol avant le mini-agent de dictée.
+  // Plan usage budget (MIN-72) — pre-flight before the mini-dictation agent.
   try {
     await ensureUsageBudget(auth.user.id, "voice");
   } catch (err) {
@@ -361,14 +361,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  // `null` est du JSON valide : lire body.mode dessus ferait un 500, pas un 400.
+  // `null` is valid JSON: reading body.mode on it would make a 500, not a 400.
   if (!body || typeof body !== "object") {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const mode = body.mode === "edit" ? ("edit" as const) : ("create" as const);
-  // Smart-fill n'existe que dans le formulaire de CRÉATION : en édition, le
-  // panneau montre tous les champs et la dictée les pose tous.
+  // Smart-fill only exists in the CREATION form: in edition, the
+  // panel shows all fields and dictation asks them all.
   const smartFill = mode === "create" && body.smartFill === true;
 
   const transcript =
@@ -438,8 +438,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     resolveAiRuntime({ userId: auth.user.id, modelKey: "dictate_model", surface: "voice" }),
     getLocale(),
   ]);
-  // `let` : le repli du raccourci de routage (MIN-263) colle au modèle qui a
-  // marché, pour ne pas re-tenter le suffixe à chaque round.
+  // `let`: The routing shortcut fallback (MIN-263) sticks to the template that has
+  // market, so as not to re-attempt the suffix each round.
   let model = aiRuntime.model;
 
   const messages: OpenRouterMessage[] = [
@@ -463,7 +463,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   // until the model answers with plain text (or the round cap hits).
   const merged: IssueDraftPatch = {};
   let reply = "";
-  // Suivi des coûts : un run = cette dictée ; chaque round est un appel.
+  // Cost tracking: one run = this dictation; each round is a call.
   const runId = newRunId();
   const usageRows: AiUsageInput[] = [];
   try {

@@ -15,17 +15,17 @@ import {
 } from "./opencode-events";
 
 /**
- * MIN-286 lot 1 — la traduction du flux d'opencode vers notre fil.
+ * MIN-286 batch 1 — translating the opencode stream to our feed.
  *
- * **Les événements de ce fichier ne sont pas écrits à la main** : ils ont été
- * capturés sur un vrai serveur `opencode-ai@1.18.16`, pendant un tour complet
- * avec appel de tool (`fixtures/opencode-turn.ndjson`). C'est ce qui donne leur
- * valeur aux assertions : un test sur des événements inventés vérifie qu'on sait
- * lire ce qu'on a écrit, pas qu'on sait lire ce qu'opencode envoie.
+ * **The events in this file are not written by hand**: they have been
+ * captured on a real server `opencode-ai@1.18.16`, during a full turn
+ * with tool call (`fixtures/opencode-turn.ndjson`). This is what gives them
+ * value to assertions: a test on invented events verifies that we know
+ * read what we wrote, not that we know how to read what opencode sends.
  *
- * Ce qu'ils gardent : **le fil raconte la même chose** qu'avec la boucle maison —
- * mêmes types, mêmes payloads, même ordre. C'est le critère de bascule du lot 3,
- * et `agent_run_events` ne garde rien d'autre que ces payloads.
+ * What they keep: **the thread tells the same thing** as with the house loop —
+ * same types, same payloads, same order. This is the changeover criterion for lot 3,
+ * and `agent_run_events` doesn't keep anything other than these payloads.
  */
 
 const FIXTURE = join(__dirname, "fixtures", "opencode-turn.ndjson");
@@ -38,10 +38,10 @@ function fixtureEvents(): OpencodeEvent[] {
 }
 
 /**
- * Ouvre une sous-table d'un event de fixture, ou rend `undefined` si le chemin
- * n'existe pas. Les `properties` d'un `OpencodeEvent` sont volontairement larges
- * — c'est un flux tiers. Passer par ici plutôt que par une conversion enchaînée
- * évite qu'un `?.` sur le premier maillon laisse le second déréférencer `undefined`.
+ * Opens a subtable of a fixture event, or returns `undefined` if the path
+ * does not exist. The `properties` of a `OpencodeEvent` are deliberately wide
+ * — it’s a third-party feed. Go this way rather than through a chained conversion
+ * prevents a `?.` on the first link from leaving the second dereference `undefined`.
  */
 function subRecord(value: unknown): Record<string, unknown> | undefined {
   return typeof value === "object" && value !== null
@@ -49,7 +49,7 @@ function subRecord(value: unknown): Record<string, unknown> | undefined {
     : undefined;
 }
 
-/** Rejoue le tour capturé et rend tout ce qu'il a produit. */
+/** Replays the captured trick and returns everything it produced. */
 function replay() {
   const state = newTurnStreamState();
   const events: TranslatedEvent[] = [];
@@ -70,8 +70,8 @@ describe("un vrai tour capturé", () => {
   it("rend l'appel de tool, puis son résultat, dans cet ordre", () => {
     const { events } = replay();
     expect(events.map((e) => e.type)).toEqual(["tool_call", "tool_result"]);
-    // Le tool généré s'appelle déjà comme le nôtre : rien à traduire ici, et
-    // c'est le point — les 32 tools de domaine portent nos noms par construction.
+    // The generated tool is already called like ours: nothing to translate here, and
+    // That's the point — the 32 domain tools have our names by construction.
     expect(events[0].payload).toEqual({ id: "call_1", name: "read_issue", issue: "MIN-286" });
     expect(events[1].payload.id).toBe("call_1");
     expect(events[1].payload.success).toBe(true);
@@ -79,8 +79,8 @@ describe("un vrai tour capturé", () => {
   });
 
   it("n'annonce PAS l'appel tant qu'on ne sait pas ce qu'il appelle", () => {
-    // Mesuré : le premier `message.part.updated` d'un tool arrive en `pending`
-    // avec `input: {}`. L'émettre afficherait un appel sans argument, puis rien.
+    // Measured: the first `message.part.updated` of a tool arrives at `pending`
+    // with `input: {}`. Issuing it would show a call with no arguments, then nothing.
     const state = newTurnStreamState();
     const pending = fixtureEvents().find((e) => {
       if (e.type !== "message.part.updated") return false;
@@ -93,8 +93,8 @@ describe("un vrai tour capturé", () => {
 
   it("compte le coût du round UNE fois, alors qu'il arrive deux fois", () => {
     const { usage } = replay();
-    // Mesuré : `message.updated` se répète à l'identique une fois le round fini.
-    // Sans déduplication, chaque round paierait deux lignes de ledger.
+    // Measured: `message.updated` is repeated identically once the round is over.
+    // Without deduplication, each round would pay two ledger lines.
     const finished = usage.filter((u) => u.finish);
     expect(finished.length).toBe(usage.length);
     const ids = new Set(usage.map((u) => u.messageId));
@@ -107,8 +107,8 @@ describe("un vrai tour capturé", () => {
   });
 
   it("ne compte pas un round qui n'a pas fini", () => {
-    // Le premier `message.updated` d'un round assistant arrive à `cost: 0`, sans
-    // `finish`. Le compter écrirait une ligne vide, puis une vraie.
+    // The first `message.updated` of an assistant round arrives at `cost: 0`, without
+    // `finish`. Counting it would write a blank line, then a real one.
     const state = newTurnStreamState();
     const early = fixtureEvents().find((e) => {
       if (e.type !== "message.updated") return false;
@@ -124,8 +124,8 @@ describe("un vrai tour capturé", () => {
   });
 
   it("n'émet RIEN pour le bruit de session", () => {
-    // `session.status`, `session.updated`, `session.diff` : le fil n'a pas
-    // d'équivalent, et en inventer un remplirait `agent_run_events`.
+    // `session.status`, `session.updated`, `session.diff`: the wire does not have
+    // equivalent, and inventing one would fill `agent_run_events`.
     const state = newTurnStreamState();
     for (const raw of fixtureEvents()) {
       if (!raw.type.startsWith("session.") || raw.type === "session.idle") continue;
@@ -140,11 +140,11 @@ describe("un vrai tour capturé", () => {
   });
 
   it("garde ce que le tour a répondu, alors que la fin de round vide le direct", () => {
-    // Le piège, et il ne se voit dans aucun test de traduction pris seul :
-    // `message.updated` (fin de round) arrive AVANT `session.idle`. Le texte du
-    // direct est vidé là — donc si la réponse se lisait dans le même sac, un
-    // tour sur deux rendrait une réponse vide, et le message de commit se
-    // rabattrait sur sa forme générique sans que rien ne le signale.
+    // The trap, and it is not seen in any translation test taken alone:
+    // `message.updated` (end of round) arrives BEFORE `session.idle`. The text of
+    // direct is emptied there - so if the answer was read in the same bag, a
+    // every other turn would return an empty response, and the commit message would
+    // would fall back on its generic form without anything indicating it.
     const { state } = replay();
     const session = "ses_00999fb08ffe1CH0pZOeoJnbos";
     expect(liveTextOf(state, session)).toBe("");
@@ -153,13 +153,13 @@ describe("un vrai tour capturé", () => {
 });
 
 /**
- * MIN-286 — CE QUE LE MODÈLE ÉCRIT ENTRE DEUX SÉRIES DE TOOLS.
+ * MIN-286 — WHAT THE MODEL WRITES BETWEEN TWO SETS OF TOOLS.
  *
- * Le direct le montrait puis l'effaçait : rien ne le persistait, donc à l'écran le
- * texte de l'agent apparaissait quelques secondes puis disparaissait pour toujours
- * (observé sur le run du 2026-08-12 — 148 events, pas une bulle de texte).
- * C'est la règle de la boucle maison, reprise au mot : narration en `thinking`
- * quand le round CONTINUE, réponse en `summary` quand il s'arrête.
+ * The live showed it then erased it: nothing persisted, so on the screen the
+ * agent text appeared for a few seconds then disappeared forever
+ * (observed on the run of 2026-08-12 — 148 events, not a text bubble).
+ * This is the rule of the house loop, taken literally: narration in `thinking`
+ * when the round CONTINUES, response in `summary` when it stops.
  */
 describe("la narration entre deux rounds", () => {
   function roundEnd(finish: string, id: string): OpencodeEvent {
@@ -189,9 +189,9 @@ describe("la narration entre deux rounds", () => {
   });
 
   it("ne dit RIEN du texte d'un round qui s'arrête : c'est la réponse du tour", () => {
-    // Elle part en `summary` (8 000 caractères) ; la redire ici en `thinking`
-    // (2 000) ferait deux bulles dès qu'elle est longue — le fil dédoublonne par
-    // égalité de texte, et deux plafonds différents ne s'égalent plus.
+    // It starts in `summary` (8,000 characters); repeat it here in `thinking`
+    // (2,000) would make two bubbles as soon as it is long — the thread duplicates by
+    // text equality, and two different ceilings are no longer equal.
     const state = newTurnStreamState();
     translateEvent(wrote("voilà, c'est fait", "prt_2"), state);
     const out = translateEvent(roundEnd("stop", "msg_2"), state);
@@ -205,14 +205,14 @@ describe("la narration entre deux rounds", () => {
   });
 
   /**
-   * MIN-286 — LA RÈGLE PORTE SUR `tool-calls`, PAS SUR « ≠ stop ».
+   * MIN-286 — THE RULE IS ON `tool-calls`, NOT “≠ stop”.
    *
-   * `tool-calls` est la SEULE fin qui laisse la session travailler ; toutes les
-   * autres la mettent au repos, donc terminent le tour. Testée par la négation, un
-   * round terminal fini sur `length` (fenêtre pleine) ou `error` partait DEUX
-   * fois : en `thinking` à 2 000 caractères, puis en `summary` à 8 000 — et le
-   * dédoublonnage du fil se fait par égalité de texte, que deux plafonds
-   * différents ne rendent jamais.
+   * `tool-calls` is the ONLY end that lets the session work; all
+   * others put it to rest, so end the round. Tested by negation, a
+   * round terminal ended on `length` (full window) or `error` started TWO
+   * times: in `thinking` at 2,000 characters, then in `summary` at 8,000 — and the
+   * deduplication of the thread is done by equality of text, only two caps
+   * different never give back.
    */
   it("se tait sur toute fin qui TERMINE le tour, pas seulement `stop`", () => {
     for (const finish of ["length", "content-filter", "error", "other"]) {
@@ -220,7 +220,7 @@ describe("la narration entre deux rounds", () => {
       translateEvent(wrote("réponse coupée net", `prt_${finish}`), state);
       const out = translateEvent(roundEnd(finish, `msg_${finish}`), state);
       expect(out.events).toEqual([]);
-      // …et le texte reste la réponse du tour, qui partira en `summary`.
+      // …and the text remains the response of the round, which will start at `summary`.
       expect(replyOf(state, "ses_1")).toBe("réponse coupée net");
     }
   });
@@ -233,8 +233,8 @@ describe("la mère et ses filles, sur le même flux", () => {
   });
 
   it("ne mélange pas les textes de deux sessions", () => {
-    // Une fille écrit son rapport pendant que la mère attend : un seul sac le
-    // ferait entrer dans la réponse du tour, donc dans le message de commit.
+    // A daughter writes her report while the mother waits: only one bag
+    // would enter in the response of the round, therefore in the commit message.
     const state = newTurnStreamState();
     const text = (sessionID: string, id: string, value: string): OpencodeEvent => ({
       type: "message.part.updated",
@@ -262,8 +262,8 @@ describe("le vocabulaire d'opencode, traduit vers le nôtre", () => {
     expect(ourToolName("read")).toBe("read_file");
     expect(ourToolName("bash")).toBe("run_command");
     expect(ourToolName("task")).toBe("spawn_agent");
-    // Ce que nous n'avons jamais eu garde son nom : le fil n'a rien à lui
-    // opposer, et un mauvais nom vaudrait moins qu'un nom de plus.
+    // What we never had keeps its name: the thread has nothing of its own
+    // oppose, and a bad name would be worth less than an additional name.
     expect(ourToolName("webfetch")).toBe("webfetch");
   });
 
@@ -276,12 +276,12 @@ describe("le vocabulaire d'opencode, traduit vers le nôtre", () => {
       pattern: "x",
       glob: "*.ts",
     });
-    // Nos tools de domaine ne passent par aucune table : ce sont nos noms.
+    // Our domain tools do not go through any tables: these are our names.
     expect(ourToolArgs("read_issue", { issue: "MIN-1" })).toEqual({ issue: "MIN-1" });
   });
 
   it("produit le MÊME payload que la boucle maison pour un `read_file`", () => {
-    // C'est l'assertion qui tient le critère de bascule : le fil, qui affiche
+    // It is the assertion which holds the switching criterion: the thread, which displays
     // `payload.path`, doit trouver `path` — pas `filePath`.
     const state = newTurnStreamState();
     const out = translateEvent(
@@ -304,9 +304,9 @@ describe("le vocabulaire d'opencode, traduit vers le nôtre", () => {
   });
 
   /**
-   * MIN-286 — `webfetch` N'A PAS DE VIS-À-VIS MAISON, donc pas de résumé : il
-   * tombait dans le `default` de `toolArgSummary`, et l'event partait à `{}`.
-   * L'URL que le modèle est allé lire n'atteignait ni le fil ni
+   * MIN-286 — `webfetch` DOES NOT HAVE A HOUSE OPPOSITE, so no summary: it
+   * fell in the `default` of `toolArgSummary`, and the event started at `{}`.
+   * The URL that the model went to read was neither reaching the wire nor
    * `agent_run_events` — un tour entier de lecture web illisible au replay.
    */
   it("porte l'URL d'un `webfetch`, qui arrive sous le nom d'opencode", () => {
@@ -342,10 +342,10 @@ describe("le vocabulaire d'opencode, traduit vers le nôtre", () => {
   });
 
   /**
-   * « Patch de 0 fichier », lu sur chaque édition d'un run `gpt-*` : opencode
-   * nomme `patchText` ce que `toolArgSummary` lit sous `patch`, et le résumé
-   * partait donc à `{count: 0, paths: []}` — sur le SEUL chemin d'édition de ces
-   * modèles.
+   * “Patch of 0 files”, read on each edition of a run `gpt-*`: opencode
+   * names `patchText` what `toolArgSummary` reads under `patch`, and the summary
+   * therefore left at `{count: 0, paths: []}` — on the ONLY editing path of these
+   * models.
    */
   it("compte les fichiers d'un `apply_patch`, dont opencode nomme l'entrée `patchText`", () => {
     const state = newTurnStreamState();
@@ -413,7 +413,7 @@ describe("le vocabulaire d'opencode, traduit vers le nôtre", () => {
 });
 
 describe("le code de sortie d'une commande (MIN-262)", () => {
-  /** Un `bash` terminé, tel qu'opencode rend son part. */
+  /** A completed `bash`, such that opencode returns its part. */
   function bashDone(metadata: Record<string, unknown>, command = "npx vitest run") {
     return translateEvent(
       {
@@ -432,16 +432,16 @@ describe("le code de sortie d'une commande (MIN-262)", () => {
   }
 
   it("rend la commande et son code de sortie", () => {
-    // C'est ce que lisait `run_command` chez nous, et ce qui fait taire la porte
-    // de livraison quand le modèle a lancé les tests lui-même.
+    // This is what `run_command` read at home, and what silences the door
+    // of delivery when the model launched the tests itself.
     expect(bashDone({ exit: 0 }).shell).toEqual({ command: "npx vitest run", exit: 0 });
     expect(bashDone({ exit: 1 }).shell).toEqual({ command: "npx vitest run", exit: 1 });
   });
 
   it("ne conclut RIEN quand le code de sortie manque", () => {
-    // Opencode y pose `null` sur une commande abandonnée ou tuée par le timeout.
-    // Un code inconnu n'est pas un zéro : le prendre pour tel ferait taire le
-    // harness sur un tour que personne n'a vérifié.
+    // Opencode places `null` on a command abandoned or killed by the timeout.
+    // An unknown code is not a zero: taking it as such would silence the
+    // harness on a ride that no one has checked.
     expect(bashDone({ exit: null }).shell).toBeUndefined();
     expect(bashDone({}).shell).toBeUndefined();
   });
@@ -467,8 +467,8 @@ describe("le code de sortie d'une commande (MIN-262)", () => {
 
 describe("ce qui ne doit jamais casser un tour", () => {
   it("avale une forme inattendue sans lever", () => {
-    // Le flux vient d'un tiers dont on adopte la cadence de release. Une forme
-    // qu'on ne connaît pas doit être ignorée, pas tuer un tour de deux heures.
+    // The flow comes from a third party whose release cadence we adopt. A shape
+    // that we don't know should be ignored, not kill a two-hour tour.
     const state = newTurnStreamState();
     for (const raw of [
       { type: "message.part.updated" },
@@ -492,10 +492,10 @@ describe("ce qui ne doit jamais casser un tour", () => {
   });
 
   it("ne prend PAS une coupure voulue pour une panne", () => {
-    // Mesuré : tout `abort` publie `session.error` `MessageAbortedError`. Or nous
-    // coupons nous-mêmes dans trois cas voulus (plafond de dépense, question à
-    // l'utilisateur, deadline) — sans ce filtre, chacun écrivait un event `error`
-    // au fil et un `errorMessage: "Aborted"` par-dessus le vrai motif.
+    // Measured: all `abort` publishes `session.error` `MessageAbortedError`. But we
+    // let's cut it ourselves in three necessary cases (expenditure ceiling, question to
+    // the user, deadline) — without this filter, everyone wrote an event `error`
+    // on the thread and a `errorMessage: "Aborted"` over the real pattern.
     const state = newTurnStreamState();
     const out = translateEvent(
       {
@@ -506,20 +506,20 @@ describe("ce qui ne doit jamais casser un tour", () => {
     );
     expect(out.error).toBeUndefined();
     expect(out.events).toEqual([]);
-    // …mais elle se DIT, pour que le superviseur puisse distinguer la coupure
-    // qu'il a demandée de celle qu'il subit : sans ce drapeau, un round tranché
+    // …but she SAYS herself, so that the supervisor can distinguish the cut
+    // that he asked for from what he suffered: without this flag, a round decided
     // en vol disparaissait sans laisser un event.
     expect(out.aborted).toBe(true);
   });
 
   it("ferme le sac de texte d'un round coupé, comme une fin de round", () => {
     /**
-     * MIN-286 — le texte d'un round avorté se recollait devant le suivant.
+     * MIN-286 — the text of an aborted round was glued together in front of the next one.
      *
-     * Le sac n'était vidé qu'à la fin d'un round FACTURÉ (`message.updated` avec
-     * `finish`), et un round coupé n'en a pas. Sur un steering — `abort`, puis
-     * nouveau prompt sur la MÊME session — le fragment écrit avant la coupure
-     * repartait donc en tête du direct, de la réponse du tour, du `summary` et du
+     * The bag was only emptied at the end of a CHARGED round (`message.updated` with
+     * `finish`), and a cut round does not have one. On a steering — `abort`, then
+     * new prompt on the SAME session — the fragment written before the break
+     * therefore left at the head of the live, the response of the round, the `summary` and the
      * message de commit.
      */
     const state = newTurnStreamState();
@@ -535,15 +535,15 @@ describe("ce qui ne doit jamais casser un tour", () => {
       },
       state,
     );
-    // Le round suivant repart d'un sac vide…
+    // The next round starts with an empty bag…
     translateEvent(wrote("C'est fait : le test passe.", "prt_2"), state);
     expect(liveTextOf(state, "ses_1")).toBe("C'est fait : le test passe.");
     expect(replyOf(state, "ses_1")).toBe("C'est fait : le test passe.");
   });
 
   it("garde le texte coupé quand la coupure TERMINE le tour", () => {
-    // « Stop », plafond, deadline : il n'y a pas de round derrière, et ce fragment
-    // est encore ce que l'agent a dit de plus récent.
+    // “Stop”, ceiling, deadline: there is no round behind, and this fragment
+    // is still the most recent thing the agent said.
     const state = newTurnStreamState();
     translateEvent(
       {
@@ -588,18 +588,18 @@ describe("les garde-fous et les questions", () => {
       callId: "call_1",
       command: "git reset --hard",
     });
-    // Rien au fil : un refus se raconte dans le `tool_result` du tool refusé.
+    // Nothing on the thread: a refusal is reported in the `tool_result` of the rejected tool.
     expect(out.events).toEqual([]);
   });
 
   /**
-   * MIN-360 — LE CHEMIN D'UNE LECTURE N'EST PAS OÙ ON LE CROIT.
+   * MIN-360 — THE PATH OF A READING IS NOT WHERE YOU THINK IT IS.
    *
-   * Relevé dans le binaire 1.18.16 : `ReadTool` appelle
+   * Noted in binary 1.18.16: `ReadTool` calls
    * `ask({permission: "read", patterns: [<relatif au worktree>], always: ["*"],
-   * metadata: {}})`. Le `metadata` est **vide**. Ce test est ce qui empêche le
+   * metadata: {}})`. Le `metadata` is **empty**. This test is what prevents the
    * verdict de lecture du chemin local de refuser 100 % des lectures en croyant
-   * garder les `.env`.
+   * keep the `.env`.
    */
   it("rend le chemin d'une LECTURE, qu'opencode met dans `patterns`", () => {
     const state = newTurnStreamState();
@@ -674,7 +674,7 @@ describe("les garde-fous et les questions", () => {
       },
       state,
     );
-    // Sans chemin lisible, le verdict refuse — et c'est la bonne issue.
+    // Without a legible path, the verdict refuses — and that is the right outcome.
     expect(out.permission?.filepath).toBeUndefined();
   });
 
@@ -695,7 +695,7 @@ describe("les garde-fous et les questions", () => {
       state,
     );
     expect(fetch.permission?.url).toBe("http://127.0.0.1:4096/x");
-    // Sur un `bash`, `patterns` porte la COMMANDE : la recopier en « url »
+    // On a `bash`, `patterns` carries the COMMAND: copy it into “url”
     // serait un champ qui ment.
     const bash = translateEvent(
       {
@@ -738,10 +738,10 @@ describe("les garde-fous et les questions", () => {
   });
 
   /**
-   * `apply_patch` ne demande QU'UNE FOIS pour N fichiers, et son `filepath` est
-   * la liste recollée à la virgule. `metadata.files` est le seul endroit où les
-   * chemins se lisent un par un — sans lui, la vue « fichiers changés » affichait
-   * « a.ts, b.ts, c.ts » sur une seule ligne.
+   * `apply_patch` only requests ONCE for N files, and its `filepath` is
+   * the list glued to the comma. `metadata.files` is the only place where
+   * paths are read one by one — without it, the “changed files” view displayed
+   * “a.ts, b.ts, c.ts” on one line.
    */
   it("lit les fichiers d'un patch un par un, avec la nature du geste", () => {
     const state = newTurnStreamState();
@@ -816,9 +816,9 @@ describe("les garde-fous et les questions", () => {
       },
       state,
     );
-    // Le MÊME event que la boucle maison : `id` est l'appel de tool, et les
-    // questions sont normalisées par le parseur partagé — c'est ce qui permet à
-    // la carte de questions du feed de ne rien savoir du moteur.
+    // The SAME event as the home loop: `id` is the call to tool, and the
+    // questions are normalized by the shared parser — this is what allows
+    // the question card from the feed to know nothing about the engine.
     expect(out.events).toEqual([
       {
         type: "question",
@@ -854,18 +854,18 @@ describe("les garde-fous et les questions", () => {
 });
 
 /**
- * MIN-286 — LA RÉFLEXION, ET POURQUOI ELLE NE PEUT PAS SE DEVINER D'UN DELTA.
+ * MIN-286 — REFLECTION, AND WHY IT CANNOT BE GUESSED FROM A DELTA.
  *
  * Fixture ([fixtures/opencode-reasoning.ndjson](fixtures/opencode-reasoning.ndjson))
- * capturée le 2026-08-12 sur un vrai `opencode-ai@1.18.16` dans la microVM, un
- * faux fournisseur local scriptant la réponse (des deltas `reasoning` puis des
- * deltas de texte) — coût nul, flux authentique.
+ * captured on 2026-08-12 on a real `opencode-ai@1.18.16` in the microVM, a
+ * fake local provider scripting the response (deltas `reasoning` then
+ * text deltas) — zero cost, authentic flow.
  *
- * CE QU'ELLE MONTRE, et c'est le défaut qu'elle ferme : **les deltas d'un part de
- * réflexion portent `field: "text"`, exactement comme ceux de la réponse**. Rien
- * dans la frame ne les distingue ; seule l'ouverture du part le dit. Tant qu'on ne
- * la lisait pas, la chaîne de pensée entrait dans le texte du round — donc dans ce
- * que le fil affiche comme la parole de l'agent, et dans le message de commit.
+ * WHAT IT SHOWS, and this is the fault that it closes: **the deltas on one side of
+ * reflection carry `field: "text"`, exactly like those in the answer**. Nothing
+ * in the frame they cannot be distinguished; only the opening of the part says it. As long as we don't
+ * didn't read it, the chain of thought entered the text of the round - so in this
+ * which the thread displays as the agent's speech, and in the commit message.
  */
 describe("la réflexion du modèle (MIN-122, sous opencode)", () => {
   const REASONING_FIXTURE = join(__dirname, "fixtures", "opencode-reasoning.ndjson");
@@ -888,7 +888,7 @@ describe("la réflexion du modèle (MIN-122, sous opencode)", () => {
   it("garde la chaîne de pensée HORS de la réponse du tour", () => {
     const { state, live } = replayReasoning();
     expect(replyOf(state, SESSION)).toBe("Salut, voici la réponse.");
-    // Le direct ne montre que la réponse : pas un fragment de « Je regarde… ».
+    // The live broadcast only shows the response: not a fragment of “I’m watching…”.
     expect(live.some((text) => text.includes("Je regarde"))).toBe(false);
   });
 
@@ -908,14 +908,14 @@ describe("la réflexion du modèle (MIN-122, sous opencode)", () => {
       kind: "reasoning",
       text: "Je regarde ce qu'il demande.",
     });
-    // La durée vient des horodatages d'opencode : le module reste sans horloge.
+    // The duration comes from opencode timestamps: the module remains without a clock.
     expect(thinking[0].payload.durationMs).toBe(11);
   });
 
   it("n'avale pas NOTRE prompt en le prenant pour la réponse", () => {
-    // La session republie le message posté (`dis bonjour`) sous la même forme
-    // qu'un texte du modèle. Il ressortait en tête de la réponse du tour — donc
-    // du message de commit — jusqu'à ce qu'on retienne le rôle des messages.
+    // The session republishes the posted message (`dis bonjour`) in the same form
+    // as a text of the model. He came out on top in the answer of the round — so
+    // of the commit message — until we remember the role of the messages.
     const { state } = replayReasoning();
     expect(replyOf(state, SESSION).startsWith("dis bonjour")).toBe(false);
   });

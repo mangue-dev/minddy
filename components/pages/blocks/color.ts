@@ -1,49 +1,48 @@
-// La COULEUR d'un passage de page — texte et fond.
+// The COLOR of a page passage — text and background.
 //
-// Deux décisions tiennent tout ce fichier.
+// Two decisions hold this entire file.
 //
-// 1. C'est une MARK, pas un attribut de nœud. Une couleur posée sur le nœud
-//    colorerait le bloc entier ; une mark colore ce qui est sélectionné, donc
-//    trois mots au milieu d'une phrase comme un bloc entier quand la sélection
-//    le couvre. C'est le geste de Notion, et c'est aussi ce qui se sérialise en
-//    HTML sans inventer d'attribut de bloc. Le prix, assumé : le markdown n'a
-//    pas de couleur, elle ne survit donc pas à la projection (MIN-269).
+// 1. It's a MARK, not a node attribute. A color placed on the knot
+// would color the entire block; a mark colors what is selected, so
+// three words in the middle of a sentence as a whole block when selecting
+// covers it. This is the gesture of Notion, and it is also what is serialized in
+// HTML without inventing a block attribute. The price, assumed: the markdown has no
+// no color, so it does not survive projection (MIN-269).
 //
-// 2. La mark stocke un NOM de la palette (« red »), jamais une couleur. Un hex
-//    figé dans le document serait juste dans un thème et faux dans l'autre — un
-//    rouge lisible sur blanc est illisible sur noir. Le nom, lui, se résout en
-//    CSS, où chaque thème donne sa valeur (`--page-color-*` dans
-//    app/globals.css). Changer de thème recolore le document sans le réécrire.
+// 2. The mark stores a NAME of the palette (“red”), never a color. One hex
+// frozen in the document would be right in one theme and wrong in the other — one
+// readable red on white is illegible on black. The name resolves into
+// CSS, where each theme gives its value (`--page-color-*` in
+// app/globals.css). Changing the theme recolors the document without rewriting it.
 //
-// Et la palette n'est pas inventée : c'est CELLE DU PRODUIT, celle des
-// étiquettes de catégorie (lib/category-colors.ts), avec ses noms déjà traduits
-// dans `Categories.colors`. Une seule source de couleurs dans minddy — et
-// lib/pages-color.test.ts vérifie que les jetons CSS lui correspondent encore.
+// And the palette is not invented: it is THAT OF THE PRODUCT, that of
+// category labels (lib/category-colors.ts), with its names already translated
+// in `Categories.colors`. A single color source in minddy — and
+// lib/pages-color.test.ts checks that the CSS tokens still match it.
 
 import { Mark, mergeAttributes, type Editor } from "@tiptap/core";
 import { CATEGORY_COLORS, CATEGORY_COLOR_NAMES } from "@/lib/category-colors";
 import type { MessageKey } from "@/lib/i18n-keys";
 
-/** Un nom de la palette — et, tel quel, une clé i18n de `Categories.colors`. */
+/** A name of the palette — and, as is, an i18n key of `Categories.colors`. */
 export type PageColor = MessageKey<"Categories.colors">;
 
-/** La palette des pages : celle des étiquettes, dans son ordre, par NOM. */
+/** The page palette: that of the labels, in its order, by NAME. */
 export const PAGE_COLORS: readonly PageColor[] = CATEGORY_COLORS.map(
   (hex) => CATEGORY_COLOR_NAMES[hex]
 );
 
-/** Les deux dimensions colorables. Une seule mark chacune : poser un fond ne
-    doit pas effacer une couleur de texte, ni l'inverse. */
+/** Both colorable dimensions. Only one mark each: placing a background should not erase a text color, nor vice versa. */
 export type PageColorKind = "text" | "background";
 
-/** L'attribut HTML porté par chaque mark. C'est LUI que le CSS cible, et c'est
-    lui qui rend la couleur relisible après un copier-coller. */
+/** The HTML attribute carried by each mark. It is HIM that the CSS targets, and it is
+ which makes the color rereadable after copying and pasting. */
 export const PAGE_COLOR_ATTRIBUTE: Record<PageColorKind, string> = {
   text: "data-page-text",
   background: "data-page-back",
 };
 
-/** Le nom tiptap de chaque mark. */
+/** The tiptap name of each mark. */
 export const PAGE_COLOR_MARK: Record<PageColorKind, string> = {
   text: "pageTextColor",
   background: "pageBackgroundColor",
@@ -65,8 +64,8 @@ function colorMark(kind: PageColorKind) {
       };
     },
 
-    // `span[…]` et pas `span` : sans le sélecteur d'attribut, la mark happerait
-    // tout `<span>` collé depuis n'importe où et le document se remplirait de
+    // `span[…]` and not `span`: without the attribute selector, the mark would be caught
+    // any `<span>` pasted from anywhere and the document would fill with
     // marks sans couleur.
     parseHTML() {
       return [{ tag: `span[${attribute}]` }];
@@ -77,15 +76,15 @@ function colorMark(kind: PageColorKind) {
     },
 
     /**
-     * La couleur ne se dit pas en markdown : elle est PERDUE à la projection,
-     * proprement — le texte passe, la mark tombe (cf. lib/pages-markdown.ts).
-     *
-     * Le déclarer explicitement n'est pas une redite du commentaire d'en-tête.
-     * Sans spec markdown, tiptap-markdown retombe sur sa sérialisation HTML des
-     * marks inconnues et écrit `<span data-page-text="red">…</span>` au milieu du
-     * markdown : la couleur ne serait alors pas perdue mais RECOPIÉE en balise,
-     * dans ce que lit Numo. Une perte franche vaut mieux qu'une fuite.
-     */
+ * The color is not stated in markdown: it is LOST when projected,
+ * properly — the text passes, the mark falls (see lib/pages-markdown.ts).
+ *
+ * Declaring it explicitly is not a repeat of the comment header.
+ * Without markdown spec, tiptap-markdown falls back on its HTML serialization of the
+ * unknown marks and writes `<span data-page-text="red">…</span>` in the middle of the
+ * markdown: the color would then not be lost but COPIED back into tag,
+ * in what Numo reads. A clear loss is better than an escape.
+ */
     addStorage() {
       return {
         markdown: { serialize: { open: "", close: "" }, parse: {} },
@@ -94,20 +93,20 @@ function colorMark(kind: PageColorKind) {
   });
 }
 
-/** Les deux marks, à monter avec le reste de l'éditeur. */
+/** The two marks, to be mounted with the rest of the editor. */
 export const pageColorExtensions = () => [
   colorMark("text"),
   colorMark("background"),
 ];
 
-/* ── Ce que le menu appelle ───────────────────────────────────────────────── */
+/* ── What the menu calls ──────────────────────── ───────────────────────── */
 
 /**
- * Poser (ou retirer, avec `null`) une couleur sur la sélection courante.
+ * Place (or remove, with `null`) a color on the current selection.
  *
- * Rien de particulier à faire pour la sélection multi-blocs : `setMark` opère
- * sur les PLAGES de la sélection, et une `NodeRangeSelection` en porte une par
- * bloc — trois blocs sélectionnés se colorent donc d'un seul appel.
+ * Nothing particular to do for the multi-block selection: `setMark` operates
+ * on the RANGES of the selection, and a `NodeRangeSelection` carries one per
+ * block — three selected blocks are therefore colored with a single call.
  */
 export function setPageColor(
   editor: Editor,
@@ -121,7 +120,7 @@ export function setPageColor(
     : chain.unsetMark(name).run();
 }
 
-/** La couleur en vigueur là où est le curseur, ou `null` pour « aucune ». */
+/** The color in effect where the cursor is, or `null` for “none”. */
 export function activePageColor(
   editor: Editor,
   kind: PageColorKind

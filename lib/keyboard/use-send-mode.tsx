@@ -8,19 +8,19 @@ import {
 } from "@/lib/keyboard/send-shortcut";
 
 /**
- * Le mode d'envoi du compte, tel que le lisent les composers.
+ * The method of sending the count, as read by composers.
  *
- * Un contexte, et NON un `useAuth()` posé dans chaque composer : ces composants
- * sont montés des deux côtés de l'authentification — le board public (MIN-37)
- * rend le même champ de commentaire pour un visiteur anonyme. Passer par le
- * compte les ferait tous importer `lib/auth-context`, donc le client Supabase,
- * dans le bundle d'une page publique qui n'en charge aucun aujourd'hui.
+ * A context, and NOT a `useAuth()` placed in each composer: these components
+ * are mounted on both sides of the authentication — the public board (MIN-37)
+ * renders the same comment field for an anonymous visitor. Go through the
+ * account would make them all import `lib/auth-context`, so the Supabase client,
+ * in the bundle of a public page which does not load any today.
  *
- * Le contexte porte donc la valeur, et un seul endroit la remplit : la coquille
- * applicative ([app/(app)/send-mode-boundary.tsx]), qui a déjà le compte sous la
- * main. Partout ailleurs — pages publiques, écrans d'authentification — la
- * valeur par défaut s'applique, et c'est le bon comportement : sans compte, pas
- * de préférence, donc ⌘/Ctrl + Entrée.
+ * The context therefore carries the value, and only one place fills it: the shell
+ * application ([app/(app)/send-mode-boundary.tsx]), which already has the account under
+ * hand. Everywhere else — public pages, authentication screens — the
+ * default value applies, and this is the correct behavior: without an account, no
+ * preferably, so ⌘/Ctrl + Enter.
  */
 const SendModeContext = createContext<SendMode>(DEFAULT_SEND_MODE);
 
@@ -36,20 +36,20 @@ export function SendModeProvider({
   );
 }
 
-/** Le mode d'envoi en vigueur ici. */
+/** The shipping method in effect here. */
 export function useSendMode(): SendMode {
   return useContext(SendModeContext);
 }
 
 /**
- * Le test d'envoi, déjà lié au mode — ce que branchent les composers :
+ * The sending test, already linked to the mode - what the composers plug in:
  *
  * ```tsx
  * const isSend = useIsSendShortcut();
  * onKeyDown={(e) => { if (isSend(e)) { e.preventDefault(); send(); } }}
  * ```
  *
- * Stable tant que le mode ne change pas, pour rester posable en dépendance d'un
+ * Stable as long as the mode does not change, to remain poseable depending on a
  * `useCallback` de gestionnaire.
  */
 export function useIsSendShortcut() {

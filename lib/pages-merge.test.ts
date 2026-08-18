@@ -8,17 +8,17 @@ import {
 } from "./pages-merge";
 
 /**
- * MIN-271 — la fusion par bloc, et ce qu'elle refuse de trancher.
+ * MIN-271 — the block merger, and what it refuses to decide.
  *
- * Le contrat tient en deux phrases : ce qu'un seul des deux a touché est repris
- * sans rien dire ; ce que les deux ont touché garde la version DISTANTE et
- * ressort dans `conflicts`. Tout le reste de ce fichier n'est que la liste des
- * façons dont deux personnes peuvent se croiser sur un document — modifier
- * ailleurs, modifier au même endroit, supprimer ce que l'autre écrit,
- * réordonner pendant que l'autre écrit.
+ * The contract is in two sentences: what only one of the two has touched is taken back
+ * without saying anything; what both touched keeps the REMOTE version and
+ * comes out in `conflicts`. Everything else in this file is just a list of
+ * ways two people can cross paths on a document — edit
+ * somewhere else, edit in the same place, delete what the other is writing,
+ * reorder while the other is writing.
  */
 
-/** Un paragraphe identifié, écrit court : c'est le texte qui varie. */
+/** An identified paragraph, written short: it is the text that varies. */
 function p(id: string, text: string): PageNodeJSON {
   return {
     type: "paragraph",
@@ -31,7 +31,7 @@ function doc(...blocks: PageNodeJSON[]): PageDocJSON {
   return { type: "doc", content: blocks };
 }
 
-/** Le texte de chaque bloc, dans l'ordre — ce qu'un lecteur verrait. */
+/** The text of each block, in order — what a reader would see. */
 function read(document: PageDocJSON): string[] {
   return (document.content ?? []).map((node) => {
     const first = node.content?.[0] as { text?: string } | undefined;
@@ -49,7 +49,7 @@ describe("mergeDocs", () => {
 
     expect(result.conflicts).toEqual([]);
     expect(read(result.doc)).toEqual(["a:A", "b:B modifié", "c:C modifié"]);
-    // Le résultat n'est pas ce que le serveur porte : il faut le lui rendre.
+    // The result is not what the server carries: you have to give it back to him.
     expect(result.changed).toBe(true);
   });
 
@@ -64,7 +64,7 @@ describe("mergeDocs", () => {
     expect(result.conflicts).toHaveLength(1);
     expect(result.conflicts[0].id).toBe("b");
     expect(result.conflicts[0].mine).toEqual(p("b", "chez moi"));
-    // Rien à rejouer : le document fusionné est celui du serveur.
+    // Nothing to replay: the merged document is that of the server.
     expect(result.changed).toBe(false);
   });
 
@@ -107,7 +107,7 @@ describe("mergeDocs", () => {
 
     const result = mergeDocs(base, mine, theirs);
 
-    // La suppression distante gagne dans le document…
+    // Remote delete wins in document…
     expect(read(result.doc)).toEqual(["a:A"]);
     // …mais elle ne passe pas en silence.
     expect(result.conflicts).toHaveLength(1);
@@ -126,7 +126,7 @@ describe("mergeDocs", () => {
     const result = mergeDocs(base, mine, theirs);
 
     expect(read(result.doc)).toEqual(["a:A", "b:B, qu'il écrivait"]);
-    // `mine: null` = mon geste était une suppression : restaurer, c'est retirer.
+    // `mine: null` = my action was a deletion: to restore is to remove.
     expect(result.conflicts).toEqual([
       { id: "b", mine: null, theirs: p("b", "B, qu'il écrivait") },
     ]);
@@ -134,9 +134,9 @@ describe("mergeDocs", () => {
 
   it("adopte l'ordre du côté qui a DÉPLACÉ, et le texte du côté qui a écrit", () => {
     const base = doc(p("a", "A"), p("b", "B"), p("c", "C"));
-    // Moi : j'ai fait remonter C en tête (glisser-déposer), sans rien réécrire.
+    // Me: I moved C to the top (drag and drop), without rewriting anything.
     const mine = doc(p("c", "C"), p("a", "A"), p("b", "B"));
-    // Lui : il a réécrit B, sans rien déplacer.
+    // Him: he rewrote B, without moving anything.
     const theirs = doc(p("a", "A"), p("b", "B réécrit"), p("c", "C"));
 
     const result = mergeDocs(base, mine, theirs);

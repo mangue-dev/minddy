@@ -4,20 +4,20 @@ import { cn } from "mangue-ui";
 import { IsoIcon, type SceneIcon } from "@/components/illustrations/iso-icon";
 
 /**
- * Une carte de choix de wizard : un bloc isométrique, un libellé, une
- * description quand l'option en demande une.
+ * A wizard's choice card: an isometric block, a label, a
+ * description when the option requires one.
  *
- * C'est le dessin qui fait le choix, le libellé confirme — d'où l'illustration
- * POSÉE sur la carte plutôt qu'encadrée : aucun fond, aucun filet, le fond de la
- * carte court d'un bout à l'autre et le bloc flotte dedans.
+ * It is the drawing that makes the choice, the label confirms — hence the illustration
+ * PLACED on the card instead only framed: no background, no net, the background of the
+ * card runs from one end to the other and the block floats in it.
  *
- * L'alignement du texte suit ce qu'il y a à lire. Un libellé seul se centre
- * sous son dessin ; dès qu'une description l'accompagne, tout passe à gauche —
- * deux ou trois lignes centrées se lisent mal, le regard perd le début de
- * chaque ligne.
+ * The alignment of the text follows what is to be read. A single label is centered
+ * under its design; as soon as a description accompanies it, everything goes to the left —
+ * two or three centered lines are poorly read, the eye loses the beginning of
+ * each line.
  *
- * À poser dans un conteneur `role="radiogroup"` : ces cartes sont les options
- * d'un même choix, pas des boutons indépendants.
+ * To place in a container `role="radiogroup"`: these cards are the options
+ * of the same choice, not independent buttons.
  */
 export function WizardChoiceCard({
   icon,
@@ -28,7 +28,7 @@ export function WizardChoiceCard({
 }: {
   icon: SceneIcon;
   label: string;
-  /** Ce que l'option implique, quand le libellé ne suffit pas. */
+  /** What the option implies, when the wording is not enough. */
   description?: string;
   selected: boolean;
   onSelect: () => void;
@@ -40,26 +40,26 @@ export function WizardChoiceCard({
       aria-checked={selected}
       onClick={onSelect}
       className={cn(
-        // `active:scale` : la carte est tapée au doigt autant que cliquée, et au
-        // doigt il n'y a pas de survol pour dire que le geste a porté. C'est un
-        // <button> écrit à la main, donc la règle globale de globals.css — qui
-        // vise `[data-slot="button"]` — ne l'atteint pas. 0.99 et pas 0.97 :
-        // l'enfoncement se règle sur la taille, et celle-ci est grande.
+        // `active:scale`: the card is tapped as well as clicked, and
+        // finger there is no hover to say that the gesture was carried out. It's a
+        // <button> handwritten, so the global rule of globals.css — which
+        // aims for `[data-slot="button"]` — doesn't hit it. 0.99 and not 0.97:
+        // the depth is adjusted to the size, and this is large.
         "group flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-card outline-none transition-all hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.99] motion-reduce:active:scale-100",
         selected ? "border-brand/50" : "border-border hover:border-brand/40",
       )}
     >
-      {/* Une seule colonne, deux écarts explicites : autant d'air au-dessus du
-          dessin qu'en dessous du texte, et un intervalle net entre les deux. */}
+      {/* A single column, two explicit gaps: as much air above the
+ drawing as below the text, and a clear gap between the two. */}
       <span className="flex flex-col gap-4 px-5 py-6">
         <IsoIcon
           icon={icon}
-          // 200 ms, pas 500 : au-delà de ~300 ms un retour d'interaction cesse
-          // d'être un retour et devient une animation qu'on regarde — et sur
-          // mobile, où le survol reste collé après l'appui, on le regardait
-          // vraiment. C'est bien l'ENFANT qui bouge et pas la carte : un parent
-          // qui grandit sous le curseur se retire de dessous et fait clignoter
-          // son propre survol.
+          // 200 ms, not 500: beyond ~300 ms, interaction feedback ceases
+          // to be a return and becomes an animation that we watch — and on
+          // mobile, where the hover remains stuck after pressing, we looked at it
+          // Really. It is the CHILD who moves and not the card: a parent
+          // that grows under the cursor pulls out from underneath and flashes
+          // its own hover state.
           className="w-full max-w-36 self-center transition-transform duration-200 ease-out group-hover:scale-[1.04]"
         />
         <span

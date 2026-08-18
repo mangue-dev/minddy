@@ -12,9 +12,9 @@ export const billingUsageQueryKey = ["billing", "usage"] as const;
 export type UsageState = "normal" | "warning" | "low" | "exhausted";
 
 /**
- * View-model unique du billing côté client (MIN-72), partagé par la pastille
- * du header et l'onglet billing des settings pour que les deux surfaces ne
- * divergent jamais : plan, budget, dépensé, % consommé, état d'alerte et
+ * Unique view-model of client-side billing (MIN-72), shared by the tablet
+ * of the header and the billing tab of the settings so that the two surfaces do not
+ * never diverge: plan, budget, spent, % consumed, alert status and
  * ventilation par segment.
  */
 export function useBillingSummary() {
@@ -34,7 +34,7 @@ export function useBillingSummary() {
   const percent =
     includedUsd > 0 ? Math.min((usedUsd / includedUsd) * 100, 100) : 0;
   const remainingRatio = includedUsd > 0 ? 1 - usedUsd / includedUsd : 1;
-  // La jauge se lit en RESTANT (100 → 0) ; `percent` (consommé) ne sert plus
+  // The gauge reads REMAINING (100 → 0); `percent` (consumed) is no longer used
   // qu'aux calculs internes — ventilation par type, largeur des segments.
   const remainingPercent = 100 - percent;
 
@@ -64,10 +64,10 @@ export function useBillingSummary() {
 }
 
 /**
- * Arrondi du % restant pour l'affichage : jamais 100 % tant qu'il reste de la
- * conso, jamais 0 % tant qu'il reste du budget — les deux extrêmes sont
- * réservés au vrai plein et au vrai vide (même idée que le plancher à 1 % des
- * lignes de détail).
+ * Rounding of the remaining % for display: never 100% as long as there is
+ * consumption, never 0% as long as there is budget left — the two extremes are
+ * reserved for true full and true empty (same idea as the floor at 1% of
+ * detail lines).
  */
 export function roundRemainingPercent(remainingPercent: number): number {
   const rounded = Math.round(remainingPercent);
@@ -77,10 +77,10 @@ export function roundRemainingPercent(remainingPercent: number): number {
 }
 
 /**
- * Les verrous de plan consommés par l'UI (MIN-72, retours) : accès agents,
- * plafond d'invités par projet et plafond de projets. Par défaut PERMISSIF tant
- * que le billing charge (pas de flash « désactivé » pour les plans payants — le
- * serveur reste le juge), d'où le `null` = illimité des invités.
+ * Plan locks consumed by the UI (MIN-72, returns): agent access,
+ * guest cap per project and project cap. Default PERMISSIVE as long as
+ * that the billing charges (no “disabled” flash for paid plans — the
+ * server remains the judge), hence the `null` = unlimited guests.
  */
 export function usePlanGates() {
   const { loading, usage } = useBillingSummary();
@@ -96,9 +96,9 @@ export function usePlanGates() {
 }
 
 /**
- * % du budget mensuel pour un montant de coût brut — l'UI ne parle JAMAIS en
- * USD (le coût interne n'est pas l'affaire de l'utilisateur), toujours en
- * pourcentage du budget du plan. Plancher « <0.1 » pour les micro-actions.
+ * % of monthly budget for a gross cost amount — the UI NEVER speaks in
+ * USD (the internal cost is not the user's business), always in
+ * percentage of the plan budget. Floor “<0.1” for micro-actions.
  */
 export function formatBudgetPercent(usd: number, includedUsd: number): string {
   if (includedUsd <= 0 || usd <= 0) return "—";

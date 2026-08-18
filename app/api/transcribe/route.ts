@@ -18,23 +18,23 @@ import {
   planLimitResponse,
 } from "@/lib/server/plan-limit-error";
 
-// Une longue dictée met plus de temps à remonter qu'une courte : la route
-// prend le budget maximal de la plateforme, sous lequel le timeout de
-// transcribeAudio (240 s) tombe avec de la marge.
+// A long dictation takes longer to come back than a short one: the road
+// takes the maximum budget of the platform, under which the timeout of
+// transcribeAudio (240 s) falls with some margin.
 export const maxDuration = 300;
 
-// La dictée n'a pas de limite de durée — seulement ce plafond de charge utile.
-// Au débit de parole épinglé côté client (48 kb/s), 10 Mo valent ~28 minutes de
-// prise ; au-delà, la réponse est un 413 et le client affiche `Dictate.tooLarge`.
+// Dictation has no duration limit — only this payload cap.
+// At the client-side pinned speech rate (48 kb/s), 10 MB is worth ~28 minutes of
+// socket ; beyond that, the response is a 413 and the client displays `Dictate.tooLarge`.
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // 10 MB
 const RATE_LIMIT = { limit: 30, windowMs: 60 * 60 * 1000 } as const;
 
 /**
- * Sous quelle feature du ledger inscrire la prise. Par défaut `transcription`,
- * la dictée d'un ticket ou d'un objectif. Une SEULE autre valeur est acceptée :
- * la dictée d'un retour, qui se compte à part (côté utilisateur elle tombe dans
- * « Retours » et non dans « Dictée vocale »). Allowlist, pas passe-plat — le
- * client ne choisit pas librement une ligne de facturation.
+ * Under which feature of the ledger to register the take. By default `transcription`,
+ * dictation of a ticket or objective. ONLY one other value is accepted:
+ * the dictation of a return, which is counted separately (on the user side it falls into
+ * “Feedback” and not in “Voice dictation”). Allowlist, not pass-through — the
+ * customer does not freely choose an invoicing line.
  */
 function resolveFeature(value: FormDataEntryValue | null): AiFeature {
   return value === "feedback_voice" ? "feedback_voice" : "transcription";
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Budget d'usage du plan (MIN-72) — pré-vol avant l'appel de transcription.
+  // Plan usage budget (MIN-72) — pre-flight before transcription call.
   try {
     await ensureUsageBudget(user.id, "voice");
   } catch (err) {
@@ -108,8 +108,8 @@ export async function POST(request: NextRequest) {
     surface: "voice",
   });
   const model = runtime.model;
-  // Le modèle RÉELLEMENT appelé : le repli du raccourci de routage (MIN-263)
-  // peut retirer le suffixe, et c'est cette valeur-là qui va au ledger.
+  // The Model ACTUALLY Called: Routing Shortcut Fallback (MIN-263)
+  // can remove the suffix, and it is this value which goes to the ledger.
   let usedModel = model;
   let provider: Record<string, unknown> | undefined;
   if (cfg.transcription_model_provider?.trim()) {
@@ -125,9 +125,9 @@ export async function POST(request: NextRequest) {
   const arrayBuffer = await audio.arrayBuffer();
   const audioBase64 = Buffer.from(arrayBuffer).toString("base64");
 
-  // Un run par prise. Il est RENDU au client : l'étape suivante d'une dictée
-  // (le rangement par Numo) le repasse à sa route, et les deux appels se lisent
-  // alors comme une seule ligne au ledger.
+  // One run per take. It is RENDERED to the client: the next step in a dictation
+  // (the storage by Numo) returns it to its route, and the two calls read
+  // then as a single line in the ledger.
   const runId = newRunId();
   const feature = resolveFeature(formData.get("feature"));
 
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
       { logPrefix: "[/api/transcribe]" },
     );
 
-    // Suivi des coûts : appel unique (un run d'un seul appel). Best-effort.
+    // Cost tracking: single call (one run of a single call). Best-effort.
     after(() =>
       recordAiUsage({
         runId,

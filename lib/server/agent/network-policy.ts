@@ -3,121 +3,121 @@ import type { NetworkPolicy, NetworkPolicyRule } from "@vercel/sandbox";
 import { chatCompletionsUrl } from "@/lib/agent-providers";
 
 /**
- * Politique réseau de la microVM de l'agent (MIN-223). PUR et testable sans
- * sandbox — comme `command-guard.ts` et `repo-path.ts`, c'est de la logique qui
- * garde quelque chose qu'on ne peut pas rattraper après coup.
+ * Agent microVM network policy (MIN-223). PURE and testable without
+ * sandbox — like `command-guard.ts` and `repo-path.ts`, this is logic that
+ * keep something that you can't get back after the fact.
  *
- * LE PRINCIPE, ET IL EST INHABITUEL : **la microVM ne détient aucun secret DE
- * MINDDY.** Ni clé LLM, ni clé Supabase, ni jeton d'identité. Ce n'est pas une
- * discipline de code, c'est la plateforme :
+ * THE PRINCIPLE, AND IT IS UNUSUAL: **the microVM does not hold any secrets OF
+ * MINDDY.** No LLM key, no Supabase key, no identity token. It's not a
+ * code discipline, it is the platform:
  *
- * - le firewall de Vercel Sandbox termine le TLS de la VM et **pose lui-même**
- *   l'en-tête `authorization` sur la requête de complétion (`transform`), après
- *   la sortie de la VM. La clé n'entre jamais dans son espace mémoire ; la boucle
- *   envoie un placeholder et reçoit une vraie complétion (mesuré, cf.
+ * - the Vercel Sandbox firewall terminates the TLS of the VM and **installs itself**
+ * the `authorization` header on the completion request (`transform`), after
+ * the exit of the VM. The key never enters its memory space; the loop
+ * sends a placeholder and receives a real completion (measured, cf.
  *   docs/orchestrateur-process-long.md §1) ;
- * - le plan de contrôle (events, ledger, checkpoint, tools) passe par
- *   `forwardURL` : le firewall forwarde la requête vers notre route en y
- *   ajoutant un OIDC signé par la plateforme, dont le claim `sandbox_name` vaut
- *   `agent-<run.id>`. **Une VM ne peut donc rien prétendre d'autre que son propre
- *   run** — ce qu'un jeton porté dans la VM n'aurait pas su garantir.
+ * - the control plan (events, ledger, checkpoint, tools) goes through
+ * `forwardURL`: the firewall forwards the request to our route in y
+ * adding an OIDC signed by the platform, whose claim `sandbox_name` is worth
+ * `agent-<run.id>`. **A VM cannot therefore claim anything other than its own
+ * run** — which a token carried in the VM would not have been able to guarantee.
  *
- * LE SECRET QU'ELLE DÉTIENT QUAND MÊME, et la phrase ci-dessus disait le contraire
- * (MIN-327). **Le token de forge est dans la VM**, dans le `remote.origin.url` que
- * `git clone` a écrit dans `.git/config`. Ce n'est pas rattrapable par une
- * politique réseau : c'est ce avec quoi la VM clone et pousse, elle ne peut pas
- * travailler sans. Ce qui est rattrapable, et qui l'est depuis MIN-327, c'est ce
+ * THE SECRET SHE HOLDS ANYWAY, and the sentence above said the opposite
+ * (MIN-327). **The forge token is in the VM**, in the `remote.origin.url` that
+ * `git clone` wrote in `.git/config`. This cannot be made up for by
+ * network policy: this is what the VM clones and pushes with, it cannot
+ * work without. What is catchable, and has been since MIN-327, is this
  * que ce token OUVRE :
  *
- * - il est scopé AU DÉPÔT que le projet a lié (`repositories` au mint), là où il
- *   valait sur tous les dépôts de l'installation ;
- * - son pouvoir est celui de l'ANCRAGE du run : `contents: write` pour un run qui
- *   pousse, `contents: read` pour une relecture, qui n'écrit rien dans le dépôt et
- *   dont le contenu vient d'un fork inconnu (`RepoTokenAccess`, repo-access.ts) ;
- * - et il ne remonte pas dans les journaux : la substitution de `redact.ts` le
- *   retire de tout ce qui SORT de la boucle, avant même que le modèle le voie.
+ * - it is scoped AT THE DEPOSIT that the project has linked (`repositories` to the mint), where it
+ * was valid on all deposits of the installation;
+ * - its power is that of ANCHORING the run: `contents: write` for a run which
+ * pushes, `contents: read` for a reread, which does not write anything in the repository and
+ * whose content comes from an unknown fork (`RepoTokenAccess`, repo-access.ts);
+ * - and it does not appear in the logs: the substitution of `redact.ts` on
+ * removes anything OUT of the loop, before the model even sees it.
  *
- * L'affirmation trop large, elle, n'était pas neutre : elle a dispensé de regarder
- * ce que ce token-là ouvrait vraiment.
+ * The overly broad statement was not neutral: it exempted us from looking
+ * what this token really opened up.
  *
- * ET TOUT CE QUI PRÉCÈDE NE VAUT QUE D'UNE MICROVM (MIN-355, MIN-357). Ce fichier
- * décrit une politique posée par le firewall de Vercel Sandbox : un tour qui joue
- * sur la machine de l'utilisateur n'en a aucune, et n'a donc rien de ce que la
- * plateforme garantit ici. **Les deux moitiés de l'invariant y tombent, et il
- * vaut mieux les écrire que les laisser se périmer :**
+ * AND ALL OF THE ABOVE IS ONLY WORTH ONE MICROVM (MIN-355, MIN-357). This file
+ * describes a policy imposed by the Vercel Sandbox firewall: a trick that plays
+ * on the user's machine has none, and therefore has nothing of what the
+ * platform guaranteed here. **The two halves of the invariant fall there, and it
+ * it's better to write them down than let them become stale :**
  *
- * - le harness PORTE un jeton d'identité ([local-exec-token.ts](local-exec-token.ts)),
- *   parce qu'aucun firewall ne signe pour lui. Ce qui le remplace n'est pas une
- *   cachette mais une réduction de pouvoir, écrite dans `handleControlPlaneRequest` ;
- * - et il PORTE la clé du modèle, parce qu'aucun firewall ne la posera après sa
+ * - the harness CARRY an identity token ([local-exec-token.ts](local-exec-token.ts)),
+ * because no firewall signs for him. What replaces it is not
+ * hiding but a reduction of power, written in `handleControlPlaneRequest`;
+ * - and it CARRYS the key of the model, because no firewall will install it after its
  *   sortie. Elle descend d'un cran seulement — jusqu'au proxy LLM
- *   ([vm/llm-proxy.ts](vm/llm-proxy.ts)), en mémoire, jamais dans le job ni dans
- *   l'environnement du serveur opencode — et elle est toujours une clé MINTÉE À
- *   PLAFOND DUR ([run-key.ts](run-key.ts)) : c'est le plafond qui borne le dégât,
- *   pas le secret.
+ * ([vm/llm-proxy.ts](vm/llm-proxy.ts)), in memory, never in the job nor in
+ * the opencode server environment — and it is always a MINTED key
+ * HARD CEILING ([run-key.ts](run-key.ts)): it is the ceiling which limits the damage,
+ * not the secret.
  *
- * DEUX CHOIX QUI ONT L'AIR DE DÉTAILS ET N'EN SONT PAS.
+ * TWO CHOICES THAT LOOK LIKE DETAILS AND ARE NOT.
  *
- * 1. `path: { exact }` sur la route de complétion, **jamais** un `startsWith`.
- *    C'est ce mot qui met `/api/v1/key` — la route de PROVISIONING d'OpenRouter,
- *    voisine d'un segment — hors de portée : mesurée à 401 avec le placeholder,
- *    là qu'un préfixe l'aurait créditée et aurait laissé la VM émettre ses
- *    propres clés. **Le proxy LLM porte désormais le même mot** (`resolveProxyTarget`,
- *    égalité stricte sur `pathname`) : sur une machine, c'est lui qui pose la
- *    clé, donc c'est lui qui tient ce que cette ligne-ci tient ici.
- * 2. Le catch-all `"*": []` reste : le reste d'Internet est OUVERT, sans
- *    injection. On ferme le chemin du **secret**, pas celui de la **donnée** —
- *    l'exfiltration du contenu du dépôt est déjà possible aujourd'hui
- *    (`run_command` + réseau ouvert) et une liste blanche stricte casserait
- *    `npm install` sur les dépôts de nos utilisateurs, dont on ne connaît ni les
- *    registres privés ni les miroirs. Traiter les deux comme un seul problème,
- *    c'est n'en résoudre aucun.
+ * 1. `path: { exact }` on the completion route, **never** a `startsWith`.
+ * It is this word that puts `/api/v1/key` — the PROVISIONING route of OpenRouter,
+ * neighboring a segment — out of range: measured at 401 with the placeholder,
+ * there that a prefix would have credited it and would have let the VM emit its
+ * own keys. **The LLM proxy now has the same word** (`resolveProxyTarget`,
+ * strict equality on `pathname`): on a machine, it is he who sets the
+ * key, so it is he who holds what this line here holds.
+ * 2. The catch-all `"*": []` remains: the rest of the Internet is OPEN, without
+ * injection. We close the path to **secret**, not that of **data** —
+ * exfiltration of repository contents is already possible today
+ * (`run_command` + open network) and a strict whitelist would break
+ * `npm install` on our users' deposits, the details of which are unknown
+ * private registers or mirrors. Treat both as one problem,
+ * it's not resolving any of them.
  *
- * CE QUI RESTE POSSIBLE, ET QUI EST BORNÉ AILLEURS : un modèle hostile peut
- * appeler la route créditée hors de la boucle (un `curl` suffit). Ce n'est pas
- * de l'exfiltration, c'est de la dépense, et elle échappe au ledger. Le
- * garde-fou n'est pas un contrôle de plus dans la VM — elle est compromise par
- * hypothèse — c'est la clé par run à plafond dur de `run-key.ts`, tenue par le
+ * WHAT REMAINS POSSIBLE, AND WHICH IS BOUNDED ELSEWHERE: a hostile model can
+ * call the credited route outside the loop (a `curl` is enough). It's not
+ * exfiltration is an expense, and it escapes the ledger. THE
+ * guardrail is not another control in the VM — it is compromised by
+ * hypothesis — this is the key per run to hard cap of `run-key.ts`, held by the
  * fournisseur.
  */
 
 /**
- * Préfixe des URL du plan de contrôle, **identique** dans la VM et sur la route.
+ * Prefix of control plane URLs, **same** in the VM and on the route.
  *
- * Le firewall APPEND le chemin demandé par la VM à `forwardURL`. En posant
- * `forwardURL` = l'origine nue, l'URL que la VM appelle et l'URL qui arrive chez
- * nous sont donc littéralement la même — le firewall n'y ajoute que l'OIDC. Un
- * appel direct à cette URL depuis la VM est impossible : il matche la règle,
- * donc il est forwardé, donc il porte l'OIDC. Et un appel depuis n'importe où
- * ailleurs arrive sans OIDC et se fait refuser par `defineSandboxProxy`.
+ * The firewall APPENDS the path requested by the VM to `forwardURL`. By posing
+ * `forwardURL` = the bare origin, the URL that the VM calls and the URL that arrives at
+ * are literally the same to us — the firewall only adds the OIDC. A
+ * direct call to this URL from the VM is impossible: it matches the rule,
+ * so it is forwarded, so it carries the OIDC. And a call from anywhere
+ * Elsewhere arrives without OIDC and is refused by `defineSandboxProxy`.
  */
 export const AGENT_VM_PATH_PREFIX = "/api/agent-vm";
 
-/** Ce que la boucle met dans `authorization` : le firewall l'écrase. Sa seule
- *  fonction est d'être reconnaissable dans un log ou une trace réseau. */
+/** What the loop puts in `authorization`: the firewall overwrites it. His only
+ * function is to be recognizable in a log or network trace. */
 export const AGENT_LLM_PLACEHOLDER_KEY = "minddy-placeholder";
 
-/** Préfixe du nom de microVM d'un run. Le nom EST l'identité : c'est lui que la
- *  plateforme signe dans le claim `sandbox_name` de l'OIDC. */
+/** Prefix of the microVM name of a run. The name IS the identity: it is he who
+ * platform sign in the OIDC claim `sandbox_name`. */
 const AGENT_SANDBOX_PREFIX = "agent-";
 
-/** Nom déterministe de la microVM d'un run (persisté dans `agent_runs.sandbox_id`). */
+/** Deterministic name of the microVM of a run (persisted in `agent_runs.sandbox_id`). */
 export function agentSandboxName(runId: string): string {
   return `${AGENT_SANDBOX_PREFIX}${runId}`;
 }
 
 /**
- * Le run qu'une microVM PEUT prétendre être — dérivé de son nom, donc du claim
- * OIDC signé par la plateforme, jamais du corps de la requête.
+ * The run that a microVM CAN claim to be — derived from its name, therefore from the claim
+ * OIDC signed by the platform, never from the body of the request.
  *
- * C'est là que tient toute la sécurité du plan de contrôle : une VM n'écrit pas
- * sur son run parce qu'on vérifie qu'elle en a le droit, mais parce qu'elle **ne
- * peut rien prétendre d'autre**. Un jeton porté dans la VM, ou un `runId` dans le
- * corps, auraient demandé une vérification ; ici il n'y a rien à vérifier.
+ * This is where all the security of the control plane lies: a VM does not write
+ * on her run because we check that she has the right to do so, but because she **does not
+ * can claim nothing else**. A token carried in the VM, or a `runId` in the
+ * body, would have requested verification; There is nothing to check here.
  *
- * `null` sur tout ce qui n'est pas `agent-<uuid>` : une sandbox de sonde, un
- * outil interne, un nom inventé. Le format uuid est exigé — sans lui, un
- * `agent-../..` partirait en requête Postgrest sur une chaîne arbitraire.
+ * `null` on anything that is not `agent-<uuid>`: a probe sandbox, a
+ * internal tool, an invented name. The uuid format is required — without it, a
+ * `agent-../..` would make a Postgrest request on an arbitrary string.
  */
 export function runIdFromSandboxName(name: string): string | null {
   if (!name.startsWith(AGENT_SANDBOX_PREFIX)) return null;
@@ -127,14 +127,14 @@ export function runIdFromSandboxName(name: string): string | null {
     : null;
 }
 
-/** Le locataire Vercel qui a le droit de parler au plan de contrôle : NOTRE team
- *  et NOTRE projet, ceux-là mêmes qui créent les microVM des runs. */
+/** The Vercel tenant who has the right to speak to the control plan: OUR team
+ * and OUR project, the same people who create the microVMs for the runs. */
 export interface ControlPlaneTenant {
   teamId: string;
   projectId: string;
 }
 
-/** Ce que la plateforme signe sur une requête forwardée (`ProxyMeta`), réduit à
+/** What the platform signs on a forwarded request (`ProxyMeta`), reduced to
  *  ce dont l'admission a besoin. */
 export interface SandboxCaller {
   teamId: string;
@@ -147,17 +147,17 @@ export type SandboxAdmission =
   | { ok: false; status: 403 | 503; error: string };
 
 /**
- * Le locataire attendu, lu dans l'environnement. Mêmes variables que la création
- * de microVM et que les domaines personnalisés (MIN-36) — pas une de plus à tenir.
+ * The expected tenant, read in the environment. Same variables as creation
+ * of microVM and that custom domains (MIN-36) — not one more to hold.
  *
- * Et ce n'est pas qu'une économie de configuration : c'est la paire que
- * `sandboxCredentials()` (sandbox.ts) présente pour CRÉER les microVM. On
- * compare donc le locataire de l'appelant à celui qui l'a fait naître — une
- * valeur fausse ne laisserait pas passer un intrus, elle empêcherait le run
+ * And it's not just a configuration saving: it's the pair that
+ * `sandboxCredentials()` (sandbox.ts) present to CREATE microVMs. We
+ * therefore compares the appellant's tenant to the one who gave birth to him — a
+ * false value would not let an intruder through, it would prevent the run
  * d'exister.
  *
- * `null` quand l'une manque, et l'appelant en fait un **503, pas un passe-droit** :
- * un plan de contrôle qui ne sait pas qui il sert ne sert personne.
+ * `null` when one is missing, and the caller makes it a **503, not a pass**:
+ * a control plan that does not know who it serves serves no one.
  */
 export function resolveControlPlaneTenant(
   env: Record<string, string | undefined> = process.env,
@@ -168,20 +168,20 @@ export function resolveControlPlaneTenant(
 }
 
 /**
- * QUI A LE DROIT DE PARLER (MIN-331), et pourquoi la signature ne suffisait pas.
+ * WHO HAS THE RIGHT TO SPEAK (MIN-331), and why the signature was not enough.
  *
- * `defineSandboxProxy` vérifie que le jeton est un OIDC **de Vercel** : signature
- * contre le JWKS de `oidc.vercel.com`, `aud` égale à l'URL forwardée, fenêtre de
- * validité. Aucune de ces trois vérifications ne dit **de quel compte** vient la
- * VM : l'émetteur est commun à toute la plateforme, et l'`aud` est celle que
- * l'appelant a lui-même posée dans le `forwardURL` de SA politique réseau. Un
- * attaquant qui déploie chez lui, pointe son `forwardURL` sur notre origine et
- * nomme sa sandbox `agent-<uuid d'un vrai run>` passait tout ça — et repartait
- * avec le jeton de forge du run, son checkpoint et sa surface d'outils.
+ * `defineSandboxProxy` verifies that the token is an OIDC **from Vercel**: signature
+ * against the JWKS of `oidc.vercel.com`, `aud` equal to the forwarded URL, window
+ * validity. None of these three checks says **from which account** the
+ * VM: the issuer is common to the entire platform, and the `aud` is the one that
+ * the caller himself asked in the `forwardURL` of HIS network policy. A
+ * attacker who deploys at home, points his `forwardURL` to our origin and
+ * name your sandbox `agent-<uuid d'un vrai run>` passed all that — and left
+ * with the run's forge token, its checkpoint and its tool surface.
  *
- * Ce qui tranche, c'est le locataire : `team_id` et `project_id` sont posés par
- * la plateforme, hors de portée de l'appelant. On exige les nôtres, puis
- * seulement ensuite on lit le nom — car c'est ce nom qui, lui, désigne le run.
+ * What decides is the tenant: `team_id` and `project_id` are set by
+ * the platform, out of reach of the caller. We demand ours, then
+ * only then do we read the name - because it is this name which designates the run.
  */
 export function admitSandboxCaller(
   caller: SandboxCaller,
@@ -201,26 +201,26 @@ export function admitSandboxCaller(
 export interface AgentNetworkPolicyInput {
   /**
    * Base URL OpenAI-compatible du provider du run (sans `/chat/completions`),
-   * telle que `resolveAgentApiKey` la résout — registre pour un provider connu,
-   * URL saisie pour un BYOK générique.
+   * such that `resolveAgentApiKey` resolves it — register for a known provider,
+   * URL entered for generic BYOK.
    */
   baseUrl: string;
   /**
-   * La VRAIE clé : celle du run (plafond dur) en mode plateforme, celle de
-   * l'utilisateur en BYOK. Elle ne sert qu'ici, et elle ne descend pas plus bas
-   * que le firewall.
+   * The REAL key: that of the run (hard ceiling) in platform mode, that of
+   * the user in BYOK. It is only useful here, and it does not go lower
+   * than the firewall.
    */
   llmKey: string;
   /**
-   * Origine (scheme + host, sans chemin) du déploiement qui tient le plan de
-   * contrôle. La VM doit joindre CE déploiement-là : un run lancé par une preview
-   * ne parle pas à la prod.
+   * Origin (scheme + host, without path) of the deployment which holds the plan
+   * control. The VM must join THIS deployment: a run launched by a preview
+   * don't talk to production.
    */
   appOrigin: string;
 }
 
-/** Host + chemin d'une URL absolue. Lève sur une URL illisible — mieux vaut
- *  refuser de démarrer la VM que la démarrer sans politique. */
+/** Host + path of an absolute URL. Raises on an unreadable URL — better
+ * refuse to start the VM than start it without policy. */
 function splitUrl(raw: string, label: string): { host: string; path: string } {
   let url: URL;
   try {
@@ -235,17 +235,17 @@ function splitUrl(raw: string, label: string): { host: string; path: string } {
 }
 
 /**
- * La politique à poser sur la microVM d'un run.
+ * The policy to put on the microVM of a run.
  *
- * Trois entrées, et l'ordre de lecture est celui de leur importance :
- *   1. le provider LLM — une seule route créditée, en POST, chemin EXACT ;
- *   2. notre propre origine — le plan de contrôle, forwardé avec OIDC ;
- *   3. `"*"` — tout le reste, ouvert et sans injection.
+ * Three entries, and the reading order is that of their importance:
+ * 1. the LLM provider — a single credited route, in POST, EXACT path;
+ * 2. our own origin — the control plane, forwarded with OIDC;
+ * 3. `"*"` — everything else, open and without injection.
  *
- * Une requête vers un domaine listé qui ne matche AUCUNE règle passe quand même,
- * simplement non transformée (mesuré : `GET /api/v1/key` ressort en 401 côté
- * OpenRouter, pas en refus du firewall). Lister un domaine ne le restreint donc
- * pas — ça lui ajoute des règles.
+ * A request to a listed domain that does not match ANY rules still passes,
+ * simply not transformed (measured: `GET /api/v1/key` springs at 401 side
+ * OpenRouter, not refusing the firewall). Listing a domain does not restrict it
+ * not — it adds rules to it.
  */
 export function buildAgentNetworkPolicy(input: AgentNetworkPolicyInput): NetworkPolicy {
   const llm = splitUrl(chatCompletionsUrl(input.baseUrl), "provider base URL");
@@ -266,9 +266,9 @@ export function buildAgentNetworkPolicy(input: AgentNetworkPolicyInput): Network
     forwardURL: input.appOrigin.replace(/\/+$/, ""),
   };
 
-  // Le provider et le plan de contrôle peuvent partager un host (BYOK générique
-  // hébergé chez nous, jamais vu mais pas interdit) : leurs règles s'additionnent
-  // alors sur la même entrée, elles ne s'écrasent pas.
+  // The provider and the control plane can share a host (generic BYOK
+  // hosted with us, never seen but not prohibited): their rules add up
+  // then on the same input, they do not overwrite each other.
   const allow: Record<string, NetworkPolicyRule[]> = { "*": [] };
   for (const [host, rule] of [
     [llm.host, llmRule],
@@ -279,8 +279,8 @@ export function buildAgentNetworkPolicy(input: AgentNetworkPolicyInput): Network
   return { allow };
 }
 
-/** URL que la boucle, DANS la VM, appelle pour une surface du plan de contrôle
- *  (`events`, `usage`, `checkpoint`…). Le firewall y ajoute l'OIDC en passant. */
+/** URL that the loop, IN the VM, calls for a control plane surface
+ * (`events`, `usage`, `checkpoint`…). The firewall adds the OIDC in passing. */
 export function agentVmUrl(appOrigin: string, surface: string): string {
   const base = appOrigin.replace(/\/+$/, "");
   const path = surface.startsWith("/") ? surface : `/${surface}`;

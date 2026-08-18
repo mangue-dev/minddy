@@ -1,38 +1,38 @@
 "use client";
 
 /**
- * Le projet dans lequel l'utilisateur a lancé l'agent la dernière fois, retenu
- * par navigateur.
+ * The project in which the user launched the agent last time, retained
+ * by browser.
  *
- * Il pré-remplit le composer d'une conversation SANS ticket, où le projet est
- * le seul choix obligatoire (c'est son dépôt que l'agent clone) : « là où je
- * fais travailler l'agent » vaut mieux que « celui qui trie en premier ».
+ * It pre-populates the composer with a conversation WITHOUT ticket, where the project is
+ * the only mandatory choice (it is its repository that the agent clones): "where I
+ * make the agent work" is better than "the one who sorts first".
  *
- * Mémoire DISTINCTE de celle du dialog de création ([[last-create-project]]) :
- * la règle de repli est la même, le geste non — on ne dépose pas forcément ses
- * tickets là où on lance l'agent, et écrire l'un dans l'autre déplacerait le
- * défaut d'un dialog qui n'a rien demandé.
+ * Memory SEPARATE from that of the creation dialog ([[last-create-project]]):
+ * the fallback rule is the same, the gesture is not — you don't necessarily deposit your
+ * tickets there where we launch the agent, and writing one to the other would move the
+ * default of a dialog that didn't request anything.
  *
- * Local à l'appareil comme les brouillons et les vues de board — une
- * préférence, pas une donnée, donc aucun aller-retour serveur. Une valeur
- * absente ou périmée retombe simplement sur le repli, et l'appelant valide
- * toujours l'id contre les projets courants (le projet a pu être supprimé, ou
- * l'accès perdu).
+ * Local to the device like drafts and board views — a
+ * preference, not a piece of data, so no server round trip. An absent or stale
+ * value simply falls back to the fallback, and the caller still validates
+ * the id against the current projects (the project may have been deleted, or
+ * access lost).
  */
 
 const KEY = "minddy:last-agent-project";
 
-/** Retient un lancement réussi. */
+/** Retains a successful launch. */
 export function rememberAgentProject(projectId: string): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(KEY, projectId);
   } catch {
-    /* localStorage indisponible (navigation privée / désactivé) — on ignore. */
+    /* localStorage unavailable (private browsing / disabled) — ignore. */
   }
 }
 
-/** Le projet retenu, ou `null` s'il n'y en a pas. */
+/** The selected project, or `null` if there is none. */
 export function lastAgentProjectId(): string | null {
   if (typeof window === "undefined") return null;
   try {
@@ -43,11 +43,11 @@ export function lastAgentProjectId(): string | null {
 }
 
 /**
- * Sur quel projet le composer s'ouvre : le dernier où un agent a été lancé,
- * tant qu'il est encore dans la liste de l'utilisateur, sinon le premier — et
- * celui-là n'est pas arbitraire, la liste arrive triée par `updated_at`, donc
- * c'est le projet touché le plus récemment. Pure (l'appelant passe l'id retenu
- * via {@link lastAgentProjectId}), donc testable.
+ * On which project the composer opens: the last where an agent was launched,
+ * as long as it is still in the user's list, otherwise the first — and
+ * this one is not arbitrary, the list arrives sorted by `updated_at`, therefore
+ * this is the affected project most recently. Pure (the caller passes the retained id
+ * via {@link lastAgentProjectId}), so testable.
  */
 export function defaultAgentProjectId(
   projects: readonly { id: string }[],

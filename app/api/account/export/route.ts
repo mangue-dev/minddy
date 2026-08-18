@@ -6,16 +6,16 @@ import { buildAccountExport } from "@/lib/server/account-export";
 import { captureServerEvent } from "@/lib/server/posthog";
 
 /**
- * Droit d'accès et de portabilité (MIN-119, RGPD art. 15 et 20) — un seul
- * fichier JSON, téléchargé à la demande.
+ * Right of access and portability (MIN-119, GDPR art. 15 and 20) — only one
+ * JSON file, downloaded on demand.
  *
- * Pas de file d'attente ni d'e-mail avec un lien : à cette échelle un compte
- * tient en mémoire, et une chaîne asynchrone n'ajouterait qu'un stockage
- * temporaire de plus à surveiller — c'est-à-dire de la donnée personnelle
- * supplémentaire, pour un droit dont le but est d'en garder moins.
+ * No queue or email with a link: on this scale an account
+ * fits in memory, and an asynchronous chain would only add storage
+ * temporary one more to monitor — that is to say personal data
+ * additional, for a right whose aim is to keep less.
  *
- * Ce que le fichier contient est décrit dans `lib/server/account-export.ts` ;
- * il ne porte AUCUN secret.
+ * What the file contains is described in `lib/server/account-export.ts`;
+ * he carries NO secrets.
  */
 
 export const maxDuration = 60;
@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  // Un export est une lecture large : quelques-uns par heure suffisent, et la
-  // limite évite qu'une boucle côté client martèle la base.
+  // An export is a broad reading: a few per hour are enough, and the
+  // limit prevents a client-side loop from hammering the base.
   const limit = checkSessionRateLimit(auth.user.id, "account-export", {
     limit: 5,
     windowMs: 60 * 60_000,

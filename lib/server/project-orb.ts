@@ -2,17 +2,17 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
- * La graine de l'orbe d'un projet (`projects.orb_seed`), côté écriture.
+ * The seed of the orb of a project (`projects.orb_seed`), on the writing side.
  *
- * Même geste que l'avatar d'un compte (`lib/server/avatar-seeds.ts`) : l'orbe
- * ne se choisit pas, elle se relance. Le tirage est fait ICI et non par la base
- * — le défaut d'une colonne ne s'applique qu'à l'insertion, et PostgREST ne sait
- * pas écrire `set orb_seed = gen_random_uuid()`. Même source d'aléa (UUID v4),
- * donc même qualité de tirage.
+ * Same gesture as the avatar of an account (`lib/server/avatar-seeds.ts`): the orb
+ * is not chosen, it restarts. The draw is done HERE and not by the base
+ * — the default of a column only applies to the insertion, and PostgREST does not know
+ * to write `set orb_seed = gen_random_uuid()`. Same random source (UUID v4),
+ * therefore same draw quality.
  *
- * L'appelant a déjà vérifié que l'utilisateur est owner du projet, comme pour
- * l'icône : la table n'a pas de policy d'update pour ce champ, tout passe par la
- * clé de service.
+ * The caller has already verified that the user is the owner of the project, as for
+ * the icon: the table does not have an update policy for this field, everything goes through the
+ * service key.
  */
 export async function regenerateProjectOrbSeed(projectId: string): Promise<string> {
   const seed = crypto.randomUUID();

@@ -1,18 +1,18 @@
 "use client";
 
-// L'ajout rapide depuis un picker (MIN — « Menus & ajout »). Les deux hooks ci-
-// dessous fabriquent la dernière ligne du menu ; un picker ne fait que la passer
-// à SearchSelect / SearchMultiSelect (prop `createOption`), ce qui met le même
-// geste sur TOUS les boards : cartes, panneau latéral, dialog de création,
+// Quick addition from a picker (MIN — “Menus & addition”). The two hooks below
+// below make the last line of the menu; a picker just passes it
+// to SearchSelect / SearchMultiSelect (prop `createOption`), which puts the same
+// gesture on ALL boards: cards, side panel, creation dialog,
 // menus clavier L/O, triage, retours.
 //
-// Les deux entités ne se créent pas pareil, et c'est voulu :
+// The two entities are not created the same, and that is intentional:
 //
-//   - une CATÉGORIE naît sur place, avec le texte tapé pour nom et une couleur
-//     libre tirée de la palette — une étiquette n'a rien d'autre à remplir ;
-//   - un OBJECTIF ouvre son dialog, prérempli du texte tapé. Il porte un statut,
-//     un lead, une date cible, une description : le créer à l'aveugle depuis un
-//     menu en ferait une coquille que personne ne revient remplir.
+// - a CATEGORY is born on the spot, with the typed text for name and a color
+// free taken from the palette — a label has nothing else to fill in;
+// - an OBJECTIVE opens its dialog, pre-filled with the typed text. He carries a status,
+// a lead, a target date, a description: create it blindly from a
+// menu would make it a shell that no one comes back to fill.
 
 import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -25,13 +25,13 @@ import type { PickerCreateOption } from "@/components/search-select";
 import type { Category, Objective } from "@/lib/types";
 
 /**
- * « Ajouter une catégorie » : crée l'étiquette dans le projet et la rend à
- * l'appelant, qui la coche sur son ticket.
+ * “Add a category”: creates the label in the project and returns it to
+ * the caller, who checks it on their ticket.
  *
- * @param projectId Projet visé — absent (carte d'un board public, projet
- *   inconnu), la ligne n'apparaît pas.
- * @param categories Les catégories déjà là : elles servent à choisir une
- *   couleur qui ne soit pas déjà prise.
+ * @param projectId Target project — absent (public board card, project
+ * unknown), the line does not appear not.
+ * @param categories The categories already there: they are used to choose a
+ * color which is not already taken.
  */
 export function useCategoryCreateOption({
   projectId,
@@ -39,7 +39,7 @@ export function useCategoryCreateOption({
   onCreated,
 }: {
   projectId?: string | null;
-  /** Les couleurs déjà prises — tout ce dont la création a besoin de la liste. */
+  /** Colors already taken — everything the design needs from the list. */
   categories: Pick<Category, "color">[];
   onCreated: (category: Category) => void;
 }): PickerCreateOption | undefined {
@@ -53,8 +53,8 @@ export function useCategoryCreateOption({
         name,
         color: pickFreeCategoryColor(categories.map((c) => c.color)),
       });
-      // Écrite dans les caches AVANT d'être cochée : la pastille a son nom et
-      // sa couleur du premier rendu, sans attendre le refetch.
+      // Written in the caches BEFORE being checked: the pastille has its name and
+      // its color from the first rendering, without waiting for the refetch.
       insertCategoryEverywhere(queryClient, projectId, category);
       void queryClient.invalidateQueries({ queryKey: ["categories", projectId] });
       onCreated(category);
@@ -67,13 +67,13 @@ export function useCategoryCreateOption({
 }
 
 /**
- * « Ajouter un objectif » : ouvre le dialog de création, prérempli du texte
- * tapé, et lie l'objectif créé au ticket. Le menu se ferme — le dialog prend le
- * clavier.
+ * “Add a goal”: opens the creation dialog, pre-filled with the typed text
+ *, and links the created goal to the ticket. The menu closes — the dialog takes the
+ * keyboard.
  *
- * Une création dans un AUTRE projet (le bouton scindé du dialog) ne rappelle
- * pas `onCreated` : l'objectif n'existe pas dans le projet du ticket, l'y lier
- * serait refusé.
+ * A creation in ANOTHER project (the button split from the dialog) does not recall
+ * not `onCreated`: the objective does not exist in the ticket project, linking it to it
+ * would be refused.
  */
 export function useObjectiveCreateOption({
   projectId,
@@ -83,7 +83,7 @@ export function useObjectiveCreateOption({
   onCreated: (objective: Objective) => void;
 }): PickerCreateOption | undefined {
   const t = useTranslations("Picker");
-  // Hors CreateProvider (board public), personne ne monte le dialog : pas de ligne.
+  // Outside CreateProvider (public board), no one mounts the dialog: no line.
   const create = useCreateOptional();
 
   const onCreate = useCallback(

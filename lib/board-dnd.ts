@@ -1,36 +1,36 @@
 /**
- * Les deux réglages dnd-kit que les deux boards partagent : QUI est survolé, et
- * ce que les cartes ont le droit d'animer.
+ * The two dnd-kit settings that the two boards share: WHO is hovered over, and
+ * what cards can animate.
  *
- * ## `boardCollision` — le pointeur choisit la colonne, la colonne choisit la carte
+ * ## `boardCollision` — the pointer chooses the column, the column chooses the card
  *
- * `closestCorners` (le réglage d'avant) mesure des coins : au milieu d'un board,
- * les coins d'une carte de la colonne VOISINE peuvent être plus proches que ceux
- * de la carte qu'on survole, et le survol part à côté. Pire, entre deux cartes
- * ou sous la dernière, c'est le grand rectangle de la colonne qui gagne — la
- * cible retombe alors en fin de colonne, et le repère de dépôt fait un bond.
+ * `closestCorners` (the previous setting) measures corners: in the middle of a board,
+ * the corners of a card in the NEIGHBOR column can be closer than those
+ * of the card being hovered over, and the hover starts next to it. Worse, between two cards
+ * or under the last one, it is the large rectangle in the column that wins — the target
+ * then falls back to the end of the column, and the deposit marker jumps.
  *
- * D'où trois temps, dans cet ordre :
+ * Hence three times, in this order:
  *
- * 1. une carte sous le pointeur → c'est elle, sans discussion ;
- * 2. sinon la colonne sous le pointeur, et dans CETTE colonne seulement, la carte
- *    au centre le plus proche (le vide entre deux cartes, ou sous la dernière,
- *    désigne donc sa voisine — et `readDropTarget` dit ensuite de quel côté) ;
- * 3. pointeur hors de toute colonne (gouttière, en-têtes) → `closestCorners`, qui
- *    répond toujours quelque chose.
+ * 1. a card under the pointer → that's it, without discussion;
+ * 2. otherwise the column under the pointer, and in THIS column only, the card
+ * in the nearest center (the void between two cards, or under the last one,
+ * therefore designates its neighbor — and `readDropTarget` then says which side) ;
+ * 3. pointer out of any column (gutter, headers) → `closestCorners`, which
+ * always responds something.
  *
- * ## `NO_SHIFT_STRATEGY` — une seule animation par déplacement
+ * ## `NO_SHIFT_STRATEGY` — only one animation per move
  *
- * Les cartes ne se décalent plus sous le paquet glissé. Ce décalage était la
- * moitié d'un doublon : dnd-kit poussait les cartes par `transform` pendant le
- * glisser, puis le cache optimiste réordonnait la liste au dépôt — deux
- * animations pour un seul déplacement, d'où les sursauts à l'arrivée. Et ce
- * décalage MENTAIT dès que la colonne était triée par priorité ou par date : il
- * ouvrait un trou sous le curseur, là où le tri n'allait rien mettre.
+ * Cards no longer shift under the slipped packet. This offset was the
+ * half of a duplicate: dnd-kit pushed cards by `transform` during the
+ * drag, then the optimistic cache reordered the list at drop — two
+ * animations for a single move, hence the jumps on arrival. And this
+ * offset LIE as soon as the column was sorted by priority or by date: it
+ * opened a hole under the cursor, where the sort was not going to put anything.
  *
- * Ce qu'on voit à la place, c'est le repère de dépôt
- * (`components/board-drop-indicator.tsx`), calculé par le même code que
- * l'écriture qui suit (`previewBoardMove`).
+ * What we see instead is the deposit marker
+ * (`components/board-drop-indicator.tsx`), calculated by the same code as
+ * the writing which follows (`previewBoardMove`).
  */
 
 import {
@@ -44,7 +44,7 @@ import { STATUSES } from "@/lib/issue-constants";
 
 const STATUS_IDS = new Set<string>(STATUSES.map((s) => s.value));
 
-/** La colonne d'une carte, posée sur son sortable pour que la détection la lise. */
+/** The column of a card, placed on its sortable so that detection can read it. */
 export interface CardDragData {
   columnStatus: string;
 }
@@ -55,9 +55,9 @@ export const boardCollision: CollisionDetection = (args) => {
   if (card) return [card];
 
   const column = within.find((c) => STATUS_IDS.has(String(c.id)));
-  // Les algorithmes de dnd-kit rendent TOUTES les cibles, triées ; seule la
-  // première compte (`getFirstCollision`). On ne rend donc qu'elle — ce qu'on
-  // rend ici est ce que le repère de dépôt lira.
+  // dnd-kit algorithms render ALL targets, sorted; only the
+  // first account (`getFirstCollision`). We therefore only give back — what we
+  // render here is what the repository will read.
   if (!column) return closestCorners(args).slice(0, 1);
 
   const cards = args.droppableContainers.filter(
@@ -71,12 +71,12 @@ export const boardCollision: CollisionDetection = (args) => {
   return closest.length > 0 ? [closest[0]] : [column];
 };
 
-/** Aucune carte ne bouge pendant le glisser (cf. l'en-tête de ce fichier). */
+/** No card moves during dragging (see the header of this file). */
 export const NO_SHIFT_STRATEGY: SortingStrategy = () => null;
 
 /**
- * Et aucune ne rejoue son trajet APRÈS le dépôt : le cache optimiste l'a déjà
- * replacée. C'était la seconde moitié du doublon — et, accessoirement, ce qui
- * faisait mesurer un rectangle par carte à chaque changement de liste.
+ * And none replays its journey AFTER the deposit: the optimistic cache has already
+ * replaced it. This was the second half of the duplicate — and, incidentally, what made
+ * measure one rectangle per card each time the list was changed.
  */
 export const NO_LAYOUT_ANIMATION = () => false;

@@ -7,25 +7,25 @@ import { useAffirmWindowButtons } from "@/lib/use-window-buttons";
 import { startDesktopTrace } from "@/lib/desktop/trace";
 
 /**
- * Marque le document quand il est rendu DANS l'app de bureau (MIN-291).
+ * Marks the document when it is rendered IN the desktop app (MIN-291).
  *
- * Une seule chose en dépend, et elle ne peut pas se faire autrement : **les
- * zones par lesquelles on déplace la fenêtre**. La barre de titre native est
- * masquée (`titleBarStyle: "hiddenInset"`), pour que l'app n'ait pas une bande
- * grise au-dessus de son propre en-tête ; en échange, macOS ne sait plus par où
- * la saisir, et c'est à la page de le dire — `-webkit-app-region: drag` est une
- * propriété CSS, elle ne peut venir que d'ici. Sans ça, la fenêtre ne se déplace
- * pas du tout : c'était le cas au premier essai.
+ * Only one thing depends on it, and it cannot be done otherwise: **the
+ * areas through which the window is moved**. The native title bar is
+ * hidden (`titleBarStyle: "hiddenInset"`), so that the app does not have a band
+ * gray above its own header; in exchange, macOS no longer knows where
+ * enter it, and it's up to the page to say it — `-webkit-app-region: drag` is a
+ * CSS property, it can only come from here. Without it, the window will not move
+ * not at all: this was the case on the first try.
  *
- * L'attribut est posé sur `<html>` par un effet, jamais au rendu : le pont
- * n'existe pas côté serveur, et le supposer ferait diverger l'hydratation. Les
- * règles qui le lisent vivent dans app/globals.css, section « app de bureau ».
+ * The attribute is set to `<html>` by an effect, never when rendered: the bridge
+ * does not exist on the server side, and assuming it does would cause hydration to diverge. THE
+ * Rules that read it live in app/globals.css, "desktop app" section.
  *
- * Il porte une seconde chose, pour la même raison qu'il porte la première : il
- * est monté au layout RACINE, donc sur tous les écrans — la connexion, `/f/`,
- * `/p/`, la page 404 comprises. C'est ce qui lui permet de réaffirmer au main
- * process ce que le document veut des feux macOS (MIN-304) ; le composant qui
- * les dessine, lui, ne vit que sous l'app authentifiée.
+ * He carries a second thing, for the same reason that he carries the first: he
+ * is mounted in the ROOT layout, therefore on all screens — the connection, `/f/`,
+ * `/p/`, including page 404. This is what allows him to reaffirm by hand
+ * process what the document wants macOS fires (MIN-304); the component which
+ * draws them, he only lives under the authenticated app.
  */
 export function DesktopChrome() {
   useAffirmWindowButtons();
@@ -37,9 +37,9 @@ export function DesktopChrome() {
     return () => root.removeAttribute("data-desktop-app");
   }, []);
 
-  // La trace de MIN-307, éteinte par défaut : elle ne s'installe qu'avec
-  // `localStorage.minddy.trace = "1"`, et seulement dans la coquille. Montée
-  // ici parce que c'est le composant qui garantit déjà les deux conditions.
+  // The trace of MIN-307, turned off by default: it is only installed with
+  // `localStorage.minddy.trace = "1"`, and only in the shell. Rise
+  // here because it is the component that already guarantees both conditions.
   useEffect(() => startDesktopTrace(), []);
 
   return null;

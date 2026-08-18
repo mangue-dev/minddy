@@ -58,12 +58,12 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
 }
 
 /**
- * DELETE /api/issues/[id] — passage en corbeille (MIN-133).
+ * DELETE /api/issues/[id] — move to trash (MIN-133).
  *
- * Rien n'est détruit : la ligne est marquée et sort des lectures par la policy
- * `issues_select`. Ses commentaires, pièces jointes, sous-tickets et relations
- * restent en place — c'est ce qui permet de la restaurer telle quelle. Le vrai
- * `delete`, celui qui cascade et efface les objets du storage, n'arrive qu'à la
+ * Nothing is destroyed: the line is marked and leaves readings by the policy
+ * `issues_select`. Their comments, attachments, sub-posts and connections
+ * remain in place — this is what allows it to be restored as it was. The real
+ * `delete`, the one which cascades and deletes the objects from the storage, only arrives at the
  * purge (lib/server/trash.ts), manuelle ou au bout de 30 jours.
  */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {

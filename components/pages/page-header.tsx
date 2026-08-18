@@ -1,16 +1,16 @@
 "use client";
 
-// L'en-tête d'une page ouverte : son icône et son TITRE (MIN-270).
+// The header of an open page: its icon and its TITLE (MIN-270).
 //
-// Le titre est un champ à part, et surtout PAS le premier `H1` du corps. C'est
-// la décision qui rend simples la sidebar, la recherche, le fil d'Ariane, le
-// bloc sous-page et le lien de page : tous lisent une colonne, aucun n'a à
-// ouvrir un document ProseMirror pour savoir comment la page s'appelle. Le prix
-// est visible ici, et nulle part ailleurs — deux champs à l'écran au lieu d'un.
+// The title is a separate field, and especially NOT the first `H1` of the body. It is
+// the decision that makes the sidebar, the search, the breadcrumbs, the
+// subpage block and page link: all read a column, none have to
+// open a ProseMirror document to find out what the page is called. The price
+// is visible here, and nowhere else — two fields on the screen instead of one.
 //
-// Le champ est un `textarea` auto-agrandissant (components/auto-textarea.tsx) :
-// un titre long doit passer à la ligne comme il le fera dans le document, et
-// non défiler dans une fente d'une ligne.
+// The field is a self-expanding `textarea` (components/auto-textarea.tsx):
+// a long title should wrap as it will in the document, and
+// not scroll in a one-line slot.
 
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { useTranslations } from "next-intl";
@@ -21,15 +21,15 @@ import { AutoTextarea } from "@/components/auto-textarea";
 import { EmojiPicker } from "@/components/pages/emoji-picker";
 
 /**
- * Le curseur est-il sur la DERNIÈRE ligne visible du champ ?
+ * Is the cursor on the LAST visible line of the field?
  *
- * Un titre n'a pas de saut de ligne (Entrée descend dans le corps), mais il se
- * REPLIE : un titre long fait deux ou trois lignes à l'écran, et ↓ doit y
- * descendre d'une ligne avant de quitter le champ. Rien dans le DOM ne dit sur
- * quelle ligne repliée tombe le caret, d'où la mesure : un champ qui tient sur
- * une ligne rend toujours `true`, et au-delà on ne passe la main qu'au bout du
- * texte — c'est-à-dire au bout de la dernière ligne, la seule position dont on
- * soit sûr.
+ * A title does not have a line break (Enter goes down in the body), but it is
+ * FOLDED: a long title is two or three lines on the screen, and ↓ must y
+ * go down one line before leaving the field. Nothing in the DOM says about
+ * which folded line falls on the caret, hence the measurement: a field which fits on
+ * a line always returns `true`, and beyond that we only pass the hand at the end of the
+ * text — that is to say at the end of the last line, the only position of which on
+ * be sure.
  */
 function caretOnLastLine(field: HTMLTextAreaElement): boolean {
   if (field.selectionStart !== field.selectionEnd) return false;
@@ -54,39 +54,39 @@ export function PageHeader({
   icon: string | null;
   onTitleChange: (title: string) => void;
   onIconChange: (icon: string | null) => void;
-  /** Entrée depuis le titre : une ligne vide s'ouvre en tête du corps, curseur
-      dedans — le geste d'une ligne, pas celui d'un champ qu'on quitte. */
+  /** Entry from the title: an empty line opens at the head of the body, cursor
+ inside — the gesture of a line, not that of a field that is left. */
   onEnter?: () => void;
   /**
-   * ↓ depuis la dernière ligne du titre : le curseur passe dans le corps, parce
-   * que la première ligne du corps est bien la ligne d'en dessous. C'est
-   * l'autre moitié du passage que tient title-bridge.ts dans l'éditeur.
-   */
+ * ↓ from the last line of the title: the cursor passes into the body, because
+ * the first line of the body is indeed the line below. This is
+ * the other half of the passage that title-bridge.ts holds in the editor.
+ */
   onDown?: () => void;
-  /** Le champ lui-même — par où l'appelant lui rend le focus (⌫ ou ↑ dans le
-      corps ramènent en fin de titre). */
+  /** The field itself — where the caller returns focus (⌫ or ↑ in the
+ body returns to the end of the title). */
   fieldRef?: RefObject<HTMLTextAreaElement | null>;
   /**
-   * Page qui vient d'être créée : le curseur est mis dans le titre (MIN-272).
-   *
-   * C'est la seule chose qu'on ait à faire d'une page neuve — elle n'a ni nom
-   * ni contenu, et laisser le curseur nulle part obligerait à cliquer dans un
-   * champ vide pour commencer.
-   */
+ * Page that has just been created: the cursor is placed in the title (MIN-272).
+ *
+ * This is the only thing we have to do with a new page — it has neither name
+ * nor content, and leaving the cursor nowhere would require clicking in a
+ * empty field to start.
+ */
   autoFocus?: boolean;
   readOnly?: boolean;
-  /* QUI a écrit en dernier n'est PLUS ici (MIN-282) : la ligne a fusionné avec
-     l'état d'enregistrement, en haut à droite de la surface — les deux
-     répondaient à la même question, « où en est ce document ? », depuis deux
-     coins opposés de l'écran. Voir `PageStatus` (page-view.tsx). */
+  /* WHO WROTE LAST is NO LONGER HERE (MIN-282): the line merged with
+ the save state, at the top right of the surface — both
+ answered the same question, "where is this document?" ”, from two
+ opposite corners of the screen. See `PageStatus` (page-view.tsx). */
   className?: string;
 }) {
   const t = useTranslations("Pages");
 
-  // Le champ est NON contrôlé par la prop pendant la frappe : la sauvegarde
-  // renvoie la ligne serveur, et rebrancher `value` dessus ferait sauter le
-  // curseur en fin de champ à chaque aller-retour. On n'adopte une valeur
-  // distante que lorsqu'elle diffère de ce qu'on a tapé.
+  // The field is NOT controlled by the prop while typing: saving
+  // returns the server line, and reconnecting `value` to it would skip the
+  // cursor at the end of the field on each round trip. We do not adopt a value
+  // distant only when it differs from what we typed.
   const [draft, setDraft] = useState(title);
   const typed = useRef(title);
   useEffect(() => {
@@ -97,22 +97,22 @@ export function PageHeader({
   }, [title]);
 
   return (
-    // `group/header` : le bouton « ajouter une icône » n'existe qu'au survol du
-    // BLOC titre, pas de sa seule ligne — on vise le titre pour l'illustrer, et
-    // la cible se déroberait si elle n'apparaissait qu'au-dessus d'elle-même.
+    // `group/header`: the “add an icon” button only exists when hovering over the
+    // Title BLOCK, not its single line — we aim for the title to illustrate it, and
+    // the target would evade if it only appeared above itself.
     <div className={cn("group/header flex flex-col gap-2", className)}>
       {icon ? (
         <div className="-ml-1">
           <EmojiPicker value={icon} onChange={onIconChange} />
         </div>
       ) : (
-        // Pas d'icône : RIEN par défaut, et surtout pas un 📄 que personne n'a
-        // choisi. Une icône posée d'office se lit comme une décision de
-        // l'utilisateur — toutes les pages se ressemblent, et celui qui en veut
-        // une vraie ne voit pas qu'il peut la changer.
+        // No icon: NOTHING by default, and especially not a 📄 that no one has
+        // chosen. An icon automatically placed reads like a decision to
+        // the user — all pages look the same, and whoever wants them
+        // a real one doesn't see that he can change it.
         //
-        // La place est RÉSERVÉE (`h-7`) même quand le bouton est invisible :
-        // sans ça, le titre sauterait de 28 px au passage de la souris.
+        // The place is RESERVED (`h-7`) even when the button is invisible:
+        // without this, the title would jump 28 px on mouseover.
         <div className="-ml-1.5 flex h-7 items-center">
           <EmojiPicker value={null} onChange={onIconChange}>
             <button
@@ -120,9 +120,9 @@ export function PageHeader({
               className={cn(
                 "flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-muted-foreground",
                 "opacity-0 transition-opacity hover:bg-muted hover:text-foreground",
-                // `data-state=open` : le sélecteur ouvert, la souris part vers
-                // lui et quitte l'en-tête — son déclencheur ne doit pas
-                // s'effacer sous elle en chemin.
+                // `data-state=open`: the selector open, the mouse goes towards
+                // him and exits the header — its trigger should not
+                // fade beneath it along the way.
                 "group-hover/header:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100",
                 "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               )}
@@ -147,9 +147,9 @@ export function PageHeader({
           onTitleChange(event.target.value);
         }}
         onKeyDown={(event) => {
-          // Un titre n'a pas de saut de ligne : Entrée OUVRE la ligne suivante,
-          // qui est la première du corps — le champ se comporte comme la ligne
-          // qu'il paraît être (cf. block-actions.ts, `focusDocumentStart`).
+          // A title has no line break: Enter OPENS the next line,
+          // which is the first of the body — the field behaves like the line
+          // as it appears to be (cf. block-actions.ts, `focusDocumentStart`).
           if (event.key === "Enter") {
             event.preventDefault();
             onEnter?.();

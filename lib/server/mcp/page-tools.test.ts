@@ -1,27 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-273 — les outils de page, EXERCÉS PAR LEURS VRAIS CALLBACKS.
- * (Six à l'origine ; minddy_search_pages est arrivé avec MIN-276.)
+ * MIN-273 — the page tools, EXERCISED BY THEIR REAL CALLBACKS.
+ * (Originally six; minddy_search_pages arrived with MIN-276.)
  *
- * Ce test ne relit pas des schémas : il enregistre les tools contre un serveur
- * qui GARDE les callbacks, puis les appelle comme le ferait un client MCP. Tout
- * ce qui est entre les deux tourne pour de vrai — la garde d'accès, le noyau
- * `lib/server/pages.ts`, le compteur de `version`, et surtout la projection
- * markdown ⇄ ProseMirror (MIN-269), qui monte un éditeur tiptap sur un DOM
- * installé à la volée. C'est ce dernier point que ni la relecture ni un test de
- * catalogue ne peuvent dire : un aller-retour qui perd un bloc n'a aucun
- * symptôme avant qu'un agent ne réécrive une page.
+ * This test does not reread schemas: it registers the tools against a server
+ * which KEEPs callbacks, then calls them as an MCP client would. Everything in between runs for real — the gatekeeper, the kernel
+ * `lib/server/pages.ts`, the `version` counter, and especially the projection
+ * markdown ⇄ ProseMirror (MIN-269), which mounts a tiptap editor on a DOM
+ * installed on the fly. It is this last point that neither rereading nor a catalog test can tell: a round trip which loses a block has no symptoms before an agent rewrites a page.
  *
- * On ne moque QUE ce qui sort du process : la table `pages` et l'accès projet.
- * Le faux PostgREST est celui de lib/server/pages.test.ts, pour la même raison
- * qu'il existe là-bas — le vrai code serveur doit tourner au-dessus.
+ * We ONLY mock what comes out of the process: the table `pages` and project access.
+ * The fake PostgREST is that of lib/server/pages.test.ts, for the same reason
+ * it exists there — the real server code must run above it.
  */
 
 const h = vi.hoisted(() => ({
   rows: [] as Record<string, unknown>[],
-  /** Les fils de page (MIN-282) : une table à part, donc un tableau à part —
-      les mélanger ferait compter un commentaire comme une page. */
+  /** Page threads (MIN-282): a separate table, therefore a separate table —
+ mixing them would make a comment count as a page. */
   comments: [] as Record<string, unknown>[],
   access: new Set<string>(),
   seq: 0,
@@ -141,16 +138,16 @@ vi.mock("@/lib/supabase-service", () => {
   };
 
   /**
-   * `search_pages`, la fonction SQL, rejouée sur le tableau en mémoire
-   * (MIN-276).
-   *
-   * Ce que le faux reproduit fidèlement : le PÉRIMÈTRE (pages vivantes du
-   * projet demandé), la double lecture titre + `search_text`, la préséance du
-   * titre sur le corps, et l'extrait pris autour du mot trouvé. Ce qu'il ne
-   * reproduit pas et ne prétend pas tester : le scoring exact de `ts_rank_cd`
-   * ni le découpage de `ts_headline` — ça, c'est Postgres, et ça se vérifie
-   * contre une vraie base, pas contre un tableau.
-   */
+ * `search_pages`, the SQL function, replayed on the table in memory
+ * (MIN-276).
+ *
+ * What the fake faithfully reproduces: the PERIMETER (living pages of the
+ * requested project), the double reading title + `search_text`, the precedence of the
+ * title on the body, and the extract taken around the word found. What it does not
+ * reproduce and does not claim to test: the exact scoring of `ts_rank_cd`
+ * nor the division of `ts_headline` — that's Postgres, and it is verified
+ * against a real database, not against a table.
+ */
   const rpc = async (name: string, args: Record<string, unknown>) => {
     if (name !== "search_pages") throw new Error(`rpc inconnu : ${name}`);
     const tokens = String(args.p_query ?? "")
@@ -189,8 +186,8 @@ vi.mock("@/lib/supabase-service", () => {
     return { data: hits.slice(0, Number(args.p_limit ?? 20)), error: null };
   };
 
-  /** Les comptes, pour que les auteurs d'un fil se lisent par leur nom
-      (MIN-282) — jamais l'email brut, la règle de lib/display-name.ts. */
+  /** Accounts, so that the authors of a thread are read by name
+ (MIN-282) — never the raw email, the rule of lib/display-name.ts. */
   const auth = {
     admin: {
       getUserById: async (id: string) => ({
@@ -210,10 +207,10 @@ vi.mock("@/lib/supabase-service", () => {
 });
 
 /**
- * Ce qu'une écriture FAIT SAVOIR (MIN-278) — activité, mentions, notification
- * d'agent — est exercé par ses propres tests. Ici on le coupe : le faux
- * PostgREST de ce fichier ignore la TABLE visée, donc une ligne `issue_events`
- * atterrirait parmi les pages et l'index de recherche compterait faux.
+ * What a write DOES KNOW (MIN-278) — agent activity, mentions, notification
+ * — is exercised by its own tests. Here we cut it: the false
+ * PostgREST of this file ignores the targeted TABLE, so a line `issue_events`
+ * would land among the pages and the search index would count false.
  */
 vi.mock("@/lib/server/page-activity", () => ({
   recordPageEvent: async () => {},
@@ -224,10 +221,9 @@ vi.mock("@/lib/server/page-mentions", () => ({
 }));
 
 /**
- * Les notifications d'un commentaire de page (MIN-282), coupées ici pour la
- * même raison : elles écrivent dans `notifications`, une table que ce faux
- * PostgREST ne connaît pas. Ce qu'elles décident — qui est prévenu, et une
- * seule fois — est exercé par lib/server/page-comments.test.ts.
+ * Notifications of a page comment (MIN-282), cut here for the
+ * same reason: they write to `notifications`, a table that this fake
+ * PostgREST does not know. What they decide — who is notified, and only once — is exercised by lib/server/page-comments.test.ts.
  */
 vi.mock("@/lib/server/notifications", () => ({
   insertNotifications: async () => {},
@@ -251,7 +247,7 @@ import { registerPageTools } from "./page-tools";
 const ACTOR = "user-1";
 const PROJECT = "11111111-1111-4111-8111-111111111111";
 
-/** L'enregistreur qui GARDE les callbacks — c'est lui qui rend le test réel. */
+/** The logger that KEEPS the callbacks — it's what makes the test real. */
 type Callback = (
   args: Record<string, unknown>,
   extra: unknown
@@ -265,7 +261,7 @@ registerPageTools({
   },
 } as unknown as McpServer);
 
-/** Un appel de tool, comme le SDK le fait : les arguments, et l'AuthInfo. */
+/** A tool call, like the SDK does: arguments, and AuthInfo. */
 async function call(
   name: string,
   args: Record<string, unknown>
@@ -281,7 +277,7 @@ async function call(
   };
 }
 
-/** Crée une page par le VRAI tool et rend son id. */
+/** Creates a page using the REAL tool and returns its id. */
 async function createPage(
   title: string,
   markdown = "",
@@ -298,11 +294,11 @@ async function createPage(
 }
 
 /**
- * Attend que le texte de recherche des pages écrites soit posé.
+ * Waits for the search text of the written pages to be set.
  *
- * `search_text` est écrite APRÈS la réponse (`afterOrNow`) : hors requête, le
- * travail part tout de suite mais n'est pas attendu — c'est son contrat, et
- * l'attendre ici plutôt que de le rendre synchrone teste ce qui tourne vraiment.
+ * `search_text` is written AFTER the response (`afterOrNow`): outside the request, the
+ * work leaves immediately but is not expected — it's his contract, and
+ * waiting for it here rather than making it synchronous tests what's really running.
  */
 async function waitForIndex() {
   await vi.waitFor(() => {
@@ -332,7 +328,7 @@ describe("minddy_list_pages", () => {
       ["Installation", guide],
       ["macOS", install],
     ]);
-    // Aucun corps dans la liste : c'est la carte, pas les documents.
+    // No body in the list: it's the card, not the documents.
     expect(pages.every((p) => !("markdown" in p))).toBe(true);
   });
 
@@ -413,8 +409,8 @@ describe("minddy_create_page", () => {
     });
     expect(ok).toBe(true);
     expect(payload.parent_page_id).toBe(guide);
-    // Le titre explicite est vide : l'en-tête du markdown remonte alors en
-    // titre, et son émoji en icône (la règle de la projection).
+    // The explicit title is empty: the markdown header then goes up
+    // title, and its emoji as an icon (the projection rule).
     expect(payload.title).toBe("Conventions");
     expect(payload.icon).toBe("📘");
 
@@ -455,7 +451,7 @@ describe("minddy_append_to_page", () => {
     expect(payload.markdown).toBe(
       "## Lundi\n\nRien à signaler.\n\n## Mardi\n\nLes outils de page arrivent."
     );
-    // Le corps a changé : la version compte les écritures du corps (MIN-271).
+    // The body has changed: the version counts the body writings (MIN-271).
     expect(payload.version).toBe(2);
   });
 
@@ -522,7 +518,7 @@ describe("minddy_edit_page_text", () => {
     expect(error.code).toBe("text_ambiguous");
     expect(error.message).toMatch(/replace_all/);
 
-    // Et rien n'a été écrit : un refus n'écrit pas la moitié du document.
+    // And nothing was written: a refusal does not write half the document.
     const read = await call("minddy_get_page", {
       project_id: PROJECT,
       page_id: page,
@@ -569,8 +565,8 @@ describe("minddy_update_page", () => {
 
   it("refuse l'écriture sur une version périmée plutôt que d'écraser", async () => {
     const page = await createPage("Guide", "le corps d'origine");
-    // Quelqu'un d'autre écrit entre-temps (un humain dans l'éditeur, un autre
-    // agent) : la version en base n'est plus celle que l'agent a lue.
+    // Someone else is writing in the meantime (a human in the editor, another
+    // agent): the version in base is no longer the one that the agent read.
     await call("minddy_update_page", {
       project_id: PROJECT,
       page_id: page,
@@ -612,15 +608,15 @@ describe("minddy_update_page", () => {
     expect(payload.title).toBe("Guide de démarrage");
     expect(payload.icon).toBe("🚀");
     expect(payload.markdown).toBe("le corps");
-    // Renommer n'est pas écrire le corps : la version ne bouge pas.
+    // Renaming is not writing the body: the version does not change.
     expect(payload.version).toBe(1);
   });
 
 
-  // Le piège qui ne se voit qu'au DEUXIÈME aller-retour : un bloc titre de
-  // niveau 1 est un bloc de page légitime, donc `minddy_get_page` rend des corps
-  // qui commencent par « # ». Les renvoyer tels quels ne doit pas faire remonter
-  // cette ligne dans le titre de la page.
+  // The trap that is only seen on the SECOND round trip: a title block of
+  // level 1 is a legitimate page block, so `minddy_get_page` renders bodies
+  // that start with “#”. Returning them as is should not bring up
+  // this line in the page title.
   it("garde un « # » de tête dans le corps quand on renvoie ce qu'on a lu", async () => {
     const page = await createPage("Guide", "## Une section");
 
@@ -638,7 +634,7 @@ describe("minddy_update_page", () => {
     expect(first.payload.title).toBe("Guide");
     expect(first.payload.markdown).toBe("# Un titre de bloc\n\ndu texte");
 
-    // Et le tour d'après, à l'identique : lire puis réécrire ne dérive pas.
+    // And the next round, the same: reading then rewriting does not drift.
     await call("minddy_update_page", {
       project_id: PROJECT,
       page_id: page,
@@ -665,7 +661,7 @@ describe("minddy_update_page", () => {
 });
 
 describe("minddy_search_pages", () => {
-  /** Le mot rare n'est QUE dans le corps : c'est tout l'objet du ticket. */
+  /** The word rare is ONLY in the body: that's the whole point of the ticket. */
   const BODY = [
     "## Le choix du stockage",
     "",
@@ -690,8 +686,8 @@ describe("minddy_search_pages", () => {
     const [hit] = payload.pages as Array<Record<string, unknown>>;
     expect(hit.page_id).toBe(page);
     expect(hit.title).toBe("Stockage");
-    // Le CHEMIN, pas seulement le titre : deux pages « Notes » dans un wiki,
-    // c'est lui qui les distingue.
+    // The PATH, not just the title: two “Notes” pages in a wiki,
+    // it is he who distinguishes them.
     expect(hit.path).toEqual(["Guide", "Spécifications"]);
     expect(hit.excerpt).toContain("chalcogénure");
   });
@@ -744,8 +740,8 @@ describe("minddy_search_pages", () => {
     });
     expect(before.payload.count).toBe(1);
 
-    // La corbeille n'est pas exposée aux agents : on la joue comme l'UI le
-    // ferait, sur la ligne elle-même.
+    // The trash is not exposed to agents: we play it like the UI
+    // would do, on the line itself.
     const row = h.rows.find((r) => r.id === page)!;
     row.deleted_at = "2026-08-11T00:00:00Z";
 
@@ -758,12 +754,10 @@ describe("minddy_search_pages", () => {
 });
 
 /**
- * MIN-282 — le fil d'une page, vu d'un agent.
+ * MIN-282 — the thread of a page, seen from an agent.
  *
- * Deux choses s'y jouent, et ce sont celles qui font qu'un agent SERT à quelque
- * chose sur une doc discutée : il voit ce qui est contesté avant de réécrire,
- * et il peut répondre sans toucher au document. Un fil résolu, lui, n'est plus
- * une contrainte — le rendre serait rouvrir un débat clos à chaque lecture.
+ * Two things are at play here, and these are the ones that make an agent SERVE something on a discussed doc: he sees what is contested before rewriting,
+ * and he can respond without touching the document. A resolved thread is no longer a constraint — making it would be to reopen a closed debate at each reading.
  */
 describe("les fils de discussion d'une page", () => {
   it("répond sur un BLOC lu, et re-cite le texte depuis le document", async () => {
@@ -787,8 +781,8 @@ describe("les fils de discussion d'une page", () => {
     const threads = again.payload.threads as Array<Record<string, unknown>>;
     expect(threads).toHaveLength(1);
     expect(threads[0].block_id).toBe(blockId);
-    // L'extrait est RELU dans le document, pas dicté par l'agent : c'est bien
-    // le texte de la page qui sera montré à l'humain sous son commentaire.
+    // The extract is RE-READ in the document, not dictated by the agent: that’s good
+    // the text of the page which will be shown to the human under his comment.
     expect(threads[0].quote).toBe("Le quota est mensuel.");
     expect(threads[0].messages).toEqual([
       expect.objectContaining({
@@ -837,14 +831,14 @@ describe("les fils de discussion d'une page", () => {
   });
 
   /**
-   * Le fil qu'on n'a pas ouvert soi-même est justement celui auquel il faut
-   * répondre. Sans `thread_id` rendu par la lecture, un agent n'avait l'adresse
-   * que des fils qu'il venait d'écrire — répondre à l'objection d'un humain
-   * n'était possible qu'en ouvrant un second fil à côté.
-   */
+ * The thread that you haven't opened yourself is precisely the one that you need to
+ * reply to. Without `thread_id` rendered by reading, an agent only had the address
+ * of the threads it had just written — responding to a human's objection
+ * was only possible by opening a second thread next to it.
+ */
   it("répond au fil d'un HUMAIN, dont l'adresse vient de la lecture", async () => {
     const page = await createPage("Spec", "un corps");
-    // Un humain a posé la question : rien de cet id ne passe par l'agent.
+    // A human asked the question: nothing from this id passes through the agent.
     h.comments.push({
       id: "c0000000-0000-4000-8000-000000000001",
       page_id: page,

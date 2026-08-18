@@ -7,37 +7,36 @@ import type { RepoProviderId } from "@/lib/repo-providers";
 import { decryptForgeToken, encryptForgeToken } from "./token-crypto";
 
 /**
- * Le secret du webhook GitLab, PAR DÉPÔT (MIN-333).
+ * The GitLab webhook secret, BY REPOSITORY (MIN-333).
  *
- * Avant, `GITLAB_WEBHOOK_SECRET` était un secret unique, écrit dans le hook de
- * chaque locataire. Or GitLab MONTRE le token d'un hook à qui peut l'éditer :
- * tout mainteneur d'un dépôt lié pouvait le lire chez lui, puis forger des
- * événements pour les dépôts des autres — fusionner une merge request, faire
- * passer un ticket en « terminé », dans un projet qui ne le regarde pas. Un
- * secret partagé entre locataires n'est pas un secret, c'est un mot de passe
- * commun.
+ * Previously, `GITLAB_WEBHOOK_SECRET` was a unique secret, written in the hook of
+ * each tenant. But GitLab SHOWS the token of a hook to anyone who can edit it:
+ * any maintainer of a linked repository could read it at home, then forge
+ * events for the repositories of others — merge a merge request, make
+ * pass a ticket to "finished", in a project that does not concern it. A
+ * secret shared between tenants is not a secret, it is a password
+ * common.
  *
- * PAR DÉPÔT et pas par liaison : chez GitLab le hook vit SUR le dépôt, et deux
- * projets qui lient le même dépôt partagent physiquement ce hook-là, donc son
- * token. Le secret est donc porté par toutes les lignes `project_git_links` du
- * même `(provider, external_repo_id)`, à la même valeur.
+ * BY REPOSITORY and not by link: at GitLab the hook lives ON the repository, and two
+ * projects which link to the same repository physically share this hook, so its
+ * token. The secret is therefore carried by all lines `project_git_links` of
+ * same `(provider, external_repo_id)`, at the same value.
  *
- * Chiffré au repos avec l'enveloppe des tokens de forge — même secret de
- * dérivation, même colonne service-role uniquement.
+ * Encrypted at rest with the envelope of the forge tokens — same secret of
+ * derivation, same column service-role only.
  *
- * `GITLAB_WEBHOOK_SECRET` survit en REPLI, pour les hooks déjà posés qui le
- * portent encore : sans lui, activer cette version couperait toutes les
- * synchros existantes le temps d'une rotation. Le récepteur rote le hook au
- * premier événement qui arrive avec (cf. `rotateGitlabWebhookSecret`), et le
- * repli s'éteint de lui-même dépôt par dépôt.
+ * `GITLAB_WEBHOOK_SECRET` survives in FALLBACK, for already installed hooks which still carry it: without it, activating this version would cut all existing
+ * syncs for one rotation. The receiver burps the hook at the
+ * first event that arrives with (see `rotateGitlabWebhookSecret`), and the
+ * fallback turns off by itself repository by repository.
  */
 
-/** 32 octets d'entropie, en hexadécimal (GitLab accepte le token verbatim). */
+/** 32 bytes of entropy, in hexadecimal (GitLab accepts the verbatim token). */
 export function generateWebhookSecret(): string {
   return randomBytes(32).toString("hex");
 }
 
-/** Comparaison à temps constant de deux secrets partagés verbatim. */
+/** Constant time comparison of two shared secrets verbatim. */
 export function webhookSecretMatches(
   provided: string | null | undefined,
   expected: string,
@@ -48,7 +47,7 @@ export function webhookSecretMatches(
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-/** Le repli historique, s'il est encore déployé. */
+/** The historic fallback, if it is still deployed. */
 export function legacyGitlabWebhookSecret(): string | null {
   return process.env.GITLAB_WEBHOOK_SECRET || null;
 }
@@ -79,12 +78,12 @@ async function loadRepoLinks(
 }
 
 /**
- * Le secret du dépôt, créé et persisté s'il n'existe pas encore. Appelé à la
- * POSE du hook — c'est la valeur qu'on écrit chez GitLab.
+ * The secret of the repository, created and persisted if it does not already exist. Called at
+ * POSE the hook — this is the value we write at GitLab.
  *
- * Toutes les liaisons du dépôt reçoivent la même valeur : elles décrivent le
- * même hook. Si l'une d'elles en porte déjà une, c'est celle-là qui gagne — en
- * générer une seconde invaliderait le hook du voisin.
+ * All the bindings in the repository receive the same value: they describe the
+ * same hook. If one of them already has one, that one wins — en
+ * generating a second would invalidate the neighbor's hook.
  */
 export async function ensureRepoWebhookSecret(params: {
   provider: RepoProviderId;
@@ -99,9 +98,9 @@ export async function ensureRepoWebhookSecret(params: {
 }
 
 /**
- * Force un secret NEUF sur toutes les liaisons du dépôt et le renvoie. Le hook
- * chez GitLab doit être réécrit avec, sinon plus rien ne passe la vérification —
- * l'appelant est responsable de cet ordre (secret d'abord, hook ensuite).
+ * Forces a NEW secret on all bindings in the repository and returns it. The hook
+ * at GitLab must be rewritten with it, otherwise nothing passes the check —
+ * the caller is responsible for this order (secret first, hook later).
  */
 export async function rotateRepoWebhookSecret(params: {
   provider: RepoProviderId;
@@ -121,18 +120,18 @@ export async function rotateRepoWebhookSecret(params: {
   return secret;
 }
 
-/** Ce qu'une vérification de webhook a trouvé comme matière à comparer. */
+/** What a webhook check found as material to compare. */
 export interface WebhookSecretCandidates {
-  /** Les secrets propres au dépôt (un, en pratique — la liste couvre une
-   *  rotation partielle entre deux liaisons du même dépôt). */
+  /** Repository-specific secrets (one, in practice — the list covers a
+ * partial rotation between two bindings in the same repository). */
   own: string[];
-  /** Le repli global, quand il est encore déployé. */
+  /** The global fallback, when it is still deployed. */
   legacy: string | null;
-  /** Une connexion par laquelle on peut réécrire le hook (rotation). */
+  /** A connection by which we can rewrite the hook (rotation). */
   connectionId: string | null;
 }
 
-/** Toute la matière de vérification d'un dépôt, en une requête. */
+/** All the material for verifying a deposit, in one request. */
 export async function loadWebhookSecrets(params: {
   provider: RepoProviderId;
   externalRepoId: string;
@@ -150,7 +149,7 @@ export async function loadWebhookSecrets(params: {
   };
 }
 
-/** Verdict d'une vérification : par quoi le jeton a-t-il été reconnu ? */
+/** Verification verdict: how was the token recognized? */
 export type WebhookSecretVerdict = "own" | "legacy" | "rejected";
 
 export function verifyWebhookToken(

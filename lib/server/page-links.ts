@@ -6,58 +6,58 @@ import { afterOrNow } from "@/lib/server/after-safe";
 import type { getServiceClient } from "@/lib/supabase-service";
 
 /**
- * QUI cite une page (MIN-279) — la moitié qu'aucune requête ne pouvait rendre.
+ * THAT cites a page (MIN-279) — the half that no query could return.
  *
- * Un ticket qui cite une page par une RESSOURCE se lit déjà : `attachments`
- * porte une vraie clé étrangère depuis MIN-275, et son index attendait ce
- * ticket-ci. Une MENTION, non — et c'est le contrat des mentions de minddy qui
- * le veut : ce qui est stocké est du TEXTE, « @Titre », re-scanné à la
- * relecture, jamais un nœud persisté. Il n'y a donc rien à interroger, et la
- * seule façon d'obtenir une table des liens est de la DÉRIVER à l'écriture.
+ * A ticket that cites a page by a RESOURCE already reads: `attachments`
+ * carries a real foreign key since MIN-275, and its index was waiting this
+ * ticket this one. A MENTION, no — and it is the contract of minddy's mentions which
+ * wants it: what is stored is TEXT, "@Title", re-scanned at the
+ * rereading, never a persisted node. There is therefore nothing to query, and the
+ * only way to obtain a table of links is to DERIVE it when writing.
  *
- * C'est le geste de `pages.search_text` (MIN-276), au mot près, et il porte les
- * mêmes deux règles :
+ * This is the gesture of `pages.search_text` (MIN-276), to the exact word, and it carries the
+ * same two rules :
  *
- * 1. **le client ne l'écrit jamais.** Les lignes se calculent ici, à partir du
- *    texte qui vient d'être écrit et de la liste des pages du projet telle
- *    qu'elle est EN BASE. Un client qui fournirait ses liens ment le jour où il
- *    est vieux, ou celui où il cite une page qu'il n'a pas le droit de voir.
- * 2. **la source est réécrite EN ENTIER.** `delete` de ses lignes, puis
- *    `insert` de celles que le texte porte encore. Un diff incrémental laisse
- *    des liens fantômes dès qu'une écriture échoue à mi-chemin — et un rétrolien
- *    fantôme ne se voit jamais depuis la source qui l'a créé, seulement depuis
- *    la page citée, où personne ne peut le corriger.
+ * 1. **the client never writes it.** The lines are calculated here, from the
+ * text which has just been written and the list of project pages such as
+ * as it is IN BASE. A client who provides his links is lying about the day when he
+ * is old, or when he cites a page that he does not have the right to see.
+ * 2. **the source is rewritten IN ENTIRETY.** `delete` of its lines, then
+ * `insert` of those that the text still carries. An incremental diff leaves
+ * ghost links whenever a write fails halfway through — and a ghost trackback
+ * is never seen from the source that created it, only from
+ * the cited page, where no one can correct it.
  *
- * Et comme la colonne de recherche, ça sort du chemin critique : `afterOrNow`.
- * La sauvegarde d'un éditeur est déjà debouncée à la seconde ; y ajouter deux
- * requêtes pour une table que personne n'attend allongerait chaque frappe.
+ * And like the search column, it goes out of the critical path: `afterOrNow`.
+ * The saving of an editor is already triggered at the second; adding two
+ * queries for a table that no one is expecting would make each keystroke longer.
  */
 
 type Service = ReturnType<typeof getServiceClient>;
 
-/** Ce qui peut citer une page. Le troisième est ce qui fait un réseau. */
+/** Which can cite a page. The third is what makes a network. */
 export type PageLinkSourceKind = "issue" | "objective" | "page";
 
 export interface PageLinkSource {
   kind: PageLinkSourceKind;
-  /** L'id du ticket, de l'objectif ou de la page qui cite. */
+  /** The id of the citing ticket, issue, or page. */
   id: string;
-  /** Le projet de la SOURCE — et donc celui des pages qu'elle peut citer. */
+  /** The SOURCE project — and therefore that of the pages it can cite. */
   projectId: string;
 }
 
 /**
- * Les pages CITABLES d'un projet, telles que le scanner les demande.
+ * CITABLE pages of a project, as requested by the scanner.
  *
- * Les corbeillées comprises, et c'est voulu : une page à la corbeille n'est
- * qu'un `deleted_at` (MIN-266), les textes qui la citent la citent toujours, et
- * le rétrolien doit être là quand elle revient. La lecture, elle, la rendra
- * inerte — comme la pilule de ressource le fait déjà.
+ * Trash bins included, and this is intentional: a trashed page is only
+ * a `deleted_at` (MIN-266), the texts which cite it cite it always, and
+ * the trackback must be there when it returns. Reading it will make it
+ * inert - as the resource pill already does.
  *
- * Les pages SANS TITRE sont écartées, et pas par souci d'esthétique : un libellé
- * vide entre dans l'alternance du scanner comme une branche qui matche la chaîne
- * vide, et chaque « @ » du texte deviendrait alors une citation de la page
- * neuve qu'on vient d'ouvrir. Une page sans titre ne se cite pas de toute façon.
+ * UNTITLED pages are discarded, and not for aesthetic reasons: an empty label
+ * enters the scanner's alternation like a branch that matches the string
+ * empty, and each “@” in the text would then become a quote from the new page
+ * that we have just opened. A page without a title cannot be cited anyway.
  */
 async function citablePages(
   service: Service,
@@ -75,13 +75,13 @@ async function citablePages(
 }
 
 /**
- * Les pages qu'un TEXTE cite — la règle, isolée de la base pour être
- * vérifiable telle quelle.
+ * The pages that a TEXT cites — the rule, isolated from the base to be
+ * verifiable as it is.
  *
- * Le scanner est celui de tout le reste (lib/mention-scan.ts) : c'est ce qui
- * garantit que la pilule affichée dans la description et la ligne écrite ici
- * désignent bien la même page. Une mention tapée à la main, sans passer par le
- * sélecteur, compte donc autant qu'une autre.
+ * The scanner is that of everything else (lib/mention-scan.ts): this is what
+ * guarantees that the pill displayed in the description and the line written here
+ * indicates the same page. A mention typed by hand, without going through the
+ * selector, therefore counts as much as another.
  */
 export function citedPageIds(text: string, pages: MentionPage[]): string[] {
   if (!text.includes("@") || pages.length === 0) return [];
@@ -94,20 +94,19 @@ export function citedPageIds(text: string, pages: MentionPage[]): string[] {
 }
 
 /**
- * Le TEXTE d'une source, quelle que soit sa forme.
+ * The TEXT of a source, regardless of its form.
  *
- * Une description est déjà du texte. Un corps de page est un document
- * ProseMirror, qu'on aplatit bloc par bloc avec le même utilitaire que les
- * notifications de mention (lib/pages-mentions.ts) — et non par la projection
- * markdown : c'est lui qui sait qu'un nœud de mention est ATOMIQUE et rend son
- * « @libellé », alors qu'une mention posée au sélecteur — le cas le plus
- * courant — ne porte aucun texte enfant.
+ * A description is already text. A page body is a document
+ * ProseMirror, which is flattened block by block with the same utility as the
+ * mention notifications (lib/pages-mentions.ts) — and not by projection
+ * markdown: it is he who knows that a mention node is ATOMIC and renders its
+ * “@label”, while a mention placed in the selector — the most common case — does not carry any child text.
  *
- * Ce qu'il ne ramasse volontairement pas : les blocs SOUS-PAGE. Un parent qui
- * porte le bloc de son enfant ne le « cite » pas au sens de ce panneau — la
- * relation est déjà à l'écran, dans l'arbre et dans le fil d'Ariane, et la
- * répéter en « Cité par » ferait de chaque sous-page une ligne de bruit
- * garantie. Le bloc ne porte pas de texte, il en sort donc naturellement.
+ * What it deliberately does not pick up: SUB-PAGE blocks. A parent who
+ * carries their child's block is not "quoting" it in the sense of this sign — the
+ * relationship is already on the screen, in the tree, and in the breadcrumbs, and the
+ * repeating as "Quoted by" would make each subpage a guaranteed noise line
+ *. The block has no text, so it comes out naturally.
  */
 export function sourceText(source: {
   description?: string | null;
@@ -121,23 +120,23 @@ export function sourceText(source: {
 }
 
 /**
- * Réécrire les liens d'UNE source. La seule porte d'écriture de la table.
+ * Rewrite links from ONE source. The only write gate in the table.
  *
- * Best-effort de bout en bout : rien ne remonte à l'appelant. Un rétrolien
- * perdu ne doit pas faire échouer une écriture réussie — et la prochaine
- * écriture de cette source le rattrapera, puisque la réécriture est entière.
+ * End-to-end best effort: nothing goes back to the caller. A lost trackback
+ * should not cause a successful write to fail — and the next
+ * write to that source will catch up, since the rewrite is complete.
  */
 export async function syncPageLinks(
   service: Service,
   source: PageLinkSource,
   text: string
 ): Promise<void> {
-  // On CALCULE avant d'effacer : entre les deux, la source n'a plus de liens, et
-  // cette fenêtre doit être aussi courte que possible.
+  // We CALCULATE before erasing: between the two, the source no longer has any links, and
+  // this window should be as short as possible.
   const targets = text.includes("@")
     ? citedPageIds(text, await citablePages(service, source.projectId))
-        // Une page ne se cite pas elle-même. Le scanner, lui, ne le sait pas :
-        // il ne voit qu'un titre dans un texte.
+        // A page does not cite itself. The scanner does not know this:
+        // he only sees a title in a text.
         .filter((pageId) => !(source.kind === "page" && pageId === source.id))
     : [];
 
@@ -166,7 +165,7 @@ export async function syncPageLinks(
   }
 }
 
-/** La même chose, après la réponse — ce qu'appellent les chemins d'écriture. */
+/** The same thing, after the response — what write paths call. */
 export function queuePageLinks(
   service: Service,
   source: PageLinkSource,
@@ -176,12 +175,12 @@ export function queuePageLinks(
 }
 
 /**
- * Les liens portés par le CORPS de ces pages, relus depuis la base.
+ * The links carried by the BODY of these pages, reread from the base.
  *
- * Relire coûte une requête et achète l'idempotence, exactement comme
- * `syncPagesSearchText` : rejouer la dérivation sur une page ne peut pas la
- * faire diverger, quel que soit l'ordre dans lequel deux écritures concurrentes
- * se rattrapent. C'est aussi ce qui rend un rattrapage rejouable sans risque.
+ * Rereading costs a query and buys idempotence, exactly like
+ * `syncPagesSearchText`: replaying the derivation on a page cannot do it
+ * diverge, regardless of the order in which two concurrent writes
+ * catch up. This is also what makes a catch-up replayable without risk.
  */
 export async function syncPageBodyLinks(
   service: Service,
@@ -211,7 +210,7 @@ export async function syncPageBodyLinks(
   }
 }
 
-/** La même chose, après la réponse. Le seul appelant des chemins d'écriture. */
+/** The same thing, after the response. The only caller of write paths. */
 export function queuePageBodyLinks(service: Service, pageIds: string[]): void {
   if (pageIds.length === 0) return;
   afterOrNow(() => syncPageBodyLinks(service, pageIds));

@@ -27,31 +27,31 @@ import {
 } from "./issue-sync-core";
 
 /**
- * Cœur du sens DESCENDANT de la synchro d'issues (dépôt lié → minddy, MIN-97).
- * Appelé par les deux récepteurs webhook et par le backfill lancé à l'activation
- * du toggle.
+ * Heart of the DESCENDING direction of the issue sync (linked repository → minddy, MIN-97).
+ * Called by the two webhook receivers and by the backfill launched upon activation
+ * of the toggle.
  *
- * Rien ICI n'écrit chez le provider : le seul retour qui existe est celui de
- * l'état ouvert/fermé, et il vit à part, dans `issue-push.ts`, appelé depuis
- * `updateIssueFields`. Créer un ticket dans minddy ne crée toujours aucune issue
+ * Nothing HERE is not written to the provider: the only return that exists is that of
+ * the open/closed state, and it lives separately, in `issue-push.ts`, called since
+ * `updateIssueFields`. Creating a ticket in minddy still does not create any issue
  * GitHub/GitLab.
  *
- * Le dédoublonnage n'est pas fait en TS mais par l'index UNIQUE partiel
- * `idx_issues_remote_identity` : une redélivrance de webhook produit une
- * violation 23505 que `createIssueForProject` renvoie en 409 — avalée ici.
+ * Deduplication is not done in TS but by the partial UNIQUE index
+ * `idx_issues_remote_identity`: a reissue of webhook produced a
+ * violation 23505 that `createIssueForProject` returns as 409 — swallowed here.
  *
- * Acteur des écritures : `project_git_links.created_by`, le owner qui a lié le
- * dépôt (updateIssueFields exige un membre du projet). Les événements sont
- * estampillés `forge_sync` — ce qui crédite GitHub/GitLab dans la timeline
- * plutôt que cette personne (même compromis que l'agent de code) ET, depuis le
- * retour de statut, empêche la boucle : une écriture estampillée forge ne
- * repart pas vers la forge.
+ * Write actor: `project_git_links.created_by`, the owner who bound the
+ * repository (updateIssueFields requires a project member). The events are
+ * stamped `forge_sync` — which credits GitHub/GitLab in the timeline
+ * rather than this person (same compromise as the code agent) AND, since the
+ * status return, prevents the loop: a stamped write forges ne
+ * do not go back to the forge.
  */
 
-/** Plafond dur du backfill : au-delà, on n'importe pas l'historique d'un dépôt. */
+/** Hard backfill ceiling: beyond that, we do not import the history of a deposit. */
 export const REMOTE_BACKFILL_MAX = 500;
 
-/** Une liaison dont la synchro d'issues est active. */
+/** A link whose outcome synchronization is active. */
 export interface IssueSyncTarget {
   linkId: string;
   projectId: string;
@@ -60,7 +60,7 @@ export interface IssueSyncTarget {
   installationId: number | null;
   externalRepoId: string;
   repoFullName: string | null;
-  /** Le owner qui a lié le dépôt — acteur technique des écritures. */
+  /** The owner who linked the repository — technical actor of the entries. */
   createdBy: string | null;
 }
 
@@ -90,15 +90,15 @@ const toTarget = (row: TargetRow): IssueSyncTarget => ({
 });
 
 /**
- * Les liaisons ACTIVES d'un dépôt. Plusieurs projets peuvent lier le même dépôt
- * (via des connexions différentes) : le fan-out doit tous les servir, comme
- * `syncPrState` le fait pour les PR.
+ * The ACTIVE bindings of a repository. Several projects can link the same repository
+ * (via different connections): the fan-out must serve them all, like
+ * `syncPrState` does for PRs.
  *
- * Sur l'IDENTIFIANT NUMÉRIQUE du dépôt, pas sur son nom (MIN-333). Un nom de
- * dépôt se libère chez la forge dès qu'on le renomme, et se réattribue à qui le
- * demande : router sur lui, c'est accepter que le repreneur d'un nom hérite des
- * tickets de son ancien porteur. L'id, lui, ne se réattribue jamais — et il est
- * déjà stocké (`external_repo_id`) comme il est déjà porté par la charge utile.
+ * On the NUMERICAL ID of the repository, not on its name (MIN-333). A name of
+ * deposit is released at the forge as soon as it is renamed, and is reallocated to whomever the
+ * requests: routing on it means accepting that the buyer of a name inherits the
+ * tickets of its former bearer. The id is never reassigned — and it is
+ * already stored (`external_repo_id`) as it is already carried by the payload.
  */
 export async function listIssueSyncTargets(params: {
   provider: RepoProviderId;
@@ -118,7 +118,7 @@ export async function listIssueSyncTargets(params: {
   return ((data ?? []) as TargetRow[]).map(toTarget);
 }
 
-/** La liaison d'un projet, qu'elle soit active ou non (backfill, activation). */
+/** The link of a project, whether active or not (backfill, activation). */
 export async function getIssueSyncLink(
   projectId: string,
 ): Promise<IssueSyncTarget | null> {
@@ -131,7 +131,7 @@ export async function getIssueSyncLink(
   return data ? toTarget(data as TargetRow) : null;
 }
 
-/** Écrit le toggle de la liaison (et l'id du hook GitLab provisionné). */
+/** Writes the binding toggle (and the id of the provisioned GitLab hook). */
 export async function setIssueSyncEnabled(params: {
   linkId: string;
   enabled: boolean;
@@ -152,24 +152,23 @@ export async function setIssueSyncEnabled(params: {
 }
 
 /**
- * Applique un événement d'issue distante à UNE liaison : crée le ticket s'il
- * n'existe pas encore, sinon RÉCONCILIE le ticket existant avec l'issue
- * distante. Best-effort — une cible qui échoue ne doit pas empêcher les autres
- * d'être servies.
+ * Applies a remote issue event to ONE binding: creates the ticket if it
+ * does not yet exist, otherwise RECONCILIATES the existing ticket with the remote issue
+ *. Best-effort — a failing target should not prevent others
+ * from being served.
  *
- * La réconciliation est un renversement assumé par rapport à MIN-97, qui
- * n'alignait que le statut « pour ne pas écraser le travail fait dans minddy ».
- * L'usage a tranché autrement : quand une équipe ouvre encore des issues sur le
- * dépôt alors que le projet minddy existe, c'est que le dépôt reste l'endroit où
- * cette issue-là vit. Le ticket en est le REFLET, et un reflet qui diverge de ce
- * qu'il reflète ne sert plus à rien. Ce qui n'a pas d'équivalent distant — le
- * plan, les commentaires minddy, l'objectif, le cycle — n'est jamais touché.
+ * Reconciliation is an assumed reversal from MIN-97, which
+ * only aligned the status "so as not to overwrite the work done in minddy."
+ * Usage has decided otherwise: when a team still opens issues on the
+ * repository while the minddy project exists, it means that the repository remains the place where
+ * this issue lives. The ticket is the REFLECTION, and a reflection that diverges from what it reflects is no longer useful. What has no remote equivalent — the
+ * plan, the minddy comments, the goal, the cycle — is never touched.
  */
 export async function applyRemoteIssue(
   target: IssueSyncTarget,
   remote: RemoteIssue,
-  /** Index login → membre, construit une fois par LOT quand il y en a un
-   *  (backfill). Absent = construit ici, pour un événement isolé. */
+  /** Login index → ​​member, built once per BATCH when there is one
+ * (backfill). Absent = constructed here, for an isolated event. */
   assignees?: ForgeAssigneeIndex,
 ): Promise<void> {
   if (!target.createdBy) {
@@ -194,9 +193,9 @@ export async function applyRemoteIssue(
   }
 
   const { priority, effort, labels } = readForgeLabels(remote.labels);
-  // L'index coûte deux requêtes : on ne le construit que si l'issue nomme
-  // effectivement quelqu'un. La plupart des webhooks (`labeled`, `edited`) ne
-  // parlent pas d'assignation, et beaucoup de dépôts n'assignent jamais rien.
+  // The index costs two queries: we only build it if the outcome names
+  // actually someone. Most webhooks (`labeled`, `edited`) do not
+  // don't talk about assignment, and many repositories never assign anything.
   const index =
     remote.assigneeLogins.length === 0
       ? null
@@ -208,10 +207,10 @@ export async function applyRemoteIssue(
   const assigneeId = index ? matchForgeAssignee(remote.assigneeLogins, index) : null;
 
   if (!existing) {
-    // Jamais importée : elle entre TOUJOURS par le triage, quel que soit l'état
-    // distant. Une fermeture peut tomber ici (issue au-delà du plafond de
-    // backfill) — la créer directement en `done` la ferait entrer dans le projet
-    // sans que personne ne l'ait jamais vue.
+    // Never imported: it ALWAYS enters through sorting, whatever the state
+    // remote. A closure can fall here (issue beyond the ceiling of
+    // backfill) — creating it directly in `done` would make it enter the project
+    // without anyone ever seeing it.
     const resource = forgeIssueResource({
       provider: remote.provider,
       repoFullName: remote.repoFullName,
@@ -238,7 +237,7 @@ export async function applyRemoteIssue(
       },
     });
     if (!result.ok) {
-      // 409 = redélivrance du webhook, le chemin normal : silence.
+      // 409 = reissue of the webhook, the normal path: silence.
       if (result.errorKey !== "remoteIssueAlreadyImported") {
         console.error(
           `[issue-sync] create failed for ${remote.repoFullName}#${remote.number}:`,
@@ -251,15 +250,15 @@ export async function applyRemoteIssue(
     return;
   }
 
-  // ── Déjà importée : on réaligne ce que la forge porte, et rien d'autre ──
+  // ── Already imported: we realign what the forge carries, and nothing else ──
   //
-  // UNE règle gouverne tout ce bloc : **la forge n'écrase un champ que si elle
-  // a quelque chose à en dire.** Elle a toujours un titre, un corps et un état,
-  // donc ces trois-là suivent sans condition. Elle n'a pas forcément de
-  // priorité, de taille, d'assigné ni de labels — et prendre son silence pour
-  // une valeur serait ravageur : sur un dépôt qui n'assigne jamais ses issues,
-  // le moindre webhook `labeled` désassignerait le ticket que quelqu'un venait
-  // de prendre dans minddy, sans que rien ne l'ait demandé.
+  // ONE rule governs this entire block: **the forge only crushes a field if it
+  // has something to say about it.** She always has a title, a body and a state,
+  // so these three follow unconditionally. She does not necessarily have
+  // priority, size, assignment or labels — and take his silence for
+  // a value would be devastating: on a repository which never assigns its outcomes,
+  // the slightest webhook `labeled` would unassign the ticket that someone came
+  // to take in minddy, without anything asking for it.
   const issueId = existing.id as string;
   const patch: Record<string, unknown> = {};
 
@@ -267,18 +266,18 @@ export async function applyRemoteIssue(
   if (title !== existing.title) patch.title = title;
   const body = remote.body ?? null;
   if (body !== (existing.description ?? null)) patch.description = body;
-  // L'assigné suit quand la forge NOMME quelqu'un qu'on reconnaît. Un assigné
-  // qu'on ne reconnaît pas (compte non connecté) ne vide pas la case non plus :
-  // on ne sait pas qui c'est, on ne sait donc rien de plus qu'avant.
+  // The assignee follows when the forge NAMES someone we recognize. An assigned
+  // that we do not recognize (account not connected) does not empty the box either:
+  // we don't know who it is, so we don't know anything more than before.
   if (assigneeId && assigneeId !== (existing.assignee_id ?? null)) {
     patch.assignee_id = assigneeId;
   }
   if (priority !== "none" && priority !== existing.priority) patch.priority = priority;
   if (effort && effort !== existing.effort) patch.effort = effort;
 
-  // Le statut suit l'ÉTAT distant, comparé à l'état que le statut courant
-  // représente — pas au statut lui-même : `canceled` et `done` sont tous deux
-  // « fermé », et une issue fermée qui reste fermée ne doit rien requalifier.
+  // The status follows the remote STATUS, compared to the state as the current status
+  // represents — not the status itself: `canceled` and `done` are both
+  // “closed”, and a closed exit that remains closed should not reclassify anything.
   const mappedStatus = statusForRemoteReconcile(
     remote,
     existing.status as IssueStatusValue,
@@ -290,8 +289,8 @@ export async function applyRemoteIssue(
       issueId,
       actorId: target.createdBy,
       input: patch,
-      // C'est ce drapeau qui empêche la BOUCLE : `updateIssueFields` ne
-      // repousse pas vers la forge un statut qui en vient (cf. issue-push.ts).
+      // It is this flag which prevents the LOOP: `updateIssueFields` does not
+      // do not push back to the forge a status that comes from it (see issue-push.ts).
       forgeSync: remote.provider,
     });
     if (!updated.ok) {
@@ -306,19 +305,19 @@ export async function applyRemoteIssue(
 }
 
 /**
- * Les labels de l'issue distante, posés en catégories du projet — remplacement
- * complet quand elle en porte : un label retiré chez elle retire la catégorie
- * ici, c'est le sens du reflet.
+ * The labels of the distant outcome, placed in project categories - replacement
+ * complete when she wears one: a label removed from her removes the category
+ * here, it is the meaning of the reflection.
  *
- * Une issue SANS aucun label ne touche à rien, par la même règle que le bloc
- * ci-dessus : un dépôt qui n'étiquette pas ses issues ne doit pas balayer, à
- * chaque webhook, les catégories rangées à la main dans minddy. Retirer le
- * DERNIER label chez la forge ne vide donc pas les catégories ici — le prix,
- * assumé, de ne pas confondre « rien à dire » et « rien ».
+ * An issue WITHOUT any label does not touch anything, by the same rule as the block
+ * above: a repository that does not label its issues must not scan, at
+ * each webhook, the categories stored by hand in minddy. Remove the
+ * LAST label at the forge therefore does not empty the categories here - the price,
+ * assumed, not to confuse "nothing to say" and "nothing".
  *
- * Best-effort et à part de `updateIssueFields` : les catégories vivent dans une
- * table de jointure, avec leur propre chemin d'écriture (`setIssueCategories`)
- * et leurs propres événements de timeline.
+ * Best-effort and apart from `updateIssueFields`: the categories live in a
+ * join table, with their own write path (`setIssueCategories`)
+ * and their own timeline events.
  */
 async function applyRemoteLabels(
   target: IssueSyncTarget,
@@ -328,11 +327,11 @@ async function applyRemoteLabels(
   if (!target.createdBy || labels.length === 0) return;
   const resolved = await resolveCategoryIdsByName(target.projectId, labels);
   if (!resolved) return;
-  // DÉDOUBLONNÉ : `readForgeLabels` sépare deux labels que `categoryKey` peut
-  // ramener à la même catégorie (il rogne les accents, la clé non ; il garde
-  // entiers deux noms que la borne des 200 caractères confond). Un id répété
-  // ferait rater la comparaison ci-dessous, et le DELETE/INSERT repartirait à
-  // chaque webhook — précisément ce qu'elle est là pour éviter.
+  // SPLIT: `readForgeLabels` separates two labels that `categoryKey` can
+  // bring back to the same category (it trims the accents, the key does not; it keeps
+  // integer two names that the 200 character limit confuses). A repeated id
+  // would fail the comparison below, and the DELETE/INSERT would start again
+  // every webhook — precisely what it is there to avoid.
   const ids = [
     ...new Set(
       labels
@@ -347,17 +346,17 @@ async function applyRemoteLabels(
     .select("category_id")
     .eq("issue_id", issueId);
   const before = new Set((current ?? []).map((r) => r.category_id as string));
-  // Rien n'a bougé : ne pas réécrire. `setIssueCategories` fait un DELETE puis
-  // un INSERT, et le rejouer à chaque webhook ferait clignoter les catégories
-  // sur tous les tableaux ouverts, par le temps réel, sans qu'il se passe rien.
+  // Nothing has changed: do not rewrite. `setIssueCategories` does a DELETE then
+  // an INSERT, and replaying it on each webhook would flash the categories
+  // on all open tables, in real time, without anything happening.
   if (before.size === ids.length && ids.every((id) => before.has(id))) return;
 
   const result = await setIssueCategories({
     issueId,
     actorId: target.createdBy,
     categoryIds: ids,
-    // La timeline crédite la forge, pas le owner qui a activé la synchro : ce
-    // n'est pas lui qui a posé ce label.
+    // The timeline credits the forge, not the owner who activated the sync: this
+    // he was not the one who applied this label.
     forgeSync: target.provider,
   });
   if (!result.ok) {
@@ -368,7 +367,7 @@ async function applyRemoteLabels(
   }
 }
 
-/** Fan-out complet d'un événement : toutes les liaisons actives du dépôt. */
+/** Complete fan-out of an event: all active bindings in the repository. */
 export async function syncRemoteIssueEvent(remote: RemoteIssue): Promise<void> {
   const targets = await listIssueSyncTargets({
     provider: remote.provider,
@@ -388,14 +387,14 @@ export async function syncRemoteIssueEvent(remote: RemoteIssue): Promise<void> {
 }
 
 /**
- * Le nom du dépôt stocké suit celui que la forge vient d'annoncer.
+ * The name of the stored repository follows the one that the forge has just announced.
  *
- * Depuis MIN-333 le nom ne ROUTE plus rien — c'est l'id qui le fait. Il ne sert
- * plus qu'à s'afficher et à composer des URLs, et à ce titre il doit rester
- * juste : un dépôt renommé chez la forge gardait sinon son ancien nom dans les
- * réglages du projet et dans les liens des tickets importés, indéfiniment.
+ * Since MIN-333 the name no longer ROUTES anything — it's the id that does it. It only serves
+ * to display itself and to compose URLs, and as such it must remain
+ * just: a renamed repository at the forge would otherwise keep its old name in the
+ * project settings and in the links of imported tickets, indefinitely.
  *
- * Best-effort, et seulement quand il a bougé : ce chemin passe à chaque webhook.
+ * Best-effort, and only when it has moved: this path passes to each webhook.
  */
 async function refreshRepoFullName(
   targets: IssueSyncTarget[],
@@ -408,14 +407,14 @@ async function refreshRepoFullName(
   const cut = repoFullName.lastIndexOf("/");
   const patch: Record<string, unknown> = {
     repo_full_name: repoFullName,
-    // Le propriétaire est ce qui précède le DERNIER `/` — la règle vaut pour les
-    // deux forges, y compris un groupe GitLab imbriqué (`groupe/sous-groupe`).
+    // The owner is what precedes the LAST `/` — the rule applies to
+    // two forges, including a nested GitLab group (`groupe/sous-groupe`).
     repo_owner: cut > 0 ? repoFullName.slice(0, cut) : null,
     updated_at: new Date().toISOString(),
   };
-  // `repo_name` n'a pas le même sens des deux côtés : chez GitHub c'est le
-  // dernier segment du chemin, chez GitLab le NOM d'affichage du projet, que la
-  // charge utile d'une issue ne porte pas. On ne réécrit donc que celui qu'on
+  // `repo_name` does not have the same meaning on both sides: at GitHub it is the
+  // last segment of the path, at GitLab the display NAME of the project, that the
+  // payload of an issue does not carry. We therefore only rewrite the one we
   // sait dire juste.
   if (targets[0]?.provider === "github" && cut >= 0) {
     patch.repo_name = repoFullName.slice(cut + 1);
@@ -431,9 +430,9 @@ async function refreshRepoFullName(
   if (error) console.error("[issue-sync] repo rename failed:", error.message);
 }
 
-// --- Backfill à l'activation ------------------------------------------------
+// --- Backfill on activation ------------------------------------------------
 
-/** Les numéros distants déjà présents dans le projet, pour ce dépôt. */
+/** The remote numbers already present in the project, for this repository. */
 async function loadImportedNumbers(
   target: IssueSyncTarget,
 ): Promise<Set<number>> {
@@ -456,7 +455,7 @@ async function loadImportedNumbers(
   );
 }
 
-/** Une issue distante du backfill, telle que les deux forges la rendent. */
+/** A remote exit from the backfill, as rendered by the two forges. */
 interface BackfilledIssue {
   number: number;
   title: string;
@@ -466,14 +465,14 @@ interface BackfilledIssue {
   assigneeLogins: string[];
 }
 
-/** Une issue distante, ramenée à la forme attendue par l'import en masse. */
+/** A remote output, brought back to the expected form by the bulk import. */
 function toImportedIssue(
   target: IssueSyncTarget,
   issue: BackfilledIssue,
   assignees: ForgeAssigneeIndex,
 ): ImportedIssue {
-  // Les labels portent trois choses à la fois : la priorité, la taille, et le
-  // reste — qui devient des catégories du projet.
+  // Labels carry three things at once: priority, size, and
+  // rest — which becomes project categories.
   const { priority, effort, labels } = readForgeLabels(issue.labels);
   const resource = forgeIssueResource({
     provider: target.provider,
@@ -488,8 +487,8 @@ function toImportedIssue(
     priority,
     effort,
     labels,
-    // Le compte de forge redevient un membre du projet quand cette personne a
-    // connecté le sien (MIN-144) — sinon `null`, et rien n'est deviné.
+    // The forge account becomes a member of the project again when this person has
+    // connected his (MIN-144) — otherwise `null`, and nothing is guessed.
     assigneeId: matchForgeAssignee(issue.assigneeLogins, assignees),
     dueDate: null,
     createdAt: null,
@@ -507,20 +506,20 @@ function toImportedIssue(
 }
 
 /**
- * Importe les issues OUVERTES du dépôt lié à l'activation du toggle. Les issues
- * déjà fermées côté provider ne sont PAS rapatriées : la synchro sert à suivre
- * le travail en cours, pas à recopier un historique.
+ * Imports OPEN issues from the repository linked to toggle activation. Issues
+ * already closed on the provider side are NOT repatriated: synchronization is used to monitor
+ * the work in progress, not to copy a history.
  *
- * Renvoie le nombre de tickets créés (0 si tout était déjà là). Best-effort :
- * le toggle est déjà écrit quand cette fonction tourne (dans `after()`), un
- * échec ici ne le remet pas à false — les événements suivants passeront.
+ * Returns the number of tickets created (0 if everything was already there). Best-effort:
+ * the toggle is already written when this function runs (in `after()`), a
+ * failure here does not reset it to false — subsequent events will pass.
  */
 export async function backfillRemoteIssues(
   target: IssueSyncTarget,
 ): Promise<number> {
   if (!target.createdBy) return 0;
 
-  // Une seule vérification de quota pour tout le lot : la limite est un
+  // Only one quota check for the entire batch: the limit is one
   // garde-fou d'offre, pas un compteur exact (l'import CSV fait pareil).
   try {
     await ensureIssueLimit(target.projectId);
@@ -572,8 +571,8 @@ export async function backfillRemoteIssues(
 
   let created = 0;
   if (fresh.length > 0) {
-    // Une seule construction d'index pour tout le lot : c'est deux requêtes,
-    // là où le faire par ticket en ferait deux par ticket.
+    // Only one index construction for the whole batch: that's two queries,
+    // where doing it per ticket would make two per ticket.
     const assignees = await buildForgeAssigneeIndex({
       projectId: target.projectId,
       provider: target.provider,

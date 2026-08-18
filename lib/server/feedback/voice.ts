@@ -30,27 +30,27 @@ import type { ByokModelKey } from "@/lib/ai-surfaces";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 
 /**
- * Dicter un retour — le cœur partagé par les DEUX surfaces (MIN-37).
+ * Dictate a return — the core shared by the TWO surfaces (MIN-37).
  *
- * Le board public et le modal « retour interne » du dashboard écrivent dans les
- * mêmes deux champs, avec les mêmes règles : c'est donc le même prompt et la
- * même validation, et ce fichier existe pour qu'il n'y en ait qu'un. Ce qui
- * change d'une surface à l'autre — qui paye, qui est rate-limité, comment on
- * résout le projet — reste dans les points d'entrée, parce que c'est exactement
- * ce qui n'est PAS commun.
+ * The public board and the “internal return” modal of the dashboard write in the
+ * same two fields, with the same rules: it is therefore the same prompt and the
+ * same validation, and this file exists so that there is only one. What
+ * changes from one surface to another — who pays, who is rate-limited, how we
+ * solves the project — remains in the entry points, because it is exactly
+ * which is NOT common.
  *
- * Une prise = deux appels (l'écoute puis le rangement), un `runId`, la feature
- * `feedback_voice` : au ledger, une ligne = un retour dicté.
+ * One take = two calls (listening then storage), a `runId`, the feature
+ * `feedback_voice`: in the ledger, one line = a dictated return.
  */
 
 
-/** Interrupteur admin — coupe le micro sur les deux surfaces d'un coup. */
+/** Admin switch — mutes the microphone on both surfaces at once. */
 export const FEEDBACK_VOICE_ENABLED_KEY = "feedback_voice_enabled";
 
 /**
- * 10 Mo, le même plafond que `/api/transcribe` : au débit épinglé côté client
- * (48 kb/s), ça vaut ~28 minutes de prise. Un retour n'en fait jamais autant —
- * la borne est là pour la charge utile, pas pour rationner la parole.
+ * 10 MB, the same limit as `/api/transcribe`: at the rate pinned on the client side
+ * (48 kb/s), it's worth ~28 minutes of recording time. A return never does the same —
+ * the terminal is there for the payload, not to ration speech.
  */
 export const FEEDBACK_VOICE_MAX_AUDIO_BYTES = 10 * 1024 * 1024;
 
@@ -102,10 +102,10 @@ const UPDATE_FEEDBACK_TOOL = {
             "ONE short plain sentence, in the user's language, saying what you wrote or changed. No markdown, no emoji.",
         },
       },
-      // Tout en `required`, et l'outil forcé : sur les petits modèles un champ
-      // facultatif n'est tout simplement pas répondu. « Ne rien toucher » se dit
-      // donc en renvoyant la valeur courante — et la phrase de Numo voyage dans
-      // le même appel plutôt que d'en coûter un second (l'outil étant forcé, le
+      // All in `required`, and the forced tool: on small models a field
+      // optional is just not answered. “Don’t touch anything” is said
+      // therefore by returning the current value — and Numo's sentence travels in
+      // the same call rather than costing a second one (the tool being forced, the
       // message d'assistant revient sans contenu).
       required: ["title", "body", "reply"],
     },
@@ -113,11 +113,11 @@ const UPDATE_FEEDBACK_TOOL = {
 };
 
 /**
- * Le prompt du rangement. Il diffère de celui de la dictée de ticket sur le
- * point qui compte : ici on n'estime RIEN. Un ticket se range (priorité,
- * effort, échéance) parce que l'équipe qui l'écrit sait ce qu'elle estime ; un
- * retour est le témoignage de quelqu'un, et tout ce que le modèle ajouterait
- * serait mis dans sa bouche — puis lu par l'équipe comme venant de lui.
+ * The storage prompt. It differs from that of ticket dictation on the
+ * point that matters: here we estimate NOTHING. A ticket is filed (priority,
+ * effort, deadline) because the team writing it knows what it values; a
+ * return is someone's testimony, and anything the model would add
+ * would be put in their mouth — then read by the team as coming from them.
  */
 function buildFeedbackVoicePrompt({
   projectName,
@@ -128,7 +128,7 @@ function buildFeedbackVoicePrompt({
   projectName: string;
   draft: FeedbackVoiceDraft;
   locale: string;
-  /** "board" = le visiteur parle de lui ; "internal" = un membre rapporte un retour reçu. */
+  /** "board" = the visitor talks about himself; "internal" = a member reports feedback received. */
   surface: "board" | "internal";
 }): string {
   const intro =
@@ -154,7 +154,7 @@ ${JSON.stringify(draft, null, 1)}
 - Every field of the tool is required: to leave one untouched, pass back its current value unchanged.`;
 }
 
-/** Whitelist ce que le modèle renvoie : deux champs, bornés, jamais vides. */
+/** Whitelist what the model returns: two fields, bounded, never empty. */
 export function sanitizeFeedbackPatch(
   raw: Record<string, unknown>,
   draft: FeedbackVoiceDraft
@@ -165,9 +165,9 @@ export function sanitizeFeedbackPatch(
   if (raw.title !== undefined) {
     const title = typeof raw.title === "string" ? raw.title.trim() : "";
     if (!title) rejected.push("title: must be a non-empty string");
-    // Les deux champs étant `required`, un modèle qui ne veut toucher qu'au
-    // corps renvoie le titre à l'identique : ce n'est pas un changement, et le
-    // laisser passer ferait clignoter le champ pour rien.
+    // The two fields being `required`, a model that only wants to touch the
+    // body returns the title identically: this is not a change, and the
+    // letting it pass would cause the field to flash for nothing.
     else if (title !== draft.title) patch.title = title.slice(0, FEEDBACK_TITLE_MAX);
   }
   if (raw.body !== undefined) {
@@ -178,7 +178,7 @@ export function sanitizeFeedbackPatch(
   return { patch, rejected };
 }
 
-/** Coupe le transcript et les tours d'historique reçus du client. */
+/** Cuts the transcript and history tours received from the client. */
 export function normalizeVoiceTranscript(value: unknown): string {
   return typeof value === "string"
     ? sanitizeAssistantMessageContent(value).slice(0, MAX_TRANSCRIPT_CHARS)
@@ -214,18 +214,18 @@ export function normalizeVoiceDraft(value: unknown): FeedbackVoiceDraft {
   };
 }
 
-/** Le drapeau admin, lu une fois par appel (les valeurs sont mises en cache). */
+/** The admin flag, read once per call (values ​​are cached). */
 export async function feedbackVoiceEnabled(): Promise<boolean> {
   const cfg = await getAppConfigValues([FEEDBACK_VOICE_ENABLED_KEY]);
   return (cfg[FEEDBACK_VOICE_ENABLED_KEY] ?? "true").trim() !== "false";
 }
 
 /**
- * L'écoute : audio → texte, une ligne au ledger (seq 0 du run).
+ * Listening: audio → text, one line in the ledger (seq 0 of the run).
  *
- * Retourne `null` quand le modèle n'a rien entendu — Whisper meuble le silence
- * ("...", "♪"), et un retour inventé à partir de ça coûte plus cher que de le
- * dire. La ligne d'usage est renvoyée dans tous les cas : l'appel a eu lieu.
+ * Returns `null` when the model has heard nothing — Whisper fills the silence
+ * ("...", "♪"), and a return invented from that costs more expensive than
+ * say. The usage line is returned in all cases: the call was made.
  */
 export async function transcribeFeedbackAudio({
   audio,
@@ -249,8 +249,8 @@ export async function transcribeFeedbackAudio({
   const apiKey = runtime?.apiKey ?? requireApiKey();
 
   const audioBase64 = Buffer.from(await audio.arrayBuffer()).toString("base64");
-  // Le modèle RÉELLEMENT appelé : le repli du raccourci de routage (MIN-263)
-  // peut retirer le suffixe, et c'est cette valeur-là qui va au ledger.
+  // The pattern ACTUALLY called: routing shortcut fallback (MIN-263)
+  // can remove the suffix, and it is this value which goes to the ledger.
   let usedModel = model;
   const result = await withModelSuffixFallback(
     model,
@@ -297,11 +297,11 @@ type OpenRouterMessage = {
 };
 
 /**
- * Le rangement : transcript → patch du formulaire (seq 1 du run).
+ * Storage: transcript → patch of the form (seq 1 of the run).
  *
- * UN seul appel, l'outil forcé : contrairement à la dictée de ticket, il n'y a
- * ni id à retrouver ni enum à respecter — rien qui justifie une boucle de
- * correction. Le modèle écrit deux champs, on les valide, c'est fini.
+ * A single call, the forced tool: unlike ticket dictation, there is
+ * neither id to find nor enum to respect — nothing which justifies a loop of
+ * correction. The model writes two fields, we validate them, it's finished.
  */
 export async function runFeedbackVoicePass({
   transcript,
@@ -322,7 +322,7 @@ export async function runFeedbackVoicePass({
   projectName: string;
   surface: "board" | "internal";
   runId: string;
-  /** Position de l'appel dans le run : 1 après l'écoute, 0 s'il vient seul. */
+  /** Position of the call in the run: 1 after listening, 0 if it comes alone. */
   seq: number;
   billTo: AiUsageBillTo;
   projectId: string;

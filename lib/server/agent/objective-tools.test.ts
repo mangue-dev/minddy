@@ -1,30 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * Tools OBJECTIF de l'agent de code (MIN-287). Ce que ces cas tiennent :
- *  - la RÉSOLUTION par nom autant que par id — c'est ce que le modèle recopie —,
- *    et le refus qui NOMME les candidats quand un nom est ambigu ;
- *  - l'ÉPINGLAGE au projet du run : les noyaux partagés (`updateObjective`,
- *    `addCommentToObjective`) résolvent le projet depuis l'objectif, donc un id
- *    d'un autre projet y passerait — il doit mourir avant eux, pas après ;
- *  - la PROGRESSION pondérée par l'effort avec crédit partiel de statut, la même
- *    que la barre de l'UI et que `minddy_list_objectives`. Trois lecteurs qui
- *    donneraient trois pourcentages du même objectif, c'est trois vérités.
+ * Code Agent OBJECTIVE Tools (MIN-287). What these cases hold:
+ * - RESOLUTION by name as well as by id — this is what the model copies -,
+ * and the refusal which NAMES the candidates when a name is ambiguous;
+ * - PINING to the run project: shared cores (`updateObjective`,
+ * `addCommentToObjective`) solve the project from the goal, so an id
+ * from another project would pass there — it must die before them, not after ;
+ * - the effort-weighted PROGRESSION with partial status credit, the same
+ * as the UI bar and as `minddy_list_objectives`. Three readers who
+ * would give three percentages of the same objective, that's three truths.
  *
- * Les noyaux d'écriture sont espionnés (ils touchent la base, les événements et
- * les notifications) ; tout ce qui se lit passe par un faux Supabase qui applique
- * VRAIMENT ses filtres — sans quoi l'épinglage ne dirait rien.
+ * The writing cores are spied on (they touch the base, events and
+ * notifications); everything that is read goes through a fake Supabase which REALLY applies
+ * its filters — otherwise the pinning would say nothing.
  */
 
 const OBJ_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const OBJ_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const OBJ_FOREIGN = "ffffffff-ffff-4fff-8fff-ffffffffffff";
-/** Deux objectifs du MÊME projet portant le même nom : le cas où le nom ne
- *  tranche pas, et où le tool doit rendre la main plutôt que choisir. */
+/** Two objectives of the SAME project with the same name: the case where the name ne
+ * does not decide, and where the tool must give up rather than choose. */
 const OBJ_TWIN_1 = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const OBJ_TWIN_2 = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
-/** Un nom qui contient un JOKER de `LIKE`, et un voisin que ce joker attrape :
- *  le nom est du texte, et « % » y est un caractère comme un autre. */
+/** A name that contains a JOKER of `LIKE`, and a neighbor that this wildcard catches:
+ * the name is text, and "%" is a character like any other. */
 const OBJ_PERCENT = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
 const OBJ_PERCENT_NEIGHBOUR = "0e0e0e0e-0e0e-4e0e-8e0e-0e0e0e0e0e0e";
 
@@ -101,9 +101,9 @@ const OBJECTIVES = [
   },
 ];
 
-/** Deux tickets d'OBJ_A : un `done` en xs (1 point), un `todo` en xl (8 points).
- *  Pondéré, ça fait 1/9 → 11 % ; en comptes bruts ce serait 50 %. C'est
- *  exactement l'écart que le calcul partagé sert à ne pas réintroduire. */
+/** Two OBJ_A tickets: one `done` in xs (1 point), one `todo` in xl (8 points).
+ * Weighted, that's 1/9 → 11%; in gross accounts it would be 50%. This is
+ * exactly the gap that shared computing serves to not reintroduce. */
 const ISSUES = [
   {
     id: "i1",
@@ -127,8 +127,8 @@ const ISSUES = [
     effort: "xl",
     assignee_id: null,
   },
-  // Un ticket d'un autre projet, sur un objectif d'ailleurs : il ne doit
-  // compter dans aucune progression de proj-1.
+  // A ticket from another project, on an objective elsewhere: it should not
+  // count in no progress of proj-1.
   {
     id: "i3",
     number: 3,
@@ -162,9 +162,9 @@ const TABLES: Record<string, Record<string, unknown>[]> = {
 };
 
 /**
- * Faux Supabase : `select().is().eq().ilike().not().order()`, terminé par
- * `maybeSingle()` ou par un `await` sur la requête elle-même (les listes). Les
- * filtres sont APPLIQUÉS — c'est tout l'intérêt.
+ * False Supabase: `select().is().eq().ilike().not().order()`, terminated by
+ * `maybeSingle()` or by a `await` on the query itself (the lists). The
+ * filters are APPLIED — that's the whole point.
  */
 vi.mock("@/lib/supabase-service", () => {
   const from = (table: string) => {
@@ -177,9 +177,9 @@ vi.mock("@/lib/supabase-service", () => {
     query.select = () => query;
     query.eq = eq;
     query.is = eq;
-    // `ilike` est un MOTIF, pas une égalité : `%` et `_` y sont des jokers (et
-    // PostgREST y traduit `*` en `%`). Le faux doit le dire, sans quoi il
-    // absoudrait un nom passé tel quel au motif.
+    // `ilike` is a PATTERN, not a tie: `%` and `_` are wild cards (and
+    // PostgREST translates `*` into `%`). The false must say it, otherwise he
+    // would absolve a noun passed as is to the pattern.
     query.ilike = (column: string, value: string) => {
       const pattern = value
         .replace(/[.*+?^${}()|[\]\\]/g, (c) => (c === "*" ? "%" : `\\${c}`))
@@ -259,9 +259,9 @@ describe("list_objectives", () => {
       objectives: Array<{ id: string; progress: { done: number; total: number; percent: number } }>;
     };
     const a = objectives.find((o) => o.id === OBJ_A)!;
-    // 1 point sur 9, et surtout PAS 50 % : un xs fini ne vaut pas un xl à faire.
+    // 1 point out of 9, and above all NOT 50%: a finished xs is not worth an xl to make.
     expect(a.progress).toEqual({ done: 1, total: 2, percent: 11 });
-    // Un objectif sans ticket est à zéro, pas à 100 %.
+    // A goal without a ticket is zero, not 100%.
     expect(objectives.find((o) => o.id === OBJ_B)!.progress).toEqual({
       done: 0,
       total: 0,
@@ -292,7 +292,7 @@ describe("read_objective", () => {
       comments: Array<{ body: string }>;
     };
     expect(result.objective.id).toBe(OBJ_A);
-    // La description ENTIÈRE, contrairement à la liste.
+    // The ENTIRE description, unlike the list.
     expect(result.objective.description).toContain("FIN");
     expect(result.issues.map((i) => i.identifier)).toEqual(["MIN-1", "MIN-2"]);
     expect(result.comments).toHaveLength(1);
@@ -322,9 +322,9 @@ describe("read_objective", () => {
     expect(error).toContain(OBJ_TWIN_2);
   });
 
-  // Un nom est du TEXTE : `%`, `_` et `*` y sont des caractères. Résolus par un
+  // A name is TEXT: `%`, `_` and `*` are characters there. Solved by a
   // motif `LIKE`, ils deviennent des jokers — l'un rend ambigu un nom qui ne
-  // l'est pas, l'autre attache silencieusement au mauvais objectif.
+  // is not, the other silently attaches to the wrong objective.
   it("traite un nom comme du texte, jokers de LIKE compris", async () => {
     const exact = await executeObjectiveTool(ctx(), "read_objective", {
       objective: "Offline 100% du board",
@@ -358,8 +358,8 @@ describe("create_objective", () => {
       viaAssistant: true,
       input: { name: "Nouveau but", description: "Ce qu'on cherche à atteindre." },
     });
-    // Un objectif sans ticket a une barre bloquée à zéro : le dire au modèle
-    // fait partie du résultat, sinon personne ne rattache.
+    // An objective without a ticket has a bar stuck at zero: tell the model
+    // is part of the result, otherwise no one attaches.
     expect(JSON.stringify(out.result)).toMatch(/attach its issues|update_issue/i);
   });
 
@@ -403,8 +403,8 @@ describe("update_objective", () => {
     expect(updateObjective).not.toHaveBeenCalled();
   });
 
-  // Le noyau résout le projet DEPUIS l'objectif : sans cet épinglage, un id
-  // d'un autre projet accessible au lanceur serait écrit.
+  // The kernel resolves the project FROM the goal: without this pinning, an id
+  // another project accessible to the launcher would be written.
   it("n'atteint pas le noyau avec un objectif d'un autre projet", async () => {
     const out = await executeObjectiveTool(ctx(), "update_objective", {
       objective: OBJ_FOREIGN,

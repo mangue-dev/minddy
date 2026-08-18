@@ -8,21 +8,21 @@ usage() {
   cat <<'EOF'
 Usage: npm run deploy [-- auto|all|custom]
 
-Assistant unique de publication minddy.
+Minddy's single publishing assistant.
 
-  auto    recommande les périmètres d'après les fichiers modifiés
-  all     publie le cœur, déploie le web et publie macOS
-  custom  pose une question pour chaque périmètre
+  auto    recommend scopes based on modified files
+  all     publish the core, deploy the web app, and publish macOS
+  custom  ask a question for each scope
 
-Sans argument, un menu interactif propose ces trois modes.
+With no argument, an interactive menu offers these three modes.
 
-Périmètres :
-  cœur public  version SemVer + tag + GitHub Release + artefacts
-  web Cloud    instance www.minddy.app déployée depuis `production`
-  macOS        app signée/notarisée attachée à la release du cœur
+Scopes:
+  public core  SemVer version + tag + GitHub Release + artifacts
+  Cloud web    www.minddy.app instance deployed from `production`
+  macOS        signed/notarized app attached to the core release
 
-Le marketing fait partie du build web : un changement marketing seul suggère
-le déploiement Cloud, sans créer artificiellement une version du cœur.
+Marketing is part of the web build: a marketing-only change suggests
+a Cloud deployment without artificially creating a core version.
 EOF
 }
 
@@ -79,12 +79,12 @@ WEB_COUNT=$(json_count webFiles)
 MARKETING_COUNT=$(json_count marketingFiles)
 
 echo ""
-echo "Détection automatique :"
-echo "  cœur public : $AUTO_CORE ($CORE_COUNT fichiers depuis le dernier tag)"
-echo "  web Cloud   : $AUTO_WEB ($WEB_COUNT fichiers depuis production)"
-echo "  macOS       : $AUTO_DESKTOP (empreinte de la coquille)"
+echo "Automatic detection:"
+echo "public core: $AUTO_CORE ($CORE_COUNT files since the last tag)"
+echo "  Cloud web   : $AUTO_WEB ($WEB_COUNT files since production)"
+echo "macOS: $AUTO_DESKTOP (shell fingerprint)"
 if [ "$MARKETING" = "true" ]; then
-  echo "  marketing   : $MARKETING_COUNT fichiers — inclus dans le déploiement web"
+  echo "marketing: $MARKETING_COUNT files — included in web deployment"
 fi
 
 if [ -z "$MODE" ]; then
@@ -92,18 +92,18 @@ if [ -z "$MODE" ]; then
     MODE="auto"
   else
     echo ""
-    echo "Que veux-tu faire ?"
-    echo "  1) Recommandation automatique"
-    echo "  2) Tout publier directement"
-    echo "  3) Choisir périmètre par périmètre"
-    echo "  4) Annuler"
-    read -r -p "Choix [1-4] : " MENU_CHOICE
+    echo "What would you like to do?"
+    echo "  1) Automatic recommendation"
+    echo "  2) Publish everything directly"
+    echo "3) Choose perimeter by perimeter"
+    echo "4) Cancel"
+    read -r -p "Choice [1-4]: " MENU_CHOICE
     case "$MENU_CHOICE" in
       1) MODE="auto" ;;
       2) MODE="all" ;;
       3) MODE="custom" ;;
-      4) echo "Annulé."; exit 0 ;;
-      *) echo "Choix invalide."; exit 1 ;;
+      4) echo "Canceled."; exit 0 ;;
+      *) echo "Invalid choice."; exit 1 ;;
     esac
   fi
 fi
@@ -128,9 +128,9 @@ yes_no() {
 case "$MODE" in
   auto|all) ;;
   custom)
-    if yes_no "Publier une nouvelle version du cœur public ?" "$([ "$AUTO_CORE" = "true" ] && echo yes || echo no)"; then CORE=1; fi
-    if yes_no "Déployer le web Minddy Cloud (marketing inclus) ?" "$([ "$AUTO_WEB" = "true" ] && echo yes || echo no)"; then WEB=1; fi
-    if yes_no "Construire et publier l'app macOS ?" "$([ "$AUTO_DESKTOP" = "true" ] && echo yes || echo no)"; then DESKTOP=1; fi
+    if yes_no "Publish a new version of the public heart?" "$([ "$AUTO_CORE" = "true" ] && echo yes || echo no)"; then CORE=1; fi
+    if yes_no "Deploy the Minddy Cloud web (marketing included)?" "$([ "$AUTO_WEB" = "true" ] && echo yes || echo no)"; then WEB=1; fi
+    if yes_no "Build and publish the macOS app?" "$([ "$AUTO_DESKTOP" = "true" ] && echo yes || echo no)"; then DESKTOP=1; fi
     ;;
 esac
 
@@ -146,12 +146,12 @@ WEB=$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).web ? "1" : "0")
 DESKTOP=$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).desktop ? "1" : "0")' "$SELECTION")
 
 if [ "$CORE" -eq 0 ] && [ "$WEB" -eq 0 ] && [ "$DESKTOP" -eq 0 ]; then
-  echo "Rien à publier d'après ce choix."
+  echo "Nothing to publish based on this choice."
   exit 0
 fi
 
 echo ""
-echo "Publication retenue : cœur=$CORE · web=$WEB · macOS=$DESKTOP"
+echo "Publication selected: core=$CORE · web=$WEB · macOS=$DESKTOP"
 
 SECURITY_CHECKLIST_VERSION="1.0"
 SECURITY_REVIEW_REF="${MINDDY_SECURITY_REVIEW_REF:-}"
@@ -226,7 +226,7 @@ if [ "$CORE" -eq 1 ]; then
   if [ -z "$(git tag --list "v$CURRENT_VERSION")" ] && node -e 'import("./scripts/release-lib.mjs").then(({changelogSection}) => changelogSection(require("node:fs").readFileSync("CHANGELOG.md", "utf8"), process.argv[1]))' "$CURRENT_VERSION" >/dev/null 2>&1; then
     PREPARED=1
   fi
-  if [ "$PREPARED" -eq 1 ] && yes_no "La version $CURRENT_VERSION est préparée mais pas publiée. La reprendre ?" yes; then
+  if [ "$PREPARED" -eq 1 ] && yes_no "The $CURRENT_VERSION version is prepared but not published. Take it back?" yes; then
     TARGET_VERSION="$CURRENT_VERSION"
     REUSE_PREPARED=1
   else
@@ -236,14 +236,14 @@ if [ "$CORE" -eq 1 ]; then
     echo "  1) patch → $V_MAJOR.$V_MINOR.$((V_PATCH + 1))"
     echo "  2) minor → $V_MAJOR.$((V_MINOR + 1)).0"
     echo "  3) major → $((V_MAJOR + 1)).0.0"
-    echo "  4) saisir une version"
-    read -r -p "Nouvelle version [1-4] : " VERSION_CHOICE
+    echo "4) enter a version"
+    read -r -p "New version [1-4]: " VERSION_CHOICE
     case "$VERSION_CHOICE" in
       1) TARGET_VERSION="$V_MAJOR.$V_MINOR.$((V_PATCH + 1))" ;;
       2) TARGET_VERSION="$V_MAJOR.$((V_MINOR + 1)).0" ;;
       3) TARGET_VERSION="$((V_MAJOR + 1)).0.0" ;;
       4) read -r -p "Version SemVer : " TARGET_VERSION ;;
-      *) echo "Choix invalide."; exit 1 ;;
+      *) echo "Invalid choice."; exit 1 ;;
     esac
   fi
   node -e 'import("./scripts/release-lib.mjs").then(({assertVersion}) => assertVersion(process.argv[1]))' "$TARGET_VERSION"
@@ -253,8 +253,8 @@ if [ "$DESKTOP" -eq 1 ]; then
   require_gh
 fi
 
-# Contrôle rapide du mécanisme local qui prépare la demande. Les gates de
-# confiance tournent dans CI sur le SHA poussé ; ce poste n'en est pas la source.
+# Quick check of the local mechanism that prepares the request. The gates of
+# trust runs in CI on the pushed SHA; this post is not the source.
 echo "→ Checking release tooling..."
 npm run test:release
 
@@ -267,35 +267,35 @@ if [ "$CORE" -eq 1 ]; then
   fi
 fi
 
-# `release:prepare` crée le commit qui sera réellement promu. La revue doit donc
-# intervenir après cette préparation, mais toujours avant le push et la CI du
-# candidat, afin que son compte rendu puisse nommer le SHA exact.
+# `release:prepare` creates the commit that will actually be promoted. The journal must therefore
+# intervene after this preparation, but always before the push and the CI of
+# candidate, so that his report can name the exact SHA.
 if [ "$WEB" -eq 1 ]; then
   SECURITY_CANDIDATE_SHA=$(git rev-parse HEAD)
   echo ""
-  echo "Revue sécurité obligatoire pour $SECURITY_CANDIDATE_SHA : docs/security-release-checklist.md (v$SECURITY_CHECKLIST_VERSION)"
+  echo "Mandatory security review for $SECURITY_CANDIDATE_SHA: docs/security-release-checklist.md (v$SECURITY_CHECKLIST_VERSION)"
   if [ -t 0 ]; then
     if [ -z "$SECURITY_REVIEW_REF" ]; then
-      read -r -p "Référence stable du compte rendu (URL ou issue, sans espace) : " SECURITY_REVIEW_REF
+      read -r -p "Stable reference of the report (URL or issue, without spaces):" SECURITY_REVIEW_REF
     fi
     if [ -z "$RESIDUAL_RISKS" ]; then
-      if yes_no "Des risques résiduels sont-ils consignés dans ce compte rendu ?" no; then
+      if yes_no "Are any residual risks recorded in this report?" no; then
         RESIDUAL_RISKS="documented"
       else
         RESIDUAL_RISKS="none"
       fi
     fi
     if [ -z "$PENTEST_STATUS" ]; then
-      echo "Décision de pentest :"
-      echo "  1) non requis selon les critères de la checklist"
-      echo "  2) requis, terminé et constats bloquants retestés"
-      echo "  3) requis mais non terminé (la promotion sera refusée)"
+      echo "Pentest decision:"
+      echo "1) not required according to checklist criteria"
+      echo "2) required, completed and blocking findings retested"
+      echo "3) required but not completed (promotion will be refused)"
       read -r -p "Choix [1-3] : " PENTEST_CHOICE
       case "$PENTEST_CHOICE" in
         1) PENTEST_STATUS="not-required" ;;
         2) PENTEST_STATUS="completed" ;;
         3) PENTEST_STATUS="required-not-completed" ;;
-        *) echo "Choix invalide."; exit 1 ;;
+        *) echo "Invalid choice."; exit 1 ;;
       esac
     fi
   fi
@@ -348,6 +348,6 @@ if [ "$DESKTOP" -eq 1 ]; then
 fi
 
 echo ""
-echo "✓ Publication terminée : cœur=$CORE · web=$WEB · macOS=$DESKTOP"
+echo "✓ Publication finished: core=$CORE · web=$WEB · macOS=$DESKTOP"
 [ -n "$DEPLOYED_SHA" ] && echo "  production : $DEPLOYED_SHA"
 [ -n "$TARGET_VERSION" ] && echo "  tag        : v$TARGET_VERSION → $DEPLOYED_SHA"

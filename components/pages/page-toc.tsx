@@ -1,26 +1,26 @@
 "use client";
 
-// La TABLE DES MATIÈRES flottante d'une page.
+// The one-page floating TABLE OF CONTENTS.
 //
-// Elle est posée en haut à droite du panneau, hors du flux et hors du
-// défilement, et elle se lit à deux distances : au repos, une pile de TRAITS
-// dont la longueur dit le niveau du titre et dont la position dit où l'on en
-// est ; au survol, un panneau bordé qui porte les titres eux-mêmes, et plus un
-// seul trait. C'est le geste de Notion, et ce qui le rend bon est justement ce
+// It is placed at the top right of the panel, out of the flow and out of the
+// scroll, and it is read at two distances: at rest, a pile of TRAITS
+// whose length indicates the level of the title and whose position indicates where we are
+// East ; on hover, a bordered panel which bears the titles themselves, and more
+// single line. This is Notion's gesture, and what makes it good is precisely this
 // qu'il ne fait pas au repos — il ne prend pas de place, il ne prend pas de
-// nom, il ne demande pas à être lu.
+// name, it does not ask to be read.
 //
-// Cliquer y va ET rallume le bloc : après un défilement, rien ne distingue le
-// titre qu'on a demandé de ses voisins arrivés à l'écran en même temps.
+// Clicking goes there AND turns the block back on: after scrolling, nothing distinguishes the
+// title that we asked for from our neighbors who arrived on the screen at the same time.
 //
-// Elle ne dit rien quand il n'y a rien à dire : sous deux titres, une page se
-// parcourt à l'œil, et une table des matières d'une ligne est un ornement.
+// She says nothing when there is nothing to say: under two titles, a page is
+// browses by eye, and a one-line table of contents is an ornament.
 //
-// D'où viennent les titres : de l'ÉTAT ProseMirror, pas du DOM. C'est la même
-// source que le document enregistré, donc elle ne peut pas décrire une page
-// qui n'existe plus ; et elle suit la frappe sans qu'on ait à observer quoi que
-// ce soit. Le DOM ne sert qu'à une chose ici, mesurer — où est ce titre à
-// l'écran, et où faut-il défiler pour l'y amener.
+// Where do the titles come from: from the STATE ProseMirror, not from the DOM. It's the same
+// source as the saved document, so it cannot describe a page
+// which no longer exists; and it follows the strike without us having to observe anything
+// let it be. The DOM only serves one purpose here, to measure — where is this title at
+// the screen, and where should you scroll to get it there.
 
 import {
   useCallback,
@@ -35,16 +35,16 @@ import { cn } from "mangue-ui";
 import { revealBlock } from "@/components/pages/block-actions";
 import { readHeadings, sameHeadings, type TocEntry } from "@/lib/pages-toc";
 
-/** En deçà, la table ne paraît pas : voir l'en-tête. */
+/** Below, the table does not appear: see the header. */
 const MIN_HEADINGS = 2;
 
 /** Longueur du trait au repos, par niveau de titre. */
 const DASH_WIDTH: Record<number, string> = { 1: "w-4", 2: "w-3", 3: "w-2" };
 
-/** Retrait du titre déplié, par niveau. */
+/** Removing the unfolded title, by level. */
 const INDENT: Record<number, string> = { 1: "pl-0", 2: "pl-3", 3: "pl-6" };
 
-/** Marge au-dessus du titre visé, une fois le défilement fini. */
+/** Margin above the target title, once the scrolling is finished. */
 const SCROLL_MARGIN = 24;
 
 function headingElement(editor: Editor, pos: number): HTMLElement | null {
@@ -58,7 +58,7 @@ export function PageToc({
   scrollRef,
 }: {
   editor: Editor | null;
-  /** Le conteneur qui défile — celui qu'on mesure, et celui qu'on déplace. */
+  /** The moving container — the one we measure, and the one we move. */
   scrollRef: RefObject<HTMLElement | null>;
 }) {
   const t = useTranslations("Pages");
@@ -78,15 +78,15 @@ export function PageToc({
     };
   }, [editor]);
 
-  // Où l'on en est : le dernier titre passé au-dessus de la ligne de flottaison.
-  // Mesuré au défilement plutôt que par un observateur d'intersection, parce que
-  // la question n'est pas « quels titres sont visibles » (ils peuvent l'être à
-  // trois, ou à zéro sur une longue section) mais « lequel suis-je en train de
-  // lire », et cette réponse-là est toujours définie.
+  // Where we are: the last title passed above the fold.
+  // Measured by scrolling rather than by an intersection observer, because
+  // the question is not "which titles are visible" (they can be visible
+  // three, or zero on a long section) but "which one am I trying to
+  // read”, and this response is always defined.
   useEffect(() => {
-    // `scrollRef` est lu DANS l'effet : au premier rendu il est encore vide (le
-    // conteneur est peint après), et c'est le passage de zéro à N titres qui
-    // rejoue cet effet-là, une fois l'éditeur monté.
+    // `scrollRef` is read INTO the effect: at first rendering it is still empty (the
+    // container is painted after), and it is the passage from zero to N titles which
+    // replay this effect, once the editor is mounted.
     const root = scrollRef.current;
     if (!editor || !root || entries.length < MIN_HEADINGS) return;
     let frame = 0;
@@ -114,13 +114,12 @@ export function PageToc({
     };
   }, [editor, scrollRef, entries]);
 
-  /* ── Le clignement du bloc atteint ────────────────────────────────────
-     Arriver au bon endroit ne suffit pas : une fois le défilement fini, rien à
-     l'écran ne dit LEQUEL des titres visibles on a demandé. `revealBlock` est
-     exactement ce qu'utilise l'ancre d'un lien de bloc — même geste, même
-     signal, et pas un second vocabulaire pour dire la même chose.
-     On garde de quoi l'annuler : sans ça, le minuteur du clic précédent
-     éteindrait le bloc qu'on vient d'allumer. */
+  /* ── The blink of the block reached ────────────────────────── ──────────
+ Arriving at the right place is not enough: once the scrolling is finished, nothing on the screen says WHICH of the visible titles we requested. `revealBlock` is
+ exactly what the anchor of a block link uses — same gesture, same
+ signal, and not a second vocabulary to say the same thing.
+ We keep something to cancel it: without it, the timer of the previous click
+ would turn off the block we just turned on. */
   const unflash = useRef<(() => void) | null>(null);
   useEffect(
     () => () => {
@@ -133,13 +132,13 @@ export function PageToc({
     (pos: number) => {
       const container = scrollRef.current;
       if (!editor || !container) return;
-      // Y aller ET l'allumer : `revealBlock` tient les deux ensemble, et dit
-      // pourquoi le défilement y est SEC — un clignement joué pendant un
-      // défilement doux est un clignement que personne ne voit.
+      // Go there AND turn it on: `revealBlock` holds the two together, and says
+      // why the scrolling there is DRY — a blink played for a
+      // soft scrolling is a blink that no one sees.
       //
-      // La marge se compte depuis le haut du conteneur, et non par
-      // `scrollIntoView` : celui-ci colle le titre au bord haut, sous le fil
-      // d'Ariane et l'état d'enregistrement qui y sont épinglés.
+      // The margin is counted from the top of the container, not by
+      // `scrollIntoView`: this sticks the title to the top edge, under the thread
+      // of Ariane and the registration status pinned to it.
       unflash.current?.();
       unflash.current = revealBlock(editor, container, pos, SCROLL_MARGIN);
     },
@@ -149,39 +148,36 @@ export function PageToc({
   if (entries.length < MIN_HEADINGS) return null;
 
   return (
-    /* DEUX COUCHES superposées, et c'est ce qui permet d'animer sans sauter.
-       Les traits repliés et le panneau déplié n'ont ni le même pas, ni la même
-       largeur, ni la même hauteur de ligne. Tant qu'ils étaient UNE seule
-       pile, passer de l'un à l'autre voulait dire animer une géométrie contre
-       une autre : les traits partaient en cours de route, et se rattrapaient à
-       la fermeture. Empilés au même bord haut, chacun garde sa propre mise en
-       page — plus rien ne se recalcule, et il ne reste qu'un FONDU croisé,
-       qui, lui, ne peut pas sauter.
+    /* TWO LAYERS superimposed, and this is what allows you to animate without jumping.
+ The folded lines and the unfolded panel do not have the same pitch, nor the same
+ width, nor the same line height. As long as they were only ONE
+ stack, switching from one to the other meant animating one geometry against
+ another: the lines left along the way, and caught up again when closing. Stacked at the same top edge, each keeps its own layout on the
+ page — nothing is recalculated, and all that remains is a crossfade,
+ which cannot jump.
 
-       L'enveloppe est `pointer-events-none` : elle mesure la largeur du
-       panneau, et sans ça elle intercepterait les clics du document sur seize
-       centimètres de vide. Seules les couches VISIBLES reprennent la souris.
-       Le survol, lui, remonte quand même jusqu'ici — c'est ce qui déplie. */
+ The envelope is `pointer-events-none`: it measures the width of the
+ panel, and without that it would intercept the clicks of the document on sixteen
+ centimeters of space. Only the VISIBLE layers take the mouse again.
+ Hovering still goes up to here — that's what unfolds. */
     <div
       className={cn(
-        // ANCRÉE EN HAUT, et non centrée : une table centrée se déplace à
-        // l'œil quand la fenêtre change de hauteur, et sur une page longue elle
-        // finit au milieu du texte plutôt qu'en tête de ce qu'on lit.
+        // ANCHORED AT THE TOP, and not centered: a centered table moves at
+        // the eye when the window changes height, and on a long page it
+        // ends in the middle of the text rather than at the top of what we read.
         "group/toc pointer-events-none absolute top-20 right-2 z-10 w-64",
-        // Sous `lg`, la colonne de texte et la table se disputeraient la même
-        // place : elle disparaît plutôt que de passer par-dessus le document.
+        // Under `lg`, the text column and table would compete for the same
+        // place: it disappears rather than going over the document.
         "hidden lg:block"
       )}
     >
-      {/* AU REPOS — la silhouette du document. Les traits sont la seule chose
-          à l'écran, et le pas serré (10 px) est ce qui les fait lire comme une
-          silhouette plutôt que comme une liste. */}
+      {/* AT REST — the silhouette of the document. The strokes are the only thing on the screen, and the tight pitch (10 px) is what makes them read like a silhouette rather than a list. */}
       <div
         aria-hidden
         className={cn(
           "pointer-events-auto ml-auto flex w-10 flex-col items-end py-1.5 pr-1.5",
-          // Une page de cent titres ne doit pas faire courir les traits sur
-          // toute la hauteur : la silhouette se coupe, elle ne défile pas.
+          // A page of a hundred titles should not cause the lines to run across
+          // full height: the silhouette is cut, it does not scroll.
           "max-h-[70vh] overflow-hidden",
           "transition-opacity duration-200 ease-out",
           "group-hover/toc:pointer-events-none group-hover/toc:opacity-0",
@@ -201,19 +197,19 @@ export function PageToc({
         ))}
       </div>
 
-      {/* AU SURVOL — le panneau, posé par-dessus, au même bord haut. Il entre
-          d'un cheveu vers la gauche : le déplacement dit d'où il sort, sans
-          qu'aucune des deux couches n'ait à se réorganiser. */}
+      {/* ON HOVER — the panel, placed on top, at the same high edge. It enters
+ a hair to the left: the movement tells where it comes from, without
+neither of the two layers having to reorganize itself. */}
       <nav
         aria-label={t("tableOfContents")}
         className={cn(
           "absolute top-0 right-0 w-64",
           "scrollbar-quiet flex max-h-[70vh] flex-col overflow-y-auto",
-          // 12 px de rayon, 6 px de rembourrage : le rayon CONCENTRIQUE d'une
-          // ligne est donc de 6 px (`rounded-md` plus bas). Une valeur libre
-          // ferait deux courbes qui ne s'emboîtent pas.
-          // `bg-popover/95` masque déjà tout : le flou était du travail GPU
-          // pour un effet qu'on ne voit pas (MIN-323).
+          // 12 px radius, 6 px padding: the CONCENTRIC radius of a
+          // line is therefore 6 px (`rounded-md` lower). A free value
+          // would make two curves that don't fit together.
+          // `bg-popover/95` already hides everything: the blur was GPU work
+          // for an effect that we cannot see (MIN-323).
           "rounded-xl border border-border bg-popover/95 p-1.5 shadow-lg",
           "pointer-events-none translate-x-1 opacity-0",
           "transition-[opacity,transform] duration-200 ease-out",
@@ -239,8 +235,8 @@ export function PageToc({
               <span
                 className={cn(
                   "min-w-0 flex-1 truncate text-left text-[13px] font-medium",
-                  // Le retrait dit la hiérarchie ici, là où au repos c'est la
-                  // longueur du trait qui la dit.
+                  // The withdrawal says the hierarchy here, where at rest it is the
+                  // length of the line that says it.
                   INDENT[level],
                   current ? "text-foreground" : "text-muted-foreground"
                 )}

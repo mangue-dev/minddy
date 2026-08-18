@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * La FABRIQUE des routines (MIN-185) — ce que les quatre portes ne revalident
- * pas. Ce qui est testé ici est exactement ce qui, oublié dans une des portes,
- * ne se verrait qu'une fois la routine partie toute seule : la garde owner, la
- * cohérence de la cadence, le plafond de modèle du plan, le dépôt lié, et le
- * réarmement qui recalcule l'échéance au lieu de la laisser périmée.
+ * The FACTORY of routines (MIN-185) — what the four gates do not revalidate
+ *. What is tested here is exactly what, forgotten in one of the doors,
+ * would only be seen once the routine has left on its own: the owner guard, the
+ * consistency of the cadence, the plan model ceiling, the linked deposit, and the
+ * rearmament which recalculates the deadline instead of leaving it expired.
  *
- * Le faux Supabase porte les trois tables du cœur (`agent_routines`,
- * `projects`, `project_members`) et applique VRAIMENT les filtres : sans ça, le
- * compare-and-set du claim ne dirait rien de la course qu'il est censé perdre.
+ * The fake Supabase carries the three core tables (`agent_routines`,
+ * `projects`, `project_members`) and REALLY applies the filters: without that, the
+ * compare-and-set of the claim would say nothing about the race it is supposed to lose.
  */
 
 const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
@@ -45,11 +45,11 @@ interface RoutineRow extends Record<string, unknown> {
 
 const world = {
   routines: [] as RoutineRow[],
-  /** Le projet a-t-il un dépôt lié ? */
+  /** Does the project have a linked repository? */
   hasRepo: true,
-  /** Le modèle demandé dépasse-t-il le plafond du plan ? */
+  /** Does the requested model exceed the plan ceiling? */
   modelAbovePlan: false,
-  /** Le quota du propriétaire — `cap` est le budget mensuel du plan (Go : 5 $). */
+  /** Owner quota — `cap` is the plan's monthly budget (GB: $5). */
   quota: {
     allowed: true,
     unlimited: false,
@@ -105,8 +105,8 @@ vi.mock("@/lib/supabase-service", () => {
         return world.routines.filter((r) => matches(r as unknown as Record<string, unknown>));
       }
       if (table === "projects") {
-        // `getProjectAccess` lit le projet ; `listRoutinesForUser` lit les
-        // projets possédés.
+        // `getProjectAccess` reads the project; `listRoutinesForUser` reads
+        // owned projects.
         return [{ id: PROJECT_ID, owner_id: OWNER_ID, key: "MIN", deleted_at: null }].filter(
           (p) => matches(p),
         );
@@ -189,9 +189,9 @@ vi.mock("@/lib/server/agent/quota", () => ({
   checkAgentQuota: async () => world.quota,
 }));
 
-// Le petit modèle qui NOMME la routine : on ne l'appelle pas pour de vrai, mais
-// on compte ses passages — le titre doit se refaire quand l'instruction change,
-// et seulement là.
+// The little model that NAMES the routine: we don't really call it, but
+// we count its passages - the title must be redone when the instruction changes,
+// and only there.
 const titleCalls: string[] = [];
 vi.mock("@/lib/server/short-title", () => ({
   generateShortTitle: async ({ text }: { text: string }) => {
@@ -259,11 +259,11 @@ describe("createRoutine", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.routine.owner_id).toBe(OWNER_ID);
-    // Le titre est ÉCRIT à partir de l'instruction, jamais demandé.
+    // Title is WRITTEN from statement, never requested.
     expect(titleCalls).toHaveLength(1);
     expect(result.routine.title).toContain("Titre de");
     expect(result.routine.next_run_at).toBeTruthy();
-    // L'échéance est devant : une routine ne naît jamais en retard.
+    // The deadline is ahead: a routine is never born late.
     expect(new Date(result.routine.next_run_at as string).getTime()).toBeGreaterThan(Date.now());
   });
 
@@ -279,8 +279,8 @@ describe("createRoutine", () => {
   });
 
   it("ne PAYE pas de titre pour une routine qu'on refuse", async () => {
-    // Le nommage est un appel modèle : le faire avant les refus reviendrait à
-    // payer pour une routine qui n'existera jamais.
+    // Naming is a model call: doing it before refusals would amount to
+    // pay for a routine that will never exist.
     world.hasRepo = false;
     await createRoutine(validInput() as never);
     world.hasRepo = true;
@@ -293,7 +293,7 @@ describe("createRoutine", () => {
     const result = await createRoutine(validInput({ weekdays: [4, 1, 1] }) as never);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    // Dédoublonnés et triés dès l'entrée.
+    // Deduplicated and sorted upon entry.
     expect(result.routine.weekdays).toEqual([1, 4]);
   });
 
@@ -301,7 +301,7 @@ describe("createRoutine", () => {
     const result = await createRoutine(
       validInput({ frequency: "monthly", weekdays: [1], daysOfMonth: [] }) as never,
     );
-    // La cadence mensuelle veut un jour du mois : sans lui, elle est incomplète.
+    // The monthly cadence requires one day of the month: without it, it is incomplete.
     expect(result).toMatchObject({ ok: false, errorKey: "invalidSchedule" });
   });
 
@@ -311,7 +311,7 @@ describe("createRoutine", () => {
   });
 
   it("refuse un modèle au-dessus du plafond du plan, À L'ENREGISTREMENT", async () => {
-    // Le refus doit tomber devant quelqu'un, pas à 13 h dans un cron.
+    // The refusal must come in front of someone, not at 1 p.m. in a cron.
     world.modelAbovePlan = true;
     const result = await createRoutine(
       validInput({ model: "anthropic/claude-opus-5" }) as never,
@@ -351,7 +351,7 @@ describe("updateRoutine", () => {
     });
     expect(titleCalls).toHaveLength(1);
 
-    // Réécrire À L'IDENTIQUE ne rappelle pas le modèle : rien n'a changé.
+    // Rewriting THE IDENTICAL does not recall the model: nothing has changed.
     titleCalls.length = 0;
     await updateRoutine({
       routineId: ROUTINE_ID,
@@ -360,7 +360,7 @@ describe("updateRoutine", () => {
     });
     expect(titleCalls).toHaveLength(0);
 
-    // Déplacer l'heure non plus — le titre décrit le travail, pas l'horaire.
+    // Move the time either — the title describes the job, not the schedule.
     await updateRoutine({ routineId: ROUTINE_ID, actorId: OWNER_ID, hour: 7 });
     expect(titleCalls).toHaveLength(0);
   });
@@ -379,8 +379,8 @@ describe("updateRoutine", () => {
   });
 
   it("réarme une routine réactivée sur une échéance FUTURE", async () => {
-    // Sans recalcul, réactiver ferait repartir la routine immédiatement : son
-    // `next_run_at` d'origine est dans le passé.
+    // Without recalculation, reactivating would restart the routine immediately: its
+    // Original `next_run_at` is in the past.
     world.routines = [makeRoutine({ enabled: false, next_run_at: null })];
     const result = await updateRoutine({
       routineId: ROUTINE_ID,
@@ -404,8 +404,8 @@ describe("updateRoutine", () => {
   });
 
   it("valide la cadence ENTIÈRE, pas seulement le champ qui bouge", async () => {
-    // Passer une routine hebdomadaire en mensuelle sans jour du mois est
-    // incohérent — et ne se voit qu'en relisant les deux champs ensemble.
+    // Switching a weekly routine to monthly without a day of the month is
+    // incoherent — and can only be seen by rereading the two fields together.
     const result = await updateRoutine({
       routineId: ROUTINE_ID,
       actorId: OWNER_ID,
@@ -416,15 +416,15 @@ describe("updateRoutine", () => {
 });
 
 /**
- * La CORBEILLE des routines (MIN-201) — ce que la suppression ne détruit plus.
+ * The TRASH of routines (MIN-201) — what deletion no longer destroys.
  *
- * C'était un `delete` sec : la ligne partait, et ses passages avec elle
- * (`agent_runs.routine_id` cascade), donc les conversations, les diffs et les
- * pull requests qui s'y lisent. Ce qui est testé ici, c'est exactement ce qui
- * rend le retour possible : la ligne RESTE, marquée, avec tout ce qu'elle
- * portait, et elle sort quand même de la liste ET du balayage du cron — une
- * routine corbeillée qui repart le lundi matin dépenserait le budget de
- * quelqu'un qui la croit supprimée.
+ * It was a dry `delete`: the line left, and its passages with it
+ * (`agent_runs.routine_id` cascade), therefore the conversations, the diffs and the
+ * pull requests that read there. What is being tested here is exactly what
+ * makes the return possible: the line REMAINS, marked, with whatever it
+ * carried, and it still comes out of the list AND the cron scan — a trashed
+ * routine that restarts on Monday morning would spend the budget of
+ * anyone who believes it deleted.
  */
 describe("deleteRoutine", () => {
   beforeEach(() => {
@@ -440,8 +440,8 @@ describe("deleteRoutine", () => {
   it("ENVOIE À LA CORBEILLE au lieu de détruire", async () => {
     const result = await deleteRoutine({ routineId: ROUTINE_ID, actorId: OWNER_ID });
     expect(result).toEqual({ ok: true });
-    // La ligne est là, marquée : rien de ce que la routine portait n'a bougé,
-    // et ses `agent_runs` n'ont donc pas cascadé.
+    // The line is there, marked: nothing that the routine carried has moved,
+    // and its `agent_runs` therefore did not cascade.
     expect(world.routines).toHaveLength(1);
     expect(world.routines[0].deleted_at).toBeTruthy();
     expect(world.routines[0].deleted_by).toBe(OWNER_ID);
@@ -453,8 +453,8 @@ describe("deleteRoutine", () => {
     await deleteRoutine({ routineId: ROUTINE_ID, actorId: OWNER_ID });
     expect(await listRoutinesForUser(OWNER_ID)).toEqual([]);
     expect(await getRoutineForUser(ROUTINE_ID, OWNER_ID)).toBeNull();
-    // L'échéance reste armée pour que la restauration la rende telle quelle :
-    // c'est le filtre de `dueRoutines`, et lui seul, qui l'empêche de partir.
+    // The deadline remains set so that the restoration returns it as it is:
+    // it is the `dueRoutines` filter, and it alone, which prevents it from leaving.
     expect(world.routines[0].next_run_at).toBeTruthy();
     expect(await dueRoutines()).toEqual([]);
   });
@@ -474,16 +474,16 @@ describe("deleteRoutine", () => {
     await deleteRoutine({ routineId: ROUTINE_ID, actorId: OWNER_ID });
     const restored = await restoreItem("routine", ROUTINE_ID, OWNER_ID);
     expect(restored).toEqual({ ok: true });
-    // Cadence, instruction, modèle, échéance : la restauration ne remet que les
-    // deux marqueurs, il n'y a rien d'autre à reconstruire.
+    // Cadence, instruction, model, deadline: the restoration only restores the
+    // two markers, there is nothing else to rebuild.
     expect(world.routines[0]).toEqual({ ...before, deleted_at: null, deleted_by: null });
     expect((await listRoutinesForUser(OWNER_ID)).map((r) => r.id)).toEqual([ROUTINE_ID]);
     expect((await dueRoutines()).map((r) => r.id)).toEqual([ROUTINE_ID]);
   });
 
   it("REFUSE à un membre de restaurer la routine d'un autre", async () => {
-    // Même garde qu'à la suppression : la corbeille ne doit pas offrir un chemin
-    // de côté pour remettre en marche une dépense qui n'est pas la sienne.
+    // Same guard as for deletion: the trash must not offer a path
+    // aside to restart an expense that is not yours.
     await deleteRoutine({ routineId: ROUTINE_ID, actorId: OWNER_ID });
     const result = await restoreItem("routine", ROUTINE_ID, MEMBER_ID);
     expect(result).toMatchObject({ ok: false, status: 403, errorKey: "ownerOnly" });
@@ -492,23 +492,23 @@ describe("deleteRoutine", () => {
 });
 
 /**
- * Le PLAFOND DE DÉPENSE d'un passage — le garde-fou qui manquait : une routine
- * n'était bornée que par le quota du compte, donc un seul passage pouvait
- * prendre tout le mois. Sur un plan à 5 $ d'usage, il ne restait rien.
+ * The SPENDING LIMIT of a pass — the safeguard that was missing: a routine
+ * was limited only by the account quota, so a single pass could take
+ * the whole month. On a $5 usage plan, there was nothing left.
  */
 describe("plafond de dépense", () => {
   it("pose 15 % par défaut, sans que personne ne le demande", async () => {
-    // Le défaut protège le MOIS, pas seulement le pire passage : une routine
-    // hebdomadaire doit tenir ses quatre passages et laisser l'essentiel au
-    // travail à la main.
+    // The default protects the MONTH, not just the worst passage: a routine
+    // weekly must hold its four passages and leave the essential to
+    // hand work.
     const result = await createRoutine(validInput());
     expect(result).toMatchObject({ ok: true });
     expect(world.routines[0].max_spend_percent).toBe(15);
   });
 
   it("RAMÈNE un plafond absurde dans ses bornes plutôt que de refuser", async () => {
-    // Le CHECK de la base, lui, ne pardonnerait pas — et une routine ne doit
-    // pas se refuser sur un pourcentage mal écrit par une des quatre portes.
+    // The CHECK of the base would not forgive — and a routine should not
+    // not refuse a percentage poorly written by one of the four doors.
     await createRoutine(validInput({ maxSpendPercent: 400 }));
     expect(world.routines[0].max_spend_percent).toBe(100);
     world.routines = [];
@@ -525,15 +525,15 @@ describe("plafond de dépense", () => {
     });
     expect(result).toMatchObject({ ok: true });
     expect(world.routines[0].max_spend_percent).toBe(25);
-    // Le titre n'a pas été repayé : seule l'instruction le refait.
+    // The title has not been repaid: only the instruction does it again.
     expect(titleCalls).toHaveLength(0);
   });
 
   it("vaut une part du budget du PLAN, pas du restant du mois", async () => {
-    // Un plafond qui fondrait avec la consommation ferait travailler la routine
-    // de moins en moins loin à mesure que le mois avance, sans que son réglage
-    // ait bougé. Ce qui borne le restant, c'est le quota — l'autre moitié du
-    // `min()` de la boucle.
+    // A ceiling that would melt with consumption would make routine work
+    // less and less far as the month progresses, without its setting
+    // moved. What limits the remainder is the quota — the other half of the
+    // `min()` of the loop.
     world.quota.remaining = 1;
     const budget = await routineRunBudgetUsd(makeRoutine({ max_spend_percent: 50 }));
     expect(budget).toBeCloseTo(2.5, 6);
@@ -541,9 +541,9 @@ describe("plafond de dépense", () => {
 
   it("ne pose AUCUN plafond à 100 % ni en BYOK", async () => {
     expect(await routineRunBudgetUsd(makeRoutine({ max_spend_percent: 100 }))).toBeNull();
-    // En BYOK l'utilisateur paye ses tokens : le budget du plan ne borne plus
-    // rien, et un pourcentage de ce budget lui poserait un plafond qu'il n'a pas
-    // demandé. Même doctrine que le plafond de modèle.
+    // In BYOK the user pays for his tokens: the budget of the plan is no longer limited
+    // nothing, and a percentage of this budget would put a ceiling on it that it does not have
+    // request. Same doctrine as the model cap.
     world.quota = { allowed: true, unlimited: true, mode: "byok", cap: undefined, remaining: undefined };
     expect(await routineRunBudgetUsd(makeRoutine({ max_spend_percent: 50 }))).toBeNull();
   });
@@ -551,8 +551,8 @@ describe("plafond de dépense", () => {
 
 describe("listRoutinesForUser", () => {
   it("LAISSE LIRE un membre non-propriétaire", async () => {
-    // La lecture est ouverte : un membre doit voir ce qui tourne sur le dépôt
-    // qu'il partage, même s'il ne peut ni le poser ni l'arrêter.
+    // Reading is open: a member must see what is running on the repository
+    // that he shares, even if he can neither put it down nor stop it.
     world.routines = [makeRoutine()];
     const rows = await listRoutinesForUser(MEMBER_ID);
     expect(rows.map((r) => r.id)).toEqual([ROUTINE_ID]);
@@ -561,11 +561,11 @@ describe("listRoutinesForUser", () => {
 
 describe("stampRoutineLaunched", () => {
   it("note le passage à la main SANS déplacer l'échéance", async () => {
-    // « Lancer maintenant » ne passe pas par le claim du cron : sans cette
-    // écriture, `last_run_at` restait sur le passage d'avant, et les deux
-    // `list_routines` (chat, MCP) annonçaient la mauvaise date. L'échéance, en
-    // revanche, appartient à la cadence — essayer sa routine un mardi ne doit
-    // pas faire sauter le lundi suivant.
+    // “Launch now” does not go through the cron claim: without this
+    // writing, `last_run_at` remained on the passage before, and both
+    // `list_routines` (cat, MCP) announced the wrong date. The deadline, in
+    // on the other hand, belongs to the cadence — trying your routine on a Tuesday should not
+    // not blow up the following Monday.
     world.routines = [makeRoutine({ next_run_at: "2030-01-07T08:00:00.000Z", last_error: "quota" })];
     await stampRoutineLaunched(ROUTINE_ID);
     expect(world.routines[0].last_run_at).toBeTruthy();
@@ -585,7 +585,7 @@ describe("claimRoutine", () => {
 
   it("perd la course quand l'échéance a déjà bougé (compare-and-set)", async () => {
     const stale = makeRoutine({ next_run_at: "2020-01-06T08:00:00.000Z" });
-    // Un autre cron est passé entre-temps : la ligne ne porte plus l'échéance
+    // Another cron has passed in the meantime: the line no longer has the deadline
     // qu'on avait lue.
     world.routines = [makeRoutine({ next_run_at: "2030-01-07T08:00:00.000Z" })];
     const result = await claimRoutine(stale);
@@ -594,8 +594,8 @@ describe("claimRoutine", () => {
   });
 
   it("ne RATTRAPE pas les passages manqués", async () => {
-    // Trois jours sans budget : la routine repart sur la prochaine occurrence
-    // réelle, elle ne joue pas trois fois.
+    // Three days without a budget: the routine starts again on the next occurrence
+    // real, it doesn't play three times.
     world.routines = [makeRoutine({ frequency: "daily", weekdays: [] })];
     const result = await claimRoutine(world.routines[0]);
     expect(result.claimed).toBe(true);

@@ -1,26 +1,26 @@
 #!/usr/bin/env node
 /**
- * Le gate « vulnérabilités » du dépôt (MIN-335) — une seule définition, lue par
- * la CI ([.github/workflows/ci.yml]) comme par [deploy.sh].
+ * The repository "vulnerabilities" gate (MIN-335) — a single definition, read by
+ * the CI ([.github/workflows/ci.yml]) as by [deploy.sh].
  *
- * Il corrige deux angles morts de l'ancien `npm audit --omit=dev` :
+ * It fixes two blind spots of the old `npm audit --omit=dev` :
  *
- * 1. **Le bon lockfile.** Le dépôt en tient trois : `pnpm-lock.yaml` (celui qui
- *    installe réellement — `node_modules` est un store pnpm), `package-lock.json`
- *    (tenu en second, cf. CLAUDE.md), et `desktop/package-lock.json` (l'app
- *    macOS, jamais auditée jusqu'ici). Une centaine de paquets se résolvent
- *    différemment entre les deux premiers : auditer `package-lock.json` seul,
- *    c'était auditer un arbre que personne n'exécute. On les audite tous les
- *    trois — chacun est installable par quelqu'un.
+ * 1. **The correct lockfile.** The repository holds three: `pnpm-lock.yaml` (the one that
+ * actually installs — `node_modules` is a pnpm store), `package-lock.json`
+ * (held second, cf. CLAUDE.md), and `desktop/package-lock.json` (the
+ * macOS app, never audited until now). A hundred packages resolve
+ * differently between the first two: auditing `package-lock.json` alone,
+ * was auditing a tree that no one executes. We audit them all
+ * three — each one can be installed by someone.
  *
- * 2. **`--omit=dev` cachait la chaîne de build.** Le raisonnement (« les outils
- *    de build ne sont pas exposés en prod ») ne tient pas : `esbuild` produit
- *    les bundles réellement livrés (VM de l'agent, projection des pages, coquille
- *    macOS) et `tailwindcss` produit le CSS servi aux visiteurs. Un paquet
- *    compromis dans cette chaîne n'a pas besoin d'être en `dependencies` pour
- *    finir dans ce que l'utilisateur exécute. On audite donc l'arbre ENTIER.
+ * 2. **`--omit=dev` hid the build chain.** The reasoning ("the build tools
+ * are not exposed in prod") does not hold: `esbuild` produces
+ * the bundles actually delivered (agent VM, page projection, shell
+ * macOS) and `tailwindcss` produces the CSS served to visitors. A compromised
+ * packet in this chain does not need to be in `dependencies` for
+ * to end up in whatever the user is executing. We therefore audit the ENTIRE tree.
  *
- * Seuil : `high`. Une vuln high ou critical fait échouer le processus.
+ * Threshold: `high`. A high or critical vuln causes the process to fail.
  */
 
 import { spawnSync } from "node:child_process";
@@ -29,22 +29,22 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-/** Les trois lockfiles du dépôt, et la commande qui sait lire chacun. */
+/** The three lockfiles in the repository, and the command that can read each one. */
 const TARGETS = [
   {
-    label: "racine — pnpm-lock.yaml (l'arbre réellement installé)",
+    label: "root — pnpm-lock.yaml (the actually installed tree)",
     cwd: ROOT,
     command: "pnpm",
     args: ["audit", "--audit-level=high"],
   },
   {
-    label: "racine — package-lock.json (lockfile tenu en second)",
+    label: "root — package-lock.json (secondary lockfile)",
     cwd: ROOT,
     command: "npm",
     args: ["audit", "--audit-level=high"],
   },
   {
-    label: "desktop — package-lock.json (coquille macOS)",
+    label: "desktop — package-lock.json (macOS shell)",
     cwd: path.join(ROOT, "desktop"),
     command: "npm",
     args: ["audit", "--audit-level=high"],
@@ -61,10 +61,10 @@ for (const target of TARGETS) {
     shell: process.platform === "win32",
   });
 
-  // Une commande introuvable (pnpm absent de la machine) est un échec du gate,
-  // pas un succès silencieux : mieux vaut bloquer que croire avoir audité.
+  // A command not found (pnpm missing from the machine) is a gate failure,
+  // not a silent success: better to block than to believe you have audited.
   if (result.error) {
-    console.error(`  ✗ ${target.command} injouable : ${result.error.message}`);
+    console.error(`  ✗ ${target.command} cannot run: ${result.error.message}`);
     failed.push(target.label);
     continue;
   }
@@ -75,9 +75,9 @@ for (const target of TARGETS) {
 }
 
 if (failed.length > 0) {
-  console.error(`\n✗ Audit : vulnérabilité high/critical (ou audit impossible) sur :`);
+    console.error(`\n✗ Audit: high/critical vulnerability (or audit unavailable) in:`);
   for (const label of failed) console.error(`    - ${label}`);
   process.exit(1);
 }
 
-console.log("\n✓ Audit : aucune vulnérabilité high/critical sur les trois lockfiles.");
+console.log("\n✓ Audit: no high/critical vulnerabilities in the three lockfiles.");

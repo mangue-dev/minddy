@@ -1,19 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-344 — `/steer` facturait le créateur du run et ne contrôlait que lui.
+ * MIN-344 — `/steer` charged the creator of the run and only controlled him.
  *
- * Parler à un agent, c'est le faire travailler : le message allonge le tour en
- * cours, ou en rouvre un terminé. Le droit « agents » et le plafond n'étaient
- * pourtant vérifiés que sur le CRÉATEUR du run. Or trois runs sur quatre ancrages
- * sont lisibles par toute l'équipe (routine, chaîne, relecture de PR,
- * cf. `canReadAgentRun`) : un membre dont le plan n'inclut pas les agents avait
- * un agent, payé par le compte d'à côté, et sans limite de son côté à lui.
+ * Talking to an agent means making him work: the message extends the round in
+ * course, or reopens a completed one. The “agents” right and the ceiling were only checked on the CREATOR of the run. However, three runs on four anchors
+ * are readable by the whole team (routine, chain, PR rereading,
+ * cf. `canReadAgentRun`): a member whose plan does not include agents had
+ * an agent, paid by the next account, and with no limit on his side to him.
  *
- * Ce que ces tests figent : l'appelant doit AVOIR les agents à son plan, quel
- * que soit l'état du run ; et une reprise regarde les DEUX budgets — celui de
- * l'appelant, qui déclenche la dépense, et celui du propriétaire, dont la clé
- * l'exécute (le ledger impute au `created_by`, délibérément).
+ * What these tests fix: the caller must HAVE the agents in his plan, whatever
+ * whatever the state of the run; and a recovery looks at BOTH budgets — that of
+ * the caller, who triggers the expense, and that of the owner, whose key
+ * executes it (the ledger charges to `created_by`, deliberately).
  */
 
 const quotas = new Map<string, Record<string, unknown>>();

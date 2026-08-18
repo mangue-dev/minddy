@@ -7,10 +7,10 @@ import { projectShare, projectsTotal } from "@/lib/stats-derive";
 import { StatsCard } from "./stats-chrome";
 
 /**
- * Une ligne = un projet. La largeur de barre se compare au PLUS GROS projet
- * (sinon, avec un projet dominant, tous les autres deviennent des traits
- * invisibles), tandis que le pourcentage affiché, lui, se lit bien sur le total
- * — les deux lectures cohabitent sans se contredire.
+ * One line = one project. The width of the bar is compared to the BIGGEST project
+ * (otherwise, with a dominant project, all the others become invisible traits
+ *), while the percentage displayed can be read on the total
+ * — the two readings coexist without contradicting each other.
  */
 function ProjectRow({
   bucket,
@@ -60,7 +60,7 @@ function ProjectRow({
   );
 }
 
-/** Répartition des tickets terminés par projet (MIN-85). */
+/** Distribution of completed tickets by project (MIN-85). */
 export function ProjectBreakdown({
   buckets,
   emptyLabel,

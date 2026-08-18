@@ -23,8 +23,8 @@ describe("feedbackBoardUrl", () => {
     ).toBe("https://feedback.acme.com");
   });
 
-  // Une ligne `pending` existe en base mais son DNS ne pointe encore nulle part :
-  // la donner à un agent produirait un bouton mort, cassé en production.
+  // A line `pending` exists in the database but its DNS does not yet point anywhere:
+  // giving it to an agent would produce a dead button, broken in production.
   it("ignores a pending custom domain", () => {
     expect(
       feedbackBoardUrl({

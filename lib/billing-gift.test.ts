@@ -9,13 +9,13 @@ import {
 } from "./billing-gift";
 
 /**
- * Offrir un plan pour un temps donné.
+ * Give a plan for a given time.
  *
- * Ce que ces tests protègent : un cadeau S'ARRÊTE. Le droit ne tombe pas parce
- * qu'un cron est passé, mais parce que la lecture refuse un override échu —
- * c'est `isGiftExpired` qui porte cette promesse, et le décalage d'une seconde
- * dans un sens ou dans l'autre est la différence entre « un mois offert » et
- * « offert pour toujours ».
+ * What these tests protect: A gift STOPS. The right does not fall because
+ * a cron has passed, but because the read refuses an expired override —
+ * it is `isGiftExpired` * which carries this promise, and the shift of one second
+ * in one direction or the other is the difference between "one month offered" and
+ * "offered for always”.
  */
 
 const NOW = new Date("2026-08-04T09:30:00.000Z");
@@ -28,8 +28,8 @@ describe("giftExpiresAt", () => {
   });
 
   it("clampe le jour au dernier jour du mois cible", () => {
-    // Un mois offert le 31 janvier finit fin février, jamais début mars : sinon
-    // le cadeau durerait un jour de plus que ce qui a été annoncé.
+    // A free month on January 31 ends at the end of February, never at the beginning of March: otherwise
+    // the gift would last one day longer than announced.
     expect(giftExpiresAt("1m", new Date("2026-01-31T12:00:00.000Z"))).toBe(
       "2026-02-28T12:00:00.000Z"
     );
@@ -47,7 +47,7 @@ describe("giftExpiresAt", () => {
   });
 
   it("donne une date à chaque durée proposée sauf « sans limite »", () => {
-    // Une durée ajoutée à la liste sans son calcul tomberait ici, pas en prod.
+    // A duration added to the list without its calculation would fall here, not in prod.
     for (const duration of GIFT_DURATIONS) {
       const at = giftExpiresAt(duration, NOW);
       if (duration === "unlimited") {

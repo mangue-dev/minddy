@@ -1,12 +1,12 @@
 import { locales, type Locale } from "@/i18n/config";
 
 /**
- * Meilleure locale supportée d'un en-tête `Accept-Language`, ou `null`.
+ * Best supported locale of a `Accept-Language` header, or `null`.
  *
- * Module pur (pas de `next/headers`) : le middleware (`proxy.ts`) et la
- * résolution i18n côté serveur (`i18n/request.ts`) doivent lire l'en-tête de la
- * même façon, sinon le proxy redirige vers `/fr` une requête à laquelle
- * next-intl servira de l'anglais.
+ * Pure module (no `next/headers`): middleware (`proxy.ts`) and
+ * i18n resolution server side (`i18n/request.ts`) must read the header of the
+ * same way, otherwise the proxy redirects to `/fr` a request to which
+ * next-intl will serve English.
  */
 export function detectFromAcceptLanguage(header: string | null): Locale | null {
   if (!header) return null;

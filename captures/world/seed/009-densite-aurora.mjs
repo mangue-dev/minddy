@@ -1,15 +1,15 @@
 /**
- * 009 — équilibrer les colonnes d'Aurora.
+ * 009 — balance the columns of Aurora.
  *
- * Pour quelle capture : `heroBoard`. Le premier run l'a montré — Backlog (2) et
- * À faire (3) face à En cours (4 cartes à description) laissaient environ 40 %
- * de la première image du site en blanc. On ajoute 3 tickets au Backlog et 2 à
- * faire, dont trois avec description pour donner de la hauteur aux cartes.
+ * For which capture: `heroBoard`. The first run showed it — Backlog (2) and
+ * To do (3) against In progress (4 description cards) left around 40%
+ * of the first image of the site in white. We add 3 tickets to the Backlog and 2 to
+ * to do, including three with description to give height to the cards.
  *
- * C'est la boucle prévue par les deux skills : `capture-shot` révèle que la
- * donnée rend mal, `capture-world` l'ajuste. Rien n'est reconstruit.
+ * This is the loop provided by the two skills: `capture-shot` reveals that the
+ * given is wrong, `capture-world` adjusts it. Nothing is rebuilt.
  *
- * Idempotent : seuls les titres absents sont créés.
+ * Idempotent: only absent titles are created.
  *
  *   node captures/world/seed/009-densite-aurora.mjs --dry-run
  *   node captures/world/seed/009-densite-aurora.mjs
@@ -22,9 +22,9 @@ import { describeMetadata, syncIssueMetadata } from "./_issues.mjs";
 const DRY_RUN = process.argv.includes("--dry-run");
 
 /**
- * Dates fixes, antérieures au 15 juillet 2026 (l'instant figé des captures),
- * comme le reste du board d'Aurora — contrairement à Beacon, dont les dates
- * suivent la quinzaine courante.
+ * Fixed dates, before July 15, 2026 (the fixed moment of captures),
+ * like the rest of the Aurora board — unlike Beacon, whose dates
+ * follow the current fortnight.
  */
 const ISSUES = [
   {
@@ -116,8 +116,8 @@ async function main() {
   if (error) throw new Error(`captures: lecture des tickets — ${error.message}`);
 
   const known = new Set((existing || []).map((i) => i.title));
-  // On se range APRÈS les tickets existants : la colonne est ordonnée par
-  // `position`, et les nouveaux venus n'ont pas à s'intercaler.
+  // We arrange AFTER the existing tickets: the column is ordered by
+  // `position`, and newcomers do not have to intervene.
   let position = Math.max(0, ...(existing || []).map((i) => i.position ?? 0));
 
   const rows = [];
@@ -150,7 +150,7 @@ async function main() {
     await plan.apply({ confirmed: true });
   }
 
-  // Descriptions et catégories — seconde passe, voir `_issues.mjs`.
+  // Descriptions and categories — second pass, see `_issues.mjs`.
   await syncIssueMetadata(world, project, ISSUES);
 
   const { data: after } = await world.admin

@@ -1,61 +1,61 @@
 <!--
   Template GoTrue « Confirm signup » (MIN-117).
 
-  COPIE VERSIONNÉE. Le template qui SERT vit dans le dashboard Supabase
-  (Authentication → Emails → Templates → « Confirm signup »), qui n'est pas
-  versionné : ce fichier existe pour qu'une relecture, un diff ou une
-  restauration soient possibles. Toute modification ici doit être recollée
-  là-bas, et l'inverse.
+  VERSIONED COPY. The template that SERT lives in the Supabase dashboard
+  (Authentication → Emails → Templates → “Confirm signup”), which is not
+  versioned: this file exists so that a reread, a diff or a
+  restoration are possible. Any changes here must be pasted
+  there, and the other way around.
 
-  Sujet à poser au-dessus du corps — le champ « Subject » du dashboard passe par
-  le MÊME moteur de template que le corps, donc il se branche pareil :
+  Subject to place above the body — the “Subject” field of the dashboard goes through
+  the SAME template engine as the body, so it plugs in the same:
       {{ if eq (printf "%v" (index .Data "locale")) "fr" }}Confirmez votre adresse e-mail{{ else }}Confirm your email{{ end }}
-  (à recopier tel quel, sans échapper les guillemets — l'échappement ne concerne
-  que `supabase/config.toml`, en local. Vérifier sur un envoi réel : un sujet
-  qui ressortirait littéral se répare en revenant au bilingue
+  (to be copied as is, without escaping the quotation marks — escaping only concerns
+  as `supabase/config.toml`, locally. Check on a real shipment: a subject
+  which would emerge literal is repaired by returning to bilingual
   « Confirmez votre adresse e-mail · Confirm your email ».)
 
-  UNE SEULE LANGUE PAR ENVOI. L'e-mail parlait les deux à la fois, l'une sous
-  l'autre : c'est le seul endroit du produit où l'utilisateur lisait une langue
-  qu'il n'a pas choisie. La langue vient de `user_metadata.locale`, le même
-  champ que lit `lib/server/account-settings.ts` — GoTrue expose les métadonnées
-  du compte sous `{{ .Data }}` dans ses templates.
+  ONLY ONE LANGUAGE PER SENDING. The email spoke both at once, one under
+  the other: this is the only place in the product where the user read a language
+  which he did not choose. The language comes from `user_metadata.locale`, the same
+  field that `lib/server/account-settings.ts` reads — GoTrue exposes metadata
+  of the account under `{{ .Data }}` in its templates.
 
-  `index .Data "locale"` plutôt que `.Data.locale`, et `printf "%v"` autour :
-  sur un compte SANS ce champ (comptes d'avant MIN-3xx), `.Data.locale` vaut
-  `nil` et `eq nil "fr"` FAIT ÉCHOUER le rendu du template Go
-  (« incompatible types for comparison ») — donc l'e-mail entier. Passé par
-  `printf`, l'absence vaut `"<nil>"`, la comparaison est fausse, et l'anglais
-  sort : le défaut du produit (`i18n/config.ts`).
+  `index .Data "locale"` rather than `.Data.locale`, and `printf "%v"` around:
+  on an account WITHOUT this field (accounts before MIN-3xx), `.Data.locale` is worth
+  `nil` and `eq nil "fr"` CAUSES the rendering of the Go template to fail
+  (“incompatible types for comparison”) — so the entire email. Passed by
+  `printf`, the absence is worth `"<nil>"`, the comparison is false, and the English
+  output: the product defect (`i18n/config.ts`).
 
-  Ce qui remplit ce champ, côté app (`lib/interface-locale.ts`) :
-    — à l'inscription, la langue de l'interface part dans `signUp({ data })` ;
-    — à chaque session, `AuthProvider` recolle le champ sur le cookie
-      `NEXT_LOCALE` s'il en diverge. Un compte ancien se répare donc tout seul
-      à sa prochaine ouverture de l'app — mais tant qu'il ne l'a pas ouverte,
-      sa réinitialisation de mot de passe part en anglais. C'est le seul défaut
-      connu de la bascule, et il s'éteint de lui-même.
+  What fills this field, app side (`lib/interface-locale.ts`):
+    — upon registration, the interface language goes to `signUp({ data })`;
+    — at each session, `AuthProvider` pastes the field onto the cookie
+      `NEXT_LOCALE` if it deviates from it. An old account therefore repairs itself
+      the next time he opens the app — but until he opens it,
+      its password reset leaves in English. This is the only fault
+      known to the seesaw, and it turns itself off.
 
-  Le lien est à JETON, pas à `{{ .ConfirmationURL }}` : celui-ci renvoie sur
-  `?code=…`, dont l'échange exige le `code_verifier` du localStorage du
-  navigateur d'ORIGINE (flux PKCE de @supabase/ssr). Inscription sur PC +
-  confirmation sur mobile échouait pour cette seule raison. `verifyOtp()`, que
-  déclenche `token_hash`, ne dépend d'aucun appareil.
+  The link is to JETON, not to `{{ .ConfirmationURL }}`: this links to
+  `?code=…`, the exchange of which requires the `code_verifier` of the localStorage of
+  ORIGINAL browser (PKCE feed from @supabase/ssr). Registration on PC +
+  confirmation on mobile was failing for this reason alone. `verifyOtp()`, that
+  triggers `token_hash`, does not depend on any device.
 
-  `{{ .RedirectTo }}` vaut l'`emailRedirectTo` VALIDÉ — donc l'origine du
-  navigateur qui s'est inscrit (dev, preview ou prod), à condition qu'elle
-  figure dans Authentication → URL Configuration → Redirect URLs. Hors
-  allowlist, GoTrue retombe sur le Site URL. S'il ressort vide sur un envoi
-  réel, le remplacer par `{{ .SiteURL }}/auth/callback`.
+  `{{ .RedirectTo }}` is worth the VALIDATED `emailRedirectTo` — therefore the origin of the
+  browser that has registered (dev, preview or prod), provided that it
+  can be found in Authentication → URL Configuration → Redirect URLs. Out
+  allowlist, GoTrue falls back to the Site URL. If it comes out empty on a shipment
+  real, replace it with `{{ .SiteURL }}/auth/callback`.
 
-  Tout le style critique est EN LIGNE : le bloc <style> n'ajoute que le mode
-  sombre, que la plupart des clients ignorent. L'e-mail reste juste sans lui.
-  Pas de logo en image, volontairement : les images sont bloquées par défaut
-  dans une bonne part des clients, et un PNG sombre disparaîtrait en thème
-  sombre. Le wordmark est du texte, il s'adapte et s'affiche toujours.
+  All critical style is ONLINE: the <style> block only adds the mode
+  dark, which most customers ignore. The email just stays without it.
+  No logo in image, voluntarily: images are blocked by default
+  in a good part of the clients, and a dark PNG would disappear in theme
+  dark. The wordmark is text, it always fits and displays.
 
-  Couleurs = les tokens de mangue-ui convertis d'oklch en hex (oklch n'est
-  pas supporté en e-mail) :
+  Colors = mango-ui tokens converted from oklch to hex (oklch is not
+  not supported by email):
     #f5f7fb --background   #ffffff --card       #0a0a0a --foreground
     #606369 --muted-fg     #d9dce5 --border     #000000 --brand
 -->
@@ -95,7 +95,7 @@
     class="m-bg"
     style="margin:0;padding:0;width:100%;background-color:#f5f7fb;-webkit-font-smoothing:antialiased;"
   >
-    <!-- Texte de prévisualisation (la ligne grise à côté de l'objet), masqué dans le corps -->
+    <!-- Preview text (the gray line next to the object), hidden in the body -->
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
       {{ if $fr }}Un clic et votre compte minddy est actif.{{ else }}One click and your minddy account is active.{{ end }}
     </div>
@@ -162,7 +162,7 @@
                   </tr>
                 </table>
 
-                <!-- Repli : le lien en clair, pour les clients qui mangent les boutons -->
+                <!-- Fallback: the link in plain text, for customers who eat the buttons -->
                 <div
                   class="m-hr"
                   style="border-top:1px solid #d9dce5;font-size:0;line-height:0;margin:36px 0 24px;"

@@ -1,242 +1,242 @@
-# Le harness du code agent de minddy, comparé à Codex et OpenCode
+# Minddy's agent code harness, compared to Codex and OpenCode
 
 > **Date** : 2026-07-27 · **Ticket** : MIN-101
 >
-> **Bases comparées, à commit épinglé** (les trois bougent vite ; toute affirmation
-> ci-dessous est vraie *à ces commits*, et doit être relue avant d'être resservie
-> dans six mois) :
+> **Bases compared, with pinned commit** (the three move quickly; any assertion
+> below is true *to these commits*, and should be reread before reserving
+> in six months):
 >
-> | Base | Dépôt | Commit |
+> | Basic | Deposit | Commit |
 > | --- | --- | --- |
-> | minddy | ce dépôt | `58558ce29e9d0a6612ae48b8e0c8e989a8f10e5d` |
+> | minddy | this deposit | `58558ce29e9d0a6612ae48b8e0c8e989a8f10e5d` |
 > | Codex | `openai/codex` | `294d813263de08061cb303e7b601d7ea6a5e72e8` |
 > | OpenCode | `anomalyco/opencode` (branche `dev`) | `40e4d730cac33cc9e76659ae7acb16b3a6132b83` |
 >
-> **Méthode.** Trois passes : (1) état des lieux factuel de minddy écrit d'abord,
-> fichier par fichier ; (2) lecture ciblée des deux références sur les fichiers qui
-> portent les décisions de harness ; (3) confrontation aux données de production
-> (`agent_run_events`, 60 derniers jours). Chaque affirmation cite un fichier réel.
+> **Method.** Three passes: (1) factual inventory of Minddy written first,
+> file by file; (2) targeted reading of the two references on the files which
+> make harness decisions; (3) comparison with production data
+> (`agent_run_events`, last 60 days). Each statement cites an actual file.
 >
-> **Ce qui n'a pas été fait, et pourquoi.** Le plan prévoyait deux sondes dans une
-> session d'agent réelle. Elles ont été remplacées par des preuves plus fortes et
-> gratuites : (1) l'absence d'état du shell est *dans le code* — `runShell` repart
-> d'un `sh -c` neuf à chaque appel — et corroborée par 29 commandes de production
-> qui préfixent un `cd` ; (2) le comportement sur sortie longue a été établi par
-> une **sonde déterministe** rejouant la chaîne de troncature réelle (§3.6), plus
-> reproductible qu'un run unique et sans dépenser de crédits LLM ni de sandbox.
+> **What was not done, and why.** The plan called for two probes in one
+> actual agent session. They have been replaced by stronger evidence and
+> free: (1) the absence of shell state is *in the code* — `runShell` starts again
+> a new `sh -c` on each call — and corroborated by 29 production orders
+> which prefix a `cd`; (2) the behavior on long output was established by
+> a **deterministic probe** replaying the real truncation chain (§3.6), more
+> reproducible than a single run and without spending LLM or sandbox credits.
 >
-> **Cadre de priorisation.** Le différenciateur de minddy est la sobriété. Chaque
-> écart passe trois filtres : (a) est-il *mesuré* ou seulement *observé* ? (b) que
-> coûte-t-il en surface produit ? (c) un agent qui travaille sur un ticket minddy en
-> a-t-il besoin, ou est-ce une feature de CLI ? **Un écart réel qu'on décide de ne
-> pas combler est une conclusion valable** — la section « Non retenu, et pourquoi »
-> en compte sept.
+> **Prioritization framework.** Minddy's differentiator is sobriety. Each
+> deviation passes three filters: (a) is it *measured* or only *observed*? (b) that
+> does it cost in product area? (c) an agent who works on a minddy ticket in
+> does it need, or is it a CLI feature? **A real gap that we decide not to
+> filling is a valid conclusion** — the “Not retained, and why” section
+> counts seven.
 
 ---
 
-## 1. Notre harness aujourd'hui
+## 1. Our harness today
 
-### 1.1 Outils exposés au modèle
+### 1.1 Tools exposed to the model
 
-[lib/server/agent/tools.ts](../lib/server/agent/tools.ts) définit **13 tools de
-cœur**, communs aux deux ancrages :
+[lib/server/agent/tools.ts](../lib/server/agent/tools.ts) defines **13 core tools,
+common to both anchors:
 
-| Famille | Tools |
+| Family | Tools |
 | --- | --- |
-| Exploration | `read_file` (fenêtré, numéroté), `list_dir`, `glob`, `grep` |
-| Édition | `edit_file`, `apply_edits` (batch multi-fichiers), `write_file`, `move_file`, `delete_file` |
-| Vérification | `run_command` |
-| Hors dépôt | `web_search` (runs OpenRouter uniquement, cf. `agentToolsFor`) |
-| Contrôle | `update_plan`, `ask_user` |
+| Exploration | `read_file` (windowed, numbered), `list_dir`, `glob`, `grep` |
+| Edition | `edit_file`, `apply_edits` (multi-file batch), `write_file`, `move_file`, `delete_file` |
+| Verification | `run_command` |
+| Excluding deposit | `web_search` (OpenRouter runs only, see `agentToolsFor`) |
+| Control | `update_plan`, `ask_user` |
 
-puis **10 tools minddy**, servis aux DEUX ancrages depuis MIN-125 :
+plus **10 Minddy tools**, served to BOTH anchors since MIN-125:
 
-| Famille | Tools |
+| Family | Tools |
 | --- | --- |
-| Tickets du projet | `search_issues`, `read_issue`, `read_attachment`, `update_issue`, `write_issue_plan`, `create_issue` |
-| Carnet du lanceur | `read_scratchpad`, `add_scratchpad_tasks`, `update_scratchpad_task`, `set_scratchpad` |
+| Project tickets | `search_issues`, `read_issue`, `read_attachment`, `update_issue`, `write_issue_plan`, `create_issue` |
+| Launcher scratchpad | `read_scratchpad`, `add_scratchpad_tasks`, `update_scratchpad_task`, `set_scratchpad` |
 
-plus `create_pr`, le seul dont la formulation dépende encore de l'ancrage. Soit
-**25 tools au maximum** dans une session.
+plus `create_pr`, the only one whose formulation still depends on the anchoring. Either
+**25 tools maximum** in a session.
 
-L'ancrage (MIN-84) ne décide plus que d'une chose côté tools : la **cible par
-défaut** des trois tools qui prennent un `issue` (`read_issue`, `update_issue`,
-`write_issue_plan`) — le ticket du run quand il y en a un, sinon `issue` est
-obligatoire et se résout avec `search_issues`. `agentToolsFor` le dit dans la
-description de ces trois tools, comme il patche déjà celle de `read_attachment`
-selon la multimodalité du modèle.
+The anchor (MIN-84) only decides one thing on the tools side: the **target by
+default** of the three tools which take a `issue` (`read_issue`, `update_issue`,
+`write_issue_plan`) — the run ticket when there is one, otherwise `issue` is
+mandatory and resolves with `search_issues`. `agentToolsFor` says it in the
+description of these three tools, as it already patches that of `read_attachment`
+according to the multimodality of the model.
 
-**Aucun tool ne change un statut de ticket** : `update_issue` n'expose ni `status`
-ni `priority` et refuse explicitement l'argument si le modèle l'hallucine. Les
-seules écritures de statut côté agent restent celles du harness
+**No tool changes a ticket status**: `update_issue` neither exposes `status`
+nor `priority` and explicitly rejects the argument if the model hallucinates it. THE
+only status entries on the agent side remain those of the harness
 ([issue-status-sync.ts](../lib/server/agent/issue-status-sync.ts) : `in_progress`
-au lancement, puis le cycle de la PR). De même, `create_issue` n'expose pas de
-statut : le ticket créé atterrit sur le réglage de compte du LANCEUR
-(`user_metadata.numo_default_status`), annoncé dans le message de contexte du run
-— jamais dans le prompt système, qui doit rester identique d'un utilisateur à
-l'autre pour le prompt caching.
+at launch, then the PR cycle). Likewise, `create_issue` does not expose
+status: the created ticket lands on the LAUNCHER account setting
+(`user_metadata.numo_default_status`), announced in the run context message
+— never in the system prompt, which must remain identical from user to user
+the other for prompt caching.
 
-Constantes qui gouvernent leur comportement :
+Constants governing their behavior:
 
 - `RUN_COMMAND_TIMEOUT_MS = 180_000` ([tools.ts:45](../lib/server/agent/tools.ts#L45)) —
-  timeout dur, **non paramétrable par le modèle**, et pas de `workdir` non plus :
-  la signature de `run_command` est `{ command: string }`, rien d'autre.
-- `CONTROL_TOOLS = new Set(["update_plan", "ask_user"])` : traités par la boucle,
-  jamais envoyés au Sandbox.
-- **Pas de tool de fin de tour.** Le tour se termine quand le modèle répond en
-  texte sans tool-call (fin naturelle). Un shim répond encore aux vieux
-  checkpoints qui appellent `finish`
+hard timeout, **not configurable by the model**, and no `workdir` either:
+the signature of `run_command` is `{ command: string }`, nothing else.
+- `CONTROL_TOOLS = new Set(["update_plan", "ask_user"])`: processed by the loop,
+never sent to the Sandbox.
+- **No end of turn tool.** The turn ends when the model responds
+text without tool-call (natural ending). A shim still responds to old people
+  checkpoints that call `finish`
   ([agent-loop.ts:888](../lib/server/agent/agent-loop.ts#L888)).
 
-### 1.2 Prompt système
+### 1.2 Prompt system
 
 [lib/server/agent/prompt.ts](../lib/server/agent/prompt.ts) —
-`buildAgentSystemPrompt({ locale, anchor, webSearch })`. Volontairement **stable**
-(il ne dépend que de la langue, de l'ancrage et de la présence de `web_search`) pour
-que le préfixe soit réellement partagé par le prompt caching
-([caching.ts](../lib/server/agent/caching.ts)). Sections : intro conversationnelle,
-Tools, ancrage (Le ticket / Le carnet), Git et pull requests, « How to work when the
-user asks for code changes » (5 étapes : Explore → Edit → Verify → Self-review →
+`buildAgentSystemPrompt({ locale, anchor, webSearch })`. Deliberately **stable**
+(it only depends on the language, the anchor and the presence of `web_search`) for
+that the prefix is ​​actually shared by the prompt caching
+([caching.ts](../lib/server/agent/caching.ts)). Sections: conversational intro,
+Tools, anchoring (The ticket / The notebook), Git and pull requests, “How to work when the
+user asks for code changes” (5 steps: Explore → Edit → Verify → Self-review →
 Reply), Asking, Rules.
 
-Autour de lui, trois messages `user` d'amorce, dans cet ordre
+Around it, three `user` bootstrap messages, in this order
 ([execute.ts:666-724](../lib/server/agent/execute.ts#L666-L724)) :
 
-1. `buildAgentContextMessage` — dépôt + ticket (description, plan, pièces jointes
-   annoncées par nom/taille/id). Explicitement présenté comme un **snapshot**.
-2. Le cas échéant, `buildInheritedPrMessage` / `buildInheritedBranchMessage` —
-   l'amorce d'une session froide qui hérite d'une branche déjà avancée (MIN-68) :
-   résumé de la session précédente, corps de PR, fil de review, et surtout les
-   **fils ancrés à une ligne de code** (`toPrLineThreads`, avec le `diff_hunk`
-   tronqué par le haut à 8 lignes — la queue porte la ligne commentée).
-3. `readRepoInstructions` — `AGENTS.md` puis `CLAUDE.md`, **à la racine du clone
-   uniquement**, cap `REPO_INSTRUCTIONS_MAX_BYTES = 32_000`
-   ([execute.ts:346-372](../lib/server/agent/execute.ts#L346-L372)), emballés dans
+1. `buildAgentContextMessage` — deposit + ticket (description, plan, attachments
+advertised by name/size/id). Explicitly presented as a **snapshot**.
+2. If applicable, `buildInheritedPrMessage` / `buildInheritedBranchMessage` —
+the start of a cold session which inherits from an already advanced branch (MIN-68):
+summary of the previous session, PR body, review thread, and especially the
+**threads anchored to a line of code** (`toPrLineThreads`, with `diff_hunk`
+truncated from above to 8 lines — the tail bears the commented line).
+3. `readRepoInstructions` — `AGENTS.md` then `CLAUDE.md`, **at the root of the clone
+   only**, capped at `REPO_INSTRUCTIONS_MAX_BYTES = 32_000`
+([execute.ts:346-372](../lib/server/agent/execute.ts#L346-L372)), packaged in
    `<REPO_INSTRUCTIONS>`.
 
-Puis la demande du lanceur en dernier message.
+Then the launcher's request as the last message.
 
 ### 1.3 Sandbox
 
-[lib/server/agent/sandbox.ts](../lib/server/agent/sandbox.ts) — une microVM Vercel
-Sandbox par run, nommée `agent-<run.id>` :
+[lib/server/agent/sandbox.ts](../lib/server/agent/sandbox.ts) — a Vercel microVM
+Sandbox per run, named `agent-<run.id>`:
 
 - runtime `node24`, `persistent: true`, `resume: true`,
-  `SANDBOX_TIMEOUT_MS = 24 h` (le plafond du plan Pro ; le reaper d'inactivité coupe
-  bien avant), `SANDBOX_SNAPSHOT_EXPIRATION_MS = 7 jours` + `keepLastSnapshots: 1`.
-  Un run repris réveille sa VM avec son filesystem restauré ; passé l'expiration du
-  snapshot, on re-clone (git est le filet durable).
-- `REPO_DIR = /vercel/sandbox/repo`, clone `--depth 1` sur la branche de base puis
-  bascule sur la branche de travail (`cloneRepo`).
+`SANDBOX_TIMEOUT_MS = 24 h` (the cap of the Pro plan; the inactivity reaper cuts
+well before), `SANDBOX_SNAPSHOT_EXPIRATION_MS = 7 days` + `keepLastSnapshots: 1`.
+A resumed run wakes up its VM with its filesystem restored; after the expiration of
+snapshot, we re-clone (git is the durable net).
+- `REPO_DIR = /vercel/sandbox/repo`, clone `--depth 1` on the base branch then
+switches to the working branch (`cloneRepo`).
 - `runShell(sandbox, command, { cwd = REPO_DIR, timeoutMs, signal, env })` :
-  **`sh -c` dans un processus neuf à chaque appel**. Aucune session, aucun état,
-  aucun processus de fond.
-- Plafonds de lecture : `READ_MAX_LINES = 2000`, `READ_MAX_LINE_CHARS = 2000`,
+****CODE_0__ in a new process on each call**. No session, no state,
+no substantive process.
+- Read limits: `READ_MAX_LINES = 2000`, `READ_MAX_LINE_CHARS = 2000`,
   `READ_MAX_BYTES = 250_000`, `GLOB_MAX_FILES = 100`.
-- `grepRepo` = `git grep --no-color -I -E --untracked` (regex **POSIX étendue**),
-  `globRepo` = `git ls-files --cached --others --exclude-standard` : les deux
-  gitignore-aware, sans dépendance à installer.
-- Sécurité des chemins : `resolveWithin` (rejette toute sortie de `REPO_DIR`) et
-  `assertNotGit` (refuse les écritures dans `.git/` — hooks, config)
-  ([repo-path.ts](../lib/server/agent/repo-path.ts)). C'est de la
-  défense en profondeur : la microVM reste la vraie frontière.
+- `grepRepo` = `git grep --no-color -I -E --untracked` (regex **POSIX extended**),
+`globRepo` = `git ls-files --cached --others --exclude-standard`: both
+gitignore-aware, with no dependencies to install.
+- Path security: `resolveWithin` (rejects any output from `REPO_DIR`) and
+`assertNotGit` (refuses writes to `.git/` — hooks, config)
+([repo-path.ts](../lib/server/agent/repo-path.ts)). It's the
+defense in depth: microVM remains the real frontier.
 
-### 1.4 Boucle agentique
+### 1.4 Agent loop
 
 [lib/server/agent/agent-loop.ts](../lib/server/agent/agent-loop.ts) —
 `runAgentLoop` :
 
-- `MAX_ROUNDS_PER_CHUNK = 60`, suspend au **sommet** de chaque round si la
-  soft-deadline du chunk est dépassée (frontière sûre : aucun appel en vol).
+- `MAX_ROUNDS_PER_CHUNK = 60`, suspends at the **top** of each round if the
+soft-deadline of the chunk is exceeded (safe boundary: no in-flight calls).
 - `READ_ONLY_TOOLS` = `read_file, list_dir, glob, grep, search_issues, read_issue,
-  read_attachment, read_scratchpad` → si **tous** les tool-calls d'un round sont
-  read-only, ils sont exécutés en parallèle (`Promise.all`), résultats repoussés
-  dans l'ordre d'origine.
-- `pullSteering()` draine les messages utilisateur en attente au sommet de chaque
-  round → orientation à chaud, et reprise d'un `ask_user`.
-- `emitLive` republie le texte en cours d'écriture ~4×/s (`LIVE_FLUSH_MS = 250`).
-- Reprises LLM : `MAX_STREAM_ATTEMPTS = 4`, backoff exponentiel plafonné à
-  `MAX_RETRY_WAIT_MS = 30_000`, `Retry-After` honoré, timeout d'inactivité
-  `STREAM_IDLE_TIMEOUT_MS = 60_000` réarmé à chaque octet SSE
-  ([retry.ts](../lib/server/agent/retry.ts)). Épuisement d'une erreur reprenable →
-  **suspend** (reprise sur fonction fraîche), pas échec.
-- 400 « contexte trop long » → `dropOldestRound` jusqu'à `MAX_CONTEXT_TRIMS = 4`,
-  puis même appel retenté.
+read_attachment, read_scratchpad` → if **all** tool-calls in a round are
+read-only, they are executed in parallel (`Promise.all`), results pushed back
+in the original order.
+- `pullSteering()` drains pending user messages at the top of each
+round → hot orientation, and recovery of a `ask_user`.
+- `emitLive` republishes the text currently being written ~4×/s (`LIVE_FLUSH_MS = 250`).
+- LLM retakes: `MAX_STREAM_ATTEMPTS = 4`, exponential backoff capped at
+`MAX_RETRY_WAIT_MS = 30_000`, `Retry-After` honored, inactivity timeout
+`STREAM_IDLE_TIMEOUT_MS = 60_000` reset at each SSE byte
+([retry.ts](../lib/server/agent/retry.ts)). Exhaustion of a recoverable error →
+**suspend** (resume on fresh function), not failure.
+- 400 “context too long” → `dropOldestRound` up to `MAX_CONTEXT_TRIMS = 4`,
+then same call retried.
 
-### 1.5 Contexte
+### 1.5 Context
 
-- **Élagage** ([prune.ts](../lib/server/agent/prune.ts)) : à chaque frontière de
-  round, `pruneToolOutputs` remplace les sorties de tools les plus anciennes par
-  `PRUNE_STUB`, en protégeant les `PRUNE_PROTECT_BYTES = 40_000` derniers octets, et
-  seulement si l'on récupère au moins `PRUNE_MINIMUM_BYTES = 20_000`.
-- **Troncature par résultat** : chaque message `role:"tool"` passe par
-  `headTail(JSON.stringify(result), 6000)` — début + fin gardés, milieu élidé.
-- **Compaction** ([compact.ts](../lib/server/agent/compact.ts)) : au-delà de
-  `min(fenêtre × 0,75, AGENT_COMPACT_ABSOLUTE_MAX_TOKENS = 120_000)` — ou de
-  `AGENT_COMPACT_TOKEN_THRESHOLD = 70_000` quand la fenêtre est inconnue —, un
-  sous-appel LLM résume le milieu périmé
-  (`SUMMARIZE_INSTRUCTION`, 5 points), en préservant le préfixe de seed verbatim et
-  `AGENT_COMPACT_KEEP_RECENT_BYTES = 48_000` de queue. Point de rupture sûr : la
-  queue ne commence jamais sur un message `tool`. Plafonné à
-  `MAX_COMPACTIONS_PER_WINDOW = 3` par fenêtre de `MAX_ROUNDS_PER_CHUNK` rounds
-  (MIN-259), jamais lancé s'il reste moins de
+- **Pruning** ([prune.ts](../lib/server/agent/prune.ts)): at each border of
+round, `pruneToolOutputs` replaces the oldest tools output with
+`PRUNE_STUB`, protecting the last `PRUNE_PROTECT_BYTES = 40_000` bytes, and
+only if we recover at least `PRUNE_MINIMUM_BYTES = 20_000`.
+- **Truncation by result**: each `role:"tool"` message goes through
+`headTail(JSON.stringify(result), 6000)` — start + end kept, middle elided.
+- **Compaction** ([compact.ts](../lib/server/agent/compact.ts)): beyond
+`min(window × 0.75, AGENT_COMPACT_ABSOLUTE_MAX_TOKENS = 120_000)` — or
+`AGENT_COMPACT_TOKEN_THRESHOLD = 70_000` when the window is unknown —, a
+LLM sub-call summarizes the outdated environment
+(`SUMMARIZE_INSTRUCTION`, 5 points), preserving the seed prefix verbatim and
+`AGENT_COMPACT_KEEP_RECENT_BYTES = 48_000` tail. Safe breaking point:
+queue never starts on a `tool` message. Capped at
+`MAX_COMPACTIONS_PER_WINDOW = 3` per window of `MAX_ROUNDS_PER_CHUNK` rounds
+(MIN-259), never launched if there are less than
   `AGENT_COMPACT_MIN_BUDGET_MS = 60_000`.
-- Le raisonnement streamé est **affiché mais jamais persisté** dans `messages`.
+- Streamed reasoning is **displayed but never persisted** in `messages`.
 
-### 1.6 Édition
+### 1.6 Editing
 
-[lib/server/agent/edit.ts](../lib/server/agent/edit.ts) — cascade de **10
-replacers**, du plus strict au plus tolérant : `Simple`, `LineTrimmed`,
-`BlockAnchor` (ancres + similarité Levenshtein ≥ 0,65), `WhitespaceNormalized`,
+[lib/server/agent/edit.ts](../lib/server/agent/edit.ts) — a cascade of **10
+replacers**, from the strictest to the most tolerant: `Simple`, `LineTrimmed`,
+`BlockAnchor` (anchors + Levenshtein similarity ≥ 0.65), `WhitespaceNormalized`,
 `IndentationFlexible`, `UnicodeNormalized`, `EscapeNormalized`, `TrimmedBoundary`,
-`ContextAware`, `MultiOccurrence`. Garde-fous : `isDisproportionateMatch` (refuse un
-span bien plus large que `oldString`) et `realignBoundary` (le `\n` de frontière).
-L'échec est **bruyant** (throw), jamais une corruption silencieuse. `applyEdit`
-renvoie contenu + diff unifié + compteurs ; `execute.ts` renvoie au modèle un diff
-capé à `EDIT_DIFF_CAP = 4000`.
+`ContextAware`, `MultiOccurrence`. Safeguards: `isDisproportionateMatch` (rejects a
+span much larger than `oldString`) and `realignBoundary` (the border `\n`).
+Failure is **loud** (throw), never a silent corruption. `applyEdit`
+return content + unified diff + counters; `execute.ts` returns to the model a diff
+capped at `EDIT_DIFF_CAP = 4000`.
 
-### 1.7 Cycle de vie et persistance
+### 1.7 Life cycle and persistence
 
-[execute.ts](../lib/server/agent/execute.ts) — `executeAgentRun` exécute **un
+[execute.ts](../lib/server/agent/execute.ts) — `executeAgentRun` executes **a
 chunk** :
 
-- Budget : `AGENT_SOFT_DEADLINE_MS = 250_000` moins `COMMIT_MARGIN_MS = 25_000`,
-  plancher `MIN_SOFT_DEADLINE_MS = 20_000`. Timeout dur d'un appel modèle :
+- Budget: `AGENT_SOFT_DEADLINE_MS = 250_000` minus `COMMIT_MARGIN_MS = 25_000`,
+floor `MIN_SOFT_DEADLINE_MS = 20_000`. Hard timeout of a model call:
   `AGENT_RUN_TIMEOUT_MS = 210_000`.
-- Garde-fous anti-runaway par tour : `AGENT_MAX_CONTINUATIONS = 20`,
+- Per-turn runaway safeguards: `AGENT_MAX_CONTINUATIONS = 20`,
   `MAX_WALL_CLOCK_MS = 60 min`, `MAX_CHECKPOINT_BYTES = 8_000_000`.
-- **Le checkpoint EST l'historique** (`AgentCheckpoint.messages`, persisté en base) —
-  pas d'`assistant_messages` séparés.
-- **Le harness possède git** : `commitAndPush` à chaque fin de tour et à chaque
-  suspend (WIP). `remoteUpdated` (le remote a-t-il avancé ?) pilote la réouverture
-  d'une PR refusée (`reopenIfRejectedWorkPushed`). La création de PR est une
-  décision (`create_pr`), pas un automatisme.
-- `changedFiles(from, to)` produit l'event `files_changed` du tour (cap
+- **The checkpoint IS the history** (`AgentCheckpoint.messages`, persisted in base) —
+no separate `assistant_messages`.
+- **The harness has git**: `commitAndPush` at the end of each turn and at each
+suspend (WIP). `remoteUpdated` (has the remote advanced?) controls the reopening
+of a PR refused (`reopenIfRejectedWorkPushed`). The creation of PR is a
+decision (`create_pr`), not an automatism.
+- `changedFiles(from, to)` produces the turn's `files_changed` event (cap
   `CHANGED_FILES_CAP = 100`).
 
-### 1.8 Ce que le prompt demande mais que le harness n'exécute pas
+### 1.8 What the prompt asks but the harness does not execute
 
-C'est la frontière la plus intéressante — et c'est exactement là que les deux
-références divergent le plus de nous.
+This is the most interesting boundary — and it's exactly where both
+references diverge the most from us.
 
-| Le prompt dit… | Le harness… |
+| The prompt says… | The harness… |
 | --- | --- |
-| « Never run `git commit`, `git reset --hard`, `git checkout -- `, `git rebase`, `git push`, force-push, or `--amend` » | …exécute la commande telle quelle. `run_command` n'inspecte jamais ce qu'on lui passe. |
-| « Verify. Run the project's linter / type-check / build / tests » | …n'exécute rien de lui-même et ne sait pas si ça a été fait. Aucun signal, aucun event. |
-| « Self-review. Run `git diff` and read your change end to end » | …ne vérifie pas que ça a eu lieu. |
-| « Read the file first so `old_string` matches » | …n'impose rien : `edit_file` sur un fichier jamais lu passe si la cascade trouve le bloc. |
-| « Never print secrets or the git remote URL » | …ne filtre aucune sortie. L'`authUrl` porte un token d'installation. |
-| « Stay within this repository » | …**ça, si** : `resolveWithin` + `assertNotGit` sont exécutés (mais seulement sur les tools fichiers, pas sur `run_command`). |
+| “Never run `git commit`, `git reset --hard`, `git checkout -- `, `git rebase`, `git push`, force-push, or `--amend`” | …executes the command as is. `run_command` never inspects what is passed to him. |
+| “Verify. Run the project's linter / type-check / build / tests » | …does not execute anything on its own and does not know if it has been done. No signal, no event. |
+| “Self-review. Run `git diff` and read your change end to end » | …don’t check that it happened. |
+| “Read the file first so `old_string` matches” | …does not impose anything: `edit_file` on a never-read file passes if the cascade finds the block. |
+| “Never print secrets or the git remote URL” | …does not filter any output. The `authUrl` carries an installation token. |
+| “Stay within this repository” | …**that, if**: `resolveWithin` + `assertNotGit` are executed (but only on tools files, not on `run_command`). |
 
 ---
 
-## 2. Ce que nos runs disent
+## 2. What our runs say
 
-Requête sur `agent_run_events` (type `tool_result`), **60 derniers jours** :
-1 123 résultats de tools, 2 658 events, 15 runs. *Échantillon petit — les
-pourcentages sont indicatifs, les modes d'échec ne le sont pas.*
+Query on `agent_run_events` (type `tool_result`), **last 60 days**:
+1,123 tool results, 2,658 events, 15 runs. *Small sample —
+Percentages are indicative, failure modes are not.*
 
-| Tool | Appels | Échecs | Taux |
+| Tool | Calls | Chess | Rate |
 | --- | ---: | ---: | ---: |
 | `read_file` | 445 | 0 | 0,0 % |
 | `grep` | 336 | 3 | 0,9 % |
@@ -249,792 +249,792 @@ pourcentages sont indicatifs, les modes d'échec ne le sont pas.*
 | `create_pr` | 5 | 0 | 0,0 % |
 | autres (`write_issue_plan`, `write_file`, carnet) | 15 | 0 | 0,0 % |
 
-**Les trois modes d'échec réels.**
+**The three real failure modes.**
 
-1. **`run_command` échoue sur l'environnement, pas sur le code.** Les erreurs les
-   plus fréquentes : `sh: line 1: tsc: command not found` (7×, deux versions du
-   projet) — le `npm run typecheck` part avant que les dépendances soient
-   installées ; `npm error code ERESOLVE` (3×) — l'install elle-même échoue ;
-   7 échecs à `exitCode: 1` avec **stdout ET stderr vides** (voir §3.6, la sonde).
+1. **`run_command` fails on the environment, not on the code.** The most common errors
+most frequent: `sh: line 1: tsc: command not found` (7×, two versions of
+project) — the `npm run typecheck` leaves before the dependencies are
+installed; `npm error code ERESOLVE` (3×) — the install itself fails;
+7 failures at `exitCode: 1` with empty **stdout AND stderr** (see §3.6, the probe).
 
-2. **`apply_edits` : 42 % « d'échec » est un artefact de reporting.** Le tool
-   renvoie `success: applied.every(r => r.ok === true)` : un batch de 6 fichiers
-   dont 1 échoue est compté comme un échec total. Sur les 8 cas, la cause dominante
-   est `No changes to apply: oldString and newString are identical.` — le modèle
-   ré-applique une édition déjà faite. Un cas est un `Unknown tool: apply_edits`
-   (checkpoint antérieur au câblage du tool).
+2. **`apply_edits`: 42% “failure” is a reporting artifact.** The tool
+   returns `success: applied.every(r => r.ok === true)`: a batch of 6 files
+1 of which fails is counted as a total failure. Of the 8 cases, the dominant cause
+is `No changes to apply: oldString and newString are identical.` — the model
+re-applies an edit already made. A case is a `Unknown tool: apply_edits`
+(checkpoint prior to tool wiring).
 
-3. **`grep` échoue sur la syntaxe POSIX ERE.** Les 3 échecs sont tous la même
-   chose : `fatal: -e option, 'onUpdateIssue={': Unmatched \{`. Le modèle cherche
-   du JSX littéral, `git grep -E` lit `{` comme un quantificateur. Notre tool
-   n'offre pas de mode « chaîne littérale ».
+3. **`grep` fails on POSIX ERE syntax.** All 3 failures are the same
+thing: `fatal: -e option, 'onUpdateIssue={': Unmatched \{`. The model seeks
+From the JSX literal, `git grep -E` reads `{` as a quantifier. Our tool
+does not offer “string literal” mode.
 
-**Ce que le modèle fait pour contourner le harness** (220 `run_command` sur toute
-l'histoire du produit) :
+**What the model does to bypass the harness** (220 `run_command` on all
+the product's history):
 
-| Motif | Occurrences | Ce que ça dit |
+| Pattern | Occurrences | What it says |
 | --- | ---: | --- |
-| `sed -n` / `nl -ba` (lecture fenêtrée) | 68 (31 %) | Le modèle relit des fichiers **hors** de `read_file`. |
-| `grep` / `rg` direct | 35 (16 %) | Il contourne notre tool `grep`. |
-| Préfixe `cd …` | 29 (13 %) | Dont `cd /vercel/sandbox/repo && …` — le cwd **par défaut**. Le modèle ne sait pas où il est, faute de `workdir` et de shell persistant. |
-| Pipe vers `head`/`tail` | 23 (10 %) | Il borne lui-même la sortie parce qu'il a appris que le harness la coupe. |
-| `cat` | 12 | Idem `sed -n`. |
-| `2>&1` | 12 | Il craint de perdre `stderr`. |
+| `sed -n` / `nl -ba` (windowed reading) | 68 (31%) | The model rereads files **outside** of `read_file`. |
+| `grep` / `rg` direct | 35 (16 %) | It bypasses our `grep` tool. |
+| Prefix `cd …` | 29 (13%) | Including `cd /vercel/sandbox/repo && …` — the **default** cwd. The model doesn't know where it is, due to lack of `workdir` and persistent shell. |
+| Pipe to `head`/`tail` | 23 (10%) | He blocks the exit himself because he has learned that the harness cuts it off. |
+| `cat` | 12 | Same as `sed -n`. |
+| `2>&1` | 12 | It fears losing `stderr`. |
 
-**Et deux commandes git explicitement interdites par le prompt ont été exécutées** :
-`git checkout -- components/app-shell-chrome.tsx` (2026-07-14) et
+**And two git commands explicitly prohibited by the prompt were executed**:
+`git checkout -- components/app-shell-chrome.tsx` (2026-07-14) and
 `cd /vercel/sandbox/repo && git checkout -- package-lock.json && git diff --stat`
-(2026-07-15). Le prompt dit « never » ; le harness a obéi au modèle. **C'est un
-écart mesuré, pas observé.**
+(2026-07-15). The prompt says “never”; the harness obeyed the pattern. **It's a
+deviation measured, not observed.**
 
 ---
 
-## 3. Différences observées, axe par axe
+## 3. Differences observed, axis by axis
 
-### 3.1 Outils exposés au modèle
+### 3.1 Tools exposed to the model
 
 | | minddy | Codex | OpenCode |
 | --- | --- | --- | --- |
-| Exploration | `read_file`, `list_dir`, `glob`, `grep` (git grep, POSIX ERE) | Via shell (`rg` recommandé par le prompt) | `read`, `glob`, `grep` (**ripgrep**) |
-| Édition | `edit_file` / `apply_edits` / `write_file` / `move_file` / `delete_file` (string replace) | `apply_patch` **freeform à grammaire Lark** ([apply_patch.lark](https://github.com/openai/codex/blob/294d813/codex-rs/core/src/tools/handlers/apply_patch.lark)) — décodage contraint | `edit`+`write` **ou** `apply_patch`, **choisi selon le modèle** : `gpt-*` (hors `oss`/`gpt-4`) → `apply_patch` ([registry.ts](https://github.com/anomalyco/opencode/blob/40e4d73/packages/opencode/src/tool/registry.ts)) |
+| Exploration | `read_file`, `list_dir`, `glob`, `grep` (git grep, POSIX ERE) | Via shell (`rg` recommended by the prompt) | `read`, `glob`, `grep` (**ripgrep**) |
+| Edition | `edit_file` / `apply_edits` / `write_file` / `move_file` / `delete_file` (string replace) | `apply_patch` **freeform with Lark grammar** ([apply_patch.lark](https://github.com/openai/codex/blob/294d813/codex-rs/core/src/tools/handlers/apply_patch.lark)) — constrained decoding | `edit`+`write` **or** `apply_patch`, **chosen according to the model**: `gpt-*` (excluding `oss`/`gpt-4`) → `apply_patch` ([registry.ts](https://github.com/anomalyco/opencode/blob/40e4d73/packages/opencode/src/tool/registry.ts)) |
 | Shell | `run_command { command }` | `exec_command` (PTY, `session_id`), `write_stdin`, `shell_command` | `shell { command, timeout, workdir }` |
-| Web | `web_search` (OpenRouter only) | `web.run`, `tool_search` (BM25 sur tools différés) | `websearch`, `webfetch` |
-| Délégation | — | `spawn_agent`, `send_input`, `send_message`, `followup_task`, `wait_agent`, `list_agents`, `resume_agent`, `close_agent`, `interrupt_agent` | `task` (sous-agents, avec `task_id` pour reprendre la même session) |
-| Multimodal | `read_attachment` renvoie **la pièce jointe image du ticket** en partie image, quand le modèle du run l'accepte (MIN-111) | `view_image` (« View a local image file … when visual inspection is needed ») | `read` renvoie images et PDF **en pièces jointes** ([read.txt](https://github.com/anomalyco/opencode/blob/40e4d73/packages/opencode/src/tool/read.txt)) |
-| Introspection du contexte | — | `get_context_remaining` → `{ tokens_left }` ; `new_context` (« Start a new context window ») | — |
-| Sémantique du code | — | — | `lsp` (expérimental) : `goToDefinition`, `findReferences`, `hover`, `documentSymbol`, `workspaceSymbol`, `callHierarchy` |
-| Réparation d'appel invalide | — | — | tool `invalid` : les args malformés reviennent au modèle en message d'erreur au lieu de casser le round |
-| Permissions | — | `request_permissions` : le modèle **demande** plus d'accès fs/réseau en cours de tour | `ctx.ask({ permission, patterns })` sur chaque tool |
+| Web | `web_search` (OpenRouter only) | `web.run`, `tool_search` (BM25 on deferred tools) | `websearch`, `webfetch` |
+| Delegation | — | `spawn_agent`, `send_input`, `send_message`, `followup_task`, `wait_agent`, `list_agents`, `resume_agent`, `close_agent`, `interrupt_agent` | `task` (subagents, with `task_id` to resume the same session) |
+| Multimodal | `read_attachment` returns **the ticket image attachment** as an image part, when the run model accepts it (MIN-111) | `view_image` (“View a local image file … when visual inspection is needed”) | `read` returns images and PDF **as attachments** ([read.txt](https://github.com/anomalyco/opencode/blob/40e4d73/packages/opencode/src/tool/read.txt)) |
+| Context introspection | — | `get_context_remaining` → `{ tokens_left }`; `new_context` (“Start a new context window”) | — |
+| Code semantics | — | — | `lsp` (experimental): `goToDefinition`, `findReferences`, `hover`, `documentSymbol`, `workspaceSymbol`, `callHierarchy` |
+| Invalid Call Repair | — | — | tool `invalid`: malformed args return to the model as an error message instead of breaking the round |
+| Permissions | — | `request_permissions`: model **requests** more fs/network access during tour | `ctx.ask({ permission, patterns })` on each tool |
 | Checklist | `update_plan` | `update_plan` | `todowrite` |
 | Questions | `ask_user` (1–4, options, « (Recommended) », `multi_select`) | `request_user_input` (1–3, options `label`+`description`, « (Recommended) », `autoResolutionMs`) | `question` (options, « (Recommended) », `multiple`) |
 
-> **Verdict — écart réel et coûteux sur trois points** : (a) aucune entrée visuelle,
-> alors qu'une maquette jointe à un ticket est un cas d'usage *natif de minddy* ;
-> (b) le shell est le tool le plus utilisé et le plus pauvre en paramètres ;
-> (c) `grep` en POSIX ERE casse sur du JSX, mesurément.
-> Sur `ask_user` : **pas d'écart** — le nôtre est au niveau de `request_user_input`.
+> **Verdict — real and costly gap on three points**: (a) no visual input,
+> while a model attached to a ticket is a *native minddy* use case;
+> (b) the shell is the most used tool and the fewest in parameters;
+> (c) `grep` in POSIX ERE breaks on JSX, measuredly.
+> On `ask_user`: **no difference** — ours is at the level of `request_user_input`.
 >
-> *Révision du 2026-07-28* : la ligne « la délégation est une feature de CLI
-> multi-fenêtres » ne tient pas. Elle décrit la *forme* qu'elle prend chez Codex
-> (neuf tools, agents nommés, mailbox) sans regarder ce qu'elle permet. **Écart
-> réel, retenu** sous une forme réduite à un seul tool → MIN-112. Sur les
-> permissions, en revanche, le verdict tient : voir §3.2.
+> *Revision of 2026-07-28*: the line “delegation is a CLI feature
+> multi-windows" does not work. She describes the *form* she takes at Codex
+> (nine tools, named agents, mailbox) without looking at what it allows. **Gap
+> real, retained** in a form reduced to a single tool → MIN-112. On the
+> permissions, on the other hand, the verdict stands: see §3.2.
 
-### 3.2 Sandbox : isolation, filesystem, réseau
-
-| | minddy | Codex | OpenCode |
-| --- | --- | --- | --- |
-| Isolation | microVM Vercel Sandbox par run, `node24`, `persistent: true` | `SandboxPolicy` : `ReadOnly` / `WorkspaceWrite` / `ExternalSandbox` / `DangerFullAccess` ([protocol.rs:995](https://github.com/openai/codex/blob/294d813/codex-rs/protocol/src/protocol.rs#L995)) | Aucune — tourne sur la machine de l'utilisateur, protégé par le système de permissions |
-| Périmètre d'écriture | tout `REPO_DIR` ; `resolveWithin` + `assertNotGit` sur les tools fichiers | `WritableRoot` avec `read_only_subpaths` — `.codex`, `.git`, **notamment `.git/hooks`**, refusés *même sous une racine écrivable* | permission par pattern de chemin |
-| Réseau | ouvert (le clone/push en dépend) | `network_access` explicite par policy ; approbations réseau dédiées ([network_approval.rs](https://github.com/openai/codex/blob/294d813/codex-rs/core/src/tools/network_approval.rs), 1 141 lignes) | permission |
-| Garde-fou sur les commandes | **aucun** — le prompt seul | `exec_policy.rs` (1 154 lignes) : DSL de règles, `is_safe_git_command` (seuls `git status`/`log`/`diff`/`show`/`branch` à arguments lecture seule sont sûrs — **`git fetch` non**), `dangerous_command_match` (`ForcedRm`…), `BANNED_PREFIX_SUGGESTIONS` | `ctx.ask` avant chaque `shell`, analyse tree-sitter des chemins touchés |
-| Approbations | — | `with_cached_approval` + `ApprovedForSession` | `always`/`patterns` par permission |
-
-> **Verdict — écart réel, partiellement hors de notre modèle produit.** Notre
-> isolation (microVM jetable, une par run) est *structurellement plus forte* que
-> celle de Codex en local et sans commune mesure avec OpenCode : nous n'avons rien à
-> protéger d'un `rm -rf`. Mais l'absence totale de garde-fou **exécuté** sur les
-> commandes git est un écart réel *et mesuré* (§2) : ce que le harness protège n'est
-> pas la machine, c'est **le travail de l'utilisateur sur la branche**. Le système
-> d'approbations interactives, lui, n'a aucun sens chez nous (l'agent tourne dans le
-> cloud, personne ne regarde) — c'est le contre-exemple parfait d'une feature de CLI.
-
-### 3.3 Cycle de feedback : plan → implémentation → vérification
+### 3.2 Sandbox: isolation, filesystem, network
 
 | | minddy | Codex | OpenCode |
 | --- | --- | --- | --- |
-| Plan de session | `update_plan` + miroir vers le plan du ticket (`syncPlan`) | `update_plan` avec **exemples de bons et de mauvais plans** dans le prompt ([default.md:72-121](https://github.com/openai/codex/blob/294d813/codex-rs/protocol/src/prompts/base_instructions/default.md)) | `todowrite` ; mode `plan` **lecture seule** avec fichier de plan sur disque, et `plan-enter`/`plan-exit` |
-| Retour après édition | diff unifié (cap 4 000 car.) | rien (« Do not waste tokens by re-reading files after `apply_patch`. The tool call will fail if it didn't work. ») | diff **+ diagnostics LSP du fichier réinjectés** : `LSP errors detected in this file, please fix:` ([edit.ts:201](https://github.com/anomalyco/opencode/blob/40e4d73/packages/opencode/src/tool/edit.ts#L201), idem `write.ts`, `apply_patch.ts`) |
-| Doctrine de vérification | 5 lignes de prompt (« Verify », « Self-review ») | une section entière « Validating your work » : commencer par le test le plus spécifique puis élargir, **ne pas ajouter de tests à un dépôt qui n'en a pas**, formatage : 3 itérations max puis on rend la main, comportement proactif **conditionné au mode d'approbation** | prompt du tool `shell` |
-| Bascule de mode | — | modes de collaboration (`ModeKind`) qui pilotent la disponibilité des tools | agents `plan` / `build`, avec **rappels synthétiques injectés à la bascule** ([reminders.ts](https://github.com/anomalyco/opencode/blob/40e4d73/packages/opencode/src/session/reminders.ts)) |
+| Insulation | microVM Vercel Sandbox per run, `node24`, `persistent: true` | `SandboxPolicy`: `ReadOnly` / `WorkspaceWrite` / `ExternalSandbox` / `DangerFullAccess` ([protocol.rs:995](https://github.com/openai/codex/blob/294d813/codex-rs/protocol/src/protocol.rs#L995)) | None — runs on the user's machine, protected by the permissions system |
+| Writing scope | all `REPO_DIR` ; `resolveWithin` + `assertNotGit` on tool files | `WritableRoot` with `read_only_subpaths` — `.codex`, `.git`, **notably `.git/hooks`**, refused *even under a writable root* | permission by path pattern |
+| Network | open (clone/push depends on it) | `network_access` explicit by policy; dedicated network approvals ([network_approval.rs](https://github.com/openai/codex/blob/294d813/codex-rs/core/src/tools/network_approval.rs), 1141 lines) | permission |
+| Guardrail on orders | **none** — the prompt alone | `exec_policy.rs` (1,154 lines): Rules DSL, `is_safe_git_command` (only `git status`/`log`/`diff`/`show`/`branch` with read-only arguments are safe — **`git fetch` no**), `dangerous_command_match` (`ForcedRm`…), `BANNED_PREFIX_SUGGESTIONS` | `ctx.ask` before each `shell`, tree-sitter analysis of affected paths |
+| Approvals | — | `with_cached_approval` + `ApprovedForSession` | `always`/`patterns` per permission |
 
-> **Verdict — écart réel et coûteux sur un point : le retour après édition.**
-> OpenCode referme la boucle *dans le tool lui-même* : tu édites, tu reçois les
-> erreurs de typage. Chez nous il faut un `run_command` de plus, que le modèle ne
-> fait pas toujours, et dont la sortie est massacrée (§3.6). Le reste (modes,
-> plan-mode lecture seule) est de l'ergonomie de CLI — et notre miroir
-> `update_plan` → plan du ticket n'a d'équivalent nulle part : **c'est nous qui
+> **Verdict — real difference, partially outside our product model.** Our
+> isolation (disposable microVM, one per run) is *structurally stronger* than
+> that of Codex locally and without common measure with OpenCode: we have nothing to
+> protect with a `rm -rf`. But the total absence of safeguards **executed** on the
+> git commands is a real *and measured* gap (§2): what the harness protects is not
+> not the machine, it's **the user's work on the branch**. The system
+> interactive approvals make no sense for us (the agent turns in the
+> cloud, no one is looking) — this is the perfect counter-example of a CLI feature.
+
+### 3.3 Feedback cycle: plan → implementation → verification
+
+| | minddy | Codex | OpenCode |
+| --- | --- | --- | --- |
+| Session plan | `update_plan` + mirror to ticket map (`syncPlan`) | `update_plan` with **examples of good and bad plans** in the prompt ([default.md:72-121](https://github.com/openai/codex/blob/294d813/codex-rs/protocol/src/prompts/base_instructions/default.md)) | `todowrite`; `plan` **read-only** mode with plan file on disk, and `plan-enter`/`plan-exit` |
+| Return after editing | unified diff (cap 4,000 char.) | nothing ("Do not waste tokens by re-reading files after `apply_patch`. The tool call will fail if it didn't work.") | diff **+ LSP diagnostics of the file reinjected**: `LSP errors detected in this file, please fix:` ([edit.ts:201](https://github.com/anomalyco/opencode/blob/40e4d73/packages/opencode/src/tool/edit.ts#L201), same as `write.ts`, `apply_patch.ts`) |
+| Verification Doctrine | 5 prompt lines (“Verify”, “Self-review”) | an entire “Validating your work” section: start with the most specific test then expand, **do not add tests to a repository that does not have any**, formatting: 3 iterations max then we give up, proactive behavior **conditional on approval mode** | tool prompt `shell` |
+| Mode Toggle | — | collaboration modes (`ModeKind`) which control the availability of tools | agents `plan` / `build`, with **synthetic reminders injected at the toggle** ([reminders.ts](https://github.com/anomalyco/opencode/blob/40e4d73/packages/opencode/src/session/reminders.ts)) |
+
+> **Verdict — real and costly difference on one point: return after editing.**
+> OpenCode closes the loop *in the tool itself*: you edit, you receive the
+> typing errors. With us we need one more `run_command`, which the model does not
+> not always done, and whose output is massacred (§3.6). The rest (modes,
+> plan-read-only mode) is the ergonomics of CLI — and our mirror
+> `update_plan` → ticket plan has no equivalent anywhere: **it's us who
 > sommes devant**.
 
-#### Coût d'un type-check dans la sandbox (mesuré le 2026-07-28, MIN-110)
+#### Cost of a type-check in the sandbox (measured on 2026-07-28, MIN-110)
 
-R4 disait « ne pas implémenter avant d'avoir ce chiffre ». Le voici. Mesures
-faites dans une **vraie microVM Vercel Sandbox** (`node24`, 2 vCPU, 4,2 Go de
-RAM — les paramètres exacts de `getOrCreateAgentSandbox`), sur un clone frais du
-dépôt minddy (~1 100 fichiers TS/TSX), dépendances installées par
-`pnpm install --frozen-lockfile` (21 s, une seule fois par microVM). Colonne Mac
-donnée pour l'échelle : un M-series est ~2,4× plus rapide, l'écart est stable.
+R4 said “do not implement until you have this figure”. Here it is. Measures
+made in a **real Vercel Sandbox microVM** (`node24`, 2 vCPU, 4.2 GB of
+RAM — the exact parameters of `getOrCreateAgentSandbox`), on a fresh clone of the
+minddy repository (~1,100 TS/TSX files), dependencies installed by
+`pnpm install --frozen-lockfile` (21 s, once per microVM). Mac column
+given for the scale: an M-series is ~2.4× faster, the difference is stable.
 
-| Régime | microVM | Mac |
+| Diet | microVM | Mac |
 | --- | ---: | ---: |
-| `tsc --noEmit`, **à froid** (aucun `.tsbuildinfo`) | **22,6 s** | 9,4 s |
-| `tsc --noEmit`, à chaud, aucun changement | **4,9 s** | 2,5 s |
-| `tsc --noEmit`, à chaud, après édition d'un fichier feuille | **10,7 s** | 4,5 s |
-| `tsc --noEmit`, à chaud, après édition de `lib/types.ts` (104 importateurs) | **14,4 s** | — |
-| `tsc --watch` : démarrage + check initial | 22,2 s | — |
-| `tsc --watch` : recheck après édition | 0,6 – 11,3 s | — |
-| `tsc --watch` : mémoire résidente **permanente** | **1,7 → 1,9 Go** sur 4,2 | — |
-| `tsc --noEmit <un seul fichier>` (hors `tsconfig.json`) | 0,5 – 0,9 s | 0,8 s |
+| `tsc --noEmit`, **cold** (no `.tsbuildinfo`) | **22.6 sec** | 9.4 sec |
+| `tsc --noEmit`, hot, no change | **4.9 sec** | 2.5s |
+| `tsc --noEmit`, hot, after editing a sheet file | **10.7 sec** | 4.5s |
+| `tsc --noEmit`, hot, after edition of `lib/types.ts` (104 importers) | **14.4 sec** | — |
+| `tsc --watch`: start + initial check | 22.2 sec | — |
+| `tsc --watch`: recheck after editing | 0.6 – 11.3 s | — |
+| `tsc --watch`: resident memory **permanent** | **1.7 → 1.9 GB** of 4.2 | — |
+| `tsc --noEmit <one file>` (outside `tsconfig.json`) | 0.5 – 0.9 s | 0.8 s |
 | Sonde `test -f tsconfig.json && test -x node_modules/.bin/tsc` | 1 ms | — |
 
-Forcer `--incremental --tsBuildInfoFile` **hors du dépôt** ne coûte rien (20,8 /
-4,5 / 10,9 / 14,5 s) et garde `git status` propre — c'est la forme retenue, elle
-marche même si le `tsconfig.json` du dépôt n'active pas `incremental`.
+Forcing `--incremental --tsBuildInfoFile` **out of the repository** costs nothing (20.8 /
+4.5 / 10.9 / 14.5 s) and keeps `git status` clean — this is the form retained, it
+works even if the `tsconfig.json` of the repository does not activate `incremental`.
 
-**Combien d'éditions y a-t-il à couvrir ?** Sur toute l'histoire du produit :
-44 éditions réussies sur 15 runs, groupées en **30 rafales** d'éditions
-consécutives (médiane 1, moyenne 1,5, max 4). Un run à lui seul en compte 26.
+**How ​​many editions are there to cover?** On the entire product history:
+44 successful edits over 15 runs, grouped into **30 bursts** of edits
+consecutive (median 1, average 1.5, max 4). A run alone has 26.
 
-**Verdict : voie B — un check par TOUR, pas par édition.** Trois raisons, dans
-l'ordre où elles pèsent.
+**Verdict: path B — one check per ROUND, not per edition.** Three reasons, in
+the order in which they weigh.
 
-1. **Le prix.** Un check coûte 4,9 s au plancher, ~11 s en régime normal, 14,4 s
-   quand le fichier touché est un carrefour. Par édition, le run à 26 éditions
-   paierait 110 s (dédupliqué par rafale) à 290 s (brut) — soit, dans le second
-   cas, **plus que la soft-deadline entière d'un chunk (250 s)**. Par tour, la
-   même session paie 11 s. Le rapport est de 1 à 25.
-2. **La justesse — l'argument qui aurait suffi seul.** Un changement cohérent
-   s'étale sur plusieurs fichiers (rafales de 1 à 4 éditions, mesurées).
-   Type-checker *entre* deux moitiés d'un même changement remonte des erreurs que
-   l'édition suivante efface : renommer une prop, puis recâbler ses trois
-   appelants, ferait crier le harness trois fois pour rien. Le coût n'est pas que
-   du temps mural, c'est un round de LLM gâché et un modèle poussé à « réparer »
-   un état transitoire. OpenCode s'en tire parce que ses diagnostics sont
-   **par fichier et instantanés** (serveur LSP déjà chaud), et parce qu'un humain
-   regarde. Nous n'avons ni l'un ni l'autre.
-3. **`tsc --watch` (voie non prévue au plan) est un piège.** Ses rechecks sont
-   parfois excellents (0,6 s) mais il immobilise **1,9 Go des 4,2 Go de la
-   microVM**, celle-là même qui doit faire tourner `next build` et les tests ; il
-   ne survit pas à l'arrêt de la microVM entre deux chunks (22 s de redémarrage à
-   chaque reprise) ; et rien ne relie proprement un recheck à *l'édition qui l'a
-   déclenché*. Écarté.
+1. **The price.** A check costs 4.9 s at floor, ~11 s in normal mode, 14.4 s
+when the affected file is a crossroads. By edition, the run has 26 editions
+would pay 110 s (deduplicated per burst) to 290 s (raw) — i.e., in the second
+case, **more than the entire soft-deadline of a chunk (250 s)**. By turn, the
+same session pays 11 s. The ratio is 1 to 25.
+2. **Correctness — the argument that would have sufficed alone.** A coherent change
+is spread over several files (bursts of 1 to 4 editions, measured).
+Type-checker *between* two halves of the same change reports errors that
+the next edit erases: rename a prop, then rewire its three
+callers, would make the harness shout three times for nothing. The cost is not only
+wall time, it's a wasted LLM round and a model pushed to "repair"
+a transient state. OpenCode gets away with it because its diagnostics are
+**by file and snapshots** (already hot LSP server), and because a human
+   reviews it. We have neither one.
+3. **`tsc --watch` (route not planned in the plan) is a trap.** Its rechecks are
+sometimes excellent (0.6 s) but it immobilizes **1.9 GB of the 4.2 GB of the
+microVM**, the same one which must run `next build` and the tests; he
+does not survive the shutdown of the microVM between two chunks (22 s restart at
+each repeat); and nothing properly connects a recheck to the *edition that has it
+triggered*. Discarded.
 
-Et la « vérification ciblée sur un seul fichier » du plan initial est **fausse**,
-pas seulement rapide : `tsc --noEmit <fichier>` ignore le `tsconfig.json` —
-mesuré sur un `.tsx` parfaitement sain du dépôt, **37 erreurs fantômes** (JSX non
-configuré, alias `@/…` non résolus). Un type-check qui ment est pire que pas de
+And the "single-file targeted verification" of the original plan is **wrong**,
+not just fast: `tsc --noEmit <fichier>` ignores `tsconfig.json` —
+measured on a perfectly healthy `.tsx` of the repository, **37 phantom errors** (JSX not
+configured, alias `@/…` unresolved). A guy-check who lies is worse than no
 type-check.
 
-**Ce qui n'est pas garanti et qu'on assume.** Le check ne peut tourner que si
-`node_modules` existe — or §2 montre 7 `tsc: command not found`, le modèle lançant
-`npm run typecheck` avant d'installer. Le tool **se tait** dans ce cas : sonde à
-1 ms, aucune tentative d'installer quoi que ce soit à sa place. Un harness qui
-transformerait un environnement pas installé en mur d'erreurs serait pire que
+**Which is not guaranteed and we assume.** The check can only be turned if
+`node_modules` exists — or §2 shows 7 `tsc: command not found`, the model launching
+`npm run typecheck` before installing. The tool **silent** in this case: probe
+1 ms, no attempt to install anything in its place. A harness that
+would transform an uninstalled environment into a wall of errors would be worse than
 silencieux.
 
-### 3.4 Persistance entre les tours
+### 3.4 Persistence between turns
 
 | | minddy | Codex | OpenCode |
 | --- | --- | --- | --- |
-| Historique | `AgentCheckpoint.messages` en base ; cap `MAX_CHECKPOINT_BYTES = 8 Mo` | `context_manager/history.rs` + `normalize.rs` | messages/parts en base, `message-v2.ts` |
-| État du workspace | **snapshot persistant de la microVM** (7 j) + branche git poussée à chaque tour | filesystem de l'utilisateur (il ne bouge pas) | idem |
-| Session froide qui hérite | `buildInheritedPrMessage` : résumé de la session précédente + PR + fil de review + **fils ancrés ligne à ligne** | — | — |
-| Retour arrière | — | — | `revert.ts` : retour à un message donné via snapshots, `unrevert` |
-| Élagage | `pruneToolOutputs` (protège 40 Ko, seuil 20 Ko) | `normalize.rs` | `truncate` au moment de l'appel |
-| Compaction | sous-appel LLM, seuil 70 k tokens ou 75 % de la fenêtre, garde 48 Ko de queue | trois voies : locale (`compact.rs`), **distante** (`compact_remote_v2.rs`, 864 lignes), et **budget de tokens** → *nouvelle fenêtre de contexte sans résumé* (`compact_token_budget.rs`) | `overflow.ts` : `COMPACTION_BUFFER = 20_000` réservés, déclenche quand `tokens >= model.limit.input - reserved` |
-| Le modèle sait-il où il en est ? | **non** — on compacte dans son dos | **oui** : `get_context_remaining`, et il peut demander `new_context` lui-même | non |
+| History | `AgentCheckpoint.messages` in the database; cap `MAX_CHECKPOINT_BYTES = 8 MB` | `context_manager/history.rs` + `normalize.rs` | messages/parts in the database, `message-v2.ts` |
+| Workspace status | **persistent microVM snapshot** (7 days) + git branch pushed every round | user's filesystem (it doesn't move) | ditto |
+| Cold session that inherits | `buildInheritedPrMessage`: summary of the previous session + PR + review thread + **anchored threads line by line** | — | — |
+| Backspace | — | — | `revert.ts`: return to a given message via snapshots, `unrevert` |
+| Pruning | `pruneToolOutputs` (protects 40 KB, threshold 20 KB) | `normalize.rs` | `truncate` at the time of the call |
+| Compaction | LLM subcall, threshold 70k tokens or 75% of window, keeps 48KB tail | three ways: local (`compact.rs`), **remote** (`compact_remote_v2.rs`, 864 lines), and **token budget** → *new context window without summary* (`compact_token_budget.rs`) | `overflow.ts`: `COMPACTION_BUFFER = 20_000` reserved, triggers when `tokens >= model.limit.input - reserved` |
+| Does the model know where it is? | **no** — we compact behind his back | **yes**: `get_context_remaining`, and it can request `new_context` itself | no |
 
-> **Verdict — pas d'écart sur la persistance, écart réel sur le contexte.** Notre
-> persistance est la plus ambitieuse des trois, parce que c'est la seule qui doit
-> survivre à une fonction serverless qui meurt : snapshot + branche git +
-> checkpoint. Le `revert` d'OpenCode est une feature d'éditeur interactif ; chez
-> nous git le fait déjà.
+> **Verdict — no difference on persistence, real difference on context.** Our
+> persistence is the most ambitious of the three, because it is the only one that must
+> survive a serverless function that dies: snapshot + git branch +
+> checkpoint. OpenCode's `revert` is an interactive editor feature; at the house of
+> we git already does this.
 >
-> *Révision du 2026-07-28* : j'écrivais « notre compaction règle le problème ». Elle
-> le réglerait — **elle n'a jamais tourné**. Zéro event de phase `compacted` ou
-> `context_trim` depuis la mise en service, parce que le seuil vaut 75 % de la
-> fenêtre du modèle et que les modèles utilisés ont des fenêtres de 1 000 000 à
-> 1 050 000 tokens : seuil effectif ~787 000, contre ~140 000 tokens pour notre plus
-> gros checkpoint (558 Ko, 569 messages). Deux conséquences : le seuil est calibré
-> sur la mauvaise variable — avec une fenêtre de 1 M, ce qui plafonne une session
-> longue est le **coût par round**, pas la fenêtre — et un filet jamais tendu est un
-> filet troué jusqu'à preuve du contraire. → MIN-113.
+> *Revision of 2026-07-28*: I wrote “our compaction solves the problem”. She
+> would fix it — **she never filmed**. Zero phase event `compacted` or
+> `context_trim` since commissioning, because the threshold is 75% of the
+> model window and that the models used have windows from 1,000,000 to
+> 1,050,000 tokens: effective threshold ~787,000, compared to ~140,000 tokens for our plus
+> large checkpoint (558 KB, 569 messages). Two consequences: the threshold is calibrated
+> on the wrong variable — with a 1M window, which caps a session
+> long is the **cost per round**, not the window — and a never-stretched net is a
+> net with holes until proven otherwise. → MIN-113.
 
-#### Ce que coûte un gros contexte (mesuré le 2026-07-28, MIN-113)
+#### What a big context costs (measured on 2026-07-28, MIN-113)
 
-Le seuil devait être recalibré « sur le coût », encore fallait-il connaître le
-coût. Mesure sur les **814 appels** `ai_usage` de `feature = 'agent_code'` depuis
-la mise en service, en croisant `prompt_tokens` et `cost` réel.
+The threshold had to be recalibrated “on cost”, it was still necessary to know the
+cost. Measurement on **814 calls** `ai_usage` from `feature = 'agent_code'` since
+commissioning, by crossing `prompt_tokens` and `cost` real.
 
-**Le contexte réellement atteint.** p50 = 29 851 · p75 = 44 757 · p90 = 86 815 ·
-p95 = 135 115 · p99 = 153 808 · **max = 158 301**. Un seul run dépasse 60 k : 171
-rounds sur `anthropic/claude-sonnet-5`, contexte final 158 301 tokens, **13,9 M de
-prompt tokens cumulés pour 27,85 $**. Les 14 autres runs réunis coûtent 4,03 $.
+**The context actually reached.** p50 = 29,851 · p75 = 44,757 · p90 = 86,815 ·
+p95 = 135,115 · p99 = 153,808 · **max = 158,301**. A single run exceeds 60 k: 171
+rounds on `anthropic/claude-sonnet-5`, final context 158,301 tokens, **13.9 M of
+prompt tokens accumulated for $27.85**. The other 14 runs combined cost $4.03.
 
-**Le coût marginal du contexte**, ajusté par moindres carrés sur
+**The marginal cost of context**, adjusted by least squares on
 `cost = a·prompt_tokens + b·completion_tokens` :
 
-| Modèle | Rounds | $ / 1 M prompt tokens | $ / 1 M completion |
+| Model | Rounds | $ / 1M prompt tokens | $ / 1M completion |
 | --- | ---: | ---: | ---: |
 | `openai/gpt-5.6-luna` | 590 | 0,18 | 6,69 |
 | `anthropic/claude-sonnet-5` | 171 | **2,00** | 8,37 |
 | `deepseek/deepseek-v4-flash` | 53 | 0,06 | 0,39 |
 
-**Le prompt caching n'amortit rien — hypothèse falsifiée.** 2,00 $/M est *exactement*
-le tarif input plein de Sonnet 5 (tarif d'introduction, 2 $/M jusqu'au 2026-08-31).
-En modélisant chaque round à `prompt × 2 $/M + completion × 10 $/M`, c.-à-d. **sans
-aucun cache**, on retrouve 28,35 $ contre 27,85 $ observés — **ratio 0,982**, et
-**121 des 171 rounds collent au modèle « aucun cache » à ±2 %**. Les rounds 1 et 2
-montrent bien un cache read (ratio 0,15 et 0,19) ; à partir du round ~60 le ratio
-est 1,000 à la quatrième décimale. La raison est dans le code :
-[caching.ts](../lib/server/agent/caching.ts) pose ses deux breakpoints sur le
-message système et la fin du préfixe de seed — **tous deux en TÊTE**. Le bloc caché
-reste donc figé à quelques milliers de tokens pendant que l'historique en atteint
-150 000, et sa part devient négligeable. On paie plein tarif l'intégralité de la
-conversation, à chaque round.
+**Prompt caching does not amortize anything — false assumption.** $2.00/M is *exactly*
+the full input price of Sonnet 5 (introductory price, $2/M until 2026-08-31).
+By modeling each round at `prompt × 2 $/M + completion × 10 $/M`, i.e. **without
+no cache**, we find $28.35 against $27.85 observed — **ratio 0.982**, and
+**121 of the 171 rounds stick to the “no cache” model at ±2%**. Rounds 1 and 2
+clearly show a cache read (ratio 0.15 and 0.19); from round ~60 the ratio
+is 1.000 to the fourth decimal place. The reason is in the code:
+[caching.ts](../lib/server/agent/caching.ts) places its two breakpoints on the
+system message and the end of the seed prefix — **both HEAD**. The hidden block
+therefore remains frozen at a few thousand tokens while the history reaches some
+150,000, and its share becomes negligible. We pay full price for the entire
+conversation, each round.
 
-> Si l'historique entier était lu depuis le cache, ce run aurait coûté **3,35 $ au
-> lieu de 27,85 $** (−88 %). C'est un levier bien plus gros que la compaction, et
-> c'est un autre sujet : déplacer le breakpoint en QUEUE d'historique à chaque round.
-> Hors périmètre de MIN-113, qui calibre le filet existant. → à ouvrir séparément.
+> If the entire history was read from the cache, this run would have cost **$3.35 at
+> instead of $27.85** (−88%). This is a much bigger lever than compaction, and
+> that's another subject: moving the breakpoint to the TAIL of history each round.
+> Outside the perimeter of MIN-113, which calibrates the existing net. → to be opened separately.
 
-**À partir de quand résumer est-il rentable ?** Une compaction coûte un sous-appel
-sur tout sauf la queue (~12 k tokens), puis fait retomber le contexte à ~25 k. À
-150 k sur Sonnet 5 : le round coûte 0,300 $, le sous-appel 0,288 $, le round
-suivant 0,050 $ — **amorti en 1,2 round**. Le rapport est le même sur les trois
-modèles et à tous les seuils testés entre 60 k et 200 k (1,1 à 1,6 round), parce
-que le coût du résumé et l'économie par round sont tous deux linéaires en `T`. La
-rentabilité ne discrimine donc pas : **la compaction est rentable dès ~60 k**. Ce
-qui fixe le seuil par le bas, c'est la qualité — ne pas harceler les sessions
-normales — pas le coût.
+**At what point is summarization profitable?** Compaction costs one subcall
+on everything except the tail (~12k tokens), then drops the context to ~25k. HAS
+150k on Sonnet 5: the round costs $0.300, the subcall $0.288, the round
+next $0.050 — **depreciated in 1.2 rounds**. The ratio is the same on all three
+models and at all thresholds tested between 60 k and 200 k (1.1 to 1.6 rounds), because
+that the summarization cost and economy per round are both linear in `T`. There
+profitability therefore does not discriminate: **compaction is profitable from ~60 k**. This
+who sets the threshold from below is quality — don't harass sessions
+normal — not the cost.
 
-**Seuil retenu : `AGENT_COMPACT_ABSOLUTE_MAX_TOKENS = 120_000`.**
+**Selected threshold: `AGENT_COMPACT_ABSOLUTE_MAX_TOKENS = 120_000`.**
 
-| T | Rounds ≥ T (sur 814) | Runs concernés | Coût simulé du gros run |
+| T | Rounds ≥ T (of 814) | Runs affected | Simulated cost of the big run |
 | ---: | ---: | ---: | ---: |
 | 100 k | 61 (7,5 %) | 1 | 19,75 $ (−29 %) |
 | **120 k** | **48 (5,9 %)** | **1** | **20,77 $ (−25 %)** |
 | 150 k | 16 (2,0 %) | 1 | 23,37 $ (−16 %) |
-| 160 k et au-delà | **0** | **0** | inchangé |
+| 160k and beyond | **0** | **0** | unchanged |
 
-Les 180 000 tokens proposés au cadrage sont **écartés par la mesure** : aucun des
-814 rounds observés n'atteint 160 000, donc un plafond à 180 k ne se déclencherait
-jamais — ce serait reproduire le bug du ticket avec un plus petit nombre. 120 000
-se place au-dessus du p90 (86 815) : les sessions normales ne le voient pas, seuls
-les ~6 % de rounds du run réellement long le franchissent, et il aurait économisé
-un quart du coût de ce run.
+The 180,000 tokens proposed for the framework are **discarded by the measure**: none of the
+814 rounds observed does not reach 160,000, so a cap at 180k would not trigger
+never — this would reproduce the ticket bug with a smaller number. 120,000
+is placed above p90 (86,815): normal sessions do not see it, only
+the ~6% of rounds of the really long run cross it, and it would have saved
+a quarter of the cost of this run.
 
-#### Le chemin complet, exercé pour de vrai
+#### The complete path, practiced for real
 
-« Du code de secours jamais exécuté est du code cassé jusqu'à preuve du contraire »
-appelle une preuve, pas un test unitaire de plus. Deux niveaux :
+“False code never executed is broken code until proven otherwise”
+calls for a proof, not one more unit test. Two levels:
 
-**1. Test d'intégration** — [compact-path.test.ts](../lib/server/agent/compact-path.test.ts)
-fait tourner `runAgentLoop` en ne moquant QUE `fetch` : le streaming SSE, le
-sous-appel de résumé, la reconstruction et le round suivant sont le vrai code. Ce
-qui est vérifié n'est pas la valeur de retour mais **le corps réellement envoyé au
-provider au round suivant** — appariement `tool_call` ↔ `tool`, absence de `tool`
-orphelin, préfixe de seed verbatim, résumé présent une seule fois. Même chose pour
-`dropOldestRound` sur un 400 « contexte trop long » : convergence en ≤ 4 essais,
-appariement intact à chaque tentative, et un 400 qui n'est PAS un dépassement de
-contexte échoue le run sans rien élaguer. Les deux garde-fous ont été vérifiés en
-les cassant : sans le `Math.min`, le test de recalibrage tombe.
+**1. Integration test** — [compact-path.test.ts](../lib/server/agent/compact-path.test.ts)
+runs `runAgentLoop` while ONLY mocking `fetch`: SSE streaming,
+subsummary call, rebuild and next round are the real code. This
+which is checked is not the return value but **the body actually sent to the
+provider on the next round** — matching `tool_call` ↔ `tool`, no orphan `tool`,
+seed prefix verbatim, summary present only once. Same thing for
+`dropOldestRound` on a 400 “context too long”: convergence in ≤ 4 tests,
+pairing intact on every attempt, and a 400 which is NOT an overrun
+context fails the run without pruning anything. The two guardrails were checked in
+breaking them: without the `Math.min`, the recalibration test fails.
 
-**2. Contre le vrai provider, sur un vrai checkpoint** (2026-07-28). Le checkpoint
-de production le plus long en messages (run `1d08300a`, **569 messages, 40 266
-tokens**) passé dans la chaîne réelle `pruneToolOutputs` → `planCompaction` →
-sous-appel de résumé → reconstruction :
+**2. Against the real provider, on a real checkpoint** (2026-07-28). The checkpoint
+longest production run in messages (run `1d08300a`, **569 messages, 40,266
+tokens**) passed in the real string `pruneToolOutputs` → `planCompaction` →
+subcall summary → reconstruction:
 
-| Étape | Résultat |
+| Step | Result |
 | --- | --- |
-| Plan de compaction | seed 3 msg · à résumer 480 msg · queue 86 msg |
-| Sous-appel de résumé (`deepseek-v4-flash`) | note de 3 488 caractères, 0,0033 $ |
-| Historique reconstruit | **90 messages, 15 006 tokens** (−63 %), appariement valide |
-| Round suivant sur `openai/gpt-5.6-luna` | **200 OK**, 18 225 tokens de prompt |
-| Round suivant sur `anthropic/claude-sonnet-5` | **200 OK**, 30 719 tokens de prompt |
+| Compaction plan | seed 3 msg · to summarize 480 msg · tail 86 msg |
+| Summary subcall (`deepseek-v4-flash`) | 3,488 character note, $0.0033 |
+| Reconstructed history | **90 messages, 15 006 tokens** (−63%), valid pairing |
+| Next round on `openai/gpt-5.6-luna` | **200 OK**, 18,225 prompt tokens |
+| Next round on `anthropic/claude-sonnet-5` | **200 OK**, 30,719 prompt tokens |
 
-Les deux modèles reprennent le fil correctement — la réponse enchaîne sur le
-travail réel du run (sélection multiple et actions groupées, MIN-75), pas sur une
-généralité. Le 400 d'appariement redouté ne se produit sur aucun des deux. Coût
-total de la vérification : **0,08 $**.
+Both models pick up the thread correctly — the response continues on the
+real work of the run (multiple selection and grouped actions, MIN-75), not on a
+generality. The dreaded matching 400 doesn't happen on either one. Cost
+check total: **$0.08**.
 
-Ce qui reste non couvert, et ne peut l'être qu'après déploiement : que l'event
-`compacted` atterrisse bien dans `agent_run_events` via le harness déployé, et que
-la sandbox poursuive après compaction.
+What remains uncovered, and can only be covered after deployment: that the event
+`compacted` lands in `agent_run_events` via the harness deployed, and that
+the sandbox continues after compaction.
 
-#### Le modèle est prévenu avant d'être coupé
+#### The model is warned before being cut
 
-Troisième grief levé : le modèle recevait un résumé préfixé au milieu de son propre
-raisonnement, sans préavis. `runAgentLoop` injecte désormais, **une seule fois par
-chunk**, un message `user` court dès que le contexte franchit **70 % du seuil** —
-« finish the step you are on and reply, do not start new exploration » — et émet un
-event `status` de phase `context_warning`, qui donne au passage un précurseur
-mesurable de la compaction.
+Third complaint raised: the model received a summary prefixed in the middle of its own
+reasoning, without notice. `runAgentLoop` now injects **only once per
+chunk**, a `user` message runs as soon as the context crosses **70% of the threshold** —
+“finish the step you are on and reply, do not start new exploration” — and emits a
+event `status` of phase `context_warning`, which gives a precursor
+measurable compaction.
 
-**Pas de tool `get_context_remaining`**, et c'est délibéré : c'est le choix inverse
-de Codex. Le harness connaît déjà `lastPromptTokens` à chaque round ; faire dépenser
-un tour au modèle pour demander un chiffre qu'on peut lui pousser est un mauvais
-échange. Le commentaire est dans le code pour qu'on ne le « corrige » pas.
+**No tool `get_context_remaining`**, and this is deliberate: it is the opposite choice
+of Codex. The harness already knows `lastPromptTokens` each round; to spend
+a turn to the model to ask for a number that can be pushed to it is bad
+exchange. The comment is in the code so that we don't "fix" it.
 
-### 3.5 Self-correction et réessai
-
-| | minddy | Codex | OpenCode |
-| --- | --- | --- | --- |
-| Réessai réseau/LLM | 4 tentatives, backoff exponentiel, `Retry-After`, timeout d'inactivité 60 s, puis **suspend** au lieu d'échouer | — | `RETRY_INITIAL_DELAY = 2000`, facteur 2, plafond 30 s sans en-tête, `retry-after` et `retry-after-ms` honorés |
-| Contexte trop long (400) | `dropOldestRound` × 4 puis retente | compaction | compaction |
-| Édition ratée | cascade de **10 replacers**, échec bruyant | grammaire Lark : le modèle **ne peut pas** produire un patch mal formé | cascade de **9 replacers** (les nôtres + un de moins : pas de `UnicodeNormalizedReplacer`) |
-| Appel de tool malformé | le round casse ou l'arg devient `""` (`safeParse` renvoie `{}`) | validation de schéma | **tool `invalid`** : l'erreur de validation revient au modèle comme sortie de tool, le round continue |
-| Après une édition | rien | rien | **diagnostics LSP** |
-
-> **Verdict — un écart réel (`invalid`), un point où nous sommes devant.**
-> Notre cascade d'édition est *strictement supérieure* à celle d'OpenCode dont elle
-> est dérivée (on a ajouté `UnicodeNormalizedReplacer` — les modèles émettent des
-> tirets cadratins et des guillemets courbes là où le fichier a de l'ASCII). Le tool
-> `invalid` d'OpenCode, lui, comble un trou réel : `safeParse` avale silencieusement
-> un JSON d'arguments malformé et exécute le tool avec `{}`.
-
-### 3.6 Gros fichiers et navigation
+### 3.5 Self-correction and retry
 
 | | minddy | Codex | OpenCode |
 | --- | --- | --- | --- |
-| Lecture | 2 000 lignes par défaut, `offset`/`limit`, **pied de page explicite** : « Showing lines X-Y of Z. Use offset/limit to read more. » | via shell | 2 000 lignes, `offset`/`limit`, lignes > 2 000 car. tronquées |
-| Sortie de commande | `cap(stdout, 4000)` + `cap(stderr, 2000)` — **troncature par la TÊTE, la queue est perdue** ([execute.ts:326-338](../lib/server/agent/execute.ts#L326-L338)) puis `headTail(…, 6000)` | budget en **tokens** (`max_output_tokens`, défaut 10 000, plafond 1 MiB / ~256 k tokens), paramétrable **par appel** | 2 000 lignes / 50 KiB (configurable), et **au-delà : la sortie complète est écrite sur disque**, le modèle reçoit un aperçu + « Full output saved to: `<file>` — Use Grep to search the full content or Read with offset/limit » ([truncate.ts:129-137](https://github.com/anomalyco/opencode/blob/40e4d73/packages/opencode/src/tool/truncate.ts#L129-L137)) |
-| Consigne au modèle | — | — | « Do NOT use `head`, `tail`, or other truncation commands to limit output; the full output will already be captured to a file » |
-| Sortie élaguée du contexte | `PRUNE_STUB` : « Re-read the file or re-run the search if you still need it. » | — | fichier sur disque, toujours relisible |
+| Network/LLM retest | 4 attempts, exponential backoff, `Retry-After`, inactivity timeout 60 s, then **suspend** instead of failing | — | `RETRY_INITIAL_DELAY = 2000`, factor 2, 30 s cap without header, `retry-after` and `retry-after-ms` honored |
+| Context too long (400) | `dropOldestRound` × 4, then retry | compaction | compaction |
+| Failed edition | cascade of **10 replacers**, noisy failure | Lark grammar: model **cannot** produce a malformed patch | cascade of **9 replacers** (ours + one less: no `UnicodeNormalizedReplacer`) |
+| Malformed tool call | the round breaks or the arg becomes `""` (`safeParse` returns `{}`) | schema validation | **tool `invalid`**: validation error returns to model as tool output, round continues |
+| After an edition | nothing | nothing | **LSP diagnostics** |
 
-> **Verdict — écart réel, coûteux, et le plus grave du document.**
+> **Verdict — a real gap (`invalid`), a point where we are ahead.**
+> Our editing cascade is *strictly superior* to that of OpenCode which it
+> is derived (we added `UnicodeNormalizedReplacer` — the models emit
+> em dashes and curved quotes where the file has ASCII). The tool
+> `invalid` from OpenCode fills a real hole: `safeParse` silently swallows
+> a malformed JSON of arguments and executes the tool with `{}`.
+
+### 3.6 Large files and browsing
+
+| | minddy | Codex | OpenCode |
+| --- | --- | --- | --- |
+| Reading | 2000 lines by default, `offset`/`limit`, **explicit footer**: “Showing lines X-Y of Z. Use offset/limit to read more. » | via shell | 2000 lines, `offset`/`limit`, lines > 2000 chars. truncated |
+| Command output | `cap(stdout, 4000)` + `cap(stderr, 2000)` — **truncation by the HEAD, the tail is lost** ([execute.ts:326-338](../lib/server/agent/execute.ts#L326-L338)) then `headTail(…, 6000)` | budget in **tokens** (`max_output_tokens`, default 10,000, ceiling 1 MiB / ~256 k tokens), configurable **per call** | 2000 lines / 50 KiB (configurable), and **beyond: full output is written to disk**, the model receives a preview + “Full output saved to: `<file>` — Use Grep to search the full content or Read with offset/limit” ([truncate.ts:129-137](https://github.com/anomalyco/opencode/blob/40e4d73/packages/opencode/src/tool/truncate.ts#L129-L137)) |
+| Instructions to the model | — | — | “Do NOT use `head`, `tail`, or other truncation commands to limit output; the full output will already be captured to a file » |
+| Context pruned output | `PRUNE_STUB`: “Re-read the file or re-run the search if you still need it. » | — | file on disk, always rereadable |
+
+> **Verdict — real, costly, and most serious discrepancy in the document.**
 >
-> **Sonde déterministe.** J'ai fait passer une sortie type de `npm test` en échec
-> (407 lignes : 400 lignes de coches vertes, puis le récapitulatif — nom du test
-> raté, assertion, `Test Files 1 failed`) dans la chaîne de troncature réelle
+> **Deterministic probe.** I made a typical output of `npm test` fail
+> (407 lines: 400 lines of green checkmarks, then the summary — name of the test
+> miss, assertion, `Test Files 1 failed`) in actual truncation string
 > (`cap(4000)` de [execute.ts](../lib/server/agent/execute.ts) puis
 > `headTail(6000)` de [agent-loop.ts](../lib/server/agent/agent-loop.ts)) :
 >
 > ```
-> stdout brut : 16 595 caractères, 407 lignes
-> après cap(4000)          : le verdict final est-il présent ?  NON
->                            le nom du test en échec ?          NON
-> après headTail(6000)     : verdict final présent ?            NON
-> dernières lignes vues par le modèle :
+> raw stdout: 16,595 characters, 407 lines
+> after cap(4000): is the final verdict present?  NO
+> the name of the failed test?          NO
+> after headTail(6000): final verdict present?            NO
+> last lines seen by the model:
 >    ✓ lib/foo/bar-97.test.ts (7 tests) 10ms
 >    ✓ lib/foo/bar-98.test.ts (7 tests) 11ms
 >    ✓ lib/foo/bar-99.test.ts (7… [truncated]","stderr":""}
 > ```
 >
-> **Le modèle voit cent tests verts et `exitCode: 1`, sans savoir ce qui a cassé.**
-> `headTail` existe précisément pour garder la queue — mais `cap()` l'a déjà détruite
-> en amont. Ce n'est pas une hypothèse : c'est le chemin de code exécuté à chaque
-> `run_command`. Et ça explique directement les 23 pipes vers `head`/`tail` et les
-> 12 `2>&1` de la §2 : le modèle a appris à se défendre du harness.
+> **The model sees a hundred green tests and `exitCode: 1`, without knowing what broke.**
+> `headTail` exists precisely to keep the queue — but `cap()` has already destroyed it
+> upstream. This is not an assumption: it is the code path executed each time
+> `run_command`. And that directly explains the 23 pipes to `head`/`tail` and the
+> 12 `2>&1` of §2: the model has learned to defend itself from the harness.
 
-### 3.7 Tests et vérification
+### 3.7 Testing and verification
 
 | | minddy | Codex | OpenCode |
 | --- | --- | --- | --- |
-| Doctrine | 1 ligne : « run the project's linter / type-check / build / tests » | section « Validating your work » : du plus spécifique au plus large, **jamais de tests dans un dépôt sans tests**, 3 itérations max sur le formatage, proactivité conditionnée au mode d'approbation | prompt du tool `shell` |
-| Où le projet déclare ses commandes | `AGENTS.md`/`CLAUDE.md` **à la racine du clone seulement**, 32 000 octets | `AGENTS.md` **hiérarchique** : de la racine du projet jusqu'au cwd, concaténés dans cet ordre, `AGENTS.override.md` local, `project_doc_max_bytes` = **32 KiB** ([config/mod.rs:206](https://github.com/openai/codex/blob/294d813/codex-rs/core/src/config/mod.rs#L206)) | `AGENTS.md`, `CLAUDE.md`, `CONTEXT.md` (déprécié), + globaux `~/.config/opencode/AGENTS.md` et `~/.claude/CLAUDE.md` ; « the first project-level match wins so we don't stack from every ancestor » |
-| Environnement prêt ? | non — l'agent découvre que `node_modules` est vide | l'environnement est celui de l'utilisateur | idem |
-| Signal de vérification | aucun event, aucune trace | — | — |
+| Doctrine | 1 line: “run the project's linter / type-check / build / tests” | “Validating your work” section: from the most specific to the broadest, **never tests in a repository without tests**, 3 iterations max on formatting, proactivity conditioned on approval mode | tool prompt `shell` |
+| Where the project declares its orders | `AGENTS.md`/`CLAUDE.md` **at clone root only**, 32,000 bytes | `AGENTS.md` **hierarchical**: from the project root to the cwd, concatenated in this order, `AGENTS.override.md` local, `project_doc_max_bytes` = **32 KiB** ([config/mod.rs:206](https://github.com/openai/codex/blob/294d813/codex-rs/core/src/config/mod.rs#L206)) | `AGENTS.md`, `CLAUDE.md`, `CONTEXT.md` (deprecated), + global `~/.config/opencode/AGENTS.md` and `~/.claude/CLAUDE.md` ; “the first project-level match wins so we don’t stack from every ancestor” |
+| Environment ready? | no — the agent discovers that `node_modules` is empty | the environment is that of the user | ditto |
+| Verification signal | no event, no trace | — | — |
 
-> **Verdict — écart réel et coûteux, mais pas là où on l'attendait.** Notre cap de
-> 32 Ko est déjà aligné sur Codex (le commentaire d'`execute.ts` le dit). La
-> hiérarchie d'`AGENTS.md` est un raffinement de monorepo dont nous n'avons pas
-> besoin. **Le vrai écart est en amont** : chez Codex et OpenCode, le dépôt est déjà
-> installé — chez nous, une microVM fraîche a un `node_modules` vide, et
-> `tsc: command not found` est notre erreur la plus fréquente (§2). Ce n'est pas un
-> écart de harness au sens strict, c'est le prix de notre modèle d'exécution.
+> **Verdict — real and costly gap, but not where we expected.** Our target
+> 32 KB is already aligned with Codex (`execute.ts`'s comment says so). There
+> `AGENTS.md` hierarchy is a refinement of monorepo which we do not have
+> need. **The real gap is upstream**: at Codex and OpenCode, the repository is already
+> installed — for us, a fresh microVM has an empty `node_modules`, and
+> `tsc: command not found` is our most frequent error (§2). It's not a
+> harness gap in the strict sense, this is the price of our execution model.
 
 ---
 
-## 4. Opportunités priorisées
+## 4. Prioritized opportunities
 
-| # | Opportunité | Impact | Coût | Surface produit | Fichiers |
+| # | Opportunity | Impact | Cost | Product surface | Files |
 | --- | --- | --- | --- | --- | --- |
-| **1** | **Garder la QUEUE des sorties de commande** (`headTail` au lieu de `cap`) | Très fort — sans ça, l'agent ne peut pas lire un test qui échoue | Trivial (2 lignes) | Nulle | [execute.ts:326-338](../lib/server/agent/execute.ts#L326-L338) |
-| **2** | **Sortie longue déposée dans la sandbox et relisible** (modèle OpenCode) | Fort — supprime la perte d'information *et* les contournements `head`/`tail` | Moyen | Nulle (le tool ne change pas de signature) | `execute.ts`, `sandbox.ts` |
-| **3** | **Garde-fou exécuté sur les commandes git destructrices** | Fort — protège le travail de l'utilisateur ; écart **mesuré** (2 occurrences) | Faible | Nulle | nouveau `lib/server/agent/command-guard.ts`, branché dans `makeExecTool` |
-| **4** | **Diagnostics de type réinjectés après édition** | Fort — referme la boucle édition→erreur dans le tool | Moyen-fort (il faut un type-checker dans la VM) | Nulle | `execute.ts` (`edit_file`, `apply_edits`, `write_file`) |
-| **5** | **`workdir` et `timeout_ms` sur `run_command`** | Moyen — 13 % des commandes préfixent un `cd` inutile | Trivial | Nulle (paramètres optionnels) | `tools.ts`, `execute.ts` |
-| **6** | **Mode littéral sur `grep` (`fixed_strings`)** | Moyen — 3 échecs mesurés, tous du JSX | Trivial | Nulle | `tools.ts`, `sandbox.ts` (`-F` au lieu de `-E`) |
-| **7** | **Entrée visuelle : les images des pièces jointes vues par le modèle** | Moyen-fort sur *notre* cas d'usage (maquette jointe à un ticket) | Fort (l'historique passe en `content: Array<Part>`) | Faible | `agent-loop.ts`, `issue-tools.ts`, `prompt.ts`, `compact.ts` |
-| **8** | **`success` honnête sur `apply_edits`** (succès partiel ≠ échec) | Faible en fonctionnel, fort en lisibilité des métriques | Trivial | Nulle | `execute.ts:324` |
-| **9** | **Tool `invalid` : réparer un appel malformé au lieu de le subir** | Faible (non mesuré chez nous) | Faible | Nulle | `agent-loop.ts` (`safeParse`) |
-| **10** | **`apply_patch` servi aux modèles `gpt-*`** (10 runs / 15) | Moyen — le format sur lequel ces modèles sont entraînés | Moyen | Nulle (le tool remplace `edit_file`/`write_file` selon le modèle) | `tools.ts`, nouveau `patch.ts`, `execute.ts` |
-| **11** | **Sous-agents, hiérarchie à un niveau** | Fort en capacité, nul en fiabilité | Fort | **Réelle** — c'est la seule ligne du tableau qui ajoute une notion produit | `tools.ts`, `agent-loop.ts`, nouveau `subagent.ts` |
-| **12** | **Commandes en arrière-plan** (serveur de dev, poll, stop) | Fort — l'agent peut enfin voir tourner ce qu'il écrit | Moyen | Faible (3 tools, ou 1 tool à 3 actions) | `tools.ts`, `sandbox.ts`, `execute.ts` |
-| **13** | **Gestion du contexte : la calibrer, la tester, la signaler au modèle** | Fort — aujourd'hui c'est du code jamais exécuté | Moyen | Nulle | `agent-loop.ts`, `compact.ts`, `lib/agent-models.ts` |
-| **14** | **`AGENTS.md` / `CLAUDE.md` des sous-dossiers touchés** | Faible-moyen | Faible | Nulle | `execute.ts` (`readRepoInstructions`) |
+| **1** | **Keep the QUEUE of command outputs** (`headTail` instead of `cap`) | Very strong — without it, the agent cannot read a failing test | Trivial (2 lines) | Zero | [execute.ts:326-338](../lib/server/agent/execute.ts#L326-L338) |
+| **2** | **Long output deposited in the sandbox and rereadable** (OpenCode model) | Strong — removes information loss *and* workarounds `head`/`tail` | Medium | Null (the tool does not change signature) | `execute.ts`, `sandbox.ts` |
+| **3** | **Safeguard executed on destructive git commands** | Strong — protects the user's work; deviation **measured** (2 occurrences) | Low | Zero | new `lib/server/agent/command-guard.ts`, plugged into `makeExecTool` |
+| **4** | **Type diagnostics reinjected after editing** | Strong — closes the edit→error loop in the tool | Medium-strong (you need a type-checker in the VM) | Zero | `execute.ts` (`edit_file`, `apply_edits`, `write_file`) |
+| **5** | ****CODE_0__ and `timeout_ms` on `run_command`** | Average — 13% of commands prefix an unnecessary `cd` | Trivial | Null (optional parameters) | `tools.ts`, `execute.ts` |
+| **6** | **Literal mode on `grep` (`fixed_strings`)** | Average — 3 measured failures, all from JSX | Trivial | Zero | `tools.ts`, `sandbox.ts` (`-F` instead of `-E`) |
+| **7** | **Visual input: images of attachments seen by the model** | Medium-strong on *our* use case (model attached to a ticket) | Strong (history changes to `content: Array<Part>`) | Low | `agent-loop.ts`, `issue-tools.ts`, `prompt.ts`, `compact.ts` |
+| **8** | ****CODE_0__ honest on `apply_edits`** (partial success ≠ failure) | Weak in functionality, strong in readability of metrics | Trivial | Zero | `execute.ts:324` |
+| **9** | **Tool `invalid`: repair a malformed call instead of suffering it** | Low (not measured by us) | Low | Zero | `agent-loop.ts` (`safeParse`) |
+| **10** | ****CODE_0__ used for `gpt-*`** models (10 runs / 15) | Medium — the format these models are trained on | Medium | Null (the tool replaces `edit_file`/`write_file` depending on the model) | `tools.ts`, new `patch.ts`, `execute.ts` |
+| **11** | **Subagents, one-level hierarchy** | Strong on capacity, poor on reliability | Strong | **Real** — this is the only line in the table that adds a product concept | `tools.ts`, `agent-loop.ts`, new `subagent.ts` |
+| **12** | **Background commands** (dev server, poll, stop) | Strong — the agent can finally see what he writes happening | Medium | Low (3 tools, or 1 tool with 3 actions) | `tools.ts`, `sandbox.ts`, `execute.ts` |
+| **13** | **Context management: calibrate it, test it, report it to the model** | Strong — today it's code never executed | Medium | Zero | `agent-loop.ts`, `compact.ts`, `lib/agent-models.ts` |
+| **14** | **`AGENTS.md` / `CLAUDE.md` of the affected subfolders** | Low-medium | Low | Zero | `execute.ts` (`readRepoInstructions`) |
 
-### Non retenu, et pourquoi
+### Not retained, and why
 
-**Un seul** écart réel que nous décidons de ne pas combler :
+**One** real gap that we decide not to fill:
 
-- **Système d'approbations interactives** (Codex `request_permissions`,
-  OpenCode `ctx.ask`). L'agent tourne dans le cloud, souvent pendant que
-  l'utilisateur fait autre chose. Une approbation qui bloque est une session morte.
-  Et l'isolation rend la question théorique : la microVM est jetable, l'agent peut
-  y faire à peu près ce qu'il veut sans conséquence. `ask_user` couvre déjà le seul
-  cas qui compte — une *décision produit* qui bloque. **Décision confirmée après
-  revue.**
+- **Interactive approval system** (Codex `request_permissions`,
+OpenCode `ctx.ask`). The agent runs in the cloud, often while
+the user does something else. A blocking approval is a dead session.
+And isolation makes the question moot: the microVM is disposable, the agent can
+do pretty much what he wants without consequence. `ask_user` already covers the only
+case that counts — a *product decision* that blocks. **Decision confirmed after
+  review.**
 
-Et **une variante** écartée au profit d'une autre forme (voir §5, R12) :
+And **a variant** discarded in favor of another form (see §5, R12):
 
-- **`get_context_remaining` comme tool que le modèle interroge.** Faire dépenser un
-  tour au modèle pour demander son budget restant est un mauvais échange quand le
-  harness, lui, connaît déjà le chiffre à chaque round (`lastPromptTokens`). On
-  garde l'idée — que le modèle SACHE où il en est — mais en la lui **poussant** au
-  moment utile plutôt qu'en la lui faisant tirer.
+- **`get_context_remaining` as the tool that the model queries.** Spend a
+turn to the model to ask for his remaining budget is a bad exchange when the
+harness already knows the number each round (`lastPromptTokens`). We
+keeps the idea - that the model KNOWS where it is - but by **pushing** it to
+useful moment rather than making him shoot it.
 
-> ### Révision du 2026-07-28 — six écarts réintégrés
+> ### Revision of 2026-07-28 — six deviations reinstated
 >
-> La première version de ce document en écartait sept. La revue en a récupéré six,
-> dont **deux sur une erreur d'analyse de ma part** et **quatre sur une décision
-> produit assumée** (« minddy doit pouvoir faire n'importe quel travail, pas
-> seulement du travail sobre »). Quatre chiffres, mesurés après coup, ont tranché :
+> The first version of this document excluded seven. The review recovered six,
+> including **two on an analysis error on my part** and **four on a decision
+> assumed product** (“minddy must be able to do any job, not
+> only sober work"). Four figures, measured after the fact, decided:
 >
-> | Mesure | Valeur | Ce que ça invalide |
+> | Measurement | Value | What it invalidates |
 > | --- | --- | --- |
-> | Modèle dominant des runs | **`openai/gpt-5.6-luna` : 10 runs / 15** | « notre défaut est DeepSeek, `apply_patch` ne sert à rien » |
-> | Forme du tool `apply_patch` d'OpenCode | **tool normal, un paramètre `patchText: string`** — aucune grammaire, aucun support provider | « le format patch n'est pas portable » |
-> | Fenêtres de contexte des modèles utilisés | **1 050 000 / 1 048 576 / 1 000 000 tokens** → seuil de compaction à ~787 000 | « notre compaction couvre les sessions longues » |
-> | Events `status` de phase `compacted` / `context_trim` | **0, depuis toujours** | idem — la machinerie n'a **jamais tourné** |
+> | Dominant pattern of runs | ****CODE_0__: 10 runs / 15** | “our default is DeepSeek, `apply_patch` is useless” |
+> | Form of OpenCode tool `apply_patch` | **normal tool, one `patchText: string`** parameter — no grammar, no support provider | “the patch format is not portable” |
+> | Context windows of the models used | **1,050,000 / 1,048,576 / 1,000,000 tokens** → compaction threshold at ~787,000 | “our compaction covers long sessions” |
+> | Events `status` of phase `compacted` / `context_trim` | **0, always** | ditto — the machinery **never turned** |
 >
-> **Ce que je m'étais trompé.**
+> **What I was wrong.**
 >
-> - **`apply_patch`.** J'avais raison sur Codex (grammaire Lark = décodage contraint,
->   non portable via OpenRouter) et j'en ai tiré une conclusion fausse sur le
->   *format*. OpenCode implémente le même format comme un **tool ordinaire à un
->   paramètre string** ([apply_patch.ts:18-20](https://github.com/anomalyco/opencode/blob/40e4d73/packages/opencode/src/tool/apply_patch.ts#L18-L20))
->   — zéro dépendance provider. Et il ne le sert qu'aux modèles `gpt-*`, qui sont
->   précisément 10 de nos 15 runs. → **retenu, R8.**
-> - **La gestion du contexte.** J'ai écrit « pas d'écart pénalisant » parce que la
->   machinerie existe. Elle existe, mais **elle n'a jamais été exercée une seule
->   fois en production** : avec des fenêtres à 1 M tokens, le seuil à 75 % est à
->   787 k, et notre plus gros checkpoint fait ~140 k tokens. Du code de secours
->   jamais exécuté est du code cassé jusqu'à preuve du contraire, et le vrai plafond
->   n'est pas la fenêtre — c'est le **coût par round** (on renvoie 140 k tokens à
->   chaque appel) et `MAX_CHECKPOINT_BYTES`. → **retenu, R12.**
+> - **`apply_patch`.** I was right about Codex (Lark grammar = constrained decoding,
+> not portable via OpenRouter) and I drew a false conclusion about the
+> *format*. OpenCode implements the same format as an ordinary one-to-one **tool
+> string parameter** ([apply_patch.ts:18-20](https://github.com/anomalyco/opencode/blob/40e4d73/packages/opencode/src/tool/apply_patch.ts#L18-L20))
+> — zero provider dependency. And it only serves it for `gpt-*` models, which are
+> precisely 10 of our 15 runs. → **retained, R8.**
+> - **Context management.** I wrote “no penalizing deviation” because the
+> machinery exists. It exists, but **it has never been exercised once
+> times in production**: with windows of 1M tokens, the 75% threshold is at
+> 787k, and our largest checkpoint is ~140k tokens. Emergency code
+> never executed is broken code until proven otherwise, and the true ceiling
+> is not the window — it is the **cost per round** (we return 140k tokens to
+> each call) and `MAX_CHECKPOINT_BYTES`. → **retained, R12.**
 >
-> **Ce qui relève d'une décision produit, pas d'une erreur d'analyse.**
+> **This is a product decision, not an analysis error.**
 >
-> - **Sous-agents.** Mon argument (coût, opacité, surface de prompt) reste vrai ;
->   il est simplement subordonné à un choix : déléguer est un mode de travail
->   normal en 2026, et un harness qui ne sait pas le faire plafonne. **Hiérarchie
->   à un seul niveau** — un sous-agent ne peut pas en lancer d'autres. → **R9.**
-> - **Commandes en arrière-plan.** J'avais rejeté le shell à sessions de Codex, et
->   ça reste juste : une session PTY ne survivrait pas à notre suspend/resume. Mais
->   je m'étais arrêté à la mécanique au lieu de regarder la capacité qu'elle porte —
->   **lancer un serveur de dev et vérifier que l'application tourne vraiment**.
->   Aujourd'hui `run_command` bloque jusqu'à 180 s puis tue le processus : notre
->   agent ne peut pas voir son propre travail fonctionner. → **R10** (start / poll /
->   stop, pas de PTY).
-> - **Hiérarchie d'`AGENTS.md`.** « Raffinement de monorepo » était exact et
->   insuffisant : c'est surtout très bon marché, et un dépôt sur deux met un
->   `CLAUDE.md` dans un sous-dossier. → **R11.**
-> - **Tool `lsp`.** Maintenu hors périmètre **immédiat**, mais plus par principe :
->   il devient une suite naturelle de R4 (MIN-110). Si la mesure montre qu'un
->   serveur de langage peut vivre dans la microVM, « trouver toutes les références »
->   — que `grep` approxime mal — suit presque gratuitement. **Conditionné à la
->   mesure de MIN-110**, pas refusé.
+> - **Subagents.** My argument (cost, opacity, prompt surface) remains true;
+> it is simply subordinate to a choice: delegating is a way of working
+> normal in 2026, and a harness that does not know how to do it will plateau. **Hierarchy
+> at a single level** — a subagent cannot launch others. → **R9.**
+> - **Background commands.** I had rejected the Codex session shell, and
+> it remains true: a PTY session would not survive our suspend/resume. But
+> I stopped at the mechanics instead of looking at the capacity it carries —
+> **launch a dev server and check that the application is really running**.
+> Today `run_command` blocks up to 180 s then kills the process: our
+>   agent cannot see its own work running. → **R10** (start / poll /
+>   stop, no PTY).
+> - **Hierarchy of `AGENTS.md`.** “Monorepo refinement” was correct and
+> insufficient: it is above all very cheap, and one deposit in two puts a
+> `CLAUDE.md` in a subfolder. → **R11.**
+> - **Tool `lsp`.** Kept outside scope **immediate**, but no longer as a matter of principle:
+> it becomes a natural continuation of R4 (MIN-110). If the measurement shows that a
+> language server can live in the microVM, "find all references"
+> — which `grep` approximates poorly — follows almost for free. **Packaged at
+> measurement of MIN-110**, not refused.
 
 ---
 
-## 5. Recommandations concrètes
+## 5. Concrete recommendations
 
-### R1 — Garder la queue des sorties de commande *(rang 1)*
+### R1 — Keep the tail of the command outputs *(rank 1)*
 
-**Quoi.** Dans [execute.ts](../lib/server/agent/execute.ts), case `run_command` :
-remplacer `cap(r.stdout, 4000)` / `cap(r.stderr, 2000)` par `headTail(...)`, déjà
-exporté par [prune.ts](../lib/server/agent/prune.ts).
+**What.** In [execute.ts](../lib/server/agent/execute.ts), box `run_command`:
+replace `cap(r.stdout, 4000)` / `cap(r.stderr, 2000)` with `headTail(...)`, already
+exported by [prune.ts](../lib/server/agent/prune.ts).
 
-**Risque.** Aucun : `headTail` retourne la chaîne telle quelle sous le seuil, donc
-aucun comportement ne change sur les sorties courtes.
+**Risk.** None: `headTail` returns the string as is below the threshold, so
+no behavior changes on short outings.
 
-**Mesurable.** Rejouer la sonde du §3.6 en test (`execute.test.ts`) : le verdict
-final doit être présent. En production, le taux d'échec de `run_command` suivi de
-`run_command` immédiatement retenté avec `| tail` doit tomber à zéro.
+**Measurable.** Replay the probe from §3.6 in test (`execute.test.ts`): the verdict
+final must be present. In production, the failure rate of `run_command` followed by
+`run_command` immediately retried with `| tail` must fall to zero.
 
-### R2 — Sortie longue déposée dans la sandbox *(rang 1)*
+### R2 — Long output placed in the sandbox *(rank 1)*
 
-**Quoi.** Au-delà du seuil, écrire la sortie complète dans
-`/vercel/sandbox/tool-output/<runId>-<seq>.log` (hors `REPO_DIR`, donc jamais
-commitée) et renvoyer au modèle l'aperçu + le chemin, avec la consigne d'OpenCode :
-« Use `grep` to search the full content or `read_file` with offset/limit ». Il faut
-donc autoriser `read_file`/`grep` sur ce chemin précis (une exception nommée dans
-`resolveWithin`, pas une ouverture générale).
+**What.** Beyond the threshold, write the full output to
+`/vercel/sandbox/tool-output/<runId>-<seq>.log` (outside `REPO_DIR`, so never
+committed) and return the preview + the path to the model, with the OpenCode instruction:
+“Use `grep` to search the full content or `read_file` with offset/limit”. It therefore requires
+therefore authorize `read_file`/`grep` on this specific path (an exception named in
+`resolveWithin`, not a general opening).
 
-**Où.** `makeExecTool` (`run_command`) dans `execute.ts` ; helper d'écriture dans
-`sandbox.ts` ; paragraphe dans `buildAgentSystemPrompt` disant explicitement de **ne
-pas** piper vers `head`/`tail`.
+**Where.** `makeExecTool` (`run_command`) in `execute.ts`; writing helper in
+`sandbox.ts` ; paragraph in `buildAgentSystemPrompt` explicitly saying not to
+   pipe to `head`/`tail`.
 
-**Risque.** Le fichier doit rester hors du dépôt (sinon il part au commit) et être
-nettoyé avec la VM. Le snapshot persistant les garde 7 jours — acceptable.
+**Risk.** The file must remain outside the repository (otherwise it leaves during commit) and be
+cleaned with the VM. The persistent snapshot keeps them for 7 days — acceptable.
 
-**Mesurable.** La part de `run_command` contenant `| head`/`| tail` (10 % aujourd'hui,
-§2) doit tendre vers zéro.
+**Measurable.** The share of `run_command` containing `| head`/`| tail` (10% today,
+§2) must tend towards zero.
 
-### R3 — Garde-fou exécuté sur les commandes destructrices *(rang 1)*
+### R3 — Safeguard executed on destructive commands *(rank 1)*
 
-**Quoi.** Un module pur `lib/server/agent/command-guard.ts`, testable comme
+**What.** A pure module `lib/server/agent/command-guard.ts`, testable like
 `repo-path.ts` : `checkCommand(command: string): { allowed: boolean; reason?: string }`.
-Refuse — **en renvoyant une erreur de tool au modèle, pas en cassant le round** —
+Refuse — **by returning a tool error to the model, not by breaking the round** —
 `git commit`, `git push`, `git reset --hard`, `git checkout --`, `git rebase`,
-`git cherry-pick`, `--amend`, `--force`/`-f` sur un push. Le message d'erreur doit
-expliquer *pourquoi* (« the harness owns git : it commits and pushes at the end of
-each turn ») pour que le modèle s'adapte plutôt qu'insiste.
+`git cherry-pick`, `--amend`, `--force`/`-f` on a push. The error message should
+explain *why* (“the harness owns git: it commits and pushes at the end of
+each turn") so that the model adapts rather than insists.
 
-**Où.** Branché en tête du case `run_command` de `makeExecTool`. Le prompt garde son
-paragraphe : la règle est la même, elle devient simplement vraie.
+**Where.** Connected at the head of box `run_command` of `makeExecTool`. The prompt keeps its
+paragraph: the rule is the same, it simply becomes true.
 
-**Risque.** Un faux positif bloquerait une commande légitime. D'où : liste **fermée
-et courte** de motifs, jamais une heuristique. Ne pas viser `git add` (inoffensif) ni
-le git en lecture. Codex fait le même choix avec `is_known_safe_command` : `git
-status`/`log`/`diff`/`show` sûrs, le reste au cas par cas.
+**Risk.** A false positive would block a legitimate order. Hence: **closed list
+and short** of reasons, never a heuristic. Do not target `git add` (harmless) or
+the git reading. Codex makes the same choice with `is_known_safe_command`: `git
+status`/`log`/`diff`/`show` safe, the rest on a case by case basis.
 
-**Mesurable.** Un event `tool_result` avec `success: false` et
-`reason: "forbidden_command"` par tentative → la requête de §2 devient un compteur
-de suivi, et une valeur non nulle signale un modèle qui se bat contre le harness.
+**Measurable.** An event `tool_result` with `success: false` and
+`reason: "forbidden_command"` per attempt → the request in §2 becomes a counter
+tracking, and a non-zero value indicates a model fighting against the harness.
 
-### R4 — Diagnostics de type en fin de tour *(rang 2)* — **mesuré, voie B retenue**
+### R4 — Type diagnostics at end of turn *(rank 2)* — **measured, channel B retained**
 
-**Quoi.** Un `tsc --noEmit` incrémental **une fois par tour**, au moment où le
-modèle s'apprête à rendre la main, si et seulement si le tour a touché des
-fichiers et que le dépôt a un type-checker *utilisable* (`tsconfig.json` **et**
-`node_modules/.bin/tsc`). Erreurs non vides → injectées comme message `user` et le
-tour **repart** au lieu de se terminer : `Type errors detected after your changes,
-please fix:`, les fichiers touchés par le tour listés en premier. Une seule
-relance par tour (le second check vérifie le correctif, puis le tour se termine
-quoi qu'il arrive).
+**What.** An incremental `tsc --noEmit` **once per turn**, at the moment when the
+model prepares to return the hand, if and only if the trick has touched
+files and that the repository has a *usable* type-checker (`tsconfig.json` **and**
+`node_modules/.bin/tsc`). Non-empty errors → injected as message `user` and the
+turn **restarts** instead of ending: `Type errors detected after your changes,
+please fix:`, files affected by the round listed first. Only one
+reroll per round (the second check verifies the fix, then the round ends
+regardless).
 
-**Ce que la mesure a tranché** (§3.3, « Coût d'un type-check dans la sandbox ») :
-par édition, 4,9 à 14,4 s × 44 éditions — jusqu'à 290 s sur un seul run, plus
-qu'un chunk entier. Par tour, 11 s. Et surtout, checker entre deux moitiés d'un
-même changement remonte des erreurs que l'édition suivante efface. `tsc --watch`
-(1,9 Go résidents) et la vérification fichier par fichier (37 erreurs fantômes sur
-un fichier sain) sont écartés sur mesure, pas sur intuition.
+**What the measurement decided** (§3.3, “Cost of a type-check in the sandbox”):
+per edition, 4.9 to 14.4 s × 44 editions — up to 290 s on a single run, more
+than a whole chunk. Per turn, 11 s. And above all, check between two halves of a
+same change brings up errors that the next edition erases. `tsc --watch`
+(1.9 GB residents) and file-by-file verification (37 phantom errors on
+a healthy file) are discarded on measure, not on intuition.
 
-**Risque.** Un dépôt déjà cassé ferait tourner le modèle en rond : d'où la relance
-unique, et une consigne de prompt explicite — une erreur étrangère à son
-changement se signale dans la réponse, elle ne se corrige pas.
+**Risk.** An already broken deposit would cause the model to go around in circles: hence the restart
+unique, and an explicit prompt instruction — an error foreign to its
+change is indicated in the response, it is not corrected.
 
-**Mesurable.** Nombre de tours qui se terminent avec des erreurs de typage
-introduites par l'agent — aujourd'hui inconnu, ce qui est déjà un problème.
+**Measurable.** Number of rounds that end with typing errors
+introduced by the agent — now unknown, which is already a problem.
 
-### R5 — `workdir` et `timeout_ms` sur `run_command` *(rang 2)*
+### R5 — `workdir` and `timeout_ms` on `run_command` *(rank 2)*
 
-**Quoi.** Deux paramètres optionnels sur `run_command` dans `tools.ts`, passés à
-`runShell` (qui les accepte déjà : `opts.cwd`, `opts.timeoutMs`). Description du
-tool reprenant la formule d'OpenCode : « AVOID using `cd <dir> && <cmd>` ; use the
-`workdir` parameter instead ». Borner `timeout_ms` par `RUN_COMMAND_TIMEOUT_MS`.
+**What.** Two optional parameters on `run_command` in `tools.ts`, passed to
+`runShell` (which already accepts them: `opts.cwd`, `opts.timeoutMs`). Description of
+tool using the OpenCode formula: “AVOID using `cd <dir> && <cmd>`; use the
+`workdir` parameter instead.” Bound `timeout_ms` by `RUN_COMMAND_TIMEOUT_MS`.
 
-**Risque.** `workdir` doit passer par `resolveWithin` — sinon on vient de rouvrir la
-sortie du dépôt qu'on ferme partout ailleurs.
+**Risk.** `workdir` must go through `resolveWithin` — otherwise we have just reopened the
+exit from the depot which is closed everywhere else.
 
-**Mesurable.** Part des `run_command` contenant un `cd` (13 % aujourd'hui).
+**Measurable.** Share of `run_command` calls containing a `cd` (13% today).
 
-### R6 — Mode littéral sur `grep` *(rang 2)*
+### R6 — Literal mode on `grep` *(rank 2)*
 
-**Quoi.** Paramètre `fixed_strings?: boolean` → `git grep -F` au lieu de `-E`
-(`grepRepo` dans `sandbox.ts`). Et surtout : quand `git grep` échoue avec
-`Unmatched \{` ou `Unmatched \(`, **retenter automatiquement en `-F`** et le dire
-dans le résultat (« pattern retried as a literal string ») — le modèle cherche du
-JSX, pas une regex.
+**What.** Parameter `fixed_strings?: boolean` → `git grep -F` instead of `-E`
+(`grepRepo` in `sandbox.ts`). And above all: when `git grep` fails with
+`Unmatched \{` or `Unmatched \(`, **automatically try again in `-F`** and say it
+in the result (“pattern retried as a literal string”) — the model searches for
+JSX, not a regex.
 
-**Mesurable.** Le taux d'échec de `grep` (0,9 % aujourd'hui) doit tomber à zéro sur
-les erreurs `Unmatched`.
+**Measurable.** The failure rate of `grep` (0.9% today) must drop to zero on
+`Unmatched` errors.
 
-### R7 — Entrée visuelle *(rang 2 depuis le 2026-07-28, à cadrer séparément)*
+### R7 — Visual entry *(rank 2 since 2026-07-28, to be framed separately)*
 
-**Quoi.** `AgentChatMessage.content` doit accepter `Array<{type:"text"|"image_url"}>`
-et `read_attachment` renvoyer l'image en partie image quand le modèle du run est
-multimodal. Touche `agent-loop.ts` (sérialisation), `compact.ts` (`messageBytes`,
-`serializeForSummary`), `prune.ts` (l'élagage ne doit pas manger une image encore
+**What.** `AgentChatMessage.content` must accept `Array<{type:"text"|"image_url"}>`
+and `read_attachment` return the image as part image when the run model is
+multimodal. Key `agent-loop.ts` (serialization), `compact.ts` (`messageBytes`,
+`serializeForSummary`), `prune.ts` (pruning should not eat an image yet
 utile), `caching.ts`.
 
-**Pourquoi c'est différent chez nous.** Codex et OpenCode donnent au modèle une image
-*du disque*. Chez nous, l'image est **une pièce jointe du ticket** — une maquette que
-quelqu'un a déposée en écrivant l'issue. C'est le seul point de ce document où le
-besoin est *plus* fort que chez les références, pas moins.
+**Why it's different for us.** Codex and OpenCode give the model an image
+*from the disk*. With us, the image is **a ticket attachment** — a model that
+someone filed writing the issue. This is the only point in this document where the
+need is *stronger* than in references, not less.
 
-**Risque.** Coût par tour et un checkpoint qui grossit. **La compatibilité, elle,
-n'est plus un risque** : les `input_modalities` de l'index OpenRouter donnent
-`["file","image","text"]` pour `openai/gpt-5.6-luna` et
-`["text","image","file"]` pour `anthropic/claude-sonnet-5` — soit **11 de nos 15
-runs**. Seul `deepseek/deepseek-v4-flash` est `["text"]`. Ça monte le rang de R7 :
-la capacité manque à la grande majorité des sessions réelles.
+**Risk.** Cost per turn and a growing checkpoint. **Compatibility
+is no longer a risk**: the `input_modalities` of the OpenRouter index give
+`["file","image","text"]` for `openai/gpt-5.6-luna` and
+`["text","image","file"]` for `anthropic/claude-sonnet-5` — i.e. **11 of our 15
+runs**. Only `deepseek/deepseek-v4-flash` is `["text"]`. This increases the rank of R7:
+the capacity is missing from the vast majority of real sessions.
 
-> **Fait le 2026-07-28 (MIN-111).** `content` accepte les parties `text`/`image_url`
-> (helpers de lecture dans `content.ts`, utilisés par les cinq consommateurs), la
-> capacité du modèle est lue dans le même index OpenRouter que la fenêtre de contexte
-> (`supportsImageInput`), et `read_attachment` renvoie l'image en **data URL** — pas
-> en URL signée : elle expire en 10 minutes, le checkpoint est rejoué bien plus tard.
-> Le risque « checkpoint qui grossit » est borné par trois plafonds : 750 Ko par image
-> (~1 Mo encodée), 2 images par tour, 3 images retenues dans tout l'historique
-> (`capHistoryImages`). Une image est facturée au contexte à un forfait de 4 000
-> caractères, jamais à la taille de sa base64 — sinon la première maquette ouverte
-> déclencherait une compaction à chaque round. Forme vérifiée contre le vrai
-> provider : Anthropic, OpenAI et Google acceptent tous une partie image DANS un
-> message `role:"tool"` et décrivent correctement l'image (le point qu'aucun test
+> **Dated 2026-07-28 (MIN-111).** `content` accepts parts `text`/`image_url`
+> (reading helpers in `content.ts`, used by the five consumers), the
+> model capability is read in the same OpenRouter index as the context window
+> (`supportsImageInput`), and `read_attachment` returns the image in **data URL** — not
+> in signed URL: it expires in 10 minutes, the checkpoint is replayed much later.
+> The “checkpoint growing” risk is limited by three ceilings: 750 KB per image
+> (~1 MB encoded), 2 images per turn, 3 images retained in the entire history
+> (`capHistoryImages`). An image is billed per context at a flat rate of 4,000
+> characters, never at the size of its base64 — otherwise the first open model
+> would trigger compaction every round. Form checked against real
+> provider: Anthropic, OpenAI and Google all accept an image part IN a
+> message `role:"tool"` and correctly describe the image (the point that no test
 > unitaire ne pouvait trancher).
 
-### R8 — `apply_patch` pour les modèles `gpt-*` *(rang 2)*
+### R8 — `apply_patch` for `gpt-*` models *(rank 2)*
 
-**Quoi.** Un tool `apply_patch` à un seul paramètre `patch: string`, au format
-`*** Begin Patch` / `*** Update File:` / `@@` / `+-` — celui de Codex et
-d'OpenCode. Servi **à la place** d'`edit_file`/`write_file` quand le modèle du run
-est un `gpt-*` (la règle exacte d'OpenCode : `includes("gpt-") && !includes("oss")
-&& !includes("gpt-4")`), sinon rien ne change.
+**What.** A tool `apply_patch` with a single parameter `patch: string`, in the format
+`*** Begin Patch` / `*** Update File:` / `@@` / `+-` — that of Codex and
+from OpenCode. Served **instead** of `edit_file`/`write_file` when the run model
+is a `gpt-*` (the exact OpenCode rule: `includes("gpt-") && !includes("oss")
+&& !includes("gpt-4")`); otherwise nothing changes.
 
-**Pourquoi maintenant.** 10 de nos 15 runs tournent sur `openai/gpt-5.6-luna`.
-C'est le format sur lequel cette famille est entraînée, et il porte du **contexte**
-(`@@ def greet():`) là où `old_string` porte une chaîne exacte — donc il tolère
-mieux une lecture approximative du fichier.
+**Why now.** 10 of our 15 runs run on `openai/gpt-5.6-luna`.
+This is the format this family is trained on, and it carries **context**
+(`@@ def greet():`) where `old_string` carries an exact string — so it tolerates
+better a rough reading of the file.
 
-**Ce que ça n'apporte PAS.** De la fiabilité de matching : `edit_file` est à 4,3 %
-d'échec et l'unique cas est une édition idempotente. Ne pas vendre ce ticket comme
-un correctif de bug — c'est une adaptation au modèle, à valider par comparaison.
+**What it does NOT bring.** Matching reliability: `edit_file` is 4.3%
+failure and the only case is an idempotent edition. Do not sell this ticket as
+a bug fix — it is an adaptation to the model, to be validated by comparison.
 
-**Risque.** Deux moteurs d'édition à maintenir. D'où : le parseur de patch produit
-des `{oldString, newString}` qu'on fait passer par la **cascade existante**
-d'[edit.ts](../lib/server/agent/edit.ts), au lieu d'écrire un second applicateur.
+**Risk.** Two editing engines to maintain. Hence: the patch parser produced
+`{oldString, newString}` that we pass through the **existing cascade**
+from [edit.ts](../lib/server/agent/edit.ts), instead of writing a second applicator.
 
-**Mesurable.** Taux d'échec d'`apply_patch` vs `edit_file` sur les runs `gpt-*`, et
-nombre d'éditions par tour (le format groupe plusieurs hunks).
+**Measurable.** Failure rate of `apply_patch` vs `edit_file` on `gpt-*` runs, and
+number of editions per round (the format groups several hunks).
 
-### R9 — Sous-agents, hiérarchie à un niveau *(rang 2)*
+### R9 — Subagents, one-level hierarchy *(rank 2)*
 
-**Quoi.** Un tool `spawn_agent { task, mode }` qui lance une session fille dans
-**la même sandbox**, avec son propre historique, et renvoie au parent un rapport
-texte. Deux modes : `explore` (jeu de tools en lecture seule) et `implement` (jeu
-complet). Le sous-agent **n'a pas** `spawn_agent` : la hiérarchie s'arrête à un
-niveau, par construction et non par consigne.
+**What.** A tool `spawn_agent { task, mode }` which launches a child session in
+**the same sandbox**, with its own history, and returns a report to the parent
+text. Two modes: `explore` (read-only toolset) and `implement` (read-only toolset)
+complete). The subagent **does not** have `spawn_agent`: the hierarchy stops at a
+level, by construction and not by instruction.
 
-**Les trois contraintes qui décident du design.**
+**The three constraints that decide the design.**
 
-1. **La sandbox est partagée**, contrairement à Codex et OpenCode où chaque agent
-   voit le même disque parce que c'est le disque de l'utilisateur. Chez nous deux
-   sous-agents qui écrivent en parallèle se marchent dessus dans un dépôt git dont
-   le harness fait `git add -A` en fin de tour. Règle : **les `explore` peuvent
-   être parallèles, les `implement` sont sérialisés** — un seul écrivain à la fois.
-2. **Le budget se compte par `ai_usage.user_id`.** Chaque appel d'un sous-agent
-   doit passer par `recordAiUsage` avec le `user_id` et le `run_id` du parent,
-   dans une bande de `seq` dédiée (comme `WEB_SEARCH_SEQ_BASE` et
-   `SANDBOX_USAGE_SEQ_BASE`). Sinon la délégation devient un trou de facturation.
-3. **La soft-deadline est celle du parent.** Un sous-agent reçoit une fraction du
-   budget restant du chunk et rend la main avant, sinon un `spawn_agent` peut faire
-   rater le commit de fin de tour.
+1. **The sandbox is shared**, unlike Codex and OpenCode where each agent
+sees the same disk because it is the user's disk. At the two of us
+subagents that write in parallel step on each other in a git repository whose
+the harness does `git add -A` at the end of the turn. Rule: **`explore` can
+be parallel, the `implement` are serialized** — only one writer at a time.
+2. **The budget is counted by `ai_usage.user_id`.** Each call from a sub-agent
+must go through `recordAiUsage` with the `user_id` and the `run_id` of the parent,
+in a dedicated `seq` band (like `WEB_SEARCH_SEQ_BASE` and
+`SANDBOX_USAGE_SEQ_BASE`). Otherwise delegation becomes a billing hole.
+3. **The soft-deadline is that of the parent.** A sub-agent receives a fraction of the
+remaining budget of the chunk and hands over before, otherwise a `spawn_agent` can do
+miss the end-of-round commit.
 
-**Risque principal — l'opacité.** Un agent qui délègue devient illisible dans le
-fil. Il faut donc que le sous-agent émette ses events sur le même `run_id`, avec un
-marqueur de parenté, et que le fil les rende repliés sous l'appel.
+**Main risk — opacity.** An agent who delegates becomes illegible in the
+thread. The sub-agent must therefore emit its events on the same `run_id`, with a
+kinship marker, and that the thread makes them folded under the call.
 
-**Mesurable.** Part des tours qui délèguent, coût moyen d'un tour avec vs sans
-délégation, et surtout : le rapport du sous-agent a-t-il servi (le parent le
-cite-t-il dans sa réponse) ?
+**Measurable.** Share of tours that delegate, average cost of a tour with vs without
+delegation, and above all: was the sub-agent's report used (the parent
+he quotes in his response)?
 
-### R10 — Commandes en arrière-plan *(rang 2)*
+### R10 — Background commands *(rank 2)*
 
-**Quoi.** `run_command` avec `background: true` renvoie un `job_id` au lieu
-d'attendre ; `check_command { job_id }` renvoie la sortie accumulée depuis le
-dernier appel et l'état (`running` / `exited`) ; `stop_command { job_id }` tue le
-processus. Tous les jobs sont tués en fin de tour.
+**What.** `run_command` with `background: true` returns a `job_id` instead
+to wait; `check_command { job_id }` returns the accumulated output since the
+last call and status (`running` / `exited`); `stop_command { job_id }` kill him
+process. All jobs are killed at the end of the turn.
 
-**La capacité que ça débloque.** Lancer `npm run dev`, attendre qu'il écoute, puis
-`curl localhost:3000` — **voir tourner ce qu'on vient d'écrire**. Aujourd'hui
-impossible : `run_command` bloque jusqu'à `RUN_COMMAND_TIMEOUT_MS` (180 s) puis tue.
-C'est le manque qui empêche l'agent de vérifier autre chose que des tests unitaires.
+**The ability it unlocks.** Run `npm run dev`, wait for it to listen, then
+`curl localhost:3000` — **see what we just wrote turn around**. Today
+impossible: `run_command` blocks until `RUN_COMMAND_TIMEOUT_MS` (180 s) then kills.
+This is the lack that prevents the agent from checking anything other than unit tests.
 
-**Ce qu'on ne fait PAS.** Pas de PTY, pas de `write_stdin`, pas de session shell qui
-survit au tour. Une session interactive ne survivrait ni au suspend/resume ni à
-l'arrêt de la microVM par le reaper — et l'interactivité n'est utile qu'à un humain
-devant un terminal.
+**What we do NOT do.** No PTY, no `write_stdin`, and no shell session that
+survives the round. An interactive session would survive neither suspend/resume nor
+the shutdown of the microVM by the reaper — and the interactivity is only useful to a human
+at a terminal.
 
-**Risque.** Un processus oublié qui consomme la microVM. D'où : plafond de jobs
-simultanés (3), kill inconditionnel en fin de tour, et sortie accumulée sur disque
-via le mécanisme de R2.
+**Risk.** A forgotten process that consumes the microVM. Hence: job ceiling
+simultaneous (3), unconditional kill at end of turn, and accumulated output on disk
+via the R2 mechanism.
 
-### R11 — Instructions des sous-dossiers touchés *(rang 3)*
+### R11 — Affected subfolder instructions *(rank 3)*
 
-**Quoi.** `readRepoInstructions` lit aujourd'hui `AGENTS.md` et `CLAUDE.md` **à la
-racine du clone**. Y ajouter, à la première édition dans un sous-dossier, les
-`AGENTS.md`/`CLAUDE.md` rencontrés entre la racine et ce fichier — la règle de
-Codex, mais **paresseuse** : on ne charge que ce que l'agent touche, au lieu de
-concaténer tout l'arbre à l'amorce.
+**What.** `readRepoInstructions` today reads `AGENTS.md` and `CLAUDE.md` **at the
+root of the clone**. Add, at the first edition in a sub-folder, the
+`AGENTS.md`/`CLAUDE.md` encountered between the root and this file — the rule of
+Codex, but **lazy**: load only what the agent touches instead of
+concatenate the entire tree at the seed.
 
-**Pourquoi paresseux.** Le cap global reste 32 Ko. Charger tout l'arbre d'un
-monorepo à l'amorce le remplirait de conventions de paquets que l'agent ne touchera
-jamais, au détriment de celles de la racine.
+**Why lazy.** The overall cap remains 32 KB. Load the entire tree with one
+monorepo at boot would fill it with package conventions that the agent won't touch
+never, to the detriment of those of the root.
 
-### R12 — Gestion du contexte : calibrer, tester, signaler *(rang 2)*
+### R12 — Context management: calibrate, test, report *(rank 2)*
 
-**Le vrai problème, mesuré.** La compaction n'a **jamais tourné** : zéro event
-`status` de phase `compacted` ou `context_trim` depuis la mise en service. Cause :
-`compactThreshold = contextWindow * 0.75`, et les modèles utilisés ont des fenêtres
-de 1 000 000 à 1 050 000 tokens → seuil à ~787 000, quand notre plus gros checkpoint
-pèse ~140 000 tokens (558 Ko de JSON, 569 messages).
+**The real problem, measured.** The compaction has **never turned**: zero events
+`status` phase `compacted` or `context_trim` since commissioning. Cause:
+`compactThreshold = contextWindow * 0.75`, and the models used have windows
+from 1,000,000 to 1,050,000 tokens → threshold at ~787,000, when our biggest checkpoint
+weighs ~140,000 tokens (558 KB of JSON, 569 messages).
 
-**Trois conséquences, trois gestes.**
+**Three consequences, three actions.**
 
-1. **Le seuil est calibré sur la mauvaise variable.** Avec une fenêtre de 1 M, ce
-   qui plafonne une session longue n'est pas la fenêtre — c'est le **coût par
-   round** (on renvoie tout l'historique à chaque appel) et `MAX_CHECKPOINT_BYTES`.
-   → borner le seuil par un plafond absolu en plus du ratio :
-   `min(contextWindow * 0.75, plafond_coût)` dans
+1. **The threshold is calibrated on the wrong variable.** With a window of 1 M, this
+that caps a long session is not the window — it's the **cost per
+round** (we return the entire history on each call) and `MAX_CHECKPOINT_BYTES`.
+→ limit the threshold by an absolute ceiling in addition to the ratio:
+`min(contextWindow * 0.75, cost_ceiling)` in
    [agent-loop.ts](../lib/server/agent/agent-loop.ts).
-2. **Du code de secours jamais exécuté est du code cassé jusqu'à preuve du
-   contraire.** `planCompaction`, `dropOldestRound` et `pruneToolOutputs` ont des
-   tests unitaires, mais le chemin complet (sous-appel de résumé, reconstruction de
-   l'historique, round suivant qui repart dessus) n'a jamais tourné pour de vrai.
-   → un test d'intégration qui force le seuil à 5 000 tokens et fait tourner une
-   vraie session.
-3. **Le modèle ne sait pas qu'on l'a compacté.** Il reçoit un message `user`
-   préfixé `COMPACT_SUMMARY_PREFIX` au milieu de son propre raisonnement. Plutôt
-   qu'un tool `get_context_remaining` qu'il devrait penser à appeler, **lui pousser
-   l'information au moment utile** : quand `lastPromptTokens` dépasse ~70 % du
-   seuil, injecter une ligne « you are approaching the context limit — wrap up the
-   current step and reply » avant l'appel. Il conclut proprement au lieu d'être
-   coupé.
+2. **Fallout code never executed is broken code until proven
+contrary.** `planCompaction`, `dropOldestRound` and `pruneToolOutputs` have
+unit tests, but the full path (summary subcall, reconstruction of
+the history, next round which starts again) never turned out for real.
+→ an integration test which forces the threshold to 5,000 tokens and runs a
+   real session.
+3. **The model does not know that it has been compacted.** It receives a message `user`
+prefixed `COMPACT_SUMMARY_PREFIX` in the middle of its own reasoning. Instead
+that a tool `get_context_remaining` that he should remember to call, **push him
+information when needed**: when `lastPromptTokens` exceeds ~70% of the
+threshold, inject a line “you are approaching the context limit — wrap up the
+current step and reply” before the call. He concludes properly instead of being
+cut.
 
-**Mesurable.** Les events de phase `compacted` doivent devenir non nuls après
-recalibrage — et si `compacted` monte sans que la qualité tombe, le seuil est bon.
+**Measurable.** Phase events `compacted` must become non-zero after
+recalibration — and if `compacted` increases without the quality falling, the threshold is good.
 
-> **Fait le 2026-07-28 (MIN-113).** Seuil borné par
-> `AGENT_COMPACT_ABSOLUTE_MAX_TOKENS = 120_000`, chemin complet exercé (test
-> d'intégration + vrai checkpoint contre le vrai provider), préavis
-> `context_warning` injecté à 70 % du seuil. Chiffres, calibrage et validation :
-> §3.4. **Découverte au passage** : le prompt caching n'amortit rien — les
-> breakpoints de `caching.ts` sont en tête d'historique, on paie donc plein tarif
-> l'intégralité de la conversation à chaque round. Levier estimé −88 % sur un run
-> long, soit bien plus que la compaction ; c'est un autre chantier.
-
----
-
-## 6. Tickets de suite
-
-Créés depuis ce document, liés à MIN-101 :
-
-| Ticket | Rang | Recommandation |
-| --- | --- | --- |
-| **MIN-107** — *Ne plus perdre la fin des sorties de `run_command`* | 1 | R1 + R2 — la queue des sorties de commande, et la sortie longue relisible |
-| **MIN-108** — *Faire exécuter par le harness les interdits git qu'il se contente de dire* | 1 | R3 — garde-fou exécuté sur les commandes destructrices |
-| **MIN-109** — *Trois frictions mesurées sur les tools* | 2 | R5 + R6 + R8 — `workdir`/`timeout_ms`, `grep` littéral, `success` honnête sur `apply_edits` |
-| **MIN-110** — *Renvoyer les erreurs de typage juste après l'édition* | 2 | R4 — diagnostics après édition (**commence par mesurer le coût**, et l'abandon est une issue valable) |
-| **MIN-111** — *Que l'agent VOIE les maquettes jointes aux tickets* | 2 | R7 — entrée visuelle (**remonté** : 11 runs / 15 tournent sur un modèle qui accepte les images) |
-
-Créés à la revue du 2026-07-28, avec les six écarts réintégrés :
-
-| Ticket | Rang | Recommandation |
-| --- | --- | --- |
-| **MIN-112** — *Sous-agents, un seul niveau* | 2 | R9 — délégation, `explore` parallèles / `implement` sérialisés, facturation au owner |
-| **MIN-113** — *La compaction n'a jamais tourné* | 2 | R12 — recalibrer le seuil sur le coût, exercer le chemin complet, prévenir le modèle |
-| **MIN-114** — *Commandes en arrière-plan* | 2 | R10 — lancer un serveur de dev et voir tourner son travail (bloqué par MIN-107) |
-| **MIN-115** — *`apply_patch` pour `gpt-*` + instructions des sous-dossiers* | 3 | R8 + R11 |
-
-Deux opportunités n'ont **pas** de ticket, et c'est délibéré :
-
-- **Le tool `invalid`** (opportunité 9) : l'écart est réel chez OpenCode, mais nous
-  n'avons aucune occurrence mesurée d'un appel de tool malformé. On attend un signal.
-- **Le tool `lsp`** : requalifié en *conditionné à la mesure de MIN-110*. Si un
-  serveur de langage peut vivre dans la microVM, il suit presque gratuitement ;
-  sinon la question ne se pose pas. Noté en commentaire sur MIN-110.
+> **Done on 2026-07-28 (MIN-113).** Threshold limited by
+> `AGENT_COMPACT_ABSOLUTE_MAX_TOKENS = 120_000`, full path exercised (test
+> integration + real checkpoint against the real provider), notice
+> `context_warning` injected at 70% of the threshold. Figures, calibration and validation:
+> §3.4. **Discovery in passing**: prompt caching does not amortize anything — the
+> breakpoints of `caching.ts` are at the top of the history, we therefore pay full price
+> the entire conversation in each round. Estimated leverage −88% on one run
+> long, much longer than compaction; it’s another project.
 
 ---
 
-## Annexe — reproduire les mesures
+## 6. Follow-up tickets
 
-Les scripts de la passe 3 vivent dans le scratchpad de la session (non commités).
-Pour les rejouer, l'essentiel tient en une requête PostgREST sur
-`agent_run_events` avec la clé de service :
+Created from this document, related to MIN-101:
+
+| Ticket | Rank | Recommendation |
+| --- | --- | --- |
+| **MIN-107** — *No longer lose the end of `run_command`* outputs | 1 | R1 + R2 — the tail of the command outputs, and the long readable output |
+| **MIN-108** — *Make the harness execute the git prohibitions that it simply says* | 1 | R3 — guardrail executed on destructive commands |
+| **MIN-109** — *Three frictions measured on the tools* | 2 | R5 + R6 + R8 — `workdir`/`timeout_ms`, `grep` literal, `success` honest to `apply_edits` |
+| **MIN-110** — *Return typing errors right after editing* | 2 | R4 — post-edit diagnostics (**starts by measuring the cost**, and abandonment is a valid outcome) |
+| **MIN-111** — *Let the agent SEE the models attached to the tickets* | 2 | R7 — visual input (**upgraded**: 11 runs / 15 runs on a model that accepts images) |
+
+Created at the review of 2026-07-28, with the six gaps reinstated:
+
+| Ticket | Rank | Recommendation |
+| --- | --- | --- |
+| **MIN-112** — *Subagents, single level* | 2 | R9 — delegation, `explore` parallel / `implement` serialized, billing to the owner |
+| **MIN-113** — *Compaction never turned* | 2 | R12 — recalibrate threshold on cost, exercise full path, prevent model |
+| **MIN-114** — *Background commands* | 2 | R10 — launch a dev server and see its work running (blocked by MIN-107) |
+| **MIN-115** — *`apply_patch` for `gpt-*` + subfolder instructions* | 3 | R8 + R11 |
+
+Two opportunities have **no** tickets, and this is deliberate:
+
+- **The `invalid`** tool (opportunity 9): the gap is real at OpenCode, but we
+have no measured occurrence of a malformed tool call. We're waiting for a signal.
+- **The tool `lsp`**: reclassified as *conditioned to the measurement of MIN-110*. If a
+language server can live in the microVM, it follows almost for free;
+otherwise the question does not arise. Noted in comments on MIN-110.
+
+---
+
+## Appendix — reproduce the measurements
+
+Pass 3 scripts live in the session scratchpad (uncommitted).
+To replay them, the essential thing is a PostgREST request on
+`agent_run_events` with the service key:
 
 ```
 GET {SUPABASE_URL}/rest/v1/agent_run_events
@@ -1043,8 +1043,8 @@ GET {SUPABASE_URL}/rest/v1/agent_run_events
     &created_at=gte.{ISO}
 ```
 
-puis agrégation sur `payload->>'name'` et `payload->>'success'`. Attention : les
-events antérieurs au 2026-07-18 portent un payload de forme ancienne
-(`{ id, name, args }` où `args` est le JSON brut) — les payloads récents portent le
-résumé destructuré (`{ id, name, command }` pour `run_command`). Toute agrégation
-qui ignore la forme ancienne perd la moitié des `run_command`.
+then aggregation on `payload->>'name'` and `payload->>'success'`. Warning: the
+events before 2026-07-18 carry an old form payload
+(`{ id, name, args }` where `args` is the raw JSON) — recent payloads carry the
+unstructured summary (`{ id, name, command }` for `run_command`). Any aggregation
+who ignores the old form loses half of the `run_command`.

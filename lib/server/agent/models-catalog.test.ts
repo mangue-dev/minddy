@@ -4,21 +4,21 @@ import type { AgentProviderId } from "@/lib/agent-providers";
 import type { OpenRouterModelInfo } from "./openrouter-index";
 
 /**
- * Ce que le picker de modèles PROPOSE, à partir de l'index OpenRouter.
+ * What the model picker PROPOSES, from the OpenRouter index.
  *
- * Le catalogue est plus étroit que l'index, et c'est le sujet de ce fichier :
- * l'index doit tout garder (un id collé à la main reste chiffrable), le picker
- * ne doit montrer que des modèles de TEXTE réellement adressables. Trois choses
- * en sortent, dont deux qu'aucun `supported_parameters` ne trahit — les
- * aiguillages et les modèles d'image ou d'audio déclarent `tools` comme les
- * autres.
+ * The catalog is narrower than the index, and that is the subject of this file:
+ * the index must keep everything (a hand-pasted id remains encryptable), the picker
+ * should only show actually addressable TEXT patterns. Three things
+ * come out of it, two of which no `supported_parameters` betrays — the
+ * switches and image or audio models declare `tools` as the
+ * others.
  *
- * On ne moque que la lecture d'OpenRouter et les deux modules serveur que le
- * catalogue importe (Supabase). Le cache est de PROCESS : chaque test réimporte
- * le module à neuf, sans quoi le premier servirait tous les autres.
+ * We only mock the reading OpenRouter and the two server modules that the
+ * catalog imports (Supabase). The cache is PROCESS: each test reimports
+ * the new module, otherwise the first one would serve all the others.
  */
 
-/** Une entrée d'index, tous champs par défaut à « modèle de texte ordinaire ». */
+/** An index entry, all fields default to "plain text template". */
 function entry(over: Partial<OpenRouterModelInfo> & { id: string }): OpenRouterModelInfo {
   return {
     name: over.id,
@@ -35,26 +35,26 @@ function entry(over: Partial<OpenRouterModelInfo> & { id: string }): OpenRouterM
 }
 
 const INDEX: OpenRouterModelInfo[] = [
-  // Prix réalistes et bien séparés : c'est eux qui rangent les conseils.
+  // Realistic and well-separated prices: they are the ones who store the advice.
   entry({ id: "anthropic/claude-opus-5", pricing: { inputUsdPerMTok: 5, outputUsdPerMTok: 25 } }),
   entry({
     id: "deepseek/deepseek-v4-flash",
     pricing: { inputUsdPerMTok: 0.14, outputUsdPerMTok: 0.28 },
   }),
-  // Aiguillages : `openrouter/auto` et l'alias `…-latest` d'une famille.
+  // Referrals: `openrouter/auto` and the alias `…-latest` of a family.
   entry({ id: "openrouter/auto", router: true, textOutput: false }),
   entry({ id: "~anthropic/claude-opus-latest", router: true }),
   entry({ id: "openrouter/free", router: true }),
-  // Sorties non textuelles, `tools` déclaré quand même.
+  // Non-textual outputs, `tools` declared anyway.
   entry({ id: "google/gemini-3-pro-image", textOutput: false }),
   entry({ id: "openai/gpt-audio", textOutput: false }),
-  // Pas de tool-calling : l'exclusion qui existait déjà.
+  // No tool-calling: the exclusion that already existed.
   entry({ id: "some/no-tools", tools: false }),
 ];
 
 async function freshCatalog(
   index: OpenRouterModelInfo[] = INDEX,
-  /** Valeur de la ligne `app_config.recommended_models` ; `null` = non réglée. */
+  /** Value of line `app_config.recommended_models`; `null` = not set. */
   recommendedConfig: string | null = null,
   endpoint: {
     provider: AgentProviderId;
@@ -84,7 +84,7 @@ async function freshCatalog(
   }));
   vi.doMock("./model-plan", () => ({
     getModelPlanLimit: vi.fn(async () => null),
-    // Le baseline de l'échelle de coût : le prix du défaut de minddy.
+    // The baseline of the cost scale: the price of Minddy's default.
     getBaselinePricing: vi.fn(async () => ({ inputUsdPerMTok: 1, outputUsdPerMTok: 1 })),
   }));
   vi.doMock("@/lib/server/app-config", () => ({
@@ -105,8 +105,8 @@ afterEach(() => {
 
 describe("getPlatformModelCatalog", () => {
   it("ne propose pas les aiguillages d'OpenRouter", async () => {
-    // `openrouter/auto` n'est pas un modèle, et `~…-latest` change de modèle
-    // sous les pieds de l'utilisateur — prix et paliers de raisonnement compris.
+    // `openrouter/auto` is not a template, and `~…-latest` changes template
+    // under the user's feet — prices and reasoning levels included.
     const { getPlatformModelCatalog } = await freshCatalog();
     const ids = (await getPlatformModelCatalog()).map((m) => m.id);
     expect(ids).not.toContain("openrouter/auto");
@@ -115,7 +115,7 @@ describe("getPlatformModelCatalog", () => {
   });
 
   it("ne propose que ce qui rend du texte", async () => {
-    // Ces deux-là déclarent `tools` : le filtre tool-calling ne les attrape pas.
+    // These two declare `tools`: the tool-calling filter does not catch them.
     const { getPlatformModelCatalog } = await freshCatalog();
     const ids = (await getPlatformModelCatalog()).map((m) => m.id);
     expect(ids).not.toContain("google/gemini-3-pro-image");
@@ -188,9 +188,9 @@ describe("getAgentModelsForUser", () => {
 
 describe("les modèles conseillés", () => {
   it("se rangent du MOINS CHER au plus cher, pas dans l'ordre de la config", async () => {
-    // Le réglage admin est un ensemble : l'ordre est calculé, sinon un rang
-    // écrit à la main survivrait aux prix qui l'ont justifié. Ici la config
-    // nomme le cher d'abord — il doit ressortir en second.
+    // The admin setting is a set: the order is calculated, otherwise a rank
+    // handwritten would survive the prices that justified it. Here the config
+    // name the dear one first — it should come out second.
     const { getAgentModelsForUser } = await freshCatalog(
       INDEX,
       JSON.stringify(["anthropic/claude-opus-5", "deepseek/deepseek-v4-flash"]),
@@ -203,8 +203,8 @@ describe("les modèles conseillés", () => {
   });
 
   it("relèguent en fin de liste un modèle sans prix connu", async () => {
-    // On ne sait pas où le situer : le mettre au milieu lui prêterait un rang
-    // qu'on n'a pas mesuré.
+    // We don't know where to place it: putting it in the middle would give it a rank
+    // that we have not measured.
     const index = [...INDEX, entry({ id: "aaa/no-price", pricing: null })];
     const { getAgentModelsForUser } = await freshCatalog(
       index,
@@ -219,8 +219,8 @@ describe("les modèles conseillés", () => {
   });
 
   it("écartent un conseil que ce catalogue ne propose pas", async () => {
-    // Conseiller un modèle absent ferait une ligne morte dans le picker — et
-    // c'est le cas courant en BYOK, dont les ids sont natifs.
+    // Advising an absent model would make a dead line in the picker — and
+    // this is the common case in BYOK, whose ids are native.
     const { getAgentModelsForUser } = await freshCatalog(
       INDEX,
       JSON.stringify(["anthropic/claude-opus-5", "openai/gpt-audio", "nobody/nothing"]),
@@ -230,17 +230,17 @@ describe("les modèles conseillés", () => {
   });
 
   it("retombent sur le repli produit quand rien n'est réglé", async () => {
-    // Le repli est la liste écrite en code : de ce faux index, il ne croise que
-    // le défaut de minddy — et c'est bien lui qui doit ressortir.
+    // The fallback is the list written in code: from this false index, it only crosses
+    // Minddy's flaw — and it's this one that must stand out.
     const { getAgentModelsForUser } = await freshCatalog();
     const catalog = await getAgentModelsForUser("user-1");
     expect(catalog.recommended).toEqual(["deepseek/deepseek-v4-flash"]);
   });
 
   it("survivent à une ligne app_config illisible", async () => {
-    // Un réglage cassé ne doit pas vider le picker : on retombe sur le repli
-    // produit, exactement comme si la ligne n'existait pas, jamais sur une
-    // exception qui ferait tomber tout le catalogue.
+    // A broken setting should not empty the picker: we fall back on the fallback
+    // product, exactly as if the line did not exist, never on one
+    // exception that would drop the entire catalog.
     const { getAgentModelsForUser } = await freshCatalog(INDEX, "{ pas du json");
     await expect(getAgentModelsForUser("user-1")).resolves.toMatchObject({
       recommended: ["deepseek/deepseek-v4-flash"],
@@ -248,16 +248,16 @@ describe("les modèles conseillés", () => {
   });
 
   it("ouvrent sur une liste VIDE quand aucun conseil n'est lançable", async () => {
-    // Le cas d'un provider BYOK, dont les ids sont natifs (`claude-sonnet-5`) :
-    // aucun conseil ne tombe juste, et le picker doit rouvrir sur le catalogue
-    // entier plutôt que sur une sélection de zéro modèle.
+    // The case of a BYOK provider, whose ids are native (`claude-sonnet-5`):
+    // no advice is right, and the picker must reopen on the catalog
+    // integer rather than a selection of zero models.
     const { getAgentModelsForUser } = await freshCatalog(INDEX, JSON.stringify(["nobody/nothing"]));
     const catalog = await getAgentModelsForUser("user-1");
     expect(catalog.recommended).toEqual([]);
   });
 
   it("accompagnent aussi le picker de review de PR", async () => {
-    // C'est une surface UTILISATEUR : même sélection, même raison.
+    // It's a USER surface: same selection, same reason.
     const { getPrReviewModelCatalog } = await freshCatalog(
       INDEX,
       JSON.stringify(["anthropic/claude-opus-5"]),
@@ -267,8 +267,8 @@ describe("les modèles conseillés", () => {
   });
 
   it("ne touchent PAS le catalogue admin", async () => {
-    // /admin sert à régler `app_config`, transcription et embeddings compris :
-    // une liste de conseils y masquerait ce qu'on est venu chercher.
+    // /admin is used to set `app_config`, transcription and embeddings included:
+    // a list of advice would hide what we came to look for.
     const { getAdminModelCatalog } = await freshCatalog(
       INDEX,
       JSON.stringify(["anthropic/claude-opus-5"]),
@@ -284,18 +284,18 @@ describe("les modèles conseillés", () => {
 
 describe("getAdminModelCatalog", () => {
   it("situe chaque modèle sur l'échelle de coût de minddy", async () => {
-    // C'est l'information de travail de l'écran : on y choisit ce que minddy
-    // paye, et le tri de la sélection conseillée s'y lit.
+    // This is the working information on the screen: we choose what minddy
+    // pays, and the sorting of the recommended selection is read there.
     const { getAdminModelCatalog } = await freshCatalog();
     const catalog = await getAdminModelCatalog();
     const byId = new Map(catalog.models.map((m) => [m.id, m.multiplier]));
-    // Baseline mocké à (1 + 1) / 2 = 1 USD/Mtok.
+    // Baseline mocked at (1 + 1) / 2 = 1 USD/Mtok.
     expect(byId.get("anthropic/claude-opus-5")).toBe(15);
     expect(byId.get("deepseek/deepseek-v4-flash")).toBe(0.21);
   });
 
   it("ne joint AUCUN plafond, donc ne grise rien", async () => {
-    // Un plan de facturation ne s'applique pas à un réglage d'instance.
+    // A billing plan does not apply to an instance setting.
     const { getAdminModelCatalog } = await freshCatalog();
     expect((await getAdminModelCatalog()).maxMultiplier).toBeNull();
   });

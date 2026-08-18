@@ -1,21 +1,21 @@
 "use client";
 
-// Raccourci « @ » (MIN-105) : ouvre Numo avec, en contexte, l'élément sous le
-// pointeur — une carte de ticket, une ligne de triage, une ligne de retour — ou
-// la sélection multiple quand il y en a une. C'est le pendant clavier de
-// l'action « Demander à Numo » de la pilule de sélection (voir
-// components/bulk-issue-actions.tsx) : même `onAskNumo`, même pilule de
+// Shortcut “@” (MIN-105): opens Numo with, in context, the element under the
+// pointer — a ticket card, a yard line, a return line — or
+// multiple selection when there is one. It is the keyboard counterpart of
+// the “Ask Numo” action of the selection pill (see
+// components/bulk-issue-actions.tsx): same `onAskNumo`, same pill
 // contexte au-dessus du composer.
 //
-// L'écoute clavier est UNIQUE et vit ici, chez la surface ; les éléments se
-// contentent de s'inscrire. Un écouteur par carte (comme les raccourcis de
-// champ) PLUS un écouteur global pour le cas « sélection sans survol » se
-// marcheraient dessus : deux ouvertures pour une seule frappe.
+// Keyboard listening is UNIQUE and lives here, on the surface; the elements are
+// just register. One listener per card (like the shortcuts of
+// field) PLUS a global listener for the “selection without hover” case
+// would walk on it: two openings for a single strike.
 //
-// Quel élément est sous le pointeur se lit dans le DOM AU MOMENT de la frappe
-// (`innermostHovered`), jamais dans un état mémorisé au survol : celui-ci
-// retarde d'un effet passif sur le pointeur et désigne encore l'élément
-// précédent (MIN-158).
+//Which element is under the pointer is read in the DOM AS YOU TYPE
+// (`innermostHovered`), never in a state stored on hover: this one
+// delays a passive effect on the pointer and still designates the element
+// previous (MIN-158).
 
 import {
   createContext,
@@ -32,11 +32,11 @@ import { innermostHovered } from "@/lib/keyboard/hover-keys";
 import type { Issue } from "@/lib/types";
 
 /**
- * « @ » ne vit pas sur la même touche selon la disposition : Maj+2 en QWERTY
- * US, touche nue sur un clavier Apple français, AltGr+0 sous Windows FR — et
- * AltGr lève à la fois `ctrlKey` et `altKey`. On lit donc le CARACTÈRE produit
- * plutôt que la touche physique, et on n'écarte que les vraies combinaisons
- * ⌘/Ctrl. `eventKey` protège des keydown synthétiques sans `key`.
+ * “@” does not live on the same key depending on the layout: Shift+2 in QWERTY
+ * US, bare key on a French Apple keyboard, AltGr+0 under Windows FR — and
+ * AltGr raises both `ctrlKey` and `altKey`. We therefore read the produced CHARACTER
+ * rather than the physical key, and we only discard the real combinations
+ * ⌘/Ctrl. `eventKey` protects synthetic keydowns without `key`.
  */
 function isAtSign(e: KeyboardEvent): boolean {
   if (eventKey(e) !== "@") return false;
@@ -44,18 +44,17 @@ function isAtSign(e: KeyboardEvent): boolean {
   return !(e.ctrlKey && !e.altKey);
 }
 
-/** Rien de sélectionné — une constante plutôt qu'un `[]` neuf à chaque rendu. */
+/** Nothing selected — a constant rather than a new `[]` each time it is rendered. */
 const NOTHING: readonly never[] = [];
 
 /**
- * Fabrique le couple provider + inscription pour UN type de chose dont on peut
- * parler à Numo. Provider et hook naissent ensemble parce qu'ils partagent le
- * même contexte React ; l'appeler deux fois donne deux registres étanches.
+ * Creates the provider + registration pair for ONE type of thing that we can
+ * talk to Numo about. Provider and hook are born together because they share the same React context; calling it twice gives two waterproof registers.
  *
- * Deux surfaces montées en même temps ne se gênent pas, même si chacune pose
- * son écouteur : celle qui n'a ni sélection ni élément survolé sort sans rien
- * consommer (pas de `preventDefault`), et le survol ne peut désigner qu'un
- * registre à la fois.
+ * Two surfaces mounted at the same time do not interfere with each other, even if each one places
+ * its listener: the one which has neither selection nor hovered element leaves without anything
+ * consume (no `preventDefault`), and hovering cannot designate only one
+ * register at a time.
  */
 function createAskNumo<T>() {
   const Registry = createContext<{
@@ -67,17 +66,17 @@ function createAskNumo<T>() {
     onAsk,
     children,
   }: {
-    /** Ce qui est sélectionné, et qui prime sur le survol. Vide si la surface
-     *  n'a pas de sélection multiple. */
+    /** What is selected, and which takes precedence over hover. Empty if surface
+ * does not have multi-select. */
     selection: readonly T[];
     onAsk: (targets: T[]) => void;
     children: ReactNode;
   }) {
-    // Les éléments montés, chacun sachant rendre sa version fraîche de la chose
-    // (une ligne modifiée sous le pointeur n'envoie donc jamais un titre périmé).
+    // The assembled elements, each knowing how to make their own fresh version of the thing
+    // (a modified line under the pointer therefore never sends an outdated title).
     const targetsRef = useRef(new Map<Element, () => T>());
-    // Refs miroir : l'écouteur est posé une seule fois et lit toujours l'état
-    // courant, sans se réabonner à chaque changement de sélection.
+    // Mirror refs: the listener is placed only once and always reads the status
+    // current, without resubscribing each time the selection changes.
     const selectionRef = useRef(selection);
     selectionRef.current = selection;
     const askRef = useRef(onAsk);
@@ -94,7 +93,7 @@ function createAskNumo<T>() {
     useEffect(() => {
       const onKey = (e: KeyboardEvent) => {
         if (!isAtSign(e)) return;
-        // Jamais pendant une saisie : « @ » y est un caractère (une mention, une
+        // Never during an entry: “@” is a character (a mention, a
         // adresse e-mail), pas un raccourci.
         if (isTypingTarget(e.target)) return;
         const selected = selectionRef.current;
@@ -116,12 +115,12 @@ function createAskNumo<T>() {
   }
 
   /**
-   * Déclare un élément comme cible possible de « @ ». Rend un callback ref à
-   * poser dessus (fusionné avec ses autres refs, sans rien renvoyer depuis la
-   * fusion : c'est le rappel avec `null` qui désinscrit au démontage — filtre
-   * de vue, drag). Hors surface (aucun provider), c'est un no-op : le raccourci
-   * n'existe simplement pas là.
-   */
+ * Declares an element as a possible target of "@". Returns a callback ref to
+ * placed on it (merged with its other refs, without returning anything from the
+ * merge: this is the callback with `null` which unsubscribes on disassembly — filter
+ * view, drag). Outside of the surface (no provider), it's a no-op: the shortcut
+ * simply does not exist there.
+ */
   function useAskTarget(target: T): (el: Element | null) => void {
     const register = useContext(Registry)?.register;
     const targetRef = useRef(target);
@@ -141,14 +140,14 @@ function createAskNumo<T>() {
   return { AskProvider, useAskTarget };
 }
 
-// ── Tickets : board de projet, board global, colonne de triage ───────────────
+// ── Tickets: project board, global board, sorting column ───────────────
 
 const issueAsk = createAskNumo<Issue>();
 
 /**
- * Monté par un board (ou la colonne de triage) : arbitre ce que « @ » envoie à
- * Numo. La sélection prime sur le survol — quand la pilule est là, c'est elle
- * le mode courant.
+ * Set up by a board (or the sorting column): arbitrates what “@” sends to
+ * Numo. Selection takes precedence over hover — when the pill is there, it
+ * is the current mode.
  */
 export function AskNumoProvider({
   selectedIssues,
@@ -166,30 +165,30 @@ export function AskNumoProvider({
   );
 }
 
-/** Déclare une carte de ticket comme cible possible de « @ ». */
+/** Declares a ticket card as a possible target of "@". */
 export const useAskNumoTarget = issueAsk.useAskTarget;
 
-// ── Retours : colonne de l'onglet équipe ─────────────────────────────────────
+// ── Returns: column in the team tab ─────────────────────────────────────
 
 /**
- * Le minimum qu'une ligne de retour doit savoir dire d'elle-même pour que Numo
- * la reçoive en contexte. Volontairement structurel plutôt que
- * `TeamFeedbackListItem` : ce fichier n'a pas à connaître la forme d'un retour.
+ * The minimum that a return line must be able to say about itself for Numo
+ * to receive it in context. Deliberately structural rather than
+ * `TeamFeedbackListItem`: this file does not have to know the form of a return.
  */
 export interface AskNumoFeedback {
   id: string;
-  /** Le titre canonique — celui que porte la pilule de contexte du composer. */
+  /** The canonical title — the one carried by the composer's context pill. */
   title: string;
 }
 
 const feedbackAsk = createAskNumo<AskNumoFeedback>();
 
 /**
- * Monté par l'onglet équipe des retours : « @ » au survol d'une ligne ouvre
- * Numo avec CE retour en contexte, sans avoir à l'ouvrir d'abord.
+ * Set up by the returns team tab: "@" on hovering over a line opens
+ * Numo with THIS feedback in context, without having to open it first.
  *
- * Pas de sélection ici — les retours se tranchent un par un — donc le survol
- * décide seul, et le rappel reçoit un retour et non une liste.
+ * No selection here — the returns are decided one by one — so hovering
+ * decides alone, and the callback receives a return and not a list.
  */
 export function AskNumoFeedbackProvider({
   onAskNumo,
@@ -209,5 +208,5 @@ export function AskNumoFeedbackProvider({
   );
 }
 
-/** Déclare une ligne de retour comme cible possible de « @ ». */
+/** Declares a return line as a possible target of "@". */
 export const useAskNumoFeedbackTarget = feedbackAsk.useAskTarget;

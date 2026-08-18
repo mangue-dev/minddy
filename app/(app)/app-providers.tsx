@@ -47,41 +47,40 @@ const ScratchpadModal = dynamic(
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      {/* Le raccourci d'envoi choisi par le compte, posé haut : tous les
-          composers de l'app sont dessous, et aucun n'a besoin de connaître
-          Supabase pour le lire (cf. lib/keyboard/use-send-mode). */}
+      {/* The sending shortcut chosen by the account, placed high: all
+ composers of the app are below, and none need to know
+ Supabase to read it (see lib/keyboard/use-send-mode). */}
       <SendModeBoundary>
         <AppQueryProvider>
           <RealtimeProvider>
             <ProjectsProvider>
-              {/* Rouvre le wizard de création au retour d'un redirect git
-                  (?setup=git) : le projet n'existe pas encore, la reprise ne peut
-                  donc pas vivre dans le layout d'un projet. */}
+              {/* Reopens the creation wizard when returning from a git redirect
+ (?setup=git): the project does not yet exist, the restart cannot therefore live in the layout of a project. */}
               <Suspense fallback={null}>
                 <ProjectDraftResume />
               </Suspense>
               <AssistantPanelProvider>
-                {/* La conversation Numo vit ICI, au-dessus du panneau : fermer le
-                    panneau démonte sa coquille, pas le tour en cours. */}
+                {/* The Numo conversation lives HERE, above the sign: close the
+ panel dismantles its shell, not the current round. */}
                 <AssistantChatProvider>
                   <ScratchpadProvider>
-                    {/* Le mode zen (MIN-134) enveloppe le shell ET le FAB : c'est
-                        le chrome des deux qu'il masque, et ils sont frères. */}
+                    {/* Zen mode (MIN-134) wraps the shell AND the FAB: it is
+ the chrome of the two it hides, and they are brothers. */}
                     <ZenModeProvider>
-                      {/* Au-dessus du clavier : ⌘B lit ce contexte pour savoir
-                          qu'une page porte une sidebar secondaire — la primaire y
-                          est en rail, il n'y a plus rien à replier. */}
+                      {/* Above the keyboard: ⌘B reads this context to know
+ that a page has a secondary sidebar — the primary y
+ is in rail, there is nothing more to fold. */}
                       <SecondarySidebarProvider>
                         <KeyboardProvider>
                           <UndoProvider>
                             <CreateProvider>
                               <BulkActionsProvider>
-                                {/* « Enregistrer la vue actuelle » (⌘K) part de
-                                    l'adresse ; les surfaces dont la sélection
-                                    n'y vit pas (une conversation de /agents, la
-                                    PR ouverte, la vue active d'un board) la
-                                    publient ici. Au-dessus du shell, donc :
-                                    c'est la palette qui lit. */}
+                                {/* “Save current view” (⌘K) starts from
+ address; surfaces whose selection
+ does not live there (a conversation of /agents, the open
+ PR, the active view of a board) the
+ publish here. Above the shell, therefore:
+ it is the palette which reads. */}
                                 <CurrentViewProvider>
                                   <AppShellChrome>{children}</AppShellChrome>
                                 </CurrentViewProvider>
@@ -94,21 +93,21 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                             <AnalyticsProjectGroup />
                             <NewVersionBanner />
                             <PushServiceWorker />
-                            {/* Le pendant natif dans l'app de bureau (MIN-291) :
-                                le pont temps réel de MIN-89 fournit déjà tout,
-                                il n'y a que les bannières à émettre. */}
+                            {/* The native counterpart in the desktop app (MIN-291):
+ the MIN-89 real-time bridge already provides everything,
+ there are only the banners to emit. */}
                             <DesktopNotifications />
-                            {/* La question de la mesure d'audience, posée une
-                                fois dans l'app de bureau — le bandeau de site
-                                n'y va pas (MIN-291). */}
+                            {/* The question of audience measurement, asked once
+ times in the desktop app — the site banner
+ does not go there (MIN-291). */}
                             <DesktopAnalyticsPrompt />
-                            {/* Les boutons macOS sont natifs : rien ne passe
-                                devant eux, donc ils s'effacent le temps d'une
-                                boîte de dialogue (MIN-291). */}
+                            {/* The macOS buttons are native: nothing happens
+ in front of them, so they are erased for the duration of a
+ dialog box (MIN-291). */}
                             <DesktopWindowButtons />
-                            {/* Suspense obligatoire : il lit `useSearchParams`,
-                                parce que la cible d'une notification vit dans la
-                                query (`?issue=…`). */}
+                            {/* Obligatory suspense: it reads `useSearchParams`,
+ because the target of a notification lives in the
+ query (`?issue=…`). */}
                             <Suspense fallback={null}>
                               <PushNotificationDismiss />
                             </Suspense>

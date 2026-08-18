@@ -1,19 +1,19 @@
 "use client";
 
-// Les mentions « @ » dans une DESCRIPTION (tiptap) — personne, ticket, objectif.
+// “@” mentions in a DESCRIPTION (tiptap) — person, ticket, objective.
 //
-// Même contrat que dans un commentaire (components/mention-textarea) : ce qui est
-// STOCKÉ est du texte, « @Nom » / « @MIN-42 » / « @Objectif », et la pilule s'en
-// re-déduit à chaque relecture par la règle unique de lib/mention-scan. Le nœud
-// tiptap n'est qu'un habit posé sur ce texte : il se sérialise en markdown vers
-// lui, et l'hydratation le repose à l'ouverture. Rien de nouveau à persister,
-// donc rien à migrer, et une description reste lisible telle quelle par le MCP,
-// par Numo et par l'agent de code.
+// Same contract as in a comment (components/mention-textarea): what is
+// STORED is text, “@Name” / “@MIN-42” / “@Goal”, and the pill comes from it
+// re-inferred on each reread by the unique rule of lib/mention-scan. The knot
+// tiptap is just a coat placed on this text: it is serialized in markdown towards
+// him, and the hydration rests him at the opening. Nothing new to persist,
+// so nothing to migrate, and a description remains readable as is by the MCP,
+// by Numo and by the code agent.
 //
-// Le menu est porté au corps du document, comme celui du « / » du carnet
-// (components/scratchpad/slash-command) et pour les mêmes raisons : dans le
-// panneau ou le dialogue, un menu en position absolue se fait couper par le
-// conteneur qui défile.
+// The menu is brought to the body of the document, like that of the “/” in the notebook
+// (components/scratchpad/slash-command) and for the same reasons: in the
+// panel or dialog, a menu in absolute position is cut by the
+// scrolling container.
 
 import {
   forwardRef,
@@ -40,11 +40,11 @@ import {
 import { memberLabel, type MentionScan, type ScannedMention } from "@/lib/mention-scan";
 import { MentionNodeBase } from "@/components/mention-node";
 
-/* ── Le nœud ─────────────────────────────────────────────────────────── */
+/* ── The node ───────────────────────────── ────────────────────────────── */
 
-/** Le nœud PLUS sa pilule. Le schéma, les attributs et la sérialisation markdown
-    vivent à part (components/mention-node.ts) : la projection markdown des pages
-    monte le nœud nu, hors navigateur, sans React. */
+/** The node PLUS its pill. The schema, attributes and serialization markdown
+ live separately (components/mention-node.ts): the markdown projection of pages
+ mounts the bare node, outside the browser, without React. */
 export const MentionNode = MentionNodeBase.extend({
   addNodeView() {
     return ReactNodeViewRenderer(MentionNodeView);
@@ -54,15 +54,15 @@ export const MentionNode = MentionNodeBase.extend({
 function MentionNodeView({ node }: NodeViewProps) {
   const type = node.attrs.mentionType as MentionOption["type"] | "numo";
   const id = (node.attrs.mentionId as string | null) ?? NUMO_MENTION_ID;
-  // Où mène cette pilule-là : la surface le sait (lib/use-mention-sources), le
-  // nœud non — il ne porte que le type et l'id. Une personne ne mène nulle part,
-  // et un élément que les sources ne connaissent pas (encore) non plus : la
-  // pilule reste alors du texte, ce qu'elle a toujours été.
+  // Where does this pill lead: the surface knows it (lib/use-mention-sources), the
+  // node no — it only carries the type and id. One person gets nowhere,
+  // and an element that the sources do not know (yet) either: the
+  // pill then remains text, which it has always been.
   const links = useMentionLinks();
   const href = links?.href(type, id) ?? null;
   return (
-    // `align-baseline`, comme la pilule qu'elle porte : une enveloppe centrée
-    // sur la hauteur d'x remettrait le décalage que la pilule vient de corriger.
+    // `align-baseline`, like the pill she carries: a centered envelope
+    // on the height of x would restore the offset that the pill has just corrected.
     <NodeViewWrapper as="span" className="inline-block align-baseline">
       <MentionChip
         type={type}
@@ -72,10 +72,10 @@ function MentionNodeView({ node }: NodeViewProps) {
         label={node.attrs.mentionLabel ?? ""}
         avatarSeed={node.attrs.seed}
         color={node.attrs.color}
-        // L'attribut `icon` porte deux choses selon le type, et une seule à la
-        // fois : le favicon d'un projet (une URL) ou l'émoji d'une page. Les
-        // passer tous les deux sans distinguer donnerait une pilule de page
-        // toujours coiffée du livre générique, jamais de son émoji.
+        // The `icon` attribute carries two things depending on the type, and only one on
+        // times: the favicon of a project (a URL) or the emoji of a page. THE
+        // passing both without distinguishing would give a page pill
+        // always wearing the generic book, never its emoji.
         iconUrl={type === "page" ? null : node.attrs.icon}
         icon={type === "page" ? node.attrs.icon : null}
       />
@@ -83,7 +83,7 @@ function MentionNodeView({ node }: NodeViewProps) {
   );
 }
 
-/** Les attributs du nœud pour une option choisie dans la liste. */
+/** The node attributes for an option chosen from the list. */
 function attrsFromOption(option: MentionOption) {
   return {
     mentionType: option.type,
@@ -95,7 +95,7 @@ function attrsFromOption(option: MentionOption) {
   };
 }
 
-/** Les attributs du nœud pour une mention RELUE dans le texte. */
+/** The node attributes for a REVIEW mention in the text. */
 function attrsFromScanned(mention: ScannedMention) {
   switch (mention.type) {
     case "member":
@@ -123,8 +123,8 @@ function attrsFromScanned(mention: ScannedMention) {
         mentionLabel: mention.page.title,
         seed: null,
         color: null,
-        // L'émoji de la page voyage dans `icon`, comme le favicon d'un projet :
-        // c'est le même attribut, et la pilule sait quoi en faire selon le type.
+        // The page emoji travels in `icon`, like the favicon of a project:
+        // it's the same attribute, and the pill knows what to do with it depending on the type.
         icon: mention.page.icon,
       };
     case "objective":
@@ -136,9 +136,9 @@ function attrsFromScanned(mention: ScannedMention) {
         color: mention.objective.color,
         icon: null,
       };
-    // Numo et les comptes de forge ne se citent pas dans une description : le
-    // scanner d'une description ne les produit pas comme option, mais « @numo »
-    // reste reconnu dans le texte — il garde donc sa pilule.
+    // Numo and the forge accounts are not cited in a description: the
+    // scanning a description does not produce them as an option, but “@numo”
+    // remains recognized in the text — he therefore keeps his pill.
     default:
       return {
         mentionType: "numo",
@@ -152,22 +152,21 @@ function attrsFromScanned(mention: ScannedMention) {
 }
 
 /**
- * Marque la transaction d'hydratation. L'éditeur la reconnaît pour ne PAS la
- * compter comme une frappe : sans ça, poser les pilules à l'ouverture marquerait
- * la description « modifiée par l'utilisateur », et le panneau cesserait
- * d'accepter les écritures distantes sur un texte que personne n'a touché.
+ * Marks the hydration transaction. The editor recognizes it for NOT counting
+ * as a keystroke: otherwise, placing the pills at the opening would mark
+ * the description "modified by user", and the panel would stop
+ * accepting remote writes on text that no one has touched.
  */
 export const MENTION_HYDRATION_META = "mentionHydration";
 
 /**
- * Repose les pilules d'un texte déjà écrit : chaque « @… » reconnu devient un
- * nœud. Appelé à l'ouverture, et de nouveau quand la liste des citables arrive
- * après coup (l'index se charge au temps mort).
+ * Rests the pills of an already written text: each recognized “@…” becomes a
+ * node. Called upon opening, and again when the list of quotables arrives
+ * afterwards (the index loads at dead time).
  *
- * Les remplacements s'appliquent DE LA FIN VERS LE DÉBUT : chacun change la
- * longueur du document, donc décale toutes les positions qui le suivent.
- * `addToHistory: false` : l'hydratation n'est pas une modification de
- * l'utilisateur, un ⌘Z ne doit pas la défaire.
+ * Replacements apply FROM THE END TO THE BEGINNING: each changes the length of the document, therefore shifting all positions following it.
+ * `addToHistory: false`: hydration is not a modification of
+ * the user, a ⌘Z should not undo it.
  */
 export function hydrateMentions(editor: Editor, scan: MentionScan): void {
   const { state } = editor;
@@ -202,7 +201,7 @@ export function hydrateMentions(editor: Editor, scan: MentionScan): void {
   editor.view.dispatch(tr);
 }
 
-/* ── Le menu ─────────────────────────────────────────────────────────── */
+/* ── The menu ───────────────────────────── ────────────────────────────── */
 
 interface MentionMenuRef {
   onKeyDown: (event: KeyboardEvent) => boolean;
@@ -264,10 +263,10 @@ const EDGE = 8;
 const GAP = 6;
 
 /**
- * Rendu impératif du menu, porté au corps du document et positionné en
- * coordonnées de FENÊTRE — même montage, et mêmes raisons, que le menu « / » du
- * carnet : dans un panneau ou un dialogue qui défile, un menu en position
- * absolue se fait couper par son conteneur.
+ * Imperative rendering of the menu, carried to the body of the document and positioned in
+ * WINDOW coordinates — same assembly, and same reasons, as the “/” menu of
+ * notebook: in a scrolling panel or dialog, a menu in absolute position
+ * is cut off by its container.
  */
 function renderMentionMenu() {
   let renderer: ReactRenderer<MentionMenuRef, MentionProps> | null = null;
@@ -288,9 +287,9 @@ function renderMentionMenu() {
     menuEl.style.left = `${clamp(rect.left, window.innerWidth - w - EDGE)}px`;
   };
 
-  // La taille du menu ne vaut qu'à la frame suivante après un changement de
-  // props : sans ce second passage, une liste qui vient d'être filtrée est
-  // placée avec sa hauteur d'avant.
+  // The size of the menu only applies to the next frame after a change of
+  // props: without this second pass, a list which has just been filtered is
+  // placed with its previous height.
   const reposition = () => {
     place();
     requestAnimationFrame(place);
@@ -301,7 +300,7 @@ function renderMentionMenu() {
       renderer = new ReactRenderer(MentionMenu, { props, editor: props.editor });
       menuEl = renderer.element as HTMLElement;
       menuEl.style.position = "fixed";
-      menuEl.style.zIndex = "60"; // au-dessus des dialogues (z-50), comme les infobulles
+      menuEl.style.zIndex = "60"; // above dialogs (z-50), like tooltips
       menuEl.style.pointerEvents = "auto";
       caretRect = () => props.clientRect?.() ?? null;
       document.body.appendChild(menuEl);
@@ -331,15 +330,14 @@ function renderMentionMenu() {
 }
 
 export interface MentionSuggestOptions {
-  /** Lue à CHAQUE frappe, pas capturée : la liste arrive souvent après le
-      montage de l'éditeur (l'index se charge au temps mort). */
+  /** Read on EACH keystroke, not captured: the list often arrives after the editor is mounted (the index loads at dead time). */
   items: () => MentionOption[];
-  /** Le premier « @ » tapé — de quoi réclamer la liste à ce moment-là plutôt
-      qu'à l'ouverture de la page. Appelé sans garantie d'unicité. */
+  /** The first “@” typed — enough to request the list at that moment rather
+ than when opening the page. Called without guarantee of uniqueness. */
   onQuery?: () => void;
 }
 
-/** L'extension « @ » d'une description. Se configure avec un LECTEUR de liste. */
+/** The “@” extension of a description. Configured with a list READER. */
 export const MentionSuggest = Extension.create<MentionSuggestOptions>({
   name: "mentionSuggest",
 
@@ -351,17 +349,17 @@ export const MentionSuggest = Extension.create<MentionSuggestOptions>({
     const options = this.options;
     return [
       Suggestion<MentionOption>({
-        // pnpm dual @tiptap/core (même 3.27.4) — l'editor de Extension n'a pas
-        // la même identité que celui de @tiptap/suggestion. Sans effet à
-        // l'exécution (même remarque que pour le menu « / »).
+        // pnpm dual @tiptap/core (even 3.27.4) — the Extension editor does not have
+        // the same identity as that of @tiptap/suggestion. No effect on
+        // execution (same remark as for the “/” menu).
         editor: this.editor as never,
-        // Une CLÉ à soi. `Suggestion` en pose une par défaut, la même pour tout
-        // le monde : le « @ » et le menu « / » d'une page se retrouvaient sur
-        // la même, et ProseMirror levait au montage (MIN-270).
+        // A KEY to yourself. `Suggestion` sets one by default, the same for everything
+        // the world: the “@” and the “/” menu of a page were found on
+        // the same, and ProseMirror raised during editing (MIN-270).
         pluginKey: new PluginKey("mentionSuggest"),
         char: "@",
-        // Comme partout ailleurs : le libellé se cherche par son DÉBUT de mot,
-        // et c'est le choix dans la liste qui pose « @Jean Dupont » en entier.
+        // Like everywhere else: the wording is searched by its START of the word,
+        // and it is the choice in the list which poses “@Jean Dupont” in full.
         allowSpaces: false,
         items: ({ query }) => {
           options.onQuery?.();
@@ -373,8 +371,8 @@ export const MentionSuggest = Extension.create<MentionSuggestOptions>({
             .focus()
             .insertContentAt(range, [
               { type: "mention", attrs: attrsFromOption(props) },
-              // L'espace qui suit : sans lui le caret reste collé à un nœud
-              // atomique et la frappe suivante repart de travers.
+              // The space that follows: without it the caret remains stuck to a node
+              // atomic and the next keystroke goes wrong.
               { type: "text", text: " " },
             ])
             .run();

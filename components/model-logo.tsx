@@ -39,33 +39,33 @@ import { cn } from "mangue-ui";
 import { providerFromModel } from "@/lib/model-display";
 
 /**
- * Logo couleur d'un modèle IA (MIN-46) déduit de son id OpenRouter
- * `provider/model` via `@lobehub/icons`. Partagé par `ModelBadge` (affichage
- * d'un run) et `ModelCombobox` (picker recherchable). On importe les marques
- * individuellement (le barrel a `sideEffects:false`) pour ne pas tirer
- * `ProviderIcon`/`@lobehub/ui`. Slug provider inconnu → fallback `Cpu`.
+ * Color logo of an AI model (MIN-46) deduced from its OpenRouter id
+ * `provider/model` via `@lobehub/icons`. Shared by `ModelBadge` (display
+ * of a run) and `ModelCombobox` (searchable picker). We import the marks
+ * individually (the barrel has `sideEffects:false`) so as not to draw
+ * `ProviderIcon`/`@lobehub/ui`. Unknown slug provider → fallback `Cpu`.
  *
- * Une poignée d'éditeurs restent sur ce fallback, et c'est un choix : ils ne
- * publient rien d'utilisable dans 14 pixels (logotypes de deux lignes chez
- * Thinking Machines, avatars personnels chez TheDrummer et Sao10K). Une puce
- * neutre y vaut mieux qu'un raster flou — et mieux qu'un monogramme coloré,
- * essayé puis retiré : il attirait l'œil plus que les vrais logos.
+ * A handful of publishers remain on this fallback, and it's a choice: they don't
+ * publish anything usable in 14 pixels (two-line logos at
+ * Thinking Machines, personal avatars at TheDrummer and Sao10K). A neutral chip
+ * is better than a blurry raster — and better than a colored monogram,
+ * tried then removed: it attracted the eye more than real logos.
  */
 
 type LobeLogo = { size?: number; className?: string };
 
 /**
- * slug provider (normalisé par providerFromModel) → composant logo.
+ * slug provider (normalized by providerFromModel) → component logo.
  *
- * Les clés sont les slugs TELS QU'OPENROUTER LES PUBLIE, une fois passés par les
- * alias de `providerFromModel` (`z-ai` → `zhipu`, `amazon` → `bedrock`…). D'où
- * les tirets conservés sur `aion-labs`, `bytedance-seed`, `arcee-ai`,
- * `ibm-granite` : ces éditeurs n'ont pas d'alias, et c'est bien cette chaîne-là
- * qu'on reçoit.
+ * The keys are the slugs AS OPENROUTER PUBLISHES them, once passed through the
+ * alias of `providerFromModel` (`z-ai` → `zhipu`, `amazon` → `bedrock`…). Hence
+ * the hyphens kept on `aion-labs`, `bytedance-seed`, `arcee-ai`,
+ * `ibm-granite`: these editors do not have an alias, and it is indeed this string
+ * that we receive.
  *
- * `.Color` quand la marque en publie un, le monochrome sinon — certaines n'ont
- * qu'une version (OpenAI, Grok, Moonshot, et la plupart des petits éditeurs).
- * Un slug absent d'ici retombe sur `Cpu`.
+ * `.Color` when the brand publishes one, the monochrome otherwise — some only have
+ * one version (OpenAI, Grok, Moonshot, and most small publishers).
+ * A slug absent from here falls on `Cpu`.
  */
 const PROVIDER_LOGOS: Record<string, ComponentType<LobeLogo>> = {
   deepseek: DeepSeek.Color,
@@ -92,7 +92,7 @@ const PROVIDER_LOGOS: Record<string, ComponentType<LobeLogo>> = {
   tencent: Tencent.Color,
   "bytedance-seed": ByteDance.Color,
   "arcee-ai": Arcee.Color,
-  // Meituan ne publie sous ce slug que la famille LongCat, dont c'est le logo.
+  // Meituan only publishes the LongCat family under this slug, for which it is the logo.
   meituan: LongCat.Color,
   stepfun: Stepfun,
   liquid: Liquid,
@@ -104,10 +104,10 @@ const PROVIDER_LOGOS: Record<string, ComponentType<LobeLogo>> = {
 };
 
 /**
- * Ce slug a-t-il un vrai logo, ou retombera-t-il sur le `Cpu` générique ?
+ * Does this slug have a real logo, or will it fall back on the generic `Cpu`?
  *
- * Exporté pour les tests : un modèle CONSEILLÉ sans logo est un défaut visible
- * de tous, puisque c'est la liste sur laquelle le picker s'ouvre.
+ * Exported for testing: a RECOMMENDED model without a logo is a default visible
+ * to everyone, since this is the list on which the picker opens.
  */
 export function hasProviderLogo(slug: string): boolean {
   return slug in PROVIDER_LOGOS;
@@ -132,7 +132,7 @@ function LogoBySlug({
   );
 }
 
-/** Logo déduit d'un id modèle `provider/model` (ex. "openai/gpt-4o"). */
+/** Logo deduced from a model id `provider/model` (e.g. "openai/gpt-4o"). */
 export function ModelLogo({
   model,
   size = 14,
@@ -145,7 +145,7 @@ export function ModelLogo({
   return <LogoBySlug slug={providerFromModel(model)} size={size} className={className} />;
 }
 
-/** Logo déduit d'un slug provider direct (ex. "openai", "anthropic", "google"). */
+/** Logo deduced from a direct provider slug (e.g. "openai", "anthropic", "google"). */
 export function ProviderLogo({
   provider,
   size = 14,

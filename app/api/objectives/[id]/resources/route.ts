@@ -84,8 +84,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     });
     return NextResponse.json(rows, { status: 201 });
   } catch (e) {
-    // Une page qui n'est pas une page vivante de ce projet est une requête
-    // malformée, pas une panne : 400, comme le reste de la validation.
+    // A page that is not a live page of this project is a request
+    // malformed, not a failure: 400, like the rest of the validation.
     if (e instanceof ResourceScopeError) {
       return NextResponse.json({ error: t("resourceInvalid") }, { status: 400 });
     }

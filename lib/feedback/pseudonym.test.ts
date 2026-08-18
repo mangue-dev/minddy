@@ -21,7 +21,7 @@ describe("generatePseudonym", () => {
     const values = new Set(
       Array.from({ length: 200 }, (_, i) => generatePseudonym(`user-${i}`))
     );
-    // Pas d'exigence d'unicité stricte, mais la distribution doit être large.
+    // No strict uniqueness requirement, but distribution must be wide.
     expect(values.size).toBeGreaterThan(150);
   });
 });

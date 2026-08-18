@@ -1,13 +1,13 @@
 /**
- * Un modèle peut terminer un round sur une simple annonce d'action (`stop`),
- * notamment quand une sortie de type commentary a été aplatie en texte par une
- * couche OpenAI-compatible. Le protocole dit alors « fini », même si la phrase
- * dit exactement l'inverse.
+ * A model can end a round on a simple action announcement (`stop`),
+ * especially when a commentary type output has been flattened into text by an OpenAI-compatible
+ * layer. The protocol then says "finished", even if the phrase
+ * says exactly the opposite.
  *
- * Cette détection reste volontairement étroite : un faux négatif coûte une
- * mauvaise réponse, un faux positif ferait payer un round que personne n'a
- * demandé. Elle vise donc les formulations d'annonce observées, suivies d'un
- * verbe qui implique une lecture, une commande ou une modification.
+ * This detection remains deliberately narrow: a false negative costs a
+ * wrong answer, a false positive would charge for a round that no one has
+ * requested. It therefore targets the announcement formulations observed, followed by a
+ * verb which implies a reading, an order or a modification.
  */
 export function looksLikeUnexecutedPreamble(text: string): boolean {
   const normalized = text

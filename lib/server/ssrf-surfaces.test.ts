@@ -1,18 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-341 — le garde anti-SSRF existe depuis MIN-336 ; ce qui manquait, c'est
- * que les sorties HTTP pilotées par un utilisateur y passent TOUTES.
+ * MIN-341 — the anti-SSRF guard has existed since MIN-336; what was missing is
+ * that user-driven HTTP outputs ALL pass through it.
  *
- * Ce fichier tient la liste de ces sorties, et pour chacune la même question :
- * `http://169.254.169.254/` — le service de métadonnées du cloud, l'adresse qui
- * rend des jetons IAM à qui sait la demander — est-il refusé AVANT tout appel
- * réseau ? Le mock est posé sur le résolveur DNS et sur `pinnedRequest` : le
- * garde joue en entier, et l'absence d'appel est ce qu'on assert.
+ * This file keeps the list of these outputs, and for each the same question:
+ * `http://169.254.169.254/` — the cloud metadata service, the address which
+ * returns IAM tokens to anyone who knows how to ask for it — is it refused BEFORE any network call
+ *? The mock is placed on the DNS resolver and on `pinnedRequest`: the
+ * plays in full, and the absence of a call is what we assert.
  *
- * Une propriété de plus, propre au webhook : ce que l'appelant apprend d'une
- * livraison est un état, jamais le code HTTP du destinataire. Un webhook qui
- * rend « 200 » ici et « 502 » là est un scanner de ports poli.
+ * One more property, specific to the webhook: what the caller learns from a
+ * delivery is a state, never the recipient's HTTP code. A webhook that
+ * renders "200" here and "502" there is a polite port scanner.
  */
 
 const lookup = vi.hoisted(() => vi.fn());
@@ -37,9 +37,9 @@ beforeEach(() => {
   lookup.mockResolvedValue([{ address: "93.184.216.34" }]);
 });
 
-// ── 1. Webhook sortant d'intégration ────────────────────────────────────────
+// ── 1. Outbound integration webhook ──────────────────── ────────────────────
 
-/** L'intégration telle qu'elle est en base, que les tests réécrivent. */
+/** The integration as it is in base, which the tests rewrite. */
 let integrationRow: Record<string, unknown> = {
   id: "int-1",
   kind: "issues",
@@ -48,9 +48,9 @@ let integrationRow: Record<string, unknown> = {
 const updatePatch = vi.fn();
 
 /**
- * Un maillon de requête qui accepte n'importe quelle suite d'appels et finit
- * par rendre `{ data, error: null }`. Les tables autres qu'`integrations` ne
- * sont ici qu'un décor : ce qu'on regarde est ce qui se passe AVANT elles.
+ * A request link that accepts any sequence of calls and ends up with
+ * returning `{ data, error: null }`. Tables other than `integrations` ne
+ * are here just for decoration: what we look at is what happens BEFORE them.
  */
 function anyChain(data: unknown): unknown {
   return new Proxy(
@@ -158,8 +158,8 @@ describe("webhook d'intégration — l'agent ne choisit pas la destination", () 
   });
 
   it("refuse à l'agent de POSER une destination", async () => {
-    // Le scénario du ticket : une injection de prompt dans une description
-    // suffirait sinon à ouvrir un canal d'exfiltration permanent.
+    // The ticket scenario: prompt injection in a description
+    // would otherwise be enough to open a permanent exfiltration channel.
     integrationRow = { id: "int-1", kind: "issues", webhook_url: null };
     const result = await updateIntegrationWebhook({
       projectId: "p1",
@@ -249,8 +249,8 @@ vi.mock("@/lib/server/api-auth", () => ({
   getAuthedUser: async () => ({
     ok: true,
     user: { id: "u1" },
-    // La route push écrit par le client authentifié (sa RLS EST le contrôle de
-    // propriété) : le décor lui rend des listes vides.
+    // The push route written by the authenticated client (its RLS IS the control of
+    // property): the decor returns empty lists.
     supabase: { from: () => anyChain([]) },
   }),
 }));
@@ -283,8 +283,8 @@ describe("base URL BYOK « generic »", () => {
     expect(pinnedRequest).not.toHaveBeenCalled();
   });
 
-  // Témoin : sans lui, un 400 rendu pour une tout autre raison (provider
-  // inconnu, corps mal lu) ferait passer les cas ci-dessus pour des refus.
+  // Witness: without him, a 400 returned for a completely different reason (provider
+  // unknown, body misread) would make the above cases appear as refusals.
   it("accepte un endpoint public", async () => {
     const response = await postAiKey(
       jsonRequest({
@@ -334,7 +334,7 @@ describe("endpoint Web Push", () => {
   });
 });
 
-// ── 4. Icône de projet ──────────────────────────────────────────────────────
+// ── 4. Project icon ─────────────────────────── ───────────────────────────
 
 const { FaviconError, resolveFavicon } = await import("./favicon");
 

@@ -7,7 +7,7 @@ import {
 } from "@/lib/prompt-copy-auto-start";
 
 describe("resolvePromptCopyAutoStart", () => {
-  it("est activée par défaut, y compris sans métadonnées", () => {
+  it("is enabled by default, including without metadata", () => {
     expect(resolvePromptCopyAutoStart(undefined)).toBe(true);
     expect(resolvePromptCopyAutoStart(null)).toBe(true);
     expect(resolvePromptCopyAutoStart({})).toBe(true);
@@ -30,7 +30,7 @@ describe("shouldAutoStartOnPromptCopy", () => {
     expect(shouldAutoStartOnPromptCopy("todo")).toBe(true);
   });
 
-  it("ne ramène jamais un ticket déjà commencé ou clos", () => {
+  it("never brings back an already started or closed ticket", () => {
     for (const status of ["in_progress", "in_review", "done", "canceled", "duplicate"] as const) {
       expect(shouldAutoStartOnPromptCopy(status)).toBe(false);
     }
@@ -38,11 +38,11 @@ describe("shouldAutoStartOnPromptCopy", () => {
 });
 
 describe("shouldAutoStartTask", () => {
-  it("ne démarre qu'une tâche du carnet pas encore commencée", () => {
+  it("starts only a scratchpad task that has not started yet", () => {
     expect(shouldAutoStartTask("pending")).toBe(true);
   });
 
-  it("laisse en place une tâche en cours, cochée ou annulée", () => {
+  it("leaves an in-progress, checked, or cancelled task in place", () => {
     expect(shouldAutoStartTask("in_progress")).toBe(false);
     expect(shouldAutoStartTask("completed")).toBe(false);
     expect(shouldAutoStartTask("cancelled")).toBe(false);

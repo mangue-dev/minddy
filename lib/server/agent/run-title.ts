@@ -1,19 +1,19 @@
 /**
- * Ce qu'on donne au titreur (`generateShortTitle`) pour nommer une conversation
- * de l'agent — et rien d'autre : la fonction est pure, elle assemble un texte.
+ * What we give to the titrator (`generateShortTitle`) to name a conversation
+ * of the agent — and nothing else: the function is pure, it assembles a text.
  *
- * Deux morceaux, dans cet ordre : le TICKET (de quoi on parle) puis la CONSIGNE
- * (ce qu'on a demandé). Une conversation ancrée à un ticket a besoin des deux —
- * la consigne seule est souvent une anaphore (« implémente ça », « regarde le
- * middleware ») qui ne nomme rien, et le titre du ticket seul ne dit pas ce qu'on
- * a demandé quand on lui parle trois fois de suite. Le titreur tranche entre les
- * deux ; ici on ne fait que les lui poser côte à côte.
+ * Two pieces, in this order: the TICKET (what we are talking about) then the CONIGNE
+ * (what we asked for). A conversation anchored to a ticket needs both —
+ * the instruction alone is often an anaphora ("implement this", "look at the
+ * middleware") which names nothing, and the title of the ticket alone does not say what we
+ * asked when spoken to three times in a row. The titrator decides between the
+ * two; here we just ask them side by side.
  *
- * Une conversation SANS ticket (carnet, MIN-84) n'a que sa note, et c'est déjà
- * la mission : elle passe telle quelle.
+ * A conversation WITHOUT a ticket (notebook, MIN-84) only has its note, and that is already
+ * the mission: it passes as is.
  *
- * `null` = rien à résumer (ni ticket ni consigne) → l'appelant saute l'appel au
- * modèle plutôt que de lui envoyer une chaîne vide.
+ * `null` = nothing to summarize (neither ticket nor deposit) → the caller skips the call to the
+ * model rather than sending it an empty string.
  */
 export function agentRunTitleSource({
   issueTitle,

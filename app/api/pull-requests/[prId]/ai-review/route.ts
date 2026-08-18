@@ -3,15 +3,15 @@ import { type NextRequest } from "next/server";
 import { authorizePrRequest, prReviewRunResponse } from "@/lib/server/agent/pr-actions";
 
 /**
- * La review de Numo sur cette pull request, en tant que SESSION.
+ * Numo's review of this pull request, as a SESSION.
  *  GET → { review, events, reviewedHeadSha, defaultModel }
  *
- * Lu à l'ouverture du panneau (rejeu du fil), puis re-poll pendant qu'une passe
- * tourne — le direct realtime (`pr-review:{id}`) est le confort, ce GET est le
- * filet : onglet endormi, message perdu, page rechargée en plein milieu.
+ * Read when the panel opens (replay the wire), then re-poll while a pass
+ * turns — live realtime (`pr-review:{id}`) is comfort, this GET is
+ * net: tab asleep, message lost, page reloaded in the middle.
  *
- * Le déclenchement, lui, reste un POST sur la route parente
- * (`{ action: 'ai_review' }`) : c'est un geste sur la PR, pas sur sa session.
+ * The trigger remains a POST on the parent route
+ * (`{ action: 'ai_review' }`): this is a gesture on the PR, not on its session.
  */
 
 type RouteContext = { params: Promise<{ prId: string }> };

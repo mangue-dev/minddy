@@ -8,15 +8,15 @@ import {
 } from "@/lib/desktop/channel";
 
 describe("parseDesktopChannel", () => {
-  it("reconnaît le seul canal qui ne soit pas le défaut", () => {
+  it("recognizes the only channel that is not the default", () => {
     expect(parseDesktopChannel("preview")).toBe("preview");
     expect(parseDesktopChannel("stable")).toBe("stable");
   });
 
-  // Ce qui compte ici n'est pas la validation, c'est le SENS du repli : un
+  // What matters here is not the validation, it is the MEANING of the withdrawal: a
   // fichier illisible doit ramener quelqu'un en production, jamais l'y bloquer
   // ailleurs.
-  it("retombe sur le stable pour tout le reste", () => {
+  it("falls back to stable for everything else", () => {
     for (const raw of [undefined, null, "", "PREVIEW", "beta", 1, {}, []]) {
       expect(parseDesktopChannel(raw)).toBe("stable");
     }
@@ -44,12 +44,12 @@ describe("desktopOriginForChannel", () => {
 });
 
 describe("desktopChannelForOrigin", () => {
-  it("lit le canal sur l'origine de la page", () => {
+  it("reads the channel from the page origin", () => {
     expect(desktopChannelForOrigin(DESKTOP_STABLE_ORIGIN)).toBe("stable");
     expect(desktopChannelForOrigin(DESKTOP_PREVIEW_ORIGIN)).toBe("preview");
   });
 
-  // `null` est ce qui retire l'interrupteur de l'écran de réglages en dév.
+  // `null` is what removes the switch from the dev settings screen.
   it("rend null hors des deux canaux", () => {
     expect(desktopChannelForOrigin("http://localhost:3000")).toBeNull();
     expect(desktopChannelForOrigin("https://minddy.app")).toBeNull();

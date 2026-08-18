@@ -1,31 +1,30 @@
-// Où vit une tâche DANS son document — la moitié « document » de ce que
-// lib/scratchpad-prompt.ts fait ensuite avec des chaînes.
+// Where a task lives IN its document — the “document” half of what
+// lib/scratchpad-prompt.ts then done with strings.
 //
-// Séparé de la vue (components/scratchpad/task-item-view.tsx) pour la même
-// raison que le schéma l'a été de sa vue : la vue tire `mangue-ui` et ne se
-// monte que dans un navigateur, alors que ceci ne parle qu'à ProseMirror et se
-// joue donc sur un vrai document, dans un test. C'est le canal par lequel une
-// tâche arrive chez l'agent avec sa section — s'il se trompe, personne ne le
-// voit : le prompt part quand même, il dit juste autre chose.
+// Separate from the view (components/scratchpad/task-item-view.tsx) for the same
+// reason that the schema was from its view: the view draws `mangue-ui` and does not
+// only displays in a browser, whereas this only speaks to ProseMirror and
+// therefore plays on a real document, in a test. It is the channel through which a
+// task arrives at the agent with his section — if he makes a mistake, no one will
+// see: the prompt still goes, it just says something else.
 
 import type { Editor } from "@tiptap/core";
 import { sectionHeadingChain } from "@/lib/scratchpad-prompt";
 
 /**
- * Les lignes de titre markdown (niveaux compris) des sections qui CONTIENNENT le
- * bloc situé en `pos`, de la plus large à la plus étroite — vide si la tâche
- * traîne avant tout titre. Reprises telles quelles en tête du markdown copié /
- * lancé : c'est ce qui permet au prompt de nommer la section.
+ * Markdown title lines (including levels) of sections that CONTAIN the
+ * block located in `pos`, from widest to narrowest — empty if task
+ * trails before any title. Repeated as is at the top of the copied markdown /
+ * launched: this is what allows the prompt to name the section.
  *
- * La hiérarchie compte : une tâche sous « ## Sidebar » est aussi une tâche de
- * « # Pull requests », et le titre le plus proche ne suffit pas à la situer. La
- * règle d'emboîtement vit dans `sectionHeadingChain` — ici on ne fait que lui
- * lister les titres qui précèdent la tâche.
+ * Hierarchy matters: a task under “## Sidebar” is also a task under
+ * “# Pull requests”, and the closest title is not enough to locate it. The
+ * nesting rule lives in `sectionHeadingChain` — here we only do it
+ * list the titles which precede the task.
  *
- * On raisonne au PREMIER NIVEAU du document : la tâche vit dans une `taskList`,
- * on remonte à son bloc de premier niveau, puis on relève les titres qui le
- * précèdent, dans l'ordre du document. Un titre enfermé dans un dépliant ne
- * compte donc pas comme une section — c'est du contenu replié, pas un plan.
+ * We reason at the FIRST LEVEL of the document: the task lives in a `taskList`,
+ * we go back to its first level block, then we note the titles which precede
+ *, in the order of the document. A title enclosed in a leaflet therefore does not count as a section — it is folded content, not an outline.
  */
 export function taskSectionHeadings(
   editor: Editor,

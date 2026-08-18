@@ -39,27 +39,27 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * La corbeille (MIN-133).
+ * The basket (MIN-133).
  *
- * Un seul écran pour les six choses qu'on peut supprimer — tickets, objectifs,
- * pages (MIN-266), retours, routines (MIN-201), projets — parce que ce qu'on y cherche est
- * toujours la même chose : « je viens d'effacer quelque chose, où est-ce ». Les
- * sections suivent l'ordre du contenu vers le contenant, et chaque ligne dit le
- * délai qui lui reste : c'est l'information qui décide s'il faut agir maintenant.
+ * A single screen for the six things you can delete — tickets, goals,
+ * pages (MIN-266), returns, routines (MIN-201), projects — because what we are looking for is
+ * always the same thing: “I just deleted something, where is it”. THE
+ * sections follow the order from content to container, and each line says the
+ * time remaining: it is the information that decides whether to act now.
  *
- * Restaurer est le geste principal (bouton plein) ; supprimer définitivement
- * reste une icône discrète derrière une confirmation — la corbeille existe pour
- * revenir en arrière, pas pour finir le travail.
+ * Restore is the main gesture (full button); permanently delete
+ * remains a discreet icon behind a confirmation — the trash can exists for
+ * go back, not to finish the job.
  */
 
 const TYPE_ICON: Record<TrashType, LucideIcon> = {
   issue: CircleDashed,
   objective: Target,
-  // Une ligne « page » vaut pour la page ET ses sous-pages : restaurer la
-  // racine ramène l'arbre entier (MIN-266).
+  // A “page” line is valid for the page AND its subpages: restore the
+  // root brings back the entire tree (MIN-266).
   page: FileText,
   feedback: MessagesSquare,
-  // La même que la colonne Routines : c'est à elle qu'on renvoie l'œil.
+  // The same as the Routines column: it is to this that we return the eye.
   routine: CalendarClock,
   project: Trash2,
 };
@@ -126,7 +126,7 @@ function TrashRow({
         </div>
       </div>
 
-      {/* Le compte à rebours : au-delà, le balayage nocturne tranche. */}
+      {/* The countdown: beyond that, the nocturnal sweep cuts through. */}
       <span
         className={cn(
           "shrink-0 text-xs tabular-nums",
@@ -219,14 +219,13 @@ export default function TrashPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-10">
-      {/* Corbeille vide : ni titre ni sous-titre au-dessus de la scène — il n'y
-          a rien à décrire, et le délai de conservation ne dit quelque chose que
-          quand il court sur quelque chose. */}
+      {/* Empty trash can: no title or subtitle above the scene — there is no
+ has nothing to describe, and the retention period only says something when it runs over something. */}
       {grouped.length > 0 && header}
 
       {grouped.length === 0 ? (
-        /* Rien à faire ici non plus : la scène et une phrase, sans bouton,
-           comme le triage. */
+        /* Nothing to do here either: the scene and a sentence, without a button,
+ like triage. */
         <EmptyScene icon={Trash2} tone="destructive" title={t("emptyTitle")} />
       ) : (
         grouped.map(({ type, items: rows }) => (

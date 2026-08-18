@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version du cœur déjà publiée (sans préfixe v)"
+        description: "Core version already released (without v prefix)""
         required: true
         type: string
 
@@ -70,8 +70,8 @@ jobs:
           MINDDY_DESKTOP_FEED_URL: ${{ secrets.PUBLIC_DESKTOP_FEED_URL }}
         run: npm --prefix desktop run dist
 
-      # publish-desktop vérifie signature, ticket agrafé et manifeste avant le
-      # premier octet, puis publie latest-mac.yml en dernier.
+      # publish-desktop verifies signature, stapled ticket and manifest before
+      # first byte, then publish latest-mac.yml last.
       - name: Verify and publish public update feed
         env:
           MINDDY_DESKTOP_FEED_URL: ${{ secrets.PUBLIC_DESKTOP_FEED_URL }}
@@ -96,8 +96,8 @@ jobs:
           RELEASE_VERSION: ${{ inputs.version }}
         run: gh release upload "v$RELEASE_VERSION" .desktop-release/*
 
-      # Le relevé versionné alimente la prochaine détection automatique de
-      # `npm run deploy`. Il est écrit seulement après publication réussie.
+      #The versioned report feeds the next automatic detection of
+      #`npm run deploy`. It is written only after successful publication.
       - name: Record published desktop fingerprint
         env:
           GH_TOKEN: ${{ github.token }}

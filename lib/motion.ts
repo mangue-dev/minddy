@@ -7,14 +7,14 @@ export const transitions = {
   snappy: { type: "spring", stiffness: 500, damping: 35 } as Transition,
   fade: { duration: 0.15, ease: "easeOut" } as Transition,
   /**
-   * Le glissement du CHÂSSIS : largeur de la sidebar primaire, gouttière de la
-   * sidebar secondaire, et par ricochet tout ce qui est à leur droite — header,
-   * fil d'Ariane, contenu. Les trois DOIVENT partager cette courbe, sinon leurs
-   * bords se décalent entre eux pendant le trajet au lieu de glisser d'un bloc.
-   *
-   * Une durée plutôt qu'un ressort : un ressort dépasse sa cible, et une largeur
-   * de mise en page qui dépasse fait tressauter toute la moitié droite de
-   * l'écran. La courbe part vite et se pose doucement.
-   */
+ * The sliding of the CHASSIS: width of the primary sidebar, gutter of the
+ * secondary sidebar, and by extension everything that is to their right — header,
+ * breadcrumbs, content. All three MUST share this curve, otherwise their
+ * edges shift between them during travel instead of sliding as a block.
+ *
+ * A duration rather than a spring: a spring overshoots its target, and an overhanging width
+ * layout causes the entire right half to jolt de
+ * the screen. The curve starts quickly and settles gently.
+ */
   shell: { duration: 0.32, ease: [0.32, 0.72, 0, 1] } as Transition,
 };

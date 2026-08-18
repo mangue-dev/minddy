@@ -4,36 +4,33 @@ import { cn } from "mangue-ui/lib/utils";
 import { ScreenshotSlot } from "./screenshot-slot";
 
 /**
- * L'app de bureau, mise en scène (MIN-292).
+ * The desktop app, staged (MIN-292).
  *
- * **Trois règles, et la première explique les deux autres.**
+ * **Three rules, and the first explains the other two.**
  *
- * 1. **Rien de faux.** Pas de cadre de fenêtre macOS dessiné autour de la
- *    capture : minddy n'a PAS de barre de titre — les feux de circulation
- *    vivent dans la ligne de marque de la barre latérale (§2 du cadrage). Un
- *    chrome générique posé par-dessus une capture web mentirait sur la seule
- *    chose que cette page a à montrer, et écraserait le logo qui occupe
- *    précisément ce coin.
- * 2. **Ce qu'on ajoute est ce que l'app fait vraiment.** La bannière de
- *    notification et la pastille chiffrée du dock ne sont pas du décor : ce sont
- *    les deux seules choses que l'app apporte et qu'une capture ne peut pas
- *    contenir, puisqu'elles vivent HORS de la fenêtre. Les dessiner est la seule
- *    façon honnête de les montrer.
- * 3. **Ça déborde.** Les deux objets sortent du cadre de la capture, en haut à
- *    droite et en bas à gauche : c'est ce qui dit « hors du navigateur » sans
- *    l'écrire, et ce qui empêche la composition d'être une capture de plus
- *    centrée dans une boîte.
+ * 1. **Nothing wrong.** No macOS window frame drawn around the
+ * capture: minddy does NOT have a title bar — the traffic lights
+ * lives in the sidebar brand line (framing §2). A
+ * generic chrome placed on top of a web capture would lie about the only
+ * thing that this page has to show, and would overwrite the logo which occupies
+ * precisely this corner.
+ * 2. **What we add is what the app really does.** The banner of
+ * notification and the encrypted patch of the dock are not part of the decor: they are
+ * the only two things that the app brings and that a capture cannot
+ * contain, since they live OUTSIDE the window. Drawing them is the only honest way to show them.
+ * 3. **It's overflowing.** Both objects go out of scope of the capture, top right and bottom left: this is what says "out of browser" without writing it, and what prevents the composition from being a capture more
+ * centered in a box.
  *
- * Sous `sm`, les débordements rentrent : une bannière qui dépasse de 40 px sur
- * un écran de 390 px ferait défiler la page latéralement.
+ * Under `sm`, overflows fit: a banner that extends by 40 px on
+ * a 390 px screen would scroll the page sideways.
  */
 export async function DesktopShowcase({ className }: { className?: string }) {
   const t = await getTranslations("Download");
 
   return (
     <div className={cn("relative", className)}>
-      {/* Halo — il donne de la profondeur sans ajouter d'objet. `blur-3xl` sur
-          un aplat de la couleur d'accent, sous tout le reste. */}
+      {/* Halo — it gives depth without adding an object. `blur-3xl` on
+ a solid color of the accent color, under everything else. */}
       <div
         aria-hidden
         className="pointer-events-none absolute -inset-x-8 -inset-y-10 -z-10 rounded-[3rem] bg-primary/[0.07] blur-3xl"
@@ -41,9 +38,9 @@ export async function DesktopShowcase({ className }: { className?: string }) {
 
       <ScreenshotSlot id="heroBoard" priority />
 
-      {/* La bannière native, en haut à droite. C'est la forme d'une
-          notification macOS : icône carrée à coins très arrondis, titre en
-          gras, corps sur deux lignes au plus. */}
+      {/* The native banner, top right. This is the shape of a
+ macOS notification: square icon with very rounded corners, title in bold
+, body on two lines at most. */}
       <div className="pointer-events-none absolute -top-7 -right-2 hidden w-[19rem] sm:block lg:-top-9 lg:-right-10">
         <div className="flex items-start gap-3 rounded-2xl border border-border bg-card/95 p-3 shadow-xl ring-1 ring-black/[0.04] backdrop-blur-md dark:ring-white/[0.06]">
           <Image
@@ -64,9 +61,9 @@ export async function DesktopShowcase({ className }: { className?: string }) {
         </div>
       </div>
 
-      {/* L'icône du dock et sa pastille, en bas à gauche. L'icône est la VRAIE
-          (celle qui a servi à fabriquer le .icns), et la pastille est un vrai
-          compteur de non-lus — pas un « 1 » décoratif. */}
+      {/* The dock icon and its button, bottom left. The icon is the REAL
+ (the one used to make the .icns), and the dot is a real
+ unread counter — not a decorative “1”. */}
       <div className="pointer-events-none absolute -bottom-9 -left-4 hidden sm:block lg:-bottom-10 lg:-left-12">
         <div className="relative">
           <Image

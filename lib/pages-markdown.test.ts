@@ -1,20 +1,20 @@
 // @vitest-environment jsdom
 //
-// L'aller-retour markdown ⇄ JSON d'une page, joué en ENTIER sur un vrai éditeur
-// monté sous jsdom — le patron de lib/scratchpad-nesting.test.ts, et pour la
-// même raison : les sous-tâches du carnet se perdaient entre le markdown et
-// l'éditeur sans que rien ne le signale, et la seule chose qui l'a vu est un
-// aller-retour joué du début à la fin.
+// The round trip markdown ⇄ JSON of a page, played in ENTIRE on a real editor
+// mounted under jsdom — the pattern of lib/scratchpad-nesting.test.ts, and for
+// same reason: the notebook subtasks were lost between markdown and
+// the editor without anything indicating it, and the only thing that saw it was a
+// back and forth played from start to finish.
 //
-// Un bloc n'est pas fini quand il s'affiche. Il est fini quand markdown → JSON →
-// markdown revient identique. D'où la forme de ce fichier : les cas ne sont pas
-// une liste écrite à la main mais le REGISTRE lui-même. Ajouter un bloc sans sa
-// projection ne peut donc pas passer inaperçu — le cas de ce bloc existe avant
-// qu'on y pense, et il échoue.
+// A block is not finished when it is displayed. It is finished when markdown → JSON →
+// markdown returns identical. Hence the form of this file: the cases are not
+// a handwritten list but the REGISTER itself. Add a block without its
+// projection therefore cannot go unnoticed — the case of this block exists before
+// think about it, and it fails.
 //
-// Ce qui est perdu l'est EXPRÈS, et se lit ici en toutes lettres (couleur, état
-// plié, pilule de mention, id de bloc) : une perte documentée est un contrat,
-// une perte découverte est un bug.
+// What is lost is lost EXPRESSLY, and is read here in full (color, state
+// folded, mention pill, block id): a documented loss is a contract,
+// a discovered loss is a bug.
 
 import { describe, expect, it } from "vitest";
 import { PAGE_BLOCKS } from "@/components/pages/blocks";
@@ -25,12 +25,12 @@ import {
   pageToMarkdown,
 } from "@/lib/pages-markdown";
 
-/** markdown → JSON → markdown, sur le CORPS seul. */
+/** markdown → JSON → markdown, on the BODY only. */
 function roundTrip(markdown: string): string {
   return bodyToMarkdown(bodyFromMarkdown(markdown));
 }
 
-/* ── Le registre, bloc par bloc ───────────────────────────────────────── */
+/* ── The register, block by block ──────────────────── ───────────────────── */
 
 describe("l'aller-retour de chaque bloc du catalogue", () => {
   it.each(PAGE_BLOCKS.map((block) => [block.id, block] as const))(
@@ -43,8 +43,8 @@ describe("l'aller-retour de chaque bloc du catalogue", () => {
   it.each(PAGE_BLOCKS.map((block) => [block.id, block] as const))(
     "%s produit bien son nœud, et pas un paragraphe",
     (_id, block) => {
-      // Sans ça, un échantillon qui ne se PARSE pas traverserait l'aller-retour
-      // sans broncher (texte → texte) et ne prouverait rien du bloc.
+      // Without this, a sample that does not PARSE would go through the round trip
+      // without flinching (text → text) and would prove nothing of the block.
       const seen = nodeNames(bodyFromMarkdown(block.markdown.sample));
       expect(
         seen.has(block.nodeName),
@@ -54,10 +54,10 @@ describe("l'aller-retour de chaque bloc du catalogue", () => {
   );
 
   it("couvre le catalogue en entier — pas un bloc sans son cas", () => {
-    // La garde de la garde : les deux `it.each` ci-dessus tirent leurs cas du
-    // registre, donc un bloc neuf en hérite d'office. Ce test dit pourquoi ça
-    // suffit, et tombe le jour où quelqu'un remplacerait cette liste par une
-    // liste écrite à la main.
+    // The guard of the guard: the two `it.each` above draw their cases from
+    // register, so a new block automatically inherits it. This test says why
+    // is enough, and the day falls when someone replaces this list with one
+    // handwritten list.
     expect(PAGE_BLOCKS.length).toBeGreaterThan(0);
     const covered = new Set(PAGE_BLOCKS.map((block) => block.id));
     for (const block of PAGE_BLOCKS) {
@@ -67,7 +67,7 @@ describe("l'aller-retour de chaque bloc du catalogue", () => {
   });
 });
 
-/* ── L'en-tête : titre et icône ───────────────────────────────────────── */
+/* ── The header: title and icon ──────────────────── ───────────────────── */
 
 describe("l'en-tête d'une page", () => {
   it("rend le titre et l'icône en tête, et les relit", () => {
@@ -136,7 +136,7 @@ describe("l'en-tête d'une page", () => {
   });
 });
 
-/* ── Les blocs qui n'ont pas de markdown standard ─────────────────────── */
+/* ── Blocks that do not have standard markdown ─────────────────────── */
 
 describe("le dépliant", () => {
   const FOLD = "<details>\n<summary>A summary</summary>\n\nHidden text\n\n</details>";
@@ -158,7 +158,7 @@ describe("le dépliant", () => {
   it("perd l'état PLIÉ — c'est écrit, et c'est de la présentation", () => {
     const open = bodyFromMarkdown(FOLD);
     const details = findNode(open, "details");
-    // `open` retombe sur le défaut du nœud : rien dans le markdown ne le porte.
+    // `open` falls back on the node's defect: nothing in the markdown carries it.
     expect(bodyToMarkdown(open)).toBe(FOLD);
     expect(details).toBeTruthy();
   });
@@ -186,7 +186,7 @@ describe("la sous-page", () => {
   });
 });
 
-/* ── Ce qui vient d'ailleurs et ne doit pas être réécrit ──────────────── */
+/* ── What comes from elsewhere and should not be rewritten ──────────────── */
 
 describe("les tâches", () => {
   it("gardent les quatre états du plan", () => {
@@ -202,8 +202,8 @@ describe("les tâches", () => {
 
 describe("les mentions", () => {
   it("passent en texte, à la lettre — la pilule se re-déduit", () => {
-    // Une mention EST du texte : le nœud n'est qu'un habit, et lib/mention-scan
-    // le repose à la relecture. Rien n'est perdu du CONTENU.
+    // A mention IS of the text: the node is only a habit, and lib/mention-scan
+    // put it back on rereading. Nothing is lost from the CONTENT.
     const json = bodyFromMarkdown("Hello");
     const doc = withMention(json, "MIN-42");
     expect(bodyToMarkdown(doc)).toBe("Hello @MIN-42");
@@ -243,17 +243,17 @@ describe("les pertes assumées", () => {
     const ids = blockIds(json);
     expect(ids.length).toBeGreaterThan(0);
     expect(ids.every((id) => typeof id === "string" && id.length > 0)).toBe(true);
-    // Deux lectures du même markdown ne donnent pas les mêmes ids : ils
+    // Two readings of the same markdown do not give the same ids: they
     // n'appartiennent pas au markdown, ils appartiennent au document.
     expect(blockIds(bodyFromMarkdown("# A heading\n\nSome text"))).not.toEqual(ids);
   });
 });
 
-/* ── Le document composite ────────────────────────────────────────────── */
+/* ── The composite document ─────────────────────── ─────────────────────── */
 
 describe("un document qui contient tout", () => {
-  // Un bloc isolé peut revenir intact et se casser au contact du suivant :
-  // c'est un document ENTIER qui le dit, pas une addition de cas.
+  // An isolated block can return intact and break on contact with the next one:
+  // it's an ENTIRE document that says it, not an addition of cases.
   const DOC = [
     "# 📘 Le manuel",
     "",
@@ -290,9 +290,9 @@ describe("un document qui contient tout", () => {
     "",
     "[[page:00000000-0000-4000-8000-000000000000]]",
     "",
-    // Une image et un fichier (MIN-280). Le lien du fichier est celui d'un
-    // fichier DE PAGE : c'est ce qui le sépare du `[lien](https://…)` du premier
-    // paragraphe, qui doit rester du texte et non devenir un bloc.
+    // An image and a file (MIN-280). The file link is that of a
+    // PAGE file: this is what separates it from `[lien](https://…)` from the first
+    // paragraph, which must remain text and not become a block.
     "![Une capture d'écran](/api/projects/00000000-0000-4000-8000-000000000000/pages/files/11111111-1111-4111-8111-111111111111)",
     "",
     "[rapport.pdf](/api/projects/00000000-0000-4000-8000-000000000000/pages/files/22222222-2222-4222-8222-222222222222)",
@@ -322,18 +322,18 @@ describe("un document qui contient tout", () => {
   });
 });
 
-/* ── L'échappement de la projection (MIN-350) ─────────────────────────── */
+/* ── The projection exhaust (MIN-350) ─────────────────────────── */
 
 describe("ce qui a un sens dans une balise ou dans un lien", () => {
   const PROJECT = "00000000-0000-4000-8000-000000000000";
   const FILE = "22222222-2222-4222-8222-222222222222";
 
-  // Le dépliant projette du HTML : un `<` dans un résumé y refermerait la
-  // balise. Il ressort échappé — pas par blocks/details.ts, mais par le
-  // sérialiseur de TEXTE de tiptap-markdown, qui passe tout nœud texte par
-  // `escapeHTML` (cf. le commentaire de `summaryMarkdown`). Ce cas est ici pour
-  // que la garantie soit VÉRIFIÉE plutôt que supposée : elle tient à une
-  // dépendance, et c'est ce test qui le dira le jour où elle bougera.
+  // The leaflet projects HTML: a `<` in a summary would close the
+  // tag. It comes out escaped — not by blocks/details.ts, but by the
+  // tiptap-markdown TEXT serializer, which passes any text node through
+  // `escapeHTML` (see the comment of `summaryMarkdown`). This case is here for
+  // that the guarantee is VERIFIED rather than assumed: it is due to a
+  // dependence, and it is this test which will tell the day it moves.
   it("échappe le `<` d'un résumé de dépliant, dans les deux sens", () => {
     const json = bodyFromMarkdown(
       "<details>\n<summary>A &lt;b&gt; x</summary>\n\nHidden\n\n</details>"
@@ -348,8 +348,8 @@ describe("ce qui a un sens dans une balise ou dans un lien", () => {
   });
 
   it("échappe le guillemet du nom d'un fichier qui entre par le markdown", () => {
-    // Le nom voyage dans un attribut HTML fabriqué à la main par la règle
-    // markdown-it du bloc : un guillemet nu l'aurait refermé, et le bloc serait
+    // The name travels in an HTML attribute handcrafted by the rule
+    // markdown-it of the block: a bare quote would have closed it, and the block would be
     // revenu sans son nom.
     const json = bodyFromMarkdown(
       `[rap"port.pdf](/api/projects/${PROJECT}/pages/files/${FILE})`
@@ -358,10 +358,10 @@ describe("ce qui a un sens dans une balise ou dans un lien", () => {
   });
 
   it("n'écrit pas de lien vers un protocole refusé", () => {
-    // Les blocs sont fabriqués à la main : un tel `src` ne peut plus entrer par
-    // la lecture (lib/page-files.ts le refuse), et c'est justement le cas qu'on
-    // veut tenir — un corps hérité, écrit avant le garde-fou, ne ressort pas en
-    // lien cliquable dans un markdown qu'on exporte.
+    // The blocks are made by hand: such a `src` can no longer enter through
+    // reading (lib/page-files.ts refuses it), and this is precisely the case that we
+    // wants to hold — an inherited body, written before the safeguard, does not emerge in
+    // clickable link in a markdown that we export.
     const doc = {
       type: "doc",
       content: [
@@ -386,15 +386,15 @@ describe("ce qui a un sens dans une balise ou dans un lien", () => {
   });
 });
 
-/* ── L'origine, retirée à l'entrée (MIN-284) ──────────────────────────── */
+/* ── The origin, removed at the entrance (MIN-284) ──────────────────────────── */
 
 describe("l'adresse d'un fichier de page entrant avec une ORIGINE", () => {
-  // Le cas vécu : copier-coller un bloc image passe par le presse-papiers, qui
-  // porte du HTML, et Chrome y absolutise les `src`. Le corps rangeait
-  // `http://localhost:3000/api/…` ; l'image ne chargeait plus en production, et
-  // le balayage des orphelins, qui ne la reconnaissait plus, s'apprêtait à
-  // effacer le fichier qu'elle nommait. Le chemin markdown → HTML → parseHTML
-  // joué ici est EXACTEMENT celui d'un collage.
+  // The real case: copying and pasting an image block goes through the clipboard, which
+  // carries HTML, and Chrome absolutizes `src` there. The body put away
+  // `http://localhost:3000/api/…`; the image no longer loaded in production, and
+  // the sweep of the orphans, who no longer recognized her, was preparing to
+  // delete the file it named. The path markdown → HTML → parseHTML
+  // played here is EXACTLY that of a collage.
   const PROJECT = "00000000-0000-4000-8000-000000000000";
   const IMAGE = "11111111-1111-4111-8111-111111111111";
   const FILE = "22222222-2222-4222-8222-222222222222";
@@ -423,7 +423,7 @@ describe("l'adresse d'un fichier de page entrant avec une ORIGINE", () => {
     );
   });
 
-  /** Les attributs des nœuds image et fichier, dans l'ordre du document. */
+  /** The attributes of the image and file nodes, in document order. */
   function attrsOf(nodes: JsonNode[]): Record<string, unknown>[] {
     const out: Record<string, unknown>[] = [];
     const walk = (list: JsonNode[]) => {
@@ -439,7 +439,7 @@ describe("l'adresse d'un fichier de page entrant avec une ORIGINE", () => {
   }
 });
 
-/* ── Les outils du fichier ────────────────────────────────────────────── */
+/* ── File tools ─────────────────────── ─────────────────────── */
 
 interface JsonNode {
   type?: string;
@@ -479,7 +479,7 @@ function blockIds(json: unknown): unknown[] {
   return ids;
 }
 
-/** Le même document, une mention collée en fin de premier paragraphe. */
+/** The same document, a note pasted at the end of the first paragraph. */
 function withMention(json: unknown, label: string): Record<string, unknown> {
   const doc = JSON.parse(JSON.stringify(json)) as JsonNode;
   const paragraph = findNode(doc, "paragraph");

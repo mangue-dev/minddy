@@ -2,76 +2,76 @@ import { headTail } from "./prune";
 import { grepRepo, type RepoHost } from "./repo-host";
 
 /**
- * Auto-relecture EXÉCUTÉE de fin de tour.
+ * Auto-replay EXECUTED at end of turn.
  *
- * Le prompt système demande depuis toujours, à l'étape 4 de « How to work » :
- * « Run `git diff` and read your change end to end before replying ». C'était une
- * politesse — rien ne l'exécutait, rien ne vérifiait qu'elle avait eu lieu. Or le
- * dépôt applique partout ailleurs la règle inverse : les interdits git sont
- * ANNONCÉS comme exécutés parce qu'ils le sont (command-guard.ts, MIN-108), et
- * le type-check de fin de tour PARLE au modèle au lieu d'espérer qu'il le lance
- * (diagnostics.ts, MIN-110). Ce module applique la même doctrine à la relecture :
- * le diff du tour est mis DANS le contexte du modèle avant qu'il ne réponde.
+ * The system prompt has always asked, in step 4 of “How to work”:
+ * “Run `git diff` and read your change end to end before replying”. It was a
+ * politeness — nothing executed it, nothing verified that it had taken place. But the
+ * repository applies the opposite rule everywhere else: git prohibitions are
+ * ANNOUNCED as executed because they are (command-guard.ts, MIN-108), and
+ * the end-of-turn type-check TALKS to the model instead of hoping it throws it
+ * (diagnostics.ts, MIN-110). This module applies the same doctrine to proofreading:
+ * the round diff is put IN the context of the model before it responds.
  *
- * Ce que ça attrape, et que rien d'autre n'attrapait : l'erreur de JOINTURE —
- * deux fichiers écrits dans le même geste, chacun correct isolément, dont le
- * contrat entre eux est faux. Le cas fondateur : `"deleteViewTitle": "Delete
- * “{name}”?"` dans le catalogue, `t("deleteViewTitle")` dans le composant. Ni
- * le type-check ni les tests du dépôt ne voyaient la faute (cf.
- * lib/i18n-contract.test.ts, écrit pour celle-là) — et une relecture fichier par
- * fichier ne la voit pas non plus, parce que chaque moitié passe. Il faut avoir
- * les deux versants sous les yeux EN MÊME TEMPS, ce que le diff du tour donne.
+ * What it catches that nothing else catches: the JOIN error —
+ * two files written in the same gesture, each correct in isolation, whose
+ * contract between them is false. The basic case: `"deleteViewTitle": "Delete
+ * “{name}”?”` in the catalog, `t("deleteViewTitle")` in the component. Neither
+ * neither the type-check nor the repository tests saw the fault (cf.
+ * lib/i18n-contract.test.ts, written for that one) — and a file reread by
+ * file doesn't see it either, because every half passes. You must have
+ * the two slopes under the eyes AT THE SAME TIME, what the difference of the turn gives.
  *
- * Le diff est présenté comme la sortie d'un `git diff` que le harness a lancé À
- * SA PLACE — l'agent n'a donc aucune raison de le relancer, et le round coûte
- * une injection plutôt qu'un aller-retour de tool.
+ * The diff is presented as the output of a `git diff` that the harness threw to
+ * HIS PLACE — the agent therefore has no reason to restart it, and the round costs
+ * an injection rather than a round trip of tool.
  *
- * CE QUE LE DIFF SEUL NE MONTRE PAS (MIN-252). La relecture ci-dessus pose la
+ * WHAT THE DIFF ALONE DOES NOT SHOW (MIN-252). The rereading above poses the
  * bonne question — « *a value produced in one file and consumed in another — do
- * the two sides agree?* » — et sur le run de la PR 48 le modèle y a répondu
- * honnêtement : la chaîne de données ÉTAIT cohérente. Le défaut était ailleurs.
- * `onEvent: (row) => { setLive(null) }` remettait à `null` l'état que le
- * changement venait de poser, depuis une ligne NON MODIFIÉE, absente des quatre
- * hunks. Une relecture de diff ne peut pas voir ce qui n'est pas dans le diff —
- * et ce n'était pas un problème de contexte : le modèle avait lu cette ligne
- * deux appels avant d'éditer, sans élagage entre-temps. Il l'avait lue et ne
- * l'a pas reliée à ce qu'il écrivait.
+ * the two sides agree?*” — and on the run of the PR 48 the model answered it
+ * honestly: the data string WAS consistent. The fault was elsewhere.
+ * `onEvent: (row) => { setLive(null) }` returned `null` to the state that the
+ * change had just been made, from an UNMODIFIED line, absent from the four
+ * hunks. A diff replay cannot see what is not in the diff —
+ * and it was not a problem of context: the model had read this line
+ * two calls before editing, with no pruning in between. He had read it and
+ * didn't connect it to what he wrote.
  *
- * D'où le second bloc : les AUTRES sites d'écriture des états que le diff écrit,
- * lus dans le dépôt et pas dans le diff. Même famille d'erreur que celle qui a
- * motivé le premier — un défaut invisible fichier par fichier — décalée d'un
- * cran : invisible DIFF PAR DIFF. Et c'est un `grep` que le harness peut faire
- * lui-même, comme il fait déjà `git diff` à la place du modèle.
+ * Hence the second block: the OTHER report writing sites that the diff writes,
+ * read in the repository and not in the diff. Same error family as the one that
+ * motivated first — an invisible defect file by file — shifted by one
+ * notch: invisible DIFF BY DIFF. And it's a `grep` that the harness can do
+ * itself, as it already does `git diff` in place of the model.
  *
- * ASSUMÉ, parce que le parfait est hors de portée : aucune analyse de flot. On
- * extrait des identifiants des lignes ajoutées et on les cherche, comme le
- * ferait un relecteur pressé. Ça rend des faux positifs — acceptable, le bloc
- * est court et le modèle trie. Ce qui ne l'est pas, c'est ce qu'on avait avant :
- * zéro signal.
+ * ASSUME, because the perfect is out of reach: no flow analysis. We
+ * extracts the identifiers of the added lines and searches for them, as in
+ * would make a proofreader in a hurry. This produces false positives - acceptable, the block
+ * is short and the model sorts. What isn't is what we had before:
+ * zero signal.
  */
 
-/** Cap du diff injecté. Au-delà, le modèle ne relit plus, il subit — même
- *  raisonnement que `TYPE_ERRORS_MAX_CHARS`, calibré plus haut parce qu'un diff
- *  se lit en entier ou ne se lit pas. Élision par le MILIEU (`headTail`) : le
- *  début et la fin d'un diff portent les fichiers, pas le remplissage. */
+/** Injected diff cap. Beyond that, the model no longer rereads, it undergoes — even
+ * reasoning that `TYPE_ERRORS_MAX_CHARS`, calibrated higher because a diff
+ * can be read in full or not read. Elision by the MIDDLE (`headTail`): the
+ * start and end of a diff carry the files, not the padding. */
 export const SELF_REVIEW_DIFF_MAX_CHARS = 12_000;
 
-/** Cap du bloc « qui écrit ça ailleurs ». Un ORDRE DE GRANDEUR sous le diff, et
- *  c'est voulu : ce bloc ACCOMPAGNE le diff, il ne le concurrence pas. Un
- *  paragraphe de grep plus long que le changement qu'il commente se lit comme le
- *  sujet du tour, ce qu'il n'est pas. */
+/** Cape of the “who writes this elsewhere” block. An ORDER OF SIZE under the diff, and
+ * this is intentional: this block ACCOMPANYS the diff, it does not compete with it. A
+ * grep paragraph longer than the change it comments out reads like the
+ * subject of the tour, which it is not. */
 export const SELF_REVIEW_OVERWRITES_MAX_CHARS = SELF_REVIEW_DIFF_MAX_CHARS / 6;
 
-/** Budget mural minimum restant sur le chunk pour injecter une relecture.
+/** Minimum wall budget remaining on the chunk to inject replay.
  *
- *  Rallongé en MIN-252 : le geste n'est plus « deux commandes git » — il porte
- *  maintenant jusqu'à `MAX_ASSIGNED_SYMBOLS` greps (lancés ensemble, mais chacun
- *  traverse le dépôt), et le bloc qui en sort demande une VÉRIFICATION, pas une
- *  lecture. Servir ça à un modèle qui n'a plus le temps d'ouvrir un fichier
- *  produirait le pire des deux mondes : une question posée, jamais instruite. */
+ * Extended to MIN-252: the gesture is no longer “two git commands” — it carries
+ * now until `MAX_ASSIGNED_SYMBOLS` greps (run together, but each
+ * crosses the deposit), and the block that comes out requires a VERIFICATION, not a
+ * reading. Serve this to a model who no longer has time to open a file
+ * would produce the worst of both worlds: a question asked, never instructed. */
 export const SELF_REVIEW_MIN_BUDGET_MS = 75_000;
 
-/** Fichiers non suivis listés par nom (au-delà, on dit combien il en reste). */
+/** Untracked files listed by name (beyond that, we say how many remain). */
 const UNTRACKED_MAX = 20;
 
 const HEADER = `Before you reply, here is what this turn actually changed. The harness ran \`git diff\` for you — do not run it again.`;
@@ -86,7 +86,7 @@ Then the usual: no stray debug or scratch file, no leftover commented-out code, 
 
 If it is all correct, carry on — do not restate the diff, and do not announce that you re-read it.`;
 
-/** Un fichier non suivi, tel que `git status --porcelain` le rend. */
+/** An untracked file, such as `git status --porcelain` renders it. */
 export function parseUntracked(porcelain: string): string[] {
   return porcelain
     .split("\n")
@@ -96,24 +96,24 @@ export function parseUntracked(porcelain: string): string[] {
 }
 
 /**
- * Le bloc d'auto-relecture, ou `null` s'il n'y a rien à relire.
+ * The auto-reread block, or `null` if there is nothing to re-read.
  *
- * PUR : la sandbox est lue par l'appelant (execute.ts), pour que la mise en
- * forme, les caps et la formulation restent testables sans microVM — même
- * découpage que `formatTypeErrors`.
+ * PUR: the sandbox is read by the caller (execute.ts), so that the implementation
+ * form, headings and formulation remain testable without microVM — even
+ * cutting as `formatTypeErrors`.
  */
 export function formatSelfReview(input: {
-  /** Sortie de `git diff <baseline>` : les fichiers SUIVIS modifiés ce tour. */
+  /** Output of `git diff <baseline>`: SUIVIS files modified this round. */
   diff: string;
-  /** Sortie de `git status --porcelain` : sert à lister les fichiers ajoutés. */
+  /** Output of `git status --porcelain`: used to list the added files. */
   porcelain?: string;
-  /** Les autres écritures des états que le diff écrit (`overwriteSitesForTurn`). */
+  /** The other writes of the states that the diff writes (`overwriteSitesForTurn`). */
   overwrites?: readonly OverwriteHit[];
 }): string | null {
   const diff = input.diff.trim();
   const untracked = parseUntracked(input.porcelain ?? "");
 
-  // Rien de suivi modifié ET rien de neuf : le tour n'a pas touché au dépôt.
+  // Nothing followed modified AND nothing new: the tour did not touch the deposit.
   if (!diff && untracked.length === 0) return null;
 
   const shown = untracked.slice(0, UNTRACKED_MAX);
@@ -134,92 +134,92 @@ export function formatSelfReview(input: {
   return `${HEADER}${diffBlock}${untrackedBlock}\n\n${INSTRUCTIONS}${overwrites}`;
 }
 
-// ── Ce qui, AILLEURS, écrit le même état (MIN-252) ───────────────────────────
+// ── Which, ELSEWHERE, writes the same state (MIN-252) ───────────────────────────
 
-/** Symboles extraits du diff, au maximum. Au-delà, le bloc noierait le diff
- *  qu'il accompagne — et les premières écritures d'un tour sont celles qui
- *  portent le changement. */
+/** Symbols extracted from the diff, at most. Beyond that, the block would drown out the difference
+ * that it accompanies — and the first writings of a tour are those which
+ * carry change. */
 export const MAX_ASSIGNED_SYMBOLS = 15;
-/** Sites RAPPORTÉS par symbole. Trois suffisent à faire ouvrir le fichier ;
- *  au-delà on liste, on ne montre plus. */
+/** Sites REPORTED by symbol. Three are enough to open the file;
+ * beyond that we list, we no longer show. */
 export const MAX_SITES_PER_SYMBOL = 3;
 /**
- * Au-delà de ce nombre de sites, un symbole est JETÉ plutôt que rapporté.
+ * Beyond this number of sites, a symbol is DISMISSED rather than reported.
  *
- * C'est le garde-fou qui décide de l'utilité de tout le mécanisme, et il tient
- * lieu de liste de mots vides (même raisonnement qu'en `plan-closure.ts`) : un
- * nom générique — `data`, `value`, `state` — est écrit partout, donc il tombe
- * ici tout seul, sans qu'on ait à tenir une liste que chaque convention de
- * framework périmerait. Un état qu'on écrit d'un seul autre endroit, lui, est
- * exactement le cas fondateur.
+ * It is the safeguard which decides the usefulness of the whole mechanism, and it holds
+ * place of list of stop words (same reasoning as in `plan-closure.ts`): a
+ * generic name — `data`, `value`, `state` — is written everywhere, so it falls
+ * here alone, without having to keep a list that each convention of
+ * framework would expire. A state that is written from only one other place is
+ * exactly the founding case.
  */
 export const MAX_SITES_SCANNED = 12;
-/** Symboles détaillés dans le bloc rendu. */
+/** Detailed symbols in the rendered block. */
 const SYMBOLS_SHOWN = 6;
-/** Fichiers du dépôt fouillés : le code, pas la doc ni les catalogues. */
+/** Repository files searched: the code, not the docs or catalogs. */
 const CODE_GLOB = "**/*.{ts,tsx,js,jsx,mjs,cjs}";
-/** Sous ça, un identifiant est un compteur de boucle, pas un état. */
+/** Under that, an identifier is a loop counter, not a state. */
 const MIN_SYMBOL_LENGTH = 4;
 
 /**
- * La FORME d'écriture qui a fait retenir un symbole. Elle porte le motif grepé,
- * donc elle décide de ce qu'on trouvera — et elle se dit au modèle, qui n'a pas
- * à deviner pourquoi le harness le lui montre.
+ * The FORM of writing that caused a symbol to be remembered. It bears the rigged pattern,
+ * so she decides what we will find — and she tells herself to the model, who has not
+ * to guess why the harness shows him.
  */
 export type AssignedKind = "setter" | "collection" | "variable";
 
 export interface AssignedSymbol {
-  /** L'identifiant écrit : `setLive`, `cache`, `pending.current`. */
+  /** The identifier writes: `setLive`, `cache`, `pending.current`. */
   name: string;
   kind: AssignedKind;
-  /** Le motif ERE cherché dans le dépôt, dérivé du nom et de la forme. */
+  /** The ERE pattern searched in the repository, derived from the name and form. */
   pattern: string;
 }
 
-/** Un `setX(` — le setter d'un `useState`, et la forme la plus nette : tout
- *  appel est une écriture, sans exception à trier. */
+/** A `setX(` — the setter of a `useState`, and the clearest form: all
+ * call is a write, without exception to sort. */
 const SETTER_CALL = /\b(set[A-Z][A-Za-z0-9_$]*)\s*\(/g;
-/** Une collection mutée : `x.set(`, `x.add(`, `x.delete(`, `x.clear(`. */
+/** A mutated collection: `x.set(`, `x.add(`, `x.delete(`, `x.clear(`. */
 const COLLECTION_WRITE = /\b([A-Za-z_$][A-Za-z0-9_$]*)\.(?:set|add|delete|clear)\s*\(/g;
 /**
- * Une affectation en TÊTE d'instruction : `live = …`, `cache.current = …`.
+ * An assignment at HEAD of instruction: `live = …`, `cache.current = …`.
  *
- * L'ancrage en début de ligne (une fois l'indentation ôtée) est ce qui sépare
- * une écriture d'un `prop={…}` de JSX, d'un paramètre par défaut ou d'une clé
- * d'objet — aucun des trois n'ouvre une ligne. `[^=>]` après le `=` écarte
- * `==`, `===` et la flèche d'une lambda ; les déclarations sont écartées avant.
+ * The anchor at the start of the line (once the indentation is removed) is what separates
+ * writing a JSX `prop={…}`, a default parameter or a key
+ * object — none of the three opens a line. `[^=>]` after `=` removes
+ * `==`, `===` and the arrow of a lambda; declarations are discarded before.
  */
 const ASSIGNMENT = /^([A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)?)\s*=[^=>]/;
-/** Une déclaration DÉCLARE, elle n'écrase rien : le symbole naît là. */
+/** A declaration DECLARES, it does not overwrite anything: the symbol is born there. */
 const DECLARATION = /^(?:const|let|var|export|import|type|interface|class|function|async)\b/;
 
-/** Échappe pour une ERE POSIX — en pratique, le point d'un `x.current`. */
+/** Escape for a POSIX ERE — in practice, the point of a `x.current`. */
 function escapeEre(value: string): string {
   return value.replace(/[.[\]{}()*+?^$|\\]/g, "\\$&");
 }
 
-/** Le motif d'écriture de ce symbole, selon sa forme. */
+/** The pattern of writing of this symbol, according to its shape. */
 function patternFor(name: string, kind: AssignedKind): string {
   const id = escapeEre(name);
   if (kind === "setter") return `${id} *\\(`;
   if (kind === "collection") return `${id} *\\.(set|add|delete|clear) *\\(`;
-  // Le garde de gauche empêche `active = …` de matcher `isActive = …` ou
-  // `x.active = …` : ce qu'on cherche, c'est CE symbole, pas son homonyme.
+  // The left guard prevents `active = …` from matching `isActive = …` or
+  // `x.active = …`: what we are looking for is THIS symbol, not its namesake.
   return `(^|[^-+*/%!<>=&|.A-Za-z0-9_$])${id} *=[^=>]`;
 }
 
-/** Une ligne d'un hunk, du côté APRÈS : celui que le dépôt porte maintenant, donc
- *  celui dont les numéros de ligne s'alignent sur ceux du grep. */
+/** A line from a hunk, from the AFTER side: the one the depot carries now, so
+ * the one whose line numbers align with those of grep. */
 export interface HunkLine {
   text: string;
-  /** Le tour l'a ÉCRITE (`+`), par opposition au contexte que git donne autour. */
+  /** The turn WRITE it (`+`), as opposed to the context that git gives around. */
   added: boolean;
-  /** Son numéro dans le fichier d'aujourd'hui. */
+  /** His number in today's file. */
   line: number;
 }
 
 export interface DiffHunk {
-  /** Chemin relatif au dépôt, tel que `+++ b/…` le nomme. */
+  /** Path relative to the repository, as `+++ b/…` names it. */
   file: string;
   lines: HunkLine[];
 }
@@ -227,15 +227,15 @@ export interface DiffHunk {
 const HUNK_HEADER = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/;
 
 /**
- * Les hunks d'un `git diff` unifié, côté APRÈS, numéros de ligne compris.
+ * The hunks of a unified `git diff`, AFTER side, including line numbers.
  *
- * Ces numéros sont tout l'intérêt : ce sont eux qui permettent de dire « ce
- * match du grep EST une ligne du diff » sans comparer des textes. Sur le cas
- * fondateur la comparaison de textes se serait trompée — `setLive(null);` figure
- * TROIS fois dans le fichier, dont une dans le diff et une dans le `onEvent`
+ * These numbers are the whole point: they are what allows you to say “this
+ * grep match IS a diff' line without comparing texts. On the case
+ * founder the comparison of texts would have been wrong — `setLive(null);` figure
+ * THREE times in the file, including one in the diff and one in the `onEvent`
  * qu'il faut justement remonter.
  *
- * Un fichier supprimé (`+++ /dev/null`) n'a pas de côté après : il est ignoré.
+ * A deleted file (`+++ /dev/null`) has no side after it: it is ignored.
  */
 export function parseDiffHunks(diff: string): DiffHunk[] {
   const hunks: DiffHunk[] = [];
@@ -259,16 +259,16 @@ export function parseDiffHunks(diff: string): DiffHunk[] {
     }
     if (!current) continue;
     if (raw.startsWith("+")) current.lines.push({ text: raw.slice(1).trim(), added: true, line: next++ });
-    else if (raw.startsWith("-")) continue; // Retiré : plus dans le fichier, donc plus de numéro.
+    else if (raw.startsWith("-")) continue; // Removed: no longer in file, so no more number.
     else if (raw.startsWith(" ") || raw === "")
       current.lines.push({ text: raw.slice(1).trim(), added: false, line: next++ });
-    // Tout le reste (`\ No newline`, `diff --git`, `index`) ne porte pas de ligne.
+    // Everything else (`\ No newline`, `diff --git`, `index`) does not carry a line.
   }
   return hunks;
 }
 
-/** Le diff couvre-t-il ce `fichier:ligne` ? C'est la question que pose
- *  l'exclusion : ce que le modèle vient de lire, on ne le lui remontre pas. */
+/** Does the diff cover this `fichier:ligne`? This is the question posed
+ * exclusion: what the model has just read, we do not show it to him. */
 export function diffCoverage(hunks: readonly DiffHunk[]): (file: string, line: number) => boolean {
   const byFile = new Map<string, Set<number>>();
   for (const hunk of hunks) {
@@ -280,24 +280,24 @@ export function diffCoverage(hunks: readonly DiffHunk[]): (file: string, line: n
 }
 
 /**
- * Les états que ce tour ÉCRIT, les plus directs d'abord.
+ * The states that this trick WRITES, the most direct first.
  *
- * Périmètre délibérément étroit : les setters de `useState`, les collections
- * mutées, et les affectations en tête d'instruction. Ce sont les trois formes
- * qui produisent l'erreur visée — « quelqu'un d'autre remet ça à zéro ».
+ * Deliberately narrow scope: `useState` setters, collections
+ * mutated, and assignments at the head of the instruction. These are the three forms
+ * which produce the intended error — “someone else resets this.”
  *
- * LE HUNK, PAS LA LIGNE `+`. Sur le cas fondateur, le tour ajoute deux champs
- * DANS un `setLive((prev) => ({ … }))` dont la tête d'appel, elle, ne bouge pas :
- * l'écriture est le fait du hunk, elle n'est écrite sur aucune de ses lignes
- * `+`. S'en tenir aux lignes ajoutées ne trouvait rien du tout — vérifié, c'est
- * ce que faisait la première version de ce module. Le contexte que git donne
- * autour (trois lignes) est donc lu aussi, et il est lu comme ce qu'il est : le
- * voisinage immédiat du changement. Un hunk sans aucune ligne ajoutée — un pur
- * retrait — n'écrit rien et n'est pas lu.
+ * THE HUNK, NOT THE `+` LINE. On the founding case, the trick adds two fields
+ * IN a `setLive((prev) => ({ … }))` whose call head does not move:
+ * the writing is the hunk's doing, it is not written on any of his lines
+ * `+`. Sticking to the added lines didn't find anything at all — checked, it's
+ * what the first version of this module did. The context that git gives
+ * around (three lines) is therefore also read, and it is read as what it is: the
+ * immediate vicinity of the change. A hunk with no added lines — a pure
+ * withdrawal — writes nothing and is not read.
  *
- * L'ORDRE porte le cap. Ce que le tour a tapé passe devant ce qu'il a côtoyé, et
- * les setters devant le reste : c'est la forme dont chaque occurrence est une
- * écriture, donc celle dont le grep ment le moins.
+ * THE ORDER wears the cape. What the trick has hit takes precedence over what it has encountered, and
+ * the setters in front of the rest: it is the form of which each occurrence is a
+ * writing, therefore the one whose grep lies the least.
  */
 export function assignedSymbols(diff: string): AssignedSymbol[] {
   const found = new Map<string, AssignedSymbol & { added: boolean }>();
@@ -305,7 +305,7 @@ export function assignedSymbols(diff: string): AssignedSymbol[] {
     if (name.length < MIN_SYMBOL_LENGTH) return;
     const already = found.get(name);
     if (already) {
-      // Le même symbole vu sur une ligne `+` vaut mieux que sur du contexte.
+      // The same symbol seen on a `+` line is better than in context.
       if (added && !already.added) already.added = true;
       return;
     }
@@ -330,12 +330,12 @@ export function assignedSymbols(diff: string): AssignedSymbol[] {
     .map(({ name, kind, pattern }) => ({ name, kind, pattern }));
 }
 
-/** Un endroit du dépôt qui écrit le symbole, hors du diff. */
+/** A place in the repository that writes the symbol, outside the diff. */
 export interface OverwriteSite {
-  /** Chemin relatif au dépôt, tel que `git grep -n` le rend. */
+  /** Path relative to the repository, as `git grep -n` renders it. */
   file: string;
   line: number;
-  /** La ligne, indentation ôtée. */
+  /** The line, indentation removed. */
   text: string;
 }
 
@@ -344,8 +344,8 @@ export interface OverwriteHit {
   sites: OverwriteSite[];
 }
 
-/** Découpe une sortie `git grep -n` (`fichier:ligne:texte`). Une ligne dont le
- *  numéro n'est pas un nombre n'est pas un match : elle est jetée, pas devinée. */
+/** Cuts out a `git grep -n` (`fichier:ligne:texte`) output. A line whose
+ * number is not a number is not a match: it is thrown, not guessed. */
 export function parseGrepSites(output: string): OverwriteSite[] {
   const sites: OverwriteSite[] = [];
   for (const raw of output.split("\n")) {
@@ -361,17 +361,17 @@ export function parseGrepSites(output: string): OverwriteSite[] {
 }
 
 /**
- * Les sites qui ne sont PAS dans le diff, les fichiers touchés d'abord.
+ * Sites that are NOT in the diff, files affected first.
  *
- * Une seule règle : ne jamais faire relire au modèle une ligne qu'il vient de
+ * Only one rule: never make the model reread a line that he has just
  * lire. L'exclusion se fait donc par `fichier:ligne` — un site couvert par un
- * hunk EST une ligne du diff — et surtout pas par le texte, qui se répète : sur
- * le cas fondateur, la ligne à remonter porte mot pour mot le même
- * `setLive(null);` qu'une ligne du diff, quinze lignes plus haut.
+ * hunk IS a line of the diff — and especially not by the text, which repeats: on
+ * the founding case, the line to go back carries word for word the same
+ * `setLive(null);` than one line of the diff, fifteen lines higher.
  *
- * L'ordre compte plus qu'il n'y paraît : le cap tombe à trois, et un autre site
- * dans un fichier que le tour vient d'éditer est de loin le plus susceptible de
- * défaire ce qu'il vient d'y poser.
+ * The order matters more than it seems: the cap falls to three, and another site
+ * in a file that the turn has just edited is by far the most likely to
+ * undo what he has just put there.
  */
 export function selectSites(
   sites: readonly OverwriteSite[],
@@ -388,8 +388,8 @@ const OVERWRITE_HEADER = `The harness also grepped the state your diff WRITES, a
 
 const OVERWRITE_FOOTER = `Does any of them undo what you just set? A diff review cannot answer this on its own: the line that defeats a change is usually the one that did not change. This is an observation, not a verdict — most of these are legitimate. Open the ones that write the same state on the same path as your change, and reply once you have looked.`;
 
-/** Comment le bloc dit d'où vient un symbole — le modèle doit pouvoir écarter
- *  un faux positif sans ouvrir le fichier. */
+/** How the block tells where a symbol comes from — the model must be able to rule out
+ * a false positive without opening the file. */
 const KIND_LABEL: Record<AssignedKind, string> = {
   setter: "state setter",
   collection: "mutated collection",
@@ -397,16 +397,16 @@ const KIND_LABEL: Record<AssignedKind, string> = {
 };
 
 /**
- * Le bloc « qui écrit ça ailleurs », ou `""` s'il n'y a rien à dire — le cas
- * NORMAL, et celui qui doit rester muet : un tour dont personne ne défait
- * l'écriture ne mérite pas un paragraphe qui le dit.
+ * The “who writes this elsewhere” block, or `""` if there is nothing to say — the case
+ * NORMAL, and the one who must remain silent: a trick that no one undoes
+ * the writing doesn't deserve a paragraph saying so.
  *
- * PUR, comme tout le reste du module : le grep est fait par l'appelant.
+ * PUR, like everything else in the module: the grep is done by the caller.
  */
 export function formatOverwrites(hits: readonly OverwriteHit[]): string {
-  // Le tri par volume appartient à `overwriteSitesForTurn`, qui l'applique sur le
-  // grep BRUT — seul endroit où le compte réel est connu. Le cap reste ici en
-  // filet pour un appelant qui construirait ses `hits` autrement.
+  // Sorting by volume belongs to `overwriteSitesForTurn`, which applies it to the
+  // grep BRUT — only place where the actual count is known. The course remains here in
+  // net for a caller who would construct his `hits` differently.
   const kept = hits.filter((hit) => hit.sites.length > 0 && hit.sites.length <= MAX_SITES_SCANNED);
   if (kept.length === 0) return "";
 
@@ -427,18 +427,18 @@ export function formatOverwrites(hits: readonly OverwriteHit[]): string {
 }
 
 /**
- * Lance les greps dans la sandbox et rend les autres écritures, symbole par
+ * Runs the greps in the sandbox and renders the other writes, symbol by
  * symbole.
  *
- * Un grep PAR symbole, tous lancés ensemble : `grepRepo` sait déjà distinguer
- * « aucun match » d'un motif refusé et retomber en littéral (MIN-109), et
- * refaire ça dans une boucle `sh` reviendrait à réécrire ce module-là en moins
- * bien. Le prix est un aller-retour par symbole, payé en parallèle et borné par
+ * One grep PER symbol, all run together: `grepRepo` already knows how to distinguish
+ * “no match” of a refused pattern and fall back to literal (MIN-109), and
+ * doing this again in a `sh` loop would amount to rewriting this module in less
+ * GOOD. The price is a round trip per symbol, paid in parallel and bounded by
  * `MAX_ASSIGNED_SYMBOLS`.
  *
- * Best-effort de bout en bout, comme le type-check et la clôture de plan : pas
- * de dépôt, `git` absent, timeout, motif refusé → pas de bloc, jamais un tour
- * bloqué.
+ * End-to-end best-effort, such as type-checking and plan closure: no
+ * deposit, `git` absent, timeout, reason refused → no block, never a turn
+ * blocked.
  */
 export async function overwriteSitesForTurn(
   host: RepoHost,
@@ -456,19 +456,19 @@ export async function overwriteSitesForTurn(
         pattern: symbol.pattern,
         glob: CODE_GLOB,
         outputMode: "content",
-        // Un de plus que le cap : c'est ce qui permet de SAVOIR qu'on l'a dépassé,
-        // donc de jeter un symbole trop répandu au lieu d'en montrer trois sites
+        // One more than the milestone: this is what allows you to KNOW that you have exceeded it,
+        // therefore to throw away a symbol that is too widespread instead of showing three sites
         // au hasard.
         headLimit: MAX_SITES_SCANNED + 1,
       }).catch(() => null);
       if (!res?.ok) return null;
       const raw = parseGrepSites(res.output);
-      // LE CAP SE JUGE SUR LE GREP BRUT, AVANT `selectSites`. Le symbole est
-      // extrait du diff, donc ses PROPRES lignes sont dans ce grep : les retirer
-      // d'abord fait redescendre sous le seuil un symbole omniprésent, qui
-      // s'annonce ensuite « 12 other writes » alors qu'il en a deux cents. C'est
-      // l'ordre que `plan-closure.ts` applique déjà (il filtre sur `hit.files`
-      // brut avant de retirer les fichiers nommés par le plan).
+      // THE CAP IS JUDGED ON THE GREP BRUT, BEFORE `selectSites`. The symbol is
+      // extracted from the diff, so its OWN lines are in this grep: remove them
+      // first brings down below the threshold an omnipresent symbol, which
+      // then announces “12 other writes” even though he has two hundred. It is
+      // the order that `plan-closure.ts` already applies (it filters on `hit.files`
+      // raw before removing the files named by the plan).
       if (raw.length > MAX_SITES_SCANNED) return null;
       return { symbol, sites: selectSites(raw, { inDiff, touched }) };
     }),

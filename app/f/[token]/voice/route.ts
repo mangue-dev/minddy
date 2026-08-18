@@ -17,31 +17,31 @@ import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { getClientIp } from "@/lib/server/request-ip";
 
 /**
- * L'ÉCOUTE d'un retour dicté, côté board public.
+ * LISTENING to dictated feedback, on the public board side.
  *
- * Le reste des interactions visiteur passe par des server actions (voir
- * `../actions.ts`) ; celle-ci est une route parce qu'elle porte de l'audio :
- * le corps d'une server action est plafonné à 1 Mo, soit trois minutes de prise,
- * et une dictée coupée au milieu n'est pas un cas limite, c'est le cas courant.
+ * The rest of the visitor interactions go through server actions (see
+ * `../actions.ts`); this one is a route because it carries audio:
+ * the body of a server action is capped at 1 MB, or three minutes of time,
+ * and a dictation cut in the middle is not a borderline case, it is the common case.
  *
- * Elle vit sous `/f/<token>/` et non sous `/api/` pour une raison de cookie : la
- * session visiteur est path-scopée sur le board (`/f/<token>`, ou `/` sur
- * domaine personnalisé), et le navigateur ne l'enverrait donc jamais à `/api/…`.
+ * It lives under `/f/<token>/` and not under `/api/` for a cookie reason:
+ * visitor session is path-scoped on the board (`/f/<token>`, or `/` on
+ * custom domain), and the browser would therefore never send it to `/api/…`.
  *
- * Ce qu'elle fait : transcrire, et rien d'autre. Le rangement par Numo est la
- * server action `dictateFeedbackAction`, qui reprend le `runId` rendu ici — les
- * deux appels d'une prise partagent ainsi une ligne au ledger.
+ * What she does: transcribe, and nothing else. Storage by Numo is the
+ * server action `dictateFeedbackAction`, which takes the `runId` rendered here — the
+ * two calls from a socket thus share a line at the ledger.
  */
 
 export const runtime = "nodejs";
-// Une longue prise met plus de temps à remonter qu'une courte : même budget que
-// /api/transcribe, sous lequel le timeout de transcribeAudio tombe avec marge.
+// A long hold takes longer to reassemble than a short one: same budget as
+// /api/transcribe, under which the transcribeAudio timeout falls with margin.
 export const maxDuration = 300;
 
 /**
- * Par visiteur identifié, par heure. La porte OTP est passée avant d'arriver
- * ici : ce compteur borne ce qu'UNE personne peut faire dépenser au board,
- * pendant que celui par IP borne ce qu'une machine peut ouvrir de comptes.
+ * Per identified visitor, per hour. The OTP gate is passed before arriving
+ * here: this counter limits what ONE person can spend on the board,
+ * while the one by IP limits what accounts a machine can open.
  */
 const USER_RATE_LIMIT = { limit: 20, windowMs: 60 * 60 * 1000 } as const;
 const IP_RATE_LIMIT = { limit: 40, windowMs: 60 * 60 * 1000 } as const;
@@ -56,9 +56,9 @@ export async function POST(
     return NextResponse.json({ error: "notFound" }, { status: 404 });
   }
 
-  // Identité d'abord : dicter fait dépenser le owner du board, alors on sait
-  // toujours qui a parlé. C'est aussi ce qui rend le compteur par personne
-  // possible — sans elle, il ne resterait que l'IP.
+  // Identity first: dictating makes the board owner spend, so we know
+  // always who spoke. This is also what makes the per person counter
+  // possible — without it, only the IP address would remain.
   const cookie = (await cookies()).get(FEEDBACK_SESSION_COOKIE)?.value;
   const session = await getFeedbackSession(ctx.board.id, cookie);
   if (!session) {
@@ -87,7 +87,7 @@ export async function POST(
     );
   }
 
-  // Le owner paye : sans budget, le micro se tait plutôt que de creuser.
+  // The owner pays: without a budget, the microphone stays silent rather than digging.
   if (!(await ownerHasUsageBudget(ctx.project.id, "feedback"))) {
     return NextResponse.json({ error: "unavailable" }, { status: 503 });
   }
@@ -113,8 +113,8 @@ export async function POST(
       audio,
       locale,
       runId,
-      // Visiteur du board : aucun déclencheur nommable côté minddy, le owner
-      // paye — c'est son budget qui a autorisé l'appel (MIN-131).
+      // Visitor to the board: no nameable trigger on Minddy's side, the owner
+      // pays — it was his budget that authorized the appeal (MIN-131).
       billTo: { projectOwner: ctx.project.id },
       projectId: ctx.project.id,
     });

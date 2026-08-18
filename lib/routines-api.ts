@@ -6,15 +6,15 @@ import { DEFAULT_MAX_SPEND_PERCENT } from "./routine-budget";
 import type { RoutineFrequency } from "./routine-schedule";
 
 /**
- * Client des ROUTINES (MIN-185) — la porte HTTP, côté navigateur.
+ * ROUTINES client (MIN-185) — the HTTP gate, browser side.
  *
- * Même forme que `lib/agent-api.ts` : des fetchers nus qui lèvent une
- * `RoutineApiError` portant le `code` métier de la route. C'est ce code que
- * l'écran traduit — `ownerOnly`, `modelAbovePlan`, `unknownTimezone` — plutôt
- * que le message anglais du serveur.
+ * Same form as `lib/agent-api.ts`: bare fetchers which raise a
+ * `RoutineApiError` carrying the `code` business the road. It is this code that
+ * the screen translates — `ownerOnly`, `modelAbovePlan`, `unknownTimezone` — rather
+ * than the English message from the server.
  */
 
-/** Erreur d'API qui garde le `code` de la route, pour que l'UI le traduise. */
+/** API error that keeps the `code` from the route, for the UI to translate. */
 export class RoutineApiError extends Error {
   code?: string;
   details?: Record<string, unknown>;
@@ -47,7 +47,7 @@ async function parseJson<T>(response: Response): Promise<T> {
   return data as T;
 }
 
-/** Une routine, telle que l'API la rend. */
+/** A routine, as the API renders it. */
 export interface Routine {
   id: string;
   project_id: string;
@@ -57,8 +57,8 @@ export interface Routine {
   model: string | null;
   reasoning_level: ReasoningLevel;
   base_branch: string | null;
-  /** Part du budget mensuel qu'UN passage peut dépenser (1–100 ; 100 = sans
-   *  plafond propre, seul le quota du compte borne). */
+  /** Share of the monthly budget that ONE passage can spend (1–100; 100 = without
+ * own ceiling, only the account quota limits). */
   max_spend_percent: number;
   frequency: RoutineFrequency;
   hour: number;
@@ -69,21 +69,21 @@ export interface Routine {
   enabled: boolean;
   next_run_at: string | null;
   last_run_at: string | null;
-  /** CODE du dernier passage manqué (`quota`, `noRepo`…), traduit par l'UI. */
+  /** CODE of the last missed passage (`quota`, `noRepo`…), translated by the UI. */
   last_error: string | null;
   created_at: string;
   updated_at: string;
 }
 
-/** Ce qu'une création envoie — la même forme que la fabrique attend. */
+/** What a creation sends — the same form the factory expects. */
 export interface RoutineInput {
   projectId: string;
-  /** Pas de titre : minddy l'écrit à partir de l'instruction (cf. `titleFor`). */
+  /** No title: minddy writes it from the instruction (see `titleFor`). */
   prompt: string;
   model?: string | null;
   reasoningLevel?: ReasoningLevel;
   baseBranch?: string | null;
-  /** Plafond d'un passage, en % du budget mensuel. Absent = le défaut (90 %). */
+  /** Ceiling for a passage, as a % of the monthly budget. Absent = the defect (90%). */
   maxSpendPercent?: number;
   frequency: RoutineFrequency;
   hour: number;
@@ -100,16 +100,16 @@ export async function fetchRoutinesApi(): Promise<{ routines: Routine[] }> {
 export async function createRoutineApi(
   input: RoutineInput,
 ): Promise<{ routine: Routine }> {
-  // Aligné sur `launchNotebookAgentApi` : ce qu'on mesure, c'est la FORME du
-  // geste (cadence, modèle choisi ou non), jamais l'instruction elle-même.
+  // Aligned with `launchNotebookAgentApi`: what we measure is the SHAPE of the
+  // gesture (cadence, model chosen or not), never the instruction itself.
   trackEvent("routine_created", {
     frequency: input.frequency,
     model: input.model ?? "default",
     reasoning_level: input.reasoningLevel ?? "default",
     has_branch: !!input.baseBranch,
-    // Le plafond de dépense choisi : c'est le réglage dont on veut savoir s'il
-    // est TOUCHÉ, et dans quel sens — un défaut que personne ne bouge n'est pas
-    // le bon défaut.
+    // The chosen spending limit: this is the setting we want to know if it
+    // is TOUCHED, and in what sense — a defect that no one moves is not
+    // the correct default.
     spend_cap_percent: input.maxSpendPercent ?? DEFAULT_MAX_SPEND_PERCENT,
     prompt_length_bucket: lengthBucket(input.prompt),
   });
@@ -139,14 +139,14 @@ export async function deleteRoutineApi(routineId: string): Promise<{ ok: true }>
   return parseJson(await fetch(`/api/routines/${routineId}`, { method: "DELETE" }));
 }
 
-/** Les « Exécutions précédentes » — les runs de la routine, la plus récente en tête. */
+/** “Previous Runs” — the runs of the routine, with the most recent one at the top. */
 export async function fetchRoutineRunsApi(
   routineId: string,
 ): Promise<{ runs: AgentRunSummary[] }> {
   return parseJson(await fetch(`/api/routines/${routineId}/runs`));
 }
 
-/** « Lancer maintenant » : un passage hors calendrier, sans déplacer l'échéance. */
+/** “Launch now”: a move outside of the calendar, without moving the deadline. */
 export async function runRoutineNowApi(
   routineId: string,
 ): Promise<{ run: AgentRunSummary }> {

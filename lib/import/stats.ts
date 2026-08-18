@@ -1,23 +1,23 @@
-// Ce que contient chaque colonne, compté UNE fois.
+// What each column contains, counted ONE time.
 //
-// Cinq choses veulent savoir la même chose d'un fichier — quelles valeurs
-// distinctes porte cette colonne, et combien de fois : la construction du plan,
-// la détection des trous, le résumé envoyé au modèle, la liste de valeurs du
-// tableau de correspondance, et les exemples affichés sous chaque en-tête.
-// Chacune balayait le fichier de son côté ; sur un export de 2 000 lignes et
-// 30 colonnes, refait à chaque retouche du tableau, ça se voit à l'écran.
+// Five things want to know the same thing from a file — what values
+// distinct carries this column, and how many times: the construction of the plan,
+// hole detection, summary sent to the model, list of values ​​of the
+// correspondence table, and examples displayed under each header.
+// Each person scanned the file on their own; on an export of 2,000 lines and
+// 30 columns, redone each time the table is retouched, you can see it on the screen.
 //
-// Un seul balayage, au dépôt du fichier, et tout le monde lit ce tableau.
+// A single scan, when submitting the file, and everyone reads this table.
 
 import type { CsvTable } from "@/lib/import/normalize";
 import { normalizeToken } from "@/lib/import/normalize";
 
-/** Au-delà, une colonne n'est plus une énumération mais du texte libre : on
- *  arrête de retenir ses valeurs, on continue de les compter. */
+/** Beyond that, a column is no longer an enumeration but free text: on
+ * stops retaining its values, we continue counting them. */
 export const MAX_TRACKED_VALUES = 200;
 
 export interface ColumnValue {
-  /** La première graphie rencontrée — celle qu'on montre à l'utilisateur. */
+  /** The first spelling encountered — the one shown to the user. */
   label: string;
   count: number;
 }
@@ -25,13 +25,13 @@ export interface ColumnValue {
 export interface ColumnStats {
   index: number;
   header: string;
-  /** jeton normalisé → graphie + occurrences, dans l'ordre d'apparition. */
+  /** normalized token → spelling + occurrences, in order of appearance. */
   values: Map<string, ColumnValue>;
-  /** Nombre de valeurs distinctes, même au-delà de ce qui est retenu. */
+  /** Number of distinct values, even beyond what is retained. */
   distinctCount: number;
-  /** `values` a été plafonné : la colonne est du texte libre. */
+  /** `values` has been capped: the column is free text. */
   truncated: boolean;
-  /** Cellules non vides — une colonne toujours vide ne vaut pas d'être placée. */
+  /** Non-empty cells — a column that is always empty is not worth placing. */
   filled: number;
 }
 
@@ -47,8 +47,8 @@ export function computeStats(table: CsvTable): TableStats {
     filled: 0,
   }));
 
-  // Une seule traversée du fichier, colonnes en boucle interne : c'est l'ordre
-  // qui garde les lignes en cache, pas l'inverse.
+  // A single traversal of the file, columns in an internal loop: this is the order
+  // which keeps the lines cached, not the other way around.
   for (const row of table.rows) {
     for (let i = 0; i < stats.length; i++) {
       const raw = (row[i] ?? "").trim();
@@ -73,12 +73,12 @@ export function computeStats(table: CsvTable): TableStats {
   return stats;
 }
 
-/** Les valeurs d'une colonne, les plus fréquentes d'abord. */
+/** The values ​​of a column, the most frequent first. */
 export function topValues(col: ColumnStats, limit: number): ColumnValue[] {
   return [...col.values.values()].sort((a, b) => b.count - a.count).slice(0, limit);
 }
 
-/** Les valeurs distinctes de TOUTES les colonnes d'un champ, ordre du fichier. */
+/** The distinct values ​​of ALL columns in a field, file order. */
 export function valuesOfColumns(
   stats: TableStats,
   indexes: number[]

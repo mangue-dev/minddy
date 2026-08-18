@@ -12,20 +12,20 @@ import {
 } from "@/lib/demo-dictation";
 
 /**
- * Les pièces PURES de la démo de dictée publique (MIN-150) — gardes d'entrée,
- * prompt, et validation de ce que le modèle renvoie.
+ * The PURE parts of the public dictation demo (MIN-150) — entry guards,
+ * prompt, and validation of what the model returns.
  *
- * Elles vivent ici et pas dans `app/api/demo/dictate/route.ts` pour une raison
- * simple : c'est le seul endpoint IA de minddy ouvert à un visiteur anonyme, et
- * ce qui le protège doit être exerçable par un test — or la suite ne regarde que
- * `lib/**` (voir `vitest.config.ts`). La route garde l'orchestration : lire la
- * configuration, appeler OpenRouter, écrire la dépense au ledger.
+ * They live here and not in `app/api/demo/dictate/route.ts` * for a simple reason
+ *: it is the only Minddy AI endpoint open to an anonymous visitor, and
+ * what protects it must be exercisable by a test — but the rest only concerns
+ * `lib/**` (see `vitest.config.ts`). The route keeps the orchestration: read the
+ * configuration, call OpenRouter, write the expense to the ledger.
  */
 
-/** Ce que le modèle a le droit d'écrire, une fois validé. */
+/** What the model has the right to write, once validated. */
 const MAX_TITLE_CHARS = 120;
 const MAX_DESCRIPTION_CHARS = 500;
-/** Au-delà, une échéance n'est plus une échéance mais une hallucination. */
+/** Beyond that, a deadline is no longer a deadline but a hallucination. */
 const MAX_DUE_DATE_DAYS = 400;
 
 export interface DemoMember {
@@ -38,12 +38,11 @@ export interface DemoCategory {
 }
 
 /**
- * Le POST vient-il d'une page servie par cet hôte ?
+ * Does the POST come from a page served by this host?
  *
- * Un navigateur pose toujours `Origin` sur un POST : un script qui voudrait se
- * servir de la démo comme d'une API de transcription gratuite doit au moins le
- * forger. C'est le filtre à coût nul, pas une sécurité — les vraies bornes sont
- * le compteur par IP, le plafond journalier et l'interrupteur d'admin.
+ * A browser always sets `Origin` on a POST: a script that would like to use the demo as a free transcription API must at least use the
+ * forge. This is the zero-cost filter, not security — the real limits are
+ * the IP meter, the daily cap and the admin switch.
  */
 export function isSameOrigin(request: Request): boolean {
   const origin = request.headers.get("origin");
@@ -56,9 +55,9 @@ export function isSameOrigin(request: Request): boolean {
 }
 
 /**
- * Plafond de passages par jour, en mémoire donc PAR INSTANCE et remis à zéro au
- * déploiement. C'est un plafond de dépense, pas une comptabilité : il existe
- * pour ce que le compteur par IP ne voit pas (adresses tournantes).
+ * Ceiling of passages per day, in memory therefore PER INSTANCE and reset to zero upon
+ * deployment. It's a spending ceiling, not accounting: there is
+ * for what the IP counter does not see (rotating addresses).
  */
 let dailyWindow = { day: -1, count: 0 };
 
@@ -70,14 +69,14 @@ export function withinDailyBudget(limit: number): boolean {
   return true;
 }
 
-/** Repart de zéro — pour les tests uniquement. */
+/** Start from scratch — for testing only. */
 export function resetDailyBudget(): void {
   dailyWindow = { day: -1, count: 0 };
 }
 
-// La table MIME → format vit avec le client de transcription : elle est la même
-// pour la démo, la dictée authentifiée et le retour dicté. Ré-exportée ici parce
-// que les gardes d'entrée de la démo se lisent (et se testent) d'un seul bloc.
+// The MIME table → format lives with the transcription client: it is the same
+// for the demo, authenticated dictation and dictated feedback. Re-exported here because
+// that the entrance guards of the demo are read (and tested) in one piece.
 export { resolveAudioFormat } from "@/lib/server/openrouter-transcribe";
 
 export function resolveLocale(value: unknown): Locale {
@@ -92,7 +91,7 @@ export function resolveTimeZone(value: unknown): string {
     : "UTC";
 }
 
-/** "2026-08-02" dans le fuseau du visiteur — l'ancre des « vendredi », « demain ». */
+/** "2026-08-02" in the visitor's time zone — the anchor for "Friday", "tomorrow". */
 export function todayIn(timeZone: string): string {
   try {
     return new Intl.DateTimeFormat("en-CA", {
@@ -107,9 +106,9 @@ export function todayIn(timeZone: string): string {
 }
 
 /**
- * L'outil unique, forcé. Tous les champs sont dans `required` : un petit modèle
- * ne répond simplement pas un champ laissé hors de la liste, même quand la
- * question l'appelle.
+ * The unique, forced tool. All fields are in `required`: a small pattern
+ * simply does not respond to a field left out of the list, even when the
+ * question calls for it.
  */
 export const FILL_TICKET_TOOL = {
   type: "function" as const,
@@ -182,9 +181,9 @@ ${categories.map((c) => `- ${c.id} = ${c.name}`).join("\n")}
 }
 
 /**
- * Ce qui sort du modèle, ramené au décor et aux enums : un membre inventé, une
- * priorité inventée ou une date absurde ne sortent pas d'ici. L'endpoint étant
- * ouvert, c'est la seule barrière entre une réponse de LLM et l'écran.
+ * What comes out of the model, brought back to the setting and the enums: an invented member, an invented
+ * priority or an absurd date do not come out of here. The endpoint being
+ * open, this is the only barrier between an LLM response and the screen.
  */
 export function sanitizeDemoTicket(
   raw: Record<string, unknown>,
@@ -203,8 +202,8 @@ export function sanitizeDemoTicket(
   const title =
     typeof raw.title === "string" && raw.title.trim()
       ? raw.title.trim().slice(0, MAX_TITLE_CHARS)
-      : // Un modèle qui n'a pas su titrer ne doit pas rendre une carte vide :
-        // la phrase elle-même fait un titre acceptable.
+      : // A model that has not been able to title must not return an empty card:
+        // the phrase itself makes an acceptable title.
         transcript.slice(0, MAX_TITLE_CHARS);
   const description =
     typeof raw.description === "string"

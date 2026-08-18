@@ -21,40 +21,39 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * Le rebond « déjà connecté → /home » a déménagé dans `proxy.ts` (MIN-88).
- * Ici, il coûtait un `auth.getUser()` : un aller-retour RÉSEAU vers GoTrue
- * avant le premier octet de la landing, et une page que le CDN ne pouvait pas
- * mettre en cache (mesuré en prod : `cache-control: private, no-store`,
- * `x-vercel-cache: MISS` à chaque appel). Le middleware fait la même chose en
- * lisant la session depuis les cookies, et il s'exécute AVANT le cache : les
- * connectés sont redirigés, les autres reçoivent la page mise en cache. Cette
- * lecture ne constitue pas une autorisation ; les handlers vérifient ensuite
- * les JWT avant d'accéder aux données.
+ * The bounce "already logged in → /home" has moved to `proxy.ts` (MIN-88).
+ * Here, it cost one `auth.getUser()`: a NETWORK round trip to GoTrue
+ * before the first byte of the landing, and a page that the CDN could not
+ * cache (measured in prod: `cache-control: private, no-store`,
+ * `x-vercel-cache: MISS` on each call). Middleware does the same thing by
+ * reading the session from the cookies, and it executes BEFORE the cache: the
+ * connected are redirected, others receive the cached page. This
+ * reading does not constitute authorization; the handlers then check
+ * the JWTs before accessing the data.
  */
 export default async function LandingPage() {
   return (
     <>
       <StructuredData />
       <LandingViewed />
-      {/* Fond de page : posé ici et non dans le hero pour qu'il parte du haut
-          du document et passe derrière la navbar. Il s'ancre sur le
-          `relative isolate` du layout marketing (<main> n'est pas positionné). */}
+      {/* Background: placed here and not in the hero so that it starts from the top
+ of the document and goes behind the navbar. It is anchored to the
+ `relative isolate` of the marketing layout (<main> is not positioned). */}
       <HeroShader />
       <Hero />
-      {/* Sept sections de contenu, dans l'ordre de la démonstration : le hero
-          promet la boucle agent, le tracker rassure aussitôt (« et dessous,
-          c'est un vrai tracker »), la section Agents prouve la promesse, la
-          vitesse suit, puis ce qui entre depuis l'extérieur, puis le rappel que
-          le reste est déjà là.
-          Agents est passée devant Speed (MIN-148) : la preuve doit suivre la
-          promesse, pas attendre deux sections. Le menu « Produit » de la nav se
-          lit comme le plan de cette page, il suit le même ordre. */}
+      {/* Seven sections of content, in the order of the demonstration: the hero
+ promises the agent loop, the tracker immediately reassures ("and below,
+ it's a real tracker"), the Agents section proves the promise, the
+ speed follows, then what enters from the outside, then the reminder that
+ the rest is already there.
+ Agents passed before Speed (MIN-148): proof must follow the
+ promise, not wait two sections. The “Product” menu of the nav reads
+ like the map of this page, it follows the same order. */}
       <SectionTracker />
       <SectionAgents />
       <SectionSpeed />
-      {/* Les pages avant les retours, et pas après : la section suivante
-          s'ouvre sur « jusqu'ici, tout venait de vous ». Le wiki est le dernier
-          endroit où c'est encore vrai. */}
+      {/* Pages before returns, not after: the next section
+ opens with “so far, everything came from you”. The wiki is the last place where this is still true. */}
       <SectionPages />
       <SectionFeedback />
       <SectionMore />

@@ -1,9 +1,9 @@
-// GÉNÉRÉ — ne pas éditer à la main.
+// GENERATED — do not edit by hand.
 //
-// Produit par `node captures/lib/publish.mjs` à partir du contenu réel de
-// `public/captures/`. Chaque entrée vaut `<emplacement>-<langue>-<thème>`
-// et garantit que le fichier existe : la landing ne pointe donc jamais une
-// image absente, elle rend son cadre de réservation à la place.
+// Produced by `node captures/lib/publish.mjs` from actual content of
+// `public/captures/`. Each entry is named `<slot>-<locale>-<theme>`
+// and guarantees that the file exists: the landing therefore never points to a
+// image missing, it returns its reservation frame instead.
 
 export const PUBLISHED_SCREENSHOTS: ReadonlySet<string> = new Set([
   "featureCycle-en-dark",

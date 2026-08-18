@@ -3,17 +3,17 @@ import { FullCatalogMessages } from "@/components/full-catalog-messages";
 import { AppProviders } from "./app-providers";
 
 /**
- * Segment de l'app authentifiée. Composant SERVEUR, qui ne fait rien d'autre
- * que porter ce `metadata` et monter l'arbre de providers clients
- * (`app-providers.tsx`) — une page cliente ne peut pas exporter de métadonnées,
- * or c'est exactement ce qu'il fallait ici.
+ * Segment of the authenticated app. SERVER component, which does nothing else
+ * what to carry this `metadata` and climb the client provider tree
+ * (`app-providers.tsx`) — a client page cannot export metadata,
+ * But that's exactly what was needed here.
  *
- * `noindex, nofollow` sur tout ce qui est derrière l'authentification (MIN-88).
- * Ceinture et bretelles : le `Disallow` du robots.txt demande poliment de ne pas
- * crawler, l'en-tête et cette balise interdisent d'indexer ce qui aurait quand
- * même été atteint — par un lien externe, une URL collée quelque part, ou un
- * robot qui ignore robots.txt. Même règle que `app/(app)/admin/layout.tsx`, qui
- * la portait déjà pour lui seul.
+ * `noindex, nofollow` on everything behind the authentication (MIN-88).
+ * Belt and suspenders: the `Disallow` of robots.txt politely requests not to
+ * crawler, the header and this tag prohibit indexing what would have when
+ * even been reached — by an external link, a URL pasted somewhere, or a
+ * robot that ignores robots.txt. Same rule as `app/(app)/admin/layout.tsx`, which
+ * already had it for himself.
  */
 export const metadata: Metadata = {
   robots: { index: false, follow: false },

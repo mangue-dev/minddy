@@ -8,40 +8,37 @@ import { sendApnsNotification } from "./apns";
 import { toPushLocale, type PushLocale, type PushPayload } from "./payload";
 
 /**
- * L'envoi Web Push, et l'entretien du parc d'abonnements qui va avec (MIN-183).
+ * Web Push sending, and the maintenance of the subscription base that goes with it (MIN-183).
  *
- * ## Le contrat : jamais de throw
+ * ## The contract: never throw
  *
- * Même contrat que `insertNotifications` — on log, on avale. Un service de push
- * injoignable ne doit pas faire échouer le commentaire qui l'a déclenché, ni la
- * cascade d'automatisations dans laquelle il tourne.
+ * Same contract as `insertNotifications` — we log, we swallow. An unreachable push
+ * service must not fail the comment that triggered it, nor the
+ * cascade of automations in which it runs.
  *
- * ## Les abonnements MEURENT, et c'est normal
+ * ## Subscriptions DIE, and that's normal
  *
- * Un abonnement n'a pas de fin de vie annoncée : l'utilisateur désinstalle la
- * PWA, révoque la permission, efface les données du site — et l'endpoint répond
- * alors 404 ou 410, définitivement. Sans purge, la table accumulerait des lignes
- * mortes que la carte des réglages montrerait comme des appareils actifs, et à
- * qui on continuerait de pousser à chaque événement. La purge se fait donc ICI,
- * au moment où le service de push nous le dit : c'est le seul endroit qui
- * l'apprend.
+ * A subscription has no announced end of life: the user uninstalls the
+ * PWA, revokes the permission, deletes the site data — and the endpoint responds
+ * then 404 or 410, definitively. Without purging, the table would accumulate dead rows which the settings map would show as active devices, and which would continue to be pushed on each event. The purge is therefore done HERE,
+ * at the moment when the push service tells us: this is the only place that
+ * learns it.
  *
- * Les autres codes ne se traitent pas pareil, et c'est le point :
- *   • 403 → la SIGNATURE est refusée : les clés VAPID ont changé sous les pieds
- *           des abonnements. Ce n'est pas l'appareil qui est mort, c'est nous
- *           qui avons cassé le lien — supprimer serait effacer la preuve.
- *   • 413 → charge utile trop grosse. Un bug de fabrication, pas un appareil.
- *   • 429 / 5xx → transitoire. On compte, on garde, ça repassera.
+ * The other codes are not treated the same, and that is the point:
+ * • 403 → the SIGNATURE is refused: the VAPID keys have changed under the subscriptions. It's not the device that died, it's us
+ * who broke the link — deleting would erase the evidence.
+ * • 413 → payload too big. A manufacturing bug, not a device.
+ * • 429 ​​/ 5xx → transient. We count, we keep, it will come back.
  *
- * ## Concurrence bornée
+ * ## Bounded competition
  *
- * Quelqu'un peut avoir dix appareils, et un insert peut concerner dix personnes.
- * Un `Promise.all` sur tout le produit ouvrirait cent requêtes sortantes d'un
- * coup depuis une lambda. Cinq à la fois suffisent largement et tiennent la
- * queue courte.
+ * Someone can have ten devices, and an insert can concern ten people.
+ * A `Promise.all` on the entire product would open a hundred requests outgoing from a
+ * shot from a lambda. Five at a time are more than enough and hold the
+ * short tail.
  */
 
-/** Ce que la table stocke d'un appareil, réduit à ce dont l'envoi a besoin. */
+/** What the table stores of a device, reduced to what the send needs. */
 export interface PushSubscriptionRow {
   id: string;
   endpoint: string;
@@ -53,11 +50,11 @@ export interface PushSubscriptionRow {
 
 const CONCURRENCY = 5;
 
-/** 24 h : au-delà, une notification d'inbox n'a plus d'intérêt — l'appareil qui
- *  se rallume trois jours après n'a pas à recevoir une rafale de l'avant-veille. */
+/** 24 hours: beyond that, an inbox notification is no longer of interest — the device which
+ * turns back on three days later does not have to receive a burst from the day before. */
 const TTL_SECONDS = 60 * 60 * 24;
 
-/** L'issue d'un envoi vers un appareil, telle que l'appelant peut la lire. */
+/** The outcome of a send to a device, as the caller can read it. */
 export type PushSendOutcome = "sent" | "gone" | "failed" | "skipped";
 
 const statusOf = (e: unknown): number | null => {
@@ -66,9 +63,9 @@ const statusOf = (e: unknown): number | null => {
 };
 
 /**
- * Un envoi, vers un appareil. Met la ligne à jour selon l'issue : succès →
- * horodatage et compteur d'échecs remis à zéro ; abonnement mort → la ligne
- * disparaît ; échec transitoire → le compteur monte.
+ * A send, to a device. Updates the row based on the outcome: success →
+ * timestamp and failure counter reset to zero; subscription dead → the line
+ * disappears; transient failure → counter goes up.
  */
 async function sendToSubscription(
   service: SupabaseClient,
@@ -118,8 +115,8 @@ async function sendToSubscription(
     const status = statusOf(e);
 
     if (status === 404 || status === 410) {
-      // L'abonnement n'existe plus chez le service de push. Rien à réparer :
-      // la ligne ne désignera plus jamais un appareil joignable.
+      // The subscription no longer exists with the push service. Nothing to repair:
+      // the line will never again designate a reachable device.
       await service.from("push_subscriptions").delete().eq("id", sub.id);
       return "gone";
     }
@@ -136,8 +133,8 @@ async function sendToSubscription(
       `[push] envoi échoué (${status ?? "sans statut"}):`,
       (e as Error).message
     );
-    // `failure_count + 1` sans RPC : la valeur lue peut être périmée, mais
-    // c'est un indicateur d'entretien, pas un compteur transactionnel.
+    // `failure_count + 1` without RPC: the value read may be out of date, but
+    // this is a maintenance indicator, not a transactional counter.
     await incrementFailureCount(service, sub.id);
     return "failed";
   }
@@ -156,7 +153,7 @@ async function incrementFailureCount(service: SupabaseClient, id: string): Promi
     .eq("id", id);
 }
 
-/** Exécute les tâches par vagues de `CONCURRENCY`. */
+/** Runs tasks in waves of `CONCURRENCY`. */
 async function inBatches<T>(
   tasks: readonly (() => Promise<T>)[],
   size = CONCURRENCY
@@ -168,8 +165,8 @@ async function inBatches<T>(
   return out;
 }
 
-/** Les appareils actifs d'un compte. Client SERVICE : on lit pour le compte de
- *  quelqu'un d'autre, hors de toute requête authentifiée. */
+/** The active devices of an account. Client SERVICE: we read on behalf of
+ * someone else, outside of any authenticated request. */
 export async function activeSubscriptionsOf(
   service: SupabaseClient,
   userId: string
@@ -187,11 +184,11 @@ export async function activeSubscriptionsOf(
 }
 
 /**
- * Pousse vers tous les appareils actifs d'un compte.
+ * Pushes to all active devices in an account.
  *
- * `payloadFor` est appelé par LANGUE et non par appareil : la formulation est la
- * même pour deux téléphones en français, et sa fabrication coûte un formateur
- * next-intl. Rendre `null` (cible disparue) n'envoie rien pour cette langue-là.
+ * `payloadFor` is called by LANGUAGE and not by device: the wording is the
+ * even for two phones in French, and it costs a trainer
+ * next-intl. Making `null` (target disappeared) sends nothing for that language.
  */
 export async function sendPushToUser(
   service: SupabaseClient,

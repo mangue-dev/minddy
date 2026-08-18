@@ -12,7 +12,7 @@ import type {
   UserStats,
 } from "@/lib/types";
 
-/** Forme brute renvoyée par la fonction SQL get_user_stats. */
+/** Raw form returned by the get_user_stats SQL function. */
 interface RawStats {
   totals: {
     created: number;
@@ -30,7 +30,7 @@ interface RawStats {
   days: Array<{ date: string; count: number; issues: number; tasks: number }>;
 }
 
-/** Forme brute renvoyée par la fonction SQL get_cycle_stats (MIN-58). */
+/** Raw form returned by the SQL function get_cycle_stats (MIN-58). */
 interface RawCycleStats {
   avg_completion_offset_days: number | null;
   completion_offset_sample: number | null;
@@ -43,24 +43,24 @@ interface RawCycleStats {
   }>;
 }
 
-/** Ordre d'affichage des efforts (xs→xl) — indexe le tri du by_effort brut. */
+/** Effort display order (xs→xl) — indexes the sorting of raw by_effort. */
 const EFFORT_ORDER = new Map(EFFORTS.map((e, i) => [e.value, i] as const));
 
-/** Nombre fini ou null (le RPC renvoie des numériques Postgres = string|number). */
+/** Finite number or null (RPC returns Postgres numerics = string|number). */
 function num(value: unknown): number | null {
   const n = typeof value === "string" ? Number(value) : (value as number);
   return typeof n === "number" && Number.isFinite(n) ? n : null;
 }
 
 /**
- * Mappe la sortie brute du RPC cycles vers la forme cliente (MIN-58).
+ * Maps the raw output of the RPC cycles to the client form (MIN-58).
  *
- * `median_seconds` est lu sans repli sur l'ancien `avg_seconds` : entre le
- * déploiement du code et celui de la migration, la fonction en base rend encore
- * des moyennes, et une moyenne affichée sous un libellé « médiane » serait un
- * chiffre faux qui ne se voit pas. Une ligne sans médiane est donc écartée — la
- * section disparaît le temps que la migration passe, comme quand le RPC lui-même
- * n'est pas encore déployé.
+ * `median_seconds` is read without fallback to the old `avg_seconds`: between the
+ * deployment of the code and that of the migration, the base function renders again
+ * averages, and an average displayed under a “median” label would be a
+ * false figure which cannot be seen. A line without a median is therefore discarded — the
+ * section disappears while the migration passes, such as when the RPC itself
+ * is not yet deployed.
  */
 function toCycles(raw: RawCycleStats | null): StatsCycles {
   const byEffort = (raw?.by_effort ?? [])
@@ -88,13 +88,13 @@ function ymd(date: Date): string {
 }
 
 /**
- * Fenêtre de la heatmap dans le fuseau `tz`, sans lib de dates :
- *   - `end`   = aujourd'hui (date locale de l'utilisateur) ;
- *   - `start` = le dimanche du bloc de 53 semaines qui se termine ce jour ;
- *   - `since` = `start` − 1 jour (marge pour ne rater aucun event de bord ;
- *               les jours antérieurs à `start` sont ignorés à la densification).
- * On calcule « aujourd'hui-en-tz » via Intl, puis on manipule des dates nues en
- * UTC (aucune dérive de fuseau puisqu'on ne raisonne qu'en jours calendaires).
+ * Heatmap window in the `tz` zone, without date lib:
+ * - `end` = today (user's local date);
+ * - `start` = Sunday of the 53-week block that ends on this day ;
+ * - `since` = `start` − 1 day (margin to not miss any edge event ;
+ * days prior to `start` are ignored during densification).
+ * We calculate “today-in-tz” via Intl, then we manipulate bare dates in
+ * UTC (no time zone drift since we only think in calendar days).
  */
 function heatmapWindow(tz: string): { start: string; end: string; since: string } {
   let todayStr: string;
@@ -104,14 +104,14 @@ function heatmapWindow(tz: string): { start: string; end: string; since: string 
     todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(new Date());
   }
   const today = new Date(`${todayStr}T00:00:00Z`);
-  // 52 semaines en arrière, puis recul jusqu'au dimanche de cette semaine.
+  // 52 weeks back, then rewind to Sunday of this week.
   const anchor = new Date(today.getTime() - 364 * DAY_MS);
   const startSunday = new Date(anchor.getTime() - anchor.getUTCDay() * DAY_MS);
   const since = new Date(startSunday.getTime() - DAY_MS);
   return { start: ymd(startSunday), end: ymd(today), since: since.toISOString() };
 }
 
-/** Densifie la série sparse du RPC en un point par jour de `start` à `end`. */
+/** Densifies the sparse RPC series to one point per day from `start` to `end`. */
 function densify(start: string, end: string, sparse: RawStats["days"]): HeatmapDay[] {
   const byDate = new Map(sparse.map((d) => [d.date, d]));
   const days: HeatmapDay[] = [];
@@ -130,9 +130,9 @@ function densify(start: string, end: string, sparse: RawStats["days"]): HeatmapD
 }
 
 /**
- * Élan récent, lu dans la série dense (qui se termine aujourd'hui, dans le
- * fuseau de l'utilisateur) : les 7 derniers jours, et les 7 d'avant pour la
- * tendance. Pas de requête supplémentaire — la heatmap couvre déjà l'année.
+ * Recent momentum, read in the dense series (which ends today, in the
+ * user's time zone): the last 7 days, and the 7 before that for the
+ * trend. No additional query — the heatmap already covers the year.
  */
 function weekTotals(days: HeatmapDay[]): StatsWeek {
   const sum = (slice: HeatmapDay[], pick: (d: HeatmapDay) => number) =>
@@ -148,9 +148,9 @@ function weekTotals(days: HeatmapDay[]): StatsWeek {
 }
 
 /**
- * Agrège les statistiques personnelles de l'utilisateur courant.
- * `supabase` doit être le client RLS (route handler) : le RPC est SECURITY
- * INVOKER, donc auth.uid() = l'appelant et il ne lit que ses propres lignes.
+ * Aggregates the personal statistics of the current user.
+ * `supabase` must be the RLS client (route handler): the RPC is SECURITY
+ * INVOKER, so auth.uid() = the caller and it only reads its own lines.
  */
 export async function getUserStats(
   supabase: SupabaseClient,
@@ -160,11 +160,11 @@ export async function getUserStats(
 
   const [statsRes, workloadRes, cycleRes] = await Promise.all([
     supabase.rpc("get_user_stats", { p_tz: tz, p_since: since }),
-    // Charge actuelle : issues ouvertes qui me sont assignées (live, RLS scope
-    // les projets accessibles). Détaché non requis — c'est un instantané du présent.
-    // `projects!inner(deleted_at)` porte le filtre de la corbeille : un projet
-    // jeté garde ses tickets et `can_access_project` ignore `deleted_at`, donc
-    // sans lui la charge comptait des tickets qui ne sont plus nulle part.
+    // Current load: open issues assigned to me (live, RLS scope
+    // accessible projects). Detached not required — it's a snapshot of the present.
+    // `projects!inner(deleted_at)` carries the trash filter: a project
+    // threw keeps his tickets and `can_access_project` ignores `deleted_at`, so
+    // without him the load included tickets which are no longer anywhere.
     supabase
       .from("issues")
       .select("status, projects!inner(deleted_at)")
@@ -172,15 +172,15 @@ export async function getUserStats(
       .is("projects.deleted_at", null)
       .eq("assignee_id", userId)
       .not("status", "in", `(${CLOSED_STATUSES.join(",")})`),
-    // Stats de cycle (MIN-58) : cadence, tickets/cycle, durée par effort.
+    // Cycle stats (MIN-58): cadence, tickets/cycle, duration per effort.
     supabase.rpc("get_cycle_stats", { p_tz: tz }),
   ]);
 
   if (statsRes.error) throw new Error(statsRes.error.message);
   const raw = (statsRes.data ?? {}) as RawStats;
 
-  // Best-effort : une erreur du RPC cycles (ex. fonction pas encore déployée)
-  // n'invalide pas la page — on retombe sur une section cycles vide.
+  // Best-effort: an error in the RPC cycles (e.g. function not yet deployed)
+  // does not invalidate the page — we land on an empty cycles section.
   if (cycleRes.error) {
     console.error("[api/stats] cycle stats failed:", cycleRes.error.message);
   }

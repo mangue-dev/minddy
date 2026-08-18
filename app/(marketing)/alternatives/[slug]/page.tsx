@@ -20,15 +20,15 @@ import { SectionCta } from "@/components/marketing/section-cta";
 import { TrackedCta } from "@/components/marketing/tracked-cta";
 
 /**
- * `/alternatives/<outil>` — un comparatif par concurrent (MIN-93).
+ * `/alternatives/<tool>` — a competitor comparison page (MIN-93).
  *
- * La page est bâtie pour être CITÉE, pas pour gagner un débat : elle ouvre sur
- * ce que l'autre outil fait mieux, et son tableau ne compare que cinq
- * différences de structure. Le pourquoi de ce parti pris, et le choix des trois
- * concurrents, sont dans `lib/comparisons.ts`.
+ * The page is built to be QUOTED, not to win a debate: it opens on
+ * what the other tool does better, and its table only compares five
+ * structural differences. The why of this bias, and the choice of the three
+ * competitors, are in `lib/comparisons.ts`.
  *
- * Le prix de minddy vient de `BILLING_PLANS`, comme partout ailleurs : une page
- * qui annonce un tarif périmé est pire qu'une page absente.
+ * Minddy's price comes from `BILLING_PLANS`, like everywhere else: one page
+ * which announces an expired price is worse than a missing page.
  */
 
 export function generateStaticParams() {
@@ -54,9 +54,9 @@ export default async function AlternativePage({
   params: Promise<{ slug: string }>;
 }) {
   const comparison = comparisonBySlug((await params).slug);
-  // `generateStaticParams` ne fabrique que les trois slugs connus, mais la
-  // route reste dynamique : `/alternatives/asana` doit tomber en 404, pas
-  // rendre une page vide.
+  // `generateStaticParams` only makes the three known slugs, but the
+  // route remains dynamic: `/alternatives/asana` must return 404, not
+  // render an empty page.
   if (!comparison) notFound();
 
   const locale = (await getLocale()) as Locale;
@@ -89,7 +89,7 @@ export default async function AlternativePage({
         </div>
       </section>
 
-      {/* ── Le tableau ───────────────────────────────────────────────────── */}
+      {/* ── The table ────────────────────────── ─────────────────────────── */}
       <section className="border-t border-border py-16 sm:py-20">
         <div className="mx-auto w-full max-w-4xl px-4 sm:px-6">
           <header className="mb-10 max-w-2xl">
@@ -123,8 +123,8 @@ export default async function AlternativePage({
             ]}
           />
 
-          {/* Une comparaison sans date ni source est une opinion. Celle-ci dit
-              quand elle a été vérifiée et renvoie chez l'autre. */}
+          {/* A comparison without a date or source is an opinion. This one says
+ when it has been verified and returns to the other. */}
           <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
             {t("checkedNote")}{" "}
             <a
@@ -140,7 +140,7 @@ export default async function AlternativePage({
         </div>
       </section>
 
-      {/* ── Ce que l'autre fait mieux, d'abord ───────────────────────────── */}
+      {/* ── What the other tool does better, first ───────────────────────── */}
       <section className="border-t border-border py-16 sm:py-20">
         <div className="mx-auto w-full max-w-4xl px-4 sm:px-6">
           <div className="grid gap-12 md:grid-cols-2 md:gap-16">
@@ -173,7 +173,7 @@ export default async function AlternativePage({
         </div>
       </section>
 
-      {/* ── Le verdict ───────────────────────────────────────────────────── */}
+      {/* ── The verdict ────────────────────────── ─────────────────────────── */}
       <section className="border-t border-border py-16 sm:py-20">
         <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
           <RevealHeading
@@ -200,9 +200,9 @@ export default async function AlternativePage({
             >
               {t("seeMcp")}
             </Link>
-            {/* Le tableau ne cite aucun prix — c'est la page tarifs qui fait
-                foi, et elle est dérivée de `BILLING_PLANS`. Un chiffre recopié
-                ici serait faux au premier changement. */}
+            {/* The table does not cite any prices — it is the prices page that does
+, and it is derived from `BILLING_PLANS`. A number copied
+ here would be wrong on the first change. */}
             <Link
               href={localizedHref(pricingRoute.en, locale)}
               className="text-sm font-medium text-muted-foreground underline-offset-4 hover:underline"

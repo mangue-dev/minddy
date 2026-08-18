@@ -1,26 +1,26 @@
 "use client";
 
-// LA vue d'une tâche — celle du carnet, et celle d'une page.
+// THE view of a task — that of the notebook, and that of a page.
 //
-// Une tâche est le même objet des deux côtés : même schéma, mêmes quatre états,
-// même round-trip markdown (task-nodes.ts), même case à cocher
-// (task-checkbox.tsx). Ce fichier est le dernier morceau à l'avoir été aussi :
-// le menu ⋯, les raccourcis de survol et le clic droit. Une page de projet est
-// exactement l'endroit où l'on écrit un compte-rendu qui finit en liste
-// d'actions ; les confier depuis là devait cesser de demander de les recopier
-// dans le carnet.
+// A task is the same object on both sides: same schema, same four states,
+// same round-trip markdown (task-nodes.ts), same checkbox
+// (task-checkbox.tsx). This file is the last piece to have been as well:
+// the ⋯ menu, hover shortcuts and right click. A project page is
+// exactly the place where you write a report that ends in a list
+// of actions; entrusting them from there should stop asking to copy them
+// in the notebook.
 //
-// Ce qui différait n'était jamais la tâche, seulement ce qu'il faut faire
-// AUTOUR quand on la confie : quitter la surface, quel prompt emballer, quoi
-// dire à Numo. Ces trois gestes viennent de `useTaskSurface()` (task-surface.tsx),
-// que le carnet et la page remplissent chacun à sa façon.
+// What differed was never the task, only what had to be done
+// AROUND when we entrust it: leaving the surface, what prompt packing, what
+// tell Numo. These three gestures come from `useTaskSurface()` (task-surface.tsx),
+// that the notebook and the page each fill in their own way.
 //
-// ⚠️ Ce fichier importe le baril `mangue-ui` (SearchMenu, Button, toast), donc
-// il n'est PAS importable hors navigateur. Le registre de blocs des pages, lui,
-// doit l'être (projection markdown, outils MCP, tests — cf. lib/cx.ts) : c'est
-// pourquoi aucun fichier de bloc ne le nomme, et pourquoi c'est l'éditeur de
-// page qui INJECTE cette vue au montage (`pageExtensions({ nodeViews })`),
-// comme il le fait déjà pour la pilule de mention.
+// ⚠️ This file imports the `mangue-ui` barrel (SearchMenu, Button, toast), so
+// it is NOT importable outside the browser. The page block register, for its part,
+// must be (markdown projection, MCP tools, tests — cf. lib/cx.ts): it is
+// why no block file names it, and why it's the editor
+// page which INJECTS this view during assembly (`pageExtensions({ nodeViews })`),
+// as it already does for the mention pill.
 
 import { useRef, useState, type MouseEvent } from "react";
 import {
@@ -72,7 +72,7 @@ import { eventKey } from "@/lib/keyboard/event-key";
 import { pointerIsStale, useHoverKeys } from "@/lib/keyboard/hover-keys";
 import { isTypingTarget } from "@/lib/keyboard/keyboard-context";
 
-/** Les quatre états d'une tâche, dans l'ordre du cycle de vie. */
+/** The four states of a task, in lifecycle order. */
 const STATE_CHOICES = [
   {
     value: "pending",
@@ -119,13 +119,13 @@ export function TaskItemView({
   getPos,
 }: NodeViewProps) {
   const t = useTranslations("Plan");
-  // `useAuthOptional` et non `useAuth` : cet éditeur est aussi monté HORS de
-  // l'application, sur une page publiée (MIN-283), où il n'y a pas de session —
-  // et `useAuth` y levait, emportant la page pour une préférence de compte dont
-  // seules les actions du menu se servent.
+  // `useAuthOptional` and not `useAuth`: this editor is also mounted OUTSIDE
+  // the application, on a published page (MIN-283), where there is no session —
+  // and `useAuth` lifted there, taking the page for an account preference of which
+  // only menu actions are used.
   const user = useAuthOptional()?.user ?? null;
-  // Hors provider (un aperçu, un éditeur monté sans surface) : la case reste,
-  // le reste disparaît. Cf. task-surface.tsx.
+  // Outside provider (an overview, an editor mounted without surface): the box remains,
+  // the rest disappears. See task-surface.tsx.
   const surface = useTaskSurface();
 
   const raw = node.attrs.state;
@@ -135,37 +135,37 @@ export function TaskItemView({
 
   const set = (next: PlanTaskState) => updateAttributes({ state: next });
 
-  // Confier la tâche à un agent, c'est la commencer : la passation la fait
-  // passer « en cours », exactement comme sur un ticket, et avec les deux mêmes
-  // règles — « copier le prompt » démarre sous l'option de compte (MIN-20,
-  // Compte → Préférences), « lancer un agent » démarre toujours (MIN-46). Une
-  // tâche déjà commencée, cochée ou annulée ne bouge dans aucun des deux cas.
+  // Entrusting the task to an agent means starting it: the handover does it
+  // pass “in progress”, exactly like on a ticket, and with the same two
+  // rules — “copy prompt” starts under the count option (MIN-20,
+  // Account → Preferences), “launch an agent” always starts (MIN-46). A
+  // task already started, checked or canceled does not move in either case.
   //
-  // Depuis la reprise des sous-tâches, le geste porte sur le SOUS-ARBRE : un
-  // parent qu'on confie, ce sont ses enfants qu'on confie avec lui, et ce sont
-  // eux, à leur tour, que la passation démarre. Un parent déjà « en cours » qui
-  // porte encore des tâches à faire les démarre donc, alors que lui ne bouge pas.
+  // Since the resumption of the subtasks, the gesture concerns the SUB-TREE: a
+  // parent that we entrust, it is his children that we entrust with him, and these are
+  // them, in turn, that the handover begins. A parent already “in progress” who
+  // still has tasks to do so starts them, while he doesn't move.
   const copyStarts = resolvePromptCopyAutoStart(user?.user_metadata);
   const started = (s: PlanTaskState): PlanTaskState =>
     s === "pending" ? "in_progress" : s;
 
-  /** Démarre la tâche et sa descendance ; rend le nombre de tâches déplacées. */
+  /** Starts the task and its descendants; returns the number of tasks moved. */
   const startSubtree = (): number => {
     const pos = getPos();
     if (pos == null) return 0;
     return startPendingTasks(editor, pos, pos + node.nodeSize);
   };
 
-  // Le markdown que porte la tâche quand elle sort de sa surface (copie ou
-  // agent) : la tâche ET SES SOUS-TÂCHES, marqueurs et niveaux compris,
-  // PRÉCÉDÉES des titres des sections qui la contiennent — seul moyen de dire à
-  // l'agent d'où elle vient (le prompt les reformule en clair, cf.
-  // lib/scratchpad-prompt.ts). Null si la ligne est vide.
+  // The markdown that the task carries when it leaves its surface (copy or
+  // agent): the task AND ITS SUB-TASKS, markers and levels included,
+  // PRECEDED by the titles of the sections which contain it — the only way to tell
+  // the agent from which it comes (the prompt reformulates them clearly, cf.
+  // lib/scratchpad-prompt.ts). Null if the line is empty.
   //
-  // Les marqueurs sont ceux de l'état APRÈS le geste (comme le XML d'un ticket
-  // copié, cf. issue-card.tsx) : une tâche que la passation démarre part en
-  // `[~]`, pas dans son état d'avant — sans quoi le prompt décrirait comme « à
-  // faire » un travail que le document, lui, dit déjà en cours.
+  // The markers are those of the state AFTER the gesture (like the XML of a ticket
+  // copied, cf. issue-card.tsx): a task that the handover starts leaves in
+  // `[~]`, not in its previous state — otherwise the prompt would describe as “to
+  //do” work that the document says is already in progress.
   const taskMarkdown = (start: boolean): string | null => {
     const lines = taskItemLines(node, start ? started : undefined);
     if (!lines[0]?.text) return null;
@@ -180,20 +180,20 @@ export function TaskItemView({
     if (!md) return;
     void navigator.clipboard.writeText(surface.copyPrompt(md));
     const moved = copyStarts ? startSubtree() : 0;
-    // Le toast ne signale le déplacement que s'il a eu lieu.
+    // The toast only signals the move if it has taken place.
     toast.success(t(moved > 0 ? "copiedLineMovedToast" : "copiedLineToast"));
   };
 
-  // « Promouvoir en ticket » : la note part telle quelle à Numo, qui la convertit
-  // en vrai ticket — pose des questions plutôt que d'inventer si elle est trop
-  // floue, puis retire la note de sa surface une fois le ticket créé : elle vit
-  // désormais dans le tracker. Quitter la surface avant d'ouvrir le panneau
-  // (fermeture du carnet, enregistrement de la page) est le travail du provider.
+  // “Promote to ticket”: the note goes as is to Numo, who converts it
+  // in real ticket — ask questions rather than inventing if it is too
+  // blurred, then removes the note from its surface once the ticket has been created: it lives
+  // now in the tracker. Leave the surface before opening the panel
+  // (closing the notebook, saving the page) is the work of the provider.
   //
-  // La note envoyée est le SOUS-ARBRE : les sous-tâches sont le détail du
-  // travail, et un ticket écrit sans elles est un ticket qui perd la moitié de
-  // ce que la note disait. Une tâche sans enfant part en texte simple, comme
-  // avant — pas de case à cocher pour une seule ligne.
+  // The note sent is the SUB-TREE: the sub-tasks are the details of the
+  // work, and a ticket written without them is a ticket that loses half of
+  // what the note said. A task without children is sent as simple text, like
+  // before — no checkbox for a single line.
   const promoteToIssue = () => {
     if (!surface) return;
     const lines = taskItemLines(node).filter((line) => line.text);
@@ -202,24 +202,24 @@ export function TaskItemView({
     surface.promote(note);
   };
 
-  // « Lancer un agent » (MIN-84) : la ligne part en markdown (marqueur et titre
-  // de section compris — la note est le SEUL canal jusqu'à l'agent), emballée
-  // par la surface dans le MÊME prompt que « copier le prompt » ci-dessus ; le
-  // composer de la page Agents le montre tel quel, éditable, et fait choisir le
-  // projet avant l'envoi.
+  // “Launch an agent” (MIN-84): the line goes into markdown (marker and title
+  // section included — the note is the ONLY channel to the agent), packaged
+  // by the surface in the SAME prompt as “copy prompt” above; THE
+  // compose the Agents page shows it as is, editable, and makes you choose the
+  // project before sending.
   //
-  // Le démarrage a lieu ICI, au geste, et pas à l'envoi réel : le run n'est
-  // rattaché à aucune tâche (sa note est un simple texte, cf.
-  // lib/server/agent/launch.ts), donc rien ne pourrait retrouver la ligne plus
-  // tard. Abandonner le composer laisse la tâche « en cours » — un clic pour la
-  // remettre, contre une passation qui ne marque rien dans le cas normal.
+  // The start takes place HERE, with the gesture, and not with the actual sending: the run is not
+  // attached to no task (its note is a simple text, cf.
+  //lib/server/agent/launch.ts), so nothing could find the line anymore
+  // late. Aborting the composer leaves the task “in progress” — one click to
+  // hand over, against a handover which does not mark anything in the normal case.
   const launchAgent = () => {
     if (!surface) return;
     const md = taskMarkdown(true);
     if (!md) return;
-    // AVANT `launchAgent` : la surface enregistre en partant (le carnet flushe
-    // en se démontant, la page flushe avant de naviguer) — l'état doit donc
-    // être posé pour partir avec, sinon il se perdrait en route.
+    // BEFORE `launchAgent`: the surface records when leaving (the book flushes
+    // when unmounting, the page flushes before navigating) — the state must therefore
+    // be placed to leave with it, otherwise it would get lost on the way.
     startSubtree();
     surface.launchAgent(md);
   };
@@ -228,10 +228,10 @@ export function TaskItemView({
   // or by right-clicking the task; anchored to the ⋯ trigger (Radix positions it
   // transform-aware, unlike a fixed-point anchor inside the dialog).
   const [menuOpen, setMenuOpen] = useState(false);
-  // Les quatre états tiennent derrière une seule entrée « Changer l'état » : le
-  // menu avance d'une étape sans se fermer, comme le sélecteur de relations. La
-  // recherche est contrôlée pour repartir vide à l'étape 2 — sans quoi le texte
-  // tapé pour trouver l'entrée filtrerait ensuite les états.
+  // The four states fit behind a single “Change state” entry: the
+  // menu advances one step without closing, like the relationship selector. There
+  // search is controlled to leave empty in step 2 — otherwise the text
+  // typed to find the entry would then filter the states.
   const [statePage, setStatePage] = useState(false);
   const [query, setQuery] = useState("");
   const pick = (fn: () => void) => {
@@ -243,53 +243,53 @@ export function TaskItemView({
   const CurrentStateIcon =
     STATE_CHOICES.find((c) => c.value === state)?.icon ?? Circle;
 
-  // Raccourcis au survol, comme sur une carte de ticket : ⇧A lance l'agent,
-  // ⇧P copie la ligne en prompt. Ils sont posés sur la TÂCHE seule — les
-  // sections gardent leurs boutons de survol, le carnet entier ses boutons
-  // d'en-tête, et aucun des deux n'a de raccourci.
+  // Shortcuts on hover, like on a ticket card: ⇧A launches the agent,
+  // ⇧P copies the line as a prompt. They are placed on the TASK alone — the
+  // sections keep their hover buttons, the entire notebook its buttons
+  // header, and neither has a shortcut.
   //
-  // Le carnet comme une page sont des surfaces éditables, où ⇧A c'est aussi
-  // « écrire un A ». La règle : **la frappe l'emporte tant qu'on écrit**, où que
-  // soit le pointeur. Écrire « Ajouter » sur sa propre ligne ne lance donc rien
-  // — et écrire sur une AUTRE ligne non plus, alors même que la souris est
-  // restée sur celle-ci (`pointerIsStale`, cf. hover-keys.ts). Le raccourci ne
-  // repart qu'une fois la tâche visée à nouveau, d'un mouvement du pointeur.
-  // Une surface qui monte cette vue doit donc appeler `noteTyping()` sur ses
-  // frappes et `trackPointerFreshness()` le temps qu'elle vit.
+  // The notebook like a page are editable surfaces, where ⇧A is also
+  // “write an A”. The rule: **typing wins as long as you write**, wherever
+  // be the pointer. Writing “Add” on its own line therefore launches nothing
+  // — and write on ANOTHER line either, even though the mouse is
+  // remained on this one (`pointerIsStale`, cf. hover-keys.ts). The shortcut does not
+  // restarts only once the task is targeted again, with a movement of the pointer.
+  // A surface that mounts this view must therefore call `noteTyping()` on its
+  // keystrokes and `trackPointerFreshness()` the time she lives.
   //
-  // Tout ce qui bouge d'un rendu à l'autre (les actions relisent le contenu du
-  // nœud, `getPos` sa position) passe par une ref : le listener reste alors
-  // abonné d'un bout à l'autre du survol au lieu de se réabonner à chaque frappe.
+  // Everything that moves from one rendering to another (the actions reread the contents of the
+  // node, `getPos` its position) passes through a ref: the listener then remains
+  // subscribed from one end of the hover to the other instead of resubscribing on each keystroke.
   const liveRef = useRef({ copyLine, launchAgent, getPos });
   liveRef.current = { copyLine, launchAgent, getPos };
 
-  // La tâche visée se lit dans le DOM au moment de la frappe : passer d'une
-  // ligne à l'autre puis taper aussitôt ne peut plus lancer l'agent sur la
-  // précédente (MIN-158). `useHoverKeys` désigne aussi la tâche la plus
-  // INTÉRIEURE, ce qui règle les tâches imbriquées — entrer dans l'enfant ne
-  // fait pas sortir du parent, les deux sont survolés, l'enfant gagne.
+  // The target task is read in the DOM at the time of typing: go from one
+  // line to the other then type immediately can no longer launch the agent on the
+  // previous (MIN-158). `useHoverKeys` also designates the most important task
+  // INTERIOR, which resolves nested tasks — entering the child does not
+  // does not move out of the parent, both are hovered over, the child wins.
   //
-  // Menu ouvert = on tape dans son champ de recherche : la lettre lui revient.
+  // Menu open = you type in your search field: the letter comes back to you.
   const hoverRef = useHoverKeys(
     (e) => {
       if (!e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
       const key = eventKey(e);
       if (key !== "a" && key !== "p") return;
-      // On tape dans un champ hors de la surface (la recherche du ⋯, un dialog
-      // par dessus) : la touche est à lui, la tâche survolée n'a rien à y voir.
+      // We type in a field outside the surface (the search for ⋯, a dialog
+      // on top): the key is his, the task hovered over has nothing to do with it.
       const target = e.target as HTMLElement | null;
       if (isTypingTarget(target) && !editor.view.dom.contains(target)) return;
-      // On écrit DANS la surface, ailleurs que sur la tâche visée : le pointeur
-      // n'est plus qu'un vestige du dernier déplacement, la lettre l'emporte.
+      // We write IN the surface, elsewhere than on the targeted task: the pointer
+      // is nothing more than a vestige of the last movement, the letter wins.
       if (pointerIsStale()) return;
-      // On écrit DANS cette tâche-là : la lettre l'emporte sur le raccourci.
+      // We write IN this task: the letter prevails over the shortcut.
       const pos = liveRef.current.getPos();
       if (pos != null && editor.isFocused) {
         const self = editor.state.doc.nodeAt(pos);
         const { from, to } = editor.state.selection;
         if (self && to >= pos && from <= pos + self.nodeSize) return;
       }
-      // Le survol possède la combinaison : ni l'éditeur ni le dialog ne la voit.
+      // Hover has the combination: neither the editor nor the dialog sees it.
       e.preventDefault();
       e.stopImmediatePropagation();
       if (key === "a") liveRef.current.launchAgent();
@@ -359,8 +359,8 @@ export function TaskItemView({
             }
           >
             {statePage ? (
-              // Étape 2 : les états, l'état courant en moins — le proposer
-              // reviendrait à proposer de ne rien faire.
+              // Step 2: the states, minus the current state — propose it
+              // would amount to proposing to do nothing.
               <CommandGroup heading={t("changeState")}>
                 {STATE_CHOICES.filter((c) => c.value !== state).map(
                   ({ value, icon: Icon, label, keywords }) => (
@@ -378,9 +378,9 @@ export function TaskItemView({
               </CommandGroup>
             ) : (
               <CommandGroup>
-                {/* Une seule entrée pour les quatre états, mais elle garde tous
-                    leurs mots-clés : taper « terminé » depuis la première page la
-                    trouve toujours, au lieu de ne plus rien trouver. */}
+                {/* Only one entry for the four states, but it keeps all
+ their keywords: typing "done" from the first page always finds
+, instead of finding nothing. */}
                 <CommandItem
                   value={t("changeState")}
                   keywords={STATE_CHOICES.flatMap((c) => [...c.keywords])}
@@ -407,7 +407,7 @@ export function TaskItemView({
                 >
                   <Bot />
                   {t("launchAgent")}
-                  {/* Mêmes touches que sur un ticket, affichées au même endroit. */}
+                  {/* Same keys as on a ticket, displayed in the same place. */}
                   <CommandShortcut>
                     <Kbd size="sm">⇧A</Kbd>
                   </CommandShortcut>
@@ -449,8 +449,8 @@ export function TaskItemView({
 }
 
 /**
- * La vue, prête à être greffée sur le nœud tâche (task-nodes.ts) — par le
- * carnet (scratchpad-task.tsx) comme par l'éditeur de page, qui l'injecte dans
+ * The view, ready to be grafted onto the task node (task-nodes.ts) — by the
+ * notebook (scratchpad-task.tsx) as well as by the page editor, which injects it into
  * `pageExtensions({ nodeViews })`.
  */
 export function taskItemNodeView(): NodeViewRenderer {

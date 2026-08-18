@@ -6,33 +6,33 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { closeNotificationsForView } from "@/lib/push/dismiss";
 
 /**
- * Referme les notifications poussées de l'écran qu'on est en train de regarder.
- * Aucun rendu : ce composant n'existe que pour son effet, à côté de
- * `<PushServiceWorker />` dans les providers de l'app.
+ * Closes push notifications for the screen you are currently viewing.
+ * No rendering: this component only exists for its effect, next to
+ * `<PushServiceWorker />` in the app's providers.
  *
- * ## Les trois moments où il faut regarder
+ * ## The three moments when you have to look at
  *
- * Ils ne se recouvrent pas, et il en manquerait un dans n'importe quelle paire :
+ * They do not overlap, and one would be missing in any pair:
  *
- *   • **la navigation** — le cas courant : la notification est arrivée pendant
- *     qu'on faisait autre chose, et on ouvre le ticket depuis l'app ;
- *   • **le retour sur l'onglet** (`visibilitychange`) — la notification est
- *     arrivée alors que la page concernée était déjà ouverte, mais en arrière-plan.
- *     Rien ne bouge côté route quand on revient dessus ;
- *   • **l'affichage d'un push** (`push-shown`, posté par public/sw.js) — on est
- *     PILE sur la page, au premier plan, quand la bannière tombe. Ni route ni
- *     visibilité ne changent : sans ce message, celle-là resterait pour toujours.
+ * • **navigation** — the common case: the notification arrived while
+ * that we were doing something else, and we open the ticket from the app ;
+ * • **return to the tab** (`visibilitychange`) — the notification is
+ * arrived while the page concerned was already open, but in the background.
+ * Nothing moves on the road side when you return to it;
+ * • **display of a push** (`push-shown`, posted by public/sw.js) — we are
+ * RIGHT on the page, in the foreground, when the banner falls. Neither route nor
+ * visibility changes: without this message, this one would remain forever.
  *
- * D'où la condition commune : on ne referme que si l'onglet est **visible**. Une
- * notification qu'on n'a pas eu l'occasion de voir doit rester — un onglet
- * oublié en arrière-plan sur le bon ticket avalerait tout, en silence.
+ * Hence the common condition: we only close if the tab is **visible**. A
+ * notification that we haven't had the opportunity to see must remain — a tab
+ * forgotten in the background on the right ticket would swallow everything, silently.
  *
- * ## `useSearchParams`, et donc `<Suspense>`
+ * ## `useSearchParams`, and therefore `<Suspense>`
  *
- * La cible d'une notification vit dans la query (`?issue=…`), pas dans le
- * chemin : ouvrir un ticket depuis son board ne change QUE ça. `usePathname`
- * seul ne se réveillerait jamais. C'est ce qui oblige à monter le composant sous
- * une frontière `<Suspense>`, côté app-providers.
+ * The target of a notification lives in the query (`?issue=…`), not in the
+ * path: opening a ticket from your board ONLY changes that. `usePathname`
+ * alone would never wake up. This is what requires mounting the component under
+ * a `<Suspense>` border, on the app-providers side.
  */
 export function PushNotificationDismiss() {
   const pathname = usePathname();
@@ -53,8 +53,8 @@ export function PushNotificationDismiss() {
     };
 
     document.addEventListener("visibilitychange", sweep);
-    // Optionnel jusqu'au bout : `navigator.serviceWorker` n'existe pas en
-    // contexte non sécurisé ni en navigation privée Firefox.
+    // Optional all the way through: `navigator.serviceWorker` does not exist in
+    // context not secure or in Firefox private browsing.
     navigator.serviceWorker?.addEventListener("message", onMessage);
 
     return () => {

@@ -6,17 +6,17 @@ import { displayName } from "@/lib/display-name";
 import type { ImportContext } from "@/lib/import/types";
 
 /**
- * Ce que le projet d'arrivée apporte au rapprochement : ses membres et ses
- * catégories (MIN-45 suite).
+ * What the arrival project brings to the reconciliation: its members and its
+ * categories (MIN-45 continued).
  *
- * Les deux routes d'import le chargent — celle qui propose un plan, pour que le
- * modèle voie les gens et les catégories qui existent, et celle qui valide,
- * pour rejouer le plan contre la MÊME vérité. C'est ce second usage qui compte
- * : un identifiant de membre envoyé par le navigateur n'assigne que s'il est
- * dans cette liste-là (`sanitizeMapping`), donc la liste doit venir du serveur.
+ * The two import routes load it — the one that proposes a plan, so that the
+ * model sees the people and categories that exist, and the one that valid,
+ * to replay the plan against the SAME truth. It is this second use that counts
+ *: a member identifier sent by the browser only assigns if it is
+ * in this list (`sanitizeMapping`), so the list must come from the server.
  *
- * Le propriétaire n'a pas de ligne `project_members` : son entrée est
- * synthétisée depuis `projects.owner_id`, comme partout ailleurs.
+ * The owner does not have a `project_members` line: its entry is
+ * synthesized from `projects.owner_id`, like everywhere else.
  */
 export async function loadImportContext(
   projectId: string,
@@ -44,8 +44,8 @@ export async function loadImportContext(
       return {
         userId,
         email: named.email,
-        // Le nom d'affichage Supabase, jamais l'e-mail brut — la même règle
-        // qu'à l'écran (lib/display-name.ts).
+        // The Supabase display name, never the raw email — the same rule
+        // only on the screen (lib/display-name.ts).
         name: named.full_name ? displayName(named) : null,
       };
     }),

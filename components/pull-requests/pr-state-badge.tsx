@@ -12,23 +12,23 @@ import {
 import type { PullRequestListItem } from "@/lib/agent-api";
 
 /**
- * Badge d'état d'une pull request — un seul endroit, pour la liste comme pour
- * le détail (les deux le peignaient chacun de leur côté, et pas pareil).
+ * Status badge of a pull request — only one place, for the list as for
+ * the detail (both painted it separately, and not the same).
  *
- * Les COULEURS sont celles de GitHub : vert ouverte, violet fusionnée, rouge
- * fermée, gris brouillon. Ce n'est pas une palette qu'une app personnalise —
- * c'est un code que l'utilisateur lit déjà ailleurs, et le lui traduire en
- * couleurs maison lui coûterait un aller-retour à chaque coup d'œil. L'icône
- * suit la même logique : GitHub en a une par état, et elle porte l'information
- * sans la couleur (donc sans exclure qui ne la distingue pas).
+ * COLORS are those of GitHub: open green, merged purple, red
+ * closed, gray draft. It's not a palette that an app customizes —
+ * it's a code that the user already reads elsewhere, and translating it to them into
+ * house colors would cost them a round trip for each glance. The icon
+ * follows the same logic: GitHub has one per state, and it carries the information
+ * without the color (so without excluding who does not distinguish it).
  *
- * La FORME, elle, reste celle des badges de minddy : teinte à 10 %, bord à
- * 20 %, jamais un aplat — c'est ça qui est à nous.
+ * The SHAPE, for its part, remains that of minddy's badges: tint at 10%, edge at
+ * 20%, never a solid — that's what we have.
  *
- * `PR_STATE_STYLES` est exporté parce que l'état d'une PR se lit AILLEURS que
- * dans ce badge — la liste des sessions d'agent, l'en-tête d'une conversation —
- * et que ces endroits-là repeignaient à leur tour, en vert le « fusionnée » que
- * GitHub met en violet. Une seule table, et le code reste lisible partout.
+ * `PR_STATE_STYLES` is exported because the status of a PR reads ELSEWHERE than
+ * in this badge — the list of agent sessions, the header of a conversation —
+ * and that these places in turn repainted in green the “merged” that
+ * GitHub puts in purple. A single table, and the code remains readable everywhere.
  */
 
 type PrState = PullRequestListItem["pr_state"];
@@ -39,7 +39,7 @@ export const PR_STATE_STYLES: Record<PrState, string> = {
     "border-violet-600/20 bg-violet-600/10 text-violet-700 dark:border-violet-500/25 dark:bg-violet-500/15 dark:text-violet-400",
   closed:
     "border-destructive/20 bg-destructive/10 text-destructive dark:bg-destructive/15",
-  // Le brouillon garde le gris de `secondary` : c'est déjà celui de GitHub.
+  // The draft keeps the gray of `secondary`: it is already that of GitHub.
   draft: "",
 };
 
@@ -59,7 +59,7 @@ const STATE_LABELS = {
 
 export function PrStateBadge({
   state,
-  /** Icône d'état — hors de la liste, où le badge tient en 10 px de haut. */
+  /** Status icon — out of the list, where the badge fits 10 px high. */
   icon = false,
   className,
 }: {

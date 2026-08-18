@@ -48,13 +48,13 @@ const LANGUAGE_LABELS: Record<Locale, string> = {
   en: "English",
 };
 
-/** `""` = « on ne sait pas encore » : le thème n'existe que côté client, et
-    aucun segment ne doit s'allumer avant le montage (cf. `mounted`). */
+/** `""` = “we don’t know yet”: the theme only exists on the client side, and
+    no segment must light up before editing (see `mounted`). */
 type ThemeValue = "light" | "dark" | "system" | "";
 
-/** Compte → Préférences : deux groupes, l'apparence et ce que font les tickets.
-    Les six sections empilées d'avant n'étaient pas six sujets, c'était six
-    réglages : chacun avait droit à son titre, aucun n'avait de voisin. */
+/** Account → Preferences: two groups, appearance and what tickets do.
+    The six stacked sections from before weren't six subjects, they were six
+    settings: everyone had the right to their title, no one had a neighbor. */
 export function AccountPreferencesSection() {
   const ta = useTranslations("Account");
   const tLang = useTranslations("Language");
@@ -82,8 +82,8 @@ export function AccountPreferencesSection() {
     setAutoAssign(user?.user_metadata?.auto_assign_created === true);
   }, [user]);
 
-  // Optimiste et NON verrouillé : le switch bascule tout de suite, l'écriture
-  // GoTrue est sérialisée par updateUserMetadata (merge-safe), revert à l'échec.
+  // Optimistic and NOT locked: the switch switches immediately, writing
+  // GoTrue is serialized by updateUserMetadata (merge-safe), revert to failure.
   const toggleAutoAssign = async (next: boolean) => {
     if (!user) return;
     setAutoAssign(next);
@@ -115,9 +115,9 @@ export function AccountPreferencesSection() {
     }
   };
 
-  // Smart-fill (MIN-260) : le formulaire de création remplit seul priorité,
-  // effort, catégories et objectif. Activée par défaut, comme les deux
-  // au-dessus — d'où le passage par `resolveSmartFill` plutôt qu'un `=== true`.
+  // Smart-fill (MIN-260): the creation form fills only priority,
+  // effort, categories and objective. Enabled by default, like both
+  // above — hence the passage by `resolveSmartFill` rather than a `=== true`.
   const [smartFill, setSmartFill] = useState(resolveSmartFill(user?.user_metadata));
   useEffect(() => {
     setSmartFill(resolveSmartFill(user?.user_metadata));
@@ -174,8 +174,8 @@ export function AccountPreferencesSection() {
     }
   };
 
-  // Le raccourci d'envoi (MIN-287). Même mécanique que ses voisines, sauf que
-  // ce n'est pas un booléen : un mode, dont le défaut est celui de toujours.
+  // The sending shortcut (MIN-287). Same mechanics as its neighbors, except that
+  // it is not a Boolean: a mode, the default of which is that of always.
   const [sendMode, setSendMode] = useState<SendMode>(
     resolveSendMode(user?.user_metadata),
   );
@@ -268,8 +268,8 @@ export function AccountPreferencesSection() {
         />
       </SettingsGroup>
 
-      {/* Clavier — un seul réglage pour l'instant, mais un sujet à lui : le
-          geste d'envoi n'est ni une apparence ni une propriété de ticket. */}
+      {/* Keyboard — only one setting for now, but a subject of its own: the
+          send gesture is neither an appearance nor a ticket property. */}
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountKeyboard}
         icon={Keyboard}

@@ -8,16 +8,16 @@ import type { AnalyticsPropsFor } from "@/lib/analytics-events";
 type CtaLocation = AnalyticsPropsFor<"landing_cta_clicked">["location"];
 
 /**
- * Lien d'appel à l'action du site public, tracké (MIN-78).
+ * Public site call-to-action link, tracked (MIN-78).
  *
- * Les sections marketing sont des composants SERVEUR (elles lisent les
- * traductions côté serveur) : elles ne peuvent pas appeler `useAnalytics()`.
- * Ce wrapper client minimal ne prend en charge QUE le clic — le contenu reste
- * rendu par le serveur et passe en `children`, donc rien de plus ne bascule
- * côté client.
+ * Marketing sections are SERVER components (they read the
+ * translations on the server side): they cannot call `useAnalytics()`.
+ * This minimal client wrapper ONLY supports clicking — the content remains
+ * rendered by the server and goes to `children`, so nothing more switches to
+ * on the client side.
  *
- * `location` est l'information qui compte : savoir lequel des cinq points
- * d'entrée vers l'inscription convertit réellement.
+ * `location` is the information that matters: knowing which of the five Input points
+ * to registration actually converts.
  */
 export function TrackedCta({
   location,

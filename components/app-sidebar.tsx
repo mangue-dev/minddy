@@ -82,47 +82,47 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-/** La barre dépliée. Exportée pour le bloc de navigation du mode zen, qui la
- *  déplie hors du flux et doit connaître sa largeur pour se ranger. */
+/** The bar unfolded. Exported for the Zen mode navigation block, which
+ * unfolds out of the flow and must know its width to tidy up. */
 export const EXPANDED_WIDTH = 256;
 const COLLAPSED_WIDTH = 56;
 
 /**
- * ─── La colonne des icônes ────────────────────────────────────────────
+ * ─── The icon column ────────────────────── ──────────────────────
  *
- * Une icône ne doit PAS bouger d'un pixel entre la barre ouverte et la barre
- * repliée : c'est le seul repère qui survit à l'animation, et le voir glisser
- * de quelques pixels donne à toute la barre l'air de flotter.
+ * An icon must NOT move one pixel between the open bar and the bar
+ * folded: it is the only mark that survives the animation, and see it slide
+ * of a few pixels makes the whole bar look like it's floating.
  *
- * Le calage part du rail, où l'icône est au milieu :
+ * The timing starts from the rail, where the icon is in the middle:
  *
- *     rail 56 = 10 (gouttière) + 9 + 18 (icône) + 9 + 10
- *                                └── centre à 28, bord gauche à 19 ──┘
+ * rail 56 = 10 (gutter) + 9 + 18 (icon) + 9 + 10
+ * └── center at 28, left edge at 19 ──┘
  *
- * D'où deux constantes tenues à la main dans les deux états — la gouttière de
- * la nav (`px-2.5`) et le retrait de la ligne (`pl-[9px]`). Les changer sans
- * refaire l'addition remet le décalage.
+ * Hence two constants held by hand in the two states — the gutter of
+ * the nav (`px-2.5`) and the withdrawal of the line (`pl-[9px]`). Change them without
+ * redoing the addition resets the offset.
  *
- * Ce qui compte est le CENTRE à 28, pas le bord à 19 : le bord ne suffit que
- * pour les glyphes de 18 px. Deux exceptions, donc, l'une et l'autre calées sur
- * le centre — l'avatar du compte (22 px, retrait de 7) et le logo (26 px de
- * large, viewBox 104×96 à `h-6`), que l'on CENTRE dans la boîte de 36 px au lieu
- * de l'aligner par la gauche : posé à 19, il débordait de 4 px à droite.
+ * What counts is the CENTER at 28, not the edge at 19: the edge is only enough
+ * for 18 px glyphs. Two exceptions, therefore, both based on
+ * the center — the account avatar (22 px, indented by 7) and the logo (26 px of
+ * large, viewBox 104×96 at `h-6`), which we CENTER in the 36 px box instead
+ * to align it from the left: placed at 19, it extended 4 px to the right.
  */
-/** Gouttière de la nav, du pied et de la ligne de marque. Les deux états. */
+/** Nav, foot and brand line gutter. Both states. */
 const GUTTER = "px-2.5";
-/** Retrait d'une ligne : icône 18 px → bord gauche à 19 px de la barre. */
+/** Removing a line: 18 px icon → left edge 19 px from the bar. */
 const ROW_PL = "pl-[9px]";
-/** Idem pour l'avatar du compte, plus large de 4 px. */
+/** Same for the account avatar, wider by 4 px. */
 const AVATAR_PL = "pl-[7px]";
-/** La boîte d'une ligne repliée : 9 + 18 + 9. Centre à 28 de la barre. */
+/** The box of a folded line: 9 + 18 + 9. Center at 28 from the bar. */
 const ROW_BOX = "w-9";
 /**
- * Les infobulles de la barre attendent avant de paraître. Sans ce délai elles
- * jaillissent sous le pointeur qui ne fait que traverser la barre pour en
- * sortir, et se posent alors en travers de la sidebar secondaire.
- * `disableHoverableContent` finit le travail : l'infobulle ne se survole pas,
- * elle ne peut donc pas retenir le pointeur qu'on croyait avoir sorti.
+ * Tooltips in the bar wait before appearing. Without this delay they
+ * spring up under the pointer which only crosses the bar to
+ * come out, and then land across the secondary sidebar.
+ * `disableHoverableContent` finishes the job: the tooltip does not hover,
+ * it therefore cannot retain the pointer that we thought we had output.
  */
 const TOOLTIP_DELAY_MS = 600;
 
@@ -130,29 +130,29 @@ const TOOLTIP_DELAY_MS = 600;
 export type AppNavItem = NavItem & {
   shortcut?: string;
   /**
-   * Rejoue le `badge` dans un coin de l'icône quand la sidebar est REPLIÉE (les
-   * badges normaux n'y sont pas rendus, faute de place). À porter par TOUTE
-   * entrée qui signale quelque chose — spinner « agent en cours », pastille
-   * non-lu, compteur de file : le mode rail est celui des pages où l'on trie,
-   * et c'est précisément là que la file ne doit pas disparaître.
+   * Replays the `badge` in a corner of the icon when the sidebar is FOLDED (the
+   * normal badges are not returned there due to lack of space). To be worn by EVERYONE
+   * input that signals something — “agent in progress” spinner, pad
+   * unread, queue counter: rail mode is that of the pages where we sort,
+   * and this is precisely where the line must not disappear.
    *
-   * Le coin ne tient qu'une forme COMPACTE (≈ 14 px). Un badge plus large —
-   * un compteur à trois caractères, deux marques côte à côte — passe par
-   * `badgeCollapsed`, qui lui donne sa version repliée.
+   * The corner only holds a COMPACT shape (≈ 14 px). A larger badge —
+   * a three-character counter, two marks side by side — goes through
+   * `badgeCollapsed`, which gives it its folded version.
    */
   showBadgeCollapsed?: boolean;
   /**
-   * Ce que la pastille de coin porte à la place du `badge`, quand celui-ci n'y
-   * tiendrait pas : compteur plafonné à « 9+ » (`countBadgeCollapsed`), ou une
-   * seule des marques d'un badge qui en cumule plusieurs. Cas réel : l'entrée
-   * « Accueil » du mode projet cumule le triangle Smart Assign et un compteur ;
-   * repliée, elle garde le triangle, et le compteur seulement à défaut.
+   * What the corner patch bears in place of the `badge`, when the latter is not there
+   * would not hold: counter capped at “9+” (`countBadgeCollapsed`), or a
+   * only marks of a badge which combines several. Real case: the entrance
+   * “Home” in project mode combines the Smart Assign triangle and a counter;
+   * folded, it keeps the triangle, and the counter only in default.
    */
   badgeCollapsed?: ReactNode;
   /**
-   * Actions au clic droit sur la ligne. Réservé aux entrées qui portent un
-   * OBJET dont on peut faire quelque chose — un brouillon de projet, qu'on jette
-   * de là plutôt qu'en le rouvrant. Une entrée de navigation n'en a pas.
+   * Right-click actions on the row. Reserved for entries that bear a
+   * OBJECT that we can do something with — a draft of a project, which we throw away
+   * from there rather than reopening it. A navigation entry does not have one.
    */
   contextActions?: ContextMenuAction[];
 };
@@ -163,15 +163,15 @@ const MotionLink = motion.create(Link);
 /* ─── Brand ────────────────────────────────────────────────────────── */
 
 /**
- * La marque : le logo, et rien d'autre. Hors production il change de TEINTE
- * (`ENV_LOGO_TINT`) — c'est le seul signal, et il suffit. Le nom de
- * l'environnement écrit à côté était un mot de plus à lire à chaque coup d'œil,
- * pour une information qu'on connaît déjà quand on est dessus.
+ * The brand: the logo, and nothing else. Out of production it changes SHADE
+ * (`ENV_LOGO_TINT`) — this is the only signal, and it is enough. The name of
+ * the environment written next to it was one more word to read at every glance,
+ * for information that we already know when we are on it.
  *
- * CENTRÉ dans la boîte d'une ligne, et non aligné par la gauche comme les
- * icônes : il est plus large qu'elles (26 px contre 18), et c'est son centre qui
- * doit tomber sur le leur. La boîte étant la même dans les deux états, il ne
- * bouge pas d'un pixel quand la barre s'ouvre ou se referme.
+ * CENTERED in the one-line box, not aligned from the left like the
+ * icons: it is wider than them (26 px compared to 18), and it is its center which
+ * must fall on theirs. The box being the same in both states, it does not
+ * does not move a pixel when the bar opens or closes.
  */
 function SidebarBrand() {
   return (
@@ -179,9 +179,9 @@ function SidebarBrand() {
       href="/home"
       aria-label="minddy"
       className={cn(
-        // `sidebar-brand-mark` : la prise de app/globals.css qui la fait
-        // GLISSER d'un bord à l'autre de la ligne quand les boutons macOS
-        // prennent ou rendent leur place (plein écran, rail).
+        // `sidebar-brand-mark`: taking app/globals.css which does it
+        // SWIPE from one edge of the line to the other when the macOS buttons
+        // take or give up their place (full screen, rail).
         "sidebar-brand-mark inline-flex shrink-0 items-center justify-center text-sidebar-foreground",
         ROW_BOX,
       )}
@@ -214,9 +214,9 @@ function SidebarRow({
 
   const rowClass = cn(
     "group relative flex h-9 items-center gap-3 rounded-lg text-sm font-medium transition-colors",
-    // Le retrait gauche est le MÊME dans les deux états (cf. la colonne des
-    // icônes en tête de fichier) : l'icône ne bouge pas quand la barre s'anime.
-    // Repliée, la ligne se referme à 36 px sur son icône — 9 + 18 + 9.
+    // The left indent is the SAME in both states (see the column of
+    // icons at the head of the file): the icon does not move when the bar is animated.
+    // Folded, the line closes at 36 px on its icon — 9 + 18 + 9.
     ROW_PL,
     collapsed ? cn(ROW_BOX, "gap-0 pr-[9px]") : "pr-3",
     active
@@ -238,8 +238,8 @@ function SidebarRow({
       ) : !collapsed && item.badge != null ? (
         <span className="ml-auto flex items-center">{item.badge}</span>
       ) : null}
-      {/* Replié : le badge (spinner « agent en cours » / pastille non-lu) se replie
-          en pastille de coin sur l'icône — sinon l'info disparaît en mode rail. */}
+      {/* Folded: the badge (“current agent” spinner / unread badge) folds
+          in the corner of the icon — otherwise the information disappears in rail mode. */}
       {collapsed && item.showBadgeCollapsed && collapsedBadge != null ? (
         <span className="absolute right-1 top-1 flex items-center justify-center rounded-full bg-sidebar">
           {collapsedBadge}
@@ -248,11 +248,11 @@ function SidebarRow({
     </>
   );
 
-  // Préchauffage des caches du board au survol / focus clavier (MIN-89) : sur
-  // une entrée de projet uniquement — les autres routes n'ont pas d'éventail de
-  // requêtes à recouvrir. `projectIdFromPath` ne renvoie un id que pour
-  // /projects/<uuid>, donc les liens de section (…/objectives) le préchauffent
-  // aussi, ce qui est exactement voulu.
+  // Preheating of board caches on hover / keyboard focus (MIN-89): on
+  // a project entry only — other routes do not have a range of
+  // requests to be covered. `projectIdFromPath` only returns an id for
+  // /projects/<uuid>, so the section links (…/objectives) preheat it
+  // also, what exactly is wanted.
   const prefetchProject = usePrefetchProject();
   const warm = item.href
     ? () => {
@@ -261,8 +261,8 @@ function SidebarRow({
       }
     : undefined;
 
-  // Clic droit : le même menu ancré au pointeur que les cartes du board, sur les
-  // seules lignes qui portent des actions (aujourd'hui les brouillons de projet).
+  // Right click: the same menu anchored to the pointer as the board cards, on the
+  // only lines that carry actions (today project drafts).
   const [menuPosition, setMenuPosition] = useState<{
     x: number;
     y: number;
@@ -306,15 +306,15 @@ function SidebarRow({
     );
   }
 
-  // ⚠ Le `<Tooltip>` est rendu INCONDITIONNELLEMENT, et c'est son OUVERTURE qui
-  // varie (MIN-313). Envelopper conditionnellement changerait le TYPE de
-  // l'élément rendu à cette position, et React ne réconcilie pas deux types
-  // différents : il démonte le sous-arbre et en monte un neuf, donc le nœud DOM
-  // est remplacé et le focus qu'il portait retombe sur <body>. Ici la détente
-  // est quotidienne — `collapsed` bascule à chaque survol de la barre : on
-  // clique une entrée de projet, `onFocusCapture` ne retient que le focus
-  // clavier, le pointeur part, 150 ms plus tard la ligne focalisée est
-  // remplacée, et la tabulation repart du haut du document.
+  // ⚠ The `<Tooltip>` is rendered UNCONDITIONALLY, and it is its OPENING which
+  // varies (MIN-313). Wrapping conditionally would change the TYPE of
+  // the element rendered at this position, and React does not reconcile two types
+  // different: it dismantles the subtree and mounts a new one, therefore the DOM node
+  // is replaced and the focus it had falls on <body>. Here relaxation
+  // is daily — `collapsed` switches each time the bar is hovered: we
+  // clicks a project entry, `onFocusCapture` only retains the focus
+  // keyboard, the pointer leaves, 150 ms later the focused line is
+  // replaced, and the tab starts again from the top of the document.
   row = (
     <Tooltip
       delayDuration={TOOLTIP_DELAY_MS}
@@ -339,7 +339,7 @@ function SidebarRow({
   return (
     <>
       {row}
-      {/* Menu court : pas de champ de recherche, il ne ferait que du bruit. */}
+      {/* Short menu: no search field, it would only add noise. */}
       <IssueContextMenu
         position={menuPosition}
         onClose={() => setMenuPosition(null)}
@@ -397,9 +397,9 @@ const THEME_CHOICES = [
   { value: "system", icon: Monitor, label: "themeSystem" },
 ] as const;
 
-/** Le thème se change rarement : il tient dans un sous-menu plutôt que
-    d'occuper trois lignes du menu de compte. L'icône du déclencheur montre le
-    réglage courant, pour ne pas avoir à ouvrir le sous-menu pour le lire. */
+/** The theme rarely changes: it is in a submenu rather than
+    to occupy three lines of the account menu. The shutter icon shows the
+    current setting, so as not to have to open the submenu to read it. */
 function ThemeSubmenu() {
   const t = useTranslations("Nav");
   const { theme, setTheme } = useTheme();
@@ -440,9 +440,9 @@ function AccountButton({
   const seed = useMyAvatarSeed();
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
 
-  // Après le montage seulement : la fraîcheur se lit sur l'horloge du visiteur,
-  // et un rendu serveur qui trancherait à sa place ferait diverger l'hydratation
-  // à la frontière des cinq jours.
+  // After assembly only: the freshness can be read on the visitor's clock,
+  // and a server rendering which would decide for him would cause the hydration to diverge
+  // on the border of five days.
   const [recentChangelog, setRecentChangelog] = useState(false);
   useEffect(() => setRecentChangelog(hasRecentChangelog()), []);
 
@@ -452,8 +452,8 @@ function AccountButton({
         <DropdownMenuTrigger
           className={cn(
             "flex h-10 items-center rounded-lg outline-none transition-colors hover:bg-sidebar-accent focus-visible:bg-sidebar-accent",
-            // L'avatar fait 22 px : son retrait propre le recentre sur la même
-            // verticale que les icônes de 18 px (cf. la colonne des icônes).
+            // The avatar is 22 px: its own removal refocuses it on the same
+            // vertical than the 18 px icons (see the icons column).
             AVATAR_PL,
             collapsed ? cn(ROW_BOX, "pr-[7px]") : "w-full gap-3 pr-3 text-left",
           )}
@@ -475,10 +475,10 @@ function AccountButton({
               {t("accountSettings")}
             </Link>
           </DropdownMenuItem>
-          {/* Les statistiques ont quitté le pied de la barre pour ce menu
-              (MIN-133) : elles se consultent de temps en temps, alors que la
-              corbeille se cherche dans l'urgence de ce qu'on vient d'effacer —
-              c'est elle qui mérite d'être visible en permanence. */}
+          {/* The statistics have left the foot of the bar for this menu
+              (MIN-133): they consult each other from time to time, while the
+              trash searches in the urgency of what we have just erased —
+              it is she who deserves to be permanently visible. */}
           <DropdownMenuItem asChild>
             <Link href="/statistics">
               <BarChart3 />
@@ -502,8 +502,8 @@ function AccountButton({
           <DropdownMenuSeparator />
           <ThemeSubmenu />
           <DropdownMenuSeparator />
-          {/* Le changelog public, dans un modal : on lit ce qui vient de sortir
-              sans quitter l'app. Pastille bleue tant que la dernière livraison a
+          {/* The public changelog, in a modal: we read what has just been released
+              without leaving the app. Blue badge as long as the last delivery has
               moins de cinq jours. */}
           <DropdownMenuItem onSelect={() => setWhatsNewOpen(true)}>
             <Newspaper />
@@ -546,15 +546,15 @@ function FooterRow({
   collapsed: boolean;
   active?: boolean;
   /**
-   * Une ligne qui ne fait que CONSTATER — le téléchargement d'une mise à jour en
-   * cours. Elle garde sa place, son infobulle et son libellé ; seul le geste
-   * disparaît.
+   * A line that only NOTICES — downloading an update in
+   * course. It keeps its place, its tooltip and its wording; only the gesture
+   * disappears.
    *
-   * ⚠ `aria-disabled` et NON `disabled` : un bouton désactivé n'émet plus
-   * d'événement de pointeur, donc plus de `pointerenter` — et l'infobulle du
-   * mode rail, qui est le SEUL endroit où le libellé se lit quand la barre est
-   * repliée, ne s'ouvrirait jamais. On retire donc l'action (le `onClick` n'est
-   * pas branché) sans retirer la ligne au pointeur.
+   * ⚠ `aria-disabled` and NOT `disabled`: a deactivated button no longer emits
+   * pointer event, so no more `pointerenter` — and the tooltip of the
+   * rail mode, which is the ONLY place the label reads when the bar is
+   * folded, would never open. We therefore remove the action (the `onClick` is not
+   * not plugged in) without removing the line at the pointer.
    */
   disabled?: boolean;
   iconClassName?: string;
@@ -576,18 +576,18 @@ function FooterRow({
       )}
     >
       <Icon className={cn("size-[18px] shrink-0", iconClassName)} />
-      {/* `truncate` (donc pas de retour à la ligne) : le libellé reste monté
-          pendant que la barre s'anime de 56 à 256 px, et sans lui « Partager un
-          retour » se replie sur trois lignes dans les premières images du
-          dépliage avant de se remettre à plat. Coupé net, il est simplement
-          rogné par l'`overflow-hidden` de la barre — on ne voit rien. */}
+      {/* `truncate` (so no line break): the label remains mounted
+          while the bar animates from 56 to 256 px, and without it “Share a
+          return” folds into three lines in the first images of the
+          unfolding before laying flat again. Cut cleanly, it is simply
+          cropped by the `overflow-hidden` of the bar — we see nothing. */}
       {!collapsed && <span className="min-w-0 flex-1 truncate">{label}</span>}
       {!collapsed && TrailingIcon && <TrailingIcon className="size-4 shrink-0" />}
     </button>
   );
-  // Même motif que `SidebarRow` : rendu inconditionnel, ouverture pilotée. Une
-  // enveloppe conditionnelle change le type de la racine, donc remplace le nœud
-  // et perd le focus à chaque bascule du rail (MIN-313).
+  // Same reason as `SidebarRow`: unconditional rendering, controlled opening. A
+  // conditional envelope changes the type of the root, therefore replaces the node
+  // and loses focus with each tilt of the rail (MIN-313).
   return (
     <Tooltip
       delayDuration={TOOLTIP_DELAY_MS}
@@ -601,33 +601,33 @@ function FooterRow({
 }
 
 /**
- * La mise à jour de l'app de bureau, dans la barre latérale (MIN-353).
+ * Updating the desktop app, in the sidebar (MIN-353).
  *
- * ## Pourquoi ici, et pas seulement dans la boîte native
+ * ## Why here, and not just in the native box
  *
- * La boîte est un instant : elle s'ouvre à la fin du téléchargement, et qui
- * répond « plus tard » n'a plus rien devant les yeux. Cet encart, lui, DURE tant
- * que la version neuve attend sur le disque — c'est la même information, mais
- * qu'on peut retrouver au lieu de la rattraper.
+ * The box is an instant: it opens at the end of the download, and which
+ * answers “later” no longer has anything in front of his eyes. This insert LASTS as long as
+ * that the new version is waiting on disk — it's the same information, but
+ * that we can find instead of catching up with her.
  *
- * ## Un encart, et pas une ligne de plus
+ * ## One insert, and not one more line
  *
- * Il a d'abord été une ligne comme ses voisines (Corbeille, Partager un
- * retour) : elle se voyait à peine. Une mise à jour n'est pas une destination de
- * plus dans une liste de destinations, c'est la seule chose du pied qui DEMANDE
- * quelque chose — d'où le cadre, le libellé qui nomme la version, et le bouton
- * plein qui porte le verbe. La grammaire des lignes voisines dirait le
- * contraire : « encore une entrée de menu, on verra plus tard ».
+ * It was first a line like its neighbors (Corbeille, Partager un
+ * return): she could barely see herself. An update is not a destination
+ * more in a list of destinations, it's the only thing on the foot that DEMANDS
+ * something — hence the frame, the label that names the version, and the button
+ * full which carries the verb. The grammar of the neighboring lines would say the
+ * opposite: “one more menu entry, we’ll see later”.
  *
- * ## Il ne rend rien la plupart du temps, et c'est le point
+ * ## It doesn't return anything most of the time, and that's the point
  *
- * Sur le web il n'y a pas de pont, donc jamais d'état autre qu'`idle`, donc
- * jamais d'encart : rien à conditionner à `isDesktop()`, l'état suffit. Et dans
- * l'app, l'absence de mise à jour est le cas de presque toujours — un pied de
- * barre latérale qui porterait un cadre mort en permanence coûterait sa place à
+ * On the web there is no bridge, so never a state other than `idle`, so
+ * never an insert: nothing to condition at `isDesktop()`, the state is enough. And in
+ * the app, the lack of updating is almost always the case — a foot of
+ * sidebar which would carry a permanently dead frame would cost its place to
  * quelque chose d'utile.
  *
- * Le clic n'installe pas : il rouvre la boîte native, qui demande le dernier oui
+ * The click does not install: it reopens the native box, which asks for the last yes
  * (`installUpdate`, lib/desktop/bridge.ts).
  */
 function UpdateFooterCard({ collapsed }: { collapsed: boolean }) {
@@ -638,21 +638,21 @@ function UpdateFooterCard({ collapsed }: { collapsed: boolean }) {
   const ready = status.state === "ready";
   const install = () => getDesktopBridge()?.installUpdate();
 
-  // **Mode rail : 56 px, et le cadre n'y tient pas.** On retombe sur la
-  // grammaire des lignes voisines — une icône dans la boîte de 36, son
-  // infobulle, et le même geste. C'est le seul endroit de la barre où la forme
-  // change avec la largeur, parce que c'est le seul contenu du pied qui ne soit
-  // pas déjà une ligne.
+  // **Rail mode: 56 px, and the frame does not fit there.** We land on the
+  // grammar of neighboring lines — an icon in the box of 36, its
+  // tooltip, and the same gesture. This is the only place on the bar where the shape
+  // changes with width, because it is the only content of the foot which is not
+  // not already a line.
   if (collapsed) {
     return (
       <FooterRow
         icon={ready ? ArrowDownToLine : Loader2}
-        // Repliée, la ligne n'a plus que son icône pour se distinguer de ses
-        // voisines : elle prend la couleur du bouton qu'elle remplace.
+        // Folded, the line only has its icon to distinguish itself from its
+        // neighbors: it takes the color of the button it replaces.
         iconClassName={ready ? "text-primary" : "animate-spin"}
-        // ⚠ Les DEUX messages portent `{version}` : appelé sans ses valeurs,
-        // next-intl retombe en silence sur le chemin de la clé, et c'est lui
-        // qu'on lit à l'écran (cf. CLAUDE.md).
+        // ⚠ BOTH messages carry `{version}`: called without its values,
+        // next-intl silently falls back to the path of the key, and it's him
+        // that we read on the screen (see CLAUDE.md).
         label={t(ready ? "updateReady" : "updateDownloading", {
           version: status.version,
         })}
@@ -665,9 +665,9 @@ function UpdateFooterCard({ collapsed }: { collapsed: boolean }) {
 
   return (
     <div className="mb-1 rounded-lg border border-border bg-sidebar-accent/50 p-2.5">
-      {/* `text-pretty` et pas de `truncate` : le numéro de version est la moitié
-          de la phrase, et il tomberait le premier. Deux lignes valent mieux
-          qu'un « Mettre à jour vers la ver… ». */}
+      {/* `text-pretty` and no `truncate`: the version number is half
+          of the sentence, and he would fall first. Two lines are better
+          than a “Update to ver…”. */}
       <p className="flex items-start gap-1.5 text-pretty text-xs leading-snug text-muted-foreground">
         {!ready && <Loader2 className="mt-px size-3 shrink-0 animate-spin" />}
         <span className="min-w-0">
@@ -676,9 +676,9 @@ function UpdateFooterCard({ collapsed }: { collapsed: boolean }) {
           })}
         </span>
       </p>
-      {/* Le bouton n'apparaît QUE quand il peut agir. Un bouton plein grisé
-          pendant le téléchargement attire l'œil sur un geste impossible — le
-          rouet du libellé dit déjà que quelque chose avance. */}
+      {/* The button ONLY appears when it can act. A full grayed out button
+          while downloading draws the eye to an impossible gesture — the
+          spinning wheel of the wording already says that something is moving forward. */}
       {ready && (
         <Button size="sm" className="mt-2 w-full" onClick={install}>
           {t("updateAction")}
@@ -701,9 +701,9 @@ function SidebarFooter({
   const productFeedbackUrl = PRODUCT_FEEDBACK_URL;
   return (
     <div className="flex flex-col gap-0.5">
-      {/* Au-dessus de ses voisines : c'est la seule des quatre choses du pied qui
-          apparaisse d'elle-même, et la seule qui disparaisse. La poser entre
-          deux lignes permanentes ferait sauter tout ce qui est en dessous à
+      {/* Above its neighbors: it is the only one of the four things on the foot which
+          appears by itself, and the only one that disappears. Place it between
+          two permanent lines would blow up everything below to
           chaque fois. */}
       <UpdateFooterCard collapsed={collapsed} />
       <FooterRow
@@ -731,8 +731,8 @@ function SidebarFooter({
 
 /* ─── Shell ────────────────────────────────────────────────────────── */
 
-/** Délai avant repli quand le pointeur quitte la barre en mode rail. Assez court
- *  pour que le repli suive le geste, assez long pour tolérer un frôlement. */
+/** Delay before fallback when the pointer leaves the bar in rail mode. Quite short
+ * so that the fold follows the gesture, long enough to tolerate a brush. */
 const RAIL_CLOSE_DELAY_MS = 150;
 
 /**
@@ -742,17 +742,17 @@ const RAIL_CLOSE_DELAY_MS = 150;
  * right, home from the left. `modeKey` ("home" | `project-<id>`) drives the
  * swap; navigating between a project's sub-pages keeps the same key (no replay).
  *
- * `overlay` est le mode RAIL : la page porte une sidebar secondaire, et la
- * primaire lui cède la place. Elle ne garde que ses 56 px d'icônes dans le flux
- * et se déplie AU-DESSUS de la secondaire au survol (ou au passage du focus
- * clavier), sans jamais rien décaler — le layout d'une page à deux barres est le
- * même, barre primaire ouverte ou non.
+ * `overlay` is RAIL mode: the page has a secondary sidebar, and the
+ * primary gives way to it. It only keeps its 56 px of icons in the flow
+ * and unfolds ABOVE the secondary on hover (or when focus passes
+ * keyboard), without ever shifting anything — the layout of a two-bar page is the
+ * same, primary bar open or not.
  *
- * C'est le SEUL repli. Il n'y a plus de bouton pour replier la barre à la main,
- * ni de ⌘B : le rail existe là où une seconde barre a besoin de la place, et
- * partout ailleurs la barre est simplement ouverte. Un repli manuel en plus de
- * celui-ci, c'était deux barres repliées pour deux raisons différentes, dont une
- * qu'il fallait connaître un raccourci pour défaire.
+ * This is the ONLY fallback. There is no longer a button to fold the bar by hand,
+ * nor ⌘B: the rail exists where a second bar needs the space, and
+ * everywhere else the bar is simply open. A manual fallback in addition to
+ * this one was two bars folded for two different reasons, one of which
+ * that you had to know a shortcut to undo.
  */
 export function AppSidebar({
   sections,
@@ -764,15 +764,15 @@ export function AppSidebar({
   modeKey: string;
   overlay?: boolean;
   /**
-   * La barre est rendue DANS le bloc de navigation du mode zen : dépliée comme
-   * partout ailleurs, mais entière hors du flux, et rangée hors de l'écran tant
-   * qu'on ne survole pas le bord (`components/zen-nav-overlay.tsx`).
+   * The bar is rendered IN the Zen mode navigation block: unfolded as
+   * everywhere else, but entirely out of the flow, and stored away from the screen as
+   * that we do not fly over the edge (`components/zen-nav-overlay.tsx`).
    *
-   * Une seule chose en dépend, et c'est l'ANIMATION de la marque : les boutons
-   * macOS s'en vont avec le bloc et reviennent avec lui, donc la place qu'ils
-   * réservent s'ouvre et se referme à chaque survol. Animée, la marque
-   * traverserait sa ligne à chaque fois, en retard sur un bloc qui glisse déjà —
-   * exactement ce que `data-rail` désarme pour le mode rail. Même raison, même
+   * Only one thing depends on it, and that is the ANIMATION of the brand: the buttons
+   * macOS goes away with the block and comes back with it, so the place they
+   * reserve opens and closes with each hover. Lively, the brand
+   * would cross his line every time, late on a block that is already slipping —
+   * exactly what `data-rail` disarms for rail mode. Same reason, same
    * marqueur (cf. app/globals.css).
    */
   inZenPanel?: boolean;
@@ -780,38 +780,38 @@ export function AppSidebar({
   const reduce = useReducedMotion();
   const dx = modeKey === "home" ? -16 : 16;
 
-  // Mode rail : ce qui déplie la barre. Le survol, le focus clavier (tabuler
-  // dans la nav doit la lire), et le menu de compte — il se pose hors de la
-  // barre (portail Radix), donc y aller compterait comme en sortir.
+  // Rail mode: which unfolds the bar. Hover, keyboard focus (tab
+  // in the nav should read it), and the account menu — it arises out of the
+  // bar (Radix portal), so going there would count as leaving it.
   const [hovered, setHovered] = useState(false);
   const [focusWithin, setFocusWithin] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /** La barre elle-même, pour savoir si le pointeur y revient (cf. plus bas). */
+  /** The bar itself, to know if the pointer returns to it (see below). */
   const railRef = useRef<HTMLElement>(null);
-  /** Le guetteur du retour de pointeur, et de quoi le retirer. */
+  /** The pointer return watcher, and what to remove it. */
   const returnWatcher = useRef<(() => void) | null>(null);
   useEffect(() => () => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
     returnWatcher.current?.();
   }, []);
 
-  // Ceinture et bretelles : la navigation démonte la ligne qui avait le focus,
-  // et un `blur` n'a alors personne à qui arriver. Sans cette remise à zéro, la
-  // barre pourrait rester dépliée sur la page suivante.
+  // Belt and suspenders: navigation dismantles the line that had the focus,
+  // and a `blur` then has no one to reach. Without this reset, the
+  // bar could remain unfolded on the next page.
   //
-  // Le SURVOL part avec, et pour la même raison. La remise à zéro d'en dessous
-  // est branchée sur la sortie du mode rail : elle ne voit donc rien quand on va
-  // d'une page à barre secondaire à une AUTRE — `overlay` ne retombe jamais.
-  // C'est le trajet de la palette : on survole la barre, ⌘K passe son voile
-  // par-dessus (la barre n'est plus la cible du pointeur, son `pointerleave`
-  // peut ne jamais venir), on choisit une page au clavier, et on arrive primaire
-  // DÉPLIÉE par-dessus la secondaire, pointeur à l'autre bout de l'écran.
+  // SURVOL leaves with it, and for the same reason. Resetting from below
+  // is connected to the rail mode output: it therefore sees nothing when we go
+  // from one secondary bar page to ANOTHER — `overlay` never falls back.
+  // This is the path of the palette: we fly over the bar, ⌘K puts on his veil
+  // over it (the bar is no longer the target of the pointer, its `pointerleave`
+  // may never come), we choose a page on the keyboard, and we arrive primary
+  // UNFOLDED over the secondary, pointer at the other end of the screen.
   //
-  // Se replier en arrivant est de toute façon ce qu'on veut, y compris quand
-  // c'est un clic DANS la barre qui a navigué : c'est ce que dit déjà le
-  // commentaire de `onFocusCapture`, et `onPointerMove` rattrape au moindre
-  // mouvement le cas du pointeur resté dessus.
+  // Falling back upon arrival is what we want anyway, including when
+  // it's a click IN the bar that navigated: that's what the
+  // comment from `onFocusCapture`, and `onPointerMove` catches up at the slightest
+  // movement in the case of the pointer remaining on it.
   const routeKey = usePathname();
   useEffect(() => {
     setFocusWithin(false);
@@ -823,27 +823,27 @@ export function AppSidebar({
     setHovered(false);
   }, [routeKey]);
 
-  // Même histoire pour le survol et le menu de compte, mais à la SORTIE du mode
-  // rail : leurs poseurs sont branchés sur `overlay`. Quitter une page à barre
-  // secondaire EN PASSANT PAR LA BARRE (on la survole, elle est dépliée, on
-  // clique « Accueil ») débranche donc `onPointerLeave` avec le pointeur encore
-  // dessus : personne ne le verra jamais sortir, et `hovered` reste vrai pour
-  // toujours. La page à barre secondaire suivante — atteinte par la palette,
-  // donc sans repasser sur la barre — s'ouvrait alors primaire DÉPLIÉE
-  // par-dessus la secondaire, pointeur à l'autre bout de l'écran, et plus rien
-  // ne pouvait la refermer.
+  // Same story for hover and account menu, but when EXIT mode
+  // rail: their installers are connected to `overlay`. Exit a barred page
+  // secondary PASSING THROUGH THE BAR (we hover over it, it is unfolded, we
+  // click “Home”) so disconnect `onPointerLeave` with the pointer still
+  // above: no one will ever see it come out, and `hovered` remains true for
+  // always. The next secondary bar page — reached by the palette,
+  // so without going back over the bar — then opened primary UNFOLDED
+  // over the secondary, pointer at the other end of the screen, and nothing
+  // couldn't close it.
   //
-  // Hors mode rail ces deux états ne sont pas lus : les remettre à zéro ne
-  // change rien à ce qu'on voit, et garantit qu'on revient au rail propre.
+  // Outside rail mode these two states are not read: resetting them does not
+  // changes nothing to what we see, and guarantees that we return to the clean rail.
   useEffect(() => {
     if (overlay) return;
     if (closeTimer.current) {
       clearTimeout(closeTimer.current);
       closeTimer.current = null;
     }
-    // Le guetteur de pointeur va avec : quitter le mode rail alors qu'il attend
-    // le retour du pointeur le laisserait branché sur une barre qui n'a plus
-    // rien à refermer.
+    // The pointer watcher goes with it: exiting rail mode while it waits
+    // returning the pointer would leave it connected to a bar that no longer has
+    // nothing to close.
     returnWatcher.current?.();
     setHovered(false);
     setMenuOpen(false);
@@ -854,39 +854,39 @@ export function AppSidebar({
       clearTimeout(closeTimer.current);
       closeTimer.current = null;
     }
-    // Le guetteur de retour de pointeur est DÉSARMÉ ici (MIN-314) : la barre
-    // vient de reprendre la main, il n'a plus rien à trancher. Sans ça, il
-    // restait branché et refermait le rail au premier mouvement de souris —
-    // parfois des minutes plus tard, sans rapport avec le geste qui l'a armé.
+    // The pointer return watcher is DISARMED here (MIN-314): the bar
+    // has just regained control, he has nothing left to decide. Without that, he
+    // remained connected and closed the rail at the first mouse movement —
+    // sometimes minutes later, unrelated to the gesture that armed him.
     returnWatcher.current?.();
     setHovered(true);
   };
 
   /**
-   * Le pointeur sort-il de la barre PAR LES BOUTONS macOS ? (MIN-291)
+   * Does the pointer move out of the bar THROUGH THE macOS BUTTONS? (MIN-291)
    *
-   * Ils sont natifs : dessinés par-dessus la page, ils ne reçoivent aucun
-   * événement du DOM et n'en émettent aucun. Aller les cliquer depuis un rail
-   * déplié, c'est donc SORTIR de la barre du point de vue de Chromium — le rail
-   * se referme, les boutons disparaissent avec lui, et ils deviennent
-   * impossibles à atteindre. Le pointeur n'aura même pas fini son geste.
+   * They are native: drawn over the page, they receive no
+   * DOM event and do not emit any. Go and click them from a rail
+   * unfolded, it is therefore EXIT from the bar from Chromium's point of view — the rail
+   * closes, the pimples disappear with it, and they become
+   * impossible to reach. The pointer will not even have finished its gesture.
    *
-   * On reconnaît cette sortie à l'endroit où elle a lieu, faute de mieux : le
-   * coin haut-gauche, celui-là même que la ligne de marque leur réserve. La
-   * boîte reprend `trafficLightPosition` (desktop/src/main.ts) et le
+   * We recognize this outing from the place where it takes place, for lack of a better word: the
+   * top left corner, the same one that the score line reserves for them. There
+   * box takes `trafficLightPosition` (desktop/src/main.ts) and the
    * `padding-left` de `.sidebar-brand-row` (app/globals.css) — trois endroits,
-   * un seul objet, et il faut les lire ensemble.
+   * a single object, and they must be read together.
    */
   const leavesThroughWindowButtons = (e: { clientX: number; clientY: number }) =>
     windowButtons.reserved && e.clientX <= WINDOW_BUTTONS_WIDTH && e.clientY <= 60;
 
   /**
-   * Le pointeur est parti sur les boutons : on ne referme pas, et on attend de
-   * le REVOIR pour trancher. Tant qu'il est sur eux, la page ne reçoit rien ;
-   * son premier mouvement de retour dit s'il rentre dans la barre (elle reprend
-   * la main) ou s'il est ailleurs (on referme). Sans ce guetteur, le rail
-   * resterait ouvert indéfiniment — et c'est exactement le défaut que les
-   * commentaires ci-dessus racontent, en pire.
+   * The pointer has gone to the buttons: we do not close, and we wait to
+   * REVIEW it to decide. As long as it is on them, the page receives nothing;
+   * his first return movement says if he enters the bar (she resumes
+   * hand) or if it is elsewhere (we close it). Without this lookout, the rail
+   * would remain open indefinitely — and this is exactly the fault that the
+   * comments above describe, only worse.
    */
   const watchPointerReturn = () => {
     returnWatcher.current?.();
@@ -896,17 +896,17 @@ export function AppSidebar({
       closeRail();
     };
     /**
-     * Le repli de SECOURS (MIN-314). Le guetteur ci-dessus n'a aucune borne :
-     * il attend un `pointermove` qui peut ne jamais venir — le feu rouge CACHE
-     * la fenêtre au lieu de la détruire (desktop/src/main.ts), elle est donc
-     * rangée rail déplié et rouverte telle quelle, guetteur toujours armé. Une
-     * séquence entièrement au clavier laissait ensuite la barre dépliée
-     * par-dessus la secondaire, jusqu'au premier mouvement de souris.
+     * The EMERGENCY withdrawal (MIN-314). The watcher above has no bounds:
+     * it waits for a `pointermove` which may never come — the red light HIDES
+     * the window instead of destroying it (desktop/src/main.ts), it is therefore
+     * rail row unfolded and reopened as is, lookout still armed. A
+     * sequence entirely on the keyboard then left the bar unfolded
+     * over the secondary, until the first mouse movement.
      *
-     * ⚠ **Pas un minuteur.** Ce serait rouvrir le défaut que MIN-291 a fermé :
-     * un rail qui se referme sous un pointeur en route vers les boutons. On
-     * s'accroche à ce qui dit que le geste est FINI — la fenêtre a perdu la
-     * main, ou elle n'est plus visible.
+     * ⚠ **Not a timer.** This would reopen the fault that MIN-291 closed:
+     * a rail that closes under a pointer on its way to the buttons. We
+     * clings to what says that the gesture is FINISHED — the window has lost its
+     * hand, or it is no longer visible.
      */
     const onGiveUp = () => {
       disarm();
@@ -930,10 +930,10 @@ export function AppSidebar({
   };
 
   /**
-   * Arme le repli — et ne le REPOUSSE jamais s'il est déjà armé. Le délai est là
-   * pour tolérer un frôlement, pas pour se recharger : le filet ci-dessous
-   * appelle ceci à chaque `pointermove` hors de la barre, et un minuteur remis à
-   * zéro à chaque mouvement ne se déclencherait qu'à l'arrêt du pointeur.
+   * Arm the fallback — and never REPELL him back if he is already armed. The deadline is here
+   * to tolerate a brush, not to recharge: the net below
+   * calls this every `pointermove` off the bar, and a timer resets
+   * zero on each movement would only fire when the pointer stops.
    */
   const scheduleClose = () => {
     if (closeTimer.current) return;
@@ -952,22 +952,22 @@ export function AppSidebar({
   };
 
   /**
-   * Le filet : **`pointerleave` n'est pas garanti.** Il suppose que la barre est
-   * la cible du pointeur quand celui-ci s'en va — or un voile peut s'interposer
-   * pendant qu'on la survole (la palette, une boîte de dialogue), et le pointeur
-   * repart alors sans que la barre l'apprenne. `hovered` reste vrai, la primaire
-   * reste dépliée par-dessus la secondaire, et plus rien ne la referme tant
-   * qu'on n'est pas retourné la survoler pour en ressortir.
+   * The net: **`pointerleave` is not guaranteed.** It assumes that the bar is
+   * the target of the pointer when it leaves — but a veil can intervene
+   * while hovering over it (the palette, a dialog box), and the pointer
+   * then leaves without the bar finding out. `hovered` remains true, the primary
+   * remains unfolded over the secondary, and nothing closes it anymore
+   * that we did not return to fly over it to come out.
    *
-   * Tant que la barre est dépliée PAR LE SURVOL, on vérifie donc à la source :
-   * un mouvement de pointeur hors de la barre la referme, d'où qu'il vienne.
+   * As long as the bar is unfolded BY HOVER, we therefore check at the source:
+   * a movement of the pointer outside the bar closes it, wherever it comes from.
    *
-   * Rien à voir avec `onPointerMove` sur la barre, qui fait l'inverse (ouvrir) —
-   * et rien qui coûte : ni état ni rendu, un `contains` par mouvement, et
-   * seulement pendant que la barre est dépliée (MIN-323).
+   * Nothing to do with `onPointerMove` on the bar, which does the opposite (open) —
+   * and nothing that costs: neither state nor return, one `contains` per movement, and
+   * only while the bar is unfolded (MIN-323).
    *
-   * ⚠ Ne casse pas MIN-291 : sur les boutons macOS natifs, la page ne reçoit
-   * AUCUN mouvement. Le guetteur de retour garde donc la main sur ce cas-là.
+   * ⚠ Does not break MIN-291: on native macOS buttons, the page does not receive
+   * NO movement. The returning watcher therefore keeps control in this case.
    */
   useEffect(() => {
     if (!overlay || !hovered) return;
@@ -977,7 +977,7 @@ export function AppSidebar({
     };
     document.addEventListener("pointermove", onMove);
     return () => document.removeEventListener("pointermove", onMove);
-    // `scheduleClose` ne lit que des refs : sa fermeture peut être périmée sans
+    // `scheduleClose` only reads refs: its closure may be out of date without
     // que rien ne change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [overlay, hovered]);
@@ -985,53 +985,53 @@ export function AppSidebar({
   const collapsed = overlay && !(hovered || focusWithin || menuOpen);
 
   /**
-   * Les boutons macOS, dans l'app de bureau (MIN-291). Ils se posent sur la
-   * ligne de marque, à la place de la marque — et on les retire quand la barre
-   * est REPLIÉE : 56 px ne tiennent pas trois boutons plus la marque, et les
-   * laisser déborderait sur la navigation.
+   * macOS buttons, in the desktop app (MIN-291). They land on the
+   * mark line, in place of the mark — and we remove them when the bar
+   * is FOLDED: 56 px does not hold three buttons plus the mark, and the
+   * leaving it would overflow the navigation.
    *
-   * C'est `collapsed` qui décide, pas `overlay` : la barre dépliée PAR-DESSUS
-   * la secondaire est une barre dépliée comme une autre, elle a ses 256 px et
-   * doit donc reprendre les boutons. Le survol du rail les ramène, le quitter
-   * les remet de côté — c'est le même geste que celui qui rend la navigation
-   * lisible, et il vaut pour tout ce que la ligne de marque contient.
+   * It is `collapsed` who decides, not `overlay`: the bar unfolded ABOVE
+   * the secondary is an unfolded bar like any other, it has its 256 px and
+   * must therefore take back the buttons. Flying over the rail brings them back, leaving it
+   * puts them aside — it's the same gesture that makes navigation
+   * readable, and it is valid for everything that the mark line contains.
    *
-   * Ce qu'on rend, en revanche, ne suit pas la demande mais le RÉSULTAT — le
-   * plein écran les emmène ailleurs sans que la barre en sache rien. Et une
-   * boîte de dialogue les retire sans que la place bouge : on dessine alors des
-   * leurres, sinon la marque sauterait à chaque ouverture. Voir
+   * What we deliver, on the other hand, does not follow the request but the RESULT — the
+   * full screen takes them elsewhere without the bar knowing anything about it. And one
+   * dialog box removes them without the place moving: we then draw
+   * lures, otherwise the mark would jump at each opening. See
    * lib/use-window-buttons.ts.
    *
-   * ⚠ **Et seulement quand la barre est RENDUE.** Sous 768 px l'AppShell la
-   * cache, mais elle reste montée : sans `wide`, elle continuait de demander le
-   * retrait des boutons dès que son rail — invisible — se repliait, et de leur
-   * garder une place que personne ne regardait. Le coin revient alors à
-   * l'en-tête (`HeaderWindowButtonsSlot`), qui l'occupe pour de vrai.
+   * ⚠ **And only when the bar is RENDERED.** Under 768 px the AppShell
+   * cache, but it remains mounted: without `wide`, it continued to request the
+   * removal of the buttons as soon as its rail — invisible — folded, and their
+   * keep a place that no one was looking at. The corner then returns to
+   * the header (`HeaderWindowButtonsSlot`), which occupies it for real.
    */
   const wide = useWideLayout();
   useHoldWindowButtons("rail", wide && collapsed);
   const windowButtons = useWindowButtonsSlot(wide);
 
-  // Deux largeurs, et c'est tout le mécanisme : celle que la barre OCCUPE dans
-  // le flux, et celle qu'elle MESURE. En mode rail la première reste au rail
-  // quoi qu'il arrive — la barre se déplie par-dessus la secondaire, jamais à
-  // côté. Hors mode rail les deux sont égales, et la barre est donc dans le flux
-  // sans en avoir l'air.
+  // Two widths, and that's the whole mechanism: that which the bar OCCUPIES in
+  // the flow, and that which it MEASURES. In rail mode the first one stays on the rail
+  // whatever happens — the bar unfolds over the secondary, never to
+  // side. Outside rail mode the two are equal, and the bar is therefore in the flow
+  // without making it look that way.
   //
-  // Ce fantôme est aussi ce qui rend le CHANGEMENT DE MODE animable : quitter
-  // une page à sidebar secondaire ne change aucune structure, seulement des
-  // largeurs — 56 → 256 ici, 320 → 0 pour la gouttière d'à côté, sur la même
-  // courbe. Tout ce qui est à droite glisse d'un bloc au lieu de sauter.
+  // This ghost is also what makes the MODE CHANGE animable: quit
+  // a page with a secondary sidebar does not change any structure, only
+  // widths — 56 → 256 here, 320 → 0 for the gutter next door, on the same
+  // curve. Everything to the right slides one block instead of jumping.
   const flowWidth = overlay ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
   const asideWidth = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
   const shellTransition = reduce ? { duration: 0 } : transitions.shell;
 
   return (
     <>
-      {/* `initial` explicite, et non `initial={false}` : c'est lui que framer
-          écrit dans le HTML du serveur. Sans largeur au premier affichage, la
-          gouttière partirait à zéro et tout le châssis se remettrait en place à
-          l'hydratation. Au montage il vaut déjà la cible : rien ne s'anime. */}
+      {/* `initial` explicit, and not `initial={false}`: it is he who framer
+          written in the server's HTML. Without width at first display, the
+          gutter would start from zero and the whole frame would return to its place at
+          hydration. In editing it is already the target: nothing comes alive. */}
       <motion.div
         aria-hidden
         className="h-full shrink-0"
@@ -1046,28 +1046,28 @@ export function AppSidebar({
         animate={{ width: asideWidth }}
         transition={shellTransition}
         onPointerEnter={overlay ? openRail : undefined}
-        // Arriver sur une page à sidebar secondaire REPLIE la barre sous un
-        // pointeur qui ne bouge pas : c'est le clic sur l'entrée qui a navigué,
-        // le pointeur était donc déjà dessus et aucun `pointerenter` ne viendra.
-        // Le moindre mouvement rattrape cet état, au lieu d'attendre une sortie
-        // et une rentrée.
+        // Arriving on a page with a secondary sidebar FOLDS the bar under a
+        // pointer that does not move: it is the click on the entry that navigated,
+        // so the pointer was already there and no `pointerenter` will come.
+        // The slightest movement catches this state, instead of waiting for an exit
+        // and a return.
         //
-        // Débranché dès que la barre est ouverte (MIN-323) : `openRail` n'a
-        // alors plus rien à faire, et sans cette garde chaque mouvement de
-        // pointeur sur une barre dépliée traversait un `setState`.
+        // Disconnected as soon as the bar is open (MIN-323): `openRail` has
+        // then nothing more to do, and without this guard each movement of
+        // pointer on an unfolded bar crossed a `setState`.
         onPointerMove={overlay && !hovered ? openRail : undefined}
-        // L'ÉVÉNEMENT est passé, et il compte : c'est l'endroit de la sortie
-        // qui dit si le pointeur part sur les boutons macOS (cf. closeRail).
+        // The EVENT has passed, and it matters: this is the exit location
+        // which says if the pointer goes to the macOS buttons (see closeRail).
         onPointerLeave={overlay ? (e) => closeRail(e) : undefined}
         onFocusCapture={
           overlay
             ? (e) => {
-                // `:focus-visible`, et pas « a le focus » : CLIQUER une entrée
-                // lui donne le focus, et la barre restait alors dépliée une
-                // fois le pointeur parti — on venait pourtant de naviguer,
-                // c'est le moment précis où elle doit se replier. Seul le focus
-                // VENU DU CLAVIER (tabulation) la retient, parce que là il n'y
-                // a pas de pointeur pour la rouvrir.
+                // `:focus-visible`, and not “has focus”: CLICK an entry
+                // gives it the focus, and the bar then remained unfolded for a
+                // once the pointer left - we had just navigated,
+                // this is the precise moment when it must retreat. Only the focus
+                // COMING FROM THE KEYBOARD (tabulation) holds it, because there there is no
+                // has no pointer to reopen it.
                 const el = e.target as HTMLElement;
                 if (el.matches?.(":focus-visible")) setFocusWithin(true);
               }
@@ -1076,18 +1076,18 @@ export function AppSidebar({
         onBlurCapture={
           overlay
             ? (e) => {
-                // Une perte de focus qui ne désigne AUCUNE nouvelle cible n'est
-                // pas forcément une sortie de la barre (MIN-313) : c'est ce que
-                // produit la désactivation de la fenêtre — la barre de menus
-                // macOS, un ⌘Tab. Replier là-dessus refermerait la barre sous un
-                // pointeur qui n'a pas bougé.
+                // A loss of focus that does not designate ANY new target is
+                // not necessarily an exit from the bar (MIN-313): that's what
+                // produces disabling of the window — the menu bar
+                // macOS, a ⌘Tab. Falling back on this would close the bar under a
+                // pointer which has not moved.
                 //
-                // Mais c'est AUSSI ce que produit un clic sur une zone non
-                // focusable de la page : le focus retombe sur le document, et
-                // s'en tenir à « pas de cible, on garde » laissait la barre
-                // dépliée par-dessus la secondaire pour de bon, après une
-                // simple tabulation dedans. Ce qui tranche entre les deux, c'est
-                // qui a la main : la fenêtre l'a encore, ou elle l'a perdue.
+                // But this is ALSO what a click on an area not produced
+                // focusable of the page: the focus falls on the document, and
+                // sticking to “no target, we keep” left the bar
+                // unfolded over the secondary for good, after a
+                // simple tab in it. What separates the two is
+                // who has the hand: the window still has it, or it has lost it.
                 const next = e.relatedTarget as Node | null;
                 if (next === null) {
                   if (!document.hasFocus()) return;
@@ -1102,44 +1102,44 @@ export function AppSidebar({
             : undefined
         }
         className={cn(
-          // Toujours en surimpression sur son propre fantôme, mode rail ou non :
-          // c'est ce qui fait que passer de l'un à l'autre n'est qu'une affaire
-          // de largeurs. Hors mode rail le fantôme fait exactement sa largeur,
-          // et rien ne se voit.
+          // Always superimposed on its own ghost, rail mode or not:
+          // This is what makes switching from one to the other a simple matter.
+          // widths. Out of rail mode the ghost is exactly its width,
+          // and nothing is seen.
           "absolute inset-y-0 left-0 z-40 flex h-full flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground",
-          // Dépliée par-dessus la secondaire, les deux barres partagent le même
-          // fond : sans ombre portée, seule la bordure les sépare, et elle
-          // disparaît en thème sombre. Une ombre explicite plutôt que
-          // `shadow-2xl`, qui ne se voit pas sur fond noir. Elle se fond au lieu
-          // de disparaître d'un coup : quitter une page à sidebar secondaire en
-          // survolant la barre l'éteint en même temps que tout se remet en place.
+          // Unfolded over the secondary, the two bars share the same
+          // background: without a cast shadow, only the border separates them, and it
+          // disappears in dark theme. An explicit shadow rather than
+          // `shadow-2xl`, which cannot be seen on a black background. She blends in instead
+          // to disappear suddenly: leave a page with a secondary sidebar by
+          // hovering over the bar turns it off at the same time as everything snaps back into place.
           "transition-shadow duration-300",
           overlay && !collapsed && "shadow-[8px_0_32px_-8px_rgba(0,0,0,0.45)]",
         )}
       >
-        {/* La marque. Ancrée à GAUCHE, et le MÊME élément que la barre soit au
-            rail ou dépliée : en changer au dépliage démonterait ce que la
-            tabulation vient de viser, et la première tabulation dans le rail
-            perdrait son focus. Le rail n'ayant que 56 px, `overflow-hidden` la
-            coupe — elle ne se recentre pas et ne bouge donc jamais.
-            Même hauteur et même bordure basse que le header et que la ligne de
-            titre de la sidebar secondaire : une seule ligne horizontale
-            traverse l'application, d'un bord à l'autre.
+        {/* The brand. Anchored to the LEFT, and the SAME element that the bar is at
+            rail or unfolded: changing it when unfolding would dismantle what the
+            tab just aimed, and the first tab in the rail
+            would lose focus. The rail having only 56 px, `overflow-hidden` the
+            cuts — it does not refocus and therefore never moves.
+            Same height and same bottom border as the header and the line of
+            title of the secondary sidebar: a single horizontal line
+            crosses the application, from one edge to the other.
 
-            Dans l'app de bureau, c'est CETTE ligne qui accueille les boutons
-            macOS, à la place de la marque, qui passe à droite (MIN-291) —
-            `sidebar-brand-row` est la prise de app/globals.css, et
-            `data-window-buttons` lui dit si les boutons sont là. */}
+            In the desktop app, THIS line houses the buttons
+            macOS, instead of the mark, which goes to the right (MIN-291) —
+            `sidebar-brand-row` is the socket for app/globals.css, and
+            `data-window-buttons` tells him if the buttons are there. */}
         <div
           data-window-buttons={windowButtons.reserved ? "" : undefined}
-          // Le glissement de la marque n'est ARMÉ qu'une fois le premier état
-          // de la fenêtre reçu : avant la réponse du pont la place vaut
-          // « fermée », et animer ce rattrapage ferait démarrer l'app sur un
-          // logo qui traverse sa barre.
+          // Mark sliding is only ARMED once the first state
+          // of the window received: before the response from the bridge the place is worth
+          // “closed”, and animating this catch-up would start the app on a
+          // logo that crosses its bar.
           data-window-buttons-ready={windowButtons.ready ? "" : undefined}
-          // Mode rail : le seul état où la LARGEUR de la barre change. La
-          // marque y suit la ligne en temps réel (`100cqw`) et ne doit surtout
-          // pas être amortie en plus — voir app/globals.css.
+          // Rail mode: the only state where the WIDTH of the bar changes. There
+          // brand follows the line in real time (`100cqw`) and above all must not
+          // not be amortized additionally — see app/globals.css.
           data-rail={overlay || inZenPanel ? "" : undefined}
           className={cn(
             "sidebar-brand-row relative flex h-[60px] shrink-0 items-center border-b border-border",

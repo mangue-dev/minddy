@@ -36,17 +36,17 @@ import { OnboardingImportDialog } from "@/components/home/onboarding-import-dial
 import { OnboardingJoinDialog } from "@/components/home/onboarding-join-dialog";
 
 /**
- * Onboarding du nouveau compte (MIN-74), sur le patron d'AutoKap : à gauche les
- * quatre étapes et leur état, à droite la courante, et elle seule. Le titre de
- * l'étape n'est pas répété à droite — la colonne de gauche le tient déjà.
+ * Onboarding of the new account (MIN-74), on the AutoKap boss: on the left the
+ * four stages and their state, on the right the current one, and this alone. The title of
+ * the step is not repeated on the right — the left column already holds it.
  *
- * Il prend la place du corps de la home tant qu'il n'est pas terminé : pour un
- * compte neuf, les cartes cycle/global, le feedback et la grille de projets
- * n'ont de toute façon rien à montrer. Deux étapes se cochent seules quand la
- * donnée existe (projet, ticket) ; les autres sont acquittées à la main —
- * importer son backlog et connecter un agent sont des propositions, jamais des
- * prérequis. « Passer l'onboarding » reste visible en permanence, sous
- * confirmation : c'est irréversible.
+ * It takes the place of the body of the house as long as it is not finished: for a
+ * new account, cycle/global cards, feedback and project grid
+ * have nothing to show anyway. Two steps are checked alone when the
+ * data exists (project, ticket); the others are paid by hand —
+ * importing your backlog and connecting an agent are suggestions, never
+ * prerequisite. “Skip onboarding” remains permanently visible, under
+ * confirmation: it is irreversible.
  */
 
 const MOTION = { duration: 0.22, ease: [0.16, 1, 0.3, 1] as const };
@@ -58,9 +58,9 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
   const { openCreateProject } = useProjects();
   const { openCreateIssue } = useCreate();
   const { track } = useAnalytics();
-  // Une invitation en attente change l'étape 1 : on n'a plus à expliquer
-  // comment se faire inviter, il n'y a qu'à entrer. La plus récente d'abord —
-  // l'API les renvoie triées ; les autres restent dans la bannière et l'inbox.
+  // A pending invitation changes step 1: we no longer have to explain
+  // how to get invited, all you have to do is enter. Most recent first —
+  // the API returns them sorted; the others remain in the banner and the inbox.
   const {
     invitations,
     busyId: invitationBusyId,
@@ -91,7 +91,7 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
     cycles: t("cyclesDesc"),
   };
 
-  /** Acquitte une étape ; la dernière ferme l'onboarding, d'où le mot de fin. */
+  /** Acknowledges a step; the last one closes onboarding, hence the final word. */
   const acknowledge = async (step: OnboardingStepId) => {
     setBusy(true);
     try {
@@ -101,14 +101,14 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
     }
   };
 
-  /** Activer les cycles coche la dernière étape — donc termine l'onboarding. */
+  /** Activating cycles checks the last step — therefore completes onboarding. */
   const enableCycles = async () => {
     if (!user) return;
     setBusy(true);
     try {
       await updateUserMetadata({ [CYCLES_ENABLED_META_KEY]: true });
-      // Les deux lectures réconcilient la timeline des cycles (ensureCycles) :
-      // le résumé, qui est ce que la home a sous les yeux, et le board agrégé.
+      // The two readings reconcile the cycle timeline (ensureCycles):
+      // the summary, which is what the home has in front of them, and the aggregated board.
       void queryClient.invalidateQueries({ queryKey: HOME_SUMMARY_KEY });
       void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
     } catch (e) {
@@ -124,19 +124,19 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
   };
 
   const openJoin = () => {
-    // Le compte qui clique ici n'a pas de projet à lui : c'est le seul endroit
-    // du produit qui le dit, et l'entonnoir d'activation a besoin de le savoir.
+    // The account that clicks here does not have its own project: this is the only place
+    // of the product that says it, and the activation funnel needs to know it.
     track("onboarding_join_opened");
     setJoinOpen(true);
   };
 
   /**
-   * DÉPÔT SUR TOUTE LA CARTE, pendant l'étape des tickets. On arrive avec un
-   * CSV sous le bras, pas avec l'envie d'ouvrir un dialog d'abord : le fichier
-   * lâché n'importe où sur l'onboarding ouvre l'import, déjà chargé.
+   * DEPOSIT ON THE WHOLE CARD, during the ticket stage. We arrive with a
+   * CSV at hand, not with the desire to open a dialog first: the file
+   * dropped anywhere on the onboarding opens the import, already loaded.
    *
-   * `dragenter`/`dragleave` se déclenchent aussi en traversant les enfants —
-   * d'où le compteur, sans quoi le survol clignoterait.
+   * `dragenter`/`dragleave` also triggers when crossing children —
+   * hence the counter, otherwise the hover would blink.
    */
   const dropTarget = currentStepId === "tickets" && !finalScreen;
   const dragDepth = useRef(0);
@@ -169,8 +169,8 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
       }
     : {};
 
-  // `currentStepId` est non-null tant que les étapes défilent ; sur le mot de
-  // fin il vaut null et c'est justement ce qu'on rend.
+  // `currentStepId` is non-null as long as the steps scroll; on the word of
+  // At the end it is worth null and that is precisely what we return.
   if (!currentStepId && !finalScreen) return null;
 
   return (
@@ -180,7 +180,7 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
         className="relative w-full rounded-2xl border border-border bg-card p-2.5 text-card-foreground md:p-3.5"
       >
         <div className="grid gap-3 md:grid-cols-[280px_1fr] md:gap-5">
-          {/* Colonne gauche : où j'en suis. */}
+          {/* Left column: where I am. */}
           <div className="flex flex-col gap-3">
             <p className="pr-1 text-right text-sm text-muted-foreground">
               {finalScreen
@@ -206,7 +206,7 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
             </ol>
           </div>
 
-          {/* Colonne droite : l'étape courante, et elle seule. */}
+          {/* Right column: the current step, and this alone. */}
           <div className="flex min-w-0 flex-col items-center justify-center gap-4 md:px-4">
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
@@ -242,9 +242,9 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
                           {t("projectCta")}
                           <ArrowRight data-icon="inline-end" />
                         </Button>
-                        {/* Invité : le bouton nomme le projet et y fait entrer
-                            d'un clic, au lieu d'ouvrir le mode d'emploi de
-                            l'invitation qu'on a déjà reçue. */}
+                        {/* Guest: the button names the project and enters it
+ with one click, instead of opening the instructions for
+ the invitation that we have already received. */}
                         {invitation ? (
                           <Button
                             type="button"
@@ -265,10 +265,10 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
                       </div>
                     )}
 
-                    {/* Deux chemins vers la même étape, et elle se coche de
-                        toute façon toute seule dès qu'un ticket existe : celui
-                        qu'on vient de créer, ou les cent qu'on vient
-                        d'importer. */}
+                    {/* Two paths to the same stage, and it ticks off
+ anyway on its own as soon as a ticket exists: the one
+ that we have just created, or the hundred that we have just
+ imported. */}
                     {currentStepId === "tickets" && (
                       <div className="flex w-full flex-col gap-3">
                         <div className="flex flex-wrap items-center gap-2">
@@ -299,9 +299,9 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
                       />
                     )}
 
-                    {/* L'étape se coche de toute façon seule dès qu'une clé
-                        existe ; l'acquitter tout de suite évite d'attendre le
-                        refetch. */}
+                    {/* The step is ticked alone anyway as soon as a key
+ exists; Acknowledging it immediately avoids waiting for the
+ refetch. */}
                     {currentStepId === "key" && (
                       <OnboardingKeyStep
                         onDone={() => void acknowledge("key")}
@@ -313,9 +313,9 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
                     {currentStepId === "cycles" && (
                       <div className="flex w-full flex-col gap-4">
                         <label className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 p-3">
-                          {/* Toujours décoché ici : cycles activés = étape
-                              franchie. On lit quand même la préférence réelle
-                              plutôt que de câbler `false` en dur. */}
+                          {/* Always unchecked here: cycles enabled = step
+ crossed. We still read the real preference
+ rather than hard-wiring `false`. */}
                           <Switch
                             id="onboarding-cycles"
                             checked={resolveCyclePrefs(user?.user_metadata).enabled}
@@ -347,8 +347,8 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
           </div>
         </div>
 
-        {/* Voile de dépôt : au-dessus de la carte entière, transparent aux
-            événements pour que le `drop` du conteneur reste atteignable. */}
+        {/* Deposition veil: above the entire map, transparent to
+ events so that the container's `drop` remains reachable. */}
         {dragOver && (
           <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-brand bg-card/95 backdrop-blur-sm">
             <FileUp className="size-6 text-brand" aria-hidden />
@@ -396,8 +396,8 @@ export function OnboardingCard({ onboarding }: { onboarding: UseOnboardingResult
         onImported={() => {
           setImportOpen(false);
           setDroppedFile(null);
-          // L'étape se cochera seule au prochain résumé (des tickets existent) ;
-          // l'acquitter tout de suite évite d'attendre l'aller-retour.
+          // The step will be checked on its own at the next summary (tickets exist);
+          // Acknowledging it immediately avoids having to wait for the round trip.
           void acknowledge("tickets");
         }}
       />

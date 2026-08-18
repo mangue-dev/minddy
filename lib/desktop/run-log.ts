@@ -1,111 +1,111 @@
 import { SecretRedactor, type RedactText } from "@/lib/server/agent/redact";
 
 /**
- * LE JOURNAL D'UN TOUR JOUÉ SUR LA MACHINE (MIN-363) — la moitié qui se décide
+ * THE DIARY OF A TICK PLAYED ON THE MACHINE (MIN-363) — the half that decides
  * sans disque.
  *
  * ## Pourquoi ce fichier existe
  *
- * Un run local peut rater **avant que le harness ait parlé** : le bundle ne se
- * lance pas, opencode ne s'installe pas, le dépôt a bougé, macOS refuse le
- * dossier, le plan de contrôle rend 403. Dans cette fenêtre-là, il n'existe ni
- * event, ni checkpoint, ni ligne de `agent_runs` à lire — le `stdio` de
- * l'enfant est la SEULE chose qui parle, et personne ne l'écoute : la coquille
- * n'a jamais lancé d'enfant, et les journaux d'opencode partent dans un dossier
- * de la machine que l'utilisateur ne connaît pas.
+ * A local run can fail **before the harness has spoken**: the bundle does not
+ * does not launch, opencode does not install, the repository has moved, macOS refuses it
+ * folder, the control plan returns 403. In this window, there is neither
+ * event, neither checkpoint, nor line of `agent_runs` to read — the `stdio` of
+ * the child is the ONLY thing that speaks, and no one listens: the shell
+ * never launched a child, and the opencode logs go to a folder
+ * of the machine that the user does not know.
  *
- * C'est le premier ticket de support de la fonctionnalité, et sans ce fichier il
- * est insoluble : « ça ne marche pas » sans une ligne à regarder.
+ * This is the first support ticket for the feature, and without this file it
+ * is insoluble: “it doesn’t work” without a line to look at.
  *
- * ## Ce qui se décide ici, et pourquoi ça ne vit pas dans `desktop/src/`
+ * ## What is decided here, and why it does not live in `desktop/src/`
  *
- * Le nommage, la rotation, l'en-tête, la substitution des secrets et le rapport
- * de diagnostic sont des décisions ; `vitest` ne collecte pas `desktop/src/`
+ * Naming, rotation, header, secret substitution and reporting
+ * diagnostic are decisions; `vitest` does not collect `desktop/src/`
  * ([local-surface-coverage.test.ts](../server/agent/local-surface-coverage.test.ts)).
- * Elles descendent donc ici, avec leur test, et la coquille ne garde que le `fs`.
+ * So they come down here, with their test, and the shell only keeps the `fs`.
  *
- * ## Trois règles qui ont l'air de détails
+ * ## Three rules that seem like details
  *
- * 1. **Le nom porte la date en tête**, donc l'ordre alphabétique EST l'ordre
- *    chronologique. La rotation trie des chaînes, sans jamais lire une `mtime` —
- *    qu'une copie, une sauvegarde ou un `rsync` réécrit.
- * 2. **La rotation garde toujours le plus récent**, même seul au-dessus du
- *    plafond d'octets. Un tour qui déraille et crache 200 Mo est exactement
- *    celui qu'on veut lire ; une rotation qui le supprime pour tenir un quota
- *    laisse l'utilisateur avec un dossier propre et rien à envoyer.
- * 3. **Les secrets sont substitués à l'ÉCRITURE**, pas à la lecture. Le jeton
- *    d'exécution locale et la clé du modèle passent par l'environnement et les
- *    arguments de l'enfant ; un journal qu'on colle dans un fil de support ne
- *    doit pas les porter, et le seul moment où c'est garanti est avant que
- *    l'octet touche le disque.
+ * 1. **The name has the date at the top**, so alphabetical order IS the order
+ * chronological. Rotation sorts strings, without ever reading a `mtime` —
+ * as a copy, a backup or a rewritten `rsync`.
+ * 2. **Rotation always keeps the most recent**, even alone above the
+ * byte limit. A ride that goes off the rails and spits out 200MB is exactly
+ * the one we want to read; a rotation that removes it to hold a quota
+ * leaves the user with a clean folder and nothing to send.
+ * 3. **Secrets are substituted for WRITING**, not for reading. The token
+ * local execution and the model key pass through the environment and the
+ * child's arguments; a newspaper stuck in a support wire does not
+ * should not wear them, and the only time it's guaranteed is before
+ * the byte touches the disk.
  *
- * Et une règle de produit, qui n'est pas technique : **le rapport ne part
- * jamais tout seul.** Il va au presse-papier, l'utilisateur le relit et le
- * colle. C'est ce qui permet d'y mettre un chemin de home.
+ * And a product rule, which is not technical: **the report does not leave
+ * never on its own.** It goes to the clipboard, the user reads it again and
+ * glue. This is what allows you to put a path home there.
  */
 
-/** Le dossier des journaux, sous `userData`. */
+/** The logs folder, under `userData`. */
 export const RUN_LOG_DIR_NAME = "agent-logs";
 
-/** L'extension, et le filtre de la rotation : elle ne regarde rien d'autre. */
+/** The extension, and the rotation filter: it doesn't look at anything else. */
 export const RUN_LOG_EXTENSION = ".log";
 
 /** Combien de journaux on garde au plus. */
 export const RUN_LOG_MAX_FILES = 20;
 
-/** Et combien d'octets, tous journaux confondus (25 Mo). */
+/** And how many bytes, all logs combined (25 MB). */
 export const RUN_LOG_MAX_BYTES = 25 * 1024 * 1024;
 
-/** Combien de lignes de queue le rapport de diagnostic emporte. */
+/** How many tail lines the diagnostic report carries. */
 export const RUN_LOG_REPORT_LINES = 120;
 
-/** Ce qu'on écrit quand on ne sait pas — jamais une chaîne vide, qui se lit mal. */
+/** What we write when we don't know — never an empty string, which reads poorly. */
 const UNKNOWN = "—";
 
 /**
- * CE QU'UN JOURNAL SAIT DE SON TOUR AVANT QUE LE HARNESS AIT PARLÉ.
+ * WHAT A NEWSPAPER KNOWS ABOUT ITS TURN BEFORE THE HARNESS HAS SPOKEN.
  *
- * Les cinq champs du rapport de diagnostic, plus l'identité du run. Ils sont
- * tous connus du lanceur au moment du `fork` : c'est précisément ce qui rend
- * l'en-tête utile quand tout le reste a échoué.
+ * The five fields of the diagnostic report, plus the run identity. They are
+ * all known to the launcher at the time of `fork`: this is precisely what makes
+ * the useful header when all else has failed.
  */
 export interface RunLogFacts {
-  /** Le run dont ce journal est le tour. */
+  /** The run which this diary is about. */
   readonly runId: string;
   /** Version de l'app de bureau (`app.getVersion()`). */
   readonly appVersion: string;
-  /** Empreinte du bundle de harness téléchargé pour ce tour. */
+  /** Footprint of the harness bundle downloaded for this tour. */
   readonly bundleVersion: string;
-  /** Version d'opencode épinglée (`OPENCODE_VERSION`). */
+  /** Pinned opencode version (`OPENCODE_VERSION`). */
   readonly opencodeVersion: string;
-  /** Le dépôt sur lequel le tour joue — un chemin de cette machine. */
+  /** The deposit on which the round plays — a path of this machine. */
   readonly repoPath: string;
 }
 
-/** L'en-tête relu depuis un journal. Tous les champs sont facultatifs : un
- *  fichier tronqué par un arrêt brutal doit se lire quand même. */
+/** The header reread from a newspaper. All fields are optional: a
+ * file truncated by a hard stop should still be read. */
 export type RunLogHeader = Partial<Record<keyof RunLogFacts | "started", string>>;
 
-/** Un journal sur le disque, tel que la rotation a besoin de le voir. */
+/** A log on disk, such as rotation needs to see it. */
 export interface RunLogFile {
   readonly name: string;
   readonly bytes: number;
 }
 
-/** Les deux plafonds de la rotation. */
+/** Both caps of the rotation. */
 export interface RunLogLimits {
   readonly maxFiles?: number;
   readonly maxBytes?: number;
 }
 
 /**
- * Le nom du journal d'un tour : la date d'abord, l'identifiant ensuite.
+ * The name of the log of a tour: the date first, the identifier then.
  *
- * `:` et `.` sortent de l'horodatage — le premier est interdit sur les systèmes
- * de fichiers d'autres plateformes et fâcheux dans un `scp`, le second couperait
- * l'extension en deux. L'identifiant est réduit aux caractères sûrs : il vient
- * de la base, mais un nom de fichier construit à partir d'une valeur distante
- * sans être filtré est un chemin d'écriture qu'on offre à quelqu'un d'autre.
+ * `:` and `.` go outside the timestamp — the first is prohibited on systems
+ * of files from other platforms and annoying in a `scp`, the second would cut
+ * the extension in two. The identifier is reduced to safe characters: it comes
+ * from the base, but a file name constructed from a remote value
+ * unfiltered is a writing path that we offer to someone else.
  */
 export function runLogFileName(runId: string, startedAt: Date): string {
   const stamp = startedAt.toISOString().replace(/[:.]/g, "-");
@@ -114,9 +114,9 @@ export function runLogFileName(runId: string, startedAt: Date): string {
 }
 
 /**
- * L'en-tête écrit en tête de chaque journal, et relisible par
- * {@link readRunLogHeader}. Il se termine par une ligne vide : c'est elle qui
- * borne la lecture, et elle sépare visuellement l'en-tête de la sortie brute.
+ * The header written at the top of each newspaper, and rereadable by
+ * {@link readRunLogHeader}. It ends with an empty line: it is she who
+ * bounds the read, and it visually separates the header from the raw output.
  */
 export function runLogHeader(facts: RunLogFacts, startedAt: Date): string {
   return (
@@ -133,9 +133,9 @@ export function runLogHeader(facts: RunLogFacts, startedAt: Date): string {
 }
 
 /**
- * L'en-tête relu. S'arrête à la première ligne vide, et ignore tout ce qui n'a
- * pas la forme `clé: valeur` — un journal dont l'en-tête a été mangé rend un
- * objet vide plutôt que de lever.
+ * The header read again. Stops at the first empty line, and ignores anything that doesn't have
+ * not the form `key: value` — a log whose header has been eaten returns a
+ * empty object rather than lifting.
  */
 export function readRunLogHeader(text: string): RunLogHeader {
   const header: RunLogHeader = {};
@@ -150,10 +150,10 @@ export function readRunLogHeader(text: string): RunLogHeader {
 }
 
 /**
- * Les journaux à SUPPRIMER — la fonction ne touche à rien, elle nomme.
+ * Logs to DELETE — the function doesn't touch anything, it names.
  *
- * Deux plafonds, et le plus récent survit toujours aux deux (cf. règle 2 en tête
- * de fichier). Le tri est décroissant sur le NOM, qui commence par la date.
+ * Two ceilings, and the most recent always survives both (see rule 2 at the top
+ * file). The sorting is descending on the NAME, which begins with the date.
  */
 export function pruneRunLogs(files: readonly RunLogFile[], limits: RunLogLimits = {}): string[] {
   const maxFiles = limits.maxFiles ?? RUN_LOG_MAX_FILES;
@@ -181,10 +181,10 @@ export function pruneRunLogs(files: readonly RunLogFile[], limits: RunLogLimits 
 }
 
 /**
- * Les `count` dernières lignes. Le `\n` final ne compte pas pour une ligne vide
- * de plus : un journal se termine toujours par une fin de ligne, et emporter
- * une ligne vide au lieu de la dernière ligne utile serait la faute qu'on ne
- * remarque que le jour où on lit le rapport.
+ * The last `count` lines. The final `\n` does not count for an empty line
+ * moreover: a newspaper always ends with an end of line, and take away
+ * an empty line instead of the last useful line would be the fault we don't
+ * notice that the day we read the report.
  */
 export function tailLines(text: string, count: number): string {
   const lines = text.replace(/\n$/, "").split("\n");
@@ -193,12 +193,12 @@ export function tailLines(text: string, count: number): string {
 }
 
 /**
- * La substitution posée sur ce que le tour écrit. Les valeurs trop courtes pour
- * être un secret sont ignorées par `SecretRedactor` — sans quoi une « clé » de
- * trois caractères substituerait des bouts de mots dans tout le journal.
+ * The substitution placed on what the turn writes. Values ​​too short for
+ * be a secret are ignored by `SecretRedactor` — otherwise a “key” of
+ * three characters would substitute bits of words throughout the newspaper.
  *
- * `redact.ts` plutôt qu'une seconde substitution écrite ici : c'est le même
- * problème que dans la boucle, et deux implémentations divergent.
+ * `redact.ts` rather than a second substitution written here: it is the same
+ * problem only in the loop, and two implementations diverge.
  */
 export function runLogRedactor(secrets: readonly (string | null | undefined)[]): RedactText {
   const redactor = new SecretRedactor();
@@ -207,13 +207,13 @@ export function runLogRedactor(secrets: readonly (string | null | undefined)[]):
 }
 
 /**
- * Un morceau de `stdout` ou de `stderr`, préparé pour le journal : chaque ligne
+ * A piece of `stdout` or `stderr`, prepared for the log: each line
  * porte sa source.
  *
- * Le marquage compte plus qu'il n'en a l'air — un harness qui écrit sa
- * progression sur `stdout` et ses erreurs sur `stderr` produit, mélangé, un
- * texte où l'on ne sait plus ce qui est un incident. Une ligne vide reste vide :
- * on ne fabrique pas du `[out]` pour du blanc.
+ * Marking matters more than it seems — a harness that writes its
+ * progress on `stdout` and its errors on `stderr` produces, mixed, a
+ * text where we no longer know what is an incident. An empty line remains empty:
+ * we don't make `[out]` for white.
  */
 export function tagRunLogChunk(chunk: string, stream: "out" | "err"): string {
   const tag = stream === "err" ? "[err] " : "[out] ";
@@ -223,18 +223,18 @@ export function tagRunLogChunk(chunk: string, stream: "out" | "err"): string {
     .join("\n");
 }
 
-/** Ce que la coquille a ramassé sur le disque pour fabriquer le rapport. */
+/** What the shell picked up from the disk to make the report. */
 export interface DiagnosticFacts {
   readonly appVersion: string;
   readonly opencodeVersion: string;
-  /** `darwin 25.5.0`, ou ce que la plateforme rend. */
+  /** `darwin 25.5.0`, or what the platform renders. */
   readonly platform: string;
   readonly generatedAt: Date;
-  /** Le dossier des journaux — l'utilisateur doit pouvoir aller voir. */
+  /** The logs folder — the user should be able to see. */
   readonly logDir: string;
   /** Combien de journaux y vivent. */
   readonly logCount: number;
-  /** Le dernier tour joué, ou `null` quand aucun n'a jamais joué. */
+  /** The last turn played, or `null` when none has ever played. */
   readonly lastRun: {
     readonly fileName: string;
     readonly header: RunLogHeader;
@@ -243,14 +243,14 @@ export interface DiagnosticFacts {
 }
 
 /**
- * LE RAPPORT DE DIAGNOSTIC, tel qu'il part au presse-papier.
+ * THE DIAGNOSTIC REPORT, as it goes on the clipboard.
  *
- * En anglais, comme le menu qui le déclenche, et en markdown : il finira collé
- * dans un fil de support, pas lu dans un terminal.
+ * In English, like the menu that triggers it, and in markdown: it will end up pasted
+ * in a support thread, not read in a terminal.
  *
- * Quand aucun tour n'a jamais joué, il le DIT au lieu de rendre un rapport vide.
- * C'est déjà une réponse — « la machine n'a jamais reçu de run » et « le run a
- * échoué au démarrage » sont deux tickets de support différents.
+ * When no trick ever played, he SAYS so instead of returning an empty report.
+ * That's already an answer — "the machine never received a run" and "the run has
+ * failed to boot” are two different support tickets.
  */
 export function formatDiagnosticReport(facts: DiagnosticFacts): string {
   const header = facts.lastRun?.header ?? {};

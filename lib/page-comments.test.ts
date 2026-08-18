@@ -8,14 +8,11 @@ import {
 } from "./page-comments";
 
 /**
- * MIN-282 — l'ANCRAGE et le DÉTACHEMENT, la moitié qu'on ne peut pas vérifier à
- * l'œil.
+ * MIN-282 — ANCHORING and DETACHING, the half that cannot be checked by eye.
  *
- * Le détachement est un calcul fait à chaque affichage contre le document réel,
- * jamais une écriture : c'est exactement le genre de règle qui a l'air juste
- * dans le code et se trompe d'un cran une fois montée. Et l'erreur ne se voit
- * pas — un fil détaché qui ne remonte pas en tête est un fil que plus rien ne
- * rappelle à personne.
+ * Detachment is a calculation made each time it is displayed against the real document,
+ * never a writing: this is exactly the kind of rule that looks right
+ * in the code and goes one step wrong when mounted. And the error is not visible - a detached thread that does not go to the top is a thread that nothing reminds anyone of.
  */
 
 let seq = 0;
@@ -48,8 +45,8 @@ describe("arrangeThreads", () => {
   });
 
   it("détache le fil dont le bloc a disparu, et le remonte EN TÊTE", () => {
-    // Le bloc « b-parti » n'est plus dans le document : le fil ne peut plus se
-    // rappeler à personne par la page, donc c'est la liste qui doit le faire.
+    // The “b-parti” block is no longer in the document: the thread can no longer be
+    // remind no one by the page, so the list should do it.
     const page = comment({ created_at: "2026-08-01T10:00:00.000Z" });
     const orphaned = comment({
       block_id: "b-parti",
@@ -61,8 +58,8 @@ describe("arrangeThreads", () => {
     const threads = arrangeThreads([page, orphaned, alive], blocks("b1"));
     expect(threads.map((t) => t.root.id)).toEqual([orphaned.id, page.id, alive.id]);
     expect(threads[0].detached).toBe(true);
-    // Il reste LISIBLE : son extrait figé est la seule trace de ce dont il
-    // parlait, et la seule raison de savoir pourquoi le bloc a été retiré.
+    // It remains READABLE: its frozen extract is the only trace of what it
+    // was talking, and the only reason why the block was removed.
     expect(threads[0].root.quote).toBe("le passage supprimé");
     expect(threads.slice(1).every((t) => !t.detached)).toBe(true);
   });
@@ -88,8 +85,8 @@ describe("arrangeThreads", () => {
   });
 
   it("une réponse ORPHELINE redevient une racine plutôt que de disparaître", () => {
-    // Perdre du texte parce qu'on a perdu son parent est exactement ce que le
-    // détachement refuse par ailleurs.
+    // Losing text because you lost your parent is exactly what
+    // detachment otherwise refuses.
     const orphan = comment({ parent_id: "racine-effacée" });
     expect(arrangeThreads([orphan], blocks()).map((t) => t.root.id)).toEqual([
       orphan.id,
@@ -108,8 +105,8 @@ describe("commentedBlockCounts", () => {
   });
 
   it("compte les RÉPONSES : la pastille dit la taille de la discussion", () => {
-    // Sans elles, un bloc où trois personnes se répondent porte « 1 », et le
-    // chiffre ne sert plus à décider si ça vaut le clic.
+    // Without them, a block where three people answer each other carries “1”, and the
+    // number is no longer used to decide if it's worth the click.
     const root = comment({ block_id: "b1" });
     const replies = [
       comment({ block_id: null, parent_id: root.id }),

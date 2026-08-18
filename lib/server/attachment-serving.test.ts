@@ -6,18 +6,18 @@ vi.mock("server-only", () => ({}));
 const { signedAttachmentUrl, uploadAttachment } = await import("./attachments");
 
 /**
- * MIN-340 — `signedAttachmentUrl` est le SEUL endroit où un fichier privé
- * devient une URL. C'est donc le seul endroit où se décide s'il sera affiché
- * ou téléchargé, et ce que ce test épingle est cette décision, pas la
+ * MIN-340 — `signedAttachmentUrl` is the ONLY place where a private
+ * file becomes a URL. This is therefore the only place where it is decided whether it will be displayed
+ * or downloaded, and what this test pinpoints is this decision, not the
  * signature.
  *
- * Ce qui est simulé ici : le storage, et lui seul. `createSignedUrl` note ce
- * qu'on lui demande — la présence d'un `download` EST la disposition « pièce
- * jointe », qui ne rend jamais rien et n'exécute donc jamais rien. `info`
- * rend l'entête que porte l'objet dans le bucket : pour une ressource de
- * ticket, qui monte directement du navigateur au storage, c'est la seule
- * vérité sur ce que le navigateur recevra — la ligne, elle, ne porte que ce
- * que le client a bien voulu déclarer.
+ * What is simulated here: storage, and it alone. `createSignedUrl` notes what
+ * is being asked for — the presence of a `download` IS the provision "exhibit
+ * attached", which never renders anything and therefore never executes anything. `info`
+ * returns the header that the object carries in the bucket: for a resource of
+ * ticket, which goes directly from the browser to the storage, it is the only
+ * truth about what the browser will receive — the line only carries this
+ * that the client has requested declare.
  */
 
 function fakeStorage(options: { contentType?: string; infoFails?: boolean } = {}) {
@@ -53,9 +53,9 @@ function fakeStorage(options: { contentType?: string; infoFails?: boolean } = {}
         remove: async () => ({ error: null }),
       }),
     },
-    // MIN-343 : l'enregistrement demande au storage qui a téléversé l'objet, et
-    // le ménage demande aux tables qui le référence encore. Ici l'objet vient
-    // d'être créé par le serveur (aucun téléverseur) et rien ne le référence.
+    // MIN-343: the registration asks the storage which uploaded the object, and
+    // housekeeping asks the tables who still references it. Here the object comes
+    // to be created by the server (no uploader) and nothing references it.
     rpc: async () => ({ data: [], error: null }),
     from: () => ({
       insert: (batch: Record<string, unknown>[]) => {
@@ -75,8 +75,8 @@ const PATH = "projects/11111111-1111-4111-8111-111111111111/abc/capture.png";
 
 describe("signedAttachmentUrl — la disposition", () => {
   it("affiche un vrai PNG, sans rien ajouter", async () => {
-    // Le risque de régression du sujet : la garde ne doit pas transformer
-    // toutes les images de l'app en téléchargements.
+    // The risk of regression of the subject: custody must not transform
+    // all images in the app for downloads.
     const storage = fakeStorage({ contentType: "image/png" });
     const url = await signedAttachmentUrl(storage.client, PATH);
     expect(url).toBe(`https://signed.test/${PATH}`);
@@ -84,8 +84,8 @@ describe("signedAttachmentUrl — la disposition", () => {
   });
 
   it("force la pièce jointe sur un objet servi en HTML", async () => {
-    // Le fichier s'appelle `.png` et la ligne dira `image/png` ; l'entête que
-    // le bucket porte, elle, dit `text/html`.
+    // The file is called `.png` and the line will say `image/png`; the header that
+    // the bucket carries, it says `text/html`.
     const storage = fakeStorage({ contentType: "text/html" });
     await signedAttachmentUrl(storage.client, PATH);
     expect(storage.calls[0].download).toBe(true);
@@ -98,8 +98,8 @@ describe("signedAttachmentUrl — la disposition", () => {
   });
 
   it("ferme la porte quand le type de l'objet est illisible", async () => {
-    // Un fichier qui se télécharge au lieu de s'afficher est un désagrément ;
-    // l'inverse est le sujet de ce ticket.
+    // A file that downloads instead of displaying is an inconvenience;
+    // the opposite is the subject of this ticket.
     const storage = fakeStorage({ infoFails: true });
     await signedAttachmentUrl(storage.client, PATH);
     expect(storage.calls[0].download).toBe(true);
@@ -109,13 +109,13 @@ describe("signedAttachmentUrl — la disposition", () => {
     const storage = fakeStorage({ contentType: "image/png" });
     await signedAttachmentUrl(storage.client, PATH, { download: "capture.png" });
     expect(storage.calls[0].download).toBe("capture.png");
-    // Rien à demander au storage : la disposition est déjà décidée.
+    // Nothing to ask for storage: the arrangement has already been decided.
     expect(storage.infoCalls()).toBe(0);
   });
 
   it("croit l'appelant qui tient déjà un type de confiance", async () => {
-    // Un fichier de page : son type a été déduit des OCTETS à l'envoi, la ligne
-    // fait donc foi et l'aller-retour `info()` n'a rien à apprendre.
+    // A page file: its type was deduced from the BYTES when sending, the line
+    // is therefore authentic and the `info()` round trip has nothing to learn.
     const storage = fakeStorage({ contentType: "text/html" });
     await signedAttachmentUrl(storage.client, PATH, { mimeType: "image/png" });
     expect(storage.calls[0].download).toBeUndefined();
@@ -142,8 +142,8 @@ describe("uploadAttachment — le type rangé", () => {
       mimeType: "image/png",
       data: Buffer.from("<!DOCTYPE html><script>alert(1)</script>"),
     });
-    // L'entête posée sur l'OBJET compte autant que la ligne : c'est elle que le
-    // bucket resservira, et c'est sur elle que se lit la garde de lecture.
+    // The header placed on the OBJECT counts as much as the line: it is this that the
+    // bucket will be used again, and it is on it that the reading guard is read.
     expect(storage.uploads[0].contentType).toBe("text/html");
     expect(storage.rows[0].mime_type).toBe("text/html");
   });

@@ -1,30 +1,30 @@
 "use client";
 
-// Adoption des lignes écrites AILLEURS.
+// Adoption of lines written ELSEWHERE.
 //
-// Le pont temps réel (lib/realtime-provider.tsx) recevait déjà chaque écriture
-// de tous mes projets — mais il n'en faisait qu'une INVALIDATION. Le ticket que
-// Numo vient de créer n'apparaissait donc pas à l'arrivée de la diffusion : il
-// apparaissait au retour du refetch qu'elle déclenche, et pour `/all` ce refetch
-// est `GET /api/me/board`, une route agrégée à plusieurs secondes (tous les
-// tickets de tous mes projets, les membres résolus par l'API admin, la
-// réconciliation des cycles). D'où le « ça met quelques secondes à apparaître »
-// — et le doute : est-ce que ça a marché ?
+// The real-time bridge (lib/realtime-provider.tsx) was already receiving each write
+// of all my projects — but he only made an INVALIDATION of them. The ticket that
+// Numo just created did not appear when the broadcast arrived: it
+// appeared upon return of the refetch that it triggers, and for `/all` this refetch
+// is `GET /api/me/board`, a route aggregated to several seconds (every
+// tickets from all my projects, members resolved by the admin API, the
+// cycle reconciliation). Hence the “it takes a few seconds to appear”
+// — and the doubt: did it work?
 //
-// Or la diffusion PORTE la ligne. Mesuré en prod le 2026-08-05, sonde en clé
-// service : les 30 colonnes de `issues`, valeurs identiques au caractère près à
-// ce que rend PostgREST, reçues 231 ms après le début de l'INSERT — soit en même
-// temps que la réponse HTTP de l'écriture elle-même. Il n'y a donc rien à
-// attendre du serveur pour l'AFFICHER. Ce module la traduit en écriture de
-// cache, exactement comme le retour d'un PATCH local (`mergeServerIssue`) : la
-// ligne est là à la milliseconde, et l'invalidation qui suit ne sert plus qu'à
-// réconcilier ce qu'elle ne dit pas (les catégories liées, le nombre de pièces
-// jointes, les vues dérivées calculées en SQL).
+// But diffusion CARRIES the line. Measured in production on 2026-08-05, probe in key
+// service: the 30 columns of `issues`, values ​​identical to the character except
+// what PostgREST renders, received 231 ms after the start of the INSERT — i.e. at the same
+// time for the HTTP response to write itself. So there is nothing to
+// wait for the server to DISPLAY it. This module translates it into writing
+// cache, exactly like the return of a local PATCH (`mergeServerIssue`): the
+// line is there at the millisecond, and the invalidation which follows only serves to
+// reconcile what it doesn't say (related categories, number of pieces
+// attached, derived views calculated in SQL).
 //
-// Ce qui NE doit pas passer par ici : l'écho de notre PROPRE écriture. Le
-// trigger diffuse au commit, typiquement avant que la réponse HTTP ne revienne
-// (mesuré : 4 ms avant) — réécrire la ligne d'alors par-dessus une seconde
-// édition déjà partie rouvrirait la course fermée par MIN-156. L'appelant écarte
+// What should NOT pass through here: the echo of our OWN writing. THE
+// trigger broadcast at commit, typically before the HTTP response comes back
+// (measured: 4 ms before) — rewrite the then line over a second
+// edition already gone would reopen the race closed by MIN-156. The appellant dismisses
 // ce cas (`issueWrites` / `objectiveWrites`.wasJustWritten).
 
 import type { QueryClient } from "@tanstack/react-query";
@@ -54,7 +54,7 @@ import type {
   SearchIndexObjective,
 } from "../types";
 
-/** Charge utile de `realtime.broadcast_changes()`, telle que le pont la reçoit. */
+/** Payload of `realtime.broadcast_changes()`, as the bridge receives it. */
 export interface RemoteChange {
   operation: "INSERT" | "UPDATE" | "DELETE";
   table: string;
@@ -62,16 +62,16 @@ export interface RemoteChange {
   old_record: Record<string, unknown> | null;
 }
 
-/** L'entité qu'un écho touche : les deux que l'app recopie dans ses caches. */
+/** The entity that an echo touches: the two that the app copies into its caches. */
 type Entity = "issue" | "objective";
 
-/** Ce qu'un écho demande aux caches. */
+/** What an echo asks from caches. */
 export type RemoteEcho =
-  /** La ligne diffusée, à compléter (si on l'a) ou à ajouter (sinon). */
+  /** The broadcast line, to be completed (if you have it) or added (otherwise). */
   | { entity: Entity; kind: "upsert"; id: string; row: Record<string, unknown> }
-  /** Corbeillée (soft delete = UPDATE `deleted_at`) ou purgée : la ligne s'en va. */
+  /** Trashed (soft delete = UPDATE `deleted_at`) or purged: the line goes away. */
   | { entity: Entity; kind: "remove"; id: string }
-  /** Un lien de catégorie posé ou retiré sur un ticket. */
+  /** A category link placed or removed on a ticket. */
   | { entity: "issue"; kind: "category"; id: string; categoryId: string; linked: boolean }
   | null;
 
@@ -81,11 +81,11 @@ function stringField(row: Record<string, unknown> | null, field: string): string
 }
 
 /**
- * Une ligne diffusée pour une table à corbeille : ce qu'elle demande aux caches.
+ * A row broadcast for a trash table: what it asks from the caches.
  *
- * Une suppression y est un UPDATE qui pose `deleted_at` (MIN-133) ; la purge
- * définitive, elle, est un vrai DELETE. Les deux font disparaître la ligne — la
- * RLS l'a déjà fait disparaître des lectures.
+ * A deletion is an UPDATE which sets `deleted_at` (MIN-133); the definitive purge
+ * is a real DELETE. Both make the line disappear — the
+ * RLS has already made it disappear from reads.
  */
 function trashAwareEcho(entity: Entity, change: RemoteChange): RemoteEcho {
   const row = change.record ?? change.old_record;
@@ -98,8 +98,8 @@ function trashAwareEcho(entity: Entity, change: RemoteChange): RemoteEcho {
 }
 
 /**
- * Ce que cet écho veut dire pour les caches, ou `null` s'il ne les concerne pas.
- * Fonction PURE — c'est elle que verrouille le test.
+ * What this echo means for caches, or `null` if it does not concern them.
+ * PURE function — this is what the test locks.
  */
 export function remoteEchoOf(change: RemoteChange): RemoteEcho {
   if (change.table === "issues") return trashAwareEcho("issue", change);
@@ -121,17 +121,17 @@ export function remoteEchoOf(change: RemoteChange): RemoteEcho {
 }
 
 /**
- * Inscrit l'écriture au registre des écritures en attente, DÉJÀ confirmée.
+ * Registers the write to the pending writes register, ALREADY confirmed.
  *
- * Sans ça, une réponse de `/api/me/board` partie avant la diffusion et arrivée
- * après elle réécrirait le cache sans le ticket — il apparaîtrait puis
- * disparaîtrait pour quelques secondes de plus. Le contrat du registre est
- * temporel : l'entrée s'applique aux réponses parties avant cet instant, puis se
- * purge d'elle-même (30 s).
+ * Without this, a response from `/api/me/board` that left before broadcast and arrived
+ * afterwards would rewrite the cache without the ticket — it would appear and then
+ * would disappear for a few more seconds. The register contract is
+ * temporal: the entry applies to responses left before this instant, then is
+ * purged by itself (30 s).
  *
- * `settle` SANS ligne serveur, volontairement : l'empreinte qu'il mémoriserait
- * sinon ferait passer une diffusion suivante pour l'écho d'une écriture à nous,
- * et lui ferait sauter l'invalidation qui réconcilie ce que la ligne ne dit pas.
+ * `settle` WITHOUT a server line, voluntarily: the fingerprint that it would memorize
+ * otherwise would pass off a subsequent broadcast as an echo of a write to us,
+ * and make it skip the invalidation that reconciles what the line doesn't say.
  */
 function remember<T extends { id: string }>(
   registry: PendingWrites<T>,
@@ -141,12 +141,12 @@ function remember<T extends { id: string }>(
 }
 
 /**
- * La ligne d'index de la palette, champ par champ.
+ * The index row of the palette, field by field.
  *
- * PAS un `...row` : l'index porte jusqu'à 4 000 lignes, il est tenu hors du
- * disque pour cette raison (lib/query-provider.tsx), et une ligne de ticket
- * complète y traînerait sa description et son plan (jusqu'à 64 Ko). La route
- * n'en sélectionne que ces colonnes — on n'en met pas d'autres.
+ * NOT a `...row`: the index carries up to 4000 rows, it is kept off the
+ * disk for this reason (lib/query-provider.tsx), and a row of complete ticket
+ * would drag its description and plan (up to 64 KB). The route
+ * only selects these columns — we don't put any others.
  */
 function indexIssueOf(row: Record<string, unknown>): SearchIndexIssue {
   const full = row as unknown as SearchIndexIssue;
@@ -175,7 +175,7 @@ function indexObjectiveOf(row: Record<string, unknown>): SearchIndexObjective {
   };
 }
 
-/** Un objectif écrit ailleurs, dans ses trois caches. */
+/** An objective written elsewhere, in its three caches. */
 function adoptObjective(
   queryClient: QueryClient,
   projectId: string,
@@ -199,11 +199,11 @@ function adoptObjective(
 }
 
 /**
- * Écrit dans les caches la ligne qu'un autre client (Numo, le MCP, un
- * coéquipier) vient d'écrire en base, sans attendre le moindre aller-retour.
+ * Writes in the caches the line that another client (Numo, the MCP, a
+ * teammate) has just written in base, without waiting for the slightest round trip.
  *
- * `projectId` vient du TOPIC, pas de la ligne : c'est le même projet, et les
- * lignes de liaison (`issue_categories`) ne le portent pas.
+ * `projectId` comes from the TOPIC, not from the line: it's the same project, and the
+ * connecting lines (`issue_categories`) do not carry it.
  */
 export function adoptRemoteRow(
   queryClient: QueryClient,
@@ -225,21 +225,21 @@ export function adoptRemoteRow(
     }
     case "upsert": {
       const cached = findCachedIssue(queryClient, projectId, echo.id);
-      // L'index de la palette, dans les deux cas : `patchIssueEverywhere` ne sait
-      // que patcher une ligne DÉJÀ indexée, et un ticket qui vient de naître n'y
-      // est par définition pas.
+      // The palette index, in both cases: `patchIssueEverywhere` does not know
+      // that patching a line ALREADY indexed, and a ticket that has just been created is not there
+      // is by definition not.
       upsertSearchIndexIssue(queryClient, indexIssueOf(echo.row));
       if (cached) {
-        // La ligne diffusée ne porte PAS `category_ids` (ni `resource_count`) :
-        // ce sont des agrégats que la route calcule. Ne pas les citer dans le
-        // patch, c'est justement les préserver.
+        // The broadcast line does NOT carry `category_ids` (nor `resource_count`):
+        // these are aggregates that the route calculates. Do not cite them in the
+        // patch is precisely to preserve them.
         const patch = echo.row as Partial<Issue>;
         patchIssueEverywhere(queryClient, projectId, echo.id, patch);
         remember(issueWrites, { kind: "patch", id: echo.id, patch });
         return;
       }
-      // Première fois qu'on voit ce ticket : ses liens de catégorie arriveront
-      // par leurs propres diffusions, et le refetch les portera de toute façon.
+      // First time seeing this ticket: its category links will arrive
+      // by their own broadcasts, and the refetch will carry them anyway.
       const issue = { category_ids: [], ...echo.row } as unknown as Issue;
       insertIssueEverywhere(queryClient, projectId, issue);
       remember(issueWrites, { kind: "insert", row: issue });
@@ -247,7 +247,7 @@ export function adoptRemoteRow(
     }
     case "category": {
       const cached = findCachedIssue(queryClient, projectId, echo.id);
-      if (!cached) return; // rien à patcher : la ligne du ticket suit ou suivra
+      if (!cached) return; // nothing to patch: the ticket line follows or will follow
       const current = cached.category_ids ?? [];
       const next = echo.linked
         ? current.includes(echo.categoryId)

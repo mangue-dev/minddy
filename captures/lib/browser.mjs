@@ -1,9 +1,9 @@
 /**
- * captures/ — contexte de navigateur déterministe.
+ * captures/ — deterministic browser context.
  *
- * Tout ce qui peut rendre deux captures différentes à contenu identique est
- * neutralisé ici : animations, horloge, police pas encore chargée, échelle.
- * Le savoir accumulé sur AutoKap tient dans ce fichier.
+ * Anything that can render two different captures with identical content is
+ * neutralized here: animations, clock, font not yet loaded, scale.
+ * The knowledge accumulated on AutoKap is contained in this file.
  */
 import { mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
@@ -14,11 +14,11 @@ import { loadEnv, ROOT } from "./env.mjs";
 export const AUTH_STATE = resolve(ROOT, "captures/.auth/demo.json");
 
 /**
- * Ouvre une page prête à photographier.
+ * Opens a page ready to photograph.
  *
  *   theme   "light" | "dark"
  *   locale  "fr" | "en"
- *   authed  true pour réutiliser la session du compte de démo
+ * authed true to reuse the demo account session
  */
 export async function openPage({
   theme = "light",
@@ -34,40 +34,40 @@ export async function openPage({
     deviceScaleFactor: CAPTURE.deviceScaleFactor,
     locale: locale === "fr" ? "fr-FR" : "en-US",
     colorScheme: theme,
-    // Coupe les animations CSS et les transitions Framer Motion à la source,
-    // au lieu d'attendre que l'image arrête de bouger.
+    // Cuts CSS animations and Framer Motion transitions at source,
+    // instead of waiting for the image to stop moving.
     reducedMotion: "reduce",
     storageState: authed ? AUTH_STATE : undefined,
   });
 
-  // Le thème est lu dans localStorage par ThemeInitScript AVANT le premier
-  // paint. On le pose donc avant le chargement, pas après.
+  // Theme is read into localStorage by ThemeInitScript BEFORE the first
+  // paint. We therefore place it before loading, not after.
   await context.addInitScript(
     ([themeValue, frozenIso]) => {
       try {
         localStorage.setItem("mangue-ui-theme", themeValue);
 
-        // Bandeau cookies : sans choix enregistré, il se pose en bas de TOUTES
-        // les pages et se retrouve sur toutes les captures. On répond
-        // « declined » plutôt qu'« accepted » — un robot de capture n'a rien à
-        // envoyer aux analytics. Clé et valeurs : lib/cookie-consent.ts.
+        // Cookies banner: without a saved choice, it is placed at the bottom of ALL
+        // the pages and is found on all the captures. We respond
+        // “declined” rather than “accepted” — a capture robot has nothing to
+        // send to analytics. Key and values: lib/cookie-consent.ts.
         localStorage.setItem("cookie_consent", "declined");
       } catch {}
 
-      // L'indicateur de développement de Next (la pastille « N » en bas à
-      // gauche, avec son compte d'anomalies) n'existe que sur `next dev` — donc
-      // jamais sur les cibles déployées, et systématiquement quand on
-      // photographie localhost. Il vit dans un `<nextjs-portal>` hors de l'arbre
-      // React, qu'aucun sélecteur applicatif n'atteint : on le masque par une
-      // règle globale, posée avant le premier paint.
+      // The Next development indicator (the “N” dot at the bottom
+      // left, with its anomaly count) only exists on `next dev` — so
+      // never on deployed targets, and systematically when we
+      // localhost photography. He lives in a `<nextjs-portal>` outside the tree
+      // React, which no application selector reaches: we hide it with a
+      // global rule, laid before the first paint.
       document.addEventListener("DOMContentLoaded", () => {
         const style = document.createElement("style");
         style.textContent = "nextjs-portal { display: none !important; }";
         document.head.appendChild(style);
       });
 
-      // Horloge figée : les dates relatives ("il y a 2 jours") deviennent
-      // stables d'un run à l'autre.
+      // Frozen clock: relative dates ("2 days ago") become
+      // stable from one run to the next.
       const fixed = new Date(frozenIso).getTime();
       const Real = Date;
       class Frozen extends Real {
@@ -96,25 +96,25 @@ export async function openPage({
 }
 
 /**
- * Noms de vues traduits UNE FOIS, à la création, puis figés en base.
+ * View names translated ONCE, at creation, then frozen in base.
  *
- * `ensureBaselineViews` (lib/server/views.ts) crée les vues de départ avec le
- * libellé traduit dans la langue de la requête, et l'écrit dans la table
- * `views`. Ce n'est donc plus une traduction mais une donnée : le compte de
- * démo ayant vu son premier board en français, la capture ANGLAISE affichait
- * un onglet « Toutes » au milieu d'une interface anglaise.
+ * `ensureBaselineViews` (lib/server/views.ts) creates the starting views with the
+ * wording translated into the query language, and written in the table
+ * `views`. It is therefore no longer a translation but a piece of data: the account of
+ * demo having seen its first board in French, the ENGLISH capture displayed
+ * an “All” tab in the middle of an English interface.
  *
- * On réécrit la réponse de l'API en vol, pour que le libellé corresponde à la
- * langue de la capture. Deux raisons de faire ça ici plutôt qu'en base :
- *   - aucune écriture en production, donc rien à défaire ni à surveiller ;
- *   - l'image montre ce qu'un vrai utilisateur de cette langue verrait — chez
- *     lui, la vue aurait été créée dans SA langue.
+ * We rewrite the API response in flight, so that the wording corresponds to the
+ * language of capture. Two reasons to do this here rather than in the base:
+ * - no writing in production, therefore nothing to undo or monitor;
+ * - the image shows what a real user of this language would see — at
+ * him, the view would have been created in HIS language.
  *
- * Seules les vues `custom` sont concernées : celles de type `my` sont
- * réétiquetées par l'interface d'après leur `kind`, jamais d'après leur nom.
+ * Only `custom` views are affected: those of type `my` are
+ * relabeled by the interface according to their `kind`, never according to their name.
  */
 export const DEFAULT_VIEW_NAMES = {
-  // Board.defaultViewName dans messages/<locale>.json
+  // Board.defaultViewName in messages/<locale>.json
   fr: "Toutes",
   en: "All",
 };
@@ -145,30 +145,30 @@ async function alignStoredViewNames(context, locale) {
 }
 
 /**
- * Attend que la page soit VRAIMENT prête. Trois couches, dans cet ordre.
- * `networkidle` est volontairement absent : il ne converge jamais sur une app
- * avec du Realtime ouvert en permanence, ce qui est le cas de minddy.
+ * Wait until the page is REALLY ready. Three layers, in that order.
+ * `networkidle` is deliberately absent: it never converges on an app
+ * with Realtime permanently open, which is the case with minddy.
  */
 export async function settle(page, { expect } = {}) {
   await page.waitForLoadState("domcontentloaded");
 
-  // 1. L'ancre sémantique : un élément qui prouve que l'écran voulu est là.
+  // 1. The semantic anchor: an element which proves that the desired screen is there.
   if (expect) await page.locator(expect).first().waitFor({ state: "visible", timeout: 15_000 });
 
-  // 2. Aucun indicateur de chargement visible.
+  // 2. No visible charging indicator.
   await page
     .locator('[aria-busy="true"], [role="progressbar"], .animate-pulse')
     .first()
     .waitFor({ state: "hidden", timeout: 10_000 })
     .catch(() => {});
 
-  // 3. Polices chargées : sans ça, la première capture d'une session sort
-  // avec la police de repli et un métrage différent.
+  // 3. Loaded fonts: without this, the first capture of a session is output
+  // with the fallback font and different footage.
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(150);
 }
 
-/** Enregistre une capture, en créant l'arborescence au besoin. */
+/** Saves a capture, building the tree as needed. */
 export async function shoot(target, outPath, options = {}) {
   await mkdir(dirname(outPath), { recursive: true });
   await target.screenshot({ path: outPath, animations: "disabled", ...options });

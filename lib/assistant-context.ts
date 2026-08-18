@@ -1,11 +1,11 @@
-// Le contexte de Numo, vu comme une LISTE de pilules.
+// The context of Numo, seen as a LIST of pills.
 //
-// `AssistantPageContext` est un objet plat (un ticket ouvert, une vue, un
-// cycle…) : pratique à envoyer, illisible à afficher. Ce module en fait des
-// pilules — une par élément de contexte — et sait refaire le chemin inverse :
-// quand l'utilisateur éteint l'œil d'une pilule, on retire du contexte envoyé
-// EXACTEMENT les champs que cette pilule représentait. Le message persiste donc
-// ce que Numo a réellement vu, pas ce que la page publiait.
+// `AssistantPageContext` is a flat object (an open ticket, a view, a
+// cycle…): practical to send, illegible to display. This module makes
+// pills — one per context element — and knows how to go back the other way:
+// when the user turns off the eye of a pill, we remove the sent context
+// EXACTLY the fields that this pill represented. The message therefore persists
+// what Numo actually saw, not what the page was posting.
 
 import type { useTranslations } from "next-intl";
 import { orbSeedOr } from "@/lib/project-orb-colors";
@@ -27,50 +27,50 @@ export type AssistantContextKind =
   | "member";
 
 export interface AssistantContextChip {
-  /** Identité stable de la pilule — c'est elle qu'on désélectionne. */
+  /** Stable identity of the pill — this is what we deselect. */
   key: string;
   kind: AssistantContextKind;
-  /** Ce qui est écrit sur la pilule. */
+  /** What is written on the pill. */
   label: string;
-  /** Infobulle : le détail que le libellé a laissé de côté. */
+  /** Tooltip: the detail that the wording left out. */
   tooltip: string;
   /**
-   * Membres : la graine du portrait. Projets : l'id, graine de l'orbe.
-   * Dans les deux cas la pilule montre la VRAIE figure de la chose plutôt
-   * qu'une icône générique.
-   */
+ * Members: the seed of the portrait. Projects: the id, seed of the orb.
+ * In both cases the pill shows the REAL figure of the thing rather
+ * than a generic icon.
+ */
   avatarSeed?: string;
-  /** Projets : le favicon importé, quand le projet en a un. */
+  /** Projects: the imported favicon, when the project has one. */
   iconUrl?: string | null;
   /** Objectifs : leur couleur — celle que porte leur cible, ici comme ailleurs. */
   color?: string | null;
-  /** Épinglé à la main (bouton @) — retirable, là où l'ambiant s'éteint. */
+  /** Hand pinned (@ button) — removeable, where ambient turns off. */
   pinned?: boolean;
 }
 
-/** Clé de pilule d'un contexte épinglé. */
+/** Pill key of a pinned context. */
 export function pinnedKey(item: AssistantPinnedContext): string {
   return `pinned:${item.kind}:${item.id}`;
 }
 
-/** Le traducteur du namespace Assistant. Sans le namespace, TypeScript renonce
-    (TS2589) et ne vérifie plus rien — voir CLAUDE.md. */
+/** The Assistant namespace translator. Without the namespace, TypeScript gives up
+ (TS2589) and no longer checks anything — see CLAUDE.md. */
 type Translate = ReturnType<typeof useTranslations<"Assistant">>;
 
 /**
- * Les pilules d'un contexte, dans l'ordre où elles se lisent : le projet
- * d'abord (le plus large), puis ce qui est ouvert, puis la vue et le cycle,
- * puis ce que l'utilisateur a épinglé lui-même.
+ * A context's pills, in the order they read: project
+ * first (largest), then what's open, then view and cycle,
+ * then what the user pinned themselves.
  *
- * `scopeProjectId` est la portée de la conversation : sur une page sans
- * contexte ambiant, c'est encore le projet courant, et il mérite sa pilule.
+ * `scopeProjectId` is the scope of the conversation: on a page without
+ * ambient context, it is still the current project, and it deserves its pill.
  */
 export function contextChips(
   ctx: AssistantPageContext | null | undefined,
   opts: {
     t: Translate;
     scopeProjectId?: string | null;
-    /** Résout un id de projet (nom + icône) via le contexte projets du client. */
+    /** Resolves a project id (name + icon) via the client projects context. */
     project?: (
       id: string,
     ) =>
@@ -97,8 +97,8 @@ export function contextChips(
   }
 
   if (ctx?.issueId) {
-    // L'identifiant seul : court, stable, il suffit à reconnaître le ticket.
-    // Le titre part dans l'infobulle.
+    // The identifier alone: ​​short, stable, it is enough to recognize the ticket.
+    // The title goes into the tooltip.
     chips.push({
       key: "issue",
       kind: "issue",
@@ -106,8 +106,8 @@ export function contextChips(
       tooltip: ctx.issueTitle ?? t("contextIssue"),
     });
   } else if (ctx?.issueIds && ctx.issueIds.length > 0) {
-    // Sélection groupée d'un board : le compte suffit sur la pilule, la liste
-    // des identifiants tient dans l'infobulle.
+    // Group selection of a board: the account is enough on the pill, the list
+    // identifiers fit in the tooltip.
     chips.push({
       key: "issues",
       kind: "issues",
@@ -156,8 +156,8 @@ export function contextChips(
   }
 
   if (ctx?.viewId || ctx?.onglet) {
-    // Le nom de la vue prime ; l'onglet ne concerne que les messages persistés
-    // avant les vues v2 (un seul onglet depuis).
+    // The name of the view takes precedence; the tab only concerns persistent messages
+    // before v2 views (only one tab since).
     const label =
       ctx.viewName ??
       (ctx.onglet === "my" ? t("contextBoardMy") : t("contextBoardAll"));
@@ -175,8 +175,8 @@ export function contextChips(
   }
 
   for (const item of ctx?.pinned ?? []) {
-    // Épinglé ou ambiant, un projet garde la même figure : son orbe (ou son
-    // favicon), résolu ici comme celui de la portée.
+    // Pinned or ambient, a project keeps the same figure: its orb (or its
+    // favicon), resolved here as the scope one.
     const project = item.kind === "project" ? opts.project?.(item.id) : undefined;
     chips.push({
       key: pinnedKey(item),
@@ -197,10 +197,10 @@ export function contextChips(
   return chips;
 }
 
-/** Les champs que chaque pilule ambiante représente — ce qu'éteindre l'œil retire. */
+/** The fields that each ambient pill represents — what turning off the eye removes. */
 const FIELDS_BY_KEY: Record<string, (keyof AssistantPageContext)[]> = {
   project: ["projectId"],
-  // La PR suit son ticket : elle n'existe dans le prompt que rattachée à lui.
+  // The PR follows its ticket: it only exists in the prompt attached to it.
   issue: [
     "issueId",
     "issueIdentifier",
@@ -219,9 +219,9 @@ const FIELDS_BY_KEY: Record<string, (keyof AssistantPageContext)[]> = {
 };
 
 /**
- * Le contexte réellement envoyé : celui de la page, moins les pilules éteintes.
- * Rend `null` quand il ne reste rien — l'API n'attache alors aucun bloc de
- * contexte au prompt.
+ * The context actually sent: that of the page, minus the extinguished pills.
+ * Returns `null` when there is nothing left — the API then does not attach any block of
+ * context to the prompt.
  */
 export function applyContextSelection(
   ctx: AssistantPageContext | null | undefined,
@@ -246,8 +246,8 @@ export function applyContextSelection(
 }
 
 /**
- * Le contexte de la page enrichi de la portée (le projet courant) et des
- * éléments épinglés — la forme complète, avant désélection.
+ * The context of the page enriched with the scope (the current project) and the
+ * pinned elements — the full form, before deselection.
  */
 export function withPinnedContext(
   ctx: AssistantPageContext | null | undefined,

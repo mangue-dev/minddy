@@ -1,195 +1,195 @@
-# Sous-traitants et transferts hors UE — minddy
+# Subcontractors and transfers outside the EU — minddy
 
-*Article 28 du RGPD. Document interne, à présenter en cas de contrôle.*
+*Article 28 of the GDPR. Internal document, to be presented in the event of an inspection.*
 
-Chaque prestataire qui traite des données personnelles pour le compte de minddy
-est un sous-traitant au sens de l'article 28. Il faut, pour chacun : un contrat
-de sous-traitance (DPA) accepté, une base de transfert valide s'il traite hors
-de l'Union européenne, et la garantie qu'il n'agit que sur instruction.
+Each service provider who processes personal data on behalf of minddy
+is a subcontractor within the meaning of article 28. For each person, you need: a contract
+of subcontracting (DPA) accepted, a valid transfer basis if it deals outside
+of the European Union, and the guarantee that it only acts on instruction.
 
-**Dernière revue : 6 août 2026.** À reprendre à chaque ajout de prestataire,
-et au moins une fois par an.
+**Last reviewed: August 6, 2026.** To be repeated each time a service provider is added,
+and at least once a year.
 
-> **⚠️ Colonne « DPA » à confirmer.** Le tableau ci-dessous recense les DPA que
-> chaque prestataire publie, **pas** l'état de leur acceptation sur les comptes
-> minddy. La plupart s'acceptent au moment de la souscription ou depuis un
-> écran dédié du tableau de bord (Supabase → Organization → Legal Documents,
+> **⚠️ “DPA” column to be confirmed.** The table below lists the DPAs that
+> each service provider publishes, **not**, the status of their acceptance on the accounts
+>mindy. Most are accepted at the time of subscription or from a
+> dedicated dashboard screen (Supabase → Organization → Legal Documents,
 > Vercel → Team Settings → Legal, Stripe → Settings → Legal, PostHog → Settings
-> → Organization, Resend → Settings → Legal). **Passer sur chaque compte, signer
-> ce qui ne l'est pas, puis remplacer « à confirmer » par la date
-> d'acceptation.** Un DPA non signé est le point qu'un contrôle relève en
-> premier, et c'est la seule ligne de ce dossier qui ne peut pas se remplir
-> depuis le code.
+> → Organization, Resend → Settings → Legal). **Go to each account, sign
+> what is not, then replace “to be confirmed” with the date
+> acceptance.** An unsigned DPA is the point that a control notes in
+> first, and this is the only line in this file that cannot be filled
+> from the code.
 
 ---
 
-## Tableau récapitulatif
+## Summary table
 
-| Sous-traitant | Rôle | Données traitées | Hébergement | Hors UE | Base de transfert | DPA |
+| Subcontractor | Role | Data processed | Accommodation | Outside the EU | Transfer base | DPA |
 | --- | --- | --- | --- | --- | --- | --- |
-| **Supabase** | Base de données, authentification, stockage de fichiers | Toutes les données applicatives | UE — Irlande (`eu-west-1`) | Non | — | [DPA](https://supabase.com/legal/dpa) — à confirmer |
-| **Vercel** | Hébergement de l'application, exécution des fonctions, bacs à sable de l'agent | Données en transit ; journaux de requêtes | États-Unis, avec points de présence mondiaux | Oui | CCT + DPF | [DPA](https://vercel.com/legal/dpa) — à confirmer |
-| **Stripe** | Paiement et abonnements | E-mail, identifiants client et abonnement, données de paiement (chez Stripe uniquement) | Irlande (entité UE) + États-Unis | Oui | CCT intragroupe | [DPA](https://stripe.com/legal/dpa) — à confirmer |
-| **OpenRouter** | Routage des appels aux modèles de langage | Contenu transmis aux modèles (tickets, code, messages, **retours déposés sur un board public et audio de leur dictée**) | États-Unis | Oui | CCT | [Politique](https://openrouter.ai/privacy) — à confirmer |
-| **PostHog** | Mesure d'audience | Événements d'usage, identifiant de mesure | UE — Allemagne (`eu.posthog.com`) | Non | — | [DPA](https://posthog.com/dpa) — à confirmer |
-| **Resend** | E-mails transactionnels | Adresse de destination, contenu du message | États-Unis | Oui | CCT | [DPA](https://resend.com/legal/dpa) — à confirmer |
-| **GitHub** | Connexion aux dépôts, *pull requests* de l'agent | Identifiant du compte, contenu du dépôt relié | États-Unis | Oui | CCT (Microsoft) | [DPA](https://github.com/customer-terms/github-data-protection-agreement) — à confirmer |
-| **GitLab** | Connexion aux dépôts, *merge requests* de l'agent | Identifiant du compte, contenu du dépôt relié | États-Unis ou instance auto-hébergée du client | Oui | CCT | [DPA](https://about.gitlab.com/handbook/legal/data-processing-agreement/) — à confirmer |
+| **Supabase** | Database, authentication, file storage | All application data | EU — Ireland (`eu-west-1`) | No | — | [DPA](https://supabase.com/legal/dpa) — to be confirmed |
+| **Vercel** | Application hosting, function execution, agent sandboxes | Data in transit; query logs | United States, with global points of presence | Yes | CCT + DPF | [DPA](https://vercel.com/legal/dpa) — to be confirmed |
+| **Stripe** | Payment and subscriptions | Email, customer and subscription IDs, payment data (at Stripe only) | Ireland (EU entity) + United States | Yes | Intra-group CCT | [DPA](https://stripe.com/legal/dpa) — to be confirmed |
+| **OpenRouter** | Routing calls to language models | Content transmitted to the models (tickets, code, messages, **feedback posted on a public board and audio of their dictation**) | United States | Yes | CCT | [Policy](https://openrouter.ai/privacy) — TBC |
+| **PostHog** | Audience measurement | Usage events, measurement identifier | EU — Germany (`eu.posthog.com`) | No | — | [DPA](https://posthog.com/dpa) — to be confirmed |
+| **Resend** | Transactional Emails | Destination address, message content | United States | Yes | CCT | [DPA](https://resend.com/legal/dpa) — to be confirmed |
+| **GitHub** | Connection to agent repositories, *pull requests* | Account identifier, content of linked deposit | United States | Yes | CCT (Microsoft) | [DPA](https://github.com/customer-terms/github-data-protection-agreement) — to be confirmed |
+| **GitLab** | Connecting to agent repositories, *merge requests* | Account identifier, content of linked deposit | United States or customer self-hosted instance | Yes | CCT | [DPA](https://about.gitlab.com/handbook/legal/data-processing-agreement/) — to be confirmed |
 
-**CCT** : clauses contractuelles types de la Commission européenne (décision
-2021/914). **DPF** : *EU–US Data Privacy Framework* (décision d'adéquation du
-10 juillet 2023).
+**CCT**: standard contractual clauses of the European Commission (decision
+2021/914). **DPF**: *EU–US Data Privacy Framework* (adequacy decision of
+July 10, 2023).
 
 ---
 
-## Détail par sous-traitant
+## Detail by subcontractor
 
 ### Supabase
 
-*Supabase Inc. — instance hébergée dans la région Union européenne (Irlande).*
+*Supabase Inc. — instance hosted in the European Union (Ireland) region.*
 
-Le sous-traitant principal : il porte la base PostgreSQL, l'authentification et
-les buckets de fichiers. Toutes les données applicatives y résident.
+The main subcontractor: it carries the PostgreSQL database, authentication and
+file buckets. All application data resides there.
 
-- **Données hors UE** : aucune. L'instance est provisionnée en `eu-west-1` et le
-  reste ; le choix de région est figé à la création du projet.
-- **Sous-traitants ultérieurs** : AWS (infrastructure de la région irlandaise).
-- **Sécurité** : chiffrement au repos, sauvegardes quotidiennes avec restauration
-  à un instant donné, `Row Level Security` activée sur toutes les tables
-  applicatives.
-- **À la fin du contrat** : suppression du projet et des sauvegardes.
+- **Data outside the EU**: none. The instance is provisioned as `eu-west-1` and the
+  remainder; the choice of region is fixed at the creation of the project.
+- **Subprocessors**: AWS (Irish region infrastructure).
+- **Security**: encryption at rest, daily backups with restoration
+  at a given time, `Row Level Security` activated on all tables
+  applications.
+- **At the end of the contract**: deletion of the project and backups.
 
 ### Vercel
 
-*Vercel Inc. — hébergement de l'application Next.js et exécution des bacs à sable
-de l'agent de code.*
+*Vercel Inc. — hosting Next.js application and running sandboxes
+of the code agent.*
 
-Vercel exécute le code applicatif : les données transitent par ses fonctions,
-elles n'y sont pas stockées durablement. Les journaux de requêtes (URL, code de
-réponse, durée, adresse IP) y sont conservés selon la rétention du plan.
+Vercel executes the application code: the data passes through its functions,
+they are not stored there permanently. Query logs (URL, code
+response, duration, IP address) are kept there according to the retention of the plan.
 
-- **Transfert hors UE** : oui — CCT et adhésion au *Data Privacy Framework*.
-- **Bacs à sable de l'agent** : une micro-VM par run, où le code du dépôt relié
-  est cloné. Elle n'est pas éphémère au sens strict : la session est coupée après
-  ~5 min d'inactivité, mais son **filesystem est conservé en snapshot pendant
-  7 jours** (`SANDBOX_SNAPSHOT_EXPIRATION_MS`), pour qu'une conversation reprenne
-  à chaud. Passé ce délai, le snapshot est effacé et le dépôt re-cloné au besoin.
-- **À surveiller** : la région d'exécution. Les fonctions peuvent être fixées sur
-  une région européenne (`fra1`, `cdg1`) ; les bacs à sable, **non** — Vercel
-  Sandbox n'existe qu'en `iad1` (États-Unis). Le point est ouvert pour les
-  fonctions, fermé pour les bacs à sable tant que l'offre ne change pas.
+- **Transfer outside the EU**: yes — CCT and adherence to the *Data Privacy Framework*.
+- **Agent sandboxes**: one micro-VM per run, where the code from the linked repository
+  is cloned. It is not ephemeral in the strict sense: the session is cut off after
+  ~5 min of inactivity, but its **filesystem is kept in snapshot for
+  7 days** (`SANDBOX_SNAPSHOT_EXPIRATION_MS`), for a conversation to resume
+  hot. After this period, the snapshot is deleted and the repository re-cloned if necessary.
+- **To watch**: the execution region. Functions can be set to
+  a European region (`fra1`, `cdg1`); sandboxes, **no** — Vercel
+  Sandbox only exists in `iad1` (United States). The point is open for
+  functions, closed for sandboxes as long as the offer does not change.
 
 ### Stripe
 
-*Stripe Payments Europe Ltd (Irlande), avec Stripe Inc. comme sous-traitant
-ultérieur.*
+*Stripe Payments Europe Ltd (Ireland), with Stripe Inc. as subcontractor
+later.*
 
-- **Aucune donnée bancaire ne transite par minddy** : la saisie se fait sur des
-  pages hébergées par Stripe (Checkout, portail client). minddy ne conserve que
-  des identifiants opaques (`cus_…`, `sub_…`) et l'état de l'abonnement.
-- **Transfert hors UE** : oui, intragroupe, encadré par CCT.
-- **Certification** : PCI-DSS niveau 1.
+- **No banking data passes through minddy**: the entry is made on
+  pages hosted by Stripe (Checkout, customer portal). minddy only keeps
+  opaque identifiers (`cus_…`, `sub_…`) and subscription status.
+- **Transfer outside the EU**: yes, intra-group, supervised by CCT.
+- **Certification**: PCI-DSS level 1.
 
-### OpenRouter et fournisseurs de modèles
+### OpenRouter and template providers
 
-*OpenRouter, Inc. — passerelle unique vers les fournisseurs de modèles.*
+*OpenRouter, Inc. — single gateway to model providers.*
 
-Le contenu transmis aux modèles (texte des tickets, commentaires, extraits de
-code lus par l'agent) sort du périmètre européen à cet endroit. C'est le
-transfert le plus sensible du service et il doit être annoncé comme tel dans la
-politique de confidentialité.
+The content transmitted to the models (ticket text, comments, extracts from
+code read by the agent) leaves the European perimeter at this location. This is the
+most sensitive transfer of the service and it must be announced as such in the
+privacy policy.
 
-**Y compris les retours des boards publics** (traitement n° 6), et c'est le cas
-qui demande le plus d'attention : les personnes concernées ne sont pas des
-clients de minddy mais ceux de son client, elles n'ont accepté aucune condition
-d'utilisation, et le texte qu'elles écrivent part au modèle AVANT toute revue —
-donc avant que quoi que ce soit ait pu repérer qu'il contient des données
-personnelles. Trois appels au maximum par retour : la revue (modération,
-catégorisation, dédoublonnage, traduction), le calcul de l'embedding, et pour une
-dictée la transcription de l'audio puis la mise en forme du formulaire. Aucun de
-ces appels ne porte l'identité de l'auteur.
+**Including feedback from public boards** (processing #6), and this is the case
+which requires the most attention: the people concerned are not
+minddy's clients but those of her client, they did not accept any conditions
+of use, and the text they write goes to the model BEFORE any review —
+so before anything could spot that it contains data
+personal. Three calls maximum per return: the review (moderation,
+categorization, deduplication, translation), the calculation of embedding, and for a
+dictated the transcription of the audio and then formatted the form. None of
+these calls do not bear the identity of the author.
 
-- **Transfert hors UE** : oui — CCT.
-- **Rétention chez le fournisseur : variable, et hors du contrôle de minddy.**
-  OpenRouter route l'appel vers le fournisseur du modèle retenu, qui applique sa
-  propre politique — certains journalisent les prompts, certains les conservent,
-  certains s'en servent pour améliorer leurs modèles. Le modèle étant choisi par
-  l'utilisateur, **aucune garantie de rétention nulle ne peut être donnée**, et
-  il ne faut pas en écrire une : une promesse de confidentialité qu'on ne tient
-  pas est un manquement de plus, pas une précaution.
-- **Sous-traitants ultérieurs** : les fournisseurs de modèles routés par
-  OpenRouter. Leur liste dépend des modèles ouverts au catalogue.
-- **Clés apportées par l'utilisateur (BYOK)** : quand l'utilisateur configure sa
-  propre clé, l'appel part vers *son* fournisseur, sous *sa* responsabilité
-  contractuelle. minddy ne stocke que la clé chiffrée.
+- **Transfer outside the EU**: yes — CCT.
+- **Retention with the supplier: variable, and beyond the control of minddy.**
+  OpenRouter routes the call to the provider of the selected model, which applies its
+  own policy — some journal the prompts, some keep them,
+  some use it to improve their models. The model being chosen by
+  the user, **no guarantee of retention can be given**, and
+  you should not write one: a promise of confidentiality that cannot be kept
+  not is another failure, not a precaution.
+- **Sub-processors**: model providers routed by
+  OpenRouter. Their list depends on the models open in the catalog.
+- **Keys provided by the user (BYOK)**: when the user configures his
+  own key, the call goes to *its* provider, under *its* responsibility
+  contractual. minddy only stores the encrypted key.
 
 ### PostHog
 
-*PostHog, Inc. — instance européenne `eu.posthog.com` (hébergement Allemagne).*
+*PostHog, Inc. — European instance `eu.posthog.com` (Germany hosting).*
 
-- **Transfert hors UE** : aucun, l'instance européenne est utilisée.
-- **Mesure navigateur** : avant le choix, elle est anonyme, sans cookie et
-  conservée uniquement en mémoire ; le consentement autorise la persistance.
-  Un refus déclenche `opt_out_capturing()` et coupe toute émission du navigateur.
-- **Événements serveur** : des faits techniques nécessaires à la mesure du
-  service (création via MCP, webhook, cron) peuvent être émis sans dépendre du
-  bandeau, au titre de l'intérêt légitime. Ils ne lisent ni n'écrivent le terminal.
-- **Minimisation** : client et serveur passent par un catalogue fermé et par
-  `lib/analytics-sanitize.ts` ; aucune donnée personnelle en texte libre, pas
-  d'adresse IP conservée, autocapture et enregistrement de session désactivés.
+- **Transfer outside the EU**: none, the European body is used.
+- **Browser measurement**: before the choice, it is anonymous, without cookies and
+  stored only in memory; consent authorizes persistence.
+  A refusal triggers `opt_out_capturing()` and cuts all broadcasts from the browser.
+- **Server events**: technical facts necessary to measure the
+  service (creation via MCP, webhook, cron) can be issued without depending on the
+  banner, under legitimate interest. They do not read or write the terminal.
+- **Minimization**: client and server go through a closed catalog and through
+  `lib/analytics-sanitize.ts` ; no personal data in free text, no
+  IP address retained, autocapture and session recording disabled.
 
 ### Resend
 
-*Resend, Inc. — envoi des e-mails transactionnels (invitations, notifications,
-codes de vérification des boards publics).*
+*Resend, Inc. — sending transactional emails (invitations, notifications,
+public board verification codes).*
 
-- **Transfert hors UE** : oui — CCT.
-- **Données** : adresse de destination et contenu du message. Aucun e-mail
-  commercial n'est envoyé, donc aucune liste de diffusion n'est constituée.
+- **Transfer outside the EU**: yes — CCT.
+- **Data**: destination address and message content. No email
+  commercial is not sent, therefore no mailing list is created.
 
-### GitHub et GitLab
+### GitHub and GitLab
 
-*Sollicités uniquement sur action explicite de l'utilisateur, lorsqu'il relie un
-dépôt à un projet.*
+*Requested only upon explicit action by the user, when he links a
+deposit to a project.*
 
-- **Données** : identifiant du compte, dépôts autorisés, contenu du dépôt lu et
-  écrit par l'agent.
-- **Jetons d'accès** : chiffrés au repos en base, portée limitée aux dépôts
-  explicitement reliés, révocables depuis les réglages du compte.
-- **Transfert hors UE** : oui — CCT.
-
----
-
-## Ce qui n'est pas de la sous-traitance
-
-- **L'utilisateur qui invite quelqu'un sur son projet** n'est pas un
-  sous-traitant : il agit comme responsable de traitement pour le contenu qu'il
-  crée, minddy étant à cet égard *son* sous-traitant (voir la section « Rôle de
-  sous-traitant » de la politique de confidentialité).
-- **Les fournisseurs de connexion tierce (Google, GitHub)** utilisés pour
-  s'authentifier sont des responsables de traitement autonomes pour leur propre
-  service ; minddy ne reçoit d'eux que l'identité minimale nécessaire à la
-  création du compte.
+- **Data**: account identifier, authorized deposits, content of the deposit read and
+  written by the agent.
+- **Access tokens**: encrypted at rest in base, scope limited to deposits
+  explicitly linked, revocable from account settings.
+- **Transfer outside the EU**: yes — CCT.
 
 ---
 
-## Procédure d'ajout d'un sous-traitant
+## What is not subcontracting
 
-1. Vérifier qu'il propose un DPA conforme à l'article 28 et l'accepter.
-2. Déterminer l'hébergement réel des données et, s'il est hors UE, la base de
-   transfert (adéquation, CCT, DPF).
-3. Ajouter une ligne au tableau ci-dessus et une section de détail.
-4. Ajouter le traitement concerné au registre interne.
-5. Mettre à jour la liste des sous-traitants dans la politique de confidentialité
-   publique (clé `transfersProcessors` des namespaces `Privacy`, en français et
-   en anglais) — cette liste est **nominative**, un prestataire non cité ne peut
-   pas être considéré comme porté à la connaissance des personnes.
-6. Mettre à jour `lastModified` de la clé `privacy` dans `lib/public-routes.ts`.
+- **The user who invites someone to his project** is not a
+  subcontractor: he acts as data controller for the content he
+  creates, minddy being in this regard *its* subcontractor (see the section “Role of
+  subcontractor” of the privacy policy).
+- **Third-party connection providers (Google, GitHub)** used to
+  authenticate are autonomous data controllers for their own
+  service; minddy only receives from them the minimal identity necessary for
+  creation of the account.
 
-**Cas particulier des fournisseurs de modèles.** La politique de confidentialité
-les nomme aussi (clé `aiProvidersGateway` : DeepSeek, Anthropic, OpenAI,
-Google). Cette liste suit le catalogue réel — `lib/agent-models.ts` pour les
-modèles de l'agent, `lib/ai-model-config.ts` pour les tâches de fond, la dictée
-et les embeddings. **Ouvrir un modèle d'un fournisseur non cité, c'est ajouter un
-destinataire non déclaré** : la clé i18n bouge dans le même commit que le
-catalogue.
+---
+
+## Procedure for adding a subcontractor
+
+1. Check that it offers a DPA that complies with article 28 and accept it.
+2. Determine the actual hosting of the data and, if outside the EU, the basis of
+   transfer (adequacy, CCT, DPF).
+3. Add a row to the table above and a detail section.
+4. Add the processing concerned to the internal register.
+5. Update the list of subcontractors in the privacy policy
+   public (key `transfersProcessors` of namespaces `Privacy`, in French and
+   in English) — this list is **nominative**, a service provider not mentioned cannot
+not be considered as brought to the attention of individuals.
+6. Update `lastModified` of key `privacy` in `lib/public-routes.ts`.
+
+**Special case of model suppliers.** Privacy policy
+also names them (key `aiProvidersGateway`: DeepSeek, Anthropic, OpenAI,
+Google). This listing follows the actual catalog — `lib/agent-models.ts` for
+agent models, `lib/ai-model-config.ts` for background tasks, dictation
+and embeddings. **Opening a model from an unnamed supplier means adding a
+undeclared recipient**: the i18n key moves in the same commit as the
+catalog.

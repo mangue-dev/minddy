@@ -1,27 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-224 — le chien de garde ne PRÉSUME pas, il constate.
+ * MIN-224 — the watchdog does not PRESUME, it observes.
  *
- * CE QU'IL REMPLACE, et pourquoi le remplacement n'est pas cosmétique.
- * Le balayeur par présomption (retiré en MIN-225) déclarait mort tout run
- * `running` silencieux depuis vingt
- * minutes, puis lui volait son claim. C'était tenable tant qu'un chunk durait
- * cinq minutes. Un tour qui vit dans la microVM peut travailler des heures sans
- * écrire un event — un `npm test` qui dure, un modèle qui réfléchit — et le vieux
- * balayeur le tuerait en pleine santé, pour relancer une SECONDE boucle sur la
- * même microVM. Le second checkpoint écraserait le premier.
+ * WHAT IT REPLACES, and why the replacement is not cosmetic.
+ * The presumptive sweeper (removed in MIN-225) declared everything dead run
+ * `running` silent for twenty
+ * minutes, then stole his claim. This was tenable as long as a chunk lasted
+ * five minutes. A tower that lives in the microVM can work for hours without
+ * writing an event — a `npm test` that lasts, a model that thinks — and the old
+ * sweeper would kill it at full health, to restart a SECOND loop on the
+ * same microVM. The second checkpoint would overwrite the first.
  *
- * Le nouveau demande à la plateforme si le process vit. Trois réponses, et les
- * deux qui ne sont pas « mort » ne font RIEN. C'est ça que ces tests gardent : un
- * chien de garde qui conclut sur un silence de l'API est pire que pas de chien de
- * garde du tout.
+ * The new one asks the platform if the process is alive. Three answers, and the
+ * two that are not "dead" do NOTHING. This is what these tests keep: a
+ * watchdog which concludes with silence of the API is worse than no watchdog of
+ * guard at all.
  */
 
 const h = vi.hoisted(() => ({
-  /** Ce que la plateforme répond : true vivant, false mort, null « on ne sait pas ». */
+  /** What the platform responds to: true alive, false dead, null “we don’t know”. */
   alive: null as boolean | null,
-  /** Le stamp est refusé : quelqu'un a conclu le run entre-temps. */
+  /** The stamp is refused: someone has completed the run in the meantime. */
   stampRefused: false,
   probes: [] as Array<{ sandbox: string; command: string }>,
   events: [] as Array<{ runId: string; type: string; payload: Record<string, unknown> }>,
@@ -30,12 +30,12 @@ const h = vi.hoisted(() => ({
   revoked: [] as string[],
   rows: [] as Array<Record<string, unknown>>,
   updates: [] as Array<Record<string, unknown>>,
-  /** Les lignes de compute écrites — la moitié de la facture que personne
-   *  d'autre ne tient sur ce chemin. */
+  /** The compute lines written — the half of the bill that no one
+ * else holds on this path. */
   compute: [] as Array<Record<string, unknown>>,
-  /** Ce que le ledger répond ; `null` = la lecture a échoué. */
+  /** What the ledger responds to; `null` = read failed. */
   ledgerSpend: null as number | null,
-  /** L'ordre des deux gestes de facturation, pour garder « le compute d'abord ». */
+  /** The order of the two billing gestures, to keep “compute first”. */
   order: [] as string[],
 }));
 
@@ -86,7 +86,7 @@ vi.mock("./execute", () => ({ executeAgentRun: vi.fn(async () => "completed") })
 
 const { reapDeadVmRuns } = await import("./drain");
 
-/** Client Supabase minimal : le SELECT du chien de garde et l'UPDATE de la clé. */
+/** Minimal Supabase client: the SELECT of the watchdog and the UPDATE of the key. */
 function fakeService() {
   const builder = {
     select: () => builder,
@@ -102,7 +102,7 @@ function fakeService() {
   return { from: () => builder } as never;
 }
 
-/** Le tour a démarré il y a une heure — c'est ce que la microVM a coûté. */
+/** The tour started an hour ago — that's what the microVM cost. */
 const STARTED_MS_AGO = 60 * 60_000;
 
 const ROW = {
@@ -121,7 +121,7 @@ const ROW = {
   cost_usd: 0,
 };
 
-/** Une date vieille de `ms`, au format de la base. */
+/** A date `ms` old, in base format. */
 const agoIso = (ms: number) => new Date(Date.now() - ms).toISOString();
 
 beforeEach(() => {
@@ -150,8 +150,8 @@ describe("reapDeadVmRuns", () => {
   });
 
   it("ne touche à RIEN quand la plateforme ne sait pas répondre", async () => {
-    // microVM introuvable, session expirée, API en panne. Conclure ici remettrait
-    // au repos des tours en pleine santé, sur la seule foi d'un silence.
+    // microVM not found, session expired, API down. Concluding here would put
+    // to the rest of the towers in full health, on the sole faith of silence.
     h.alive = null;
     const { reaped } = await reapDeadVmRuns(fakeService());
     expect(reaped).toBe(0);
@@ -172,12 +172,12 @@ describe("reapDeadVmRuns", () => {
   });
 
   /**
-   * LE FAUX POSITIF QU'ON A LU EN PRODUCTION (run de la PR 51). Le stamp ne peut
-   * échouer que d'une façon — sa garde `status in ('running')` ne matche plus,
-   * c'est-à-dire que quelqu'un vient de conclure ce run. Le tour ne s'est alors
-   * pas arrêté : il a FINI. Annoncer sa perte avant de le savoir écrivait un
-   * message d'échec sous une conversation qui s'était bien terminée.
-   */
+ * THE FALSE POSITIVE THAT WE READ IN PRODUCTION (run of PR 51). The stamp can only
+ * fail one way — its guard `status in ('running')` no longer matches,
+ * that is, someone has just finished this run. The round then
+ * did not stop: it ENDED. Announcing your loss before knowing it wrote a
+ * failure message under a conversation that had ended successfully.
+ */
   it("ne raconte RIEN quand la conclusion lui a été soufflée entre-temps", async () => {
     h.alive = false;
     h.stampRefused = true;
@@ -188,9 +188,9 @@ describe("reapDeadVmRuns", () => {
   });
 
   it("NE TOUCHE PAS au checkpoint — c'est de lui que le tour suivant repart", async () => {
-    // La boucle en sauvegarde un toutes les cinq minutes, à une frontière de round
-    // sûre. L'écraser (ou l'effacer, comme le vieux balayeur au bout de ses
-    // tentatives) perdrait tout ce que le tour avait compris.
+    // The loop saves one every five minutes, at a round boundary
+    // safe. Crush it (or erase it, like the old street sweeper at the end of his rope)
+    // attempts) would lose everything the round had understood.
     h.alive = false;
     await reapDeadVmRuns(fakeService());
     expect(Object.keys(h.stamped[0].fields)).not.toContain("checkpoint");
@@ -204,17 +204,17 @@ describe("reapDeadVmRuns", () => {
   });
 
   it("FACTURE le compute de la microVM — sinon il disparaît en silence", async () => {
-    // Dans la nouvelle forme, le wall-clock est tenu par la boucle et remonté
-    // dans son rapport de fin de tour ; la fonction ne facture plus rien de son
-    // côté. Un tour dont le process meurt ne rend jamais ce rapport : sans cette
-    // ligne, le réveil, le clone et les heures de VM sortent de tous les
-    // compteurs, et personne ne s'en apercevrait avant la facture Vercel.
+    // In the new form, the wall-clock is held by the loop and wound up
+    // in his end of turn report; the function no longer charges anything for its
+    // side. A turn whose process dies never returns this report: without this
+    // line, wakeup, clone and VM times come out of all
+    // meters, and no one would notice until the Vercel bill.
     h.alive = false;
     await reapDeadVmRuns(fakeService());
     expect(h.compute).toHaveLength(1);
     expect(h.compute[0]).toMatchObject({
-      // L'identifiant du LEDGER, pas celui de la ligne — c'est sous lui que la
-      // dépense d'un run repris se compte.
+      // The identifier of the LEDGER, not that of the line — it is under it that the
+      // expenditure of a repeated run is counted.
       runId: "ledger-run-1",
       feature: "sandbox_compute",
       projectId: "proj-1",
@@ -234,36 +234,36 @@ describe("reapDeadVmRuns", () => {
     h.alive = false;
     h.rows = [{ ...ROW, started_at: null }];
     const { reaped } = await reapDeadVmRuns(fakeService());
-    // Le run est bien mis au repos : le métrage est un à-côté, jamais un
-    // prérequis de la conclusion.
+    // The run is well put to rest: the footage is a sideline, never a
+    // conclusion prerequisite.
     expect(reaped).toBe(1);
     expect(h.compute).toHaveLength(0);
   });
 
   /**
-   * MIN-286 — la ligne du run disait « gratuit » un tour qui ne l'était pas.
-   *
-   * `cost_usd` n'est écrite que par les sorties SAINES : un tour dont le process
-   * meurt la laissait à sa valeur d'avant le tour, donc à zéro sur un premier
-   * tour. Mesuré en production pendant la fenêtre d'observation d'opencode :
-   * trois runs moissonnés, 0 sur la ligne, 0,159 $ au ledger. La facture et les
-   * plafonds étaient saufs (ils lisent déjà le ledger) ; ce qui mentait, c'est ce
-   * qu'un humain relit après l'incident.
-   */
+ * MIN-286 — the run line said "free" for a turn that was not.
+ *
+ * `cost_usd` is only written by HEALTHY outputs: a turn whose process
+ * dies leaves it at its value before the turn, therefore at zero on one first
+ * round. Measured in production during the opencode observation window:
+ * three runs harvested, 0 on the line, $0.159 on the ledger. The invoice and the
+ * ceilings were safe (they already read the ledger); what lied was this
+ * that a human reread after the incident.
+ */
   it("recolle `cost_usd` au ledger sur un run moissonné", async () => {
     h.alive = false;
     h.ledgerSpend = 0.0678;
     await reapDeadVmRuns(fakeService());
     expect(h.updates).toContainEqual({ cost_usd: 0.0678 });
-    // Le compute de la microVM AVANT la relecture, sans quoi la somme relue
-    // n'emporterait pas la ligne qu'on vient d'écrire.
+    // The microVM compute BEFORE rereading, otherwise the sum reread
+    // would not carry the line we just wrote.
     expect(h.order).toEqual(["compute", "ledger"]);
   });
 
   it("ne fait jamais RECULER la dépense affichée", async () => {
-    // Ledger et colonne sont deux minorants : le plus grand est le plus vrai. Un
-    // ledger en retard (une ligne pas encore écrite) ne doit pas effacer ce que la
-    // colonne portait déjà.
+    // Ledger and column are two lower bounds: the larger is the truer. A
+    // late ledger (a line not yet written) must not erase what the
+    // column already carried.
     h.alive = false;
     h.rows = [{ ...ROW, cost_usd: 0.5 }];
     h.ledgerSpend = 0.01;
@@ -272,8 +272,8 @@ describe("reapDeadVmRuns", () => {
   });
 
   it("ne touche pas à la colonne quand le ledger ne répond pas", async () => {
-    // `spentFromLedger` rend `null`, jamais 0, précisément pour qu'on ne confonde
-    // pas « lecture ratée » avec « ce run n'a rien dépensé ».
+    // `spentFromLedger` returns `null`, never 0, precisely so that we don't confuse
+    // not “failed read” with “this run spent nothing”.
     h.alive = false;
     h.ledgerSpend = null;
     const { reaped } = await reapDeadVmRuns(fakeService());
@@ -288,11 +288,11 @@ describe("reapDeadVmRuns", () => {
   });
 
   it("sans identifiant de commande, il n'interroge rien — mais il finit par conclure", async () => {
-    // `startVmLoop` écrit cet identifiant à la fin de l'amorçage (~22 s). Une ligne
-    // qui ne l'a toujours pas au bout d'un quart d'heure est une fonction morte
-    // entre le claim et le lancement : il n'y a pas de process à sonder, et il n'y
-    // en aura jamais. C'est le cas que l'ancienne requête ne regardait même pas —
-    // le run restait `running` pour toujours.
+    // `startVmLoop` writes this identifier at the end of boot (~22 s). One line
+    // which still does not have it after a quarter of an hour is a dead function
+    // between the claim and the launch: there is no process to probe, and there is no
+    // will never have one. This is the case that the old query didn't even look at —
+    // the run remained `running` forever.
     h.rows = [{ ...ROW, loop_command_id: null }];
     const { reaped } = await reapDeadVmRuns(fakeService());
     expect(h.probes).toHaveLength(0);
@@ -301,19 +301,19 @@ describe("reapDeadVmRuns", () => {
   });
 
   it("laisse un amorçage EN COURS tranquille", async () => {
-    // Vingt secondes de vie : la boucle est peut-être en train de démarrer. Le
-    // délai se compte sur `started_at` (posé au claim) et non sur le silence — un
-    // run re-queué avec un délai devant lui arrive au claim avec une horloge
-    // d'activité déjà vieille, et le compter là le tuerait en plein réveil.
+    // Twenty seconds of life: the loop may be starting. THE
+    // delay is counted on `started_at` (placed on the claim) and not on silence — a
+    // re-queued run with a deadline ahead arrives at the claim with a clock
+    // of already old activity, and counting it there would kill him in the middle of waking up.
     h.rows = [{ ...ROW, loop_command_id: null, started_at: agoIso(20_000) }];
     const { reaped } = await reapDeadVmRuns(fakeService());
     expect(reaped).toBe(0);
   });
 
   it("l'ignorance ne dure pas TOUJOURS : au bout de deux heures, elle vaut décès", async () => {
-    // Une microVM détruite répond « introuvable » à chaque passage, donc `null`,
-    // donc rien : le run restait `running` jusqu'à ce qu'un humain le supprime en
-    // base. Ce qui manquait n'est pas un verdict plus audacieux, c'est une borne.
+    // A destroyed microVM responds “not found” on each pass, so `null`,
+    // so nothing: the run remained `running` until a human deleted it
+    // base. What was missing was not a bolder verdict, it was a milestone.
     h.alive = null;
     h.rows = [{ ...ROW, started_at: agoIso(3 * 60 * 60_000), last_activity_at: agoIso(3 * 60 * 60_000) }];
     const { reaped } = await reapDeadVmRuns(fakeService());
@@ -322,8 +322,8 @@ describe("reapDeadVmRuns", () => {
   });
 
   it("mais elle dure assez pour un tour qui travaille en silence", async () => {
-    // Une heure sans un signe, la plateforme injoignable : un round unique peut
-    // durer ça (un `npm test` qui n'en finit pas). On attend.
+    // An hour without a sign, the platform unreachable: a single round can
+    // last this (a never-ending `npm test`). We wait.
     h.alive = null;
     h.rows = [{ ...ROW, started_at: agoIso(60 * 60_000), last_activity_at: agoIso(60 * 60_000) }];
     const { reaped } = await reapDeadVmRuns(fakeService());

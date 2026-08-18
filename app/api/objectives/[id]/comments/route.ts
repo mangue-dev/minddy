@@ -18,7 +18,7 @@ export const maxDuration = 300;
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// Borne du tableau de mentions (MIN-118) — on ne mentionne jamais autant de monde.
+// Mention-array bound (MIN-118) — never mention that many people.
 const MAX_MENTIONS = 50;
 
 /** GET /api/objectives/[id]/comments — the objective's comment thread (RLS: project access). */

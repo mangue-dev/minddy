@@ -5,9 +5,9 @@ import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import { forgeFor, isForgeApiError } from "@/lib/server/agent/forge";
 
 /**
- * Branches du dépôt lié au projet de l'issue (picker de branche de base au
- * lancement d'un agent). Servi par l'API du provider via un token frais —
- * `defaultBranch` en tête, le reste dans l'ordre alphabétique.
+ * Branches from the repository linked to the issue project (basic branch picker at
+ * launching an agent). Served by the provider API through a fresh token —
+ * `defaultBranch` at the top, the rest in alphabetical order.
  */
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  // RLS : l'appelant doit pouvoir voir l'issue (et son projet avec elle).
+  // RLS: the caller must be able to see the outcome (and their plan with it).
   const { data: issue } = await auth.supabase
     .from("issues")
     .select("id, project_id")
@@ -36,8 +36,8 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       token: target.token,
       repoFullName: target.repoFullName,
     });
-    // Défaut TOUJOURS en tête, même si le listing paginé l'a manqué (dépôt à
-    // centaines de branches) : c'est l'option de repli du picker.
+    // Default ALWAYS at the top, even if the paginated listing missed it (deposit at
+    // hundreds of branches): this is the picker's fallback option.
     const rest = names
       .filter((n) => n !== target.defaultBranch)
       .sort((a, b) => a.localeCompare(b));

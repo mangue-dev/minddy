@@ -40,28 +40,28 @@ import {
 } from "@/lib/feedback/types";
 
 /**
- * Passe de revue du feedback (MIN-87) — UNE passe, UN appel LLM par post, qui
- * remplace les deux passes séparées d'avant (dédoublonnage MIN-37 puis
- * classification MIN-54).
+ * Feedback review pass (MIN-87) — ONE pass, ONE LLM call per post, which
+ * replaces the two separate passes before (MIN-37 deduplication then
+ * MIN-54 classification).
  *
- * Pourquoi les fusionner : elles tournaient dans le mauvais ordre. Le merge
- * passait en premier, et un post fusionné sort de la file de classification (le
- * claim exclut `merged_into_id`) — un junk pouvait donc être absorbé par un vrai
- * post, sa voix gonflant le canonique, et un rapport de sécurité pouvait être
- * fusionné AVANT d'être détecté sensible, donc ne jamais être signalé à
- * l'équipe. Une seule décision, prise dans le bon ordre (modérer → protéger →
- * catégoriser → dédoublonner), supprime la fenêtre — et divise le coût par deux.
+ * Why merge them: they were rotating in the wrong order. The merge
+ * went first, and a merged post leaves the classification queue (the
+ * claim excludes `merged_into_id`) — a junk could therefore be absorbed by a real
+ * post, its voice inflating the canonical, and a security report could be
+ * merged BEFORE being detected sensitive, so never be reported to
+ * the team. A single decision, made in the correct order (moderate → protect →
+ * categorize → deduplicate), removes the window — and halves the cost.
  *
- * Deux déclencheurs partagent le même cœur :
- *   - `reviewFeedbackPost(id)` — à la soumission, via `after()` : un retour
- *     apparaît sur le board en quelques secondes au lieu d'attendre le cron ;
- *   - `runFeedbackReview()` — le cron horaire, filet de sécurité pour les posts
- *     dont la revue immédiate a échoué (LLM en panne, budget revenu depuis).
+ * Two triggers share the same core:
+ * - `reviewFeedbackPost(id)` — at the submission, via `after()`: a return
+ * appears on the board in a few seconds instead of waiting for the cron;
+ * - `runFeedbackReview()` — the hourly cron, safety net for posts
+ * whose immediate review has failed (LLM down, budget returned since).
  *
- * Concurrence : claim `for update skip locked` + lease de 15 min
- * (auto-guérissant si un run crashe) ; 3 échecs → abandon, le post reste en
- * attente et remonte dans le filtre « À revoir » de l'équipe (fail-closed
- * assumé : rien de non modéré ne part sur un board public).
+ * Competition: claim `for update skip locked` + 15 min lease
+ * (self-healing if a run crashes); 3 failures → abandoned, the post remains in
+ * waiting and goes back to the team's “To be reviewed” filter (fail-closed
+ * assumed: nothing unmoderated is posted on a public board).
  */
 
 const DEFAULT_AUTO_THRESHOLD = 0.92;
@@ -91,9 +91,9 @@ export interface ReviewReport {
   posts_suggested: number;
   posts_categorized: number;
   posts_forced_private: number;
-  /** Junk classé `spam` par la modération. */
+  /** Junk classified `spam` by moderation. */
   posts_rejected: number;
-  /** Publiés sans revue : projet qui l'a désarmée, ou bascule budget épuisé. */
+  /** Published without review: project which disarmed it, or exhausted budget shift. */
   posts_published_unreviewed: number;
   failures: number;
 }
@@ -141,12 +141,12 @@ async function loadSettings(): Promise<ReviewSettings> {
 }
 
 /**
- * Réglages de traduction d'un projet (colonnes `projects`, défauts sûrs).
+ * Project translation settings (`projects` columns, safe defaults).
  *
- * `feedback_team_language` peut être NULL — les projets d'avant la migration, et
- * ceux créés hors du wizard. On retombe alors sur la locale par défaut de l'app
- * plutôt que de couper la traduction : une équipe qui n'a rien réglé lit
- * probablement l'anglais, et le réglage est à un clic pour dire le contraire.
+ * `feedback_team_language` can be NULL — projects before migration, and
+ * those created outside the wizard. We then fall back to the default locale of the app
+ * rather than cutting the translation: a team that has not adjusted anything reads
+ * probably English, and the setting is one click away to say the opposite.
  */
 export async function projectTranslationSettings(
   projectId: string
@@ -169,7 +169,7 @@ export async function projectTranslationSettings(
   };
 }
 
-/** Réglages de revue d'un projet (colonnes `projects`, défauts sûrs si absent). */
+/** Project review settings (`projects` columns, safe defaults if absent). */
 async function projectReviewSettings(
   projectId: string
 ): Promise<{ reviewEnabled: boolean; skipOverBudget: boolean }> {
@@ -187,10 +187,10 @@ async function projectReviewSettings(
 }
 
 /**
- * La revue est-elle armée pour ce projet ? Kill-switch d'instance ET réglage du
- * owner. Quand elle ne l'est pas, retenir les posts en attente n'aurait aucun
- * sens — personne ne viendra les publier : la création les publie d'emblée
- * (cf. `createFeedbackPost`).
+ * Is the journal equipped for this project? Instance kill-switch AND setting of
+ * owner. When it is not, retaining pending posts would have no
+ * sense — no one will come to publish them: the creation publishes them immediately
+ * (see `createFeedbackPost`).
  */
 export async function isFeedbackReviewEnabled(projectId: string): Promise<boolean> {
   if (!(await loadSettings()).enabled) return false;
@@ -198,8 +198,8 @@ export async function isFeedbackReviewEnabled(projectId: string): Promise<boolea
 }
 
 /**
- * Ce qu'on fait d'un post à revoir, réglages du projet et budget du owner
- * compris. Voir `resolveFeedbackReviewMode` pour la table de vérité.
+ * What we do with a post to be reviewed, project settings and owner
+ * budget included. See `resolveFeedbackReviewMode` for the truth table.
  */
 async function reviewModeForProject(projectId: string): Promise<FeedbackReviewMode> {
   const [project, hasBudget] = await Promise.all([
@@ -214,10 +214,10 @@ async function reviewModeForProject(projectId: string): Promise<FeedbackReviewMo
 }
 
 /**
- * Publication sans revue : le post sort en l'état, ni catégorisé ni modéré. On
- * pose les deux marqueurs de complétion pour qu'il ne revienne pas dans la file
- * — re-armer la revue (ou recharger son budget) ne déclenche pas une passe
- * rétroactive surprise sur tout l'historique.
+ * Publication without review: the post is published as is, neither categorized nor moderated. On
+ * sets the two completion markers so that it does not return to the queue
+ * — re-arming the magazine (or recharging its budget) does not trigger a surprise retroactive pass
+ * on the entire history.
  */
 async function publishWithoutReview(postId: string): Promise<void> {
   const service = getServiceClient();
@@ -234,8 +234,8 @@ async function publishWithoutReview(postId: string): Promise<void> {
     classified_at: now,
     analysis_claimed_at: null,
   };
-  // Seul un post en attente est promu : une décision d'équipe (publié / écarté
-  // à la main) fait foi, comme partout ailleurs dans la revue.
+  // Only a pending post is promoted: a team decision (published / discarded
+  // by hand) is authentic, as everywhere else in the magazine.
   if (fresh.review_state === "pending") updates.review_state = "published";
   await service
     .from("feedback_posts")
@@ -245,7 +245,7 @@ async function publishWithoutReview(postId: string): Promise<void> {
     .is("merged_into_id", null);
 }
 
-/** Passe de lot (cron horaire) : rattrape tout ce que la revue immédiate a raté. */
+/** Batch pass (hourly cron): catches up with anything the immediate review missed. */
 export async function runFeedbackReview(): Promise<ReviewReport> {
   const report = emptyReport();
   const settings = await loadSettings();
@@ -260,8 +260,8 @@ export async function runFeedbackReview(): Promise<ReviewReport> {
     return report;
   }
 
-  // Un seul résolution de mode par projet dans le lot (budget + réglages du
-  // owner) : c'est deux lectures, inutile de les refaire pour chaque post.
+  // Only one mode resolution per project in the batch (budget + mode settings
+  // owner): it's two readings, no need to redo them for each post.
   const modeByProject = new Map<string, FeedbackReviewMode>();
 
   for (const post of (claimed ?? []) as ClaimedPost[]) {
@@ -271,10 +271,10 @@ export async function runFeedbackReview(): Promise<ReviewReport> {
       modeByProject.set(post.project_id, mode);
     }
 
-    if (mode === "hold") continue; // budget épuisé, pas de bascule demandée
+    if (mode === "hold") continue; // budget exhausted, no switch requested
     if (mode === "publish") {
-      // Revue désarmée, ou budget épuisé avec bascule demandée : on libère le
-      // post plutôt que de le laisser en attente indéfiniment.
+      // Disarmed review, or exhausted budget with requested switch: we release the
+      // post rather than leaving it waiting indefinitely.
       await publishWithoutReview(post.id);
       report.posts_published_unreviewed += 1;
       continue;
@@ -287,9 +287,9 @@ export async function runFeedbackReview(): Promise<ReviewReport> {
 }
 
 /**
- * Revue d'un seul post, déclenchée juste après sa soumission (`after()`). Pose
- * le même lease que le cron pour que les deux ne se marchent pas dessus ; sort
- * en silence si un autre run a déjà pris le post ou s'il est déjà revu.
+ * Review of a single post, triggered just after its submission (`after()`). Set
+ * the same lease as the cron so that the two do not step on each other; sort
+ * silently if another run has already taken the post or if it is already reviewed.
  */
 export async function reviewFeedbackPost(
   postId: string,
@@ -299,9 +299,9 @@ export async function reviewFeedbackPost(
   const settings = await loadSettings();
   if (!settings.enabled) return report;
 
-  // Mode AVANT le claim : un post qu'on ne va pas revoir ne doit pas se voir
-  // poser un lease de 15 min — sinon la reprise par le cron serait retardée
-  // d'autant après le retour du budget.
+  // Mode BEFORE the claim: a post that we are not going to review should not be seen
+  // set a lease of 15 min — otherwise the recovery by the cron would be delayed
+  // especially after the return of the budget.
   const mode = await reviewModeForProject(projectId);
   if (mode === "hold") return report;
   if (mode === "publish") {
@@ -311,8 +311,8 @@ export async function reviewFeedbackPost(
   }
 
   const service = getServiceClient();
-  // Même claim que le cron, ciblé sur un post : ni double traitement, ni reprise
-  // d'un post déjà revu.
+  // Same claim as the cron, targeted on a post: no double processing, no recovery
+  // from a post already reviewed.
   const { data, error } = await service.rpc("claim_feedback_post_for_review", {
     p_post: postId,
   });
@@ -351,9 +351,9 @@ function parseFloatOr(value: string | null | undefined, fallback: number): numbe
 }
 
 async function bumpFailure(id: string, currentFailures: number): Promise<void> {
-  // Le lease (analysis_claimed_at) reste posé : le retry attend le prochain run
-  // horaire. À 3 échecs, le claim ne sélectionne plus la ligne — le post reste
-  // en attente et l'équipe le voit dans « À revoir ».
+  // The lease (analysis_claimed_at) remains set: the retry waits for the next run
+  // hourly. At 3 failures, the claim no longer selects the line — the post remains
+  // on hold and the team sees it in “See You Again”.
   const service = getServiceClient();
   await service
     .from("feedback_posts")
@@ -362,7 +362,7 @@ async function bumpFailure(id: string, currentFailures: number): Promise<void> {
     .eq("id", id);
 }
 
-/** Paires interdites (undo / suggestions rejetées), dans les deux sens. */
+/** Forbidden pairs (undo / rejected suggestions), in both directions. */
 async function fetchRejectedPairIds(itemId: string): Promise<Set<string>> {
   const service = getServiceClient();
   const [asDup, asCanonical] = await Promise.all([
@@ -376,8 +376,8 @@ async function fetchRejectedPairIds(itemId: string): Promise<Set<string>> {
 }
 
 /**
- * Écarte les candidats de fusion classés spam : absorber un vrai retour dans un
- * post écarté par la modération l'enterrerait derrière un tombstone invisible.
+ * Rejects merge candidates classified as spam: absorbing a real return in a
+ * post rejected by moderation would bury it behind an invisible tombstone.
  */
 async function dropSpamCandidates(candidates: MatchedPost[]): Promise<MatchedPost[]> {
   if (candidates.length === 0) return candidates;
@@ -404,15 +404,15 @@ async function reviewOne(
 ): Promise<boolean> {
   const service = getServiceClient();
 
-  // ── Contexte : embedding (backfill si la soumission n'avait pas pu le
-  //    calculer), voisins kNN, catégories du projet ────────────────────────────
+  // ── Context: embedding (backfill if the submission could not
+  // calculate), kNN neighbors, project categories ────────────────────────────
   let embedding = post.embedding ? parseEmbedding(post.embedding) : null;
   if (!embedding) {
     embedding = await embedText(
       post.submitted_body
         ? `${post.submitted_title}\n\n${post.submitted_body}`
         : post.submitted_title,
-      // Passe de fond (cron) : pas de déclencheur, le owner paye (MIN-131).
+      // Background pass (cron): no trigger, the owner pays (MIN-131).
       { record: { billTo: { projectOwner: post.project_id }, projectId: post.project_id } }
     );
     if (!embedding) return false;
@@ -423,8 +423,8 @@ async function reviewOne(
       .eq("id", post.id);
   }
 
-  // Un post déjà dédoublonné (marqueur d'avant MIN-87) ne repasse pas par la
-  // recherche de doublons : on ne re-proposerait qu'une fusion déjà tranchée.
+  // A post already deduplicated (marker before MIN-87) does not go through the
+  // search for duplicates: we would only re-propose a merger that has already been decided.
   const lookForDuplicates = post.analyzed_at === null;
 
   const [rejectedPairs, catRows, translation] = await Promise.all([
@@ -453,7 +453,7 @@ async function reviewOne(
     name: c.name,
   })) as ProjectCategory[];
 
-  // ── Un seul appel : doublon + catégories + junk + sensible ────────────────
+  // ── Single call: duplicate + categories + junk + sensitive ────────────────
   const verdict = await reviewWithLlm(
     settings.model,
     post,
@@ -463,7 +463,7 @@ async function reviewOne(
   );
   if (!verdict) return false;
 
-  // Garde de course : l'équipe a pu merger/publier/rejeter le post pendant l'appel.
+  // Race guard: the team was able to merge/publish/reject the post during the call.
   const { data: fresh } = await service
     .from("feedback_posts")
     .select("id, merged_into_id, is_public, status, review_state, analyzed_at, classified_at")
@@ -489,7 +489,7 @@ async function reviewOne(
     suggestFloor: settings.suggestFloor,
   });
 
-  // ── Application, dans l'ordre de la politique ─────────────────────────────
+  // ── Application, in policy order ─────────────────────────────
   if (decision.categoryIds.length > 0) {
     const res = await setFeedbackPostCategories({
       projectId: post.project_id,
@@ -509,20 +509,20 @@ async function reviewOne(
     moderation_reason: decision.moderationReason,
   };
   if (decision.markSpam) updates.status = "spam";
-  // La langue et la traduction sont des CONSTATS sur le texte soumis, pas des
-  // décisions de modération : elles ne passent pas par `decideFeedbackReview`,
-  // qui n'aurait rien à en dire. On les écrit telles que la passe les a lues —
-  // y compris `null`, qui efface une traduction devenue sans objet (l'équipe a
-  // ajouté la langue à sa liste blanche entre deux passes).
+  // The language and translation are FINDINGS on the submitted text, not
+  // moderation decisions: they do not go through `decideFeedbackReview`,
+  // who would have nothing to say about it. We write them as the pass read them —
+  // including `null`, which deletes a translation that has become irrelevant (the team has
+  // added the language to its whitelist between two passes).
   if (verdict.sourceLanguage) updates.source_language = verdict.sourceLanguage;
   if (translation.enabled) {
     updates.translated_title = verdict.translation?.title ?? null;
     updates.translated_body = verdict.translation?.body ?? null;
     updates.translated_language = verdict.translation?.language ?? null;
   }
-  // On ne touche à la suggestion que si l'on a bien cherché des doublons — sinon
-  // on effacerait celle qu'une passe précédente avait posée (post déjà analysé
-  // mais pas encore classé, cas des lignes d'avant MIN-87).
+  // We only touch the suggestion if we have looked for duplicates - otherwise
+  // we would erase the one that a previous pass had placed (post already analyzed
+  // but not yet classified, case of lines before MIN-87).
   if (lookForDuplicates) {
     updates.suggested_merge_into_id = decision.suggestTargetId;
     updates.suggested_confidence = decision.suggestConfidence;
@@ -540,8 +540,8 @@ async function reviewOne(
     return false;
   }
 
-  // Fusion en dernier : le post porte déjà sa décision de modération, donc rien
-  // ne peut plus être absorbé sans avoir été jugé.
+  // Merge last: the post already has its moderation decision, so nothing
+  // can no longer be absorbed without having been judged.
   if (decision.mergeTargetId) {
     const merged = await mergePosts({
       dupId: post.id,
@@ -552,8 +552,8 @@ async function reviewOne(
     if (merged.ok) {
       report.posts_merged += 1;
     } else {
-      // La RPC a refusé (état déplacé sous nos pieds) → on retombe sur une
-      // suggestion, que l'équipe tranchera.
+      // The PRC refused (state displaced under our feet) → we fall back on a
+      // suggestion, which the team will decide.
       await service
         .from("feedback_posts")
         .update({
@@ -569,9 +569,9 @@ async function reviewOne(
     report.posts_suggested += 1;
   }
 
-  // Fil d'activité : on ne raconte que les actions notables de modération —
-  // passage forcé en privé et classement en spam, attribués à Numo
-  // (via_assistant). La publication « normale » d'un post vérifié reste
+  // Activity thread: we only report notable moderation actions —
+  // forced to private and classified as spam, attributed to Numo
+  // (via_assistant). The “normal” publication of a verified post remains
   // silencieuse (pas de bruit).
   const eventUpdates: Record<string, unknown> = {};
   if (decision.forcePrivate) eventUpdates.is_public = false;
@@ -620,7 +620,7 @@ async function reviewWithLlm(
   const categoryIds = categories.map((c) => c.id);
   const hasCandidates = candidateIds.length > 0;
   const hasCategories = categoryIds.length > 0;
-  // Le bloc « langue » ne coûte que là où il sert : un projet qui a coupé la
+  // The “language” block only costs where it serves: a project that cut the
   // traduction ne paie pas de champs qu'il jettera.
   const wantsLanguage = translation.enabled;
   const skipList = effectiveSkipLanguages(translation);
@@ -680,9 +680,9 @@ ${categoryBlock}`;
     reason: { type: ["string", "null"] },
     confidence: { type: "number", minimum: 0, maximum: 1 },
   };
-  // Ce qui n'est pas `required` n'est tout simplement pas répondu par un petit
-  // modèle : sans ça il ne renvoie que le verdict de modération et tout post
-  // paraît unique. Chaque décision attendue doit donc être exigée.
+  // What is not `required` is simply not answered with a small
+  // model: without that it only returns the moderation verdict and any post
+  // appears unique. Each expected decision must therefore be required.
   const required = ["is_junk", "is_sensitive"];
   if (hasCandidates) {
     properties.duplicate_of = { type: ["string", "null"], enum: [...candidateIds, null] };
@@ -693,9 +693,9 @@ ${categoryBlock}`;
     required.push("category_ids");
   }
   if (wantsLanguage) {
-    // `und` (ISO 639-2 « indéterminé ») plutôt que null : un petit modèle à qui
-    // l'on offre null pour une question factuelle le choisit dès qu'il hésite,
-    // et tout devient indéterminé. Un code à donner l'oblige à trancher, et
+    // `und` (ISO 639-2 “indeterminate”) rather than null: a small model to which
+    // we offer null for a factual question and choose it as soon as he hesitates,
+    // and everything becomes indeterminate. A code to be given obliges him to decide, and
     // `normalizeLanguage` refusera `und` comme n'importe quoi d'autre hors jeu.
     properties.language = { type: "string" };
     properties.translated_title = { type: ["string", "null"] };
@@ -715,8 +715,8 @@ ${categoryBlock}`;
       modelKey: "feedback_analysis_model",
       record: {
         feature: "feedback_classify",
-        // Revue de fond : c'est le budget du owner qui l'autorise (ligne 164),
-        // c'est donc à lui qu'elle se facture — explicitement (MIN-131).
+        // Basic review: it is the owner's budget which authorizes it (line 164),
+        // it is therefore to him that she invoices herself — explicitly (MIN-131).
         billTo: { projectOwner: post.project_id },
         projectId: post.project_id,
       },
@@ -737,11 +737,11 @@ ${categoryBlock}`;
       ? args.reason.trim().slice(0, 500)
       : null;
 
-  // La langue décide de la traduction, pas le modèle : il rend un fait (dans
-  // quelle langue est ce texte), la politique en tire une conséquence. Sans
-  // cette garde, une réponse trop zélée — une « traduction » française d'un
-  // texte déjà français, parce qu'il contenait trois mots anglais — écraserait
-  // le retour d'une paraphrase.
+  // The language decides the translation, not the model: it renders a fact (in
+  // what language is this text), politics draws a consequence from it. Without
+  // this guard, an overzealous response — a French “translation” of a
+  // already French text, because it contained three English words — would overwrite
+  // the return of a paraphrase.
   const sourceLanguage = wantsLanguage ? normalizeLanguage(args.language) : null;
   const translate = shouldTranslateFeedback(translation, sourceLanguage);
   const text = (value: unknown, max: number): string | null => {
@@ -758,8 +758,8 @@ ${categoryBlock}`;
     sensitivityKind: args.is_sensitive === true ? normalizeSensitivityKind(args.sensitivity_kind) : null,
     reason,
     sourceLanguage,
-    // Un titre traduit vide ne vaut rien : sans lui la bascule de l'interface
-    // n'a rien à montrer, donc pas de traduction du tout.
+    // An empty translated title is worthless: without it the interface toggle
+    // has nothing to show, so no translation at all.
     translation:
       translate && text(args.translated_title, FEEDBACK_TITLE_MAX)
         ? {

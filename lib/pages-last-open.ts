@@ -1,18 +1,16 @@
 "use client";
 
 /**
- * La DERNIÈRE page ouverte d'un projet, retenue d'une visite à l'autre.
+ * The LAST open page of a project, retained from one visit to the next.
  *
- * Revenir dans l'onglet Pages tombait sur l'écran « choisissez une page à
- * gauche », alors qu'on y revient presque toujours pour continuer celle qu'on
- * lisait. On retient donc son id, par projet, dans `localStorage` — au même
- * endroit et de la même façon que l'état d'ouverture de l'arbre
- * (components/pages/page-tree.tsx) : une préférence d'affichage, propre à ce
- * poste, qui n'a rien à faire en base.
+ * Returning to the Pages tab came up with the "choose a page on the left" screen, whereas we almost always returned there to continue the one we were reading. We therefore retain its id, per project, in `localStorage` — in the same place
+ * and in the same way as the opening state of the tree
+ * (components/pages/page-tree.tsx): a display preference, specific to this
+ * position, which has nothing to do in base.
  *
- * Ce qui n'est PAS retenu ici : que la page existe encore. Elle a pu partir à
- * la corbeille, ou changer de projet ; c'est au lecteur de le vérifier dans la
- * liste avant d'y aller (voir `app/(app)/projects/[id]/pages/page.tsx`).
+ * What is NOT retained here: that the page still exists. She could have gone to
+ * in the trash, or changed projects; it is up to the reader to check it in the
+ * list before going there (see `app/(app)/projects/[id]/pages/page.tsx`).
  */
 
 function lastPageKey(projectId: string): string {
@@ -23,7 +21,7 @@ export function rememberLastPage(projectId: string, pageId: string): void {
   try {
     window.localStorage.setItem(lastPageKey(projectId), pageId);
   } catch {
-    // Mode privé, quota plein : l'onglet marche, il ne se souvient pas.
+    // Private mode, quota full: the tab works, it doesn't remember.
   }
 }
 

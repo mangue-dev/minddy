@@ -12,17 +12,17 @@ import {
 import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
 
 /**
- * Le contrat entre CE QU'ON RACONTE AUX AGENTS et CE QUE LES ROUTES FONT.
+ * The contract between WHAT AGENTS ARE TOLD and WHAT ROUTES DO.
  *
- * `integrationUsage` est la seule description du format d'intégration que
- * reçoivent Numo et l'agent MCP de l'utilisateur ; c'est contre elle qu'ils
- * écrivent du code dans un autre dépôt, sans jamais voir `app/api/v1/`. Une
- * description périmée ne casse donc rien chez nous : elle casse chez le client,
- * silencieusement, à la première requête.
+ * `integrationUsage` is the only description of the integration format that
+ * receives from Numo and the user's MCP agent; it is against it that they
+ * write code in another repository, without ever seeing `app/api/v1/`. An outdated
+ * description therefore does not break anything for us: it breaks for the client,
+ * silently, at the first request.
  *
- * Le test relit les VRAIES routes : chaque URL annoncée doit correspondre à un
- * `route.ts` existant, et chaque code d'erreur annoncé doit apparaître dans le
- * code qui la sert (la route, ou le socle d'authentification qu'elle partage).
+ * The test rereads the REAL routes: each announced URL must correspond to an existing
+ * `route.ts`, and each announced error code must appear in the
+ * code that serves it (the route, or the authentication base that it shares).
  */
 
 const ROOT = join(import.meta.dirname, "..", "..");
@@ -34,8 +34,8 @@ function routeFileFor(url: string): string | null {
   let dir = join(ROOT, "app");
   for (const segment of path.split("/").filter(Boolean)) {
     if (segment.startsWith("<")) {
-      // Segment dynamique : le nom du paramètre côté route n'a pas à coller au
-      // nom qu'on montre à l'agent (`<post_id>` vs `[id]`).
+      // Dynamic segment: the name of the road side parameter does not have to stick to the
+      // name shown to the agent (`<post_id>` vs `[id]`).
       const dynamic = readdirSync(dir).find((entry) => entry.startsWith("["));
       if (!dynamic) return null;
       dir = join(dir, dynamic);
@@ -48,7 +48,7 @@ function routeFileFor(url: string): string | null {
   return existsSync(file) ? file : null;
 }
 
-/** Le socle partagé par toutes les routes /api/v1 (401, 403, forme d'erreur). */
+/** The base shared by all /api/v1 routes (401, 403, error form). */
 const AUTH_SOURCE = readFileSync(
   join(ROOT, "lib", "server", "integration-auth.ts"),
   "utf8"
@@ -94,10 +94,10 @@ describe.each(["feedback", "issues"] as IntegrationKind[])(
 );
 
 /**
- * Le webhook a la même exigence que les endpoints, dans l'autre sens : ce
- * qu'on annonce doit être ce que `lib/server/webhooks.ts` envoie VRAIMENT. Un
- * agent écrit sa route de réception contre cette description et ne la testera
- * qu'en production, sur un événement qu'il ne provoque pas lui-même.
+ * The webhook has the same requirement as the endpoints, in the other direction: this
+ * that we announce must be what `lib/server/webhooks.ts` REALLY sends. A
+ * agent writes its receive route against this description and will only test it
+ * in production, on an event that it does not cause itself.
  */
 describe("integrationWebhookDoc", () => {
   const doc = integrationWebhookDoc();
@@ -132,13 +132,13 @@ describe("integrationWebhookDoc", () => {
   it("describes the signature the dispatcher computes: HMAC-SHA256 keyed by the key hash", () => {
     expect(DISPATCHER).toContain('createHmac("sha256", integration.key_hash)');
     expect(doc.signature).toContain("SHA-256 hex digest");
-    // Le récepteur signe le corps BRUT : re-sérialiser le JSON change les
-    // octets, et c'est l'erreur qu'on paie en production.
+    // The receiver signs the BRUT body: re-serializing the JSON changes the
+    // bytes, and this is the error we pay for in production.
     expect(doc.signature).toMatch(/raw/i);
   });
 
-  // Le webhook ne livre que des événements d'issue : l'annoncer sur une clé
-  // feedback ferait écrire une route de réception qui n'est jamais appelée.
+  // The webhook only delivers outcome events: announce it on a key
+  // feedback would write a receive route that is never called.
   it("n'est porté que par la clé issues", () => {
     expect(integrationUsage("issues", ORIGIN).webhook?.events).toEqual(doc.events);
     expect(integrationUsage("feedback", ORIGIN).webhook).toBeUndefined();

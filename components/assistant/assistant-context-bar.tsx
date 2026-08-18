@@ -1,12 +1,12 @@
 "use client";
 
-// La rangée de contexte du composer de Numo : ce qu'il a sous les yeux, plus le
-// bouton @ qui permet d'en ajouter.
+// The context row of Numo's composer: what he has in front of him, plus the
+// @ button that lets you add one.
 //
-// La rangée ne passe JAMAIS à la ligne — un board avec vue, cycle et sélection
-// ferait grandir le composer de trois rangs. Elle défile à l'horizontale, sans
-// barre visible, avec deux chevrons qui n'apparaissent qu'au survol et
-// seulement s'il reste quelque chose à voir de ce côté.
+// The row NEVER crosses the line — a board with view, cycle and selection
+// would make the composition grow by three rows. It scrolls horizontally, without
+// visible bar, with two chevrons which only appear on hover and
+// only if there is something left to see on this side.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -38,7 +38,7 @@ import { useNumoBoard, useNumoMembers } from "@/lib/use-numo-mentionables";
 import type { AssistantContextChip } from "@/lib/assistant-context";
 import type { AssistantPinnedContext } from "@/lib/assistant-types";
 
-// ── Défilement horizontal ─────────────────────────────────────────────
+// ── Horizontal scrolling ────────────────────── ───────────────────────
 
 function HScroller({ children }: { children: React.ReactNode }) {
   const t = useTranslations("Assistant");
@@ -58,8 +58,8 @@ function HScroller({ children }: { children: React.ReactNode }) {
     const el = ref.current;
     if (!el) return;
     measure();
-    // Le contenu bouge sans que la rangée change de taille (une pilule qui
-    // s'ajoute, un libellé qui arrive) : on observe les DEUX.
+    // The content moves without the row changing size (a pill that
+    // is added, a wording which arrives): we observe BOTH.
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     if (el.firstElementChild) observer.observe(el.firstElementChild);
@@ -106,7 +106,7 @@ function HScroller({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ── Bouton @ : ajouter du contexte ────────────────────────────────────
+// ── @ button: add context ─────────────────────────────────────────────
 
 type AddKind = "member" | "project" | "issue" | "objective" | "page";
 
@@ -122,9 +122,9 @@ function AddContextButton({
   const t = useTranslations("Assistant");
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<AddKind | null>(null);
-  // Le champ de recherche est CONTRÔLÉ et remis à vide entre les deux étapes —
-  // et surtout il reste monté : c'est lui qui garde le focus quand la liste
-  // change, sinon le focus retombe sur le body et Radix ferme le menu.
+  // The search field is CHECKED and cleared between the two steps —
+  // and above all it remains mounted: it is he who keeps the focus when the list
+  // changes, otherwise the focus falls back on the body and Radix closes the menu.
   const [query, setQuery] = useState("");
   const { projects } = useProjects();
   const { members, loading: membersLoading } = useNumoMembers(
@@ -133,26 +133,26 @@ function AddContextButton({
   );
   const boardOn = open && kind === "issue";
   const board = useNumoBoard(boardOn);
-  // Les objectifs viennent de l'index de la palette — la même source que le
-  // « @ » du texte, donc la même liste des deux côtés du composer.
+  // The lenses come from the palette index — the same source as the
+  // “@” text, so the same list on both sides of the compose.
   const mentionSources = useMentionSources(scopeProjectId);
-  // Les pages, elles, sont celles du projet COURANT : un wiki appartient à son
-  // projet (voir use-mention-sources). C'est le cache que lit déjà la sidebar,
-  // donc épingler une page ne coûte aucune requête de plus — et on le parcourt
-  // en profondeur pour proposer l'arbre dans l'ordre où on le lit à gauche.
+  // The pages are those of the COURANT project: a wiki belongs to its
+  // project (see use-mention-sources). This is the cache that the sidebar already reads,
+  // so pinning a page costs no extra query — and we browse it
+  // in depth to propose the tree in the order in which it is read on the left.
   const pagesQuery = usePagesQuery(scopeProjectId ?? null);
   const pages = useMemo(
     () =>
       flattenPageTree(pagesQuery.tree)
-        // Une page SANS TITRE n'est pas épinglable : la pilule s'afficherait
-        // vide, et Numo n'aurait rien pour la nommer.
+        // A page WITHOUT A TITLE cannot be pinned: the pill would be displayed
+        // empty, and Numo would have nothing to name it.
         .filter((page) => page.title.trim()),
     [pagesQuery.tree],
   );
 
-  // Le panneau de Numo est un Sheet modal : react-remove-scroll bloque la molette
-  // sur tout ce qui est porté à <body>. On porte donc le menu DANS le panneau,
-  // sinon sa liste ne défile pas (même correctif que le popover d'historique).
+  // The Numo panel is a Sheet modal: react-remove-scroll blocks the scroll wheel
+  // on anything set to <body>. We therefore carry the menu INTO the panel,
+  // otherwise its list does not scroll (same fix as the history popover).
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const anchorRef = useCallback((node: HTMLDivElement | null) => {
     setContainer(
@@ -167,7 +167,7 @@ function AddContextButton({
 
   const issues = useMemo(() => {
     const list = board.data?.issues ?? [];
-    // Ouvertes d'abord — les closes restent choisissables.
+    // Open first — closed ones remain selectable.
     return [...list].sort(
       (a, b) => (isClosedStatus(a.status) ? 1 : 0) - (isClosedStatus(b.status) ? 1 : 0),
     );
@@ -188,16 +188,16 @@ function AddContextButton({
     { kind: "member", icon: <User className="size-4" />, label: t("addContextMember") },
     { kind: "project", icon: <Folder className="size-4" />, label: t("addContextProject") },
     { kind: "issue", icon: <FileText className="size-4" />, label: t("addContextIssue") },
-    // La cible reste NEUTRE ici : la ligne désigne la notion « un objectif »,
-    // pas un objectif dont on suivrait la couleur.
+    // The target remains NEUTRAL here: the line designates the notion “an objective”,
+    // not a lens whose color we follow.
     {
       kind: "objective",
       icon: <Target className="size-4" />,
       label: t("addContextObjective"),
     },
-    // Le wiki n'existe que dans un projet : hors portée de projet (conversation
-    // globale), la ligne ne mènerait qu'à une liste vide, donc elle ne s'ouvre
-    // pas du tout.
+    // The wiki only exists in a project: out of project scope (conversation
+    // global), the line would only lead to an empty list, so it only opens
+    // not at all.
     ...(scopeProjectId
       ? [
           {
@@ -244,8 +244,8 @@ function AddContextButton({
                     : t("addContext")
         }
         emptyText={loading ? t("addContextLoading") : undefined}
-        // Plus large que le w-60 par défaut : à l'étape « ticket » on reconnaît
-        // une ligne à son titre, et 240px le coupent au tiers.
+        // Wider than the w-60 by default: at the “ticket” stage we recognize
+        // a line in its title, and 240px cuts it to a third.
         contentClassName="w-80"
         trigger={
           <Button
@@ -345,8 +345,8 @@ function AddContextButton({
                   }
                   className="gap-2"
                 >
-                  {/* Son émoji quand elle en a un, sinon la figure du wiki —
-                      celle de l'arbre des pages et de sa pilule de contexte. */}
+                  {/* Her emoji when she has one, otherwise the figure from the wiki —
+ that of the page tree and its context pill. */}
                   <span className="flex size-5 shrink-0 items-center justify-center text-sm">
                     {page.icon ?? (
                       <BookText className="size-4 text-muted-foreground" />
@@ -388,7 +388,7 @@ function AddContextButton({
   );
 }
 
-// ── La rangée ─────────────────────────────────────────────────────────
+// ── The row ──────────────────────────── ─────────────────────────────
 
 export function AssistantContextBar({
   chips,
@@ -401,9 +401,9 @@ export function AssistantContextBar({
 }: {
   chips: AssistantContextChip[];
   disabledKeys: ReadonlySet<string>;
-  /** Éteint / rallume une pilule ambiante (l'œil). */
+  /** Turns off/on an ambient pill (the eye). */
   onToggle: (key: string) => void;
-  /** Retire une pilule épinglée à la main (la croix). */
+  /** Remove a pill pinned to the hand (the cross). */
   onRemove: (key: string) => void;
   onAdd: (item: AssistantPinnedContext) => void;
   scopeProjectId: string | null;

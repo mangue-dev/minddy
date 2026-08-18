@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { forgeMentionScanner, type MentionSegment } from "./mention-scan";
 
-/** Les comptes tels que la forge les sert. */
+/** Accounts as the Forge serves them. */
 const member = (login: string) => ({ login, avatar_url: `https://avatars/${login}.png` });
 
 const shape = (segments: MentionSegment[]) =>
@@ -49,7 +49,7 @@ describe("forgeMentionScanner", () => {
   it("sans aucun compte, seul @numo reste reconnaissable", () => {
     const scan = forgeMentionScanner([]);
     expect(shape(scan("@numo et @personne"))).toEqual(["@numo", " et @personne"]);
-    // Le garde-fou du scanner : une liste vide ne doit pas transformer chaque
+    // The scanner's safeguard: an empty list must not transform each
     // « @ » du texte en mention.
     expect(shape(scan("a @ b @ c"))).toEqual(["a @ b @ c"]);
   });

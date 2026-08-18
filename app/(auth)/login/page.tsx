@@ -6,11 +6,11 @@ import { resolveInvitationToken } from "@/lib/server/invitation-token";
 import { preserveAuthParams } from "@/lib/signup-wizard";
 
 /**
- * L'écran de connexion est un formulaire client (`components/auth/login-form`),
- * mais la PAGE est un server component depuis MIN-197 : le `?invite=<token>`
- * d'un email d'invitation doit être résolu en clé service — l'invité n'a pas de
- * session, et n'aurait de toute façon pas accès au projet dont on affiche le
- * nom. Token absent, inconnu ou expiré → `null`, et l'écran est l'ordinaire.
+ * The login screen is a customer form (`components/auth/login-form`),
+ * but the PAGE is a server component since MIN-197: the `?invite=<token>`
+ * of an invitation email must be resolved in service key — the guest does not have
+ * session, and would in any case not have access to the project whose display is displayed.
+ * name. Token missing, unknown or expired → `null`, and the screen is the ordinary.
  */
 export default async function LoginPage({
   searchParams,
@@ -19,10 +19,10 @@ export default async function LoginPage({
 }) {
   const params = await searchParams;
 
-  // `?mode=signup` a été l'inscription pendant toute la vie de cet écran : les
-  // vieux liens (emails d'invitation déjà partis, marque-pages, la 308 qu'on
-  // vient de retirer de next.config) le portent encore. Il mène maintenant au
-  // parcours, en gardant ce qui doit le suivre (MIN-300).
+  // `?mode=signup` has been the inscription for the entire life of this screen: the
+  // old links (invitation emails already sent, bookmarks, the 308 that we
+  // just removed from next.config) still carry it. It now leads to
+  // route, keeping what must follow it (MIN-300).
   if (params.mode === "signup") {
     const search = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {

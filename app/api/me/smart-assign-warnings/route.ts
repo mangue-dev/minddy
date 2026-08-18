@@ -4,14 +4,14 @@ import { loadSmartAssignConfigWarnings } from "@/lib/server/smart-assign";
 import type { SmartAssignWarningsResponse } from "@/lib/types";
 
 /**
- * GET /api/me/smart-assign-warnings — mes projets où Smart Assign tourne sans
- * être réglé (MIN-31).
+ * GET /api/me/smart-assign-warnings — my projects where Smart Assign runs without
+ * be adjusted (MIN-31).
  *
- * Une route à part et non un champ de /api/me/summary : la sidebar porte la
- * marque sur TOUTES les pages, alors que le résumé du tableau de bord réconcilie
- * la timeline des cycles et compte les tickets — le monter partout pour une
- * pastille reviendrait à payer la lecture la plus lourde de l'app à chaque
- * navigation. Ici, deux petits `select`, et le plus souvent zéro ligne.
+ * A separate route and not a /api/me/summary field: the sidebar carries the
+ * marks on ALL pages, while the dashboard summary reconciles
+ * the cycle timeline and counts tickets — mount it anywhere for
+ * pellet would amount to paying for the heaviest reading of the app each time
+ * navigation. Here, two small `select`, and most often zero lines.
  */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);

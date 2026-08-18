@@ -1,0 +1,28 @@
+# Repository agent rules
+
+## Language
+
+- All new comments, docstrings, test descriptions, documentation, configuration
+  prose, and developer-facing CLI messages must be written in idiomatic English.
+- Do not add French prose to application code, tests, documentation, scripts, or
+  configuration. The only normal French catalog is `messages/fr.json`.
+- Preserve intentional runtime translations, language-specific test fixtures,
+  locale branches, proper names, legal credits, identifiers, URLs, API values,
+  and behavior. Do not translate those into English copies.
+- When editing existing French prose, translate it as part of the same change
+  unless it is one of the intentional runtime or language-fixture exceptions.
+
+## Translation-task boundary
+
+Translate comments and documentation without changing code, identifiers, URLs,
+configuration keys, migration behavior, or test semantics. If a French string
+is required to test localization or to serve the French locale, keep it and
+make the exception obvious from its surrounding code or fixture path.
+
+## Verification
+
+- Run `npm run check:owned-english` after changing comments, documentation,
+  tests, scripts, or configuration prose.
+- Run the smallest relevant test or lint command after source/configuration
+  changes.
+- Review `git diff --check` and confirm that excluded paths are untouched.

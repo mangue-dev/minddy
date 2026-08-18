@@ -141,9 +141,9 @@ function capForMobile<T extends { project_id: string }>(
 }
 
 /**
- * L'extrait, dans la place qu'une ligne de palette lui laisse. Il est déjà
- * borné par `ts_headline` (une vingtaine de mots) ; cette coupe-ci est le
- * garde-fou d'affichage, pour que le nom du projet reste lisible à sa gauche.
+ * The extract, in the space that a line of palette leaves for it. He is already
+ * bounded by `ts_headline` (around twenty words); this cut is the
+ * display guardrail, so that the project name remains readable on its left.
  */
 const MAX_EXCERPT_CHARS = 90;
 
@@ -153,15 +153,15 @@ function truncateExcerpt(excerpt: string): string {
     : `${excerpt.slice(0, MAX_EXCERPT_CHARS).trimEnd()}…`;
 }
 
-// L'export CSV est différé comme les dialogues de création : un dialogue qu'on
-// ouvre depuis ⌘K quelques fois dans la vie d'un compte n'a rien à faire dans le
-// bundle de chaque page.
+// The CSV export is deferred like the creation dialogs: a dialog that we
+// opens from ⌘K a few times in the life of an account has nothing to do in the
+// bundle for each page.
 const ExportIssuesDialog = dynamic(
   () => import("@/components/export-issues-dialog").then((m) => m.ExportIssuesDialog),
   { ssr: false }
 );
 
-/** Right-aligned project tag shown on palette rows (orb + name), à la AutoKap. */
+/** Right-aligned project tag shown on palette rows (orb + name), AutoKap-style. */
 function projectChip(project: Project) {
   return (
     <span className="flex items-center gap-1.5 text-xs text-muted-foreground/80">
@@ -194,9 +194,9 @@ function objectiveDotIcon(color: string | null): ComponentType<{ className?: str
   return Icon;
 }
 
-// L'emoji d'une page du wiki, dans la fente à icône de la palette (MIN-270).
-// Mis en cache par emoji pour la même raison que le point d'objectif : le slot
-// reçoit un COMPOSANT, et en fabriquer un neuf à chaque rendu le remonterait.
+// The emoji of a wiki page, in the icon slot of the palette (MIN-270).
+// Cached by emoji for the same reason as the objective point: slot
+// receives a COMPONENT, and making a new one each time it is rendered would reassemble it.
 const emojiIconCache = new Map<string, ComponentType<{ className?: string }>>();
 
 function emojiIcon(emoji: string): ComponentType<{ className?: string }> {
@@ -215,18 +215,18 @@ function emojiIcon(emoji: string): ComponentType<{ className?: string }> {
   return Icon;
 }
 
-/** Visage de Numo en icône statique de nav/palette (pas de clignement perpétuel,
-    comme les icônes de liste). Slotté là où les tabs lucide passent un `className`. */
+/** Numo's face in static nav/palette icon (no perpetual blinking,
+ like list icons). Slotted where the lucid tabs pass a `className`. */
 const NumoNavIcon = ({ className }: { className?: string }) => (
   <NumoIcon animated={false} className={className} />
 );
 NumoNavIcon.displayName = "NumoNavIcon";
 
 /**
- * Le compteur d'une entrée de la sidebar (inbox, PR, triage, feedback, projet).
- * Plafonné à « 99+ » : une file très en retard ne doit pas élargir la ligne au
- * point de rogner le nom du projet. `label` sert de lecture au lecteur d'écran,
- * pour qui un « 12 » posé à côté d'un nom de projet ne veut rien dire.
+ * The counter of a sidebar entry (inbox, PR, triage, feedback, project).
+ * Capped at “99+”: a queue that is very late must not widen the line to
+ * point to crop the project name. `label` is used as a reading for the screen reader,
+ * for whom a “12” next to a project name means nothing.
  */
 function countBadge(count: number, label?: string) {
   return (
@@ -240,28 +240,28 @@ function countBadge(count: number, label?: string) {
 }
 
 /**
- * Le même compteur, REPLIÉ en pastille de coin pour le mode rail : la ligne n'y
- * est plus qu'une icône, et le chiffre posé au bout n'a plus de bout où se
- * poser. Sans lui la file disparaît purement et simplement dès qu'une page porte
- * une sidebar secondaire — c'est-à-dire sur les pages mêmes où l'on trie.
+ * The same counter, FOLDED into a corner pad for rail mode: the line is not there
+ * is more than an icon, and the number placed at the end no longer has an end to
+ * to set down. Without it, the queue simply disappears as soon as a page has
+ * a secondary sidebar — that is to say on the same pages where we sort.
  *
- * Trois écarts avec la version dépliée, tous imposés par la boîte de 36 px :
+ * Three differences with the unfolded version, all imposed by the 36 px box:
  *
- * - **Plafond à « 9+ »**, pas « 99+ ». Ce n'est pas un choix de goût : la
- *   pastille est ancrée en haut à DROITE de la boîte et grandit vers la gauche,
- *   c'est-à-dire par-dessus l'icône. Trois caractères l'effacent, et le rail ne
- *   montre plus alors qu'un compteur sans dire de quoi.
- * - **Fond à la couleur de la barre**, là où la version dépliée n'a pas de fond
- *   du tout : posé à même les traits de l'icône, un chiffre nu ne se lit pas.
- *   Une pastille TEINTÉE ferait une seconde forme à lire ; à la couleur du fond,
- *   elle ne se voit pas — elle découpe simplement l'icône, et le chiffre a l'air
- *   posé dessus, sans rien ajouter. Le `px` la fait respirer : sans lui, la
- *   découpe s'arrête au chiffre et un trait d'icône vient le toucher.
- * - **`aria-label` porte le compte EXACT** quand l'affichage plafonne : « 9+ »
- *   lu à voix haute ne dit rien de ce qui attend.
+ * - **Ceiling at “9+”**, not “99+”. This is not a choice of taste:
+ * pellet is anchored at the top RIGHT of the box and grows towards the left,
+ * i.e. over the icon. Three characters clear it, and the rail does not
+ * shows more than a counter without saying what.
+ * - **Background to the color of the bar**, where the unfolded version has no background
+ * at all: placed directly on the lines of the icon, a bare number cannot be read.
+ * A TINTED tablet would make a second shape to read; to the background color,
+ * it is not visible — it simply cuts out the icon, and the number looks
+ * placed on top, without adding anything. The `px` makes it breathe: without it, the
+ * The cut stops at the number and an icon stroke touches it.
+ * - **`aria-label` carries the EXACT** count when the display peaks: “9+”
+ * read aloud says nothing of what awaits.
  *
- * Son encombrement est celui du spinner « agent en cours » (14 px), à un ou deux
- * pixels près : tout ce qui se replie dans ce coin y tient la même place.
+ * Its size is that of the “current agent” spinner (14 px), with one or two
+ * pixels: everything that folds into this corner holds the same place.
  */
 function countBadgeCollapsed(count: number, label?: string) {
   return (
@@ -275,9 +275,9 @@ function countBadgeCollapsed(count: number, label?: string) {
 }
 
 /**
- * Les champs de badge d'une entrée qui porte un COMPTEUR, dépliée et repliée
- * d'un seul geste — l'oubli du second est invisible tant qu'on ne va pas sur
- * une page à sidebar secondaire. Zéro ne rend rien : la ligne reste nue.
+ * The badge fields of an entry that carries a COUNTER, unfolded and folded
+ * with a single gesture - the forgetting of the second is invisible as long as we do not go on
+ * a secondary sidebar page. Zero does nothing: the line remains bare.
  */
 function countBadges(
   count: number,
@@ -292,9 +292,9 @@ function countBadges(
 }
 
 /**
- * La marque d'un brouillon de projet, à la place exacte du compteur « à trier »
- * d'un projet créé : c'est le seul point où la ligne diffère, et le vide y
- * laisserait croire à un projet sans rien à trier.
+ * The mark of a draft project, in the exact place of the “to sort” counter
+ * of a created project: this is the only point where the line differs, and the void there
+ * would suggest a project without anything to sort.
  */
 function draftBadge(label: string) {
   return <FileClock className="size-3.5 text-muted-foreground" aria-label={label} />;
@@ -334,17 +334,17 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const { openCreateIssue, openCreateObjective } = useCreate();
   const { open: openScratchpad } = useScratchpad();
   const { unreadCount } = useNotifications();
-  // Le badge de l'inbox compte aussi les invitations en attente : elles s'y
-  // affichent, et rien d'autre ne les signale une fois la home quittée.
+  // The inbox badge also counts pending invitations: they are there
+  // display, and nothing else reports them once you leave the home.
   const { invitations } = useMyInvitations();
   const inboxCount = unreadCount + invitations.length;
   const { setOpen: setCheatsheetOpen } = useCheatsheet();
-  // Mode zen (MIN-134) : la palette est le seul interrupteur, et la seule sortie
-  // avec le rechargement — elle reste donc montée, quoi qu'on masque autour.
+  // Zen mode (MIN-134): the paddle is the only switch, and the only output
+  // with reloading — it therefore remains mounted, whatever is masked around it.
   const { zen, toggle: toggleZen } = useZenMode();
-  // Entre le téléphone et le bureau large, on conserve le chrome desktop mais
-  // on rend les 256 px de la barre : le panneau du zen revient au survol du
-  // bord gauche, sans pousser le contenu ni activer la barre mobile.
+  // Between the phone and the wide desktop, we keep the chrome desktop but
+  // we return the 256 px of the bar: the zen panel returns when hovering over the
+  // left edge, without pushing content or activating the moving bar.
   const compactDesktop = useMediaQuery(
     "(min-width: 768px) and (max-width: 1199px)",
   );
@@ -353,11 +353,11 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // global shortcuts (⌘K / ⌘P / F, handled inside <CommandPalette>).
   const [paletteOpen, setPaletteOpen] = useState(false);
 
-  // La page porte-t-elle une sidebar secondaire ? Le montage de la barre est la
-  // réponse exacte ; la route donne la même avant l'hydratation, où rien n'est
-  // encore monté (cf. routeHasSecondaryNav). Sans elle, le HTML du serveur
-  // partirait sidebar primaire dépliée et contenu pleine largeur, pour tout
-  // réorganiser d'un coup à l'hydratation.
+  // Does the page have a secondary sidebar? The mounting of the bar is
+  // correct answer; the road gives the same before hydration, where nothing is
+  // still mounted (see routeHasSecondaryNav). Without it, the server's HTML
+  // would leave primary sidebar unfolded and full width content, for all
+  // reorganize suddenly for hydration.
   const { present: secondaryPresent } = useSecondarySidebar();
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
@@ -370,13 +370,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     () => new Map(projects.map((p) => [p.id, p])),
     [projects]
   );
-  // Ménage des branches d'agent (MIN-102), offert dans la palette DEPUIS
-  // N'IMPORTE OÙ : une ligne par projet éligible (owner + dépôt lié + des
-  // branches poussées par l'agent), pas seulement pour le projet de la page.
-  // Une seule requête couvre tous mes projets — cf. use-branch-cleanup-targets.
+  // Cleaning agent branches (MIN-102), offered in the SIN palette
+  // ANYWHERE: one line per eligible project (owner + linked deposit +
+  // branches pushed by the agent), not just for the project page.
+  // A single request covers all my projects — cf. use-branch-cleanup-targets.
   const branchCleanupTargets = useBranchCleanupTargets();
-  // La cible SURVIT à la fermeture (le dialogue joue son animation de sortie) ;
-  // c'est `branchCleanupOpen` qui ouvre et ferme.
+  // The target SURVIVES closing (the dialogue plays its exit animation);
+  // it is `branchCleanupOpen` which opens and closes.
   const [branchCleanup, setBranchCleanup] = useState<BranchCleanupTarget | null>(null);
   const [branchCleanupOpen, setBranchCleanupOpen] = useState(false);
   const openBranchCleanup = useCallback((target: BranchCleanupTarget) => {
@@ -384,10 +384,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     setBranchCleanupOpen(true);
   }, []);
 
-  // Export CSV : une seule ligne de palette, jamais par projet — c'est le
-  // dialogue qui demande la portée, parce qu'« un projet ou tous » est justement
-  // la question qu'on se pose en cliquant. Comme pour le ménage des branches, le
-  // montage SURVIT à la fermeture le temps de l'animation de sortie.
+  // CSV export: only one pallet line, never per project — this is the
+  // dialogue which requires scope, because “one project or all” is precisely
+  // the question we ask ourselves when clicking. As for cleaning the branches, the
+  // montage SURVIVES closing for the duration of the exit animation.
   const [exportMounted, setExportMounted] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const openExport = useCallback(() => {
@@ -410,29 +410,29 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   });
 
   // Objectives feed the palette list. useObjectivesQuery shares the
-  // ["objectives", projectId] cache, kept fresh by realtime — les lignes du
-  // projet courant sont donc exactes, là où l'index de recherche est un
-  // instantané.
+  // ["objectives", projectId] cache, kept fresh by realtime — the lines of
+  // current project are therefore accurate, where the search index is a
+  // instant.
   const { objectives: projectObjectives, loading: objectivesLoading } =
     useObjectivesQuery(currentProjectId);
 
-  // Les pages du wiki du projet courant, pour ⌘K (MIN-270). Même cache que
-  // l'arbre de l'onglet Pages : ouvrir l'onglet ne redemande rien, et une page
-  // renommée là-bas change de nom dans la palette sans aller-retour.
+  // The current project wiki pages, for ⌘K (MIN-270). Same cache as
+  // the tree of the Pages tab: opening the tab does not ask for anything, and a page
+  // fame there changes name in the palette without going back and forth.
   const { pages: wikiPages, createPage: createWikiPage } =
     usePagesQuery(currentProjectId);
 
   /**
-   * « Nouvelle page » depuis ⌘K : la page est créée puis OUVERTE, comme le fait
-   * le « + » de la barre secondaire (components/pages/pages-shell.tsx).
+   * “New page” from ⌘K: the page is created then OPENED, as does
+   * the “+” of the secondary bar (components/pages/pages-shell.tsx).
    *
-   * Pas de dialogue en chemin, contrairement à un ticket ou à un objectif : une
-   * page n'a rien à renseigner avant d'exister — son titre se tape dans le
-   * document. Le geste attendu depuis la palette est donc « je suis dans la
-   * page neuve », pas « je remplis un formulaire ».
+   * No dialogue along the way, unlike a ticket or an objective: a
+   * page does not have to provide anything before existing — its title is typed in the
+   * document. The gesture expected from the palette is therefore “I am in the
+   * new page”, not “I am filling out a form”.
    *
-   * `markDraftPage`, comme partout ailleurs : une page créée n'est pas une page
-   * sauvegardée, et repartir sans y écrire une lettre la fait disparaître.
+   * `markDraftPage`, like everywhere else: a created page is not a page
+   * saved, and leaving without writing a letter in it makes it disappear.
    */
   const createPageFromPalette = useCallback(
     (projectId: string) => {
@@ -466,9 +466,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       mergeByProject(searchIndex?.issues ?? [], currentProjectId, projectIssues),
     [searchIndex, currentProjectId, projectIssues]
   );
-  // Les pages du wiki, TOUS PROJETS (MIN-276). Même fusion que les tickets : le
-  // projet courant vient de son cache vivant (renommer une page dans l'arbre la
-  // renomme dans ⌘K sans aller-retour), les autres de l'instantané.
+  // Wiki pages, ALL PROJECTS (MIN-276). Same merger as tickets: the
+  // current project comes from its live cache (rename a page in the tree
+  // renames in ⌘K without round trip), the others of the snapshot.
   const palettePages = useMemo<SearchIndexPage[]>(
     () =>
       mergeByProject(
@@ -487,9 +487,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     [searchIndex, currentProjectId, wikiPages]
   );
 
-  // Et ce que les titres ne peuvent pas donner : les pages dont le CONTENU
-  // répond. Une requête au serveur, en retard sur la frappe, qui enrichit la
-  // liste déjà affichée au lieu de la faire attendre.
+  // And what titles cannot give: pages whose CONTENT
+  // answers. A request to the server, late on typing, which enriches the
+  // list already displayed instead of making it wait.
   const pageContentHits = usePageContentSearch(paletteOpen);
 
   const paletteObjectives = useMemo<SearchIndexObjective[]>(
@@ -510,8 +510,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // same issues cache the board and search already keep fresh.
   const triageCount = (projectIssues ?? []).filter((i) => i.status === "triage").length;
 
-  // Feedback (MIN-37) : compteur des retours ouverts/prévus, via un endpoint
-  // léger (le badge n'a pas besoin de la liste complète).
+  // Feedback (MIN-37): counter of open/planned feedback, via an endpoint
+  // lightweight (badge does not need the full list).
   const { data: feedbackCountData } = useQuery({
     queryKey: ["feedback-count", currentProjectId ?? ""],
     queryFn: async () => {
@@ -524,21 +524,21 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   });
   const feedbackCount = feedbackCountData?.count ?? 0;
 
-  // Pull Requests (MIN-66) : compteur des PR ouvertes. La liste est globale
-  // (l'onglet pointe vers /pull-requests), donc on dérive le compte de la même
-  // query que la page, dans son état par défaut — le serveur ne renvoie déjà que
-  // les ouvertes (open + draft).
+  // Pull Requests (MIN-66): counter of open PRs. The list is global
+  // (the tab points to /pull-requests), so we derive the account from the same
+  // query as the page, in its default state — the server already only returns
+  // the open ones (open + draft).
   //
-  // Depuis MIN-143 il compte TOUTES les PR ouvertes du dépôt, pas seulement
-  // celles de Numo. C'est voulu : la pastille annonce ce que l'onglet contient,
-  // et la restreindre aux PR rattachées à un ticket rouvrirait exactement le
-  // problème que MIN-143 ferme — un écran qui montre la moitié du dépôt.
+  // Since MIN-143 it counts ALL open PRs in the repository, not just
+  // those of Numo. This is intentional: the sticker announces what the tab contains,
+  // and restricting it to PRs attached to a ticket would exactly reopen the
+  // problem that MIN-143 closes — a screen that shows half of the repository.
   const { pullRequests } = useAllPullRequestsQuery();
   const openPrCount = pullRequests.length;
 
-  // Smart Assign actif mais sans règles sur un de mes projets (MIN-31) : la
-  // sidebar en porte la marque, et c'est l'accueil qui l'explique — l'entrée
-  // « Accueil » la porte donc, dans les deux modes de la sidebar.
+  // Smart Assign active but without rules on one of my projects (MIN-31): the
+  // sidebar bears the mark, and it is the welcome which explains it — the entrance
+  // “Home” therefore carries it, in both modes of the sidebar.
   const { warnings: smartAssignWarnings } = useSmartAssignWarningsQuery();
   const smartAssignBadge =
     smartAssignWarnings.length > 0 ? (
@@ -548,16 +548,16 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       />
     ) : undefined;
 
-  // Ce qui attend d'être trié dans chacun de mes projets — tickets en triage +
-  // retours ouverts, la file « À trier » de l'accueil vue par projet. Hors d'un
-  // projet, la sidebar ne montrait rien de tout ça : elle y liste les projets
-  // sans un seul badge, et le triage d'ailleurs restait invisible tant qu'on
-  // n'entrait pas dedans. Chaque ligne de projet porte donc maintenant la somme
-  // des deux compteurs qu'on lira sur ses onglets une fois à l'intérieur.
+  // What's waiting to be sorted in each of my projects — tickets in triage +
+  // open returns, the “To be sorted” queue at reception viewed by project. Out of a
+  // project, the sidebar didn't show any of that: it lists the projects
+  // without a single badge, and the sorting, moreover, remained invisible as long as we
+  // didn't get into it. Each project line therefore now carries the sum
+  // of the two counters that can be read on its tabs once inside.
   const { counts: triageCounts } = useTriageCountsQuery();
-  // Depuis un projet, la même information sur les AUTRES : l'entrée de retour
-  // « Accueil » en porte le total (celui du projet courant est déjà sur ses
-  // propres onglets, deux lignes plus bas).
+  // From a project, the same information on OTHERS: the return entry
+  // “Home” brings the total (that of the current project is already on its
+  // their own tabs, two lines below).
   const triageElsewhere = useMemo(
     () =>
       Object.entries(triageCounts).reduce(
@@ -567,9 +567,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       ),
     [triageCounts, currentProjectId]
   );
-  // L'entrée « Accueil » cumule donc deux marques. Le coin de l'icône n'en tient
-  // qu'UNE : le triangle passe devant, parce qu'un réglage incomplet ne se
-  // rattrape pas tout seul là où une file finit toujours par se vider.
+  // The “Home” entry therefore combines two marks. The corner of the icon does not hold
+  // only ONE: the triangle passes in front, because an incomplete adjustment does not
+  // Don't catch up alone where a line always ends up emptying.
   const homeBadge =
     smartAssignBadge || triageElsewhere > 0 ? (
       <span className="flex items-center gap-1.5">
@@ -591,15 +591,15 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         )
       : undefined);
 
-  // Agents : un spinner sur l'onglet dès qu'une session TRAVAILLE (génération en
-  // cours), tous projets confondus ; sinon une bulle bleue si au moins une session a
-  // TERMINÉ sans avoir été consultée (le travail en cours prime sur le non-lu).
+  // Agents: a spinner on the tab as soon as a session is WORKING (generation in
+  // course), all projects combined; otherwise a blue bubble if at least one session has
+  // FINISHED without having been consulted (work in progress takes precedence over unread work).
   const { sessions: agentSessions } = useAgentSessionsQuery();
   const { reads: agentReads } = useAgentReads();
   const anyAgentWorking = agentSessions.some((s) => s.working);
   const anyAgentUnread = agentSessions.some((s) => isAgentSessionUnread(s, agentReads));
-  // Une session attend une réponse (ask_user) et n'est pas lue → point JAUNE
-  // prioritaire sur le bleu « terminé, non lu ».
+  // A session is waiting for a response (ask_user) and is not read → YELLOW dot
+  // priority on the blue “finished, unread”.
   const anyAgentAwaiting = agentSessions.some(
     (s) => s.awaitingInput && isAgentSessionUnread(s, agentReads),
   );
@@ -631,9 +631,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         metaText: currentProject.name,
         onSelect: () => openCreateObjective({ projectId: currentProject.id }),
       });
-      // La page ne suit le projet ouvert que DANS un projet, contrairement au
-      // ticket : hors projet, la palette ne saurait pas dans quel wiki écrire,
-      // et le cache des pages n'est chargé que pour le projet courant.
+      // The page only follows the open project IN a project, unlike the
+      // ticket: outside the project, the palette would not know in which wiki to write,
+      // and the page cache is only loaded for the current project.
       createItems.push({
         key: "create-page",
         label: tPages("newPage"),
@@ -685,13 +685,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         onSelect: openCreateProject,
       });
     }
-    // Les brouillons vivent DANS le groupe « Créer », sous « Nouveau projet » :
-    // un brouillon est une création en cours, et les deux lignes mènent au même
-    // endroit — le wizard, neuf ou repris. Les mettre dans « Aller à » aurait
-    // rangé une modale parmi des destinations.
+    // Drafts live IN the “Create” group, under “New Project”:
+    // a draft is a creation in progress, and both lines lead to the same
+    // place — the wizard, new or reused. Putting them in “Go to” would have
+    // ranked a modal among destinations.
     //
-    // Pas de verrou de plan ici, contrairement à « Nouveau projet » : reprendre
-    // un brouillon n'est pas créer, et le plafond se dit à la création.
+    // No plan lock here, unlike “New project”: resume
+    // a draft is not created, and the ceiling is said to be created.
     for (const d of projectDrafts) {
       createItems.push({
         key: `resume-project-draft-${d.id}`,
@@ -732,8 +732,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 onSelect: () => router.push("/agents"),
               },
               {
-                // Les ROUTINES (MIN-185) ont leur propre page et leur propre
-                // entrée dans la navigation primaire.
+                // ROUTINES (MIN-185) have their own page and their own
+                // entry into primary navigation.
                 key: "go-routines",
                 label: tRoutines("title"),
                 icon: CalendarClock,
@@ -758,9 +758,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           onSelect: () => router.push("/all"),
         },
         {
-          // Le cycle est personnel et cross-projet : il vit sur /all en mode
-          // cycle (MIN-32), jamais scopé à un projet — même destination que
-          // l'onglet ↗ des boards et la carte de la home.
+          // The cycle is personal and cross-project: it lives on /all in mode
+          // cycle (MIN-32), never assigned to a project — same destination as
+          // the ↗ boards tab and the home map.
           key: "go-cycle",
           label: t("cycle"),
           icon: IterationCw,
@@ -783,9 +783,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           onSelect: () => router.push("/settings"),
         },
         {
-          // Sortir ses tickets en CSV — le geste qu'on vient chercher dans ⌘K
-          // chez Linear, et qu'on cherchait donc ici. Le dialogue demande le
-          // projet et les statuts ; cette ligne ne présume de rien.
+          // Take out your tickets in CSV — the gesture you come to look for in ⌘K
+          // at Linear, and that we were therefore looking for here. The dialogue asks for
+          // project and statutes; this line assumes nothing.
           key: "export-issues",
           label: tExport("title"),
           icon: Download,
@@ -813,9 +813,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           onSelect: () => setCheatsheetOpen(true),
         },
         {
-          // Mode zen (MIN-134) : entrée unique, dans les deux sens. Sans bouton
-          // ailleurs, cette ligne est aussi la porte de sortie — d'où le libellé
-          // qui bascule plutôt qu'un « Mode zen » ambigu une fois dedans.
+          // Zen mode (MIN-134): single input, in both directions. Without button
+          // elsewhere, this line is also the exit door — hence the wording
+          // which switches rather than an ambiguous “Zen Mode” once in.
           key: "toggle-zen",
           label: zen ? t("zenModeExit") : t("zenMode"),
           icon: zen ? PanelsTopLeft : Focus,
@@ -882,8 +882,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             contextId,
             onSelect: () => router.push(`${base}/objectives`),
           },
-          // Entre Objectifs et Triage, comme dans la sidebar : la palette dit
-          // les écrans d'un projet dans l'ordre où on les y voit.
+          // Between Objectives and Triage, as in the sidebar: the palette says
+          // the screens of a project in the order in which they are seen.
           {
             key: `pg-pages-${p.id}`,
             label: t("pages"),
@@ -927,10 +927,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         );
       }
 
-      // Ménage des branches d'agent (MIN-102) — une action, pas une page, mais
-      // par projet comme le reste du groupe, et joignable de n'importe où : une
-      // ligne par projet éligible, avec sa puce, parce qu'une suppression de
-      // branches doit dire sur quel dépôt elle porte.
+      // Housekeeping of agent branches (MIN-102) — an action, not a page, but
+      // per project like the rest of the group, and reachable from anywhere: a
+      // line per eligible project, with its chip, because a deletion of
+      // branches must say which deposit it relates to.
       for (const target of branchCleanupTargets) {
         const p = projectById.get(target.project_id);
         if (!p) continue;
@@ -958,27 +958,27 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         });
       }
 
-      // « Aller à » et non « Pages » : depuis MIN-270, une Page est un objet du
-      // produit (le wiki d'un projet). Garder ce mot pour le groupe des ÉCRANS
-      // mettrait deux choses différentes sous le même titre, dans la même liste.
+      // “Go to” and not “Pages”: since MIN-270, a Page is an object of the
+      // product (the wiki of a project). Keep this word for the SCREENS group
+      // would put two different things under the same title, in the same list.
       groups.push({ key: "pages", heading: t("goTo"), items: pageItems });
     }
 
     return groups;
   }, [projects, projectById, projectDrafts, openProjectDraft, currentProject, createPageFromPalette, router, openCreateProject, openCreateIssue, openCreateObjective, openScratchpad, agentsAllowed, projectLimitReached, branchCleanupTargets, openBranchCleanup, openExport, zen, toggleZen, t, ti, tk, tPages, tScratch, tSettings, tExport, tProjects, setCheatsheetOpen]);
 
-  // ── Réglages : une ligne par CARTE, pas par onglet ───────────────────────
-  // Un onglet de réglages est une colonne de cartes ; « Cadence », « Zone
-  // sensible » ou « Agir en votre nom » ne sont pas des onglets, et ce sont
-  // pourtant ces mots-là qu'on tape. Choisir une ligne ouvre donc la bonne page,
-  // y sélectionne le bon onglet, déroule jusqu'à la carte et la surligne
+  // ── Settings: one line per CARD, not per tab ───────────────────────
+  // A settings tab is a column of cards; “Cadence”, “Zone
+  // sensitive” or “Act on your behalf” are not tabs, and they are
+  // yet these words we type. Choosing a line therefore opens the correct page,
+  // y selects the correct tab, scrolls down to the map and highlights it
   // (lib/settings-sections.ts → components/settings-shell.tsx).
   //
-  // Le projet offert est CELUI DE LA PAGE, et lui seul : les mêmes treize
-  // sections répétées pour chaque projet noieraient la liste, alors que « les
-  // réglages de ce projet » est ce qu'on cherche depuis l'intérieur d'un projet.
-  // Pour en régler un autre, la ligne « Paramètres du projet » du groupe Pages
-  // (elle, offerte pour tous) y emmène d'abord.
+  // The project offered is THAT OF THE PAGE, and it alone: ​​the same thirteen
+  // repeated sections for each project would swamp the list, while “the
+  // settings of this project” is what we are looking for from inside a project.
+  // To set another one, the “Project Settings” line in the Pages group
+  // (she, offered for all) takes there first.
   const settingsSections = useSettingsSections();
   const settingsGroups = useMemo<PaletteGroup[]>(() => {
     const row = (s: SettingsSection, project: Project | null): PaletteItem => ({
@@ -987,8 +987,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       icon: s.icon,
       keywords: [
         ...s.keywords,
-        // L'onglet est un terme de recherche à part entière : « cycles » doit
-        // trouver « Cadence », qui ne porte le mot nulle part.
+        // The tab is a search term in its own right: “cycles” must
+        // find “Cadence”, which doesn’t have the word anywhere.
         s.tabLabel,
         ...(project ? [project.name, project.key] : []),
       ],
@@ -1009,9 +1009,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     ];
 
     if (currentProject) {
-      // « Quitter le projet » et « Zone sensible » s'excluent l'une l'autre :
-      // proposer la seconde à qui n'est pas propriétaire l'emmènerait sur un
-      // onglet où elle n'existe pas.
+      // “Leave project” and “Sensitive area” are mutually exclusive:
+      // offering the second to someone who is not an owner would take them to a
+      // tab where it does not exist.
       const isOwner = currentProject.owner_id === user?.id;
       groups.push({
         key: "settings-project",
@@ -1029,13 +1029,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     return groups;
   }, [settingsSections, currentProject, user, router, t]);
 
-  // ── Data groups: tickets + objectifs, tous projets confondus (MIN-91) ────
-  // Séparés des groupes de commandes ci-dessus parce qu'ils sont les seuls à
-  // peser : quelques milliers de lignes, chacune avec ses éléments React
-  // (badge d'identifiant, puce de projet). On les fabrique donc à la demande,
-  // avec deux budgets — liste complète pour la palette desktop (virtualisée,
-  // et qui ne rend rien tant qu'elle est fermée), liste plafonnée pour le nav
-  // mobile (qui monte tout ce qu'on lui donne).
+  // ── Data groups: tickets + objectives, all projects combined (MIN-91) ────
+  // Separated from the command groups above because they are the only ones
+  // weigh: a few thousand lines, each with its React elements
+  // (ID badge, project chip). We therefore manufacture them on demand,
+  // with two budgets — complete list for the desktop palette (virtualized,
+  // and which does not return anything as long as it is closed), capped list for nav
+  // mobile (which mounts everything it receives).
   const buildDataGroups = useCallback(
     (
       issues: SearchIndexIssue[],
@@ -1045,16 +1045,16 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     ): PaletteGroup[] => {
       const groups: PaletteGroup[] = [];
 
-      // L'identifiant porte la clé du projet (MIN-42 vs AKP-7), donc une ligne
-      // dit d'où elle vient ; `contextId` fait remonter le projet courant.
+      // The identifier carries the project key (MIN-42 vs AKP-7), therefore one line
+      // says where it comes from; `contextId` brings up the current project.
       if (issues.length > 0) {
         groups.push({
           key: "issues",
           heading: ti("entityPlural"),
           items: issues.flatMap((i) => {
             const project = projectById.get(i.project_id);
-            // Projet inconnu (supprimé, ou quitté) → rien pour étiqueter ni
-            // router le ticket : on l'écarte plutôt que d'afficher « -12 ».
+            // Unknown project (deleted, or left) → nothing to label or
+            // route the ticket: we discard it rather than displaying “-12”.
             if (!project) return [];
             const id = issueIdentifier(project.key, i.number);
             return [
@@ -1074,9 +1074,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         });
       }
 
-      // Un objectif s'ouvre sur SA page (MIN-226) : c'est un objet qu'on vient
-      // voir, plus un panneau qui se posait par-dessus la page courante. Même
-      // lien que les notifications, quel que soit le projet.
+      // An objective opens on ITS page (MIN-226): it is an object that we come
+      // see, plus a panel that was placed over the current page. Even
+      // link as notifications, regardless of the project.
       if (objectives.length > 0) {
         groups.push({
           key: "objectives",
@@ -1101,19 +1101,19 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         });
       }
 
-      // ── Le wiki, TOUS PROJETS (MIN-270, cross-projet depuis MIN-276) ───
+      // ── The wiki, ALL PROJECTS (MIN-270, cross-project since MIN-276) ───
       //
-      // Deux sources en une seule liste, et c'est voulu. Les TITRES viennent de
-      // l'index (filtrés à la frappe, sans serveur) ; le CONTENU vient de
-      // Postgres, avec l'extrait qui dit pourquoi la page sort. L'extrait est
-      // posé en `description` : le moteur de la palette classe un match de
-      // titre au-dessus d'un match de description, donc « trouvée par son
-      // titre » passe devant « citée dans un corps » sans qu'on ait à trier —
-      // et le mot cherché reste visible sur la ligne (`metaText`).
+      // Two sources in one list, and that's intentional. The TITLES come from
+      // the index (filtered as you type, serverless); the CONTENT comes from
+      // Postgres, with the snippet that says why the page exits. The extract is
+      // placed in `description`: the palette engine classifies a match of
+      // title above a description match, so "found by its
+      // title” passes before “cited in a body” without having to sort —
+      // and the searched word remains visible on the line (`metaText`).
       //
-      // Une page trouvée par son contenu mais absente de l'index (plafond
-      // atteint, instantané périmé) est ajoutée à la liste : le serveur vient
-      // de dire qu'elle existe et qu'elle répond.
+      // A page found by its content but missing from the index (ceiling
+      // reached, snapshot expired) is added to the list: the server comes
+      // to say that it exists and that it responds.
       const excerptById = new Map(
         contentHits.map((hit) => [hit.id, hit.excerpt] as const)
       );
@@ -1213,8 +1213,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   };
 
   // Verrous de plan (MIN-72) : Agents & Pull Requests restent visibles mais
-  // grisés quand le plan ne les inclut pas ; « Nouveau projet » se grise au
-  // plafond. Partagés par les deux modes de la sidebar (projet / home).
+  // grayed out when the plan does not include them; “New project” turns gray
+  // ceiling. Shared by the two sidebar modes (project/home).
   const pullRequestsItem: AppNavItem = {
     key: "pull-requests",
     label: t("pullRequests"),
@@ -1243,7 +1243,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       agentsAllowed && anyAgentWorking ? (
         <Spinner className="size-3.5 text-muted-foreground" />
       ) : agentsAllowed && anyAgentAwaiting ? (
-        // Une session attend une réponse de l'utilisateur → point JAUNE.
+        // A session is waiting for a response from the user → YELLOW point.
         <span
           className="size-2 rounded-full bg-yellow-500"
           aria-label={t("agentsAwaiting")}
@@ -1303,7 +1303,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               icon: LayoutGrid,
               href: base,
               active: pathname === base,
-              // P (projet) — B est le board tous-projets, depuis un projet aussi.
+              // P (project) — B is the all-project board, from a project too.
               shortcut: "P",
             },
             {
@@ -1314,10 +1314,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               active: pathname.startsWith(`${base}/objectives`),
               shortcut: "O",
             },
-            // Entre Objectifs et Triage : le wiki du projet se lit avec ce qui
-            // dit OÙ VA le projet, et pas avec les files qu'on vide. Triage,
-            // Retours et leurs pastilles restent groupés en bas, là où on les
-            // regarde quand on cherche du travail en attente.
+            // Between Objectives and Triage: the project wiki can be read with what
+            // says WHERE the project is GOING, and not with the files that we empty. Sorting,
+            // Returns and their pellets remain grouped at the bottom, where they are
+            // checks when looking for pending work.
             {
               key: "pages",
               label: t("pages"),
@@ -1392,9 +1392,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       {
         items: [
           ...projects.map((p) => {
-            // Un seul chiffre pour les deux moitiés de la file : entrer dans le
-            // projet le redécompose en ses onglets Triage et Feedback, et la
-            // somme doit y retomber juste.
+            // A single number for both halves of the line: enter the
+            // project breaks it down into its Triage and Feedback tabs, and the
+            // total must land there exactly.
             const toTriage = triageCountTotal(triageCounts[p.id]);
             return {
               key: `project-${p.id}`,
@@ -1404,10 +1404,10 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               ...countBadges(toTriage, t("triageBadge", { count: toTriage })),
             };
           }),
-          // Les brouillons, à la suite des projets et dans la même liste : c'est
-          // la même chose à un état près, et les reléguer ailleurs demanderait
-          // d'aller les chercher. La ligne est celle d'un projet — orbe, nom —
-          // sauf sa marque, et cliquer rouvre le wizard là où on l'a laissé.
+          // The drafts, following the projects and in the same list: this is
+          // the same thing up to one state, and relegating them elsewhere would require
+          // to go get them. The line is that of a project — orb, name —
+          // except its mark, and clicking reopens the wizard where we left it.
           ...projectDrafts.map(
             (d): AppNavItem => ({
               key: `project-draft-${d.id}`,
@@ -1415,8 +1415,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               icon: projectOrbIcon(draftOrbSeed(d), draftIconUrl(d)),
               onClick: () => openProjectDraft(d),
               badge: draftBadge(tProjects("draftBadge")),
-              // Au rail, la ligne se réduit à son orbe : sans la pastille de
-              // coin, un brouillon y serait indiscernable d'un projet.
+              // On the rail, the line is reduced to its orb: without the pellet of
+              // corner, a draft would be indistinguishable from a project.
               showBadgeCollapsed: true,
               tooltip: tProjects("draftResume", { name: d.name }),
               contextActions: [
@@ -1459,7 +1459,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const { menuSections: accountSections, commandGroup: accountCommandGroup } =
     useAccountActions();
 
-  // Palette = commandes + données + compte (used by the desktop pill too). The
+  // Palette = orders + data + account (used by the desktop pill too). Tea
   // mobile menu sheet gains the account sections so it fully replaces the
   // sidebar, and takes the capped data groups.
   const paletteGroups = useMemo(
@@ -1500,25 +1500,25 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShell
-      // `app-shell` : la prise de globals.css sur le <main> du shell, dont la
-      // réserve basse se recale sur la hauteur RÉELLE de la barre mobile
+      // `app-shell`: taking globals.css on the <main> of the shell, whose
+      // low reserve adjusts to the REAL height of the moving bar
       // (--mobile-nav-clearance). Rien d'autre ne s'y accroche.
       className="app-shell"
-      // Le bloc de navigation : la sidebar primaire, puis le point d'accueil de
-      // la sidebar SECONDAIRE que la page y téléporte. Les deux vivent dans la
-      // même boîte, à gauche du header — c'est ce qui décale le fil d'Ariane et
-      // le contenu, au lieu de les laisser passer au-dessus d'une colonne.
+      // The navigation block: the primary sidebar, then the home point of
+      // the SECONDARY sidebar that the page teleports there. Both live in the
+      // same box, to the left of the header — this is what shifts the breadcrumbs and
+      // the content, instead of letting them pass over a column.
       //
-      // Mode zen (MIN-134) : le header n'est pas caché, il n'est pas donné —
-      // pas de bande vide là où il était. La NAVIGATION, elle, ne part pas : le
-      // zen n'est pas censé enfermer. Les deux barres quittent le flux d'un seul
-      // bloc et se rappellent au survol du bord gauche (`ZenNavOverlay`), hors
-      // du flux, sans rien décaler — exactement le marché que la primaire passe
-      // déjà avec son rail. Le zen retire le meuble, pas la navigation.
+      // Zen mode (MIN-134): the header is not hidden, it is not given —
+      // no empty strip where it was. NAVIGATION does not leave: the
+      // Zen is not meant to confine. Both bars leave the stream as one
+      // block and remember when hovering over the left edge (`ZenNavOverlay`), excluding
+      // of the flow, without shifting anything — exactly the market that the primary passes
+      // already with its rail. Zen removes the furniture, not the navigation.
       //
-      // Le bloc porte TOUJOURS la primaire, la secondaire s'y ajoutant quand la
-      // page en a une : c'est elle qui héberge les boutons de fenêtre de l'app
-      // de bureau, et c'est aussi la seule navigation des pages qui n'ont pas de
+      // The block ALWAYS carries the primary, the secondary being added when the
+      // page has one: it is this which hosts the app window buttons
+      // desktop, and it is also the only navigation of pages that do not have
       // barre secondaire.
       sidebar={
         <div className="relative flex h-full">
@@ -1560,9 +1560,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           />
         )
       }
-      // Le nav mobile RESTE, lui : c'est par son bouton de recherche qu'on ouvre
-      // la palette sur mobile, donc le masquer enfermerait dans le mode zen tous
-      // ceux qui n'ont pas de ⌘K sous la main.
+      // The mobile nav REMAINS: it is through its search button that you open
+      // the palette on mobile, so hiding it would lock everyone in Zen mode
+      // those who don't have ⌘K on hand.
       mobileNav={
         <MobileNav
           sections={mobileMenuSections}
@@ -1576,20 +1576,20 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       }
     >
       {children}
-      {/* Command palette (⌘K / ⌘P / F, header search pill) — mêmes groupes que
-          la recherche du nav mobile, tickets enrichis d'actions (⌘;). L'index
-          cross-projet sert aussi ces actions : membres et catégories du projet
-          DU TICKET, qui n'est pas forcément celui de la page (MIN-91). */}
+      {/* Command palette (⌘K / ⌘P / F, header search pill) — same groups as
+ mobile nav search, tickets enriched with actions (⌘;). The cross-project
+ index also serves these actions: members and categories of the project
+ OF THE TICKET, which is not necessarily that of the page (MIN-91). */}
       <CommandPalette
         groups={paletteGroups}
         open={paletteOpen}
         onOpenChange={handlePaletteOpenChange}
         searchIndex={searchIndex}
       />
-      {/* Ménage des branches ouvert depuis la palette (MIN-102) — le MÊME
-          dialogue que le bouton des paramètres, monté ici pour être joignable
-          de n'importe quelle page, sur n'importe lequel de mes projets. La clé
-          remonte le dialogue d'un projet à l'autre, donc son aperçu se recharge. */}
+      {/* Cleaning of branches opened from the pallet (MIN-102) — the SAME
+ dialog as the settings button, mounted here to be reachable
+ from any page, on any of my projects. The key
+ moves the dialog from one project to another, so its preview reloads. */}
       {branchCleanup && (
         <BranchCleanupDialog
           key={branchCleanup.project_id}
@@ -1599,9 +1599,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           onOpenChange={setBranchCleanupOpen}
         />
       )}
-      {/* Export CSV ouvert depuis la palette — monté ici pour la même raison :
-          il part de n'importe quelle page, et emporte les tickets de n'importe
-          lequel de mes projets. Le projet de la page n'est qu'un défaut. */}
+      {/* CSV export opened from the palette — mounted here for the same reason:
+ it starts from any page, and takes the tickets from any
+ any of my projects. The draft page is just a blemish. */}
       {exportMounted && (
         <ExportIssuesDialog
           open={exportOpen}

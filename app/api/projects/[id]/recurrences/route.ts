@@ -5,14 +5,14 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * GET /api/projects/[id]/recurrences — les récurrences actives du projet
- * (MIN-136), pour l'onglet « Récurrences » de ses paramètres.
+ * GET /api/projects/[id]/recurrences — the active recurrences of the project
+ * (MIN-136), for the “Recurrences” tab of its parameters.
  *
- * Un seul ticket vivant par série porte une cadence : la liste des tickets où
- * `recurrence is not null` EST la liste des récurrences. Rien à filtrer sur le
- * statut — un ticket terminé a passé sa cadence à son successeur, un ticket
- * annulé l'a perdue (lib/server/update-issue.ts), et la corbeille est déjà
- * exclue par la policy `issues_select`.
+ * A single living ticket per series carries a cadence: the list of tickets where
+ * `recurrence is not null` IS the list of recurrences. Nothing to filter on the
+ * status — a completed ticket has passed its cadence to its successor, a ticket
+ * canceled lost it (lib/server/update-issue.ts), and the trash is already
+ * excluded by the `issues_select` policy.
  */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     .select("id, number, title, status, assignee_id, due_date, recurrence")
     .eq("project_id", id)
     .not("recurrence", "is", null)
-    // La prochaine échéance d'abord : c'est l'ordre dans lequel on les lit.
+    // The next deadline first: this is the order in which we read them.
     .order("due_date", { ascending: true });
 
   if (error) {

@@ -34,41 +34,41 @@ import type { GitConnection, GitIdentity } from "@/lib/types";
 const PROVIDER_ICON = { github: Github, gitlab: Gitlab } as const;
 
 /**
- * « Comptes git connectés » (MIN-47 + MIN-144) : un compte de forge par bloc,
- * avec ses DEUX niveaux l'un sous l'autre.
+ * “Connected git accounts” (MIN-47 + MIN-144): one forge account per block,
+ * with its TWO levels one under the other.
  *
- *   ┌ GitHub · mangue-dev        12 juil. · 3 projets   [Déconnecter] ┐
- *   ├ minddy peut agir en votre nom                       [Révoquer]  ┤
+ * ┌ GitHub · mangue-dev Jul 12 · 3 projects [Disconnect] ┐
+ * ├ minddy can act on your behalf [Revoke] ┤
  *
- * Les deux vivaient dans deux cartes séparées, et il fallait recoller de tête
- * « GitHub · mangue-dev » d'en bas avec « GitHub — pas encore autorisé » d'en
- * haut. Sous le même bloc, la question « de quel compte parle-t-on » ne se pose
- * plus, et la hiérarchie est lisible : la connexion PORTE l'autorisation.
+ * Both lived in two separate maps, and it was necessary to reglue from head
+ * “GitHub · mango-dev” from below with “GitHub — not yet authorized” from en
+ * top. Under the same block, the question "which account are we talking about" does not arise
+ * any more, and the hierarchy is readable: the connection CARRYS the authorization.
  *
- * D'où le survol teinté, qui dit la portée avant le clic : survoler
- * « Déconnecter » rougit tout le bloc (la connexion part, et l'autorisation
- * avec) ; survoler « Révoquer » ne rougit que sa ligne (seule l'autorisation
- * saute, la connexion reste). Le focus clavier fait pareil — le signal ne
- * s'adresse pas qu'à la souris.
+ * Hence the tinted hover, which says the scope before the click: hover
+ * "Disconnect" reddens the entire block (the connection leaves, and authorization
+ * with); hovering over "Revoke" only reddens its line (only permission
+ * jumps, connection remains). Keyboard focus does the same — the signal does not
+ * only address the mouse.
  */
 
-/** Un compte de forge : sa connexion, son autorisation, ou l'une des deux. */
+/** A forge account: its connection, its authorization, or one of both. */
 interface AccountBlock {
   key: string;
   provider: RepoProviderId;
-  /** L'installation de l'app / l'OAuth qui donne accès aux dépôts. */
+  /** Installation of the app / OAuth which gives access to the repositories. */
   connection: GitConnection | null;
-  /** L'autorisation d'agir en votre nom sur une pull request. */
+  /** Authorization to act on your behalf on a pull request. */
   identity: GitIdentity | null;
 }
 
 /**
- * Assemble les blocs. Une identité est UNIQUE par provider (« MON compte git »,
- * au singulier) alors qu'on peut avoir plusieurs connexions chez la même forge
- * — une par organisation où l'app est installée. Elle se pose donc sur la
- * connexion du MÊME compte, à défaut sur la première ; sans connexion du tout,
- * elle tient son bloc seule (on peut autoriser son compte sans jamais avoir
- * installé l'app, quand c'est un autre membre qui a lié le dépôt).
+ * Joins the blocks. An identity is UNIQUE per provider (“MY git account”,
+ * in the singular) while you can have several connections at the same forge
+ * — one per organization where the app is installed. It therefore arises on the
+ * connection of the SAME account, failing that on the first; without connection at all,
+ * she holds her block alone (you can authorize her account without ever having
+ * installed the app, when it is another member who linked the deposit).
  */
 function buildBlocks(
   connections: GitConnection[],
@@ -101,8 +101,8 @@ function buildBlocks(
     }
   }
 
-  // Rien encore : une ligne par forge déployée, pour avoir où s'autoriser.
-  // Dès qu'une forge est utilisée, on ne parle plus que de celle-là.
+  // Nothing yet: one line per forge deployed, to have where to authorize yourself.
+  // As soon as a forge is used, we only talk about that one.
   if (blocks.length === 0) {
     return deployed.map((id) => ({
       key: `provider-${id}`,
@@ -117,8 +117,8 @@ function buildBlocks(
 export function AccountGitConnectionsSection() {
   const t = useTranslations("Account");
   const tc = useTranslations("Common");
-  // Les libellés de la connexion git vivent dans `Settings` : ce sont les mêmes
-  // mots que dans un projet, et les recopier ici les ferait diverger.
+  // The git connection labels live in `Settings`: they are the same
+  // words only in a project, and copying them here would cause them to diverge.
   const tSettings = useTranslations("Settings");
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -133,7 +133,7 @@ export function AccountGitConnectionsSection() {
   const [connecting, setConnecting] = useState<RepoProviderId | null>(null);
   const [authorizing, setAuthorizing] = useState<RepoProviderId | null>(null);
 
-  // Retour de callback (?git=connected | ?git=error), posé par
+  // Callback return (?git=connected | ?git=error), set by
   // /api/git/{github/setup,github/user-callback,gitlab/callback}.
   const handledCallback = useRef(false);
   useEffect(() => {
@@ -148,7 +148,7 @@ export function AccountGitConnectionsSection() {
     } else if (status === "error") {
       toast.error(tSettings("gitConnectError"));
     }
-    // Retire les params de callback en conservant l'onglet.
+    // Remove callback params while keeping the tab.
     const next = new URLSearchParams(searchParams);
     next.delete("git");
     next.delete("connection");
@@ -161,10 +161,10 @@ export function AccountGitConnectionsSection() {
     try {
       const res = await startAccountGitConnectApi(provider, "settings");
       if (res.mode === "reuse") {
-        // Rien à installer : la connexion existait déjà, elle est juste remontée.
+        // Nothing to install: the connection already existed, it was just reassembled.
         void queryClient.invalidateQueries({ queryKey: gitConnectionsQueryKey });
       } else {
-        window.location.href = res.url; // sortie de page vers la forge
+        window.location.href = res.url; // page exit to the forge
       }
     } catch (err) {
       toast.error((err as Error).message);
@@ -227,15 +227,13 @@ export function AccountGitConnectionsSection() {
         description={t("gitConnectionsDesc")}
         help={t("gitConnectionsHelp")}
         variant="block"
-        /* Le geste vit en bout de titre ; sans compte il descend dans la scène
-           et n'est pas montré deux fois. */
+        /* The gesture lives at the end of the title; without counting he goes down in the scene
+ and is not shown twice. */
         action={
           connections.length > 0 && deployed.length > 0 ? connectMenu : undefined
         }
       >
-        {/* Les deux requêtes décident du contenu d'un même bloc : les attendre
-            toutes les deux, sinon la ligne d'autorisation saute d'un état à
-            l'autre sous les yeux. */}
+        {/* The two requests decide the contents of the same block: wait for them both, otherwise the authorization line jumps from one state to the other in front of you. */}
         {loading || identitiesLoading ? (
           <SettingsEmpty className="py-0">{tc("loading")}</SettingsEmpty>
         ) : blocks.length === 0 ? (
@@ -303,8 +301,8 @@ export function AccountGitConnectionsSection() {
 }
 
 /**
- * Un compte, ses deux niveaux, et la portée de chaque geste rendue AVANT le
- * clic : `danger` dit quelle région le bouton survolé emporterait.
+ * An account, its two levels, and the scope of each gesture rendered BEFORE the
+ * click: `danger` says which region the button hovered over would take.
  */
 function GitAccountBlock({
   block,
@@ -330,9 +328,9 @@ function GitAccountBlock({
   const name = getRepoProvider(block.provider).displayName;
   const login = identity?.account_login ?? connection?.account_login ?? null;
 
-  // Le compte GitLab EST la connexion OAuth : la révoquer ici délierait les
-  // dépôts des projets. Ça se fait par « Déconnecter », dont la confirmation
-  // porte l'avertissement — donc pas de second bouton sur cette ligne.
+  // The GitLab account IS the OAuth connection: revoking it here would unbind the
+  // project repositories. This is done by “Disconnect”, the confirmation of which
+  // carries the warning — so no second button on this line.
   const revocable = identity?.source === "identity";
 
   const status = identity
@@ -341,7 +339,7 @@ function GitAccountBlock({
       : t("gitIdentityAuthorized")
     : t("gitIdentityNotAuthorized");
 
-  /** Survol ET focus : le signal ne s'adresse pas qu'à la souris. */
+  /** Hover AND focus: the signal is not only addressed to the mouse. */
   const scope = (region: "account" | "identity") => ({
     onMouseEnter: () => setDanger(region),
     onMouseLeave: () => setDanger(null),
@@ -387,8 +385,8 @@ function GitAccountBlock({
         }
         action={
           connection && (
-            // Déconnecter délie les dépôts de tous les projets qui s'en
-            // servaient, et emporte l'autorisation avec : le bloc entier rougit.
+            // Disconnect unbinds the repositories of all projects that are connected to them
+            // served, and takes the authorization with it: the entire block blushes.
             <Button
               type="button"
               variant="destructive"
@@ -414,7 +412,7 @@ function GitAccountBlock({
       >
         <p className="min-w-0 flex-1 text-xs text-muted-foreground">{status}</p>
         {revocable ? (
-          // Seule l'autorisation saute : la teinte s'arrête à cette ligne.
+          // Only the authorization jumps: the color stops at this line.
           <Button
             type="button"
             variant="destructive"

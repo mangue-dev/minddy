@@ -9,27 +9,27 @@ import { defaultLocale, type Locale } from "@/i18n/config";
 import { completeChain, stopChain, type AgentChain } from "./chain";
 
 /**
- * Le RAPPORT d'une chaîne (MIN-147) : un commentaire Numo sur le ticket, aux
- * trois moments où quelqu'un doit savoir ce qui s'est passé sans avoir eu à
- * regarder — la chaîne l'attend, elle est allée au bout, elle s'est arrêtée.
+ * A channel's REPORT (MIN-147): a Numo comment on the ticket, at
+ * three moments when someone should know what happened without having to
+ * watch — the channel is waiting for it, it went to the end, it stopped.
  *
- * Attribution identique à `postPrComment` (execute.ts) : ligne `comments` avec
- * `author_id = chain.owner_id` et `via_assistant: true` — c'est Numo qui parle,
- * sous le compte qui porte techniquement l'écriture.
+ * Assignment identical to `postPrComment` (execute.ts): line `comments` with
+ * `author_id = chain.owner_id` and `via_assistant: true` — this is Numo speaking,
+ * under the account which technically carries writing.
  *
- * Les textes vivent ICI et non dans `messages/*.json`, comme les autres
- * commentaires écrits par l'agent : ils sont produits hors requête, dans un
- * `after()` où `cookies()`/`headers()` n'existent plus, et la langue est celle du
- * compte de la chaîne, pas celle d'un lecteur.
+ * The texts live HERE and not in `messages/*.json`, like the others
+ * comments written by the agent: they are produced outside the request, in a
+ * `after()` where `cookies()`/`headers()` no longer exist, and the language is that of
+ * channel account, not that of a reader.
  *
- * JAMAIS DE DOLLARS : la dépense s'écrit en part du budget mensuel du plan, comme
- * partout ailleurs dans le produit.
+ * NEVER DOLLARS: the expense is written as a share of the plan's monthly budget, like
+ * everywhere elsewhere in the product.
  */
 
 export type ChainReportKind = "awaiting_human" | "completed" | "stopped";
 
-/** Ce que le rapport dit d'un arrêt, motif par motif. Un code inconnu retombe
- *  sur une phrase générique plutôt que sur le code brut. */
+/** What the report says about a judgment, reason by reason. Unknown code falls
+ * to a generic phrase rather than the raw code. */
 const STOP_REASONS: Record<Locale, Record<string, string>> = {
   fr: {
     quota: "le budget d'usage IA du compte est épuisé",
@@ -121,23 +121,23 @@ async function localeOf(userId: string): Promise<Locale> {
     const r = await getAccountSettings({ userId });
     if (r.ok) return r.settings.locale;
   } catch {
-    // ignore — défaut de l'app
+    // ignore — app default
   }
   return defaultLocale;
 }
 
 /**
- * La dépense, en part du budget mensuel du plan du owner. Rendue en pourcentage
- * arrondi — « 3 % », jamais « 0,42 $ ». Null si le plan n'a pas de budget inclus
- * (on ne divise pas par zéro pour rassurer).
+ * The expense, as part of the monthly budget of the owner's plan. Rendered as a percentage
+ * rounded — “3%”, never “$0.42”. Null if the plan does not have a budget included
+ * (we do not divide by zero to reassure).
  */
 async function spentShare(chain: AgentChain): Promise<string | null> {
   try {
     const { plan } = await getResolvedBilling(chain.owner_id);
     if (!plan.includedUsageUsd) return null;
     const share = (chain.spent_usd / plan.includedUsageUsd) * 100;
-    // Une chaîne à 0,3 % ne doit pas s'afficher « 0 % » : c'est faux et ça se
-    // voit. Sous 1 %, on le dit tel quel.
+    // A channel with 0.3% should not display “0%”: this is false and is correct
+    // see. Below 1%, we tell it like it is.
     return share > 0 && share < 1 ? "<1 %" : `${Math.round(share)} %`;
   } catch {
     return null;
@@ -145,14 +145,14 @@ async function spentShare(chain: AgentChain): Promise<string | null> {
 }
 
 export interface ChainReportExtras {
-  /** Résumé du dernier verdict de vérification, si l'étape en a produit un. */
+  /** Summary of the last verification verdict, if the step produced one. */
   verdictSummary?: string | null;
   verdictBlockers?: string[];
 }
 
 /**
- * Poste le rapport de la chaîne sur le ticket. Best-effort : un commentaire qui
- * ne part pas ne doit jamais faire échouer l'arrêt ou l'avancement d'une chaîne.
+ * Posts the channel report on the ticket. Best-effort: a comment that
+ * does not leave should never cause a channel to fail to stop or advance.
  */
 export async function postChainComment(
   chain: AgentChain,
@@ -199,9 +199,9 @@ export async function postChainComment(
 }
 
 /**
- * Tranches de dépense pour l'analytics — jamais le montant : ce qu'on veut
- * savoir, c'est si les chaînes coûtent « rien », « un peu » ou « beaucoup », pas
- * combien a payé tel compte.
+ * Spending brackets for analytics — never the amount: what we want
+ * to know is whether the channels cost "nothing", "a little" or "a lot", not
+ * how much did a given account pay.
  */
 function spentBucket(usd: number): string {
   if (usd <= 0) return "0";
@@ -211,7 +211,7 @@ function spentBucket(usd: number): string {
   return ">2";
 }
 
-/** Analytics d'une chaîne qui s'ouvre (MIN-147, événement SERVEUR). */
+/** Analytics of a string that opens (MIN-147, SERVER event). */
 export function captureChainStarted(
   chain: AgentChain,
   meta: { effort: string | null; plannedSteps: number },
@@ -229,7 +229,7 @@ export function captureChainStarted(
   });
 }
 
-/** Analytics d'une chaîne qui se termine, quelle qu'en soit la façon. */
+/** Analytics for a string that ends in any way. */
 export function captureChainFinished(
   chain: AgentChain,
   outcome: "completed" | "stopped",
@@ -241,7 +241,7 @@ export function captureChainFinished(
     properties: {
       preset: chain.preset ?? "custom",
       outcome,
-      // Le motif est déjà un CODE fermé (cf. `stopChain`) — jamais du texte libre.
+      // The pattern is already a closed CODE (see `stopChain`) — never free text.
       stop_reason: chain.stop_reason ?? "none",
       steps: chain.step,
       retries: chain.retries,
@@ -254,14 +254,14 @@ export function captureChainFinished(
 }
 
 /**
- * ARRÊTE une chaîne et le fait savoir : commentaire de rapport, notification
- * d'inbox, analytics. Le passage obligé de toute fin subie — un arrêt muet
- * serait pire que pas d'automatisation du tout, puisque le ticket resterait là,
- * à moitié fait, sans que rien ne le dise.
+ * STOPs a channel and makes it known: report comment, inbox notification
+ *, analytics. The obligatory passage of any end suffered - a silent shutdown
+ * would be worse than no automation at all, since the ticket would remain there,
+ * half-done, without anything saying so.
  *
- * Hors de `AGENT_TYPES` (lib/server/notifications.ts) à dessein : `replaceUnread`
- * y efface les frères non lus, et un « agent terminé » ne doit pas effacer un
- * « la chaîne s'est arrêtée ».
+ * Out of `AGENT_TYPES` (lib/server/notifications.ts) on purpose :`replaceUnread`
+ * clears unread brothers there, and a "terminated agent" should not clear a
+ * "the chain has stopped".
  */
 export async function haltChain(
   chain: AgentChain,
@@ -275,8 +275,8 @@ export async function haltChain(
   captureChainFinished(stopped, "stopped");
 }
 
-/** La chaîne est allée au bout de ses règles : rapport + analytics, pas de
- *  notification — la fin du dernier run en a déjà produit une. */
+/** The channel has followed its rules: reporting + analytics, no
+ * notification — the end of the last run has already produced one. */
 export async function finishChain(chain: AgentChain): Promise<void> {
   const done = await completeChain(chain.id);
   if (!done) return;

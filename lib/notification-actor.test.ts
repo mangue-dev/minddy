@@ -10,24 +10,24 @@ import type { NotificationRow } from "@/lib/server/notifications";
 import fr from "@/messages/fr.json";
 
 /**
- * Ce que ce test protège n'est pas le `if` de trois lignes, c'est la SECONDE
+ * What this test protects is not the three-line `if`, it's the SECOND
  * SURFACE.
  *
- * Un commentaire écrit par un agent portait son drapeau sur la ligne de
- * commentaire, et l'inbox le lisait là (app/api/notifications/route.ts). La
- * notification poussée, elle, ne lit que la ligne de notification : sans ces
- * champs, la même écriture s'annonçait « Numo a commenté » dans l'app et
- * « Clément a commenté » sur le téléphone de Clément — une notification de
- * soi-même, pour un texte qu'on n'a pas écrit.
+ * A comment written by an agent had its flag on the line of
+ * comment, and the inbox read it there (app/api/notifications/route.ts). The
+ * push notification only reads the notification line: without these
+ * fields, the same writing announced "Numo commented" in the app and
+ * “Clément commented” on Clément's phone — a notification from
+ * yourself, for a text that you don't have written.
  *
- * D'où la forme du test : on passe la sortie du helper au VRAI constructeur de
- * charge utile, et on vérifie le nom qui en sort.
+ * Hence the form of the test: we pass the helper output to the REAL constructor of
+ * payload, and we check the name that comes out.
  */
 
 const PROJECT = "11111111-1111-1111-1111-111111111111";
 const ISSUE = "22222222-2222-2222-2222-222222222222";
-/** Le compte sous lequel l'écriture est passée — celui qu'il ne faut PAS nommer
-    quand c'est un agent qui a écrit. */
+/** The account under which the entry was made — the one that should NOT be named
+ when an agent wrote. */
 const CLEMENT = "33333333-3333-3333-3333-333333333333";
 
 function context(): PushContext {
@@ -39,8 +39,8 @@ function context(): PushContext {
   return ctx;
 }
 
-/** La ligne telle que la posent add-comment.ts, description-mentions.ts et
-    leurs voisins : l'`actor_id` du compte porteur, plus la source. */
+/** The line as posed by add-comment.ts, description-mentions.ts and
+ their neighbors: the `actor_id` of the bearer account, plus the source. */
 const commentRow = (source: Partial<NotificationRow>): NotificationRow =>
   ({
     user_id: CLEMENT,
@@ -82,8 +82,8 @@ describe("notificationActorSource", () => {
   });
 
   it("ne cumule JAMAIS les deux drapeaux : la clé l'emporte, elle a un nom", () => {
-    // L'affichage teste `via_assistant` avant `via_mcp` (comme la timeline) :
-    // les porter tous les deux ferait dire « Numo » d'un geste dont on connaît
+    // The display tests `via_assistant` before `via_mcp` (like the timeline):
+    // wearing them both would make you say “Numo” with a familiar gesture
     // l'agent par son nom.
     const source = notificationActorSource({ viaAssistant: true, mcpKeyId: "k1" });
     expect(source.via_assistant).toBeUndefined();

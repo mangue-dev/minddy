@@ -4,10 +4,10 @@ import { buildBlocks } from "./agent-feed-blocks";
 import type { FeedItem } from "@/components/agent/agent-event-feed";
 
 /**
- * LE DÉCOUPAGE DU FIL EN TOURS : ce qui ouvre un tour, ce qui le referme, et ce qui
- * ne fait que se poser dessous. Un tour = un accordéon = UN chrono à l'écran, et
- * c'est cette dernière égalité que la suite garde (elle s'est déjà cassée : la liste
- * de fichiers en direct fabriquait un second accordéon sous la réponse).
+ * CUTTING THE WIRE INTO TURNS: what opens a turn, what closes it, and what
+ * only lays underneath. One turn = one accordion = ONE timer on the screen, and
+ * it is this last equality that the sequel keeps (it has already broken: the list
+ * of live files created a second accordion under the response).
  */
 
 const T = "2026-08-13T10:00:00.000Z";
@@ -42,7 +42,7 @@ function files(id: string, live?: boolean): FeedItem {
   };
 }
 
-/** La note de MIN-358 : le commit du tour a emporté des fichiers de l'humain. */
+/** MIN-358's note: the tour commit took files from the human. */
 function overlap(id: string, count = 1): FeedItem {
   return { kind: "note", id, variant: "currentRepoOverlap", count, text: "", createdAt: T };
 }
@@ -66,9 +66,9 @@ describe("buildBlocks", () => {
   });
 
   it("n'ouvre PAS un second tour sur la liste de fichiers vivante qui suit la réponse", () => {
-    // Le cas du bug : le direct ne lâche la liste qu'au `files_changed` de fin de
-    // tour, donc elle arrive derrière le résumé. Rangée comme un tour neuf, elle
-    // affichait un DEUXIÈME accordéon sous la réponse, avec son propre chrono.
+    // The case of the bug: the direct only releases the list at the end of `files_changed`
+    // tour, so it arrives behind the summary. Row like a new round, it
+    // displayed a SECOND accordion under the answer, with its own timer.
     const blocks = buildBlocks(
       [reasoning, message("answer", { summary: true }), files("live-files", true)],
       true,
@@ -77,7 +77,7 @@ describe("buildBlocks", () => {
     expect(blocks[blocks.length - 1]).toEqual({ type: "loose", item: files("live-files", true) });
   });
 
-  it("le bloc de fichiers de FIN de tour se range sous la réponse de ce tour", () => {
+  it("the END-OF-TURN file block is placed under that turn's response", () => {
     const blocks = buildBlocks(
       [reasoning, message("answer", { summary: true }), files("f1")],
       false,
@@ -92,36 +92,36 @@ describe("buildBlocks", () => {
     expect(blocks[0]).toMatchObject({ type: "turn", active: true, endedAt: null });
   });
 
-  it("un tour arrêté sans conclure garde son accordéon, marqué interrompu", () => {
+  it("a stopped turn without a conclusion keeps its accordion marked interrupted", () => {
     const blocks = buildBlocks([reasoning], false);
     expect(blocks[0]).toMatchObject({ type: "turn", active: false, interrupted: true });
   });
 
-  it("un message user sépare les tours : le travail non résumé se déverse déplié", () => {
+  it("a user message separates turns: unsummarized work is laid out expanded", () => {
     const blocks = buildBlocks(
       [reasoning, message("u1", { user: true }), message("answer", { summary: true })],
       false,
     );
-    // Le tour mis en pause n'a pas conclu : il reste déplié, et seul ce qui suit le
-    // message user forme le tour suivant — ici une réponse seule, donc libre aussi.
+    // The paused tour has not concluded: it remains unfolded, and only what follows the
+    // message user forms the next round — here a single response, therefore free too.
     expect(blocks.map((b) => b.type)).toEqual(["loose", "loose", "loose"]);
   });
 });
 
 /**
- * MIN-293 — LE TOUR FANTÔME « INTERROMPU », vu sur un vrai run local.
+ * MIN-293 — THE “INTERRUPTED” GHOST TOUR, seen on a real local run.
  *
- * `current_repo_overlap` (MIN-358) arrive APRÈS le résumé, comme `files_changed`.
- * Tant qu'il n'était pas reconnu comme une conclusion de tour, il comptait pour du
- * TRAVAIL : il rouvrait un tour à lui tout seul, que rien ne refermait jamais, et
- * le fil affichait « Tour interrompu » sous un tour qui venait de réussir.
+ * `current_repo_overlap` (MIN-358) comes AFTER the summary, like `files_changed`.
+ * As long as it was not recognized as a conclusion of a round, it counted as
+ * WORK: it reopened a round on its own, which nothing ever closed, and
+ * the thread displayed "Turn interrupted" under a round which had just succeeded.
  *
- * Le défaut ne se voyait qu'en mode dépôt courant — donc uniquement sur un run
- * local, ce qui explique qu'il ait traversé toute la suite sans être vu.
+ * The fault was only visible in current deposit mode - therefore only on a run
+ * local, which explains why he went through the entire suite without being seen.
  */
-describe("ce qui arrive APRÈS le résumé se range sous le tour", () => {
-  it("ne fabrique PAS un second tour « interrompu » sur un chevauchement", () => {
-    // La séquence exacte du run f1be4a59 : travail, résumé, chevauchement, fichiers.
+describe("what arrives AFTER the summary is placed under the turn", () => {
+  it("does not create a second « interrupted » turn for an overlap", () => {
+    // The exact sequence of run f1be4a59: job, summary, overlap, files.
     const blocks = buildBlocks(
       [reasoning, message("summary", { summary: true }), overlap("ov"), files("fc")],
       false,
@@ -131,7 +131,7 @@ describe("ce qui arrive APRÈS le résumé se range sous le tour", () => {
     expect(blocks[0]).not.toHaveProperty("interrupted", true);
   });
 
-  it("range le chevauchement SOUS la réponse, avec les fichiers changés", () => {
+  it("places the overlap UNDER the response with the changed files", () => {
     const blocks = buildBlocks(
       [reasoning, message("summary", { summary: true }), overlap("ov"), files("fc")],
       false,
@@ -143,15 +143,15 @@ describe("ce qui arrive APRÈS le résumé se range sous le tour", () => {
   });
 
   it("laisse un chevauchement ORPHELIN en item libre, sans inventer de tour", () => {
-    // Aucun tour devant lui (rechargement au milieu du fil) : il se montre tel
-    // quel plutôt que d'ouvrir un accordéon vide.
+    // No turn in front of him (reloading in the middle of the wire): he shows himself as
+    // what rather than opening an empty accordion.
     const blocks = buildBlocks([overlap("ov")], false);
     expect(blocks).toEqual([{ type: "loose", item: overlap("ov") }]);
   });
 
-  it("garde « interrompu » sur un vrai tour coupé — la ligne sert encore", () => {
-    // Ce que le correctif ne doit pas emporter : un tour arrêté sans réponse dit
-    // toujours pourquoi la réponse manque.
+  it("keeps « interrupted » on a genuinely stopped turn — the line is still useful", () => {
+    // What the fix should not take away: a stopped lap without response said
+    // always why the answer is missing.
     const blocks = buildBlocks([reasoning], false);
     expect(blocks[0]).toMatchObject({ type: "turn", active: false, interrupted: true });
   });

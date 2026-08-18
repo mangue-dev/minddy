@@ -5,10 +5,10 @@ import { AdminDashboard } from "@/components/admin/admin-dashboard";
 import { SettingsPageSkeleton } from "@/components/route-skeletons";
 
 export default function AdminPage() {
-  // <Suspense> requis : le shell lit l'onglet courant via useSearchParams. Le
-  // repli monte le squelette à sidebar secondaire, et non rien du tout : une
-  // page vide replierait la gouttière et déplierait la sidebar primaire, pour
-  // tout rouvrir une image plus tard.
+  // <Suspense> required: the shell reads the current tab via useSearchParams. THE
+  // fold mounts the skeleton to secondary sidebar, and not nothing at all: a
+  // empty page would fold the gutter and unfold the primary sidebar, to
+  // reopen everything one image later.
   return (
     <Suspense fallback={<SettingsPageSkeleton rows={4} />}>
       <AdminDashboard />

@@ -9,50 +9,50 @@ import type {
 } from "@/components/pages/blocks/types";
 
 /**
- * Le bloc SOUS-PAGE : un nœud atomique qui ne porte QUE l'id de la page cible.
+ * The SUB-PAGE block: an atomic node which ONLY carries the id of the target page.
  *
- * Pas de titre recopié dedans, volontairement : renommer une page laisserait
- * sinon son ancien nom dans le corps de tous ses parents. Le titre et l'icône
- * sont résolus à l'affichage depuis le cache du projet
+ * No title copied in, deliberately: renaming a page would leave
+ * if not his old name in the body of all his parents. The title and icon
+ * are resolved when displayed from the project cache
  * (components/pages/pages-lookup.tsx).
  *
- * Le nœud porte aussi la DÉTECTION de sa propre disparition (MIN-272) : à
- * chaque mise à jour du document, les pages citées avant et après sont
- * comparées, et celles qui viennent d'en sortir sont annoncées à l'éditeur, qui
- * demande confirmation puis les met à la corbeille. Ce que ce fichier ne fait
- * PAS : parler à la base — il ne connaît que deux crochets, `create` et
- * `removed`, posés par components/pages/page-view.tsx.
+ * The node also carries the DETECTION of its own disappearance (MIN-272): to
+ * each update of the document, the pages cited before and after are
+ * compared, and those which have just come out are announced to the publisher, who
+ * asks for confirmation then puts them in the trash. What this file does
+ * PAS: speak to the base — it only knows two square brackets, `create` and
+ * `removed`, placed by components/pages/page-view.tsx.
  *
- * Pourquoi la détection plutôt qu'un bouton « supprimer » : le bloc part par
- * une douzaine de gestes — retour arrière, menu ⋯, couper, tout sélectionner,
- * glisser hors du document. Les intercepter un par un, c'est en oublier ; le
- * document, lui, dit toujours la vérité.
+ * Why detection rather than a “delete” button: the block leaves
+ * a dozen gestures — backspace, menu ⋯, cut, select all,
+ * slide out of the document. To intercept them one by one is to forget some; THE
+ * The document always tells the truth.
  *
- * ── LE REPARENTAGE, et c'est le genre de subtilité qu'on re-découvre sinon ──
+ * ── REPARENTING, and it’s the kind of subtlety that we otherwise rediscover ──
  *
- * Déplacer une page dans l'arbre de la sidebar change `parent_id` et NE DÉPLACE
- * PAS son bloc : celui-ci reste dans le corps où il a été écrit, et devient un
- * simple lien vers une page qui vit désormais ailleurs. C'est délibéré et non
+ * Moving a page in the sidebar tree changes `parent_id` and DOES NOT MOVE
+ * NOT its block: this remains in the body where it was written, and becomes a
+ * simple link to a page that now lives elsewhere. This is deliberate and not
  * un manque.
  *
- * La raison tient au sens des deux objets. Le bloc est une phrase du document —
- * il a une place dans un texte, entre deux paragraphes qui parlent de lui.
- * Aller le découper d'un corps pour le recoller à la fin d'un autre détruirait
- * cette place pour la remplacer par rien, et ferait d'un geste d'ORGANISATION
- * (ranger une page ailleurs) une modification du TEXTE de deux pages que
- * personne n'a demandée — chez celui qui les a peut-être ouvertes en ce moment
- * même.
+ * The reason lies in the meaning of the two objects. The block is a sentence in the document —
+ * he has a place in a text, between two paragraphs that talk about him.
+ * To cut it out of one body and put it back together at the end of another would destroy
+ * this place to replace it with nothing, and would make a gesture of ORGANIZATION
+ * (place a page elsewhere) a modification of the TEXT of two pages that
+ * no one asked — at the one who may have opened them at the moment
+ * even.
  *
- * La conséquence à assumer : après un reparentage, le corps de l'ancien parent
- * cite une page qui n'est plus sa fille. Le bloc continue de marcher, il
- * n'annonce simplement plus une imbrication. C'est ce que `parent_id` est la
- * vérité veut dire concrètement.
+ * The consequence to be assumed: after reparenting, the body of the former parent
+ * cites a page who is no longer his daughter. The block continues to march, it
+ * simply no longer announces nesting. This is what `parent_id` is
+ * truth means concretely.
  */
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     subpage: {
-      /** Poser un bloc sous-page pointant sur `pageId` (`null` = pas encore créée). */
+      /** Place a subpage block pointing to `pageId` (`null` = not yet created). */
       insertSubpage: (pageId: string | null) => ReturnType;
     };
   }
@@ -62,30 +62,30 @@ declare module "@tiptap/core" {
 }
 
 export interface SubpageStorage {
-  /** Le créateur de page, posé par l'éditeur au montage (MIN-272). Lu au moment
-      du clic, pas capturé : il arrive après le montage de l'éditeur. */
+  /** The page creator, installed by the editor during editing (MIN-272). Read at the moment
+      of the click, not captured: it arrives after editing the editor. */
   create: (() => Promise<string | null>) | null;
-  /** Les pages qui viennent de perdre leur bloc dans ce document. Même parti
-      pris que `create` : lu au moment de l'événement, jamais capturé. */
+  /** The pages that have just lost their block in this document. Same party
+      taken as `create`: read at the time of the event, never captured. */
   removed: ((pageIds: string[]) => void) | null;
-  /** La page qui vient d'être créée depuis le menu « / » et dont le bloc est
-      posé : à l'appelant d'enregistrer le parent, puis de l'ouvrir. */
+  /** The page which has just been created from the “/” menu and whose block is
+      asked: the caller to save the parent, then open it. */
   opened: ((pageId: string) => void) | null;
-  /** Copier une page et sa descendance, et rendre l'id de la copie. C'est ce
-      que « dupliquer » fait sur un bloc sous-page — copier le BLOC donnerait
-      deux liens vers la même page, ce que personne ne demande. */
+  /** Copy a page and its descendants, and return the id of the copy. This is what
+      that “duplicate” does on a subpage block — copying the BLOCK would give
+      two links to the same page, which no one asks for. */
   duplicate: ((pageId: string) => Promise<string | null>) | null;
   markdown?: unknown;
 }
 
 /**
- * Les pages citées par un document ProseMirror.
+ * Pages cited by a ProseMirror document.
  *
- * Sur le nœud plutôt que sur son JSON : `descendants` traverse l'arbre sans
- * rien sérialiser, et cette lecture tourne à CHAQUE frappe. Elle est récursive
- * parce qu'un bloc sous-page peut être posé dans un dépliant ou un item de
- * liste — ne regarder que le premier niveau laisserait un bloc pointant vers le
- * vide, exactement ce qu'on cherche à empêcher.
+ * On the node rather than on its JSON: `descendants` traverses the tree without
+ * serialize nothing, and this read runs on EVERY keystroke. It is recursive
+ * because a sub-page block can be placed in a leaflet or an item of
+ * list — looking only at the first level would leave a block pointing to the
+ * empty, exactly what we are trying to prevent.
  */
 export function subpageIdsInDoc(doc: ProseMirrorNode): Set<string> {
   const ids = new Set<string>();
@@ -112,16 +112,16 @@ export const Subpage = Node.create<Record<string, never>, SubpageStorage>({
   },
 
   /**
-   * `onUpdate` et pas `onTransaction`, et la différence est tout sauf un
-   * détail : adopter un document fusionné passe par `setContent(…, { emitUpdate:
-   * false })` (MIN-271), qui pose `preventUpdate` sur sa transaction. Sur
-   * `onTransaction`, une fusion qui a fait tomber un bloc sous-page — ce que la
-   * fusion fait justement quand le SERVEUR vient de le retirer — se lirait comme
-   * une suppression de l'utilisateur, et corbeillerait la page une seconde fois.
+   * `onUpdate` and not `onTransaction`, and the difference is all but one
+   * detail: adopting a merged document requires `setContent(…, { emitUpdate:
+   * false })` (MIN-271), qui pose `preventUpdate` on its transaction. On
+   * `onTransaction`, a merge that dropped a subpage block — what the
+   * fusion does precisely when the SERVER has just removed it — would read as
+   * a deletion of the user, and would trash the page a second time.
    *
-   * La comparaison se fait sur `transaction.before` plutôt que sur un instantané
-   * gardé de côté : un instantané se périme précisément à ces adoptions
-   * silencieuses, alors que la transaction porte toujours son propre avant.
+   * The comparison is made on `transaction.before` rather than on a snapshot
+   * kept aside: a snapshot expires precisely at these adoptions
+   * silent, while the transaction always carries its own forward.
    */
   onUpdate({ editor, transaction }) {
     const removed = this.storage.removed;
@@ -156,14 +156,14 @@ export const Subpage = Node.create<Record<string, never>, SubpageStorage>({
     ];
   },
 
-  // Pas d'`addNodeView` ici, et c'est la règle du dossier : la vue
-  // (blocks/subpage-view.tsx) est un module « use client » et `@tiptap/react`
-  // en est un aussi. La nommer depuis ce fichier ferait entrer une référence
-  // client dans le graphe SERVEUR — le registre est monté par la projection
-  // markdown (lib/pages-markdown.ts), donc par le MCP, Numo et l'agent — et
-  // tiptap l'appellerait au montage de l'éditeur headless. La vue est injectée
-  // par la surface, `pageExtensions({ nodeViews: { subpage } })`, exactement
-  // comme la tâche du carnet (cf. task-list.ts).
+  // No `addNodeView` here, and that's the rule of the file: the view
+  // (blocks/subpage-view.tsx) is a “use client” module and `@tiptap/react`
+  // is one too. Naming it from this file would enter a reference
+  // client in the SERVER graph — the register is mounted by the projection
+  // markdown (lib/pages-markdown.ts), therefore by the MCP, Numo and the agent — and
+  // tiptap would call it when mounting the headless editor. The view is injected
+  // by the surface, `pageExtensions({ nodeViews: { subpage } })`, exactly
+  // like the notebook task (see task-list.ts).
 
   addCommands() {
     return {
@@ -186,23 +186,23 @@ export const subpageBlock: PageBlock = {
     order: 4,
     keywords: ["page", "subpage", "sous-page", "sous page", "child", "enfant", "wiki"],
   },
-  // Une sous-page ne se « transforme » pas depuis un paragraphe : il n'y a rien
-  // à convertir, elle POINTE vers un autre document.
+  // A subpage does not “transform” from a paragraph: there is nothing
+  // to convert, it POINTS to another document.
   turnInto: false,
   insert: (editor, range) => {
     editor.chain().focus().deleteRange(range).run();
     const create = editor.storage.subpage?.create;
     if (!create) {
-      // Sans créateur câblé, on pose quand même le bloc : visible, sélectionnable,
-      // supprimable. Un bloc vide se voit et se corrige ; une entrée de menu qui
-      // n'a rien fait laisse l'utilisateur croire qu'il a mal tapé.
+      // Without a wired creator, we still place the block: visible, selectable,
+      // deleteable. An empty block can be seen and corrected; a menu entry that
+      // did nothing leaves the user thinking they typed wrong.
       editor.commands.insertSubpage(null);
       return;
     }
-    // `create` crée la page ET ouvre l'enfant, dans cet ordre : le bloc doit
-    // être POSÉ, puis le corps du parent enregistré, avant qu'on quitte la page
-    // — sinon la navigation démonte l'éditeur avec, dans le brouillon, un bloc
-    // que personne n'a encore écrit. L'attente et l'enregistrement vivent chez
+    // `create` creates the page AND opens the child, in this order: the block must
+    // be ASKED, then the body of the registered parent, before leaving the page
+    // — otherwise the navigation disassembles the editor with, in the draft, a block
+    // that no one has written yet. Waiting and recording lives at home
     // l'appelant (`PagesLookup.opened`), qui seul tient l'autosave.
     void create().then((pageId) => {
       if (editor.isDestroyed) return;
@@ -212,9 +212,9 @@ export const subpageBlock: PageBlock = {
   },
   isActive: (editor) => editor.isActive("subpage"),
   markdown: {
-    // Une sous-page se projette en `[[page:<id>]]` : une ligne, lisible, et que
-    // Numo peut ÉCRIRE (il connaît les ids par les outils MCP). Le sens lecture
-    // demande sa propre règle — markdown-it ne connaît pas cette syntaxe.
+    // A subpage is projected as `[[page:<id>]]`: one line, readable, and
+    // Numo can WRITE (it knows the ids from MCP tools). The reading sense
+    // requires its own rule — markdown-it doesn't know this syntax.
     sample: "[[page:00000000-0000-4000-8000-000000000000]]",
     toMarkdown: (state: MarkdownState, node: MarkdownNode) => {
       state.write(`[[page:${node.attrs.pageId ?? ""}]]`);
@@ -224,10 +224,10 @@ export const subpageBlock: PageBlock = {
   },
 };
 
-/* ── La règle markdown-it (sens lecture) ──────────────────────────────── */
+/* ── The markdown-it rule (reading direction) ──────────────────────────────── */
 
-// Forme minimale des pièces de markdown-it qu'on touche — même parti pris que
-// components/scratchpad/task-markdown.ts : le paquet est une dépendance
+// Minimal form of markdown-it pieces that we touch — same bias as
+// components/scratchpad/task-markdown.ts: the package is a dependency
 // transitive de tiptap-markdown, on ne s'y accroche pas par ses types.
 interface MdToken {
   type: string;
@@ -247,13 +247,13 @@ interface MarkdownIt {
 }
 
 /**
- * Un paragraphe qui ne contient QUE `[[page:<id>]]` devient le HTML que le nœud
- * sait relire. On passe par un `html_block` plutôt que par un token maison : le
- * chemin de lecture de tiptap-markdown est markdown-it → HTML → `parseHTML`, et
- * c'est ce que fait déjà `parseHTML` du nœud ci-dessus.
+ * A paragraph that ONLY contains `[[page:<id>]]` becomes the HTML as the node
+ * knows how to reread. We use a `html_block` rather than a house token: the
+ * reading path of tiptap-markdown is markdown-it → HTML → `parseHTML`, and
+ * This is what `parseHTML` of the node above already does.
  *
- * D'où le `html: true` sur l'extension Markdown de l'éditeur de page : sans lui,
- * markdown-it échapperait ce bloc en texte.
+ * Hence the `html: true` on the Markdown page editor extension: without it,
+ * markdown-it would escape this block into text.
  */
 function subpageMarkdownIt(md: MarkdownIt): void {
   md.core.ruler.after("inline", "minddy-subpage", (state) => {
@@ -269,8 +269,8 @@ function subpageMarkdownIt(md: MarkdownIt): void {
       const match = SUBPAGE_MD.exec(tokens[i].content.trim());
       if (!match) continue;
       const token = new state.Token("html_block", "", 0);
-      // Échappé : `[[page:a"b]]` est du markdown parfaitement écrivable, et
-      // recopié nu il ferme l'attribut qu'on fabrique (MIN-350).
+      // Escaped: `[[page:a"b]]` is perfectly writeable markdown, and
+      // copied naked it closes the attribute that we manufacture (MIN-350).
       token.content =
         `<div data-type="subpage" data-page-id="${escapeHtmlAttribute(match[1])}"></div>\n`;
       token.block = true;

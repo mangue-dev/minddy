@@ -6,35 +6,35 @@ import { promisify } from "node:util";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { commitAndPush } from "./repo-host";
-// Le fake reste une SANDBOX et passe par `sandboxHost` : depuis MIN-224 ce test
-// couvre donc aussi l'adaptateur RPC, c'est-à-dire le chemin réel de l'ancienne
-// forme — la logique de `commitAndPush`, elle, est désormais commune aux deux.
+// The fake remains a SANDBOX and goes through `sandboxHost`: since MIN-224 this test
+// therefore also covers the RPC adapter, i.e. the real path of the old
+// form — the logic of `commitAndPush` is now common to both.
 import { sandboxHost, type Sandbox } from "./sandbox";
 import { cloudLayout } from "./harness-layout";
 
 /**
- * `commitAndPush` contre un VRAI dépôt git (MIN-123). Le seul test de ce dossier
- * qui sorte du pur : ici la question n'est pas notre logique (couverte par
- * sandbox-push.test.ts, en sandbox factice) mais le comportement de git — la
- * promesse de l'issue est « aucune branche n'apparaît sur le dépôt », et elle ne
- * se vérifie qu'en regardant un dépôt distant après coup.
+ * `commitAndPush` against a REAL git repository (MIN-123). The only test in this folder
+ * that is out of the pure: here the question is not our logic (covered by
+ * sandbox-push.test.ts, in dummy sandbox) but the behavior of git — the
+ * promise of the outcome is "no branch appears on the repository", and it does not hold
+ * only by looking at a remote repository afterwards.
  *
- * Le décor reproduit celui de la microVM : `git clone --depth 1 --branch <base>`
- * (shallow, mono-branche) puis `git checkout -b <branche de travail>`. C'est de ce
- * clone que vient `refs/remotes/origin/<base>`, le repère du détecteur : si un jour
- * `cloneRepo` change de forme et le fait disparaître, c'est ici que ça se voit.
+ * The decor reproduces that of the microVM: `git clone --depth 1 --branch <base>`
+ * (shallow, single-branch) then `git checkout -b <branche de travail>`. It is from this
+ * clone that `refs/remotes/origin/<base>`, the detector's marker, comes: if one day
+ * `cloneRepo` changes shape and makes it disappear, this is where it shows.
  */
 
 const run = promisify(execFile);
 
-/** Dépôt « distant » (celui de l'utilisateur) et clone de travail (la microVM). */
+/** “Remote” repository (that of the user) and working clone (the microVM). */
 let root: string;
 let origin: string;
 let repo: string;
 
 const sh = (cmd: string, cwd: string) => run("sh", ["-c", cmd], { cwd });
 
-/** Branches qui existent VRAIMENT sur le dépôt distant. */
+/** Branches that REALLY exist on the remote repository. */
 async function remoteHeads(): Promise<string[]> {
   const { stdout } = await sh(`git ls-remote --heads ${origin}`, origin);
   return stdout
@@ -45,9 +45,9 @@ async function remoteHeads(): Promise<string[]> {
 }
 
 /**
- * Sandbox RÉELLE : même contrat que la microVM (`sh -c` dans le dépôt), câblée sur
- * le clone local. Le `cwd` demandé est REPO_DIR, un chemin de microVM — on le
- * remplace par celui du clone.
+ * REAL Sandbox: same contract as the microVM (`sh -c` in the repository), wired to
+ * the local clone. The `cwd` requested is REPO_DIR, a microVM path — we replace it
+ * with that of the clone.
  */
 const sandbox = {
   runCommand: async ({ args }: { args: string[] }) => {
@@ -66,13 +66,13 @@ const sandbox = {
 } as unknown as Sandbox;
 
 const WORK_BRANCH = "minddy/agent/min-123-abcd1234";
-/** Identité git + signature coupée : le dépôt du test ne doit rien à la config globale. */
+/** Git identity + cut signature: the test repository owes nothing to the global config. */
 const GIT_IDENTITY = `git config user.email numo@minddy.app && git config user.name numo && git config commit.gpgsign false`;
 /**
- * L'identité que le HARNESS pose, et elle n'est PAS celle du dépôt (MIN-358) :
- * le clone garde `numo`, le commit doit sortir sous celle-ci. C'est ce qui
- * distingue un `git -c user.email=…` d'un `git config user.email` — et ce qui
- * fait qu'en mode dépôt courant l'identité de l'utilisateur reste la sienne.
+ * The identity that the HARNESS sets, and it is NOT that of the repository (MIN-358):
+ * the clone keeps `numo`, the commit must exit under this one. This is what
+ * distinguishes a `git -c user.email=…` from a `git config user.email` — and what
+ * ensures that in current deposit mode the user's identity remains theirs.
  */
 const COMMITTER = { name: "minddy[bot]", email: "42+minddy[bot]@users.noreply.github.com" };
 
@@ -86,15 +86,15 @@ beforeAll(async () => {
     `git init -q --initial-branch=main . && ${GIT_IDENTITY} && echo one > f.txt && git add -A && git commit -qm one`,
     origin,
   );
-  // Le décor du harnais. `file://` et pas un chemin nu : sans lui git ignore
-  // `--depth` en local et le clone ne serait pas shallow.
+  // The decoration of the harness. `file://` and not a bare path: without it git ignores
+  // `--depth` locally and the clone would not be shallow.
   await sh(`git clone -q --depth 1 --branch main file://${origin} repo`, root);
   await sh(`${GIT_IDENTITY} && git checkout -q -b ${WORK_BRANCH}`, repo);
 });
 
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
-/** Un push de fin de tour, avec le message qu'aurait le harnais. */
+/** A push at the end of the turn, with the message that the harness would have. */
 const push = (message: string) =>
   commitAndPush(sandboxHost(sandbox, cloudLayout()), {
     authUrl: `file://${origin}`,
@@ -123,11 +123,11 @@ describe("commitAndPush sur un vrai dépôt git", () => {
   });
 
   /**
-   * MIN-358 — l'identité vient de l'APPEL, pas du dépôt. Le clone est configuré
-   * sous `numo` et le commit sort quand même sous le bot : c'est la preuve que
-   * `git -c` fait le travail que `git config` faisait, sans écrire dans le
-   * `.git/config` de personne.
-   */
+ * MIN-358 — identity comes from CALL, not repository. The clone is configured
+ * under `numo` and the commit still comes out under the bot: this is proof that
+ * `git -c` does the work that `git config` did, without writing to the
+ * `.git/config` of person.
+ */
   it("commite sous l'identité passée, sans toucher à celle du dépôt", async () => {
     const { stdout: author } = await sh(`git log -1 --format='%an <%ae>'`, repo);
     expect(author.trim()).toBe(`${COMMITTER.name} <${COMMITTER.email}>`);
@@ -138,8 +138,8 @@ describe("commitAndPush sur un vrai dépôt git", () => {
   it("tour suivant sans changement → push no-op, branche et travail conservés", async () => {
     const res = await push("wip(MIN-123): agent update");
 
-    // La branche existe : on pousse (rien de neuf, donc `remoteUpdated` faux — pas
-    // de réouverture de PR refusée sur un tour qui n'a rien apporté).
+    // The branch exists: we push (nothing new, so `remoteUpdated` false — not
+    // reopening of PR refused on a turn which brought nothing).
     expect(res).toMatchObject({ committed: false, pushed: true, remoteUpdated: false });
     expect(await remoteHeads()).toContain(`refs/heads/${WORK_BRANCH}`);
   });

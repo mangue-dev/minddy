@@ -14,13 +14,13 @@ export interface MyFeedbackItem {
   mergedFromTitle: string | null;
 }
 
-/** « Mes feedbacks » (MIN-37) : suivi pull-based de ses posts et votes, avec
-    avancement — y compris après merge (le canonique est suivi à la place).
+/** “My feedback” (MIN-37): pull-based monitoring of posts and votes, with
+    advancement — including after merge (the canonical is followed instead).
 
-    La ligne est celle du board, à l'identique (`FeedbackPostRow`) : c'est le
-    même retour, on peut y voter d'ici comme de là-bas, et ce qui n'appartient
-    qu'à cette page — privé, en vérification, écrit ou voté — s'ajoute à la ligne
-    de méta au lieu de lui inventer une deuxième forme. */
+    The line is that of the board, identically (`FeedbackPostRow`): it is the
+    same return, we can vote from here as from there, and what does not belong
+    that on this page — private, in verification, written or voted — is added to the line
+    of meta instead of inventing a second form for it. */
 export function MyFeedbackClient({
   token,
   basePath,
@@ -29,9 +29,9 @@ export function MyFeedbackClient({
   entries,
 }: {
   token: string;
-  /** Préfixe public des liens : /f/<token>, ou "" sur domaine personnalisé. */
+  /** Public prefix of links: /f/<token>, or "" on custom domain. */
   basePath: string;
-  /** Le produit : nom (infobulles d'état) et icône (badge « L'équipe a répondu »). */
+  /** The product: name (status tooltips) and icon (“Team responded” badge). */
   project: PublicProject;
   identity: PublicIdentity | null;
   entries: MyFeedbackItem[];
@@ -54,10 +54,10 @@ export function MyFeedbackClient({
         </div>
       ) : (
         <>
-          {/* Le pseudonyme ne se dit plus ici : il ne s'affiche NULLE PART côté
-              public — ni sur une ligne du board, ni sur la page d'un retour.
-              L'annoncer était promettre au visiteur qu'il verrait ce nom
-              quelque part, et l'envoyer le chercher pour rien. */}
+          {/* The pseudonym is no longer said here: it is not displayed NOWHERE on the
+              public — neither on a line on the board, nor on a feedback page.
+              Announcing it was promising the visitor that he would see this name
+              somewhere, and send him to get it for nothing. */}
           <h2 className="text-base font-semibold">{t("myFeedback")}</h2>
 
           {entries.length === 0 ? (
@@ -74,21 +74,21 @@ export function MyFeedbackClient({
                   post={entry.post}
                   project={project}
                   statusBadge={
-                    // Absent du board, quelle qu'en soit la raison : gardé privé
-                    // par son auteur, ou écarté par la modération. Les deux se
-                    // disent du même mot. « Spam » est le vocabulaire de
-                    // l'équipe et pas une réponse à un visiteur ; et un badge
-                    // « Privé » posé à côté du statut faisait deux étiquettes
-                    // pour une seule idée — c'est le STATUT qui est « non
-                    // publié ».
+                    // Absent from the board, for any reason: kept private
+                    // by its author, or dismissed by moderation. The two
+                    // say the same word. “Spam” is the vocabulary of
+                    // the team and not a response to a visitor; and a badge
+                    // “Private” placed next to the status made two labels
+                    // for a single idea — it is the STATUS which is “no
+                    // published.”
                     entry.post.status === "spam" || !entry.post.isPublic ? (
                       <UnpublishedBadge projectName={project.name} />
                     ) : undefined
                   }
                   meta={
                     <>
-                      {/* Revue avant publication (MIN-54) : l'auteur voit son
-                          retour en attente tant qu'il n'est pas publié. */}
+                      {/* Review before publication (MIN-54): the author sees his
+                          pending return until it is published. */}
                       {entry.relation === "authored" &&
                         entry.post.isPublic &&
                         entry.post.reviewState === "pending" && (

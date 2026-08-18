@@ -111,9 +111,9 @@ export function filterIssues(
   );
   return issues.filter((i) => {
     if (config.display.hideDone && i.status === "done") return false;
-    // MIN-136 : la maintenance qui revient chaque semaine n'est pas ce qu'on
-    // vient lire sur un tableau. Seul le ticket VIVANT d'une série porte la
-    // cadence — les occurrences passées restent visibles.
+    // MIN-136: maintenance that comes back every week is not what we
+    // comes to read on a board. Only the LIVE ticket of a series bears the
+    // cadence — past occurrences remain visible.
     if (config.display.hideRecurring && i.recurrence) return false;
     if (f.status?.length && !f.status.includes(i.status)) return false;
     if (f.priority?.length && !f.priority.includes(i.priority)) return false;

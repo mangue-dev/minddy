@@ -11,11 +11,11 @@
 //
 // That exclusion is the one thing here that can silently swallow real work, so
 // the heading has to BE about questions, not merely mention the word: a work
-// section called "La bascule (à écrire une fois la question tranchée)" used to
+// section called "The switch (to write once the question has been decided)" used to
 // open one (MIN-146), and every task under it stopped counting.
 //
 // The section still runs until a heading of the same or higher rank — a deeper
-// one nests inside it, which is what lets a scratchpad hang "### Détail" under
+// one nests inside it, which is what lets a scratchpad hang "### Detail" under
 // its questions. The corollary is worth knowing when WRITING a plan: put the
 // sections that follow "## Questions" at that same rank, or they nest inside it
 // and the whole plan counts for nothing.
@@ -78,7 +78,7 @@ const headingKey = (text: string): string =>
 
 /**
  * Opens a questions section — "Questions", "Open questions", "Questions
- * ouvertes", "Question pour toi", "## 2. Questions".
+ * Open”, “Question for you”, “## 2. Questions”.
  *
  * Anchored on purpose: the heading has to START with the word (bar one
  * qualifier), so a work section that merely mentions a question in passing
@@ -193,9 +193,9 @@ export function parsePlan(plan: string | null | undefined): ParsedPlan {
 export const planProgress = (plan: string | null | undefined): PlanProgress =>
   parsePlan(plan).progress;
 
-/** Le ticket porte-t-il un plan exploitable (au moins une tâche) ? C'est la
- *  question que posent l'UI — « Générer un plan » ou « Vérifier le plan » — et
- *  les prompts, qui demandent d'ÉCRIRE le plan ou de le RELIRE point par point. */
+/** Does the ticket have an actionable plan (at least one task)? This is the
+ * question asked by the UI — “Generate plan” or “Check plan” — and
+ * prompts, which ask to WRITE the plan or REREAD it point by point. */
 export const hasPlanTasks = (plan: string | null | undefined): boolean =>
   parsePlan(plan).tasks.length > 0;
 

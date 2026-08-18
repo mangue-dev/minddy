@@ -4,35 +4,35 @@ import type { NextRequest } from "next/server";
 import { createSupabaseWithCookieSink, type CookieSink } from "@/lib/server/api-auth";
 
 /**
- * Qui revient d'un callback de forge (MIN-324).
+ * Which returns from a forge callback (MIN-324).
  *
- * Le `state` signé de [link-state.ts](./link-state.ts) dit **où l'on va** — quel
- * projet, quel retour. Il ne dit pas **qui revient**. La signature HMAC empêche
- * d'en FABRIQUER un ; elle n'empêche pas d'en RÉUTILISER un légitime, et c'est
- * toute la différence :
+ * The `state` signed by [link-state.ts](./link-state.ts) says **where we are going** — what
+ * project, what return. He doesn't say **who's coming back**. The HMAC signature prevents
+ * from MAKING one; it does not prevent you from REUSING a legitimate one, and that's
+ * all the difference:
  *
- *  - `/api/git/github/setup` n'avait aucune session à confronter : un utilisateur
- *    ordinaire mintait son propre `state`, énumérait `installation_id` (petits
- *    entiers séquentiels) et se réattribuait les installations des autres ;
- *  - les deux callbacks OAuth enregistraient le jeton sous `state.userId` : un
- *    lien envoyé à une victime déposait le jeton de LA VICTIME dans le compte de
- *    l'attaquant.
+ * - `/api/git/github/setup` had no session to confront: an ordinary user
+ * mined his own `state`, listed `installation_id` (small
+ * sequential integers) and reallocated the installations of others;
+ * - the two OAuth callbacks saved the token under `state.userId`: a
+ * link sent to a victim deposited the VICTIM's token in the account from
+ * the attacker.
  *
- * Seule la session dit qui revient. D'où ce module, partagé par les trois routes.
+ * Only the session says who returns. Hence this module, shared by the three routes.
  *
- * ## Le piège des cookies (MIN-293)
+ * ## The cookie trap (MIN-293)
  *
- * Ces callbacks sont des navigations de premier niveau venues de la forge, et le
- * matcher du proxy exclut `/api/` : le handler est donc le PREMIER à ouvrir les
- * cookies de session, avec un jeton d'accès qui peut être expiré. Le lire le
- * renouvelle, GoTrue fait tourner le jeton de rafraîchissement, et jeter le
- * couple neuf DÉCONNECTE l'utilisateur. D'où `createSupabaseWithCookieSink` — et
- * l'obligation de passer **chaque** sortie par `applyCookies`, y compris les
- * redirections d'erreur. Surtout pas `getAuthedUser` : il rend un 401 JSON (une
- * navigation attend une redirection) et lit avec un `setAll` vide.
+ * These callbacks are first-level navigations from the forge, and the
+ * proxy matcher excludes `/api/`: the handler is therefore the FIRST to open the
+ * session cookies, with an access token which may be expired. Reading the
+* renews, GoTrue rotates the refresh token, and discarding the
+* couple new LOGS OUT the user. Hence `createSupabaseWithCookieSink` — and
+ * the requirement to pass **every** output through `applyCookies`, including
+ * error redirects. Especially not `getAuthedUser`: it returns a 401 JSON (a
+ * navigation awaits a redirect) and reads with an empty `setAll`.
  */
 export interface ForgeCallbackSession {
-  /** L'utilisateur connecté DANS CET ONGLET, ou null. */
+  /** The user logged in IN THIS TAB, or null. */
   userId: string | null;
   applyCookies: CookieSink["applyCookies"];
 }
@@ -46,17 +46,17 @@ export async function readForgeCallbackSession(
     const sub = data?.claims?.sub;
     return { userId: typeof sub === "string" && sub ? sub : null, applyCookies };
   } catch {
-    // Supabase injoignable : on ne sait pas qui revient, donc on n'écrit rien.
-    // Fail closed — le pire ici serait d'accorder par défaut.
+    // Supabase unreachable: we don't know who is coming back, so we don't write anything.
+    // Fail closed — the worst thing here would be to grant by default.
     return { userId: null, applyCookies };
   }
 }
 
 /**
- * Le `state` et la session désignent-ils la même personne ?
+ * Do the `state` and the session designate the same person?
  *
- * Une absence de session n'autorise RIEN : deux `null` ne « correspondent » pas,
- * ils constatent seulement qu'on ignore qui revient.
+ * An absence of session authorizes NOTHING: two `null` do not “match”,
+ * they only note that we do not know who returns.
  */
 export function sessionMatchesState(
   sessionUserId: string | null | undefined,

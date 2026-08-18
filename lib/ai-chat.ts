@@ -12,10 +12,10 @@ import { SITE_URL } from "./site";
 /**
  * Contrat chat interne de minddy.
  *
- * Les surfaces expriment une intention (`maxOutputTokens`, `reasoning`) et ne
- * connaissent jamais les noms wire d'un fournisseur. Toute nouvelle option
- * commune doit entrer ici puis être traduite ci-dessous ; `extensions` reste
- * réservé aux capacités volontairement non portables (plugin web OpenRouter,
+ * Surfaces express an intention (`maxOutputTokens`, `reasoning`) and do not
+ * never know the wire names of a supplier. Brand new option
+ * commune must be entered here and then translated below; `extensions` remains
+ * reserved for intentionally non-portable capabilities (OpenRouter web plugin,
  * par exemple).
  */
 export interface AiChatRequest {
@@ -25,7 +25,7 @@ export interface AiChatRequest {
   maxOutputTokens?: number;
   reasoning?: {
     effort?: ReasoningLevel;
-    /** Budget fixe quand le provider sait l'exprimer. */
+    /** Fixed budget when the provider knows how to express it. */
     maxTokens?: number;
   };
   tools?: unknown[];
@@ -34,7 +34,7 @@ export interface AiChatRequest {
   stop?: string | string[];
   responseFormat?: unknown;
   parallelToolCalls?: boolean;
-  /** Options sciemment propres à l'endpoint choisi. Jamais pour un champ commun. */
+  /** Options deliberately specific to the chosen endpoint. Never for a common field. */
   extensions?: Record<string, unknown>;
 }
 
@@ -56,10 +56,10 @@ function isManualThinkingClaude(model: string): boolean {
 }
 
 /**
- * Familles où le raisonnement ne peut PAS être coupé : `thinking: {type:
- * "disabled"}` revient en 400 (Fable 5, Mythos 5, Mythos Preview). Le mode
- * « off » n'y est pas exprimable ; on n'envoie alors aucun champ, ce qui
- * laisse le défaut de la famille (penser, de toute façon) s'appliquer.
+ * Families where reasoning CANNOT be cut: `thinking: {type:
+ * "disabled"}` returns to 400 (Fable 5, Mythos 5, Mythos Preview). The mode
+ * “off” is not expressible there; we then do not send any field, which
+ * lets the family default (thinking, anyway) apply.
  */
 function isAlwaysThinkingClaude(model: string): boolean {
   return (
@@ -80,16 +80,16 @@ function anthropicReasoningFields(params: {
 }): Record<string, unknown> {
   if (params.effort === "off") {
     // Fable 5 / Mythos 5 / Mythos Preview refusent `thinking: {type: "disabled"}`
-    // (400) : le raisonnement est inéteignable sur ces familles, on ne pose donc
-    // aucun champ — le modèle retombe sur son défaut (penser).
+    // (400): reasoning is inexhaustible on these families, we therefore do not pose
+    // no field — the model falls back on its default (thinking).
     if (isAlwaysThinkingClaude(params.model)) return {};
     return isAdaptiveClaude(params.model) || isManualThinkingClaude(params.model)
       ? { thinking: { type: "disabled" } }
       : {};
   }
 
-  // Un budget explicite garde le mode manuel sur les familles qui l'acceptent.
-  // Sans budget fixe, la voie actuelle recommandée est le mode adaptatif.
+  // An explicit budget keeps manual mode on families who accept it.
+  // Without a fixed budget, the current recommended path is adaptive mode.
   if (params.fixedTokens === undefined && isAdaptiveClaude(params.model)) {
     return { thinking: { type: "adaptive" } };
   }
@@ -115,9 +115,9 @@ function providerReasoningFields(
   maxOutputTokens: number | undefined,
   hasFunctionTools: boolean,
 ): Record<string, unknown> {
-  // GPT-5.6 sait appeler des fonctions via Chat Completions, mais pas en même
-  // temps qu'un effort de raisonnement. Responses est la voie complète ; tant
-  // que ce transport reste Chat Completions, `none` est le contrat documenté.
+  // GPT-5.6 knows how to call functions via Chat Completions, but not at the same time
+  // time than an effort of reasoning. Responses is the full path; so much
+  // that this transport remains Chat Completions, `none` is the documented contract.
   if (provider === "openai" && hasFunctionTools && isGpt56(model)) {
     return { reasoning_effort: "none" };
   }
@@ -144,7 +144,7 @@ function providerReasoningFields(
     : {};
 }
 
-/** Traduit le contrat minddy vers le JSON exact du provider. Fonction pure. */
+/** Translates the minddy contract to the exact JSON of the provider. Pure function. */
 export function translateAiChatRequest(
   request: AiChatRequest,
   provider: AgentProviderId,
@@ -191,7 +191,7 @@ export function translateAiChatRequest(
   return body;
 }
 
-/** En-têtes propres au provider ; l'authentification reste au transport. */
+/** Provider-specific headers; authentication remains in transport. */
 export function aiChatProviderHeaders(
   provider: AgentProviderId,
   title: string,
@@ -204,8 +204,8 @@ export function aiChatProviderHeaders(
 }
 
 /**
- * Produit le même corps avec l'autre alias de plafond, uniquement quand le 400
- * désigne explicitement celui qui a été envoyé comme non supporté.
+ * Produces the same body with the other ceiling alias, only when the 400
+ * explicitly designates the one that was sent as unsupported.
  */
 export function alternateOutputTokenBody(
   bodyText: string,
@@ -239,9 +239,9 @@ export function alternateOutputTokenBody(
 }
 
 /**
- * Répare les deux seuls 400 de compatibilité que l'on sait rejouer sans risque :
- * un alias de plafond refusé, ou GPT-5.6 Chat Completions qui refuse le couple
- * function tools + raisonnement. Toute autre erreur conserve le corps initial.
+ * Repairs the only two compatibility 400s that we know how to replay without risk:
+ * a denied cap alias, or GPT-5.6 Chat Completions that denies the couple
+ * function tools + reasoning. Any other error keeps the initial body.
  */
 export function repairRejectedAiChatBody(
   bodyText: string,
@@ -269,9 +269,9 @@ export function repairRejectedAiChatBody(
 }
 
 /**
- * Frontière de compatibilité pour un client tiers (opencode) qui fabrique déjà
- * du JSON OpenAI. Les alias provider sont absorbés puis réémis par le même
- * traducteur que toutes les surfaces.
+ * Compatibility boundary for a third-party client (opencode) that already manufactures
+ * of OpenAI JSON. The provider aliases are absorbed then reissued by the same
+ * translator that all surfaces.
  */
 export function translateLegacyAiChatBody(
   input: Record<string, unknown>,
@@ -307,8 +307,8 @@ export function translateLegacyAiChatBody(
   }
 
   if (profile.usageAccounting && body.usage === undefined) body.usage = { include: true };
-  // Cette frontière ne sert qu'au client opencode, qui streame tous ses rounds.
-  // Certaines versions omettent pourtant `stream: true` du corps intermédiaire.
+  // This border is only used by the opencode client, which streams all its rounds.
+  // However, some versions omit `stream: true` from the intermediate body.
   if (profile.streamUsage && body.stream_options === undefined) {
     body.stream_options = { include_usage: true };
   }

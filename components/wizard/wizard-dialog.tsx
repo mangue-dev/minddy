@@ -19,60 +19,60 @@ import { SendShortcutTooltip } from "@/components/send-shortcut";
 import { useSubmitShortcut } from "@/lib/keyboard/use-submit-shortcut";
 
 /**
- * La modale d'un wizard — la forme, une fois pour toutes.
+ * The modal of a wizard — the form, once and for all.
  *
- * Le dessin est celui du wizard de création de projet, qui le tenait d'AutoKap
- * (project-wizard-dialog.tsx) : grande modale fixe (tokens
- * `--spacing-dialog-w/h`), stepper à pilules seul en haut, colonne centrée qui
- * porte le titre et le sous-titre de l'étape alignés à gauche, puis le corps de
- * l'étape ; en bas de cette même colonne, un CTA pleine largeur et le retour en
- * lien discret. Le corps glisse d'une étape à l'autre, le reste ne bouge pas.
+ * The drawing is that of the project creation wizard, which took it from AutoKap
+ * (project-wizard-dialog.tsx): large fixed modal (tokens
+ * `--spacing-dialog-w/h`), pill stepper alone at the top, centered column which
+ * has the title and subtitle of the step aligned to the left, then the body of
+ * the step; at the bottom of this same column, a full-width CTA and the return in
+ * discreet link. The body slides from one stage to the next, the rest does not move.
  *
- * Un wizard qui passe par ici n'a donc plus à décider ni de sa modale, ni de sa
- * progression, ni de son animation, ni de ses boutons : il décrit ses étapes
- * (`WizardStep[]`) et dit où il en est. Ce qui reste à sa charge est ce qui lui
- * appartient vraiment — quand une étape est valide, ce que « Continuer »
- * déclenche, ce qu'il crée à la fin.
+ * A wizard who passes through here no longer has to decide either his modal or his
+ * progression, neither its animation, nor its buttons: it describes its steps
+ * (`WizardStep[]`) and says where he is. What remains his responsibility is what he
+ * really belongs — when a step is valid, what "Continue" means
+ * triggers, what it creates in the end.
  *
- * La navigation est CONTRÔLÉE (`stepIndex` + `onStepIndexChange`) : les étapes
- * d'un vrai parcours dépendent des réponses (l'origine du projet décide de
- * l'amorce, le mode d'intégration décide du SSO), et une reprise après un
- * aller-retour hors de l'app doit pouvoir rouvrir le wizard à l'étape voulue.
- * Un index posé au-dehors sait faire tout ça ; un index caché ici, non.
+ * Navigation is CONTROLLED (`stepIndex` + `onStepIndexChange`): the steps
+ * of a real journey depend on the answers (the origin of the project decides to
+ * the initiation, the integration mode decides the SSO), and a recovery after a
+ * going back and forth outside the app must be able to reopen the wizard at the desired step.
+ * An index finger placed outside can do all that; a hidden index here, no.
  *
- * Le shell ne fait reculer que vers les étapes DÉJÀ validées — jamais avancer :
- * sauter en avant contournerait la validation de l'étape en cours.
+ * The shell only moves backwards to ALREADY validated steps — never forwards:
+ * jumping forward would bypass validation of the current step.
  *
- * Il sait aussi retenir une fermeture accidentelle (`dismissConfirm`), ce qu'un
- * parcours de plusieurs étapes finit toujours par demander : un clic à côté ne
- * doit pas emporter ce qu'on est en train de faire.
+ * It also knows how to remember an accidental closure (`dismissConfirm`), which a
+ * journey of several stages always ends up asking: a click next to it does not
+ * must not take away what we are doing.
  */
 
 export interface WizardStep<Id extends string = string> {
   id: Id;
-  /** Titre de l'étape, au-dessus de son contenu. */
+  /** Title of the step, above its content. */
   title: string;
-  /** Une ligne pour situer l'étape. Facultative : un titre qui se suffit se suffit. */
+  /** A line to locate the step. Optional: a self-explanatory title is sufficient. */
   subtitle?: ReactNode;
   content: ReactNode;
   /**
-   * Colonne élargie (max-w-2xl au lieu de max-w-lg) : pour les étapes qu'on
-   * REGARDE avant de les lire — des cartes illustrées côte à côte, pas des
+   * Enlarged column (max-w-2xl instead of max-w-lg): for the steps that are
+   * LOOK before you read — side-by-side picture maps, not
    * champs.
    */
   wide?: boolean;
   /**
-   * L'étape avance d'elle-même (une carte cliquée EST le geste) : pas de CTA.
-   * Un « Continuer » y demanderait un second clic pour confirmer ce qui vient
-   * d'être dit.
+   * The step advances by itself (a clicked card IS the gesture): no CTA.
+   * A “Continue” would require a second click to confirm what is coming.
+   * to be said.
    */
   hideSubmit?: boolean;
-  /** Défaut : « Continuer ». À passer pour « Terminer », « Passer », « Générer »… */
+  /** Default: “Continue”. To pass for “Finish”, “Skip”, “Generate”… */
   submitLabel?: string;
   submitDisabled?: boolean;
   /**
-   * Étape sans retour : ce qui la précède a produit des effets qu'un pas en
-   * arrière ne défait pas (une clé créée, un projet créé). Ni lien de retour,
+   * Stage of no return: what precedes it has produced effects that a step in
+   * back does not undo (one key created, one project created). Neither return link,
    * ni pilule cliquable.
    */
   lockBack?: boolean;
@@ -92,26 +92,26 @@ export function WizardDialog<Id extends string>({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Nom de la modale pour les lecteurs d'écran — celui du wizard, pas de l'étape. */
+  /** Modal name for screen readers — that of the wizard, not the step. */
   label: string;
-  /** Les étapes du parcours TEL QU'IL EST : la liste peut changer en route. */
+  /** The stages of the route AS IS: the list may change en route. */
   steps: WizardStep<Id>[];
   stepIndex: number;
-  /** Reculer (pilule d'une étape passée, lien de retour). */
+  /** Step back (step past pill, back link). */
   onStepIndexChange: (index: number) => void;
-  /** Le CTA a été activé sur cette étape — à l'appelant d'avancer, ou pas. */
+  /** The CTA has been activated on this step — it's up to the caller to move forward, or not. */
   onSubmit: (stepId: Id) => void;
   submitting?: boolean;
-  /** Message d'échec, sous le corps de l'étape. */
+  /** Failure message, below the step body. */
   error?: ReactNode;
   /**
-   * Les deux fermetures ACCIDENTELLES — le clic au-dehors et Échap — demandent
-   * confirmation, avec ces mots-là. Le bouton de fermeture, lui, n'est jamais
-   * intercepté : cliquer une croix est un geste explicite, et le faire répéter
-   * n'empêcherait aucune erreur, ça n'ajouterait qu'un clic à qui veut sortir.
+   * The two ACCIDENTAL closes — click out and Escape — require
+   * confirmation, with these words. The closing button is never
+   * intercepted: clicking a cross is an explicit gesture, and repeating it
+   * would not prevent any errors, it would only add one click to whoever wants to exit.
    *
-   * Passer `undefined` là où il n'y a plus rien à perdre (la dernière étape,
-   * la première) : une question sans enjeu apprend à répondre sans lire.
+   * Pass `undefined` where there is nothing more to lose (the last step,
+   * the first): a question without stakes teaches you to answer without reading.
    */
   dismissConfirm?: {
     title: string;
@@ -122,15 +122,15 @@ export function WizardDialog<Id extends string>({
 }) {
   const tCommon = useTranslations("Common");
   const [confirmingDismiss, setConfirmingDismiss] = useState(false);
-  // ⌘/Ctrl + Entrée actionne le CTA de l'étape — le même geste que le clic,
-  // donc rien sur une étape qui avance d'elle-même (`hideSubmit`) ou dont le
-  // bouton est encore grisé. Le CTA se désigne par son attribut : le corps de
-  // l'étape vient du dehors, et un bouton qui y oublierait son `type` serait
-  // sinon pris pour lui.
+  // ⌘/Ctrl + Enter activates the step CTA — the same gesture as clicking,
+  // therefore nothing on a step which advances by itself (`hideSubmit`) or whose
+  // button is still grayed out. The CTA is designated by its attribute: the body of
+  // the step comes from outside, and a button that forgets its `type` would be
+  // otherwise taken for him.
   const submitShortcut = useSubmitShortcut({ selector: "[data-wizard-cta]" });
 
-  // Une étape peut disparaître de la liste sous l'index (l'utilisateur change
-  // une réponse en amont) : on borne plutôt que de rendre du vide.
+  // A step may disappear from the list under the index (the user changes
+  // an answer in advance): we limit rather than creating emptiness.
   const index = Math.min(Math.max(stepIndex, 0), Math.max(steps.length - 1, 0));
   const step = steps[index];
   const isLast = index >= steps.length - 1;
@@ -143,15 +143,15 @@ export function WizardDialog<Id extends string>({
   };
 
   /**
-   * La garde est posée SUR LA MODALE, et pas sur son contenu : toutes les
-   * fermetures que la modale déclenche d'elle-même — clic au-dehors, Échap, et
-   * le glissé vers le bas de la feuille mobile — passent par ce
-   * `onOpenChange`, alors que les crochets `onInteractOutside` /
-   * `onEscapeKeyDown` du contenu n'existent que dans la version bureau (en
-   * dessous de 480 px, mangue-ui rend un `Drawer`, qui ne les reçoit pas).
+   * The guard is placed ON THE MODAL, and not on its content: all
+   * closures that the modal triggers on its own — click out, Escape, and
+   * the slide down the loose leaf — go through this
+   * `onOpenChange`, while the brackets `onInteractOutside` /
+   * `onEscapeKeyDown` content only exists in the desktop version (in
+   * below 480 px, mango-ui returns a `Drawer`, which does not receive them).
    *
-   * Le bouton de fermeture, lui, appelle `onOpenChange` EN DIRECT, sans passer
-   * par la modale : il n'est donc pas intercepté, et c'est voulu.
+   * The close button calls `onOpenChange` LIVE, without going through
+   * by the modal: it is therefore not intercepted, and this is desired.
    */
   const handleModalOpenChange = (next: boolean) => {
     if (!next && dismissConfirm) {
@@ -167,9 +167,9 @@ export function WizardDialog<Id extends string>({
         showCloseButton={false}
         className="flex h-[var(--spacing-dialog-h)] max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] flex-col overflow-hidden p-0 !rounded-2xl sm:max-h-[var(--spacing-dialog-h)] sm:max-w-[var(--spacing-dialog-w)]"
       >
-        {/* Le nom de la modale est celui du wizard : il ne change pas d'une
-            étape à l'autre. Le titre de l'étape, lui, est un titre DANS la
-            modale — il est visible, dans la colonne, avec ce qu'il annonce. */}
+        {/* The name of the modal is that of the wizard: it does not change from one moment to another.
+            step to another. The title of the stage is a title IN the
+            modal — it is visible, in the column, with what it announces. */}
         <DialogTitle className="sr-only">{label}</DialogTitle>
         <DialogDescription className="sr-only">{step.title}</DialogDescription>
 
@@ -185,9 +185,9 @@ export function WizardDialog<Id extends string>({
           </Button>
         </div>
 
-        {/* En-tête : uniquement où l'on en est. La progression est la seule
-            chose qui ne bouge pas d'une étape à l'autre — elle tient le haut de
-            la modale, à la hauteur du bouton de fermeture. */}
+        {/* Header: only where we are. Progression is the only
+            thing that does not move from one stage to the next — it holds the top of
+            the modal, at the height of the closing button. */}
         <div className="flex shrink-0 justify-center px-6 pt-5 pb-2">
           <WizardStepper
             className="pt-2.5"
@@ -198,13 +198,13 @@ export function WizardDialog<Id extends string>({
           />
         </div>
 
-        {/* Une étape plus HAUTE que la modale doit rester atteignable.
-            `items-center` centrait le formulaire dans une boîte qui défile :
-            dès qu'il débordait, son HAUT passait au-dessus du point de départ
-            du défilement et devenait inaccessible — on ne pouvait plus remonter
+        {/* One step HIGHER than the modal must remain achievable.
+            `items-center` centered the form in a scrolling box:
+            as soon as it overflowed, its TOP passed above the starting point
+            scrolling and became inaccessible — we could no longer go back
             au premier champ. Des marges `auto` centrent tout aussi bien tant
-            qu'il reste de la place, et retombent à zéro dès qu'il n'y en a
-            plus : le formulaire repart alors du haut et se parcourt en
+            that there is room left, and fall back to zero as soon as there is none
+            more: the form then starts from the top and is browsed in
             entier. */}
         <div className="flex flex-1 flex-col items-center overflow-y-auto px-6 pt-4 pb-12">
           <form
@@ -228,10 +228,10 @@ export function WizardDialog<Id extends string>({
                   transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
                   className="flex w-full flex-col gap-6"
                 >
-                  {/* Titre et sous-titre : posés au-dessus de ce qu'ils
-                      annoncent, dans la même colonne et alignés sur son bord
-                      gauche, pas relégués dans un coin de l'en-tête. Ils
-                      voyagent avec le contenu, donc ils changent dans le même
+                  {/* Title and subtitle: placed above what they
+                      announce, in the same column and aligned on its edge
+                      left, not relegated to a corner of the header. They
+                      travel with the content, so they change in the same
                       mouvement. */}
                   <div className="space-y-1.5 text-left">
                     <h2 className="text-xl font-semibold tracking-tight">
@@ -292,10 +292,10 @@ export function WizardDialog<Id extends string>({
           </form>
         </div>
 
-        {/* Rendue DANS la modale : c'est ce qui l'inscrit au-dessus d'elle dans
-            la pile de calques de Radix, donc le clic qui la ferme ne redescend
-            pas fermer le wizard derrière. Hors du `<form>`, aussi : son bouton
-            de confirmation n'a rien à soumettre. */}
+        {/* Rendered IN the modal: this is what inscribes it above it in
+            the Radix layer stack, so the click that closes it does not go back down
+            not close the wizard behind. Outside of `<form>`, too: its button
+            confirmation has nothing to submit. */}
         {dismissConfirm && (
           <ConfirmDeleteDialog
             open={confirmingDismiss}

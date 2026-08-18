@@ -1,27 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * LES TROIS GARDES DE MIN-346.
+ * THE THREE GUARDS OF MIN-346.
  *
- * L'enregistrement dynamique de client est ouvert : tout ce qui suit est
- * piloté par un attaquant. D'où trois questions, et une seule réponse
- * acceptable à chacune.
+ * Dynamic client registration is open: everything after that is
+ * driven by an attacker. Hence three questions, and only one acceptable answer
+ * to each.
  *
- * 1. Un paramètre de protocole invalide envoie-t-il l'utilisateur chez le
- *    client ? Non — sinon minddy est un redirecteur ouvert permanent sous son
- *    propre domaine, déclenchable par une simple URL.
- * 2. Un refresh token présenté par un AUTRE client est-il échangé ? Non — le
- *    token est lié au client qui l'a obtenu.
- * 3. La purge DCR peut-elle supprimer un client actif quand la liste des
- *    grants dépasse une page ? Non — et c'est le cas qui la faisait détruire
- *    des autorisations vivantes, sans rien dire.
+ * 1. Does an invalid protocol parameter send the user to the
+ * client? No — otherwise minddy is a permanent open forwarder under its
+ * own domain, triggerable by a simple URL.
+ * 2. Is a refresh token presented by ANOTHER client exchanged? No — the
+ * token is tied to the client that obtained it.
+ * 3. Can DCR purge remove an active client when the list of
+ * grants exceeds one page? No — and this is the case that caused it to destroy
+ * living permissions, without saying anything.
  */
 
 interface Row extends Record<string, unknown> {}
 
 let db: Record<string, Row[]> = {};
-/** Les UPDATE réellement partis (table + valeurs) — un refus rendu APRÈS
-    l'écriture n'aurait rien refusé. */
+/** The UPDATEs actually sent (table + values) — a refusal given AFTER
+ the writing would not have refused anything. */
 let updateLog: Array<{ table: string; values: Row }> = [];
 
 function makeQuery(table: string) {
@@ -95,7 +95,7 @@ vi.mock("@/lib/server/after-safe", () => ({
   afterOrNow: (fn: () => Promise<void>) => void fn(),
 }));
 
-/** Le client que `validateAuthorizeRequest` ira chercher en base. */
+/** The client that `validateAuthorizeRequest` will fetch from the base. */
 let registeredClient: {
   client_id: string;
   client_name: string;
@@ -121,7 +121,7 @@ const { getClientIp } = await import("@/lib/server/request-ip");
 
 const ORIGIN = "https://www.minddy.app";
 const CALLBACK = "https://evil.example.com/callback";
-// base64url(sha256) = 43 caractères.
+// base64url(sha256) = 43 characters.
 const CHALLENGE = "a".repeat(43);
 
 beforeEach(() => {
@@ -135,7 +135,7 @@ beforeEach(() => {
   };
 });
 
-describe("requête d'autorisation : aucune redirection sur erreur de protocole", () => {
+describe("authorization request: no redirect on protocol error", () => {
   const base = {
     client_id: "cli_attacker",
     redirect_uri: CALLBACK,
@@ -145,17 +145,17 @@ describe("requête d'autorisation : aucune redirection sur erreur de protocole",
     state: "xyz",
   };
 
-  it("accepte une requête conforme", async () => {
+  it("accepts a valid request", async () => {
     const v = await validateAuthorizeRequest(base, ORIGIN);
     expect(v.kind).toBe("ok");
   });
 
   /**
-   * Le cœur du ticket : chacun de ces paramètres se pose dans l'URL, sans
-   * rien connaître de l'utilisateur. Si l'un d'eux produisait une redirection,
-   * `https://www.minddy.app/oauth/authorize?…` deviendrait un aller simple
-   * vers l'adresse de l'attaquant, sous notre nom et notre certificat.
-   */
+ * The heart of the ticket: each of these parameters is placed in the URL, without
+ * knowing anything about the user. If one of them produced a redirect,
+ * `https://www.minddy.app/oauth/authorize?…` would become a one-way ticket
+ * to the attacker's address, under our name and certificate.
+ */
   it.each([
     ["response_type", { ...base, response_type: "token" }],
     ["code_challenge_method", { ...base, code_challenge_method: "plain" }],
@@ -166,7 +166,7 @@ describe("requête d'autorisation : aucune redirection sur erreur de protocole",
   ])("refuse sur place : %s", async (_label, params) => {
     const v = await validateAuthorizeRequest(params, ORIGIN);
     expect(v.kind).toBe("invalid");
-    // Le verdict ne PORTE même pas d'URI de redirection : il n'y a rien à
+    // The verdict doesn't even HAVE a redirect URI: there is nothing to
     // suivre, par construction.
     expect(JSON.stringify(v)).not.toContain("evil.example.com");
   });
@@ -186,7 +186,7 @@ describe("requête d'autorisation : aucune redirection sur erreur de protocole",
   });
 });
 
-describe("refresh token lié à son client", () => {
+describe("refresh token bound to its client", () => {
   const TOKEN = "mdyrt_secret";
   const FUTURE = new Date(Date.now() + 3600_000).toISOString();
 
@@ -206,20 +206,20 @@ describe("refresh token lié à son client", () => {
     ];
   });
 
-  it("échange le token pour le client qui l'a obtenu", async () => {
+  it("exchanges the token for the client that obtained it", async () => {
     const pair = await rotateRefreshToken(TOKEN, "cli_legit");
     expect(pair?.scope).toBe("minddy");
   });
 
-  it("refuse le même token présenté par un autre client", async () => {
+  it("rejects the same token presented by another client", async () => {
     expect(await rotateRefreshToken(TOKEN, "cli_attacker")).toBeNull();
-    // Et surtout : la ligne n'a pas bougé. Un refus qui aurait quand même
-    // rotationné le token déconnecterait le client légitime.
+    // And above all: the line has not moved. A refusal which would still have
+    // rotated the token would disconnect the legitimate client.
     expect(updateLog).toHaveLength(0);
     expect(db.oauth_grants[0].refresh_token_hash).toBe(sha256Hex(TOKEN));
   });
 
-  it("la révocation sur rejeu reste chez le client concerné", async () => {
+  it("a replay revocation remains with the affected client", async () => {
     db.oauth_grants[0].prev_refresh_token_hash = sha256Hex("mdyrt_old");
     expect(await handleRefreshReuse("mdyrt_old", "cli_attacker")).toBe(false);
     expect(db.oauth_grants[0].revoked_at ?? null).toBeNull();
@@ -230,10 +230,10 @@ describe("refresh token lié à son client", () => {
 });
 
 describe("purge DCR : ne supprimer que ce qu'on a lu en entier", () => {
-  /** Un client actif dont les grants tombent au-delà de la première page. */
+  /** An active customer whose grants fall beyond the first page. */
   it("ne condamne pas un client dont les grants dépassent la page", async () => {
     const candidates = ["cli_a", "cli_b"];
-    // 1000 grants de cli_a (une page pleine), puis le seul grant de cli_b.
+    // 1000 grants of cli_a (a full page), then the only grant of cli_b.
     const grants = [
       ...Array.from({ length: 1000 }, () => "cli_a"),
       "cli_b",
@@ -265,7 +265,7 @@ describe("IP du client : le dernier relais, jamais l'appelant", () => {
     new Request("https://www.minddy.app/api/oauth/token", { headers });
 
   it("ignore la valeur de tête que le client a injectée", () => {
-    // L'appelant a envoyé « 1.2.3.4 » ; le relais a ajouté la vraie.
+    // The caller sent "1.2.3.4"; the relay added the real one.
     expect(getClientIp(req({ "x-forwarded-for": "1.2.3.4, 203.0.113.7" }))).toBe(
       "203.0.113.7"
     );

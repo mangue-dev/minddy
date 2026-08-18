@@ -7,8 +7,8 @@ import {
 } from "@/lib/pr-review-threads";
 
 /**
- * Les cas ci-dessous reproduisent le comportement RÉEL de l'API GitHub, relevé
- * contre une vraie PR : c'est lui qui dicte les règles, pas l'intuition.
+ * The cases below reproduce the REAL behavior of the GitHub API, noted
+ * against a real PR: it dictates the rules, not intuition.
  */
 
 function comment(over: Partial<PullRequestReviewComment> = {}): PullRequestReviewComment {
@@ -32,7 +32,7 @@ function comment(over: Partial<PullRequestReviewComment> = {}): PullRequestRevie
 }
 
 describe("groupReviewThreads", () => {
-  it("regroupe les réponses sous leur racine, dans l'ordre chronologique", () => {
+  it("groups replies under their root in chronological order", () => {
     const threads = groupReviewThreads([
       comment({ id: 10, created_at: "2026-07-17T10:00:00Z" }),
       comment({ id: 11, in_reply_to_id: 10, created_at: "2026-07-17T10:05:00Z" }),
@@ -44,8 +44,8 @@ describe("groupReviewThreads", () => {
     expect(threads[0].comments.map((c) => c.id)).toEqual([10, 12, 11]);
   });
 
-  it("rattache à la racine une réponse-de-réponse (GitHub aplatit les fils)", () => {
-    // Vérifié contre l'API : répondre à la réponse 11 renvoie in_reply_to_id = 10.
+  it("attaches a reply to a reply to the root (GitHub flattens threads)", () => {
+    // Checked against API: reply to response 11 returns in_reply_to_id = 10.
     const threads = groupReviewThreads([
       comment({ id: 10 }),
       comment({ id: 11, in_reply_to_id: 10 }),
@@ -55,7 +55,7 @@ describe("groupReviewThreads", () => {
     expect(threads[0].comments).toHaveLength(3);
   });
 
-  it("sépare deux fils distincts sur la même ligne", () => {
+  it("separates two distinct threads on the same line", () => {
     const threads = groupReviewThreads([
       comment({ id: 10, created_at: "2026-07-17T10:00:00Z" }),
       comment({ id: 20, created_at: "2026-07-17T11:00:00Z" }),
@@ -64,16 +64,16 @@ describe("groupReviewThreads", () => {
     expect(threads.map((t) => t.id)).toEqual([10, 20]);
   });
 
-  it("promeut en racine une réponse dont la racine manque, plutôt que de la perdre", () => {
+  it("promotes a reply with a missing root to a root instead of losing it", () => {
     const threads = groupReviewThreads([comment({ id: 11, in_reply_to_id: 999 })]);
     expect(threads).toHaveLength(1);
     expect(threads[0].id).toBe(11);
   });
 
-  it("garde UN fil quand la racine supprimée laisse plusieurs réponses", () => {
-    // Racine 999 effacée sur la forge : ses réponses gardent `in_reply_to_id:999`.
-    // Les promouvoir une par une donnait autant de fils que de réponses — et la
-    // seconde perdait aussi son état de résolution, apparié sur la seule racine.
+  it("keeps ONE thread when a deleted root leaves several replies", () => {
+    // Root 999 deleted on the forge: its responses keep `in_reply_to_id:999`.
+    // Promoting them one by one gave as many threads as answers — and the
+    // second also lost its resolution state, matched on the root alone.
     const threads = groupReviewThreads(
       [
         comment({ id: 12, in_reply_to_id: 999, created_at: "2026-07-17T10:05:00Z" }),
@@ -82,7 +82,7 @@ describe("groupReviewThreads", () => {
       [{ rootCommentId: 11, threadId: "PRRT_kwDOABC", resolved: true, resolvedBy: "alice" }],
     );
     expect(threads).toHaveLength(1);
-    // La plus ANCIENNE survivante fait racine — la même que rend la forge.
+    // The OLDEST survivor makes root — the same as the forge makes.
     expect(threads[0].id).toBe(11);
     expect(threads[0].comments.map((c) => c.id)).toEqual([11, 12]);
     expect(threads[0].resolution?.resolved).toBe(true);
@@ -98,12 +98,12 @@ describe("groupReviewThreads", () => {
 });
 
 /**
- * MIN-139 : l'état de résolution vient d'un AUTRE appel que les commentaires
- * (GraphQL côté GitHub, discussions côté GitLab). Tout tient donc à l'appariement
- * par l'id de la RACINE — la seule clé que les deux forges donnent, et celle sur
- * laquelle le regroupement travaille déjà.
+ * MIN-139: resolution status comes from ANOTHER call than comments
+ * (GraphQL on GitHub side, discussions on GitLab side). Everything therefore depends on the pairing
+ * by the id of the ROOT — the only key that the two forges give, and the one on
+ * which the grouping is already working on.
  */
-describe("groupReviewThreads — état de résolution", () => {
+describe("groupReviewThreads — resolution state", () => {
   const state = (over: Partial<ReviewThreadState> = {}): ReviewThreadState => ({
     rootCommentId: 10,
     threadId: "PRRT_kwDOABC",
@@ -123,8 +123,8 @@ describe("groupReviewThreads — état de résolution", () => {
   });
 
   it("laisse `resolution` indéfini quand l'état n'est pas connu — pas « non résolu »", () => {
-    // La nuance porte l'UI : un fil d'état inconnu n'offre pas « Résoudre »,
-    // là où un fil connu non résolu l'offre.
+    // The nuance carries the UI: an unknown status thread does not offer “Resolve”,
+    // where a known unresolved thread offers it.
     const [thread] = groupReviewThreads([comment({ id: 10 })]);
     expect(thread.resolution).toBeUndefined();
     const [withEmpty] = groupReviewThreads([comment({ id: 10 })], []);
@@ -139,7 +139,7 @@ describe("groupReviewThreads — état de résolution", () => {
     expect(threads.map((t) => !!t.resolution?.resolved)).toEqual([false, true]);
   });
 
-  it("ignore un état dont le fil est absent (listes lues à deux instants)", () => {
+  it("ignores state for a missing thread (lists read at two moments)", () => {
     const threads = groupReviewThreads(
       [comment({ id: 10 })],
       [state({ rootCommentId: 999 })],
@@ -149,8 +149,8 @@ describe("groupReviewThreads — état de résolution", () => {
   });
 
   it("suit la racine PROMUE d'un fil tronqué par la pagination", () => {
-    // La réponse orpheline devient sa propre racine : c'est cet id-là qui
-    // s'apparie, sinon un fil coupé perdrait son état de résolution.
+    // The orphan response becomes its own root: it is this id which
+    // pairs, otherwise a cut wire would lose its resolution state.
     const threads = groupReviewThreads(
       [comment({ id: 11, in_reply_to_id: 999 })],
       [state({ rootCommentId: 11, resolved: false, resolvedBy: null })],
@@ -161,7 +161,7 @@ describe("groupReviewThreads — état de résolution", () => {
 });
 
 describe("displayLineOf", () => {
-  it("se rabat sur original_line quand GitHub a effacé line", () => {
+  it("falls back to original_line when GitHub removed line", () => {
     expect(displayLineOf(comment({ line: null, original_line: 42 }))).toBe(42);
     expect(displayLineOf(comment({ line: 7, original_line: 42 }))).toBe(7);
   });

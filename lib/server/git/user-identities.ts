@@ -10,22 +10,22 @@ import {
 } from "./github-user-auth";
 
 /**
- * Le compte git PERSONNEL d'un utilisateur minddy (MIN-144), table
- * `git_user_identities`. C'est lui qui signe les gestes humains sur une pull
- * request — là où `git_connections` dit « l'App est installée sur ce compte ».
+ * The PERSONAL git account of a minddy user (MIN-144), table
+ * `git_user_identities`. He is the one who signs human gestures on a sweater
+ * request — where `git_connections` says “the App is installed on this account”.
  *
- * Service client (RLS bypassée), la vérification utilisateur est faite ici en TS
- * (pattern `connections.ts`). Les colonnes de tokens ne sortent JAMAIS : les
- * fonctions publiques sélectionnent des colonnes explicites, sans les secrets.
+ * Customer service (RLS bypassed), user verification is done here in TS
+ * (pattern `connections.ts`). The token columns NEVER come out: the
+ * public functions select explicit columns, without the secrets.
  *
- * GitHub uniquement pour l'instant : côté GitLab, la connexion OAuth de
- * `git_connections` EST déjà l'identité de la personne (cf. `forge-actor.ts`).
+ * GitHub only for the moment: on the GitLab side, the OAuth connection of
+ * `git_connections` IS already the identity of the person (see `forge-actor.ts`).
  */
 
-/** Rafraîchir quand le token est dans cette fenêtre d'expiry. */
+/** Refresh when the token is within this expiry window. */
 const REFRESH_SKEW_MS = 5 * 60 * 1000;
 
-/** Colonnes non-secrètes exposables à l'UI. */
+/** Non-secret columns exposed to the UI. */
 const PUBLIC_COLS = "id, provider, account_login, account_avatar_url, created_at";
 
 interface PublicRow {
@@ -48,10 +48,10 @@ function toPublic(row: PublicRow): GitIdentity {
 }
 
 /**
- * Tous les comptes git de l'utilisateur, sanitisés — GitHub depuis
+ * All user's git accounts, sanitized — GitHub since
  * `git_user_identities`, GitLab depuis sa connexion OAuth de `git_connections`
- * (qui EST déjà son identité : la dupliquer ferait diverger deux rotations de
- * token). [] si aucun, null sur erreur DB.
+ * (which IS already its identity: duplicating it would cause two rotations of
+ * token). [] if none, null on DB error.
  */
 export async function listUserIdentities(
   userId: string,
@@ -75,7 +75,7 @@ export async function listUserIdentities(
   if (identities.error) return null;
 
   const rows = ((identities.data ?? []) as PublicRow[])
-    // Une éventuelle ligne GitLab ici ne ferait pas autorité : la connexion, si.
+    // A possible GitLab line here would not be authoritative: the connection, yes.
     .filter((r) => r.provider !== "gitlab")
     .map(toPublic);
   const gitlabRow = gitlab.data as
@@ -95,9 +95,9 @@ export async function listUserIdentities(
 }
 
 /**
- * Enregistre (ou remplace) le compte git autorisé par l'utilisateur. Unique par
- * `(user_id, provider)` : réautoriser un autre compte GitHub remplace le
- * précédent — c'est bien « MON compte git », au singulier.
+ * Registers (or replaces) the git account authorized by the user. Unique by
+ * `(user_id, provider)`: reauthorizing another GitHub account replaces the
+ * previous — it is indeed “MY git account”, in the singular.
  */
 export async function upsertUserIdentity(params: {
   userId: string;
@@ -136,14 +136,14 @@ export async function upsertUserIdentity(params: {
 }
 
 /**
- * Recale le compte affiché sur ce que la forge en dit aujourd'hui (MIN-154) :
- * le login est un nom d'AFFICHAGE, écrit à la connexion et jamais rafraîchi
- * ensuite — la rotation de token ne touche qu'aux tokens, et un token d'App non
- * expirant ne la déclenche même jamais.
+ * Reset the account displayed on what the forge says about it today (MIN-154):
+ * the login is a DISPLAY name, written at login and never refreshed
+ * then — token rotation only affects tokens, and an App token does not
+ * expiring never even triggers it.
  *
- * Ciblé par `(user_id, provider)`, le couple unique de l'upsert. N'écrit que si
- * une valeur a bougé : la page des réglages se recharge souvent, et un `updated_at`
- * qui avance sans raison n'est le marqueur de rien.
+ * Targeted by `(user_id, provider)`, the unique upsert couple. Only write if
+ * a value has moved: the settings page often reloads, and a `updated_at`
+ * who advances without reason is the marker of nothing.
  */
 export async function updateIdentityAccount(
   userId: string,
@@ -187,8 +187,8 @@ export async function updateIdentityAccount(
 }
 
 /**
- * Déconnecte le compte git d'un provider. Renvoie false si l'utilisateur n'en
- * avait aucun — l'appelant en fait un 404.
+ * Disconnects the git account from a provider. Returns false if the user does not
+ * had none — actually calling it a 404.
  */
 export async function deleteUserIdentity(
   userId: string,
@@ -231,7 +231,7 @@ async function loadTokenRow(
   return (data as TokenRow | null) ?? null;
 }
 
-/** Le compte GitHub d'un utilisateur, token frais compris. */
+/** A user's GitHub account, including token fees. */
 export interface GithubUserCredentials {
   token: string;
   login: string | null;
@@ -239,52 +239,52 @@ export interface GithubUserCredentials {
 }
 
 /**
- * Une rotation à la fois par utilisateur, DANS ce process.
+ * One rotation at a time per user, IN this process.
  *
- * Le panneau d'une pull request tire trois à quatre requêtes EN PARALLÈLE
- * (détail, conversation, commentaires de review, commits), et chacune résout
- * l'acteur — donc mint ce token. Quand elles tombent ensemble dans la fenêtre
- * `REFRESH_SKEW_MS`, elles rafraîchissent toutes, avec le MÊME refresh token.
+ * The pull request panel pulls three to four requests IN PARALLEL
+ * (detail, conversation, review comments, commits), and each resolves
+ * the actor — so mint this token. When they fall together in the window
+ * `REFRESH_SKEW_MS`, they all refresh, with the SAME refresh token.
  *
- * Or GitHub invalide l'ancien access token à chaque rotation : deux rotations
- * concurrentes laissent en base le token de la première (le compare-and-set plus
- * bas ne laisse écrire qu'un gagnant) alors que la seconde vient de le tuer — un
- * token mort portant une expiry d'apparence fraîche, que plus rien ne rafraîchit
- * pendant huit heures. C'est le mode de panne observé le 2026-08-03 : « votre
- * compte git ne peut ni fusionner… » à l'écran, `Bad credentials` au premier
+ * But GitHub invalidates the old access token on each rotation: two rotations
+ * competitors leave the token of the first in the base (the compare-and-set plus
+ * low only lets one winner be written) while the second has just killed him — a
+ * dead token carrying a fresh-looking expiry, which nothing refreshes anymore
+ * for eight hours. This is the failure mode observed on 2026-08-03: “your
+ * git account cannot merge..." on screen, `Bad credentials` at first
  * geste.
  *
- * Le partage de promesse règle le cas dominant (Fluid Compute réutilise
- * l'instance entre requêtes concurrentes). Entre instances, c'est le probe 401
- * de `forge-actor.ts` qui rattrape, en forçant une rotation.
+ * Promise sharing solves the dominant case (Fluid Compute reuses
+ * the instance between competing requests). Between instances, it's probe 401
+ * of `forge-actor.ts` which catches up, forcing a rotation.
  */
 const inFlight = new Map<string, Promise<GithubUserCredentials | null>>();
 
 /**
- * Token GitHub utilisateur valide, ou **null** — jamais d'exception : aucun
- * compte connecté, une enveloppe indéchiffrable (secret tourné) et un refresh
- * mort se disent tous « reconnecte ton compte » en amont, pas 500.
+ * Valid user GitHub token, or **null** — never exception: none
+ * connected account, an indecipherable envelope (turned secret) and a refresh
+ * dead all say “reconnect your account” upstream, not 500.
  *
- * Deux mondes selon la configuration de l'App :
- *  • « Expire user authorization tokens » ACTIVÉ → expiry à 8 h + refresh token,
- *    rafraîchi paresseusement sous `REFRESH_SKEW_MS` ;
- *  • désactivé → `token_expires_at` null et AUCUN refresh token : le token est
- *    permanent, on le déchiffre et on le rend tel quel.
+ * Two worlds depending on the configuration of the App:
+ * • “Expire user authorization tokens” ENABLED → expiry at 8 a.m. + refresh token,
+ * refreshed lazily under `REFRESH_SKEW_MS`;
+ * • disabled → `token_expires_at` null and NO refresh token: the token is
+ * permanent, we decipher it and return it as it is.
  *
- * `force` saute le raccourci « pas encore expiré » : c'est ce que fait un
- * appelant à qui GitHub vient de répondre 401 sur ce token-là. L'expiry stockée
- * dit alors une chose que la forge dément, et c'est la forge qui a raison.
+ * `force` skips the “not yet expired” shortcut: this is what a
+ * caller to whom GitHub has just responded 401 on this token. The stored expiry
+ * then says something that the forge denies, and it is the forge that is right.
  *
- * Persistance en compare-and-set sur `token_expires_at` (le refresh token de
- * GitHub est single-use rotatif, comme celui de GitLab) : le perdant d'une
- * course relit la ligne et réutilise le token du gagnant.
+ * Persistence in compare-and-set on `token_expires_at` (the refresh token of
+ * GitHub is rotating single-use, like that of GitLab): the loser of a
+ * race rereads the line and reuses the winner's token.
  */
 export async function getGithubUserToken(
   userId: string,
   opts: { force?: boolean } = {},
 ): Promise<GithubUserCredentials | null> {
-  // Une rotation forcée ne se greffe pas sur une passe en cours : c'est
-  // précisément le token qu'elle allait rendre qui vient d'être refusé.
+  // A forced rotation is not grafted onto a pass in progress: it is
+  // precisely the token that she was going to return which has just been refused.
   const shared = opts.force ? null : inFlight.get(userId);
   if (shared) return shared;
   const task = mintGithubUserToken(userId, !!opts.force).finally(() => {
@@ -303,7 +303,7 @@ async function mintGithubUserToken(
   const account = { login: row.account_login, avatarUrl: row.account_avatar_url };
   const withToken = (token: string | null) => (token ? { token, ...account } : null);
 
-  // Token permanent : l'App n'expire pas ses autorisations. Rien à forcer non
+  // Permanent token: the App does not expire its authorizations. Nothing to force no
   // plus — il n'y a pas de refresh token en face.
   if (row.token_expires_at == null) {
     return withToken(decryptForgeToken(row.access_token_encrypted));
@@ -313,7 +313,7 @@ async function mintGithubUserToken(
   if (!force && Date.parse(row.token_expires_at) - nowMs > REFRESH_SKEW_MS) {
     const token = decryptForgeToken(row.access_token_encrypted);
     if (token) return withToken(token);
-    // Déchiffrement échoué (secret tourné / corruption) → on tente un refresh.
+    // Decryption failed (secret twisted / corruption) → we attempt a refresh.
   }
 
   const refreshToken = decryptForgeToken(row.refresh_token_encrypted);
@@ -323,8 +323,8 @@ async function mintGithubUserToken(
   try {
     refreshed = await refreshGithubUserToken(refreshToken);
   } catch (err) {
-    // Course de rotation single-use : un autre worker a rafraîchi en premier. On
-    // relit ; si l'expiry stockée a AVANCÉ, son token est frais — on le reprend.
+    // Single-use rotation race: another worker refreshed first. We
+    // rereads; if the stored expiry has ADVANCED, its token is fresh — we take it back.
     const recovered = await loadTokenRow(userId, "github");
     if (
       recovered &&
@@ -352,17 +352,17 @@ async function mintGithubUserToken(
       updated_at: new Date().toISOString(),
     })
     .eq("id", row.id);
-  // Le compare-and-set n'a plus de sens sur une rotation FORCÉE : elle part
-  // justement d'une expiry stockée que la forge a démentie, et c'est notre token
-  // qui fait foi. Sans elle, on ne réécrit que si personne n'a bougé.
+  // The compare-and-set no longer makes sense on a FORCED rotation: it leaves
+  // precisely from a stored expiry that the forge denied, and it is our token
+  // which is authentic. Without it, we only rewrite if no one has moved.
   const { data: written } = await (force
     ? persist
     : persist.eq("token_expires_at", row.token_expires_at)
   ).select("id");
-  // Perdre le compare-and-set n'est PAS anodin : la ligne garde le token du
-  // gagnant, que notre propre rotation vient peut-être d'invalider chez GitHub.
-  // On le dit — c'est la seule trace qui nomme cette course, et le probe 401 de
-  // `forge-actor.ts` est ce qui la rattrape.
+  // Losing the compare-and-set is NOT trivial: the line keeps the token of
+  // winner, which our own rotation may have just invalidated at GitHub.
+  // It is said - it is the only trace which names this race, and the probe 401 of
+  // `forge-actor.ts` is what catches her.
   if (!force && !written?.length) {
     console.warn(
       "[user-identities] concurrent GitHub token rotation: our refresh was not persisted",

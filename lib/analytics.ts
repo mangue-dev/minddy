@@ -10,86 +10,86 @@ import {
 } from "./analytics-events";
 
 /**
- * Le client PostHog, une fois chargé (MIN-94).
+ * The PostHog client, once loaded (MIN-94).
  *
- * `posthog-js` pèse 227 Ko non compressés : l'importer statiquement ici le
- * mettait dans le bundle initial de TOUTES les pages publiques, via la chaîne
- * `cookie-banner` → `use-analytics` → ce module. Il est désormais chargé par un
- * `import()` dans `components/posthog-init.tsx`, qui dépose le client ici — ce
- * fichier n'en garde qu'un type, effacé à la compilation.
+ * `posthog-js` weighs 227 KB uncompressed: import it statically here the
+ * put in the initial bundle of ALL public pages, via the chain
+ * `cookie-banner` → `use-analytics` → this module. It is now loaded by a
+ * `import()` in `components/posthog-init.tsx`, which drops the client here — this
+ * file only keeps one type, erased at compilation.
  *
- * Tant que rien n'est déposé (pas de clé, hôte local, chunk pas encore
- * téléchargé), la référence reste `null` et tous les appels sont inertes :
- * exactement le contrat d'avant, où ils tapaient sur un singleton non
- * initialisé.
+ * As long as nothing is dropped (no key, localhost, chunk not yet
+ * downloaded), the reference remains `null` and all calls are inert:
+ * exactly the contract from before, where they were tapping on an uninitialized singleton
+ *.
  */
 let client: PostHog | null = null;
 
-/** Appelé par `PostHogInit` juste avant `posthog.init()`. */
+/** Called by `PostHogInit` just before `posthog.init()`. */
 export function setAnalyticsClient(instance: PostHog): void {
   client = instance;
 }
 
-/** Le client chargé, ou `null` — à relire à chaque appel, jamais à mémoriser. */
+/** The loaded client, or `null` — to be reread on each call, never to be memorized. */
 export function getAnalyticsClient(): PostHog | null {
   return client;
 }
 
 /**
- * Émission d'un événement analytics HORS composant React (MIN-78).
+ * Emitting an analytics event OUTSIDE the React component (MIN-78).
  *
- * `useAnalytics()` couvre les composants ; beaucoup d'actions intéressantes
- * vivent en revanche dans la couche API (`lib/*-api.ts`) ou dans un store
- * zustand — du code sans hooks. Les deux visent le même client, avec exactement
- * les mêmes garanties : catalogue typé, allowlist runtime, sanitisation des
+ * `useAnalytics()` covers components; a lot of interesting actions
+ * live on the other hand in the API layer (`lib/*-api.ts`) or in a store
+ * zustand — code without hooks. Both target the same client, with exactly
+ * the same guarantees: typed catalog, allowlist runtime, sanitization of
  * props.
  *
- * Sans effet si PostHog n'est pas initialisé (pas de clé, hôte local, refus
- * cookies) ou si l'appel vient du serveur — les routes serveur passent par
+ * No effect if PostHog is not initialized (no key, local host, refusal
+ * cookies) or if the call comes from the server — server routes go through
  * `lib/server/posthog.ts`.
  */
 /**
- * PostHog est-il initialisé ? (MIN-78)
+ * Is PostHog initialized? (MIN-78)
  *
- * L'init est DIFFÉRÉE (`requestIdleCallback`, jusqu'à 800 ms), or l'identité
- * arrive AVANT : Supabase émet `INITIAL_SESSION` dès le montage, et le projet
- * courant est connu dès la première URL. Sans file d'attente, ces appels
- * partaient sur un client non initialisé et étaient perdus — l'utilisateur
- * restait anonyme toute la session, et plus aucun entonnoir par compte n'était
+ * The init is DELAYED (`requestIdleCallback`, up to 800 ms), but the identity
+ * arrives BEFORE: Supabase issues `INITIAL_SESSION` upon mounting, and the current project
+ * is known from the first URL. Without a queue, these calls
+ * were sent to an uninitialized client and were lost — the user
+ * remained anonymous throughout the session, and no more funnels per account were
  * calculable.
  *
- * Les deux natures d'appel attendent donc l'init plutôt que de se perdre :
- *   - l'ÉTAT (identité, groupe, propriétés de personne) est REJOUÉ ici. Ce
- *     n'est pas un événement daté mais un contexte : l'appliquer avec quelques
- *     centaines de millisecondes de retard est exact, le perdre ne l'est pas ;
- *   - les ÉVÉNEMENTS (`trackEvent`) sont mis en file et rejoués AVEC leur
- *     horodatage d'émission (MIN-150 — voir `pendingEvents`). Ils l'étaient
- *     autrefois pas, et ça coûtait la totalité des événements « vu ».
+ * Both types of call therefore wait for init rather than get lost:
+ * - STATE (identity, group, person properties) is REPLAYED here. This
+ * is not a dated event but a context: applying it with a few
+ * hundreds of milliseconds of delay is correct, losing it is not;
+ * - EVENTS (`trackEvent`) are queued and replayed WITH their
+ * timestamp (MIN-150 — see `pendingEvents`). They used to be
+ * previously not, and it cost all the "seen" events.
  *
- * L'ordre du rejeu compte : l'identité D'ABORD, les événements ENSUITE, pour
- * qu'un événement mis en file avant la connaissance du compte parte quand même
- * sous le bon `distinct_id`.
+ * The order of replay matters: identity FIRST, events THEN, so that
+ * an event queued before knowing the account still leaves
+ * under the voucher `distinct_id`.
  */
 let analyticsReady = false;
 const readyWaiters = new Set<() => void>();
 
-/** Appelé par `PostHogInit` une fois `posthog.init()` passé. */
+/** Called by `PostHogInit` after `posthog.init()` has passed. */
 export function markAnalyticsReady(): void {
   if (analyticsReady) return;
   analyticsReady = true;
-  // Copie avant itération : un callback peut en enregistrer un autre.
+  // Copy before iteration: a callback can record another.
   // oxlint-disable-next-line unicorn/no-useless-spread
   for (const cb of [...readyWaiters]) {
     readyWaiters.delete(cb);
     cb();
   }
-  // Après l'identité, jamais avant : voir l'en-tête.
+  // After the identity, never before: see the header.
   flushPendingEvents();
 }
 
 /**
- * Exécute `cb` dès que PostHog est prêt — immédiatement s'il l'est déjà.
- * Renvoie une fonction d'annulation (à appeler au démontage).
+ * Runs `cb` as soon as PostHog is ready — immediately if it is already.
+ * Returns a rollback function (to be called on unmount).
  */
 export function onAnalyticsReady(cb: () => void): () => void {
   if (analyticsReady) {
@@ -101,25 +101,20 @@ export function onAnalyticsReady(cb: () => void): () => void {
 }
 
 /**
- * Les événements émis AVANT l'init, en attente de leur client (MIN-150).
+ * Events emitted BEFORE init, waiting for their client (MIN-150).
  *
- * Ils étaient jetés, et c'était écrit comme un coût assumé du chargement
- * différé. La mesure a tranché autrement : `landing_viewed` est émis au montage
- * de CHAQUE visite de la landing, et PostHog n'en avait pas reçu un seul en
- * 180 jours — quand `cookie_consent_choice` (9) et `landing_cta_clicked` (3),
- * eux, arrivaient sur la même période. Rien d'aléatoire là-dedans : un effet de
- * montage passe toujours avant un `requestIdleCallback`, un clic toujours
- * après. Ce n'était donc pas « quelques événements perdus au démarrage », c'est
- * toute une CATÉGORIE d'événements — les « vu » — qui n'existait pas, et la
- * première marche de l'entonnoir d'acquisition avec elle.
+ * They were thrown away, and this was written as an assumed cost of loading
+ * deferred. The measure decided otherwise: `landing_viewed` is issued at the mounting
+ * of EACH visit to the landing, and PostHog had not received a single one in
+ * 180 days — when `cookie_consent_choice` (9) and `landing_cta_clicked` (3),
+ * them, arrived during the same period. Nothing random about it: a
+ * edit effect always comes before a `requestIdleCallback`, a click always
+ * after. So it wasn't "a few events lost at startup", it was a whole CATEGORY of events — the "seen" ones — that didn't exist, and the first step in the acquisition funnel with it. would distort its
+ * timestamp") had an answer in the API: `capture` accepts the time in
+ * third argument. We therefore keep the emission time, not the replay time.
  *
- * L'objection d'origine (« rejouer un événement passé fausserait son
- * horodatage ») avait une réponse dans l'API : `capture` accepte l'instant en
- * troisième argument. On garde donc l'heure d'émission, pas celle du rejeu.
- *
- * La file est bornée : au-delà, un onglet qui n'initialise jamais PostHog (pas
- * de clé, refus cookies) accumulerait sans fin. Vingt suffisent — c'est déjà
- * plus d'événements qu'une page n'en émet avant d'être interactive.
+ * The queue is limited: beyond that, a tab which never initializes PostHog (no key, refusal of cookies) would accumulate endlessly. Twenty is enough — that's already
+ * more events than a page emits before being interactive.
  */
 const MAX_PENDING_EVENTS = 20;
 const pendingEvents: {
@@ -128,11 +123,11 @@ const pendingEvents: {
   at: Date;
 }[] = [];
 
-/** Rejoue la file sur le client fraîchement initialisé, puis la vide. */
+/** Replays the queue on the freshly initialized client, then empties it. */
 function flushPendingEvents(): void {
   const queued = pendingEvents.splice(0, pendingEvents.length);
   const posthog = getAnalyticsClient();
-  // Pas de client (pas de clé, hôte local) : la file se vide sans partir.
+  // No client (no key, local host): the queue empties without leaving.
   if (!posthog?.__loaded) return;
   for (const { event, props, at } of queued) {
     posthog.capture(event, props, { timestamp: at });
@@ -148,8 +143,8 @@ export function trackEvent<E extends AnalyticsEventName>(
   if (!safeEvent || !ALLOWED_ANALYTICS_EVENTS.has(safeEvent as AnalyticsEventName)) return;
   const safeProps = sanitizeAnalyticsProps(props as Record<string, unknown> | undefined);
 
-  // L'init est différée (voir components/posthog-init.tsx) : ce qui arrive
-  // avant elle attend son tour au lieu de disparaître.
+  // The init is deferred (see components/posthog-init.tsx): what happens
+  // before she waits her turn instead of disappearing.
   const posthog = getAnalyticsClient();
   if (!posthog?.__loaded) {
     if (pendingEvents.length < MAX_PENDING_EVENTS) {

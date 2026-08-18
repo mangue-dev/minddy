@@ -1,51 +1,46 @@
 /**
- * La session qui SUIT le canal (MIN-353).
+ * The session FOLLOWS the channel (MIN-353).
  *
- * ## Le problème, et pourquoi il n'a pas de solution côté web
+ * ## The problem, and why it has no solution on the web side
  *
- * Les deux canaux servent le même projet Supabase — mêmes comptes, mêmes
- * données — mais pas la même ORIGINE : `www.minddy.app` et
- * `preview.minddy.app`. Or un cookie appartient à un hôte. Basculer le canal
- * arrivait donc sur l'écran de connexion, à chaque fois, dans les deux sens :
- * la session existe, elle est valide, elle est simplement rangée sous l'autre
- * porte.
+ * Both channels serve the same Supabase project — same accounts, same
+ * data — but not the same ORIGIN: `www.minddy.app` and
+ * `preview.minddy.app`. But a cookie belongs to a host. Switching the channel
+ * therefore arrived on the login screen, each time, in both directions:
+ * the session exists, it is valid, it is simply stored under the other
+ * door.
  *
- * Élargir le cookie au domaine (`.minddy.app`) le réparerait pour tout le
- * monde — et le donnerait aussi à tout ce qui vit sous ce domaine, y compris ce
- * qu'on y mettra un jour sans y penser. Ce n'est pas un réglage à prendre pour
- * une commodité de l'app de bureau.
+ * Expand the cookie to the domain (`.minddy.app`) would fix it for everyone
+ * — and also give it to everything that lives under this domain, including that
+ * that we put there one day without thinking about it. This is not a setting to take for
+ * a convenience of the desktop app.
  *
- * **Le report se fait donc dans la coquille, et nulle part ailleurs.** Elle a
- * les deux jarres sous la main (une seule `session` Electron pour les deux
- * origines), elle sait exactement quand la bascule a lieu, et rien de ce qu'elle
- * fait ne change ce que le web sert à un navigateur.
+ * **The report is therefore done in the shell, and nowhere else.** She has
+ * the two jars on hand (only one `session` Electron for two
+ * origins), it knows exactly when the switch occurs, and nothing it does changes what the web serves to a browser. GoTrue ROTATES the refresh token for each use: two
+ * origins that hold the same end up having one with an expired
+ * token, and using it is worth disconnecting. This is why the report is
+ * always in the direction of the seesaw, **from the origin that we leave**: the one
+ * that we leave is the one that has just used it, therefore the one that has the fresh token
+ *. The one we join is overwritten, not merged.
  *
- * ## Le jeton de rafraîchissement, et pourquoi le sens compte
+ * What remains behind is out of date, and does not have to be cleaned: the next
+ * switch in the other direction will overwrite it in turn, with fresh. Neither side
+ * ever uses a token that it did not receive on the last pass.
  *
- * GoTrue fait TOURNER le jeton de rafraîchissement à chaque usage : deux
- * origines qui détiennent le même finissent par en avoir une avec un jeton
- * périmé, et s'en servir vaut déconnexion. C'est pour ça que le report est
- * toujours dans le sens de la bascule, **depuis l'origine qu'on quitte** : celle
- * qu'on quitte est celle qui vient de s'en servir, donc celle qui a le jeton
- * frais. Celle qu'on rejoint est écrasée, pas fusionnée.
- *
- * Ce qui reste derrière est périmé, et n'a pas à être nettoyé : la prochaine
- * bascule dans l'autre sens l'écrasera à son tour, avec du frais. Aucun des deux
- * côtés ne se sert jamais d'un jeton qu'il n'a pas reçu au dernier passage.
- *
- * Module PUR : `desktop/src/main.ts` lit et écrit la jarre, ce fichier dit quoi.
+ * PUR module: `desktop/src/main.ts` reads and writes the jar, this file says what.
  */
 
-/** Un cookie tel qu'Electron le rend (`Electron.Cookie`), réduit à ce qu'on lit. */
+/** A cookie such as Electron makes (`Electron.Cookie`), reduced to what we read. */
 export interface SourceCookie {
   name: string;
   value: string;
-  /** Absent sur un cookie de session — il meurt alors avec l'app. */
+  /** Absent on a session cookie — it then dies with the app. */
   expirationDate?: number;
   sameSite?: string;
 }
 
-/** Ce qu'on passe à `cookies.set` (`Electron.CookiesSetDetails`). */
+/** What we pass to `cookies.set` (`Electron.CookiesSetDetails`). */
 export interface CarriedCookie {
   url: string;
   name: string;
@@ -57,38 +52,36 @@ export interface CarriedCookie {
   expirationDate?: number;
 }
 
-/** Les valeurs qu'Electron accepte ; tout le reste retombe sur celle de Supabase. */
+/** The values ​​that Electron accepts; everything else falls on that of Supabase. */
 const SAME_SITE = new Set(["unspecified", "no_restriction", "lax", "strict"]);
 
 /**
- * Les cookies qui PORTENT la session, et eux seuls.
+ * Cookies that CARRY the session, and them alone.
  *
- * `@supabase/ssr` écrit `sb-<ref>-auth-token`, et le découpe en
- * `sb-<ref>-auth-token.0`, `.1`… quand la charge dépasse la taille d'un cookie.
- * Les morceaux voyagent ensemble ou pas du tout : il en manque un et la session
- * ne se relit plus.
+ * `@supabase/ssr` writes `sb-<ref>-auth-token`, and splits it into
+ * `sb-<ref>-auth-token.0`, `.1`… when the load exceeds the size of a cookie.
+ * The pieces travel together or not at all: one is missing and the session
+ * is no longer read again.
  *
- * **Ce qui est délibérément EXCLU** : `…-auth-token-code-verifier`, le
- * vérificateur PKCE d'un tour d'authentification en cours. Il appartient au tour
- * qui l'a tiré, sur l'origine qui l'a tiré ; le reporter ailleurs ne fait
- * qu'emporter un demi-échange que personne ne finira. Et tout le reste — langue,
- * consentement aux cookies, jetons de vue partagée — qui est un réglage de
- * l'origine, pas une identité.
+ * **Which is deliberately EXCLUDED**: `…-auth-token-code-verifier`, the
+ * PKCE checker of an authentication round in progress. It belongs to the turn
+ * that drew it, on the origin that drew it; Reporting it elsewhere only leaves a half-trade that no one will finish. And everything else — language,
+ * cookie consent, shared view tokens — which is an origin setting, not an identity.
  */
 export function isSessionCookie(name: string): boolean {
   return /^sb-.+-auth-token(\.\d+)?$/.test(name);
 }
 
 /**
- * Ce qu'il faut écrire sur l'origine d'ARRIVÉE, à partir de ce qu'on a lu sur
- * celle de départ.
+ * What to write on the ARRIVAL origin, based on what we read about
+ * the departure one.
  *
- * Les options ne se recopient pas de la source, elles se DÉDUISENT de la cible :
- * `secure` suit son protocole (`https` en preview comme en production, `http` en
- * dév local), et `httpOnly` reste faux parce que le client Supabase du
- * navigateur lit ces cookies en JavaScript pour reconstruire la session — le
- * même choix que `lib/session-cookies.ts`, pour la même raison. Sans `domain` :
- * on écrit un cookie d'HÔTE, qui ne déborde pas sur les voisins.
+ * The options are not copied from the source, they are DEDUCED from the target:
+ * `secure` follows its protocol (`https` in preview as in production, `http` in
+ * local dev), and `httpOnly` remains false because the Supabase client of the
+ * browser reads these cookies in JavaScript to reconstruct the session — the
+ * same choice than `lib/session-cookies.ts`, for the same reason. Without `domain`:
+ * we write a HOST cookie, which does not overflow onto neighbors.
  */
 export function carrySessionCookies(
   cookies: readonly SourceCookie[],
@@ -113,17 +106,16 @@ export function carrySessionCookies(
 }
 
 /**
- * Les cookies de session à EFFACER sur l'origine d'arrivée avant d'écrire.
+ * Session cookies to be DELETED on the arrival origin before writing.
  *
- * Le cas qu'on répare : la cible portait une session découpée en trois morceaux,
- * celle qui arrive en fait deux. Écrire par-dessus laisse le `.2` de l'ancienne
- * traîner, et le client recolle trois morceaux dont le dernier n'appartient pas
- * à la même charge — une session illisible, donc une déconnexion, sur un chemin
- * dont tout l'objet était de l'éviter.
+ * The case that we repair: the target carried a session divided into three pieces,
+ * the one that arrives makes two. Writing over leaves the `.2` of the old
+ * lying around, and the client puts together three pieces, the last of which does not belong to
+ * on the same load — an unreadable session, therefore a disconnection, on a path
+ * whose whole purpose was to avoid it.
  *
- * On n'efface que ce qu'on ne va pas réécrire : le reste sera écrasé de toute
- * façon, et un cookie retiré puis reposé est un cookie qui n'existe pas pendant
- * l'intervalle.
+ * We only erase what we are not going to rewrite: the rest will be overwritten anyway, and a cookie removed then put back is a cookie that does not exist during
+ * the interval.
  */
 export function staleSessionCookies(
   targetCookies: readonly SourceCookie[],

@@ -13,22 +13,22 @@ import { toast } from "mangue-ui";
 import { formatModShortcut } from "@/lib/keyboard/shortcuts";
 
 /**
- * Mode zen (MIN-134) : le board seul, sans barre latérale, sans header, sans le
- * FAB de Numo. Il se bascule DEPUIS LA PALETTE uniquement — lui donner un bouton
- * ajouterait un élément d'interface à celle qu'il prétend épurer.
+ * Zen mode (MIN-134): the board alone, without sidebar, without header, without the
+ * FAB of Numo. It toggles FROM THE PALETTE only — giving it a button
+ * would add an interface element to the one it claims to clean.
  *
- * L'état vit en mémoire, et nulle part ailleurs. C'est le filet de sécurité :
- * qui l'a activé par mégarde et ne sait plus comment en sortir recharge la page
- * — le réflexe universel — et retrouve son interface. Le poser en sessionStorage
- * survivrait au rechargement et refermerait cette porte de sortie ; localStorage,
- * pire, la condamnerait pour toutes les sessions à venir.
+ * The state lives in memory, and nowhere else. It's the safety net:
+ * who activated it inadvertently and no longer knows how to get out, reloads the page
+ * — the universal reflex — and finds its interface. Placing it in sessionStorage
+ * would survive the reload and close this exit door; localStorage,
+ * worse, would condemn it for all future sessions.
  *
- * Le toast d'activation dit donc les deux sorties : ⌘K, et le rechargement.
- * En sortie, pas de toast : le header et la sidebar qui reviennent le disent
- * déjà, mieux qu'une phrase.
+ * The activation toast therefore says the two outputs: ⌘K, and the reload.
+ * On output, no toast: the header and the sidebar which return say it
+ * already, better than a sentence.
  */
 interface ZenModeContextValue {
-  /** Chrome masqué (sidebar, header, FAB). */
+  /** Hidden Chrome (sidebar, header, FAB). */
   zen: boolean;
   toggle: () => void;
 }
@@ -39,12 +39,12 @@ export function ZenModeProvider({ children }: { children: ReactNode }) {
   const t = useTranslations("Nav");
   const [zen, setZen] = useState(false);
 
-  // Le toast se déclenche AVANT le setState, pas dedans : un updater doit rester
-  // pur — React le rejoue (StrictMode en dev, et rien ne garantit un seul appel
-  // en général), et le toast partait alors en double.
+  // The toast is triggered BEFORE the setState, not inside: an updater must remain
+  // pure — React replays it (StrictMode in dev, and nothing guarantees a single call
+  // in general), and the toast would then be made twice.
   const toggle = useCallback(() => {
-    // Le raccourci se lit à la bascule, jamais au rendu : on est déjà dans le
-    // navigateur, donc `navigator` dit la vraie plateforme (⌘K ou Ctrl+K).
+    // The shortcut is read on the switch, never when rendered: we are already in the
+    // browser, so `navigator` says the real platform (⌘K or Ctrl+K).
     if (!zen) toast.success(t("zenModeOn", { shortcut: formatModShortcut("K") }));
     setZen((on) => !on);
   }, [zen, t]);

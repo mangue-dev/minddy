@@ -1,49 +1,49 @@
-# Exploiter une instance minddy auto-hébergée
+# Operate a self-hosted minddy instance
 
-Ce runbook commence **après** l'installation décrite dans
-[`self-hosting.md`](self-hosting.md). Il couvre une mise à jour entre deux
-versions publiées consécutives, une sauvegarde complète et une restauration sur
-une pile Supabase vierge. Les exemples supposent une application et la
-distribution Docker officielle de Supabase, mais les invariants restent les
-mêmes avec un autre orchestrateur.
+This runbook begins **after** the installation described in
+[`self-hosting.md`](self-hosting.md). It covers an update between two
+consecutive published versions, a complete backup and restoration on
+a blank Supabase battery. The examples assume an application and the
+official Docker distribution of Supabase, but the invariants remain the
+same with another orchestrator.
 
-Une sauvegarde minddy n'est complète que si elle contient ensemble :
+A minddy backup is only complete if it contains together:
 
-- PostgreSQL, y compris Auth, les métadonnées Storage et l'historique des
-  migrations ;
-- les octets du backend Storage ;
-- la configuration et les secrets de l'application **et** de Supabase ;
-- la version exacte du code et des images déployées.
+- PostgreSQL, including Auth, Storage metadata and log history
+  migration;
+- the bytes of the Storage backend;
+- the configuration and secrets of the Supabase application **and**;
+- the exact version of the code and images deployed.
 
-Un dump PostgreSQL seul ne contient pas les fichiers Storage. Une copie des
-fichiers Storage seule ne contient ni leurs métadonnées ni leurs permissions.
+A PostgreSQL dump alone does not contain Storage files. A copy of the
+Storage files alone contain neither their metadata nor their permissions.
 
-## Politique de versions supportées
+## Supported versions policy
 
-- Une version exploitable est un tag Git immuable `vMAJEUR.MINEUR.CORRECTIF`.
-  Ne déployez ni une branche mobile (`main`, `production`) ni une archive sans
-  son commit.
-- Les migrations sont testées dans l'ordre des versions publiées. Passez d'un
-  tag au tag publié suivant, sans en sauter. Répétez ce runbook pour rattraper
-  plusieurs versions.
-- La dernière version publiée est la version maintenue. La précédente n'est
-  conservée que comme cible de rollback court, lorsque les migrations du
-  nouveau tag sont explicitement compatibles avec elle. Les correctifs de
-  sécurité sont appliqués à la dernière version, pas rétroportés par défaut.
-- Avant `v1.0.0`, une version mineure peut modifier la configuration ou demander
-  une maintenance. Après `v1.0.0`, une montée de version majeure peut demander
-  une procédure dédiée. Dans les deux cas, les notes de version et le diff des
-  migrations priment sur ce runbook.
-- Mettez à jour séparément la distribution Supabase et minddy. Ne changez pas
-  en même temps minddy, la version majeure de PostgreSQL et les images
-  Supabase : une panne n'aurait plus une cause isolable. Une mise à niveau
-  majeure de PostgreSQL suit le runbook de la version Supabase utilisée.
+- An exploitable version is an immutable Git tag `vMAJEUR.MINEUR.CORRECTIF`.
+  Do not deploy a mobile branch (`main`, `production`) nor an archive without
+  its commit.
+- Migrations are tested in the order of released versions. Go from one
+  tag to the next published tag, without skipping. Repeat this runbook to catch up
+  several versions.
+- The last published version is the maintained version. The previous one is not
+  kept only as a short rollback target, when migrations of the
+  new tag are explicitly compatible with it. The fixes of
+  security are applied to the latest version, not backported by default.
+- Before `v1.0.0`, a minor version may change the configuration or request
+  maintenance. After `v1.0.0`, a major version upgrade may require
+  a dedicated procedure. In both cases, the release notes and the diff of
+  migrations take precedence over this runbook.
+- Update the Supabase and minddy distribution separately. Don't change
+  at the same time minddy, the major version of PostgreSQL and the images
+  Supabase: a breakdown would no longer have an isolatable cause. An upgrade
+  major version of PostgreSQL follows the runbook of the Supabase version used.
 
-## Variables utilisées dans les commandes
+## Variables used in commands
 
-Adaptez une fois ces chemins et gardez les URL PostgreSQL hors de l'historique
-du shell. `BACKUP_ROOT` doit être un volume chiffré, distinct du disque de
-production, avec assez d'espace pour la base et Storage.
+Adapt these paths once and keep PostgreSQL URLs out of history
+of the shell. `BACKUP_ROOT` must be an encrypted volume, separate from the storage disk.
+production, with enough space for base and storage.
 
 ```bash
 export FROM_TAG=v0.9.4
@@ -60,31 +60,31 @@ export NEXT_PUBLIC_SUPABASE_ANON_KEY='…'
 export SUPABASE_SERVICE_ROLE_KEY='…'
 ```
 
-Ne préfixez pas une commande par les secrets : ils apparaîtraient dans la ligne
-de commande ou les journaux. Les exports ci-dessus sont illustratifs ; en
-production, chargez-les depuis le gestionnaire de secrets de l'instance.
+Do not prefix a command with secrets: they would appear in the line
+order or logs. The exports above are illustrative; in
+production, load them from the instance secrets manager.
 
-## Avant toute maintenance
+## Before any maintenance
 
-### Décider et annoncer la fenêtre
+### Decide and announce the window
 
-La procédure sûre a une **indisponibilité en écriture** du début de la
-sauvegarde à la fin des contrôles. Affichez une page de maintenance et annoncez
-la durée prévue. Bloquez aussi les accès directs à l'API Supabase publique :
-arrêter seulement le frontend n'empêche pas un client déjà authentifié d'écrire
-dans PostgREST ou Storage.
+The safe procedure has a **write unavailability** of the start of the
+saved at the end of the checks. Display a maintenance page and announce
+the planned duration. Also block direct access to the public Supabase API:
+stopping only the frontend does not prevent an already authenticated client from writing
+in PostgREST or Storage.
 
-Avant la fenêtre :
+Before the window:
 
-1. préparez le nouveau checkout, installez ses dépendances et construisez-le
-   avec ses variables `NEXT_PUBLIC_*` finales ;
-2. lisez les notes des deux versions et examinez les migrations, les dépendances
-   et l'environnement ;
-3. vérifiez la capacité disque, la destination hors hôte et la dernière
-   restauration d'essai ;
-4. mesurez la durée de la dernière sauvegarde et fixez un point d'abandon ;
-5. gardez le binaire ou checkout précédent et sa configuration immédiatement
-   redémarrables.
+1. prepare the new checkout, install its dependencies and build it
+   with its final `NEXT_PUBLIC_*` variables;
+2. read the notes of both versions and look at migrations, dependencies
+   and the environment;
+3. check disk capacity, off-host destination and latest
+   trial restoration;
+4. measure the duration of the last backup and set an abort point;
+5. keep the previous binary or checkout and its configuration immediately
+   restartable.
 
 ```bash
 cd "$MINDDY_REPO"
@@ -110,40 +110,40 @@ pnpm install --frozen-lockfile
 pnpm build
 ```
 
-Abandonnez avant l'indisponibilité si le tag cible est absent, si le tag source
-ne correspond pas au commit réellement déployé, si une variable requise n'a pas
-de valeur, si la sauvegarde précédente n'est pas lisible ou si l'espace libre
-est insuffisant.
+Abort before unavailability if target tag is absent, if source tag
+does not match the actually deployed commit, if a required variable does not have
+of value, if the previous backup is not readable or if the free space
+is insufficient.
 
-### Classer les changements d'environnement
+### Classify environment changes
 
-Comparez `.env.example`, sans recopier aveuglément ses valeurs. Consignez pour
-chaque différence : ajout, retrait, renommage, valeur par défaut, secret à
-générer et composant à redémarrer.
+Compare `.env.example`, without blindly copying its values. Record for
+each difference: addition, removal, renaming, default value, secret to
+generate and component to restart.
 
-- `NEXT_PUBLIC_*` est incorporé au build Next.js : toute modification impose un
-  nouveau build, pas seulement un redémarrage.
-- Les autres variables applicatives sont lues côté serveur et imposent le
-  redémarrage de l'application et des workers concernés.
-- Les variables de la pile Supabase imposent de recréer le ou les services qui
-  les consomment. Vérifiez notamment Auth, Storage, Realtime et le proxy.
-- Ne régénérez pas `GIT_TOKEN_ENCRYPTION_SECRET`,
-  `AI_KEY_ENCRYPTION_SECRET` ou `FEEDBACK_SSO_ENCRYPTION_SECRET` pendant une
-  mise à jour : les données déjà chiffrées deviendraient illisibles sans une
-  migration de rotation dédiée.
-- Une rotation de `CRON_SECRET`, de clés OAuth/webhook ou de clés API exige une
-  bascule coordonnée de leurs appelants. Une rotation du secret JWT Supabase
-  invalide les sessions et exige de régénérer les clés qui en dépendent.
-- Conservez les anciens noms encore documentés comme alias jusqu'à ce que les
-  notes de version autorisent leur retrait.
+- `NEXT_PUBLIC_*` is incorporated into the Next.js build: any modification imposes a
+  new build, not just a reboot.
+- The other application variables are read on the server side and impose the
+  restart of the application and the workers concerned.
+- The Supabase stack variables require recreating the service(s) that
+  consume them. Check especially Auth, Storage, Realtime and proxy.
+- Do not regenerate `GIT_TOKEN_ENCRYPTION_SECRET`,
+  `AI_KEY_ENCRYPTION_SECRET` or `FEEDBACK_SSO_ENCRYPTION_SECRET` during a
+  update: data already encrypted would become unreadable without
+  dedicated rotation migration.
+- A rotation of `CRON_SECRET`, OAuth/webhook keys or API keys requires a
+  coordinated switching of their callers. A rotation of the JWT Supabase secret
+  invalidates sessions and requires regenerating the keys that depend on them.
+- Keep the old names still documented as aliases until the
+  release notes authorize their removal.
 
-## Sauvegarde complète et cohérente
+## Complete and consistent backup
 
-### 1. Créer et identifier le jeu de sauvegarde
+### 1. Create and identify the backup set
 
-Au début de la fenêtre, mettez l'application, ses workers et l'ordonnanceur en
-maintenance, puis bloquez l'API Supabase au reverse proxy. Laissez PostgreSQL
-disponible localement pour le dump.
+At the start of the window, put the application, its workers and the scheduler in
+maintenance, then block the Supabase API to the reverse proxy. Leave PostgreSQL
+available locally for dump.
 
 ```bash
 export BACKUP_ID="$(date -u +%Y%m%dT%H%M%SZ)-${FROM_TAG}"
@@ -157,16 +157,16 @@ docker compose images > "$BACKUP_DIR/supabase-images.txt"
 docker compose ps > "$BACKUP_DIR/supabase-services.txt"
 ```
 
-Le suffixe `-dirty` est un motif d'abandon : archivez et versionnez d'abord les
-modifications déployées. Gardez aussi dans le journal d'exploitation l'heure à
-laquelle les écritures ont été bloquées.
+The suffix `-dirty` is an abort reason: check in and version the files first.
+changes deployed. Also keep in the operating log the time at
+which the writes were blocked.
 
 ### 2. Sauvegarder PostgreSQL
 
-La CLI Supabase applique les filtres nécessaires aux rôles et schémas gérés.
-Les deux fichiers `history_*` sont séparés car le dump de schéma normal n'inclut
-pas le registre `supabase_migrations`. N'ôtez pas les données `auth` ou
-`storage` : elles portent les comptes et les métadonnées des objets.
+The Supabase CLI applies the necessary filters to managed roles and schemas.
+The two `history_*` files are separated because the normal schema dump does not include
+not the `supabase_migrations` register. Do not remove `auth` data or
+`storage`: they carry the accounts and metadata of the objects.
 
 ```bash
 cd "$MINDDY_REPO"
@@ -194,27 +194,27 @@ psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -Atc "
 " > "$BACKUP_DIR/database/counts.json"
 ```
 
-Vérifiez immédiatement que les six fichiers sont non vides et que `data.sql`
-contient notamment des sections `COPY` pour `auth.users`, `storage.objects` et
-les tables `public` de minddy. Une absence signifie que l'URL ou la version de
-CLI n'a pas produit une sauvegarde complète ; ne poursuivez pas la mise à jour.
+Immediately verify that all six files are non-empty and that `data.sql`
+contains in particular `COPY` sections for `auth.users`, `storage.objects` and
+minddy's `public` tables. An absence means that the URL or version of
+CLI did not produce a full backup; do not continue with the update.
 
-### 3. Sauvegarder les secrets et la configuration
+### 3. Back up secrets and configuration
 
-Copiez dans `config/`, en conservant les permissions :
+Copy to `config/`, retaining permissions:
 
-- `MINDDY_ENV_FILE` et la configuration du service applicatif ;
-- `.env`, `docker-compose.yml`, les overrides et scripts `run.sh` de la pile
-  Supabase ;
-- la configuration du reverse proxy, du DNS/TLS et de l'ordonnanceur ;
-- le manifeste des images, les paramètres du backend Storage et les gabarits
-  Auth/SMTP non versionnés ;
-- la clé racine `pgsodium`, si la pile en possède une. Avec la distribution
-  Docker Supabase, contrôlez
-  `/etc/postgresql-custom/pgsodium_root.key` dans le service `db` et archivez-la
-  séparément. Sans elle, les secrets Vault éventuels ne sont pas récupérables.
+- `MINDDY_ENV_FILE` and configuration of the application service;
+- `.env`, `docker-compose.yml`, stack overrides and `run.sh` scripts
+  Supabase;
+- configuration of the reverse proxy, DNS/TLS and scheduler;
+- the image manifest, Storage backend parameters and templates
+  Unversioned Auth/SMTP;
+- the root key `pgsodium`, if the stack has one. With distribution
+  Docker Supabase, control
+  `/etc/postgresql-custom/pgsodium_root.key` in the `db` service and archive it
+  separately. Without it, any Vault secrets are not recoverable.
 
-Par exemple, pour les deux fichiers principaux :
+For example, for the two main files:
 
 ```bash
 install -m 0600 "$MINDDY_ENV_FILE" "$BACKUP_DIR/config/minddy.env"
@@ -230,25 +230,25 @@ if docker compose exec -T db test -f /etc/postgresql-custom/pgsodium_root.key; t
 fi
 ```
 
-Archivez de la même manière les définitions de service, proxy et ordonnanceur
-propres à votre hôte. Le `--exclude='./volumes'` est important : Storage est
-sauvegardé séparément, après son arrêt, à l'étape suivante.
+Archive service, proxy and scheduler definitions in the same way
+specific to your host. The `--exclude='./volumes'` is important: Storage is
+saved separately, after stopping it, in the next step.
 
-Ne laissez pas ce répertoire en clair après la fenêtre. Chiffrez-le avec l'outil
-de sauvegarde de l'organisation, envoyez-le hors hôte, vérifiez sa récupération,
-puis appliquez la durée de rétention prévue. Un hash ne remplace ni le
-chiffrement ni une copie hors site.
+Do not leave this directory unencrypted after the window. Encrypt it with the tool
+backup of the organization, send it off-host, verify its recovery,
+then apply the expected retention time. A hash does not replace or
+encryption or off-site copying.
 
 ### 4. Sauvegarder Storage
 
-Arrêtez le service `storage` **après** le dump de base et avant la copie. Les
-écritures sont déjà bloquées : les métadonnées du dump et les octets ont donc le
-même point logique.
+Stop the `storage` service **after** the base dump and before copying. The
+writes are already blocked: the dump metadata and the bytes therefore have the
+same logical point.
 
-#### Backend fichier de la distribution Docker
+#### Backend file of the Docker distribution
 
-Le montage officiel est `volumes/storage`. Confirmez le chemin dans le Compose
-réel ; n'utilisez jamais une supposition pour une commande d'archive.
+The official edit is `volumes/storage`. Confirm the path in Compose
+real; real; never use a guess for an archive command.
 
 ```bash
 cd "$SUPABASE_COMPOSE_DIR"
@@ -262,17 +262,17 @@ tar -tzf "$BACKUP_DIR/storage-files.tar.gz" > "$BACKUP_DIR/storage-files.list"
 
 #### Backend S3 ou compatible S3
 
-Arrêtez également `storage`, puis créez un snapshot/version immuable avec le
-fournisseur. À défaut, copiez **le bucket backend brut** vers un bucket de
-sauvegarde avec les identifiants du backend et contrôlez source/destination avec
-`rclone check` ou l'équivalent du fournisseur.
+Also stop `storage`, then create an immutable snapshot/version with the
+supplier. Failing that, copy **the raw backend bucket** to a bucket of
+backup with the backend identifiers and control source/destination with
+`rclone check` or the provider's equivalent.
 
-N'utilisez pas l'endpoint compatible S3 `/storage/v1/s3` pour une restauration
-physique couplée au dump PostgreSQL : cet endpoint crée lui-même des
-métadonnées, qui entreraient en conflit avec `storage.objects` restauré depuis
-la base. Le snapshot doit préserver les clés internes opaques du backend.
+Do not use the S3-enabled endpoint `/storage/v1/s3` for a restore
+physics coupled with the PostgreSQL dump: this endpoint itself creates
+metadata, which would conflict with `storage.objects` restored since
+the base. The snapshot must preserve the opaque internal keys of the backend.
 
-### 5. Sceller et contrôler
+### 5. Seal and control
 
 ```bash
 cd "$BACKUP_DIR"
@@ -281,31 +281,31 @@ sha256sum --check SHA256SUMS
 du -sh "$BACKUP_DIR"
 ```
 
-Copiez le jeu hors de l'hôte et refaites `sha256sum --check` sur la copie. Une
-sauvegarde n'est déclarée réussie qu'après restauration d'essai ; le contrôle de
-hash prouve seulement que les fichiers copiés n'ont pas changé.
+Copy the game off the host and redo `sha256sum --check` on the copy. A
+backup is only declared successful after trial restoration; control of
+hash only proves that the copied files have not changed.
 
-Storage reste arrêté à ce point. Pour une sauvegarde sans mise à jour, redémarrez
-`storage` et `imgproxy`, contrôlez-les, puis rouvrez les accès dans l'ordre
-inverse de leur fermeture. Pour une mise à jour, poursuivez ci-dessous.
+Storage remains stopped at this point. For a backup without updating, restart
+`storage` and `imgproxy`, check them, then reopen the accesses in order
+reverse of their closure. For an update, continue below.
 
-## Mise à jour vers la version suivante
+## Update to the next version
 
 ### Ordre obligatoire
 
-L'ordre sûr est : **bloquer les écritures → sauvegarder → migrer la base avec le
-code cible → déployer l'application cible → vérifier → rouvrir**.
+The safe order is: **block writes → save → migrate the database with the
+target code → deploy target application → verify → reopen**.
 
-Ne démarrez jamais la nouvelle application avant ses migrations. Ne laissez pas
-non plus l'ancienne application écrire pendant ou après une migration dont la
-compatibilité descendante n'est pas explicitement annoncée.
+Never start the new application before its migrations. Don't let
+no longer will the old application write during or after a migration whose
+Backward compatibility is not explicitly announced.
 
-### 1. Confirmer la release préparée avant la fenêtre
+### 1. Confirm the release prepared before the window
 
-La préparation de la section « Avant toute maintenance » doit déjà avoir créé
-et construit un répertoire ou une image immuable. Ne payez pas le téléchargement
-des dépendances ni le build pendant l'indisponibilité. Confirmez seulement
-l'artefact :
+The preparation of the “Before any maintenance” section must have already created
+and constructs an immutable directory or image. Don't pay for the download
+dependencies or build during downtime. Just confirm
+the artifact:
 
 ```bash
 test "$(git -C "$TARGET_RELEASE_DIR" rev-parse HEAD)" = \
@@ -314,14 +314,14 @@ test -d "$TARGET_RELEASE_DIR/.next"
 test -f "$TARGET_RELEASE_DIR/.env.local"
 ```
 
-Le build doit recevoir les valeurs `NEXT_PUBLIC_*` de production. Ne réutilisez
-pas un `.next` construit pour une autre origine ou une autre instance Supabase.
+The build must receive production `NEXT_PUBLIC_*` values. Do not reuse
+not a `.next` constructed for another origin or another Supabase instance.
 
-### 2. Après la sauvegarde, appliquer les migrations
+### 2. After backup, apply migrations
 
-Cette étape modifie la base et peut être **irréversible**. Ne l'exécutez que si
-PostgreSQL et Storage ont été sauvegardés, que les hashes sont valides et que la
-copie hors hôte est accessible.
+This step modifies the base and may be **irreversible**. Only run it if
+PostgreSQL and Storage have been backed up, the hashes are valid and the
+off-host copy is accessible.
 
 ```bash
 cd "$SUPABASE_COMPOSE_DIR"
@@ -330,28 +330,28 @@ cd "$TARGET_RELEASE_DIR"
 pnpm bootstrap:supabase -- --db-url "$SUPABASE_DB_URL" --env-file .env.local
 ```
 
-Chargez d'abord les trois variables Supabase dans le shell. Le `.env.local`
-protégé est la copie de l'environnement courant créée avant la fenêtre ; le
-bootstrap complète uniquement ses valeurs absentes et ne remplace jamais un
-secret existant. Son option `--env-file` n'accepte volontairement qu'un fichier
-situé dans le clone : ne lui passez pas directement un environnement conservé
-dans `/etc`. Reportez consciemment toute nouvelle valeur dans le gestionnaire de
-secrets avant d'activer la release.
+First load the three Supabase variables into the shell. The `.env.local`
+protected is the copy of the current environment created before the window; the
+bootstrap only completes its missing values and never replaces a
+existing secret. Its `--env-file` option voluntarily accepts only one file
+located in the clone: do not directly pass a preserved environment to it
+in `/etc`. Consciously report any new values in the data manager
+secrets before activating the release.
 
-Le bootstrap exécute `supabase db push`, réconcilie les buckets et lance les
-contrôles. Les migrations SQL versionnées font foi ; ne les collez pas à la main
-dans Studio et ne marquez pas une migration `applied` pour contourner un échec.
+The bootstrap executes `supabase db push`, reconciles the buckets and launches the
+controls. Versioned SQL migrations take precedence; don't stick them by hand
+in Studio and don't mark a migration `applied` to work around a failure.
 
-Si le dépôt vient juste de passer de l'historique de 211 migrations au baseline,
-suivez d'abord la section « Transition depuis l'historique avant baseline » de
-[`self-hosting.md`](self-hosting.md). C'est une opération exceptionnelle, jamais
-une étape récurrente de mise à jour.
+If the repository has just moved from 211 migration history to baseline,
+first follow the “Transition from pre-baseline history” section of
+[`self-hosting.md`](self-hosting.md). This is an exceptional operation, never
+a recurring update step.
 
-### 3. Déployer et vérifier avant de rouvrir
+### 3. Deploy and verify before reopening
 
-Activez `TARGET_RELEASE_DIR` dans le gestionnaire de service, recréez les
-services dont l'environnement a changé et démarrez la nouvelle application sans
-retirer la page de maintenance. Puis exécutez :
+Enable `TARGET_RELEASE_DIR` in service manager, recreate the
+services whose environment has changed and start the new application without
+remove the maintenance page. Then execute:
 
 ```bash
 cd "$TARGET_RELEASE_DIR"
@@ -361,26 +361,26 @@ pnpm verify:supabase --db-url "$SUPABASE_DB_URL" \
 curl --fail --silent --show-error "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/health"
 ```
 
-Avec un compte de test, contrôlez ensuite : connexion/déconnexion, ouverture
-d'un projet, création et modification d'un ticket, upload puis téléchargement
-d'une pièce jointe, mise à jour temps réel dans deux sessions et exécution d'un
-job de fond sans effet dangereux. Contrôlez les logs de l'application, Auth,
-PostgREST, Realtime et Storage pendant ces actions.
+With a test account, then check: connection/disconnection, opening
+of a project, creation and modification of a ticket, upload then download
+of an attachment, real-time update in two sessions and execution of a
+background work without dangerous effects. Check application logs, Auth,
+PostgREST, Realtime and Storage during these actions.
 
-Rouvrez d'abord l'application, puis l'accès public Supabase et enfin
-l'ordonnanceur. Notez l'heure, le tag, le commit, les migrations appliquées, la
-durée d'indisponibilité et l'identifiant de sauvegarde dans le journal
-d'exploitation.
+First reopen the application, then Supabase public access and finally
+the scheduler. Note the time, tag, commit, migrations applied,
+downtime and backup ID in log
+of exploitation.
 
-## Restaurer dans un environnement vierge
+## Restore to a pristine environment
 
-La restauration est **destructive pour sa cible** et impose une indisponibilité
-totale. Utilisez une nouvelle pile sans utilisateurs ni objets. Si la cible
-contient déjà des données, arrêtez : ce runbook n'est pas une fusion.
+The restoration is **destructive for its target** and imposes unavailability
+total. Use a new stack without users or objects. If the target
+already contains data, stop: this runbook is not a merge.
 
-### 1. Valider et préparer la cible
+### 1. Validate and prepare the target
 
-Définissez d'abord des cibles portant explicitement le nom de restauration :
+First define targets explicitly named restore:
 
 ```bash
 export RESTORE_DB_URL='postgresql://postgres:…@restore-db:5432/postgres'
@@ -391,19 +391,19 @@ export RESTORE_SERVICE_ROLE_KEY='…'
 export RESTORE_REPORT_DIR="/srv/restore/reports/$BACKUP_ID"
 ```
 
-1. récupérez la sauvegarde hors site et vérifiez `SHA256SUMS` ;
-2. provisionnez la même version majeure de PostgreSQL et les mêmes versions
-   d'images Supabase que dans `supabase-images.txt` ;
-3. restaurez la configuration Supabase et ses secrets avant le premier démarrage
-   utile, ou documentez les secrets volontairement renouvelés ;
-4. démarrez la pile Supabase vierge pour initialiser ses schémas internes, mais
-   gardez son proxy public fermé et l'application minddy arrêtée ;
-5. confirmez que la base cible et le backend Storage cible sont bien les cibles
-   jetables attendues.
+1. get the offsite backup and check `SHA256SUMS`;
+2. provision the same PostgreSQL major version and versions
+   of Supabase images than in `supabase-images.txt`;
+3. restore Supabase configuration and its secrets before first boot
+   useful, or document voluntarily renewed secrets;
+4. Start the blank Supabase stack to initialize its internal schematics, but
+   keep its public proxy closed and the minddy application stopped;
+5. confirm that the target database and the target Storage backend are indeed the targets
+   expected disposables.
 
-Sur un répertoire cible neuf, la configuration archivée peut être reposée ainsi
-avant le démarrage. L'extraction écrit les fichiers du Compose sauvegardé : ne
-l'exécutez jamais dans le répertoire de production ou une cible non vide.
+On a new target directory, the archived configuration can be reposted as follows:
+before starting. Extraction writes the saved Compose files: do not
+Never run it in the production directory or a non-empty target.
 
 ```bash
 install -d -m 0700 "$RESTORE_SUPABASE_DIR"
@@ -413,12 +413,12 @@ install -m 0600 "$BACKUP_DIR/config/supabase.env" \
   "$RESTORE_SUPABASE_DIR/.env"
 ```
 
-Si `config/pgsodium_root.key` existe, restaurez-la dans le volume `db-config`
-selon la procédure de la version Supabase archivée **avant** de charger les
-données. Ne démarrez pas avec une clé nouvellement générée lorsque la base
-sauvegardée contient des secrets Vault.
+If `config/pgsodium_root.key` exists, restore it to volume `db-config`
+according to the procedure of the archived Supabase version **before** loading the
+data. Do not boot with a newly generated key when the database
+saved contains Vault secrets.
 
-Initialisez ensuite la pile sans exposer son proxy :
+Then initialize the stack without exposing its proxy:
 
 ```bash
 cd "$RESTORE_SUPABASE_DIR"
@@ -426,8 +426,8 @@ sh run.sh start
 docker compose ps
 ```
 
-Utilisez une URL PostgreSQL de restauration distincte pour rendre une erreur de
-cible visible :
+Use a separate PostgreSQL restore URL to render an error
+visible target:
 
 ```bash
 cd "$BACKUP_DIR"
@@ -438,9 +438,9 @@ psql "$RESTORE_DB_URL" -X -v ON_ERROR_STOP=1 -Atc \
 
 ### 2. Restaurer PostgreSQL
 
-Sur la base initialisée mais vierge, restaurez rôles, schéma et données dans une
-transaction. `session_replication_role = replica` empêche les triggers de
-rejouer des effets pendant le chargement.
+On the initialized but blank database, restore roles, schema and data in a
+transaction. `session_replication_role = replica` prevents triggers from
+replay effects while loading.
 
 ```bash
 psql --single-transaction --variable ON_ERROR_STOP=1 \
@@ -456,16 +456,16 @@ psql --single-transaction --variable ON_ERROR_STOP=1 \
   --dbname "$RESTORE_DB_URL"
 ```
 
-Une erreur annule la transaction concernée. Lisez la première erreur ; ne
-retirez pas arbitrairement une table ou une contrainte du dump. Une différence
-de version Auth, Storage, extension ou PostgreSQL signifie généralement que la
-pile cible n'est pas celle du manifeste.
+An error cancels the transaction concerned. Read the first error; don't
+Do not arbitrarily remove a table or constraint from the dump. A difference
+Auth, Storage, extension or PostgreSQL version generally means that the
+target stack is not the one in the manifest.
 
-### 3. Restaurer les octets Storage
+### 3. Restore Storage bytes
 
-Arrêtez `storage` et `imgproxy` sur la cible. Pour le backend fichier, inspectez
-d'abord la liste de l'archive, confirmez que le chemin cible est celui du
-Compose vierge, puis extrayez :
+Stop `storage` and `imgproxy` on the target. For the file backend, inspect
+first list the archive, confirm that the target path is that of the
+Compose blank, then extract:
 
 ```bash
 cd "$RESTORE_SUPABASE_DIR"
@@ -478,19 +478,19 @@ tar --numeric-owner --acls --xattrs \
 docker compose up -d storage imgproxy
 ```
 
-L'extraction remplace les fichiers homonymes : elle n'est autorisée que sur le
-backend vierge validé à l'étape précédente. Pour un backend S3, restaurez le
-snapshot dans un bucket backend vide, configurez `GLOBAL_S3_BUCKET` vers ce
-bucket puis démarrez Storage. Ne réimportez pas les objets via l'API Storage
-après avoir restauré `storage.objects`.
+Extraction replaces homonymous files: it is only authorized on the
+blank backend validated in the previous step. For an S3 backend, restore the
+snapshot in an empty backend bucket, configure `GLOBAL_S3_BUCKET` to this
+bucket then start Storage. Do not re-import objects via the Storage API
+after restoring `storage.objects`.
 
-### 4. Reposer minddy et vérifier la restauration
+### 4. Rest minddy and check the restoration
 
-Checkouttez le commit de `minddy-commit.txt`, restaurez les secrets applicatifs,
-adaptez uniquement les URL de l'environnement d'essai, puis reconstruisez
-l'application. Si les secrets Supabase ont été renouvelés, remplacez aussi les
-clés anon/service côté minddy ; les utilisateurs devront se reconnecter après
-une rotation du secret JWT.
+Check out the `minddy-commit.txt` commit, restore the application secrets,
+only adapt the test environment URLs, then rebuild
+the application. If the Supabase secrets have been renewed, also replace the
+anon keys/mindy side service; users will have to log in again after
+a rotation of the JWT secret.
 
 ```bash
 export RESTORE_APP_URL='https://restore-tickets.example.test'
@@ -511,12 +511,12 @@ pnpm verify:supabase --db-url "$RESTORE_DB_URL" \
   --service-role-key "$RESTORE_SERVICE_ROLE_KEY"
 ```
 
-Le bootstrap ne doit appliquer aucune ancienne migration ; il peut seulement
-appliquer celles postérieures au point sauvegardé si vous avez consciemment
-checkouté un tag plus récent. Pour un test fidèle, utilisez d'abord le commit
-sauvegardé.
+The bootstrap should not apply any old migrations; he can only
+apply those after the saved point if you consciously
+checked out a newer tag. For faithful testing, use the commit first
+saved.
 
-Comparez les nombres de lignes restaurés avec ceux scellés dans la sauvegarde :
+Compare the restored row counts with those sealed in the backup:
 
 ```bash
 install -d -m 0700 "$RESTORE_REPORT_DIR"
@@ -534,46 +534,46 @@ diff -u "$BACKUP_DIR/database/counts.json" \
   "$RESTORE_REPORT_DIR/counts.json"
 ```
 
-Puis rejouez le parcours fonctionnel de la mise à jour et téléchargez plusieurs
-objets de chaque bucket, dont une pièce jointe privée.
+Then replay the functional journey of the update and download several
+objects in each bucket, including a private attachment.
 
-Une restauration est déclarée testée seulement si :
+A restoration is declared tested only if:
 
-- les hashes sont valides et toutes les commandes SQL terminent sans erreur ;
-- `verify:supabase` passe ;
-- les comptages convenus correspondent ;
-- un utilisateur restauré peut s'authentifier et lire ses données ;
-- les objets Storage restaurés sont réellement téléchargeables ;
-- la date, la durée, le RPO observé et les écarts sont consignés.
+- the hashes are valid and all SQL commands complete without errors;
+- `verify:supabase` passes;
+- the agreed counts correspond;
+- a restored user can authenticate and read their data;
+- restored Storage objects are actually downloadable;
+- the date, duration, RPO observed and deviations are recorded.
 
-Testez cette procédure au moins après un changement de versions Supabase ou de
-backend Storage et selon la fréquence imposée par votre RPO/RTO.
+Test this procedure at least after changing Supabase versions or
+backend Storage and according to the frequency imposed by your RPO/RTO.
 
-## Rollback et point de non-retour
+## Rollback and point of no return
 
-| Moment de l'échec | Action sûre |
+| Moment of failure | Safe action |
 | --- | --- |
-| Avant toute migration | Redémarrer le tag source avec son environnement ; la sauvegarde reste utilisable. |
-| Après une migration, avant ouverture | Ne redémarrer l'ancien tag que si les notes déclarent toutes les migrations compatibles en arrière. Sinon restaurer le jeu complet. |
-| Après ouverture aux écritures | Refermer immédiatement. Ne restaurez l'ancien snapshot qu'après avoir accepté la perte des écritures postérieures ou les avoir exportées pour une reprise manuelle. |
-| Rotation de secret ou changement de backend | Restaurer ensemble configuration, base et Storage. Un rollback du code seul ne recrée ni un secret perdu ni des objets déplacés. |
+| Before any migration | Restart the source tag with its environment; the backup remains usable. |
+| After a migration, before opening | Only restart the old tag if the notes declare all backward compatible migrations. Otherwise restore the full game. |
+| After opening for writing | Close immediately. Only restore the old snapshot after accepting the loss of subsequent writes or exporting them for manual recovery. |
+| Secret rotation or backend change | Restore configuration, database and Storage together. A code rollback alone does not recreate a lost secret or moved objects. |
 
-Les migrations minddy sont orientées vers l'avant et n'ont pas de `down`
-automatique. N'inventez pas de SQL inverse en incident. Une suppression de
-colonne/table, une transformation de données, un changement de type, une
-réécriture d'identifiants ou la consolidation d'historique est un point de
-non-retour : le rollback passe par la restauration complète.
+minddy migrations are forward facing and have no `down`
+automatic. Don't invent reverse SQL incidentally. A deletion of
+column/table, a data transformation, a change of type, a
+rewriting identifiers or consolidating history is a point of
+no return: rollback involves complete restoration.
 
-Gardez l'ancienne release et la sauvegarde jusqu'à la fin de la période
-d'observation. La suppression de l'ancien volume PostgreSQL, de l'ancien bucket
-ou du snapshot est elle-même irréversible et ne fait jamais partie de la
-procédure de mise à jour.
+Keep the old release and backup until the end of the period
+observation. Deleting the old PostgreSQL volume, from the old bucket
+or snapshot is itself irreversible and never forms part of the
+update procedure.
 
 ## Diagnostics courants
 
-Commencez par préserver l'erreur originale et l'heure. Collectez les sorties en
-masquant URL avec mot de passe, JWT, cookies, en-têtes `Authorization` et contenu
-utilisateur.
+Start by preserving the original error and time. Collect the outputs in
+masking URL with password, JWT, cookies, `Authorization` headers and content
+user.
 
 ```bash
 cd "$MINDDY_REPO"
@@ -588,28 +588,28 @@ df -h
 df -i
 ```
 
-| Symptôme | Contrôles et décision |
+| Symptom | Controls and decision |
 | --- | --- |
-| Migration refusée | Lisez la première erreur de `supabase db push`, contrôlez disque, verrous et `supabase_migrations.schema_migrations`. Corrigez la cause puis relancez : seules les migrations absentes sont appliquées. Ne modifiez pas le registre à la main. |
-| `relation does not exist`, colonne absente | L'application a probablement démarré avant la base ou ne pointe pas vers la base migrée. Remettez la maintenance, comparez les URL et relancez le bootstrap du tag déployé. |
-| 401 généralisés après restauration | Vérifiez la cohérence entre secret JWT, clés anon/service et variables de l'application. Après une rotation volontaire, forcez une nouvelle authentification ; ne remettez pas une ancienne clé avec un nouveau secret. |
-| 502/503 | Vérifiez `docker compose ps`, les healthchecks et les logs du service derrière le proxy. Contrôlez DNS/TLS et les URL externes avant de redémarrer en boucle. |
-| Upload impossible | Lancez `verify:supabase`, contrôlez les buckets et la policy `attachments insert`, l'espace/inodes, les permissions du montage ou les identifiants S3. |
-| Objet listé mais téléchargement 404 | La métadonnée `storage.objects` existe mais les octets manquent dans le backend. Comparez snapshot, bucket/prefix et manifeste ; ne supprimez pas la métadonnée pour masquer l'incohérence. |
-| Fichier présent mais absent de l'API | Les octets et la base ne viennent pas du même point, ou le fichier a été copié directement dans un format inattendu. Revenez au couple dump/snapshot cohérent. |
-| Temps réel absent | Vérifiez que `supabase_realtime` existe avec `verify:supabase`, puis les logs Realtime, le secret JWT, le proxy WebSocket et l'abonnement de la table. |
-| Jobs de fond inactifs ou 401 | Vérifiez l'ordonnanceur, l'URL canonique et que son bearer correspond au `CRON_SECRET` courant. Ne journalisez pas ce bearer. |
-| Build correct, mauvaise URL dans le navigateur | Une valeur `NEXT_PUBLIC_*` a changé sans rebuild. Rebuild puis remplacez l'artefact ; un redémarrage seul ne suffit pas. |
-| Restauration SQL échoue | Confirmez que la cible est vierge et utilise les images/majeure PostgreSQL du manifeste. Une erreur dans `data.sql` est souvent une divergence Auth/Storage ; ne poursuivez pas avec une restauration partielle. |
+| Migration refused | Read the first `supabase db push` error, check disk, locks and `supabase_migrations.schema_migrations`. Correct the cause then restart: only the missing migrations are applied. Do not modify the registry by hand. |
+| `relation does not exist`, column missing | The application probably started before the database or does not point to the migrated database. Return the maintenance, compare the URLs and restart the bootstrap of the deployed tag. |
+| 401s generalized after restoration | Check the consistency between JWT secret, anon/service keys and application variables. After a voluntary rotation, force a new authentication; don't hand over an old key with a new secret. |
+| 502/503 | Check `docker compose ps`, healthchecks and logs of the service behind the proxy. Check DNS/TLS and external URLs before looping again. |
+| Unable to upload | Launch `verify:supabase`, check the buckets and policy `attachments insert`, space/inodes, mount permissions or S3 identifiers. |
+| Object listed but download 404 | The `storage.objects` metadata exists but the bytes are missing in the backend. Compare snapshot, bucket/prefix and manifest; don't remove the metadata to hide the inconsistency. |
+| File present but missing from API | The bytes and base do not come from the same point, or the file was copied directly into an unexpected format. Return to the consistent dump/snapshot pairing. |
+| Real time absent | Verify that `supabase_realtime` exists with `verify:supabase`, then Realtime logs, JWT secret, WebSocket proxy and table subscription. |
+| Inactive Background Jobs or 401 | Check the scheduler, the canonical URL and that its bearer corresponds to the current `CRON_SECRET`. Do not log this bearer. |
+| Correct build, wrong URL in browser | A `NEXT_PUBLIC_*` value has changed without rebuilding. Rebuild then replace the artifact; a reboot alone is not enough. |
+| SQL Restore Fails | Confirm that the target is blank and uses the PostgreSQL images/major from the manifest. An error in `data.sql` is often an Auth/Storage discrepancy; do not proceed with a partial restoration. |
 
-Pour vérifier uniquement les invariants minddy sans modifier le schéma, utilisez
-toujours `pnpm verify:supabase`. Si le diagnostic nécessite une modification de
-production, reprenez depuis une sauvegarde cohérente et une nouvelle fenêtre de
+To check only minddy invariants without modifying the schema, use
+always `pnpm verify:supabase`. If the diagnosis requires a modification of
+production, resume from a consistent backup and a new production window
 maintenance.
 
-## Références d'infrastructure
+## Infrastructure references
 
-- [Sauvegarde et restauration avec la CLI Supabase](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore)
-- [Auto-hébergement Supabase avec Docker](https://supabase.com/docs/guides/self-hosting/docker)
-- [Backend et protocole S3 de Supabase Storage](https://supabase.com/docs/guides/self-hosting/self-hosted-s3)
-- [Mise à niveau PostgreSQL d'une pile Supabase](https://supabase.com/docs/guides/self-hosting/postgres-upgrade-17)
+- [Backup and restore with the Supabase CLI](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore)
+- [Supabase self-hosting with Docker](https://supabase.com/docs/guides/self-hosting/docker)
+- [Backend and S3 protocol of Supabase Storage](https://supabase.com/docs/guides/self-hosting/self-hosted-s3)
+- [PostgreSQL upgrade of a Supabase stack](https://supabase.com/docs/guides/self-hosting/postgres-upgrade-17)

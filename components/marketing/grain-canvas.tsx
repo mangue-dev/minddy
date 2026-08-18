@@ -4,24 +4,20 @@ import { GrainGradient } from "@paper-design/shaders-react";
 import { useShaderPalette } from "@/lib/use-shader-palette";
 
 /**
- * Le canvas WebGL du fond animé, et lui seul.
+ * The WebGL canvas of the animated background, and it alone.
  *
- * Sorti de `hero-shader.tsx` pour que `@paper-design/shaders-react` ne soit
- * atteint que par un `next/dynamic` monté CONDITIONNELLEMENT (MIN-100). Un
- * `dynamic()` dont le composant parent se rend côté serveur voit son chunk
- * préchargé dans le document : la landing téléchargeait donc 12 Ko gzippés de
- * WebGL sur mobile — où le shader n'est même pas monté (il démarre à `sm`).
- * Ici, rien ne rend, donc rien ne se précharge.
- *
- * La palette est lue ici et non passée en props : elle dérive du token
- * `--primary` résolu dans le navigateur, ce qui suppose déjà d'être côté client.
+ * Taken out of `hero-shader.tsx` so that `@paper-design/shaders-react` is
+ * only reached by a CONDITIONALLY mounted `next/dynamic` (MIN-100). A
+ * `dynamic()` whose parent component goes to the server side sees its chunk
+ * preloaded in the document: the landing therefore downloaded 12 KB gzipped from
+ * WebGL on mobile — where the shader is not even mounted (it starts at `sm`) client.
  */
 export default function GrainCanvas({
   isDark,
   speed,
 }: {
   isDark: boolean;
-  /** 0 = boucle arrêtée (hors champ, ou « moins de mouvement »). */
+  /** 0 = loop stopped (out of scope, or “less movement”). */
   speed: number;
 }) {
   const colors = useShaderPalette();

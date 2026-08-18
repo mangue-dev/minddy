@@ -23,10 +23,10 @@ import {
 import { isGiftExpired } from "@/lib/billing-gift";
 
 /**
- * Comptes billing (MIN-72) — une ligne `billing_accounts` par user, écrite
- * uniquement par le service client (webhook Stripe, checkout, sync). Le plan
- * effectif n'est jamais stocké : il est résolu à la lecture —
- * admin_override → abonnement Stripe utilisable → free.
+ * Billing accounts (MIN-72) — one `billing_accounts` line per user, written
+ * only by customer service (Stripe webhook, checkout, sync). The effective
+ * plan is never stored: it is resolved upon reading —
+ * admin_override → Usable Stripe subscription → free.
  */
 
 export interface BillingAccount {
@@ -61,7 +61,7 @@ export interface ResolvedBilling {
   stripeConfigured: boolean;
 }
 
-/** Statuts Stripe qui donnent droit au plan payant (past_due = grâce). */
+/** Stripe statuses that entitle you to the paid plan (past_due = grace). */
 const STRIPE_ACTIVE_STATUSES = new Set(["active", "trialing", "past_due"]);
 
 export function shouldUseStripePlan(status: string | null | undefined): boolean {
@@ -69,12 +69,12 @@ export function shouldUseStripePlan(status: string | null | undefined): boolean 
 }
 
 /**
- * L'override admin encore VALIDE de ce compte, `null` dès l'échéance passée.
+ * The still VALID admin override of this account, `null` as soon as the expiry date has passed.
  *
- * C'est ici que le cadeau à durée s'arrête tout seul : rien n'a besoin de
- * passer réécrire la ligne pour que le droit tombe — la lecture suffit. Le
- * balayage (`expireAdminOverrides`) nettoie ensuite, sans rien changer au
- * résultat.
+ * This is where the duration gift stops by itself: nothing needs
+ * rewrite the line so that the right falls — reading is enough. The
+ * scan (`expireAdminOverrides`) then cleans up, without changing anything in the
+ * result.
  */
 export function activeAdminOverride(
   account: BillingAccount | null,
@@ -104,18 +104,18 @@ export function resolvePlanFromBillingAccount(
 }
 
 /**
- * « Combien ce compte PAIE-t-il ? » — à ne pas confondre avec
- * `resolvePlanFromBillingAccount`, qui répond à « à quoi a-t-il DROIT ? ».
+ * “How much does this account PAY?” » — not to be confused with
+ * `resolvePlanFromBillingAccount`, which answers “what is he RIGHT TO?” .
  *
- * Deux questions distinctes, d'où deux résolveurs. Un override admin donne des
- * droits sans générer un centime : c'est un cadeau, jamais du revenu. Un compte
- * free avec un override pro paie donc 0 € ; un compte Go payant avec un override
- * pro paie Go. Ce résolveur IGNORE donc `admin_override_plan_id` et ne lit que
- * l'abonnement Stripe réel.
+ * Two separate questions, hence two resolvers. An admin override gives
+ * rights without generating a cent: it's a gift, never income. A free
+ * account with a pro override therefore pays €0; a paid Go account with an override
+ * pro pays Go. This resolver therefore IGNORES `admin_override_plan_id` and only reads
+ * the real Stripe subscription.
  *
- * (Sur le graphique la question ne se pose même pas — le revenu y vient des
- * balance transactions, et un cadeau ne produit aucune transaction. C'est le MRR
- * théorique, calculé à partir des abonnements en base, qui a besoin de la règle.)
+ * (On the graph the question does not even arise — the income comes from
+ * balance transactions, and a gift produces no transactions. It is the theoretical MRR
+ *, calculated from base subscriptions, that needs the rule.)
  */
 export function resolvePaidPlanFromBillingAccount(
   account: BillingAccount | null
@@ -125,8 +125,8 @@ export function resolvePaidPlanFromBillingAccount(
   if (!shouldUseStripePlan(account?.stripe_subscription_status)) return null;
   return {
     planId: stripePlanId,
-    // Price inconnu (promo, ancien tarif) → mensuel, l'hypothèse la plus
-    // conservatrice : elle ne gonfle pas le MRR.
+    // Price unknown (promo, old price) → monthly, the most
+    // conservative: it does not inflate the MRR.
     interval: getIntervalForStripePrice(account?.stripe_price_id) ?? "month",
   };
 }
@@ -164,9 +164,9 @@ export async function upsertBillingAccount(
 // ── Sync Stripe ──────────────────────────────────────────────────────────────
 
 /**
- * Écrit l'état d'un abonnement Stripe dans le compte. Résolution du user :
- * metadata.user_id (posé au checkout) → subscription id → customer id.
- * Partagé par le webhook et le re-sync paresseux.
+ * Writes the status of a Stripe subscription to the account. User resolution:
+ * metadata.user_id (set at checkout) → subscription id → customer id.
+ * Shared by webhook and lazy re-sync.
  */
 export async function syncSubscriptionToBillingAccount(
   subscription: StripeSubscription,
@@ -234,14 +234,14 @@ export async function findUserIdForStripeIdentifiers(params: {
   return null;
 }
 
-/** Âge max des données Stripe avant re-vérification API (filet si webhook raté). */
+/** Max age of Stripe data before API re-verification (net if webhook failed). */
 const STRIPE_SYNC_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 function isStripeSyncStale(account: BillingAccount | null): boolean {
   if (!account?.stripe_subscription_id) return false;
   if (!shouldUseStripePlan(account.stripe_subscription_status)) return false;
-  // Période échue mais statut encore actif → le webhook de renouvellement a
-  // probablement été manqué ; sans re-sync la fenêtre d'usage resterait figée.
+  // Period expired but status still active → the renewal webhook has
+  // probably been missed; without re-sync the usage window would remain frozen.
   const periodEnd = account.stripe_current_period_end
     ? new Date(account.stripe_current_period_end).getTime()
     : 0;
@@ -264,14 +264,14 @@ async function withStripeSync(
     return await getBillingAccountForUser(account.user_id);
   } catch (err) {
     console.error("[billing] stripe re-sync failed:", (err as Error).message);
-    // updated_at avancé pour ne pas re-tenter à chaque requête pendant 24 h.
+    // updated_at advanced so as not to retry each request for 24 hours.
     return upsertBillingAccount(account.user_id, {}).catch(() => account);
   }
 }
 
-// ── Point d'entrée ───────────────────────────────────────────────────────────
+// ── Entry point ───────────────────────────── ──────────────────────────────
 
-/** Le plan effectif d'un user — l'unique point d'entrée serveur. */
+/** A user's effective plan — the single server entry point. */
 export async function getResolvedBilling(userId: string): Promise<ResolvedBilling> {
   const account = await withStripeSync(await getBillingAccountForUser(userId));
   const { planId, source } = resolvePlanFromBillingAccount(account);
@@ -287,17 +287,17 @@ export async function getResolvedBilling(userId: string): Promise<ResolvedBillin
 // ── Fin des plans offerts ────────────────────────────────────────────────────
 
 /**
- * Efface les overrides admin dont l'échéance est passée.
+ * Clears admin overrides whose deadline has passed.
  *
- * Ne coupe RIEN : `activeAdminOverride` les ignore déjà depuis la seconde où
- * ils expirent, quota compris. Ce balayage sert à ce que la ligne arrête de
- * décrire un cadeau qui n'existe plus — et, accessoirement, l'écriture pousse
- * le changement de plan aux onglets ouverts (le direct écoute
- * `billing_accounts`), qui garderaient sinon l'ancien badge jusqu'au prochain
- * chargement.
+ * Does not cut ANYTHING: `activeAdminOverride` already ignores them from the second that
+ * they expire, including quota. This scan is used so that the line stops
+ * describing a gift that no longer exists — and, incidentally, the writing pushes
+ * the change of plan to open tabs (the live listen
+ * `billing_accounts`), which would otherwise keep the old badge until the next
+ * loading.
  *
- * La note part avec le plan : elle disait POURQUOI on offrait, elle n'a plus
- * d'objet une fois le cadeau fini.
+ * The note leaves with the plan: it said WHY we were giving a gift, it no longer has
+ * any object once the gift is finished.
  */
 export async function expireAdminOverrides(): Promise<{ expired: number }> {
   const service = getServiceClient();
@@ -317,17 +317,17 @@ export async function expireAdminOverrides(): Promise<{ expired: number }> {
   return { expired: (data ?? []).length };
 }
 
-// ── Reconciliation périodique ────────────────────────────────────────────────
+// ── Periodic reconciliation ──────────────────────── ────────────────────────
 
 /**
- * Filet anti-dérive (cron, en plus du re-sync paresseux) : re-tire l'état réel
- * de chaque abonnement depuis Stripe et le ré-écrit, indépendamment des
- * webhooks. Un event manqué — renouvellement, changement de plan, annulation —
- * serait sinon invisible pour les users inactifs que la lecture ne touche
- * jamais. Un abonnement annulé repasse naturellement en free via
- * `syncSubscriptionToBillingAccount` (statut `canceled`). Les comptes les plus
- * anciennement synchronisés d'abord, par lot borné pour tenir dans le budget
- * temps de la fonction.
+ * Anti-drift net (cron, in addition to lazy re-sync): re-pulls the actual state
+ * of each subscription from Stripe and rewrites it, independent of
+ * webhooks. A missed event — renewal, change of plan, cancellation —
+ * would otherwise be invisible to inactive users as reading never touches
+ *. A canceled subscription naturally reverts to free via
+ * `syncSubscriptionToBillingAccount` (status `canceled`). The most accounts
+ * formerly synchronized first, in batches limited to fit within the budget
+ * time of the function.
  */
 export async function reconcileStripeBillingAccounts(options?: {
   limit?: number;

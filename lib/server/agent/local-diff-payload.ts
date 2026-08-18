@@ -8,10 +8,9 @@ function num(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-/** Le patch local traverse un jeton lisible par le modèle : on ne fait donc
- * confiance ni à sa forme ni à sa taille. La borne globale est réappliquée
- * avant Realtime ET avant la persistance dans `files_changed`, même si le
- * harness officiel l'a déjà appliquée. */
+/** The local patch passes through a token readable by the model: we therefore trust neither its shape nor its size. The global bound is reapplied
+ * before Realtime AND before persistence in `files_changed`, even if the official
+ * harness has already applied it. */
 export function localDiffPayload(raw: unknown): AgentLiveDiff {
   const input = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
   const rows = Array.isArray(input.files) ? input.files : [];

@@ -15,9 +15,9 @@ export interface EventContext {
   categories: Category[];
   issues: Issue[];
   projectKey: string;
-  /** Auteur du retour affiché (fil feedback) — le board n'est qu'un canal, pas
-      un acteur : quand on connaît la personne qui a écrit, c'est elle que la
-      ligne « a soumis ce retour » nomme, avec le visage de la fiche auteur. */
+  /** Author of the feedback displayed (feedback thread) — the board is only a channel, not
+ an actor: when we know the person who wrote, it is them that the
+ line “submitted this feedback” names, with the face of the author file. */
   feedbackAuthor?: { label: string; seed: string } | null;
 }
 
@@ -40,14 +40,14 @@ export interface EventTranslators {
 }
 
 /**
- * Les champs remplis par Smart-fill, tels que la timeline les nomme. La liste
- * arrive en clair de la base (« priority,effort,category_ids ») et se traduit
- * ici : un libellé figé à l'écriture aurait gelé la langue de l'auteur dans le
- * ticket, et un lecteur anglophone lirait « priorité » six mois plus tard.
+ * The fields filled by Smart-fill, as the timeline names them. The list
+ * arrives in plain text from the base ("priority, effort, category_ids") and is translated
+ * here: a wording frozen in writing would have frozen the author's language in the
+ * ticket, and an English-speaking reader would read "priority" six months later.
  *
- * Jointes à la virgule, sans « et » final : la conjonction n'a pas la même place
- * selon la langue, et une ligne de timeline n'est pas une phrase de dialogue.
- * Un champ inconnu (nom retiré depuis) est sauté plutôt que rendu tel quel.
+ * Joined to the comma, without final "and": the conjunction does not have the same place
+ * depending on the language, and a timeline line is not a dialogue sentence.
+ * An unknown field (name since removed) is skipped rather than rendered as is.
  */
 const SMART_FILL_LABELS: Record<string, string> = {
   priority: "smartFillPriority",
@@ -84,13 +84,13 @@ function issueRef(ctx: EventContext, tr: EventTranslators, id: string | null): s
   return i ? issueIdentifier(ctx.projectKey, i.number) : tr.t("issueSome");
 }
 /**
- * Clé d'activité d'un geste de pull request, selon la forge : GitLab dit
- * « merge request !123 » là où GitHub dit « pull request #123 ».
+ * Activity key for a pull request gesture, according to the forge: GitLab says
+ * "merge request!123" where GitHub says "pull request #123".
  *
- * Le provider se lit TOUJOURS sur `from_value` (cf. `forgeActorValue`), qui
- * l'encode aussi bien pour un geste de webhook — où il accompagne le login de
- * l'acteur — que pour un geste in-app, où il voyage seul. `forgePrActor` retombe
- * sur GitHub quand la valeur est nulle : c'est la forme historique.
+ * The provider ALWAYS reads `from_value` (cf. `forgeActorValue`), which
+ * encodes it both for a webhook gesture — where it accompanies the login of
+ * the actor — and for an in-app gesture, where it travels alone. `forgePrActor` falls to
+ * on GitHub when the value is zero: this is the historical form.
  */
 function prEventKey(
   e: IssueEvent,
@@ -112,10 +112,10 @@ function prEventKey(
 const IMPORT_SOURCE_LABELS: Record<string, string> = {
   linear: "Linear",
   jira: "Jira",
-  // Un export minddy relu par minddy — le déménagement d'un projet à l'autre.
+  // A minddy export reread by minddy — moving from one project to another.
   minddy: "minddy",
   csv: "CSV",
-  // Backfill du dépôt lié à l'activation de la synchro d'issues (MIN-97).
+  // Backfill of the repository linked to the activation of issue sync (MIN-97).
   github: "GitHub",
   gitlab: "GitLab",
 };
@@ -134,9 +134,9 @@ export function describeEvent(
   const { t, tStatus, tPriority, tRecurrence, formatDue } = tr;
   if (e.type === "created") return t("created");
   // CSV importers (MIN-45): to_value carries the source.
-  // L'amorce par brief (MIN-172) emprunte le même chemin d'écriture, mais elle
-  // n'importe rien d'un outil : c'est un texte qui s'est découpé. Le nom d'un
-  // produit ne rend pas ça, donc elle a sa phrase à elle.
+  // The primer by brief (MIN-172) takes the same writing path, but it
+  // doesn't matter about a tool: it's a text that has been cut. The name of a
+  // product doesn't render that, so it has its own sentence.
   if (e.type === "imported")
     return e.to_value === "brief"
       ? t("importedFromBrief")
@@ -147,8 +147,8 @@ export function describeEvent(
     return t("categoryAdded", { name: categoryName(ctx, tr, e.to_value) });
   if (e.type === "category_removed")
     return t("categoryRemoved", { name: categoryName(ctx, tr, e.from_value) });
-  // Récurrence (MIN-136) : le ticket terminé dit ce qu'il a engendré —
-  // `to_value` porte l'occurrence suivante, `from_value` la cadence.
+  // Recurrence (MIN-136): the completed ticket says what it generated —
+  // `to_value` carries the following occurrence, `from_value` the cadence.
   if (e.type === "recurrence_spawned")
     return t("recurrenceSpawned", { ref: issueRef(ctx, tr, e.to_value) });
   if (e.type === "sub_issue_added")
@@ -168,9 +168,9 @@ export function describeEvent(
   // Plan task transitions: to_value carries the task text.
   if (e.type === "agent_launched")
     return t("agentLaunched", { model: e.to_value ?? "" });
-  // Vie de la PR (to_value = son numéro) : l'ouvrir, y pousser, la commenter,
-  // la relire. Émis par l'agent (Numo), par les routes in-app (acteur = membre)
-  // ou par les webhooks GitHub/GitLab (acteur = login de la forge).
+  // Life of the PR (to_value = its number): open it, push it, comment on it,
+  // reread it. Issued by the agent (Numo), by in-app routes (actor = member)
+  // or by GitHub/GitLab webhooks (actor = forge login).
   if (e.type === "pr_opened")
     return t(prEventKey(e, "Opened"), { number: e.to_value ?? "" });
   if (e.type === "pr_reopened")
@@ -207,11 +207,11 @@ export function describeEvent(
       case "plan":
         return t("planChanged");
       case "status":
-        // Écriture venue du dépôt lié : la ligne d'acteur dit déjà « GitHub »,
-        // la phrase dit donc d'où vient le changement plutôt que le seul diff.
-        // Deux causes possibles — l'issue distante qui se ferme (MIN-97) ou la
-        // pull request qui se fusionne (MIN-143) — d'où la formule qui nomme le
-        // DÉPÔT et pas l'une des deux.
+        // Writing from the linked repository: the actor line already says “GitHub”,
+        // the sentence therefore says where the change comes from rather than just the diff.
+        // Two possible causes — the remote exit closing (MIN-97) or the
+        // pull request which merges (MIN-143) — hence the formula which names the
+        // DEPOSIT and not one of the two.
         if (e.forge_sync)
           return t("forgeStatusSynced", {
             to: e.to_value ? tStatus(e.to_value) : emptyDash,
@@ -233,9 +233,9 @@ export function describeEvent(
       case "assignee_id":
         // Smart Assign writes a dedicated sentence — the actor line already
         // reads "Smart Assign", so "reassigned: — → X" would be redundant.
-        // Deux phrases, parce que les deux gestes ne sont pas le même : ou le
-        // modèle a lu les règles d'attribution, ou personne ne les a lues et le
-        // ticket est revenu au propriétaire par défaut.
+        // Two sentences, because the two gestures are not the same: or the
+        // model has read the attribution rules, or no one has read them and the
+        // ticket reverted to the default owner.
         if (e.via_smart_assign)
           return e.smart_assign_ai
             ? t("smartAssignedByRules", { to: memberName(ctx, tr, e.to_value) })
@@ -244,10 +244,10 @@ export function describeEvent(
           from: memberName(ctx, tr, e.from_value),
           to: memberName(ctx, tr, e.to_value),
         });
-      // Smart-fill (MIN-260) : UN événement pour les quatre champs, posés d'un
-      // même geste à la création. La ligne d'acteur dit déjà « Smart-fill », la
-      // phrase dit donc CE qu'il a rempli — et seulement ce qu'il a vraiment
-      // rempli (le serveur n'y met pas les champs que l'auteur avait déjà posés).
+      // Smart-fill (MIN-260): ONE event for the four fields, placed one
+      // same gesture at creation. The actor's line already says "Smart-fill", the
+      // sentence therefore says WHAT he has completed — and only what he really has
+      // filled (the server does not include the fields that the author had already entered).
       case "smart_fill":
         return t("smartFilled", { fields: smartFilledFields(e.to_value, t) });
       case "objective_id":
@@ -260,8 +260,8 @@ export function describeEvent(
           from: formatDue(e.from_value),
           to: formatDue(e.to_value),
         });
-      // La cadence se dit en toutes lettres (« Toutes les semaines ») ; le
-      // retrait n'a rien à montrer d'autre que lui-même.
+      // The cadence is said in full (“Every week”); THE
+      // indent has nothing to show other than itself.
       case "recurrence":
         return e.to_value
           ? t("recurrenceSet", { to: tRecurrence?.(e.to_value) ?? e.to_value })
@@ -326,16 +326,15 @@ export function describeObjectiveEvent(
 /**
  * Localized description of a PAGE activity event, without the actor (MIN-278).
  *
- * Le plus court des quatre describers, et c'est le sujet : une page n'a pas de
- * champs à suivre — pas de statut, pas de priorité, pas d'assigné. Ce qu'on
- * vient lire, c'est QUI est passé, et quand. Le reste se lit dans l'historique
- * (MIN-277), qui rend les états eux-mêmes.
+ * The shortest of the four describers, and that's the point: a page has no
+ * fields to track — no status, no priority, no assigned. What we
+ * come to read is WHO happened, and when. The rest is read in the history
+ * (MIN-277), which renders the states themselves.
  *
- * La règle d'identité de minddy ne se joue PAS ici mais dans l'acteur : une
- * écriture d'agent porte `via_assistant`, et la ligne nomme donc Numo, alors
- * que `actor_id` est celui du compte humain qui l'a permise. Sans ce drapeau,
- * l'activité dirait « Clément a modifié cette page » d'un texte que Clément n'a
- * pas écrit. La phrase, elle, est la même dans les deux cas.
+ * Minddy's identity rule does NOT play out here but in the actor: an agent write carries `via_assistant`, and the line therefore names Numo, then
+ * that `actor_id` is that of the human account which enabled it. Without this flag,
+ * the activity would say "Clément modified this page" of a text that Clément did not
+ * write. The sentence is the same in both cases.
  */
 export function describePageEvent(
   e: IssueEvent,
@@ -367,14 +366,14 @@ export function describeFeedbackEvent(
   const { t } = tr;
   const fbStatus = (v: string) => tr.tFeedbackStatus?.(v) ?? v;
 
-  // Entrée dans le système : le canal est porté par `field`.
+  // Entry into the system: the channel is carried by `field`.
   if (e.type === "created") return t(`feedbackCreated_${e.field ?? "board"}`);
   if (e.type === "promoted")
     return t("feedbackPromoted", { ref: issueRef(ctx, tr, e.to_value) });
   if (e.type === "linked")
     return t("feedbackLinked", { ref: issueRef(ctx, tr, e.to_value) });
   if (e.type === "unlinked") return t("feedbackUnlinked");
-  // to_value = titre du doublon absorbé.
+  // to_value = title of the absorbed duplicate.
   if (e.type === "merged")
     return t("feedbackMerged", { title: e.to_value ?? "" });
   if (e.type === "merge_undone")
@@ -399,8 +398,8 @@ export function describeFeedbackEvent(
         return e.to_value === "private"
           ? t("feedbackMadePrivate")
           : t("feedbackMadePublic");
-      // `rejected` a été replié dans le statut `spam` : les lignes d'avant la
-      // bascule le portent encore, et doivent continuer à se lire.
+      // `rejected` has been folded into the `spam` status: the lines before the
+      // toggle still carry it, and must continue reading.
       case "review_state":
         return e.to_value === "rejected"
           ? t("feedbackRejected")

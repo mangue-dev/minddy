@@ -3,12 +3,12 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Une ligne du ledger de statistiques (`stat_events`). Append-only : on écrit
- * un event à la création d'une issue, un à chaque passage en `done`, et un à
- * chaque tâche cochée dans le carnet de tâches. Les champs `project_*` /
- * `issue_*` / `task_text` sont des SNAPSHOTS — ils restent lisibles même après
- * suppression de l'issue, du projet (les FKs sont `on delete set null`) ou de la
- * tâche (le carnet est une note libre, sans historique).
+ * A line from the statistics ledger (`stat_events`). Append-only: we write
+ * an event at the creation of an issue, one at each passage in `done`, and one at
+ * each task checked in the task book. The `project_*` /
+ * `issue_*` / `task_text` fields are SNAPSHOTS — they remain readable even after
+ * deletion of the issue, the project (the FKs are `on delete set null`) or the
+ * task (the notebook is a free note, without history).
  */
 export interface StatEventRow {
   user_id: string;
@@ -19,14 +19,14 @@ export interface StatEventRow {
   issue_id: string | null;
   issue_number: number | null;
   issue_title: string | null;
-  /** Libellé de la tâche cochée (kind `scratchpad_task_completed`). */
+  /** Label of the checked task (kind `scratchpad_task_completed`). */
   task_text?: string | null;
 }
 
 /**
- * Insère des events de stats (service client, RLS bypassée). Best-effort, à
- * l'image de `insertNotifications` / `insertEvents` : on log et on avale
- * l'erreur pour ne JAMAIS faire échouer la mutation d'issue qui l'appelle.
+ * Inserts stats events (customer service, RLS bypassed). Best effort, at
+ * the image of `insertNotifications` / `insertEvents`: we log and swallow
+ * the error to NEVER fail the outcome mutation that calls it.
  */
 export async function insertStatEvents(
   service: SupabaseClient,

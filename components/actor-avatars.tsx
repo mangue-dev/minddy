@@ -4,14 +4,14 @@ import { getMcpAgent, isMcpAgentId } from "@/lib/mcp-agents";
 import { NumoFace } from "@/components/numo-face";
 
 /**
- * Les portraits des acteurs QUI NE SONT PAS DES PERSONNES : Numo, un agent
- * branché sur le serveur MCP, Smart Assign, une automatisation de projet. Un
- * compte a sa marque générée (components/user-avatar.tsx) ; ceux-là ont la
- * leur, et elle doit être la même partout — la timeline d'un ticket et l'inbox
- * racontent la même action.
+ * Portraits of actors WHO ARE NOT PEOPLE: Numo, an agent
+ * connected to the MCP server, Smart Assign, project automation. A
+ * account has its generated brand (components/user-avatar.tsx); these have the
+ * them, and it must be the same everywhere — the timeline of a ticket and the inbox
+ * tell the same action.
  *
- * `className` dimensionne le disque (défaut `size-5`), `iconClassName` la marque
- * à l'intérieur : les deux ne suivent pas le même rapport selon la taille.
+ * `className` sizes the disk (default `size-5`), `iconClassName` marks it
+ * inside: the two do not follow the same ratio according to size.
  */
 
 const disc = (className?: string) =>
@@ -20,14 +20,14 @@ const disc = (className?: string) =>
     className
   );
 
-/** Action déclenchée via Numo — le visage de l'assistant plutôt que celui de la
-    personne dont l'action porte techniquement le nom.
+/** Action triggered via Numo — the assistant's face rather than that of the
+ person whose action technically bears the name.
 
-    Le dessin vient de `NumoFace`, pas de `NumoIcon` : ce portrait-là ne cligne
-    jamais, et `NumoIcon` appelle `useAnimate()` au premier niveau — il ferait
-    donc entrer framer-motion dans le bundle de tout écran qui montre un acteur
-    (une pilule de mention dans un commentaire, par exemple) pour un visage
-    immobile. Même raison qu'en MIN-100, voir components/numo-face.tsx. */
+ The drawing comes from `NumoFace`, not from `NumoIcon`: this portrait never blinks
+, and `NumoIcon` calls `useAnimate()` at the first level — it would
+ so enter framer-motion in the bundle of any screen that shows an actor
+ (a mention pill in a comment, for example) for a still face
+. Same reason as in MIN-100, see components/numo-face.tsx. */
 export function NumoAvatar({
   className,
   iconClassName,
@@ -42,9 +42,9 @@ export function NumoAvatar({
   );
 }
 
-/** Action passée par le serveur MCP — le logo de l'agent qui a agi (Claude
-    Code, Cursor…) quand la clé est rattachée à un agent connu, sinon un robot
-    générique. L'acteur est l'AGENT, jamais le propriétaire de la clé. */
+/** Action passed by the MCP server — the logo of the agent who acted (Claude
+ Code, Cursor…) when the key is attached to a known agent, otherwise a generic robot
+. The actor is the AGENT, never the owner of the key. */
 export function McpAvatar({
   agent,
   className,
@@ -81,11 +81,11 @@ export function McpAvatar({
   );
 }
 
-/** Geste joué par une AUTOMATISATION de projet (MIN-147) — la règle tient lieu
-    d'acteur, jamais l'assigné dont le compte porte techniquement le lancement.
-    Le même glyphe que partout ailleurs dans la feature (barre de chaîne, entrée
-    « Automatiser » du menu, picker de préréglage) : une boucle se reconnaît au
-    même dessin sur toutes ses surfaces. */
+/** Gesture played by a project AUTOMATION (MIN-147) — the rule takes place
+ actor, never the assignee whose account technically carries the launch.
+ The same glyph as everywhere else in the feature (chain bar, entry
+ “Automate” from the menu, preset picker): a loop is recognized au
+ same design on all its surfaces. */
 export function AutomationAvatar({
   className,
   iconClassName,
@@ -100,11 +100,11 @@ export function AutomationAvatar({
   );
 }
 
-/** Ticket rempli par Smart-fill (MIN-260) — la fonctionnalité tient lieu
-    d'acteur, jamais la personne qui a écrit le ticket : elle n'a pas posé ces
-    propriétés-là. `Sparkles` et non `WandSparkles` : Smart Assign est juste
-    en dessous avec la baguette, et les deux se croisent dans la même timeline —
-    deux automatisations voisines doivent rester distinguables d'un coup d'œil. */
+/** Ticket filled by Smart-fill (MIN-260) — functionality takes place
+ of actor, never the person who wrote the ticket: she did not set these
+ properties. `Sparkles` and not `WandSparkles`: Smart Assign is just
+ below with the wand, and the two intersect in the same timeline —
+ two neighboring automations must remain distinguishable at a glance. */
 export function SmartFillAvatar({
   className,
   iconClassName,
@@ -119,8 +119,8 @@ export function SmartFillAvatar({
   );
 }
 
-/** Affectation faite par Smart Assign — la fonctionnalité tient lieu d'acteur,
-    jamais l'utilisateur qui a sorti le ticket du triage. */
+/** Assignment made by Smart Assign — the functionality takes the place of an actor,
+ never the user who took the ticket out of triage. */
 export function SmartAssignAvatar({
   className,
   iconClassName,

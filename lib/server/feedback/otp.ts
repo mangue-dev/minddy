@@ -8,42 +8,41 @@ import { sendOtpEmail } from "@/lib/server/feedback/otp-email";
 import { capability } from "@/lib/server/capabilities";
 
 /**
- * Vérification email par code OTP (MIN-37). Codes 6 chiffres, hashés sha256
- * salés par le row id (jamais stockés en clair), 10 minutes de vie, 5
- * tentatives max (incrémentées AVANT la comparaison), cooldown de renvoi 60 s
- * en base. La table est RLS deny-all.
+ * Email verification by OTP code (MIN-37). 6-digit codes, sha256
+ hashes * salted by the row id (never stored in plain text), 10 minutes of life, 5
+ * max attempts (incremented BEFORE comparison), return cooldown 60 s
+ * in base. The table is RLS deny-all.
  *
- * ── Ce qu'un ANONYME atteint ici (MIN-342) ────────────────────────────────
+ * ── What ANONYMOUS achieves here (MIN-342) ────────────────────────────────
  *
- * L'appelant est un visiteur non authentifié qui choisit le destinataire :
- * c'est, par construction, la seule surface de minddy où un inconnu déclenche
- * un envoi depuis le domaine vérifié. On ne peut pas exiger que l'adresse soit
- * déjà connue du board — c'est la porte d'entrée, personne n'y est connu la
- * première fois. Ce qui tient l'ouverture, c'est donc :
+ * The caller is an unauthenticated visitor who chooses the recipient:
+ * this is, by construction, the only surface of minddy where an unknown person triggers
+ * a send from the verified domain. We cannot require that the address be
+ * already known to the board — it is the front door, no one is known there the
+ * the first time. What holds the opening is therefore:
  *
- * 1. le corps de l'e-mail ne contient AUCUN texte choisi par un tiers
- *    (cf. otp-email.ts : le nom du projet n'y est plus) ;
- * 2. des compteurs PERSISTANTS, par destinataire et par origine. Le compteur
- *    en mémoire ne suffisait pas : il repart à zéro à chaque déploiement et ne
- *    voit qu'une instance sur N. Et le plafond par destinataire compte toutes
- *    boards confondues — arroser une victime via N boards était le levier.
+ * 1. the body of the e-mail does not contain ANY text chosen by a third party
+ * (see otp-email.ts: the name of the project is no longer there);
+ * 2. PERSISTENT counters, per recipient and by origin. The counter
+ * in memory was not enough: it starts from zero on each deployment and only sees one instance out of N. And the ceiling per recipient counts all
+ * boards combined — spraying a victim via N boards was the lever.
  */
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
 const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
 
-/** Fenêtre des compteurs persistants, et leurs plafonds. Le pire cas légitime
-    est quelqu'un qui se trompe d'adresse deux fois puis reçoit son code. */
+/** Window of persistent counters, and their ceilings. The legitimate worst case
+ is someone who enters the wrong address twice and then receives their code. */
 const OTP_COUNTER_WINDOW_MS = 60 * 60 * 1000;
-/** Par ADRESSE, tous boards confondus : ce qu'une victime peut recevoir en 1 h. */
+/** By ADDRESS, all boards combined: what a victim can receive in 1 hour. */
 const OTP_MAX_PER_EMAIL = 5;
-/** Par ORIGINE : ce qu'un demandeur peut déclencher en 1 h, toutes adresses. */
+/** By ORIGIN: what a requester can trigger in 1 hour, all addresses. */
 const OTP_MAX_PER_IP = 15;
 
-/** Empreinte d'origine, jamais l'IP en clair : la colonne sert à COMPTER, pas à
-    identifier. Salée par la clé de service — le seul secret dont ce module
-    dispose déjà, et sans lequel il n'aurait de toute façon pas de base. */
+/** Original fingerprint, never the IP in plain text: the column is used to COUNT, not to
+ identify. Salted by the service key — the only secret that this module
+ already has, and without which it would have no basis anyway. */
 function hashIp(ip: string): string {
   return sha256Hex(`feedback-otp-ip:${process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""}:${ip}`);
 }
@@ -68,15 +67,15 @@ export async function requestFeedbackOtp(params: {
   const email = params.email.trim().toLowerCase();
   const ip = params.ip || "unknown";
 
-  // Première ligne, gratuite : elle coupe le martèlement avant toute requête.
+  // First line, free: it cuts the hammering before any request.
   const rate = checkSessionRateLimit(ip, `feedback-otp:${params.boardId}`, {
     limit: 5,
     windowMs: 10 * 60_000,
   });
   if (!rate.allowed) return { ok: false, error: "rateLimited" };
 
-  // Cooldown de renvoi : réponse générique « envoyé » sans renvoyer (pas
-  // d'oracle sur l'existence d'une demande précédente).
+  // Resend cooldown: generic “sent” response without resending (not
+  // from oracle on the existence of a previous request).
   const { data: last } = await service
     .from("feedback_otp_codes")
     .select("created_at")
@@ -154,7 +153,7 @@ export async function verifyFeedbackOtp(params: {
     return { ok: false, error: "tooManyAttempts" };
   }
 
-  // Brûle une tentative AVANT de comparer : pas de brute force en parallèle.
+  // Burn an attempt BEFORE comparing: no brute force in parallel.
   await service
     .from("feedback_otp_codes")
     .update({ attempts: (row.attempts as number) + 1 })

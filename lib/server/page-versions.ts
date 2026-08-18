@@ -10,34 +10,34 @@ import { updatePage, type PageErrorKey } from "@/lib/server/pages";
 import type { Page, PageVersion, PageWriteKind } from "@/lib/pages";
 
 /**
- * L'HISTORIQUE d'une page (MIN-277) : lire les états antérieurs, en revenir un.
+ * The HISTORY of a page (MIN-277): read previous states, return one.
  *
- * Le filet de l'agent, et c'est bien à ça qu'il sert : six outils d'écriture
- * sont ouverts à Numo, au MCP et à l'agent de code, et sans ce module la seule
- * réponse possible à « l'agent a écrasé ma page » serait « on ne peut rien
- * faire ».
+ * The agent's net, and that's what it is for: six writing tools
+ * are open to Numo, the MCP and the code agent, and without this module the only
+ * possible answer to "the agent overwrote my page" would be "there's nothing we can
+ * do".
  *
- * Ce que la table contient est décidé ailleurs — `stampPageWrite`, dans
- * lib/server/pages.ts, archive l'état que chaque écriture RECOUVRE. Ici on ne
- * fait que le rendre, et le remettre en place.
+ * What the table contains is decided elsewhere — `stampPageWrite`, in
+ * lib/server/pages.ts, archives the state that each writing COVERS. Here we just
+ * just return it, and put it back in place.
  *
- * Deux choix qui se lisent dans les signatures :
+ * Two choices that can be read in the signatures:
  *
- * 1. **une page corbeillée garde son historique consultable.** La lecture
- *    n'exclut pas `deleted_at` (la policy non plus, cf. la migration) : « ça a
- *    disparu, remonte à avant » est le geste d'après l'incident, pas un cas
- *    tordu.
- * 2. **restaurer est une ÉCRITURE comme une autre.** Elle repasse par
- *    `updatePage`, donc par la garde d'accès, le compteur de `version`, la
- *    projection de recherche et l'archivage — l'état d'avant la restauration
- *    est donc lui-même archivé, et une restauration se défait.
+ * 1. **a trashed page keeps its history searchable.** Reading
+ * does not exclude `deleted_at` (the policy either, cf. migration): "it has
+ * disappeared, goes back to before" is the gesture after the incident, not a case
+ * twisted.
+ * 2. **restore is a WRITING like any other.** It comes back by
+ * `updatePage`, therefore by the gatekeeper, the `version` counter, the
+ * search projection and archiving — the state before the restoration
+ * is therefore itself archived, and a restoration takes place undone.
  */
 
 type Service = ReturnType<typeof getServiceClient>;
 
-/** Les colonnes de la LISTE : tout sauf le corps, pour la même raison que
-    `LIST_COLUMNS` côté pages — vingt documents ProseMirror pour une liste de
-    dates seraient la requête la plus lourde de l'écran. */
+/** LIST columns: everything except the body, for the same reason that
+ `LIST_COLUMNS` on the page side — twenty ProseMirror documents for a list of
+ dates would be the heaviest query on the screen. */
 const VERSION_COLUMNS =
   "id, page_id, version, title, icon, author_id, author_kind, author_api_key_id, created_at";
 
@@ -45,7 +45,7 @@ export type PageVersionResult<T> =
   | { ok: true; data: T }
   | { ok: false; status: number; errorKey: PageErrorKey };
 
-/** La page (corbeillée comprise) si l'acteur y a accès, sinon rien. */
+/** The page (including trash) if the actor has access to it, otherwise nothing. */
 async function reachable(
   service: Service,
   pageId: string,
@@ -76,13 +76,13 @@ type VersionRow = {
 };
 
 /**
- * Le NOM d'un auteur de version, et c'est là que se joue la règle d'identité de
- * minddy : geste humain = nom de l'humain, geste automatisé = nom de minddy.
+ * The NAME of a version author, and this is where the identity rule of
+ * minddy comes into play: human gesture = name of the human, automated gesture = name of minddy.
  *
- * Une écriture d'agent porte pourtant bien un `author_id` — celui du compte qui
- * l'a permise. On ne le lit pas : afficher ce nom-là ferait passer pour sien un
- * texte que personne n'a écrit, ce qui est exactement l'incident de confiance
- * que cet historique existe pour éviter.
+ * An agent's writing nevertheless carries a `author_id` — that of the account who
+ * allowed it. We don't read it: displaying this name would pass off as one's own a
+ * text that no one wrote, which is exactly the trust incident
+ * that this history exists to avoid.
  */
 async function resolveAuthors(
   service: Service,
@@ -100,13 +100,13 @@ async function resolveAuthors(
 }
 
 /**
- * QUEL agent, quand c'en est un (MIN-282).
+ * WHICH agent, when it is one (MIN-282).
  *
- * Le NOM ne bouge pas — « minddy » dans les deux cas, c'est la règle
- * d'identité. Ce qu'on résout ici est le VISAGE : l'agent canonique porté par
- * la clé (« claude-code », « cursor »…), que la ligne rend en logo. Une version
- * d'avant cette colonne n'en a pas, et retombe sur le visage de Numo — le bon
- * repli, une clé MCP étant l'exception.
+ * The NAME does not move — "minddy" in both cases, it is the rule
+ * identity. What we resolve here is the FACE: the canonical agent carried by
+ * the key (“claude-code”, “cursor”…), which the line renders as a logo. A version
+ * from before this column does not have one, and falls on Numo's face — the correct
+ * fallback, an MCP key being the exception.
  */
 async function resolveAgents(rows: VersionRow[]): Promise<Map<string, string | null>> {
   const actors = await resolveApiKeyActors(rows.map((row) => row.author_api_key_id));
@@ -138,7 +138,7 @@ function toVersion(
   };
 }
 
-/** L'historique d'une page, du plus récent au plus ancien. */
+/** The history of a page, from newest to oldest. */
 export async function listPageVersions(
   pageId: string,
   actorId: string
@@ -166,7 +166,7 @@ export async function listPageVersions(
   return { ok: true, data: rows.map((row) => toVersion(row, names, agents)) };
 }
 
-/** UNE version, corps compris — l'aperçu en lecture seule. */
+/** ONE version, including body — the read-only preview. */
 export async function getPageVersion(
   pageId: string,
   versionId: string,
@@ -179,9 +179,9 @@ export async function getPageVersion(
   const { data, error } = await service
     .from("page_versions")
     .select(`${VERSION_COLUMNS}, content`)
-    // Le `page_id` est dans la condition, et pas seulement dans l'URL : une
-    // version d'une AUTRE page (donc peut-être d'un autre projet) ne se lit pas
-    // en passant par une page à laquelle on a droit.
+    // The `page_id` is in the condition, not just in the URL: a
+    // version of ANOTHER page (so perhaps from another project) cannot be read
+    // going through a page to which we are entitled.
     .eq("page_id", pageId)
     .eq("id", versionId)
     .maybeSingle();
@@ -200,16 +200,16 @@ export async function getPageVersion(
 }
 
 /**
- * REMET une version en place.
+ * PUTS a version back in place.
  *
- * Une écriture neuve, faite par celui qui clique : elle porte son nom, elle
- * incrémente la `version`, elle rejoue la projection de recherche — et elle
- * archive l'état d'avant elle, `alwaysArchive` court-circuitant la coalescence.
- * C'est ce dernier point qui rend le geste sûr : restaurer par erreur se défait
- * en restaurant la ligne que la restauration vient elle-même de créer.
+ * A new write, made by the person who clicks: it bears his name, it
+ * increments the `version`, it replays the search projection — and it
+ * archives the state before it, `alwaysArchive` short-circuiting the coalescence.
+ * It is this last point which makes the gesture safe: restoring by mistake undoes
+ * by restoring the line that the restoration itself has just created.
  *
- * Le titre et l'icône reviennent avec le corps. Ce sont trois champs d'un même
- * état ; en rendre deux sur trois donnerait une page qui n'a jamais existé.
+ * The title and the icon return with the body. These are three fields of the same
+ * state; rendering two out of three would result in a page that never existed.
  */
 export async function restorePageVersion(
   pageId: string,

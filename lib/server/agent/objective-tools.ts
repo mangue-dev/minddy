@@ -16,45 +16,45 @@ import { isObjectiveStatus } from "@/lib/objective-validation";
 import { resourceSummary } from "@/lib/server/resource-select";
 
 /**
- * Les OBJECTIFS pour l'agent de code (MIN-287) — le but auquel sert le ticket
- * qu'il implémente.
+ * The OBJECTIVES for the code agent (MIN-287) — the purpose served by the ticket
+ * it implements.
  *
- * Le trou que ces tools ferment n'était pas « un tool de plus » : l'agent
- * travaillait sur un ticket sans jamais savoir à quoi ce ticket sert, et un
- * ticket qu'il créait tombait hors de tout objectif — donc hors des barres de
- * progression et hors du remplissage de cycle. La doctrine du MCP vaut ici mot
- * pour mot : ce qu'on n'a pas rangé, quelqu'un devra le ranger à la main.
+ * The hole these tools close was not "another tool": the agent
+ * was working on a ticket without ever knowing what this ticket is for, and a
+ * ticket it created fell outside of any objective — therefore outside of the
+ * progress bars and outside of cycle filling. The MCP doctrine is worth here
+ * for word: what we don't put away, someone will have to put it away by hand.
  *
- * Aucune logique métier ici, volontairement : `createObjective` /
- * `updateObjective` ([lib/server/objectives.ts](../objectives.ts)) et
- * `addCommentToObjective` ([lib/server/add-comment.ts](../add-comment.ts)) sont
- * les noyaux du MCP et de l'app — événements d'activité, notifications, mentions
- * et liens de pages compris. Ce module traduit les arguments du modèle, épingle
- * tout au projet du run et rend la forme de résultat de la boucle.
+ * No business logic here, on purpose: `createObjective` /
+ * `updateObjective` ([lib/server/objectives.ts](../objectives.ts)) and
+ * `addCommentToObjective` ([lib/server/add-comment.ts](../add-comment.ts)) are
+ * the cores of the MCP and the app — activity events, notifications, mentions
+ * and page links included. This module translates the template arguments, pins
+ * everything to the run's project and renders the loop result form.
  *
- * La progression est PONDÉRÉE par l'effort avec crédit partiel par statut
- * (`effortToPoints` × `statusCompletionCredit`) : exactement le calcul de la
- * barre de l'UI et de `minddy_list_objectives`. Trois lecteurs qui donneraient
- * trois pourcentages du même objectif, c'est trois vérités.
+ * Progress is WEIGHTED by effort with partial credit by status
+ * (`effortToPoints` × `statusCompletionCredit`): exactly calculating the
+ * UI bar and `minddy_list_objectives`. Three readers who would give
+ * three percentages of the same objective, that's three truths.
  *
- * Ils sont routés avec les tools ticket (`ISSUE_TOOL_NAMES`) pour la raison qui
- * a rangé les pages là (MIN-273) : même contexte — le projet du run et son
- * acteur — et une famille de plus dans le routage n'apporterait que du câblage.
+ * They are routed with the tools ticket (`ISSUE_TOOL_NAMES`) for the reason that
+ * put the pages there (MIN-273): same context — the run project and son
+ * actor — and one more family in the routing would only bring cabling.
  */
 
-/** La forme de résultat de la boucle, déclarée localement comme dans les autres
-    modules de tools de plateforme (le type de `tool-loop.ts` n'est pas exporté). */
+/** The result form of the loop, declared locally as in other
+ platform tools modules (the type of `tool-loop.ts` is not exported). */
 type ToolOutcome = { result: unknown; success: boolean };
 
 export interface ObjectiveToolContext {
   projectId: string;
-  /** Clé du projet — les tickets d'un objectif se nomment « MIN-42 », pas par uuid. */
+  /** Project key — tickets for an objective are named “MIN-42”, not by uuid. */
   projectKey: string;
-  /** Propriétaire du run : l'acteur de toute lecture d'accès et de toute écriture. */
+  /** Run owner: the actor of all access reading and writing. */
   actorId: string | null;
 }
 
-/** Les noms servis au modèle, tels que `lib/server/agent/tools.ts` les déclare. */
+/** The names served to the model, such as `lib/server/agent/tools.ts` declares them. */
 export const OBJECTIVE_TOOL_NAMES = new Set([
   "list_objectives",
   "read_objective",
@@ -63,10 +63,10 @@ export const OBJECTIVE_TOOL_NAMES = new Set([
   "comment_objective",
 ]);
 
-/** Description tronquée dans la LISTE : elle sert à choisir, pas à lire. Le
-    document entier est dans `read_objective`. */
+/** Description truncated in the LIST: it is used to choose, not to read. The entire
+ document is in `read_objective`. */
 const LIST_DESCRIPTION_MAX_CHARS = 400;
-/** Derniers commentaires du fil d'un objectif, comme sur un ticket. */
+/** Latest comments on a goal's thread, like on a ticket. */
 const COMMENTS_DEFAULT_LIMIT = 15;
 const COMMENT_BODY_MAX_CHARS = 2000;
 
@@ -83,12 +83,11 @@ interface ResolvedObjective {
 }
 
 /**
- * L'objectif VISÉ — par uuid OU par nom (insensible à la casse).
+ * The INTENDED objective — by uuid OR by name (case insensitive).
  *
- * Le nom est là parce que c'est ce qu'un modèle recopie : `list_objectives` rend
- * les deux, et entre « Refonte du board » et un uuid de 36 caractères, celui qui
- * se recopie sans faute n'est pas celui qu'on croit. Un nom ambigu est une
- * erreur qui NOMME les candidats — pas un choix arbitraire fait à sa place.
+ * The name is there because that's what a model copies: `list_objectives` renders
+ * both, and between "Board redesign" and a uuid of 36 characters, the one who
+ * copies himself without error is not the one we think. An ambiguous name is an error that NAMES the candidates — not an arbitrary choice made for it.
  */
 export async function resolveObjectiveRef(
   projectId: string,
@@ -114,12 +113,12 @@ export async function resolveObjectiveRef(
     return { objective: { id: data.id as string, name: data.name as string } };
   }
 
-  // Comparaison en MÉMOIRE, pas `ilike` : un nom est du texte, et `%`, `_` ou
-  // `*` y sont des caractères — passés à `ilike`, ils deviennent des jokers.
-  // « V_ » attacherait alors un ticket à « V1 » sans que personne ne le voie,
-  // et un nom qui contient `%` peut en désigner un autre que celui demandé.
-  // C'est déjà comme ça que le MCP résout une catégorie par son nom
-  // (`resolveCategoryRefs`), et un projet a une poignée d'objectifs.
+  // Comparison in MEMORY, not `ilike`: a name is text, and `%`, `_` or
+  // `*` are characters — passed to `ilike`, they become wildcards.
+  // “V_” would then attach a ticket to “V1” without anyone seeing it,
+  // and a name that contains `%` may designate something other than the one requested.
+  // This is already how MCP resolves a category by name
+  // (`resolveCategoryRefs`), and a project has a handful of goals.
   const { data, error } = await query;
   if (error) return { error: error.message };
   const needle = raw.toLowerCase();
@@ -141,7 +140,7 @@ export async function resolveObjectiveRef(
   return { objective: { id: rows[0].id as string, name: rows[0].name as string } };
 }
 
-/** Progression pondérée d'un lot de tickets — le calcul de la barre de l'UI. */
+/** Weighted progress of a batch of tickets — the calculation of the UI bar. */
 function progressOf(
   issues: Array<{ status: unknown; effort: unknown }>,
 ): { done: number; total: number; percent: number } {
@@ -179,8 +178,8 @@ async function listObjectives(ctx: ObjectiveToolContext): Promise<ToolOutcome> {
       .not("objective_id", "is", null),
   ]);
   if (error) return { result: { error: error.message }, success: false };
-  // La progression vient de CETTE requête-là : une lecture ratée rendrait tous
-  // les objectifs à 0 % — un chiffre faux, et rien pour le dire. Même refus
+  // The progression comes from THIS request: a failed reading would make all
+  // 0% targets — a false figure, and nothing to say it. Same refusal
   // franc que `minddy_list_objectives`.
   if (issuesError) return { result: { error: issuesError.message }, success: false };
 
@@ -259,9 +258,9 @@ async function readObjective(
         .select("id, author_id, body, parent_id, via_assistant, created_at")
         .eq("objective_id", objective.id)
         .order("created_at", { ascending: true }),
-      // Ressources de l'objectif LUI-MÊME (`comment_id` null) — fichiers, liens
-      // et pages du wiki. Elles s'ouvrent ensuite par `read_resource`, qui
-      // accepte déjà une ressource portée par un objectif du projet.
+      // Goal resources ITSELF (`comment_id` null) — files, links
+      // and wiki pages. They are then opened with `read_resource`, which
+      // already accepts a resource supported by a project objective.
       service
         .from("attachments")
         .select(
@@ -410,9 +409,9 @@ async function updateObjectiveTool(
     };
   }
 
-  // Épinglage au projet du run AVANT l'écriture : le noyau, lui, résout le
-  // projet depuis l'objectif — un id d'un autre projet accessible au lanceur y
-  // passerait. Ici, il est introuvable.
+  // Pinning to the run project BEFORE writing: the kernel resolves the
+  // project from the goal — an id of another project accessible to the launcher y
+  // would pass. Here he is nowhere to be found.
   const target = await resolveObjectiveRef(ctx.projectId, args.objective);
   if ("error" in target) return { result: { error: target.error }, success: false };
 
@@ -467,7 +466,7 @@ async function commentObjective(
   };
 }
 
-/** Exécute un tool objectif. L'appelant a déjà routé sur `OBJECTIVE_TOOL_NAMES`. */
+/** Runs an objective tool. The caller has already routed to `OBJECTIVE_TOOL_NAMES`. */
 export async function executeObjectiveTool(
   ctx: ObjectiveToolContext,
   name: string,

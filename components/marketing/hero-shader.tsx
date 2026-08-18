@@ -6,58 +6,55 @@ import { useTheme } from "mangue-ui/components/theme-provider";
 import { cn } from "mangue-ui/lib/utils";
 
 /**
- * Le fond animé de la landing (MIN-73), monté deux fois : sous le hero et sous
- * la dernière relance, pour que la page se referme comme elle s'ouvre. Tout ce
- * qui suit vaut pour les deux ; seules la géométrie et le masque changent.
+ * The animated background of the landing (MIN-73), mounted twice: under the hero and under
+ * the last restart, so that the page closes as it opens. Everything that follows applies to both; only the geometry and the mask change.
  *
- * C'est le même shader « grain gradient » que le
- * panneau de connexion — mêmes couleurs, dérivées du token `--primary` (cf.
- * useShaderPalette) — en beaucoup plus discret : c'est un fond, pas un sujet.
+ * It is the same “grain gradient” shader as the
+ * connection panel — same colors, derived from the `--primary` token (cf.
+ * useShaderPalette) — but much more discreet: it is a background, not a subject.
  *
- * Réglages volontairement calmes (intensité et opacité basses, grande échelle) :
- * le texte du hero passe par-dessus et doit rester le point de contraste le plus
- * fort de la page. Le WebGL n'est monté qu'à partir de `sm` (sur mobile il coûte
- * une batterie pour une bande de 200 px) et l'animation se fige si l'utilisateur
- * demande moins de mouvement. Un dégradé de masquage fond le shader dans la
- * page vers le bas, pour qu'il n'y ait pas de couture avec la section suivante.
+ * Deliberately calm settings (low intensity and opacity, large scale):
+ * the hero's text passes over it and must remain the strongest point of contrast on the page. The WebGL is only mounted from `sm` (on mobile it costs
+ * a battery for a strip of 200 px) and the animation freezes if the user
+ * requests less movement. A masking gradient blends the shader into the
+ * page down, so there is no seam with the next section.
  *
- * Se rend au niveau de la PAGE, pas du hero : ancré sur le `relative isolate`
- * du layout marketing, il part du haut du document et passe derrière la navbar
- * (transparente hors de sa pastille) grâce à `-z-10`. Le monter dans le hero
- * le ferait démarrer sous les 80 px réservés à la barre, avec une couture
- * horizontale visible juste en dessous.
+ * Goes to the PAGE level, not the hero: anchored to the `relative isolate`
+ * of the marketing layout, it leaves from the top of the document and goes behind the navbar
+ * (transparent outside its pastille) thanks to `-z-10`. Mounting it in the hero
+ * would make it start below the 80 px reserved for the bar, with a horizontal seam
+ * visible just below.
  *
- * IL S'ARRÊTE QUAND ON L'A DÉPASSÉ. La librairie ne met la boucle en pause que
- * si l'ONGLET est caché (`document.hidden`) : elle n'a pas d'IntersectionObserver.
- * Mesuré sur la landing, le shader demandait donc encore 120 images par seconde
- * alors qu'il était à 10 700 px au-dessus du viewport — pour un fond que
- * personne ne regarde, sur toute la longueur de la page. L'observer ci-dessous
- * passe `speed` à 0 dès qu'il sort du champ, ce que `setCurrentSpeed` traduit
- * par un `cancelAnimationFrame` (shader-mount.js) : la boucle s'arrête net.
+ * IT STOPS WHEN YOU PASS IT. The library only pauses the loop
+ * if the TAB is hidden (`document.hidden`): it has no IntersectionObserver.
+ * Measured on the landing, the shader therefore still required 120 frames per second
+ * while it was 10,700 px above the viewport — for a background that
+ * no one is looking at, over the entire length of the page. Observe it below
+ * changes `speed` to 0 as soon as it leaves the field, which `setCurrentSpeed` translates
+ * by a `cancelAnimationFrame` (shader-mount.js): the loop stops dead.
  *
- * On ne DÉMONTE pas le shader pour autant — ça détruirait le contexte WebGL et
- * il faudrait le recréer à chaque retour en haut de page, ce qui coûte plus
- * cher que de laisser un canvas figé sur sa dernière image.
+ * We don't DISASSEMBLE the shader though — that would destroy the WebGL context and
+ * it would have to be recreated each time we return to the top of the page, which costs more
+ * than leaving a canvas frozen on its last image.
  */
 /**
- * `@paper-design/shaders-react` est une librairie WebGL : chargée statiquement,
- * elle entrait dans le bundle INITIAL de la landing — celui qui doit arriver
- * avant que la page soit interactive — pour un fond décoratif qui n'est même
- * pas monté sous 640 px. `ssr: false` parce que le shader ne rend rien
- * d'utile côté serveur : c'est un canvas (MIN-88).
+ * `@paper-design/shaders-react` is a WebGL library: statically loaded,
+ * it entered the INITIAL bundle of the landing — the one which must arrive
+ * before the page is interactive — for a decorative background which is not even
+ * mounted under 640 px. `ssr: false` because the shader doesn't render anything
+ * useful on the server side: it's a canvas (MIN-88).
  *
- * La cible du `dynamic()` est `grain-canvas.tsx`, PAS la librairie (MIN-100).
- * Next précharge dans le document le chunk d'un `dynamic()` dès que le composant
- * qui le rend passe par le rendu serveur : `GrainBackdrop` rendant toujours son
- * conteneur, le WebGL était téléchargé même sur mobile, où `enabled` reste faux
- * et où rien ne s'affiche jamais. En le montant sous une condition d'état — donc
- * jamais côté serveur — le chunk n'est demandé que là où il sert.
+ * The target of `dynamic()` is `grain-canvas.tsx`, NOT the library (MIN-100).
+ * Next preloads the chunk of a `dynamic()` into the document as soon as the component
+ * which renders it passes through server rendering: `GrainBackdrop` always rendering its
+ * container, WebGL was downloaded even on mobile, where `enabled` remains false
+ * and where nothing ever displays. By mounting it under a state condition — therefore
+ * never on the server side — the chunk is only requested where it is used.
  */
 const GrainCanvas = dynamic(() => import("./grain-canvas"), { ssr: false });
 
-/** Dégradé de masquage : le shader ne s'arrête jamais net, il se fond dans la
-    page. Le hero se dissout vers le bas ; le CTA, pris entre deux sections, se
-    dissout des deux côtés. */
+/** Masking Gradient: The shader never stops abruptly, it blends into the
+ page. The hero dissolves downwards; the CTA, caught between two sections, dissolves on both sides. */
 const MASKS = {
   hero: "linear-gradient(to bottom, black 0%, black 35%, transparent 100%)",
   cta: "linear-gradient(to bottom, transparent 0%, black 35%, black 68%, transparent 100%)",
@@ -67,7 +64,7 @@ function GrainBackdrop({
   className,
   mask,
 }: {
-  /** Géométrie du fond : c'est l'appelant qui décide où il se pose. */
+  /** Bottom geometry: it is the caller who decides where it lands. */
   className: string;
   mask: string;
 }) {
@@ -96,8 +93,8 @@ function GrainBackdrop({
   useEffect(() => {
     const el = holder.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
-    // Une marge de 200 px relance l'animation juste avant qu'elle redevienne
-    // visible : personne ne doit voir le fond repartir sous ses yeux.
+    // A margin of 200 px restarts the animation just before it becomes
+    // visible: no one should see the bottom disappear before their eyes.
     const io = new IntersectionObserver(
       ([entry]) => setOnScreen(entry.isIntersecting),
       { rootMargin: "200px 0px" },
@@ -127,7 +124,7 @@ function GrainBackdrop({
   );
 }
 
-/** Le fond du haut de page, posé au niveau de la PAGE (voir plus haut). */
+/** The background of the top of the page, placed at the level of the PAGE (see above). */
 export function HeroShader() {
   return (
     <GrainBackdrop
@@ -138,10 +135,9 @@ export function HeroShader() {
 }
 
 /**
- * Le même fond sous la dernière relance : la page se referme sur l'image qui
- * l'a ouverte. Il remplit la section (qui porte `relative isolate`) au lieu de
- * partir du haut du document, et se fond en haut comme en bas pour ne faire de
- * couture ni avec la FAQ ni avec le pied de page.
+ * The same background under the last restart: the page closes on the image which
+ * opened it. It fills the section (which has `relative isolate`) instead of
+ * from the top of the document, and blends at the top as well as the bottom so as not to seam with either the FAQ or the footer.
  */
 export function CtaShader() {
   return <GrainBackdrop className="absolute inset-0 -z-10" mask={MASKS.cta} />;

@@ -20,11 +20,11 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { captureServerEvent } from "@/lib/server/posthog";
 
 /**
- * Endpoint token OAuth 2.1 (RFC 6749 §3.2) — public, CORS ouvert, réponses
+ * Endpoint token OAuth 2.1 (RFC 6749 §3.2) — public, open CORS, responses
  * jamais mises en cache. Deux grants :
- * - authorization_code + PKCE : claim atomique du code (un rejeu révoque le
+ * - authorization_code + PKCE: atomic claim of the code (a replay revokes the
  *   grant — interception possible) ;
- * - refresh_token : rotation atomique, rejeu d'un token N-1 ⇒ révocation.
+ * - refresh_token: atomic rotation, replay of an N-1 token ⇒ revocation.
  * Erreurs au format RFC 6749 §5.2, anglais simple.
  */
 
@@ -48,14 +48,14 @@ const tokenSuccess = (pair: TokenPair) =>
     { status: 200, headers: HEADERS }
   );
 
-// Endpoint public : bornes sur le corps (MIN-118). Aucune valeur légitime ne
-// dépasse ça (redirect_uri ≤ 2000, code_verifier ≤ 128 par la RFC 7636) — un
-// champ hors gabarit est simplement ignoré, et manquera donc au grant (400).
+// Public endpoint: on-body terminals (MIN-118). No legitimate value
+// exceeds that (redirect_uri ≤ 2000, code_verifier ≤ 128 per RFC 7636) — a
+// out-of-size field is simply ignored, and will therefore miss the grant (400).
 const MAX_BODY_FIELDS = 30;
 const MAX_FIELD_NAME_CHARS = 100;
 const MAX_FIELD_CHARS = 2048;
 
-/** form-urlencoded (spec) — tolère aussi un body JSON (clients laxistes). */
+/** form-urlencoded (spec) — also tolerates a JSON body (lax clients). */
 async function parseBody(request: NextRequest): Promise<Record<string, string> | null> {
   const contentType = request.headers.get("content-type") ?? "";
   const keep = (key: string, value: unknown): value is string =>
@@ -127,8 +127,8 @@ async function handleAuthorizationCode(
 
   const claimed = await claimAuthorizationCode(code);
   if (!claimed) {
-    // Code inconnu/expiré… ou déjà consommé : dans ce dernier cas, révoquer
-    // le grant lié (RFC 6749 §4.1.2 — interception possible).
+    // Unknown/expired code… or already consumed: in the latter case, revoke
+    // the linked grant (RFC 6749 §4.1.2 — possible interception).
     const replayedGrantId = await findReplayedCode(code);
     if (replayedGrantId) {
       console.warn(
@@ -156,15 +156,15 @@ async function handleAuthorizationCode(
   if (client_id !== claimed.client_id) {
     return tokenError("invalid_grant", "client_id does not match this code.");
   }
-  // redirect_uri obligatoire et identique à celui de l'autorisation.
+  // redirect_uri mandatory and identical to that of authorization.
   if (!redirect_uri || redirect_uri !== claimed.redirect_uri) {
     return tokenError("invalid_grant", "redirect_uri does not match this code.");
   }
   if (!verifyPkceS256(code_verifier, claimed.code_challenge)) {
     return tokenError("invalid_grant", "PKCE verification failed.");
   }
-  // L'origine attendue vient de l'environnement, jamais de la requête : c'est
-  // celle que les `.well-known` ont annoncée.
+  // The expected origin comes from the environment, never from the request: it is
+  // the one that the `.well-known` announced.
   const origin = oauthIssuer();
   if (resource !== undefined && !isValidResource(resource, origin)) {
     return tokenError("invalid_target", `The resource parameter must be ${origin}/api/mcp.`);
@@ -172,10 +172,10 @@ async function handleAuthorizationCode(
 
   const pair = await issueTokens(claimed.grant_id);
   if (!pair) return tokenError("invalid_grant", "Grant has been revoked.");
-  // Analytics (MIN-78) : un agent vient de se connecter au MCP pour la première
-  // fois (l'échange du code n'a lieu qu'une fois par autorisation — les
-  // reconnexions passent par refresh_token). Le nom du client est déclaratif,
-  // mais c'est la seule façon de savoir QUELS agents utilisent minddy.
+  // Analytics (MIN-78): an agent has just connected to the MCP for the first
+  // times (the exchange of the code only takes place once per authorization — the
+  // reconnections go through refresh_token). The customer name is declarative,
+  // but this is the only way to know WHICH agents are using minddy.
   captureServerEvent({
     distinctId: claimed.user_id ?? "oauth:unknown",
     event: "oauth_grant_created",
@@ -191,9 +191,9 @@ async function handleRefreshToken(
   if (!refresh_token) {
     return tokenError("invalid_request", "refresh_token is required.");
   }
-  // RFC 6749 §6 : un client public présente son client_id. On l'exige, parce
-  // que c'est ce qui lie le token à son client — sans lui, tout client
-  // enregistré échange le refresh token d'un autre.
+  // RFC 6749 §6: a public client presents its client_id. We demand it, because
+  // that this is what links the token to its client — without it, any client
+  // registered exchanges the refresh token of another.
   if (!client_id) {
     return tokenError("invalid_request", "client_id is required.");
   }
@@ -201,7 +201,7 @@ async function handleRefreshToken(
   const pair = await rotateRefreshToken(refresh_token, client_id);
   if (pair) return tokenSuccess(pair);
 
-  // Rotation manquée : rejeu d'un token N-1 ⇒ révocation du grant entier.
+  // Missed rotation: replay of an N-1 token ⇒ revocation of the entire grant.
   await handleRefreshReuse(refresh_token, client_id);
   return tokenError("invalid_grant", "Invalid, expired or rotated refresh token.");
 }

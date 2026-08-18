@@ -3,21 +3,20 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSavedView, updateSavedView } from "./saved-views";
 
 /**
- * Les écritures des VUES ENREGISTRÉES (« Enregistrer la vue actuelle », ⌘K).
+ * The writing of SAVED VIEWS ("Save the current view", ⌘K).
  *
- * Deux choses seulement s'y jouent, et aucune ne se voit à l'écran :
+ * Only two things are at stake, and neither is seen on the screen:
  *
- * 1. **Ce qu'on accepte d'écrire.** Une vue enregistrée est une adresse qu'on
- *    rouvrira d'un clic, plus tard, sans la relire. Une adresse qui SORT du
- *    site (`//ailleurs.example`, lue par un navigateur comme un autre hôte)
- *    deviendrait un lien de redirection ouverte planqué dans la palette de son
- *    propre compte. Le refus doit se produire AVANT la base — la contrainte
- *    `check` de la migration est le dernier rempart, pas le premier.
- * 2. **Réenregistrer sous un nom connu DÉPLACE la vue.** Sans ça, la palette
- *    empilerait deux lignes du même nom, qu'on ne pourrait plus distinguer.
+ * 1. **What we agree to write.** A saved view is an address that one
+ * will reopen with a click, later, without re-reading it. An address that OUTSIDE the
+ * site (`//ailleurs.example`, read by a browser as another host)
+ * would become an open redirect link hidden in its own account's palette. The refusal must occur BEFORE the database — the constraint
+ * `check` of the migration is the last line of defense, not the first.
+ * 2. **Resaving under a known name MOVES the view.** Without it, the palette
+ * would stack two lines of the same name, which we could no longer distinguish.
  *
- * Le double PostgREST applique vraiment l'unicité `(user_id, name)` : sinon le
- * test ne dirait rien de l'`onConflict` qu'on écrit.
+ * The double PostgREST really applies `(user_id, name)` uniqueness: otherwise the
+ * test would say nothing about the `onConflict` that we write.
  */
 
 interface Row extends Record<string, unknown> {
@@ -30,7 +29,7 @@ interface Row extends Record<string, unknown> {
 let rows: Row[] = [];
 let nextId = 0;
 
-/** Double de chaîne PostgREST réduit à ce que `saved-views` touche. */
+/** PostgREST string double reduced to whatever `saved-views` touches. */
 function table() {
   const filters: ((row: Row) => boolean)[] = [];
   let upserted: { payload: Record<string, unknown>; onConflict: string } | null = null;
@@ -57,7 +56,7 @@ function table() {
   const resolve = () => {
     if (upserted) {
       const { payload, onConflict } = upserted;
-      // L'unicité est celle de l'index : deux colonnes, pas d'expression.
+      // The uniqueness is that of the index: two columns, no expression.
       const keys = onConflict.split(",").map((k) => k.trim());
       const existing = rows.find((row) => keys.every((k) => row[k] === payload[k]));
       if (existing) {
@@ -70,10 +69,10 @@ function table() {
     }
     const matching = rows.filter((row) => filters.every((f) => f(row)));
     if (updated) {
-      // RLS : une ligne d'un autre compte est invisible, donc pas mise à jour.
+      // RLS: a line from another account is invisible, therefore not updated.
       if (matching.length === 0) return { data: null, error: null };
       const target = matching[0];
-      // L'index unique vaut aussi pour un UPDATE — c'est ce que Postgres
+      // The unique index also applies to an UPDATE — that's what Postgres
       // renverrait, code compris.
       if (
         typeof updated.name === "string" &&
@@ -176,7 +175,7 @@ describe("updateSavedView", () => {
 
     expect(result).toMatchObject({ ok: true });
     expect(rows[0].name).toBe("Ma semaine");
-    // Renommer ne déplace pas la vue.
+    // Renaming does not move the view.
     expect(rows[0].href).toBe("/all");
   });
 
@@ -204,9 +203,9 @@ describe("updateSavedView", () => {
       name: "Ma semaine",
     });
 
-    // 409, pas 500 : la création tranche toute seule (l'upsert déplace la vue
-    // homonyme), mais un renommage qui écraserait une AUTRE vue la ferait
-    // disparaître sans le dire.
+    // 409, not 500: the creation slices by itself (the upsert moves the view
+    // homonym), but a rename that overwrites ANOTHER view would make it
+    // disappear without saying it.
     expect(result).toEqual({
       ok: false,
       status: 409,

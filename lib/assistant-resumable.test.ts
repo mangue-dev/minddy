@@ -27,8 +27,8 @@ describe("hasResumableConversation", () => {
   });
 
   it("compte l'envoi qui n'a pas encore son id de conversation", () => {
-    // Un message parti de l'accueil est à l'écran bien avant que le serveur
-    // ait nommé le fil : le FAB doit déjà ramener dessus.
+    // A message from the reception is on the screen well before the server
+    // named the thread: the FAB must already bring it back to it.
     expect(hasResumableConversation({ ...EMPTY, messageCount: 1 })).toBe(true);
   });
 
@@ -37,7 +37,7 @@ describe("hasResumableConversation", () => {
   });
 
   it("suit le pointeur relu au chargement, avant toute ouverture du panneau", () => {
-    // Le fil d'hier : la reprise du panneau n'a pas eu lieu, seule cette
+    // Yesterday's thread: the resumption of the panel did not take place, only this
     // lecture peut dire qu'il existe.
     expect(
       hasResumableConversation({ ...EMPTY, probedConversationId: CONV }),
@@ -45,8 +45,8 @@ describe("hasResumableConversation", () => {
   });
 
   it("cesse de croire le pointeur une fois le panneau repris", () => {
-    // « Nouvelle conversation » efface le fil vivant et le pointeur en base ;
-    // la lecture faite au chargement, elle, dit encore l'ancien.
+    // “New conversation” deletes the live thread and the base pointer;
+    // the reading made when loading, says the old man again.
     expect(
       hasResumableConversation({
         ...EMPTY,

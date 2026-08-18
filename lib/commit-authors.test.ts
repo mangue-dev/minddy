@@ -5,7 +5,7 @@ import {
   parseCoAuthorTrailers,
 } from "@/lib/commit-authors";
 
-/** Le trailer tel que les agents l'écrivent réellement dans ce dépôt. */
+/** The trailer as the agents actually write it in this repository. */
 const MESSAGE = [
   "feat: une chose",
   "",

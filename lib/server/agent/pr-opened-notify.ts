@@ -7,47 +7,47 @@ import { minddyUsersForForgeAccount } from "./pr-activity";
 import { rowProvider, type PullRequestRow } from "./pull-requests";
 
 /**
- * Inbox : « une pull request vient de s'ouvrir » — à TOUS les membres du projet
- * d'où elle se lit.
+ * Inbox: "a pull request has just opened" — to ALL project members
+ * where it reads.
  *
- * C'est le seul moment de la vie d'une PR qui ne déclenchait rien. `pr_reviewed`
- * et `pr_merged` (MIN-138) préviennent l'auteur du run quand on relit ou fusionne
- * SA pull request ; l'ouverture, elle, ne concerne justement pas son auteur mais
- * les autres — c'est l'instant où le travail attend des yeux.
+ * This is the only moment in the life of a PR that didn't trigger anything. `pr_reviewed`
+ * and `pr_merged` (MIN-138) warn the author of the run when rereading or merging
+ * SA pull request; the opening, for its part, does not concern its author but
+ * the others — it is the moment when the work awaits the eyes.
  *
- * **Peu importe d'où elle vient** : celle que Numo ouvre en fin de run comme
- * celle qu'un humain ouvre depuis la forge. Une PR existe → l'équipe l'apprend.
+ * **It does not matter where it comes from**: the one that Numo opens at the end of the run like
+ * the one that a human opens from the forge. A PR exists → the team learns it.
  *
- * Deux gardes, et deux seulement :
+ * Two guards, and two only:
  *
- *   • on ne s'annonce pas à soi-même — le membre minddy derrière le compte de
- *     forge qui vient de l'ouvrir est retiré de la liste. Le lanceur d'un run,
- *     lui, reste dedans : il n'a pas ouvert cette PR, Numo l'a ouverte pour lui
- *     (même doctrine que les notifications d'agent, cf. `notifyAgentRun`) ;
- *   • une seule annonce par PR, quoi qu'il arrive. La même ouverture arrive par
- *     deux chemins (Numo l'ouvre, puis le webhook de la forge la rapporte), et
- *     les récepteurs écartent déjà l'écho par l'identité de l'acteur — ce
- *     verrou-ci ne dépend d'aucune identité, donc il tient même quand celle-ci
- *     se dérobe (compte de service renommé, hook rejoué).
+ * • we do not announce ourselves — the minddy member behind the account of
+ * forge who has just opened it is removed from the list. The launcher of a run,
+ * stays inside: he did not open this PR, Numo opened it for him
+ * (same doctrine as agent notifications, cf. `notifyAgentRun`);
+ * • only one announcement per PR, whatever happens. The same opening arrives by
+ * two paths (Numo opens it, then the forge webhook brings it back), and
+ * the receivers already dismiss the echo by the identity of the actor — this
+ * lock does not depend on any identity, so it holds even when this one
+ * slips away (service account renamed, hook replayed).
  *
- * Best-effort de bout en bout : rien de ce qui suit ne remonte à l'appelant —
- * un webhook ne tombe pas parce qu'une notification n'a pas pu s'écrire.
+ * End-to-end best effort: nothing that follows goes back to the caller —
+ * a webhook does not drop because a notification failed to write.
  */
 export async function notifyPullRequestOpened(
   pr: PullRequestRow | null,
   opts: {
-    /** Le compte de forge qui l'a ouverte, tel que le hook le livre. */
+    /** The forge account that opened it, as the hook delivers it. */
     actor?: { accountId: string | null; login: string | null } | null;
   } = {},
 ): Promise<void> {
-  // `upsertPullRequest` rend `null` quand l'écriture a échoué : pas de ligne, pas
-  // de cible où renvoyer.
+  // `upsertPullRequest` returns `null` when write failed: no line, no
+  // target to return to.
   if (!pr) return;
 
   try {
     const service = getServiceClient();
 
-    // Déjà annoncée ? On s'arrête avant toute autre lecture.
+    // Already announced? We stop before any further reading.
     const { data: already } = await service
       .from("notifications")
       .select("id")
@@ -69,9 +69,9 @@ export async function notifyPullRequestOpened(
       for (const id of openers) excluded.add(id);
     }
 
-    // Un membre présent dans deux projets qui lient le même dépôt ne reçoit
-    // qu'UNE ligne : la PR est un fait du dépôt, pas d'un projet — le
-    // `project_id` n'est là que pour le contexte, la destination est la PR.
+    // A member present in two projects which link the same repository does not receive
+    // that ONE line: the PR is a fact of the deposit, not of a project — the
+    // `project_id` is only there for context, the destination is the PR.
     const rows: NotificationRow[] = [];
     const seen = new Set<string>();
     for (const projectId of projectIds) {
@@ -84,8 +84,8 @@ export async function notifyPullRequestOpened(
           type: "pr_opened",
           issue_id: null,
           pull_request_id: pr.id,
-          // L'auteur est un compte de forge, pas un utilisateur minddy : l'inbox
-          // retombe sur l'icône du type, comme pour les autres gestes de PR.
+          // The author is a forge account, not a minddy user: the inbox
+          // falls back to the type icon, as with other PR gestures.
           actor_id: null,
         });
       }
@@ -99,12 +99,12 @@ export async function notifyPullRequestOpened(
 }
 
 /**
- * Les projets d'où cette PR se lit.
+ * The projects from which this PR reads.
  *
- * Son TICKET tranche quand elle en a un : c'est le projet de ce ticket, et lui
- * seul, même si le dépôt est lié ailleurs. Sans ticket — le cas normal d'une PR
- * humaine —, ce sont tous les projets qui lient le dépôt : c'est exactement ce
- * que la page Pull requests montre à chacun.
+ * Her TICKET decides when she has one: it is the project of this ticket, and it
+ * alone, even if the repository is linked elsewhere. Without a ticket — the normal case of a human PR
+ * — all the projects link the repository: it is exactly this
+ * that the Pull requests page shows to everyone.
  */
 async function projectsForPr(pr: PullRequestRow): Promise<string[]> {
   const service = getServiceClient();

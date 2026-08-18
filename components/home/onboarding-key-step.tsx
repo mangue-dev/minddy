@@ -6,19 +6,19 @@ import { useAnalytics } from "@/lib/use-analytics";
 import { ByokConnectPanel } from "@/components/settings/byok-connect-panel";
 
 /**
- * Étape « votre clé d'API » de l'onboarding (MIN-149) : le panneau des réglages
- * du compte, tel quel — sélecteur de provider puis champ de clé — plus la seule
- * chose que l'étape ajoute, sa sortie.
+ * “Your API key” step of onboarding (MIN-149): the settings panel
+ * of the account, as is — provider selector then key field — no longer the only one
+ * thing that the step adds, its output.
  *
- * Elle est ici parce que c'est l'argument central du prix : l'abonnement achète
- * minddy, l'inférence de l'agent peut rester chez soi. Un dev qui code avec des
- * agents toute la journée a déjà une clé ; la lui demander plus tard, dans un
- * onglet de réglages, c'est la lui demander jamais.
+ * It is here because it is the central argument of the price: the subscription buys
+ * minddy, the agent's inference can stay at home. A dev who codes with
+ * agents all day already have a key; ask him later, in a
+ * settings tab, it's never asking him.
  *
- * Passer et poser sa clé franchissent la même étape — comme l'étape MCP,
- * l'onboarding ne bloque sur rien. L'étape se coche d'ailleurs SEULE dès qu'une
- * clé existe (`resolveOnboardingState`) : l'acquittement explicite ne sert qu'à
- * celui qui passe.
+ * Passing and putting down your key take the same step — like the MCP step,
+ * onboarding doesn't block anything. The step is also checked ONLY as soon as a
+ * key exists (`resolveOnboardingState`): explicit acknowledgment is only used to
+ * the one that passes.
  */
 export function OnboardingKeyStep({
   onDone,
@@ -37,8 +37,8 @@ export function OnboardingKeyStep({
       <ByokConnectPanel
         className="max-w-none"
         onConnected={() => {
-          // Combien de comptes arrivent avec leur clé — la donnée qui dit si le
-          // BYOK est bien l'argument qu'on croit (MIN-149).
+          // How many accounts arrive with their key — the data that says if the
+          // BYOK is indeed the argument we believe (MIN-149).
           track("onboarding_ai_key_added");
           onDone();
         }}

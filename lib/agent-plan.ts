@@ -1,9 +1,9 @@
 import type { AgentRunEvent } from "./agent-api";
 
-/** Les quatre états qu'`update_plan` accepte (cf. lib/server/agent/tools.ts). */
+/** The four states that `update_plan` accepts (see lib/server/agent/tools.ts). */
 export type PlanStepStatus = "pending" | "in_progress" | "completed" | "cancelled";
 
-/** Une étape de la checklist de session, telle que l'agent l'a posée. */
+/** A session checklist step, as asked by the agent. */
 export interface PlanStep {
   step: string;
   status: PlanStepStatus;
@@ -26,24 +26,24 @@ function opensNewTurn(type: AgentRunEvent["type"]): boolean {
 }
 
 /**
- * La checklist du TOUR EN COURS, dans son dernier état.
+ * The checklist for the CURRENT TOUR, in its latest state.
  *
- * `update_plan` envoie à chaque fois le plan ENTIER : le dernier `plan_update`
- * dit donc tout, et les précédents ne sont que des photos périmées. Un plan vidé
- * (tableau vide) est un vrai signal — l'agent a abandonné sa checklist — et rend
- * ici un tableau vide, pas l'avant-dernier plan.
+ * `update_plan` sends the ENTIRE plan each time: the last `plan_update`
+ * therefore says everything, and the previous ones are just outdated photos. An empty plan
+ * (empty table) is a real signal — the agent has abandoned its checklist — and returns
+ * here an empty table, not the penultimate plan.
  *
- * Le TOUR, et pas la session — la même fenêtre que les sous-agents
- * ([agent-subagents](./agent-subagents.ts)), et pour la même raison. Un plan
- * décrit le travail qu'un tour s'est donné ; sa réponse rendue, il ne décrit
- * plus rien. Le garder afficherait, au-dessus de l'input où l'on tape la question
- * SUIVANTE, une checklist qui parle de la précédente — et son dernier état laisse
- * en plus croire qu'elle avance encore. Tant que l'agent n'a pas reposé ou
- * recoché un plan dans le nouveau tour, il n'y a rien à montrer.
+ * The TURN, not the session — the same window as the sub-agents
+ * ([agent-subagents](./agent-subagents.ts)), and for the same reason. A plan
+ * describes the work that a tower has done; once his answer is given, he describes
+ * nothing more. Keeping it would display, above the input where we type the question
+ * NEXT, a checklist which talks about the previous one - and its last state lets
+ * also believe that it is still moving forward. As long as the agent has not rested or
+ * rechecked a plan in the new turn, there is nothing to show.
  *
- * Seul le PARENT peut poser un plan : `update_plan` est un tool de contrôle,
- * retiré aux sous-agents (`SUBAGENT_FORBIDDEN_TOOLS`). Leurs events, eux, ne
- * referment pas le tour du parent — le résumé d'une fille n'est pas le sien.
+ * Only the PARENT can place a plan: `update_plan` is a control tool,
+ * removed from subagents (`SUBAGENT_FORBIDDEN_TOOLS`). Their events, for their part, do not
+ * close to the parent's turn — a daughter's summary is not hers.
  */
 export function livePlan(events: AgentRunEvent[]): PlanStep[] {
   let latest: AgentRunEvent | null = null;

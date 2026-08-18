@@ -12,17 +12,17 @@ import { markDraftPage } from "@/lib/pages-draft";
 import { readLastPage } from "@/lib/pages-last-open";
 
 /**
- * L'onglet Pages sans page ouverte (MIN-270).
+ * The Pages tab with no page open (MIN-270).
  *
- * Sur desktop, l'arbre est déjà à gauche : ce panneau n'a donc rien à lister, il
- * n'a qu'à dire ce qu'on peut faire. Sous `md`, la barre secondaire occupe seule
- * l'écran et ce panneau n'est pas rendu — d'où l'absence de liste ici, qui
- * ferait doublon partout.
+ * On desktop, the tree is already on the left: this panel therefore has nothing to list, it
+ * just says what we can do. Under `md`, the secondary bar occupies the whole
+ * the screen and this panel is not rendered — hence the absence of a list here, which
+ * would duplicate it everywhere.
  *
- * Et avant de le montrer : on ROUVRE la dernière page lue. Revenir dans l'onglet
- * pour continuer ce qu'on écrivait est le cas courant ; l'écran « choisissez une
- * page à gauche » était alors un clic de plus, à chaque fois, sur une page qu'on
- * savait déjà vouloir.
+ * And before showing it: we REOPEN the last page read. Return to tab
+ * to continue what we were writing is the common case; the “choose a
+ * page on the left" was then one more click, each time, on a page that we
+ * already knew how to want.
  */
 export default function ProjectPagesPage() {
   const t = useTranslations("Pages");
@@ -30,26 +30,26 @@ export default function ProjectPagesPage() {
   const router = useRouter();
   const { pages, byId, loading, createPage } = usePagesQuery(projectId);
 
-  // Une seule fois par montage : sans ce verrou, revenir DÉLIBÉRÉMENT à la
-  // liste (mobile, bouton précédent) se ferait renvoyer en boucle sur la page.
+  // Only once per assembly: without this lock, return DELIBERATELY to the
+  // list (mobile, previous button) would loop through the page.
   const restored = useRef(false);
   useEffect(() => {
     if (restored.current || loading) return;
     restored.current = true;
-    // Sous `md`, cet écran-ci n'est pas affiché : c'est l'ARBRE qui occupe la
-    // largeur, et c'est bien lui qu'on veut voir en arrivant. Rouvrir la
-    // dernière page y sauterait par-dessus la seule navigation du téléphone.
+    // Under `md`, this screen is not displayed: it is the TREE which occupies the
+    // width, and it’s him we want to see when we arrive. Reopen the
+    // last page would jump there over the phone's navigation alone.
     if (!window.matchMedia("(min-width: 768px)").matches) return;
     const last = readLastPage(projectId);
-    // La page a pu partir à la corbeille depuis : on ne va pas sur un lien
-    // mort, et on ne nettoie rien — la prochaine page ouverte réécrira l'entrée.
+    // The page may have since gone to the trash: we do not go to a link
+    // dead, and nothing is cleaned — the next page opened will rewrite the entry.
     if (last && byId.has(last)) router.replace(`/projects/${projectId}/pages/${last}`);
   }, [loading, byId, projectId, router]);
 
   const create = async () => {
     try {
       const page = await createPage({});
-      // Créée vide : elle ne survit pas à un départ sans une lettre dedans.
+      // Created empty: it does not survive a departure without a letter in it.
       markDraftPage(page.id);
       router.push(`/projects/${projectId}/pages/${page.id}`);
     } catch (err) {
@@ -60,12 +60,11 @@ export default function ProjectPagesPage() {
   if (loading) return null;
 
   return (
-    /* Le MÊME cadre que les quatre autres onglets du projet — tickets, triage,
-       objectifs, retours : une zone défilante en `px-6 py-8`, contenu borné à
-       `max-w-5xl` et centré horizontalement. L'état vide se calait ici au milieu
-       de la hauteur (`items-center`), et il était le seul : passer de Pages à
-       Objectifs faisait sauter l'illustration d'une centaine de pixels, sur des
-       écrans qui ne diffèrent que par leur icône et leur phrase. */
+    /* The SAME framework as the other four project tabs — tickets, triage,
+ objectives, returns: a scrollable area in `px-6 py-8`, content limited to
+ `max-w-5xl` and centered horizontally. The empty state was here in the middle
+ of the height (`items-center`), and it was the only one: going from Pages to
+ Objectives made the illustration jump by a hundred pixels, on screens which only differ by their icon and their sentence. */
     <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
       <div className="mx-auto max-w-5xl">
         <EmptyScene

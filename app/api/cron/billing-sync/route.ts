@@ -7,14 +7,14 @@ import {
 
 /**
  * Cron horaire (Vercel Cron, vercel.json) : reconciliation billing — re-tire
- * l'état réel des abonnements depuis Stripe pour rattraper tout webhook manqué
- * (renouvellement, changement de plan, annulation), en complément du re-sync
- * paresseux qui, lui, ne couvre que les users actifs. Vercel envoie
- * `Authorization: Bearer ${CRON_SECRET}` ; la route est inutilisable sans.
+ * the actual status of subscriptions from Stripe to catch up on any missed webhook
+ * (renewal, change of plan, cancellation), in addition to re-sync
+ * lazy which only covers active users. Vercel sends
+ * `Authorization: Bearer ${CRON_SECRET}` ; the road is unusable without it.
  *
- * Balaye au passage les plans OFFERTS arrivés à échéance. Le droit, lui, est
- * déjà tombé tout seul à la seconde près (la résolution ignore un override
- * expiré) : ce balayage ne fait que nettoyer les lignes.
+ * Scan the OFFERED plans that have expired. The law is
+ * already fell by itself to the nearest second (the resolution ignores an override
+ * expired): This scan only cleans the lines.
  */
 
 export const maxDuration = 300;
@@ -24,9 +24,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  // Le nettoyage des cadeaux échus ne dépend pas de Stripe : il tourne même
-  // quand Stripe n'est pas configuré, et un échec de reconciliation ne doit
-  // pas l'emporter avec lui.
+  // Cleaning up expired gifts does not depend on Stripe: it even runs
+  // when Stripe is not configured, and a reconciliation failure should not
+  // not take it with him.
   const gifts = await expireAdminOverrides();
   const result = await reconcileStripeBillingAccounts();
   return NextResponse.json({ ok: true, ...result, expiredGifts: gifts.expired });

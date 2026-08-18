@@ -6,10 +6,10 @@ import { SettingsEmpty, SettingsGroup } from "@/components/settings/settings-ui"
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { ImportPanel } from "@/components/settings/import-panel";
 
-/** Réglages du projet → Import (MIN-45). L'enveloppe seulement : le titre de
-    section, la garde propriétaire — un mauvais fichier crée des centaines de
-    tickets d'un coup — et le panneau, qui fait tout le reste et sert aussi à
-    l'étape import de l'onboarding (MIN-98). Il ne change pas, seul son cadre. */
+/** Project settings → Import (MIN-45). The envelope only: the title of
+ section, the owner's guard - a bad file creates hundreds of
+ tickets at once - and the panel, which does everything else and also serves to
+ the import step of onboarding (MIN-98). It does not change, only its frame. */
 export function ProjectImportSection({
   projectId,
   isOwner,

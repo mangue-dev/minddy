@@ -5,23 +5,23 @@ import type { AgentLaunchIntent } from "@/lib/server/agent/launch";
 import type { AgentRunVerdict } from "@/lib/server/agent/runs";
 
 /**
- * La CHAÎNE (MIN-147) — l'objet durable sans lequel rien du reste n'est
- * possible : ni le point d'arrêt humain, ni le bouton « arrêter », ni le rapport
- * de fin. Elle porte l'étape courante, les règles déjà jouées, la dépense
- * cumulée (pour la DIRE, pas pour couper), le nombre de reprises et le motif
- * d'arrêt.
+ * The CHAIN ​​(MIN-147) — the durable object without which nothing else is
+ * possible: neither the human breakpoint, nor the "stop" button, nor the end report
+ *. It bears the current step, the rules already played, the cumulative expenditure
+ * (for SAYING it, not for cutting), the number of restarts and the reason
+ * for stopping.
  *
- * Service client de bout en bout (aucune policy d'écriture sur `agent_chains`).
+ * End-to-end customer service (no write policy on `agent_chains`).
  *
- * Concurrence : l'avancement se fait par COMPARE-AND-SET sur `(id, step)`. Deux
- * crochets qui concluraient la même étape ne peuvent pas la jouer deux fois — le
- * perdant reçoit `null` et rend la main. Aucune fonction SQL nouvelle : le CAS
- * tient dans le `.eq("step", …)` de l'update.
+ * Competition: advancement is done by COMPARE-AND-SET on `(id, step)`. Two
+ * brackets that would conclude the same step cannot play it twice — the losing
+ * receives `null` and returns the hand. No new SQL function: the CAS
+ * fits in the `.eq("step", …)` of the update.
  */
 
 export type AgentChainStatus =
-  /** EN SURSIS : ouverte, mais elle ne démarre qu'à `not_before` — et seulement
-   *  si la condition qui l'a ouverte tient encore (cf. la migration). */
+  /** SUSPENDED: open, but it only starts at `not_before` — and only
+ * if the condition which opened it still holds (see migration). */
   | "pending"
   | "running"
   | "awaiting_human"
@@ -29,7 +29,7 @@ export type AgentChainStatus =
   | "completed"
   | "failed";
 
-/** L'événement mis de côté par une chaîne en sursis, rejoué à son réveil. */
+/** The event put aside by a suspended channel, replayed when he wakes up. */
 export interface PendingChainEvent {
   to: string;
   source: string;
@@ -46,23 +46,22 @@ export interface AgentChain {
   played_rule_ids: string[];
   retries: number;
   spent_usd: number;
-  /** LEGACY : plus jamais posé. Une chaîne ne s'interrompt plus sur un plafond —
-   *  seul le quota du compte borne la dépense (cf. l'en-tête de lib/automations).
-   *  La colonne reste pour ne pas migrer une table pour un champ mort. */
+  /** LEGACY: never posed again. A chain is no longer interrupted on a ceiling —
+ * only the account quota limits the expenditure (see the lib/automations header).
+ * The column remains so as not to migrate a table for a dead field. */
   budget_usd: number | null;
   stop_reason: string | null;
-  /** Heure d'amorçage d'une chaîne en sursis. Null = elle a déjà démarré. */
+  /** Start time of a suspended chain. Null = it has already started. */
   not_before: string | null;
-  /** L'événement qui l'a ouverte, à rejouer au réveil (chaîne en sursis). */
+  /** The event which opened it, to be replayed when you wake up (channel on hold). */
   pending_event: PendingChainEvent | null;
   created_at: string;
   updated_at: string;
 }
 
 /**
- * Statuts d'une chaîne VIVANTE — ceux que couvre l'index unique par ticket.
- * `pending` en fait partie : un ticket en sursis est OCCUPÉ, sans quoi une
- * deuxième chaîne s'ouvrirait dessus et les deux démarreraient.
+ * Statuses of a LIVE chain — those covered by the unique index per ticket.
+ * `pending` is one of them: a suspended ticket is BUSY, otherwise a second chain would open on it and both would start.
  */
 export const LIVE_CHAIN_STATUSES: AgentChainStatus[] = [
   "pending",
@@ -70,15 +69,15 @@ export const LIVE_CHAIN_STATUSES: AgentChainStatus[] = [
   "awaiting_human",
 ];
 
-/** Code Postgres d'une violation de contrainte d'unicité. */
+/** Postgres code for a unique constraint violation. */
 const PG_UNIQUE_VIOLATION = "23505";
 
 function toChain(row: unknown): AgentChain {
   const chain = row as AgentChain;
   return {
     ...chain,
-    // `numeric` revient en string via PostgREST dès qu'il dépasse la précision
-    // d'un double — on normalise ici, une fois, plutôt que chez chaque lecteur.
+    // `numeric` returns to string via PostgREST as soon as it exceeds the precision
+    // a double — we normalize here, once, rather than for each reader.
     spent_usd: Number(chain.spent_usd ?? 0),
     budget_usd: chain.budget_usd == null ? null : Number(chain.budget_usd),
     played_rule_ids: Array.isArray(chain.played_rule_ids) ? chain.played_rule_ids : [],
@@ -86,19 +85,19 @@ function toChain(row: unknown): AgentChain {
 }
 
 /**
- * Ouvre une chaîne sur un ticket. `null` si une chaîne y est DÉJÀ vivante :
- * l'index partiel unique `idx_agent_chains_active_issue` tranche, et on traite
- * sa violation comme une réponse et non comme une panne — même doctrine
- * qu'`ActiveRunExistsError` pour les runs.
+ * Opens a channel on a ticket. `null` if a string is ALREADY alive:
+ * the unique partial index `idx_agent_chains_active_issue` slices, and we treat
+ * its violation as a response and not as a failure — same doctrine
+ * as `ActiveRunExistsError` for runs.
  */
 export async function openChain(input: {
   projectId: string;
   issueId: string;
   ownerId: string;
   preset: string | null;
-  /** Sursis : l'heure avant laquelle elle ne démarre pas. Absent = tout de suite. */
+  /** Respite: the time before which it does not start. Absent = immediately. */
   notBefore?: string | null;
-  /** L'événement à rejouer au réveil. Obligatoire avec `notBefore`. */
+  /** The event to replay when waking up. Mandatory with `notBefore`. */
   pendingEvent?: PendingChainEvent | null;
 }): Promise<AgentChain | null> {
   const service = getServiceClient();
@@ -127,7 +126,7 @@ export async function openChain(input: {
   return toChain(data);
 }
 
-/** La chaîne VIVANTE d'un ticket, ou null. */
+/** The LIVE string of a ticket, or null. */
 export async function chainForIssue(issueId: string): Promise<AgentChain | null> {
   const service = getServiceClient();
   const { data } = await service
@@ -141,7 +140,7 @@ export async function chainForIssue(issueId: string): Promise<AgentChain | null>
   return data ? toChain(data) : null;
 }
 
-/** La DERNIÈRE chaîne d'un ticket, vivante ou non (lecture d'écran). */
+/** The LAST string of a ticket, alive or not (screen reading). */
 export async function latestChainForIssue(issueId: string): Promise<AgentChain | null> {
   const service = getServiceClient();
   const { data } = await service
@@ -165,9 +164,9 @@ export async function getChain(chainId: string): Promise<AgentChain | null> {
 }
 
 /**
- * AVANCE la chaîne d'une étape en marquant la règle jouée — le compare-and-set
- * qui garantit qu'une étape ne se joue qu'une fois. `null` = un autre l'a jouée
- * (ou la chaîne n'est plus `running`) : l'appelant rend la main SANS rien lancer.
+ * ADVANCES the chain one step by marking the rule played — the compare-and-set
+ * which ensures that a step is only played once. `null` = another played it
+ * (or the chain is no longer `running`): the caller returns the hand WITHOUT throwing anything.
  */
 export async function advanceChain(
   chain: AgentChain,
@@ -183,17 +182,17 @@ export async function advanceChain(
     })
     .eq("id", chain.id)
     .eq("step", chain.step)
-    // PAS `LIVE_CHAIN_STATUSES` : une chaîne en SURSIS n'avance pas, elle se
-    // réveille d'abord (`startPendingChain`), et ce réveil re-vérifie que la
+    // NOT `LIVE_CHAIN_STATUSES`: a suspended chain does not move forward, it
+    // wake up first (`startPendingChain`), and this wake-up re-checks that the
     // condition qui l'a ouverte tient toujours. Avancer directement ferait sauter
-    // ce contrôle — et l'update ci-dessus la passerait en `running` au passage.
-    // NI `awaiting_human` : c'est le statut qui matérialise « la boucle attend
-    // un humain », et le seul chemin légitime pour en sortir est `resumeChain`
-    // (feu vert explicite). L'accepter ici ouvrait une seconde porte : un moteur
-    // concurrent qui trouvait la chaîne entre `advanceChain` et `parkChain`
-    // pouvait sauter le point d'arrêt EN SILENCE, après que le commentaire
-    // « la suite attend ton feu vert » a été posté. Le moteur garantit de toute
-    // façon `status === "running"` avant tout appel : ne rien perdre ici.
+    // this check — and the update above would change it to `running` in passing.
+    // NI `awaiting_human`: this is the status which materializes “the loop is waiting
+    // a human", and the only legitimate way out is `resumeChain`
+    // (explicit green light). Accepting it here opened a second door: an engine
+    // competitor who found the string between `advanceChain` and `parkChain`
+    // could skip the breakpoint SILENTLY, after the comment
+    // “the rest awaits your green light” has been posted. The engine guarantees all
+    // `status === "running"` way before any call: don't lose anything here.
     .eq("status", "running")
     .select("*")
     .maybeSingle();
@@ -201,18 +200,18 @@ export async function advanceChain(
 }
 
 /**
- * RECALCULE la dépense de la chaîne depuis ses runs. Idempotent par
- * construction — et c'est tout l'intérêt.
+ * RECALCULATES the channel's spend from its runs. Idempotent by
+ * construction — and that's the whole point.
  *
- * L'ancienne version cumulait un delta (`spent += run.cost_usd`) en pariant sur
- * « exactement une fois par run ». Or `stampRun` garantit exactement une fois
- * par TRANSITION TERMINALE, et un run en traverse plusieurs par conception :
- * l'agent pose une question (repos), on lui répond (`/steer` le re-queue), il
- * repart, il se repose encore. Comme `agent_runs.cost_usd` est CUMULATIF, chaque
- * repos rajoutait le total du run depuis le début : un run à cinq tours de 0,10
- * affichait 1,50 pour 0,50 réellement dépensés.
+ * The old version accumulated a delta (`spent += run.cost_usd`) by betting on
+ * "exactly once per run". Now `stampRun` guarantees exactly once
+ * per TERMINAL TRANSITION, and a run crosses several by design:
+ * the agent asks a question (rest), it is answered (`/steer` the re-queue), it
+ * leaves, it rests again. As `agent_runs.cost_usd` is CUMULATIVE, each
+ * rest added the total of the run from the start: a five-round run of 0.10
+ * displayed 1.50 for every 0.50 actually spent.
  *
- * Une somme relue ne peut pas dériver, quel que soit le nombre d'appels.
+ * A reread amount cannot not drift, regardless of the number of calls.
  */
 export async function recomputeChainSpend(chainId: string): Promise<number> {
   const service = getServiceClient();
@@ -230,8 +229,8 @@ export async function recomputeChainSpend(chainId: string): Promise<number> {
 }
 
 /**
- * Réveille une chaîne EN SURSIS. Compare-and-set sur `pending` : le balayeur et
- * un « Lancer maintenant » simultanés ne peuvent pas la démarrer deux fois.
+ * Wakes up a SUSPENDED channel. Compare-and-set on `pending`: the sweeper and
+ * a simultaneous “Launch Now” cannot start it twice.
  */
 export async function startPendingChain(chainId: string): Promise<AgentChain | null> {
   const service = getServiceClient();
@@ -246,10 +245,9 @@ export async function startPendingChain(chainId: string): Promise<AgentChain | n
 }
 
 /**
- * Annule une chaîne en sursis. SILENCIEUX à dessein — ni commentaire, ni
- * notification : elle n'a rien joué, rien dépensé, et rien produit qui mérite
- * un rapport. Annoncer « la chaîne s'est arrêtée » pour un travail qui n'a
- * jamais commencé serait du bruit sur le ticket.
+ * Cancels a suspended chain. QUIET on purpose — no comments, no
+ * notice: she played nothing, spent nothing, and produced nothing that merits
+ * a report. Announcing "the chain has stopped" for a job that has never started would be noise on the ticket.
  */
 export async function cancelPendingChain(
   chainId: string,
@@ -267,8 +265,7 @@ export async function cancelPendingChain(
 }
 
 /**
- * Les chaînes en sursis DUES. Lues par le balayeur (cron) : c'est lui qui les
- * réveille, la fenêtre d'un `after()` ne survivant pas à cinq minutes d'attente.
+ * Suspended channels DUE. Read by the scanner (cron): it is he who wakes them, the window of a `after()` not surviving five minutes of waiting.
  */
 export async function duePendingChains(limit = 50): Promise<AgentChain[]> {
   const service = getServiceClient();
@@ -283,19 +280,19 @@ export async function duePendingChains(limit = 50): Promise<AgentChain[]> {
 }
 
 /**
- * Chaînes `running` ABANDONNÉES : plus rien ne les porte.
+ * ABANDONED `running` chains: nothing carries them anymore.
  *
- * Le système n'avait aucun filet pour `running`. Une chaîne n'en sort que par le
- * crochet de fin de run — or ce crochet est une promesse en vol, qu'une fonction
- * qui gèle emporte ; et si un run manuel démarre dans l'intervalle, le moteur
- * rend la main et le run manuel, lui, ne porte pas de `chain_id` : plus aucun
- * événement ne viendra jamais. Comme `running` fait partie de l'index unique par
- * ticket, ce ticket n'acceptait alors PLUS JAMAIS d'automatisation.
+ * The system had no net for `running`. A string only comes out through the
+ * hook at the end of the run — but this hook is a promise in flight, which a function
+ * which freezes takes away; and if a manual run starts in the meantime, the engine
+ * gives up and the manual run does not carry any `chain_id`: no more
+ * events will ever occur. As `running` is part of the unique index per
+ * ticket, this ticket would NEVER accept automation again.
  *
- * Le seuil est large à dessein (bien au-delà de la latence d'un crochet) : ce
- * balayage ne rattrape que ce qui est manifestement mort. Et le rattrapage est
- * sans risque — c'est le compare-and-set d'`advanceChain` qui décide au bout,
- * donc un événement simplement lent ne peut pas produire un double lancement.
+ * The threshold is purposely wide (well beyond the latency of a hook): this
+ * scan only catches what is obviously dead. And the catch-up is
+ * without risk — it's the compare-and-set of `advanceChain` that decides in the end,
+ * so a simply slow event cannot produce a double launch.
  */
 export async function staleRunningChains(
   staleBefore: string,
@@ -312,7 +309,7 @@ export async function staleRunningChains(
   return ((data ?? []) as unknown[]).map(toChain);
 }
 
-/** Gare la chaîne : elle attend un feu vert humain explicite. */
+/** Park the chain: it is waiting for an explicit human green light. */
 export async function parkChain(chainId: string): Promise<AgentChain | null> {
   const service = getServiceClient();
   const { data } = await service
@@ -325,7 +322,7 @@ export async function parkChain(chainId: string): Promise<AgentChain | null> {
   return data ? toChain(data) : null;
 }
 
-/** Feu vert humain : la chaîne repart. `null` si elle n'attendait pas. */
+/** Human green light: the chain starts again. `null` if she didn't wait. */
 export async function resumeChain(chainId: string): Promise<AgentChain | null> {
   const service = getServiceClient();
   const { data } = await service
@@ -339,9 +336,9 @@ export async function resumeChain(chainId: string): Promise<AgentChain | null> {
 }
 
 /**
- * Arrête la chaîne. `reason` est un CODE (`quota`, `interrupted`,
- * `verification_failed`, `noRepo`, `run_failed`…), jamais une phrase : c'est le
- * commentaire de rapport qui le traduit, dans la langue du lecteur.
+ * Stops the chain. `reason` is a CODE (`quota`, `interrupted`,
+ * `verification_failed`, `noRepo`, `run_failed`…), never a sentence: it is the
+ * report comment which translates it, into the language of the reader.
  */
 export async function stopChain(
   chainId: string,
@@ -358,7 +355,7 @@ export async function stopChain(
   return data ? toChain(data) : null;
 }
 
-/** La chaîne est allée au bout de ses règles : plus rien à jouer. */
+/** The channel has gone to the end of its rules: nothing left to play. */
 export async function completeChain(chainId: string): Promise<AgentChain | null> {
   const service = getServiceClient();
   const { data } = await service
@@ -372,9 +369,9 @@ export async function completeChain(chainId: string): Promise<AgentChain | null>
 }
 
 /**
- * Reprise après une vérification d'implémentation en échec : on incrémente le
- * compteur de reprises et on DÉMARQUE les règles à rejouer (implémenter, puis
- * vérifier). Le plan, lui, reste écrit — ce n'est pas lui qu'on refait.
+ * Resumption after a failed implementation check: we increment the
+ * restart counter and we DEMARK the rules to be replayed (implement, then
+ * check). The plan remains written — it’s not the one we redo.
  */
 export async function retryChain(
   chain: AgentChain,
@@ -393,11 +390,11 @@ export async function retryChain(
 }
 
 /**
- * Le dernier VERDICT rendu sur la chaîne (tool `report_verdict`). Deux lecteurs,
- * et c'est pour ça qu'il est ici plutôt que chez l'un d'eux : le moteur, qui
- * décide entre continuer, reprendre et rendre la main ; et le point d'arrêt
- * humain, dont le commentaire doit DIRE ce que la vérification a conclu — sans
- * quoi il annonce un plan « vérifié » sans le verdict de la vérification.
+ * The last VERDICT rendered on the chain (tool `report_verdict`). Two readers,
+ * and that's why it's here rather than at one of them: the engine, which
+ * decides between continuing, resuming and giving back; and the human breakpoint
+ *, whose comment must SAY what the check concluded — without
+ * which announces a "verified" plan without the check's verdict.
  */
 export async function lastVerdictOfChain(chainId: string): Promise<AgentRunVerdict | null> {
   const service = getServiceClient();
@@ -413,7 +410,7 @@ export async function lastVerdictOfChain(chainId: string): Promise<AgentRunVerdi
   return verdict && typeof verdict.ok === "boolean" ? verdict : null;
 }
 
-/** Le dernier run de la chaîne — ce qu'une reprise humaine doit rejouer. */
+/** The last run in the chain — what a human restart should replay. */
 export async function lastRunOfChain(chainId: string): Promise<{
   id: string;
   intent: AgentLaunchIntent | null;

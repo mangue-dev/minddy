@@ -4,36 +4,35 @@ import { hasStrongSecret, requireSecret } from "@/lib/server/env-secrets";
 import { decrypt, encrypt, isEncryptedEnvelope } from "@/lib/server/encryption";
 
 /**
- * Chiffrement au repos du secret SSO d'un board (MIN-119).
+ * At-rest encryption of a board's SSO secret (MIN-119).
  *
- * `feedback_boards.sso_secret` est le secret partagé HS256 avec lequel le
- * backend de l'éditeur signe l'identité de ses utilisateurs. Qui le détient
- * peut forger l'identité de N'IMPORTE QUEL visiteur du board — donc écrire et
- * voter sous l'adresse de quelqu'un d'autre. Il vivait pourtant en clair, seul
- * secret du produit dans ce cas : les tokens de forge et les clés IA « BYOK »
- * portent la même enveloppe AES-256-GCM depuis MIN-47 et MIN-46.
+ * `feedback_boards.sso_secret` is the HS256 shared secret with which the publisher's backend signs the identity of its users. Whoever owns it
+ * can forge the identity of ANY visitor to the board — so write and
+ * vote under someone else's address. However, it lived in the clear, alone
+ * product secret in this case: the forge tokens and the AI “BYOK” keys
+ * carry the same AES-256-GCM envelope since MIN-47 and MIN-46.
  *
- * Il reste réaffichable au propriétaire, et c'est le point : un secret partagé
- * qu'on ne peut pas relire est un secret qu'on doit faire tourner à chaque perte
- * de post-it. C'est ce besoin — réversible, pas vérifiable — qui appelle un
- * chiffrement plutôt qu'une empreinte.
+ * It remains redisplayable to the owner, and that's the point: a shared secret
+ * that cannot be reread is a secret that must be rotated each time you lose
+ * post-it notes. It is this need — reversible, not verifiable — that calls for a
+ * encryption rather than a fingerprint.
  *
- * COMPATIBILITÉ. `readBoardSsoSecret` accepte une valeur qui n'est pas une
- * enveloppe : c'est un secret d'avant cette bascule, rendu tel quel. Les
- * lectures de `lib/server/feedback/boards.ts` le rescellent au passage, donc un
- * board actif se met à jour tout seul à sa première visite.
+ * COMPATIBILITY. `readBoardSsoSecret` accepts a value that is not a
+ * envelope: this is a secret from before this switch, rendered as is. The
+ * readings of `lib/server/feedback/boards.ts` reseal it in passing, so an active
+ * board updates itself on its first visit.
  *
- * Fail-closed à l'écriture (secret d'env absent → lève) : on ne stocke jamais en
- * clair. Le déchiffrement, lui, rend null plutôt que de lever — un secret d'env
- * tourné se traduit par « regénère ton secret SSO » et non par un board en 500.
+ * Fail-closed on writing (env secret absent → raised): we never store en
+ * clear. Decryption renders null rather than raising — a secret of env
+ * turned translates into “regenerate your SSO secret” and not by a board of 500.
  */
 
 function getSsoEncryptionSecret(): string {
-  // Absent OU trop court : le même refus (MIN-347).
+  // Absent OR too short: the same refusal (MIN-347).
   return requireSecret("FEEDBACK_SSO_ENCRYPTION_SECRET");
 }
 
-/** Le secret de chiffrement est-il déployé, et utilisable ? (garde de config.) */
+/** Is the encryption secret deployed and usable? (config. guard) */
 export function isSsoCryptoConfigured(): boolean {
   return hasStrongSecret("FEEDBACK_SSO_ENCRYPTION_SECRET");
 }
@@ -43,9 +42,9 @@ export function encryptBoardSsoSecret(plain: string): string {
 }
 
 export interface BoardSsoSecretRead {
-  /** Le secret utilisable, ou null s'il est illisible. */
+  /** The usable secret, or null if it is unreadable. */
   plain: string | null;
-  /** Vrai quand la valeur stockée était en clair (secret d'avant MIN-119). */
+  /** True when the stored value was in plain text (secret before MIN-119). */
   legacy: boolean;
 }
 
@@ -58,7 +57,7 @@ export function readBoardSsoSecret(
   try {
     envelope = JSON.parse(stored);
   } catch {
-    // Pas du JSON : c'est un `fbsso_…` d'avant le chiffrement.
+    // Not JSON: it's a `fbsso_…` from before encryption.
     return { plain: stored, legacy: true };
   }
   if (!isEncryptedEnvelope(envelope)) return { plain: stored, legacy: true };

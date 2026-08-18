@@ -3,18 +3,18 @@ import { resolveWithin, resolveReadable, assertNotGit } from "./repo-path";
 import { cloudLayout, layoutForRoot } from "./harness-layout";
 
 /**
- * LES GARDE-FOUS DE CHEMIN, REJOUÉS SUR DEUX RACINES (MIN-354).
+ * THE PATH GUARDS, REPLAYED ON TWO ROOTS (MIN-354).
  *
- * Ces fonctions prenaient déjà leur base en argument, mais un seul appelant la
- * leur donnait, et c'était toujours `/vercel/sandbox/repo`. Le contrat qu'elles
- * tiennent n'a donc jamais été exercé ailleurs — et « ailleurs » est précisément
- * ce que le lot ouvre : un dépôt de travail sur le disque d'un développeur.
+ * These functions already took their base as an argument, but only one caller gave them the
+ *, and it was always `/vercel/sandbox/repo`. The contract they
+ * hold has therefore never been exercised elsewhere — and "elsewhere" is precisely
+ * what the batch opens: a working repository on a developer's disk.
  *
- * D'où la boucle sur DEUX layouts. Ce qu'elle garde n'est pas une valeur de plus,
- * c'est une propriété : **rien de ce qui refuse ici ne dépend du préfixe**. Une
- * garde qui ne tiendrait que sous `/vercel` n'est pas une garde, c'est une
- * coïncidence — et sur un vrai poste, elle serait le seul obstacle entre le
- * modèle et `~/.ssh`.
+ * Hence the loop on TWO layouts. What it keeps is not one more value,
+ * it is a property: **nothing that refuses here depends on the prefix**. A
+ * guard that would only fit under `/vercel` is not a guard, it's a
+ * coincidence — and on a real workstation, it would be the only obstacle between the
+ * model and `~/.ssh`.
  */
 const ROOTS = [
   ["microVM", cloudLayout()],
@@ -44,7 +44,7 @@ describe.each(ROOTS)("garde-fous de chemin (%s)", (_name, layout) => {
     });
 
     it("LÈVE sur un préfixe frère trompeur", () => {
-      // `<racine>/repo-evil` ne doit pas passer pour être dans `repo`.
+      // `<racine>/repo-evil` should not be considered to be in `repo`.
       expect(() => resolveWithin(BASE, "../repo-evil/x")).toThrow(/escapes/i);
     });
   });
@@ -67,26 +67,26 @@ describe.each(ROOTS)("garde-fous de chemin (%s)", (_name, layout) => {
     });
 
     it("refuse le préfixe frère trompeur", () => {
-      // `<sorties>-evil` n'est pas `<sorties>` : il ne matche pas l'exception, donc
-      // il retombe en chemin dépôt-relatif (et reste sous le dépôt) au lieu d'être
+      // `<sorties>-evil` is not `<sorties>`: it does not match the exception, so
+      // it falls back to the repository-relative path (and remains under the repository) instead of being
       // lu tel quel.
       expect(readable(`${TOOL_OUTPUT}-evil/x`).startsWith(`${BASE}/`)).toBe(true);
     });
 
     it("ne laisse JAMAIS un absolu quelconque atteindre l'hôte", () => {
-      // /etc/passwd ne vise aucune exception : il est re-rooté dans le dépôt (où il
-      // n'existe pas) plutôt que lu. La propriété qui compte : le résultat reste
-      // sous une racine autorisée.
+      // /etc/passwd does not intend any exception: it is re-rooted in the repository (where it
+      // does not exist) rather than read. The property that counts: the result remains
+      // under an authorized root.
       const resolved = readable("/etc/passwd");
       expect(resolved).toBe(`${BASE}/etc/passwd`);
       expect(resolved.startsWith(`${BASE}/`)).toBe(true);
     });
 
     /**
-     * LE DOSSIER PERSONNEL, QUI N'EXISTE QUE HORS MICROVM. Un `~` développé par
-     * le modèle donne un absolu ordinaire : il ne vise aucune exception, il est
-     * re-rooté dans le dépôt, et rien du vrai `$HOME` n'est lu.
-     */
+ * THE PERSONAL FILE, WHICH ONLY EXISTS OUTSIDE MICROVM. A `~` developed by
+ * the model gives an ordinary absolute: it does not target any exceptions, it is
+ * re-rooted in the repository, and nothing from the real `$HOME` is read.
+ */
     it("re-roote un chemin du dossier personnel au lieu de le lire", () => {
       const resolved = readable("/Users/dev/.ssh/id_ed25519");
       expect(resolved).toBe(`${BASE}/Users/dev/.ssh/id_ed25519`);
@@ -101,17 +101,17 @@ describe.each(ROOTS)("garde-fous de chemin (%s)", (_name, layout) => {
 
     it("autorise un fichier normal", () => {
       expect(() => assertNotGit(BASE, `${BASE}/src/x.ts`, "src/x.ts")).not.toThrow();
-      // .gitignore n'est PAS dans .git/
+      // .gitignore is NOT in .git/
       expect(() => assertNotGit(BASE, `${BASE}/.gitignore`, ".gitignore")).not.toThrow();
     });
 
     /**
-     * MIN-360 — CE QUE LE DISQUE RÉEL AJOUTE.
-     *
-     * Le préfixe brut sur la racine tenait tant que le dépôt était un clone
-     * jetable sur l'ext4 d'une microVM. Sur le Mac de quelqu'un, il rate deux
-     * chemins qui désignent exactement le même pouvoir : un hook.
-     */
+ * MIN-360 — WHAT THE ACTUAL DISK ADDED.
+ *
+ * The raw prefix on the root held as long as the repository was a disposable clone
+ * on the ext4 of a microVM. On someone's Mac, they're missing two
+ * paths that denote the exact same power: a hook.
+ */
     it("replie la casse — APFS ne distingue pas `.GIT/` de `.git/`", () => {
       expect(() => assertNotGit(BASE, `${BASE}/.GIT/hooks/pre-commit`, ".GIT/hooks/pre-commit"))
         .toThrow(/\.git/i);
@@ -119,14 +119,14 @@ describe.each(ROOTS)("garde-fous de chemin (%s)", (_name, layout) => {
     });
 
     it("refuse un `.git` IMBRIQUÉ, pas seulement celui de la racine", () => {
-      // Sous-module, dépôt imbriqué, fixture de test : le hook y a le même pouvoir.
+      // Submodule, nested repository, test fixture: the hook has the same power.
       expect(() => assertNotGit(BASE, `${BASE}/packages/ui/.git/hooks/post-checkout`, "packages/ui/.git/hooks/post-checkout"))
         .toThrow(/\.git/i);
     });
 
     it("ne se laisse pas troubler par une racine qui contient le mot", () => {
-      // La racine est donnée par le harness : ce qui s'y trouve ne vient pas du
-      // modèle, et seul ce qui est SOUS elle est inspecté.
+      // The root is given by the harness: what is there does not come from
+      // model, and only what is UNDER it is inspected.
       const root = "/Users/dev/.github/minddy";
       expect(() => assertNotGit(root, `${root}/lib/x.ts`, "lib/x.ts")).not.toThrow();
       expect(() => assertNotGit(root, `${root}/.git/config`, ".git/config")).toThrow(/\.git/i);

@@ -1,11 +1,11 @@
 /**
- * `server-only` n'existe qu'à travers le bundler de Next : un module qui
- * l'importe est illisible sous vitest (« Cannot find package 'server-only' »).
- * L'aliaser sur ce fichier vide rend testables les modules serveur qui sont
- * PURS malgré le garde-fou — `lib/server/agent/tools.ts`, dont `agentToolsFor`
- * décide du jeu de tools servi au modèle (MIN-115).
+ * `server-only` only exists through the Next bundler: a module which
+ * imports is unreadable under vitest ("Cannot find package 'server-only'").
+ * Aliasing it on this empty file makes server modules which are
+ * PURE despite the guardrail — `lib/server/agent/tools.ts`, including `agentToolsFor`
+ * decides the set of tools used for the model (MIN-115).
  *
- * Ça ne change rien au build : l'alias ne vit que dans vitest.config.ts, et le
- * vrai garde-fou reste en place côté Next.
+ * This does not change anything in the build: the alias only lives in vitest.config.ts, and the
+ * real guardrail remains in place on the Next side.
  */
 export {};

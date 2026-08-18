@@ -33,60 +33,60 @@ import type { VmTurnReport } from "./vm/protocol";
 import { localDiffPayload } from "./local-diff-payload";
 
 /**
- * LA MISE AU REPOS D'UN TOUR JOUÉ DANS LA MICROVM (MIN-224).
+ * STOPPING A ROUND PLAYED IN THE MICROVM (MIN-224).
  *
- * La boucle a fini, a poussé son travail, et a rendu son rapport au plan de
- * contrôle. Tout ce qui suit demande la base et la forge — donc la fonction, et
- * pas la VM : l'événement `files_changed`, la réouverture d'une pull request
- * refusée, la mise au repos de la ligne, la notification, le métrage compute.
+ * The loop finished, pushed its work, and returned its report to the
+ * control plane. Everything that follows requires the base and the forge — therefore the function, and
+ * not the VM: the `files_changed` event, the reopening of a refused pull request
+ *, the idling of the line, the notification, the compute footage.
  *
- * CE QUI EST PLUS SIMPLE QU'AVANT, et c'est le dossier du ticket. `executeAgentRun`
- * a HUIT sorties de repos, parce qu'un chunk peut finir de huit façons — suspendu,
- * différé, à court de continuations, en attente d'un fournisseur en panne… Ici il
- * y en a QUATRE, et ce sont les seules qui aient jamais eu un sens pour
- * l'utilisateur : le tour a fini, il a été interrompu, il a échoué, ou le budget
- * est épuisé. Tout le reste était de la plomberie de découpage.
+ * WHAT IS SIMPLER THAN BEFORE, and this is the ticket file. `executeAgentRun`
+ * has EIGHT exits from quiesce, because a chunk can end up in eight ways — suspended,
+ * deferred, running out of continuations, waiting for a failed provider... Here there
+ * are FOUR, and these are the only ones that have ever made sense for
+ * the user: the round has ended, it has been interrupted, it has failed, or the budget
+ * is exhausted. Everything else was slicing plumbing.
  *
- * CE QUI EST IDENTIQUE, et doit le rester : les mots, les events, l'ordre.
- * L'atterrissage sur la pull request passe par [pr-landing.ts](pr-landing.ts),
- * partagé avec l'ancienne forme — c'est ce qui rend vérifiable le critère de
- * bascule du cadrage (« le fil raconte la même chose sur le même ticket »).
+ * WHAT IS THE SAME, and should stay the same: the words, the events, the order.
+ * Landing on the pull request goes through [pr-landing.ts](pr-landing.ts),
+ * shared with the old form — this is what makes the criterion of
+ * toggle of the framing (“the thread says the same thing on the same ticket”) verifiable.
  */
 
 /**
- * LE MÉTRAGE COMPUTE EST UNE DURÉE, PAS UNE DÉCLARATION (MIN-329).
+ * THE COMPUTE METAGE IS A DURATION, NOT A STATEMENT (MIN-329).
  *
- * `report.sandboxMs` est un nombre que la microVM envoie et qui devient
- * directement des dollars sur le compte du propriétaire du run
- * (`recordSandboxUsage` : minutes × tarif). Une VM dont la boucle a été détournée
- * facturait donc ce qu'elle voulait à quelqu'un d'autre. Aucune VM ne vit plus
- * longtemps que son propre timeout (`SANDBOX_TIMEOUT_MS`, sandbox.ts, 24 h) :
- * au-delà, ce n'est plus une horloge, et on coupe. Recopié plutôt qu'importé —
- * `sandbox.ts` tire le SDK Vercel, qui n'a rien à faire dans ce chemin-ci.
+ * `report.sandboxMs` is a number that the microVM sends that becomes
+ * directly in the account of the owner of the run
+ * (`recordSandboxUsage`: minutes × price). A VM whose loop was hijacked
+ * therefore charged someone else what it wanted. No VM lives longer
+ * than its own timeout (`SANDBOX_TIMEOUT_MS`, sandbox.ts, 24 h):
+ * beyond that, it is no longer a clock, and we cut it. Copyed rather than imported —
+ * `sandbox.ts` pulls the Vercel SDK, which has nothing to do in this path.
  */
 export const MAX_SANDBOX_MS = 24 * 60 * 60_000;
 
 /**
- * CE QU'ON FACTURE DE COMPUTE POUR CE TOUR — la règle générale, écrite une fois
- * (MIN-360) :
+ * WHAT WE CHARGE COMPUTE FOR THIS ROUND — the general rule, written once
+ * (MIN-360):
  *
- * **Aucune valeur portant une conséquence financière ne vient d'un process local
- * sans borne serveur.**
+ * **No value with financial consequences comes from a local process
+ * without bound server.**
  *
- * Deux bornes, et elles ne disent pas la même chose :
+ * Two terminals, and they do not say the same thing:
  *
- * - **un run LOCAL ne facture RIEN.** Il n'y a pas eu de microVM : le wall-clock
- *   remonté est celui du Mac de l'utilisateur, et le convertir en dollars
- *   reviendrait à lui faire payer une machine qu'il a lui-même fournie. La marque
- *   « run local » est celle de la LIGNE (`agent_runs.local_exec`, posée au
- *   lancement), jamais un champ du rapport — le rapport vient du process qu'on
- *   soupçonne, et un harness détourné se dirait cloud ;
- * - **un run cloud est plafonné** à la durée de vie d'une microVM. Au-delà, ce
- *   n'est plus une horloge.
+ * - **a LOCAL run charges NOTHING.** There was no microVM: the wall-clock
+ * returned is that of the user's Mac, and convert it to dollars
+ * would be like making him pay for a machine that he himself provided. The mark
+ * "run local" is that of the LINE (`agent_runs.local_exec`, placed at
+ * launch), never a field of the report - the report comes from the process that one
+ * suspects, and a diverted harness would be called cloud;
+ * - **a cloud run is capped** at the lifetime of a microVM. Beyond that, this
+ * is no longer a clock.
  *
- * Le chien de garde ([drain.ts](drain.ts)) tient la même règle sur son propre
- * chemin, et il la tient mieux encore : il calcule la durée depuis `started_at`,
- * donc l'horloge y est celle du serveur de bout en bout.
+ * The watchdog ([drain.ts](drain.ts)) holds the same rule on its own
+ * path, and it holds it even better: it calculates the duration since `started_at`,
+ * so the clock there is that of the end-to-end server.
  */
 export function billableSandboxMs(reported: number, opts: { localExec: boolean }): number {
   if (opts.localExec) return 0;
@@ -99,10 +99,9 @@ function cap(str: string, max: number): string {
 }
 
 /**
- * Fait atterrir le tour. Ne LÈVE jamais vers l'appelant HTTP sur un détail : ce
- * qui compte est que la ligne du run quitte `running`. Un event raté, une PR non
- * rouverte, une notification perdue sont des dégradations ; un run laissé
- * `running` est une conversation bloquée jusqu'au passage du chien de garde.
+ * Lands the trick. Never ROSE to the HTTP caller on a detail: what matters is that the run line leaves `running`. A missed event, a PR not
+ * reopened, a lost notification are degradations; a run left
+ * `running` is a conversation blocked until the watchdog passes.
  */
 export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<void> {
   const emit: EmitAgentEvent = (type, payload) => appendEvent(run.id, type, payload);
@@ -113,29 +112,29 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
     : { unattributed: `run ${run.id} sans created_by` };
 
   /**
-   * LE MÉTRAGE DE LA MICROVM, et il change de main ici (MIN-221 §3).
-   *
-   * `recordSandboxUsage` facturait le wall-clock du CHUNK depuis le `finally` de
-   * la fonction. Sans chunk, plus personne ne tient cette horloge : c'est la
-   * boucle qui la tient, dans la VM, du début à la fin du tour, et qui la remonte
-   * dans son rapport. **C'est la moitié compute de la facture** — elle
-   * disparaîtrait en silence si on l'oubliait, et personne ne s'en apercevrait
-   * avant de comparer la marge à la facture Vercel.
-   *
-   * Écrit AVANT le reste : le reste peut échouer, cette ligne-là ne doit pas.
-   *
-   * ET BORNÉ CÔTÉ SERVEUR (MIN-360) : `billableSandboxMs` lit la marque de la
-   * LIGNE, pas du rapport — un run local ne facture aucun compute, et un rapport
-   * qui prétendrait le contraire n'a pas voix au chapitre.
-   */
+ * THE METAGE OF THE MICROVM, and it changes hands here (MIN-221 §3).
+ *
+ * `recordSandboxUsage` charged the CHUNK wall-clock from the `finally` of
+ * function. Without chunk, no one keeps this clock anymore: it is the
+ * loop which keeps it, in the VM, from the start to the end of the round, and which brings it back
+ * in its report. **It's the computed half of the invoice** — it
+ * would disappear silently if we forgot it, and no one would notice
+ * before comparing the margin to the Vercel invoice.
+ *
+ * Written BEFORE the rest: the rest can fail, this line must not not.
+ *
+ * AND BOUNDED ON THE SERVER SIDE (MIN-360): `billableSandboxMs` reads the mark of the
+ * LINE, not the report — a local run does not charge any compute, and a report
+ * which claims the opposite has no voice in the chapter.
+ */
   const sandboxMs = billableSandboxMs(report.sandboxMs, { localExec: !!run.local_exec });
   if (sandboxMs > 0) {
     await recordSandboxUsage({
       runId: run.run_id ?? run.id,
-      // La bande de seq est celle des lignes `sandbox_compute` ; un tour = une
-      // ligne, indexée par le compteur de tours qu'est `continuations` sur la
-      // ligne du run (toujours 0 dans la nouvelle forme, mais la bande reste
-      // celle-là pour qu'un run migré ne collisionne pas avec son passé).
+      // The seq band is that of the `sandbox_compute` lines; one turn = one
+      // line, indexed by the lap counter that is `continuations` on the
+      // line of the run (still 0 in the new form, but the strip remains
+      // this one so that a migrated run does not collide with its past).
       seq: SANDBOX_USAGE_SEQ_BASE + run.continuations,
       billTo,
       feature: run.routine_id ? "routine_compute" : "sandbox_compute",
@@ -144,10 +143,10 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
     }).catch(() => {});
   }
 
-  // Le checkpoint a dû lâcher la CONVERSATION pour tenir dans son gabarit : ça se
-  // dit, sinon l'agent semble avoir tout oublié sans raison au tour suivant. Les
-  // paliers d'avant (historiques de filles, images, sorties de tools) ne perdent
-  // que du re-demandable et ne se disent pas.
+  // The checkpoint had to drop the CONVERSATION to fit within its size: that’s
+  // said, otherwise the agent seems to have forgotten everything for no reason in the next round. THE
+  // levels from before (girl histories, images, tool outputs) do not lose
+  // only what is re-askable and cannot be said.
   if (report.checkpointDropped.includes("history")) {
     await emit("error", {
       code: "turnHistoryReset",
@@ -159,9 +158,9 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
 
   const { locale } = await resolveRunPrefs(run);
 
-  // Push raté → SIGNAL VISIBLE. Un rejet non-fast-forward n'est pas transitoire
-  // (quelqu'un a poussé sur la branche de l'agent) : sans signal, chaque tour
-  // re-échouerait en silence et l'utilisateur croirait le travail livré.
+  // Push failed → SIGNAL VISIBLE. A non-fast-forward rejection is not transient
+  // (someone pushed on the agent's branch): without signal, each turn
+  // would re-fail silently and the user would believe the work delivered.
   if (report.pushError) {
     await emit("error", {
       message: (PUSH_FAILED_STRINGS[locale] ?? PUSH_FAILED_STRINGS.en)(
@@ -170,15 +169,15 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
     });
   }
 
-  // Atterrissage sur la pull request. Best-effort de bout en bout : le travail
-  // est déjà sur le dépôt à ce stade, et un run qui reste `running` parce que la
-  // forge répond 502 serait un mal bien pire.
+  // Landing on the pull request. Best-effort end-to-end: the work
+  // is already on the repository at this point, and a run that remains `running` because the
+  // forge responds 502 would be a much worse evil.
   const prState = { number: run.pr_number, url: run.pr_url, state: run.pr_state };
   await landOnPullRequest(run, report, prState, emit, locale).catch((err) => {
     console.error("[agent-vm-rest] pull request landing failed:", (err as Error).message);
   });
 
-  // Le diff du tour, calculé par git DANS la VM (la fonction n'a plus le dépôt).
+  // The diff of the round, calculated by git IN the VM (the function no longer has the repository).
   if (report.changed && (report.changed.files.length > 0 || report.changed.diff)) {
     await emit("files_changed", {
       files: report.changed.files,
@@ -187,14 +186,14 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
     });
   }
 
-  // ── La mise au repos ───────────────────────────────────────────────────────
+  // ── Resting ─────────────────────────── ────────────────────────────
   /**
-   * Ce que la dépense du run vaut VRAIMENT, relu au ledger (MIN-215) plutôt que
-   * cumulé sur la colonne. La colonne n'est écrite que par les sorties saines ;
-   * le ledger, lui, est écrit appel par appel, y compris par un tour qui est mort
-   * sans rien stamper. Le MAX des deux : ce sont deux minorants, le plus grand
-   * est le plus vrai, et une dépense affichée ne doit jamais reculer.
-   */
+ * What the run expense is REALLY worth, read from the ledger (MIN-215) rather than
+ * accumulated on the column. The column is only written by healthy outputs;
+ * the ledger is written call by call, including by a turn that is dead
+ * without stamping anything. The MAX of the two: these are two lower bounds, the larger
+ * is the truest, and a displayed expense must never decrease.
+ */
   const ledger = await spentFromLedger(run.run_id ?? run.id).catch(() => null);
   const newCost = Math.max(run.cost_usd + report.costUsd, ledger ?? 0);
 
@@ -203,31 +202,31 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
     attempts: 0,
     cost_usd: newCost,
     /**
-     * Le checkpoint n'est écrit que si le rapport en porte un. Un rapport de
-     * SECOURS (le tour a levé) n'en porte pas : celui qui est en base vient de la
-     * sauvegarde périodique, à une frontière de round sûre, et l'écraser par
-     * l'historique laissé au milieu d'un round donnerait au tour suivant un
-     * `tool_call` sans son `tool_result` — plus la perte de `lastFilesSha`, donc
-     * un diff de tour recalculé depuis la mauvaise base.
-     */
+ * The checkpoint is only written if the report has one. A report of
+ * RESCUE (the turn raised) does not carry any: the one in base comes from the
+ * periodic backup, at a safe round boundary, and overwriting it with
+ * the history left in the middle of a round would give the next turn a
+ * `tool_call` without sound `tool_result` — plus the loss of `lastFilesSha`, therefore
+ * a turn diff recalculated from the wrong base.
+ */
     ...(report.checkpoint ? { checkpoint: report.checkpoint } : {}),
-    // La microVM reste CHAUDE (le reaper la coupera après ~5 min d'inactivité) :
-    // c'est ce qui rend la reprise à chaud instantanée sur le message suivant.
+    // The microVM remains HOT (the reaper will shut it down after ~5 min of inactivity):
+    // this is what makes hot restart instantaneous on the following message.
     sandbox_stopped_at: null,
     last_activity_at: nowIso,
     interrupt_requested: false,
     awaiting_input: false,
-    // Le process de boucle est fini. Laisser son id sur la ligne ferait constater
-    // au chien de garde un décès sur un run déjà au repos, à chaque passage.
+    // The loop process is finished. Leaving your ID on the line would cause you to notice
+    // to the watchdog a death on a run already at rest, on each pass.
     loop_command_id: null,
   } satisfies Partial<Parameters<typeof stampRun>[1]>;
 
   /**
-   * Un message de steering arrivé APRÈS la dernière frontière de round (pendant
-   * le push, pendant ce rapport) : on RE-QUEUE au lieu de reposer, et le drain
-   * relancera un tour qui le drainera aussitôt. Sans ça le message resterait en
-   * file sans personne pour le lire — un utilisateur qui écrit et n'obtient rien.
-   */
+ * A steering message arrived AFTER the last round border (during
+ * the push, during this report): we RE-QUEUE instead of resting, and the drain
+ * will restart a turn which will drain it immediately. Otherwise the message would remain in
+ * queue with no one to read it — a user who writes and gets nothing.
+ */
   const restStamp = async (extra: Partial<Parameters<typeof stampRun>[1]>): Promise<boolean> => {
     const pending = await hasPendingRunMessages(run.id).catch(() => false);
     await stampToRest({
@@ -240,19 +239,17 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
   };
 
   /**
-   * LA MISE AU REPOS DOIT ABOUTIR, MÊME SI LA BASE REFUSE LE CHECKPOINT (MIN-286).
-   *
-   * `stampRun` avale son erreur : un refus laissait le run `running` alors que la
-   * VM venait de rendre son rapport et s'apprêtait à mourir — plus personne pour
-   * conclure, une conversation figée à l'écran, et le chien de garde qui finit par
-   * la ranger en « le processus s'est arrêté ». C'est arrivé le 2026-08-12, sur un
-   * octet nul dans le journal d'opencode.
-   *
-   * On retente donc SANS le checkpoint, qui est le seul champ gros et venu du
-   * modèle. Ce qu'on perd alors est la mémoire du dernier tour — celle que la base
-   * refusait de toute façon —, et ce qu'on garde est une session au repos, qu'un
-   * message réveille.
-   */
+ * THE STOP MUST SUCCEED, EVEN IF THE BASE REFUSES THE CHECKPOINT (MIN-286).
+ *
+ * `stampRun` swallows its error: a refusal left the run `running` while the
+ * VM had just submitted his report and was about to die - no one left to conclude, a conversation frozen on the screen, and the watchdog who ended up classifying it as "the process has stopped". It happened on 2026-08-12, on a
+ * zero byte in the opencode log.
+ *
+ * We therefore try again WITHOUT the checkpoint, which is the only large field and comes from the
+ * model. What we then lose is the memory of the last round - the one that the base
+ * refused anyway -, and what we keep is an idle session, which a
+ * message wakes up.
+ */
   async function stampToRest(fields: Parameters<typeof stampRun>[1]): Promise<void> {
     const first = await stampRunResult(run.id, fields);
     if (!first.failed) return;
@@ -275,7 +272,7 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
   if (report.status === "budget_exhausted") {
     await emitBudgetExhausted(run, emit);
     // Volontairement PAS `restStamp` : celui-ci re-queue s'il reste du steering,
-    // ce qui relancerait aussitôt un tour sans budget. Le message attend.
+    // which would immediately restart a tour without a budget. The message is waiting.
     await stampToRest({ status: "completed", ...restFields });
     await notifyAgentRun(run, "agent_failed");
     await revokeKey(run);
@@ -291,35 +288,35 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
 
   if (report.status === "error") {
     /**
-     * LE FOURNISSEUR EN PANNE N'EST PAS UNE FIN DE TOUR (MIN-219), et c'est ce
-     * que ce chemin avait perdu.
-     *
-     * La boucle a épuisé ses reprises d'appel (4 essais, ≤ 3,5 s cumulées) : ce
-     * tour n'a rien fait avancer, il a ATTENDU. Il ne se repose donc pas — il
-     * repart en file avec un délai devant lui, et le compteur d'attente voyage
-     * sur le checkpoint, seul état qui traverse deux tours. Sans ce délai, le
-     * drain reclaimerait dans la foulée et retomberait dans la même panne à la
-     * seconde près.
-     *
-     * Le compteur se lit sur la LIGNE, et le checkpoint à écrire vient du
-     * RAPPORT : les deux ne sont pas le même objet, et les confondre suffit à
-     * rendre l'attente infinie. Celui du rapport est reconstruit à neuf par
-     * `buildCheckpoint` ([vm/turn.ts](vm/turn.ts)), qui ne connaît pas ce
-     * champ — le lire là repartirait de 1 à chaque panne, et `MAX_PROVIDER_REQUEUES`
-     * ne bornerait plus rien.
-     *
-     * C'est aussi ce qui rend le compte CONSÉCUTIF sans rien coder pour : toute
-     * mise au repos écrit un checkpoint qui ne porte pas le champ, donc un tour
-     * qui avance remet le compteur à zéro de lui-même.
-     *
-     * SAUF si un message attend : l'utilisateur qui écrit pendant la panne est le
-     * seul signal qui vaille qu'on retente tout de suite. Le compteur monte quand
-     * même — la sortie de secours reste bornée.
-     */
+ * THE FAILED SUPPLIER IS NOT END OF TURN (MIN-219), and it is this
+ * that this path had lost.
+ *
+ * The loop has exhausted its call restarts (4 tries, ≤ 3.5 s cumulative): this
+ * round didn't move anything forward, it WAITED. He therefore does not rest - he
+ * leaves in line with a deadline ahead of him, and the waiting counter travels
+ * on the checkpoint, the only state which crosses two turns. Without this delay, the
+ * drain would immediately reclaim and fall back into the same failure at the
+ * second.
+ *
+ * The counter is read on the LINE, and the checkpoint to write comes from the
+ * REPORT: the two are not the same object, and confusing them is enough to
+ * make the wait infinite. That of the report is rebuilt anew by
+ * `buildCheckpoint` ([vm/turn.ts](vm/turn.ts)), which does not know this
+ * field — reading it there would start from 1 at each failure, and `MAX_PROVIDER_REQUEUES`
+ * would no longer limit nothing.
+ *
+ * This is also what makes the count CONSECUTIVE without coding anything for: any
+ * putting to rest writes a checkpoint which does not carry the field, so a turn
+ * which advances resets the counter to zero by itself.
+ *
+ * EXCEPT if a message is waiting: the user who writes during the outage is the
+ * only signal worth trying again straight away. The counter rises when
+ * even — the emergency exit remains limited.
+ */
     const stallCheckpoint =
       report.errorCode === "providerUnavailable" ? (report.checkpoint ?? run.checkpoint) : null;
-    // Pas de checkpoint du tout ⇒ pas de re-queue : le compteur n'aurait nulle
-    // part où voyager, et une attente non bornée est pire qu'un repos honnête.
+    // No checkpoint at all ⇒ no re-queue: the counter would have zero
+    // where to travel, and unbounded waiting is worse than honest rest.
     const stall = stallCheckpoint
       ? planProviderStall(run.checkpoint?.providerRetries ?? 0)
       : null;
@@ -331,24 +328,24 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
         checkpoint: { ...stallCheckpoint, providerRetries: stall.retries },
         not_before: new Date(Date.now() + (steering ? 0 : stall.delayMs)).toISOString(),
       });
-      // Aucun event ici : le fil porte déjà la note « le fournisseur a hoqueté »
-      // que la boucle vient d'émettre (`status: transient_error`), et elle dit
-      // vrai — le tour repart. Un `error` par-dessus annoncerait un arrêt qui
-      // n'a pas lieu. C'est mot pour mot ce que fait l'ancienne forme.
+      // No events here: the thread already bears the note “the supplier hiccuped”
+      // that the loop has just issued (`status: transient_error`), and it says
+      // true — the round starts again. A `error` on top would announce a stop which
+      // does not take place. This is word for word what the old form does.
       await revokeKey(run);
       return;
     }
 
     /**
-     * Un CODE, traduit par le fil — les MÊMES que l'ancienne forme
-     * ([execute.ts](execute.ts)), pour que le tour se raconte pareil des deux
-     * côtés. Sans cet event, la fin de tour était MUETTE : `error_message` n'est
-     * lu par rien dans `components/agent/`, il n'est qu'exposé par l'API.
-     *
-     * Le repli en anglais est celui d'un client qui ne connaîtrait pas le code
-     * (et la trace lisible dans la table d'events) — la phrase que l'utilisateur
-     * lit vient, elle, de `ERROR_CODE_KEYS` et des deux catalogues.
-     */
+ * A CODE, translated by the thread — the SAME as the old form
+ * ([execute.ts](execute.ts)), so that the trick is told the same on both
+ * sides. Without this event, the end of the turn was MUTE: `error_message` is
+ * read by nothing in `components/agent/`, it is only exposed by the API.
+ *
+ * The fallback in English is that of a client who does not know the code
+ * (and the readable trace in the events table) — the sentence that the user
+ * reads comes from `ERROR_CODE_KEYS` and the two catalogs.
+ */
     if (report.errorCode) {
       await emit("error", {
         code: report.errorCode,
@@ -369,8 +366,8 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
   // Fin de tour NATURELLE.
   const pending = await restStamp({
     outcome: report.reply ? cap(report.reply, 4000) : null,
-    // Tour terminé sur un `ask_user` → la session ATTEND : point jaune sur les
-    // surfaces tant que l'utilisateur n'a pas répondu.
+    // Round ended on a `ask_user` → the session WAITS: yellow dot on the
+    // surfaces until the user responds.
     ...(report.askedUser ? { awaiting_input: true } : {}),
     ...(report.pushError ? { error_message: cap(report.pushError, 1000) } : {}),
   });
@@ -381,11 +378,10 @@ export async function landVmTurn(run: AgentRun, report: VmTurnReport): Promise<v
 }
 
 /**
- * La clé LLM du run n'a plus personne pour s'en servir : le process de boucle est
- * mort. Révoquée ici plutôt qu'attendue au reaper d'inactivité — celui-ci la
- * révoque aussi (cinq minutes plus tard), mais entre les deux la clé reste vivante
- * sur une microVM que le modèle peut encore atteindre s'il a laissé un job de
- * fond. Best-effort et idempotent.
+ * The LLM key of the run no longer has anyone to use it: the loop process is
+ * dead. Revoked here rather than waiting for the inactivity reaper — this one also revokes it (five minutes later), but in between the key remains alive
+ * on a microVM that the model can still reach if it left a job of
+ * in the background. Best-effort and idempotent.
  */
 async function revokeKey(run: AgentRun): Promise<void> {
   if (!run.provider_key_id) return;
@@ -396,10 +392,10 @@ async function revokeKey(run: AgentRun): Promise<void> {
 }
 
 /**
- * Ce que le push du tour change côté pull request : la branche enregistrée au
- * premier push réel, la PR refusée rouverte, les commits tracés au ticket, et la
- * note du cas particulier — une PR fusionnée PENDANT le tour, dont le travail
- * poussé n'appartient plus à rien.
+ * What the push of the round changes on the pull request side: the branch saved at the
+ * first actual push, the rejected PR reopened, the commits traced to the ticket, and the
+ * note of the special case — a PR merged DURING the round, whose work
+ * pushed no longer belongs to nothing.
  */
 async function landOnPullRequest(
   run: AgentRun,
@@ -413,8 +409,8 @@ async function landOnPullRequest(
   const target = await resolveRepoCloneTarget(run.project_id);
   if (!target) return;
 
-  // La branche n'existe pour l'app qu'à partir du premier push RÉEL : c'est lui
-  // qui la crée sur le dépôt (MIN-123).
+  // The branch only exists for the app from the first REAL push: it's him
+  // which creates it on the repository (MIN-123).
   if (!run.branch_name && report.workBranch) {
     await stampRun(run.id, { branch_name: report.workBranch }).catch((err) => {
       console.error("[agent-vm-rest] branch stamp failed:", (err as Error).message);
@@ -435,8 +431,8 @@ async function landOnPullRequest(
   };
 
   await reopenIfRejectedWorkPushed(ctx, report.pushed, target.token);
-  // APRÈS la réouverture : elle recale `prState` sur la base, donc un push qui
-  // ressuscite une PR refusée se raconte sur la bonne PR.
+  // AFTER reopening: it resets `prState` on the base, therefore a push which
+  // resurrects a rejected PR and tells it about the good PR.
   await notePrCommits(ctx, report.pushed);
 
   if (report.pushed.remoteUpdated && prState.state === "merged" && prState.number != null) {
@@ -463,10 +459,10 @@ async function identifierOf(run: AgentRun): Promise<string | null> {
 }
 
 /**
- * La carte « budget épuisé », mot pour mot celle de l'ancienne forme : deux
- * causes derrière la même frontière, et elles ne se règlent pas pareil — le
- * budget du COMPTE est à zéro (attendre, monter de plan, passer en BYOK), ou
- * c'est le plafond posé sur CE run qui a mordu, et le compte va très bien.
+ * The "exhausted budget" card, word for word that of the old form: two
+ * causes behind the same border, and they are not resolved the same - the
+ * budget of the ACCOUNT is at zero (wait, go up plan, switch to BYOK), or
+ * it is the ceiling placed on THIS run which has bitten, and the account will very good.
  */
 async function emitBudgetExhausted(run: AgentRun, emit: EmitAgentEvent): Promise<void> {
   const quota = await checkAgentQuota(run.created_by ?? "").catch(() => null);

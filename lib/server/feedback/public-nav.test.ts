@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-342 — la navigation du site public listait les vues partagées PROTÉGÉES
- * par mot de passe, avec leur nom et leur token. La page de ces vues, elle, ne
- * dit rien d'elle-même tant qu'on n'a pas le mot de passe (pas même son nom) :
- * l'onglet annulait cette discrétion, et donnait l'URL par-dessus.
+ * MIN-342 — the public site navigation listed shared views PROTECTED
+ * by password, with their name and token. The page of these views does not
+ * say anything about itself as long as you do not have the password (not even its name):
+ * the tab canceled this discretion, and gave the URL on top.
  */
 
 interface ShareRow {
@@ -15,7 +15,7 @@ interface ShareRow {
 
 let shares: ShareRow[] = [];
 let board: Record<string, unknown> | null = null;
-/** Les filtres `.eq()` réellement posés — la garde EST le filtre. */
+/** The `.eq()` filters actually installed — the guard IS the filter. */
 let filters: [string, unknown][] = [];
 
 vi.mock("@/lib/server/feedback/boards", () => ({
@@ -81,8 +81,8 @@ describe("getPublicSiteTabs", () => {
       current: { kind: "feedback" },
     });
     expect(tabs.map((t) => t.href)).toEqual(["/f/board-token", "/share/tok-open"]);
-    // Ni le nom, ni le token : la requête les écarte à la source plutôt que de
-    // les lire pour les jeter ensuite.
+    // Neither the name nor the token: the query discards them at the source rather than
+    // read them and then throw them away.
     expect(filters).toContainEqual(["level", "public"]);
     expect(JSON.stringify(tabs)).not.toContain("tok-locked");
     expect(JSON.stringify(tabs)).not.toContain("Interne");
@@ -90,7 +90,7 @@ describe("getPublicSiteTabs", () => {
 
   it("rend une navigation vide quand la seule vue partagée est verrouillée", async () => {
     shares = shares.filter((s) => s.level === "password");
-    // Un seul onglet restant (le board) = rien à montrer.
+    // Only one tab remaining (the board) = nothing to show.
     expect(
       await getPublicSiteTabs({
         projectId: "proj",

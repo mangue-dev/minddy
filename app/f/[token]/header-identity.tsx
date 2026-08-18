@@ -17,16 +17,16 @@ import { logoutAction } from "./actions";
 import { FeedbackAuthDialog } from "./feedback-auth";
 import { IdentityAvatar } from "./feedback-bits";
 
-/** Identité du visiteur dans le header du site public : « S'authentifier »
-    (porte OTP) ou l'avatar seul — les actions (Mes feedbacks, déconnexion)
-    vivent dans un dropdown, à l'abri des clics accidentels. */
+/** Visitor identity in the header of the public site: “Authenticate”
+ (OTP door) or the avatar alone — the actions (My feedback, disconnection)
+ live in a dropdown, protected from accidental clicks. */
 export function HeaderIdentity({
   token,
   basePath,
   identity,
 }: {
   token: string;
-  /** Préfixe public des liens : /f/<token>, ou "" sur domaine personnalisé. */
+  /** Public link prefix: /f/<token>, or "" on custom domain. */
   basePath: string;
   identity: PublicIdentity | null;
 }) {
@@ -62,9 +62,9 @@ export function HeaderIdentity({
           <MessagesSquare className="size-4" />
           {t("myFeedback")}
         </DropdownMenuItem>
-        {/* Aller voir ses retours et fermer sa session sont deux gestes de
-            nature différente, et le second ne se rattrape pas : le filet les
-            sépare pour qu'un clic ne glisse pas de l'un à l'autre. */}
+        {/* Going to see your feedback and closing your session are two gestures of
+ different nature, and the second does not catch up: the net separates them
+ so that a click does not slip from one to the other. */}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"
@@ -74,7 +74,7 @@ export function HeaderIdentity({
               try {
                 await logoutAction(token);
               } catch {
-                // le refresh re-synchronise l'état de session
+                // refresh re-synchronizes session state
               }
               router.refresh();
             })

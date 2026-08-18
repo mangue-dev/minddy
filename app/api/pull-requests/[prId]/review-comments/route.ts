@@ -10,16 +10,16 @@ import {
 } from "@/lib/server/agent/pr-actions";
 
 /**
- * Commentaires de review d'une pull request (MIN-143) — ceux ancrés à une ligne
- * du diff, par opposition au fil plat de `/comments`. Ce sont de VRAIS
- * commentaires de la forge : ils apparaissent sur la PR, et Numo les relit.
- *  GET   → { comments, threads } — les commentaires et l'état de leurs fils.
- *  POST  → { body, path, line, side }  poste sur une ligne
- *        | { body, in_reply_to }       répond dans un fil
- *  PATCH → { thread_id, resolved }     résout / rouvre un fil (MIN-139)
+ * Pull request review comments (MIN-143) — those anchored to a line
+ * of the diff, as opposed to the flat wire of `/comments`. These are REAL
+ * comments from the forge: they appear on the PR, and Numo rereads them.
+ * GET → { comments, threads } — comments and the status of their threads.
+ * POST → { body, path, line, side } post on a line
+ * | { body, in_reply_to } replies in a thread
+ * PATCH → { thread_id, resolved } resolves/reopens a thread (MIN-139)
  *
- * Un commentaire part IMMÉDIATEMENT (équivalent « Add single comment ») : pas de
- * review groupée, pas de brouillon.
+ * A comment leaves IMMEDIATELY (equivalent to “Add single comment”): no
+ * group review, no draft.
  */
 
 type RouteContext = { params: Promise<{ prId: string }> };

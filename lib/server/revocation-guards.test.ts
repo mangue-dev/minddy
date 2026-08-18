@@ -2,20 +2,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { canonicalSql, readBaseline } from "@/test/sql-migrations";
 
 /**
- * MIN-351 — CE QUI DOIT S'ARRÊTER QUAND ON EST RETIRÉ D'UN PROJET.
+ * MIN-351 — WHAT SHOULD STOP WHEN YOU'RE REMOVED FROM A PROJECT.
  *
- * Le fil rouge de ces cas est une seule confusion : « c'est moi qui l'ai écrit »
- * a été pris pour une autorisation. C'en est une preuve d'appartenance de la
- * LIGNE, pas du droit d'y toucher aujourd'hui. Retiré du projet, l'ancien membre
- * gardait donc la main sur ses commentaires, ses pièces jointes, et une fenêtre
- * de lecture continue sur les tickets par le truchement de son inbox — laquelle
- * réhydratait des titres et des extraits VIVANTS en clé service.
+ * The common thread in these cases is a single confusion: "I wrote it"
+ * was taken for authorization. This is proof of belonging to the
+ * LINE, not the right to touch it today. Removed from the project, the former member
+ * therefore kept control of his comments, his attachments, and a window
+ * for continuous reading on tickets via his inbox — which
+ * rehydrated titles and LIVE extracts into service key.
  *
- * Ce qu'on exerce ici : les deux gardes écrites en TypeScript (ressources,
- * notifications), et le contenu des policies pour celles qui vivent en SQL — la
- * base n'est pas joignable depuis la suite, mais la migration, elle, est la
- * source de vérité de ce qui y sera posé, et une garde retirée par distraction
- * se voit ici.
+ * This that we exercise here: the two guards written in TypeScript (resources,
+ * notifications), and the content of the policies for those who live in SQL — the
+ * database cannot be reached from the suite, but the migration is the
+ * source of truth of what will be placed there, and a guard removed by distraction
+ * is seen here.
  */
 
 const USER = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -24,7 +24,7 @@ const OTHER_PROJECT = "11111111-1111-4111-8111-111111111111";
 const RESOURCE = "22222222-2222-4222-8222-222222222222";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Décor commun
+// Common decor
 // ─────────────────────────────────────────────────────────────────────────────
 
 const getAuthedUser = vi.fn();
@@ -32,7 +32,7 @@ const getProjectAccess = vi.fn();
 const accessibleProjectIds = vi.fn();
 const removeStorageObjects = vi.fn();
 
-/** Ce que la clé service a réellement lu ou effacé, par table. */
+/** What the service key actually read or erased, per table. */
 const serviceCalls: { deleted: string[]; read: Record<string, string[][]> } = {
   deleted: [],
   read: {},
@@ -79,8 +79,8 @@ vi.mock("@/lib/supabase-service", () => ({
           }),
           in: (_column: string, ids: string[]) => {
             record(ids);
-            // Une ligne vivante par id demandé : ce test parle de ce qui est LU,
-            // pas du filtre de corbeille (`targetAlive`), qui écarterait tout si
+            // A live line per requested id: this test talks about what is READ,
+            // not the trash filter (`targetAlive`), which would discard everything if
             // l'hydratation rendait vide.
             const rows = ids.map((id) => ({ id, title: "t", number: 1, body: "b" }));
             return Object.assign(Promise.resolve({ data: rows, error: null }), {
@@ -134,11 +134,11 @@ beforeEach(() => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// La ressource : déposant ET membre
+// The resource: depositor AND member
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("DELETE /api/resources/[id]", () => {
-  it("refuse au déposant qui n'est plus membre du projet, sans rien effacer", async () => {
+  it("rejects a depositor who is no longer a project member without erasing anything", async () => {
     getProjectAccess.mockResolvedValue(null);
 
     const response = await deleteResource(req(), {
@@ -150,7 +150,7 @@ describe("DELETE /api/resources/[id]", () => {
     expect(removeStorageObjects).not.toHaveBeenCalled();
   });
 
-  it("laisse passer le déposant encore membre", async () => {
+  it("allows a depositor who is still a member through", async () => {
     getProjectAccess.mockResolvedValue({ isMember: true, isOwner: false, project: {} });
 
     const response = await deleteResource(req(), {
@@ -164,11 +164,11 @@ describe("DELETE /api/resources/[id]", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// L'inbox : ce qu'on a le droit de RELIRE
+// The inbox: what we have the right to RE-READ
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("GET /api/notifications", () => {
-  it("écarte les lignes d'un projet quitté, et ne va pas lire leur contenu", async () => {
+  it("discards rows from a project that was left and does not read their content", async () => {
     notificationRows = [
       { id: "n1", type: "comment", project_id: PROJECT, issue_id: "i1", comment_id: "c1" },
       {
@@ -179,21 +179,21 @@ describe("GET /api/notifications", () => {
         comment_id: "c2",
       },
     ];
-    // Le projet quitté ne ressort pas de la revérification d'accès.
+    // The left project does not appear in the access recheck.
     accessibleProjectIds.mockResolvedValue(new Set([PROJECT]));
 
     const response = await listNotifications(req());
     const body = (await response.json()) as { id: string }[];
 
     expect(body.map((n) => n.id)).toEqual(["n1"]);
-    // Et surtout : l'extrait du commentaire de l'autre projet n'a jamais été
-    // demandé. Filtrer l'affichage après coup n'aurait pas suffi — la lecture
-    // en clé service EST la fuite.
+    // And above all: the extract from the comment of the other project was never
+    // request. Filtering the display afterwards would not have been enough — reading
+    // in service key IS the leak.
     expect(serviceCalls.read.comments).toEqual([["c1"]]);
     expect(serviceCalls.read.issues).toEqual([["i1"]]);
   });
 
-  it("garde une ligne sans projet — il n'y a pas d'accès à revérifier", async () => {
+  it("keeps a row without a project — there is no access to recheck", async () => {
     notificationRows = [{ id: "n1", type: "assigned", project_id: null }];
     accessibleProjectIds.mockResolvedValue(new Set());
 
@@ -205,12 +205,12 @@ describe("GET /api/notifications", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Les gardes qui vivent en SQL
+// The guards who live in SQL
 // ─────────────────────────────────────────────────────────────────────────────
 
 const baselineSql = canonicalSql(readBaseline());
 
-/** Le corps d'une policy, de son `create policy` au `;` qui la ferme. */
+/** The body of a policy, from its `create policy` to the `;` which closes it. */
 function policyBody(sql: string, name: string): string {
   const start = sql.indexOf(`create policy ${name} `);
   expect(start).toBeGreaterThanOrEqual(0);
@@ -243,8 +243,8 @@ describe("policies (SQL)", () => {
     "members_track_page_presence",
   ])("%s ne caste plus le topic à cru", (name) => {
     const body = policyBody(baselineSql, name);
-    // Un topic malformé rendrait NULL au lieu de LEVER — et une branche qui
-    // lève fait tomber la policy entière, donc tout le temps réel de la session.
+    // A malformed topic would return NULL instead of RAISING — and a branch that
+    // raise drops the entire policy, therefore all the real time of the session.
     expect(body).toContain("public.can_access_project(public.topic_uuid(realtime.topic()))");
     expect(body).not.toMatch(/split_part\(realtime\.topic\(\), ':', 2\)::uuid/);
   });
@@ -252,8 +252,8 @@ describe("policies (SQL)", () => {
   it("topic_uuid rend NULL au lieu de lever", () => {
     const sql = baselineSql;
     expect(sql).toContain("exception when others then return null;");
-    // Appelée depuis une policy : sans `execute`, l'appel lève et la policy
-    // tombe avec lui (MIN-329).
+    // Called from a policy: without `execute`, the call raises and the policy
+    // falls with him (MIN-329).
     expect(sql).toMatch(/grant (?:execute|all) on function public\.topic_uuid\((?:topic )?text\) to authenticated/);
   });
 });

@@ -1,31 +1,31 @@
 "use client";
 
-// Le composer de commentaire d'une pull request (MIN-162) — celui du FIL, et
-// celui d'une remarque de LIGNE.
+// Compose the comment of a pull request (MIN-162) — that of the FIL, and
+// that of a LINE remark.
 //
-// Il était resté le plus pauvre de l'app — un textarea nu et un bouton — sur une
-// prémisse fausse : « un commentaire part sur GitHub, où mentions et pièces
-// jointes n'ont pas de sens ». Les deux en ont un, et ce sont deux gestes qu'on
-// fait tout le temps. Ce qui CHANGE par rapport au composer de ticket
-// (`CommentComposer`, components/issue-timeline) n'est ni la barre d'outils ni
-// le glisser-déposer : c'est la SOURCE des mentions et la DESTINATION des
+// It remained the poorest part of the app — a bare textarea and a button — on one
+// false premise: “a comment goes to GitHub, where mentions and pieces
+// joined do not make sense. Both have one, and these are two gestures that we
+// done all the time. What CHANGES compared to composing a ticket
+// (`CommentComposer`, components/issue-timeline) is neither the toolbar nor
+// drag and drop: this is the SOURCE of mentions and the DESTINATION of
 // fichiers.
 //
-//  · Les mentions viennent de la FORGE — les collaborateurs du dépôt, pas les
-//    membres minddy : un `@` finit chez GitHub, où citer quelqu'un qui n'y a pas
-//    de compte ne notifie personne. `@Numo` fait la seule exception, et elle est
-//    dite visuellement (son visage, en tête de liste) : c'est minddy qui la
-//    traite, avant l'envoi.
-//  · Les fichiers vont dans le stockage minddy et s'écrivent DANS le corps du
-//    message — la forge n'a aucune idée de ce qu'est une pièce jointe minddy, et
-//    n'affichera que ce que le texte dit (cf. `useForgeUploads`).
+// · The mentions come from the FORGE — the collaborators of the depot, not the
+// minddy members: a `@` ends up at GitHub, where to quote someone who isn't there
+// account does not notify anyone. `@Numo` makes the only exception, and it is
+// said visually (her face, at the top of the list): it's minddy who
+// process, before sending.
+// · Files go to minddy storage and are written INTO the body of the
+// message — the forge has no idea what a minddy attachment is, and
+// will only display what the text says (see `useForgeUploads`).
 //
-// L'aperçu, lui, est du markdown rendu par le `Markdown` de l'app : c'est ce qui
-// manquait le plus à l'œil, et le composant existait déjà.
+// The preview is markdown rendered by the `Markdown` of the app: this is what
+// most missed the eye, and the component already existed.
 //
-// Une `PrEndpoint` et non un id de PR : la vue diff ne connaît qu'elle, et c'est
-// ce qui permet au champ de la ligne d'être LE MÊME dans le panneau PR et dans
-// la vue diff d'une session d'agent (les façades `agent-runs/[runId]/pr/*`).
+// A `PrEndpoint` and not a PR id: the diff view only knows it, and it is
+// which allows the row field to be THE SAME in the PR panel and in
+// the diff view of an agent session (the `agent-runs/[runId]/pr/*` facades).
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
@@ -60,33 +60,33 @@ export function PrCommentComposer({
 }: {
   endpoint: PrEndpoint;
   value: string;
-  /** Le brouillon vit chez l'appelant : « Citer » y écrit aussi (quoteReply). */
+  /** The draft lives with the caller: “Quote” also writes there (quoteReply). */
   onChange: (transform: (draft: string) => string) => void;
   onSubmit: () => void;
-  /** Présent sur une remarque de ligne : elle s'ouvre et se referme, là où le
-      composer du fil est toujours là. Échap l'appelle. */
+  /** Present on a line remark: it opens and closes, where the
+ dial of the thread is still there. Escape calls him. */
   onCancel?: () => void;
   posting: boolean;
   placeholder: string;
   submitLabel: string;
-  /** Incrémenté par « Citer » : le message vient d'être écrit dans le brouillon,
-      le curseur doit suivre. */
+  /** Incremented by “Quote”: the message has just been written in the draft,
+ the cursor must follow. */
   focusSignal?: number;
   autoFocus?: boolean;
   /**
-   * `thread` : épinglé en pied de panneau — les suggestions s'ouvrent VERS LE
-   * HAUT, sinon elles sortiraient de l'écran.
-   * `line` : ancré sous une ligne du diff, au milieu d'une zone qui défile —
-   * plus compact, et il porte un bouton Annuler.
-   */
+ * `thread`: pinned at the bottom of the panel — suggestions open TOWARDS
+ * UP, otherwise they would go off the screen.
+ * `line`: anchored under a line in the diff, in the middle of a scrolling area —
+ * more compact, and it has a Cancel button.
+ */
   variant?: "thread" | "line";
 }) {
   const t = useTranslations("PullRequests");
   const [tab, setTab] = useState<"write" | "preview">("write");
-  // Les comptes de la forge ne se chargent qu'au premier « @ » tapé : ouvrir une
-  // PR ne doit coûter aucune requête de plus, et la plupart se lisent sans qu'on
-  // y écrive. Le drapeau ne redescend jamais — une fois la liste demandée, elle
-  // reste en cache pour tout le temps du panneau.
+  // The forge accounts are only loaded at the first “@” typed: open a
+  // PR should not cost any extra query, and most of them can be read without having to
+  // write there. The flag never comes down — once the list is requested, it
+  // stays cached for the entire time of the panel.
   const [wantsMentions, setWantsMentions] = useState(false);
   const { members } = usePrMembersQuery(endpoint, wantsMentions);
   const uploads = useForgeUploads(endpoint, onChange);
@@ -94,9 +94,9 @@ export function PrCommentComposer({
 
   const line = variant === "line";
   const body = value.trim();
-  // Un fichier encore en vol laisserait sa ligne d'attente DANS le message
-  // publié : on attend qu'il ait atterri, comme le composer de ticket attend
-  // ses uploads.
+  // A file still in flight would leave its queue IN the message
+  // published: we wait until it has landed, as the ticket composer waits
+  // its uploads.
   const canPost = !!body && !posting && !uploads.uploading;
 
   return (
@@ -104,12 +104,12 @@ export function PrCommentComposer({
       <div
         className={cn(
           "relative w-full border border-border transition-colors focus-within:border-ring",
-          // Le composer du fil porte le rayon du champ de Numo sur la page
-          // Agents (`chat-input`, rounded-2xl) : c'est le même geste, la même
-          // place à l'écran, il n'y avait pas de raison qu'il ait une autre
-          // silhouette. Celui d'une remarque de LIGNE garde un rayon plus
-          // serré — il est ancré dans le diff, à la taille d'une ligne de code,
-          // et 24px de coins y pèseraient plus que la boîte elle-même.
+          // The wire dial carries the radius of the Numo field on the page
+          // Agents (`chat-input`, rounded-2xl): it's the same gesture, the same
+          // space on the screen, there was no reason for it to have another
+          // silhouette. That of a LINE remark keeps a radius more
+          // tight — it is anchored in the diff, at the size of a line of code,
+          // and 24px of corners would weigh more than the box itself.
           line ? "rounded-lg bg-background" : "rounded-2xl bg-card",
           drop.dragging && "border-brand",
         )}
@@ -118,9 +118,9 @@ export function PrCommentComposer({
       >
         <DropOverlay show={drop.dragging} />
 
-        {/* « Écrire » / « Aperçu », comme chez GitHub : le corps d'un commentaire
-            de PR est du markdown, souvent avec une image ou un extrait de code,
-            et on n'a aujourd'hui aucun moyen de le voir avant de l'envoyer. */}
+        {/* “Write” / “Preview”, as at GitHub: the body of a PR comment
+ is markdown, often with an image or a code snippet,
+ and today we have no way of seeing it before sending it. */}
         <Tabs
           value={tab}
           onValueChange={(next) => setTab(next as "write" | "preview")}
@@ -140,9 +140,9 @@ export function PrCommentComposer({
           </TabsList>
         </Tabs>
 
-        {/* Le champ reste MONTÉ sous l'aperçu (`hidden`) : le démonter emporterait
-            le caret, la pile d'annulation et les enveloppes de mentions —
-            revenir à « Écrire » rendrait un champ amnésique. */}
+        {/* The field remains MOUNTED under the preview (`hidden`): unmounting it would take away
+ the caret, the undo stack and the mention envelopes —
+ returning to “Write” would render a field amnesiac. */}
         <div className={cn(tab === "preview" && "hidden")}>
           <MentionTextarea
             value={value}
@@ -154,8 +154,8 @@ export function PrCommentComposer({
             onSubmit={onSubmit}
             onEscape={onCancel}
             placeholder={placeholder}
-            // Ancré dans le diff, le champ est HAUT dans une zone qui défile :
-            // une liste qui s'ouvrirait vers le haut se replierait hors de vue.
+            // Anchored in the diff, the field is HIGH in a scrollable area:
+            // a list that opened upwards would fold out of view.
             dropUp={!line}
             includeNumo
             className={cn(
@@ -183,9 +183,7 @@ export function PrCommentComposer({
             }
             disabled={posting}
           />
-          {/* Le fil ne montre son bouton d'envoi qu'une fois qu'il y a quelque
-              chose à envoyer ; une remarque de ligne le garde, parce qu'elle a
-              été OUVERTE exprès et qu'elle porte son Annuler à côté. */}
+          {/* The thread only shows its submit button once there is something to send; a line remark keeps it, because it was OPENED on purpose and has its Cancel next to it. */}
           {line || body || posting ? (
             <>
               {onCancel ? (

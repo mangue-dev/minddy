@@ -18,20 +18,20 @@ import { errorReason } from "@/lib/analytics-sanitize";
 import { authErrorMessage } from "@/lib/auth-errors";
 
 /**
- * « Mot de passe oublié » (MIN-297).
+ * “Forgotten password” (MIN-297).
  *
- * Le produit n'en avait aucun : sans compte Google ni GitHub, un mot de passe
- * perdu enfermait dehors, définitivement. C'est l'écran qui manquait, et il ne
- * fait qu'une chose — demander une adresse et faire partir un lien.
+ * The product had none: without a Google or GitHub account, a password
+ * lost locked out, permanently. It was the screen that was missing, and it
+ * does just one thing — ask for an address and send a link.
  *
- * **Il ne dit jamais si le compte existe.** GoTrue répond pareil dans les deux
- * cas, et l'écran de confirmation est formulé pour que ce soit vrai à
- * l'affichage aussi (« si un compte existe pour cette adresse ») : un écran qui
- * distinguerait les deux serait un révélateur de comptes, c'est-à-dire la
- * moitié du travail d'un attaquant, offerte.
+ * **It never says if the account exists.** GoTrue responds the same in both
+ * case, and the confirmation screen is worded so that it is true at
+ * the display too (“if an account exists for this address”): a screen which
+ * would distinguish the two would be a revealer of accounts, that is to say the
+ * half the work of an attacker, free.
  *
- * La suite du parcours est ailleurs : le lien reçu passe par `/auth/confirm`
- * (le geste qui ouvre la session, MIN-345) puis par `/reset-password`, où le
+ * The rest of the journey is elsewhere: the link received goes through `/auth/confirm`
+ * (the gesture that opens the session, MIN-345) then by `/reset-password`, where the
  * nouveau mot de passe se choisit.
  */
 export function ForgotPasswordForm() {
@@ -41,13 +41,13 @@ export function ForgotPasswordForm() {
   const { track } = useAnalytics();
   const inDesktopApp = useInDesktopApp();
 
-  // L'adresse déjà tapée sur l'écran de connexion, s'il y en avait une : la
-  // faire retaper ici est le genre de friction qui fait abandonner un parcours
-  // dont on ne sort, par définition, que par la boîte mail.
+  // The address already typed on the connection screen, if there was one: the
+  // retyping here is the kind of friction that makes you abandon a course
+  // from which we only exit, by definition, through the mailbox.
   const [email, setEmail] = useState(searchParams.get("email") ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  /** L'adresse à laquelle un lien vient de partir — l'écran change alors. */
+  /** The address to which a link just left — the screen then changes. */
   const [sentTo, setSentTo] = useState<string | null>(null);
 
   const backHref = `/login${preserveAuthParams(searchParams)}`;
@@ -62,14 +62,14 @@ export function ForgotPasswordForm() {
     setLoading(true);
     try {
       await sendPasswordReset(email.trim());
-      // Aucune prop : l'adresse est une donnée personnelle, et le seul fait
-      // intéressant ici est qu'un parcours de reset a démarré.
+      // No prop: the address is personal data, and the only fact
+      // interesting here is that a reset process has started.
       track("password_reset_requested", {});
       setSentTo(email.trim());
     } catch (err) {
-      // Le refus brut dans la console : l'appel part du navigateur vers
-      // Supabase, il n'y a rien à lire côté Vercel. Ce qui remonte vraiment,
-      // c'est la limite de débit (`over_email_send_rate_limit`) — traduite.
+      // Raw refusal in the console: the call goes from the browser to
+      // Supabase, there is nothing to read on the Vercel side. Which really goes back,
+      // this is the rate limit (`over_email_send_rate_limit`) — translated.
       console.error("[forgot-password] refus de Supabase Auth:", err);
       track("password_reset_failed", { reason: errorReason(err) });
       setError(authErrorMessage(err, t));

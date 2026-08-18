@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { forgeActorValue, forgePrActor, isForgePrEvent } from "./pr-events";
 
 /**
- * Tests de l'encodage provider des événements PR/MR webhook (MIN-69) : GitHub
- * reste la forme historique NON préfixée (rétro-compatible avec les événements
- * déjà en base), GitLab se distingue par le préfixe `gitlab:` dans from_value.
+ * Tests of the provider encoding of PR/MR webhook events (MIN-69): GitHub
+ * remains the historical form NOT prefixed (backwards compatible with the events
+ * already in base), GitLab is distinguished by the prefix `gitlab:` in from_value.
  */
 
 describe("forgeActorValue / forgePrActor", () => {

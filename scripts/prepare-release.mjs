@@ -11,10 +11,10 @@ const version = assertVersion(process.argv[2] ?? "");
 const today = new Date().toISOString().slice(0, 10);
 
 if (execFileSync("git", ["status", "--porcelain"], { cwd: root, encoding: "utf8" }).trim()) {
-  throw new Error("le répertoire de travail doit être propre avant de préparer une release");
+  throw new Error("the working tree must be clean before preparing a release");
 }
 if (execFileSync("git", ["tag", "--list", `v${version}`], { cwd: root, encoding: "utf8" }).trim()) {
-  throw new Error(`le tag v${version} existe déjà`);
+  throw new Error(`tag v${version} already exists`);
 }
 
 const changelogPath = path.join(root, "CHANGELOG.md");
@@ -34,5 +34,5 @@ await Promise.all([
   writeFile(changelogPath, nextChangelog),
 ]);
 
-console.log(`Release v${version} préparée.`);
-console.log("Relisez CHANGELOG.md, commitez ces fichiers, puis attendez une CI verte avant publication.");
+console.log(`Release v${version} prepared.`);
+console.log("Review CHANGELOG.md, commit these files, then wait for green CI before publishing.");

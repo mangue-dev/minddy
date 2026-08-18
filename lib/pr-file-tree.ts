@@ -2,27 +2,27 @@ import type { PullRequestFile } from "@/lib/agent-api";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
- * L'arbre des fichiers TOUCHÉS par une PR (MIN-182) — pas le dépôt, seulement ce
- * que le diff contient. Construit depuis les seuls chemins de `files` : aucun
- * appel réseau, aucune connaissance du dépôt.
+ * The tree of files AFFECTED by a PR (MIN-182) — not the repository, just what
+ * the diff contains. Built from `files` paths alone: none
+ * network call, no repository knowledge.
  *
- * Deux règles font tout le travail :
+ * Two rules do all the work:
  *
- * - **les dossiers à enfant unique se replient sur une ligne** — sur une PR qui
- *   ne touche qu'un écran, `app/(app)/lab/diff` vaut mieux que quatre niveaux
- *   d'indentation dont trois ne disent rien ;
- * - **les compteurs remontent** — un dossier porte la somme de ce qu'il
- *   contient, ce qui donne la carte des poids sans avoir à tout déplier.
+ * - **single-child folders fold onto one line** — on a PR which
+ * only touches one screen, `app/(app)/lab/diff` is better than four levels
+ * of indentation, three of which say nothing;
+ * - **the counters go up** — a folder carries the sum of what it
+ * contains, which gives the map of weights without having to do everything unfold.
  *
- * Pur et sans React, comme `pr-review-threads` ou `pr-diff-hunk` : la structure
- * se teste sans monter quoi que ce soit.
+ * Pure and without React, like `pr-review-threads` or `pr-diff-hunk`: the
+ * structure is tested without mounting anything.
  */
 
 /**
- * Statut normalisé d'un fichier. GitHub en connaît plus que les quatre qu'on
- * peint (`copied`, `changed`, `unchanged`) : tout ce qui n'est pas un ajout, un
- * retrait ou un renommage se dit « modifié ». `previous_filename` sert de
- * second témoin du renommage — GitLab le pose aussi.
+ * Normalized status of a file. GitHub knows more than the four that we
+ * paint (`copied`, `changed`, `unchanged`): everything that is not an addition, a
+ * removal or a renaming is called "modified". `previous_filename` serves as
+ * second witness of the renaming — GitLab sets it too.
  */
 export type FileStatus = "added" | "removed" | "renamed" | "modified";
 
@@ -33,10 +33,10 @@ export function fileStatusOf(file: PullRequestFile): FileStatus {
 }
 
 /**
- * Le mot du statut, une seule fois pour les deux surfaces qui le disent : le
- * badge de la carte de fichier et l'icône d'une ligne de l'arbre. Typée
- * `MessageKey` et pas `string` — une clé fautive doit refuser de compiler, pas
- * s'afficher en clair (cf. [lib/i18n-keys.ts](lib/i18n-keys.ts)).
+ * The status word, only once for the two surfaces that say it: the
+ * file card badge and the tree line icon. Typed
+ * `MessageKey` and not `string` — a faulty key must refuse to compile, not
+ * displayed in plain text (see [lib/i18n-keys.ts](lib/i18n-keys.ts)).
  */
 export const FILE_STATUS_LABELS = {
   added: "fileAdded",
@@ -46,21 +46,20 @@ export const FILE_STATUS_LABELS = {
 } as const satisfies Record<FileStatus, MessageKey<"PullRequests">>;
 
 /**
- * L'ancre DOM de la carte d'un fichier. Le chemin tel quel : `getElementById`
- * n'échappe rien, donc un espace ou une parenthèse dans un nom de fichier ne
- * pose pas de question. Stable d'un rendu à l'autre — c'est ce qui en fait une
- * cible de lien.
+ * The DOM anchor of a file's map. The path as is: `getElementById`
+ * doesn't escape anything, so a space or a parenthesis in a file name doesn't pose a problem. Stable from one rendition to the next — that's what makes it a
+ * link target.
  */
 export function fileAnchorId(filename: string): string {
   return `pr-file-${filename}`;
 }
 
 interface FileTreeCommon {
-  /** Ce que la ligne affiche : un segment, ou plusieurs si le dossier est replié. */
+  /** What the line displays: one segment, or several if the folder is folded. */
   label: string;
-  /** Chemin complet depuis la racine — clé de rendu, et pour un fichier, l'ancre. */
+  /** Full path from root — render key, and for a file, anchor it. */
   path: string;
-  /** Cumulés pour un dossier, ceux du fichier pour une feuille. */
+  /** Accumulated for a folder, those of the file for a sheet. */
   additions: number;
   deletions: number;
 }
@@ -68,7 +67,7 @@ interface FileTreeCommon {
 export interface FileTreeFile extends FileTreeCommon {
   kind: "file";
   status: FileStatus;
-  /** Le fichier tel que la forge l'a servi — le renommage, le patch, tout est là. */
+  /** The file as the forge served it — the renaming, the patch, everything is there. */
   file: PullRequestFile;
 }
 
@@ -79,7 +78,7 @@ export interface FileTreeDir extends FileTreeCommon {
 
 export type FileTreeNode = FileTreeFile | FileTreeDir;
 
-/** Dossier en cours de construction : une map de sous-dossiers et ses fichiers. */
+/** Folder under construction: a map of subfolders and its files. */
 interface DirDraft {
   name: string;
   dirs: Map<string, DirDraft>;
@@ -87,9 +86,9 @@ interface DirDraft {
 }
 
 /**
- * Alphabétique, insensible à la casse comme les explorateurs de fichiers, et
- * numérique pour que `10` suive `9`. Locale FIGÉE : l'ordre des fichiers d'une
- * PR n'a pas à changer selon la langue de qui la regarde.
+ * Alphabetical, case insensitive like file explorers, and
+ * numeric so that `10` follows `9`. FIXED local: the order of the files of a
+ * PR does not have to change depending on the language of who is looking at it.
  */
 const COLLATOR = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
 
@@ -99,11 +98,11 @@ function basename(path: string): string {
 }
 
 /**
- * Ce qu'une feuille annonce. Un renommage qui change le NOM le dit sur la ligne
- * (`ancien → nouveau`) ; un simple déplacement, non — l'arbre le montre déjà en
- * plaçant le fichier sous son nouveau dossier, et répéter le chemin d'origine
- * doublerait la ligne pour ne rien apprendre. Le chemin complet d'avant reste
- * sur `file.previous_filename`, pour l'infobulle.
+ * What a leaf announces. A rename that changes the NAME says so on the line
+ * (`ancien → nouveau`); a simple move, no — the tree already shows it by
+ * placing the file under its new folder, and repeating the original path
+ * would double the line to learn nothing. The full path from before remains
+ * on `file.previous_filename`, for the tooltip.
  */
 function leafLabel(file: PullRequestFile): string {
   const name = basename(file.filename);
@@ -134,7 +133,7 @@ function totals(children: FileTreeNode[]): { additions: number; deletions: numbe
   return { additions, deletions };
 }
 
-/** Dossiers d'abord, puis fichiers, chaque groupe trié par son nom. */
+/** Folders first, then files, each group sorted by name. */
 function childrenOf(draft: DirDraft, path: string): FileTreeNode[] {
   const dirs = [...draft.dirs.values()]
     .sort((a, b) => COLLATOR.compare(a.name, b.name))
@@ -148,11 +147,11 @@ function childrenOf(draft: DirDraft, path: string): FileTreeNode[] {
 function dirNode(draft: DirDraft, parentPath: string): FileTreeDir {
   const path = parentPath ? `${parentPath}/${draft.name}` : draft.name;
   const children = childrenOf(draft, path);
-  // Un dossier dont l'unique enfant est un DOSSIER n'ajoute qu'un cran
-  // d'indentation : les deux lignes n'en font qu'une. Le fils est déjà replié
-  // (le parcours est postfixe), donc une chaîne entière se ramasse d'un coup.
-  // Un unique enfant FICHIER, lui, ne se replie pas : le dossier reste ce qui
-  // se déplie, et son fichier ce qui s'ouvre.
+  // A folder whose only child is a FOLDER only adds one notch
+  // indentation: the two lines become one. The son is already folded
+  // (the traversal is postfix), so an entire string is collected at once.
+  // A single child FILE does not fold: the file remains what
+  // unfolds, and its file opens.
   const inner = children.length === 1 && children[0].kind === "dir" ? children[0] : null;
   const effective = inner ? inner.children : children;
   return {
@@ -165,14 +164,14 @@ function dirNode(draft: DirDraft, parentPath: string): FileTreeDir {
 }
 
 /**
- * L'arbre, prêt à rendre. Les fichiers arrivent dans l'ordre de la forge ; le
- * tri est le nôtre, et il ne dépend que des chemins.
+ * The tree, ready to render. Files arrive in order from the forge; the
+ * sort is ours, and it only depends on the paths.
  */
 export function buildFileTree(files: PullRequestFile[]): FileTreeNode[] {
   const root: DirDraft = { name: "", dirs: new Map(), files: [] };
   for (const file of files) {
     // `filter(Boolean)` : un chemin qui commencerait par `/` ou porterait un
-    // double séparateur créerait sinon un dossier sans nom.
+    // double separator would otherwise create an unnamed folder.
     const segments = file.filename.split("/").filter(Boolean);
     if (segments.length === 0) continue;
     let dir = root;

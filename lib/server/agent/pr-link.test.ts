@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-163bis — le rattachement manuel d'une PR à un ticket, devenu le point de
- * passage des TROIS surfaces (dialog de l'app, MCP, Numo). Ce qui est testé ici
- * est exactement ce qui change selon l'appelant sans devoir changer de réponse :
- * l'échelle des refus, et le fait qu'un agent qui rejoue son appel trouve un
- * succès là où l'écran, lui, doit voir un conflit.
+ * MIN-163bis — the manual attachment of a PR to a ticket, which has become the point of
+ * passage of THREE surfaces (app dialog, MCP, Numo). What is tested here
+ * is exactly what changes depending on the caller without having to change the response:
+ * the scale of refusals, and the fact that an agent who replays his call finds a
+ * success where the screen should see a conflict.
  *
- * Le faux Supabase porte les trois seules formes de requête du cœur : la liste
- * des projets d'un dépôt, la recherche d'une PR vivante sur un ticket, et
- * l'écriture CONDITIONNELLE du lien — c'est elle qui rend le geste atomique, et
- * le faux l'applique vraiment (sinon le test ne dirait rien de la course).
+ * The fake Supabase carries the only three forms of request from the heart: the list
+ * of projects in a repository, the search for a living PR on a ticket, and
+ * the CONDITIONAL writing of the link — it is this which makes the gesture atomic, and
+ * the fake really applies it (otherwise the test would say nothing about the race).
  */
 
 const PR_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -32,7 +32,7 @@ interface PrRow {
 }
 
 const world = {
-  /** Projets qui lient le dépôt (`project_git_links` + son projet embarqué). */
+  /** Projects that link the repository (`project_git_links` + its embedded project). */
   links: [] as Array<{ provider: string; repo_full_name: string; project_id: string }>,
   prs: [] as PrRow[],
 };
@@ -68,7 +68,7 @@ vi.mock("@/lib/supabase-service", () => {
           .map((l) => ({
             provider: l.provider,
             repo_full_name: l.repo_full_name,
-            // Relation to-one embarquée : `projectsForRepo` lit `row.project`.
+            // Embedded to-one relationship: `projectsForRepo` reads `row.project`.
             project: { id: l.project_id, key: "MIN" },
           }));
       }
@@ -85,8 +85,8 @@ vi.mock("@/lib/supabase-service", () => {
       );
     };
 
-    /** L'écriture conditionnelle : elle ne touche QUE les lignes que les
-        filtres retiennent — `is("issue_id", null)` compris. */
+    /** Conditional writing: it ONLY affects the lines that the
+ filters retain — including `is("issue_id", null)`. */
     const applyUpdate = (): unknown[] => {
       const targets = rows() as PrRow[];
       for (const row of targets) Object.assign(row, patch);
@@ -113,13 +113,13 @@ vi.mock("@/lib/supabase-service", () => {
       inFilter = { column, values };
       return query;
     };
-    // Le balayage tamponne `pull_request_syncs` : rien à observer ici.
+    // The scan buffers `pull_request_syncs`: nothing to observe here.
     query.upsert = async () => ({ error: null });
     query.maybeSingle = async () => {
       const found = patch ? applyUpdate() : rows();
       return { data: found[0] ?? null, error: null };
     };
-    // Awaitable sans `.maybeSingle()` : la forme des lectures de liste.
+    // Awaitable without `.maybeSingle()`: the form of list reads.
     query.then = (resolve: (v: unknown) => unknown) =>
       Promise.resolve({ data: patch ? applyUpdate() : rows(), error: null }).then(resolve);
     return query;
@@ -144,8 +144,8 @@ vi.mock("./repo-access", () => ({
   resolveRepoCloneTargetForRepo: (...a: unknown[]) => cloneTarget(...(a as [])),
 }));
 
-/** Le balayage lit la forge : on lui rend un dépôt vide, ce qui suffit à
-    vérifier qu'il a bien été TENTÉ avant de conclure « introuvable ». */
+/** The scan reads the forge: we give it an empty deposit, which is enough to
+ verify that it has indeed been ATTEMPTED before concluding “not found”. */
 const sweep = vi.fn(async () => ({ pulls: [], truncated: false }));
 vi.mock("./forge", () => ({
   forgeFor: () => ({ listPullRequests: sweep }),
@@ -200,7 +200,7 @@ describe("linkPullRequestToIssue", () => {
     const result = await link();
 
     expect(result).toEqual({ ok: true, already: true, status: "in_review" });
-    // Le geste est déjà fait : ni diffusion, ni statut réécrit.
+    // The gesture is already done: no distribution, no rewritten status.
     expect(broadcast).not.toHaveBeenCalled();
     expect(syncStatus).not.toHaveBeenCalled();
   });
@@ -230,8 +230,8 @@ describe("linkPullRequestToIssue", () => {
   });
 
   it("accepte un ticket dont les PR précédentes sont TERMINALES", async () => {
-    // Un ticket que Numo a repris plusieurs fois enchaîne légitimement les PR :
-    // c'est l'unicité « une PR VIVANTE », pas « une PR ».
+    // A ticket that Numo has taken up several times legitimately has a string of PRs:
+    // it’s the uniqueness of “a LIVING PR”, not “a PR”.
     world.prs = [makePr(), makePr({ id: "pr-2", number: 7, state: "merged", issue_id: ISSUE_ID })];
 
     await expect(link({ pr: world.prs[0] })).resolves.toMatchObject({ ok: true });
@@ -262,8 +262,8 @@ describe("resolveProjectPullRequest", () => {
     cloneTarget.mockResolvedValue({ token: "t" });
 
     await expect(resolve("#404")).resolves.toEqual({ error: "not_found" });
-    // Le rattrapage a bien eu lieu : une PR ouverte il y a trente secondes sur un
-    // dépôt sans webhook n'est pas encore en base, et « introuvable » serait faux.
+    // The catch-up has taken place: a PR opened thirty seconds ago on a
+    // repository without webhook is not yet in base, and “not found” would be false.
     expect(cloneTarget).toHaveBeenCalled();
     expect(sweep).toHaveBeenCalled();
   });

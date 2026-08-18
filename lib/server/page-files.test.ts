@@ -9,27 +9,26 @@ import {
 } from "@/lib/server/page-files";
 
 /**
- * MIN-280 — un envoi branché sans son MÉNAGE est la seule vraie faute possible
- * ici, et c'est celle qui ne se voit jamais : le bucket grossit d'images que
- * plus aucun document ne montre, sans une ligne d'erreur, sans un écran qui
+ * MIN-280 — sending connected without its HOUSEHOLD is the only real possible fault
+ * here, and it is the one that is never seen: the bucket grows with images that
+ * no document shows anymore, without an error line, without a screen that
  * change.
  *
- * Ce fichier joue les deux moitiés sur un faux Supabase en mémoire — seul ce qui
- * SORT du process est simulé (le storage, PostgREST), le vrai module par-dessus.
- * Trois propriétés y sont épinglées, et chacune est un octet ou une ligne qui
- * survivrait autrement :
+ * This file plays both halves on a fake Supabase in memory — only the OUTPUT of the process is simulated (the storage, PostgREST), the real module on top.
+ * Three properties are pinned to it, and each is a byte or line that
+ * would survive otherwise:
  *
- *  - un envoi dont la LIGNE échoue efface son objet, sinon il naît orphelin ;
- *  - le balayage ne supprime QUE ce qu'aucun corps ne cite plus — un fichier
- *    encore affiché, imbriqué dans un dépliant, doit rester ;
- *  - et la ligne part AVANT les octets, jamais l'inverse : dans l'autre ordre,
- *    un échec laisse une ligne qui nomme un objet disparu, donc un bloc mort.
+ * - a sending whose LINE fails erases its object, otherwise it is born an orphan;
+ * - scanning ONLY deletes what no body no longer cites — a file
+ * still displayed, nested in a leaflet, must remain;
+ * - and the line leaves BEFORE the bytes, never the other way around: in the other order,
+ * a failure leaves a line which names an object missing, therefore a dead block.
  */
 
 const PROJECT = "07b14964-0def-4941-8ddf-686572d6345d";
 const PAGE = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 
-/* ── Le faux Supabase ─────────────────────────────────────────────────────── */
+/* ── The fake Supabase ─────────────────────────── ──────────────────────────── */
 
 interface FakeRow {
   id: string;
@@ -46,7 +45,7 @@ interface FakeRow {
 function fakeService(options: {
   files?: FakeRow[];
   pages?: { id: string; content: unknown }[];
-  /** Faire échouer l'insertion de la ligne — la seule branche de rattrapage. */
+  /** Fail row insertion — the only catch-up branch. */
   insertFails?: boolean;
   /** Compte plein : ce que rend `project_storage_quota_ok` (MIN-348). */
   quotaOk?: boolean;
@@ -55,7 +54,7 @@ function fakeService(options: {
   const pages = options.pages ?? [];
   const uploaded: string[] = [];
   const removed: string[] = [];
-  /** L'ordre RÉEL des gestes, pour trancher « la ligne avant les octets ». */
+  /** The REAL order of gestures, to slice “the line before the bytes”. */
   const order: string[] = [];
 
   const storage = {
@@ -82,9 +81,9 @@ function fakeService(options: {
           filters.before = value;
           return query;
         },
-        // MIN-343 : le ménage du bucket demande d'abord qui référence encore le
-        // chemin. Les lignes VIVANTES répondent — c'est ce qui rend l'ordre
-        // « la ligne d'abord, les octets ensuite » observable ici.
+        // MIN-343: bucket cleaning first asks who is still referencing the
+        // path. LIVING lines respond — that's what makes order
+        // “line first, bytes later” observable here.
         in: async (_column: string, paths: string[]) => ({
           data: files
             .filter((f) => paths.includes(f.storage_path))
@@ -138,14 +137,14 @@ function fakeService(options: {
         }),
       };
     }
-    // L'autre table qui référence le bucket : aucune ressource de ticket ici.
+    // The other table that references the bucket: no ticket resources here.
     if (table === "attachments") {
       return { select: () => ({ in: async () => ({ data: [], error: null }) }) };
     }
     throw new Error(`table inattendue: ${table}`);
   };
 
-  // Le verdict de quota est en SQL ; le module n'en connaît que l'appel.
+  // The quota verdict is in SQL; the module only knows the call.
   const rpc = async (name: string) => {
     if (name !== "project_storage_quota_ok") throw new Error(`rpc inattendu: ${name}`);
     return { data: options.quotaOk ?? true, error: null };
@@ -180,8 +179,8 @@ describe("createPageFile", () => {
     expect(service.uploaded[0]).toMatch(
       new RegExp(`^projects/${PROJECT}/pages/${PAGE}/[0-9a-f-]{36}/`)
     );
-    // Le nom de la CLÉ est nettoyé (le storage refuse l'exotique), celui de la
-    // LIGNE garde ses espaces et son apostrophe : c'est lui qu'on affiche.
+    // The name of the KEY is cleaned (the storage refuses the exotic), that of the
+    // LINE keeps its spaces and its apostrophe: this is what we display.
     expect(service.uploaded[0].endsWith("Ma_capture_d_cran.png")).toBe(true);
     expect(row.file_name).toBe("Ma capture d'écran.png");
     expect(row.size_bytes).toBe(args.data.byteLength);
@@ -199,8 +198,8 @@ describe("createPageFile", () => {
   });
 
   it("refuse quand le compte a rempli son quota, sans rien téléverser", async () => {
-    // Cette écriture-ci passe par le client de SERVICE, qui contourne la policy
-    // où le plafond est posé : sans ce relais, elle serait le trou (MIN-348).
+    // This writing goes through the SERVICE client, which bypasses the policy
+    // where the ceiling is placed: without this relay, it would be the hole (MIN-348).
     const service = fakeService({ quotaOk: false });
     await expect(createPageFile(service.client, args)).rejects.toMatchObject({
       status: 507,
@@ -209,9 +208,9 @@ describe("createPageFile", () => {
   });
 
   it("efface l'objet quand la LIGNE ne passe pas", async () => {
-    // Sans ce rattrapage, l'octet existe et plus rien ne dit à quelle page il
-    // appartenait : même le balayage des orphelins, qui part des lignes, ne
-    // pourrait plus le retrouver.
+    // Without this catch-up, the byte exists and nothing says which page it is on
+    // belonged: even the scanning of orphans, which starts from the lines, does not
+    // couldn't find him anymore.
     const service = fakeService({ insertFails: true });
     await expect(createPageFile(service.client, args)).rejects.toBeInstanceOf(
       PageFileError
@@ -236,7 +235,7 @@ describe("createPageFile", () => {
   });
 });
 
-/* ── Le ménage ────────────────────────────────────────────────────────────── */
+/* ── Housekeeping ─────────────────────────────── ─────────────────────────────── */
 
 function row(id: string, pageId = PAGE): FakeRow {
   return {
@@ -252,7 +251,7 @@ function row(id: string, pageId = PAGE): FakeRow {
   };
 }
 
-/** Un corps qui cite `cited`, dont un fichier IMBRIQUÉ dans un dépliant. */
+/** A body that cites `cited`, including a file EMBEDDED in a leaflet. */
 function body(cited: string[]) {
   return {
     type: "doc",
@@ -282,9 +281,9 @@ function body(cited: string[]) {
 
 describe("sweepOrphanPageFiles", () => {
   const LATER = "2026-02-01T00:00:00.000Z";
-  // De vrais identifiants : c'est la FORME de l'URL que le balayage reconnaît
-  // dans un corps (lib/page-files.ts), et un id bidon ne s'y retrouverait pas —
-  // le test passerait alors pour la mauvaise raison, en effaçant tout.
+  // Real identifiers: this is the FORM of the URL that the scanning recognizes
+  // in a body (lib/page-files.ts), and a bogus id would not be found there —
+  // the test would then pass for the wrong reason, erasing everything.
   const VIVANT = "11111111-1111-4111-8111-111111111111";
   const IMBRIQUE = "22222222-2222-4222-8222-222222222222";
   const ORPHELIN = "33333333-3333-4333-8333-333333333333";
@@ -304,7 +303,7 @@ describe("sweepOrphanPageFiles", () => {
     expect(service.files.map((f) => f.id)).toEqual([VIVANT, IMBRIQUE]);
   });
 
-  it("supprime la LIGNE avant les octets", async () => {
+  it("deletes the ROW before the bytes", async () => {
     const service = fakeService({
       files: [row(ORPHELIN)],
       pages: [{ id: PAGE, content: body([]) }],
@@ -317,16 +316,16 @@ describe("sweepOrphanPageFiles", () => {
   });
 
   it("emporte les fichiers d'une page qui n'existe plus", async () => {
-    // Ses lignes sont déjà parties par la cascade au moment de la purge ; celles
-    // qu'on voit ici sont d'une page purgée entre deux balayages.
+    // Its lines have already left through the waterfall at the time of the purge; those
+    // that we see here are of a page purged between two scans.
     const service = fakeService({ files: [row(VEUF)], pages: [] });
     expect(await sweepOrphanPageFiles(service.client, LATER)).toBe(1);
     expect(service.removed).toHaveLength(1);
   });
 
-  it("épargne ce qui n'a pas passé le délai de grâce", async () => {
-    // Un fichier envoyé il y a une heure n'est pas encore dans un corps
-    // ENREGISTRÉ : l'autosave n'a pas forcément écrit. Le supprimer serait
+  it("spares what has not passed the grace period", async () => {
+    // A file sent an hour ago is not yet in a body
+    // SAVED: the autosave did not necessarily write. Deleting it would
     // effacer l'image qu'on vient de coller.
     const service = fakeService({
       files: [row(FRAIS)],
@@ -338,11 +337,11 @@ describe("sweepOrphanPageFiles", () => {
     expect(service.removed).toEqual([]);
   });
 
-  it("ne touche à rien quand il n'y a aucun candidat", async () => {
+  it("does nothing when there are no candidates", async () => {
     const service = fakeService();
     const spy = vi.spyOn(service.client, "from");
     expect(await sweepOrphanPageFiles(service.client, LATER)).toBe(0);
-    // Une seule requête : les corps ne sont même pas lus.
+    // Only one request: the bodies are not even read.
     expect(spy).toHaveBeenCalledTimes(1);
   });
 });

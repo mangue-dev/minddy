@@ -1,61 +1,61 @@
-name: Proposer une amélioration
-description: Décrire un besoin ou une évolution du cœur open source
-title: "[Amélioration] "
+name: Suggest an improvement
+description: Describe a need or an evolution of the open source core
+title: "[Improvement]""
 labels:
   - enhancement
 body:
   - type: markdown
     attributes:
       value: |
-        Commencez par le problème à résoudre. Une discussion exploratoire peut être ouverte dans [GitHub Discussions](https://github.com/mangue-dev/minddy-issues/discussions).
+        Start with the problem to solve. An exploratory discussion can be opened in [GitHub Discussions](https://github.com/mangue-dev/minddy-issues/discussions).
 
   - type: checkboxes
     id: prerequisites
     attributes:
-      label: Vérifications préalables
+      label: Prior checks
       options:
-        - label: J'ai recherché les issues et discussions existantes.
+        - label: I searched existing issues and discussions.
           required: true
-        - label: Cette proposition concerne le cœur open source ou son interface publique, pas une demande de support privé.
+        - label: This proposal concerns the open-source core or its public interface, not a private support request.
           required: true
-        - label: J'accepte de respecter le Code of Conduct du projet.
+        - label: I agree to follow the project's Code of Conduct.
           required: true
 
   - type: textarea
     id: problem
     attributes:
-      label: Problème à résoudre
-      description: Qui rencontre ce problème, dans quel contexte, et avec quel impact ?
+      label: Problem to solve
+      description: Who encounters this problem, in what context, and with what impact?
     validations:
       required: true
 
   - type: textarea
     id: proposal
     attributes:
-      label: Résultat souhaité
-      description: Décrivez le comportement attendu sans imposer inutilement une implémentation.
+      label: Desired result
+      description: Describe the expected behavior without unnecessarily imposing an implementation.
     validations:
       required: true
 
   - type: textarea
     id: alternatives
     attributes:
-      label: Alternatives envisagées
-      description: Contournements actuels, solutions comparées ou raisons de les écarter.
+      label: Alternatives considered
+      description: Current workarounds, solutions compared or reasons to rule them out.
 
   - type: textarea
     id: scope
     attributes:
-      label: Périmètre et compatibilité
-      description: API, migration, données, sécurité, accessibilité ou rupture de compatibilité éventuelle.
+      label: Scope and compatibility
+      description: API, migration, data, security, accessibility or possible compatibility break.
 
   - type: dropdown
     id: contribution
     attributes:
-      label: Souhaitez-vous contribuer à l'implémentation ?
+      label: Would you like to contribute to the implementation?
       options:
         - Oui
-        - Peut-être, avec accompagnement
+        - Maybe, with guidance
         - Non
     validations:
       required: true

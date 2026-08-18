@@ -3,13 +3,13 @@ import { describe, expect, it } from "vitest";
 import { exceedsJsonDepth, MAX_PAGE_JSON_DEPTH } from "@/lib/json-depth";
 
 /**
- * MIN-348 — la borne qui doit tenir là où `JSON.stringify` tombe.
+ * MIN-348 — the terminal which must hold where `JSON.stringify` falls.
  *
- * Le contrôle qui compte est le dernier : sur le document qui faisait lever le
- * garde-fou précédent, celui-ci répond, et il répond `true`.
+ * The control which counts is the last: on the document which raised the
+ * previous guardrail, this one responds, and it responds `true`.
  */
 
-/** Un objet de `depth` niveaux : `{v:{v:{…}}}`, construit sans récursion. */
+/** An object of `depth` levels: `{v:{v:{…}}}`, constructed without recursion. */
 function nest(depth: number): unknown {
   let node: unknown = {};
   for (let i = 1; i < depth; i++) node = { v: node };

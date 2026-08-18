@@ -2,25 +2,25 @@ import { BILLABLE_FEATURES, type BillableFeature } from "@/lib/billing-plans";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
- * Le NOM que l'utilisateur lit sur une ligne de son historique d'usage.
+ * The NAME that the user reads on a line in their usage history.
  *
- * La barre de budget parle en SEGMENTS (`USAGE_SEGMENTS`) — six familles, six
- * couleurs — parce qu'une barre à dix-huit parts ne se lit plus. L'historique,
- * lui, montre des gestes : une ligne = un run, et « Automatisations » n'y dit
- * pas ce qui s'est passé. Smart Assign et Smart-fill partagent un segment ;
- * quand la ligne les confond, la question qu'on se pose devant l'historique
- * (« qu'est-ce que j'ai déclenché ? ») n'a pas de réponse. D'où cette table :
- * le segment garde l'icône et la couleur — la famille se voit — et le libellé
- * dit la feature exacte.
+ * The budget bar speaks in SEGMENTS (`USAGE_SEGMENTS`) — six families, six
+ * colors — because a bar with eighteen shares is no longer read. The history,
+ * shows gestures: one line = one run, and “Automations” does not say
+ * what happened. Smart Assign and Smart-fill share a segment;
+ * when the line confuses them, the question we ask ourselves in front of the history
+ * ("what did I trigger?") has no answer. Hence this table:
+ * the segment keeps the icon and the color - the family is visible - and the label
+ * says the exact feature.
  *
- * `import_map` et `brief_split` en font partie alors qu'elles sont ABSENTES de
- * `BILLABLE_FEATURES` : elles sont imputées à un utilisateur (`billTo: userId`)
- * donc elles apparaissent dans son historique, et sans elles ici, la ligne
- * héritait du repli de `segmentForFeature` et s'affichait « Numo ». Elles
- * restent hors de la barre — elle, c'est `BILLABLE_FEATURES` qui la remplit.
+ * `import_map` and `brief_split` are part of it even though they are ABSENT de
+ * `BILLABLE_FEATURES`: they are charged to a user (`billTo: userId`)
+ * so they appear in his history, and without them here, the line
+ * inherited the fallback of `segmentForFeature` and was displayed "Numo". They
+ * remain outside the bar - it is `BILLABLE_FEATURES` who fills it.
  *
- * `landing_demo` n'y est pas : elle se facture à la plateforme, aucun compte
- * n'a de ligne à ce nom.
+ * `landing_demo` is not there: it is invoiced to the platform, no account
+ * has a line for this name.
  */
 const USER_BILLED_INTERNAL_FEATURES = ["import_map", "brief_split"] as const;
 
@@ -34,10 +34,10 @@ export type UsageHistoryFeature =
   | (typeof USER_BILLED_INTERNAL_FEATURES)[number];
 
 /**
- * Libellé de chaque feature, côté UTILISATEUR — le vocabulaire du produit, pas
- * celui du ledger. L'admin finance a sa propre table (`Admin.finance.features`),
- * volontairement technique : là-bas on lit une marge, ici on se souvient d'un
- * geste. `MessageKey` plutôt que `string` : une clé fautive ne compile pas.
+ * Label of each feature, USER side — the vocabulary of the product, not
+ * that of the ledger. The finance admin has his own table (`Admin.finance.features`),
+ * deliberately technical: there we read a margin, here we remember a
+ * gesture. `MessageKey` rather than `string`: a faulty key does not compile.
  */
 export const FEATURE_LABEL_KEYS: Record<UsageHistoryFeature, MessageKey<"Billing">> = {
   numo_chat: "historyFeatureNumoChat",
@@ -61,13 +61,12 @@ export const FEATURE_LABEL_KEYS: Record<UsageHistoryFeature, MessageKey<"Billing
 };
 
 /**
- * La feature d'une ligne du ledger, si l'utilisateur a un mot pour elle.
+ * The feature of a ledger line, if the user has a word for it.
  *
- * Rend `null` sur tout ce qu'on ne sait pas nommer (feature retirée du code mais
- * encore en base, `landing_demo` arrivée là par accident) : l'appelant retombe
- * alors sur le nom du segment, qui reste vrai. Jamais de clé i18n assemblée à
- * partir d'une valeur de base sans passer par ici — c'est le chemin de la clé
- * qui s'afficherait à l'écran.
+ * Returns `null` on everything that we cannot name (feature removed from the code but
+ * still in base, `landing_demo` arrived there by accident): the caller then falls back to the segment name, which remains true. Never assemble an i18n key to
+ * from a base value without going through here — it is the path of the key
+ * that would be displayed on the screen.
  */
 export function toUsageHistoryFeature(feature: string): UsageHistoryFeature | null {
   return (USAGE_HISTORY_FEATURES as readonly string[]).includes(feature)

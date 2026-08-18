@@ -1,13 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * RENOMMER et SUPPRIMER une conversation de l'agent.
+ * RENAME and DELETE an agent conversation.
  *
- * Jusqu'ici la route n'avait qu'un GET : il n'existait AUCUN chemin de
- * suppression d'un run — ni bouton ni verbe. Une conversation dont la boucle
- * meurt reste `running`, ne s'arrête pas, ne se guide pas, et la seule issue était
- * un `delete` à la main en production. D'où le point de ce fichier : ce qui se
- * passe AVANT le `delete`, et qu'on ne peut plus faire après.
+ * So far the route only had a GET: there was NO path to
+ * deleting a run — neither button nor verb. A conversation whose loop
+ * dies remains `running`, does not stop, does not guide, and the only outcome was
+ * a `delete` in production. Hence the point of this file: what happens BEFORE `delete` *, and which can no longer be done after.
  */
 
 const getAuthedUser = vi.fn();
@@ -89,8 +88,8 @@ beforeEach(() => {
   getRun.mockResolvedValue({
     id: RUN,
     project_id: "proj-1",
-    // MIN-332 : la conversation appartient à qui l'a eue, et les trois ancrages
-    // qui en feraient un geste du PROJET sont vides — c'est le cas ordinaire.
+    // MIN-332: the conversation belongs to whoever had it, and the three anchors
+    // which would make it a gesture of the PROJECT are empty — this is the ordinary case.
     created_by: "user-1",
     routine_id: null,
     chain_id: null,
@@ -103,32 +102,31 @@ beforeEach(() => {
 });
 
 /**
- * MIN-332 — la conversation appartient à qui l'a eue.
+ * MIN-332 — the conversation belongs to who had it.
  *
- * Ces trois verbes lisaient le run EN CLÉ SERVICE et ne demandaient que
- * l'appartenance au projet : la policy `agent_runs_select`, seule à porter la
- * règle, ne gardait rien ici. Un membre ordinaire lisait donc le prompt d'un
- * coéquipier, le renommait, le supprimait.
+ * These three verbs read the run IN KEY SERVICE and only asked for
+ * membership in the project: the policy `agent_runs_select`, the only one to carry the
+ * rule, kept nothing here. So an ordinary member would read a teammate's prompt, rename it, delete it.
  */
-describe("visibilité — un run personnel n'est pas celui du projet", () => {
+describe("visibility — a personal run is not the project run", () => {
   const asTeammate = () => {
     getAuthedUser.mockResolvedValue({ ok: true, user: { id: "user-2" } });
   };
 
-  it("404 sur la LECTURE d'une conversation d'un autre membre", async () => {
+  it("returns 404 when READING another member's conversation", async () => {
     asTeammate();
     const res = await get();
     expect(res.status).toBe(404);
   });
 
-  it("404 sur le RENOMMAGE, et rien n'est écrit", async () => {
+  it("returns 404 when RENAMING, and writes nothing", async () => {
     asTeammate();
     const res = await patch({ title: "x" });
     expect(res.status).toBe(404);
     expect(h.updated).toHaveLength(0);
   });
 
-  it("404 sur la SUPPRESSION, et la microVM n'est pas coupée", async () => {
+  it("returns 404 when DELETING, and does not stop the microVM", async () => {
     asTeammate();
     const res = await del();
     expect(res.status).toBe(404);
@@ -137,9 +135,9 @@ describe("visibilité — un run personnel n'est pas celui du projet", () => {
   });
 
   it("mais un PASSAGE DE ROUTINE reste lisible par tout membre", async () => {
-    // La routine est un objet du PROJET : son `created_by` est le porteur de la
-    // règle, pas un acteur. La réserver à lui rendrait ses exécutions invisibles
-    // à l'équipe qui les a mises en place.
+    // The routine is an object of the PROJECT: its `created_by` is the bearer of the
+    // rule, not an actor. Reserving it for him would make his executions invisible
+    // to the team who put them in place.
     asTeammate();
     getRun.mockResolvedValue({
       id: RUN,
@@ -154,7 +152,7 @@ describe("visibilité — un run personnel n'est pas celui du projet", () => {
     expect(res.status).toBe(200);
   });
 
-  it("et une session de RELECTURE de PR aussi — son sujet est public", async () => {
+  it("also rejects a PR REVIEW session — its subject is public", async () => {
     asTeammate();
     getRun.mockResolvedValue({
       id: RUN,
@@ -171,16 +169,16 @@ describe("visibilité — un run personnel n'est pas celui du projet", () => {
 });
 
 describe("PATCH — renommer", () => {
-  it("écrit le titre du run", async () => {
+  it("writes the run title", async () => {
     const res = await patch({ title: "  Migration Electron  " });
     expect(res.status).toBe(200);
     expect(h.updated).toEqual([{ title: "Migration Electron" }]);
   });
 
   it("un titre VIDE efface le sien — c'est le chemin de retour", async () => {
-    // La conversation retombe alors sur le titre de son ticket (cf.
+    // The conversation then returns to the title of his ticket (cf.
     // `agentSessionTitle`). Interdire l'effacement rendrait un renommage
-    // malheureux définitif.
+    // definitely unhappy.
     await patch({ title: "   " });
     expect(h.updated).toEqual([{ title: null }]);
   });
@@ -191,8 +189,8 @@ describe("PATCH — renommer", () => {
     expect(h.updated).toHaveLength(0);
   });
 
-  it("404 pour qui n'est pas membre du projet — pas 403", async () => {
-    // Dire « interdit » apprendrait déjà qu'un run porte cet identifiant.
+  it("returns 404 for a non-member of the project — not 403", async () => {
+    // Saying “forbidden” would already learn that a run has this identifier.
     getProjectAccess.mockResolvedValue(null);
     const res = await patch({ title: "x" });
     expect(res.status).toBe(404);
@@ -201,21 +199,21 @@ describe("PATCH — renommer", () => {
 });
 
 describe("DELETE — supprimer", () => {
-  it("coupe la microVM et révoque la clé AVANT de supprimer la ligne", async () => {
+  it("stops the microVM and revokes the key BEFORE deleting the row", async () => {
     const res = await del();
     expect(res.status).toBe(200);
-    // L'ordre est tout : après le `delete`, on n'a plus ni le nom de la sandbox ni
-    // le hash de la clé. La microVM tournerait jusqu'au bout de sa session (24 h
-    // facturées) et la clé resterait valide, sans plus rien en base pour dire
+    // The order is everything: after the `delete`, we no longer have either the name of the sandbox or
+    // the hash of the key. The microVM would run until the end of its session (24 hours
+    // billed) and the key would remain valid, with nothing left in the base to say
     // lesquelles.
     expect(stopSandboxByName).toHaveBeenCalledWith("agent-run-1");
     expect(revokeRunKey).toHaveBeenCalledWith("hash-1");
     expect(h.deleted).toEqual([RUN]);
   });
 
-  it("supprime une conversation qui TRAVAILLE — c'est le cas qui l'a fait écrire", async () => {
-    // Une boucle morte laisse un run `running` qu'on ne peut ni arrêter ni guider.
-    // Refuser de le supprimer ne laisserait que la base pour issue.
+  it("deletes a conversation that is WORKING — this is the case that caused it to be written", async () => {
+    // A dead loop leaves a `running` run that cannot be stopped or guided.
+    // Refusing to remove it would only leave the base for issue.
     await del();
     expect(requestInterrupt).toHaveBeenCalledWith(RUN);
     expect(h.deleted).toEqual([RUN]);
@@ -239,7 +237,7 @@ describe("DELETE — supprimer", () => {
     expect(h.deleted).toEqual([RUN]);
   });
 
-  it("404 pour qui n'est pas membre — et rien n'est supprimé", async () => {
+  it("returns 404 for a non-member — and deletes nothing", async () => {
     getProjectAccess.mockResolvedValue(null);
     const res = await del();
     expect(res.status).toBe(404);

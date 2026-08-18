@@ -8,10 +8,10 @@ import {
 } from "@/lib/pages-export";
 
 /**
- * MIN-283 — l'export d'une branche. Ce que ce test épingle n'est pas le
- * markdown (MIN-269 le couvre, bloc par bloc) mais ce que l'export ajoute :
- * une ARBORESCENCE de fichiers, et des liens qui marchent une fois l'archive
- * dézippée sur le bureau de quelqu'un d'autre.
+ * MIN-283 — exporting a branch. What this test pins is not the
+ * markdown (MIN-269 covers it, block by block) but what the export adds:
+ * a TREE of files, and links that work once the archive
+ * is unzipped on someone else's desktop.
  */
 
 const md = (id: string, extra = "") => `# ${id}\n\n${extra}`;
@@ -67,13 +67,13 @@ describe("exportPagesToFiles", () => {
     const [file] = exportPagesToFiles([
       { id: "solo", parent_id: null, title: "Solo", icon: null, markdown: md("solo", "[[page:ailleurs]]") },
     ]);
-    // Inventer un chemin qui ne résout pas serait pire que la marque d'origine.
+    // Inventing a path that doesn't resolve would be worse than the original mark.
     expect(file.markdown).toContain("[[page:ailleurs]]");
   });
 
   it("ne laisse pas une sous-page « Index » écraser le corps de son parent", () => {
-    // Le dossier d'un parent porte son corps sous `index.md` : une fille
-    // intitulée « Index » y écrivait le MÊME chemin, et l'archive ne gardait
+    // A parent's file shows their body under `index.md`: a girl
+    // entitled “Index” wrote the SAME path there, and the archive did not keep
     // qu'un des deux fichiers — sans rien dire.
     const files = exportPagesToFiles([
       { id: "r", parent_id: null, title: "Guide", icon: null, markdown: md("r") },

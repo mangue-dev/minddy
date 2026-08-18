@@ -1,75 +1,75 @@
 import { gitIdentityFlags, sq, type RepoHost } from "./repo-host";
 
 /**
- * TRAVAILLER DANS LE DÉPÔT DE QUELQU'UN D'AUTRE (MIN-358, décision D2).
+ * WORKING IN SOMEONE ELSE'S DEPOT (MIN-358, decision D2).
  *
- * En microVM, le dépôt est un clone créé pour le tour : on y fait ce qu'on veut,
- * `git add -A` compris, parce qu'il n'y a personne d'autre dedans. Sur la machine
- * de l'utilisateur, le dépôt est CELUI QU'IL A OUVERT — sa branche, son index,
- * son WIP, ses `.env`. Trois gestes de la chaîne de fin de tour y détruisent du
- * travail humain, mesurés sur un clone jetable de ce dépôt :
+ * In microVM, the repository is a clone created for the tour: we do what we want there,
+ * `git add -A` included, because there is no one else in it. On the machine
+ * of the user, the repository is THE ONE HE OPENED — its branch, its index,
+ * its WIP, its `.env`. Three gestures of the end of turn chain destroy
+ * human work, measured on a disposable clone from this repository:
  *
  * | Geste | Ce qu'il fait au checkout de l'humain |
  * | --- | --- |
- * | `git add -A` | stage tout le non-ignoré : son WIP part dans la pull request |
- * | `git checkout -b` | le change de branche sous les doigts |
- * | `git config user.email` | réécrit SON identité git dans SON dépôt |
+ * | `git add -A` | stage all the non-ignored: its WIP goes into the pull request |
+ * | `git checkout -b` | changing branches at your fingertips |
+ * | `git config user.email` | rewrites HIS git identity in HIS repository |
  *
- * Ce module est la réponse, et sa forme tient en une phrase : **on ne touche ni
- * à son index, ni à son HEAD, ni à son arbre de travail.** Le commit se fabrique
- * dans un index JETABLE (`GIT_INDEX_FILE`), depuis l'arbre du parent, en n'y
- * posant que les chemins du tour ; `commit-tree` en fait un commit, `update-ref`
- * l'accroche à une ref à nous, et le push part par sha. Après quoi
- * `git status`, `git branch --show-current` et `git write-tree` rendent, chez
- * l'utilisateur, exactement ce qu'ils rendaient avant.
- *
- * ─────────────────────────────────────────────────────────────────────────────
- * CE QUE LA SONDE A TRANCHÉ, ET QU'AUCUNE LECTURE NE DIRAIT
- *
- * - **les hooks ne tournent pas.** `commit-tree` est de la plomberie : un
- *   `pre-commit` lent, ou qui sort en 1, ne peut plus casser un tour. C'est le
- *   problème « les hooks de l'utilisateur s'exécutent » réglé par construction,
- *   et non par un `--no-verify` qu'il aurait fallu penser à mettre ;
- * - **un chemin fantôme est ignoré en silence** (`update-index --add --remove`
- *   sur un fichier ni sur disque ni dans l'arbre rend 0) : la liste des chemins
- *   du tour n'a donc pas besoin d'être exacte pour être sûre ;
- * - **`git status --porcelain` CITE les chemins non-ASCII** (`"lib/\303\251t\303\251.ts"`),
- *   `-z` non. D'où `-z` partout ici : un chemin accentué mal relu, c'est un
- *   fichier absent de la pull request ;
- * - **un fichier gitignoré n'apparaît pas dans `status`** mais `update-index` le
- *   stagerait sans broncher — c'est de la plomberie, elle ne lit pas `.gitignore`.
- *   Le `.env` réel de l'utilisateur est là, dans ce mode : d'où `dropIgnoredPaths`.
+ * This module is the answer, and its form is in one sentence: **we do not touch or
+ * to its index, nor to its HEAD, nor to its working tree.** The commit is made
+ * in a DISPOSABLE index (`GIT_INDEX_FILE`), from the parent tree, not including
+ * posing as the paths of the tour; `commit-tree` makes it a commit, `update-ref`
+ * hooks it to a ref of ours, and the push leaves by sha. After which
+ * `git status`, `git branch --show-current` and `git write-tree` render, at
+ * the user, exactly what they rendered before.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * DEUX CHOIX ASSUMÉS, QUI SE VOIENT DANS LE PRODUIT
+ * WHAT THE PROBE HAS DECIDED, AND THAT NO READING WOULD SAY
  *
- * 1. **Le parent du premier commit est le HEAD du checkout**, pas `origin/<base>`.
- *    Brancher sur la base produirait une pull request dont le contenu est bâti
- *    sur un état que la base ne contient pas — du code subtilement faux — là où
- *    brancher sur HEAD n'emporte que des commits que l'utilisateur a déjà faits.
- *    Corollaire : `origin/<base>` n'est LU nulle part sur ce chemin, donc le fait
- *    qu'il vaille le dernier `git fetch` de l'humain ne nous concerne plus.
- * 2. **Aucune branche locale n'est créée.** L'ancre du run est une ref à nous
- *    (`refs/minddy/run/<id>/work`) ; la branche de travail n'existe que sur le
- *    remote. Poser un `refs/heads/<branche>` serait plus commode — et le jour où
- *    l'utilisateur a justement CETTE branche checkoutée, la déplacer sous lui
- *    ferait apparaître tout le travail de l'agent comme annulé dans son
- *    `git status`. Il la récupère du remote, comme n'importe quel collègue.
+ * - **the hooks do not turn.** `commit-tree` is plumbing: a
+ * `pre-commit` slow, or which comes out in 1, can no longer break a turn. This is the
+ * “user hooks are running” problem fixed by build,
+ * and not by a `--no-verify` that you should have thought about putting;
+ * - **a ghost path is silently ignored** (`update-index --add --remove`
+ * on a file neither on disk nor in the tree returns 0): the list of paths
+ * of the tour therefore does not need to be exact to be safe;
+ * - **`git status --porcelain` CITE non-ASCII paths** (`"lib/\303\251t\303\251.ts"`),
+ * `-z` no. Hence `-z` everywhere here: a poorly reread accentuated path is a
+ * file missing from pull request;
+ * - **a gitignored file does not appear in `status`** but `update-index` does
+ * would stage without flinching — it's plumbing, it doesn't read `.gitignore`.
+ * The user's real `.env` is there, in this mode: hence `dropIgnoredPaths`.
  *
- * Et un cas qu'aucune astuce ne referme, et qui doit donc se DIRE plutôt que se
- * trancher en silence : **l'utilisateur édite un fichier que l'agent édite
- * aussi.** `carriedPaths` le nomme, et la fin de tour le publie au fil.
+ * ─────────────────────────────────────────────────────────────────────────────
+ * TWO ASSURED CHOICES, WHICH CAN BE SEEN IN THE PRODUCT
+ *
+ * 1. **The parent of the first commit is the HEAD of the checkout**, not `origin/<base>`.
+ * Connecting to the database would produce a pull request whose content is built
+ * on a state that the base does not contain — subtly false code — where
+ * branching into HEAD only carries commits that the user has already made.
+ * Corollary: `origin/<base>` is not READ anywhere on this path, so the fact
+ * whether he is worth the last human `git fetch` no longer concerns us.
+ * 2. **No local branch is created.** The run anchor is a ref to us
+ * (`refs/minddy/run/<id>/work`); the branch of work only exists on the
+ * remote. Setting a `refs/heads/<branche>` would be more convenient — and the day
+ * the user has exactly THIS branch checked out, move it under him
+ * would make all of the agent's work appear as canceled in his
+ * `git status`. He gets it from the remote, like any colleague.
+ *
+ * And a case that no trick closes, and which must therefore be SAYED rather than
+ * decide silently: **the user edits a file that the agent edits
+ * also.** `carriedPaths` names it, and the end of the round publishes it to the thread.
  */
 
 /**
- * Où l'ancre d'un run vit dans le dépôt de l'utilisateur. Une ref à nous, hors
- * de `refs/heads/` : elle n'apparaît ni dans `git branch`, ni dans son
- * autocomplete, et deux runs sur la même machine ne se marchent pas dessus.
+ * Where the anchor of a run lives in the user's repository. A ref to us, outside
+ * of `refs/heads/`: it appears neither in `git branch` nor in its
+ * autocomplete, and two runs on the same machine do not work on each other.
  *
- * Le point est retiré comme le reste, et pas seulement en tête : `..` est
- * INTERDIT dans un nom de ref par git lui-même, et un identifiant qui en
- * porterait ferait échouer le `update-ref` au moment du commit — c'est-à-dire à
- * l'endroit où on a le plus de travail à perdre.
+ * The point is removed like the rest, and not just at the top: `..` is
+ * FORBIDDEN in a ref name by git itself, and an identifier that
+ * would cause the `update-ref` to fail at commit time — that is, at
+ * the place where we have the most work to lose.
  */
 export function runWorkRef(runId: string): string {
   const safe = runId.replace(/[^A-Za-z0-9_-]/g, "-") || "run";
@@ -77,22 +77,22 @@ export function runWorkRef(runId: string): string {
 }
 
 /**
- * L'ÉTAT DE L'ARBRE DE TRAVAIL, indexé par chemin — un instantané qu'on prend au
- * début du tour et qu'on recompare à la fin.
+ * THE STATE OF THE WORK TREE, indexed by path — a snapshot taken at
+ * start of the round and we compare again at the end.
  *
- * La valeur est le code XY de `git status` (` M`, `??`, `D `…). On ne compare
- * jamais des CONTENUS : ce qu'on cherche, c'est « ce chemin n'était pas dans cet
- * état quand le tour a commencé », et c'est exactement ce que le code dit.
+ * The value is the XY code of `git status` (` M`, `??`, `D `…). We do not compare
+ * never CONTENT: what we are looking for is “this path was not in this
+ * state when the round started", and that's exactly what the code says.
  */
 export type RepoState = Map<string, string>;
 
 /**
- * `git status --porcelain -z` → l'état, chemin par chemin.
+ * `git status --porcelain -z` → the state, path by path.
  *
- * Le format `-z` sépare les entrées par NUL et ne cite RIEN. Un renommage (`R`)
- * y occupe deux champs — destination puis origine — et les deux comptent : la
- * destination est un chemin neuf, l'origine un chemin disparu, et un tour qui
- * renomme doit livrer les deux.
+ * The `-z` format separates entries with NULL and quotes NOTHING. A rename (`R`)
+ * y occupies two fields — destination then origin — and both count: the
+ * destination is a new path, the origin a vanished path, and a turn which
+ * rename must deliver both.
  */
 export function parseStatusZ(stdout: string): RepoState {
   const fields = stdout.split("\0");
@@ -104,9 +104,9 @@ export function parseStatusZ(stdout: string): RepoState {
     const path = entry.slice(3);
     if (!path) continue;
     state.set(path, code);
-    // Renommage/copie : le champ SUIVANT porte le chemin d'origine, et il n'a pas
-    // de code à lui. Il est consommé ici, sans quoi la boucle le lirait comme une
-    // entrée dont les trois premiers caractères seraient du chemin.
+    // Renaming/copying: the NEXT field has the original path, and it does not have
+    // of code to him. It is consumed here, otherwise the loop would read it as a
+    // entry whose first three characters would be of the path.
     if (code[0] === "R" || code[0] === "C") {
       const from = fields[++i];
       if (from) state.set(from, code);
@@ -115,8 +115,8 @@ export function parseStatusZ(stdout: string): RepoState {
   return state;
 }
 
-/** L'instantané, lu dans le dépôt. Best-effort : un git muet rend un état vide,
- *  ce qui fait retomber le périmètre du tour sur les seules éditions notées. */
+/** The snapshot, read from the repository. Best-effort: a silent git returns an empty state,
+ * which reduces the scope of the tour to only the noted editions. */
 export async function readRepoState(host: RepoHost): Promise<RepoState> {
   try {
     const res = await host.exec(`git status --porcelain -z`, { timeoutMs: 60_000 });
@@ -126,47 +126,47 @@ export async function readRepoState(host: RepoHost): Promise<RepoState> {
   }
 }
 
-/** Le périmètre d'un tour : ce qu'il livre, et ce qu'il emporte sans l'avoir écrit. */
+/** The scope of a tour: what it delivers, and what it takes away without having written it. */
 export interface TurnPaths {
-  /** Les chemins à stager, triés — l'union des deux sources, chemins ignorés exclus
-   *  par `dropIgnoredPaths` (qui, lui, a besoin du dépôt). */
+  /** Paths to be staged, sorted — the union of the two sources, ignored paths excluded
+   * by `dropIgnoredPaths` (who needs the deposit). */
   paths: string[];
   /**
-   * Les chemins que l'agent a édités ALORS QUE l'utilisateur les avait déjà
-   * modifiés — donc ceux dont le commit emporte aussi son travail à lui.
+   * The paths that the agent edited WHILE the user already had them
+   * modified — therefore those whose commit also carries its own work.
    *
-   * Ce n'est pas une erreur à corriger, c'est le prix du mode : deux mains dans
-   * le même fichier. Ce qui serait fautif, ce serait de ne pas le dire.
+   * This is not an error to be corrected, it is the price of the mode: two hands in
+   * the same file. What would be wrong would be not to say it.
    */
   carried: string[];
 }
 
 /**
- * LE PÉRIMÈTRE DU TOUR — deux sources, et il faut les deux.
+ * THE PERIMETER OF THE TOUR — two sources, and you need both.
  *
- * 1. **Les éditions notées** (`delivery.noteEdit`, qui vient des permissions
+ * 1. **Notated editions** (`delivery.noteEdit`, which comes from permissions
  *    `edit` d'opencode). Fiable en v1 : il n'y a pas de bouton « toujours
- *    autoriser », donc aucune édition n'est muette. **Le jour où il y en aura un,
- *    `always` sur `edit` porte le motif `*` et rendra les éditions suivantes
- *    invisibles** — cette liste deviendra alors FAUSSE, pas seulement incomplète,
- *    et c'est la seconde source qui devra rattraper.
- * 2. **Le delta des deux instantanés**, qui voit ce qu'aucun tool d'écriture n'a
- *    produit : un lockfile réécrit par `npm install`, un codegen, un `rm` du
- *    shell. Sans lui ces fichiers seraient simplement absents de la pull request.
+ * allow”, so no edit is silent. **The day there is one,
+ * `always` on `edit` has the pattern `*` and will render subsequent editions
+ * invisible** — this list will then become FALSE, not just incomplete,
+ * and it is the second source which will have to catch up.
+ * 2. **The delta of the two snapshots**, which sees what no writing tool has
+ * product: a lockfile rewritten by `npm install`, a codegen, a `rm` of
+ * shell. Without it these files would simply be missing from the pull request.
  *
- * Aucune des deux ne suffit : `git status` seul verrait aussi le WIP de
- * l'utilisateur, et les éditions notées seules rateraient tout le shell.
+ * Neither of the two is enough: `git status` alone would also see the WIP of
+ * the user, and noted edits alone would miss the entire shell.
  *
- * `owned` est ce que les tours PRÉCÉDENTS du même run avaient déjà édité. Il ne
- * sert qu'à `carried` : après un tour, le travail de l'agent reste « modifié »
- * dans l'arbre de travail (nos commits vivent sur une ref, pas sur son HEAD), et
- * sans cette soustraction chaque fichier de l'agent se dénoncerait lui-même comme
- * du travail de l'utilisateur emporté.
+ * `owned` is what the PREVIOUS laps of the same run had already edited. He doesn't
+ * only serves `carried`: after a round, the agent's work remains “modified”
+ * in the working tree (our commits live on a ref, not on its HEAD), and
+ * without this subtraction each file of the agent would denounce itself as
+ * of the user's work taken away.
  */
 export function turnPaths(opts: {
-  /** Chemins édités par les tools PENDANT ce tour (relatifs au dépôt). */
+  /** Paths edited by the tools DURING this tour (relating to the repository). */
   edited: Iterable<string>;
-  /** Chemins déjà édités par les tours précédents de ce run. */
+  /** Paths already edited by previous rounds of this run. */
   owned?: Iterable<string>;
   before: RepoState;
   after: RepoState;
@@ -179,9 +179,9 @@ export function turnPaths(opts: {
   for (const [path, code] of opts.after) {
     if (opts.before.get(path) !== code) paths.add(path);
   }
-  // Un chemin disparu de l'instantané de fin alors qu'il était modifié au début
-  // ne compte PAS : c'est l'utilisateur (ou l'agent) qui a rendu le fichier à son
-  // état d'origine, il n'y a rien à livrer.
+  // A path disappeared from the end snapshot even though it was modified at the beginning
+  // does NOT count: it is the user (or agent) who returned the file to their
+  // original condition, there is nothing to deliver.
 
   const owned = new Set<string>();
   for (const path of opts.owned ?? []) owned.add(path.trim());
@@ -191,14 +191,14 @@ export function turnPaths(opts: {
 }
 
 /**
- * LA LISTE DES CHEMINS, PASSÉE PAR UN FICHIER ET NON PAR LA LIGNE DE COMMANDE.
+ * THE LIST OF PATHS, PASSED THROUGH A FILE AND NOT THROUGH THE COMMAND LINE.
  *
- * Deux raisons, et la seconde est la vraie : un tour de refonte touche des
- * centaines de fichiers et `sh -c` a une limite (`E2BIG`) ; surtout, `-z` — le
- * seul format où un chemin accentué ou à espaces se relit sans ambiguïté — n'est
- * accepté par `check-ignore` et `update-index` qu'avec `--stdin` (mesuré :
- * « -z only makes sense with --stdin »). Le fichier vit sous la racine DU RUN,
- * donc hors du dépôt : il n'apparaît jamais dans le `git status` de personne.
+ * Two reasons, and the second is the real one: a redesign round affects
+ * hundreds of files and `sh -c` has a limit (`E2BIG`); above all, `-z` — the
+ * only format where an accented or spaced path is reread without ambiguity — is not
+ * accepted by `check-ignore` and `update-index` than with `--stdin` (measured:
+ * "-z only makes sense with --stdin"). The file lives under the DU RUN root,
+ * therefore outside the repository: it never appears in anyone's `git status`.
  */
 async function writePathList(host: RepoHost, name: string, paths: string[]): Promise<string> {
   const file = `${host.layout.root}/${name}`;
@@ -208,14 +208,14 @@ async function writePathList(host: RepoHost, name: string, paths: string[]): Pro
 }
 
 /**
- * RETIRE LES CHEMINS GITIGNORÉS. `update-index` est de la plomberie : il stage un
- * `.env.local` sans un mot. Dans ce mode, ce `.env.local` est le VRAI fichier de
- * secrets de l'utilisateur.
+ * REMOVE THE GITIGNORED PATHS. `update-index` is plumbing: it involves a
+ * `.env.local` without a word. In this mode, this `.env.local` is the REAL file of
+ * user secrets.
  *
- * `git check-ignore` rend les chemins ignorés sur stdout, sort en 0 s'il en a
- * trouvé, en 1 sinon, et en 128 sur erreur — ce dernier cas ne filtre rien
- * plutôt que de tout jeter. Il consulte l'index, donc un fichier SUIVI n'est
- * jamais rendu comme ignoré, même s'il matche un motif : c'est ce qu'on veut.
+ * `git check-ignore` makes ignored paths on stdout, outputs 0 if it has any
+ * found, in 1 otherwise, and in 128 on error — this last case does not filter anything
+ * rather than throwing everything away. It consults the index, so a TRACKED file is not
+ * never returned as ignored, even if it matches a pattern: that's what we want.
  */
 export async function dropIgnoredPaths(host: RepoHost, paths: string[]): Promise<string[]> {
   if (paths.length === 0) return paths;
@@ -230,38 +230,38 @@ export async function dropIgnoredPaths(host: RepoHost, paths: string[]): Promise
   }
 }
 
-/** Ce que la préparation a trouvé dans le dépôt de l'utilisateur. */
+/** What the preparation found in the user's repository. */
 export interface CurrentRepoState {
-  /** Le commit sur lequel le tour s'appuie : notre ancre si le run a déjà commité,
-   *  le HEAD du checkout sinon. */
+  /** The commit on which the run is based: our anchor if the run has already committed,
+   * the HEAD of the checkout otherwise. */
   parent: string;
-  /** La branche que l'utilisateur a sous les doigts (vide si HEAD est détaché). */
+  /** The branch that the user has under their fingers (empty if HEAD is detached). */
   branch: string;
-  /** Le tour reprend-il une ancre existante (deuxième tour, ou reprise) ? */
+  /** Does the turn repeat an existing anchor (second turn, or repeat)? */
   resumed: boolean;
-  /** Fichiers déjà modifiés dans son arbre de travail quand le tour a commencé. */
+  /** Files already modified in its working tree when the round started. */
   dirty: number;
-  /** L'instantané déjà lu pour calculer `dirty`, réutilisé par le superviseur. */
+  /** The snapshot already read to calculate `dirty`, reused by the supervisor. */
   state: RepoState;
 }
 
 /**
- * PRÉPARE LE TOUR DANS LE DÉPÔT COURANT — et ne clone, ne checkout, ne configure
- * rien. C'est le pendant de `cloneRepo`, et il est beaucoup plus court parce que
- * tout ce que `cloneRepo` fabrique est déjà là.
+ * PREPARE THE ROUND IN THE CURRENT DEPOSIT — and don't clone, checkout, configure
+ * Nothing. It is the counterpart of `cloneRepo`, and it is much shorter because
+ * everything `cloneRepo` makes is already there.
  *
  * Trois gestes seulement :
  *
- * 1. **vérifier que `layout.repoDir` EST la racine d'un dépôt git.** Refuser un
- *    sous-dossier n'est pas du zèle : les chemins du tour sont relatifs à la
- *    racine du dépôt, et un sous-dossier les décalerait tous en silence ;
- * 2. **retrouver l'ancre du run** — la ref locale si elle existe, sinon la
- *    branche de travail sur le remote (le run a déjà poussé, d'ici ou d'ailleurs),
+ * 1. **check that `layout.repoDir` IS the root of a git repository.** Reject one
+ * subfolder is not zealous: the tour paths are relative to the
+ * root of the repository, and a subfolder would silently shift them all;
+ * 2. **find the anchor of the run** — the local ref if it exists, otherwise the
+ * working branch on the remote (the run has already pushed, from here or elsewhere),
  *    sinon rien ;
- * 3. **lire l'état de départ** : HEAD, branche, propreté.
+ * 3. **read the starting state**: HEAD, branch, cleanliness.
  *
- * LÈVE si le dépôt n'est pas utilisable, comme `cloneRepo` : un tour qui ne sait
- * pas où il écrit n'a pas de mode dégradé.
+ * LIFT if the deposit is not usable, like `cloneRepo`: a trick that doesn't know
+ * not where he writes does not have degraded mode.
  */
 export async function prepareCurrentRepo(
   host: RepoHost,
@@ -270,8 +270,8 @@ export async function prepareCurrentRepo(
     authUrl: string;
     workBranch: string;
     remoteWorkMayExist?: boolean;
-    /** Branche de base choisie au lancement : une branche cloud est ramenée
-     * avant d'ouvrir OpenCode, sans jamais déplacer le HEAD de l'utilisateur. */
+    /** Base branch chosen at launch: a cloud branch is brought back
+     * before opening OpenCode, without ever moving the user's HEAD. */
     baseBranch?: string;
   },
 ): Promise<CurrentRepoState> {
@@ -296,10 +296,10 @@ export async function prepareCurrentRepo(
   const ref = runWorkRef(opts.runId);
   const base = opts.baseBranch?.trim() ?? "";
   const baseRef = `refs/minddy/run/${opts.runId.replace(/[^A-Za-z0-9_-]/g, "-") || "run"}/base`;
-  // Une branche proposée comme locale par le picker doit rester locale : la
-  // télécharger à nouveau coûtait ~1 s à chaque conversation, puis le code
-  // repartait malgré tout de HEAD. Les deux refs sont indépendantes, donc lues
-  // en parallèle.
+  // A branch proposed as local by the picker must remain local: the
+  // download again cost ~1s each conversation, then the code
+  // nevertheless left HEAD. The two refs are independent, therefore read
+  // in parallel.
   const [localBase, localRunParent] = await Promise.all([
     base ? revParse(host, `refs/heads/${base}`) : Promise.resolve(""),
     revParse(host, ref),
@@ -307,8 +307,8 @@ export async function prepareCurrentRepo(
 
   let baseParent = localBase;
   if (base && !baseParent) {
-    // La branche n'existe que dans le cloud : on la ramène sous une ref privée à
-    // minddy, sans déplacer HEAD ni les refs de l'utilisateur.
+    // The branch only exists in the cloud: we bring it under a private ref to
+    // minddy, without moving HEAD or user refs.
     const fetched = await host.exec(
       `git fetch --no-tags --quiet ${sq(opts.authUrl)}` +
         ` ${sq(`+refs/heads/${base}:${baseRef}`)}`,
@@ -328,9 +328,9 @@ export async function prepareCurrentRepo(
 
   let parent = localRunParent;
   if (!parent && opts.remoteWorkMayExist !== false) {
-    // Le run a-t-il déjà poussé, d'ici ou d'une autre machine ? On ramène son tip
+    // Has the run already pushed, from here or another machine? We bring back our tip
     // sous NOTRE ref — jamais sous `refs/heads/` ni `refs/remotes/origin/`, qui
-    // appartiennent tous les deux à l'utilisateur.
+    // both belong to the user.
     const fetched = await host.exec(
       `git fetch --no-tags --quiet ${sq(opts.authUrl)}` +
         ` ${sq(`+refs/heads/${opts.workBranch}:${ref}`)}`,
@@ -338,12 +338,12 @@ export async function prepareCurrentRepo(
     );
     if (fetched.exitCode === 0) parent = await revParse(host, ref);
   }
-  // « Repris » se dit du RUN, pas de la machine : une ancre ramenée du remote est
-  // du travail que ce run a déjà poussé, d'ici ou d'ailleurs. Ce qui reste après
-  // ce point, c'est un run qui commence — et il commence sur le HEAD de
-  // l'utilisateur (cf. l'en-tête, choix nº 1).
+  // “Recovered” is said from the RUN, not from the machine: an anchor brought back from the remote is
+  // of the work that this run has already pushed, from here or elsewhere. What remains after
+  // at this point, a run begins — and it begins on the HEAD of
+  // the user (see the header, choice no. 1).
   const resumed = Boolean(parent);
-  // Ces trois lectures ne dépendent pas les unes des autres. Les sérialiser
+  // These three readings do not depend on each other. Serialize them
   // ajoutait trois forks de shell au chemin critique de chaque tour local.
   const [head, branchResult, state] = await Promise.all([
     parent ? Promise.resolve(parent) : baseParent ? Promise.resolve(baseParent) : revParse(host, "HEAD"),
@@ -359,7 +359,7 @@ export async function prepareCurrentRepo(
   return { parent, branch, resumed, dirty: state.size, state };
 }
 
-/** Le sha d'une ref, ou "" si elle n'existe pas. Ne lève jamais. */
+/** The sha of a ref, or "" if it does not exist. Never lift. */
 async function revParse(host: RepoHost, ref: string): Promise<string> {
   try {
     const res = await host.exec(`git rev-parse --verify --quiet ${sq(`${ref}^{commit}`)}`);
@@ -369,43 +369,43 @@ async function revParse(host: RepoHost, ref: string): Promise<string> {
   }
 }
 
-/** Ce que `commitTurnAndPush` rend — la forme de `commitAndPush`, plus ce que le
- *  mode dépôt courant est seul à savoir. */
+/** What `commitTurnAndPush` renders — the form of `commitAndPush`, plus what the
+ * Current deposit mode is the only one to know. */
 export interface CurrentRepoPush {
   committed: boolean;
   remoteUpdated: boolean;
   headSha: string;
   pushed: boolean;
-  /** Les chemins livrés par ce commit. */
+  /** The paths delivered by this commit. */
   paths: string[];
-  /** Ceux d'entre eux que l'utilisateur avait aussi modifiés (cf. `TurnPaths`). */
+  /** Those of them that the user had also modified (see `TurnPaths`). */
   carried: string[];
 }
 
 /**
- * LE COMMIT PAR INDEX TEMPORAIRE, PUIS LE PUSH — le cœur du mode dépôt courant.
+ * COMMIT BY TEMPORARY INDEX, THEN PUSH — the heart of the current deposit mode.
  *
  * ```
- * GIT_INDEX_FILE=<jetable> git read-tree <parent>          # l'arbre du parent, pas le sien
+ * GIT_INDEX_FILE=<jetable> git read-tree <parent> # parent's tree, not its own
  * GIT_INDEX_FILE=<jetable> git update-index --add --remove -- <chemins du tour>
  * GIT_INDEX_FILE=<jetable> git write-tree                  # l'arbre du commit
- * git -c user.email=… commit-tree <arbre> -p <parent>      # aucun hook, aucun HEAD
+ * git -c user.email=… commit-tree <arbre> -p <parent> # no hook, no HEAD
  * git update-ref <ancre du run> <commit>
  * git push <url> <commit>:refs/heads/<branche>
  * ```
  *
- * L'index de l'utilisateur, son HEAD et son arbre de travail ne sont touchés par
- * aucune de ces six commandes — vérifié sur un vrai dépôt
+ * The user's index, HEAD and working tree are not affected by
+ * none of these six commands — verified on a real repository
  * ([current-repo.git.test.ts](current-repo.git.test.ts)).
  *
- * PAS DE BRANCHE POUR RIEN, comme `commitAndPush` (MIN-123) : si l'arbre écrit
- * est identique à celui du parent, il n'y a rien à commiter, et si le run n'a
- * jamais rien poussé il n'y a alors rien à pousser non plus. Un tour de question
- * ou de plan ne laisse donc aucune branche sur le dépôt de l'utilisateur.
+ * NO BRANCH FOR NOTHING, like `commitAndPush` (MIN-123): if the tree writes
+ * is identical to that of the parent, there is nothing to commit, and if the run has not
+ * never pushed anything so there is nothing to push either. A round of questions
+ * or plan therefore leaves no branch on the user's repository.
  *
- * `remoteUpdated` garde exactement le sens qu'il a côté microVM : le push a-t-il
- * fait AVANCER la branche distante ? C'est lui, et non `committed`, que la
- * fonction lit pour rouvrir une pull request refusée.
+ * `remoteUpdated` keeps exactly the meaning it has on the microVM side: does the push have
+ * moves the remote branch FORWARD? It is he, and not `committed`, that the
+ * function reads to reopen a refused pull request.
  */
 export async function commitTurnAndPush(
   host: RepoHost,
@@ -416,16 +416,16 @@ export async function commitTurnAndPush(
     message: string;
     committer: { name: string; email: string };
     /**
-     * Sur quoi commiter QUAND LE RUN N'A PAS ENCORE D'ANCRE — le HEAD du
+     * What to commit to WHEN THE RUN HAS NO ANCHOR YET — the HEAD of the
      * checkout, tel que `prepareCurrentRepo` l'a lu.
      *
-     * Le parent réel, lui, est relu ICI à chaque appel. C'est ce qui rend la
-     * fonction sûre à appeler deux fois dans un tour (`create_pr`, puis la fin de
-     * tour) : un appelant qui oublierait d'avancer son état fabriquerait sinon un
-     * FRÈRE du premier commit, et le push partirait en non-fast-forward.
+     * The real parent is read HERE with each call. This is what makes the
+     * safe function to call twice in a round (`create_pr`, then the end of
+     * turn): a caller who forgets to state his state would otherwise create a
+     * BROTHER of the first commit, and the push would go non-fast-forward.
      */
     fallbackParent: string;
-    /** Le périmètre du tour, déjà uni et déjà débarrassé des chemins ignorés. */
+    /** The perimeter of the tour, already united and already cleared of ignored paths. */
     scope: TurnPaths;
   },
 ): Promise<CurrentRepoPush> {
@@ -435,10 +435,10 @@ export async function commitTurnAndPush(
   const indexFile = `${host.layout.root}/turn-index`;
   const env = { GIT_INDEX_FILE: indexFile };
 
-  // L'index jetable est REFAIT à chaque appel (`create_pr` puis fin de tour, ou
-  // deux tours dans la même racine de run) : un index laissé par un appel
-  // précédent porterait des chemins qui ne sont plus ceux du tour. Et il vit sous
-  // la racine du RUN, jamais dans le dépôt : `git status` ne doit rien en voir.
+  // The disposable index is REDONE at each call (`create_pr` then end of turn, or
+  // two turns in the same run root): an index left by a call
+  // previous would carry paths which are no longer those of the tour. And he lives under
+  // the root of the RUN, never in the repository: `git status` must not see anything.
   await host.mkdir(host.layout.root).catch(() => {});
   const wipe = await host.exec(`rm -f ${sq(indexFile)}`);
   if (wipe.exitCode !== 0) throw new Error(`temp index cleanup failed: ${wipe.stderr}`);
@@ -449,9 +449,9 @@ export async function commitTurnAndPush(
   }
 
   if (opts.scope.paths.length > 0) {
-    // `--add` prend les fichiers neufs, `--remove` acte ceux qui ont disparu du
-    // disque. Un chemin qui n'existe ni sur disque ni dans l'arbre est ignoré
-    // sans erreur (mesuré) : la liste n'a pas besoin d'être exacte.
+    // `--add` takes the new files, `--remove` records those which have disappeared from
+    // disk. A path that does not exist on disk or in the tree is ignored
+    // error-free (measured): the list does not need to be exact.
     const list = await writePathList(host, "turn-paths", opts.scope.paths);
     const staged = await host.exec(
       `git update-index --add --remove -z --stdin < ${sq(list)}`,
@@ -490,17 +490,17 @@ export async function commitTurnAndPush(
   await host.exec(`rm -f ${sq(indexFile)}`).catch(() => {});
 
   /**
-   * CE QUE CE COMMIT A LIVRÉ — vide quand il n'y a pas eu de commit, et c'est ce
-   * qui compte : `carried` déclenche une note au fil (« du travail à vous est
-   * parti dans la pull request »), et la publier sur un tour qui n'a rien
-   * commité annoncerait un dégât qui n'a pas eu lieu.
+   * WHAT THIS COMMIT DELIVERED — empty when there was no commit, and this is
+   * which counts: `carried` triggers a note in the thread (“work of yours is
+   * left in the pull request"), and publish it on a tour which has nothing
+   * committed would announce a damage which did not occur.
    */
   const delivered = committed
     ? { paths: opts.scope.paths, carried: opts.scope.carried }
     : { paths: [], carried: [] };
 
-  // Rien de commité et rien de poussé auparavant : aucune branche à créer sur le
-  // dépôt de l'utilisateur pour un tour qui n'a pas touché au code.
+  // Nothing committed and nothing pushed before: no branch to create on the
+  // user repository for a ride that didn't touch the code.
   if (!committed && !anchor) {
     return { ...delivered, committed: false, remoteUpdated: false, headSha, pushed: false };
   }
@@ -511,7 +511,7 @@ export async function commitTurnAndPush(
   );
   const remoteSha = remote.exitCode === 0 ? remote.stdout.trim().split(/\s/)[0] ?? "" : "";
 
-  // Par SHA, et pas `HEAD:refs/heads/…` : HEAD est celui de l'utilisateur.
+  // By SHA, and not `HEAD:refs/heads/…`: HEAD is that of the user.
   const push = await host.exec(
     `git push ${sq(opts.authUrl)} ${sq(`${headSha}:refs/heads/${opts.workBranch}`)}`,
     { timeoutMs: 120_000 },

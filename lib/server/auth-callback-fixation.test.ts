@@ -4,15 +4,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AUTH_PENDING_COOKIE, decodePendingOtp } from "@/lib/auth-otp-pending";
 
 /**
- * MIN-345 — la fixation de session par le callback web.
+ * MIN-345 — session fixation by the web callback.
  *
- * L'attaque tient en une phrase : l'attaquant demande un lien pour SON compte
- * et l'envoie à sa victime. Si `GET /auth/callback?token_hash=…` ouvre une
- * session, la victime travaille désormais dans le compte de l'attaquant, qui
- * lit tout ce qu'elle y écrit.
+ * The attack is in one sentence: the attacker requests a link for HIS account
+ * and sends it to his victim. If `GET /auth/callback?token_hash=…` opens a
+ * session, the victim now works in the attacker's account, who
+ * reads everything she writes there.
  *
- * Ce que ce fichier tient, et qu'aucune relecture ne tient : **aucun `GET` ne
- * consomme le jeton**, et le `POST` qui le consomme ne part que d'ici.
+ * What this file holds, and no reread holds: **no `GET` ne
+ * consumes the token**, and the `POST` that consumes it only leaves from here.
  */
 
 const verifyOtp = vi.fn(async () => ({
@@ -28,7 +28,7 @@ vi.mock("@supabase/ssr", () => ({
   createServerClient: () => ({ auth: { verifyOtp, exchangeCodeForSession } }),
 }));
 
-/** Le magasin de cookies du serveur, celui que `next/headers` rend. */
+/** The server's cookie store, the one that `next/headers` renders. */
 const store = new Map<string, string>();
 
 vi.mock("next/headers", () => ({
@@ -76,7 +76,7 @@ function post(headers: Record<string, string>): Promise<Response> {
   ) as unknown as Promise<Response>;
 }
 
-/** Le cookie d'attente tel que la réponse le pose, décodé. */
+/** The wait cookie as the response asks, decoded. */
 function pendingFrom(response: Response) {
   const raw = response.headers.get("set-cookie") ?? "";
   const value = /mdy_auth_pending=([^;]*)/.exec(raw)?.[1];
@@ -97,7 +97,7 @@ describe("GET /auth/callback", () => {
     expect(verifyOtp).not.toHaveBeenCalled();
     expect(arrivals).toEqual([]);
     expect(response.headers.get("location")).toBe(`${ORIGIN}/auth/confirm`);
-    // Le jeton quitte l'URL : plus rien à fuiter dans un `Referer`.
+    // The token leaves the URL: nothing more to leak in a `Referer`.
     expect(response.headers.get("location")).not.toContain("th_attacker");
     expect(pendingFrom(response)).toEqual({
       tokenHash: "th_attacker",

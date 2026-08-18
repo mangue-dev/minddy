@@ -2,40 +2,40 @@ import { describe, expect, it } from "vitest";
 import { unechoedMessages } from "./agent-pending";
 
 /**
- * Bulles optimistes de la conversation de l'agent. Ce qui est verrouillé ici, c'est
- * le cycle de vie complet d'un message de follow-up : il apparaît À L'ENVOI, reste
- * visible tant que la boucle ne l'a pas drainé, et disparaît PILE quand son écho
- * arrive — sans doublon, et sans se faire avaler par un message identique plus vieux.
+ * Optimistic agent chat bubbles. What is locked here is
+ * the complete life cycle of a follow-up message: it appears WHEN SENDING, remains
+ * visible until the loop has drained it, and disappears QUITE when its echo
+ * arrives — without a duplicate, and without being swallowed by an identical older message.
  */
 
 describe("unechoedMessages", () => {
-  it("affiche le message dès l'envoi, avant tout écho serveur", () => {
-    // Le scénario réel : session au repos (l'agent vient de répondre), l'utilisateur
-    // envoie un follow-up. Le fil ne contient que le prompt de lancement et la
-    // réponse ; le nouveau message n'est pas encore un event.
+  it("displays the message as soon as it is sent, before any server echo", () => {
+    // The real scenario: session at rest (the agent has just responded), the user
+    // send a follow-up. The thread only contains the launch prompt and the
+    // answer ; the new message is not yet an event.
     expect(unechoedMessages(["ajoute des tests"], ["Travaille sur MIN-68"])).toEqual([
       "ajoute des tests",
     ]);
   });
 
-  it("retire la bulle quand son écho arrive (aucun doublon)", () => {
+  it("removes the bubble when its echo arrives (no duplicate)", () => {
     expect(
       unechoedMessages(["ajoute des tests"], ["Travaille sur MIN-68", "ajoute des tests"]),
     ).toEqual([]);
   });
 
-  it("garde DEUX bulles pour deux envois identiques, et n'en retire qu'une par écho", () => {
-    // Le cas qui casse un simple « ce texte existe-t-il déjà ? » : sans compter, le
-    // 1er écho ferait disparaître les deux bulles d'un coup.
+  it("keeps TWO bubbles for two identical sends and removes only one per echo", () => {
+    // The case that breaks a simple “does this text already exist?” »: without counting, the
+    // 1st echo would make both bubbles disappear at once.
     expect(unechoedMessages(["continue", "continue"], [])).toEqual(["continue", "continue"]);
     expect(unechoedMessages(["continue", "continue"], ["continue"])).toEqual(["continue"]);
     expect(unechoedMessages(["continue", "continue"], ["continue", "continue"])).toEqual([]);
   });
 
-  it("ne se laisse pas avaler par un message identique DÉJÀ échoué plus tôt", () => {
-    // « ok » envoyé au tour 1 (déjà échoué), puis « ok » de nouveau au tour 2. La
-    // liste `pending` n'étant jamais purgée, elle porte les deux : la soustraction
-    // laisse bien la nouvelle bulle.
+  it("is not swallowed by an identical message that already failed earlier", () => {
+    // “ok” sent in round 1 (already failed), then “ok” again in round 2. The
+    // list `pending` being never purged, it carries both: subtraction
+    // leave the new bubble well.
     expect(unechoedMessages(["ok", "ok"], ["ok"])).toEqual(["ok"]);
   });
 
@@ -53,11 +53,11 @@ describe("unechoedMessages", () => {
 });
 
 /**
- * PR 52 — LES MENTIONS VOYAGENT AVEC LEUR MESSAGE.
+ * PR 52 — MENTIONS TRAVEL WITH THEIR MESSAGE.
  *
- * Un message en attente ne porte pas que du texte : il porte les ids de ce qu'il
- * cite. Les retrouver après coup par égalité de texte donnait les pilules du
- * premier « ok » au second — celui qui citait un ticket.
+ * A pending message does not just carry text: it carries the ids of what it
+ * cites. Finding them afterwards by equality of text gave the pills of the
+ * first “ok” to the second — the one who cited a ticket.
  */
 describe("les objets en attente, pas leurs textes", () => {
   it("rend le message ENTIER, mentions comprises", () => {
@@ -73,7 +73,7 @@ describe("les objets en attente, pas leurs textes", () => {
       { text: "ok", mentions: [] },
       { text: "ok", mentions: [{ type: "issue", id: "i-1", label: "MIN-7" }] },
     ];
-    // Le premier « ok » est revenu du serveur : c'est LUI qui part, et celui qui
+    // The first “ok” came back from the server: it’s HE who leaves, and the one who
     // reste garde ses mentions.
     expect(unechoedMessages(pending, ["ok"])).toEqual([pending[1]]);
   });

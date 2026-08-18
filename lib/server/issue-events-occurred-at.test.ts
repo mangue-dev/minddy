@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import { stampOccurredAt, type EventRow } from "@/lib/server/issue-events";
 
 /**
- * `stampOccurredAt` — l'horodatage d'un événement, c'est l'instant du GESTE.
+ * `stampOccurredAt` — the timestamp of an event, this is the instant of the GESTURE.
  *
- * Un événement différé (`after()`) s'insère quelques centaines de millisecondes
- * après le geste qui l'a produit, et pendant ce temps d'autres écritures — Smart
- * Assign, les relations — passent devant. Sans cet horodatage figé, la timeline
- * classe par ordre d'ÉCRITURE : « a assigné » avant « a changé le statut ».
+ * A delayed event (`after()`) is inserted a few hundred milliseconds
+ * after the gesture that produced it, and during this time other writes — Smart
+ * Assign, relationships — come first. Without this fixed timestamp, the timeline
+ * sorts in WRITING order: “assigned” before “changed status”.
  */
 
 const row = (over: Partial<EventRow> = {}): EventRow => ({
@@ -24,7 +24,7 @@ describe("stampOccurredAt", () => {
     const stamped = stampOccurredAt([row(), row({ field: "priority" })], at);
 
     expect(stamped.map((r) => r.created_at)).toEqual([at, at]);
-    // Le reste de la ligne est intact — l'estampille s'ajoute, elle ne réécrit pas.
+    // The rest of the line is intact — the stamp is added, it does not rewrite.
     expect(stamped[0]).toMatchObject({ issue_id: "issue-1", type: "updated", field: "status" });
   });
 

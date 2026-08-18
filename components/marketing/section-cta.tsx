@@ -6,26 +6,25 @@ import { TrackedCta } from "./tracked-cta";
 import { Reveal, RevealHeading } from "./reveal";
 
 /**
- * Dernière relance avant le footer (MIN-73). Partagée par la landing et la page
- * tarifs : les deux se terminent sur la même demande, il n'y a pas de raison
- * qu'elles ne se terminent pas sur le même écran.
+ * Last restart before the footer (MIN-73). Shared by the landing and the page
+ * prices: both end on the same request, there is no reason
+ * that they should not end on the same screen.
  *
- * Un écran, justement : la section occupe presque toute la hauteur du viewport
- * et centre son contenu, avec le fond animé du hero derrière. C'est le seul
- * moment de la page, avec le hero, où on ne demande pas de lire mais de cliquer.
+ * One screen, precisely: the section occupies almost the entire height of the viewport
+ * and centers its content, with the animated background of the hero behind. This is the only moment on the page, with the hero, where we are not asked to read but to click.
  *
- * `relative isolate` : le shader est un enfant en `-z-10`, il doit rester
- * derrière le texte de la section sans passer derrière le fond de la page.
+ * `relative isolate`: the shader is a child in `-z-10`, it must remain
+ * behind the text of the section without passing behind the background of the page.
  */
 export async function SectionCta() {
   const t = await getTranslations("Landing");
 
-  // `svh` et pas `vh` : sur mobile, `vh` se mesure sur le viewport LARGE —
-  // celui d'après la rétractation de la barre d'URL. Une section calée dessus
-  // déborde donc de la hauteur de cette barre tant qu'elle est déployée,
-  // c'est-à-dire à l'arrivée sur la page. `svh` prend le viewport PETIT (barre
-  // déployée) : la section tient à l'écran d'emblée, et gagne de l'air quand la
-  // barre se rétracte plutôt que d'en manquer avant.
+  // `svh` and not `vh`: on mobile, `vh` is measured on the LARGE viewport —
+  // the one after the URL bar is retracted. A section wedged on top
+  // therefore overflows the height of this bar as long as it is deployed,
+  // that is to say upon arrival on the page. `svh` takes the viewport SMALL (bar
+  // deployed): the section fits on the screen from the outset, and gains air when the
+  // bar retracts rather than running out before.
   return (
     <section className="relative isolate flex min-h-[80svh] items-center overflow-hidden border-t border-border py-24 sm:min-h-svh sm:py-32">
       <CtaShader />

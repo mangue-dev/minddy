@@ -1,12 +1,12 @@
 "use client";
 
-// Le hook de PRÉSENCE des pages (MIN-271) — la moitié React de
-// lib/page-presence.ts, et rien de plus.
+// The pages PRESENCE hook (MIN-271) — the React half of
+// lib/page-presence.ts, and nothing more.
 //
-// Il est monté UNE fois, par la coquille des pages, et pas par chaque page
-// ouverte : le canal est celui du projet, et l'arbre a besoin de l'état complet
-// pour poser ses pastilles. Ouvrir une autre page ne rejoint donc rien — c'est
-// un `track` de plus sur le canal déjà là.
+// It is mounted ONCE, by the shell of the pages, and not by each page
+// open: the channel is that of the project, and the tree needs the complete state
+// to place your tablets. Opening another page therefore doesn't do anything — it's
+// one more `track` on the channel already there.
 
 import { useEffect, useRef, useState } from "react";
 
@@ -20,8 +20,8 @@ import {
 const EMPTY: PagePresenceMap = new Map();
 
 /**
- * Qui d'AUTRE regarde quoi dans ce projet — `pageId` → les ids des présents.
- * Jamais moi, pas même depuis un autre onglet : le tri se fait à la source
+ * Who ELSE looks at what in this project — `pageId` → the ids of the presents.
+ * Never me, not even from another tab: sorting is done at the source
  * (lib/page-presence.ts).
  */
 export function usePagePresence(
@@ -32,15 +32,15 @@ export function usePagePresence(
   const userId = user?.id ?? null;
   const [present, setPresent] = useState<PagePresenceMap>(EMPTY);
   const handle = useRef<PagePresenceHandle | null>(null);
-  // La page ouverte, LUE à l'ouverture du canal plutôt que capturée : elle ne
-  // fait pas partie de ce qui décide de rejoindre.
+  // The open page, READ when the channel opens rather than captured: it does not
+  // is not part of what decides to join.
   const open = useRef(pageId);
   open.current = pageId;
 
-  // Le canal ne dépend PAS de la page : le rejoindre à chaque navigation ferait
-  // un aller-retour de socket par clic dans l'arbre, et l'avatar clignoterait
-  // chez tout le monde à chaque fois. `on` vaut « une page est ouverte » — sur
-  // la liste, il n'y a personne à déclarer et rien à afficher.
+  // The channel does NOT depend on the page: joining it each time you browse would
+  // one socket round trip per click in the tree, and the avatar would flash
+  // at everyone's house every time. `on` is “a page is open” — on
+  // the list, there is no one to declare and nothing to display.
   const on = !!projectId && !!userId && !!pageId;
   useEffect(() => {
     if (!on || !projectId || !userId || !open.current) {

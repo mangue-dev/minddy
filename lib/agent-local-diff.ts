@@ -1,6 +1,6 @@
 import type { AgentRunEvent, PullRequestFile } from "./agent-api";
 
-/** Forme transportée par le direct local et par l'event `files_changed`. */
+/** Form transported by the local direct and by the `files_changed` event. */
 export interface AgentLocalDiff {
   files: PullRequestFile[];
   truncated: boolean;
@@ -11,8 +11,7 @@ const FILE_CAP = 100;
 const PATCH_CAP = 240_000;
 const STATUSES = new Set(["added", "removed", "renamed", "modified"]);
 
-/** Frontière client : un event historique ou un message Realtime mal formé ne
- * doit jamais alimenter directement le renderer de diff. */
+/** Client boundary: a historical event or malformed Realtime message should never feed directly to the diff renderer. */
 export function parseAgentLocalDiff(raw: unknown): AgentLocalDiff {
   const value = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
   const rows = Array.isArray(value.files) ? value.files : [];
@@ -54,9 +53,9 @@ function nonNegative(value: unknown): number {
     : 0;
 }
 
-/** Les events sont des diffs PAR TOUR. Le dernier patch d'un chemin gagne : il
- * est calculé contre la baseline de la session et contient donc les retouches
- * des tours précédents sur ce même fichier. */
+/** Events are PER TURN diffs. The last patch of a path wins: it
+ * is calculated against the baseline of the session and therefore contains the retouches
+ * of previous rounds on this same file. */
 export function settledAgentLocalDiff(events: AgentRunEvent[]): AgentLocalDiff {
   const byPath = new Map<string, PullRequestFile>();
   let truncated = false;
@@ -70,7 +69,7 @@ export function settledAgentLocalDiff(events: AgentRunEvent[]): AgentLocalDiff {
   return { files: [...byPath.values()].sort(byFilename), truncated };
 }
 
-/** Ajoute l'instantané du tour en cours au diff déjà persisté. */
+/** Adds the current round snapshot to the already persisted diff. */
 export function mergeAgentLocalDiff(
   settled: AgentLocalDiff,
   live: AgentLocalDiff | null,

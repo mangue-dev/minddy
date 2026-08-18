@@ -1,13 +1,13 @@
 import { posix as posixPath } from "node:path";
 
 /**
- * Validation de chemins de l'agent de code (MIN-46). PUR et testable — la logique
- * est sécurité-critique (empêche qu'un chemin `../../x` sorte du dépôt cloné).
+ * Code Agent path validation (MIN-46). PURE and testable — the
+ * logic is safety-critical (prevents a `../../x` path from leaving the cloned repository).
  */
 
 /**
- * Résout `relPath` sous `baseDir` en normalisant `..`, et LÈVE si le résultat sort
- * de `baseDir`. `baseDir` doit être un chemin absolu POSIX sans slash final.
+ * Resolves `relPath` under `baseDir` by normalizing `..`, and RISES if the result leaves
+ * of `baseDir`. `baseDir` must be a POSIX absolute path without trailing slash.
  */
 export function resolveWithin(baseDir: string, relPath: string): string {
   const cleaned = relPath.replace(/^\/+/, "");
@@ -19,13 +19,13 @@ export function resolveWithin(baseDir: string, relPath: string): string {
 }
 
 /**
- * Résout un chemin de LECTURE (MIN-107) : soit dans le dépôt (`resolveWithin`),
- * soit sous l'un des `readableDirs` — des dossiers de la microVM hors dépôt où le
- * harness dépose des choses à relire (les sorties longues de `run_command`).
- * Le chemin doit être donné ABSOLU pour viser un `readableDir` : tout le reste
- * reste relatif au dépôt, comme avant. Un `..` qui sortirait du dossier visé LÈVE
- * — on n'ouvre jamais le filesystem, on nomme des exceptions.
- * Les ÉCRITURES ne passent jamais par ici (cf. `assertNotGit` / `writablePath`).
+ * Resolves a READ path (MIN-107): either in the repository (`resolveWithin`),
+ * or under one of the `readableDirs` — microVM folders outside the repository where the
+ * harness deposits things to be reread (the long outputs of `run_command`).
+ * The path must be given ABSOLUTE to target a `readableDir`: everything else
+ * remains relative to the repository, as before. A `..` which would come out of the targeted folder LEAVE
+ * — we never open the filesystem, we name exceptions.
+ * WRITINGs never pass through here (cf. `assertNotGit` / `writablePath`).
  */
 export function resolveReadable(
   baseDir: string,
@@ -44,34 +44,33 @@ export function resolveReadable(
 }
 
 /**
- * Lève si `absPath` (déjà résolu sous `baseDir`) vise un `.git/` — écritures
- * interdites.
+ * Raises if `absPath` (already resolved under `baseDir`) targets a `.git/` — writes
+ * prohibited.
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * DEUX ÉLARGISSEMENTS QUE LE DISQUE RÉEL IMPOSE (MIN-360)
+ * ─────────────────────── ─────────────────────── ───────────────────────────────
+ * TWO ENLARGEMENTS THAT THE ACTUAL DISK IMPOSES (MIN-360)
  *
- * La comparaison était un préfixe brut sur la racine du dépôt, et elle tenait tant
- * que le dépôt était un clone jetable sur un ext4 de microVM :
+ * The comparison was a raw prefix on the root of the repository, and it held as long as
+ * that the repository was a disposable clone on a microVM ext4:
  *
- * - **la casse.** APFS est insensible à la casse : `.GIT/hooks/pre-commit` désigne
- *   exactement le même fichier que `.git/hooks/pre-commit`, et n'était pas reconnu.
- *   On replie donc les deux côtés avant de comparer ;
- * - **la profondeur.** Seul le `.git` de la RACINE était gardé. Un dépôt en porte
- *   d'autres (sous-modules, dépôt imbriqué, fixture de test), et un hook y a
- *   exactement le même pouvoir. Un segment `.git` est donc refusé **où qu'il soit**
- *   dans le chemin.
+ * - **case.** APFS is case insensitive: `.GIT/hooks/pre-commit` designates
+ * exactly the same file as `.git/hooks/pre-commit`, and was not recognized.
+ * We therefore fold the two sides before comparing;
+ * - **the depth.** Only the `.git` of the ROOT was kept. A repository carries
+ * others (submodules, nested repository, test fixture), and a hook has
+ * exactly the same power. A `.git` segment is therefore refused **wherever it is**
+ * in the path.
  *
- * Ce qui n'est PAS ici, et qui doit se dire : le lien symbolique. `ln -s` n'est vu
- * par aucun garde-fou, et un lien créé DANS le dépôt satisfait cette validation
- * tout en pointant ailleurs. Ça demande le disque, donc `realpath`, donc une
- * fonction asynchrone — elle vit dans [vm/local-guard.ts](vm/local-guard.ts), et
- * c'est le superviseur qui l'applique. Celle-ci reste pure.
+ * Which is NOT here, and which must be said: the symbolic link. `ln -s` is not seen
+ * by any guardrail, and a link created IN the repository satisfies this validation
+ * while pointing elsewhere. It requires the disk, so `realpath`, therefore an asynchronous function — it lives in [vm/local-guard.ts](vm/local-guard.ts), and
+ * is applied by the supervisor. This remains pure.
  */
 export function assertNotGit(baseDir: string, absPath: string, relPath: string): void {
   const base = baseDir.toLowerCase();
   const target = absPath.toLowerCase();
-  // On n'inspecte que ce qui est SOUS le dépôt : la racine, elle, est donnée par
-  // le harness, et un `.git` qui s'y trouverait ne viendrait pas du modèle.
+  // We only inspect what is UNDER the deposit: the root is given by
+  // the harness, and a `.git` that would be there would not come from the model.
   const inside =
     target === base ? "" : target.startsWith(`${base}/`) ? target.slice(base.length + 1) : target;
   if (inside.split("/").includes(".git")) {

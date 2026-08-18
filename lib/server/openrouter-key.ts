@@ -2,29 +2,29 @@ import "server-only";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 
 /**
- * Le plafond mensuel de la clé minddy (MIN-92).
+ * The monthly limit of the minddy key (MIN-92).
  *
- * Le risque n'est PAS de tomber à court de crédits — l'auto-refill OpenRouter
- * est actif au niveau du compte. Le vrai risque est de SATURER LE PLAFOND de la
- * clé et de voir Numo, la dictée et le traitement du feedback s'arrêter net
- * jusqu'au mois suivant.
+ * The risk is NOT to run out of credits — OpenRouter
+ * auto-refill is active at the account level. The real risk is to SATURATING THE CEILING of the
+ * key and seeing Numo, dictation and feedback processing stop dead
+ * until the following month.
  *
- * ⚠️ `GET /api/v1/auth/key` renvoie les compteurs DE LA CLÉ. À ne pas confondre
- * avec `GET /api/v1/credits`, qui agrège le compte ENTIER, toutes clés
- * mélangées : inutilisable pour piloter minddy.
+ * ⚠️ `GET /api/v1/auth/key` returns the counters OF THE KEY. Do not confuse
+ * with `GET /api/v1/credits`, which aggregates the ENTIRE account, all keys
+ * mixed: unusable to control minddy.
  */
 
 const OPENROUTER_KEY_URL = "https://openrouter.ai/api/v1/auth/key";
 const REQUEST_TIMEOUT_MS = 5_000;
 
 export interface OpenRouterKeyStatus {
-  /** Plafond en USD sur la période. `null` = clé sans plafond. */
+  /** Ceiling in USD over the period. `null` = key without cap. */
   limit: number | null;
-  /** Consommé sur la période du plafond, en USD. */
+  /** Consumed over the cap period, in USD. */
   usage: number;
-  /** Reste à consommer, en USD. `null` quand il n'y a pas de plafond. */
+  /** Remains to be consumed, in USD. `null` when there is no cap. */
   remaining: number | null;
-  /** `monthly`, `daily`… tel que rapporté par OpenRouter. */
+  /** `monthly`, `daily`… as reported by OpenRouter. */
   limitReset: string | null;
   usageDaily: number;
   usageWeekly: number;
@@ -47,10 +47,8 @@ function num(value: unknown): number {
 }
 
 /**
- * L'état du plafond, ou `null` si on n'a pas pu le lire (clé absente, OpenRouter
- * injoignable). Ne lève jamais : ni la page Finances ni le cron du garde-fou ne
- * doivent tomber parce qu'un appel externe a échoué — l'écran affiche
- * simplement la tuile en « indisponible ».
+ * The state of the ceiling, or `null` if we could not read it (key absent, OpenRouter
+ * unreachable). Never raises: neither the Finances page nor the guardrail cron should drop because an external call failed — the screen simply shows the tile as "unavailable".
  */
 export async function fetchOpenRouterKeyStatus(): Promise<OpenRouterKeyStatus | null> {
   if (!isManagedAiEnabled()) return null;
@@ -77,8 +75,8 @@ export async function fetchOpenRouterKeyStatus(): Promise<OpenRouterKeyStatus | 
       typeof data.limit === "number" && Number.isFinite(data.limit)
         ? data.limit
         : null;
-    // `limit_reset: monthly` → `usage_monthly` est le compteur qui compte face au
-    // plafond ; `usage` est le cumul depuis la création de la clé.
+    // `limit_reset: monthly` → `usage_monthly` is the counter that counts against the
+    // ceiling ; `usage` is the total since the key was created.
     const usage =
       data.limit_reset === "monthly" ? num(data.usage_monthly) : num(data.usage);
 

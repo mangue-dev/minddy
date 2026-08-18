@@ -1,7 +1,7 @@
 import { getProjectAccess } from "@/lib/server/project-access";
 
-/** La visibilite appartient a la conversation, jamais a son contexte ou a son
- * mode de lancement. */
+/** Visibility belongs to the conversation, never to its context or its
+ * launch mode. */
 export type AgentConversationVisibility = "private" | "project";
 
 export interface ConversationAccessRecord {
@@ -23,9 +23,9 @@ export interface RunVisibility extends RunAnchors {
 }
 
 /**
- * Compatibilite pour les seuls lecteurs d'une ancienne ligne non jointe. Ce
- * predicat ne doit plus servir a creer une politique : il traduit uniquement la
- * visibilite historique lors d'un deploiement roulant.
+ * Compatibility for readers of an old, unjoined line only. This
+ * predicate should no longer be used to create a policy: it only reflects the
+ * historical visibility during a rolling deployment.
  */
 export function isSharedRun(run: RunAnchors): boolean {
   return Boolean(run.routine_id ?? run.chain_id ?? run.pull_request_id);
@@ -38,7 +38,7 @@ export function canReadConversationRecord(
   return conversation.visibility === "project" || conversation.owner_id === userId;
 }
 
-/** Membre du projet puis visibilite EXPLICITE de la conversation. */
+/** Project member then EXPLICIT visibility of the conversation. */
 export async function canReadAgentRun(
   userId: string,
   run: RunVisibility,
@@ -47,7 +47,7 @@ export async function canReadAgentRun(
   if (!access) return false;
   if (run.conversation) return canReadConversationRecord(userId, run.conversation);
 
-  // Ancien objet construit a la main ou application deployee juste avant la
-  // migration. A supprimer une fois tous les producteurs passes a la jointure.
+  // Old hand-built object or application deployed just before the
+  // migration. To be deleted once all the producers have passed the join.
   return isSharedRun(run) || run.created_by === userId;
 }

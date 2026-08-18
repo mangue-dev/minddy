@@ -1,23 +1,23 @@
 /**
- * 007 — le board de retours d'Aurora.
+ * 007 — Aurora's feedback board.
  *
- * Pour quelles captures :
- *   `feedbackBoard`  — le board PUBLIC trié par votes, avec compteurs, badges
- *                      de statut, une réponse d'équipe dépliée, catégories ;
- *   `feedbackInbox`  — le même retour vu côté équipe, avec la bannière de
- *                      suggestion de fusion et les actions de promotion.
+ * For what captures:
+ * `feedbackBoard` — the PUBLIC board sorted by votes, with counters, badges
+ * status, an unfolded team response, categories;
+ * `feedbackInbox` — the same return seen on the team side, with the banner of
+ * merger suggestion and promotional actions.
  *
- * DEUX PRÉCAUTIONS, et elles ne sont pas cosmétiques :
+ * TWO PRECAUTIONS, and they are not cosmetic:
  *
- *  1. Chaque post porte `analyzed_at` ET `classified_at`. La passe IA horaire
- *     (app/api/cron/feedback-analysis) ne réclame que les posts dont ces
- *     colonnes sont nulles. Sans elles, le cron ferait tourner un modèle sur
- *     nos données de démo, et ce serait facturé.
- *  2. `vote_count` n'est jamais écrit à la main : un trigger l'incrémente à
- *     chaque ligne de `feedback_votes`. On crée donc de vrais votes, et le
- *     compteur affiché correspond à ce qui existe réellement.
+ * 1. Each post has `analyzed_at` AND `classified_at`. The hourly AI pass
+ * (app/api/cron/feedback-analysis) only requests posts for which these
+ * columns are null. Without them, the cron would run a model on
+ * our demo data, and it would be charged.
+ * 2. `vote_count` is never written by hand: a trigger increments it to
+ * each line of `feedback_votes`. We therefore create real votes, and the
+ * displayed counter corresponds to what actually exists.
  *
- * Idempotent : board réutilisé, votants et posts reconnus à leur identité.
+ * Idempotent: reused board, voters and posts recognized for their identity.
  *
  *   node captures/world/seed/007-feedback.mjs --dry-run
  *   node captures/world/seed/007-feedback.mjs
@@ -31,8 +31,8 @@ import { currentCycleWindow, spreadInWindow } from "./_cycle-window.mjs";
 const DRY_RUN = process.argv.includes("--dry-run");
 
 /**
- * Les votants. Ce sont des identités de bout de chaîne (`feedback_users`), pas
- * des comptes minddy : sur le board public, personne n'apparaît sous son vrai
+ * Voters. These are end-of-chain identities (`feedback_users`), not
+ * minddy accounts: on the public board, no one appears under their real name
  * nom, seulement sous un pseudonyme stable.
  */
 const VOTERS = [
@@ -45,9 +45,9 @@ const VOTERS = [
 ];
 
 /**
- * Les retours. `votes` = nombre de votants parmi VOTERS (les N premiers), ce
- * qui donne des chevauchements crédibles : les gens votent sur plusieurs
- * sujets. `at` situe la soumission dans la quinzaine courante.
+ * Returns. `votes` = number of voters among VOTERS (the first N), this
+ * which gives credible overlaps: people vote on several
+ * subjects. `at` places the submission in the current fortnight.
  */
 const POSTS = [
   {
@@ -101,7 +101,7 @@ const POSTS = [
     category: "feature",
   },
   {
-    /* Le doublon : c'est lui qui porte la bannière de suggestion de fusion. */
+    /* The duplicate: it is he who carries the merger suggestion banner. */
     title: "Can we get notified in Slack?",
     body: "Would be great to have incidents pushed to a Slack channel instead of email.",
     status: "open",
@@ -163,7 +163,7 @@ async function main() {
   const people = resolvePeople(world);
   const project = requireProject(world, "AUR");
 
-  // ── 1. Le board ────────────────────────────────────────────────────────────
+  // ── 1. The board ────────────────────────────── ──────────────────────────────
   const { data: boards, error: boardError } = await world.admin
     .from("feedback_boards")
     .select("id, token, enabled")
@@ -191,7 +191,7 @@ async function main() {
     console.log(`  → board déjà là, URL /f/${board.token}`);
   }
 
-  // ── 2. Les votants ─────────────────────────────────────────────────────────
+  // ── 2. Voters ──────────────────────────── ─────────────────────────────
   const { data: existingUsers, error: userError } = await world.admin
     .from("feedback_users")
     .select("id, pseudonym, email")
@@ -201,8 +201,8 @@ async function main() {
   const knownVoters = new Map((existingUsers || []).map((u) => [u.pseudonym, u]));
   const missingVoters = VOTERS.filter((p) => !knownVoters.has(p)).map((pseudonym, i) => ({
     project_id: project.id,
-    // Le motif de démo dans l'email : ces identités restent reconnaissables
-    // comme les nôtres même en regardant la table à l'œil nu.
+    // The demo pattern in the email: these identities remain recognizable
+    // like ours even when looking at the table with the naked eye.
     email: `captures-demo+voter${String(i + 1).padStart(2, "0")}@minddy.app`,
     pseudonym,
     verified_via: "email",
@@ -220,7 +220,7 @@ async function main() {
 
   const voterIds = VOTERS.map((p) => knownVoters.get(p).id);
 
-  // ── 3. Les retours ─────────────────────────────────────────────────────────
+  // ── 3. Returns ──────────────────────────── ─────────────────────────────
   const { data: existingPosts, error: postError } = await world.admin
     .from("feedback_posts")
     .select("id, title, vote_count, suggested_merge_into_id")
@@ -235,8 +235,8 @@ async function main() {
     author_id: voterIds[i % voterIds.length],
     title: post.title,
     body: post.body,
-    // Le texte soumis est sacré et jamais réécrit : ici il vaut le texte curé,
-    // ce qui correspond à un retour que l'équipe n'a pas eu à retoucher.
+    // The submitted text is sacred and never rewritten: here it is worth the curated text,
+    // which corresponds to a return that the team did not have to rework.
     submitted_title: post.title,
     submitted_body: post.body,
     status: post.status,
@@ -245,7 +245,7 @@ async function main() {
     review_state: "published",
     team_response: post.teamResponse ?? null,
     team_response_at: post.teamResponse ? spreadInWindow(window, 0.9, 15) : null,
-    // Les deux horodatages qui tiennent le cron IA à l'écart.
+    // The two timestamps that keep the AI ​​cron apart.
     analyzed_at: now,
     classified_at: now,
     created_at: spreadInWindow(window, post.at, 9 + (i % 9)),
@@ -261,8 +261,8 @@ async function main() {
     console.log(`  → ${missingPosts.length} retour(s) créés`);
   }
 
-  // ── 4. La suggestion de fusion ─────────────────────────────────────────────
-  // Posée après coup : elle pointe un autre post, qui doit donc exister.
+  // ── 4. The merger suggestion ────────────────────── ───────────────────────
+  // Posted after the fact: it points to another post, which must therefore exist.
   const duplicate = POSTS.find((p) => p.mergeSuggestedInto);
   if (duplicate) {
     const dupRow = knownPosts.get(duplicate.title);
@@ -282,7 +282,7 @@ async function main() {
     }
   }
 
-  // ── 5. Les votes ───────────────────────────────────────────────────────────
+  // ── 5. Votes ───────────────────────────── ──────────────────────────────
   const { data: existingVotes, error: voteError } = await world.admin
     .from("feedback_votes")
     .select("post_id, user_id")
@@ -309,10 +309,10 @@ async function main() {
     console.log(`  → ${missingVotes.length} vote(s) créés`);
   }
 
-  // ── 6. Les catégories ──────────────────────────────────────────────────────
-  // Désignées par clé courte (`feature`), jamais par leur libellé : celui-ci a
-  // été renommé en anglais par 013-categories-en.mjs, et le résolveur partagé
-  // accepte les deux noms.
+  // ── 6. Categories ─────────────────────────── ───────────────────────────
+  // Designated by short key (`feature`), never by their wording: this one has
+  // been renamed in English to 013-categories-en.mjs, and the shared resolver
+  // accepts both names.
   const categories = await resolveCategories(world, project.id);
 
   const { data: existingLinks } = await world.admin
@@ -339,7 +339,7 @@ async function main() {
     console.log(`  → ${missingLinks.length} catégorie(s) rattachées`);
   }
 
-  // ── 7. Contrôle ────────────────────────────────────────────────────────────
+  // ── 7. Control ────────────────────────────── ──────────────────────────────
   const { data: finalPosts } = await world.admin
     .from("feedback_posts")
     .select("title, vote_count, status, analyzed_at, classified_at")

@@ -4,12 +4,12 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getMfaStatus, issueRecoveryCodes } from "@/lib/server/mfa";
 
 /**
- * Régénère les dix codes de récupération (MIN-132). Les précédents — consommés
- * ou non — cessent immédiatement de valoir : c'est le geste qu'on fait quand on
- * ne sait plus où est la feuille, donc la remplacer à moitié n'aurait aucun sens.
+ * Regenerates all ten recovery codes (MIN-132). The previous ones — consumed
+ * or not — immediately cease to be valid: it is the gesture we make when we
+ * doesn't know where the leaf is anymore, so half replacing it wouldn't make sense.
  *
- * Rien à écrire pour exiger `aal2` : le garde-fou de `getAuthedUser` refuse déjà
- * toute session `aal1` sur un compte protégé.
+ * Nothing to write to require `aal2`: the safeguard of `getAuthedUser` already refuses
+ * any `aal1` session on a protected account.
  */
 export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);

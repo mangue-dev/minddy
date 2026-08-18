@@ -4,32 +4,32 @@ import { getServiceClient } from "@/lib/supabase-service";
 import type { ProjectTriageCount, TriageCountsResponse } from "@/lib/types";
 
 /**
- * GET /api/me/triage-counts — ce qui attend d'être trié dans chacun de mes
- * projets : tickets en statut triage, et retours encore ouverts ou prévus.
+ * GET /api/me/triage-counts — what's waiting to be sorted in each of my
+ * projects: tickets in triage status, and returns still open or planned.
  *
- * Une route à part, sur le modèle de /api/me/smart-assign-warnings : la sidebar
- * porte ces chiffres sur TOUTES les pages hors projet, alors que
- * /api/me/summary — qui réconcilie la timeline des cycles avant de lire —
- * est bien trop cher pour être monté partout. Ici, deux `select` d'UNE colonne,
- * sur les seules lignes qui attendent quelque chose.
+ * A separate route, based on the model of /api/me/smart-assign-warnings: the sidebar
+ * carries these figures on ALL non-project pages, while
+ * /api/me/summary — which reconciles the cycles timeline before reading —
+ * is far too expensive to be mounted everywhere. Here, two `select` of ONE column,
+ * on the only lines that expect something.
  *
- * Les deux moitiés sont comptées EXACTEMENT comme les deux onglets du mode
- * projet — le compteur de triage de la sidebar et GET …/feedback/counts — pour
- * que le chiffre d'une ligne de projet soit la somme des deux badges qu'on lira
- * en entrant dedans. Un écart, ici, se verrait immédiatement.
+ * The two halves are counted EXACTLY as the two mode tabs
+ * project — the sidebar sorting counter and GET …/feedback/counts — for
+ * that the number of a project line is the sum of the two badges that will be read
+ * when entering it. A discrepancy here would be seen immediately.
  */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  // Les tickets passent par le client de l'utilisateur : RLS
-  // (`can_access_project`) borne la lecture à mes projets. Les tables
-  // `feedback_*` sont RLS deny-all (cf. supabase/migrations/…_feedback.sql),
-  // d'où une lecture service-role bornée, elle, aux ids lus juste avant — sous
-  // RLS, donc.
+  // Tickets go through the user's client: RLS
+  // (`can_access_project`) limits reading to my projects. The tables
+  // `feedback_*` are RLS deny-all (see supabase/migrations/…_feedback.sql),
+  // hence a service-role reading limited to the ids read just before — under
+  // RLS, therefore.
   //
-  // Cette liste sert AUSSI de périmètre : elle exclut les projets à la corbeille,
-  // et le compte doit l'exclure avec elle (voir la jointure plus bas).
+  // This list ALSO serves as a scope: it excludes trashed projects,
+  // and the account must exclude it with it (see the join below).
   const { data: projectRows, error: projectsError } = await auth.supabase
     .from("projects")
     .select("id")
@@ -44,15 +44,15 @@ export async function GET(request: NextRequest) {
   }
 
   const [triageRes, feedbackRes] = await Promise.all([
-    // `projects!inner(deleted_at)` n'est pas une colonne lue, c'est le FILTRE de
-    // la corbeille : jeter un projet ne touche pas ses tickets (ils reviennent
-    // avec lui), et `can_access_project` ne regarde pas `deleted_at` — ceux d'un
-    // projet jeté continuent donc de passer RLS. Sans ce filtre, ils tombaient
-    // dans `counts` sous l'id d'un projet que la sidebar ne liste plus : aucune
-    // ligne ne les portait, mais le badge « Accueil » — qui SOMME la table — les
-    // comptait. Un « +1 » qu'on ne pouvait trouver nulle part, jusqu'à ce que
-    // vider la corbeille le fasse disparaître. Même jointure que le tableau de
-    // bord (app/api/me/summary/route.ts) et la réconciliation des cycles.
+    // `projects!inner(deleted_at)` is not a read column, it is the FILTER of
+    // the trash: throwing away a project does not affect its tickets (they come back
+    // with him), and `can_access_project` does not look at `deleted_at` — those of a
+    // Project thrown away therefore continue to pass RLS. Without this filter, they fell
+    // in `counts` under the id of a project that the sidebar no longer lists: none
+    // line did not carry them, but the “Home” badge — which IS the table —
+    // mattered. A “+1” that could not be found anywhere, until
+    // emptying the trash makes it disappear. Same join as the table
+    // edge (app/api/me/summary/route.ts) and cycle reconciliation.
     auth.supabase
       .from("issues")
       .select("project_id, projects!inner(deleted_at)")
@@ -68,10 +68,10 @@ export async function GET(request: NextRequest) {
       .in("status", ["open", "planned"]),
   ]);
 
-  // Une panne de lecture n'est pas une erreur 500 : ces chiffres décorent une
-  // barre latérale montée sur toutes les pages, et un 500 par navigation ferait
-  // plus de bruit que le badge ne rend de service. On journalise, et la moitié
-  // qui a répondu s'affiche seule.
+  // A reading failure is not a 500 error: these numbers decorate a
+  // sidebar mounted on all pages, and a 500 per navigation would
+  // more noise than the badge provides service. We journal, and half
+  // who responded is displayed alone.
   if (triageRes.error) {
     console.error("[api/me/triage-counts] triage load failed:", triageRes.error.message);
   }

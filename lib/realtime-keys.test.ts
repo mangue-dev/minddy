@@ -24,7 +24,7 @@ function change(
   };
 }
 
-/** La ligne `pages` telle que le trigger la diffuse (sans corps, cf. migration). */
+/** The `pages` line as the trigger broadcasts it (without body, see migration). */
 function pageRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id: PAGE,
@@ -44,11 +44,11 @@ function pageRow(overrides: Record<string, unknown> = {}): Record<string, unknow
 const hasKey = (keys: { key: readonly unknown[] }[], expected: unknown[]) =>
   keys.some((k) => JSON.stringify(k.key) === JSON.stringify(expected));
 
-/* ── Les PAGES (MIN-346) ───────────────────────────────────────────────────
-   Le trou d'origine : la table diffusait (depuis cette même livraison) mais
-   l'aiguilleur n'avait pas de branche pour elle — l'arbre restait celui du
-   chargement, et une page créée sur la web app n'existait pas pour l'app de
-   bureau. */
+/* ── PAGES (MIN-346) ───────────────────────────────── ──────────────────
+ The original hole: the table was broadcasting (since this same delivery) but
+ the switcher did not have a branch for it — the tree remained that of
+ loading, and a page created on the web app did not exist for the
+ desktop app. */
 
 describe("keysForProjectEvent — pages", () => {
   it("rafraîchit l'arbre du projet quand une page est créée ailleurs", () => {
@@ -57,8 +57,8 @@ describe("keysForProjectEvent — pages", () => {
       PROJECT
     );
     expect(hasKey(keys, ["pages", PROJECT])).toBe(true);
-    // Et il REPART au serveur : un arbre monté doit se repeindre, pas seulement
-    // se marquer périmé.
+    // And it GOES AGAIN to the server: a mounted tree must be repaint, not only
+    // mark yourself expired.
     expect(keys.find((k) => k.key[0] === "pages")?.refetch).toBe("active");
   });
 
@@ -90,18 +90,18 @@ describe("keysForProjectEvent — pages", () => {
       PROJECT
     );
     expect(hasKey(keys, ["me", "trash"])).toBe(true);
-    // L'index de la palette porte les titres de page, mais il est marqué périmé
-    // sans requête : c'est un instantané qui se revalide à l'ouverture.
+    // The palette index has the page titles, but it is marked outdated
+    // without request: it is a snapshot which revalidates when opened.
     expect(
       keys.find((k) => JSON.stringify(k.key) === '["me","search-index"]')?.refetch
     ).toBe("none");
-    // Une page n'est pas un ticket : rien à redemander à `/api/me/board`.
+    // A page is not a ticket: nothing to ask again from `/api/me/board`.
     expect(hasKey(keys, ["me", "board"])).toBe(false);
   });
 
   it("rattrape l'arbre après une coupure", () => {
-    // Le cache des pages est persisté sur le disque et son staleTime est de cinq
-    // minutes : sans cette entrée, un onglet qui a dormi ne redemande rien.
+    // The page cache is persisted to disk and its staleTime is five
+    // minutes: without this entry, a tab that has slept does not request anything again.
     expect(
       projectScopeKeys(PROJECT).some(
         (key) => JSON.stringify(key) === JSON.stringify(["pages", PROJECT])
@@ -110,14 +110,13 @@ describe("keysForProjectEvent — pages", () => {
   });
 });
 
-/* ── Le garde-fou : aucune table diffusée ne doit rester muette ─────────────
-   C'est la faute que MIN-346 a corrigée, et elle ne lève RIEN — ni au
-   type-check, ni à l'exécution. Le seul moyen de la revoir venir est de
-   confronter l'aiguilleur à la liste réelle des triggers. */
+/* ── The safeguard: no distributed table must remain silent ─────────────
+ This is the fault that MIN-346 corrected, and it raises NOTHING — neither at the
+ type-check, nor at execution. The only way to see it happen again is to confront the switcher with the actual list of triggers. */
 
 const baselineSql = canonicalSql(readBaseline());
 
-/** Toutes les tables dont un trigger émet sur un topic `project:{id}`. */
+/** All tables for which a trigger emits on a `project:{id}` topic. */
 function projectBroadcastTables(): string[] {
   const sql = baselineSql;
 
@@ -141,17 +140,17 @@ describe("aucune table diffusée sur project:{id} n'est sans réponse", () => {
   const tables = projectBroadcastTables();
 
   it("la liste est bien lue depuis les migrations", () => {
-    // Deux sondes : une historique, une neuve. Si l'extraction casse, elle
-    // rendrait une liste vide et le test suivant passerait pour rien.
+    // Two probes: one historic, one new. If the extraction breaks, it
+    // would return an empty list and the next test would pass for nothing.
     expect(tables).toContain("issues");
     expect(tables).toContain("pages");
     expect(tables.length).toBeGreaterThan(10);
   });
 
   it.each(tables)("%s a une branche dans keysForProjectEvent", (table) => {
-    // Les quatre parents possibles sont renseignés d'un coup : ce test ne juge
-    // pas l'aiguillage fin (les tests par table s'en chargent), seulement qu'une
-    // diffusion de cette table ne tombe pas dans le `default:`.
+    // The four possible parents are informed at once: this test does not judge
+    // no fine switching (the tests by table take care of it), only one
+    // distribution of this table does not fall into the `default:`.
     const record = {
       id: "22222222-2222-4222-8222-222222222222",
       project_id: PROJECT,
@@ -166,10 +165,10 @@ describe("aucune table diffusée sur project:{id} n'est sans réponse", () => {
   });
 });
 
-/* ── La charge utile d'une page ne porte pas son corps ──────────────────────
-   `content` va jusqu'à 1 Mo et l'enregistrement automatique écrit la page une
-   fois par seconde de frappe. Une diffusion qui l'emporterait pousserait le
-   document à tous les membres du projet, à chaque seconde. */
+/* ── The payload of a page does not carry its body ──────────────────────
+ `content` goes up to 1 MB and autosave writes the page one
+ times per second of typing. A successful broadcast would push the
+ document to all project members, every second. */
 
 describe("le trigger des pages", () => {
   const sql = baselineSql;
@@ -181,8 +180,8 @@ describe("le trigger des pages", () => {
   });
 
   it("ne déclenche pas sur une écriture du corps", () => {
-    // Le `when (…)` de l'UPDATE ne nomme QUE des colonnes visibles : ni
-    // `content`, ni `version`, ni les colonnes d'horodatage d'écriture.
+    // The `when (…)` of the UPDATE ONLY names visible columns: neither
+    // `content`, nor `version`, nor the write timestamp columns.
     const triggerStart = sql.indexOf("create or replace trigger pages_broadcast_update");
     const trigger = sql.slice(triggerStart, sql.indexOf(";", triggerStart));
     const when = /when \(([\s\S]*?)\)\s*execute function/.exec(trigger)?.[1] ?? "";

@@ -1,7 +1,7 @@
-// Appariement PUR (sans DB, sans import server-only) entre les étapes du
-// checklist run-scopé de l'agent (tool update_plan) et les tâches du plan
-// d'implémentation de l'issue. Isolé ici pour être testable en node/vitest.
-// L'accès base + l'écriture vivent dans plan-sync.ts (server-only).
+// PUR matching (without DB, without import server-only) between the steps of the
+// agent run-scoped checklist (tool update_plan) and plan tasks
+// implementation of the issue. Isolated here to be testable in node/vitest.
+// Base access + writing lives in plan-sync.ts (server-only).
 
 import type { PlanTaskState } from "@/lib/plan";
 
@@ -10,25 +10,25 @@ export interface AgentPlanStep {
   status: PlanTaskState;
 }
 
-/** Une tâche du plan d'issue, réduite à ce dont l'appariement a besoin. */
+/** A task from the outcome plan, reduced to what the pairing needs. */
 export interface MatchableTask {
-  /** Index (0-based) de la tâche dans le plan — identité pour la bascule. */
+  /** Index (0-based) of the task in the plan — identity for the toggle. */
   index: number;
   text: string;
   state: PlanTaskState;
 }
 
 export interface PlanStateChange {
-  /** Index de la tâche du plan d'issue à basculer. */
+  /** Index of the outcome plan task to switch. */
   index: number;
   state: PlanTaskState;
 }
 
 /**
- * Normalise un libellé de tâche pour l'appariement : retire un éventuel marqueur
- * de liste/checkbox résiduel en tête, réduit les espaces internes à un seul,
- * trim, casse basse. Donne une clé d'égalité tolérante (casse/espaces) entre une
- * étape de l'agent et une tâche du plan d'issue.
+ * Normalizes a task label for matching: removes a possible residual list/checkbox marker
+ * at the head, reduces internal spaces to a single space,
+ * trim, lower case. Gives a tolerant equality key (case/spaces) between a
+ * agent step and an outcome plan task.
  */
 export function normalizeTaskText(text: string): string {
   return text
@@ -39,19 +39,19 @@ export function normalizeTaskText(text: string): string {
 }
 
 /**
- * Calcule, pour chaque étape de l'agent, la tâche du plan d'issue dont le libellé
- * NORMALISÉ correspond, et l'état cible LORSQU'IL DIFFÈRE de l'état courant.
- *  - Appariement par texte normalisé ; les libellés en double sont consommés dans
- *    l'ordre d'apparition (une tâche n'est appariée qu'une seule fois).
- *  - Le statut de l'étape se mappe 1:1 sur l'état de la case (pending→pending, …).
- *  - Ne renvoie QUE les vraies bascules : pas de correspondance ou état déjà
- *    correct → rien (no-op). Ne touche jamais au TEXTE — seulement à l'état.
+ * Calculates, for each step of the agent, the task of the outcome plan whose label
+ * NORMALIZED corresponds, and the target state WHEN IT DIFFERS from the current state.
+ * - Matching by normalized text; duplicate labels are consumed in
+ * order of appearance (a task is only matched once).
+ * - Step status maps 1:1 to box state (pending→pending, …).
+ * - ONLY returns true toggles: no match or state already
+ * correct → nothing (no-op). Never touch TEXT — only state.
  */
 export function planStateChanges(
   tasks: MatchableTask[],
   steps: AgentPlanStep[]
 ): PlanStateChange[] {
-  // Texte normalisé → file des positions (dans `tasks`) partageant ce texte.
+  // Normalized text → queue of positions (in `tasks`) sharing this text.
   const byText = new Map<string, number[]>();
   tasks.forEach((task, pos) => {
     const key = normalizeTaskText(task.text);

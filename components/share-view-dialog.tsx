@@ -96,13 +96,13 @@ export function ShareViewDialog({
   const submitPassword = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = password.trim();
-    // Le serveur refuse en dessous (MIN-347) : le formulaire le dit avant.
+    // The server refuses below (MIN-347): the form says so before.
     if (trimmed.length < MIN_SHARE_PASSWORD_LENGTH) return;
     update.mutate({ level: "password", password: trimmed });
   };
 
-  // Domaine personnalisé (MIN-36) — même query que la CustomDomainSection ;
-  // vérifié, il devient l'URL de partage affichée.
+  // Custom domain (MIN-36) — same query as the CustomDomainSection;
+  // checked, it becomes the displayed sharing URL.
   const { data: domainData } = useQuery({
     queryKey: ["share-domain", viewId],
     queryFn: () => fetchCustomDomainApi(`/api/views/${viewId}/share/domain`),
@@ -213,7 +213,7 @@ export function ShareViewDialog({
               </div>
             )}
 
-            {/* ── Domaine personnalisé (MIN-36) ─────────────────────────── */}
+            {/* ── Custom domain (MIN-36) ─────────────────────────── */}
             {share && viewId && (
               <CustomDomainSection
                 endpoint={`/api/views/${viewId}/share/domain`}

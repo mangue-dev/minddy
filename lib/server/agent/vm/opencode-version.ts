@@ -1,43 +1,43 @@
 /**
- * DANS QUELLE VERSION OPENCODE TOURNE, OÙ SON BINAIRE SE TROUVE, ET COMMENT ON
+ * WHAT VERSION OPENCODE RUNS IN, WHERE ITS BINARY IS FOUND, AND HOW TO WORK
  * L'INSTALLE (MIN-286, lot 3 ; MIN-293).
  *
- * Module SANS AUCUN import, et c'est sa raison d'être : ces valeurs ont
+ * Module WITHOUT ANY import, and this is its reason for being: these values ​​have
  * **trois** lecteurs qui ne se ressemblent pas —
  *
- *  - [opencode-host.ts](opencode-host.ts), dans le harness, qui installe le
- *    binaire s'il manque et le lance ;
+ * - [opencode-host.ts](opencode-host.ts), in the harness, which installs the
+ * binary if missing and throws it;
  *  - [scripts/create-agent-snapshot.ts](../../../../scripts/create-agent-snapshot.ts),
- *    sur le poste, qui **cuit** ce même binaire dans l'image pré-chauffée
+ * on the station, which **cooks** this same binary in the pre-heated image
  *    (`AGENT_SANDBOX_SNAPSHOT_ID`) ;
- *  - le PRÉ-VOL de l'app de bureau (MIN-293,
+ * - PRE-FLIGHT desktop app (MIN-293,
  *    [desktop/src/opencode-install.ts](../../../../desktop/src/opencode-install.ts)),
- *    qui l'installe avant le fork pour que l'échec ait un journal.
+ * which installs it before the fork so that the failure has a log.
  *
- * Tous doivent poser **exactement le même chemin, exactement la même version et
- * exactement la même commande**, sans quoi le snapshot ne sert à rien : le
- * binaire cuit serait à côté de celui que le harness cherche, ou d'une version
- * que l'épingle refuse, et chaque microVM neuve repaierait les 10,6 s
- * d'installation sans que rien ne le dise. Le script est un `tsx` lancé à la
- * main : il ne peut pas importer `opencode-host.ts` sans traîner tout le
- * superviseur (repo-host, redact, les modèles…) derrière lui. D'où ce fichier-ci,
- * qui n'a rien à traîner.
+ * Everyone must pose **exactly the same path, exactly the same version and
+ * exactly the same command**, without which the snapshot is useless: the
+ * cooked binary would be next to the one the harness is looking for, or a version
+ * that the pin refuses, and each new microVM would pay the 10.6 s
+ * installation without anything saying so. The script is a `tsx` launched at
+ * main: it cannot import `opencode-host.ts` without dragging all the
+ * supervisor (repo-host, redact, models, etc.) behind him. Hence this file,
+ * who has nothing to drag around.
  */
 
-/** La version d'opencode que ce dépôt a mesurée. Voir docs/harness-opencode.md. */
+/** The version of opencode that this repository measured. See docs/harness-opencode.md. */
 export const OPENCODE_VERSION = "1.18.16";
 
 /**
- * Le chemin de repli local vers npm voyage dans l'environnement du harness.
- * Dans une microVM ces variables sont absentes et le harness utilise le `npm`
- * de l'image. Dans l'app de bureau, elles désignent le npm signé et empaqueté
- * avec minddy, exécuté par le Node qu'Electron embarque déjà.
+ * The local fallback path to npm travels in the harness environment.
+ * In a microVM these variables are absent and the harness uses the `npm`
+ * of the image. In the desktop app, they refer to the signed and packaged npm
+ * with minddy, executed by the Node that Electron already has on board.
  */
 export const MINDDY_NPM_CLI_ENV = "MINDDY_NPM_CLI";
 export const MINDDY_NODE_EXEC_ENV = "MINDDY_NODE_EXEC";
 export const MINDDY_RUNTIME_BIN_ENV = "MINDDY_RUNTIME_BIN";
 
-/** Programme npm choisi par le harness, testable sans lancer de processus. */
+/** Npm program chosen by the harness, testable without launching a process. */
 export function opencodeNpmProgram(
   env: Readonly<Record<string, string | undefined>>,
 ): { executable: string; argsPrefix: string[]; electronRunAsNode: boolean } {
@@ -49,49 +49,49 @@ export function opencodeNpmProgram(
 }
 
 /**
- * Le binaire, tel que `npm i opencode-ai` le pose dans son dossier d'installation.
+ * The binary, such as `npm i opencode-ai` places it in its installation folder.
  *
- * Le DOSSIER, lui, est une valeur du layout depuis MIN-354
- * (`HarnessLayout.opencodeDir`) : `/vercel/oc` dans la microVM, ailleurs sur une
- * machine ordinaire. Il n'est PAS propre au run — 144 Mo de binaire se partagent
- * entre les runs d'une même machine, et le cuire par run reviendrait à
- * réinstaller à chaque ticket.
+ * The FILE is a layout value since MIN-354
+ * (`HarnessLayout.opencodeDir`): `/vercel/oc` in the microVM, elsewhere on a
+ * ordinary machine. It is NOT run-specific — 144MB of binary is shared
+ * between runs of the same machine, and cooking it per run would amount to
+ * reinstall with each ticket.
  */
 export function opencodeBin(installDir: string): string {
   return `${installDir}/node_modules/.bin/opencode`;
 }
 
 /**
- * LA COMMANDE D'INSTALLATION, ET LES DEUX DRAPEAUX QUI ONT COÛTÉ CHER (MIN-293).
+ * THE INSTALLATION ORDER, AND THE TWO EXPENSIVE FLAGS (MIN-293).
  *
- * ## Ce qui est arrivé, mesuré sur un vrai Mac
+ * ## What happened, measured on a real Mac
  *
- * `npm i opencode-ai@…` lancé avec `cwd` sur un dossier **sans `package.json`**
- * ne s'installe pas là : **npm REMONTE l'arborescence** jusqu'au premier
- * `package.json` qu'il trouve, et installe dedans. Sur le Mac de test, il est
- * remonté de `~/Library/Application Support/minddy-dev/opencode` jusqu'à
- * `/Users/<moi>/package.json`, a posé 144 Mo dans `~/node_modules`, **et s'est
- * ajouté aux dépendances du home**. Le dossier d'installation, lui, est resté
- * vide — et `npm` a rendu **0**.
+ * `npm i opencode-ai@…` launched with `cwd` on a folder **without `package.json`**
+ * does not install there: **npm REMOVAL the tree** to the first
+ * `package.json` that it finds, and installs in it. On the test Mac, it is
+ * moved up from `~/Library/Application Support/minddy-dev/opencode` until
+ * `/Users/<moi>/package.json`, placed 144 MB in `~/node_modules`, **and
+ * added to the home** outbuildings. The installation folder remained
+ * empty — and `npm` returned **0**.
  *
- * Le harness a donc trouvé son binaire absent, l'a lancé quand même, et a attendu
- * un serveur qui n'existerait jamais. Trois symptômes, une cause, et aucun des
+ * The harness therefore found its missing binary, launched it anyway, and waited
+ * a server that would never exist. Three symptoms, one cause, and none of the
  * trois ne nomme npm.
  *
- * Dans la microVM ça n'était jamais arrivé, et c'était de la CHANCE : les
- * ancêtres de `/vercel/oc` sont `/vercel` et `/`, où il n'y a pas de
- * `package.json`. L'hypothèse n'était écrite nulle part.
+ * In microVM this had never happened, and it was LUCKY: the
+ * ancestors of `/vercel/oc` are `/vercel` and `/`, where there is no
+ * `package.json`. The hypothesis was not written anywhere.
  *
- * ## Les deux garde-fous, et pourquoi il en faut deux
+ * ## The two safeguards, and why we need two
  *
- * - **`--prefix`** dit à npm où installer, sans qu'il ait à chercher. C'est lui
- *   qui ferme la porte ;
- * - **le `package.json` posé dans le dossier** ({@link OPENCODE_INSTALL_MANIFEST})
- *   la ferme une seconde fois, et rend le dossier lisible par un humain qui
- *   tombe dessus dans `~/Library/Application Support/`.
+ * - **`--prefix`** tells npm where to install, without it having to search. It's him
+ * who closes the door;
+ * - **the `package.json` placed in the folder** ({@link OPENCODE_INSTALL_MANIFEST})
+ * closes it a second time, and makes the file readable by a human who
+ * falls on it in `~/Library/Application Support/`.
  *
- * `--omit=dev` et `--no-audit` ne sont pas du confort : ce dossier n'est pas un
- * projet, personne n'y développe, et un audit réseau de plus retarde un tour.
+ * `--omit=dev` and `--no-audit` are not comfortable: this folder is not a
+ * project, no one develops on it, and one more network audit delays a round.
  */
 export function opencodeInstallArgs(
   installDir: string,
@@ -111,8 +111,8 @@ export function opencodeInstallArgs(
 }
 
 /**
- * Le `package.json` du dossier d'installation. Minimal, `private` pour qu'aucune
- * publication ne soit même concevable, et nommé pour qu'on sache d'où il vient.
+ * The `package.json` of the installation folder. Minimal, `private` so that no
+ * publication is even conceivable, and named so that we know where it comes from.
  */
 export const OPENCODE_INSTALL_MANIFEST = `${JSON.stringify(
   {
@@ -125,17 +125,17 @@ export const OPENCODE_INSTALL_MANIFEST = `${JSON.stringify(
   2,
 )}\n`;
 
-/** Le chemin de ce manifeste. */
+/** The path of this manifesto. */
 export function opencodeInstallManifestPath(installDir: string): string {
   return `${installDir.replace(/\/+$/, "")}/package.json`;
 }
 
-/** Le manifeste du paquet INSTALLÉ, d'où l'on relit la version réellement posée. */
+/** The manifest of the INSTALLED package, from which we reread the version actually installed. */
 export function opencodePackageManifestPath(installDir: string): string {
   return `${installDir.replace(/\/+$/, "")}/node_modules/opencode-ai/package.json`;
 }
 
-/** Le runtime TypeScript des tools, partagé au lieu d'être réinstallé par run. */
+/** The tools TypeScript runtime, shared instead of being reinstalled per run. */
 export function opencodePluginManifestPath(installDir: string): string {
   return `${installDir.replace(/\/+$/, "")}/node_modules/@opencode-ai/plugin/package.json`;
 }

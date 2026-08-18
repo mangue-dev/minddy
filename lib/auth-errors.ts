@@ -1,23 +1,23 @@
 /**
- * Les refus de Supabase Auth, dits dans la langue de l'écran (MIN-300).
+ * Supabase Auth refusals, said in the screen language (MIN-300).
  *
- * `error.message` arrive en anglais, écrit pour un développeur : « Password is
- * known to be weak and easy to guess, please choose a different one. », « User
- * already registered ». C'était ce qu'on affichait — au milieu d'une interface
- * française, sous un formulaire d'inscription.
+ * `error.message` arrives in English, written for a developer: “Password is
+ * known to be weak and easy to guess, please choose a different one. », “User
+ * already registered”. This was what we displayed — in the middle of a French interface
+ *, under a registration form.
  *
- * On traduit par le CODE, pas par le message : `AuthApiError` porte un
- * `code` stable (`weak_password`, `user_already_exists`…), là où le message est
- * une phrase libre que GoTrue reformule d'une version à l'autre. Un code inconnu
- * retombe sur le message d'origine : mieux vaut une phrase anglaise exacte
- * qu'une phrase française approximative — et le trou se voit, ce qui est la
- * seule façon de le combler un jour.
+ * We translate by the CODE, not by the message: `AuthApiError` carries a stable
+ * `code` (`weak_password`, `user_already_exists`…), where the message is
+ * a free phrase that GoTrue reformulates from one version to another. An unknown code
+ * falls back on the original message: better an exact English sentence
+ * than an approximate French sentence — and the hole is visible, which is the
+ * only way to fill it one day.
  *
- * Les codes retenus sont ceux qu'un écran d'auth peut vraiment produire. La
- * liste n'a pas à être exhaustive ; elle a à être juste.
+ * The codes retained are those that a screen d'auth can really produce. The
+ * list does not have to be exhaustive; it has to be fair.
  */
 
-/** Les clés du namespace `Auth` qui traduisent un refus. */
+/** The keys of the namespace `Auth` which reflect a refusal. */
 export type AuthErrorKey =
   | "errorWeakPassword"
   | "errorUserExists"
@@ -44,9 +44,9 @@ const BY_CODE: Record<string, AuthErrorKey> = {
 };
 
 /**
- * Le repli sur le MESSAGE, pour les refus que GoTrue rend sans code — c'est le
- * cas des versions plus anciennes, et de certaines erreurs de validation. On ne
- * teste que des fragments stables, en minuscules, et jamais une phrase entière.
+ * The fallback on the MESSAGE, for the refusals that GoTrue renders without code — this is the
+ * case of older versions, and of certain validation errors. We only
+ * test stable fragments, in lower case, and never an entire sentence.
  */
 const BY_MESSAGE: [RegExp, AuthErrorKey][] = [
   [/known to be weak|password is too weak/i, "errorWeakPassword"],
@@ -57,10 +57,10 @@ const BY_MESSAGE: [RegExp, AuthErrorKey][] = [
 ];
 
 /**
- * La clé de traduction d'un refus, ou `null` s'il faut garder son message.
+ * The translation key for a refusal, or `null` if you have to keep your message.
  *
- * Accepte n'importe quoi : ce qui remonte d'un `catch` n'est pas typé, et une
- * panne réseau y passe aussi.
+ * Accepts anything: what comes back from a `catch` is not typed, and a
+ * network failure occurs there also.
  */
 export function authErrorKey(error: unknown): AuthErrorKey | null {
   if (!error || typeof error !== "object") return null;
@@ -80,29 +80,29 @@ export function authErrorKey(error: unknown): AuthErrorKey | null {
 }
 
 /**
- * Un message qui ne DIT rien : vide, ou fait de ponctuation seule.
+ * A message that SAY nothing: empty, or punctuation only.
  *
- * Le cas réel derrière ce test est `{}`, affiché tel quel sous le formulaire
- * d'inscription. supabase-js construit son `AuthApiError` en recopiant le champ
- * `msg` du corps de la réponse — et quand ce corps n'en a pas (une 5xx du
- * réseau, un corps vide renvoyé par la passerelle), il retombe sur
- * `JSON.stringify(body)`, c'est-à-dire la chaîne « {} ».
+ * The actual case behind this test is `{}`, displayed as is under the registration form
+ *. supabase-js constructs its `AuthApiError` by copying the
+ * `msg` field from the response body — and when this body does not have one (a 5xx from the
+ * network, an empty body returned by the gateway), it falls back to
+ * `JSON.stringify(body)`, that is to say the string “{}”.
  *
- * On ne peut pas le traduire, puisqu'on ne sait pas ce qui s'est passé ; on peut
- * refuser de le montrer. « Une erreur est survenue » est vague, mais c'est une
- * phrase — « {} » n'en est pas une.
+ * We cannot translate it, since we do not know what happened; we can
+ * refuse to show it. “An error has occurred” is vague, but it is a
+ * phrase — “{}” is not one.
  */
 function saysNothing(message: string): boolean {
   return !/\p{L}|\p{N}/u.test(message);
 }
 
 /**
- * Le message à afficher : la traduction si on sait, le message d'origine s'il
- * veut dire quelque chose, une phrase générique sinon. Ne rend JAMAIS de chaîne
- * vide : un échec silencieux laisse le bouton retomber sans rien dire, et donne
- * l'impression que le clic n'a pas été pris.
+ * The message to display: the translation if we know, the original message if it
+ * means something, a generic sentence otherwise. NEVER returns a string
+ * empty: a silent failure lets the button drop without saying anything, and makes
+ * look like the click was not taken.
  *
- * `translate` est le `t` de l'écran, restreint au namespace `Auth`.
+ * `translate` is the screen's `t`, restricted to the namespace `Auth`.
  */
 export function authErrorMessage(
   error: unknown,

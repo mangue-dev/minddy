@@ -174,15 +174,13 @@ function ObjectiveColorValue({
 }
 
 /**
- * L'objectif ouvert, tel qu'il occupe la moitié droite de la page Objectifs
- * (MIN-226) — le pendant exact du détail du triage : un en-tête sans bordure
- * (le fondu du contenu dit qu'il continue au-dessus), puis un seul flux qui
- * défile, titre, description, pièces jointes, propriétés, avancement, activité.
+ * The open objective, as it occupies the right half of the Objectives page
+ * (MIN-226) — the exact counterpart of the triage detail: a borderless header
+ * (the content fade says it continues above), then a single stream that scrolls, title, description, attachments, properties, progress, activity.
  *
- * C'était un panneau latéral. Il ne l'est plus : un objectif est un objet qu'on
- * VIENT voir, pas un survol posé par-dessus autre chose. La colonne de gauche
- * dit lequel, cette surface dit tout le reste — et il n'y a donc plus rien à
- * fermer, ni de bouton pour le faire.
+ * This was a side panel. It is no longer: an objective is an object that we
+ * COME to see, not a hover placed on top of something else. The left column
+ * says which one, this surface says everything else — and so there's nothing left to close, nor a button to do it.
  */
 export function ObjectiveDetail({
   objective,
@@ -201,15 +199,15 @@ export function ObjectiveDetail({
   issues: Issue[];
   onUpdate: (id: string, updates: ObjectiveUpdateInput) => Promise<unknown>;
   onDelete: (id: string) => Promise<void>;
-  /** Sous `md`, la liste et le détail se relaient : rendre la main à la liste. */
+  /** Under `md`, the list and the detail take turns: return control to the list. */
   onBack: () => void;
   /**
-   * La dictée est EN VOL (audio parti, patch pas revenu). La page s'en sert pour
-   * refuser de changer d'objectif le temps que Numo réponde : le patch vise
-   * l'objectif affiché, et en changer maintenant le jetterait — c'est le même
-   * garde-fou que la fermeture refusée de l'ancien panneau, transposé au seul
-   * geste qui, sur une page, emporte encore l'objectif sous la dictée.
-   */
+ * The dictation is IN FLIGHT (audio gone, patch not returned). The page uses it to
+ * refuse to change the objective until Numo responds: the patch targets
+ * the displayed objective, and changing it now would throw it away — it's the same
+ * safeguard as the refused closure of the old panel, transposed to the single
+ * gesture which, on a page, still carries the objective under dictation.
+ */
   onBusyChange: (busy: boolean) => void;
 }) {
   const { user } = useAuth();
@@ -221,22 +219,22 @@ export function ObjectiveDetail({
   const [name, setName] = useState(objective.name);
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Remount the markdown editor when the description is rewritten under it
-  // (la dictée) — il ne lit `value` qu'au montage et ne commite qu'au blur.
+  // (dictation) — it only reads `value` when editing and only commits when blurring.
   const [editorKey, setEditorKey] = useState(0);
-  /** Conteneur de l'éditeur : sert de repère de focus (voir l'effet ci-dessous). */
+  /** Editor container: serves as a focus marker (see effect below). */
   const descriptionRef = useRef<HTMLDivElement>(null);
-  /** Dernière version de la description déjà reflétée à l'écran : distingue une
-      réécriture par Numo (à adopter) de l'écho de notre propre commit. */
+  /** Latest version of the description already reflected on the screen: distinguishes a
+ rewrite by Numo (to be adopted) from the echo of our own commit. */
   const shownDescription = useRef(objective.description ?? "");
-  /** Retouché à la main depuis la dernière synchro : sans ce drapeau, un simple
-      aller-retour du focus recommiterait le reflet périmé du champ — autrement
-      dit annulerait ce que la dictée vient d'écrire. */
+  /** Retouched by hand since the last sync: without this flag, a simple
+ round trip of the focus would recommit the outdated reflection of the field - otherwise
+ said would cancel what the dictation has just written. */
   const descriptionEdited = useRef(false);
   const fade = useScrollFade<HTMLDivElement>();
-  /** Le micro, rangé dans le menu : c'est par là qu'on l'allume. */
+  /** The microphone, stored in the menu: this is how you turn it on. */
   const dictateRef = useRef<DictateButtonHandle>(null);
   const mod = useModKey();
-  /** Le board du projet, filtré sur cet objectif — le bouton et ⌘O y mènent. */
+  /** The project board, filtered on this objective — the button and ⌘O lead there. */
   const issuesHref = `/projects/${projectId}?objective=${objective.id}`;
 
   const { items, addComment, updateComment, deleteComment, deleteAttachment } =
@@ -249,16 +247,16 @@ export function ObjectiveDetail({
     setEditorKey((k) => k + 1);
   }, [objective.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ⌘O / Ctrl+O : le bouton « voir les tickets » sans la souris. Il porte un
-  // modificateur parce que la page est PLEINE de champs — nom, description,
-  // commentaire : un « O » nu s'écrirait dans l'un d'eux au lieu de naviguer.
-  // Du coup il part aussi depuis un champ, comme la dictée, et `preventDefault`
-  // avale au passage le « ouvrir un fichier » du navigateur.
+  // ⌘O / Ctrl+O: the “view tickets” button without the mouse. He wears a
+  // modify because the page is FULL of fields — name, description,
+  // comment: a bare "O" would be written in one of these instead of navigating.
+  // So it also starts from a field, like dictation, and `preventDefault`
+  // swallows the browser's “open a file” in passing.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!matchesModCombo(e, "o")) return;
-      // Un dialog ouvert (la confirmation de suppression) tient l'écran : on ne
-      // l'emporte pas ailleurs sous les doigts de l'utilisateur.
+      // An open dialog (deletion confirmation) holds the screen: we cannot
+      // does not take it elsewhere under the user's fingers.
       if (document.querySelector('[role="dialog"][data-state="open"]')) return;
       e.preventDefault();
       router.push(issuesHref);
@@ -267,10 +265,10 @@ export function ObjectiveDetail({
     return () => document.removeEventListener("keydown", onKey, true);
   }, [router, issuesHref]);
 
-  // La dictée réécrit la description sous l'éditeur, qui ne relit pas `value` :
-  // l'adopter, c'est le remonter. Jamais pendant qu'on y écrit — une version
-  // refusée n'est PAS notée, elle reste « en attente » et le blur du conteneur
-  // la prend.
+  // The dictation rewrites the description under the editor, which does not reread `value`:
+  // to adopt it is to reassemble it. Never while writing — a version
+  // refused is NOT noted, it remains “pending” and the container blurs
+  // takes it.
   useEffect(() => {
     const next = objective.description ?? "";
     if (
@@ -333,9 +331,9 @@ export function ObjectiveDetail({
     resetDictation();
   }, [objective.id, resetDictation]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Une prise en cours de transcription (l'audio est parti, le texte n'est pas
-  // revenu) : avec la suite Numo, c'est la fenêtre où changer d'objectif perd la
-  // dictée. La page en tient la garde ; ici on ne fait que la lui dire.
+  // A take being transcribed (the audio is gone, the text is not
+  // income): with the Numo suite, this is the window where changing lenses loses the
+  // dictation. The page holds custody of it; here we just tell him.
   const [transcribing, setTranscribing] = useState(false);
   const busy = transcribing || numoBusy;
   useEffect(() => {
@@ -367,18 +365,18 @@ export function ObjectiveDetail({
     const next = markdown.trim() || null;
     descriptionEdited.current = false;
     if (next === (objective.description ?? null)) return;
-    // Ce qu'on vient d'écrire est déjà à l'écran : le noter évite que son écho
-    // par la prop passe pour une réécriture distante et remonte l'éditeur.
+    // What we have just written is already on the screen: writing it down prevents its echo
+    // through the prop goes for a remote rewrite and returns the editor.
     shownDescription.current = next ?? "";
     void patch({ description: next });
   };
 
   return (
     <>
-      {/* En-tête SANS bordure : c'est le fondu du contenu qui dit qu'il continue
-          au-dessus (même parti que le triage et la pull request). Il ne NOMME
-          pas l'objectif — la colonne de gauche le désigne, le titre l'écrit en
-          gros juste dessous — il ne porte que ce qu'on y FAIT. */}
+      {/* Borderless header: this is the fade of content that says it continues
+ above (same part as triage and pull request). It does not NAME
+ the objective - the left column designates it, the title writes it in big
+ just below - it only describes what we DO there. */}
       <div className="flex shrink-0 items-center gap-1.5 px-4 py-3 md:px-6">
         <Button
           variant="ghost"
@@ -391,8 +389,8 @@ export function ObjectiveDetail({
         </Button>
 
         <div className="ml-auto flex items-center gap-1.5">
-          {/* Numo reprend la dictée : le micro a disparu dans le menu, l'aveu du
-              travail en cours reste ici, à la place qu'occupait la commande. */}
+          {/* Numo resumes dictation: the microphone has disappeared in the menu, the acknowledgment of
+ work in progress remains here, in the place occupied by the command. */}
           {numoBusy && (
             <>
               <span
@@ -410,11 +408,8 @@ export function ObjectiveDetail({
             </>
           )}
 
-          {/* L'avancement, monté ici depuis la carte qu'il occupait au milieu du
-              flux. Il n'a jamais été une SECTION de l'objectif — c'est un
-              chiffre d'en-tête, et sa place est contre le lien vers les tickets
-              qu'il compte : « 3/12 » et « voir les 12 tickets » se lisent d'un
-              seul geste des yeux. */}
+          {/* The progress, mounted here from the map it occupied in the middle of the
+ flow. It was never a SECTION of the goal — it's a header number, and its place is against the link to the tickets it counts: "3/12" and "see all 12 tickets" are read with a single eye gesture. */}
           <ObjectiveProgressStat progress={progress} tooltip className="mr-1" />
 
           <Button asChild variant="outline" size="sm">
@@ -423,8 +418,8 @@ export function ObjectiveDetail({
               {t("viewLinkedIssues", {
                 issues: tIssue("entityPlural").toLowerCase(),
               })}
-              {/* Deux pastilles, comme partout ailleurs : « ⌘O » dans une seule
-                  se lirait comme une touche unique. */}
+              {/* Two pads, like everywhere else: “⌘O” in a single
+ would read as a single key. */}
               <span className="ml-0.5 inline-flex items-center gap-0.5 opacity-60">
                 <Kbd size="sm">{mod}</Kbd>
                 <Kbd size="sm">O</Kbd>
@@ -432,9 +427,9 @@ export function ObjectiveDetail({
             </Link>
           </Button>
 
-          {/* Monté en permanence, invisible au repos : c'est lui qui tient le
-              magnétophone et l'ancre de l'onde. L'entrée de menu ci-dessous ne
-              fait que le déclencher, et il reparaît alors en bouton d'arrêt. */}
+          {/* Permanently mounted, invisible when at rest: it is he who holds the
+ tape recorder and the anchor of the wave. The menu entry below does
+ only triggers it, and it then reappears as a stop button. */}
           <DictateButton
             ref={dictateRef}
             hideWhenIdle
@@ -461,9 +456,9 @@ export function ObjectiveDetail({
                 <Mic />
                 {t("dictateEditTooltip")}
               </DropdownMenuItem>
-              {/* Ce qui MODIFIE l'objectif d'un côté du trait, ce qui l'ENLÈVE de
-                  l'autre : sans lui, la corbeille est à un cran de la dictée,
-                  dans un menu qu'on ouvre sans regarder. */}
+              {/* Which MODIFIES the objective on one side of the line, which REMOVES it from
+ the other: without it, the trash is one step away from dictation,
+ in a menu that you open without looking. */}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
@@ -497,10 +492,9 @@ export function ObjectiveDetail({
             placeholder={t("namePlaceholder")}
           />
 
-          {/* Le conteneur sert de repère de focus : tant que le curseur est
-            DANS l'éditeur, une réécriture par Numo ne le remonte pas — et au
-            moment où il en sort, l'éditeur prend la version en attente (sans
-            frappe, le blur ne commite rien, donc rien ne rejouerait l'effet). */}
+          {/* The container serves as a focus mark: as long as the cursor is
+ IN the editor, a rewrite by Numo does not bring it up — and at the moment it exits, the editor takes the pending version (without
+ hitting, the blur commits nothing, so nothing would replay the effect). */}
           <div
             ref={descriptionRef}
             onBlur={() => {
@@ -527,9 +521,9 @@ export function ObjectiveDetail({
             />
           </div>
 
-          {/* Key/value properties — borderless, like the issue panel. Les pièces
-              jointes sont une ligne de cette table, la dernière : elles sont ce
-              que l'objectif TRANSPORTE, après ce qu'il est. */}
+          {/* Key/value properties — borderless, like the issue panel. The attached
+ are a row of this table, the last: they are what
+ that the objective TRANSPORTS, after what it is. */}
           <div className="flex flex-col">
             <PropertyRow label={t("statusFieldLabel")}>
               <ObjectiveStatusValue

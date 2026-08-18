@@ -50,14 +50,14 @@ import type { AssistantMention } from "@/lib/assistant-types";
 import type { ResourceInput } from "@/lib/types";
 
 /**
- * Sélecteur du PROJET de la conversation. Obligatoire : sans ticket, seul le
- * projet dit quel dépôt cloner. Pas de filtre « a un dépôt lié » côté client :
- * le serveur refuse proprement (`noRepo`) et le toast l'explique.
+ * DRAFT selector of the conversation. Mandatory: without ticket, only the
+ * project says which repository to clone. No “has a linked repository” filter on the client side:
+ * the server refuses properly (`noRepo`) and the toast explains it.
  *
- * Un SELECT, pas un combobox : le même menu déroulant que le sélecteur de projet
- * du fil d'Ariane (orbe + nom, `ChevronsUpDown`), et pour la même raison — on
- * choisit parmi ses projets, une liste qu'on connaît et qu'on parcourt du
- * regard. Un champ de recherche par-dessus ne servait qu'à retarder le clic.
+ * A SELECT, not a combobox: the same drop-down menu as the project selector
+ * breadcrumbs (orb + noun, `ChevronsUpDown`), and for the same reason — we
+ * chooses from among his projects, a list that we know and that we go through from
+ * glance. A search box on top only served to delay the click.
  */
 function ProjectSelect({
   projects,
@@ -116,25 +116,25 @@ function ProjectSelect({
 }
 
 /**
- * Composer de LANCEMENT d'une conversation d'agent — la phase d'avant toute
- * run, pendant de celle d'AgentConversation pour un ticket.
+ * Compose LAUNCH of an agent conversation — the front-end phase
+ * run, equivalent to that of AgentConversation for a ticket.
  *
- * C'est la VUE PAR DÉFAUT de la page Agents : y arriver, c'est ouvrir une
- * conversation vierge. Le sujet est LIBRE — ce qu'on écrit ici part comme
- * instruction, et la seule chose obligatoire est le PROJET, dont l'agent clone
- * le dépôt. Le texte peut arriver pré-écrit (une note du carnet — MIN-84 —, un
- * prompt d'intégration) ou vide (arrivée sur la page, bouton « Nouveau »), et
- * reste éditable dans les deux cas. Modèle, niveau de raisonnement et branche de
- * base sont facultatifs — ils partent sur les défauts perso, comme depuis un
+ * This is the DEFAULT VIEW of the Agents page: getting there means opening a
+ * blank conversation. The subject is FREE — what we write here goes like
+ * instruction, and the only mandatory thing is the PROJECT, whose clone agent
+ * the deposit. The text can arrive pre-written (a notebook note — MIN-84 —, a
+ * integration prompt) or empty (arrival on the page, “New” button), and
+ * remains editable in both cases. Model, level of reasoning and branch of
+ * base are optional — they are based on personal faults, as from a
  * ticket.
  *
- * Une conversation ANCRÉE à un ticket ne passe pas par ici : elle se lance
- * DEPUIS LE TICKET (carte ou panneau) — la page Agents n'offre aucun sélecteur
- * de ticket — et ouvre le composer d'AgentConversation, qui sait ce qu'un ticket
- * demande de plus : branche héritée, statut à faire avancer.
+ * A conversation ANCHORED to a ticket does not go through here: it starts
+ * FROM THE TICKET (card or panel) — the Agents page does not offer any selector
+ * ticket — and opens the AgentConversation composer, who knows what a ticket
+ * additional request: inherited branch, status to be advanced.
  *
- * Envoyer POSTe /api/agent-runs ; la run rendue est remontée à la page
- * (`onLaunched`), qui bascule sur sa session réelle.
+ * Send POST /api/agent-runs; the rendered run is moved up the page
+ * (`onLaunched`), which switches to its real session.
  */
 export function SessionCompose({
   initialText,
@@ -142,20 +142,20 @@ export function SessionCompose({
   onLaunched,
   onBack,
 }: {
-  /** Texte pré-écrit dans le composer (librement éditable), vide par défaut. */
+  /** Pre-written text in the composer (freely editable), empty by default. */
   initialText?: string;
   /**
-   * Projet pré-choisi quand le brouillon en désigne un (prompt d'intégration
-   * feedback, lancé depuis les réglages d'un projet) — le picker reste ouvert.
+   * Pre-chosen project when the draft designates one (prompt integration
+   * feedback, launched from a project settings) — the picker remains open.
    */
   initialProjectId?: string;
-  /** Une run vient d'être lancée — la page bascule sur sa session. */
+  /** A run has just been launched — the page switches to its session. */
   onLaunched: (run: AgentRunSummary) => void;
   /**
-   * Retour à la liste sous `md`, où liste et détail se relaient en plein écran.
-   * Même bouton que l'en-tête d'une conversation (`AgentSessionDetail`) : sans
-   * lui, la conversation vierge — la vue par DÉFAUT de la page — serait un
-   * cul-de-sac sur mobile.
+   * Return to the list under `md`, where list and detail take turns in full screen.
+   * Same button as the header of a conversation (`AgentSessionDetail`): without
+   * him, the blank conversation — the DEFAULT view of the page — would be a
+   * dead end on mobile.
    */
   onBack?: () => void;
 }) {
@@ -164,19 +164,19 @@ export function SessionCompose({
   const tNav = useTranslations("Nav");
 
   /**
-   * Le FAB de Numo s'efface ici comme dans une conversation ouverte : ce volet
-   * porte le MÊME composer épinglé en bas, et le FAB tombe pile sur son bouton
-   * d'envoi. `AgentConversation` le déclarait déjà pour lui-même — mais la vue
-   * PAR DÉFAUT de la page Agents est cet écran-ci, pas une conversation, et le
-   * FAB y revenait donc dès qu'on arrivait sur la page.
+   * Numo's FAB fades away here as in an open conversation: this part
+   * wears the SAME dial pinned at the bottom, and the FAB falls right on its button
+   * sending. `AgentConversation` already declared this for itself — but the view
+   * DEFAULT of the Agents page is this screen, not a conversation, and the
+   * FAB therefore came back to it as soon as we arrived on the page.
    */
   useSuppressAssistantFab();
 
   const agentErrorMessage = useAgentErrorMessage();
   const queryClient = useQueryClient();
   const { projects } = useProjects();
-  // Le compte est nommé ici comme partout ailleurs (barre latérale, menu
-  // mobile) : son nom d'affichage entier, jamais l'e-mail brut.
+  // The account is named here like everywhere else (sidebar, menu
+  // mobile): its full display name, never the raw email.
   const { user } = useAuth();
   const name = authDisplayName(
     user?.user_metadata as AuthNameMeta | undefined,
@@ -185,10 +185,10 @@ export function SessionCompose({
   );
 
   /**
-   * Les projets où l'agent peut travailler : ceux qui ont un DÉPÔT lié. Les
-   * autres ne sont pas proposés — l'agent y échouerait à sa première seconde
-   * (`noRepo`), une fois la consigne écrite et envoyée. Mieux vaut ne pas les
-   * offrir que refuser après coup.
+   * Projects where the agent can work: those that have a DEPOSIT linked. THE
+   * others are not proposed — the agent would fail in its first second
+   * (`noRepo`), once the instruction has been written and sent. Better not to
+   * offer than refuse after the fact.
    */
   const { projectIds: gitLinked, loading: gitLinkedLoading } =
     useGitLinkedProjectsQuery();
@@ -196,22 +196,22 @@ export function SessionCompose({
     () => projects.filter((p) => gitLinked.has(p.id)),
     [projects, gitLinked],
   );
-  /** Aucun dépôt nulle part : il n'y a aucune conversation à lancer d'ici. */
+  /** No deposits anywhere: there are no conversations to initiate from here. */
   const noRepoAnywhere = !gitLinkedLoading && launchable.length === 0;
 
-  // Le projet part PRÉ-CHOISI : celui que le brouillon désigne, sinon le dernier
-  // où un agent a été lancé (à défaut, le projet touché le plus récemment). Il
-  // reste librement modifiable — c'est un défaut, pas un verrou.
+  // The project leaves PRE-CHOSEN: the one that the draft designates, otherwise the last
+  // where an agent was launched (failing that, the most recently affected project). He
+  // remains freely modifiable — it's a defect, not a lock.
   const [projectId, setProjectId] = useState(initialProjectId ?? "");
-  // Résolu dans un effet, pas à l'initialisation : les projets et leurs liens
-  // arrivent par react-query et peuvent être encore vides au montage (le composer
-  // resterait alors sans projet pour toujours), et lire localStorage pendant le
-  // rendu ferait diverger une hydratation.
+  // Solved in an effect, not at initialization: projects and their links
+  // arrive by react-query and may still be empty during assembly (compose it
+  // would then remain without a project forever), and read localStorage during the
+  // rendered would cause hydration to diverge.
   //
-  // L'effet repasse aussi sur un choix DÉJÀ fait s'il ne tient plus : un projet
-  // pré-choisi par un brouillon (ou par le « + » d'un projet dont le dépôt a été
-  // délié depuis) n'est plus dans la liste, et le sélecteur afficherait alors un
-  // vide en prétendant qu'un projet est choisi.
+  // The effect also returns to a choice ALREADY made if it no longer holds: a project
+  // pre-chosen by a draft (or by the “+” of a project whose submission has been
+  // unlinked since) is no longer in the list, and the selector would then display a
+  // empty by pretending that a project is chosen.
   useEffect(() => {
     if (gitLinkedLoading || launchable.length === 0) return;
     if (projectId && launchable.some((p) => p.id === projectId)) return;
@@ -224,42 +224,42 @@ export function SessionCompose({
   } = useAgentModelsQuery();
   const { defaultModel, defaultReasoningLevel } = useAgentPreferencesQuery();
   const [model, setModel] = useState("");
-  // Niveau de raisonnement du lancement (MIN-122), figé sur la run côté serveur :
-  // tant qu'on n'y touche pas, c'est le défaut perso qui part — comme dans le
-  // composer d'un ticket.
+  // Launch reasoning level (MIN-122), frozen on the server-side run:
+  // as long as we don't touch it, it's the personal defect that goes away - as in the
+  // a ticket composer.
   const [reasoningOverride, setReasoningOverride] = useState<ReasoningLevel | null>(null);
-  // Le MODÈLE effectif de ce lancement — celui dont on affiche les paliers de
-  // raisonnement. `model` vide = on part sur le défaut perso, sinon celui du
-  // provider : c'est celui-là qui tournera, donc c'est le sien qu'il faut lire.
+  // The actual MODEL of this launch — the one for which we display the performance levels
+  // reasoning. `model` empty = we start with the personal default, otherwise that of the
+  // provider: that's the one that will run, so it's his that you have to read.
   const effectiveModel = model || defaultModel || providerDefaultModel;
   const reasoningLevels = useReasoningLevelsFor(effectiveModel);
-  // Rabattu sur ce que ce modèle accepte : un défaut perso à `xhigh` sur un
-  // modèle qui n'en veut pas doit s'afficher sur son plus proche voisin, pas
-  // laisser le chip nommer un palier absent de la liste.
+  // Focusing on what this model accepts: a personal default to `xhigh` on a
+  // model which does not want it must be displayed on its nearest neighbor, not
+  // let the chip name a bearing missing from the list.
   const reasoningLevel = nearestReasoningLevel(
     reasoningOverride ?? defaultReasoningLevel,
     reasoningLevels,
   );
   const [baseBranch, setBaseBranch] = useState("");
   const [launching, setLaunching] = useState(false);
-  // Bulle optimiste du 1er message pendant le POST (mêmes raisons que le launch
-  // d'AgentConversation : les pré-checks serveur prennent quelques secondes).
+  // Optimistic bubble of the 1st message during POST (same reasons as launch
+  // of AgentConversation: server pre-checks take a few seconds).
   const [launchText, setLaunchText] = useState<string | null>(null);
   const [launchMentions, setLaunchMentions] = useState<AssistantMention[]>([]);
-  // Même information que la run rendue, mais disponible dès le premier rendu
-  // optimiste : sans elle, la page Agents nommait une sandbox pour un tour qui
-  // attendait en réalité le harness local.
+  // Same information as the rendered run, but available from the first rendering
+  // optimistic: without it, the Agents page named a sandbox for a round that
+  // was actually waiting for the local harness.
   const [launchLocalExec, setLaunchLocalExec] = useState(false);
   const localEndpoint = isLocalAgentProvider(provider);
   const modelRequired = (provider === "generic" || localEndpoint) && !defaultModel && !model;
   const selectedProject = launchable.find((p) => p.id === projectId) ?? null;
   const { mentionables, links, onMentionQuery } = useNumoMentionables(projectId || null);
 
-  // OÙ LA CONVERSATION TOURNE (MIN-359) — même règle que dans une conversation
-  // de ticket : le chip n'existe que si un dossier est attaché à CE projet sur
-  // cette machine. Le projet changeant ici (le composer en propose plusieurs),
-  // le hook suit `projectId` et l'environnement retombe au cloud dès que le
-  // dossier du projet choisi n'est pas prêt.
+  // WHERE THE CONVERSATION TURNS (MIN-359) — same rule as in a conversation
+  // ticket: the chip only exists if a folder is attached to THIS project on
+  // this machine. The changing project here (the composer offers several),
+  // the hook follows `projectId` and the environment falls back to the cloud as soon as the
+  // selected project folder is not ready.
   const localRepo = useLocalRepo(projectId || null);
 
   const [environment, setEnvironment] = useState<AgentEnvironment>("cloud");
@@ -302,31 +302,31 @@ export function SessionCompose({
         baseBranch: baseBranch || undefined,
         mentions,
         attachments,
-        // `ready` et pas seulement l'état du chip : entre le choix et l'envoi,
-        // le dossier a pu disparaître (ou le projet changer).
+        // `ready` and not just the state of the chip: between choice and sending,
+        // the folder may have disappeared (or the project may have changed).
         localExec,
         localWorktree,
       });
       /**
-       * Amorce le cache de la session AVANT de rendre la main.
+       * Primes the session cache BEFORE returning control.
        *
-       * Le volet de conversation qui prend le relais dans une seconde interroge
-       * cette clé-là (`useAgentRunQuery`). Sans données, il se rend en phase
-       * « chargement » : un spinner À LA PLACE du message et du composer, le temps
-       * d'un aller-retour, en plein milieu du lancement. Or la session est ICI,
-       * telle que le serveur vient de la rendre — il n'y a rien à aller chercher.
-       * La conversation s'ouvre donc directement sur son fil.
+       * The conversation pane that takes over in a second questions
+       * this key (`useAgentRunQuery`). Without data, it goes in phase
+       * “loading”: a spinner INSTEAD of the message and the composer, time
+       * of a round trip, right in the middle of the launch. But the session is HERE,
+       * as the server has just returned it — there is nothing to fetch.
+       * The conversation therefore opens directly on his thread.
        */
       queryClient.setQueryData(agentRunQueryKey(run.id), { run });
       onLaunched(run);
-      // Ce projet devient le défaut du prochain composer (mémoire d'appareil).
+      // This project becomes the default of the next composer (device memory).
       rememberAgentProject(projectId);
-      // La liste des sessions ne poll pas au repos : sans invalidation, la page
-      // ne rattraperait la session neuve qu'au prochain rechargement.
+      // The list of sessions does not pollute at rest: without invalidation, the page
+      // would only catch up with the new session on the next reload.
       await queryClient.invalidateQueries({ queryKey: allAgentSessionsQueryKey });
     } catch (err) {
-      // Refusé (pas de dépôt lié, quota…) : la run n'existe pas → on retire la
-      // bulle plutôt que de laisser croire au lancement.
+      // Refused (no linked deposit, quota, etc.): the run does not exist → we remove the
+      // bubble rather than suggesting the launch.
       setLaunchText(null);
       setLaunchMentions([]);
       setLaunchLocalExec(false);
@@ -338,17 +338,17 @@ export function SessionCompose({
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      {/* En-tête, à la MÊME géométrie que celle d'une conversation ouverte
-          (`AgentConversation` : `px-4 pt-4 pb-2.5`, retour mobile · icône · titre).
-          Ce n'est pas de la décoration : quand la session réelle prend le relais —
-          quelques secondes après l'envoi —, la page échange ce volet contre celui
-          de la conversation. Sans en-tête ici, le fil démarrait 50 px plus haut et
-          le message déjà écrit sautait vers le bas au moment de la relève.
-          Le titre suit le même sort : « Nouvelle conversation » cède la place au
-          titre que l'agent lui donne, sans que rien ne bouge. */}
+      {/* Header, with the SAME geometry as an open conversation
+ (`AgentConversation`: `px-4 pt-4 pb-2.5`, mobile return · icon · title).
+ This is not decoration: when the real session takes over —
+ a few seconds after sending —, the page exchanges this pane for the one
+ of the conversation. Without a header here, the thread started 50 px higher and
+ the message already written jumped down at the time of recovery.
+ The title follows the same fate: “New conversation” gives way to the
+ title that the agent gives it, without anything moving. */}
       <div className="flex shrink-0 items-center gap-2 px-4 pt-4 pb-2.5">
-        {/* Sous `md` seulement : la colonne des conversations est cachée derrière
-            ce volet, il faut un chemin de retour. Au-dessus, les deux cohabitent. */}
+        {/* Under `md` only: the conversations column is hidden behind
+ this pane, you need a return path. Above, the two coexist. */}
         {onBack ? (
           <Button
             variant="ghost"
@@ -360,9 +360,8 @@ export function SessionCompose({
             <ChevronLeft />
           </Button>
         ) : null}
-        {/* L'orbe du projet choisi, comme dans l'en-tête d'une conversation
-            ouverte. Tant qu'aucun projet n'est choisi, une icône neutre tient sa
-            place — même taille, donc rien ne bouge quand il arrive. */}
+        {/* The orb of the chosen project, like in the header of an open conversation
+. As long as no project is chosen, a neutral icon holds its place — same size, so nothing moves when it arrives. */}
         {selectedProject ? (
           <ProjectOrb
             seed={projectOrbSeed(selectedProject)}
@@ -376,10 +375,10 @@ export function SessionCompose({
       </div>
       <div className="min-h-0 flex-1">
         {launchText ? (
-          /* Les pilules de mention MÈNENT QUELQUE PART, ici comme dans la
-             conversation ([agent-conversation.tsx]) : sans ce fournisseur, la
-             bulle optimiste affiche `@MIN-42` et le clic ne fait rien — alors
-             que la même pilule est cliquable partout ailleurs. */
+          /* Mention pills LEAD SOMEWHERE, here as in the
+ conversation ([agent-conversation.tsx]): without this provider, the
+ optimistic bubble displays `@MIN-42` and the click does nothing — so
+ the same pill is clickable everywhere else. */
           <MentionLinksProvider value={links}>
             <AgentEventFeed
               runId={null}
@@ -390,17 +389,17 @@ export function SessionCompose({
             />
           </MentionLinksProvider>
         ) : (
-          /* La conversation n'a pas encore de fil : sa place accueille le seul
-             choix qui manque avant de lancer — le PROJET, dont l'agent clonera
-             le dépôt. Il est dit dans une phrase plutôt que posé en chip dans
-             le composer : c'est la question de l'écran, pas un réglage de
-             l'envoi (le modèle, le raisonnement et la branche, eux, le sont). */
+          /* The conversation has no thread yet: its place welcomes the only one
+ choice that is missing before launching — the PROJECT, whose agent will clone
+ the deposit. It is said in a sentence rather than put in chip in
+ compose it: it is the question of the screen, not a setting of
+ the sending (the model, the reasoning and the branch, they are). */
           <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
             <p className="text-lg font-medium">{t("composeGreeting", { name })}</p>
             {noRepoAnywhere ? (
-              /* Aucun projet n'a de dépôt : il n'y a pas de choix à offrir, et
-                 l'agent n'a rien à cloner. On le dit ici plutôt que de laisser
-                 un sélecteur vide faire croire à un chargement. */
+              /* No project has a deposit: there is no choice to offer, and
+ the agent has nothing to clone. We say it here rather than letting
+ an empty selector make it appear as a loading. */
               <p className="max-w-sm text-sm text-muted-foreground">
                 {t("composeNoRepo")}
               </p>
@@ -413,8 +412,8 @@ export function SessionCompose({
         )}
       </div>
 
-      {/* Même pied que la conversation : ancré au bas de la page, donc sorti du
-          dégradé de la barre mobile par `dock-above-nav` (cf. globals.css). */}
+      {/* Same footing as the conversation: anchored at the bottom of the page, therefore removed from the
+ degraded from the moving bar by `dock-above-nav` (see globals.css). */}
       <div className="dock-above-nav shrink-0">
         <div className="mx-auto w-full max-w-[800px]">
           <ChatInput
@@ -423,10 +422,10 @@ export function SessionCompose({
             mentionables={mentionables}
             onMentionQuery={onMentionQuery}
             disabled={launching}
-            // Sans projet, rien à cloner : l'envoi est bloqué (le texte reste
-            // librement éditable) et le tooltip du bouton dit ce qui manque —
-            // choisir un projet, ou en connecter un à un dépôt s'il n'y en a
-            // aucun où lancer l'agent.
+            // Without a project, nothing to clone: ​​sending is blocked (the text remains
+            // freely editable) and the button tooltip says what is missing —
+            // choose a project, or connect one to a repository if there is one
+            // no where to launch the agent.
             sendDisabled={
               !projectId || (environment === "cloud" && !cloudExecutionConfigured)
             }
@@ -446,8 +445,8 @@ export function SessionCompose({
                   value={projectId}
                   onChange={(id) => {
                     setProjectId(id);
-                    // La branche appartient au dépôt du projet : changer de
-                    // projet invalide le choix précédent.
+                    // The branch belongs to the project repository: change
+                    // project invalidates the previous choice.
                     setBaseBranch("");
                   }}
                   placeholder={t("composeProjectPlaceholder")}

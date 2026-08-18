@@ -8,27 +8,27 @@ import { applyBriefApi, type SeedCommitResponse } from "@/lib/seed-api";
 import type { SeedProposal } from "@/lib/seed/types";
 
 /**
- * L'aperçu VIVANT d'une proposition d'amorce : ce qui est décoché, les titres
- * réécrits, et l'écriture de ce que l'écran montre.
+ * The LIVE preview of a starter proposal: what is unchecked, the titles
+ * rewritten, and the writing of what the screen shows.
  *
- * Une seule fabrique pour les deux entrées du mode « nouveau projet » — la
- * modale du board, qui part d'un brief collé (MIN-172), et la carte du fil de
- * Numo, qui part de la conversation (MIN-173). Elles n'ont en commun ni leur
- * surface ni leur déclencheur, mais exactement le même geste : cocher, corriger,
- * créer. Le dupliquer, c'est se réveiller un jour avec deux règles différentes
- * sur ce qu'un objectif décoché emporte avec lui.
+ * A single factory for the two entries of the "new project" mode — the modal
+ * of the board, which leaves of a pasted brief (MIN-172), and the thread map of
+ * Numo, which starts from the conversation (MIN-173). They have neither their
+ * surface nor their trigger in common, but exactly the same gesture: check, correct,
+ * create. Duplicating it means waking up one day with two different rules
+ * on what an unchecked goal takes with it.
  */
 export function useSeedProposal(projectId: string) {
   const t = useTranslations("Seed");
   const queryClient = useQueryClient();
 
   const [proposal, setProposalState] = useState<SeedProposal | null>(null);
-  /** Les tickets décochés — l'exclusion se dit, la sélection se déduit. */
+  /** Unchecked tickets — the exclusion is said, the selection is deduced. */
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const [creating, setCreating] = useState(false);
 
-  /** Poser (ou retirer) la proposition à relire. Repart d'une sélection pleine :
-   *  les décochages d'une proposition précédente ne veulent plus rien dire. */
+  /** Add (or remove) the proposition to be reread. Starts from a full selection:
+ * unchecking a previous proposition no longer means anything. */
   const setProposal = useCallback((next: SeedProposal | null) => {
     setProposalState(next);
     setExcluded(new Set());
@@ -67,14 +67,14 @@ export function useSeedProposal(projectId: string) {
   );
 
   /**
-   * Écrit ce que l'aperçu montre, et rien d'autre. Rend le compte rendu du
-   * serveur, ou `null` quand rien n'a été écrit (échec dit en toast) — c'est à
-   * l'appelant de décider ce que sa surface fait ensuite.
-   */
+ * Writes what the preview shows, and nothing else. Reports the
+ * server, or `null` when nothing has been written (failure called toast) — it's up to
+ * the caller to decide what its surface does next.
+ */
   const create = useCallback(async (): Promise<SeedCommitResponse | null> => {
     if (!proposal || creating) return null;
-    // Les tickets cochés, et les objectifs qu'il reste au moins un ticket pour
-    // peupler : un chantier vide n'est pas un chantier.
+    // Checked tickets, and the objectives that at least one ticket remains for
+    // populate: an empty construction site is not a construction site.
     const issues = proposal.issues.filter((issue) => !excluded.has(issue.key));
     if (issues.length === 0) return null;
     const keptKeys = new Set(issues.map((issue) => issue.objectiveKey));

@@ -66,7 +66,7 @@ export interface ResourceLike {
   project_id?: string | null;
 }
 
-/** L'adresse d'une page dans l'app — la même que celle de l'arbre du wiki. */
+/** The address of a page in the app — the same as that of the wiki tree. */
 export function pageResourceHref(projectId: string, pageId: string): string {
   return `/projects/${projectId}/pages/${pageId}`;
 }
@@ -219,8 +219,8 @@ export function AddResourceButton({
   );
 }
 
-/** Ce qu'un sélecteur de page rend : de quoi écrire la ressource et l'afficher
-    tout de suite, sans attendre que la ligne redescende du serveur. */
+/** What a page selector does: enough to write the resource and display it
+ immediately, without waiting for the line to come back down from the server. */
 export interface PickedPage {
   id: string;
   title: string;
@@ -228,16 +228,16 @@ export interface PickedPage {
 }
 
 /**
- * « Choisir une page » : l'arbre du wiki du projet, à plat dans son ordre
- * d'affichage et indenté par profondeur, dans le même shell cmdk que les autres
- * sélecteurs de l'app.
+ * "Choose a page": the project's wiki tree, flat in its display order
+ * and indented by depth, in the same cmdk shell as the others
+ * app selectors
  *
- * L'arbre vient du cache du projet ([use-pages-query](../lib/use-pages-query.ts)),
- * celui que lisent déjà la sidebar, le fil d'Ariane et le bloc sous-page : une
- * page renommée ailleurs se cherche ici sous son nouveau nom, sans requête de
- * plus. Le cache n'est demandé qu'à l'OUVERTURE du dialog (`open` conditionne le
- * montage) — la sidebar d'un ticket n'a pas à charger le wiki pour afficher un
- * bouton.
+ * The tree comes from the project cache ([use-pages-query](../lib/use-pages-query.ts)),
+ * the one that the sidebar, the breadcrumbs and the subpage block already read: a
+ * page renamed elsewhere is searched here under its new name, without request for
+ * more. The cache is only requested when OPENING the dialog (`open` conditions the
+ * mount) — the sidebar of a ticket does not have to load the wiki to display a
+ * button.
  */
 export function AddPageDialog({
   open,
@@ -260,10 +260,10 @@ export function AddPageDialog({
       className="sm:max-w-lg"
     >
       <CommandInput placeholder={t("pageSearchPlaceholder")} />
-      {/* Le champ de recherche est posé dans un `p-1 pb-0` : la liste reprend le
-          MÊME retrait (4px) de chaque côté — sinon les options mordent un bord
-          que le champ respecte — et son `pt` fait la gouttière qui manquait
-          entre les deux. */}
+      {/* The search field is placed in a `p-1 pb-0`: the list takes the
+ SAME indentation (4px) on each side - otherwise the options bite an edge
+ that the field respects - and its `pt` makes the gutter that was missing
+ between the two. */}
       <CommandList className="p-1">
         {open && (
           <PageOptions
@@ -280,13 +280,13 @@ export function AddPageDialog({
 }
 
 /**
- * La liste elle-même — séparée pour que la requête ne parte qu'une fois le
- * dialog ouvert (le hook n'est monté qu'alors).
+ * The list itself — separated so that the request only starts once the
+ * dialog is opened (the hook is only mounted then).
  *
- * Liste À PLAT : les pages défilent dans l'ordre de la sidebar, mais sans
- * retrait d'imbrication. Ce qu'on fait ici est CHOISIR une page, pas se repérer
- * dans l'arbre — et une liste qu'on filtre en tapant perd de toute façon la
- * hiérarchie dès le premier caractère, ne laissant qu'un décalage sans sens.
+ * FLAT list: pages scroll in sidebar order, but without
+ * nesting removal. What we're doing here is CHOOSING a page, not finding your way to
+ * in the tree — and a list that you filter by typing loses the
+ * hierarchy from the first character anyway, leaving only a meaningless offset.
  */
 function PageOptions({
   projectId,
@@ -330,10 +330,10 @@ function PageOptions({
 }
 
 /**
- * « Coller un lien » : un champ, une validation, rien de plus. `https://` est
- * préfixé quand le schéma manque ([url-normalize.ts](../lib/url-normalize.ts)) —
- * personne ne tape un schéma, et refuser « linear.app » pour ça reviendrait à
- * faire faire à la main ce que la machine sait compléter.
+ * “Paste a link”: a field, a validation, nothing more. `https://` is
+ * prefixed when the schema is missing ([url-normalize.ts](../lib/url-normalize.ts)) —
+ * no one types a schema, and refusing "linear.app" for that would be like
+ * having to do by hand what the machine knows complete.
  */
 export function AddLinkDialog({
   open,
@@ -366,13 +366,13 @@ export function AddLinkDialog({
           className="flex flex-col gap-3"
           onSubmit={async (e) => {
             e.preventDefault();
-            // Ce dialog s'ouvre DEPUIS un formulaire (le composer de ticket, celui
-            // d'objectif) : le portail de Radix le sort du DOM du parent, mais pas
-            // de l'arbre React — l'événement `submit` d'ici remonte donc jusqu'au
-            // `onSubmit` de là-bas, qui créait le ticket au lieu d'ajouter le lien
-            // (et sans le lien, `addLink` n'ayant pas encore rendu la main).
-            // `preventDefault` ne suffit pas : il annule le comportement natif,
-            // pas la propagation React.
+            // This dialog opens FROM a form (the ticket type, the one
+            // objective): Radix's portal takes it out of the parent's DOM, but not
+            // from the React tree — the `submit` event from here therefore goes back to the
+            // `onSubmit` from there, which created the ticket instead of adding the link
+            // (and without the link, `addLink` not having returned yet).
+            // `preventDefault` is not enough: it overrides the native behavior,
+            // not React propagation.
             e.stopPropagation();
             const url = normalizeWebUrl(value);
             if (!url) {
@@ -391,10 +391,10 @@ export function AddLinkDialog({
             }
           }}
         >
-          {/* PAS `type="url"` : le navigateur validerait le champ AVANT le
-              submit, et refuserait « linear.app » — précisément ce que
-              `normalizeWebUrl` est là pour compléter. `inputMode` suffit à
-              obtenir le clavier URL sur mobile, sans la validation native. */}
+          {/* NOT `type="url"`: the browser would validate the field BEFORE the
+ submit, and refuse "linear.app" — precisely what
+ `normalizeWebUrl` is there to complete. `inputMode` is enough to get
+ to get the URL keyboard on mobile, without native validation. */}
           <Input
             autoFocus
             type="text"
@@ -528,9 +528,9 @@ function formatBytes(n: number, mb: string, kb: string): string {
   return `${Math.max(1, Math.round(n / 1024))} ${kb}`;
 }
 
-/** Une teinte par genre de ressource, dans la table des pilules de contexte de
-    Numo : une page est indigo ICI COMME LÀ-BAS. Un fichier garde le gris — il
-    n'a pas de nature à annoncer, sa figure MIME le dit déjà. */
+/** A tint per resource type, in the context pill table of
+ Numo: a page is indigo HERE AS THERE. A file remains gray — it
+ has no nature to announce, its MIME figure already says so. */
 const KIND_TINT: Record<"file" | "link" | "page", string | undefined> = {
   file: undefined,
   link: "bg-sky-500/12 text-sky-600 dark:text-sky-400",
@@ -544,12 +544,11 @@ const KIND_TINT: Record<"file" | "link" | "page", string | undefined> = {
  * and its weight, a link its favicon, a page its emoji — and neither of those
  * two has a size to speak of.
  *
- * - `pill` — la pilule commune de minddy ([entity-pill.tsx](entity-pill.tsx)),
- *   celle du contexte de Numo : mêmes rayons concentriques, même figure teintée,
- *   même croix en surimpression. Le clic prévisualise une image, télécharge un
- *   autre fichier, ouvre un lien dans un onglet, une page dans l'app.
+ * - `pill` — minddy's common pill ([entity-pill.tsx](entity-pill.tsx)),
+ * that of the Numo context: same concentric rays, same tinted figure,
+ * same superimposed cross. Clicking previews an image, downloads another file, opens a link in a tab, a page in the app.
  * - `ultra-compact` — icon + truncated name only, for dense surfaces (chat
- *   bubbles, reply rows).
+ * bubbles, reply rows).
  *
  * `pending` renders the in-flight entries of a composer as spinner pills.
  */
@@ -567,8 +566,8 @@ export function ResourcePills({
   resources?: ResourceLike[];
   pending?: PendingResource[];
   variant?: "pill" | "ultra-compact";
-  /** Rayon de la pilule — la figure suit (rayons concentriques). `md` pour
-      l'imbrication du composer de Numo. */
+  /** Pill radius — figure follows (concentric rays). `md` for
+ Numo composer nesting. */
   radius?: PillRadius;
   onRemove?: (resource: ResourceLike) => void;
   /** Per-resource gate for the X (default: every one when onRemove is set). */
@@ -601,8 +600,8 @@ export function ResourcePills({
       </PillIcon>
     );
 
-  /** L'emoji de la page, ou l'icône par défaut du wiki — même tuile que le
-      reste, pour que les trois genres se lisent sur une seule ligne. */
+  /** The page emoji, or the default wiki icon — same tile as the
+ remains, so that all three genders read on a single line. */
   const pageIcon = (emoji: string | null | undefined) =>
     iconTile(
       emoji ? (
@@ -615,7 +614,7 @@ export function ResourcePills({
           aria-hidden
         />
       ),
-      // Un emoji porte sa propre couleur : la teinte irait contre lui.
+      // An emoji wears its own color: the hue would go against it.
       emoji ? undefined : KIND_TINT.page
     );
 
@@ -686,8 +685,8 @@ export function ResourcePills({
               className={cn(
                 "truncate",
                 !compact && "min-w-0 font-medium text-foreground/80",
-                // Page partie à la corbeille : le titre reste lisible, mais rien
-                // ne prétend qu'on peut l'ouvrir.
+                // Page gone to the trash: the title remains readable, but nothing
+                // does not pretend that it can be opened.
                 pageId && !pageHref && "text-muted-foreground line-through"
               )}
             >
@@ -704,9 +703,9 @@ export function ResourcePills({
         const inner = (
           <>
             {pageHref ? (
-              // Navigation INTERNE — une page du wiki n'est pas un lien vers
-              // l'extérieur, et l'ouvrir dans un onglet perdrait le contexte du
-              // ticket qu'on est en train de lire.
+              // INTERNAL navigation — a wiki page is not a link to
+              // the outside, and opening it in a tab would lose the context of the
+              // ticket we are currently reading.
               <Link
                 href={pageHref}
                 title={label}
@@ -757,8 +756,8 @@ export function ResourcePills({
         );
         const key = a.id ?? url ?? pageId ?? path ?? a.file_name;
 
-        // La forme dense garde son enveloppe à elle : elle vit dans une bulle de
-        // conversation, où la pilule commune serait deux fois trop grande.
+        // The dense form keeps its own envelope: it lives in a bubble of
+        // conversation, where the common pill would be twice too big.
         if (compact) {
           return (
             <span key={key} className={compactClass}>

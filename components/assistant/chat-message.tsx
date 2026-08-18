@@ -34,21 +34,21 @@ interface ChatMessageProps {
     { status: "running" | "complete"; result?: unknown; success?: boolean }
   >;
   /**
-   * Masque la ligne ask_user de ce message : la question ACTIVE est rendue par la
-   * surface hôte à la place du composer (MIN-86), pas comme une bulle du fil.
+   * Hides the ask_user line from this message: the ACTIVE question is rendered by the
+   * host surface in place of the composer (MIN-86), not like a wire bubble.
    */
   askUserHidden?: boolean;
   /**
-   * Réponse de l'utilisateur aux questions ask_user de ce message (la bulle user
-   * qui suivait, masquée du fil) — affichée dans les détails de la ligne.
+   * User response to the ask_user questions in this message (the user bubble
+   * which followed, hidden from the thread) — displayed in the line details.
    */
   askUserAnswer?: string | null;
   /**
-   * Ce message porte-t-il la proposition d'amorce (MIN-173) qui attend encore
-   * l'utilisateur ? Elle s'affiche alors en carte à cocher et à créer.
+   * Does this message carry the primer proposal (MIN-173) which is still waiting
+   * the user? It is then displayed as a card to check and create.
    */
   seedLive?: boolean;
-  /** Les tickets de cette proposition viennent d'être écrits (leur nombre). */
+  /** The tickets for this proposal have just been written (their number). */
   onSeedCreated?: (created: number) => void;
   /** Whether this assistant message renders a Copy button under its text.
    *  Only a turn's final answer should — everything folded into the work
@@ -93,9 +93,9 @@ function CopyButton({ text }: { text: string }) {
 
 // ── Contexte d'un message ─────────────────────────────────────────────
 
-/** Ce que Numo avait sous les yeux pour CE message. Le projet est laissé de
-    côté : il vaut pour toute la conversation, le répéter à chaque bulle
-    n'apprendrait rien. */
+/** What Numo had in mind for THIS message. The project is left
+ side: it applies to the entire conversation, repeating it at each bubble
+ would not teach anything. */
 function MessageContextChips({ context }: { context: AssistantPageContext }) {
   const t = useTranslations("Assistant");
   const { projects } = useProjects();
@@ -118,7 +118,7 @@ function MessageContextChips({ context }: { context: AssistantPageContext }) {
   );
 }
 
-// ── Texte d'un message utilisateur ────────────────────────────────────
+// ── Text of a user message ────────────────────────────────────
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -184,9 +184,9 @@ function rehypeUserMentions(mentions: AssistantMention[]) {
   return () => (tree: UserMarkdownNode) => walk(tree);
 }
 
-/** Le texte de la bulle, avec les « @ » rendus en pilules. Les mentions sont
-    persistées sur la métadonnée du message (nom + id) : on n'a donc pas à
-    deviner à quel membre « @Clément » renvoyait au moment de l'envoi. */
+/** The bubble text, with the “@” rendered as pills. The mentions are
+ persisted on the message metadata (name + id): we therefore do not have to
+ guess which member “@Clément” referred to at the time of sending. */
 function UserText({
   content,
   mentions,
@@ -194,13 +194,13 @@ function UserText({
   content: string;
   mentions: AssistantMention[];
 }) {
-  // Un projet mentionné montre sa vraie figure. Son orbe se dessine à partir
-  // de son id seul : même un projet devenu inaccessible garde la sienne, seul
-  // le favicon importé demande de connaître le projet.
+  // A mentioned project shows its true face. Its orb takes shape from
+  // of its id alone: ​​even a project that has become inaccessible keeps its own, alone
+  // the imported favicon asks to know the project.
   const { projects } = useProjects();
-  // Un message ENVOYÉ se relit : la pilule d'un ticket ou d'un objectif qu'on y
-  // a cité mène à lui, comme dans une description. Le composer, lui, n'a pas de
-  // destinations — on y écrit, un clic y pose le curseur (chat-input.tsx).
+  // A SENT message is reread: the pill of a ticket or an objective that we
+  // cited leads to him, as in a description. Composing it has no
+  // destinations — we write there, a click places the cursor there (chat-input.tsx).
   const links = useMentionLinks();
 
   return (
@@ -265,18 +265,18 @@ function AssistantText({ content }: { content: string }) {
 // ── Message components ────────────────────────────────────────────────
 
 /**
- * MÉMOÏSÉ, et c'est structurel : un message déjà écrit ne change plus jamais.
+ * MEMORIZED, and it's structural: a message already written never changes again.
  *
- * Le fil de l'agent se re-rend ~4 fois par seconde pendant que le modèle écrit
- * (le direct pousse son texte à cette cadence). Sans ce garde, chacune de ces
- * images re-rendait TOUS les messages du fil — donc reparsait tout leur markdown
- * et remuait tout leur DOM — pour n'en changer qu'un seul, le dernier. Sur une
- * session un peu longue, c'est ce qui saturait le fil principal.
+ * Agent thread re-renders ~4 times per second while model writes
+ * (the direct pushes its text at this pace). Without this guard, each of these
+ * images re-rendered ALL messages in the thread — therefore re-rendered all their markdown
+ * and stirred up all their DOM — to change only one, the last. On a
+ * somewhat long session, that's what saturated the main thread.
  *
- * Le contrat qui le rend efficace : les props doivent garder leur identité entre
- * deux rendus. `message` et `toolCallResults` viennent d'un `useMemo` sur les
- * events (stables tant qu'aucun event n'arrive) et `onSeedCreated` /
- * `onOpenFile` doivent être des callbacks stables côté appelant.
+ * The contract that makes it effective: the owners must keep their identity between
+ * two renderings. `message` and `toolCallResults` come from a `useMemo` on the
+ * events (stable as long as no event arrives) and `onSeedCreated` /
+ * `onOpenFile` must be stable callbacks on the calling side.
  */
 export const ChatMessage = memo(function ChatMessage({
   message,
@@ -311,16 +311,15 @@ export const ChatMessage = memo(function ChatMessage({
               )}
             {message.content && (
               <>
-                {/* `rounded-xl` et non le `rounded-2xl` des SURFACES (le
-                    composer, les cartes) : une bulle n'en est pas une, elle
-                    n'est qu'un fond posé sur du texte. Un rayon plus court la
-                    range derrière la surface qui la contient au lieu de la
-                    mettre à son niveau.
+                {/* `rounded-xl` and not the `rounded-2xl` of SURFACES (the
+ composer, the cards): a bubble is not one, it
+ is only a background placed on text. A shorter radius places the
+ behind the surface which contains it instead of putting it at its level.
 
-                    `mention-on-ink` : les pilules de mention gardent leur teinte
-                    de type sur cette bulle-là, mais aux clartés d'une surface
-                    d'encre — c'est la SURFACE qui le dit, pas chaque pilule
-                    (app/globals.css). */}
+ `mention-on-ink`: the mention pills keep their type hue
+ on this bubble, but at the clarity of a ink surface
+ — it's the SURFACE that says this, not each pill
+ (app/globals.css). */}
                 <div className="chat-selectable mention-on-ink relative min-w-0 max-w-full break-words rounded-xl bg-foreground px-4 py-2 text-sm leading-relaxed text-background [overflow-wrap:anywhere]">
                   <UserText
                     content={message.content}
@@ -417,8 +416,8 @@ export function StreamingMessage({
               result: tc.result,
               success: tc.success,
             }))}
-            // La question en cours de stream ne s'affiche pas en bulle : dès la
-            // fin du tour, la carte VIVANTE prend la place du composer.
+            // The question during the stream is not displayed in a bubble: from the
+            // end of the turn, the LIVING card takes the place of the composer.
             askUserHidden
           />
         )}

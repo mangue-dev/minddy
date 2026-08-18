@@ -9,16 +9,15 @@ import type { IssueEffort, IssuePriority } from "@/lib/issue-constants";
 import type { SeedIssue, SeedProposal } from "@/lib/seed/types";
 
 /**
- * L'aperçu de l'amorce (MIN-172) — la même promesse que l'aperçu d'import :
- * ce qu'on voit est ce qui est écrit.
+ * The primer preview (MIN-172) — the same promise as the import preview:
+ * what you see is what is written.
  *
- * Rien n'existe encore quand ceci s'affiche. Les tickets sont groupés par
- * objectif parce que c'est la forme que la passe a rendue et que c'est ce que
- * « structurer l'idée » veut dire ; chaque ticket se décoche, chaque titre se
- * réécrit, et décocher un objectif emporte son chantier entier.
+ * Nothing exists yet when this is displayed. Tickets are grouped by
+ * objective because that's the shape the pass rendered and that's what
+ * "structuring the idea" means; each ticket is unchecked, each title is rewritten, and unchecking an objective takes away its entire project.
  *
- * L'état vit chez l'appelant (`project-seed-dialog.tsx`) : c'est cette
- * proposition-là, celle que l'écran montre, qui part au commit.
+ * The state lives in the caller (`project-seed-dialog.tsx`): it is this
+ * proposition, the one that the screen shows, which leaves commit.
  */
 export function BriefPreview({
   proposal,
@@ -30,7 +29,7 @@ export function BriefPreview({
   className,
 }: {
   proposal: SeedProposal;
-  /** Clés des tickets décochés — l'exclusion se dit, la sélection se déduit. */
+  /** Ticket keys unchecked — the exclusion is said, the selection is deduced. */
   excluded: Set<string>;
   onToggle: (keys: string[], next: boolean) => void;
   onRename: (key: string, title: string) => void;
@@ -40,13 +39,13 @@ export function BriefPreview({
 }) {
   const t = useTranslations("Seed");
 
-  // Les groupes, dans l'ordre des objectifs rendus ; les tickets sans chantier
-  // ferment la marche plutôt que d'être dispersés.
+  // The groups, in the order of the objectives reached; tickets without construction site
+  // bring up the rear rather than being dispersed.
   const groups = useMemo(() => {
     const byKey = new Map<string, SeedIssue[]>();
     const orphans: SeedIssue[] = [];
-    // Les sous-tickets suivent leur parent, indentés — l'ordre du modèle ne le
-    // garantit pas, et un enfant loin de son parent ne se lit pas.
+    // Sub-tickets follow their parent, indented — the template order does not
+    // does not guarantee, and a child far from its parent does not read.
     const children = new Map<string, SeedIssue[]>();
     for (const issue of proposal.issues) {
       if (!issue.parentKey) continue;
@@ -130,9 +129,9 @@ export function BriefPreview({
                   </span>
                 </label>
 
-                {/* Les tickets s'alignent sous le NOM de leur chantier, pas
-                    sous sa case : c'est ce décalage qui fait lire le groupe
-                    comme un groupe. */}
+                {/* The tickets are aligned under the NAME of their site, not
+ under its box: it is this offset that makes the group
+ read as a group. */}
                 <ul className="flex flex-col pl-6">
                   {group.issues.map((issue) => (
                     <IssueRow
@@ -142,9 +141,9 @@ export function BriefPreview({
                       disabled={creating}
                       onToggle={(next) =>
                         onToggle(
-                          // Décocher un parent emporte ses sous-tickets : un
-                          // enfant orphelin s'écrirait à plat, ce qui n'est pas
-                          // ce que le geste voulait dire.
+                          // Unchecking a parent takes away its sub-tickets: one
+                          // orphan child would be written flat, which is not
+                          // what the gesture meant.
                           issue.parentKey
                             ? [issue.key]
                             : [
@@ -208,8 +207,8 @@ function IssueRow({
       {issue.parentKey && (
         <CornerDownRight className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
       )}
-      {/* Le titre s'édite là où il se lit : pas de mode, pas de dialog — le
-          champ n'a de bordure qu'au focus. */}
+      {/* The title is edited where it reads: no mode, no dialog — the
+ field only has a border at the focus. */}
       <input
         value={issue.title}
         onChange={(e) => onRename(e.target.value)}

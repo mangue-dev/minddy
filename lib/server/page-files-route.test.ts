@@ -1,20 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-280 — la route d'envoi est mince, et c'est justement ce qui la rend
- * fragile : tout ce qu'elle fait est REFUSER. Quatre refus, dont trois ne se
- * voient jamais à l'usage normal et deux ouvriraient une porte —
+ * MIN-280 — the sending route is thin, and that's precisely what makes it
+ * fragile: all it does is REFUSE. Four refusals, three of which never see the normal use and two would open a door —
  *
- *  - le projet n'est pas le mien → 404 (pas 403 : on ne dit pas qu'il existe) ;
- *  - la page n'est pas DANS ce projet, ou elle est à la corbeille → 404. Sans
- *    cette vérification, l'identifiant de page de l'URL suffirait à déposer un
- *    fichier dans le wiki d'un projet voisin ;
- *  - le fichier dépasse la limite → 413, AVANT de lire ses octets ;
- *  - il n'y a pas de fichier du tout → 400.
+ * - the project is not mine → 404 (not 403: we do not say that it exists);
+ * - the page is not IN this project, or it is in the trash → 404. Without
+ * this check, the page identifier of the URL would be enough to deposit a
+ * file in the wiki of a neighboring project;
+ * - the file exceeds the limit → 413, BEFORE reading its bytes;
+ * - there is no file at all → 400.
  *
- * Et un seul chemin heureux, dont ce test épingle la seule chose que le client
- * ne refabrique pas lui-même : l'ADRESSE rendue, celle qui partira dans le corps
- * du document et que la projection markdown recopiera.
+ * And only one happy path, of which this test pins the only thing that the client
+ * does not remake itself: the ADDRESS rendered, the one which will go into the body
+ * of the document and that the markdown projection will copy.
  */
 
 const getAuthedUser = vi.fn();

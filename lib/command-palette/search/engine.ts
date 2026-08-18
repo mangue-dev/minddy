@@ -112,15 +112,15 @@ const SCORE_WEIGHTS = {
 
 /**
  * Normalizes text for search by:
- * - Removing accents/diacritics (é → e, ç → c, etc.)
+ * - Removing accents/diacritics (accented letters → ASCII equivalents, etc.)
  * - Converting to lowercase
  * - Replacing special characters with spaces
  * - Collapsing multiple spaces into one
  * - Trimming whitespace
  *
  * @example
- * normalizeSearchText("Créer une tâche") // "creer une tache"
- * normalizeSearchText("l'application")   // "l application"
+ * normalizeSearchText("Create a task") // "create a task"
+ * normalizeSearchText("the application") // "the application"
  */
 export function normalizeSearchText(text: string): string {
   return text
@@ -136,7 +136,7 @@ export function normalizeSearchText(text: string): string {
  * Extracts initials from text by taking first letter of each word.
  *
  * @example
- * extractInitials("Créer une tâche") // "cut"
+ * extractInitials("Create a task") // "cat"
  */
 export function extractInitials(text: string): string {
   const normalized = normalizeSearchText(text);
@@ -293,7 +293,7 @@ function isFuzzyMatch(query: string, text: string): boolean {
  * @example
  * matchesSearch("em", "Envoyer un message")   // true (abbreviation)
  * matchesSearch("message", "Envoyer un message") // true (substring)
- * matchesSearch("creer tache", "Créer une tâche") // true (multi-word)
+ * matchesSearch("create task", "Create a task") // true (multi-word)
  */
 export function matchesSearch(query: string, text: string): boolean {
   const normalizedQuery = normalizeSearchText(query);

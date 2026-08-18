@@ -7,11 +7,11 @@ import {
 } from "./device-label";
 
 /**
- * Des user-agents RÉELS, et pas des chaînes minimales : tout l'intérêt du test
- * est là. Chaque famille de navigateurs se fait passer pour les précédentes
- * (Edge dit « Chrome » et « Safari », Chrome dit « Safari », un Android dit
- * aussi « Linux ») — un ordre de tests inversé rendrait « Safari sur Linux »
- * pour un Chrome Android, sans que rien ne le signale.
+ * REAL user-agents, and not minimal chains: the whole point of the test
+ * is there. Each family of browsers pretends to be the previous ones
+ * (Edge says "Chrome" and "Safari", Chrome says "Safari", an Android says
+ * also "Linux") - a reverse order of tests would make "Safari on Linux"
+ * for a Chrome Android, without anything indicating it.
  */
 const CASES: readonly [label: string, ua: string, expected: string][] = [
   [

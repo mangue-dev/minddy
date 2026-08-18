@@ -1,9 +1,9 @@
-# Configuration reproducible de la pile Supabase locale de minddy.
+#Reproducible setup of minddy's local Supabase stack.
 #
-# Les secrets de l'application ne vivent pas ici : `pnpm bootstrap:supabase`
-# les écrit dans `.env.local`, ignoré par Git. Les buckets et leurs policies
-# vivent dans les migrations pour que le même historique s'applique aussi à une
-# instance Supabase auto-hébergée distante.
+#App secrets don't live here: `pnpm bootstrap:supabase`
+#writes them to `.env.local`, ignored by Git. Buckets and their policies
+#live in migrations so that the same history also applies to a
+#Remote self-hosted Supabase instance.
 project_id = "minddy"
 
 [api]
@@ -44,9 +44,9 @@ enabled = true
 enabled = true
 file_size_limit = "25MiB"
 
-# Ces déclarations rendent les contraintes visibles à l'opérateur local. Les
-# INSERT/UPDATE idempotents de `supabase/migrations` restent la source de
-# vérité, car `supabase db push` est aussi le chemin des instances distantes.
+#These declarations make the constraints visible to the local operator. THE
+#INSERT/UPDATE idempotents of `supabase/migrations` remain the source of
+#truth, because `supabase db push` is also the path of remote instances.
 [storage.buckets.attachments]
 public = false
 file_size_limit = "20MiB"

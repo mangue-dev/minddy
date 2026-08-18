@@ -2,17 +2,17 @@ import type { AssistantPageContext } from "@/lib/assistant-types";
 import type { Issue } from "@/lib/types";
 
 /**
- * Le contexte Numo d'une poignée de tickets : la sélection d'un board, ou la
- * carte survolée quand « @ » l'a désignée (MIN-105).
+ * The Numo context of a handful of tickets: the selection of a board, or the
+ * card hovered over when "@" has designated it (MIN-105).
  *
- * Un ticket unique emprunte les champs SINGULIERS plutôt que les listes : la
- * pilule affiche alors « KEY-42 — son titre » au lieu de « 1 ticket
- * sélectionné » (components/assistant/page-context-badge.tsx), et le prompt
- * serveur prend sa branche « ce ticket », plus directe que la branche
- * « sélection » (lib/server/assistant/prompt.ts).
+ * A single ticket uses SINGULAR fields rather than lists: the
+ * pill displays then "KEY-42 — its title" instead of "1 ticket
+ * selected" (components/assistant/page-context-badge.tsx), and the prompt
+ * server takes its branch "this ticket", more direct than the branch
+ * "selection" (lib/server/assistant/prompt.ts).
  *
- * @param identifierOf Rend l'identifiant lisible du ticket ("KEY-42") — la clé
- *   du projet vit sur le board, pas sur l'issue.
+ * @param identifierOf Makes the readable identifier of the ticket ("KEY-42") — the key
+ * of the project lives on the board, not on the issue.
  */
 export function issuesPageContext(
   issues: Issue[],

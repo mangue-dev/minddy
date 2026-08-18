@@ -19,10 +19,10 @@ import {
 } from "@/lib/server/feedback/comments";
 
 /**
- * Lectures du board public (MIN-37). Tout passe par le service client (RLS
- * deny-all) ; l'anonymisation se fait ICI : seuls les pseudonymes sortent,
- * jamais l'email ni le nom. Le board ne montre que les posts canoniques —
- * un post mergé n'existe publiquement qu'à travers sa redirection.
+ * Public board readings (MIN-37). Everything goes through customer service (RLS
+ * deny-all); anonymization is done HERE: only the pseudonyms come out,
+ * never the email or the name. The board only shows canonical posts —
+ * a merged post only exists publicly through its redirection.
  */
 
 const PUBLIC_LIST_LIMIT = 200;
@@ -79,11 +79,11 @@ export async function listPublicPosts(params: {
   viewerId: string | null;
   sort: PublicSort;
   /**
-   * Les statuts à garder (`publicFilterStatuses`) — `null`/absent = tous. Une
-   * LISTE et non un statut : le filtre par défaut du board en groupe trois
-   * (ouvert, prévu, en cours), et le faire côté SQL évite de charger l'archive
-   * pour la jeter ensuite.
-   */
+ * The statuses to keep (`publicFilterStatuses`) — `null`/absent = all. A
+ * LIST and not a status: the board's default filter in group three
+ * (open, planned, in progress), and doing it on the SQL side avoids loading the archive
+ * and then throwing it away.
+ */
   statuses?: readonly FeedbackPostStatus[] | null;
 }): Promise<PublicPost[]> {
   const service = getServiceClient();
@@ -93,11 +93,11 @@ export async function listPublicPosts(params: {
     .is("deleted_at", null)
     .eq("project_id", params.projectId)
     .is("merged_into_id", null)
-    // Les retours privés remontent à l'équipe mais ne sont jamais listés ici.
+    // Private feedback goes back to the team but is never listed here.
     .eq("is_public", true)
-    // Revue avant publication (MIN-54) : un post en attente n'apparaît pas.
+    // Review before publication (MIN-54): a pending post does not appear.
     .eq("review_state", "published")
-    // Le spam n'a jamais de page publique — c'est ce que le statut décide.
+    // Spam never has a public page — that's what the status decides.
     .neq("status", "spam")
     .limit(PUBLIC_LIST_LIMIT);
   if (params.statuses) {
@@ -119,19 +119,19 @@ export async function listPublicPosts(params: {
   const posts = rows.map((r) =>
     toPublicPost(r, params.viewerId, voted, comments.get(r.id))
   );
-  // Terminés (livrés / refusés) rangés en bas, l'ordre choisi (votes/date)
-  // conservé au sein de chaque groupe.
+  // Completed (delivered / refused) ranked at the bottom, the chosen order (votes/date)
+  // kept within each group.
   return sortFeedbackResolvedLast(posts, (p) => p.status);
 }
 
 /**
- * Le board a-t-il seulement un retour public ?
+ * Does the board only have one public return?
  *
- * À n'appeler QUE quand la liste rend zéro ligne, et pour une seule raison :
- * distinguer les deux vides. Un board neuf doit lire « soyez le premier » ; un
- * board dont tout est livré ou décliné doit lire « rien ne correspond à ce
- * filtre » — sinon on lui annonce qu'il est vide devant vingt retours traités,
- * et le visiteur n'a aucune raison d'aller chercher « tous ».
+ * ONLY to be called when the list returns zero lines, and for one reason only:
+ * to distinguish the two empty ones. A new board must read “be first”; a
+ * board on which everything is delivered or declined must read "nothing matches this
+ * filter" - otherwise it is announced that it is empty in front of twenty returns processed,
+ * and the visitor has no reason to go and find "all".
  */
 export async function hasAnyPublicPost(projectId: string): Promise<boolean> {
   const service = getServiceClient();
@@ -149,12 +149,11 @@ export async function hasAnyPublicPost(projectId: string): Promise<boolean> {
 
 export interface PublicPostDetail {
   post: PublicPost;
-  /** Renseigné si CE post est un tombstone : rediriger vers le canonique. */
+  /** Informed if THIS post is a tombstone: redirect to the canonical. */
   mergedIntoId: string | null;
-  /** Titres des posts fusionnés dans celui-ci (mention « fusionné depuis »). */
+  /** Titles of posts merged into this one (“merged since”). */
   mergedFromTitles: string[];
-  /** Le fil public du retour (MIN-196), anonymisé, du plus ancien au plus
-      récent. La réponse d'équipe en fait partie — elle n'est plus à côté. */
+  /** The public feedback thread (MIN-196), anonymized, from oldest to most recent. Team response is one of them — it's no longer around. */
   comments: PublicComment[];
 }
 
@@ -173,15 +172,15 @@ export async function getPublicPostDetail(params: {
     .maybeSingle();
   if (!data) return null;
   const row = data as unknown as PostWithAuthor;
-  // Visible publiquement uniquement si public, publié ET pas en spam
-  // (MIN-54/MIN-37). Un post privé, en attente de revue ou écarté n'est ouvrable
-  // que par son auteur ; les autres → 404. Tout reste visible côté équipe via
-  // l'onglet des retours du projet.
+  // Publicly visible only if public, published AND not spam
+  // (MIN-54/MIN-37). A private post, awaiting review or dismissed cannot be opened
+  // only by its author; others → 404. Everything remains visible on the team side via
+  // the project feedback tab.
   const publiclyVisible =
     row.is_public && row.review_state === "published" && !isHiddenFeedbackStatus(row.status);
   if (!publiclyVisible && row.author_id !== params.viewerId) return null;
   if (row.merged_into_id !== null) {
-    // Tombstone : le canonique porte tout, l'appelant redirige.
+    // Tombstone: canonical carries all, caller redirects.
     return {
       post: toPublicPost(row, params.viewerId, new Set<string>()),
       mergedIntoId: row.merged_into_id,
@@ -214,18 +213,18 @@ export async function getPublicPostDetail(params: {
 }
 
 /**
- * Titre et corps d'un post, pour les métadonnées de sa page (MIN-95).
+ * Title and body of a post, for the metadata of its page (MIN-95).
  *
- * Volontairement plus strict que `getPublicPostDetail` : celui-ci laisse son
- * AUTEUR ouvrir un post privé ou en attente de revue, ce qui est juste pour la
- * page — mais un `<title>` ou un `og:description` part dans l'aperçu de lien de
- * qui reçoit l'URL, pas seulement dans l'onglet de l'auteur. Seuls les posts
- * publiquement visibles nomment donc leur page ; les autres retombent sur le
- * titre générique du board.
+ * Deliberately stricter than `getPublicPostDetail`: this one lets its
+ * AUTHOR open a private post or one awaiting review, which is just for the
+ * page — but a `<title>` or `og:description` leaves in the link preview of
+ * which receives the URL, not just in the author tab. Only publicly visible posts
+ * therefore name their page; the others fall on the
+ * generic title of the board.
  *
- * `cache()` sur des arguments primitifs : deux appels dans la même requête
- * (aucun aujourd'hui, mais la page en fera peut-être un) ne coûtent qu'une
- * lecture.
+ * `cache()` on primitive arguments: two calls in the same request
+ * (none today, but the page will perhaps make one) cost than a
+ * reading.
  */
 export const getPublicPostMeta = cache(
   async (
@@ -243,30 +242,30 @@ export const getPublicPostMeta = cache(
     if (!data) return null;
     if (!data.is_public || data.review_state !== "published") return null;
     if (isHiddenFeedbackStatus(data.status as FeedbackPostStatus)) return null;
-    // Un doublon fusionné redirige en 308 vers son canonique : c'est ce
-    // dernier qui nomme la page.
+    // A merged duplicate redirects in 308 to its canonical: this is what
+    // last one which names the page.
     if (data.merged_into_id !== null) return null;
     return { title: data.title as string, body: (data.body as string) ?? "" };
   },
 );
 
 export interface MyFeedbackEntry {
-  /** Post à afficher (le canonique si le mien a été fusionné). */
+  /** Post to display (the canonical if mine was merged). */
   post: PublicPost;
   relation: "authored" | "voted";
-  /** Titre soumis à l'origine quand mon post a été fusionné dans un autre. */
+  /** Title originally submitted when my post was merged into another. */
   mergedFromTitle: string | null;
 }
 
 /**
- * « Mes feedbacks » : mes posts (y compris fusionnés — suivis jusqu'au
- * canonique) et mes votes, avec leur avancement.
+ * “My feedback”: my posts (including merged ones — followed up to the canonical
+ *) and my votes, with their progress.
  *
- * Un retour privé n'y entre que si je l'ai ÉCRIT. Privé veut dire « lu par
- * l'équipe seule » : le voir dans sa liste parce qu'on a voté dessus avant que
- * l'équipe ne le retire du board, ou parce que le sien y a été fusionné, c'est
- * lire le retour de quelqu'un d'autre à un endroit où le board a promis qu'on
- * ne le lirait pas.
+ * A private feedback only enters if I WROTE it. Private means "read by
+ * the team alone": seeing it in your list because you voted on it before
+ * the team removed it from the board, or because yours was merged there, it's
+ * reading someone else's return to a place where the board promised that you
+ * wouldn't would not read.
  */
 export async function listMyFeedback(params: {
   projectId: string;
@@ -295,7 +294,7 @@ export async function listMyFeedback(params: {
     feedback_posts: PostWithAuthor;
   }[];
 
-  // Mes posts fusionnés : suivre le pointeur (profondeur ≤ 1 par aplatissement).
+  // My merged posts: follow the pointer (depth ≤ 1 by flattening).
   const mergedTargets = authored
     .map((p) => p.merged_into_id)
     .filter((id): id is string => id !== null);
@@ -311,16 +310,16 @@ export async function listMyFeedback(params: {
     }
   }
 
-  /** Lisible ici seulement si public, ou écrit par moi. */
+  /** Readable here only if public, or written by me. */
   const readable = (row: PostWithAuthor) =>
     row.is_public || row.author_id === params.viewerId;
 
   const entries: { row: PostWithAuthor; relation: "authored" | "voted"; mergedFromTitle: string | null }[] = [];
   const seen = new Set<string>();
   for (const row of authored) {
-    // Mon retour fusionné dans le retour PRIVÉ d'un autre : on ne suit pas le
-    // pointeur, on reste sur le mien. Suivre montrerait son titre et son
-    // avancement — précisément ce que « privé » retire de ma vue.
+    // My return merged into the PRIVATE return of another: we do not follow the
+    // pointer, we stay on mine. Follow would show its title and its
+    // advancement — precisely what “private” removes from my view.
     const target = row.merged_into_id ? canonicalById.get(row.merged_into_id) : null;
     const canonical = target && readable(target) ? target : null;
     const display = canonical ?? row;
@@ -333,10 +332,10 @@ export async function listMyFeedback(params: {
     });
   }
   for (const { feedback_posts: row } of votedRows) {
-    // Les votes suivent déjà le merge (déplacés vers le canonique) ; un
-    // tombstone voté ne devrait pas exister, on l'ignore par sécurité.
+    // The votes already follow the merge (moved to the canonical); A
+    // voted tombstone should not exist, we ignore it for safety.
     if (!row || row.merged_into_id !== null || seen.has(row.id)) continue;
-    // Voté puis passé en privé par l'équipe : il sort de la liste comme il est
+    // Voted then passed privately by the team: it leaves the list as it is
     // sorti du board.
     if (!readable(row)) continue;
     seen.add(row.id);

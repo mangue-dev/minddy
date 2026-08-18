@@ -27,40 +27,40 @@ export interface NotificationRow {
   /** Set instead of the three above for a ROUTINE notification (MIN-185) — a
       scheduled run has no ticket, and its executions live in the routine. */
   routine_id?: string | null;
-  /** Set instead of all the above for a PULL REQUEST notification: elle se lit
-      sur la page Pull requests, et n'a pas forcément de ticket. */
+  /** Set instead of all the above for a PULL REQUEST notification: it reads
+ on the Pull requests page, and does not necessarily have a ticket. */
   pull_request_id?: string | null;
   /** Set instead of all the above for a PAGE notification (MIN-278) — mention
-      dans une page, ou écriture de l'agent dedans. */
+ in a page, or writing of the agent in it. */
   page_id?: string | null;
-  /** Le bloc visé dans cette page, quand la mention y a été posée : le clic
-      tombe alors sur le paragraphe, pas seulement sur le document. */
+  /** The block referred to in this page, when the mention was made: the click
+ then falls on the paragraph, not just on the document. */
   block_id?: string | null;
   comment_id?: string | null;
   actor_id: string | null;
-  /** L'action est passée par le serveur MCP : l'acteur affiché dans l'inbox est
-      l'AGENT porté par `api_key_id`, pas le propriétaire de la clé. Même
-      vocabulaire que `issue_events` (lib/server/issue-events.ts). */
+  /** The action is taken by the MCP server: the actor displayed in the inbox is
+ the AGENT carried by `api_key_id`, not the owner of the key. Same
+ vocabulary as `issue_events` (lib/server/issue-events.ts). */
   via_mcp?: boolean;
-  /** L'action est un geste de NOTRE agent hors MCP — le chat Numo, l'agent de
-      code. L'inbox nomme alors Numo, comme elle le fait déjà d'un commentaire
-      qu'il a écrit (le drapeau se lisait jusqu'ici sur la ligne de commentaire ;
-      une citation dans une page n'a pas cet abri, MIN-278). */
+  /** The action is a gesture from OUR non-MCP agent — the Numo cat, the agent of
+ code. The inbox then names Numo, as it already does from a comment
+ that he wrote (the flag was read until now on the comment line;
+ a quote in a page does not have this shelter, MIN-278). */
   via_assistant?: boolean;
-  /** La clé API derrière une action MCP — son agent/nom donne logo et libellé. */
+  /** The API key behind an MCP action — its agent/name gives logo and label. */
   api_key_id?: string | null;
-  /** L'affectation vient de Smart Assign (`actor_id` null) : l'inbox nomme la
-      fonctionnalité au lieu de dire « Quelqu'un ». */
+  /** The assignment comes from Smart Assign (`actor_id` null): the inbox names the
+ feature instead of saying "Someone". */
   via_smart_assign?: boolean;
-  /** La ligne vient d'une automatisation de projet (MIN-147) — même raison que
-      le drapeau ci-dessus : sans lui, l'inbox dit « Quelqu'un ». */
+  /** The line comes from a project automation (MIN-147) — same reason as
+ the flag above: without it, the inbox says "Someone". */
   via_automation?: boolean;
 }
 
 /** The agent types displace each other: one live agent notification per issue.
- *  `routine_done` en fait partie : c'est la fin de passage d'une routine, elle
- *  se substitue au « terminé » ou à l'« échec » du passage précédent — sinon
- *  une routine quotidienne empile une ligne par matin. */
+ * `routine_done` is one of them: it is the end of the passage of a routine, it
+ * replaces the “finished” or “failed” of the previous passage — otherwise
+ * a daily routine stacks one line per morning. */
 const AGENT_TYPES: readonly NotificationType[] = [
   "agent_done",
   "agent_question",
@@ -100,8 +100,8 @@ export async function insertNotifications(
   );
   const kept = rows.filter((r) => {
     const prefs = prefsById.get(r.user_id);
-    // La LIGNE, pas seulement son type : une routine emprunte les types de
-    // l'agent, et seul son `routine_id` la range sous la bonne bascule.
+    // The LINE, not just its type: a routine borrows the types of
+    // the agent, and only its `routine_id` places it under the correct toggle.
     return !prefs || prefs[categoryOfNotification(r)];
   });
   if (kept.length === 0) return;
@@ -122,17 +122,17 @@ export async function insertNotifications(
         del = r.agent_conversation_id
           ? del.eq("agent_conversation_id", r.agent_conversation_id)
           : del.is("agent_conversation_id", null);
-        // Une notification de ROUTINE (MIN-185) n'a pas de ticket : sans ce
-        // second filtre, le `issue_id is null` ci-dessus déplacerait la ligne
-        // de TOUTES les routines du compte — deux routines en échec le même
-        // matin n'en laisseraient qu'une, et l'autre disparaîtrait sans avoir
-        // été lue. Chaque routine déplace la sienne, et elle seule.
+        // A ROUTINE notification (MIN-185) has no ticket: without this
+        // second filter, the `issue_id is null` above would move the line
+        // of ALL routines in the account — two routines fail the same
+        // morning would leave only one, and the other would disappear without having
+        // been read. Each routine moves its own, and that alone.
         del = r.routine_id ? del.eq("routine_id", r.routine_id) : del.is("routine_id", null);
-        // Même raison pour une PAGE (MIN-278) : sans ce filtre, une écriture
-        // d'agent dans une page déplacerait la ligne non lue de TOUTES les
-        // autres. C'est cette clause qui fait qu'un agent qui réécrit six pages
-        // d'affilée laisse six lignes, et qu'un agent qui repasse dix fois sur
-        // la même n'en laisse qu'une.
+        // Same reason for a PAGE (MIN-278): without this filter, a write
+        // of agent in a page would move the unread line ALL the
+        // others. It is this clause that makes an agent who rewrites six pages
+        // in a row leaves six lines, and an agent who goes over ten times
+        // the same leaves only one.
         del = r.page_id ? del.eq("page_id", r.page_id) : del.is("page_id", null);
         return del;
       })
@@ -145,34 +145,34 @@ export async function insertNotifications(
     return;
   }
 
-  // Web Push (MIN-183) : les mêmes lignes partent en notification système, sur
-  // les appareils que le destinataire a enregistrés. Ici, et pas ailleurs, pour
+  // Web Push (MIN-183): the same lines go to system notification, on
+  // the devices that the recipient has registered. Here, and not elsewhere, for
   // deux raisons :
-  //   • c'est le SEUL point d'insertion — treize producteurs y convergent, donc
-  //     brancher ici couvre tout ce qui tombe dans l'inbox, aujourd'hui et
-  //     demain, sans qu'aucun d'eux n'ait à le savoir ;
-  //   • le filtre de préférences (MIN-82) est déjà passé sur `kept`. Une seule
-  //     bascule gouverne les deux surfaces, il n'y a rien à refiltrer — et donc
-  //     aucun second filtre à tenir en phase avec le premier.
+  // • this is the ONLY insertion point — thirteen producers converge there, so
+  // plug in here covers everything that falls into the inbox, today and
+  // tomorrow, without any of them having to know it;
+  // • the preferences filter (MIN-82) is already set to `kept`. Only one
+  // seesaw governs both surfaces, there is nothing to refilter — and therefore
+  // no second filter to keep in phase with the first.
   //
-  // Après l'insert et SEULEMENT s'il a réussi : une notification qu'on n'a pas
-  // su écrire ne doit pas sonner sur un téléphone en laissant l'inbox vide.
+  // After the insert and ONLY if it was successful: a notification that we don't have
+  // writing should not ring on a phone leaving the inbox empty.
   //
-  // `afterOrNow` est indispensable : la moitié des producteurs tournent hors
-  // requête (cascades d'automatisations, fin de run d'agent, crons). Un `void`
-  // détaché mourrait avec la réponse, en « TypeError: fetch failed » (cf.
+  // `afterOrNow` is essential: half of the producers shoot outside
+  // request (automation cascades, end of agent run, crons). A `void`
+  // detached would die with the response, in “TypeError: fetch failed” (cf.
   // lib/server/after-safe.ts).
   pushNotifications(service, kept);
 }
 
-/** Le volet push d'`insertNotifications`, isolé pour se lire seul. Best-effort
-    de bout en bout : rien de ce qui suit ne remonte à l'appelant. */
+/** The push pane of `insertNotifications`, isolated to read alone. Best-effort
+ end-to-end: Nothing that follows goes back to the caller. */
 function pushNotifications(service: SupabaseClient, kept: NotificationRow[]): void {
   if (!isPushConfigured() && !isApnsConfigured()) return;
   afterOrNow(async () => {
     const ctx = await loadPushContext(service, kept);
-    // Séquentiel par destinataire : `sendPushToUser` parallélise déjà par
-    // appareil, et un insert vise rarement plus d'une poignée de personnes.
+    // Sequential by recipient: `sendPushToUser` already parallelizes by
+    // device, and an insert is rarely aimed at more than a handful of people.
     for (const row of kept) {
       await sendPushToUser(service, row.user_id, (locale) =>
         buildPushPayload(ctx, row, locale)

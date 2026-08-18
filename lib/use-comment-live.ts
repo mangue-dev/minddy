@@ -5,24 +5,24 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { getSupabase } from "./supabase";
 
 /**
- * Une réponse @Numo EN DIRECT, sur le topic privé `numo-comment:{commentId}`
+ * A response @Numo LIVE, on the private topic `numo-comment:{commentId}`
  * (migration 20260909090000_numo_comment_live_stream).
  *
- * L'assistant streame parce que son panneau tient la connexion SSE de la route
- * qui fait tourner la boucle. Une réponse en commentaire ne peut pas : elle
- * s'écrit dans un after(), sans navigateur au bout du fil. Le serveur diffuse
- * donc le texte du round sur le topic du commentaire (lib/server/assistant/
- * comment-live.ts), et c'est ici qu'on le reçoit — ~4 fois par seconde, sans une
- * seule écriture en base ni un seul refetch du fil.
+ * The assistant streams because its panel holds the SSE connection of the route
+ * which runs the loop. A comment response cannot: it
+ * is written in an after(), without a browser on the line. The server broadcasts
+ * therefore the text of the round on the comment topic (lib/server/assistant/
+ * comment-live.ts), and this is where we receive it — ~4 times per second, without a single
+ * write to the base nor a single refetch of the thread.
  *
- * Le refetch tant que la réponse est 'working' reste en place : c'est le filet
- * (message perdu, onglet endormi, abonnement pas encore joint).
+ * The refetch as long as the response is 'working' remains in place: it is the net
+ * (message lost, tab asleep, subscription not yet attached).
  */
 
 export interface CommentLive {
-  /** Réponse telle qu'écrite jusqu'ici. */
+  /** Answer as written so far. */
   text: string;
-  /** Outil en cours — il prend le pas sur le texte à l'écran. */
+  /** Current tool — it takes precedence over the text on the screen. */
   tool: string | null;
 }
 
@@ -37,14 +37,14 @@ type Listener = (payload: StreamPayload) => void;
 interface Entry {
   channel: RealtimeChannel | null;
   listeners: Set<Listener>;
-  /** Dernier abonné parti pendant l'ouverture → ne pas joindre après coup. */
+  /** Last subscriber left during opening → do not contact afterwards. */
   closed: boolean;
 }
 
 /**
- * UN canal par commentaire, quel que soit le nombre de fils montés dessus : le
- * même ticket peut être ouvert en panneau latéral et en modale, et un même
- * socket ne peut pas joindre deux fois le même topic.
+ * ONE channel per comment, regardless of the number of threads mounted on it: the
+ * same ticket can be opened in side panel and in modal, and the same
+ * socket cannot join the same topic twice.
  */
 const channels = new Map<string, Entry>();
 
@@ -55,8 +55,8 @@ function subscribeComment(commentId: string, listener: Listener): () => void {
     entry = fresh;
     channels.set(commentId, fresh);
     const supabase = getSupabase();
-    // Même précaution que le RealtimeProvider : pousser le token AVANT le join,
-    // sinon le canal privé refuse l'abonnement (jeton anon).
+    // Same precaution as the RealtimeProvider: push the token BEFORE the join,
+    // otherwise the private channel refuses the subscription (anon token).
     void supabase.realtime.setAuth().then(() => {
       if (fresh.closed) return;
       const channel = supabase.channel(`numo-comment:${commentId}`, {
@@ -82,21 +82,21 @@ function subscribeComment(commentId: string, listener: Listener): () => void {
 }
 
 /**
- * `active` = la réponse est en cours d'écriture (assistant_status 'working'). Au
- * repos on ne s'abonne pas : il n'y a rien à diffuser, et le commentaire fini est
- * celui de la base.
+ * `active` = the response is being written (assistant_status 'working'). At
+ * rest we do not subscribe: there is nothing to broadcast, and the finished comment is
+ * that of the base.
  *
- * Renvoie `null` tant que rien n'est arrivé — l'appelant retombe alors sur la
- * ligne en base, qui est ce que voit un onglet ouvert en cours de route.
+ * Returns `null` as long as nothing has happened — the caller then falls back to the
+ * line in base, which is what an open tab sees along the way.
  */
 export function useCommentLive(
   commentId: string | null,
   active: boolean
 ): CommentLive | null {
   const [live, setLive] = useState<CommentLive | null>(null);
-  // Horodatage du dernier message retenu : deux diffusions parties à 250 ms
-  // d'écart peuvent arriver dans le désordre, et un texte plus ancien effacerait
-  // la fin de celui déjà affiché.
+  // Timestamp of the last message retained: two broadcasts left at 250 ms
+  // discrepancies can arrive out of order, and older text would erase
+  // the end of the one already displayed.
   const lastAt = useRef(0);
 
   useEffect(() => {
@@ -110,8 +110,8 @@ export function useCommentLive(
       lastAt.current = at;
       const text = typeof p.text === "string" ? p.text : "";
       const tool = typeof p.tool === "string" ? p.tool : null;
-      // Diffusion à vide : plus rien à montrer en direct (échec), on rend la main
-      // à la ligne en base.
+      // Empty broadcast: nothing left to show live (failure), we give up
+      // to the base line.
       setLive(text || tool ? { text, tool } : null);
     });
   }, [commentId, active]);

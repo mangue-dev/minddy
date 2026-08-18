@@ -8,15 +8,15 @@ import { ImageOff } from "lucide-react";
 import { prFileRawUrl, type PrEndpoint, type PullRequestFile } from "@/lib/agent-api";
 
 /**
- * Diff d'une image (MIN-66) : l'avant et l'après côte à côte, avec dimensions et
- * poids. Ce que la vue diff affiche à la place de « diff indisponible » quand le
- * fichier sans patch est une image — le cas de très loin le plus fréquent, et le
- * seul qu'on sache vraiment MONTRER.
+ * Diff of an image (MIN-66): before and after side by side, with dimensions and
+ * weight. What the diff view displays instead of “diff unavailable” when the
+ * file without a patch is an image — by far the most common case, and the
+ * only one that we really know how to SHOW.
  *
- * On passe par `fetch` + blob plutôt que par un `<img src>` direct sur la route :
- * un `<img>` ne dit ni le poids du fichier ni la raison d'un échec, et la même
- * requête nous donne les deux (`blob.size`, et le statut HTTP pour distinguer
- * « trop lourde » d'une vraie panne).
+ * We go through `fetch` + blob rather than a `<img src>` direct on the route:
+ * a `<img>` tells neither the size of the file nor the reason for a failure, and the same
+ * query gives us both (`blob.size`, and the HTTP status to distinguish
+ * "too heavy" from a real one failure).
  */
 
 type Side = "base" | "head";
@@ -30,9 +30,9 @@ interface Version {
 }
 
 /**
- * Charge une version de l'image et en mesure les dimensions. `missing` = la
- * forge répond 404, ce qui est le cas NORMAL du côté absent (un fichier ajouté
- * n'a pas d'avant) — pas une erreur à signaler comme telle.
+ * Loads a version of the image and measures its dimensions. `missing` = the
+ * forge responds 404, which is the NORMAL case on the absent side (an added file
+ * has no front) — not an error to report as such.
  */
 function useImageVersion(endpoint: PrEndpoint, path: string, side: Side, enabled: boolean): Version {
   const [state, setState] = useState<Version>({ status: enabled ? "loading" : "missing" });
@@ -54,14 +54,14 @@ function useImageVersion(endpoint: PrEndpoint, path: string, side: Side, enabled
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         objectUrl = url;
-        // Dimensions lues sur une image DÉTACHÉE : elles doivent être connues
-        // avant le rendu pour que la légende s'affiche d'un coup, sans faire
-        // sauter la mise en page une fois le `<img>` monté.
+        // Dimensions read on a DETACHED image: they must be known
+        // before rendering so that the legend is displayed at once, without doing
+        // skip the layout once the `<img>` is mounted.
         const size = await new Promise<{ width: number; height: number } | null>((resolve) => {
           const probe = new Image();
           probe.onload = () => resolve({ width: probe.naturalWidth, height: probe.naturalHeight });
-          // Un SVG sans dimensions intrinsèques, un format que le navigateur ne
-          // décode pas : on l'affiche quand même, sans légende de taille.
+          // An SVG without intrinsic dimensions, a format that the browser does not
+          // do not decode: we display it anyway, without size legend.
           probe.onerror = () => resolve(null);
           probe.src = url;
         });
@@ -88,7 +88,7 @@ function useImageVersion(endpoint: PrEndpoint, path: string, side: Side, enabled
   return state;
 }
 
-/** Poids lisible. Ko/Mo décimaux — ceux qu'affichent GitHub et le Finder. */
+/** Readable weight. Decimal KB/MB — those displayed by GitHub and Finder. */
 function formatBytes(bytes: number, locale: string): string {
   if (bytes < 1000) return `${bytes} B`;
   const units = ["kB", "MB"] as const;
@@ -101,7 +101,7 @@ function formatBytes(bytes: number, locale: string): string {
   return `${value.toLocaleString(locale, { maximumFractionDigits: value < 10 ? 1 : 0 })} ${units[unit]}`;
 }
 
-/** Un des deux côtés : le damier, l'image, et sa légende. */
+/** One of the two sides: the checkerboard, the image, and its legend. */
 function ImagePane({
   label,
   version,
@@ -110,7 +110,7 @@ function ImagePane({
 }: {
   label: string;
   version: Version;
-  /** Teinte du liseré : l'avant se lit en rouge, l'après en vert, comme le diff. */
+  /** Color of the border: the front is read in red, the after in green, like the diff. */
   tone: "base" | "head";
   locale: string;
 }) {
@@ -140,10 +140,10 @@ function ImagePane({
       </span>
       <div
         className={cn(
-          // `flex-1` : les deux panneaux sont des colonnes soeurs étirées à la
-          // même hauteur, mais sans ça chaque cadre prend celle de SON image —
-          // et deux images de tailles différentes donnent deux cadres inégaux,
-          // ce qui se lit comme un défaut d'alignement plutôt que comme un écart
+          // `flex-1`: the two panels are sister columns stretched to the
+          // same height, but without that each frame takes that of ITS image —
+          // and two images of different sizes result in two unequal frames,
+          // which reads as a misalignment rather than a gap
           // de dimensions.
           "pr-image-checker flex min-h-28 flex-1 items-center justify-center rounded border p-3",
           tone === "base"
@@ -186,13 +186,13 @@ export function PrImageDiff({
 }) {
   const t = useTranslations("PullRequests");
 
-  // Le côté qui n'existe pas n'est PAS demandé : une requête qu'on sait vouée au
-  // 404 ferait un aller-retour de forge pour rien.
+  // The side that does not exist is NOT requested: a request that we know is dedicated to
+  // 404 would make a round trip to the forge for nothing.
   const base = useImageVersion(endpoint, file.filename, "base", file.status !== "added");
   const head = useImageVersion(endpoint, file.filename, "head", file.status !== "removed");
 
-  // Ajout ou suppression : un seul côté a du sens, et le montrer seul et large
-  // dit mieux ce qui s'est passé qu'un panneau vide en face.
+  // Add or delete: only one side makes sense, and show it alone and wide
+  // says what happened better than a blank sign in front.
   if (file.status === "added" || file.status === "removed") {
     const only = file.status === "added" ? head : base;
     return (

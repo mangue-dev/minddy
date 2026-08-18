@@ -1,21 +1,21 @@
 "use client";
 
-// Le menu ⋯ d'un bloc de page.
+// The menu ⋯ of a page block.
 //
-// Ce qu'il faut voir en le lisant : il n'y a AUCUNE liste de blocs ici. Le
-// sous-menu « transformer en » est `turnIntoItems(editor)`, c'est-à-dire le
-// registre (MIN-267) filtré sur ce qui est convertible, dans son ordre, avec
-// son entrée active cochée et son raccourci affiché. Le jour où l'on ajoute un
-// bloc tableau, ce fichier ne bouge pas — et le raccourci qu'il affiche est
-// exactement celui que le clavier déclenche, puisque les deux lisent le même
-// champ du descripteur.
+// What to see when reading it: there is NO list of blocks here. THE
+// submenu “transform to” is `turnIntoItems(editor)`, that is to say the
+// register (MIN-267) filtered on what is convertible, in its order, with
+// its active entry checked and its shortcut displayed. The day we add a
+// array block, this file does not move — and the shortcut it displays is
+// exactly the one that the keyboard triggers, since both read the same
+// descriptor field.
 //
-// De même pour les couleurs : la palette vient de blocks/color.ts, donc de
-// celle des étiquettes du produit, et chaque pastille se peint avec les jetons
-// CSS qui peindront le texte. Une pastille ne peut pas mentir sur le résultat.
+// The same for the colors: the palette comes from blocks/color.ts, therefore from
+// that of the product labels, and each pastille is painted with the tokens
+// CSS that will paint the text. A tablet cannot lie about the result.
 //
-// Tout ce qui touche au document est dans block-actions.ts : ce composant ne
-// fait qu'appeler, pour que le comportement reste testable sans interface.
+// Everything related to the document is in block-actions.ts: this component does not
+// only calls, so that the behavior remains testable without an interface.
 
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
@@ -65,8 +65,8 @@ import {
   turnBlocksInto,
 } from "@/components/pages/block-actions";
 
-/** La pastille d'une couleur, peinte avec le jeton qu'elle pose — le « A »
-    pour le texte, le carré plein pour le fond. */
+/** The patch of a color, painted with the token it places — the “A”
+ for the text, the solid square for the background. */
 function Swatch({
   kind,
   color,
@@ -140,47 +140,45 @@ export function BlockMenu({
   editor: Editor;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Le déclencheur — la poignée de la marge, ou n'importe quel bouton. */
+  /** The trigger — the margin handle, or any button. */
   children: React.ReactNode;
 }) {
   const t = useTranslations("Pages");
 
-  // Recalculés à chaque OUVERTURE : la sélection a bougé entre deux, et un
-  // « transformer en » qui coche le bloc d'avant est pire que pas de coche.
+  // Recalculated at each OPENING: the selection has moved between two, and one
+  // “transform to” which checks the block before is worse than no check.
   const items = useMemo(() => (open ? turnIntoItems(editor) : []), [open, editor]);
   const count = useMemo(() => (open ? selectedBlockCount(editor) : 0), [open, editor]);
 
   /**
-   * Un bloc sous-page seul en sélection : le menu change de VOCABULAIRE
-   * (MIN-272).
-   *
-   * Ce qu'on retire — « transformer en » et les couleurs — n'est pas une
-   * simplification de confort : un lien vers un document ne se convertit pas en
-   * citation, et son texte n'est pas du texte à peindre, c'est le titre d'une
-   * autre page, relu à chaque rendu. Les deux entrées agissaient sur un bloc
-   * qui n'a ni l'un ni l'autre.
-   *
-   * Et ce qui reste parle de la PAGE : dupliquer la copie, elle et ses
-   * sous-pages ; supprimer la met à la corbeille — d'où le libellé de la
-   * sidebar, mot pour mot, parce que c'est le même geste.
-   */
+ * A single subpage block in selection: the menu changes VOCABULARY
+ * (MIN-272).
+ *
+ * What we remove — “transform into” and the colors — is not a
+ * comfort simplification: a link to a document does not convert en
+ * quote, and its text is not text to paint, it is the title of a
+ * other page, reread at each rendering. Both entries acted on a block
+ * which has neither.
+ *
+ * And what remains speaks of the PAGE: duplicate the copy, it and its
+ * subpages; delete puts it in the trash — hence the wording of the
+ * sidebar, word for word, because it's the same gesture.
+ */
   const subpageId = useMemo(
     () => (open ? selectedSubpageId(editor) : null),
     [open, editor]
   );
 
   /**
-   * Une image ou un fichier, seuls en sélection (MIN-282) : le menu se réduit
-   * pour la même raison que sur une sous-page — ce qu'on retire n'a pas de sens
-   * sur ce bloc-là.
-   *
-   * « Transformer en » et les couleurs, comme pour la sous-page : un fichier ne
-   * devient pas une citation, et il n'a pas de texte à peindre. Et DUPLIQUER en
-   * plus, ce que la sous-page garde : dupliquer une sous-page copie vraiment la
-   * page, alors que dupliquer une image ne copie aucun octet — elle pose une
-   * seconde référence au même fichier, qui se lit comme une copie sans en être
-   * une, et que supprimer d'un côté ne libère pas de l'autre.
-   */
+ * An image or a file, alone in selection (MIN-282): the menu is reduced
+ * for the same reason as on a subpage - what is removed has no meaning
+ * on this block.
+ *
+ * “Transform into” and the colors, as for the subpage: a file does not
+ * does not become a quote, and it has no text to paint. And DUPLICATE in
+ * more, what the subpage keeps: duplicating a subpage really copies the
+ * page, whereas duplicating an image does not copy any bytes — it sets a second reference to the same file, which reads as a copy without being one, and deleting one side does not release any the other.
+ */
   const mediaOnly = useMemo(
     () => (open ? selectionIsMediaOnly(editor) : false),
     [open, editor]
@@ -189,13 +187,13 @@ export function BlockMenu({
 
   const duplicateSubpage = async (pageId: string) => {
     const duplicate = editor.storage.subpage?.duplicate;
-    // La place de la copie est retenue MAINTENANT : copier est un aller-retour
-    // au serveur, et la sélection aura peut-être bougé quand il rend la main.
+    // The copy's place is retained NOW: copying is a round trip
+    // to the server, and the selection may have moved when he returns control.
     const at = blockRange(editor)?.to;
     if (!duplicate || at === undefined) return;
     const copy = await duplicate(pageId);
-    // Le bloc n'est posé QUE si la copie a abouti : un bloc vers une page qui
-    // n'existe pas se rendrait en orphelin, pour une erreur déjà signalée.
+    // The block is ONLY placed if the copy was successful: a block to a page which
+    // does not exist would be rendered as an orphan, for an error already reported.
     if (copy && !editor.isDestroyed) insertSubpageAfter(editor, copy, at);
   };
 
@@ -219,8 +217,8 @@ export function BlockMenu({
         align="start"
         side="bottom"
         className="w-60"
-        // Échap et clic dehors rendent le curseur au bloc : sans ça, le focus
-        // reste sur un déclencheur qui disparaît avec le survol, et la frappe
+        // Escape and click outside returns the cursor to the block: otherwise, the focus
+        // stays on a trigger that disappears on hover, and hits
         // suivante se perd.
         onCloseAutoFocus={(event) => {
           event.preventDefault();
@@ -320,10 +318,10 @@ export function BlockMenu({
           }}
         >
           <Trash2 />
-          {/* Sur une sous-page, le geste ne supprime pas un bloc : il met une
-              PAGE à la corbeille, avec ses descendants. Le libellé est celui de
-              la sidebar, mot pour mot — c'est le même geste, il ne doit pas
-              porter deux noms selon l'endroit d'où on le déclenche. */}
+          {/* On a subpage, the gesture does not delete a block: it places a
+ PAGE in the trash, with its descendants. The wording is that of
+ the sidebar, word for word — it's the same gesture, it should not
+ have two names depending on where it is triggered from. */}
           <span className="truncate">
             {subpageId ? t("deletePage") : t("deleteBlock")}
           </span>

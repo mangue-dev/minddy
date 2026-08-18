@@ -4,7 +4,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { createView, ensureBaselineViews } from "@/lib/server/views";
 
 /** GET /api/me/views — the caller's global (cross-project) views, all personal.
-    Seeds the baseline (system "Mes tickets" + default "Toutes") first. */
+ Seeds the baseline (system "My tickets" + default "All") first. */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;

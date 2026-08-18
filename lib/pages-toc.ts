@@ -1,33 +1,33 @@
 import type { Node } from "@tiptap/pm/model";
 
 /**
- * Ce que la table des matières flottante lit d'un document
- * (components/pages/page-toc.tsx) — et rien d'autre : ni React, ni DOM, ni
- * navigateur, pour que la lecture des titres se teste seule.
+ * What the floating table of contents reads from a document
+ * (components/pages/page-toc.tsx) — and nothing else: neither React, nor DOM, nor
+ * browser, so that reading titles can be tested alone.
  *
- * La source est l'ÉTAT ProseMirror et pas le DOM rendu. Deux conséquences qui
- * valent d'être dites : la table suit la frappe sans qu'on observe quoi que ce
- * soit, et elle ne peut pas décrire une page que le document ne contient plus.
+ * The source is the ProseMirror STATUS and not the rendered DOM. Two consequences which
+ * are worth saying: the table follows the typing without us observing anything that
+ * is, and it cannot describe a page that the document no longer contains.
  */
 export interface TocEntry {
-  /** La position ProseMirror du titre — son identité ET son ancre DOM. */
+  /** The ProseMirror position of the title — its identity AND its DOM anchor. */
   pos: number;
-  /** 1, 2 ou 3 : le registre des blocs n'en propose pas d'autres. */
+  /** 1, 2 or 3: the block register does not offer others. */
   level: number;
   text: string;
 }
 
 /**
- * Les titres du document, dans l'ordre de lecture.
+ * The titles of the document, in reading order.
  *
- * Un titre VIDE n'en est pas un : on en croise un dès qu'on tape « ## » et
- * qu'on s'arrête pour réfléchir, et une entrée sans texte est une ligne muette
- * dans la table — au mieux inutile, au pire une place qui bouge sous le
- * curseur pendant qu'on écrit.
+ * An EMPTY title is not one: we come across one as soon as we type "##" and
+ * we stop to think, and an entry without text is a silent line
+ * in the table — at best useless, at worst a place that moves under the
+ * cursor while writing.
  *
- * Les titres imbriqués (dans un dépliant, par exemple) comptent : ils
- * structurent la page comme les autres, et les sauter ferait une table qui
- * saute des sections sans jamais dire pourquoi.
+ * Nested titles (in a leaflet, for example) count: they
+ * structure the page like the others, and skipping them would make a table that
+ * skips sections without ever saying why.
  */
 export function readHeadings(doc: Node): TocEntry[] {
   const entries: TocEntry[] = [];
@@ -44,11 +44,11 @@ export function readHeadings(doc: Node): TocEntry[] {
 }
 
 /**
- * Deux tables portent-elles la même chose ?
+ * Do two tables carry the same thing?
  *
- * La lecture est refaite à CHAQUE frappe : sans cette comparaison, taper une
- * lettre dans un paragraphe re-rendrait la table entière, avec ses transitions
- * de largeur, pour un contenu identique.
+ * The reading is redone with EACH keystroke: without this comparison, typing a
+ * letter in a paragraph would re-render the entire table, with its transitions
+ * width, for content identical.
  */
 export function sameHeadings(a: TocEntry[], b: TocEntry[]): boolean {
   return (

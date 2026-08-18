@@ -9,25 +9,24 @@ import { FormDialog } from "@/components/form-dialog";
 import { useIsSendShortcut } from "@/lib/keyboard/use-send-mode";
 
 /**
- * « Copier pour l'agent » : le dialog qui demande — sans l'exiger — ce qu'on
- * veut voir fait de cette page.
+ * “Copy for agent”: the dialog that asks — without requiring it — what we
+ * want to see done on this page.
  *
- * Cousin du prompt personnalisé d'un ticket
- * ([custom-prompt-dialog.tsx](components/agent/custom-prompt-dialog.tsx)), et
- * volontairement PAS le même composant, pour la règle qui les sépare : là-bas
- * la consigne est le geste (un bouton « Personnalisé » sans consigne ne veut
- * rien dire, le bouton reste donc désactivé tant que le champ est vide), ici
- * elle est FACULTATIVE — copier une page pour la donner à un agent est déjà un
- * geste complet, et le champ ne fait que l'armer. D'où un bouton toujours
- * actif, et une paire de composants qui ne peuvent pas fusionner sans que l'un
- * des deux mente.
+ * Cousin of the custom ticket prompt
+ * ([custom-prompt-dialog.tsx](components/agent/custom-prompt-dialog.tsx)), and
+ * deliberately NOT the same component, for the rule that separates them: over there
+ * the instruction is the gesture (a “Custom” button without instructions does not mean anything, the button therefore remains disabled as long as the field is empty), here
+ * it is OPTIONAL — copying a page to give it to an agent is already a complete
+ * gesture, and the field only enables it. Hence a button always
+ * active, and a pair of components which cannot merge without one
+ * of the two lying.
  *
- * Le champ prend le focus à l'ouverture : ⌘⇧L puis ⌘Entrée copie sans consigne,
- * ⌘⇧L puis une phrase puis ⌘Entrée copie avec. Le geste rapide reste rapide.
+ * The field takes focus when opened: ⌘⇧L then ⌘Enter copy without instruction,
+ * ⌘⇧L then a sentence then ⌘Enter copy with. The quick gesture remains fast.
  *
- * « Annuler » est là bien qu'Échap ferme déjà : la sortie d'un dialog doit être
- * VISIBLE. Sans bouton, on ne quitte l'écran qu'en connaissant la touche, ou en
- * cliquant à l'extérieur — deux gestes que rien à l'écran n'annonce.
+ * “Cancel” is there although Escape already closes: the output of a dialog must be
+ * VISIBLE. Without a button, you only leave the screen by knowing the key, or by
+ * clicking outside — two gestures that nothing on the screen announces.
  */
 export function PageAgentCopyDialog({
   open,
@@ -36,12 +35,12 @@ export function PageAgentCopyDialog({
   onSubmit,
 }: {
   open: boolean;
-  /** Le titre est RAPPELÉ dans le sous-titre : le dialog s'ouvre aussi au
-      clavier, depuis n'importe où dans la page — on doit voir ce qu'on copie. */
+  /** The title is RECALLED in the subtitle: the dialog also opens with
+ keyboard, from anywhere on the page — we must see what we are copying. */
   pageTitle: string;
   onOpenChange: (open: boolean) => void;
-  /** La consigne, telle quelle (le rognage vit dans le constructeur de
-      prompt) ; chaîne vide = on ne demande rien. */
+  /** The instruction, as is (the trimming lives in the constructor of
+ prompt); empty string = nothing is asked. */
   onSubmit: (instructions: string) => void;
 }) {
   const t = useTranslations("Pages");
@@ -49,8 +48,8 @@ export function PageAgentCopyDialog({
   const isSend = useIsSendShortcut();
   const [instructions, setInstructions] = useState("");
 
-  // Chaque ouverture repart d'un champ vide : une consigne est écrite pour UNE
-  // copie, la retrouver à la suivante ferait partir l'ancienne par mégarde.
+  // Each opening starts from an empty field: an instruction is written for ONE
+  // copy, finding it at the next one would cause the old one to go away inadvertently.
   useEffect(() => {
     if (open) setInstructions("");
   }, [open]);
@@ -82,9 +81,9 @@ export function PageAgentCopyDialog({
         autoFocus
         value={instructions}
         onChange={(e) => setInstructions(e.target.value)}
-            // ⌘/Ctrl+Entrée valide ; Entrée seule reste un retour à la ligne,
-            // une consigne tenant souvent sur plusieurs — sauf si le compte a
-            // mis l'envoi sur Entrée, où Maj+Entrée prend le relais.
+            // ⌘/Ctrl+Valid entry; Enter only remains a newline,
+            // a deposit often holding on several — unless the account has
+            // set send to Enter, where Shift+Enter takes over.
             onKeyDown={(e) => {
               if (isSend(e)) {
                 e.preventDefault();

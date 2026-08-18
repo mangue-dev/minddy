@@ -18,7 +18,7 @@ function event(seq: number, diff: unknown): AgentRunEvent {
 }
 
 describe("diff local d'un run", () => {
-  it("valide la forme avant de la donner au renderer", () => {
+  it("validates the shape before giving it to the renderer", () => {
     expect(parseAgentLocalDiff({
       files: [
         { filename: "lib/a.ts", status: "modified", additions: 2.6, deletions: -1, patch: "@@\n+x" },
@@ -56,7 +56,7 @@ describe("diff local d'un run", () => {
     expect(merged.truncated).toBe(true);
   });
 
-  it("un snapshot vide retire un ancien diff après annulation des changements", () => {
+  it("an empty snapshot removes an old diff after changes are cancelled", () => {
     const settled = settledAgentLocalDiff([
       event(1, { files: [{ filename: "a.ts", status: "modified", additions: 1, deletions: 0, patch: "avant" }] }),
       event(2, { files: [], snapshot: true }),

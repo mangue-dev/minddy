@@ -4,35 +4,35 @@ import { getServiceClient } from "@/lib/supabase-service";
 import type { RepoProviderId } from "@/lib/repo-providers";
 
 /**
- * Le pont entre un compte de FORGE et un membre du projet minddy : « octocat »
- * → l'utilisateur qui a connecté ce compte-là.
+ * The bridge between a FORGE account and a member of the minddy project: “octocat”
+ * → the user who connected this account.
  *
- * C'est ce qui manquait à la synchro d'issues (MIN-97). Elle laissait tout
- * arriver non assigné, avec une raison qui tenait à l'époque — « l'assigné
- * GitHub est un compte de la forge, pas un membre du projet ». Sauf que depuis
- * MIN-144 minddy sait exactement qui est qui : `git_user_identities` porte le
- * login GitHub de chaque utilisateur, et côté GitLab c'est la connexion OAuth
- * qui EST l'identité (même partage que `forge-actor.ts`).
+ * This is what was missing from the issue sync (MIN-97). She let everything
+ * arrive unassigned, with a reason that held at the time — "the assigned
+ * GitHub is a forge account, not a project member." Except that since
+ * MIN-144 minddy knows exactly who is who: `git_user_identities` carries the
+ * GitHub login of each user, and on the GitLab side it is the OAuth connection
+ * which IS the identity (same share as `forge-actor.ts`).
  *
- * Deux garde-fous, et ils sont le sujet du module :
+ * Two guardrails, and they are the subject of the module:
  *
- *  1. **Seuls les MEMBRES du projet** entrent dans l'index. Un login GitHub
- *     connu de minddy mais étranger à ce projet-ci ne doit pas s'y voir
- *     assigner des tickets : `issues.assignee_id` porte une FK vers auth.users,
- *     elle passerait, et le ticket atterrirait chez quelqu'un qui ne voit même
- *     pas le projet.
- *  2. **Rien n'est deviné.** Un login sans compte connecté ne ressemble à
- *     personne — il n'y a pas de rapprochement par nom ici, contrairement à
- *     l'import CSV (`lib/import/people.ts`), qui n'a que des noms à se mettre
- *     sous la dent. Ici on a une égalité exacte, et un mauvais assigné coûte
- *     plus cher qu'une absence d'assigné.
+ * 1. **Only MEMBERS of the project** enter the index. A GitHub login
+ * known to minddy but foreign to this project should not be seen there
+ * assign tickets: `issues.assignee_id` carries an FK to auth.users,
+ * it would pass, and the ticket would land with someone who doesn't even see
+ * not the project.
+ * 2. **Nothing is guessed.** A login without a connected account looks like
+ * no one — there is no matching by name here, unlike
+ * CSV import (`lib/import/people.ts`), which only has names to match. put
+ * in your tooth. Here we have an exact equality, and a bad assignee costs
+ * more expensive than no assignee.
  */
 
-/** login de la forge (minuscules) → `user_id` minddy. */
+/** forge login (lowercase) → `user_id` minddy. */
 export type ForgeAssigneeIndex = Map<string, string>;
 
-/** Les membres du projet : le propriétaire (qui n'a pas de ligne
- *  `project_members`) et les membres, comme partout ailleurs. */
+/** The members of the project: the owner (who does not have a line
+ * `project_members`) and the members, like everywhere else. */
 async function loadProjectUserIds(projectId: string): Promise<string[]> {
   const service = getServiceClient();
   const [{ data: project }, { data: members }] = await Promise.all([
@@ -48,9 +48,9 @@ async function loadProjectUserIds(projectId: string): Promise<string[]> {
 }
 
 /**
- * Index login → membre pour ce projet et cette forge. Vide (jamais `null`) si
- * personne n'a connecté son compte : l'appelant n'assigne alors rien, ce qui
- * est le comportement d'avant.
+ * Index login → member for this project and this forge. Empty (never `null`) if
+ * no one has connected their account: the caller then assigns nothing, which
+ * is the behavior before.
  */
 export async function buildForgeAssigneeIndex(params: {
   projectId: string;
@@ -61,9 +61,9 @@ export async function buildForgeAssigneeIndex(params: {
   if (userIds.length === 0) return index;
 
   const service = getServiceClient();
-  // GitHub : le compte personnel de MIN-144. GitLab : la connexion OAuth, qui
-  // porte déjà le login de la personne — la dupliquer ferait diverger deux
-  // rotations de token (même raison que `listUserIdentities`).
+  // GitHub: MIN-144’s personal account. GitLab: the OAuth connection, which
+  // already carries the person's login — duplicating it would cause the two to diverge
+  // token rotations (same reason as `listUserIdentities`).
   const table =
     params.provider === "github" ? "git_user_identities" : "git_connections";
   const { data, error } = await service
@@ -78,23 +78,23 @@ export async function buildForgeAssigneeIndex(params: {
 
   for (const row of data ?? []) {
     const login = (row.account_login as string | null)?.trim().toLowerCase();
-    // Premier arrivé, premier servi : deux comptes minddy qui auraient réussi à
-    // déclarer le MÊME login de forge sont ambigus, et le second ne doit pas
-    // voler les tickets du premier.
+    // First come, first served: two minddy accounts that would have managed to
+    // declare the SAME forge login are ambiguous, and the second should not
+    // steal the tickets from the first one.
     if (login && !index.has(login)) index.set(login, row.user_id as string);
   }
   return index;
 }
 
-/** Le membre que ce login désigne, ou `null`. */
+/** The member that this login designates, or `null`. */
 export function matchForgeAssignee(
   logins: string[],
   index: ForgeAssigneeIndex,
 ): string | null {
-  // Les deux forges acceptent PLUSIEURS assignés, minddy un seul : on prend le
-  // premier qu'on reconnaisse, dans l'ordre rendu par la forge (celui de
-  // l'assignation). Les autres ne sont pas perdus pour autant — ils restent
-  // lisibles sur l'issue distante, dont le lien est en ressource du ticket.
+  // The two forges accept SEVERAL assignees, minddy only one: we take the
+  // first that we recognize, in the order rendered by the forge (that of
+  // the assignment). The others are not lost - they remain
+  // readable on the remote issue, the link of which is in the ticket resource.
   for (const login of logins) {
     const found = index.get(login.trim().toLowerCase());
     if (found) return found;

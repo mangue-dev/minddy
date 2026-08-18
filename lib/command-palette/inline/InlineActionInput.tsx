@@ -97,8 +97,8 @@ export function InlineActionInput({
     return fieldConfig.options.filter((opt) => matchesSearch(query, opt.label));
   }, [activeField, fields]);
 
-  // Le champ qui prend le curseur à l'ouverture : le premier à remplir, et à
-  // défaut le premier tout court — un formulaire entièrement pré-rempli est une
+  // The field that takes the cursor when opened: the first to fill, and to
+  // default the first one altogether — a fully pre-filled form is a
   // proposition, pas un formulaire fini (cf. auto-focus.ts).
   const autoFocusIndex = useMemo(
     () => autoFocusFieldIndex(fields.map((f) => f.spec.key), values),

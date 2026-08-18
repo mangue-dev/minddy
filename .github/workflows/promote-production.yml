@@ -4,27 +4,27 @@ on:
   workflow_dispatch:
     inputs:
       sha:
-        description: "SHA vert de main à promouvoir sans merge ni réécriture"
+        description: "Green hand SHA to promote without merge or rewrite""
         required: true
         type: string
       checklist_version:
-        description: "Version de docs/security-release-checklist.md utilisée"
+        description: "Docs/security-release-checklist.md version used""
         required: true
         default: "1.0"
         type: string
       security_review_ref:
-        description: "Référence stable du compte rendu de revue (sans donnée sensible)"
+        description: "Stable reference of the review report (without sensitive data)""
         required: true
         type: string
       residual_risks:
-        description: "Risques résiduels dans le compte rendu"
+        description: "Residual risks in the report""
         required: true
         type: choice
         options:
           - none
           - documented
       pentest_status:
-        description: "Décision de pentest selon la checklist"
+        description: "Pentest decision according to the checklist""
         required: true
         type: choice
         options:
@@ -38,8 +38,8 @@ permissions:
   deployments: read
 
 concurrency:
-  # Partagé avec la release du cœur : production ne peut pas avancer pendant
-  # qu'un workflow est en train de construire puis taguer son SHA.
+  # Shared with core release: production cannot progress for
+  # that a workflow is building and then tagging its SHA.
   group: production-publication
   cancel-in-progress: false
 
@@ -50,8 +50,8 @@ jobs:
     timeout-minutes: 2
     permissions: {}
     steps:
-      # Cette validation vit dans le workflow lui-même : elle ne peut donc pas
-      # être affaiblie par le SHA candidat avant l'approbation de production.
+      # This validation lives in the workflow itself: it cannot therefore be
+      # be weakened by the candidate SHA before production approval.
       - name: Enforce current checklist and pentest decision
         env:
           CHECKLIST_VERSION: ${{ inputs.checklist_version }}
@@ -72,10 +72,10 @@ jobs:
           esac
 
           {
-            echo "### Revue sécurité de release"
+            echo "### Release security review"
             echo "- Checklist: \`$CHECKLIST_VERSION\`"
-            echo "- Compte rendu: \`$SECURITY_REVIEW_REF\`"
-            echo "- Risques résiduels: \`$RESIDUAL_RISKS\`"
+            echo "- Report: \`$SECURITY_REVIEW_REF\`"
+            echo "- Residual risks: \`$RESIDUAL_RISKS\`"
             echo "- Pentest: \`$PENTEST_STATUS\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -119,11 +119,11 @@ jobs:
           echo "Validated successful main CI run $CI_RUN for $TARGET_SHA"
 
           {
-            echo "### Promotion demandée"
-            echo "- De: \`$(git rev-parse origin/production)\`"
+            echo "### Promotion requested"
+            echo "- From: \`$(git rev-parse origin/production)\`"
             echo "- Vers: \`$TARGET_SHA\` (CI run $CI_RUN)"
-            echo "- Revue sécurité: \`$SECURITY_REVIEW_REF\`"
-            echo "- Risques résiduels: \`$RESIDUAL_RISKS\`"
+            echo "- Security review: \`$SECURITY_REVIEW_REF\`"
+            echo "- Residual risks: \`$RESIDUAL_RISKS\`"
             echo "- Pentest: \`$PENTEST_STATUS\`"
             echo ""
             echo "#### Changements Cloud"
@@ -131,13 +131,13 @@ jobs:
             echo ""
             echo "#### Marketing"
             marketing=$(git diff --name-only "origin/production..$TARGET_SHA" -- | grep -E '^app/\(marketing\)/|^components/marketing/|^public/(captures|marketing)/|^app/(sitemap\.ts|robots\.txt|llms(-full)?\.txt)' || true)
-            if [ -n "$marketing" ]; then printf '%s\n' "$marketing" | sed 's/^/- `/' | sed 's/$/`/'; else echo "- Aucun changement marketing."; fi
+            if [ -n "$marketing" ]; then printf '%s\n' "$marketing" | sed 's/^/- `/' | sed 's/$/`/'; else echo "- No marketing changes."; fi
             echo ""
             echo "#### Migrations"
             migrations=$(git diff --name-only "origin/production..$TARGET_SHA" -- supabase/migrations || true)
-            if [ -n "$migrations" ]; then printf '%s\n' "$migrations" | sed 's/^/- `/' | sed 's/$/`/'; else echo "- Aucune migration SQL."; fi
+            if [ -n "$migrations" ]; then printf '%s\n' "$migrations" | sed 's/^/- `/' | sed 's/$/`/'; else echo "- No SQL migrations."; fi
             echo ""
-            echo "Mise à jour et rollback : \`docs/releases.md\` et \`docs/self-hosting-operations.md\`."
+            echo "Updates and rollback: \`docs/releases.md\` and \`docs/self-hosting-operations.md\`."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Fast-forward production
@@ -149,9 +149,9 @@ jobs:
           git push origin "$TARGET_SHA:refs/heads/production"
           test "$(git ls-remote origin refs/heads/production | cut -f1)" = "$TARGET_SHA"
 
-      # L'intégration Git Vercel crée un GitHub Deployment nommé Production.
-      # Attendre son statut rend le verdict Cloud traçable sans token Vercel sur
-      # le poste du mainteneur ni dans ce workflow.
+      # The Git Vercel integration creates a GitHub Deployment named Production.
+      # Waiting for its status makes the Cloud verdict traceable without Vercel token on
+      # the maintainer's position nor in this workflow.
       - name: Verify Vercel production deployment
         env:
           GH_TOKEN: ${{ github.token }}

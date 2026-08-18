@@ -52,16 +52,16 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Briques d'affichage des commentaires de review d'une PR : le fil ancré sous une
- * ligne (annotation de `@pierre/diffs`), le composer d'un nouveau commentaire, et
- * le repli des fils périmés. Le placement, lui, vit dans `pr-diff`.
+ * Bricks for displaying PR review comments: the thread anchored under a
+ * line (annotation of `@pierre/diffs`), compose it with a new comment, and
+ * the folding of expired threads. The placement lives in `pr-diff`.
  */
 
 /**
- * État des réponses à un fil de review. Partagé par la vue par fichier et le repli
- * des fils orphelins — mêmes règles des deux côtés : un seul composer ouvert à la
- * fois, mais un brouillon PAR fil (changer de fil, ou rater un envoi, ne coûte
- * jamais le texte).
+ * Status of responses to a review thread. Shared by file view and fallback
+ * orphan sons — same rules on both sides: a single dial open to the
+ * times, but a draft PER thread (changing thread, or missing a sending, does not cost
+ * never the text).
  */
 export function useReviewReplies(endpoint: PrEndpoint, onPosted: () => unknown) {
   const [replyingId, setReplyingId] = useState<number | null>(null);
@@ -74,7 +74,7 @@ export function useReviewReplies(endpoint: PrEndpoint, onPosted: () => unknown) 
       if (!body || postingId != null) return;
       setPostingId(threadId);
       try {
-        // N'importe quel id du fil convient : GitHub rattache à la racine.
+        // Any thread id is fine: GitHub attaches to the root.
         await replyPrReviewCommentApi(endpoint, { body, inReplyTo: threadId });
         setReplyingId(null);
         setDrafts(({ [threadId]: _cleared, ...rest }) => rest);
@@ -92,10 +92,10 @@ export function useReviewReplies(endpoint: PrEndpoint, onPosted: () => unknown) 
     replyingId,
     postingId,
     valueFor: (threadId: number) => drafts[threadId] ?? "",
-    /** Une TRANSFORMATION, pas une valeur : deux pièces jointes qui atterrissent
-        dans le même tour doivent s'ajouter l'une après l'autre, chacune au
-        brouillon courant — passer une chaîne capturée au rendu ferait perdre la
-        première. */
+    /** A TRANSFORMATION, not a value: two attachments that land
+        in the same round must be added one after the other, each at the
+        current draft — passing a captured string to rendering would lose the
+        first. */
     change: (threadId: number, transform: (draft: string) => string) =>
       setDrafts((prev) => ({ ...prev, [threadId]: transform(prev[threadId] ?? "") })),
     start: (threadId: number) => setReplyingId(threadId),
@@ -107,9 +107,9 @@ export function useReviewReplies(endpoint: PrEndpoint, onPosted: () => unknown) 
 export type ReviewReplies = ReturnType<typeof useReviewReplies>;
 
 /**
- * Bascule « résolu / rouvert » d'un fil (MIN-139). Un seul fil en vol à la fois,
- * comme les réponses : la liste se recharge après coup, deux bascules simultanées
- * se marcheraient dessus.
+ * Toggle “resolved/reopened” of a thread (MIN-139). Only one thread flying at a time,
+ * like the answers: the list reloads afterwards, two simultaneous toggles
+ * would overlap one another.
  */
 export function useThreadResolution(endpoint: PrEndpoint, onChanged: () => unknown) {
   const [pendingId, setPendingId] = useState<number | null>(null);
@@ -117,8 +117,8 @@ export function useThreadResolution(endpoint: PrEndpoint, onChanged: () => unkno
   const toggle = useCallback(
     async (thread: PrReviewThread) => {
       const state = thread.resolution;
-      // Sans état connu il n'y a pas d'id de fil à donner à la forge — l'appelant
-      // ne rend d'ailleurs pas le bouton dans ce cas.
+      // Without a known state there is no thread id to give to the forge — the caller
+      // does not return the button in this case.
       if (!state || pendingId != null) return;
       setPendingId(thread.id);
       try {
@@ -142,22 +142,22 @@ export function useThreadResolution(endpoint: PrEndpoint, onChanged: () => unkno
 export type ThreadResolution = ReturnType<typeof useThreadResolution>;
 
 /**
- * Réactions emoji des commentaires d'une PR (MIN-139, élargi par MIN-147) : la
- * table indexée par commentaire, l'état voulu à poser, et le fil en vol.
+ * Emoji reactions of PR comments (MIN-139, expanded by MIN-147): the
+ * table indexed by comment, the desired state to ask, and the thread in flight.
  *
- * `canReact` sépare LIRE de POSER — une vue en lecture seule affiche les
- * réactions des autres sans en offrir : les masquer ferait croire qu'il n'y en a
- * pas.
+ * `canReact` separates READ from ASK — a read-only view displays the
+ * reactions of others without offering any: hiding them would make one believe that there are none
+ * not.
  *
- * La bascule envoie l'ÉTAT VOULU (`!mine`), pas un « inverse ce que tu as » :
- * c'est le serveur qui tranche, et un renvoi après un échec réseau ne défait
- * alors pas ce qui avait abouti.
+ * The flip-flop sends the DESIRED STATE (`!mine`), not a “reverse what you have”:
+ * it is the server which decides, and a referral after a network failure does not undo
+ * then not what had resulted.
  *
- * `surface` dit sur QUELLE famille de commentaires on réagit — les deux ont la
- * même forme et les mêmes gestes, mais pas la même route : chez GitHub, les
- * commentaires ancrés au code et ceux du fil ne vivent pas au même endroit. Le
- * reste (groupement, chips, palette) est rigoureusement commun, et c'est ce qui
- * fait que réagir se comporte pareil partout.
+ * `surface` says on WHICH family of comments we react — both have the
+ * same form and the same gestures, but not the same route: at GitHub, the
+ * comments anchored to the code and those in the thread do not live in the same place. THE
+ * rest (grouping, chips, palette) is strictly common, and this is what
+ * makes react behave the same everywhere.
  */
 export function useCommentReactions(
   endpoint: PrEndpoint,
@@ -192,7 +192,7 @@ export function useCommentReactions(
 
 export type CommentReactions = ReturnType<typeof useCommentReactions>;
 
-/** Clé de libellé de chaque réaction — typée, sinon `t()` ne vérifie plus rien. */
+/** Label key of each reaction — typed, otherwise `t()` no longer checks anything. */
 const REACTION_LABELS: Record<ReviewReactionContent, MessageKey<"PullRequests">> = {
   "+1": "reactionThumbsUp",
   "-1": "reactionThumbsDown",
@@ -205,8 +205,8 @@ const REACTION_LABELS: Record<ReviewReactionContent, MessageKey<"PullRequests">>
 };
 
 /**
- * Le geste « bascule cette réaction », partagé par les deux endroits d'où la
- * palette s'ouvre : l'état VOULU se déduit de ce qui est déjà posé, jamais d'un
+ * The gesture “changes this reaction”, shared by the two places hence the
+ * palette opens: the DESIRED state is deduced from what is already placed, never from a
  * « inverse ce que tu as » — cf. `useCommentReactions`.
  */
 export function reactionToggler(
@@ -223,20 +223,20 @@ export function reactionToggler(
 }
 
 /**
- * La bande de réactions d'un commentaire : les emoji déjà posés avec leur compte,
- * puis le bouton qui en ajoute — TOUT ce qui touche aux réactions au même endroit,
- * dans la même ligne.
+ * The reaction band of a comment: the emoji already posted with their account,
+ * then the button that adds — EVERYTHING related to reactions in the same place,
+ * in the same line.
  *
- * Cette ligne n'existe QUE si le commentaire porte déjà une réaction : sinon, la
- * palette reste dans l'en-tête, révélée au survol (l'appelant fait ce partage).
- * Une bande vide sous chaque message coûterait sa hauteur à tous les commentaires
- * de toutes les PR pour n'y montrer qu'un bouton — c'est aussi, exactement, ce que
- * fait GitHub.
+ * This line ONLY exists if the comment already has a reaction: otherwise, the
+ * palette remains in the header, revealed on hover (the caller does this sharing).
+ * An empty strip under each post would cost all comments their height
+ * of all the PRs to show only one button — this is also, exactly, what
+ * GitHub does.
  *
- * Un chip allumé = « MOI j'ai réagi » (MIN-145) : la réaction part du compte git
- * de la personne sur les deux forges, et le serveur ne l'allume que pour elle.
- * Sans compte git connecté, aucun chip n'est allumé — les compteurs, eux,
- * restent justes : ils disent ce que les autres ont posé.
+ * A chip on = “I reacted” (MIN-145): the reaction comes from the git account
+ * of the person on both forges, and the server only lights it for them.
+ * Without a connected git account, no chip is turned on — the counters are
+ * remain correct: they say what others have said.
  */
 export function CommentReactionChips({
   commentId,
@@ -253,10 +253,10 @@ export function CommentReactionChips({
     <div className="flex flex-wrap items-center gap-1">
       {list.map((reaction) => {
         const busy = reactions.pending === `${commentId}:${reaction.content}`;
-        // `aria-disabled` et non `disabled` : un bouton désactivé ne reçoit aucun
-        // événement de pointeur, donc n'affiche jamais son infobulle — or c'est
-        // en lecture seule qu'on a le PLUS besoin de lire ce que l'emoji veut
-        // dire. Le clic est refusé ici, et `toggle` refuse déjà le doublon.
+        // `aria-disabled` and not `disabled`: a disabled button receives no
+        // pointer event, so never displays its tooltip — but this is
+        // in read-only that we MOST need to read what the emoji wants
+        // say. The click is refused here, and `toggle` already refuses the duplicate.
         const locked = !reactions.canReact || busy;
         return (
           <Tooltip key={reaction.content}>
@@ -284,19 +284,19 @@ export function CommentReactionChips({
                 {reaction.count}
               </button>
             </TooltipTrigger>
-            {/* Le nom de l'emoji, et — quand c'est la mienne — le geste qu'un
-                deuxième clic ferait. Les forges ne nomment pas leurs réacteurs de
-                la même façon : on ne peut pas promettre le « X et Y ont réagi »
-                de GitHub sans qu'il manque d'un côté. */}
+            {/* The name of the emoji, and — when it’s mine — the gesture that a
+                second click would do. The forges do not name their reactors
+                the same way: we cannot promise “X and Y reacted”
+                from GitHub without it missing on one side. */}
             <TooltipContent side="top">
               {reaction.mine ? t("reactionMine") : t(REACTION_LABELS[reaction.content])}
             </TooltipContent>
           </Tooltip>
         );
       })}
-      {/* Le bouton d'ajout ferme la bande : la ligne dit « voilà les réactions, et
-          voilà comment en mettre une ». Visible en permanence, contrairement à
-          celui de l'en-tête — la ligne est déjà là, rien à révéler. */}
+      {/* The add button closes the strip: the line says "here are the reactions, and
+          here’s how to put one on.” Permanently visible, unlike
+          that of the header — the line is already there, nothing to reveal. */}
       {reactions.canReact ? (
         <ReactionPicker onPick={reactionToggler(reactions, commentId, list)} />
       ) : null}
@@ -304,7 +304,7 @@ export function CommentReactionChips({
   );
 }
 
-/** La palette : les huit réactions que GitHub accepte, pas une de plus. */
+/** The palette: the eight reactions that GitHub accepts, not one more. */
 export function ReactionPicker({
   onPick,
   className,
@@ -317,20 +317,20 @@ export function ReactionPicker({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      {/* Le bouton porte une icône et rien d'autre : ce qu'il fait doit se lire
-          sans cliquer. Infobulle plutôt que `title` natif — c'est celle du reste
-          de l'app (le « Citer » du fil est juste à côté), elle se montre tout de
-          suite là où le `title` du navigateur se fait attendre une seconde. Les
-          deux déclencheurs sont imbriqués en `asChild` : la recette Radix pour
-          qu'une infobulle et un popover partagent le MÊME bouton — le clic qui
-          ouvre la palette referme l'infobulle au passage.
+      {/* The button has an icon and nothing else: what it does should read
+          without clicking. Tooltip rather than native `title` — it's the one for the rest
+          of the app (the “Quote” of the thread is right next to it), it shows up straight away
+          continuation where the browser's `title` waits a second. THE
+          two triggers are nested in `asChild`: the Radix recipe for
+          that a tooltip and a popover share the SAME button — the click that
+          opens the palette closes the tooltip in passing.
 
-          Un rond de 28 px, en `Button` ghost : EXACTEMENT la forme du « Citer »
-          qui le suit dans l'en-tête d'un message, et la hauteur des chips de la
-          bande de réactions. Ces voisins-là se rendent toujours côte à côte — la
-          moindre différence de taille ou de traitement s'y lit comme un défaut.
-          Le rattrapage vertical, lui, appartient à l'EN-TÊTE (`-my-1` chez
-          l'appelant) : dans la bande de réactions il n'y a rien à rattraper. */}
+          A circle of 28 px, in `Button` ghost: EXACTLY the shape of the “Quote”
+          that follows it in the header of a message, and the height of the chips of the
+          reaction band. These neighbors always go side by side — the
+          The slightest difference in size or treatment reads as a defect.
+          The vertical catch-up belongs to the HEADER (`-my-1` at
+          the caller): in the reaction band there is nothing to catch up on. */}
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
@@ -367,13 +367,13 @@ export function ReactionPicker({
   );
 }
 
-/** Corps d'un commentaire : avatar, auteur, heure, markdown, réactions. */
+/** Body of a comment: avatar, author, time, markdown, reactions. */
 function CommentBody({
   comment,
   reactions,
 }: {
   comment: PullRequestReviewComment;
-  /** Absentes quand la forge n'a pas su les lire : on n'affiche alors rien. */
+  /** Absent when the forge has not been able to read them: nothing is then displayed. */
   reactions?: CommentReactions;
 }) {
   const format = useFormatter();
@@ -394,12 +394,12 @@ function CommentBody({
         <span className="shrink-0 text-xs text-muted-foreground/80">
           {format.relativeTime(new Date(comment.created_at), now)}
         </span>
-        {/* Le repli de l'en-tête, pour un commentaire SANS réaction : dès qu'il
-            en porte une, la palette descend dans la bande, avec les emoji qu'elle
-            ajoute. Ici elle est révélée au survol, comme le « + » de la gouttière
-            juste à côté — une palette permanente sous chaque message ferait un
-            damier de boutons. Rendue quand même (et non montée au survol) pour
-            rester atteignable au clavier — `focus-visible` la rallume. */}
+        {/* The fallback of the header, for a comment WITHOUT reaction: as soon as it
+            wears one, the palette goes down in the band, with the emoji that it
+            adds. Here it is revealed on hover, like the “+” of the gutter
+            right next to it — a permanent palette under each message would make a
+            checkerboard of buttons. Rendered anyway (and not edited on hover) for
+            remain reachable on the keyboard — `focus-visible` turns it back on. */}
         {reactions?.canReact && list.length === 0 ? (
           <ReactionPicker
             className="-my-1 ml-auto opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
@@ -416,20 +416,20 @@ function CommentBody({
 }
 
 /**
- * Zone de saisie partagée par le composer d'un nouveau commentaire de ligne et
- * celui d'une réponse. ⌘/Ctrl+Entrée envoie, Échap ferme ; le texte n'est JAMAIS
- * effacé par l'appelant tant que l'envoi n'a pas réussi (un échec GitHub ne doit
- * pas coûter le message).
+ * Input area shared by the composer of a new line comment and
+ * that of a response. ⌘/Ctrl+Enter sends, Escape closes; the text is NEVER
+ * cleared by the caller until the upload is successful (a GitHub failure should not
+ * not cost the message).
  *
- * C'est LE MÊME composer que celui du fil depuis MIN-162 — mentions de comptes
- * de la forge, pièces jointes, aperçu markdown — en variante `line` : plus
- * compact, suggestions vers le bas, et un Annuler puisqu'il s'ouvre et se ferme.
- * Une remarque de ligne est un commentaire GitHub comme un autre ; rien ne
- * justifiait qu'elle reste un textarea nu quand le fil, lui, savait tout faire.
+ * This is THE SAME composition as that of the wire since MIN-162 — mentions of accounts
+ * of the forge, attachments, markdown preview — alternatively `line`: more
+ * compact, suggestions down, and a Cancel as it opens and closes.
+ * A line remark is a GitHub comment like any other; nothing
+ * justified it remaining a bare textarea when the thread knew how to do everything.
  *
- * L'endpoint vient du contexte : la vue diff est traversée par le panneau PR
- * comme par la conversation d'un run, et aucun des composants intermédiaires n'a
- * à porter la question.
+ * The endpoint comes from the context: the diff view is crossed by the PR panel
+ * as by the conversation of a run, and none of the intermediate components have
+ * to raise the question.
  */
 function Composer({
   value,
@@ -452,9 +452,9 @@ function Composer({
 }) {
   const endpoint = usePrEndpoint();
 
-  // Hors d'une vue de PR (le laboratoire de diff, une session sans PR) il n'y a
-  // ni compte à mentionner ni endroit où héberger un fichier : on garde le champ
-  // simple plutôt que d'offrir des gestes qui échoueraient.
+  // Outside of a PR view (the diff lab, a session without PR) there is no
+  // no account to mention or place to host a file: we keep the field
+  // simple rather than offering gestures that would fail.
   if (!endpoint) {
     return (
       <PlainComposer
@@ -486,7 +486,7 @@ function Composer({
   );
 }
 
-/** Le champ d'avant, gardé pour les surfaces sans pull request. */
+/** The front field, kept for surfaces without pull requests. */
 function PlainComposer({
   value,
   onChange,
@@ -542,7 +542,7 @@ function PlainComposer({
   );
 }
 
-/** Nouveau commentaire sur une ligne — rendu sous la ligne visée. */
+/** New comment on a line — rendered below the intended line. */
 export function LineComposer({
   value,
   onChange,
@@ -574,17 +574,17 @@ export function LineComposer({
 }
 
 /**
- * Un fil : les commentaires empilés, puis « Répondre » et « Résoudre ».
+ * A thread: comments stacked, then “Reply” and “Resolve”.
  *
- * Un fil RÉSOLU se rend REPLIÉ — une seule ligne « ✓ Résolu par X », dépliable.
- * C'est tout l'objet de MIN-139 : tant qu'un fil traité s'affichait exactement
- * comme un fil ouvert, le résoudre n'aurait rien changé à l'écran. Le repli est
- * local et non persistant : rouvrir la page replie de nouveau, ce qui est bien la
- * lecture voulue (« ce point est réglé, passe au suivant »).
+ * A RESOLVED thread becomes FOLDED — a single “✓ Resolved by X” line, unfoldable.
+ * That's the whole point of MIN-139: as long as a processed thread was displayed exactly
+ * like an open thread, resolving it would not have changed anything on screen. The fallback is
+ * local and non-persistent: reopening the page folds again, which is indeed the
+ * desired reading (“this point is settled, move on to the next one”).
  *
- * `resolution` peut manquer sur le fil (`thread.resolution === undefined`) quand
- * la forge n'a pas su dire l'état : on n'affiche alors AUCUNE affordance, plutôt
- * qu'un bouton qui prétendrait savoir.
+ * `resolution` may be missing on wire (`thread.resolution === undefined`) when
+ * the forge did not know how to tell the state: we then display NO affordance, rather
+ * than a button that pretends to know.
  */
 export function ReviewThreadCard({
   thread,
@@ -595,13 +595,13 @@ export function ReviewThreadCard({
 }: {
   thread: PrReviewThread;
   replies: ReviewReplies;
-  /** Absent quand le fil ne se résout pas : soit la forge n'en dit rien, soit le
-      compte git n'a pas le droit d'écrire sur le dépôt (MIN-144). */
+  /** Absent when the thread does not resolve: either the forge says nothing about it, or the
+      git account does not have permission to write to the repository (MIN-144). */
   resolution?: ThreadResolution;
-  /** Réactions de la PR (MIN-139) — chaque commentaire y prend les siennes. */
+  /** Reactions from the PR (MIN-139) — each comment has its own. */
   reactions?: CommentReactions;
-  /** Le fil se lit mais ne se répond pas — pas de compte git, ou aucun accès au
-      dépôt : la réponse partirait sous l'identité du bot (MIN-144). */
+  /** The thread reads but does not respond — no git account, or no access to the
+      deposit: the response would be sent under the identity of the bot (MIN-144). */
   readOnly?: boolean;
 }) {
   const t = useTranslations("PullRequests");
@@ -621,9 +621,9 @@ export function ReviewThreadCard({
         onClick={() => setExpanded(true)}
         className="flex w-full items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-muted/70"
       >
-        {/* Le chevron dit que la ligne se DÉPLIE — le même signal que le repli des
-            fils périmés juste en dessous. Sans lui, la carte résolue se lit comme
-            une étiquette morte et le fil semble perdu. */}
+        {/* The chevron says that the line is UNFOLDING — the same signal as the folding of the
+            expired wires just below. Without it, the resolved card reads like
+            a dead label and the thread seems lost. */}
         <ChevronRight className="size-3.5 shrink-0" />
         <CircleCheck className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
         <span className="min-w-0 flex-1 truncate">{resolvedLabel}</span>
@@ -636,8 +636,8 @@ export function ReviewThreadCard({
 
   return (
     <div className="flex flex-col gap-3 rounded-md border border-border bg-card px-3 py-2.5">
-      {/* Déplié, l'en-tête REPLIE : le geste doit être réversible là où il a été
-          fait, sinon le seul retour en arrière est de recharger la page. */}
+      {/* Unfolded, the header FOLDED: the gesture must be reversible where it was
+          done, otherwise the only way back is to reload the page. */}
       {resolved ? (
         <button
           type="button"
@@ -675,11 +675,11 @@ export function ReviewThreadCard({
               variant="ghost"
               size="sm"
               disabled={pending}
-              // Le dépli est LOCAL, donc il survit à la bascule : sans ce reset,
-              // un fil déplié puis rouvert puis re-résolu resterait déplié — or
-              // c'est le repli qui fait qu'un fil traité cesse de ressembler à un
-              // fil ouvert. Rouvrir n'en souffre pas : `resolved` repasse à false,
-              // la carte est pleine de toute façon.
+              // The unfolding is LOCAL, so it survives the switch: without this reset,
+              // a thread unfolded then reopened then re-resolved would remain unfolded — or
+              // it is the folding that causes a treated yarn to stop looking like a
+              // open wire. Reopening does not suffer: `resolved` returns to false,
+              // the map is full anyway.
               onClick={() => {
                 setExpanded(false);
                 void resolution.toggle(thread);
@@ -696,23 +696,23 @@ export function ReviewThreadCard({
 }
 
 /**
- * Annotation d'une ligne : tous ses fils, puis le composer s'il est ouvert.
- * Rendue en light DOM et projetée par la lib de diff sous la ligne visée.
+ * Annotation of a line: all its children, then compose it if it is open.
+ * Rendered in light DOM and projected by the diff lib under the target line.
  *
- * L'en-tête nomme la ligne. Sans lui, le fil flotte SOUS la ligne sans rien dire
- * de ce à quoi il se rattache — et en vue unifiée c'est franchement ambigu : une
- * ligne modifiée produit DEUX lignes portant le même numéro (la supprimée puis
- * l'ajoutée), donc deux annotations voisines. « ajoutée » / « supprimée » les
- * départage. Une plage (commentaire multi-lignes) se dit par ses deux bouts.
+ * The header names the line. Without it, the thread floats UNDER the line without saying anything
+ * of what it is linked to - and in a unified view it is frankly ambiguous: a
+ * modified line produces TWO lines with the same number (deleted then
+ * added it), therefore two neighboring annotations. “added” / “deleted”
+ * tiebreaker. A range (multi-line comment) is said from both ends.
  */
 export function LineWidget({
   anchor,
   children,
 }: {
-  /** Ligne visée + nature du changement, pour l'en-tête. */
+  /** Target line + nature of change, for the header. */
   anchor: {
     line: number;
-    /** Première ligne d'une plage — absente pour une remarque sur une seule ligne. */
+    /** First line of a range — absent for a single-line remark. */
     startLine?: number;
     kind: "added" | "removed" | "context";
   };
@@ -730,7 +730,7 @@ export function LineWidget({
 
   return (
     <div className="flex flex-col gap-2 bg-muted/20 px-3 py-2.5">
-      {/* La flèche ↳ dit « ceci se rapporte à ce qui précède ». */}
+      {/* The arrow ↳ says “this relates to the above”. */}
       <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
         <CornerDownRight className="size-3 shrink-0" />
         <span className="font-mono">{label}</span>
@@ -741,9 +741,9 @@ export function LineWidget({
 }
 
 /**
- * Fils qui ne s'ancrent plus dans le diff rendu (décision : repliés en bas du
- * fichier). Chacun garde son `diff_hunk` d'origine : sans lui, « et le cas nul ? »
- * se lit sans savoir de quel code il parlait.
+ * Threads which are no longer anchored in the rendered diff (decision: folded at the bottom of the
+ * file). Everyone keeps their original `diff_hunk`: without it, “and the null case? »
+ * can be read without knowing which code it referred to.
  */
 export function StaleThreads({
   threads,
@@ -757,9 +757,9 @@ export function StaleThreads({
   replies: ReviewReplies;
   resolution?: ThreadResolution;
   reactions?: CommentReactions;
-  /** Propagé aux cartes : sans compte git, ces fils se lisent seulement. */
+  /** Propagated to maps: without a git account, these threads are read only. */
   readOnly?: boolean;
-  /** Intitulé du repli — le cas orphelin ne se raconte pas comme un périmé. */
+  /** Title of the fallback — the orphan case cannot be told like an out-of-date one. */
   label?: (count: number) => string;
 }) {
   const t = useTranslations("PullRequests");
@@ -787,16 +787,16 @@ export function StaleThreads({
             const line = displayLineOf(thread.root);
             return (
               <div key={thread.id} className="flex flex-col gap-1.5">
-                {/* Le hunk tel qu'il était au moment du commentaire — le contexte
-                    que le diff courant ne montre plus. Sans lui, « et le cas nul ? »
+                {/* The hunk as he was at the time of the comment — the context
+                    that the current diff no longer shows. Without him, “what about the null case?” »
                     se lit sans savoir de quel code il parlait.
 
-                    Rendu par la lib de diff comme le fichier juste au-dessus, et
-                    non plus en `<pre>` brut : un fil périmé parle du même code
-                    que le diff, il n'a pas à s'afficher dans une autre langue.
-                    `maxLines={0}` — tout le hunk : ici il EST le seul contexte,
-                    là où dans le fil d'activité il ne fait que rappeler une ligne
-                    qu'on peut aller lire dans l'onglet Fichiers. */}
+                    Rendered by the diff lib like the file just above, and
+                    no longer in raw `<pre>`: an outdated thread speaks the same code
+                    than the diff, it does not have to display in another language.
+                    `maxLines={0}` — the whole hunk: here he IS the only context,
+                    where in the activity thread it only recalls a line
+                    which you can read in the Files tab. */}
                 <PrHunk
                   path={thread.root.path}
                   line={line}

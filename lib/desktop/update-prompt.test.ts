@@ -10,7 +10,7 @@ describe("updatePromptCopy", () => {
     const copy = updatePromptCopy("1.0.0");
     expect(copy.buttons[copy.defaultId]).toBe("Install and Relaunch");
     expect(copy.buttons[copy.cancelId]).toBe("Later");
-    // Échap ne doit JAMAIS relancer l'app sous les doigts de quelqu'un.
+    // Escape should NEVER restart the app under someone's fingers.
     expect(copy.defaultId).not.toBe(copy.cancelId);
   });
 });

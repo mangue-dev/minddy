@@ -1,41 +1,41 @@
 import "server-only";
 
 /**
- * Ce que lisent les routes `resources` d'une entité : la ligne entière, plus la
- * PAGE qu'elle référence quand c'en est une (MIN-275).
+ * What an entity's `resources` routes read: the entire line, plus the
+ * PAGE it references when it is one (MIN-275).
  *
- * Le titre d'une page n'est pas stocké dans la ressource — il est résolu à la
- * lecture, exactement comme le fait le bloc sous-page d'un document
- * (components/pages/pages-lookup.tsx). Sans ça, renommer une page laisserait son
- * ancien nom sur tous les tickets qui la citent. Une jointure SERVEUR plutôt
- * qu'une requête client de plus : la sidebar d'un ticket n'a aucune raison de
- * charger l'arbre des pages du projet pour afficher une pilule.
+ * The title of a page is not stored in the resource — it resolves to the
+ * reading, exactly like the subpage block of a document
+ * does (components/pages/pages-lookup.tsx). Otherwise, renaming a page would leave its
+ * old name on all tickets that cite it. A SERVER join rather
+ * than one more client request: the sidebar of a ticket has no reason to
+ * load the project page tree to display a pill.
  *
- * Lu avec le client de SESSION, donc sous la policy `pages_select`, qui exclut
- * les pages corbeillées : une page à la corbeille redescend `page: null`, et
- * c'est ce qui rend la pilule inerte sans qu'aucun code ne s'occupe de la
- * corbeille.
+ * Read with the SESSION client, therefore under the policy `pages_select`, which excludes
+ * trashed pages: a trashed page goes back down to `page: null`, and
+ * this is what makes the pill inert without any code taking care of the
+ * trash.
  */
 export const RESOURCE_SELECT = "*, page:pages(id, title, icon)";
 
-/** La page jointe d'une ligne de ressource. */
+/** The attached page of a resource row. */
 export interface JoinedPage {
   id: string;
   title: string;
   icon?: string | null;
-  /** Présent quand la lecture est faite en clé SERVICE, qui ignore la policy
-      excluant les corbeillées : c'est alors la seule façon de les distinguer. */
+  /** Present when reading is done in SERVICE key, which ignores the policy
+ excluding trashed bins: this is then the only way to distinguish them. */
   deleted_at?: string | null;
 }
 
 /**
- * La page jointe, quelle que soit la forme sous laquelle elle arrive.
+ * The attached page, regardless of the form it arrives in.
  *
- * `page_id` est une clé étrangère simple, donc PostgREST rend un OBJET — mais
- * sans types de schéma générés, postgrest-js type tout embed comme un tableau.
- * Ce normaliseur évite d'écrire le même `as unknown as` dans les quatre
- * lecteurs (routes, issue-reads, MCP, agent), avec le risque qu'un seul se
- * trompe le jour où PostgREST rendrait vraiment une liste.
+ * `page_id` is a simple foreign key, so PostgREST renders an OBJECT — but
+ * without generated schema types, postgrest-js types everything embed as one array.
+ * This normalizer avoids writing the same `as unknown as` in all four
+ * readers (routes, issue-reads, MCP, agent), with the risk that a single se
+ * will fail the day PostgREST would really render a list.
  */
 export function joinedPage(value: unknown): JoinedPage | null {
   if (!value) return null;
@@ -44,22 +44,22 @@ export function joinedPage(value: unknown): JoinedPage | null {
 }
 
 /**
- * Une ressource telle qu'un AGENT la lit — trois formes, une par `kind`.
+ * A resource such as an AGENT reads it — three forms, one per `kind`.
  *
- * Écrite une fois parce qu'elle est lue par plusieurs surfaces (le ticket dans
- * issue-reads, les objectifs du chat) et qu'un modèle apprend la forme qu'on
- * lui montre : deux lecteurs qui nomment le même champ `title` d'un côté et
- * `file_name` de l'autre lui font écrire deux fois du code différent pour la
- * même chose.
+ * Written once because it is read by multiple surfaces (the ticket in
+ * issue-reads, the chat goals) and a model learns the form that we
+ * show him: two readers who name the same field `title` on one side and
+ * `file_name` on the other make him write different code twice for the
+ * same thing.
  *
- * Ce qui n'y est PAS, volontairement : le contenu d'un fichier. Ses octets
- * restent derrière la porte des URLs signées de l'app ; ici on ne dit que son
- * nom, son type et sa taille.
+ * Which is NOT there, intentionally: the content of a file. Its
+ * bytes remain behind the app's signed URL gate; here we only say its
+ * name, its type and its size.
  *
- * Le titre d'une PAGE vient de la jointure, pas de la ligne : c'est ce qui fait
- * qu'une page renommée l'est aussi partout où elle est citée. `page_in_trash`
- * n'apparaît qu'en lecture SERVICE — au client de session, une page corbeillée
- * ne redescend simplement pas.
+ * The title of a PAGE comes from the join, not from the line: this is what makes
+ * that a renamed page is also renamed wherever it is cited. `page_in_trash`
+ * only appears on read SERVICE — at the session client, a trashed page
+ * simply does not come back down.
  */
 export function resourceSummary(row: {
   id: unknown;

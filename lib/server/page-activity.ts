@@ -6,23 +6,21 @@ import { insertNotifications } from "@/lib/server/notifications";
 import type { PageWriteKind } from "@/lib/pages";
 
 /**
- * Ce qu'une page RACONTE quand elle change (MIN-278) : sa ligne d'activité, et
- * la notification de l'écriture d'agent.
+ * What a page TELLS when it changes (MIN-278): its activity line, and
+ * the notification of the agent writing.
  *
- * Deux surfaces bien distinctes, et c'est la décision de fond du ticket :
+ * Two very distinct surfaces, and this is the basic decision of the ticket:
  *
- *   • l'ACTIVITÉ se consulte. Elle porte tout — créée, modifiée, mise à la
- *     corbeille, restaurée —, avec son auteur, et elle vit dans le journal
- *     existant (`issue_events`, polymorphe depuis les objectifs), avec une
- *     quatrième colonne de parent. Une table `page_events` parallèle aurait
- *     redemandé son API, son hydratation d'acteurs et son rendu.
- *   • une NOTIFICATION interrompt. Il n'y en a donc AUCUNE pour « quelqu'un a
- *     modifié une page » : ce serait du bruit à quatre et un déluge à dix. Seule
- *     l'écriture de l'AGENT en produit une, et seulement pour celui qui a lancé
- *     le run — pas pour le projet.
+ * • the ACTIVITY is consulted. It carries everything — created, modified, trashed, restored —, with its author, and it lives in the existing journal
+ * (`issue_events`, polymorphic from the objectives), with a fourth parent column. A parallel `page_events` table would have
+ * re-requested its API, actor hydration and rendering.
+ * • a NOTIFICATION interrupts. There is therefore NONE for “someone has
+ * modified a page”: it would be noise at four and a deluge at ten. Only
+ * writing the AGENT produces one, and only for the one who launched
+ * the run — not for the project.
  */
 
-/** Les gestes qu'une page enregistre. */
+/** The gestures that a page records. */
 export type PageEventType =
   | "page_created"
   | "page_updated"
@@ -30,38 +28,38 @@ export type PageEventType =
   | "page_restored";
 
 /**
- * La fenêtre de coalescence de l'ACTIVITÉ, la même que celle de l'historique
- * (`VERSION_COALESCE_MS`, lib/server/pages.ts) et pour la même raison :
- * l'éditeur enregistre une seconde après la dernière frappe, donc un après-midi
- * d'écriture ferait mille lignes. Une même personne, sur une même page, en pose
- * une par tranche de cinq minutes.
+ * The ACTIVITY coalescence window, the same as that of the history
+ * (`VERSION_COALESCE_MS`, lib/server/pages.ts) and for the same reason:
+ * the editor saves one second after the last keystroke, so an afternoon
+ * of writing would make a thousand lines. The same person, on the same page, poses
+ * one for every five minutes.
  *
- * Ce que la fenêtre ne recouvre jamais : un changement d'auteur, ni de nature
- * de geste. « L'agent est passé après moi » est exactement ce qu'on vient lire.
+ * What the window never covers: a change of author, nor of the nature
+ * of gesture. “The agent came after me” is exactly what we read.
  */
 const EVENT_COALESCE_MS = 5 * 60_000;
 
-/** Seul « modifiée » se répète assez pour mériter d'être coalescé — on ne crée
-    ni ne corbeille une page quarante fois de suite. */
+/** Only "modified" repeats enough to merit coalescing — you don't create
+ or trash a page forty times in a row. */
 const COALESCED: readonly PageEventType[] = ["page_updated"];
 
 /**
- * Pose la ligne d'activité d'un geste sur une page.
+ * Places the activity line of a gesture on a page.
  *
- * Deux colonnes disent la NATURE du geste, et ce n'est pas une redondance :
+ * Two columns say the NATURE of the gesture, and this is not a redundancy:
  *
- *   • `via_assistant` nomme l'ACTEUR. Une écriture d'agent porte l'id du compte
- *     qui l'a permise, et sans ce drapeau la ligne dirait « Clément a modifié
- *     cette page » d'un texte que Clément n'a pas écrit — c'est le vocabulaire
- *     que la timeline emploie déjà pour un geste automatisé, et il applique ici
- *     la même règle d'identité que l'historique de MIN-277 à ses versions ;
- *   • `field` porte la nature en clair (« human » / « agent ») et sert à la
- *     COALESCENCE ci-dessous : la fenêtre de cinq minutes ne doit jamais avaler
- *     un changement de nature. « L'agent est passé après moi » est exactement
- *     ce qu'on vient lire.
+ * • `via_assistant` names the ACTOR. An agent's writing carries the id of the account
+ * which authorized it, and without this flag the line would say "Clément modified
+ * this page" of a text that Clément did not write - this is the vocabulary
+ * that the timeline already uses for an automated gesture, and it applies here
+ * the same identity rule that the history of MIN-277 to its versions;
+ * • `field` carries the nature in plain text (“human” / “agent”) and is used for the
+ * COALESCENCE below: the five-minute window must never swallow
+ * a change of nature. “The agent came after me” is exactly
+ * what we came to read.
  *
- * Best-effort de bout en bout : une activité qu'on n'a pas su écrire ne doit
- * jamais faire échouer l'écriture de la page.
+ * Best-effort from start to finish: an activity that we did not know how to write must
+ * never cause the writing of the page to fail.
  */
 export async function recordPageEvent(
   service: SupabaseClient,
@@ -70,10 +68,10 @@ export async function recordPageEvent(
     actorId: string | null;
     kind: PageWriteKind;
     type: PageEventType;
-    /** La clé MCP derrière le geste, quand il vient de là : la ligne nomme alors
-        l'agent de la clé — « Claude Code (mcp) » —, exactement comme la timeline
-        d'un ticket écrit par le même agent. `via_assistant` prend le relais
-        sinon, et la ligne dit « Numo ». */
+    /** The MCP key behind the gesture, when it comes from there: the line then names
+ the agent of the key — “Claude Code (mcp)” —, exactly like the timeline
+ of a ticket written by the same agent. `via_assistant` takes over
+ otherwise, and the line says "Numo". */
     mcpKeyId?: string | null;
   },
 ): Promise<void> {
@@ -86,8 +84,8 @@ export async function recordPageEvent(
       .eq("page_id", pageId)
       .eq("type", type)
       .eq("field", kind)
-      // `actor_id` peut être null (aucun geste de page ne l'est aujourd'hui,
-      // mais la colonne l'autorise) : `eq` ne matche pas NULL en SQL, d'où la
+      // `actor_id` can be null (no page gestures are null today,
+      // but the column allows it): `eq` does not match NULL in SQL, hence the
       // branche — sans elle, deux gestes anonymes ne se coalesceraient jamais.
       .filter("actor_id", actorId ? "eq" : "is", actorId ?? null)
       .gte("created_at", new Date(Date.now() - EVENT_COALESCE_MS).toISOString())
@@ -101,9 +99,9 @@ export async function recordPageEvent(
       actor_id: actorId,
       type,
       field: kind,
-      // Les deux ne se cumulent PAS : la timeline teste `via_assistant` AVANT
-      // `via_mcp` (components/issue-timeline.tsx), donc les porter tous les deux
-      // ferait dire « Numo » d'un geste dont on connaît l'agent par son nom.
+      // The two do NOT stack: the timeline tests `via_assistant` BEFORE
+      // `via_mcp` (components/issue-timeline.tsx), so carry them both
+      // would say “Numo” with a gesture whose agent we know by name.
       via_assistant: kind === "agent" && !mcpKeyId,
       ...(mcpKeyId ? { via_mcp: true, api_key_id: mcpKeyId } : {}),
     },
@@ -111,21 +109,19 @@ export async function recordPageEvent(
 }
 
 /**
- * Prévient le lanceur d'un run que l'AGENT vient d'écrire dans une page.
+ * Warns the launcher of a run that the AGENT has just written to a page.
  *
- * `actorId` EST le destinataire, et ce n'est pas une bizarrerie : les six outils
- * d'écriture de page tournent sous l'id du compte qui les a permis — le porteur
- * de la clé MCP, l'utilisateur de Numo, le propriétaire du projet. C'est donc la
- * seule personne à prévenir, et prévenir tout le projet d'un geste que personne
- * n'a demandé serait exactement le bruit que ce ticket cherche à éviter.
+ * `actorId` IS the recipient, and this is not an oddity: the six page writing tools
+ * run under the id of the account that allowed them — the bearer
+ * of the MCP key, the Numo user, the project owner. So this is the only person to warn, and warning the entire project with a gesture that no one asked for would be exactly the noise this ticket seeks to avoid.
  *
- * `actor_id` reste NULL sur la ligne : l'acteur n'est pas une personne, c'est
- * l'agent. Le laisser rempli ferait afficher au destinataire son propre portrait
- * à côté de « quelqu'un a écrit dans cette page ».
+ * `actor_id` remains NULL on the line: the actor is not a person, this is
+ * the agent. Leaving it filled would cause the recipient to see their own portrait
+ * next to "someone wrote in this page".
  *
- * `replaceUnread` : un run qui repasse dix fois sur la même page ne laisse
- * qu'une ligne — c'est le même mécanisme que les notifications de run, et il est
- * borné à la page par la clause `page_id` d'`insertNotifications`.
+ * `replaceUnread`: a run that goes over the same page ten times leaves
+ * only one line — this is the same mechanism as run notifications, and it is
+ * bounded on the page by the `page_id` clause of `insertNotifications`.
  */
 export async function notifyAgentPageWrite(
   service: SupabaseClient,

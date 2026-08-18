@@ -1,19 +1,18 @@
 "use client";
 
 /**
- * L'état de glisser d'un board : le paquet en cours, et le repère qui dit où il
- * se posera.
+ * The sliding state of a board: the current package, and the mark which says where it will land.
  *
- * Les deux boards (projet et cross-projet) en partagent la totalité, et c'est le
- * point : **le repère affiché et l'écriture qui suit sortent du même calcul.**
- * `plan()` sert aux deux — à chaque mouvement pour dessiner le trait, une
- * dernière fois au dépôt pour écrire. Un repère qui mentirait sur l'arrivée
- * serait pire que pas de repère du tout.
+ * The two boards (project and cross-project) share the whole of it, and this is the
+ * point: **the displayed mark and the writing which follows come out of the same calculation.**
+ * `plan()` is used for both — at each movement to draw the line, one
+ * last time at the deposit to write. A marker that lies about the arrival
+ * would be worse than no marker at all.
  *
- * `now` est figé à la prise de la carte, pas relu à chaque appel : hors tri
- * manuel, la position écrite est un horodatage (cf. `planBoardMove`), et deux
- * horodatages différents entre l'aperçu et le dépôt pourraient ranger la carte à
- * deux places différentes dans une colonne triée par priorité.
+ * `now` is frozen when the card is taken, not reread at each call: excluding manual sorting
+ *, the written position is a timestamp (cf. `planBoardMove`), and two
+ * different timestamps between preview and repository could put the card at
+ * two different places in a column sorted by priority.
  */
 
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -41,16 +40,16 @@ type BoardDragEvent = Pick<
 >;
 
 export interface BoardDrop {
-  /** Le repère de dépôt, ou `null` quand le geste n'écrirait rien. */
+  /** The drop mark, or `null` when the gesture would not write anything. */
   preview: DropPreview | null;
-  /** Le paquet embarqué par le glisser en cours (cartes estompées). */
+  /** The deck loaded by the current drag (cards dimmed). */
   draggingIds: Set<string>;
-  /** Le ticket tenu au curseur, `null` hors glisser. */
+  /** The ticket held at the cursor, `null` excluding dragging. */
   activeId: string | null;
   start: (event: Pick<DragStartEvent, "active">) => void;
-  /** À chaque mouvement : recalcule le repère, ne re-rend que s'il a bougé. */
+  /** On each movement: recalculates the mark, only re-renders if it has moved. */
   track: (event: BoardDragEvent) => void;
-  /** Les déplacements à écrire pour ce geste (`null` = rien à faire). */
+  /** The movements to write for this gesture (`null` = nothing to do). */
   plan: (event: BoardDragEvent) => { status: IssueStatus; moves: PlannedMove[] } | null;
   end: () => void;
 }
@@ -64,18 +63,18 @@ export function useBoardDrop({
   rank,
   crossColumnOnly = false,
 }: {
-  /** Les colonnes telles qu'affichées — l'ordre lu est celui de l'écran. */
+  /** The columns as displayed — the order read is that of the screen. */
   columns: { status: StatusMeta; items: Issue[] }[];
-  /** Le tri d'affichage des colonnes (celui qui a produit `items`). */
+  /** The column display sort (the one that produced `items`). */
   comparator: (a: Issue, b: Issue) => number;
-  /** Tri manuel : le seul cas où l'ordre DANS une colonne se réordonne. */
+  /** Manual sort: the only case where the order IN a column reorders. */
   manual: boolean;
   issueMap: Map<string, Issue>;
   selectedIds: Set<string>;
   /** Rang d'affichage de chaque ticket (`displayRank`). */
   rank: Map<string, number>;
-  /** Vue de cycle : l'ordre de reco est le seul, un ticket déjà dans la colonne
-      cible n'y bouge pas — seul le changement de statut passe. */
+  /** Cycle view: the receipt order is the only one, a ticket already in the target column
+ does not move there — only the status change passes. */
   crossColumnOnly?: boolean;
 }): BoardDrop {
   const [preview, setPreview] = useState<DropPreview | null>(null);
@@ -91,7 +90,7 @@ export function useBoardDrop({
 
   const plan = useCallback(
     (event: BoardDragEvent) => {
-      // Lâcher une carte sur elle-même n'écrit rien — et ne montre donc rien.
+      // Dropping a card on itself writes nothing — and therefore shows nothing.
       if (!event.over || String(event.over.id) === String(event.active.id)) {
         return null;
       }
@@ -117,10 +116,10 @@ export function useBoardDrop({
         targetStatus: target.status,
         overIssueId: target.overIssueId,
         dropAfter: target.after,
-        // Le calcul de position veut la colonne triée PAR POSITION, et l'ordre
-        // affiché ne l'est pas toujours : en vue de cycle, il vient du
-        // comparateur de reco alors que `sort` reste « manuel ». Les deux
-        // coïncident partout ailleurs, la copie ne coûte donc rien.
+        // The position calculation wants the column sorted BY POSITION, and the order
+        // displayed is not always: in cycle view, it comes from
+        // reco comparator while `sort` remains “manual”. Both
+        // coincide everywhere else, so the copy costs nothing.
         columnItems: manual
           ? [...items].sort((a, b) => a.position - b.position)
           : items,

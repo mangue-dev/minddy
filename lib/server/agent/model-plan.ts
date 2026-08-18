@@ -12,45 +12,45 @@ import { getRootDefaultModel } from "./model";
 import { getOpenRouterModelInfo } from "./openrouter-index";
 
 /**
- * Le plafond de modèle par plan : ce qui rend « x1,5 / x4 / x10 » exécutoire.
+ * The model cap per plan: what makes "x1.5 / x4 / x10" enforceable.
  *
- * Deux règles, et elles expliquent tout le reste :
+ * Two rules, and they explain everything else:
  *
- *  1. **Quota minddy seulement.** En BYOK, l'utilisateur paye ses propres
- *     tokens : lui refuser un modèle serait lui refuser SON argent. Les
- *     appelants passent donc le `mode` qu'ils connaissent déjà (`checkAgentQuota`
- *     le calcule au lancement) ; la review de PR, elle, tourne toujours sur la
- *     clé plateforme et passe donc toujours `platform`.
+ * 1. **Mindy quota only.** In BYOK, the user pays their own
+ * tokens: refusing him a model would mean refusing him HIS money. The
+ * callers therefore pass the `mode` that they already know (`checkAgentQuota`
+ * calculates it at launch); the PR review always runs on the
+ * platform key and therefore always passes `platform`.
  *
- *  2. **Ce que l'utilisateur CHOISIT, pas ce que minddy résout.** Le plafond
- *     porte sur un modèle nommé par quelqu'un — override de run, défaut perso,
- *     modèle retenu pour la review. Les défauts de l'instance (`agent_model`,
- *     `pr_review_model`) n'y sont jamais soumis : `pr_review_model` vaut
- *     délibérément un modèle cher (relire du code demande un autre regard), et
- *     un plafond qui refuserait le propre défaut de minddy laisserait un compte
- *     Go sans aucun chemin vers une review.
+ * 2. **What the user CHOOSES, not what minddy solves.** The cap
+ * concerns a model named by someone — run override, default personal,
+ * model retained for the review. The instance's defaults (`agent_model`,
+ * `pr_review_model`) are never subject to it: `pr_review_model` is worth
+ * deliberately an expensive model (reading code again requires another look), and
+ * a cap that would deny minddy's own default would leave an account
+ * Go without any path to a review.
  *
- * On ne refuse jamais sur une ignorance : prix inconnus (modèle absent de
- * l'index, endpoint qui ne publie rien) → autorisé. Le budget d'usage reste
- * derrière comme plafond dur.
+ * We never refuse on ignorance: unknown prices (model absent from
+ * the index, endpoint which publishes nothing) → authorized. The usage budget remains
+ * behind as a hard ceiling.
  */
 
-/** Ce qu'un compte a le droit de choisir, et l'échelle sur laquelle le lire. */
+/** What an account is allowed to choose, and the scale on which to read it. */
 export interface ModelPlanLimit {
   planId: BillingPlanId;
-  /** Plafond du plan, en multiplicateur du modèle par défaut de minddy. */
+  /** Plan ceiling, multiplied by minddy's default model. */
   maxMultiplier: number;
-  /** Prix du baseline — `null` quand l'échelle n'est pas calculable. */
+  /** Baseline price — `null` when the scale is not calculable. */
   baseline: ModelPricing | null;
 }
 
-/** Prix du modèle par défaut de minddy — l'origine de l'échelle (×1). */
+/** Minddy's default model price — the origin of the scale (×1). */
 export async function getBaselinePricing(): Promise<ModelPricing | null> {
   const baseline = await getRootDefaultModel();
   return (await getOpenRouterModelInfo(baseline))?.pricing ?? null;
 }
 
-/** Le plafond applicable à ce compte, et le baseline pour situer les modèles. */
+/** The ceiling applicable to this account, and the baseline to locate the models. */
 export async function getModelPlanLimit(userId: string): Promise<ModelPlanLimit> {
   const [{ plan }, baseline] = await Promise.all([
     getResolvedBilling(userId),
@@ -59,7 +59,7 @@ export async function getModelPlanLimit(userId: string): Promise<ModelPlanLimit>
   return { planId: plan.id, maxMultiplier: plan.maxModelMultiplier, baseline };
 }
 
-/** Multiplicateur d'un modèle sur une échelle donnée. `null` = incalculable. */
+/** Multiplier of a model on a given scale. `null` = incalculable. */
 export async function getModelMultiplier(
   model: string,
   baseline: ModelPricing | null,
@@ -70,12 +70,12 @@ export async function getModelMultiplier(
 }
 
 /**
- * Garde d'un modèle CHOISI par l'utilisateur : lève `model_above_plan` (403) si
- * son multiplicateur dépasse le plafond du plan. `mode: "byok"` ne vérifie rien.
+ * Guard of a model CHOSEN by the user: raises `model_above_plan` (403) if
+ * its multiplier exceeds the plan cap. `mode: "byok"` does not check anything.
  *
- * Les paramètres de l'erreur portent le modèle, son multiplicateur et le plafond :
- * l'écran doit pouvoir dire « Claude Opus 5 (×12) dépasse le plafond de votre
- * plan Go (×4) », pas « modèle refusé ».
+ * The error parameters carry the model, its multiplier and the ceiling:
+ * the screen should be able to say "Claude Opus 5 (×12) exceeds the ceiling of your
+ * Go plan (×4)", not "model refused .
  */
 export async function ensureModelInPlan(opts: {
   userId: string;
@@ -88,15 +88,15 @@ export async function ensureModelInPlan(opts: {
   if (isMultiplierWithinPlan(multiplier, limit.maxMultiplier)) return;
   throw new PlanLimitError("model_above_plan", {
     model: opts.model,
-    // Nombres, pas chaînes : le « × » vit dans le message et next-intl écrit la
-    // décimale selon la locale de qui lit.
+    // Numbers, not strings: the “×” lives in the message and next-intl writes it
+    // decimal according to the locale of who is reading.
     multiplier: multiplier as number,
     limit: limit.maxMultiplier,
     plan: planLabel(limit.planId),
   });
 }
 
-/** Nom affichable d'un plan : son id capitalisé (« go » → « Go »). */
+/** Displayable name of a plan: its capitalized id (“go” → “Go”). */
 function planLabel(id: string): string {
   return id.charAt(0).toUpperCase() + id.slice(1);
 }

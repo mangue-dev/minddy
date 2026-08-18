@@ -27,31 +27,31 @@ import { mfaVerifyErrorKey } from "@/lib/mfa";
 import { OtpInput } from "@/components/otp-input";
 
 /**
- * Réglages du compte → « Second facteur » (MIN-132).
+ * Account settings → “Second factor” (MIN-132).
  *
- * Facultatif, et proposé à tout le monde — comptes Google et GitHub compris :
- * « connecté avec Google » n'est un second facteur que si la personne l'a activé
- * chez Google, ce qu'on ne peut pas savoir d'ici. Une note le dit, le choix reste
- * à elle.
+ * Optional, and available to everyone — including Google and GitHub accounts:
+ * “signed in with Google” is only a second factor if the person has enabled it
+ * at Google, which we cannot know from here. A note says it, the choice remains
+ * to her.
  *
- * L'enrôlement se joue contre GoTrue depuis le navigateur (c'est la vérification
- * du premier code qui monte la session en `aal2`, et seul le SDK sait la faire) ;
- * `/api/account/mfa` ne fait ensuite que ce que le client ne peut pas faire :
- * poser le drapeau que le JWT transporte, et frapper les codes de récupération.
+ * Enrollment is played against GoTrue from the browser (it is the verification
+ * of the first code which mounts the session in `aal2`, and only the SDK knows how to do it);
+ * `/api/account/mfa` then only does what the client cannot do:
+ * place the flag that the JWT carries, and enter the recovery codes.
  *
- * Les codes ne sont montrés qu'une fois, et l'écran ne se referme pas tout seul :
- * il faut cocher « je les ai notés ». C'est le seul chemin de retour si le
- * téléphone disparaît — il n'y a pas de support humain derrière.
+ * The codes are only shown once, and the screen does not close by itself:
+ * you must check “I wrote them down.” This is the only way back if the
+ * phone disappears — there is no human support behind it.
  *
- * ## Pourquoi un encart et pas un réglage de plus
+ * ## Why an insert and not one more setting
  *
- * Rendu comme les autres lignes de réglages, ce choix-là se lisait aussi anodin
- * qu'un fuseau horaire. Il ne l'est pas : ce compte ouvre les dépôts Git reliés
- * EN ÉCRITURE, via l'agent de code. Tant que la 2FA est inactive, la section
- * porte donc un encart qui dit ce qui est réellement en jeu — et la page de
- * réglages pose une pastille sur l'onglet, pour que la recommandation existe
- * aussi quand on n'est pas venu la chercher. Une fois activée, l'encart se tait :
- * il constate, il ne félicite pas.
+ * Rendered like the other settings lines, this choice also read anodine
+ * than a time zone. It is not: this account opens the related Git repositories
+ * WRITING, via the code agent. As long as 2FA is inactive, the
+ * section therefore carries an insert which says what is really at stake — and the
+ * settings page places a sticker on the tab, so that the recommendation exists
+ * also when you have not come to get it. Once activated, the insert is silent:
+ * it notes, it does not congratulate.
  */
 
 type Stage = "idle" | "enrolling" | "codes";
@@ -67,14 +67,14 @@ export function AccountSecuritySection() {
   const [stage, setStage] = useState<Stage>("idle");
   const [busy, setBusy] = useState(false);
 
-  // Enrôlement en cours
+  // Enrollment in progress
   const [factorId, setFactorId] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState("");
   const [secret, setSecret] = useState("");
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
 
-  // Codes de récupération fraîchement émis (clair, une seule fois)
+  // Freshly issued recovery codes (clear, only once)
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [acknowledged, setAcknowledged] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -85,7 +85,7 @@ export function AccountSecuritySection() {
   const provider = (user?.app_metadata?.provider as string | undefined) ?? "email";
   const providerLabel = provider === "google" ? "Google" : provider === "github" ? "GitHub" : null;
 
-  // La pastille de l'onglet lit le même cache : l'invalider met les deux à jour.
+  // The tab's pad reads the same cache: invalidating it updates both.
   const reloadStatus = () =>
     void queryClient.invalidateQueries({ queryKey: mfaStatusQueryKey });
 
@@ -93,8 +93,8 @@ export function AccountSecuritySection() {
     setBusy(true);
     setCodeError(null);
     try {
-      // Un nom daté distingue les facteurs si un jour on en autorise plusieurs,
-      // et rend l'écran de GoTrue lisible en cas de support.
+      // A dated name distinguishes the factors if one day several are authorized,
+      // and makes the GoTrue screen readable in case of support.
       const enrolled = await enrollTotp(`minddy ${new Date().toISOString().slice(0, 10)}`);
       setFactorId(enrolled.factorId);
       setQrCode(enrolled.qrCode);
@@ -116,8 +116,8 @@ export function AccountSecuritySection() {
     setSecret("");
     setCode("");
     setCodeError(null);
-    // Un facteur non vérifié ne compte pour rien, mais le laisser traîner
-    // encombrerait la liste au prochain essai.
+    // An unverified factor counts for nothing, but leaving it lying around
+    // would clutter the list on the next try.
     if (pending) await unenrollTotp(pending).catch(() => {});
   };
 
@@ -126,8 +126,8 @@ export function AccountSecuritySection() {
     setBusy(true);
     setCodeError(null);
     try {
-      // Vérifie le facteur ET monte la session en aal2 — sans quoi l'appel
-      // suivant se ferait refuser par le garde-fou qu'on vient d'activer.
+      // Check the factor AND mount the session in aal2 — otherwise the call
+      // following would be refused by the guardrail that we have just activated.
       await verifyTotp(factorId, submitted.trim());
 
       const response = await fetch("/api/account/mfa", { method: "POST" });
@@ -146,16 +146,16 @@ export function AccountSecuritySection() {
       setSecret("");
       setCode("");
 
-      // Le JWT courant ne porte pas encore le drapeau : le rafraîchir maintenant
-      // évite qu'une navigation intercalée reparte vers l'écran de challenge.
+      // The current JWT does not yet carry the flag: refresh it now
+      // prevents interspersed navigation from going back to the challenge screen.
       await refreshUser();
-      // Et couper les autres sessions, sinon un jeton déjà volé resterait bon
-      // jusqu'à son propre rafraîchissement — soit exactement ce qu'on ferme.
+      // And cut off the other sessions, otherwise an already stolen token would remain good
+      // until its own refreshment — which is exactly what we close.
       await signOutOtherSessions().catch(() => {});
       reloadStatus();
     } catch (e) {
-      // Le message brut de GoTrue est anglais et technique — on ne garde que la
-      // distinction utile (code refusé / trop d'essais / le reste).
+      // GoTrue's raw message is English and technical — we only keep the
+      // useful distinction (code refused / too many tries / the rest).
       setCodeError(t(mfaVerifyErrorKey(e)));
     } finally {
       setBusy(false);
@@ -229,10 +229,10 @@ export function AccountSecuritySection() {
 
   return (
     <>
-      {/* `variant="block"` : les trois états (recommandation, enrôlement, codes)
-          sont un ASSISTANT en pile, pas des rangées clé/valeur. Les encarts
-          bordés d'avant ont perdu leur cadre — ils sont DANS la carte, et la
-          double bordure faisait partie du bruit. */}
+      {/* `variant="block"`: The three states (recommendation, enrollment, codes)
+ are a stack WIZARD, not key/value rows. The front-bordered
+ inserts have lost their frame — they are IN the card, and the double-bordered
+ was part of the noise. */}
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountSecurity}
         icon={Lock}
@@ -296,8 +296,8 @@ export function AccountSecuritySection() {
               <p className="text-sm font-medium">{t("enrollScanTitle")}</p>
               <p className="text-xs text-muted-foreground">{t("enrollScanHint")}</p>
               {qrCode && (
-                // Le QR est un SVG inline renvoyé par GoTrue (data-uri) : rien à
-                // charger, et le fond blanc est nécessaire en thème sombre.
+                // The QR is an inline SVG returned by GoTrue (data-uri): nothing to
+                // load, and the white background is necessary in dark theme.
                 <img
                   src={qrCode}
                   alt={t("enrollQrAlt")}
@@ -344,8 +344,8 @@ export function AccountSecuritySection() {
             </div>
           </div>
         ) : status.enabled ? (
-          /* Activée : le même bloc, mais qui se tait. Il constate l'état et
-             donne les deux gestes d'entretien — il ne félicite personne. */
+          /* Enabled: the same block, but silent. He notes the state and
+ gives the two maintenance gestures — he does not congratulate anyone. */
           <div className="space-y-3">
             <div className="space-y-1">
               <p className="text-sm font-medium">{t("enabledCardTitle")}</p>
@@ -376,8 +376,8 @@ export function AccountSecuritySection() {
             </div>
           </div>
         ) : (
-          /* Inactive : la recommandation. Le titre nomme ce qui est en jeu —
-             pas la fonctionnalité, qui est déjà écrite juste au-dessus. */
+          /* Inactive: the recommendation. The title names what is at stake —
+ not the functionality, which is already written just above. */
           <div className="space-y-3">
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">

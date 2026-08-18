@@ -8,37 +8,37 @@ import type { AiSurface } from "@/lib/ai-surfaces";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 
 /**
- * Contrôle d'accès de l'agent de code (MIN-46 / MIN-10, refondu par MIN-72) :
- *  1. le PLAN doit inclure les agents (`allowAgents` — Free : non), BYOK ou pas.
- *  2. BYOK VALIDÉE → usage LLM ILLIMITÉ (à ses frais), MAIS le compute de la
- *     microVM garde son plafond (voir plus bas).
- *  3. sinon → budget d'usage mensuel du plan (USD au coût brut, TOUTES features
- *     confondues — l'ancien plafond `agent_monthly_cap_usd` est remplacé).
+ * Code agent access control (MIN-46 / MIN-10, recast by MIN-72):
+ * 1. the PLAN must include agents (`allowAgents` — Free: no), BYOK or not.
+ * 2. BYOK VALIDATED → LLM usage UNLIMITED (at its own expense), BUT the compute of the
+ * microVM keeps its ceiling (see below).
+ * 3. otherwise → monthly usage budget of the plan (USD at raw cost, ALL features
+ * combined — the old `agent_monthly_cap_usd` ceiling is replaced).
  *
- * La fenêtre comptée vient de lib/server/usage.ts : période Stripe courante ou
- * mois calendaire, bornée par le filigrane admin `agent_quota_resets`.
+ * The counted window comes from lib/server/usage.ts: current Stripe period or
+ * calendar month, bounded by the admin watermark `agent_quota_resets`.
  *
- * ## Ce que le BYOK lève, et ce qu'il ne lève pas (MIN-344)
+ * ## What BYOK raises, and what it does not raise (MIN-344)
  *
- * Il levait TOUT, et il suffisait de déclarer une clé — même inventée — pour ça.
- * Deux corrections, à deux endroits :
- *  • la clé doit avoir été RECONNUE par le fournisseur (`user_ai_keys.validated_at`,
- *    posé par le probe de `byok-validate.ts`) ; `getUserByok` ignore les autres,
- *    donc `userHasByokKey` ne les voit pas non plus ;
- *  • le compute sandbox ne se lève JAMAIS. Les tokens sont payés par la clé de
- *    l'utilisateur, la microVM ne l'est pas : elle tourne sur le compte Vercel de
- *    minddy, à la minute (`SANDBOX_USD_PER_MINUTE`). Une clé perso ne peut donc
- *    pas ouvrir un robinet de compute illimité — c'était le seul plafond qui
- *    protégeait une dépense qui reste la nôtre.
+ * It raised EVERYTHING, and it was enough to declare a key - even an invented one - for that.
+ * Two corrections, in two places:
+ * • the key must have been RECOGNIZED by the supplier (`user_ai_keys.validated_at`,
+ * set by the `byok-validate.ts` probe); `getUserByok` ignores the others,
+ * so `userHasByokKey` doesn't see them either;
+ * • the compute sandbox NEVER rises. The tokens are paid by the key of
+ * the user, the microVM is not: it runs on the Vercel account of
+ * minddy, at the minute (`SANDBOX_USD_PER_MINUTE`). A personal key cannot therefore
+ * open an unlimited compute tap — it was the only ceiling that
+ * protected an expense that remains ours.
  *
- * Le plafond de compute est le budget d'usage du plan, lu sur les seules lignes
- * de microVM (`sandbox_compute` + `routine_compute`). Autrement dit : un compte
- * en BYOK a droit à autant de minutes de microVM qu'un compte plateforme
- * pourrait s'en payer en dépensant tout son budget — et ses tokens à lui, en
- * plus, sans limite. C'est large, et c'est borné.
+ * The compute ceiling is the usage budget of the plan, read on the sole lines
+ * of microVM (`sandbox_compute` + `routine_compute`). In other words: a BYOK account
+ * is entitled to as many minutes of microVM as a platform account
+ * could afford by spending its entire budget - and its own tokens, en
+ * more, without limit. It's broad, and it's limited.
  */
 
-/** Les lignes de ledger qui mesurent des MINUTES DE MICROVM, payées par minddy. */
+/** Ledger lines measuring MICROVM MINUTES, paid by minddy. */
 const COMPUTE_FEATURES = ["sandbox_compute", "routine_compute"] as const;
 
 export interface AgentQuota {
@@ -48,23 +48,23 @@ export interface AgentQuota {
   spent?: number;
   cap?: number;
   remaining?: number;
-  /** ISO — fin de la fenêtre comptée : la date à laquelle le budget se recharge. */
+  /** ISO — end of window counted: the date the budget recharges. */
   resetsAt?: string;
-  /** Plan courant, et le suivant s'il en existe un au-dessus (proposition d'upgrade). */
+  /** Current plan, and the next one if there is one above (upgrade proposal). */
   planId?: BillingPlanId;
   nextPlanId?: BillingPlanId | null;
   reason?: "agents_not_in_plan" | "usage_budget_exceeded" | "managed_ai_unavailable";
 }
 
-/** Décide si l'utilisateur peut lancer un run maintenant. */
+/** Decide if the user can start a run now. */
 export async function checkAgentQuota(
   userId: string,
   surface: Extract<AiSurface, "agent" | "automations"> = "agent",
 ): Promise<AgentQuota> {
   const hasByok = await userHasByokKey(userId, surface);
-  // En auto-hébergement, les tokens et l'endpoint appartiennent à l'opérateur.
-  // Une clé BYOK (ou un endpoint local) est donc autorisée sans lire de plan ni
-  // de ledger minddy ; sans elle, on refuse avant tout appel plateforme.
+  // In self-hosting, the tokens and the endpoint belong to the operator.
+  // A BYOK key (or a local endpoint) is therefore authorized without reading a plan or
+  // from ledger minddy ; without it, we refuse any platform call beforehand.
   if (!isManagedAiEnabled()) {
     return hasByok
       ? { allowed: true, unlimited: true, mode: "byok" }
@@ -86,9 +86,9 @@ export async function checkAgentQuota(
   if (hasByok) {
     const usage = await getUserUsage(userId);
     const cap = plan.includedUsageUsd;
-    // Les DEUX features de microVM : un run d'agent et un passage de routine
-    // brûlent les mêmes minutes sur le même compte Vercel, seule la ligne de
-    // facture diffère. Les compter séparément laisserait la moitié du robinet
+    // The TWO features of microVM: an agent run and a routine pass
+    // burn the same minutes on the same Vercel account, only the line of
+    // invoice differs. Counting them separately would leave half the tap
     // ouverte.
     const compute = COMPUTE_FEATURES.reduce(
       (sum, feature) => sum + (usage.byFeature[feature] ?? 0),

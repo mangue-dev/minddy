@@ -4,24 +4,24 @@ import { useEffect, useRef, useState, type ComponentProps } from "react";
 import { cn } from "mangue-ui/lib/utils";
 
 /**
- * Le `<picture>` d'une capture, et son fondu à la charge (MIN-73, MIN-88).
+ * The `<picture>` of a capture, and its fade on charge (MIN-73, MIN-88).
  *
- * Seul le fondu a besoin du client : il part de l'événement `load` de l'image,
- * qui n'existe pas côté serveur. Tout le reste — quelle variante servir, dans
- * quelle langue, dans quel thème, à quelles largeurs — est calculé par
- * `screenshot-slot.tsx`, qui est un composant serveur.
+ * Only the fade needs the client: it starts from the `load` event of the image,
+ * which does not exist on the server side. Everything else — which variation to serve, in
+ * which language, in which theme, at what widths — is calculated by
+ * `screenshot-slot.tsx`, which is a server component.
  *
- * ENTRÉE À LA CHARGE, pas seulement au scroll. Les blocs de la landing entrent
- * via `<Reveal>` quand ils croisent le viewport — mais une capture est en
- * `loading="lazy"` : elle COMMENCE à se télécharger à peu près à ce moment-là.
- * L'apparition du conteneur jouait donc sur un cadre vide, et l'image tombait
- * dedans d'un coup, sans transition, une fois l'animation finie. Le fondu
- * ci-dessous est porté par l'image elle-même et part de son `load` : c'est le
- * seul instant qui corresponde à « l'image apparaît ».
+ * ENTRY ON LOAD, not just on scroll. Landing blocks enter
+ * via `<Reveal>` when they cross the viewport — but a capture is in progress
+ * `loading="lazy"`: it STARTS downloading around this time.
+ * The appearance of the container therefore played on an empty frame, and the image fell
+ * in at once, without transition, once the animation is finished. The fade
+ * below is carried by the image itself and starts from its `load`: this is the
+ * only moment which corresponds to “the image appears”.
  *
- * La capture du hero en est exemptée (`priority`) : c'est le candidat LCP, et
- * la démarrer à opacité nulle repousserait la métrique d'autant. Elle garde la
- * cascade CSS du hero, qui part d'un plancher d'opacité non nul.
+ * The capture of the hero is exempt (`priority`): it is the LCP candidate, and
+ * starting it at zero opacity would push the metric back that much. She keeps the
+ * CSS cascade of the hero, which starts from a non-zero opacity floor.
  */
 export function ScreenshotPicture({
   darkSrcSet,
@@ -38,13 +38,13 @@ export function ScreenshotPicture({
   const [loaded, setLoaded] = useState(false);
   const img = useRef<HTMLImageElement | null>(null);
 
-  // `mounted` : même garde que `<Reveal>`. Le rendu serveur ne masque RIEN, donc
-  // la landing reste lisible si le script ne part pas — on ne peut pas cacher
-  // une image derrière une animation qui a besoin de JavaScript pour finir.
-  // `complete` : une image déjà en cache peut être chargée AVANT que React
-  // n'ait branché son `onLoad`. Les deux états sont posés dans le même effet,
-  // donc dans le même rendu : une image déjà là n'a jamais l'occasion de
-  // disparaître pour réapparaître.
+  // `mounted`: same guard as `<Reveal>`. The server rendering does not mask ANYTHING, so
+  // the landing remains readable if the script does not leave — we cannot hide
+  // an image behind an animation that needs JavaScript to finish.
+  // `complete`: an already cached image can be loaded BEFORE React
+  // has connected its `onLoad`. The two states are posed in the same effect,
+  // therefore in the same rendering: an image already there never has the opportunity to
+  // disappear to reappear.
   useEffect(() => {
     setMounted(true);
     if (img.current?.complete) setLoaded(true);
@@ -52,14 +52,14 @@ export function ScreenshotPicture({
 
   return (
     <picture>
-      {/* Art direction par thème SYSTÈME, sans JavaScript ni cookie : le
-          navigateur choisit une seule des deux variantes, avant même que React
-          ne s'exécute. Voir `screenshot-slot.tsx` pour pourquoi ce n'est pas
-          `useTheme()` qui décide. */}
+      {/* Art direction by SYSTEM theme, without JavaScript or cookies: the
+          browser chooses only one of the two variants, even before React
+          does not execute. See `screenshot-slot.tsx` for why this is not
+          `useTheme()` who decides. */}
       {darkSrcSet && <source media="(prefers-color-scheme: dark)" srcSet={darkSrcSet} />}
       {lightSrcSet && <source media="(prefers-color-scheme: light)" srcSet={lightSrcSet} />}
-      {/* eslint-disable-next-line @next/next/no-img-element -- les props viennent
-          de `getImageProps`, c'est le motif documenté pour l'art direction. */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- props come
+          of `getImageProps`, this is the documented pattern for the art direction. */}
       <img
         {...imgProps}
         ref={img}

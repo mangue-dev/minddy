@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-292 — une pull request ouverte par une session CARNET a bien une lignée.
+ * MIN-292 — a pull request opened by a NOTEBOOK session does have a lineage.
  *
- * Le défaut se lisait à l'écran : sur une PR de Numo née du carnet, « demander
- * des changements » répondait « Numo n'a jamais travaillé sur cette pull request ».
- * La branche existait pourtant, et le run qui l'a poussée aussi — ce qui manquait,
- * c'était un TICKET, seul index que `inheritableWorkForIssue` sait interroger.
+ * The defect was read on the screen: on a Numo PR born from the notebook, "request
+ * changes" responded "Numo has never worked on this pull request."
+ * The branch existed, however, and the run that pushed it too — what was missing,
+ * was a TICKET, the only index that `inheritableWorkForIssue` knows how to query.
  *
- * Ce qui est gardé ici, c'est le BRANCHEMENT du lancement : quelle lignée est lue
- * (le ticket, ou la PR), et ce que la run froide en reçoit à sa création. Le reste
- * de `launchAgentRun` — quota, modèle, drain — est moqué : il n'est pas le sujet,
- * et rien de ce chemin ne doit changer selon l'ancrage.
+ * What is kept here is the BRANCH of the launch: which line is read
+ * (the ticket, or the PR), and what the cold run receives from it at its creation. The rest
+ * of `launchAgentRun` — quota, model, drain — is mocked: it is not the subject,
+ * and nothing in this path should change depending on the anchor.
  */
 
 const RUN_ID = "11111111-1111-4111-8111-111111111111";
@@ -22,17 +22,17 @@ const USER_ID = "55555555-5555-4555-8555-555555555555";
 const REPO = "mangue-dev/minddy-issues";
 
 const h = vi.hoisted(() => ({
-  /** Ce que `createRun` a reçu — c'est là que l'héritage se lit. */
+  /** What `createRun` received — that's where the inheritance reads. */
   created: [] as Array<Record<string, unknown>>,
-  /** Lignée rendue par l'index TICKET, et par l'index PULL REQUEST. */
+  /** Lineage rendered by the TICKET index, and by the PULL REQUEST index. */
   issueLineage: null as Record<string, unknown> | null,
   prLineage: null as Record<string, unknown> | null,
   /** Runs actifs vus par chacune des deux gardes. */
   activeIssue: null as Record<string, unknown> | null,
   activePr: null as Record<string, unknown> | null,
-  /** Quelle garde d'unicité a été interrogée. */
+  /** Which uniqueness guard was queried. */
   activeCalls: [] as string[],
-  /** La PR que `loadPrRunContext` rend, ou null (PR disparue). */
+  /** The PR that `loadPrRunContext` returns, or null (PR gone). */
   pr: null as Record<string, unknown> | null,
 }));
 
@@ -116,7 +116,7 @@ vi.mock("./issue-status-sync", () => ({ syncIssueStatusOnAgentStart: vi.fn(async
 vi.mock("@/lib/server/issue-events", () => ({ insertEvents: vi.fn(async () => {}) }));
 vi.mock("@/lib/server/automations/hooks", () => ({ handOffToHuman: vi.fn(() => {}) }));
 vi.mock("@/lib/server/short-title", () => ({ generateShortTitle: vi.fn(async () => "Un titre") }));
-// Le drain part en `after()` : ici il ne part pas du tout, rien à observer.
+// The drain leaves in `after()`: here it does not leave at all, nothing to observe.
 vi.mock("next/server", () => ({ after: vi.fn(() => {}) }));
 
 const { launchAgentRun } = await import("./launch");
@@ -169,10 +169,10 @@ describe("reprise d'une pull request sans ticket", () => {
     expect(result.ok).toBe(true);
     expect(h.created).toHaveLength(1);
     expect(h.created[0]).toMatchObject({
-      // Sans ticket : le run ne s'ancre à rien d'autre que son travail.
+      // Without a ticket: the run is not anchored to anything other than its work.
       issueId: null,
       projectId: PROJECT_ID,
-      // Et il repart de la branche de la PR, pas d'une branche neuve.
+      // And he starts from the PR branch, not from a new branch.
       branchName: "minddy/agent/note-92275fe4",
       baseBranch: "main",
       prNumber: 51,

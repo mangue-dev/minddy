@@ -1,82 +1,82 @@
 /**
- * La largeur d'une colonne de board, et pourquoi elle n'est pas `w-full` sous
- * 1200 px (MIN-293), indépendamment du seuil du chrome desktop.
+ * The width of a board column, and why it is not `w-full` under
+ * 1200 px (MIN-293), regardless of the Chrome desktop threshold.
  *
- * Le board était un empilement de colonnes PLEINE LARGEUR qu'on feuilletait au
- * doigt, une par écran. C'est juste sur un téléphone ; ça ne l'est plus dès
- * qu'on redimensionne la fenêtre de l'app de bureau, où la même règle donnait
- * une colonne unique de 900 px de large — une carte de ticket étirée sur toute
- * la fenêtre, et cinq statuts hors champ.
+ * The board was a stack of FULL-WIDTH columns that we flipped through
+ * finger, one per screen. It's just on a phone; it is no longer so
+ * that we resize the desktop app window, where the same rule gave
+ * a single column 900 px wide — a ticket card stretched across the entire
+ * the window, and five statuses off-screen.
  *
- * D'où un partage : la colonne prend une FRACTION de la place, et la fraction
- * suit la place disponible.
+ * Hence a division: the column takes a FRACTION of the space, and the fraction
+ * follows the available space.
  *
- *     < 640 px   1 colonne   (téléphone : le feuilletage d'origine)
+ * < 640 px 1 column (telephone: the original lamination)
  *     ≥ 640 px   2 colonnes
  *     ≥ 1024 px  3 colonnes
- *     ≥ 1200 px  22rem fixes (le board complet, avec sa barre latérale)
+ * ≥ 1200 px 22rem fixed (the complete board, with its sidebar)
  *
- * Le calcul retire les gouttières AVANT de diviser (`gap-3` = 0.75rem entre deux
- * colonnes) : sans ça, deux colonnes à 50 % plus une gouttière débordent, et la
- * deuxième est coupée à droite — ce qui a exactement l'air d'un bug d'une
- * colonne mal calée.
+ * The calculation removes the gutters BEFORE dividing (`gap-3` = 0.75rem between two
+ * columns): without that, two columns at 50% plus a gutter overflow, and the
+ * second is cut off to the right — which looks exactly like a bug of a
+ * column poorly seated.
  *
- * L'accroche du défilement passe de `snap-center` à `snap-start` : centrer avait
- * du sens quand une colonne remplissait l'écran (centre = début) ; avec deux ou
- * trois colonnes visibles, ça les laisserait à cheval sur les deux bords. Le
- * même changement ne change rien à un doigt sur un téléphone.
+ * The scroll hook changes from `snap-center` to `snap-start`: center had
+ * meaning when a column filled the screen (center = start); with two or
+ * three columns visible, that would leave them straddling both edges. THE
+ * same change doesn't change anything to a finger on a phone.
  *
- * ⚠ **Les fractions sont bornées par `max-wide:`, et ce n'est pas décoratif.**
- * Le partage ci-dessus ne vaut QUE sous 1200 px ; au-dessus, la colonne est fixe.
- * Écrit sans borne — `sm:w-… lg:w-… desktop:w-[22rem]` — il débordait au-dessus
- * du seuil : `lg:` s'appliquait toujours et la colonne prenait le TIERS de la
- * fenêtre. Mesuré au navigateur : 472 px à 1440, 632 px à 1920, au lieu de 352
- * dans les deux cas — des cartes de ticket étirées, exactement le défaut que ce
+ * ⚠ **Fractions are bounded by `max-wide:`, and this is not decorative.**
+ * The above sharing is ONLY worth under 1200 px; above, the column is fixed.
+ * Written without limit — `sm:w-… lg:w-… desktop:w-[22rem]` — it overflowed above
+ * of the threshold: `lg:` always applied and the column took THIRD of the
+ * window. Measured in the browser: 472 px at 1440, 632 px at 1920, instead of 352
+ * in both cases — stretched ticket cards, exactly the defect that this
  * partage devait corriger sous 1200 px.
  *
- * La cause est dans l'ORDRE des media queries, pas dans les largeurs. Tailwind
- * trie les points de rupture par leur valeur, mais il ne sait pas comparer des
- * unités différentes : les siens sont en `rem` (`sm` = 40rem, `lg` = 64rem),
- * `--breakpoint-wide` est en `px` (1200px). Les `px` sortent donc
- * EN BLOC avant les `rem`, et la feuille générée finit par
+ * The cause is in the ORDER of the media queries, not in the widths. Tailwind
+ * sorts the break points by their value, but it does not know how to compare
+ * different units: his are in `rem` (`sm` = 40rem, `lg` = 64rem),
+ * `--breakpoint-wide` is in `px` (1200px). So the `px` come out
+ * IN BLOCK before the `rem`, and the generated sheet ends up
  *
- *     @media (width >= 1200px)  { … }   ← wide, écrit en premier
+ * @media (width >= 1200px) { … } ← wide, written first
  *     @media (width >= 40rem)   { … }   ← sm
- *     @media (width >= 64rem)   { … }   ← lg, écrit en DERNIER → il gagne
+ * @media (width >= 64rem) { … } ← lg, written LAST → he wins
  *
- * À spécificité égale c'est le dernier qui l'emporte : au-dessus de 1200 px les
- * trois règles s'appliquent, et `desktop:` perd. Aucune erreur, aucun
- * avertissement — le mélange `px`/`rem` ne se lit nulle part dans les classes.
+ * With equal specificity, it is the last one which wins: above 1200 px the
+ * three rules apply, and `desktop:` loses. No errors, none
+ * warning — the mixture `px`/`rem` is not read anywhere in classes.
  *
- * `max-wide:` rend les intervalles DISJOINTS (`(width < 1200px)` imbriqué
- * autour de la fraction), donc l'ordre ne décide plus rien. C'est la parade qui
- * tient quel que soit le tri : la garder en cas de refonte de ces classes, et
- * s'en souvenir avant tout nouveau `desktop:` posé sur une propriété que `sm:`,
- * `md:`, `lg:`, `xl:` ou `2xl:` posent déjà. [board-layout.test.ts](board-layout.test.ts)
- * compile ces classes pour de vrai et relit la largeur qui gagne à cinq largeurs
- * de fenêtre.
+ * `max-wide:` makes the intervals DISJOINT (`(width < 1200px)` nested
+ * around the fraction), so the order no longer decides anything. It is the parade which
+ * holds regardless of the sorting: keep it in the event of a redesign of these classes, and
+ * remember it before any new `desktop:` placed on a property that `sm:`,
+ * `md:`, `lg:`, `xl:` or `2xl:` already poses. [board-layout.test.ts](board-layout.test.ts)
+ * compiles these classes for real and reads back the width which gains to five widths
+ * window.
  */
 export const BOARD_COLUMN_CLASS =
   "w-full shrink-0 snap-start max-wide:sm:w-[calc((100%-0.75rem)/2)] max-wide:lg:w-[calc((100%-1.5rem)/3)] wide:w-[22rem]";
 
 /**
- * La gouttière du défileur.
+ * The scroller's gutter.
  *
- * Elle valait 16 px en compact contre 24 en large. C'est-à-dire que le seul cas
- * où la barre latérale ne pousse plus le board vers l'intérieur était aussi
- * celui qui lui donnait le moins de marge : la colonne de gauche démarrait au
- * bord de la fenêtre. Elle passe donc à 24 px dès qu'il y a plus d'une colonne,
- * c'est-à-dire dès `sm` — même chiffre partout, sauf sur un téléphone où 24 px
- * de chaque côté seraient pris sur la carte.
+ * It was worth 16 px in compact compared to 24 in large. That is to say, the only case
+ * where the sidebar no longer pushes the board inwards was also
+ * the one which gave it the least margin: the left column started at
+ * edge of the window. It therefore changes to 24 px as soon as there is more than one column,
+ * that is to say from `sm` — same number everywhere, except on a phone where 24 px
+ * on each side would be taken on the map.
  *
- * ⚠ **Le fondu de bord ne se règle plus ici** (MIN-319). Il passait par un
- * `mask-image` posé SUR ce défileur, avec une rampe en variable CSS
- * (`--board-fade`) que cette classe éteignait sous 640 px. Un masque sur un
- * conteneur qui défile le fait re-compositer à chaque image — et c'était ici un
- * masque à l'intérieur d'un masque, chaque colonne en portant un aussi. Le
- * fondu est désormais un calque dessiné À CÔTÉ du défileur
- * (`components/scroll-fade-edges.tsx`), piloté par les `edges` que rend
- * `useScrollFade` : rien n'est posé sur le contenu, donc rien à re-compositer.
+ * ⚠ **Edge fading is no longer set here** (MIN-319). He went through a
+ * `mask-image` placed ON this scroller, with a ramp in CSS variable
+ * (`--board-fade`) that this class turned off under 640 px. A mask on a
+ * container that scrolls makes it re-composed with each frame — and here it was a
+ * mask within a mask, each column wearing one too. THE
+ * fade is now a layer drawn NEXT to the scroller
+ * (`components/scroll-fade-edges.tsx`), driven by the `edges` that renders
+ * `useScrollFade`: nothing is placed on the content, therefore nothing to re-compose.
  */
 export const BOARD_SCROLLER_CLASS =
   "flex gap-3 overflow-x-auto px-4 snap-x snap-mandatory sm:px-6 wide:snap-none";

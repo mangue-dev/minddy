@@ -13,11 +13,11 @@ import { mapClientNameToAgent } from "@/lib/mcp-agents";
 import { afterOrNow } from "@/lib/server/after-safe";
 
 /**
- * Grants OAuth : une ligne active par (user × client), tokens opaques
- * rotationnés sur place. Chaque grant est adossé à une ligne api_keys
- * « acteur » (name = client_name, agent mappé) dont le key_hash est le
- * sha256 d'un secret aléatoire JAMAIS révélé (satisfait NOT NULL + UNIQUE),
- * porteur de l'attribution timeline existante (api_key_id).
+ * OAuth grants: one line active per (user × client), opaque tokens
+ * rotated in place. Each grant is backed by a line api_keys
+ * “actor” (name = client_name, mapped agent) whose key_hash is the
+ * sha256 of a random secret NEVER revealed (satisfied NOT NULL + UNIQUE),
+ * bearer of the existing timeline attribution (api_key_id).
  */
 
 const ACCESS_TTL_MS = 3600_000; // 1 h
@@ -40,8 +40,8 @@ export interface GrantSummary {
   last_used_at: string | null;
 }
 
-/** Grant actif pour (user, client) — réutilisé s'il existe, sinon créé avec
-    sa ligne api_keys acteur. Appelé au moment du consentement. */
+/** Active grant for (user, client) — reused if it exists, otherwise created with
+ its line api_keys actor. Called at the time of consent. */
 export async function ensureGrantWithActorKey({
   userId,
   client,
@@ -60,8 +60,8 @@ export async function ensureGrantWithActorKey({
     .maybeSingle();
   if (existing) return { grantId: existing.id as string };
 
-  // Ligne acteur : key_hash d'un secret jamais révélé (satisfait NOT NULL +
-  // UNIQUE sans jamais pouvoir s'authentifier), masquée des settings via
+  // Actor line: key_hash of a secret never revealed (satisfied NOT NULL +
+  // UNIQUE without ever being able to authenticate), hidden from settings via
   // oauth_client_id.
   const { data: actorKey, error: keyError } = await service
     .from("api_keys")
@@ -106,7 +106,7 @@ export async function ensureGrantWithActorKey({
   return { grantId: grant.id as string };
 }
 
-/** Émet une paire access/refresh neuve pour le grant (échange de code). */
+/** Issues a new access/refresh pair for the grant (code exchange). */
 export async function issueTokens(grantId: string): Promise<TokenPair | null> {
   const service = getServiceClient();
   const access = generateSecret(ACCESS_TOKEN_PREFIX);
@@ -140,13 +140,12 @@ export async function issueTokens(grantId: string): Promise<TokenPair | null> {
   };
 }
 
-/** Rotation atomique du refresh token : le swap est keyed sur l'ANCIEN hash,
-    donc une seule rotation concurrente gagne. Expiry glissante +90 j.
+/** Atomic rotation of the refresh token: the swap is keyed on the OLD hash,
+ so only one concurrent rotation wins. Expiry sliding +90 days.
 
-    Le `client_id` fait partie de la clé (RFC 6749 §6 : le client public le
-    présente, §10.4 : le serveur doit lier le token à son client). Sans lui,
-    n'importe quel client enregistré — et l'inscription est ouverte — échange
-    le refresh token d'un autre dès qu'il en intercepte un. */
+ The `client_id` is part of the key (RFC 6749 §6: the public client presents it, §10.4: the server must bind the token to its client). Without it,
+ any registered client — and registration is open — exchanges
+ another's refresh token as soon as it intercepts one. */
 export async function rotateRefreshToken(
   refreshToken: string,
   clientId: string
@@ -186,10 +185,8 @@ export async function rotateRefreshToken(
   };
 }
 
-/** Rejeu d'un refresh token rotationné (génération N-1) : le grant entier est
-    révoqué — un tiers détient peut-être la paire courante (RFC 9700 §4.14).
-    Lié au client lui aussi : la révocation est une arme, et le grant d'un
-    client n'est pas à la portée d'un autre. */
+/** Replay of a rotated refresh token (N-1 generation): the entire grant is revoked — a third party perhaps holds the current pair (RFC 9700 §4.14).
+ Also linked to the client: revocation is a weapon, and the grant of one client is not within the reach of another. */
 export async function handleRefreshReuse(
   refreshToken: string,
   clientId: string
@@ -211,7 +208,7 @@ export async function handleRefreshReuse(
   return true;
 }
 
-/** Vérifie un access token mdyat_… → { userId, keyId } pour AuthInfo. */
+/** Checks an access token mdyat_… → { userId, keyId } for AuthInfo. */
 export async function verifyOAuthAccessToken(
   token: string
 ): Promise<{ userId: string; keyId: string } | null> {
@@ -228,8 +225,8 @@ export async function verifyOAuthAccessToken(
   const actorKey = data.api_keys as unknown as { revoked_at: string | null };
   if (actorKey?.revoked_at) return null;
 
-  // Un horodatage d'usage ne retarde pas la requête : il part APRÈS la réponse,
-  // mais rattaché à l'invocation — détaché, il mourrait au gel de la lambda.
+  // A usual timestamp does not delay the request: it leaves AFTER the response,
+  // but attached to the invocation - detached, he would die in the frost of the lambda.
   afterOrNow(async () => {
     const [grant, key] = await Promise.all([
       service.from("oauth_grants").update({ last_used_at: now }).eq("id", data.id),
@@ -285,7 +282,7 @@ async function revokeGrantById(grantId: string, apiKeyId: string): Promise<void>
     .is("revoked_at", null);
 }
 
-/** Révocation par le propriétaire (settings → Applications connectées). */
+/** Revocation by the owner (settings → Connected applications). */
 export async function revokeGrant({
   userId,
   grantId,

@@ -3,12 +3,11 @@ import { describe, expect, it } from "vitest";
 import { localExecRequested } from "./local-exec";
 
 /**
- * MIN-359 — le drapeau `localExec` arrive dans le corps d'un POST : c'est une
- * DEMANDE. Ces cas disent ce qui la transforme en fait, et surtout ce qui ne la
- * transforme pas. La règle qu'ils protègent, en une phrase : **un run dont le
- * contexte n'a pas été écrit par la personne qui lance ne part jamais sur sa
- * machine** — dans une microVM jetable, une injection de prompt coûte une VM ;
- * sur un Mac, c'est un shell.
+ * MIN-359 — the `localExec` flag arrives in the body of a POST: it is a
+ * REQUEST. These cases say what transforms it in fact, and especially what does not transform it. The rule they protect, in one sentence: **a run whose
+ * context has not been written by the person running it never leaves on his
+ * machine** — in a disposable microVM, a prompt injection costs one VM;
+ * on a Mac, it's a shell.
  */
 describe("localExecRequested", () => {
   const base = { triggeredBy: "button" } as const;
@@ -40,9 +39,9 @@ describe("localExecRequested", () => {
   });
 
   it("refuse une MENTION — elle peut venir d'un webhook de forge", () => {
-    // Rien à cet endroit ne distingue une mention tapée dans minddy d'un
-    // commentaire de pull request recopié par un webhook. Tant que la source
-    // n'est pas portée jusqu'ici (MIN-360), le refus est le seul choix sûr.
+    // Nothing here distinguishes a mention typed in minddy from a
+    // pull request comment copied by a webhook. As long as the source
+    // is not carried so far (MIN-360), refusal is the only safe choice.
     expect(localExecRequested({ triggeredBy: "mention", localExec: true })).toBe(false);
   });
 });

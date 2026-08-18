@@ -13,56 +13,54 @@ import { revokeRunKey } from "./run-key";
 import { currentDeploymentScope } from "./deployment";
 
 /**
- * Drain des runs de l'agent (MIN-46) — le worker. Auto-budgété sous les 300s de
- * la fonction : reclaim les runs bloqués, puis boucle claim→execute tant qu'il
- * reste du budget et des runs dus. Un run suspendu se re-`queue` avec
- * not_before=now → la re-requête suivante le reprend EN PROCESS (continuation
- * basse latence), comme AutoKap.
+ * Drain runs from the agent (MIN-46) — the worker. Self-budgeted within 300s of
+ * the function: reclaim the blocked runs, then claim→execute loop as long as there
+ * remains of the budget and runs due. A suspended run re-`queue` with
+ * not_before=now → the next re-request resumes it IN PROCESS (continuation
+ * low latency), like AutoKap.
  */
 
 /**
- * Budget d'un drain lancé depuis une route de 300 s (`launchAgentRun` via `after`).
- * Le CRON, lui, tourne dans une fonction de 800 s et passe son propre budget : le
- * budget ne peut pas être une constante globale, sinon un drain déclenché par un
- * lancement utilisateur croirait disposer de treize minutes et se ferait tuer en
- * plein chunk — checkpoint non écrit, tour perdu.
+ * Budget of a drain launched from a 300 s route (`launchAgentRun` via `after`).
+ * The CRON, for its part, runs in a function of 800 s and passes its own budget: the
+ * budget cannot be a global constant, otherwise a drain triggered by a
+ * launch user would think he had thirteen minutes and would be killed in
+ * full chunk — checkpoint not written, turn lost.
  */
 const DRAIN_TIME_BUDGET_MS = 270_000;
 /**
- * CE QUE COÛTE UN LANCEMENT, et plus ce que coûtait un chunk (MIN-225).
+ * WHAT A LAUNCH COSTS, and no longer what a chunk cost (MIN-225).
  *
- * `executeAgentRun` n'exécute plus le tour : il réveille ou clone la microVM,
- * écrit le job et le bundle, lance le superviseur en détaché et REND LA MAIN. Le
- * seuil d'admission n'a donc plus à couvrir treize minutes de travail — seulement
- * un amorçage, dont le clone est le poste le plus lourd (~22 s mesurées, MIN-222)
- * et dont le timeout propre est de 180 s.
+ * `executeAgentRun` no longer executes the trick: it wakes up or clones the microVM,
+ * writes the job and the bundle, launches the detached supervisor and RETURNS HAND. The
+ * admission threshold therefore no longer has to cover thirteen minutes of work — only
+ * a boot, whose clone is the heaviest post (~22 s measured, MIN-222)
+ * and whose own timeout is 180 s.
  *
- * Deux minutes : large pour un amorçage tiède, honnête sur un clone froid. En
- * dessous, on préfère laisser le run à `queued` — le tick suivant le reprendra
- * avec une fenêtre entière plutôt que de se faire tuer en plein `writeFiles`,
- * qui laisserait une microVM debout et un run `running` sans process.
+ * Two minutes: wide for a lukewarm boot, honest on a cold clone. En
+ * below, we prefer to leave the run at `queued` — the next tick will resume it
+ * with an entire window rather than being killed in the middle of `writeFiles`,
+ * which would leave a microVM standing and a run `running` without process.
  */
 const MIN_LAUNCH_BUDGET_MS = 120_000;
-/** Inactivité au-delà de laquelle on coupe la microVM d'un run au repos. */
+/** Inactivity beyond which the microVM is cut off from an idle run. */
 const SANDBOX_IDLE_REAP_MS = 5 * 60_000;
-/** Runs au repos dont la microVM peut être coupée. `completed` = le seul repos du
-    modèle conversationnel (la session garde sa sandbox pour une reprise à chaud —
-    sans ce reaping, chaque tour fini fuiterait une microVM). */
+/** Idle runs from which the microVM can be shut down. `completed` = the only rest of the
+ conversational model (the session keeps its sandbox for hot restart —
+ without this reaping, each finished round would leak a microVM). */
 const RESTING_STATUSES = ["completed"];
 
 /**
- * Reaper d'inactivité : coupe la microVM des runs AU REPOS (suspendus ou tour fini)
- * restés inactifs (> ~5 min) tout en gardant leur snapshot persistant → le run reste
- * reprennable (réveil rapide au prochain message, sans re-clone complet). Ne touche
- * ni au statut, ni au checkpoint, ni à sandbox_id : marque juste sandbox_stopped_at
- * pour ne pas re-couper en boucle. Appelé en tête de chaque drain (~2 min via cron).
+ * Inactivity reaper: cuts the microVM from runs AT IDLE (suspended or round finished)
+ * that have remained inactive (> ~5 min) while keeping their snapshot persistent → the run remains
+ * resumable (quick wake-up at the next message, without complete re-clone). Do not touch
+ * neither the status, nor the checkpoint, nor sandbox_id: just mark sandbox_stopped_at
+ * so as not to re-cut in a loop. Called at the head of each drain (~2 min via cron).
  *
- * IL RÉVOQUE AUSSI LA CLÉ DU RUN (MIN-223). C'est ici, et pas au bout du run,
- * parce qu'une session au repos n'est pas finie : elle peut repartir sur un
- * `steer`, et c'est ce redémarrage qui remintera. Tant que la VM tourne, sa clé
- * doit vivre ; dès qu'elle est coupée, plus personne n'a de raison légitime de
- * s'en servir — et la seule chose qui pourrait encore le faire serait quelque
- * chose qu'on n'a pas voulu.
+ * IT ALSO REVOKES THE RUN KEY (MIN-223). It is here, and not at the end of the run,
+ * because an idle session is not finished: it can start again on a
+ * `steer`, and it is this restart which will restart. As long as the VM is running, its key
+ * must live; once it's cut off, no one has a legitimate reason to use it — and the only thing that could still do that would be something we didn't want.
  */
 export async function reapIdleSandboxes(
   service: SupabaseClient,
@@ -75,7 +73,7 @@ export async function reapIdleSandboxes(
     .not("sandbox_id", "is", null)
     .is("sandbox_stopped_at", null)
     .lt("last_activity_at", cutoff)
-    .order("last_activity_at", { ascending: true }) // les plus inactifs d'abord
+    .order("last_activity_at", { ascending: true }) // the most inactive first
     .limit(50);
   const rows = (data ?? []) as Array<{
     id: string;
@@ -85,9 +83,9 @@ export async function reapIdleSandboxes(
   let reaped = 0;
   for (const row of rows) {
     if (!row.sandbox_id) continue;
-    // CAS AVANT de stopper : on réserve la coupe (sandbox_stopped_at) sous garde. Si
-    // le run a été repris (steer) ou re-activé (heartbeat) depuis le SELECT, la garde
-    // ne matche pas → on NE stoppe PAS une microVM en cours d'utilisation.
+    // CASE BEFORE stopping: we reserve the cut (sandbox_stopped_at) under guard. If
+    // the run has been resumed (steer) or re-activated (heartbeat) from SELECT, keeps it
+    // do not match → we DO NOT stop a microVM in use.
     const { data: claimed } = await service
       .from("agent_runs")
       .update({ sandbox_stopped_at: new Date().toISOString() })
@@ -97,12 +95,12 @@ export async function reapIdleSandboxes(
       .lt("last_activity_at", cutoff)
       .select("id")
       .maybeSingle();
-    if (!claimed) continue; // reprise/activité concurrente → on laisse la VM tranquille
+    if (!claimed) continue; // resumption/competing activity → we leave the VM alone
     await stopSandboxByName(row.sandbox_id);
-    // La VM d'abord, la clé ensuite : dans cet ordre, une révocation qui échoue
-    // laisse une clé plafonnée sans machine pour s'en servir. L'ordre inverse
-    // ouvrirait une fenêtre où la VM tourne encore avec une clé morte, et le tour
-    // en cours de reprise mourrait sur des 401.
+    // VM first, key second: in that order, a revocation that fails
+    // leaves a capped key without a machine to use it. The reverse order
+    // would open a window where the VM is still running with a dead key, and that's it
+    // during recovery would die on 401s.
     if (row.provider_key_id) {
       await revokeRunKey(row.provider_key_id);
       await service.from("agent_runs").update({ provider_key_id: null }).eq("id", row.id);
@@ -113,78 +111,77 @@ export async function reapIdleSandboxes(
 }
 
 /**
- * Silence toléré avant d'aller DEMANDER à la plateforme si un tour vit encore.
+ * Silence tolerated before going to ASK the platform if a tower still lives.
  *
- * Ce n'est pas un seuil de mort — c'est un seuil d'INTERROGATION. Un tour qui
- * vient de démarrer ne vaut pas un appel à l'API Sandbox à chaque passage du
- * cron ; passé quelques minutes sans un event, la question devient légitime. La
- * réponse, elle, est un fait : `Command.exitCode` non nul ⇒ le process a rendu.
+ * This is not a death threshold — it is a QUESTION threshold. A round that
+ * has just started is not worth a call to the Sandbox API each time the
+ * cron passes; After a few minutes without an event, the question becomes legitimate. The
+ * answer is a fact: `Command.exitCode` not zero ⇒ the process returned.
  */
 const VM_LOOP_PROBE_AFTER_MS = 3 * 60_000;
 
 /**
- * Silence après lequel une réponse INDÉTERMINÉE finit par valoir un décès.
+ * Silence after which an INDETERMINED response ends up being worth a death.
  *
- * La règle reste « on ne conclut pas sur un silence de l'API » — mais elle ne
- * peut pas valoir *pour toujours*. Une microVM détruite (session expirée,
- * plateforme qui l'a rendue) répond « introuvable » à chaque passage, donc
- * `null`, donc rien : le run restait `running` jusqu'à ce qu'un humain le
- * supprime en base. Ce qui manquait n'était pas un verdict plus audacieux, c'est
- * une BORNE : passé deux heures sans le moindre signe de vie de la boucle ET sans
- * que la plateforme sache seulement dire qu'elle existe, la panne d'API qui
- * expliquerait les deux n'est plus l'hypothèse raisonnable.
+ * The rule remains "we do not conclude on a silence of the API" - but it does not
+ * cannot be valid *forever*. A destroyed microVM (expired session,
+ * platform which made it) responds "not found" on each pass, therefore
+ * `null`, therefore nothing: the run remained `running` until a human deleted it
+ * in base. What was missing was not a bolder verdict, it was
+ * a TERMINAL: after two hours without the slightest sign of life from the loop AND without
+ * that the platform only knows how to say that it exists, the API failure which
+ * would explain both is no longer the reasonable hypothesis.
  *
- * Deux heures = 24 fois l'intervalle de sauvegarde du checkpoint (5 min), qui est
- * le battement de cœur de la boucle. Le pire cas assumé — un round unique qui
- * dure plus de deux heures pendant une panne totale de l'API Sandbox — remet la
- * session au repos sur son dernier checkpoint : elle reste reprennable, ce qui
- * est très exactement ce que le run bloqué, lui, n'était pas.
+ * Two hours = 24 times the checkpoint save interval (5 min), which is
+ * the heartbeat of the loop. The assumed worst case — a single round that
+ * lasts more than two hours during a total failure of the Sandbox API — puts the
+ * session back to rest on its last checkpoint: it remains resumable, which
+ * is exactly what the blocked run was not.
  */
 const VM_LOOP_LOST_AFTER_MS = 2 * 60 * 60_000;
 
 /**
- * Délai au-delà duquel un run `running` SANS identifiant de commande est réputé
- * n'avoir jamais démarré sa boucle.
+ * Delay beyond which a run `running` WITHOUT a command identifier is deemed
+ * to have never started its loop.
  *
- * `startVmLoop` écrit cet identifiant à la fin de l'amorçage (~22 s à froid) : une
- * ligne qui ne l'a toujours pas au bout d'un quart d'heure est une fonction morte
- * entre le claim et le lancement. Il n'y a rien à sonder — pas de commande, donc
- * pas de constat possible — et c'est précisément le cas que l'ancienne rédaction
- * laissait filer sans le dire (`.not("loop_command_id", "is", null)` dans la
- * requête : ces runs-là n'étaient même pas regardés).
+ * `startVmLoop` writes this identifier at the end of boot (~22 s cold): a
+ * line which still does not have it after a quarter of an hour is a dead function
+ * between the claim and the launch. There is nothing to probe - no command, therefore
+ * no observation possible - and this is precisely the case that the old editorial team
+ * let slip without saying it (`.not("loop_command_id", "is", null)` in the
+ * query: these runs were not even looked at).
  *
- * Compté sur `started_at` (posé au claim, donc propre à CE tour) et non sur le
- * silence : un run re-queué avec un délai devant lui arrive au claim avec une
- * horloge d'activité déjà vieille, et le compter là le tuerait en plein amorçage.
+ * Counted on `started_at` (placed on the claim, therefore specific to THIS turn) and not on the
+ * silence: a re-queued run with a deadline ahead of it arrives at the claim with an already old activity clock, and counting it there would kill it in the middle of priming.
  */
 const VM_LOOP_UNLAUNCHED_AFTER_MS = 15 * 60_000;
 
 /**
- * LE CHIEN DE GARDE des runs dont la boucle vit dans la microVM (MIN-224).
+ * THE WATCHDOG of runs whose loop lives in the microVM (MIN-224).
  *
- * IL A REMPLACÉ le balayeur par présomption (retiré en MIN-225), et ce n'était
- * pas le même geste. L'ancien déclarait mort tout run `running` silencieux depuis
- * vingt minutes, puis lui volait son claim — une heuristique acceptable quand un chunk durait
- * cinq minutes, intenable quand un tour peut travailler des heures sans écrire un
- * event (un `npm test` qui dure, un modèle qui réfléchit). Celui-ci ne présume
- * rien : il DEMANDE à la plateforme si la commande vit encore, et la plateforme
- * le sait.
+ * IT REPLACED the sweeper by presumption (removed in MIN-225), and it was
+ * not the same gesture. The old one declared dead any run `running` silent for
+ * twenty minutes, then stole its claim — an acceptable heuristic when a chunk lasted
+ * five minutes, untenable when a round can work for hours without writing an
+ * event (a `npm test` that lasts, a model that thinks). This does not presume
+ * anything: it ASKS the platform if the order still lives, and the platform
+ * knows it.
  *
- * Trois réponses, trois conduites :
+ * Three answers, three actions:
  *
- * - le process VIT → on ne touche à rien, quel que soit le silence ;
- * - on ne SAIT PAS (microVM introuvable, session expirée, API en panne) → on ne
- *   touche à rien non plus. Un chien de garde qui conclut sur un silence de l'API
- *   remettrait au repos des tours en pleine santé. Mais l'attente est BORNÉE
- *   (`VM_LOOP_LOST_AFTER_MS`, et `VM_LOOP_UNLAUNCHED_AFTER_MS` pour une ligne qui
- *   n'a même pas de commande à interroger) : « on ne sait pas » ne peut pas durer
- *   toujours, sans quoi un run reste `running` jusqu'à ce qu'un humain le
- *   supprime en base ;
- * - le process est MORT → la session repasse au repos sur son DERNIER CHECKPOINT
- *   (celui de la sauvegarde périodique), **le fil le dit**, et le compute de la
- *   microVM est facturé (cf. `recordSandboxUsage` plus bas). C'est ce qui
- *   distingue « l'agent s'est arrêté et voilà pourquoi » de « l'agent ne répond
- *   plus depuis vingt minutes ».
+ * - the process LIVES → we don't touch nothing, whatever the silence ;
+ * - we don't KNOW (microVM not found, session expired, API down) → we don't
+ * touch anything either. A watchdog that concludes with a silence of the API
+ * would restore towers to full health. But the wait is BORNE
+ * (`VM_LOOP_LOST_AFTER_MS`, and `VM_LOOP_UNLAUNCHED_AFTER_MS` for a line which
+ * does not even have a command to query): "we don't know" cannot last
+ * always, otherwise a run remains `running` until a human deletes the
+ * in base;
+ * - the process is DEAD → the session returns to idle on its LAST CHECKPOINT
+ * (that of the periodic backup), **the thread says so**, and the compute of the
+ * microVM is billed (cf. `recordSandboxUsage` below). This is what
+ * distinguishes “the agent has stopped and this is why” from “the agent has not responded
+ * for twenty minutes”.
  */
 export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped: number }> {
   const cutoff = new Date(Date.now() - VM_LOOP_PROBE_AFTER_MS).toISOString();
@@ -215,14 +212,11 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
   }>;
 
   /**
-   * LES SONDES EN PARALLÈLE, les conduites en série.
-   *
-   * Constater qu'un process VIT coûte le délai entier de `isLoopCommandAlive`
-   * (5 s : c'est l'absence de réponse qui fait la réponse). En série, une file de
-   * vingt runs en bonne santé mangerait une minute et demie du budget du drain
-   * avant qu'il n'ait claim quoi que ce soit. Les sondes ne se touchent pas entre
-   * elles — les mettre de front ramène le coût à celui d'UNE.
-   */
+ * PROBES IN PARALLEL, pipes in series.
+ *
+ * Observe that a VIT process costs the entire delay of `isLoopCommandAlive`
+ * (5 s: it is the absence of response which makes the response). In series, a queue of twenty healthy runs would eat up a minute and a half of the drain's budget before it claimed anything. The probes do not touch each other — placing them abreast reduces the cost to that of ONE.
+ */
   const verdicts = await Promise.all(
     rows.map(async (row) => ({
       row,
@@ -234,11 +228,11 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
   );
 
   /**
-   * Depuis combien de temps ce tour ne donne-t-il plus signe de vie, et depuis
-   * combien de temps a-t-il été claim ? `null` (date absente) = on ne sait pas, et
-   * on ne borne alors rien : les deux replis temporels ci-dessous ne servent qu'à
-   * fermer un cas qu'on a CONSTATÉ ouvert, jamais à conclure sur une ignorance.
-   */
+ * How long has this tower not given any sign of life, and since
+ * how long has it been claimed? `null` (date absent) = we do not know, and
+ * we then limit nothing: the two temporal folds below only serve to
+ * close a case that we have OBSERVED to be open, never to conclude on ignorance.
+ */
   const agedMs = (at: string | null): number | null => {
     const ms = at ? Date.parse(at) : NaN;
     return Number.isFinite(ms) ? Date.now() - ms : null;
@@ -246,36 +240,36 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
 
   let reaped = 0;
   for (const { row, alive } of verdicts) {
-    if (alive === true) continue; // le process vit : on ne touche à rien.
+    if (alive === true) continue; // the process lives: we don’t touch anything.
     if (alive === null) {
       /**
-       * On ne SAIT PAS — et il y a maintenant trois façons de ne pas savoir.
-       *
-       * **Sans identifiant de commande**, il n'y a rien à interroger : la boucle
-       * n'a jamais été lancée, et passé le délai d'amorçage c'est un fait, pas une
-       * présomption. **Avec un identifiant**, c'est la plateforme qui ne répond
-       * pas : on lui laisse deux heures avant d'en tirer une conclusion.
-       *
-       * **ET SUR UNE MACHINE, ON NE SAURA JAMAIS (MIN-355).** Un run local n'a ni
-       * microVM ni commande — il n'y a personne à qui poser la question. Il tombait
-       * donc dans la première branche, celle du « jamais lancé », qui n'est fondée
-       * que parce qu'un amorçage de microVM dure vingt secondes : trois minutes de
-       * silence (le seuil de la requête ci-dessus) sur un run vieux d'un quart
-       * d'heure suffisaient à le déclarer mort, à publier « l'agent s'est arrêté »
-       * et à facturer du compute. Un Mac qui dort quatre minutes perdait son tour,
-       * là où un run cloud dont l'API ne répond pas a droit à deux heures.
-       *
-       * On lui donne donc la MÊME borne que ce cas-là, et pour la même raison : ce
-       * qui manque n'est pas un verdict plus audacieux, c'est une borne. Le harness
-       * écrit `last_activity_at` toutes les deux minutes
-       * (`SUPERVISOR_CHECKPOINT_SAVE_INTERVAL_MS`) ; deux heures, c'est soixante
-       * battements manqués — et un tour qui reviendrait après, s'il revient,
-       * retrouve sa session au repos sur son dernier checkpoint plutôt qu'un run
-       * `running` que personne ne joue.
-       */
-      // Il y a quelqu'un à interroger, ou personne par nature : dans les deux cas
-      // le silence est ce qui décide, et il a deux heures. Reste le seul cas où
-      // une réponse était DUE et n'est jamais venue — une microVM sans commande.
+ * We don't KNOW — and there are now three ways to not know.
+ *
+ * **Without a command identifier**, there is nothing to query: the loop
+ * was never started, and after the boot timeout it's a fact, not a
+ * presumption. **With an identifier**, it is the platform that does not respond
+ *: we give it two hours before drawing a conclusion.
+ *
+ * **AND ON A MACHINE, WE WILL NEVER KNOW (MIN-355).** A local run has neither
+ * microVM nor command — there is no one to whom ask the question. It fell
+ * therefore in the first branch, that of "never launched", which is only based
+ * because a microVM boot lasts twenty seconds: three minutes of
+ * silence (the threshold of the request above) on a run a quarter of an hour old
+ * was enough to declare it dead, to publish “the agent has stopped”
+ * and to charge compute. A Mac that sleeps for four minutes loses its turn,
+ * where a cloud run whose API does not respond is entitled to two hours.
+ *
+ * We therefore give it the SAME limit as this case, and for the same reason: this
+ * which is missing is not a more daring verdict, it is a terminal. The harness
+ * writes `last_activity_at` every two minutes
+ * (`SUPERVISOR_CHECKPOINT_SAVE_INTERVAL_MS`); two hours is sixty
+ * missed beats — and a turn that would come back afterwards, if it comes back,
+ * finds its session idle at its last checkpoint rather than a run
+ * `running` that no one plays.
+ */
+      // There is someone to question, or no one by nature: in both cases
+      // silence is what decides, and it has two hours. There remains the only case where
+      // a response was DUE and never came — a microVM without a command.
       const lost =
         row.local_exec || row.loop_command_id
           ? (agedMs(row.last_activity_at) ?? 0) >= VM_LOOP_LOST_AFTER_MS &&
@@ -285,25 +279,25 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
     }
 
     /**
-     * LE STAMP D'ABORD, LE FIL ENSUITE — l'ordre inverse de celui d'origine, et
-     * c'est une leçon de production.
-     *
-     * L'argument d'avant était : « si le stamp échoue derrière, l'utilisateur
-     * aura quand même lu pourquoi son tour s'est arrêté ». Mais la seule façon
-     * dont ce stamp échoue est sa garde `status in ('running')`, c'est-à-dire :
-     * **quelqu'un a conclu ce run entre-temps**. Le tour ne s'est alors pas
-     * arrêté du tout — il vient de finir. On écrivait donc un message d'échec
-     * dans une conversation qui s'était bien terminée, et c'est ce qu'on a lu
-     * sur le run de la PR 51.
-     *
-     * Ce qu'on perd est un cas qui n'existe pas : un stamp refusé laissait, dans
-     * l'ancien ordre, une erreur orpheline ; dans celui-ci, le passage suivant du
-     * drain reverra le run s'il est vraiment resté `running`.
-     *
-     * Le CHECKPOINT N'EST PAS TOUCHÉ : celui qui est en base est le dernier
-     * sauvegardé périodiquement par la boucle, à une frontière de round sûre.
-     * C'est exactement ce depuis quoi le tour suivant doit repartir.
-     */
+ * STAMP FIRST, THREAD THEN — the reverse order of the original, and
+ * it's a production lesson.
+ *
+ * The argument before was: "if the stamp fails behind, the user
+ * will still have read why for his turn stopped.” But the only way
+ * this stamp fails is by keeping it `status in ('running')`, that is:
+ * **someone finished this run in the meantime**. The round then didn't stop
+ * at all — it just ended. So we wrote a failure message
+ * in a conversation that ended well, and that's what we read
+ * on the run of PR 51.
+ *
+ * What we lose is a case that doesn't exist: a refused stamp left, in
+ * the old order, an orphan error; in this one, the following passage of the
+ * drain will see the run again if it really remained `running`.
+ *
+ * The CHECKPOINT IS NOT TOUCHED: the one at the base is the last
+ * saved periodically by the loop, at a boundary of safe round.
+ * This is exactly what the next round should start from.
+ */
     const stamped = await stampRun(row.id, {
       status: "completed",
       error_message: "The agent process stopped unexpectedly",
@@ -322,38 +316,38 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
     }).catch(() => {});
 
     /**
-     * LE COMPUTE DE LA MICROVM, ET C'EST ICI QUE PERSONNE NE LE FACTURERAIT.
-     *
-     * Dans la nouvelle forme, le wall-clock de la VM est tenu par la boucle et
-     * remonté dans son rapport de fin de tour (`vm-rest.ts`) — et la fonction ne
-     * facture plus rien de son côté.
-     * Un tour dont le process meurt ne rend jamais ce rapport : sans cette ligne,
-     * le réveil, le clone et les heures de microVM sortent de tous les compteurs
-     * en silence. C'est la moitié compute de la facture, sur le seul chemin où
-     * l'on ne s'en apercevrait pas.
-     *
-     * PAS DE DOUBLE COMPTE AVEC LE RAPPORT DE FIN DE TOUR, et c'est l'ORDRE des
-     * deux gestes qui le garantit, pas la chance. Ici on stampe PUIS on facture
-     * (`if (!stamped) continue`, juste au-dessus) ; `landVmTurn` fait l'inverse.
-     * Un tour qui rend son rapport pendant qu'on le croit mort fait donc échouer
-     * notre garde (`status in ('running')`) et on n'écrit rien. Et le cas
-     * symétrique ne se pose pas : notre verdict EST « le process a rendu », or un
-     * process qui a rendu ne poste plus.
-     *
-     * De `started_at` à MAINTENANT, et c'est un MINORANT malgré les apparences :
-     * la SESSION de microVM survit à son process de boucle, et ne sera coupée que
-     * par le reaper d'inactivité — ~5 min après ce stamp, qui vient tout juste de
-     * faire passer le run au repos. On facture donc moins que ce que la
-     * plateforme nous facture, ce qui est le bon sens de l'erreur.
-     *
-     * ET RIEN DU TOUT POUR UN RUN LOCAL (MIN-355) : il n'y a pas eu de microVM.
-     * Facturer ici du `sandbox_compute` sur des minutes de Mac reviendrait à faire
-     * payer à l'utilisateur une machine qu'il a lui-même fournie — et à la faire
-     * payer précisément sur le chemin de l'incident, celui qu'on ne relit pas.
-     * La borne est SERVEUR, jamais un chiffre que le harness rendrait : c'est le
-     * même principe que `sandboxMs`, et il vaut d'autant plus ici que la machine
-     * est celle qu'on soupçonne.
-     */
+ * THE COMPUTE OF THE MICROVM, AND THIS IS WHERE NOBODY WOULD CHARGE IT.
+ *
+ * In the new form, the wall-clock of the VM is held by the loop and
+ * reported in its end-of-turn report (`vm-rest.ts`) — and the function ne
+ * charges nothing more on its side.
+ * A round whose process dies never returns this report: without this line,
+ * wake-up, clone and microVM hours exit all counters
+ * silently. This is the computed half of the bill, on the only path where
+ * one would not notice.
+ *
+ * NO DOUBLE COUNTING WITH THE END OF TURN REPORT, and it is the ORDER of the
+ * two gestures which guarantees it, not luck. Here we stamp THEN we invoice
+ * (`if (!stamped) continue`, just above); `landVmTurn` does the opposite.
+ * A turn which returns its report while we believe it to be dead therefore fails
+ * our guard (`status in ('running')`) and we write nothing. And the symmetrical case
+ * does not arise: our verdict IS "the process has rendered", or a
+ * process which has rendered no longer posts.
+ *
+ * From `started_at` to NOW, and it is a MINORANT despite appearances :
+ * the microVM SESSION survives its loop process, and will only be cut by
+ * by the inactivity reaper — ~5 min after this stamp, which has just finished
+ * making the run idle. We therefore charge less than what the
+ * platform charges us, which is the common sense of the error.
+ *
+ * AND NOTHING AT ALL FOR A LOCAL RUN (MIN-355): there was no microVM.
+ * Charge here for `sandbox_compute` on Mac minutes would amount to making
+ * paying the user for a machine that he himself provided - and making it
+ * paying precisely on the path to the incident, the one that we do not reread.
+ * The terminal is SERVER, never a figure that the harness would give: it is the
+ * same principle as `sandboxMs`, and it is all the more valid here if the machine
+ * is the one we suspect.
+ */
     const startedMs = row.started_at && !row.local_exec ? Date.parse(row.started_at) : NaN;
     if (Number.isFinite(startedMs) && Date.now() > startedMs) {
       const billTo: AiUsageBillTo = row.created_by
@@ -361,8 +355,8 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
         : { unattributed: `run ${row.id} sans created_by` };
       await recordSandboxUsage({
         runId: row.run_id ?? row.id,
-        // Même bande de seq que les deux autres écrivains de compute : un run
-        // migré ne collisionne pas avec les lignes de son passé.
+        // Same seq strip as the other two compute writers: one run
+        // migrated does not collide with the lines of its past.
         seq: SANDBOX_USAGE_SEQ_BASE + row.continuations,
         billTo,
         feature: row.routine_id ? "routine_compute" : "sandbox_compute",
@@ -374,24 +368,24 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
     }
 
     /**
-     * LA COLONNE DE DÉPENSE, RECOLLÉE AU LEDGER — ce que `landVmTurn` fait sur le
-     * chemin sain (`vm-rest.ts`, le `Math.max` du rapport de fin de tour) et que
-     * personne ne faisait ici. `cost_usd` n'est écrite que par les sorties saines :
-     * un tour dont le process meurt laissait donc la ligne à ce qu'elle valait
-     * avant le tour, c'est-à-dire **zéro** sur un premier tour — alors que le
-     * ledger, lui, porte chaque round facturé avant l'accident.
-     *
-     * Mesuré en production sur la fenêtre d'observation d'opencode (MIN-286) :
-     * trois runs moissonnés, `cost_usd = 0` sur les trois, **0,159 $** au ledger.
-     * Rien n'était perdu pour la facture (`finance.ts` lit le ledger) ni pour les
-     * plafonds (`control-plane.ts` et `execute.ts` prennent déjà le MAX des deux),
-     * mais la ligne du run — ce qu'un humain relit après un incident — annonçait
-     * gratuit un tour qui ne l'était pas.
-     *
-     * APRÈS `recordSandboxUsage`, pour que la somme relue porte aussi le compute
-     * qu'on vient d'écrire. Et un MAX, pas une affectation : le ledger et la
-     * colonne sont deux minorants, une dépense affichée ne recule jamais.
-     */
+ * THE SPEND COLUMN, PACKED TO THE LEDGER — what `landVmTurn` does on the
+ * healthy path (`vm-rest.ts`, the `Math.max` of the end-of-turn report) and that
+ * no one did here. `cost_usd` is only written by healthy outputs:
+ * a round whose process dies therefore leaves the line at what it was worth
+ * before the round, that is to say **zero** on a first round — while the
+ * ledger carries each round billed before the accident.
+ *
+ * Measured in production on the opencode observation window (MIN-286):
+ * three runs harvested, `cost_usd = 0` on the three, **$0.159** to the ledger.
+ * Nothing was lost for the bill (`finance.ts` reads the ledger) nor for the
+ * ceilings (`control-plane.ts` and `execute.ts` already take the MAX of the two),
+ * but the run line — what a human rereads after an incident — announced
+ * free a round which does not was not.
+ *
+ * AFTER `recordSandboxUsage`, so that the sum read also carries the compute
+ * that we have just written. And a MAX, not an allocation: the ledger and the
+ * column are two lower bounds, a displayed expense never goes backwards.
+ */
     const spent = await spentFromLedger(row.run_id ?? row.id).catch(() => null);
     if (spent != null && spent > row.cost_usd) {
       await service.from("agent_runs").update({ cost_usd: spent }).eq("id", row.id);
@@ -408,13 +402,13 @@ export async function reapDeadVmRuns(service: SupabaseClient): Promise<{ reaped:
 }
 
 /**
- * Restreint une requête de file au périmètre du déploiement courant (MIN-165).
- * Les DEUX requêtes de file passent par ici : si elles divergeaient, un drain
- * verrait du travail dû qu'il n'a pas le droit de claim et bouclerait à vide.
+ * Restricts a queue request to the scope of the current deployment (MIN-165).
+ * BOTH queue requests pass through here: if they diverged, a drain
+ * would see work due to not having the right to claim and would exit empty.
  *
- * Générique NON contraint, avec le cast à l'intérieur : contraindre `Q` sur la
- * forme de `is`/`eq` fait exploser l'inférence sur le builder Postgrest (TS2589),
- * et renvoyer une interface minimale ferait perdre `order`/`limit` à l'appelant.
+ * Generic NOT constrained, with the cast inside: constraining `Q` on the
+ * form of `is`/`eq` explodes the inference on the Postgrest builder (TS2589),
+ * and returning a minimal interface would lose `order`/`limit` to the caller.
  */
 function scopeToDeployment<Q>(query: Q, scope: string | null): Q {
   const q = query as unknown as {
@@ -430,51 +424,51 @@ function scopeToDeployment<Q>(query: Q, scope: string | null): Q {
 export async function drainAgentRuns(
   service: SupabaseClient,
   opts?: {
-    /** Budget mural de CE drain. Doit rester sous le `maxDuration` de la route qui
-     *  l'appelle : c'est l'appelant, et lui seul, qui connaît sa propre durée. */
+    /** CE drain wall budget. Must remain under the `maxDuration` of the route which
+ * calls it: it is the caller, and he alone, who knows his own duration. */
     budgetMs?: number;
   },
 ): Promise<{ claimed: number }> {
   const deadline = Date.now() + (opts?.budgetMs ?? DRAIN_TIME_BUDGET_MS);
-  // Périmètre du déploiement (MIN-165) : résolu UNE fois, il ne bouge pas d'un
-  // tour de boucle à l'autre. Les deux balayeurs restent GLOBAUX : ni le constat
-  // de décès ni la coupe d'une microVM au repos ne dépendent de la logique
-  // d'agent, et les scoper laisserait la VM d'un run preview tourner jusqu'au
+  // Deployment perimeter (MIN-165): resolved ONE time, it does not move one
+  // loop turn to another. The two sweepers remain OVERALL: neither the observation
+  // death nor cutting of a microVM at rest does not depend on logic
+  // of agent, and the scoper would let the VM of a run preview run until
   // timeout de session.
   const scope = currentDeploymentScope();
   let claimed = 0;
 
-  // LE chien de garde, et il n'y en a plus qu'un (MIN-225) : `requeueStuckRuns`
-  // présumait la mort d'un run après vingt minutes de silence, ce qui n'a aucun
-  // sens pour un tour qui vit dans la microVM et peut travailler une heure sans
-  // écrire un event. Celui-ci ne présume rien, il DEMANDE à la plateforme si le
-  // process vit. Best-effort — un constat de décès raté se rattrape au passage
-  // suivant, une exception ici tuerait le drain entier.
+  // THE watchdog, and there is only one left (MIN-225): `requeueStuckRuns`
+  // presumed the death of a run after twenty minutes of silence, which has no
+  // meaning for a tower that lives in the microVM and can work for an hour without
+  // write an event. This does not assume anything, it ASKS the platform if the
+  // process lives. Best effort — a failed death certificate is made up for in passing
+  // next, an exception here would kill the entire drain.
   await reapDeadVmRuns(service).catch((err) =>
     console.error("[agent-drain] vm watchdog failed:", (err as Error).message),
   );
-  // Libère les microVM des sessions au repos inactives (garde le snapshot).
+  // Release microVMs from inactive idle sessions (keep snapshot).
   await reapIdleSandboxes(service).catch((err) =>
     console.error("[agent-drain] reap failed:", (err as Error).message),
   );
 
   while (deadline - Date.now() >= MIN_LAUNCH_BUDGET_MS) {
     /**
-     * ⚠ **LE DRAIN NE PREND JAMAIS UN RUN LOCAL** (MIN-293).
-     *
-     * `agent_runs.local_exec` est figé au lancement et dit « ce tour joue sur la
-     * machine de quelqu'un » ([local-exec-scope.ts](local-exec-scope.ts)). Sans
-     * cette ligne, le drain le claim comme les autres et le fait tourner dans une
-     * microVM : l'utilisateur a demandé sa machine, il obtient le cloud, **et
-     * rien ne le lui dit**. C'est le défaut exact que ce chantier combat partout
-     * ailleurs — quelque chose qui se dégrade sans qu'on le sache.
-     *
-     * Le corollaire est assumé et il appartient à MIN-294 : tant que la présence
-     * et le claim n'existent pas, un run local qu'aucune machine ne réclame reste
-     * `queued`. C'est un run en attente, pas un run trahi — et le repli vers le
-     * cloud, quand il existera, se décidera AVANT le premier tour (décision D1),
-     * jamais en le jouant au mauvais endroit en silence.
-     */
+ * ⚠ **DRAIN NEVER TAKES A LOCAL RUN** (MIN-293).
+ *
+ * `agent_runs.local_exec` is frozen on launch and says "this trick is playing on someone's
+ * machine" ([local-exec-scope.ts](local-exec-scope.ts)). Without
+ * this line, the drain claims it like the others and runs it in a
+ * microVM: the user requested his machine, he obtains the cloud, **and
+ * nothing tells him**. This is the exact fault that this site is fighting everywhere
+ * elsewhere — something that is deteriorating without us knowing it.
+ *
+ * The corollary is assumed and it belongs to MIN-294: as long as the presence
+ * and the claim do not exist, a local run that no machine claims remains
+ * `queued`. It's a pending run, not a betrayed run — and the fallback to the
+ * cloud, when it exists, will be decided BEFORE the first turn (D1 decision),
+ * never by playing it in the wrong place silently.
+ */
     const { data } = await scopeToDeployment(
       service
         .from("agent_runs")

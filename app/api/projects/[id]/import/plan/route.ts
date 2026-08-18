@@ -11,36 +11,36 @@ import type { ImportMember } from "@/lib/import/types";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** Les membres tels que le prompt les numérote — même ordre que `context.members`,
- *  parce que c'est ce rang que le modèle renvoie. */
+/** Members as the prompt numbers them — same order as `context.members`,
+ * because it is this rank that the model returns. */
 const digestMembers = (members: ImportMember[]): CsvDigestMember[] =>
   members.map((m, i) => ({
     ref: i + 1,
     name: [m.name, m.email].filter(Boolean).join(" ") || `member ${i + 1}`,
   }));
 
-// Un seul appel modèle, sur un résumé de quelques milliers de tokens.
+// A single model call, on a summary of a few thousand tokens.
 export const maxDuration = 60;
 
 /**
- * POST /api/projects/[id]/import/plan — propose une correspondance de colonnes
- * pour un CSV en cours de dépôt. Corps : `{ digest }`, le résumé du fichier
- * construit dans le navigateur (`lib/import/digest.ts`), jamais le fichier.
+ * POST /api/projects/[id]/import/plan — provides column matching
+ * for a CSV being submitted. Body: `{ digest }`, the file summary
+ * built in the browser (`lib/import/digest.ts`), never the file.
  *
- * Rend `{ mapping }`, une PROPOSITION que l'aperçu fusionne avec ce que la
- * détection par en-têtes avait déjà trouvé, affiche, et laisse corriger. Rien
- * n'est écrit ici : la route ne fait que lire un résumé et appeler un modèle.
- * `mapping: null` quand la passe n'est pas disponible (drapeau coupé, clé
- * absente, budget épuisé, appel raté) — l'import se fait alors comme avant.
+ * Returns `{ mapping }`, a PROPOSAL that the preview merges with what the
+ * detection by headers had already found, displayed, and left to correct. Nothing
+ * is written here: the route just reads a summary and calls a model.
+ * `mapping: null` when the pass is not available (flag cut, key
+ * absent, budget exhausted, call missed) — the import is then done as before.
  *
- * Réservée au owner, comme l'import lui-même : c'est lui qui paye l'appel.
+ * Reserved for the owner, like the import itself: it is he who pays for the call.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
-  // Une dizaine de fichiers déposés par minute suffit largement, et le geste
-  // n'est pas répétable : un fichier déposé = un appel.
+  // Around ten files uploaded per minute are more than enough, and the gesture
+  // is not repeatable: one file submitted = one call.
   const rl = checkSessionRateLimit(auth.user.id, "project-import-plan", { limit: 10 });
   if (!rl.allowed) {
     return NextResponse.json(
@@ -70,15 +70,15 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("importInvalidCsv") }, { status: 400 });
   }
 
-  // Budget épuisé : pas d'erreur, pas de proposition. L'utilisateur garde son
-  // import et son tableau de correspondance, il le remplit à la main.
+  // Budget exhausted: no error, no proposal. The user keeps his
+  // import and its correspondence table, he fills it in by hand.
   if (!(await hasUsageBudget(auth.user.id, "automations"))) {
     return NextResponse.json({ mapping: null });
   }
 
-  // Les membres et les catégories viennent du SERVEUR, jamais du digest : ce
-  // sont eux qui referment la boucle — le modèle répond des rangs de membres,
-  // et c'est cette liste-ci qui les retransforme en identifiants.
+  // The members and categories come from the SERVER, never from the digest: this
+  // they are the ones who close the loop — the model responds to the ranks of members,
+  // and it is this list which transforms them back into identifiers.
   const context = await loadImportContext(id, auth.user.id);
 
   const mapping = await proposeImportMapping({

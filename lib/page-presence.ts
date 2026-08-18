@@ -1,69 +1,69 @@
 "use client";
 
-// QUI EST SUR QUELLE PAGE (MIN-271) — la présence, et rien d'autre.
+// WHO IS ON WHICH PAGE (MIN-271) — presence, and nothing else.
 //
-// Un canal par PROJET, pas un par page. La charge utile porte `pageId`, donc un
-// seul abonnement suffit à savoir qui lit quoi dans tout le wiki : l'arbre peut
-// poser sa pastille sur n'importe quelle ligne sans ouvrir vingt canaux, et
+// One channel per PROJECT, not one per page. The payload carries `pageId`, so a
+// a single subscription is enough to know who reads what throughout the wiki: the tree can
+// place your pad on any line without opening twenty channels, and
 // changer de page ne rejoint rien — on se contente de retrack.
 //
-// Ce que la présence apporte, et que la sauvegarde versionnée ne peut pas
-// donner : savoir AVANT d'écrire qu'on n'est pas seul. Le 409 et la fusion par
-// bloc rattrapent la collision ; l'avatar en haut de page l'évite.
+// What presence brings, and which versioned backup cannot
+// give: know BEFORE writing that you are not alone. The 409 and the merger by
+// block catches the collision; the avatar at the top of the page avoids it.
 //
-// Le fichier est séparé du hook React, et pas par goût du découpage : c'est ce
-// qui rend le CYCLE DE VIE testable (lib/page-presence.test.ts). Un abonnement
-// qui ne redescend jamais de son canal est le défaut qu'on a déjà livré une
-// fois (PR 48) — il compilait, il passait le type-check, et personne ne pouvait
-// l'attraper autrement qu'en montant puis démontant pour de vrai.
+// The file is separated from the React hook, and not for the sake of division: that's what
+// which makes the LIFE CYCLE testable (lib/page-presence.test.ts). A subscription
+// which never comes down from its channel is the fault that we have already delivered a
+// times (PR 48) — he compiled, he passed the type-check, and no one could
+// catch it other than by going up and then taking it down for real.
 
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 
 import { getSupabase } from "./supabase";
 
-/** Le topic. Privé, autorisé par `can_access_project` — cf. la migration
-    20261127090000_page_presence. */
+/** The topic. Private, authorized by `can_access_project` — cf. migration
+ 20261127090000_page_presence. */
 export const pagePresenceTopic = (projectId: string) =>
   `page-presence:${projectId}`;
 
-/** Ce qu'on diffuse de soi : le strict nécessaire pour dessiner un avatar. */
+/** What we broadcast about ourselves: what is strictly necessary to draw an avatar. */
 export interface PagePresenceState {
   userId: string;
   pageId: string;
 }
 
-/** Les pages regardées, par pageId → les ids des AUTRES personnes présentes. */
+/** The pages viewed, by pageId → the ids of OTHER people present. */
 export type PagePresenceMap = Map<string, string[]>;
 
-/** Le minimum qu'on demande au client Supabase — de quoi mentir dans un test
-    sans reconstruire la moitié du SDK. */
+/** The minimum we ask of the Supabase client — enough to lie in a test
+ without rebuilding half of the SDK. */
 type PresenceClient = Pick<SupabaseClient, "channel" | "removeChannel"> & {
   realtime: { setAuth: () => Promise<unknown> };
 };
 
 export interface PagePresenceHandle {
-  /** Se déclarer sur une autre page, sans quitter le canal. */
+  /** Declare yourself on another page, without leaving the channel. */
   move: (pageId: string) => void;
-  /** Quitter. À appeler AU DÉMONTAGE, sans exception. */
+  /** To leave. To be called FOR DISASSEMBLY, without exception. */
   close: () => void;
 }
 
 /**
- * Rejoint la présence du projet et s'y déclare.
+ * Joins the presence of the project and declares himself there.
  *
- * `onChange` reçoit à chaque mouvement les AUTRES, jamais soi — pas même depuis
- * un autre onglet.
+ * `onChange` receives the OTHERS with each movement, never yourself — not even from
+ * another tab.
  *
- * Le tri se fait ici plutôt que chez chaque appelant, et c'est le sens même de
- * l'indicateur qui l'impose : il répond « je ne suis pas seul », et une réponse
- * qui compte le lecteur est fausse quoi qu'elle affiche. Un deuxième onglet à
- * soi allumait une pastille dans l'arbre en face d'une page que personne d'autre
- * ne lisait — la présence disait quelque chose, et ce quelque chose était faux.
- * Filtrer chez l'appelant demandait à chacun de se souvenir de qui il est ;
- * celui de l'arbre ne le savait même pas.
+ * Sorting is done here instead that in each caller, and this is the very meaning of
+ * the indicator which imposes it: he answers "I am not alone", and a response
+ * which counts the reader is false whatever it displays. A second tab at
+ * self lit a tablet in the tree in front of a page that no one else
+ * read — the presence said something, and that something was wrong.
+ * Filtering in the caller asked everyone to remember who they are;
+ * the one in the tree did not know not even.
  *
- * Le token est poussé sur la socket AVANT le join, comme partout ailleurs dans
- * ce dépôt : un canal privé rejoint avec le jeton anon est refusé, en silence.
+ * The token is pushed to the socket BEFORE the join, like everywhere else in
+ * this repository: a private channel joined with the anon token is refused, silently.
  */
 export function openPagePresence({
   projectId,
@@ -89,10 +89,10 @@ export function openPagePresence({
     for (const entries of Object.values(state)) {
       for (const entry of entries) {
         if (!entry?.pageId || !entry.userId) continue;
-        // Soi, sous toutes ses connexions : la présence dit qui d'AUTRE lit.
+        // Self, under all its connections: the presence says who ELSE reads.
         if (entry.userId === userId) continue;
         const people = pages.get(entry.pageId);
-        // Un même compte ouvert deux fois sur la même page n'est qu'un avatar.
+        // The same account opened twice on the same page is just an avatar.
         if (people) {
           if (!people.includes(entry.userId)) people.push(entry.userId);
         } else {
@@ -104,15 +104,15 @@ export function openPagePresence({
   };
 
   void supabase.realtime.setAuth().then(() => {
-    // Parti pendant que le token montait : ne rejoindre rien. C'est le cas
-    // qu'un démontage rapide (on ouvre une page, on en ouvre une autre)
-    // produit à tous les coups.
+    // Left while the token was rising: join nothing. This is the case
+    // a quick disassembly (open one page, open another)
+    // produced every time.
     if (closed) return;
-    // Pas de `presence.key` : la clé par défaut est celle de la CONNEXION, donc
-    // deux onglets du même compte sont deux entrées distinctes. Une clé bâtie
-    // sur l'utilisateur les ferait se recouvrir, et fermer l'un retirerait
-    // l'avatar de l'autre. Le dédoublonnage se fait à la lecture (`publish`),
-    // là où il ne coûte rien.
+    // No `presence.key`: the default key is CONNECTION, so
+    // two tabs in the same account are two separate entries. A built key
+    // on the user would make them overlap, and closing one would remove
+    // the avatar of the other. Deduplication is done on reading (`publish`),
+    // where it costs nothing.
     const ch = supabase.channel(pagePresenceTopic(projectId), {
       config: { private: true },
     });
@@ -137,9 +137,9 @@ export function openPagePresence({
       if (channel) {
         const ch = channel;
         channel = null;
-        // `untrack` d'abord : `removeChannel` ferme la socket côté client, mais
-        // c'est le `leave` explicite qui retire l'avatar chez les AUTRES tout
-        // de suite plutôt qu'à l'expiration du présentiel.
+        // `untrack` first: `removeChannel` closes the socket on the client side, but
+        // it is the explicit `leave` which removes the avatar from OTHERS all
+        // immediately rather than at the end of the in-person session.
         void ch.untrack();
         void supabase.removeChannel(ch);
       }

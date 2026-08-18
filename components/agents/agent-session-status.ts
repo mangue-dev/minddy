@@ -2,18 +2,18 @@ import type { MessageKey } from "@/lib/i18n-keys";
 import type { AgentRunStatus } from "@/lib/agent-api";
 
 /**
- * L'état d'une session d'agent, en UN mot — celui qu'affiche le tooltip de la
- * liste (page Agents). Il ne dit pas « terminé » : il reflète la GÉNÉRATION en
- * cours, puis l'ÉTAT DE LA PULL REQUEST. Priorité :
- *   1. génération en cours → « En cours » ;
- *   2. PR fusionnée → « PR fusionnée » ;
- *   3. PR ouverte (ou brouillon, ou état inconnu) → « PR disponible » ;
- *   4. PR fermée → « PR fermée » ;
- *   5. sinon (pas de PR) → échec / annulation / au repos.
+ * The status of an agent session, in ONE word — the one displayed in the agent session tooltip.
+ * list (Agents page). It does not say “finished”: it reflects the GENERATION in
+ * course, then the STATUS OF THE PULL REQUEST. Priority :
+ * 1. generation in progress → “In progress”;
+ * 2. Merged PR → “Merged PR”;
+ * 3. PR open (or draft, or unknown state) → “PR available”;
+ * 4. PR closed → “PR closed”;
+ * 5. otherwise (no PR) → fail/cancel/at rest.
  *
- * C'était un BADGE coloré posé sur chaque ligne de la liste. La ligne ne porte
- * plus que son titre : l'état s'y réduit au point de couleur (non lu / réponse
- * attendue) et au spinner, et le mot exact attend le survol.
+ * It was a colorful BADGE placed on each line of the list. The line does not carry
+ * more than its title: the state is reduced to the point of color (unread / response
+ * expected) and to the spinner, and the exact word waits for hover.
  */
 export function agentSessionStatusKey({
   status,

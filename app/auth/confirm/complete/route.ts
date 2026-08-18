@@ -12,22 +12,22 @@ import { buildAuthFailureRedirect, completeAuthArrival } from "@/lib/server/auth
 import { SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
 
 /**
- * Le geste qui ouvre la session, au bout du lien e-mail (MIN-345).
+ * The gesture that opens the session, at the end of the e-mail link (MIN-345).
  *
- * Trois choses doivent être vraies pour arriver au bout, et chacune couvre ce
- * que les autres ne couvrent pas :
+ * Three things must be true to get to the end, and each one covers this
+ * that the others do not cover:
  *
- * 1. **C'est un `POST`.** Une navigation `GET` s'obtient en faisant cliquer sur
- *    un lien ; c'était exactement la faille.
- * 2. **Le cookie d'attente est là.** Il est `SameSite=Lax`, donc un `POST` parti
- *    d'un autre site ne l'emporte pas : le formulaire auto-soumis d'un attaquant
- *    arrive les mains vides, et il n'y a rien à consommer.
- * 3. **L'`Origin` est la nôtre.** La ceinture de la bretelle précédente, pour le
- *    jour où un navigateur relâche `SameSite` ou une extension s'en mêle.
+ * 1. **It's a `POST`.** A `GET` navigation is obtained by clicking on
+ * a link ; that was exactly the flaw.
+ * 2. **The wait cookie is there.** It is `SameSite=Lax`, so a `POST` gone
+ * from another site does not win: an attacker's self-submitted form
+ * arrives empty-handed, and there is nothing to consume.
+ * 3. **The `Origin` is ours.** The belt from the previous strap, for the
+ * day when a browser releases `SameSite` or an extension gets involved.
  *
- * Redirection en **303** : le navigateur doit repartir en `GET` sur la
- * destination. Le 307 par défaut de `NextResponse.redirect` rejouerait le
- * `POST` sur `/home`, qui n'en veut pas.
+ * Redirection in **303**: the browser must restart in `GET` on the
+ * destination. The default 307 of `NextResponse.redirect` would replay the
+ * `POST` on `/home`, who doesn't want it.
  */
 export async function POST(request: NextRequest) {
   const origin = new URL(request.url).origin;
@@ -46,8 +46,8 @@ export async function POST(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      // `Secure` sur les cookies de session (MIN-351, lib/session-cookies.ts) :
-      // c'est ici que la session s'ouvre au bout d'un lien e-mail.
+      // `Secure` on session cookies (MIN-351, lib/session-cookies.ts):
+      // this is where the session opens after an e-mail link.
       cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll() {
@@ -62,9 +62,9 @@ export async function POST(request: NextRequest) {
     }
   );
 
-  // Le jeton part du navigateur quoi qu'il advienne ensuite : réussi il est
-  // consommé, raté il ne vaut plus rien. Le laisser traîner ne ferait qu'offrir
-  // une seconde chance à qui a mis la main dessus.
+  // The token leaves the browser whatever happens next: successful it is
+  // consumed, missed it is no longer worth anything. Leaving it lying around would only offer
+  // a second chance to whoever gets their hands on it.
   cookieStore.set(AUTH_PENDING_COOKIE, "", authPendingCookieOptions(0));
 
   try {
@@ -74,10 +74,10 @@ export async function POST(request: NextRequest) {
     });
     if (error) {
       console.error("[auth/confirm] verifyOtp failed:", error.message);
-      // Un lien de confirmation d'inscription mérite mieux que « ce lien de
-      // connexion n'est plus valide » : il est à usage unique et peut avoir
-      // été consommé par l'antivirus de messagerie du destinataire, qui
-      // pré-visite les liens. Le message dédié dit quoi faire (MIN-117).
+      // A registration confirmation link deserves better than “this link
+      // connection is no longer valid”: it is for single use and may have
+      // been consumed by the recipient's email antivirus, which
+      // pre-visit the links. The dedicated message says what to do (MIN-117).
       return redirect303(
         buildAuthFailureRedirect(
           origin,
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/** Même destination, mais en 303 — voir l'en-tête du fichier. */
+/** Same destination, but in 303 — see file header. */
 function redirect303(response: NextResponse): NextResponse {
   return NextResponse.redirect(response.headers.get("location") ?? "/login", 303);
 }

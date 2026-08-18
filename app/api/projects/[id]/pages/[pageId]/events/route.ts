@@ -6,18 +6,18 @@ import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 type RouteContext = { params: Promise<{ id: string; pageId: string }> };
 
 /**
- * GET /api/projects/[id]/pages/[pageId]/events — l'activité d'une page (MIN-278).
+ * GET /api/projects/[id]/pages/[pageId]/events — page activity (MIN-278).
  *
- * Le jumeau exact de la route d'activité d'un objectif : même table
- * (`issue_events`, polymorphe), même hydratation des acteurs MCP, même tri
- * chronologique. La garde est la RLS — `issue_events_select` a gagné sa branche
- * « page dont je suis membre du projet » dans la migration — d'où le client de
- * SESSION et non le client service : le contrôle d'accès est déjà écrit une
- * fois, en base, pour les trois autres parents.
+ * The exact twin of a goal's activity route: same table
+ * (`issue_events`, polymorphic), same hydration of MCP actors, same sorting
+ * chronological. The guard is the RLS — `issue_events_select` has won its branch
+ * “page of which project I am a member” in the migration — hence the client
+ * SESSION and not the client service: the access control is already written once
+ * times, as a base, for the other three parents.
  *
- * La page CORBEILLÉE garde son activité lisible, comme elle garde son historique
- * (MIN-277) : la policy des pages ne cache que la ligne, et « ça a disparu, qui
- * l'a supprimée ? » est justement la question d'après l'incident.
+ * The BASKET page keeps its activity readable, just as it keeps its history
+ * (MIN-277): the page policy only hides the line, and “it has disappeared, which
+ * deleted it? » is precisely the question after the incident.
  */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { pageId } = await params;

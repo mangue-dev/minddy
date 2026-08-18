@@ -5,17 +5,17 @@ import { browserTimeZone } from "./global-board-api";
 import type { HomeSummaryResponse } from "./types";
 
 /**
- * Charge utile du tableau de bord (MIN-89).
+ * Dashboard payload (MIN-89).
  *
- * L'accueil montait `useGlobalBoardQuery()` — c'est-à-dire GET /api/me/board,
- * tous les tickets complets de tous mes projets — pour afficher trois compteurs
- * et trois lignes de cycle. Cette query lit la même chose depuis
- * GET /api/me/summary, où les compteurs sont des `count` SQL et où seuls les
- * tickets du cycle courant sont matérialisés, en colonnes réduites.
+ * Home was going up `useGlobalBoardQuery()` — i.e. GET /api/me/board,
+ * all full tickets for all my projects — to show three counters
+ * and three cycle lines. This query reads the same thing from
+ * GET /api/me/summary, where the counters are `count` SQL and where only the
+ * tickets of the current cycle are materialized, in reduced columns.
  *
- * Fraîcheur : le pont temps réel invalide `["me","summary"]` sur tout événement
- * de ticket, de cycle ou de feedback (lib/realtime-provider.tsx) — donc pas de
- * staleTime court ici, l'horloge n'a plus rien à rattraper.
+ * Freshness: the real-time bridge is invalid `["me","summary"]` on any event
+ * ticket, cycle or feedback (lib/realtime-provider.tsx) — so no
+ * staleTime is running here, the clock has nothing left to catch up with.
  */
 export const HOME_SUMMARY_KEY = ["me", "summary"] as const;
 

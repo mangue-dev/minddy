@@ -48,12 +48,12 @@ export type ViewResult =
       rawMessage?: string;
     };
 
-/** Exporté : Numo annonce exactement ces tris dans ses schémas d'outils
-    (lib/server/assistant/tools.ts), plutôt que d'en tenir une deuxième copie. */
+/** Exported: Numo announces exactly these sorts in its tool schemas
+ (lib/server/assistant/tools.ts), rather than maintaining a second copy. */
 export const VIEW_SORTS: readonly ViewSort[] = ["manual", "priority", "created", "updated", "due"];
 
-// Bornes MIN-118 : le nom d'une vue reste court (tronqué au-delà), un filtre ne
-// référence jamais plus d'ids que ça, et un id (uuid ou sentinelle "@me") non plus.
+// Terminals MIN-118: the name of a view remains short (truncated beyond), a filter does not
+// never reference more ids than that, and an id (uuid or sentinel "@me") either.
 const MAX_NAME_LENGTH = 200;
 const MAX_FILTER_VALUES = 100;
 const MAX_ID_LENGTH = 100;
@@ -393,18 +393,18 @@ export async function updateView({
 /**
  * Idempotent baseline seeding, called from the GET list handlers (one code
  * path that also covers Numo/MCP callers and members joining later):
- *  - the caller's kind='my' system view ("Mes tickets"), if missing;
- *  - the default view ("Toutes") when the scope has no custom view at all
- *    (bootstrap only — the UI forbids deleting the last custom view).
+ * - the caller's kind='my' system view ("My tickets"), if missing;
+ * - the default view ("All") when the scope has no custom view at all
+ * (bootstrap only — the UI forbids deleting the last custom view).
  * projectId null = the global (cross-project) scope, where both are personal.
  * Failures are logged, never thrown: listing views must not break on a seed.
  */
-// (project,user) pairs déjà réconciliés dans cette instance. Les vues baseline
-// (système « Mes tickets » + défaut « Toutes ») ne sont jamais supprimées une
-// fois créées, donc une fois qu'on les a vérifiées/semées pour une paire, les 2
-// SELECT de contrôle sont inutiles sur tous les chargements suivants — et
-// `GET /views` est sur le chemin critique de chaque board. Memo à vie du
-// process (un cold start revérifie une fois), posé UNIQUEMENT sur un run propre.
+// (project,user) peers already reconciled in this instance. Baseline views
+// (“My tickets” system + default “All”) are never deleted once
+// times created, so once we have checked/seeded them for a pair, the 2
+// SELECT controls are useless on all subsequent loads — and
+// `GET /views` is on the critical path of each board. Lifetime memo from
+// process (a cold start rechecks once), placed ONLY on a clean run.
 const seededBaselines = new Set<string>();
 
 export async function ensureBaselineViews({
@@ -421,7 +421,7 @@ export async function ensureBaselineViews({
   const memoKey = `${projectId ?? "global"}:${userId}`;
   if (seededBaselines.has(memoKey)) return;
   const service = getServiceClient();
-  // Un accroc de lecture laisse la paire non-memoïsée → réessai au prochain GET.
+  // A reading hitch leaves the pair unmemorized → retry at the next GET.
   let clean = true;
 
   let systemQuery = service
@@ -465,7 +465,7 @@ export async function ensureBaselineViews({
   const { count, error: countError } = await customQuery;
   if (countError) {
     console.error("[views] custom views count failed:", countError.message);
-    return; // non-memoïsé : on revérifiera au prochain GET
+    return; // not memorized: we will check again at the next GET
   }
   if (!count) {
     const { error } = await service.from("views").insert({
@@ -483,6 +483,6 @@ export async function ensureBaselineViews({
     }
   }
 
-  // Baseline confirmée/semée sans accroc → on saute les contrôles la prochaine fois.
+  // Baseline confirmed/sown without a hitch → we skip the checks next time.
   if (clean) seededBaselines.add(memoKey);
 }

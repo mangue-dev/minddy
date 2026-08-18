@@ -9,7 +9,7 @@ import { takeGeneration, type CapturedGeneration } from "./llm-proxy";
 import { opencodeAnchorFile, opencodeToolDir } from "./opencode-config";
 import { cloudLayout, layoutForRoot } from "../harness-layout";
 
-/** Le layout du run testé — celui d'une microVM (MIN-354). */
+/** The layout of the tested run — that of a microVM (MIN-354). */
 const LAYOUT = cloudLayout();
 const ANCHOR_FILE = opencodeAnchorFile(LAYOUT);
 const TOOL_DIR = opencodeToolDir(LAYOUT);
@@ -20,24 +20,24 @@ import type { AgentUserMessage } from "@/lib/agent-mentions";
 import { VM_PROTOCOL_VERSION, type VmJob } from "./protocol";
 
 /**
- * MIN-286 lot 1 — le superviseur, joué de bout en bout sur un FAUX serveur
- * opencode qui rejoue un vrai tour capturé.
+ * MIN-286 lot 1 — the supervisor, played from start to finish on a FAKE server
+ * opencode which replays a real captured trick.
  *
- * La forme du test suit celle de [turn.test.ts](turn.test.ts) : on ne moque que
- * ce qui SORT du process (le serveur opencode, le plan de contrôle, le dépôt), et
- * le superviseur tourne pour de vrai — y compris sa traduction d'events, qui rend
- * ici exactement les mêmes frames que le binaire a émises.
+ * The form of the test follows that of [turn.test.ts](turn.test.ts): we only mock
+ * what OUT of the process (the opencode server, the control plane, the repository), and
+ * the supervisor runs for real — including its events translation, which renders
+ * here exactly the same frames that the binary emitted.
  *
- * Ce qu'il garde : un tour **rend toujours un rapport**, il **écrit son décor
- * avant de démarrer**, il **compte chaque round au ledger**, il **pousse**, et il
- * **exporte son journal** pour que le tour suivant reparte d'ailleurs.
+ * What he keeps: a tour **always returns a report**, he **writes his decor
+ * before starting**, he **counts each round on the ledger**, he **pushes**, and he
+ * **exports his log** so that the next round starts from elsewhere.
  */
 
 const FIXTURE = join(__dirname, "fixtures", "opencode-turn.ndjson");
 
-/** La session du tour capturé — celle que le faux serveur doit rendre. */
+/** The captured tour session — the one the fake server should render. */
 const PARENT = "ses_00999fb08ffe1CH0pZOeoJnbos";
-/** Une session FILLE, comme le `task` d'opencode en ouvre une. */
+/** A DAUGHTER session, like opencode's `task`, opens one. */
 const CHILD = "ses_fille";
 
 function fixtureLines(): string[] {
@@ -45,9 +45,9 @@ function fixtureLines(): string[] {
 }
 
 /**
- * Le flux du faux serveur : le tour capturé, avec les frames du test INSÉRÉES
- * AVANT le `session.idle` de la mère. Les mettre après ne prouverait rien — la
- * boucle est déjà sortie, et le test passerait sans jamais les lire.
+ * The fake server flow: the tour captured, with the test frames INSERTED
+ * BEFORE mother's `session.idle`. Putting them after would prove nothing — the
+ * loop is already exited, and the test would pass without ever reading them.
  */
 function sseBody(): string {
   const lines = fixtureLines();
@@ -58,7 +58,7 @@ function sseBody(): string {
     .join("");
 }
 
-/** Un round assistant terminé, tel que `message.updated` le rend. */
+/** A completed assistant round, as `message.updated` renders it. */
 function childRound(over: Record<string, unknown> = {}): string {
   return JSON.stringify({
     type: "message.updated",
@@ -113,65 +113,65 @@ const h = {
   events: [] as Array<{ type: string; payload: Record<string, unknown> }>,
   usage: [] as Array<Record<string, unknown>>,
   live: [] as Array<Record<string, unknown>>,
-  /** Routes appelées sur le faux serveur, dans l'ordre. */
+  /** Routes called on the fake server, in order. */
   routes: [] as string[],
-  /** Les incréments de journal POUSSÉS par le superviseur (`POST /journal`). */
+  /** Log increments PUSHED by supervisor (`POST /journal`). */
   journal: [] as Array<{ sessionId: string; events: Record<string, unknown>[] }>,
-  /** Le journal que `/sync/history` rend. */
+  /** The log that `/sync/history` returns. */
   history: [] as Record<string, unknown>[],
-  /** Les checkpoints sauvegardés EN COURS DE TOUR (le battement de cœur). */
+  /** Checkpoints saved DURING THE TOUR (the heartbeat). */
   checkpoints: [] as Record<string, unknown>[],
-  /** Les plans miroités vers le ticket (`update_plan`). */
+  /** The plans mirrored to the ticket (`update_plan`). */
   plansSynced: [] as Record<string, unknown>[][],
-  /** Le plan de contrôle refuse la sauvegarde : le run a été conclu ailleurs. */
+  /** The control plan refuses the save: the run was concluded elsewhere. */
   runClosed: false,
   replayed: null as Record<string, unknown> | null,
   healthy: true,
   pushed: true,
-  /** Frames ajoutées au flux capturé (sessions filles, erreurs…). */
+  /** Frames added to the captured flow (child sessions, errors, etc.). */
   extraFrames: [] as string[],
-  /** Ce que le superviseur a répondu aux permissions, dans l'ordre. */
+  /** What the supervisor responded to permissions, in order. */
   permissionReplies: [] as Array<{ id: string; reply: string; message?: string }>,
-  /** Questions écartées (`/question/:id/reject`). */
+  /** Questions dismissed (`/question/:id/reject`). */
   questionsRejected: [] as string[],
-  /** Questions RÉPONDUES (`/question/:id/reply`) — le chemin local (MIN-364, D7). */
+  /** ANSWERED Questions (`/question/:id/reply`) — the local path (MIN-364, D7). */
   questionsAnswered: [] as Array<{ id: string; answers: string[][] }>,
-  /** Le serveur refuse la réponse à une permission. */
+  /** The server refuses the response to a permission. */
   permissionReplyFails: false,
   proxyClosed: false,
-  /** L'horloge du superviseur : `tick` la fait avancer à chaque lecture, ce qui
-   *  est le seul moyen de faire tomber un sondage (steering, budget) dans un test
-   *  qui dure trois millisecondes. À 0, le temps ne bouge pas. */
+  /** The supervisor clock: `tick` advances it with each reading, which
+   * is the only way to make a survey fall (steering, budget) in a test
+   * which lasts three milliseconds. At 0, time does not move. */
   clock: 1_000_000,
   tick: 0,
-  /** La file de steering du plan de contrôle, drainée par `pullSteering`. */
+  /** The control plane steering queue, drained by `pullSteering`. */
   steering: [] as string[],
-  /** Le drapeau d'interruption (« Stop »). */
+  /** The interrupt flag (“Stop”). */
   interrupt: false,
-  /** Combien de fois le superviseur l'a EFFACÉ (un stop + message le consomme). */
+  /** How many times the supervisor DELETED it (a stop + message consumes it). */
   interruptCleared: 0,
-  /** Les prompts postés à la session, dans l'ordre. */
+  /** Prompts posted to the session, in order. */
   prompts: [] as string[],
-  /** Combien de fois la session a été coupée. */
+  /** How many times the session was cut. */
   aborts: 0,
-  /** Ce que le plan de contrôle répond sur le restant de budget. */
+  /** What the control plan answers about the remaining budget. */
   remainingUsd: null as number | null,
   budgetReads: 0,
-  /** Les tools que le superviseur exécute lui-même, tels qu'il les donne au pont. */
+  /** The tools that the supervisor executes himself, as he gives them to the bridge. */
   supervisorTools: {} as Record<string, (args: Record<string, unknown>) => Promise<unknown>>,
-  /** Appels au plan de contrôle (`cp.callTool`), dans l'ordre. */
+  /** Calls to the control plane (`cp.callTool`), in order. */
   toolCalls: [] as Array<{ name: string; body: Record<string, unknown> }>,
-  /** Les commandes passées au dépôt, dans l'ordre — l'ordre EST ce qui se teste
-   *  pour les jobs de fond : tués avant le `git add -A`, jamais après. */
+  /** Orders placed at the depot, in order — order IS what is tested
+   * for background jobs: killed before `git add -A`, never after. */
   exec: [] as string[],
-  /** Ce que le proxy local a vu passer chez le fournisseur. */
+  /** What the local proxy saw happening at the provider. */
   generations: [] as CapturedGeneration[],
-  /** Le diff que `git diff` rend — vide sauf quand un test veut y mettre un
-   *  secret (MIN-360 : le scan qui refuse le push). */
+  /** The diff that `git diff` renders — empty except when a test wants to put a
+   * secret (MIN-360: the scan that refuses the push). */
   diff: "",
-  /** Les fichiers de conventions présents à la racine du dépôt (MIN-360). */
+  /** The conventions files present at the root of the repository (MIN-360). */
   repoInstructions: [] as string[],
-  /** La base SQLite d'opencode est-elle encore sur la machine ? (MIN-361) */
+  /** Is the opencode SQLite database still on the machine? (MIN-361) */
   localStore: true,
 };
 
@@ -197,8 +197,8 @@ function cp(): ControlPlaneClient {
       return !h.runClosed;
     },
     pullSteering: async () => h.steering.splice(0).map((text) => ({ text })),
-    // La vraie surface REMET en file : un message drainé et non posté redevient un
-    // message en attente, et c'est lui qui re-queue le run.
+    // The real surface RETURNS: a drained and unposted message becomes a new one
+    // message waiting, and it is he who re-queues the run.
     pushSteering: async (texts) => {
       h.steering.push(...texts.map((message) => message.text));
     },
@@ -220,34 +220,34 @@ function cp(): ControlPlaneClient {
       return { result: { url: "https://forge/pr/7" }, success: true };
     },
     repoAuthUrl: async () => "https://x-access-token:fresh@github.com/org/repo.git",
-    // Jamais appelée d'un job de microVM (cf. `isLocalJob`) : ce décor ne joue
-    // que des tours cloud, et cette ligne est là pour que le contrat soit
-    // complet, pas pour être exercée.
+    // Never called a microVM job (see `isLocalJob`): this decor does not play a role
+    // only cloud towers, and this line is there so that the contract is
+    // complete, not to be exercised.
     llmKey: async () => "sk-or-v1-clef-de-test",
     reportTurn: async () => {},
   };
 }
 
-/** Le dépôt : seuls `commitAndPush` et `changedFiles` le touchent ici. */
+/** The deposit: only `commitAndPush` and `changedFiles` affect it here. */
 function host(layout = LAYOUT) {
   return {
-    // Le host porte son layout depuis MIN-354 : c'est de lui que viennent le
-    // dépôt (chemins relatifs des éditions) et le dossier de sorties de tools
-    // (les trois fichiers d'un job de fond).
+    // The host carries its layout from MIN-354: it is from him that the
+    // repository (relative paths of editions) and the tools output folder
+    // (the three files of a background job).
     layout,
     exec: vi.fn(async (command: string) => {
       h.exec.push(command);
-      // MIN-361 : la sonde de la base SQLite d'opencode, sur le chemin local —
-      // c'est elle qui décide entre reprendre la session et en ouvrir une neuve.
+      // MIN-361: the opencode SQLite database probe, on the local path —
+      // it is she who decides between resuming the session and opening a new one.
       if (command.startsWith("test -f")) {
         return { exitCode: h.localStore ? 0 : 1, stdout: "", stderr: "" };
       }
-      // Le lanceur d'un job de fond rend son PID sur stdout (`background.ts`).
+      // The launcher of a background job returns its PID to stdout (`background.ts`).
       if (command.includes("setsid")) return { exitCode: 0, stdout: "4242\n", stderr: "" };
-      // MIN-360, puis MIN-364 : la sonde des `AGENTS.md` / `CLAUDE.md`, racine ET
-      // sous-dossiers, qu'on rend explicitement depuis
-      // qu'`OPENCODE_DISABLE_PROJECT_CONFIG` les retire. `find` rend des chemins
-      // préfixés `./`, comme le vrai.
+      // MIN-360, then MIN-364: the `AGENTS.md` / `CLAUDE.md` probe, root AND
+      // subfolders, which we explicitly return from
+      // that `OPENCODE_DISABLE_PROJECT_CONFIG` removes them. `find` renders paths
+      // prefixed `./`, like the real one.
       if (command.startsWith("find .")) {
         return {
           exitCode: 0,
@@ -255,12 +255,12 @@ function host(layout = LAYOUT) {
           stderr: "",
         };
       }
-      // `commitAndPush` enchaîne add / commit / push / rev-parse ; `changedFiles`
-      // fait un diff. Ce qui compte est que le superviseur les appelle, pas ce
-      // que git répond — la mécanique est testée chez `repo-host`.
-      // MIN-358, mode dépôt courant : la préparation vérifie que le dossier EST
-      // la racine du dépôt (les deux lignes doivent coïncider), et le commit
-      // passe par la plomberie plutôt que par `git commit`.
+      // `commitAndPush` chains add / commit / push / rev-parse; `changedFiles`
+      // makes a difference. What matters is that the supervisor calls them, not what
+      // that git responds to — the mechanics are tested at `repo-host`.
+      // MIN-358, current filing mode: preparation checks that the file IS
+      // the root of the repository (the two lines must coincide), and the commit
+      // goes through the plumbing rather than `git commit`.
       if (command.includes("show-toplevel")) {
         return { exitCode: 0, stdout: `${layout.repoDir}\n${layout.repoDir}\n`, stderr: "" };
       }
@@ -278,8 +278,8 @@ function host(layout = LAYOUT) {
       return { exitCode: 0, stdout: "", stderr: "" };
     }),
     writeFiles: vi.fn(async () => {}),
-    // Le contenu des fichiers de conventions : le superviseur les LIT lui-même
-    // depuis MIN-364, pour pouvoir plafonner ce qui entre dans le prompt système.
+    // The content of the convention files: the LIT supervisor himself
+    // from MIN-364, to be able to cap what enters the system prompt.
     readFile: vi.fn(async (path: string) => {
       const relative = path.startsWith(`${layout.repoDir}/`)
         ? path.slice(layout.repoDir.length + 1)
@@ -290,7 +290,7 @@ function host(layout = LAYOUT) {
   } as never;
 }
 
-/** Le faux serveur opencode : les routes que le client appelle vraiment. */
+/** The fake opencode server: the routes that the client really calls. */
 function fakeFetch(): typeof fetch {
   return (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
@@ -301,8 +301,8 @@ function fakeFetch(): typeof fetch {
       return new Response(JSON.stringify({ healthy: h.healthy }), { status: 200 });
     }
     if (path === "/session" && init?.method === "POST") {
-      // La session rendue est CELLE DU FLUX capturé : c'est ce qui fait du tour
-      // rejoué un tour de la mère, et non un tour d'inconnue.
+      // The session rendered is THAT OF THE FLOW captured: this is what makes the trick
+      // replayed a mother's trick, and not a stranger's trick.
       return new Response(JSON.stringify({ id: PARENT, projectID: "p" }), { status: 200 });
     }
     if (path.endsWith("/prompt_async")) {
@@ -331,10 +331,10 @@ function fakeFetch(): typeof fetch {
     }
     if (path === "/sync/history") {
       /**
-       * INCRÉMENTAL, comme le vrai : le corps est le curseur par agrégat, et un
-       * event déjà exporté ne repart pas. Sans ça, la sauvegarde périodique et
-       * l'export de fin rendraient deux fois le même journal, et un test sur la
-       * reprise passerait sur un doublon qui n'existe pas en production.
+       * INCREMENTAL, like the real one: the body is the cursor by aggregate, and a
+       * event already exported does not restart. Without it, the periodic backup and
+       * the end export would render the same log twice, and a test on the
+       * recovery would pass on a duplicate which does not exist in production.
        */
       const since = JSON.parse(String(init?.body ?? "{}")) as Record<string, number>;
       const events = h.history.filter((e) => {
@@ -358,9 +358,9 @@ function fakeFetch(): typeof fetch {
 }
 
 /**
- * Le flux `/event` ROMPU en vol — le seul signe qu'un serveur opencode est mort
- * (il n'y a pas d'autre canal : `startServer` ne surveille pas le process). La
- * lecture rejette, et la rejection traverse la boucle jusqu'au `catch` du tour.
+ * The `/event` stream BROKEN in flight — the only sign that an opencode server is dead
+ * (there is no other channel: `startServer` does not monitor the process). There
+ * read rejects, and the rejection goes through the loop until `catch` of the round.
  */
 function tornEventStream(): typeof fetch {
   const base = fakeFetch();
@@ -395,39 +395,39 @@ function deps(): SupervisorDeps {
     client: (baseUrl) =>
       new OpencodeClient({ baseUrl, directory: LAYOUT.repoDir, fetchImpl: fakeFetch() }),
     /**
-     * Le proxy, en mémoire : il rend ce que `h.generations` déclare et applique
-     * le MÊME appariement que le vrai (`takeGeneration`), qui est testé à part
-     * chez [llm-proxy.test.ts](llm-proxy.test.ts). Ce qu'on garde ici, c'est le
-     * branchement — que la ligne de ledger porte l'identifiant et le coût vus
-     * chez le fournisseur.
+     * The proxy, in memory: it renders what `h.generations` declares and applies
+     * the SAME pairing as the real one (`takeGeneration`), which is tested separately
+     * at [llm-proxy.test.ts](llm-proxy.test.ts). What we keep here is the
+     * connection — that the ledger line carries the identifier and cost seen
+     * at the supplier.
      */
     startProxy: async () => ({
       url: "http://127.0.0.1:9999",
       take: (round) => takeGeneration(h.generations, round),
-      // Ce que le vrai proxy rend en fin de tour : les générations que plus aucun
-      // round n'a prises — un round coupé en vol (MIN-286 lot 3, §2.23).
+      // What the real proxy returns at the end of the round: the generations that no longer have
+      // round not taken — a round cut in flight (MIN-286 lot 3, §2.23).
       drain: () => h.generations.splice(0, h.generations.length),
       settle: async () => {},
       close: async () => {
         h.proxyClosed = true;
       },
     }),
-    // Le pont de tools est le VRAI ([tool-bridge.ts](tool-bridge.ts)), sur un
-    // port éphémère — comme en production depuis MIN-354, où plus aucun port
-    // n'est écrit en dur. On ne l'intercepte que pour GARDER les tools que le
-    // superviseur exécute lui-même : `create_pr` n'est appelable que par le
-    // modèle, et aucun modèle ne tourne ici.
+    // The tools bridge is the REAL one ([tool-bridge.ts](tool-bridge.ts)), on a
+    // ephemeral port — as in production since MIN-354, where no more ports
+    // is not written in hard copy. We only intercept it to KEEP the tools that the
+    // supervisor executes itself: `create_pr` can only be called by the
+    // model, and no model is running here.
     startToolBridge: async (opts) => {
       h.supervisorTools = (opts.supervisorTools ?? {}) as typeof h.supervisorTools;
       return await startToolBridge(opts);
     },
     toolBridgePort: 0,
-    // Le port du serveur : le faux client ne l'écoute pas, mais il est
-    // OBLIGATOIRE depuis MIN-354 — un défaut fixe est exactement la collision
-    // entre deux runs qu'on vient de supprimer.
+    // The server port: the fake client does not listen to it, but it is
+    // MANDATORY since MIN-354 — a fixed fault is exactly the collision
+    // between two runs that we just deleted.
     opencodePort: 4096,
-    // Le vrai plafond est à 60 s : ce test-ci vérifie ce qui se passe QUAND il
-    // tombe, pas combien de temps il dure.
+    // The real ceiling is at 60 s: this test checks what happens WHEN it
+    // when it falls, not how long it lasts.
     bootTimeoutMs: 300,
     now: () => (h.clock += h.tick),
   };
@@ -540,7 +540,7 @@ beforeEach(() => {
   h.localStore = true;
 });
 
-/** Une demande de permission, telle qu'opencode la publie sur le flux. */
+/** A permission request, such as opencode posts it to the feed. */
 function permissionFrame(
   permission: string,
   metadata: Record<string, unknown>,
@@ -577,26 +577,26 @@ describe("le décor, posé avant le premier octet de serveur", () => {
     expect(JSON.parse(h.env.OPENCODE_CONFIG_CONTENT).model).toBe(
       "minddy/deepseek/deepseek-v4-flash",
     );
-    // Les 32 tools générés lisent cette variable : sans elle, ils rendent une
-    // phrase au modèle au lieu d'appeler quoi que ce soit.
+    // The 32 tools generated read this variable: without it, they return a
+    // sentence to the model instead of calling anything.
     expect(h.env[SUPERVISOR_URL_ENV]).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
     expect(h.env.OPENCODE_CONFIG_CONTENT).not.toContain("ghs_SECRET");
   });
 
   /**
-   * MIN-360 — les deux écoutilles ferment l'auto-découverte de plugins et de
-   * config depuis le dépôt, c'est-à-dire de l'exécution de code arbitraire écrit
-   * par quiconque peut committer. Ce qu'elles emportent au passage — les
-   * conventions du dépôt — est rendu NOMMÉ, et sans rien exécuter.
+   * MIN-360 — both hatches close auto-discovery of plugins and
+   * config from the repository, i.e. from executing arbitrary code written
+   * by anyone who can commit. What they carry along the way — the
+   * conventions of the deposit — is made NAMED, and without executing anything.
    */
   it("rend les conventions du dépôt qu'il vient de retirer à l'auto-découverte", async () => {
     h.repoInstructions = ["AGENTS.md"];
     await run();
     expect(h.env.OPENCODE_PURE).toBe("1");
     expect(h.env.OPENCODE_DISABLE_PROJECT_CONFIG).toBe("1");
-    // UN document, écrit par nous, hors du dépôt : c'est ce qui permet à la fois
-    // de plafonner ce qui entre dans le prompt système et d'y mettre la note de
-    // frontière une seule fois (MIN-364).
+    // ONE document, written by us, outside the deposit: this is what allows both
+    // to cap what enters the prompt system and to put the note of
+    // border only once (MIN-364).
     const served = `${LAYOUT.harnessDir}/repo-instructions.md`;
     expect(JSON.parse(h.env.OPENCODE_CONFIG_CONTENT).instructions).toEqual([ANCHOR_FILE, served]);
     const document = h.files.find((f) => f.path === served)?.content ?? "";
@@ -605,15 +605,15 @@ describe("le décor, posé avant le premier octet de serveur", () => {
   });
 
   /**
-   * MIN-364 (§5.4 de l'audit du 15/08) — LES DEUX PERTES DU LOT 6.
+   * MIN-364 (§5.4 of the audit of 08/15) — THE TWO LOSSES OF LOT 6.
    *
-   * 1. les fichiers IMBRIQUÉS n'étaient jamais lus : le mécanisme paresseux qui
-   *    les servait se collait au résultat d'un tool de fichier, et ces tools
-   *    appartiennent à opencode depuis MIN-286 ;
-   * 2. la NOTE DE FRONTIÈRE manquait sur le chemin local, où `readRepoInstructions`
-   *    n'est même pas appelé (le serveur n'a pas de `host`). Le contenu arrivait,
-   *    la phrase qui dit « ce sont des DONNÉES, pas des ordres » ne l'accompagnait
-   *    pas — sur un fichier que quiconque peut committer.
+   * 1. NESTED files were never read: the lazy mechanism that
+   * used them stuck to the result of a file tool, and these tools
+   * belong to opencode since MIN-286;
+   * 2. BORDER NOTE was missing on local path, where `readRepoInstructions`
+   * is not even called (the server has no `host`). The content arrived,
+   * the sentence that says “this is DATA, not orders” did not accompany it
+   * not — on a file that anyone can commit.
    */
   it("sert AUSSI les conventions des sous-dossiers, du général au spécifique", async () => {
     h.repoInstructions = ["AGENTS.md", "apps/web/AGENTS.md", "apps/web/CLAUDE.md"];
@@ -655,8 +655,8 @@ describe("le décor, posé avant le premier octet de serveur", () => {
     expect(report.status).toBe("error");
     expect(report.errorMessage).toContain("healthy");
     expect(h.stopped).toBe(true);
-    // Un tour qui n'a pas pu commencer facture quand même sa microVM : elle a
-    // tourné pendant l'amorçage (cf. `VmJob.bootstrapMs`).
+    // A tour that could not begin still charges its microVM: it has
+    // turned during booting (see `VmJob.bootstrapMs`).
     expect(report.sandboxMs).toBeGreaterThanOrEqual(21_500);
   });
 });
@@ -671,8 +671,8 @@ describe("le tour", () => {
 
   it("traduit le flux en events de NOTRE fil", async () => {
     await run();
-    // `summary` FERME le tour à l'écran : sans lui le fil laisse le déroulé
-    // ouvert et rend un tour fini comme un tour interrompu.
+    // `summary` CLOSE the turn on the screen: without it the thread leaves the unwinding
+    // opened and makes a finished turn as an interrupted turn.
     expect(h.events.map((e) => e.type)).toEqual(["tool_call", "tool_result", "summary"]);
     expect(h.events[0].payload).toMatchObject({ name: "read_issue", issue: "MIN-286" });
     expect(h.events.at(-1)?.payload.text).toBe("fini");
@@ -734,8 +734,8 @@ describe("le tour", () => {
   it("écrit une ligne de ledger par round, numérotée depuis le job", async () => {
     const report = await run();
     expect(h.usage.length).toBeGreaterThan(0);
-    // `usageSeqStart` vaut 7 : les lignes du tour continuent la numérotation du
-    // run, elles ne repartent pas de zéro (c'est ce que `seq` sert à dire).
+    // `usageSeqStart` is 7: the lines of the round continue the numbering of the
+    // run, they do not start from scratch (that's what `seq` is used to say).
     expect(h.usage[0].seq).toBe(7);
     expect(h.usage[0].estimated).toBe(false);
     expect(report.costUsd).toBeGreaterThan(0);
@@ -746,30 +746,30 @@ describe("le tour", () => {
   });
 
   /**
-   * MIN-286 — `prompt_tokens` AU SENS DU FOURNISSEUR, cache compris.
+   * MIN-286 — `prompt_tokens` IN THE PROVIDER'S TERMS, including cache.
    *
-   * L'`input` d'opencode l'EXCLUT (identité mesurée au lot 0 :
-   * `input + cache.read + cache.write = native_tokens_prompt`). Écrit tel quel, il
-   * donnait à la colonne un sens différent de celui de l'autre moteur — et un taux
-   * de hit `cached_tokens / prompt_tokens` qui pouvait dépasser 1.
+   * The `input` of opencode EXCLUDES it (identity measured at batch 0:
+   * `input + cache.read + cache.write = native_tokens_prompt`). Written as is, it
+   * gave the column a direction different from that of the other engine - and a rate
+   * of hit `cached_tokens / prompt_tokens` which could exceed 1.
    */
   it("écrit `prompt_tokens` cache compris, comme la boucle maison", async () => {
     h.extraFrames = [childRound({ sessionID: PARENT, id: "msg_mere_tokens" })];
     await run();
     const line = h.usage.find((l) => Number(l.promptTokens) === 115);
-    // 100 d'entrée + 10 relus dans le cache + 5 écrits dedans.
+    // 100 input + 10 read back into cache + 5 written into it.
     expect(line).toBeDefined();
     expect(line!.cachedTokens).toBe(10);
     expect(line!.cacheWriteTokens).toBe(5);
     expect(line!.totalTokens).toBe(135);
-    // La lecture qui donne son sens à la colonne (migration MIN-242).
+    // The reading which gives meaning to the column (MIN-242 migration).
     expect(Number(line!.cachedTokens)).toBeLessThanOrEqual(Number(line!.promptTokens));
   });
 
   it("porte le `generation_id` et le coût FACTURÉ vus par le proxy", async () => {
-    // Opencode n'expose l'identifiant de génération nulle part (dossier §2.6) :
-    // c'est le proxy local, et lui seul, qui le rend au ledger. Le coût suit la
-    // même règle — celui du fournisseur prime sur celui qu'opencode calcule.
+    // Opencode does not expose the generation identifier anywhere (folder §2.6):
+    // it is the local proxy, and it alone, which returns it to the ledger. The cost follows the
+    // same rule — that of the supplier takes precedence over that which opencode calculates.
     h.generations = [
       { id: "gen-abc", model: "", outputTokens: null, costUsd: 0.0042, usage: null },
     ];
@@ -781,14 +781,14 @@ describe("le tour", () => {
       h.usage.reduce((sum, l) => sum + Number(l.cost ?? 0), 0),
       10,
     );
-    // Le proxy est fermé avec le serveur : un port qui reste ouvert dans une
-    // microVM qui enchaîne les tours est un port de moins au tour suivant.
+    // The proxy is closed with the server: a port which remains open in a
+    // microVM which continues the rounds is one port less in the next round.
     expect(h.proxyClosed).toBe(true);
   });
 
   it("retombe sur le coût d'opencode quand le fournisseur n'a rien dit", async () => {
-    // Le cas normal aujourd'hui : OpenRouter ne rend le coût qu'avec
-    // `usage: {include: true}`, et un provider BYOK peut ne rien rendre du tout.
+    // The normal case today: OpenRouter only returns the cost with
+    // `usage: {include: true}`, and a BYOK provider may not return anything at all.
     h.generations = [
       { id: "gen-xyz", model: "", outputTokens: null, costUsd: null, usage: null },
     ];
@@ -800,15 +800,15 @@ describe("le tour", () => {
 
   it("facture le round COUPÉ EN VOL, que opencode ne facture pas", async () => {
     /**
-     * MIN-286 lot 3 (§2.23), et c'est un trou de facturation, pas un détail :
-     * mesuré sur le binaire, un round avorté (« Stop », plafond, deadline,
-     * question) rend `finish: null`, `cost: 0`, `tokens: 0` — donc AUCUNE ligne —
-     * alors que le fournisseur a bel et bien facturé. Le proxy, lui, l'a vu
-     * passer : il ne coupe pas l'amont quand le client s'en va.
+     * MIN-286 lot 3 (§2.23), and it's a billing hole, not a detail:
+     * measured on the binary, an aborted round (“Stop”, ceiling, deadline,
+     * question) returns `finish: null`, `cost: 0`, `tokens: 0` — so NO lines —
+     * even though the supplier has indeed invoiced. The proxy saw it
+     * pass: it does not cut upstream when the client leaves.
      *
-     * Le modèle de la génération ne concorde avec aucun round : `take` la laisse
-     * donc dans la file, exactement comme le fait un round qui ne rendra jamais
-     * son message assistant.
+     * The generation model does not match any round: `take` leaves it
+     * so in the queue, exactly like a round that will never return
+     * its assistant message.
      */
     h.generations = [
       {
@@ -833,9 +833,9 @@ describe("le tour", () => {
     expect(orphan!.cost).toBe(0.002827);
     expect(orphan!.promptTokens).toBe(2032);
     expect(orphan!.completionTokens).toBe(159);
-    // Ce n'est pas un calcul : c'est le montant lu chez le fournisseur.
+    // This is not a calculation: it is the amount read from the supplier.
     expect(orphan!.estimated).toBe(false);
-    // Et il compte dans la dépense du tour, donc dans le quota et la facture.
+    // And it counts in the expense of the tour, therefore in the quota and the invoice.
     expect(report.costUsd).toBeCloseTo(
       h.usage.reduce((sum, l) => sum + Number(l.cost ?? 0), 0),
       10,
@@ -844,13 +844,13 @@ describe("le tour", () => {
 
   it("facture le round coupé MÊME quand le tour meurt en vol", async () => {
     /**
-     * MIN-286 — la reprise du round coupé vivait sur le seul chemin heureux.
+     * MIN-286 — the resumption of the cut round lived on the only happy path.
      *
-     * Or c'est l'autre qui la rend nécessaire : la seule façon d'apprendre que le
-     * serveur opencode est mort est son flux `/event` qui se rompt, et le round
-     * en vol a bel et bien été facturé. L'exception sautait `recordOrphans` et le
-     * `finally` fermait le proxy derrière : la dépense partait avec la microVM,
-     * et le rapport annonçait `costUsd: 0`.
+     * But it is the other who makes it necessary: ​​the only way to learn that the
+     * opencode server is dead and its `/event` flow breaks, and the round
+     * in flight was indeed billed. The exception was skipping `recordOrphans` and the
+     * `finally` closed the proxy behind: the expense left with the microVM,
+     * and the report announced `costUsd: 0`.
      */
     h.generations = [
       {
@@ -885,13 +885,13 @@ describe("le tour", () => {
     expect(orphan, "la dépense du round en vol doit atteindre le ledger").toBeTruthy();
     expect(orphan!.cost).toBe(0.002827);
     expect(orphan!.estimated).toBe(false);
-    // …et le rapport ne dit plus « ce tour n'a rien coûté ».
+    // …and the report no longer says “this tour cost nothing”.
     expect(report.costUsd).toBeCloseTo(0.002827, 10);
   });
 
   it("n'écrit RIEN d'un round coupé dont le fournisseur n'a rien dit", async () => {
-    // Une ligne à zéro se lirait « cet appel était gratuit » et referait le trou
-    // qu'on vient de boucher. On préfère l'absence, dite dans les logs.
+    // A zero line would read “this call was free” and close the gap
+    // which we have just blocked. We prefer absence, said in the logs.
     h.generations = [
       { id: "gen-muet", model: "un-autre-modele", outputTokens: null, costUsd: null, usage: null },
     ];
@@ -900,16 +900,16 @@ describe("le tour", () => {
   });
 
   it("dit au tour suivant où en est la numérotation du ledger", async () => {
-    // `execute.ts` relit `checkpoint.usageSeq` : sans lui, le tour repris
-    // renumérote ses lignes par-dessus celles du tour d'avant.
+    // `execute.ts` rereads `checkpoint.usageSeq`: without it, the trick is repeated
+    // renumber its lines over those of the previous round.
     const report = await run();
     const parentLines = h.usage.filter((l) => Number(l.seq) < 1_000_000);
     expect((report.checkpoint as { usageSeq?: number }).usageSeq).toBe(7 + parentLines.length);
   });
 
   it("marque l'usage `estimated` quand le job n'a pas de prix", async () => {
-    // Sans prix déclaré, opencode calcule sur un catalogue qu'il n'a pas et rend
-    // zéro : une ligne à zéro marquée « exacte » serait un mensonge définitif.
+    // Without a declared price, opencode calculates on a catalog that it does not have and returns
+    // zero: a zero line marked “exact” would be a definitive lie.
     await run({ pricing: undefined });
     expect(h.usage.every((l) => l.estimated === true)).toBe(true);
   });
@@ -929,17 +929,17 @@ describe("le tour", () => {
     h.pushed = false;
     const report = await run();
     expect(report.pushError).toBeTruthy();
-    // Le travail reste dans la microVM et le tour suivant le repoussera : un
-    // échec de push n'est pas une raison de perdre l'état du tour.
+    // The work stays in the microVM and the next round will push it out: a
+    // Push failure is not a reason to lose round state.
     expect(report.checkpoint).toBeTruthy();
   });
 
   /**
-   * MIN-360 — LA FIN DE TOUR PUBLIE SANS HUMAIN DEVANT L'ÉCRAN.
+   * MIN-360 — THE END OF THE TOUR PUBLISHED WITHOUT HUMAN IN FRONT OF THE SCREEN.
    *
-   * La porte de livraison est une porte de QUALITÉ : rien n'y cherchait une
-   * fuite. Le scan est DUR — il lève avant le commit —, donc ce test garde deux
-   * choses à la fois : que rien ne part, et que le tour ne meurt pas de ça.
+   * The delivery door is a QUALITY door: nothing was looking for a
+   * leak. The scan is HARD — it raises before the commit — so this test keeps two
+   * things at once: that nothing goes away, and that the tour does not die from that.
    */
   it("refuse de pousser un diff qui ajoute une vraie clé, et le DIT", async () => {
     h.diff = [
@@ -950,10 +950,10 @@ describe("le tour", () => {
     const report = await run();
     expect(report.pushError).toMatch(/credential/i);
     expect(report.pushError).toContain("lib/x.ts");
-    // Rien n'est parti, et rien n'a même été commité.
+    // Nothing has happened, and nothing has even been committed.
     expect(report.pushed).toBeNull();
     expect(h.exec.some((c) => c.includes("push"))).toBe(false);
-    // Le tour, lui, garde son état : le modèle a travaillé, la mémoire reste.
+    // The trick keeps its state: the model has worked, the memory remains.
     expect(report.status).toBe("completed");
     expect(report.checkpoint).toBeTruthy();
   });
@@ -972,12 +972,12 @@ describe("le tour", () => {
 });
 
 /**
- * MIN-286 — CE QUE LE FIL DIT PENDANT QUE LE MODÈLE PENSE.
+ * MIN-286 — WHAT THE THREAD SAYS WHILE THE MODEL THINKS.
  *
- * Un modèle à `reasoning_level: high` peut penser des minutes avant d'écrire son
- * premier mot, et ces frames-là ne portent aucun `liveText` : sans ce chemin, le
- * direct ne partait pas du tout et le fil restait sur « l'agent travaille » — ce
- * qu'on a lu sur le premier run de production.
+ * A `reasoning_level: high` model can think for minutes before writing its
+ * first word, and these frames do not carry any `liveText`: without this path, the
+ * direct did not start at all and the thread remained on “the agent is working” — this
+ * that we read on the first production run.
  */
 describe("la réflexion, au direct", () => {
   const REASONING_PART = "prt_reflexion";
@@ -1003,7 +1003,7 @@ describe("la réflexion, au direct", () => {
 
   it("allume l'indicateur de réflexion, sans texte", async () => {
     h.extraFrames = reasoningFrames();
-    // L'horloge doit avancer : le direct est throttlé à 250 ms.
+    // The clock must move forward: the live feed is throttled to 250 ms.
     h.tick = 300;
     await run();
     const thinking = h.live.filter((l) => l.reasoningActive === true);
@@ -1025,17 +1025,17 @@ describe("la réflexion, au direct", () => {
 
 describe("le plafond de dépense", () => {
   it("coupe le tour à la frontière de round, et le DIT comme un budget", async () => {
-    // Le premier round de la fixture coûte déjà plus que ça : la garde doit
-    // mordre là, couper la session, et rendre `budget_exhausted` — pas `error`.
-    // La fonction en tire une conduite propre (event `quota_exhausted`, pas de
-    // re-queue) ; rangé sous `error`, le run serait retenté sans quoi payer.
+    // The first round of the fixture already costs more than that: the guard must
+    // bite there, kill the session, and return `budget_exhausted` — not `error`.
+    // The function derives its own behavior (event `quota_exhausted`, no
+    // re-tail); stored under `error`, the run would be retried without paying.
     const report = await run({ budgetUsd: 0.0000001 });
     expect(report.status).toBe("budget_exhausted");
     expect(h.routes.some((r) => r.endsWith("/abort"))).toBe(true);
-    // Une seule ligne de ledger : on ne paie pas un appel de plus.
+    // Just one ledger line: you don't pay for another call.
     expect(h.usage).toHaveLength(1);
-    // Le tour garde tout de même son journal — la reprise ne dépend pas de la
-    // raison de l'arrêt.
+    // The tour still keeps its log — the resumption does not depend on the
+    // reason for the shutdown.
     expect((report.checkpoint as { opencode?: unknown }).opencode).toBeTruthy();
   });
 
@@ -1046,12 +1046,12 @@ describe("le plafond de dépense", () => {
   });
 
   it("RELIT le plafond en cours de tour, il ne le snapshote pas", async () => {
-    // Rien ne réserve de budget : deux runs concurrents lisent le même restant
-    // et le prennent chacun pour plafond. Un tour de microVM dure des heures —
-    // un plafond figé au démarrage serait aveugle du début à la fin.
+    // Nothing reserves budget: two competing runs read the same remaining
+    // and each take it as their ceiling. A microVM tour lasts for hours —
+    // a fixed ceiling at start-up would be blind from start to finish.
     h.remainingUsd = 0;
-    // L'horloge avance d'une minute par lecture, pour franchir la cadence de
-    // relecture sans faire attendre le test.
+    // The clock advances by one minute per reading, to cross the cadence of
+    // rereading without making the test wait.
     let clock = Date.now();
     const report = await run(
       { budgetUsd: 1_000 },
@@ -1082,8 +1082,8 @@ describe("les garde-fous", () => {
   it("refuse `git reset --hard` et dit pourquoi AU MODÈLE", async () => {
     h.extraFrames = [
       permissionFrame("bash", { command: "git reset --hard" }),
-      // Le tool revient en erreur derrière le refus : c'est cette frame-là qui
-      // porte le refus jusqu'au fil.
+      // The tool returns an error after the refusal: it is this frame which
+      // carries the refusal to the wire.
       JSON.stringify({
         type: "message.part.updated",
         properties: {
@@ -1099,10 +1099,10 @@ describe("les garde-fous", () => {
     ];
     await run();
     expect(h.permissionReplies[0].reply).toBe("reject");
-    // Le message VOYAGE : opencode le recopie dans l'erreur du tool. Sans lui, le
-    // modèle ne sait pas ce qu'on lui reproche et réessaie.
+    // The TRAVEL message: opencode copies it in the tool error. Without him, the
+    // model doesn't know what she's being blamed for and tries again.
     expect(h.permissionReplies[0].message).toContain("throws away uncommitted work");
-    // Et le refus reste mesurable sur `agent_run_events`, comme du temps de la
+    // And the refusal remains measurable on `agent_run_events`, as in the time of
     // boucle maison (`FORBIDDEN_COMMAND_REASON`).
     const result = h.events.find((e) => e.payload.id === "call_garde" && e.type === "tool_result");
     expect(result?.payload.reason).toBe("forbidden_command");
@@ -1135,11 +1135,11 @@ describe("les garde-fous", () => {
   });
 
   /**
-   * MIN-286 lot 2, tâche 14 — L'ÉDITION EST LE FAIT QUE LES RÈGLES DE LIVRAISON
-   * LISENT, et chez opencode elle ne passe plus par un de nos tools : la demande
-   * de permission est le seul endroit où on la voit. Sans ce câblage, un tour qui
-   * édite se présente à la porte comme un tour qui n'a rien touché — donc sans
-   * type-check, sans tests et sans relecture avant que le code parte chez un humain.
+   * MIN-286 lot 2, task 14 — EDITING IS THE FACT THAT DELIVERY RULES
+   * READ, and at opencode it no longer goes through one of our tools: the request
+   * permission is the only place we see it. Without this wiring, a trick that
+   * edite presents himself at the door like a trick which has touched nothing - therefore without
+   * type-check, without tests and without proofreading before the code goes to a human.
    */
   it("note une écriture autorisée au checkpoint, en chemin de dépôt", async () => {
     h.extraFrames = [permissionFrame("edit", { filepath: "/vercel/sandbox/repo/lib/a.ts" })];
@@ -1149,14 +1149,14 @@ describe("les garde-fous", () => {
   });
 
   it("montre le fichier touché AU DIRECT, sur chaque charge qui suit", async () => {
-    // Une édition n'avance pas le round : sans cette charge-là, la liste
-    // n'apparaîtrait qu'en fin de tour, avec `files_changed`.
+    // An edition does not advance the round: without this charge, the list
+    // would only appear at the end of the turn, with `files_changed`.
     h.extraFrames = [permissionFrame("edit", { filepath: "/vercel/sandbox/repo/lib/a.ts" })];
     await run();
     const withFiles = h.live.filter((l) => Array.isArray(l.files));
     expect(withFiles.length).toBeGreaterThan(0);
     expect(withFiles[0].files).toEqual([{ path: "lib/a.ts", status: "modified" }]);
-    // Portée par la DERNIÈRE charge aussi : le fil efface ce qu'une charge tait.
+    // Carried by the LAST charge too: the thread erases what a charge silences.
     expect(h.live.at(-1)?.files).toEqual([{ path: "lib/a.ts", status: "modified" }]);
   });
 
@@ -1168,9 +1168,9 @@ describe("les garde-fous", () => {
   });
 
   it("ne perd pas le tour quand le verdict n'arrive pas à destination", async () => {
-    // Le serveur peut refuser la réponse (permission déjà expirée, route qui
-    // bouge à une release près). Le tour continue : le tool restera suspendu
-    // jusqu'à la deadline, ce qui est un signal — un tour mort n'en est pas un.
+    // The server may refuse the response (permission already expired, route which
+    // moves within one release). The tour continues: the tool will remain suspended
+    // until the deadline, which is a signal — a dead turn is not one.
     h.extraFrames = [permissionFrame("bash", { command: "ls" })];
     h.permissionReplyFails = true;
     const report = await run();
@@ -1198,34 +1198,34 @@ describe("les questions à l'utilisateur", () => {
   it("pose les questions au fil, puis ARRÊTE le tour", async () => {
     h.extraFrames = [question];
     const report = await run();
-    // Le même event que la boucle maison : c'est ce que la carte de questions du
-    // feed sait déjà rendre, y compris sur un run relu trois mois plus tard.
+    // The same event as the house loop: this is what the question card of the
+    // feed already knows how to deliver, including a run reread three months later.
     const asked = h.events.find((e) => e.type === "question");
     expect(asked?.payload.id).toBe("call_q");
-    // `askedUser` est ce qui met la session en `awaiting_input` et envoie
-    // `agent_question` plutôt qu'`agent_done` (vm-rest.ts).
+    // `askedUser` is what puts the session into `awaiting_input` and sends
+    // `agent_question` rather than `agent_done` (vm-rest.ts).
     expect(report.askedUser).toBe(true);
     expect(report.status).toBe("completed");
-    // Pas de mot de la fin : la carte de questions clôt le fil, et le commit
-    // prend son message générique.
+    // No final words: the question card closes the thread, and the commit
+    // takes its generic message.
     expect(report.reply).toBeUndefined();
   });
 
   it("ne tient pas la microVM ouverte le temps qu'un humain revienne", async () => {
     h.extraFrames = [question];
     const report = await run();
-    // La question est écartée (le tool se résout, l'historique reste apparié) et
-    // la session coupée : la réponse reviendra au tour suivant, par le steering.
+    // The question is dismissed (the tool resolves, the history remains matched) and
+    // the session is cut: the response will come back the next round, via the steering.
     expect(h.questionsRejected).toEqual(["que_1"]);
     expect(h.routes.some((r) => r.endsWith("/abort"))).toBe(true);
-    // Et le tour garde son journal : c'est lui qui fera repartir le suivant.
+    // And the tour keeps its diary: it is he who will send the next one back.
     expect((report.checkpoint as { opencode?: unknown }).opencode).toBeTruthy();
   });
 
   it("ne prend PAS l'abort de la question pour une panne", async () => {
-    // Tout `abort` publie `session.error` `MessageAbortedError` : sans le filtre
-    // du traducteur, le tour rendrait `error` et le fil afficherait une panne là
-    // où il y a une question.
+    // All `abort` publishes `session.error` `MessageAbortedError`: without the filter
+    // of the translator, the trick would return `error` and the thread would display a fault there
+    // where there is a question.
     h.extraFrames = [
       question,
       JSON.stringify({
@@ -1241,10 +1241,10 @@ describe("les questions à l'utilisateur", () => {
 
   it("dit la coupure que PERSONNE n'a demandée", async () => {
     /**
-     * La panne la plus silencieuse du harness : un round tranché en vol publie la
-     * même `MessageAbortedError` qu'un `abort` voulu. Avalée sans condition, elle
-     * laissait un tour « terminé » sans event, sans résumé et sans erreur — le fil
-     * figé sur son dernier status, la dépense bien réelle (run `ec9b2ed5`).
+     * The quietest failure of the harness: a round cut in flight publishes the
+     * same `MessageAbortedError` as a desired `abort`. Swallowed unconditionally, she
+     * left a “finished” round without events, without summary and without errors — the thread
+     * frozen on its last status, the very real expense (run `ec9b2ed5`).
      */
     h.extraFrames = [
       JSON.stringify({
@@ -1255,37 +1255,37 @@ describe("les questions à l'utilisateur", () => {
     const report = await run();
     expect(report.status).toBe("error");
     expect(report.errorMessage).toContain("cut short");
-    // Et surtout : le fil l'apprend. `error_message` n'est lu par personne dans
-    // `components/agent/` — sans cet event, l'utilisateur ne voit toujours rien.
+    // And above all: the thread learns it. `error_message` is not read by anyone in
+    // `components/agent/` — without this event, the user still sees nothing.
     expect(h.events.some((e) => e.type === "error")).toBe(true);
   });
 });
 
 describe("les sessions filles", () => {
   /**
-   * Le flux `/event` est celui du SERVEUR : quand le modèle délègue, la fille
-   * publie sur le même canal. Trois choses en dépendent, et chacune casse en
-   * silence — le tour se termine trop tôt, la réponse se mélange, la dépense se
-   * range dans la mauvaise bande.
+   * The `/event` flow is that of the SERVER: when the model delegates, the daughter
+   * publishes on the same channel. Three things depend on it, and each one breaks in
+   * silence — the round ends too soon, the answer gets mixed up, the expenditure
+   * put in the wrong band.
    */
   it("compte la fille dans le MÊME run, dans la bande des sous-agents", async () => {
     h.extraFrames = [childRound()];
     await run();
     const child = h.usage.find((l) => Number(l.seq) >= 2_000_000_000);
     expect(child, "la fille doit avoir sa ligne de ledger").toBeTruthy();
-    // Slot 0 de la bande des sous-agents — la convention de la boucle maison
-    // (`subagentUsageSeq`), pour que l'ordre d'un run se lise pareil.
+    // Slot 0 of the subagent gang — the house loop convention
+    // (`subagentUsageSeq`), so that the order of a run reads the same.
     expect(child!.seq).toBe(2_000_000_000);
     expect(child!.cachedTokens).toBe(10);
     expect(child!.cacheWriteTokens).toBe(5);
-    // La mère garde sa propre numérotation, elle ne saute pas.
+    // The mother keeps her own numbering, she does not jump.
     expect(h.usage[0].seq).toBe(7);
   });
 
   it("ne termine PAS le tour sur le `session.idle` d'une fille", async () => {
-    // La fille se tait avant la mère : si son `idle` sortait de la boucle, tout
-    // ce que la mère fait ensuite serait perdu — et le tour rendrait la main
-    // sans rien avoir répondu.
+    // The daughter shuts up before the mother: if her `idle` left the loop, everything
+    // what the mother does next would be lost — and the trick would return the hand
+    // without having answered anything.
     h.extraFrames = [
       JSON.stringify({ type: "session.idle", properties: { sessionID: CHILD } }),
       JSON.stringify({
@@ -1325,18 +1325,18 @@ describe("les sessions filles", () => {
     await run();
     const own = h.events.find((e) => e.payload.id === "call_fille");
     expect(own?.payload.subagent_id).toBe(CHILD);
-    // Ceux de la mère ne portent rien : c'est elle qui parle.
+    // Those of the mother carry nothing: it is she who speaks.
     expect(h.events.find((e) => e.payload.id === "call_1")?.payload.subagent_id).toBeUndefined();
   });
 
   it("tait le direct quand le round continue, et le garde quand il conclut", async () => {
-    // Le texte d'un round intermédiaire part au fil en `thinking` : le laisser
-    // aussi au direct le ferait lire deux fois. Celui du dernier round, lui,
-    // attend son `summary`, qui ne part qu'à la fin du tour — l'effacer ici
-    // ferait disparaître la réponse pendant l'export et le push.
+    // The text of an intermediate round goes to the thread in `thinking`: leave it
+    // also live would make it read twice. The one from the last round, him,
+    // waits for its `summary`, which only leaves at the end of the round — delete it here
+    // would make the response disappear during export and push.
     await run();
-    // La première charge vide ALLUME désormais la réflexion dès que le prompt
-    // est accepté ; seule celle qui l'éteint est une purge de fin de round.
+    // The first empty charge now turns ON the reflection as soon as the prompt
+    // is accepted; only the one that turns it off is an end-of-round purge.
     const cleared = h.live.filter((l) => l.text === "" && l.reasoningActive === false);
     expect(cleared.length).toBe(1);
     expect(h.live.at(-1)?.text).toBe("fini");
@@ -1344,30 +1344,30 @@ describe("les sessions filles", () => {
 
   it("compte les outils PAR ROUND, comme la boucle maison", async () => {
     /**
-     * MIN-286 — le fil lit `tools` comme un prédicat : `0` ⇒ ce texte est
-     * peut-être la réponse finale, et il prend la place du résumé
-     * (`isLiveAnswer`). La boucle maison envoie l'accumulateur INTERNE au round
-     * (`acc.size`), donc remis à zéro à chaque round.
+     * MIN-286 — the thread reads `tools` as a predicate: `0` ⇒ this text is
+     * maybe the final answer, and it takes the place of the summary
+     * (`isLiveAnswer`). The home loop sends the INTERNAL accumulator to the round
+     * (`acc.size`), therefore reset to zero each round.
      *
-     * Cumulé sur le tour, le compteur ne retombait jamais : la réponse du dernier
-     * round du tour capturé — qui n'appelle aucun tool — s'affichait comme de la
-     * narration parce qu'un `read_issue` avait eu lieu deux rounds plus tôt.
+     * Accumulated over the lap, the counter never fell: the response of the last
+     * round of the captured turn — which does not call any tools — was displayed as
+     * narration because a `read_issue` had occurred two rounds earlier.
      */
     await run();
-    // Le round 1 appelle `read_issue` : la charge de purge de fin de round ne
-    // décrit plus rien, elle part à zéro (le `clearLive` de la boucle maison).
+    // Round 1 calls `read_issue`: end-of-round purge charge does not
+    // describes nothing anymore, it starts from zero (the `clearLive` of the home loop).
     expect(h.live.find((l) => l.text === "")?.tools).toBe(0);
-    // Le round 2 n'appelle aucun tool : sa réponse en cours d'écriture doit se
-    // lire comme une réponse.
+    // Round 2 does not call any tool: its response being written must be
+    // read as an answer.
     expect(h.live.at(-1)).toMatchObject({ text: "fini", tools: 0 });
   });
 
   it("remet le rapport de la fille au fil, et referme son bloc", async () => {
     /**
-     * Le fil tient un bloc par fille : son rapport vient d'un `summary` marqué à
-     * son nom, et son chrono s'arrête sur `status: subagent_report`. Sans les
-     * deux, une fille reste « au travail » sous un tour terminé, et ce qu'elle a
-     * trouvé n'est lisible nulle part.
+     * The thread holds one block per girl: its report comes from a `summary` marked at
+     * his name, and his timer stops on `status: subagent_report`. Without the
+     * two, a girl remains "at work" under a completed turn, and what she has
+     * found is not readable anywhere.
      */
     h.extraFrames = [
       JSON.stringify({
@@ -1417,23 +1417,23 @@ describe("les sessions filles", () => {
       }),
     ];
     const report = await run();
-    // La réponse part dans le message de commit et dans le fil : le rapport
-    // d'une fille n'y a rien à faire.
+    // The response is sent in the commit message and in the thread: the report
+    // of a girl there is nothing to be done.
     expect(report.reply).not.toContain("RAPPORT DE LA FILLE");
   });
 });
 
 /**
- * MIN-286 lot 2, tâche 15 — LA FORGE, ET LE SEUL TOOL COUPÉ EN DEUX.
+ * MIN-286 lot 2, task 15 — THE FORGE, AND THE ONLY TOOL CUT IN HALF.
  *
- * `create_pr` pousse ICI (la microVM a le dépôt) et fait ouvrir LÀ-BAS (la
- * fonction a le token de forge). Ce qui se teste est donc la moitié VM : qu'elle
- * pousse avant de faire ouvrir, qu'elle remonte la branche plutôt que de laisser
- * la fonction la relire, et qu'elle refuse dans les deux cas où pousser
- * livrerait autre chose que le travail du tour.
+ * `create_pr` pushes HERE (the microVM has the repository) and opens THERE (the
+ * function has the forge token). What is tested is therefore the VM half: that it
+ * pushes before opening, that it goes up the branch rather than leaving
+ * the function reads it again, and it refuses in both cases where push
+ * would deliver something other than the work of the lathe.
  */
 describe("la forge", () => {
-  /** Le handler tel que le pont le reçoit — avant sa porte de livraison. */
+  /** The handler as the bridge receives it — before its delivery gate. */
   const createPr = () => h.supervisorTools.create_pr;
 
   it("pousse, PUIS fait ouvrir la pull request, branche comprise", async () => {
@@ -1444,12 +1444,12 @@ describe("la forge", () => {
     expect(out.success).toBe(true);
     const call = h.toolCalls.find((c) => c.name === "create_pr");
     expect(call).toBeTruthy();
-    // Le push a eu lieu AVANT l'appel : la fonction ouvre sur une tête qui existe.
+    // The push took place BEFORE the call: the function opens on a head that exists.
     expect((call!.body.pushed as { committed: boolean }).committed).toBe(true);
     /**
-     * LA BRANCHE VOYAGE. `agent_runs.branch_name` n'est stampé qu'après un push
-     * réel (MIN-123) — or ce push-ci est le premier du run dans le cas normal :
-     * la fonction lirait une branche nulle et ouvrirait sur une tête vide.
+     * THE TRAVEL BRANCH. `agent_runs.branch_name` is only stamped after a push
+     * real (MIN-123) — but this push is the first of the run in the normal case:
+     * the function would read a null branch and open on an empty head.
      */
     expect(call!.body.workBranch).toBe("minddy/agent/min-42-abcd1234");
   });
@@ -1460,15 +1460,15 @@ describe("la forge", () => {
     const out = (await createPr()({ title: "t" })) as { success: boolean; result: { error: string } };
     expect(out.success).toBe(false);
     expect(out.result.error).toContain("push failed");
-    // Un rejet de push recopie l'URL de push, token compris (MIN-239).
+    // A rejected push echoes the push URL, including the token (MIN-239).
     expect(out.result.error).not.toContain("ghs_SECRET");
-    // Et rien n'a été demandé à la forge : il n'y a pas de tête à ouvrir.
+    // And nothing was asked of the forge: there are no heads to open.
     expect(h.toolCalls.some((c) => c.name === "create_pr")).toBe(false);
   });
 
   it("refuse de livrer pendant qu'une fille écrit dans le même dépôt", async () => {
-    // `commitAndPush` fait `git add -A` sur un sandbox PARTAGÉ : livrer ici
-    // emporterait le travail d'un `implement` à moitié posé.
+    // `commitAndPush` does `git add -A` on a SHARED sandbox: deliver here
+    // would take away the work of a half-assed `implement`.
     h.extraFrames = [
       JSON.stringify({
         type: "message.part.updated",
@@ -1495,14 +1495,14 @@ describe("la forge", () => {
   });
 
   it("ne donne AUCUN `create_pr` à une session de relecture", async () => {
-    // Une relecture ne pousse pas et n'ouvre rien (`writesToRepo: false`) : le
-    // tool n'est ni servi au modèle (`agentToolsFor` à l'ancrage `pr`) ni routé.
+    // A reread does not push and does not open anything (`writesToRepo: false`): the
+    // tool is neither served to the model (`agentToolsFor` at anchor `pr`) nor routed.
     await run({ writesToRepo: false, anchor: "pr" });
     expect(h.supervisorTools.create_pr).toBeUndefined();
     const files = h.files.filter((f) => f.path.startsWith(TOOL_DIR));
     expect(files.some((f) => f.path.endsWith("/create_pr.ts"))).toBe(false);
-    // Les trois écritures de la relecture, elles, restent servies : elles
-    // s'exécutent côté fonction, qui a la forge (pr-tools.ts).
+    // The three writings of rereading remain served: they
+    // run on the function side, which has the forge (pr-tools.ts).
     for (const name of ["comment_pr", "comment_pr_line", "reply_pr_thread"]) {
       expect(files.some((f) => f.path.endsWith(`/${name}.ts`))).toBe(true);
     }
@@ -1522,20 +1522,20 @@ describe("la forge", () => {
 });
 
 /**
- * MIN-286 lot 3 — LES JOBS DE FOND, reposés en tool local.
+ * MIN-286 lot 3 — BACKGROUND JOBS, reposted in tool local.
  *
- * `bash` n'a pas de mode fond : sans ce tool, la doctrine « fais tourner le code
- * pour de vrai » se rabattait sur un `&` dans le shell persistant — donc sans
- * aucun de ses garde-fous. Ce qui se teste ici est exactement ce que le repli ne
- * tenait pas : le tool est SERVI et exécuté dans la VM, et ses jobs sont TUÉS
- * avant que quoi que ce soit ne stage le dépôt.
+ * `bash` does not have a background mode: without this tool, the doctrine “run the code
+ * for real" fell back on a `&` in the persistent shell — therefore without
+ * none of its safeguards. What is being tested here is exactly what fallback does
+ * did not hold: the tool is SERVED and executed in the VM, and its jobs are KILLED
+ * before anything stages the deposit.
  */
 /**
- * `update_plan` — un tool de CONTRÔLE, pas de domaine. Rangé côté domaine, il
- * repartait au plan de contrôle qui n'a jamais eu de handler pour lui : chaque
- * appel revenait en `404: unknown platform tool: update_plan` (lu deux fois sur
- * le run de la PR 51), la checklist du fil ne s'est jamais remplie, et le modèle
- * lisait une erreur là où il attendait un accusé de réception.
+ * `update_plan` — a CONTROL tool, no domain. Stored on the estate side, it
+ * went back to the control plane which never had a handler for it: each
+ * call came back to `404: unknown platform tool: update_plan` (read twice on
+ * the run of PR 51), the thread checklist was never filled, and the model
+ * was reading an error where it expected an acknowledgment.
  */
 describe("la checklist du tour", () => {
   const updatePlan = () => h.supervisorTools.update_plan;
@@ -1557,21 +1557,21 @@ describe("la checklist du tour", () => {
       { step: "Corriger les remarques", status: "in_progress" },
     ]);
     expect(h.plansSynced).toHaveLength(1);
-    // Et surtout : RIEN n'est parti au plan de contrôle comme tool de domaine.
+    // And above all: NOTHING has gone to the control plane as a domain tool.
     expect(h.toolCalls.some((c) => c.name === "update_plan")).toBe(false);
   });
 
   /**
-   * MIN-364 (lot 9) — LE PLAN DU TICKET EST UNE SURFACE PARTAGÉE.
+   * MIN-364 (lot 9) — THE TICKET PLAN IS A SHARED SURFACE.
    *
-   * L'audit reprochait à `todowrite` de coûter « 20 écritures réseau sur une
-   * surface partagée » (§3 #12). Mesuré sur le binaire : `todowrite` n'écrit
-   * nulle part hors d'opencode. L'écriture réseau, c'est CELLE-CI — le miroir
-   * vers le plan du ticket, que d'autres lisent et éditent.
+   * The audit criticized `todowrite` for costing “20 network writes on a
+   * shared surface” (§3 #12). Measured on binary: `todowrite` does not write
+   * nowhere outside of opencode. Network writing is THIS — the mirror
+   * to the ticket map, which others read and edit.
    *
-   * Un modèle réémet couramment sa checklist à l'identique : le prompt lui
-   * demande d'envoyer le plan ENTIER à chaque changement, et « changement » est
-   * son jugement.
+   * A model commonly reissues its checklist identically: the prompt
+   * asks to send the ENTIRE plan for each change, and "change" is
+   * its judgment.
    */
   it("ne re-miroite PAS un plan identique, mais garde l'event", async () => {
     await run();
@@ -1580,10 +1580,10 @@ describe("la checklist du tour", () => {
     await updatePlan()(plan);
     await updatePlan()(plan);
 
-    // Une seule écriture sur le ticket…
+    // Only one entry on the ticket…
     expect(h.plansSynced).toHaveLength(1);
-    // …et trois events : le journal dit ce que le modèle a FAIT, et « il a
-    // réémis trois fois le même plan » est un fait qu'une autopsie doit lire.
+    // …and three events: the log says what the model DID, and “it
+    // reissued the same plan three times” is a fact that an autopsy must read.
     expect(h.events.filter((e) => e.type === "plan_update")).toHaveLength(3);
   });
 
@@ -1602,20 +1602,20 @@ describe("la checklist du tour", () => {
         { step: "Vraie étape", status: "n'importe quoi" },
       ],
     });
-    // Étape vide écartée, statut inconnu ramené à `pending`.
+    // Empty step removed, unknown status reduced to `pending`.
     expect(h.events.find((e) => e.type === "plan_update")?.payload.plan).toEqual([
       { step: "Vraie étape", status: "pending" },
     ]);
   });
 
   /**
-   * MIN-286 — UN TOOL DE CONTRÔLE NE FAIT PAS DE BULLE.
+   * MIN-286 — A CONTROL TOOL DOES NOT MAKE BUBBLES.
    *
-   * La boucle maison n'émettait AUCUN event de tool pour `update_plan` : elle
-   * répondait au tool-call et passait au suivant, le fil ne voyant que la
-   * checklist. Chez opencode il passe par le binaire comme les autres, donc le
-   * flux en publie les parts — la checklist se retrouvait racontée deux fois, une
-   * barre de plan et un appel brut au-dessus.
+   * The home loop did not emit ANY tool events for `update_plan`: it
+   * responded to the tool-call and moved on to the next one, the thread only seeing the
+   * checklist. At opencode it goes through binary like the others, so the
+   * flux publishes the parts — the checklist found itself told twice, once
+   * plan bar and a raw call above.
    */
   it("ne fait PAS de bulle de tool dans le fil", async () => {
     h.extraFrames = [
@@ -1648,14 +1648,14 @@ describe("la checklist du tour", () => {
     ];
     await run();
     expect(h.events.some((e) => e.payload.name === "update_plan")).toBe(false);
-    // Et il ne compte pas non plus dans le compteur d'outils du direct : ce n'est
-    // pas un geste de l'agent, c'est le harness qui accuse réception.
+    // And it doesn't count in the direct tool counter either: it's not
+    // not a gesture from the agent, it is the harness which acknowledges receipt.
     expect(h.live.every((p) => Number(p.tools ?? 0) <= 1)).toBe(true);
   });
 });
 
 describe("les jobs de fond", () => {
-  /** Ce qu'un tool généré poste : le pont, puis le registre du superviseur. */
+  /** What a generated tool posts: the bridge, then the supervisor register. */
   const background = () => h.supervisorTools.run_background;
 
   it("sert `run_background` au modèle et l'exécute dans la microVM", async () => {
@@ -1669,14 +1669,14 @@ describe("les jobs de fond", () => {
     };
     expect(out.success).toBe(true);
     expect(out.result.pid).toBe(4242);
-    // Le job tourne dans le dépôt de la VM, jamais chez le plan de contrôle.
+    // The job runs in the VM repository, never in the control plane.
     expect(h.exec.some((c) => c.includes("setsid"))).toBe(true);
     expect(h.toolCalls.some((c) => c.name === "run_background")).toBe(false);
   });
 
   it("refuse une commande que le garde-fou git interdit", async () => {
-    // `checkCommand` vaut ICI AUSSI : sans lui, `run_background` serait une porte
-    // dérobée sur `git push` (MIN-108).
+    // `checkCommand` is valid HERE ALSO: without it, `run_background` would be a door
+    // stolen on `git push` (MIN-108).
     await run();
     const out = (await background()({ action: "start", command: "git push --force" })) as {
       success: boolean;
@@ -1687,10 +1687,10 @@ describe("les jobs de fond", () => {
 
   it("tue ses jobs AVANT de stager le dépôt en fin de tour", async () => {
     /**
-     * Le job est lancé PENDANT le tour (le pont est ouvert avant le serveur), ce
-     * qui est la seule façon de prouver l'ordre : un serveur encore vivant
-     * pendant le `git add -A` fait commiter ce qu'il vient d'écrire, et il
-     * tiendrait la microVM éveillée après le tour.
+     * The job is launched DURING the round (the bridge is opened before the server), this
+     * which is the only way to prove the order: a server still alive
+     * during `git add -A` commits what he has just written, and he
+     * would keep the microVM awake after the round.
      */
     await run(
       {},
@@ -1710,8 +1710,8 @@ describe("les jobs de fond", () => {
   });
 
   it("tue ses jobs avant un `create_pr`, et le DIT au modèle", async () => {
-    // Un serveur arrêté en silence laisse le modèle croire qu'il tourne : il
-    // enchaîne des `curl` sur un port mort en cherchant ce qu'il a cassé (MIN-209).
+    // A server stopped silently lets the model believe that it is running: it
+    // strings `curl` on a dead port while looking for what it broke (MIN-209).
     await run();
     await background()({ action: "start", command: "npm run dev" });
     const out = (await h.supervisorTools.create_pr({ title: "MIN-42: le titre" })) as {
@@ -1723,7 +1723,7 @@ describe("les jobs de fond", () => {
   });
 
   it("n'en donne AUCUN à une session de relecture", async () => {
-    // Une relecture tient dans une session : rien à lancer, rien à laisser vivant.
+    // A reread takes one session: nothing to launch, nothing to leave alive.
     await run({ writesToRepo: false, anchor: "pr" });
     expect(h.supervisorTools.run_background).toBeUndefined();
     const files = h.files.filter((f) => f.path.startsWith(TOOL_DIR));
@@ -1732,31 +1732,31 @@ describe("les jobs de fond", () => {
 });
 
 /**
- * LE BATTEMENT DE CŒUR, ET CE QU'IL A COÛTÉ DE NE PAS L'AVOIR (run de la PR 51,
- * 2026-08-12). Ce moteur ne sauvegardait qu'à la toute fin : le seul écrivain de
- * `last_activity_at` sur un run qui travaille étant cette sauvegarde, un tour
- * d'opencode paraissait muet depuis son lancement. Passé trois minutes, le chien
- * de garde des microVM va interroger la plateforme, et une sonde qui répond mal
- * conclut « process mort » — le fil affiche « le processus de ce tour s'est
- * arrêté avant d'avoir fini », le run passe au repos, et le rapport de fin se
- * fait refuser en 409 derrière. Le tour de la PR 51 a perdu sa conversation
- * comme ça, checkpoint resté `null` en base.
+ * THE HEARTBEAT, AND WHAT IT COST OF NOT HAVING IT (run of PR 51,
+ * 2026-08-12). This engine only saved at the very end: the only writer of
+ * `last_activity_at` on a run that works being this backup, a turn
+ * of opencode seemed silent since its launch. After three minutes, the dog
+ * microVM guard will interrogate the platform, and a probe which responds poorly
+ * concludes “process dead” — the thread displays “the process of this round has
+ * stopped before finishing", the run goes to rest, and the end report is
+ * refused in 409 behind. The PR 51 tour lost its conversation
+ * like that, checkpoint remained `null` in base.
  */
 describe("la sauvegarde périodique", () => {
   it("sauvegarde EN COURS de tour, journal compris", async () => {
-    // L'horloge avance de plus de deux minutes à chaque lecture : le sondage qui
-    // porte la sauvegarde tombe donc dès le premier passage.
+    // The clock advances by more than two minutes with each reading: the poll which
+    // carries the backup therefore falls on the first pass.
     h.tick = 130_000;
     await run();
     expect(h.checkpoints.length).toBeGreaterThan(0);
     const first = h.checkpoints[0] as { opencode?: { sessionId: string } };
-    // Ce qu'un tour repris doit relire : la session d'opencode et son journal.
+    // What a repeater should reread: the opencode session and its log.
     expect(first.opencode?.sessionId).toBe(PARENT);
   });
 
   it("ne sauvegarde pas sur un tour court", async () => {
-    // Horloge figée : rien ne doit partir, un tour de trois secondes n'a pas à
-    // écrire en base à chaque event du flux.
+    // Frozen clock: nothing should go, a three-second turn doesn't have to
+    // write in base at each event of the flow.
     h.tick = 0;
     await run();
     expect(h.checkpoints).toEqual([]);
@@ -1765,9 +1765,9 @@ describe("la sauvegarde périodique", () => {
   it("n'exporte le journal qu'une fois : la sauvegarde n'en fait pas un doublon", async () => {
     h.tick = 130_000;
     await run();
-    // Deux events au journal du faux serveur, deux poussés en tout — la
-    // sauvegarde périodique a bien fait avancer le curseur d'export, donc la fin
-    // de tour n'a plus rien de neuf à envoyer.
+    // Two events in the fake server log, two pushed in total — the
+    // periodic backup has advanced the export cursor, so the end
+    // the round no longer has anything new to send.
     expect(h.journal.flatMap((batch) => batch.events)).toHaveLength(2);
   });
 
@@ -1775,8 +1775,8 @@ describe("la sauvegarde périodique", () => {
     h.tick = 130_000;
     h.runClosed = true;
     const report = await run();
-    // Un run conclu sous nous ne se poursuit pas : continuer, ce serait dépenser
-    // au nom d'une conversation qui n'existe plus.
+    // A run concluded under us does not continue: to continue would be to spend
+    // in the name of a conversation that no longer exists.
     expect(report.status).toBe("interrupted");
     expect(h.aborts).toBeGreaterThan(0);
   });
@@ -1788,8 +1788,8 @@ describe("la reprise", () => {
     const state = (report.checkpoint as { opencode?: { sessionId: string; seq: Record<string, number> } })
       .opencode;
     expect(state?.sessionId).toBe(PARENT);
-    // Le curseur, agrégat par agrégat : c'est lui qui rend l'export incrémental
-    // (5 events pour un tour, au lieu de tout l'historique).
+    // The cursor, aggregate by aggregate: it is this which makes the export incremental
+    // (5 events for a turn, instead of the whole history).
     expect(state?.seq).toEqual({ ses_neuve: 4 });
   });
 
@@ -1802,49 +1802,49 @@ describe("la reprise", () => {
       },
     });
     expect(h.routes).toContain("POST /sync/replay");
-    // Le piège du dossier, et il est dans le schéma d'opencode : l'export rend du
-    // snake_case, le replay attend du camelCase.
+    // The trap of the folder, and it is in the opencode schema: the export renders
+    // snake_case, the replay expects camelCase.
     expect(JSON.stringify(h.replayed)).toContain("aggregateID");
     expect(JSON.stringify(h.replayed)).not.toContain("aggregate_id");
-    // Session REPRISE : on n'en crée pas une deuxième.
+    // RESUME session: we do not create a second one.
     expect(h.routes).not.toContain("POST /session");
   });
 
   /**
-   * MIN-286 (2026-08-13) — LE JOURNAL NE PASSE PLUS PAR LE CHECKPOINT.
+   * MIN-286 (2026-08-13) — THE NEWSPAPER NO LONGER GOES THROUGH THE CHECKPOINT.
    *
-   * Il portait la sortie COMPLÈTE de chaque tool : une lecture de 260 lignes pèse
-   * 22 Ko dedans, republiée deux à trois fois par opencode. Le plafond du corps du
-   * plan de contrôle tombait donc au bout d'une quinzaine de lectures, et le tour
-   * lâchait toute sa conversation — mesuré sur un tour de 31 minutes qui a fini par
-   * repartir du ticket comme s'il n'avait jamais travaillé. Les events s'écrivent
-   * maintenant en APPEND (`POST /journal`), et le checkpoint n'en garde que le
+   * It carried the COMPLETE output of each tool: a reading of 260 lines weighs
+   * 22 KB in, republished two to three times by opencode. The ceiling of the body
+   * control plan therefore fell after about fifteen readings, and the turn
+   * blurted out his entire conversation — measured over a 31-minute lap that ended up
+   * leave the ticket as if he had never worked. The events are written
+   * now in APPEND (`POST /journal`), and the checkpoint only keeps the
    * pointeur.
    */
   it("POUSSE les events au lieu de les porter dans le checkpoint", async () => {
     const report = await run();
-    // Ce que la microVM a envoyé : l'incrément, sous sa session.
+    // What the microVM sent: the increment, under its session.
     expect(h.journal).toHaveLength(1);
     expect(h.journal[0].sessionId).toBe(PARENT);
     expect(h.journal[0].events).toHaveLength(2);
-    // Ce que le checkpoint porte : le pointeur, et rien d'autre.
+    // What the checkpoint carries: the pointer, and nothing else.
     const state = (report.checkpoint as { opencode?: Record<string, unknown> }).opencode;
     expect(state).toEqual({ sessionId: PARENT, seq: { ses_neuve: 4 } });
     expect(report.checkpointDropped).toEqual([]);
   });
 
   /**
-   * MIN-328 — LE JOURNAL EST SUBSTITUÉ, LUI AUSSI.
+   * MIN-328 — THE NEWSPAPER IS SUBSTITUTED, TOO.
    *
-   * Il porte la sortie COMPLÈTE de chaque tool : un `cat .git/config`, un
-   * `git remote -v`. Il s'écrit dans `agent_run_journal` — persisté, relu par
-   * l'équipe — et il est rejoué dans la session au tour suivant, donc devant le
-   * modèle. Le fil d'events était substitué depuis MIN-239 ; celui-ci ne l'était
-   * pas, et c'est le plus gros des deux.
+   * It carries the COMPLETE output of each tool: a `cat .git/config`, a
+   * `git remote -v`. It is written in `agent_run_journal` — persisted, reread by
+   * the team — and it is replayed in the session in the next round, therefore in front of the
+   * model. The events thread was overridden since MIN-239; this one was not
+   * not, and it's the bigger of the two.
    */
   it("substitue le token de forge dans le journal qu'il pousse, à tous les niveaux", async () => {
-    // Un vrai token d'installation : le registre ignore ce qui fait moins de 12
-    // caractères (cf. `MIN_SECRET_LENGTH`), et `ghs_SECRET` n'en fait que dix.
+    // A real installation token: the registry ignores anything less than 12
+    // characters (see `MIN_SECRET_LENGTH`), and `ghs_SECRET` is only ten.
     const TOKEN = "ghs_16C7e42F292c6912E7710c838347Ae178B4a";
     h.history = [
       {
@@ -1854,9 +1854,9 @@ describe("la reprise", () => {
         data: {
           part: {
             state: {
-              // Trois niveaux, et un tableau au passage : exactement la forme des
-              // parts d'opencode, et exactement ce que l'ancienne substitution à
-              // un seul niveau laissait passer.
+              // Three levels, and a table in passing: exactly the shape of the
+              // opencode shares, and exactly what the old substitution for
+              // only one level allowed through.
               output: `url = https://x-access-token:${TOKEN}@github.com/org/repo.git`,
               metadata: { lines: [`remote.origin.url=${TOKEN}`] },
             },
@@ -1871,10 +1871,10 @@ describe("la reprise", () => {
   });
 
   it("découpe un incrément trop gros pour tenir dans une requête", async () => {
-    // Un round qui lit deux cents fichiers rend un seul export de plusieurs
-    // mégaoctets : le corps reste plafonné par la plateforme, donc on envoie par
-    // lots — et jamais un event à cheval sur deux, `/sync/replay` voulant une
-    // suite contiguë.
+    // A round that reads two hundred files produces a single export of several
+    // megabytes: the body remains capped by the platform, so we send by
+    // lots — and never one event overlapping two, `/sync/replay` wanting one
+    // contiguous suite.
     const fat = "x".repeat(900_000);
     h.history = [
       { aggregate_id: "ses_neuve", seq: 3, type: "message.updated", data: { fat } },
@@ -1883,16 +1883,16 @@ describe("la reprise", () => {
     ];
     await run();
     expect(h.journal.length).toBeGreaterThan(1);
-    // Rien ne s'est perdu au découpage, et l'ordre est celui de l'export.
+    // Nothing was lost during cutting, and the order is that of export.
     const sent = h.journal.flatMap((batch) => batch.events);
     expect(sent).toHaveLength(3);
     expect(sent.map((e) => (e as { seq: number }).seq)).toEqual([3, 4, 5]);
   });
 
   it("n'avance pas son curseur sur un incrément qu'il n'a pas su écrire", async () => {
-    // Le curseur commande le PROCHAIN export : avancé sur un lot perdu, il
-    // laisserait un trou définitif dans le journal — et `/sync/replay` refuse une
-    // suite non contiguë. Mieux vaut réexporter la même tranche.
+    // The cursor controls the NEXT export: advanced on a lost batch, it
+    // would leave a permanent hole in the log — and `/sync/replay` refuses a
+    // non-contiguous suite. Better to re-export the same slice.
     const report = await run(
       {},
       {},
@@ -1919,22 +1919,22 @@ describe("la reprise", () => {
 });
 
 /**
- * MIN-286 lot 3 — LE STEERING ET LE « STOP ».
+ * MIN-286 lot 3 — STEERING AND “STOP”.
  *
- * Les deux gestes les plus visibles du produit, et les deux que le superviseur
- * n'avait pas : un bouton « Stop » qui ne fait rien et un message écrit pendant un
- * tour qui reste dans la file ne se voient dans aucun test de type — ils se voient
- * en s'en servant, sur un tour qui dure des heures.
+ * The two most visible gestures of the product, and the two that the supervisor
+ * did not have: a “Stop” button which does nothing and a message written for a
+ * tower that remains in the queue are not seen in any type test — they are seen
+ * using it, on a tour that lasts hours.
  *
- * Ce que ces tests fixent, et qui n'est pas évident : **on ne draine la file que
- * quand on est en mesure de poster derrière**. `pullSteering` consomme ; un message
- * drainé et non posté est perdu pour de bon, puisque le plan de contrôle ne
- * re-queue le run que sur ce qui reste dans la file.
+ * What these tests fix, and which is not obvious: **we only drain the queue
+ * when we are able to post behind**. `pullSteering` consumes; a message
+ * drained and unposted is lost for good, since the control plane does not
+ * re-queue the run only on what remains in the queue.
  */
 /**
- * Une file qui se remplit APRÈS le premier prompt — c'est le seul montage qui
- * exerce l'injection en cours de tour. Une file remplie avant partirait avec le
- * prompt du tour, et le test passerait sans rien couper.
+ * A queue that fills AFTER the first prompt — this is the only edit that
+ * performs the injection during the turn. A line filled before would leave with the
+ * prompt of the turn, and the test would pass without cutting anything.
  */
 function steeringAfterFirstPrompt(text: string): Partial<ControlPlaneClient> {
   let given = false;
@@ -1954,9 +1954,9 @@ describe("le steering et le « Stop »", () => {
     h.steering = ["et regarde aussi les tests"];
     await run();
     expect(h.prompts[0]).toBe("fais le ticket\n\net regarde aussi les tests");
-    // SEUL le message de steering entre dans le fil : le prompt du tour y est
-    // déjà (message de lancement, ou réponse affichée par le composer), et le
-    // dire deux fois le ferait lire deux fois.
+    // ONLY the steering message enters the thread: the lap prompt is there
+    // already (launch message, or response displayed by the composer), and the
+    // saying twice would make it read twice.
     expect(h.events.filter((e) => e.type === "user_message").map((e) => e.payload.text)).toEqual([
       "et regarde aussi les tests",
     ]);
@@ -1980,14 +1980,14 @@ describe("le steering et le « Stop »", () => {
     expect(h.prompts).toEqual([]);
     expect(report.status).toBe("completed");
     expect(report.costUsd).toBe(0);
-    // Un tour qui n'a rien joué ne pousse pas : il n'a rien produit.
+    // A trick that has played nothing does not grow: it has produced nothing.
     expect(report.pushed).toBeNull();
   });
 
   it("coupe le round et repose la consigne à la frontière suivante", async () => {
-    // Le temps avance : c'est ce qui fait tomber le sondage en cours de tour. Et
-    // le message n'arrive qu'APRÈS le premier prompt — sinon il partirait avec
-    // lui, et le test ne dirait rien de l'injection en cours de tour.
+    // Time advances: this is what causes the poll to fall during the round. And
+    // the message only arrives AFTER the first prompt — otherwise it would leave with
+    // him, and the test would say nothing about the injection during the turn.
     h.tick = 3_000;
     const report = await runOpencodeTurn(
       job(),
@@ -1996,8 +1996,8 @@ describe("le steering et le « Stop »", () => {
       host(),
       deps(),
     );
-    // La consigne n'est jamais postée dans une session qui travaille : on coupe
-    // (`abort`), et on repose au `session.idle` qui suit.
+    // The instruction is never posted in a working session: we cut
+    // (`abort`), and we rest at `session.idle` which follows.
     expect(h.aborts).toBeGreaterThanOrEqual(1);
     expect(h.events.some((e) => e.type === "status" && e.payload.phase === "steered")).toBe(true);
     expect(h.prompts).toEqual(["fais le ticket", "ajoute un test"]);
@@ -2010,11 +2010,11 @@ describe("le steering et le « Stop »", () => {
     const report = await run();
     expect(h.aborts).toBeGreaterThanOrEqual(1);
     expect(report.status).toBe("interrupted");
-    // Le drapeau n'est PAS consommé sur un stop nu : c'est la fonction qui le
-    // range en remettant la session au repos.
+    // The flag is NOT consumed on a bare stop: it is the function which
+    // put away by putting the session back to rest.
     expect(h.interruptCleared).toBe(0);
-    // Et le tour ne se CLÔT pas : `summary` dit « voilà ma réponse », ce qu'un
-    // tour coupé n'a pas dit. Le fil le rend interrompu, et c'est la vérité.
+    // And the round does not CLOSE: `summary` says “here is my answer”, which a
+    // tour cut did not say. The thread makes it interrupted, and that's the truth.
     expect(h.events.some((e) => e.type === "summary")).toBe(false);
   });
 
@@ -2028,30 +2028,30 @@ describe("le steering et le « Stop »", () => {
       host(),
       deps(),
     );
-    // Le drapeau est consommé, sinon le sondage suivant sortirait du tour avec le
-    // message pour seule trace — accepté et jamais joué.
+    // The flag is consumed, otherwise the next poll would exit the round with the
+    // message for only trace — accepted and never played.
     expect(h.interruptCleared).toBe(1);
     expect(report.status).not.toBe("interrupted");
     expect(h.prompts.at(-1)).toBe("arrête ça et fais plutôt l'autre");
   });
 
   /**
-   * MIN-286 — CE QU'ON A DRAINÉ SANS SAVOIR LE JOUER RETOURNE EN FILE.
+   * MIN-286 — WHAT WE DRAINED WITHOUT KNOWING TO PLAY IT COMES BACK IN LINE.
    *
-   * `pullSteering` CONSOMME. On ne draine qu'en sachant qu'on va couper pour
-   * reposter derrière — mais le tour peut sortir entre les deux. Le message était
-   * alors consommé en base et vivant dans une variable locale de la microVM :
-   * accepté à l'écran, perdu pour toujours, et le run ne se réveillait même pas,
-   * puisque c'est la file qui le re-queue.
+   * `pullSteering` CONSUMED. We only drain knowing that we are going to cut for
+   * repost behind — but the round can come out in between. The message was
+   * then consumed in base and living in a local variable of the microVM:
+   * accepted on screen, lost forever, and the run didn't even wake up,
+   * since it is the queue which re-queues it.
    */
   it("un tour REPARTI après une erreur de session ne se range plus en erreur", async () => {
     /**
-     * MIN-286 — `sessionError` ne se remettait jamais à zéro.
+     * MIN-286 — `sessionError` never reset.
      *
-     * Une erreur de session qui n'est pas une coupure ne SORT PAS de la boucle
-     * (le tour peut très bien continuer). Reposté derrière par un message de
-     * steering, le tour finissait bien, poussait, et se rangeait quand même
-     * « erreur » — sans son `summary`, donc lu comme interrompu par le fil.
+     * A session error that is not a break does NOT exit the loop
+     * (the tour can very well continue). Reposted behind by a message from
+     * steering, the tour ended well, pushed, and parked anyway
+     * “error” — without its `summary`, so read as interrupted by the thread.
      */
     h.tick = 3_000;
     h.extraFrames = [
@@ -2067,9 +2067,9 @@ describe("le steering et le « Stop »", () => {
       host(),
       deps(),
     );
-    // L'erreur est DITE au fil (elle a eu lieu)…
+    // The error is TOLD to the thread (it occurred)...
     expect(h.events.some((e) => e.type === "error")).toBe(true);
-    // …mais elle ne condamne pas ce qui a recommencé derrière.
+    // …but it does not condemn what started again behind.
     expect(h.prompts.at(-1)).toBe("reprends là où tu en étais");
     expect(report.status).toBe("completed");
     expect(report.errorMessage).toBeUndefined();
@@ -2078,8 +2078,8 @@ describe("le steering et le « Stop »", () => {
 
   it("REMET en file le message drainé quand le tour sort avant de l'avoir posté", async () => {
     h.tick = 3_000;
-    // Le plafond tombe sur le premier round : le tour sort par `break` juste
-    // après avoir drainé, sans jamais atteindre le `session.idle` qui postait.
+    // The ceiling falls on the first round: the round ends with `break` just
+    // after draining, without ever reaching the `session.idle` who was posting.
     h.remainingUsd = 0;
     const report = await runOpencodeTurn(
       job({ budgetUsd: 0.0001 }),
@@ -2089,25 +2089,25 @@ describe("le steering et le « Stop »", () => {
       deps(),
     );
     expect(report.status).toBe("budget_exhausted");
-    // Jamais posté…
+    // Never posted...
     expect(h.prompts).toEqual(["fais le ticket"]);
-    // …donc rendu à la file, où le tour suivant le trouvera.
+    // …so back to the line, where the next round will find him.
     expect(h.steering).toEqual(["et regarde les tests"]);
   });
 });
 
 /**
- * MIN-286 — LE BATTEMENT DU TOUR.
+ * MIN-286 — THE BEAT OF THE ROUND.
  *
- * Tout ce qui fait vivre un tour — le « Stop », le steering, la sauvegarde
- * périodique (qui EST le battement de cœur du run) et l'échéance murale — vivait
- * dans le corps de la boucle d'events. Un `bash` de vingt minutes ne publie rien
- * entre son début et sa fin : le flux se taisait, et avec lui s'arrêtaient la
- * seule horloge du tour et le seul écrivain de `last_activity_at`. Le chien de
- * garde partait alors sonder une microVM parfaitement vivante.
+ * Everything that makes a ride come alive — “Stop”, steering, backup
+ * periodic (which IS the heartbeat of the run) and the wall deadline — lived
+ * in the body of the events loop. A twenty-minute `bash` publishes nothing
+ * between its beginning and its end: the flow was silent, and with it stopped the
+ * the only clock in the tower and the only writer of `last_activity_at`. The dog of
+ * guard then left to probe a perfectly alive microVM.
  */
 describe("le battement du tour", () => {
-  /** Un flux qui ne rend JAMAIS rien — le `bash` de vingt minutes. */
+  /** A flow that NEVER delivers anything — the twenty-minute `bash`. */
   function silentStream(): Partial<SupervisorDeps> {
     return {
       client: (baseUrl) =>
@@ -2117,7 +2117,7 @@ describe("le battement du tour", () => {
           fetchImpl: (async (input: RequestInfo | URL, init?: RequestInit) => {
             const path = String(input).replace(/^http:\/\/127\.0\.0\.1:\d+/, "").split("?")[0];
             if (path === "/event") {
-              // Ouvert, et muet : la socket vit, aucune frame n'arrive.
+              // Open, and silent: the socket is alive, no frame arrives.
               return new Response(
                 new ReadableStream({ start() {} }),
                 { status: 200, headers: { "content-type": "text/event-stream" } },
@@ -2139,13 +2139,13 @@ describe("le battement du tour", () => {
   });
 
   it("sauvegarde — donc bat le cœur du run — et tient son échéance murale", async () => {
-    // Une heure par lecture d'horloge : la sauvegarde périodique (deux minutes)
-    // tombe au premier battement, et la deadline de douze heures quelques
-    // battements plus tard. Les deux ne sont lues QUE par le battement.
+    // One hour per clock reading: periodic backup (two minutes)
+    // falls on the first beat, and the deadline of twelve hours a few
+    // beats later. Both are ONLY read by beat.
     h.tick = 60 * 60_000;
     const report = await run({}, silentStream());
-    // Le seul écrivain de `last_activity_at` sur un tour qui travaille : sans
-    // lui, le chien de garde va sonder une microVM vivante au bout de 3 minutes.
+    // The only writer from `last_activity_at` on a tour who works: without
+    // him, the watchdog will probe a living microVM after 3 minutes.
     expect(h.checkpoints.length).toBeGreaterThanOrEqual(1);
     expect(report.status).toBe("error");
     expect(report.errorCode).toBe("turnTooLong");
@@ -2153,13 +2153,13 @@ describe("le battement du tour", () => {
 });
 
 /**
- * MIN-358 — LE MÊME TOUR, DANS LE DÉPÔT DE QUELQU'UN D'AUTRE.
+ * MIN-358 — THE SAME ROUND, IN SOMEONE ELSE'S DEPOT.
  *
- * Ce que le superviseur doit faire de `repoMode: "current"` tient en trois
- * branchements, et chacun se voit d'ici : préparer le dépôt au lieu de le
- * supposer, commiter par la plomberie au lieu de `git add -A`, et publier ce
- * qu'un mode partagé est seul à savoir. La mécanique git, elle, est vérifiée
- * contre un vrai dépôt ([current-repo.git.test.ts](../current-repo.git.test.ts)).
+ * What the supervisor should do with `repoMode: "current"` comes down to three
+ * connections, and everyone can see each other from here: prepare the deposit instead of
+ * assume, commit via plumbing instead of `git add -A`, and post this
+ * that a shared mode is the only one to know. The git mechanics are verified
+ * against a real repository ([current-repo.git.test.ts](../current-repo.git.test.ts)).
  */
 describe("le mode dépôt courant", () => {
   it("prépare le dépôt et n'envoie AUCUN des gestes qui détruisent du travail", async () => {
@@ -2174,16 +2174,16 @@ describe("le mode dépôt courant", () => {
   });
 
   /**
-   * MIN-293, décision D2bis-B — **LE TOUR NE COMMITE RIEN, ET NE POUSSE RIEN.**
+   * MIN-293, decision D2bis-B — **THE TOUR COMMITS NOTHING, AND PUSHES NOTHING.**
    *
-   * Il poussait une branche à chaque fin de tour, comme dans le cloud. Sur le
-   * disque de quelqu'un c'est le mauvais geste : l'agent édite là où l'humain
-   * travaille, et rien ne l'autorise à décider seul que ce travail part sur une
-   * forge. La branche arrivait en plus sans exister localement (commit dans un
-   * index jetable, poussé par sha) — on la lisait dans l'interface sans pouvoir
-   * la trouver dans son propre `git branch`.
+   * He pushed a branch at the end of each turn, like in the cloud. On the
+   * someone's disk is the wrong move: the agent edits where the human
+   * works, and nothing authorizes him to decide alone that this work starts on a
+   * wrought. The branch also arrived without existing locally (committed in a
+   * disposable index, pushed by sha) — we read it in the interface without being able to
+   * find it in its own `git branch`.
    *
-   * Le livrable est désormais l'arbre de travail.
+   * The deliverable is now the work tree.
    */
   it("ne COMMITE ni ne POUSSE en fin de tour — le livrable est l'arbre", async () => {
     h.pushed = true;
@@ -2197,9 +2197,9 @@ describe("le mode dépôt courant", () => {
   });
 
   it("dit quand même au fil ce qu'il a changé, lu dans l'ARBRE", async () => {
-    // Sans commit, il n'y a pas de second sha à differ : `files_changed` vient
-    // de l'arbre de travail, borné au périmètre du tour — sans quoi les fichiers
-    // que l'humain avait déjà en cours remonteraient comme s'ils étaient de lui.
+    // Without commit, there is no second sha to defer: `files_changed` comes
+    // of the working tree, limited to the perimeter of the round — otherwise the files
+    // that the human already had in progress would come back as if they were his.
     h.pushed = true;
     await run({ repoMode: "current" });
     expect(h.exec.some((c) => c.includes("git status --porcelain --untracked-files=all"))).toBe(
@@ -2208,9 +2208,9 @@ describe("le mode dépôt courant", () => {
   });
 
   it("borne le diff aux écritures attribuées à CE run, même si un autre fichier bouge", async () => {
-    // Le faux dépôt annonce `a.ts` dans son état global. Seule la permission
-    // d'écriture de `lib/agent.ts` appartient à ce run : le fallback Git ne doit
-    // plus aspirer `a.ts` dans le diff affiché.
+    // The fake repository announces `a.ts` in its global state. Only permission
+    // writing code of `lib/agent.ts` belongs to this run: the Git fallback must not
+    // no longer suck `a.ts` into the displayed diff.
     h.extraFrames = [
       permissionFrame("edit", { filepath: "/vercel/sandbox/repo/lib/agent.ts" }),
     ];
@@ -2227,9 +2227,9 @@ describe("le mode dépôt courant", () => {
   });
 
   /**
-   * ET LA PULL REQUEST RESTE POSSIBLE — elle devient un GESTE, pas la fin d'un
-   * tour. C'est la contrepartie assumée de la décision, et la machinerie de
-   * MIN-358 ne meurt pas : elle change de déclencheur.
+   * AND THE PULL REQUEST REMAINS POSSIBLE — it becomes a GESTURE, not the end of a
+   * round. It is the assumed counterpart of the decision, and the machinery of
+   * MIN-358 doesn't die: it changes triggers.
    */
   it("pousse par l'index jetable quand on DEMANDE une pull request", async () => {
     h.pushed = true;
@@ -2238,8 +2238,8 @@ describe("le mode dépôt courant", () => {
       success: boolean;
     };
     expect(out.success).toBe(true);
-    // Le commit passe par l'index jetable, et le push par le SHA — jamais `HEAD`,
-    // qui est celui de l'utilisateur.
+    // The commit goes through the disposable index, and the push goes through the SHA — never `HEAD`,
+    // which is that of the user.
     expect(h.exec.some((c) => c.includes("read-tree"))).toBe(true);
     expect(h.exec.some((c) => c.includes("commit-tree"))).toBe(true);
     expect(h.exec.some((c) => c.includes("HEAD:refs/heads/"))).toBe(false);
@@ -2251,10 +2251,10 @@ describe("le mode dépôt courant", () => {
     const found = h.events.find(
       (e) => e.type === "status" && e.payload.phase === "current_repo",
     );
-    // Ce que l'event doit PORTER : la branche que l'utilisateur avait sous les
-    // doigts et ce qu'il avait en cours. C'est de quoi relire, plus tard, une
-    // pull request dont personne n'attribue les commits à l'agent. (Le host
-    // factice répond à tout `rev-parse`, donc l'ancre du run y existe déjà.)
+    // What the event must CARRY: the branch that the user had under the
+    // fingers and what he had going on. It's something to reread, later,
+    // pull request where no one attributes the commits to the agent. (The host
+    // dummy responds to any `rev-parse`, so the run anchor already exists there.)
     expect(Object.keys(found?.payload ?? {}).sort()).toEqual([
       "branch",
       "dirty",
@@ -2288,16 +2288,16 @@ describe("le mode dépôt courant", () => {
 });
 
 /**
- * MIN-361 — CE QUI REMONTE DE LA MACHINE DE L'UTILISATEUR.
+ * MIN-361 — WHAT COMES FROM THE USER'S MACHINE.
  *
- * Le seul point du chantier local qui ne se répare pas après coup : ce qui est
- * monté est monté. Les tests ci-dessous tiennent les deux moitiés de la
- * décision — ce qui ne part PAS (le journal, le contenu d'une sortie qui parle
- * d'ailleurs) et ce qui part quand même mais réécrit (les chemins de la
- * machine, jusque dans le message de commit).
+ * The only point of the local construction site that cannot be repaired after the fact: what is
+ * mounted is mounted. The tests below hold both halves of the
+ * decision — what is NOT leaving (the newspaper, the content of an output that speaks
+ * moreover) and what leaves all the same but is rewritten (the paths of
+ * machine, even in the commit message).
  *
- * Le décor est le tour capturé, joué avec un layout de MACHINE et un
- * `controlToken` — c'est lui, et rien d'autre, qui fait un tour local
+ * The setting is the captured trick, played with a MACHINE layout and a
+ * `controlToken` — it's him, and nothing else, who takes a local tour
  * (`isLocalJob`).
  */
 describe("un tour sur la machine de quelqu'un", () => {
@@ -2313,7 +2313,7 @@ describe("un tour sur la machine de quelqu'un", () => {
       { ...deps(), ...moreDeps },
     );
 
-  /** Une frame de tool, telle qu'opencode la publie sur le flux. */
+  /** A tool frame, such as opencode publishes it to the stream. */
   const toolFrame = (
     tool: string,
     callId: string,
@@ -2332,8 +2332,8 @@ describe("un tour sur la machine de quelqu'un", () => {
 
   it("n'exporte RIEN du journal de ses tools", async () => {
     await runLocal();
-    // Ni l'export côté opencode, ni l'écriture côté base : la sortie complète de
-    // chaque tool reste sur la machine qui l'a produite.
+    // Neither the export on the opencode side, nor the writing on the base side: the complete output of
+    // each tool remains on the machine that produced it.
     expect(h.routes).not.toContain("POST /sync/history");
     expect(h.journal).toEqual([]);
   });
@@ -2370,8 +2370,8 @@ describe("un tour sur la machine de quelqu'un", () => {
   });
 
   it("…là où un tour de microVM l'exporte, comme avant", async () => {
-    // Le contre-exemple compte autant : la décision porte sur le chemin LOCAL,
-    // et un journal cloud qui disparaîtrait coûterait la mémoire de la session.
+    // The counter-example counts as much: the decision concerns the LOCAL path,
+    // and a disappearing cloud log would cost session memory.
     await run();
     expect(h.journal.length).toBeGreaterThan(0);
   });
@@ -2388,8 +2388,8 @@ describe("un tour sur la machine de quelqu'un", () => {
     const preview = String(resultOf("call_ailleurs")?.payload.preview ?? "");
     expect(preview).toContain("kept this output on this machine");
     expect(preview).not.toContain("id_ed25519");
-    // Retenue ET COMPTÉE : c'est ce qui permet de savoir, après coup, qu'un tour
-    // a lu hors du dossier — sans faire monter ce qu'il y a lu.
+    // RETAINED AND COUNTED: this is what allows you to know, after the fact, that a round
+    // read outside the folder — without surfacing what it read.
     expect(resultOf("call_ailleurs")?.payload.withheld).toBe(1);
     expect(
       h.events.some(
@@ -2399,8 +2399,8 @@ describe("un tour sur la machine de quelqu'un", () => {
   });
 
   it("la retient sur l'APPEL, même quand la sortie ne porte aucun chemin", async () => {
-    // Le cas qui décide de la forme : une clé privée est du texte sans le
-    // moindre chemin. Regarder la seule sortie la laisserait monter entière.
+    // The case that decides the form: a private key is text without the
+    // least path. Watching the only exit would let it rise whole.
     h.extraFrames = [
       toolFrame("bash", "call_cle", {
         status: "running",
@@ -2416,8 +2416,8 @@ describe("un tour sur la machine de quelqu'un", () => {
     const preview = String(resultOf("call_cle")?.payload.preview ?? "");
     expect(preview).toContain("kept this output on this machine");
     expect(preview).not.toContain("OPENSSH PRIVATE KEY");
-    // Le GESTE, lui, reste lisible : on doit pouvoir voir ce que l'agent est
-    // allé faire, surtout quand il est allé le faire hors du dossier.
+    // The GESTURE remains legible: we must be able to see what the agent is
+    // went to do it, especially when he went to do it off the record.
     const call = h.events.find((e) => e.type === "tool_call" && e.payload.id === "call_cle");
     expect(JSON.stringify(call?.payload)).toContain("~/.ssh/id_rsa");
   });
@@ -2433,8 +2433,8 @@ describe("un tour sur la machine de quelqu'un", () => {
     await runLocal();
     const payload = JSON.stringify(resultOf("call_dedans")?.payload);
     expect(payload).toContain("export const x = 1;");
-    // Et `/Users/<prénom nom>` a disparu — y compris sur un chemin qui est DANS
-    // le dépôt, ce qu'une règle « hors du dépôt » ne couvrirait jamais.
+    // And `/Users/<first last name>` disappeared — including on a path that is IN
+    // the deposit, which an “out of deposit” rule would never cover.
     expect(payload).not.toContain("/Users/testeur");
     expect(payload).toContain("./lib/x.ts");
     expect(resultOf("call_dedans")?.payload.withheld).toBeUndefined();
@@ -2449,15 +2449,15 @@ describe("un tour sur la machine de quelqu'un", () => {
       }),
     ];
     await run();
-    // Aucun tour de microVM ne doit changer de comportement : la garde est
-    // adossée au chemin local, et un clone jetable n'a pas de disque personnel.
+    // No microVM round should change behavior: the guard is
+    // backed by the local path, and a disposable clone does not have a home disk.
     expect(String(resultOf("call_cloud")?.payload.preview ?? "")).toContain("Host github.com");
   });
 
   it("repart d'une session neuve quand la base d'opencode a disparu", async () => {
-    // Sans journal exporté, la mémoire du tour précédent EST ce fichier. Un
-    // identifiant de session sans sa base ferait prompter dans le vide, et la
-    // conversation serait cassée pour de bon.
+    // Without an exported log, the memory from the previous round IS this file. A
+    // session identifier without its base would prompt into the void, and the
+    // conversation would be broken for good.
     h.localStore = false;
     await runLocal({ opencode: { sessionId: "ses_dun_autre_temps", events: [], seq: {} } });
     expect(h.routes).toContain("POST /session");
@@ -2470,12 +2470,12 @@ describe("un tour sur la machine de quelqu'un", () => {
   });
 
   /**
-   * MIN-364, décision D5 — SORTIR DU DOSSIER EST AUTORISÉ, ET LAISSE UNE TRACE.
+   * MIN-364, decision D5 — LEAVING THE FILE IS AUTHORIZED, AND LEAVES A TRACE.
    *
-   * C'est la contrepartie de l'ouverture, et sa seule justification honnête : le
-   * mur d'avant (`external_directory: "deny"`) n'attrapait que les tools honnêtes
-   * et poussait le travail vers `bash`, où l'on ne voit plus rien. Ici le verdict
-   * ne bride rien ET le fil garde la liste des excursions.
+   * This is the counterpart of openness, and its only honest justification:
+   * wall before (`external_directory: "deny"`) only caught honest tools
+   * and pushed the work towards `bash`, where we no longer see anything. Here the verdict
+   * doesn't restrict anything AND the thread keeps the list of excursions.
    */
   describe("sortir du dossier attaché", () => {
     const externalFrame = JSON.stringify({
@@ -2498,15 +2498,15 @@ describe("un tour sur la machine de quelqu'un", () => {
       const trace = h.events.find(
         (e) => e.type === "status" && e.payload.phase === "outside_repo",
       );
-      // Le chemin est réécrit comme tout le reste du chemin local : ce qui monte
-      // dit où l'agent est allé, jamais le nom de son propriétaire.
+      // The path is rewritten like the rest of the local path: what goes up
+      // says where the agent went, never the name of its owner.
       expect(trace?.payload.path).toBe("~/Projets/voisin");
     });
 
     it("n'annonce un dossier QU'UNE fois, quel que soit le nombre d'accès", async () => {
-      // Opencode redemande à chaque accès (on répond `once`, jamais `always`) :
-      // un tour qui lit trente fichiers d'un dépôt voisin publierait trente
-      // lignes identiques, et une trace illisible n'est plus une trace.
+      // Opencode asks again on each access (we answer `once`, never `always`):
+      // a lathe that reads thirty files from a neighboring repository would publish thirty
+      // identical lines, and an illegible trace is no longer a trace.
       h.extraFrames = [externalFrame, externalFrame, externalFrame];
       await runLocal();
       expect(h.permissionReplies).toHaveLength(3);
@@ -2526,18 +2526,18 @@ describe("un tour sur la machine de quelqu'un", () => {
   });
 
   /**
-   * MIN-364, décision D7 — UNE QUESTION SUSPEND LE TOUR AU LIEU DE LE TUER.
+   * MIN-364, decision D7 — A QUESTION SUSPENDS THE ROUND INSTEAD OF KILLING IT.
    *
-   * Le motif du refus d'avant nommait la microVM (« tenir une microVM ouverte le
-   * temps qu'un humain revienne coûterait des heures de compute ») : il vaut zéro
-   * sur un Mac, où il n'y a pas de compute à payer et où quelqu'un est devant
-   * l'écran. Le tool `question` bloque tout seul, sans timeout, et y répondre ne
-   * termine pas le tour — mesuré sur le binaire
+   * The reason for refusal before was called microVM (“keeping a microVM open on
+   * time for a human to return would cost hours of computing"): it is worth zero
+   * on a Mac, where there is no computing to pay and someone is in front
+   * the screen. The `question` tool blocks itself, without timeout, and responding to it does not
+   * does not complete the round — measured on binary
    * ([opencode-wait.probe.test.ts](opencode-wait.probe.test.ts)).
    *
-   * Ce que ces tests fixent est le DÉTOUR SUPPRIMÉ : plus de rejet de question,
-   * plus de coupure de session, plus de réponse déguisée en steering au tour
-   * suivant. Le message de l'utilisateur dénoue le tool, et le round repart.
+   * What these tests fix is ​​the REMOVED DETOUR: no more question rejection,
+   * no more session interruption, no more response disguised as lap steering
+   * following. The user's message unwinds the tool, and the round starts again.
    */
   describe("une question du modèle", () => {
     const questionFrame = JSON.stringify({
@@ -2557,9 +2557,9 @@ describe("un tour sur la machine de quelqu'un", () => {
     });
 
     /**
-     * Une file qui ne se remplit qu'une fois la QUESTION posée — le seul montage
-     * qui exerce la réponse. Une file prête plus tôt serait drainée par le premier
-     * sondage du tour, donc jouée comme du steering ordinaire.
+     * A queue that only fills once the QUESTION is asked — the only editing
+     * who exercises the response. A queue ready earlier would be drained by the first
+     * sounding of the turn, therefore played like ordinary steering.
      */
     const answerAfterQuestion = (text: string): Partial<ControlPlaneClient> => {
       let given = false;
@@ -2577,11 +2577,11 @@ describe("un tour sur la machine de quelqu'un", () => {
     it("ne coupe PAS la session : le round reste suspendu sur le tool", async () => {
       h.extraFrames = [questionFrame];
       const report = await runLocal();
-      // Le chemin microVM, lui, coupe (test du dessous). Ici rien ne coupe : le
-      // tool `question` bloque tout seul, et c'est exactement ce qu'on veut.
+      // The microVM path cuts (test below). Here nothing cuts: the
+      // tool `question` blocks on its own, and that's exactly what we want.
       expect(h.aborts).toBe(0);
-      // `askedUser` est ce qui met la session en `awaiting_input` et envoie la
-      // notification `agent_question` : un tour qui attend N'EST PAS un tour fini.
+      // `askedUser` is what puts the session in `awaiting_input` and sends the
+      // notification `agent_question`: a waiting turn is NOT a finished turn.
       expect(report.askedUser).toBeUndefined();
     });
 
@@ -2612,27 +2612,27 @@ describe("un tour sur la machine de quelqu'un", () => {
         host(LOCAL_LAYOUT),
         deps(),
       );
-      // La réponse voyage à la FORME d'opencode : une liste par question, dans
-      // l'ordre où elles ont été posées.
+      // The answer travels to the FORM of opencode: one list per question, in
+      // the order in which they were placed.
       expect(h.questionsAnswered).toEqual([{ id: "que_local", answers: [["A"]] }]);
-      // LE DÉTOUR EST BIEN SUPPRIMÉ : pas de second prompt (la réponse arrive au
-      // modèle dans le résultat du tool), et pas d'`abort` du round qu'on vient
-      // de débloquer.
+      // THE DETOUR IS WELL REMOVED: no second prompt (the response arrives at the
+      // model in the result of the tool), and no `abort` of the round we have just
+      // to unlock.
       expect(h.prompts).toEqual(["fais le ticket"]);
       expect(h.aborts).toBe(0);
-      // Le fil garde quand même la parole de l'utilisateur : le résultat du tool
-      // n'est pas une bulle de conversation.
+      // The thread still keeps the user's voice: the result of the tool
+      // is not a conversation bubble.
       expect(
         h.events.filter((e) => e.type === "user_message").map((e) => e.payload.text),
       ).toEqual(["A"]);
       expect(report.status).toBe("completed");
-      // Répondue, donc pas écartée : le tool revient `completed`, pas en erreur.
+      // Answered, therefore not dismissed: the tool returns `completed`, not in error.
       expect(h.questionsRejected).toEqual([]);
     });
 
     it("consomme le « Stop » que le composer envoie AVEC la réponse", async () => {
-      // Le composer envoie toujours le couple steer + interrupt. Le jouer ici
-      // arrêterait le tour que l'utilisateur vient précisément de relancer.
+      // The dialer always sends the steer + interrupt pair. Play it here
+      // would stop the round that the user has just restarted.
       h.tick = 3_000;
       h.interrupt = true;
       h.extraFrames = [questionFrame];
@@ -2654,10 +2654,10 @@ describe("un tour sur la machine de quelqu'un", () => {
     });
 
     it("écarte la question en vol quand le tour sort sans réponse", async () => {
-      // Le tour se termine (flux rompu, « Stop » nu, deadline, plafond) avec un
-      // tool `question` encore suspendu : il DOIT être résolu, sinon il reste
-      // `running` pour toujours dans la base d'opencode, que le tour suivant
-      // relit — et rien ne le ressuscite (mesuré, sonde d'attente, cas 2).
+      // The round ends (broken flow, bare “Stop”, deadline, ceiling) with a
+      // tool `question` still suspended: it MUST be resolved, otherwise it remains
+      // `running` forever in the opencode base, only the next round
+      // relit — and nothing revives it (measured, waiting probe, case 2).
       h.extraFrames = [questionFrame];
       await runLocal();
       expect(h.questionsRejected).toEqual(["que_local"]);
@@ -2665,19 +2665,19 @@ describe("un tour sur la machine de quelqu'un", () => {
   });
 
   /**
-   * MIN-364 (décision D8) — LE REGISTRE D'ENFANTS COUVRE LES JOBS DE FOND.
+   * MIN-364 (decision D8) — THE CHILDREN'S REGISTRY COVERS GROUND JOBS.
    *
-   * C'était la CONDITION écrite de la réouverture de `run_background` en local,
-   * et elle n'a rien de théorique : les jobs partent en `setsid`, expressément
-   * pour survivre au shell, et le `stopAll` de fin de tour ne tourne jamais quand
-   * le harness est tué net (⌘Q, plantage du main process). Sans cette écriture,
-   * le `npm run dev` du modèle reste vivant, le port 3000 tenu, et rien nulle
-   * part ne sait où le retrouver.
+   * This was the written CONDITION for the reopening of `run_background` locally,
+   * and there is nothing theoretical about it: jobs go to `setsid`, expressly
+   * to survive the shell, and the end-of-turn `stopAll` never runs when
+   * the harness is killed outright (⌘Q, main process crash). Without this writing,
+   * the `npm run dev` of the model remains alive, port 3000 held, and nothing null
+   * I don't know where to find him.
    *
-   * Le test écrit dans un VRAI dossier temporaire : `child-registry.ts` fait du
-   * `writeFileSync` synchrone (par conception — un process tué net n'a pas le
-   * temps d'un flush asynchrone), et c'est le fichier sur le disque qui est le
-   * contrat avec le lanceur.
+   * The test written in a REAL temporary folder: `child-registry.ts` makes some
+   * `writeFileSync` synchronous (by design — a process killed cleanly does not have the
+   * time of an asynchronous flush), and it is the file on the disk which is the
+   * contract with the launcher.
    */
   describe("les jobs de fond, inscrits au registre", () => {
     let root = "";
@@ -2706,12 +2706,12 @@ describe("un tour sur la machine de quelqu'un", () => {
 
     it("inscrit le job, en GROUPE, et le retire quand il l'a tué lui-même", async () => {
       const file = await runInTemp();
-      // Le tour s'est terminé, donc `stopAll` est passé : l'entrée doit avoir été
-      // RETIRÉE. C'est l'autre moitié du contrat — un registre qui n'oublie
-      // jamais ferait tuer des pid réattribués à d'autres, au démarrage suivant.
+      // The round has ended, so `stopAll` has passed: the entry must have been
+      // WITHDRAWN. It's the other half of the contract — a record that doesn't forget
+      // would never kill pids reassigned to others, at the next startup.
       const after = JSON.parse(readFileSync(file, "utf8")) as { children: unknown[] };
       expect(after.children).toEqual([]);
-      // Et le job a bel et bien été lancé, puis tué, dans cet ordre.
+      // And the job was indeed launched, then killed, in that order.
       expect(h.exec.findIndex((c) => c.includes("setsid"))).toBeGreaterThanOrEqual(0);
       expect(h.exec.findIndex((c) => c.includes("kill -TERM"))).toBeGreaterThan(
         h.exec.findIndex((c) => c.includes("setsid")),
@@ -2732,8 +2732,8 @@ describe("un tour sur la machine de quelqu'un", () => {
           startToolBridge: async (opts) => {
             h.supervisorTools = (opts.supervisorTools ?? {}) as typeof h.supervisorTools;
             await h.supervisorTools.run_background({ action: "start", command: "npm run dev" });
-            // Lu PENDANT le tour : c'est le seul instant où l'observation a un
-            // sens, puisque la fin de tour tue tout.
+            // Read DURING the tour: this is the only moment where the observation has a
+            // meaning, since the end of the turn kills everything.
             const live = JSON.parse(readFileSync(file, "utf8")) as {
               children: Array<{ pid: number; kind: string; label?: string }>;
             };

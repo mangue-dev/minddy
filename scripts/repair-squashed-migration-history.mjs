@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 /**
- * MIN-379 — transition sûre des instances existantes vers le baseline compact.
+ * MIN-379 — safe transition from existing instances to the compact baseline.
  *
- * Le baseline porte volontairement la dernière version de l'ancien historique.
- * Une instance déjà à jour a donc son schéma correct ; seuls les 210 anciens
- * enregistrements de `supabase_migrations.schema_migrations` doivent être
- * retirés. Cette commande ne touche jamais au schéma ni aux données.
+ * The baseline voluntarily carries the latest version of the old history.
+ * An instance already up to date therefore has its correct schema; only the 210 old
+ * records in `supabase_migrations.schema_migrations` should be removed. This command never touches the schema or data.
  */
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -13,13 +12,13 @@ import { pathToFileURL } from "node:url";
 
 export const BASELINE_VERSION = "20270106090000";
 export const LEGACY_VERSION_COUNT = 210;
-// SHA-256 de la liste triée des 211 versions pré-baseline, une par ligne.
-// C'est plus compact qu'une seconde copie de l'ancien historique, tout en
-// empêchant de réparer une base qui n'aurait qu'un nombre semblable de versions.
+// SHA-256 of the sorted list of 211 pre-baseline versions, one per line.
+// It's more compact than a second copy of the old history, while
+// preventing you from repairing a database that only has a similar number of versions.
 export const LEGACY_HISTORY_DIGEST = "8c79c3a1afa368b63956b311fec45ec81dd9649764d27a49db9a61894c43682b";
 
 function fail(message) {
-  throw new Error(`Réparation de l'historique impossible : ${message}`);
+  throw new Error(`History repair failed: ${message}`);
 }
 
 export function parseArgs(argv) {
@@ -29,7 +28,7 @@ export function parseArgs(argv) {
     if (flag === "--") continue;
     if (flag === "--db-url") {
       const value = argv[++index];
-      if (!value || value.startsWith("--")) fail("--db-url attend une valeur.");
+      if (!value || value.startsWith("--")) fail("--db-url expects a value.");
       options.dbUrl = value;
     } else if (flag === "--apply") {
       options.apply = true;
@@ -39,38 +38,38 @@ export function parseArgs(argv) {
       options.manualSchema = true;
     } else if (flag === "--confirm-history") {
       const value = argv[++index];
-      if (!value || value.startsWith("--")) fail("--confirm-history attend une empreinte SHA-256.");
+      if (!value || value.startsWith("--")) fail("--confirm-history expects a SHA-256 digest.");
       options.confirmHistory = value;
     } else if (flag === "--help" || flag === "-h") {
       options.help = true;
     } else {
-      fail(`option inconnue : ${flag}.`);
+      fail(`unknown option: ${flag}.`);
     }
   }
   if (!options.help && !options.dbUrl && !options.linked) {
-    fail("--db-url ou --linked est requis.");
+    fail("--db-url or --linked is required.");
   }
-  if (options.dbUrl && options.linked) fail("--db-url et --linked sont exclusifs.");
+  if (options.dbUrl && options.linked) fail("--db-url and --linked are mutually exclusive.");
   return options;
 }
 
 export function help() {
   return `Usage: pnpm repair:squashed-migrations -- (--db-url <postgres-url> | --linked) [options]
 
-Sans --apply, vérifie uniquement que l'instance porte exactement les 211
-versions de l'ancien historique. Avec --apply, retire les 210 versions
-antérieures au baseline 20270106090000 de la table d'historique ; le schéma et
-les données ne sont jamais modifiés. --linked utilise le projet lié à la CLI.
-Pour une base dont les migrations ont été appliquées manuellement, contrôlez
-d'abord le schéma avec \`supabase db diff --linked\`, puis ajoutez
-\`--allow-manual-schema\`. Avec \`--apply\`, cette voie exige en plus
-\`--confirm-history <empreinte affichée>\`. Faites une sauvegarde restaurable avant.`;
+Without --apply, only verifies that the instance has exactly the 211 versions
+from the old history. With --apply, removes the 210 versions before baseline
+20270106090000 from the history table; the schema and data are never modified.
+--linked uses the project linked to the CLI.
+For a database whose migrations were applied manually, first inspect the schema
+with \`supabase db diff --linked\`, then add \`--allow-manual-schema\`. With
+\`--apply\`, this path also requires \`--confirm-history <displayed-digest>\`.
+Create a restorable backup first.`;
 }
 
 function command(command, args) {
   const result = spawnSync(command, args, { encoding: "utf8" });
-  if (result.error?.code === "ENOENT") fail(`commande absente : ${command}.`);
-  if (result.status !== 0) fail(`${command} a échoué : ${(result.stderr || result.stdout).trim()}`);
+  if (result.error?.code === "ENOENT") fail(`command is missing: ${command}.`);
+  if (result.status !== 0) fail(`${command} failed: ${(result.stderr || result.stdout).trim()}`);
   return result.stdout;
 }
 
@@ -122,13 +121,13 @@ function historyDigest(versions) {
 
 export function validateHistory(versions) {
   const summary = summariseHistory(versions);
-  if (!summary.hasBaseline) fail(`le baseline ${BASELINE_VERSION} n'est pas enregistré.`);
-  if (summary.malformed.length > 0) fail(`versions inattendues : ${summary.malformed.join(", ")}.`);
-  if (summary.newer.length > 0) fail(`migrations postérieures au baseline : ${summary.newer.join(", ")}.`);
+  if (!summary.hasBaseline) fail(`baseline ${BASELINE_VERSION} is not recorded.`);
+  if (summary.malformed.length > 0) fail(`unexpected versions: ${summary.malformed.join(", ")}.`);
+  if (summary.newer.length > 0) fail(`migrations after baseline: ${summary.newer.join(", ")}.`);
   if (!summary.ready) {
     fail(
-      `l'instance ne porte pas exactement l'historique historique attendu : ${summary.legacy.length} version(s) ` +
-        `antérieure(s), ${LEGACY_VERSION_COUNT} attendues. Vérifiez la dérive avant toute réparation.`
+      `the instance does not have exactly the expected history: ${summary.legacy.length} version(s) ` +
+        `before baseline, ${LEGACY_VERSION_COUNT} expected. Check for drift before repairing.`
     );
   }
   return summary;
@@ -153,22 +152,22 @@ export function main(argv = process.argv.slice(2)) {
     }
     manualSchema = true;
     console.log(
-      `→ Historique manuel accepté : ${summary.legacy.length} version(s), empreinte ${historyDigest(versions)}.`
+      `→ Manual history accepted: ${summary.legacy.length} version(s), digest ${historyDigest(versions)}.`
     );
   }
   if (!manualSchema) {
-    console.log(`→ Instance vérifiée : baseline + ${summary.legacy.length} versions historiques.`);
+    console.log(`→ Instance verified: baseline + ${summary.legacy.length} historical versions.`);
   }
   if (!options.apply) {
     console.log(
       manualSchema
-        ? "→ Simulation seulement. Vérifiez le diff de schéma, puis ajoutez --apply --confirm-history <empreinte>."
-        : "→ Simulation seulement. Ajoutez --apply après sauvegarde restaurable pour réparer l'historique."
+        ? "→ Simulation only. Check the schema diff, then add --apply --confirm-history <digest>."
+        : "→ Simulation only. Add --apply after creating a restorable backup to repair history."
     );
     return;
   }
   if (manualSchema && options.confirmHistory !== historyDigest(versions)) {
-    fail("--confirm-history doit correspondre exactement à l'empreinte affichée par la simulation.");
+    fail("--confirm-history must exactly match the digest displayed by the simulation.");
   }
 
   const repairArgs = [
@@ -190,9 +189,9 @@ export function main(argv = process.argv.slice(2)) {
   }
   const remaining = listRemoteVersions(options);
   if (remaining.length !== 1 || remaining[0] !== BASELINE_VERSION) {
-    fail("l'historique après réparation ne contient pas uniquement le baseline ; annulez le déploiement.");
+    fail("history after repair does not contain only the baseline; cancel the deployment.");
   }
-  console.log("✓ Historique consolidé. Exécutez maintenant pnpm bootstrap:supabase pour appliquer la migration de données initiales.");
+  console.log("✓ History consolidated. Run pnpm bootstrap:supabase now to apply the initial data migration.");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

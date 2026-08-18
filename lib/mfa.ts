@@ -1,35 +1,35 @@
 /**
- * Second facteur (MIN-132) — le peu de logique partagée entre le proxy, l'API et
- * le client. Isomorphe volontairement : pas de `server-only` ici, ce module est
- * lu dans les trois runtimes.
+ * Second factor (MIN-132) — how little logic is shared between the proxy, the API and
+ * the client. Deliberately isomorphic: no `server-only` here, this module is
+ * read in the three runtimes.
  *
- * ## Pourquoi un drapeau dans `app_metadata`
+ * ## Why a flag in `app_metadata`
  *
- * L'enforcement pose deux questions : « cette session est-elle en aal2 ? » et
- * « ce compte a-t-il un facteur enrôlé ? ». La première se lit dans le JWT
- * (claim `aal`, signé). La seconde, non : Supabase l'expose via
- * `session.user.factors`, qui vient du COOKIE. Or qui a volé la session peut
- * réécrire ce cookie et retirer `factors` — c'est-à-dire désactiver le garde-fou
- * exactement dans le scénario que la 2FA existe pour couvrir.
+ * The enforcement asks two questions: "this session is it in aal2? » and
+ * “does this account have an enrolled factor? ". The first reads in the JWT
+ * (claim `aal`, signed). The second, no: Supabase exposes it via
+ * `session.user.factors`, which comes from the COOKIE. But whoever stole the session can
+ * rewrite this cookie and remove `factors` — that is, disable the guard
+ * exactly in the scenario that 2FA exists to cover.
  *
- * D'où `app_metadata.mfa_enabled`, écrit côté serveur avec la clé de service (le
- * client ne peut pas écrire `app_metadata`) et embarqué dans chaque JWT frappé
- * ensuite. `getClaims()` en vérifie la signature localement : la réponse est
- * gratuite et non falsifiable.
+ * Hence `app_metadata.mfa_enabled`, written next server with the service key (the
+ * client cannot write `app_metadata`) and embedded in each JWT hit
+ * then. `getClaims()` verifies the signature locally: the response is
+ * free and non-falsifiable.
  *
- * Contrepartie assumée : le drapeau est figé jusqu'au prochain rafraîchissement
- * du jeton (≤ 1 h). À l'activation, on rafraîchit la session tout de suite ET on
- * révoque les autres sessions — sinon un jeton `aal1` déjà volé resterait valide
- * jusqu'à son propre refresh.
+ * Assumed counterpart: the flag is frozen until the next refresh
+ * of the token (≤ 1 h). Upon activation, we refresh the session immediately AND on
+ * revokes the other sessions — otherwise an already stolen `aal1` token would remain valid
+ * until its own refresh.
  */
 
-/** Clé du drapeau dans `app_metadata`. */
+/** Flag key in `app_metadata`. */
 export const MFA_ENABLED_CLAIM = "mfa_enabled";
 
-/** Code d'erreur renvoyé par l'API quand la session n'est pas montée en aal2. */
+/** Error code returned by the API when the session is not mounted in aal2. */
 export const MFA_REQUIRED_CODE = "mfa_required";
 
-/** Nombre de codes de récupération émis d'un coup. */
+/** Number of recovery codes issued at once. */
 export const RECOVERY_CODE_COUNT = 10;
 
 export function hasMfaEnabled(appMetadata: unknown): boolean {
@@ -38,14 +38,14 @@ export function hasMfaEnabled(appMetadata: unknown): boolean {
 }
 
 /**
- * Vrai quand le compte a un facteur enrôlé mais que la session n'est pas montée
- * au second niveau — donc : il reste un challenge à passer.
+ * True when the account has an enrolled factor but the session is not raised
+ * to the second level — therefore: there is still a challenge to pass.
  *
- * Le refus est GLOBAL, pas limité à une liste de routes sensibles. Une liste
- * demanderait d'y penser à chaque nouvelle route, et une liste qu'on oublie de
- * compléter est une faille qui ne se voit pas. Comme le challenge est posé juste
- * après le mot de passe, on n'est de toute façon en `aal1` que si on a abandonné
- * la connexion en cours de route.
+ * The refusal is GLOBAL, not limited to a list of sensitive routes. A list
+ * would require you to think about it on each new route, and a list that you forget to complete
+ * is a flaw that is not visible. As the challenge is posed just
+ * after the password, we are only in `aal1` if we abandoned
+ * the connection during the process.
  */
 export function needsMfaChallenge(
   claims: { aal?: unknown; app_metadata?: unknown } | null | undefined
@@ -55,10 +55,10 @@ export function needsMfaChallenge(
 }
 
 /**
- * Payload d'un JWT, SANS vérification de signature. Réservé au proxy, qui ne
- * fait que router : il choisit d'envoyer une session vers l'écran de challenge,
- * il n'autorise aucune donnée. Un jeton bricolé y passerait et se ferait refuser
- * par la première requête API — `getAuthedUser`, lui, vérifie la signature.
+ * Payload of a JWT, WITHOUT signature verification. Reserved for the proxy, which does not
+ * only route: it chooses to send a session to the challenge screen,
+ * it does not allow any data. A tinkered token would pass through and be refused
+ * by the first API request — `getAuthedUser` checks the signature.
  */
 export function decodeJwtPayload(token: string): Record<string, unknown> | null {
   const part = token.split(".")[1];
@@ -77,16 +77,16 @@ export function decodeJwtPayload(token: string): Record<string, unknown> | null 
 }
 
 /**
- * Traduit un échec de `challengeAndVerify` en clé de message.
+ * Translates a `challengeAndVerify` failure into a message key.
  *
- * GoTrue répond en anglais et en jargon — « Invalid TOTP code entered ». Le
- * remonter tel quel à l'écran, c'est afficher un message qui n'est ni dans la
- * langue de la personne ni dans ses mots, au moment précis où elle est déjà
- * bloquée dehors. On ne garde donc du serveur que la DISTINCTION utile : code
- * refusé, trop d'essais, ou le reste.
+ * GoTrue responds in English and jargon — “Invalid TOTP code entered”. The
+ * coming up as is on the screen means displaying a message which is neither in the person's
+ * language nor in their words, at the precise moment when they are already
+ * blocked outside. We therefore only keep from the server the useful DISTINCTION: code
+ * refused, too many tries, or the rest.
  *
- * Les trois clés existent dans `Auth` et dans `AccountSecurity` — les deux
- * écrans qui vérifient un code — avec la formulation propre à chacun.
+ * The three keys exist in `Auth` and in `AccountSecurity` — the two
+ * screens which verify a code — with the proper formulation to everyone.
  */
 export type MfaErrorKey =
   | "mfaInvalidCode"
@@ -101,8 +101,8 @@ export function mfaVerifyErrorKey(error: unknown): MfaErrorKey {
   if (code === "over_request_rate_limit" || status === 429) {
     return "mfaTooManyAttempts";
   }
-  // `mfa_verification_failed` est le cas courant ; le repli sur 4xx couvre les
-  // variantes de GoTrue sans les nommer une par une (elles changent, le sens
+  // `mfa_verification_failed` is the common case; the fallback on 4xx covers the
+  // GoTrue variants without naming them one by one (they change, the meaning
   // « ce code ne passe pas » reste).
   if (
     code.startsWith("mfa_verification") ||
@@ -114,32 +114,32 @@ export function mfaVerifyErrorKey(error: unknown): MfaErrorKey {
 }
 
 /**
- * Format d'un code de récupération : TROIS groupes de quatre caractères en
- * Crockford base32 (sans I, L, O, U — les confusions à l'oral et à la copie).
+ * Format of a recovery code: THREE groups of four characters in
+ * Crockford base32 (without I, L, O, U - confusion when spoken or copied).
  *
- * Douze caractères, donc 60 bits par code (MIN-347). Les deux groupes d'origine
- * n'en portaient que 40 : assez contre une devinette en ligne, pas assez contre
- * une base qui fuit — 2⁴⁰ empreintes se balaient hors ligne en quelques
- * secondes sur une carte graphique. L'entropie et le KDF vont ensemble : le
- * hachage lent de [lib/server/mfa.ts](server/mfa.ts) rend le balayage coûteux,
- * ces 20 bits de plus le rendent inutile. Un groupe de plus à recopier est le
- * prix, sur un geste qu'on fait une fois dans sa vie.
+ * Twelve characters, therefore 60 bits per code (MIN-347). The two original groups
+ * only carried 40: enough against an online guess, not enough against
+ * a leaky base — 2⁴⁰ fingerprints wipe offline in a few
+ * seconds on a graphics card. Entropy and KDF go together: the
+ * slow hashing of [lib/server/mfa.ts](server/mfa.ts) makes scanning expensive,
+ * those extra 20 bits make it useless. One more group to copy is the
+ * price, for a gesture that you make once in your life.
  */
 export const RECOVERY_CODE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
-/** Caractères significatifs d'un code, tirets exclus. */
+/** Significant characters of a code, excluding hyphens. */
 export const RECOVERY_CODE_LENGTH = 12;
 const RECOVERY_CODE_RE =
   /^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/;
 
-/** Découpe en groupes de quatre : la seule forme sous laquelle un code circule. */
+/** Cut into groups of four: the only form in which a code circulates. */
 export function formatRecoveryCode(raw: string): string {
   return (raw.match(/.{1,4}/g) ?? []).join("-");
 }
 
 /**
- * Normalise ce que la personne a tapé : majuscules, tirets rétablis, espaces et
- * séparations parasites retirés. Renvoie `null` si ça ne peut pas être un code —
- * ce qui évite d'aller taper la base pour une saisie manifestement à côté.
+ * Normalizes what the person typed: capital letters, hyphens restored, spaces and
+ * spurious separations removed. Returns `null` if it cannot be a code —
+ * which avoids having to type the base for an obviously incorrect entry.
  */
 export function normalizeRecoveryCode(input: string): string | null {
   const cleaned = input.toUpperCase().replace(/[^0-9A-Z]/g, "");

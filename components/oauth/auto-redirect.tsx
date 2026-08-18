@@ -2,9 +2,9 @@
 
 import { useEffect } from "react";
 
-/** Redirection automatique de l'interstitiel de succès vers le callback du
-    client — location.replace pour ne pas laisser l'URL (avec le code) dans
-    l'historique du navigateur. */
+/** Automatic redirection of the success interstitial to the
+ client callback — location.replace to not leave the URL (with the code) in
+ the browser history. */
 export function AutoRedirect({ url, delayMs }: { url: string; delayMs: number }) {
   useEffect(() => {
     const id = window.setTimeout(() => window.location.replace(url), delayMs);

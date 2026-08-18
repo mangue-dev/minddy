@@ -55,7 +55,7 @@ type PageProps = { params: Promise<{ token: string }> };
 const getShareContext = cache(getPublicShareByToken);
 
 /** A password share reveals NOTHING (not even the view name) until unlocked.
-    La règle est écrite une fois pour les deux surfaces publiques
+    The rule is written once for both public surfaces
     (lib/server/share-unlock.ts). */
 async function isUnlocked(ctx: PublicShareContext): Promise<boolean> {
   return isShareUnlocked(ctx.share);
@@ -68,14 +68,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     getTranslations("PublicShare"),
     getLocale(),
   ]);
-  // Token inconnu → la page part en 404 : elle en porte le titre, quel que
-  // soit celui des deux chemins (métadonnées de la route ou de la frontière
+  // Unknown token → the page goes to 404: it bears the title, whatever
+  // either that of the two paths (metadata of the road or the border
   // not-found) que Next retient.
   if (!ctx) {
     return { ...(await appPageMetadata("notFound")), robots: { index: false, follow: false } };
   }
-  // Verrouillée, la page ne dit ni le nom de la vue ni celui du projet — elle
-  // dit seulement qu'elle est verrouillée, ce que le visiteur voit déjà.
+  // Locked, the page says neither the name of the view nor that of the project — it
+  // only says that it is locked, which the visitor already sees.
   if (!(await isUnlocked(ctx))) {
     return publicTokenMetadata({
       title: t("protectedTitle"),
@@ -95,10 +95,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     sanitized for anonymous visitors (no emails — Member.email stays null and
     full_name is pre-resolved through displayName).
 
-    Tout ce qui sort d'ici est SÉRIALISÉ dans le HTML de la page (MIN-342) :
-    ce que ça rend passe donc par les projections de
-    [lib/public-board-projection.ts](lib/public-board-projection.ts), et jamais
-    par les lignes de base telles quelles. */
+    Everything that comes out of here is SERIALIZED into the HTML of the page (MIN-342):
+    what this renders therefore passes through the projections of
+    [lib/public-board-projection.ts](lib/public-board-projection.ts), and never
+    by the baselines as is. */
 async function loadBoardProps(ctx: PublicShareContext): Promise<{
   cards: PublicCard[];
   projectKey: string;
@@ -134,9 +134,9 @@ async function loadBoardProps(ctx: PublicShareContext): Promise<{
   // owner's id (shared team views fall back to whoever created the share),
   // exactly like on their own board.
   const config = viewConfigOf(view);
-  // Le tri appartient au serveur : le comparateur lit `position`, `created_at`
-  // et `updated_at`, trois champs qu'aucune carte n'affiche et qui n'ont donc
-  // aucune raison de traverser la frontière (MIN-342).
+  // The sorting belongs to the server: the comparator reads `position`, `created_at`
+  // and `updated_at`, three fields that no card displays and which therefore have no
+  // no reason to cross the border (MIN-342).
   const issues = filterIssues(allIssues, config, {
     myUserId: view.user_id ?? ctx.share.created_by,
   }).sort(issueComparator(config.sort));
@@ -188,8 +188,8 @@ async function loadBoardProps(ctx: PublicShareContext): Promise<{
     cards,
     projectKey: project.key,
     members,
-    // Les tables du projet ne sortent pas en entier : seules les lignes qu'une
-    // carte visible cite peuvent être peintes, donc seules celles-là partent.
+    // The project tables do not output in full: only the lines that one
+    // visible card quotes can be painted, so only those go.
     categories: publicCategoriesFor(
       (categoriesRes.data ?? []) as Category[],
       visibleIssues
@@ -207,8 +207,8 @@ export default async function SharedViewPage({ params }: PageProps) {
   if (!ctx) notFound();
   const { view } = ctx;
   const unlocked = await isUnlocked(ctx);
-  // Le site public du projet : onglets Feedback + vues partagées. Une vue
-  // verrouillée ne révèle rien d'elle-même, mais la navigation du site reste.
+  // The public project site: Feedback tabs + shared views. A view
+  // locked doesn't reveal anything about itself, but the site navigation remains.
   const tFeedback = await getTranslations("PublicFeedback");
   const tabs = await getPublicSiteTabs({
     projectId: ctx.project.id,

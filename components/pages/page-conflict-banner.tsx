@@ -1,17 +1,17 @@
 "use client";
 
-// LE BANDEAU DE CONFLIT (MIN-271).
+// THE CONFLICT BAND (MIN-271).
 //
-// Il ne paraît que pour ce que la fusion a refusé de trancher : un bloc que
-// deux personnes ont écrit en même temps. Tout le reste — un paragraphe chez
-// moi, un autre chez elle — a déjà été fusionné sans rien dire, et c'est le cas
+// It only appears for what the merger refused to decide: a block that
+// two people wrote at the same time. Everything else — a paragraph at
+// me, another at her — has already been merged without saying anything, and that's the case
 // courant.
 //
-// Ce qu'il dit tient en une phrase, et il la dit au passé : le document porte
-// déjà la version de l'autre. Le bouton n'est donc pas « résoudre », c'est
-// « restaurer la mienne » — un retour en arrière explicite, sur un bloc nommé,
-// que l'utilisateur peut aussi bien laisser tomber. Ce qu'on ne fait JAMAIS :
-// écraser sans le dire, dans un sens ou dans l'autre.
+// What he says is contained in one sentence, and he says it in the past tense: the document bears
+// already the other's version. The button is therefore not “resolve”, it is
+// “restore mine” — an explicit rollback, on a named block,
+// which the user may as well drop. What we NEVER do:
+// overwrite without saying it, one way or the other.
 
 import { useTranslations } from "next-intl";
 import { Button } from "mangue-ui";
@@ -19,7 +19,7 @@ import { X } from "lucide-react";
 
 import type { PageBlockConflict } from "@/lib/pages-merge";
 
-/** Le début du texte d'un bloc — de quoi le reconnaître dans la page. */
+/** The start of the text of a block — enough to recognize it on the page. */
 function excerpt(node: PageBlockConflict["mine"]): string {
   if (!node) return "";
   const out: string[] = [];

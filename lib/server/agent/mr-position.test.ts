@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import { resolveDiffPosition } from "./mr-position";
 
 /**
- * Tests de la résolution de position GitLab (MIN-69) : une ligne ajoutée donne
- * `new_line` seul, une supprimée `old_line` seul, une ligne de contexte les DEUX
- * — et une ligne hors diff donne null (422 côté API, « lineNotInDiff » côté UI).
+ * Tests of GitLab position resolution (MIN-69): an added line gives
+ * `new_line` alone, a deleted `old_line` alone, a context line BOTH
+ * — and a line outside diff gives null (422 on the API side, "lineNotInDiff" on the UI).
  */
 
-// Hunk simple : base lignes 10-14, une suppression (11), une insertion (12).
+// Simple hunk: base lines 10-14, one deletion (11), one insertion (12).
 const DIFF = [
   "@@ -10,5 +10,5 @@ function demo() {",
   " context-a", // old 10 / new 10
@@ -29,7 +29,7 @@ describe("resolveDiffPosition", () => {
   });
 
   it("ligne de contexte → les deux numéros, décalage suivi après +/-", () => {
-    // context-b : old 12 / new 12 (le -/+ s'annulent), côté RIGHT comme LEFT.
+    // context-b: old 12 / new 12 (the -/+ cancels), RIGHT side like LEFT.
     expect(resolveDiffPosition(DIFF, 12, "RIGHT")).toEqual({ oldLine: 12, newLine: 12 });
     expect(resolveDiffPosition(DIFF, 12, "LEFT")).toEqual({ oldLine: 12, newLine: 12 });
   });
@@ -82,7 +82,7 @@ describe("resolveDiffPosition", () => {
       "",
     ].join("\n");
     expect(resolveDiffPosition(diff, 2, "RIGHT")).toEqual({ oldLine: null, newLine: 2 });
-    // La ligne 3 n'existe nulle part — le "" final ne doit pas compter comme contexte.
+    // Line 3 does not exist anywhere — the final "" should not count as context.
     expect(resolveDiffPosition(diff, 3, "RIGHT")).toBeNull();
   });
 });

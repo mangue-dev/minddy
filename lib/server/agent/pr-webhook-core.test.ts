@@ -13,25 +13,23 @@ import {
 } from "./pr-webhook-core";
 
 /**
- * Les deux tables « événement de forge → fait minddy » : l'ÉTAT de la PR, et la
- * ligne d'activité du ticket. Elles se trompent en SILENCE — une action mal
- * orthographiée ne lève rien, elle ne trace simplement jamais rien, et personne
- * ne remarque une ligne absente. Un état faux, lui, se voit : il déplace le
+ * The two “forge event → done minddy” tables: the PR STATUS, and the
+ * ticket activity line. They get SILENT wrong — a poorly spelled action doesn't raise anything, it simply never traces anything, and no one notices a missing line. A false state is visible: it moves the
  * ticket.
  */
 
 describe("githubPrState", () => {
   it("fusionnée l'emporte sur fermée — GitHub ferme une PR en la fusionnant", () => {
     expect(githubPrState({ state: "closed", merged: true })).toBe("merged");
-    // L'endpoint *list* ne renvoie pas `merged` : `merged_at` est le seul signal.
+    // The *list* endpoint does not return `merged`: `merged_at` is the only signal.
     expect(githubPrState({ state: "closed", merged_at: "2026-01-02T00:00:00Z" })).toBe("merged");
     expect(githubPrState({ state: "closed" })).toBe("closed");
   });
 
   it("un brouillon n'est brouillon que tant qu'il est OUVERT", () => {
     expect(githubPrState({ state: "open", draft: true })).toBe("draft");
-    // GitHub garde `draft: true` sur un brouillon fermé : l'annoncer « brouillon »
-    // cacherait qu'il est mort.
+    // GitHub keeps `draft: true` in a closed draft: announce it as “draft”
+    // would hide that he is dead.
     expect(githubPrState({ state: "closed", draft: true })).toBe("closed");
     expect(githubPrState({ state: "open" })).toBe("open");
   });
@@ -39,15 +37,15 @@ describe("githubPrState", () => {
 
 describe("githubPrStateForAction", () => {
   it("une PR ROUVERTE restée brouillon reste un brouillon", () => {
-    // Le bug de MIN-164 : `reopened` valait « ouverte » en dur, et le ticket
-    // partait en revue pour un travail que personne n'avait proposé (MIN-138).
+    // The MIN-164 bug: `reopened` was “open” hard, and the ticket
+    // went on a review for a job that no one had offered (MIN-138).
     expect(githubPrStateForAction("reopened", { state: "open", draft: true })).toBe("draft");
     expect(githubPrStateForAction("reopened", { state: "open" })).toBe("open");
   });
 
   it("pilote l'état dès l'OUVERTURE, comme le récepteur GitLab", () => {
-    // Sans `opened`, ouvrir une PR humaine qui cite un ticket n'avait d'effet
-    // que sur GitLab, alors que la fusionner en avait des deux côtés.
+    // Without `opened`, opening a human PR that cites a ticket had no effect
+    // only on GitLab, while merge had it on both sides.
     expect(githubPrStateForAction("opened", { state: "open" })).toBe("open");
     expect(githubPrStateForAction("opened", { state: "open", draft: true })).toBe("draft");
   });
@@ -60,8 +58,8 @@ describe("githubPrStateForAction", () => {
   });
 
   it("ne touche à l'état sur AUCUNE autre action", () => {
-    // Un push (`synchronize`) ou une retouche de titre (`edited`) mettent la PR à
-    // jour, jamais son état.
+    // A push (`synchronize`) or a title edit (`edited`) sets the PR to
+    // day, never its state.
     for (const action of ["synchronize", "edited", "labeled", "assigned"]) {
       expect(githubPrStateForAction(action, { state: "open" })).toBeNull();
     }
@@ -71,8 +69,8 @@ describe("githubPrStateForAction", () => {
 describe("gitlabMrState", () => {
   it("lit les DEUX noms du brouillon", () => {
     expect(gitlabMrState({ state: "opened", draft: true })).toBe("draft");
-    // GitLab a renommé `work_in_progress` en `draft` en 14.0 : une instance
-    // auto-hébergée plus ancienne n'envoie que l'ancien.
+    // GitLab renamed `work_in_progress` to `draft` in 14.0: an instance
+    // older self-hosted only sends the old one.
     expect(gitlabMrState({ state: "opened", work_in_progress: true })).toBe("draft");
     expect(gitlabMrState({ state: "opened" })).toBe("open");
   });
@@ -92,9 +90,9 @@ describe("gitlabMrStateForAction", () => {
   });
 
   it("ne relit l'état sur `update` que s'il touche au titre ou au brouillon", () => {
-    // Le brouillon n'a pas d'action dédiée chez GitLab : il vit dans le préfixe
-    // `Draft:` du titre. Sans ce garde, retoucher une description réécrirait
-    // l'état — et, en cascade, le statut du ticket — à chaque édition.
+    // The draft has no dedicated action at GitLab: it lives in the prefix
+    // `Draft:` of the title. Without this guard, retouching a description would rewrite
+    // the status — and, in cascade, the status of the ticket — at each edition.
     const attrs = { action: "update", state: "opened", draft: true };
     expect(gitlabMrStateForAction({ object_attributes: attrs, changes: { title: {} } })).toBe(
       "draft",
@@ -115,7 +113,7 @@ describe("gitlabMrStateForAction", () => {
 describe("prActionForPullRequest (GitHub)", () => {
   it("trace l'ouverture et le push", () => {
     expect(prActionForPullRequest("opened", false)).toBe("pr_opened");
-    // `synchronize` EST le nom GitHub d'un push sur la branche de la PR.
+    // `synchronize` IS the GitHub name of a push to the PR branch.
     expect(prActionForPullRequest("synchronize", false)).toBe("pr_committed");
   });
 
@@ -125,14 +123,14 @@ describe("prActionForPullRequest (GitHub)", () => {
   });
 
   it("trace la réouverture, distincte d'une ouverture", () => {
-    // MIN-164 : c'était la seule transition du cycle de vie sans ligne. Le
+    // MIN-164: This was the only lifecycle transition without a line. THE
     // ticket repassait en revue sans que rien ne dise ce qui l'y avait remis.
     expect(prActionForPullRequest("reopened", false)).toBe("pr_reopened");
   });
 
   it("ignore le bruit de forge", () => {
-    // `converted_to_draft` / `ready_for_review` changent l'ÉTAT (donc le statut
-    // du ticket, qui se raconte tout seul) mais ne sont pas des faits du ticket.
+    // `converted_to_draft` / `ready_for_review` change the STATUS (therefore the status
+    // of the ticket, which tells itself) but are not facts of the ticket.
     for (const action of ["edited", "labeled", "assigned", "ready_for_review"]) {
       expect(prActionForPullRequest(action, false)).toBeNull();
     }
@@ -147,8 +145,8 @@ describe("prActionForReview (GitHub)", () => {
 
   it("ne trace une review « commented » que si elle porte un message", () => {
     expect(prActionForReview({ state: "commented", body: "à revoir" })).toBe("pr_commented");
-    // Sans corps, la review n'est que l'enveloppe des remarques de ligne, déjà
-    // tracées une à une : la tracer ajouterait une ligne sans texte derrière.
+    // Without body, the review is only the envelope of line remarks, already
+    // drawn one by one: drawing it would add a line without text behind.
     expect(prActionForReview({ state: "commented", body: "" })).toBeNull();
     expect(prActionForReview({ state: "commented", body: "   " })).toBeNull();
     expect(prActionForReview({ state: "commented" })).toBeNull();
@@ -162,7 +160,7 @@ describe("prActionForReview (GitHub)", () => {
 describe("isPullRequestComment (GitHub)", () => {
   it("ne retient que les commentaires de PR nouvellement créés", () => {
     expect(isPullRequestComment({ action: "created", issue: { pull_request: {} } })).toBe(true);
-    // Une issue distante n'est pas de notre ressort (synchro à sens unique).
+    // A remote issue is not within our control (one-way sync).
     expect(isPullRequestComment({ action: "created", issue: {} })).toBe(false);
     expect(isPullRequestComment({ action: "edited", issue: { pull_request: {} } })).toBe(false);
     expect(isPullRequestComment({ action: "deleted", issue: { pull_request: {} } })).toBe(false);
@@ -181,8 +179,8 @@ describe("prActionForMergeRequest (GitLab)", () => {
 
   it("ne lit un push que sur l'`update` qui porte `oldrev`", () => {
     // GitLab n'a pas d'action « push » : un changement de titre, de description
-    // ou d'étiquette arrive avec la MÊME action. Seul `oldrev` dit que la tête
-    // a bougé — sans ce garde, éditer une description dirait « a commité ».
+    // or label arrives with the SAME action. Only `oldrev` says that the head
+    // moved — without this guard, editing a description would say "committed".
     expect(prActionForMergeRequest({ action: "update", oldrev: "abc123" })).toBe("pr_committed");
     expect(prActionForMergeRequest({ action: "update" })).toBeNull();
   });
@@ -211,8 +209,8 @@ describe("prActionForNote (GitLab)", () => {
 
 describe("isServiceAccountGesture (GitLab)", () => {
   it("couvre les gestes que minddy fait sous le token du compte connecté", () => {
-    // Ouvrir et pousser en font partie depuis que l'agent trace lui-même : sans
-    // ça, chaque PR de Numo porterait deux lignes « a ouvert ».
+    // Open and push are part of it since the agent traces itself: without
+    // that, each Numo PR would carry two “opened” lines.
     for (const type of [
       "pr_accepted",
       "pr_rejected",
@@ -226,8 +224,8 @@ describe("isServiceAccountGesture (GitLab)", () => {
 
   it("laisse les COMMENTAIRES dehors", () => {
     // Personne ne commente sous ce token : un commentaire in-app part du compte
-    // git de la personne. L'y mettre rendrait muets, pour toujours, les
-    // commentaires de celui qui a lié le dépôt.
+    // person's git. Putting it there would silence, forever, the
+    // comments from whoever linked the repository.
     expect(isServiceAccountGesture("pr_commented")).toBe(false);
     expect(isServiceAccountGesture("pr_code_commented")).toBe(false);
     expect(isServiceAccountGesture("pr_approved")).toBe(false);

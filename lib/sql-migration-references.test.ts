@@ -16,7 +16,7 @@ function testFiles(directory: string): string[] {
   });
 }
 
-/** Extrait les littéraux sans prendre les noms cités dans les commentaires. */
+/** Extract the literals without taking the names cited in the comments. */
 function stringLiterals(source: string): string[] {
   const literals: string[] = [];
   for (let index = 0; index < source.length; index += 1) {

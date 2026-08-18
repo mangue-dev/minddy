@@ -9,22 +9,22 @@ import { objectivesQueryFn } from "./objectives-api";
 import { fetchIssueRelationsApi } from "./issue-relations-api";
 
 /**
- * Préchauffe les caches d'un board projet à l'intention de navigation (MIN-89).
+ * Preheats the caches of a project board for browsing intent (MIN-89).
  *
- * Ouvrir un projet enchaînait : chargement du chunk de la route, montage, PUIS
- * cinq requêtes en éventail. Les déclencher au survol (ou au focus clavier)
- * recouvre ce délai avec le temps que met l'utilisateur à cliquer — à l'arrivée,
- * le board est le plus souvent déjà peuplé.
+ * Opening a project follows: loading the route chunk, mounting, THEN
+ * five fan requests. Trigger them on hover (or keyboard focus)
+ * covers this delay with the time it takes the user to click — on arrival,
+ * the board is most often already populated.
  *
- * `prefetchQuery` respecte le `staleTime` : un cache frais n'entraîne AUCUNE
- * requête, donc survoler dix cartes d'affilée ne déclenche pas dix salves.
- * Un garde-fou par projet évite en plus de reposer la question à chaque
- * entrée/sortie du curseur sur la même carte.
+ * `prefetchQuery` respects `staleTime`: a fresh cache does not cause NONE
+ * query, so hovering over ten cards in a row does not trigger ten bursts.
+ * A safeguard per project also avoids asking the question again each
+ * entry/exit of the cursor on the same card.
  */
 export function usePrefetchProject() {
   const queryClient = useQueryClient();
-  // Un survol = une tentative, quel que soit le nombre d'aller-retours du
-  // curseur sur la carte (les `mouseenter` se rallument à chaque enfant survolé).
+  // One hover = one attempt, regardless of the number of round trips of the
+  // cursor on the map (the `mouseenter` lights up again with each child hovered over).
   const attempted = useRef(new Set<string>());
 
   return useCallback(
@@ -32,9 +32,9 @@ export function usePrefetchProject() {
       if (!projectId || attempted.current.has(projectId)) return;
       attempted.current.add(projectId);
 
-      // Les cinq lectures que monte app/(app)/projects/[id]/page.tsx. Les vues
-      // et intégrations sont laissées de côté : elles sont légères et ne
-      // bloquent pas le premier rendu du board.
+      // The five readings that app/(app)/projects/[id]/page.tsx shows. The views
+      // and integrations are left aside: they are light and do not
+      // do not block the first rendering of the board.
       void queryClient.prefetchQuery({
         queryKey: ["issues", projectId],
         queryFn: issuesQueryFn(projectId),

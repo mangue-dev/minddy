@@ -2,22 +2,22 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-355 — LE CHIEN DE GARDE ET LES RUNS QU'ON NE PEUT PAS INTERROGER.
+ * MIN-355 — THE WATCHDOG AND THE RUNS THAT CANNOT BE QUESTIONED.
  *
- * `reapDeadVmRuns` ne présume rien : il DEMANDE à la plateforme si le process vit.
- * Un run local n'a ni microVM ni commande — il n'y a personne à qui poser la
- * question, jamais. Il tombait donc dans la branche « jamais lancé », dont les
- * quinze minutes ne sont fondées que parce qu'un amorçage de microVM dure vingt
- * secondes : trois minutes de silence sur un run vieux d'un quart d'heure
- * suffisaient à le déclarer mort, publier « l'agent s'est arrêté » et facturer du
- * compute que personne n'a consommé.
+ * `reapDeadVmRuns` does not assume anything: it ASKS the platform if the process is alive.
+ * A local run has no microVM or commands — there is no one to ask
+ * question, never. It therefore fell into the “never launched” branch, whose
+ * fifteen minutes is only valid because a microVM boot lasts twenty
+ * seconds: three minutes of silence on a quarter-hour old run
+ * were enough to declare him dead, publish "the agent has stopped" and charge
+ * compute that no one has consumed.
  *
- * Les deux moitiés du correctif sont ici : la BORNE (celle du cas cloud
- * indéterminé, deux heures) et la FACTURE (aucune — il n'y a pas eu de microVM).
+ * The two halves of the fix are here: the TERMINAL (that of the cloud case
+ * undetermined, two hours) and the INVOICE (none — there was no microVM).
  */
 
 const h = vi.hoisted(() => ({
-  /** Les runs sondés auprès de la plateforme. Un run local n'y apparaît jamais. */
+  /** The runs surveyed on the platform. A local run never appears there. */
   probed: [] as string[],
   stamped: [] as Array<{ id: string; fields: Record<string, unknown> }>,
   events: [] as Array<{ runId: string; type: string }>,
@@ -29,7 +29,7 @@ const h = vi.hoisted(() => ({
 vi.mock("./sandbox", () => ({
   isLoopCommandAlive: vi.fn(async (sandboxId: string) => {
     h.probed.push(sandboxId);
-    return null; // « on ne sait pas » — le cas que ce test met sous tension.
+    return null; // “we don’t know” — the case that this test brings into focus.
   }),
   stopSandboxByName: vi.fn(async () => {}),
 }));
@@ -71,7 +71,7 @@ import { reapDeadVmRuns } from "./drain";
 const MINUTE = 60_000;
 const RUN_ID = "11111111-2222-4333-8444-555555555555";
 
-/** Une ligne de run local, silencieuse et lancée depuis `agedMinutes`. */
+/** A local run line, silent and launched from `agedMinutes`. */
 function localRow(agedMinutes: number) {
   const at = new Date(Date.now() - agedMinutes * MINUTE).toISOString();
   return {
@@ -92,7 +92,7 @@ function localRow(agedMinutes: number) {
   };
 }
 
-/** Le strict nécessaire du client Supabase : une lecture, puis des écritures. */
+/** The bare essentials of the Supabase client: a read, then writes. */
 function fakeService(rows: unknown[]): SupabaseClient {
   const write = {
     update: (fields: Record<string, unknown>) => {
@@ -119,14 +119,14 @@ beforeEach(() => {
 
 describe("un run qui joue sur la machine de l'utilisateur", () => {
   it("survit à vingt minutes de silence — le quart d'heure ne le vise plus", async () => {
-    // Le cas ordinaire qu'on cassait : un Mac qui dort, un tour qui pense. Le
-    // harness écrit `last_activity_at` toutes les deux minutes, mais rien ne
-    // garantit qu'une machine réponde en continu — et il n'y a personne à sonder.
+    // The ordinary case that we broke: a sleeping Mac, a thinking tower. THE
+    // harness writes `last_activity_at` every two minutes, but nothing
+    // ensures that a machine responds continuously — and there is no one to probe.
     const { reaped } = await reapDeadVmRuns(fakeService([localRow(20)]));
     expect(reaped).toBe(0);
     expect(h.stamped).toEqual([]);
     expect(h.events).toEqual([]);
-    // Et on n'a interrogé personne : il n'y a ni microVM ni commande.
+    // And we didn't ask anyone: there is no microVM or command.
     expect(h.probed).toEqual([]);
   });
 
@@ -134,10 +134,10 @@ describe("un run qui joue sur la machine de l'utilisateur", () => {
     const { reaped } = await reapDeadVmRuns(fakeService([localRow(180)]));
     expect(reaped).toBe(1);
     expect(h.stamped[0]?.fields.status).toBe("completed");
-    // Le fil le DIT — c'est ce qui distingue « l'agent s'est arrêté et voilà
-    // pourquoi » d'une conversation qui ne répond plus.
+    // The thread SAYS so — that's what distinguishes "the agent stopped and that's it"
+    // why” of a conversation that no longer responds.
     expect(h.events).toEqual([{ runId: RUN_ID, type: "error" }]);
-    // La clé du modèle, elle, est bien révoquée : elle, elle existait.
+    // The key to the model is indeed revoked: it existed.
     expect(h.revokedKeys).toEqual(["key-1"]);
   });
 
@@ -147,8 +147,8 @@ describe("un run qui joue sur la machine de l'utilisateur", () => {
   });
 
   it("laisse intacte la borne d'amorçage d'une microVM sans commande", async () => {
-    // La branche « jamais lancé » garde son sens là où elle en a un : une fonction
-    // morte entre le claim et le lancement, dont l'amorçage dure vingt secondes.
+    // The “never launched” branch keeps its meaning where it has one: a function
+    // dead between the claim and the launch, the initiation of which lasts twenty seconds.
     const cloud = { ...localRow(20), local_exec: false };
     await reapDeadVmRuns(fakeService([cloud]));
     expect(h.stamped[0]?.fields.status).toBe("completed");

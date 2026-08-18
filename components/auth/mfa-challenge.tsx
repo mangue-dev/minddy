@@ -8,15 +8,15 @@ import { RECOVERY_CODE_LENGTH, mfaVerifyErrorKey } from "@/lib/mfa";
 import { OtpInput } from "@/components/otp-input";
 
 /**
- * L'étape de challenge de la connexion (MIN-132). Elle prend la place du
- * formulaire dès que la session existe mais qu'elle est restée en `aal1` — après
- * un mot de passe accepté, ou au retour de Google / GitHub, le proxy renvoyant
- * alors ici.
+ * The connection challenge stage (MIN-132). She takes the place of
+ * form as soon as the session exists but remains in `aal1` — after
+ * an accepted password, or upon return from Google / GitHub, the proxy returning
+ * so here.
  *
- * Le deuxième chemin, « je n'ai plus mon téléphone », est le seul filet du
- * produit : pas d'équipe support derrière, donc un code de récupération DÉSACTIVE
- * la 2FA au lieu de la contourner le temps d'une session. L'écran le dit avant
- * qu'on s'en serve, pas après.
+ * The second path, "I no longer have my phone", is the only net of
+ * product: no support team behind it, so a DISABLED recovery code
+ * 2FA instead of bypassing it for the duration of a session. The screen says it before
+ * let's use it, not afterwards.
  */
 export function MfaChallenge({
   onVerified,
@@ -58,7 +58,7 @@ export function MfaChallenge({
       await verifyTotp(factorId, submitted.trim());
       onVerified();
     } catch (err) {
-      // Jamais le message de GoTrue : il est en anglais et en jargon.
+      // Never the GoTrue message: it is in English and in jargon.
       setError(t(mfaVerifyErrorKey(err)));
       setCode("");
     } finally {
@@ -118,9 +118,9 @@ export function MfaChallenge({
               disabled={busy}
               autoFocus
               aria-label={t("mfaCodeLabel")}
-              // Six chiffres saisis (ou collés, ou remplis par le gestionnaire
-              // de mots de passe) = intention de valider. Attendre un clic de
-              // plus n'apporte rien : il n'y a pas d'autre champ à remplir.
+              // Six digits entered (or pasted, or filled in by the manager
+              // password entry) = intent to validate. Wait for a click from
+              // more adds nothing: there is no other field to fill in.
               onComplete={(value) => void submitCode(value)}
             />
           </div>

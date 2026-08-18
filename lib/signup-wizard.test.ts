@@ -49,9 +49,9 @@ describe("validateSignupStep", () => {
 
   it("refuse un mot de passe qui ne tient pas la politique, AVANT de le comparer", () => {
     const weak = "abcdefgh";
-    // Les deux champs concordent, et pourtant l'étape ne passe pas : il manque
-    // une majuscule et un chiffre, et c'est ça qu'il faut dire — sinon le
-    // serveur le dira, en anglais, après le clic.
+    // The two fields match, and yet the step does not pass: it is missing
+    // a capital letter and a number, and that is what must be said — otherwise the
+    // server will say it, in English, after the click.
     expect(validateSignupStep("password", values({ password: weak, confirmPassword: weak }))).toBe(
       "passwordPolicy"
     );

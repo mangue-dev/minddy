@@ -4,20 +4,20 @@ import { buildPageTree, type PageRow } from "./pages";
 import { computePageMove, dropModeAt, type PageDropMode } from "./pages-move";
 
 /**
- * MIN-270 — le glisser-déposer de l'arbre.
+ * MIN-270 — drag and drop of the tree.
  *
- * Ce qui est épinglé ici est ce qu'on ne voit PAS en relisant le code : qu'un
- * déplacement « après mon voisin du dessous » bouge bien la page (et ne la
- * repose pas où elle était), et qu'un dépôt dans sa propre descendance soit
- * refusé AVANT le réseau — c'est la seule chose qui sépare l'arbre d'une
- * récursion infinie si jamais la garde serveur venait à passer.
+ * What is pinned here is what we do NOT see when rereading the code: that a
+ * move “after my neighbor below” moves the page (and does not rest it
+ * not where it was), and that a deposit in its own descendants is
+ * refused BEFORE the network — this is the only thing that separates the tree from an
+ * infinite recursion if ever the server guard were to pass.
  */
 
 function page(id: string, parent: string | null, position: string): PageRow {
   return { id, parent_id: parent, title: id, position };
 }
 
-/** L'arbre rendu en chemins « a/b/c », dans l'ordre d'affichage. */
+/** The tree rendered as paths “a/b/c”, in display order. */
 function paths(pages: PageRow[]): string[] {
   const out: string[] = [];
   const walk = (nodes: ReturnType<typeof buildPageTree<PageRow>>, prefix: string) => {
@@ -31,7 +31,7 @@ function paths(pages: PageRow[]): string[] {
   return out;
 }
 
-/** Applique le déplacement à la liste à plat, comme le fait le cache. */
+/** Applies the move to the flat list, like the cache does. */
 function moved(
   pages: PageRow[],
   dragId: string,
@@ -72,8 +72,8 @@ describe("computePageMove", () => {
   });
 
   it("déplace bien vers le bas — la page déplacée sort du calcul", () => {
-    // Le piège : « a après b » avec `a` encore compté dans la fratrie donnerait
-    // une position entre a et b, donc aucun mouvement visible.
+    // The trap: “a after b” with `a` still counted in the siblings would give
+    // a position between a and b, therefore no visible movement.
     expect(paths(moved(flat, "a", "b", "after"))).toEqual(["b", "a", "c"]);
   });
 
@@ -106,7 +106,7 @@ describe("computePageMove", () => {
     ];
     expect(computePageMove(deep, "a", "c", "inside")).toBeNull();
     expect(computePageMove(deep, "a", "c", "before")).toBeNull();
-    // Mais un frère de la descendance reste une cible valide.
+    // But an offspring sibling is still a valid target.
     expect(computePageMove(deep, "c", "b", "after")).not.toBeNull();
   });
 

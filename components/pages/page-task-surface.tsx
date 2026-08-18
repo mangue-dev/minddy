@@ -1,20 +1,20 @@
 "use client";
 
-// Ce que la PAGE ajoute à la tâche partagée : sa surface (MIN-274).
+// What the PAGE adds to the shared task: its surface area (MIN-274).
 //
-// Le pendant de `ScratchpadTaskSurface` (components/scratchpad/scratchpad-task.tsx),
-// et il ne diffère que là où les deux surfaces diffèrent vraiment :
+// The counterpart of `ScratchpadTaskSurface` (components/scratchpad/scratchpad-task.tsx),
+// and it only differs where the two surfaces really differ:
 //
-//  - QUITTER. Le carnet est une modale : on la ferme, et son démontage flushe
-//    l'autosave. Une page ne se ferme pas — mais la passation vient d'écrire un
-//    `[~]` dans le document, et la navigation qui suit démonterait l'éditeur
-//    avec cette écriture encore en attente. D'où le `flush()` explicite avant
-//    de partir, exactement comme l'ouverture d'une sous-page (page-view.tsx).
-//  - LE PROMPT. `buildPageTaskPrompt` (lib/pages-prompt.ts) : la page a un nom,
-//    et ses outils MCP sont ceux des pages.
-//  - PROMOUVOIR. Numo a déjà la page en contexte ambiant (`useAssistantContext`,
-//    MIN-273) : il peut donc en retirer la tâche lui-même une fois le ticket
-//    créé, ce que le prompt lui demande.
+//  - TO LEAVE. The notebook is a modal: you close it, and its disassembly flushes
+// autosave. A page does not close — but the handover has just written a
+// `[~]` in the document, and the subsequent navigation would unmount the editor
+// with this writing still pending. Hence the explicit `flush()` before
+// to leave, exactly like opening a subpage (page-view.tsx).
+// - THE PROMPT. `buildPageTaskPrompt` (lib/pages-prompt.ts): the page has a name,
+// and its MCP tools are those of the pages.
+//  - PROMOTE. Numo already has the page in ambient context (`useAssistantContext`,
+// MIN-273): he can therefore remove the task himself once the ticket
+// created, what the prompt asks it to do.
 
 import { useMemo, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -36,13 +36,13 @@ export function PageTaskSurface({
   flush,
   children,
 }: {
-  /** Le projet de la page. Passé À L'OUVERTURE de Numo (MIN-353) : une portée
-   *  imposée, sans quoi la passation continuerait la conversation ouverte —
-   *  peut-être globale, ou celle d'un autre projet — au lieu d'ouvrir un fil ici. */
+  /** The project of the page. Passed AT THE OPENING of Numo (MIN-353): an imposed scope
+ *, otherwise the handover would continue the open conversation —
+ * perhaps global, or that of another project — instead of opening a thread here. */
   projectId: string;
-  /** Le titre AFFICHÉ de la page — donc celui qu'on vient peut-être de taper. */
+  /** The DISPLAYED title of the page — so the one you may have just typed. */
   pageTitle: string;
-  /** Écrire ce qui est en attente. À attendre avant toute navigation. */
+  /** Write what is pending. To wait before any navigation. */
   flush: () => Promise<void>;
   children: ReactNode;
 }) {
@@ -52,14 +52,14 @@ export function PageTaskSurface({
 
   const surface = useMemo<TaskSurface>(
     () => ({
-      // Le bloc MCP sert l'agent EXTERNE (Claude Code, Cursor) dans lequel on
-      // colle : lui a les outils de page et peut cocher la ligne en repartant.
+      // The MCP block serves the EXTERNAL agent (Claude Code, Cursor) in which we
+      // paste: he has the page tools and can check the line when leaving.
       copyPrompt: (markdown) =>
         buildPageTaskPrompt(markdown, { page: pageTitle }),
 
-      // Le run Numo, lui, part SANS le bloc — même règle que le carnet : ce
-      // qu'on lit dans le composer est exactement ce qui part (le serveur
-      // laisse passer un prompt déjà emballé, cf. `isScratchpadPrompt`).
+      // The Numo run starts WITHOUT the block — same rule as the notebook: this
+      // that we read in the composer is exactly what is leaving (the server
+      // lets pass an already wrapped prompt, cf. `isScratchpadPrompt`).
       launchAgent: (markdown) => {
         const prompt = buildPageTaskPrompt(markdown, {
           page: pageTitle,
@@ -72,9 +72,9 @@ export function PageTaskSurface({
       },
 
       promote: (note) => {
-        // Le panneau s'ouvre tout de suite — il ne démonte pas l'éditeur, donc
-        // rien ne presse l'écriture ; on la lance quand même, pour que le `[~]`
-        // soit parti avant que Numo ne relise la page.
+        // The panel opens right away — it doesn't unmount the editor, so
+        // nothing urges writing; we launch it anyway, so that the `[~]`
+        // is gone before Numo rereads the page.
         void flush();
         openAssistant({
           projectId,

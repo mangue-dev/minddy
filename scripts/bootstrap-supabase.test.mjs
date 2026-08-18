@@ -13,7 +13,7 @@ import {
 import { checkLocalConfig, verificationSql } from "./verify-supabase-bootstrap.mjs";
 import { BASELINE_VERSION } from "./repair-squashed-migration-history.mjs";
 
-test("le baseline est compact, trié et porte l'extension vector", () => {
+test("the baseline is compact, sorted, and includes the vector extension", () => {
   const migrations = listMigrations();
   assert.equal(migrations.length, 2);
   assert.deepEqual([...migrations].sort(), migrations);
@@ -22,14 +22,14 @@ test("le baseline est compact, trié et porte l'extension vector", () => {
   assert.equal(migrations[0].split("_")[0], BASELINE_VERSION);
 });
 
-test("le fichier d'environnement est complété sans remplacer les valeurs existantes", () => {
+test("the environment file is completed without replacing existing values", () => {
   const directory = mkdtempSync(join(tmpdir(), "minddy-bootstrap-"));
   const file = join(directory, ".env.local");
   try {
-    writeFileSync(file, "CRON_SECRET=secret-existant\n# commentaire\n", { mode: 0o600 });
+    writeFileSync(file, "CRON_SECRET=existing-secret\n# comment\n", { mode: 0o600 });
     const values = {
-      CRON_SECRET: "ne-doit-pas-remplacer",
-      GIT_STATE_SECRET: "secret-nouveau",
+      CRON_SECRET: "must-not-replace",
+      GIT_STATE_SECRET: "new-secret",
       NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
     };
 
@@ -37,15 +37,15 @@ test("le fichier d'environnement est complété sans remplacer les valeurs exist
     assert.deepEqual(appendMissingEnv(file, values), []);
 
     const parsed = parseEnv(readFileSync(file, "utf8"));
-    assert.equal(parsed.get("CRON_SECRET"), "secret-existant");
-    assert.equal(parsed.get("GIT_STATE_SECRET"), "secret-nouveau");
+    assert.equal(parsed.get("CRON_SECRET"), "existing-secret");
+    assert.equal(parsed.get("GIT_STATE_SECRET"), "new-secret");
     assert.equal(parsed.get("NEXT_PUBLIC_SUPABASE_URL"), "http://127.0.0.1:54321");
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
 });
 
-test("le mode distant exige une URL de base et le vérificateur couvre les invariants", () => {
+test("remote mode requires a database URL and the verifier covers invariants", () => {
   assert.equal(parseArgs([]).local, true);
   assert.equal(parseArgs(["--", "--local"]).local, true);
   assert.equal(parseArgs(["--db-url", "postgresql://example"]).local, false);

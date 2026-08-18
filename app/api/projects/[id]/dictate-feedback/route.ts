@@ -17,17 +17,17 @@ import {
 } from "@/lib/server/feedback/voice";
 
 /**
- * Le RANGEMENT d'un retour dicté dans le dashboard — le jumeau authentifié de
- * `dictateFeedbackAction` (board public). Même cœur (`lib/server/feedback/
- * voice.ts`), donc même prompt et mêmes règles ; ce qui change tient en deux
- * lignes : ici le membre qui parle paye, et le projet vient de la session, pas
- * d'un token de board.
+ * The STORAGE of a dictated return in the dashboard — the authenticated twin of
+ * `dictateFeedbackAction` (public board). Same core (`lib/server/feedback/
+ * voice.ts`), so same prompt and same rules; what changes takes two
+ * lines: here the member who speaks pays, and the project comes from the session, not
+ * of a board token.
  *
- * L'écoute, elle, passe par `/api/transcribe` avec `feature=feedback_voice` :
- * la route rend le `runId` que celle-ci reprend, et les deux appels d'une prise
- * ne font qu'une ligne au ledger.
+ * Listening goes through `/api/transcribe` with `feature=feedback_voice`:
+ * the route returns the `runId` which it resumes, and the two calls of a socket
+ * make only one line in the ledger.
  *
- * Cette route n'écrit RIEN en base : elle rend un patch, que le modal applique.
+ * This route does not write ANYTHING in base: it returns a patch, which the modal applies.
  */
 
 export const runtime = "nodejs";
@@ -86,7 +86,7 @@ export async function POST(
     return NextResponse.json({ error: "transcript is required" }, { status: 400 });
   }
 
-  // RLS porte l'accès : un projet inaccessible se lit comme introuvable.
+  // RLS carries access: an inaccessible project reads as not found.
   const { data: project } = await auth.supabase
     .from("projects")
     .select("id, name")

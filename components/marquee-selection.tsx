@@ -10,48 +10,48 @@ import {
 } from "react";
 
 /**
- * Lasso de sélection sur le fond des boards, « comme sur le bureau » : on appuie
- * sur le fond, on glisse, et tout ticket touché par le rectangle entre dans la
- * sélection — celle-là même que la pilule d'actions groupées consomme (MIN-75).
+ * Selection lasso on the bottom of the boards, “like on the desk”: press
+ * on the bottom, we slide, and any ticket touched by the rectangle enters the
+ * selection — the same one that the grouped action pill consumes (MIN-75).
  *
- * Quatre choses méritent d'être dites, parce qu'elles ne se devinent pas :
+ * Four things are worth saying, because they cannot be guessed:
  *
- * - **Tout se calcule en coordonnées écran.** Chaque colonne défile de son côté
- *   et le board défile horizontalement : raisonner en coordonnées de contenu
- *   voudrait dire suivre trois origines à la fois. `getBoundingClientRect` les
- *   ramène toutes à la même. Corollaire heureux : une carte poussée hors de sa
- *   colonne par le défilement n'est pas attrapée, parce qu'on ne prend que ce que
- *   le rectangle MONTRE — `visibleRect` recoupe la carte avec ce qui la rogne.
+ * - **Everything is calculated in screen coordinates.** Each column scrolls on its own side
+ * and the board scrolls horizontally: reasoning in content coordinates
+ * would mean following three origins at once. `getBoundingClientRect` them
+ * brings them all back to the same thing. Happy corollary: a card pushed out of its
+ * column by scrolling is not caught, because we only take what
+ * the rectangle SHOW — `visibleRect` intersects the map with what trims it.
  *
- * - **Le rectangle ne passe pas par React.** Il est écrit directement dans le
- *   style de l'élément d'`overlayRef`. Un `setState` par image rerendrait toutes
- *   les cartes du board soixante fois par seconde pour déplacer un cadre. Le seul
- *   rendu qu'on déclenche, c'est le changement de sélection — et encore, filtré :
- *   `emit` compare avant d'appeler.
+ * - **The rectangle does not go through React.** It is written directly in the
+ * style of the `overlayRef` element. A `setState` per image would render all
+ * the cards on the board sixty times per second to move a frame. The only one
+ * rendering that we trigger is the selection change — and again, filtered:
+ * `emit` compares before calling.
  *
- * - **Le défilement automatique déplace l'ancre.** Quand un bord fait défiler, le
- *   contenu glisse sous un point de départ qui, lui, est fixe à l'écran : on le
- *   décale d'autant, sinon le lasso se décroche de la carte d'où il est parti.
- *   Seule la colonne où le geste a commencé compte — faire défiler une AUTRE
- *   colonne doit bien faire passer ses cartes sous un rectangle immobile.
+ * - **Auto-scroll moves the anchor.** When an edge scrolls, the
+ * content slides under a starting point which is fixed on the screen: we
+ * shifts by the same amount, otherwise the lasso will become detached from the card from which it started.
+ * Only the column where the gesture started counts — scroll ANOTHER
+ *   column must pass its cards beneath a stationary rectangle.
  *
- * - **Souris uniquement.** Au doigt, le même geste est le défilement du board,
- *   exactement comme pour le glisser-déposer des cartes (MouseSensor).
+ * - **Mouse only.** With your finger, the same gesture is scrolling the board,
+ * exactly like dragging and dropping cards (MouseSensor).
  */
 
-/** Ce que le lasso attrape : toute carte qui porte son id. */
+/** What the lasso catches: any card that bears its id. */
 const ITEM_SELECTOR = "[data-issue-id]";
 
-/** Ce qui n'est pas du fond : une carte, un bouton, un lien, un champ. */
+/** What is not background: a card, a button, a link, a field. */
 const IGNORE_SELECTOR = `${ITEM_SELECTOR}, button, a, input, textarea, select, [role="button"], [contenteditable="true"]`;
 
-/** En deçà, le geste reste un clic (qui, lui, referme la sélection). */
+/** Below, the gesture remains a click (which closes the selection). */
 const START_DISTANCE = 5;
 
-/** Largeur de la bande de bord qui déclenche le défilement automatique. */
+/** Width of the edge strip that triggers autoscroll. */
 const EDGE = 56;
 
-/** Vitesse du défilement automatique au ras du bord, en pixels par image. */
+/** Speed ​​of automatic scrolling at the edge, in pixels per image. */
 const MAX_SPEED = 24;
 
 interface Box {
@@ -80,7 +80,7 @@ function intersect(a: Box, b: Box): Box | null {
   return right <= left || bottom <= top ? null : { left, top, right, bottom };
 }
 
-/** Les ancêtres qui rognent la carte, du plus proche jusqu'au board inclus. */
+/** The ancestors who trim the map, from the closest to the board included. */
 function clippingAncestors(el: HTMLElement, root: HTMLElement): HTMLElement[] {
   const out: HTMLElement[] = [];
   let node: HTMLElement | null = el.parentElement;
@@ -96,11 +96,11 @@ function clippingAncestors(el: HTMLElement, root: HTMLElement): HTMLElement[] {
 }
 
 /**
- * La part de la carte réellement visible. `null` si le défilement de sa colonne
- * l'a entièrement escamotée : on ne sélectionne pas ce qu'on ne voit pas.
+ * The part of the card actually visible. `null` if scrolling its column
+ * completely evaded it: we don't select what we don't see.
  *
- * Les ancêtres rogneurs sont mis en cache pour la durée du geste — les retrouver
- * demande un `getComputedStyle` par niveau, et on repasse sur chaque carte à
+ * Trimming ancestors are cached for the duration of the gesture — find them
+ * asks for a `getComputedStyle` per level, and we go back to each card
  * chaque image.
  */
 function visibleRect(
@@ -121,21 +121,21 @@ function visibleRect(
   return box;
 }
 
-/** Plus on s'enfonce dans la bande, plus ça va vite ; au-delà, ça plafonne. */
+/** The deeper you go into the band, the faster it goes; beyond that, it plateaus. */
 function rampSpeed(depth: number): number {
   return Math.max(2, Math.min(MAX_SPEED, (depth / EDGE) * MAX_SPEED));
 }
 
-/** Vitesse de défilement pour un pointeur à `pos` entre deux bords. */
+/** Scrolling speed for a pointer at `pos` between two edges. */
 function edgeVelocity(pos: number, min: number, max: number): number {
-  // Sous deux bandes de haut, les deux bords se marchent dessus : on renonce.
+  // Under two high bands, the two edges step on each other: we give up.
   if (max - min < EDGE * 2) return 0;
   if (pos < min + EDGE) return -rampSpeed(min + EDGE - pos);
   if (pos > max - EDGE) return rampSpeed(pos - (max - EDGE));
   return 0;
 }
 
-/** La colonne (ou autre boîte défilante) sous ce point, à l'intérieur du board. */
+/** The column (or other scrolling box) under this point, inside the board. */
 function scrollableAt(
   x: number,
   y: number,
@@ -162,11 +162,11 @@ function sameIds(a: Set<string>, b: Set<string>): boolean {
 }
 
 export interface MarqueeSelection<T extends HTMLElement> {
-  /** À fusionner avec les autres refs du conteneur défilant du board. */
+  /** To be merged with the other refs of the scrolling container of the board. */
   ref: RefCallback<T>;
-  /** À poser sur ce même conteneur. */
+  /** To place on this same container. */
   onPointerDown: (event: ReactPointerEvent<T>) => void;
-  /** À passer à <MarqueeOverlay/>, rendu n'importe où dans l'arbre. */
+  /** To pass to <MarqueeOverlay/>, rendered anywhere in the tree. */
   overlayRef: RefObject<HTMLDivElement | null>;
 }
 
@@ -174,9 +174,9 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
   selected,
   onChange,
 }: {
-  /** La sélection courante — sert de base à un geste additif (⇧ ou ⌘). */
+  /** The current selection — serves as the basis for an additive gesture (⇧ or ⌘). */
   selected: Set<string>;
-  /** Reçoit la sélection complète, jamais un delta. */
+  /** Receives the full selection, never a delta. */
   onChange: (next: Set<string>) => void;
 }): MarqueeSelection<T> {
   const containerRef = useRef<T | null>(null);
@@ -187,8 +187,8 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
     onChangeRef.current = onChange;
   });
 
-  // Un geste en cours ne doit pas survivre au board (changement de vue, de
-  // projet) — listeners coupés, et le corps rendu à sa sélection de texte.
+  // A gesture in progress must not survive the board (change of view,
+  // project) — listeners cut off, and the body returned to its text selection.
   useEffect(
     () => () => {
       abortRef.current?.abort();
@@ -207,9 +207,9 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
     if (!container) return;
     const target = event.target as HTMLElement | null;
     if (!target || target.closest(IGNORE_SELECTOR)) return;
-    // Une barre de défilement classique (Windows, Linux) est dans le cadre mais
-    // n'est pas du fond : sans ça, l'attraper lancerait un lasso au lieu de faire
-    // défiler le board. Sous macOS elle flotte et ces deux marges valent zéro.
+    // A classic scrollbar (Windows, Linux) is in the frame but
+    // is not from the bottom: without that, catching it would throw a lasso instead of making
+    // scroll the board. Under macOS it floats and these two margins are worth zero.
     const bounds = container.getBoundingClientRect();
     if (
       event.clientX > bounds.right - (container.offsetWidth - container.clientWidth) ||
@@ -217,7 +217,7 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
     ) {
       return;
     }
-    // Coupe net la sélection de texte et le glisser d'image du navigateur.
+    // Sharp cut text selection and image drag from browser.
     event.preventDefault();
 
     abortRef.current?.abort();
@@ -233,7 +233,7 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
       event.clientY,
       container
     );
-    /** La boîte défilante sous le pointeur, tenue à jour par `pointermove`. */
+    /** The scrollable box below the pointer, maintained by `pointermove`. */
     let pointerScroller: HTMLElement | null = anchorScroller;
     let anchorX = event.clientX;
     let anchorY = event.clientY;
@@ -252,7 +252,7 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
 
     const apply = () => {
       const containerBox = rectOf(container);
-      // Le lasso ne déborde pas du board : on ne sélectionne que ce qu'il montre.
+      // The lasso does not extend beyond the board: we only select what it shows.
       const box = intersect(
         {
           left: Math.min(anchorX, pointerX),
@@ -263,10 +263,10 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
         containerBox
       );
 
-      // ⚠ **LIRE AVANT D'ÉCRIRE** (MIN-320). Les styles de l'overlay étaient
-      // posés en premier, puis venaient les N `getBoundingClientRect()` des
-      // cartes : l'ordre exactement inverse de celui qui évite un reflow. Les
-      // mesures d'abord, l'écriture ensuite — un seul layout par image.
+      // ⚠ **READ BEFORE WRITING** (MIN-320). The overlay styles were
+      // placed first, then came the N `getBoundingClientRect()` of the
+      // cards: the exact opposite order of that which avoids a reflow. THE
+      // measurements first, writing second — only one layout per image.
       const touched = new Set<string>();
       if (box) {
         for (const el of container.querySelectorAll<HTMLElement>(ITEM_SELECTOR)) {
@@ -293,27 +293,27 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
     };
 
     /**
-     * Le défilement automatique aux bords, en LISANT PUIS ÉCRIVANT (MIN-320).
+     * Automatic scrolling at edges, READING THEN WRITING (MIN-320).
      *
-     * La version d'avant alternait : lecture de rect → écriture de `scrollLeft`
-     * → relecture → `document.elementFromPoint` (qui force une mise à jour de
-     * style ET de layout, puisqu'une écriture vient de les invalider) → remontée
-     * des ancêtres avec `getComputedStyle().overflowY` et lectures de
-     * `scrollHeight`/`clientHeight` par niveau → écriture de `scrollTop`. Deux à
-     * trois layouts forcés par image, pointeur immobile compris, pendant tout le
+     * The previous version alternated: reading rect → writing `scrollLeft`
+     * → reread → `document.elementFromPoint` (which forces an update of
+     * style AND layout, since a write has just invalidated them) → raised
+     * ancestors with `getComputedStyle().overflowY` and readings of
+     * `scrollHeight`/`clientHeight` per level → writing of `scrollTop`. Two to
+     * three forced layouts per image, including stationary pointer, throughout the
      * geste.
      *
-     * Ce qui reste ici est une phase de lecture puis une phase d'écriture. La
-     * résolution du scroller sous le pointeur, elle, a quitté la boucle : elle
-     * ne peut changer qu'au mouvement du pointeur, donc elle vit dans son
+     * What remains here is a reading phase and then a writing phase. There
+     * resolution of the scroller under the pointer, she left the loop: she
+     * can only change when the pointer moves, so it lives in its
      * gestionnaire (`pointerScroller`).
      */
     const autoScroll = () => {
       const containerBox = rectOf(container);
       const dx = edgeVelocity(pointerX, containerBox.left, containerBox.right);
 
-      // Le curseur est peut-être sorti du board : on continue alors de faire
-      // défiler la colonne d'où l'on est parti, ce qui est l'intention.
+      // The cursor may have come off the board: we then continue to do
+      // scroll down the column you started from, which is the intention.
       const scroller = pointerScroller ?? anchorScroller;
       const scrollerBox = scroller ? rectOf(scroller) : null;
       const dy = scrollerBox
@@ -365,11 +365,11 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
       (e: PointerEvent) => {
         pointerX = e.clientX;
         pointerY = e.clientY;
-        // La boîte défilante sous le pointeur est résolue ICI et pas dans la
-        // boucle (MIN-320) : elle ne peut changer qu'au mouvement du pointeur,
-        // et sa résolution coûte un `elementFromPoint` plus une remontée
-        // d'ancêtres en `getComputedStyle` — c'est-à-dire un layout forcé, qui
-        // tombait sinon à chaque image, y compris pointeur immobile.
+        // The scrollable box below the pointer is resolved HERE and not in the
+        // loop (MIN-320): it can change only when the pointer moves,
+        // and its resolution costs a `elementFromPoint` plus an escalation
+        // of ancestors in `getComputedStyle` — that is to say a forced layout, which
+        // otherwise fell at every frame, including stationary pointer.
         pointerScroller = scrollableAt(pointerX, pointerY, container);
         if (!started) {
           if (Math.hypot(pointerX - anchorX, pointerY - anchorY) < START_DISTANCE) {
@@ -387,16 +387,16 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
     const stop = () => {
       const dragged = started;
       finish();
-      // Un clic net sur le fond, sans glisser : on referme la sélection — c'était
-      // jusqu'ici la croix de la pilule, à l'autre bout de l'écran.
+      // A clear click on the bottom, without sliding: we close the selection — it was
+      // so far the pill cross, at the other end of the screen.
       if (!dragged && !additive && baseline.size > 0) {
         onChangeRef.current(new Set());
       }
     };
     window.addEventListener("pointerup", stop, { signal });
     window.addEventListener("pointercancel", stop, { signal });
-    // Relâchement hors de la fenêtre, ⌘-tab au milieu du geste : on ne verra
-    // jamais le `pointerup`. On garde la sélection acquise, on lâche le reste.
+    // Release out of the window, ⌘-tab in the middle of the gesture: we won't see
+    // never the `pointerup`. We keep the acquired selection, we let go of the rest.
     window.addEventListener("blur", finish, { signal });
 
     window.addEventListener(
@@ -409,8 +409,8 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
       { signal }
     );
 
-    // Molette pendant le geste : les cartes bougent, le rectangle non — il faut
-    // refaire le calcul. `capture` parce qu'un défilement de colonne ne remonte pas.
+    // Wheel during the gesture: the cards move, the rectangle does not — you must
+    // redo the calculation. `capture` because a column scroll does not go up.
     window.addEventListener(
       "scroll",
       () => {
@@ -424,8 +424,8 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
 }
 
 /**
- * Le rectangle lui-même. Masqué et positionné à la main par le hook (cf. son
- * en-tête) : ce composant ne rend qu'une fois et ne réagit à rien.
+ * The rectangle itself. Masked and positioned by hand by the hook (see its
+ * header): this component only renders once and does not react to anything.
  */
 export function MarqueeOverlay({
   overlayRef,

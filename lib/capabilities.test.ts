@@ -9,7 +9,7 @@ const core = {
 };
 
 describe("resolveCapabilities", () => {
-  it("ne garde que Supabase et Storage dans la configuration minimale", () => {
+  it("keeps only Supabase and Storage in the minimal configuration", () => {
     const capabilities = resolveCapabilities(core);
 
     expect(capabilities.supabase.state).toBe("ready");
@@ -20,7 +20,7 @@ describe("resolveCapabilities", () => {
     }
   });
 
-  it("ne déduit pas les services managés de secrets présents", () => {
+  it("does not infer managed services from present secrets", () => {
     const capabilities = resolveCapabilities({
       ...core,
       OPENROUTER_API_KEY: "operator-key",
@@ -40,7 +40,7 @@ describe("resolveCapabilities", () => {
     ).toBe(true);
   });
 
-  it("diagnostique chaque configuration partielle avec les variables manquantes", () => {
+  it("diagnoses each partial configuration with its missing variables", () => {
     const capabilities = resolveCapabilities({
       ...core,
       MINDDY_MANAGED_AI: "1",
@@ -68,7 +68,7 @@ describe("resolveCapabilities", () => {
     }
   });
 
-  it("exige un choix explicite avant toute exécution Vercel Sandbox ou Resend", () => {
+  it("requires an explicit choice before any Vercel Sandbox or Resend execution", () => {
     const capabilities = resolveCapabilities({
       ...core,
       VERCEL: "1",
@@ -80,7 +80,7 @@ describe("resolveCapabilities", () => {
     expect(capabilities.transactionalEmail.configured).toBe(false);
   });
 
-  it("ne déduit jamais les services managés du hostname officiel", () => {
+  it("never infers managed services from the official hostname", () => {
     const official = resolveCapabilities({
       ...core,
       VERCEL: "1",
@@ -165,7 +165,7 @@ describe("resolveCapabilities", () => {
     expect(capabilities.vercelSandbox.missing).toContain("NEXT_PUBLIC_APP_URL");
   });
 
-  it("ne déclare pas Web Push prêt avec un sujet VAPID inutilisable", () => {
+  it("does not declare Web Push ready with an unusable VAPID subject", () => {
     const capabilities = resolveCapabilities({
       ...core,
       NEXT_PUBLIC_VAPID_PUBLIC_KEY: "public",
@@ -177,7 +177,7 @@ describe("resolveCapabilities", () => {
     expect(capabilities.webPush.missing).toContain("VAPID_SUBJECT (mailto: or https:)");
   });
 
-  it("classe les remplacements opérables hors Vercel et hors Resend", () => {
+  it("classifies workable replacements outside Vercel and Resend", () => {
     const capabilities = resolveCapabilities(core);
     expect(capabilities.vercelSandbox.requirement).toBe("replaceable");
     expect(capabilities.scheduler.requirement).toBe("replaceable");

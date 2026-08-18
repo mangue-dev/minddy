@@ -13,29 +13,28 @@ import { removeStorageObjects } from "@/lib/server/attachments";
 import { projectStorageAllowed } from "@/lib/server/storage-quota";
 
 /**
- * Les fichiers d'une page, côté serveur (MIN-280) : l'envoi, et le MÉNAGE.
+ * One-page files, server side (MIN-280): sending, and HOUSEHOLD.
  *
- * Le ménage est la moitié qui compte. Un envoi branché sans lui, c'est un bucket
- * qui grossit d'images que plus aucun document ne montre, sans que rien ne le
- * dise jamais. Il y a donc trois portes de sortie, et elles se complètent :
+ * Housekeeping is the half that counts. A connected sending without it is a bucket
+ * which swells with images that no document shows anymore, without anything ever saying it. There are therefore three exit doors, and they complement each other:
  *
- *  - la CASCADE SQL (`page_files.page_id`) efface les LIGNES quand la page part
- *    pour de bon — mais pas les octets, jamais : c'est le piège du sujet, et
- *    c'est pourquoi la purge relève les chemins AVANT de supprimer
- *    (lib/server/trash.ts) ;
- *  - le BALAYAGE des orphelins ({@link sweepOrphanPageFiles}) ramasse ce qui a
- *    quitté le corps sans que la page parte : une image supprimée d'un coup de
- *    retour arrière, un bloc coupé et jamais recollé ;
- *  - et rien d'autre. En particulier, PAS de comparaison à chaque écriture du
- *    corps : elle supprimerait le fichier d'un annuler/refaire entre deux
- *    frappes, et il n'y a pas de retour en arrière sur un objet supprimé.
+ * - the SQL CASCADE (`page_files.page_id`) erases the LINES when the page leaves
+ * for good — but not the bytes, ever: this is the trap of the subject, and
+ * this is why the purge raises the paths BEFORE deleting
+ * (lib/server/trash.ts);
+ * - the orphan SCAN ({@link sweepOrphanPageFiles}) picks up what has
+ * left the body without the page leaving: an image deleted with a stroke of
+ * backspace, a cut block and never stuck again ;
+ * - and nothing else. In particular, NO comparison on each write of the
+ * body: it would delete the file with one undo/redo between two
+ * keystrokes, and there is no backtracking on a deleted object.
  */
 
-/** Le délai de grâce d'un orphelin. Sept jours, et le chiffre a une raison :
-    un fichier peut sortir d'un corps et y revenir par un `⌘Z` fait le lendemain,
-    par la restauration d'une version de l'historique (MIN-277), ou parce que la
-    page est passée par la corbeille. Ce qui est encore là au bout d'une semaine,
-    lui, ne revient plus. */
+/** The grace period of an orphan. Seven days, and the number has a reason:
+ a file can leave a body and return there by a `⌘Z` done the next day,
+ by the restoration of a version of the history (MIN-277), or because the
+ page has gone through the trash. What is still there after a week,
+, no longer comes back. */
 export const ORPHAN_PAGE_FILE_DAYS = 7;
 
 export interface PageFileRow {
@@ -61,14 +60,13 @@ export class PageFileError extends Error {
 }
 
 /**
- * Téléverse les octets, PUIS enregistre la ligne — et efface l'objet si la ligne
- * ne passe pas.
+ * Uploads the bytes, THEN saves the line — and deletes the object if the line
+ * does not pass.
  *
- * Cet ordre-là et pas l'autre : une ligne sans objet donnerait un bloc image qui
- * ne charge jamais, visible dans le document et impossible à réparer ; un objet
- * sans ligne n'est qu'un orphelin, et il ne survit pas au rattrapage ci-dessous.
- * Entre les deux fautes possibles, on choisit toujours celle que le ménage sait
- * réparer.
+ * This order and not the other: a line without an object would result in an image block that never loads, visible in the document and impossible to repair; an object
+ * without a line is just an orphan, and it does not survive the catch-up below.
+ * Between the two possible faults, we always choose the one that the household knows
+ * to repair.
  */
 export async function createPageFile(
   service: SupabaseClient,
@@ -85,18 +83,18 @@ export async function createPageFile(
   if (size === 0) throw new PageFileError("empty file", 400);
   if (size > MAX_PAGE_FILE_BYTES) throw new PageFileError("file too large", 413);
 
-  // Le quota du compte (MIN-348). Cette écriture-ci passe par le client de
-  // SERVICE, qui contourne la policy où le plafond est posé : sans ce relais,
-  // les fichiers de page seraient précisément la porte qui l'ignore.
+  // The account quota (MIN-348). This writing goes through the client of
+  // SERVICE, which bypasses the policy where the ceiling is placed: without this relay,
+  // the page files would be precisely the door that ignores it.
   if (!(await projectStorageAllowed(service, args.projectId))) {
     throw new PageFileError("storage quota exceeded", 507);
   }
 
-  // Le type vient des OCTETS et non de l'annonce du navigateur (MIN-340) :
-  // l'envoi d'un fichier de page passe par le serveur, donc on tient le contenu
-  // — et un `.png` qui est en réalité du HTML n'a aucune raison de repartir
-  // étiqueté `image/png`. Le type retenu part dans l'entête de l'objet ET dans
-  // la ligne, qui devient la source de confiance de la porte de lecture.
+  // The type comes from the BYTES and not from the browser announcement (MIN-340):
+  // sending a page file goes through the server, so we hold the content
+  // — and a `.png` which is actually HTML has no reason to leave
+  // labeled `image/png`. The type retained goes into the object header AND into
+  // the line, which becomes the trusted source of the read gate.
   const mime = resolveUploadedMimeType(args.mimeType, args.data).slice(0, 120);
   const fileName = args.fileName.trim().slice(0, 200) || "fichier";
   const path = `${pageFileStoragePrefix(args.projectId, args.pageId)}/${crypto.randomUUID()}/${sanitizeFileKey(fileName)}`;
@@ -129,10 +127,9 @@ export async function createPageFile(
   return data as PageFileRow;
 }
 
-/** Le chemin de storage d'un fichier, si l'acteur peut le voir — la porte de
-    lecture (`GET /api/projects/{id}/pages/files/{fileId}`) n'a besoin que de ça.
-    Le `project_id` est EXIGÉ : sans lui, un id de fichier valide servirait le
-    fichier d'un autre projet à qui saurait forger l'URL. */
+/** The storage path of a file, if the actor can see it — the reading gate (`GET /api/projects/{id}/pages/files/{fileId}`) only needs that.
+ The `project_id` is REQUIRED: without it, a valid file id would serve the
+ file of another project which could forge the URL. */
 export async function getPageFilePath(
   service: SupabaseClient,
   projectId: string,
@@ -147,8 +144,8 @@ export async function getPageFilePath(
   return (data as { storage_path: string; file_name: string; mime_type: string } | null) ?? null;
 }
 
-/** Les chemins de storage des fichiers de ces pages. Relevés AVANT le delete —
-    la cascade emporte les lignes, jamais les octets. */
+/** The storage paths for the files on these pages. Read BEFORE the delete —
+ the cascade takes the lines, never the bytes. */
 export async function pageFilePathsForPages(
   service: SupabaseClient,
   pageIds: string[]
@@ -161,8 +158,8 @@ export async function pageFilePathsForPages(
   return (data ?? []).map((row) => (row as { storage_path: string }).storage_path);
 }
 
-/** Idem, à l'échelle d'un PROJET : purger un projet emporte ses pages par
-    cascade, donc ses fichiers de page avec. */
+/** Same, at the scale of a PROJECT: purging a project takes its pages by
+ cascade, therefore its page files with it. */
 export async function pageFilePathsForProjects(
   service: SupabaseClient,
   projectIds: string[]
@@ -176,20 +173,20 @@ export async function pageFilePathsForProjects(
 }
 
 /**
- * Les fichiers dont plus aucun corps ne parle, passé le délai de grâce.
+ * Files that no body is talking about anymore, after the grace period.
  *
- * Par BALAYAGE et non par différence à l'écriture (le pourquoi est en tête de ce
- * fichier). La comparaison se fait page par page : les candidats sont groupés
- * par `page_id`, le corps de chaque page est lu une fois, et tout id qui n'y
- * figure plus s'en va — ligne et objet.
+ * By SCANNING and not by difference when writing (the why is at the top of this
+ * file). The comparison is done page by page: candidates are grouped
+ * by `page_id`, the body of each page is read once, and any id that is no longer there
+ * goes away — line and object.
  *
- * La lecture du corps est AVEUGLE au type de nœud (`pageFileIdsInBody`) : elle
- * cherche l'adresse du fichier partout dans le JSON. C'est volontairement large,
- * et l'asymétrie est du bon côté — le pire cas est de garder un fichier de trop,
- * jamais d'en effacer un que le document montre encore.
+ * Reading the body is BLIND to the node type (`pageFileIdsInBody`): it
+ * searches for the file address anywhere in the JSON. It's deliberately wide,
+ * and the asymmetry is on the good side — the worst case is to keep one file too many,
+ * never to delete one that the document still shows.
  *
- * Le lot est borné comme les autres purges du balayage ; le lendemain reprend la
- * suite. Rend le nombre de lignes réellement supprimées.
+ * The batch is bounded like the other sweep purges; the next day resumes the
+ * continuation. Returns the number of rows actually deleted.
  */
 export async function sweepOrphanPageFiles(
   service: SupabaseClient,
@@ -228,9 +225,9 @@ export async function sweepOrphanPageFiles(
     ((pages ?? []) as { id: string; content: unknown }[]).map((p) => [p.id, p.content])
   );
   for (const [pageId, rows] of byPage) {
-    // Une page qui n'est PAS revenue de la lecture n'existe plus (elle vient
-    // d'être purgée entre deux balayages) : ses fichiers sont orphelins de
-    // plein droit, leurs lignes étant déjà parties par la cascade.
+    // A page that has NOT returned from reading no longer exists (it just
+    // to be purged between two scans): its files are orphaned
+    // straight ahead, their lines having already left via the waterfall.
     const cited = bodies.has(pageId)
       ? pageFileIdsInBody(bodies.get(pageId))
       : new Set<string>();
@@ -249,8 +246,8 @@ export async function sweepOrphanPageFiles(
     );
   if (deleteError) throw deleteError;
 
-  // Les octets APRÈS la ligne : dans l'autre ordre, un échec du delete laisserait
-  // une ligne qui nomme un objet disparu — donc un bloc mort dans le document.
+  // The bytes AFTER the line: in the other order, a failed delete would leave
+  // a line that names a missing object — therefore a dead block in the document.
   await removeStorageObjects(
     service,
     orphans.map((o) => o.storage_path)

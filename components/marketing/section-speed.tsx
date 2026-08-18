@@ -15,23 +15,22 @@ import { Reveal, RevealGroup, RevealHeading } from "./reveal";
 import { IsoTile, type IsoTileName } from "./iso-tile";
 
 /**
- * §3 — « Fait pour aller vite » (nouvelle section).
+ * §3 — “Made to go fast” (new section).
  *
- * La page défendait la simplicité par le nombre d'écrans, jamais par le nombre
- * de gestes. Or la fluidité est la moitié du positionnement, et elle était
- * éparpillée en trois endroits qui ne se parlaient pas : une case de grille
- * (la palette), une section pleine (la dictée), une section pleine (le carnet).
- * Les trois sont ici, dans l'ordre où on les rencontre quand on va vite : le
- * clavier d'abord, la voix quand le clavier ne suffit pas, le carnet pour ce
- * qui n'est pas encore un ticket.
+ * The page defended simplicity by the number of screens, never by the number
+ * of gestures. Now fluidity is half of the positioning, and it was
+ * scattered in three places which did not speak to each other: a grid square
+ * (the palette), a full section (the dictation), a full section (the notebook).
+ * The three are here, in the order in which we encounter them when we go fast: the
+ * keyboard first, the voice when the keyboard is not enough, the notebook for this
+ * which is not yet a ticket.
  *
- * Trois blocs sous un seul H2, donc trois `h3` : la dictée et le carnet perdent
- * leur rang de section mais gardent leur ancre (`#voice`, `#scratchpad`), pour
- * que les liens du pied de page et les liens déjà partagés continuent de
- * tomber au bon endroit.
+ * Three blocks under a single H2, therefore three `h3`: the dictation and the notebook lose
+ * their section rank but keep their anchor (`#voice`, `#scratchpad`), so that
+ * footer links and already shared links continue to fall in the correct place.
  */
 
-/** Les trois usages de la dictée, tels que `DictateButton` est réellement monté. */
+/** The three uses of dictation, such as `DictateButton` is actually mounted. */
 const VOICE_WAYS = [
   { key: "create", icon: "mic" },
   { key: "edit", icon: "pencil" },
@@ -69,7 +68,7 @@ export async function SectionSpeed() {
           </Reveal>
         </header>
 
-        {/* ── Le clavier ─────────────────────────────────────────────────── */}
+        {/* ── The keyboard ───────────────────────── ────────────────────────── */}
         <RevealGroup step={0.12} className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
           <ScreenshotSlot id="featurePalette" />
           <div>
@@ -77,17 +76,17 @@ export async function SectionSpeed() {
             <h3 className="mb-3 text-2xl font-semibold tracking-tight">
               {t("feature_palette_title")}
             </h3>
-            {/* La liste des raccourcis (« G puis I », « ⇧V »…) a sauté : le
-                visiteur qui ne connaît pas minddy veut savoir ce qu'on y gagne,
-                pas quelle touche appuyer. Les raccourcis s'apprennent dans
-                l'app, où ils sont affichés à côté de chaque action. */}
+            {/* The list of shortcuts (“G then I”, “⇧V”…) has been skipped: the
+ visitor who does not know Minddy wants to know what we gain,
+ not which key to press. Shortcuts are learned in
+ the app, where they are displayed next to each action. */}
             <p className="leading-relaxed text-pretty text-muted-foreground">
               {t("feature_palette_body")}
             </p>
           </div>
         </RevealGroup>
 
-        {/* ── La voix ────────────────────────────────────────────────────── */}
+        {/* ── The voice ─────────────────────────── ─────────────────────────── */}
         <div id="voice" className="mt-16 scroll-mt-24 sm:mt-24">
           <header className="mx-auto mb-10 max-w-2xl text-center">
             <Reveal
@@ -111,16 +110,15 @@ export async function SectionSpeed() {
             </Reveal>
           </header>
 
-          {/* Jouable, pas illustré (MIN-150) : le visiteur parle et regarde les
-              champs se remplir. La figure statique qui tenait cette place
-              disait la même chose sans la faire ressentir. */}
+          {/* Playable, not illustrated (MIN-150): the visitor speaks and watches the
+ fields fill up. The static figure who held this place
+ said the same thing without making it felt. */}
           <Reveal>
             <VoiceDemo />
           </Reveal>
 
-          {/* Les grilles à filets (`gap-px` sur un fond `bg-border`) entrent d'un
-              seul tenant : y masquer les cartes une à une laisserait voir le fond
-              gris du conteneur pendant la cascade. */}
+          {/* The net grids (`gap-px` on a `bg-border` background) enter as a single piece: hiding the cards one by one would reveal the gray
+ background of the container during the cascade. */}
           <Reveal
             as="ul"
             className="mt-10 grid gap-px overflow-hidden rounded-2xl border border-border bg-border md:grid-cols-3"
@@ -137,7 +135,7 @@ export async function SectionSpeed() {
           </Reveal>
         </div>
 
-        {/* ── Le carnet ──────────────────────────────────────────────────── */}
+        {/* ── The notebook ────────────────────────── ────────────────────────── */}
         <div
           id="scratchpad"
           className="mt-16 grid scroll-mt-24 items-center gap-10 sm:mt-24 md:grid-cols-2 md:gap-16 [&>*]:min-w-0"

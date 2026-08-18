@@ -7,10 +7,10 @@ import { ISSUE_SELECT, mapIssueRow } from "@/lib/server/issue-mapper";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// De quoi couvrir les deux automatisations de la création : Smart-fill, qui
-// tourne DANS la requête et retarde donc la réponse (un appel de modèle, borné à
-// 20 s — c'est le prix d'une ligne qui naît complète, cf. lib/server/smart-fill.ts),
-// et l'appel de Smart Assign, qui repart en `after()` une fois la réponse rendue.
+// Enough to cover the two automations of creation: Smart-fill, which
+// runs IN the request and therefore delays the response (a model call, limited to
+// 20 s — this is the price of a line that is complete, cf. lib/server/smart-fill.ts),
+// and the call to Smart Assign, which returns to `after()` once the response is given.
 export const maxDuration = 60;
 
 /** GET /api/projects/[id]/issues — all issues of an accessible project. */
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   }
 
   // Issue-level resource counts, files and links alike (the ones on comments
-  // excluded) — one indexed query, folded onto each issue so « copier le
+  // excluded) — one indexed query, folded onto each issue so « copy the
   // prompt » can flag resources in the XML without a per-card fetch. Failure is
   // non-fatal: the board still renders, just without the counts.
   const resourceCounts = new Map<string, number>();
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   );
 }
 
-/** POST /api/projects/[id]/issues — create an issue (assigns CLÉ-number atomically). */
+/** POST /api/projects/[id]/issues — create an issue (assigns KEY-number atomically). */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
@@ -87,10 +87,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     projectName: access.project.name,
     actorId: auth.user.id,
     input: payload,
-    // L'id que la carte optimiste porte déjà côté navigateur : la ligne naît
-    // avec, sinon le direct rapporte une création que le client ne reconnaît pas
-    // comme la sienne et la carte apparaît en double (lib/optimistic-issue.ts).
-    // Validé comme UUID par le cœur, qui l'ignore sinon.
+    // The id that the optimistic card already carries on the browser side: the line is born
+    // with, otherwise the direct reports a creation that the client does not recognize
+    // like his and the map appears in duplicate (lib/optimistic-issue.ts).
+    // Validated as UUID by the core, which otherwise ignores it.
     rowId: typeof payload.id === "string" ? payload.id : null,
   });
   if (!result.ok) {

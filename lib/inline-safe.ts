@@ -1,34 +1,31 @@
 /**
- * Ce qu'on accepte d'AFFICHER, et ce qu'on se contente de rendre (MIN-340).
+ * What we agree to DISPLAY, and what we just return (MIN-340).
  *
- * Un fichier téléversé porte deux types MIME, et aucun des deux n'est une
- * mesure : celui que le navigateur ANNONCE au moment de l'envoi, et celui qu'on
- * range dans la ligne. Les deux viennent du client. Servir un fichier « en
- * `inline` » sur la foi de l'un d'eux, c'est laisser un membre choisir ce que
- * son fichier sera : un `.png` qui contient du HTML, ou un SVG portant un
- * `<script>`, devient un DOCUMENT exécuté par le navigateur de qui l'ouvre.
+ * An uploaded file has two MIME types, and neither of them is a
+ * measure: the one that the browser ANNOUNCES at the time of sending, and the one which we
+ * stores in the line. Both come from the customer. Serving a file "en
+ * `inline`" on the basis of one of them, is letting a member choose what
+ * their file will be: a `.png` which contains HTML, or an SVG carrying a
+ * `<script>`, becomes an executed DOCUMENT by the browser that opens it.
  *
- * D'où deux gardes, et il faut les deux :
+ * Hence two guards, and you need both:
  *
- *  - une ALLOWLIST ({@link isInlineSafeMimeType}) — hors liste, la réponse porte
- *    `Content-Disposition: attachment`, qui ne rend jamais rien ;
- *  - un SNIFF des octets ({@link resolveUploadedMimeType}) partout où on tient
- *    le contenu à l'enregistrement, pour que le type rangé décrive ce que le
- *    fichier EST plutôt que ce qu'il prétend.
+ * - an ALLOWLIST ({@link isInlineSafeMimeType}) — outside the list, the response carries
+ * `Content-Disposition: attachment`, which never returns anything;
+ * - a SNIFF of bytes ({@link resolveUploadedMimeType}) wherever we hold
+ * the contents on save, so that the stored type describes what the
+ * file IS rather than what it IS claims.
  *
- * `image/svg+xml` est volontairement hors liste : c'est un document XML avec des
- * scripts et des liens, pas une image bitmap. Il s'affiche toujours dans un
- * `<img>` (la disposition ne gouverne que la navigation) ; ce qu'elle empêche,
- * c'est de l'ATTEINDRE directement.
+ * `image/svg+xml` is deliberately unlisted: it is an XML document with scripts and links, not a bitmap image. It always displays in a
+ * `<img>` (the layout only governs navigation); what it prevents,
+ * is REACHING it directly.
  *
- * Ce module est pur : pas de base, pas de storage, pas de `server-only` — la
- * même règle sert au serveur qui signe une URL et au test qui la vérifie.
+ * This module is pure: no base, no storage, no `server-only` — the
+ * same rule is used for the server which signs a URL and for the test which signs it checks.
  */
 
 /**
- * Les types servis TELS QUELS. Ce qui reste ici est ce que nos vues affichent
- * vraiment — les images bitmap — plus les deux formats qu'on ouvre sans y
- * penser. Le reste se télécharge, ce qu'un lien de pièce jointe fait déjà.
+ * Types served AS IS. What's left here is what our views actually display — the bitmap images — plus the two formats that we open without thinking. The rest downloads, which an attachment link already does.
  */
 export const INLINE_SAFE_MIME_TYPES: ReadonlySet<string> = new Set([
   "image/png",
@@ -40,25 +37,24 @@ export const INLINE_SAFE_MIME_TYPES: ReadonlySet<string> = new Set([
   "text/plain",
 ]);
 
-/** `Image/PNG; charset=utf-8` → `image/png`. Le paramètre ne décide rien. */
+/** `Image/PNG; charset=utf-8` → `image/png`. The parameter doesn't decide anything. */
 export function normalizeMimeType(raw: string | null | undefined): string {
   if (typeof raw !== "string") return "";
   return raw.split(";")[0].trim().toLowerCase();
 }
 
-/** Ce type peut-il être servi sans `Content-Disposition: attachment` ? */
+/** Can this type be served without `Content-Disposition: attachment`? */
 export function isInlineSafeMimeType(raw: string | null | undefined): boolean {
   return INLINE_SAFE_MIME_TYPES.has(normalizeMimeType(raw));
 }
 
-/** Le type sous lequel un fichier sera SERVI (cf. l'allowlist ci-dessus). */
+/** The type under which a file will be SERVED (see the allowlist above). */
 export function servedMimeType(raw: string | null | undefined): string {
   const type = normalizeMimeType(raw);
   return INLINE_SAFE_MIME_TYPES.has(type) ? type : "application/octet-stream";
 }
 
-/** Les octets qui identifient un format à coup sûr, dans l'ordre où on les
-    teste. Un `null` en position d'octet veut dire « n'importe lequel ». */
+/** The bytes that reliably identify a format, in the order in which they are tested. A `null` in byte position means “any”. */
 const MAGIC: { mime: string; offset: number; bytes: (number | null)[] }[] = [
   // \x89PNG\r\n\x1a\n
   { mime: "image/png", offset: 0, bytes: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] },
@@ -70,7 +66,7 @@ const MAGIC: { mime: string; offset: number; bytes: (number | null)[] }[] = [
     offset: 0,
     bytes: [0x52, 0x49, 0x46, 0x46, null, null, null, null, 0x57, 0x45, 0x42, 0x50],
   },
-  // ???? ftypavif / ftypavis (boîte ISOBMFF)
+  // ???? ftypavif / ftypavis (ISOBMFF box)
   {
     mime: "image/avif",
     offset: 4,
@@ -79,12 +75,12 @@ const MAGIC: { mime: string; offset: number; bytes: (number | null)[] }[] = [
   { mime: "application/pdf", offset: 0, bytes: [0x25, 0x50, 0x44, 0x46, 0x2d] }, // %PDF-
 ];
 
-/** Combien d'octets de tête suffisent à trancher — tout ce qui suit est du
-    contenu, et le sniff n'a rien à y chercher. */
+/** How many leading bytes are enough to decide — everything after that is
+ content, and the sniff has nothing to look for there. */
 export const MIME_SNIFF_BYTES = 1024;
 
-/** Les entêtes textuelles qui font d'un fichier un DOCUMENT, quel que soit le
-    nom qu'il porte. Le `<?xml` est là pour le SVG déclaré proprement. */
+/** The textual headers that make a file a DOCUMENT, regardless of the
+ name it has. The `<?xml` is there for the properly declared SVG. */
 const MARKUP_PREFIXES: { mime: string; starts: string[] }[] = [
   { mime: "image/svg+xml", starts: ["<svg"] },
   {
@@ -94,11 +90,11 @@ const MARKUP_PREFIXES: { mime: string; starts: string[] }[] = [
 ];
 
 /**
- * Le type que les OCTETS révèlent, ou `null` quand ils ne révèlent rien.
+ * The type that the BYTES reveal, or `null` when they reveal nothing.
  *
- * Les formats binaires se lisent sur leur signature ; le texte, lui, se lit sur
- * son premier élément — un `<?xml … ?>` puis un `<svg>` reste un SVG, d'où le
- * saut du prologue et des commentaires avant de comparer.
+ * Binary formats are read by their signature; the text is read on
+ * its first element — a `<?xml … ?>` then a `<svg>` remains an SVG, hence the
+ * skipping the prologue and comments before comparing.
  */
 export function sniffMimeType(bytes: Uint8Array): string | null {
   for (const sig of MAGIC) {
@@ -116,7 +112,7 @@ export function sniffMimeType(bytes: Uint8Array): string | null {
 
   const head = new TextDecoder("utf-8", { fatal: false })
     .decode(bytes.subarray(0, MIME_SNIFF_BYTES))
-    // BOM, espaces, prologue XML et commentaires : du décor avant l'élément.
+    // BOM, spaces, XML prologue and comments: decoration before the element.
     .replace(/^﻿/, "")
     .replace(/^\s+/, "")
     .replace(/^<\?xml[^>]*\?>/i, "")
@@ -130,16 +126,16 @@ export function sniffMimeType(bytes: Uint8Array): string | null {
 }
 
 /**
- * Le type à RANGER pour un fichier dont on tient les octets.
+ * The type to STORE for a file whose bytes are held.
  *
- * Trois cas, et le troisième est celui qui compte : les octets tranchent quand
- * ils le peuvent ; sinon un type déclaré hors allowlist est gardé tel quel (il
- * ne sera jamais servi `inline`, et il nomme correctement l'icône du fichier) ;
- * sinon — un type d'affichage que les octets ne CONFIRMENT pas — on retombe sur
- * `application/octet-stream`. C'est exactement le `.png` qui n'en est pas un.
+ * Three cases, and the third is the one that counts: the bytes decide when
+ * they can; otherwise a type declared outside the allowlist is kept as is (it
+ * will never be served `inline`, and it correctly names the file icon);
+ * otherwise — a display type that the bytes do not CONFIRM — we fall back on
+ * `application/octet-stream`. It is exactly the `.png` which is not one.
  *
- * `text/plain` est la seule exception, faute de signature : du texte sans
- * balise de tête reste du texte.
+ * `text/plain` is the only exception, due to lack of signature: text without
+ * head tag remains text.
  */
 export function resolveUploadedMimeType(
   declared: string | null | undefined,

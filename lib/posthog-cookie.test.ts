@@ -7,7 +7,7 @@ describe("posthogCookieName", () => {
     expect(posthogCookieName("phc_abc123")).toBe("ph_phc_abc123_posthog");
   });
 
-  it("rend null sans clé de projet — self-host, CI", () => {
+  it("returns null without a project key — self-host, CI", () => {
     expect(posthogCookieName(undefined)).toBeNull();
     expect(posthogCookieName("")).toBeNull();
   });
@@ -24,13 +24,13 @@ describe("readPosthogDistinctId", () => {
     expect(readPosthogDistinctId(raw)).toBe("0198-abcd");
   });
 
-  it("rend null quand le cookie est absent", () => {
+  it("returns null when the cookie is absent", () => {
     expect(readPosthogDistinctId(undefined)).toBeNull();
     expect(readPosthogDistinctId(null)).toBeNull();
     expect(readPosthogDistinctId("")).toBeNull();
   });
 
-  it("rend null sur une valeur qui n'est pas du JSON", () => {
+  it("returns null for a value that is not JSON", () => {
     expect(readPosthogDistinctId("pas-du-json")).toBeNull();
   });
 
@@ -40,12 +40,12 @@ describe("readPosthogDistinctId", () => {
     expect(readPosthogDistinctId(JSON.stringify({ distinct_id: "   " }))).toBeNull();
   });
 
-  it("refuse un identifiant démesuré — cookie forgé", () => {
+  it("rejects an oversized identifier — forged cookie", () => {
     const raw = JSON.stringify({ distinct_id: "x".repeat(201) });
     expect(readPosthogDistinctId(raw)).toBeNull();
   });
 
-  it("ne lève pas sur un pourcent isolé, que decodeURIComponent refuse", () => {
+  it("does not throw for an isolated percent sign, which decodeURIComponent rejects", () => {
     expect(() => readPosthogDistinctId("%")).not.toThrow();
     expect(readPosthogDistinctId("%")).toBeNull();
   });

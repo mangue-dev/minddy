@@ -20,28 +20,28 @@ import { restorePage, trashPage, type PageErrorKey } from "@/lib/server/pages";
 import type { PageWriteKind } from "@/lib/pages";
 
 /**
- * La corbeille (MIN-133).
+ * The basket (MIN-133).
  *
- * Supprimer un ticket, un objectif, un feedback, une routine ou un projet ne
- * détruit plus rien : la ligne est marquée (`deleted_at` / `deleted_by`) et sort
- * de l'app par la RLS pour les tickets et les objectifs, par un filtre explicite
- * pour les autres. Elle reste visible ici 30 jours, restaurable à l'identique —
- * commentaires, pièces jointes, sous-tickets, liens et passages d'agent compris,
- * puisque rien n'a été détaché. Passé ce délai, le balayage nocturne
- * (lib/server/retention.ts) fait la vraie suppression, celle qui cascade.
+ * Deleting a ticket, goal, feedback, routine or project does not
+ * destroys nothing: the line is marked (`deleted_at` / `deleted_by`) and exits
+ * of the app by the RLS for tickets and objectives, by an explicit filter
+ * for others. It remains visible here for 30 days, can be restored identically —
+ * comments, attachments, sub-posts, links and agent passages included,
+ * since nothing was detached. After this period, night scanning
+ * (lib/server/retention.ts) does the real deletion, the one that cascades.
  *
- * TOUT passe par le client service, RLS contournée, et les contrôles d'accès
- * vivent donc ici : la liste ne sort pas des projets auxquels l'appelant a
- * accès, et chaque restauration/purge repasse par `getProjectAccess`. C'est
- * aussi la raison pour laquelle la suppression elle-même a déménagé ici plutôt
- * que de rester un `update` sur le client authentifié : PostgREST rend la ligne
- * modifiée via un RETURNING, auquel la policy SELECT s'applique — la ligne
- * fraîchement corbeillée n'y passerait plus, et la route croirait à un 404.
+ * EVERYTHING goes through customer service, EPIRB bypass, and access controls
+ * therefore live here: the list does not go beyond the projects to which the caller has
+ * access, and each restore/purge goes through `getProjectAccess`. It is
+ * also the reason why the deletion itself moved here instead
+ * than to remain a `update` on the authenticated client: PostgREST renders the line
+ * modified via a RETURNING, to which the SELECT policy applies — the line
+ * freshly trashed would no longer pass there, and the road would look like a 404.
  */
 
 export { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 
-/** Garde-fou de lecture : la corbeille d'un mois n'est jamais si longue. */
+/** Reading safeguard: a month's bin is never that long. */
 const LIST_LIMIT = 200;
 
 export type TrashType =
@@ -65,7 +65,7 @@ export function isTrashType(value: string): value is TrashType {
   return (TRASH_TYPES as string[]).includes(value);
 }
 
-/** La table portant chaque type — la seule endroit où la correspondance vit. */
+/** The table bearing each type — the only place where the correspondence lives. */
 const TABLE: Record<TrashType, string> = {
   issue: "issues",
   project: "projects",
@@ -85,16 +85,16 @@ export interface TrashActor {
 export interface TrashItem {
   type: TrashType;
   id: string;
-  /** Titre du ticket / du feedback / de la routine, nom du projet ou de l'objectif. */
+  /** Title of ticket/feedback/routine, name of project or objective. */
   title: string;
-  /** « MIN-42 » pour un ticket, sinon null. */
+  /** “MIN-42” for a ticket, otherwise null. */
   identifier: string | null;
-  /** Projet parent — null quand l'élément EST le projet. */
+  /** Parent project — null when the element IS the project. */
   project_id: string | null;
   project_name: string | null;
   project_color: string | null;
   deleted_at: string;
-  /** Qui a supprimé. Null si le compte a disparu depuis. */
+  /** Who deleted. Null if the account has since disappeared. */
   deleted_by: TrashActor | null;
 }
 
@@ -122,24 +122,24 @@ const NOT_FOUND: Record<TrashType, TrashErrorKey> = {
   page: "pageNotFound",
 };
 
-/* ─── Contrôle d'accès ─────────────────────────────────────────────────────── */
+/* ─── Access control ─────────────────────────── ──────────────────────────── */
 
 /**
- * Qui a le droit de faire quoi, pour les TROIS gestes — supprimer, restaurer,
- * purger. Un seul endroit : trois copies du même contrôle finissent par
- * diverger, et c'est celle qu'on regarde le moins qui laisse passer.
+ * Who has the right to do what, for the THREE actions — delete, restore,
+ * purge. One place: three copies of the same control end up
+ * diverge, and it is the one we look at least that lets it pass.
  *
- * Un projet ne répond qu'à son propriétaire. Une ROUTINE non plus : elle engage
- * un budget tous les lundis matin sans que personne ne clique, et c'est déjà la
- * garde de la fabrique (`lib/server/routines.ts`) — la corbeille ne doit pas
- * offrir un chemin de côté à un membre. Le reste (tickets, objectifs, retours)
- * appartient à tout membre du projet : la corbeille étant partagée, l'erreur de
+ * A project only responds to its owner. A ROUTINE either: it involves
+ * a budget every Monday morning without anyone clicking, and it's already there
+ * factory custody (`lib/server/routines.ts`) — the trash must not
+ * offer a side path to a member. The rest (tickets, goals, returns)
+ * belongs to any member of the project: the trash being shared, the error of
  * l'un reste rattrapable par l'autre.
  *
- * `mustBeTrashed` : restaurer et purger ne portent que sur une ligne DÉJÀ à la
- * corbeille, là où supprimer porte sur une ligne vivante — mais on ne le filtre
- * pas pour un projet, dont le contrôle regarde le propriétaire, qui lui ne
- * change pas : le filtrer ferait répondre « introuvable » à un second appel.
+ * `mustBeTrashed`: restore and purge only concern a line ALREADY at the
+ * trash, where delete concerns a living line — but we do not filter it
+ * not for a project, the control of which concerns the owner, who does not
+ * does not change: filtering it would cause a second call to respond “not found”.
  */
 async function authorize(
   service: SupabaseClient,
@@ -170,10 +170,10 @@ async function authorize(
 }
 
 /**
- * Un refus venu de `lib/server/pages.ts` (le seul module dont la corbeille
- * délègue des gestes) rendu dans le vocabulaire d'ici. Ses clés d'erreur sont
- * plus fines que celles de la corbeille — un parent introuvable, un cycle — et
- * ne se produisent pas sur ces chemins-là : elles retombent sur « introuvable ».
+ * A refusal from `lib/server/pages.ts` (the only module whose trash
+ * delegates gestures) rendered in the vocabulary here. Its error keys are
+ * finer than those in the basket — a parent not found, a cycle — and
+ * do not occur on these paths: they fall back on “not found”.
  */
 function toTrashResult(result: {
   status: number;
@@ -186,20 +186,20 @@ function toTrashResult(result: {
 
 /* ─── Suppression ──────────────────────────────────────────────────────────── */
 
-/** Marque un élément comme supprimé, après contrôle d'accès (cf. `authorize`). */
+/** Marks an element as deleted, after access control (see `authorize`). */
 export async function softDeleteItem(
   type: TrashType,
   id: string,
   actorId: string,
-  /** La NATURE du geste (MIN-278), qui ne sert qu'aux pages : elles sont les
-      seules à porter une ligne d'activité, et sans ce mot celle-ci nommerait
-      l'humain d'une corbeille demandée à Numo. */
+  /** The NATURE of the gesture (MIN-278), which only serves the pages: they are the
+      alone to carry a line of activity, and without this word this would name
+      the human from a basket requested from Numo. */
   kind: PageWriteKind = "human"
 ): Promise<TrashResult> {
   const service = getServiceClient();
 
-  // Une PAGE emporte ses sous-pages (MIN-266) : l'opération n'est pas un update
-  // d'une ligne mais d'un sous-arbre, et elle porte son propre contrôle d'accès.
+  // A PAGE carries its subpages (MIN-266): the operation is not an update
+  // of a line but of a subtree, and it carries its own access control.
   if (type === "page") {
     const result = await trashPage(id, actorId, kind);
     return result.ok ? { ok: true } : toTrashResult(result);
@@ -220,15 +220,15 @@ export async function softDeleteItem(
     console.error(`[trash] soft delete ${type} failed:`, error.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  // Aucune ligne mise à jour ne veut PAS dire « introuvable » : l'existence et
-  // l'accès viennent d'être vérifiés juste au-dessus, donc la seule façon de ne
-  // rien toucher est que la ligne soit DÉJÀ en corbeille. L'intention de
-  // l'appelant est satisfaite (double clic, rejeu d'une requête) — un 404
-  // l'induirait en erreur.
+  // No updated line does NOT mean “not found”: the existence and
+  // access have just been checked just above, so the only way to do
+  // nothing to touch is that the line is ALREADY trashed. The intention of
+  // the caller is satisfied (double click, replay of a request) — a 404
+  // would mislead him.
   return { ok: true };
 }
 
-/** Le projet auquel appartient un élément corbeillé ou non, ou null. */
+/** The project to which an element belongs, trashed or not, or null. */
 async function resolveProjectId(
   service: SupabaseClient,
   type: Exclude<TrashType, "project">,
@@ -245,20 +245,20 @@ async function resolveProjectId(
 /* ─── Liste ────────────────────────────────────────────────────────────────── */
 
 /**
- * Ce que l'appelant peut rattraper : les éléments supprimés de ses projets
- * VIVANTS, plus ses propres projets supprimés.
+ * What the caller can make up: items deleted from their projects
+ * ALIVE, plus his own projects deleted.
  *
- * Les tickets d'un projet lui-même en corbeille n'y figurent pas : restaurer le
- * projet les y ramène, et les lister deux fois ferait de la corbeille l'inverse
- * de ce qu'elle doit être — une liste courte de choses qu'on peut récupérer
+ * The tickets for a project itself in the trash are not there: restore the
+ * project brings them back there, and listing them twice would make the trash the opposite
+ * of what it should be — a short list of things that can be salvaged
  * d'un clic.
  *
- * Les ROUTINES font exception au « tous mes projets » : seul le propriétaire du
- * projet peut en restaurer une (`authorize`), donc seul lui les voit ici. Les
- * montrer à un membre lui poserait un bouton « Restaurer » qui répond 403.
+ * ROUTINES are an exception to “all my projects”: only the owner of the
+ * project can restore one (`authorize`), so only he sees them here. THE
+ * showing a member would ask them a “Restore” button that responds 403.
  *
- * `userSupabase` (client de session) sert à décider quels projets sont les
- * miens : le périmètre vient de la RLS, jamais du rôle service.
+ * `userSupabase` (session client) is used to decide which projects are the
+ * mine: the scope comes from the RLS, never from the service role.
  */
 export async function listTrash(
   userId: string,
@@ -286,12 +286,12 @@ export async function listTrash(
     ])
   );
 
-  /** Les cinq types portés par un projet se lisent tous de la même façon. */
+  /** The five types carried by a project all read the same way. */
   const inProjects = async (
     table: string,
     columns: string,
     ids: string[] = projectIds,
-    /** Colonne à exiger nulle en plus — les sous-pages, cf. `pageRows`. */
+    /** Column to be required zero in addition — the subpages, cf. `pageRows`. */
     nullColumn?: string
   ): Promise<TrashRow[]> => {
     if (ids.length === 0) return [];
@@ -317,8 +317,8 @@ export async function listTrash(
         "id, project_id, deleted_at, deleted_by, title",
         ownedProjectIds
       ),
-      // Seulement les RACINES de suppression (`deleted_root_id is null`) : une
-      // page et ses vingt sous-pages font UNE ligne à restaurer, pas vingt.
+      // Only deletion ROOTS (`deleted_root_id is null`): one
+      // page and its twenty subpages make ONE line to restore, not twenty.
       inProjects(
         "pages",
         "id, project_id, deleted_at, deleted_by, title, deleted_root_id",
@@ -344,7 +344,7 @@ export async function listTrash(
     ...projectRows,
   ]);
 
-  /** Ce qu'un type a en commun : le parent, l'horodatage, l'auteur. */
+  /** What a type has in common: parent, timestamp, author. */
   const base = (row: TrashRow) => ({
     id: row.id,
     project_id: row.project_id ?? null,
@@ -361,7 +361,7 @@ export async function listTrash(
       ...base(row),
       type: "issue" as const,
       title: row.title ?? "",
-      // « MIN-42 » : la clé vient du projet parent, forcément vivant ici.
+      // “MIN-42”: the key comes from the parent project, obviously living here.
       identifier: row.project_id
         ? `${projectById.get(row.project_id)?.key ?? ""}-${row.number}`
         : null,
@@ -401,7 +401,7 @@ export async function listTrash(
   return items.sort((a, b) => (a.deleted_at < b.deleted_at ? 1 : -1));
 }
 
-/** Une ligne corbeillée, quelle que soit sa table (colonnes en union). */
+/** A basketed row, whatever its table (columns in union). */
 interface TrashRow {
   id: string;
   project_id?: string | null;
@@ -444,23 +444,23 @@ async function resolveActors(
 /* ─── Restauration ─────────────────────────────────────────────────────────── */
 
 /**
- * Remet un élément en circulation. L'accès se contrôle sur le projet VIVANT :
- * `getProjectAccess` filtre déjà les projets corbeillés, donc restaurer un
- * ticket sous un projet lui-même en corbeille échoue naturellement — il faut
- * d'abord restaurer le projet, ce que la corbeille propose juste au-dessus.
+ * Returns an item to circulation. Access is controlled on the VIVANT project:
+ * `getProjectAccess` already filters trashed projects, so restore a
+ * ticket under a project itself in trash naturally fails — you have to
+ * first restore the project, which is what the trash offers just above.
  */
 export async function restoreItem(
   type: TrashType,
   id: string,
   actorId: string,
-  /** Cf. `softDeleteItem` : la nature du geste, pour la ligne d'activité de la
-      page restaurée. */
+  /** Cf. `softDeleteItem`: the nature of the gesture, for the line of activity of the
+      page restored. */
   kind: PageWriteKind = "human"
 ): Promise<TrashResult> {
   const service = getServiceClient();
 
-  // Une PAGE revient avec tout ce qui est parti avec elle, et remonte à la
-  // racine si son parent est encore corbeillé (MIN-266).
+  // A PAGE returns with everything that left with it, and goes back to the
+  // root if its parent is still trashed (MIN-266).
   if (type === "page") {
     const result = await restorePage(id, actorId, kind);
     return result.ok ? { ok: true } : toTrashResult(result);
@@ -478,9 +478,9 @@ export async function restoreItem(
     .maybeSingle();
 
   if (error) {
-    // Supprimer un projet libère sa clé (index unique partiel sur les projets
-    // vivants) : si l'utilisateur en a recréé un avec la même depuis, la
-    // restauration ne peut pas passer. Le dire, plutôt qu'un « erreur serveur ».
+    // Deleting a project releases its key (partial unique index on projects
+    // alive): if the user has recreated one with the same one since then, the
+    // restoration cannot pass. Say it, rather than a “server error”.
     if (error.code === "23505") {
       return { ok: false, status: 409, errorKey: "projectKeyAlreadyUsed" };
     }
@@ -494,10 +494,10 @@ export async function restoreItem(
 /* ─── Purge ────────────────────────────────────────────────────────────────── */
 
 /**
- * Supprime pour de bon. C'est le `delete` d'avant MIN-133 : il cascade sur les
- * commentaires, l'activité, les pièces jointes, les relations, les passages
- * d'agent d'une routine, et détache les sous-tickets. Les objets du storage, eux,
- * ne cascadent pas — ils sont relevés avant, puis effacés une fois la ligne
+ * Delete for good. This is the `delete` before MIN-133: it cascades over the
+ * comments, activity, attachments, relationships, passages
+ * agent of a routine, and detaches the sub-tickets. The storage objects
+ * do not cascade — they are raised before, then erased once the line
  * partie.
  */
 export async function purgeItem(
@@ -512,10 +512,10 @@ export async function purgeItem(
 
   const paths = await attachmentPaths(service, type, [id]);
 
-  // Un PROJET porte aussi des objets hors du bucket `attachments` : son icône et
-  // les pièces jointes des commentaires de ses pull requests, dans deux buckets
-  // PUBLICS en lecture (MIN-296). Relevés ici, avant le delete qui emporte les
-  // lignes d'où on les déduit ; effacés après.
+  // A PROJECT also carries objects outside the `attachments` bucket: its icon and
+  // the attachments of the comments of his pull requests, in two buckets
+  // AUDIENCE in reading (MIN-296). Noted here, before the delete which takes the
+  // lines from which they are deduced; deleted afterwards.
   const sideBuckets =
     type === "project"
       ? {
@@ -524,14 +524,14 @@ export async function purgeItem(
         }
       : null;
 
-  // Une page purgée emporte les sous-pages parties avec elle : elles n'ont plus
-  // de racine à qui revenir, et `parent_id` étant `on delete set null`, rien ne
-  // les emporterait — elles réapparaîtraient à la racine de la corbeille.
+  // A purged page takes the subpages gone with it: they no longer have
+  // of root to return to, and `parent_id` being `on delete set null`, nothing
+  // would take them away — they would reappear at the root of the trash.
   if (type === "page") {
-    // Les fichiers de TOUTE LA FAMILLE, relevés avant le delete : `paths`
-    // ci-dessus ne connaît que la racine, et les sous-pages emportées portent
-    // les leurs (MIN-280). C'est le piège du sujet — la cascade SQL efface les
-    // lignes de `page_files`, jamais les octets du bucket.
+    // The files of the WHOLE FAMILY, noted before deletion: `paths`
+    // above only knows the root, and the subpages carried away carry
+    // theirs (MIN-280). This is the subject trap — the SQL cascade erases the
+    // lines of `page_files`, never the bytes of the bucket.
     const { data: descendants } = await service
       .from("pages")
       .select("id")
@@ -579,18 +579,18 @@ export async function purgeItem(
 }
 
 /**
- * La colonne d'`attachments` qui rattache un fichier à chaque type. Une pièce
- * jointe pend d'EXACTEMENT un parent — `attachments_parent_ck` l'impose sur
- * `issue_id` / `objective_id` / `feedback_post_id` (20260731090000) — et porte
- * en plus le `project_id`, qui ramasse tout le projet d'un coup.
+ * The `attachments` column that attaches a file to each type. One piece
+ * attached depends on EXACTLY one parent — `attachments_parent_ck` imposes it on
+ * `issue_id` / `objective_id` / `feedback_post_id` (20260731090000) — and door
+ * in addition the `project_id`, which takes over the entire project at once.
  *
- * `null` pour une ROUTINE : elle n'a aucune surface où déposer un fichier —
- * pas de commentaires, pas de ressources —, et lui inventer une colonne ferait
- * échouer la purge sur une colonne qui n'existe pas. Null aussi pour une PAGE,
- * mais pour une raison inverse : depuis MIN-280 elle porte bel et bien des
- * fichiers, seulement ils vivent dans `page_files` et non dans `attachments`
- * (deux durées de vie, deux tables — cf. la migration). Ils sont relevés juste
- * en dessous, dans la même fonction.
+ * `null` for a ROUTINE: it has no surface on which to place a file —
+ * no comments, no resources —, and inventing a column for it would
+ * Fail the purge on a column that does not exist. Also null for a PAGE,
+ * but for an opposite reason: since MIN-280 it has indeed worn
+ * files, only they live in `page_files` and not in `attachments`
+ * (two lifetimes, two tables — see migration). They are just raised
+ * below, in the same function.
  */
 const ATTACHMENT_PARENT: Record<TrashType, string | null> = {
   issue: "issue_id",
@@ -602,12 +602,12 @@ const ATTACHMENT_PARENT: Record<TrashType, string | null> = {
 };
 
 /**
- * Chemins storage à effacer avec ces lignes. QUATRE des cinq types en portent :
- * un objectif et un feedback ont leurs propres fichiers depuis 20260728091000 et
- * 20260731090000. Les oublier laisserait les objets orphelins dans le bucket,
- * la ligne `attachments` partie en cascade — invisibles, et impossibles à
- * rattraper ensuite. Les ressources de type LIEN n'ont pas d'objet : filtrées
- * ici, sinon la liste porterait des nulls que `remove()` refuse.
+ * Storage paths to clear with these lines. FOUR of the five guys wear them:
+ * a goal and feedback have their own files since 20260728091000 and
+ * 20260731090000. Forgetting them would leave the objects orphaned in the bucket,
+ * the `attachments` line cascades — invisible, and impossible to
+ * catch up afterwards. LINK type resources have no object: filtered
+ * here, otherwise the list would carry nulls that `remove()` refuses.
  */
 export async function attachmentPaths(
   service: SupabaseClient,
@@ -616,10 +616,10 @@ export async function attachmentPaths(
 ): Promise<string[]> {
   if (ids.length === 0) return [];
 
-  // Les fichiers POSÉS DANS un corps de page (MIN-280) : une autre table, donc
-  // une requête de plus, mais la même règle — les chemins sont relevés avant le
-  // delete, sinon la cascade emporte les lignes et laisse les octets. Une page
-  // n'a que ceux-là ; un projet a les deux, ses pages partant avec lui.
+  // Files PLACED IN a page body (MIN-280): another table, therefore
+  // one more query, but the same rule — the paths are noted before the
+  // delete, otherwise the cascade takes away the lines and leaves the bytes. One page
+  // only has these; a project has both, its pages leaving with it.
   const pageFiles =
     type === "page"
       ? await pageFilePathsForPages(service, ids)
@@ -637,7 +637,7 @@ export async function attachmentPaths(
   return [...pageFiles, ...(data ?? []).map((a) => a.storage_path as string)];
 }
 
-/** Vide toute la corbeille de l'appelant, élément par élément. */
+/** Empties the caller's entire trash, item by item. */
 export async function emptyTrash(
   userId: string,
   userSupabase: SupabaseClient

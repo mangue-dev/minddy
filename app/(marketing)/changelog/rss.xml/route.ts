@@ -8,20 +8,20 @@ import { SITE_URL } from "@/lib/site";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
- * Le flux RSS du changelog (MIN-93).
+ * The changelog RSS feed (MIN-93).
  *
- * Un flux n'a plus grand-chose d'un canal grand public, mais il reste ce que
- * suivent les agrégateurs, les robots de veille et une partie des crawlers :
- * c'est le format qui dit « cette page bouge, voilà quand », sans qu'on ait à
- * la recrawler pour le découvrir.
+ * An RSS feed is no longer much of a public channel, but it remains what
+ * aggregators, monitoring robots, and some crawlers follow:
+ * it’s the format that says “this page moves, that’s when”, without us having to
+ * recrawl it to find out.
  *
- * Route dans le groupe `(marketing)` : un route handler n'y rend aucun layout,
- * mais le fichier reste à côté de la page qu'il double. La langue arrive en
- * paramètre — voir `lib/changelog-feed.ts`.
+ * Route in the `(marketing)` group: a route handler does not render any layout there,
+ * but the file remains next to the page it duplicates. The language arrives in
+ * parameter — see `lib/changelog-feed.ts`.
  *
- * Le corps est échappé à la main : les titres et les textes viennent des
- * catalogues de traduction, et un `&` ou une apostrophe typographique suffit à
- * rendre un XML invalide — auquel cas le lecteur n'affiche RIEN, sans le dire.
+ * The body has escaped from the hand: the titles and texts come from
+ * translation catalogs, and a `&` or a typographical apostrophe is enough to
+ * render an XML invalid — in which case the reader displays NOTHING, without saying so.
  */
 
 export async function GET(request: NextRequest): Promise<Response> {
@@ -38,8 +38,8 @@ export async function GET(request: NextRequest): Promise<Response> {
       "    <item>",
       `      <title>${escapeXml(t(`entry_${entry.id}_title` as MessageKey<"Changelog">))}</title>`,
       `      <link>${escapeXml(`${pageUrl}#${entry.id}`)}</link>`,
-      // `isPermaLink="false"` : le guid est l'identifiant stable de l'entrée,
-      // pas une URL. Sans ça, changer d'ancre republierait toute la liste.
+      // `isPermaLink="false"`: the guid is the stable identifier of the entry,
+      // not a URL. Otherwise, changing anchors would republish the entire list.
       `      <guid isPermaLink="false">minddy:changelog:${entry.id}</guid>`,
       `      <pubDate>${rfc822(entry.date)}</pubDate>`,
       `      <description>${escapeXml(t(`entry_${entry.id}_body` as MessageKey<"Changelog">))}</description>`,
@@ -47,10 +47,10 @@ export async function GET(request: NextRequest): Promise<Response> {
     ].join("\n"),
   ).join("\n");
 
-  // L'instruction de style, juste après la déclaration XML : c'est elle qui
-  // fait qu'un navigateur affiche une page lisible au lieu d'un arbre XML brut.
-  // Les lecteurs de flux l'ignorent — voir `rss.css/route.ts` pour le choix du
-  // CSS plutôt que du XSLT.
+  // The style instruction, just after the XML declaration: this is what
+  // causes a browser to display a readable page instead of a raw XML tree.
+  // Feed readers ignore it — see `rss.css/route.ts` for choice of
+  // CSS rather than XSLT.
   const body = `<?xml version="1.0" encoding="UTF-8"?>
 <?xml-stylesheet type="text/css" href="${escapeXml(changelogFeedStylePath(locale))}"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
@@ -68,27 +68,27 @@ ${items}
 
   return new Response(body, {
     headers: {
-      // `text/xml` et non `application/rss+xml`, qui est pourtant le type
-      // canonique d'un flux RSS. Mesuré dans Chromium : sur
-      // `application/rss+xml`, le navigateur ne lance PAS son parseur XML — il
-      // enveloppe la réponse dans une page HTML et l'affiche telle quelle
-      // (`document.documentElement` vaut `HTML`, zéro feuille de style
-      // chargée). L'instruction de style ci-dessus n'est donc jamais lue, et le
-      // visiteur voit du balisage brut. Sur `text/xml` comme sur
-      // `application/xml`, le document est parsé en XML et la feuille
+      // `text/xml` and not `application/rss+xml`, which is nevertheless the type
+      // canonical of an RSS feed. Measured in Chromium: on
+      // `application/rss+xml`, the browser does NOT launch its XML parser — it
+      // wraps the response in an HTML page and displays it as is
+      // (`document.documentElement` is `HTML`, zero style sheets
+      // loaded). The style statement above is therefore never read, and the
+      // visitor sees raw markup. On `text/xml` as on
+      // `application/xml`, the document is parsed in XML and the sheet
       // s'applique.
       //
-      // Aucune perte côté lecteurs de flux : ils reconnaissent un flux à son
-      // contenu, `text/xml` est répandu, et la découverte automatique se fait
-      // par le `<link rel="alternate" type="application/rss+xml">` du `<head>`
-      // de la page, qui lui garde le type canonique.
+      // No loss on the stream reader side: they recognize a stream by its
+      // content, `text/xml` is widespread, and automatic discovery is done
+      // by the `<link rel="alternate" type="application/rss+xml">` of the `<head>`
+      // of the page, which keeps the canonical type.
       "Content-Type": "text/xml; charset=utf-8",
       "Cache-Control": "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
     },
   });
 }
 
-/** Date ISO courte → date RFC 822, la seule que RSS 2.0 accepte. */
+/** Short ISO date → RFC 822 date, the only one that RSS 2.0 accepts. */
 function rfc822(iso: string): string {
   const [year, month, day] = iso.split("-").map(Number);
   return new Date(Date.UTC(year, month - 1, day)).toUTCString();

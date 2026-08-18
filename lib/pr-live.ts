@@ -1,58 +1,58 @@
 import type { QueryKey } from "@tanstack/react-query";
 
 /**
- * Le direct d'UNE pull request — le vocabulaire partagé entre le serveur qui
- * pousse (`lib/server/agent/pr-live.ts`) et l'écran qui écoute
+ * The direct of A pull request — the vocabulary shared between the server which
+ * pushes (`lib/server/agent/pr-live.ts`) and the screen which listens to
  * (`lib/use-pr-live.ts`).
  *
- * Module PUR : aucun import serveur, il traverse la frontière.
+ * PUR module: no server import, it crosses the border.
  *
- * Le message ne transporte JAMAIS de contenu, seulement les PARTIES qui ont
- * bougé. Ce n'est pas une économie d'octets : le contenu d'une PR se lit avec le
- * token du LECTEUR, et il n'est pas le même pour tout le monde — une réaction
- * porte un `viewerIsActor`, les gestes offerts dépendent de `viewer.capability`
- * (MIN-144). Pousser ce qu'un autre a lu serait faux chez celui qui reçoit. Le
- * message dit donc « telle partie a bougé », et chaque client va relire avec ses
- * propres yeux.
+ * The message NEVER carries content, only the PARTS that have
+ * moved. This is not a saving of bytes: the content of a PR is read with the READER's
+ * token, and it is not the same for everyone — a reaction
+ * carries a `viewerIsActor`, the gestures offered depend on `viewer.capability`
+ * (MIN-144). To push what another has read would be wrong in the receiver. The
+ * message therefore says "this part has moved", and each client will reread it with their
+ * own eyes.
  *
- * C'est aussi ce qui rend le topic sûr : y être abonné ne donne accès à rien
- * qu'on ne puisse déjà lire par la route.
+ * This is also what makes the topic safe: subscribing to it does not give access to anything
+ * that cannot already be read through it. route.
  */
 
-/** Topic privé du direct d'une PR (migration 20260929090000_pull_request_realtime). */
+/** Private topic of the live PR (migration 20260929090000_pull_request_realtime). */
 export function pullRequestTopic(prId: string): string {
   return `pull-request:${prId}`;
 }
 
 /**
- * Les surfaces d'une PR, telles que l'écran les charge — une par cache :
+ * The surfaces of a PR, as the screen loads them — one per cache:
  *
- *   `pr`             — l'en-tête : état, checks CI, approbations, méthodes de merge ;
- *   `conversation`   — le fil (messages, activité, réactions du fil) ;
- *   `commits`        — l'onglet Commits ;
- *   `reviewComments` — les remarques de ligne, leurs fils et leurs réactions.
+ * `pr` — the header: status, CI checks, approvals, merge methods;
+ * `conversation` — the thread (messages, activity, thread reactions);
+ * `commits` — the Commits tab;
+ * `reviewComments` — line comments, their threads and their reactions.
  */
 export type PrLivePart = "pr" | "conversation" | "commits" | "reviewComments";
 
 /** Charge utile du message `changed`. */
 export interface PrLiveChanged {
   parts: PrLivePart[];
-  /** Horodatage d'émission (ms) — sert au diagnostic, pas à l'ordre : une
-   *  invalidation n'est pas un delta, la rejouer dans le désordre est sans effet. */
+  /** Transmission timestamp (ms) — is used for diagnosis, not for order: a
+ * invalidation is not a delta, replaying it out of order has no effect. */
   at: number;
 }
 
 /**
- * Caches React Query à invalider pour ces parties (cf. `lib/use-agent-runs.ts`).
+ * React Query caches to invalidate for these parts (see `lib/use-agent-runs.ts`).
  *
- * `reviewComments` rend une clé PRÉFIXE, sans son endpoint : la vue diff sert
- * deux surfaces — la page Pull Requests (`prEndpoint(prId)`) et la vue diff
- * d'une session d'agent (`runPrEndpoint(runId)`) —, qui lisent les MÊMES
- * commentaires sous deux clés différentes. Le préfixe les attrape toutes les
- * deux ; nommer l'une des deux formes en laisserait une périmée.
+ * `reviewComments` returns a PREFIX key, without its endpoint: the diff view serves
+ * two surfaces — the Pull Requests page (`prEndpoint(prId)`) and the diff
+ * view of an agent session (`runPrEndpoint(runId)`) —, which read the SAME
+ * comments under two different keys. The prefix catches them every
+ * two; naming one of the two forms would leave one out of date.
  *
- * Les doublons sont écartés : deux parties peuvent viser la même clé (une review
- * bouge le fil ET l'en-tête), et invalider deux fois déclencherait deux refetch.
+ * Duplicates are ruled out: two parties can aim for the same key (a review
+ * moves the thread AND the header), and invalidating twice would trigger two refetch.
  */
 export function prLiveQueryKeys(prId: string, parts: PrLivePart[]): QueryKey[] {
   const keys: QueryKey[] = [];
@@ -82,7 +82,7 @@ export function prLiveQueryKeys(prId: string, parts: PrLivePart[]): QueryKey[] {
   return keys;
 }
 
-/** Les parties d'un message reçu, filtrées de ce qui n'en est pas une. */
+/** The parts of a received message, filtered from what is not a message. */
 export function parsePrLiveParts(raw: unknown): PrLivePart[] {
   const known: PrLivePart[] = ["pr", "conversation", "commits", "reviewComments"];
   if (!Array.isArray(raw)) return [];

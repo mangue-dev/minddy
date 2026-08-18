@@ -1,57 +1,54 @@
 /**
- * Table des pages publiques du site (MIN-88) — la seule.
+ * Table of public pages on the site (MIN-88) — the only one.
  *
- * Quatre choses avaient besoin de connaître cette liste, et chacune en tenait sa
- * propre copie : le proxy (quoi laisser passer sans session), le sitemap, les
- * métadonnées de chaque page, et les liens de la nav et du pied de page. Quatre
- * listes qui se désynchronisent au premier ajout de page. Elles lisent
- * désormais celle-ci.
+ * Four things needed to know this list, and each had its own copy: the proxy (what to let pass without a session), the sitemap, the
+ * metadata for each page, and the navigation links and footer. Four
+ * lists that desynchronize on first page addition. They read
+ * now this one.
  *
- * **URLs localisées, anglais canonique.** L'anglais vit à la racine (`/`,
- * `/pricing`), le français sous `/fr` avec des slugs traduits (`/fr`,
- * `/fr/tarifs`). Une URL = une langue : c'est la seule forme qu'un moteur sait
- * indexer. Avant, une URL unique servait les deux langues selon un cookie et
- * l'`Accept-Language` — Googlebot ne voyait que l'anglais, et la moitié du
- * contenu du site n'existait pour personne.
+ * **Localized URLs, canonical English.** English lives at the root (`/`,
+ * `/pricing`), French under `/fr` with slugs translated (`/fr`,
+ * `/fr/tarifs`). A URL = a language: this is the only form that an engine knows
+ * to index. Previously, a single URL served both languages depending on a cookie and
+ * the `Accept-Language` — Googlebot only saw English, and half of the site content did not exist for anyone.
  *
- * Il n'y a PAS de fichiers de route dupliqués sous `app/fr/` : le proxy réécrit
- * `/fr/tarifs` vers `/pricing` en posant `x-minddy-locale: fr`, que
- * `i18n/request.ts` lit pour servir le français. Une seule page, deux URLs.
+ * There are NO duplicate route files under `app/fr/`: the proxy rewrites
+ * `/fr/tarifs` to `/pricing` by setting `x-minddy-locale: fr`, which
+ * `i18n/request.ts` reads to serve French. One page, two URLs.
  *
- * L'app interne (derrière l'authentification) ne suit PAS ce modèle : elle
- * reste sur le cookie `NEXT_LOCALE`. Ses URLs n'ont pas à être indexées, donc
- * rien n'oblige à les dédoubler.
+ * The internal app (behind the authentication) does NOT follow this model: it
+ * stays on the `NEXT_LOCALE` cookie. Its URLs do not have to be indexed, so
+ * nothing requires them to be split.
  */
 
 /**
- * `lastModified` est le seul des trois champs de sitemap que Google lit
- * vraiment (`priority` et `changeFrequency` sont ignorés depuis longtemps ;
- * Bing les regarde encore un peu) : c'est lui qui déclenche un nouveau passage
- * du crawler. Il est donc tenu à la main, page par page — une date de build
- * remise à jour à chaque déploiement voudrait dire « tout a changé » à chaque
- * fois, et Google apprend vite à ne plus y croire. **À mettre à jour quand le
- * contenu de la page change**, pas à chaque déploiement.
+ * `lastModified` is the only one of the three sitemap fields that Google actually reads
+ * (`priority` and `changeFrequency` have been ignored for a long time;
+ * Bing still looks at them a little): it is he who triggers a new pass
+ * of the crawler. It is therefore kept by hand, page by page - a build date
+ * updated with each deployment would mean "everything has changed" each time, and Google quickly learns not to believe it anymore. **To be updated when the
+ * page content changes**, not with each deployment.
  */
 import { CHANGELOG_LAST_MODIFIED } from "@/lib/changelog";
 import type { Namespace } from "@/lib/i18n-keys";
 
 export interface PublicRoute {
-  /** Clé stable, utilisée par `publicPageMetadata` et les liens. */
+  /** Stable key, used by `publicPageMetadata` and links. */
   key: string;
   /** URL canonique (anglais). */
   en: string;
-  /** URL française. */
+  /** French URL. */
   fr: string;
-  /** Namespace i18n où vivent `metaTitle` et `metaDescription`. */
+  /** Namespace i18n where `metaTitle` and `metaDescription` live. */
   namespace: Namespace;
   /**
-   * Le titre porte-t-il déjà la marque ? La landing s'appelle « minddy, … » :
-   * le template « %s · minddy » du root layout la répéterait.
-   */
+ * Is the title already branded? The landing is called “minddy,…”:
+ * the “%s · minddy” template of the root layout would repeat it.
+ */
   titleIsAbsolute?: boolean;
-  /** Dernière modification réelle du contenu, en ISO court. */
+  /** Last actual modification of the content, in short ISO. */
   lastModified: string;
-  /** Poids relatif dans le sitemap. */
+  /** Relative weight in the sitemap. */
   priority: number;
 }
 
@@ -81,10 +78,10 @@ export const PUBLIC_ROUTES = [
     lastModified: "2026-08-10",
     priority: 0.9,
   },
-  // L'app de bureau (MIN-292). Elle a sa page et non un bouton sur la landing :
-  // ce qu'il faut dire ici — macOS seulement, et les notifications qui
-  // s'arrêtent quand l'app est quittée — ne tient pas sous un bouton, et le
-  // taire serait la seule malhonnêteté du site.
+  // The desktop app (MIN-292). It has its own page and not a button on the landing:
+  // what to say here — macOS only, and the notifications that
+  // stop when the app is exited — does not fit under a button, and the
+  // silence would be the only dishonesty on the site.
   {
     key: "download",
     en: "/download",
@@ -93,9 +90,9 @@ export const PUBLIC_ROUTES = [
     lastModified: "2026-08-13",
     priority: 0.7,
   },
-  // Seule page dont le `lastModified` n'est PAS tenu à la main : ici,
-  // « le contenu a changé » et « une entrée a été ajoutée » sont le même
-  // événement, et la fraîcheur est ce que Perplexity regarde en premier.
+  // Only page whose `lastModified` is NOT hand-held: here,
+  // “content has changed” and “an entry has been added” are the same
+  // event, and freshness is what Perplexity looks at first.
   {
     key: "changelog",
     en: "/changelog",
@@ -104,10 +101,10 @@ export const PUBLIC_ROUTES = [
     lastModified: CHANGELOG_LAST_MODIFIED,
     priority: 0.6,
   },
-  // Un comparatif = une entrée, comme n'importe quelle page (MIN-93). Les
-  // slugs sont les mêmes dans les deux langues : `alternatives` s'écrit
-  // pareil, et le nom du concurrent est un nom propre. Voir
-  // `lib/comparisons.ts` pour le choix de ces trois-là.
+  // A comparison = an entry, like any page (MIN-93). THE
+  // slugs are the same in both languages: `alternatives` is written
+  // the same, and the competitor's name is a proper noun. See
+  // `lib/comparisons.ts` for choosing these three.
   {
     key: "alternativeLinear",
     en: "/alternatives/linear",
@@ -168,17 +165,17 @@ export const PUBLIC_ROUTES = [
 
 export type PublicRouteKey = (typeof PUBLIC_ROUTES)[number]["key"];
 
-/** Tous les chemins publics, EN et FR — ce que le proxy laisse passer. */
+/** All public paths, EN and FR — what the proxy lets through. */
 export const PUBLIC_ROUTE_PATHS: ReadonlySet<string> = new Set(
   PUBLIC_ROUTES.flatMap((route) => [route.en, route.fr]),
 );
 
-/** Les seuls chemins FR, pour la branche de réécriture du proxy. */
+/** The only FR paths, for the proxy rewrite branch. */
 const FR_TO_EN = new Map<string, string>(
   PUBLIC_ROUTES.map((route) => [route.fr, route.en]),
 );
 
-/** Chemin anglais équivalent d'une URL française publique, ou `null`. */
+/** English path equivalent to a public French URL, or `null`. */
 export function englishPathForFrench(pathname: string): string | null {
   return FR_TO_EN.get(pathname) ?? null;
 }
@@ -190,7 +187,7 @@ const BY_PATH = new Map<string, PublicRoute>(
   ]),
 );
 
-/** L'entrée de la table qui sert ce chemin (EN ou FR), ou `null`. */
+/** The table entry that serves this path (EN or FR), or `null`. */
 export function routeByPath(pathname: string): PublicRoute | null {
   return BY_PATH.get(pathname) ?? null;
 }
@@ -201,7 +198,7 @@ const BY_KEY = new Map<string, PublicRoute>(
 
 export function routeByKey(key: PublicRouteKey): PublicRoute {
   const route = BY_KEY.get(key);
-  // La clé vient d'un type littéral : ce cas ne peut survenir qu'en JS pur.
+  // The key comes from a literal type: this case can only occur in pure JS.
   if (!route) throw new Error(`Unknown public route: ${key}`);
   return route;
 }

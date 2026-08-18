@@ -1,10 +1,10 @@
 /**
- * feedbackInbox — un retour vu côté équipe, avec sa suggestion de fusion.
+ * feedbackInbox — feedback seen on the team side, with its suggestion of a merge.
  *
- * Voir `intent.md` : c'est « Can we get notified in Slack? » qu'on ouvre, et
- * pas un autre — la suggestion de fusion n'existe que sur celui-là.
+ * See `intent.md`: it’s “Can we get notified in Slack?” » that we open, and
+ * not another — the merger suggestion only exists on that one.
  *
- *   node captures/shots/feedback-inbox/shot.mjs             # produit les PNG
+ * node captures/shots/feedback-inbox/shot.mjs # produces the PNGs
  *   node captures/shots/feedback-inbox/shot.mjs --publish   # + livre
  */
 import { openPage, settle, shoot, CAPTURE } from "../../lib/browser.mjs";
@@ -15,7 +15,7 @@ const OUT = "captures/shots/feedback-inbox/out";
 const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";
 const VIEWPORT = { width: 1736, height: 1085 };
 
-/** Le retour qui porte la suggestion de fusion. Titre = donnée, donc bilingue. */
+/** The return which carries the suggestion of fusion. Title = data, therefore bilingual. */
 const POST = "Can we get notified in Slack?";
 const MERGE_TARGET = "Slack alerts when an incident opens";
 
@@ -37,9 +37,9 @@ async function capture({ locale, theme }) {
 
     await page.getByText(POST, { exact: false }).first().click();
 
-    // La bannière de fusion se rend AVEC le détail, pas avec la liste : sans
-    // cette attente on photographie le retour sans ce qui le justifie. Le
-    // pourcentage est une donnée (0,91), donc une ancre valable en FR comme en EN.
+    // The merge banner renders WITH the detail, not with the list: without
+    // this wait we photograph the return without what justifies it. THE
+    // percentage is a given (0.91), therefore a valid anchor in FR as in EN.
     await page.getByText("91", { exact: false }).first().waitFor({
       state: "visible",
       timeout: 15_000,
@@ -55,7 +55,7 @@ async function capture({ locale, theme }) {
         return {
           hasPost: text.includes(post),
           hasSuggestion: text.includes(target) && /91\s*%/.test(text),
-          // Le motif de démo n'a plus rien à faire ici (voir 011-votants-emails).
+          // The demo pattern has nothing more to do here (see 011-votants-emails).
           leaksDemoEmail: /captures-demo/.test(text),
           votes: /(^|\D)5(\D|$)/.test(text),
         };

@@ -41,8 +41,8 @@ export async function GET(request: NextRequest) {
   const denied = await requireAdmin(request);
   if (denied) return denied;
 
-  // Les suffixes de routage (MIN-263) sont des clés à part entière : le
-  // dashboard les lit dans le même objet que le modèle qu'ils accompagnent.
+  // Routing suffixes (MIN-263) are keys in their own right: the
+  // dashboard reads them in the same object as the model they accompany.
   const values = await getAppConfigValues([
     ...AI_MODEL_CONFIG_FIELDS.map((f) => f.key),
     ...AI_MODEL_SUFFIX_KEYS,
@@ -96,9 +96,9 @@ export async function PATCH(request: NextRequest) {
       );
     }
   }
-  // Un suffixe de routage n'a que trois valeurs légales, plus le vide qui
-  // efface la ligne (« aucun paramètre »). Refuser ici plutôt que de laisser
-  // partir un `…:nirto` qu'OpenRouter renverrait en 404 à chaque appel.
+  // A routing suffix has only three legal values, plus the blank which
+  // deletes the line (“no parameters”). Refuse here rather than leave
+  // leave a `…:nirto` that OpenRouter would return as 404 on each call.
   if (isModelSuffixKey(key) && trimmed && !isModelSuffix(trimmed)) {
     return NextResponse.json(
       { error: `Suffix must be one of: ${MODEL_SUFFIXES.join(", ")}` },
@@ -111,8 +111,8 @@ export async function PATCH(request: NextRequest) {
       { status: 400 }
     );
   }
-  // Même règle, même raison : ce que le runtime ignorerait à la lecture, on le
-  // refuse à l'écriture, plutôt que d'enregistrer un réglage sans effet.
+  // Same rule, same reason: what the runtime ignores when reading, we
+  // refuses to write, rather than saving a setting without effect.
   if (kind === "recommended" && trimmed && parseRecommendedModels(trimmed) === null) {
     return NextResponse.json(
       { error: "Recommended models must be a JSON array with at least one model id" },
@@ -121,8 +121,8 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    // Modèle vidé = retour au défaut du registre : on supprime la ligne plutôt
-    // que d'y écrire l'id du défaut, pour que le réglage suive ses évolutions.
+    // Model emptied = return to register default: delete the line instead
+    // than write the fault id there, so that the setting follows its developments.
     if (!isFlagKey(key) && !trimmed) await clearAppConfigValue(key);
     else await setAppConfigValue(key, trimmed);
   } catch (e) {

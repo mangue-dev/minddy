@@ -23,24 +23,24 @@ import {
 } from "@/lib/server/mcp/tool-helpers";
 
 /**
- * LES PAGES sur le MCP (MIN-273) — c'est le ticket qui justifie la feature.
+ * THE PAGES on the MCP (MIN-273) — this is the ticket that justifies the feature.
  *
- * La douleur n'a jamais été d'avoir deux outils, mais deux MCP : Numo lisait les
- * tickets sans jamais lire la doc qui explique pourquoi ils existent. Ces six
- * outils ferment ça, et rendent inutile tout bouton « transformer cette page en
- * tickets » : l'agent lit la page, puis crée les tickets avec les outils qu'il a
- * déjà.
+ * The pain was never having two tools, but two MCPs: Numo read the
+ * tickets without ever reading the doc that explains why they exist. These six
+ * tools close that, and make any "turn this page into
+ * tickets" button useless: the agent reads the page, then creates the tickets with the tools he has
+ * already.
  *
- * Ce qu'un agent voit ici est du MARKDOWN, jamais du JSON ProseMirror — la
- * traduction vit dans `lib/server/page-tools.ts`, partagée avec le chat Numo et
- * l'agent de code, pour que les trois surfaces lisent le même document.
+ * What an agent sees here is MARKDOWN, never JSON ProseMirror — the
+ * translation lives in `lib/server/page-tools.ts`, shared with Numo chat and
+ * code agent, so all three surfaces read the same document.
  *
- * Deux outils ne sont pas du confort. `minddy_append_to_page` et
- * `minddy_edit_page_text` suivent le patron déjà en place pour le plan des
- * tickets : sans eux, corriger une phrase coûte le document entier en jetons, et
- * tout ce qu'on n'a pas touché risque d'être réécrit au passage.
+ * Two tools are not convenience. `minddy_append_to_page` and
+ * `minddy_edit_page_text` follow the pattern already in place for the
+ * ticket plan: without them, correcting a sentence costs the entire document in tokens, and
+ * anything that has not been touched risks being rewritten in the process.
  *
- * Pas de suppression, volontairement : la corbeille reste un geste humain.
+ * No deletion, voluntarily: the trash remains a human gesture.
  */
 
 const PROJECT_ID = z
@@ -57,13 +57,13 @@ const PAGE_ID = z
   );
 
 /**
- * Les IMAGES et les FICHIERS d'une page (MIN-280), dits au modèle en trois
- * phrases parce qu'il ne peut pas les deviner et qu'il en détruirait sans le
- * savoir : `update_page` remplace le corps ENTIER, donc une ligne d'image qu'on
- * n'a pas recopiée est un fichier détaché de son document.
+ * IMAGES and FILES of a page (MIN-280), said to the model in three
+ * sentences because it cannot guess them and would destroy some without the
+ * namely: `update_page` replaces the ENTIRE body, therefore one line of image that one
+ * has not copied is a file detached from its document.
  *
- * La même prose sur les trois surfaces (MCP, Numo, agent de code), comme le
- * reste du mode d'emploi de la syntaxe.
+ * The same prose on the three surfaces (MCP, Numo, code agent), like the
+ * remains of the instructions for using the syntax.
  */
 const IMAGES_AND_FILES =
   "An image reads '![caption](url)' and a file '[name](url)' — those are REAL " +
@@ -71,8 +71,8 @@ const IMAGES_AND_FILES =
   "rewrite a body: dropping one detaches the file from the page. You cannot " +
   "upload a file yourself, and you must never invent one of those urls.";
 
-/** Le corps d'une page, en markdown. La même prose des deux côtés de l'écriture :
-    ce champ est le seul mode d'emploi que le modèle lit avant d'écrire. */
+/** The body of a page, in markdown. The same prose on both sides of the writing:
+ this field is the only instructions the model reads before writing. */
 const BODY = z
   .string()
   .describe(
@@ -90,7 +90,7 @@ function refusal(result: { code: string; message: string }): ToolResult {
   return fail(result.code, result.message);
 }
 
-/** Le retour commun des écritures : de quoi confirmer, jamais le document. */
+/** The common return of the entries: enough to confirm, never the document. */
 function written<T extends { page_id: string }>(data: T): ToolResult {
   return ok(data);
 }
@@ -278,9 +278,9 @@ export function registerPageTools(server: McpServer): void {
         icon: args.icon,
         markdown: args.markdown,
         parentPageId: args.parent_page_id ?? null,
-        // La clé qui écrit NOMME l'agent (MIN-278) : l'activité de la page et
-        // les citations qu'il y pose disent « Claude Code (mcp) », pas le nom du
-        // porteur de la clé — la même règle que la timeline d'un ticket.
+        // The key that writes NAME the agent (MIN-278): the activity of the page and
+        // the quotes he puts there say “Claude Code (mcp)”, not the name of the
+        // key holder — the same rule as the ticket timeline.
         mcpKeyId: scope.keyId,
       });
       if (!result.ok) return refusal(result);
@@ -500,8 +500,8 @@ export function registerPageTools(server: McpServer): void {
         body: args.body,
         blockId: args.block_id ?? null,
         parentCommentId: args.parent_comment_id ?? null,
-        // La clé qui écrit NOMME l'agent : le fil dit « Claude Code (mcp) », pas
-        // le nom du porteur de la clé (la règle d'identité de minddy).
+        // The key that writes NAME the agent: the thread says “Claude Code (mcp)”, not
+        // the name of the key holder (minddy's identity rule).
         mcpKeyId: scope.keyId,
       });
       if (!result.ok) return refusal(result);
@@ -510,9 +510,9 @@ export function registerPageTools(server: McpServer): void {
   );
 }
 
-/** Plafond du diff renvoyé : de quoi confirmer que l'édition a atterri au bon
-    endroit, sans re-transporter le document qu'on vient d'éviter de réécrire
-    (même borne que minddy_edit_issue_text). */
+/** Ceiling of the returned diff: enough to confirm that the edition landed in the correct
+ place, without re-transporting the document that we have just avoided rewriting
+ (same limit as minddy_edit_issue_text). */
 const MAX_EDIT_DIFF_CHARS = 2000;
 
 function trimDiff<T extends { diff: string; page_id: string }>(data: T) {
@@ -524,5 +524,5 @@ function trimDiff<T extends { diff: string; page_id: string }>(data: T) {
   };
 }
 
-/** Le type de retour du noyau, ré-exporté pour les adaptateurs de test. */
+/** The kernel return type, re-exported for test adapters. */
 export type { PageToolResult };

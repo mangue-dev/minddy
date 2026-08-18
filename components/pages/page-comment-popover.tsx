@@ -1,25 +1,25 @@
 "use client";
 
-// Le fil d'un BLOC, posé sur le bloc (MIN-282).
+// The wire of a BLOCK, placed on the block (MIN-282).
 //
-// C'est la moitié qui donne son sens à l'ancre : une discussion sur « cette
-// phrase-là » se lit à côté de la phrase, pas dans un pied de page où il
-// faudrait se souvenir de quoi elle parlait. Le fil de la PAGE, lui, n'a pas de
-// texte à côtoyer — il vit dans l'activité de l'historique
+// This is the half that gives meaning to the anchor: a discussion on “this
+// sentence itself” is read next to the sentence, not in a footer where it
+// should remember what she was talking about. The PAGE thread has no
+// text to be alongside — it lives in the activity of history
 // (components/pages/page-activity.tsx).
 //
 // ─── Positionnement ──────────────────────────────────────────────────────────
 //
-// En coordonnées d'ÉCRAN, mesurées sur le nœud du bloc, comme la bulle de
-// sélection : la colonne du document porte déjà la réserve de gouttière et le
-// positionnement du chrome de bloc, et rien de tout ça ne doit descendre dans
-// l'éditeur. Le panneau se pose à DROITE quand la fenêtre est assez large — la
-// place naturelle, celle que Notion et Google Docs ont apprise à tout le monde —
-// et repasse SOUS le bloc quand elle ne l'est pas, plutôt que de sortir de
-// l'écran.
+// In SCREEN coordinates, measured on the block node, like the bubble of
+// selection: the column of the document already carries the gutter reserve and the
+// positioning of the block chrome, and none of this should go down in
+// the editor. The panel is placed on the RIGHT when the window is wide enough — the
+// natural place, the one that Notion and Google Docs taught everyone —
+// and goes back UNDER the block when it is not, rather than coming out of
+// the screen.
 //
-// Il se remesure au défilement : le document défile sous lui, et un panneau
-// ancré à un bloc qui n'y est plus est pire qu'un panneau fermé.
+// It is measured by scrolling: the document scrolls under it, and a panel
+// anchored to a block that is no longer there is worse than a closed panel.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -40,7 +40,7 @@ import {
 import type { PageThread } from "@/lib/page-comments";
 import type { Member } from "@/lib/types";
 
-/** Largeur du panneau, et marge qu'il garde avec le bord de la fenêtre. */
+/** Width of the panel, and the margin it keeps with the edge of the window. */
 const WIDTH = 340;
 const GAP = 16;
 const MARGIN = 12;
@@ -48,7 +48,7 @@ const MARGIN = 12;
 
 export interface BlockCommentTarget {
   blockId: string;
-  /** L'extrait, quand le fil s'ouvre sur une sélection qu'on vient de faire. */
+  /** The extract, when the thread opens on a selection that we have just made. */
   quote?: string;
 }
 
@@ -65,9 +65,9 @@ export function PageCommentPopover({
   onDelete,
 }: {
   editor: Editor | null;
-  /** Le bloc dont on ouvre le fil, et l'extrait si c'est un fil qui NAÎT. */
+  /** The block from which we open the thread, and extract it if it is a BORN thread. */
   target: BlockCommentTarget;
-  /** Les fils de ce bloc — vide quand on vient d'en ouvrir un. */
+  /** The wires of this block — empty when you have just opened one. */
   threads: PageThread[];
   members: Member[];
   currentUserId: string | null;
@@ -92,8 +92,8 @@ export function PageCommentPopover({
     if (!editor || editor.isDestroyed) return;
     const pos = posOfBlockId(editor, target.blockId);
     if (pos === null) {
-      // Le bloc vient de disparaître sous nos yeux (⌘Z, un coéquipier). Le fil
-      // n'est pas perdu : il repart dans l'activité, marqué détaché.
+      // The block has just disappeared before our eyes (⌘Z, a teammate). The thread
+      // is not lost: he returns to the activity, marked detached.
       onClose();
       return;
     }
@@ -122,7 +122,7 @@ export function PageCommentPopover({
     };
   }, [measure]);
 
-  // Le document bouge (frappe, écriture distante) : le bloc peut descendre.
+  // The document moves (keystroke, remote writing): the block can go down.
   useEffect(() => {
     if (!editor) return;
     editor.on("transaction", measure);
@@ -131,14 +131,14 @@ export function PageCommentPopover({
     };
   }, [editor, measure]);
 
-  // Échap ferme, et un clic AILLEURS aussi — sauf dans le panneau, sauf sur une
-  // pastille (cliquer celle d'un autre bloc doit ouvrir SON fil, pas refermer
-  // celui-ci et laisser l'utilisateur cliquer deux fois), et sauf dans un calque
-  // ouvert PAR-DESSUS : le menu « ⋯ » d'un commentaire et son dialogue de
-  // confirmation sont portés en fin de `body`, donc « ailleurs » au sens du DOM.
-  // Sans cette dernière exception, supprimer un commentaire était impossible —
-  // le clic sur « Supprimer » fermait le panneau, qui emportait le dialogue
-  // avant qu'on ait pu confirmer (lib/overlay-layers.ts).
+  // Close escape, and a click ELSEWHERE too — except in the panel, except on one
+  // pill (clicking one from another block must open ITS thread, not close
+  // this one and let the user click twice), and except in a layer
+  // open ABOVE: the “⋯” menu of a comment and its dialog
+  // confirmation are carried at the end of `body`, therefore “elsewhere” in the sense of the DOM.
+  // Without this last exception, deleting a comment was impossible —
+  // clicking on “Delete” closed the panel, which removed the dialog
+  // before we could confirm (lib/overlay-layers.ts).
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
@@ -163,9 +163,9 @@ export function PageCommentPopover({
 
   if (!box) return null;
 
-  // Le panneau S'OUVRE sur un composeur dans deux cas : la bulle vient de créer
-  // un fil sur une sélection (`quote`), ou le bloc n'a encore rien. Sinon il
-  // s'ouvre sur la discussion, et on répond dedans.
+  // The panel OPENS on a composer in two cases: the bubble has just been created
+  // a thread on a selection (`quote`), or the block has nothing yet. Otherwise he
+  // opens to the discussion, and we respond there.
   const fresh = !!target.quote || threads.length === 0;
 
   return (
@@ -192,9 +192,9 @@ export function PageCommentPopover({
         </Button>
       </div>
 
-      {/* L'extrait du fil qui NAÎT : ce qu'on a sélectionné, sous les yeux
-          pendant qu'on écrit. Sans lui, on tape « oui mais là… » sans plus voir
-          de quel « là » il s'agit. */}
+      {/* The extract from the thread that IS BORN: what we have selected, under our eyes
+ while we write. Without it, we type “yes but there…” without seeing
+ which “there” it is. */}
       {fresh && target.quote ? (
         <p className="mx-3 mt-3 border-l-2 border-brand/50 pl-2 text-xs italic text-muted-foreground line-clamp-3">
           {target.quote}
@@ -266,8 +266,8 @@ function ThreadPanel({
 
   return (
     <div className="border-b border-border/60 last:border-b-0">
-      {/* L'extrait du fil, tel qu'il se lisait quand on l'a écrit : le bloc a pu
-          être réécrit depuis, et c'est justement ce qu'on veut voir. */}
+      {/* The extract from the thread, as it read when we wrote it: the block could
+ be rewritten since, and that's precisely what we want to see. */}
       <p className="mx-3 mt-3 border-l-2 border-brand/50 pl-2 text-xs italic text-muted-foreground line-clamp-2">
         {root.quote ?? t("commentOnBlock")}
       </p>
@@ -313,6 +313,6 @@ function ThreadPanel({
   );
 }
 
-/** Un fil de page n'a pas de pièce jointe (cf. `allowAttachments`) : le crochet
-    existe pour la signature partagée, et n'est jamais appelé. */
+/** A page thread has no attachment (see `allowAttachments`): the
+ hook exists for the shared signature, and is never called. */
 const noAttachments = async () => {};

@@ -7,14 +7,11 @@ import type { ControlPlaneClient } from "./control-plane-client";
 import type { VmJob } from "./protocol";
 
 /**
- * MIN-286 lot 2 — le pont de tools, et d'abord ce pour quoi il existe : le
- * plafond de recherches web du TOUR.
+ * MIN-286 lot 2 — the tools bridge, and first of all what it exists for: the
+ * TOUR web search ceiling.
  *
- * Le test monte le VRAI serveur (localhost, port libre) et n'appelle que par
- * HTTP, exactement comme le fera le tool généré dans la microVM. C'est la seule
- * forme qui prouve ce qui compte : que le plafond tient de l'autre côté du
- * réseau, que le refus arrive au modèle comme un résultat de tool lisible, et
- * qu'aucune recherche refusée n'a été payée.
+ * The test mounts the REAL server (localhost, free port) and only calls via
+ * HTTP, exactly as it will do the tool generated in the microVM. This is the only form that proves what matters: that the cap holds on the other side of the network, that the denial comes to the model as a readable tool result, and that no denied searches were paid for.
  */
 
 const calls: Array<{ name: string; body: Record<string, unknown> }> = [];
@@ -39,7 +36,7 @@ function job(over: Partial<VmJob> = {}): VmJob {
   } as VmJob;
 }
 
-/** Ce qu'un tool généré fait : il poste, il lit le texte, il le rend au modèle. */
+/** What a generated tool does: it posts, it reads the text, it returns it to the model. */
 async function call(
   bridge: ToolBridge,
   name: string,
@@ -53,7 +50,7 @@ async function call(
   return { status: res.status, body: await res.text() };
 }
 
-/** Monte le pont, joue le scénario, referme — un port ouvert par test, pas plus. */
+/** Raise the bridge, play the scenario, close — one port opened per test, no more. */
 async function withBridge(
   opts: {
     job?: VmJob;
@@ -90,12 +87,12 @@ describe("recherche web — le plafond du tour", () => {
       }
       const refused = await call(bridge, "web_search", { query: "q5" });
 
-      // Le refus est un RÉSULTAT de tool, lisible par le modèle : c'est ce qui
-      // lui fait travailler avec ce qu'il a plutôt que de rechercher en rond.
+      // The refusal is a RESULT of tool, readable by the model: this is what
+      // makes him work with what he has rather than searching in circles.
       expect(refused.status).toBe(200);
       expect(JSON.parse(refused.body).error).toContain("Web search limit reached for this turn (5");
-      // Et surtout : la sixième n'a JAMAIS atteint le plan de contrôle, donc
-      // aucun forfait Exa (0,005 $) n'a été facturé pour elle.
+      // And above all: the sixth NEVER reached the control plane, so
+      // no Exa package ($0.005) was charged for her.
       expect(calls.filter((c) => c.name === "web_search")).toHaveLength(5);
       expect(bridge.webSearchesUsed).toBe(5);
     });
@@ -113,8 +110,8 @@ describe("recherche web — le plafond du tour", () => {
   });
 
   it("suit le plafond du JOB, pas une constante recopiée ici", async () => {
-    // Le chiffre voyage dans le job (`webSearchMax`) parce que `web-search.ts`
-    // tient un client Supabase en clé de service, qui n'entre pas dans la VM.
+    // The number travels in the job (`webSearchMax`) because `web-search.ts`
+    // holds a Supabase client as a service key, which does not enter the VM.
     await withBridge({ job: job({ webSearchMax: 1 }) }, async (bridge) => {
       await call(bridge, "web_search", { query: "a" });
       const refused = await call(bridge, "web_search", { query: "b" });
@@ -144,8 +141,8 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
     await withBridge({ job: job({ imageInput: true }), cp: client }, async (bridge) => {
       await call(bridge, "comment_pr_line", { body: "x" });
       await call(bridge, "comment_pr_line", { body: "y" });
-      // Le plafond des 5 ancres se compte sur la vie du RUN : la fonction rend le
-      // compte atteint, et c'est lui qui repart au prochain appel.
+      // The ceiling of the 5 anchors is counted over the life of the RUN: the function makes the
+      // account reached, and it is he who starts again on the next call.
       expect(calls[1].body.prInlineComments).toBe(1);
       expect(calls[1].body.imageInput).toBe(true);
       expect(bridge.prInlineComments).toBe(2);
@@ -160,8 +157,8 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
     });
     await withBridge({ cp: client }, async (bridge) => {
       const res = await call(bridge, "read_issue", { identifier: "MIN-42" });
-      // 200 : le tool généré rend le corps tel quel au modèle. Un 5xx lui ferait
-      // rendre « could not reach the harness », qui masque le vrai motif.
+      // 200: the generated tool renders the body as is to the model. A 5xx would make him
+      // render “could not reach the harness”, which hides the real motive.
       expect(res.status).toBe(200);
       expect(JSON.parse(res.body).error).toContain("409");
     });
@@ -170,10 +167,10 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
   it("route tous les tools de domaine — un servi et non routé est notre défaut", async () => {
     await withBridge({}, async (bridge) => {
       for (const name of DOMAIN_TOOL_NAMES) {
-        // `create_pr` est le seul à ne pas être un passe-plat : il est coupé en
-        // deux (la VM pousse, la fonction ouvre) et il n'a de handler que sur une
-        // session qui écrit. Sans lui il est refusé, jamais transmis tel quel :
-        // il ouvrirait une pull request sur une branche que personne n'a poussée.
+        // `create_pr` is the only one not to be a hatch: it is cut into
+        // two (the VM pushes, the function opens) and it only has a handler on one
+        // session that writes. Without it it is refused, never transmitted as is:
+        // it would open a pull request on a branch that no one has pushed.
         const res = await call(bridge, name, {});
         expect(res.status).toBe(200);
       }
@@ -182,11 +179,10 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
   });
 
   /**
-   * MIN-286 lot 3 — `run_background` est un tool LOCAL : il ne sort JAMAIS de la
-   * microVM. Le pont l'exécute (le registre de jobs vit dans le superviseur) au
-   * lieu de le faire suivre — un `run_background` qui atteindrait le plan de
-   * contrôle lui demanderait de lancer un serveur qu'il n'a pas.
-   */
+ * MIN-286 batch 3 — `run_background` is a LOCAL tool: it NEVER leaves the
+ * microVM. The bridge executes it (the job register lives in the supervisor) at
+ * instead of forwarding it — a `run_background` which would reach the control plane would ask it to launch a server it does not have.
+ */
   it("exécute `run_background` dans la VM, sans jamais l'envoyer au plan de contrôle", async () => {
     const seen: Array<Record<string, unknown>> = [];
     await withBridge(
@@ -209,9 +205,9 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
   });
 
   it("refuse `run_background` sans handler plutôt que de le transmettre", async () => {
-    // Le cas d'une session de RELECTURE : le tool n'est pas généré, donc l'appel
-    // vient d'un fichier laissé par un tour d'avant. 200 + `error` : le modèle le
-    // lit et fait autrement.
+    // The case of a REREADING session: the tool is not generated, therefore the call
+    // comes from a file left over from a previous tour. 200 + `error`: the model
+    // read and do otherwise.
     await withBridge({}, async (bridge) => {
       const res = await call(bridge, "run_background", { action: "start", command: "sleep 1" });
       expect(res.status).toBe(200);
@@ -228,13 +224,12 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
   });
 
   /**
-   * MIN-286 lot 2, tâche 14 — LA VOIX DU HARNESS ARRIVE AU MODÈLE.
-   *
-   * Ce que la boucle maison servait en message `user` après le round part ici
-   * dans le TEXTE que le tool rend : chez opencode il n'y a pas de message à
-   * insérer, et un `followUp` qui resterait dans une clé JSON que personne ne
-   * lit serait un contrôle exécuté pour rien.
-   */
+ * MIN-286 lot 2, task 14 — THE VOICE OF THE HARNESS COMES TO THE MODEL.
+ *
+ * What the house loop served as a message `user` after the round leaves here
+ * in the TEXT that the tool renders: at opencode it there is no message to
+ * insert, and a `followUp` that would remain in a JSON key that no one reads would be a check executed for nothing.
+ */
   it("colle le followUp du harness après le résultat, dans le texte rendu au modèle", async () => {
     const delivery = {
       wrapDomainTool:
@@ -255,9 +250,9 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
   });
 
   it("laisse `create_pr` refusé quand il n'a pas de handler, sans lui poser de porte", async () => {
-    // Rendre les contrôles pour refuser juste après dirait au modèle qu'il a
-    // livré alors que rien n'a été poussé — le cas d'une session de relecture,
-    // qui n'a ni tool d'écriture ni push.
+    // Returning the controls to deny right after would tell the model that it has
+    // delivered when nothing has been pushed — the case of a proofreading session,
+    // which has neither writing tool nor push.
     let gated = false;
     const delivery = {
       wrapDomainTool: (h: unknown) => h,
@@ -275,8 +270,8 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
   });
 
   it("pose la porte de livraison sur le `create_pr` du superviseur", async () => {
-    // La porte est ce qui fait rendre les contrôles au premier appel d'un tour
-    // qui a édité (MIN-247). Posée ailleurs qu'ici, elle laisserait passer le
+    // The gate is what makes the controls return on the first call of a turn
+    // who edited (MIN-247). Placed elsewhere than here, it would let the
     // seul chemin par lequel du code part vraiment chez un humain.
     const delivery = {
       wrapDomainTool: (h: unknown) => h,
@@ -297,7 +292,7 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
       async (bridge) => {
         const res = await call(bridge, "create_pr", { title: "t" });
         expect(JSON.parse(res.body)).toEqual({ opened: false });
-        // Rien n'a été poussé : la porte a retenu l'appel avant le handler.
+        // Nothing was pushed: the door picked up the call before the handler.
         expect(pushed).toBe(false);
       },
     );
@@ -320,14 +315,14 @@ describe("le passe-plat, et les états de tour qui l'accompagnent", () => {
 });
 
 /**
- * MIN-286 lot 3 — LES IMAGES, la dernière parité que le pont avait perdue.
+ * MIN-286 lot 3 — THE IMAGES, the last parity that the bridge had lost.
  *
- * Le pont répond du texte, et un modèle qui reçoit du texte lit la fiche
- * signalétique d'une maquette au lieu de la regarder. Ce que ces tests fixent,
- * c'est le contrat mesuré sur `opencode-ai@1.18.16` (dossier §2.22) : quand le
- * plan de contrôle rend des images, la réponse devient une ENVELOPPE annoncée
- * par son en-tête, et le tool généré la rend en `{output, attachments}` —
- * qu'opencode republie en partie `image_url` d'un message posé après le round.
+ * The bridge responds with text, and a model that receives text reads the sign
+ * of a model instead of looking at it. What these tests fix,
+ * is the contract measured on `opencode-ai@1.18.16` (file §2.22): when the
+ * control plane renders images, the response becomes an ENVELOPE announced
+ * by its header, and the generated tool renders it as `{output, attachments}` —
+ * that opencode republishes in part `image_url` of a message posted after the round.
  */
 describe("images — l'enveloppe de pièces jointes", () => {
   const withImage = (): ControlPlaneClient =>
@@ -352,15 +347,15 @@ describe("images — l'enveloppe de pièces jointes", () => {
       expect(res.headers.get("x-minddy-attachments")).toBe("1");
 
       const envelope = JSON.parse(await res.text());
-      // Le TEXTE ne change pas : la fiche signalétique reste ce que le modèle
-      // lit, l'image s'y ajoute. Un fil raconte donc la même chose qu'avant.
+      // The TEXT does not change: the MSDS remains what the model
+      // reads, the image is added. A thread therefore tells the same thing as before.
       expect(JSON.parse(envelope.output)).toEqual({
         name: "maquette.png",
         mime: "image/png",
         bytes: 12,
       });
-      // La forme exacte du `ToolAttachment` d'@opencode-ai/plugin, mime relu
-      // sur la data URL plutôt que supposé.
+      // The exact form of `ToolAttachment` of @opencode-ai/plugin, mime reread
+      // on the data URL rather than assumed.
       expect(envelope.attachments).toEqual([
         {
           type: "file",
@@ -380,22 +375,22 @@ describe("images — l'enveloppe de pièces jointes", () => {
         body: JSON.stringify({ args: {} }),
       });
       expect(res.headers.get("x-minddy-attachments")).toBeNull();
-      // Le corps est le résultat NU, comme avant : c'est ce que le tool généré
-      // rend tel quel au modèle.
+      // The body is the NU result, as before: this is what the tool generated
+      // render as is to the model.
       expect(JSON.parse(await res.text())).toHaveProperty("answer");
     });
   });
 });
 
 /**
- * MIN-286 — LE MOTIF D'UN REFUS DU HARNESS REMONTE.
+ * MIN-286 — THE REASON FOR REFUSAL OF THE HARNESS IS UP.
  *
- * `run_background` est un tool LOCAL : quand `checkCommand` écarte un `git push`
- * (MIN-108), le motif (`forbidden_command`) est ce qui rend le refus MESURABLE sur
- * `agent_run_events` — la boucle maison le reposait sur son `tool_result`. Le pont
- * ne construisait sa réponse qu'à partir du résultat et du `followUp` : le motif
- * était perdu entre le registre de jobs et le fil, et les refus devenaient
- * invisibles en base.
+ * `run_background` is a LOCAL tool: when `checkCommand` rejects a `git push`
+ * (MIN-108), the pattern (`forbidden_command`) is what makes the denial MEASURABLE on
+ * `agent_run_events` — the home loop was relying on its `tool_result`. The bridge
+ * only constructed its response from the result and the `followUp`: the pattern
+ * was lost between the job register and the thread, and the refusals became
+ * invisible in base.
  */
 describe("le motif d'un refus", () => {
   it("remonte au superviseur avec le `callID` de l'appel", async () => {
@@ -413,7 +408,7 @@ describe("le motif d'un refus", () => {
       },
       async (bridge) => {
         const res = await call(bridge, "run_background", { command: "git push" });
-        // Le modèle, lui, lit le motif en clair — la réponse ne change pas.
+        // The model reads the pattern clearly — the answer does not change.
         expect(res.status).toBe(200);
         expect(JSON.parse(res.body)).toEqual({ error: "git push is not allowed" });
       },

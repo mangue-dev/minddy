@@ -56,9 +56,9 @@ export async function createIntegrationApi(
 }
 
 /**
- * Le prompt d'intégration d'une clé qui existe déjà. Aucun credential dedans :
- * il nomme la variable d'environnement, l'interface montre la ligne à coller.
- * C'est ce qui permet de le confier à Numo sans envoyer de secret.
+ * The prompt for integrating a key that already exists. No credential in it:
+ * it names the environment variable, the interface shows the line to paste.
+ * This is what allows you to entrust it to Numo without sending a secret.
  */
 export async function fetchIntegrationPromptApi(
   projectId: string,

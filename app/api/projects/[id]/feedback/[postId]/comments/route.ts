@@ -145,10 +145,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     parent_id: string | null;
     visibility: string;
   };
-  // La visibilité qu'on lit ici est celle de la LIGNE CRÉÉE, pas celle qu'on a
-  // demandée : une réponse hérite de la visibilité de son fil, et une réponse
-  // sous un commentaire public est donc publique même si le composeur a envoyé
-  // « interne ». Relire la demande laisserait Numo répondre sur le board.
+  // The visibility we read here is that of the CREATED LINE, not the one we have
+  // requested: a response inherits the visibility of its thread, and a response
+  // under a public comment is therefore public even if the composer sent
+  // " internal ". Rereading the request would let Numo respond on the board.
   const trigger =
     created.visibility === "public"
       ? null

@@ -27,29 +27,27 @@ import {
 import type { ViewShareLevel } from "@/lib/types";
 
 /**
- * PUBLIER une page en lecture (MIN-283).
+ * PUBLISH a page for reading (MIN-283).
  *
- * Même grammaire que le partage d'une vue (components/share-view-dialog) — trois
- * niveaux, un lien, un mot de passe optionnel — parce que c'est la même
- * machinerie dessous et que deux dialogues qui font la même chose de deux
- * façons se lisent comme deux features.
+ * Same grammar as sharing a view (components/share-view-dialog) — three
+ * levels, a link, an optional password — because it's the same
+ * machinery below and that two dialogs which do the same thing in two
+ * ways read like two features.
  *
- * Ce que ce dialogue-ci ajoute, et qui n'a de sens que sur un document :
+ * What this dialog adds, and which only makes sense on a document:
  *
- *  - les SOUS-PAGES. La case dit le NOMBRE de pages qui partiraient, parce
- *    qu'une case à cocher muette ferait publier une branche entière à quelqu'un
- *    qui croit publier une page. Une branche de dix-sept pages qu'on envoie à un
- *    client, ce n'est pas une option cochée : c'est une fuite ;
- *  - RIEN sur l'indexation, et c'est le point : une page publiée est toujours
- *    `noindex`. Le lien est le secret, comme pour une vue partagée, et une case
- *    « autoriser Google » cochée une fois « pour voir » ne se décoche pas d'un
- *    index.
+ * - the SUBPAGES. The box says the NUMBER of pages that would leave, because a blank checkbox would cause someone to publish an entire branch who thinks they are publishing a page. A branch of seventeen pages that we send to a
+ * client, this is not a checked option: it's a leak;
+ * - NOTHING about indexing, and that's the point: a published page is always
+ * `noindex`. The link is the secret, as for a shared view, and a checkbox
+ * "allow Google" checked once "to view" does not uncheck a
+ * index.
  */
 export function PagePublishDialog({
   projectId,
   pageId,
   title,
-  /** Le nombre de descendants vivants de la page — dit par la case à cocher. */
+  /** The number of living descendants of the page — told by the checkbox. */
   descendantCount,
   open,
   onOpenChange,
@@ -75,7 +73,7 @@ export function PagePublishDialog({
   const [level, setLevel] = useState<ViewShareLevel>("private");
   const [password, setPassword] = useState("");
 
-  // Re-synchronisé à l'ouverture, et quand la réponse arrive.
+  // Re-synchronized on opening, and when the response arrives.
   useEffect(() => {
     if (open) {
       setLevel(serverLevel);
@@ -112,14 +110,14 @@ export function PagePublishDialog({
     } else if (next === "public") {
       update.mutate({ level: "public" });
     }
-    // « password » attend le mot de passe ci-dessous : le serveur en exige un
-    // avant de créer le partage.
+    // “password” expects the password below: the server requires one
+    // before creating the share.
   };
 
   const submitPassword = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = password.trim();
-    // Le serveur refuse en dessous (MIN-347) : le formulaire le dit avant.
+    // The server refuses below (MIN-347): the form says so before.
     if (trimmed.length < MIN_SHARE_PASSWORD_LENGTH) return;
     update.mutate({ level: "password", password: trimmed });
   };
@@ -235,8 +233,8 @@ export function PagePublishDialog({
                     />
                     <span className="flex flex-col gap-0.5">
                       <span className="text-sm">{t("includeChildren")}</span>
-                      {/* Un COMPTE, jamais une case muette : c'est la seule
-                          façon de savoir ce qu'on envoie vraiment. */}
+                      {/* An ACCOUNT, never a blank box: this is the only
+ way to know what we are really sending. */}
                       <span className="text-xs text-muted-foreground">
                         {descendantCount === 0
                           ? t("noChildren")
@@ -257,7 +255,7 @@ export function PagePublishDialog({
   );
 }
 
-/** La clé de cache de l'état de publication. */
+/** The publish state cache key. */
 export function pageShareKey(pageId: string): [string, string] {
   return ["page-share", pageId];
 }

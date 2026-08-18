@@ -25,25 +25,24 @@ import {
 import { IsoIcon, isoGlyph } from "@/components/illustrations/iso-icon";
 
 /**
- * Les icônes de la landing, dans l'isométrie de l'application (MIN-254).
+ * The icons of the landing, in the isometry of the application (MIN-254).
  *
- * La page posait partout la même pastille : un carré arrondi gris avec une
- * icône lucide dedans, répétée d'une section à l'autre. C'est le dessin le plus
- * neutre possible — donc celui qui ne dit rien de minddy. Les illustrations de
- * l'app, elles, ont un style : l'icône posée sur un bloc isométrique
- * (`components/illustrations/iso-icon.tsx`). Le reprendre ici fait que la
- * landing et le produit se ressemblent enfin.
+ * The page placed the same patch everywhere: a gray rounded square with a
+ * lucid icon in it, repeated from one section to another. It's the most neutral drawing possible — so the one that doesn't say anything about minddy. The illustrations of
+ * the app have a style: the icon placed on an isometric block
+ * (`components/illustrations/iso-icon.tsx`). Resuming it here makes the
+ * landing and the product finally look the same.
  *
- * POURQUOI UN REGISTRE DE NOMS et pas une prop `icon`. `IsoIcon` est un
- * composant client (il MESURE le tracé rendu pour l'inscrire dans la face du
- * bloc) et les sections de la landing sont des Server Components. Un composant
- * React ne se sérialise pas : passer `icon={Inbox}` depuis le serveur ne compile
- * pas. L'appelant passe donc un nom, et la résolution se fait ici, côté client.
+ * WHY A REGISTER OF NAMES and not a `icon` prop. `IsoIcon` is a
+ * client component (it MEASURES the rendered path to register it in the face of the
+ * block) and the sections of the landing are Server Components. A component
+ * React does not serialize: passing `icon={Inbox}` from the server does not compile
+ *. The caller therefore passes a name, and the resolution is done here, on the client side.
  *
- * Un appelant qui tient DÉJÀ le composant d'icône — donc lui-même un composant
- * client, la seule frontière où passer une icône est possible : le menu
- * « Produit » de la nav, l'écran de confirmation d'e-mail — importe `IsoIcon`
- * directement. Ce module ne sert qu'au registre et au glyphe.
+ * A caller who ALREADY holds the icon component - therefore itself a component
+ * client, the only border where passing an icon is possible: the menu
+ * "Product" of the nav, the confirmation screen email — imports `IsoIcon`
+ * directly. This module is only used for the register and the glyph.
  */
 
 const ICONS = {
@@ -71,21 +70,19 @@ const ICONS = {
 export type IsoTileName = keyof typeof ICONS;
 
 /**
- * L'icône sur son bloc, désignée par son nom.
+ * The icon on its block, designated by its name.
  *
- * L'appelant ne donne qu'une LARGEUR (`w-14`) : le bloc porte son propre rapport
- * — un cube vu en 2:1 est plus large que haut — et la hauteur suit.
+ * The caller only gives a WIDTH (`w-14`): the block carries its own report
+ * — a cube seen in 2:1 is wider than it is tall — and the height follows.
  */
 export function IsoTile({ name, className }: { name: IsoTileName; className?: string }) {
   return <IsoIcon icon={ICONS[name]} className={className} />;
 }
 
 /**
- * Le même dessin, avec un CHIFFRE à la place de l'icône — le trajet numéroté
- * d'un retour utilisateur. Les pastilles rondes numérotées qui tenaient cette
- * place étaient les seules de la page à ne pas être en isométrie, et ça se
- * voyait : quatre cartes qui racontent une suite, dans un style que rien
- * d'autre ne portait.
+ * The same drawing, with a NUMBER in place of the icon — the numbered path
+ * of a user return. The round numbered dots that held this
+ * place were the only ones on the page not to be in isometry, and it showed: four cards which tell a sequence, in a style that nothing else carried.
  */
 export function IsoNumber({ value, className }: { value: string; className?: string }) {
   return <IsoIcon icon={isoGlyph(value)} className={className} />;

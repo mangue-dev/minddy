@@ -9,7 +9,7 @@ import {
 
 const UUID = "22560e52-8a83-49d1-93d5-39a47187b7e0";
 const PUBLIC_URL = `https://github.com/user-attachments/assets/${UUID}`;
-// Forme exacte mesurée contre l'API (cf. la doc du module).
+// Exact form measured against the API (see the module doc).
 const SIGNED_URL =
   `https://private-user-images.githubusercontent.com/81526886/630179617-${UUID}.png` +
   "?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIn0.sig";
@@ -22,20 +22,20 @@ describe("forgeAssetId", () => {
   it("ignore tout ce qui n'est pas un asset de commentaire", () => {
     expect(forgeAssetId("https://img.shields.io/badge/ci-passing-green.svg")).toBeNull();
     expect(forgeAssetId("https://github.com/mangue-dev/minddy/pull/30")).toBeNull();
-    // Un hôte qui RESSEMBLE : le motif est ancré, il ne se laisse pas préfixer.
+    // A host that LOOKS LIKE: the pattern is anchored, it cannot be prefixed.
     expect(forgeAssetId(`https://evil.com/github.com/user-attachments/assets/${UUID}`)).toBeNull();
     expect(forgeAssetId(`http://github.com/user-attachments/assets/${UUID}`)).toBeNull();
-    // Ni suffixe : `…/<uuid>/../../etc` ne doit pas passer pour un uuid.
+    // Neither suffix: `…/<uuid>/../../etc` must not pass for a uuid.
     expect(forgeAssetId(`${PUBLIC_URL}/../../secret`)).toBeNull();
   });
 });
 
 describe("signedForgeAssetId", () => {
-  it("relit le même uuid depuis l'URL signée", () => {
+  it("reads the same uuid from the signed URL", () => {
     expect(signedForgeAssetId(SIGNED_URL)).toBe(UUID);
   });
 
-  it("refuse un autre hôte", () => {
+  it("rejects another host", () => {
     expect(
       signedForgeAssetId(`https://evil.example/81526886/630179617-${UUID}.png?jwt=x`),
     ).toBeNull();
@@ -71,7 +71,7 @@ describe("collectSignedAssets", () => {
     expect([...map.keys()]).toEqual([UUID]);
   });
 
-  it("verse plusieurs surfaces dans la même table et ignore les vides", () => {
+  it("stores several surfaces in the same table and ignores empty ones", () => {
     const other = SIGNED_URL.replace(UUID, "11111111-2222-3333-4444-555555555555");
     const map = collectSignedAssets([
       null,
@@ -84,7 +84,7 @@ describe("collectSignedAssets", () => {
     expect(map.get("11111111-2222-3333-4444-555555555555")).toBe(other);
   });
 
-  it("garde le premier jwt quand un asset est cité deux fois", () => {
+  it("keeps the first jwt when an asset is cited twice", () => {
     const second = SIGNED_URL.replace("sig", "autre");
     const map = collectSignedAssets([`<img src="${SIGNED_URL}" />`, `<img src="${second}" />`]);
     expect(map.get(UUID)).toBe(SIGNED_URL);
@@ -100,7 +100,7 @@ describe("forgeImageSrc", () => {
     );
   });
 
-  it("laisse passer tout le reste — un badge CI se sert très bien tout seul", () => {
+  it("lets everything else through — a CI badge works perfectly well by itself", () => {
     const badge = "https://img.shields.io/badge/ci-passing-green.svg";
     expect(forgeImageSrc(badge, endpoint)).toBe(badge);
     expect(forgeImageSrc(undefined, endpoint)).toBeUndefined();

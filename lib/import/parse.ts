@@ -3,12 +3,12 @@
 // LIST of column indexes (Jira repeats multi-value columns like "Labels"),
 // and detection picks the alias table from the headers alone.
 //
-// Deux entrées, une seule lecture :
-//   • `prepareImport` — celle du navigateur. Rend le tableau, la source et le
-//     plan déduit, pour que l'aperçu recalcule les tickets à chaque retouche du
-//     tableau de correspondance sans relire le fichier.
-//   • `mapCsvToIssues` — celle du serveur (et des tests). Reprend le texte brut,
-//     avec le plan reçu du client quand il y en a un, et refait tout.
+// Two entries, one reading:
+// • `prepareImport` — that of the browser. Returns the table, source and
+// deduced plan, so that the preview recalculates the tickets each time the file is edited
+// correspondence table without rereading the file.
+// • `mapCsvToIssues` — that of the server (and tests). Takes the raw text,
+// with the plan received from the client when there is one, and redo everything.
 
 import Papa from "papaparse";
 import {
@@ -65,16 +65,16 @@ export function detectSource(table: CsvTable): ImportSource | null {
   ) {
     return "jira";
   }
-  // Notre propre export (`lib/export/issues-csv.ts`). « Objective » n'est le
-  // nom d'aucune colonne des autres outils, et « Project » sans « Team » ni
-  // « Issue key » achève de trancher : c'est un fichier sorti de minddy.
+  // Our own export (`lib/export/issues-csv.ts`). “Objective” is not
+  // name of no column in other tools, and “Project” without “Team” or
+  // “Issue key” completes the decision: it is a file taken from minddy.
   if (hasHeader(table, "title") && hasHeader(table, "objective") && hasHeader(table, "project")) {
     return "minddy";
   }
-  // Les marqueurs doivent être PROPRES à Linear. « Estimate » en faisait
-  // partie et ne l'est pas du tout : n'importe quel CSV maison portant
-  // « Title » et « Estimate » était lu comme un export Linear, dont la table
-  // d'alias ne connaît que « Parent issue » — et sa colonne « Parent » tombait.
+  // Markers must be SPECIAL to Linear. “Estimate” made it
+  // part and is not at all: any in-house CSV carrying
+  // “Title” and “Estimate” were read as a Linear export, whose table
+  // alias only knows “Parent issue” — and its “Parent” column was falling out.
   if (
     hasHeader(table, "title") &&
     hasHeader(table, "team", "creator", "parent issue", "cycle number")
@@ -85,7 +85,7 @@ export function detectSource(table: CsvTable): ImportSource | null {
   return null;
 }
 
-/** Tickets + avertissements pour un plan donné. Le seul chemin de lecture. */
+/** Tickets + warnings for a given plan. The only reading path. */
 export function issuesFromMapping(
   table: CsvTable,
   mapping: ImportMapping
@@ -100,7 +100,7 @@ export type ImportPrepareResult =
   | {
       ok: true;
       table: CsvTable;
-      /** Le comptage des colonnes, fait une fois — tout le reste le relit. */
+      /** Column counting, done once — everything else reads it again. */
       stats: TableStats;
       source: ImportSource;
       mapping: ImportMapping;
@@ -108,14 +108,12 @@ export type ImportPrepareResult =
   | { ok: false; error: ImportParseError };
 
 /**
- * Ce que le navigateur fait d'un fichier déposé : le tableau, la source et le
- * plan déduit des en-têtes.
+ * What the browser does with a deposited file: the table, the source and the
+ * plan deduced from the headers.
  *
- * À la différence de `mapCsvToIssues`, un fichier SANS colonne de titre
- * reconnaissable n'est pas rejeté : c'est un CSV générique dont le plan n'a pas
- * encore de titre, et c'est exactement le cas que le modèle — ou le tableau de
- * correspondance — est là pour régler. Le refus reste, mais au moment de
- * valider, quand plus personne n'a su désigner de titre.
+ * Unlike `mapCsvToIssues`, a file WITHOUT recognizable title column
+ * is not rejected: it is a generic CSV whose outline doesn't have a title yet, and that's exactly the case that the template — or the correspondence table — is there to address. The refusal remains, but at the time of
+ * validate, when no one has been able to designate a title.
  */
 export function prepareImport(
   csvText: string,
@@ -138,9 +136,9 @@ export function prepareImport(
  * on the server (the client payload is the raw CSV text, plus the mapping the
  * user saw and possibly corrected).
  *
- * Un plan reçu de l'extérieur passe par `sanitizeMapping` : il ne peut porter
- * que des champs et des valeurs d'énumération connus, sur les colonnes du
- * fichier tel que le SERVEUR l'a relu.
+ * A plan received from the outside goes through `sanitizeMapping`: it can only carry
+ * only known fields and enumeration values, on the columns of the
+ * file as the SERVER read it.
  */
 export function mapCsvToIssues(
   csvText: string,
@@ -159,8 +157,8 @@ export function mapCsvToIssues(
       : sanitizeMapping(table.headers.length, context, rawMapping);
   const mapping = provided ?? buildMapping(table, computeStats(table), source, context);
 
-  // Sans colonne de titre, il n'y a pas de ticket à fabriquer — que le plan
-  // vienne de la détection ou du navigateur.
+  // Without a title column, there is no ticket to make — only the plan
+  // comes from detection or the browser.
   if (!hasTitleColumn(mapping)) return { ok: false, error: "noTitleColumn" };
 
   const { issues, warnings } = issuesFromMapping(table, mapping);

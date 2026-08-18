@@ -1,21 +1,21 @@
-// LE SCHÉMA d'une page — le catalogue de blocs, plus le substrat qu'il suppose.
+// THE DIAGRAM of a page — the catalog of blocks, plus the substrate it assumes.
 //
-// Deux surfaces le montent, et elles doivent monter LE MÊME : l'éditeur
-// (components/pages/page-editor.tsx) et la projection markdown
-// (lib/pages-markdown.ts, donc le MCP et l'agent). Un nœud que l'éditeur sait
-// produire et que la projection ne connaît pas, c'est un bloc qui disparaît en
-// silence dès qu'un agent relit la page — exactement le défaut que MIN-269
-// existe pour rendre impossible. D'où ce fichier : une seule liste, deux
+// Two surfaces mount it, and they must mount THE SAME: the editor
+// (components/pages/page-editor.tsx) and the markdown projection
+// (lib/pages-markdown.ts, therefore the MCP and the agent). A knot that the editor knows
+// produce and that the projection does not know, it is a block which disappears in
+// silence as soon as an agent rereads the page — exactly the default that MIN-269
+// exists to make impossible. Hence this file: one list, two
 // lectures.
 //
-// Ce qu'il N'A PAS, et qui reste à l'éditeur : le chrome (marge, menu ⋯), le
-// menu « / », la suggestion de mention, le placeholder, `NodeRange`. Rien de
-// tout cela ne touche le schéma ni le markdown.
+// What it DOES NOT have, and which remains for the editor: the chrome (margin, menu ⋯), the
+// menu “/”, the mention suggestion, the placeholder, `NodeRange`. Nothing
+// all this does not affect the schema or markdown.
 //
-// Pas de « use client » ici, volontairement : ce module doit pouvoir être monté
-// hors navigateur. C'est aussi pourquoi la mention se PASSE en option — sa
-// pilule vit dans un module client, et un module client importé côté serveur ne
-// rend qu'une référence, pas une extension tiptap.
+// No “client use” here, voluntarily: this module must be able to be mounted
+// outside browser. This is also why the mention HAPPENS as an option — its
+// pill lives in a client module, and an imported server-side client module does not
+// only renders a reference, not a tiptap extension.
 
 import type { AnyExtension, Extensions, NodeViewRenderer } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
@@ -32,29 +32,29 @@ import {
 
 export interface PageExtensionsOptions {
   /**
-   * Sans vue de nœud ni comportement de navigateur : le schéma et la
-   * sérialisation markdown, montables sous jsdom comme dans une fonction
-   * serveur. C'est ce que prend la projection.
-   */
+ * Without node view or browser behavior: the schema and the
+ * serialization markdown, mountable under jsdom as in a function
+ * server. This is what the projection takes.
+ */
   headless?: boolean;
 
   /**
-   * Le nœud de mention à monter. Par défaut le nœud NU
-   * (components/mention-node.ts) : le texte « @Nom », son schéma et son
-   * markdown. L'éditeur passe la version qui porte la pilule — c'est le même
-   * nœud, avec une vue en plus.
-   */
+ * The mention node to mount. By default the NU
+ * node (components/mention-node.ts): the text “@Name”, its schema and its
+ * markdown. The editor passes the version which carries the pill — it is the same
+ * node, with an additional view.
+ */
   mention?: AnyExtension;
 
   /**
-   * Les vues de nœud que la SURFACE apporte, par nom de nœud. Même raison que
-   * `mention`, et même forme : une vue qui tire le baril `mangue-ui` ne peut
-   * pas être nommée par un fichier de bloc sans rendre le registre inimportable
-   * hors navigateur. C'est par là que passe la tâche partagée avec le carnet
-   * (`taskItem`, cf. components/scratchpad/task-item-view.tsx).
-   *
-   * Ignoré en `headless`, où il n'y a de toute façon aucune vue.
-   */
+ * The node views that SURFACE brings, by node name. Same reason as
+ * `mention`, and same form: a view that fires the `mangue-ui` barrel cannot
+ * be named by a block file without making the register unimportable
+ * outside the browser. This is where the task shared with the notebook goes through
+ * (`taskItem`, cf. components/scratchpad/task-item-view.tsx).
+ *
+ * Ignored in `headless`, where there is no view.
+ */
   nodeViews?: Record<string, NodeViewRenderer>;
 }
 
@@ -68,9 +68,9 @@ export function pageExtensions(
   } = options;
 
   return [
-    // Le substrat : document, texte, marques, annuler / refaire, liens. Tous les
-    // nœuds de BLOC sont coupés — ils viennent du registre, et deux définitions
-    // du même nœud font lever tiptap.
+    // The substrate: document, text, marks, undo/redo, links. All the
+    // BLOCK nodes are cut — they come from the registry, and two definitions
+    // from the same node raise tiptap.
     StarterKit.configure({
       paragraph: false,
       heading: false,
@@ -85,22 +85,22 @@ export function pageExtensions(
     ...pageColorExtensions(),
     PageBlockShortcuts,
     mention,
-    // L'ID stable des blocs, posé des DEUX côtés : une page écrite en markdown
-    // par Numo arrive donc dans l'éditeur avec des blocs déjà identifiés, comme
-    // si un humain les avait tapés.
+    // The stable ID of the blocks, placed on BOTH sides: a page written in markdown
+    // by Numo therefore arrives in the editor with blocks already identified, like
+    // if a human had typed them.
     UniqueID.configure({
       attributeName: BLOCK_ID_ATTRIBUTE,
       types: BLOCK_ID_TYPES,
     }),
     Markdown.configure({
-      // `true` : le dépliant et la sous-page se projettent en HTML minimal
-      // (cf. blocks/details.ts et blocks/subpage.ts) — markdown n'a ni l'un ni
-      // l'autre. Sans ça, les deux repartiraient en texte échappé.
+      // `true`: the leaflet and the subpage are projected in minimal HTML
+      // (see blocks/details.ts and blocks/subpage.ts) — markdown has neither
+      // the other. Without that, both would end up in escaped text.
       html: true,
-      // `linkify` seulement dans l'ÉDITEUR : une URL tapée s'y transforme en
-      // lien, ce qui est un service rendu à l'humain. La projection, elle, doit
-      // être fidèle — linkifier une URL nue la ferait ressortir en
-      // `[url](url)`, donc un aller-retour qui réécrit le texte de Numo.
+      // `linkify` only in the EDITOR: a typed URL is transformed into
+      // link, which is a service provided to humans. The projection must
+      // be faithful — linking a bare URL would make it stand out
+      // `[url](url)`, therefore a round trip which rewrites Numo's text.
       linkify: !headless,
       transformPastedText: !headless,
       transformCopiedText: !headless,

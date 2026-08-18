@@ -51,9 +51,9 @@ export const maxDuration = 300;
 const PROCESSING_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 const ASSISTANT_CHAT_RATE_LIMIT = { limit: 20 };
 
-/** Ce qu'une pilule épinglée peut désigner, et ce qu'un « @ » peut citer. Les
- *  deux tables sont côte à côte parce qu'elles se suivent : ce qui s'épingle au
- *  bouton @ se cite aussi dans le texte. */
+/** What a pinned pill can refer to, and what an “@” can quote. THE
+ * two tables are side by side because they follow each other: what is pinned to the
+ * @ button is also quoted in the text. */
 const PINNED_KINDS: ReadonlySet<string> = new Set([
   "issue",
   "project",
@@ -88,9 +88,9 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
       .slice(0, 50);
     return list.length > 0 ? list : undefined;
   };
-  // Contexte épinglé à la main (bouton @ du composer) : quelques entrées, des
-  // libellés courts. Les ids ne sont que cités dans le prompt — chaque outil
-  // repasse par la RLS de l'utilisateur, donc rien ne s'ouvre ici.
+  // Context pinned by hand (@ button of the composer): some entries,
+  // short wording. The ids are only quoted in the prompt — each tool
+  // goes back through the user's RLS, so nothing opens here.
   const pinned = ((): AssistantPinnedContext[] | undefined => {
     if (!Array.isArray(obj.pinned)) return undefined;
     const list = obj.pinned
@@ -150,8 +150,8 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
   return hasAnything ? ctx : null;
 }
 
-/** Les « @ » écrits dans le message, résolus côté client. Même confiance que le
- *  contexte : ils ne servent qu'à nommer, jamais à ouvrir un accès. */
+/** The “@” written in the message, resolved on the client side. Same confidence as the
+ * context: they are only used to name, never to provide access. */
 function parseMentions(raw: unknown): AssistantMention[] {
   if (!Array.isArray(raw)) return [];
   return raw
@@ -179,9 +179,9 @@ function parseMentions(raw: unknown): AssistantMention[] {
     }));
 }
 
-/** Résolution « @Nom → id » accrochée au message qui porte les mentions : Numo
- *  peut assigner ou cibler sans re-chercher le nom, et la ligne survit dans
- *  l'historique puisqu'elle se recalcule depuis la métadonnée persistée. */
+/** Resolution “@Nom → id” attached to the message which bears the mentions: Numo
+ * can assign or target without re-searching the name, and the line survives in
+ * the history since it is recalculated from the persisted metadata. */
 function mentionsNote(metadata: unknown): string {
   const list = parseMentions(
     (metadata as { mentions?: unknown } | null)?.mentions
@@ -200,9 +200,9 @@ function mentionsNote(metadata: unknown): string {
 }
 
 export async function POST(request: NextRequest) {
-  // getAuthedUser plutôt qu'un getUser() direct : c'est lui qui porte la gate
-  // MFA globale (aal2) et le 503 « instance injoignable » — un compte protégé
-  // par TOTP ne doit pas pouvoir parler à l'assistant en aal1 (MIN-118).
+  // getAuthedUser rather than a direct getUser(): it is he who carries the gate
+  // Global MFA (aal2) and 503 “instance unreachable” — a protected account
+  // by TOTP should not be able to talk to the assistant in aal1 (MIN-118).
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const { user, supabase } = auth;
@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Budget d'usage du plan (MIN-72) — pré-vol avant tout appel LLM.
+  // Plan usage budget (MIN-72) — pre-flight before any LLM call.
   try {
     await ensureUsageBudget(user.id, "assistant");
   } catch (err) {
@@ -233,16 +233,16 @@ export async function POST(request: NextRequest) {
   let body: AssistantChatRequest;
   try {
     const parsed: unknown = await request.json();
-    // Corps non-objet (null, chaîne…) : refusé ici plutôt que de crasher plus bas.
+    // Non-object body (null, string…): refused here rather than crashing further down.
     if (!parsed || typeof parsed !== "object") throw new Error("not an object");
     body = parsed as AssistantChatRequest;
   } catch {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  // Champs racine coercés : des types farfelus ne doivent ni crasher ni finir
-  // dans une requête. Un uuid fait 36 caractères — au-delà de 100, corps forgé.
-  // Le message, lui, est borné par sanitizeAssistantMessageContent (12 000).
+  // Coerced root fields: Wacky types should neither crash nor terminate
+  // in a query. A uuid is 36 characters long — beyond 100, forged body.
+  // The message is limited by sanitizeAssistantMessageContent (12,000).
   const projectId =
     typeof body.projectId === "string" && body.projectId ? body.projectId : undefined;
   const conversationId =
@@ -289,8 +289,8 @@ export async function POST(request: NextRequest) {
   // Locale from the NEXT_LOCALE cookie (same chain as the rest of the app).
   // Resolved BEFORE the stream starts — next-intl needs the request context.
   const locale = await getLocale();
-  // Idem pour les messages d'erreur : le traducteur est capturé ici puis appelé
-  // depuis le stream, où le contexte de requête n'est plus disponible.
+  // Same for error messages: the translator is captured here then called
+  // from the stream, where the request context is no longer available.
   const tApi = await getTranslations("ApiErrors");
 
   // Where Numo-created issues land without an explicit status — the user's
@@ -333,9 +333,9 @@ export async function POST(request: NextRequest) {
 
   // Create or fetch conversation
   let convId = conversationId;
-  // Résumé du titre par un petit modèle : lancé sans être attendu (la sidebar a
-  // déjà le repli tronqué), puis attendu avant de fermer le flux — c'est ce qui
-  // garantit qu'il aboutit sans retarder le premier token de la réponse.
+  // Summary of the title by a small model: launched without being expected (the sidebar has
+  // already the truncated fallback), then waited before closing the flow — that's what
+  // guarantees that it succeeds without delaying the first token of the response.
   let titleDone: Promise<void> | null = null;
   if (!convId) {
     const title = fallbackShortTitle(sanitizedUserMessage);
@@ -364,7 +364,7 @@ export async function POST(request: NextRequest) {
       locale,
       usage: {
         feature: "numo_chat",
-        // C'est l'auteur du message qui paye, comme le tour de chat qui suit.
+        // It is the author of the message who pays, like the chat trick that follows.
         userId: user.id,
         projectId,
         conversationId: newConvId,
@@ -468,8 +468,8 @@ export async function POST(request: NextRequest) {
     activeTools = GLOBAL_ASSISTANT_TOOLS;
   }
 
-  // Recherche web : coupable d'un drapeau admin. Coupée, le tool n'est même pas
-  // proposé (sinon le modèle brûle un round pour se faire refuser).
+  // Web search: guilty of an admin flag. Cut off, the tool is not even
+  // proposed (otherwise the model burns a round to be refused).
   const webSearchEnabled = await isWebSearchEnabled();
   if (!webSearchEnabled) activeTools = withoutWebSearch(activeTools);
 
@@ -480,9 +480,9 @@ export async function POST(request: NextRequest) {
     systemPrompt += `\n${buildPageContextBlock(pageContext)}`;
   }
 
-  // L'heure de l'utilisateur (MIN-185) : le fuseau vient du navigateur, avec la
-  // requête, parce qu'il n'existe nulle part ailleurs. Sans lui, une routine
-  // demandée « à 13 h » part en UTC et tourne à côté, tous les lundis.
+  // User time (MIN-185): the time zone comes from the browser, with the
+  // query, because it doesn't exist anywhere else. Without him, a routine
+  // requested “at 1 p.m.” leaves in UTC and runs nearby, every Monday.
   const timezone =
     typeof body.timezone === "string" && body.timezone.length <= 64
       ? body.timezone
@@ -569,8 +569,8 @@ export async function POST(request: NextRequest) {
   // Capture convId in a const for the closure (always defined at this point)
   const finalConvId = convId!;
 
-  // Un run de ledger pour CETTE réponse : les appels du loop et les éventuelles
-  // recherches web (écrites pendant le tour, pas à la fin) le partagent.
+  // A ledger run for THIS answer: loop calls and possible
+  // web searches (written during the tour, not at the end) share it.
   const runId = newRunId();
 
   // Stream response with server-side resilience
@@ -609,8 +609,8 @@ export async function POST(request: NextRequest) {
 
         clearTimeout(timeout);
 
-        // Suivi des coûts : chaque round du loop est un appel LLM ; ils partagent
-        // le même runId (cette réponse Numo = un run). Best-effort, ne bloque rien.
+        // Cost tracking: each round of the loop is an LLM call; they share
+        // the same runId (this Numo response = one run). Best effort, doesn't block anything.
         if (result.generations.length > 0) {
           await recordAiUsage(
             result.generations.map((g, i) => ({
@@ -625,8 +625,8 @@ export async function POST(request: NextRequest) {
               completionTokens: g.completionTokens,
               totalTokens: g.totalTokens,
               cost: g.cost,
-              // Le budget gaté en pré-vol est celui de `user` : c'est donc lui
-              // qui paye, y compris sur le projet de quelqu'un d'autre.
+              // The budget spoiled in pre-flight is that of `user`: it is therefore him
+              // who pays, including on someone else's project.
               billTo: { userId: user.id },
               projectId: projectId ?? null,
               conversationId: finalConvId,
@@ -657,8 +657,8 @@ export async function POST(request: NextRequest) {
           .update({ status: "idle", error_message: null })
           .eq("id", finalConvId);
 
-        // Le titre est parti au moment de la création : on ne le laisse pas
-        // pendre au-delà de la réponse (la fonction meurt avec le flux).
+        // The title is gone at the time of creation: we don't leave it
+        // hang beyond the answer (the function dies with the flow).
         await titleDone;
 
         emitter.emit("done", {});
@@ -673,8 +673,8 @@ export async function POST(request: NextRequest) {
           .update({ status: "error", error_message: errorMessage })
           .eq("id", finalConvId);
 
-        // Idem sur le chemin d'erreur : une conversation qui a échoué garde son
-        // titre, c'est même ce qui permet de la retrouver pour réessayer.
+        // Same on the error path: a conversation that failed keeps its
+        // title, this is even what allows you to find it to try again.
         await titleDone;
 
         emitter.emit("error", { message: errorMessage });

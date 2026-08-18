@@ -1,58 +1,58 @@
 /**
- * LE SCAN DE SECRETS AVANT PUSH (MIN-360) — PUR et testable, comme
- * [command-guard.ts](command-guard.ts) et [repo-path.ts](repo-path.ts), et pour la
- * même raison : ce qu'il garde ne se rattrape pas après coup.
+ * SCAN OF SECRETS BEFORE PUSH (MIN-360) — PURE and testable, like
+ * [command-guard.ts](command-guard.ts) and [repo-path.ts](repo-path.ts), and for the
+ * same reason: what it keeps doesn't make up for it afterwards coup.
  *
- * CE QUI LE REND NÉCESSAIRE. La fin de tour publie une pull request **sans humain
- * devant l'écran** — c'est tout l'intérêt du produit, et c'est aussi ce qui fait
- * qu'aucun regard ne passe entre le diff et le remote.
- * [delivery-gate.ts](delivery-gate.ts) est une porte de QUALITÉ (types, tests,
- * relecture) : rien n'y cherche un secret. Tant que le dépôt était un clone
- * jetable, le seul secret à portée était celui du dépôt lui-même ; en mode dépôt
- * courant, le `.env` réel de l'utilisateur est là, à côté des fichiers du tour.
+ * WHICH MAKES IT NECESSARY. The end of the tour publishes a pull request **without human
+ * in front of the screen** — that's the whole point of the product, and it's also what makes
+ * that no glance passes between the diff and the remote.
+ * [delivery-gate.ts](delivery-gate.ts) is a QUALITY gate (types, tests,
+ * rereading): nothing is looking for a secret. As long as the repository was a disposable clone
+ *, the only secret in range was that of the repository itself; In current deposit
+ * mode, the user's real `.env` is there, next to the tour files.
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * LA DOCTRINE, ET ELLE EST LA MÊME QUE CELLE DU GARDE-FOU DE COMMANDES
+ * ─────────────────────── ──────────────────────── ──────────────────────────────
+ * THE DOCTRINE, AND IT IS THE SAME AS THAT OF THE COMMAND GUARD
  *
- * **Liste fermée de préfixes STRUCTURÉS, jamais d'entropie.** Une porte DURE — qui
- * refuse le push — ne peut pas se permettre de faux positif : un tour bloqué par
- * une chaîne aléatoire de 40 caractères dans une fixture est un tour perdu, et un
- * garde-fou qu'on finit par retirer. Ce qu'on reconnaît, ce sont des jetons qui
- * s'annoncent : `AKIA…`, `ghp_…`, `sk-ant-…`, `-----BEGIN … PRIVATE KEY-----`.
+ * **Closed list of STRUCTURED prefixes, never entropy.** A HARD door — which
+ * refuses the push — cannot afford a false positive: a blocked turn by
+ * a random string of 40 characters in a fixture is a wasted turn, and a
+ * guardrail that we end up removing. What we recognize are tokens which
+ * announce themselves: `AKIA…`, `ghp_…`, `sk-ant-…`, `-----BEGIN … PRIVATE KEY-----`.
  *
- * DEUX MOTIFS ONT ÉTÉ ESSAYÉS PUIS RETIRÉS, et il vaut mieux dire pourquoi que
- * laisser quelqu'un les rajouter :
+ * TWO PATTERNS HAVE BEEN TESTED THEN REMOVED, and it's better to say why than
+ * let someone add them back:
  *
- * - **le JWT nu.** La clé anonyme de Supabase EN EST UN, elle est publique par
- *   conception et vit dans les `.env.example` et les README de la moitié du
- *   monde. On ne garde donc que le JWT dont la charge utile dit `service_role` —
- *   celui-là, personne ne le publie exprès ;
- * - **l'URL à identifiants** (`postgres://user:pass@host`). Presque toujours une
- *   URL de dév locale, dans un `docker-compose.yml` ou un README.
+ * - **the bare JWT.** The Supabase anonymous key IS ONE, it's public by
+ * design and lives in the `.env.example` and README half du
+ * world. We therefore only keep the JWT whose payload says `service_role` —
+ * this one, no one publishes it on purpose;
+ * - **the URL with identifiers** (`postgres://user:pass@host`). Almost always a
+ * local dev URL, in a `docker-compose.yml` or README.
  */
 
-/** Une trouvaille. Le secret lui-même n'y est JAMAIS entier : ce module écrit
- *  dans un fil de conversation, et une fuite qui se raconte reste une fuite. */
+/** A find. The secret itself is NEVER complete: this module writes
+ * in a conversation thread, and a leak that is told remains a leak. */
 export interface SecretFinding {
   /** Ce qu'on a reconnu, en clair (« GitHub token »). */
   kind: string;
-  /** Le fichier, quand le diff le dit. */
+  /** The file, when the diff says so. */
   file: string;
-  /** Le début du jeton, tronqué — assez pour le retrouver, pas pour s'en servir. */
+  /** The start of the token, truncated — enough to find it, not to use it. */
   sample: string;
 }
 
 /**
- * LES FICHIERS DONT LE CONTENU EST UN SECRET PAR NATURE — la famille dotenv.
+ * FILES WHOSE CONTENTS ARE SECRET BY NATURE — the dotenv family.
  *
- * Lu à deux endroits, et c'est pour ça qu'il vit ici plutôt que dans l'un des
- * deux : le verdict de permission s'en sert pour refuser une LECTURE sur le
- * chemin local ([vm/opencode-permissions.ts](vm/opencode-permissions.ts)), le scan
- * pour refuser un push qui en AJOUTE un.
+ * Read in two places, and that's why it lives here rather than in one of
+ * two: the permission verdict uses it to deny a READ on the
+ * local path ([vm/opencode-permissions.ts](vm/opencode-permissions.ts)), the scan
+ * to refuse a push that ADDS one.
  *
- * `.env.example` (et ses cousins `.sample` / `.template`) sont épargnés : ils sont
- * faits pour être lus et commités, et c'est souvent le seul endroit où le nom des
- * variables est écrit.
+ * `.env.example` (and its cousins `.sample` / `.template`) are spared: they are
+ * made to be read and committed, and this is often the only place where the name of the
+ * variables is written.
  */
 export function isSecretFile(path: string): boolean {
   const name = (path.split("/").pop() ?? "").trim().toLowerCase();
@@ -63,8 +63,8 @@ export function isSecretFile(path: string): boolean {
   return name === ".env" || name.startsWith(".env.") || name.endsWith(".env");
 }
 
-/** Les jetons qui s'annoncent. L'ordre compte : le plus spécifique d'abord, parce
- *  qu'un `sk-ant-…` satisfait aussi le motif générique des clés en `sk-`. */
+/** The tokens that are announced. The order matters: the most specific first, because
+ * a `sk-ant-…` also satisfies the generic pattern of keys in `sk-`. */
 const PATTERNS: ReadonlyArray<{ kind: string; re: RegExp }> = [
   { kind: "private key", re: /-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----/g },
   { kind: "AWS access key id", re: /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g },
@@ -80,15 +80,15 @@ const PATTERNS: ReadonlyArray<{ kind: string; re: RegExp }> = [
   { kind: "Vercel Blob token", re: /\bvercel_blob_rw_[A-Za-z0-9_]{20,}/g },
 ];
 
-/** Un JWT, dont on ne retient que ceux dont la charge utile dit `service_role`. */
+/** A JWT, of which we only retain those whose payload says `service_role`. */
 const JWT = /\beyJ[A-Za-z0-9_-]{8,}\.(eyJ[A-Za-z0-9_-]{16,})\.[A-Za-z0-9_-]{16,}/g;
 
-/** Ce qui, DANS LA VALEUR ELLE-MÊME, dit qu'elle n'est pas un vrai jeton. On ne
- *  regarde pas la ligne entière : un commentaire « example » au-dessus d'une
- *  vraie clé ne doit pas l'exempter. */
+/** Which, IN THE VALUE ITSELF, says that it is not a real token. We don't
+ * look at the whole line: an "example" comment above a
+ * real key should not exempt it. */
 const PLACEHOLDER = /(example|placeholder|redacted|changeme|your[_-]|xxxx|\.\.\.)/i;
 
-/** Assez pour retrouver la ligne, pas assez pour s'en servir. */
+/** Enough to find the line, not enough to use it. */
 function sampleOf(match: string): string {
   return `${match.slice(0, 12)}…`;
 }
@@ -105,8 +105,8 @@ function isServiceRoleJwt(payload: string): boolean {
 }
 
 /**
- * Les secrets d'un TEXTE (le contenu d'un fichier neuf, une ligne ajoutée).
- * `file` n'est qu'une étiquette, pour que la trouvaille se dise.
+ * The secrets of a TEXT (the contents of a new file, an added line).
+ * `file` is just a label, so that the find can be said.
  */
 export function scanSecrets(text: string, file = ""): SecretFinding[] {
   if (!text) return [];
@@ -121,8 +121,8 @@ export function scanSecrets(text: string, file = ""): SecretFinding[] {
   };
 
   for (const { kind, re } of PATTERNS) {
-    // `lastIndex` est de l'état porté par le littéral de module : on le remet à
-    // zéro, sans quoi un appel sur deux sauterait le début du texte.
+    // `lastIndex` is in the state carried by the module literal: we reset it to
+    // zero, otherwise every second call would skip the start of the text.
     re.lastIndex = 0;
     for (const match of text.matchAll(re)) push(kind, match[0]);
   }
@@ -134,12 +134,12 @@ export function scanSecrets(text: string, file = ""): SecretFinding[] {
 }
 
 /**
- * LES SECRETS D'UN DIFF UNIFIÉ — les lignes AJOUTÉES, et elles seules.
+ * THE SECRETS OF A UNIFIED DIFF — the ADDED lines, and them only.
  *
- * Scanner les fichiers entiers plutôt que le diff paraîtrait plus sûr et serait en
- * réalité inutilisable : un secret déjà présent dans le dépôt bloquerait alors
- * tous les tours qui touchent à ce fichier, pour toujours, sans que l'agent ait
- * quoi que ce soit à s'y reprocher. Ce qu'on garde, c'est ce que CE tour ajoute.
+ * Scanning the entire files rather than the diff would seem safer and would be in
+ * unusable reality: a secret already present in the repository would then block
+ * all the tricks that touch this file, forever, without the agent having
+ * anything to blame. What we keep is what THIS round adds.
  */
 export function scanDiff(diff: string): SecretFinding[] {
   const found: SecretFinding[] = [];
@@ -157,8 +157,8 @@ export function scanDiff(diff: string): SecretFinding[] {
   return found;
 }
 
-/** Le mot au modèle. Il NOMME les fichiers — c'est ce qui rend le refus réparable
- *  — et ne recopie jamais le jeton entier. */
+/** The word to the model. It NAMEs the files — this is what makes the refusal fixable
+ * — and never copies the entire token. */
 export function formatSecretFindings(findings: SecretFinding[]): string {
   const lines = findings
     .slice(0, 10)

@@ -7,62 +7,62 @@ import { getGitlabAccessToken } from "@/lib/server/git/gitlab-app";
 import { GITLAB_HOST } from "@/lib/server/git/gitlab-rest";
 
 /**
- * Résout de quoi cloner le dépôt lié à un projet dans le Sandbox de l'agent
- * (MIN-46 + MIN-69). On mint un token ÉPHÉMÈRE — token d'installation GitHub
+ * Solves how to clone the repository linked to a project in the Agent Sandbox
+ * (MIN-46 + MIN-69). We mint an EPHEMERAL token — GitHub installation token
  * (getInstallationToken, MIN-47) ou access token OAuth GitLab (refresh paresseux
- * via getGitlabAccessToken) — et on construit une URL de clone HTTPS
- * token-authentifiée — jamais persistée hors de la microVM.
+ * via getGitlabAccessToken) — and we build an HTTPS clone URL
+ * token-authenticated — never persisted outside the microVM.
  *
- * On lit directement `project_git_links` (qui dénormalise `installation_id`)
- * plutôt que getProjectLink(), car ce dernier ne renvoie pas l'installation_id
- * nécessaire au mint du token. À ré-appeler pour obtenir un token frais avant
- * chaque opération réseau (clone/push) d'un run long.
+ * We read directly `project_git_links` (which denormalizes `installation_id`)
+ * rather than getProjectLink(), because the latter does not return the installation_id
+ * necessary for the mint of the token. To be called again to obtain a fresh token before
+ * each network operation (clone/push) of a long run.
  *
- * DEPUIS MIN-327, le token n'est plus « celui de l'installation » : il est scopé
- * AU DÉPÔT du lien, et son pouvoir dépend de qui va le détenir — voir
- * `RepoTokenAccess` ci-dessous. C'est le même appel, avec un argument de plus,
- * parce que la question « que peut ce token ? » ne doit pas se poser loin de
- * l'endroit qui le fabrique.
+ * SINCE MIN-327, the token is no longer “that of the installation”: it is scoped
+ * AT THE DEPOSIT of the bond, and its power depends on who will hold it — see
+ * `RepoTokenAccess` below. It's the same appeal, with one more argument,
+ * because the question “what can this token do?” » must not land far from
+ * the place that makes it.
  */
 
 export type RepoProvider = "github" | "gitlab";
 
 /**
- * CE QUE LE TOKEN A LE DROIT DE FAIRE (MIN-327), et qui le détiendra.
+ * WHAT THE TOKEN HAS THE RIGHT TO DO (MIN-327), and who will hold it.
  *
- * Trois profils, et la ligne qui compte passe entre le premier et les deux
- * autres : `full` reste dans la FONCTION, `repo-write` et `repo-read` descendent
- * dans la MICROVM, où `git clone` les écrit dans `.git/config` et où le modèle
+ * Three profiles, and the line that counts passes between the first and the two
+ * others: `full` remains in the FUNCTION, `repo-write` and `repo-read` go down
+ * in the MICROVM, where `git clone` writes them in `.git/config` and where the model
  * lance du shell.
  *
- * - `full` — le token maximal de l'installation SUR LE DÉPÔT LIÉ. Ouvrir une PR,
- *   commenter, relire, merger, fermer une issue : tout ce qui parle à l'API de
- *   la forge depuis nos routes. Il ne sort jamais du process.
- * - `repo-write` — `contents: write`, rien d'autre. C'est tout ce dont `git`
- *   a besoin (clone, fetch, ls-remote, push) et c'est tout ce que la microVM
- *   d'un run de ticket ou de carnet reçoit : le token qu'elle porte ne peut plus
- *   merger une PR, ni approuver, ni commenter — ces gestes-là passent par le
- *   plan de contrôle, qui les rejoue côté fonction sous l'ancrage du run.
- * - `repo-read` — `contents: read`. La RELECTURE, le seul ancrage dont le
- *   contenu vient d'un fork inconnu. Elle n'écrit rien dans le dépôt
- *   (`writesToRepo` dans execute.ts) : lui donner de quoi pousser était une
- *   contradiction, et une injection depuis le fork suffisait à la récolter.
+ * - `full` — the maximum token of the installation ON THE LINKED REPOSITORY. Open a PR,
+ * comment, reread, merge, close an issue: everything that speaks to the API of
+ * the forge from our roads. It never leaves the process.
+ * - `repo-write` — `contents: write`, nothing else. That's all `git`
+ * needs (clone, fetch, ls-remote, push) and that's all the microVM
+ * of a ticket or notebook run receives: the token it carries can no longer
+ * merge a PR, neither approve, nor comment — these gestures go through the
+ * control plane, which replays them on the function side under the run anchor.
+ * - `repo-read` — `contents: read`. REREADING, the only anchor whose
+ * content comes from an unknown fork. She doesn't write anything in the repository
+ * (`writesToRepo` in execute.ts): giving it something to grow was a
+ * contradiction, and an injection from the fork was enough to harvest it.
  *
- * **GitLab ne connaît pas cette distinction, et c'est assumé.** Le token est
- * l'access token OAuth de la connexion, de portée `api` sur le compte entier
- * (cf. `GITLAB_OAUTH_SCOPES`) : GitLab n'offre aucun down-scoping d'un token
- * OAuth au moment de l'usage, et les project access tokens — le seul mécanisme
- * à portée réduite — sont des jetons PERSISTANTS à créer, suivre et révoquer,
- * pour une durée minimale d'un jour. Le profil est donc SANS EFFET côté GitLab,
- * et une relecture GitLab tourne avec un token qui peut écrire. C'est dit ici,
- * dans SECURITY.md et dans l'UI de liaison — comme l'absence d'identité de bot
- * (MIN-146), c'est une contrainte de la plateforme, pas un oubli.
+ * **GitLab does not know this distinction, and this is assumed.** The token is
+ * the OAuth access token of the connection, with scope `api` on the entire account
+ * (see `GITLAB_OAUTH_SCOPES`): GitLab does not offer any down-scoping of a token
+ * OAuth at the time of use, and project access tokens — the only mechanism
+ * reduced scope — are PERSISTENT tokens to create, track and revoke,
+ * for a minimum duration of one day. The profile is therefore WITHOUT EFFECT on the GitLab side,
+ * and a GitLab replay runs with a token that can write. It says here,
+ * in SECURITY.md and binding UI — such as no bot identity
+ * (MIN-146), this is a constraint of the platform, not an oversight.
  */
 export type RepoTokenAccess = "full" | "repo-write" | "repo-read";
 
-/** Les permissions GitHub demandées au mint, par profil. `full` ne narrowe rien
- *  (le token garde celles de l'installation) — la restriction qui compte pour lui
- *  est la portée par dépôt, posée dans tous les cas. */
+/** GitHub permissions requested from mint, per profile. `full` doesn't narrow anything
+ * (the token keeps those of the installation) — the restriction that matters to it
+ * is the scope per deposit, posed in all cases. */
 const GITHUB_PERMISSIONS_BY_ACCESS: Record<
   RepoTokenAccess,
   Record<string, "read" | "write"> | undefined
@@ -76,11 +76,11 @@ export interface RepoCloneTarget {
   provider: RepoProvider;
   /** `owner/name`. */
   repoFullName: string;
-  /** Branche de base (fallback "main" si le dépôt ne l'expose pas). */
+  /** Base branch (fallback "main" if the repository does not expose it). */
   defaultBranch: string;
-  /** URL HTTPS de clone/push avec token éphémère embarqué (jamais stockée). */
+  /** Clone/push HTTPS URL with embedded ephemeral token (never stored). */
   authUrl: string;
-  /** Token brut (pour d'éventuels appels REST : PR, etc.). */
+  /** Raw token (for possible REST calls: PR, etc.). */
   token: string;
   linkId: string;
   connectionId: string;
@@ -100,8 +100,8 @@ const GIT_LINK_COLUMNS =
   "id, provider, connection_id, installation_id, repo_full_name, default_branch";
 
 /**
- * Cible de clone du projet, ou null s'il n'a aucun dépôt lié. Lève si le lien
- * est incomplet (installation_id GitHub manquant) ou si le provider est inconnu.
+ * Clone target of the project, or null if it has no repository linked to it. Raise if the link
+ * is incomplete (installation_id GitHub missing) or if the provider is unknown.
  */
 export async function resolveRepoCloneTarget(
   projectId: string,
@@ -119,15 +119,15 @@ export async function resolveRepoCloneTarget(
 }
 
 /**
- * Cible de clone d'un DÉPÔT, pour un utilisateur donné (MIN-143).
+ * Clone target of a DEPOSIT, for a given user (MIN-143).
  *
- * Une pull request n'appartient pas à un projet : elle appartient à un dépôt,
- * que plusieurs projets peuvent lier. Il faut donc choisir un lien — et pas
- * n'importe lequel : un lien dont le projet est ACCESSIBLE À CET UTILISATEUR.
- * Sans ce filtre, on minterait un token au nom d'un projet qu'il ne peut pas
- * voir : le membre d'un projet suffirait à agir sur un dépôt lié ailleurs.
+ * A pull request does not belong to a project: it belongs to a repository,
+ * that several projects can link. You must therefore choose a link — and not
+ * any: a link whose project is ACCESSIBLE TO THIS USER.
+ * Without this filter, we would mint a token in the name of a project that it cannot
+ * see: the member of a project would be enough to act on a repository linked elsewhere.
  *
- * Renvoie null quand aucun projet accessible ne lie ce dépôt — l'appelant en
+ * Returns null when no accessible project links this repository — calling it
  * fait un 404, comme partout ailleurs.
  */
 export async function resolveRepoCloneTargetForRepo(opts: {
@@ -139,7 +139,7 @@ export async function resolveRepoCloneTargetForRepo(opts: {
   return link ? targetFromLink(link.row) : null;
 }
 
-/** Liaison projet↔dépôt retenue pour un utilisateur, SANS mint de token. */
+/** Project↔deposit link retained for a user, WITHOUT token mint. */
 export interface ResolvedRepoLink {
   linkId: string;
   connectionId: string;
@@ -147,19 +147,19 @@ export interface ResolvedRepoLink {
   provider: RepoProvider;
   repoFullName: string;
   defaultBranch: string;
-  /** Ligne brute, pour `targetFromLink` — évite une seconde requête. */
+  /** Raw line, for `targetFromLink` — avoids a second query. */
   row: GitLinkRow;
 }
 
 /**
- * La liaison projet↔dépôt par laquelle CET utilisateur atteint ce dépôt, sans
- * minter de token (MIN-168) : le lancement d'une review a besoin du PROJET
- * porteur du run — c'est lui que la RLS des runs interroge — bien avant d'avoir
- * besoin de parler à la forge.
+ * The project↔repository link by which THIS user reaches this repository, without
+ * token minter (MIN-168): launching a review requires the PROJECT
+ * bearer of the run - it is him that the RLS of runs questions - well before having
+ * need to speak to the forge.
  *
- * Même règle de choix que `resolveRepoCloneTargetForRepo`, dont c'est désormais
- * la première moitié : le premier lien dont le projet est ACCESSIBLE. Sans ce
- * filtre, un membre d'un projet quelconque agirait sur un dépôt lié ailleurs.
+ * Same choice rule as `resolveRepoCloneTargetForRepo`, which is now
+ * the first half: the first link whose project is ACCESSIBLE. Without this
+ * filter, a member of any project would act on a repository linked elsewhere.
  */
 export async function resolveProjectLinkForRepo(opts: {
   userId: string;
@@ -192,29 +192,29 @@ export async function resolveProjectLinkForRepo(opts: {
 }
 
 /**
- * Mint du token + URL de clone pour une ligne `project_git_links` déjà résolue.
+ * Mint of the token + clone URL for an already resolved `project_git_links` line.
  *
- * **C'est ici que se décide QUI agit sur la forge** — et il n'y a que deux
- * porteurs possibles dans minddy :
+ * **This is where the decision is made WHO acts on the forge** — and there are only two
+ * possible carriers in minddy:
  *
- * - **L'agent, c'est minddy.** Ce que fait Numo (ouvrir la MR, pousser la
- *   branche, poser les commentaires de sa review, faire le ménage des branches)
- *   doit porter le nom de minddy, jamais celui d'un humain. C'est le token minté
- *   ici. Sur GitHub, le token d'installation donne `minddy-app[bot]` : juste.
- * - **Un geste humain porte le nom de l'humain** (MIN-144) : approuver,
- *   commenter, réagir, merger passent par `resolveForgeActor`
- *   ([lib/server/git/forge-actor.ts](lib/server/git/forge-actor.ts)) et le token
- *   du compte git de qui clique. Jamais par le token d'ici.
+ * - **The agent is minddy.** What Numo does (open the MR, push the
+ * branch, post comments on your review, clean the branches)
+ * must be named Minddy, never that of a human. This is the minted token
+ * here. On GitHub, the installation token gives `minddy-app[bot]`: correct.
+ * - **A human gesture bears the name of the human** (MIN-144): approve,
+ * comment, react, merger go through `resolveForgeActor`
+ * ([lib/server/git/forge-actor.ts](lib/server/git/forge-actor.ts)) and the token
+ * of the git account of who clicks. Never by the token from here.
  *
- * **La transgression connue (MIN-146).** GitLab n'a aucune identité de bot : le
- * token ci-dessous est l'access token OAuth de la connexion portée par le LIEN,
- * c'est-à-dire du compte de la personne qui a lié le dépôt. Sur la forge, c'est
- * donc elle qui ouvre la MR de Numo et qui poste ses commentaires — un geste
- * automatisé sous un nom humain, le miroir exact du bug corrigé par MIN-144.
- * Les COMMITS, eux, sont corrects (`resolveCommitterIdentity` dans execute.ts
- * configure `minddy agent <agent@minddy.app>`) : c'est l'auteur au niveau de
- * l'API qui est faux. En attendant une identité de service GitLab, la liaison
- * le dit dans l'UI (`gitAgentActsAs`) plutôt que de le taire.
+ * **The known transgression (MIN-146).** GitLab has no bot identity: the
+ * token below is the OAuth access token of the connection carried by the LINK,
+ * that is, from the account of the person who linked the deposit. On the forge, it is
+ * so she who opens Numo's MR and posts her comments - a gesture
+ * automated under a human name, the exact mirror of the bug fixed by MIN-144.
+ * The COMMITS are correct (`resolveCommitterIdentity` in execute.ts
+ * configure `minddy agent <agent@minddy.app>`): this is the author at the level of
+ * the API which is wrong. While waiting for a GitLab service identity, binding
+ * says it in the UI (`gitAgentActsAs`) rather than keeping it quiet.
  */
 async function targetFromLink(
   row: GitLinkRow,
@@ -229,11 +229,11 @@ async function targetFromLink(
       throw new Error("GitHub link is missing its installation id");
     }
     /**
-     * LA PORTÉE PAR DÉPÔT EST POSÉE DANS TOUS LES CAS (MIN-327), profil compris.
+     * THE SCOPE BY DEPOSIT IS ASKED IN ALL CASES (MIN-327), profile included.
      *
-     * Le nom COURT, pas `owner/name` : c'est ce que `repositories` attend, et un
-     * slash y vaut 422. On le tient du lien lui-même — le projet a lié un dépôt,
-     * il n'y a rien à deviner.
+     * The SHORT name, not `owner/name`: that's what `repositories` expects, and a
+     * slash y is 422. We get it from the link itself — the project linked a repository,
+     * there is nothing to guess.
      */
     const repoName = row.repo_full_name.split("/").pop() ?? row.repo_full_name;
     const { token } = await getInstallationToken(row.installation_id, {

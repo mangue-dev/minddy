@@ -7,24 +7,23 @@ import { OPENCODE_VERSION } from "./vm/opencode-version";
 import { VM_PROTOCOL_VERSION } from "./vm/protocol";
 
 /**
- * MIN-293 — LA LIVRAISON DU HARNESS SUR LA MACHINE DE L'UTILISATEUR.
+ * MIN-293 — HARNESS DELIVERY TO THE USER'S MACHINE.
  *
- * Deux choses sont tenues ici, et aucune ne se déduit d'un type :
+ * Two things are required here, and neither is inferred from a type:
  *
- *  1. **Le manifeste dit la vérité sur les octets servis.** L'empreinte est ce
- *     qui décide si le lanceur forke ou refuse ; un manifeste qui décrirait un
- *     autre fichier que celui de la route voisine ferait échouer TOUS les tours,
- *     ou — pire — passer un bundle qu'on n'a pas servi.
- *  2. **Les deux routes sont authentifiées.** Le bundle ne porte aucun secret
- *     (`vm-bundle-secrets.test.ts` le tient) mais il n'a rien à faire en accès
- *     anonyme, et une régression sur ce point est exactement le genre de chose
- *     qu'on ne remarque jamais : la route continue de marcher.
+ * 1. **The manifest tells the truth about the bytes served.** The fingerprint is this
+ * which decides whether the launcher forks or refuses; a manifest that would describe a
+ * file other than that of the neighboring route would cause ALL rounds to fail,
+ * or — worse — pass a bundle that was not used.
+ * 2. **Both routes are authenticated.** The bundle carries no secret
+ * (`vm-bundle-secrets.test.ts` the holds) but it has nothing to do with anonymous access, and a regression on this point is exactly the sort of thing
+ * that you never notice: the route continues to walk.
  *
- * Le test importe les VRAIES routes (`app/**` est hors du périmètre de
- * `vitest.config.ts`, mais un test de `lib/` peut aller les chercher — cf.
- * [local-surface-coverage.test.ts](local-surface-coverage.test.ts)). Seuls
- * l'authentification et la lecture du fichier sont moqués : ce sont les deux
- * seuls IO, et le reste est le vrai chemin.
+ * The test imports the REAL routes (`app/**` is outside the scope de
+ * `vitest.config.ts`, but a test of `lib/` can fetch them — cf.
+ * [local-surface-coverage.test.ts](local-surface-coverage.test.ts)). Only
+ * authentication and file reading are mocked: these are both
+ * only IO, and the rest is the real path.
  */
 
 const h = vi.hoisted(() => ({
@@ -65,7 +64,7 @@ function request(path: string): NextRequest {
   return new NextRequest(`https://minddy.test${path}`);
 }
 
-/** Le cache est PAR INSTANCE DE FONCTION en production ; ici il faut le rendre. */
+/** The cache is PER INSTANCE FUNCTION in production; here it must be returned. */
 async function forgetCache(): Promise<void> {
   const mod = await import("./harness-bundle");
   mod.forgetHarnessBundleCache();
@@ -106,8 +105,8 @@ describe("GET /api/desktop/harness", () => {
   it("rend 503 quand ce déploiement n'a pas de bundle — pas un 500 anonyme", async () => {
     h.bundle = null;
     const response = await (await manifestRoute())(request("/api/desktop/harness"));
-    // 503 : la machine doit pouvoir distinguer « ce déploiement ne peut pas
-    // servir de harness » de « je ne suis pas connecté » et l'écrire au journal.
+    // 503: the machine must be able to distinguish “this deployment cannot
+    // serve as harness” of “I’m not connected” and write it to the log.
     expect(response.status).toBe(503);
   });
 });
@@ -121,8 +120,8 @@ describe("GET /api/desktop/harness/bundle", () => {
 
     expect(response.status).toBe(200);
     expect(await response.text()).toBe(h.bundle);
-    // LE point du test : les deux routes parlent du même fichier. Si elles
-    // divergeaient, le lanceur refuserait tous les tours sans qu'on sache pourquoi.
+    // THE point of the test: the two routes talk about the same file. If they
+    // diverge, the thrower would refuse all rounds without anyone knowing why.
     expect(response.headers.get("x-minddy-harness-sha256")).toBe(manifest.sha256);
   });
 
@@ -168,8 +167,8 @@ describe("le cache du bundle", () => {
   it("REPART à zéro après un échec — sinon un build en retard resterait cassé", async () => {
     h.bundle = null;
     expect((await (await manifestRoute())(request("/api/desktop/harness"))).status).toBe(503);
-    // Le bundle arrive (déploiement suivant, ou `npm run build:agent-vm` en dev) :
-    // la même instance doit pouvoir le servir, sans redémarrage.
+    // The bundle arrives (following deployment, or `npm run build:agent-vm` in dev):
+    // the same instance must be able to serve it, without restarting.
     h.bundle = "console.log('plus tard');\n";
     expect((await (await manifestRoute())(request("/api/desktop/harness"))).status).toBe(200);
   });

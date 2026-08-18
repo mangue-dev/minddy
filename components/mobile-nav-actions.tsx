@@ -27,12 +27,11 @@ export function MobileNavActions() {
 
   return (
     <>
-      {/* Numo — opens the full-bleed assistant panel. Pas de pastille de
-          contexte : le contexte de la page se lit dans le panneau (la puce
-          au-dessus du composer), pas sur le bouton qui l'ouvre. */}
+      {/* Numo — opens the full-bleed assistant panel. No context tag: the context of the page is read in the panel (the bullet
+ above the composer), not on the button that opens it. */}
       <MobileNavItem label={tk("navAssistant")} onClick={() => toggle()}>
-        {/* Statique : une animation d'attributs SVG en boucle sur une barre
-            de navigation ne dit rien, et tourne même masquée (MIN-323). */}
+        {/* Static: an animation of SVG attributes looping on a navigation bar
+ says nothing, and even runs hidden (MIN-323). */}
         <NumoIcon animated={false} className="size-[22px] text-foreground" />
       </MobileNavItem>
 

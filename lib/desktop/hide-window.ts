@@ -1,28 +1,25 @@
 /**
- * Faire disparaître la fenêtre, quand elle est en PLEIN ÉCRAN (MIN-353).
+ * Make the window disappear, when it is in FULL SCREEN (MIN-353).
  *
- * L'app n'a qu'une fenêtre, et elle ne meurt pas : ⌘W et le feu rouge la
- * CACHENT, pour que l'app reste vivante et que les notifications continuent
- * d'arriver (§3). Cacher une fenêtre fenêtrée ne pose aucune question.
+ * The app only has one window, and it does not die: ⌘W and the red light la
+ * HIDE, so that the app remains alive and the notifications continue
+ * to arrive (§3). Hiding a windowed window poses no problem.
  *
- * **En plein écran, si.** macOS a donné à cette fenêtre un *Space* à elle — un
- * bureau entier, avec son animation d'entrée et sa place dans Mission Control.
- * `hide()` retire la fenêtre de ce Space **sans le refermer** : il reste un
- * bureau vide, noir, au premier plan, et il n'y a plus rien dedans pour en
- * sortir. Ce qu'on voit alors, c'est « l'app a fait un écran noir et ne s'est
- * pas fermée » — les deux moitiés du symptôme, et elles disent la même chose.
+ * **Full screen, yes.** macOS has given this window a *Space* of its own — an entire
+ * desktop, with its entry animation and its place in Mission Control.
+ * `hide()` removes the window from this Space **without close it**: there remains an empty, black desk in the foreground, and there is nothing left in it to get out of. What we then see is "the app went black and did not close" — both halves of the symptom, and they say the same thing.
  *
- * D'où l'ordre en DEUX temps : on sort du plein écran, ce qui referme le Space
- * et rend l'écran à ce qu'il y avait avant, et **c'est seulement une fois sorti**
- * qu'on cache. L'inverse, ou les deux dans la même passe, ne marche pas :
- * `setFullScreen(false)` est asynchrone (AppKit anime la transition), et une
- * fenêtre déjà cachée n'anime rien du tout — elle reste dans son Space.
+ * Hence the TWO-step order: we exit the full screen, which closes the Space
+ * and returns the screen to what was there before, and **it's only once out**
+ * that we hide. The opposite, or both in the same pass, does not work:
+ * `setFullScreen(false)` is asynchronous (AppKit animates the transition), and an already hidden
+ * window does not animate anything at all — it remains in its Space.
  *
- * Module PUR : la règle se teste ici, `desktop/src/hide-window.ts` ne fait que
- * la câbler sur `leave-full-screen`.
+ * PUR module: the rule is tested here, `desktop/src/hide-window.ts` just
+ * wires it to `leave-full-screen`.
  */
 
-/** L'état de la fenêtre, réduit à ce qui décide. */
+/** The state of the window, reduced to what decides. */
 export interface HideWindowState {
   /** `process.platform`. */
   platform: string;
@@ -31,15 +28,15 @@ export interface HideWindowState {
 }
 
 /**
- * Le premier geste à poser.
+ * The first action to take.
  *
- * - `hide` — directement, c'est le cas ordinaire.
- * - `leave-full-screen` — sortir d'abord, cacher à l'arrivée.
+ * - `hide` — directly, this is the ordinary case.
+ * - `leave-full-screen` — exit first, hide on arrival.
  *
- * **macOS seulement.** Ailleurs le plein écran n'est pas un Space mais une
- * fenêtre sans décorations, que le gestionnaire de fenêtres cache comme les
- * autres : y ajouter un aller-retour ne réparerait rien et ferait clignoter
- * l'écran.
+ * **macOS only.** Elsewhere the full screen is not a Space but a
+ * window without decorations, which the window manager hides like the
+ * others: adding a round trip there would not fix anything and would cause
+ * the screen to flash.
  */
 export function hideWindowStep(state: HideWindowState): "hide" | "leave-full-screen" {
   return state.platform === "darwin" && state.fullScreen

@@ -1,22 +1,22 @@
 /**
- * LES FORMES de la comptabilité d'usage IA — les types, la normalisation de
- * l'`usage` d'OpenRouter, et rien d'autre.
+ * FORMS of AI usage accounting — types, normalization of
+ * OpenRouter's `usage`, and nothing else.
  *
- * SÉPARÉ D'`ai-usage.ts` PAR MIN-224, et pour une seule raison. La boucle
- * d'agent a besoin de ces formes-là ; elle n'a rien à faire de l'ÉCRITURE, qui
- * passe par le client Supabase en clé de service. Or depuis MIN-224 la boucle
- * descend dans la microVM, où le modèle exécute du shell arbitraire : un `env`
- * y suffirait à lire `SUPABASE_SERVICE_ROLE_KEY` si ce module-là entrait dans
- * son bundle. Le graphe d'imports du bundle est gardé par
- * `vm-bundle-secrets.test.ts` — c'est cette arête-ci qu'il pointait du doigt
- * depuis MIN-216, sous le nom de « dette écrite ».
+ * SEPARATED FROM `ai-usage.ts` BY MIN-224, and for only one reason. The agent loop
+ * needs these forms; it has nothing to do with WRITING, which
+ * passes through the Supabase client as a service key. Now since MIN-224 the loop
+ * descends into the microVM, where the model executes an arbitrary shell: a `env`
+ * would be enough to read `SUPABASE_SERVICE_ROLE_KEY` if this module entered into
+ * its bundle. The bundle import graph is kept by
+ * `vm-bundle-secrets.test.ts` — it is this edge that he has been pointing to
+ * since MIN-216, under the name of "written debt".
  *
- * Rien ici ne touche à la base, ne lit d'environnement, ni n'importe de SDK :
- * c'est de l'arithmétique et des noms. `ai-usage.ts` les ré-exporte, donc aucun
- * appelant existant ne change.
+ * Nothing here touches the base, reads environment, nor any SDK import:
+ * it's arithmetic and names. `ai-usage.ts` re-exports them, so no existing
+ * callers change.
  */
 
-/** Les types d'appels IA suivis (1:1 avec le check `feature` de la migration). */
+/** The types of AI calls tracked (1:1 with the migration's `feature` check). */
 export type AiFeature =
   | "numo_chat"
   | "numo_comment"
@@ -24,13 +24,13 @@ export type AiFeature =
   | "transcription"
   | "smart_assign"
   /**
-   * Smart-fill (MIN-260) : un appel à la création d'un ticket, qui lit son titre
-   * et sa description et pose priorité, effort, catégories et objectif. Sa
-   * propre feature à côté de `smart_assign` — l'une choisit QUI prend le ticket,
-   * l'autre dit ce qu'il EST, on les arme séparément et leurs coûts se lisent
-   * séparément. Elles se rejoignent une ligne plus haut, dans le segment
-   * « Automatisations » montré à l'utilisateur (`USAGE_SEGMENTS`).
-   */
+ * Smart-fill (MIN-260): a call to create a ticket, which reads its title
+ * and description and sets priority, effort, categories and objective. Its
+ * own feature next to `smart_assign` — one chooses WHO takes the ticket,
+ * the other says what it IS, we arm them separately and their costs read
+ * separately. They meet one line higher, in the segment
+ * “Automations” shown to the user (`USAGE_SEGMENTS`).
+ */
   | "smart_fill"
   | "feedback_classify"
   | "feedback_analyze"
@@ -41,88 +41,87 @@ export type AiFeature =
   | "pr_review"
   | "import_map"
   /**
-   * Découpe d'un brief en objectifs + tickets (MIN-172) : un appel par brief
-   * collé. Sa propre feature, comme `import_map` : c'est le coût de l'amorce
-   * d'un projet, et on veut pouvoir le lire seul.
-   */
+ * Breaking a brief into objectives + tickets (MIN-172): one call per brief
+ * pasted. Its own feature, like `import_map`: it's the cost of starting
+ * of a project, and we want to be able to read it alone.
+ */
   | "brief_split"
   /**
-   * Démo de dictée de la landing (MIN-150) : ses DEUX appels (transcription
-   * puis rangement) s'écrivent sous cette seule feature, sous un run_id
-   * commun. Une ligne = une démo jouée, son coût moyen par run = le prix d'un
-   * passage. Les ranger sous 'transcription'/'dictation' les mélangeait à la
-   * dictée des vrais comptes, et rendait les deux questions insolubles.
-   */
+ * Landing dictation demo (MIN-150): its TWO calls (transcription
+ * then storage) are written under this single feature, under a common run_id
+ *. One line = one demo played, its average cost per run = the price of one
+ * passage. Putting them under 'transcription'/'dictation' mixed them with the dictation of the real accounts, and made the two questions insoluble.
+ */
   | "landing_demo"
   /**
-   * Dicter un retour — au board public comme dans le dashboard. Ses DEUX appels
-   * (l'écoute puis le rangement par Numo) s'écrivent sous cette seule feature,
-   * sous un run_id commun : une ligne = une prise, son coût moyen par run = le
-   * prix d'un retour dicté. Côté utilisateur elle rejoint le segment
-   * « Retours » (`USAGE_SEGMENTS`) : c'est du feedback, pas de la dictée de
-   * ticket, et c'est dans cette ligne-là qu'on ira chercher sa dépense.
-   */
+ * Dictate feedback — on the public board as well as in the dashboard. Its TWO calls
+ * (listening then storage by Numo) are written under this single feature,
+ * under a common run_id: a line = a socket, its average cost per run = the
+ * price of a dictated return. On the user side it joins the segment
+ * “Returns” (`USAGE_SEGMENTS`): it is feedback, not dictation of
+ * ticket, and it is in this line that we will find our expense.
+ */
   | "feedback_voice"
   /**
-   * Un run de ROUTINE (MIN-185). Techniquement c'est le run de `agent_code`, au
-   * mot près — mêmes appels, même sandbox. En facturation, non : un run d'agent
-   * est un geste qu'on a fait, une routine est un abonnement qu'on a laissé
-   * tourner, et les confondre rend « qu'est-ce qui a mangé mon budget ce
-   * mois-ci ? » insoluble quand la réponse est « quelque chose qui tourne tout
-   * seul ». D'où DEUX features, une par nature de coût — sans
-   * `routine_compute`, les minutes de microVM d'une routine resteraient sous
-   * « Agents ». Les sous-agents d'un run de routine se facturent avec leur mère.
-   */
+ * A ROUTINE run (MIN-185). Technically it's the run of `agent_code`, au
+ * exact word — same calls, same sandbox. In billing, no: an agent run
+ * is a gesture that we made, a routine is a subscription that we let
+ * run, and confusing them makes it "what ate my budget this
+ * this month?" " unsolvable when the answer is "something that runs all
+ * alone". Hence TWO features, one by cost nature — without
+ * `routine_compute`, the microVM minutes of a routine would remain under
+ * “Agents”. The subagents of a routine run bill themselves with their mother.
+ */
   | "routine_code"
   | "routine_compute";
 
-/** Forme de l'objet `usage` renvoyé par OpenRouter (chat / embeddings / audio). */
+/** Form of the `usage` object returned by OpenRouter (chat / embeddings / audio). */
 export interface OpenRouterUsage {
   prompt_tokens?: number | null;
   completion_tokens?: number | null;
   total_tokens?: number | null;
-  /** Coût USD — présent seulement si la requête a passé `usage: { include: true }`. */
+  /** USD cost — present only if the request passed `usage: { include: true }`. */
   cost?: number | null;
-  /** Endpoints audio (whisper) exposent parfois les tokens sous ces noms. */
+  /** Audio endpoints (whisper) sometimes expose tokens under these names. */
   input_tokens?: number | null;
   output_tokens?: number | null;
   /**
-   * Détail du prompt caching (MIN-242). `cached_tokens` = ce que le fournisseur a
-   * RELU dans son cache (facturé une fraction du prix d'entrée) ; `cache_write_tokens`
-   * = ce qu'il vient d'y ÉCRIRE (facturé une prime, 1,25× chez Anthropic). Les deux
-   * sont là sur le chemin streamé comme sur le chemin bloquant, et absents chez les
-   * fournisseurs sans caching — d'où l'optionnel jusqu'en bas.
-   */
+ * Details of the caching prompt (MIN-242). `cached_tokens` = what the provider has
+ * READ back into its cache (charged a fraction of the entry price); `cache_write_tokens`
+ * = what was just WRITTEN there (charged a premium, 1.25× at Anthropic). The two
+ * are there on the streaming path as well as on the blocking path, and absent from the
+ * providers without caching — hence the optional one at the bottom.
+ */
   prompt_tokens_details?: {
     cached_tokens?: number | null;
     cache_write_tokens?: number | null;
   } | null;
 }
 
-/** Champs normalisés extraits d'un `usage` OpenRouter (tolérant aux absents). */
+/** Normalized fields extracted from an OpenRouter `usage` (absentee tolerant). */
 export interface NormalizedUsage {
   promptTokens: number | null;
   completionTokens: number | null;
   totalTokens: number | null;
   cost: number | null;
   /**
-   * Tokens de prompt RELUS au cache du fournisseur, et tokens qu'il vient d'y
-   * écrire (MIN-242). `null` — jamais 0 — quand le fournisseur n'en dit rien :
-   * un zéro se lirait « le cache n'a pas mordu », alors qu'il n'y a pas de cache
-   * du tout. C'est cette distinction qui rend le taux de hit lisible au ledger
-   * sans repasser par l'API `generation` d'OpenRouter.
-   */
+ * Prompt tokens RELEASED to the provider's cache, and tokens it just wrote to y
+ * (MIN-242). `null` — never 0 — when the provider says nothing:
+ * a zero would read "cache did not bite", when there is no cache
+ * at all. It is this distinction that makes the hit rate readable by the ledger
+ * without going through OpenRouter's `generation` API.
+ */
   cachedTokens: number | null;
   cacheWriteTokens: number | null;
 }
 
-/** À passer à chaque appel IA pour obtenir le coût inline dans la réponse. */
+/** To pass on each AI call to get the cost inline in the response. */
 export const OPENROUTER_USAGE_INCLUDE = { include: true } as const;
 
 /**
- * Normalise l'objet `usage` d'OpenRouter vers nos champs. Couvre les deux formes
- * de nommage des tokens (chat: prompt/completion, audio: input/output) et calcule
- * `totalTokens` par somme si l'API ne le fournit pas.
+ * Normalizes OpenRouter's `usage` object to our fields. Covers both forms
+ * of token naming (chat: prompt/completion, audio: input/output) and calculates
+ * `totalTokens` by sum if the API does not provide it.
  */
 export function parseOpenRouterUsage(
   usage: OpenRouterUsage | null | undefined
@@ -153,36 +152,31 @@ export function parseOpenRouterUsage(
 }
 
 /**
- * À QUI la ligne est imputée (MIN-131) — dit par l'appelant, jamais deviné.
+ * TO WHOM the line is charged (MIN-131) — said by the caller, never guessed.
  *
- * La règle produit : chacun paye son propre usage, pas celui des autres membres
- * de son projet. Le repli sur le owner existe toujours, mais il se DEMANDE : un
- * chemin d'appel qui oublie l'utilisateur ne peut plus faire payer le owner en
- * silence, parce que `billTo` est obligatoire et que ces trois formes sont les
- * seules qui existent.
+ * The rule produces: everyone pays for their own usage, not that of other members
+ * of their project. The fallback on the owner still exists, but it is ASKED: a
+ * call path which forgets the user can no longer charge the owner in
+ * silence, because `billTo` is obligatory and these three forms are the only ones that exist.
  */
 export type AiUsageBillTo =
-  /** Le déclencheur identifié paye. Le cas normal de toute action d'un user. */
+  /** The identified trigger pays. The normal case of any user action. */
   | { userId: string }
   /**
-   * Aucun déclencheur nommable (visiteur anonyme du board public, passe de fond
-   * du cron) : le owner du projet paye, parce que c'est SON budget qui a
-   * autorisé l'appel (`ownerHasUsageBudget`). À réserver à ces cas-là.
-   */
+ * No nameable trigger (anonymous visitor to the public board, background pass
+ * from the cron): the project owner pays, because it is HIS budget which authorized the call (`ownerHasUsageBudget`). To be reserved for these cases.
+ */
   | { projectOwner: string }
   /**
-   * La PLATEFORME paye, délibérément : un appel qu'on offre à quelqu'un qui n'a
-   * pas de compte (la démo de dictée de la landing, MIN-150). Comme
-   * `unattributed`, la ligne n'entre dans le budget de personne — mais elle se
-   * distingue en base, et ne se journalise PAS en erreur : c'est une dépense
-   * décidée, pas une fuite. Le motif dit laquelle.
-   */
+ * The PLATFORM pays, deliberately: a call that is offered to someone who does not have
+ * an account (the landing dictation demo, MIN-150). Like
+ * `unattributed`, the line does not enter anyone's budget — but it is distinguished in base, and does NOT log as an error: it is a decided expenditure, not a leak. The pattern says which one.
+ */
   | { platform: string }
   /**
-   * Personne ne paye — la ligne existe pour la compta, mais n'entre dans le
-   * compteur d'aucun budget. Le motif est journalisé en erreur : c'est une
-   * anomalie qu'on assume bruyamment, jamais un défaut tranquille.
-   */
+ * No one pays — the line exists for accounting, but does not enter the
+ * counter for any budget. The reason is logged as an error: it is an anomaly that we loudly assume, never a quiet fault.
+ */
   | { unattributed: string };
 
-/** Une ligne d'usage à enregistrer. `runId`, `feature` et `billTo` sont requis. */
+/** A usage line to save. `runId`, `feature` and `billTo` are required. */

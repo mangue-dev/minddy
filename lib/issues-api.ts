@@ -28,9 +28,9 @@ async function parseJson<T>(response: Response): Promise<T> {
   return data as T;
 }
 
-/** `signal` : celui que react-query fournit à sa `queryFn` — un refetch annulé
-    lâche vraiment sa requête au lieu de la laisser courir et répondre en retard
-    (MIN-156). */
+/** `signal`: the one that react-query provides to its `queryFn` — a canceled refetch
+ actually drops its query instead of letting it run and respond late
+ (MIN-156). */
 export async function fetchIssuesApi(
   projectId: string,
   signal?: AbortSignal
@@ -41,15 +41,15 @@ export async function fetchIssuesApi(
 }
 
 /**
- * La `queryFn` de `["issues", projectId]`, partagée par TOUS ses observateurs :
- * le board du projet, les cartes du tableau de bord, l'entête et le
- * préchargement au survol. Une seule fonction pour une seule clé — sans quoi le
- * dernier observateur monté imposerait sa lecture, et une lecture qui saute
- * l'overlay ramène le bug (MIN-156).
+ * The `queryFn` of `["issues", projectId]`, shared by ALL its observers:
+ * the project board, the dashboard cards, the header and the
+ * preloading on hover. A single function for a single key — otherwise the
+ * last mounted observer would impose its reading, and a reading that skips
+ * the overlay brings back the bug (MIN-156).
  *
- * Elle retient l'instant du DÉPART de la requête et fait traverser la réponse au
- * registre d'écritures en attente : une réponse partie avant une écriture ne
- * peut plus la défaire, quel que soit son ordre d'arrivée.
+ * It retains the START instant of the request and sends the response to the
+ * register of pending writes: a response left before a write ne
+ * can no longer undo it, whatever its order of arrival.
  */
 export function issuesQueryFn(projectId: string) {
   return async ({ signal }: { signal?: AbortSignal } = {}): Promise<Issue[]> => {
@@ -62,8 +62,8 @@ export function issuesQueryFn(projectId: string) {
   };
 }
 
-/** Les récurrences actives d'un projet (MIN-136) — un ticket vivant par série,
-    lu par l'onglet « Récurrences » de ses paramètres. */
+/** Active recurrences of a project (MIN-136) — one live ticket per series,
+ read by the “Recurrences” tab of its settings. */
 export async function fetchRecurrencesApi(
   projectId: string
 ): Promise<RecurringIssue[]> {
@@ -73,8 +73,8 @@ export async function fetchRecurrencesApi(
 }
 
 /** One issue, in full. Used where only a light row is at hand — the command
-    palette's cross-project index (MIN-91) carries no description or plan, which
-    « copier le prompt » needs, so it fetches the ticket on demand. */
+ palette's cross-project index (MIN-91) carries no description or plan, which
+ “copy prompt” needs, so it fetches the ticket on demand. */
 export async function fetchIssueApi(issueId: string): Promise<Issue> {
   return parseJson<Issue>(await fetch(`/api/issues/${issueId}`));
 }
@@ -90,34 +90,34 @@ export async function createIssueApi(
       body: JSON.stringify(input),
     })
   );
-  // Toutes les créations côté client passent par ici (tableau de projet, board
-  // agrégé, dialog global, palette, annulation) : c'est donc le seul endroit à
-  // instrumenter pour mémoriser le dernier projet où un ticket a été créé, qui
-  // sert de projet par défaut au dialog quand la route n'en désigne aucun. Après
-  // le succès seulement — une création refusée ne déplace pas le défaut.
+  // All client-side creations go through here (project board, board
+  // aggregate, global dialog, palette, cancellation): this is therefore the only place to
+  // instrument to memorize the last project where a ticket was created, which
+  // serves as the default project for the dialog when the route does not designate any. After
+  // success only — a rejected creation does not move the defect.
   rememberCreateProject(projectId);
   return issue;
 }
 
-/** Contexte analytics facultatif — la surface d'où part l'édition (MIN-78). */
+/** Optional analytics context — the surface from which the edition starts (MIN-78). */
 export interface IssueMutationMeta {
   /** « side_panel », « kanban », « palette », « context_menu », « bulk »… */
   surface?: string;
-  /** État précédent, quand l'appelant le connaît (mise à jour optimiste). */
+  /** Previous state, when the caller knows it (optimistic update). */
   previousStatus?: string | null;
 }
 
 /**
- * Traduit un patch en événements analytics (MIN-78).
+ * Translates a patch into analytics events (MIN-78).
  *
- * C'est ici, et pas dans chaque composant, parce que TOUTES les éditions de
- * ticket convergent vers `updateIssueApi` : panneau latéral, menu contextuel,
- * glisser-déposer du kanban, palette, actions groupées, annulation. Instrumenter
- * le goulot d'étranglement plutôt que la douzaine d'appelants garantit qu'aucun
- * chemin n'est oublié — et qu'un futur appelant est couvert d'office.
+ * It's here, not in every component, because ALL editions of
+ * ticket converge on `updateIssueApi`: side panel, context menu,
+ * drag and drop kanban, pallet, bulk actions, cancellation. Instrumenting
+ * the bottleneck rather than the dozen callers guarantees that no
+ * path is forgotten — and that a future caller is automatically covered.
  *
- * Seules des MÉTADONNÉES partent : jamais le titre ni la description, seulement
- * leur modification et la tranche de longueur.
+ * Only METADATA leaves: never the title or description, only
+ * their modification and the length range.
  */
 function trackIssueUpdate(updates: IssueUpdateInput, meta?: IssueMutationMeta): void {
   const surface = meta?.surface ?? "unknown";
@@ -146,10 +146,10 @@ function trackIssueUpdate(updates: IssueUpdateInput, meta?: IssueMutationMeta): 
     trackEvent("issue_due_date_changed", { cleared: patch.due_date === null });
   }
   if (patch.cycle_id !== undefined && patch.status !== "triage") {
-    // Le cycle est un champ du ticket, mais l'action utilisateur est « ajouter
-    // à / retirer de mon cycle » — c'est sous ce nom qu'on veut la lire. D'où
-    // l'exception : un passage en triage sort le ticket du cycle (MIN-32), mais
-    // c'est une conséquence, pas le geste — le compter fausserait la mesure.
+    // The cycle is a ticket field, but the user action is "add
+    // to / remove from my cycle” — that’s the name we want to read it under. Hence
+    // the exception: a trip to triage removes the ticket from the cycle (MIN-32), but
+    // it's a consequence, not the gesture — counting it would distort the measurement.
     trackEvent(patch.cycle_id === null ? "cycle_issue_removed" : "cycle_issue_added", {
       surface,
     });
@@ -193,8 +193,8 @@ export async function updateIssueApi(
       body: JSON.stringify(updates),
     })
   );
-  // Tracké seulement après un aller-retour réussi — une édition rejetée par le
-  // serveur (quota, permission) n'est pas une édition.
+  // Tracked only after a successful round trip — an edition rejected by the
+  // server (quota, permission) is not an edition.
   void issue.then(
     () => trackIssueUpdate(updates, meta),
     () => {}

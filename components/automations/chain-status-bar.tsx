@@ -10,16 +10,16 @@ import { issueChainQueryKey, useIssueChainQuery } from "@/lib/use-agent-runs";
 import type { MessageKey } from "@/lib/i18n-keys";
 
 /**
- * La barre d'état d'une chaîne d'automatisation sur un ticket (MIN-147) : où
- * elle en est, et les deux seuls gestes qu'un humain a sur elle — continuer,
- * arrêter. Pas de jauge de dépense : une chaîne n'a plus de plafond propre, elle
- * ne s'interrompt pas là-dessus (cf. l'en-tête de lib/automations). Ce qu'elle a
- * coûté se dit à la fin, dans son commentaire de rapport.
+ * The status bar of an automation chain on a ticket (MIN-147): where
+ * she is, and the only two gestures a human has on her — continue,
+ * Stop. No spending gauge: a channel no longer has its own ceiling, it
+ * don't interrupt there (see the lib/automations header). What she has
+ * cost is said at the end, in his report commentary.
  *
- * Elle bouge SEULE : la query qui la nourrit ne poll pas, c'est le trigger
- * realtime sur `agent_chains` qui l'invalide (cf. lib/realtime-provider.tsx).
- * C'est la seule surface du produit où la péremption est certaine — une chaîne
- * avance pendant plusieurs minutes sans que personne ne touche à rien.
+ * It moves ALONE: the query that feeds it does not pollute, it is the trigger
+ * realtime on `agent_chains` which invalidates it (see lib/realtime-provider.tsx).
+ * This is the only surface of the product where expiration is certain — a chain
+ * moves forward for several minutes without anyone touching anything.
  */
 
 const STATUS_KEYS = {
@@ -36,19 +36,19 @@ export function ChainStatusBar({ issueId }: { issueId: string }) {
   const queryClient = useQueryClient();
   const { chain } = useIssueChainQuery(issueId);
   const [busy, setBusy] = useState<"resume" | "start" | "stop" | null>(null);
-  // Le compte à rebours d'un sursis se rafraîchit tout seul : sans horloge, il
-  // afficherait « dans 5 min » jusqu'au démarrage, et donnerait l'impression que
-  // rien ne bouge. La minute est la bonne granularité (le balayeur passe aux 2).
+  // The countdown to a reprieve refreshes itself: without a clock, it
+  // would display "in 5 min" until booting, and would give the impression that
+  // nothing moves. The minute is the right granularity (the sweeper switches to 2).
   const now = useNow({ updateInterval: 30_000 });
 
-  // Rien à dire quand aucune chaîne n'a jamais tourné, ni une fois qu'elle est
-  // finie : un bandeau « terminé » qui ne part plus est du bruit permanent.
+  // Nothing to say when no channel has ever been turned, nor once it is
+  // finished: a “finished” headband that no longer goes away is permanent noise.
   //
-  // Ni quand elle s'est arrêtée SANS avoir joué la moindre étape : c'est le
-  // sursis annulé — parce qu'on a copié le prompt, déplacé le ticket, lancé
-  // Numo à la main. Rien n'a tourné, rien n'a été dépensé, et laisser
-  // « Automatisation arrêtée » à demeure sur un ticket qu'on vient de prendre en
-  // main annoncerait un incident là où il n'y a eu qu'un geste ordinaire.
+  // Nor when she stopped WITHOUT having played the slightest step: it is the
+  // reprieve canceled — because we copied the prompt, moved the ticket, launched
+  // Number in hand. Nothing turned out, nothing was spent, and let
+  // “Automation stopped” permanently on a ticket that we have just taken into account
+  // hand would announce an incident where there was only an ordinary gesture.
   if (!chain || chain.status === "completed") return null;
   if (chain.status === "stopped" && chain.step === 0) return null;
 
@@ -77,8 +77,8 @@ export function ChainStatusBar({ issueId }: { issueId: string }) {
         ? Workflow
         : OctagonX;
 
-  // Minutes restantes du sursis, jamais moins d'une : « dans 0 min » se lit
-  // comme un bug alors que le balayeur passe simplement dans les deux minutes.
+  // Minutes remaining on reprieve, never less than one: “in 0 min” reads
+  // like a bug while the sweeper simply passes within two minutes.
   const minutesLeft =
     pending && chain.notBefore
       ? Math.max(1, Math.ceil((Date.parse(chain.notBefore) - now.getTime()) / 60_000))
@@ -125,8 +125,8 @@ export function ChainStatusBar({ issueId }: { issueId: string }) {
               onClick={() => void act("stop")}
             >
               {busy === "stop" && <Spinner />}
-              {/* Une chaîne qui n'a pas démarré s'ANNULE ; une qui tourne
-                  s'ARRÊTE. Le même bouton, deux gestes différents. */}
+              {/* A channel that has not started CANCELS; one that turns
+ STOPS. The same button, two different gestures. */}
               {pending ? t("cancel") : t("stop")}
             </Button>
           </div>

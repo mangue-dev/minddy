@@ -66,14 +66,14 @@ export interface AccountSettings {
   smart_fill: boolean;
   /** Cycles (MIN-32) — Account → Cycles, one key per knob in user_metadata. */
   cycles: CyclePrefs;
-  /** Préréglage d'automatisation (MIN-147) : la boucle Numo appliquée à TOUS les
-   *  projets dont ce compte est propriétaire. `null` = aucun. */
+  /** Automation preset (MIN-147): Numo loop applied to ALL
+ * projects owned by this account. `null` = none. */
   automation_preset: AutomationPresetId | null;
-  /** Inbox (MIN-82) — une bascule par famille de déclencheur. */
+  /** Inbox (MIN-82) — one toggle per trigger family. */
   notifications: NotificationPrefs;
-  /** Préférences de l'agent de code (MIN-46 / MIN-122). Seul réglage de compte
-   *  qui ne vit PAS dans `user_metadata` mais dans `user_agent_preferences` —
-   *  d'où sa lecture à part. `null` = suit le défaut de l'app. */
+  /** Code Agent Preferences (MIN-46 / MIN-122). Only account setting
+ * which does NOT live in `user_metadata` but in `user_agent_preferences` —
+ * hence its separate reading. `null` = follows app default. */
   agent: AgentPrefs;
 }
 
@@ -82,8 +82,8 @@ export interface AgentPrefs {
   default_reasoning_level: ReasoningLevel | null;
 }
 
-/** Même garde-fou que le PUT de /api/account/agent-preferences : `provider/model`
-    (OpenRouter) comme les ids natifs sans slash. Pas d'allowlist. */
+/** Same safeguard as the PUT of /api/account/agent-preferences: `provider/model`
+ (OpenRouter) like native ids without slashes. No allowlist. */
 const MODEL_ID_RE = /^[\w./:@-]{1,200}$/;
 
 function metaString(meta: Record<string, unknown>, key: string): string {
@@ -92,14 +92,14 @@ function metaString(meta: Record<string, unknown>, key: string): string {
 }
 
 /**
- * Les préférences agent du compte, lues dans `user_agent_preferences`.
+ * The agent preferences of the account, read in `user_agent_preferences`.
  *
- * ABSENCE DE LIGNE ET PANNE DE LECTURE NE SONT PAS LA MÊME CHOSE. Un compte qui
- * n'a jamais touché à ces réglages n'a pas de ligne — c'est le cas courant, et
- * il vaut « aucune préférence ». Une erreur de base, elle, remonte : la rendre
- * comme « aucune préférence » ferait dire à Numo « vous n'avez pas de modèle par
- * défaut » à quelqu'un qui en a un, et fabriquer un état valide mais faux est
- * pire que d'échouer.
+ * NO LINE AND READ FAILURE ARE NOT THE SAME THING. An account that
+ * has never touched these settings has no line — this is the common case, and
+ * it is worth "no preference". A basic error goes back: making it
+ * like "no preference" would make Numo say "you don't have a model by
+ * default" to someone who does, and making a valid but false state is
+ * worse than failing.
  */
 async function readAgentPrefs(
   userId: string
@@ -246,8 +246,8 @@ export async function updateAccountSettings({
     next[SMART_FILL_META_KEY] = input[SMART_FILL_META_KEY];
   }
 
-  // Préréglage d'automatisation (MIN-147). `null` l'efface — c'est la façon de
-  // dire « plus aucune boucle », sans avoir à éteindre chaque projet.
+  // Automation preset (MIN-147). `null` erases it — that's the way to
+  // say “no more loops”, without having to turn off each project.
   if ("automation_preset" in input) {
     if (input.automation_preset === null) {
       delete next[AUTOMATION_PRESET_META_KEY];
@@ -258,7 +258,7 @@ export async function updateAccountSettings({
     }
   }
 
-  // Inbox (MIN-82) — une bascule par famille, clés d'entrée = clés de meta.
+  // Inbox (MIN-82) — one toggle per family, input keys = meta keys.
   for (const category of NOTIFICATION_CATEGORIES) {
     const key = NOTIFICATION_CATEGORY_META_KEYS[category];
     if (key in input) {
@@ -309,11 +309,11 @@ export async function updateAccountSettings({
     next[CYCLE_UPCOMING_COUNT_META_KEY] = n;
   }
 
-  // Préférences agent (MIN-46 / MIN-122) : seul bloc qui ne vit pas dans
-  // `user_metadata`. Validé et écrit exactement comme le PUT de
+  // Agent preferences (MIN-46 / MIN-122): only block that does not live in
+  // `user_metadata`. Validated and written exactly like the PUT of
   // /api/account/agent-preferences, plafond de plan compris — refuser ici ce
-  // qui serait refusé au lancement évite d'enregistrer une préférence qui
-  // bloquerait ensuite tous les runs du compte.
+  // which would be refused at launch avoids saving a preference which
+  // would then block all runs on the account.
   const agentPatch: Record<string, unknown> = {};
   if ("default_model" in input) {
     const model = input.default_model ?? null;
@@ -330,9 +330,9 @@ export async function updateAccountSettings({
         });
       } catch (err) {
         if (isPlanLimitError(err)) {
-          // Les paramètres portent le modèle, son multiplicateur et le plafond :
-          // les relayer permet à Numo de proposer autre chose, là où un
-          // « modèle refusé » sec obligerait l'utilisateur à deviner.
+          // The parameters carry the model, its multiplier and the ceiling:
+          // relaying them allows Numo to offer something else, where a
+          // "pattern refused" sec would force the user to guess.
           const p = err.params ?? {};
           return {
             ok: false,
@@ -363,8 +363,8 @@ export async function updateAccountSettings({
     "auto_assign_on_start",
     "prompt_copy_auto_start",
     SMART_FILL_META_KEY,
-    // Sans lui, un appel ne portant QUE le préréglage sortait ici en « rien à
-    // changer » — alors que le bloc qui l'écrit venait juste de le poser.
+    // Without it, a call carrying ONLY the preset came out here as “nothing to
+    // change” — even though the block that wrote it had just placed it.
     AUTOMATION_PRESET_META_KEY,
     ...NOTIFICATION_CATEGORIES.map((c) => NOTIFICATION_CATEGORY_META_KEYS[c]),
     CYCLES_ENABLED_META_KEY,
@@ -403,7 +403,7 @@ export async function updateAccountSettings({
     }
   }
 
-  // Un SEUL chemin pour construire l'état rendu, quel que soit ce qui a bougé —
-  // et il propage une panne de lecture au lieu d'inventer des valeurs.
+  // ONLY one path to construct the rendered state, regardless of what moved —
+  // and it propagates a read failure instead of inventing values.
   return getAccountSettings({ userId });
 }

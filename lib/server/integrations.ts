@@ -17,17 +17,17 @@ import {
 import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
 
 /**
- * Gestion des intégrations d'un projet (API Feedback). Écritures via le
- * service client — les routes appelantes DOIVENT avoir vérifié que l'acteur
- * est owner du projet. key_hash ne sort jamais d'ici.
+ * Management of project integrations (Feedback API). Writes via the
+ * customer service — calling routes MUST have verified that the actor
+ * is the owner of the project. key_hash never leaves here.
  */
 
 export const INTEGRATION_SUMMARY_SELECT =
   "id, name, kind, key_prefix, created_at, last_used_at, revoked_at, " +
   "webhook_url, webhook_events, webhook_scope, webhook_last_status, webhook_last_at";
 
-// Le kind et son garde vivent en pur avec le contrat d'API qu'ils décrivent
-// (lib/feedback/integration-contract.ts) ; réexportés ici pour les appelants.
+// The kind and its guard live in purity with the API contract they describe
+// (lib/feedback/integration-contract.ts); re-exported here for callers.
 export { isIntegrationKind, type IntegrationKind };
 
 export interface IntegrationSummary {
@@ -45,15 +45,15 @@ export interface IntegrationSummary {
   webhook_last_at: string | null;
 }
 
-/** Une ligne de la table, rendue à l'appelant : l'état de la dernière
-    livraison y remplace le code HTTP distant (MIN-341). */
+/** A row of the table, returned to the caller: the state of the last
+ delivery replaces the remote HTTP code (MIN-341). */
 function toSummary(row: unknown): IntegrationSummary {
   const raw = row as IntegrationSummary;
   return { ...raw, webhook_last_status: normalizeWebhookStatus(raw.webhook_last_status) };
 }
 
 const MAX_NAME_LENGTH = 60;
-// Borne classique des URL (elle est persistée puis rejouée à chaque livraison).
+// Classic URL terminal (it is persisted then replayed on each delivery).
 const MAX_WEBHOOK_URL_LENGTH = 2048;
 
 export async function listIntegrations(
@@ -118,12 +118,12 @@ export async function createIntegration({
 }
 
 /**
- * Qui règle le webhook. Une destination de webhook est un canal de sortie
- * permanent : tout ce qui passe par les événements d'issue du projet part à
- * l'adresse qui y est écrite. Une injection de prompt dans un ticket suffirait
- * à la faire écrire par l'agent — donc CHOISIR une adresse est un geste humain
- * (MIN-341). L'agent garde ce qui ne crée pas de canal : éteindre le webhook,
- * et régler les événements et la portée d'une destination déjà en place.
+ * Which sets the webhook. A webhook destination is a permanent
+ * output channel: everything that passes through the project's exit events goes to
+ * the address written there. A prompt injection in a ticket would be enough
+ * to make the agent write it — so CHOOSING an address is a human gesture
+ * (MIN-341). The agent keeps what doesn't create a channel: turn off the webhook,
+ * and set the events and scope of a destination already in place.
  */
 export type WebhookActor = "human" | "agent";
 
@@ -151,7 +151,7 @@ export async function updateIntegrationWebhook({
         | "databaseError";
     }
 > {
-  // webhook_url null = webhook désactivé (la config events/scope est conservée).
+  // webhook_url null = webhook disabled (the events/scope config is preserved).
   let url: string | null = null;
   if (input.webhook_url !== null && input.webhook_url !== undefined) {
     if (typeof input.webhook_url !== "string") {
@@ -161,9 +161,9 @@ export async function updateIntegrationWebhook({
     if (url.length > MAX_WEBHOOK_URL_LENGTH) {
       return { ok: false, status: 400, errorKey: "webhookInvalidUrl" };
     }
-    // Même garde que la livraison : une URL qu'on refuserait d'appeler n'a
-    // aucune raison d'être rangée. Le contrôle porte sur l'adresse résolue —
-    // `127.0.0.1`, le lien-local du service de métadonnées, le réseau interne.
+    // Same guard as delivery: a URL that we refuse to call has no
+    // no reason to be tidy. The check is on the resolved address —
+    // `127.0.0.1`, the link-local of the metadata service, the internal network.
     try {
       await assertPublicHttpUrl(url);
     } catch {
@@ -171,7 +171,7 @@ export async function updateIntegrationWebhook({
     }
   }
 
-  // Plus long que la liste complète des événements = forcément des doublons.
+  // Longer than the complete list of events = necessarily duplicates.
   if (
     !Array.isArray(input.webhook_events) ||
     input.webhook_events.length > WEBHOOK_EVENTS.length ||
@@ -185,10 +185,10 @@ export async function updateIntegrationWebhook({
 
   const service = getServiceClient();
 
-  // Un webhook ne porte que des événements d'ISSUE : sur une clé feedback, il
-  // n'aurait rien à livrer. On refuse de l'allumer plutôt que de ranger une
-  // configuration qui ne partira jamais — l'éteindre, en revanche, reste
-  // toujours possible (une clé feedback réglée avant cette règle doit pouvoir
+  // A webhook only carries ISSUE events: on a feedback key, it
+  // would have nothing to deliver. We refuse to light it rather than put away a
+  // configuration that will never go away — turning it off, however, remains
+  // always possible (a feedback key set before this rule must be able to
   // se nettoyer).
   if (url) {
     const { data: existing, error: readError } = await service
@@ -209,7 +209,7 @@ export async function updateIntegrationWebhook({
     if (existing.kind !== "issues") {
       return { ok: false, status: 400, errorKey: "webhookIssuesOnly" };
     }
-    // Poser une destination, ou la déplacer : geste humain uniquement.
+    // Set a destination, or move it: human gesture only.
     if (actor === "agent" && existing.webhook_url !== url) {
       return { ok: false, status: 403, errorKey: "webhookHumanOnly" };
     }

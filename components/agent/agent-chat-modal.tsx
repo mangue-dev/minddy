@@ -22,18 +22,18 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Modal conversationnelle de l'agent de code (MIN-46). Réutilise le shell du chat
- * Numo (Sheet flottant grand format + morph compact/étendu) et héberge le cœur
- * partagé `AgentConversation` (identique à la page Agents). Les boutons
- * agrandir/replier/fermer sont fournis en `headerActions` ; l'en-tête gauche (modèle
- * en live / issue ciblée en compose) et tout le comportement viennent du cœur.
+ * Modal conversational agent code (MIN-46). Reuse the cat shell
+ * Numo (Large format floating sheet + compact/extended morph) and hosts the core
+ * shared `AgentConversation` (same as Agents page). The buttons
+ * expand/collapse/close are provided in `headerActions`; the left header (model
+ * live / targeted issue in composition) and all behavior comes from the heart.
  *
- * `initialRunId` ouvre une run précise : c'est le rôle qui reste à cette modal,
- * la REPRISE à chaud d'une conversation existante depuis le panneau d'issue
- * (« Ouvrir la conversation » de `AgentRunPanel`). Le LANCEMENT, lui, ne passe plus
- * par une modal : il redirige vers la page Agents (`/agents?compose=…`). Sans
- * `initialRunId` la modal retombe sur la dernière session de l'issue (ou compose),
- * mais plus aucun appelant ne l'utilise ainsi.
+ * `initialRunId` opens a specific run: this is the role that remains for this modal,
+ * hot RESUMPTION of an existing conversation from the exit panel
+ * (“Open conversation” by `AgentRunPanel`). The LAUNCH no longer happens
+ * by a modal: it redirects to the Agents page (`/agents?compose=…`). Without
+ * `initialRunId` the modal falls on the last session of the issue (or compose),
+ * but no callers use it that way anymore.
  */
 export function AgentChatModal({
   open,
@@ -47,19 +47,19 @@ export function AgentChatModal({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   issueId: string;
-  /** Identifiant lisible (MIN-42) — affiché dans l'en-tête en phase compose. */
+  /** Readable identifier (MIN-42) — displayed in the header in phase compose. */
   issueIdentifier: string;
   projectId?: string | null;
-  /** Ouvre CETTE run (sinon : session au travail, à défaut la dernière session). */
+  /** Open THIS run (otherwise: session at work, otherwise the last session). */
   initialRunId?: string | null;
-  /** Force la phase compose (« Lancer un NOUVEL agent »). */
+  /** Forces the compose phase (“Launch a NEW agent”). */
   compose?: boolean;
 }) {
   const t = useTranslations("Agent");
   const tc = useTranslations("Common");
   const ta = useTranslations("Assistant");
 
-  // Grand format par défaut (vrai modal centré) ; repliable en widget de coin.
+  // Large format by default (true modal centered); collapsible into corner widget.
   const [displayMode, setDisplayMode] = useState<PanelDisplayMode>("expanded");
   const isExpanded = displayMode === "expanded";
   const toggleDisplayMode = () =>

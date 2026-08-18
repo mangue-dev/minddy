@@ -1,75 +1,73 @@
 "use client";
 
-// Ce qu'un bloc « sous-page » a besoin de savoir du monde extérieur, et rien de
-// plus : comment lire le titre et l'icône d'une page, où mène son lien, comment
-// en créer une, et comment en ressortir une de la corbeille.
+// What a “subpage” block needs to know about the outside world, and nothing
+// more: how to read the title and icon of a page, where its link leads, how
+// create one, and how to get one out of the trash.
 //
-// Le nœud ne stocke que le `pageId` (cf. blocks/subpage.ts) — le titre affiché
-// est TOUJOURS résolu à la lecture, sinon renommer une page laisserait son
-// ancien nom dans le corps de tous ses parents. Le cache réel est celui du
-// projet (lib/use-pages-query.ts), branché par components/pages/page-view.tsx :
-// la sidebar, le fil d'Ariane et ce bloc lisent donc la même chose.
+// The node only stores the `pageId` (see blocks/subpage.ts) — the displayed title
+// is ALWAYS resolved on reading, otherwise renaming a page would leave its
+// old name in the body of all its parents. The real cache is that of
+// project (lib/use-pages-query.ts), connected by components/pages/page-view.tsx:
+// the sidebar, breadcrumbs and this block therefore read the same thing.
 
 import { createContext, useContext, type ReactNode } from "react";
 
 export interface PageSummary {
   id: string;
   title: string;
-  /** L'emoji de la page, ou `null` — l'icône par défaut est alors posée par la vue. */
+  /** The page emoji, or `null` — the default icon is then set by the view. */
   icon: string | null;
 }
 
 export interface PagesLookup {
-  /** `undefined` = la page n'est pas dans le cache. Ce que ça VEUT DIRE dépend
-      de `ready` : tant que le cache charge, c'est une attente ; une fois chargé,
-      c'est une page absente — corbeillée, purgée, ou d'un autre projet. */
+  /** `undefined` = the page is not in the cache. What it MEANS depends on
+ of `ready`: as long as the cache is loading, it's a wait; Once loaded,
+ is a missing page — trashed, purged, or from another project. */
   get: (pageId: string) => PageSummary | undefined;
   /**
-   * Le cache du projet est-il chargé ?
-   *
-   * Sans ce booléen, la vue du bloc n'a aucun moyen de distinguer « je ne sais
-   * pas encore » de « cette page n'existe plus », et elle annoncerait donc
-   * l'un des deux à tort — soit un clignotement « page supprimée » sur chaque
-   * chargement, soit un bloc éternellement vide sur une page vraiment partie.
-   */
+ * Is the project cache loaded?
+ *
+ * Without this boolean, the block view has no way of distinguishing "I don't know
+ * yet" from "this page no longer exists", and it would therefore announce
+ * one of the two incorrectly — i.e. a blink " page deleted" on each
+ * loading, i.e. an eternally empty block on a truly gone page.
+ */
   ready?: boolean;
-  /** Où mène le bloc. Absent : le bloc se rend, mais ne se clique pas. */
+  /** Where the block leads. Absent: the block surrenders, but does not click. */
   href?: (pageId: string) => string;
   /**
-   * Ouvrir la page, dans l'onglet courant.
-   *
-   * Séparé de `href` parce que les deux répondent à des questions différentes :
-   * `href` donne l'adresse — d'où le ⌘-clic, le clic du milieu et le menu
-   * contextuel du navigateur —, `navigate` fait la navigation d'APPLICATION du
-   * clic ordinaire. Sans lui, l'ancre rechargerait la page entière.
-   */
+ * Open the page, in the current tab.
+ *
+ * Separated from `href` because the two answer different questions:
+ * `href` gives the address — hence the ⌘-click, middle click and menu
+ * browser context —, `navigate` makes APP navigation from the
+ * ordinary click. Without it, the anchor would reload the entire page.
+ */
   navigate?: (pageId: string) => void;
-  /** Créer une page enfant et rendre son id. Absent : le menu « / » pose un
-      bloc vide, que l'on peut supprimer. */
+  /** Create a child page and render its id. Absent: the “/” menu places an empty block, which can be deleted. */
   create?: () => Promise<string | null>;
-  /** La page créée dont le bloc vient d'être posé : enregistrer le parent, puis
-      l'ouvrir. C'est l'appelant qui tient l'autosave, donc lui seul peut le
-      faire dans cet ordre. */
+  /** The created page whose block has just been placed: save the parent, then
+ open it. It is the caller who holds the autosave, so only he can do it in this order. */
   opened?: (pageId: string) => void;
   /**
-   * Copier une page ET sa descendance, et rendre l'id de la copie (`null` si
-   * elle a échoué). C'est ce que « dupliquer » fait du menu ⋯ sur un bloc
-   * sous-page : copier le BLOC donnerait deux liens vers le même document.
-   */
+ * Copy a page AND its descendant, and return the id of the copy (`null` if
+ * it failed). This is what "duplicate" does from the menu ⋯ on a block
+ * subpage: copying the BLOCK would give two links to the same document.
+ */
   duplicate?: (pageId: string) => Promise<string | null>;
-  /** Ressortir de la corbeille la page d'un bloc orphelin. Rend `true` si elle
-      est revenue. */
+  /** Remove the page of an orphan block from the trash. Returns `true` if it
+ returned. */
   restore?: (pageId: string) => Promise<boolean>;
   /**
-   * Ce que dit un bloc dont la page est absente du lookup. Par défaut « Page
-   * déplacée vers la corbeille », qui est la seule raison possible DANS
-   * l'application.
-   *
-   * Sur une page publiée (MIN-283), il y en a une seconde, et elle n'a rien à
-   * voir : la sous-page existe très bien, elle n'est simplement pas publiée.
-   * Lui faire dire « corbeille » serait faux ; lui faire dire son titre serait
-   * la fuite qu'on refuse. D'où ce libellé, posé par la surface.
-   */
+ * What a block says whose page is missing from the lookup. By default "Page
+ * moved to Trash", which is the only possible reason IN
+ * the application.
+ *
+ * On a published page (MIN-283), there is a second one, and it has nothing to do with
+ * see: the subpage exists very well, it is simply not published.
+ * Making it say “trash” would be wrong; making him say his title would be
+ * the escape that we refuse. Hence this wording, posed by the surface.
+ */
   missingLabel?: string;
 }
 

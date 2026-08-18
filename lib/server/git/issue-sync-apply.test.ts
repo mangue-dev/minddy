@@ -2,25 +2,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RemoteIssue } from "@/lib/server/git/issue-sync-core";
 
 /**
- * `applyRemoteIssue` — ce qui se passe vraiment quand une issue distante arrive,
- * par webhook ou par backfill.
+ * `applyRemoteIssue` — what really happens when a remote issue arrives,
+ * by webhook or by backfill.
  *
- * La partie PURE de la synchro (lecture des labels, traduction des états, forme
- * neutre des payloads) a ses propres tests. Ce fichier-ci tient la partie qui
- * ÉCRIT, et il n'existe que pour UNE règle, celle qui gouverne tout le bloc de
- * réconciliation :
+ * The PURE part of the sync (reading labels, translating states, forming
+ * neutral payloads) has its own tests. This file holds the part which
+ * WRITTEN, and it only exists for ONE rule, the one which governs the entire block of
+ * reconciliation:
  *
- *   **la forge n'écrase un champ que si elle a quelque chose à en dire.**
+ * **the forge only overwrites a field if it has something to say about it.**
  *
- * Elle a toujours un titre, un corps et un état : ces trois-là suivent sans
- * condition. Elle n'a pas forcément de priorité, de taille, d'assigné ni de
- * labels — et prendre son SILENCE pour une valeur serait ravageur. Sur un dépôt
- * qui n'assigne jamais ses issues, le moindre webhook `labeled` désassignerait
- * le ticket que quelqu'un vient de prendre dans minddy, sans que rien ne l'ait
- * demandé, et sans une ligne dans les logs pour le dire.
+ * It always has a title, a body and a state: these three follow without
+ * condition. It does not necessarily have a priority, size, assignment or
+ * labels — and taking its SILENCE for a value would be devastating. On a repository
+ * that never assigns its issues, the slightest webhook `labeled` would unassign
+ * the ticket that someone has just taken in minddy, without anything having asked for it, and without a line in the logs to say so.
  *
- * Les assertions portent donc autant sur ce que le patch NE contient PAS que sur
- * ce qu'il contient — c'est là que la régression se cacherait.
+ * So the assertions are as much about what the patch DOES NOT contain as they are about
+ * what it does contain — that's where the regression would be hiding.
  */
 
 interface Row extends Record<string, unknown> {}
@@ -28,13 +27,13 @@ interface Row extends Record<string, unknown> {}
 let issueRows: Row[] = [];
 let issueCategoryRows: Row[] = [];
 
-/** Ce que les cœurs d'écriture ont reçu — les sondes de tout ce fichier. */
+/** What the write cores received — the probes for this entire file. */
 let creates: Record<string, unknown>[] = [];
 let updates: Record<string, unknown>[] = [];
 let categorySets: Record<string, unknown>[] = [];
-/** Combien de fois l'index d'assignés a été construit (deux requêtes chacune). */
+/** How many times the assignee index was built (two queries each). */
 let indexBuilds = 0;
-/** `createIssueForProject` échoue-t-il, et sur quelle clé ? */
+/** Does `createIssueForProject` fail, and on which key? */
 let createError: string | null = null;
 
 function table(rows: () => Row[]) {
@@ -49,7 +48,7 @@ function table(rows: () => Row[]) {
     filters.push((row) => (row[column] ?? null) === value);
     return query;
   };
-  // L'horodatage de fin de backfill sur `project_git_links` — écrit, jamais lu.
+  // The end of backfill timestamp on `project_git_links` — written, never read.
   query.update = () => ({ eq: async () => ({ error: null }) });
   const matching = () => rows().filter((row) => filters.every((f) => f(row)));
   query.maybeSingle = async () => ({ data: matching()[0] ?? null, error: null });
@@ -92,11 +91,11 @@ vi.mock("@/lib/server/set-issue-categories", () => ({
   },
 }));
 
-// Les étiquettes du projet : un id stable par nom, pour que le test parle de
-// noms et pas d'uuid. La vraie fonction a ses propres tests (categories.test.ts)
-// — mais elle est reproduite ici SUR SON POINT SENSIBLE : l'index est bâti avec
-// `categoryKey`, donc il passe par la troncature. Un double qui indexerait sur
-// le nom entier rendrait ce fichier aveugle à ce que le vrai code fait.
+// Project labels: a stable id by name, so that the test speaks of
+// names and no uuid. The real function has its own tests (categories.test.ts)
+// — but it is reproduced here ON ITS SENSITIVE POINT: the index finger is built with
+// `categoryKey`, so it goes through truncation. A double that would index on
+// the whole name would make this file blind to what the real code does.
 const categoryKey = (name: string) => name.trim().slice(0, 200).toLowerCase();
 
 vi.mock("@/lib/server/categories", () => ({
@@ -121,11 +120,11 @@ vi.mock("@/lib/server/git/forge-members", () => ({
   },
 }));
 
-/** Les lots passés à l'import en masse — la sonde du backfill. */
+/** Batches passed to bulk import — the backfill probe. */
 let imports: Record<string, unknown>[] = [];
-/** Les issues ouvertes que la forge rend au backfill. */
+/** The open exits that the forge returns to the backfill. */
 let openIssues: Record<string, unknown>[] = [];
-/** Le projet a-t-il atteint son plafond de tickets ? */
+/** Has the project reached its ticket cap? */
 let overIssueLimit = false;
 
 class PlanLimitError extends Error {}
@@ -169,7 +168,7 @@ const TARGET = {
   createdBy: "user-owner",
 };
 
-/** Un événement d'issue distante, sous sa forme neutre. */
+/** A remote outcome event, in its neutral form. */
 function remote(overrides: Partial<RemoteIssue> = {}): RemoteIssue {
   return {
     provider: "github",
@@ -188,7 +187,7 @@ function remote(overrides: Partial<RemoteIssue> = {}): RemoteIssue {
   };
 }
 
-/** Un ticket DÉJÀ importé pour cette issue, tel que la base le porte. */
+/** A ticket ALREADY imported for this issue, as the base carries it. */
 function imported(overrides: Row = {}): Row {
   const row: Row = {
     id: "issue-1",
@@ -209,7 +208,7 @@ function imported(overrides: Row = {}): Row {
   return row;
 }
 
-/** Le patch passé à `updateIssueFields`, ou null si rien n'a été écrit. */
+/** The patch passed to `updateIssueFields`, or null if nothing was written. */
 const patch = () => (updates[0]?.input as Record<string, unknown>) ?? null;
 
 beforeEach(() => {
@@ -235,7 +234,7 @@ describe("applyRemoteIssue — l'issue n'a jamais été importée", () => {
     expect(input.status).toBe("triage");
     expect(input.title).toBe("Le bouton ne répond pas");
     expect(input.description).toBe("Sur Safari uniquement.");
-    // Le lien qu'on ouvre depuis le panneau, à côté des fichiers.
+    // The link that we open from the panel, next to the files.
     expect(input.resources).toEqual([
       {
         kind: "link",
@@ -244,7 +243,7 @@ describe("applyRemoteIssue — l'issue n'a jamais été importée", () => {
         icon_data_url: expect.stringContaining("data:image/webp;base64,"),
       },
     ]);
-    // L'identité distante voyage avec la ligne : c'est elle qui dédoublonne.
+    // The distant identity travels with the line: it is this which duplicates.
     expect(creates[0].remote).toEqual({
       provider: "github",
       repoId: "9001",
@@ -254,9 +253,9 @@ describe("applyRemoteIssue — l'issue n'a jamais été importée", () => {
   });
 
   it("atterrit en triage MÊME fermée — personne ne l'a encore vue", async () => {
-    // Cas réel : une issue au-delà du plafond de backfill, fermée avant qu'on
-    // la connaisse. La créer en `done` la ferait entrer dans le projet sans
-    // qu'elle ait jamais existé pour l'équipe.
+    // Real case: an exit beyond the backfill ceiling, closed before
+    // know her. Creating it in `done` would make it enter the project without
+    // that it ever existed for the team.
     await applyRemoteIssue(TARGET, remote({ action: "closed", state: "closed" }));
 
     expect((creates[0].input as Record<string, unknown>).status).toBe("triage");
@@ -271,8 +270,8 @@ describe("applyRemoteIssue — l'issue n'a jamais été importée", () => {
     const input = creates[0].input as Record<string, unknown>;
     expect(input.priority).toBe("high");
     expect(input.effort).toBe("m");
-    // « P1 » et « size/M » ont été consommés : une colonne « P1 » à côté d'une
-    // colonne « P2 » n'apprend rien qu'un tri par priorité ne dise mieux.
+    // “P1” and “size/M” have been consumed: a “P1” column next to a
+    // column “P2” does not learn anything that a sort by priority does not say better.
     expect(categorySets[0].categoryIds).toEqual(["cat-bug", "cat-frontend"]);
   });
 
@@ -332,8 +331,8 @@ describe("applyRemoteIssue — le ticket existe : le silence n'écrase rien", ()
   });
 
   it("ne désassigne pas quand la forge ne nomme personne", async () => {
-    // Le piège : sur un dépôt qui n'assigne jamais, le moindre webhook
-    // `labeled` viderait la case que quelqu'un vient de remplir dans minddy.
+    // The trap: on a repository that never assigns the slightest webhook
+    // `labeled` would empty the box that someone just filled in minddy.
     imported({ assignee_id: "user-dev" });
     await applyRemoteIssue(TARGET, remote({ action: "labeled", assigneeLogins: [] }));
 
@@ -362,7 +361,7 @@ describe("applyRemoteIssue — le ticket existe : le silence n'écrase rien", ()
   });
 
   it("estampille l'écriture `forgeSync` — c'est L'ANTI-BOUCLE", async () => {
-    // Sans ce drapeau, `updateIssueFields` repousserait vers la forge le statut
+    // Without this flag, `updateIssueFields` would push the status back to the forge
     // qui vient d'en descendre, qui reviendrait par webhook, sans fin.
     imported({ status: "todo" });
     await applyRemoteIssue(TARGET, remote({ action: "closed", state: "closed" }));
@@ -399,7 +398,7 @@ describe("applyRemoteIssue — le ticket existe : le silence n'écrase rien", ()
     imported({ id: "issue-ailleurs", project_id: "project-2" });
     await applyRemoteIssue(TARGET, remote());
 
-    // Vu comme jamais importé ici : c'est une CRÉATION, pas une réconciliation.
+    // Seen as never imported here: it is a CREATION, not a reconciliation.
     expect(creates).toHaveLength(1);
     expect(updates).toHaveLength(0);
   });
@@ -426,9 +425,9 @@ describe("applyRemoteIssue — les catégories", () => {
   });
 
   it("ne réécrit RIEN quand le jeu est déjà le bon", async () => {
-    // `setIssueCategories` fait un DELETE puis un INSERT : le rejouer à chaque
-    // webhook ferait clignoter les catégories sur tous les tableaux ouverts,
-    // par le temps réel, sans qu'il se passe quoi que ce soit.
+    // `setIssueCategories` does a DELETE then an INSERT: replay it each time
+    // webhook would flash categories on all open boards,
+    // in real time, without anything happening.
     imported();
     issueCategoryRows.push({ issue_id: "issue-1", category_id: "cat-bug" });
     await applyRemoteIssue(TARGET, remote({ labels: ["bug"] }));
@@ -437,9 +436,9 @@ describe("applyRemoteIssue — les catégories", () => {
   });
 
   it("ne balaye pas les catégories quand la forge n'a AUCUN label", async () => {
-    // Le prix, assumé, de ne pas confondre « rien à dire » et « rien » : un
-    // dépôt qui n'étiquette pas ses issues ne doit pas vider, à chaque webhook,
-    // ce qui a été rangé à la main dans minddy.
+    // The price, assumed, of not confusing “nothing to say” and “nothing”: a
+    // repository which does not label its outputs must not empty, at each webhook,
+    // what was stored by hand in minddy.
     imported();
     issueCategoryRows.push({ issue_id: "issue-1", category_id: "cat-maison" });
     await applyRemoteIssue(TARGET, remote({ labels: [] }));
@@ -448,11 +447,11 @@ describe("applyRemoteIssue — les catégories", () => {
   });
 
   it("ne garde qu'un exemplaire d'une catégorie que deux labels désignent", async () => {
-    // Deux labels que `readForgeLabels` garde SÉPARÉS (leurs jetons diffèrent)
-    // mais que la borne des 200 caractères ramène à la même catégorie. Un id
-    // répété ferait rater la comparaison « rien n'a bougé » juste au-dessus, et
-    // le DELETE/INSERT repartirait à chaque webhook — le clignotement qu'elle
-    // est là pour éviter.
+    // Two labels that `readForgeLabels` keeps SEPARATE (their tokens differ)
+    // but that the limit of 200 characters brings back to the same category. An id
+    // repeated would miss the comparison “nothing has moved” just above, and
+    // the DELETE/INSERT would start again with each webhook — the flashing that it
+    // is there to avoid.
     const long = "z".repeat(240);
     imported();
     issueCategoryRows.push({ issue_id: "issue-1", category_id: `cat-${"z".repeat(200)}` });
@@ -464,7 +463,7 @@ describe("applyRemoteIssue — les catégories", () => {
 });
 
 describe("backfillRemoteIssues — l'import à l'activation du toggle", () => {
-  /** Une issue ouverte telle que `listRepoOpenIssues` la rend. */
+  /** An open issue such as `listRepoOpenIssues` renders it. */
   const openIssue = (overrides: Record<string, unknown> = {}) => ({
     number: 7,
     title: "Le bouton ne répond pas",
@@ -475,7 +474,7 @@ describe("backfillRemoteIssues — l'import à l'activation du toggle", () => {
     ...overrides,
   });
 
-  /** Les tickets d'un lot d'import. */
+  /** Tickets from an import batch. */
   const batch = () => (imports[0]?.issues as Record<string, unknown>[]) ?? [];
 
   it("importe chaque issue en triage, avec son lien en ressource", async () => {
@@ -534,8 +533,8 @@ describe("backfillRemoteIssues — l'import à l'activation du toggle", () => {
   });
 
   it("construit UN SEUL index d'assignés pour tout le lot", async () => {
-    // Deux requêtes par lot, pas deux par ticket : sur 500 issues, c'est la
-    // différence entre deux requêtes et mille.
+    // Two requests per batch, not two per ticket: out of 500 issues, this is the
+    // difference between two requests and a thousand.
     openIssues = [openIssue(), openIssue({ number: 8 }), openIssue({ number: 9 })];
     await backfillRemoteIssues(TARGET);
 

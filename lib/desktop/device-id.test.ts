@@ -3,12 +3,12 @@ import { describe, expect, it } from "vitest";
 import { deviceIdForUserData, deviceLabel, normalizeUserDataPath } from "./device-id";
 
 /**
- * MIN-293 — CE QUI DISTINGUE LA COQUILLE DE DÉV DE L'APP INSTALLÉE.
+ * MIN-293 — WHAT DISTINGUISHES THE DEV SHELL FROM THE INSTALLED APP.
  *
- * Les deux tournent côte à côte sur le poste où on développe, avec la MÊME
- * session (les cookies sont par origine, pas par profil). L'identifiant est ce
- * qui empêche les deux de réclamer les mêmes runs, et il doit donc différer là
- * où les profils diffèrent — c'est-à-dire sur `userData`, et nulle part ailleurs.
+ * The two run side by side on the workstation where we are developing, with the SAME
+ * session (cookies are by origin, not by profile). The identifier is this
+ * which prevents both from claiming the same runs, and so it must differ there
+ * where the profiles differ — that is, on `userData`, and nowhere else.
  */
 
 const INSTALLED = "/Users/clement/Library/Application Support/minddy";
@@ -24,9 +24,9 @@ describe("deviceIdForUserData", () => {
   });
 
   it("ne change pas parce qu'un chemin a été recollé autrement", () => {
-    // Un slash final, un séparateur doublé : le même dossier. Une version de
-    // l'app qui construirait le chemin autrement se présenterait sinon comme une
-    // machine neuve, et chasserait la précédente de ses runs.
+    // A final slash, a double separator: the same folder. A version of
+    // the app which would construct the path otherwise would present itself as a
+    // new machine, and would chase the previous one from its runs.
     const id = deviceIdForUserData(INSTALLED);
     expect(deviceIdForUserData(`${INSTALLED}/`)).toBe(id);
     expect(deviceIdForUserData(`${INSTALLED}//`)).toBe(id);

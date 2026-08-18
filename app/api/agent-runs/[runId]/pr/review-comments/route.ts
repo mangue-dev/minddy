@@ -10,11 +10,11 @@ import {
 } from "@/lib/server/agent/pr-actions";
 
 /**
- * FAÇADE (MIN-143) des commentaires de review — ceux ancrés à une ligne du diff.
- * La route par PR est `/api/pull-requests/[prId]/review-comments` ; celle-ci
- * résout le run → sa PR et délègue, pour les deep-links `?run=` et `/agents`.
+ * FACING (MIN-143) of review comments — those anchored to a line in the diff.
+ * The route by PR is `/api/pull-requests/[prId]/review-comments` ; this one
+ * resolves the run → its PR and delegates, for the deep-links `?run=` and `/agents`.
  *
- *  GET   → { comments, threads } (listes vides si le run n'a pas de PR).
+ * GET → { comments, threads } (empty lists if the run has no PR).
  *  POST  → { body, path, line, side } | { body, in_reply_to }
  *  PATCH → { thread_id, resolved }
  */

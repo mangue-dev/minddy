@@ -29,11 +29,11 @@ export function SettingsAssistantPrompt({
     [openAssistant, projectId],
   );
 
-  // `px-0` : les réglages sont une colonne de CARTES, et le composeur doit
-  // s'aligner sur leur bord. Sa gouttière de 12 px le rentrait en deçà — on
-  // l'ANNULE, là où l'ancien `-mx-3` la compensait en le faisant dépasser de la
-  // colonne (MIN-167). Cette gouttière n'a de sens que dans le panneau de Numo,
-  // où rien d'autre n'écarte le composeur du bord.
+  // `px-0`: the settings are a CARDS column, and the composer must
+  // align with their edge. Its 12 px gutter fit it below — we
+  // CANCELS it, where the old `-mx-3` compensated for it by making it exceed the
+  // column (MIN-167). This gutter only makes sense in the Numo panel,
+  // where nothing else pushes the composer off the edge.
   return (
     <section>
       <ChatInput onSend={handleSend} placeholder={placeholder} className="px-0" />

@@ -38,25 +38,25 @@ import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 
 /**
- * Le catalogue des sections de réglages — la table que lisent la palette ⌘K et
- * les écrans de réglages eux-mêmes.
+ * The catalog of settings sections — the table that the ⌘K palette reads and
+ * the settings screens themselves.
  *
- * Une section de réglages vit à trois endroits : la carte `<SettingsGroup>` qui
- * la rend, l'onglet qui la contient, et la ligne de palette qui y mène. Le
- * chemin complet (page → onglet → ancre → surlignage) n'a de sens que si les
- * trois disent la même chose, d'où une seule table : `SETTINGS_SECTIONS` donne
- * les identifiants (posés en ancre DOM par `SettingsGroup anchor=…`, typés, donc
- * une faute de frappe ne compile pas), `useSettingsSections()` donne les lignes
- * de palette, et `lib/settings-sections.test.ts` vérifie que chaque entrée du
- * catalogue est effectivement rendue quelque part — sinon la ligne existerait
- * dans ⌘K et n'emmènerait nulle part.
+ * A settings section lives in three places: the `<SettingsGroup>` card that
+ * renders it, the tab which contains it, and the pallet line which leads to it. The
+ * full path (page → tab → anchor → highlight) only makes sense if the
+ * three say the same thing, hence a single table: `SETTINGS_SECTIONS` gives
+ * the identifiers (placed in DOM anchor by `SettingsGroup anchor=…`, typed, so
+ * a typo doesn't compile), `useSettingsSections()` gives the
+ * palette lines, and `lib/settings-sections.test.ts` checks that each entry in the
+ * catalog is actually rendered somewhere — otherwise the line would exist
+ * in ⌘K and wouldn't take you anywhere.
  */
 
-/** L'onglet ouvert par défaut de chaque écran (celui que `?tab=` peut omettre). */
+/** The default open tab for each screen (the one that `?tab=` can omit). */
 export const ACCOUNT_SETTINGS_DEFAULT_TAB = "profile";
 export const PROJECT_SETTINGS_DEFAULT_TAB = "general";
 
-/** Les onglets de `/settings` — les clés sont les valeurs `?tab=`. */
+/** `/settings` tabs — keys are `?tab=` values. */
 export type AccountSettingsTab =
   | "profile"
   | "security"
@@ -69,7 +69,7 @@ export type AccountSettingsTab =
   | "agent"
   | "data";
 
-/** Les onglets de `/projects/<id>/settings`. */
+/** The `/projects/<id>/settings` tabs. */
 export type ProjectSettingsTab =
   | "general"
   | "categories"
@@ -82,9 +82,9 @@ export type ProjectSettingsTab =
   | "integrations";
 
 /**
- * L'identifiant d'une section. Stable et jamais traduit : c'est à la fois
- * l'ancre DOM (`settingsSectionAnchor`), le paramètre `?section=` de l'URL et
- * l'identifiant de la ligne de palette (donc la clé des favoris et des stats).
+ * The identifier of a section. Stable and never translated: it is both
+ * the DOM anchor (`settingsSectionAnchor`), the `?section=` parameter of the URL and
+ * the identifier of the palette line (therefore the key to favorites and stats).
  */
 export const SETTINGS_SECTIONS = {
   accountProfile: "account-profile",
@@ -128,34 +128,33 @@ export const SETTINGS_SECTIONS = {
 export type SettingsSectionId =
   (typeof SETTINGS_SECTIONS)[keyof typeof SETTINGS_SECTIONS];
 
-/** L'`id` DOM de la carte d'une section — le préfixe évite toute collision. */
+/** The `id` DOM of a section's map — the prefix prevents collisions. */
 export function settingsSectionAnchor(id: SettingsSectionId): string {
   return `settings-section-${id}`;
 }
 
-/** Le paramètre d'URL que l'écran de réglages consomme pour dérouler + surligner. */
+/** The URL parameter that the settings screen consumes to expand + highlight. */
 export const SETTINGS_SECTION_PARAM = "section";
 
 export type SettingsSection = {
   id: SettingsSectionId;
-  /** Compte (`/settings`) ou projet (`/projects/<id>/settings`). */
+  /** Account (`/settings`) or project (`/projects/<id>/settings`). */
   scope: "account" | "project";
   tab: AccountSettingsTab | ProjectSettingsTab;
   icon: LucideIcon;
-  /** Le titre de la carte, MOT POUR MOT — la ligne de palette annonce ce sur
-   *  quoi elle atterrit. */
+  /** The title of the card, WORD FOR WORD — the paddle line announces what it lands on. */
   title: string;
-  /** L'onglet qui la contient, affiché en contexte dim à côté du titre. */
+  /** The tab that contains it, displayed in dim context next to the title. */
   tabLabel: string;
-  /** Termes de recherche, FR **et** EN : ils ne s'affichent pas, donc les deux
-   *  langues cohabitent et la ligne se trouve quelle que soit celle de l'écran. */
+  /** Search terms, FR **and** EN: they are not displayed, so the two
+ * languages ​​coexist and the line is found regardless of the one on the screen. */
   keywords: string[];
-  /** Section réservée au propriétaire du projet (ou aux autres) — sans ça, la
-   *  palette proposerait « Zone sensible » à qui ne la verra jamais. */
+  /** Section reserved for the project owner (or others) — otherwise, the
+ * palette would offer “Sensitive Zone” to anyone who will never see it. */
   audience?: "owner" | "member";
 };
 
-/** L'URL qui ouvre la section : bonne page, bon onglet, ancre à dérouler. */
+/** The URL that opens the section: correct page, correct tab, anchor to drop down. */
 export function settingsSectionHref(
   section: SettingsSection,
   projectId?: string,
@@ -169,16 +168,16 @@ export function settingsSectionHref(
       ? ACCOUNT_SETTINGS_DEFAULT_TAB
       : PROJECT_SETTINGS_DEFAULT_TAB;
   const params = new URLSearchParams();
-  // L'onglet par défaut n'a pas besoin d'être dit : le shell le retire de l'URL
-  // dès qu'on y revient à la main, autant ne pas l'y mettre.
+  // The default tab does not need to be said: the shell removes it from the URL
+  // as soon as you come back to it by hand, you might as well not put it there.
   if (section.tab !== defaultTab) params.set("tab", section.tab);
   params.set(SETTINGS_SECTION_PARAM, section.id);
   return `${base}?${params.toString()}`;
 }
 
 /**
- * Le catalogue résolu dans la langue de l'écran. Appelé par le shell applicatif
- * (les lignes ⌘K) ; les cartes, elles, ne lisent que `SETTINGS_SECTIONS`.
+ * The catalog resolved in the screen language. Called by the application shell
+ * (the ⌘K lines); the cards only read `SETTINGS_SECTIONS`.
  */
 export function useSettingsSections(): SettingsSection[] {
   const tAccount = useTranslations("Account");
@@ -392,11 +391,11 @@ export function useSettingsSections(): SettingsSection[] {
           "revoke", "déconnecter", "deconnecter", "disconnect",
         ],
       }),
-      // Une seule carte depuis la fusion : la connexion au dépôt et
-      // l'autorisation d'agir en votre nom sont deux niveaux du MÊME compte, et
-      // deux cartes séparées obligeaient à les recoller de tête. Les mots-clés
-      // des deux y sont donc réunis — « agir en mon nom » doit toujours tomber
-      // sur cette carte-là.
+      // Only one card since the merger: connection to the repository and
+      // authorization to act on your behalf are two levels of the SAME account, and
+      // two separate cards required them to be glued together head on. Keywords
+      // the two are therefore united there — “act in my name” must always fall
+      // on this map.
       account({
         id: SETTINGS_SECTIONS.accountGitConnections,
         tab: "git",
@@ -463,7 +462,7 @@ export function useSettingsSections(): SettingsSection[] {
         ],
       }),
 
-      // ── Projet ──────────────────────────────────────────────────────────
+      // ── Project ───────────────────────────── ─────────────────────────────
       project({
         id: SETTINGS_SECTIONS.projectGeneral,
         tab: "general",

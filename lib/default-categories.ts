@@ -1,21 +1,16 @@
 /**
- * Le jeu de catégories posé sur chaque projet neuf.
+ * The set of categories placed on each new project.
  *
- * Il vivait dans la base (`public.default_categories()`, trigger
- * `projects_seed_categories`), avec des noms écrits en dur EN FRANÇAIS :
- * Postgres ne connaît pas la langue de celui qui crée le projet, donc un
- * utilisateur anglais héritait de « Fonctionnalité » et « Amélioration ».
- *
- * Les noms sont donc devenus des chaînes traduites (`Categories.defaults`),
- * et c'est l'application qui sème, dans la langue de la requête — le même
- * geste que pour les vues par défaut (`ensureBaselineViews`). Ici comme
- * là-bas, le nom est FIGÉ à la création : ce sont des données éditables
- * ensuite, pas des libellés d'interface. Changer de langue plus tard ne les
- * retraduit pas, et c'est voulu — sinon renommer une catégorie serait
+ * It lived in the database (`public.default_categories()`, trigger
+ * `projects_seed_categories`), with names written hard IN FRENCH:
+ * Postgres does not know the language from the one who created the project, so an English user inherited "Feature" and "Improvement". same
+ * gesture as for default views (`ensureBaselineViews`). Here like
+ * there, the name is FIXED at creation: it is editable data
+ * then, not interface labels. Changing the language later does not re-translate them, and that is intended — otherwise renaming a category would be
  * impossible.
  *
- * L'ordre est celui de l'ancien trigger : il détermine l'ordre d'affichage
- * (les catégories se listent par `created_at`).
+ * The order is that of the old trigger: it determines the display order
+ * (the categories are listed by `created_at`).
  */
 export const DEFAULT_CATEGORIES = [
   { key: "bug", color: "#ef4444" },

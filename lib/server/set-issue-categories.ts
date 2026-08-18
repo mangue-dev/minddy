@@ -47,10 +47,10 @@ export async function setIssueCategories({
   viaAssistant?: boolean;
   /** Attributes the resulting activity events to an MCP API key (agent actor). */
   mcpKeyId?: string | null;
-  /** Attribue les événements à la forge quand les catégories viennent des
-      LABELS d'une issue distante (synchro d'un dépôt lié) : l'`actorId` reste
-      le owner qui porte techniquement l'écriture, la timeline affiche
-      GitHub/GitLab — même règle que `updateIssueFields`. */
+  /** Assigns events to the forge when the categories come from
+ LABELS from a remote issue (synchronized with a linked repository): `actorId` remains
+ the owner who technically carries the writing, the timeline displays
+ GitHub/GitLab — same rule as `updateIssueFields`. */
   forgeSync?: RepoProviderId | null;
 }): Promise<SetCategoriesResult> {
   const requested = categoryIds.filter((v): v is string => typeof v === "string");

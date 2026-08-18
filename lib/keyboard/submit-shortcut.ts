@@ -1,37 +1,36 @@
 import { isSendShortcut } from "@/lib/keyboard/send-shortcut";
 
 /**
- * ⌘/Ctrl + Entrée dans un FORMULAIRE : ce que le raccourci doit faire, décidé
- * hors de tout DOM pour rester lisible et testable.
+ * ⌘/Ctrl + Enter in a FORM: what the shortcut should do, decided
+ * outside of any DOM to remain readable and testable.
  *
- * Le geste n'appelle pas la fonction de soumission : il **clique le bouton
- * principal**. C'est ce qui le tient aligné sur ce que l'écran montre — un
- * bouton grisé (titre vide, envoi en cours, pièce jointe encore en vol) ne
- * s'active pas plus au clavier qu'à la souris, sans qu'aucune de ces conditions
- * n'ait à être recopiée ici.
+ * The gesture does not call the submit function: it **clicks the main
+ * button**. This is what keeps it aligned with what the screen shows — a grayed out
+ * button (empty title, sending in progress, attachment still in flight) does not
+ * activate on the keyboard any more than on the mouse, without any of these conditions
+ * having to be copied here.
  *
- * `blur-then-click` est la subtilité qui compte. Nos éditeurs de description
- * (tiptap) ne remontent leur markdown qu'au BLUR : cliquer le bouton pendant
- * que le caret est encore dedans enverrait la description telle qu'elle était
- * au dernier blur — c'est-à-dire, sur un ticket qu'on vient d'écrire, vide. On
- * sort donc du champ d'abord, et on clique au tour d'après.
+ * `blur-then-click` is the subtlety that counts. Our description editors
+ * (tiptap) only go back their markdown to the BLUR: clicking the button while the caret is still in would send the description as it was
+ * to the last blur — that is to say, on a ticket that we have just written, empty. On
+ * therefore leaves the field first, and we click on the next turn.
  */
 export type SubmitShortcutPlan = "ignore" | "click" | "blur-then-click";
 
 export function planSubmitShortcut(
   e: { key: string; metaKey: boolean; ctrlKey: boolean; defaultPrevented?: boolean },
   state: {
-    /** Le formulaire porte un `button[type=submit]` actionnable. */
+    /** The form has an actionable `button[type=submit]`. */
     hasEnabledSubmit: boolean;
-    /** Le focus est dans une surface contenteditable de ce formulaire. */
+    /** The focus is in a contenteditable surface of this form. */
     activeIsEditor: boolean;
   }
 ): SubmitShortcutPlan {
   if (e.defaultPrevented) return "ignore";
   if (!isSendShortcut(e)) return "ignore";
-  // Pas de bouton, ou un bouton grisé : on ne fait RIEN, et surtout on ne
-  // confisque pas la frappe — ⌘Entrée reste le saut de ligne dur de tiptap là
-  // où il n'y a rien à créer.
+  // No button, or a grayed out button: we do NOTHING, and above all we do not
+  // confiscate not typing — ⌘Input remains hard tiptap line break there
+  // where there is nothing to create.
   if (!state.hasEnabledSubmit) return "ignore";
   return state.activeIsEditor ? "blur-then-click" : "click";
 }

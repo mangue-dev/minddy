@@ -57,8 +57,8 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("systemViewLocked") }, { status: 400 });
   }
 
-  // Le cascade views → view_shares → custom_domains emporte la ligne domaine
-  // mais pas l'attachement Vercel (MIN-36) — capturé avant, détaché après.
+  // The cascade views → view_shares → custom_domains takes the domain line
+  // but not the Vercel attachment (MIN-36) — captured before, detached after.
   const service = getServiceClient();
   const { data: shareRow } = await service
     .from("view_shares")

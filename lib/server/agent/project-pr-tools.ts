@@ -15,61 +15,61 @@ import {
 } from "./pull-requests";
 
 /**
- * LES PULL REQUESTS DU PROJET, vues et agies depuis un run ORDINAIRE (MIN-267).
+ * THE PULL REQUESTS OF THE PROJECT, seen and acted upon since an ORDINARY run (MIN-267).
  *
- * Ce que `pr-tools.ts` sert, c'est LA pull request d'une session de RELECTURE :
- * un run ancré à une PR, sans tool d'édition, qui commente celle-là et pas une
- * autre. Il manquait l'autre moitié — un run de ticket, de carnet ou de ROUTINE
- * ne pouvait pas même SAVOIR qu'une pull request existait. « Fais-moi le point
- * des PR de la semaine tous les vendredis » n'était pas exprimable : la routine
- * partait lire le dépôt en shell, ce qui ne dit rien des relectures, des checks
- * ni des états.
+ * What `pr-tools.ts` serves is THE pull request for a REVIEW session:
+ * a run anchored to a PR, without an editing tool, which comments on that one and not one
+ * other. The other half was missing — a run of ticket, notebook or ROUTINE
+ * couldn't even KNOW a pull request existed. “Give me an update
+ * PRs of the week every Friday" was inexpressible: the routine
+ * went to read the deposit in shell, which says nothing about rereading, checks
+ * nor states.
  *
- * D'où cette famille, servie aux ancrages TICKET et CARNET (jamais à la
- * relecture, dont la lecture seule reste une propriété du jeu de tools) :
+ * Hence this family, served at the TICKET and CARNET anchors (never at the
+ * rereading, of which read-only remains a property of the toolset):
  *
  *  - `list_pull_requests` — l'inventaire, lu en BASE (`pull_requests`), pas chez
- *    la forge : c'est la même table que la page Pull Requests, donc la même
- *    liste, et un balayage paresseux la rafraîchit quand elle a vieilli. Lister
- *    quinze PR ne coûte alors pas quinze appels d'API.
- *  - `read_pull_request` — le détail d'UNE, chez la forge. Le diff par fichier
- *    n'y vient que sur `include_diff` : une routine qui parcourt la semaine lit
- *    quinze en-têtes, pas quinze diffs.
- *  - les écritures : commentaire de fil, commentaire de ligne, réponse à un fil,
- *    VERDICT de review, et changement d'ÉTAT (fusion comprise).
+ * the forge: it is the same table as the Pull Requests page, therefore the same
+ * list, and a lazy swipe refreshes it when it gets old. List
+ * fifteen PR then doesn't cost fifteen API calls.
+ * - `read_pull_request` — the detail of UNE, at the forge. The diff per file
+ * only comes on `include_diff`: a routine that runs through the week
+ * fifteen headers, not fifteen diffs.
+ * - entries: thread comment, line comment, response to a thread,
+ * Review VERDICT, and change of STATUS (including merger).
  *
- * ## Ce que ça change de la doctrine, et qui l'a décidé
+ * ## What it changes from the doctrine, and who decided it
  *
- * `pr-tools.ts` dit, depuis MIN-141 : « Numo donne un avis, il ne tient pas la
- * porte » — aucune de ses trois écritures ne soumet de verdict à la forge, parce
- * qu'un `APPROVE` posté par l'app satisferait une protection de branche et qu'un
- * `REQUEST_CHANGES` bloquerait la PR jusqu'à ce qu'un humain le lève.
+ * `pr-tools.ts` says, from MIN-141: “Numo gives an opinion, he does not hold
+ * door” — none of its three writings submits a verdict to the forge, because
+ * that a `APPROVE` posted by the app would satisfy branch protection and that a
+ * `REQUEST_CHANGES` would block the PR until a human raises it.
  *
- * **Cette règle ne tient plus ici, et c'est un choix explicite du propriétaire
- * du produit** (2026-08-10) : `review_pull_request` soumet un vrai verdict et
- * `set_pull_request_state` fusionne. Une routine peut donc approuver et
- * fusionner sans qu'aucun humain n'intervienne. La contrepartie est celle-là,
- * elle est réelle, et elle est assumée — ce qui la borne, ce sont les
- * protections de branche du DÉPÔT, plus rien du côté de minddy.
+ * **This rule no longer holds here, and it is an explicit choice of the owner
+ * of the product** (2026-08-10): `review_pull_request` submits a real verdict and
+ * `set_pull_request_state` merges. A routine can therefore approve and
+ * merge without any human intervention. The counterpart is this,
+ * it is real, and it is assumed - what limits it are the
+ * DEPOSIT branch protections, nothing more on Minddy's side.
  *
- * L'IDENTITÉ, elle, ne bouge pas : tout part sous le token d'installation, donc
- * sous le compte de minddy — un geste automatisé porte le nom de minddy (cf. la
- * table d'identité de `forge.ts`). Ce qui, ici, est exactement ce qu'on veut :
- * une PR fusionnée par une routine ne doit pas se lire comme fusionnée par la
- * personne qui a écrit la routine il y a trois mois.
+ * IDENTITY does not change: everything goes under the installation token, so
+ * under the account of minddy — an automated gesture bears the name of minddy (see the
+ * identity table of `forge.ts`). Which, here, is exactly what we want:
+ * a PR merged by a routine should not be read as merged by the
+ * person who wrote the routine three months ago.
  *
- * Un mot sur l'AUTO-REVIEW : GitHub refuse d'approuver une PR ouverte par le
- * même compte (422). C'est le cas NORMAL des PR de Numo, et `submitReview` le
- * rattrape déjà en publiant le verdict en commentaire — le résultat le dit
- * (`published: "comment"`), et le tool le répercute au modèle plutôt que de le
- * laisser croire à une approbation qui n'a pas eu lieu.
+ * A word about SELF-REVIEW: GitHub refuses to approve a PR opened by the
+ * same account (422). This is the NORMAL case of Numo PRs, and `submitReview` the
+ * already catch up by publishing the verdict in comments - the result says it
+ * (`published: "comment"`), and the tool passes it to the model rather than
+ * to suggest an approval which did not take place.
  */
 
 export { PROJECT_PR_TOOL_NAMES } from "./platform-tool-names";
 
 type ToolOutcome = { result: unknown; success: boolean };
 
-/** Dépôt lié au projet du run, avec un token FRAIS. */
+/** Deposit linked to the run project, with a FRESH token. */
 export interface ProjectRepoTarget {
   token: string;
   repoFullName: string;
@@ -77,43 +77,43 @@ export interface ProjectRepoTarget {
 }
 
 export interface ProjectPrToolContext {
-  /** Projet du run — le périmètre de tout ce que cette famille voit. */
+  /** Project run — the perimeter of everything this family sees. */
   projectId: string;
   /**
-   * Dépôt + token, re-résolus À CHAQUE APPEL : un tour peut durer plus longtemps
-   * que le token d'installation qui a cloné le dépôt. `null` = ce projet n'a pas
-   * de dépôt lié (le tool le dit, il ne lève pas).
+   * Deposit + token, re-solved EACH CALL: a round can last longer
+   * as the installation token that cloned the repository. `null` = this project does not have
+   * linked deposit (the tool says so, it does not lift).
    */
   repo: () => Promise<ProjectRepoTarget | null>;
-  /** Modèle du run — il signe ce que Numo écrit. */
+  /** Model of the run — he signs what Numo writes. */
   model: string;
-  /** Langue de la signature : celle du lanceur. */
+  /** Language of signature: that of the launcher. */
   locale: string;
   /**
-   * Ancres posées par CE RUN — le MÊME objet que celui de la session de
-   * relecture (`PrToolContext.inline`), persisté par `execute.ts` dans le
-   * checkpoint. Le plafond est donc « 5 par run », TOUTES pull requests
-   * confondues : quinze remarques ancrées restent du bruit, qu'elles tombent sur
-   * une PR ou sur cinq.
+   * Anchors set by THIS RUN — the SAME object as the running session
+   * reread (`PrToolContext.inline`), persisted by `execute.ts` in the
+   * checkpoint. The ceiling is therefore “5 per run”, ALL pull requests
+   * confused: fifteen anchored remarks remain noise, whether they fall on
+   * one PR or out of five.
    */
   inline: { used: number };
 }
 
-// ── Bornes de ce qu'on rend au modèle ───────────────────────────────────────
+// ── Limits of what we return to the model ───────────────────────────────────────
 
-/** Corps de commentaire accepté — GitHub refuse au-delà de 65 536 caractères. */
+/** Comment body accepted — GitHub refuses beyond 65,536 characters. */
 const MAX_BODY_LENGTH = 65_536;
-/** Patch par fichier, quand `include_diff` est demandé (même plafond que le MCP). */
+/** Patch per file, when `include_diff` is requested (same ceiling as MCP). */
 const MAX_PATCH_CHARS = 4_000;
-/** Fichiers listés par `read_pull_request` — au-delà, on dit combien manquent. */
+/** Files listed by `read_pull_request` — beyond that, we say how many are missing. */
 const MAX_FILES = 100;
-/** Messages du fil rendus, les plus RÉCENTS (une PR bavarde en porte des centaines). */
+/** Posts from the thread rendered, the most RECENT (one PR chatter has hundreds). */
 const MAX_COMMENTS = 30;
 /** Fils de review rendus. */
 const MAX_THREADS = 40;
-/** Corps d'un message rendu — de quoi le lire, pas de quoi noyer le contexte. */
+/** Body of a message delivered — enough to read it, not enough to drown out the context. */
 const MAX_COMMENT_CHARS = 2_000;
-/** Lignes rendues par `list_pull_requests` (défaut 30). */
+/** Lines rendered by `list_pull_requests` (default 30). */
 const MAX_LIST_LIMIT = 100;
 
 const PR_STATES: PullRequestState[] = ["draft", "open", "merged", "closed"];
@@ -132,7 +132,7 @@ function cap(text: string | null | undefined, max: number): string | null {
   return text.length > max ? `${text.slice(0, max)}\n… (truncated)` : text;
 }
 
-/** Le numéro de PR, exigé par tous les tools sauf la liste. */
+/** The PR number, required by all tools except the list. */
 function prNumber(args: Record<string, unknown>): number | { error: string } {
   const n = int(args.pull_request);
   if (n == null || n < 1) {
@@ -147,11 +147,11 @@ function prNumber(args: Record<string, unknown>): number | { error: string } {
 // ── Inventaire ──────────────────────────────────────────────────────────────
 
 /**
- * Rafraîchit la liste si elle a vieilli — le MÊME balayage paresseux que la page
- * Pull Requests (`needsRepoSync`, 15 min). Best-effort : une forge en panne rend
- * la liste telle qu'elle est en base, jamais une erreur. Sans lui, une routine
- * du vendredi matin lirait l'état laissé par le dernier webhook reçu, et un
- * webhook perdu se lirait comme « rien n'a bougé ».
+ * Refreshes the list if it has aged — the SAME lazy scan as the page
+ * Pull Requests (`needsRepoSync`, 15 mins). Best effort: a broken down forge makes
+ * the list as it is in base, never an error. Without him, a routine
+ * on Friday morning would read the state left by the last webhook received, and a
+ * lost webhook would read as "nothing has moved".
  */
 async function refreshIfStale(target: ProjectRepoTarget): Promise<void> {
   try {
@@ -240,8 +240,8 @@ async function listPullRequests(
     result: {
       repository: target.repoFullName,
       count: rows.length,
-      // La liste est BORNÉE : le dire, plutôt que de laisser conclure « voilà
-      // toutes les PR de la semaine » sur une fenêtre coupée au plafond.
+      // The list is LIMITED: say it, rather than leaving the conclusion “there you go
+      // all the PRs of the week” on a window cut into the ceiling.
       truncated: rows.length === limit,
       pull_requests: rows.map((row) => ({
         number: row.number,
@@ -268,7 +268,7 @@ async function listPullRequests(
   };
 }
 
-// ── Détail ──────────────────────────────────────────────────────────────────
+// ── Detail ───────────────────────────────── ─────────────────────────────────
 
 async function readPullRequest(
   ctx: ProjectPrToolContext,
@@ -283,9 +283,9 @@ async function readPullRequest(
   const includeDiff = args.include_diff === true;
 
   const pr = await forge.getPullRequest(call);
-  // Tout le reste est BEST-EFFORT : un dépôt sans CI, une App sans la permission
-  // des checks ou une forge qui n'a pas d'objet review ne doivent pas empêcher de
-  // lire la pull request. `null` veut dire « pas lisible », jamais « rien ».
+  // Everything else is BEST-EFFORT: a repository without CI, an App without permission
+  // checks or a forge that does not have a review object should not prevent
+  // read the pull request. `null` means “not readable”, never “nothing”.
   const [diff, reviewComments, reviewThreads, comments, reviews, checks] = await Promise.all([
     forge.listPullRequestFiles(call).catch(() => ({ files: [], truncated: false })),
     forge.listPullRequestReviewComments(call).catch(() => []),
@@ -312,8 +312,8 @@ async function readPullRequest(
       created_at: pr.createdAt ?? null,
       updated_at: pr.updatedAt ?? null,
       merged_at: pr.mergedAt ?? null,
-      // `mergeable: null` veut dire INCONNU chez GitHub (le calcul est
-      // asynchrone), pas « non » : le rendre tel quel plutôt qu'en booléen.
+      // `mergeable: null` means UNKNOWN at GitHub (the calculation is
+      // asynchronous), not “no”: make it as is rather than boolean.
       mergeable: pr.mergeable ?? null,
       mergeable_state: pr.mergeableState ?? null,
       repository: target.repoFullName,
@@ -338,8 +338,8 @@ async function readPullRequest(
         ...(includeDiff ? { patch: cap(f.patch ?? null, MAX_PATCH_CHARS) } : {}),
       })),
       files_truncated: diff.truncated || diff.files.length > files.length,
-      // Sans le diff, le dire : un modèle qui lit une liste de fichiers sans
-      // patch doit savoir que le contenu s'obtient, pas qu'il n'existe pas.
+      // Without the diff, say it: a model that reads a list of files without
+      // patch must know that the content is obtained, not that it does not exist.
       ...(includeDiff ? {} : { diff_omitted: "call again with include_diff: true to get the patches" }),
       review_comments: threads.slice(0, MAX_THREADS).map((thread) => ({
         id: thread.id,
@@ -366,7 +366,7 @@ async function readPullRequest(
   };
 }
 
-// ── Écritures ───────────────────────────────────────────────────────────────
+// ── Scriptures ─────────────────────────────── ────────────────────────────────
 
 async function commentPullRequest(
   ctx: ProjectPrToolContext,
@@ -405,7 +405,7 @@ async function commentPullRequestLine(
     return { result: { error: "line must be a positive integer." }, success: false };
   }
 
-  // Le plafond AVANT tout appel de forge : dépassé, il n'y a rien à tenter.
+  // The ceiling BEFORE any call for forging: exceeded, there is nothing to try.
   if (AI_REVIEW_MAX_INLINE_COMMENTS - ctx.inline.used <= 0) {
     return {
       result: {
@@ -422,8 +422,8 @@ async function commentPullRequestLine(
   const forge = forgeFor(target.provider);
   const call = { token: target.token, repoFullName: target.repoFullName, number };
 
-  // Même validation d'ancre que la session de relecture : une ligne commentable
-  // est une ligne du DIFF, et un refus rend les PLAGES qui le sont.
+  // Same anchor validation as the replay session: one commentable line
+  // is a line of the DIFF, and a refusal makes the RANGES which are.
   const { files } = await forge.listPullRequestFiles(call);
   const anchor = resolvePrCommentAnchor(files, { path, line, side });
   if (!anchor.ok) return { result: { error: anchor.error }, success: false };
@@ -519,9 +519,9 @@ async function reviewPullRequest(
       result: {
         verdict,
         published: submission.published,
-        // Le cas NORMAL d'une PR ouverte par Numo : la forge refuse l'auto-review
-        // et le verdict part en commentaire. Le dire, sinon le modèle rapporte
-        // « approuvée » sur une PR que personne n'a approuvée.
+        // The NORMAL case of a PR opened by Numo: the forge refuses the self-review
+        // and the verdict goes into commentary. Say it, otherwise the model pays off
+        // “approved” on a PR that no one approved.
         ...(submission.published === "comment"
           ? {
               note:
@@ -583,8 +583,8 @@ async function setPullRequestState(
     }, "A merged pull request cannot be reopened.");
   }
 
-  // `ready_for_review` : GitHub n'adresse la mutation que par le node id
-  // GraphQL, que seul le GET d'UNE pull request sert (cf. `forge.ts`).
+  // `ready_for_review`: GitHub only addresses the mutation by the node id
+  // GraphQL, that only the GET of ONE pull request is used (see `forge.ts`).
   return await forgeCall(async () => {
     const pr = await forge.getPullRequest(call);
     if (!pr.draft) {
@@ -611,9 +611,9 @@ function noRepo(): ToolOutcome {
 }
 
 /**
- * Un refus de FORGE rendu comme une erreur de tool, jamais comme une exception :
- * le modèle peut corriger un 422 s'il lit ce que la forge a dit, il ne peut que
- * subir un tour qui tombe. `hint` dit ce qu'il y a à en faire.
+ * A FORGE refusal rendered as a tool error, never as an exception:
+ * the model can correct a 422 if it reads what the forge said, it can only
+ * undergo a falling ride. `hint` says what to do with it.
  */
 async function forgeCall(
   fn: () => Promise<ToolOutcome>,
@@ -634,7 +634,7 @@ async function forgeCall(
   }
 }
 
-/** Exécute un tool de cette famille. L'appelant a déjà routé sur les noms. */
+/** Runs a tool from this family. The caller has already routed on the names. */
 export async function executeProjectPrTool(
   ctx: ProjectPrToolContext,
   name: string,

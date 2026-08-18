@@ -1,17 +1,17 @@
 // @vitest-environment jsdom
 //
-// Le passage du CORPS vers le TITRE (components/pages/title-bridge.ts).
+// The transition from the BODY to the TITLE (components/pages/title-bridge.ts).
 //
-// Ce qu'aucun type ne voit, et qui est tout le sujet : ⌫ et ↑ sont des touches
-// déjà prises. La propriété tenue ici n'est donc pas « la touche appelle le
-// crochet » mais « elle ne l'appelle QUE si personne d'autre n'avait à faire » —
-// sortir d'une liste, joindre deux blocs, supprimer une sélection passent
-// devant. C'est la priorité basse de l'extension qui l'assure, et rien dans le
-// fichier ne la rappelle à qui la baisserait par mégarde.
+// What no guy sees, and which is the whole point: ⌫ and ↑ are keys
+// already taken. The property held here is therefore not “the key calls the
+// hook” but “she ONLY calls him if no one else had to” —
+// exit a list, join two blocks, delete a selection pass
+// in front. It is the low priority of the extension which ensures this, and nothing in the
+// file does not remind anyone who accidentally lowers it.
 //
-// La flèche ↑ n'est testée que par sa moitié PURE (`inFirstBlock`) : l'autre
-// moitié est `view.endOfTextblock("up")`, qui mesure des rectangles de rendu et
-// n'a pas de réponse sous jsdom.
+// The ↑ arrow is only tested by its PURE half (`inFirstBlock`): the other
+// half is `view.endOfTextblock("up")`, which measures render rectangles and
+// has no response under jsdom.
 
 import { describe, expect, it, vi } from "vitest";
 import { Editor } from "@tiptap/core";
@@ -22,8 +22,8 @@ import {
   inFirstBlock,
 } from "@/components/pages/title-bridge";
 
-/** Le vrai éditeur d'une page, plus le passage vers le titre — c'est-à-dire
-    tout ce qui se dispute ⌫ et ↑. */
+/** The actual one-page editor, plus the jump to the title — that is,
+ anything that disputes ⌫ and ↑. */
 function makeEditor(content: string, onLeaveTop: () => void) {
   return new Editor({
     element: document.createElement("div"),
@@ -35,29 +35,29 @@ function makeEditor(content: string, onLeaveTop: () => void) {
   });
 }
 
-/** Frapper une touche par le VRAI chemin — le plugin `keymap`, dans son ordre
-    de plugins (cf. lib/pages-chrome.test.ts, même raison). */
+/** Hit a key via the REAL path — the `keymap` plugin, in its order
+ of plugins (see lib/pages-chrome.test.ts, same reason). */
 function press(editor: Editor, key: string): void {
   const event = new KeyboardEvent("keydown", { key });
   editor.view.someProp("handleKeyDown", (handler) => handler(editor.view, event));
 }
 
-/** Le nom de chaque nœud de premier niveau, dans l'ordre. */
+/** The name of each top-level node, in order. */
 function topLevel(editor: Editor): string[] {
   const names: string[] = [];
   editor.state.doc.forEach((node) => names.push(node.type.name));
   return names;
 }
 
-describe("⌫ au début du document", () => {
+describe("⌫ at the start of the document", () => {
   it("remonte au titre au lieu de ne rien faire", () => {
     const leave = vi.fn();
     const editor = makeEditor("<p>Bonjour</p><p>Suite</p>", leave);
     editor.commands.setTextSelection(1);
     press(editor, "Backspace");
     expect(leave).toHaveBeenCalledTimes(1);
-    // Et le document n'a pas bougé : on ne quitte le corps que là où ⌫ n'avait
-    // rien à supprimer.
+    // And the document has not moved: we only leave the body where ⌫ had not
+    // nothing to delete.
     expect(editor.getText()).toContain("Bonjour");
     expect(topLevel(editor)).toEqual(["paragraph", "paragraph"]);
     editor.destroy();
@@ -66,7 +66,7 @@ describe("⌫ au début du document", () => {
   it("laisse joindre les deux blocs quand on n'est pas au premier", () => {
     const leave = vi.fn();
     const editor = makeEditor("<p>Bonjour</p><p>Suite</p>", leave);
-    // Début du SECOND paragraphe.
+    // Start of SECOND paragraph.
     editor.commands.setTextSelection(editor.state.doc.child(0).nodeSize + 1);
     press(editor, "Backspace");
     expect(leave).not.toHaveBeenCalled();
@@ -85,7 +85,7 @@ describe("⌫ au début du document", () => {
     editor.destroy();
   });
 
-  it("ne se déclenche pas sur une sélection", () => {
+  it("does not trigger on a selection", () => {
     const leave = vi.fn();
     const editor = makeEditor("<p>Bonjour</p>", leave);
     editor.commands.setTextSelection({ from: 1, to: 4 });
@@ -109,7 +109,7 @@ describe("⌫ au début du document", () => {
 });
 
 describe("les deux gardes, lues seules", () => {
-  it("atDocumentStart : le début du premier bloc, et lui seul", () => {
+  it("atDocumentStart: the start of the first block, and only it", () => {
     const leave = vi.fn();
     const editor = makeEditor("<p>Bonjour</p><p>Suite</p>", leave);
 
@@ -129,13 +129,13 @@ describe("les deux gardes, lues seules", () => {
     const editor = makeEditor("<ul><li><p>Item</p></li></ul>", leave);
     editor.commands.setTextSelection(3);
     expect(atDocumentStart(editor.state)).toBe(false);
-    // Le premier bloc, lui, c'est bien celui-là : ↑ y a donc quelque chose à
-    // dire là où ⌫ doit d'abord délister.
+    // The first block is indeed this one: ↑ there is therefore something to
+    // say where ⌫ must first delist.
     expect(inFirstBlock(editor.state)).toBe(true);
     editor.destroy();
   });
 
-  it("inFirstBlock : vrai partout dans le premier bloc, faux ensuite", () => {
+  it("inFirstBlock: true throughout the first block, false afterward", () => {
     const leave = vi.fn();
     const editor = makeEditor("<p>Bonjour</p><p>Suite</p>", leave);
 

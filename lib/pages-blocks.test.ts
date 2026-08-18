@@ -1,24 +1,24 @@
 // @vitest-environment jsdom
 //
-// Le garde-fou du REGISTRE de blocs — celui qui rendra l'oubli impossible le
-// jour où l'on ajoutera le bloc tableau.
+// The safeguard of the block REGISTER — the one that will make forgetting impossible on
+// day when we will add the table block.
 //
-// Un bloc est six choses cousues (le nœud, l'entrée « / », l'entrée
-// « transformer en », l'icône, les libellés FR/EN, la sérialisation markdown).
-// Le compilateur en tient déjà deux : un descripteur auquel il manque un champ
-// ne compile pas, et une `labelKey` absente du catalogue ANGLAIS est une erreur
-// de type (cf. global.d.ts). Ce fichier tient les autres, celles qu'aucun type
+// A block is six things stitched together (the node, the “/” entry, the entry
+// “transform into”, icon, FR/EN labels, markdown serialization).
+// The compiler already has two: a descriptor missing a field
+// does not compile, and a `labelKey` missing from the ENGLISH catalog is an error
+// of type (see global.d.ts). This file holds the others, those that no type
 // ne voit :
 //
-//  - la clé existe aussi dans le catalogue FRANÇAIS, et n'y est pas restée
-//    identique à l'anglais par copier-coller ;
-//  - chaque nœud du catalogue est réellement MONTÉ (un bloc dont plus personne
-//    n'apporte l'extension est un bloc mort) ;
-//  - et surtout : le markdown de chaque bloc revient INTACT d'un aller-retour,
-//    joué sur un vrai éditeur monté sur le vrai registre.
+// - the key also exists in the FRENCH catalog, and did not remain there
+// identical to English by copy-paste;
+// - each node in the catalog is actually MOUNTED (a block of which no one
+// does not bring the extension is a dead block);
+// - and above all: the markdown of each block returns INTACT from a round trip,
+// played on a real editor mounted on the real registry.
 //
-// Ce dernier point est ce qui fait la différence entre un test qui vérifie
-// qu'un champ n'est pas vide et un test qui vérifie qu'il dit vrai.
+// This last point is what makes the difference between a test which checks
+// that a field is not empty and a test which verifies that it is true.
 
 import { describe, expect, it } from "vitest";
 import { Editor, getExtensionField, type NodeViewRenderer } from "@tiptap/core";
@@ -39,7 +39,7 @@ import {
 const enPages = en.Pages as Record<string, string | undefined>;
 const frPages = fr.Pages as Record<string, string | undefined>;
 
-/** Un éditeur monté sur le VRAI registre, sans une ligne de React. */
+/** An editor mounted on the REAL registry, without a line of React. */
 function makeEditor(content = "") {
   return new Editor({
     element: document.createElement("div"),
@@ -62,8 +62,8 @@ function md(editor: Editor): string {
 describe("le registre des blocs de page", () => {
   it("n'a ni identité ni nœud en double là où ça compte", () => {
     expect(blockById.size).toBe(PAGE_BLOCKS.length);
-    // Le paragraphe DOIT être le premier bloc du menu : c'est le bloc par
-    // défaut, et « transformer en » y ramène.
+    // The paragraph MUST be the first block of the menu: it is the block by
+    // default, and “transform to” brings it back.
     expect(slashItems()[0].id).toBe("paragraph");
   });
 
@@ -75,40 +75,40 @@ describe("le registre des blocs de page", () => {
         `le nœud « ${block.nodeName} » du bloc « ${block.id} » n'est monté par aucun descripteur`
       ).toBe(true);
     }
-    // Les trois titres partagent un nœud, les deux listes partagent `listItem` :
-    // le dédoublonnage du registre est ce qui permet à chaque fichier de bloc de
-    // déclarer de quoi tenir debout seul.
+    // All three titles share a node, both lists share `listItem`:
+    // register deduplication is what allows each block file to
+    // declare enough to stand alone.
     expect(blocksByNodeName.get("heading")).toHaveLength(3);
     expect(
       blockExtensions({ headless: true }).filter((e) => e.name === "listItem")
     ).toHaveLength(1);
   });
 
-  // MIN-274 : la vue d'une tâche est celle du CARNET, et elle tire le baril
-  // `mangue-ui`. Un fichier de bloc qui la nommerait rendrait le registre
-  // inimportable hors navigateur — ce fichier entier ne se chargerait plus, et
-  // c'est ce qui en fait le garde-fou (cf. lib/cx.ts). D'où le partage : le
-  // nœud au registre, la vue injectée par la surface.
+  // MIN-274: the view of a task is that of the NOTEBOOK, and it pulls the barrel
+  // `mangue-ui`. A block file naming it would make the registry
+  // unimportable outside browser — this entire file would no longer load, and
+  // this is what makes it the safeguard (see lib/cx.ts). Hence the sharing: the
+  // node to the register, the view injected by the surface.
   it("laisse la surface poser la vue d'une tâche", () => {
     const view = () => ({}) as never;
-    // `addNodeView` n'est pas dans le type union de `config` (une extension nue
-    // n'en a pas) : on le lit tel qu'il est réellement posé.
+    // `addNodeView` is not in the union type of `config` (a bare extension
+    // does not have one): we read it as it is actually posed.
     const taskView = (options?: Parameters<typeof blockExtensions>[0]) => {
       const node = blockExtensions(options).find((e) => e.name === "taskItem");
       const config = node?.config as { addNodeView?: () => unknown };
       return config.addNodeView;
     };
 
-    // Sans injection, `taskItem` garde la vue de tiptap — la case BINAIRE de
-    // l'extension amont, qui ne connaît pas les quatre états du plan. C'est
-    // dire que l'injection n'est pas un ornement : elle est ce qui rend une
-    // tâche de page conforme au reste du produit.
+    // Without injection, `taskItem` keeps the view of tiptap — the BINARY box of
+    // the upstream extension, which does not know the four states of the plan. It is
+    // say that the injection is not an ornament: it is what makes a
+    // page task consistent with the rest of the product.
     expect(taskView()?.call(null)).not.toBe(view);
     expect(taskView({ nodeViews: { taskItem: view } })?.call(null)).toBe(view);
-    // `headless` reste le dernier mot : la projection markdown ne monte jamais
-    // de vue, même si l'appelant en passe une. `null` et non `undefined` — le
-    // pourquoi est dans blocks/index.ts, et le test qui compte est plus bas
-    // (« le montage headless »).
+    // `headless` remains the last word: the markdown projection never goes up
+    // view, even if the caller passes one. `null` and not `undefined` — the
+    // why is in blocks/index.ts, and the test that counts is lower
+    // (“headless editing”).
     expect(
       taskView({ headless: true, nodeViews: { taskItem: view } })
     ).toBeNull();
@@ -135,9 +135,9 @@ describe("les libellés des blocs", () => {
   });
 
   it("sont réellement traduits, pas recopiés", () => {
-    // Un libellé identique dans les deux langues est presque toujours un
-    // copier-coller oublié. Les exceptions sont des mots qui s'écrivent
-    // pareil — elles se déclarent ici, une par une.
+    // Identical wording in both languages ​​is almost always a
+    // forgotten copy-paste. The exceptions are words that are written
+    // the same — they declare themselves here, one by one.
     const SAME_IN_BOTH = new Set(["blockCitation", "blockQuote", "blockImage"]);
     const copied = PAGE_BLOCKS.filter(
       (block) =>
@@ -149,11 +149,11 @@ describe("les libellés des blocs", () => {
 
   it("ont une icône, et une icône distincte", () => {
     for (const block of PAGE_BLOCKS) {
-      // Une icône lucide est un `forwardRef`, donc un OBJET, pas une fonction.
+      // A lucid icon is a `forwardRef`, therefore an OBJECT, not a function.
       expect(block.icon, `pas d'icône sur « ${block.id} »`).toBeTruthy();
     }
-    // Deux blocs qui portent la même icône sont deux blocs qu'on ne distingue
-    // pas dans le menu « / » — la faute typique du copier-coller de descripteur.
+    // Two blocks that bear the same icon are two blocks that cannot be distinguished
+    // not in the “/” menu — the typical descriptor copy-paste fault.
     const shared = new Map<unknown, string[]>();
     for (const block of PAGE_BLOCKS) {
       shared.set(block.icon, [...(shared.get(block.icon) ?? []), block.id]);
@@ -165,11 +165,11 @@ describe("les libellés des blocs", () => {
 
 describe("le menu « / » et « transformer en »", () => {
   it("offrent chacun ce qui les concerne", () => {
-    // Tout le catalogue est INSÉRABLE…
+    // The entire catalog is INSERTABLE…
     expect(slashItems()).toHaveLength(PAGE_BLOCKS.length);
 
-    // …mais un séparateur et une sous-page ne se TRANSFORMENT pas : il n'y a
-    // rien à convertir. C'est précisément ce que `turnInto: false` dit, et ce
+    // …but a separator and a subpage do not TRANSFORM: there is no
+    // nothing to convert. This is precisely what `turnInto: false` says, and this
     // qu'un registre sans descripteur ne saurait pas dire.
     const editor = makeEditor("Some text");
     const convertible = turnIntoItems(editor).map((item) => item.block.id);
@@ -180,12 +180,12 @@ describe("le menu « / » et « transformer en »", () => {
   });
 
   it("posent VRAIMENT quelque chose, chacun", () => {
-    // `insertBlock` retombe sur « effacer la plage, puis convertir » quand le
-    // descripteur ne porte pas d'`insert`. Un bloc à la fois `turnInto: false`
-    // et sans `insert` avale donc le « /… » et ne pose rien — une entrée de menu
-    // qui ne fait rien, sans un mot d'erreur. C'est arrivé aux deux blocs de
-    // MIN-280, et rien ne le disait : le nœud est dans le schéma, le markdown
-    // revient intact, seul le geste manque.
+    // `insertBlock` falls back to “clear range, then convert” when the
+    // descriptor does not carry a `insert`. One block at a time `turnInto: false`
+    // and without `insert` therefore swallows the “/…” and does not put anything — a menu entry
+    // which does nothing, without an error word. It happened to both blocks of
+    // MIN-280, and nothing said it: the node is in the diagram, the markdown
+    // returns intact, only the gesture is missing.
     const silent = PAGE_BLOCKS.filter(
       (block) => !block.turnInto && !block.insert
     ).map((block) => block.id);
@@ -193,9 +193,9 @@ describe("le menu « / » et « transformer en »", () => {
   });
 
   it("l'image et le fichier demandent leur sélecteur", () => {
-    // L'autre moitié du même geste : le descripteur appelle bien le crochet que
-    // la surface pose (`storage.<nœud>.pick`, cf. page-editor.tsx). Sans lui,
-    // « /image » n'ouvrirait aucune boîte de dialogue.
+    // The other half of the same gesture: the descriptor calls the hook that
+    // the surface sets (`storage.<node>.pick`, cf. page-editor.tsx). Without it,
+    // “/image” would not open any dialog box.
     for (const [id, node, accept] of [
       ["image", "image", "image/*"],
       ["file", "pageFile", ""],
@@ -229,8 +229,8 @@ describe("l'aller-retour markdown de chaque bloc", () => {
   );
 
   it("chaque échantillon produit BIEN le nœud qu'il annonce", () => {
-    // Sans ça, un échantillon qui ne se parse pas (donc relu comme un simple
-    // paragraphe) traverserait l'aller-retour sans broncher et ne prouverait
+    // Without that, a sample which does not parse (therefore reread as a simple
+    // paragraph) would cross the round trip without flinching and would not prove
     // rien du bloc.
     for (const block of PAGE_BLOCKS) {
       if (block.id === "paragraph") continue;
@@ -249,21 +249,21 @@ describe("l'aller-retour markdown de chaque bloc", () => {
 });
 
 /**
- * `headless` doit VRAIMENT retirer les vues de nœud.
+ * `headless` should REALLY remove node views.
  *
- * Ce que ce test tient, et qu'aucun autre ne voyait : `getExtensionField` de
- * tiptap remonte à l'extension PARENTE dès qu'un champ vaut `undefined`. Un
- * `addNodeView: undefined` posé par `blockExtensions({ headless: true })` ne
- * retirait donc rien — il re-trouvait la vue d'origine. Sous jsdom, personne ne
- * s'en apercevait : React est là, la vue se monte, le markdown sort juste.
+ * What this test holds, and which no others saw: `getExtensionField` from
+ * tiptap goes back to the PARENT extension as soon as a field is equal to `undefined`. A
+ * `addNodeView: undefined` placed by `blockExtensions({ headless: true })` did not
+ * therefore removed nothing — it re-found the original view. Under jsdom, no one
+ * noticed: React is there, the view goes up, the markdown just comes out.
  *
- * Dans une fonction serveur, non : `@tiptap/react` porte « use client », donc
- * la vue est une référence CLIENT, et l'appeler lève « Attempted to call
- * ReactNodeViewRenderer() from the server ». C'était l'échec de TOUT outil de
- * page — Numo, le MCP, l'agent — au premier `minddy_get_page`.
+ * In a server function, no: `@tiptap/react` carries “use client”, so
+ * the view is a CUSTOMER reference, and calling it raises “Attempted to call
+ * ReactNodeViewRenderer() from the server”. It was the failure of ANY tool from
+ * page — Numo, the MCP, the agent — at the first `minddy_get_page`.
  *
- * On regarde donc les extensions telles que tiptap les lira, pas telles qu'on
- * croit les avoir écrites.
+ * So we look at the extensions as tiptap will read them, not as we
+ * think we have them written.
  */
 describe("le montage headless", () => {
   it("n'expose aucune vue de nœud", () => {
@@ -277,10 +277,10 @@ describe("le montage headless", () => {
   });
 
   it("greffe en revanche la vue que la SURFACE apporte à la sous-page", () => {
-    // Le pendant du cas précédent : sans lui, « aucune vue » serait aussi vrai
-    // d'un `blockExtensions` qui aurait cessé de savoir en poser une. Et c'est
-    // la sous-page qu'on regarde, parce que c'est SA vue qui a déménagé du
-    // fichier de bloc vers la surface (components/pages/page-editor.tsx).
+    // The counterpart of the previous case: without it, “no view” would also be true
+    // of a `blockExtensions` who would have ceased to know how to place one. And it is
+    // the subpage we are looking at, because it is HIS view which has moved from
+    // block file to surface (components/pages/page-editor.tsx).
     const view = (() => null) as unknown as NodeViewRenderer;
     const node = blockExtensions({ nodeViews: { subpage: view } }).find(
       (extension) => extension.name === "subpage"
@@ -291,8 +291,8 @@ describe("le montage headless", () => {
     );
     expect(addNodeView?.()).toBe(view);
 
-    // Sans injection, le nœud n'a plus de vue du tout : le bloc se rendrait nu.
-    // C'est ce qui garantit qu'aucune surface ne l'oublie en silence.
+    // Without injection, the node no longer has a view at all: the block would be rendered bare.
+    // This is what ensures that no surface silently forgets it.
     const bare = blockExtensions().find((e) => e.name === "subpage");
     expect(getExtensionField(bare!, "addNodeView")).toBeUndefined();
   });

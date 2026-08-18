@@ -1,27 +1,27 @@
 import type { Messages, NamespaceKeys, NestedKeyOf, useTranslations } from "next-intl";
 
 /**
- * Outillage de types pour les clés i18n construites AILLEURS que sur place :
+ * Tooling types for i18n keys built ELSEWHERE than on site:
  * tables de correspondance (`{ quotaExceeded: "errorQuotaExceeded" }`),
- * catalogues de raccourcis, listes de sections. Le typage strict de next-intl
- * (cf. `global.d.ts`) vérifie `t("cle")` écrit en dur ; ces types étendent la
- * même vérification aux clés qui transitent par une constante.
+ * shortcut catalogs, section lists. Strict typing of next-intl
+ * (cf. `global.d.ts`) checks `t("cle")` written hard; these types extend the
+ * same check for keys that pass through a constant.
  *
- * Le gain n'est pas cosmétique : une table déclarée `Record<string, string>`
- * accepte une clé qui n'existe pas, et l'écran affiche alors le chemin de la
- * clé (`Agent.errorTypo`) au lieu du message. Déclarée `MessageKey<"Agent">`,
- * la même faute ne compile pas.
+ * The gain is not cosmetic: a table declared `Record<string, string>`
+ * accepts a key that does not exist, and the screen then displays the path to the
+ * key (`Agent.errorTypo`) instead of message. Declared `MessageKey<"Agent">`,
+ * the same fault does not compile.
  *
- * Reste le cas irréductible : une clé assemblée à l'exécution à partir d'une
- * valeur serveur (`t(\`errors.${code}\`)`). Aucun type ne peut la garantir — on
- * la caste explicitement au point d'appel avec `Parameters<typeof t>[0]`, ce
- * qui rend visible l'endroit exact où le compilateur cesse de répondre.
+ * The irreducible case remains: a key assembled at runtime from a
+ * server value (`t(\`errors.${code}\`)`). No guy can guarantee it — we
+ * the caste explicitly at the point of call with `Parameters<typeof t>[0]`, this
+ * which makes visible the exact place where the compiler stops responding.
  */
 
-/** Les namespaces du catalogue (`"Board"`, `"Common"`, `"Agent"`…). */
+/** The catalog namespaces (`"Board"`, `"Common"`, `"Agent"`…). */
 export type Namespace = NamespaceKeys<Messages, NestedKeyOf<Messages>>;
 
-/** Les clés que `t()` accepte pour le namespace `N`. */
+/** The keys that `t()` accepts for the namespace `N`. */
 export type MessageKey<N extends Namespace> = Parameters<
   ReturnType<typeof useTranslations<N>>
 >[0];

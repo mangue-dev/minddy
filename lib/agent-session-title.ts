@@ -2,23 +2,23 @@ import { issueIdentifier } from "@/lib/issue-constants";
 import type { AgentSessionListItem } from "@/lib/agent-api";
 
 /**
- * Le NOM d'une conversation de l'agent, tel qu'il se lit dans la colonne comme
- * dans l'en-tête du volet — une seule fonction pour les deux, sinon les deux
- * divergent.
+ * The NAME of an agent's conversation, as it reads in the column like
+ * in the pane header — a single function for both, otherwise both
+ * diverge.
  *
- * Un run = une conversation, et un ticket en porte souvent plusieurs : sans son
- * IDENTIFIANT devant, trois conversations du même ticket se ressemblent trop
- * pour qu'on les distingue d'un coup d'œil, et deux tickets différents peuvent
- * se répondre mot pour mot (« Corriger la redirection »). L'identifiant, lui,
- * est unique et se cherche — c'est ce qu'on tape dans le filtre.
+ * A run = a conversation, and a ticket often carries more than one: without its
+ * ID in front, three conversations from the same ticket are too similar to
+ * to be distinguishable at a glance, and two different tickets can
+ * respond to each other word for word ("Fix redirection"). The identifier,
+ * is unique and searchable — this is what we type in the filter.
  *
- * La cascade du titre, du plus précis au plus vague :
- *  1. le titre écrit au lancement par le titreur (celui de la PR pour une
- *     relecture, MIN-168) ;
- *  2. le titre du TICKET, quand la génération n'a rien donné ou date d'avant
- *     `agent_runs.title` — mieux vaut le titre du ticket que rien ;
- *  3. le repli de l'appelant (« Conversation sans titre »), pour une
- *     conversation carnet sans titre ni note.
+ * The cascade of the title, from the most precise to the most vague:
+ * 1. the title written at launch by the titrator (that of the PR for a
+ * rereading, MIN-168);
+ * 2. the title of the TICKET, when the generation has given nothing or dates from before
+ * `agent_runs.title` — better the title of the ticket than nothing;
+ * 3. the withdrawal of the caller ("Conversation without title"), for a
+ * notebook conversation without title or note.
  */
 export function agentSessionTitle(
   session: Pick<AgentSessionListItem, "title" | "issue" | "project">,

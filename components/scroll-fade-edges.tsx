@@ -3,28 +3,23 @@
 import { cn } from "mangue-ui";
 
 /**
- * Le fondu de bord d'un scroller, dessiné À CÔTÉ de lui plutôt que POSÉ dessus.
+ * The edge fade of a scroller, drawn NEXT to it rather than PLACED ON it.
  *
- * `useScrollFade` sait rendre un `mask-image` à appliquer au scroller lui-même,
- * et c'est ce que faisaient les colonnes du board. Le coût est invisible et
- * permanent : **un scroller masqué ne peut plus être fait défiler par simple
- * translation de son calque.** Le masque est ancré à la boîte de bordure, pas au
- * contenu — il doit donc rester immobile pendant que le contenu bouge, ce que le
- * compositeur ne sait pas faire tout seul : il re-composite à chaque image de
- * défilement. Trois instances sur le board (une par colonne, plus le scroller
- * horizontal qui les contient — donc un masque DANS un masque) suffisaient à le
- * rendre coûteux (MIN-319).
+ * `useScrollFade` knows how to render a `mask-image` to apply to the scroller itself,
+ * and that's what the columns of the scroller did board. The cost is invisible and
+ * permanent: **a hidden scroller can no longer be scrolled by simple
+ * translation of its layer.** The mask is anchored to the border box, not to the
+ * content — it must therefore remain stationary while the content moves, which the
+ * composer cannot do alone: it re-composes each time image of
+ * scroll. Three instances on the board (one per column, plus the horizontal scroller which contains them - therefore a mask IN a mask) were enough to make it expensive (MIN-319). * only change when an edge crosses its threshold.
  *
- * Deux calques absolus par-dessus coûtent, eux, un dessin unique : ils ne
- * changent que lorsqu'un bord franchit son seuil.
+ * **To be placed in a parent `relative`, in brother of the scroller** — not inside, otherwise
+ * they scroll with the content.
  *
- * **À poser dans un parent `relative`, en frère du scroller** — pas dedans, sinon
- * ils défilent avec le contenu.
- *
- * ⚠ `from-background` est le fond RÉEL des colonnes du board (le scroller n'en
- * pose aucun). Sur une surface au fond différent, passer `from` explicitement :
- * un dégradé qui part de la mauvaise couleur se voit tout de suite en thème
- * sombre.
+ * ⚠ `from-background` is the REAL background of the board columns (the scroller does not set
+ *). On a surface with a different background, pass `from` explicitly:
+ * a gradient starting from the wrong color is immediately seen in a dark theme.
+ *.
  */
 export function ScrollFadeEdges({
   edges,
@@ -34,7 +29,7 @@ export function ScrollFadeEdges({
 }: {
   edges: { start: boolean; end: boolean };
   axis?: "x" | "y";
-  /** La classe Tailwind du fond de départ du dégradé. */
+  /** The Tailwind class of the gradient's starting background. */
   from?: string;
   className?: string;
 }) {

@@ -18,20 +18,20 @@ import { activeAdminOverride } from "@/lib/server/billing-accounts";
 import type { AdminUserRow, AdminUsersResponse } from "@/lib/types";
 
 /**
- * `/admin` → onglet « Utilisateurs » (MIN-90). Gate identique aux autres
+ * `/admin` → “Users” tab (MIN-90). Gate identical to the others
  * endpoints admin : JWT via getClaims + isAdminUser.
  *
- *  GET   ?search=&limit=&offset= → une ligne par compte : onboarding, projets,
- *        tickets, plan effectif, budget, inscription et dernier signe de vie.
- *  PATCH { userId, internal } → marque le compte comme INTERNE (équipe, démo,
- *        bot) ou le rend au décompte. Un compte interne reste listé et
- *        administrable ici ; il disparaît seulement des statistiques.
+ * GET ?search=&limit=&offset= → one line per account: onboarding, projects,
+ * tickets, effective plan, budget, registration and last sign of life.
+ * PATCH { userId, internal } → marks the account as INTERNAL (team, demo,
+ * bot) or returns it to the count. An internal account remains listed and
+ * administrable here; it only disappears from the statistics.
  *
- * Le plan et la dépense COMPTÉE passent par `getUserUsage`, qui connaît la vraie
- * fenêtre de chacun (cycle Stripe, sous-cycle mensuel d'un annuel, filigrane de
- * remise à zéro) — la SQL ne renvoie que le mois calendaire brut. C'est ce qui
- * rendait l'ancien onglet « Quotas » juste, et ça reste vrai ici. D'où la page
- * volontairement petite : chaque ligne coûte quelques requêtes.
+ * The plan and the COUNTED expense go through `getUserUsage`, who knows the real
+ * window of each (Stripe cycle, monthly sub-cycle of an annual, watermark of
+ * reset) — the SQL only returns the raw calendar month. This is what
+ * made the old “Quotas” tab fair, and it remains true here. Hence the page
+ * intentionally small: each line costs a few queries.
  */
 
 const DEFAULT_LIMIT = 25;
@@ -43,14 +43,14 @@ function intParam(value: string | null, fallback: number, max: number): number {
   return Math.min(n, max);
 }
 
-/** Billing + usage d'un compte ; un échec isolé ne doit pas vider la page. */
+/** Billing + use of an account; an isolated failure should not clear the page. */
 async function usageOf(row: AdminUserRpcRow) {
   try {
     const usage = await getUserUsage(row.user_id);
     const account = usage.billing.account;
     const budgetUsd = usage.billing.plan.includedUsageUsd;
-    // Un plan offert dont l'échéance est passée ne compte plus nulle part :
-    // ni dans le plan effectif (la résolution l'ignore), ni ici.
+    // A plan offered whose expiry date has passed no longer counts anywhere:
+    // neither in the actual plan (the resolution ignores this), nor here.
     const override = activeAdminOverride(account);
     return {
       billing: {
@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** PATCH { userId, internal } — bascule le drapeau « compte interne ». */
+/** PATCH { userId, internal } — toggles the “internal account” flag. */
 export async function PATCH(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
@@ -161,7 +161,7 @@ export async function PATCH(request: NextRequest) {
   let body: { userId?: unknown; internal?: unknown };
   try {
     const parsed: unknown = await request.json();
-    // Corps non-objet (null, chaîne…) : refusé ici plutôt que de crasher plus bas.
+    // Non-object body (null, string…): refused here rather than crashing further down.
     if (!parsed || typeof parsed !== "object") throw new Error("not an object");
     body = parsed as { userId?: unknown; internal?: unknown };
   } catch {

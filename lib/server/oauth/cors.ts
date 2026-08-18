@@ -1,9 +1,9 @@
 import "server-only";
 
 /**
- * CORS des endpoints OAuth publics (metadata, register, token). `*` est sûr :
- * aucun cookie n'entre en jeu (Bearer/params uniquement), et les clients MCP
- * navigateur (claude.ai, inspector) en ont besoin.
+ * CORS of public OAuth endpoints (metadata, register, token). `*` is safe:
+ * no cookies come into play (Bearer/params only), and MCP
+ * browser clients (claude.ai, inspector) need them.
  */
 export const OAUTH_CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -12,7 +12,7 @@ export const OAUTH_CORS_HEADERS = {
   "Access-Control-Max-Age": "86400",
 } as const;
 
-/** Réponses token/register : jamais mises en cache (RFC 6749 §5.1). */
+/** Token/register responses: never cached (RFC 6749 §5.1). */
 export const NO_STORE_HEADERS = {
   "Cache-Control": "no-store",
   Pragma: "no-cache",

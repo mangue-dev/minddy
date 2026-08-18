@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * Réglages des sous-agents (MIN-112) : favoris et plafond de parallélisme, lus dans
- * `app_config` pour être réglables sans déploiement.
+ * Subagent settings (MIN-112): favorites and parallelism cap, read in
+ * `app_config` to be adjustable without deployment.
  *
- * Ce qui compte ici : un réglage CASSÉ ne doit jamais tuer un run. La liste de
- * favoris est du prompt, pas de la donnée critique — un JSON mal formé retombe sur
- * le repli écrit en code. Et le résolveur de modèle doit refuser un id inventé AVEC
- * la liste des favoris, plutôt que de laisser une fille se prendre un 400 du
- * fournisseur, ce qui lui coûterait un round entier pour rien.
+ * What matters here: a BROKEN setting should never kill a run. The list of
+ * favorites is the prompt, not the critical data — malformed JSON falls to
+ * the fallback written in code. And the model resolver should reject a made-up id WITH
+ * the favorites list, rather than letting a girl take a 400 from the
+ * provider, which would cost her an entire round for nothing.
  */
 
 const { config } = vi.hoisted(() => ({ config: new Map<string, string | null>() }));
@@ -23,9 +23,9 @@ const {
   subagentRoundsLeft,
   SUBAGENT_MAX_ROUNDS,
 } = await import("./subagent-config");
-// Les deux lectures d'`app_config` vivent à part depuis MIN-224 (la boucle importe
-// `subagent-config.ts` dans la microVM, et ce qu'elle importe ne doit pas pouvoir
-// atteindre la base) ; ce test-ci les couvre toujours, il les prend d'où elles sont.
+// The two readings of `app_config` live separately since MIN-224 (the loop imports
+// `subagent-config.ts` in the microVM, and what it imports should not be able to
+// reach base); this test always covers them, it takes them from where they are.
 const {
   getSubagentFavorites,
   maxParallelSubagents,
@@ -43,13 +43,13 @@ describe("subagentRoundsLeft", () => {
   });
 
   it("tombe à ZÉRO ou moins au plafond — jamais ramené à 1", () => {
-    // C'est TOUT le test. Le lanceur bornait la fille reprise à
-    // `Math.max(1, MAX - déjà joués)` : au plafond, elle repartait avec un round,
-    // le jouait, la boucle suspendait, le parent se garait, le chunk se
-    // re-queuait — dix-neuf fois, jusqu'à ce que le garde-fou des continuations
-    // tue le tour (deux passages de routine perdus le 07/08/2026). Une fille sans
-    // round doit être COUPÉE, avec son rapport partiel : zéro ou moins est le
-    // signal qui le dit, et le ramener à 1 le détruisait.
+    // That's the WHOLE test. The thrower limited the girl caught to
+    // `Math.max(1, MAX - already played)`: on the ceiling, she left with a round,
+    // played it, the loop paused, the parent parked, the chunk stopped
+    // re-queued — nineteen times, until the continuation guardrail
+    // kills the round (two routine passages lost on 08/07/2026). A girl without
+    // round must be CUT, with its partial ratio: zero or less is the
+    // signal that says so, and setting it to 1 would destroy it.
     expect(subagentRoundsLeft(SUBAGENT_MAX_ROUNDS)).toBe(0);
     expect(subagentRoundsLeft(SUBAGENT_MAX_ROUNDS + 7)).toBeLessThan(0);
   });
@@ -61,11 +61,11 @@ describe("getSubagentFavorites", () => {
     for (const f of favorites) {
       expect(f.id).toMatch(/\//);
       expect(f.label.length).toBeGreaterThan(0);
-      // Le use-case EST ce qui sert au choix : un favori sans conseil ne dit rien.
+      // The use-case IS what is used for the choice: a favorite without advice says nothing.
       expect(f.use_case.length).toBeGreaterThan(10);
     }
-    // Les `hint` du picker sont en français et écrits pour un humain : ils n'ont
-    // rien à faire dans un prompt.
+    // The picker's `hint` are in French and written for a human: they do not have
+    // nothing to do in a prompt.
     expect(favorites.map((f) => f.use_case).join(" ")).not.toMatch(/Économique|défaut/);
   });
 
@@ -96,7 +96,7 @@ describe("getSubagentFavorites", () => {
     );
     const favorites = await getSubagentFavorites();
     expect(favorites.map((f) => f.id)).toEqual(["ok/one", "ok/two"]);
-    // Sans libellé, l'id fait office de nom ; `off` n'est pas un niveau exposé.
+    // Without a label, the id acts as a name; `off` is not an exposed level.
     expect(favorites[0].label).toBe("ok/one");
     expect(favorites[1].thinking_effort).toBeUndefined();
   });
@@ -144,9 +144,9 @@ describe("makeSubagentModelResolver", () => {
   });
 
   it("accepte un favori absent du catalogue (un curaté est une valeur sûre)", () => {
-    // Le catalogue peut être vide : il ne lève jamais, il rend le cache périmé ou
-    // rien. Refuser alors TOUS les modèles retirerait la capacité pour une panne
-    // d'index.
+    // The catalog can be empty: it never reads, it makes the cache expired or
+    // Nothing. Refusing ALL models would remove capacity for failure
+    // of the index.
     const noCatalog = makeSubagentModelResolver({ favorites, catalogIds: [] });
     expect(noCatalog("anthropic/strong")).toEqual({ ok: true, id: "anthropic/strong" });
     expect(noCatalog("mistral/other").ok).toBe(false);
@@ -158,15 +158,15 @@ describe("makeSubagentModelResolver", () => {
     if (out.ok) throw new Error("unreachable");
     expect(out.error).toContain("deepseek/cheap (Cheap One)");
     expect(out.error).toContain("anthropic/strong (Strong One)");
-    // Deux choses que le modèle doit comprendre : pourquoi un id peut manquer, et
-    // qu'il peut simplement omettre le champ.
+    // Two things the model needs to understand: why an id might be missing, and
+    // that it can simply omit the field.
     expect(out.error).toMatch(/cannot call tools are excluded/);
     expect(out.error).toMatch(/Omit `model`/);
   });
 
   it("refuse un modèle HORS PLAFOND à part, sans le dire inconnu", () => {
-    // « Inconnu du catalogue » sur un modèle qui existe enverrait l'agent le
-    // retenter sous une autre orthographe, un round à chaque fois.
+    // “Unknown in catalog” on a model that exists would send the agent
+    // try again under another spelling, one round each time.
     const capped = makeSubagentModelResolver({
       favorites,
       catalogIds: ["deepseek/cheap"],
@@ -197,8 +197,8 @@ describe("scopeSubagentModels", () => {
   };
 
   it("retire du catalogue ET des favoris ce que le plan ne paye pas", () => {
-    // Le trou que ça bouche : le picker grise Strong pour un compte Go, mais
-    // l'agent parent pouvait déléguer dessus — sur le même quota.
+    // The hole this closes: the picker grays out Strong for a Go account, but
+    // the parent agent could delegate to it — against the same quota.
     const scope = scopeSubagentModels({ favorites, catalog: { ...catalog, maxMultiplier: 15 } });
     expect(scope.allowedIds).toEqual(["deepseek/cheap", "mistral/mid"]);
     expect(scope.abovePlanIds).toEqual(["anthropic/strong"]);
@@ -217,8 +217,8 @@ describe("scopeSubagentModels", () => {
   });
 
   it("garde les favoris que le catalogue ne situe pas", () => {
-    // Index des prix illisible → aucun multiplicateur → on n'interdit rien sur
-    // une ignorance, exactement comme le picker.
+    // Unreadable price index → no multiplier → nothing is prohibited out of
+    // ignorance, exactly like the picker.
     const scope = scopeSubagentModels({
       favorites,
       catalog: { models: [{ id: "deepseek/cheap", name: "Cheap" }], maxMultiplier: 15 },

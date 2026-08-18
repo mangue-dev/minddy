@@ -4,27 +4,27 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * Le raccourci d'envoi ne se réécrit PAS à la main.
+ * The sending shortcut is NOT rewritten by hand.
  *
- * Depuis qu'il est réglable par compte (Compte → Préférences → Clavier), un
- * `e.key === "Enter" && (e.metaKey || e.ctrlKey)` recopié dans un composer n'est
- * plus seulement un doublon : c'est un champ qui ignore le réglage, et qui
- * l'ignore SILENCIEUSEMENT — il continue de marcher pour qui n'a rien changé,
- * donc pour l'auteur du champ. Deux existaient encore quand la préférence est
- * arrivée (le champ de commentaire, l'éditeur de plan), tous deux écrits bien
- * après `isSendShortcut`.
+ * Since it is adjustable by account (Account → Preferences → Keyboard), a
+ * `e.key === "Enter" && (e.metaKey || e.ctrlKey)` copied into a composer is not
+ * no longer just a duplicate: it is a field which ignores the setting, and which
+ * SILENTLY ignores it — it continues to work for those who have not changed anything,
+ * therefore for the author of the field. Two still existed when the preference is
+ * arrived (the comment field, the plan editor), both written well
+ * after `isSendShortcut`.
  *
- * D'où ce test : la reconnaissance du geste passe par
- * [send-shortcut.ts](send-shortcut.ts) — `isSendShortcut` pour une surface qui
- * garde ⌘/Ctrl quoi qu'il arrive (un formulaire dont le corps est un éditeur),
- * `useIsSendShortcut` pour un composer qui suit le compte.
+ * Hence this test: recognition of the gesture goes through
+ * [send-shortcut.ts](send-shortcut.ts) — `isSendShortcut` for a surface that
+ * keeps ⌘/Ctrl no matter what (a form whose body is an editor),
+ * `useIsSendShortcut` for a composer that tracks the count.
  */
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const SOURCE_DIRS = ["app", "components", "lib"];
 const IGNORED_DIRS = new Set(["node_modules", ".next", ".git", "dist", "build"]);
 
-/** Le module qui PORTE la règle a évidemment le droit de l'écrire. */
+/** The module which CARRYS the rule obviously has the right to write it. */
 const ALLOWED = new Set([join("lib", "keyboard", "send-shortcut.ts")]);
 
 function sourceFiles(): string[] {
@@ -41,10 +41,9 @@ function sourceFiles(): string[] {
   return out;
 }
 
-/** « Entrée » et un modificateur ⌘/Ctrl testés POSITIVEMENT sur la même ligne.
-    Les gardes négatives (`!e.metaKey`, pour dire « Entrée nue ») sont retirées
-    d'abord : elles ne reconnaissent pas l'envoi, elles s'en protègent — c'est ce
-    que fait la liste de mentions, où Entrée choisit une suggestion. */
+/** "Enter" and a ⌘/Ctrl modifier tested POSITIVELY on the same line.
+ The negative guards (`!e.metaKey`, to say "Bare Entry") are removed
+ first: they do not recognize the sending, they protect themselves from it — this is what the list of mentions does, where Enter choose a suggestion. */
 const NEGATED = /![\w.]*\.(?:metaKey|ctrlKey)/g;
 const INLINE_CHECK =
   /(?:metaKey|ctrlKey)[^\n]*["']Enter["']|["']Enter["'][^\n]*(?:metaKey|ctrlKey)/;

@@ -54,14 +54,14 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Ce que la colonne montre. Les quatre états d'un objectif, plus les deux qui
- * n'en sont pas : « actifs » — ce qui n'est ni terminé ni annulé, et le point de
- * départ de la page — et « tous ».
+ * What the column shows. The four states of a goal, plus the two that
+ * are not: “active” — that which is neither finished nor canceled, and the point of
+ * start of the page — and “all”.
  *
- * Le statut d'un objectif est DÉRIVÉ de ses tickets (migration
- * `objective_status_auto`) : un objectif qu'on vient de poser est « planifié »
- * tant qu'aucun de ses tickets n'a démarré. C'est pour ça que le défaut n'est
- * pas le seul statut « en cours » — il masquerait tout ce qu'on vient de créer.
+ * The status of a goal is DERIVED from its tickets (migration
+ * `objective_status_auto`): a goal that has just been set is “planned”
+ * as long as none of its tickets have started. This is why the defect is not
+ * not the only “in progress” status — it would hide everything we have just created.
  */
 type ObjectiveStateFilter = "active" | ObjectiveStatus | "all";
 
@@ -74,15 +74,15 @@ function matchesState(objective: Objective, filter: ObjectiveStateFilter) {
 }
 
 /**
- * Le titre de la colonne vide quand c'est CET état, et lui seul, qui la vide —
- * « aucun objectif terminé » dit ce qu'on cherchait, là où « aucun dans ces
- * filtres » renvoie l'utilisateur rouvrir le menu pour se rappeler lesquels.
- * « Tous » n'y figure pas : un état qui n'exclut rien n'a rien à nommer, et
- * cette surface-là est traitée avant le rendu de la colonne.
+ * The title of the empty column when it is THIS state, and only this state, which empties it —
+ * “no objective completed” says what we were looking for, where “none in these
+ * filters" returns the user to reopen the menu to remember which ones.
+ * “All” does not appear there: a state which excludes nothing has nothing to name, and
+ * this surface is processed before rendering the column.
  *
- * Typé en `MessageKey` et non en `string` : une clé qui n'existe pas ne compile
- * pas (cf. CLAUDE.md), là où un `Record<string, string>` afficherait sereinement
- * « Objectives.emptyDone » à l'écran.
+ * Typed as `MessageKey` and not as `string`: a key that does not exist does not compile
+ * not (see CLAUDE.md), where a `Record<string, string>` would calmly display
+ * “Objectives.emptyDone” on screen.
  */
 const EMPTY_BY_STATE: Record<
   Exclude<ObjectiveStateFilter, "all">,
@@ -96,11 +96,11 @@ const EMPTY_BY_STATE: Record<
 };
 
 /**
- * Le filtre de la colonne — le même combobox que les pull requests et les
- * retours, pour la même raison : sur une ligne de 320 px il ne reste la place
- * que d'une icône, et ce qu'un libellé aurait dit passe dans le tooltip. Une
- * pastille signale de loin qu'un filtre est posé ; sans elle, une liste
- * restreinte n'aurait plus rien pour le dire.
+ * The column filter — the same combobox as pull requests and
+ * returns, for the same reason: on a line of 320 px there is no space left
+ * only an icon, and what a label would have said goes into the tooltip. A
+ * pellet signals from afar that a filter is installed; without it, a list
+ * restricted would have nothing left to say about it.
  */
 function ObjectiveFilterMenu({
   state,
@@ -119,8 +119,8 @@ function ObjectiveFilterMenu({
       : state === "all"
         ? t("filterAll")
         : tStatus(state);
-  // « Actifs » est le point de départ : rien à signaler. Tout le reste restreint
-  // la liste, et doit se voir sans ouvrir le menu.
+  // “Assets” is the starting point: nothing to report. Everything else restricted
+  // the list, and should be seen without opening the menu.
   const active = state !== "active";
   const tooltip = t("filterTooltip", { state: stateLabel });
 
@@ -145,8 +145,8 @@ function ObjectiveFilterMenu({
           <span className="relative flex items-center justify-center">
             <ListFilter className="size-4" />
             {active ? (
-              /* L'anneau à la couleur de la barre détache la pastille du trait
-                 de l'icône, qui passe juste dessous. */
+              /* The ring in the color of the bar detaches the pellet from the line
+ of the icon, which passes just below. */
               <span
                 aria-hidden
                 className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-primary ring-2 ring-sidebar"
@@ -194,10 +194,10 @@ function ObjectiveFilterMenu({
 }
 
 /**
- * Une ligne de la colonne — même gabarit que le triage, les retours et les pull
- * requests : une pastille arrondie dans une gouttière de 8 px. Ce que la ligne
- * porte est ce qu'on compare d'un objectif à l'autre : sa couleur, son nom, son
- * état, son avancement, son responsable.
+ * One row of the column — same template as sort, returns and pull
+ * requests: a rounded pellet in an 8 px gutter. What the line
+ * door is what we compare from one objective to another: its color, its name, its
+ * status, its progress, its manager.
  */
 function ObjectiveRow({
   objective,
@@ -247,10 +247,10 @@ function ObjectiveRow({
         <span className="shrink-0 text-xs text-muted-foreground">
           {tStatus(status.value)}
         </span>
-        {/* Le compte d'abord, l'anneau ensuite : c'est l'anneau qui tombe sur le
-            bord droit, à la même abscisse d'une ligne à l'autre — la colonne se
-            parcourt sur cette rangée de cercles, pas sur des chiffres qui
-            changent de largeur. */}
+        {/* The count first, then the ring: it is the ring that falls on the
+ right edge, at the same abscissa from one row to the next — the column se
+ iterates over this row of circles, not over numbers which
+ change width. */}
         <ObjectiveProgressStat progress={progress} countFirst className="ml-auto" />
       </div>
     </button>
@@ -280,16 +280,16 @@ function ObjectivesInner() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  // Sous `md` les deux volets se relaient en plein écran : la liste d'abord,
-  // le détail après avoir choisi.
+  // Under `md` the two panes take turns in full screen: the list first,
+  // the details after choosing.
   const [mobileDetail, setMobileDetail] = useState(false);
   const [query, setQuery] = useState("");
   /**
-   * L'état montré par la colonne. « Actifs » par défaut : une page d'objectifs
-   * qui empile deux ans de chantiers terminés ne dit plus où on en est.
+   * The state shown by the column. Default “Assets”: an objectives page
+   * which piles up two years of completed projects no longer says where we are.
    */
   const [state, setState] = useState<ObjectiveStateFilter>("active");
-  /** Dictée en vol dans le détail — voir `ObjectiveDetail.onBusyChange`. */
+  /** In-flight dictation in detail — see `ObjectiveDetail.onBusyChange`. */
   const [dictationBusy, setDictationBusy] = useState(false);
 
   const memberMap = useMemo(
@@ -298,9 +298,9 @@ function ObjectivesInner() {
   );
 
   /**
-   * Ce que le filtre d'état laisse passer — et donc ce dans quoi la sélection
-   * vit. Un objectif sorti du filtre (terminé pendant qu'on le regardait) doit
-   * rendre la main au suivant, comme s'il avait été supprimé.
+   * What the state filter lets pass — and therefore what the selection
+   * lives. A lens taken out of the filter (completed while looking at it) must
+   * hand over to the next one, as if it had been deleted.
    */
   const filtered = useMemo(
     () => objectives.filter((o) => matchesState(o, state)),
@@ -310,10 +310,10 @@ function ObjectivesInner() {
   const selected = filtered.find((o) => o.id === selectedId) ?? null;
 
   /**
-   * Ce que la colonne AFFICHE. Un cran EN DESSOUS de `filtered`, qui porte la
-   * sélection : le filtre texte ne doit pas la déplacer, sinon chaque frappe
-   * changerait l'objectif ouvert à droite — alors qu'on filtre justement pour
-   * aller en chercher un autre, et le choisir soi-même.
+   * What the column DISPLAYS. One notch BELOW `filtered`, which carries the
+   * selection: the text filter must not move it, otherwise each keystroke
+   * would change the lens open to the right - whereas we filter precisely for
+   * go find another one, and choose it yourself.
    */
   const listed = useMemo(() => {
     if (!query.trim()) return filtered;
@@ -335,9 +335,9 @@ function ObjectivesInner() {
   );
 
   /**
-   * Changer d'objectif — refusé tant que Numo tient une dictée sur celui qui est
-   * ouvert : son patch vise CET objectif, et en changer maintenant le jetterait.
-   * Une sélection sans effet passerait pour une panne, d'où le mot.
+   * Change objective—denied as long as Numo holds dictation on which one is
+   * open: its patch aims for THIS objective, and changing it now would throw it away.
+   * A selection without effect would pass for a failure, hence the word.
    */
   const select = useCallback(
     (id: string) => {
@@ -351,8 +351,8 @@ function ObjectivesInner() {
     [dictationBusy, selectedId, t]
   );
 
-  // Garder une sélection valide : le premier objectif par défaut, et le suivant
-  // quand celui qui était ouvert disparaît (suppression, changement de filtre).
+  // Keep a valid selection: the first objective by default, and the next
+  // when the one that was open disappears (deletion, change of filter).
   useEffect(() => {
     if (filtered.length === 0) {
       if (selectedId !== null) setSelectedId(null);
@@ -371,15 +371,15 @@ function ObjectivesInner() {
     }
   }, [newParam, pathname, router]);
 
-  // Lien profond (notifications, palette) : ?open=<id> sélectionne CET objectif
-  // plutôt que le premier de la liste, puis purge le paramètre pour qu'un
-  // refetch de fond ne ramène pas la sélection ici. On attend qu'il soit
-  // vraiment chargé : purger avant l'arrivée des objectifs laisserait l'effet
-  // ci-dessus retomber sur le premier, et le lien serait perdu à froid.
+  // Deep link (notifications, palette): ?open=<id> selects THIS goal
+  // rather than the first one in the list, then purges the setting so that one
+  // background refetch does not bring the selection back here. We wait for him to be
+  // really loaded: purging before the arrival of the objectives would leave the effect
+  // above fall back on the first, and the link would be lost cold.
   //
-  // Le filtre passe à « tous » avec lui : un lien vers un objectif terminé
-  // n'ouvrirait rien tant que la colonne n'en montre que les actifs — et c'est
-  // précisément un objectif clos qu'on vient relire depuis une notification.
+  // The filter changes to “all” with it: a link to a completed objective
+  // wouldn't open anything as long as the column only shows assets — and that's
+  // precisely a closed objective that we come to reread from a notification.
   useEffect(() => {
     if (!openParam) return;
     if (!objectives.some((o) => o.id === openParam)) return;
@@ -389,16 +389,16 @@ function ObjectivesInner() {
     router.replace(pathname);
   }, [openParam, objectives, pathname, router]);
 
-  // « Enregistrer la vue actuelle » (⌘K) : l'objectif ouvert dans le volet de
-  // droite est une SÉLECTION dans la page, pas une surimpression — elle fait
-  // donc partie de la vue. Elle sort de l'adresse dès que `?open=` est consommé
-  // ci-dessus, d'où cette publication ; `?open=` est aussi ce qui la rétablit.
+  // “Save current view” (⌘K): The open lens in the view pane
+  // right is a SELECTION on the page, not an overlay — it makes
+  // therefore part of the view. It leaves the address as soon as `?open=` is consumed
+  // above, hence this publication; `?open=` is also what restores it.
   //
-  // Le nom proposé PORTE LE PROJET, et ce n'est pas cosmétique : le champ
-  // arrive pré-rempli et pré-sélectionné, donc Entrée l'accepte tel quel — et
-  // l'enregistrement écrase la vue homonyme. « Objectifs » tout court, c'est le
-  // même nom sur chaque projet : enregistrer les objectifs d'un deuxième projet
-  // aurait remplacé ceux du premier, sans un mot.
+  // The proposed name CARRIES THE PROJECT, and it is not cosmetic: the field
+  // comes pre-populated and pre-selected, so Enter accepts it as is — and
+  // saving overwrites the view of the same name. “Objectives” quite simply, is the
+  // same name on each project: save the objectives of a second project
+  // would have replaced those of the first, without a word.
   usePublishCurrentView({
     href: buildViewHref(pathname, searchParams.toString(), {
       open: selected?.id ?? null,
@@ -431,9 +431,9 @@ function ObjectivesInner() {
     );
   }
 
-  /* `projectId` n'est pas seulement l'étiquette du bouton : c'est le préfixe de
-     stockage des pièces jointes, la portée des brouillons locaux et le projet
-     que la route de dictée interroge. */
+  /* `projectId` is not just the button label: it is the prefix of
+ attachment storage, the scope of local drafts, and the
+ project that the dictation route is querying. */
   const createDialog = (
     <ObjectiveDialog
       open={dialogOpen}
@@ -446,20 +446,19 @@ function ObjectivesInner() {
     />
   );
 
-  // Aucun objectif du tout (pas « rien dans ce filtre ») : les deux volets n'ont
-  // plus rien à montrer, et l'écran doit dire par quoi commencer plutôt que
-  // d'afficher une colonne vide à côté d'un « sélectionnez un objectif ».
+  // No objective at all (not “nothing in this filter”): both panes have no
+  // nothing left to show, and the screen must say where to start rather than
+  // to display an empty column next to a "select a goal".
   if (!loading && objectives.length === 0) {
     return (
       <>
         <div className="flex h-full flex-col">
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
             <div className="mx-auto max-w-5xl">
-              {/* Même forme que le board vide (MIN-173) : une scène, une phrase,
-                 les gestes qui remplissent la page. La scène est l'icône de
-                 l'onglet, posée au sol — la page se reconnaît à ce qui la nomme
-                 dans la barre latérale. Pas d'import ici : un objectif ne
-                 s'exporte d'aucun outil. */}
+              {/* Same form as the empty board (MIN-173): a scene, a sentence,
+ the gestures that fill the page. The scene is the
+ tab icon, placed on the ground — the page can be recognized by what names it
+ in the sidebar. No import here: an objective cannot be exported from any tool. */}
               <EmptyScene icon={Target} title={t("emptyTitle")}>
                 <Button onClick={() => setDialogOpen(true)}>
                   <Plus />
@@ -495,7 +494,7 @@ function ObjectivesInner() {
 
   return (
     <div className="flex h-full min-h-0">
-      {/* ── Colonne : les objectifs du projet ────────────────────────────── */}
+      {/* ── Column: project objectives ────────────────────────────── */}
       <SecondarySidebar
         title={t("title")}
         hiddenOnMobile={mobileDetail}
@@ -506,11 +505,11 @@ function ObjectivesInner() {
           clearLabel: tCommon("clearFilter"),
         }}
         actions={
-          /* Icônes seules : les libellés complets mangeaient la ligne. Ce
-             qu'ils disaient revient au survol — le tooltip de l'app, pas
-             l'infobulle du navigateur. Le `-mr-2` ne va que sur la DERNIÈRE :
-             c'est elle qui doit s'aligner sur le bord droit des lignes de la
-             liste, pas 8 px en-deçà. */
+          /* Icons alone: ​​the complete labels ate up the line. This
+ they said comes back to hover — the app tooltip, not
+ the browser tooltip. The `-mr-2` only goes on the LAST:
+ it is this which must align with the right edge of the lines of the
+ list, not 8 px below. */
           <>
             <ObjectiveFilterMenu state={state} onStateChange={setState} />
             <Tooltip>
@@ -537,12 +536,12 @@ function ObjectivesInner() {
             ))}
           </div>
         ) : listed.length === 0 ? (
-          /* Une page sans AUCUN objectif est traitée plus haut : ici, c'est
-             forcément un filtre qui a vidé la colonne. Lequel n'est pas un
-             détail — « rien ne correspond » se répare en effaçant trois lettres,
-             « aucun objectif terminé » demande de rouvrir le menu d'état, d'où
-             le bouton, qui n'a rien à offrir tant que c'est la saisie qui
-             restreint. */
+          /* A page without ANY objective is discussed above: here, it is
+ necessarily a filter which emptied the column. Which is not a
+ detail — "nothing matches" is fixed by deleting three letters,
+ "no goals completed" asks to reopen the status menu, hence
+ the button, which has nothing to offer as long as it is the input that
+ is restricting. */
           <EmptyScene
             size="compact"
             icon={Target}
@@ -579,7 +578,7 @@ function ObjectivesInner() {
         )}
       </SecondarySidebar>
 
-      {/* ── Détail : l'objectif ouvert ───────────────────────────────────── */}
+      {/* ── Detail: the open lens ───────────────────────────────────── */}
       <div
         className={cn(
           "min-h-0 min-w-0 flex-1 flex-col md:flex",
@@ -596,8 +595,8 @@ function ObjectivesInner() {
             onUpdate={updateObjective}
             onDelete={async (id) => {
               await deleteObjective(id);
-              // L'effet de sélection ci-dessus enchaîne sur l'objectif suivant ;
-              // sur mobile, il n'y a plus rien à voir : retour à la liste.
+              // The selection effect above segues into the next objective;
+              // on mobile, there is nothing more to see: return to the list.
               setMobileDetail(false);
             }}
             onBack={() => setMobileDetail(false)}

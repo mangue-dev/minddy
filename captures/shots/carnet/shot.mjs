@@ -1,12 +1,12 @@
 /**
- * scratchpad — le carnet de tâches de Camille, ouvert par G puis N.
+ * scratchpad — Camille's task notebook, opened by G then N.
  *
- * Voir `intent.md`, notamment pour la fenêtre : c'est la seule capture qui ne
- * prend pas 1447 × 1085, parce que la modale fait 90vw × 90vh quand son contenu
- * a des métriques fixes.
+ * See `intent.md`, especially for the window: it is the only capture that does not
+ * does not take 1447 × 1085, because the modal is 90vw × 90vh when its content
+ * has fixed metrics.
  *
- *   node captures/shots/carnet/shot.mjs             # produit les PNG
- *   node captures/shots/carnet/shot.mjs --publish   # + livre sur la landing
+ * node captures/shots/carnet/shot.mjs # produces the PNGs
+ * node captures/shots/carnet/shot.mjs --publish # + book on the landing
  */
 import { openPage, settle, shoot, CAPTURE } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
@@ -15,10 +15,10 @@ const SLOT = "scratchpad";
 const OUT = "captures/shots/carnet/out";
 const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";
 
-/** 4/3. Plus petit que les autres captures : voir `intent.md`, § Cadrage. */
+/** 4/3. Smaller than other captures: see `intent.md`, § Framing. */
 const VIEWPORT = { width: 1024, height: 768 };
 
-/** Les titres de section sont des données — anglais dans les deux variantes. */
+/** Section headings are data — English in both variants. */
 const SECTIONS = ["Before the release", "Loose ends"];
 const TASK_COUNT = 9;
 
@@ -36,17 +36,17 @@ async function capture({ locale, theme }) {
     await page.goto(`${CAPTURE.baseUrl}/projects/${AURORA}`, { waitUntil: "domcontentloaded" });
     await settle(page, { expect: "text=AUR-1" });
 
-    // Le raccourci que la landing cite mot pour mot. On le tape sur un board
-    // stabilisé, avant toute surface ouverte : rien à perdre au clavier.
+    // The shortcut that the landing quotes verbatim. We hit it on a board
+    // stabilized, before any open surface: nothing to lose on the keyboard.
     await page.keyboard.press("g");
     await page.keyboard.press("n");
 
     const modal = page.getByRole("dialog").first();
     await modal.waitFor({ state: "visible", timeout: 10_000 });
 
-    // Attendre le DOCUMENT, pas seulement la modale : la note arrive par une
-    // requête, et les boutons de section sont des décorations ProseMirror que
-    // l'application du contenu recrée. Survoler avant ce moment perd le survol.
+    // Wait for the DOCUMENT, not just the modal: the note arrives by a
+    // query, and section buttons are ProseMirror decorations that
+    // the application recreates the content. Hovering before this time loses the hover.
     await page.getByText(SECTIONS[1], { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
 
     const launch = page.locator(".scratchpad-section-launch");
@@ -90,12 +90,12 @@ async function capture({ locale, theme }) {
           `distinguent pas assez à l'œil.`,
       );
     }
-    // Le survol vient EN DERNIER, juste avant la prise, et il est vérifié en un
-    // seul instant : le fond de section et l'infobulle sont posés ensemble par
-    // `mouseenter`, mais une dernière passe de rendu de l'éditeur recrée le
-    // widget sous le curseur — le navigateur émet alors `mouseleave` sur le
-    // nœud retiré et les deux marqueurs disparaissent. Les vérifier l'un après
-    // l'autre laissait passer un état à moitié éteint (vu sur fr/dark).
+    // The hover comes LAST, just before the take, and it is checked in one
+    // single moment: the section background and the tooltip are placed together by
+    // `mouseenter`, but a final rendering pass of the editor recreates the
+    // widget under the cursor — the browser then issues `mouseleave` on the
+    // node removed and both markers disappear. Check them one after the other
+    // the other allowed a half-off state to pass (seen on fr/dark).
     for (let attempt = 1; ; attempt += 1) {
       await launch.first().hover({ force: true });
       const shown = await page

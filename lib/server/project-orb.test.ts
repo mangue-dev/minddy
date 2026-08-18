@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * La relance du tirage de l'orbe. On ne moque que ce qui SORT du process — la
- * base —, et on regarde ce qui part dedans.
+ * Restarting the orb draw. We only mock what COMES OUT of the process — the
+ * base —, and we look at what goes in.
  *
- * Ce que le test tient : le tirage se fait DANS le code, pas dans la base. La
- * valeur par défaut d'une colonne ne s'applique qu'à l'insertion, et PostgREST
- * ne sait pas écrire `set orb_seed = gen_random_uuid()` : une relance qui
- * n'enverrait pas de graine écrirait `null`, c'est-à-dire remettrait l'orbe à sa
- * couleur d'origine — l'exact contraire du geste demandé.
+ * What the test holds: the draw is done IN the code, not in the base. The
+ * default value of a column only applies to insertion, and PostgREST
+ * cannot write `set orb_seed = gen_random_uuid()`: a restart which
+ * would not send a seed would write `null`, i.e. would put the orb back to sa
+ * original color — the exact opposite of the requested gesture.
  */
 const updates: Array<{ fields: Record<string, unknown>; id: string }> = [];
 let updateError: { message: string } | null = null;
@@ -41,7 +41,7 @@ beforeEach(() => {
 });
 
 describe("regenerateProjectOrbSeed", () => {
-  it("écrit une graine tirée ici, et rend celle qui a été posée", async () => {
+  it("writes a seed drawn here and returns the one that was stored", async () => {
     const seed = await regenerateProjectOrbSeed(PROJECT);
 
     expect(seed).toMatch(UUID_RE);
@@ -49,15 +49,15 @@ describe("regenerateProjectOrbSeed", () => {
     expect(updates[0]).toEqual({ fields: { orb_seed: seed }, id: PROJECT });
   });
 
-  it("tire une graine NEUVE à chaque appel", async () => {
-    // Sans ça, « Nouvelle orbe » ne changerait rien la deuxième fois — et le
-    // bouton se cliquerait dans le vide sans rien dire.
+  it("draws a NEW seed on every call", async () => {
+    // Without that, “New Orb” wouldn’t change anything the second time around — and the
+    // button would click in the void without saying anything.
     const first = await regenerateProjectOrbSeed(PROJECT);
     const second = await regenerateProjectOrbSeed(PROJECT);
     expect(second).not.toBe(first);
   });
 
-  it("lève quand la base refuse — la route répond alors 500", async () => {
+  it("throws when the database rejects — the route then returns 500", async () => {
     updateError = { message: "permission denied" };
     await expect(regenerateProjectOrbSeed(PROJECT)).rejects.toThrow(
       "permission denied",

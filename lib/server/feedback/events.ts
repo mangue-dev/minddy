@@ -11,21 +11,21 @@ import {
 import type { FeedbackPostSource } from "@/lib/feedback/types";
 
 /**
- * Journal d'activité du feedback (MIN-57) — le pendant de issue-events pour les
- * posts de feedback. Les rows vivent dans la MÊME table `issue_events`
- * (polymorphe issue / objectif / feedback_post) et passent par le même
- * `insertEvents` ; ces helpers ne font que construire les EventRow feedback et
- * les attribuer correctement (membre, board, intégration, IA).
+ * Feedback Activity Log (MIN-57) — the counterpart to issue-events for
+ * feedback posts. The rows live in the SAME table `issue_events`
+ * (polymorphic issue / objective / feedback_post) and pass through the same
+ * `insertEvents` ; these helpers only construct the EventRow feedback and
+ * assign them correctly (member, board, integration, AI).
  *
- * Toutes les écritures sont best-effort et hors chemin critique : un échec de
- * journalisation ne doit jamais faire échouer la mutation qui l'a déclenchée
- * (insertEvents avale déjà ses erreurs).
+ * All writes are best-effort and off-critical path: a failure of
+ * logging should never cause the mutation that triggered it to fail
+ * (insertEvents already swallows its errors).
  */
 
 const s = (v: unknown): string | null =>
   v === null || v === undefined ? null : String(v);
 
-/** Champs du post suivis avec from/to (le miroir de buildFieldChangeEvents). */
+/** Fields in the post followed with from/to (the mirror of buildFieldChangeEvents). */
 export function buildFeedbackFieldChangeEvents(
   postId: string,
   actorId: string | null,
@@ -44,7 +44,7 @@ export function buildFeedbackFieldChangeEvents(
       to_value: s(updates.title),
     });
   }
-  // Corps : comme une description, on n'enregistre que le fait qu'il a changé.
+  // Body: like a description, we only record the fact that it has changed.
   if ("body" in updates && (updates.body ?? "") !== (before.body ?? "")) {
     events.push({
       feedback_post_id: postId,
@@ -63,11 +63,11 @@ export function buildFeedbackFieldChangeEvents(
       to_value: s(updates.status),
     });
   }
-  // La réponse d'équipe ne passe plus par ici (MIN-196) : c'est un commentaire
-  // public, et le fil d'activité montre déjà les commentaires. Les lignes
-  // `team_response` déjà écrites restent lisibles — voir lib/describe-event.ts.
-  // Visibilité : on journalise le sens (rendu public / privé) — pas de from/to,
-  // l'action se suffit à elle-même dans le fil.
+  // The team response no longer goes through here (MIN-196): it's a comment
+  // public, and the activity feed already shows comments. The lines
+  // `team_response` already written remains readable — see lib/describe-event.ts.
+  // Visibility: we log the meaning (made public/private) — no from/to,
+  // the action is self-sufficient in the thread.
   if (
     "is_public" in updates &&
     (updates.is_public ?? null) !== (before.is_public ?? null)
@@ -80,10 +80,10 @@ export function buildFeedbackFieldChangeEvents(
       to_value: updates.is_public ? "public" : "private",
     });
   }
-  // État de publication (MIN-54) : publication d'un retour retenu, émise par un
-  // override équipe. `pending` ne produit pas de phrase — c'est l'état
-  // d'attente initial, sans action à raconter. Le junk, lui, ne passe plus par
-  // ici : il est devenu le statut `spam`, journalisé par le bloc `status`.
+  // Publication status (MIN-54): publication of a retained return, issued by a
+  // override team. `pending` does not produce a sentence — this is the state
+  // initial wait, with no action to report. Junk no longer passes through
+  // here: it has become the status `spam`, logged by the `status` block.
   if (
     "review_state" in updates &&
     (updates.review_state ?? null) !== (before.review_state ?? null) &&
@@ -100,9 +100,9 @@ export function buildFeedbackFieldChangeEvents(
   return events;
 }
 
-/** Événement « créé » — attribué au membre (saisie interne), à l'intégration
-    (canal API) ou au board (soumission publique, acteur anonyme). Le canal est
-    porté par `field` pour la phrase du fil. */
+/** “Created” event — assigned to the member (internal input), integration
+ (API channel) or board (public submission, anonymous actor). The channel is
+ carried by `field` for the thread phrase. */
 export async function emitFeedbackCreated(
   service: SupabaseClient,
   params: {
@@ -124,7 +124,7 @@ export async function emitFeedbackCreated(
   );
 }
 
-/** Événements de changement de champ (titre / corps / statut / réponse). */
+/** Field change events (title/body/status/response). */
 export async function emitFeedbackFieldChanges(
   service: SupabaseClient,
   params: {
@@ -132,9 +132,9 @@ export async function emitFeedbackFieldChanges(
     actorId: string | null;
     before: Record<string, unknown>;
     updates: Record<string, unknown>;
-    /** Attribue le changement à Numo dans le fil (via_assistant). */
+    /** Assigns the change to Numo in the thread (via_assistant). */
     viaAssistant?: boolean;
-    /** Attribue le changement à l'agent MCP (via_mcp + clé) dans le fil. */
+    /** Assigns the change to the MCP agent (via_mcp + key) in the thread. */
     mcpKeyId?: string | null;
   }
 ): Promise<void> {
@@ -153,7 +153,7 @@ export async function emitFeedbackFieldChanges(
   await insertEvents(service, rows);
 }
 
-/** Promotion en issue (to_value = id de l'issue créée). */
+/** Promotion to issue (to_value = id of the issue created). */
 export async function emitFeedbackPromoted(
   service: SupabaseClient,
   params: {
@@ -179,7 +179,7 @@ export async function emitFeedbackPromoted(
   );
 }
 
-/** Lien vers une issue existante (to_value = id de l'issue). */
+/** Link to an existing issue (to_value = issue id). */
 export async function emitFeedbackLinked(
   service: SupabaseClient,
   params: {
@@ -205,7 +205,7 @@ export async function emitFeedbackLinked(
   );
 }
 
-/** Détachement de l'issue liée (from_value = id de l'issue détachée). */
+/** Detaching the linked issue (from_value = id of the detached issue). */
 export async function emitFeedbackUnlinked(
   service: SupabaseClient,
   params: {
@@ -231,8 +231,8 @@ export async function emitFeedbackUnlinked(
   );
 }
 
-/** Fusion reçue sur le post canonique (to_value = titre du doublon absorbé).
-    Une fusion IA est attribuée à Numo dans le fil (via_assistant). */
+/** Merge received on the canonical post (to_value = title of the duplicate absorbed).
+ An AI merge is assigned to Numo in the thread (via_assistant). */
 export async function emitFeedbackMerged(
   service: SupabaseClient,
   params: {

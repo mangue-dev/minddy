@@ -1,20 +1,20 @@
 /**
- * Ce que le wizard d'inscription SAIT, hors de tout écran (MIN-300).
+ * What the registration wizard KNOWS, off-screen (MIN-300).
  *
- * L'inscription n'est plus un onglet du formulaire de connexion : c'est un
- * parcours à trois étapes, sur sa propre route (`/signup`). Ce module en porte
- * la partie qui se raisonne — l'ordre des étapes, ce qui rend une étape valide,
- * et les paramètres d'URL qui doivent survivre au passage d'un écran d'auth à
- * l'autre. Le composant, lui, ne fait que dessiner et appeler Supabase.
+ * Registration is no longer a tab on the login form: it's a
+ * three-step journey, on its own route (`/signup`). This module carries
+ * the part that makes sense — the order of steps, what makes a step valid,
+ * and the URL parameters that should survive going from one auth screen to
+ * the other. The component only draws and calls Supabase.
  *
- * La validation rend un CODE, jamais une phrase : le message est traduit à
- * l'affichage (namespace `Auth`), et un module testé en `environment: node`
- * n'a pas de traducteur sous la main.
+ * The validation returns a CODE, never a sentence: the message is translated to
+ * the display (namespace `Auth`), and a module tested in `environment: node`
+ * does not have translator on hand.
  */
 
 import { passwordMeetsPolicy } from "@/lib/password-policy";
 
-/** Les étapes, dans l'ordre. Le parcours par e-mail les traverse toutes. */
+/** The steps, in order. The email journey goes through them all. */
 export const SIGNUP_STEPS = ["account", "identity", "password"] as const;
 
 export type SignupStep = (typeof SIGNUP_STEPS)[number];
@@ -27,9 +27,9 @@ export interface SignupValues {
 }
 
 /**
- * Ce qui manque à l'étape courante. Chaque code est une clé du namespace
- * `Auth` — la table de correspondance vit dans le composant, pour que le
- * contrat i18n reste vérifiable par `lib/i18n-contract.test.ts`.
+ * What is missing in the current step. Each code is a key of the namespace
+ * `Auth` — the lookup table lives in the component, so that the
+ * i18n contract remains verifiable by `lib/i18n-contract.test.ts`.
  */
 export type SignupIssue =
   | "emailRequired"
@@ -39,10 +39,10 @@ export type SignupIssue =
   | "passwordMismatch";
 
 /**
- * Assez pour attraper la faute de frappe, pas assez pour prétendre valider une
- * adresse : seule la confirmation par e-mail le fait vraiment. Le navigateur
- * applique la même règle sur un `<input type="email">` — celle-ci existe pour
- * que le bouton « Continuer » sache dire non AVANT la soumission.
+ * Enough to catch the typo, not enough to claim to validate a
+ * address: only email confirmation really does it. The browser
+ * applies the same rule on a `<input type="email">` — this one exists so that
+ * the “Continue” button knows to say no BEFORE submission.
  */
 export function isValidEmail(value: string): boolean {
   const email = value.trim();
@@ -53,7 +53,7 @@ export function isValidEmail(value: string): boolean {
   return domain.includes(".") && !domain.startsWith(".") && !domain.endsWith(".");
 }
 
-/** Ce qui bloque cette étape, ou `null` si elle peut avancer. */
+/** What blocks this step, or `null` if it can advance. */
 export function validateSignupStep(
   step: SignupStep,
   values: SignupValues
@@ -63,41 +63,41 @@ export function validateSignupStep(
       if (!values.email.trim()) return "emailRequired";
       return isValidEmail(values.email) ? null : "emailInvalid";
     case "identity":
-      // Le nom est le seul champ de son étape : la sauter à vide donnerait un
-      // compte dont l'app afficherait l'adresse e-mail partout (cf. la règle
-      // de display-name), ce qu'on ne veut ni pour lui ni pour ses coéquipiers.
+      // The name is the only field in its step: skipping it empty would give a
+      // account whose email address the app would display everywhere (see the rule
+      // from display-name), which we don't want for him or his teammates.
       return values.fullName.trim() ? null : "nameRequired";
     case "password":
-      // La politique d'abord : elle est AFFICHÉE, règle par règle, sous le
-      // champ. Comparer les deux saisies avant de la tenir ferait apparaître
-      // « ne correspondent pas » sur un mot de passe que le serveur allait de
-      // toute façon refuser.
+      // Policy first: it is DISPLAYED, rule by rule, under the
+      // field. Comparing the two entries before holding it would show
+      // "do not match" on a password that the server was going to
+      // refuse anyway.
       if (!passwordMeetsPolicy(values.password)) return "passwordPolicy";
       return values.password === values.confirmPassword ? null : "passwordMismatch";
   }
 }
 
-/** L'étape suivante, ou `null` sur la dernière. */
+/** The next step, or `null` on the last one. */
 export function nextSignupStep(step: SignupStep): SignupStep | null {
   return SIGNUP_STEPS[SIGNUP_STEPS.indexOf(step) + 1] ?? null;
 }
 
-/** L'étape précédente, ou `null` sur la première. */
+/** The previous step, or `null` on the first. */
 export function previousSignupStep(step: SignupStep): SignupStep | null {
   const index = SIGNUP_STEPS.indexOf(step);
   return index > 0 ? (SIGNUP_STEPS[index - 1] ?? null) : null;
 }
 
 /**
- * Les paramètres qui doivent SUIVRE d'un écran d'auth à l'autre, et eux seuls.
+ * Parameters that should FOLLOW from one auth screen to another, and only them.
  *
- * `redirect` porte la destination d'origine (le proxy la pose en renvoyant ici),
- * `invite` porte le lien d'invitation : passer de « créer un compte » à « j'ai
- * déjà un compte » en les perdant renverrait la personne sur `/home` sans
- * jamais rejoindre le projet qui l'attendait. Tout le reste (`error`, `mode`,
- * un `utm_*`…) appartient à l'écran d'où l'on vient et ne se recopie pas.
+ * `redirect` carries the original destination (the proxy sets it by returning here),
+ * `invite` carries the invite link: pass from "create an account" to "I have
+ * already an account" losing them would send the person back to `/home` without
+ * ever joining the project that was waiting for them. Everything else (`error`, `mode`,
+ * a `utm_*`…) belongs to the screen we came from and is not copied.
  *
- * Rend une chaîne de requête préfixée de `?`, ou `""` s'il n'y a rien à passer.
+ * Returns a query string prefixed with `?`, or `""` if there is nothing to pass.
  */
 export function preserveAuthParams(
   search: URLSearchParams | string,

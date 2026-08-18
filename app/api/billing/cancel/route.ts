@@ -10,22 +10,22 @@ import {
 } from "@/lib/server/stripe";
 
 /**
- * POST /api/billing/cancel — résilier (ou reprendre) son abonnement DEPUIS
+ * POST /api/billing/cancel — cancel (or resume) your subscription FROM
  * l'app (MIN-296).
  *
- * La règle « click-to-cancel » : résilier ne doit pas demander plus de gestes
- * que souscrire. Souscrire, c'est un bouton sur /billing puis le paiement ;
- * résilier passait par le Customer Portal, donc un aller-retour chez Stripe et
- * deux écrans de plus. Cette route donne le chemin direct — un bouton, une
+ * The “click-to-cancel” rule: canceling should not require more actions
+ * what to subscribe. Subscribe, it's a button on /billing then payment;
+ * canceling went through the Customer Portal, so a round trip to Stripe and
+ * two more screens. This road gives the direct path — a button, a
  * confirmation.
  *
- * `{ resume: true }` fait l'inverse et c'est ce qui rend le geste sûr : tant que
- * la période court, on revient en arrière du même endroit. Le portail Stripe
- * reste là pour le reste (moyen de paiement, factures, changement de formule).
+ * `{ resume: true }` does the opposite and this is what makes the gesture safe: as long as
+ * the period runs, we go back from the same place. The Stripe portal
+ * stays there for the rest (means of payment, invoices, change of formula).
  *
- * La résiliation est à la FIN DE PÉRIODE : ce qui est payé reste dû, on arrête
- * le renouvellement. La réponse renvoie l'état écrit en base plutôt que d'attendre
- * le webhook — sans ça l'écran se rafraîchirait sur l'ancien état.
+ * Termination is at the END OF THE PERIOD: what is paid remains due, we stop
+ * renewal. The response returns the state written in base rather than waiting
+ * the webhook — without it the screen would refresh to the old state.
  */
 export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as { resume?: unknown };
     resume = body?.resume === true;
   } catch {
-    // Corps absent ou illisible = résiliation, la seule action qui a un défaut.
+    // Absent or illegible body = termination, the only action that has a defect.
   }
 
   const account = await getBillingAccountForUser(auth.user.id);

@@ -19,18 +19,18 @@ import {
   type PullRequestStateFilter,
 } from "./agent-api";
 
-/** Clé de cache des runs d'agent d'une issue. */
+/** Cache key for agent runs of an issue. */
 export function issueAgentRunsQueryKey(issueId: string) {
   return ["agent-runs", "issue", issueId] as const;
 }
 
 /**
- * Runs de l'agent d'une issue, avec polling adaptatif : ~3 s tant que l'agent
- * TRAVAILLE (queued/running) ; ~12 s de backstop sinon dès qu'une run existe —
- * pour capter une reprise déclenchée par un AUTRE client (autre onglet,
- * coéquipier) même quand notre conversation est ouverte. `refetchOnMount: always`
- * garantit un état frais à l'ouverture de la modal (évite d'ouvrir « compose » sur
- * une session déjà vivante à cause d'un cache périmé).
+ * Runs of the agent of an issue, with adaptive polling: ~3 s as long as the agent
+ * WORK (queued/running); ~12 s backstop otherwise as soon as a run exists —
+ * to capture a recovery triggered by ANOTHER client (other tab,
+ * teammate) even when our conversation is open. `refetchOnMount: always`
+ * guarantees a fresh state when opening the modal (avoids opening “compose” on
+ * a session already alive because of an expired cache).
  */
 export function useIssueAgentRunsQuery(issueId: string | null) {
   const enabled = !!issueId;
@@ -48,26 +48,26 @@ export function useIssueAgentRunsQuery(issueId: string | null) {
   });
   return {
     runs: data?.runs ?? [],
-    /** La PR du ticket, quel que soit son état — null s'il n'en a aucune. */
+    /** The PR of the ticket, regardless of its state — null if it has none. */
     pullRequest: data?.pullRequest ?? null,
     loading: enabled && isPending,
   };
 }
 
-/** Clé de cache de la chaîne d'automatisation d'un ticket (MIN-147). */
+/** Ticket automation chain cache key (MIN-147). */
 export function issueChainQueryKey(issueId: string) {
   return ["agent-chain", "issue", issueId] as const;
 }
 
 /**
- * Chaîne d'automatisation d'un ticket. AUCUN polling, à la différence de ses
- * voisines : une chaîne vit plusieurs minutes sans que personne ne touche à
- * rien, et c'est exactement pour ça qu'elle a un trigger realtime dédié
- * (`case "agent_chains"` dans lib/realtime-provider.tsx) — le direct la fait
- * bouger, un timer ne ferait que payer des requêtes pour rien.
+ * Ticket automation chain. NO polling, unlike its
+ * neighbors: a channel lives for several minutes without anyone touching it
+ * nothing, and that's exactly why it has a dedicated realtime trigger
+ * (`case "agent_chains"` in lib/realtime-provider.tsx) — direct does it
+ * move, a timer would just pay requests for nothing.
  *
- * `refetchOnMount: always` quand même : le realtime ne rejoue pas ce qui s'est
- * passé pendant que l'onglet dormait.
+ * `refetchOnMount: always` anyway: realtime does not replay what happened
+ * passed while the tab was sleeping.
  */
 export function useIssueChainQuery(issueId: string | null) {
   const on = !!issueId;
@@ -86,16 +86,16 @@ export function useIssueChainQuery(issueId: string | null) {
   };
 }
 
-/** Clé de cache du détail d'un run (conversation d'une session CARNET, MIN-84). */
+/** Cache key for the details of a run (conversation of a NOTEBOOK session, MIN-84). */
 export function agentRunQueryKey(runId: string) {
   return ["agent-run", runId] as const;
 }
 
 /**
- * Détail d'UN run — la conversation d'une session carnet (le run EST la session,
- * pas de liste de runs d'issue à interroger). Même cadence que les runs d'issue :
- * ~3 s tant que l'agent travaille, ~12 s de backstop sinon (capte une reprise
- * depuis un autre onglet), état frais à chaque montage.
+ * Details of ONE run — the conversation of a notebook session (the run IS the session,
+ * no list of outcome runs to query). Same cadence as the outcome runs:
+ * ~3 s as long as the agent is working, ~12 s backstop otherwise (captures a restart
+ * from another tab), fresh state each time it is edited.
  */
 export function useAgentRunQuery(runId: string | null) {
   const enabled = !!runId;
@@ -114,15 +114,15 @@ export function useAgentRunQuery(runId: string | null) {
 }
 
 /**
- * Events du live view d'un run : polling ~2 s tant que le run est actif.
- * `runId` null = la session n'existe pas encore (POST de lancement en vol) : rien à
- * interroger, le fil n'affiche que la bulle optimiste du 1er message.
+ * Live view events of a run: polling ~2 s as long as the run is active.
+ * `runId` null = the session does not yet exist (in-flight launch POST): nothing to
+ * query, the thread only displays the optimistic bubble of the 1st message.
  *
- * `refetchOnMount: always` : au repos le run ne poll plus, et le `staleTime` global
- * de 5 min garderait le cache « frais ». Sans ce forçage, revenir sur la page Agents
- * après avoir quitté l'onglet (remontage du composant) réafficherait les events
- * d'AVANT — sans le dernier message envoyé ni la réponse de l'agent — jusqu'à un
- * rechargement complet. On refetch donc à chaque montage, comme les runs de l'issue.
+ * `refetchOnMount: always`: at rest the run no longer pollutes, and the global `staleTime`
+ * of 5 min would keep the cache “fresh”. Without this forcing, return to the Agents page
+ * after leaving the tab (remounting the component) would redisplay the events
+ * BEFORE — without the last message sent or the agent's response — until a
+ * complete reloading. We therefore refetch at each edit, like the runs of the outcome.
  */
 export function useAgentRunEventsQuery(runId: string | null, active: boolean) {
   const enabled = !!runId;
@@ -136,17 +136,17 @@ export function useAgentRunEventsQuery(runId: string | null, active: boolean) {
   return { events: data?.events ?? [], loading: enabled && isPending };
 }
 
-/** Cadence de suivi d'une CI en cours — une CI se compte en minutes, pas en
-    secondes : plus lent que le diff (7 s) qui, lui, suit un agent qui écrit. */
+/** Tracking rate of a CI in progress — a CI is counted in minutes, not in
+    seconds: slower than the diff (7 s) which follows an agent who writes. */
 const CHECKS_POLL_MS = 15_000;
 
 /**
- * PR d'un run pour la review in-app : metadata, fichiers/patches, checks CI,
- * approbations et méthodes de merge offertes par la forge (MIN-138).
+ * PR of a run for the in-app review: metadata, files/patches, CI checks,
+ * approvals and merge methods offered by the forge (MIN-138).
  *
- * Tant qu'un check est `pending`, on re-poll : sans ça le bandeau CI resterait
- * figé sur « en cours » jusqu'à un rechargement de page, alors que c'est
- * précisément le moment où l'utilisateur regarde.
+ * As long as a check is `pending`, we re-poll: otherwise the CI banner would remain
+ * frozen on “in progress” until a page reload, even though it is
+ * precisely when the user is looking.
  */
 export function usePullRequestQuery(prId: string, enabled: boolean) {
   const { data, isPending, refetch } = useQuery({
@@ -162,9 +162,9 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
     checks: data?.checks ?? null,
     checksError: data?.checksError ?? null,
     reviews: data?.reviews ?? null,
-    // Qui je suis pour cette PR (MIN-144). `null` tant que le GET n'a pas
-    // répondu : l'UI n'offre alors aucun geste d'écriture, plutôt que d'en
-    // proposer un qu'elle retirerait une seconde plus tard.
+    // Who I am for this PR (MIN-144). `null` as long as the GET has not
+    // answered: the UI then does not offer any writing gesture, rather than
+    // propose one that she would withdraw a second later.
     viewer: data?.viewer ?? null,
     mergeMethods: data?.mergeMethods ?? [],
     loading: enabled && isPending,
@@ -172,22 +172,22 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
   };
 }
 
-/** Clé de cache du diff vivant d'un run (vue diff dans la conversation). */
+/** Cache key for the live diff of a run (diff view in the conversation). */
 export function agentRunDiffQueryKey(runId: string) {
   return ["agent-run-diff", runId] as const;
 }
 
 /**
- * Diff vivant d'un run — la vue diff DANS la conversation, sans attendre la PR.
- * Interrogé seulement quand la vue est OUVERTE (`enabled`) ; tant que l'agent
- * travaille, re-poll ~7 s. `refetchOnMount: always` : la vue repart toujours
- * d'un état frais à l'ouverture (le staleTime global de 5 min garderait sinon un
- * diff d'avant le dernier tour).
+ * Diff alive from a run — the diff view IN the conversation, without waiting for the PR.
+ * Queried only when the view is OPEN (`enabled`); as long as the agent
+ * works, re-poll ~7 sec. `refetchOnMount: always`: the view always restarts
+ * from a fresh state upon opening (the overall staleTime of 5 min would otherwise keep a
+ * diff before the last round).
  *
- * La cadence de 7 s date du temps où ce diff ne bougeait qu'aux pushes de fin de
- * tour. Il vient maintenant de la sandbox pendant le tour et avance donc en
- * continu ; 7 s reste le bon pas — chaque passage est un aller-retour RPC dans la
- * microVM, et une vue diff qui se repeint quatre fois par seconde ne se lit pas.
+ * The 7 s cadence dates from the time when this diff only moved at the end of the push.
+ * round. He now comes from the sandbox during the turn and therefore advances in
+ * continuous ; 7 s remains the right step — each pass is an RPC round trip in the
+ * microVM, and a diff view that repaints itself four times per second does not read.
  */
 export function useAgentRunDiffQuery(runId: string, enabled: boolean, working: boolean) {
   const { data, isPending } = useQuery({
@@ -206,22 +206,22 @@ export function useAgentRunDiffQuery(runId: string, enabled: boolean, working: b
   };
 }
 
-/** Clé de cache du RÉSUMÉ du diff (les mêmes fichiers, sans les patches). */
+/** Diff SUMMARY cache key (the same files, without the patches). */
 export function agentRunDiffStatQueryKey(runId: string) {
   return ["agent-run-diff-stat", runId] as const;
 }
 
 /**
- * LES DEUX NOMBRES DE L'EN-TÊTE PENDANT LE TOUR (MIN-266).
+ * BOTH HEADER NUMBERS DURING THE ROUND (MIN-266).
  *
- * L'en-tête les tirait des events `files_changed`, émis en FIN de tour : pendant
+ * The header took them from the `files_changed` events, emitted at the END of the round: during
  * qu'il travaillait, l'agent pouvait toucher trente fichiers sans que rien ne
- * bouge là-haut — et au premier tour d'une session, il n'y avait rien du tout.
- * Cette requête-ci lit le même diff que la vue, en version résumée (aucun patch),
- * et donne donc les compteurs pendant que le travail se fait.
+ * move up there — and in the first round of a session, there was nothing at all.
+ * This query reads the same diff as the view, in summarized version (no patch),
+ * and therefore gives the counters while the work is done.
  *
- * Elle ne tourne QUE pendant le tour : au repos, les events font foi et ne
- * coûtent rien — ils sont déjà chargés par le fil.
+ * It ONLY rotates during the tour: at rest, the events are authentic and do not
+ * cost nothing — they are already charged by the wire.
  */
 export function useAgentRunDiffStatQuery(runId: string | null, working: boolean) {
   const { data } = useQuery({
@@ -237,17 +237,17 @@ export function useAgentRunDiffStatQuery(runId: string | null, working: boolean)
   };
 }
 
-/** Page de liste par défaut — le serveur borne à 500 (un dépôt actif a des
-    centaines de PR ; les charger toutes n'a jamais servi personne). */
+/** Default list page — the server limits to 500 (an active repository has
+    hundreds of PRs; loading them all never helped anyone). */
 export const PULL_REQUESTS_PAGE = 100;
 
-/** PR à garantir dans la réponse malgré la pagination (deep-link). */
+/** PR to be guaranteed in the response despite pagination (deep-link). */
 export interface PullRequestPin {
   pr?: string | null;
   run?: string | null;
 }
 
-/** Clé de cache de la liste globale des PR (MIN-66) — variable par filtre/page. */
+/** Global PR List Cache Key (MIN-66) — variable per filter/page. */
 export function allPullRequestsQueryKey(
   state: PullRequestStateFilter = "open",
   limit: number = PULL_REQUESTS_PAGE,
@@ -257,26 +257,26 @@ export function allPullRequestsQueryKey(
 }
 
 /**
- * Liste globale des PR des dépôts liés (page Pull Requests). Polling ~5 s tant
- * qu'une PR a un run actif (Numo retravaille dessus), sinon pas de polling.
+ * Global list of PRs of linked repositories (Pull Requests page). Polling ~5 seconds
+ * that a PR has an active run (Numo is reworking on it), otherwise no polling.
  *
- * Le filtre d'ÉTAT est servi par le serveur (MIN-143) : depuis que la liste
- * montre tout le dépôt et plus seulement les PR de Numo, « toutes » veut dire
- * des centaines de lignes, dont personne ne regarde les fermées.
+ * The STATUS filter is served by the server (MIN-143): since the list
+ * shows the entire repository and not just the Numo PRs, “all” means
+ * hundreds of lines, of which no one looks at the closed ones.
  *
- * `refetchOnMount: always` (même raison que useAgentSessionsQuery) : au repos la
- * liste ne poll plus ET l'app-shell garde ce cache chaud, donc un deep-link
- * `?run=` arrivant sur un cache « frais » (staleTime global 5 min) ne verrait
- * jamais la PR qu'on vient de créer. On expose aussi `fetching` : la page PR
- * attend qu'un refetch en vol atterrisse avant de retomber sur la 1re PR de la
- * liste, sinon le deep-link ouvrirait la dernière PR au lieu de la bonne.
+ * `refetchOnMount: always` (same reason as useAgentSessionsQuery): at rest the
+ * list no longer polls AND the app-shell keeps this cache hot, therefore a deep-link
+ * `?run=` arriving on a “fresh” cache (global staleTime 5 min) would not see
+ * never the PR that we have just created. We also expose `fetching`: the PR page
+ * waits for an in-flight refetch to land before falling back to the 1st PR of the
+ * list, otherwise the deep-link would open the last PR instead of the correct one.
  *
- * `placeholderData` = la page PRÉCÉDENTE. La pagination met `limit` dans la clé
- * de cache : sans ça, « en voir plus » ouvre une clé vierge, donc `isPending`
- * repasse à vrai — la liste entière retombe en squelettes, le bouton disparaît
- * et le panneau de détail se vide, pour revenir une seconde plus tard. C'est un
- * AGRANDISSEMENT de la liste, pas un changement d'écran : elle reste affichée, et
- * `fetching` (que le bouton lit déjà : spinner + désactivé) porte l'attente.
+ * `placeholderData` = PREVIOUS page. Paging puts `limit` in the key
+ * cache: without that, “see more” opens a blank key, so `isPending`
+ * returns to true — the entire list reverts to skeletons, the button disappears
+ * and the detail panel clears, only to return a second later. It's a
+ * ENLARGEMENT of the list, not a screen change: it remains displayed, and
+ * `fetching` (which the button already reads: spinner + disabled) carries the wait.
  */
 export function useAllPullRequestsQuery(
   state: PullRequestStateFilter = "open",
@@ -305,16 +305,16 @@ export function useAllPullRequestsQuery(
   };
 }
 
-/** Clé de cache de la liste globale des sessions d'agent (page Agents). */
+/** Cache key for the global list of agent sessions (Agents page). */
 export const allAgentSessionsQueryKey = ["agent-sessions", "all"] as const;
 
 /**
- * Liste globale des sessions de l'agent (page Agents). Polling ~5 s tant qu'une
- * session TRAVAILLE (Numo tourne), sinon pas de polling — calqué sur
- * `useAllPullRequestsQuery`. `refetchOnMount: always` pour la même raison que les
- * events : au repos la liste ne poll plus, donc revenir sur /agents après avoir
- * quitté l'onglet réafficherait des statuts/non-lus périmés (cache « frais » 5 min)
- * jusqu'à un rechargement complet.
+ * Global list of agent sessions (Agents page). Polling ~5 sec as a
+ * WORK session (Numo is running), otherwise no polling — modeled on
+ * `useAllPullRequestsQuery`. `refetchOnMount: always` for the same reason as the
+ * events: at rest the list no longer polls, so return to /agents after having
+ * left the tab would redisplay outdated/unread statuses (“fresh” cache 5 min)
+ * until fully recharged.
  */
 export function useAgentSessionsQuery() {
   const { data, isPending, refetch } = useQuery({
@@ -329,7 +329,7 @@ export function useAgentSessionsQuery() {
   return { sessions: data?.sessions ?? [], loading: isPending, refetch };
 }
 
-/** Fil de conversation d'une PR (commentaires GitHub) et leurs réactions. */
+/** PR conversation thread (GitHub comments) and their reactions. */
 export function usePrCommentsQuery(prId: string | null) {
   const enabled = !!prId;
   const { data, isPending, refetch } = useQuery({
@@ -339,11 +339,11 @@ export function usePrCommentsQuery(prId: string | null) {
   });
   return {
     comments: data?.comments ?? [],
-    // L'activité (MIN-159) voyage avec les messages : c'est le MÊME fil, ordonné
-    // par date — la servir à part la ferait s'intercaler avec un temps de retard.
+    // The activity (MIN-159) travels with the messages: it is the SAME thread, ordered
+    // by date — serving it separately would cause it to be a time late.
     timeline: data?.timeline ?? [],
-    // Les réactions (MIN-147) voyagent avec les commentaires, comme côté review :
-    // elles se rendent SOUS un message, et le corps de la PR y a les siennes.
+    // The reactions (MIN-147) travel with the comments, as on the review side:
+    // they go UNDER a message, and the PR body has its own there.
     reactions: data?.reactions ?? [],
     loading: enabled && isPending,
     refetch,
@@ -351,9 +351,9 @@ export function usePrCommentsQuery(prId: string | null) {
 }
 
 /**
- * Commits d'une PR (onglet Commits). Pas de polling : une liste de commits ne
- * bouge qu'à un push, et l'appelant la rafraîchit quand Numo finit de
- * travailler — c'est le seul moment où elle change sous les yeux du lecteur.
+ * Commits of a PR (Commitments tab). No polling: a list of commits does not
+ * moves only at a push, and the caller refreshes it when Numo finishes
+ * work — this is the only moment when it changes before the reader's eyes.
  */
 export function usePrCommitsQuery(prId: string | null) {
   const enabled = !!prId;
@@ -371,9 +371,9 @@ export function usePrCommitsQuery(prId: string | null) {
 }
 
 /**
- * Diff d'UN commit de la PR. Interrogé seulement quand la vue est OUVERTE
- * (`enabled`) : c'est un aller-retour de forge par commit regardé, et la
- * plupart ne le sont jamais. Aucun polling — un commit est immuable.
+ * Diff of ONE PR commit. Queried only when view is OPEN
+ * (`enabled`): it's a forge round trip per commit looked at, and the
+ * most never are. No polling — a commit is immutable.
  */
 export function usePrCommitDiffQuery(prId: string, sha: string | null) {
   const enabled = !!sha;
@@ -386,9 +386,9 @@ export function usePrCommitDiffQuery(prId: string, sha: string | null) {
 }
 
 /**
- * Commentaires de review d'une PR (ceux ancrés à une ligne du diff). Prend une
- * BASE de route et non un id : la vue diff sert la page Pull Requests (indexée
- * par PR) comme la conversation d'agent (indexée par run) — cf. `PrEndpoint`.
+ * PR review comments (those anchored to a line in the diff). Take a
+ * BASE route and not an id: the diff view serves the Pull Requests page (indexed
+ * by PR) like the agent conversation (indexed by run) — cf. `PrEndpoint`.
  */
 export function usePrReviewCommentsQuery(endpoint: PrEndpoint | null) {
   const enabled = !!endpoint;
@@ -397,14 +397,14 @@ export function usePrReviewCommentsQuery(endpoint: PrEndpoint | null) {
     queryFn: () => fetchPrReviewCommentsApi(endpoint as PrEndpoint),
     enabled,
   });
-  // `threads` (MIN-139) voyage avec les commentaires : c'est la même query, donc
-  // le même rafraîchissement — résoudre un fil et répondre dedans ne peuvent pas
-  // se désynchroniser.
+  // `threads` (MIN-139) travels with the comments: it's the same query, so
+  // the same refresh — resolving a thread and replying in it cannot
+  // get out of sync.
   return {
     comments: data?.comments ?? [],
     threads: data?.threads ?? [],
-    // Les réactions (MIN-139) voyagent avec, pour la même raison : elles se
-    // rendent SOUS un commentaire, jamais séparément.
+    // The reactions (MIN-139) travel with it, for the same reason: they
+    // submit UNDER a comment, never separately.
     reactions: data?.reactions ?? [],
     loading: enabled && isPending,
     refetch,

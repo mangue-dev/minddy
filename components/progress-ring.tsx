@@ -3,15 +3,15 @@
 import { cn } from "mangue-ui";
 
 /**
- * L'anneau d'avancement de l'app : rempli dans le sens des aiguilles depuis midi
- * — le `Pie` des indicateurs de ticket, mais en TRAIT, pour qu'il se lise comme
- * une jauge et non comme un statut.
+ * The app's progress ring: filled clockwise from noon
+ * — the `Pie` of ticket indicators, but in DASH, so that it reads as
+ * a gauge and not a status.
  *
- * Né sur le cycle (MIN-32), il est depuis la forme unique de « ce qui est fait
- * sur ce qui reste » : le cycle, et l'objectif partout où son avancement se lit
- * (colonne, en-tête du détail, bandeau du board). Une barre horizontale demande
- * une largeur qu'une ligne de liste n'a pas ; l'anneau tient dans la place d'une
- * icône.
+ * Born on the cycle (MIN-32), it is since the unique form of “what is done
+ * on what remains”: the cycle, and the objective wherever its progress reads
+ * (column, detail header, board banner). A horizontal bar requires
+ * a width that a list line does not have; the ring fits in the place of a
+ * icon.
  */
 export function ProgressRing({
   percent,

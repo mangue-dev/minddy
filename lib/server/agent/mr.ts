@@ -33,20 +33,20 @@ import type {
 } from "./pr";
 
 /**
- * Opérations Merge Request GitLab pour l'agent de code (MIN-69) — le miroir de
- * `pr.ts` contre l'API GitLab v4, derrière la MÊME surface (types neutres de
- * `pr.ts`, signatures identiques, exposées via `forge.ts`). Correspondances :
- *   • `number` = l'`iid` de la MR (numéro par projet, comme un numéro de PR) ;
- *   • le dépôt est adressé par son chemin complet URL-encodé (`group/projet`) ;
- *   • état : `opened`/`locked` → `open`, `merged` → `closed` + `merged: true`
- *     (même convention que GitHub : `state` open/closed + booléen `merged`) ;
- *   • conversation = les notes non-système ; review ancrée = les discussions
- *     portant une `position` (DiffNote). GitLab ne fournit pas de `diff_hunk`
- *     → chaîne vide (tous les rendus ont déjà un repli sans hunk).
- * Token : access token OAuth du compte connecté (minté par resolveRepoCloneTarget).
+ * GitLab Merge Request Operations for Code Broker (MIN-69) — the mirror of
+ * `pr.ts` against the GitLab API v4, behind the SAME surface (neutral types of
+ * `pr.ts`, identical signatures, exposed via `forge.ts`). Correspondence:
+ * • `number` = the `iid` of the MR (number per project, like a PR number);
+ * • the repository is addressed by its full URL-encoded path (`group/projet`);
+ * • state: `opened`/`locked` → `open`, `merged` → `closed` + `merged: true`
+ * (same convention as GitHub: `state` open/closed + boolean `merged`);
+ * • conversation = non-system notes; anchored review = discussions
+ * carrying a `position` (DiffNote). GitLab does not provide `diff_hunk`
+ * → empty string (all renderings already have a hunkless fallback).
+ * Token: OAuth access token of the connected account (minted by resolveRepoCloneTarget).
  */
 
-/** Erreur d'API GitLab avec le status HTTP (pendant de `GithubApiError`). */
+/** GitLab API error with HTTP status (during `GithubApiError`). */
 export class GitlabApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -56,12 +56,12 @@ export class GitlabApiError extends Error {
   }
 }
 
-/** Chemin projet `group/sub/projet` → id d'URL GitLab (tout encodé, `/` compris). */
+/** Project path `group/sub/projet` → GitLab URL id (all encoded, including `/`). */
 function projectPath(repoFullName: string): string {
   return encodeURIComponent(repoFullName);
 }
 
-/** Message d'erreur GitLab : `message` peut être une chaîne, un objet ou un tableau. */
+/** GitLab error message: `message` can be a string, an object, or an array. */
 function errorMessage(data: unknown, status: number): string {
   const raw = (data as { message?: unknown; error?: unknown } | null) ?? {};
   const m = raw.message ?? raw.error;
@@ -80,16 +80,16 @@ async function glJson<T>(url: string, token: string, init?: RequestInit): Promis
   try {
     data = text ? JSON.parse(text) : null;
   } catch {
-    // Corps non-JSON (rare) : data reste null, le message par défaut s'applique.
+    // Non-JSON body (rare): data remains null, default message applies.
   }
   if (!res.ok) throw new GitlabApiError(errorMessage(data, res.status), res.status);
   return data as T;
 }
 
 /**
- * Variante paginée (offset via X-Next-Page), bornée par `maxPages`. `stopWhen`
- * (optionnel) court-circuite les pages restantes dès que l'accumulé suffit —
- * ex. la recherche d'UNE discussion n'a pas à drainer tout le fil.
+ * Paginated variant (offset via X-Next-Page), bounded by `maxPages`. `stopWhen`
+ * (optional) bypasses the remaining pages as soon as the accumulation is sufficient —
+ * ex. looking for ONE discussion doesn't have to drain the entire thread.
  */
 async function glPaged<T>(
   baseUrl: string,
@@ -101,11 +101,11 @@ async function glPaged<T>(
 }
 
 /**
- * La même pagination, mais qui DIT si elle s'est arrêtée au plafond (MIN-168).
- * Une liste coupée sans le dire ne se distingue pas d'une liste complète, et
- * l'appelant conclut alors sur ce qu'il a vu comme si c'était tout.
- * `stopWhen` ne compte pas comme une troncature : là, c'est l'appelant qui a
- * décidé qu'il en avait assez.
+ * The same pagination, but which SAYS if it stopped at the ceiling (MIN-168).
+ * A list cut without saying so is indistinguishable from a complete list, and
+ * the caller then concludes with what he saw as if that were all.
+ * `stopWhen` does not count as a truncation: here, it is the caller who
+ * decided he'd had enough.
  */
 async function glPagedBounded<T>(
   baseUrl: string,
@@ -134,7 +134,7 @@ async function glPagedBounded<T>(
     page = gitlabNextPage(res);
     fetched++;
   }
-  // Il restait une page à lire quand le plafond a coupé.
+  // There was one page left to read when the ceiling cut.
   return { items: all, truncated: page != null && fetched >= maxPages };
 }
 
@@ -154,21 +154,21 @@ interface RawMr {
   author?: { username?: string; avatar_url?: string | null } | null;
   created_at?: string;
   updated_at?: string;
-  /** État de fusionnabilité détaillé (GitLab 15.6+). */
+  /** Detailed mergeability status (GitLab 15.6+). */
   detailed_merge_status?: string | null;
   /** L'API historique : can_be_merged | cannot_be_merged | unchecked | checking. */
   merge_status?: string | null;
 }
 
 /**
- * Fusionnabilité GitLab → le vocabulaire GitHub que porte `PullRequestRef`, pour
- * que l'UI n'ait qu'une langue à lire. `undefined` = inconnu (GitLab calcule lui
- * aussi en asynchrone : `unchecked` / `checking` à la première lecture).
+ * GitLab mergability → the GitHub vocabulary that `PullRequestRef` carries, for
+ * that the UI only has one language to read. `undefined` = unknown (GitLab calculates
+ * also asynchronously: `unchecked` / `checking` on first reading).
  */
 function toMergeable(mr: RawMr): { mergeable?: boolean | null; mergeableState?: string | null } {
   const detailed = mr.detailed_merge_status;
   if (!detailed) {
-    // Repli sur l'API historique quand l'instance est antérieure à 15.6.
+    // Fallback to historical API when the instance is older than 15.6.
     if (mr.merge_status === "can_be_merged") return { mergeable: true, mergeableState: "clean" };
     if (mr.merge_status === "cannot_be_merged") {
       return { mergeable: false, mergeableState: "dirty" };
@@ -187,7 +187,7 @@ function toMergeable(mr: RawMr): { mergeable?: boolean | null; mergeableState?: 
     default:
       // `not_approved`, `blocked_status`, `ci_must_pass`, `discussions_not_resolved`,
       // `need_rebase`, `draft_status`, `requested_changes`… : autant de refus du
-      // dépôt lui-même, que l'UI dit tous de la même façon (« merge bloqué »).
+      // repository itself, which the UI all says the same way ("merge blocked").
       return { mergeable: false, mergeableState: "blocked" };
   }
 }
@@ -197,8 +197,8 @@ function toRef(mr: RawMr): PullRequestRef {
   return {
     number: mr.iid,
     url: mr.web_url,
-    // Convention neutre de `pr.ts` : `state` open/closed + booléen `merged`.
-    // `locked` est un état transitoire (merge en cours) → open.
+    // Neutral convention of `pr.ts`: `state` open/closed + boolean `merged`.
+    // `locked` is a transient state (merge in progress) → open.
     state: mr.state === "opened" || mr.state === "locked" ? "open" : "closed",
     draft: mr.draft ?? mr.work_in_progress,
     merged,
@@ -213,13 +213,13 @@ function toRef(mr: RawMr): PullRequestRef {
     createdAt: mr.created_at,
     updatedAt: mr.updated_at,
     mergedAt: mr.merged_at ?? null,
-    // `nodeId` reste vide : c'est une clé GraphQL GitHub, sans équivalent utile
-    // ici (la bascule brouillon GitLab se fait par le titre — cf. plus bas).
+    // `nodeId` remains empty: it is a GraphQL GitHub key, with no useful equivalent
+    // here (the GitLab draft switch is done by the title — see below).
     ...toMergeable(mr),
   };
 }
 
-/** MR ouverte pour `head` (branche du run), ou null. */
+/** MR open for `head` (run branch), or null. */
 export async function findOpenMergeRequest(opts: {
   token: string;
   repoFullName: string;
@@ -234,12 +234,12 @@ export async function findOpenMergeRequest(opts: {
 }
 
 /**
- * Ouvre la MR du run, ou renvoie celle déjà ouverte pour cette branche (reprise).
- * GitLab répond 409 « Another open merge request already exists » dans ce cas.
+ * Opens the MR of the run, or returns the one already open for this branch (resume).
+ * GitLab responds 409 “Another open merge request already exists” in this case.
  *
- * Parité GitHub sur la branche VIDE : GitLab accepte les MR sans aucun commit —
- * on refuse nous-mêmes en 422 (le même status que le « No commits between… » de
- * GitHub), sinon l'agent ouvrirait une MR vide et pousserait le ticket en revue.
+ * GitHub parity on EMPTY branch: GitLab accepts MR without any commits —
+ * we refuse ourselves in 422 (the same status as the “No commits between…” of
+ * GitHub), otherwise the agent would open an empty MR and push the ticket for review.
  */
 export async function ensureMergeRequest(opts: {
   token: string;
@@ -307,9 +307,9 @@ interface RawDiff {
   deleted_file?: boolean;
 }
 
-/** Compte +/- d'un unified diff (GitLab ne fournit pas les stats par fichier).
-    Gardé DANS les hunks, mêmes règles que `resolveDiffPosition` : une ligne de
-    contenu `++…` est bien une addition, un en-tête hors hunk n'est rien. */
+/** Count +/- of a unified diff (GitLab does not provide stats per file).
+    Kept IN hunks, same rules as `resolveDiffPosition`: a line of
+    content `++…` is indeed an addition, a header excluding hunk is nothing. */
 function countDiffLines(diff: string): { additions: number; deletions: number } {
   let additions = 0;
   let deletions = 0;
@@ -328,8 +328,8 @@ function countDiffLines(diff: string): { additions: number; deletions: number } 
 
 const DIFFS_MAX_PAGES = 10;
 
-/** Diffs bruts de la MR (endpoint /diffs, paginé). Partagé fichiers + positions.
-    `stopWhen` court-circuite la pagination quand on ne cherche qu'un fichier. */
+/** MR raw diffs (endpoint /diffs, paginated). Shared files + positions.
+    `stopWhen` bypasses pagination when looking for only one file. */
 async function listRawDiffs(
   opts: {
     token: string;
@@ -360,13 +360,13 @@ function toPullRequestFile(d: RawDiff): PullRequestFile {
           : "modified",
     additions,
     deletions,
-    // Diff vide (binaire / trop gros) → undefined, comme le `patch` GitHub.
+    // Empty diff (binary / too big) → undefined, like `patch` GitHub.
     patch: d.diff || undefined,
     previous_filename: d.renamed_file ? d.old_path : undefined,
   };
 }
 
-/** Fichiers de la MR au format neutre (patches unified diff) — review in-app. */
+/** MR files in neutral format (unified diff patches) — in-app review. */
 export async function listMergeRequestChanges(opts: {
   token: string;
   repoFullName: string;
@@ -390,23 +390,23 @@ interface RawCommit {
   created_at?: string | null;
   web_url?: string | null;
   parent_ids?: string[] | null;
-  /** Servi par le détail d'UN commit, jamais par la liste d'une MR. */
+  /** Served by the detail of ONE commit, never by the list of an MR. */
   stats?: { additions?: number; deletions?: number } | null;
 }
 
-/** Même plafond que `pr.ts` : 3 pages de 100 commits, `truncated` au-delà. */
+/** Same ceiling as `pr.ts`: 3 pages of 100 commits, `truncated` beyond. */
 const COMMITS_MAX_PAGES = 3;
 
 /**
- * Les commits de la MR, du plus ANCIEN au plus récent — l'ordre de `pr.ts`, et
- * donc celui que l'onglet Commits affiche des deux côtés. GitLab sert cette
- * liste à l'envers (tête de branche d'abord) : on la retrie par date, la seule
- * clé que les deux forges donnent.
+ * The MR commits, from oldest to newest — the order of `pr.ts`, and
+ * so the one that the Commits tab displays on both sides. GitLab serves this
+ * list in reverse (branch head first): we sort it by date, the only
+ * key that the two forges give.
  *
- * Ni compte de forge ni signature ici : l'API des commits d'une MR ne sert que
- * le nom écrit dans le commit, et la vérification demanderait un appel PAR
+ * Neither forge account nor signature here: the API of commits of an MR is only used
+ * the name written in the commit, and the check would request a PAR call
  * commit (`/repository/commits/{sha}/signature`). `author: null` +
- * `verified: null` disent « on ne sait pas », que le rendu traite déjà.
+ * `verified: null` say "we don't know", which the renderer already processes.
  */
 export async function listMergeRequestCommits(opts: {
   token: string;
@@ -419,60 +419,60 @@ export async function listMergeRequestCommits(opts: {
     COMMITS_MAX_PAGES,
   );
   const commits = raw
-    // La forge sert la tête de branche d'abord : l'inversion suffit dans le cas
-    // courant, et le tri qui suit ne fait que remettre d'aplomb les rebases (une
-    // date d'auteur peut y précéder celle du commit d'avant).
+    // The forge serves the branch head first: inversion is sufficient in the case
+    // current, and the sorting that follows only straightens out the rebases (a
+    // author date can precede that of the previous commit).
     .reverse()
     .map((c) => {
       const authoredAt = c.authored_date ?? c.created_at ?? null;
       return {
         sha: c.id,
-        // `message` porte le titre ET le corps ; `title` seul est le repli des
-        // instances qui ne servent que lui sur cet endpoint.
+        // `message` has the title AND the body; `title` alone is the withdrawal of
+        // instances that only serve him on this endpoint.
         message: c.message ?? c.title ?? "",
         author: null,
         authorName: c.author_name ?? null,
         authorEmail: c.author_email ?? null,
         authoredAt,
-        // Certaines instances ne servent pas `web_url` ici : l'URL de commit est
-        // stable et se reconstruit, comme celle du compare.
+        // Some instances do not serve `web_url` here: the commit URL is
+        // stable and rebuilds itself, like that of the compare.
         url: c.web_url ?? `${GITLAB_HOST}/${opts.repoFullName}/-/commit/${c.id}`,
         verified: null,
-        // Premier parent : la ligne principale d'un commit de fusion.
+        // First parent: The main line of a merge commit.
         parentSha: c.parent_ids?.[0] ?? null,
-        // Comme chez GitHub, la liste ne porte ni stats ni auteurs (`…CommitExtras`)
-        // — sauf que GitLab ne saura jamais résoudre les seconds en comptes :
-        // l'appelant lira les trailers `Co-authored-by` du message.
+        // As with GitHub, the list contains neither stats nor authors (`…CommitExtras`)
+        // — except that GitLab will never be able to resolve the latter into accounts:
+        // the caller will read the `Co-authored-by` trailers of the message.
         authors: [],
         additions: null,
         deletions: null,
       } satisfies PullRequestCommit;
     })
-    // Tri STABLE, et une date illisible compare à 0 (règle de `Array.sort` sur
-    // NaN) : deux commits d'un même push partagent souvent la seconde, et
-    // l'ordre de la forge est alors le seul départage qu'on ait.
+    // STABLE sorting, and an unreadable date compares to 0 (`Array.sort` rule on
+    // NaN): two commits from the same push often share the second, and
+    // the order of the forge is then the only tie-breaker we have.
     .sort((a, b) => Date.parse(a.authoredAt ?? "") - Date.parse(b.authoredAt ?? ""));
   return { commits, truncated: raw.length >= COMMITS_MAX_PAGES * 100 };
 }
 
 /**
- * Au-delà, on ne va pas chercher les stats : GitLab n'a pas l'équivalent du
- * GraphQL de GitHub (aucun endpoint ne sert le poids de PLUSIEURS commits d'un
- * coup), donc chaque commit coûte un aller-retour. Cinquante suffisent aux MR
- * qu'on lit vraiment commit par commit ; au-delà, l'indicateur +/− disparaît et
- * le diff d'un commit reste ouvrable — il porte ses propres chiffres.
+ * Beyond that, we're not going to look for stats: GitLab doesn't have the equivalent of
+ * GraphQL from GitHub (no endpoint serves the weight of MULTIPLE commits from one
+ * blow), so each commit costs a round trip. Fifty is enough for MRs
+ * that we really read commit by commit; beyond this, the +/− indicator disappears and
+ * a commit's diff remains open — it carries its own numbers.
  */
 const MAX_STATS_COMMITS = 50;
-/** Requêtes de stats en vol : assez pour que 50 commits tiennent en ~10 tours. */
+/** In-flight stat queries: enough for 50 commits to fit in ~10 turns. */
 const STATS_CONCURRENCY = 5;
 
 /**
- * Le poids de chaque commit de la MR, indexé par SHA — le pendant du GraphQL de
- * `pr.ts`, en beaucoup moins élégant : GitLab ne sert `stats` que sur le DÉTAIL
- * d'un commit, donc un appel par commit, en parallèle borné.
+ * The weight of each MR commit, indexed by SHA — the GraphQL counterpart of
+ * `pr.ts`, much less elegant: GitLab only serves `stats` on the DETAIL
+ * of a commit, therefore one call per commit, in bounded parallel.
  *
- * Best-effort commit par commit : un SHA illisible (commit élagué d'un
- * force-push) n'ôte pas ses chiffres aux autres.
+ * Best-effort commit by commit: an unreadable SHA (commit pruned by one
+ * force-push) does not take away its numbers from others.
  */
 export async function listMergeRequestCommitExtras(opts: {
   token: string;
@@ -495,8 +495,8 @@ export async function listMergeRequestCommitExtras(opts: {
           stats.set(sha, {
             additions: commit.stats?.additions ?? 0,
             deletions: commit.stats?.deletions ?? 0,
-            // GitLab ne résout AUCUN compte sur ses commits, co-auteurs compris :
-            // l'appelant lira les trailers du message, seule source qui reste.
+            // GitLab does NOT resolve any counts on its commits, including co-authors:
+            // the caller will read the message trailers, the only source remaining.
             authors: [],
           });
         } catch (err) {
@@ -509,9 +509,9 @@ export async function listMergeRequestCommitExtras(opts: {
 }
 
 /**
- * Le diff d'UN commit contre son parent, au format neutre. Deux appels : les
- * diffs d'un côté (paginés), le commit de l'autre — c'est lui qui porte les
- * stats, l'URL web et le parent, qu'aucun des deux endpoints ne sert ensemble.
+ * The diff of ONE commit against its parent, in neutral format. Two calls:
+ * diffs on one side (paginated), the commit on the other — it is he who carries the
+ * stats, web URL and parent, which neither endpoint serves together.
  */
 export async function getCommitDiff(opts: {
   token: string;
@@ -526,8 +526,8 @@ export async function getCommitDiff(opts: {
   const files = diffs.map(toPullRequestFile);
   return {
     files,
-    // `stats` manquant (instance ancienne) : les patches les portent déjà, on
-    // recompte plutôt que d'annoncer zéro.
+    // `stats` missing (old instance): the patches already carry them, we
+    // recount rather than announcing zero.
     additions:
       commit.stats?.additions ?? files.reduce((n, f) => n + f.additions, 0),
     deletions:
@@ -538,11 +538,11 @@ export async function getCommitDiff(opts: {
 }
 
 /**
- * Diff CUMULÉ d'une branche de travail contre sa base — le miroir du compare
- * GitHub (`pr.ts`), pour la vue diff d'une session SANS MR. `from...to` diffe
- * depuis le merge base (défaut `straight=false` de l'API), comme une MR.
- * L'URL web est construite à la main : l'API compare ne la renvoie pas.
- * Lève GitlabApiError(404) si la branche n'a pas (encore) été poussée.
+ * CUMULATIVE Diff of a branch of work against its base — the mirror of the comparison
+ * GitHub (`pr.ts`), for the diff view of a session WITHOUT MR. `from...to` differs
+ * from the merge base (API default `straight=false`), like an MR.
+ * The web URL is constructed by hand: the compare API does not return it.
+ * Raises GitlabApiError(404) if the branch has not (yet) been pushed.
  */
 export async function compareBranches(opts: {
   token: string;
@@ -564,8 +564,8 @@ export async function compareBranches(opts: {
 }
 
 /**
- * Merge base de deux BRANCHES — le pendant sans MR de `getMergeBaseSha` : la base
- * du dépliage de contexte de la vue diff d'une session qui n'a pas encore de MR.
+ * Merge base of two BRANCHES — the counterpart without MR of `getMergeBaseSha`: the base
+ * context unfolding of the diff view of a session that does not yet have an MR.
  * GitLab l'expose directement (endpoint repository/merge_base).
  */
 export async function getBranchesMergeBaseSha(opts: {
@@ -583,12 +583,12 @@ export async function getBranchesMergeBaseSha(opts: {
   return res.id;
 }
 
-/** Même plafond que `pr.ts` : 5 pages de 100 suffisent à un picker de branche. */
+/** Same ceiling as `pr.ts`: 5 pages of 100 are enough for a branch picker. */
 const MAX_BRANCH_PAGES = 5;
 
 /**
- * Noms des branches du dépôt (picker de branche de base du lancement d'agent) —
- * miroir de `pr.ts`. Le tri (défaut d'abord) est fait par l'appelant.
+ * Repository branch names (agent launch base branch picker) —
+ * mirror of `pr.ts`. The sorting (default first) is done by the caller.
  */
 export async function listBranches(opts: {
   token: string;
@@ -602,20 +602,20 @@ export async function listBranches(opts: {
   return branches.map((b) => b.name);
 }
 
-/** Même plafond que `pr.ts` (MAX_MEMBER_PAGES). */
+/** Same ceiling as `pr.ts` (MAX_MEMBER_PAGES). */
 const MAX_MEMBER_PAGES = 2;
 
 /**
- * Les comptes GitLab qu'on peut mentionner sur ce projet (MIN-162).
+ * GitLab accounts that can be mentioned on this project (MIN-162).
  *
- * `members/all` et non `members` : GitLab distingue les membres DIRECTS du
- * projet de ceux qui en héritent par le groupe parent — et sur une instance
- * organisée en groupes, la seconde liste est l'essentiel des gens. C'est le
+ * `members/all` and not `members`: GitLab distinguishes DIRECT members from
+ * project of those who inherit it from the parent group — and on an instance
+ * organized into groups, the second list is the bulk of the people. This is the
  * pendant exact de l'`affiliation=all` de GitHub.
  *
- * GitLab sert un `name` en plus du `username` : on le garde, la suggestion se
- * cherche alors aussi bien par nom que par identifiant — mais c'est toujours
- * `@username` qui s'insère, seul lui notifie.
+ * GitLab serves a `name` in addition to the `username`: we keep it, the suggestion is
+ * then searches by name as well as by identifier — but it is always
+ * `@username` which is inserted, only notifies him.
  */
 export async function listRepoMembers(opts: {
   token: string;
@@ -637,14 +637,14 @@ export async function listRepoMembers(opts: {
     }));
 }
 
-/** Même plafond que `pr.ts` (MAX_PR_PAGES) pour le ménage des branches. */
+/** Same ceiling as `pr.ts` (MAX_PR_PAGES) for cleaning branches. */
 const MAX_MR_PAGES = 5;
 
 /**
- * TOUTES les MR du dépôt, tous états confondus (MIN-102) — miroir de `pr.ts`.
- * `state=all` est ici doublement nécessaire : GitLab compte `merged` et `closed`
- * comme deux états DISTINCTS (`state=closed` ne ramène PAS les fusionnées), et
- * on veut de toute façon voir les MR ouvertes pour protéger leurs branches.
+ * ALL MRs in the repository, all states combined (MIN-102) — mirror of `pr.ts`.
+ * `state=all` is doubly necessary here: GitLab counts `merged` and `closed`
+ * as two DISTINCT states (`state=closed` does NOT bring back the merged ones), and
+ * In any case, we want to see the MRs open to protect their branches.
  */
 export async function listPullRequests(opts: {
   token: string;
@@ -658,15 +658,15 @@ export async function listPullRequests(opts: {
   );
   return {
     pulls: raw.map(toRef),
-    // glPaged s'arrête sur `maxPages` sans le dire : une moisson pleine à ras
-    // bord est le seul indice qu'il restait des pages.
+    // glPaged stops on `maxPages` without saying it: a harvest full to the brim
+    // edge is the only clue that there were any pages left.
     truncated: raw.length >= MAX_MR_PAGES * 100,
   };
 }
 
 /**
- * Supprime une branche distante (MIN-102) — miroir de `deleteBranch` de `pr.ts`.
- * Contrairement à GitHub, le nom de branche est ENTIÈREMENT URL-encodé ici
+ * Removes a remote branch (MIN-102) — mirror of `deleteBranch` of `pr.ts`.
+ * Unlike GitHub, the branch name is FULLY URL-encoded here
  * (l'API GitLab attend un segment, pas un chemin). 404 → `"already-gone"`.
  */
 export async function deleteBranch(opts: {
@@ -689,14 +689,14 @@ export async function deleteBranch(opts: {
 }
 
 /**
- * SHA de la BASE du diff servi par GitLab pour cette MR : `diff_refs.base_sha`.
+ * SHA of the BASE of the diff served by GitLab for this MR: `diff_refs.base_sha`.
  *
- * Le miroir du piège documenté dans `pr.ts` (getMergeBaseSha), inversé : GitHub
- * recalcule le diff à la volée (le merge base VIVANT est le bon), GitLab fige le
- * diff à `diff_refs` — rafraîchi seulement quand la branche source pousse, PAS
- * quand la cible avance. Recalculer un merge base vivant décalerait les lignes
- * dépliées après un rebase/force-push de la cible (ou après merge). L'ancre
- * persistée survit aussi à la suppression de la branche source.
+ * The trap mirror documented in `pr.ts` (getMergeBaseSha), reversed: GitHub
+ * recalculates the diff on the fly (the VIVANT base merge is the correct one), GitLab freezes the
+ * diff to `diff_refs` — refreshed only when the source branch grows, NOT
+ * when the target advances. Recalculating a live base merge would shift the lines
+ * unfolded after a rebase/force-push of the target (or after merge). The anchor
+ * persisted also survives deletion of the source branch.
  */
 export async function getMergeBaseSha(opts: {
   token: string;
@@ -712,7 +712,7 @@ export async function getMergeBaseSha(opts: {
   return sha;
 }
 
-/** Contenu brut d'un fichier à un ref donné, ou null s'il n'y existe pas. */
+/** Raw content of a file at a given ref, or null if it does not exist there. */
 export async function getFileAtRef(opts: {
   token: string;
   repoFullName: string;
@@ -730,7 +730,7 @@ export async function getFileAtRef(opts: {
     try {
       data = JSON.parse(text);
     } catch {
-      // Corps raw : message par défaut.
+      // Raw body: default message.
     }
     throw new GitlabApiError(errorMessage(data, res.status), res.status);
   }
@@ -738,9 +738,9 @@ export async function getFileAtRef(opts: {
 }
 
 /**
- * Mêmes octets, non décodés — le pendant GitLab de `getFileBytesAtRef` de
- * `pr.ts` : `res.text()` interprète le corps en UTF-8 et corrompt tout binaire.
- * Sert la vue côte à côte des images du diff (MIN-66).
+ * Same bytes, undecoded — the GitLab counterpart of `getFileBytesAtRef` of
+ * `pr.ts`: `res.text()` interprets the body as UTF-8 and corrupts any binary.
+ * Serves side-by-side view of diff images (MIN-66).
  */
 export async function getFileBytesAtRef(opts: {
   token: string;
@@ -758,7 +758,7 @@ export async function getFileBytesAtRef(opts: {
     try {
       data = await res.json();
     } catch {
-      // Corps raw : message par défaut.
+      // Raw body: default message.
     }
     throw new GitlabApiError(errorMessage(data, res.status), res.status);
   }
@@ -766,11 +766,11 @@ export async function getFileBytesAtRef(opts: {
 }
 
 /**
- * Merge la MR. La STRATÉGIE (merge commit / fast-forward) est un réglage du
- * projet chez GitLab, pas un paramètre d'appel comme chez GitHub : le seul
- * levier par MR est `squash`. D'où `mergeMethods` réduit à `["merge","squash"]`
- * côté `forge.ts` — « merge » veut dire ici « la stratégie du projet, sans
- * écrasement des commits ».
+ * Merge the MR. The STRATEGY (merge commit / fast-forward) is an adjustment of the
+ * project at GitLab, not a call parameter like at GitHub: the only
+ * lever by MR is `squash`. Hence `mergeMethods` reduced to `["merge","squash"]`
+ * side `forge.ts` — “merge” here means “the project strategy, without
+ * overwriting commits”.
  */
 export async function mergeMergeRequest(opts: {
   token: string;
@@ -789,14 +789,14 @@ export async function mergeMergeRequest(opts: {
   );
 }
 
-/** Préfixes de titre par lesquels GitLab marque une MR brouillon (`WIP:` est
-    l'ancienne forme, encore acceptée par les instances anciennes). */
+/** Title prefixes by which GitLab marks a draft MR (`WIP:` is
+    the old form, still accepted by the old authorities). */
 const DRAFT_TITLE_PREFIX = /^\s*(?:\[?draft\]?|\[?wip\]?)\s*:?\s*/i;
 
 /**
- * Bascule une MR brouillon en « prête pour la review ». GitLab n'a pas de champ
- * ni d'action dédiée : le brouillon EST le préfixe `Draft:` du titre — on relit
- * donc le titre et on le renvoie sans son préfixe. Le pendant de la mutation
+ * Switches a draft MR to “ready for review”. GitLab has no field
+ * nor dedicated action: the draft IS the prefix `Draft:` of the title — we reread
+ * therefore the title and we return it without its prefix. The counterpart of the mutation
  * GraphQL de GitHub (`markPullRequestReadyForReview`).
  */
 export async function markMergeRequestReadyForReview(opts: {
@@ -817,16 +817,16 @@ export async function markMergeRequestReadyForReview(opts: {
 
 // ── Reviews formelles (MIN-138) ──────────────────────────────────────────────
 
-/** Comme `pr.ts` : le verdict écrit en toutes lettres en tête de la note de repli. */
+/** Like `pr.ts`: the verdict written in full at the top of the fallback note. */
 const FALLBACK_VERDICT_PREFIX: Record<ReviewVerdict, string> = {
   approve: "**Approuvé depuis minddy.**",
   request_changes: "**Changements demandés depuis minddy.**",
   comment: "",
 };
 
-/** GitLab refuse-t-il l'approbation (auteur de la MR, ou tier sans l'API) ?
-    Contrairement au 422 de GitHub, c'est un 401 — et un 403/404 sur les
-    instances où l'endpoint d'approbation n'est pas servi. */
+/** Does GitLab deny approval (MR author, or tier without the API)?
+    Unlike GitHub's 422, it's a 401 — and a 403/404 on
+    instances where the trust endpoint is not served. */
 function isApprovalRefusal(err: unknown): boolean {
   return (
     err instanceof GitlabApiError &&
@@ -859,16 +859,16 @@ export async function unapproveMergeRequest(opts: {
 }
 
 /**
- * Soumet une review sur la MR — le pendant de `submitPullRequestReview`, avec
- * deux écarts que GitLab impose :
- *  • il n'y a pas de review composite : l'approbation et le message sont deux
- *    appels (`/approve` puis une note), et le message ne doit pas se perdre si
- *    l'approbation échoue ;
- *  • il n'y a **pas** de `REQUEST_CHANGES` natif → une note préfixée du verdict,
- *    comme le documente déjà le webhook (`app/api/webhooks/gitlab/route.ts`).
- * Comme sur GitHub, l'auto-approbation est refusée (réglage projet
- * `merge_requests_author_approval`, interdit par défaut) : on retombe alors sur
- * la note seule, et c'est minddy qui garde la trace du verdict.
+ * Submits a review on MR — the counterpart of `submitPullRequestReview`, with
+ * two deviations that GitLab imposes:
+ * • there is no composite review: the approval and the message are two
+ * calls (`/approve` then a note), and the message must not be lost if
+ * approval fails;
+ * • there is **no** native `REQUEST_CHANGES` → a prefixed verdict note,
+ * as the webhook (`app/api/webhooks/gitlab/route.ts`) already documents.
+ * As on GitHub, self-approval is refused (project setting
+ * `merge_requests_author_approval`, prohibited by default): we then land on
+ * the note alone, and it's Minddy who keeps track of the verdict.
  */
 export async function submitMergeRequestReview(opts: {
   token: string;
@@ -891,8 +891,8 @@ export async function submitMergeRequestReview(opts: {
 
   const prefix = published === "comment" ? FALLBACK_VERDICT_PREFIX[opts.verdict] : "";
   const body = `${prefix}\n\n${opts.body}`.trim();
-  // Une approbation nue sans message n'a rien à dire de plus : la note ne part
-  // que si elle porte quelque chose (le préfixe compte comme un contenu).
+  // A bare approval without a message has nothing more to say: the note does not go away
+  // only if it carries something (the prefix counts as content).
   if (body) {
     await createMergeRequestNote({ ...opts, body });
   }
@@ -904,10 +904,10 @@ interface RawApprovals {
 }
 
 /**
- * Décompte des approbations de la MR. GitLab tient la liste courante des
+ * Countdown of MR approvals. GitLab maintains the current list of
  * approbateurs (pas un historique de reviews comme GitHub) : il n'y a donc rien
- * à réduire, et `changesRequested` vaut toujours 0 — l'état « changements
- * demandés » n'existe pas côté GitLab (minddy le porte en note + événement).
+ * to reduce, and `changesRequested` is always 0 — the “changes” state
+ * requested” does not exist on the GitLab side (minddy notes it + event).
  */
 export async function listMergeRequestApprovals(opts: {
   token: string;
@@ -922,20 +922,20 @@ export async function listMergeRequestApprovals(opts: {
 }
 
 /**
- * Les reviews déjà soumises, avec leur texte — TOUJOURS VIDE côté GitLab, et
- * c'est la bonne réponse plutôt qu'un manque : GitLab n'a pas d'objet « review ».
- * Une approbation y est une signature sans texte (`/approvals`, décomptée
- * ci-dessus), et tout ce qui s'écrit sur une MR est une NOTE — donc déjà servi
- * par `listMergeRequestNotes`. Rendre les notes ici les compterait deux fois.
+ * Reviews already submitted, with their text — STILL EMPTY on the GitLab side, and
+ * this is the correct answer rather than a mistake: GitLab does not have a “review” object.
+ * An approval is a signature without text (`/approvals`, counted
+ * above), and everything written on an MR is a NOTE — therefore already used
+ * by `listMergeRequestNotes`. Returning the grades here would count them twice.
  */
 export async function listMergeRequestReviewMessages(): Promise<PullRequestReviewMessage[]> {
   return [];
 }
 
 /**
- * Checks CI de la MR : ses pipelines, du plus récent au plus ancien — seul le
- * dernier décrit l'état courant (cf. `checks-core`). Le scope OAuth `api` déjà
- * acquis suffit : aucune permission à faire accepter, contrairement à GitHub.
+ * MR CI Checks: its pipelines, from newest to oldest — only the
+ * last describes the current state (see `checks-core`). The OAuth scope `api` already
+ * acquired is enough: no permission to accept, unlike GitHub.
  */
 export async function listMergeRequestChecks(opts: {
   token: string;
@@ -965,8 +965,8 @@ export async function closeMergeRequest(opts: {
   );
 }
 
-/** Rouvre une MR refusée (MIN-68) — même règle produit que GitHub : on réitère
-    la dernière MR de la branche, jamais de doublon. */
+/** Reopens a refused MR (MIN-68) — same product rule as GitHub: we repeat
+    the last MR of the branch, never a duplicate. */
 export async function reopenMergeRequest(opts: {
   token: string;
   repoFullName: string;
@@ -988,12 +988,12 @@ interface RawNote {
   id: number;
   body?: string;
   system?: boolean;
-  type?: string | null; // "DiffNote" pour les notes ancrées au diff
+  type?: string | null; // "DiffNote" for notes anchored to diff
   author?: { username?: string; avatar_url?: string | null } | null;
   created_at: string;
   position?: RawPosition | null;
   original_position?: RawPosition | null;
-  /** Résolution du FIL, portée par chaque note résolvable (MIN-139). */
+  /** Resolution of the FIL, carried by each resolvable note (MIN-139). */
   resolved?: boolean;
   resolvable?: boolean;
   resolved_by?: { username?: string } | null;
@@ -1006,7 +1006,7 @@ interface RawPosition {
   new_line?: number | null;
 }
 
-/** Ancre web d'une note (GitLab ne renvoie pas d'URL par note). */
+/** Web anchor of a note (GitLab does not return URLs per note). */
 function noteUrl(repoFullName: string, iid: number, noteId: number): string {
   return `${GITLAB_HOST}/${repoFullName}/-/merge_requests/${iid}#note_${noteId}`;
 }
@@ -1030,8 +1030,8 @@ function toComment(
 const NOTES_MAX_PAGES = 10;
 
 /**
- * Commentaires de conversation de la MR : les notes NON système et NON ancrées
- * au diff (les DiffNotes vivent dans les discussions de review, autre endpoint).
+ * MR Conversation Comments: NON-System and NON-Anchored Notes
+ * at diff (DiffNotes live in review discussions, another endpoint).
  */
 export async function listMergeRequestNotes(opts: {
   token: string;
@@ -1050,19 +1050,19 @@ export async function listMergeRequestNotes(opts: {
 }
 
 /**
- * L'ACTIVITÉ de la MR (MIN-159) : approbations, commits poussés, labels,
- * assignations, changements de titre, brouillon ↔ prête, merge, fermeture.
+ * MR ACTIVITY (MIN-159): approvals, pushed commits, labels,
+ * assignments, title changes, draft ↔ ready, merge, close.
  *
- * GitLab ne type RIEN de tout ça : il l'écrit en anglais dans une note marquée
- * `system`, sur le même endpoint que les commentaires. C'est donc l'exacte
- * moitié que `listMergeRequestNotes` jette, relue avec l'autre filtre — la
- * reconnaissance des phrases (et le repli quand aucune ne colle) est dans
- * `lib/pr-timeline`, partagé avec GitHub et le client.
+ * GitLab doesn't type ANY of this: it writes it in English in a note marked
+ * `system`, on the same endpoint as the comments. So this is the exact
+ * half that `listMergeRequestNotes` throws away, reread with the other filter — the
+ * recognition of sentences (and the fallback when none sticks) is in
+ * `lib/pr-timeline`, shared with GitHub and the client.
  *
- * Oui, ce sont les mêmes pages que le fil : deux appels au lieu d'un. C'est le
- * prix d'une interface où les deux forges répondent à la même question, là où
- * GitHub sert bien deux endpoints distincts. Les pages sont chaudes chez GitLab,
- * et fusionner les deux méthodes obligerait tout appelant à connaître ce détail.
+ * Yes, these are the same pages as the thread: two calls instead of one. This is the
+ * price of an interface where the two forges answer the same question, where
+ * GitHub serves two distinct endpoints well. Pages are hot at GitLab,
+ * and merging the two methods would require any caller to know this detail.
  */
 export async function listMergeRequestTimeline(opts: {
   token: string;
@@ -1080,7 +1080,7 @@ export async function listMergeRequestTimeline(opts: {
   );
 }
 
-/** Ajoute une note à la conversation de la MR (auteur = le compte connecté). */
+/** Adds a note to the MR's conversation (author = the connected account). */
 export async function createMergeRequestNote(opts: {
   token: string;
   repoFullName: string;
@@ -1104,7 +1104,7 @@ interface RawDiscussion {
   notes?: RawNote[];
 }
 
-/** Position → (ligne, côté) au sens GitHub : new_line → RIGHT, sinon LEFT. */
+/** Position → (line, side) in the GitHub sense: new_line → RIGHT, otherwise LEFT. */
 function lineOf(p: RawPosition | null | undefined): {
   line: number | null;
   side: "LEFT" | "RIGHT";
@@ -1128,15 +1128,15 @@ function toReviewComment(
     line,
     original_line: original.line,
     side,
-    // GitLab ancre une note sur UNE ligne (`old_line`/`new_line`) : pas de plage
-    // à relire, et l'UI n'en propose pas non plus de ce côté (MIN-181).
+    // GitLab anchors a note on ONE line (`old_line`/`new_line`): no range
+    // to reread, and the UI does not offer any on this side either (MIN-181).
     start_line: null,
     start_side: null,
     in_reply_to_id: rootId,
-    // Aucune review à laquelle rattacher ce commentaire : GitLab n'a pas d'objet
-    // review, ses notes de diff se rendent seules dans le fil (MIN-159).
+    // No review to attach this comment to: GitLab has no subject
+    // review, its diff notes go alone in the thread (MIN-159).
     review_id: null,
-    // GitLab n'expose pas d'extrait de hunk par note — tous les rendus (UI,
+    // GitLab does not expose a hunk snippet per note — all renders (UI,
     // prompt de l'agent) ont un repli sans hunk (chemin + ligne + corps).
     diff_hunk: "",
     user: n.author
@@ -1166,10 +1166,10 @@ async function listRawDiscussions(
 }
 
 /**
- * Commentaires de review de la MR — les notes ancrées à une ligne du diff
- * (DiffNotes), aplaties depuis les discussions : la racine du fil porte
- * `in_reply_to_id: null`, ses réponses pointent la racine (fils plats, même
- * modèle que GitHub).
+ * MR review comments — notes anchored to one line of the diff
+ * (DiffNotes), flattened since the discussions: the root of the thread carries
+ * `in_reply_to_id: null`, his answers point to the root (flat wires, even
+ * model than GitHub).
  */
 export async function listMergeRequestDiffComments(opts: {
   token: string;
@@ -1190,24 +1190,24 @@ export async function listMergeRequestDiffComments(opts: {
 }
 
 /**
- * État de résolution des fils de review (MIN-139) — le pendant GitLab de la
- * requête GraphQL de `pr.ts`, mais sans autre ENDPOINT à interroger : les
- * discussions portent déjà tout, `listMergeRequestDiffComments` ne fait que le
- * jeter en aplatissant. `threadId` est l'id de discussion (une chaîne, à la
- * différence des ids de notes), `rootCommentId` la première DiffNote — la même
- * racine que côté GitHub, donc la même clé d'appariement.
+ * Review thread resolution status (MIN-139) — the GitLab counterpart to the
+ * GraphQL query of `pr.ts`, but without any other ENDPOINT to query: the
+ * discussions already carry everything, `listMergeRequestDiffComments` only does the
+ * discard by flattening. `threadId` is the discussion id (a string, like
+ * difference in note ids), `rootCommentId` the first DiffNote — the same
+ * root as on the GitHub side, therefore the same pairing key.
  *
- * Prix à payer, à ne pas se cacher : c'est une SECONDE passe paginée sur
- * `/discussions`, lancée en parallèle de la première par `prReviewCommentsResponse`.
- * Les deux lectures coûtent donc deux fois les mêmes pages. Les fusionner
- * demanderait de changer la forme de `Forge` (un appel rendant commentaires ET
- * fils), ce que la lecture REST + GraphQL de GitHub ne permet pas de servir aussi
- * simplement — d'où ce doublon, borné par `DISCUSSIONS_MAX_PAGES`.
+ * Price to pay, not to hide: it's a SECOND paginated pass on
+ * `/discussions`, launched in parallel with the first by `prReviewCommentsResponse`.
+ * The two readings therefore cost twice the same pages. Merge them
+ * would ask to change the form of `Forge` (a call returning comments AND
+ * son), which reading REST + GraphQL from GitHub does not serve as well
+ * simply — hence this duplicate, bounded by `DISCUSSIONS_MAX_PAGES`.
  *
- * `resolved` est porté par CHAQUE note du fil (GitLab résout le fil, pas la
- * note) : lire la racine suffit. Une discussion non résolvable (rare sur une
- * DiffNote) est signalée `resolved: false` — l'appelant n'a pas à en faire un
- * cas particulier, la forge refusera la bascule si elle n'est pas permise.
+ * `resolved` is carried by EACH note in the thread (GitLab resolves the thread, not the
+ * note): reading the root is enough. An unresolvable discussion (rare on a
+ * DiffNote) is reported `resolved: false` — the caller does not have to make one
+ * special case, the forge will refuse the tilt if it is not permitted.
  */
 export async function listMergeRequestDiffThreads(opts: {
   token: string;
@@ -1230,8 +1230,8 @@ export async function listMergeRequestDiffThreads(opts: {
 }
 
 /**
- * Résout (ou rouvre) un fil de review. Natif en REST ici, là où GitHub exige
- * GraphQL : la discussion est l'objet, et `resolved` un de ses champs.
+ * Resolves (or reopens) a review thread. Native REST here, where GitHub requires
+ * GraphQL: discussion is the object, and `resolved` one of its fields.
  */
 export async function setMergeRequestDiscussionResolved(opts: {
   token: string;
@@ -1252,7 +1252,7 @@ export async function setMergeRequestDiscussionResolved(opts: {
   );
 }
 
-// ── Réactions emoji des commentaires de review (MIN-139) ─────────────────────
+// ── Emoji reactions from review comments (MIN-139) ─────────────────────
 
 interface RawAward {
   id: number;
@@ -1260,8 +1260,8 @@ interface RawAward {
   user?: { username?: string } | null;
 }
 
-/** Notes interrogées au plus, et combien à la fois : GitLab n'a pas d'appel
-    groupé pour les awards, donc c'est un N+1 — borné, jamais illimité. */
+/** Notes queried at most, and how many at a time: GitLab has no call
+    grouped for the awards, so it's an N+1 — limited, never unlimited. */
 const AWARDS_MAX_NOTES = 120;
 const AWARDS_CONCURRENCY = 8;
 
@@ -1278,8 +1278,8 @@ async function mapLimited<A, B>(
   return out;
 }
 
-/** Login du compte connecté — GitLab décerne les awards SOUS SON NOM, et c'est
-    la seule façon de savoir lesquels sont les nôtres (pas de `viewerHasReacted`
+/** Connected account login — GitLab awards the awards UNDER ITS NAME, and it is
+    the only way to know which ones are ours (no `viewerHasReacted`
     ici, contrairement au GraphQL de GitHub). */
 async function gitlabCurrentUsername(token: string): Promise<string | null> {
   const me = await glJson<{ username?: string }>(`${GITLAB_API_BASE}/user`, token);
@@ -1287,12 +1287,12 @@ async function gitlabCurrentUsername(token: string): Promise<string | null> {
 }
 
 /**
- * Collection d'awards d'un sujet : une NOTE, ou la merge request elle-même —
- * `PR_BODY_COMMENT_ID` (MIN-147), le corps qui ouvre le fil de conversation.
+ * Collection of awards for a topic: a NOTE, or the merge request itself —
+ * `PR_BODY_COMMENT_ID` (MIN-147), the body that opens the conversation thread.
  *
- * Rien d'autre ne distingue les deux surfaces côté GitLab : une note du fil et
- * une note de review portent leurs awards sous la même URL, ce qui laisse
- * `listMergeRequestNoteAwards` et `setMergeRequestNoteAward` servir les deux.
+ * Nothing else distinguishes the two surfaces on the GitLab side: a thread note and
+ * a review note carry their awards under the same URL, which leaves
+ * `listMergeRequestNoteAwards` and `setMergeRequestNoteAward` serve both.
  */
 function awardsUrl(repoFullName: string, iid: number, noteId: number): string {
   const base = `${GITLAB_API_BASE}/projects/${projectPath(repoFullName)}/merge_requests/${iid}`;
@@ -1302,18 +1302,18 @@ function awardsUrl(repoFullName: string, iid: number, noteId: number): string {
 }
 
 /**
- * Réactions des commentaires de review — le pendant GitLab de la requête
+ * Reactions from review comments — the GitLab counterpart of the request
  * `reactionGroups` de `pr.ts`, mais **note par note** : l'API des awards n'existe
- * que par note, et rien dans la réponse des discussions ne les porte. C'est donc
- * le N+1 que le cadrage du ticket redoutait, rendu supportable par un plafond
- * (`AWARDS_MAX_NOTES`) et une concurrence bornée plutôt que par un pari.
+ * only by note, and nothing in the response to the discussions bears them out. It is therefore
+ * the N+1 that the ticket framework feared, made bearable by a ceiling
+ * (`AWARDS_MAX_NOTES`) and limited competition rather than a bet.
  *
- * Une note dont la lecture échoue rend simplement zéro réaction : une réaction
- * illisible ne doit pas emporter la vue de review.
+ * A note that fails to read simply gives zero reaction: one reaction
+ * illegible should not take away the review view.
  *
- * `viewerIsActor` (MIN-145) : à faux, le token est celui du LIEN de projet et
- * non celui de la personne qui regarde — « la mienne » n'aurait alors aucun
- * sens. On ne demande même pas `GET /user` (un aller-retour économisé) et tout
+ * `viewerIsActor` (MIN-145): if false, the token is that of the project LINK and
+ * not that of the person looking — “mine” would then have no
+ * sense. We don't even ask for `GET /user` (a round trip saved) and everything
  * sort en `mine: false`.
  */
 export async function listMergeRequestNoteAwards(opts: {
@@ -1340,7 +1340,7 @@ export async function listMergeRequestNoteAwards(opts: {
       opts.token,
     ).catch(() => [] as RawAward[]);
 
-    // Agrégé par emoji : l'API rend une ligne PAR personne, l'UI un compte.
+    // Aggregated by emoji: the API renders one line PER person, the UI one count.
     const byContent = new Map<ReviewReactionContent, ReviewCommentReaction>();
     for (const award of awards ?? []) {
       const content = award.name ? reactionFromGitlabName(award.name) : null;
@@ -1357,14 +1357,14 @@ export async function listMergeRequestNoteAwards(opts: {
 }
 
 /**
- * Pose ou retire une réaction sur une note. GitLab refuse un award en double
- * (404 « has already been taken ») et ne laisse retirer que le SIEN : les deux
- * chemins passent donc par la liste, comme côté GitHub.
+ * Add or remove a reaction to a note. GitLab rejects duplicate award
+ * (404 “has already been taken”) and only allows HIS to be removed: both
+ * paths therefore go through the list, like on the GitHub side.
  *
- * `login` est celui de l'acteur (MIN-145) et il est **ignoré ici** : GitLab
- * décerne l'award sous le compte du token, et `GET /user` en donne le nom — rien
- * n'est à passer de l'extérieur. Il n'existe dans la signature que parce que
- * GitHub, lui, en a besoin pour retrouver la réaction à supprimer (même
+ * `login` is that of the actor (MIN-145) and it is **ignored here**: GitLab
+ * awards the award under the token account, and `GET /user` gives the name — nothing
+ * is not to be passed from the outside. It only exists in the signature because
+ * GitHub needs it to find the reaction to delete (even
  * arrangement que `commentIds`, que GitHub ignore).
  */
 export async function setMergeRequestNoteAward(opts: {
@@ -1383,8 +1383,8 @@ export async function setMergeRequestNoteAward(opts: {
   const mine = (awards ?? []).find((a) => a.name === name && a.user?.username === me);
 
   if (opts.on) {
-    // Déjà décernée : ne pas la reposter, GitLab répondrait par une erreur là où
-    // l'état demandé est déjà atteint.
+    // Already awarded: do not repost it, GitLab will respond with an error where
+    // the requested state has already been reached.
     if (mine) return;
     await glJson<unknown>(url, opts.token, {
       method: "POST",
@@ -1398,11 +1398,11 @@ export async function setMergeRequestNoteAward(opts: {
 }
 
 /**
- * Poste un commentaire de review sur une ligne (nouvelle discussion GitLab),
- * ancré par les `diff_refs` (base/start/head) lus À CHAUD sur la MR. Ligne hors
- * diff → GitlabApiError(422), même contrat que GitHub (« lineNotInDiff » côté
- * route). Le fichier est adressé par son chemin ACTUEL (new_path) même côté
- * LEFT — la convention GitHub que toute l'UI suit — avec repli sur old_path.
+ * Post a review comment on a line (new GitLab discussion),
+ * anchored by the `diff_refs` (base/start/head) read HOT on the MR. Offline
+ * diff → GitlabApiError(422), same contract as GitHub (“lineNotInDiff” side
+ * road). The file is addressed by its CURRENT path (new_path) same side
+ * LEFT — the GitHub convention that the entire UI follows — with fallback to old_path.
  */
 export async function createMergeRequestDiffComment(opts: {
   token: string;
@@ -1415,8 +1415,8 @@ export async function createMergeRequestDiffComment(opts: {
 }): Promise<PullRequestReviewComment> {
   const matchesPath = (d: RawDiff): boolean =>
     d.new_path === opts.path || d.old_path === opts.path;
-  // MR (diff_refs) et diffs sont indépendants — en parallèle, et la pagination
-  // des diffs s'arrête dès que le fichier visé est trouvé.
+  // MR (diff_refs) and diffs are independent — parallel, and paging
+  // diffs stops as soon as the target file is found.
   const [mrRaw, diffs] = await Promise.all([
     glJson<RawMr>(
       `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}`,
@@ -1462,9 +1462,9 @@ export async function createMergeRequestDiffComment(opts: {
 }
 
 /**
- * Répond dans un fil de review. `commentId` est l'id d'une note du fil : GitLab
- * adresse les réponses par discussion — on retrouve la discussion porteuse puis
- * on y ajoute la note (fil plat, la réponse pointe la racine).
+ * Reply in a review thread. `commentId` is the id of a thread note: GitLab
+ * addresses the responses by discussion — we find the main discussion then
+ * we add the note (flat wire, the answer points to the root).
  */
 export async function replyToMergeRequestDiffComment(opts: {
   token: string;
@@ -1475,7 +1475,7 @@ export async function replyToMergeRequestDiffComment(opts: {
 }): Promise<PullRequestReviewComment> {
   const holdsComment = (d: RawDiscussion): boolean =>
     (d.notes ?? []).some((n) => n.id === opts.commentId);
-  // La pagination s'arrête dès que la discussion porteuse est trouvée.
+  // Paging stops as soon as the supporting discussion is found.
   const discussions = await listRawDiscussions(opts, (all) => all.some(holdsComment));
   const discussion = discussions.find(holdsComment);
   if (!discussion) {

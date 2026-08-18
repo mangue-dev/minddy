@@ -25,7 +25,7 @@ beforeAll(() => {
   writeFileSync(path.join(repo, "tracked.txt"), "base\n");
   git(repo, ["add", "tracked.txt"]);
   git(repo, ["commit", "-m", "base"]);
-  // Le décor qui compte : ce checkout porte du travail non commité.
+  // The decor that counts: this checkout carries uncommitted work.
   writeFileSync(path.join(repo, "tracked.txt"), "human WIP\n");
   writeFileSync(path.join(repo, "notes.txt"), "keep me\n");
 });

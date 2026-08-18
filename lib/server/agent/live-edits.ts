@@ -3,43 +3,42 @@ import type { AgentLiveEdit, AgentLiveFileStat } from "./agent-contract";
 import { CHANGED_FILES_CAP } from "./repo-host";
 
 /**
- * LES FICHIERS DU TOUR EN COURS, tenus pour le direct — la moitié provisoire du
- * couple dont `files_changed` (dérivé de git, en fin de tour) est l'autorité.
+ * THE FILES OF THE CURRENT TOUR, kept for live — the provisional half of the
+ * couple of which `files_changed` (derived from git, at the end of the tour) is the authority.
  *
- * PARTAGÉ PAR LES DEUX MOTEURS, et pas par élégance : la fonction
- * ([execute.ts](execute.ts)) et la microVM ([vm/turn.ts](vm/turn.ts)) doivent
- * raconter le même fil, et c'est exactement ce que la première version n'a pas
- * fait — le crochet n'existait que côté fonction, donc la feature ne marchait
- * sur aucun projet basculé en `loop_in_vm`, c'est-à-dire sur celui où on la
- * regardait. Un état à tenir en double se tient dans un module, pas par copie.
+ * SHARED BY THE TWO ENGINES, and not for elegance: the function
+ * ([execute.ts](execute.ts)) and microVM ([vm/turn.ts](vm/turn.ts)) should
+ * tell the same thread, and that's exactly what the first version didn't
+ * do — the hook only existed on the function side, so the feature didn't worked
+ * on no project switched to `loop_in_vm`, that is to say on the one where we looked at
+ *. A state to be kept in duplicate is held in a module, not by copy.
  *
- * Deux règles y vivent :
+ * Two rules live there:
  *
- *  - **une `Map` par chemin** : un fichier édité six fois n'apparaît qu'une fois,
- *    et la dernière nouvelle l'emporte (écrit puis supprimé ⇒ supprimé) ;
- *  - **la liste part avec CHAQUE charge du direct**, pas seulement avec celle de
- *    l'édition. Une charge est un INSTANTANÉ complet du round, et le fil efface
- *    ce qu'une charge tait : émise à part, la liste disparaissait à la charge
- *    suivante.
+ * - **one `Map` per path**: a file edited six times only appears once,
+ * and the last new wins (written then deleted ⇒ deleted) ;
+ * - **the list leaves with EACH load of the direct**, not only with that of
+ * the edition. A charge is a complete SNAPSHOT of the round, and the thread erases
+ * what a charge does not: issued separately, the list disappears on the next charge
+ *.
  */
 export interface LiveEditLog {
   /** Ce qu'un tool vient de toucher. */
   note(edits: AgentLiveEdit[]): void;
-  /** Compteurs Git exacts lus après que l'outil a effectivement écrit. */
+  /** Exact Git counters read after the tool actually writes. */
   noteStats(stats: AgentLiveFileStat[]): void;
-  /** Le relais est passé à la liste de git : on oublie. Rend `true` s'il y avait
-   *  quelque chose à oublier — l'appelant n'a à rediffuser que dans ce cas. */
+  /** The baton has passed to the git list: we forget. Returns `true` if there was
+ * anything to forget — the caller only has to rebroadcast in this case. */
   clear(): boolean;
   /**
-   * Ce qu'une charge de direct doit porter. Vide (aucune clé) quand rien n'a été
-   * touché : le fil distingue « pas de fichiers » de « liste vide », et une clé
-   * `files: []` en trop suffirait à faire passer un round au repos pour un signe
-   * de vie.
-   *
-   * Bornée au même plafond que la liste autoritaire, et le même aveu : un tour
-   * qui touche 200 fichiers ne doit pas en diffuser 200 quatre fois par seconde,
-   * et une liste tronquée sans le dire se lit comme une liste complète.
-   */
+ * What a direct charge should carry. Empty (no key) when nothing has been touched: the thread distinguishes "no files" from "empty list", and an extra key
+ * `files: []` would be enough to pass off a round at rest for a sign
+ * of life.
+ *
+ * Bounded to the same ceiling than the authoritarian list, and the same admission: a round
+ * which touches 200 files should not broadcast 200 four times per second,
+ * and a list truncated without saying it reads like a complete list.
+ */
   payload(): {
     files?: AgentLiveEdit[];
     filesTruncated?: boolean;
@@ -78,14 +77,14 @@ export function newLiveEditLog(): LiveEditLog {
 }
 
 /**
- * Le crochet `onEdit` de l'exec-tool, tel que les DEUX moteurs le câblent : on
- * note, puis on rediffuse aussitôt — sans quoi le fil attendrait la prochaine
- * charge de texte, c'est-à-dire le prochain round.
+ * The exec-tool's `onEdit` hook, as BOTH engines wire it: on
+ * note, then immediately rebroadcast — otherwise the thread would wait for the next
+ * text load, i.e. the next round.
  *
- * La charge est celle d'un round AU REPOS. Une édition ne fait pas avancer le
- * round (ni texte, ni réflexion, ni tool-call de plus) : annoncer `tools: 1`
- * mentirait sur un compteur que le fil lit pour décider si un texte est une
- * réponse ou de la narration.
+ * The charge is that of one round AT REST. An edition does not advance the
+ * round (neither text, nor reflection, nor tool-call moreover): announcing `tools: 1`
+ * would lie on a counter that the thread reads to decide if a text is a
+ * response or narration.
  */
 export function liveEditHook(
   log: LiveEditLog,

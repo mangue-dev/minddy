@@ -129,8 +129,8 @@ export async function replyTargetsNumoFeedback(
 }
 
 // Fire-and-forget: no ask_user — the loop can never pause for the user. Same
-// for propose_backlog (MIN-173) : sa proposition s'ouvre dans le panneau de
-// Numo, qu'un commentaire de ticket n'a pas sous la main.
+// for proposition_backlog (MIN-173): its proposal opens in the
+// Numo, which a ticket comment does not have on hand.
 const COMMENT_TOOLS = ASSISTANT_TOOLS.filter(
   (t) => !["ask_user", "propose_backlog"].includes(t.function.name)
 );
@@ -162,8 +162,8 @@ export async function runCommentMention({
   trigger?: "mention" | "reply";
 }): Promise<void> {
   let replyId: string | null = null;
-  // Hissé hors du try : le catch écrit l'échec par le MÊME afficheur, donc dans
-  // la même file d'écritures — sa mise à jour passe forcément après celles qui
+  // Hoisted out of the try: the catch writes the failure by the SAME display, therefore in
+  // the same queue of writes — its update necessarily comes after those which
   // seraient encore en vol.
   let display: CommentDisplay | null = null;
   try {
@@ -188,7 +188,7 @@ export async function runCommentMention({
     const access = await getProjectAccess(actorId, issue.project_id as string);
     if (!access) return;
 
-    // Budget du plan (MIN-72) — fire-and-forget : à sec, skip silencieux.
+    // Plan budget (MIN-72) — fire-and-forget: dry, silent skip.
     if (!(await hasUsageBudget(actorId, "assistant"))) return;
 
     // ── Post the live placeholder reply right away ───────────────────────
@@ -380,10 +380,10 @@ export async function runCommentMention({
       issue_id: issueId,
       comment_id: replyId as string,
       actor_id: actorId,
-      // La ligne dit elle-même que c'est NUMO qui a écrit. L'inbox le savait
-      // déjà par le commentaire (`comments.via_assistant`) ; la notification
-      // poussée, elle, ne lit que cette ligne — sans ce drapeau, la bannière
-      // annonçait « <le demandeur> a commenté » au demandeur lui-même.
+      // The line itself says that it was NUMO who wrote. The inbox knew it
+      // already by the comment (`comments.via_assistant`); the notification
+      // pushed, she only reads this line — without this flag, the banner
+      // announced “<le demandeur> commented” to the requester himself.
       via_assistant: true,
     }));
     await insertNotifications(service, rows);
@@ -413,8 +413,8 @@ export async function runObjectiveCommentMention({
   trigger?: "mention" | "reply";
 }): Promise<void> {
   let replyId: string | null = null;
-  // Hissé hors du try : le catch écrit l'échec par le MÊME afficheur, donc dans
-  // la même file d'écritures — sa mise à jour passe forcément après celles qui
+  // Hoisted out of the try: the catch writes the failure by the SAME display, therefore in
+  // the same queue of writes — its update necessarily comes after those which
   // seraient encore en vol.
   let display: CommentDisplay | null = null;
   try {
@@ -439,7 +439,7 @@ export async function runObjectiveCommentMention({
     const access = await getProjectAccess(actorId, objective.project_id as string);
     if (!access) return;
 
-    // Budget du plan (MIN-72) — fire-and-forget : à sec, skip silencieux.
+    // Plan budget (MIN-72) — fire-and-forget: dry, silent skip.
     if (!(await hasUsageBudget(actorId, "assistant"))) return;
 
     // ── Post the live placeholder reply right away ───────────────────────
@@ -616,7 +616,7 @@ export async function runObjectiveCommentMention({
       objective_id: objectiveId,
       comment_id: replyId as string,
       actor_id: actorId,
-      // Cf. le jumeau ticket : la ligne nomme Numo, sur les deux surfaces.
+      // Cf. the twin ticket: the line names Numo, on both surfaces.
       via_assistant: true,
     }));
     await insertNotifications(service, rows);
@@ -644,8 +644,8 @@ export async function runFeedbackCommentMention({
   trigger?: "mention" | "reply";
 }): Promise<void> {
   let replyId: string | null = null;
-  // Hissé hors du try : le catch écrit l'échec par le MÊME afficheur, donc dans
-  // la même file d'écritures — sa mise à jour passe forcément après celles qui
+  // Hoisted out of the try: the catch writes the failure by the SAME display, therefore in
+  // the same queue of writes — its update necessarily comes after those which
   // seraient encore en vol.
   let display: CommentDisplay | null = null;
   try {
@@ -670,7 +670,7 @@ export async function runFeedbackCommentMention({
     const access = await getProjectAccess(actorId, post.project_id as string);
     if (!access) return;
 
-    // Budget du plan (MIN-72) — fire-and-forget : à sec, skip silencieux.
+    // Plan budget (MIN-72) — fire-and-forget: dry, silent skip.
     if (!(await hasUsageBudget(actorId, "assistant"))) return;
 
     // ── Post the live placeholder reply right away ───────────────────────
@@ -739,16 +739,16 @@ export async function runFeedbackCommentMention({
     const authorName = (id: string | null, viaAssistant?: boolean): string =>
       viaAssistant ? "Numo" : displayName(toNamed(id ? users.get(id) : null), "User");
 
-    // Le fil d'un retour mele DEUX conversations (MIN-196) : les notes d'equipe
-    // et ce qui s'ecrit sur le board public. Les servir a plat, avec un visiteur
-    // rendu en « User » comme n'importe quel coequipier, c'est demander au
-    // modele de raisonner sur des propos dont il ignore et l'origine et la
-    // portee — et de repondre « comme l'a dit X plus haut » a propos d'un
-    // inconnu qui a ecrit sur une page publique.
+    // The thread of a return mixes TWO conversations (MIN-196): team notes
+    // and what is written on the public board. Serve them flat, with a visitor
+    // made “User” like any teammate, this is asking the
+    // model of reasoning about comments of which he is unaware of both the origin and the
+    // scope — and to respond “as X said above” about a
+    // unknown who wrote on a public page.
     //
-    // Chaque entree porte donc d'ou elle vient. Numo ne repond QUE dans les fils
-    // internes (le declencheur se coupe sur le public, voir la route des
-    // commentaires) : le public est ici de la LECTURE.
+    // Each entry therefore indicates where it comes from. Numo ONLY responds in threads
+    // internal (the trigger cuts off on the public, see the route of
+    // comments): the audience is here READING.
     const thread: CommentPromptThreadEntry[] = recentComments.map((c) => {
       const visitor = c.feedback_users as unknown as {
         name: string | null;
@@ -886,7 +886,7 @@ export async function runFeedbackCommentMention({
       feedback_post_id: postId,
       comment_id: replyId as string,
       actor_id: actorId,
-      // Cf. le jumeau ticket : la ligne nomme Numo, sur les deux surfaces.
+      // Cf. the twin ticket: the line names Numo, on both surfaces.
       via_assistant: true,
     }));
     await insertNotifications(service, rows);
@@ -926,15 +926,15 @@ async function runLoop(
   let finalContent = "";
   let continueLoop = true;
   let roundCount = 0;
-  // Suivi des coûts : un run = ce @numo ; chaque round est un appel.
+  // Cost tracking: one run = this @number; each round is a call.
   const runId = newRunId();
   const usageRows: AiUsageInput[] = [];
-  // Les identifiants vivants qu'un tool aurait rendus (MIN-343) — cumulatifs sur
-  // le tour, comme dans la boucle du chat.
+  // The live identifiers that a tool would have returned (MIN-343) — cumulative on
+  // the turn, as in the cat loop.
   const redactor = new SecretRedactor();
-  // Recherche web du tour : même run que les appels ci-dessus, plafonnée sur la
-  // durée du @numo (ses lignes de ledger, elles, sont écrites au fil de l'eau).
-  // Coupée côté admin, le tool n'est pas proposé du tout.
+  // Tour web search: same run as the calls above, capped on the
+  // duration of the @numo (its ledger lines are written over time).
+  // Cut off on the admin side, the tool is not offered at all.
   const webSearchEnabled = await isWebSearchEnabled();
   const webSearch = webSearchEnabled ? { runId, used: 0 } : undefined;
   const tools = webSearchEnabled ? COMMENT_TOOLS : withoutWebSearch(COMMENT_TOOLS);
@@ -1040,8 +1040,8 @@ async function runLoop(
       completionTokens: usageInfo?.completion_tokens ?? null,
       totalTokens: usageInfo?.total_tokens ?? null,
       cost: usageInfo?.cost ?? null,
-      // L'auteur de la mention paye — c'est son budget qui a ouvert le tour
-      // (`hasUsageBudget(actorId)`), même sur le projet d'un autre.
+      // The author of the mention pays — it was his budget that opened the round
+      // (`hasUsageBudget(actorId)`), even on someone else's project.
       billTo: { userId: ctx.userId },
       projectId: ctx.projectId,
     });
@@ -1079,11 +1079,11 @@ async function runLoop(
           triggerSource: "mention",
           webSearch,
         });
-        // Ici le tour ne rend pas un écran mais un COMMENTAIRE : un identifiant
-        // vivant laissé dans le résultat, le modèle le recopierait dans un texte
-        // que tout le projet lit (MIN-343). Substitué, donc — et le secret est
-        // simplement perdu pour cette surface, ce qui est le bon compromis :
-        // une clé se crée depuis le chat ou les réglages, pas depuis un fil.
+        // Here the tour does not render a screen but a COMMENT: an identifier
+        // alive left in the result, the model would copy it into a text
+        // that the whole project reads (MIN-343). Substituted, therefore — and the secret is
+        // simply lost for this surface, which is the good compromise:
+        // a key is created from the chat or settings, not from a thread.
         for (const secret of secrets ?? []) redactor.add(secret);
         messages.push({
           role: "tool",

@@ -74,28 +74,28 @@ interface ToolCallItem {
 interface ToolCallListProps {
   items: ToolCallItem[];
   /**
-   * Masque les lignes ask_user de ce groupe : la question ACTIVE est rendue par
-   * la surface hôte À LA PLACE du composer (MIN-86) — le fil ne montre que les
-   * questions passées, repliées en ligne de tool-call.
+   * Hides the ask_user lines in this group: the ACTIVE question is rendered by
+   * the host surface INSTEAD of the composer (MIN-86) — the wire only shows the
+   * past questions, folded online from tool-call.
    */
   askUserHidden?: boolean;
   /**
-   * Réponse de l'utilisateur aux questions ask_user de ce message (le message
-   * user qui suit, masqué du fil) — affichée dans les détails de la ligne.
+   * User response to the ask_user questions in this message (the message
+   * user following, hidden from the thread) — displayed in the row details.
    */
   askUserAnswer?: string | null;
   /**
-   * Ce message porte-t-il la proposition d'amorce (MIN-173) qui ATTEND encore
-   * l'utilisateur ? Elle s'affiche alors en carte, à cocher et à créer ; les
-   * propositions des tours passés restent des lignes.
+   * Does this message carry the primer proposal (MIN-173) which is still WAITING
+   * the user? It is then displayed as a card, to be checked and created; THE
+   * proposals from past rounds remain lines.
    */
   seedLive?: boolean;
-  /** Les tickets de la proposition viennent d'être écrits (leur nombre). */
+  /** The proposal tickets have just been written (their number). */
   onSeedCreated?: (created: number) => void;
 }
 
-/** La proposition portée par un résultat de `propose_backlog`, si elle a
- *  survécu au voyage (résultat d'un ancien format, message tronqué…). */
+/** The proposition carried by a result of `propose_backlog`, if it has
+ * survived the trip (result of an old format, truncated message, etc.). */
 function seedProposalOf(
   result: unknown
 ): { projectId: string; proposal: SeedProposal } | null {
@@ -109,10 +109,10 @@ function seedProposalOf(
   return { projectId: r.project_id, proposal: r.proposal as SeedProposal };
 }
 
-/** Le translator du namespace `ToolCall`, tel que le rendent `useTranslations`
- *  et `getTranslations`. Typé depuis la source plutôt que réécrit à la main :
- *  une signature maison `(key: string, values?: any)` accepte tout, y compris
- *  une clé à placeholder appelée sans ses valeurs. */
+/** The translator of the namespace `ToolCall`, as rendered by `useTranslations`
+ * and `getTranslations`. Typed from source rather than rewritten by hand:
+ * a house signature `(key: string, values?: any)` accepts everything, including
+ * a placeholder key called without its values. */
 type TranslateFn = ReturnType<typeof useTranslations<"ToolCall">>;
 
 interface ToolMeta {
@@ -151,11 +151,11 @@ function resultCount(
 }
 
 /**
- * Cochage de tâches du carnet. Servi sous DEUX noms : `update_scratchpad_tasks`
- * (Numo chat) et `update_scratchpad_task` (agent de code, MIN-84/MIN-125) — les
- * renommer casserait la reprise des runs en cours, donc le fil connaît les deux.
- * Le compte vient du résultat, sinon des arguments bruts du modèle, sinon du
- * résumé à plat que `toolArgSummary` persiste pour un run d'agent (`count`).
+ * Checking off tasks from the notebook. Served under TWO names: `update_scratchpad_tasks`
+ * (Numo chat) and `update_scratchpad_task` (code agent, MIN-84/MIN-125) — the
+ * renaming would break resuming current runs, so the thread knows both.
+ * The account comes from the result, if not from the raw arguments of the model, otherwise from the
+ * flat summary that `toolArgSummary` persists for an agent run (`count`).
  */
 const SCRATCHPAD_TASKS_META: ToolMeta = {
   icon: ListChecks,
@@ -175,8 +175,8 @@ const SCRATCHPAD_TASKS_META: ToolMeta = {
 };
 
 /**
- * Lecture d'une page du wiki. Servie sous DEUX noms : `get_page` (Numo) et
- * `read_page` (agent de code) — même geste, même ligne dans le fil.
+ * Reading a wiki page. Served under TWO names: `get_page` (Numo) and
+ * `read_page` (code agent) — same gesture, same line in the thread.
  */
 const PAGE_READ_META: ToolMeta = {
   icon: BookText,
@@ -188,7 +188,7 @@ const PAGE_READ_META: ToolMeta = {
   },
 };
 
-/** Lecture d'un retour du board. `get_feedback` (Numo) et `read_feedback` (agent). */
+/** Reading feedback from the board. `get_feedback` (Numo) and `read_feedback` (agent). */
 const FEEDBACK_READ_META: ToolMeta = {
   icon: MessagesSquare,
   getLabel: (_args, _result, success, status, t) => {
@@ -198,25 +198,25 @@ const FEEDBACK_READ_META: ToolMeta = {
 };
 
 /**
- * Le numéro de la pull request visée, tel que le fil d'un run le relit : les
- * tools des pull requests DU PROJET (MIN-267) le prennent en argument, et
- * `toolArgSummary` le persiste. Absent (session de relecture, où la pull request
- * est celle de la session) : la ligne se dit sans numéro.
+ * The number of the targeted pull request, as the thread of a run reads it: the
+ * tools of the PROJECT pull requests (MIN-267) take it as an argument, and
+ * `toolArgSummary` persists it. Absent (replay session, where the pull request
+ * is that of the session): the line is said without a number.
  */
 function prNumber(args: Record<string, unknown>): number | null {
   return typeof args.pull_request === "number" ? args.pull_request : null;
 }
 
-/** Référence du ticket visé quand le tool en portait une (sinon : celui du run). */
+/** Reference of the ticket targeted when the tool carried one (otherwise: that of the run). */
 function targetIssue(args: Record<string, unknown>): string | null {
   return typeof args.issue === "string" && args.issue.trim() ? args.issue.trim() : null;
 }
 
 /**
- * Nombre de fichiers touchés par un batch (`apply_edits`, `apply_patch`).
- * `changes` / `patch` n'existent que dans les arguments bruts du modèle ; ce que
- * le fil d'un run relit est le résumé à plat de `toolArgSummary`
- * (lib/server/agent/agent-loop.ts) : `{ count, paths }`. D'où les trois replis.
+ * Number of files affected by a batch (`apply_edits`, `apply_patch`).
+ * `changes` / `patch` only exist in raw template arguments; that
+ * the thread of a relit run is the flat summary of `toolArgSummary`
+ * (lib/server/agent/agent-loop.ts): `{ count, paths }`. Hence the three folds.
  */
 function batchFileCount(args: Record<string, unknown>): number {
   if (Array.isArray(args.changes)) return args.changes.length;
@@ -302,9 +302,9 @@ const TOOL_META: Record<string, ToolMeta> = {
         : t("issueCreated");
     },
   },
-  // L'amorce d'un projet par la conversation (MIN-173). La proposition VIVANTE
-  // s'affiche en carte (voir plus bas) ; cette ligne est ce qu'il en reste une
-  // fois la conversation repartie.
+  // Starting a project through conversation (MIN-173). The LIVING proposal
+  // is displayed as a map (see below); this line is what one remains
+  // once the conversation starts again.
   propose_backlog: {
     icon: Sparkles,
     getLabel: (_args, result, success, status, t) => {
@@ -349,8 +349,8 @@ const TOOL_META: Record<string, ToolMeta> = {
   edit_issue_text: {
     icon: FilePen,
     getLabel: (args, _result, success, status, t) => {
-      // Le champ visé change ce que l'utilisateur lit : « le plan » et « la
-      // description » ne se corrigent pas au même endroit de l'écran.
+      // The targeted field changes what the user reads: “the plan” and “the
+      // description” are not corrected in the same place on the screen.
       const plan = args.field !== "description";
       if (status === "running")
         return plan ? t("editingPlanText") : t("editingDescriptionText");
@@ -358,7 +358,7 @@ const TOOL_META: Record<string, ToolMeta> = {
       return plan ? t("planTextEdited") : t("descriptionTextEdited");
     },
   },
-  // ── Pages : le wiki du projet (MIN-273) ─────────────────────────────────
+  // ── Pages: the project wiki (MIN-273) ─────────────────────────────────
   list_pages: {
     icon: BookOpen,
     getLabel: (_args, result, _success, status, t) => {
@@ -463,11 +463,11 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("objectiveUpdated") : t("updateObjectiveFailed");
     },
   },
-  // Les deux gestes que l'agent de code a en plus (MIN-287) : ouvrir un objectif
-  // et écrire sur son fil. Le nom se lit dans le RÉSULTAT (le modèle a pu viser
-  // par nom comme par id) — comme `create_objective` juste au-dessus, et il
-  // retombe donc sur le libellé sans nom là où le fil ne transporte pas les
-  // résultats.
+  // The two gestures that the code agent has in addition (MIN-287): open an objective
+  // and write on his thread. The name is read in the RESULT (the model was able to aim
+  // by name as by id) — like `create_objective` just above, and it
+  // therefore falls back on the wording without a name where the thread does not carry the
+  // results.
   read_objective: {
     icon: Target,
     getLabel: (_args, result, success, status, t) => {
@@ -577,7 +577,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (args, _result, success, status, t) => {
       if (status === "running") return t("configuringFeedbackBoard");
       if (!success) return t("configureFeedbackBoardFailed");
-      // La publication est le seul effet qui se voit du dehors : on la nomme.
+      // Publication is the only effect that is visible from the outside: we name it.
       if (args.enabled === true) return t("feedbackBoardPublished");
       if (args.enabled === false) return t("feedbackBoardUnpublished");
       return t("feedbackBoardConfigured");
@@ -648,8 +648,8 @@ const TOOL_META: Record<string, ToolMeta> = {
   respond_to_feedback: {
     icon: MessagesSquare,
     getLabel: (args, _result, success, status, t) => {
-      // La réponse publique VIDÉE n'est pas une réponse publiée : c'est son
-      // retrait, et c'est ce que l'utilisateur doit lire dans le fil.
+      // The VIDED public response is not a published response: it is its
+      // indent, and that's what the user should read in the thread.
       const clearing = typeof args.response === "string" && !args.response.trim();
       if (status === "running")
         return clearing ? t("clearingFeedbackResponse") : t("respondingToFeedback");
@@ -670,8 +670,8 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (args, result, success, status, t) => {
       if (status === "running") return t("launchingCodeAgent");
       if (!success) return t("launchCodeAgentFailed");
-      // Une run déjà en cours reçoit le message en PILOTAGE : le dire, sinon
-      // « agent lancé » sur une run qui tournait déjà induit en erreur.
+      // A run already in progress receives the message in CONTROL: say it, otherwise
+      // “agent launched” on a run that was already running astray.
       if (result?.continued === true) return t("codeAgentSteered");
       const mode = typeof args.mode === "string" ? args.mode : "";
       if (mode === "plan") return t("codeAgentLaunchedPlan");
@@ -686,9 +686,9 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (_args, result, success, status, t) => {
       if (status === "running") return t("creatingRoutine");
       if (!success) return t("createRoutineFailed");
-      // Le titre vient du RÉSULTAT, jamais des arguments : il n'y a pas de
-      // champ « nom » dans le tool — minddy l'écrit lui-même à partir de
-      // l'instruction. Le lire dans `args` ne rendait donc jamais rien.
+      // The title comes from the RESULT, never from the arguments: there is no
+      // “name” field in the tool — minddy writes it herself from
+      // instruction. Reading it in `args` therefore never returned anything.
       const routine = result?.routine as Record<string, unknown> | undefined;
       const title = typeof routine?.title === "string" ? routine.title : "";
       return title ? t("routineCreatedNamed", { title }) : t("routineCreated");
@@ -706,7 +706,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (args, _result, success, status, t) => {
       if (status === "running") return t("updatingRoutine");
       if (!success) return t("updateRoutineFailed");
-      // Activer/désactiver est le geste qu'on relit le plus : il se dit.
+      // Activate/deactivate is the gesture that we read the most: it is said.
       if (args.enabled === false) return t("routineDisabled");
       if (args.enabled === true) return t("routineEnabled");
       return t("routineUpdated");
@@ -717,8 +717,8 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (args, result, success, status, t) => {
       if (status === "running") return t("loadingPullRequest");
       if (!success) return t("pullRequestNotFound");
-      // Le résultat pour Numo, les arguments pour l'agent : le fil d'un run ne
-      // transporte PAS le résultat des tools, seulement le résumé des arguments.
+      // The result for Numo, the arguments for the agent: the thread of a run does not
+      // NOT carry the results of the tools, only the summary of the arguments.
       const number =
         typeof result?.number === "number" ? result.number : prNumber(args);
       return number != null
@@ -866,7 +866,7 @@ const TOOL_META: Record<string, ToolMeta> = {
       return questions[0]?.question || t("questionAsked");
     },
   },
-  // ── Agent de code (MIN-46) : mêmes lignes de tool-call que Numo. ──────────
+  // ── Code agent (MIN-46): same tool-call lines as Numo. ──────────
   read_file: {
     icon: FileSearch,
     getLabel: (args, _r, _s, _st, t) =>
@@ -899,18 +899,18 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   apply_edits: {
     icon: FileStack,
-    // `changes` n'existe QUE dans les arguments bruts du modèle. Ce que le fil
-    // d'un run relit, c'est le résumé à plat écrit par `toolArgSummary`
+    // `changes` ONLY exists in raw template arguments. What the thread
+    // of a run relit, this is the flat summary written by `toolArgSummary`
     // (lib/server/agent/agent-loop.ts) : `{ count, paths }`. Sans ces deux
-    // replis, tout batch multi-fichiers s'affichait « Édition de 0 fichier(s) »,
-    // trois lignes au-dessus de son propre « 3 fichiers modifiés ».
+    // fallbacks, any multi-file batch was displayed “Editing 0 file(s)”,
+    // three lines above its own “3 files modified”.
     getLabel: (args, _r, _s, _st, t) =>
       t("agentApplyEdits", { count: batchFileCount(args) }),
   },
   apply_patch: {
     icon: FileStack,
-    // Même repli que `apply_edits` : `patch` est la chaîne brute du modèle, et ce
-    // que le fil relit est le résumé à plat de `toolArgSummary` — `{ count, paths }`.
+    // Same fallback as `apply_edits`: `patch` is the raw string of the model, and this
+    // that the thread rereads is the flat summary of `toolArgSummary` — `{ count, paths }`.
     getLabel: (args, _r, _s, _st, t) =>
       t("agentApplyPatch", { count: batchFileCount(args) }),
   },
@@ -930,8 +930,8 @@ const TOOL_META: Record<string, ToolMeta> = {
       t("agentRunCommand", { command: (args.command as string) || "…" }),
   },
   // Tools minddy de l'agent (MIN-125). `search_issues`, `create_issue`,
-  // `add_scratchpad_tasks` et `set_scratchpad` réutilisent tels quels les entrées
-  // de Numo ci-dessus : mêmes noms, mêmes formes de résultat.
+  // `add_scratchpad_tasks` and `set_scratchpad` reuse the entries as is
+  // from Numo above: same names, same forms of result.
   read_issue: {
     icon: FileSearch,
     getLabel: (args, _r, _s, _st, t) => {
@@ -943,8 +943,8 @@ const TOOL_META: Record<string, ToolMeta> = {
     icon: FileSearch,
     getLabel: (_a, _r, _s, _st, t) => t("agentReadResource"),
   },
-  // Le nom d'avant MIN-184 : les runs déjà déroulés le portent dans leurs
-  // events, et une relecture ne doit pas afficher un appel sans libellé.
+  // The name before MIN-184: the runs already carried out carry it in their
+  // events, and a replay should not show an unlabeled call.
   read_attachment: {
     icon: FileSearch,
     getLabel: (_a, _r, _s, _st, t) => t("agentReadResource"),
@@ -971,9 +971,9 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   run_background: {
     icon: Activity,
-    // Une ligne par ACTION : « lance npm run dev » et « sonde bg-1 » ne racontent
-    // pas la même chose. `job_id` vient des arguments du modèle (start n'en a pas
-    // encore) ou du résultat, qui le porte pour les trois actions.
+    // One line per ACTION: “launch npm run dev” and “probe bg-1” do not tell
+    // not the same thing. `job_id` comes from template arguments (start doesn't have any
+    // again) or the result, which carries it for the three actions.
     getLabel: (args, result, _s, _st, t) => {
       const job = (args.job_id as string) || (result?.job_id as string) || "…";
       if (args.action === "stop") return t("agentBackgroundStop", { job });
@@ -982,8 +982,8 @@ const TOOL_META: Record<string, ToolMeta> = {
     },
   },
   // Sous-agents (MIN-112). `toolArgSummary` persiste `{ mode, task, model,
-  // thinking_effort }` : la ligne dit ce qui a été délégué et à qui, sinon un tour
-  // qui délègue n'affiche qu'un « Traitement… » anonyme.
+  // thinking_effort }`: the line says what was delegated and to whom, otherwise a turn
+  // who delegates only displays an anonymous “Processing…”.
   spawn_agent: {
     icon: Bot,
     getLabel: (args, _result, success, status, t) => {
@@ -1002,18 +1002,18 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   list_agents: {
     icon: Bot,
-    // Libellé SANS compte, délibérément. `list_agents` n'a pas d'arguments, et le
-    // fil d'un run d'agent ne transporte PAS le résultat des tools : `buildFeed`
-    // ne garde que `{status, success}` par tool-call. Un libellé qui lirait
-    // `result.agents` afficherait donc « Aucun sous-agent » sur une session qui en
-    // a trois — c'est exactement le piège déjà documenté pour `apply_edits`
-    // ci-dessus, et il a été vu à l'écran avant d'être corrigé ici.
+    // Worded WITHOUT consideration, deliberately. `list_agents` has no arguments, and the
+    // thread of an agent run does NOT carry the result of tools: `buildFeed`
+    // only keeps `{status, success}` per tool-call. Wording that would read
+    // `result.agents` would therefore display “No subagent” on a session which
+    // three — this is exactly the trap already documented for `apply_edits`
+    // above, and it was seen on screen before being corrected here.
     getLabel: (_a, _r, _s, _st, t) => t("agentSubagentList"),
   },
   read_page: PAGE_READ_META,
   read_feedback: FEEDBACK_READ_META,
-  // `webfetch` arrive sous le nom d'opencode : il n'a pas de vis-à-vis maison,
-  // donc pas de nom à traduire ([opencode-events.ts](lib/server/agent/vm/opencode-events.ts)).
+  // `webfetch` arrives under the name of opencode: it has no opposite house,
+  // so no name to translate ([opencode-events.ts](lib/server/agent/vm/opencode-events.ts)).
   webfetch: {
     icon: Globe,
     getLabel: (args, _r, _s, _st, t) =>
@@ -1026,11 +1026,11 @@ const TOOL_META: Record<string, ToolMeta> = {
   },
   // ── Pull requests de l'agent ─────────────────────────────────────────
   //
-  // OUVRIR LA PULL REQUEST EST L'ACTE LE PLUS VISIBLE D'UN RUN, et sans entrée
-  // ici il s'affichait « Traitement… » puis « Terminé », sous l'icône grille du
-  // repli — c'est-à-dire la seule ligne du fil qui ne disait rien de ce qu'elle
-  // faisait. Le titre vient des arguments, que `toolArgSummary` persiste ; un
-  // échec (rien à livrer, PR refusée à rouvrir) se dit, il ne se devine pas.
+  // OPENING THE PULL REQUEST IS THE MOST VISIBLE ACT OF A RUN, and without entry
+  // here it was displayed “Processing…” then “Finished”, under the grid icon of the
+  // fallback — that is to say the only line of the thread which said nothing of what it
+  // was doing. The title comes from the arguments, which `toolArgSummary` persists; A
+  // failure (nothing to deliver, PR refused to reopen) is said, it cannot be guessed.
   create_pr: {
     icon: GitPullRequestCreate,
     getLabel: (args, _result, success, status, t) => {
@@ -1040,8 +1040,8 @@ const TOOL_META: Record<string, ToolMeta> = {
       return title ? t("agentCreatePrTitled", { title }) : t("agentCreatePr");
     },
   },
-  // Les trois écritures d'une session de RELECTURE (MIN-168) : la pull request
-  // est celle de la session, donc jamais de numéro.
+  // The three writings of a REREADING session (MIN-168): the pull request
+  // is that of the session, so never a number.
   comment_pr: {
     icon: MessageSquare,
     getLabel: (_a, _r, success, status, t) =>
@@ -1062,7 +1062,7 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (_a, _r, success, status, t) =>
       status === "complete" && !success ? t("agentReplyPrThreadFailed") : t("agentReplyPrThread"),
   },
-  // Les pull requests DU PROJET (MIN-267) : celles-là portent un numéro.
+  // PROJECT pull requests (MIN-267): these have a number.
   list_pull_requests: {
     icon: GitPullRequest,
     getLabel: (_a, _r, _s, _st, t) => t("agentListPullRequests"),
@@ -1090,8 +1090,8 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (_a, _r, success, status, t) =>
       status === "complete" && !success ? t("agentReplyPrThreadFailed") : t("agentReplyPrThread"),
   },
-  // Le VERDICT porte l'information : une approbation et une demande de
-  // modifications n'engagent pas la même chose, et la forge les enregistre.
+  // The VERDICT carries the information: an approval and a request for
+  // modifications do not commit the same thing, and the forge records them.
   review_pull_request: {
     icon: ClipboardCheck,
     getLabel: (args, _r, success, status, t) => {
@@ -1103,8 +1103,8 @@ const TOOL_META: Record<string, ToolMeta> = {
       return t("agentReviewPrComment", { number });
     },
   },
-  // Fusionner est irréversible : la ligne le NOMME plutôt que de dire
-  // « mise à jour de la pull request ».
+  // Merging is irreversible: the line NAMES it rather than saying
+  // “pull request update”.
   set_pull_request_state: {
     icon: GitMerge,
     getLabel: (args, _r, success, status, t) => {
@@ -1144,13 +1144,13 @@ function getToolView(item: ToolCallItem, t: TranslateFn) {
   return { Icon, label };
 }
 
-// ── Résumé d'une salve d'actions ────────────────────────────────────────────
+// ── Summary of a burst of actions ────────────────────── ──────────────────────
 //
-// Une salve terminée ne se raconte pas par sa DERNIÈRE action : « Exécution de
-// npm test » ne dit rien des dix-sept qui précèdent. Elle se raconte par ce
-// qu'elle a fait, par famille — « Lecture de 4 fichiers, exécution de
-// 3 commandes, écriture de 2 fichiers ». Les familles sont volontairement
-// grossières : la ligne tient sur une ligne, et le détail est à un clic.
+// A completed salvo is not told by its LAST action: “Execution of
+// npm test” says nothing of the seventeen above. It is told by this
+// what she did, per family — “Reading 4 files, executing
+// 3 commands, writing 2 files.” Families are voluntarily
+// coarse: the line fits on one line, and the detail is one click away.
 
 type ActionKind =
   | "read"
@@ -1163,7 +1163,7 @@ type ActionKind =
   | "update"
   | "other";
 
-/** Ordre de lecture des familles dans la phrase (les échecs ferment la marche). */
+/** Reading order of families in the sentence (chess brings up the rear). */
 const ACTION_ORDER: readonly ActionKind[] = [
   "read",
   "search",
@@ -1176,8 +1176,8 @@ const ACTION_ORDER: readonly ActionKind[] = [
   "other",
 ];
 
-/** Messages en MINUSCULE : ils s'enchaînent en une phrase dont seule la première
- *  lettre est capitalisée (voir `summarizeActions`). */
+/** Messages in LOWER CASE: they are linked in a sentence of which only the first
+ * letter is capitalized (see `summarizeActions`). */
 const SUMMARY_KEYS: Record<ActionKind, MessageKey<"ToolCall">> = {
   read: "summaryRead",
   search: "summarySearch",
@@ -1190,9 +1190,9 @@ const SUMMARY_KEYS: Record<ActionKind, MessageKey<"ToolCall">> = {
   other: "summaryOther",
 };
 
-/** Les tools dont la famille ne se devine pas au nom. Tout le reste passe par la
- *  règle de `actionKind` : un tool minddy qui LIT s'appelle `list_`/`get_`/
- *  `read_`/`search_`, les autres écrivent. */
+/** The tools whose family cannot be guessed by the name. Everything else goes through
+ * rule of `actionKind`: a minddy tool that LIT is called `list_`/`get_`/
+ * `read_`/`search_`, the others write. */
 const ACTION_KIND: Record<string, ActionKind> = {
   read_file: "read",
   grep: "search",
@@ -1211,10 +1211,10 @@ const ACTION_KIND: Record<string, ActionKind> = {
   spawn_agent: "delegate",
   launch_code_agent: "delegate",
   agent_status: "lookup",
-  // Une proposition d'amorce n'écrit rien : elle attend l'utilisateur.
+  // A seed proposal does not write anything: it waits for the user.
   propose_backlog: "other",
   ask_user: "other",
-  // Rendre un verdict ne change rien : c'est ce que la chaîne LIT pour décider.
+  // Rendering a verdict doesn't change anything: that's what the LIT channel decides.
   report_verdict: "other",
 };
 
@@ -1222,20 +1222,20 @@ function actionKind(name: string): ActionKind {
   const known = ACTION_KIND[name];
   if (known) return known;
   if (/^(list|get|read|search)_/.test(name)) return "lookup";
-  // Un tool INCONNU du fil (ancien run, tool retiré depuis) ne se laisse pas
-  // ranger : on le compte sans prétendre savoir ce qu'il a fait.
+  // An UNKNOWN tool in the thread (old run, tool since removed) is not left
+  // put away: we count him without pretending to know what he has done.
   return name in TOOL_META ? "update" : "other";
 }
 
-/** Ce que l'action pèse dans son compte : un batch multi-fichiers compte ses
- *  fichiers, pas son appel — sinon « Édition de 5 fichiers » se résumerait en
- *  « édition d'un fichier ». */
+/** What the action weighs in its account: a multi-file batch counts its
+ * files, not its call — otherwise “Editing 5 files” would be summarized as
+ * “editing a file”. */
 function actionWeight(item: ToolCallItem): number {
   if (item.name !== "apply_edits" && item.name !== "apply_patch") return 1;
   return Math.max(1, batchFileCount(safeParseArgs(item.arguments)));
 }
 
-/** « Lecture de 4 fichiers, exécution de 3 commandes, 1 échec ». */
+/** “Read 4 files, execute 3 commands, 1 failure”. */
 function summarizeActions(items: ToolCallItem[], t: TranslateFn): string {
   const counts = new Map<ActionKind, number>();
   let failed = 0;
@@ -1248,8 +1248,8 @@ function summarizeActions(items: ToolCallItem[], t: TranslateFn): string {
   const parts = ACTION_ORDER.filter((kind) => counts.get(kind)).map((kind) =>
     t(SUMMARY_KEYS[kind], { count: counts.get(kind)! })
   );
-  // Un échec ne se voit plus à la couleur de la ligne (le résumé porte sur tout
-  // le groupe, pas sur l'action fautive) : il se DIT, en fin de phrase.
+  // A failure is no longer seen by the color of the line (the summary covers everything
+  // the group, not on the wrongful action): it is SAID, at the end of the sentence.
   if (failed > 0) parts.push(t("summaryFailed", { count: failed }));
 
   const line = parts.join(", ");
@@ -1257,9 +1257,9 @@ function summarizeActions(items: ToolCallItem[], t: TranslateFn): string {
 }
 
 /**
- * Question passée : une LIGNE au style des tool-calls (le fil de lecture reste
- * propre), repliable — le clic déplie les questions posées et les réponses
- * données. La réponse de l'utilisateur ne s'affiche plus en bulle : elle vit ici.
+ * Past question: a LINE in the style of tool-calls (the reading thread remains
+ * clean), foldable — the click unfolds the questions asked and the answers
+ * data. The user's response is no longer displayed in a bubble: she lives here.
  */
 function AskUserSummaryRow({
   item,
@@ -1271,8 +1271,8 @@ function AskUserSummaryRow({
   t: TranslateFn;
 }) {
   const [open, setOpen] = useState(false);
-  // Comprend la forme actuelle {questions: [...]} comme la forme legacy
-  // mono-question {question, suggestions} des anciens messages persistés.
+  // Understands current form {questions: [...]} as well as legacy form
+  // single-question {question, suggestions} from old persisted messages.
   const questions = parseAskUserQuestions(safeParseArgs(item.arguments));
   if (questions.length === 0) return null;
 
@@ -1309,7 +1309,7 @@ function AskUserSummaryRow({
               )}
             </div>
           ))}
-          {/* Réponse non appariable (skip, texte libre hors carte) : en bloc. */}
+          {/* Unmatchable response (skip, free text outside the map): in bulk. */}
           {answer && !matched && (
             <div className="text-xs text-foreground">{answer}</div>
           )}
@@ -1331,8 +1331,8 @@ function ToolCallRow({ item, t }: { item: ToolCallItem; t: TranslateFn }) {
       )}
     >
       <Icon className="h-3 w-3 shrink-0" />
-      {/* Action EN COURS → le label lui-même shimmer (pas de spinner : le texte
-          qui respire dit déjà « ça tourne », sans ajouter un objet qui tourne). */}
+      {/* Action IN PROGRESS → the label itself shimmer (no spinner: the text
+ which breathes already says “it spins”, without adding a rotating object). */}
       <span className={cn("flex-1 truncate", item.status === "running" && "text-shimmer")}>
         {label}
       </span>
@@ -1357,8 +1357,8 @@ export function ToolCallList({
   const askUserCallouts = items.filter(
     (i) => i.name === "ask_user" && i.status === "complete"
   );
-  // La proposition d'amorce en attente prend la place de sa ligne : c'est un
-  // aperçu à relire, pas une action passée.
+  // The pending primer proposition takes the place of its line: it is a
+  // insight to reread, not a past action.
   const seedCallouts =
     seedLive && onSeedCreated
       ? items.filter(
@@ -1377,29 +1377,29 @@ export function ToolCallList({
   const renderRows = () => {
     if (rowItems.length === 0) return null;
 
-    // Action unique : la ligne shimmer d'elle-même tant qu'elle tourne.
+    // Unique action: the line shimmers by itself as long as it rotates.
     if (rowItems.length === 1) return <ToolCallRow item={rowItems[0]} t={t} />;
 
     const anyRunning = rowItems.some((i) => i.status === "running");
     const lastItem = rowItems[rowItems.length - 1];
     const lastError = lastItem.status === "complete" && lastItem.success === false;
 
-    // Salve TERMINÉE : la ligne d'en-tête ne montre plus la dernière action mais
-    // ce que la salve a fait EN ENTIER, et c'est la MÊME phrase pliée ou dépliée
-    // — le clic n'ouvre que le détail, il ne change pas ce qui est dit.
+    // Salvo COMPLETED: the header line no longer shows the last action but
+    // what the ENTIRE salvo did, and it is the SAME sentence folded or unfolded
+    // — the click only opens the detail, it does not change what is said.
     //
-    // Salve EN COURS : rien à résumer, un compte serait faux d'une ligne à
-    // l'autre. On garde le direct — la dernière action en date une fois pliée,
-    // le compte courant une fois dépliée — et le shimmer qui dit « ça tourne ».
+    // Salve IN PROGRESS: nothing to summarize, an account would be false from one line to the next
+    // the other. We keep the live - the last action to date once folded,
+    // the current account once unfolded — and the shimmer which says “it’s running”.
     const summary = anyRunning ? null : summarizeActions(rowItems, t);
     const label =
       summary ??
       (expanded
         ? t("toolCallSummary", { count: rowItems.length })
         : getToolView(lastItem, t).label);
-    // Le rouge ne vaut que pour la ligne « dernière action » : un résumé de
-    // groupe reste NEUTRE (il DIT ses échecs), et seules les lignes d'action
-    // fautives, dépliées, apparaissent en rouge.
+    // Red only applies to the “last action” line: a summary of
+    // group remains NEUTRAL (it SAYS its failures), and only the lines of action
+    // faulty, unfolded, appear in red.
     const headerError = !summary && !expanded && lastError;
 
     return (
@@ -1449,9 +1449,8 @@ export function ToolCallList({
             t={t}
           />
         ))}
-      {/* L'identifiant vivant que le résultat vient d'apporter (MIN-343) : il
-          s'affiche EN PLUS de la ligne d'action, et seulement en direct — au
-          rechargement l'historique ne porte plus que `[redacted]`. */}
+      {/* The living identifier that the result has just brought (MIN-343): it
+ is displayed IN ADDITION to the action line, and only live — upon reloading the history only shows `[redacted]`. */}
       {items.map((item) => {
         const secret =
           item.status === "complete" && item.success !== false

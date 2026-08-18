@@ -70,10 +70,10 @@ export async function getAppConfigValues(
 }
 
 /**
- * Remet une clé à son défaut PRODUIT en supprimant sa ligne : la lecture
- * retombe alors sur le `fallback` du registre (`lib/ai-model-config.ts`), qui
- * suivra les futurs changements de défaut. Écrire l'id du défaut à la place
- * figerait le réglage sur la valeur d'aujourd'hui.
+ * Resets a key to its PRODUCT default by deleting its line: the reading
+ * then falls back to the `fallback` of the register (`lib/ai-model-config.ts`), which
+ * will track future default changes. Writing the default id instead
+ * would freeze the setting at today's value.
  */
 export async function clearAppConfigValue(key: string): Promise<void> {
   const supabase = getServiceClient();

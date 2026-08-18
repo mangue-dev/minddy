@@ -8,29 +8,26 @@ import { put } from "@vercel/blob";
 import { computeDesktopFingerprint } from "./desktop-fingerprint.mjs";
 
 /**
- * PUBLIER LE FLUX DE L'APP DE BUREAU (MIN-292).
+ * PUBLISH DESKTOP APP FLOW (MIN-292).
  *
- * electron-builder a produit `desktop/release/` ; ce script en pousse le contenu
- * utile dans Vercel Blob, sous le préfixe `desktop/`. C'est tout le « stockage
- * quelconque » du §5 du cadrage : le flux de mise à jour n'a besoin de rien
- * d'autre qu'un dossier servi en HTTPS avec des noms stables.
+ * electron-builder produced `desktop/release/` ; this script pushes the useful content
+ * into Vercel Blob, under the prefix `desktop/`. This is all the “storage
+ * any” of §5 of the framework: the update flow does not need anything
+ * other than a folder served in HTTPS with stable names.
  *
- *     MINDDY_DESKTOP_FEED_URL=https://…/desktop \
- *     BLOB_READ_WRITE_TOKEN=… \
- *     node scripts/publish-desktop.mjs
+ * MINDDY_DESKTOP_FEED_URL=https://…/desktop \
+ * BLOB_READ_WRITE_TOKEN=… \
+ * node scripts/publish-desktop.mjs
  *
- * **`addRandomSuffix: false` n'est pas une préférence** : les noms de fichiers
- * SONT le contrat du flux. `latest-mac.yml` les cite, electron-updater les
- * résout relativement à l'URL de base, et un suffixe aléatoire casserait le lien
- * entre le manifeste et les binaires qu'il annonce.
+ * **`addRandomSuffix: false` is not a preference**: filenames
+ * ARE flow contract. `latest-mac.yml` cites them, electron-updates them
+ * resolves relative to the base URL, and a random suffix would break the link
+ * between the manifest and the binaries it announces.
  *
- * **Trois refus, avant le premier octet envoyé.** Ils sont là parce que les trois
- * pannes correspondantes sont MUETTES : une app non signée s'installe et ne se
- * mettra jamais à jour (Squirrel.Mac exige une app signée) ; une app non
- * notarisée ne s'ouvre chez personne, et le build ne fait qu'un `warn` quand il
- * saute l'étape ; un `app-update.yml` sans URL donne une app qui ne cherche
- * nulle part. Dans les trois cas rien ne casse à la publication, et tout est
- * cassé chez les gens.
+ * **Three rejections, before the first byte sent.** They are there because the three corresponding faults are MUTE: an unsigned app installs and will never update (Squirrel.Mac requires a signed app); a non
+ * notarized app does not open with anyone, and the build only does a `warn` when it
+ * skips the step; a `app-update.yml` without a URL results in an app that doesn't look for
+ * anywhere. In all three cases nothing breaks on publication, and everything is broken in people.
  */
 
 const exec = promisify(execFile);
@@ -40,7 +37,7 @@ const repo = path.resolve(dir, "..");
 const RELEASE_DIR = path.join(repo, "desktop", "release");
 const PREFIX = "desktop";
 
-/** Ce qui part : les binaires, leurs blockmaps (deltas) et le manifeste. */
+/** What leaves: the binaries, their blockmaps (deltas) and the manifest. */
 const PUBLISHED = /\.(dmg|zip|blockmap)$|^latest-mac\.yml$/;
 
 function fail(message) {
@@ -50,13 +47,13 @@ function fail(message) {
 
 const verifyOnly = process.argv.includes("--verify-only");
 const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
-if (!verifyOnly && !token) fail("BLOB_READ_WRITE_TOKEN manque — rien à publier sans store.");
+if (!verifyOnly && !token) fail("BLOB_READ_WRITE_TOKEN is missing — nothing to publish without a store.");
 
 const feedUrl = process.env.MINDDY_DESKTOP_FEED_URL?.trim();
 if (!feedUrl) {
   fail(
-    "MINDDY_DESKTOP_FEED_URL manque. C'est la même URL que celle du bloc `publish` " +
-      "de desktop/electron-builder.yml : sans elle, l'app empaquetée ne cherche nulle part."
+    "MINDDY_DESKTOP_FEED_URL is missing. It is the same URL as the `publish` block " +
+      "in desktop/electron-builder.yml; without it, the packaged app looks nowhere."
   );
 }
 
@@ -64,15 +61,15 @@ let entries;
 try {
   entries = await readdir(RELEASE_DIR);
 } catch {
-  fail(`${path.relative(repo, RELEASE_DIR)} n'existe pas — lancer d'abord \`npm --prefix desktop run dist\`.`);
+  fail(`${path.relative(repo, RELEASE_DIR)} does not exist — run \`npm --prefix desktop run dist\` first.`);
 }
 
 if (!entries.includes("latest-mac.yml")) {
-  fail("latest-mac.yml manque : sans manifeste, il n'y a pas de flux, seulement des fichiers.");
+  fail("latest-mac.yml is missing: without a manifest, there is no feed, only files.");
 }
 
-// Refus 1 — l'app doit être signée. `codesign -dv` échoue (code ≠ 0) sur un
-// bundle non signé, et c'est exactement le cas qu'on veut attraper.
+// Refusal 1 — the app must be signed. `codesign -dv` fails (code ≠ 0) on a
+// unsigned bundle, and this is exactly the case we want to catch.
 const apps = [];
 for (const arch of ["mac-arm64", "mac"]) {
   const app = path.join(RELEASE_DIR, arch, "minddy.app");
@@ -80,79 +77,79 @@ for (const arch of ["mac-arm64", "mac"]) {
     await stat(app);
     apps.push(app);
   } catch {
-    // Cette architecture n'a pas été construite : `latest-mac.yml` ne
-    // l'annoncera pas non plus, rien à vérifier.
+    // This architecture has not been built: `latest-mac.yml` does not
+    // won't announce it either, nothing to check.
   }
 }
-if (apps.length === 0) fail("aucun `minddy.app` dans desktop/release — le build n'a pas abouti.");
+if (apps.length === 0) fail("no `minddy.app` in desktop/release — the build did not complete.");
 
 for (const app of apps) {
   try {
     await exec("codesign", ["-dv", "--verbose=2", app]);
   } catch {
     fail(
-      `${path.relative(repo, app)} n'est PAS signé. Squirrel.Mac exige une app signée : ` +
-        "la publier donnerait une app qui s'installe et ne se met jamais à jour. " +
-        "Voir docs/desktop-release.md."
+      `${path.relative(repo, app)} is NOT signed. Squirrel.Mac requires a signed app: ` +
+        "publishing it would produce an app that installs but never updates. " +
+        "See docs/desktop-release.md."
     );
   }
 }
 
-// Refus 2 — l'app est NOTARISÉE, et le ticket est agrafé.
+// Refusal 2 — the app is NOTARIZED, and the ticket is stapled.
 //
-// Signée ne suffit pas : Gatekeeper veut aussi qu'Apple ait regardé. Et le manque
-// ne se voit pas au build — quand les identifiants de `notarytool` manquent,
-// electron-builder écrit `skipped macOS notarization` en `warn` au milieu de cent
-// lignes et rend une app signée, non notarisée, d'apparence normale. Elle ne
-// s'ouvrirait chez personne. `stapler validate` est ce qui tranche : il lit le
-// ticket DANS le bundle, sans réseau, exactement comme le fera le Mac d'en face.
+// Signed is not enough: Gatekeeper also wants Apple to have looked. And the lack
+// is not seen in the build — when the `notarytool` identifiers are missing,
+// electron-builder writes `skipped macOS notarization` to `warn` in the middle of hundred
+// lines and renders a signed, non-notarized, normal-looking app. She doesn't
+// would open in anyone's home. `stapler validate` is what decides: he reads the
+// ticket IN the bundle, without network, exactly like the Mac opposite will do.
 for (const app of apps) {
   try {
     await exec("xcrun", ["stapler", "validate", app]);
   } catch {
     fail(
-      `${path.relative(repo, app)} n'a pas de ticket de notarisation agrafé. ` +
-        "macOS refusera de l'ouvrir. Le build a probablement écrit " +
-        "`skipped macOS notarization` — vérifier APPLE_KEYCHAIN_PROFILE, puis " +
+      `${path.relative(repo, app)} has no stapled notarization ticket. ` +
+        "macOS will refuse to open it. The build probably wrote " +
+        "`skipped macOS notarization` — check APPLE_KEYCHAIN_PROFILE, then " +
         "docs/desktop-release.md."
     );
   }
 }
 
-// Refus 3 — l'`app-update.yml` du bundle porte bien l'URL du flux. C'est le
-// fichier que lit electron-updater, et il est écrit au moment de l'empaquetage :
-// un `MINDDY_DESKTOP_FEED_URL` absent CE jour-là ne se voit nulle part ailleurs.
+// Refusal 3 — the `app-update.yml` of the bundle bears the URL of the flow. This is the
+// file that electron-updater reads, and it is written at packaging time:
+// an absent `MINDDY_DESKTOP_FEED_URL` THIS day is not seen anywhere else.
 for (const app of apps) {
   const inside = path.join(app, "Contents", "Resources", "app-update.yml");
   const content = await readFile(inside, "utf8").catch(() => "");
   if (!/^url:\s*\S+/m.test(content)) {
     fail(
-      `${path.relative(repo, inside)} n'a pas d'URL de flux : l'app empaquetée ne chercherait ` +
-        "aucune mise à jour. Reconstruire avec MINDDY_DESKTOP_FEED_URL défini."
+      `${path.relative(repo, inside)} has no feed URL: the packaged app would look for ` +
+        "no updates. Rebuild with MINDDY_DESKTOP_FEED_URL set."
     );
   }
 }
 
-// **C'est le MANIFESTE qui décide de ce qui part, pas le contenu du dossier.**
-// `desktop/release/` n'est pas nettoyé entre deux builds : les binaires d'une
-// version précédente y restent, et un balayage du dossier les republierait — du
-// poids mort dans le store, et un `.zip` d'une version que le flux n'annonce
-// plus. On ne pousse donc que ce que `latest-mac.yml` cite, plus ses blockmaps
-// (les deltas, qu'il ne cite pas mais qu'electron-updater va chercher à côté).
+// **It is the MANIFESTO that decides what goes, not the contents of the file.**
+// `desktop/release/` is not cleaned between two builds: the binaries of one
+// previous version remain there, and a scan of the folder would republish them — from
+// dead weight in the store, and a `.zip` of a version that the flow does not announce
+// anymore. We therefore publish only what `latest-mac.yml` cites, plus its blockmaps
+// (the deltas, which he does not cite but which electron-updater will look for next).
 //
-// La lecture des `url:` est volontairement minuscule et duplique trois lignes de
-// lib/desktop/update-feed.ts (l'autre lecteur du même fichier, côté site) :
-// importer du TypeScript du dépôt dans un script `.mjs` coûterait plus cher que
-// ces trois lignes-là.
+// Reading `url:` is deliberately lowercase and duplicates three lines of
+// lib/desktop/update-feed.ts (the other reader of the same file, site side):
+// importing TypeScript from the repository into a `.mjs` script would cost more than
+// these three lines.
 const manifest = await readFile(path.join(RELEASE_DIR, "latest-mac.yml"), "utf8");
 const referenced = [...manifest.matchAll(/^\s*-\s*url:\s*(.+)$/gm)].map((m) =>
   m[1].trim().replace(/^['"]|['"]$/g, "")
 );
-if (referenced.length === 0) fail("latest-mac.yml n'annonce aucun fichier.");
+if (referenced.length === 0) fail("latest-mac.yml announces no files.");
 
 const missing = referenced.filter((name) => !entries.includes(name));
 if (missing.length > 0) {
-  fail(`le manifeste annonce des fichiers absents du dossier : ${missing.join(", ")}`);
+  fail(`manifest announces files missing from the directory: ${missing.join(", ")}`);
 }
 
 const files = entries
@@ -165,21 +162,21 @@ const files = entries
   .sort();
 
 const skipped = entries.filter((name) => PUBLISHED.test(name) && !files.includes(name));
-// Un plafond silencieux est un mensonge : on DIT ce qu'on laisse au sol.
+// A silent ceiling is misleading: SAY what we leave behind.
 if (skipped.length > 0) {
   console.log(
-    `[publish-desktop] ignorés (hors manifeste, sans doute d'un build précédent) : ${skipped.join(", ")}`
+    `[publish-desktop] skipped (outside the manifest, probably from an earlier build): ${skipped.join(", ")}`
   );
 }
-if (files.length === 0) fail("rien à publier dans desktop/release.");
+if (files.length === 0) fail("nothing to publish in desktop/release.");
 
-// Le manifeste EN DERNIER, toujours. Il est ce qui annonce une version ; le
-// publier avant ses binaires ouvre une fenêtre, courte mais réelle, pendant
-// laquelle chaque app installée télécharge un 404.
+// The manifesto LAST, always. He is what announces a version; THE
+// publish before its binaries opens a window, short but real, during
+// which each installed app downloads a 404.
 files.sort((a, b) => Number(a === "latest-mac.yml") - Number(b === "latest-mac.yml"));
 
 if (verifyOnly) {
-  console.log(`[publish-desktop] vérification seule : ${files.length} fichiers prêts (${files.join(", ")}).`);
+  console.log(`[publish-desktop] verification only: ${files.length} files ready (${files.join(", ")}).`);
   process.exit(0);
 }
 
@@ -190,24 +187,23 @@ for (const name of files) {
     token,
     addRandomSuffix: false,
     allowOverwrite: true,
-    // Le manifeste est relu à chaque vérification : le mettre en cache long
-    // ferait vivre une version périmée bien après sa remplaçante. Les binaires,
-    // eux, sont immuables — leur nom porte leur version.
+    // The manifest is reread at each check: cache it long
+    // would make an outdated version live long after its replacement. Binaries,
+    // they are immutable — their name bears their version.
     cacheControlMaxAge: name === "latest-mac.yml" ? 60 : 31_536_000,
   });
   console.log(`[publish-desktop] ${name} → ${url}`);
 }
 
 /**
- * Le relevé de ce qui vient d'être publié — `desktop/released.json`, COMMITÉ.
+ * The statement of what has just been published — `desktop/released.json`, COMMITTEE.
  *
- * C'est lui qui permet à `npm run deploy` de répondre « faut-il republier
- * l'app ? » sans rien demander à personne : il compare l'empreinte du dépôt à
- * celle-ci. Un fichier versionné plutôt qu'un appel réseau, pour que la réponse
- * se lise dans un diff et qu'un déploiement hors ligne reste possible.
+ * This is what allows `npm run deploy` to respond “should we republish
+ * the app? » without asking anyone: it compares the fingerprint of the deposit to
+ * this one. A versioned file rather than a network call, so that the response
+ * is read in a diff and an offline deployment remains possible.
  *
- * Il s'écrit APRÈS l'envoi, jamais avant : un relevé qui annoncerait une
- * publication ratée ferait sauter tous les déploiements suivants.
+ * It is written AFTER sending, never before: a statement announcing a failed publication would skip all deployments following.
  */
 const version = JSON.parse(
   await readFile(path.join(repo, "desktop", "package.json"), "utf8")
@@ -223,6 +219,6 @@ await writeFile(
 );
 
 console.log(
-  `[publish-desktop] ${files.length} fichiers publiés en ${version} (empreinte ${fingerprint.slice(0, 12)}).`
+  `[publish-desktop] ${files.length} files published in ${version} (fingerprint ${fingerprint.slice(0, 12)}).`
 );
-console.log("[publish-desktop] desktop/released.json mis à jour — À COMMITER.");
+console.log("[publish-desktop] desktop/released.json updated — COMMIT THIS FILE.");

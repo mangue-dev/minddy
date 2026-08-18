@@ -1,47 +1,47 @@
 "use client";
 
-// L'HISTORIQUE d'une page (MIN-277) — la liste des états antérieurs, l'aperçu
-// de l'un d'eux, et le retour en arrière.
+// One-page HISTORY (MIN-277) — list of previous states, overview
+// of one of them, and going back.
 //
-// C'est le filet de l'agent, et c'est à ce titre qu'il existe : six outils
-// d'écriture sont ouverts à Numo, au MCP et à l'agent de code, et sans cet écran
-// la seule réponse possible à « l'agent a écrasé ma page » serait « on ne peut
-// rien faire ». D'où deux partis pris qui se voient tout de suite :
+// It is the agent's net, and that is why it exists: six tools
+// writing are open to Numo, MCP and Code Agent, and without this screen
+// the only possible response to "the agent overwrote my page" would be "we can't
+// do nothing.” Hence two biases which are immediately visible:
 //
-// 1. **une écriture d'agent se reconnaît dans la liste** — au nom (« minddy »,
-//    jamais celui du compte qui l'a permise) et à sa marque. C'est la ligne
-//    qu'on cherche quand on ouvre ce panneau.
-// 2. **restaurer est un geste, pas un parcours** : un bouton sur la version
-//    qu'on lit. Il ne détruit rien — l'état d'avant la restauration entre
-//    lui-même dans l'historique, donc se restaure à son tour.
+// 1. **an agent's writing can be recognized in the list** — in the name (“minddy”,
+// never that of the account which authorized it) and to its brand. This is the line
+//    that we look for when opening this panel.
+// 2. **restore is a gesture, not a journey**: a button on the version
+// that we read. It does not destroy anything — the state before the restoration enters
+// itself in history, therefore restores itself in turn.
 //
-// L'aperçu monte le VRAI éditeur en `editable: false`, et pas un rendu à part :
-// l'éditeur EST la surface (cf. l'architecture des mentions). Un second rendu
-// finirait par diverger sur exactement les blocs qu'on regarde le moins.
+// The preview shows the REAL editor as `editable: false`, and not a separate rendering:
+// the editor IS the surface (see the architecture of mentions). A second rendering
+// would end up diverging on exactly the blocks we look at least.
 //
-// ─── LE MEUBLE est celui d'un ticket (MIN-282) ──────────────────────────────
+// ─── THE FURNITURE is that of a ticket (MIN-282) ──────────────────────────────
 //
-// `SidePanel`, exactement comme le panneau d'un ticket : mêmes marges, même
-// rayon, même ombre, même bascule en tiroir sous 480 px, et la même grammaire
-// dedans — titre à gauche, croix ronde à droite, onglets soulignés pleine
-// largeur, corps en `px-6` qui défile d'un bloc.
+// `SidePanel`, exactly like the ticket panel: same margins, same
+// radius, same shadow, same drawer switch under 480 px, and the same grammar
+// inside — title on the left, round cross on the right, full underlined tabs
+// width, body in `px-6` which scrolls in one block.
 //
-// Ce que ça a coûté, et c'est la seule chose que ce panneau perd : l'aperçu ne
-// s'ouvre plus dans une SECONDE colonne à côté de la liste. Un panneau à deux
-// volets de 900 px n'existait nulle part ailleurs dans l'application — c'était
-// précisément le reproche. La version choisie se déplie donc SOUS sa ligne, avec
-// son bouton de restauration, dans la même carte : le vocabulaire des fils de
-// commentaires (carte bordée, séparateurs internes), qu'on lit partout ailleurs.
+// What it cost, and that's the only thing this panel loses: the preview doesn't
+// no longer opens in a SECOND column next to the list. A panel for two
+// 900 px panes didn't exist anywhere else in the app — it was
+// precisely the reproach. The chosen version therefore unfolds UNDER its line, with
+// its restore button, in the same card: the vocabulary of the threads of
+// comments (bordered card, internal separators), which we read everywhere else.
 //
-// ─── Et l'ACTIVITÉ à côté (MIN-278) ─────────────────────────────────────────
+// ─── And the ACTIVITY next to it (MIN-278) ──────────────────── ─────────────────────
 //
-// Un second onglet, dans le même panneau, parce que la question est la même —
-// « qu'est-il arrivé à cette page ? » — et qu'elle se pose au même endroit : en
-// lisant « modifiée par quelqu'un d'autre » en tête de page. Deux onglets et
-// non une liste, parce que les deux réponses ne sont pas de même nature : les
-// versions sont des ÉTATS qu'on relit et qu'on remet en place, l'activité des
-// GESTES — dont ceux qui ne laissent aucun état derrière eux (créée, mise à la
-// corbeille, restaurée, renommée).
+// A second tab, in the same panel, because the question is the same —
+// “what happened to this page?” » — and that it arises in the same place: in
+// reading "edited by someone else" at the top of the page. Two tabs and
+// not a list, because the two answers are not of the same nature: the
+// versions are STATES that we reread and put back in place, the activity of
+// GESTURES — including those that leave no state behind them (created, released
+// trash, restored, renamed).
 
 import { useEffect, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
@@ -83,7 +83,7 @@ import type { Member } from "@/lib/types";
 import { useAuth } from "@/lib/auth-context";
 import type { PageVersion } from "@/lib/pages";
 
-/** La durée de conservation annoncée, la même que la corbeille (30 jours). */
+/** The announced shelf life, the same as the basket (30 days). */
 const RETENTION_DAYS = 30;
 
 export function PageHistorySheet({
@@ -98,9 +98,9 @@ export function PageHistorySheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /**
-   * La page vient d'être réécrite : l'éditeur ouvert derrière tient un document
-   * et une `version` désormais périmés, et tiptap ne relit pas son `content`.
-   * L'appelant remonte donc la surface (cf. page-view.tsx).
+   * The page has just been rewritten: the open editor behind is holding a document
+   * and a `version` now expired, and tiptap does not reread its `content`.
+   * The caller therefore goes back to the surface (see page-view.tsx).
    */
   onRestored: () => void;
 }) {
@@ -109,21 +109,21 @@ export function PageHistorySheet({
   const format = useFormatter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  // Les MEMBRES, pour le visage des auteurs humains de l'historique : la graine
-  // d'un avatar vit sur le membre, jamais sur la ligne de version (elle ne
-  // porte qu'un id et un nom déjà résolu). Le même cache que partout ailleurs.
+  // MEMBERS, for the face of the human authors of history: the seed
+  // of an avatar lives on the member, never on the version line (it does not
+  // carries only an id and a name already resolved). The same cache as everywhere else.
   const { members } = useMembersQuery(projectId, open);
   const [selected, setSelected] = useState<string | null>(null);
   const [tab, setTab] = useState<"versions" | "activity">("activity");
 
-  // Rouvrir le panneau repart de l'ACTIVITÉ, et sans version dépliée : ni celle
-  // qu'on regardait la fois d'avant ni l'onglet où on l'avait laissé n'ont de
-  // raison d'être ce qu'on vient chercher.
+  // Reopening the panel restarts from the ACTIVITY, and without the unfolded version: nor the
+  // that we looked at the time before nor the tab where we left it have any
+  // reason to be what we are looking for.
   //
-  // L'activité d'abord parce que c'est la question courante — « qu'est-ce qui
-  // s'est passé ici, qu'est-ce qui a été dit ? ». Les versions répondent à une
-  // question plus rare et plus grave, celle d'après l'incident : « remets-moi
-  // ça comme c'était ».
+  // The activity first because it is the common question — “what
+  // happened here, what was said? ". The versions respond to a
+  // rarer and more serious question, the one after the incident: “put me back
+  // that’s how it was.”
   useEffect(() => {
     if (!open) {
       setSelected(null);
@@ -134,13 +134,13 @@ export function PageHistorySheet({
   const versions = useQuery({
     queryKey: ["page-versions", pageId],
     queryFn: () => fetchPageVersionsApi(projectId, pageId),
-    // Comme le journal d'à côté : la liste ne part chercher ses lignes que
-    // quand on la regarde. C'est l'ACTIVITÉ qui ouvre le panneau maintenant,
-    // donc sans cette garde chaque ouverture paierait une requête pour un
-    // onglet que personne n'a demandé.
+    // Like the newspaper next door: the list only goes to get its lines
+    // when you look at it. It is the ACTIVITY which opens the panel now,
+    // so without this guard each opening would pay a request for a
+    // tab that no one asked for.
     enabled: open && tab === "versions",
-    // L'historique bouge à chaque écriture, la sienne comme celle d'un autre :
-    // on le redemande à chaque ouverture plutôt que de peindre un cache.
+    // History changes with each writing, one's own as well as that of another:
+    // we ask for it again each time we open it rather than painting a cover.
     refetchOnMount: "always",
     staleTime: 0,
   });
@@ -157,11 +157,11 @@ export function PageHistorySheet({
     onSuccess: () => {
       toast.success(t("historyRestored"));
       void queryClient.invalidateQueries({ queryKey: pageKey(pageId) });
-      // La LISTE aussi : une restauration ramène le titre et l'icône de la
-      // version, et c'est ce cache-là que lisent la sidebar, le fil d'Ariane,
-      // le bloc sous-page — et le titre affiché en tête. Sans cette ligne, ils
-      // gardent l'ancien nom cinq minutes (le `staleTime` du dépôt), sur une
-      // page dont le corps, lui, a bien changé sous les yeux.
+      // The LIST too: a restoration brings back the title and the icon of the
+      // version, and it is this cache that the sidebar, the breadcrumbs, read,
+      // the subpage block — and the title displayed at the top. Without this line, they
+      // keep the old name for five minutes (the `staleTime` of the repository), on a
+      // page whose body has changed a lot before our eyes.
       void queryClient.invalidateQueries({ queryKey: pagesKey(projectId) });
       void queryClient.invalidateQueries({ queryKey: ["page-versions", pageId] });
       onOpenChange(false);
@@ -177,19 +177,19 @@ export function PageHistorySheet({
   return (
     <SidePanel open={open} onOpenChange={onOpenChange}>
       <SidePanelContent
-        // Un peu plus large que le panneau d'un ticket (460 px) : ce qu'on lit
-        // ici est un DOCUMENT, pas une description de trois lignes. Assez pour
-        // que les titres et les listes du corps gardent leur air, assez étroit
-        // pour rester une barre latérale.
+        // A little wider than a ticket panel (460 px): what we read
+        // here is a DOCUMENT, not a three line description. Enough for
+        // that the titles and lists of the body keep their air, quite narrow
+        // to remain a sidebar.
         className="w-[min(560px,calc(100vw-2rem))]"
-        // Le composeur de l'onglet Activité porte une suggestion de mention,
-        // rendue en portail HORS du panneau : sans ça, choisir un nom dans la
-        // liste comptait comme un clic dehors et refermait tout.
+        // The composer of the Activity tab carries a suggested mention,
+        // rendered as a portal OUTSIDE the panel: otherwise, choose a name in the
+        // list counted as clicking out and closing everything.
         onInteractOutside={keepOverlayOpenForPopper}
       >
-        {/* En-tête, dans la grammaire du panneau d'un ticket : le titre à
-            gauche, les boutons ronds à droite, et aucun trait — c'est la ligne
-            des onglets qui sépare. */}
+        {/* Header, in the grammar of a ticket panel: the title to
+            left, the round buttons on the right, and no lines — that's the line
+            tabs that separate. */}
         <div className="flex shrink-0 items-center justify-between gap-4 px-6 pt-5 pb-3">
           <SidePanelTitle asChild>
             <span className="text-lg font-semibold tracking-tight">
@@ -224,9 +224,9 @@ export function PageHistorySheet({
               </TabsTrigger>
             </TabsList>
 
-            {/* L'ACTIVITÉ (MIN-278) : les GESTES, là où l'onglet d'à côté rend
-                les ÉTATS. `enabled` suit l'onglet — le journal ne part chercher
-                ses lignes que quand on le regarde. */}
+            {/* THE ACTIVITY (MIN-278): GESTURES, where the next tab makes
+                the STATES. `enabled` follows the tab — the newspaper does not search
+                its lines only when you look at it. */}
             <TabsContent value="activity" className="mt-4">
               <PageActivity
                 projectId={projectId}
@@ -246,8 +246,8 @@ export function PageHistorySheet({
                   {t("historyLoadFailed")}
                 </p>
               ) : rows.length === 0 ? (
-                // Une page qu'on vient de créer n'a rien derrière elle. Le dire
-                // vaut mieux qu'une colonne vide qu'on prendrait pour une panne.
+                // A page that has just been created has nothing behind it. say it
+                // is better than an empty column that we would mistake for a failure.
                 <p className="py-6 text-xs text-muted-foreground">
                   {t("historyEmpty")}
                 </p>
@@ -280,8 +280,8 @@ export function PageHistorySheet({
                       />
                     ))}
                   </ol>
-                  {/* La rétention se dit SOUS la liste, pas dans l'en-tête : ce
-                      n'est pas ce qu'on vient chercher, c'est ce qu'on se
+                  {/* Retention is stated UNDER the list, not in the header: this
+                      is not what we come to look for, it is what we get
                       demande en arrivant au bout. */}
                   <p className="text-xs text-muted-foreground">
                     {t("historyDescription", { days: RETENTION_DAYS })}
@@ -293,11 +293,11 @@ export function PageHistorySheet({
           </Tabs>
         </SidePanelBody>
 
-        {/* Le composeur est FIXE, en pied de panneau — exactement comme celui
-            d'un ticket. On écrit après avoir lu, donc après avoir fait défiler :
-            un champ posé en bout de liste s'éloigne à mesure qu'on descend.
-            Seulement sur l'onglet Activité : rien à commenter sur une liste de
-            versions, et un champ inerte sous les yeux est une promesse fausse. */}
+        {/* The dialer is FIXED, at the bottom of the panel — exactly like the one
+            of a ticket. We write after reading, therefore after scrolling:
+            a field placed at the end of the list moves away as you go down.
+            Only on the Activity tab: nothing to comment on a list of
+            versions, and an inert field before the eyes is a false promise. */}
         {tab === "activity" && (
           <SidePanelFooter className="border-t-0 pt-3 sm:flex-row">
             <PageCommentBar projectId={projectId} pageId={pageId} />
@@ -309,18 +309,18 @@ export function PageHistorySheet({
 }
 
 /**
- * LE VISAGE d'un auteur de version — le même vocabulaire que la timeline d'un
- * ticket, où l'on reconnaît déjà Numo, une clé MCP et un collègue sans lire.
+ * THE FACE of a version author — the same vocabulary as the timeline of a
+ * ticket, where we already recognize Numo, an MCP key and a colleague without reading.
  *
- * Trois cas, et l'ordre entre eux est la règle d'identité de minddy :
+ * Three cases, and the order between them is minddy's identity rule:
  *
- *  • une écriture d'AGENT DE CLÉ porte le logo de son agent — Claude Code,
- *    Cursor… — parce que c'est LUI qui a agi, jamais le porteur de la clé ;
- *  • toute autre écriture d'agent est celle de Numo, et porte son visage. C'est
- *    aussi le repli des versions d'avant MIN-282, qui n'ont pas gardé la clé ;
- *  • une écriture HUMAINE porte le portrait de son auteur, semé depuis le
- *    membre. Un auteur parti du projet n'a plus de graine à emprunter : son nom
- *    en fait une stable, comme dans la timeline.
+ * • a KEY AGENT writing bears the logo of his agent — Claude Code,
+ * Cursor… — because it was HE who acted, never the bearer of the key;
+ * • all other agent writing is that of Numo, and bears his face. It is
+ * also the fallback of versions before MIN-282, which did not keep the key;
+ * • a HUMAN writing bears the portrait of its author, sown since the
+ * member. An author who left the project no longer has a seed to borrow: his name
+ * actually a stable one, like in the timeline.
  */
 function VersionAvatar({
   version,
@@ -349,18 +349,18 @@ function VersionAvatar({
 }
 
 /**
- * L'aperçu d'une version, BORNÉ en hauteur — une quinzaine de lignes, puis on
- * défile dedans.
+ * The preview of a version, BORNE in height - around fifteen lines, then we
+ * scrolls inside.
  *
- * Sans ça, déplier une page de trois cents lignes déroule trois cents lignes
- * dans le panneau : la carte suivante part à des écrans de là, et la LISTE —
- * qui est ce qu'on est venu lire — disparaît. L'aperçu sert à reconnaître un
- * état, pas à le relire en entier ; pour ça il y a la page.
+ * Without that, unfolding a page of three hundred lines unfolds three hundred lines
+ * in the panel: the next card is screens away, and the LIST —
+ * who is what we came to read — disappears. The preview is used to recognize a
+ * state, not to reread it in full; for that there is the page.
  *
- * Le DÉGRADÉ n'est pas une décoration : sans lui, la dernière ligne visible est
- * coupée net et rien ne distingue « le document s'arrête ici » de « il continue
- * plus bas ». Il ne paraît donc que quand il reste vraiment quelque chose à
- * lire, et s'efface une fois en bas.
+ * The GRADIENT is not a decoration: without it, the last visible line is
+ * cut cleanly and nothing distinguishes “the document stops here” from “it continues
+ * lower.” It therefore only appears when there is really something left to
+ * read, and erases once at the bottom.
  */
 function PreviewScroller({ children }: { children: React.ReactNode }) {
   const box = useRef<HTMLDivElement>(null);
@@ -372,15 +372,15 @@ function PreviewScroller({ children }: { children: React.ReactNode }) {
     const measure = () => {
       const remaining =
         element.scrollHeight - element.scrollTop - element.clientHeight;
-      // Une tolérance d'un pixel : les hauteurs fractionnaires d'un zoom
-      // navigateur laissent sinon le dégradé allumé en bas de course.
+      // A tolerance of one pixel: the fractional heights of a zoom
+      // browser otherwise leave the gradient on at the bottom of the stroke.
       setMore(remaining > 1);
     };
     measure();
     element.addEventListener("scroll", measure, { passive: true });
-    // L'éditeur se monte APRÈS ce rendu (`immediatelyRender: false`) : sans
-    // observer, on mesurerait un conteneur encore vide et le dégradé
-    // n'apparaîtrait jamais.
+    // The editor is mounted AFTER this rendering (`immediatelyRender: false`): without
+    // observe, we would measure a still empty container and the gradient
+    // would never appear.
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     for (const child of Array.from(element.children)) observer.observe(child);
@@ -408,7 +408,7 @@ function PreviewScroller({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** « minddy · il y a 2 heures » — l'auteur, puis le quand. */
+/** “minddy · 2 hours ago” — the author, then the when. */
 function versionLabel(
   version: PageVersion,
   t: ReturnType<typeof useTranslations<"Pages">>,
@@ -421,10 +421,10 @@ function versionLabel(
 }
 
 /**
- * Une version, en CARTE — la même que celle d'un fil de commentaires : bordée,
- * fond de carte, séparateurs internes en `border-border/60`. Elle se déplie sur
- * l'aperçu de son document et le bouton qui le remet en place, plutôt que
- * d'envoyer le regard dans une seconde colonne.
+ * A version, in MAP — the same as that of a comments thread: lined,
+ * basemap, internal separators in `border-border/60`. It unfolds on
+ * the preview of its document and the button that puts it back in place, rather than
+ * to send the gaze into a second column.
  */
 function VersionCard({
   version,
@@ -441,7 +441,7 @@ function VersionCard({
   label: string;
   open: boolean;
   onToggle: () => void;
-  /** L'aperçu de CETTE version — null tant qu'elle est repliée. */
+  /** The preview of THIS version — null while collapsed. */
   preview: { pending: boolean; failed: boolean; data: PageVersion | null } | null;
   restoring: boolean;
   onRestore: () => void;
@@ -508,8 +508,8 @@ function VersionCard({
                   {t("historyRestore")}
                 </Button>
               </div>
-              {/* `key` sur l'id : tiptap ne relit pas son `content`, donc passer
-                  d'une version à l'autre demande un montage neuf. */}
+              {/* `key` on the id: tiptap does not reread its `content`, so pass
+                  from one version to another requires new assembly. */}
               <PreviewScroller>
                 <PageEditor
                   key={preview.data.id}

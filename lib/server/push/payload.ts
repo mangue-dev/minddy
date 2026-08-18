@@ -16,42 +16,41 @@ import { resolveApiKeyActors, type ApiKeyActor } from "@/lib/server/api-key-acto
 import type { NotificationRow } from "@/lib/server/notifications";
 
 /**
- * Ce que dit une notification poussée (MIN-183) — les MÊMES mots que la ligne
- * d'inbox correspondante.
+ * What a push notification (MIN-183) says — the SAME words as the corresponding
+ * inbox line.
  *
- * C'est le point de la chose : deux surfaces, une seule formulation. D'où la
- * réutilisation des clés du namespace `Inbox` via `NOTIFICATION_LINE_KEYS`, et
- * du vocabulaire d'acteur de la timeline (Smart Assign nommé, un agent MCP
- * nommé, jamais « Quelqu'un » quand on sait qui c'est).
+ * That's the point: two surfaces, one wording. Hence the
+ * reuse of keys from the namespace `Inbox` via `NOTIFICATION_LINE_KEYS`, and
+ * from the actor vocabulary of the timeline (named Smart Assign, a named MCP
+ * agent, never “Someone” when we know who it is).
  *
- * ## Pourquoi `createTranslator` et pas `getTranslations`
+ * ## Why `createTranslator` and not `getTranslations`
  *
- * `getTranslations` exige un contexte de REQUÊTE. La moitié des producteurs de
- * notifications n'en ont pas : une cascade d'automatisations, un run d'agent qui
- * se termine, un cron de feedback. `createTranslator` sur les catalogues
- * importés statiquement marche partout — c'est déjà la recette des tests
+ * `getTranslations` requires a REQUEST context. Half of the producers of
+ * notifications don't have one: a cascade of automations, an agent run that ends, a feedback cron. `createTranslator` on catalogs
+ * statically imported works everywhere — that's already the recipe for tests
  * (lib/describe-event-smart-assign.test.ts).
  *
- * Et la langue n'est pas celle de la requête de toute façon : c'est celle de
- * l'ABONNEMENT, capturée par appareil au moment où on s'y abonne. Le cookie
- * `NEXT_LOCALE` de quelqu'un d'autre est illisible depuis un job de fond.
+ * And the language is not that of the request anyway: it's the one de
+ * SUBSCRIPTION, captured by device when subscribing to it. Someone else's cookie
+ * `NEXT_LOCALE` is unreadable from a background job.
  *
- * ## Hydratation en LOT
+ * ## Hydration in LOT
  *
- * `loadPushContext` fait UNE passe de lecture pour tout le lot inséré ;
- * `buildPushPayload` est ensuite pur. Un insert est souvent multi-destinataires
- * (une mention de trois personnes dans un commentaire) et chaque destinataire
- * peut avoir plusieurs appareils dans plusieurs langues : hydrater par ligne et
- * par langue serait le même N+1, répété.
+ * `loadPushContext` does ONE read pass for everything the inserted batch ;
+ * `buildPushPayload` is then pure. An insert is often multi-recipient
+ * (a mention of three people in a comment) and each recipient
+ * can have multiple devices in multiple languages: hydrate per line and
+ * per language would be the same N+1, repeated.
  */
 
 export interface PushPayload {
   title: string;
   body: string;
-  /** Chemin relatif — le service worker le résout sur son origine. */
+  /** Relative path — the service worker resolves it to its origin. */
   url: string;
-  /** Regroupement côté navigateur : une rafale sur la même cible REMPLACE au
-   *  lieu d'empiler. Écho de `replaceUnread` côté inbox. */
+  /** Browser-side grouping: a burst on the same target REPLACES au
+ * instead of stacking. Echo of `replaceUnread` on the inbox side. */
   tag: string;
 }
 
@@ -59,7 +58,7 @@ export type PushLocale = "fr" | "en";
 
 const CATALOGS: Record<PushLocale, typeof en> = { en, fr: fr as typeof en };
 
-/** Normalise une langue stockée (`"fr-FR"`, `"FR"`, `null`) vers un catalogue. */
+/** Normalizes a stored language (`"fr-FR"`, `"FR"`, `null`) to a catalog. */
 export function toPushLocale(raw: string | null | undefined): PushLocale {
   return raw?.trim().toLowerCase().startsWith("fr") ? "fr" : "en";
 }
@@ -69,19 +68,19 @@ export interface PushContext {
   agentConversations: Map<string, string | null>;
   objectives: Map<string, string>;
   feedbackPosts: Map<string, string>;
-  /** Titre d'une ROUTINE (MIN-185) — la bannière ne montre que lui. */
+  /** Title of a ROUTINE (MIN-185) — the banner only shows him. */
   routines: Map<string, string>;
-  /** Numéro + titre d'une PULL REQUEST — la bannière les montre comme la
-   *  référence et le titre d'un ticket. */
+  /** Number + title of a PULL REQUEST — the banner shows them as the
+ * reference and title of a ticket. */
   pullRequests: Map<string, { number: number; title: string | null }>;
-  /** Titre d'une PAGE du wiki (MIN-278) — la bannière ne montre que lui. */
+  /** Title of a wiki PAGE (MIN-278) — the banner only shows it. */
   pages: Map<string, string>;
   projectKeys: Map<string, string>;
   actorNames: Map<string, string>;
   apiKeyActors: Map<string, ApiKeyActor>;
 }
 
-/** Contexte vide — sert de valeur de départ et de repli. */
+/** Empty context — serves as seed and fallback. */
 export function emptyPushContext(): PushContext {
   return {
     issues: new Map(),
@@ -98,9 +97,9 @@ export function emptyPushContext(): PushContext {
 }
 
 /**
- * Une passe de lecture pour tout le lot : titres des cibles (en écartant les
- * corbeillés — MIN-133 : la notification survit à la mise en corbeille de sa
- * cible), clés de projet, noms d'acteurs.
+ * A reading pass for the entire batch: target titles (discarding the trashed
+ * — MIN-133: the notification survives the trashing of its target
+ *), project keys, actor names.
  */
 export async function loadPushContext(
   service: SupabaseClient,
@@ -160,18 +159,18 @@ export async function loadPushContext(
           .in("id", feedbackIds)
           .is("deleted_at", null)
       : Promise.resolve({ data: [] as { id: string; title: string }[] }),
-    // Une ROUTINE (MIN-185) : pas de corbeille, la ligne part avec elle.
+    // A ROUTINE (MIN-185): no basket, the line leaves with it.
     routineIds.length
       ? service.from("agent_routines").select("id, title").in("id", routineIds)
       : Promise.resolve({ data: [] as { id: string; title: string }[] }),
-    // Une PULL REQUEST : pas de corbeille non plus, la ligne part avec elle.
+    // A PULL REQUEST: no basket either, the line leaves with it.
     prIds.length
       ? service.from("pull_requests").select("id, number, title").in("id", prIds)
       : Promise.resolve({
           data: [] as { id: string; number: number; title: string | null }[],
         }),
-    // Une PAGE : corbeillée, elle ne pousse rien — la ligne mènerait à un
-    // écran vide (même règle que les tickets, MIN-133).
+    // A PAGE: trashed, it grows nothing — the line would lead to a
+    // blank screen (same rule as tickets, MIN-133).
     pageIds.length
       ? service
           .from("pages")
@@ -201,8 +200,8 @@ export async function loadPushContext(
   for (const p of pages.data ?? []) ctx.pages.set(p.id, p.title);
   for (const p of projects.data ?? []) ctx.projectKeys.set(p.id, p.key);
   for (const [id, user] of actors) {
-    // Repli VIDE plutôt que « User » : le libellé de repli est traduit, et sa
-    // langue n'est connue qu'à la construction de la charge utile, plus bas.
+    // EMPTY fallback rather than “User”: the fallback label is translated, and its
+    // language is only known when constructing the payload, below.
     ctx.actorNames.set(id, displayName(toNamed(user), ""));
   }
   ctx.apiKeyActors = keyActors;
@@ -211,9 +210,9 @@ export async function loadPushContext(
 }
 
 /**
- * La charge utile d'une ligne, dans la langue d'un appareil — ou `null` quand
- * la cible n'est plus là (corbeille) ou que la ligne ne mène nulle part : mieux
- * vaut ne rien pousser qu'ouvrir un écran vide.
+ * The payload of a line, in the language of a device — or `null` when
+ * the target is no longer there (trash) or the line leads nowhere: better
+ * is better than pushing nothing than opening a blank screen.
  */
 export function buildPushPayload(
   ctx: PushContext,
@@ -227,9 +226,9 @@ export function buildPushPayload(
   const t = createTranslator({ locale, messages, namespace: "Inbox" });
   const tTimeline = createTranslator({ locale, messages, namespace: "Timeline" });
 
-  // Le titre, c'est DE QUOI on parle — la première ligne de l'inbox. La
-  // référence du ticket devant : c'est elle qu'on reconnaît d'un coup d'œil dans
-  // une bannière système, où il n'y a de place pour rien d'autre.
+  // The title is WHAT we're talking about — the first line of the inbox. There
+  // reference of the ticket in front: it is she who we recognize at a glance in
+  // a system banner, where there is no room for anything else.
   let title: string;
   if (row.objective_id) {
     const name = ctx.objectives.get(row.objective_id);
@@ -246,14 +245,14 @@ export function buildPushPayload(
   } else if (row.pull_request_id) {
     const pr = ctx.pullRequests.get(row.pull_request_id);
     if (!pr) return null;
-    // `#12 · Réparer…` — le pendant exact de `MIN-42 · …` pour un ticket.
+    // `#12 · Réparer…` — the exact counterpart of `MIN-42 · …` for a ticket.
     title = pr.title ? `#${pr.number} · ${pr.title}` : `#${pr.number}`;
   } else if (row.page_id) {
     const pageTitle = ctx.pages.get(row.page_id);
     if (pageTitle === undefined) return null;
-    // Une page sans titre a bien un titre : c'est la chaîne vide. La bannière
-    // système n'a rien d'autre à montrer, d'où le repli explicite — un titre
-    // vide y ferait une notification anonyme.
+    // A page without a title does have a title: it is the empty string. The banner
+    // system has nothing else to show, hence the explicit fallback — a title
+    // empty would make an anonymous notification there.
     title = pageTitle || t("somePageFallback");
   } else if (row.issue_id) {
     const issue = ctx.issues.get(row.issue_id);
@@ -268,8 +267,8 @@ export function buildPushPayload(
     return null;
   }
 
-  // Le nom de l'acteur, dans les termes de l'inbox et de la timeline : Smart
-  // Assign se nomme, un agent MCP se nomme, et « Quelqu'un » ne sert que quand
+  // The name of the actor, in the terms of the inbox and the timeline: Smart
+  // Assign is named, an MCP agent is named, and “Someone” is only used when
   // on ne sait vraiment pas.
   let actor: string;
   if (row.via_smart_assign) {
@@ -278,9 +277,9 @@ export function buildPushPayload(
     const keyActor = row.api_key_id ? ctx.apiKeyActors.get(row.api_key_id) : null;
     actor = mcpActorLabel(keyActor?.agent, keyActor?.name, tTimeline("mcpFallback"));
   } else if (row.via_assistant) {
-    // Notre agent hors MCP (MIN-278) : le chat, l'agent de code. Le même nom que
-    // l'inbox lui donne — sans quoi la bannière et la ligne diraient deux
-    // acteurs différents du même geste.
+    // Our agent outside MCP (MIN-278): the cat, the code agent. The same name as
+    // the inbox gives it — otherwise the banner and the line would say two
+    // different actors of the same gesture.
     actor = "Numo";
   } else {
     actor = ctx.actorNames.get(row.actor_id ?? "")?.trim() || t("someone");

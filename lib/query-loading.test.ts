@@ -4,30 +4,30 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * Le drapeau de chargement de l'UI se lit sur le STATUT (`isPending`), jamais
- * sur le vol en cours (`isLoading`).
+ * The UI loading flag reads on STATUS (`isPending`), never
+ * on the current flight (`isLoading`).
  *
- * Pourquoi. Le cache est réhydraté depuis localStorage au montage
- * (`PersistQueryClientProvider`, lib/query-provider.tsx), et cette restauration
- * est ASYNCHRONE : le premier rendu se peint avant qu'elle ne rende la main.
- * Pendant cette fenêtre, react-query force `fetchStatus: "idle"` sur toutes les
- * queries — elles sont en `pending`, sans donnée, mais rien n'est en vol. Or
- * `isLoading = isPending && isFetching` (v5) : il vaut donc FAUX alors qu'il n'y
- * a encore rien à montrer.
+ * Why. The cache is rehydrated from localStorage on mount
+ * (`PersistQueryClientProvider`, lib/query-provider.tsx), and this restore
+ * is ASYNCHRONOUS: the first render is painted before it returns.
+ * During this window, react-query forces `fetchStatus: "idle"` to all
+ * queries — they are in `pending`, with no data, but nothing is in flight. Or
+ * `isLoading = isPending && isFetching` (v5): it is therefore FALSE while there
+ * still has nothing to show.
  *
- * Ce que ça donnait à l'écran : chaque page peignait son état vide — « aucun
- * ticket », « aucune session », « corbeille vide » — le temps d'une image, puis
- * son squelette, puis son contenu. Sur TOUTES les pages, à chaque chargement,
- * parce que la cause est le provider commun et pas telle ou telle page.
+ * What it looked like on the screen: each page painted its empty state — “none
+ * ticket », “no session”, “empty trash” — the time of an image, then
+ * its skeleton, then its contents. On ALL pages, on each load,
+ * because the cause is the common provider and not this or that page.
  *
- * `isPending` dit exactement « aucune donnée » : il couvre la restauration comme
- * le premier fetch. Sa seule contrepartie est qu'une query DÉSACTIVÉE reste
- * `pending` pour toujours — d'où le `enabled && isPending` des hooks à garde,
- * qui reprend la même expression que le `enabled` de la query.
+ * `isPending` says exactly "no data": it covers the restore like
+ * the first fetch. Its only counterpart is that a DEACTIVATED query remains
+ * `pending` forever — hence the `enabled && isPending` of the guarded hooks,
+ * which uses the same expression as the `enabled` of the query.
  *
- * Ce test est structurel parce que rien d'autre ne peut l'être : les deux
- * drapeaux ont le même type, la même forme d'appel, et l'un des deux est
- * silencieusement faux. Un type-check vert ne dit rien de ce contrat-là.
+ * This test is structural because nothing else can be: both
+ * flags have the same type, the same form of calling, and one of them is
+ * silently false. A green type-check says nothing about this contract.
  */
 
 const ROOT = join(import.meta.dirname, "..");
@@ -49,12 +49,12 @@ function sourceFiles(): string[] {
 }
 
 /**
- * `const { data, isLoading } = useQuery({` — la lecture directe du résultat. La
- * classe `[^{}]` accepte les retours à la ligne : un destructuring écrit sur
- * plusieurs lignes est le même bug, et il ne doit pas passer sous le radar.
+ * `const { data, isLoading } = useQuery({` — direct reading of the result. The
+ * class `[^{}]` accepts newlines: destructuring written to
+ * multiple lines is the same bug, and it should not fly under the radar.
  */
 const DESTRUCTURED = /\{[^{}]*\bisLoading\b[^{}]*\}\s*=\s*useQuery\s*\(/g;
-/** `status.isLoading` — le résultat gardé en objet (deux queries dans un hook). */
+/** `status.isLoading` — the result kept as an object (two queries in a hook). */
 const MEMBER_ACCESS = /\.isLoading\b/g;
 
 interface Violation {
@@ -67,12 +67,12 @@ function findViolations(): Violation[] {
   const violations: Violation[] = [];
   for (const file of sourceFiles()) {
     const source = readFileSync(file, "utf8");
-    // Seuls les fichiers qui parlent à react-query sont concernés : `isLoading`
-    // est aussi un nom de PROP tout à fait légitime ailleurs (cf. les champs du
+    // Only files that talk to react-query are affected: `isLoading`
+    // is also a completely legitimate PROP name elsewhere (see the fields of
     // command palette).
     if (!source.includes("@tanstack/react-query")) continue;
     const lines = source.split("\n");
-    /** Ligne (1-based) d'un index de caractère dans le fichier. */
+    /** Line (1-based) of a character index in the file. */
     const lineAt = (index: number) => source.slice(0, index).split("\n").length;
     for (const pattern of [DESTRUCTURED, MEMBER_ACCESS]) {
       pattern.lastIndex = 0;
@@ -90,7 +90,7 @@ function findViolations(): Violation[] {
 }
 
 describe("le drapeau de chargement", () => {
-  it("se lit sur isPending, jamais sur isLoading", () => {
+  it("reads from isPending, never from isLoading", () => {
     const violations = findViolations();
     const report = violations
       .map((v) => `${v.file}:${v.line}\n    ${v.text}`)

@@ -92,10 +92,9 @@ export function useScratchpadProgress(): PlanProgress {
 }
 
 /**
- * La note ELLE-MÊME, depuis ce même cache toujours chaud : une surface qui
- * montre les tâches qui restent, groupées par section, n'a pas que le compte à
- * lire. Le GET est le même que celui du badge — une seule requête pour les
- * deux, et le pont temps réel les rafraîchit ensemble.
+ * The note ITSELF, from this same always-hot cache: a surface that
+ * shows the remaining tasks, grouped by section, does not only have the account to
+ * read. The GET is the same as the badge — a single request for both, and the real-time bridge refreshes them together.
  */
 export function useScratchpadSummary(): { content: string; progress: PlanProgress } {
   const { data } = useQuery({
@@ -260,12 +259,12 @@ export function useScratchpadDoc({
     if (live === undefined || live !== baseRef.current.content) return;
     baseRef.current = { content: data.content, rev: data.rev };
     if (live === data.content) return;
-    // HORS de la phase de commit (`queueMicrotask`) : remplacer le contenu
-    // remonte les vues React des tâches, et tiptap les monte en `flushSync`.
-    // Appelé directement dans l'effet, React refuse — « flushSync was called
-    // from inside a lifecycle method » (même piège que la pose des mentions,
-    // cf. components/markdown-editor.tsx). Une microtâche s'exécute juste après
-    // le commit, donc hors de tout rendu.
+    // OUT of the commit phase (`queueMicrotask`): replace the content
+    // pull up the React views of the tasks, and tiptap mounts them in `flushSync`.
+    // Called directly in the effect, React refuses — “flushSync was called
+    // from inside a lifecycle method” (same trap as putting mentions,
+    // cf. components/markdown-editor.tsx). A microtask runs right after
+    // commit it, therefore out of any rendering.
     const adopted = data.content;
     queueMicrotask(() => applyExternal(adopted, { emitUpdate: false }));
   }, [data, getLive, applyExternal]);

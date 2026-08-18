@@ -1,16 +1,16 @@
-// LE REGISTRE des blocs de page.
+// THE REGISTER of page blocks.
 //
-// Un seul tableau, `PAGE_BLOCKS`, et trois lectures dessus : le menu « / », le
-// menu « transformer en », et le montage des extensions (donc, par ricochet, la
-// sérialisation markdown). Aucun consommateur n'importe un bloc nommément —
-// c'est LA règle de ce dossier, et c'est elle qui fait qu'ajouter un bloc
-// tableau demandera un fichier et une ligne ici, pas six éditions dispersées.
+// A single table, `PAGE_BLOCKS`, and three readings on it: the “/” menu, the
+// “transform into” menu, and the assembly of extensions (so, in turn, the
+// markdown serialization). No consumer imports a block by name —
+// this is THE rule of this file, and it is what only adds a block
+// tableau will ask for one file and one row here, not six scattered edits.
 //
-// Ce que le registre garantit, et que personne n'a plus à penser :
-//  - un nœud monté UNE fois même quand plusieurs blocs le partagent (les trois
+// What the registry guarantees, and that no one has to think about anymore:
+// - a node mounted ONCE even when several blocks share it (the three
 //    titres, `listItem` des deux listes) ;
-//  - la sérialisation déclarée sur le descripteur greffée sur le bon nœud ;
-//  - un menu « / » groupé et ordonné, un « transformer en » qui n'offre que le
+// - the serialization declared on the descriptor grafted onto the correct node;
+// - a grouped and ordered “/” menu, a “transform into” which only offers the
 //    convertible.
 
 import {
@@ -61,7 +61,7 @@ export {
   type PageColorKind,
 } from "@/components/pages/blocks/color";
 
-/** Le catalogue v1. Ajouter un bloc = un fichier, et une ligne ICI. */
+/** The catalog v1. Add a block = a file, and a line HERE. */
 export const PAGE_BLOCKS: readonly PageBlock[] = [
   paragraphBlock,
   heading1Block,
@@ -83,8 +83,8 @@ export const blockById = new Map<PageBlockId, PageBlock>(
   PAGE_BLOCKS.map((block) => [block.id, block])
 );
 
-/** Les blocs qui partagent un nœud, par nom de nœud — `heading` en porte trois.
-    C'est ce que lit tout ce qui part du DOCUMENT plutôt que du menu. */
+/** Blocks that share a node, by node name — `heading` carries three.
+    This is what anything that starts from the DOCUMENT rather than the menu reads. */
 export const blocksByNodeName = PAGE_BLOCKS.reduce((map, block) => {
   const list = map.get(block.nodeName);
   if (list) list.push(block);
@@ -92,24 +92,24 @@ export const blocksByNodeName = PAGE_BLOCKS.reduce((map, block) => {
   return map;
 }, new Map<string, PageBlock[]>());
 
-/* ── L'identité d'un bloc dans le document ────────────────────────────── */
+/* ── The identity of a block in the document ────────────────────────────── */
 
-/** Déclaré dans blocks/types.ts, re-exporté ici : c'est par le registre que
-    tout le dépôt le lit. Le pourquoi du déménagement est écrit là-bas. */
+/** Declared in blocks/types.ts, re-exported here: it is through the register that
+    the whole depot reads it. The reason for the move is written there. */
 export { BLOCK_ID_ATTRIBUTE } from "@/components/pages/blocks/types";
 
-/** Les nœuds qui reçoivent un ID stable : TOUS ceux du catalogue. Se recalcule
-    depuis le registre — un bloc neuf est identifié d'office. */
+/** Nodes that receive a stable ID: ALL those in the catalog. Recalculates
+    from the register — a new block is automatically identified. */
 export const BLOCK_ID_TYPES = [
   ...new Set(PAGE_BLOCKS.map((block) => block.nodeName)),
 ];
 
-/* ── Les extensions ───────────────────────────────────────────────────── */
+/* ── Extensions ────────────────────────── ─────────────────────────── */
 
-/** Greffe le `toMarkdown` / `fromMarkdown` du descripteur sur le nœud, là où
-    tiptap-markdown le lit. Sans déclaration, le nœud garde ce qu'il a déjà —
-    la règle de tiptap-markdown pour les nœuds standards, sa propre sérialisation
-    pour les tâches du carnet. */
+/** Grafts the `toMarkdown` / `fromMarkdown` of the descriptor onto the node, where
+    tiptap-markdown reads it. Without declaration, the node keeps what it already has —
+    the tiptap-markdown rule for standard nodes, its own serialization
+    for notebook tasks. */
 function withMarkdown(block: PageBlock, extension: AnyExtension): AnyExtension {
   const { toMarkdown, fromMarkdown } = block.markdown;
   if (!toMarkdown && !fromMarkdown) return extension;
@@ -127,25 +127,25 @@ function withMarkdown(block: PageBlock, extension: AnyExtension): AnyExtension {
 }
 
 /**
- * Toutes les extensions du catalogue, dédoublonnées par nom.
+ * All extensions in the catalog, deduplicated by name.
  *
- * Le dédoublonnage n'est pas une précaution : il est ce qui permet à chaque
- * fichier de bloc de déclarer de quoi tenir DEBOUT SEUL (la liste numérotée
- * apporte `listItem` comme la liste à puces), sans que monter les deux fasse
- * lever tiptap sur une extension en double.
+ * Deduplication is not a precaution: it is what allows each
+ * block file to declare enough to stand STANDING ALONE (the numbered list
+ * brings `listItem` like the bulleted list), without having to mount both
+ * raise tiptap on a duplicate extension.
  *
- * `headless` retire les vues React des nœuds : le SCHÉMA et la sérialisation
- * markdown sans une ligne de rendu. C'est ce dont a besoin tout ce qui lit ou
- * écrit une page hors d'un navigateur — la projection markdown, les outils MCP,
- * et les tests. Sans ça, monter le catalogue demanderait React et un `<EditorContent>`.
+ * `headless` removes React views from nodes: SCHEMA and serialization
+ * markdown without a rendered line. This is what everyone who reads or
+ * writes a page outside of a browser — markdown projection, MCP tools,
+ * and testing. Without that, building the catalog would require React and a `<EditorContent>`.
  *
- * `nodeViews` fait l'inverse : il GREFFE une vue sur un nœud, par nom. C'est le
- * chemin des vues que le catalogue ne peut pas porter lui-même — la tâche
- * partagée avec le carnet (components/scratchpad/task-item-view.tsx) tire le
- * baril `mangue-ui`, donc un fichier de bloc qui la nommerait rendrait le
- * registre entier inimportable hors navigateur (cf. lib/cx.ts). Le nœud reste
- * au registre, la vue vient de la surface — exactement le partage que
- * `pageExtensions({ mention })` fait déjà pour la pilule de mention.
+ * `nodeViews` does the opposite: it GRAFTS a view onto a node, by name. This is the
+ * path of views that the catalog cannot carry itself — the task
+ * shared with the notebook (components/scratchpad/task-item-view.tsx) pulls the
+ * barrel `mangue-ui`, so a block file that named it would render the
+ * entire register unimportable outside browser (see lib/cx.ts). The knot remains
+ * in register, the view comes from the surface - exactly the sharing that
+ * `pageExtensions({ mention })` already does for the mention pill.
  */
 export function blockExtensions(
   options: {
@@ -166,17 +166,17 @@ export function blockExtensions(
       const view = options.nodeViews?.[extension.name];
       extensions.push(
         options.headless
-          ? // `null` et NON `undefined`, et c'est tout sauf un détail de style :
-            // `getExtensionField` de tiptap remonte à l'extension PARENTE dès
+          ? // `null` and NOT `undefined`, and that's anything but a stylistic detail:
+            // `getExtensionField` of tiptap goes back to the PARENT extension from
             // qu'un champ vaut `undefined` (helpers/getExtensionField.ts). Un
-            // `addNodeView: undefined` ne retire donc rien — il re-trouve la vue
-            // de l'extension d'origine, et `headless` ne l'était pas du tout.
-            // Sur le serveur, cette vue-là est une référence CLIENT
+            // `addNodeView: undefined` therefore removes nothing — it regains sight
+            // from the original extension, and `headless` was not at all.
+            // On the server, this view is a CLIENT reference
             // (`@tiptap/react` porte « use client ») : l'appeler faisait lever
             // « Attempted to call ReactNodeViewRenderer() from the server »
-            // sur le premier outil de page de Numo, du MCP ou de l'agent.
-            // `null` ne remonte pas, et le filtre de tiptap le lit comme
-            // « pas de vue » (`!!getExtensionField(…, "addNodeView")`).
+            // on the first page tool of Numo, MCP or agent.
+            // `null` does not return, and the tiptap filter reads it as
+            // “no view” (`!!getExtensionField(…, "addNodeView")`).
             withStorage.extend({ addNodeView: null })
           : view
             ? withStorage.extend({ addNodeView: () => view })
@@ -187,9 +187,9 @@ export function blockExtensions(
   return extensions;
 }
 
-/* ── Le menu « / » ────────────────────────────────────────────────────── */
+/* ── The “/” menu ─────────────────────────── ─────────────────────────── */
 
-/** Les sections du catalogue, dans l'ordre de tri du menu. */
+/** The sections of the catalog, in the sort order of the menu. */
 export const SLASH_GROUPS: ReadonlyArray<{
   group: SlashGroup;
 }> = [
@@ -198,9 +198,9 @@ export const SLASH_GROUPS: ReadonlyArray<{
   { group: "advanced" },
 ];
 
-/** Le catalogue dans l'ordre du menu « / » : groupe par groupe, `order` par
-    `order`. Les LIBELLÉS ne sont pas résolus ici — le registre n'a pas de
-    traducteur, il rend des descripteurs et le menu les affiche. */
+/** The catalog in the order of the “/” menu: group by group, `order` by
+    `order`. LABELS are not resolved here — the registry has no
+    translator, it renders descriptors and the menu displays them. */
 export function slashItems(): PageBlock[] {
   const rank = new Map(SLASH_GROUPS.map(({ group }, index) => [group, index]));
   return [...PAGE_BLOCKS].sort(
@@ -210,8 +210,8 @@ export function slashItems(): PageBlock[] {
   );
 }
 
-/** Poser le bloc à la place de la saisie « /… ». Sans `insert` déclaré, c'est
-    « effacer la plage, puis convertir » — ce qui couvre tout bloc qui est une
+/** Place the block in place of the “/…” entry. Without `insert` declared, it is
+    “clear range, then convert” — which covers any block that is a
     transformation du paragraphe courant. */
 export function insertBlock(
   block: PageBlock,
@@ -226,23 +226,23 @@ export function insertBlock(
   if (block.turnInto) block.turnInto(editor);
 }
 
-/* ── Les raccourcis de conversion ─────────────────────────────────────── */
+/* ── Conversion shortcuts ─────────────────────────────────────── */
 
 /**
- * Les raccourcis `shortcut` du catalogue, montés en une seule extension.
+ * The `shortcut` shortcuts from the catalog, mounted in a single extension.
  *
- * Deux propriétés qui justifient de reprendre à la main ce que les extensions
- * tiptap font déjà chacune de leur côté :
+ * Two properties which justify resuming by hand what the extensions
+ * tiptap already do each on their own:
  *
- *  - un raccourci se DÉCLARE avec le bloc, à côté de son libellé et de son
- *    icône. Le menu affiche celui-là même que le clavier déclenche : ils ne
+ * - a shortcut is DECLARED with the block, next to its label and its
+ * icon. The menu displays the same one that the keyboard triggers: they do not
  *    peuvent pas diverger, parce qu'il n'y en a qu'un ;
- *  - tous ont la même sémantique de BASCULE — le raccourci du bloc actif ramène
- *    au paragraphe. Sans ça, `⌘⌥1` bascule (Heading) mais `⌘⌥D` non (Details),
- *    et l'éditeur répond différemment selon le bloc sous le curseur.
+ * - all have the same TOGGLE semantics — the active block shortcut brings back
+ * in paragraph. Without that, `⌘⌥1` switches (Heading) but `⌘⌥D` does not (Details),
+ * and the editor responds differently depending on the block under the cursor.
  *
- * `priority` au-dessus des 100 par défaut : la liaison du registre passe donc
- * AVANT celle de l'extension du nœud, et c'est elle qui répond.
+ * `priority` above 100 by default: the register link therefore passes
+ * BEFORE that of the extension of the node, and it is she who responds.
  */
 export const PageBlockShortcuts = Extension.create({
   name: "pageBlockShortcuts",
@@ -255,10 +255,10 @@ export const PageBlockShortcuts = Extension.create({
       if (!shortcut || !turnInto) continue;
       bindings[shortcut.keys] = () => {
         const editor = this.editor as unknown as Editor;
-        // `turnBlocksInto` et pas `turnInto` : la conversion porte sur toute la
-        // sélection, listes déliées comprises (cf. block-actions.ts). Le menu ⋯
-        // passe par la même porte — un raccourci qui convertirait autrement que
-        // l'entrée de menu qui l'affiche serait pire que pas de raccourci.
+        // `turnBlocksInto` and not `turnInto`: the conversion covers the entire
+        // selection, delinked lists included (see block-actions.ts). The menu ⋯
+        // goes through the same door — a shortcut that would convert otherwise than
+        // the menu entry that displays it would be worse than no shortcut.
         if (block.id !== "paragraph" && block.isActive(editor)) {
           return turnBlocksInto(editor, paragraphBlock);
         }
@@ -269,10 +269,10 @@ export const PageBlockShortcuts = Extension.create({
   },
 });
 
-/* ── Le menu « transformer en » ───────────────────────────────────────── */
+/* ── The “transform to” menu ──────────────────── ───────────────────── */
 
-/** Ce vers quoi la sélection courante peut être transformée, avec l'entrée
-    active marquée. Ordre du menu « / » — un seul ordre à retenir. */
+/** What the current selection can be transformed to, with the input
+    active marked. Menu order “/” — only one order to remember. */
 export function turnIntoItems(
   editor: Editor
 ): Array<{ block: PageBlock; active: boolean }> {

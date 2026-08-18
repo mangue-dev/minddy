@@ -8,14 +8,14 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 /**
- * Redirections de slugs français (MIN-88). Sous `/fr`, seuls les slugs traduits
- * existent : `/fr/pricing` n'est pas une deuxième URL valide pour la page
- * tarifs, c'est une erreur — et deux URLs pour une page, c'est exactement ce que
- * `canonical` et `hreflang` passent leur temps à démêler.
+ * French slug redirects (MIN-88). Under `/fr`, only translated slugs
+ * exist: `/fr/pricing` is not a valid second URL for the page
+ * prices, that's an error — and two URLs for a page is exactly what
+ * `canonical` and `hreflang` spend their time untangling.
  *
- * **Tenu en phase avec `lib/public-routes.ts` par `lib/public-routes.test.ts`** :
- * un fichier `.mjs` ne peut pas importer la table TypeScript, donc la liste est
- * recopiée ici et le test échoue si les deux divergent.
+ * **Kept in line with `lib/public-routes.ts` by `lib/public-routes.test.ts`**:
+ * a `.mjs` file cannot import the TypeScript table, so the list is
+ * copied here and the test fails if the two diverge.
  */
 export const FRENCH_SLUG_REDIRECTS = [
   { source: "/fr/pricing", destination: "/fr/tarifs" },
@@ -27,8 +27,8 @@ export const FRENCH_SLUG_REDIRECTS = [
 ];
 
 /**
- * Toutes les URLs publiques, EN et FR — même recopie, même test de
- * non-divergence. Elles servent ici à poser l'en-tête de cache CDN (voir
+ * All public URLs, EN and FR — same copy, same test of
+ * non-divergence. They are used here to set the CDN cache header (see
  * `headers()`).
  */
 export const PUBLIC_ROUTE_PATHS = [
@@ -59,26 +59,26 @@ export const PUBLIC_ROUTE_PATHS = [
 ];
 
 /**
- * Les hosts qui servent minddy elle-même, en expression régulière — la forme
- * qu'attend le `has: [{ type: "host" }]` d'une entrée de `headers()` (comparée
- * ancrée, port retiré, en minuscules).
+ * Hosts that serve minddy itself, as a regular expression — the form
+ * that `has: [{ type: "host" }]` expects from an entry of `headers()` (compared
+ * anchored, port removed, lowercase).
  *
- * Elle existe pour BORNER le cache CDN des pages publiques à ces hosts-là
- * (MIN-337). Sur un domaine client, `/` sert un board de feedback personnalisé
- * par cookie : il tombait sous le même en-tête, sans `Vary`, et le CDN pouvait
- * servir à un visiteur la page d'un autre.
+ * It exists to BOUND the CDN cache of public pages to these hosts
+ * (MIN-337). On a client domain, `/` serves a personalized feedback board
+ * per cookie: it fell under the same header, without `Vary`, and the CDN could
+ * serve one visitor another's page.
  *
- * Volontairement plus étroite que `isPrimaryHost` (lib/public-hosts.ts), qui
- * accepte tout `*.minddy.app` : un sous-domaine minddy servant l'app un jour
- * n'aurait ici que le cache en moins, quand l'inverse — un domaine client qui
- * passerait la grille — est le défaut qu'on corrige. `feedback.minddy.app`, le
- * domaine de dogfooding, est justement un `*.minddy.app` qui n'est PAS primaire.
- * `lib/public-routes.test.ts` tient les deux en phase.
+ * Voluntarily more narrow that `isPrimaryHost` (lib/public-hosts.ts), which
+ * accepts all `*.minddy.app`: a minddy subdomain serving the app one day
+ * would only have the cache less here, when the opposite — a client domain which
+ * would pass the grid — is the default that we correct. `feedback.minddy.app`, the
+ * domain of dogfooding, is precisely a `*.minddy.app` which is NOT primary.
+ * `lib/public-routes.test.ts` keeps the two in phase.
  */
 export const PRIMARY_HOST_PATTERN =
   "(?:www\\.|preview\\.)?minddy\\.app|localhost|[a-z0-9-]+\\.vercel\\.app";
 
-/** Sur Vercel, hors production (preview, deploys de branche). Pas en local. */
+/** On Vercel, excluding production (preview, branch deploys). Not locally. */
 const isVercelNonProduction =
   !!process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production";
 
@@ -89,43 +89,42 @@ const nextConfig = {
   turbopack: { root: dir },
   // mangue-ui ships TS/TSX source (no build) — Next must transpile it.
   transpilePackages: ["mangue-ui"],
-  // `radix-ui` est un baril sur toutes les primitives Radix, et c'est par lui que
-  // les composants de mangue-ui les importent (`import { Dialog } from
-  // "radix-ui"`). Next réécrit ces imports nommés vers le module qui les exporte
-  // vraiment, au lieu d'évaluer le baril entier (MIN-100).
+  // `radix-ui` is a barrel on all Radix primitives, and it is through it that
+  // mango-ui components import them (`import { Dialog } from
+  // "radix-ui"`). Next rewrites these named imports to the module that exports them
+  // really, instead of evaluating the whole barrel (MIN-100).
   //
-  // Le même réglage ne peut RIEN pour le baril de mangue-ui : la réécriture a
-  // besoin de sous-chemins, et le champ `exports` du paquet n'en publie aucun.
-  // C'est l'alias `mangue-ui/*` de `tsconfig.json` qui s'en charge — voir le
-  // commentaire là-bas, il porte la mesure.
+  // The same setting can NOTHING for the mango-ui barrel: the rewrite has
+  // need subpaths, and the package's `exports` field doesn't post any.
+  // The alias `mangue-ui/*` of `tsconfig.json` takes care of this — see the
+  // comment there, it carries the measure.
   experimental: {
     optimizePackageImports: ["radix-ui"],
   },
   /**
-   * LES DEUX BUNDLES ESBUILD DU DÉPÔT, embarqués dans les fonctions.
-   *
-   * Tous deux sont produits par `prebuild` et LUS PAR CHEMIN à l'exécution — l'un
-   * par `fs`, l'autre par `require`. Le traceur de Next suit les IMPORTS : un
-   * fichier lu par chemin n'est pas une arête du graphe, et il ne peut donc pas
-   * le voir passer. Sans ces lignes, la fonction déploie sans eux.
-   *
-   * `.agent-vm/` (MIN-224) — le harness de la microVM, écrit dans la VM au
-   * démarrage de chaque tour. Absent, chaque run `loop_in_vm` échoue sur un
-   * ENOENT. Le motif couvre toutes les routes d'API : le harnais est écrit depuis
-   * le chemin de LANCEMENT comme depuis le CRON de drain, et lister les deux à la
-   * main ferait qu'un troisième appelant, un jour, découvrirait le problème en
-   * production.
-   *
-   * `.pages-md/` (MIN-295) — la projection markdown des pages, sortie du bundler
-   * de Next parce que celui-ci substitue `typeof window` → `"undefined"` et
-   * réduit ainsi `elementFromString` de tiptap à un `throw` inconditionnel (voir
-   * scripts/build-pages-md.mjs, qui porte la mesure). Ici le motif est `/**`, et
-   * pas `/api/**` : la projection est appelée depuis les routes d'API, mais aussi
-   * depuis l'export, la recherche et les server actions de pages — c'est-à-dire
-   * depuis des routes de page. Restreindre le motif reviendrait à tenir cette
-   * liste à la main, pour économiser un fichier que Vercel mutualise de toute
-   * façon entre les traces.
-   */
+ * BOTH ESBUILD BUNDLES OF THE REPOSITORY, embedded in the functions.
+ *
+ * Both are produced by `prebuild` and PATH READ at runtime — one
+ * by `fs`, the other by `require`. Next's tracer tracks IMPORTS: a
+ * file read by path is not an edge of the graph, and so it cannot see it pass. Without these lines, the function deploys without them.
+ *
+ * `.agent-vm/` (MIN-224) — the microVM harness, written to the VM at
+ * startup of each round. Absent, each `loop_in_vm` run fails on a
+ * ENOENT. The pattern covers all API routes: the harness is written from
+ * the LAUNCH path as well as from the drain CRON, and listing both at the
+ * main would cause a third caller, someday, to discover the problem in
+ * production.
+ *
+ * `.pages-md/` (MIN-295) — the markdown projection of the pages, output of the bundler
+ * of Next because it substitutes `typeof window` → `"undefined"` and
+ * thus reduces `elementFromString` of tiptap to one `throw` unconditional (see
+ * scripts/build-pages-md.mjs, which carries the measure). Here the pattern is `/**`, and
+ * not `/api/**`: the projection is called from API routes, but also
+ * from page export, search and server actions — that is,
+ * from page routes. Restricting the pattern would amount to keeping this
+ * list by hand, to save a file that Vercel pools in any way
+ * between traces.
+ */
   outputFileTracingIncludes: {
     "/api/**": [".agent-vm/**"],
     "/**": [".pages-md/**"],
@@ -135,22 +134,22 @@ const nextConfig = {
   // Unset locally → "development". Inlined at build time.
   env: {
     NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV ?? "development",
-    // Le SHA du commit qui a produit CE bundle (MIN-157). Server-only chez
-    // Vercel comme VERCEL_ENV, donc bridgé ici — et inliné au build, ce qui est
-    // exactement le point : la constante reste celle de la version chargée dans
-    // l'onglet, quand /api/version répond, elle, celle du déploiement qui sert
-    // le trafic. Vide en local (et si « Automatically expose System Environment
-    // Variables » est décoché) → la détection s'éteint d'elle-même.
+    // The SHA of the commit that produced THIS bundle (MIN-157). Server-only at
+    // Vercel like VERCEL_ENV, therefore bridged here — and inlined to the build, which is
+    // exactly the point: the constant remains that of the version loaded in
+    // the tab, when /api/version responds, that of the deployment which is used
+    // traffic. Empty locally (and if “Automatically expose System Environment
+    // Variables » is unchecked) → detection turns off by itself.
     NEXT_PUBLIC_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
-    // Le nombre de commits entre le tag de la version courante et le commit
-    // construit — le nombre affiché derrière le numéro de version (0.8.9-3).
-    // Mesuré ICI parce que c'est le seul moment où le dépôt est là : le runtime
-    // Vercel ne voit ni `.git` ni l'historique. Voir le module pour la mesure,
-    // et pour le `VERCEL_DEEP_CLONE=1` qu'elle réclame côté Vercel.
+    // The number of commits between the current version tag and the commit
+    // built — the number displayed behind the version number (0.8.9-3).
+    // Measured HERE because this is the only time the repository is there: runtime
+    // Vercel sees neither `.git` nor the history. See the module for measurement,
+    // and for the `VERCEL_DEEP_CLONE=1` that she requests from Vercel.
     NEXT_PUBLIC_VERSION_COMMITS: String(commitsSinceVersion()),
   },
-  // Test local des domaines personnalisés (MIN-36) : hosts /etc/hosts pointés
-  // sur 127.0.0.1 — sans quoi `next dev` bloque les requêtes cross-origin
+  // Local test of custom domains (MIN-36): hosts /etc/hosts pointed
+  // on 127.0.0.1 — otherwise `next dev` blocks cross-origin requests
   // (server actions, assets) venant d'un host non-localhost.
   allowedDevOrigins: ["board.minddy.test", "view.minddy.test"],
   async redirects() {
@@ -170,14 +169,14 @@ const nextConfig = {
   async headers() {
     const headers = [];
 
-    // En-têtes de sécurité, toutes routes (MIN-118). HSTS ne vaut que sur une
-    // réponse HTTPS — inoffensif en dev, et la redirection HTTP→HTTPS est
-    // native Vercel. `preload` est dans l'en-tête mais le domaine n'est PAS
-    // soumis à hstspreload.org (quasi irréversible). La CSP se limite à
-    // `frame-ancestors`/`base-uri`/`form-action` : un `script-src` à nonces
-    // exigerait de réécrire la chaîne de rendu (scripts inline Next +
-    // theme-init-script) — chantier séparé si souhaité. Micro autorisé en
-    // self : la dictée de l'assistant s'en sert.
+    // Security headers, all routes (MIN-118). HSTS is only valid on one
+    // HTTPS response — harmless in dev, and the HTTP→HTTPS redirection is
+    // native Vercel. `preload` is in the header but the domain is NOT
+    // submitted to hstspreload.org (almost irreversible). The CSP is limited to
+    // `frame-ancestors`/`base-uri`/`form-action`: a `script-src` with nonces
+    // would require rewriting the render string (inline scripts Next +
+    // theme-init-script) — separate site if desired. Microphone authorized in
+    // self: the assistant's dictation uses it.
     const securityHeaders = (csp) => [
       {
         key: "Strict-Transport-Security",
@@ -195,46 +194,46 @@ const nextConfig = {
 
     const BASE_CSP = "frame-ancestors 'none'; base-uri 'self'";
 
-    // ⚠ `/oauth/authorize` est EXCLU de cette entrée (un seul en-tête CSP par
-    // réponse : deux se cumulent en intersection, la plus stricte gagnerait).
-    // L'exclusion est ancrée sur `/` ou la fin — sans quoi une future route en
-    // `/oauth/authorize-…` sortirait en silence de TOUS ces en-têtes.
+    // ⚠ `/oauth/authorize` is EXCLUDED from this entry (only one CSP header per
+    // answer: two accumulate in intersection, the strictest would win).
+    // The exclusion is anchored on `/` or the end — otherwise a future route in
+    // `/oauth/authorize-…` would silently exit ALL these headers.
     headers.push({
       source: "/((?!oauth/authorize(?:/|$)).*)",
       headers: securityHeaders(`${BASE_CSP}; form-action 'self'`),
     });
 
-    // L'écran de consentement OAuth, et lui seul, sans `form-action`.
+    // The OAuth consent screen, and it alone, without `form-action`.
     //
     // Son formulaire (components/oauth/consent-card.tsx) POSTe vers
-    // /api/oauth/authorize, qui répond 303 vers le `redirect_uri` du client MCP
-    // — donc vers claude.ai, un localhost, ou un schéma applicatif : une cible
-    // cross-origin PAR CONSTRUCTION. Or Chrome et Safari appliquent
-    // `form-action` à la cible de la REDIRECTION qui suit un POST de formulaire
-    // (Firefox non — le comportement n'est pas spécifié). `form-action 'self'`
-    // ici bloquerait donc le retour au client sur deux navigateurs sur trois,
-    // c'est-à-dire tout le flux OAuth du MCP, seule voie d'accès depuis le
-    // retrait des clés `mdyk_`. Le reste de la CSP est identique.
+    // /api/oauth/authorize, which responds 303 to the `redirect_uri` of the MCP client
+    // — so towards claude.ai, a localhost, or an application schema: a target
+    // cross-origin BY CONSTRUCTION. Or Chrome and Safari apply
+    // `form-action` to the target of the REDIRECTION which follows a form POST
+    // (Firefox no — behavior is not specified). `form-action 'self'`
+    // here would therefore block the return to the client on two browsers out of three,
+    // that is to say the entire OAuth flow of the MCP, the only access route from the
+    // removal of `mdyk_` keys. The rest of the CSP is identical.
     headers.push({
       source: "/oauth/authorize",
       headers: securityHeaders(BASE_CSP),
     });
 
-    // Le service worker des notifications push (MIN-183).
+    // The push notification service worker (MIN-183).
     //
-    // `Content-Type` : servi depuis `public/`, il l'a déjà — mais un service
-    // worker refusé pour cause de type MIME échoue à l'enregistrement, sans
-    // recours possible côté client. On le pose explicitement.
+    // `Content-Type`: served from `public/`, he already has it — but a service
+    // worker refused due to MIME type fails to register, without
+    // possible recourse on the client side. We ask it explicitly.
     //
-    // `Cache-Control` : le navigateur re-télécharge `/sw.js` pour comparer les
-    // octets et décider s'il y a une nouvelle version. Un worker mis en cache
-    // est un worker qui ne se met jamais à jour.
+    // `Cache-Control`: the browser re-downloads `/sw.js` to compare the
+    // bytes and decide if there is a new version. A cached worker
+    // is a worker that never updates.
     //
-    // ⚠ SURTOUT PAS de `Content-Security-Policy` ici, malgré ce que suggère le
-    // guide PWA de Next : l'entrée fourre-tout ci-dessus en pose DÉJÀ une sur
-    // `/sw.js`, et deux en-têtes CSP sur une même réponse se cumulent en
-    // intersection — la plus stricte gagne, sur chaque directive. C'est le même
-    // piège que `/oauth/authorize` plus haut, dans l'autre sens.
+    // ⚠ ESPECIALLY NO `Content-Security-Policy` here, despite what the
+    // Next's PWA guide: the catch-all entry above is ALREADY one on
+    // `/sw.js`, and two CSP headers on the same response accumulate in
+    // intersection — the strictest wins, on each directive. It's the same
+    // trap that `/oauth/authorize` higher up, in the other direction.
     headers.push({
       source: "/sw.js",
       headers: [
@@ -243,49 +242,49 @@ const nextConfig = {
       ],
     });
 
-    // Les pages publiques, dans leurs deux langues. Recopiées de
+    // Public pages, in their two languages. Recopied from
     // `lib/public-routes.ts` faute de pouvoir importer du TypeScript ici —
-    // `lib/public-routes.test.ts` vérifie qu'elles ne divergent pas.
+    // `lib/public-routes.test.ts` checks that they do not diverge.
     //
-    // Elles répondaient `cache-control: private, no-cache, no-store` avec
-    // `x-vercel-cache: MISS` à CHAQUE appel, parce que la landing appelait
-    // `auth.getUser()` au rendu. Ce rebond est passé dans le proxy (qui
-    // s'exécute avant le cache), plus rien dans ces pages ne dépend d'un
-    // cookie : le CDN peut enfin les servir.
+    // They responded `cache-control: private, no-cache, no-store` with
+    // `x-vercel-cache: MISS` on EVERY call, because the landing was calling
+    // `auth.getUser()` when rendered. This bounce is passed into the proxy (which
+    // executes before the cache), nothing in these pages depends on a
+    // cookie: the CDN can finally serve them.
     //
-    // Pas de `Vary: Cookie` : sur le CDN de Vercel il ferait tomber le taux de
-    // hit à zéro (chaque combinaison de cookies devient une entrée), c'est-à-dire
-    // exactement l'inverse de ce qu'on cherche. La langue est portée par l'URL
-    // et non par un cookie depuis les URLs localisées, et la session est
-    // traitée par le middleware — il ne reste rien à faire varier.
+    // No `Vary: Cookie`: on the Vercel CDN it would drop the rate of
+    // hit to zero (each combination of cookies becomes an entry), i.e.
+    // exactly the opposite of what we are looking for. The language is carried by the URL
+    // and not by a cookie from the localized URLs, and the session is
+    // processed by the middleware — nothing remains to vary.
     //
-    // ⚠ POURQUOI DEUX EN-TÊTES, et pas seulement `Cache-Control`.
+    // ⚠ WHY TWO HEADERS, and not just `Cache-Control`.
     //
-    // Ces pages sont rendues dynamiquement (elles lisent `headers()` pour
-    // résoudre la locale), et Next pose LUI-MÊME `Cache-Control: private,
-    // no-cache, no-store` sur la réponse d'un rendu dynamique. Sur Vercel, les
-    // en-têtes de ce fichier sont appliqués par le routeur AVANT l'invocation de
-    // la fonction : celle-ci écrase ensuite `Cache-Control`. Mesuré sur la prod
-    // au premier déploiement — `private, no-store` et `x-vercel-cache: MISS`,
-    // alors que `next start` en local donnait bien la valeur d'ici. (Le
-    // `X-Robots-Tag` plus bas, lui, fonctionne : Next ne le pose jamais, donc
-    // personne ne l'écrase.)
+    // These pages are dynamically rendered (they read `headers()` to
+    // resolve the locale), and Next sets HIMSELF `Cache-Control: private,
+    // no-cache, no-store` on the response of a dynamic rendering. On Vercel, the
+    // headers in this file are applied by the router BEFORE invoking
+    // the function: this then overwrites `Cache-Control`. Measured on production
+    // on first deployment — `private, no-store` and `x-vercel-cache: MISS`,
+    // while `next start` locally gave the value here. (THE
+    // `X-Robots-Tag` lower down works: Next never sets it, so
+    // no one overwrites it.)
     //
-    // `Vercel-CDN-Cache-Control` est l'en-tête prévu pour ce cas : il ne pilote
-    // QUE le cache de l'Edge Network de Vercel, Next n'y touche pas, et il est
-    // retiré de la réponse avant qu'elle n'atteigne le navigateur. On garde
-    // `Cache-Control` à côté : il reste juste hors de Vercel (et en local), et
-    // le navigateur, lui, continuera de recevoir le `private, no-store` de Next
-    // — ce qui est très bien, on veut un cache CDN partagé, pas un cache
-    // navigateur qui figerait la page d'un visiteur qui vient de se connecter.
+    // `Vercel-CDN-Cache-Control` is the header intended for this case: it does not drive
+    // THAT the cache of Vercel's Edge Network, Next does not touch it, and it is
+    // removed from the response before it reaches the browser. We keep
+    // `Cache-Control` next to it: it stays just outside Vercel (and locally), and
+    // the browser will continue to receive the `private, no-store` from Next
+    // — which is very good, we want a shared CDN cache, not a cache
+    // browser that would freeze the page of a visitor who has just connected.
     //
-    // ⚠ `has: host` — ces en-têtes ne valent QUE sur les hosts de minddy.
+    // ⚠ `has: host` — these headers are ONLY valid on minddy hosts.
     //
-    // Un domaine personnalisé (MIN-36) sert à sa racine un board de feedback ou
-    // une vue partagée, c'est-à-dire une page personnalisée par cookie. Sans
-    // cette condition, le `/` du client tombait sous la ligne ci-dessus : mis en
-    // cache par le CDN, sans `Vary`, donc servi à qui passe ensuite (MIN-337).
-    // Le proxy pose en plus `no-store` sur toute réponse d'un domaine client.
+    // A custom domain (MIN-36) serves at its root as a feedback board or
+    // a shared view, that is to say a personalized page per cookie. Without
+    // this condition, the client's `/` fell below the line above: set
+    // cache by the CDN, without `Vary`, therefore served to whoever passes next (MIN-337).
+    // The proxy also sets `no-store` on any response from a client domain.
     headers.push(
       ...PUBLIC_ROUTE_PATHS.map((source) => ({
         source,
@@ -303,11 +302,11 @@ const nextConfig = {
       })),
     );
 
-    // Preview et deploys de branche : un site complet, en double, qui répondait
-    // jusqu'ici `Allow: /` sur `preview.minddy.app/robots.txt` (MIN-88). Le
-    // robots.txt ne protège que la DÉCOUVERTE : une URL déjà connue d'un
-    // crawler est visitée quand même, et seule cette en-tête l'empêche
-    // d'atterrir dans l'index — où elle concurrencerait la vraie.
+    // Preview and branch deploys: a complete, duplicate site that responded
+    // so far `Allow: /` to `preview.minddy.app/robots.txt` (MIN-88). THE
+    // robots.txt only protects DISCOVERY: a URL already known to a
+    // crawler is visited anyway, and only this header prevents it
+    // to land in the index — where it would compete with the real one.
     if (isVercelNonProduction) {
       headers.push({
         source: "/:path*",

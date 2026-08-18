@@ -2,17 +2,15 @@ import { execFileSync } from "node:child_process";
 import path from "node:path";
 
 /**
- * Le bundle de la projection des pages, construit AVANT la suite (MIN-295).
+ * The page projection bundle, built BEFORE the sequel (MIN-295).
  *
- * `lib/server/pages-projection.ts` ne charge plus `lib/pages-markdown.ts` par un
- * import : il `require()` le bundle esbuild par son chemin, et refuse de se
- * rabattre sur autre chose. Sans ce crochet, tout test qui traverse la
- * projection tomberait sur « bundle introuvable ».
+ * `lib/server/pages-projection.ts` no longer loads `lib/pages-markdown.ts` by a
+ * import: it `require()` the bundle esbuild by its path, and refuses to fall back on anything else. Without this hook, any test that passes through the
+ * projection would fall on "bundle not found".
  *
- * Le construire ici plutôt que de le supposer présent a un second effet, qui est
- * le vrai : la suite joue L'ARTEFACT RÉELLEMENT LIVRÉ, pas le source dont il est
- * tiré. C'est toute la leçon du ticket — un test de runtime ne peut rien dire
- * d'une substitution de build. Le bundle sort en une centaine de millisecondes.
+ * Constructing it here rather than assuming it is present has a second effect, which is
+ * the real one: the sequel plays THE ACTUALLY DELIVERED ARTIFACT, not the source it is from
+ *shot. That's the whole lesson of the ticket — a runtime test can't tell anything about a build override. The bundle comes out in about a hundred milliseconds.
  */
 export default function setup(): void {
   const repo = path.resolve(import.meta.dirname, "..");

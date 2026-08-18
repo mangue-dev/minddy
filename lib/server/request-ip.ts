@@ -1,21 +1,20 @@
 import "server-only";
 
 /**
- * IP du client pour le rate limiting des surfaces publiques.
+ * Client IP for rate limiting public surfaces.
  *
- * Le piège est dans `x-forwarded-for` : c'est une LISTE, et son entrée de
- * TÊTE est celle que l'appelant a envoyée. La lire, c'est laisser un client
- * choisir son propre compteur — un en-tête différent à chaque requête et la
- * limite ne limite plus rien.
+ * The catch is in `x-forwarded-for`: it's a LIST, and its
+ * HEAD entry is the one the caller sent. Reading it means letting a client
+ * choose its own counter — a different header for each request and the limit no longer limits anything.
  *
- * Ce qui est digne de foi, c'est ce qu'a écrit le dernier relais de confiance,
- * c'est-à-dire le nôtre :
- * - `x-vercel-forwarded-for` et `x-real-ip` sont posés par la plateforme et
- *   écrasent ce que le client aurait envoyé sous ces noms ;
- * - dans `x-forwarded-for`, l'entrée de QUEUE est celle qu'ajoute le relais le
- *   plus proche de nous ; les précédentes viennent de l'appelant.
+ * What is trustworthy is what the last trusted relay,
+ * wrote, i.e. ours :
+ * - `x-vercel-forwarded-for` and `x-real-ip` are set by the platform and
+ * overwrite what the client would have sent under these names;
+ * - in `x-forwarded-for`, the QUEUE entry is the one added by the relay the
+ * closer to us; the previous ones come from the caller.
  *
- * Fallback "unknown" : un bucket partagé vaut mieux que pas de limite.
+ * Fallback "unknown": a shared bucket is better than no limit.
  */
 export function getClientIp(request: Request): string {
   return (
@@ -26,7 +25,7 @@ export function getClientIp(request: Request): string {
   );
 }
 
-/** Idem depuis un `Headers` déjà lu (server actions, `headers()`). */
+/** Same from a `Headers` already read (server actions, `headers()`). */
 export function clientIpFromHeaders(headers: Headers): string {
   return (
     lastHop(headers.get("x-vercel-forwarded-for")) ??

@@ -7,27 +7,27 @@ import { localHost } from "./local-host";
 import { cloudLayout } from "../harness-layout";
 
 /**
- * MIN-224 — les mains LOCALES du harness, celles qui remplacent l'aller-retour
- * RPC quand la boucle vit dans la microVM.
+ * MIN-224 — the LOCAL hands of the harness, those which replace the round trip
+ * RPC when the loop lives in the microVM.
  *
- * Ce qui se teste ici n'est pas « est-ce que `ls` marche » : c'est le contrat que
- * `repo-host.ts` attend, et dont chaque écart se paie en silence.
+ * What is tested here is not “does `ls` work”: it is the contract that
+ * `repo-host.ts` waits, and each difference is paid for silently.
  *
- * - un exit code non nul est un RÉSULTAT, pas une exception — sinon le premier
- *   `grep` sans match ferait échouer un tool ;
- * - une commande tuée par timeout rend ce qu'elle avait DÉJÀ écrit, et le dit —
- *   sinon le modèle lit un échec vide là où il devait lire la sortie partielle
- *   d'un test qui a bouclé ;
- * - un fichier absent rend `null` (c'est le contrat de `readFileToBuffer`), mais
- *   une vraie erreur d'accès LÈVE : rendre `null` sur un EACCES ferait écrire par
- *   `edit_file` un fichier que le modèle croyait vide.
+ * - a non-zero exit code is a RESULT, not an exception — otherwise the first
+ * `grep` without a match would cause a tool to fail;
+ * - a command killed by timeout returns what it had ALREADY written, and says so —
+ * otherwise the model reads an empty failure where it was supposed to read the partial output
+ * of a test that completed;
+ * - an absent file returns `null` (this is the contract for `readFileToBuffer`), but
+ * a real access error RISE: rendering `null` on an EACCES would cause
+ * `edit_file` to write a file that the model believed to be empty.
  */
 
 let dir: string;
 /**
- * Le host connaît son layout depuis MIN-354 : le `cwd` par défaut de `exec` est
- * `layout.repoDir`, et non plus une constante. Ces cas passent tous un `cwd`
- * explicite (le dossier temporaire), donc seul le contrat compte ici.
+ * The host knows its layout since MIN-354: the default `cwd` of `exec` is
+ * `layout.repoDir`, and no longer a constant. These cases all pass an explicit `cwd`
+ * (the temp folder), so only the contract matters here.
  */
 const host = localHost(cloudLayout());
 
@@ -46,7 +46,7 @@ describe("exec", () => {
 
   it("exécute dans le `cwd` demandé", async () => {
     const res = await host.exec(`pwd`, { cwd: dir });
-    // macOS préfixe /private aux chemins de /var : on compare les fins.
+    // macOS prefix /private to /var paths: we compare the endings.
     expect(res.stdout.trim().endsWith(dir.replace(/^\/private/, ""))).toBe(true);
   });
 
@@ -58,16 +58,16 @@ describe("exec", () => {
   it("tue au timeout, rend la sortie DÉJÀ écrite, et le dit", async () => {
     const res = await host.exec(`echo début; sleep 30`, { cwd: dir, timeoutMs: 300 });
     expect(res.exitCode).not.toBe(0);
-    // Ce qui a été produit avant la coupure n'est PAS perdu : c'est souvent tout
-    // ce que le modèle avait besoin de lire.
+    // What was produced before the cut is NOT lost: it is often all
+    // what the model needed to read.
     expect(res.stdout).toContain("début");
-    // Et le timeout se DIT : un exit 143 nu se relit comme un échec de la commande.
+    // And the timeout SAYS: a bare exit 143 is reread as a failure of the command.
     expect(res.stderr).toContain("timed out");
   }, 10_000);
 
   it("tue le GROUPE de process, pas seulement le shell", async () => {
-    // Un `npm test` a lui-même lancé des enfants : les laisser survivre mangerait
-    // la microVM jusqu'au reaper, et ils écriraient dans le dépôt pendant le
+    // A `npm test` launched children himself: letting them survive would eat
+    // the microVM up to the reaper, and they would write to the repository during the
     // `git add -A` de fin de tour.
     const marker = path.join(dir, "orphan.txt");
     await host.exec(`(sleep 1; echo vivant > ${JSON.stringify(marker)}) & sleep 30`, {
@@ -101,8 +101,8 @@ describe("fichiers", () => {
   });
 
   it("LÈVE sur une erreur qui n'est pas « le fichier n'existe pas »", async () => {
-    // Un dossier lu comme un fichier : `null` ferait croire à un fichier vide, et
-    // `edit_file` écrirait par-dessus un arbre entier.
+    // A folder read as a file: `null` would make it appear as an empty file, and
+    // `edit_file` would write over an entire tree.
     await expect(host.readFile(dir)).rejects.toThrow();
   });
 

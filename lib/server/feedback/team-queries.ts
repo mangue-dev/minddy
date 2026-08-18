@@ -10,9 +10,9 @@ import {
 } from "@/lib/feedback/types";
 
 /**
- * Lectures côté équipe (MIN-37) — contrairement au board public, les vraies
- * identités sortent ici (nom, email, external_id) : c'est le canal de
- * recontact. Les checks membre sont faits par les routes appelantes.
+ * Team side readings (MIN-37) — unlike the public board, the real
+ * identities come out here (name, email, external_id): this is the channel for
+ * recontact. Member checks are done by the calling routes.
  */
 
 export interface TeamFeedbackAuthor {
@@ -26,12 +26,12 @@ export interface TeamFeedbackAuthor {
 
 const AUTHOR_SELECT = "id, pseudonym, email, name, external_id, verified_via";
 
-/** Embed N–N des catégories (MIN-52) — aplati en `category_ids` côté client. */
+/** Embed N–N categories (MIN-52) — flattened to `category_ids` on the client side. */
 const CATEGORY_EMBED = "feedback_post_categories(category_id)";
 
 type WithCategoryEmbed = { feedback_post_categories?: { category_id: string }[] | null };
 
-/** Aplati l'embed jonction en liste d'ids, puis retire le champ brut du row. */
+/** Flattens the embed junction into a list of ids, then removes the raw field from the row. */
 function flattenCategories<T extends WithCategoryEmbed>(
   row: T
 ): Omit<T, "feedback_post_categories"> & { category_ids: string[] } {
@@ -49,13 +49,13 @@ export interface TeamFeedbackListItem extends FeedbackPostRow {
 }
 
 /**
- * Les retours d'un projet, vue équipe — plafonnés à 500, triés par votes.
+ * The returns of a project, team view — capped at 500, sorted by votes.
  *
- * `statuses` filtre DANS LA REQUÊTE, et c'est la seule façon correcte de le
- * faire : le tri est par votes, donc les statuts « réglés » (spam en tête, qui
- * ne récolte pas de voix) sont précisément ceux que le plafond coupe. Filtrer
- * après coup sur la fenêtre renvoyait une liste vide là où la base avait la
- * réponse — silencieusement, et d'autant plus souvent que le projet est gros.
+ * `statuses` filter IN THE REQUEST, and this is the only correct way to do it
+ *: the sort is by votes, so the statuses are “settled” (spam in the lead, which
+ * does not collect votes) are precisely those that the ceiling cuts off. Filter
+ * afterwards on the window returned an empty list where the database had the
+ * response — silently, and all the more often the bigger the project.
  */
 export async function listTeamFeedback(
   projectId: string,
@@ -89,8 +89,8 @@ export async function listTeamFeedback(
       ? (suggestionTitles.get(row.suggested_merge_into_id) ?? null)
       : null,
   }));
-  // Terminés (livrés / refusés) en bas de liste, tri par votes conservé au sein
-  // de chaque groupe — comme sur le board public.
+  // Completed (delivered / refused) at the bottom of the list, sorting by votes kept within
+  // of each group — like on the public board.
   return sortFeedbackResolvedLast(items, (item) => item.status);
 }
 
@@ -119,7 +119,7 @@ export interface TeamFeedbackDetail extends FeedbackPostRow {
   suggested_title: string | null;
   category_ids: string[];
   merged_from: { id: string; title: string }[];
-  /** Fusions actives (non défaites) dont ce post est la cible — undoable. */
+  /** Active (undoable) merges for which this post is the target — undoable. */
   merge_events: TeamMergeEvent[];
   issue: { id: string; number: number; status: string } | null;
 }
@@ -185,17 +185,17 @@ export async function getTeamFeedbackDetail(
   };
 }
 
-// ── Le feedback ACCROCHÉ À UN TICKET (MIN-196) ──────────────────────────────
+// ── Feedback HANGING ON A TICKET (MIN-196) ──────────────────────────────
 
 export type { IssueLinkedFeedback };
 
 /**
- * Les retours qu'un ticket met en œuvre. Plusieurs sont possibles : plusieurs
- * demandes convergent souvent vers un même travail.
+ * The returns that a ticket implements. Several are possible: several
+ * requests often converge on the same job.
  *
- * Le service client, toujours : `feedback_posts` est RLS deny-all, donc une
- * lecture par le client de session rendrait une liste VIDE au lieu d'une
- * erreur. L'appelant a déjà prouvé son accès au projet, on filtre dessus.
+ * Customer service, always: `feedback_posts` is RLS deny-all, so a
+ * read by the session client would return an EMPTY list instead of a
+ * error. The caller has already proven their access to the project, we filter on it.
  */
 export async function listFeedbackForIssue(
   projectId: string,
@@ -208,8 +208,8 @@ export async function listFeedbackForIssue(
     .is("deleted_at", null)
     .eq("project_id", projectId)
     .eq("issue_id", issueId)
-    // Un doublon fusionné n'existe plus qu'à travers son canonique : le montrer
-    // ferait deux entrées pour une seule demande.
+    // A merged duplicate only exists through its canonical: show it
+    // would make two entries for a single request.
     .is("merged_into_id", null)
     .order("vote_count", { ascending: false });
   if (error) {

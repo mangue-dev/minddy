@@ -8,16 +8,16 @@ import {
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 
 /**
- * POST /api/pull-requests/[prId]/attachments — héberge un fichier destiné à un
- * commentaire de PR et rend son URL publique (MIN-162).
+ * POST /api/pull-requests/[prId]/attachments — hosts a file intended for a
+ * PR comment and makes its URL public (MIN-162).
  *
- * En multipart et non en JSON base64 : le fichier ne fait que traverser, et
- * l'encoder en texte lui coûterait un tiers de poids pour rien.
+ * In multipart and not in base64 JSON: the file only traverses, and
+ * encoding it into text would cost it a third of its weight for nothing.
  *
- * L'upload passe par le serveur (et non en direct-to-storage comme les pièces
- * jointes de ticket) parce que la destination est un bucket PUBLIC : c'est la
- * vérification d'accès à la PR, ici, qui empêche d'en faire un hébergeur de
- * fichiers ouvert. Le détail est dans `prAttachmentResponse`.
+ * The upload goes through the server (and not direct-to-storage like the parts
+ * ticket attachments) because the destination is a PUBLIC bucket: this is the
+ * access check to the PR, here, which prevents it from being a host of
+ * open files. The details are in `prAttachmentResponse`.
  */
 
 type RouteContext = { params: Promise<{ prId: string }> };
@@ -27,15 +27,15 @@ export const maxDuration = 60;
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { prId } = await params;
 
-  // L'AUTORISATION D'ABORD (MIN-348). Lire le multipart, c'est ramener tout le
-  // corps en mémoire : le faire avant de savoir qui appelle offre à un anonyme
-  // la mémoire d'une fonction, autant de fois qu'il le veut, pour une requête
-  // qui finira en 401. L'ordre est le même sur la façade par run.
+  // AUTHORIZATION FIRST (MIN-348). To read the multipart is to bring back all the
+  // body in memory: do it before knowing who is calling, offer to an anonymous person
+  // the memory of a function, as many times as he wants, for a query
+  // which will end in 401. The order is the same on the facade by run.
   const auth = await authorizePrRequest(request, prId);
   if (!auth.ok) return auth.response;
-  // Même garde que les pièces jointes de ticket : la destination est un bucket
-  // PUBLIC de 20 Mo par fichier, et rien d'autre ne borne la boucle qui en
-  // téléverse un millier.
+  // Same guard as ticket attachments: destination is a bucket
+  // PUBLIC of 20 MB per file, and nothing else limits the loop which
+  // upload a thousand.
   const rl = checkSessionRateLimit(auth.userId, "pr-attachment-create");
   if (!rl.allowed) {
     return NextResponse.json(

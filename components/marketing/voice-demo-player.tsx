@@ -20,34 +20,34 @@ import {
 import type { IssuePriorityValue } from "@/lib/issue-validation";
 
 /**
- * La dictée, jouable sur la landing, sans compte (MIN-150).
+ * Dictation, playable on the landing, without account (MIN-150).
  *
- * Ce bloc remplace la figure statique qui racontait la dictée en deux instants
- * côte à côte. Elle disait la bonne chose et ne la faisait pas ressentir : le
- * moment « aha » du produit, c'est de voir les champs se remplir tout seuls, et
- * aucune image ne montre ça. Ici le visiteur parle cinq secondes — ou joue une
- * phrase d'un clic s'il n'a pas de micro — et regarde le ticket se remplir.
+ * This block replaces the static figure which told the dictation in two moments
+ * side by side. She said the right thing and didn't make it feel: the
+ * “aha” moment of the product is seeing the fields fill up on their own, and
+ * no image shows this. Here the visitor speaks for five seconds — or plays a
+ * sentence with one click if he doesn't have a microphone — and watch the ticket fill up.
  *
- * Le ticket est JETABLE : rien n'est créé, rien n'est gardé, l'audio ne survit
- * pas à la requête (`app/api/demo/dictate/route.ts`).
+ * The ticket is DISPOSABLE: nothing is created, nothing is saved, the audio does not survive
+ * not to the query (`app/api/demo/dictate/route.ts`).
  *
- * ## Trois choix qui tiennent le bloc
+ * ## Three choices that hold the block
  *
- * **Les phrases d'exemple sont visibles d'emblée**, pas seulement après un refus
- * de micro. C'est le chemin le plus court vers la démonstration, et un visiteur
- * en open space ne parlera de toute façon pas à son écran.
+ * **Example sentences are visible straight away**, not just after a refusal
+ * microphone. This is the shortest path to the demonstration, and a visitor
+ * in open space will not talk to its screen anyway.
  *
- * **Rien du produit n'est redessiné** : `PriorityIndicator` et `DictateWaveform`
- * sont les composants de l'app, et les intitulés de champs viennent des mêmes
- * catalogues (`Field`, `Priority`) — passés en props par le composant serveur,
- * parce que ces namespaces-là ne sont pas servis au client sur le site public.
+ * **Nothing about the product is redesigned**: `PriorityIndicator` and `DictateWaveform`
+ * are the components of the app, and the field titles come from the same
+ * catalogs (`Field`, `Priority`) — passed as props by the server component,
+ * because these namespaces are not served to the client on the public site.
  *
- * **Le portrait de l'assigné arrive dans la réponse**, en data URI dessinée par
- * le serveur. Importer `UserAvatar` ici tirerait DiceBear (~40 Ko) dans le
- * bundle de la landing pour une image qu'on ne voit qu'après avoir joué.
+ * **The portrait of the assignee arrives in the response**, in data URI drawn by
+ * the server. Importing `UserAvatar` here would pull DiceBear (~40 KB) into the
+ * landing bundle for an image that you only see after playing.
  */
 
-/** Intitulés de champs et de priorités, repris des catalogues de l'app. */
+/** Titles of fields and priorities, taken from the app catalogs. */
 export interface VoiceDemoLabels {
   priority: string;
   dueDate: string;
@@ -58,10 +58,10 @@ export interface VoiceDemoLabels {
 
 type Status = "idle" | "recording" | "processing" | "done";
 
-/** Les six morceaux du ticket, dévoilés l'un après l'autre. */
+/** The six pieces of the ticket, revealed one after the other. */
 const REVEAL_STEPS = 6;
 const REVEAL_STEP_MS = 220;
-/** Vitesse de frappe d'une phrase d'exemple — le temps d'une phrase parlée. */
+/** Typing speed of an example sentence — the time of a spoken sentence. */
 const TYPING_STEP_MS = 26;
 
 function prefersReducedMotion(): boolean {
@@ -89,7 +89,7 @@ function pickRecorderMimeType(): string | undefined {
   return undefined;
 }
 
-/** Une ligne de propriété du ticket, comme dans le panneau d'un vrai ticket. */
+/** A ticket ownership line, like in the panel of a real ticket. */
 function Row({
   label,
   shown,
@@ -130,7 +130,7 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timersRef = useRef<ReturnType<typeof setInterval>[]>([]);
-  /** Départ du passage en cours — sert la tranche de durée mesurée. */
+  /** Start of current passage — serves the measured time slot. */
   const startedAtRef = useRef(0);
   const mountedRef = useRef(true);
 
@@ -156,7 +156,7 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
     };
   }, [clearTimers]);
 
-  /** Dévoile le ticket morceau par morceau — d'un coup en mouvement réduit. */
+  /** Unveil the ticket piece by piece — all at once in reduced movement. */
   const reveal = useCallback(() => {
     if (prefersReducedMotion()) {
       setRevealed(REVEAL_STEPS);
@@ -171,7 +171,7 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
     timersRef.current.push(timer);
   }, []);
 
-  /** Écrit la phrase d'exemple à l'écran, comme si elle était dite. */
+  /** Write the example sentence on the screen, as if it were being spoken. */
   const typeOut = useCallback((text: string) => {
     if (prefersReducedMotion()) {
       setTranscript(text);
@@ -221,8 +221,8 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
       setStatus("done");
       setRevealed(0);
       reveal();
-      // L'attente MESURÉE est celle du visiteur — du clic au ticket rempli, la
-      // phrase qui s'écrit comprise, pas la seule latence du serveur.
+      // The MEASURED wait is that of the visitor — from the click to the completed ticket, the
+      // sentence that is written understood, not just server latency.
       track("landing_voice_demo_completed", {
         input,
         duration_bucket: durationBucket(Date.now() - startedAtRef.current),
@@ -231,7 +231,7 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
     [reveal, track],
   );
 
-  /** Une phrase d'exemple : elle s'écrit pendant que le serveur la range. */
+  /** An example sentence: it is written while the waiter puts it away. */
   const playSample = useCallback(
     async (id: DemoSampleId) => {
       if (status === "recording" || status === "processing") return;
@@ -377,8 +377,8 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
     track("landing_voice_demo_started", { input: "mic" });
     recorder.start();
 
-    // Le chrono, et l'arrêt automatique : une démo publique se paye à la
-    // seconde d'audio, et une phrase tient largement dans quinze secondes.
+    // The timer, and the automatic stop: a public demo is paid for per time.
+    // second of audio, and a sentence fits well into fifteen seconds.
     const startedAt = Date.now();
     const timer = setInterval(() => {
       const elapsed = Date.now() - startedAt;
@@ -408,33 +408,33 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
 
   return (
     <figure className="rounded-xl border border-border bg-card p-6 shadow-sm sm:p-8">
-      {/* `[&>*]:min-w-0` : sans lui, une colonne de grille prend la largeur de
-          son contenu le plus long (les phrases d'exemple, en `nowrap`) et la
-          page déborde à l'horizontale sur mobile. */}
+      {/* `[&>*]:min-w-0`: without it, a grid column takes the width of
+          its longest content (the example sentences, in `nowrap`) and the
+          page overflows horizontally on mobile. */}
       <div className="grid gap-6 md:grid-cols-[1fr_auto_1fr] md:gap-8 [&>*]:min-w-0">
-        {/* ── Ce que vous dites ─────────────────────────────────────────── */}
+        {/* ── What you say ───────────────────── ────────────────────── */}
         <div className="flex flex-col gap-4">
           <p className="text-xs font-medium text-muted-foreground">
             {t("voiceDemoSpoken")}
           </p>
 
-          {/* LA PRISE (refaite en MIN-254). C'était une barre discrète avec un
-              micro de 32 px dedans, reprise du popover de dictée du produit :
-              dans l'app le geste est connu, sur la landing personne ne voyait
-              qu'il y avait quelque chose à essayer.
+          {/* THE TAKE (remade in MIN-254). It was a discreet bar with a
+              32 px microphone inside, resuming the product dictation popover:
+              in the app the gesture is known, on the landing no one saw
+              that there was something to try.
 
               Trois changements, un seul but — qu'on comprenne qu'on peut
-              parler : le micro fait 56 px et porte la couleur de marque en
-              aplat, c'est TOUTE la boîte qui déclenche et non la pastille
-              seule, et l'intitulé est une invitation à l'impératif plutôt
-              qu'une étiquette. L'anneau qui bat pendant l'enregistrement dit
-              que ça tourne sans avoir à lire le chrono.
+              speak: the microphone is 56 px and bears the brand color in
+              flat, it is the WHOLE box that triggers and not the pellet
+              alone, and the title is an invitation to the imperative rather
+              than a label. The ring that beats during recording says
+              that it runs without having to read the timer.
 
-              Le bouton COUVRE la boîte au lieu de la contenir : la forme d'onde
-              est un `<div>` avec son canvas, et un bouton n'accepte que du
-              contenu de phrasé. Le calque en `absolute inset-0` donne la même
-              cible de clic sans mentir sur le HTML — et il porte l'intitulé
-              accessible, puisque c'est lui, le bouton. */}
+              The button COVERS the box instead of containing it: the waveform
+              is a `<div>` with its canvas, and a button only accepts
+              phrasing content. The layer in `absolute inset-0` gives the same
+              click target without lying on the HTML — and it bears the title
+              accessible, since it is him, the button. */}
           <div
             className={cn(
               "group relative flex items-center gap-4 rounded-xl border p-4 transition-colors",
@@ -497,9 +497,9 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
             </div>
           </div>
 
-          {/* Ce qui a été entendu — ou la phrase d'exemple, en train de s'écrire.
-              Absent au repos : « On vous écoute » quand rien n'écoute serait
-              faux, et la place vide se voit. */}
+          {/* What was heard — or the example sentence, being written.
+              Absent at rest: “We listen to you” when nothing listening would be
+              wrong, and the empty place is visible. */}
           {(transcript || status === "recording") && (
             <blockquote aria-live="polite" className="text-[15px] leading-relaxed text-pretty">
               {transcript ? (
@@ -518,7 +518,7 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
             </p>
           )}
 
-          {/* Le chemin sans micro : toujours là, jamais un pis-aller caché. */}
+          {/* The path without a microphone: always there, never a hidden stopgap. */}
           <div className="flex flex-col gap-2">
             <p className="text-xs font-medium text-muted-foreground">
               {t("voiceDemoSamples")}
@@ -530,9 +530,9 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
                   type="button"
                   onClick={() => void playSample(id)}
                   disabled={busy}
-                  // Pastille tronquée là où la phrase tient (elle y tient
-                  // toujours), ligne pleine sur mobile : une phrase coupée en
-                  // deux ne dit plus ce qu'on s'apprête à jouer.
+                  // Pastille truncated where the sentence fits (it fits there
+                  // always), full line on mobile: a sentence cut into
+                  // two no longer says what we are about to play.
                   className="max-w-full rounded-lg border border-border bg-background px-3 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:border-brand/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 sm:truncate sm:rounded-full"
                 >
                   {t(DEMO_SAMPLE_KEYS[id])}
@@ -542,7 +542,7 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
           </div>
         </div>
 
-        {/* Le sens de lecture : à droite sur grand écran, vers le bas sinon. */}
+        {/* Reading direction: to the right on the big screen, downwards otherwise. */}
         <div className="flex justify-center self-center text-muted-foreground" aria-hidden>
           <ArrowDown className="size-5 md:hidden" />
           <ArrowRight className="hidden size-5 md:block" />
@@ -569,8 +569,8 @@ export function VoiceDemoPlayer({ labels }: { labels: VoiceDemoLabels }) {
             aria-live="polite"
             className="rounded-lg border border-border bg-background p-4"
           >
-            {/* Au repos, la carte n'est pas vide : c'est le formulaire qu'on
-                aurait rempli à la main, en attente de l'être tout seul. */}
+            {/* When idle, the card is not empty: it is the form that we
+                would have filled by hand, waiting to be done alone. */}
             {ticket ? (
               <h4
                 className={cn(

@@ -3,12 +3,12 @@ import { describe, expect, it } from "vitest";
 import { formatSecretFindings, isSecretFile, scanDiff, scanSecrets } from "./secret-scan";
 
 /**
- * MIN-360 — LE SCAN DE SECRETS AVANT PUSH.
+ * MIN-360 — SCAN OF SECRETS BEFORE PUSH.
  *
- * Comme [command-guard.test.ts](command-guard.test.ts), le test qui compte n'est
- * pas la liste des trouvailles : c'est la liste de ce qui NE doit pas en être une.
- * Cette porte est DURE — elle refuse le push — donc un faux positif bloque un tour
- * entier, et un garde-fou qui bloque des tours finit par être retiré.
+ * Like [command-guard.test.ts](command-guard.test.ts), the test that counts is
+ * not the list of finds: it is the list of what should NOT be found a.
+ * This door is HARD — it refuses pushing — so a false positive blocks an entire round
+ *, and a guardrail that blocks rounds ends up being removed.
  */
 
 const kinds = (text: string) => scanSecrets(text).map((f) => f.kind);
@@ -52,16 +52,16 @@ describe("scanSecrets — ce qui s'annonce", () => {
 
 describe("scanSecrets — les faux positifs à ne PAS attraper", () => {
   for (const text of [
-    // La valeur elle-même s'annonce comme un décor.
+    // The value itself appears as a decoration.
     "GITHUB_TOKEN=ghp_your_token_here_0123456789abcdefghijkl",
     "STRIPE_SECRET_KEY=sk_live_EXAMPLE_KEY_0123456789",
     "ANTHROPIC_API_KEY=sk-ant-api03-placeholder-0123456789012345",
     "AWS=AKIAXXXXXXXXXXXXXXXX",
-    // Rien de structuré : un sha, un hash, une chaîne aléatoire.
+    // Nothing structured: a sha, a hash, a random string.
     "const sha = 'a308f21c4b9e0d7f1234567890abcdef12345678';",
     "integrity: sha512-8Rk+7ZlKCbJl6kZ2gLmQz1o9wYbXk3PfQ2n1cA7v==",
     "const id = crypto.randomUUID();",
-    // Un préfixe trop court pour être un jeton.
+    // A prefix too short to be a token.
     "class='sk-chase-dot'",
     "npm_config_registry=https://registry.npmjs.org/",
   ]) {
@@ -71,10 +71,10 @@ describe("scanSecrets — les faux positifs à ne PAS attraper", () => {
   }
 
   /**
-   * LE JWT NU A ÉTÉ RETIRÉ EXPRÈS, et ce test est ce qui l'empêche de revenir :
-   * la clé anonyme de Supabase EST un JWT, elle est publique par conception, et
-   * elle vit dans la moitié des `.env.example` du monde.
-   */
+ * THE BARE JWT WAS REMOVED ON PURPOSE, and this test is what's stopping it from coming back:
+ * Supabase's anonymous key IS a JWT, it's public by design, and
+ * it lives in half of the world's `.env.example`.
+ */
   it("ignore un JWT ordinaire et reconnaît celui qui dit `service_role`", () => {
     const jwt = (payload: Record<string, unknown>) =>
       [
@@ -101,8 +101,8 @@ describe("scanDiff — les lignes AJOUTÉES, et elles seules", () => {
   ].join("\n");
 
   it("ne voit pas un secret qu'on RETIRE", () => {
-    // Sinon un secret déjà dans le dépôt bloquerait tous les tours qui touchent
-    // à ce fichier, pour toujours, sans que l'agent y soit pour rien.
+    // Otherwise a secret already in the repository would block all tricks that touch
+    // to this file, forever, without the agent having anything to do with it.
     const found = scanDiff(diff);
     expect(found).toHaveLength(1);
     expect(found[0].sample).toBe("ghp_01234567…");
@@ -125,7 +125,7 @@ describe("isSecretFile", () => {
   });
 
   it("épargne les fichiers faits pour être lus", () => {
-    // Souvent le seul endroit où le NOM des variables est écrit.
+    // Often the only place where the NAME of the variables is written.
     for (const path of [".env.example", ".env.sample", ".env.local.template", "lib/env.ts"]) {
       expect(isSecretFile(path)).toBe(false);
     }
@@ -140,7 +140,7 @@ describe("formatSecretFindings", () => {
     expect(message).toContain("lib/x.ts");
     expect(message).toMatch(/nothing was committed/i);
     expect(message).toMatch(/\.env\.example/);
-    // Le jeton entier n'est pas recopié dans le fil.
+    // The entire token is not copied into the thread.
     expect(message).not.toContain("mnopqrstuvwxyz");
   });
 });

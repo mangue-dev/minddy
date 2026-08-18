@@ -7,9 +7,7 @@ import {
 } from "./same-origin";
 
 /**
- * MIN-345 — la garde d'origine. Deux niveaux qu'il ne faut surtout pas
- * confondre : l'un exige que la requête dise d'où elle vient, l'autre ne refuse
- * que ce qui se déclare d'ailleurs. Les tests disent lequel fait quoi.
+ * MIN-345 — the original guard. Two levels that should definitely not be confused: one requires the request to say where it comes from, the other only refuses what is stated elsewhere. The tests tell which one does what.
  */
 
 function req(headers: Record<string, string>) {
@@ -46,8 +44,8 @@ describe("hasForeignOrigin", () => {
     ).toBe(true);
   });
 
-  /** Le choix assumé : une requête muette n'est pas une requête de navigateur
-      tiers — le navigateur aurait posé l'en-tête. */
+  /** The assumed choice: a silent request is not a third-party browser
+ request — the browser would have set the header. */
   it("laisse passer une requête qui ne déclare rien", () => {
     expect(hasForeignOrigin(req({ host: "www.minddy.app" }))).toBe(false);
   });

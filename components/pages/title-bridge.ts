@@ -1,29 +1,29 @@
-// Le TITRE et le CORPS d'une page, cousus au clavier (MIN-270).
+// The TITLE and BODY of a page, sewn on the keyboard (MIN-270).
 //
-// Le titre n'est pas le premier bloc du document — c'est une colonne, et un
-// `textarea` à part (cf. page-header.tsx). Le prix de ce choix se paie ici :
-// pour qui écrit, les deux champs sont une seule surface, et le curseur doit
-// pouvoir passer de l'un à l'autre comme il passe d'une ligne à la suivante.
+// The title is not the first block of the document — it is a column, and a
+// `textarea` separately (see page-header.tsx). The price of this choice is paid here:
+// for those who write, the two fields are a single surface, and the cursor must
+// be able to move from one to the other as it moves from one line to the next.
 //
-// Trois gestes, et un seul sens à retenir — le titre est la ligne AU-DESSUS de
-// la première ligne du corps :
+// Three gestures, and only one meaning to remember — the title is the line ABOVE
+// the first line of the body:
 //
-//  - ⌫ au tout début du document remonte en fin de titre (rien à supprimer là
-//    où on est, donc rien ne se perd) ;
-//  - ↑ depuis la première ligne du corps fait de même ;
-//  - ↓ depuis le titre redescend dans le corps (page-header.tsx).
+// - ⌫ at the very beginning of the document goes to the end of the title (nothing to delete there
+// where we are, so nothing is lost);
+// - ↑ from the first line of the body does the same;
+// - ↓ from the title goes down into the body (page-header.tsx).
 //
-// L'extension ne SAIT RIEN du titre : elle constate qu'on sort par le haut et
-// le dit. C'est l'appelant qui rend le focus, parce que lui seul tient le champ.
+// The extension KNOWS NOTHING about the title: it notices that we exit from the top and
+// says it. It is the caller who returns the focus, because he alone holds the field.
 //
-// **Priorité 1, et c'est le cœur du fichier.** tiptap monte les keymaps dans
-// l'ordre inverse de déclaration, puis les trie par priorité décroissante : à
-// priorité égale, l'extension déclarée en DERNIER est consultée en PREMIER.
-// Nos deux touches sont parmi les plus chargées de l'éditeur — ⌫ défait une
-// règle de saisie, sort d'une liste, joint deux blocs ; ↑ traverse les vues de
-// nœud. En passant devant, on aurait volé la touche à tout ce monde-là. Avec
-// une priorité basse, on est consulté en dernier : on n'agit que si personne
-// d'autre n'avait quelque chose à faire.
+// **Priority 1, and this is the heart of the file.** tiptap mounts the keymaps in
+// the reverse order of declaration, then sorts them by decreasing priority: to
+// equal priority, the extension declared LAST is consulted FIRST.
+// Our two keys are among the most loaded in the editor — ⌫ undoes one
+// input rule, exits a list, joins two blocks; ↑ crosses the views of
+// node. By walking past, we would have stolen the touch from all those people. With
+// low priority, we are consulted last: we only act if no one
+//no one else had anything to do.
 
 import { Extension } from "@tiptap/core";
 import type { EditorState } from "@tiptap/pm/state";
@@ -31,20 +31,20 @@ import type { EditorView } from "@tiptap/pm/view";
 
 export interface TitleBridgeOptions {
   /**
-   * Le curseur sort du document PAR LE HAUT. Rendre `true` pour dire que le
-   * geste a été pris en charge — `null` (le défaut) laisse la touche suivre son
-   * chemin habituel, ce qui est le comportement d'une surface sans titre.
-   */
+ * The cursor exits the document FROM THE TOP. Make `true` to say that the
+ * gesture has been supported — `null` (the default) lets the key follow its usual
+ * path, which is the behavior of an untitled surface.
+ */
   onLeaveTop: (() => void) | null;
 }
 
 /**
- * Le curseur est-il collé au tout début du document ?
+ * Is the cursor stuck at the very beginning of the document?
  *
- * `depth === 1` est la garde qui compte : un curseur au début du premier item
- * d'une liste, ou de la première ligne d'une citation, est à la position 3 ou
- * plus et n'est PAS « le début du document » — ⌫ doit l'y sortir de sa liste
- * avant de parler de quitter le corps.
+ * `depth === 1` is the guard that matters: a cursor at the start of the first item
+ * of a list, or the first line of a quote, is at position 3 or
+ * more and is NOT “the start of the document” — ⌫ must remove it from its list
+ * before talking about leaving the body.
  */
 export function atDocumentStart(state: EditorState): boolean {
   const { selection } = state;
@@ -54,12 +54,12 @@ export function atDocumentStart(state: EditorState): boolean {
 }
 
 /**
- * Le curseur est-il dans le PREMIER bloc de premier niveau ?
+ * Is the cursor in the FIRST top-level block?
  *
- * La moitié pure de « suis-je sur la première ligne » — l'autre moitié
- * (`endOfTextblock`) mesure le rendu, et n'a de réponse que dans un navigateur.
- * Séparées parce qu'un bloc peut faire dix lignes à l'écran : être dans le
- * premier bloc ne suffit pas, et ne l'être pas suffit à répondre non.
+ * The pure half of "am I on the first line" — the other half
+ * (`endOfTextblock`) measures rendering, and is only responsive in a browser.
+ * Separated because a block can be ten lines on the screen: being in the
+ * first block is not enough, and not being there is enough to answer no.
  */
 export function inFirstBlock(state: EditorState): boolean {
   const { selection } = state;
@@ -69,7 +69,7 @@ export function inFirstBlock(state: EditorState): boolean {
   return $from.before(1) === 0;
 }
 
-/** Le curseur est-il sur la première ligne visible du document ? */
+/** Is the cursor on the first visible line of the document? */
 export function onFirstLine(view: EditorView): boolean {
   if (!inFirstBlock(view.state)) return false;
   return view.endOfTextblock("up");
@@ -84,8 +84,8 @@ export const TitleBridge = Extension.create<TitleBridgeOptions>({
   },
 
   addKeyboardShortcuts() {
-    // Lu au moment de la frappe, et non capturé : l'option peut être posée
-    // après le montage.
+    // Read at the time of typing, and not captured: the option can be set
+    // after editing.
     const leave = () => {
       const go = this.options.onLeaveTop;
       if (!go) return false;

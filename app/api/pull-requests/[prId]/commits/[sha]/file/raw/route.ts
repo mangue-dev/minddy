@@ -7,10 +7,10 @@ import {
 } from "@/lib/server/agent/pr-actions";
 
 /**
- * Octets d'un fichier du diff d'un commit — ce que la vue diff met dans ses
- * `<img>` pour montrer une image côte à côte (MIN-66), aux deux refs de CE
- * commit : son parent d'un côté, lui-même de l'autre.
- *  GET ?path=…&side=base|head → le fichier, sous le type MIME de son extension.
+ * Bytes of a commit diff file — what the diff view puts in its
+ * `<img>` to show a side-by-side image (MIN-66), at both CE refs
+ * commit: its parent on one side, itself on the other.
+ * GET ?path=…&side=base|head → the file, under the MIME type of its extension.
  */
 
 type RouteContext = { params: Promise<{ prId: string; sha: string }> };

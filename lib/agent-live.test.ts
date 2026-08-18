@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest";
 import { liveAfterEvent, liveFromStream, type AgentRunLive } from "./agent-live";
 
 /**
- * La moitié CLIENT du direct : ce que le fil garde, ce qu'il efface, et quand.
+ * The CLIENT half of the live thing: what the thread keeps, what it deletes, and when.
  *
- * Les deux règles qui comptent tiennent ensemble une seule promesse — le bloc
- * « fichiers changés » apparaît à la première édition et reste jusqu'à ce que la
- * liste de git le remplace, une fois, sans doublon.
+ * The two rules that matter together hold a single promise — the
+ * "changed files" block appears on the first edit and remains until the
+ * git list replaces, once, without duplicates.
  */
 
 const T0 = "2026-08-09T12:00:00.000Z";
@@ -23,9 +23,9 @@ function withFiles(paths: string[]): AgentRunLive {
 
 describe("liveFromStream", () => {
   it("compte les FICHIERS comme un signe de vie", () => {
-    // Une édition n'écrit ni texte ni tool-call de plus : la charge qui la porte
-    // est celle d'un round au repos. Sans ce test, elle se lisait comme un envoi à
-    // vide et effaçait la queue vivante au lieu de l'ouvrir.
+    // An edition writes neither text nor tool-call moreover: the load which carries it
+    // is that of a round at rest. Without this test, it read like a sending to
+    // empty and erase the live tail instead of opening it.
     const live = liveFromStream(null, {
       files: [{ path: "lib/a.ts", status: "deleted" }],
       filesTruncated: true,
@@ -57,8 +57,8 @@ describe("liveFromStream", () => {
   });
 
   it("ne fusionne pas : la charge fait foi, y compris sur les fichiers", () => {
-    // Le serveur renvoie la liste entière à chaque charge. Fusionner ferait
-    // survivre un fichier que le tour a cessé de compter.
+    // The server returns the entire list on each load. Merging would
+    // survive a file that the round has stopped counting.
     const next = liveFromStream(withFiles(["a.ts", "b.ts"]), {
       text: "je continue",
       files: [{ path: "b.ts", status: "modified" }],
@@ -86,18 +86,18 @@ describe("liveAfterEvent", () => {
   });
 
   it("les LÂCHE sur ce qui CLÔT le tour — la liste ne survit pas à la réponse", () => {
-    // La liste vivante appartient au tour en cours. Quand elle lui survivait, le fil
-    // la rangeait dans un tour NEUF (elle arrive après le résumé) et affichait un
-    // second accordéon sous la réponse, avec son propre chrono.
+    // The live list belongs to the current round. When she survived him, the thread
+    // placed it in a NEW round (it arrives after the summary) and displayed a
+    // second accordion under the response, with its own timer.
     expect(liveAfterEvent(withFiles(["a.ts"]), "summary")).toBeNull();
     expect(liveAfterEvent(withFiles(["a.ts"]), "quota_exhausted")).toBeNull();
   });
 
   it("les LÂCHE sur `files_changed` : l'autorité est arrivée", () => {
-    // Le passage de relais se décide ici, et pas sur une charge de purge : quand la
-    // boucle tourne dans la microVM, l'event est posé après que le tour a rendu son
-    // rapport et personne ne diffuse plus rien. Les deux listes se superposaient
-    // jusqu'à la fin du run — la même, deux fois, l'une sans ses compteurs.
+    // The handover is decided here, and not on a purge load: when the
+    // loop runs in the microVM, the event is set after the round has returned
+    // report and no one broadcasts anything anymore. The two lists overlapped
+    // until the end of the run — the same, twice, one without its counters.
     expect(liveAfterEvent(withFiles(["a.ts"]), "files_changed")).toBeNull();
   });
 });

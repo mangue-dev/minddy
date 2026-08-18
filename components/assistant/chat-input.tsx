@@ -49,23 +49,23 @@ import {
 const ACCEPT =
   "image/*,application/pdf,text/csv,text/plain,text/markdown,application/json,.csv,.txt,.md,.json,.log";
 
-/** L'enveloppe d'une mention dans l'éditeur : un nœud NON éditable, vide, dans
-    lequel React porte la vraie pilule (MentionChip). Le composer ne redessine
-    donc pas une pilule « comme » celle du contexte — c'est la même. */
+/** The envelope of a mention in the editor: a NON-editable, empty node, in
+ which React carries the real pill (MentionChip). Composing it does not redraw
+ so it is not a pill “like” the one in the context — it is the same. */
 const MENTION_SLOT_CLASS = "inline-block align-baseline";
 
-/** La pilule d'une commande « / » posée en tête du message : même géométrie que
-    la pilule de mention, sans figure — le « / » suffit à dire ce qu'elle est.
-    Elle porte son texte directement (pas de portail : rien à re-rendre).
+/** The pill of a “/” command placed at the top of the message: same geometry as
+ the pill of mention, without a figure — the “/” is enough to say what it is.
+ It carries its text directly (no portal: nothing to re-render).
 
-    Elle garde le fond NEUTRE (le repli de `--mention-chip`, cf. globals.css) là
-    où les mentions sont désormais teintées par type : une commande ne cite rien,
-    elle n'a donc aucune teinte à suivre. */
+ It keeps the background NEUTRAL (the fallback of `--mention-chip`, cf. globals.css) there
+ where the mentions are now colored by type: a command does not cite anything,
+ it therefore has no color to follow. */
 const COMMAND_PILL_CLASS =
   "mx-0.5 inline-block whitespace-nowrap rounded-[5px] bg-(--mention-chip) px-1.5 py-px align-baseline text-[0.95em] font-medium leading-4 text-primary";
 
-/** Ce qu'une enveloppe sait dire d'elle-même : de quoi la re-rendre sans rien
-    d'autre que le DOM (une annulation ⌘Z peut la restituer bien après coup). */
+/** What an envelope can say about itself: enough to return it without anything
+ other than the DOM (a ⌘Z cancellation can return it well after the fact). */
 const MENTION_TYPES: ReadonlySet<string> = new Set([
   "member",
   "project",
@@ -84,9 +84,9 @@ function mentionFromNode(node: HTMLElement): MentionOption | null {
     id,
     label,
     ...(node.dataset.mentionSeed ? { avatarSeed: node.dataset.mentionSeed } : {}),
-    // `data-mention-icon` porte deux choses selon le type, et une seule à la
-    // fois : le favicon d'un projet (une URL) ou l'émoji d'une page. Un attribut
-    // de plus pour la même case n'aurait rien clarifié.
+    // `data-mention-icon` carries two things depending on the type, and only one
+    // times: the favicon of a project (a URL) or the emoji of a page. An attribute
+    // more for the same box would not have clarified anything.
     ...(node.dataset.mentionIcon
       ? type === "page"
         ? { icon: node.dataset.mentionIcon }
@@ -101,7 +101,7 @@ interface ChatInputProps {
     message: string,
     attachments: ResourceInput[],
     mentions: AssistantMention[],
-    /** La commande « / » posée en tête du message, quand il y en a une. */
+    /** The “/” command placed at the top of the message, when there is one. */
     command?: AssistantCommandId,
   ) => void;
   onAbort?: () => void;
@@ -110,50 +110,50 @@ interface ChatInputProps {
   noBorder?: boolean;
   placeholder?: string;
   /**
-   * Posé sur la boîte extérieure du composer. Elle porte une gouttière de 12 px
-   * (`px-3`) qui lui sert de marge de clic dans le panneau de Numo, où rien
-   * d'autre n'en donne. Dans une colonne qui a déjà la sienne — les réglages —
-   * cette gouttière rétrécit le composer par rapport aux cartes d'à côté : on
-   * l'annule avec `px-0` plutôt que de la compenser d'un `-mx-3`, qui le ferait
-   * déborder de la colonne (MIN-167).
+   * Placed on the outer box of the composer. She has a 12 px gutter
+   * (`px-3`) which serves as a click margin in the Numo panel, where nothing
+   * no one else gives any. In a column that already has its own — the settings —
+   * this gutter shrinks the composition compared to the cards next to it: we
+   * cancels it with `px-0` rather than offsetting it with a `-mx-3`, which would
+   * overflow the column (MIN-167).
    */
   className?: string;
   /**
    * Hide the attach affordances (file button + drop overlay + paste-to-attach).
-   * À poser sur les surfaces dont l'envoi ne SAIT PAS quoi faire d'un fichier —
-   * les composers de l'agent, qui parlent à un dépôt et non à un stockage de
-   * pièces jointes. L'accueil l'a longtemps porté pour une autre raison
-   * (`open({ prompt })` ne relayait pas les fichiers) : depuis que l'ouverture
-   * les transporte, il ne le porte plus.
+   * To place on surfaces where sending does NOT KNOW what to do with a file —
+   * agent composers, which talk to a repository and not to a repository
+   * attachments. The reception carried him for a long time for another reason
+   * (`open({ prompt })` was not relaying files): since opening
+   * carries them, he no longer carries it.
    */
   hideAttach?: boolean;
   /**
-   * Rangée de contexte posée en haut du composer, au-dessus du texte (les
-   * pilules de contexte de Numo et le bouton @). Elle vit chez l'appelant : le
-   * composer ne sait rien de ce qu'elle porte, il lui prête juste sa place —
-   * dont le rayon est calculé pour un emboîtement concentrique.
+   * Context row placed at the top of the composer, above the text (the
+   * Numo context pills and the @ button). She lives with the appellant: the
+   * composer knows nothing about what she is wearing, he just lends her his place —
+   * whose radius is calculated for a concentric nesting.
    */
   contextSlot?: ReactNode;
   /**
-   * Place la rangée de contexte dans un bandeau derrière le haut du composer.
-   * Les conversations de l'agent y regroupent les choix qui déterminent son
-   * espace de travail (projet, environnement et branche), sans voler de place
-   * à la zone où l'on écrit.
+   * Place the context row in a banner behind the top of the composer.
+   * The agent's conversations bring together the choices which determine his
+   * work space (project, environment and branch), without stealing space
+   * to the area where you write.
    */
   contextPlacement?: "inside" | "above";
   /**
-   * Les entités citables par « @ » dans le texte. Vide/absent = pas de
-   * mentions du tout (les composers hors Numo). La liste peut arriver après
-   * coup : `onMentionQuery` prévient l'hôte dès qu'une mention se tape, ce qui
-   * lui laisse la charger à ce moment-là et pas avant.
+   * Entities cited by “@” in the text. Empty/absent = no
+   * mentions at all (the composers excluding Numo). The list may come later
+   * hit: `onMentionQuery` notifies the host as soon as a mention is typed, which
+   * let him charge it at that moment and not before.
    */
   mentionables?: MentionOption[];
   onMentionQuery?: (active: boolean) => void;
   /**
-   * Les commandes « / » proposées quand le message COMMENCE par un slash.
-   * Vide/absent = pas de menu slash du tout (les composers hors du shell Numo).
-   * Choisir une commande la pose en pilule non éditable en tête du message ;
-   * son id canonique part avec l'envoi (4e argument d'`onSend`).
+   * The “/” commands offered when the message STARTS with a slash.
+   * Empty/absent = no slash menu at all (composers outside the Numo shell).
+   * Choose a command and place it as a non-editable pill at the top of the message;
+   * its canonical id leaves with the sending (4th argument of `onSend`).
    */
   commands?: SlashCommandOption[];
   /**
@@ -168,22 +168,22 @@ interface ChatInputProps {
    */
   leadingControls?: ReactNode;
   /**
-   * Liseré animé « réponse en cours » autour de la surface (même effet que les
-   * cartes d'issue). Le chat Numo et la conversation de l'agent l'activent tant
-   * qu'une réponse se génère.
+   * Animated “response in progress” border around the surface (same effect as the
+   * exit cards). Numo chat and agent chat activates it so much
+   * that a response is generated.
    */
   beam?: boolean;
   /**
-   * Pendant une réponse en cours (`isStreaming`), autorise l'ENVOI : le bouton Stop
-   * n'apparaît que si l'input est vide ; dès qu'on tape, il devient un bouton
+   * During a response in progress (`isStreaming`), authorizes SEND: the Stop button
+   * only appears if the input is empty; as soon as you type, it becomes a button
    * d'envoi. L'agent conversationnel l'active (envoyer = interrompre + steerer en
-   * priorité). Défaut : off (le chat Numo garde Stop tant qu'il génère).
+   * priority). Default: off (Numo cat keeps Stop as long as it generates).
    */
   sendWhileStreaming?: boolean;
   /**
-   * Bloque UNIQUEMENT l'envoi (saisie libre, Entrée inerte) : le bouton devient
-   * un chip inactif porteur de `sendDisabledTooltip`, qui explique quoi faire
-   * d'abord. Le composer de lancement s'en sert tant qu'aucun projet n'est
+   * ONLY blocks sending (free entry, inert entry): the button becomes
+   * an inactive chip carrying `sendDisabledTooltip`, which explains what to do
+   * First of all. The launch composer uses it as long as no project is
    * choisi.
    */
   sendDisabled?: boolean;
@@ -230,9 +230,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const { user } = useAuth();
     const userId = user?.id;
     const uploads = useAttachmentUploads(() => `chat/${userId}`, { max: 5 });
-    // L'agent accepte un message qui l'oriente pendant qu'il travaille
-    // (`sendWhileStreaming`) : ses fichiers doivent rester joignables dans ce
-    // même cas. Le chat Numo, lui, garde son bouton masqué tant qu'il génère.
+        // The agent accepts a message that steers it while it works
+    // (`sendWhileStreaming`): its files must remain reachable in this
+    // same case. The Numo cat keeps its button hidden as long as it generates.
     const canAttach = !hideAttach && (!isStreaming || !!sendWhileStreaming);
     const drop = useFileDrop((files) => {
       if (userId) uploads.addFiles(files);
@@ -250,17 +250,17 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         } else if (node.nodeType === Node.ELEMENT_NODE) {
           const element = node as HTMLElement;
 
-          // Une mention s'écrit « @Nom » dans le message même si la pilule ne
-          // montre que le nom : côté modèle, c'est l'arobase qui la signale (et
-          // c'est sur elle que la bulle re-place la pilule à la relecture).
+          // A mention is written “@Name” in the message even if the pill does not
+          // shows that the name: on the model side, it is the at sign which indicates it (and
+          // it is on it that the bubble re-places the pill on rereading).
           if (element.dataset.mentionLabel) {
             parts.push(`@${element.dataset.mentionLabel}`);
             return;
           }
 
-          // Une commande s'écrit « /libellé » — le texte que la pilule montre
-          // déjà, mais lu depuis sa donnée : le rendu peut évoluer sans changer
-          // ce qui part dans le message.
+          // A command is written “/label” — the text that the pill shows
+          // already, but read from its data: the rendering can evolve without changing
+          // what goes into the message.
           if (element.dataset.commandLabel) {
             parts.push(`/${element.dataset.commandLabel}`);
             return;
@@ -297,15 +297,15 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     }, []);
 
     // ── Mentions « @ » ──────────────────────────────────────────────
-    // La requête se lit dans le NŒUD TEXTE sous le caret : c'est le seul
-    // endroit où « @quelque chose » est encore en train de s'écrire. Les
-    // mentions déjà posées sont des <span contenteditable=false> — le caret ne
-    // rentre pas dedans, elles s'effacent d'un bloc, et elles ne peuvent donc
-    // pas être relues comme une requête en cours.
+    // The request is read in the TEXT NODE under the caret: it is the only
+    // place where “@something” is still being written. THE
+    // mentions already asked are <span contenteditable=false> — the caret does not
+    // do not fit in, they disappear as a whole, and they therefore cannot
+    // not be read back as a current query.
     const [mentionQuery, setMentionQuery] = useState<string | null>(null);
     const [mentionIndex, setMentionIndex] = useState(0);
-    // Les enveloppes présentes dans l'éditeur, relues DEPUIS LE DOM : c'est lui
-    // qui fait foi (une annulation ⌘Z rend un nœud que React ne suivait plus).
+    // The envelopes present in the editor, reread FROM THE DOM: it’s him
+    // which is authentic (a ⌘Z cancellation returns a node that React was no longer following).
     const [mentionSlots, setMentionSlots] = useState<
       Array<{ el: HTMLElement; option: MentionOption }>
     >([]);
@@ -339,7 +339,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       if (!el.contains(node)) return null;
       const end = sel.anchorOffset;
       const before = (node.textContent ?? "").slice(0, end);
-      // Un « @ » en début de mot uniquement — pas celui d'une adresse e-mail.
+      // An “@” at the beginning of a word only — not that of an email address.
       const match = /(^|[\s ])@([^\s @]{0,30})$/.exec(before);
       if (!match) return null;
       return {
@@ -363,9 +363,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       Math.max(0, mentionOptions.length - 1),
     );
 
-    // Le passage « on tape une mention » ↔ « on n'en tape plus » se signale une
-    // seule fois à l'hôte (il s'en sert pour charger la liste au bon moment) :
-    // d'où le miroir, plutôt qu'un effet caché dans un updater de state.
+    // The passage “we type a mention” ↔ “we type no more” indicates a
+    // once to the host (it uses it to load the list at the right time):
+    // hence the mirror, rather than a hidden effect in a state updater.
     const mentionActiveRef = useRef(false);
     const refreshMention = useCallback(() => {
       const next = readMention()?.query ?? null;
@@ -377,7 +377,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       }
     }, [readMention, onMentionQuery]);
 
-    // La requête change → on repart de la première suggestion.
+    // The request changes → we start from the first suggestion.
     useEffect(() => setMentionIndex(0), [mentionQuery]);
 
     const insertMention = useCallback(
@@ -402,8 +402,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         pill.className = MENTION_SLOT_CLASS;
         range.insertNode(pill);
 
-        // Espace insécable après la pilule : sans lui, le caret se retrouve
-        // collé à un nœud non éditable et la frappe suivante repart de travers.
+        // Unbreakable space after the pill: without it, the caret finds itself
+        // stuck to an uneditable node and the next keystroke goes wrong.
         const space = document.createTextNode(" ");
         pill.after(space);
 
@@ -425,7 +425,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       [readMention, onMentionQuery, syncMentionSlots],
     );
 
-    /** Les mentions réellement posées dans le texte, dédoublonnées. */
+    /** The mentions actually made in the text, duplicated. */
     const collectMentions = useCallback((): AssistantMention[] => {
       const el = editorRef.current;
       if (!el) return [];
@@ -450,10 +450,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     }, []);
 
     // ── Commandes « / » ─────────────────────────────────────────────
-    // Le menu ne vit que tant que le message ENTIER est « /requête » : une
-    // seule ligne de texte nu, pas de pilule déjà posée. La détection se relit
-    // donc depuis l'éditeur complet — pas depuis le caret comme les mentions :
-    // une commande n'existe qu'en tête de message.
+    // The menu only lives as long as the ENTIRE message is “/request”: a
+    // single line of bare text, no pill already placed. The detection is read again
+    // so from the full editor — not from the caret like the mentions:
+    // a command only exists at the top of the message.
     const [slashQuery, setSlashQuery] = useState<string | null>(null);
     const [slashIndex, setSlashIndex] = useState(0);
 
@@ -461,9 +461,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       if (!commands?.length) return null;
       const el = editorRef.current;
       if (!el) return null;
-      // Que des nœuds texte — pas de pilule déjà posée, pas de retour à la
-      // ligne. Le <br> que le navigateur laisse parfois traîner en fin
-      // d'éditeur ne compte pas ; ailleurs, c'est un vrai saut de ligne.
+      // Only text nodes — no pill already placed, no return to the
+      // line. The <br> that the browser sometimes leaves hanging at the end
+      // publisher does not count; elsewhere, it's a real line break.
       const nodes = [...el.childNodes];
       const last = nodes[nodes.length - 1];
       if (last instanceof HTMLElement && last.tagName === "BR") nodes.pop();
@@ -472,8 +472,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       return text.startsWith("/") ? text.slice(1) : null;
     }, [commands]);
 
-    // Relue sur la frappe uniquement : Échap ferme le menu, et il ne se rouvre
-    // qu'au prochain caractère tapé — pas au moindre déplacement du caret.
+    // Reread on typing only: Escape closes the menu, and it does not reopen
+    // only at the next character typed — not at the slightest movement of the caret.
     const refreshSlash = useCallback(() => {
       const next = readSlash();
       setSlashQuery((prev) => (prev === next ? prev : next));
@@ -492,15 +492,15 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       Math.max(0, slashOptions.length - 1),
     );
 
-    // La requête change → on repart de la première commande.
+    // The query changes → we start from the first command.
     useEffect(() => setSlashIndex(0), [slashQuery]);
 
     const insertCommand = useCallback((option: SlashCommandOption) => {
       const el = editorRef.current;
       if (!el) return;
-      // Le composer ne contient que « /requête » (condition d'ouverture du
-      // menu) : tout est remplacé par la pilule, suivie de l'espace insécable
-      // qui rend un nœud éditable au caret — même geste que les mentions.
+      // The composer only contains “/request” (condition for opening the
+      // menu): everything is replaced by the pill, followed by the non-breaking space
+      // which makes a node editable with caret — same gesture as the mentions.
       el.innerHTML = "";
       const pill = document.createElement("span");
       pill.contentEditable = "false";
@@ -525,7 +525,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       setIsEmpty(false);
     }, []);
 
-    /** La commande réellement posée en tête du message, s'il y en a une. */
+    /** The command actually placed at the top of the message, if there is one. */
     const collectCommand = useCallback((): AssistantCommandId | undefined => {
       const node =
         editorRef.current?.querySelector<HTMLElement>("[data-command-id]");
@@ -538,10 +538,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       onSend(value, uploads.inputs, collectMentions(), collectCommand());
       clearEditor();
       uploads.clear();
-      // Le caret reste dans le composer après l'envoi. Sans ça le focus s'échappe
-      // (vider un contentEditable le perd ; cliquer Envoyer focus un bouton qui
-      // disparaît juste après), et dans le panneau Numo le FocusScope du Sheet le
-      // rapatriait sur la coquille — d'où un halo de focus autour du panneau.
+      // The caret remains in the composer after sending. Without that the focus escapes
+      // (emptying a contentEditable loses it; clicking Send focuses a button which
+      // disappears just after), and in the Numo panel the FocusScope of the Sheet the
+      // repatriated to the shell — hence a halo of focus around the panel.
       editorRef.current?.focus();
       setMentionQuery(null);
     }, [
@@ -557,7 +557,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {
-        // Menu slash ouvert : même contrat clavier que la liste de mentions.
+        // Open slash menu: same keyboard contract as the list of mentions.
         if (slashOpen) {
           if (e.key === "ArrowDown" || e.key === "ArrowUp") {
             e.preventDefault();
@@ -579,8 +579,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             return;
           }
         }
-        // Liste de mentions ouverte : les flèches et Entrée lui appartiennent —
-        // sinon le caret sortirait de la requête (ou le message partirait).
+        // List of mentions open: the arrows and Enter belong to it —
+        // otherwise the caret would exit the request (or the message would leave).
         if (mentionOpen) {
           if (e.key === "ArrowDown" || e.key === "ArrowUp") {
             e.preventDefault();
@@ -604,14 +604,14 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             return;
           }
         }
-        // ⌘/Ctrl + Entrée ENVOIE ; Entrée seule passe à la ligne. Ce composer
-        // n'est pas un champ de chat d'une ligne : on y écrit une consigne de
-        // plusieurs phrases, on y cite des tickets, on y colle un bout de log —
-        // et Entrée partait au milieu d'une pensée. Le contrat est le même dans
-        // les quatre surfaces qui le montent (accueil, panneau Numo, page
-        // agents, conversation d'agent), puisqu'elles montent CE composer, et le
-        // même que dans tous les autres composers de l'app (`send-shortcut`) —
-        // y compris quand le compte a mis l'envoi sur Entrée seule.
+        // ⌘/Ctrl + Enter SEND; Input only moves to line. This compose
+        // is not a one-line chat field: we write an instruction
+        // several sentences, mentions tickets, and pastes part of a log —
+        // and Entree left in the middle of a thought. The contract is the same in
+        // the four surfaces that mount it (home, Numo panel, page
+        // agents, agent conversation), since they mount CE compose, and the
+        // same as in all other composers of the app (`send-shortcut`) —
+        // including when the account has set sending to Enter only.
         if (isSend(e)) {
           e.preventDefault();
           handleSubmit();
@@ -647,12 +647,12 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     }, [refreshMention, refreshSlash, syncMentionSlots]);
 
     /**
-     * Colle uniquement le texte fourni par le presse-papiers. Les éditeurs de
-     * code (dont VS Code) fournissent souvent aussi une version `text/html`
-     * enrichie de spans et de styles ; laisser le navigateur l'insérer dans le
-     * contentEditable ferait entrer ce DOM dans le composer. Un nœud texte
-     * unique conserve les caractères markdown et les retours à la ligne, sans
-     * importer ce formatage étranger.
+     * Pastes only the text provided by the clipboard. The editors of
+     * code (including VS Code) often also provide a `text/html` version
+     * enriched with spans and styles; let the browser insert it into the
+     * contentEditable would bring this DOM into the composer. A text node
+     * unique preserves markdown characters and newlines, without
+     * import this foreign formatting.
      */
     const insertPlainText = useCallback(
       (value: string) => {
@@ -761,9 +761,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       }
     }, [noBorder]);
 
-    // Pré-remplissage one-shot (montage) : on écrit le texte initial, caret en
-    // fin, prêt à être édité — le composer de lancement d'agent s'en sert pour
-    // pré-écrire « Travaille sur MIN-42 ».
+    // One-shot pre-filling (editing): we write the initial text, caret in
+    // fine, ready for editing — the Agent Launch Composer uses this to
+    // pre-write “Works on MIN-42”.
     useEffect(() => {
       const el = editorRef.current;
       if (!initialValue || !el) return;
@@ -778,7 +778,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         sel.removeAllRanges();
         sel.addRange(range);
       }
-      // Volontairement au montage uniquement (pas de resync sur changement).
+      // Intentionally during editing only (no resync on change).
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -800,10 +800,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         const target = e.target as HTMLElement;
         if (editorRef.current?.contains(target)) return;
         if (target.closest("button, a, input, textarea, select")) return;
-        // Un menu porté hors du composer (le popover d'ajout de contexte) reste
-        // son ENFANT React : ses événements remontent jusqu'ici. Sans ce
-        // garde-fou, cliquer une entrée du menu rendait le focus à l'éditeur —
-        // et Radix, voyant le focus partir, refermait le menu aussitôt.
+        // A menu carried outside of the composer (the context addition popover) remains
+        // his CHILD React: his events go back so far. Without this
+        // guardrail, clicking a menu entry returned focus to the editor —
+        // and Radix, seeing the focus leave, closed the menu immediately.
         if (target.closest('[data-slot="popover-content"], [role="dialog"]')) return;
         e.preventDefault();
         focusEditorAtEnd();
@@ -820,9 +820,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         )}
         onMouseDown={handleContainerMouseDown}
       >
-        {/* Chaque mention posée dans le texte reçoit SA pilule, portée dans son
-            enveloppe : même composant que dans la bulle envoyée, donc jamais
-            deux dessins à faire vivre en parallèle. */}
+        {/* Each mention placed in the text receives ITS pill, carried in its
+ envelope: same component as in the bubble sent, so never
+ two drawings to live in parallel. */}
         {mentionSlots.map(({ el, option }, index) =>
           createPortal(
             <MentionChip
@@ -835,14 +835,13 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               color={option.color}
             />,
             el,
-            // Deux mentions de la MÊME personne dans un message : la clé prend
-            // le rang, sinon React en verrait deux fois la même.
+            // Two mentions of the SAME person in a message: the key takes
+            // the rank, otherwise React would see the same thing twice.
             `${option.type}:${option.id}:${index}`,
           ),
         )}
-        {/* La liste de mentions vit HORS de la surface du composer : celle-ci
-            est `overflow-hidden` (le liseré, la zone de dépôt), elle la
-            couperait. */}
+        {/* The list of mentions lives OUTSIDE the surface of the composer: this one
+ is `overflow-hidden` (the border, the drop zone), it would cut it. */}
         {mentionOpen && (
           <MentionSuggestions
             options={mentionOptions}
@@ -852,10 +851,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             className="left-3"
           />
         )}
-        {/* Le menu slash partage la place (et les raisons d'être hors de la
-            surface) de la liste de mentions ; les deux ne peuvent pas être
-            ouverts en même temps — l'un exige un « / » en tête de message nu,
-            l'autre un « @ » en cours de frappe. */}
+        {/* The slash menu shares the place (and reasons for being out of the
+ surface) of the mentions list; both cannot be opened at the same time — one requires a "/" at the top of the message, and the other requires a "@" while typing. */}
         {slashOpen && (
           <SlashMenu
             options={slashOptions}
@@ -865,10 +862,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             className="left-3"
           />
         )}
-        {/* `keepMounted` : le composer ne doit JAMAIS être remonté quand le liseré
-            s'allume ou s'éteint — sinon l'éditeur perd le focus (le FocusScope du
-            Sheet le repose alors sur la coquille) et le texte tapé pendant la
-            réponse disparaît. */}
+        {/* `keepMounted`: the dial must NEVER be reassembled when the border
+ turns on or off — otherwise the editor loses focus (the FocusScope of the
+ Sheet then rests it on the shell) and the text typed during the
+ response disappears. */}
         {contextSlot && contextPlacement === "above" ? (
           <div className="relative z-0 mx-3 -mb-7 flex min-h-[70px] items-start rounded-t-[1.5rem] bg-muted/60 px-2 pt-2 dark:bg-muted/35">
             {contextSlot}
@@ -887,13 +884,13 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           {...(canAttach ? drop.handlers : {})}
         >
           <DropOverlay show={canAttach && drop.dragging} />
-          {/* Rangée de contexte (pilules + bouton @), fournie par l'hôte. Elle
-              défile à l'horizontale et garde donc sa propre rangée : les
-              pièces jointes, elles, s'empilent en dessous. Emboîtement
-              concentrique : la surface est en rounded-2xl (--radius-2xl =
-              --radius + 8px = 24px), donc une pilule en rounded-md
-              (--radius - 2px = 14px) + les 10px (p-2.5) qui la séparent du
-              bord === 24px. */}
+          {/* Context row (pills + @ button), provided by the host. She
+ scrolls horizontally and therefore keeps its own row: the
+ attachments are stacked below. Concentric
+ nesting: the surface is rounded-2xl (--radius-2xl =
+ --radius + 8px = 24px), so a pill in rounded-md
+ (--radius - 2px = 14px) + the 10px (p-2.5) which separate it du
+ edge === 24px. */}
           {contextPlacement === "inside" ? contextSlot : null}
           {uploads.pending.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 px-2.5 pt-2.5">
@@ -922,8 +919,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               suppressContentEditableWarning
               onInput={handleInput}
               onKeyDown={handleKeyDown}
-              // Le caret peut sortir d'une requête « @ » sans que le texte
-              // change (flèches, clic) : on relit après coup.
+              // The caret can exit an “@” query without the text
+              // change (arrows, click): we reread afterwards.
               onKeyUp={(e) => {
                 if (
                   ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(
@@ -937,7 +934,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               onFocus={() => setIsFocused(true)}
               onBlur={() => {
                 setIsFocused(false);
-                // Léger différé : le clic sur une suggestion se joue avant.
+                // Slight delay: clicking on a suggestion occurs before.
                 setTimeout(() => {
                   setMentionQuery(null);
                   setSlashQuery(null);
@@ -950,9 +947,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           </div>
 
           <div className="flex items-center justify-between gap-2 px-2 pb-2 pt-1">
-            {/* Les fichiers sont une propriété du message, pas du modèle : dans
-                l'agent ils précèdent donc le sélecteur de modèle, comme demandé
-                par MIN-369. */}
+            {/* Files are a property of the message, not the template: in
+ the agent therefore precedes the template selector, as requested
+ by MIN-369. */}
             <div className="flex min-w-0 items-center gap-1.5">
               {canAttach && (
                 <>
@@ -1003,10 +1000,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                   )}
                   {!isEmpty &&
                     (sendDisabled && sendDisabledTooltip ? (
-                      // Envoi bloqué avec explication : un <button disabled> natif
-                      // n'émet plus d'événements pointeur (le tooltip Radix ne
-                      // s'ouvrirait jamais) → même montage que le chip verrouillé
-                      // du BranchCombobox, le <span> extérieur porte le hover.
+                      // Sending blocked with explanation: a native <button disabled>
+                      // no longer emits pointer events (the Radix tooltip no longer emits
+                      // would never open) → same assembly as the locked chip
+                      // of the BranchCombobox, the outer <span> carries the hover.
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span className="inline-flex cursor-not-allowed">
@@ -1028,9 +1025,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                         disabled={(disabled ?? false) || (sendDisabled ?? false) || uploads.uploading}
                         onClick={handleSubmit}
                         ariaLabel={t("send")}
-                        // Entrée ne partant plus, le raccourci qui part doit se
-                        // lire quelque part : au survol du bouton, comme sur
-                        // tous les boutons d'envoi de l'app.
+                        // Entrance no longer leaving, the shortcut which leaves must be
+                        // read somewhere: when hovering over the button, like on
+                        // all the send buttons in the app.
                         tooltipLabel={
                           <span className="inline-flex items-center gap-1.5">
                             {t("send")}

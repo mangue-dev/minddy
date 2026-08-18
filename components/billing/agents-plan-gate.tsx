@@ -8,9 +8,9 @@ import { EmptyState } from "@/components/empty-state";
 import { usePlanGates } from "@/lib/use-billing-query";
 
 /**
- * Garde de plan des pages agents / pull requests (MIN-72, retours) : quand le
- * plan n'inclut pas les agents, la page entière est remplacée par un upsell —
- * l'accès est réellement bloqué, pas juste l'action de lancement.
+ * Plan guard of agent pages / pull requests (MIN-72, returns): when the
+ * plan does not include agents, entire page is replaced by an upsell —
+ * access is actually blocked, not just the launch action.
  */
 export function AgentsPlanGate({ children }: { children: React.ReactNode }) {
   const t = useTranslations("Billing");

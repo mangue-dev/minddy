@@ -7,16 +7,14 @@ const { parseResourcesInput, MAX_ATTACHMENTS_PER_ENTITY } = await import(
 );
 
 /**
- * MIN-184 — `parseResourcesInput` est la porte d'entrée des descripteurs que le
- * CLIENT compose. Rien de ce qui la franchit n'a été vu par le serveur ailleurs :
- * un chemin de storage y désigne un objet qu'on va rattacher à une entité, une
- * URL y devient un `href` sur lequel quelqu'un cliquera, un data URI y devient
- * le `src` d'une balise `<img>`.
+ * MIN-184 — `parseResourcesInput` is the gateway to the descriptors that the
+ * CLIENT composes. Nothing that crosses it has been seen by the server elsewhere:
+ * a storage path designates an object that we will attach to an entity, a
+ * URL becomes a `href` on which someone will click, a data URI becomes
+ * the `src` of a tag `<img>`.
  *
- * D'où la forme du contrat : elle rend `null` — jamais une liste amputée — dès
- * qu'UNE entrée cloche. Une validation qui jette silencieusement l'entrée fautive
- * enregistrerait le reste comme si de rien n'était, et personne ne verrait qu'il
- * manque quelque chose.
+ * Hence the form of the contract: it makes `null` — never an amputated list — as soon as ONE entry goes wrong. A commit that silently throws away the offending entry
+ * would log the rest as if nothing happened, and no one would see that something is missing.
  */
 
 const PREFIX = "projects/11111111-1111-4111-8111-111111111111/";
@@ -174,8 +172,8 @@ describe("parseResourcesInput — une page (MIN-275)", () => {
   });
 
   it("refuse une page qui porte AUSSI une url ou un chemin de storage", () => {
-    // Les trois formes s'excluent : accepter les deux laisserait passer une
-    // ligne que la contrainte SQL refuserait de toute façon, mais en 500.
+    // The three forms are mutually exclusive: accepting both would miss one
+    // line that the SQL constraint would refuse anyway, but in 500.
     expect(
       parseResourcesInput([page({ url: "https://exemple.com" })], PREFIX)
     ).toBeNull();

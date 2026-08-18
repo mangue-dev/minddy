@@ -1,9 +1,9 @@
 /**
- * Capacités opérées par minddy, séparées du cœur auto-hébergé.
+ * Capabilities operated by minddy, separate from the self-hosted core.
  *
- * Les drapeaux sont volontairement opt-in : une instance qui copie des secrets
- * ou utilise une clé OpenRouter pour ses propres besoins ne doit pas commencer
- * à servir un quota ou une facturation minddy sans décision explicite.
+ * Flags are voluntarily opt-in: an instance that copies secrets
+ * or uses an OpenRouter key for its own purposes should not start
+ * serving minddy quota or billing without a decision explicit.
  */
 export interface ManagedServiceEnvironment {
   [key: string]: string | undefined;
@@ -27,7 +27,7 @@ function enabled(value: string | undefined): boolean {
   return value === "1";
 }
 
-/** Tous les paramètres Stripe réellement utilisés par Checkout et le webhook. */
+/** All Stripe settings actually used by Checkout and the webhook. */
 export function hasManagedBillingConfiguration(env: ManagedServiceEnvironment): boolean {
   return Boolean(
     env.STRIPE_SECRET_KEY &&

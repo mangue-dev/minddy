@@ -23,10 +23,10 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const t = await getTranslations("ApiErrors");
 
   const service = getServiceClient();
-  // Un seul lot parallèle : projet (owner + deleted_at), membres, invitations.
-  // L'accès se déduit du projet + de la liste de membres déjà chargée — plus de
-  // second SELECT project_members (ce que faisait getProjectAccess), et plus de
-  // phase séquentielle avant les reads.
+  // A single parallel batch: project (owner + deleted_at), members, invitations.
+  // Access is deduced from the project + the list of members already loaded — more than
+  // second SELECT project_members (what getProjectAccess did), and more
+  // sequential phase before the reads.
   const [{ data: project }, { data: memberRows }, { data: inviteRows }] =
     await Promise.all([
       service
@@ -41,20 +41,20 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
         .order("created_at", { ascending: true }),
       service
         .from("project_invitations")
-        // Sans `invited_user_id` : le rendre au client dirait quelles adresses
-        // ont un compte minddy (cf. le type `Invitation`).
+        // Without `invited_user_id`: returning it to the client would say which addresses
+        // have a minddy account (see the `Invitation` type).
         .select("id, project_id, invited_email, status, created_at")
         .eq("project_id", id)
         .eq("status", "pending")
-        // Les périmées sortent de la liste comme elles sortent du décompte de
-        // `ensureMemberSlotAvailable` : le compteur d'invités de l'écran se
-        // calcule sur CETTE liste (`project-members.tsx`), les deux doivent
-        // compter la même chose ou le formulaire se désarme pour rien.
+        // Expired items leave the list as they leave the counting of
+        // `ensureMemberSlotAvailable`: the guest counter on the screen is
+        // calculates on THIS list (`project-members.tsx`), both must
+        // count the same thing or the form disarms for nothing.
         .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false }),
     ]);
 
-  // Accès = projet vivant ET (propriétaire OU présent dans la liste de membres).
+  // Access = living project AND (owner OR present in the members list).
   if (!project || project.deleted_at) {
     return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
   }
@@ -96,18 +96,18 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   });
 }
 
-/** POST /api/projects/[id]/members — owner invites by email. L'adresse n'a pas
-    besoin d'avoir un compte minddy (MIN-197) : un email d'invitation part, et
-    l'inscription depuis ce lien rattache la personne au projet. */
+/** POST /api/projects/[id]/members — owner invites by email. The address does not require
+ to have a minddy account (MIN-197): an invitation email goes out, and
+ registration from this link attaches the person to the project. */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
-  // 20/min et pas les 60 par défaut. Ce que la route écrit se compte sur les
-  // doigts : le plan plafonne à 2 invités (Free) ou 5 (Go), et même un projet
-  // Pro qui embarque toute une équipe le fait à la main, un formulaire à la
-  // fois — 20 par minute, c'est déjà une invitation toutes les 3 secondes sans
-  // relâche. Au-delà, ce n'est plus quelqu'un qui invite.
+  // 20/min and not the default 60. What the road writes is counted on the
+  // fingers: the plan caps at 2 guests (Free) or 5 (Go), and even a project
+  // Professional who has an entire team doing it by hand, one form to the
+  // times — 20 per minute, that's already an invitation every 3 seconds without
+  // released. Beyond that, it is no longer someone who invites.
   const rl = checkSessionRateLimit(auth.user.id, "project-members-write", {
     limit: 20,
   });
@@ -130,19 +130,19 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     projectId: id,
     actorId: auth.user.id,
     email: (body as { email?: unknown })?.email,
-    // Le lien du mail doit ramener sur CE déploiement (dev, preview, prod) —
-    // sinon un test en local envoie l'invité sur la production. Il se lit dans
-    // l'ENVIRONNEMENT et pas dans la requête (MIN-351) : `X-Forwarded-Host` est
-    // choisi par l'appelant, et le jeton d'acceptation partait donc vers le
-    // domaine que celui-ci désignait, dans un e-mail expédié par nous.
+    // The email link must return to THIS deployment (dev, preview, prod) —
+    // otherwise a local test sends the guest to production. It is read in
+    // the ENVIRONMENT and not in the request (MIN-351): `X-Forwarded-Host` is
+    // chosen by the caller, and the acceptance token therefore went to the
+    // domain that it designated, in an e-mail sent by us.
     origin: canonicalAppOrigin(),
-    // On ne connaît pas la langue de l'invité : on prend celle de l'invitant,
-    // qui est la personne dont il attend le message.
+    // We do not know the language of the guest: we take that of the inviter,
+    // who is the person from whom he expects the message.
     locale: (await getLocale()) === "fr" ? "fr" : "en",
   });
   if (!result.ok) {
-    // `errorParams` porte le `{limit}` de `memberLimitReached` : un message à
-    // placeholder appelé sans ses valeurs afficherait son chemin de clé.
+    // `errorParams` carries the `{limit}` of `memberLimitReached`: a message to
+    // placeholder called without its values ​​would display its key path.
     return NextResponse.json(
       { error: t(result.errorKey, result.errorParams) },
       { status: result.status }

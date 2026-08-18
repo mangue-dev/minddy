@@ -11,8 +11,8 @@ describe("readAnalyzeOption", () => {
     expect(readAnalyzeOption(false)).toEqual({ ok: true, analyze: false });
   });
 
-  // Aucune coercition : ces valeurs-là sont des bugs d'intégration, pas des
-  // intentions à deviner — et se tromper publie du non-modéré sur un board public.
+  // No coercion: these values ​​are integration bugs, not
+  // intentions to guess — and being wrong publishes unmoderated material on a public board.
   it.each([["false"], ["true"], [0], [1], [null], [{}], [[]], ["yes"], ["no"]])(
     "rejects %p",
     (value) => {

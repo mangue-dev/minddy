@@ -47,17 +47,17 @@ export type AssistantToolDef = {
   };
 };
 
-/** Ce qu'un corps de page accepte, dit là où le modèle le lit — la même prose
-    que côté MCP (lib/server/mcp/page-tools.ts) : c'est le seul mode d'emploi de
-    la syntaxe, et un lien de sous-page ne se devine pas. */
+/** What a page body accepts, says where the model reads it — the same prose
+ as on the MCP side (lib/server/mcp/page-tools.ts): this is the only way to use the
+ syntax, and a subpage link cannot be guessed. */
 /**
- * Les IMAGES et les FICHIERS d'une page (MIN-280), dits au modèle en trois
- * phrases parce qu'il ne peut pas les deviner et qu'il en détruirait sans le
- * savoir : `update_page` remplace le corps ENTIER, donc une ligne d'image qu'on
- * n'a pas recopiée est un fichier détaché de son document.
+ * IMAGES and FILES of a page (MIN-280), said to the model in three
+ * sentences because it cannot guess them and would destroy some without the
+ * namely: `update_page` replaces the ENTIRE body, therefore one line of image that one
+ * has not copied is a file detached from its document.
  *
- * La même prose sur les trois surfaces (MCP, Numo, agent de code), comme le
- * reste du mode d'emploi de la syntaxe.
+ * The same prose on the three surfaces (MCP, Numo, code agent), like the
+ * remains of the instructions for using the syntax.
  */
 const PAGE_FILES_DESCRIPTION =
   "An image reads '![caption](url)' and a file '[name](url)' — those are REAL " +
@@ -511,12 +511,12 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     },
   },
 
-  // ── Pages : le wiki du projet (MIN-273) ─────────────────────────────────
+  // ── Pages: the project wiki (MIN-273) ─────────────────────────────────
   //
-  // Le même jeu de six gestes que sur le MCP, et pour la même raison : un
-  // ticket dit quoi faire, une page dit pourquoi c'est comme ça. Les deux
-  // écritures chirurgicales (append, edit) existent ici aussi — sans elles,
-  // corriger une phrase coûte le document entier.
+  // The same set of six gestures as on the MCP, and for the same reason: a
+  // ticket says what to do, a page says why it's like that. Both
+  // surgical writings (append, edit) exist here too — without them,
+  // correcting a sentence costs the entire document.
   {
     type: "function",
     function: {
@@ -1883,9 +1883,9 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
               "How much the agent reasons before acting, FOR THIS RUN ONLY. Pass it only when the user asks for it on this run ('réfléchis bien', 'vite fait') — otherwise omit it and their account default applies. To change that default, use update_account_settings (default_reasoning_level).",
           },
         },
-        // `mode` est REQUIS : sur un petit modèle, un champ optionnel n'est
-        // simplement pas rempli — le choix du job serait alors toujours 'custom'
-        // par défaut, et les trois consignes natives ne serviraient jamais.
+        // `mode` is REQUIRED: on a small model, an optional field is not
+        // simply not filled in — the choice of job would then always be 'custom'
+        // by default, and the three native instructions would never be used.
         required: ["mode"],
       },
     },
@@ -1896,10 +1896,10 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "create_routine",
       description: CREATE_ROUTINE_DESCRIPTION,
-      // `project_id` n'est pas déclaré ici : en mode global, `buildGlobalTools`
-      // l'injecte et le rend REQUIS pour tous les tools de projet ; en mode
-      // projet, il vient de la conversation. Le déclarer en double ferait
-      // apparaître deux fois la même clé dans `required`.
+      // `project_id` is not declared here: in global mode, `buildGlobalTools`
+      // inject it and make it REQUIRED for all project tools; in fashion
+      // project, it comes from the conversation. Declaring it duplicate would
+      // appear twice the same key in `required`.
       parameters: CREATE_ROUTINE_PARAMETERS,
     },
   },
@@ -1958,8 +1958,8 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
               "The pull request: its number ('42'), '#42', '!42' for a GitLab merge request, or its full URL on the forge.",
           },
         },
-        // Les DEUX sont requis : sur un petit modèle, un champ optionnel n'est
-        // pas rempli, et un rattachement à moitié désigné n'a aucun sens.
+        // BOTH are required: on a small model, an optional field is not
+        // not filled, and a half-designated attachment makes no sense.
         required: ["issue_id", "pull_request"],
       },
     },

@@ -48,9 +48,9 @@ export function useMyCycleQuery() {
   const { data } = useQuery({
     queryKey: MY_CYCLE_KEY,
     queryFn: fetchMyCycleApi,
-    // Le topic `user:` diffuse déjà chaque changement de `cycles` vers cette clé
-    // (lib/use-my-cycle-query en-tête) : le défaut global de 5 min suffit, le
-    // rattrapage à 30 s ne servait qu'à couvrir un pont incomplet (MIN-89).
+    // The topic `user:` already broadcasts each change from `cycles` to this key
+    // (lib/use-my-cycle-query header): the global default of 5 min is enough, the
+    // catch-up at 30 s only served to cover an incomplete bridge (MIN-89).
     enabled,
   });
 

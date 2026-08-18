@@ -3,22 +3,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createControlPlaneClient } from "./control-plane-client";
 
 /**
- * MIN-355 — LE JETON SUR LES DEUX FETCH, et pas seulement sur celui qu'on regarde.
+ * MIN-355 — THE TOKEN ON BOTH FETCH, and not just the one we are looking at.
  *
- * Ce module pose ses en-têtes à DEUX endroits : `request()`, qui sert tout, et
- * `emitLive`, qui a son propre `fetch` détaché au `catch` vide parce qu'il tire
- * quatre fois par seconde. Le jeton posé sur le premier et oublié sur le second
- * donne un tour qui aboutit, un fil qui ne stream plus pendant des heures, et zéro
- * erreur nulle part — la panne la plus difficile à voir de tout le chemin local.
+ * This module places its headers in TWO places: `request()`, which serves everything, and
+ * `emitLive`, which has its own `fetch` detached from the empty `catch` because it draws
+ * four times per second. The token placed on the first and forgotten on the second
+ * results in a successful turn, a thread that no longer streams for hours, and zero
+ * errors anywhere — the hardest failure to see on the entire local path.
  *
- * D'où un test qui ne teste presque rien d'autre.
+ * Hence a test that tests almost nothing else.
  */
 
 const ORIGIN = "https://minddy.test";
 
-/** Ce qu'un appel a réellement envoyé — l'URL et les en-têtes, rien d'autre. */
+/** What a call actually sent — the URL and headers, nothing else. */
 let calls: Array<{ url: string; headers: Record<string, string> }> = [];
-/** Ce que le plan de contrôle répond. Réglable par test ; `{ ok: true }` sinon. */
+/** What the control plane responds to. Adjustable by test; `{ ok: true }` otherwise. */
 let reply: { status: number; body: unknown } = { status: 200, body: { ok: true } };
 
 beforeEach(() => {
@@ -67,8 +67,8 @@ describe("le client du plan de contrôle, sur une machine", () => {
   });
 
   it("RELIT le jeton à chaque appel — c'est par là que passera le renouvellement", async () => {
-    // Un jeton dure quinze minutes, un tour des heures : une chaîne figée à la
-    // construction du client condamnerait le tour à sa première expiration.
+    // A token lasts fifteen minutes, a turn of hours: a chain frozen at the
+    // building the client would doom the round on its first expiration.
     let token = "premier";
     const cp = createControlPlaneClient(ORIGIN, () => token);
     await cp.emit("status", {});
@@ -81,14 +81,14 @@ describe("le client du plan de contrôle, sur une machine", () => {
   });
 
   /**
-   * MIN-357 — LA CLÉ DU MODÈLE N'A AUCUN REPLI, contrairement à sa voisine
-   * `repoAuthUrl` (qui retombe sur le token que le job porte déjà).
-   *
-   * Il n'y a aucune clé ailleurs, et il ne doit pas y en avoir : un échec ici veut
-   * dire « ce déploiement ne sait pas plafonner », et la seule conduite juste est
-   * que le tour ne parte pas. La seule exception est `key: null`, contrat
-   * explicite d'un endpoint local sans authentification.
-   */
+ * MIN-357 — THE MODEL KEY HAS NO FALLBACK, unlike its neighbor
+ * `repoAuthUrl` (which falls on the token that the job already carries).
+ *
+ * There is no key elsewhere, and there should not be: a failure here wants
+ * to say “this deployment does not know how to cap”, and the only correct behavior is
+ * that the turn does not start. The only exception is `key: null`, explicit contract
+ * of a local endpoint without authentication.
+ */
   it("rend la clé du tour local, ou null quand l'endpoint n'en demande pas", async () => {
     const cp = createControlPlaneClient(ORIGIN, () => "jeton-du-bail");
     reply = { status: 200, body: { key: "sk-or-v1-clef-du-run", capUsd: 3 } };
@@ -98,20 +98,20 @@ describe("le client du plan de contrôle, sur une machine", () => {
     reply = { status: 200, body: { key: null } };
     await expect(cp.llmKey()).resolves.toBeNull();
 
-    // Un 200 sans clé serait une faute de chez nous : sans ce refus, elle devient
-    // un `authorization` vide et un 401 du fournisseur qui ne dit rien.
+    // A 200 without a key would be a fault on our part: without this refusal, it becomes
+    // an empty `authorization` and a 401 from the provider which says nothing.
     reply = { status: 200, body: { capUsd: 3 } };
     await expect(cp.llmKey()).rejects.toThrow(/no key/);
 
-    // Un refus n'est pas retenté (403), et il remonte tel quel : c'est ce texte
-    // que le rapport de fin de tour portera.
+    // A refusal is not retried (403), and it goes back as is: this is the text
+    // that the end of turn report will carry.
     reply = { status: 403, body: { error: "a microVM gets its model key from the firewall" } };
     await expect(cp.llmKey()).rejects.toThrow(/firewall/);
   });
 
   it("garde le `content-type` là où il y a un corps, et nulle part ailleurs", async () => {
-    // La fusion des en-têtes est le genre de refactor qui perd un champ en
-    // silence : le plan de contrôle refuserait alors le JSON qu'on lui envoie.
+    // Merging headers is the kind of refactor that loses a field in
+    // silence: the control plane would then refuse the JSON sent to it.
     const cp = createControlPlaneClient(ORIGIN, () => "t");
     await cp.emit("status", {});
     await cp.checkInterrupt();

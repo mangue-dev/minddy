@@ -5,29 +5,29 @@ vi.mock("server-only", () => ({}));
 const { joinedPage, resourceSummary } = await import("./resource-select");
 
 /**
- * MIN-275 — la forme sous laquelle un AGENT lit une ressource.
+ * MIN-275 — the form in which an AGENT reads a resource.
  *
- * Ce n'est pas de la cosmétique de champ : cette forme est la seule chose qui
- * dise à Numo, au MCP et à l'agent de code qu'une ressource peut être une PAGE
- * du wiki. Elle a été écrite trois fois (le ticket, les objectifs du chat, le
- * MCP) avant d'être écrite une — et c'est exactement de cette dispersion que
- * venait le trou : deux des trois copies ne connaissaient que les fichiers et
- * les liens, et un modèle apprend la forme qu'on lui montre.
+ * This is not field cosmetics: this form is the only thing that
+ * tells Numo, the MCP and the code agent that a resource can be a PAGE
+ * from the wiki. It was written three times (the ticket, the chat objectives, the
+ * MCP) before being written once — and it is exactly from this dispersion that
+ * the hole came: two of the three copies only knew the files and
+ * the links, and a model learned the form shown to it.
  *
- * Ce que ce fichier tient, donc :
+ * What this file holds, therefore:
  *
- *  - une page rend `page_id` ET un titre, celui de la JOINTURE — sans quoi une
- *    page renommée garderait son ancien nom sur tous les tickets qui la citent ;
- *  - un fichier ne rend jamais son contenu : nom, type, taille, et rien de plus ;
- *  - la jointure PostgREST arrive tantôt en objet, tantôt en tableau, et les
- *    deux se lisent pareil.
+ * - a page returns `page_id` AND a title, that of the JOIN — otherwise a renamed
+ * page would keep its old name on all the tickets which cite it;
+ * - a file never returns its content: name, type, size, and nothing more;
+ * - the PostgREST join arrives sometimes as an object, sometimes as an array, and the
+ * both read the same.
  */
 
 const PAGE_ROW = {
   id: "att-1",
   kind: "page",
   page_id: "page-9",
-  // La photo prise au moment de l'attachement : elle ne sert que de secours.
+  // The photo taken at the time of attachment: it only serves as a backup.
   file_name: "Le titre d'avant",
   page: { id: "page-9", title: "Spec du board" },
 };
@@ -43,8 +43,8 @@ describe("la forme d'une ressource pour un agent", () => {
   });
 
   it("retombe sur le nom stocké quand la jointure n'a rien ramené", () => {
-    // Client de session + page corbeillée : la policy `pages_select` l'exclut,
-    // la jointure redescend vide. La pilule doit rester lisible.
+    // Session client + trashed page: the `pages_select` policy excludes it,
+    // the join comes back empty. The pill must remain legible.
     expect(resourceSummary({ ...PAGE_ROW, page: null })).toMatchObject({
       title: "Le titre d'avant",
     });
@@ -91,8 +91,8 @@ describe("la forme d'une ressource pour un agent", () => {
       mime_type: "image/png",
       size_bytes: 4096,
     });
-    // L'url interne du stockage ne sort pas : les octets passent par une URL
-    // signée, demandée à part.
+    // The internal storage URL does not go out: the bytes go through a URL
+    // signed, requested separately.
     expect(file).not.toHaveProperty("url");
   });
 });

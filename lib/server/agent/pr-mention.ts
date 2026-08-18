@@ -5,7 +5,7 @@ import { mentionsNumo } from "@/lib/server/assistant/comment-agent";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { findPullRequestByNumber, type PullRequestRow } from "./pull-requests";
 // Type seulement : l'import de valeur reste paresseux plus bas (`pr-actions`
-// tire tout le module des routes PR, et `next/server` avec lui).
+// pull the entire module from PR routes, and `next/server` with it).
 import type { PrScope } from "./pr-actions";
 import {
   claimDenialNotice,
@@ -15,67 +15,67 @@ import {
 } from "./forge-mention-guard";
 
 /**
- * `@numo` écrit DEPUIS la forge (MIN-162).
+ * `@numo` written FROM the forge (MIN-162).
  *
- * Depuis minddy, la route de commentaire voit passer le message et déclenche la
- * passe elle-même. Depuis github.com, le seul signal est l'événement
- * `issue_comment` — que le récepteur traitait déjà, mais seulement pour tracer
- * « a commenté la PR ».
+ * From minddy, the comment route sees the message and triggers the
+ * pass itself. From github.com, the only signal is the event
+ * `issue_comment` — which the receiver was already processing, but only to trace
+ * "commented the PR".
  *
- * Deux choses manquent au hook que la route a sous la main, et elles décident de
- * tout :
+ * Two things are missing from the hook that the route has on hand, and they decide to
+ * all:
  *
- *  1. **Qui paye.** Un tour de modèle se compte sur un compte minddy
- *     (`ai_usage.user_id`), et l'auteur du commentaire n'en a pas forcément un.
- *     C'est donc le OWNER d'un projet qui porte la dépense — la même règle que
- *     partout ailleurs pour un travail de fond, et le seul compte dont
- *     l'existence est garantie. C'est aussi lui qui sert à résoudre le token de
- *     forge, comme pour n'importe quelle lecture.
+ * 1. **Who pays.** A model ride is counted on a minddy
+ * account (`ai_usage.user_id`), and the author of the comment does not necessarily have one.
+ * It is therefore the OWNER of a project who bears the expense — the same rule that
+ * everywhere else for background work, and the only account whose existence
+ * is guaranteed. It is also what is used to resolve the
+ * forge token, as for any reading.
  *
- *     Ce projet se trouvait par le TICKET lié, et une PR sans ticket voyait donc
- *     sa mention ignorée. C'était un raccourci, corrigé par MIN-168 : une pull
- *     request n'appartient pas à un ticket, elle appartient à un DÉPÔT, que des
- *     projets lient (`project_git_links`) — exactement la résolution qui sert au
- *     bouton « faire vérifier par Numo ». Le ticket reste le meilleur chemin
- *     quand il existe (c'est SON projet qui est concerné) ; sans lui, on prend un
- *     projet qui lie le dépôt. Sans aucun des deux, il n'y a vraiment personne :
- *     on ne fait rien.
+ * This project was found by the linked TICKET, and a PR without a ticket therefore saw
+ * its mention ignored. This was a shortcut, corrected by MIN-168: a pull
+ * request does not belong to a ticket, it belongs to a REPOSITORY, which
+ * projects link to (`project_git_links`) — exactly the resolution that serves the
+ * "have Numo check" button. The ticket remains the best path
+ * when it exists (it is HIS project which is concerned); without it, we take a
+ * project which links the repository. Without either of these, there's really no one:
+ * we don't do anything.
  *
- *  2. **Qui a le droit de le faire payer.** Le corps du commentaire vient de la
- *     forge, où un dépôt public laisse écrire n'importe qui. L'auteur doit donc
- *     être rattachable à un membre d'un projet qui lie ce dépôt, et son
- *     déclenchement reste borné dans le temps — les deux gardes vivent dans
- *     `forge-mention-guard.ts`, qui porte aussi le pourquoi du refus par défaut.
+ * 2. **Who has the right to charge for it.** The body of the comment comes from the
+ * forge, where a public repository lets anyone write. The author must therefore
+ * be linked to a member of a project which links this repository, and its
+ * triggering remains limited in time — the two guards live in
+ * `forge-mention-guard.ts`, which also carries the reason for refusal by default.
  *
- *  3. **Si ce message vient de nous.** Un commentaire posté depuis minddy revient
- *     par webhook quelques secondes plus tard : sans garde, la passe partirait
- *     deux fois. Trois filets, du plus sûr au plus large — l'auteur est le bot de
- *     l'App (écarté par l'appelant), l'écho reconnu sur l'événement que la route
- *     vient d'écrire (`isPrActionEcho`, chez l'appelant aussi), et la session
- *     déjà ouverte sur cette PR, vérifiée au moment de démarrer.
+ * 3. **If this message comes from us.** A comment posted from minddy comes back
+ * by webhook a few seconds later: without guarding, the pass would leave
+ * twice. Three nets, from the safest to the widest — the author is the bot of
+ * the App (dismissed by the caller), the echo recognized on the event that the route
+ * has just written (`isPrActionEcho`, also at the caller), and the session
+ * already opened on this PR, verified at the time of start.
  *
- * Ce qui NE change pas selon la provenance : ce que `@numo` déclenche. Une
- * relecture, jamais un run de code — cf. `startNumoPrReview`.
+ * What DOES NOT change depending on the source: what `@numo` triggers. A
+ * reread, never a code run — cf. `startNumoPrReview`.
  */
 
-/** Les projets qui ont voix au chapitre sur cette PR, dans l'ordre du payeur. */
+/** The projects that have a say in this PR, in the order of the payer. */
 interface MentionScope {
-  /** Le compte minddy qui portera la relecture. */
+  /** The minddy account which will carry the proofreading. */
   userId: string;
-  /** Tous les projets concernés : c'est parmi LEURS membres qu'on cherche l'auteur. */
+  /** All projects concerned: we look for the author among THEIR members. */
   projectIds: string[];
 }
 
 /**
- * Le compte minddy qui portera la relecture, et les projets où chercher l'auteur
- * du commentaire. Deux chemins pour le payeur, dans cet ordre : le owner du
- * projet du TICKET lié quand il y en a un (c'est son projet qui est concerné),
- * sinon le owner d'un projet qui LIE LE DÉPÔT. Null seulement quand plus
- * personne ne connaît ce dépôt.
+ * The minddy account which will carry out the proofreading, and the projects where to look for the author
+ * of the comment. Two paths for the payer, in this order: the owner of the
+ * project of the linked TICKET when there is one (it is his project which is concerned),
+ * otherwise the owner of a project which LINKS THE DEPOSIT. Null only when no longer
+ * no one knows this repository.
  *
- * L'appartenance, elle, se juge sur TOUS ces projets et pas seulement celui du
- * payeur : deux projets peuvent lier le même dépôt, et un membre de l'un comme
- * de l'autre est chez lui sur cette pull request.
+ * Membership is judged on ALL these projects and not just that of the
+ * payer: two projects can link the same repository, and a member of one like
+ * of the other is at home on this pull request.
  */
 async function scopeForPr(pr: PullRequestRow): Promise<MentionScope | null> {
   const service = getServiceClient();
@@ -96,10 +96,10 @@ async function scopeForPr(pr: PullRequestRow): Promise<MentionScope | null> {
     }
   }
 
-  // PR sans ticket : le dépôt reste rattaché à des projets, et l'un d'eux a un
-  // owner. Ordonné par date de liaison pour que le choix soit STABLE d'une
-  // mention à l'autre — deux projets qui lient le même dépôt ne doivent pas se
-  // renvoyer la facture au hasard.
+  // PR without ticket: the repository remains attached to projects, and one of them has a
+  // owner. Ordered by date of connection so that the choice is STABLE of one
+  // mention to the other — two projects which link the same repository must not be
+  // resend the invoice randomly.
   const { data } = await service
     .from("project_git_links")
     .select("project_id, created_at, projects(owner_id)")
@@ -120,10 +120,10 @@ async function scopeForPr(pr: PullRequestRow): Promise<MentionScope | null> {
 }
 
 /**
- * Les deux refus, tels qu'ils s'écrivent sous le commentaire. En anglais comme
- * le reste de ce que Numo dit à la forge (son prompt, ses erreurs d'outil) : ce
- * fil est lu par des comptes de forge, pas par une session minddy dont on
- * connaîtrait la langue.
+ * The two refusals, as written under the comment. In English like
+ * the rest of what Numo says at the forge (his prompt, his tool errors): this
+ * thread is read by forge accounts, not by a minddy session whose language on
+ * would know.
  */
 const DENIAL_BODIES = {
   notMember: (login: string | null) =>
@@ -137,21 +137,21 @@ const DENIAL_BODIES = {
     `Mention me again later, or start the review from minddy.`,
 } as const;
 
-/** Poste le refus sous la pull request. Best-effort : ne lève jamais. */
+/** Post the refusal under the pull request. Best-effort: never lifts. */
 async function replyOnPr(scope: PrScope, body: string): Promise<void> {
   try {
     await scope.forge.createPullRequestComment({ ...scope.call, body });
   } catch (err) {
-    // Le refus lui-même n'a pas à faire échouer le webhook : la mention est déjà
-    // rejetée, ce commentaire n'est que la politesse qui l'explique.
+    // The refusal itself does not have to cause the webhook to fail: the mention is already
+    // rejected, this comment is just politeness explaining it.
     console.warn("[pr-mention] refus non commenté :", (err as Error).message);
   }
 }
 
 /**
- * Déclenche la relecture si ce commentaire de forge mentionne Numo. Ne lève
- * jamais : le webhook ne doit jamais échouer pour ça — la forge re-livrerait, et
- * la mention repartirait en boucle.
+ * Triggers replay if this forge comment mentions Numo. Never raise
+ *: the webhook must never fail for this — the forge would re-deliver, and
+ * the mention would loop again.
  */
 export async function handleForgeNumoMention(opts: {
   provider: RepoProviderId;
@@ -173,8 +173,8 @@ export async function handleForgeNumoMention(opts: {
 
     const target = await scopeForPr(pr);
     if (!target) {
-      // Plus AUCUN projet ne lie ce dépôt (liaison retirée depuis) : personne à
-      // qui imputer la dépense, et aucun droit à lire. On le dit, plutôt que de
+      // NO more projects link this repository (link since removed): no one to
+      // which to charge the expense, and no right to read. We say it, rather than
       // deviner un compte.
       console.warn(
         `[pr-mention] @numo ignoré sur ${opts.repoFullName}#${opts.prNumber} : aucun projet ne lie ce dépôt`,
@@ -183,9 +183,9 @@ export async function handleForgeNumoMention(opts: {
     }
     const { userId, projectIds } = target;
 
-    // MIN-330 — l'autorisation AVANT le débit : un inconnu ne doit pas consommer
-    // le compteur d'un dépôt (ce serait un déni de service sur les membres), il
-    // a le sien, qui ne sert qu'à ne lui répondre qu'une fois.
+    // MIN-330 — authorization BEFORE debit: a stranger must not consume
+    // the counter of a deposit (this would be a denial of service to members), it
+    // has his own, which only serves to answer him once.
     const member = await isForgeAuthorMember({
       provider: opts.provider,
       projectIds,
@@ -212,8 +212,8 @@ export async function handleForgeNumoMention(opts: {
           `(${opts.authorLogin ?? "auteur inconnu"}) : ${member ? "débit" : "non-membre"}`,
       );
       if (!notify) return;
-      // Résoudre la portée COÛTE un token de forge : on ne le fait que pour le
-      // seul refus qu'on commente, pas pour chacun d'eux.
+      // Resolving the range COSTS a forge token: we only do it for the
+      // only refusal that we comment on, not for each of them.
       const { resolvePrScope } = await import("./pr-actions");
       const scope = await resolvePrScope(userId, pr);
       if (scope) {
@@ -225,8 +225,8 @@ export async function handleForgeNumoMention(opts: {
       return;
     }
 
-    // Import paresseux : `pr-actions` tire tout le module des routes PR (et
-    // `next/server`), là où ce fichier est chargé par le récepteur de webhook.
+    // Lazy import: `pr-actions` pulls the entire module from PR routes (and
+    // `next/server`), where this file is loaded by the webhook receiver.
     const { resolvePrScope, startNumoPrReview } = await import("./pr-actions");
     const scope = await resolvePrScope(userId, pr);
     if (!scope) return;

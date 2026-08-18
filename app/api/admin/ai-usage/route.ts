@@ -4,15 +4,15 @@ import { isAdminUser } from "@/lib/server/admin";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
- * Lecture admin du suivi des coûts LLM (`ai_usage`). Gate identique aux autres
+ * Admin reading of LLM cost tracking (`ai_usage`). Gate identical to the others
  * endpoints admin (`/api/admin/app-config`) : JWT via getClaims + isAdminUser.
  *
  * GET /api/admin/ai-usage
- *   ?days=<n>       fenêtre en jours (défaut 30, borné 1–365)
- *   ?run=<uuid>     détail : les appels individuels du run (drill-down)
+ * ?days=<n> window in days (default 30, bounded 1–365)
+ * ?run=<uuid> detail: individual run calls (drill-down)
  *
- * Les agrégats sont calculés en SQL (`get_ai_usage_stats` / `get_ai_run_calls`)
- * et lus via le service client (service_role), la table étant en RLS deny-all.
+ * Aggregates are calculated in SQL (`get_ai_usage_stats` / `get_ai_run_calls`)
+ * and read via customer service (service_role), the table being in RLS deny-all.
  */
 
 async function requireAdmin(request: NextRequest): Promise<NextResponse | null> {
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
   const service = getServiceClient();
   const { searchParams } = new URL(request.url);
 
-  // Drill-down : les appels d'un run précis.
+  // Drill-down: calls for a specific run.
   const run = searchParams.get("run");
   if (run) {
     if (!UUID_RE.test(run)) {
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ calls: data ?? [] });
   }
 
-  // Vue d'ensemble sur une fenêtre.
+  // Overview of a window.
   const daysRaw = Number(searchParams.get("days"));
   const days = Number.isFinite(daysRaw) ? Math.min(365, Math.max(1, Math.floor(daysRaw))) : 30;
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();

@@ -1,13 +1,13 @@
 "use client";
 
-// Le menu « / » d'une page. Même mécanique que celui du carnet
-// (components/scratchpad/slash-command.tsx) — y compris le portage au corps du
-// document, pour la même raison : dans un panneau qui défile, un menu en
+// The “/” menu of a page. Same mechanics as that of the notebook
+// (components/scratchpad/slash-command.tsx) — including porting to the body of the
+// document, for the same reason: in a scrolling panel, a menu in
 // position absolue se fait couper par son conteneur.
 //
-// La différence tient en une ligne, et c'est tout l'objet du ticket : ce menu
-// n'a AUCUNE liste de blocs. Il affiche ce que `slashItems()` lui rend et pose
-// le bloc par `insertBlock()`. Ajouter un bloc tableau ne demandera pas d'y
+// The difference is in one line, and that's the whole point of the ticket: this menu
+// has NO block list. It displays what `slashItems()` returns to it and places
+// the block by `insertBlock()`. Adding a table block will not require any
 // revenir.
 
 import {
@@ -29,16 +29,16 @@ import {
   type PageBlock,
 } from "@/components/pages/blocks";
 
-/** Ce que le menu a besoin de savoir d'un bloc, une fois les clés traduites.
-    La traduction se fait DEHORS : le registre n'a pas de traducteur. */
+/** What the menu needs to know in one block, once the keys have been translated.
+ The translation is done OUTSIDE: the register has no translator. */
 export interface PageSlashItem {
   block: PageBlock;
   label: string;
 }
 
-/** Le catalogue traduit, dans l'ordre du menu. `t` vient du composant appelant
-    (namespace `Pages`), typé avec son namespace — sans lui, TypeScript renonce
-    (TS2589) et ne vérifie plus aucune clé. */
+/** The translated catalog, in menu order. `t` comes from the calling component
+ (namespace `Pages`), typed with its namespace — without it, TypeScript gives up
+ (TS2589) and no longer checks any keys. */
 export function pageSlashItems(
   t: (key: PageBlock["labelKey"]) => string
 ): PageSlashItem[] {
@@ -48,9 +48,9 @@ export function pageSlashItems(
   }));
 }
 
-/** Le filtre du menu : le libellé TRADUIT d'abord, puis les alias du
-    descripteur — qui portent les deux langues, parce qu'on tape « quote » sur
-    une interface française. */
+/** The menu filter: the TRANSLATED label first, then the aliases of the
+ descriptor — which carry both languages, because we type “quote” on
+ a French interface. */
 export function filterSlashItems(
   items: PageSlashItem[],
   query: string
@@ -78,29 +78,29 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
   useEffect(() => setSelected(0), [props.items]);
 
   /**
-   * Le clavier PREND LA MAIN sur la souris.
-   *
-   * Les deux se battaient : les flèches font défiler la liste, le défilement
-   * fait passer une ligne sous le pointeur immobile, `mouseenter` se déclenche
-   * et la sélection saute là où est la souris — la flèche suivante repart de
-   * cette ligne-là, et on ne descend plus. Dès qu'on navigue au clavier, la
-   * liste devient donc insensible au pointeur (et sans survol peint, qui
-   * désignerait une seconde ligne), jusqu'au prochain VRAI mouvement de souris.
-   */
+ * The keyboard TAKES OVER the mouse.
+ *
+ * The two were fighting: arrows scroll the list, scrolling
+ * passes a line under the stationary pointer, `mouseenter` triggers
+ * and the selection jumps to where is the mouse — the next arrow starts again from
+ * this line, and we no longer go down. As soon as you navigate with the keyboard, the
+ * list therefore becomes insensitive to the pointer (and without a painted hover, which
+ * would designate a second line), until the next REAL mouse movement.
+ */
   const [keyboard, setKeyboard] = useState(false);
   useEffect(() => {
     if (!keyboard) return;
     const wake = () => setKeyboard(false);
-    // `mousemove` et pas `mouseover` : c'est le mouvement qui rend la main à la
-    // souris, pas le fait qu'une ligne soit passée dessous toute seule.
+    // `mousemove` and not `mouseover`: it is the movement which returns the hand to the
+    // mouse, not the fact that a line went underneath by itself.
     window.addEventListener("mousemove", wake, { once: true });
     return () => window.removeEventListener("mousemove", wake);
   }, [keyboard]);
 
-  // Le menu DÉFILE avec les flèches. Sans ça la ligne active sortait du cadre
-  // dès le quatrième ↓ : le clavier continuait de fonctionner, mais on ne
-  // voyait plus ce qu'on choisissait. `nearest` : on ne recentre pas une ligne
-  // déjà visible, ce qui ferait sauter la liste à chaque pression.
+  // The SCROLLS menu with the arrows. Without that the active line would go out of the frame
+  // from the fourth ↓: the keyboard continued to work, but we could not
+  // could no longer see what we were choosing. `nearest`: we do not recenter a line
+  // already visible, which would cause the list to jump with each press.
   const listRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     listRef.current
@@ -152,8 +152,8 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
         className={cn(
           "flex w-full items-center gap-2.5 scroll-my-1.5 rounded-lg px-2 py-1.5 text-left text-sm transition-colors",
           index === selected ? "bg-muted text-foreground" : "text-foreground/90",
-          // Pendant la navigation au clavier, la souris ne peint plus rien :
-          // deux lignes allumées, ce serait deux réponses à « Entrée ».
+          // During keyboard navigation, the mouse no longer paints anything:
+          // two lines lit, that would be two responses to “Enter”.
           keyboard && "pointer-events-none"
         )}
       >
@@ -175,8 +175,8 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
   );
 });
 
-/** Marque le menu porté au corps du document, pour qu'un dialogue puisse
-    distinguer un clic dedans d'un clic en dehors de lui. */
+/** Marks the menu carried in the body of the document, so that a dialog can
+ distinguish a click inside it from a click outside it. */
 export const PAGE_SLASH_MENU_ATTR = "data-page-slash-menu";
 
 const EDGE = 8;
@@ -201,9 +201,9 @@ function renderSlashMenu() {
     menuEl.style.left = `${clamp(rect.left, window.innerWidth - w - EDGE)}px`;
   };
 
-  // La taille du menu ne vaut qu'à la frame suivante après un changement de
-  // props : sans ce second passage, une liste filtrée est placée avec sa
-  // hauteur d'avant.
+  // The size of the menu only applies to the next frame after a change of
+  // props: without this second pass, a filtered list is placed with its
+  // height from before.
   const reposition = () => {
     place();
     requestAnimationFrame(place);
@@ -244,7 +244,7 @@ function renderSlashMenu() {
   };
 }
 
-/** L'extension « / » d'une page. Se configure avec le catalogue TRADUIT. */
+/** The “/” extension of a page. Configured with the TRANSLATED catalog. */
 export const PageSlashCommand = Extension.create<{ items: PageSlashItem[] }>({
   name: "pageSlashCommand",
 
@@ -256,16 +256,16 @@ export const PageSlashCommand = Extension.create<{ items: PageSlashItem[] }>({
     const items = () => this.options.items;
     return [
       Suggestion<PageSlashItem>({
-        // pnpm résout @tiptap/core deux fois (même version) — l'editor de
-        // Extension n'a pas la même identité que celui de @tiptap/suggestion.
-        // Sans effet à l'exécution, comme dans le carnet.
+        // pnpm resolves @tiptap/core twice (same version) — the editor
+        // Extension does not have the same identity as that of @tiptap/suggestion.
+        // No effect at runtime, as in the notebook.
         editor: this.editor as never,
-        // Une CLÉ à soi. `Suggestion` en pose une par défaut, la même pour
-        // tout le monde (`suggestion$`) : monter le menu « / » et la
-        // suggestion « @ » sur le même éditeur faisait alors lever ProseMirror
-        // au montage (« Adding different instances of a keyed plugin »). Les
-        // deux ne se sont croisés qu'à l'ouverture d'une page, seule surface à
-        // porter les deux.
+        // A KEY to yourself. `Suggestion` sets one by default, the same for
+        // everyone (`suggestion$`): bring up the “/” menu and the
+        // suggestion “@” on the same editor then raised ProseMirror
+        // during assembly (“Adding different instances of a keyed plugin”). THE
+        // two only crossed when opening a page, the only surface to
+        // wear both.
         pluginKey: new PluginKey("pageSlashCommand"),
         char: "/",
         allowSpaces: false,

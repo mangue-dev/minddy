@@ -1,19 +1,19 @@
 "use client";
 
-// La pilule de contexte de Numo : ce que l'assistant a sous les yeux, une
+// Numo's context pill: what the assistant has in front of him, a
 // chose par pilule.
 //
-// Le DESSIN (rayons concentriques, commande en surimpression) vit dans
-// [components/entity-pill.tsx](../entity-pill.tsx), partagé avec les ressources
-// d'un ticket. Ce qui reste ici est ce que le contexte a de propre :
+// The DRAWING (concentric rays, superimposed order) lives in
+// [components/entity-pill.tsx](../entity-pill.tsx), shared with resources
+// of a ticket. What remains here is what is specific to the context:
 //
-//  • UNE TEINTE PAR NATURE, pour reconnaître la pilule avant de la lire.
+// • A COLOR BY NATURE, to recognize the pill before reading it.
 //
-//  • L'ŒIL. Le contexte ambiant n'est pas une pièce jointe : on ne le retire
-//    pas, on l'ignore. L'œil apparaît au survol, éteint la pilule (grise, et
-//    l'œil barré reste visible pour dire qu'il y a un chemin de retour), et le
-//    champ correspondant quitte le contexte envoyé. Ce qu'on a épinglé à la
-//    main, lui, se retire pour de bon — une croix.
+// • THE EYE. The ambient context is not an attachment: it cannot be removed
+// no, we ignore it. The eye appears on hover, turns off the pill (gray, and
+// the crossed out eye remains visible to say that there is a way back), and the
+// corresponding field leaves the sent context. What we pinned to the
+// hand, he withdraws for good — a cross.
 
 import { useTranslations } from "next-intl";
 import {
@@ -50,8 +50,8 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Une couleur par nature de contexte : la pilule se reconnaît du coin de l'œil,
- * avant d'être lue. Le fond reste une teinte à 12 % — c'est un repère, pas une
+ * A color by nature of context: the pill can be recognized from the corner of the eye,
+ * before being read. The base remains a 12% shade — it's a benchmark, not a
  * pastille.
  */
 const STYLES: Record<
@@ -66,21 +66,21 @@ const STYLES: Record<
     icon: Layers,
     tint: "bg-violet-500/12 text-violet-600 dark:text-violet-400",
   },
-  // L'objectif ne prend PAS sa teinte ici : il porte la SIENNE, celle qu'il
-  // affiche partout ailleurs (voir plus bas, ObjectiveIconBadge). L'entrée reste
-  // pour que la table couvre toutes les natures de contexte.
+  // The lens does NOT take its shade here: it wears HIS, the one it
+  // displayed everywhere else (see below, ObjectiveIconBadge). The entrance remains
+  // so that the table covers all context types.
   objective: { icon: Target, tint: "" },
   feedback: {
     icon: MessagesSquare,
     tint: "bg-rose-500/12 text-rose-600 dark:text-rose-400",
   },
-  // La même horloge que l'onglet Routines et son état vide : une routine se
-  // reconnaît à sa figure, ici comme là-bas.
+  // The same clock as the Routines tab and its empty state: a routine is
+  // recognized by his face, here and there.
   routine: {
     icon: CalendarClock,
     tint: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
   },
-  // Le wiki : la même figure que l'arbre des pages dans la sidebar.
+  // The wiki: the same figure as the page tree in the sidebar.
   page: {
     icon: BookText,
     tint: "bg-indigo-500/12 text-indigo-600 dark:text-indigo-400",
@@ -93,8 +93,8 @@ const STYLES: Record<
     icon: IterationCw,
     tint: "bg-teal-500/12 text-teal-600 dark:text-teal-400",
   },
-  // Membre et projet ne passent jamais par cette table : ils portent leur
-  // propre figure (portrait, orbe).
+  // Member and project never pass through this table: they carry their
+  // its own figure (portrait, orb).
   member: { icon: FileText, tint: "" },
   project: { icon: FileText, tint: "" },
 };
@@ -108,13 +108,13 @@ export function ContextPill({
   className,
 }: {
   chip: AssistantContextChip;
-  /** Rayon de la pilule — l'icône suit (voir PILL_INNER_RADIUS). */
+  /** Pill radius — icon follows (see PILL_INNER_RADIUS). */
   radius?: PillRadius;
-  /** Contexte désélectionné : la pilule reste, grisée, et n'est plus envoyée. */
+  /** Context deselected: the pill remains, grayed out, and is no longer sent. */
   disabled?: boolean;
-  /** Bascule la sélection (contexte ambiant). Absent = pilule inerte. */
+  /** Toggles selection (ambient context). Absent = inert pill. */
   onToggle?: () => void;
-  /** Retire la pilule (contexte épinglé à la main). */
+  /** Remove the pill (hand pinned background). */
   onRemove?: () => void;
   className?: string;
 }) {
@@ -141,8 +141,8 @@ export function ContextPill({
               ? {
                   label: actionLabel,
                   onClick: action,
-                  // Éteinte, la commande reste visible : c'est le seul chemin de
-                  // retour vers le contexte.
+                  // When turned off, the command remains visible: this is the only path
+                  // return to context.
                   persistent: disabled,
                   icon: onRemove ? (
                     <X className="size-3" />
@@ -155,9 +155,9 @@ export function ContextPill({
               : undefined
           }
         >
-          {/* Membre et projet ont une figure à eux — le portrait, l'orbe (ou le
-              favicon importé). Ils la portent telle quelle, sans pastille
-              teintée autour : une icône générique dirait moins. */}
+          {/* Member and project have a figure of their own — the portrait, the orb (or the
+ imported favicon). They wear it as is, without a tinted
+ patch around it: a generic icon would say less. */}
           {chip.kind === "member" ? (
             <UserAvatar
               seed={chip.avatarSeed}
@@ -174,9 +174,9 @@ export function ContextPill({
               )}
             />
           ) : chip.kind === "objective" && !disabled ? (
-            // Un objectif a une couleur à lui : sa cible la porte, ici comme sur
-            // le board et dans une description. Éteinte, la pilule retombe sur
-            // le gris commun — c'est l'extinction qu'on lit alors, pas l'objectif.
+            // An objective has its own color: its target carries it, here as on
+            // the board and in a description. Extinguished, the pill falls back on
+            // the common gray — it is extinction that we read then, not the objective.
             <ObjectiveIconBadge
               color={chip.color}
               className={cn("size-5", PILL_INNER_RADIUS[radius])}

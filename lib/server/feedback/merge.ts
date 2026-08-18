@@ -4,8 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
 import { emitFeedbackMerged } from "@/lib/server/feedback/events";
 
-/** Journalise une fusion (ou son undo) sur le post canonique, en nommant le
-    doublon absorbé. Best-effort : lit l'event de merge puis le titre du doublon. */
+/** Logs a merge (or its undo) on the canonical post, naming the absorbed duplicate. Best-effort: reads the merge event then the title of the duplicate. */
 async function recordMergeActivity(
   service: SupabaseClient,
   params: {
@@ -37,10 +36,10 @@ async function recordMergeActivity(
 }
 
 /**
- * Merge/undo (MIN-37) — wrappers TS des fonctions Postgres. Toute l'atomicité
- * (locks ordonnés, union des votes par identité, aplatissement des chaînes,
- * payload d'undo) vit en SQL : supabase-js n'a pas de transactions client.
- * L'IA (passe horaire) et l'équipe (onglet feedback) appellent les mêmes RPC.
+ * Merge/undo (MIN-37) — TS wrappers of Postgres functions. All atomicity
+ * (ordered locks, vote union by identity, string flattening,
+ * undo payload) lives in SQL: supabase-js has no client transactions.
+ * AI (time pass) and team (feedback tab) call the same RPCs.
  */
 
 export type MergeResult = { ok: true; eventId: string } | { ok: false; error: string };
@@ -88,8 +87,8 @@ export async function undoMerge(params: {
   return { ok: true };
 }
 
-/** Rejet d'une suggestion IA : la paire est mémorisée pour que l'analyseur ne
-    la re-propose jamais (dans les deux sens), puis la suggestion s'efface. */
+/** Rejecting an AI suggestion: the pair is memorized so that the analyzer never
+ re-proposes it (in both directions), then the suggestion is deleted. */
 export async function rejectMergeSuggestion(params: {
   postId: string;
   actorId?: string | null;

@@ -1,11 +1,11 @@
 "use client";
 
-// Qui et quoi on peut citer depuis le composer de Numo — mentions « @ » dans le
-// message ET contexte épinglé par le bouton @.
+// Who and what we can quote from the Numo composition — “@” mentions in the
+// message AND context pinned by the @ button.
 //
-// Rien ne se charge tant que `enabled` est faux : ouvrir le panneau ne doit
-// déclencher aucune requête, seul le geste qui a besoin de la liste le fait
-// (taper « @ », ouvrir le menu d'ajout).
+// Nothing loads as long as `enabled` is false: opening the panel should not
+// trigger no request, only the gesture that needs the list does it
+// (type “@”, open the add menu).
 
 import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -24,9 +24,9 @@ import type { MentionOption } from "@/components/mention-suggest";
 import type { GlobalBoardResponse, Member } from "@/lib/types";
 
 /**
- * Les membres mentionnables. En portée projet, ceux de CE projet (une requête
- * légère). En global, ceux de tous mes projets, dédoublonnés : ils voyagent
- * avec le board agrégé, déjà en cache dès qu'on a ouvert « Tous les tickets ».
+ * Mentionable members. In project scope, those of THIS project (a lightweight
+ * request). Overall, those of all my projects, deduplicated: they travel
+ * with the aggregated board, already in cache as soon as we opened "All tickets".
  */
 export function useNumoMembers(
   enabled: boolean,
@@ -50,30 +50,30 @@ export function useNumoMembers(
 }
 
 /**
- * Tout ce qu'un « @ » peut citer depuis un composer de Numo, et le geste qui
- * l'arme. Les deux composers qui parlent à Numo — le panneau et l'accueil —
- * partent d'ici : la liste des membres, des projets, des tickets et des
- * objectifs y est construite UNE fois, dans le même ordre et avec les mêmes
- * termes de recherche, plutôt que réécrite de part et d'autre.
+ * Everything an “@” can quote from a Numo composer, and the gesture that
+ * arms it. The two composers that talk to Numo — the panel and the reception —
+ * start from here: the list of members, projects, tickets and
+ * objectives is built there ONCE, in the same order and with the same
+ * search terms, rather than rewritten on both sides.
  *
- * `onMentionQuery` se branche directement sur le composer : rien ne se charge
- * tant qu'aucun « @ » n'a été tapé. Le premier arme les membres (une requête)
- * et réclame l'index de la palette tout de suite au lieu d'attendre le temps
- * mort qui l'arme d'habitude — monter un composer, lui, ne coûte rien.
+ * `onMentionQuery` plugs directly into the composer: nothing loads
+ * as long as no “@” has been typed. The first arms the members (a request)
+ * and requests the index of the palette immediately instead of waiting for the dead time
+ * which usually arms it — setting up a composer costs nothing.
  */
 export function useNumoMentionables(scopeProjectId: string | null): {
   mentionables: MentionOption[];
-  /** Où mènent les pilules des messages DÉJÀ envoyés : le fil se relit, et un
-      ticket qu'on y a cité s'ouvre d'un clic (components/mention-links). */
+  /** Where the pills of messages ALREADY sent lead: the thread is reread, and a
+ ticket cited there opens with a click (components/mention-links). */
   links: MentionLinks;
   onMentionQuery: (active: boolean) => void;
 } {
   const [wanted, setWanted] = useState(false);
   const { members } = useNumoMembers(wanted, scopeProjectId);
   const { projects } = useProjects();
-  // Tickets et objectifs viennent de l'index de la palette, comme les mentions
-  // d'une description : il porte déjà tout, de tous mes projets. Les pages, elles,
-  // sont celles du projet en portée — un wiki appartient à son projet.
+  // Tickets and objectives come from the palette index, like the mentions
+  // a description: it already carries everything, of all my projects. The pages, they
+  // are those of the project in scope — a wiki belongs to its project.
   const { issues, objectives, pages, armNow } = useMentionSources(scopeProjectId);
 
   const links = useMentionLinksFor({ issues, objectives, pages });
@@ -95,8 +95,8 @@ export function useNumoMentionables(scopeProjectId: string | null): {
         iconUrl: p.icon_url,
         keywords: [p.key],
       })),
-      // Le TITRE en second rang, et cherchable : on retrouve « le ticket sur
-      // les webhooks » sans en connaître le numéro.
+      // The TITLE in second row, and searchable: we find “the ticket on
+      // webhooks” without knowing the number.
       ...issues.map((i) => ({
         type: "issue" as const,
         id: i.id,
@@ -110,8 +110,8 @@ export function useNumoMentionables(scopeProjectId: string | null): {
         label: o.name,
         color: o.color,
       })),
-      // Les pages du wiki du projet courant (MIN-273) : citer « @Guide » suffit
-      // à ce que Numo lise le document avant de répondre.
+      // The wiki pages of the current project (MIN-273): quoting “@Guide” is enough
+      // that Numo reads the document before responding.
       ...pages
         .filter((p) => p.title.trim())
         .map((p) => ({
@@ -137,9 +137,9 @@ export function useNumoMentionables(scopeProjectId: string | null): {
 }
 
 /**
- * Le board agrégé (tous mes tickets), chargé À LA DEMANDE et partagé avec le
- * board « Tous les tickets » et le picker de la page Agents — même clé de
- * cache, donc jamais deux fois.
+ * The aggregated board (all my tickets), loaded ON DEMAND and shared with the
+ * board “All tickets” and the picker of the Agents page — same key of
+ * cache, so never twice.
  */
 export function useNumoBoard(enabled: boolean) {
   return useQuery<GlobalBoardResponse>({

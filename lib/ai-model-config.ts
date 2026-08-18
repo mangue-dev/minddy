@@ -21,12 +21,12 @@ import { DEFAULT_SUBAGENT_FAVORITES } from "@/lib/subagent-favorites";
 import { DEFAULT_RECOMMENDED_MODELS } from "@/lib/recommended-models";
 
 /**
- * `model`       → id `provider/model` choisi dans le catalogue de la clé plateforme ;
- * `modelId`     → id saisi tel quel, dans le namespace d'un provider BYOK (`gpt-…`,
- *                 `claude-…`) : le catalogue plateforme y écrirait des ids invalides ;
- * `favorites`   → liste JSON de `FavoriteSubagentModel` ;
- * `recommended` → liste JSON d'ids, dans l'ordre d'affichage du picker ;
- * `flag`        → interrupteur "true"/"false".
+ * `model` → id `provider/model` chosen in the platform key catalog;
+ * `modelId` → id entered as is, in the namespace of a BYOK provider (`gpt-…`,
+ * `claude-…`): the platform catalog would write invalid ids;
+ * `favorites` → JSON list of `FavoriteSubagentModel`;
+ * `recommended` → JSON list of ids, in the order of display of the picker ;
+ * `flag` → “true”/”false” switch.
  */
 export type AiConfigKind = "model" | "modelId" | "favorites" | "recommended" | "flag";
 
@@ -41,29 +41,28 @@ export interface AiConfigField {
   /** Section the field is grouped under in the dashboard. */
   group: AiConfigGroup;
   /**
-   * Coupe le suffixe OpenRouter (MIN-263) sur un champ `model` qui, sinon,
-   * en accepterait un. Voir `MODEL_SUFFIXES` pour la raison de chaque exclusion.
-   */
+ * Trims the OpenRouter suffix (MIN-263) on a `model` field that would otherwise accept one. See `MODEL_SUFFIXES` for the reason for each exclusion.
+ */
   noSuffix?: true;
-  /** Libellé technique généré pour les défauts provider × feature. */
+  /** Technical label generated for provider × feature defects. */
   adminLabel?: string;
 }
 
 /**
- * Raccourcis de routage OpenRouter (MIN-263) : collés à l'id du modèle après
- * deux points, ils ordonnent les providers de CE modèle sans en changer un
- * seul. Universels — ils marchent sur n'importe quel id.
+ * OpenRouter routing shortcuts (MIN-263): stuck to the model id after
+ * colon, they order providers of THIS model without changing one
+ * alone. Universal — they work on any id.
  *
- *   `nitro`  → providers triés par débit (le plus rapide d'abord) ;
- *   `floor`  → triés par prix (le moins cher d'abord) ;
- *   `exacto` → qualité d'abord, providers dont le tool-calling est fiable.
+ * `nitro` → providers sorted by speed (fastest first);
+ * `floor` → sorted by price (cheapest first);
+ * `exacto` → quality first, providers whose tool-calling is reliable.
  *
- * `:online` existe aussi et n'est DÉLIBÉRÉMENT pas offert : il allume la
- * recherche web payante (~$0,005 par appel, forfait Exa) sur n'importe quel
- * appel, alors que la recherche de minddy est un tool explicite dont le coût
- * est une ligne de ledger à part (`lib/server/web-search.ts`). Un suffixe qui
- * multiplie par mille le prix d'un titre de conversation n'a rien à faire dans
- * une liste déroulante.
+ * `:online` also exists and is DELIBERATELY not offered: it turns on the
+ * paid web search (~$0.005 per call, Exa package) on any
+ * call, while minddy's search is an explicit tool whose cost
+ * is a separate ledger line (`lib/server/web-search.ts`). A suffix that
+ * multiplies the price of a conversation title by a thousand has no place in
+ * a drop-down list.
  */
 export const MODEL_SUFFIXES = ["nitro", "floor", "exacto"] as const;
 
@@ -85,41 +84,41 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
     group: "automations",
     noSuffix: true,
   },
-  // Smart-fill (lib/server/smart-fill.ts, MIN-260) : UN appel par ticket créé à
-  // la main, sur son seul titre + sa description, et qui rend priorité, effort,
-  // catégories et objectif. Il tient la personne devant son écran (la ligne
-  // n'est insérée qu'une fois remplie) : il lui faut donc un modèle RAPIDE, pas
-  // un modèle malin — la tâche est un rangement, pas un raisonnement. Le drapeau
-  // le coupe partout d'un coup, et le formulaire retombe sur la saisie à la main.
+  // Smart-fill (lib/server/smart-fill.ts, MIN-260): ONE call per ticket created at
+  // the hand, on its sole title + its description, and which gives priority, effort,
+  // categories and objective. He holds the person in front of his screen (the line
+  // is only inserted once completed): it therefore needs a FAST model, not
+  // a clever model — the task is tidying up, not reasoning. The flag
+  // cuts it everywhere at once, and the form falls back to hand entry.
   { key: "smart_fill_enabled", kind: "flag", fallback: "true", group: "automations" },
   { key: "smart_fill_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
-  // Titre d'une conversation Numo (lib/server/assistant/title.ts) : un appel de
-  // quelques dizaines de tokens par conversation neuve — un petit modèle suffit,
-  // et c'est exactement le genre d'appel où un gros ne se justifie pas.
+  // Title of a Numo conversation (lib/server/assistant/title.ts): a call from
+  // a few dozen tokens per new conversation — a small model is enough,
+  // and that's exactly the kind of call where a big guy doesn't justify himself.
   { key: "conversation_title_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
   // Correspondance des colonnes d'un import CSV (lib/server/import-mapping-ai.ts) :
-  // UN appel par fichier déposé, jamais par ligne — le modèle ne voit qu'un
-  // résumé des colonnes. C'est le prix d'un import qui ne perd rien, et le
-  // drapeau le coupe partout d'un coup (l'import retombe alors sur ses tables
-  // d'alias, comme avant).
+  // ONE call per file submitted, never per line — the model only sees one
+  // column summary. It is the price of an import which loses nothing, and the
+  // flag cuts it everywhere at once (the import then falls back onto its tables
+  // alias, as before).
   { key: "import_map_enabled", kind: "flag", fallback: "true", group: "automations" },
   { key: "import_map_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
-  // Découpe d'un brief en objectifs + tickets (lib/server/brief-to-issues.ts,
-  // MIN-172) : UN appel par brief collé, jamais par ticket — le modèle rend le
+  // Breaking a brief into objectives + tickets (lib/server/brief-to-issues.ts,
+  // MIN-172): ONE call per pasted brief, never per ticket — the model renders the
   // lot entier d'un coup, ce que vingt `create_issue` en file ne feraient ni au
-  // même prix ni à la même latence. Le drapeau la coupe partout d'un coup :
-  // l'amorce d'un projet neuf retombe alors sur l'import et la saisie à la main.
+  // same price nor at the same latency. The flag cuts her everywhere at once:
+  // the start of a new project then falls on import and manual entry.
   { key: "brief_enabled", kind: "flag", fallback: "true", group: "automations" },
   { key: "brief_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "automations" },
-  // Recherche web (tool `web_search` de Numo et des agents) : le modèle qui lit
-  // les résultats du plugin OpenRouter. Le drapeau la coupe partout d'un coup.
+  // Web search (tool `web_search` from Numo and agents): the model that reads
+  // the results of the OpenRouter plugin. The flag cuts her everywhere at once.
   { key: "web_search_enabled", kind: "flag", fallback: "true", group: "assistant" },
   { key: "web_search_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant" },
-  // Agent de code cloud (MIN-46) — défaut racine, surchargé par user puis par run.
-  // Pas de suffixe (MIN-263) : le modèle d'un run est écrit sur sa ligne
-  // `agent_runs` et retourne pendant des dizaines de rounds, parfois depuis la
-  // microVM — le repli « rejouer sans le `:` » y voudrait dire réécrire le
-  // modèle du run en vol, ce qui est un autre chantier.
+  // Cloud Code Agent (MIN-46) — root default, overloaded by user then by run.
+  // No suffix (MIN-263): the model of a run is written on its line
+  // `agent_runs` and returns for dozens of rounds, sometimes from the
+  // microVM — the fallback “replay without the `:`” would mean rewriting the
+  // model of the run in flight, which is another project.
   {
     key: "agent_model",
     kind: "model",
@@ -127,11 +126,11 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
     group: "agent",
     noSuffix: true,
   },
-  // Review d'une PR par Numo (MIN-141). DÉLIBÉRÉMENT plus cher que `agent_model` :
-  // relire du code avec le modèle qui vient de l'écrire ne produit qu'un second
-  // avis identique — la valeur d'une review vient d'un autre regard. Un appel par
-  // clic, jamais automatique : c'est ce qui rend le tarif tenable.
-  // Pas de suffixe non plus : même boucle, même run persisté que `agent_model`.
+  // Review of a PR by Numo (MIN-141). DELIBERATELY more expensive than `agent_model`:
+  // rereading code with the model that just wrote it only produces a second
+  // identical review — the value of a review comes from another perspective. A call by
+  // click, never automatic: this is what makes the price sustainable.
+  // No suffix either: same loop, same persistent run as `agent_model`.
   {
     key: "pr_review_model",
     kind: "model",
@@ -139,52 +138,52 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
     group: "agent",
     noSuffix: true,
   },
-  // Favoris servis au prompt du parent pour `spawn_agent` (MIN-112).
+  // Favorites served at parent prompt for `spawn_agent` (MIN-112).
   {
     key: "agent_subagent_favorites",
     kind: "favorites",
     fallback: JSON.stringify(DEFAULT_SUBAGENT_FAVORITES),
     group: "agent",
   },
-  // Les modèles CONSEILLÉS, montrés en tête du picker à l'ouverture
-  // (cf. lib/recommended-models.ts). À ne pas confondre avec les favoris
-  // ci-dessus, qui sont du PROMPT : ceux-là sont de l'UI, lus par un humain qui
-  // choisit sur quoi lancer son agent. Ils ne restreignent rien — le catalogue
-  // entier reste à une recherche.
+  // RECOMMENDED models, shown at the top of the picker when opened
+  // (see lib/recommended-models.ts). Not to be confused with favorites
+  // above, which are from PROMPT: these are from the UI, read by a human who
+  // chooses what to launch its agent on. They don't restrict anything — the catalog
+  // integer remains a search.
   {
     key: "recommended_models",
     kind: "recommended",
     fallback: JSON.stringify(DEFAULT_RECOMMENDED_MODELS),
     group: "agent",
   },
-  // Défauts frontier des providers BYOK : ce que tourne un compte qui a posé sa
-  // clé sans jamais choisir de modèle. Ids NATIFS du provider (pas `vendor/model`).
+  // Border faults of BYOK providers: what happens to an account that has installed
+  // key without ever choosing a model. NATIVE IDs of the provider (not `vendor/model`).
   { key: "byok_default_model_openai", kind: "modelId", fallback: byokFallback("openai"), group: "byok" },
   { key: "byok_default_model_anthropic", kind: "modelId", fallback: byokFallback("anthropic"), group: "byok" },
   { key: "byok_default_model_google", kind: "modelId", fallback: byokFallback("google"), group: "byok" },
-  // Voix (dictée → ticket)
+  // Voice (dictation → ticket)
   { key: "dictate_model", kind: "model", fallback: "google/gemini-3.1-flash-lite", group: "voice" },
   { key: "transcription_model", kind: "model", fallback: "openai/whisper-large-v3", group: "voice" },
-  // Démo de dictée de la landing (MIN-150) : le seul appel IA qu'on offre à un
-  // visiteur SANS COMPTE. Le drapeau la coupe partout d'un coup, sans
-  // déploiement — c'est le garde-fou du dernier recours si l'endpoint ouvert
-  // se fait tirer dessus (les autres, par IP et par jour, sont dans la route).
+  // Landing dictation demo (MIN-150): the only AI call we offer to a
+  // visitor WITHOUT ACCOUNT. The flag cuts it everywhere at once, without
+  // deployment — this is the last resort safeguard if the endpoint is open
+  // gets shot (the others, by IP and by day, are in the way).
   { key: "demo_dictation_enabled", kind: "flag", fallback: "true", group: "voice" },
   // Board de feedback
   { key: "feedback_classify_enabled", kind: "flag", fallback: "true", group: "feedback" },
-  // Dicter un retour, au board public comme dans le dashboard. Elle tourne sur
-  // les deux modèles de la voix (`transcription_model` puis `dictate_model`) :
-  // c'est la même prise, rangée dans d'autres champs. Le drapeau la coupe
-  // partout d'un coup — le micro disparaît, l'écriture reste.
+  // Dictate feedback, on the public board as well as in the dashboard. It turns on
+  // the two voice models (`transcription_model` then `dictate_model`):
+  // it's the same take, stored in other fields. The flag cuts it
+  // everywhere at once — the microphone disappears, the writing remains.
   { key: "feedback_voice_enabled", kind: "flag", fallback: "true", group: "feedback" },
   { key: "feedback_analysis_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "feedback" },
   { key: "feedback_embedding_model", kind: "model", fallback: "openai/text-embedding-3-small", group: "feedback" },
 ];
 
 /**
- * Matrice provider × type d'appel. OpenRouter est absent : son défaut est, par
- * définition, le réglage plateforme du même type. Les champs vides d'un
- * provider générique obligent le compte à choisir un id de son endpoint.
+ * Provider × call type matrix. OpenRouter is absent: its default is, by
+ * definition, the platform setting of the same type. Empty fields of a generic
+ * provider force the account to choose an id of its endpoint.
  */
 for (const provider of AGENT_PROVIDERS.filter((entry) => entry.id !== "openrouter")) {
   for (const modelKey of BYOK_MODEL_KEYS) {
@@ -220,39 +219,38 @@ export const AI_MODEL_CONFIG_GROUPS: AiConfigGroup[] = [
 ];
 
 /**
- * Un champ accepte-t-il un suffixe de routage ? Les modèles, sauf ceux marqués
- * `noSuffix`. Les ids BYOK (`kind: "modelId"`) vivent dans le namespace d'un
- * provider natif, où les raccourcis OpenRouter n'existent pas.
+ * Does a field accept a routing suffix? Models except those marked
+ * `noSuffix`. BYOK ids (`kind: "modelId"`) live in the namespace of a native
+ * provider, where OpenRouter shortcuts do not exist.
  */
 export function isSuffixableField(field: AiConfigField): boolean {
   return field.kind === "model" && !field.noSuffix;
 }
 
 /**
- * Clé `app_config` du suffixe d'un réglage de modèle. Elle est DÉRIVÉE, pas
- * déclarée : un champ `model` ajouté au registre gagne son suffixe sans qu'on
- * ait une seconde entrée à tenir en face.
+ * `app_config` key for the suffix of a template setting. It is DERIVED, not
+ * declared: a `model` field added to the register gains its suffix without
+ * having a second entry to match.
  */
 export function modelSuffixKey(key: string): string {
   return `${key}_suffix`;
 }
 
-/** Les clés de suffixe du registre, dans l'ordre de leurs champs. */
+/** The registry suffix keys, in the order of their fields. */
 export const AI_MODEL_SUFFIX_KEYS: string[] = AI_MODEL_CONFIG_FIELDS.filter(
   isSuffixableField,
 ).map((f) => modelSuffixKey(f.key));
 
-/** Cette clé est-elle le suffixe d'un champ du registre ? */
+/** Is this key the suffix of a registry field? */
 export function isModelSuffixKey(key: string): boolean {
   return AI_MODEL_SUFFIX_KEYS.includes(key);
 }
 
 /**
- * Colle un suffixe de routage à un id de modèle. No-op quand il n'y a pas de
- * suffixe, quand il n'est pas reconnu (une ligne `app_config` écrite à la main
- * ne doit pas casser l'appel), ou quand l'id en porte DÉJÀ un : un admin qui a
- * saisi `…:free` en texte libre a choisi une variante, pas un ordre de routage,
- * et `…:free:nitro` n'existe pas.
+ * Pastes a routing suffix to a template id. No-op when there is no
+ * suffix, when it is not recognized (a handwritten `app_config` * line should not break the call), or when the id ALREADY has one: an admin who has
+ * entered `…:free` in free text has chosen one variant, not a routing order,
+ * and `…:free:nitro` does not exist.
  */
 export function applyModelSuffix(model: string, suffix: string | null | undefined): string {
   const base = model.trim();
@@ -263,13 +261,13 @@ export function applyModelSuffix(model: string, suffix: string | null | undefine
 }
 
 /**
- * L'id nu, sans son suffixe de ROUTAGE — ce sur quoi on rejoue après un échec.
+ * The bare id, without its ROUTING suffix — what we replay on after a failure.
  *
- * On ne coupe que `:nitro`, `:floor`, `:exacto`. Les deux points servent aussi
- * à désigner une VARIANTE de modèle (`…:free`, `…:thinking`), qui est un autre
- * modèle, pas un ordre de routage : la couper ferait rejouer un refus sur la
- * variante payante, en silence. `applyModelSuffix` refuse déjà de coller un
- * raccourci sur un id qui porte un `:` — les deux moitiés disent la même chose.
+ * We only cut `:nitro`, `:floor`, `:exacto`. The colon also serves
+ * to denote a pattern VARIANT (`…:free`, `…:thinking`), which is another
+ * pattern, not a routing order: cutting it would replay a denial on the
+ * paid variant, silently. `applyModelSuffix` already refuses to paste a
+ * shortcut to an id that has a `:` — both halves say the same thing.
  */
 export function stripModelSuffix(model: string): string {
   const cut = model.lastIndexOf(":");
@@ -292,11 +290,11 @@ export function isFlagKey(key: string): boolean {
 }
 
 /**
- * Défaut d'un réglage, à servir quand la ligne `app_config` est absente ou vide.
+ * Default of a setting, to be used when the `app_config` line is absent or empty.
  *
- * Lève sur une clé inconnue : c'est une faute de programmation, pas un cas de
- * production — mieux vaut casser au premier appel que router silencieusement du
- * trafic vers `undefined`.
+ * Throws on an unknown key: this is a programming fault, not a case of
+ * production — better to break on the first call than route silently du
+ * traffic to `undefined`.
  */
 export function aiModelFallback(key: string): string {
   const field = getAiConfigField(key);
@@ -304,12 +302,12 @@ export function aiModelFallback(key: string): string {
   return field.fallback;
 }
 
-/** Clé `app_config` du défaut frontier d'un provider BYOK. */
+/** `app_config` key for the border fault of a BYOK provider. */
 export function byokDefaultModelKey(providerId: string): string {
   return `byok_default_model_${providerId}`;
 }
 
-/** Défaut frontier écrit dans le registre des providers (`lib/agent-providers.ts`). */
+/** Border fault written in the providers register (`lib/agent-providers.ts`). */
 function byokFallback(providerId: string): string {
   const model = getProviderDefaultModel(providerId);
   if (!model) throw new Error(`Provider ${providerId} has no default model`);

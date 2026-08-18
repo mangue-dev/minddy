@@ -345,7 +345,7 @@ export async function fillCycleForUser({
     (id) => !statusById.has(id)
   );
   if (blockerIds.length > 0) {
-    // Un bloqueur corbeillé ne bloque plus : absent de `statusById`, il est lu
+    // A trashed blocker no longer blocks: absent from `statusById`, it is read
     // comme « pas bloquant » par isBlockedIn (lib/cycle.ts), ce qu'on veut.
     const { data: blockerRows } = await service
       .from("issues")

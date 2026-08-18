@@ -1,22 +1,22 @@
 /**
- * Éloigne les portraits des trois membres de démo.
+ * Move the portraits of the three demo members away.
  *
- * Pourquoi : l'avatar de minddy est un portrait dessiné sur un aplat coloré,
- * tiré d'une graine aléatoire. À 24 px sur une carte de board, c'est le FOND qui
- * dit qui est qui — le visage, non. Or le tirage a mis les trois membres dans
- * les bleus (Camille bleu, Alice bleu, Tom indigo), ce qui rend une capture du
+ * Why: Minddy's avatar is a portrait drawn on a colored flat surface,
+ * taken from a random seed. At 24 px on a board card, it is the BACKGROUND which
+ * says who is who — the face, no. But the draw put the three members in
+ * the blue ones (Camille blue, Alice blue, Tom indigo), which makes a capture of the
  * board illisible.
  *
- * Ce n'est pas un défaut du code : le tirage de DiceBear est uniforme (vérifié,
- * 15 teintes ~20 fois chacune sur 300 graines). C'est de la malchance, et le
- * remède est celui que le produit offre déjà : retirer une graine.
+ * This is not a defect in the code: the DiceBear draw is uniform (verified,
+ * 15 shades ~20 times each on 300 seeds). It's bad luck, and the
+ * remedy is what the product already offers: removing a seed.
  *
- * Le script vise une FAMILLE de teintes par personne, et relance le tirage
- * jusqu'à tomber dedans. Idempotent : relancé, il constate que chacun est déjà
- * dans sa famille et n'écrit rien.
+ * The script targets a FAMILY of shades per person, and restarts the draw
+ * until you fall in. Idempotent: relaunched, he finds that everyone is already
+ * in his family and writes nothing.
  *
- *   node captures/world/seed/012-avatars.mjs           (montre le plan)
- *   node captures/world/seed/012-avatars.mjs --apply   (écrit, après accord)
+ * node captures/world/seed/012-avatars.mjs (shows the plan)
+ * node captures/world/seed/012-avatars.mjs --apply (written, after agreement)
  */
 import { randomUUID } from "node:crypto";
 import { createAvatar } from "@dicebear/core";
@@ -24,7 +24,7 @@ import * as lorelei from "@dicebear/lorelei";
 import { openDemoWorld, createPlan } from "../../lib/guards.mjs";
 import { AVATAR_BACKGROUNDS } from "../../../lib/avatar.ts";
 
-/** Familles de teintes, découpées dans la roue de `lib/avatar.ts`. */
+/** Families of shades, cut out from the `lib/avatar.ts` wheel. */
 const FAMILIES = {
   chaud: ["ef4444", "f97316", "f59e0b", "eab308"], // rouge → jaune
   vert: ["84cc16", "22c55e", "10b981", "14b8a6"], // lime → turquoise
@@ -33,9 +33,9 @@ const FAMILIES = {
 };
 
 /**
- * Une famille par personne, choisies aux quatre coins de la roue. Camille garde
- * le froid : c'est le compte principal, son portrait est déjà celui qu'on voit
- * dans la barre latérale de la plupart des captures.
+ * One family per person, chosen from the four corners of the wheel. Camille guard
+ * the cold: this is the main account, his portrait is already the one we see
+ * in the sidebar of most captures.
  */
 const WANTED = {
   "captures-demo@minddy.app": "froid",
@@ -43,7 +43,7 @@ const WANTED = {
   "captures-demo+tom@minddy.app": "vert",
 };
 
-/** Le fond que DiceBear tire pour une graine — la seule chose qui nous importe. */
+/** The bottom DiceBear shoots for a seed — the only thing we care about. */
 function backgroundOf(seed) {
   const svg = createAvatar(lorelei, { seed, backgroundColor: AVATAR_BACKGROUNDS })
     .toString()
@@ -51,7 +51,7 @@ function backgroundOf(seed) {
   return AVATAR_BACKGROUNDS.find((hex) => svg.includes(hex)) ?? null;
 }
 
-/** Tire des graines jusqu'à en trouver une qui tombe dans la famille visée. */
+/** Draw seeds until you find one that falls into the target family. */
 function seedInFamily(family) {
   for (let attempt = 0; attempt < 500; attempt++) {
     const seed = randomUUID();

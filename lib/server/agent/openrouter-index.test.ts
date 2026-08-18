@@ -3,18 +3,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { modelCostMultiplier } from "@/lib/model-multiplier";
 
 /**
- * La lecture de l'index OpenRouter — la seule source des prix, donc du
- * multiplicateur affiché et du plafond de plan. Ce qui compte : que la forme
- * réelle de `/models` (des prix en CHAÎNES, par TOKEN) ressorte en USD au
- * million de tokens, et qu'un id suffixé ne devienne pas « de prix inconnu »,
- * ce qui le ferait passer sous tous les plafonds.
+ * Reading the OpenRouter index — the only source of prices, hence the displayed multiplier and plan cap. What matters: that the real form
+ * of `/models` (prices in CHAINS, per TOKEN) comes out in USD at
+ * million tokens, and that a suffixed id does not become “of unknown price”,
+ * which would make it pass under all the ceilings.
  *
- * L'index est un cache de PROCESS : chaque test le réimporte à neuf
- * (`vi.resetModules()` + `import()` dynamique), sans quoi le premier test
- * chargé servirait tous les autres.
+ * The index is a PROCESS cache: each test reimports it new
+ * (`vi.resetModules()` + dynamic `import()`), otherwise the first test
+ * loaded would serve all the others.
  */
 
-/** Extrait fidèle de la réponse d'OpenRouter (prix par token, en chaînes). */
+/** Faithful extract from OpenRouter's response (price per token, in chains). */
 const PAYLOAD = {
   data: [
     {
@@ -23,8 +22,8 @@ const PAYLOAD = {
       context_length: 163840,
       supported_parameters: ["tools", "reasoning"],
       architecture: { input_modalities: ["text"] },
-      // Le vrai objet publié par OpenRouter : les efforts arrivent du PLUS LOURD
-      // au plus léger, et `none` y est le mot pour « ne raisonne pas ».
+      // The real object published by OpenRouter: the efforts come from the HEAVIEST
+      // at the lightest, and `none` is the word for “do not reason”.
       reasoning: {
         mandatory: false,
         default_effort: "medium",
@@ -38,7 +37,7 @@ const PAYLOAD = {
       context_length: 200000,
       supported_parameters: ["tools"],
       architecture: { input_modalities: ["text", "image"] },
-      // Les Claude : ils raisonnent, mais ne publient aucune énumération.
+      // The Claudes: they reason, but do not publish any enumeration.
       reasoning: { mandatory: false },
       pricing: { prompt: "0.000005", completion: "0.000025" },
     },
@@ -48,7 +47,7 @@ const PAYLOAD = {
       supported_parameters: [],
       pricing: { prompt: "0.00000002", completion: "0" },
     },
-    // Un aiguillage : pas un modèle, un méta-endpoint qui en choisit un.
+    // A referral: not a model, a meta-endpoint which chooses one.
     {
       id: "openrouter/auto",
       name: "Auto Router",
@@ -60,7 +59,7 @@ const PAYLOAD = {
       },
       pricing: { prompt: "-1", completion: "-1" },
     },
-    // Un ALIAS de famille : même mécanique, mais il porte un `alias_target`.
+    // A family ALIAS: same mechanism, but it carries a `alias_target`.
     {
       id: "~anthropic/claude-opus-latest",
       name: "Anthropic: Claude Opus Latest",
@@ -73,7 +72,7 @@ const PAYLOAD = {
       },
       pricing: { prompt: "0.000005", completion: "0.000025" },
     },
-    // Il rend de l'IMAGE, et déclare quand même `tools`.
+    // It renders the IMAGE, and still declares `tools`.
     {
       id: "google/gemini-3-pro-image",
       name: "Gemini 3 Pro Image",
@@ -84,7 +83,7 @@ const PAYLOAD = {
   ],
 };
 
-/** Un index neuf, alimenté par `payload` (ou en échec upstream). */
+/** A new index, powered by `payload` (or failed upstream). */
 async function freshIndex(payload: unknown = PAYLOAD, status = 200) {
   vi.resetModules();
   const fetchMock = vi.fn(
@@ -115,8 +114,8 @@ describe("getOpenRouterModelInfo", () => {
   });
 
   it("retombe sur l'id NU pour un suffixe de routage", async () => {
-    // Sans ce repli, coller « :nitro » suffirait à rendre un modèle « de prix
-    // inconnu » — donc autorisé sous n'importe quel plafond.
+    // Without this fallback, pasting “:nitro” would be enough to render a “price” model
+    // unknown” — therefore authorized under any ceiling.
     const { getOpenRouterModelInfo } = await freshIndex();
     const nitro = await getOpenRouterModelInfo("anthropic/claude-opus-5:nitro");
     expect(nitro?.id).toBe("anthropic/claude-opus-5");
@@ -136,8 +135,8 @@ describe("getOpenRouterModelInfo", () => {
   });
 
   it("déduplique les demandes concurrentes", async () => {
-    // Au démarrage d'une invocation, le catalogue, la boucle et le plafond
-    // demandent l'index dans la même milliseconde.
+    // When starting an invocation, the catalog, loop and cap
+    // request the index in the same millisecond.
     const { getOpenRouterModelInfo, fetchMock } = await freshIndex();
     await Promise.all([
       getOpenRouterModelInfo("deepseek/deepseek-v4-flash"),
@@ -148,7 +147,7 @@ describe("getOpenRouterModelInfo", () => {
   });
 
   it("marque le tool-calling, y compris quand rien n'est déclaré", async () => {
-    // Une liste de paramètres VIDE n'est pas un refus : le modèle reste listable.
+    // An EMPTY parameter list is not a refusal: the model remains listable.
     const { getOpenRouterModelInfo } = await freshIndex();
     expect((await getOpenRouterModelInfo("some/embedding-model"))?.tools).toBe(true);
     expect((await getOpenRouterModelInfo("anthropic/claude-opus-5"))?.tools).toBe(true);
@@ -157,8 +156,8 @@ describe("getOpenRouterModelInfo", () => {
 
 describe("aiguillages et modalités de sortie", () => {
   it("marque comme aiguillage le routeur ET l'alias de famille", async () => {
-    // Les deux se reconnaissent au tokenizer « Router » ; l'alias porte en plus
-    // un `alias_target`, et l'un des deux signes suffit.
+    // Both are recognized by the “Router” tokenizer; the alias also carries
+    // a `alias_target`, and one of the two signs is enough.
     const { getOpenRouterModelInfo } = await freshIndex();
     expect((await getOpenRouterModelInfo("openrouter/auto"))?.router).toBe(true);
     expect((await getOpenRouterModelInfo("~anthropic/claude-opus-latest"))?.router).toBe(true);
@@ -172,15 +171,15 @@ describe("aiguillages et modalités de sortie", () => {
   });
 
   it("répute textuel un modèle qui n'annonce aucune sortie", async () => {
-    // L'absence d'annonce n'est pas un aveu : elle ne doit pas le faire
-    // disparaître du picker.
+    // The absence of an announcement is not an admission: it should not do so
+    // disappear from the picker.
     const { getOpenRouterModelInfo } = await freshIndex();
     expect((await getOpenRouterModelInfo("some/embedding-model"))?.textOutput).toBe(true);
   });
 
   it("garde tout de même les aiguillages dans l'index", async () => {
-    // Le catalogue ne les propose pas, mais un id collé à la main doit rester
-    // chiffrable — sinon « prix inconnu », donc sous tous les plafonds.
+    // The catalog does not offer them, but a hand-pasted id must remain
+    // quantifiable — otherwise “unknown price”, therefore under all ceilings.
     const { listOpenRouterIndex } = await freshIndex();
     const ids = (await listOpenRouterIndex()).map((m) => m.id);
     expect(ids).toContain("openrouter/auto");
@@ -202,8 +201,8 @@ describe("index illisible", () => {
   it("ne lève pas et ne situe plus personne", async () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { getOpenRouterModelInfo, listOpenRouterIndex } = await freshIndex(null, 500);
-    // Prix inconnus → multiplicateur null → aucun modèle refusé sur une
-    // ignorance : c'est le budget d'usage qui reste le plafond dur.
+    // Unknown prices → null multiplier → no model refused on a
+    // ignorance: it is the usage budget which remains the hard ceiling.
     await expect(listOpenRouterIndex()).resolves.toEqual([]);
     await expect(getOpenRouterModelInfo("anthropic/claude-opus-5")).resolves.toBeNull();
     spy.mockRestore();
@@ -212,8 +211,8 @@ describe("index illisible", () => {
 
 describe("les paliers de raisonnement publiés par le modèle", () => {
   it("ressortent du moins cher au plus cher, `none` traduit en `off`", async () => {
-    // Nos listes vont dans l'autre sens que celle d'OpenRouter, et `off` dit un
-    // peu plus que leur `none` : n'envoyer AUCUN champ de raisonnement.
+    // Our lists go in the other direction than OpenRouter's, and `off` says a
+    // little more than their `none`: send NO reasoning fields.
     const { getOpenRouterModelInfo } = await freshIndex();
     const info = await getOpenRouterModelInfo("deepseek/deepseek-v4-flash");
     expect(info?.reasoning).toEqual({
@@ -223,9 +222,9 @@ describe("les paliers de raisonnement publiés par le modèle", () => {
   });
 
   it("un modèle qui n'énumère rien garde un objet VIDE, pas `null`", async () => {
-    // La nuance porte tout le sélecteur : `null` = rien de publié, liste vide =
-    // il raisonne sans dire comment. Les deux retombent sur les paliers
-    // génériques, mais `mandatory` n'a de sens que dans le second cas.
+    // The nuance carries all the selector: `null` = nothing published, empty list =
+    // he reasons without saying how. Both fall back onto the landings
+    // generics, but `mandatory` only makes sense in the second case.
     const { getOpenRouterModelInfo } = await freshIndex();
     const info = await getOpenRouterModelInfo("anthropic/claude-opus-5");
     expect(info?.reasoning).toEqual({ efforts: [], mandatory: false });
@@ -238,7 +237,7 @@ describe("les paliers de raisonnement publiés par le modèle", () => {
   });
 
   it("jette un palier qu'on ne sait pas nommer plutôt que de le deviner", async () => {
-    // Un palier qu'on ne sait pas afficher ne doit pas non plus se sélectionner.
+    // A level that cannot be displayed should not be selected either.
     const { getOpenRouterModelInfo } = await freshIndex({
       data: [
         {

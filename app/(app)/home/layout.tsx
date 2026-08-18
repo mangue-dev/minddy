@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { appPageMetadata } from "@/lib/app-metadata";
 
-// Layout porteur de métadonnées : la page est un composant CLIENT et ne peut
-// donc pas exporter les siennes. Titre et description viennent du namespace
-// `Meta` ; le `noindex` du segment est posé par `app/(app)/layout.tsx`.
+// Layout carrying metadata: the page is a CLIENT component and cannot
+// therefore not export your own. Title and description come from the namespace
+// `Meta` ; the `noindex` of the segment is set by `app/(app)/layout.tsx`.
 export function generateMetadata(): Promise<Metadata> {
   return appPageMetadata("home");
 }

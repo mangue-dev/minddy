@@ -1,9 +1,9 @@
 import "server-only";
 
 /**
- * Plomberie REST bas niveau partagée pour l'intégration GitHub App (MIN-47),
- * portée d'AutoKap (github-rest.ts) — réduite au minimum dont le flux de liaison
- * inerte a besoin : base URL, en-têtes d'auth, pagination Link-header.
+ * Shared low-level REST plumbing for GitHub App integration (MIN-47),
+ * AutoKap scope (github-rest.ts) — reduced to the minimum that binding flow
+ * inert needs: base URL, auth headers, pagination Link-header.
  */
 
 export const GITHUB_API_BASE = "https://api.github.com";
@@ -22,7 +22,7 @@ export function githubHeaders(
   };
 }
 
-/** Extrait l'URL `rel="next"` d'un en-tête Link GitHub, ou null. */
+/** Extracts the `rel="next"` URL from a GitHub Link header, or null. */
 export function parseNextLink(linkHeader: string | null): string | null {
   if (!linkHeader) return null;
   for (const part of linkHeader.split(",")) {

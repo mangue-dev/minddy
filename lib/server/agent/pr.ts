@@ -23,9 +23,9 @@ import {
 import type { CommitAuthor } from "@/lib/commit-authors";
 
 /**
- * Opérations Pull Request GitHub pour l'agent de code (MIN-46) : ouvrir la PR
- * d'un run, la lire (metadata + fichiers/patches pour la review in-app), la
- * merger ou la fermer. Toutes scopées par un token d'installation frais
+ * GitHub Pull Request Operations for Code Agent (MIN-46): Open PR
+ * of a run, read it (metadata + files/patches for in-app review),
+ * merge or close it. All scoped by a fresh installation token
  * (getInstallationToken via resolveRepoCloneTarget). `repoFullName` = `owner/name`.
  */
 
@@ -39,53 +39,53 @@ export interface PullRequestRef {
   body?: string | null;
   head?: string;
   base?: string;
-  /** SHA de la tête — ancre immuable pour calculer le merge base (getMergeBaseSha). */
+  /** Head SHA — immutable anchor to calculate the merge base (getMergeBaseSha). */
   headSha?: string;
-  /** Nombre de commits de la PR, tel que la forge le compte. GitHub le sert avec
-      le GET d'UNE PR (jamais avec la liste) ; GitLab ne le sert nulle part et le
-      laisse `undefined` — l'appelant retombe alors sur la longueur de la liste
+  /** Number of PR commits, as forge counts. GitHub serves it with
+      the GET of A PR (never with the list); GitLab doesn't serve it anywhere and it
+      leaves `undefined` — the caller then falls back to the length of the list
       de commits. */
   commitCount?: number;
-  /** Auteur et date d'ouverture : le `body` ouvre le fil comme un commentaire, il lui faut son en-tête. */
+  /** Author and opening date: `body` opens the thread as a comment, it needs its header. */
   user?: { login: string; avatar_url: string | null } | null;
   createdAt?: string;
-  /** Dernière activité CHEZ LA FORGE — le tri de la liste des PR (MIN-143). */
+  /** Last activity AT THE FORGE — sorting the PR list (MIN-143). */
   updatedAt?: string;
-  /** Date de fusion, quand il y en a une (MIN-143 : la table la garde). */
+  /** Merger date, when there is one (MIN-143: the table keeps it). */
   mergedAt?: string | null;
-  /** Identifiant GraphQL de la PR — seule clé acceptée par les mutations (MIN-138 :
-      la bascule brouillon → prête n'existe QUE en GraphQL). GitLab : jamais rempli. */
+  /** GraphQL identifier of the PR — only key accepted by mutations (MIN-138:
+      the draft → ready toggle ONLY exists in GraphQL). GitLab: never populated. */
   nodeId?: string;
-  /** La PR peut-elle être fusionnée ? `null`/`undefined` = INCONNU, pas « non » :
-      GitHub calcule la fusionnabilité en asynchrone (vérifié — une PR fraîche
-      répond `mergeable: null` + `mergeable_state: "unknown"` pendant quelques
-      secondes), et l'endpoint *list* ne renvoie pas du tout ces deux champs. */
+  /** Can PR be merged? `null`/`undefined` = UNKNOWN, not “no”:
+      GitHub calculates mergeability asynchronously (verified — a fresh PR
+      responds `mergeable: null` + `mergeable_state: "unknown"` for a few
+      seconds), and the *list* endpoint does not return these two fields at all. */
   mergeable?: boolean | null;
-  /** État de fusionnabilité détaillé : `clean`, `blocked` (le dépôt exige des
+  /** Detailed mergeability status: `clean`, `blocked` (filing requires
       approbations / des checks), `dirty` (conflit), `unstable` (checks non
-      requis en échec), `unknown`. */
+      required in failure), `unknown`. */
   mergeableState?: string | null;
 }
 
-/** Verdict d'une review, en vocabulaire neutre (GitHub : APPROVE / REQUEST_CHANGES / COMMENT). */
+/** Verdict of a review, in neutral vocabulary (GitHub: APPROVE / REQUEST_CHANGES / COMMENT). */
 export type ReviewVerdict = "approve" | "request_changes" | "comment";
 
 /**
- * Ce qui est RÉELLEMENT arrivé chez la forge quand minddy soumet une review.
+ * What REALLY happened at the forge when minddy submitted a review.
  *
- * `"review"` : le verdict est publié tel quel. `"comment"` : la forge a refusé
- * l'auto-review — les PR de Numo sont ouvertes par le bot de la GitHub App, et
- * GitHub répond 422 « Can not approve your own pull request » (mesuré, cf. le
- * spike de MIN-138). Le verdict part alors en commentaire, préfixé de sa valeur,
- * et c'est minddy qui garde la trace du verdict réel (événement `pr_approved` /
- * `pr_changes_requested`). L'appelant le dit à l'utilisateur : approuver depuis
- * minddy ne coche pas la case verte de GitHub.
+ * `"review"`: the verdict is published as is. `"comment"`: the forge refused
+ * self-review — Numo PRs are opened by the GitHub App bot, and
+ * GitHub responds 422 “Can not approve your own pull request” (measured, cf. the
+ * spike of MIN-138). The verdict then goes into comment, prefixed with its value,
+ * and it is minddy who keeps track of the real verdict (event `pr_approved` /
+ * `pr_changes_requested`). The caller tells the user: approve from
+ * minddy does not check the green box on GitHub.
  */
 export interface ReviewSubmission {
   published: "review" | "comment";
 }
 
-/** Décompte d'approbations d'une PR — tout ce que minddy en affiche. */
+/** PR approval count — everything minddy shows about it. */
 export interface PullRequestReviewSummary {
   approvals: number;
   changesRequested: number;
@@ -97,64 +97,64 @@ export interface PullRequestFile {
   additions: number;
   deletions: number;
   patch?: string;
-  /** Chemin AVANT la PR si le fichier a été renommé — c'est lui qui adresse la version de base. */
+  /** Path BEFORE the PR if the file has been renamed — it addresses the base version. */
   previous_filename?: string;
 }
 
 /**
- * Un commit de la PR — ce que l'onglet Commits montre.
+ * A PR commit — what the Commits tab shows.
  *
- * DEUX auteurs, qui ne disent pas la même chose : `author` est le COMPTE de la
- * forge, quand elle a su rattacher l'email du commit à un utilisateur (c'est lui
- * qui porte l'avatar et le login), tandis que `authorName` est le nom écrit DANS
- * le commit, que git a toujours. Un commit poussé depuis une machine dont
- * l'email n'est pas déclaré chez la forge n'a que le second — et côté GitLab,
- * dont l'API de commits de MR ne sert aucun compte, il n'y a jamais que lui.
+ * TWO authors, who do not say the same thing: `author` is the ACCOUNT of the
+ * forge, when she was able to attach the commit email to a user (it's him
+ * which bears the avatar and the login), while `authorName` is the name written IN
+ * the commit, which git always has. A commit pushed from a machine whose
+ * the email is not declared at the forge only has the second — and on the GitLab side,
+ * whose MR commits API does not serve any account, there is never just him.
  */
 export interface PullRequestCommit {
   sha: string;
-  /** Message COMPLET : première ligne = titre, le reste = corps (souvent vide). */
+  /** COMPLETE message: first line = title, the rest = body (often empty). */
   message: string;
   author: { login: string; avatar_url: string | null } | null;
   authorName: string | null;
-  /** Email de l'auteur — la seule clé qui dédoublonne un co-signataire d'avec
-      l'auteur principal quand aucune des deux formes ne porte de compte. */
+  /** Author email — the only key that duplicates a co-signer from
+      the main author when neither form bears any account. */
   authorEmail: string | null;
   authoredAt: string | null;
   url: string | null;
-  /** Signature vérifiée par la forge. `null` = INCONNU, pas « non signé » :
-      GitLab ne le sert pas sur cet endpoint (il faut un appel par commit). */
+  /** Signature verified by the forge. `null` = UNKNOWN, not “unsigned”:
+      GitLab does not serve it on this endpoint (one call per commit is required). */
   verified: boolean | null;
   /**
-   * PREMIER parent — le côté « avant » du diff de ce commit seul. C'est lui qui
-   * adresse la version base d'un fichier au dépliage de contexte. `null` sur un
-   * commit racine (aucun parent), où il n'y a rien à déplier avant.
+   * FIRST parent — the “before” side of the diff of this commit alone. It is he who
+   * addresses the base version of a file to context unfolding. `null` on a
+   * root commit (no parent), where there is nothing to unfold before.
    */
   parentSha: string | null;
-  /** Lignes ajoutées / retirées PAR CE COMMIT. `null` = pas encore lu : aucune
-      des deux forges ne sert ces chiffres avec la liste (cf. `…CommitExtras`). */
+  /** Lines added/removed BY THIS COMMIT. `null` = not yet read: none
+      of the two forges do not use these figures with the list (see `…CommitExtras`). */
   additions: number | null;
   deletions: number | null;
   /**
-   * TOUS ses auteurs, principal en tête (MIN-159) — un commit co-signé en a
-   * plusieurs, et c'est le cas courant dès qu'un agent a tenu le clavier.
-   * Vide tant que `…CommitExtras` n'a pas répondu ; l'appelant retombe alors sur
+   * ALL its authors, main one (MIN-159) — one co-signed commit has
+   * several, and this is the common case as soon as an agent has held the keyboard.
+   * Empty until `…CommitExtras` responds; the caller then falls back on
    * `author` / `authorName`, l'auteur principal seul.
    */
   authors: CommitAuthor[];
 }
 
-/** Ce que la liste de commits ne porte PAS, et qu'un second appel va chercher :
-    le poids de chaque commit, et ses auteurs résolus en comptes de forge. */
+/** What the commits list does NOT carry, and which a second call will fetch:
+    the weight of each commit, and its authors resolved into forge counts. */
 export interface CommitExtras {
   additions: number;
   deletions: number;
-  /** Auteurs, principal en tête, dédoublonnés PAR LA FORGE. Vide quand elle ne
-      sait pas les résoudre (GitLab) : le repli lit alors les trailers. */
+  /** Authors, principal at the head, duplicated BY THE FORGE. Empty when she
+      does not know how to resolve them (GitLab): the fallback then reads the trailers. */
   authors: CommitAuthor[];
 }
 
-/** Le diff d'UN commit contre son parent : la vue « ce que ce commit change ». */
+/** The diff of ONE commit against its parent: the “what this commit changes” view. */
 export interface CommitDiff {
   files: PullRequestFile[];
   additions: number;
@@ -164,19 +164,19 @@ export interface CommitDiff {
 }
 
 /**
- * Un compte de la FORGE qu'on peut mentionner sur une PR (MIN-162) — pas un
- * membre minddy : le commentaire part chez la forge, où un `@` ne désigne
- * quelqu'un que s'il désigne un compte de là-bas.
+ * A FORGE account that can be mentioned on a PR (MIN-162) — not a
+ * member minddy: the comment goes to the forge, where a `@` does not designate
+ * someone only if he designates an account from there.
  */
 export interface RepoMember {
-  /** Le nom tel qu'il s'écrit après l'arobase — `@login`, brut. */
+  /** The name as it is written after the at sign — `@login`, raw. */
   login: string;
   avatar_url: string | null;
-  /** Nom affiché quand la forge en a un (GitLab), sinon le login seul. */
+  /** Name displayed when the forge has one (GitLab), otherwise the login only. */
   name: string | null;
 }
 
-/** Commentaire de conversation d'une PR (endpoint issues/{n}/comments de GitHub). */
+/** PR conversation comment (GitHub endpoint issues/{n}/comments). */
 export interface PullRequestComment {
   id: number;
   body: string;
@@ -186,39 +186,39 @@ export interface PullRequestComment {
 }
 
 /**
- * Commentaire de REVIEW : ancré à une ligne du diff (endpoint pulls/{n}/comments),
- * là où `PullRequestComment` vit dans le fil plat de la conversation.
+ * REVIEW comment: anchored to a line in the diff (endpoint pulls/{n}/comments),
+ * where `PullRequestComment` lives in the flat thread of the conversation.
  *
- * `line` est la ligne dans la version ACTUELLE de la PR, `original_line` celle du
- * commit où le commentaire a été posé. GitHub met `line: null` quand il ne sait
- * plus rattacher le commentaire au diff courant (« outdated ») — mais l'inverse
- * n'est PAS vrai : `line` non nul ne garantit pas que la ligne soit dans le diff
- * (vérifié contre l'API : un commentaire posé sur une ligne de CONTEXTE garde son
- * `line` même après que le diff se soit déplacé ailleurs dans le fichier). Côté
- * rendu, seule la résolution effective dans les hunks fait foi.
+ * `line` is the line in the CURRENT version of the PR, `original_line` that of
+ * commit where the comment was posted. GitHub puts `line: null` when it doesn't know
+ * no longer attach the comment to the current diff (“outdated”) — but the opposite
+ * is NOT true: `line` not null does not guarantee that the line is in the diff
+ * (checked against the API: a comment placed on a CONTEXT line keeps its
+ * `line` even after the diff has moved elsewhere in the file). Side
+ * rendered, only the effective resolution in the hunks is authentic.
  */
 export interface PullRequestReviewComment {
   id: number;
   body: string;
   path: string;
-  /** Ligne dans le diff courant, ou null si GitHub ne sait plus la rattacher. */
+  /** Line in the current diff, or null if GitHub no longer knows how to attach it. */
   line: number | null;
-  /** Ligne au commit d'origine — le repli d'affichage quand `line` est null. */
+  /** Line at the original commit — the display fallback when `line` is null. */
   original_line: number | null;
   side: "LEFT" | "RIGHT";
-  /** Première ligne d'une remarque MULTI-LIGNES (MIN-181) — `line` en est alors
-      la DERNIÈRE. `null` sur une remarque d'une seule ligne, et toujours `null`
-      côté GitLab, où une note s'ancre sur une ligne. Sans ces deux champs, une
-      remarque posée sur les lignes 6 à 15 se relit comme une remarque sur la
-      15 : l'ancre est juste, la plage a disparu. */
+  /** First line of a MULTI-LINE remark (MIN-181) — `line` is then
+      the LAST. `null` on a single line remark, and always `null`
+      on the GitLab side, where a note is anchored on a line. Without these two fields, a
+      remark made on lines 6 to 15 is reread as a remark on the
+      15: the anchor is right, the beach has disappeared. */
   start_line: number | null;
   start_side: "LEFT" | "RIGHT" | null;
-  /** Racine du fil (GitHub normalise : répondre à une réponse pointe la racine). */
+  /** Thread root (GitHub standardizes: replying to a reply points to the root). */
   in_reply_to_id: number | null;
-  /** Review qui porte ce commentaire (MIN-159) — la clé qui le range sous elle
-      dans le fil de conversation. `null` côté GitLab, qui n'a pas d'objet review. */
+  /** Review which bears this comment (MIN-159) — the key which stores it under it
+      in the conversation thread. `null` on the GitLab side, which has no review object. */
   review_id: number | null;
-  /** Extrait du diff autour de la ligne, tel qu'au moment du commentaire. */
+  /** Excerpt from the diff around the line, as at the time of the comment. */
   diff_hunk: string;
   user: { login: string; avatar_url: string | null } | null;
   created_at: string;
@@ -226,9 +226,9 @@ export interface PullRequestReviewComment {
 }
 
 /**
- * L'état d'un FIL (résolution) vit dans le module pur `lib/pr-review-threads` —
- * il est partagé avec le client, qui apparie les deux listes au rendu. Réexporté
- * ici pour que `mr.ts` et `forge.ts` l'importent comme les autres types de PR.
+ * The state of a FIL (resolution) lives in the pure module `lib/pr-review-threads` —
+ * it is shared with the client, who matches the two lists for rendering. Re-exported
+ * here so that `mr.ts` and `forge.ts` import it like other PR types.
  */
 export type { ReviewThreadState } from "@/lib/pr-review-threads";
 export type {
@@ -238,7 +238,7 @@ export type {
 export type { PrTimelineEvent } from "@/lib/pr-timeline";
 export type { CommitAuthor } from "@/lib/commit-authors";
 
-/** Erreur d'API GitHub avec le status HTTP (permet de distinguer 422 « no commits »). */
+/** GitHub API error with HTTP status (allows you to distinguish 422 “no commits”). */
 export class GithubApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -254,13 +254,13 @@ function splitRepo(repoFullName: string): { owner: string; repo: string } {
 }
 
 /**
- * Message d'erreur GitHub, DÉTAIL COMPRIS.
+ * GitHub error message, DETAILS INCLUDED.
  *
- * Sur un 422, `message` ne vaut que « Unprocessable Entity » : le motif réel est
- * dans `errors[]` — et c'est lui qui distingue « ne peut pas approuver sa propre
- * pull request » d'un corps invalide (vérifié contre l'API, MIN-138). Les
- * entrées y sont tantôt des chaînes nues, tantôt des objets `{message}` ou
- * `{resource, field, code}` : les trois formes existent selon l'endpoint.
+ * On a 422, `message` is only “Unprocessable Entity”: the real pattern is
+ * in `errors[]` — and it is he who distinguishes “cannot approve his own
+ * pull request” from an invalid body (checked against API, MIN-138). THE
+ * entries are sometimes bare strings, sometimes `{message}` objects or
+ * `{resource, field, code}`: the three forms exist depending on the endpoint.
  */
 function githubErrorMessage(data: unknown, status: number): string {
   const body = (data ?? {}) as { message?: string; errors?: unknown };
@@ -292,9 +292,9 @@ async function ghJson<T>(
 }
 
 /**
- * Variante texte de `ghJson` : avec `Accept: application/vnd.github.raw` GitHub
- * sert le contenu du fichier tel quel, pas du JSON (et jusqu'à 100 Mo, là où la
- * réponse JSON plafonne à 1 Mo). 404 → null (fichier absent à ce ref).
+ * Text variant of `ghJson`: with `Accept: application/vnd.github.raw` GitHub
+ * serves the contents of the file as is, not JSON (and up to 100 MB, where the
+ * JSON response caps at 1 MB). 404 → null (file missing at this ref).
  */
 async function ghRawText(url: string, token: string): Promise<string | null> {
   const res = await fetch(url, { headers: githubHeaders(token, "application/vnd.github.raw") });
@@ -305,7 +305,7 @@ async function ghRawText(url: string, token: string): Promise<string | null> {
     try {
       message = (JSON.parse(text) as { message?: string }).message ?? message;
     } catch {
-      // Corps non-JSON (raw) : on garde le message par défaut.
+      // Non-JSON body (raw): we keep the default message.
     }
     throw new GithubApiError(message, res.status);
   }
@@ -333,10 +333,10 @@ interface RawPull {
 }
 
 /**
- * `toRef` sert le GET d'UNE PR **et** `listPullRequests`. L'endpoint *list* ne
+ * `toRef` serves the GET of A PR **and** `listPullRequests`. The *list* endpoint does not
  * renvoie ni `mergeable`, ni `mergeable_state`, ni `merged` : ces champs y
- * restent `undefined`. C'est voulu et ça ne gêne pas le ménage de branches (qui
- * ne les lit pas), mais tout lecteur doit distinguer `undefined` (« pas
+ * remain `undefined`. This is intentional and does not interfere with the cleaning of branches (which
+ * does not read them), but any reader must distinguish `undefined` (“not
  * l'information ») de `false` (« vraiment pas fusionnable »).
  */
 function toRef(pr: RawPull): PullRequestRef {
@@ -362,7 +362,7 @@ function toRef(pr: RawPull): PullRequestRef {
   };
 }
 
-/** PR ouverte pour `head` (branche du run), ou null. */
+/** PR open for `head` (run branch), or null. */
 export async function findOpenPullRequest(opts: {
   token: string;
   repoFullName: string;
@@ -377,8 +377,8 @@ export async function findOpenPullRequest(opts: {
 }
 
 /**
- * Ouvre la PR du run, ou renvoie celle déjà ouverte pour cette branche (reprise).
- * Lève GithubApiError(422) « No commits between… » si la branche n'a aucun diff.
+ * Opens the PR of the run, or returns the one already open for this branch (resume).
+ * Raises GithubApiError(422) “No commits between…” if the branch has no diff.
  */
 export async function ensurePullRequest(opts: {
   token: string;
@@ -406,7 +406,7 @@ export async function ensurePullRequest(opts: {
     );
     return toRef(created);
   } catch (err) {
-    // 422 « A pull request already exists » → on retrouve et on renvoie l'existante.
+    // 422 “A pull request already exists” → we find and return the existing one.
     if (err instanceof GithubApiError && err.status === 422) {
       const existing = await findOpenPullRequest({
         token: opts.token,
@@ -434,22 +434,22 @@ export async function getPullRequest(opts: {
 
 const FILES_PER_PAGE = 100;
 /**
- * GitHub plafonne cet endpoint à 3 000 fichiers : trente pages le couvrent en
- * entier. Une PR qui en dépasse existe (une migration de dépôt, un lockfile
- * régénéré), et c'est justement là que la troncature doit se DIRE — un lecteur
- * qui ignore ce qu'il n'a pas vu conclut sur ce qu'il a vu.
+ * GitHub caps this endpoint at 3,000 files: thirty pages cover it in
+ * entire. A PR that exceeds this exists (a repository migration, a lockfile
+ * regenerated), and this is precisely where the truncation must be SAYED — a reader
+ * He who ignores what he has not seen concludes on what he has seen.
  */
 const FILES_MAX_PAGES = 30;
 
 /**
- * Fichiers de la PR avec leurs patches (unified diff) — alimente la review
- * in-app, la vue diff et l'amorce d'une session de relecture.
+ * PR files with their patches (unified diff) — feeds the review
+ * in-app, diff view and initiating a replay session.
  *
- * PAGINÉ (MIN-168). Une seule page en servait 100 et n'en disait rien : au-delà,
- * les fichiers suivants disparaissaient sans laisser de trace — l'appelant ne
- * pouvait même pas savoir qu'il lui en manquait. `truncated` est la moitié qui
- * manquait : il dit que la liste s'arrête au plafond, pas que le dépôt s'arrête
- * là.
+ * PAGINATED (MIN-168). A single page served 100 and said nothing: beyond that,
+ * the following files disappeared without a trace — the caller did not
+ * couldn't even know he was missing it. `truncated` is the half that
+ * missing: it says that the list stops at the ceiling, not that the deposit stops
+ * there.
  */
 export async function listPullRequestFiles(opts: {
   token: string;
@@ -484,7 +484,7 @@ export async function listPullRequestFiles(opts: {
         previous_filename: f.previous_filename,
       })),
     );
-    // Page incomplète = dernière page.
+    // Incomplete page = last page.
     if (batch.length < FILES_PER_PAGE) break;
     if (page === FILES_MAX_PAGES) truncated = true;
   }
@@ -515,12 +515,12 @@ function toCommit(c: RawCommit): PullRequestCommit {
     authoredAt: c.commit?.author?.date ?? null,
     url: c.html_url ?? null,
     verified: c.commit?.verification?.verified ?? null,
-    // Premier parent seulement : sur un commit de fusion, c'est la ligne
-    // principale, et c'est contre elle que les deux forges diffent.
+    // First parent only: on a merge commit, this is the line
+    // main, and it is against it that the two forges differ.
     parentSha: c.parents?.[0]?.sha ?? null,
-    // La REST des commits ne porte PAS de stats (vérifié contre l'API) : elles
-    // arrivent d'ailleurs, et sont fusionnées par l'appelant. Les co-auteurs non
-    // plus : la REST ne lit pas les trailers, seul GraphQL les résout.
+    // The REST of commits does NOT carry stats (checked against the API): they
+    // arrive from elsewhere, and are merged by the caller. The co-authors no
+    // more: REST does not read trailers, only GraphQL resolves them.
     additions: null,
     deletions: null,
     authors: [],
@@ -528,18 +528,18 @@ function toCommit(c: RawCommit): PullRequestCommit {
 }
 
 const COMMITS_PER_PAGE = 100;
-/** GitHub plafonne cet endpoint à 250 commits : trois pages le couvrent en
-    entier, et une PR qui en dépasse se lit chez la forge (`truncated` le dit). */
+/** GitHub caps this endpoint at 250 commits: three pages cover it in
+    whole, and a PR which exceeds it can be read at the forge (`truncated` says so). */
 const COMMITS_MAX_PAGES = 3;
 
 /**
- * Les commits de la PR, du plus ANCIEN au plus récent — l'ordre que GitHub
- * sert et qu'il affiche, celui dans lequel le travail s'est fait.
+ * PR commits, from oldest to newest — the order GitHub
+ * serves and displays, the one in which the work was done.
  *
- * Paginé pour la même raison que les commentaires de review : GitHub sert cette
- * liste dans l'ordre chronologique, donc s'arrêter à la première page ferait
- * disparaître les commits les plus RÉCENTS — précisément ceux qu'on vient
- * regarder après un nouveau push de Numo.
+ * Paginated for the same reason as review comments: GitHub serves this
+ * list in chronological order, so stopping at the first page would
+ * disappear the most RECENT commits — precisely the ones we just
+ * watch after another push from Numo.
  */
 export async function listPullRequestCommits(opts: {
   token: string;
@@ -556,7 +556,7 @@ export async function listPullRequestCommits(opts: {
       opts.token,
     );
     commits.push(...batch.map(toCommit));
-    // Page incomplète = dernière page.
+    // Incomplete page = last page.
     if (batch.length < COMMITS_PER_PAGE) break;
     if (page === COMMITS_MAX_PAGES) truncated = true;
   }
@@ -586,7 +586,7 @@ interface RawCommitExtras {
   } | null;
 }
 
-/** Au-delà, l'avatar empilé n'est plus lisible — et GitHub replie aussi. */
+/** Beyond that, the stacked avatar is no longer readable — and GitHub collapses too. */
 const MAX_COMMIT_AUTHORS = 10;
 
 const COMMIT_EXTRAS_QUERY = `
@@ -605,22 +605,22 @@ const COMMIT_EXTRAS_QUERY = `
   }`;
 
 /**
- * Ce que la liste REST des commits ne porte pas : leur POIDS (+/− lignes) et
- * leurs AUTEURS résolus en comptes de forge — indexés par SHA.
+ * What the REST list of commits does not carry: their WEIGHT (+/− lines) and
+ * their AUTHORS resolved into forge accounts — indexed by SHA.
  *
- * En GraphQL, et à part de la liste, parce que la REST ne sait faire ni l'un ni
- * l'autre : `pulls/{n}/commits` ne porte aucune stat (vérifié contre l'API), et
- * les obtenir en REST demanderait un `GET commits/{sha}` PAR commit ; quant aux
- * co-auteurs, elle ne lit tout simplement pas les trailers `Co-authored-by`.
- * GraphQL rend les deux en une requête — et sans permission de plus que la REST
- * équivalente (même constat que les fils de review).
+ * In GraphQL, and apart from the list, because REST cannot do either
+ * the other: `pulls/{n}/commits` carries no stats (checked against the API), and
+ * getting them in REST would require a `GET commits/{sha}` PER commit; as for the
+ * co-authors, she just doesn't read the `Co-authored-by` trailers.
+ * GraphQL does both in one query — and without more than REST permissions
+ * equivalent (same observation as the review threads).
  *
- * Les deux voyagent ensemble parce qu'ils viennent du même aller-retour : les
- * séparer en doublerait le coût pour rien.
+ * The two travel together because they come from the same round trip: the
+ * separating it would double the cost for nothing.
  *
- * L'appelant traite l'échec en best-effort : sans cet appel, la liste s'affiche
- * quand même — l'indicateur +/− disparaît, et les auteurs retombent sur l'auteur
- * principal plus ce que les trailers du message disent.
+ * The caller treats the failure as a best effort: without this call, the list is displayed
+ * anyway — the +/− indicator disappears, and the authors fall back on the author
+ * main plus what the message trailers say.
  */
 export async function listPullRequestCommitExtras(opts: {
   token: string;
@@ -643,10 +643,10 @@ export async function listPullRequestCommitExtras(opts: {
       extras.set(c.oid, {
         additions: c.additions ?? 0,
         deletions: c.deletions ?? 0,
-        // MESURÉ : GitHub rend l'auteur principal EN TÊTE puis les co-signataires,
-        // déjà dédoublonnés par email — un trailer qui répète l'auteur n'ajoute
-        // pas d'entrée. Il résout aussi les comptes, jusqu'à `noreply@anthropic.com`
-        // (→ `claude`), ce que la REST ne fait nulle part.
+        // MEASURED: GitHub makes the main author LEAD then the co-signers,
+        // already duplicated by email — a trailer which repeats the author does not add
+        // no entry. It also resolves accounts, up to `noreply@anthropic.com`
+        // (→ `claude`), which REST does nowhere.
         authors: (c.authors?.nodes ?? []).flatMap((a) => {
           const name = a?.name?.trim();
           if (!name && !a?.user?.login) return [];
@@ -655,7 +655,7 @@ export async function listPullRequestCommitExtras(opts: {
               login: a?.user?.login ?? null,
               name: name || (a?.user?.login as string),
               // L'avatar du COMPTE seulement : `GitActor.avatarUrl` sert un
-              // identicon pour un email inconnu, qui se lirait comme une photo.
+              // identicon for an unknown email, which would read like a photo.
               avatar_url: a?.user?.avatarUrl ?? null,
             },
           ];
@@ -670,12 +670,12 @@ export async function listPullRequestCommitExtras(opts: {
 }
 
 /**
- * Le diff d'UN commit contre son parent — « ce que ce commit-là change », au
- * même format que le diff de la PR entière (mêmes patches, même rendu).
+ * The difference of ONE commit against its parent — “what this commit changes”, at
+ * same format as the diff of the entire PR (same patches, same rendering).
  *
- * GitHub sert au plus 300 fichiers sur cet endpoint ; au-delà il faudrait
+ * GitHub serves at most 300 files on this endpoint; beyond that it would be necessary
  * paginer, mais un commit unique qui touche 300 fichiers ne se lit plus
- * fichier par fichier de toute façon.
+ * file by file anyway.
  */
 export async function getCommitDiff(opts: {
   token: string;
@@ -713,14 +713,14 @@ export async function getCommitDiff(opts: {
   };
 }
 
-/** Pages de 100 drainées au plus pour le picker de branche — au-delà, un dépôt
-    a trop de branches pour qu'une liste exhaustive serve encore à choisir. */
+/** Pages of 100 drained at most for the branch picker — beyond that, a deposit
+    has too many branches for an exhaustive list to still be useful for choosing. */
 const MAX_BRANCH_PAGES = 5;
 
 /**
- * Noms des branches du dépôt (picker de branche de base du lancement d'agent).
- * Paginé jusqu'à MAX_BRANCH_PAGES × 100 — le tri (défaut d'abord) est fait par
- * l'appelant, GitHub ne proposant ni tri ni recherche sur cet endpoint.
+ * Repository branch names (agent launch base branch picker).
+ * Paged up to MAX_BRANCH_PAGES × 100 — sorting (default first) is done by
+ * the caller, GitHub does not offer either sorting or searching on this endpoint.
  */
 export async function listBranches(opts: {
   token: string;
@@ -739,19 +739,19 @@ export async function listBranches(opts: {
   return names;
 }
 
-/** Deux pages = 200 comptes. Au-delà, une liste de suggestions n'aide plus
-    personne : on tape trois lettres, on ne déroule pas un annuaire. */
+/** Two pages = 200 accounts. Beyond that, a list of suggestions no longer helps
+    person: you type three letters, you don't pull out a directory. */
 const MAX_MEMBER_PAGES = 2;
 
 /**
- * Les comptes GitHub qu'on peut mentionner sur ce dépôt (MIN-162) — ses
- * collaborateurs, `affiliation=all` (membres directs, hérités de l'organisation
- * et sortants). C'est la liste que GitHub propose lui-même sous un `@`.
+ * The GitHub accounts that can be mentioned on this repository (MIN-162) — its
+ * collaborators, `affiliation=all` (direct members, inherited from the organization
+ * and outgoing). This is the list that GitHub itself offers under a `@`.
  *
- * Le token d'installation suffit : c'est une LECTURE, comme toutes celles de la
- * vue PR. Elle demande la permission « Members » (lecture) sur l'installation —
- * sans elle GitHub répond 403, et l'appelant rend une liste vide plutôt qu'une
- * erreur : on écrit très bien un commentaire sans suggestion de mention.
+ * The installation token is enough: it is a READ, like all those of the
+ * PR view. It asks for “Members” (read) permission on the installation —
+ * without it GitHub responds 403, and the caller returns an empty list rather than one
+ * error: we write a comment very well without suggesting a mention.
  */
 export async function listRepoMembers(opts: {
   token: string;
@@ -773,19 +773,19 @@ export async function listRepoMembers(opts: {
   return members;
 }
 
-/** Même esprit que MAX_BRANCH_PAGES : 500 PR suffisent à un ménage de branches,
-    et l'ordre `updated desc` met les plus récentes — les seules encore vivantes
-    dans la tête de l'utilisateur — sur la première page. */
+/** Same spirit as MAX_BRANCH_PAGES: 500 PR is enough for a household of branches,
+    and the order `updated desc` puts the most recent — the only ones still alive
+    in the user's head — on the first page. */
 const MAX_PR_PAGES = 5;
 
 /**
- * TOUTES les PR du dépôt, tous états confondus (MIN-102, ménage des branches
- * d'agent). `state=all` est indispensable : `state=closed` de GitHub couvre les
- * refusées ET les fusionnées, mais on veut aussi voir les PR OUVERTES pour ne
- * jamais proposer la suppression d'une branche qui en porte une.
+ * ALL PRs in the repository, all states combined (MIN-102, cleaning of branches
+ * agent). `state=all` is essential: `state=closed` from GitHub covers the
+ * refused AND merged, but we also want to see the PRs OPEN so as not to
+ * never propose the deletion of a branch which carries one.
  *
- * `truncated` prévient l'appelant qu'au-delà de MAX_PR_PAGES × 100 la liste est
- * coupée — l'aperçu le dit alors à l'écran plutôt que de mentir par omission.
+ * `truncated` warns the caller that beyond MAX_PR_PAGES × 100 the list is
+ * cut — the preview then says it on screen rather than lying by omission.
  */
 export async function listPullRequests(opts: {
   token: string;
@@ -800,8 +800,8 @@ export async function listPullRequests(opts: {
         `?state=all&sort=updated&direction=desc&per_page=100&page=${page}`,
       opts.token,
     );
-    // L'endpoint *list* ne renvoie pas `merged` : `toRef` retombe sur
-    // `merged_at`, seul signal disponible ici pour distinguer fusionnée/refusée.
+    // The *list* endpoint does not return `merged`: `toRef` falls back to
+    // `merged_at`, only signal available here to distinguish merged/refused.
     pulls.push(...batch.map(toRef));
     if (batch.length < 100) break;
     if (page === MAX_PR_PAGES) truncated = true;
@@ -810,10 +810,10 @@ export async function listPullRequests(opts: {
 }
 
 /**
- * Supprime une branche distante (MIN-102). Renvoie `"deleted"`, ou
- * `"already-gone"` si la référence n'existe plus — un ménage rejoué ne doit pas
- * ressembler à une panne. GitHub répond 422 « Reference does not exist » (et
- * non 404) quand le ref a déjà disparu.
+ * Delete a remote branch (MIN-102). Returns `"deleted"`, or
+ * `"already-gone"` if the reference no longer exists — a replayed household should not
+ * look like a breakdown. GitHub responds 422 “Reference does not exist” (and
+ * no 404) when the ref has already disappeared.
  */
 export async function deleteBranch(opts: {
   token: string;
@@ -821,8 +821,8 @@ export async function deleteBranch(opts: {
   branch: string;
 }): Promise<"deleted" | "already-gone"> {
   const { owner, repo } = splitRepo(opts.repoFullName);
-  // Ref laissé tel quel — mêmes raisons que getMergeBaseSha : nos branches
-  // portent des `/` (`minddy/agent/…`) et les %2F casseraient la route.
+  // Ref left as is — same reasons as getMergeBaseSha: our branches
+  // carry `/` (`minddy/agent/…`) and %2F would break the road.
   try {
     await ghJson<unknown>(
       `${GITHUB_API_BASE}/repos/${owner}/${repo}/git/refs/heads/${opts.branch}`,
@@ -839,15 +839,15 @@ export async function deleteBranch(opts: {
 }
 
 /**
- * SHA du **merge base** de la PR — le point de référence des patches GitHub.
+ * PR **merge base** SHA — the reference point for GitHub patches.
  *
- * GitHub diffe une PR à trois points (`base...head`) : les numéros de ligne
- * « anciens » des patches comptent depuis l'ancêtre commun, PAS depuis le tip de
- * la branche de base. Utiliser `pr.base.sha` est un piège : si la base a avancé
- * depuis, les lignes décalent et l'expansion injecte silencieusement le mauvais
- * code. On passe le nom de branche vivant (et non `base.sha`, figé à l'ouverture
- * de la PR) : si `head` a fusionné la base entre-temps, l'ancêtre commun a bougé
- * et seule la branche vivante donne celui que GitHub a réellement utilisé.
+ * GitHub defers a three-point PR (`base...head`): line numbers
+ * "old" patches count from the common ancestor, NOT from the tip of
+ * the basic branch. Using `pr.base.sha` is a trap: if the base has advanced
+ * since then, the lines have shifted and the expansion has silently injected the bad
+ * code. We pass the living branch name (and not `base.sha`, frozen at opening
+ * of the PR): if `head` has merged the base in the meantime, the common ancestor has moved
+ * and only the live branch gives the one that GitHub actually used.
  */
 export async function getMergeBaseSha(opts: {
   token: string;
@@ -856,8 +856,8 @@ export async function getMergeBaseSha(opts: {
   head: string;
 }): Promise<string> {
   const { owner, repo } = splitRepo(opts.repoFullName);
-  // Refs laissés tels quels : les noms de branche à slash (`numo/min-42`) sont
-  // valides ici, et les %2F casseraient la route compare de GitHub.
+  // Refs left as is: branch names with slash (`numo/min-42`) are
+  // valid here, and the %2F would break GitHub's compare route.
   const comparison = await ghJson<{ merge_base_commit?: { sha?: string } }>(
     `${GITHUB_API_BASE}/repos/${owner}/${repo}/compare/${opts.base}...${opts.head}?per_page=1`,
     opts.token,
@@ -868,12 +868,12 @@ export async function getMergeBaseSha(opts: {
 }
 
 /**
- * Diff CUMULÉ d'une branche de travail contre sa base — la vue diff d'une session
- * SANS PR (le compare GitHub sert les fichiers au même format que pulls/{n}/files,
- * depuis le merge base, comme une PR). `?per_page=1` borne la liste des COMMITS
- * embarquée dans la réponse : les fichiers, eux, ne sont servis que sur la
- * première page et arrivent entiers (plafond GitHub : 300).
- * Lève GithubApiError(404) si la branche n'a pas (encore) été poussée.
+ * CUMULATIVE diff of a working branch against its base — the diff view of a session
+ * WITHOUT PR (the GitHub comparison serves files in the same format as pulls/{n}/files,
+ * from the merge base, like a PR). `?per_page=1` bounds the list of COMMITS
+ * embedded in the response: the files are only served on the
+ * first page and arrive complete (GitHub ceiling: 300).
+ * Raises GithubApiError(404) if the branch has not (yet) been pushed.
  */
 export async function compareBranches(opts: {
   token: string;
@@ -882,7 +882,7 @@ export async function compareBranches(opts: {
   head: string;
 }): Promise<{ files: PullRequestFile[]; url: string | null }> {
   const { owner, repo } = splitRepo(opts.repoFullName);
-  // Refs laissés tels quels — mêmes raisons que getMergeBaseSha (branches à slash).
+  // Refs left as is — same reasons as getMergeBaseSha (slash branches).
   const comparison = await ghJson<{
     html_url?: string;
     files?: Array<{
@@ -910,12 +910,12 @@ export async function compareBranches(opts: {
   };
 }
 
-/** Chemin de fichier encodé segment par segment : encodeURIComponent avalerait les `/`. */
+/** Segment-by-segment encoded file path: encodeURIComponent would swallow `/`. */
 function encodePath(path: string): string {
   return path.split("/").map(encodeURIComponent).join("/");
 }
 
-/** Contenu brut d'un fichier à un ref donné, ou null s'il n'y existe pas. */
+/** Raw content of a file at a given ref, or null if it does not exist there. */
 export async function getFileAtRef(opts: {
   token: string;
   repoFullName: string;
@@ -930,10 +930,10 @@ export async function getFileAtRef(opts: {
 }
 
 /**
- * Mêmes octets, non décodés : la version image d'un fichier du diff (MIN-66).
- * `getFileAtRef` passe par `res.text()`, qui interprète le corps en UTF-8 et
- * remplace tout octet invalide par U+FFFD — un PNG en ressort corrompu. C'est la
- * seule raison d'être de ce doublon.
+ * Same bytes, not decoded: the image version of a diff file (MIN-66).
+ * `getFileAtRef` passes through `res.text()`, which interprets the body as UTF-8 and
+ * replaces any invalid byte with U+FFFD — a PNG comes out corrupted. This is the
+ * the only reason for this duplicate.
  */
 export async function getFileBytesAtRef(opts: {
   token: string;
@@ -950,7 +950,7 @@ export async function getFileBytesAtRef(opts: {
     try {
       message = ((await res.json()) as { message?: string }).message ?? message;
     } catch {
-      // Corps non-JSON (raw) : on garde le message par défaut.
+      // Non-JSON body (raw): we keep the default message.
     }
     throw new GithubApiError(message, res.status);
   }
@@ -993,10 +993,10 @@ export async function closePullRequest(opts: {
 }
 
 /**
- * Rouvre une PR refusée (MIN-68) : une run froide qui hérite d'une PR `closed`
- * retravaille SA branche — on remet la PR en revue plutôt que d'en ouvrir une
- * seconde sur la même branche. Renvoie la PR rouverte. Échoue (422) si la branche
- * tête a été supprimée entre-temps : l'appelant retombe alors sur une PR neuve.
+ * Reopens a refused PR (MIN-68): a cold run that inherits a PR `closed`
+ * reworks its branch - we review the PR rather than opening one
+ * second on the same branch. Returns the reopened PR. Fails (422) if the branch
+ * head has been deleted in the meantime: the caller then falls back on a new PR.
  */
 export async function reopenPullRequest(opts: {
   token: string;
@@ -1025,9 +1025,9 @@ const GITHUB_REVIEW_EVENT: Record<ReviewVerdict, "APPROVE" | "REQUEST_CHANGES" |
 };
 
 /**
- * Le verdict, écrit en toutes lettres en tête du commentaire de repli — sans lui,
- * un lecteur de la PR sur GitHub ne verrait qu'un commentaire nu là où minddy
- * affiche « approuvé ». En français, comme le corps de PR que l'agent rédige
+ * The verdict, written in full at the top of the fallback commentary — without it,
+ * a PR reader on GitHub would only see a bare comment where minddy
+ * displays “approved”. In French, like the body of PR that the agent writes
  * (`execute.ts`).
  */
 const FALLBACK_VERDICT_PREFIX: Record<ReviewVerdict, string> = {
@@ -1036,8 +1036,8 @@ const FALLBACK_VERDICT_PREFIX: Record<ReviewVerdict, string> = {
   comment: "",
 };
 
-/** GitHub refuse-t-il parce que l'auteur ne peut pas se relire lui-même ?
-    Mesuré : 422 « Review Can not approve your own pull request ». */
+/** Is GitHub refusing because the author can't proofread himself?
+    Measured: 422 “Review Can not approve your own pull request”. */
 function isSelfReviewRefusal(err: unknown): boolean {
   return (
     err instanceof GithubApiError &&
@@ -1047,23 +1047,23 @@ function isSelfReviewRefusal(err: unknown): boolean {
 }
 
 /**
- * Soumet une review sur la PR. `approve` et `request_changes` sont TENTÉS en
- * événement de review puis repliés en commentaire si GitHub refuse l'auto-review
- * (le cas normal des PR de Numo : elles sont ouvertes par le bot de la GitHub
- * App). On tente quand même plutôt que de replier d'emblée : sur un GitHub
- * Enterprise, ou le jour où une PR portera un autre auteur, le verdict doit
- * atterrir pour de vrai — le coût est un aller-retour de plus sur un clic.
+ * Submit a review on PR. `approve` and `request_changes` are ATTEMPTED in
+ * review event then folded into a comment if GitHub refuses auto-review
+ * (the normal case of Numo PRs: they are opened by the GitHub bot
+ * App). We're still trying rather than folding straight away: on a GitHub
+ * Enterprise, or the day a PR bears another author, the verdict must
+ * land for real — the cost is one more round trip on a click.
  *
- * **Tout ce qui n'est pas un verdict part dans le FIL** (`issues/{n}/comments`),
- * jamais en review `COMMENT`. VÉRIFIÉ contre l'API : le corps d'une review
- * `COMMENT` ne ressort que de `pulls/{n}/reviews` — il est absent de
- * `issues/{n}/comments`, le seul endpoint dont minddy peuple le fil de la PR
- * (`listPullRequestComments`). Un texte posté en review `COMMENT` est donc
- * lisible sur github.com et invisible DANS minddy, ce qui touchait les deux
- * chemins les plus courants : le verdict « commenter » du menu Review, et le
- * repli d'auto-review — c'est-à-dire toute approbation d'une PR de Numo.
- * GitLab faisait déjà ainsi (`submitMergeRequestReview` → `createMergeRequestNote`) :
- * les deux forges disent désormais la même chose.
+ * **Everything that is not a verdict goes into the FIL** (`issues/{n}/comments`),
+ * never in review `COMMENT`. VERIFIED against the API: the body of a review
+ * `COMMENT` only appears in `pulls/{n}/reviews` — it is absent from
+ * `issues/{n}/comments`, the only endpoint with which minddy populates the PR thread
+ * (`listPullRequestComments`). A text posted in review `COMMENT` is therefore
+ * readable on github.com and invisible IN minddy, which affected both
+ * most common paths: the “comment” verdict from the Review menu, and the
+ * self-review fallback — that is, any approval of a Numo PR.
+ * GitLab already did this (`submitMergeRequestReview` → `createMergeRequestNote`):
+ * both forges now say the same thing.
  */
 export async function submitPullRequestReview(opts: {
   token: string;
@@ -1084,8 +1084,8 @@ export async function submitPullRequestReview(opts: {
       },
     );
 
-  // Rien à publier comme verdict : le texte va là où il sera lu. `published`
-  // reste « review » — aucune forge n'a rien refusé.
+  // Nothing to publish as a verdict: the text goes where it will be read. `published`
+  // remains “review” — no forge has refused anything.
   if (opts.verdict === "comment") {
     await createPullRequestComment(opts);
     return { published: "review" };
@@ -1095,7 +1095,7 @@ export async function submitPullRequestReview(opts: {
     return { published: "review" };
   } catch (err) {
     if (!isSelfReviewRefusal(err)) throw err;
-    // Le préfixe garantit aussi un corps NON VIDE : GitHub accepte un `APPROVE`
+    // The prefix also guarantees a NON-EMPTY body: GitHub accepts a `APPROVE`
     // sans message, mais refuse un commentaire qui n'en a pas.
     const body = `${FALLBACK_VERDICT_PREFIX[opts.verdict]}\n\n${opts.body}`.trim();
     await createPullRequestComment({ ...opts, body });
@@ -1111,10 +1111,10 @@ interface RawReview {
 }
 
 /**
- * Le TEXTE d'une review déjà soumise, avec son verdict — ce que le décompte
- * d'approbations ne dit pas. Lu par la passe de relecture de Numo (MIN-141) :
- * un point déjà soulevé par quelqu'un n'a pas à l'être une seconde fois, et le
- * corps d'une review vit ailleurs que le fil (`pulls/{n}/reviews`, jamais
+ * The TEXT of a review already submitted, with its verdict — what the count
+ * of approvals does not say. Read via Numo's replay pass (MIN-141):
+ * a point already raised by someone does not need to be raised a second time, and the
+ * body of a review lives elsewhere than the thread (`pulls/{n}/reviews`, never
  * `issues/{n}/comments`).
  */
 export interface PullRequestReviewMessage {
@@ -1126,11 +1126,11 @@ export interface PullRequestReviewMessage {
 }
 
 /**
- * Décompte des approbations de la PR. GitHub garde TOUT l'historique des reviews
- * (approuver, puis demander des changements, laisse les deux lignes) : seule la
- * DERNIÈRE review tranchante de chaque utilisateur compte, exactement comme la
- * règle d'approbation du dépôt. Les `COMMENTED` et `DISMISSED` ne tranchent rien
- * et sont donc ignorées, sans effacer un verdict antérieur.
+ * PR approval count. GitHub keeps ALL review history
+ * (approve, then request changes, leave the two lines): only the
+ * LATEST sharp review of every user counts, exactly like the
+ * repository approval rule. The `COMMENTED` and `DISMISSED` do not decide anything
+ * and are therefore ignored, without erasing a previous verdict.
  */
 export async function listPullRequestReviews(opts: {
   token: string;
@@ -1142,7 +1142,7 @@ export async function listPullRequestReviews(opts: {
     `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}/reviews?per_page=100`,
     opts.token,
   );
-  // L'endpoint renvoie du plus ancien au plus récent : la dernière écriture par
+  // The endpoint goes from oldest to newest: last written by
   // login gagne naturellement.
   const verdictByUser = new Map<string, "approved" | "changes_requested">();
   for (const r of reviews) {
@@ -1159,10 +1159,10 @@ export async function listPullRequestReviews(opts: {
 }
 
 /**
- * Les reviews déjà soumises, AVEC leur texte (du plus ancien au plus récent).
- * Même endpoint que le décompte ci-dessus, autre lecture : ici on garde ce qui a
- * été ÉCRIT. Les reviews sans corps sont écartées — une approbation nue n'apporte
- * rien à qui relit, son existence se lit déjà dans le décompte.
+ * Reviews already submitted, WITH their text (from oldest to most recent).
+ * Same endpoint as the count above, different reading: here we keep what has
+ * been WRITTEN. Reviews without a body are ruled out — naked approval does not bring
+ * nothing to read again, its existence can already be read in the countdown.
  */
 export async function listPullRequestReviewMessages(opts: {
   token: string;
@@ -1185,13 +1185,13 @@ export async function listPullRequestReviewMessages(opts: {
 }
 
 /**
- * Appel GraphQL, pour ce que la REST de GitHub ne sait pas faire : basculer une
- * PR hors brouillon (ci-dessous) et résoudre un fil de review (MIN-139).
+ * GraphQL call, for what GitHub REST cannot do: switch a
+ * PR out of draft (below) and resolve a review thread (MIN-139).
  *
- * GraphQL répond **200 avec un tableau `errors`** quand l'opération échoue :
- * s'en remettre au status HTTP ferait passer un échec pour un succès. Vérifié
- * avec un token d'installation — aucune permission de plus que celles de la REST
- * équivalente (`pull_requests: read`/`write`).
+ * GraphQL responds **200 with an array `errors`** when the operation fails:
+ * relying on HTTP status would make a failure look like a success. Verified
+ * with an installation token — no more permissions than REST
+ * equivalent (`pull_requests: read`/`write`).
  */
 async function ghGraphql<T>(
   token: string,
@@ -1209,7 +1209,7 @@ async function ghGraphql<T>(
   try {
     data = text ? (JSON.parse(text) as GraphqlBody) : null;
   } catch {
-    // Corps non-JSON : le status seul décidera.
+    // Non-JSON body: the status alone will decide.
   }
   if (!res.ok) {
     throw new GithubApiError(
@@ -1225,8 +1225,8 @@ async function ghGraphql<T>(
 }
 
 /**
- * Bascule une PR brouillon en « prête pour la review ». La REST ne sait pas le
- * faire : c'est une mutation GraphQL, adressée par le `node_id` de la PR (d'où
+ * Switches a draft PR to “ready for review”. REST does not know
+ * do: it is a GraphQL mutation, addressed by the `node_id` of the PR (hence
  * `PullRequestRef.nodeId`).
  */
 export async function markPullRequestReadyForReview(opts: {
@@ -1242,14 +1242,14 @@ export async function markPullRequestReadyForReview(opts: {
 }
 
 /**
- * Checks CI de la tête de la PR : les check runs (GitHub Actions & co) ET les
- * commit statuses (l'API historique), fusionnés par `checks-core`.
+ * CI checks from the PR head: check runs (GitHub Actions & co) AND
+ * commit statuses (the historical API), merged by `checks-core`.
  *
- * Demande les permissions `checks: read` et `statuses: read` de la GitHub App.
- * Une App qui les gagne ne les obtient PAS rétroactivement — chaque installation
- * existante doit les accepter (même piège que `getIssuesPermission`). Tant que ce
- * n'est pas fait, GitHub répond **403 « Resource not accessible by integration »**
- * (mesuré) : l'appelant dégrade en « checks indisponibles », il ne casse pas.
+ * Requests `checks: read` and `statuses: read` permissions from the GitHub App.
+ * An App that earns them does NOT earn them retroactively — every install
+ * existing must accept them (same trap as `getIssuesPermission`). As long as this
+ * is not done, GitHub responds **403 “Resource not accessible by integration”**
+ * (measured): the caller degrades to “checks unavailable”, it does not break.
  */
 export async function listPullRequestChecks(opts: {
   token: string;
@@ -1284,8 +1284,8 @@ function toComment(c: RawComment): PullRequestComment {
 }
 
 /**
- * Commentaires de conversation de la PR (fil de discussion). Sur GitHub une PR
- * EST une issue, donc ses commentaires vivent sous `issues/{n}/comments`.
+ * PR conversation comments (thread). On GitHub a PR
+ * IS an issue, so his comments live under `issues/{n}/comments`.
  */
 export async function listPullRequestComments(opts: {
   token: string;
@@ -1301,20 +1301,20 @@ export async function listPullRequestComments(opts: {
 }
 
 /**
- * Les images des commentaires de la PR, indexées par uuid d'asset (MIN-162).
+ * Images from PR comments, indexed by asset uuid (MIN-162).
  *
- * `Accept: application/vnd.github.full+json` demande à GitHub de RENDRE le
- * markdown : la réponse porte alors un `body_html` où chaque image collée est
- * réécrite en URL signée, servable sans authentification — là où l'URL du corps
- * brut (`github.com/user-attachments/assets/…`) répond 404 à tout ce que minddy
- * détient. Le pourquoi, et la table de mesures, sont dans `lib/forge-image-assets`.
+ * `Accept: application/vnd.github.full+json` asks GitHub to MAKE it
+ * markdown: the response then carries a `body_html` where each pasted image is
+ * rewritten to a signed, serverable URL without authentication — where the body URL
+ * raw (`github.com/user-attachments/assets/…`) responds 404 to everything minddy
+ * holds. The why, and the measurement table, are in `lib/forge-image-assets`.
  *
- * Trois surfaces, parce qu'une image peut être n'importe où sur la PR : son
- * CORPS, un message du fil, une remarque de ligne. Elles se lisent en parallèle
- * et versent dans la même table — l'appelant cherche un uuid, pas un endroit.
+ * Three surfaces, because an image can be anywhere on the PR: its
+ * BODY, a thread message, a line remark. They are read in parallel
+ * and pour into the same table — the caller is looking for a uuid, not a location.
  *
- * Best-effort à la surface : une lecture en échec retire des images de la table,
- * elle ne fait pas tomber l'affichage de la PR.
+ * Best-effort on the surface: a failed read removes images from the table,
+ * it does not cause the PR display to fall.
  */
 export async function listPullRequestImageAssets(opts: {
   token: string;
@@ -1347,20 +1347,20 @@ export async function listPullRequestImageAssets(opts: {
 }
 
 const TIMELINE_PER_PAGE = 100;
-/** Garde-fou : 10 pages = 1000 faits, très au-delà de la PR la plus bavarde. */
+/** Guardrail: 10 pages = 1000 facts, far beyond the most talkative PR. */
 const TIMELINE_MAX_PAGES = 10;
 
 /**
- * L'ACTIVITÉ de la PR (MIN-159) — reviews soumises, commits poussés, labels,
- * assignations, renommages, brouillon ↔ prête, fermeture, merge.
+ * PR ACTIVITY (MIN-159) — reviews submitted, commits pushed, labels,
+ * assignments, renames, draft ↔ ready, close, merge.
  *
- * Sur GitHub une PR est une issue, et tout ça vit sous `issues/{n}/timeline` :
- * un flux hétérogène où chaque `event` a sa propre forme. La normalisation est
- * dans `lib/pr-timeline` (pure, partagée avec le client) ; ici on ne fait que
- * paginer — du plus ANCIEN au plus récent, comme les commentaires.
+ * On GitHub a PR is an issue, and it all lives under `issues/{n}/timeline`:
+ * a heterogeneous flow where each `event` has its own form. Normalization is
+ * in `lib/pr-timeline` (pure, shared with the client); here we only do
+ * paginate — from OLDEST to newest, like comments.
  *
- * Les reviews en font partie (`event: "reviewed"`, avec leur corps) : c'est ce
- * qui manquait le plus au fil de minddy, une approbation motivée n'y étant
+ * The reviews are part of it (`event: "reviewed"`, with their body): this is what
+ * which was missing the most from minddy's thread, a reasoned approval not being there
  * jusqu'ici visible nulle part.
  */
 export async function listPullRequestTimeline(opts: {
@@ -1377,7 +1377,7 @@ export async function listPullRequestTimeline(opts: {
       opts.token,
     );
     all.push(...batch);
-    // Page incomplète = dernière page.
+    // Incomplete page = last page.
     if (batch.length < TIMELINE_PER_PAGE) break;
   }
   return fromGithubTimeline(all);
@@ -1403,10 +1403,10 @@ function toReviewComment(c: RawReviewComment): PullRequestReviewComment {
     line: c.line ?? null,
     original_line: c.original_line ?? null,
     side: c.side === "LEFT" ? "LEFT" : "RIGHT",
-    // Remarque multi-lignes : `line` en est la DERNIÈRE ligne, `start_line` la
-    // première. Sans relire ces deux-là, un commentaire posé sur les lignes 6 à
-    // 15 revient de la forge comme un commentaire sur la 15 — il l'est, au sens
-    // de l'ancre, mais l'écran ne dirait plus rien de la plage.
+    // Multi-line note: `line` is the LAST line, `start_line` the
+    // first. Without rereading these two, a comment on lines 6 to
+    // 15 returns from the forge as a commentary on 15 — it is, in the sense
+    // of the anchor, but the screen would no longer say anything about the beach.
     start_line: c.start_line ?? null,
     start_side: c.start_side === "LEFT" ? "LEFT" : c.start_side === "RIGHT" ? "RIGHT" : null,
     in_reply_to_id: c.in_reply_to_id ?? null,
@@ -1419,17 +1419,17 @@ function toReviewComment(c: RawReviewComment): PullRequestReviewComment {
 }
 
 const REVIEW_COMMENTS_PER_PAGE = 100;
-/** Garde-fou : 10 pages = 1000 commentaires de review, très au-delà du réel. */
+/** Guardrail: 10 pages = 1000 review comments, far beyond reality. */
 const REVIEW_COMMENTS_MAX_PAGES = 10;
 
 /**
- * Commentaires de review de la PR — ceux ancrés à une ligne de code.
+ * PR review comments — those anchored to one line of code.
  *
- * PAGINÉ, contrairement à ses voisins de ce fichier : GitHub sert ce endpoint du
- * plus ANCIEN au plus récent, donc s'arrêter à la première page ferait disparaître
- * les commentaires les plus RÉCENTS — précisément ceux qui portent la demande du
- * jour, et que l'agent doit lire. Un fil de review dépasse 100 bien plus vite
- * qu'une PR ne dépasse 100 fichiers changés.
+ * PAGINATED, unlike its neighbors of this file: GitHub serves this endpoint of the
+ * oldest to newest, so stopping at the first page would make it disappear
+ * the most RECENT comments — precisely those which carry the request of the
+ * day, and which the agent must read. A review thread exceeds 100 much faster
+ * that a PR does not exceed 100 files changed.
  */
 export async function listPullRequestReviewComments(opts: {
   token: string;
@@ -1445,24 +1445,24 @@ export async function listPullRequestReviewComments(opts: {
       opts.token,
     );
     all.push(...batch.map(toReviewComment));
-    // Page incomplète = dernière page.
+    // Incomplete page = last page.
     if (batch.length < REVIEW_COMMENTS_PER_PAGE) break;
   }
   return all;
 }
 
 /**
- * Poste un commentaire de review sur une ligne (équivalent du « Add single
- * comment » de GitHub : il part tout de suite, hors review groupée).
+ * Post a review comment on one line (equivalent to “Add single
+ * comment” from GitHub: it leaves immediately, excluding group review).
  *
- * `commitId` DOIT être la tête de la PR (`PullRequestRef.headSha`), et la ligne
- * doit appartenir au diff : vérifié contre l'API réelle, une ligne hors diff —
- * typiquement une ligne de contexte dépliée dans la vue — se fait refuser en
+ * `commitId` MUST be the head of the PR (`PullRequestRef.headSha`), and the line
+ * must belong to diff: checked against real API, one line out of diff —
+ * typically a context line unfolded in the view — is refused in
  * **422** (`pull_request_review_thread.line: could not be resolved`). L'appelant
- * ne doit donc proposer l'affordance que sur les lignes des hunks d'origine.
+ * must therefore only offer the affordance on the lines of the original hunks.
  *
- * `startLine`/`startSide` sont là pour les commentaires multi-lignes (hors
- * périmètre aujourd'hui) : GitHub les accepte sur ce même endpoint.
+ * `startLine`/`startSide` are there for multi-line comments (excluding
+ * perimeter today): GitHub accepts them on this same endpoint.
  */
 export async function createPullRequestReviewComment(opts: {
   token: string;
@@ -1498,9 +1498,9 @@ export async function createPullRequestReviewComment(opts: {
 }
 
 /**
- * Répond dans un fil de review. `commentId` peut être n'importe quel commentaire
- * du fil : GitHub rattache la réponse à la RACINE (vérifié contre l'API — répondre
- * à une réponse renvoie `in_reply_to_id` = la racine). Les fils sont donc plats.
+ * Reply in a review thread. `commentId` can be any comment
+ * from the thread: GitHub attaches the response to the ROOT (checked against the API — answer
+ * to a response returns `in_reply_to_id` = the root). The wires are therefore flat.
  */
 export async function replyToPullRequestReviewComment(opts: {
   token: string;
@@ -1522,9 +1522,9 @@ export async function replyToPullRequestReviewComment(opts: {
   return toReviewComment(created);
 }
 
-// ── Résolution des fils de review (MIN-139) ──────────────────────────────────
+// ── Resolution of review threads (MIN-139) ──────────────────────────────────
 
-/** Même garde-fou que la pagination des commentaires : 10 × 100 fils. */
+/** Same safeguard as comment pagination: 10 × 100 threads. */
 const REVIEW_THREADS_MAX_PAGES = 10;
 
 interface RawReviewThreads {
@@ -1544,18 +1544,18 @@ interface RawReviewThreads {
 }
 
 /**
- * État de résolution des fils de review — **le seul endroit où GitHub le dit**.
+ * Review thread resolution status — **the only place GitHub says it**.
  *
- * L'API REST des commentaires (`listPullRequestReviewComments`) ne connaît que
- * des commentaires : ni l'id du FIL, ni sa résolution. Plutôt que de basculer
- * toute la lecture sur GraphQL, on ajoute CETTE requête à côté : elle rend, par
- * fil, son node id (seule clé des mutations) et l'id REST de son commentaire
- * racine (`databaseId`) — c'est-à-dire exactement la clé sur laquelle
- * `groupReviewThreads` regroupe déjà. Les deux listes s'apparient donc sans
+ * The comments REST API (`listPullRequestReviewComments`) only knows
+ * comments: neither the id of the FIL, nor its resolution. Rather than switching
+ * all the reading on GraphQL, we add THIS query next to it: it returns, by
+ * thread, its node id (only key for mutations) and the REST id of its comment
+ * root (`databaseId`) — that is, exactly the key on which
+ * `groupReviewThreads` already groups. The two lists therefore match without
  * heuristique.
  *
- * `comments(first:1)` suffit : GitHub sert les commentaires d'un fil du plus
- * ancien au plus récent, et le premier EST la racine (celui dont la REST dit
+ * `comments(first:1)` is enough: GitHub serves comments from a thread of the most
+ * old to newest, and the first IS the root (the one whose REST says
  * `in_reply_to_id: null`).
  */
 export async function listPullRequestReviewThreads(opts: {
@@ -1587,8 +1587,8 @@ export async function listPullRequestReviewThreads(opts: {
     const threads = data.repository?.pullRequest?.reviewThreads;
     for (const node of threads?.nodes ?? []) {
       const rootCommentId = node?.comments?.nodes?.[0]?.databaseId;
-      // Un fil sans node id ou sans racine lisible n'est appariable à rien : on
-      // le laisse tomber plutôt que d'inventer une clé.
+      // A thread without a node id or without a readable root cannot be matched to anything: we
+      // drop it rather than invent a key.
       if (!node?.id || rootCommentId == null) continue;
       states.push({
         rootCommentId,
@@ -1604,8 +1604,8 @@ export async function listPullRequestReviewThreads(opts: {
 }
 
 /**
- * Résout (ou rouvre) un fil de review. GraphQL SEULEMENT : la REST n'expose
- * aucune de ces deux opérations, et le fil s'adresse par son node id — celui que
+ * Resolves (or reopens) a review thread. GraphQL ONLY: REST does not expose
+ * neither of these two operations, and the thread is addressed by its node id — the one that
  * `listPullRequestReviewThreads` vient de rendre, jamais un id de commentaire.
  */
 export async function setPullRequestReviewThreadResolved(opts: {
@@ -1619,9 +1619,9 @@ export async function setPullRequestReviewThreadResolved(opts: {
   await ghGraphql<unknown>(opts.token, mutation, { id: opts.threadId });
 }
 
-// ── Réactions emoji des commentaires de review (MIN-139) ─────────────────────
+// ── Emoji reactions from review comments (MIN-139) ─────────────────────
 
-/** Enum GraphQL des réactions → vocabulaire canonique (`pr-review-reactions`). */
+/** GraphQL enum of reactions → canonical vocabulary (`pr-review-reactions`). */
 const GH_REACTION_BY_ENUM: Record<string, ReviewReactionContent> = {
   THUMBS_UP: "+1",
   THUMBS_DOWN: "-1",
@@ -1633,18 +1633,18 @@ const GH_REACTION_BY_ENUM: Record<string, ReviewReactionContent> = {
   EYES: "eyes",
 };
 
-/** Un groupe de réaction GraphQL, tel que le rendent les DEUX requêtes (review et
-    conversation) : le même fragment, donc la même forme. */
+/** A GraphQL reaction group, as rendered by BOTH queries (review and
+    conversation): the same fragment, therefore the same form. */
 type RawReactionGroup = {
   content?: string;
   viewerHasReacted?: boolean;
   reactors?: { totalCount?: number } | null;
 } | null;
 
-/** Groupes GraphQL → réactions canoniques d'UN sujet. Les groupes à zéro sont
-    écartés (GitHub garde un instant celui d'une réaction retirée : le rendre
-    afficherait un emoji que plus personne n'a posé), et `mine` est forcé à faux
-    quand le token n'est pas celui de l'humain — cf. `viewerIsActor`. */
+/** GraphQL groups → canonical reactions of ONE subject. The zero groups are
+    discarded (GitHub keeps for a moment that of a withdrawn reaction: return it
+    would display an emoji that no one has asked anymore), and `mine` is forced to false
+    when the token is not that of the human — cf. `viewerIsActor`. */
 function toReactions(
   commentId: number,
   groups: RawReactionGroup[] | null | undefined,
@@ -1665,8 +1665,8 @@ function toReactions(
   return out;
 }
 
-/** Commentaires lus par fil : un fil de review qui dépasse est rarissime, et ce
-    qui déborde ne perd que ses réactions — jamais son texte, servi par la REST. */
+/** Comments read by thread: a review thread that exceeds is extremely rare, and this
+    who overflows only loses his reactions – never his text, served by the REST. */
 const REACTIONS_COMMENTS_PER_THREAD = 50;
 
 interface RawReactionThreads {
@@ -1688,22 +1688,22 @@ interface RawReactionThreads {
 }
 
 /**
- * Réactions de TOUS les commentaires de review, en une requête GraphQL.
+ * Reactions from ALL review comments, in one GraphQL query.
  *
- * La REST sait les compter (le payload d'un commentaire porte un objet
- * `reactions`) mais ne dit PAS si l'identité courante a déjà réagi — or c'est
- * exactement ce qui décide l'état du bouton. Le savoir en REST demanderait un
- * appel par commentaire ; `reactionGroups` le donne pour toute la PR d'un coup,
- * avec `viewerHasReacted` — « le viewer » étant, littéralement, le porteur du
+ * REST knows how to count them (the payload of a comment carries an object
+ * `reactions`) but does NOT say if the current identity has already reacted — but it is
+ * exactly what decides the state of the button. Knowing REST would require a
+ * appeal by comment; `reactionGroups` gives it for the entire PR at once,
+ * with `viewerHasReacted` — “the viewer” being, literally, the bearer of the
  * token qui lit.
  *
- * D'où `viewerIsActor` (MIN-145) : à faux, le token est celui de l'installation
- * et `viewerHasReacted` parle du BOT. On force alors `mine: false` plutôt que de
- * rendre tel quel un « j'ai réagi » qui n'est celui de personne. Les comptes,
- * eux, sont les mêmes pour tout le monde.
+ * Hence `viewerIsActor` (MIN-145): if false, the token is that of the installation
+ * and `viewerHasReacted` talks about the BOT. We then force `mine: false` rather than
+ * to render as is an “I reacted” which is not that of anyone. The accounts,
+ * they are the same for everyone.
  *
- * `commentIds` est ignoré : la requête part de la PR, pas des commentaires. Il
- * n'est là que parce que GitLab, lui, n'a rien d'équivalent et doit interroger
+ * `commentIds` is ignored: the request starts from the PR, not from the comments. He
+ * is only there because GitLab has nothing equivalent and must query
  * note par note.
  */
 export async function listPullRequestReviewCommentReactions(opts: {
@@ -1756,11 +1756,11 @@ interface RawReaction {
 }
 
 /**
- * Le compte à qui APPARTIENT ce token (`GET /user`) — le pendant GitHub de
- * `gitlabCurrentUsername` de `mr.ts`. Il n'est demandé qu'en dernier recours :
- * le login de l'acteur voyage déjà avec l'appel, et cet aller-retour n'existe
- * que pour le rattraper quand il est PÉRIMÉ. Rend null si la question échoue —
- * un token d'installation, par exemple, n'a pas de porteur à nommer.
+ * The account to which this token BELONGS (`GET /user`) — the GitHub counterpart of
+ * `gitlabCurrentUsername` of `mr.ts`. It is only requested as a last resort:
+ * the actor's login already travels with the call, and this round trip does not exist
+ * only to catch it when it is OUT OF DATE. Returns null if the question fails —
+ * a facility token, for example, has no bearer to name.
  */
 async function githubCurrentLogin(token: string): Promise<string | null> {
   const me = await ghJson<{ login?: string }>(`${GITHUB_API_BASE}/user`, token).catch(
@@ -1770,20 +1770,20 @@ async function githubCurrentLogin(token: string): Promise<string | null> {
 }
 
 /**
- * Pose ou retire une réaction sur un commentaire de review. REST des deux côtés
- * de la bascule : la mutation GraphQL équivalente s'adresse par node id, que la
- * palette n'a pas pour un commentaire encore SANS réaction.
+ * Post or remove a reaction to a review comment. REST on both sides
+ * of the toggle: the equivalent GraphQL mutation is addressed by node id, that the
+ * palette has not yet commented WITHOUT reaction.
  *
- * Geste humain (MIN-145) : le token est celui de l'ACTEUR, et `login` son compte
- * — la réaction à retirer se cherche par ce nom, parce que la REST ne sait pas
- * supprimer « la mienne » sans son id, et que la liste ne les distingue que par
- * leur auteur. Sans `login`, on lève : retomber sur le bot ferait exactement le
- * bug que ce ticket corrige, et poser une réaction qu'on ne saura jamais retirer
- * n'est pas mieux.
+ * Human gesture (MIN-145): the token is that of the ACTOR, and `login` his account
+ * — the reaction to be removed is searched by this name, because the REST does not know
+ * delete “mine” without its id, and that the list only distinguishes them by
+ * their author. Without `login`, we raise: falling back on the bot would do exactly the
+ * bug that this ticket corrects, and pose a reaction that we will never be able to remove
+ * is not better.
  *
- * Ce nom n'est qu'un RACCOURCI, jamais l'autorité : quand il ne désigne aucune
- * réaction du commentaire, c'est au token qu'on demande son porteur (cf. le
- * retrait plus bas). L'autorité, c'est lui — le nom stocké peut avoir vieilli.
+ * This name is only a SHORTCUT, never authority: when it does not designate any
+ * reaction of the comment, it is the token that we ask for its bearer (cf. the
+ * withdrawal below). He is the authority — the stored name may have aged.
  */
 export async function setPullRequestReviewCommentReaction(opts: {
   token: string;
@@ -1801,9 +1801,9 @@ export async function setPullRequestReviewCommentReaction(opts: {
 }
 
 /**
- * La bascule elle-même, à une COLLECTION de réactions près (`base`) : la même
- * mécanique sert les commentaires de review, ceux du fil, et le corps de la PR —
- * seule l'URL change d'une surface à l'autre.
+ * The seesaw itself, except for one COLLECTION of reactions (`base`): the same
+ * mechanics serves the review comments, those of the thread, and the body of the PR —
+ * only the URL changes from one surface to another.
  */
 async function setGithubReaction(opts: {
   token: string;
@@ -1816,7 +1816,7 @@ async function setGithubReaction(opts: {
   const base = opts.base;
 
   if (opts.on) {
-    // Idempotent : GitHub rend 200 (et non 201) quand la réaction existait déjà.
+    // Idempotent: GitHub returns 200 (not 201) when the reaction already existed.
     await ghJson<unknown>(base, opts.token, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1835,31 +1835,31 @@ async function setGithubReaction(opts: {
       : undefined;
 
   let mine = reactionOf(opts.login);
-  // `login` est un CACHE : il vient de `git_user_identities`, écrit à la
-  // connexion du compte et jamais rafraîchi. Qui renomme son compte GitHub garde
-  // un token valide et un `viewerHasReacted` juste — sa réaction s'allume donc —
-  // mais ce nom-là ne désigne plus personne, et le retrait sortirait par le
-  // `return` ci-dessous : chip toujours allumé, aucun message, un clic sans
-  // effet à répéter indéfiniment. Le token, lui, ne périme pas son porteur : on
-  // le lui demande. Seulement s'il reste un candidat — une liste vide n'a aucun
-  // nom à départager, et c'est le cas courant du « déjà retiré ».
+  // `login` is a CACHE: it comes from `git_user_identities`, written at
+  // account login and never refreshed. Whoever renames their GitHub account keeps
+  // a valid token and a correct `viewerHasReacted` — its reaction therefore lights up —
+  // but this name no longer designates anyone, and the withdrawal would come out through the
+  // `return` below: chip always on, no message, one click without
+  // effect to be repeated indefinitely. The token does not expire its bearer: we
+  // asks him. Only if there is one candidate left — an empty list has no
+  // name to be decided, and this is the common case of “already withdrawn”.
   if (!mine && (existing?.length ?? 0) > 0) {
     const current = await githubCurrentLogin(opts.token);
     if (current && current !== opts.login) mine = reactionOf(current);
   }
-  // Rien à retirer : la bascule a déjà l'effet demandé, ce n'est pas une panne.
+  // Nothing to remove: the rocker already has the requested effect, it is not a failure.
   if (mine?.id == null) return;
   await ghJson<unknown>(`${base}/${mine.id}`, opts.token, { method: "DELETE" });
 }
 
-// ── Réactions du FIL de conversation (MIN-147) ───────────────────────────────
+// ── Conversation THREAD Reactions (MIN-147) ───────────────────────────────
 
 /**
- * Collection de réactions visée par un id de commentaire de conversation.
+ * Collection of reactions targeted by a conversation comment id.
  *
- * Une PR EST une issue chez GitHub : ses messages vivent sous
- * `issues/comments/{id}`, et son CORPS — le message qui ouvre le fil — sous
- * `issues/{n}` lui-même. `PR_BODY_COMMENT_ID` fait la bascule entre les deux.
+ * A PR IS an issue at GitHub: its messages live under
+ * `issues/comments/{id}`, and its BODY — the message that opens the thread — under
+ * `issues/{n}` itself. `PR_BODY_COMMENT_ID` switches between the two.
  */
 function conversationReactionsUrl(opts: {
   repoFullName: string;
@@ -1889,19 +1889,19 @@ interface RawConversationReactions {
   } | null;
 }
 
-/** Pages de commentaires de fil lues pour leurs réactions — au-delà, seuls les
-    emoji manquent : le TEXTE des commentaires vient de la REST, sans plafond. */
+/** Feed comment pages read for reactions — beyond that, only comments
+    emoji are missing: the TEXT of the comments comes from the REST, without cap. */
 const CONVERSATION_REACTIONS_MAX_PAGES = 5;
 
 /**
- * Réactions du fil de conversation — le corps de la PR ET tous ses commentaires,
- * en une requête GraphQL, exactement comme leur pendant de review.
+ * Reactions from the conversation thread — the body of the PR AND all its comments,
+ * in a GraphQL query, exactly like their review counterpart.
  *
- * Le corps sort sous `PR_BODY_COMMENT_ID` : c'est un message de plus dans le fil
- * pour qui lit, un sujet à part pour qui écrit (cf. `conversationReactionsUrl`).
+ * The body comes out under `PR_BODY_COMMENT_ID`: it's one more message in the thread
+ * for those who read, a separate subject for those who write (see `conversationReactionsUrl`).
  *
- * `viewerIsActor` (MIN-145) : à faux, `viewerHasReacted` parle du BOT et non de
- * la personne qui regarde — tout sort en `mine: false`, les comptes restent justes.
+ * `viewerIsActor` (MIN-145): falsely, `viewerHasReacted` speaks of the BOT and not of
+ * the person watching — everything comes out as `mine: false`, the accounts remain accurate.
  */
 export async function listPullRequestConversationReactions(opts: {
   token: string;
@@ -1932,8 +1932,8 @@ export async function listPullRequestConversationReactions(opts: {
       { owner, name: repo, number: opts.number, cursor },
     );
     const pr = data.repository?.pullRequest;
-    // Le corps ne vient QUE de la première page : il est porté par la PR, pas par
-    // la pagination des commentaires, et le relire compterait ses réactions deux fois.
+    // The body ONLY comes from the first page: it is carried by the RA, not by
+    // the pagination of the comments, and rereading it would count its reactions twice.
     if (page === 0) {
       reactions.push(
         ...toReactions(PR_BODY_COMMENT_ID, pr?.reactionGroups, opts.viewerIsActor),
@@ -1951,8 +1951,8 @@ export async function listPullRequestConversationReactions(opts: {
   return reactions;
 }
 
-/** Pose ou retire une réaction sur un message du fil — ou sur le corps de la PR
-    (`PR_BODY_COMMENT_ID`). Même mécanique que la review, autre collection. */
+/** Post or remove a reaction on a message in the thread — or on the body of the PR
+    (`PR_BODY_COMMENT_ID`). Same mechanics as the review, different collection. */
 export async function setPullRequestConversationReaction(opts: {
   token: string;
   repoFullName: string;
@@ -1965,7 +1965,7 @@ export async function setPullRequestConversationReaction(opts: {
   return setGithubReaction({ ...opts, base: conversationReactionsUrl(opts) });
 }
 
-/** Ajoute un commentaire à la conversation de la PR (auteur = la GitHub App minddy). */
+/** Add a comment to the PR conversation (author = GitHub App minddy). */
 export async function createPullRequestComment(opts: {
   token: string;
   repoFullName: string;

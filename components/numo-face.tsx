@@ -1,23 +1,22 @@
 import type { CSSProperties, ReactNode, Ref, SVGProps } from "react";
 
 /**
- * Le DESSIN de Numo, sans une ligne de JavaScript.
+ * Numo's DRAWING, without a line of JavaScript.
  *
- * Pas de `"use client"`, pas de framer-motion : c'est un SVG, il se rend côté
- * serveur. `NumoIcon` (client) l'enveloppe pour lui donner son clignement et ses
- * regards ; les appelants qui voulaient déjà un visage immobile — la nav
- * publique, son menu produit, la section « agents » de la landing — l'utilisent
- * directement.
+ * No `"use client"`, no framer-motion: it's an SVG, it goes to the
+ * server side. `NumoIcon` (client) wraps it to give it its wink and
+ * looks; callers who already wanted a still face — the public nav
+ *, its product menu, the “agents” section of the landing — use it
+ * directly.
  *
- * Pourquoi ce découpage (MIN-100) : `NumoIcon` appelle `useAnimate()` au premier
- * niveau, donc il importe framer-motion QUOI QU'IL ARRIVE, y compris derrière
- * `animated={false}`. Sur la landing, où les trois usages sont immobiles, cela
- * faisait entrer **48 Ko gzippés de moteur d'animation dans le bundle initial**
- * — devant l'image du LCP dans la file de téléchargement — pour un visage qui ne
- * bouge pas.
+ * Why this division (MIN-100): `NumoIcon` calls `useAnimate()` at first
+ * level, so it matters framer-motion NO MATTER HAPPEN, including behind
+ * `animated={false}`. On the landing, where the three uses are immobile, this
+ * brought **48 gzipped KB of animation engine into the initial bundle**
+ * — in front of the LCP image in the download queue — for a face that does not
+ * move.
  *
- * Le dessin vit ici et nulle part ailleurs : `NumoIcon` le rend aussi, il ne le
- * recopie pas.
+ * The drawing lives here and nowhere else: `NumoIcon` returns it too, it doesn't copy it.
  */
 
 // SVG transforms default to the (0,0) origin; `fill-box` + `center` pins the
@@ -36,9 +35,9 @@ const MOUTH_PATH =
   "M20.5 21L20.7519 21.1679C21.5657 21.7105 22.5219 22 23.5 22C24.4946 22 25.4663 21.7014 26.2893 21.143L26.5 21";
 
 export type NumoFaceProps = Omit<SVGProps<SVGSVGElement>, "ref"> & {
-  /** Couleur des traits. `currentColor` par défaut : se teinte avec `text-*`. */
+  /** Line color. `currentColor` by default: tints with `text-*`. */
   paint?: string;
-  /** `<defs>` de l'appelant (le dégradé « en train de réfléchir »). */
+  /** `<defs>` of the caller (the "thinking" gradient). */
   defs?: ReactNode;
   ref?: Ref<SVGSVGElement>;
 };

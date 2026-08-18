@@ -20,9 +20,9 @@ import {
 const RATE_LIMIT = { limit: 10, windowMs: 60 * 60 * 1000 } as const;
 
 /**
- * POST /api/billing/checkout — { planId: "go" | "pro" } → { url } de la session
- * Stripe Checkout (MIN-72). Un abonnement déjà actif → 409 : le changement de
- * plan passe par le portal.
+ * POST /api/billing/checkout — { planId: "go" | "pro" } → { url } of the session
+ * Stripe Checkout (MIN-72). An already active subscription → 409: change of
+ * plan goes through the portal.
  */
 export async function POST(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -66,15 +66,15 @@ export async function POST(request: NextRequest) {
   }
 
   /**
-   * Customer : celui QU'ON A ÉCRIT pour ce compte, sinon un neuf. Jamais une
+   * Customer: the one WE WROTE for this account, otherwise a new one. Never one
    * recherche par adresse (MIN-344).
    *
-   * L'e-mail n'identifie personne chez Stripe : rien n'y empêche deux clients de
-   * la porter, et surtout rien ne relie l'adresse d'un compte minddy au client
-   * Stripe qui la porte — un compte qui s'inscrit avec l'adresse d'un autre
-   * héritait de SON client, donc de son abonnement, de ses factures et du portail
-   * qui les ouvre. Le seul lien qui fasse foi est celui qu'on a écrit nous-mêmes
-   * dans `billing_accounts.stripe_customer_id`.
+   * The email does not identify anyone at Stripe: nothing prevents two customers from
+   * carry it, and above all nothing links the address of a minddy account to the customer
+   * Stripe that carries it — an account that registers with the address of another
+   * inherited HIS client, therefore his subscription, his invoices and the portal
+   * who opens them. The only authentic link is the one we wrote ourselves
+   * in `billing_accounts.stripe_customer_id`.
    */
   let customerId = account?.stripe_customer_id ?? null;
   if (!customerId) {
@@ -87,11 +87,11 @@ export async function POST(request: NextRequest) {
     (await createStripeCustomer({ email: user.email, userId: user.id })).id;
 
   const origin = canonicalAppOrigin();
-  // Le paiement s'ouvre dans le NAVIGATEUR même quand il part de l'app de
-  // bureau (une page de carte bancaire n'a rien à faire dans une fenêtre à
+  // The payment opens in the BROWSER even when it leaves the app
+  // desktop (a bank card page has nothing to do in a window
   // nous). Sans ce rebond, il s'y terminait aussi : on repartait de Stripe vers
-  // sa page de facturation dans Safari, l'app toujours ouverte derrière et
-  // toujours sur l'ancien plan. Voir lib/desktop/open-link.ts.
+  // its billing page in Safari, the app always open behind and
+  // still on the old plan. See lib/desktop/open-link.ts.
   const fromDesktop = (body as { desktop?: unknown })?.desktop === true;
   const openCheckout = (customer: string) =>
     createStripeCheckoutSession({
@@ -104,16 +104,16 @@ export async function POST(request: NextRequest) {
     });
 
   /**
-   * L'identifiant de client qu'on garde peut ne plus rien désigner chez Stripe :
-   * client supprimé depuis leur tableau de bord, ou clé qui a changé de compte
-   * Stripe. Il reste alors écrit ici, et l'appel échouait en 500 — « No such
-   * customer » sur un simple clic « passer au plan supérieur ».
+   * The customer ID that we keep may no longer designate anything at Stripe:
+   * customer deleted from their dashboard, or key who changed account
+   * Stripe. It then remains written here, and the call failed at 500 — “No such
+   * customer” with a simple click “upgrade”.
    *
-   * On en refait un et on rejoue, une fois. C'est sans perte : le checkout n'est
-   * proposé qu'à un compte SANS abonnement actif (le 409 plus haut), il n'y a
-   * donc rien à retrouver sur l'ancien client. Une seule reprise, et l'échec
-   * suivant remonte : si le second client ne marche pas non plus, ce n'est plus
-   * une référence périmée, c'est une panne, et la masquer ne sert personne.
+   * We do one again and we play again, once. There is no loss: checkout is not
+   * only offered to an account WITHOUT an active subscription (the 409 above), there is no
+   * so nothing to be found on the old client. Just one attempt and failure
+   * next goes back: if the second client does not work either, it is no longer
+   * an outdated reference is a failure, and hiding it serves no one.
    */
   let session;
   try {

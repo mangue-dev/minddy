@@ -35,11 +35,11 @@ import { FeedbackBoardClient } from "./feedback-board-client";
 import { HeaderIdentity } from "./header-identity";
 
 /**
- * Board public de feedback (MIN-37) — anonyme en lecture, le token EST
- * l'autorisation. Toute écriture exige une identité (OTP ou SSO) mais reste
- * pseudonyme côté public. Board désactivé = 404 (la collecte continue par
- * les canaux API/interne). Le header porte les onglets du site public :
- * Feedback + les vues partagées du projet.
+ * Public feedback board (MIN-37) — anonymous for reading, the EST token
+ * authorization. All writing requires an identity (OTP or SSO) but remains
+ * pseudonym on the public side. Board disabled = 404 (collection continues through
+ * API/internal channels). The header carries the tabs of the public site:
+ * Feedback + shared views of the project.
  */
 
 export const dynamic = "force-dynamic";
@@ -62,14 +62,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     getTranslations("PublicFeedback"),
     getLocale(),
   ]);
-  // Le même board répond sur www.minddy.app/f/<token> ET sur le domaine du
-  // client : le canonical dit laquelle des deux URLs fait foi (MIN-88).
+  // The same board responds on www.minddy.app/f/<token> AND on the domain
+  // client: the canonical says which of the two URLs is authentic (MIN-88).
   const canonical = await publicCanonicalUrl(
     feedbackBasePath(token, domainTarget),
     "",
   );
-  // Board absent ou désactivé → la page part en 404 : elle en porte le titre,
-  // et surtout pas un canonical vers une URL qui ne répond pas.
+  // Board absent or deactivated → the page goes to 404: it bears the title,
+  // and especially not a canonical to an unresponsive URL.
   if (!ctx?.board.enabled) {
     return { ...(await appPageMetadata("notFound")), robots: { index: false, follow: false } };
   }
@@ -85,13 +85,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function PublicFeedbackPage({ params, searchParams }: PageProps) {
   const { token } = await params;
   const search = await searchParams;
-  // Domaine personnalisé (MIN-36) : basePath "" quand le board est servi par
-  // son propre domaine — les liens deviennent /p/<id>, /me…
+  // Custom domain (MIN-36): basePath "" when the board is served by
+  // its own domain — the links become /p/<id>, /me…
   const domainTarget = await getRequestDomainTarget();
   const base = feedbackBasePath(token, domainTarget);
 
-  // Atterrissage SSO documenté : /f/<token>?sso=<jwt> — une page ne peut pas
-  // poser de cookie, la route dédiée s'en charge puis revient ici.
+  // Documented SSO landing: /f/<token>?sso=<jwt> — a page cannot
+  // place a cookie, the dedicated route takes care of it and then comes back here.
   if (search.sso) {
     redirect(`${base}/sso?jwt=${encodeURIComponent(search.sso)}`);
   }
@@ -111,10 +111,10 @@ export default async function PublicFeedbackPage({ params, searchParams }: PageP
     }),
   ]);
   const sort: PublicSort = search.sort === "recent" ? "recent" : "top";
-  // Seuls les statuts que le board sait nommer, plus « all » : `?status=spam`
-  // n'est pas un filtre, c'est une question à laquelle la page n'a rien à
-  // répondre. Tout le reste — y compris le paramètre absent — retombe sur le
-  // défaut : les retours encore vivants.
+  // Only the statuses that the board knows how to name, plus “all”: `?status=spam`
+  // is not a filter, it is a question that the page has nothing to do with
+  // answer. Everything else — including the absent parameter — falls on the
+  // default: returns still alive.
   const filter: PublicStatusFilter =
     search.status === "all"
       ? "all"
@@ -131,8 +131,8 @@ export default async function PublicFeedbackPage({ params, searchParams }: PageP
     }),
     toPublicIdentity(session),
   ]);
-  // Une lecture de plus, et seulement quand il n'y a rien à montrer : elle
-  // décide lequel des deux vides le board annonce.
+  // One more reading, and only when there is nothing to show: it
+  // decides which of the two voids the board announces.
   const boardEmpty = posts.length === 0 ? !(await hasAnyPublicPost(ctx.project.id)) : false;
 
   return (

@@ -254,7 +254,7 @@ export function cycleCompletionPercent(issues: PointedIssue[]): number | null {
 
 /**
  * Steering weights for the deterministic engine. All optional; Numo derives
- * them from a phrase ("priorise les fixs UI") — they bias the scoring, they
+ * them from a phrase ("prioritize UI fixes") — they bias the scoring, they
  * never force a pick.
  */
 export interface FillWeights {

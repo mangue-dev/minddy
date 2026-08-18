@@ -75,9 +75,9 @@ export type AssistantDisplayMode = "compact" | "expanded";
 
 export interface AssistantShellHandle {
   /** Send a message. `projectId` null = global mode. Ce qui suit ne vaut que
-   *  pour CET envoi : le contexte de page des ouvertures contextuelles, et les
-   *  mentions, la commande et les pièces jointes du composer qui a écrit le
-   *  message ailleurs (la home). `pageContext` absent = celui du shell. */
+   * for THIS sending: the page context of the contextual openings, and the
+   * mentions, order and attachments of the composer who wrote the
+   * message elsewhere (home). `pageContext` absent = that of the shell. */
   sendMessage: (
     projectId: string | null,
     message: string,
@@ -138,9 +138,9 @@ export const AssistantShell = forwardRef<
   const tToolCall = useTranslations("ToolCall");
   const tSeed = useTranslations("Seed");
 
-  // La conversation vit AU-DESSUS du panneau (AssistantChatProvider) : elle
-  // survit à la fermeture du Sheet, qui démonte cette coquille. Ici, on ne fait
-  // que la rendre.
+  // The conversation lives ABOVE the panel (AssistantChatProvider): it
+  // survives the closing of the Sheet, which dismantles this shell. Here, we don't do
+  // than return it.
   const { state, sendMessage, loadConversation, reset, abort, restoring } =
     useAssistantChatContext();
   const chatInputRef = useRef<ChatInputHandle>(null);
@@ -163,12 +163,12 @@ export const AssistantShell = forwardRef<
     );
   }, []);
 
-  // ── Contexte : ce que Numo a sous les yeux ────────────────────────
-  // Le contexte de la page (ambiant) est complété par la PORTÉE (le projet
-  // courant, qui vaut contexte à lui seul) et par ce que l'utilisateur épingle
-  // à la main depuis le bouton @. Les pilules éteintes ne sont pas retirées de
-  // l'affichage : elles sortent seulement du contexte envoyé — c'est
-  // `applyContextSelection` qui fait le tri, une fois, à l'envoi.
+  // ── Context: what Numo has in front of his eyes ────────────────────────
+  // The context of the page (ambient) is completed by the SCOPE (the project
+  // current, which is worth context in itself) and by what the user pins
+  // by hand from the @ button. Extinguished pills are not removed from
+  // the display: they only go out of the sent context — this is
+  // `applyContextSelection` which sorts it once when sending.
   const { projects } = useProjects();
   const [pinned, setPinned] = useState<AssistantPinnedContext[]>([]);
   const [disabledKeys, setDisabledKeys] = useState<ReadonlySet<string>>(
@@ -190,8 +190,8 @@ export const AssistantShell = forwardRef<
     [fullContext, t, resolveProject],
   );
 
-  // Nouvelle conversation → on repart du contexte de la page, sans les
-  // épingles ni les extinctions du tour précédent.
+  // New conversation → we start from the context of the page, without the
+  // pins nor the extinctions of the previous round.
   const resetContextSelection = useCallback(() => {
     setPinned([]);
     setDisabledKeys(new Set());
@@ -220,15 +220,15 @@ export const AssistantShell = forwardRef<
     );
   }, []);
 
-  // Mentions « @ » dans le texte : la liste ne se charge qu'à la première
-  // frappe d'un « @ » (et reste ensuite en cache).
+  // “@” mentions in the text: the list only loads at the first
+  // hits with an “@” (and then remains cached).
   const { mentionables, links, onMentionQuery } = useNumoMentionables(projectId);
 
   // Read by the send handlers without stale closures. The host may set the
   // context the same tick it dispatches a one-shot send, so the imperative
   // sendMessage also takes an explicit override to avoid that race.
-  // Le contexte EFFECTIF (portée + épingles − pilules éteintes) : c'est lui qui
-  // part avec le message, et lui qui reste sur la bulle.
+  // The EFFECTIVE context (reach + pins − extinguished pills): it is he who
+  // leaves with the message, and he stays on the bubble.
   const effectiveContext = useMemo(
     () => applyContextSelection(fullContext, disabledKeys),
     [fullContext, disabledKeys],
@@ -278,9 +278,9 @@ export const AssistantShell = forwardRef<
 
   const slashCommands = useSlashCommands();
 
-  // Réponse envoyée depuis une carte de questions ask_user (MIN-86) : part comme
-  // un message utilisateur normal — le tool result « awaiting_user_response » est
-  // déjà dans l'historique, la boucle reprend avec la réponse.
+  // Response sent from an ask_user question card (MIN-86): leaves as
+  // a normal user message — the tool result “awaiting_user_response” is
+  // already in the history, the loop resumes with the response.
   const handleAnswer = useCallback(
     (text: string) => {
       if (!text.trim()) return;
@@ -308,11 +308,11 @@ export const AssistantShell = forwardRef<
   const isBusy = isStreaming || isGeneratingServer;
   const hasMessages = state.messages.length > 0 || isBusy;
 
-  // Question ask_user ACTIVE : le dernier message visible est un message
-  // assistant porteur d'un tool-call ask_user et Numo est au repos (il attend la
-  // réponse). La carte VIVANTE remplace alors le composer (pattern Claude
-  // Code/Codex) ; la bulle correspondante du fil est masquée. Les questions des
-  // tours passés restent dans le fil, inertes.
+  // Question ask_user ACTIVE: the last visible message is a message
+  // assistant carrying a tool-call ask_user and Numo is at rest (he is waiting for the
+  // answer). The VIVANTE card then replaces the composer (pattern Claude
+  // Code/Codex); the corresponding thread bubble is hidden. The questions of
+  // Past turns remain in the wire, inert.
   const activeAskUser = useMemo((): {
     messageId: string;
     questions: AskUserQuestion[];
@@ -328,7 +328,7 @@ export const AssistantShell = forwardRef<
       try {
         args = JSON.parse(call.function.arguments);
       } catch {
-        // Args invalides du LLM → pas de carte.
+        // Invalid LLM args → no card.
       }
       const questions = parseAskUserQuestions(args);
       return questions.length > 0 ? { messageId: m.id, questions } : null;
@@ -336,15 +336,15 @@ export const AssistantShell = forwardRef<
     return null;
   }, [state.messages, isBusy]);
 
-  // Passer les questions : Numo reçoit un message user explicite et reprend.
+  // Skip questions: Numo receives an explicit user message and resumes.
   const handleSkipQuestions = useCallback(() => {
     handleSend(tToolCall("skippedQuestions"));
   }, [handleSend, tToolCall]);
 
-  // Proposition d'amorce ACTIVE (MIN-173) : même règle que la question ouverte —
-  // le dernier message visible porte le `propose_backlog` et Numo est au repos
-  // (l'outil lui a fait rendre la main). La carte s'y affiche, à cocher et à
-  // créer ; dès qu'un message la suit, la proposition appartient au passé.
+  // ACTIVE leading proposition (MIN-173): same rule as the open question —
+  // the last visible message bears the `propose_backlog` and Numo is at rest
+  // (the tool made him give up). The card is displayed there, check and
+  // create ; as soon as a message follows it, the proposition belongs to the past.
   const activeSeedMessageId = useMemo((): string | null => {
     if (isBusy) return null;
     for (let i = state.messages.length - 1; i >= 0; i--) {
@@ -358,9 +358,9 @@ export const AssistantShell = forwardRef<
     return null;
   }, [state.messages, isBusy]);
 
-  // Les tickets viennent d'être écrits : Numo l'apprend par un message de
-  // l'utilisateur — c'est SON geste — et la conversation reprend là-dessus.
-  // C'est aussi ce qui éteint la carte, y compris au rechargement.
+  // The tickets have just been written: Numo learns of this through a message from
+  // the user — it’s HIS gesture — and the conversation resumes there.
+  // This is also what turns off the card, including when reloading.
   const handleSeedCreated = useCallback(
     (created: number) => {
       handleSend(tSeed("createdReply", { count: created }));
@@ -368,9 +368,9 @@ export const AssistantShell = forwardRef<
     [handleSend, tSeed]
   );
 
-  // Réponses aux questions ask_user : la bulle user qui suit un message porteur
-  // d'un ask_user est sa réponse — elle ne s'affiche PAS comme bulle (le flow de
-  // lecture reste propre) mais dans les détails de la ligne ask_user du fil.
+  // Answers to ask_user questions: the user bubble that follows a carrying message
+  // of an ask_user is their answer — it is NOT displayed as a bubble (the flow of
+  // reading remains clean) but in the details of the ask_user line of the thread.
   const askUserReplies = useMemo(() => {
     const byMessageId = new Map<string, string>();
     const hiddenBubbleIds = new Set<string>();
@@ -391,11 +391,11 @@ export const AssistantShell = forwardRef<
     return { byMessageId, hiddenBubbleIds };
   }, [state.messages]);
 
-  // Fil de lecture en TOURS, à parité avec le fil de l'agent de code : tout ce que
-  // Numo a fait avant de répondre (narration intermédiaire, appels d'outils) se
-  // replie dans un accordéon « Travaille depuis X » / « A travaillé pendant X », et
-  // seule la réponse reste visible dessous — on suit le travail, puis on lit le
-  // message final, au lieu de recevoir le tour d'un bloc.
+  // Reading thread in TURN, on parity with the code agent thread: everything that
+  // Numo did before responding (intermediate narration, calls for tools)
+  // folds into an accordion “Worked since X” / “Worked for X”, and
+  // only the answer remains visible below — we follow the work, then we read the
+  // final message, instead of receiving the turn of a block.
   const blocks = useMemo(
     () =>
       buildAssistantBlocks(state.messages, {
@@ -411,23 +411,23 @@ export const AssistantShell = forwardRef<
     ]
   );
 
-  // Le fil ne se recale en bas que sur un GESTE de l'utilisateur : ouvrir une
-  // conversation, ou envoyer un message. Pendant que Numo écrit, il ne bouge plus —
-  // c'est tout ce que `<Conversation>` sait faire, et son bouton de retour en bas
-  // reste là pour rattraper la fin quand on la veut.
+  // The thread only resets at the bottom upon a GESTURE from the user: open a
+  // conversation, or send a message. While Numo writes, he no longer moves —
+  // that's all `<Conversation>` can do, and its back button at the bottom
+  // stay there to catch the end whenever you want it.
   const userMessageCount = useMemo(
     () => state.messages.filter((m) => m.role === "user").length,
     [state.messages],
   );
   const scrollAnchor = `${state.conversationId ?? "new"}:${userMessageCount}`;
 
-  // Bouton « Copier » : uniquement sur la RÉPONSE du tour — celle qui reste
-  // seule sous l'accordéon replié en « A travaillé pendant X ». Ce qui est plié
-  // dedans est du travail intermédiaire, pas une réponse à emporter.
+  // “Copy” button: only on the ANSWER of the round — the one that remains
+  // alone under the accordion folded into “Worked for X”. What is folded
+  // in is middle work, not a takeaway answer.
   const copyButtonIds = useMemo(() => copyableMessageIds(blocks), [blocks]);
 
-  // Le tour actif montre-t-il déjà du travail ? Son en-tête chronométré porte alors
-  // le signal « Numo travaille » et l'indicateur de réflexion ferait doublon.
+  // Is the active lap already showing work? Its timed header then reads
+  // the signal “Numo is working” and the reflection indicator would be duplicated.
   const lastBlock = blocks[blocks.length - 1];
   const activeTurnHasWork =
     lastBlock?.kind === "turn" &&
@@ -444,8 +444,8 @@ export const AssistantShell = forwardRef<
     !activeTurnHasWork;
 
   const renderMessage = (msg: AssistantMessage) =>
-    // Réponse à une question ask_user : elle ne s'affiche pas en bulle, mais dans
-    // les détails de la ligne de question (askUserReplies).
+    // Answer to an ask_user question: it is not displayed in a bubble, but in
+    // the details of the question line (askUserReplies).
     askUserReplies.hiddenBubbleIds.has(msg.id) ? null : (
       <ChatMessage
         key={msg.id}
@@ -566,8 +566,8 @@ export const AssistantShell = forwardRef<
         </Tooltip>
       )}
 
-      {/* Pas de nom de projet ici : le projet courant est un contexte comme un
-          autre, il s'affiche (et s'éteint) en pilule dans le composer. */}
+      {/* No project name here: the current project is a context like a
+ other, it is displayed (and turned off) as a pill in the composer. */}
 
       {onClose && (
         <Tooltip>
@@ -590,9 +590,9 @@ export const AssistantShell = forwardRef<
     </div>
   ) : null;
 
-  // Même forme que l'éditeur de page : le corps d'abord, ses contextes ensuite.
-  // Écrire le fournisseur autour du `return` aurait réindenté deux cents lignes
-  // de JSX pour une ligne de sens.
+  // Same form as the page editor: the body first, its contexts then.
+  // Writing the provider around the `return` would have reindented two hundred lines
+  // from JSX for a direction line.
   const shell = (
     <div className="flex h-full overflow-hidden">
       {/* Permanent sidebar — only outside compact mode. */}
@@ -645,10 +645,10 @@ export const AssistantShell = forwardRef<
             />
           </div>
         ) : (
-          /* Accueil (greeting + suggestions) et conversation partagent LE MÊME
-             composer monté : le basculer d'une branche à l'autre au premier
-             message le démonterait, le focus partirait sur <body> et le
-             FocusScope du Sheet le poserait sur la coquille (halo de focus). */
+          /* Welcome (greeting + suggestions) and conversation share THE SAME
+ mounted composer: switching it from one branch to another at the first
+ message would unmount it, the focus would go to <body> and the
+ FocusScope of the Sheet would place it on the shell (focus halo). */
           <>
             {hasMessages ? (
               <Conversation className="min-h-0 flex-1" anchor={scrollAnchor}>
@@ -662,10 +662,10 @@ export const AssistantShell = forwardRef<
                   {blocks.map((block) => {
                     if (block.kind === "message")
                       return renderMessage(block.message);
-                    // Round EN VOL : dès qu'il porte un appel d'outil, tout le round
-                    // (son texte compris) est du travail et rejoint le déroulé.
-                    // Sinon son texte est la réponse en train de s'écrire, affichée
-                    // sous l'accordéon — là où le message final restera.
+                    // Round IN FLIGHT: as soon as it carries a tool call, the whole round
+                    // (its text included) is work and joins the unfolding.
+                    // Otherwise its text is the response being written, displayed
+                    // under the accordion — where the final message will remain.
                     const streamingIsWork =
                       block.active && state.activeToolCalls.length > 0;
                     const hasWork = block.work.length > 0 || streamingIsWork;
@@ -740,8 +740,8 @@ export const AssistantShell = forwardRef<
               className={cn(
                 `mx-auto w-full min-w-0 ${convoMaxW} shrink-0`,
                 compact ? "px-1.5 pb-1.5" : "px-2 md:px-0",
-                // Accueil : gouttière sous les suggestions + coussin bas hors
-                // compact (le composer bordé apporte déjà le sien en conversation).
+                // Home: gutter under suggestions + bottom cushion outside
+                // compact (the lined dial already brings its own in conversation).
                 !hasMessages && "space-y-3",
                 !hasMessages && !compact && "pb-2",
               )}
@@ -762,9 +762,9 @@ export const AssistantShell = forwardRef<
                   </Suggestions>
                 </div>
               )}
-              {/* Question active : la carte prend la PLACE du composer. Le
-                  ChatInput reste MONTÉ (masqué en CSS) — son brouillon et son
-                  focus scope survivent, il réapparaît intact après la réponse. */}
+              {/* Active question: the card takes the PLACE of the composer. THE
+ ChatInput remains MOUNTED (hidden in CSS) — its draft and its
+ focus scope survive, it reappears intact after the response. */}
               {activeAskUser && (
                 <AskUserCard
                   key={activeAskUser.messageId}
@@ -803,8 +803,8 @@ export const AssistantShell = forwardRef<
     </div>
   );
 
-  // Les pilules « @ » d'un message DÉJÀ envoyé mènent à ce qu'elles citent — un
-  // ticket, un objectif, une page (components/mention-links). Le composer, lui,
-  // n'a pas de destinations : on y écrit, et un clic y pose le curseur.
+  // The “@” pills of a message ALREADY sent lead to what they quote — a
+  // ticket, one objective, one page (components/mention-links). Compose him,
+  // has no destinations: you write there, and a click places the cursor there.
   return <MentionLinksProvider value={links}>{shell}</MentionLinksProvider>;
 });

@@ -7,31 +7,31 @@ import { CircleGauge } from "lucide-react";
 import { getBillingPlan, type BillingPlanId } from "@/lib/billing-plans";
 
 /**
- * Un run s'est arrêté sur une frontière de DÉPENSE, à la fin d'un round : son
- * travail est poussé et son checkpoint gardé. Cette carte clôt le tour dans le
- * fil et dit ce qui s'est passé.
+ * A run stopped on an EXPENDITURE boundary, at the end of a round: its
+ * work is pushed and its checkpoint guarded. This card ends the turn in the
+ * thread and said what happened.
  *
- * **Deux frontières, deux cartes.** Le budget mensuel du COMPTE tombé à zéro
- * (`cause: "account"`) et le plafond de dépense d'un PASSAGE DE ROUTINE
- * (`cause: "run_cap"`) s'arrêtent au même endroit dans le code, mais ne se
- * répondent pas du tout : la première laisse trois issues (attendre, monter de
- * plan, sa propre clé), la seconde n'en a qu'une — relever le plafond de la
- * routine, dans la routine. Proposer un upgrade à quelqu'un dont le budget du
- * mois est encore presque entier lui ferait payer plus cher pour un problème
+ * **Two borders, two maps.** The monthly ACCOUNT budget dropped to zero
+ * (`cause: "account"`) and the spending limit of a ROUTINE PASS
+ * (`cause: "run_cap"`) stops at the same place in the code, but does not
+ * do not respond at all: the first leaves three outcomes (wait, go up
+ * plan, its own key), the second has only one — raise the ceiling of the
+ * routine, in routine. Suggest an upgrade to someone whose budget
+ * month is still almost whole would make him pay more for a problem
  * qu'il n'a pas.
  *
- * Sur le chemin `account`, elle ne montre que les issues qui existent
- * réellement :
+ * On the `account` path, it only shows the exits that exist
+ * really :
  *  • un plan au-dessus, seulement s'il en existe un qui donne PLUS de budget ;
- *  • sa propre clé d'API, seulement si l'utilisateur n'en a pas déjà une ;
- *  • attendre le rechargement — toujours vrai, donc dit en dernier, en prose.
- * Une action qu'on ne peut pas prendre n'est pas une option, c'est un mur.
+ * • its own API key, only if the user does not already have one;
+ * • wait for reload — always true, so said last, in prose.
+ * An action that cannot be taken is not an option, it is a wall.
  *
- * L'usage se dit en POURCENTAGE, jamais en dollars : l'utilisateur a payé un
- * abonnement en euros, le coût brut en USD est une mécanique interne qui ne lui a
- * jamais été montrée ailleurs dans l'app (seul le tableau de bord admin en parle).
- * Sur le chemin `account` c'est toujours 100 % ; sur l'autre, c'est le plafond
- * lui-même, dans l'unité où il a été réglé.
+ * Usage is expressed in PERCENTAGE, never in dollars: the user has paid a
+ * subscription in euros, the gross cost in USD is an internal mechanism which does not
+ * never been shown elsewhere in the app (only the admin dashboard talks about it).
+ * On the `account` path it is always 100%; on the other, it's the ceiling
+ * itself, in the unit where it was settled.
  */
 export function QuotaExhaustedCard({
   resetsAt,
@@ -40,15 +40,15 @@ export function QuotaExhaustedCard({
   cause = "account",
   capPercent = null,
 }: {
-  /** ISO — fin de la fenêtre comptée : quand le budget se recharge. */
+  /** ISO — end of window counted: when the budget recharges. */
   resetsAt: string | null;
-  /** Plan immédiatement au-dessus, ou null si déjà au sommet. */
+  /** Plane immediately above, or null if already at the top. */
   nextPlanId: BillingPlanId | null;
-  /** L'utilisateur tourne déjà sur sa propre clé (alors le budget ne le concerne pas). */
+  /** The user is already running on his own key (so the budget does not concern him). */
   byok: boolean;
-  /** Quelle frontière a mordu. Absent = le compte (les runs d'avant le plafond). */
+  /** Which border has bitten. Absent = the count (the runs before the cap). */
   cause?: "account" | "run_cap";
-  /** Le plafond du passage, en % du budget mensuel. */
+  /** The ceiling of the passage, as a % of the monthly budget. */
   capPercent?: number | null;
 }) {
   const t = useTranslations("Agent");
@@ -61,9 +61,9 @@ export function QuotaExhaustedCard({
       : null;
 
   /**
-   * Le plafond du PASSAGE : rien à proposer, tout à expliquer. La suite se règle
-   * sur la routine — et c'est justement d'où on vient pour lire ce fil, donc
-   * aucun lien à poser.
+   * The PASSAGE ceiling: nothing to propose, everything to explain. The rest is resolved
+   * on routine — and that's precisely where we're coming from to read this thread, so
+   * no link to post.
    */
   if (cause === "run_cap") {
     return (
@@ -103,8 +103,8 @@ export function QuotaExhaustedCard({
           ) : null}
           {!byok ? (
             <Button asChild size="sm" variant="ghost">
-              {/* Sur l'onglet, pas sur la page : « utiliser ma clé » doit
-                  tomber sur le champ de clé, pas sur le profil (MIN-149). */}
+              {/* On the tab, not on the page: “use my key” must
+ fall on the key field, not on the profile (MIN-149). */}
               <Link href="/settings?tab=agent">{t("quotaUseOwnKey")}</Link>
             </Button>
           ) : null}
@@ -114,7 +114,7 @@ export function QuotaExhaustedCard({
   );
 }
 
-/** Nom affichable d'un plan : son id capitalisé (« go » → « Go »). */
+/** Displayable name of a plan: its capitalized id (“go” → “Go”). */
 function planLabel(id: BillingPlanId): string {
   const plan = getBillingPlan(id);
   return plan.id.charAt(0).toUpperCase() + plan.id.slice(1);

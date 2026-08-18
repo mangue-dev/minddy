@@ -1,20 +1,20 @@
 "use client";
 
-// L'ARBRE des pages du projet, dans la sidebar secondaire (MIN-270).
+// The TREE of the project pages, in the secondary sidebar (MIN-270).
 //
-// Il se reconstruit depuis la liste à plat (`buildPageTree`) : une requête pour
-// tout le projet, profondeur illimitée, et aucune notion de « charger les
-// enfants » — ils sont déjà là. Ce qui se persiste n'est donc pas la donnée mais
-// l'état d'OUVERTURE, par projet, dans `localStorage` : revenir sur un projet
-// doit retrouver l'arbre déplié comme on l'avait laissé, sinon on repasse son
-// temps à rouvrir les mêmes trois branches.
+// It is reconstructed from the flat list (`buildPageTree`): a request for
+// the entire project, unlimited depth, and no notion of “load the
+// children” — they are already there. What persists is therefore not the data but
+// the OPEN state, by project, in `localStorage`: return to a project
+// must find the tree unfolded as we left it, otherwise we go back
+// time to reopen the same three branches.
 //
-// Le glisser-déposer est en HTML natif plutôt qu'en dnd-kit, à dessein : ce qui
-// décide du geste ici est la position VERTICALE du curseur DANS la ligne
-// survolée (tiers haut / milieu / tiers bas → avant / dedans / après, cf.
-// lib/pages-move.ts), et l'événement natif la donne exactement, ligne par
-// ligne. Un capteur qui ne rend que des rectangles en collision obligerait à la
-// recalculer à côté.
+// Drag and drop is native HTML rather than dnd-kit, on purpose: which
+// decides the gesture here is the VERTICAL position of the cursor IN the line
+// hovered over (top third / middle / bottom third → before / inside / after, cf.
+// lib/pages-move.ts), and the native event gives it exactly, line by
+// line. A sensor that only renders colliding rectangles would require
+// recalculate next.
 
 import {
   useCallback,
@@ -55,7 +55,7 @@ import { usePageDocumentMenu } from "@/components/pages/page-document-actions";
 /** Ligne d'arbre : 28 px de haut, 16 px de retrait par niveau. */
 const INDENT = 16;
 
-/** Clé de persistance de l'état d'ouverture — une par projet. */
+/** Open state persistence key — one per project. */
 function expandedKey(projectId: string): string {
   return `minddy.pages.expanded.${projectId}`;
 }
@@ -75,14 +75,14 @@ export interface PageTreeProps {
   projectId: string;
   pages: PageSummary[];
   tree: PageTreeNode<PageSummary>[];
-  /** La page ouverte, mise en évidence et dont les ancêtres se déplient. */
+  /** The open page, highlighted and whose ancestors unfold. */
   activePageId: string | null;
-  /** Filtre texte de la ligne de titre — non vide, l'arbre devient une liste. */
+  /** Title line text filter — not empty, the tree becomes a list. */
   query: string;
   onCreateChild: (parentId: string) => void;
   onMove: (dragId: string, targetId: string, mode: PageDropMode) => void;
   onTrash: (page: PageSummary) => void;
-  /** Épingler / désépingler. Le favori est PARTAGÉ par le projet (lib/pages.ts). */
+  /** Pin/unpin. The favorite is SHARED by the project (lib/pages.ts). */
   onToggleFavorite: (page: PageSummary) => void;
 }
 
@@ -101,8 +101,8 @@ export function PageTree({
   const tCommon = useTranslations("Common");
 
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
-  // Lu après le montage : `localStorage` n'existe pas au rendu serveur, et
-  // partir d'un état différent de celui du HTML ferait diverger l'hydratation.
+  // Read after editing: `localStorage` does not exist in server rendering, and
+  // starting from a state different from that of the HTML would cause the hydration to diverge.
   useEffect(() => {
     setExpanded(readExpanded(projectId));
   }, [projectId]);
@@ -116,7 +116,7 @@ export function PageTree({
           JSON.stringify([...next])
         );
       } catch {
-        // Mode privé, quota plein : l'arbre marche, il ne se souvient pas.
+        // Private mode, full quota: the tree works, it doesn't remember.
       }
     },
     [projectId]
@@ -131,10 +131,10 @@ export function PageTree({
     [expanded, persist]
   );
 
-  // La page ouverte est TOUJOURS visible : ouvrir une sous-page depuis la
-  // recherche ou un lien de bloc déplie sa chaîne de parents. Sans ça, la ligne
-  // sélectionnée est repliée sous un parent fermé, et rien à l'écran ne dit où
-  // l'on est.
+  // The open page is ALWAYS visible: open a subpage from the
+  // search or a block link unfolds its parent chain. Without that, the line
+  // selected is folded under a closed parent, and nothing on the screen says where
+  // we are.
   useEffect(() => {
     if (!activePageId) return;
     const chain = ancestorsOf(pages, activePageId).map((page) => page.id);
@@ -155,11 +155,11 @@ export function PageTree({
     });
   }, [activePageId, pages, projectId]);
 
-  /* ── Le filtre ─────────────────────────────────────────────────────────
-     Filtrer un arbre en le gardant en arbre demande de décider quoi faire d'un
-     parent qui ne correspond pas mais dont un enfant correspond. La réponse
-     retenue est de ne PAS trancher : sous filtre, l'arbre devient une LISTE à
-     plat des pages qui correspondent. On cherche une page, pas une branche. */
+  /* ── The filter ──────────────────────────── ─────────────────────────────
+     Filtering a tree while keeping it as a tree requires deciding what to do with it.
+     parent who does not match but has a child who matches. The answer
+     retained is NOT to decide: under filter, the tree becomes a LIST to
+     Flat pages that match. We are looking for a page, not a branch. */
   const filtered = useMemo(() => {
     const needle = query.trim();
     if (!needle) return null;
@@ -168,21 +168,21 @@ export function PageTree({
       .sort((a, b) => a.title.localeCompare(b.title));
   }, [pages, query]);
 
-  /* ── Les favoris ───────────────────────────────────────────────────────
-     Épinglées en tête, À PLAT : une sous-page favorite se lit donc deux fois
-     dans la barre — ici au niveau 0, et à sa vraie place dans l'arbre. C'est le
-     sens du geste : épingler est un raccourci, pas un déménagement, et voir la
+  /* ── Favorites ─────────────────────────── ────────────────────────────
+     Pinned at the top, FLAT: a favorite subpage is therefore read twice
+     in the bar — here at level 0, and in its true place in the tree. This is the
+     meaning of the gesture: pinning is a shortcut, not a move, and see the
      page quitter son parent se lirait comme un reparentage.
 
-     Pas de titre de section au-dessus : l'étoile en bout de ligne dit déjà ce
-     qu'est ce bloc, et un intertitre pour trois lignes coûte plus de hauteur
-     qu'il n'en explique. Le séparateur suffit à le détacher de l'arbre.
+     No section title above: the star at the end of the line already says this
+     what is this block, and an intertitle for three lines costs more height
+     than he explains. The separator is enough to detach it from the tree.
 
-     L'ordre et le choix des lignes vivent dans `favoritePages` (lib/pages.ts),
-     avec le reste de la logique d'arbre — donc testés, comme elle. */
+     The order and choice of lines lives in `favoritePages` (lib/pages.ts),
+     with the rest of the logic tree — so tested, like it. */
   const favorites = useMemo(() => favoritePages(tree), [tree]);
 
-  /* ── Le dépôt ──────────────────────────────────────────────────────────── */
+  /* ── The deposit ────────────────────────────── ────────────────────────────── */
   const [dragId, setDragId] = useState<string | null>(null);
   const [drop, setDrop] = useState<{ id: string; mode: PageDropMode } | null>(
     null
@@ -194,9 +194,9 @@ export function PageTree({
   }, []);
 
   /* ── Publier, exporter (MIN-283) ────────────────────────────────────────
-     Les deux entrées sont écrites une fois pour leurs deux ancrages — cette
-     ligne, et le menu ⋯ de la page ouverte. Le dialogue de publication est
-     monté UNE fois pour tout l'arbre : il porte sa page visée en état. */
+     Both entries are written once for their two anchors — this
+     line, and the menu ⋯ of the opened page. The publishing dialog is
+     mounted ONCE for the whole tree: it carries its intended page in its state. */
   const { actionsFor, dialogs } = usePageDocumentMenu({ projectId, pages });
 
   if (filtered) {
@@ -278,8 +278,8 @@ export function PageTree({
       {favorites.length > 0 && (
         <>
           {favorites.map((page) => (
-            // La clé est préfixée : une sous-page favorite est rendue DEUX fois
-            // dans cette même liste, ici et dans l'arbre plus bas.
+            // The key is prefixed: a favorite subpage is rendered TWICE
+            // in this same list, here and in the tree below.
             <PageRow
               key={`fav-${page.id}`}
               page={page}
@@ -332,14 +332,14 @@ function PageRow({
   hasChildren: boolean;
   open: boolean;
   active: boolean;
-  /** La cible de dépôt courante, quand c'est CETTE ligne qui est survolée. */
+  /** The current drop target, when THIS line is hovered over. */
   drop: PageDropMode | null;
   dragging: boolean;
   untitled: string;
-  /** « Publier » et « Exporter » (MIN-283), écrites par le crochet partagé. */
+  /** “Publish” and “Export” (MIN-283), written by shared hook. */
   documentActions: ContextMenuAction[];
-  /** Rendue dans le BLOC des favoris, en tête de la barre : elle porte alors
-      l'étoile qui, faute d'intertitre, dit ce qu'est ce bloc. */
+  /** Returned to the BLOCK of favorites, at the top of the bar: it then bears
+      the star which, for lack of an intertitle, says what this block is. */
   pinned?: boolean;
   onToggle: () => void;
   onCreateChild: (parentId: string) => void;
@@ -352,14 +352,14 @@ function PageRow({
 }) {
   const t = useTranslations("Pages");
   const [menuOpen, setMenuOpen] = useState(false);
-  // Le clic droit : la position du pointeur, ou `null` quand le menu est fermé.
+  // Right click: the position of the pointer, or `null` when the menu is closed.
   const [menuPosition, setMenuPosition] = useState<{
     x: number;
     y: number;
   } | null>(null);
-  // Les AUTRES, jamais moi (le tri est à la source) : mes propres onglets
-  // allumaient une pastille en face de pages que personne d'autre ne lisait. La
-  // ligne active reste exclue par principe — c'est celle que je lis.
+  // OTHERS, never me (sorting at the source): my own tabs
+  // lit a tablet in front of pages that no one else was reading. There
+  // active line remains excluded in principle — that's the one I'm reading.
   const present = usePresentOn(active ? null : page.id);
 
   const modeFrom = (event: DragEvent<HTMLDivElement>): PageDropMode => {
@@ -368,14 +368,14 @@ function PageRow({
   };
 
   /**
-   * Les actions de la ligne, écrites UNE fois pour deux ancrages : le bouton
-   * « ⋯ » qui apparaît au survol, et le clic droit n'importe où sur la ligne.
+   * The actions of the line, written ONCE for two anchors: the button
+   * “⋯” which appears on hover, and right-click anywhere on the line.
    *
-   * C'est tout l'intérêt de passer par `ContextMenuAction[]` plutôt que de
-   * recopier des `<DropdownMenuItem>` : deux menus qui listent la même chose de
-   * deux endroits différents finissent toujours par diverger, et c'est celui
-   * qu'on ouvre le moins souvent qui garde l'action périmée. Ici il n'y a qu'une
-   * liste — les cartes du board et la sidebar primaire font déjà pareil
+   * That's the whole point of going through `ContextMenuAction[]` rather than
+   * copy `<DropdownMenuItem>`: two menus which list the same thing from
+   * two different places always end up diverging, and this is the one
+   * which is opened the least often which keeps the action out of date. Here there is only one
+   * list — board maps and primary sidebar already do the same
    * (components/issue-context-menu.tsx).
    */
   const actions: ContextMenuAction[] = [
@@ -413,20 +413,20 @@ function PageRow({
         "group/page relative flex items-center rounded-md pr-1 transition-colors",
         active ? "bg-muted" : "hover:bg-muted/60 focus-within:bg-muted/60",
         dragging && "opacity-40",
-        // « Dedans » se dit par le fond de la ligne cible, « avant / après » par
-        // un trait à son bord : deux signaux différents pour deux gestes
-        // différents, lisibles sans avoir à viser au pixel.
+        // “Inside” is said by the bottom of the target line, “before/after” by
+        // a line on its edge: two different signals for two gestures
+        // different, readable without having to aim at the pixel.
         drop === "inside" && "ring-1 ring-inset ring-primary"
       )}
-      // Le clic droit ouvre le menu de la ligne, où qu'il tombe dessus : sur le
-      // titre, sur l'icône, sur le blanc à droite. Viser le « ⋯ » demande de
-      // survoler la ligne pour le faire apparaître, puis d'atteindre un carré de
-      // 24 px ; le clic droit, lui, n'a besoin de rien.
+      // Right-clicking opens the line menu, wherever it falls on it: on the
+      // title, on the icon, on the blank on the right. Aiming for “⋯” requires
+      // hover over the line to make it appear, then reach a square of
+      // 24px; the right click does not need anything.
       //
-      // `preventDefault` assumé : on remplace le menu du navigateur, comme le
-      // font les cartes du board et la sidebar primaire. Ce qu'il offrait
-      // d'utile ici — ouvrir dans un nouvel onglet — reste au ⌘-clic et au clic
-      // du milieu sur le lien, qui sont de vraies ancres.
+      // `preventDefault` assumed: we replace the browser menu, like the
+      // make the board maps and the primary sidebar. What he offered
+      // useful here — open in a new tab — remains ⌘-click and click
+      // from the middle on the link, which are real anchors.
       onContextMenu={(event) => {
         event.preventDefault();
         setMenuPosition({ x: event.clientX, y: event.clientY });
@@ -434,7 +434,7 @@ function PageRow({
       draggable={!!onDragStart}
       onDragStart={(event) => {
         event.dataTransfer.effectAllowed = "move";
-        // Firefox n'amorce pas un glissé sans données.
+        // Firefox does not initiate a drag without data.
         event.dataTransfer.setData("text/plain", page.id);
         onDragStart?.();
       }}
@@ -461,9 +461,9 @@ function PageRow({
         />
       ) : null}
 
-      {/* Le retrait est porté par un cale à gauche du chevron, pas par un
-          padding sur la ligne : le fond de survol doit courir sur toute la
-          largeur de la colonne, à tous les niveaux. */}
+      {/* The shrinkage is carried by a wedge to the left of the rafter, not by a
+          padding on the line: the hover background must run over the entire
+          width of the column, at all levels. */}
       <div style={{ width: depth * INDENT }} className="shrink-0" />
 
       <button
@@ -504,26 +504,26 @@ function PageRow({
           {page.title || untitled}
         </span>
         {/* Quelqu'un d'autre lit cette page en ce moment (MIN-271). Un point,
-            et pas un avatar : à cet endroit l'information utile est binaire —
-            qui, on le lit en ouvrant la page. */}
+            and not an avatar: at this location the useful information is binary —
+            which, we read it when opening the page. */}
         <PagePresenceDot count={present.length} />
       </Link>
 
-      {/* Les deux gestes de survol. Ils réservent leur place (`opacity`, pas
-          `hidden`) : sans ça le titre se raccourcirait au passage de la souris. */}
+      {/* Both hover gestures. They reserve their place (`opacity`, not
+          `hidden`): without this the title would be shortened when the mouse passes. */}
       <div
         className={cn(
           "flex shrink-0 items-center opacity-0 transition-opacity",
           "group-hover/page:opacity-100 group-focus-within/page:opacity-100",
-          // Le ⋯ n'apparaît qu'au survol : sans ça il disparaîtrait sous le
-          // menu qu'il vient lui-même d'ouvrir, la souris ayant quitté la ligne.
+          // The ⋯ only appears on hover: otherwise it would disappear under the
+          // menu that he himself has just opened, the mouse having left the line.
           menuOpen && "opacity-100"
         )}
       >
         <IssueActionsMenu
           onOpenChange={setMenuOpen}
-          // Trois entrées : le champ de recherche du menu ne ferait que du
-          // bruit, le survol et le typeahead de Radix suffisent.
+          // Three entries: the menu search field would only do
+          // noise, hover and Radix typeahead are enough.
           searchable={false}
           align="start"
           actions={actions}
@@ -549,17 +549,17 @@ function PageRow({
         </Button>
       </div>
 
-      {/* L'étoile FERME la ligne, après le ⋯ et le + — c'est le bord droit de
-          la colonne, là où l'œil balaie pour trouver ce qui est épinglé.
-          Elle est hors du bloc des gestes de survol, donc elle ne s'efface
-          pas avec eux ; et comme ce bloc réserve sa place (`opacity`, pas
-          `hidden`), elle ne bouge pas d'un pixel quand la souris passe.
+      {/* The star CLOSES the line, after the ⋯ and the + — it is the right edge of
+          the column, where the eye sweeps to find what is pinned.
+          It's out of the hover gesture block, so it doesn't fade
+          not with them; and as this block reserves its place (`opacity`, not
+          `hidden`), it does not move a pixel when the mouse passes.
 
-          La BOÎTE est celle du `+` juste à sa gauche — `size-6`, contenu
-          centré : c'est ce qui l'écarte du bord. Posée nue, l'étoile ne faisait
-          que ses 12 px et venait se coller au `pr-1` de la ligne, alors que les
-          deux boutons, eux, respirent dans leur carré. Une icône de plus dans
-          la même rangée se loge dans le même carré, sinon la rangée n'a plus
+          The BOX is that of `+` just to its left — `size-6`, contents
+          centered: this is what separates it from the edge. Posed naked, the star did not
+          than its 12 px and stuck to the `pr-1` of the line, while the
+          two buttons breathe in their square. One more icon in
+          the same row fits in the same square, otherwise the row no longer has
           de rythme. */}
       {pinned && (
         <span
@@ -571,11 +571,11 @@ function PageRow({
       )}
     </div>
 
-    {/* Le MÊME menu, ancré au pointeur. Hors de la ligne, et c'est délibéré :
-        il pose une ancre invisible en `position: fixed` aux coordonnées du
-        clic, et la ligne est `draggable` — une ancre restée dedans étirerait le
-        rectangle que le navigateur photographie pour le fantôme du glissé
-        jusqu'au coin de l'écran. Sortie du flux, elle ne coûte rien ici. */}
+    {/* The SAME menu, anchored to the pointer. Out of line, and this is deliberate:
+        he places an invisible anchor in `position: fixed` at the coordinates of
+        click, and the line is `draggable` — an anchor left in would stretch the
+        rectangle that the browser photographs for the ghost of the slide
+        to the corner of the screen. Out of the flow, it costs nothing here. */}
     <IssueContextMenu
       position={menuPosition}
       onClose={() => setMenuPosition(null)}

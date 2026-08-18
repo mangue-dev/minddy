@@ -1,34 +1,34 @@
 "use client";
 
-// L'ACTIVITÉ d'une page (MIN-278, MIN-282) — qui est passé, ce qu'il a fait, et
-// ce qui s'est dit.
+// THE ACTIVITY of a page (MIN-278, MIN-282) — who passed, what he did, and
+// what was said.
 //
-// À côté de l'historique et pas à sa place : les deux répondent à des questions
-// différentes, et confondre les deux les rendrait tous deux confus.
+// Next to history and not in place: both answer questions
+// different, and confusing the two would confuse them both.
 //
-//   • l'HISTORIQUE (MIN-277) rend les ÉTATS. On y va pour lire ce que la page
-//     disait avant, et pour l'y remettre. Il ne connaît que le corps.
-//   • l'ACTIVITÉ rend les GESTES. Elle porte ce qu'aucun état ne porte : la
-//     création, la mise à la corbeille, la restauration — et un renommage, qui
-//     ne laisse aucune version derrière lui.
+// • HISTORY (MIN-277) renders the STATES. We go there to read what the page
+// said before, and to put it back. He only knows the body.
+// • ACTIVITY makes GESTURES. It carries what no state carries: the
+// creation, trashing, restoration — and renaming, which
+// leaves no version behind.
 //
-// D'où le rendu par `IssueActivity`, celui d'un ticket et d'un objectif, et non
-// une liste de plus : c'est la même table (`issue_events`), donc les mêmes
-// visages d'acteurs, les mêmes regroupements, le même vocabulaire — un geste de
-// Numo se reconnaît ici comme il se reconnaît là-bas.
+// Hence the rendering by `IssueActivity`, that of a ticket and an objective, and not
+// one more list: it's the same table (`issue_events`), so the same
+// faces of actors, the same groupings, the same vocabulary — a gesture of
+// Numo recognizes himself here as he recognizes himself there.
 //
-// ─── Le fil de la PAGE vit ici (MIN-282) ────────────────────────────────────
+// ─── The PAGE thread lives here (MIN-282) ────────────────────────────────────
 //
-// Un commentaire qui parle du document ENTIER est un geste de plus sur la page,
-// au même titre qu'un renommage ou qu'une restauration : il se lit dans la même
-// colonne, à sa date, et `IssueActivity` mêle déjà messages et événements. Une
-// section sous le document aurait fait de la page un fil de discussion, ce
-// qu'elle n'est pas — on ouvre une page pour la LIRE.
+// A comment that talks about the ENTIRE document is one more gesture on the page,
+// in the same way as a renaming or a restoration: it is read in the same
+// column, on its date, and `IssueActivity` already mixes messages and events. A
+// section under the document would have made the page a discussion thread, this
+// that it is not — we open a page to READ it.
 //
-// Ce qui n'est PAS ici : les fils ancrés à un bloc et toujours vivants. Ceux-là
-// se lisent à côté de leur texte (components/pages/page-comment-popover.tsx) —
-// c'est toute la raison de l'ancre. Un fil DÉTACHÉ, lui, revient ici : son bloc
-// n'existe plus, la page n'a plus aucun endroit où le montrer, et il porte
+// What is NOT here: the wires anchored to a block and still alive. These
+// are read next to their text (components/pages/page-comment-popover.tsx) —
+// that's the whole reason for the anchor. A DETACHED thread returns here: its block
+// no longer exists, the page no longer has anywhere to show it, and it carries
 // l'extrait qui dit de quoi il parlait.
 
 import { useMemo } from "react";
@@ -47,7 +47,7 @@ import { usePageComments } from "@/lib/use-page-comments";
 import type { PageThread } from "@/lib/page-comments";
 import type { EventContext } from "@/lib/describe-event";
 
-/** La clé de cache du journal d'une page — celle qu'invalide le pont temps réel. */
+/** The log cache key for a page — the one that the real-time bridge invalidates. */
 export const pageEventsKey = (pageId: string) =>
   ["page-events", pageId] as const;
 
@@ -60,7 +60,7 @@ export function PageActivity({
   projectId: string;
   pageId: string;
   currentUserId: string | null;
-  /** Le panneau est fermé : rien à charger tant qu'on ne le regarde pas. */
+  /** The panel is closed: nothing to load until you look at it. */
   enabled?: boolean;
 }) {
   const t = useTranslations("Pages");
@@ -70,22 +70,22 @@ export function PageActivity({
     queryKey: pageEventsKey(pageId),
     queryFn: () => fetchPageEventsApi(projectId, pageId),
     enabled,
-    // Comme l'historique : le journal bouge à chaque écriture, la sienne comme
-    // celle d'un autre. On le redemande à l'ouverture plutôt que de peindre un
-    // cache de la fois d'avant.
+    // Like history: the journal moves with each writing, its own like
+    // that of another. We ask for it again at the opening rather than painting a
+    // cache from the time before.
     refetchOnMount: "always",
     staleTime: 0,
   });
 
   /**
-   * Les blocs du document, lus dans le CORPS et non dans un éditeur : cet
-   * onglet vit dans un panneau, il ne monte pas tiptap. C'est la même règle de
-   * granularité que partout ailleurs (`pageBlockTexts`, premier niveau), et le
-   * cache est celui que la page a déjà rempli en s'ouvrant.
-   *
-   * Sans ça, tout fil ancré passerait pour détaché ici et se lirait DEUX fois —
-   * à côté de son bloc, et dans cette colonne.
-   */
+ * The document blocks, read in the BODY and not in an editor: this
+ * tab lives in a panel, it does not mount tiptap. It's the same rule of
+ * granularity as everywhere else (`pageBlockTexts`, first level), and the
+ * cache is the one that the page has already filled when opening.
+ *
+ * Without it, any anchored thread would be considered detached here and would be read TWICE —
+ * next to its block, and in this column.
+ */
   const page = useQuery({
     queryKey: pageKey(pageId),
     queryFn: () => fetchPageApi(projectId, pageId),
@@ -108,16 +108,16 @@ export function PageActivity({
   });
 
   /**
-   * Ce que cette colonne montre — deux cas, un seul principe : un fil s'affiche
-   * ici quand la PAGE n'a nulle part ailleurs où le montrer.
-   *
-   *  • le fil de la page : il ne parle d'aucun bloc ;
-   *  • un fil DÉTACHÉ : son bloc est parti, et il porte l'extrait qui dit de
-   *    quoi il parlait.
-   *
-   * Un fil ancré et vivant reste sur son texte : c'est toute la raison de
-   * l'ancre, et le montrer deux fois ferait douter que ce soit le même.
-   */
+ * What this column shows — two cases, one principle: a thread is displayed
+ * here when the PAGE has nowhere else to show it.
+ *
+ * • the page thread: it does not talk about any block;
+ * • a DETACHED thread: its block is gone, and it carries the extract which says of
+ * what he was talking about.
+ *
+ * An anchored and living thread remains on his text: that is the whole reason for
+ * the anchor, and showing it twice would make one doubt that it is the same.
+ */
   const shown = useMemo(
     () => threads.filter((thread) => !thread.root.block_id || thread.detached),
     [threads]
@@ -146,11 +146,11 @@ export function PageActivity({
     [shown]
   );
 
-  // Une page n'a ni objectif, ni catégorie, ni ticket à nommer : seuls les
-  // MEMBRES servent, pour résoudre l'acteur de chaque ligne. Le reste du
-  // contexte est vide plutôt qu'absent — `EventContext` est partagé avec les
-  // trois autres surfaces, et le remplir de listes vides coûte moins qu'un
-  // second type à tenir en phase.
+  // A page has no objective, category or ticket to name: only the
+  // MEMBERS are used to resolve the actor of each line. The rest of the
+  // context is empty rather than absent — `EventContext` is shared with
+  // three more surfaces, and filling it with empty lists costs less than one
+  // second type to keep in phase.
   const ctx = useMemo<EventContext>(
     () => ({
       members,
@@ -195,8 +195,8 @@ export function PageActivity({
         }
         onEditComment={edit}
         onDeleteComment={remove}
-        // Un fil de page n'a pas de pièce jointe : le crochet existe pour la
-        // signature partagée, et n'est jamais atteignable.
+        // A page thread has no attachment: the hook exists for the
+        // shared signature, and is never reachable.
         onDeleteAttachment={async () => {}}
       />
     </div>
@@ -204,16 +204,14 @@ export function PageActivity({
 }
 
 /**
- * COMMENTER la page — le composeur, en PIED de panneau et non en bout de liste.
+ * COMMENT the page — the composer, at the FOOT of the panel and not at the end of the list.
  *
- * Il est fixe : on écrit un commentaire après avoir lu, donc après avoir fait
- * défiler, et un champ qui s'éloigne à mesure qu'on lit est un champ qu'il faut
- * aller rechercher. C'est déjà la règle du panneau d'un ticket, dont le
- * composeur vit dans `SidePanelFooter`.
+ * It is fixed: you write a comment after having read, therefore after having scrolled, and a field which moves away as you read is a field which must be
+ * go search. This is already the rule of a ticket panel, whose
+ * composer lives in `SidePanelFooter`.
  *
- * Il est monté À CÔTÉ de la liste, pas dedans, et lit le même cache : une
- * seule requête pour les deux (react-query la partage sur `["page-comments",
- * pageId]`), et l'écriture invalide la clé que la liste écoute.
+ * It is mounted NEXT to the list, not in it, and reads the same cache: a single query for both (react-query shares it on `["page-comments",
+ * pageId]`), and writing invalidates the key the list is listening to.
  */
 export function PageCommentBar({
   projectId,
@@ -239,20 +237,20 @@ export function PageCommentBar({
   );
 }
 
-/** Le composeur n'a que faire des ancres : il n'écrit que des commentaires de
-    PAGE, et ne lit aucun fil. L'ensemble vide évite de refabriquer un Set à
-    chaque rendu pour rien. */
+/** The composer does not care about anchors: it only writes comments from
+ PAGE, and does not read any threads. The empty set avoids remaking a Set
+ each rendering for nothing. */
 const NO_BLOCKS: ReadonlySet<string> = new Set<string>();
 
-/** Le bandeau d'un fil : ce dont il parle, et ce que son ancre est devenue. */
+/** The band of a thread: what it speaks of, and what its anchor has become. */
 function ThreadHeader({ thread }: { thread: PageThread }) {
   const t = useTranslations("Pages");
   const { root, detached } = thread;
 
   return (
     <div className="min-w-0">
-      {/* Le fil parle d'un texte que plus personne ne voit : le dire, et montrer
-          l'extrait, est la seule trace de pourquoi le bloc a été retiré. */}
+      {/* The thread talks about a text that no one sees anymore: saying it, and showing
+ the extract, is the only trace of why the block was removed. */}
       {detached && (
         <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-500">
           <Link2Off className="size-3.5" />

@@ -27,7 +27,7 @@ function optionalPublicUrl(value: string | undefined, variable: string): string 
   }
 }
 
-/** Configuration publique pure, partagée par le build client et les tests. */
+/** Pure public configuration, shared by client build and tests. */
 export function resolvePublicSite(env: PublicSiteEnvironment) {
   const officialCloud = isOfficialMinddyCloud({
     NEXT_PUBLIC_APP_URL: env.appUrl,
@@ -62,9 +62,9 @@ export function resolvePublicSite(env: PublicSiteEnvironment) {
   return {
     url: parsed.origin,
     name: env.siteName?.trim() || "minddy",
-    // Une installation auto-hébergée ne doit jamais publier l'adresse de l'opérateur
-    // cloud par défaut. L'adresse dérivée reste propre au domaine de l'instance
-    // et NEXT_PUBLIC_CONTACT_EMAIL permet de la remplacer explicitement.
+    // A self-hosted installation should never publish the operator's address
+    // cloud by default. The derived address remains specific to the domain of the instance
+    // and NEXT_PUBLIC_CONTACT_EMAIL allows you to explicitly replace it.
     contactEmail:
       env.contactEmail?.trim() ||
       (officialCloud ? "hello@minddy.app" : `contact@${parsed.hostname}`),
@@ -84,37 +84,37 @@ const publicSite = resolvePublicSite({
   vercelProjectProductionUrl: process.env.VERCEL_PROJECT_PRODUCTION_URL,
 });
 
-/** Origine canonique de cette instance, jamais celle de l'infrastructure minddy par défaut. */
+/** Canonical origin of this instance, never that of the default minddy infrastructure. */
 export const SITE_URL = publicSite.url;
 
 /**
- * La marque, telle qu'elle apparaît dans un titre d'onglet. Le root layout en
- * fait le template « %s · minddy » ; les rares titres posés côté client (le
- * ticket ouvert en panneau) le recomposent à la main et lisent la même
- * constante.
+ * The brand, as it appears in a tab title. The root layout en
+ * makes the template “%s · minddy”; the rare titles placed on the client side (the
+ * ticket opened in panel) recompose it by hand and read the same
+ * constant.
  */
 export const SITE_NAME = publicSite.name;
 
-/** Point d'entrée du serveur MCP, tel qu'on le colle dans un agent. */
+/** Entry point of the MCP server, as pasted into an agent. */
 export const MCP_ENDPOINT = `${SITE_URL}/api/mcp`;
 
 export const CONTACT_EMAIL = publicSite.contactEmail;
 
-/** Board où l'opérateur souhaite recueillir les retours sur le produit. */
+/** Board where the operator wants to collect feedback on the product. */
 export const PRODUCT_FEEDBACK_URL = publicSite.productFeedbackUrl;
 
 /**
- * Jetons de vérification de propriété (MIN-88), posés en `<meta>` par le root
- * layout. En dur et non en variable d'environnement : ce sont des valeurs
- * publiques, servies dans le HTML de chaque page, et une propriété perdue parce
- * qu'une variable a sauté d'un environnement est un échec silencieux.
+ * Ownership verification tokens (MIN-88), placed in `<meta>` by the root
+ * layout. Hardcoded and not an environment variable: these are public
+ * values, served in the HTML of each page, and a property lost because
+ * a variable jumped from an environment is a silent failure.
  *
- * Chaîne vide = pas encore vérifié, la balise n'est pas émise. On récupère les
- * jetons dans Google Search Console (« Balise HTML ») et Bing Webmaster Tools,
- * puis on les colle ici — le déploiement suivant valide la propriété.
+ * Empty string = not yet checked, the tag is not emitted. We retrieve the
+ * tokens from Google Search Console ("HTML Tag") and Bing Webmaster Tools,
+ * then paste them here — the following deployment validates the property.
  *
- * Bing accepte aussi l'import direct depuis Search Console une fois Google
- * vérifié, auquel cas `bing` peut rester vide.
+ * Bing also accepts direct import from Search Console once Google
+ * has been verified, in which case `bing` may remain empty.
  */
 export const SITE_VERIFICATION = {
   /** `<meta name="google-site-verification">` */

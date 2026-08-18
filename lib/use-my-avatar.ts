@@ -5,17 +5,15 @@ import { useAuth } from "./auth-context";
 import { GLOBAL_BOARD_KEY } from "./use-global-board-query";
 
 /**
- * Ma marque d'avatar.
+ * My avatar mark.
  *
- * Les marques des autres arrivent avec les membres d'un projet ; la mienne n'a
- * pas ce véhicule (la barre latérale s'affiche avant tout projet), d'où cette
- * lecture dédiée. La graine ne change que si je la relance, donc elle est
- * gardée fraîche indéfiniment et n'est invalidée que par la mutation.
+ * Others' marks arrive with members of a project; mine does not have this vehicle (the sidebar appears before any project), hence this dedicated reading. The seed only changes if I restart it, so it is
+ * kept fresh indefinitely and is only invalidated by mutation.
  *
- * Renvoie `null` tant que la réponse n'est pas là — pas une graine de repli, qui
- * afficherait une FAUSSE marque le temps d'une frame. `UserAvatar` rend une
- * pastille neutre dans cet intervalle. Le cache étant persisté
- * (lib/query-provider.tsx), l'attente ne concerne que la toute première visite.
+ * Returns `null` until the response is there — not a fallback seed, which
+ * would show a FALSE timemark of one frame. `UserAvatar` returns a
+ * neutral pellet in this interval. Since the cache is persisted
+ * (lib/query-provider.tsx), the wait only concerns the very first visit.
  */
 function avatarKey(userId: string | undefined) {
   return ["my-avatar", userId ?? null];
@@ -38,7 +36,7 @@ export function useMyAvatarSeed(): string | null {
   return data?.seed ?? null;
 }
 
-/** Relance le tirage. La nouvelle marque s'affiche partout dès la réponse. */
+/** Restarts the draw. The new brand is displayed everywhere upon response. */
 export function useRegenerateAvatar() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -51,8 +49,8 @@ export function useRegenerateAvatar() {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(avatarKey(user?.id), data);
-      // Les membres portent MA marque dans les listes déjà chargées (assignés,
-      // commentaires, mentions) : elles doivent la relire.
+      // The members bear MY mark in the lists already loaded (assigned,
+      // comments, mentions): they must reread it.
       void queryClient.invalidateQueries({ queryKey: ["members"] });
       void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
     },

@@ -1,54 +1,54 @@
-# L'orchestrateur dans la microVM — cadrage
+# The orchestrator in the microVM — framing
 
-> **Date** : 2026-08-07 · **Ticket** : MIN-221 · **Objectif** : *Orchestrateur en
-> process long* (MIN-222 à MIN-225)
+> **Date**: 2026-08-07 · **Ticket**: MIN-221 · **Objective**: *Orchestrator in
+> long process* (MIN-222 to MIN-225)
 >
-> **La direction était prise avant ce document** : la boucle vit dans la microVM,
-> la fonction reçoit la requête, démarre ou réveille la VM, et rend la main. On ne
-> change pas de fournisseur. Ce document ne rouvre pas cette décision — il tranche
-> les sept points qui la rendent constructible, et il en corrige deux prémisses.
+> **The direction was taken before this document**: the loop lives in the microVM,
+> the function receives the request, starts or wakes up the VM, and returns control. We don't
+> do not change supplier. This document does not reopen this decision — it decides
+> the seven points which make it constructible, and he corrects two premises.
 >
-> **Ce qui a été mesuré pour l'écrire**, plutôt que supposé : le courtage de
-> credentials du firewall Vercel Sandbox, exercé dans une vraie microVM avec la
-> vraie clé plateforme (§1) ; le coût d'un aller-retour de commande (§5). Les deux
-> sondes sont reproductibles, leur méthode est dans le texte.
+> **What was measured to write it**, rather than assumed: the brokerage of
+> credentials of the Vercel Sandbox firewall, exercised in a real microVM with the
+> real platform key (§1); the cost of a round trip order (§5). Both
+> probes are reproducible, their method is in the text.
 
 ---
 
-## Ce qui a changé depuis l'écriture des tickets
+## What has changed since the tickets were written
 
-Deux prémisses du chantier ne tiennent plus telles quelles. Elles ne l'annulent
-pas — l'une le simplifie beaucoup, l'autre lui retire un argument.
+Two premises of the project no longer hold as they are. They don't cancel it
+not — one simplifies it a lot, the other removes an argument from it.
 
-**Le proxy de credentials n'est pas à construire.** MIN-223 proposait de départager
-deux formes à écrire nous-mêmes (un endpoint relais, ou une re-signature du trafic
-sortant « sur le modèle Cloudflare »). La seconde existe **nativement dans Vercel
-Sandbox**, dans le SDK déjà installé (`@vercel/sandbox@2.6.0`), sous le nom de
-*credentials brokering*. Elle est mesurée en §1. Le ticket estimé `l` devient une
-question de configuration et de garde-fous, pas d'infrastructure.
+**The credentials proxy is not to be built.** MIN-223 proposed to decide between
+two forms to write ourselves (a relay endpoint, or a re-signing of traffic
+outgoing “on the Cloudflare model”). The second exists **natively in Vercel
+Sandbox**, in the already installed SDK (`@vercel/sandbox@2.6.0`), under the name
+*credentials brokering*. It is measured in §1. The estimated ticket `l` becomes a
+a question of configuration and safeguards, not of infrastructure.
 
-**Le gain de latence n'est pas établi.** MIN-224 chiffre « ~0,3 s par tool call,
-soit 30 à 45 s par run ». La mesure de §5 ne le confirme pas, et le chiffre doit
-être re-dérivé avant d'être resservi. Ça ne change pas la décision : le dossier de
-la migration, ce sont les **11 défauts sur 15** de [problems.md](../problems.md)
-qui vivent dans le découpage, pas la latence.
+**Latency gain is not established.** MIN-224 figure “~0.3 s per tool call,
+i.e. 30 to 45 s per run.” The measurement of §5 does not confirm this, and the figure must
+be re-diverted before being re-served. This does not change the decision: the file of
+migration, these are the **11 out of 15 defects** of [problems.md](../problems.md)
+who live in slicing, not latency.
 
 ---
 
-## 1. Le proxy de credentials
+## 1. The credentials proxy
 
-**Décision : aucune des deux formes proposées. Le firewall de Vercel Sandbox fait
-le courtage, et la microVM ne détient plus rien du tout.**
+**Decision: neither of the two proposed forms. The Vercel Sandbox firewall is
+the brokerage, and the microVM no longer holds anything at all.**
 
-`networkPolicy` accepte, par domaine, des règles à `match` (méthode, chemin,
-en-têtes, query) et `transform` (en-têtes à poser sur la requête sortante). La
-réécriture a lieu **après la sortie de la VM**, dans le proxy qui termine le TLS :
-le secret n'entre jamais dans son espace mémoire. La politique se pose à la
-création et **se met à jour à chaud** (`sandbox.updateNetworkPolicy`), sans
-redémarrer le process.
+`networkPolicy` accepts, per domain, rules for `match` (method, path,
+headers, query) and `transform` (headers to set on the outgoing request). The
+rewriting takes place **after exiting the VM**, in the proxy which terminates the TLS:
+the secret never enters his memory space. Politics arises at the
+creation and **updates hot** (`sandbox.updateNetworkPolicy`), without
+restart the process.
 
-**Sonde du 2026-08-07** — microVM `node24` réelle, clé plateforme OpenRouter réelle,
-politique posée à la création :
+**Probe from 2026-08-07** — real microVM `node24`, real OpenRouter platform key,
+policy posed at creation:
 
 ```ts
 { allow: {
@@ -56,379 +56,379 @@ politique posée à la création :
       match: { method: ["POST"], path: { exact: "/api/v1/chat/completions" } },
       transform: [{ headers: { authorization: `Bearer ${OPENROUTER_API_KEY}` } }],
     }],
-    "*": [],   // le reste d'Internet reste ouvert — cf. plus bas
+    "*": [],   // the rest of the Internet remains open — see below
 } }
 ```
 
-| Ce qu'on a lancé dans la VM | Résultat |
+| What we launched in the VM | Result |
 | --- | --- |
-| `env \| grep -iE 'key\|token\|secret'` | **aucune variable sensible** |
+| `env \| grep -iE 'key\|token\|secret'` | **no sensitive variables** |
 | `grep -c 'sk-or' /proc/self/environ` | **0** |
-| `POST /api/v1/chat/completions`, `Authorization: Bearer minddy-placeholder` | **HTTP 200**, complétion réelle, `cost: 0,00000581 $`, `is_byok: false` |
-| `GET /api/v1/key`, **même** placeholder (hors matcher) | **HTTP 401** `Missing Authentication header` |
-| `GET httpbin.org/headers` (via le catch-all `*`) | reçoit `Bearer minddy-placeholder` — **l'injection ne fuit pas ailleurs** |
+| `POST /api/v1/chat/completions`, `Authorization: Bearer minddy-placeholder` | **HTTP 200**, real completion, `cost: 0,00000581 $`, `is_byok: false` |
+| `GET /api/v1/key`, **same** placeholder (excluding matcher) | **HTTP 401** `Missing Authentication header` |
+| `GET httpbin.org/headers` (via catch-all `*`) | receives `Bearer minddy-placeholder` — **injection does not leak elsewhere** |
 
-Le matcher est donc une frontière réelle : la VM peut faire *une* chose créditée,
-et pas la route de provisioning d'à côté qui aurait permis d'émettre des clés.
+The matcher is therefore a real boundary: the VM can do *one* credited thing,
+and not the provisioning route next door which would have made it possible to issue keys.
 
-**Ce que la microVM détient quand même : rien.** Pas de jeton court, pas de clé à
-portée réduite. C'est plus fort que ce que le ticket espérait, et ça vaut aussi
-pour son identité — cf. §2, où elle est prouvée par la plateforme au lieu d'être
-portée par un secret.
+**What the microVM still holds: nothing.** No short token, no key to
+reduced range. It's stronger than the ticket hoped for, and it's worth too
+for its identity — cf. §2, where it is proven by the platform instead of being
+carried by a secret.
 
-**Ce qui reste possible, et qu'il faut nommer.** Un modèle hostile peut appeler la
-route créditée **en dehors de la boucle** : la sonde vient de le faire, avec un
-`curl`. Ce n'est pas de l'exfiltration, c'est de la **dépense** — et elle échappe
-au ledger. Le garde-fou n'est pas un contrôle de plus dans la VM (elle est
-compromise par hypothèse), c'est une **clé OpenRouter par run, à plafond dur**,
-mintée au lancement par la fonction via l'API de provisioning, injectée par le
-`transform`, révoquée à la fin du run. Le plafond est alors tenu par le
-fournisseur, hors de la VM *et* hors de notre code. En BYOK, on ne peut pas
-plafonner la clé de l'utilisateur : c'est sa clé et sa facture — à **dire** dans
-l'écran BYOK, pas à corriger.
+**Which remains possible, and which must be named.** A hostile model can call the
+credited route **outside the loop**: the probe has just done it, with a
+`curl`. It's not exfiltration, it's **expense** — and it escapes
+to the ledger. The guardrail is not another control in the VM (it is
+compromised by hypothesis), it is one **OpenRouter key per run, with hard ceiling**,
+minted at launch by the function via the provisioning API, injected by the
+`transform`, revoked at the end of the run. The ceiling is then held by the
+provider, outside the VM *and* outside our code. In BYOK, we cannot
+cap the user's key: it's their key and their bill — to **say** in
+the BYOK screen, not to be corrected.
 
-**Ce qu'on ne cherche pas à fermer, et pourquoi c'est ce qui débloque le
-chantier.** L'exfiltration du *contenu du dépôt* reste possible : le catch-all `*`
-laisse la VM joindre n'importe quoi. C'est déjà le cas aujourd'hui (`run_command`
-+ réseau ouvert, cf. §3.2 du [comparatif](agent-harness-comparison.md)), la
-migration ne l'aggrave pas, et une liste blanche stricte casserait `npm install`
-sur les dépôts de nos utilisateurs — dont on ne connaît ni les registres privés ni
-les miroirs. Traiter « le secret ne doit pas sortir » et « la donnée ne doit pas
-sortir » comme **deux problèmes** est ce qui rend le premier soluble aujourd'hui.
-Le second reste ouvert, et le firewall saura le fermer le jour où on en aura le
-besoin et la connaissance des dépôts.
+**What we are not trying to close, and why it is what unlocks the
+construction site.** Exfiltration of the *contents of the repository* remains possible: the catch-all `*`
+let the VM attach anything. This is already the case today (`run_command`
++ open network, cf. §3.2 of [comparison](agent-harness-comparison.md)), the
+migration doesn't make it worse, and strict whitelisting would break `npm install`
+on the deposits of our users — of which we know neither the private registers nor
+the mirrors. Address “the secret must not come out” and “the data must not
+coming out” as **two problems** is what makes the first one solvable today.
+The second remains open, and the firewall will be able to close it the day we have the opportunity to do so.
+need and knowledge of deposits.
 
-**Contrepartie technique à connaître** : pour transformer, le proxy **termine le
-TLS**, avec une CA par sandbox ajoutée aux certificats système. La sonde confirme
-que les variables standard sont déjà câblées (`NODE_EXTRA_CA_CERTS`,
-`CURL_CA_BUNDLE`, `GIT_SSL_CAINFO`, `SSL_CERT_FILE`, `NODE_USE_SYSTEM_CA=1`…). Un
-outil du dépôt qui embarque son propre bundle de CA échouera — cas rare, message
-d'erreur à reconnaître.
+**Technical counterpart to know**: to transform, the proxy **ends the
+TLS**, with a sandbox CA added to the system certificates. The probe confirms
+that the standard variables are already wired (`NODE_EXTRA_CA_CERTS`,
+`CURL_CA_BUNDLE`, `GIT_SSL_CAINFO`, `SSL_CERT_FILE`, `NODE_USE_SYSTEM_CA=1`…). A
+repository tool that ships its own CA bundle will fail — rare case, message
+error to recognize.
 
 ---
 
-## 2. Le canal d'events
+## 2. The events channel
 
-**Décision : appel HTTP vers une route de collecte — mais ce n'est pas nous qui le
-signons, et la VM ne porte aucun jeton.**
+**Decision: HTTP call to a collection route — but we're not the ones doing it
+sign, and the VM does not carry any token.**
 
-Le même firewall offre le `forwardURL` : les requêtes de la VM vers un domaine
-donné sont **forwardées vers un handler à nous**, avec en plus l'en-tête
-`vercel-sandbox-oidc-token`. Ses claims portent `team_id`, `project_id`,
-`sandbox_id` et `sandbox_name` — et notre `sandbox_name` **est** `agent-<run.id>`
+The same firewall offers `forwardURL`: requests from the VM to a domain
+given are **forwarded to a handler of ours**, with the addition of the header
+`vercel-sandbox-oidc-token`. Its claims bear `team_id`, `project_id`,
+`sandbox_id` and `sandbox_name` — and our `sandbox_name` **is** `agent-<run.id>`
 ([sandbox.ts:23](../lib/server/agent/sandbox.ts)). `defineSandboxProxy`
-(`@vercel/sandbox/proxy`) vérifie signature, émetteur, expiration et `aud`.
+(`@vercel/sandbox/proxy`) checks signature, issuer, expiration and `aud`.
 
-L'identité du run est donc **prouvée par la plateforme et infalsifiable depuis la
-VM**. Conséquences directes :
+The identity of the run is therefore **proven by the platform and unfalsifiable from the
+VM**. Direct consequences:
 
-- aucune clé Supabase n'entre dans la microVM, à aucune portée ;
-- une VM ne peut écrire d'events que sur **son** run — pas parce qu'on le vérifie,
-  parce qu'elle ne peut rien prétendre d'autre ;
-- le direct suit le même chemin : `broadcastRunStream`
-  ([live.ts:93](../lib/server/agent/live.ts)) devient un POST sur la même surface,
-  et le collecteur **dérive le topic du `sandbox_name`** au lieu de le recevoir.
-  Un run ne peut pas diffuser sur le fil d'un autre. Une clé Supabase à portée
-  réduite, elle, n'aurait pas su l'empêcher : le topic est un paramètre.
+- no Supabase key enters the microVM, at any range;
+- a VM can only write events on **its** run — not because it is checked,
+  because it cannot claim anything else;
+- the direct follows the same path: `broadcastRunStream`
+  ([live.ts:93](../lib/server/agent/live.ts)) becomes a POST on the same surface,
+  and the collector **derives the topic from `sandbox_name`** instead of receiving it.
+  A run cannot broadcast on another's feed. A Supabase key within reach
+  reduced, she would not have been able to prevent it: the topic is a parameter.
 
-Côté serveur, la route de collecte fait ce que `appendEvent`
-([runs.ts:1076](../lib/server/agent/runs.ts)) fait déjà — même calcul de `seq`,
-même retente sur collision, même `broadcastRunEvent` derrière.
+On the server side, the collection route does what `appendEvent`
+([runs.ts:1076](../lib/server/agent/runs.ts)) already does — same calculation of `seq`,
+same retry on collision, same `broadcastRunEvent` behind.
 
-**Le point qui était à mesurer avant de s'y engager : mesuré, et il passe.**
-Sonde du 2026-08-07 (MIN-223) — microVM `node24` réelle, route `defineSandboxProxy`
-déployée en preview, `forwardURL` = l'origine nue du déploiement :
+**The point that had to be measured before committing to it: measured, and it passes.**
+Probe from 2026-08-07 (MIN-223) — real microVM `node24`, route `defineSandboxProxy`
+deployed in preview, `forwardURL` = the bare origin of the deployment:
 
-| Ce qu'on a mesuré | Résultat |
+| What we measured | Result |
 | --- | ---: |
-| Aller-retour JSON, connexion neuve (médiane de 20) | **62 ms** (min 49, max 130) |
-| Le même en réutilisant la connexion (médiane de 20) | **55 ms** |
-| Flux SSE de 60 s | **tenu** — 200, TTFB **54 ms**, 61 events, total 60,08 s |
-| Corps de requête accepté | **4 Mio oui, 4,3 Mio non** (413 `FUNCTION_PAYLOAD_TOO_LARGE`) |
-| `sandbox_name` reçu dans le handler | **exact**, l'identité du run est bien prouvée |
-| Politique après une reprise de session | **survit** — complétion 200 et forward 200 sans rien reposer |
+| JSON round trip, new connection (median of 20) | **62ms** (min 49, max 130) |
+| The same when reusing the connection (median of 20) | **55ms** |
+| 60 sec SSE flow | **held** — 200, TTFB **54 ms**, 61 events, total 60.08 s |
+| Request body accepted | **4 MiB yes, 4.3 MiB no** (413 `FUNCTION_PAYLOAD_TOO_LARGE`) |
+| `sandbox_name` received in handler | **correct**, the identity of the run is well proven |
+| Policy after session resume | **survives** — completion 200 and forward 200 without resting anything |
 
-Le plan de contrôle coûte donc **~55 ms par appel** contre les ~211 ms d'un
-aller-retour `runCommand` (§5) : il n'est pas le point cher de la migration. Le
-repli (`transform` sur le domaine Supabase, en assumant qu'une VM compromise
-puisse écrire des events sur un autre run) **n'a pas lieu d'être** — on le laisse
-écrit pour mémoire, il n'est plus le chemin.
+The control plan therefore costs **~55 ms per call** compared to ~211 ms of a
+round trip `runCommand` (§5): it is not the expensive point of the migration. The
+fallback (`transform` on the Supabase domain, assuming that a compromised VM
+can write events on another run) **does not need to be** — we leave it
+written for the record, it is no longer the way.
 
-**Deux résultats à ne pas perdre, parce qu'ils contraignent MIN-224.**
+**Two results not to be lost, because they constrain MIN-224.**
 
-1. **Le corps est plafonné à 4,5 Mo** — la limite des fonctions Vercel, que le
-   forward ne relève pas. Or `MAX_CHECKPOINT_BYTES` vaut **8 Mo**
-   ([checkpoint-fit.ts](../lib/server/agent/checkpoint-fit.ts)) : un checkpoint à
-   son plafond actuel **ne passe pas**. La route refuse elle-même au-delà de 4 Mo,
-   en JSON — sans ça la plateforme rend un 413 en HTML qu'une boucle lirait comme
-   un succès, et c'est le checkpoint qu'on perdrait. À trancher dans MIN-224 :
-   abaisser le plafond de `fitCheckpoint`, ou sortir le checkpoint de cette route.
-2. **Le domaine appelé doit RÉSOUDRE en DNS.** Un TLD fictif
-   (`minddy-control.invalid`) et un sous-domaine sans enregistrement
-   (`agent-vm.minddy.app`) échouent tous deux en `curl (6) could not resolve host`,
-   en http comme en https : le firewall n'intercepte pas une résolution qui n'a pas
-   lieu. D'où la forme retenue — la VM appelle **notre propre origine**, et le
-   `forwardURL` étant cette origine nue, l'URL qu'elle appelle et celle qui arrive
-   chez nous sont littéralement la même ; le firewall n'y ajoute que l'OIDC.
+1. **The body is capped at 4.5 MB** — the limit of Vercel functions, which the
+   forward does not report. Or `MAX_CHECKPOINT_BYTES` is worth **8 MB**
+   ([checkpoint-fit.ts](../lib/server/agent/checkpoint-fit.ts)): a checkpoint at
+   its current ceiling **does not pass**. The route itself refuses beyond 4 MB,
+   in JSON — without that the platform renders a 413 in HTML that a loop would read as
+   a success, and that’s the checkpoint we would lose. To be decided in MIN-224:
+   lower the cap of `fitCheckpoint`, or remove the checkpoint from this route.
+2. **The domain called must RESOLVE to DNS.** A fictitious TLD
+   (`minddy-control.invalid`) and a subdomain without registration
+   (`agent-vm.minddy.app`) both fail in `curl (6) could not resolve host`,
+   in http as in https: the firewall does not intercept a resolution that does not have
+   place. Hence the form chosen — the VM calls **our own origin**, and the
+   `forwardURL` being this bare origin, the URL it calls and the one that arrives
+   with us are literally the same; the firewall only adds the OIDC.
 
-**Transform ou forwardURL pour le LLM ?** Les deux marchent ; ils ne tiennent pas
-la même promesse.
+**Transform or forwardURL for LLM?** Both work; they don't hold
+the same promise.
 
-| | `transform` (mesuré, §1) | `forwardURL` (non mesuré) |
+| | `transform` (measured, §1) | `forwardURL` (unmetered) |
 | --- | --- | --- |
-| La clé entre-t-elle dans la VM ? | non | non |
-| Qui compte la dépense ? | la boucle, **dans** la VM | notre handler, **hors** de la VM |
-| Une VM compromise peut-elle dépenser hors compteur ? | oui (borné par la clé à plafond) | non |
-| Invocations de fonction | zéro | une par round LLM |
-| Streaming SSE long | natif | **tenu** (mesuré : 60 s, TTFB 54 ms) |
+| Does the key fit into the VM? | no | no |
+| Who counts the expense? | the loop, **in** the VM | our handler, **outside** the VM |
+| Can a compromised VM spend off-meter? | yes (limited by the ceiling key) | no |
+| Function invocations | zero | one per round LLM |
+| Streaming SSE long | native | **held** (measured: 60 s, TTFB 54 ms) |
 
-**Retenu : `transform` + clé par run à plafond dur.** C'est le seul des deux qui
-soit mesuré, il n'ajoute aucune invocation sur le chemin le plus chaud, et le
-plafond fournisseur borne exactement ce que le compteur manquerait. `forwardURL`
-reste le chemin du plan de contrôle (events, checkpoint, tools), où le volume est
-faible et où l'identité prouvée vaut plus que la latence.
+**Retained: `transform` + key per run on hard ceiling.** This is the only one of the two that
+be measured, it does not add any invocation on the hottest path, and the
+supplier cap limits exactly what the meter would miss. `forwardURL`
+remains the path of the control plane (events, checkpoint, tools), where the volume is
+low and where the proven identity is worth more than the latency.
 
-**Le coût d'invocations, chiffré parce qu'il surprendra sinon** : `emitLive`
-diffuse ~4×/s (`LIVE_FLUSH_MS = 250`). Un tour de dix minutes fait ~2 400 appels
-au plan de contrôle. Trois issues, dans l'ordre où on les prendra : garder 250 ms
-et **mesurer** ; monter à 500 ms ; ou tenir **une seule connexion longue** (les
-fonctions Vercel acceptent désormais les WebSockets). La v1 prend la première, et
-pose le chiffre au tableau de bord — pas l'inverse.
+**The cost of invocations, encrypted because it will surprise otherwise**: `emitLive`
+broadcast ~4×/s (`LIVE_FLUSH_MS = 250`). A ten minute ride makes ~2,400 calls
+to the control plan. Three outcomes, in the order in which we take them: keep 250 ms
+and **measure**; increase to 500 ms; or hold **a single long connection** (the
+Vercel functions now accept WebSockets). v1 takes first, and
+put the number on the dashboard — not the other way around.
 
 ---
 
-## 3. Ce qui reste dans la fonction
+## 3. What remains in the function
 
-La frontière, noir sur blanc. **Tout ce qui n'est pas dans cette liste part dans
-la VM.**
+The border, black on white. **Everything not in this list goes into
+the VM.**
 
-1. **Le lancement** (`launchAgentRun`) : quota, création de la ligne `agent_runs`,
-   résolution du dépôt et mint du token de forge, création ou réveil de la
-   microVM, **pose de la `networkPolicy`**, démarrage du process de boucle en
-   `detached: true`, retour immédiat.
-2. **Le réveil** : le même geste sur un run au repos qu'on relance (`/steer` sur un
+1. **Launch** (`launchAgentRun`): quota, creation of the `agent_runs` line,
+   resolution of the deposit and mint of the forge token, creation or awakening of the
+   microVM, **installing the `networkPolicy`**, starting the loop process
+   `detached: true`, immediate return.
+2. **Waking up**: the same gesture on a resting run that we restart (`/steer` on a
    run `completed`).
-3. **Le plan de contrôle** que la VM appelle (§2) : events, checkpoint, ledger
-   `ai_usage`, tools ticket et carnet, tools de forge (`create_pr`, commentaires de
-   PR), notifications, sync de statut du ticket, crochets de chaîne
-   d'automatisation.
-4. **Les lectures de l'UI** : events, diff, PR, heartbeat — inchangées, elles ne
-   savent rien de tout ça.
-5. **`steer` et `interrupt` — inchangés, et c'est le point le moins cher du
-   chantier.** Les deux passent déjà par la base (`agent_run_messages`,
-   `interrupt_requested`) et la boucle les *interroge*
-   ([agent-loop.ts:853](../lib/server/agent/agent-loop.ts)). Elle continuera,
-   depuis la VM, par le plan de contrôle. **Aucune voie de commande fonction→VM
-   n'est à inventer** — ni port exposé, ni websocket, ni fichier signal.
-6. **Le reaper de microVM inactive** (`reapIdleSandboxes`) et le **chien de garde**
-   qui remplace `requeueStuckRuns` (§4).
+3. **The control plane** that the VM calls (§2): events, checkpoint, ledger
+   `ai_usage`, tools ticket and notebook, forge tools (`create_pr`, comments from
+   PR), notifications, ticket status sync, string hooks
+   automation.
+4. **UI readings**: events, diff, PR, heartbeat — unchanged, they do not
+   know nothing of all that.
+5. **`steer` and `interrupt` — unchanged, and this is the cheapest point of the
+   construction site.** Both are already passing through the base (`agent_run_messages`,
+   `interrupt_requested`) and the loop *interrogates* them
+   ([agent-loop.ts:853](../lib/server/agent/agent-loop.ts)). She will continue,
+   from the VM, by the control plane. **No function→VM control channel
+   needs to be invented** — no exposed port, no websocket, no signal file.
+6. **The idle microVM reaper** (`reapIdleSandboxes`) and the **watchdog**
+   which replaces `requeueStuckRuns` (§4).
 
-Ce qui part, donc : `runAgentLoop` et toute son orchestration, les 25 tools, le
-prompt système, la cascade d'édition, l'élagage, la compaction, les sous-agents,
-les jobs de fond, `commitAndPush`.
+What leaves, therefore: `runAgentLoop` and all its orchestration, the 25 tools, the
+prompt system, editing cascade, pruning, compaction, subagents,
+background jobs, `commitAndPush`.
 
-**Comment le code arrive dans la VM.** Le paquet à embarquer ne contient **aucun
-SDK** — ni `@supabase/supabase-js`, ni client de forge : tout passe par `fetch`
-vers le plan de contrôle. C'est de la logique pure plus des appels HTTP. Un bundle
-esbuild écrit par `writeFiles` au démarrage suffit (esbuild n'est pas encore une
-dépendance du dépôt : c'est un ajout à faire). L'image pré-chauffée
-(`AGENT_SANDBOX_SNAPSHOT_ID`, déjà câblée) reste l'optimisation d'après, pas la v1.
+**How the code arrives in the VM.** The package to be loaded does not contain **any
+SDK** — neither `@supabase/supabase-js`, nor forge client: everything goes through `fetch`
+to the control plane. It's pure logic plus HTTP calls. A bundle
+esbuild written by `writeFiles` at startup is sufficient (esbuild is not yet a
+dependency of the repository: this is an addition to make). The pre-heated image
+(`AGENT_SANDBOX_SNAPSHOT_ID`, already wired) remains the optimization after, not v1.
 
-**Le métrage de la microVM change de main.** `recordSandboxUsage`
-([execute.ts:3176](../lib/server/agent/execute.ts)) facture aujourd'hui le
-wall-clock du chunk depuis le `finally` de la fonction. Sans chunk, il n'y a plus
-personne pour tenir cette horloge : le métrage devient « début du tour → fin du
-tour », posé par la boucle au moment où elle rend la main, avec le chien de garde
-comme filet quand elle ne le fait pas. **À ne pas oublier** : c'est la moitié
-compute de la facture, et elle disparaîtrait en silence.
-
----
-
-## 4. Quand la VM meurt quand même
-
-**Décision : le checkpoint ne disparaît pas, il change de rôle.** Aujourd'hui il
-est le transport entre deux **chunks**. Demain il est l'état entre deux **tours**,
-plus une sauvegarde périodique en cours de tour.
-
-**Pourquoi il ne peut pas disparaître.** Une conversation au repos trois jours,
-dont la microVM a été coupée par le reaper (~5 min d'inactivité) et le snapshot
-effacé par son expiration, doit repartir avec son historique. Le checkpoint est le
-seul endroit où il vit.
-
-**La branche WIP poussée ne suffit pas**, contrairement à ce que le ticket
-espérait — et c'est le point à contredire en priorité si quelqu'un n'est pas
-d'accord. Elle sauve le **travail**, pas la **conversation**. Un tour repris depuis
-git seul retrouve son code et perd tout ce que le modèle avait compris, essayé,
-écarté. C'est déjà vrai aujourd'hui au-delà de l'expiration du snapshot, et c'est
-déjà mauvais.
-
-**La forme retenue** : écriture à la fin de chaque tour (comme aujourd'hui), plus
-un point de sauvegarde périodique en cours de tour — toutes les N minutes ou M
-rounds, à calibrer. Sans lui, un tour de deux heures qui perd sa VM perd deux
-heures. `fitCheckpoint` ([checkpoint-fit.ts](../lib/server/agent/checkpoint-fit.ts),
-MIN-217) est conservé tel quel : écrit six fois moins souvent, pas moins utile.
-
-**Le chien de garde remplace `requeueStuckRuns`.** Un run `running` dont le process
-de boucle est mort — `Command.wait()` a rendu, ou la session de la VM a disparu —
-repasse au repos sur son dernier checkpoint, et **le dit dans le fil**. Ce n'est
-plus un vol de claim sur un présumé bloqué (`STUCK_RUNNING_MS`, 20 min de silence),
-c'est un constat de décès, et il est exact : la plateforme sait si le process vit.
+**MicroVM footage changes hands.** `recordSandboxUsage`
+([execute.ts:3176](../lib/server/agent/execute.ts)) charges today the
+wall-clock of the chunk from the `finally` of the function. Without chunk, there is no more
+no one to keep this clock: the footage becomes “beginning of the round → end of the
+turn”, placed by the loop at the moment when she gives up the hand, with the guard dog
+as a net when she doesn't. **Don't forget**: it's half
+compute the invoice, and it would disappear silently.
 
 ---
 
-## 5. Les tools dans la VM
+## 4. When the VM dies anyway
 
-**`resolveWithin` et `assertNotGit` gardent exactement le même sens, et ne changent
-pas d'une ligne.** Ce sont des fonctions de chemin pures
-([repo-path.ts](../lib/server/agent/repo-path.ts)), appliquées aux arguments du
-modèle avant de toucher le disque. Que le harness tourne dans la machine qu'il
-garde ne change rien à ce qu'elles refusent.
+**Decision: the checkpoint does not disappear, it changes role.** Today it
+is the transport between two **chunks**. Tomorrow it is the state between two **towers**,
+plus a periodic save during the turn.
 
-**Ce qui change vraiment, et qu'on découvrirait sinon dans la douleur** : le
-harness et le modèle partagent désormais le même disque. Deux conséquences.
+**Why it can't disappear.** A conversation at rest three days,
+whose microVM was cut off by the reaper (~5 min of inactivity) and the snapshot
+erased by its expiration, must leave with its history. The checkpoint is
+only place where he lives.
 
-- Le harness doit vivre **hors de `REPO_DIR`**, comme `TOOL_OUTPUT_DIR` le fait
-  déjà ([sandbox.ts:71](../lib/server/agent/sandbox.ts)), pour que le `git add -A`
-  de fin de tour ne l'emporte jamais dans un commit.
-- La microVM cesse d'être « jetable et sans conséquence » — l'argument de §3.2 du
-  [comparatif](agent-harness-comparison.md), qui justifiait de ne pas garde-fouer
-  les commandes. Un `rm -rf /vercel/sandbox` du modèle tue maintenant son propre
-  tour. C'est un **désagrément, pas une faille** (rien de durable n'y vit, la
-  branche est poussée), mais l'argument « la VM est jetable » ne peut plus être
-  invoqué tel quel.
+**Pushed WIP branch is not enough**, contrary to what the ticket
+hoped — and this is the point to contradict first if someone is not
+okay. It saves the **work**, not the **conversation**. A tour resumed since
+git alone finds its code and loses everything that the model had understood, tried,
+dismissed. This is already true today beyond the expiration of the snapshot, and it is
+already bad.
 
-**Le gain de latence, mesuré, et plus petit qu'annoncé.**
+**The form retained**: writing at the end of each turn (like today), more
+a periodic save point during the turn — every N minutes or M
+rounds, to be calibrated. Without it, a two-hour tour that loses its VM loses two
+hours. `fitCheckpoint` ([checkpoint-fit.ts](../lib/server/agent/checkpoint-fit.ts),
+MIN-217) is kept as is: written six times less often, no less useful.
 
-| Mesure (2026-08-07, microVM réelle, pilotée depuis le Mac) | Valeur |
+**The watchdog replaces `requeueStuckRuns`.** A run `running` whose process
+loop is dead — `Command.wait()` has returned, or the VM session has disappeared —
+returns to rest on its last checkpoint, and **says it in the thread**. This is not
+plus a claim theft from someone presumed to be blocked (`STUCK_RUNNING_MS`, 20 min of silence),
+it is a death report, and it is correct: the platform knows if the process is alive.
+
+---
+
+## 5. Tools in the VM
+
+**`resolveWithin` and `assertNotGit` keep exactly the same meaning, and do not change
+not one line.** These are pure path functions
+([repo-path.ts](../lib/server/agent/repo-path.ts)), applied to the arguments of the
+model before touching the disc. That the harness turns in the machine it
+guard does not change anything that they refuse.
+
+**What really changes, and which we would otherwise discover in pain**: the
+harness and model now share the same disk. Two consequences.
+
+- The harness must live **outside `REPO_DIR`**, like `TOOL_OUTPUT_DIR` does
+  already ([sandbox.ts:71](../lib/server/agent/sandbox.ts)), so that the `git add -A`
+  end of turn never prevails in a commit.
+- The microVM ceases to be “disposable and inconsequential” — the argument of §3.2 of
+  [comparison](agent-harness-comparison.md), which justified not guarding
+  orders. A `rm -rf /vercel/sandbox` of the model now kills its own
+  tower. It's an **inconvenience, not a flaw** (nothing lasting lives there, the
+  branch is pushed), but the argument “the VM is disposable” can no longer be
+  invoked as is.
+
+**The latency gain, measured, and smaller than announced.**
+
+| Measurement (2026-08-07, real microVM, driven from the Mac) | Value |
 | --- | ---: |
-| Aller-retour `runCommand("true")`, médiane de 10 | **211 ms** (min 176, max 933) |
-| Les 10 mêmes commandes enchaînées **dans** la VM, un seul aller-retour | **227 ms** au total |
+| Round trip `runCommand("true")`, median of 10 | **211 ms** (min 176, max 933) |
+| The same 10 commands chained **in** the VM, a single round trip | **227 ms** total |
 
-Soit ~21 ms par commande contre ~211 ms : **le RPC est bien l'essentiel du coût**.
-Mais la mesure part de France, et le trajet jusqu'au plan de contrôle Vercel en
-porte le gros (~180 ms de plancher observé sur une connexion réutilisée). Depuis
-une fonction co-localisée en `iad1`, ce sera **nettement moins**.
+Or ~21 ms per command versus ~211 ms: **the RPC is indeed the majority of the cost**.
+But the measurement starts from France, and the journey to the Vercel control plane in
+bears the brunt (~180 ms of floor observed on a reused connection). Since
+a function co-located in `iad1`, it will be **significantly less**.
 
-**Conclusion : le chiffre « ~0,3 s par tool call, 30 à 45 s par run » de MIN-224
-n'est pas établi.** Il doit être re-dérivé des horodatages de production
-(`agent_run_events`, `tool_call` → `tool_result`, **moins** la durée de la commande
-elle-même) avant d'être resservi comme argument. Le dossier de la migration reste
-entier sans lui : ce sont les 11 défauts sur 15 de l'audit.
-
----
-
-## 6. Le chemin de migration
-
-**Décision : drapeau par PROJET, figé sur la ligne du run à son lancement.**
-
-**Par projet, pas par run.** Par run, on ne saurait pas répondre à « pourquoi cette
-session s'est-elle comportée autrement que l'autre ? ». Par projet, on bascule un
-dépôt à la fois — en commençant par celui de minddy, où l'on voit tout — et une
-conversation ne change jamais de moteur en cours de vie. Le mécanisme existe :
-un `app_config` (comme `agent_subagent_max_parallel`,
-[subagent-config.ts:105](../lib/server/agent/subagent-config.ts)) portant une
-liste de `project_id`.
-
-**Figé au lancement.** Le drapeau est lu au lancement et écrit sur la ligne du run,
-comme `model` et `reasoning_level` le sont déjà
-([runs.ts:178](../lib/server/agent/runs.ts)). Sans ça, un tour repris après la
-bascule repartirait sur une boucle qui n'a jamais vu son checkpoint.
-
-**Combien de temps les deux coexistent.** Le temps qu'un dépôt réel — minddy —
-passe **une semaine entière** sur la nouvelle forme sans que le fil raconte autre
-chose que l'ancienne : mêmes events, même ordre, mêmes coûts au ledger. C'est le
-critère, pas une date. **Qui décide** : Clément, sur ce critère-là.
+**Conclusion: the figure “~0.3 s per tool call, 30 to 45 s per run” of MIN-224
+is not established.** It must be re-derived from the production timestamps
+(`agent_run_events`, `tool_call` → `tool_result`, **minus** the duration of the command
+itself) before being used as an argument. The migration file remains
+whole without it: these are the 11 defects out of 15 in the audit.
 
 ---
 
-## 7. Ce qu'on supprime, et quand
+## 6. The migration path
 
-**Après, jamais pendant.** Chaque ligne est un ticket du lot 3 (MIN-225) qui se
-ferme tout seul le jour où le dernier projet a basculé. Liste vérifiée dans le
-code, pas de mémoire :
+**Decision: flag by PROJECT, frozen on the run line when launched.**
 
-| Fichier | Ce qui meurt |
+**By project, not by run.** By run, we cannot answer “why this
+Did one session behave differently than the other? ". Per project, we switch one
+deposit at the same time — starting with Minddy's, where we see everything — and a
+conversation never changes engine during its life. The mechanism exists:
+a `app_config` (like `agent_subagent_max_parallel`,
+[subagent-config.ts:105](../lib/server/agent/subagent-config.ts)) carrying a
+list of `project_id`.
+
+**Fixed at launch.** The flag is read at launch and written on the run line,
+as `model` and `reasoning_level` already are
+([runs.ts:178](../lib/server/agent/runs.ts)). Without that, a lap resumed after the
+switch would start again on a loop which never saw its checkpoint.
+
+**How long do the two coexist.** The time that an actual deposit — minddy —
+spend **an entire week** on the new form without the thread saying anything else
+thing as the old one: same events, same order, same ledger costs. This is the
+criterion, not a date. **Who decides**: Clément, on this criterion.
+
+---
+
+## 7. What to delete, and when
+
+**After, never during.** Each line is a batch 3 ticket (MIN-225) which is
+closes on its own the day the last project collapsed. List verified in the
+code, no memory:
+
+| File | What dies |
 | --- | --- |
-| [execute.ts](../lib/server/agent/execute.ts) | La boucle de chunks entière : admission (`chunkFitsSubagentResume`, event `chunk_deferred`), relecture d'amorçage, sortie `suspended`, `MAX_WALL_CLOCK_MS`, `MAX_ERROR_REQUEUE_ATTEMPTS`, `SUBAGENT_RESUME_DEFER_MS` |
-| [chunk-budget.ts](../lib/server/agent/chunk-budget.ts) | **Le module, sauf une fonction** : `COMMIT_MARGIN_MS`, `MIN_SOFT_DEADLINE_MS`, `CHUNK_FLOOR_MS`, `COLD_SETUP_ALLOWANCE_MS`, `MIN_CHUNK_BUDGET_MS`, `chunkSoftDeadlineMs`. `runCommandTimeoutMs` **survit** (le plafond du tool reste) mais perd son terme `remainingMs` |
-| [drain.ts](../lib/server/agent/drain.ts) | `drainAgentRuns` et sa boucle claim→execute. `reapIdleSandboxes` et `hasDueAgentWork` **survivent** |
-| [runs.ts](../lib/server/agent/runs.ts) | `claimRun`, `requeueStuckRuns`, `STUCK_RUNNING_MS`, `MAX_CRASH_ATTEMPTS` ; colonnes `continuations`, `attempts`, `window_started_at`, et `not_before` dans son usage de re-queue |
-| `AgentCheckpoint` | `parkedForSubagents`, `providerRetries`, `usageSeq` (plus de tranche par chunk) ; `instructions`, `editedPaths`, `repoTouched`, `lastFilesSha` redeviennent des **variables locales du tour**. `messages` reste |
-| [subagent.ts](../lib/server/agent/subagent.ts) | `suspendAll`, `resumeSuspended`, `restore`, `SubagentRecord` sérialisé, `SUBAGENT_RECORDS_KEPT`, `isResumableSubagent`. Les filles redeviennent des promesses |
+| [execute.ts](../lib/server/agent/execute.ts) | The entire chunk loop: admit (`chunkFitsSubagentResume`, event `chunk_deferred`), bootstrap replay, exit `suspended`, `MAX_WALL_CLOCK_MS`, `MAX_ERROR_REQUEUE_ATTEMPTS`, `SUBAGENT_RESUME_DEFER_MS` |
+| [chunk-budget.ts](../lib/server/agent/chunk-budget.ts) | **The module, except one function**: `COMMIT_MARGIN_MS`, `MIN_SOFT_DEADLINE_MS`, `CHUNK_FLOOR_MS`, `COLD_SETUP_ALLOWANCE_MS`, `MIN_CHUNK_BUDGET_MS`, `chunkSoftDeadlineMs`. `runCommandTimeoutMs` **survives** (the tool ceiling remains) but loses its term `remainingMs` |
+| [drain.ts](../lib/server/agent/drain.ts) | `drainAgentRuns` and its claim→execute loop. `reapIdleSandboxes` and `hasDueAgentWork` **survive** |
+| [runs.ts](../lib/server/agent/runs.ts) | `claimRun`, `requeueStuckRuns`, `STUCK_RUNNING_MS`, `MAX_CRASH_ATTEMPTS` ; columns `continuations`, `attempts`, `window_started_at`, and `not_before` in its requeue usage |
+| `AgentCheckpoint` | `parkedForSubagents`, `providerRetries`, `usageSeq` (more slice per chunk); `instructions`, `editedPaths`, `repoTouched`, `lastFilesSha` become **local tour variables** again. `messages` remains |
+| [subagent.ts](../lib/server/agent/subagent.ts) | `suspendAll`, `resumeSuspended`, `restore`, `SubagentRecord` serialized, `SUBAGENT_RECORDS_KEPT`, `isResumableSubagent`. Girls become promises again |
 | [subagent-config.ts](../lib/server/agent/subagent-config.ts) | `SUBAGENT_PARENT_RESERVE_MS`, `SUBAGENT_MIN_MS`, `SUBAGENT_RESUME_MIN_SOFT_DEADLINE_MS`, `chunkFitsSubagentResume`, `SUBAGENT_MAX_MS`, `SUBAGENT_CUT_MARGIN_MS` |
-| [retry.ts](../lib/server/agent/retry.ts) | `planProviderStall` (MIN-219) : un process long **attend**, il ne se re-queue plus. Le backoff reste, la comptabilité de reprises disparaît |
-| [agent-loop.ts](../lib/server/agent/agent-loop.ts) | `MAX_ROUNDS_PER_CHUNK`, la soft-deadline et sa sortie `suspend`, `MAX_COMPACTIONS_PER_WINDOW`, `AGENT_COMPACT_MIN_BUDGET_MS` |
+| [retry.ts](../lib/server/agent/retry.ts) | `planProviderStall` (MIN-219): a long process **waits**, it no longer queues. The backoff remains, recovery accounting disappears |
+| [agent-loop.ts](../lib/server/agent/agent-loop.ts) | `MAX_ROUNDS_PER_CHUNK`, the soft-deadline and its output `suspend`, `MAX_COMPACTIONS_PER_WINDOW`, `AGENT_COMPACT_MIN_BUDGET_MS` |
 
-**Ce qui NE se supprime pas et qu'on croirait jetable.** Le **lot 1** de l'audit
-voyage avec la boucle : le plafond de dépense partagé entre les filles, la lecture
-de `finish_reason`, le refus des arguments de tool illisibles, le verrou
-d'écriture de `create_pr`. Et `fitCheckpoint` (MIN-217) reste : un checkpoint de
-fin de tour peut être aussi gros qu'un checkpoint de fin de chunk.
+**Which CANNOT be deleted and which one would think disposable.** **Lot 1** of the audit
+journey with the loop: the spending limit shared between the girls, reading
+of `finish_reason`, refusal of unreadable tool arguments, lock
+writing `create_pr`. And `fitCheckpoint` (MIN-217) remains: a checkpoint
+end of turn can be as big as an end of chunk checkpoint.
 
 ---
 
-### 7 bis. Ce qui a réellement été supprimé (MIN-225, 2026-08-14)
+### 7 bis. What was actually deleted (MIN-225, 2026-08-14)
 
-**Le tableau ci-dessus a été écrit avant le passage à opencode, et la moitié de
-ses lignes a été emportée par ce virage plutôt que par ce ticket** — la boucle
-maison entière est partie en MIN-286 (dossier `harness-opencode.md` §2.31), avec
-`agent-loop.ts`, `subagent.ts`, `exec-tool.ts`, `checkpoint-fit.ts` et le reste.
-Ce qui restait de la machinerie de DÉCOUPAGE, et qui est parti ici :
+**The table above was written before the move to opencode, and half of
+its lines were carried away by this turn rather than by this ticket** — the loop
+entire house is gone in MIN-286 (file `harness-opencode.md` §2.31), with
+`agent-loop.ts`, `subagent.ts`, `exec-tool.ts`, `checkpoint-fit.ts` and the rest.
+What remained of the CUTTING machinery, and which left here:
 
-| Ce qui disparaît | Ce qui le remplace |
+| What disappears | What replaces it |
 | --- | --- |
-| `chunk-budget.ts` **en entier** (et non « sauf une fonction ») | `runCommandTimeoutMs` n'a plus d'appelant : son consommateur était `exec-tool.ts`, et opencode exécute le shell lui-même |
-| `drain-chain.ts`, `MAX_DRAIN_CHAIN`, le paramètre `?chain=N` | rien : un lancement se compte en secondes, une fenêtre absorbe tous les runs dus, et les deux chemins qui remettent un run en file appellent `kickAgentDrain` directement |
-| `requeueStuckRuns`, `STUCK_RUNNING_MS`, `MAX_CRASH_ATTEMPTS` | `reapDeadVmRuns`, qui ne présume pas la mort après vingt minutes de silence : il DEMANDE à la plateforme si le process vit |
-| le plancher d'amorçage (`CHUNK_FLOOR_MS`) et l'admission de reprise de fille (`chunkFitsSubagentResume`, `SUBAGENT_PARENT_RESERVE_MS`, `SUBAGENT_MIN_MS`) | rien : ils protégeaient un chunk de la mort de sa fonction, et la fonction ne porte plus le tour |
-| `MIN_CHUNK_BUDGET_MS` (40 s, dérivé du chunk) | `MIN_LAUNCH_BUDGET_MS` (120 s), dimensionné sur ce que coûte un **lancement** : le clone d'un dépôt froid, pas treize minutes de travail |
-| `maxDuration = 800` sur la route de cron | `300`, le défaut — le handler ne fait plus que lancer, et garder 800 mentirait sur son métier |
-| `window_started_at` (écrite, jamais lue) | rien ; la **colonne** reste en base, cf. ci-dessous |
+| `chunk-budget.ts` **entire** (not “except a function”) | `runCommandTimeoutMs` no longer has a caller: its consumer was `exec-tool.ts`, and opencode runs the shell itself |
+| `drain-chain.ts`, `MAX_DRAIN_CHAIN`, the `?chain=N` parameter | nothing: a launch is counted in seconds, a window absorbs all the runs due, and the two paths which re-enqueue a run call `kickAgentDrain` directly |
+| `requeueStuckRuns`, `STUCK_RUNNING_MS`, `MAX_CRASH_ATTEMPTS` | `reapDeadVmRuns`, which does not presume death after twenty minutes of silence: it ASKS the platform if the process lives |
+| boot floor (`CHUNK_FLOOR_MS`) and daughter resume admission (`chunkFitsSubagentResume`, `SUBAGENT_PARENT_RESERVE_MS`, `SUBAGENT_MIN_MS`) | nothing: they protected a chunk from the death of its function, and the function no longer carries the trick |
+| `MIN_CHUNK_BUDGET_MS` (40 s, derived from chunk) | `MIN_LAUNCH_BUDGET_MS` (120 s), sized on what a **launch** costs: the clone of a cold repository, not thirteen minutes of work |
+| `maxDuration = 800` on the cron route | `300`, the default — the handler only throws, and keeping 800 would lie about his profession |
+| `window_started_at` (written, never read) | Nothing ; the **column** remains in base, cf. below |
 
-**Deux lignes du tableau original étaient fausses, et le sont restées** :
-`planProviderStall` **survit** (il est appelé par `landVmTurn`, cf. le plan de
-MIN-225), et `claimRun` **survit** — le CAS reste la seule protection contre un
-double lancement.
+**Two lines in the original table were false, and remained so**:
+`planProviderStall` **survives** (it is called by `landVmTurn`, see the plan of
+MIN-225), and `claimRun` **survives** — the CAS remains the only protection against a
+double launch.
 
-**Les colonnes ne sont PAS supprimées, et c'est délibéré.** `continuations` et
-`attempts` sont encore LUES (bandes de seq du ledger, borne de re-queue sur
-erreur) ; `window_started_at` ne l'est plus, mais un `drop column` doit suivre le
-déploiement du code qui a cessé de l'écrire, jamais le précéder — sinon toute
-écriture de la version en vol échoue à la seconde où la migration passe. Trois
-colonnes inertes ne coûtent rien ; la fenêtre entre migration et déploiement, si.
-
----
-
-## Question ouverte tranchée : une région EU est-elle bloquante ?
-
-**Non — et il y a quand même une ligne à corriger, indépendamment du chantier.**
-
-Vercel Sandbox n'existe qu'en **`iad1`** (documentation tarifaire, révision du
-2026-08-04 ; c'est aussi là que le dépôt de l'utilisateur est cloné aujourd'hui).
-La migration n'y ajoute qu'une chose : le **checkpoint** — l'historique de la
-conversation — transite désormais par la VM au lieu de rester entre la fonction et
-Supabase. Même pays, même sous-traitant, déjà au registre.
-
-Mais en relisant [docs/rgpd/sous-traitants.md](rgpd/sous-traitants.md) pour le
-vérifier, la fiche Vercel dit : *« micro-VM éphémère par run, détruite à la fin. Le
-code du dépôt y est cloné le temps du run uniquement. »* **C'est déjà inexact
-aujourd'hui** : les sandboxes sont `persistent: true` avec un snapshot conservé
-**7 jours** ([sandbox.ts:60](../lib/server/agent/sandbox.ts)) — le filesystem est
-*stocké*, pas seulement *en transit*. La migration y ajoutera l'historique de la
-conversation. **La fiche a été corrigée en même temps que ce document** : durée de
-rétention du snapshot, et `iad1` comme contrainte *fermée* pour les bacs à sable —
-là où la région des *fonctions*, elle, reste un point ouvert.
+**Columns are NOT deleted, and this is deliberate.** `continuations` and
+`attempts` are still READ (seq bands of the ledger, re-queue terminal on
+error); `window_started_at` is no longer, but a `drop column` must follow the
+deployment of code that stopped writing it, never preceded it — otherwise all
+Writing the in-flight version fails the second the migration passes. Three
+inert columns cost nothing; the window between migration and deployment, yes.
 
 ---
 
-## Ce que ce cadrage n'a pas fait
+## Open question decided: is an EU region blocking?
 
-- **Le run de bout en bout dans la nouvelle forme n'a pas été joué.** Il demande le
-  bundle VM et la route de collecte, c'est-à-dire le début de MIN-224. Il reste la
-  première étape de vérification de ce ticket-là, avant le premier test.
-- ~~**`forwardURL` n'est pas mesuré**~~ — **fait le 2026-08-07** (MIN-223), chiffres
-  en §2. Il tient : ~55 ms par aller-retour, SSE de 60 s tenu. Deux contraintes en
-  sont sorties (corps plafonné à 4,5 Mo, domaine devant résoudre en DNS), toutes
-  deux à charge de MIN-224.
-- **La latence RPC intra-région n'est pas mesurée** (§5), et le chiffre de MIN-224
-  ne doit pas être resservi avant de l'être.
+**No — and there is still a line to correct, regardless of the site.**
+
+Vercel Sandbox only exists in **`iad1`** (pricing documentation, revision of the
+2026-08-04; this is also where the user repository is cloned today).
+Migration only adds one thing: the **checkpoint** — the history of the
+conversation — now passes through the VM instead of remaining between the function and
+Supabase. Same country, same subcontractor, already on the register.
+
+But by rereading [docs/rgpd/sous-contractors.md](rgpd/sous-contractors.md) for the
+check, the Vercel sheet says: *“ephemeral micro-VM per run, destroyed at the end. The
+repository code is cloned there for the duration of the run only. »* **This is already inaccurate
+today**: sandboxes are `persistent: true` with a snapshot preserved
+**7 days** ([sandbox.ts:60](../lib/server/agent/sandbox.ts)) — the filesystem is
+*stored*, not just *in transit*. The migration will add the history of the
+conversation. **The sheet was corrected at the same time as this document**: duration of
+snapshot retention, and `iad1` as a *closed* constraint for sandboxes —
+where the region of *functions* remains an open point.
+
+---
+
+## What this framing did not do
+
+- **The end-to-end run in the new form was not played.** He requests the
+  VM bundle and the collection route, i.e. the start of MIN-224. It remains there
+  first step of checking this ticket, before the first test.
+- ~~**`forwardURL` is not measured**~~ — **made 2026-08-07** (MIN-223), numbers
+  in §2. It holds: ~55 ms per round trip, SSE of 60 s held. Two constraints in
+  are output (body capped at 4.5 MB, domain must resolve in DNS), all
+  two in charge of MIN-224.
+- **Intra-region RPC latency is not measured** (§5), and the figure of MIN-224
+  should not be re-served until ready.

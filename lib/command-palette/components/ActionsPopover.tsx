@@ -127,22 +127,22 @@ export function ActionsPopover({
       const top = rect.bottom - FOOTER_HEIGHT;
       const left = rect.right - POPOVER_WIDTH - RIGHT_OFFSET;
 
-      // Bail-out d'identité : sans lui, chaque mesure repose un objet neuf,
-      // donc un rendu, même quand rien n'a bougé.
+      // Bail-out of identity: without it, each measurement rests on a new object,
+      // therefore a rendering, even when nothing has moved.
       setPosition((prev) =>
         prev && prev.top === top && prev.left === left ? prev : { top, left }
       );
     };
 
     updatePosition();
-    // ⚠ **Pas d'écouteur de `scroll` en capture** (MIN-318). L'ancre est
-    // `styles.searchView`, dans la modale FIXE de la palette : elle ne bouge pas
-    // au défilement de la page. Le seul défilement qui atteignait cet écouteur
-    // était celui, animé, du `scrollIntoView({ behavior: "smooth" })` d'un peu
-    // plus bas — qui émet ~60 événements par seconde, tous captés. Chaque flèche
-    // pressée dans le menu ouvrait donc une boucle lecture-de-géométrie /
-    // écriture-d'état pendant ~300 ms. Le geste juste est de le SUPPRIMER, pas
-    // de le throttler.
+    // ⚠ **No `scroll` listener in capture** (MIN-318). The anchor is
+    // `styles.searchView`, in the FIXED modal of the palette: it does not move
+    // when the page scrolls. The only scroll that reached this earpiece
+    // was the animated one of `scrollIntoView({ behavior: "smooth" })` a little
+    // lower — which emits ~60 events per second, all captured. Every arrow
+    // pressed in the menu therefore opened a read-geometry loop /
+    // write-status for ~300 ms. The right thing is to DELETE it, not
+    // to throttle it.
     window.addEventListener("resize", updatePosition);
     return () => window.removeEventListener("resize", updatePosition);
   }, [isOpen, anchorRef]);
@@ -238,14 +238,14 @@ export function ActionsPopover({
   useEffect(() => {
     if (!isOpen) return;
 
-    // Ce qu'il faut ignorer, c'est l'événement qui vient d'OUVRIR le popover :
-    // il est encore en cours de propagation quand cet effet s'exécute, et un
-    // écouteur posé sur `document` pendant sa remontée le reçoit. On le
-    // reconnaît à son horodatage — `e.timeStamp` et `performance.now()`
-    // partagent la même origine —, plutôt qu'en attendant 100 ms en espérant
-    // qu'il soit passé. Un chrono en dur ne dit pas ce qu'il attend, et il a
-    // tort dans les deux sens : trop long si le geste suivant arrive vite, trop
-    // court si le fil principal est occupé.
+    // What should be ignored is the event that just OPENED the popover:
+    // it is still propagating when this effect executes, and a
+    // earphone placed on `document` during its rise receives it. We
+    // recognizes by its timestamp — `e.timeStamp` and `performance.now()`
+    // share the same origin —, rather than waiting 100 ms hoping
+    // that it has passed. A hard chrono does not say what it expects, and it has
+    // wrong in both directions: too long if the next gesture happens quickly, too long
+    // runs if the main thread is busy.
     const openedAt = performance.now();
 
     const handleClickOutside = (e: MouseEvent) => {

@@ -18,14 +18,14 @@ import { useAnalytics } from "@/lib/use-analytics";
 import { useTrackView } from "@/lib/use-track-view";
 
 /**
- * Cartes de plans du site public (MIN-73). Même grille et même hiérarchie que
- * les cartes de la page billing, mais sans session : le seul geste possible ici
- * est de créer un compte — le choix du plan et le paiement se font dans l'app,
- * une fois connecté.
+ * Public sitemap maps (MIN-73). Same grid and same hierarchy as
+ * the cards on the billing page, but without a session: the only action possible here
+ * is to create an account — the choice of plan and payment are made in the app,
+ * once connected.
  *
- * Prix, limites et features viennent tous de `BILLING_PLANS` et de
- * `planFeatureLabels()` : la page tarifs ne peut pas dériver de la réalité
- * facturée.
+ * Prices, limits and features all come from `BILLING_PLANS` and de
+ * `planFeatureLabels()`: the prices page cannot be derived from the reality
+ * billed.
  */
 
 const PLAN_LABEL_KEYS: Record<BillingPlanId, "planFree" | "planGo" | "planPro"> = {
@@ -41,18 +41,17 @@ const PLAN_DESC_KEYS: Record<BillingPlanId, "planDescFree" | "planDescGo" | "pla
 };
 
 /**
- * `headingLevel` : les cartes de plan sont des sous-sections de ce qui les
- * précède, et ce qui les précède change de page. Sur la landing elles suivent
- * le `<h2>` « Tarifs simples » — donc `h3`. Sur `/pricing` elles suivent
- * directement le `<h1>` de la page : un `h3` y sautait le niveau `h2`, ce que
- * l'audit `heading-order` relève à juste titre (MIN-88).
+ * `headingLevel`: Blueprint cards are subsections of what comes before them, and what comes before them changes pages. On the landing they follow
+ * the `<h2>` “Simple rates” — therefore `h3`. On `/pricing` they follow
+ * directly the `<h1>` of the page: a `h3` skipped the `h2` level, which
+ * the `heading-order` audit rightly notes (MIN-88).
  */
 export function PricingPlans({ headingLevel = 3 }: { headingLevel?: 2 | 3 } = {}) {
   const PlanHeading = (headingLevel === 2 ? "h2" : "h3") as "h2" | "h3";
   const { track } = useAnalytics();
-  // Marche intermédiaire de l'entonnoir : beaucoup de visiteurs passent par les
-  // tarifs avant de s'inscrire, et c'est là que se perdent ceux que le prix
-  // rebute. Sans cet événement, ce décrochage-là serait invisible.
+  // Intermediate step of the funnel: many visitors pass through the
+  // prices before registering, and this is where those who are lost in the price
+  // repels. Without this event, this dropout would be invisible.
   useTrackView(true, "pricing", () => track("pricing_viewed", { surface: "marketing" }));
   const t = useTranslations("Billing");
   const tl = useTranslations("Landing");
@@ -174,9 +173,9 @@ export function PricingPlans({ headingLevel = 3 }: { headingLevel?: 2 | 3 } = {}
                     })
                   }
                 >
-                  {/* Même libellé sur les trois cartes : payant ou non, le seul
-                      geste possible depuis le site public est de créer un
-                      compte gratuit — le plan se choisit ensuite dans l'app. */}
+                  {/* Same wording on the three cards: paid or not, the only
+ action possible from the public site is to create a
+ free account — the plan is then chosen in the app. */}
                   {tl("pricingCta")}
                 </Link>
               </Button>

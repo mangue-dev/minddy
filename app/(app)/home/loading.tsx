@@ -1,14 +1,14 @@
 import { Skeleton } from "mangue-ui";
 
-// Squelette de la home. Calqué sur app/(app)/home/page.tsx : le bloc d'accueil,
-// centré sur la hauteur de la FENÊTRE (d'où la gouttière basse à la hauteur du
-// header) — salutation centrée, composer en dessous, dans la même colonne
-// étroite. Mêmes rangées `1fr / auto / 1fr` : le composer tombe exactement là où
-// le vrai se posera.
+// Home skeleton. Modeled on app/(app)/home/page.tsx: the home block,
+// centered on the height of the WINDOW (hence the low gutter at the height of the
+// header) — centered salutation, compose below, in the same column
+// narrow. Same rows `1fr / auto / 1fr`: the composer falls exactly where
+// the real one will arise.
 //
-// Rien sous la ligne de flottaison : sur cette page, toutes les files s'effacent
-// quand elles sont vides, et c'est le cas le plus fréquent. Un squelette qui
-// promet des blocs pour n'en tenir aucun secoue la page plus qu'il ne l'annonce.
+// Nothing below the fold: on this page, all lines disappear
+// when they are empty, and this is the most frequent case. A skeleton that
+// promises blocks to keep none shakes the page more than it announces.
 export default function HomeLoading() {
   return (
     <section className="grid min-h-full grid-rows-[1fr_auto_1fr] px-6 desktop:pb-[60px]">
@@ -16,8 +16,8 @@ export default function HomeLoading() {
         <Skeleton className="mx-auto h-8 w-64" />
       </div>
 
-      {/* Composer « Demander à Numo » — la surface, plus la gouttière verticale
-          que le composer se donne (`py-3`). */}
+      {/* Dial “Ask Numo” — the surface area, plus the vertical gutter
+ that the dial gives itself (`py-3`). */}
       <div className="mx-auto w-full max-w-xl py-3">
         <Skeleton className="h-24 rounded-2xl" />
       </div>

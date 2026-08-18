@@ -16,9 +16,9 @@ import { isManagedAiEnabled } from "@/lib/managed-services";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 /**
- * Contexte de suivi de coût pour un appel d'embeddings (un appel = un run).
- * `billTo` dit qui paye : sur le board public il n'y a pas de déclencheur
- * nommable (un visiteur anonyme, ou le cron), donc `{ projectOwner }`.
+ * Cost tracking context for an embeddings call (one call = one run).
+ * `billTo` says who pays: on the public board there is no nameable trigger
+ * (an anonymous visitor, or the cron), so `{ projectOwner }`.
  */
 export interface EmbeddingUsageRecord {
   billTo: AiUsageBillTo;
@@ -26,14 +26,14 @@ export interface EmbeddingUsageRecord {
 }
 
 /**
- * Client d'embeddings via OpenRouter (même gateway et même clé que les appels
- * LLM — endpoint OpenAI-compatible /api/v1/embeddings). Modèle configuré en
- * base (app_config feedback_embedding_model, défaut text-embedding-3-small,
- * 1536 dims = extensions.vector(1536) côté schéma).
+ * Embeddings client via OpenRouter (same gateway and same key as calls
+ * LLM — OpenAI-compatible endpoint /api/v1/embeddings). Model configured as
+ * base (app_config feedback_embedding_model, default text-embedding-3-small,
+ * 1536 dims = extensions.vector(1536) schema side).
  *
- * Tout échec (clé absente, HTTP, timeout) retourne null : l'appelant insère
- * embedding=null et la passe horaire rattrape — le board n'est jamais bloqué
- * par l'IA.
+ * Any failure (missing key, HTTP, timeout) returns null: the caller inserts
+ * embedding=null and the time pass catches up — the board is never blocked
+ * by the AI.
  */
 
 const OPENROUTER_EMBEDDINGS_URL = "https://openrouter.ai/api/v1/embeddings";
@@ -47,9 +47,9 @@ export async function embedTexts(
 ): Promise<(number[] | null)[]> {
   if (texts.length === 0) return [];
 
-  // Budget du plan (MIN-72) : l'IA feedback est payée par le owner du projet.
-  // Budget à sec → null (comme un échec réseau) : le post vit sans embedding,
-  // la passe horaire rattrapera quand le budget sera revenu.
+  // Plan budget (MIN-72): AI feedback is paid by the project owner.
+  // Dry budget → null (like a network failure): the post lives without embedding,
+  // the time pass will catch up when the budget returns.
   if (opts?.record?.projectId) {
     if (!(await ownerHasUsageBudget(opts.record.projectId, "feedback"))) {
       return texts.map(() => null);
@@ -111,7 +111,7 @@ export async function embedTexts(
       model?: string;
       usage?: OpenRouterUsage;
     };
-    // Suivi des coûts : un appel d'embeddings = un run d'un seul appel. Best-effort.
+    // Cost tracking: one call of embeddings = one run of a single call. Best-effort.
     if (opts?.record) {
       const u = parseOpenRouterUsage(data.usage);
       await recordAiUsage({
@@ -144,8 +144,8 @@ export async function embedTexts(
   };
 
   try {
-    // Le raccourci de routage admin (MIN-263) s'il y en a un, et le modèle nu
-    // en repli : un embedding manquant coûte au board une passe de rattrapage.
+    // The admin routing shortcut (MIN-263) if there is one, and the bare model
+    // fallback: missing embedding costs the board a catch-up pass.
     const model = runtime?.model ?? (await resolveConfiguredModel("feedback_embedding_model")).model;
     return provider === "openrouter"
       ? await withModelSuffixFallback(model, attempt, { logPrefix: "[embeddings]" })
@@ -164,13 +164,13 @@ export async function embedText(
   return embedding ?? null;
 }
 
-/** Littéral pgvector — la forme sous laquelle un embedding transite vers les
-    colonnes vector et les paramètres des RPC match_*. */
+/** Literal pgvector — the form in which an embedding passes to the
+ vector columns and match_* RPC parameters. */
 export function toVectorLiteral(embedding: number[]): string {
   return JSON.stringify(embedding);
 }
 
-// ── kNN via les RPC SQL (service client, RLS deny-all) ───────────────────────
+// ── kNN via SQL RPCs (customer service, RLS deny-all) ───────────────────────
 
 export interface MatchedPost {
   id: string;
@@ -187,8 +187,7 @@ export async function matchFeedbackPosts(params: {
   embedding: number[];
   exclude?: string | null;
   limit?: number;
-  /** true = ne remonter que les posts publics (suggestions côté visiteur, pour
-      ne pas divulguer un retour privé). false (défaut) = dédup équipe/IA. */
+  /** true = only report public posts (suggestions on the visitor side, so as not to disclose private feedback). false (default) = team/AI dedup. */
   publicOnly?: boolean;
 }): Promise<MatchedPost[]> {
   const service = getServiceClient();

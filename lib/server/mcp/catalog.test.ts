@@ -4,12 +4,12 @@ import { mcpToolCatalog } from "./catalog";
 import { MCP_SERVER_INSTRUCTIONS } from "./instructions";
 
 /**
- * Le catalogue est lu depuis l'enregistrement RÉEL des tools (catalog.ts), et
- * c'est lui que servent `/llms.txt` et la carte de serveur MCP. Ce que ce test
- * garde, c'est donc le contrat ANNONCÉ des écritures chirurgicales de plan
- * (MIN-186) : leurs noms, leurs paramètres, et le fait qu'elles soient nommées
- * là où un modèle les cherchera — dans le mode d'emploi du serveur, et dans la
- * description du tool qui, lui, remplace tout.
+ * The catalog is read from the REAL tools record (catalog.ts), and
+ * this is what `/llms.txt` and the MCP server card are used for. What this test
+ * keeps is therefore the ANNOUNCED contract of the surgical plan writings
+ * (MIN-186): their names, their parameters, and the fact that they are named
+ * where a model will look for them — in the server's instructions for use, and in the
+ * description of the tool which, itself, replaces everything.
  */
 
 const tool = (name: string) => {
@@ -39,7 +39,7 @@ describe("catalogue MCP — édition partielle d'un plan", () => {
       expect(param("minddy_edit_issue_text", required).required).toBe(true);
     }
     expect(param("minddy_edit_issue_text", "replace_all").required).toBe(false);
-    // new_string accepte la chaîne vide : c'est ainsi qu'on SUPPRIME un passage.
+    // new_string accepts the empty string: this is how we DELETE a passage.
     expect(param("minddy_edit_issue_text", "new_string").description).toMatch(/empty/i);
   });
 
@@ -66,10 +66,10 @@ describe("catalogue MCP — édition partielle d'un plan", () => {
 });
 
 /**
- * Ce que l'audit MCP du 2026-08-06 a trouvé désynchronisé du feedback, et qui
- * ne doit pas se re-désynchroniser : les descriptions et le mode d'emploi
- * sont de la PROSE, que rien ne relie à ses constantes. Ces trois assertions
- * sont ce lien — elles échouent le jour où un statut s'ajoute sans être dit.
+ * What the MCP audit of 2026-08-06 found desynchronized from the feedback, and which
+ * must not re-desynchronize: the descriptions and instructions for use
+ * are PROSE, which nothing connects to its constants. These three assertions
+ * are that link — they fail the day a status is added without being said.
  */
 describe("catalogue MCP — le feedback dit ce que l'app fait", () => {
   it("expose toutes les options de configuration du board", () => {
@@ -106,22 +106,22 @@ describe("catalogue MCP — le feedback dit ce que l'app fait", () => {
   });
 
   it("ne décrit plus le fil de commentaires comme team-only (MIN-196)", () => {
-    // Le fil porte deux visibilités : le dire « internal, team-only » cachait
-    // à l'agent les réponses publiques des visiteurs.
+    // The thread carries two visibilities: the saying “internal, team-only” hid
+    // to the agent public responses from visitors.
     expect(MCP_SERVER_INSTRUCTIONS).not.toContain("team-only comment thread");
     expect(tool("minddy_get_feedback").description).toContain("visibility");
   });
 });
 
 /**
- * Un agent qui écrit un commentaire n'a AUCUNE mesure de ce qu'est un
- * commentaire ici : mesuré le 2026-08-06 sur la base, les commentaires écrits
- * par le MCP faisaient 2 555 caractères de médiane contre 177 pour ceux écrits
- * à la main — quatorze fois plus long, avec titres et sections, là où le fil
- * porte des phrases. Le seul endroit qui pouvait le lui dire ne disait rien du
- * tout (`body` valait « Markdown. »). Ce qui doit tenir : la consigne de
- * brièveté est dans la description ET dans le champ, avec un chiffre — un
- * adjectif seul ne borne rien.
+ * An agent who writes a comment has NO measure of what a
+ * comment here: measured on 2026-08-06 based, comments written
+ * by the MCP were 2,555 characters in median compared to 177 for those written
+ * by hand — fourteen times longer, with titles and sections, where the thread
+ * carries sentences. The only place that could tell him said nothing about
+ * everything (`body` was “Markdown.”). What must hold: the instruction of
+ * brevity is in the description AND in the field, with a number — a
+ * adjective alone does not limit anything.
  */
 describe("catalogue MCP — un commentaire est court", () => {
   const bodyParam = {
@@ -147,12 +147,10 @@ describe("catalogue MCP — un commentaire est court", () => {
 });
 
 /**
- * MIN-184 — la pièce jointe devient une RESSOURCE : un fichier OU un lien. Les
- * tools MCP sont redécouverts à chaque connexion, donc le renommage est franc
- * et rien ne persiste l'ancien nom côté client. Ce qui doit tenir, en revanche,
- * c'est que la capacité EXPOSÉE dise les deux moitiés — un agent qui ne lit
- * qu'« attach a file » n'essaiera jamais d'attacher un lien, et la feature
- * n'existera pas pour lui.
+ * MIN-184 — the attachment becomes a RESOURCE: a file OR a link. The
+ * MCP tools are rediscovered on each connection, so the renaming is straightforward
+ * and nothing persists the old name on the client side. What should hold, however, is that the EXPOSED capability says both halves — an agent that only reads “attach a file” will never attempt to attach a link, and the feature
+ * will not exist for it.
  */
 describe("catalogue MCP — ressources", () => {
   it("remplace les tools pièce jointe par les tools ressource", () => {
@@ -167,8 +165,8 @@ describe("catalogue MCP — ressources", () => {
     const description = tool("minddy_add_resource").description ?? "";
     expect(description).toMatch(/file/i);
     expect(description).toMatch(/link/i);
-    // Aucun des quatre champs de contenu n'est requis : c'est le handler qui
-    // tranche l'exclusivité, un schéma ne sait pas dire « l'un ou l'autre ».
+    // None of the four content fields are required: it is the handler which
+    // decides exclusivity, a diagram cannot say “one or the other”.
     for (const optional of ["url", "file_name", "mime_type", "content_base64"]) {
       expect(param("minddy_add_resource", optional).required).toBe(false);
     }
@@ -200,28 +198,27 @@ describe("catalogue MCP — ressources", () => {
 });
 
 /**
- * Un agent remplit ce qu'on lui DEMANDE de remplir, et « only title is
- * required » — ce que disait `minddy_create_issue` — se lit comme une
- * autorisation à ne mettre qu'un titre. Les tickets arrivaient sans priorité,
- * sans effort, sans catégorie, sans relation : le schéma n'a jamais été le
- * problème, la consigne l'était.
+ * An agent fills out what they are ASKED to fill out, and "only title is
+ * required" — what `minddy_create_issue` said — reads like permission to put only one title. The tickets arrived without priority,
+ * without effort, without category, without relation: the schema was never the
+ * problem, the instruction was.
  *
- * Ce qui doit tenir : l'ATTENTE est écrite là où un modèle la lit — la
- * description du tool, la description de CHAQUE champ concerné, et le mode
- * d'emploi du serveur —, et remplir ne coûte plus un aller-retour (catégories
- * par nom, relations posées dans l'appel de création).
+ * What must hold: the WAIT is written where a model reads it — the
+ * description of the tool, the description of EACH field concerned, and the mode
+ * of use of the server —, and filling no longer costs a round trip (categories
+ * by name, relations posed in the creation call).
  */
 describe("catalogue MCP — un ticket créé arrive rempli", () => {
   it("demande le remplissage dans minddy_create_issue, pas seulement l'autorise", () => {
     const description = tool("minddy_create_issue").description ?? "";
     expect(description).toContain("FILL THE TICKET");
-    // Ce qui manquait dans les vrais tickets, nommé un par un.
+    // What was missing in the real tickets, named one by one.
     for (const field of ["priority", "effort", "description", "categor", "relations"]) {
       expect(description, `le champ "${field}" n'est pas réclamé`).toContain(field);
     }
-    // La règle d'assignation est une DÉCISION (MIN-201) : la personne nommée,
-    // le owner sur un projet solo, personne sinon. Un agent qui assigne au
-    // hasard est pire qu'un ticket non assigné.
+    // The assignment rule is a DECISION (MIN-201): the named person,
+    // the owner on a solo project, no one otherwise. An agent who assigns
+    // chance is worse than an unassigned ticket.
     expect(param("minddy_create_issue", "assignee_id").description).toMatch(
       /single-member project, the owner/i
     );
@@ -243,7 +240,7 @@ describe("catalogue MCP — un ticket créé arrive rempli", () => {
       );
     }
     expect(param("minddy_create_issue", "category_names").required).toBe(false);
-    // Un nom inventé ne doit pas disparaître en silence : il revient à l'agent.
+    // An invented name must not disappear silently: it returns to the agent.
     expect(param("minddy_create_issue", "category_names").description).toMatch(
       /categories_unmatched/
     );
@@ -256,8 +253,8 @@ describe("catalogue MCP — un ticket créé arrive rempli", () => {
   });
 
   it("nomme les relations dans la LECTURE d'un ticket", () => {
-    // Elles étaient déjà rendues par minddy_get_issue, et annoncées nulle part :
-    // un agent qui ne lit que la description ignore que le concept existe.
+    // They were already rendered by minddy_get_issue, and announced nowhere:
+    // an agent who only reads the description does not know that the concept exists.
     const description = tool("minddy_get_issue").description ?? "";
     expect(description).toMatch(/relations/);
     expect(description).toMatch(/blocked_by/);
@@ -275,18 +272,18 @@ describe("catalogue MCP — un ticket créé arrive rempli", () => {
     expect(description).toContain("FILL IT");
     expect(description).toMatch(/description/);
     expect(description).toMatch(/lead_user_id/);
-    // Un objectif sans ticket a une barre de progression morte : le tool doit
-    // dire par où on les rattache.
+    // An objective without a ticket has a dead progress bar: the tool must
+    // say where we connect them.
     expect(description).toContain("minddy_update_issues");
   });
 });
 
 /**
- * Les objectifs portaient depuis longtemps un fil de commentaires et une
- * activité (20260728091000_objective_activity.sql, tables polymorphes), une
- * description et des ressources — et la surface MCP n'en exposait rien : ni
- * lecture unitaire, ni écriture de commentaire. Ce qui doit tenir : les deux
- * moitiés existent, et la lecture précède l'écriture.
+ * Objectives have long carried a comment thread and an
+ * activity (20260728091000_objective_activity.sql, polymorphic tables), a
+ * description and resources — and the MCP surface exposed none of them: neither
+ * unit read, nor comment write. What should hold: both
+ * halves exist, and reading precedes writing.
  */
 describe("catalogue MCP — un objectif se lit et se commente", () => {
   it("expose minddy_get_objective en lecture, par objective_id", () => {
@@ -295,7 +292,7 @@ describe("catalogue MCP — un objectif se lit et se commente", () => {
       expect(param("minddy_get_objective", required).required).toBe(true);
     }
     const description = tool("minddy_get_objective").description ?? "";
-    // Ce que la liste ne rendait pas, et qui justifie une lecture unitaire.
+    // What the list did not cover, and which justifies a unitary reading.
     for (const carried of ["description", "COMMENT", "progress", "activity"]) {
       expect(description, `${carried} absent de la description`).toMatch(
         new RegExp(carried, "i")
@@ -310,7 +307,7 @@ describe("catalogue MCP — un objectif se lit et se commente", () => {
     }
     const description = tool("minddy_add_objective_comment").description ?? "";
     expect(description).toContain("minddy_get_objective");
-    // Le partage des rôles avec le commentaire de ticket, dit explicitement.
+    // Role sharing with the ticket comment, said explicitly.
     expect(description).toContain("minddy_add_comment");
   });
 
@@ -328,12 +325,12 @@ describe("catalogue MCP — un objectif se lit et se commente", () => {
 });
 
 /**
- * MIN-273 — les six outils de PAGE. Ce que garde ce bloc n'est pas leur
- * existence (le catalogue la dit déjà) mais leur CONTRAT annoncé : ce qui est
- * requis, ce qui ne l'est pas, et surtout le fait que chaque outil dise où
- * envoyer un modèle qui s'apprête à réécrire un document entier pour changer une
- * phrase. C'est la seule chose qui empêche `minddy_update_page` de redevenir le
- * chemin par défaut, comme `minddy_update_issues` l'avait été pour les plans.
+ * MIN-273 — the six tools of PAGE. What this block guards is not their
+ * existence (the catalog already says it) but their announced CONTRACT: what is
+ * required, what is not, and above all the fact that each tool says where
+ * send a model that is about to rewrite an entire document to change a
+ * sentence. This is the only thing preventing `minddy_update_page` from becoming the
+ * default path again, like `minddy_update_issues` had been for blueprints.
  */
 describe("catalogue MCP — les pages", () => {
   it("expose les outils, lectures annoncées sans effet de bord", () => {
@@ -355,8 +352,8 @@ describe("catalogue MCP — les pages", () => {
       "minddy_update_page",
       "minddy_append_to_page",
       "minddy_edit_page_text",
-      // Commenter est une ÉCRITURE, même si elle ne touche pas au document :
-      // elle notifie des gens, et elle s'affiche sous leur page.
+      // Commenting is WRITING, even if it does not affect the document:
+      // it notifies people, and it displays under their page.
       "minddy_add_page_comment",
     ]) {
       expect(tool(write).readOnly).toBe(false);
@@ -364,10 +361,10 @@ describe("catalogue MCP — les pages", () => {
   });
 
   it("dit où lire une objection, et par quoi y répondre", () => {
-    // MIN-282 : le corps dit ce qui a été décidé, les fils disent ce qui est
-    // contesté. Un agent qui réécrit sans les avoir lus tranche un débat que
-    // personne ne lui a demandé de trancher — encore faut-il qu'il sache que
-    // c'est là, et que répondre est un geste qu'il a.
+    // MIN-282: the body says what has been decided, the son says what is
+    // disputed. An agent who rewrites without having read them settles a debate that
+    // no one asked him to decide — he still needs to know that
+    // it's there, and responding is a gesture he has.
     expect(tool("minddy_get_page").description).toMatch(/threads/i);
     expect(tool("minddy_get_page").description).toContain(
       "minddy_add_page_comment"
@@ -378,8 +375,8 @@ describe("catalogue MCP — les pages", () => {
     for (const optional of ["block_id", "parent_comment_id"]) {
       expect(param("minddy_add_page_comment", optional).required).toBe(false);
     }
-    // L'ancre se REPREND, elle ne s'invente pas : les ids de blocs ne sont pas
-    // dans le markdown, et une ancre inventée fait un fil détaché aussitôt né.
+    // The anchor RESUMES, it does not invent itself: the block ids are not
+    // in the markdown, and an invented anchor makes a detached thread as soon as it is born.
     expect(param("minddy_add_page_comment", "block_id").description).toContain(
       "threads"
     );
@@ -390,8 +387,8 @@ describe("catalogue MCP — les pages", () => {
   });
 
   it("met dans `required` ce qu'un petit modèle ne répondrait pas sinon", () => {
-    // Un champ hors `required` d'un appel d'outil forcé n'est tout simplement
-    // pas rempli : le titre et le corps d'une page créée en font partie.
+    // A field outside `required` of a forced tool call is simply not
+    // not filled: the title and body of a created page are part of it.
     for (const required of ["project_id", "title", "markdown"]) {
       expect(param("minddy_create_page", required).required).toBe(true);
     }
@@ -405,10 +402,10 @@ describe("catalogue MCP — les pages", () => {
       expect(param("minddy_edit_page_text", required).required).toBe(true);
     }
     expect(param("minddy_edit_page_text", "replace_all").required).toBe(false);
-    // La chaîne vide SUPPRIME un passage — dit là où le modèle le lit.
+    // The empty string DELETES a passage — said where the model reads it.
     expect(param("minddy_edit_page_text", "new_string").description).toMatch(/empty/i);
-    // Rien n'est requis au-delà de la cible sur l'écriture totale : on peut ne
-    // changer que l'icône.
+    // Nothing is required beyond the target on total writing: we can only
+    // change only the icon.
     for (const optional of ["markdown", "title", "icon", "version"]) {
       expect(param("minddy_update_page", optional).required).toBe(false);
     }
@@ -418,7 +415,7 @@ describe("catalogue MCP — les pages", () => {
     const description = tool("minddy_update_page").description ?? "";
     expect(description).toContain("minddy_append_to_page");
     expect(description).toContain("minddy_edit_page_text");
-    // Le garde-fou d'écriture concurrente, nommé par son code d'erreur.
+    // The concurrent write guardrail, named by its error code.
     expect(description).toContain("page_stale");
     expect(param("minddy_update_page", "version").description).toContain(
       "minddy_get_page"
@@ -432,15 +429,15 @@ describe("catalogue MCP — les pages", () => {
     expect(param("minddy_create_page", "markdown").description).toMatch(
       /Never send ProseMirror JSON/
     );
-    // La syntaxe d'un lien de page : un agent ne peut pas la deviner.
+    // The syntax of a page link: an agent cannot guess it.
     expect(param("minddy_create_page", "markdown").description).toContain(
       "[[page:"
     );
   });
 
   it("annonce les rétroliens là où on lit une page", () => {
-    // MIN-279 : un agent qui ouvre une spec doit voir ce qui en dépend sans
-    // avoir à le chercher — et il ne le cherchera que s'il sait que c'est là.
+    // MIN-279: an agent who opens a spec must see what depends on it without
+    // having to look for it — and he will only look for it if he knows it's there.
     expect(tool("minddy_get_page").description).toMatch(/backlink/i);
   });
 

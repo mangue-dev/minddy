@@ -12,42 +12,42 @@ import {
 import { notifyAgentRun } from "@/lib/server/agent/runs";
 
 /**
- * LANCEUR des runs de l'agent (MIN-46, réduit à ce métier en MIN-225). Il ne
- * DRAINE plus au sens d'exécuter : il claim les runs dus et lance leur microVM,
- * qui vit sa vie ensuite et rend son propre rapport. Un passage se compte donc en
- * secondes par run, pas en minutes — d'où la disparition du chaînage, qui
- * n'existait que pour rattraper le reliquat d'une fenêtre mangée par un chunk.
- * Vercel envoie automatiquement `Authorization: Bearer ${CRON_SECRET}` ; sans ce
- * secret, la route est 401.
+ * LAUNCHER of agent runs (MIN-46, reduced to this profession in MIN-225). He doesn't
+ * DRAINE more in the sense of executing: it claims the runs due and launches their microVM,
+ * who then lives his life and gives his own report. A passage is therefore counted in
+ * seconds per run, not in minutes — hence the disappearance of chaining, which
+ * only existed to catch up with the remainder of a window eaten by a chunk.
+ * Vercel automatically sends `Authorization: Bearer ${CRON_SECRET}`; without this
+ * secret, the route returns 401.
  *
- * En PRODUCTION, ce handler est aussi le RÉPARTITEUR des runs preview (MIN-165) :
- * son drain ne claim plus que la file commune, et il réveille par un POST les
- * déploiements qui ont du travail dû — sans jamais l'exécuter. C'est ce qui rend
- * le filet de sécurité compatible avec un test de branche : le cron reste allumé,
- * il ne mélange plus les codes.
+ * In PRODUCTION, this handler is also the DISTRIBUTOR of preview runs (MIN-165):
+ * its drain only claims the common queue, and it wakes up with a POST the
+ * deployments that have work due — without ever executing it. This is what makes
+ * the safety net compatible with a branch test: the cron remains on,
+ * he no longer mixes codes.
  */
 
 export const runtime = "nodejs";
 /**
- * 300 s — le défaut, et il suffit largement depuis MIN-225.
+ * 300 s — the default, and it is more than enough since MIN-225.
  *
- * Cette route a longtemps porté 800 s (le maximum du plan Pro sous Fluid) parce
- * qu'elle EXÉCUTAIT un chunk de treize minutes. Elle ne fait plus que lancer :
- * réveil ou clone de la microVM, écriture du job, commande détachée. Le poste le
- * plus lourd est le clone d'un dépôt froid (~22 s mesurées, MIN-222), et le tour
- * lui-même se déroule ailleurs, sans horloge de fonction au-dessus de lui.
+ * This route has long carried 800 s (the maximum of the Pro plan under Fluid) because
+ * that she PERFORMED a thirteen minute chunk. She just throws:
+ * wake up or clone the microVM, write the job, detach command. The post
+ * heavier is the clone of a cold deposit (~22 s measured, MIN-222), and the turn
+ * itself takes place elsewhere, with no function clock above it.
  *
- * Garder 800 s ne coûterait rien en facture (Fluid facture l'Active CPU) mais
- * mentirait sur ce que fait ce handler — et c'est ce mensonge-là qui a fait
- * dimensionner tout le reste en « chunks ».
+ * Keeping 800 s would cost nothing (Fluid charges the Active CPU) but
+ * would lie about what this handler does - and it is this lie that made
+ * size everything else in “chunks”.
  */
 export const maxDuration = 300;
-/** Budget du lancement, sous le `maxDuration` ci-dessus (marge pour la réponse). */
+/** Launch budget, under `maxDuration` above (room for response). */
 const CRON_DRAIN_BUDGET_MS = 270_000;
 
 /**
- * Runs preview dus, lus en prod pour la répartition. Plafond large devant le
- * plafond de réveils : c'est `previewKickTargets` qui décide, pas le SELECT.
+ * Runs preview due, read in prod for distribution. Wide ceiling in front of
+ * ceiling of wake-ups: it is `previewKickTargets` which decides, not the SELECT.
  */
 async function dueScopedRuns(service: SupabaseClient): Promise<QueuedRunRow[]> {
   const { data, error } = await service
@@ -65,8 +65,8 @@ async function dueScopedRuns(service: SupabaseClient): Promise<QueuedRunRow[]> {
   return (data ?? []) as QueuedRunRow[];
 }
 
-/** Réveille UN déploiement preview. Best-effort : la prod n'exécute jamais ces
- *  runs, elle sonne à la porte. */
+/** Wakes A deployment preview. Best effort: production never executes these
+ * runs, she rings the doorbell. */
 async function kickDeployment(url: string, secret: string): Promise<void> {
   const origin = /^https?:\/\//.test(url) ? url : `https://${url}`;
   try {
@@ -78,7 +78,7 @@ async function kickDeployment(url: string, secret: string): Promise<void> {
     console.log("[agent-drain] preview kick sent:", url);
   } catch (error) {
     if (error instanceof Error && error.name === "TimeoutError") {
-      // Comme dans `chainAgentDrain` : la requête est délivrée, l'enfant draine.
+      // As in `chainAgentDrain`: the request is delivered, the child drains.
       console.log("[agent-drain] preview kick sent (timeout):", url);
       return;
     }
@@ -87,9 +87,9 @@ async function kickDeployment(url: string, secret: string): Promise<void> {
 }
 
 /**
- * Déploiement mort : le run ne sera JAMAIS repris (le preview a été supprimé, ou
- * ne répond plus). Sans cette sortie, sa conversation reste `queued` pour
- * toujours. CAS sur `status` : un run repris entre-temps n'est pas touché.
+ * Dead deployment: the run will NEVER be resumed (the preview has been deleted, or
+ * no longer responds). Without this output, his conversation remains `queued` for
+ * always. CASE on `status`: a run resumed in the meantime is not affected.
  */
 async function failStalledRuns(service: SupabaseClient, ids: string[]): Promise<void> {
   if (ids.length === 0) return;
@@ -124,9 +124,9 @@ async function handle(request: NextRequest) {
   const service = getServiceClient();
   const summary = await drainAgentRuns(service, { budgetMs: CRON_DRAIN_BUDGET_MS });
 
-  // Répartition (MIN-165) : seule la PROD réveille les autres déploiements. Un
-  // preview kické arrive ici avec VERCEL_ENV=preview et ne fait que son drain —
-  // sans quoi deux déploiements se renverraient la balle indéfiniment.
+  // Distribution (MIN-165): only the PROD wakes up the other deployments. A
+  // kicked preview arrives here with VERCEL_ENV=preview and only does its drain —
+  // otherwise two deployments would pass the buck indefinitely.
   const secret = process.env.CRON_SECRET?.trim();
   const dispatch =
     process.env.VERCEL_ENV === "production" && secret

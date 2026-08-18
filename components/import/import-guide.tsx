@@ -9,19 +9,19 @@ import { useModShortcut } from "@/lib/keyboard/use-mod-shortcut";
 import { BrandLogo } from "@/components/brand-logo";
 
 /**
- * La marche à suivre du côté de l'outil qu'on quitte (MIN-98) : le sélecteur
- * d'outil, ses trois lignes, la commande à copier quand il n'a pas d'export, le
- * lien vers sa doc.
+ * The procedure to follow on the side of the tool you leave (MIN-98): the selector
+ * tool, its three lines, the command to copy when it has no export, the
+ * link to its documentation.
  *
- * Séparée du dropzone parce que les deux ne vont pas toujours ensemble : les
- * réglages et l'onboarding montrent la marche à suivre PUIS le dépôt+mapping
- * (`import-panel.tsx`), le wizard de création ne récolte qu'un fichier — le
- * projet n'existe pas encore, il n'y a rien à mapper. Sans cette séparation,
- * l'étape d'import du wizard n'avait qu'une zone de dépôt : on y demandait un
- * CSV sans jamais dire où le trouver.
+ * Separated from the dropzone because the two do not always go together: the
+ * settings and onboarding show the procedure THEN the repository+mapping
+ * (`import-panel.tsx`), the creation wizard only collects one file — the
+ * project does not exist yet, there is nothing to map. Without this separation,
+ * the import step of the wizard only had one drop zone: we asked for a
+ * CSV without ever saying where to find it.
  *
- * Les libellés gardent le namespace i18n `Onboarding` où ils sont nés, comme
- * `CsvImportPanel` garde `Settings` — `lib/import-guides.ts` documente cet
+ * The labels keep the i18n namespace `Onboarding` where they were born, like
+ * `CsvImportPanel` keeps `Settings` — `lib/import-guides.ts` documents this
  * emplacement.
  */
 export function ImportGuideBlock({
@@ -29,13 +29,13 @@ export function ImportGuideBlock({
   onProviderSelected,
 }: {
   className?: string;
-  /** De quel outil vient le compte — l'onboarding en fait un événement. */
+  /** Which tool does the account come from — onboarding makes it an event. */
   onProviderSelected?: (guide: ImportGuide) => void;
 }) {
   const t = useTranslations("Onboarding");
   const tc = useTranslations("Common");
-  // Linear et minddy ouvrent tous deux leur export au clavier : la phrase doit
-  // dire ⌘K à qui a un Mac et Ctrl+K à qui n'en a pas.
+  // Linear and minddy both open their export with the keyboard: the sentence must
+  // say ⌘K to someone who has a Mac and Ctrl+K to someone who doesn't.
   const shortcut = useModShortcut("K");
 
   const [guide, setGuide] = useState<ImportGuide>(IMPORT_GUIDES[0]);
@@ -85,10 +85,10 @@ export function ImportGuideBlock({
         })}
       </div>
 
-      {/* Les trois lignes reçoivent TOUTES `shortcut`, même celles qui ne s'en
-          servent pas : c'est la même clé assemblée à l'exécution, et next-intl
-          ignore une valeur de trop — alors qu'une valeur manquante afficherait
-          le chemin de la clé à l'écran. */}
+      {/* All three lines ALL receive `shortcut`, even those that don't.
+ are not useful: it is the same key assembled at runtime, and next-intl
+ ignores one value too many — whereas a missing value would display
+ the path of the key on the screen. */}
       <ol className="ml-4 flex list-decimal flex-col gap-1 text-sm text-muted-foreground marker:text-muted-foreground/70">
         <li>{t(`importGuide_${guide.id}_1`, { shortcut })}</li>
         <li>{t(`importGuide_${guide.id}_2`, { shortcut })}</li>
@@ -97,8 +97,8 @@ export function ImportGuideBlock({
 
       {guide.command && (
         <div className="flex min-w-0 flex-col items-start gap-2">
-          {/* `w-full min-w-0` : `whitespace-pre` imposerait sinon au bloc la
-              largeur de la commande entière et élargirait son conteneur. */}
+          {/* `w-full min-w-0`: `whitespace-pre` would otherwise impose on the block the
+ width of the entire command and expand its container. */}
           <code className="max-h-40 w-full min-w-0 overflow-auto whitespace-pre rounded-md border border-border bg-background px-3 py-2 font-mono text-xs">
             {guide.command}
           </code>
@@ -109,8 +109,8 @@ export function ImportGuideBlock({
         </div>
       )}
 
-      {/* minddy n'a pas de lien : sa marche à suivre se déroule dans l'app,
-          renvoyer « ailleurs » n'aurait rien de plus à montrer. */}
+      {/* minddy has no link: her instructions take place in the app,
+ returning “elsewhere” would have nothing more to show. */}
       {guide.docUrl && (
         <a
           href={guide.docUrl}

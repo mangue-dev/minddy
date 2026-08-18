@@ -3,14 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { listPullRequestFiles } from "./pr";
 
 /**
- * Pagination des fichiers d'une PR (MIN-168).
+ * Pagination of files in a PR (MIN-168).
  *
- * L'appel n'en servait qu'UNE page — `per_page=100`, sans `page` — et n'en disait
- * rien : au-delà de cent fichiers, les suivants disparaissaient sans laisser de
- * trace, et l'appelant ne pouvait même pas savoir qu'il lui en manquait. Sur une
- * relecture, c'est exactement le genre d'absence dont on tire une conclusion
- * fausse. D'où les deux moitiés testées ici : on VA CHERCHER les pages suivantes,
- * et on DIT quand on s'arrête au plafond.
+ * The call only served ONE page — `per_page=100`, without `page` — and said nothing about it: beyond a hundred files, the following ones disappeared without leaving a trace, and the caller could not even know that they were missing. On a rereading, this is exactly the kind of absence from which one draws a false conclusion. Hence the two halves tested here: we WILL SEARCH the following pages,
+ * and we SAY when we stop at the ceiling.
  */
 
 const ORIGINAL_FETCH = globalThis.fetch;
@@ -20,7 +16,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** Une réponse GitHub de `n` fichiers, nommés d'après leur page. */
+/** A GitHub response of `n` files, named after their page. */
 function page(n: number, tag: string) {
   return Array.from({ length: n }, (_, i) => ({
     filename: `${tag}/file-${i}.ts`,
@@ -31,7 +27,7 @@ function page(n: number, tag: string) {
   }));
 }
 
-/** Un faux `fetch` qui sert les pages dans l'ordre et note les URL demandées. */
+/** A fake `fetch` that serves pages in order and notes the requested URLs. */
 function stubPages(pages: unknown[][]) {
   const urls: string[] = [];
   globalThis.fetch = vi.fn(async (url: unknown) => {
@@ -68,7 +64,7 @@ describe("listPullRequestFiles", () => {
   });
 
   it("DIT la troncature quand le plafond de pages coupe", async () => {
-    // Toutes les pages pleines : la borne (30 pages × 100) finit par trancher.
+    // All full pages: the terminal (30 pages × 100) ends up deciding.
     const urls = stubPages(Array.from({ length: 40 }, (_, i) => page(100, `p${i}`)));
     const { files, truncated } = await listPullRequestFiles(CALL);
     expect(files).toHaveLength(3000);

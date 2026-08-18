@@ -1,18 +1,18 @@
-// Mapper générique — le format minddy documenté, en-têtes acceptés en anglais
-// et en français, et le filet des outils qui n'ont pas de mapper à eux (MIN-98) :
+// Generic Mapper — documented minddy format, headers accepted in English
+// and in French, and the net tools that don't have a map to them (MIN-98):
 // un export de tableau Trello ("Card Name", "Card Description", "List Name"),
-// le CSV qu'écrit `gh issue list` ("id,title,description,status,labels"), et un
-// export de base de données Notion, dont les colonnes sont les propriétés que
-// l'utilisateur a nommées lui-même.
+// the CSV that `gh issue list` writes ("id, title, description, status, labels"), and a
+// export from Notion database, whose columns are the properties that
+// the user named himself.
 //
-// Ce sont tous la source "csv" : des CSV génériques dont il se trouve qu'on
-// connaît les noms de colonnes, pas des formats qui méritent un mapper.
+// These are all the "csv" source: generic CSVs which happen to be
+// knows column names, not formats worth mapping.
 //
-// Notion mérite un mot : ses en-têtes n'ont RIEN de garanti — ce sont des
-// propriétés créées à la main, dans la langue de l'espace de travail. Les alias
-// ci-dessous couvrent celles des modèles fournis par Notion (« Task name »,
-// « Élément parent », « Date d'échéance »…) ; tout le reste est précisément le
-// travail de la passe du modèle, qui lit les valeurs et pas seulement les noms.
+// Notion deserves a word: its headers have NOTHING guaranteed — they are
+// properties created by hand, in the workspace language. Aliases
+// below cover those of the models provided by Notion (“Task name”,
+// “Parent element”, “Due date”…); everything else is precisely the
+// work of the template pass, which reads values ​​and not just names.
 
 import type { ColumnAliases } from "@/lib/import/types";
 import { GENERIC_TITLE_HEADERS } from "@/lib/import/normalize";
@@ -20,8 +20,8 @@ import { GENERIC_TITLE_HEADERS } from "@/lib/import/normalize";
 export const GENERIC_COLUMN_ALIASES: ColumnAliases = [
   ["title", GENERIC_TITLE_HEADERS],
   ["description", ["description", "desc", "card description", "body", "notes"]],
-  // « list name » est la colonne Trello, « state » celle de GitHub, « statut de
-  // la tache » celle des modèles Notion français.
+  // “list name” is the Trello column, “state” that of GitHub, “status of
+  // the stain » that of the French Notion models.
   [
     "status",
     [
@@ -112,8 +112,8 @@ export const GENERIC_COLUMN_ALIASES: ColumnAliases = [
     ],
   ],
   ["externalKey", ["id", "key", "cle", "ref", "card id", "number", "identifiant"]],
-  // Notion référence son parent par TITRE, pas par identifiant : `applyMapping`
-  // le sait et prend le titre pour clé quand le fichier n'a pas de colonne d'id.
+  // Notion references its parent by TITLE, not by identifier: `applyMapping`
+  // knows this and takes the title as the key when the file has no id column.
   [
     "parent",
     ["parent", "parent item", "element parent", "parent task", "tache parente"],

@@ -1,36 +1,36 @@
-// Les FILS d'une page (MIN-282) — la moitié pure : les lignes entrent, les fils
-// sortent, ordonnés et marqués.
+// The THREADS of a page (MIN-282) — the pure half: the lines enter, the threads
+// come out, ordered and marked.
 //
-// Rien de la base, rien de tiptap, rien de React : le document n'arrive ici que
-// sous la forme de l'ensemble des ids de blocs qu'il porte. C'est ce qui rend
-// l'ANCRAGE et le DÉTACHEMENT testables tels quels (lib/page-comments.test.ts),
-// alors que ce sont exactement les deux comportements qu'on ne peut pas vérifier
-// à l'œil.
+// Nothing from the base, nothing from tiptap, nothing from React: the document only arrives here
+// in the form of the set of block ids it carries. This is what makes
+// ANCHORING and DETACHING testable as is (lib/page-comments.test.ts),
+// while these are exactly the two behaviors that we cannot verify
+// to the eye.
 //
-// ─── Ce que « détaché » veut dire, et pourquoi ce n'est pas une colonne ──────
+// ─── What “detached” means, and why it’s not a column ──────
 //
-// Un fil ancré sur un bloc qui n'est plus dans le document est détaché. C'est
-// une LECTURE, calculée à chaque affichage contre le document réel — jamais une
-// écriture. Deux raisons, et la seconde est la vraie : un bloc peut revenir par
-// un simple ⌘Z, et une page se lit à plusieurs, donc l'onglet qui constaterait
-// la disparition écrirait un état que l'onglet d'à côté est en train de défaire.
+// A thread anchored on a block that is no longer in the document is detached. It is
+// a READING, calculated on each display against the real document — never one
+// write. Two reasons, and the second is the true one: a block can return by
+// a simple ⌘Z, and a page can be read by several people, therefore the tab which would note
+// disappearing would write a state that the next tab is undoing.
 //
-// Un fil détaché ne disparaît pas : il remonte EN TÊTE, avec l'extrait figé au
-// moment où il a été écrit (`quote`). Le supprimer avec son bloc perdrait la
-// seule trace de pourquoi le bloc a été retiré.
+// A detached thread does not disappear: it goes back TO THE HEAD, with the extract frozen at
+// when it was written (`quote`). Deleting it with its block would lose the
+// only trace of why the block was removed.
 
-/** Un commentaire de page, tel que le rend l'API. */
+/** A page comment, as rendered by the API. */
 export interface PageComment {
   id: string;
   page_id: string;
   project_id: string;
-  /** L'ancre : le bloc commenté. Null = un commentaire sur la PAGE. */
+  /** The anchor: the commented block. Null = a comment on the PAGE. */
   block_id: string | null;
-  /** L'extrait du bloc, figé au moment du commentaire. */
+  /** The extract from the block, frozen at the time of the comment. */
   quote: string | null;
   body: string;
   author_id: string | null;
-  /** La racine du fil quand cette ligne est une réponse (profondeur ≤ 1). */
+  /** The root of the thread when this line is a response (depth ≤ 1). */
   parent_id: string | null;
   via_assistant?: boolean;
   via_mcp?: boolean;
@@ -41,31 +41,27 @@ export interface PageComment {
   updated_at: string;
 }
 
-/** Un fil : sa racine, ses réponses, et ce que son ancre est devenue. */
+/** A thread: its root, its answers, and what its anchor has become. */
 export interface PageThread {
   root: PageComment;
   replies: PageComment[];
-  /** Ancré sur un bloc — que ce bloc existe encore ou non. */
+  /** Anchored to a block — whether this block still exists or not. */
   anchored: boolean;
-  /** Ancré sur un bloc ABSENT du document : le fil parle d'un texte parti. */
+  /** Anchored on an ABSENT block of the document: the thread speaks of a text that has left. */
   detached: boolean;
 }
 
 /**
- * Les fils d'une page, dans l'ordre où ils se lisent.
+ * The threads of a page, in the order they are read.
  *
- * `blockIds` est l'ensemble des ids de blocs du document tel qu'il est À
- * L'ÉCRAN — pas celui de la dernière sauvegarde. C'est le seul état qui décide
- * du détachement, et il change sous les doigts.
+ * `blockIds` is the set of block ids of the document as it is AT
+ * THE SCREEN — not the last save. It's the only state that decides
+ * the detachment, and it changes at the touch of a finger.
  *
- * L'ordre : les DÉTACHÉS d'abord (ils parlent d'un texte que plus personne ne
- * voit, donc rien dans la page ne les rappellera), puis le reste par date.
+ * The order: the DETACHED first (they talk about a text that no one sees anymore, so nothing on the page will remind them), then the rest by date.
  *
- * Pas de fil « résolu » : un commentaire de page se supprime quand il n'a plus
- * lieu d'être, il ne se clôt pas. Résoudre a du sens sur une remarque de RELECTURE
- * DE CODE — un point à traiter avant de fusionner, et c'est déjà ce que font les
- * fils d'une pull request — pas sur une note laissée dans une doc, qui n'a pas
- * d'échéance à franchir.
+ * No “resolved” thread: a page comment is deleted when it no longer has
+ * purpose, it is not closed. Resolving makes sense on a CODE REVIEW remark — a point to be addressed before merging, and this is already what the children of a pull request do — not on a note left in a doc, which has no deadline to pass.
  */
 export function arrangeThreads(
   comments: PageComment[],
@@ -80,9 +76,9 @@ export function arrangeThreads(
     list.push(c);
     repliesByRoot.set(c.parent_id, list);
   }
-  // Une réponse ORPHELINE (racine supprimée hors de cette liste) redevient une
-  // racine plutôt que de disparaître : perdre du texte parce qu'on a perdu son
-  // parent est exactement ce que le détachement refuse par ailleurs.
+  // An ORPHAN response (root removed from this list) becomes one again
+  // root rather than disappearing: losing text because we lost its
+  // parent is exactly what the detachment otherwise denies.
   const orphans = comments.filter((c) => c.parent_id && !rootIds.has(c.parent_id));
 
   const threads: PageThread[] = [...roots, ...orphans].map((root) => {
@@ -104,11 +100,11 @@ export function arrangeThreads(
 }
 
 /**
- * Les blocs qui portent un fil vivant, et combien de messages chacun — ce que
- * peignent le liseré et la pastille (components/pages/block-comments.ts).
+ * The blocks which carry a living thread, and how many messages each — what
+ * paints the border and the pastille (components/pages/block-comments.ts).
  *
- * Un fil DÉTACHÉ n'allume rien : son bloc n'existe plus, il n'y a rien à
- * peindre ; c'est l'activité de la page qui le montre.
+ * A DETACHED thread does not light anything: its block no longer exists, there is nothing to
+ * paint ; it's the page activity that shows it.
  */
 export function commentedBlockCounts(
   threads: PageThread[]
@@ -122,12 +118,11 @@ export function commentedBlockCounts(
   return counts;
 }
 
-/** Plafond de l'extrait figé : de quoi reconnaître la phrase, pas de quoi
-    recopier le bloc — un fil détaché doit tenir sur deux lignes dans la liste. */
+/** Ceiling of the frozen extract: enough to recognize the sentence, not enough to copy the block — a detached thread must fit on two lines in the list. */
 export const MAX_QUOTE_LENGTH = 300;
 
-/** L'extrait tel qu'on le range : replié sur une ligne, coupé net, avec son
-    ellipse quand il a été coupé. */
+/** The extract as it is stored: folded on a line, cut cleanly, with its
+ ellipsis when it was cut. */
 export function normalizeQuote(raw: string | null | undefined): string | null {
   const text = (raw ?? "").replace(/\s+/g, " ").trim();
   if (!text) return null;

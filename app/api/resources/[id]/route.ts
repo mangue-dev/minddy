@@ -12,12 +12,12 @@ type RouteContext = { params: Promise<{ id: string }> };
  * best-effort delete of the storage object. A link has none — its favicon rides
  * the row.
  *
- * Deux gardes, et il en faut deux (MIN-351). Le déposant, d'abord : la policy
- * RLS de suppression n'existe plus (une suppression PostgREST directe ferait
- * partir la ligne en laissant l'objet de storage orphelin), donc le contrôle
- * vit ici. Et l'APPARTENANCE au projet, ensuite : « c'est moi qui l'ai
- * déposé » ne survit pas au retrait du projet — sans elle, un ancien membre
- * continuait d'effacer ses pièces jointes dans un projet qui n'est plus le sien.
+ * Two guards, and it takes two (MIN-351). The applicant, first: the policy
+ * Delete RLS no longer exists (a direct PostgREST delete would
+ * leave the line leaving the storage object orphaned), so the control
+ * lives here. And BELONGING to the project, then: “it’s me who has it
+ * filed” does not survive the withdrawal of the project — without it, a former member
+ * kept deleting his attachments in a project that is no longer his.
  */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -33,8 +33,8 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     .eq("created_by", auth.user.id)
     .maybeSingle();
 
-  // Même 404 pour « n'existe pas », « déposée par un autre » et « plus membre » :
-  // aucune de ces trois réponses n'a à être distinguable des deux autres.
+  // Same 404 for “does not exist”, “filed by another” and “no longer a member”:
+  // none of these three answers need be distinguishable from the other two.
   if (!row || !(await getProjectAccess(auth.user.id, row.project_id as string))) {
     return NextResponse.json({ error: t("resourceNotFound") }, { status: 404 });
   }

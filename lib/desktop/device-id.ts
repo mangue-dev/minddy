@@ -1,58 +1,56 @@
 import { createHash } from "node:crypto";
 
 /**
- * QUELLE MACHINE EST-CE ? (MIN-293)
+ * WHAT MACHINE IS THIS? (MIN-293)
  *
- * ## Le problème, et il n'a rien d'hypothétique
+ * ## The problem, and it is not hypothetical
  *
- * Sur le poste où on développe minddy, **deux coquilles tournent côte à côte** :
- * l'app installée et celle de `npm run desktop:dev`. Elles ont des profils
- * séparés — `app.setName` ajoute `-dev` hors app empaquetée, et `userData` en
- * dérive ([main.ts](../../desktop/src/main.ts)) — mais **elles partagent la
- * session** dès qu'elles pointent la même origine : les cookies sont par
- * origine, pas par profil.
+ * On the workstation where we are developing minddy, **two shells are running side by side**:
+ * the installed app and that of `npm run desktop:dev`. They have separate
+ * profiles — `app.setName` adds `-dev` outside the packaged app, and `userData` en
+ * derives ([main.ts](../../desktop/src/main.ts)) — but **they share the
+ * session** as soon as they point to the same origin: the cookies are by
+ * origin, not by profile.
  *
- * Deux coquilles avec la même session, c'est deux machines qui réclameraient les
- * mêmes runs pour le même compte. Le bail d'exécution locale les départage
- * (émettre, c'est révoquer — [local-exec.ts](../server/agent/local-exec.ts)),
- * mais le départage est un constat après coup : la seconde chasse la première,
- * le premier harness perd son tour, et rien ne dit pourquoi.
+ * Two shells with the same session, that's two machines which would claim the
+ * same runs for the same account. The local execution lease ties the tiebreaker
+ * (to issue is to revoke — [local-exec.ts](../server/agent/local-exec.ts)),
+ * but the tiebreaker is an observation after the fact: the second chases the first,
+ * the first harness loses its turn, and nothing says why.
  *
- * ## Pourquoi il DÉRIVE de `userData`, au lieu d'être tiré au sort et rangé
+ * ## Why it DERIVES from `userData`, instead of being drawn and put away
  *
- * Un identifiant aléatoire écrit dans un fichier ferait le même travail — et
- * apporterait trois façons de le rater : le fichier peut manquer, être tronqué
- * par un arrêt brutal, ou être recopié tel quel par une restauration Time
- * Machine sur une autre machine. Le chemin de `userData`, lui, est déjà la chose
- * qui distingue les deux profils, il existe avant tout fichier, et il ne se
- * corrompt pas.
+ * A random identifier written to a file would do the same job — and
+ * would provide three ways to miss it: the file may be missing, be truncated
+ * by a sudden shutdown, or be copied as is by a Time
+ * machine restoration on another machine. The `userData` path is already the thing
+ * which distinguishes the two profiles, it exists before any file, and it does not
+ * corrupt.
  *
- * Il en découle une propriété qu'il faut connaître : **deux Mac dont l'utilisateur
- * porte le même nom court obtiennent le même identifiant**
- * (`/Users/clement/Library/Application Support/minddy`). Ce n'est pas un défaut
- * pour ce à quoi il sert — dire « c'est une autre coquille », pas « c'est un
- * autre ordinateur » — mais ça interdit de s'en servir comme d'une identité
- * d'appareil au sens fort. Le jour où il faudrait ça, c'est le bail qui doit
- * porter la garantie, pas cette chaîne.
+ * This results in a property that you need to know: **two Macs including user
+ * has the same short name get the same identifier**
+ * (`/Users/clement/Library/Application Support/minddy`). This is not a defect
+ * for what it is used for - say "it's another typo", not "it's a
+ * another computer" - but it prohibits using it as a device identity
+ * in the strong sense. The day this is needed, it is the lease which must
+ * carry the guarantee, not this chain.
  *
- * ## Il n'est pas un secret
+ * ## It is not a secret
  *
- * Il voyage en clair vers le serveur (MIN-371 s'en sert pour le claim) et il
- * n'ouvre rien : c'est le BAIL qui autorise, jamais l'identifiant. Le hash n'est
- * pas là pour cacher le chemin — il est là pour que ce qui voyage soit de
- * longueur fixe et ne porte pas le prénom de quelqu'un.
+ * It travels in clear to the server (MIN-371 uses it for the claim) and il
+ * does not open anything: it is the LEASE which authorizes, never the identifier. The hash isn't there to hide the path — it's there so that whatever travels is of fixed length and doesn't have anyone's first name on it.
  */
 
-/** Longueur de l'identifiant. 32 caractères hexadécimaux = 128 bits de hash. */
+/** Length of the identifier. 32 hexadecimal characters = 128 hash bits. */
 const DEVICE_ID_LENGTH = 32;
 
 /**
- * L'identifiant de cette coquille, dérivé de son dossier de données.
+ * The identifier of this shell, derived from its data folder.
  *
- * Le chemin est normalisé avant d'être hashé — un slash final, un doublon de
- * séparateur ou une casse différente désignent le même dossier et doivent donner
- * le même identifiant, sans quoi une version de l'app qui construirait le chemin
- * autrement se présenterait comme une nouvelle machine.
+ * The path is normalized before being hashed — a trailing slash, a duplicate of
+ * separator or a different case designates the same folder and must give
+ * the same identifier, otherwise a version of the app that would build the path
+ * would otherwise present itself as a new machine.
  */
 export function deviceIdForUserData(userDataPath: string): string {
   return createHash("sha256")
@@ -62,24 +60,24 @@ export function deviceIdForUserData(userDataPath: string): string {
 }
 
 /**
- * Le chemin ramené à sa forme comparable. Pas de `path.resolve` : ce module est
- * pur et se teste sans système de fichiers, et un chemin de `userData` est
- * toujours absolu — ce qu'on corrige ici, ce sont les seules variations qu'une
- * concaténation peut introduire.
+ * The path returned to its comparable form. No `path.resolve`: this module is
+ * pure and can be tested without a file system, and a `userData` path is
+ * always absolute — what we correct here are the only variations that a
+ * concatenation can introduce.
  */
 export function normalizeUserDataPath(userDataPath: string): string {
   return userDataPath.trim().replace(/\/{2,}/g, "/").replace(/\/+$/, "").toLowerCase();
 }
 
 /**
- * COMMENT CETTE COQUILLE SE PRÉSENTE, en clair.
+ * HOW THIS SHELL SHOWS, in plain text.
  *
- * L'identifiant ne se lit pas ; ce label, si — il finit dans un journal de tour,
- * dans un rapport de diagnostic, et un jour dans une liste « vos machines ». Il
- * DIT quand c'est la coquille de dév, parce que c'est précisément la confusion
- * qu'on veut rendre impossible : croire regarder la coquille qu'on développe
- * alors qu'on regarde l'app installée est une erreur qu'on a déjà faite ici
- * (cf. le verrou d'instance unique dans `main.ts`).
+ * The identifier cannot be read; this label, yes — it ends up in a tower log,
+ * in a diagnostic report, and one day in a “your machines” list. It
+ * SAYS when it is the dev shell, because it is precisely the confusion
+ * that we want to make impossible: believing that we are looking at the shell that we are developing
+ * while we are looking at the installed app is an error that we have already made here
+ * (cf. the single instance lock in `main.ts`).
  */
 export function deviceLabel(opts: {
   hostname: string;

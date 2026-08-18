@@ -6,29 +6,29 @@ import { MAX_ICON_DATA_URL_BYTES } from "@/lib/server/attachments";
 import type { LinkResourceInput } from "@/lib/types";
 
 /**
- * D'une URL brute au descripteur de ressource qu'on enregistre (MIN-184) :
- * titre de la page pour libellé, favicon ramené à une vignette inline.
+ * From a raw URL to the resource descriptor that we record (MIN-184):
+ * page title for label, favicon reduced to an inline thumbnail.
  *
- * Le favicon vit DANS la ligne, en data URI — pas dans le bucket. C'est ce qui
- * garde les quatre chaînes de ménage (route DELETE, corbeille, rétention,
- * suppression de compte) sur un seul chemin d'objets. Le prix à payer, c'est
- * que l'icône doit rester petite : 32 px de côté en WebP, ~1-2 Ko.
+ * The favicon lives IN the row, in data URI — not in the bucket. This is what
+ * keeps the four household chains (DELETE route, trash, retention,
+ * account deletion) on a single object path. The price to pay is
+ * that the icon must remain small: 32 px side in WebP, ~1-2 KB.
  *
- * Deux exceptions à la recompression, toutes deux dictées par libvips :
- *  - un `.ico` ne se lit pas — vérifié sur le favicon de linear.app, un vrai
- *    conteneur ICO à trois frames que sharp refuse net. On le garde donc BRUT,
- *    et c'est lui qui décide du plafond : 15 Ko d'ICO font ~20 Ko de base64,
- *    d'où `MAX_ICON_DATA_URL_BYTES` à 24 Ko. Descendre le plafond ne rendrait
- *    pas ces icônes plus légères, il les ferait seulement disparaître ;
- *  - une icône que sharp refuse (SVG masqué, octets tronqués) n'annule pas le
+ * Two exceptions to recompression, both dictated by libvips:
+ * - a `.ico` cannot be read — checked on the linear.app favicon, a real one
+ * ICO container with three frames that sharp refuses net. So we keep it RAW,
+ * and it is he who decides the ceiling: 15 KB of ICO makes ~20 KB of base64,
+ * hence `MAX_ICON_DATA_URL_BYTES` at 24 KB. Lowering the ceiling would not make
+ * not these lighter icons, he would only make them disappear;
+ * - an icon that sharp refuses (hidden SVG, truncated bytes) does not cancel the
  *    lien : on rend simplement `icon_data_url: null`.
  *
- * Ne lève que sur une URL irrécupérable (FaviconError("invalidUrl")). Un site
- * éteint reste un lien valide, avec son hostname pour titre.
+ * Only raises on an irretrievable URL (FaviconError("invalidUrl")). A website
+ * turned off remains a valid link, with its hostname as the title.
  */
 
-/** Le badge d'une ressource affiche l'icône en 20 px CSS ; ×1,6 pour le retina
-    sans faire grossir la ligne. */
+/** The badge of a resource displays the icon in 20 px CSS; ×1.6 for retina
+    without making the line grow. */
 const ICON_SIZE = 32;
 
 export async function resolveLinkResource(

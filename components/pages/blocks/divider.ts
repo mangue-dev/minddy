@@ -3,12 +3,12 @@ import { Minus } from "lucide-react";
 import type { PageBlock } from "@/components/pages/blocks/types";
 
 /**
- * Le seul bloc du catalogue qui ne se « transforme » pas : un séparateur n'a pas
- * de contenu, donc rien à convertir depuis un paragraphe — il s'INSÈRE. D'où
- * `turnInto: false`, et l'`insert` explicite qui va avec.
+ * The only block in the catalog that does not “transform”: a separator has no
+ * content, so nothing to convert from a paragraph — it INSERTS. Hence
+ * `turnInto: false`, and the explicit `insert` that goes with it.
  *
- * C'est exactement le cas que le descripteur doit savoir dire : sans lui, le
- * séparateur apparaîtrait dans « transformer en » et y avalerait le texte.
+ * This is exactly the case that the descriptor must know to say: without it, the
+ * separator would appear in "transform to" and swallow the descriptor there. text.
  */
 export const dividerBlock: PageBlock = {
   id: "divider",

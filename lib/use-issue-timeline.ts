@@ -19,29 +19,29 @@ export type TimelineItem =
 const commentsKey = (issueId: string) => ["comments", issueId] as const;
 const eventsKey = (issueId: string) => ["events", issueId] as const;
 
-/** La naissance du ticket, telle que la porte SA PROPRE LIGNE. */
+/** The birth of the ticket, such as carrying ITS OWN LINE. */
 export interface IssueBirth {
   createdAt: string;
   createdBy: string | null;
-  /** Ticket né d'une intégration (API Feedback) : l'acteur est l'intégration. */
+  /** Ticket born from an integration (API Feedback): the actor is the integration. */
   integrationId?: string | null;
 }
 
-/** Un ticket a-t-il déjà, dans son journal, la ligne qui dit d'où il vient ? */
+/** Does a ticket ever have the line in its log that says where it came from? */
 const hasBirthEvent = (events: IssueEvent[]) =>
   events.some((e) => e.type === "created" || e.type === "imported");
 
 /**
- * Ligne de naissance RECONSTITUÉE, quand le journal ne la porte pas.
+ * RECONSTITUTED birth line, when the log does not carry it.
  *
- * L'événement `created` est une écriture à part, best-effort : elle peut avoir
- * échoué (voir lib/server/create-issue.ts), et les tickets nés d'un insert
- * direct — le monde de démo — n'en ont jamais eu. Le ticket, lui, sait toujours
- * quand et par qui il est né : c'est sa propre ligne. Sans ce repli, la timeline
- * de ces tickets-là affiche « Aucune activité » — d'un ticket qui existe.
+ * The `created` event is a separate, best-effort write: it can have
+ * failed (see lib/server/create-issue.ts), and tickets born from one insert
+ * direct — the demo world — have never had one. The ticket always knows
+ * when and by whom it was born: it is its own line. Without this fallback, the timeline
+ * of these tickets displays "No activity" - of a ticket that exists.
  *
- * Reconstitué, donc jamais écrit : rien ne part en webhook, rien ne s'insère.
- * L'id est synthétique et stable, il ne sert qu'aux clés de React.
+ * Reconstructed, therefore never written: nothing goes to webhook, nothing is inserted.
+ * The id is synthetic and stable, it is only used for the keys of React.
  */
 const birthEvent = (issueId: string, birth: IssueBirth): IssueEvent => ({
   id: `birth:${issueId}`,
@@ -56,13 +56,13 @@ const birthEvent = (issueId: string, birth: IssueBirth): IssueEvent => ({
 });
 
 /**
- * Le fil chronologique lui-même : événements + fils de commentaires, dans
- * l'ordre. Pur, hors de React — c'est ici que se décide ce que le panneau
- * MONTRE, donc c'est ici que ça se teste.
+ * The timeline itself: events + comment threads, in
+ * order. Pure, outside of React — this is where you decide what the panel
+ * SHOWS, so this is where it's tested.
  *
- * `events === undefined` veut dire « pas encore chargés », et se distingue d'un
- * journal vide : le repli de naissance n'entre en scène qu'une fois la réponse
- * arrivée, sinon la ligne clignoterait avant de se faire doubler par la vraie.
+ * `events === undefined` means "not yet loaded", and is distinguished from a
+ * empty log: the birth fallback only comes into play once the response
+ * arrived, otherwise the line would flash before being overtaken by the real one.
  */
 export function buildTimelineItems({
   events,
@@ -104,10 +104,10 @@ export function buildTimelineItems({
         replies: repliesByRoot.get(c.id) ?? [],
       })),
   ];
-  // Tri par instant, en repassant par Date : deux horodatages du même instant
-  // ne s'écrivent pas forcément pareil (`+00:00` de PostgREST contre le `Z`
-  // d'un ISO côté client), et une comparaison de CHAÎNES les classerait alors
-  // par leur typographie. À instant égal, l'ordre d'arrivée est conservé.
+  // Sort by time, going back by Date: two timestamps of the same time
+  // are not necessarily written the same (`+00:00` of PostgREST against `Z`
+  // from a client-side ISO), and a STRING comparison would then classify them
+  // by their typography. At the same time, the order of arrival is preserved.
   merged.sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
   return merged;
 }
@@ -117,8 +117,8 @@ export function buildTimelineItems({
  * timeline. Live updates (e.g. Numo replying) come from the central realtime
  * bridge (lib/realtime-provider.tsx) invalidating ["comments"|"events", issueId].
  *
- * `birth` est le repli d'affichage décrit ci-dessus : passer le ticket lui-même
- * garantit que sa timeline commence toujours par sa naissance.
+ * `birth` is the display fallback described above: skip the ticket himself
+ * guarantees that his timeline always starts with his birth.
  */
 export function useIssueTimeline(issueId: string | null, birth?: IssueBirth | null) {
   const queryClient = useQueryClient();

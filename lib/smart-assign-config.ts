@@ -1,14 +1,14 @@
 /**
- * Ce qu'est une règle d'affectation *écrite*, pour Smart Assign (MIN-31).
+ * What a *written* assignment rule is, for Smart Assign (MIN-31).
  *
- * Trois endroits posent la même question et doivent y répondre pareil : le
- * runner qui choisit un assigné (lib/server/smart-assign.ts), l'avertissement
- * du tableau de bord, et les réglages du projet qui montrent ce qui manque. La
- * réponse tient en une ligne — une chaîne de blancs ne compte pas — mais c'est
- * exactement le genre de ligne qui diverge quand elle est écrite trois fois.
+ * Three places ask the same question and must answer it the same: the
+ * runner which chooses an assignee (lib/server/smart-assign.ts), the warning
+ * of dashboard, and project settings that show what's missing. The
+ * answer fits into one line — a string of blanks doesn't count — but it's
+ * exactly the kind of line that diverges when written three times.
  */
 
-/** Les membres, parmi ceux passés, qui n'ont pas de règle écrite. */
+/** Members, among those past, who do not have a written rule. */
 export function userIdsWithoutRule(
   userIds: string[],
   rules: Record<string, string> | null | undefined
@@ -16,8 +16,8 @@ export function userIdsWithoutRule(
   return userIds.filter((id) => !rules?.[id]?.trim());
 }
 
-/** Au moins une règle écrite dans l'équipe — sans quoi le modèle n'aurait que
-    des noms à comparer, et l'affectation retombe sur le owner. */
+/** At least one rule written in the team — otherwise the model would only have
+ names to compare, and the assignment falls on the owner. */
 export function hasAnyRule(
   userIds: string[],
   rules: Record<string, string> | null | undefined

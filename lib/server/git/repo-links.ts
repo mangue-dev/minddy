@@ -8,9 +8,9 @@ import { listInstallationRepositories } from "./github-app";
 import { getGitlabAccessToken, listGitlabProjects } from "./gitlab-app";
 
 /**
- * Accès à la liaison projet ↔ dépôt (project_git_links) — MIN-47. Service client ;
- * le gate owner est fait au niveau route (getProjectAccess). Un projet ne peut
- * lier qu'un seul dépôt (contrainte UNIQUE sur project_id).
+ * Access to project link ↔ repository (project_git_links) — MIN-47. Customer service;
+ * the gate owner is done at the route level (getProjectAccess). A project can only
+ * link one repository (UNIQUE constraint on project_id).
  */
 
 interface LinkRow {
@@ -27,7 +27,7 @@ interface LinkRow {
   created_at: string;
 }
 
-/** Liaison courante du projet (avec le login du compte connecté), ou null. */
+/** Current link of the project (with the login of the connected account), or null. */
 export async function getProjectLink(
   projectId: string,
 ): Promise<ProjectGitLink | null> {
@@ -40,7 +40,7 @@ export async function getProjectLink(
     .eq("project_id", projectId)
     .maybeSingle();
   if (!data) return null;
-  // Relation to-one embarquée : objet au runtime, cast via unknown (cf. Supabase).
+  // Embedded to-one relationship: object at runtime, cast via unknown (see Supabase).
   const row = data as unknown as LinkRow & {
     git_connections: { account_login: string | null } | null;
   };
@@ -61,8 +61,8 @@ export async function getProjectLink(
 }
 
 /**
- * Liste les dépôts candidats d'une connexion (dispatch par provider). Utilisé par
- * le sélecteur de dépôt. Lève si le provider est inconnu ou l'appel API échoue.
+ * Lists the candidate repositories of a connection (dispatch by provider). Used by
+ * the repository selector. Raised if the provider is unknown or the API call fails.
  */
 export async function listCandidateRepos(
   connection: { id: string; provider: RepoProviderId; installation_id: number | null },
@@ -99,9 +99,8 @@ export type BindResult =
   | { ok: false; errorKey: "connectionNotFound" | "repoNotFound"; status: number };
 
 /**
- * Lie un dépôt à un projet. Vérifie que la connexion appartient à l'utilisateur,
- * re-liste les candidats pour retrouver les MÉTADONNÉES SERVEUR du dépôt (jamais
- * de confiance dans les valeurs client) et upsert la liaison (unique par projet).
+ * Links a repository to a project. Verifies that the connection belongs to the user,
+ * re-lists the candidates to find the SERVER METADATA of the repository (never trusting the client values) and upserts the binding (unique per project).
  */
 export async function bindRepo(params: {
   projectId: string;
@@ -150,7 +149,7 @@ export async function bindRepo(params: {
   return { ok: true, link };
 }
 
-/** Délie le dépôt d'un projet. Renvoie false si aucune liaison n'existait. */
+/** Unbinds a project repository. Returns false if no binding existed. */
 export async function unlinkProject(projectId: string): Promise<boolean> {
   const supabase = getServiceClient();
   const { data } = await supabase

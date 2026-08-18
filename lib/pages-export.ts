@@ -1,72 +1,69 @@
 /**
- * L'EXPORT d'une page en markdown — la logique pure (MIN-283).
+ * EXPORT of a page in markdown — pure logic (MIN-283).
  *
- * Aucune IO ici : ce module reçoit l'arbre (id, parent, titre) et le markdown
- * déjà projeté de chaque page (lib/pages-markdown.ts, MIN-269), et il en fait
- * une ARBORESCENCE DE FICHIERS. C'est tout ce qui distingue un export d'une
- * simple projection, et c'est justement la partie qui se teste sans base :
+ * No IO here: this module receives the tree (id, parent, title) and the already projected markdown
+ * of each page (lib/pages-markdown.ts, MIN-269), and it actually
+ * a FILE TREE. This is all that distinguishes an export from a simple projection, and this is precisely the part that is tested without a base:
  *
- *  - un NOM DE FICHIER par page, tiré de son titre, sûr sur les trois systèmes
- *    de fichiers, et unique entre frères ;
- *  - une page qui a des enfants devient un DOSSIER (`Titre/index.md`) : c'est
- *    la seule forme qui garde l'imbrication du wiki dans une archive, et celle
- *    que tous les exports de ce genre ont convergé à produire ;
- *  - les blocs sous-page, écrits `[[page:<id>]]` par la projection, deviennent
- *    des LIENS RELATIFS entre les fichiers de l'archive. Un identifiant nu dans
- *    un fichier qu'on ouvre hors de minddy ne mène nulle part — et c'est
- *    précisément l'usage qu'on vise : emporter la doc.
+ * - one FILE NAME per page, taken from its title, safe on the three file systems, and unique between brothers;
+ * - one page which has children becomes a FILE (`Title/index.md`): this is
+ * the only form which keeps the nesting of the wiki in an archive, and that
+ * that all exports of this kind have converged to produce;
+ * - the subpage blocks, written `[[page:<id>]]` by projection, become
+ * RELATIVE LINKS between the files in the archive. A bare identifier in
+ * a file that is opened outside of minddy leads nowhere — and that is
+ * precisely the use we are aiming for: taking the doc.
  *
- * Une cible HORS de l'archive (une sous-page qu'on n'exporte pas) garde son
- * `[[page:<id>]]`. Inventer un lien qui ne résout pas serait pire que de laisser
- * la marque du document d'origine, qui, elle, dit ce qu'elle est.
+ * A target OUTSIDE the archive (a subpage that is not exported) keeps its
+ * `[[page:<id>]]`. Inventing a link that does not resolve would be worse than leaving
+ * the mark of the original document, which itself says what it is.
  */
 
-/** Une page telle que l'export la voit : sa place dans l'arbre, et son corps. */
+/** A page as the export sees it: its place in the tree, and its body. */
 export interface ExportInputPage {
   id: string;
   parent_id: string | null;
   title: string;
   icon: string | null;
-  /** Le markdown de la page, en-tête compris (cf. `pageToMarkdown`). */
+  /** The markdown of the page, including the header (see `pageToMarkdown`). */
   markdown: string;
 }
 
-/** Un fichier de l'archive. */
+/** A file in the archive. */
 export interface ExportedFile {
-  /** Chemin relatif à la racine de l'archive, séparateurs `/`. */
+  /** Path relative to the root of the archive, separators `/`. */
   path: string;
   markdown: string;
 }
 
-/** Longueur max d'un segment de nom : les systèmes de fichiers plafonnent à
-    255 octets, et un titre de page peut aller à 500 caractères. */
+/** Max length of a name segment: File systems cap at
+ 255 bytes, and a page title can be 500 characters. */
 const MAX_SLUG_LENGTH = 80;
 
 /**
- * Le nom de fichier d'une page, tiré de son titre.
+ * The file name of a page, taken from its title.
  *
- * On garde les lettres accentuées et les espaces — c'est un fichier que
- * quelqu'un va ouvrir, pas une clé de storage (cf. `sanitizeFileKey`, qui
- * répond à l'autre question). Ne tombent que les caractères qu'un système de
- * fichiers refuse, et les points de tête, qui feraient un fichier caché.
+ * We keep the accented letters and spaces — it's a file that
+ * someone will open, not a storage key (see `sanitizeFileKey`, which
+ * responds to the other question). Only the characters that a file system refuses, and the leading dots, which would make a file hidden.
  */
 export function pageFileSlug(title: string): string {
   const cleaned = title
-    // Les caractères de contrôle : invisibles dans un titre, refusés dans un nom.
+    // Control characters: invisible in a title, refused in a name.
     // oxlint-disable-next-line no-control-regex
     .replace(/[\u0000-\u001f\u007f]/g, "")
-    // Interdits sur Windows, plus `/` et `\` qui ouvriraient un dossier.
+    // Forbidden on Windows, plus `/` and `\` which would open a folder.
     .replace(/[<>:"/\\|?*]/g, "-")
     .replace(/\s+/g, " ")
     .trim()
     .replace(/^\.+/, "")
-    // Windows refuse aussi un nom qui se termine par un point ou une espace.
+    // Windows also refuses a name ending in a period or space.
     .replace(/[. ]+$/, "");
   return cleaned.slice(0, MAX_SLUG_LENGTH).trim() || "page";
 }
 
-/** `Titre`, `Titre (2)`, `Titre (3)`… — deux pages sœurs peuvent porter le même
-    nom, deux fichiers d'un même dossier non. */
+/** `Title`, `Title (2)`, `Title (3)`… — sibling pages may share a name, but two
+    files in the same folder may not. */
 function uniqueIn(taken: Set<string>, slug: string): string {
   const key = slug.toLowerCase();
   if (!taken.has(key)) {
@@ -85,12 +82,12 @@ function uniqueIn(taken: Set<string>, slug: string): string {
 const SUBPAGE_LINK = /\[\[page:([^\]\s]+)\]\]/g;
 
 /**
- * L'archive d'une branche : un fichier par page, liens réécrits.
+ * The archive of a branch: one file per page, with links rewritten.
  *
- * `pages` porte la racine ET ses descendants, dans n'importe quel ordre. Une
- * page dont le parent n'est pas de la liste est traitée comme une racine — ce
- * qui n'arrive pas sur une branche, mais évite qu'un jeu d'entrée incohérent
- * fasse disparaître des fichiers en silence.
+ * `pages` contains the root AND its descendants, in any order. A page whose
+ * parent is not in the list is treated as a root — this does not happen on a
+ * branch, but prevents an inconsistent input set from silently making files
+ * disappear.
  */
 export function exportPagesToFiles(pages: ExportInputPage[]): ExportedFile[] {
   const ids = new Set(pages.map((p) => p.id));
@@ -106,21 +103,20 @@ export function exportPagesToFiles(pages: ExportInputPage[]): ExportedFile[] {
     }
   }
 
-  // Le chemin de chaque page, d'abord — les liens ne peuvent être réécrits
-  // qu'une fois tous les chemins connus.
+  // Determine every page path first — links cannot be rewritten until all paths
+  // are known.
   const pathOf = new Map<string, string>();
-  /** `reserved` : les noms déjà pris DANS ce dossier avant qu'on nomme un seul
-      frère. Il n'y en a qu'un, et c'est `index` — le dossier porte le nom de
-      son parent, dont le corps s'y range sous `index.md`. Une sous-page
-      intitulée « Index » y aurait écrit le même chemin, et l'archive n'aurait
-      gardé qu'un des deux fichiers, en silence. */
+  /** `reserved`: names already taken IN this folder before naming any sibling.
+      There is only one, `index` — the folder carries the parent's name, and its
+      body is stored there as `index.md`. A subpage titled “Index” would produce
+      the same path, causing the archive to silently keep only one of the files. */
   const assign = (siblings: ExportInputPage[], prefix: string, reserved: string[] = []) => {
     const taken = new Set<string>(reserved);
     for (const page of siblings) {
       const slug = uniqueIn(taken, pageFileSlug(page.title));
       const children = childrenOf.get(page.id) ?? [];
-      // Une page qui a des enfants devient un dossier ; son propre corps s'y
-      // range sous `index.md`, à côté d'eux.
+      // A page with children becomes a folder; its own body is stored there as
+      // `index.md`, alongside them.
       const path = children.length > 0 ? `${prefix}${slug}/index.md` : `${prefix}${slug}.md`;
       pathOf.set(page.id, path);
       if (children.length > 0) assign(children, `${prefix}${slug}/`, ["index"]);
@@ -143,7 +139,7 @@ export function exportPagesToFiles(pages: ExportInputPage[]): ExportedFile[] {
   return files;
 }
 
-/** Les `[[page:<id>]]` d'un corps, changés en liens markdown relatifs. */
+/** The `[[page:<id>]]` markers in a body, changed into relative Markdown links. */
 function rewriteSubpageLinks(
   markdown: string,
   fromPath: string,
@@ -160,7 +156,7 @@ function rewriteSubpageLinks(
   });
 }
 
-/** Le chemin de `to` vu depuis le fichier `from` (`../autre/page.md`). */
+/** The path to `to` as seen from the file `from` (`../other/page.md`). */
 export function relativePath(from: string, to: string): string {
   const fromParts = from.split("/").slice(0, -1);
   const toParts = to.split("/");
@@ -174,12 +170,12 @@ export function relativePath(from: string, to: string): string {
   }
   const up = fromParts.length - common;
   const path = [...Array(up).fill(".."), ...toParts.slice(common)].join("/");
-  // Un lien relatif qui descend part de `./` : sans lui, un nom contenant `:`
-  // pourrait se lire comme un protocole.
+  // A relative link that descends starts with `./`: without it, a name
+  // containing `:` could be read as a protocol.
   return up === 0 ? `./${path}` : path;
 }
 
-/** Le nom du fichier téléchargé : `Ma page.md`, `Ma page.zip`. */
+/** The downloaded file name: `My page.md`, `My page.zip`. */
 export function exportFileName(title: string, extension: "md" | "zip"): string {
   return `${pageFileSlug(title)}.${extension}`;
 }

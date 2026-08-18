@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * `forcedToolCall` est la primitive partagée par cinq passes IA (smart-fill,
- * titre de conversation, correspondance d'import, découpe de brief, revue du
- * feedback). Le repli du raccourci de routage (MIN-263) vit DEDANS : c'est ce
- * qui le donne aux cinq sans qu'aucune n'ait à le savoir.
+ * `forcedToolCall` is the primitive shared by five AI passes (smart-fill,
+ * conversation title, import match, brief cut, review of
+ * feedback). The routing shortcut fallback (MIN-263) lives INSIDE: it's this
+ * that gives it to all five without anyone having to know.
  *
- * Ce qui compte : on ne rejoue que sur un REFUS, et seulement quand il y a un
- * suffixe à retirer. Rejouer un timeout doublerait l'attente de quelqu'un qui
- * patiente déjà devant son écran.
+ * What matters: we only replay on a REFUSAL, and only when there is a
+ * suffix to remove. Replaying a timeout would double the wait for someone who
+ * is already waiting in front of their screen.
  */
 
 vi.mock("@/lib/server/ai-usage", () => ({
@@ -24,7 +24,7 @@ vi.mock("@/lib/server/ai-usage", () => ({
 
 const { forcedToolCall } = await import("./forced-tool-call");
 
-/** Une réponse OpenRouter qui porte l'unique tool call attendu. */
+/** An OpenRouter response that carries the unique expected tool call. */
 function okResponse(model: string) {
   return {
     ok: true,
@@ -55,10 +55,10 @@ function call(model: string) {
   });
 }
 
-/** Le modèle réellement envoyé, essai par essai. */
+/** The model actually sent, trial by trial. */
 const modelsSent: string[] = [];
 
-/** Remplace `fetch` par `handler`, en notant le modèle de chaque requête. */
+/** Replaces `fetch` with `handler`, noting the pattern of each request. */
 function stubFetch(handler: (model: string) => Response) {
   vi.spyOn(globalThis, "fetch").mockImplementation((async (
     _url: string,

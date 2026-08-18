@@ -4,23 +4,22 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * Le dégagement de la barre de navigation mobile est un contrat entre DEUX
- * paquets. mangue-ui pose la géométrie — la hauteur de la pilule flottante et la
- * réserve que l'AppShell laisse sous le contenu — et `app/globals.css` la
- * recalcule pour recaler cette réserve sur ce que la pilule occupe vraiment
- * (`--mobile-nav-clearance`), au lieu du tiers de trop qu'elle réservait.
+ * Clearing the mobile navbar is a contract between TWO
+ * packages. mango-ui sets the geometry — the height of the floating pill and the
+ * reserve that the AppShell leaves under the content — and `app/globals.css` the
+ * recalculates to realign this reserve on what the pill really occupies
+ * (`--mobile-nav-clearance`), instead of the third too much that it occupies reserved.
  *
- * Rien ne relie les deux à l'exécution : ce sont des nombres recopiés. Un bump
- * de mangue-ui qui change la pilule de hauteur, ou qui abandonne sa réserve, ne
- * casse RIEN de visible — les écrans à champ ancré (le composer d'une pull
- * request, celui d'une session d'agent) se contentent de se reposer au mauvais
- * endroit, quelques dizaines de pixels trop haut ou par-dessus la barre. C'est
- * exactement le genre de dérive qu'on ne voit pas depuis un poste de dev, où la
- * barre mobile n'existe pas.
+ * Nothing connects the two at execution: they are copied numbers. A bump
+ * of mango-ui which changes the height pill, or which abandons its reserve, does not
+ * break ANYTHING visible - the anchored field screens (composed of a pull
+ * request, that of an agent session) are content to rest in the wrong
+ * place, a few tens of pixels too high or over the bar. This is
+ * exactly the kind of drift that you don't see from a dev workstation, where the
+ * moving bar does not exist.
  *
- * D'où ce test : il relit les deux sources et échoue à la seconde où elles ne
- * disent plus la même chose. La consigne est alors de METTRE À JOUR globals.css
- * d'après mangue-ui, pas d'assouplir le test.
+ * Hence this test: it rereads the two sources and fails the second they no longer say the same thing. The instruction is then to UPDATE globals.css
+ * according to mangue-ui, not to relax the test.
  */
 
 const REPO = process.cwd();
@@ -30,10 +29,10 @@ const GLOBALS = join(REPO, "app/globals.css");
 
 const read = (path: string) => readFileSync(path, "utf8");
 
-describe("dégagement de la barre de navigation mobile", () => {
-  it("mangue-ui réserve toujours une hauteur fixe sous le contenu, sous `desktop`", () => {
-    // La règle de globals.css n'a de sens que parce qu'il y a quelque chose à
-    // corriger : un padding bas posé par l'AppShell, et seulement sur mobile.
+describe("mobile navigation bar clearance", () => {
+  it("mangue-ui always reserves a fixed height below the content under `desktop`", () => {
+    // The rule in globals.css only makes sense because there is something to it
+    // correct: a low padding set by the AppShell, and only on mobile.
     expect(read(APP_SHELL)).toContain(
       "max-desktop:pb-[calc(6rem+env(safe-area-inset-bottom))]",
     );
@@ -41,13 +40,13 @@ describe("dégagement de la barre de navigation mobile", () => {
 
   it("la pilule mesure toujours 3rem de boutons + son ancrage bas", () => {
     const nav = read(MOBILE_NAV);
-    // Ancrage bas de la barre…
+    // Bottom anchoring of the bar…
     expect(nav).toContain("pb-[max(1rem,env(safe-area-inset-bottom))]");
-    // …et hauteur d'un bouton de la pilule (MobileNavItem).
+    // …and height of a pill button (MobileNavItem).
     expect(nav).toMatch(/inline-flex h-12 w-12 items-center/);
   });
 
-  it("globals.css recopie exactement cette géométrie", () => {
+  it("globals.css reproduces this geometry exactly", () => {
     const css = read(GLOBALS);
     expect(css).toContain(
       "--mobile-nav-height: calc(3rem + max(1rem, env(safe-area-inset-bottom)));",
@@ -55,8 +54,8 @@ describe("dégagement de la barre de navigation mobile", () => {
     expect(css).toContain(
       "--mobile-nav-clearance: calc(var(--mobile-nav-height) + 0.75rem);",
     );
-    // La réserve de l'AppShell est bien celle qu'on écrase, sur le <main> du
-    // shell et sous le même point de rupture (768px = --breakpoint-desktop).
+    // The AppShell reserve is indeed the one that is overwritten, on the <main> of
+    // shell and under the same breakpoint (768px = --breakpoint-desktop).
     expect(css).toMatch(
       /@media \(width < 768px\) \{\s*\.app-shell main \{\s*padding-bottom: var\(--mobile-nav-clearance\);/,
     );
@@ -68,14 +67,14 @@ describe("dégagement de la barre de navigation mobile", () => {
     );
   });
 
-  it("force le chrome desktop entre 768 et 1200 px, même si la dépendance est mise en cache", () => {
+  it("forces desktop chrome between 768 and 1200 px even when the dependency is cached", () => {
     const css = read(GLOBALS);
     expect(css).toContain("@media (768px <= width < 1200px)");
     expect(css).toContain(".app-shell .desktop\\:flex");
     expect(css).toContain(".app-shell .desktop\\:hidden");
   });
 
-  it("le shell porte la classe sur laquelle la règle s'accroche", () => {
+  it("the shell carries the class targeted by the rule", () => {
     expect(read(join(REPO, "components/app-shell-chrome.tsx"))).toContain(
       'className="app-shell"',
     );

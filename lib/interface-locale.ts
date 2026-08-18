@@ -2,24 +2,23 @@ import { detectFromAcceptLanguage } from "./accept-language";
 import { defaultLocale, locales, type Locale } from "@/i18n/config";
 
 /**
- * La langue de l'INTERFACE, lue depuis le navigateur.
+ * The INTERFACE language, read from the browser.
  *
- * Le serveur a déjà la sienne (`i18n/request.ts`) et n'a pas besoin de ceci.
- * Ce module existe pour les deux gestes qui se jouent hors rendu, dans
+ * The server already has its own (`i18n/request.ts`) and does not need this.
+ * This module exists for the two gestures that are played outside of rendering, in
  * `AuthProvider` :
  *
- *   — l'inscription, qui pose `locale` dans `user_metadata` (`signUp({ data })`) ;
- *   — la remise à niveau des comptes existants, à chaque session.
+ * — registration, which places `locale` in `user_metadata` (`signUp({ data })`);
+ * — upgrading existing accounts, at each session.
  *
- * Pourquoi le stocker dans les métadonnées alors que le cookie suffit à l'app :
- * les e-mails d'authentification (confirmation d'inscription, réinitialisation
- * de mot de passe) sont rendus par GoTrue, sur ses serveurs, sans requête ni
- * cookie — `user_metadata` est la SEULE chose qu'il sache du destinataire.
- * Voir `supabase/email-templates/`, qui branche dessus. Un champ qui n'est pas
- * tenu à jour ici, c'est un e-mail dans la mauvaise langue là-bas.
+ * Why store it in the metadata when the cookie is enough for the app:
+ * authentication emails (registration confirmation, password reset
+ *) are returned by GoTrue, on its servers, without request nor
+ * cookie — `user_metadata` is the ONLY thing it knows about the recipient.
+ * See `supabase/email-templates/`, which branches into this. A field that isn't kept up to date here, it's an email in the wrong language there.
  */
 
-/** Module pur, pour que le test n'ait pas à monter un `document`. */
+/** Pure module, so that the test does not have to mount a `document`. */
 export function resolveInterfaceLocale({
   cookieHeader,
   languages,
@@ -31,11 +30,11 @@ export function resolveInterfaceLocale({
   if (fromCookie && (locales as readonly string[]).includes(fromCookie)) {
     return fromCookie as Locale;
   }
-  // Pas de cookie : c'est le cas NORMAL d'une inscription. Le cookie n'est écrit
-  // que par les sélecteurs de langue, donc un visiteur qui n'a jamais changé de
-  // langue n'en a pas — alors qu'il a bien vu l'app dans la langue déduite de
-  // son navigateur, celle que le serveur a résolue pour lui. Sans ce repli,
-  // toute inscription française serait enregistrée en anglais.
+  // No cookies: this is the NORMAL case of registration. The cookie is not written
+  // only by the language selectors, therefore a visitor who has never changed
+  // language does not have one — even though he saw the app in the language deduced from
+  // his browser, the one that the server resolved for him. Without this withdrawal,
+  // any French registration would be recorded in English.
   return detectFromAcceptLanguage(languages.join(",")) ?? defaultLocale;
 }
 
@@ -47,7 +46,7 @@ function readCookie(header: string, name: string): string | null {
   return null;
 }
 
-/** Le même, branché sur le navigateur. Rend `defaultLocale` hors navigateur. */
+/** The same, plugged into the browser. Makes `defaultLocale` out of browser. */
 export function readInterfaceLocale(): Locale {
   if (typeof document === "undefined") return defaultLocale;
   return resolveInterfaceLocale({

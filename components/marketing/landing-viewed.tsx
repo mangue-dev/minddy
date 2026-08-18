@@ -4,17 +4,17 @@ import { useAnalytics } from "@/lib/use-analytics";
 import { useTrackView } from "@/lib/use-track-view";
 
 /**
- * Première marche de l'entonnoir d'acquisition (MIN-78).
+ * First step of the acquisition funnel (MIN-78).
  *
- * Pourquoi un événement dédié plutôt que de se reposer sur `$pageview` :
- *  - un entonnoir bâti sur `$pageview` + filtre d'URL casse au premier
- *    changement de route, et attrape aussi les visites internes vers `/` ;
- *  - `landing_viewed` dit ce qu'on mesure — « quelqu'un a vu l'argumentaire » —
- *    ce que `$pageview` sur `/` ne dit qu'indirectement.
+ * Why a dedicated event rather than relying on `$pageview`:
+ * - a funnel built on `$pageview` + URL break filter first
+ * change of route, and also catches internal visits to `/` ;
+ * - `landing_viewed` says what we measure — "someone saw the pitch" —
+ * what `$pageview` on `/` does not says that indirectly.
  *
- * La page étant un composant serveur, ce composant client minimal ne fait que
- * l'émission. Il n'est rendu que pour les visiteurs DÉCONNECTÉS : la page
- * redirige les autres vers `/home` avant d'arriver ici.
+ * Since the page is a server component, this minimal client component only does
+ * the emission. It is only rendered for LOGGED visitors: the page
+ * redirects others to `/home` before arriving here.
  */
 export function LandingViewed() {
   const { track } = useAnalytics();

@@ -1,74 +1,74 @@
 # captures/
 
-Outil **interne** pour automatiser les captures d'écran de minddy.
+**Internal** tool to automate minddy screenshots.
 
-Ce n'est pas un produit, ce ne sera pas packagé, ce ne sera pas publié. Tout ce
-qui est ici est spécifique à minddy : les tables, les routes, les sélecteurs
-sont écrits en dur, et c'est voulu. Si un jour ça doit servir ailleurs, ce sera
-une réécriture et une décision séparée.
+It's not a product, it won't be packaged, it won't be published. All this
+which is here is specific to minddy: tables, routes, selectors
+are written in hard copy, and that is intentional. If one day it has to be used elsewhere, it will be
+a rewrite and a separate decision.
 
-Périmètre : **captures d'écran uniquement.** Pas de clips, pas de vidéos.
+Scope: **screenshots only.** No clips, no videos.
 
-## Ce que c'est
+## What it is
 
-Un compte de démo dédié sur la base de production, dont les données sont
-créées délibérément et versionnées ici. Des scripts Playwright qui
-photographient les écrans en s'y connectant. Un registre qui permet à l'agent
-de rafraîchir une capture existante en sachant ce qui avait été fait avant.
+A dedicated demo account on the production base, whose data is
+deliberately created and versioned here. Playwright scripts that
+photograph the screens by connecting to them. A register which allows the agent
+to refresh an existing capture knowing what had been done before.
 
 ```
 captures/
-  world/            le monde de démo
-    world.md        registre lisible : compte, projets, données, journal
-    seed/           scripts d'ajout de données, idempotents et ordonnés
-  shots/            une capture = un dossier
+world/demo world
+world.md readable register: account, projects, data, log
+seed/data addition scripts, idempotent and ordered
+shots/one capture = one folder
     <nom>/
-      intent.md     ce que l'image DOIT montrer, et pourquoi
-      shot.mjs      le script Playwright
-      out/          les PNG produits
+intent.md what the image SHOULD show, and why
+shot.mjs the Playwright script
+out/ produced PNGs
       history.jsonl un enregistrement par run : date, commit, verdict
-  lib/              socle partagé
-    config.mjs      périmètre autorisé — source de vérité
-    guards.mjs      couche de sécurité entre les seeds et la base
-    browser.mjs     contexte déterministe (reduced-motion, horloge figée…)
-    session.mjs     connexion unique, réutilisée par toutes les captures
-    frame.mjs       mise en scène (mockup navigateur)
-  .auth/            session Playwright — jamais commité
+lib/ shared base
+config.mjs authorized scope — source of truth
+guards.mjs security layer between seeds and database
+browser.mjs deterministic context (reduced-motion, frozen clock, etc.)
+session.mjs single connection, reused by all captures
+frame.mjs staging (browser mockup)
+.auth/ session Playwright — never committed
 ```
 
-## La base est celle de PRODUCTION
+## The basis is that of PRODUCTION
 
-Il n'y a pas de Supabase locale sur ce projet. Les scripts écrivent donc dans
-la vraie base, et tout le dossier est construit autour de cette contrainte.
+There is no local Supabase on this project. The scripts therefore write in
+the real basis, and the entire file is built around this constraint.
 
-L'invariant tient en une phrase : **aucune écriture ne peut atteindre une ligne
-qui n'appartient pas au monde de démo.** Corriger un titre, changer un statut ou
-retirer trois tickets de démo est normal et permis. C'est toucher au reste qui
-est impossible.
+The invariant is contained in a sentence: **no writing can reach a line
+which does not belong to the demo world.** Correct a title, change a status or
+removing three demo tickets is normal and permitted. It's touching the rest which
+is impossible.
 
-Les garde-fous sont dans `lib/guards.mjs` et ne sont pas contournables :
+The guardrails are in `lib/guards.mjs` and cannot be bypassed:
 
-1. **Liste blanche de tables** dans `lib/config.mjs`. L'élargir demande un
+1. **Table whitelist** in `lib/config.mjs`. Expanding it requires
    changement de fichier, donc un diff visible.
-2. **Rattachement vérifié à l'insertion.** Une ligne qui pointe vers un vrai
-   utilisateur ou un vrai projet est rejetée avant d'atteindre le réseau.
-3. **Relecture avant modification ou retrait.** Les lignes visées sont lues et
-   vérifiées comme étant les nôtres avant qu'on y touche. On ne fait jamais
+2. **Connection checked on insertion.** A line that points to a real
+user or a real project is rejected before reaching the network.
+3. **Rereading before modification or withdrawal.** The lines concerned are read and
+verified as ours before we touch it. We never do
    confiance au filtre.
-4. **Ni TRUNCATE, ni SQL arbitraire, ni réinitialisation.** Aucune exception,
-   même sur demande.
-5. **Mesure du rayon de souffle.** Si des lignes hors démo disparaissent, alerte
-   et arrêt. Une hausse est juste de l'activité concurrente d'un vrai
-   utilisateur, elle est signalée sans bloquer.
-6. **Confirmation obligatoire.** Rien n'est écrit sans que l'utilisateur ait vu,
-   en français, la liste de ce qui va changer et pourquoi.
-7. **Jamais l'API HTTP de l'app.** On écrit en base directement, ce qui
-   court-circuite les routes et donc le Smart Assign, les notifications, les
-   events PostHog, les emails Resend et la facturation.
+4. **No TRUNCATE, no arbitrary SQL, no reset.** No exceptions,
+even on request.
+5. **Blast radius measurement.** If lines outside demo disappear, alert
+and stop. An increase is just the competing activity of a real
+user, it is reported without blocking.
+6. **Confirmation required.** Nothing is written without the user having seen,
+in French, the list of what will change and why.
+7. **Never the app's HTTP API.** We write in base directly, which
+short-circuits the routes and therefore the Smart Assign, notifications,
+PostHog events, Resend emails and billing.
 
-La seule opération destructive du dossier est `deleteDemoWorld()`, qui supprime
-le compte de démo et laisse les clés étrangères nettoyer le reste en cascade.
-Elle refuse tout compte dont l'email ne correspond pas au motif de démo.
+The only destructive operation of the folder is `deleteDemoWorld()`, which deletes
+the demo account and let the foreign keys clean up the rest in cascade.
+It refuses any account whose email does not match the demo reason.
 
 ## Mise en route
 
@@ -76,48 +76,48 @@ Elle refuse tout compte dont l'email ne correspond pas au motif de démo.
 npm i -D playwright && npx playwright install chromium
 ```
 
-Puis dans `.env`, ajouter le mot de passe du compte de démo :
+Then in `.env`, add the demo account password:
 
 ```
 CAPTURES_DEMO_PASSWORD=...
 ```
 
-Ensuite, dans Claude Code :
+Then, in Claude Code:
 
-- `capture-world` pour créer le compte de démo et lui donner des données ;
-- `capture-shot` pour produire ou rafraîchir une capture.
+- `capture-world` to create the demo account and give it data;
+- `capture-shot` to produce or refresh a capture.
 
-## Lancer à la main
+## Throw by hand
 
 ```bash
-node captures/lib/session.mjs            # rafraîchit la session de démo
-node captures/shots/<nom>/shot.mjs       # produit la capture
+node captures/lib/session.mjs # refreshes the demo session
+node captures/shots/<nom>/shot.mjs # produces the capture
 ```
 
-Par défaut les captures visent `http://localhost:3000`. Pour viser un
-déploiement :
+By default, captures target `http://localhost:3000`. To aim for a
+deployment :
 
 ```bash
 CAPTURE_BASE_URL=https://preview.minddy.app node captures/shots/<nom>/shot.mjs
 CAPTURE_BASE_URL=https://www.minddy.app node captures/shots/<nom>/shot.mjs
 ```
 
-`preview` et `www` partagent la MÊME base : le monde de démo est le même des deux
-côtés, seul le code diffère. C'est ce qui rend `preview` utile ici — une capture
-qui casse là-bas et passe en prod signale un changement d'UI pas encore livré,
-pas une donnée manquante. La session est liée à l'origine : changer de cible
-demande de rejouer `node captures/lib/session.mjs` avec le même
+`preview` and `www` share the SAME base: the demo world is the same for both
+sides, only the code differs. This is what makes `preview` useful here — a capture
+which breaks there and goes to prod signals a UI change not yet delivered,
+no missing data. Session is linked to origin: change target
+request to replay `node captures/lib/session.mjs` with the same
 `CAPTURE_BASE_URL`.
 
-Pour livrer des PNG déjà produits, sans relancer une seule prise :
+To deliver PNGs already produced, without restarting a single take:
 
 ```bash
 node captures/lib/publish.mjs --shots
 ```
 
-## Ce qui est versionné, et pourquoi
+## What is versioned, and why
 
-Tout sauf `.auth/`. Les PNG, les scripts, les seeds et les registres sont dans
-Git volontairement : c'est ce qui permet à l'agent de rafraîchir une capture en
-sachant ce qui existait avant, ce qui avait été créé, et ce que l'image était
-censée montrer. C'est le suivi d'obsolescence, en dix lignes et sans service.
+Everything except `.auth/`. PNGs, scripts, seeds and registers are in
+Git voluntarily: this is what allows the agent to refresh a capture by
+knowing what existed before, what had been created, and what the image was
+supposed to show. This is obsolescence tracking, in ten lines and without service.

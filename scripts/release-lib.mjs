@@ -5,7 +5,7 @@ export const VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0
 
 export function assertVersion(version) {
   if (!VERSION_PATTERN.test(version)) {
-    throw new Error(`version SemVer invalide : ${version}`);
+    throw new Error(`invalid SemVer version: ${version}`);
   }
   return version;
 }
@@ -15,16 +15,16 @@ export function changelogSection(changelog, version) {
   const match = changelog.match(
     new RegExp(`^## \\[${escaped}\\](?: - \\d{4}-\\d{2}-\\d{2})?\\n([\\s\\S]*?)(?=^## \\[|(?![\\s\\S]))`, "m"),
   );
-  if (!match) throw new Error(`CHANGELOG.md ne contient pas de section [${version}]`);
+  if (!match) throw new Error(`CHANGELOG.md does not contain a [${version}] section`);
   const body = match[1].trim();
-  if (!body) throw new Error(`la section [${version}] du changelog est vide`);
+  if (!body) throw new Error(`the [${version}] changelog section is empty`);
   return body;
 }
 
 export function unreleasedSection(changelog) {
   const match = changelog.match(/^## \[Unreleased\]\n([\s\S]*?)(?=^## \[)/m);
   if (!match || !match[1].trim()) {
-    throw new Error("la section [Unreleased] du changelog est vide");
+    throw new Error("the [Unreleased] changelog section is empty");
   }
   return match[1].trim();
 }

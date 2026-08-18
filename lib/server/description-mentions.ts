@@ -12,12 +12,12 @@ import { notificationActorSource } from "@/lib/notification-actor";
 import type { Member } from "@/lib/types";
 
 /**
- * Qui vient d'être cité, et mérite donc d'être prévenu — la règle, isolée de la
- * base pour être vérifiable telle quelle.
+ * Who has just been cited, and therefore deserves to be warned - the rule, isolated from the
+ * basis to be verifiable as it is.
  *
- * `members` est la liste des gens qui ONT ACCÈS : un nom qui n'y figure pas
- * n'est pas une mention, et ne notifie personne. `previousDescription` absente
- * = création, tout ce qui est cité est nouveau.
+ * `members` is the list of people who HAVE ACCESS: a name that does not appear there pas
+ * is not a mention, and does not notify anyone. `previousDescription` absent
+ * = creation, everything mentioned is new.
  */
 export function newlyMentionedUserIds(params: {
   members: Member[];
@@ -42,46 +42,45 @@ export function newlyMentionedUserIds(params: {
 }
 
 /**
- * Prévenir les gens cités dans une DESCRIPTION (de ticket ou d'objectif).
+ * Notify people mentioned in a DESCRIPTION (of ticket or objective).
  *
- * Trois règles, et la troisième est la seule qui demande un peu de soin :
+ * Three rules, and the third is the only one that requires a little care:
  *
- *  1. ACCÈS. On ne cite que des membres du projet — la liste des citables est
- *     construite ici, depuis `project_members`, et pas depuis ce que le client
- *     a envoyé. Un nom qui ne correspond à personne d'ici ne notifie personne :
- *     prévenir quelqu'un d'un ticket qu'il ne peut pas ouvrir ne lui rendrait
- *     pas service, et lui apprendrait son existence.
+ * 1. ACCESS. We only cite members of the project — the list of citables is
+ * constructed here, from `project_members`, and not from what the client
+ * sent. A name that doesn't match anyone here doesn't notify anyone:
+ * warning someone about a ticket they can't open would do them a disservice, and would teach them about its existence.
  *
- *  2. JAMAIS SOI-MÊME. Se citer dans sa propre description n'est pas un appel.
+ * 2. NEVER YOURSELF. Quoting yourself in your own description is not an appeal.
  *
- *  3. LES NOUVELLES SEULEMENT. À l'édition, on compare aux mentions de la
- *     version PRÉCÉDENTE et on ne prévient que ceux qui viennent d'arriver.
- *     Sans ça, corriger une faute de frappe dix lignes plus bas repinguerait
- *     tout le monde — et une description se relit souvent.
+ * 3. NEWS ONLY. When editing, we compare the mentions of the
+ * PREVIOUS version and we only warn those who have just arrived.
+ * Without that, correcting a typo ten lines further down would re-post
+ * everyone — and a description is often reread.
  *
- * La règle de ce qui EST une mention est la même que celle du champ de saisie
- * (lib/mention-scan) : c'est ce qui garantit que la pilule affichée et la
- * personne prévenue désignent bien le même compte.
+ * The rule for what IS a mention is the same as that for the entry field
+ * (lib/mention-scan): this is what guarantees that the displayed pill and the
+ * person notified refer to the same account.
  */
 export async function notifyDescriptionMentions(
   service: SupabaseClient,
   params: {
     projectId: string;
-    /** L'auteur de l'écriture — jamais notifié de sa propre citation. */
+    /** The author of the writing — never notified of his own citation. */
     actorId: string | null;
-    /** La description telle qu'elle vient d'être écrite. */
+    /** The description as just written. */
     description: string | null | undefined;
-    /** La version d'avant, à la modification. Absente = création. */
+    /** The previous version, upon modification. Absent = creation. */
     previousDescription?: string | null;
-    /** La cible : l'un OU l'autre, comme partout dans `notifications`. */
+    /** The target: one OR the other, like everywhere in `notifications`. */
     issueId?: string;
     objectiveId?: string;
-    /** L'écriture est passée par le MCP : l'inbox nomme l'agent, pas la clé. */
+    /** The writing went through the MCP: the inbox names the agent, not the key. */
     mcpKeyId?: string | null;
-    /** L'écriture est un geste de NOTRE agent hors MCP (le chat Numo, l'agent
-        de code) : l'inbox et la bannière nomment alors Numo. Sans ça, une
-        description réécrite par Numo annonçait « <le demandeur> vous a
-        mentionné » — d'une phrase que le demandeur n'a pas écrite. */
+    /** The writing is a gesture of OUR agent outside MCP (the cat Numo, the code agent
+): the inbox and the banner then name Numo. Without that, a
+ description rewritten by Numo said "<le demandeur> you mentioned
+" — a sentence that the requester did not write. */
     viaAssistant?: boolean;
   },
 ): Promise<void> {

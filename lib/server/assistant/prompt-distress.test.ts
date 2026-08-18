@@ -11,14 +11,14 @@ const {
 } = await import("./prompt");
 
 /**
- * MIN-296 — la conduite à tenir face à de la détresse, sur TOUTES les surfaces
- * où Numo répond à quelqu'un.
+ * MIN-296 — what to do in the face of distress, on ALL surfaces
+ * where Numo responds to someone.
  *
- * Le sujet du test est la liste, pas le texte : la consigne vit dans un seul
- * bloc, et le risque n'est pas qu'on le réécrive mal — c'est qu'une sixième
- * surface arrive un jour sans lui. Le board de feedback est la plus exposée :
- * la personne en face n'a pas de compte, et c'est le seul endroit où Numo parle
- * à quelqu'un qui n'est pas de l'équipe.
+ * The subject of the test is the list, not the text: the instruction lives in a single
+ * block, and the risk is not that we rewrite it badly — it means that a sixth
+ * surface arrives one day without it. The feedback board is the most exposed:
+ * the person opposite does not have an account, and this is the only place where Numo speaks
+ * to someone who is not on the team.
  */
 
 const project = {
@@ -89,15 +89,15 @@ const surfaces: Record<string, string> = {
   }),
 };
 
-describe("conduite à tenir face à la détresse", () => {
+describe("how to respond to distress", () => {
   for (const [surface, prompt] of Object.entries(surfaces)) {
-    it(`est dans le prompt assemblé du ${surface}`, () => {
+    it(`is in the assembled prompt for ${surface}`, () => {
       expect(prompt).toContain("distress or self-harm");
-      // Les ressources, qui sont la seule chose utile de tout le bloc.
+      // Resources, which are the only useful thing in the whole block.
       expect(prompt).toContain("3114");
       expect(prompt).toContain("988");
       expect(prompt).toContain("findahelpline.com");
-      // Et la consigne qui tranche : on pose l'outil.
+      // And the instruction that decides: we put down the tool.
       expect(prompt).toContain("STOP the task");
     });
   }
@@ -108,7 +108,7 @@ describe("messages du chat Numo", () => {
     "chat de projet": surfaces["chat de projet"],
     "chat global": surfaces["chat global"],
   })) {
-    it(`traite chaque message utilisateur comme une demande directe dans le ${surface}`, () => {
+    it(`treats every user message as a direct request in ${surface}`, () => {
       expect(prompt).toContain("direct message from the person currently talking to");
       expect(prompt).toContain("not a task-notebook note");
       expect(prompt).toContain("asks to use it");

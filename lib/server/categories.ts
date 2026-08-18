@@ -9,45 +9,45 @@ import {
 } from "@/lib/category-colors";
 import { DEFAULT_CATEGORIES } from "@/lib/default-categories";
 
-// Borne de longueur du nom (MIN-118) — une étiquette reste courte, au-delà on tronque.
+// Name length limit (MIN-118) — a label remains short, beyond that it is truncated.
 const MAX_NAME_LENGTH = 200;
 
-/** Le nom tel qu'il sera ÉCRIT en base : rogné, puis borné. */
+/** The name as it will be WRITTEN in base: trimmed, then bounded. */
 export const categoryName = (name: string): string =>
   name.trim().slice(0, MAX_NAME_LENGTH);
 
 /**
- * La clé d'index d'un nom de catégorie — le nom STOCKÉ, en minuscules.
+ * The index key of a category name — the STORED name, in lowercase.
  *
- * Elle passe par la troncature, et c'est tout son intérêt. Indexer sur le nom
- * entier alors qu'on écrit le nom coupé fait qu'un nom de plus de 200
- * caractères ne retrouve jamais la ligne qu'il vient de créer : la catégorie
- * n'est pas rattachée au ticket, et une NOUVELLE est créée au passage suivant —
- * à chaque webhook, sans fin, `categories` n'ayant pas d'unicité sur
- * `(project_id, name)`. Seul GitLab peut l'atteindre (255 caractères de titre
- * de label, contre 50 chez GitHub et 60 après le parsing d'un CSV), mais c'est
- * la sorte de fuite que personne ne va voir.
+ * It goes through truncation, and that is its whole point. Index on name
+ * whole while writing the cut name makes a name of more than 200
+ * characters never finds the line he has just created: the category
+ * is not attached to the ticket, and a NEW one is created in the next pass —
+ * to each webhook, endlessly, `categories` having no uniqueness on
+ * `(project_id, name)`. Only GitLab can achieve it (255 title characters
+ * of label, compared to 50 at GitHub and 60 after parsing a CSV), but it is
+ * the kind of leak that no one will see.
  *
- * Exportée pour que les appelants n'aient pas à REDEVENIR la règle : ils
- * cherchent avec le nom brut, la clé est calculée ici, une fois.
+ * Exported so that callers don't have to BECOME the rule again: they
+ * search with the raw name, the key is calculated here, once.
  */
 export const categoryKey = (name: string): string =>
   categoryName(name).toLowerCase();
 
 /**
- * Pose le jeu de catégories par défaut sur un projet neuf, dans la langue de
- * celui qui le crée (`names`, déjà traduits par l'appelant depuis
+ * Places the default set of categories on a new project, in the language of
+ * the one who creates it (`names`, already translated by the caller from
  * `Categories.defaults`).
  *
- * C'était un trigger Postgres, qui écrivait six noms français quelle que soit
- * la langue de l'utilisateur — voir `lib/default-categories.ts`. Comme pour les
- * vues par défaut (`ensureBaselineViews`), c'est désormais l'application qui
- * sème, parce qu'elle est le seul endroit qui connaît la langue.
+ * It was a Postgres trigger, which wrote six French names whatever
+ * the user's language — see `lib/default-categories.ts`. As for the
+ * default views (`ensureBaselineViews`), it is now the application which
+ * seme, because it is the only place that knows the language.
  *
- * Ne sème QUE si le projet n'a aucune catégorie : rejouable, et sans risque de
- * doubler celles d'un projet qui en a déjà. Un échec est journalisé, jamais
- * levé — un projet créé sans ses étiquettes reste parfaitement utilisable, et
- * l'utilisateur peut les ajouter à la main.
+ * ONLY sow if the project has no category: replayable, and without risk of
+ * double those of a project that already has them. A failure is logged, never
+ * lifted — a project created without its labels remains perfectly usable, and
+ * the user can add them by hand.
  */
 export async function seedDefaultCategories({
   projectId,
@@ -79,30 +79,30 @@ export async function seedDefaultCategories({
 }
 
 /**
- * Des NOMS d'étiquettes aux catégories du projet : celles qui existent sont
- * retrouvées à la casse près, les autres sont créées. Rend l'index
- * `categoryKey(nom)` → id — à interroger AVEC `categoryKey`, jamais avec un
- * `toLowerCase()` maison — ou `null` si la base a refusé (l'appelant décide
- * alors s'il abandonne ou s'il continue sans catégories).
+ * From label NAMES to project categories: those that exist are
+ * found at the scrapyard, the others are created. Returns index
+ * `categoryKey(nom)` → id — to query WITH `categoryKey`, never with a
+ * `toLowerCase()` house — or `null` if the base refused (the caller decides
+ * then if he gives up or if he continues without categories).
  *
- * Partagé par l'import en masse (`importIssuesIntoProject`) et par la synchro
- * d'un dépôt lié, pour une raison qui n'est pas seulement la factorisation :
- * les deux voient les MÊMES étiquettes du même dépôt, à des moments différents
- * — le backfill à l'activation, puis un webhook `labeled` trois jours après. Un
- * rapprochement qui divergerait entre les deux créerait une seconde catégorie
- * « Bug » à côté de la première, et personne ne saurait pourquoi.
+ * Shared by bulk import (`importIssuesIntoProject`) and by sync
+ * of a linked repository, for a reason which is not only factorization:
+ * both see the SAME labels from the same repository, at different times
+ * — the backfill upon activation, then a `labeled` webhook three days later. A
+ * a rapprochement that diverges between the two would create a second category
+ * “Bug” next to the first, and no one would know why.
  *
- * Le rapprochement FIN (« Bugs » → la catégorie « Bug » du projet) a déjà eu
- * lieu en amont — c'est le nom VOULU qui arrive ici. Il ne reste que l'égalité.
+ * The FIN reconciliation (“Bugs” → the “Bug” category of the project) has already had
+ * place upstream — it’s the DESIRED name that arrives here. All that remains is equality.
  */
 export async function resolveCategoryIdsByName(
   projectId: string,
   names: string[]
 ): Promise<{ idByKey: Map<string, string>; created: number } | null> {
   const idByKey = new Map<string, string>();
-  // Première casse vue par clé : c'est ce nom-là qui sera écrit en base si la
-  // catégorie doit être créée. Il est déjà sous sa forme STOCKÉE — la clé en
-  // dérive, donc les deux ne peuvent pas diverger.
+  // First case seen by key: it is this name which will be written in base if the
+  // category must be created. It is already in its STORED form — the key to
+  // drifts, so the two cannot diverge.
   const wanted = new Map<string, string>();
   for (const name of names) {
     const stored = categoryName(name);
@@ -121,9 +121,9 @@ export async function resolveCategoryIdsByName(
     console.error("[categories] resolve lookup failed:", error.message);
     return null;
   }
-  // `categoryKey` et pas `toLowerCase` : une ligne écrite avant la borne de
-  // MIN-118 peut dépasser 200 caractères, et elle doit rester trouvable sous la
-  // clé tronquée — sinon on lui fabrique un doublon coupé juste à côté.
+  // `categoryKey` and not `toLowerCase`: a line written before the terminal of
+  // MIN-118 can exceed 200 characters, and it must remain findable under the
+  // truncated key — otherwise we make a duplicate cut right next to it.
   for (const cat of existing ?? []) {
     idByKey.set(categoryKey(cat.name as string), cat.id as string);
   }
@@ -138,8 +138,8 @@ export async function resolveCategoryIdsByName(
     .insert(
       missing.map(([, name], i) => ({
         project_id: projectId,
-        // Déjà sous forme stockée (`categoryName` en tête de fonction) : le
-        // retronquer ici rouvrirait l'écart entre la clé et la ligne écrite.
+        // Already in stored form (`categoryName` at the top of the function): the
+        // truncating here would reopen the gap between the key and the written line.
         name,
         color: CATEGORY_COLORS[(offset + i) % CATEGORY_COLORS.length],
       }))

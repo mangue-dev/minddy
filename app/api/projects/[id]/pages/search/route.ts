@@ -7,11 +7,11 @@ import { searchProjectPages } from "@/lib/server/pages";
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * GET /api/projects/[id]/pages/search?q= — chercher dans le wiki du projet
- * (MIN-276), titre ET contenu.
+ * GET /api/projects/[id]/pages/search?q= — search the project wiki
+ * (MIN-276), title AND content.
  *
- * Chaque résultat porte son EXTRAIT : sur une recherche par contenu, le titre
- * seul ne dit pas pourquoi la page sort, et c'est justement la moitié qui
+ * Each result carries its EXTRACT: on a search by content, the title
+ * alone does not say why the page comes out, and it is precisely the half which
  * manquait.
  */
 export async function GET(request: NextRequest, { params }: RouteContext) {

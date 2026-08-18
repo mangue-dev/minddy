@@ -1,42 +1,41 @@
 import { CHANGED_FILES_CAP, sq, type RepoHost } from "./repo-host";
 
 /**
- * LE DIFF DU TOUR EN COURS, LU DANS LA SANDBOX — la seule source qui sache ce que
- * l'agent vient d'écrire (MIN-266, note « diff en cours »).
+ * THE DIFF OF THE CURRENT TURN, READ IN THE SANDBOX — the only source that knows what
+ * the agent just wrote (MIN-266, note “diff in progress”).
  *
- * La vue diff de la conversation était servie par la FORGE
- * ([diff/route.ts](../../../app/api/agent-runs/[runId]/diff/route.ts)) : la PR
- * quand elle existe, sinon le compare `base...branche`. C'est le travail POUSSÉ,
- * et l'agent ne pousse qu'en fin de tour — pendant qu'il travaille, cliquer un
- * fichier qu'il vient de modifier ouvrait donc l'état d'AVANT, quand ce n'était
- * pas un diff vide (premier tour : la branche n'existe pas encore côté forge).
- * Le fil disait « app/foo.tsx modifié » et la seule surface capable de montrer
- * ce changement ne le connaissait pas.
+ * The diff view of the conversation was served by the FORGE
+ * ([diff/route.ts](../../../app/api/agent-runs/[runId]/diff/route.ts)): the PR
+ * when it exists, otherwise compares it to `base...branch`. This is the PUSHED work,
+ * and the agent only pushes at the end of the round — while it is working, click a
+ * file that it has just modified therefore opened the BEFORE state, when it was
+ * not an empty diff (first round: the branch does not yet exist on the forge).
+ * The thread said "app/foo.tsx modified" and the only surface capable of showing
+ * this change did not know about it.
  *
- * Ici, on lit le dépôt là où il vit (`host.layout.repoDir`), dans la microVM du
- * run. `git diff origin/<base>` y couvre TOUT — les commits des tours précédents
- * ET l'arbre de travail non committé — donc la même chose que le compare de la
- * forge, plus ce qui n'est pas encore parti. Une seule source pendant le tour,
- * pas deux diffs à recoller (des patches ne se composent pas).
+ * Here, we read the repository where it lives (`host.layout.repoDir`), in the microVM of the
+ *run. `git diff origin/<base>` covers EVERYTHING there — the commits from previous rounds
+ * AND the uncommitted working tree — so the same thing as the compare from the
+ * forge, plus what hasn't gone yet. A single source during the round,
+ * no two diffs to glue together (patches are not composed).
  *
- * **LECTURE SEULE, et c'est la condition de sa sûreté.** Ces commandes tournent
- * pendant qu'un tour édite et committe : ni `add`, ni `add -N`, ni écriture
- * d'index — la fin de tour stage et committe seule ([commitAndPush](repo-host.ts)),
- * et une intention d'ajout posée ici finirait dans le commit de quelqu'un
- * d'autre. Le pire qui puisse arriver est un instantané pris entre deux états.
+ * **READ ONLY, and this is the condition of its safety.** These commands run
+ * while a round edits and commits: neither `add`, neither `add -N`, nor write
+ * index — the end of round stage and commit alone ([commitAndPush](repo-host.ts)),
+ * and an add intention placed here would end up in someone else's commit
+ *. The worst that can happen is a snapshot taken between two states.
  *
- * Les fichiers NON SUIVIS passent par `git diff --no-index /dev/null <chemin>`,
- * qui rend exactement la même forme qu'un `new file mode` sans toucher à
- * l'index. Sans ça, un fichier tout juste créé — le cas le plus fréquent d'un
- * tour d'agent — serait absent du diff qu'on montre.
+ * UNTRACKED files pass through `git diff --no-index /dev/null <path>`,
+ * which renders exactly the same shape as a `new file mode` without touching the
+ * index. Without that, a newly created file — the most common case of an
+ * agent trick — would be absent from the diff that we show.
  *
- * Le parsing est PUR et testé ([working-diff.test.ts](working-diff.test.ts)) :
- * ce module ne peut pas s'exercer contre une vraie sandbox, mais la lecture des
- * trois sorties de git, elle, s'exerce entièrement.
+ * The parsing is PURE and tested ([working-diff.test.ts](working-diff.test.ts)):
+ * this module does not cannot be practiced against a real sandbox, but reading the three git outputs can be fully practiced.
  */
 
-/** Un fichier du diff de travail, à la forme que servent déjà les forges
- *  (`PullRequestFile` côté client) : la vue diff n'a pas à savoir d'où ça vient. */
+/** A file of the working diff, in the form that forges already serve
+ * (`PullRequestFile` on the client side): the diff view does not have to know where it comes from. */
 export interface WorkingDiffFile {
   filename: string;
   status: "added" | "removed" | "renamed" | "modified";
@@ -47,35 +46,35 @@ export interface WorkingDiffFile {
 }
 
 /**
- * Plafond d'octets sur le TEXTE des patches, appliqué par `head -c` côté sandbox :
- * un tour qui régénère un lockfile produit un diff de plusieurs mégaoctets, qu'on
- * ne veut ni faire transiter ni peindre. La coupe tombe au milieu d'une ligne,
- * donc le parseur doit la tolérer — il ne fait qu'y perdre le dernier fichier.
+ * Byte cap on patch TEXT, applied by `head -c` on the sandbox side:
+ * a trick that regenerates a lockfile produces a diff of several megabytes, which we
+ * does not want to pass or paint. The cut falls in the middle of a line,
+ * so the parser must tolerate it — it only loses the last file.
  */
 export const WORKING_DIFF_MAX_BYTES = 2_000_000;
 
 /**
- * Plafond du diff qui quitte une exécution locale. Contrairement à une microVM,
- * le serveur ne peut pas relire ce dépôt : le patch voyage donc une fois dans le
- * direct, puis dans l'event de fin de tour. On reste nettement sous la limite du
- * plan de contrôle et de Realtime ; les gros diffs gardent leur liste et leurs
- * compteurs, mais annoncent que les patches sont tronqués.
+ * Ceiling of the diff that leaves a local execution. Unlike a microVM,
+ * the server cannot reread this repository: the patch therefore travels once in the direct
+ *, then in the end of turn event. We remain clearly below the limit of the
+ * control plan and Realtime; big diffs keep their list and their
+ * counters, but announce that the patches are truncated.
  */
 export const LOCAL_WORKING_DIFF_MAX_BYTES = 240_000;
 
-/** Le tour a-t-il produit un diff plus gros que ce plafond, ou plus de fichiers
- *  que `CHANGED_FILES_CAP` ? Se dit à l'écran — une liste tronquée sans le dire
- *  se lit comme une liste complète. */
+/** Did the round produce a diff larger than this cap, or more files
+ * than `CHANGED_FILES_CAP`? Said on screen — a truncated list without saying it
+ * reads like a complete list. */
 export interface WorkingDiff {
   files: WorkingDiffFile[];
   truncated: boolean;
 }
 
 /**
- * Le chemin APRÈS d'un champ `--numstat`, qui compacte les renommages
- * (`a => b`, `{a => b}`, `pre/{a => b}/post`). Jumeau de `numstatNewPath` de
- * [repo-host](repo-host.ts) — la duplication est assumée : celui-là est privé, et
- * l'exporter ferait passer un détail de parsing pour une primitive de dépôt.
+ * The path AFTER a `--numstat` field, which compacts the
+ * renames (`a => b`, `{a => b}`, `pre/{a => b}/post`). Twin of `numstatNewPath` of
+ * [repo-host](repo-host.ts) — duplication is assumed: this one is private, and
+ * exporting it would pass off a parsing detail as a repository primitive.
  */
 function numstatNewPath(field: string): string {
   const brace = field.match(/^(.*)\{(.*) => (.*)\}(.*)$/);
@@ -87,8 +86,8 @@ function numstatNewPath(field: string): string {
   return (arrow.length === 2 ? arrow[1] : field).trim();
 }
 
-/** `git diff --numstat` → compteurs indexés par chemin d'arrivée. Un fichier
- *  binaire vaut `-` des deux côtés : compté 0/0, comme le fait la forge. */
+/** `git diff --numstat` → counters indexed by arrival path. A binary
+ * file is worth `-` on both sides: counted 0/0, as the forge does. */
 export function parseNumstat(stdout: string): Map<string, { additions: number; deletions: number }> {
   const counts = new Map<string, { additions: number; deletions: number }>();
   for (const line of stdout.split("\n")) {
@@ -108,8 +107,8 @@ interface NameStatusEntry {
   previousFilename?: string;
 }
 
-/** `git diff --name-status --find-renames` → statut et chemins propres (le seul
- *  endroit où un renommage donne ses DEUX chemins sans compactage). */
+/** `git diff --name-status --find-renames` → status and clean paths (the only
+ * place where a rename gives its BOTH paths without compaction). */
 export function parseNameStatus(stdout: string): NameStatusEntry[] {
   const out: NameStatusEntry[] = [];
   for (const line of stdout.split("\n")) {
@@ -124,8 +123,8 @@ export function parseNameStatus(stdout: string): NameStatusEntry[] {
     }
     const filename = parts[1] ?? "";
     if (!filename) continue;
-    // Copie (C) = fichier neuf côté cible → « ajouté » du point de vue lecteur.
-    // Tout le reste (M, T, U…) se dit « modifié », comme chez GitHub.
+    // Copy (C) = new file on the target side → “added” from the reader point of view.
+    // Everything else (M, T, U…) is called “modified”, like on GitHub.
     const status: WorkingDiffFile["status"] =
       code === "A" || code === "C" ? "added" : code === "D" ? "removed" : "modified";
     out.push({ filename, status });
@@ -134,26 +133,26 @@ export function parseNameStatus(stdout: string): NameStatusEntry[] {
 }
 
 /**
- * Un diff unifié → le patch de chaque fichier, à la forme de GitHub : les HUNKS
- * seuls, de la première ligne `@@` à la fin de la section. L'en-tête
- * (`diff --git`, `index`, `---`, `+++`) est reconstruit à l'affichage
- * ([toUnifiedDiff](../../../components/pull-requests/pr-diff.tsx)), et le garder
- * ici le ferait apparaître en double.
+ * A unified diff → the patch of each file, in the form of GitHub: the HUNKS
+ * alone, from the first line `@@` to the end of the section. The header
+ * (`diff --git`, `index`, `---`, `+++`) is rebuilt when displayed
+ * ([toUnifiedDiff](../../../components/pull-requests/pr-diff.tsx)), and keeping
+ * here would make it appear duplicate.
  *
- * Le chemin se lit sur `+++ b/<chemin>` (ou `--- a/<chemin>` pour une
- * suppression), jamais sur la ligne `diff --git` : elle colle les deux chemins
- * sans séparateur exploitable, et un fichier dont le nom porte un espace y
- * devient indécidable. Git suffixe d'ailleurs ces lignes-là d'une tabulation,
- * qu'on retire.
+ * The path reads as `+++ b/<path>` (or `--- a/<path>` for a
+ * deletion), never on the `diff --git` line: it pastes the two paths
+ * without an usable separator, and a file whose name has a space y
+ * becomes undecidable. Git also suffixes these lines with a tab,
+ * which is removed.
  *
- * Une section sans hunk (renommage pur, fichier binaire) rend un patch VIDE :
- * il n'y a rien à peindre, et la vue diff sait déjà le dire.
+ * A section without a hunk (pure renaming, binary file) makes a patch EMPTY:
+ * there is nothing to paint, and the diff view already knows the say.
  */
 export function splitUnifiedDiff(text: string): Map<string, string> {
   const out = new Map<string, string>();
   if (!text.trim()) return out;
-  // `\ndiff --git ` et non `diff --git ` : une ligne de contenu du patch peut
-  // commencer par ces mots (un diff dans un diff — ce fichier-ci, tiens).
+  // `\ndiff --git ` and not `diff --git `: a line of patch content can
+  // start with these words (a diff within a diff — this file, here).
   const sections = `\n${text}`.split("\ndiff --git ");
   for (const section of sections) {
     if (!section.trim()) continue;
@@ -175,10 +174,10 @@ export function splitUnifiedDiff(text: string): Map<string, string> {
       } else if (line.startsWith("rename to ")) {
         filename = line.slice("rename to ".length);
       } else if (line.startsWith("Binary files ") && line.endsWith(" differ")) {
-        // Un binaire n'a ni `---` ni `+++` : sa seule ligne nomme les deux côtés
-        // (`Binary files /dev/null and b/logo.png differ`). Il n'a rien à peindre,
-        // mais il DOIT figurer dans la liste — un tour qui remplace une image ne
-        // peut pas passer pour un tour qui n'a rien fait.
+        // A binary has neither `---` nor `+++`: its single line names both sides
+        // (`Binary files /dev/null and b/logo.png differ`). He has nothing to paint,
+        // but it MUST be in the list — a trick that replaces an image does not
+        // cannot pass for a trick that did nothing.
         const right = line.slice("Binary files ".length, -" differ".length).split(" and ").pop();
         if (right && right !== "/dev/null") filename = right.replace(/^[ab]\//, "");
       }
@@ -189,8 +188,8 @@ export function splitUnifiedDiff(text: string): Map<string, string> {
   return out;
 }
 
-/** Additions/suppressions lues sur un patch — le seul compte disponible pour un
- *  fichier NON SUIVI, que `git diff --numstat` ignore par construction. */
+/** Additions/deletions read on a patch — the only count available for an
+ * UNTRACKED file, which `git diff --numstat` ignores by construction. */
 export function countPatchLines(patch: string): { additions: number; deletions: number } {
   let additions = 0;
   let deletions = 0;
@@ -202,19 +201,19 @@ export function countPatchLines(patch: string): { additions: number; deletions: 
 }
 
 /**
- * Les quatre sorties de git → la liste servie à la vue diff. Pur : c'est ici que
- * vit toute la lecture, et donc tout ce qui peut se tromper.
+ * The four outputs of git → the list served to the diff view. Pure: this is where
+ * lives all the reading, and therefore everything that can go wrong.
  *
- * Les fichiers non suivis sont ajoutés APRÈS les suivis puis le tout est trié par
- * chemin : `git status` et `git diff` ne parlent pas du même ensemble, et un
- * fichier ne peut pas être dans les deux.
+ * Untracked files are added AFTER the tracks then everything is sorted by
+ * path: `git status` and `git diff` do not speak of the same together, and a
+ * file cannot be in both.
  */
 export function buildWorkingDiff(out: {
   nameStatus: string;
   numstat: string;
   patch: string;
   untrackedPatch: string;
-  /** Le texte des patches a été coupé au plafond d'octets. */
+  /** Patch text has been trimmed to the byte limit. */
   patchTruncated?: boolean;
 }): WorkingDiff {
   const counts = parseNumstat(out.numstat);
@@ -251,48 +250,48 @@ export function buildWorkingDiff(out: {
 }
 
 /**
- * Les commandes, telles qu'elles partent dans la sandbox. `patches: false` sert
- * l'EN-TÊTE de la conversation, qui n'a besoin que des deux nombres et les
- * redemande toutes les quelques secondes pendant le tour : deux passes git
- * courtes, pas des mégaoctets de patch.
+ * Commands, as they go into the sandbox. `patches: false` serves
+ * the HEADER of the conversation, which only needs the two numbers and the
+ * requests again every few seconds during the round: two short git
+ * passes, not patch megabytes.
  *
- * `baseRef` est une ref git (`origin/main`), pas une entrée de l'utilisateur :
- * elle vient du run. Elle passe quand même par `sq` — le jour où elle viendra
- * d'ailleurs, la question ne se reposera pas.
+ * `baseRef` is a git ref (`origin/main`), not user input:
+ * it comes from the run. It still goes through `sq` — the day it comes
+ * moreover, the question will not be asked again.
  *
- * Best-effort de bout en bout, comme `changedFiles` : la sandbox peut être en
- * train de committer, de s'éteindre, ou ne plus répondre. Un diff vide se lit
- * comme « rien à montrer », ce qui est vrai le plus souvent, et n'empêche jamais
- * la vue de s'ouvrir.
+ * Best effort from end to end, like `changedFiles`: the sandbox can be in
+ * in the process of committing, turn off, or no longer respond. An empty diff reads
+ * as "nothing to show", which is true most often, and never prevents
+ * the view from opening.
  */
 /**
- * LA BASE DU DIFF, RÉSOLUE DANS LE CLONE — le POINT DE DÉPART DE LA BRANCHE,
- * c'est-à-dire `git merge-base origin/<base> HEAD`, et surtout pas le tip de
+ * THE BASE OF THE DIFF, RESOLVED IN THE CLONE — the STARTING POINT OF THE BRANCH,
+ * i.e. `git merge-base origin/<base> HEAD`, and especially not the tip of
  * `origin/<base>`.
  *
- * C'EST LA DIFFÉRENCE ENTRE DEUX POINTS ET TROIS POINTS, et elle se chiffre. Un
- * `git diff origin/main` compare l'arbre de travail au tip de la base : tout ce
- * qui a atterri sur `main` depuis que la branche est partie y apparaît
- * **INVERSÉ**, comme si l'agent l'avait annulé. La forge, elle, montre
- * `base...tête` — depuis le point commun. Les deux vues ne racontent alors pas
- * le même tour, et c'est ce qu'on a lu sur la PR 51 : **881 lignes en direct
- * contre 130 à la forge**, parce que deux commits (729 lignes) étaient tombés
- * sur `main` entre la naissance de la branche et le clonage de ce tour-là.
+ * THIS IS THE DIFFERENCE BETWEEN TWO POINTS AND THREE POINTS, and it can be quantified. A
+ * `git diff origin/main` compares the working tree to the base tip: everything
+ * that has landed on `main` since the branch left appears there
+ * **REVERSED**, as if the agent had canceled it. The forge shows
+ * `base...head` — from the common point. The two views then do not tell
+ * the same turn, and this is what we read on PR 51: **881 lines live
+ * against 130 in the forge**, because two commits (729 lines) had fallen
+ * on `main` between the birth of the branch and cloning this turn.
  *
- * Le commentaire d'avant disait « `origin/<base>` est figé au clonage, donc le
- * diff est juste ». Figé, il l'est — mais au clonage de CE TOUR, pas à la
- * naissance de la branche. Une session qui reprend une branche vieille de
- * quelques heures reclone une base qui a bougé, et l'écart est exactement le
- * travail des autres.
+ * The comment before said "`origin/<base>` is fixed on cloning, so the
+ * diff is correct". Frozen, it is — but at the cloning of THIS TURN, not at the
+ * birth of the branch. A session that takes over a branch that is
+ * a few hours old reclones a database that has moved, and the difference is exactly the
+ * work of others.
  *
- * `baseBranch` est nul quand le run est parti sur la branche par défaut du dépôt
- * sans qu'on l'ait nommée. Plutôt que d'aller la demander à la forge (un token
- * d'installation pour un nom), on la lit dans le clone : celui-ci est
- * `--single-branch`, donc il n'y a QU'UNE ref distante, et c'est forcément
- * celle-là.
+ * `baseBranch` is zero when the run is started on the default branch of the repository
+ * without having been named. Rather than going to the forge to ask for it (an installation token
+ * for a name), we read it in the clone: this one is
+ * `--single-branch`, so there is ONLY ONE remote ref, and it is necessarily
+ * that one.
  *
- * `null` = pas de base lisible (dépôt absent, sandbox muette) ⇒ pas de diff en
- * direct, et l'appelant retombe sur la forge.
+ * `null` = no readable base (deposit missing, silent sandbox) ⇒ no live diff,
+ * and the caller falls back to the forge.
  */
 export async function resolveBaseRef(
   host: RepoHost,
@@ -304,7 +303,7 @@ export async function resolveBaseRef(
   return await mergeBaseWithHead(host, ref, shell);
 }
 
-/** Le tip de la base dans le clone — la ref, avant de remonter au point commun. */
+/** The tip of the base in the clone — the ref, before going back to the common point. */
 async function resolveBaseTip(
   host: RepoHost,
   baseBranch: string | null,
@@ -316,12 +315,12 @@ async function resolveBaseTip(
     const ok = await run(host, `git rev-parse --verify --quiet ${sq(ref)}`, shell);
     if (ok.trim()) return ref;
   }
-  // `origin/HEAD` quand le clone l'a posé : c'est nommément la branche par défaut.
+  // `origin/HEAD` when the clone has installed it: this is the default branch.
   const head = await run(host, `git symbolic-ref --quiet --short refs/remotes/origin/HEAD`, shell);
   if (head.trim()) return head.trim();
-  // Sinon la seule ref distante qui reste. `--exclude` écarte `origin/HEAD`, dont
-  // le nom court est « origin » tout court : un ref valide, mais qui se lit comme
-  // un bug le jour où il apparaît dans un log.
+  // Otherwise the only remote ref left. `--exclude` excludes `origin/HEAD`, of which
+  // the short name is “origin” for short: a valid ref, but which reads like
+  // a bug the day it appears in a log.
   const only = await run(
     host,
     `git for-each-ref --count=1 --format='%(refname:short)'` +
@@ -332,14 +331,14 @@ async function resolveBaseTip(
 }
 
 /**
- * Le point commun entre la base et la tête, ou la base elle-même quand git ne
- * sait pas le dire.
+ * The common point between the base and the head, or the base itself when git ne
+ * cannot tell.
  *
- * LE REPLI EST LE COMPORTEMENT D'AVANT, et il est assumé : un clone `--depth`
- * peut n'avoir aucun ancêtre commun dans son greffon, et `merge-base` rend alors
- * un code 1 sans rien écrire. Mieux vaut le diff légèrement trop large qu'aucun
- * diff — la vue tombe sinon sur la forge, qui ne connaît pas le travail non
- * poussé, c'est-à-dire précisément ce qu'on est venu voir.
+ * FALLBACK IS THE BEFORE BEHAVIOR, and it is assumed: a clone `--depth`
+ * can have no common ancestor in its plugin, and `merge-base` then returns
+ * a code 1 without writing anything. Better the slightly too wide diff than none
+ * diff — the view otherwise falls on the forge, which does not know the non
+ * pushed work, that is to say precisely what we came to see.
  */
 async function mergeBaseWithHead(
   host: RepoHost,
@@ -373,9 +372,9 @@ export async function readWorkingDiff(
       opts.patches
         ? run(
             host,
-            // `-I%` plutôt qu'un `xargs` nu : un chemin à espaces doit rester UN
-            // argument. `; true` avale le code 1 que `git diff --no-index` rend
-            // par DESIGN dès qu'il y a une différence — c'est-à-dire toujours ici.
+            // `-I%` rather than a bare `xargs`: a path with spaces must remain ONE
+            // argument. `; true` swallows the code 1 that `git diff --no-index` returns
+            // by DESIGN whenever there is a difference — that is to say always here.
             `git ls-files --others --exclude-standard -z${only}` +
               ` | xargs -0 -n1 -I% git diff --no-index --no-color -- /dev/null %` +
               ` | head -c ${maxBytes}; true`,
@@ -396,8 +395,8 @@ export async function readWorkingDiff(
   }
 }
 
-/** `undefined` = tout le dépôt ; `[]` = rien. Les chemins viennent du relevé
- * Git du harness, mais restent quotés comme toute donnée injectée au shell. */
+/** `undefined` = entire repository; `[]` = nothing. The paths come from the
+ * Git statement of the harness, but remain quoted like any data injected into the shell. */
 function workingDiffPathspec(scope: readonly string[] | undefined): string {
   if (scope === undefined) return "";
   if (scope.length === 0) return ` -- ${sq(":(exclude)*")}`;
@@ -406,7 +405,7 @@ function workingDiffPathspec(scope: readonly string[] | undefined): string {
 
 type ShellOpts = { cwd: string; timeoutMs: number };
 
-/** Une commande dont l'échec ne vaut rien de plus qu'une sortie vide. */
+/** A command whose failure is worth nothing more than empty output. */
 function run(host: RepoHost, command: string, opts: ShellOpts): Promise<string> {
   return host
     .exec(command, opts)

@@ -1,20 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-282 — ce que le noyau du fil d'une page décide, et que rien d'autre ne
- * rattrape.
+ * MIN-282 — what the core thread of a page decides, and nothing else catches up.
  *
- * Trois choses s'y jouent, et les trois sont invisibles à l'usage normal :
+ * Three things are at play here, and all three are invisible in normal use:
  *
- *  - QUI est prévenu, et une seule fois. Une citation dit déjà tout : recevoir
- *    « on vous a cité » ET « on a commenté votre page » pour le même message,
- *    c'est deux lignes pour un seul geste, et c'est comme ça qu'une inbox cesse
- *    d'être lue.
- *  - Une RÉPONSE hérite de l'ancre de son fil. Sans cette règle, répondre depuis
- *    un composeur qui connaît la sélection courante ancrerait la réponse sur un
- *    AUTRE bloc que la question — un fil qui parle de deux endroits.
- *  - Une page CORBEILLÉE ne se commente plus, et le refus est un 404 : le même
- *    signal que l'invisibilité RLS, jamais « elle existe mais… ».
+ * - WHO is warned, and only once. A quote already says it all: receive
+ * "you have been quoted" AND "we have commented on your page" for the same message,
+ * it's two lines for a single gesture, and that's how an inbox stops
+ * from being read.
+ * - A RESPONSE inherits the anchor of its thread. Without this rule, answering from
+ * a composer who knows the current selection would anchor the answer to a
+ * OTHER block than the question — a thread that speaks of two places.
+ * - A TRASHED page is no longer commented out, and the refusal is a 404: the same
+ * signal as invisibility RLS, never “it exists but…”.
  */
 
 const H = vi.hoisted(() => ({
@@ -41,9 +40,8 @@ vi.mock("@/lib/server/project-access", () => ({
 }));
 
 /**
- * Un client service jetable : deux tables, et rien d'autre à monter. On ne se
- * moque QUE de ce qui sort du process (la base) — la même frontière que les
- * autres tests de surface serveur.
+ * A disposable customer service: two tables, and nothing else to set up. We ONLY care about what comes out of the process (the base) — the same boundary as the
+ * other server surface tests.
  */
 vi.mock("@/lib/supabase-service", () => ({
   getServiceClient: () => ({
@@ -103,7 +101,7 @@ describe("addPageComment", () => {
       page_id: "page-1",
       project_id: "p1",
       block_id: "b1",
-      // Replié sur une ligne : l'extrait est rangé, pas recopié tel quel.
+      // Folded onto one line: the extract is stored, not copied as is.
       quote: "la phrase en question",
       author_id: "u-clement",
       parent_id: null,
@@ -130,8 +128,8 @@ describe("addPageComment", () => {
   });
 
   it("une CITATION suffit : jamais deux lignes pour le même message", async () => {
-    // L'auteur de la page est aussi celui qu'on cite. Il doit recevoir la
-    // mention, et elle seule.
+    // The author of the page is also the one cited. He must receive the
+    // mention, and it alone.
     await addPageComment({
       pageId: "page-1",
       actorId: "u-clement",
@@ -168,15 +166,15 @@ describe("addPageComment", () => {
       pageId: "page-1",
       actorId: "u-clement",
       body: "d'accord avec toi",
-      // Une ancre DIFFÉRENTE, telle qu'un composeur pourrait la porter : elle
-      // doit être ignorée, sinon le fil parlerait de deux endroits.
+      // A DIFFERENT anchor, such as a composer might carry: it
+      // should be ignored, otherwise the thread would talk about two places.
       blockId: "b-ailleurs",
       parentId: "root-1",
     });
     expect(H.inserted).toMatchObject({
       parent_id: "root-1",
       block_id: "b1",
-      // L'extrait vit sur la racine : une réponse ne re-cite pas le passage.
+      // The extract lives on the root: a response does not re-quote the passage.
       quote: null,
     });
     expect(rows().map((r) => r.user_id)).toEqual(["u-bob", "u-author"]);

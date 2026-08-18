@@ -33,28 +33,28 @@ import { agentModelsQueryKey } from "@/lib/use-agent-models-query";
 import { agentPreferencesQueryKey } from "@/lib/use-agent-preferences-query";
 
 /**
- * « Votre clé d'API » — le choix du provider et la clé, et rien d'autre
- * (MIN-46, extrait par MIN-149).
+ * “Your API key” — choice of provider and key, and nothing else
+ * (MIN-46, extracted by MIN-149).
  *
- * Un seul sélecteur EN PREMIER : « Quota minddy » (mode plateforme, plafonné)
- * OU un provider BYOK (OpenRouter / OpenAI / Anthropic / Google / générique, à
- * ses frais, un seul actif à la fois). Repasser au quota minddy retire la clé
- * active — c'est ce que « quota minddy » veut dire côté serveur : absence de
+ * Only one selector FIRST: “Quota minddy” (platform mode, capped)
+ * OR a BYOK provider (OpenRouter / OpenAI / Anthropic / Google / generic, at
+ * its costs, only one asset at a time). Going back to the minddy quota removes the active key
+ * — this is what "minddy quota" means on the server side: absence of
  * BYOK.
  *
- * Même patron que `McpConnectPanel` : le composant sert les réglages du compte
- * (`account-ai-keys-section.tsx`, qui lui ajoute le modèle et le raisonnement
- * par défaut) et l'étape « clé » de l'onboarding
- * (`components/home/onboarding-key-step.tsx`, qui n'y ajoute que sa sortie).
- * Le parcours doit rester court : c'est l'argument central du prix, pas un
- * réglage d'expert qu'on va chercher.
+ * Same pattern as `McpConnectPanel`: the component serves the account settings
+ * (`account-ai-keys-section.tsx`, which adds the model and reasoning
+ * by default) and the “key” step of onboarding
+ * (`components/home/onboarding-key-step.tsx`, which only adds its output).
+ * The journey must remain short: it is the central argument of the price, not un
+ * expert setting that we will look for.
  */
 export function ByokConnectPanel({
   className,
   onConnected,
 }: {
   className?: string;
-  /** Une clé vient d'être enregistrée — l'onboarding s'en sert pour avancer. */
+  /** A key has just been registered — onboarding uses it to move forward. */
   onConnected?: () => void;
 }) {
   const t = useTranslations("Account");
@@ -66,40 +66,40 @@ export function ByokConnectPanel({
   const activeProvider = activeKey?.provider ?? MINDDY_QUOTA_PROVIDER_ID;
   const desktop = isDesktop();
 
-  // Sélection courante = override en cours (avant enregistrement) sinon le
-  // provider persisté. Brouillons de clé / base URL pour le formulaire BYOK.
+  // Current selection = override in progress (before recording) otherwise the
+  // persisted provider. Draft key/base URL for BYOK form.
   const [selectedOverride, setSelectedOverride] = useState<string | null>(null);
   const [keyDraft, setKeyDraft] = useState("");
   const [baseUrlDraft, setBaseUrlDraft] = useState("");
   const [saving, setSaving] = useState(false);
 
   const selected = selectedOverride ?? activeProvider;
-  const selectedDef = getAgentProvider(selected); // undefined pour « quota minddy »
+  const selectedDef = getAgentProvider(selected); // undefined for “quota minddy”
   const localProvider = !!selectedDef && isLocalAgentProvider(selectedDef.id);
   const isConfigured = !!activeKey && activeKey.provider === selected;
 
   /**
-   * Le registre porte des noms de MARQUE, qui ne se traduisent pas — sauf celui
-   * du générique, qui n'est pas une marque mais une description, et qui
-   * s'affichait en français dans l'UI anglaise. Il vient donc d'ici, pas de
-   * `AGENT_PROVIDERS`. Le reste passe tel quel.
-   */
+ * The register has BRAND names, which do not translate - except the one
+ * in the generic, which is not a brand but a description, and which
+ * was displayed in French in the English UI. So it comes from here, not from
+ * `AGENT_PROVIDERS`. The rest goes as is.
+ */
   const providerLabel = (provider: { id: string; label: string }) => {
     if (provider.id === "generic") return t("aiProviderGeneric");
     if (provider.id === "local_openai") return t("aiProviderLocalOpenAi");
     return provider.label;
   };
-  // Un endpoint local n'a de sens que dans l'app qui peut le joindre. On laisse
-  // néanmoins la configuration active visible dans le navigateur pour pouvoir la
-  // retirer sans devoir revenir sur le Mac qui l'a créée.
+  // A local endpoint only makes sense in the app that can reach it. We leave
+  // nevertheless the active configuration visible in the browser to be able to
+  // remove without having to return to the Mac that created it.
   const providers = AGENT_PROVIDERS.filter(
     (provider) => desktop || !isLocalAgentProvider(provider.id) || provider.id === activeKey?.provider,
   );
   const cloudProviders = providers.filter((provider) => !isLocalAgentProvider(provider.id));
   const localProviders = providers.filter((provider) => isLocalAgentProvider(provider.id));
 
-  /** La clé change l'endpoint ET le catalogue de modèles : les trois lectures
-   *  qui en dépendent se réconcilient ensemble, jamais l'une sans l'autre. */
+  /** The key changes the endpoint AND the model catalog: the three readings
+ * that depend on it reconcile together, never one without the other. */
   const refreshByok = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: aiKeysQueryKey }),
@@ -110,12 +110,12 @@ export function ByokConnectPanel({
 
   const onProviderChange = async (next: string) => {
     setKeyDraft("");
-    // L'installation habituelle ne demande aucune saisie : les deux ports sont
-    // ceux proposés par Ollama et LM Studio. Cette valeur reste éditable pour
-    // Docker, une autre machine du LAN ou un autre serveur compatible.
+    // The usual installation does not require any input: the two ports are
+    // those offered by Ollama and LM Studio. This value remains editable for
+    // Docker, another machine on the LAN or another compatible server.
     setBaseUrlDraft(getAgentProvider(next)?.localDefaultBaseUrl ?? "");
     setSelectedOverride(next);
-    // Repasser au quota minddy = retirer le BYOK actif (mode plateforme).
+    // Return to minddy quota = remove active BYOK (platform mode).
     if (next === MINDDY_QUOTA_PROVIDER_ID && activeKey) {
       try {
         await deleteAiKeyApi();
@@ -217,10 +217,10 @@ export function ByokConnectPanel({
       ) : null}
 
       {selected === MINDDY_QUOTA_PROVIDER_ID ? (
-        // ── Quota minddy : mode plateforme, aucune clé ──────────────────────
+        // ── Minddy quota: platform mode, no key ──────────────────────
         <p className="text-xs text-muted-foreground">{t("aiProviderMinddyHint")}</p>
       ) : isConfigured && activeKey ? (
-        // ── BYOK configuré : rappel de la clé + retrait ─────────────────────
+        // ── BYOK configured: key recall + withdrawal ─────────────────────
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
             <ProviderLogo provider={activeKey.provider} size={20} />
@@ -237,23 +237,22 @@ export function ByokConnectPanel({
               {t("aiKeyRemove")}
             </Button>
           </div>
-          {/* MIN-344 : une clé que le fournisseur n'a jamais confirmée ne lève
-              aucun plafond. Le cas est rare (on refuse tout de suite une clé
-              refusée ; il ne reste que celles enregistrées pendant une panne du
-              fournisseur), mais il doit se LIRE — sinon le compte reste plafonné
-              sans que rien à l'écran ne l'explique. */}
+          {/* MIN-344: A key that the provider has never confirmed does not raise
+ any cap. The case is rare (a refused key
+ is immediately refused; only those recorded during a failure of the
+ supplier remain), but it must be READ — otherwise the account remains capped
+ without anything on the screen explaining it. */}
           {activeKey.validated_at ? null : (
             <p className="text-xs text-amber-600 dark:text-amber-500">
               {t("aiKeyUnconfirmed")}
             </p>
           )}
-          {/* MIN-223 : dit ici parce que ça ne se corrige pas ailleurs — la clé
-              de minddy est plafonnée par run côté fournisseur, celle-ci ne peut
-              pas l'être : elle n'est pas sur notre compte. */}
+          {/* MIN-223: said here because it cannot be corrected elsewhere — minddy's key
+ is capped by run on the supplier side, this one cannot be capped: it is not on our account. */}
           <p className="text-xs text-muted-foreground">{t("aiKeyVmNote")}</p>
         </div>
       ) : selectedDef ? (
-        // ── BYOK à configurer : clé (+ base URL pour le générique) ──────────
+        // ── BYOK to configure: key (+ URL base for the generic) ──────────
         <div className="flex flex-col gap-3">
           <p className="text-xs text-muted-foreground">
             {isLocalAgentProvider(selectedDef.id)
@@ -290,9 +289,9 @@ export function ByokConnectPanel({
                 onChange={(e) => setKeyDraft(e.target.value)}
                 placeholder={localProvider ? t("aiKeyOptionalPlaceholder") : selectedDef.keyPlaceholder}
                 type="password"
-                // `off` est ignoré par plusieurs gestionnaires de mots de passe
-                // sur les champs password ; `new-password` désactive réellement
-                // la proposition d'identifiants enregistrés pour une clé API.
+                // `off` is ignored by many password managers
+                // on password fields; `new-password` actually disables
+                // the proposal of registered identifiers for an API key.
                 autoComplete="new-password"
                 spellCheck={false}
                 autoCapitalize="off"

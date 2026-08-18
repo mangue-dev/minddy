@@ -1,7 +1,7 @@
 import "server-only";
 
-/** Document RFC 8414 partagé par oauth-authorization-server et l'alias
-    openid-configuration. Clients publics + PKCE S256 uniquement. */
+/** RFC 8414 document shared by oauth-authorization-server and alias
+ openid-configuration. Public customers + PKCE S256 only. */
 export function buildAuthorizationServerMetadata(origin: string) {
   return {
     issuer: origin,

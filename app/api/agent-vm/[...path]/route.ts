@@ -12,94 +12,94 @@ import {
 } from "@/lib/server/agent/network-policy";
 
 /**
- * PLAN DE CONTRÔLE de la microVM de l'agent (MIN-223) — l'unique porte par
- * laquelle une boucle qui exécute un tour touche la base, le ledger, les tickets
- * et le carnet.
+ * Agent microVM CONTROL PLANE (MIN-223) — the only door through
+ * which a loop which executes a turn touches the base, the ledger, the tickets
+ * and the notebook.
  *
- * DEUX VOIES D'ADMISSION, ET UNE SEULE PORTE (MIN-355). Elles ne prouvent pas la
- * même chose de la même façon, et tout le reste — le 413, le parsing du corps, la
- * dérivation de la surface, l'appel au module — leur est commun et n'est écrit
- * qu'une fois (`serveControlPlane`).
+ * TWO INTAKE LANES, AND SINGLE DOOR (MIN-355). They do not prove the
+ * same thing in the same way, and everything else — the 413, the body scan, the
+ * derivation of the surface, the call to the module — is common to them and is not written
+ * only once (`serveControlPlane`).
  *
- * ── VOIE 1 : LA MICROVM, QUI N'A AUCUN SECRET À TRANSPORTER ──────────────────
+ * ── PATH 1: THE MICROVM, WHICH HAS NO SECRETS TO CARRY ──────────────────
  *
- * Et c'est tout l'intérêt. `defineSandboxProxy` valide l'OIDC que le firewall de
- * Vercel Sandbox a posé sur la requête forwardée (signature contre le JWKS de
- * `oidc.vercel.com`, `aud`, fenêtre de validité) et rend les claims d'identité de
- * la sandbox émettrice : team, projet, nom. Notre nommage étant `agent-<run.id>`,
- * le run est désigné par un claim signé, jamais par le corps de la requête — rien
- * à croire sur parole, rien qu'un `env` de la VM puisse lire.
+ * And that's the whole point. `defineSandboxProxy` validates the OIDC that the firewall of
+ * Vercel Sandbox posed on the forwarded request (signature against the JWKS of
+ * `oidc.vercel.com`, `aud`, validity window) and makes the identity claims of
+ * the sending sandbox: team, project, name. Our name being `agent-<run.id>`,
+ * the run is designated by a signed claim, never by the body of the request — nothing
+ * to take my word for it, nothing that a `env` of the VM can read.
  *
- * MAIS L'OIDC SEUL NE DIT PAS DE QUEL COMPTE ON PARLE (MIN-331). L'émetteur est
- * commun à toute la plateforme, et l'`aud` est celle que l'appelant a lui-même
- * posée dans le `forwardURL` de SA politique réseau : n'importe quel client
- * Vercel pouvait pointer son `forwardURL` sur notre origine, nommer sa sandbox
- * `agent-<uuid d'un run à nous>` et passer les trois vérifications — pour en
- * tirer le jeton de forge du run, son checkpoint et sa surface d'outils. Ce qui
- * tranche est `admitSandboxCaller` : `team_id` et `project_id` sont posés par la
- * plateforme, hors de portée de l'appelant, et on exige les NÔTRES avant même de
- * lire le nom de la sandbox.
+ * BUT THE OIDC ALONE DOES NOT SAY WHICH ACCOUNT WE ARE TALKING ABOUT (MIN-331). The transmitter is
+ * common to the entire platform, and the `aud` is the one that the caller himself has
+ * asked in the `forwardURL` of ITS network policy: any client
+ * Vercel could point his `forwardURL` at our origin, name his sandbox
+ * `agent-<uuid for one of our runs>` and pass the three checks — to
+ * draw the run's forge token, its checkpoint and its tool surface. What
+ * slice is `admitSandboxCaller`: `team_id` and `project_id` are set by the
+ * platform, out of reach of the caller, and we demand OURS before even
+ * read the name of the sandbox.
  *
- * L'`aud` reste vérifiée pour ce qu'elle vaut : elle vaut le `forwardURL` de la
- * politique, c'est-à-dire l'ORIGINE NUE du déploiement (`agentControlOrigin`).
- * Le firewall append le chemin demandé par la VM : l'URL que la VM appelle et
- * celle qui arrive ici sont donc littéralement la même.
+ * The `aud` remains checked for what it is worth: it is worth the `forwardURL` of the
+ * policy, that is to say the NARE ORIGIN of the deployment (`agentControlOrigin`).
+ * The firewall adds the path requested by the VM: the URL that the VM calls and
+ * the one that arrives here are therefore literally the same.
  *
- * FENÊTRE DE VALIDITÉ ET REJEU. `jwtVerify` fait respecter `exp`/`nbf` (60 s de
- * tolérance d'horloge) : un jeton périmé ne passe pas. Le rejeu, lui, n'a pas de
- * garde applicatif et n'en demande pas — le jeton est frappé par le firewall
- * APRÈS la sortie de la VM (elle ne le voit jamais, cf. network-policy.ts), il ne
- * circule qu'en TLS jusqu'à notre origine, et rien ici ne le journalise. Un
- * rejeu suppose donc de l'avoir intercepté sur ce chemin-là, et ne vaudrait que
- * le temps qui reste — pour agir sur le run qu'il désigne déjà, et aucun autre.
+ * VALIDITY WINDOW AND REPLAY. `jwtVerify` enforces `exp`/`nbf` (60 s of
+ * clock tolerance): an expired token does not pass. Replay has no
+ * application guard and does not request one — the token is hit by the firewall
+ * AFTER the VM exits (it never sees it, cf. network-policy.ts), it does not
+ * only travels in TLS to our origin, and nothing here logs it. A
+ * replay therefore supposes having intercepted it on this path, and would only be worth
+ * the time that remains — to act on the run that it already designates, and no other.
  *
- * ── VOIE 2 : LA MACHINE DE L'UTILISATEUR, QUI PORTE UN JETON ────────────────
+ * ── PATH 2: THE USER'S MACHINE, WHICH CARRYING A TOKEN ────────────────
  *
- * Sur un Mac, il n'y a pas de firewall pour signer. `defineSandboxProxy` accepte
- * un SECOND ARGUMENT, appelé quand les en-têtes `vercel-forwarded-*` manquent —
- * avec la requête ORIGINALE, corps non consommé (vérifié dans
- * `@vercel/sandbox/dist/proxy.js`). La voie locale est donc un `catch` sur la
- * porte existante : ni route jumelle, ni fork, ni seconde copie du 413.
+ * On a Mac, there is no firewall for signing. `defineSandboxProxy` accepts
+ * a SECOND ARGUMENT, called when the `vercel-forwarded-*` headers are missing —
+ * with the ORIGINAL query, unconsumed body (checked in
+ * `@vercel/sandbox/dist/proxy.js`). The local channel is therefore a `catch` on the
+ * existing gate: neither twin route, nor fork, nor second copy of 413.
  *
- * Elle est gardée par `admitLocalCaller` — un jeton HS256 `{rid, gen, exp}` que
- * NOUS avons signé ([local-exec-token.ts](../../../../lib/server/agent/local-exec-token.ts)).
- * Ce que ce jeton ouvre est délibérément plus étroit que ce qu'ouvre l'OIDC : il
- * vit sur un disque que le modèle peut lire, et `control-plane.ts` en réduit le
- * pouvoir plutôt que de prétendre le protéger.
+ * It is guarded by `admitLocalCaller` — an HS256 token `{rid, gen, exp}` that
+ * WE signed ([local-exec-token.ts](../../../../lib/server/agent/local-exec-token.ts)).
+ * What this token opens is deliberately narrower than what the OIDC opens: it
+ * lives on a disk that the model can read, and `control-plane.ts` reduces the
+ * power rather than pretending to protect it.
  *
- * CE QUI ATTERRIT ICI SANS ÊTRE LOCAL, et pourquoi ça ne fait pas de trou : une
- * requête bien forwardée dont l'OIDC est REFUSÉ passe aussi par ce second
- * argument. Elle n'a pas de jeton à nous — donc elle repart en 403, comme avant.
- * L'inverse (un jeton local valide accompagné d'en-têtes forwardés bidon) ne gagne
- * rien : le porteur du jeton choisit déjà la surface qu'il appelle.
+ * WHAT LANDS HERE WITHOUT BEING LOCAL, and why it doesn't make a hole: a
+ * well forwarded request whose OIDC is DEFUSED also goes through this second
+ * argument. She doesn't have a token of ours — so she goes back to 403, as before.
+ * The opposite (a valid local token accompanied by bogus forwarded headers) does not win
+ * nothing: the token holder already chooses the surface he is calling.
  *
- * Une requête sans OIDC valide ET sans jeton → 403. Une sandbox d'un autre
- * locataire, ou qui n'est pas celle d'un run → 403 aussi : ce n'est pas une
- * erreur de l'appelant, c'est quelqu'un qui n'a rien à faire ici. Et un
- * déploiement qui ne sait ni qui il sert ni signer → 503, jamais un passe-droit.
+ * A request without a valid OIDC AND without a token → 403. A sandbox from another
+ * tenant, or which is not that of a run → 403 also: it is not a
+ * Caller's mistake, he's someone who has no business here. And one
+ * deployment which neither knows who it serves nor signs → 503, never a privilege.
  */
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-/** Une requête de plan de contrôle est courte (un event, un checkpoint, un tool
- *  ticket). Le tool le plus lent est une recherche de tickets ; 60 s couvre. */
+/** A control plan request is short (an event, a checkpoint, a tool
+ * ticket). The slowest tool is a ticket search; 60s covers. */
 export const maxDuration = 60;
 
 /**
- * TOUT CE QUI EST COMMUN AUX DEUX VOIES, écrit une fois (MIN-355).
+ * EVERYTHING COMMON TO BOTH PATHS, written once (MIN-355).
  *
- * Ce qui différencie un appelant est son ADMISSION, et rien d'autre : une fois le
- * run désigné, une requête locale et une requête de microVM sont la même requête.
- * Dupliquer ces vingt lignes reviendrait à tenir deux plafonds de corps et deux
- * dérivations de surface — c'est-à-dire à en avoir un jour deux différents.
+ * What differentiates an appellant is his ADMISSION, and nothing else: once the
+ * designated run, a local query and a microVM query are the same query.
+ * Duplicating these twenty lines would amount to holding two body caps and two
+ * surface derivations — that is, to have two different ones one day.
  */
 async function serveControlPlane(
   request: Request,
   caller: { runId: string; sandboxName?: string; local?: { gen: number } },
 ): Promise<Response> {
-  // Le chemin est celui que l'appelant a demandé — sur la voie 1, le proxy le
-  // reconstruit depuis les en-têtes `vercel-forwarded-*` ; sur la voie 2, c'est
-  // l'URL appelée telle quelle. Dans les deux cas, pas le routage de Next.
+  // The path is the one the caller requested — on channel 1, the proxy
+  // rebuilt from `vercel-forwarded-*` headers; on track 2, it is
+  // the URL called as is. In both cases, not Next's routing.
   const url = new URL(request.url);
   if (!url.pathname.startsWith(AGENT_VM_PATH_PREFIX)) {
     return Response.json({ error: "off the control plane" }, { status: 404 });
@@ -109,9 +109,9 @@ async function serveControlPlane(
   let body: Record<string, unknown> | null = null;
   if (request.method !== "GET" && request.method !== "HEAD") {
     const raw = await request.text();
-    // 413 EXPLICITE plutôt que celui de la plateforme (MESURÉ : elle refuse dès
-    // ~4,3 Mio, en HTML). Un corps trop gros qui revient en page d'erreur serait
-    // lu par la boucle comme un succès — c'est le checkpoint qu'on perdrait.
+    // 413 EXPLICIT rather than that of the platform (MEASURED: it refuses as soon as
+    // ~4.3 MiB, in HTML). A body too large which returns to the error page would be
+    // read by the loop as a success — it is the checkpoint that we would lose.
     if (raw.length > CONTROL_PLANE_MAX_BODY_BYTES) {
       return Response.json(
         { error: `body too large (${raw.length} > ${CONTROL_PLANE_MAX_BODY_BYTES})` },
@@ -143,8 +143,8 @@ const handler = defineSandboxProxy(
       resolveControlPlaneTenant(),
     );
     if (!admission.ok) {
-      // Le 503 est une panne de CONFIGURATION, pas un refus : il mérite une ligne,
-      // sinon un déploiement sans VERCEL_TEAM_ID casserait tous les runs en silence.
+      // The 503 is a CONFIGURATION failure, not a refusal: it deserves a line,
+      // otherwise a deployment without VERCEL_TEAM_ID would break all runs silently.
       if (admission.status === 503) {
         console.error("[agent-vm] VERCEL_TEAM_ID/VERCEL_PROJECT_ID manquants — plan de contrôle fermé");
       }
@@ -156,9 +156,9 @@ const handler = defineSandboxProxy(
     });
   },
   /**
-   * LA VOIE LOCALE (MIN-355) — appelée avec la requête ORIGINALE et son corps
-   * intact quand rien ne l'a forwardée. C'est le seul endroit d'où un tour qui ne
-   * tourne pas chez Vercel puisse parler, et il n'y entre qu'avec un jeton à nous.
+   * THE LOCAL WAY (MIN-355) — called with the ORIGINAL request and its body
+   * intact when nothing has forwarded it. It is the only place from which a tour which does not
+   * He doesn't go to Vercel's house to speak, and he only enters with a token of ours.
    */
   async (request) => {
     const admission = admitLocalCaller(
@@ -181,7 +181,7 @@ const handler = defineSandboxProxy(
 export const GET = handler;
 export const POST = handler;
 export const PUT = handler;
-// `DELETE /interrupt` : la boucle consomme le drapeau de « stop » quand celui-ci
-// arrivait avec un message. Un verbe de plus, pas une surface de plus — c'est le
-// pendant exact du `GET /interrupt` qui le lit.
+// `DELETE /interrupt`: the loop consumes the “stop” flag when it
+// arrived with a message. One more verb, not one more surface — that’s the
+// exact counterpart of the `GET /interrupt` that reads it.
 export const DELETE = handler;

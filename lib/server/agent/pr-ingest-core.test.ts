@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import { issueRefFromPr, parseIssueRef, parsePullRequestRef } from "./pr-ingest-core";
 
 /**
- * MIN-143 — le rattachement PR ↔ ticket est la seule logique à vraie valeur de
- * test du lot : c'est elle qui décide si une PR humaine trouve son ticket, et
- * surtout si elle en trouve un qui n'est PAS le sien.
+ * MIN-143 — the PR ↔ ticket connection is the only logic with true value of
+ * batch test: it is she who decides if a human PR finds her ticket, and
+ * especially if she finds one that is NOT hers.
  */
 
 const KEYS = ["MIN"];
@@ -100,7 +100,7 @@ describe("issueRefFromPr", () => {
 describe("parseIssueRef", () => {
   it("sépare la clé du numéro", () => {
     expect(parseIssueRef("MIN-42")).toEqual({ key: "MIN", number: 42 });
-    // Une clé peut elle-même porter un tiret : c'est le DERNIER qui sépare.
+    // A key can itself carry a hyphen: it is the LAST which separates it.
     expect(parseIssueRef("A-B-7")).toEqual({ key: "A-B", number: 7 });
   });
 
@@ -112,10 +112,10 @@ describe("parseIssueRef", () => {
 });
 
 /**
- * La référence de PR écrite à la main (MCP + Numo) : c'est elle qui traduit
- * « lie la PR #42 » en une ligne de `pull_requests`. Ce qu'elle REFUSE porte
- * autant que ce qu'elle accepte — une URL d'issue prise pour une PR
- * rattacherait, sans un mot, un objet qui n'a rien à voir.
+ * The hand-written PR reference (MCP + Numo): it is this which translates
+ * “links PR #42” in a line of `pull_requests`. What it REFUSES carries
+ * as much as what it accepts — an exit URL taken for a PR
+ * would attach, without a word, an object that has nothing to do with it.
  */
 describe("parsePullRequestRef", () => {
   it("lit un numéro, nu ou préfixé", () => {
@@ -123,7 +123,7 @@ describe("parsePullRequestRef", () => {
     expect(parsePullRequestRef("42")).toBe(42);
     expect(parsePullRequestRef("  42 ")).toBe(42);
     expect(parsePullRequestRef("#42")).toBe(42);
-    // `!42` est la syntaxe des merge requests GitLab.
+    // `!42` is the syntax for GitLab merge requests.
     expect(parsePullRequestRef("!42")).toBe(42);
   });
 
@@ -135,8 +135,8 @@ describe("parsePullRequestRef", () => {
   });
 
   it("refuse une URL qui ne désigne pas une pull request", () => {
-    // Les deux numérotations cohabitent dans un dépôt GitHub : l'issue 42 et la
-    // PR 42 sont deux objets différents.
+    // The two numberings coexist in a GitHub repository: issue 42 and
+    // PR 42 are two different objects.
     expect(parsePullRequestRef("https://github.com/o/r/issues/42")).toBeNull();
     expect(parsePullRequestRef("https://github.com/o/r")).toBeNull();
   });

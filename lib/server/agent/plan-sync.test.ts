@@ -7,10 +7,10 @@ import {
 } from "./plan-sync-core";
 
 /**
- * Tests du cœur PUR de la synchro plan agent → plan d'issue (MIN-46). On parse un
- * vrai plan markdown avec lib/plan.ts, on apparie des étapes d'agent, et on
- * vérifie l'invariant : SEULS les états de cases existantes basculent, jamais le
- * texte. La couche DB (plan-sync.ts, server-only) n'est pas testée ici.
+ * Tests of the PUR core of the agent plane synchronization → outcome plan (MIN-46). We parse a
+ * real markdown plan with lib/plan.ts, we match agent steps, and on
+ * checks the invariant: ONLY the states of existing boxes switch, never the
+ * text. The DB layer (plan-sync.ts, server-only) is not tested here.
  */
 
 const tasksOf = (md: string) => parsePlan(md).tasks;
@@ -101,7 +101,7 @@ describe("planStateChanges", () => {
   });
 
   it("only flips checkbox markers, leaving the task text and prose intact", () => {
-    // Preuve de l'invariant de sûreté : le texte utilisateur n'est jamais réécrit.
+    // Proof of the safety invariant: the user text is never rewritten.
     const md =
       "## Plan\n\nSome context prose.\n\n- [ ] Add plan-sync module\n- [~] Wire into loop\n- [ ] Add tests";
     const tasks = tasksOf(md);

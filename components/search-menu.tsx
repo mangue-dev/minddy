@@ -59,21 +59,21 @@ export type SearchMenuProps = {
   /** Key badge (e.g. "S") shown next to the tooltip — surfaces the shortcut. */
   shortcutHint?: string;
   searchPlaceholder?: string;
-  /** Contrôle le texte de recherche. Par défaut cmdk le tient lui-même ; le
-   *  passer sert aux menus qui avancent d'une étape à l'autre sans se fermer
-   *  (relations : type puis ticket) et doivent repartir d'un champ vide. */
+  /** Controls search text. By default cmdk holds it itself; THE
+ * pass is used for menus which advance from one step to another without closing
+ * (relations: type then ticket) and must start from an empty field. */
   searchValue?: string;
   onSearchValueChange?: (value: string) => void;
   emptyText?: string;
-  /** Cache la ligne « Aucun résultat ». Les menus qui portent une ligne de
-   *  création la gardent visible quand rien ne matche : elle EST la réponse,
-   *  et un « aucun résultat » juste au-dessus ne dirait rien de plus. */
+  /** Hides the “No results” line. Menus that carry a
+ * creation line keep it visible when nothing matches: it IS the answer,
+ * and a "no result" just above it would say nothing more. */
   hideEmpty?: boolean;
   align?: "start" | "center" | "end";
   contentClassName?: string;
-  /** Portal target. Dans un Sheet/Dialog modal, react-remove-scroll bloque la
-   *  molette sur tout ce qui est porté à <body> : porter le menu DANS le
-   *  panneau est ce qui garde sa liste défilable (le composer de Numo). */
+  /** Portal target. In a Sheet/Dialog modal, react-remove-scroll blocks the
+ * scrollbar on anything brought to <body>: bringing the menu INTO the
+ * panel is what keeps its list scrollable (Numo's dial it). */
   container?: HTMLElement | null;
   /** Stop pointer/click from bubbling to a draggable/clickable ancestor. */
   stopPropagation?: boolean;
@@ -104,9 +104,9 @@ export function SearchMenu({
     ? (e: React.SyntheticEvent) => e.stopPropagation()
     : undefined;
 
-  // `rounded-xl` pour la même raison que les combobox : c'est `Command` qui
-  // peint cette surface et il s'impose déjà 20px. Les options sont à 8px du bord
-  // (le `p-1` de `Command` + celui de `CommandGroup`) et portent 12px —
+  // `rounded-xl` for the same reason as the comboboxes: it is `Command` which
+  // paints this surface and it is already 20px. Options are 8px from the edge
+  // (the `p-1` of `Command` + that of `CommandGroup`) and carry 12px —
   // 20 − 8 = 12, concentrique.
   const content = (
     <PopoverContent
@@ -154,14 +154,14 @@ export function SearchMenu({
 
   // Trigger-anchored mode.
   //
-  // ⚠ Une seule forme, quel que soit `tooltip` (MIN-313). Envelopper
-  // conditionnellement changerait le TYPE de l'élément rendu à cette position,
-  // et React ne réconcilie pas deux types différents : il démonte le sous-arbre,
-  // en monte un neuf, le nœud DOM est remplacé et le focus qu'il portait retombe
-  // sur <body>. Aucun des ~30 sites d'appel ne fait aujourd'hui varier `tooltip`
-  // à l'exécution — c'est donc un fusil chargé sans détente, et la première fois
-  // qu'on rendra un `tooltip` conditionnel, le défaut apparaîtrait sans que rien
-  // ne le relie à ce changement-là. Ce qui varie ici est l'OUVERTURE.
+  // ⚠ Only one form, whatever `tooltip` (MIN-313). Wrap
+  // conditionally would change the TYPE of the element rendered at that position,
+  // and React does not reconcile two different types: it disassembles the subtree,
+  // mount a new one, the DOM node is replaced and the focus it carried drops
+  // on <body>. None of the ~30 calling sites currently vary `tooltip`
+  // at execution - it is therefore a loaded rifle without a trigger, and the first time
+  // that we make a `tooltip` conditional, the fault would appear without anything
+  // does not link it to this change. What varies here is the OPENING.
   const popover = (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>

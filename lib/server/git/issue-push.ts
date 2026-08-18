@@ -12,40 +12,40 @@ import { resolveForgeActor } from "./forge-actor";
 import { remoteStateForStatus, type RemoteState } from "./issue-sync-core";
 
 /**
- * Le RETOUR de la synchro d'issues : le statut d'un ticket minddy referme ou
- * rouvre l'issue dont il vient.
+ * RETURN of issue synchronization: the status of a minddy ticket closes or
+ * reopens the issue from which it comes.
  *
- * MIN-97 posait un « sens unique STRICT : rien ici n'écrit chez le provider ».
- * Ce module lève cette règle sur UN champ, et sur un seul : l'état ouvert /
- * fermé. Ni le titre, ni le corps, ni les labels, ni les assignés ne remontent
- * — la forge reste la source de ceux-là (cf. `applyRemoteIssue`), et un
- * aller-retour à deux sens sur les mêmes champs n'aurait pas de gagnant.
+ * MIN-97 posed a “one-way STRICT: nothing here is written to the provider”.
+ * This module raises this rule on ONE field, and on only one: the open state /
+ * closed. Neither the title, nor the body, nor the labels, nor the assigned ones go back
+ * - the forge remains the source of these (see `applyRemoteIssue`), and a
+ * round trip in two directions on the same fields would not have a winner.
  *
- * Pourquoi l'état, lui, mérite les deux sens : une issue ouverte sur le dépôt
- * alors que le projet minddy existe sera vraisemblablement traitée sur le
- * dépôt. Mais celui qui la termine peut très bien le dire dans minddy — et
- * laisser derrière lui une issue GitHub ouverte que plus personne ne referme.
+ * Why does the state deserve both ways: an issue opened on the
+ * repository while the minddy project exists will likely be processed on the
+ * repository. But whoever finishes it can very well say it in minddy — and
+ * leave behind an open GitHub issue that no one closes anymore.
  *
- * **La boucle ne se referme pas**, et c'est voulu à trois endroits :
- *  1. `updateIssueFields` n'appelle ceci QUE si l'écriture ne vient pas de la
- *     forge (`forgeSync` nul) — un statut descendu du webhook ne remonte pas ;
- *  2. l'écho que GitHub renvoie (`issues.closed`) retrouve un ticket DÉJÀ dans
- *     l'état voulu, donc `applyRemoteIssue` ne patche rien ;
- *  3. on ne pousse que si l'état distant CHANGE — un `done` → `canceled` reste
- *     `closed` des deux côtés et ne fait aucun appel.
+ * **The loop does not close**, and this is intended in three places:
+ * 1. `updateIssueFields` does not call this ONLY if the writing does not come from the
+ * forge (`forgeSync` null) — a status descended from the webhook does not go up;
+ * 2. the echo that GitHub returns (`issues.closed`) finds a ticket ALREADY in
+ * the desired state, therefore `applyRemoteIssue` doesn't patch anything ;
+ * 3. we only push if the remote state CHANGES — a `done` → `canceled` remains
+ * `closed` on both sides and does nothing call.
  *
- * **Qui signe.** Le geste est HUMAIN : quelqu'un a déplacé une carte. Donc le
- * compte git de cette personne d'abord (`resolveForgeActor`, comme les gestes
- * sur une pull request), et l'App / la connexion du lien seulement à défaut.
- * GitHub affiche alors « minddy a fermé » — approximation assumée, la même
- * qu'en MIN-146 côté GitLab : sans elle, la synchro décrocherait en silence
- * pour tous ceux qui n'ont pas connecté de compte, ce qui est pire.
+ * **Who signs.** The gesture is HUMAN: someone has moved a card. So the
+ * git account of this person first (`resolveForgeActor`, like gestures
+ * on a pull request), and the App / connection link only otherwise.
+ * GitHub then displays "minddy has closed" — approximation assumed, the same
+ * as in MIN-146 on the GitLab side: without it, sync would silently stall
+ * for all those who have not connected an account, which is worse.
  *
- * Best-effort et hors chemin critique (`afterOrNow`) : une forge en panne ne
- * doit jamais faire échouer le déplacement d'une carte.
+ * Best-effort and off critical path (`afterOrNow`): a broken forge should never do
+ * fail to move a card.
  */
 
-/** Ce qu'une liaison doit fournir pour qu'on puisse écrire chez la forge. */
+/** What a connection must provide so that one can write at the forge. */
 interface PushTarget {
   provider: RepoProviderId;
   connectionId: string;
@@ -54,7 +54,7 @@ interface PushTarget {
   externalRepoId: string;
 }
 
-/** Le ticket qu'on pousse — l'identité distante qu'il porte déjà. */
+/** The ticket that is pushed — the distant identity that he already carries. */
 export interface RemoteIssueIdentity {
   projectId: string;
   provider: string | null;
@@ -63,9 +63,9 @@ export interface RemoteIssueIdentity {
 }
 
 /**
- * Programme la répercussion d'un changement de statut chez la forge. No-op
- * silencieux pour un ticket né dans minddy (la quasi-totalité) : la garde est
- * une comparaison de champs déjà chargés, aucune requête.
+ * Programs the repercussion of a change of status at the forge. No-op
+ * silent for a ticket born in minddy (almost all): the guard is
+ * a comparison of fields already loaded, no query.
  */
 export function scheduleRemoteStatusPush(params: {
   issue: RemoteIssueIdentity;
@@ -104,8 +104,8 @@ async function pushRemoteState(params: {
     .eq("project_id", params.projectId)
     .eq("provider", params.provider)
     .eq("external_repo_id", params.repoId)
-    // Couper la synchro coupe les DEUX sens : le toggle est le seul
-    // interrupteur, et il serait incompréhensible qu'il n'en arrête qu'un.
+    // Cutting the sync cuts BOTH directions: the toggle is the only one
+    // switch, and it would be incomprehensible if it only switches off one.
     .eq("issue_sync_enabled", true)
     .maybeSingle();
   if (!data) return;
@@ -142,9 +142,9 @@ async function pushRemoteState(params: {
 }
 
 /**
- * Le token qui écrira : celui de l'acteur s'il a connecté son compte ET peut
- * écrire sur le dépôt, sinon celui de la liaison (l'App GitHub, la connexion
- * OAuth du lieur côté GitLab).
+ * The token that will write: that of the actor if he has connected his account AND can
+ * write to the repository, otherwise that of the link (the GitHub App, the connection
+ * OAuth of the linker on the GitLab side).
  */
 async function resolveWriteToken(
   target: PushTarget,
@@ -156,7 +156,7 @@ async function resolveWriteToken(
       provider: target.provider,
       repoFullName: target.repoFullName,
     });
-    // `read` ne suffit pas pour fermer une issue : on retombe sur l'App plutôt
+    // `read` is not enough to close an issue: we instead fall back on the App
     // que d'aller chercher un 403 au nom de quelqu'un qui n'y peut rien.
     if (actor.kind === "actor" && actor.capability !== "read") return actor.token;
   }
@@ -175,16 +175,14 @@ async function resolveWriteToken(
 }
 
 /**
- * `PATCH /repos/{repo}/issues/{n}`. `state_reason` distingue les deux façons de
- * fermer que GitHub affiche différemment (coche violette « completed » contre
- * cercle gris « not planned ») — c'est la seule nuance de nos trois statuts
- * clos qui survive à la traversée.
+ * `PATCH /repos/{repo}/issues/{n}`. `state_reason` distinguishes between the two ways of closing that GitHub displays differently (purple “completed” check versus
+ * gray “not planned” circle) — this is the only nuance of our three closed statuses that survives traversal.
  *
- * Demande la permission `Issues: Write` de la GitHub App. Une App qui gagne une
- * permission ne l'obtient PAS rétroactivement : chaque installation existante
- * doit l'accepter (même piège que `getIssuesPermission`). Tant que ce n'est pas
- * fait, GitHub répond **403 « Resource not accessible by integration »** — le
- * geste est journalisé et abandonné, le ticket reste déplacé dans minddy.
+ * Requests the `Issues: Write` permission from the GitHub App. An App that gains a
+ * permission does NOT obtain it retroactively: each existing installation
+ * must accept it (same trap as `getIssuesPermission`). Until
+ * is done, GitHub responds **403 “Resource not accessible by integration”** — the
+ * gesture is logged and abandoned, the ticket remains moved to minddy.
  */
 async function pushGithubState(
   token: string,
@@ -211,9 +209,9 @@ async function pushGithubState(
 }
 
 /**
- * `PUT /projects/{id}/issues/{iid}`. GitLab ne prend pas un état mais une
- * TRANSITION (`state_event: close | reopen`), et n'a pas d'équivalent de
- * `state_reason` : les trois statuts clos de minddy y ferment pareil.
+ * `PUT /projects/{id}/issues/{iid}`. GitLab does not take a state but a
+ * TRANSITION (`state_event: close | reopen`), and has no equivalent of
+ * `state_reason`: the three closed statuses of minddy close in the same way.
  */
 async function pushGitlabState(
   token: string,

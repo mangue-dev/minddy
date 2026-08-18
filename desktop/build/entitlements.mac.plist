@@ -1,78 +1,79 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  Les entitlements du hardened runtime (MIN-292).
+  Hardened runtime entitlements (MIN-292).
 
-  Le hardened runtime est obligatoire pour notariser, et il interdit par défaut
-  exactement ce dont V8 a besoin pour exister. Les trois clés ci-dessous sont le
-  minimum SANS LEQUEL CHROMIUM NE DÉMARRE PAS une fois l'app signée — et l'échec
-  n'arrive qu'après signature, jamais en développement.
+  The hardened runtime is required for notarization, and by default it forbids
+  exactly what V8 needs to run. The three keys below are the minimum WITHOUT WHICH
+  CHROMIUM DOES NOT START once the app is signed — and the failure only occurs
+  after signing, never during development.
 
-  Ce qui n'est PAS ici est un choix, pas un oubli :
+  What is NOT here is a choice, not an omission:
 
-  - App Sandbox : jamais. Il interdirait précisément ce pour quoi cette app
-    existe (§4 du cadrage), et Apple ne l'exige que pour l'App Store, où on ne va
-    pas.
+  - App Sandbox: never. It would forbid precisely what this app exists for
+    (§4 of the framing), and Apple requires it only for the App Store, which we
+    are not targeting.
 -->
 <plist version="1.0">
   <dict>
-    <!-- MIN-356 — adresse APNs du bundle signé. `production` correspond au
-         profil Developer ID distribué ; un binaire de développement non signé
-         ne tente pas de s'inscrire (desktop/src/main.ts). -->
+    <!-- MIN-356 — APNs address for the signed bundle. `production` matches the
+         distributed Developer ID profile; an unsigned development binary does
+         not attempt to register (desktop/src/main.ts). -->
     <key>com.apple.developer.aps-environment</key>
     <string>production</string>
-    <!-- V8 compile à la volée : sans ça, la première page ne s'affiche pas. -->
+    <!-- V8 compiles just in time: without this, the first page does not render. -->
     <key>com.apple.security.cs.allow-jit</key>
     <true/>
-    <!-- Le JIT de V8 écrit dans des pages exécutables que le noyau n'a pas
-         validées. Même raison, une couche plus bas. -->
+    <!-- V8's JIT writes to executable pages that the kernel has not validated.
+         Same reason, one layer lower. -->
     <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
     <true/>
-    <!-- Electron passe par des variables d'environnement DYLD pour lancer ses
-         process fils (renderer, GPU, utilitaires). -->
+    <!-- Electron uses DYLD environment variables to launch its child processes
+         (renderer, GPU, utilities). -->
     <key>com.apple.security.cs.allow-dyld-environment-variables</key>
     <true/>
-    <!-- LA DICTÉE VOCALE (MIN-294). Sous hardened runtime, le micro est fermé
-         par le noyau, PAS par TCC : sans cette clé, l'app signée n'obtient rien
-         et la fenêtre de demande ne s'ouvre même pas — le refus est muet, et il
-         n'arrive qu'une fois l'app empaquetée, jamais en développement (la
-         coquille de dév tourne sous Electron.app, qui la porte déjà).
-         Elle va de pair avec `NSMicrophoneUsageDescription`, posé par
-         electron-builder.yml : l'entitlement ouvre la porte, la phrase dit
-         pourquoi. Il manque l'une des deux, il ne se passe rien. -->
+    <!-- VOICE DICTATION (MIN-294). Under the hardened runtime, the microphone is
+         closed by the kernel, NOT by TCC: without this key, the signed app gets
+         nothing and the request window does not even open — the refusal is silent,
+         and only occurs once the app is packaged, never during development (the
+         development shell runs under Electron.app, which already carries it).
+         It goes with `NSMicrophoneUsageDescription` from electron-builder.yml:
+         the entitlement opens the door, the sentence explains why. If either is
+         missing, nothing happens. -->
     <key>com.apple.security.device.audio-input</key>
     <true/>
-    <!-- L'AGENT LOCAL (MIN-293), et c'est l'entitlement le plus cher du fichier.
+    <!-- THE LOCAL AGENT (MIN-293), and this is the most consequential entitlement
+         in the file.
 
-         Le tour lance `opencode`, un binaire natif de 144 Mo installé par
-         `npm i` sur la machine et **que nous ne signons pas**. Sous hardened
-         runtime, le noyau refuse de charger dans un process signé par nous du
-         code signé par quelqu'un d'autre : sans cette clé, `opencode serve` ne
-         démarre pas une fois l'app empaquetée — et, comme le micro avant
-         MIN-294, l'échec n'arrive JAMAIS en développement, où la coquille tourne
-         sous Electron.app.
+         The round launches `opencode`, a 144 MB native binary installed by
+         `npm i` on the machine and **which we do not sign**. Under the hardened
+         runtime, the kernel refuses to load code signed by someone else into a
+         process signed by us: without this key, `opencode serve` does not start
+         once the app is packaged — and, like the microphone before MIN-294, the
+         failure NEVER occurs during development, where the shell runs under
+         Electron.app.
 
-         ⚠ CE QU'ELLE OUVRE, ET IL FAUT LE LIRE ENTIER.
+         ⚠ WHAT IT OPENS, AND WHY YOU MUST READ THIS WHOLE BLOCK.
 
-         Seule, elle dit « ce process peut charger du code non validé ».
-         **Combinée à `com.apple.security.cs.allow-dyld-environment-variables`,
-         trois lignes plus haut, elle fait de minddy un véhicule d'héritage
-         TCC** : un process lancé depuis l'app hérite de ses autorisations
-         (Documents, Bureau, Téléchargements, micro), et `DYLD_INSERT_LIBRARIES`
-         devient un moyen de faire charger n'importe quelle bibliothèque par un
-         binaire qui les porte. La seconde clé n'est pas retirable — Electron en
-         a besoin pour ses propres process fils (renderer, GPU) — donc la
-         combinaison est le prix du lot, pas un accident à corriger.
+         Alone, it says “this process may load unvalidated code”.
+         **Combined with `com.apple.security.cs.allow-dyld-environment-variables`,
+         three lines above, it makes minddy a TCC inheritance vehicle**: a process
+         launched from the app inherits its permissions (Documents, Desktop,
+         Downloads, microphone), and `DYLD_INSERT_LIBRARIES` becomes a way to
+         make any library load into a binary that carries them. The second key
+         cannot be removed — Electron needs it for its own child processes
+         (renderer, GPU) — so the combination is the cost of the package, not an
+         accident to fix.
 
-         Ce qui la rend tenable est ailleurs, et ne tient pas dans un plist : le
-         tour meurt avec l'app (`before-quit` demande, MIN-293), rien de ce qu'il
-         lance ne lui survit (`run_background` est retiré du chemin local, le
-         registre d'enfants finit le travail), et le harness lui-même est vérifié
-         à l'empreinte avant chaque fork. Retirer l'un de ces trois-là sans
-         retirer cette clé serait le vrai défaut.
+         What makes it tenable lies elsewhere, and does not fit in a plist: the
+         round dies with the app (`before-quit` requests this, MIN-293), nothing it
+         launches survives it (`run_background` is removed from the local path, the
+         child registry finishes the job), and the harness itself is fingerprinted
+         before every fork. Removing any of these three without removing this key
+         would be the real defect.
 
-         ⚠ Elle change l'empreinte de republication (scripts/desktop-fingerprint.mjs,
-         `PACKAGING_INPUTS`) : republication + renotarisation. -->
+         ⚠ It changes the republishing fingerprint (scripts/desktop-fingerprint.mjs,
+         `PACKAGING_INPUTS`): republishing + re-notarization. -->
     <key>com.apple.security.cs.disable-library-validation</key>
     <true/>
   </dict>

@@ -7,10 +7,9 @@ import {
 import type { AssistantMessage, AssistantToolCall } from "./assistant-types";
 
 /**
- * Lecture du fil Numo en TOURS. Ce qui est verrouillé ici, c'est la promesse
- * faite au lecteur : pendant que Numo travaille il voit le travail, et à la fin
- * il voit LA RÉPONSE — jamais tout le tour d'un bloc, et jamais un texte qui
- * saute d'un endroit à l'autre au fil du stream.
+ * Reading the Numo thread in ROUNDS. What's locked in here is the promise
+ * to the reader: as Numo works he sees the work, and at the end
+ * he sees THE ANSWER — never all the way around a block, and never text that jumps from place to place as the stream progresses.
  */
 
 function msg(
@@ -94,9 +93,9 @@ describe("buildAssistantBlocks", () => {
   });
 
   it("laisse le chrono courir sur le tour actif, réponse en cours déjà dehors", () => {
-    // Le texte final vient d'être reçu mais la boucle tourne encore : il reste
-    // SOUS l'accordéon, exactement là où il s'affichait en streaming — sinon il
-    // sauterait dans le déroulé puis en ressortirait à la fermeture du tour.
+    // The final text has just been received but the loop is still turning: there remains
+    // UNDER the accordion, exactly where it was displayed in streaming — otherwise it
+    // would jump into the rollout and then come out at the end of the turn.
     const blocks = buildAssistantBlocks(
       [
         msg("u1", "user", "vas-y"),
@@ -113,9 +112,9 @@ describe("buildAssistantBlocks", () => {
   });
 
   it("renvoie la narration dans le déroulé dès que le tour repart", () => {
-    // Un round en vol (outil parti, ou texte en train de s'écrire) : le texte reçu
-    // juste avant n'est plus la queue du tour, il ne peut pas rester affiché sous
-    // un travail plus récent que lui.
+    // A round in flight (tool gone, or text being written): the text received
+    // just before is no longer the tail of the turn, it cannot remain displayed under
+    // a more recent job than him.
     const blocks = buildAssistantBlocks(
       [
         msg("u1", "user", "vas-y"),
@@ -140,8 +139,8 @@ describe("buildAssistantBlocks", () => {
   });
 
   it("ne réutilise pas l'id du message qui ouvre le tour comme clé", () => {
-    // Le message user est rendu en bloc FRÈRE du tour : deux enfants React de
-    // même clé, et React duplique ou omet des nœuds.
+    // The user message is rendered as a block BROTHER of the round: two React children of
+    // same key, and React duplicates or omits nodes.
     const blocks = buildAssistantBlocks(
       [msg("u1", "user", "vas-y"), msg("a1", "assistant", "Voilà.")],
       { active: true, pendingWork: true },
@@ -174,9 +173,9 @@ describe("buildAssistantBlocks", () => {
   });
 
   it("traite une proposition d'amorce comme la fin du tour", () => {
-    // MIN-173 : la carte à cocher vit sur ce message. Repliée dans le déroulé,
-    // elle serait cachée derrière un accordéon fermé — or c'est elle qu'on
-    // attend, et rien n'existe tant qu'elle n'a pas été validée.
+    // MIN-173: the check card lives on this message. Folded in the unfolded state,
+    // she would be hidden behind a closed accordion - but it is she who is
+    // waits, and nothing exists until it has been validated.
     const blocks = buildAssistantBlocks([
       msg("u1", "user", "aide-moi à démarrer ce projet"),
       msg("a1", "assistant", null, { tool_calls: [call("list_issues")] }),
@@ -188,8 +187,8 @@ describe("buildAssistantBlocks", () => {
   });
 
   it("affiche tel quel un tour interrompu avant sa réponse", () => {
-    // Envoi annulé pendant un outil : il n'y a pas de réponse à mettre en avant,
-    // on ne cache pas le peu de travail produit derrière un accordéon fermé.
+    // Sending canceled during a tool: there is no response to put forward,
+    // we do not hide the little work produced behind a closed accordion.
     const blocks = buildAssistantBlocks([
       msg("u1", "user", "vas-y"),
       msg("a1", "assistant", null, { tool_calls: [call("list_issues")] }),
@@ -220,8 +219,8 @@ describe("buildAssistantBlocks", () => {
 });
 
 /**
- * Le bouton « Copier » suit LA RÉPONSE, pas les messages. Ce qui est plié dans
- * l'accordéon est du travail intermédiaire : on ne l'emporte pas.
+ * The “Copy” button follows THE REPLY, not the messages. What is folded in
+ * the accordion is intermediate work: we do not take it.
  */
 describe("copyableMessageIds", () => {
   const ids = (messages: AssistantMessage[], active = false) =>
@@ -250,8 +249,8 @@ describe("copyableMessageIds", () => {
   });
 
   it("ne marque rien tant que le tour travaille", () => {
-    // Narration déjà écrite, mais un outil est reparti : ce texte est du travail
-    // en cours, pas une réponse — il ne porte pas de bouton copier.
+    // Narration already written, but a tool left: this text is work
+    // in progress, not a response — it doesn't have a copy button.
     const got = ids(
       [
         msg("u1", "user", "vas-y"),
@@ -263,10 +262,10 @@ describe("copyableMessageIds", () => {
   });
 
   it("ne marque pas non plus la queue d'un tour actif entre deux rounds", () => {
-    // Round terminé, outils en cours d'exécution : plus rien n'est en vol, donc
-    // la narration se retrouve en position de réponse — provisoirement. Sans ce
-    // garde-fou, le bouton se posait tour à tour sous CHAQUE dernier message
-    // pendant tout le travail de Numo.
+    // Round finished, tools running: nothing is in flight anymore, so
+    // the narration finds itself in a position of response — provisionally. Without this
+    // safeguard, the button was placed in turn under EACH last message
+    // throughout Numo's work.
     const got = copyableMessageIds(
       buildAssistantBlocks(
         [

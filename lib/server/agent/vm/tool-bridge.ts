@@ -6,69 +6,69 @@ import type { OpencodeDelivery } from "./opencode-delivery";
 import type { VmJob } from "./protocol";
 
 /**
- * LE PONT DE TOOLS (MIN-286, lot 2) — le serveur local que les 32 tools de
- * domaine générés appellent, et qui tient ce qu'un tool sans mémoire ne peut pas
- * tenir : **les compteurs du TOUR**.
+ * THE TOOLS BRIDGE (MIN-286, lot 2) — the local server that the 32 tools of
+ * generated domain call, and which holds what a tool without memory cannot
+ * keep: **the TOUR counters**.
  *
- * Le chemin complet d'un appel : le modèle appelle `web_search` → opencode
- * exécute le `.opencode/tool/web_search.ts` généré → celui-ci poste sur
- * `MDY_SUPERVISOR_URL/tool/web_search` → **ici** → `cp.callTool` → le plan de
- * contrôle, avec l'identité que lui donne l'OIDC du firewall. Aucun secret
- * n'entre dans la VM, et le code généré ne contient aucune logique : il poste et
+ * The full path of a call: the model calls `web_search` → opencode
+ * executes the generated `.opencode/tool/web_search.ts` → this posts on
+ * `MDY_SUPERVISOR_URL/tool/web_search` → **here** → `cp.callTool` → the plan
+ * control, with the identity given to it by the firewall OIDC. No secrets
+ * does not enter the VM, and the generated code does not contain any logic: it posts and
  * il rend ([opencode-tools.ts](opencode-tools.ts)).
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * POURQUOI CE SAUT LOCAL EXISTE, alors que le tool pourrait appeler le plan de
- * contrôle directement
+ * WHY THIS LOCAL JUMP EXISTS, when the tool could call the
+ * control directly
  *
- * Parce que **le plan de contrôle ne compte rien** : il facture ce qu'on lui
- * demande, run par run, et il n'a aucune idée de ce qu'est un tour. Or trois
- * garanties du produit sont des états de TOUR :
+ * Because **the control plan counts for nothing**: it charges what it is charged for
+ * asks, run by run, and he has no idea what a round is. Gold three
+ * Product warranties are TOUR states:
  *
- * 1. **Le plafond de recherches web** (`webSearchMax`, 5 — `MAX_WEB_SEARCHES_PER_TURN`
- *    de [web-search.ts](../../web-search.ts)), partagé par la mère et ses filles.
- *    Chaque recherche coûte le forfait Exa (`WEB_SEARCH_USD_PER_CALL`, 0,005 $),
- *    et un modèle qui cherche en rond dépense sans borne si personne ne compte.
- *    C'est aussi ce compteur qui sert de `seq` : deux recherches d'un même tour
- *    écrivent alors deux lignes de ledger distinctes, là où un `seq` absent les
- *    rangeait toutes sous le même numéro.
- * 2. **Les ancres de relecture déjà posées** (`prInlineComments`) : le plafond
- *    des 5 se compte sur la vie du RUN, la fonction rend le compte à jour à
- *    chaque appel, et il faut le lui renvoyer au suivant.
- * 3. **Les images** (`imageInput`) : le plan de contrôle ne sert une maquette que
- *    si le modèle du tour sait la lire.
+ * 1. **The web search limit** (`webSearchMax`, 5 — `MAX_WEB_SEARCHES_PER_TURN`
+ * from [web-search.ts](../../web-search.ts)), shared by the mother and her daughters.
+ * Each search costs the Exa package (`WEB_SEARCH_USD_PER_CALL`, $0.005),
+ * and a model that searches in circles spends without limit if no one counts.
+ * It is also this counter which serves as `seq`: two searches in the same round
+ * then write two distinct ledger lines, where an absent `seq`
+ * all listed under the same number.
+ * 2. **The proofreading anchors already placed** (`prInlineComments`): the ceiling
+ * of the 5 is counted over the life of the RUN, the function updates the count to
+ * each call, and it must be returned to him on the next one.
+ * 3. **Images** (`imageInput`): the control plan only serves as a model
+ * if the lathe model can read it.
  *
- * C'est exactement ce que `runVmTurn` tenait dans ses fermetures
- * ([turn.ts](turn.ts)) ; le pont est ce qui reste de ces fermetures quand la
- * boucle qui les portait n'est plus notre code.
- *
- * ─────────────────────────────────────────────────────────────────────────────
- * DEUX RÈGLES DE RÉPONSE, et elles ne sont pas cosmétiques
- *
- * - **Un échec de tool répond 200**, avec `{"error": …}` pour corps. Le modèle
- *   doit LIRE l'erreur et décider (réessayer, faire autrement) — c'est ce que
- *   faisait `execTool` côté boucle maison. Un 5xx ferait rendre au tool généré une
- *   phrase de transport (« could not reach the harness ») qui masquerait le vrai
- *   motif, et une exception couperait le round : la manière la plus chère de dire
- *   « réessaie ».
- * - **Un nom inconnu répond 404.** Celui-là n'est pas une erreur du modèle mais
- *   de nous : un tool servi et non routé. Il doit se voir, pas se rattraper.
+ * This is exactly what `runVmTurn` held in its closures
+ * ([turn.ts](turn.ts)); the bridge is what remains of these closures when the
+ * loop that carried them is no longer our code.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * ET LA VOIX DU HARNESS (MIN-286, lot 2, tâche 14)
+ * TWO RESPONSE RULES, and they are not cosmetic
  *
- * Deux tools portent une règle de livraison : `write_issue_plan` (le plan relu
- * et sa clôture) et `create_pr` (type-check, tests, diff). Les deux la rendent
- * en `followUp` — ce que la boucle maison servait en message `user` après le
- * round, faute de pouvoir grossir un résultat de tool qu'elle élidait par le
- * milieu. **Chez opencode, un résultat de tool EST le texte que le tool rend**,
- * et rien ne l'élide en dessous des plafonds de `tool_output` (2 000 lignes /
- * 50 Ko ; le plus gros bloc, le diff, est capé à 12 Ko). Le pont colle donc le
- * `followUp` APRÈS le résultat, dans le même texte : le modèle lit les deux d'un
- * geste, sans qu'aucun message ne s'ajoute à la conversation.
+ * - **A tool failure responds 200**, with `{"error": …}` for body. The model
+ * must READ the error and decide (try again, do differently) — that's what
+ * was `execTool` on the home loop side. A 5xx would make the generated tool render a
+ * transport phrase (“could not reach the harness”) which would mask the real
+ * pattern, and an exception would cut the circle: the most expensive way of saying
+ * “try again”.
+ * - **An unknown name responds 404.** This one is not a model error but
+ * from us: a tool served and not routed. He must see himself, not catch up.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * AND THE VOICE OF HARNESS (MIN-286, lot 2, task 14)
+ *
+ * Two tools carry a delivery rule: `write_issue_plan` (the plan reviewed
+ * and its closure) and `create_pr` (type-check, tests, diff). Both make it
+ * in `followUp` — what the home loop served in message `user` after the
+ * round, for lack of being able to magnify a tool result that it elided by the
+ * medium. **At opencode, a result of tool IS the text that the tool renders**,
+ * and nothing elides it below the ceilings of `tool_output` (2,000 lines /
+ * 50 KB; the largest block, the diff, is capped at 12 KB). The bridge therefore sticks the
+ * `followUp` AFTER the result, in the same text: the model reads both of one
+ * gesture, without any message being added to the conversation.
  */
 
-/** Le corps qu'un tool généré poste. `args` est ce que le modèle a rempli. */
+/** The body that a tool generated post. `args` is what the template filled in. */
 interface ToolCallBody {
   args?: Record<string, unknown>;
   callID?: string;
@@ -76,31 +76,31 @@ interface ToolCallBody {
 }
 
 /**
- * Ce que le superviseur garde du pont. `webSearchesUsed` est lu par les tests et
- * par le rapport de fin de tour : un plafond qu'on ne peut pas relire est un
+ * What the supervisor keeps from the bridge. `webSearchesUsed` is read by the tests and
+ * by the end of turn report: a ceiling that cannot be reread is a
  * plafond qu'on ne peut pas prouver.
  */
 export interface ToolBridge {
-  /** `http://127.0.0.1:<port>` — la valeur de `MDY_SUPERVISOR_URL`. */
+  /** `http://127.0.0.1:<port>` — the value of `MDY_SUPERVISOR_URL`. */
   readonly url: string;
   readonly webSearchesUsed: number;
-  /** Ancres de relecture posées par ce run, à jour du dernier appel. */
+  /** Replay anchors set by this run, up to date from last call. */
   readonly prInlineComments: number;
   close(): Promise<void>;
 }
 
 /**
- * Un tool que le SUPERVISEUR exécute lui-même, parce qu'il a quelque chose que
- * ni le plan de contrôle ni opencode n'ont — le dépôt, pour `create_pr` (la VM
- * pousse, la fonction ouvre).
+ * A tool that the SUPERVISOR runs himself, because he has something that
+ * neither the control plane nor opencode have — the repository, for `create_pr` (the VM
+ * pushes, the function opens).
  */
 export type SupervisorTool = (
   args: Record<string, unknown>,
 ) => Promise<{ result: unknown; success: boolean; followUp?: string; reason?: string }>;
 
 /**
- * Ce qu'un appel rend au pont. `images` est la seule sortie qui ne soit pas du
- * texte : elle devient une pièce jointe de message chez opencode (cf. `forwardRaw`).
+ * What a call returns to the bridge. `images` is the only output that is not
+ * text: it becomes a message attachment with opencode (see `forwardRaw`).
  */
 interface ToolOutcome {
   result: unknown;
@@ -108,11 +108,11 @@ interface ToolOutcome {
   followUp?: string;
   images?: Array<{ url: string; name?: string }>;
   /**
-   * POURQUOI le harness a refusé, dans le vocabulaire d'`agent_run_events` —
-   * `forbidden_command` sur un `run_background` que `checkCommand` a écarté
-   * (MIN-108). Le modèle, lui, lit le motif en clair dans `result.error` ; ce
-   * champ-ci sert à ce que le refus reste MESURABLE en base, comme il l'était
-   * dans la boucle maison, qui le reposait sur son `tool_result`.
+   * WHY the harness refused, in the vocabulary of `agent_run_events` —
+   * `forbidden_command` on a `run_background` that `checkCommand` has discarded
+   * (MIN-108). The model reads the pattern in plain text in `result.error`; This
+   * This field is used to ensure that the refusal remains MEASURABLE in base, as it was
+   * in the home loop, which rested it on its `tool_result`.
    */
   reason?: string;
 }
@@ -121,39 +121,39 @@ export interface ToolBridgeOptions {
   job: VmJob;
   cp: ControlPlaneClient;
   /**
-   * Les règles de livraison ([opencode-delivery.ts](opencode-delivery.ts)).
-   * Absentes, le pont est un passe-plat nu — c'est ce que veulent les tests qui
-   * n'ont rien à dire du plan ni de la porte, et jamais un tour de production.
+   * The delivery rules ([opencode-delivery.ts](opencode-delivery.ts)).
+   * Absent, the bridge is a bare hatch - this is what the tests want
+   * have nothing to say about the plan or the door, and never a production tour.
    */
   delivery?: OpencodeDelivery;
   /**
-   * Les tools que le superviseur exécute au lieu de les faire suivre :
+   * The tools that the supervisor executes instead of forwarding them:
    *
-   *  - `create_pr`, parce qu'il POUSSE avant de faire ouvrir ;
-   *  - `run_background`, qui ne sort jamais de la microVM (tool LOCAL, §3.2) : le
-   *    registre de jobs vit dans le superviseur, qui les tue avant chaque
-   *    `git add -A` et à la fin du tour.
+   * - `create_pr`, because it PUSHES before opening;
+   * - `run_background`, which never leaves the microVM (LOCAL tool, §3.2): the
+   * job register lives in the supervisor, which kills them before each
+   * `git add -A` and at the end of the round.
    *
-   * Absent, le tool est REFUSÉ plutôt que passé tel quel — un `create_pr` qui
-   * atteindrait la forge sans que la VM ait poussé ouvrirait une pull request sur
-   * une branche vide. C'est le cas d'une session de relecture, qui ne pousse
-   * jamais et ne lance rien en fond.
+   * Absent, the tool is REFUSED rather than passed as is — a `create_pr` which
+   * would reach the forge without the VM having pushed would open a pull request on
+   * an empty branch. This is the case of a rereading session, which does not push
+   * never and never throws anything in the background.
    */
   supervisorTools?: Record<string, SupervisorTool>;
   /**
-   * Un tool refusé PAR LE HARNESS, avec son motif — le pendant, côté tools
-   * locaux, de ce que le verdict de permission rend pour les tools intégrés. Le
-   * superviseur le repose sur l'event `tool_result` de cet appel.
+   * A tool refused BY THE HARNESS, with its motive — the counterpart, on the tools side
+   * local, what the permission verdict renders for integrated tools. THE
+   * supervisor bases it on the `tool_result` event of this call.
    */
   onToolRefused?: (callId: string, reason: string) => void;
-  /** 0 = port libre choisi par l'OS. Le superviseur lit l'URL rendue. */
+  /** 0 = free port chosen by the OS. The supervisor reads the rendered URL. */
   port?: number;
 }
 
 /**
- * Les tools que le pont ne fait PAS suivre au plan de contrôle sans plus. Tout ce
- * qui n'est pas là-dedans est un passe-plat, et c'est le cas le plus fréquent :
- * lire un ticket ou écrire une page n'a besoin d'aucun état de tour.
+ * The tools that the bridge does NOT follow the control plane without more. All this
+ * which is not in there is a hatch, and this is the most common case:
+ * reading a ticket or writing a page doesn't need any tower state.
  */
 const SUPERVISOR_ONLY = new Set([
   "create_pr",
@@ -162,34 +162,34 @@ const SUPERVISOR_ONLY = new Set([
   "list_projects",
 ]);
 
-/** Démarre le pont. Le superviseur l'ouvre AVANT le serveur opencode. */
+/** Starts the bridge. The supervisor opens it BEFORE the opencode server. */
 export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBridge> {
   const { job, cp } = opts;
 
   /**
-   * Recherches web déjà payées par ce TOUR, mère et filles confondues — le même
-   * compteur partagé que la boucle maison tenait (MIN-171), au même endroit
-   * logique : le seul point par lequel toutes les recherches passent.
+   * Web searches already paid for by this TOUR, mother and daughters combined — the same
+   * shared meter that the house loop held (MIN-171), in the same place
+   * logic: the only point through which all research passes.
    */
   let webSearchesUsed = 0;
   let prInlineComments = job.prInlineComments;
 
   /**
-   * LE PLAFOND DE RECHERCHES, et le refus qu'il rend.
+   * THE RESEARCH CEILING, and the refusal it gives.
    *
-   * Le refus est une réponse de tool ORDINAIRE (`success: false`), pas une
-   * erreur de transport : le modèle le lit, comprend qu'il a épuisé son quota de
-   * recherche et travaille avec ce qu'il a. La phrase est celle de `turn.ts`, au
-   * mot près — le critère de bascule du lot 3 est que le fil raconte la même
-   * chose des deux côtés, et le texte d'un `tool_result` en fait partie.
+   * The refusal is a ORDINARY tool response (`success: false`), not a
+   * transport error: the model reads it, understands that it has exhausted its quota of
+   * searches and works with what he has. The sentence is that of `turn.ts`, at
+   * word for word — the switching criterion for batch 3 is that the thread tells the same
+   * thing on both sides, and the text of a `tool_result` is one of them.
    */
   async function runWebSearch(
     args: Record<string, unknown>,
   ): Promise<{ result: unknown; success: boolean }> {
     if (!job.webSearch) {
-      // Le tool n'est pas généré dans ce cas (`agentToolsFor` le retire hors
-      // OpenRouter) : y arriver quand même veut dire qu'un tour précédent a
-      // laissé son fichier derrière lui. On refuse, on ne paie pas.
+      // The tool is not generated in this case (`agentToolsFor` removes it outside
+      // OpenRouter): getting there anyway means that a previous round has
+      // left his file behind. We refuse, we do not pay.
       return { result: { error: "Web search is not available on this run." }, success: false };
     }
     if (webSearchesUsed >= job.webSearchMax) {
@@ -205,28 +205,28 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
     return { result: res.result, success: res.success };
   }
 
-  /** Le passe-plat : les états de tour partent avec, et reviennent à jour. */
+  /** The pass-through: the tower states go with it, and come back up to date. */
   async function forwardRaw(
     name: string,
     args: Record<string, unknown>,
   ): Promise<ToolOutcome> {
     const res = await cp.callTool(name, { args, imageInput: job.imageInput, prInlineComments });
-    // Le compteur d'ancres fait l'aller-retour : c'est la fonction qui l'oppose
-    // au plafond des 5 et qui rend celui qu'elle a atteint (`runPrTool`).
+    // The anchor counter goes back and forth: it is the function which opposes it
+    // at the ceiling of 5 and which returns the one it has reached (`runPrTool`).
     if (typeof res.inlineUsed === "number") prInlineComments = res.inlineUsed;
     /**
-     * LES IMAGES de `read_resource` traversent ce pont depuis MIN-286 lot 3.
+     * THE IMAGES of `read_resource` cross this bridge from MIN-286 lot 3.
      *
-     * Le résultat d'un tool opencode est du TEXTE — mais son `ToolResult` riche
-     * porte des `attachments`, et opencode les republie en partie `image_url`
-     * d'un message `user` posé juste après le round (« Attached media from tool
-     * result: »). C'est exactement ce que la boucle maison faisait de son côté,
-     * et le corps de requête est le même (mesuré, dossier §2.22).
+     * The result of an opencode tool is TEXT — but its rich `ToolResult`
+     * carries `attachments`, and opencode republishes them in part `image_url`
+     * of a message `user` placed just after the round (“Attached media from tool
+     * result:"). This is exactly what the home loop did on its side,
+     * and the request body is the same (measured, file §2.22).
      *
-     * On ne filtre pas sur `job.imageInput` ici : c'est le plan de contrôle qui
-     * décide de servir l'image ou non — on la lui a demandée avec ce drapeau
-     * (`issue-tools.ts`), et une image qui arrive quand même est une image que
-     * le modèle sait lire.
+     * We do not filter on `job.imageInput` here: it is the control plane which
+     * decides to serve the image or not — we asked him for it with this flag
+     * (`issue-tools.ts`), and an image that still arrives is an image that
+     * the model can read.
      */
     return {
       result: res.result,
@@ -236,18 +236,18 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
   }
 
   /**
-   * Le passe-plat SOUS les règles de livraison : `write_issue_plan` y note le
-   * plan écrit et repart avec sa relecture en `followUp`. Enveloppé une fois, au
-   * démarrage — l'envelopper par appel referait un sink de plan neuf à chaque
-   * fois, donc un contrôle qui ne parle jamais.
+   * The serving hatch UNDER the delivery rules: `write_issue_plan` notes the
+   * written plan and leaves with its rereading in `followUp`. Wrapped once,
+   * startup — wrapping it by call would make a new plan sink each time
+   * times, therefore a control that never speaks.
    */
   const forward = opts.delivery ? opts.delivery.wrapDomainTool(forwardRaw) : forwardRaw;
 
   /**
-   * `create_pr`, sous sa porte : le premier appel d'un tour qui a édité rend les
-   * contrôles au lieu de pousser. La porte n'est posée que s'il y a un handler —
-   * sans lui le tool est REFUSÉ, et rendre des contrôles pour refuser juste après
-   * dirait au modèle qu'il a livré alors qu'il n'a rien fait.
+   * `create_pr`, under his door: the first call of a tour which has edited makes the
+   * controls instead of pushing. The door is only installed if there is a handler —
+   * without it the tool is REFUSED, and make checks to refuse just after
+   * would tell the model that he delivered when he did nothing.
    */
   const supervisorTools: Record<string, SupervisorTool> = { ...opts.supervisorTools };
   if (opts.delivery && supervisorTools.create_pr) {
@@ -273,9 +273,9 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
 
   const server = createServer((req, res) => {
     void handle(req, res).catch((err) => {
-      // Une panne du pont lui-même (corps illisible, socket coupée) : elle se dit
-      // au modèle comme une erreur de tool, jamais en faisant tomber le process
-      // qui tient tout le tour.
+      // A failure of the bridge itself (unreadable body, cut socket): it is said
+      // to the model as a tool error, never by crashing the process
+      // which holds all the way around.
       if (!res.headersSent) res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: `minddy tool bridge: ${(err as Error).message}` }));
     });
@@ -303,41 +303,41 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
     let outcome: ToolOutcome | null;
     try {
       outcome = await dispatch(name, body.args ?? {});
-      // Le motif du refus part au superviseur, qui seul écrit au fil : le pont, lui,
-      // ne connaît que du HTTP. `callID` est celui d'opencode, donc celui que porte
+      // The reason for the refusal goes to the supervisor, who alone writes on the wire: the bridge, itself,
+      // only knows HTTP. `callID` is that of opencode, therefore the one that carries
       // l'event `tool_result` de cet appel.
       if (outcome?.reason && body.callID) opts.onToolRefused?.(body.callID, outcome.reason);
     } catch (err) {
-      // Le plan de contrôle a lâché (409, panne, timeout). Le modèle doit le
-      // lire : un tool en erreur se retente, un round coupé se repaie.
+      // The control plane failed (409, failure, timeout). The model must
+      // read: a tool in error tries again, a cut round pays for itself.
       outcome = { result: { error: `${name} failed: ${(err as Error).message}` }, success: false };
     }
     if (!outcome) {
-      // Un tool servi au modèle et routé nulle part : c'est notre défaut, et il
-      // doit se voir dans les logs de la VM autant que dans la conversation.
+      // A tool served to the model and routed nowhere: this is our default, and it
+      // must be seen in the VM logs as much as in the conversation.
       console.error(`[tool-bridge] unrouted tool: ${name}`);
       res.writeHead(404, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: `unknown minddy tool: ${name}` }));
       return;
     }
 
-    // `JSON.stringify` du résultat, tel quel : c'est ce que la boucle maison
-    // donnait au modèle, et une deuxième mise en forme serait une deuxième chose
-    // à garder en phase pendant la bascule. La voix du harness, elle, vient
-    // APRÈS, en texte : le modèle lit un résultat puis ce qu'on a à lui en dire.
+    // `JSON.stringify` of the result, as is: this is what the house loop
+    // gave to the model, and a second formatting would be a second thing
+    // to keep in phase during the shift. The voice of the harness comes
+    // AFTER, in text: the model reads a result then what we have to tell it about it.
     const rendered = JSON.stringify(
       outcome.result ?? (outcome.success ? {} : { error: "no result" }),
     );
     const output = outcome.followUp ? `${rendered}\n\n${outcome.followUp}` : rendered;
 
     /**
-     * UNE IMAGE → L'ENVELOPPE, et elle est annoncée par son en-tête (cf.
-     * `TOOL_ATTACHMENTS_HEADER`). Le tool généré rend alors un `ToolResult` riche
-     * plutôt qu'une chaîne, et opencode publie la maquette en pièce jointe.
+     * AN IMAGE → THE ENVELOPE, and it is announced by its header (cf.
+     * `TOOL_ATTACHMENTS_HEADER`). The generated tool then renders a rich `ToolResult`
+     * rather than a string, and opencode publishes the mock as an attachment.
      *
-     * Le TEXTE de la réponse ne change pas d'un octet pour autant : la fiche
-     * signalétique du fichier reste ce que le modèle lit, l'image s'y AJOUTE. Un
-     * fil racontera donc la même chose des deux côtés de la bascule.
+     * The TEXT of the response does not change by one byte however: the form
+     * The name of the file remains what the model reads, the image is ADDED to it. A
+     * wire will therefore tell the same thing on both sides of the seesaw.
      */
     if (outcome.images?.length) {
       res.writeHead(200, {
@@ -349,9 +349,9 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
           output,
           attachments: outcome.images.map((image) => ({
             type: "file",
-            // La data URL porte son propre type MIME ; hors de ce cas on ne sait
-            // pas, et `application/octet-stream` vaut mieux qu'un `image/png`
-            // affirmé au hasard — opencode décide de la modalité là-dessus.
+            // The data URL carries its own MIME type; outside of this case we don't know
+            // not, and `application/octet-stream` is better than a `image/png`
+            // asserted randomly — opencode decides the modality on that.
             mime: mimeOfDataUrl(image.url) ?? "application/octet-stream",
             url: image.url,
             ...(image.name ? { filename: image.name } : {}),
@@ -386,10 +386,10 @@ export async function startToolBridge(opts: ToolBridgeOptions): Promise<ToolBrid
 }
 
 /**
- * Le type MIME d'une data URL, ou `null`. Nos images en sont toujours
- * ([content.ts](../content.ts) : jamais d'URL signée, parce que l'historique est
- * rejoué des heures plus tard) — mais le lire plutôt que le supposer coûte une
- * ligne, et une signature qui changerait se verrait ici plutôt qu'en production.
+ * The MIME type of a data URL, or `null`. Our images are always
+ * ([content.ts](../content.ts): never a signed URL, because the history is
+ * replayed hours later) — but reading it rather than assuming it costs a
+ * line, and a signature that changes would be seen here rather than in production.
  */
 function mimeOfDataUrl(url: string): string | null {
   const match = /^data:([^;,]+)[;,]/.exec(url);

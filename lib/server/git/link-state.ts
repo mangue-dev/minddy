@@ -4,26 +4,26 @@ import crypto from "node:crypto";
 import { requireSecret } from "@/lib/server/env-secrets";
 
 /**
- * `state` signé pour les flux de connexion git (MIN-47), porté d'AutoKap
+ * `state` signed for git connection flows (MIN-47), ported from AutoKap
  * (github-link-state.ts).
  *
- * « Connecter un dépôt » est une danse à 3 temps : (1) minddy mint une URL
- * d'install/authorize portant un `state` signé, (2) l'utilisateur installe/
- * autorise chez le provider, (3) le provider redirige vers notre callback avec
- * ce même `state`. Le callback n'a aucun contexte de confiance propre : le
- * `state` est la preuve « cette installation vise le projet P, initiée par
- * l'utilisateur U ». HMAC-signé (infalsifiable) et court (15 min → une URL fuitée
- * ne se rejoue pas). Secret : GIT_STATE_SECRET.
+ * "Connecting a repository" is a 3-beat dance: (1) minddy mint a URL
+ * of install/authorize carrying a signed `state`, (2) the user installs/
+ * authorizes at the provider, (3) the provider redirects to our callback with
+ * this same `state`. The callback has no trust context of its own: the
+ * `state` is the proof “this installation targets project P, initiated by
+ * user U”. HMAC-signed (unfalsifiable) and short (15 min → a leaked URL
+ * is not replayed). Secret: GIT_STATE_SECRET.
  */
 
 const DEFAULT_MAX_AGE_MS = 15 * 60 * 1000; // 15 minutes
 const CLOCK_SKEW_TOLERANCE_MS = 60 * 1000;
 
 /**
- * `projectId` sentinelle pour une connexion au niveau COMPTE (depuis les
- * paramètres du compte, sans projet). Le state porte toujours le vrai `userId` ;
- * les callbacks branchent sur `origin === "account"` pour sauter la vérification
- * d'accès projet et rediriger vers /settings.
+ * `projectId` sentinel for a connection at ACCOUNT level (from the
+ * account settings, without project). The state always carries the real `userId` ;
+ * callbacks branch to `origin === "account"` to skip the project access check
+ * and redirect to /settings.
  */
 export const ACCOUNT_CONNECT_PROJECT = "__account__";
 
@@ -33,13 +33,13 @@ interface GitLinkStatePayload {
   provider: string;
   /** issued-at, epoch ms */
   iat: number;
-  /** D'où l'install a été initiée — contrôle la redirection du callback. */
+  /** Where the install was initiated from — controls callback redirection. */
   origin?: string;
 }
 
 function getStateSecret(): string {
-  // Absent OU trop court : le même refus (MIN-347). Un HMAC à secret court est
-  // un `state` forgeable, donc une installation attribuée au projet d'un autre.
+  // Absent OR too short: the same refusal (MIN-347). A short secret HMAC is
+  // a forgeable `state`, therefore an installation attributed to someone else's project.
   return requireSecret("GIT_STATE_SECRET");
 }
 
@@ -48,8 +48,8 @@ function sign(body: string, secret: string): string {
 }
 
 /**
- * Mint un state signé : `base64url(json).hexHmac`. Lève si le secret est absent
- * (fail closed — jamais de token non signé).
+ * Mint a signed state: `base64url(json).hexHmac`. Raised if the secret is absent
+ * (fail closed — never an unsigned token).
  */
 export function signGitLinkState(params: {
   projectId: string;
@@ -69,9 +69,9 @@ export function signGitLinkState(params: {
 }
 
 /**
- * Vérifie un state et renvoie son payload, ou null sur toute anomalie (malformé,
- * mauvaise signature, expiré, secret manquant). Ne lève jamais — l'appelant
- * redirige vers un état d'erreur sur null.
+ * Checks a state and returns its payload, or null on any anomaly (malformed,
+ * bad signature, expired, missing secret). Never raises — caller
+ * redirects to an error state on null.
  */
 export function verifyGitLinkState(
   token: string | null | undefined,
@@ -87,10 +87,10 @@ export function verifyGitLinkState(
   try {
     secret = getStateSecret();
   } catch {
-    return null; // mal configuré → fail closed
+    return null; // poorly configured → fail closed
   }
 
-  // Comparaison de signature en temps constant (longueurs égales requises).
+  // Signature comparison in constant time (equal lengths required).
   const provided = Buffer.from(signature);
   const computed = Buffer.from(sign(body, secret));
   if (provided.length !== computed.length) return null;

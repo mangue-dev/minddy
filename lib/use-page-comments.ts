@@ -1,16 +1,16 @@
 "use client";
 
-// Le fil d'une page, côté client (MIN-282).
+// The thread of a page, client side (MIN-282).
 //
-// Une seule requête — le fil ENTIER — et tout le reste est du calcul : l'ordre
-// et le détachement vivent dans lib/page-comments.ts, qui ne sait rien du
-// réseau. Ce module ne fait que brancher les deux, et les écritures qui les font
+// A single request — the ENTIRE thread — and everything else is calculation: order
+// and the detach live in lib/page-comments.ts, which knows nothing about
+// network. This module just plugs the two together, and the writes that make them
 // bouger.
 //
-// Le TEMPS RÉEL ne passe pas par ici : le pont (lib/realtime-provider.tsx)
-// invalide `["page-comments", pageId]` sur toute écriture diffusée par le topic
-// du projet. Pas de canal par page — la présence de page passe déjà par le
-// topic du projet, en ouvrir un second doublerait les abonnements pour la même
+// REAL TIME does not pass through here: the bridge (lib/realtime-provider.tsx)
+// invalidates `["page-comments", pageId]` on any writing broadcast by the topic
+// of the project. No channel per page — page presence already goes through the
+// topic of the project, opening a second one would double the subscriptions for the same
 // information.
 
 import { useCallback, useMemo } from "react";
@@ -33,7 +33,7 @@ export const pageCommentsKey = (pageId: string) =>
 
 export interface PageCommentsHandle {
   comments: PageComment[];
-  /** Les fils VISIBLES, ordonnés — détachés en tête. */
+  /** The threads VISIBLE, ordered — detached at the head. */
   threads: PageThread[];
   loading: boolean;
   add: (input: {
@@ -50,8 +50,8 @@ export interface PageCommentsHandle {
 export function usePageComments({
   projectId,
   pageId,
-  /** Les ids de blocs du document TEL QU'IL EST À L'ÉCRAN — c'est lui, et pas
-      la dernière sauvegarde, qui décide de ce qui est détaché. */
+  /** The block ids of the document AS IT IS ON SCREEN — it, not
+ the last save, decides what is detached. */
   blockIds,
 }: {
   projectId: string;

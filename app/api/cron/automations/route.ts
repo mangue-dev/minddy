@@ -14,51 +14,51 @@ import type { AutomationSource } from "@/lib/automations";
 import type { IssueStatus } from "@/lib/issue-constants";
 
 /**
- * Le BALAYEUR des chaînes en sursis (MIN-147).
+ * The CHAIN ​​SWEEPER on borrowed time (MIN-147).
  *
- * Une chaîne ouverte par un changement de statut attend quelques minutes avant
- * de démarrer : le temps de changer d'avis, de copier le prompt pour le faire
- * soi-même, ou de reclasser le ticket. Personne ne peut tenir cette attente dans
- * la fenêtre d'un `after()` — d'où ce cron.
+ * A channel opened by a status change waits a few minutes before
+ * to start: time to change your mind, to copy the prompt to do so
+ * yourself, or to reclassify the ticket. No one can keep this expectation in
+ * the window of a `after()` — hence this cron.
  *
- * Route SÉPARÉE d'`agent-drain` à dessein : celui-ci a un budget de 800 s, sert
- * de répartiteur aux déploiements preview et ne doit pas voir sa fenêtre grignotée
- * par un travail qui n'a rien à voir. Ici, chaque réveil est court — le moteur ne
- * fait que lancer un run et rendre la main.
+ * SEPARATE route of `agent-drain` on purpose: this one has a budget of 800 s, serves
+ * dispatcher to preview deployments and must not see its window nibbled
+ * by a job that has nothing to do with it. Here, each awakening is short — the engine does not
+ * just throws a run and returns the hand.
  *
- * C'est `runAutomations` qui décide vraiment : il re-vérifie que la condition
- * ayant ouvert la chaîne tient toujours (le ticket est-il encore dans ce
- * statut ?) et l'annule sinon. Le balayeur ne fait que sonner à la porte.
+ * It is `runAutomations` which really decides: it re-checks that the condition
+ * having opened the chain still holds (is the ticket still in this
+ * status?) and cancels it otherwise. The sweeper just rings the doorbell.
  */
 
 export const runtime = "nodejs";
-/** Un réveil = un lancement de run, jamais son exécution (c'est le drain qui l'a). */
+/** A wake-up = a run launch, never its execution (it's the drain that has it). */
 export const maxDuration = 300;
 
-/** Assez pour absorber une rafale, assez peu pour tenir dans la fenêtre. */
+/** Enough to absorb a gust, little enough to fit in the window. */
 const SWEEP_LIMIT = 50;
 
 /**
- * Passé ce retard, une chaîne en sursis n'a plus de sens : le monde a changé
- * depuis le geste qui l'a ouverte. Sans cette péremption, une chaîne que le
- * moteur refuse de démarrer (run manuel qui n'en finit pas, projet corbeillé)
- * restait `pending` POUR TOUJOURS — et, la file étant triée par ancienneté, une
- * cinquantaine d'entre elles suffisait à occuper 100 % de chaque balayage et à
- * affamer toutes les automatisations de la plateforme.
+ * After this delay, a suspended channel no longer makes sense: the world has changed
+ * since the gesture that opened it. Without this expiry, a chain that the
+ * engine refuses to start (manual run that never ends, project trashed)
+ * remained `pending` FOREVER — and, the queue being sorted by seniority, a
+ * fifty of them was enough to occupy 100% of each scan and to
+ * starve all automation from the platform.
  */
 const PENDING_MAX_LATENESS_MS = 60 * 60_000;
 
 /**
- * Passé ce silence, une chaîne `running` est ABANDONNÉE : son crochet de fin de
- * run s'est perdu (fonction gelée, run manuel intercalé qui ne porte pas de
- * `chain_id`, exception après l'avancement). Rien d'autre ne la réveillait, et
- * comme `running` fait partie de l'index unique, son ticket n'acceptait plus
- * jamais d'automatisation.
+ * After this silence, a `running` string is ABANDONED: its end hook
+ * run was lost (frozen function, interspersed manual run which does not carry
+ * `chain_id`, exception after advancement). Nothing else woke her, and
+ * because `running` is part of the unique index, its ticket could never be
+ * automated again.
  *
- * Très au-delà de la latence d'un crochet : on ne rattrape que ce qui est
- * manifestement mort. Le rattrapage est sans risque — c'est le compare-and-set
- * d'`advanceChain` qui tranche au bout, donc un événement simplement lent ne
- * peut pas produire un double lancement.
+ * Far beyond the latency of a hook: we only catch up with what is
+ * obviously dead. Catch-up is risk-free — it’s compare-and-set
+ * of `advanceChain` which cuts at the end, so a merely slow event cannot
+ * produce a duplicate launch.
  */
 const RUNNING_STALE_MS = 15 * 60_000;
 
@@ -71,15 +71,15 @@ async function handle(request: NextRequest) {
   let expired = 0;
   let revived = 0;
 
-  // En SÉRIE : deux chaînes dues appartiennent presque toujours au même projet,
-  // et chacune lance un run. Les paralléliser ne ferait que bousculer le quota
-  // et la file du drain pour gagner quelques centaines de millisecondes.
+  // In SERIES: two related chains almost always belong to the same project,
+  // and each throws a run. Parallelizing them would only disrupt the quota
+  // and the drain queue to save a few hundred milliseconds.
   let started = 0;
   for (const chain of due) {
-    // Trop en retard, ou sans événement mis de côté (ligne écrite à la main) :
-    // dans les deux cas elle ne démarrera jamais — on ne sait pas POURQUOI elle
-    // a été ouverte, ou le monde a trop changé depuis. On la retire de la file
-    // plutôt que de la relire indéfiniment.
+    // Too late, or without an event set aside (handwritten line):
+    // in both cases it will never start — we don't know WHY it
+    // was opened, or the world has changed too much since then. We remove it from the line
+    // rather than rereading it over and over again.
     const lateness = Date.now() - Date.parse(chain.not_before ?? chain.created_at);
     if (!chain.pending_event?.to || lateness > PENDING_MAX_LATENESS_MS) {
       await cancelPendingChain(chain.id, "expired").catch(() => null);
@@ -101,22 +101,22 @@ async function handle(request: NextRequest) {
       });
       started++;
     } catch (err) {
-      // Une chaîne qui explose ne doit pas emporter les suivantes.
+      // A chain that explodes must not carry away the following ones.
       console.error("[automations-cron] chain failed:", chain.id, (err as Error).message);
     }
   }
 
-  // ── Le filet des chaînes ABANDONNÉES ──────────────────────────────────────
-  // Une chaîne `running` que plus aucun run ne porte : on rejoue la fin de son
-  // dernier run, exactement ce que fait le bouton « Continuer ».
+  // ── The net of ABANDONED chains ──────────────────────────────────────
+  // A `running` string that no run carries anymore: we replay the end of its
+  // last run, exactly what the “Continue” button does.
   for (const chain of await staleRunningChains(
     new Date(Date.now() - RUNNING_STALE_MS).toISOString(),
   )) {
     try {
-      if (await activeRunForChain(chain.id)) continue; // elle travaille
+      if (await activeRunForChain(chain.id)) continue; // it is still working
       const last = await lastRunOfChain(chain.id);
       if (!last) {
-        // Avancée puis jamais lancée (exception entre les deux) : rien à rejouer.
+        // Advanced then never launched (exception between the two): nothing to replay.
         await haltChain(chain, "stalled");
         revived++;
         continue;

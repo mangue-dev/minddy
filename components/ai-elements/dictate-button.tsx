@@ -45,9 +45,9 @@ const SPEECH_PEAK_THRESHOLD = 20;
 
 type DictateStatus = "idle" | "starting" | "recording" | "processing";
 
-/** La commande du bouton, pour qui l'a rangé ailleurs (voir `hideWhenIdle`). */
+/** The button command, for those who have stored it elsewhere (see `hideWhenIdle`). */
 export interface DictateButtonHandle {
-  /** Démarre la prise, ou l'arrête si elle tourne — exactement le clic. */
+  /** Starts the shot, or stops it if it's spinning — exactly the click. */
   toggle: () => void;
 }
 
@@ -56,15 +56,15 @@ export interface DictateButtonProps {
   /** Called with the transcribed text when recording completes. */
   onTranscription: (text: string) => void;
   /**
-   * Remplace l'envoi par défaut à `/api/transcribe`. Reçoit la prise et la
-   * locale, rend le texte transcrit — ou `null` quand l'appelant a déjà dit
-   * l'échec à sa façon (le bouton se tait alors).
+   * Overrides the default sending to `/api/transcribe`. Receives the plug and
+   * local, makes the transcribed text — or `null` when the caller has already said
+   * failure in its own way (the button then goes silent).
    *
-   * Le point d'entrée de la transcription n'est pas le même partout : le board
-   * public a le sien (session visiteur, dépense imputée au owner), et une
-   * dictée de retour s'inscrit au ledger sous sa propre feature. Ce qui reste
-   * commun — capter le micro, l'onde, le chrono, la garde de silence — reste
-   * ici, et c'est bien pour ça que le crochet est une prop et pas un fork.
+   * The entry point for transcription is not the same everywhere: the board
+   * public has its own (visitor session, expense charged to the owner), and a
+   * Return dictation is entered into the ledger under its own feature. What remains
+   * common — pick up the microphone, the wave, the chrono, the silence — remains
+   * here, and that's why the hook is a prop and not a fork.
    */
   uploadAudio?: (blob: Blob, locale: string) => Promise<string | null>;
   /** Position the button absolutely (top-right). Defaults to inline-flex. */
@@ -74,16 +74,16 @@ export interface DictateButtonProps {
   /** Optional tooltip override. Defaults to the localized "Voice dictation" label. */
   tooltipLabel?: string;
   /**
-   * When set, pressing this combo toggles recording — same as clicking. Accepts
-   * a bare key ("v") or a combo of modifiers + key, case-insensitive, joined by
-   * "+": "mod" (⌘ on macOS, Ctrl elsewhere), "shift", "alt". A bare key only
-   * fires while focus isn't in a text field (it would type otherwise); a combo
-   * carries its own modifiers, so it fires everywhere, inputs included — but it
-   * must include a NON-typographic modifier ("mod" or "alt"): a lone Shift
-   * combo is just how you type a capital letter, and would fire on it. The
-   * listener lives for as long as the button is mounted, so scope it by only
-   * rendering the button in the context where the shortcut should apply.
-   */
+ * When set, pressing this combo toggles recording — same as clicking. Accepts
+ * a bare key ("v") or a combo of modifiers + key, case-insensitive, joined by
+ * "+": "mod" (⌘ on macOS, Ctrl elsewhere), "shift", "alt". A bare key only
+ * fires while focus isn't in a text field (it would type otherwise); a combo
+ * carries its own modifiers, so it fires everywhere, inputs included — but it
+ * must include a NON-typographic modifier ("mod" or "alt"): a lone Shift
+ * combo is just how you type a capital letter, and would fire on it. The
+ * listener lives for as long as the button is mounted, so scope it by only
+ * rendering the button in the context where the shortcut should apply.
+ */
   shortcutKey?: string;
   /**
    * Notified while a finished take is being transcribed (mic released, audio in
@@ -94,34 +94,34 @@ export interface DictateButtonProps {
    */
   onProcessingChange?: (processing: boolean) => void;
   /**
-   * Le bouton n'est plus la porte d'entrée du geste — une entrée de menu l'est
-   * (page Objectifs, MIN-226). Il reste MONTÉ au repos, simplement invisible :
-   * le magnétophone, le chrono, la garde de silence et l'ancre du popover
-   * vivent ici, et le démonter perdrait la prise en cours. Il reparaît de
-   * lui-même dès qu'il enregistre — c'est alors le bouton d'arrêt.
+   * The button is no longer the gateway to the gesture — a menu entry is
+   * (Objectives page, MIN-226). It remains MOUNTED at rest, simply invisible:
+   * the tape recorder, the chrono, the silence guard and the popover anchor
+   * live here, and taking it apart would lose the current socket. It reappears
+   * itself as soon as it records — then it's the stop button.
    */
   hideWhenIdle?: boolean;
   /**
-   * Enregistre dès son apparition, sans clic ni raccourci — l'hôte s'ouvre
-   * déjà en train d'écouter (le dialog « nouveau ticket » ouvert par ⌘⇧D).
+   * Saves as soon as it appears, without clicks or shortcuts — the host opens
+   * already listening (the “new ticket” dialog opened by ⌘⇧D).
    *
-   * C'est ICI que ça se décide et pas chez l'hôte, une question de timing : un
-   * effet du parent qui appellerait `toggle()` par la ref tirerait à blanc,
-   * car le contenu d'un dialog Radix ne se monte qu'au SECOND rendu (son
-   * `Presence` envoie MOUNT depuis un effet de layout) — la ref est encore
-   * nulle quand l'effet du parent passe. Monté ici, le déclenchement suit le
-   * montage du bouton, qui est justement l'instant où tout est prêt.
+   * It's HERE that it's decided and not with the host, a question of timing: a
+   * effect of the parent who would call `toggle()` by the ref would draw blank,
+   * because the content of a Radix dialog only amounts to the SECOND rendering (its
+   * `Presence` sends MOUNT from a layout effect) — the ref is still
+   * zero when the parent's effect passes. Mounted here, the trigger follows the
+   * assembly of the button, which is precisely the moment when everything is ready.
    *
-   * Le passage à `true` déclenche UNE prise. C'est à l'hôte de DÉSARMER le
-   * drapeau depuis {@link DictateButtonProps.onAutoStart} : le garde-fou
-   * interne ne vaut que tant que le bouton reste monté, et il est des hôtes
-   * qui le démontent entre deux (le dialog « nouveau ticket » le remplace par
-   * l'icône de Numo pendant que celui-ci reprend la dictée). Un drapeau resté
-   * levé rallumerait le micro au remontage.
+   * Switching to `true` triggers ONE hold. It is up to the host to DISARM the
+   * flag from {@link DictateButtonProps.onAutoStart}: the safeguard
+   * internal is only good as long as the button remains mounted, and it is hosts
+   * who dismantle it between two (the “new ticket” dialog replaces it with
+   * the Numo icon while he resumes dictation). A flag that remained
+   * lifted would turn the microphone back on when reassembled.
    */
   autoStart?: boolean;
-  /** Rappelé quand {@link DictateButtonProps.autoStart} vient de lancer une
-   *  prise — le signal pour désarmer le drapeau côté hôte. */
+  /** Recalled when {@link DictateButtonProps.autoStart} has just launched a
+   * socket — the signal to disarm the flag on the host side. */
   onAutoStart?: () => void;
   className?: string;
 }
@@ -244,8 +244,8 @@ export function DictateButton({
     };
   }, [cleanupStream]);
 
-  // Le crochet d'envoi, lu par une ref : l'appelant le referme sur son propre
-  // état (le brouillon en cours, un run à reprendre) sans avoir à le mémoïser.
+  // The send hook, read by a ref: the caller closes it on its own
+  // status (the current draft, a run to resume) without having to memorize it.
   const uploadAudioRef = useRef(uploadAudio);
   useEffect(() => {
     uploadAudioRef.current = uploadAudio;
@@ -258,8 +258,8 @@ export function DictateButton({
         try {
           const text = (await upload(blob, locale))?.trim() ?? "";
           if (!isMountedRef.current) return;
-          // Même garde qu'en dessous : sans lettre ni chiffre, Whisper a meublé
-          // du silence. L'appelant, lui, a déjà dit ses propres échecs.
+          // Same guard as below: without letters or numbers, Whisper has furnished
+          // silence. The caller has already spoken about his own failures.
           if (/[\p{L}\p{N}]/u.test(text)) onTranscription(text);
           else if (text) toast.error(t("emptyResult"));
         } catch (err) {
@@ -462,11 +462,11 @@ export function DictateButton({
 
   useImperativeHandle(ref, () => ({ toggle: handleClick }), [handleClick]);
 
-  // Prise ouverte d'office (voir `autoStart`). Le garde-fou est un ref, pas la
-  // seule liste de dépendances : `startRecording` change d'identité à chaque
-  // changement de statut, et sans lui la FIN d'une prise — le retour à
-  // « idle » — en relancerait immédiatement une autre. Un hôte encore occupé
-  // (`disabled`) fait attendre la prise plutôt que de la perdre.
+  // Socket open automatically (see `autoStart`). The guardrail is a ref, not the
+  // only list of dependencies: `startRecording` changes identity each time
+  // change of status, and without it the END of a take — the return to
+  // “idle” — would immediately restart another one. A host still busy
+  // (`disabled`) makes you wait for the hold rather than losing it.
   const autoStartedRef = useRef(false);
   const onAutoStartRef = useRef(onAutoStart);
   useEffect(() => {
@@ -545,9 +545,9 @@ export function DictateButton({
                 type="button"
                 onClick={handleClick}
                 disabled={disabled || status === "starting" || status === "processing"}
-                // En enregistrement, le bouton ARRÊTE : c'est ça qu'il faut
-                // annoncer, quelle que soit l'étiquette au repos. Une infobulle
-                // qui promet un résultat (« on remplit le retour ») décrirait
+                // When recording, the STOP button: that's what you need
+                // announce, whatever the label at rest. A tooltip
+                // which promises a result (“we complete the return”) would describe
                 // sinon un bouton qui fait l'inverse.
                 aria-label={
                   isRecording ? t("stop") : (tooltipLabel ?? t("start"))
@@ -557,9 +557,9 @@ export function DictateButton({
                   "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50",
                   isRecording && "text-brand",
                   floating && "absolute bottom-2 right-2 z-10",
-                  // `display:none` et non un démontage : l'élément reste l'ancre
-                  // du popover, et il redevient visible dans le même rendu que
-                  // celui qui l'ouvre (le statut a déjà quitté « idle »).
+                  // `display:none` and not a disassembly: the element remains the anchor
+                  // of the popover, and it becomes visible again in the same rendering as
+                  // the one who opens it (the status has already left “idle”).
                   hideWhenIdle && !isBusy && "hidden",
                   className,
                 )}
@@ -601,8 +601,8 @@ export function DictateButton({
             </div>
           ) : (
             <>
-              {/* Le chrono seul, centré : plus de compte à rebours à afficher
-                  en regard depuis que la dictée n'est plus limitée en durée. */}
+              {/* The chrono alone, centered: no more countdowns to display
+ since dictation is no longer limited in duration. */}
               <div className="flex items-center justify-center text-xs">
                 <span className="font-medium tabular-nums text-foreground">
                   {formatTime(elapsedMs)}

@@ -9,21 +9,21 @@ import {
 } from "@/lib/desktop/local-repo";
 
 /**
- * Les dossiers attachés, retenus d'un lancement à l'autre (MIN-359).
+ * Attached folders, retained from one launch to another (MIN-359).
  *
- * Même patron que [channel-store.ts](channel-store.ts), et pour une raison de
- * plus : **ce réglage n'a de sens que sur cette machine.** Un chemin de home ne
- * veut rien dire ailleurs ; le ranger côté serveur le publierait, faux, à tous
- * les membres du projet. Il vit donc dans `userData`, à côté du canal et de la
- * session, sous le nom d'app posé par `main.ts`.
+ * Same pattern as [channel-store.ts](channel-store.ts), and for some reason
+ * plus: **this setting only makes sense on this machine.** A home path ne
+ * means nothing elsewhere; storing it server side would publish it, falsely, to all
+ * project members. It therefore lives in `userData`, next to the channel and the
+ * session, under the app name set by `main.ts`.
  *
- * ⚠ Le dossier CHANGE en développement (`minddy-dev`, cf. `app.setName`) : la
- * coquille de dév et l'app installée n'ont pas les mêmes attachements. C'est
- * cohérent avec le reste, et ça évite qu'une session de dév redirige les runs de
- * l'app installée vers un dossier qu'on est en train de casser.
+ * ⚠ The CHANGE folder in development (`minddy-dev`, cf. `app.setName`): the
+ * dev shell and the installed app do not have the same attachments. This is
+ * consistent with the rest, and it prevents a dev session from redirecting the runs of
+ * the installed app to a folder that we are breaking.
  *
- * Lecture et écriture **synchrones** : le fichier fait quelques centaines
- * d'octets et chaque geste est un aller-retour d'IPC qui attend sa réponse.
+ * Read and write **synchronous**: the file is a few hundred
+ * bytes and each gesture is a round trip from IPC waiting for its response.
  */
 
 const FILE_NAME = "repos.json";
@@ -33,13 +33,13 @@ function storeFile(): string {
 }
 
 /**
- * Les attachements sur disque, ou rien.
+ * Attachments on disk, or nothing.
  *
- * **Tout échec retombe sur un store vide, en silence** : fichier absent (le cas
- * normal, personne n'a encore attaché quoi que ce soit), JSON tronqué par un
- * arrêt brutal, dossier en lecture seule. Aucun de ces cas ne justifie
- * d'empêcher l'app de s'ouvrir, et le repli est toujours « pas de dossier
- * attaché », c'est-à-dire le cloud.
+ * **Any failure falls on an empty store, silently**: file absent (the normal case
+ *, no one has attached anything yet), JSON truncated by a
+ * abrupt stop, read-only folder. Neither case justifies
+ * preventing the app from opening, and the fallback is always "no folder
+ * attached", i.e. cloud.
  */
 export function readLocalRepos(): LocalRepoStore {
   try {
@@ -50,17 +50,17 @@ export function readLocalRepos(): LocalRepoStore {
 }
 
 /**
- * Retient les attachements. Rend `false` si l'écriture a échoué — l'appelant
- * répond quand même à la page, mais le choix ne survivra pas au prochain
- * lancement, et c'est une chose qu'on veut voir dans les logs plutôt que
- * découvrir au redémarrage.
+ * Retains attachments. Returns `false` if the write failed — the caller
+ * still responds to the page, but the choice will not survive the next
+ * launch, and that's something we want to see in the logs rather than
+ * finding out on reboot.
  */
 export function writeLocalRepos(store: LocalRepoStore): boolean {
   try {
     writeFileSync(storeFile(), serializeLocalRepoStore(store), "utf8");
     return true;
   } catch (error) {
-    console.error("[local-repo] écriture impossible", error);
+    console.error("[local-repo] write failed", error);
     return false;
   }
 }

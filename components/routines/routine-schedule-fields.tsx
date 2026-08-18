@@ -15,25 +15,25 @@ import {
 } from "@/lib/routine-schedule";
 
 /**
- * Les champs d'une CADENCE (MIN-185) : les jours, l'heure, le fuseau.
+ * The fields of a CADENCE (MIN-185): days, time, time zone.
  *
- * Un seul composant pour les deux surfaces qui les éditent — l'étape `schedule`
- * du wizard et l'éditeur du détail. Deux formulaires séparés auraient fini par
- * accepter deux choses différentes ; ici il n'y a qu'une règle, et elle est
- * celle que `assertSchedule` fait respecter derrière.
+ * A single component for the two surfaces that edit them — the `schedule` step
+ * of the wizard and the detail editor. Two separate forms would have ended up
+ * accept two different things; here there is only one rule, and it is
+ * the one that `assertSchedule` enforces behind.
  *
- * **Les jours se choisissent à PLUSIEURS** : « le lundi et le jeudi » est une
- * cadence courante, et le picker multi-choix de l'app (le même que les
- * catégories d'un ticket) la rend sans rien inventer.
+ * **The days are chosen by SEVERAL**: “Monday and Thursday” is a
+ * current cadence, and the app's multi-choice picker (the same as the
+ * categories of a ticket) makes it without inventing anything.
  *
- * **Le fuseau est un combobox cherchable**, pas un champ texte : il y a 400
- * noms IANA, personne ne les tape de mémoire, et un nom mal tapé faisait partir
- * la routine à la mauvaise heure — ou la refusait au moment de créer, ce qui
- * est mieux mais toujours trop tard.
+ * **The time zone is a searchable combobox**, not a text field: there are 400
+ * IANA names, no one types them from memory, and a poorly typed name would cause
+ * the routine at the wrong time — or refused it when creating, which
+ * is better but still too late.
  *
- * La FRÉQUENCE se choisit en cartes illustrées, des deux côtés : le volet de
- * détail est aussi large que la modale du wizard, et deux dessins différents
- * pour un même choix n'auraient fait que le rendre méconnaissable d'un écran à
+ * The FREQUENCY is chosen in illustrated cards, on both sides: the flap of
+ * detail is as wide as the wizard's modal, and two different drawings
+ * for the same choice would only have made it unrecognizable from one screen to
  * l'autre.
  */
 
@@ -58,11 +58,11 @@ export function RoutineScheduleFields({
   const patch = (fields: Partial<RoutineSchedule>) => onChange({ ...value, ...fields });
 
   /**
-   * Changer de fréquence VIDE les jours de l'autre cadence et amorce ceux de la
-   * nouvelle. Sans ça, passer d'hebdomadaire à mensuel gardait « lundi » dans un
-   * champ que la cadence mensuelle interdit — la cadence devenait invalide sans
-   * que rien à l'écran ne le montre — et laissait le jour du mois vide, donc
-   * sans aucune occurrence. Le lundi et le 1er sont les défauts, comme partout.
+   * Change frequency EMPTY the days of the other cadence and start those of the
+   * new. Without that, going from weekly to monthly kept “Monday” in a
+   * field that the monthly cadence prohibits — the cadence became invalid without
+   * that nothing on the screen shows it — and left the day of the month blank, so
+   * without any occurrence. Monday and the 1st are the defaults, like everywhere.
    */
   const setFrequency = (frequency: RoutineFrequency) =>
     onChange({
@@ -73,8 +73,8 @@ export function RoutineScheduleFields({
         frequency === "monthly" ? (value.daysOfMonth?.length ? value.daysOfMonth : [1]) : [],
     });
 
-  // Lundi en tête, dimanche à la fin : l'ordre de la semaine, pas celui d'`Intl`.
-  // Capitale en tête : c'est un libellé de champ, pas un mot dans une phrase.
+  // Monday at the top, Sunday at the end: the order of the week, not that of `Intl`.
+  // Capital first: this is a field label, not a word in a sentence.
   const weekdayOptions = useMemo(
     () =>
       [1, 2, 3, 4, 5, 6, 0].map((d) => ({
@@ -121,10 +121,10 @@ export function RoutineScheduleFields({
         ))}
       </div>
 
-      {/* Les trois réglages sur UNE ligne : le jour, l'heure, le fuseau. Ils
-          répondent à une seule question — quand ? — et se lisent ensemble.
-          (Une cadence quotidienne n'a pas de jour à choisir : ses deux champs
-          restants s'élargissent d'eux-mêmes.) */}
+      {/* The three settings on ONE line: day, time, time zone. They
+          answer just one question — when? — and read together.
+          (A daily cadence does not have a day to choose: its two fields
+          remaining expand on their own.) */}
       <div
         className={cn(
           "grid grid-cols-1 gap-3",
@@ -214,13 +214,13 @@ export function RoutineScheduleFields({
 }
 
 /**
- * Le fuseau, cherchable — les ~400 noms d'`Intl.supportedValuesOf`, filtrés à
- * la frappe par le même combobox que le picker de modèle (qui tient déjà un
- * catalogue de plusieurs centaines d'entrées).
+ * The time zone, searchable — the ~400 names of `Intl.supportedValuesOf`, filtered at
+ * hitting by the same combobox as the pattern picker (which already holds a
+ * catalog of several hundred entries).
  *
- * Le repli quand `supportedValuesOf` n'existe pas n'est pas décoratif : sans
- * lui, le champ serait VIDE sur un moteur ancien, et une routine ne pourrait
- * plus être créée du tout. Il propose alors au moins le fuseau courant.
+ * The fallback when `supportedValuesOf` does not exist is not decorative: without
+ * him, the field would be EMPTY on an old engine, and a routine could not
+ * no longer be created at all. It then offers at least the current time zone.
  */
 export function TimezoneCombobox({
   value,
@@ -239,13 +239,13 @@ export function TimezoneCombobox({
     } catch {
       zones = [];
     }
-    // Le fuseau courant est toujours proposable, même absent du catalogue.
+    // The current time zone is always available, even if absent from the catalog.
     if (value && !zones.includes(value)) zones = [value, ...zones];
     return zones.map((zone) => ({
       value: zone,
       label: zone.replace(/_/g, " "),
-      // « Paris » doit trouver « Europe/Paris » : la ville seule est un terme
-      // de recherche à part entière, sinon il faut taper le continent d'abord.
+      // “Paris” must find “Europe/Paris”: the city alone is a term
+      // search in its own right, otherwise you have to type the continent first.
       keywords: [zone, ...zone.split("/")],
       trailing: (
         <span className="text-xs text-muted-foreground tabular-nums">
@@ -270,7 +270,7 @@ export function TimezoneCombobox({
   );
 }
 
-/** « UTC+2 » — de quoi reconnaître un fuseau dont on ne lit que la ville. */
+/** “UTC+2” — enough to recognize a time zone where only the city is read. */
 function offsetLabel(timeZone: string): string {
   try {
     const parts = new Intl.DateTimeFormat("en-US", {

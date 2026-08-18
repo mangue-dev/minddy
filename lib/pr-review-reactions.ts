@@ -1,17 +1,17 @@
 /**
- * Réactions emoji d'un commentaire de review (MIN-139). Module PUR, partagé
- * client/serveur comme `pr-review-threads` : le même vocabulaire doit valoir des
- * deux côtés du réseau ET des deux côtés des forges, sinon un 👍 posté sur l'une
- * ne se relit pas sur l'autre.
+ * Emoji reactions from a review comment (MIN-139). PUR module, shared
+ * client/server like `pr-review-threads`: the same vocabulary must be valid for
+ * on both sides of the network AND on both sides of the forges, otherwise a 👍 posted on one
+ * cannot be read on the other.
  *
- * **Le vocabulaire canonique est celui de GitHub** (`+1`, `hooray`, …) parce que
- * c'est le plus PETIT des deux : GitHub n'accepte que ces huit réactions, là où
- * GitLab décerne n'importe quel emoji nommé. Prendre le vocabulaire le plus large
- * aurait donné une palette dont GitHub refuse la moitié — l'asymétrie que la
- * contrainte structurante du ticket interdit.
+ * **The canonical vocabulary is that of GitHub** (`+1`, `hooray`, …) because
+ * is the SMALLER of the two: GitHub only accepts these eight reactions, where
+ * GitLab awards any named emoji. Taking the broadest vocabulary
+ * would have given a palette of which GitHub refuses half — the asymmetry that the
+ * structuring constraint of the prohibited ticket.
  */
 
-/** Les huit réactions, dans l'ordre où elles s'affichent partout. */
+/** All eight reactions, in the order they appear throughout. */
 export const REVIEW_REACTIONS = [
   "+1",
   "-1",
@@ -25,7 +25,7 @@ export const REVIEW_REACTIONS = [
 
 export type ReviewReactionContent = (typeof REVIEW_REACTIONS)[number];
 
-/** Le glyphe — la seule part de tout ceci que l'utilisateur lit. */
+/** The glyph — the only part of this that the user reads. */
 export const REVIEW_REACTION_EMOJI: Record<ReviewReactionContent, string> = {
   "+1": "👍",
   "-1": "👎",
@@ -38,10 +38,10 @@ export const REVIEW_REACTION_EMOJI: Record<ReviewReactionContent, string> = {
 };
 
 /**
- * Nom GitLab de chaque réaction (« award emoji »). Écrit ICI, collé au nom
- * GitHub, parce qu'une divergence entre les deux tables ne se voit QUE quand
- * elles sont côte à côte — et se lirait sinon comme une réaction qui disparaît
- * en changeant de forge.
+ * GitLab name of each reaction (“award emoji”). Written HERE, pasted to name
+ * GitHub, because a divergence between the two tables is ONLY seen when
+ * they are next to each other — and would otherwise read as a reaction that disappears
+ * when changing forge.
  */
 export const GITLAB_AWARD_NAMES: Record<ReviewReactionContent, string> = {
   "+1": "thumbsup",
@@ -59,45 +59,45 @@ const BY_GITLAB_NAME = new Map<string, ReviewReactionContent>(
 );
 
 /**
- * Award GitLab → réaction canonique, ou `null`. GitLab décerne tout l'alphabet
- * emoji : ce que la palette ne sait pas afficher, on ne le compte pas plutôt que
- * de l'agréger sous un glyphe qui ne serait pas le bon.
+ * GitLab Award → canonical reaction, or `null`. GitLab awards the entire alphabet
+ * emoji: what the palette cannot display, we do not count it rather than
+ * aggregating it under a glyph which would not be the right one.
  */
 export function reactionFromGitlabName(name: string): ReviewReactionContent | null {
   return BY_GITLAB_NAME.get(name) ?? null;
 }
 
-/** Garde de frontière : ce qui arrive d'une requête n'est pas typé, il est vérifié. */
+/** Border guard: what comes from a request is not typed, it is checked. */
 export function isReviewReactionContent(value: unknown): value is ReviewReactionContent {
   return typeof value === "string" && (REVIEW_REACTIONS as readonly string[]).includes(value);
 }
 
 /**
- * Le CORPS de la pull request, vu comme un commentaire de plus (MIN-147).
+ * The BODY of the pull request, seen as one more comment (MIN-147).
  *
- * Il ouvre le fil et se rend exactement comme les autres messages : GitHub y
- * laisse réagir, et n'y pas laisser réagir se lirait comme une panne (« pourquoi
- * tous les messages sauf le premier ? »). Mais ce n'est PAS un commentaire, et
- * les deux forges l'adressent ailleurs — `issues/{n}/reactions` chez GitHub,
- * `merge_requests/{iid}/award_emoji` chez GitLab. D'où ce zéro : aucun
- * commentaire ne le porte, et il traverse toute la chaîne (payload, groupement,
- * boutons) sans qu'aucune couche ait besoin d'un second champ.
+ * It opens the thread and renders exactly like the other messages: GitHub y
+ * lets react, and not letting react would read like a failure ("why
+ * all messages except the first?). But this is NOT a comment, and
+ * both forges address it elsewhere — `issues/{n}/reactions` at GitHub,
+ * `merge_requests/{iid}/award_emoji` at GitLab. Hence this zero: no
+ * comment carries it, and it goes through the entire chain (payload, grouping,
+ * buttons) without any layer needing a second field.
  */
 export const PR_BODY_COMMENT_ID = 0;
 
 /**
- * Une réaction, agrégée par (commentaire, emoji) — jamais par personne : les deux
- * forges ne nomment pas leurs réacteurs de la même façon, et c'est le COMPTE que
- * l'UI affiche.
+ * A reaction, aggregated by (comment, emoji) — never by person: the two
+ * forges do not name their reactors the same way, and this is the ACCOUNT that
+ * the UI displays.
  *
- * `mine` = MOI, l'humain connecté, j'ai déjà réagi (MIN-145) : la réaction part
- * du compte git de la personne sur les DEUX forges, et le serveur n'allume ce
- * booléen que pour elle. Il ne se lit pas dans les données, il se déduit du
- * token qui LIT — d'où `viewerIsActor` côté forge : sans compte git connecté la
- * lecture retombe sur le token d'installation, et `mine` vaut alors `false`
- * partout plutôt que d'allumer chez chacun une réaction que personne n'a posée.
- * Le `count`, lui, est le même pour tout le monde. C'est ce booléen que la
- * bascule inverse, et c'est lui que le bouton reflète.
+ * `mine` = ME, the connected human, have already reacted (MIN-145): the reaction leaves
+ * from the person's git account on BOTH forges, and the server only turns on this
+ * boolean for her. It is not read in the data, it is deduced from the
+ * token which READS — hence `viewerIsActor` on the forge side: without a connected git account the
+ * reading falls on the installation token, and `mine` is then worth `false`
+ * everywhere rather than sparking a reaction in everyone that no one has asked for.
+ * The `count` is the same for everyone. It is this boolean that the
+ * toggles inversely, and it is this that the button reflects.
  */
 export interface ReviewCommentReaction {
   commentId: number;
@@ -107,13 +107,12 @@ export interface ReviewCommentReaction {
 }
 
 /**
- * Réactions indexées par commentaire, chacune dans l'ORDRE CANONIQUE : les forges
- * rendent leurs groupes dans un ordre variable, et un 👍 qui change de place
- * entre deux rafraîchissements se clique de travers.
+ * Reactions indexed by comment, each in CANONICAL ORDER: the forges
+ * render their groups in a variable order, and a 👍 which changes place
+ * between two refreshes clicks crooked.
  *
- * Un groupe à zéro est écarté : GitHub garde le groupe d'une réaction retirée
- * juste après le retrait, et l'afficher rendrait un emoji que plus personne n'a
- * posé.
+ * A group with zero is discarded: GitHub keeps the group from a removed reaction
+ * right after the removal, and displaying it would return an emoji that no one has posted anymore.
  */
 export function groupReactionsByComment(
   reactions: ReviewCommentReaction[],

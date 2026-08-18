@@ -3,29 +3,29 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
- * Change USD → EUR (MIN-92) — la table `fx_rates`, une ligne par jour.
+ * Changes USD → EUR (MIN-92) — the `fx_rates` table, one row per day.
  *
- * Les coûts arrivent en USD (OpenRouter), le revenu est déjà en EUR : seule la
- * colonne coûts se convertit. La source est Frankfurter, qui republie les taux
- * de référence de la BCE — gratuit, sans clé, et c'est LA référence comptable en
- * zone euro.
+ * The costs arrive in USD (OpenRouter), the income is already in EUR: only the
+ * costs column converts. The source is Frankfurter, which republishes the ECB's
+ * reference rates — free, keyless, and it is THE accounting reference in
+ * euro zone.
  *
- * Le taux n'est jamais lu dans le chemin d'une requête : un appel externe au
- * rendu d'une page, c'est de la latence et un point de panne pour rien. C'est le
- * cron quotidien (`app/api/cron/fx-rate/route.ts`) qui alimente la table, et la
- * RPC `get_ai_cost_daily` qui joint chaque coût au taux de SA journée.
+ * The rate is never read in the path of a request: an external call to the
+ * rendering of a page, it's latency and a point of failure for nothing. It is the
+ * daily cron (`app/api/cron/fx-rate/route.ts`) which feeds the table, and the
+ * RPC `get_ai_cost_daily` which joins each cost to the rate of ITS day.
  */
 
 const FRANKFURTER_BASE = "https://api.frankfurter.dev/v1";
 
-/** Fenêtre couverte à chaque passage : la plus large que montre l'écran. */
+/** Window covered on each pass: the widest shown on the screen. */
 export const FX_SYNC_WINDOW_DAYS = 90;
 
 /**
- * Marge amont demandée à Frankfurter. La BCE ne publie que les jours ouvrés :
- * si la fenêtre démarre un samedi, il faut un jour ouvré AVANT elle pour avoir
- * quelque chose à reporter sur ces premières journées. Une semaine couvre les
- * ponts les plus longs.
+ * Upstream margin requested from Frankfurter. The ECB only publishes on working days:
+ * if the window starts on a Saturday, you need a working day BEFORE it to have
+ * something to report on these first days. One week covers the longest
+ * decks.
  */
 const LOOKBACK_DAYS = 7;
 
@@ -52,9 +52,9 @@ function addDays(date: Date, days: number): Date {
 }
 
 /**
- * Les jours ouvrés publiés par la BCE sur une plage. Renvoie `null` si l'appel
- * échoue : l'appelant n'écrit alors RIEN et le dernier taux connu continue de
- * servir — une page de finances ne tombe pas pour un problème de change.
+ * The working days published by the ECB on a range. Returns `null` if the call
+ * fails: the caller then writes NOTHING and the last known rate continues to serve
+ * — a finance page does not fall due to a currency exchange problem.
  */
 async function fetchFrankfurterRange(
   from: string,
@@ -89,16 +89,15 @@ async function fetchFrankfurterRange(
 }
 
 /**
- * Remplit `fx_rates` sur la fenêtre. Un SEUL appel réseau : Frankfurter sait
- * renvoyer une plage entière, ce qui règle d'un coup le premier amorçage (table
- * vide) et les trous laissés par un cron manqué — inutile de traiter ces deux
- * cas séparément.
+ * Populates `fx_rates` on the window. A SINGLE network call: Frankfurter knows
+ * return an entire range, which at once fixes the first boot (empty table
+ *) and the holes left by a missed cron — no need to treat these two cases separately.
  *
- * Les journées non ouvrées (week-ends, fériés) reçoivent le dernier taux publié,
- * pour qu'aucune journée ne manque à la jointure de `get_ai_cost_daily`.
+ * Non-working days (weekends, holidays) receive the last published rate,
+ * so that no day is missing at the join of `get_ai_cost_daily`.
  *
- * Les lignes DÉJÀ écrites ne sont jamais réécrites : l'historique est définitif.
- * C'est tout l'intérêt d'historiser plutôt que de recalculer.
+ * The lines ALREADY written are never rewritten: the history is definitive.
+ * This is the whole point of historicizing rather than recalculate.
  */
 export async function syncFxRates(options?: { days?: number }): Promise<{
   ok: boolean;
@@ -126,8 +125,8 @@ export async function syncFxRates(options?: { days?: number }): Promise<{
   if (readError) throw new Error(readError.message);
   const existing = new Set((existingRows ?? []).map((row) => row.day as string));
 
-  // Report : on balaie les jours dans l'ordre en gardant le dernier taux publié.
-  // Le pas de recul garantit qu'un taux est déjà en main avant `from`.
+  // Report: we scan the days in order while keeping the last published rate.
+  // The step back guarantees that a rate is already in hand before `from`.
   const publishedDays = [...published.keys()].sort();
   let carried: number | null = null;
   let cursor = 0;
@@ -153,9 +152,9 @@ export async function syncFxRates(options?: { days?: number }): Promise<{
 }
 
 /**
- * Le taux le plus récent en base, avec SA date. L'écran affiche les deux : un
- * montant converti sans son taux n'est pas vérifiable, et la date rend visible
- * un cron en panne.
+ * The most recent rate in base, with ITS date. The screen displays both: a
+ * converted amount without its rate is not verifiable, and the date makes visible
+ * a failed cron.
  */
 export async function getLatestFxRate(): Promise<FxRate | null> {
   const service = getServiceClient();

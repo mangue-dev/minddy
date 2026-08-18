@@ -10,8 +10,8 @@ import type {
 import type { ImportWarning, ImportWarningKey } from "@/lib/import/types";
 
 export interface CsvTable {
-  /** Libellés d'en-tête bruts, dans l'ordre du fichier — ce que l'utilisateur
-   *  lit dans le tableau de correspondance, et l'index d'une colonne. */
+  /** Raw header labels, in file order — what the user
+ * reads in the lookup table, and the index of a column. */
   headers: string[];
   /** normalized header name → column indexes (repeated columns keep them all). */
   headerIndex: Map<string, number[]>;
@@ -19,7 +19,7 @@ export interface CsvTable {
 }
 
 /** Lowercase, strip accents, collapse separators — used for header names AND
- *  enum-ish cell values ("À faire" → "a faire", "In-Progress" → "in progress"). */
+ * enum-ish cell values ​​("To do" → "to do", "In-Progress" → "in progress"). */
 export const normalizeToken = (value: string): string =>
   value
     .normalize("NFD")
@@ -31,14 +31,14 @@ export const normalizeToken = (value: string): string =>
     .trim();
 
 /**
- * L'apostrophe de tête qu'un tableur (et notre propre export, MIN-348) pose
- * devant une cellule que sa première lettre ferait passer pour une formule.
+ * The leading apostrophe that a spreadsheet (and our own export, MIN-348)
+ * places before a cell whose first character would make it look like a formula.
  *
- * On la retire à la lecture, exactement comme le tableur la retire à
- * l'affichage : sans ça, une description qui commence par une puce markdown
- * (`- …`) reviendrait d'un aller-retour avec une apostrophe en plus. Elle n'est
- * retirée que devant l'un de ces caractères-là — une vraie apostrophe de texte
- * (`'tis`) n'y ressemble pas et ne bouge pas.
+ * We remove it when reading, exactly as the spreadsheet removes it when
+ * displaying the value: without this, a description beginning with a markdown
+ * bullet (`- …`) would come back from a round trip with an extra apostrophe. It
+ * is removed only before one of those characters — a real text apostrophe
+ * (`'tis`) does not look like one and is left alone.
  */
 const ESCAPED_FORMULA = /^'(?=[=+\-@\t\r])/;
 
@@ -62,8 +62,8 @@ export const hasHeader = (table: CsvTable, ...names: string[]): boolean =>
 /** Cap titles defensively — exports can carry pathological rows. */
 export const MAX_TITLE_LENGTH = 500;
 
-/** Headers accepted as the title column of a generic CSV (EN + FR, Trello's
- *  "Card Name", Notion's "Task name" / "Nom de la tâche"). Lives here, not in
+/** Headers accepted as the title column of a generic CSV (English and French,
+ *  including Trello's "Card Name" and Notion's task-name header). Lives here, not in
  *  parse.ts, so the generic mapper can read the same list as `detectSource`
  *  without importing the entry point back: a file detected on one of these
  *  names must map on the same one. */
@@ -112,8 +112,8 @@ const STATUS_ALIASES: Record<string, IssueStatusValue> = {
   nouveau: "todo",
   reopened: "todo",
   "selected for development": "todo",
-  // Notion : la colonne « Statut » par défaut, et les noms d'étape les plus
-  // courants d'un tableau maison. Sans alias ils tombaient tous en backlog.
+  // Notion's default status column and the most common stage names in a custom
+  // table. Without aliases, they would all fall back to backlog.
   "not started": "todo",
   "pas commence": "todo",
   "pas commencee": "todo",
@@ -196,22 +196,21 @@ const STATUS_ALIASES: Record<string, IssueStatusValue> = {
 };
 
 /**
- * Le statut d'une valeur déjà normalisée, ou `null` si aucune table ne la
- * connaît. Volontairement muet là-dessus : ce que la table d'alias ne sait pas
- * placer est reporté au plan (`buildMapping`), donc au tableau de correspondance
- * de l'aperçu, où l'utilisateur le tranche. Les termes franchement ambigus
- * (« Bloqué », « En attente », « En pause ») ne sont PAS aliasés exprès —
- * minddy n'a pas de statut pour ça, et deviner à sa place se paierait sur des
- * dizaines de tickets.
+ * The status for an already normalized value, or `null` when no table knows it.
+ * Deliberately silent here: values that the alias table cannot place are passed
+ * to the plan (`buildMapping`), then to the preview's mapping table where the
+ * user decides. Clearly ambiguous terms (“Blocked”, “Waiting”, “Paused”) are
+ * deliberately NOT aliased — minddy has no status for them, and guessing would
+ * affect dozens of tickets.
  */
 export const mapStatusToken = (token: string): IssueStatusValue | null =>
   STATUS_ALIASES[token] ?? null;
 
 const PRIORITY_ALIASES: Record<string, IssuePriorityValue> = {
-  // « Pas de priorité » EST une priorité dans minddy (`none`), et les exports
-  // l'écrivent en toutes lettres : « No priority » chez Linear, « none » dans
-  // le nôtre. Sans ces alias, la valeur la plus fréquente d'une colonne de
-  // priorité passait pour intraduisible et déclenchait la passe du modèle.
+  // “No priority” IS a priority in minddy (`none`), and exports spell it out:
+  // “No priority” in Linear and “none” in ours. Without these aliases, the most
+  // common value in a priority column would look untranslatable and trigger the
+  // model pass.
   none: "none",
   aucune: "none",
   aucun: "none",
@@ -246,13 +245,13 @@ const PRIORITY_ALIASES: Record<string, IssuePriorityValue> = {
   p4: "low",
 };
 
-/** La priorité d'une valeur normalisée, `null` si inconnue (cf. `mapStatusToken`). */
+/** The priority for a normalized value, `null` if unknown (see `mapStatusToken`). */
 export const mapPriorityToken = (token: string): IssuePriorityValue | null =>
   PRIORITY_ALIASES[token] ?? null;
 
 const EFFORT_VALUES = new Set(["xs", "s", "m", "l", "xl"]);
 
-/** Taille exprimée en toutes lettres — Notion, Asana et les tableaux maison. */
+/** Size written out in full — Notion, Asana, and custom tables. */
 const EFFORT_ALIASES: Record<string, IssueEffortValue> = {
   "very small": "xs",
   tiny: "xs",
@@ -285,15 +284,15 @@ export function effortFromPoints(raw: string): IssueEffortValue | null {
   return "xl";
 }
 
-/** Jeton t-shirt direct, ou taille en toutes lettres. Les valeurs CHIFFRÉES
- *  restent hors dictionnaire : `effortFromPoints` les convertit à la volée. */
+/** Direct t-shirt token or size written out in full. NUMERIC values stay out of
+ *  the dictionary: `effortFromPoints` converts them on the fly. */
 export const mapEffortToken = (token: string): IssueEffortValue | null =>
   EFFORT_VALUES.has(token)
     ? (token as IssueEffortValue)
     : (EFFORT_ALIASES[token] ?? null);
 
-/** Au-delà, un nom de catégorie n'est plus une étiquette mais une phrase — et
- *  une colonne orpheline mal aiguillée en fabriquerait une par ligne. */
+/** Beyond this, a category name is no longer a label but a sentence — and a
+ *  misrouted orphan column would create one on every row. */
 export const MAX_LABEL_LENGTH = 60;
 
 /** Split a multi-label cell — Linear joins with ", ", generic CSVs use , or ;. */
@@ -309,11 +308,10 @@ const ISO_RE = /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:
 // Jira export format: "14/Jul/26 3:42 PM" or "14/Jul/2026".
 const JIRA_DATE_RE =
   /^(\d{1,2})\/([A-Za-z]{3})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2})\s*(AM|PM)?)?$/i;
-// Notion écrit ses dates en toutes lettres, dans la langue de l'espace de
-// travail, et dans l'ordre de cette langue : « July 14, 2026 » ou
-// « 14 juillet 2026 ». Les deux passent ici, et PAS par `new Date` : lui lit une
-// date sans heure dans le fuseau LOCAL, ce qui recule d'un jour toutes les
-// échéances d'un utilisateur à l'est de Greenwich.
+// Notion writes dates out in full, in the workspace language and that language's
+// order: “July 14, 2026” or “14 July 2026”. Both pass through here, NOT through
+// `new Date`: it reads a date without a time in the LOCAL time zone, moving every
+// deadline for a user east of Greenwich back by one day.
 const MONTHS: Record<string, number> = {
   jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
   jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
@@ -329,7 +327,7 @@ const DAY_FIRST_RE = new RegExp(String.raw`^(\d{1,2})\s+([^\d\s.,]+)\.?,?\s+(\d{
 // « July 14, 2026 3:42 PM »
 const MONTH_FIRST_RE = new RegExp(String.raw`^([^\d\s.,]+)\.?\s+(\d{1,2}),?\s+(\d{4})${TIME}$`, "i");
 
-/** Une date en toutes lettres → ISO, en UTC. `null` si le mois est inconnu. */
+/** A date written out in full → ISO, in UTC. `null` if the month is unknown. */
 function fromParts(
   day: string,
   monthName: string,
@@ -352,8 +350,8 @@ function fromParts(
 
 /** Best-effort ISO conversion; unparseable values are dropped (null). */
 export function parseDateValue(raw: string): string | null {
-  // Une plage Notion (« 14 juillet 2026 → 20 juillet 2026 ») : on garde le
-  // début, seule borne qui ait un sens pour une échéance ou une création.
+  // A Notion range (“14 July 2026 → 20 July 2026”): keep the start, the only
+  // bound that makes sense for a due date or creation timestamp.
   const value = raw.split(/\s*(?:→|->|–)\s*/)[0].trim();
   if (!value) return null;
 

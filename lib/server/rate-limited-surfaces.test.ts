@@ -2,18 +2,17 @@ import { describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 /**
- * MIN-348 — les surfaces coûteuses qui tournaient sans limite de débit.
+ * MIN-348 — expensive surfaces that rotated without flow rate limit.
  *
- * Le limiteur existait ; ce qui manquait, c'est qu'il soit POSÉ. Ce fichier
- * tient la liste de ce que l'audit avait relevé, et pour chacune la même
- * question, qui est la seule qui compte : au-delà de sa fenêtre, l'appel
- * suivant est-il refusé en 429 — et refusé AVANT le travail qu'il devait
- * éviter (l'image compressée, la page dupliquée, le PNG rendu) ?
+ * The limiter existed; what was missing was that it was SET. This file
+ * keeps the list of what the audit had noted, and for each the same
+ * question, which is the only one that matters: beyond its window, is the following call
+ * refused in 429 — and refused BEFORE the work that it was supposed to
+ * avoid (the compressed image, the duplicate page, the rendered PNG) ?
  *
- * Un mot sur la forme : le limiteur est un module en mémoire, partagé par tout
- * le processus, indexé sur (clé, route). Chaque cas se donne donc un
- * utilisateur (ou une IP) à lui — sans quoi les cas se limiteraient les uns les
- * autres, et le fichier mentirait dans les deux sens.
+ * A word about the form: the limiter is a module in memory, shared by all
+ * the process, indexed on (key, route). Each case therefore gives itself a
+ * user (or an IP) of its own — otherwise the cases would be limited to each other, and the file would lie in both directions.
  */
 
 const getAuthedUser = vi.fn();
@@ -67,7 +66,7 @@ vi.mock("@/lib/server/agent/pr-actions", () => ({
     return entry instanceof File ? entry : null;
   },
 }));
-// Rendre une vignette coûte un moteur de rendu entier : ici, seul compte le
+// Rendering a thumbnail costs an entire renderer: here, all that matters is the
 // fait qu'on y arrive ou non.
 vi.mock("next/og", () => ({
   ImageResponse: class {
@@ -105,7 +104,7 @@ const runAttachmentsRoute = await import(
 );
 const ogRoute = await import("@/app/og/route");
 
-/** Une requête multipart portant un fichier minuscule. */
+/** A multipart request carrying a tiny file. */
 function upload(): never {
   const form = new FormData();
   form.append("file", new File(["oct"], "c.png", { type: "image/png" }));
@@ -113,8 +112,8 @@ function upload(): never {
 }
 
 /**
- * Appelle `call` jusqu'à un 429, au plus `limit + 1` fois, et rend le rang du
- * refus. `null` = jamais refusé, c'est-à-dire la faute qu'on cherche.
+ * Calls `call` up to 429, at most `limit + 1` times, and returns the rank of
+ * refusal. `null` = never refused, that is to say the fault we are looking for.
  */
 async function refusedAt(
   limit: number,
@@ -127,8 +126,8 @@ async function refusedAt(
   return null;
 }
 
-describe("les surfaces nouvellement limitées", () => {
-  it("borne la création de page", async () => {
+describe("newly rate-limited surfaces", () => {
+  it("limits page creation", async () => {
     getAuthedUser.mockResolvedValue({ ok: true, user: { id: "u-page-create" } });
     const params = { params: Promise.resolve({ id: PROJECT }) };
     const rank = await refusedAt(30, () =>
@@ -153,7 +152,7 @@ describe("les surfaces nouvellement limitées", () => {
       )
     );
     expect(rank).toBe(11);
-    // Et le refus arrive AVANT la copie : c'est elle qu'on borne.
+    // And the refusal arrives BEFORE the copy: it is this that we limit.
     expect(duplicatePage).toHaveBeenCalledTimes(10);
   });
 
@@ -173,16 +172,16 @@ describe("les surfaces nouvellement limitées", () => {
     expect(uploadProjectIcon).toHaveBeenCalledTimes(20);
   });
 
-  it("borne aussi son jumeau sans projet (l'aperçu du wizard)", async () => {
+  it("also limits its projectless twin (the wizard preview)", async () => {
     getAuthedUser.mockResolvedValue({ ok: true, user: { id: "u-icon-account" } });
     const rank = await refusedAt(20, () => accountIconRoute.POST(upload()));
     expect(rank).toBe(21);
     expect(compressIconFile).toHaveBeenCalledTimes(20);
   });
 
-  it("borne la FAÇADE de pièce jointe de PR comme la route qu'elle expose", async () => {
-    // La route par PR était limitée, sa façade par run ne l'était pas : une
-    // garde qu'on peut contourner par une autre porte n'en est pas une.
+  it("limits the PR attachment FACADE like the route it exposes", async () => {
+    // The route by PR was limited, its frontage per run was not: a
+    // guard that can be bypassed through another door is not one.
     authorizeRunPrRequest.mockResolvedValue({
       ok: true,
       scope: {},
@@ -205,9 +204,9 @@ describe("les surfaces nouvellement limitées", () => {
     expect(rank).toBe(61);
   });
 
-  it("renvoie une URL /og non canonique vers la canonique, sans rendre l'image", async () => {
-    // Le CDN indexe sur l'URL entière : sans ça, `&cache_buster=n` fabrique
-    // autant d'entrées neuves que de requêtes, donc autant de rendus.
+  it("redirects a non-canonical /og URL to the canonical one without rendering the image", async () => {
+    // The CDN indexes on the entire URL: without that, `&cache_buster=n` produces
+    // as many new entries as requests, therefore as many renderings.
     const response = await ogRoute.GET(
       new NextRequest("https://minddy.app/og?route=home&locale=en&x=1", {
         headers: { "x-forwarded-for": "203.0.113.10" },

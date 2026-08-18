@@ -7,19 +7,18 @@ import { AUTH_PENDING_COOKIE, decodePendingOtp } from "@/lib/auth-otp-pending";
 import { desktopAuthLinkFromCallback, parseDesktopAuthLink } from "@/lib/desktop/auth-link";
 
 /**
- * MIN-297 — le lien de réinitialisation, du gabarit d'e-mail jusqu'à l'écran.
+ * MIN-297 — the reset link, from the email template to the screen.
  *
- * Ce parcours a la même forme que le contrat i18n : il est juste dans chaque
- * fichier pris séparément, et la faute n'existe qu'ENTRE eux. Le gabarit
- * (`supabase/email-templates/reset-password.html`, recopié dans le dashboard
- * Supabase) compose seul l'URL du bouton, et c'est LUI — pas le client, dont
- * rien de ce qu'il ajoute en query ne survit à l'allowlist GoTrue — qui pose le
- * `type=recovery` et la destination `next=/reset-password`. Une faute de frappe
- * là-dedans ne casse rien à la compilation : elle envoie simplement les gens
- * sur `/home` sans mot de passe à changer, ou nulle part.
+ * This route has the same shape as the i18n contract: each file is correct on
+ * its own, and the bug exists only BETWEEN them. The template
+ * (`supabase/email-templates/reset-password.html`, copied into the Supabase
+ * dashboard) alone builds the button URL. It — not the client, whose query
+ * additions cannot survive the GoTrue allowlist — sets `type=recovery` and
+ * `next=/reset-password`. A typo there does not break compilation; it simply sends
+ * people to `/home` with no password to change, or somewhere else entirely.
  *
- * On lit donc le VRAI gabarit, on substitue ce que GoTrue substitue, et on fait
- * passer l'URL obtenue dans les vraies routes.
+ * So we read the REAL template, substitute what GoTrue substitutes, and pass the
+ * resulting URL through the real routes.
  */
 
 const verifyOtp = vi.fn(async () => ({
@@ -70,14 +69,14 @@ const TEMPLATE = readFileSync(
 );
 
 /**
- * L'URL du lien, telle que GoTrue l'envoie : le premier `href` du gabarit, avec
- * `{{ .RedirectTo }}` et `{{ .TokenHash }}` substitués comme il les substitue.
- * `RedirectTo` vaut le `redirectTo` validé par l'allowlist, donc `…/auth/callback`
- * nu — c'est exactement ce que passe `sendPasswordReset`.
+ * The URL of the link, as GoTrue sends it: the first `href` in the template, with
+ * `{{ .RedirectTo }}` and `{{ .TokenHash }}` substituted as it substitutes them.
+ * `RedirectTo` is the `redirectTo` validated by the allowlist, so it is the bare
+ * `…/auth/callback` URL — exactly what `sendPasswordReset` sends.
  */
 function linkFromTemplate(): string {
   const href = /href="(\{\{ \.RedirectTo \}\}[^"]*)"/.exec(TEMPLATE)?.[1];
-  expect(href, "le gabarit doit porter un lien bâti sur {{ .RedirectTo }}").toBeTruthy();
+  expect(href, "the template must contain a link built from {{ .RedirectTo }}").toBeTruthy();
   return href!
     .replace("{{ .RedirectTo }}", `${ORIGIN}/auth/callback`)
     .replace("{{ .TokenHash }}", TOKEN_HASH)
@@ -102,28 +101,28 @@ beforeEach(() => {
   verifyOtp.mockClear();
 });
 
-describe("le gabarit d'e-mail de réinitialisation", () => {
-  it("porte un lien à JETON, jamais `{{ .ConfirmationURL }}`", () => {
-    // `{{ .ConfirmationURL }}` passe par `/auth/v1/verify`, qui ouvre une
-    // session sur un simple GET — précisément ce que MIN-345 a retiré. On
-    // regarde le DOCUMENT, pas l'en-tête de commentaire, qui a le droit d'en
-    // parler (et explique justement pourquoi il n'est pas là).
+describe("the password-reset email template", () => {
+  it("contains a TOKEN link, never `{{ .ConfirmationURL }}`", () => {
+    // `{{ .ConfirmationURL }}` goes through `/auth/v1/verify`, which opens a
+    // session on a plain GET — exactly what MIN-345 removed. Inspect the DOCUMENT,
+    // not the comment header, which is allowed to mention it (and explains why it
+    // is absent).
     const document = TEMPLATE.slice(TEMPLATE.indexOf("<!doctype html>"));
     expect(document).not.toContain("ConfirmationURL");
     expect(document).toContain("{{ .TokenHash }}");
   });
 
-  it("dit `type=recovery` et mène à `/reset-password`", () => {
+  it("sets `type=recovery` and leads to `/reset-password`", () => {
     const params = new URL(linkFromTemplate()).searchParams;
     expect(params.get("type")).toBe("recovery");
     expect(params.get("next")).toBe("/reset-password");
     expect(params.get("token_hash")).toBe(TOKEN_HASH);
   });
 
-  it("pointe tous ses liens au même endroit — le bouton et le repli en clair", () => {
-    // Le corps n'a plus qu'un bouton : le texte est branché sur la langue du
-    // compte (`lib/auth-email-templates.test.ts`), pas dupliqué. Restent le
-    // bouton et le repli en clair, et un seul oublié envoie ailleurs.
+  it("points all links to the same place — the button and the plain-text fallback", () => {
+    // The body has only one button: its text is selected by the account language
+    // (`lib/auth-email-templates.test.ts`), not duplicated. The button and the
+    // plain-text fallback remain, and only an overlooked link can point elsewhere.
     const hrefs = [...TEMPLATE.matchAll(/href="(\{\{ \.RedirectTo \}\}[^"]*)"/g)].map(
       (match) => match[1],
     );
@@ -132,8 +131,8 @@ describe("le gabarit d'e-mail de réinitialisation", () => {
   });
 });
 
-describe("le lien reçu, passé dans les vraies routes", () => {
-  it("ne consomme rien sur le GET et met le jeton en attente pour /reset-password", async () => {
+describe("the received link through the real routes", () => {
+  it("consumes nothing on GET and queues the token for /reset-password", async () => {
     const response = await get(linkFromTemplate());
 
     expect(verifyOtp).not.toHaveBeenCalled();
@@ -145,7 +144,7 @@ describe("le lien reçu, passé dans les vraies routes", () => {
     });
   });
 
-  it("ouvre la session sur le POST, et dépose bien sur l'écran du mot de passe", async () => {
+  it("opens the session on POST and lands on the password screen", async () => {
     const pending = await get(linkFromTemplate());
     store.set(
       AUTH_PENDING_COOKIE,
@@ -170,11 +169,11 @@ describe("le lien reçu, passé dans les vraies routes", () => {
     expect(response.headers.get("location")).toBe(`${ORIGIN}/reset-password`);
   });
 
-  it("repasse la main à l'app de bureau sans rien consommer, destination comprise", async () => {
-    // Dans la fenêtre, le lien arrive marqué `desktop=1` : le navigateur système
-    // ne doit pas être connecté à sa place (MIN-291), et la destination doit
-    // survivre au deep link — sinon l'app ouvre /home et le mot de passe reste
-    // celui qu'on a oublié.
+  it("hands control back to the desktop app without consuming anything, including the destination", async () => {
+    // In the desktop flow, the link is marked `desktop=1`: the system browser must
+    // not sign in on the app's behalf (MIN-291), and the destination must survive
+    // the deep link — otherwise the app opens /home and the forgotten password
+    // remains unchanged.
     const response = await get(`${linkFromTemplate()}&desktop=1`);
     expect(verifyOtp).not.toHaveBeenCalled();
 
@@ -186,8 +185,8 @@ describe("le lien reçu, passé dans les vraies routes", () => {
       next: "/reset-password",
       turn: undefined,
     });
-    // Et le même verdict lu directement depuis la query, pour que l'échec dise
-    // laquelle des deux moitiés a bougé.
+    // Assert the same result directly from the query, so a failure identifies
+    // which half changed.
     expect(
       desktopAuthLinkFromCallback(new URL(`${linkFromTemplate()}&desktop=1`).searchParams),
     ).toMatchObject({ kind: "otp", type: "recovery", next: "/reset-password" });

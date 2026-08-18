@@ -10,20 +10,20 @@ import {
 } from "@/lib/agent-reasoning";
 
 /**
- * Catalogue de modèles pour le picker (MIN-46). `staleTime` long : le catalogue
- * bouge lentement. La clé de query est invalidée quand le BYOK change
- * (cf. account-ai-keys-section) → le provider et la liste se rafraîchissent.
+ * Model catalog for the picker (MIN-46). `staleTime` long: the catalog
+ * moves slowly. The query key is invalidated when the BYOK changes
+ * (see account-ai-keys-section) → the provider and the list are refreshed.
  *
- * Trois portées :
- *  - `user` (défaut) → `/api/agent/models`, le provider ACTIF du compte (son
- *    BYOK ou la clé plateforme) : ce que SON agent peut lancer ;
- *  - `platform` → `/api/admin/models-catalog`, la clé plateforme OpenRouter
- *    sans filtre tool-calling, pour la config admin (MIN-90). Le BYOK de l'admin
- *    n'a rien à faire là : `app_config` tourne sur la plateforme ;
- *  - `review` → `/api/agent/review-models`, la clé plateforme AVEC le filtre
- *    tool-calling, pour le choix du modèle de review d'une PR : cette passe
- *    tourne sur la plateforme et force un tool call, quel que soit le BYOK du
- *    compte.
+ * Three scopes:
+ * - `user` (default) → `/api/agent/models`, the ACTIVE provider of the account (its
+ * BYOK or the platform key): what ITS agent can launch;
+ * - `platform` → `/api/admin/models-catalog`, the OpenRouter platform key
+ * without tool-calling filter, for the config admin (MIN-90). The admin's BYOK
+ * has nothing to do there: `app_config` runs on the platform;
+ * - `review` → `/api/agent/review-models`, the platform key WITH the filter
+ * tool-calling, for choosing the review model of a PR: this pass
+ * runs on the platform and forces a tool call, whatever the BYOK of the
+ * account.
  */
 
 export type AgentModelsScope = "user" | "platform" | "review";
@@ -37,13 +37,13 @@ const SCOPE_ENDPOINTS: Record<AgentModelsScope, string> = {
 export interface AgentModel {
   id: string;
   name: string;
-  /** Coût d'usage relatif au modèle par défaut de minddy (lib/model-multiplier.ts). */
+  /** Usage cost relating to the default minddy model (lib/model-multiplier.ts). */
   multiplier?: number;
   /**
-   * Les paliers de raisonnement que ce modèle accepte, tels qu'il les publie.
-   * Absent = rien de publié → le sélecteur montre les paliers génériques
-   * (`reasoningLevelsFor`).
-   */
+ * The reasoning levels that this model accepts, as it publishes them.
+ * Absent = nothing published → the selector shows generic levels
+ * (`reasoningLevelsFor`).
+ */
   reasoning?: ModelReasoning | null;
 }
 
@@ -51,28 +51,28 @@ export const agentModelsQueryKey = ["agent-models"] as const;
 
 interface AgentModelsResult {
   provider: AgentProviderId;
-  /** Modèle par défaut du provider actif (frontier BYOK ou défaut racine), ou null. */
+  /** Default model of the active provider (BYOK border or root default), or null. */
   defaultModel: string | null;
   models: AgentModel[];
   /**
-   * Plafond de multiplicateur du plan, ou null quand aucun ne s'applique (BYOK,
-   * catalogue admin) — le picker n'affiche alors ni multiplicateur ni grisé.
-   */
+ * Plan multiplier cap, or null when none applies (BYOK,
+ * admin catalog) — the picker then displays neither multiplier nor grayed out.
+ */
   maxMultiplier: number | null;
-  /** Plan du compte, pour le nommer dans l'explication du plafond. */
+  /** Account plan, to name it in the explanation of the limit. */
   planId: string | null;
   /**
-   * Les ids CONSEILLÉS, dans l'ordre, et déjà restreints par le serveur à ceux
-   * que `models` contient. Vide = pas de conseils applicables (BYOK aux ids
-   * natifs, catalogue admin, liste vidée par l'admin) : le picker rouvre alors
-   * sur le catalogue entier, comme avant.
-   */
+ * The RECOMMENDED ids, in order, and already restricted by the server to those
+ * that `models` contains. Empty = no advice applicable (BYOK to native ids
+ *, admin catalog, list emptied by admin): the picker then reopens
+ * on the entire catalog, as before.
+ */
   recommended: string[];
-  /** Le backend cloud peut réellement lancer une session sur cette instance. */
+  /** The cloud backend can actually launch a session on this instance. */
   cloudExecutionConfigured: boolean;
-  /** Les routes de tâches planifiées sont protégées et peuvent être ordonnancées. */
+  /** Scheduled task routes are protected and can be scheduled. */
   routineSchedulingConfigured: boolean;
-  /** Config locale non secrète : son catalogue est lu par la coquille Electron. */
+  /** Non-secret local config: its catalog is read by the Electron shell. */
   localEndpoint?: {
     provider: "local_openai" | "ollama";
     baseUrl: string;
@@ -120,15 +120,15 @@ async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsRes
     maxMultiplier: data.maxMultiplier ?? null,
     planId: data.planId ?? null,
     recommended: data.recommended ?? [],
-    // Une capacité inconnue reste indisponible : l'activer pendant un échec ou
-    // un chargement offrirait une action que le serveur refusera ensuite en 503.
+    // An unknown ability remains unavailable: activate it during a failure or
+    // a loading would offer an action which the server will then refuse in 503.
     cloudExecutionConfigured: data.cloudExecutionConfigured ?? false,
     routineSchedulingConfigured: data.routineSchedulingConfigured ?? false,
     ...(localEndpoint ? { localEndpoint } : {}),
   };
-  // Le serveur web ne peut — et ne doit — jamais joindre une adresse locale.
-  // L'app de bureau le fait derrière un pont borné à loopback, puis le picker
-  // reçoit exactement le même contrat qu'un catalogue cloud.
+  // The web server can never — and should — never attach a local address.
+  // The desktop app does this behind a bounded loopback bridge, then picks it
+  // receives exactly the same contract as a cloud catalog.
   const bridge = scope === "user" && catalog.localEndpoint ? getDesktopBridge() : null;
   if (!bridge || !catalog.localEndpoint) return catalog;
   const discovered = await bridge.discoverLocalModels(catalog.localEndpoint).catch(() => null);
@@ -139,12 +139,12 @@ async function fetchAgentModels(scope: AgentModelsScope): Promise<AgentModelsRes
 
 export function useAgentModelsQuery(scope: AgentModelsScope = "user") {
   const { data, isPending } = useQuery({
-    // Une portée = un catalogue : les deux ne doivent jamais partager un cache.
+    // One scope = one catalog: the two should never share a cache.
     queryKey: scope === "user" ? agentModelsQueryKey : [...agentModelsQueryKey, scope],
     queryFn: () => fetchAgentModels(scope),
-    // Les catalogues cloud sont cachés côté serveur ; une minute permet en
-    // revanche à Ollama / LM Studio fraîchement démarré d'apparaître vite sans
-    // bouton de rafraîchissement ni accès local depuis le cloud.
+    // Cloud catalogs are hidden on the server side; one minute allows
+    // revenge to Ollama / LM Studio, freshly started, appears quickly without
+    // refresh button nor local access from the cloud.
     staleTime: 60 * 1000,
   });
   return {
@@ -161,17 +161,17 @@ export function useAgentModelsQuery(scope: AgentModelsScope = "user") {
 }
 
 /**
- * Les paliers de raisonnement du modèle QUI VA TOURNER — celui que le composer
- * affiche, c'est-à-dire l'override choisi ou, à défaut, le défaut du compte.
+ * The reasoning levels of the model THAT WILL TURN — the one that the composer
+ * displays, that is to say the chosen override or, failing that, the default of the account.
  *
- * Le sélecteur ne peut pas les déduire seul : il ne connaît que sa valeur, pas le
- * modèle. Et c'est bien le modèle effectif qu'il faut, pas l'override : laisser
- * le champ « modèle par défaut » afficher les paliers génériques cacherait le
- * `xhigh` du modèle qui va réellement travailler.
+ * The selector cannot deduce them alone: it only knows its value, not the
+ * model. And it is the actual model that is needed, not the override: letting
+ * the "default model" field display the generic levels would hide the
+ * `xhigh` of the model which will actually work.
  *
- * Le catalogue vient du cache de `useAgentModelsQuery` (même clé, aucune requête
- * de plus). Modèle inconnu ou catalogue pas encore arrivé → les paliers
- * génériques, le temps que la liste réponde.
+ * The catalog comes from the `useAgentModelsQuery` cache (same key, no
+ * queries). Unknown model or catalog not yet arrived → generic
+ * levels, while the list responds.
  */
 export function useReasoningLevelsFor(
   modelId: string | null | undefined,

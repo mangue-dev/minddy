@@ -156,9 +156,9 @@ export function useAttachmentUploads(
                   : p
               )
             );
-            // Métadonnées seulement : ni le nom du fichier ni son contenu —
-            // le type MIME générique et la tranche de taille suffisent à savoir
-            // ce que les gens joignent (captures d'écran ? logs ? PDF ?).
+            // Metadata only: neither the name of the file nor its contents —
+            // the generic MIME type and the size range are enough to know
+            // what people attach (screenshots? logs? PDF?).
             trackEvent("resource_added", {
               target: "issue",
               kind: "file",
@@ -186,13 +186,13 @@ export function useAttachmentUploads(
   );
 
   /**
-   * Le geste « lien », symétrique de l'envoi d'un fichier : une entrée en vol
-   * (le badge sait déjà afficher un spinner), la résolution côté serveur, puis
-   * la même bascule en `done` et le même `onUploaded`.
-   *
-   * Lève plutôt que de toaster : c'est le dialog qui affiche l'erreur, dans le
-   * champ où l'URL vient d'être saisie — un toast l'enverrait ailleurs.
-   */
+ * The "link" gesture, symmetrical to sending a file: an entry in flight
+ * (the badge already knows how to display a spinner), the resolution on the server side, then
+ * the same switch to `done` and the same `onUploaded`.
+ *
+ * Raise rather than toast: this is the dialog that displays the error, in the
+ * field where the URL was just entered — a toast would send it elsewhere.
+ */
   const addLink = useCallback(
     async (url: string) => {
       const projectId = PROJECT_PREFIX_RE.exec(getPrefix().replace(/\/+$/, ""))?.[1];
@@ -240,7 +240,7 @@ export function useAttachmentUploads(
               : p
           )
         );
-        // Ni l'URL ni le titre : seulement qu'un lien a été ajouté.
+        // Neither the URL nor the title: only that a link has been added.
         trackEvent("resource_added", { target: "issue", kind: "link" });
         onUploadedRef.current?.(
           {
@@ -260,11 +260,11 @@ export function useAttachmentUploads(
   );
 
   /**
-   * Le geste « page » (MIN-275) — le plus court des trois : rien à téléverser,
-   * rien à aller résoudre sur le réseau. Le sélecteur a lu l'id, le titre et
-   * l'emoji dans le cache des pages du projet, donc l'entrée naît `done` et
-   * `onUploaded` part dans la foulée.
-   */
+ * The “page” gesture (MIN-275) — the shortest of the three: nothing to upload,
+ * nothing to resolve on the network. The selector read the id, title and
+ * emoji in the project's page cache, so the entry is born `done` and
+ * `onUploaded` leaves immediately.
+ */
   const addPage = useCallback(
     (page: { id: string; title: string; icon: string | null }) => {
       const projectId = PROJECT_PREFIX_RE.exec(getPrefix().replace(/\/+$/, ""))?.[1];
@@ -273,7 +273,7 @@ export function useAttachmentUploads(
         toast.error(t("tooMany", { max }));
         return;
       }
-      // Deux fois la même page sur un ticket ne dirait rien de plus.
+      // Twice the same page on a ticket would say nothing more.
       if (pendingRef.current.some((p) => p.page_id === page.id)) return;
 
       const localId = crypto.randomUUID();
@@ -293,7 +293,7 @@ export function useAttachmentUploads(
           project_id: projectId,
         },
       ]);
-      // Ni le titre ni l'id : seulement qu'une page a été citée.
+      // Neither the title nor the id: only that a page has been cited.
       trackEvent("resource_added", { target: "issue", kind: "page" });
       onUploadedRef.current?.(
         { kind: "page", page_id: page.id, file_name: title },
@@ -327,9 +327,9 @@ export function useAttachmentUploads(
               mime_type: "application/vnd.minddy.page",
               size_bytes: 0,
               page_id: input.page_id,
-              // Le brouillon n'a gardé que le TITRE du moment : sans l'emoji ni
-              // la garantie que la page vit encore, la pilule restaurée
-              // s'affiche sur ce qu'on sait, et le serveur tranche à l'envoi.
+              // The draft only kept the current TITLE: without the emoji or
+              // the guarantee that the page still lives, the pill restored
+              // is displayed on what we know, and the server decides when sending.
               page: { id: input.page_id, title: input.file_name, icon: null },
             }
           : input.kind === "link"

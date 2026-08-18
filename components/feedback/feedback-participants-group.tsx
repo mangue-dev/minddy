@@ -10,20 +10,20 @@ import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import type { TeamFeedbackUserOption } from "@/app/api/projects/[id]/feedback/users/route";
 
 /**
- * Effacer un participant du board, sur sa demande (RGPD art. 17).
+ * Delete a participant from the board, upon their request (GDPR art. 17).
  *
- * L'éditeur du board est responsable de traitement pour les gens qui y
- * participent : c'est à LUI que la demande arrive, donc c'est ici qu'elle doit
- * pouvoir s'exécuter — pas par un mail à minddy suivi d'un SQL à la main.
+ * The editor of the board is responsible for processing the people who there
+ * participate: it is to HIM that the request arrives, therefore it is here that it must
+ * be able to execute — not by an email to minddy followed by SQL by hand.
  *
- * On cherche par adresse plutôt que de dérouler une liste : la demande arrive
- * toujours sous la forme d'une adresse, et afficher d'office l'annuaire des
- * participants d'un board ferait de cet écran une surface d'exposition de plus
- * pour des données qu'on cherche justement à ne pas étaler.
+ * We search by address rather than scrolling down a list: the request arrives
+ * always in the form of an address, and automatically display the directory of
+ * participants of a board would make this screen one more exhibition surface
+ * for data that we are precisely trying not to spread.
  *
- * Ce que l'effacement fait exactement — identifiants retirés, contributions
- * gardées sous pseudonyme — est dit dans le dialogue de confirmation ET dans
- * `lib/server/feedback/erasure.ts`. Les deux doivent continuer de dire la même
+ * What erasure does exactly — removed identifiers, contributions
+ * kept under a pseudonym — is said in the confirmation dialog AND in
+ * `lib/server/feedback/erasure.ts`. Both must continue to say the same
  * chose.
  */
 
@@ -45,8 +45,8 @@ export function FeedbackParticipantsGroup({ projectId }: { projectId: string }) 
   const [done, setDone] = useState<ErasureReport | null>(null);
   const [failed, setFailed] = useState(false);
 
-  // La frappe ne doit pas déclencher une requête par lettre — et une recherche
-  // à moins de deux caractères ramènerait la moitié du board.
+  // Typing should not trigger a letter query — and a search
+  // less than two characters would bring back half the board.
   const [debounced, setDebounced] = useState("");
   useEffect(() => {
     const id = setTimeout(() => setDebounced(query.trim()), 300);
@@ -83,8 +83,8 @@ export function FeedbackParticipantsGroup({ projectId }: { projectId: string }) 
       }
       const json = (await res.json()) as { report: ErasureReport };
       setDone(json.report);
-      // La personne effacée sort des résultats : la liste doit le montrer sans
-      // qu'on ait à retaper la recherche.
+      // The deleted person leaves the results: the list must show this without
+      // that we have to retype the search.
       await queryClient.invalidateQueries({
         queryKey: ["feedback-participants", projectId],
       });

@@ -3,15 +3,14 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 
 /**
- * Clés d'intégration (API Feedback) : "mdy_" + 24 octets aléatoires en
- * base64url. Seul le sha256 hex est stocké — le plaintext n'est montré qu'une
- * fois, à la création. key_prefix garde les premiers caractères pour que
- * l'owner reconnaisse sa clé dans la liste des settings.
+ * Integration keys (API Feedback): "mdy_" + 24 random bytes en
+ * base64url. Only the sha256 hex is stored — the plaintext is only shown once, upon creation. key_prefix keeps the first characters so that
+ * the owner recognizes his key in the settings list.
  */
 
 export const INTEGRATION_KEY_PREFIX = "mdy_";
 
-/** sha256 hex de la clé présentée — la seule forme jamais persistée. */
+/** sha256 hex of the presented key — the only form ever persisted. */
 export function hashIntegrationKey(key: string): string {
   return createHash("sha256").update(key).digest("hex");
 }

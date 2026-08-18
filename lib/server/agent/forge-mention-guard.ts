@@ -5,62 +5,62 @@ import type { RepoProviderId } from "@/lib/repo-providers";
 import { buildForgeAssigneeIndex } from "@/lib/server/git/forge-members";
 
 /**
- * Qui a le droit de faire dépenser le propriétaire d'un projet, et combien de
- * fois (MIN-330).
+ * Who has the right to make a project owner spend, and how many
+ * times (MIN-330).
  *
- * `@numo` dans un commentaire de pull request lance une relecture, et cette
- * relecture est portée par un compte minddy — celui du OWNER du projet
- * (`pr-mention.ts`). Le commentaire, lui, est écrit chez la forge : sur un dépôt
- * PUBLIC, par n'importe qui. Sans garde, un inconnu vide le quota, le budget et
- * la clé BYOK du propriétaire à coût nul, et pousse au passage du texte dans le
- * contexte de l'agent.
+ * `@numo` in a pull request comment initiates a replay, and this
+ * replay is carried by a minddy account — that of the OWNER of the project
+ * (`pr-mention.ts`). The comment is written at the forge: on a deposit
+ * PUBLIC, by anyone. Without guard, an unknown person empties the quota, the budget and
+ * the owner's BYOK key at zero cost, and pushes the passage of the text in the
+ * context of the agent.
  *
- * Deux gardes, et elles répondent à deux questions différentes :
+ * Two guards, and they answer two different questions:
  *
- *  1. **Est-ce quelqu'un de la maison ?** L'auteur du commentaire doit être
- *     rattachable à un MEMBRE d'un projet qui lie ce dépôt, par son compte de
- *     forge connecté (`git_user_identities` côté GitHub, la connexion OAuth côté
- *     GitLab) — exactement le pont que la synchro d'issues utilise déjà pour
- *     assigner un ticket, réutilisé ici pour autoriser une dépense.
+ * 1. **Is this someone from the house?** The author of the comment must be
+ * linked to a MEMBER of a project which links this repository, by his account of
+ * connected forge (`git_user_identities` on the GitHub side, the OAuth connection on the
+ side * GitLab) — exactly the bridge that issue sync already uses to
+ * assign a ticket, reused here to authorize a spend.
  *
- *     **Le défaut sur un dépôt public est le refus**, sans dérogation en v1 : un
- *     contributeur externe qui écrit `@numo` n'obtient rien, et le propriétaire
- *     garde le déclenchement par le bouton « faire vérifier par Numo ». Une
- *     allowlist par dépôt reste possible plus tard — il faudrait la poser dans
- *     `project_git_links`, et surtout une surface pour l'éditer. Tant que cette
- *     surface n'existe pas, l'ouvrir reviendrait à ouvrir pour tout le monde.
+ * **The default on a public repository is refusal**, with no exception in v1: an
+ * external contributor who writes `@numo` gets nothing, and the owner
+ * keeps triggering by the "have Numo verify" button. A
+ * allowlist per repository remains possible later — it would have to be placed in
+ * `project_git_links`, and above all a surface to edit it. As long as this
+ * surface does not exist, opening it would mean opening it for everyone.
  *
- *  2. **Combien de fois ?** Un membre légitime reste borné : une identité
- *     compromise, ou une automatisation qui commente en boucle, dépenserait
- *     autant qu'un inconnu. La borne est PERSISTÉE (`claim_forge_mention`) parce
- *     que le récepteur de webhook est réparti — un compteur en mémoire ne borne
- *     que l'instance qui l'héberge.
+ * 2. **How many times?** A legitimate member remains narrow-minded: a compromised identity
+ *, or an automation that comments in a loop, would spend
+ * that much than a stranger. The terminal is PERSISTENT (`claim_forge_mention`) because
+ * the webhook receiver is distributed — a counter in memory only limits
+ * the instance that hosts it.
  *
- * Rien ici ne lève : une garde qui explose ferait échouer le webhook, la forge
- * re-livrerait, et la mention repartirait en boucle. Une panne de base vaut donc
- * REFUS (fail-closed) : c'est la seule réponse qui ne transforme pas un incident
- * en drain de budget.
+ * Nothing here raises: an exploding guard would cause the webhook to fail, forge
+ * would re-deliver, and the mention would loop again. A basic failure is therefore worth
+ * REFUSAL (fail-closed): this is the only response that does not transform an incident
+ * into a budget drain.
  */
 
-/** Fenêtre commune aux trois compteurs. */
+/** Window common to the three counters. */
 export const MENTION_WINDOW_SECONDS = 60 * 60;
 
-/** Déclenchements par membre et par dépôt dans la fenêtre. */
+/** Triggers per member and per repository in the window. */
 export const MENTION_LIMIT_PER_AUTHOR = 10;
 
-/** Déclenchements pour le dépôt entier, tous membres confondus. */
+/** Triggers for the entire repository, all members combined. */
 export const MENTION_LIMIT_PER_REPO = 30;
 
 /**
- * Refus adressés à un auteur non rattaché : le premier est commenté, les
- * suivants sont silencieux. Sans ce compteur, la réponse de refus serait elle-
- * même l'amplificateur — un commentaire du bot par mention de l'attaquant.
+ * Rejections addressed to an unrelated author: the first is commented, the following
+ * are silent. Without this counter, the refusal response would itself be
+ * even the amplifier — a comment from the bot per mention of the attacker.
  */
 const DENIAL_LIMIT_PER_AUTHOR = 1;
 
 /**
- * Compte ce déclenchement et rend son rang dans la fenêtre courante, ou `null`
- * si la base n'a pas répondu. `null` vaut refus chez l'appelant.
+ * Counts this trigger and returns its rank in the current window, or `null`
+ * if the base has not responded. `null` constitutes refusal by the caller.
  */
 async function claim(key: string): Promise<number | null> {
   try {
@@ -80,9 +80,8 @@ async function claim(key: string): Promise<number | null> {
 }
 
 /**
- * L'auteur de ce commentaire est-il un membre d'un des projets qui connaissent
- * ce dépôt ? `false` sur un login absent (une charge utile sans auteur ne
- * ressemble à personne) comme sur un compte de forge que personne n'a connecté.
+ * Is the author of this comment a member of one of the projects that knows
+ * this repository? `false` on an absent login (a payload without an author doesn't look like anyone) as well as on a forge account that no one has logged in.
  */
 export async function isForgeAuthorMember(params: {
   provider: RepoProviderId;
@@ -101,22 +100,22 @@ export async function isForgeAuthorMember(params: {
   return false;
 }
 
-/** Ce que la garde de débit répond, et ce que l'appelant en fait. */
+/** What the flow guard responds to, and what the caller does with it. */
 export interface ThrottleVerdict {
   allowed: boolean;
-  /** Vrai UNE fois par fenêtre : le franchissement, le seul refus qu'on commente. */
+  /** True ONCE per window: crossing, the only refusal that we comment on. */
   notify: boolean;
 }
 
-/** Clé de compteur — le dépôt qualifié par sa forge, jamais un id interne. */
+/** Meter key — the repository qualified by its forge, never an internal id. */
 function repoKey(provider: RepoProviderId, repoFullName: string): string {
   return `${provider}:${repoFullName.toLowerCase()}`;
 }
 
 /**
- * Le déclenchement d'un MEMBRE : borné par auteur ET par dépôt. Les deux
- * compteurs avancent à chaque passage — c'est voulu, une rafale doit peser sur
- * le dépôt même si elle vient de plusieurs comptes.
+ * Triggering a MEMBER: limited by author AND by deposit. The two
+ * counters advance with each pass — this is intentional, a burst must weigh on
+ * the deposit even if it comes from several accounts.
  */
 export async function claimMemberMention(params: {
   provider: RepoProviderId;
@@ -140,8 +139,8 @@ export async function claimMemberMention(params: {
 }
 
 /**
- * Le refus d'un NON-MEMBRE : rien ne part, et on ne le dit qu'au premier. La
- * valeur de retour ne porte donc que `notify` — `allowed` y est toujours faux.
+ * The refusal of a NON-MEMBER: nothing happens, and we only tell the first person. The
+ * return value therefore only carries `notify` — `allowed` is always false.
  */
 export async function claimDenialNotice(params: {
   provider: RepoProviderId;

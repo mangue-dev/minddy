@@ -18,31 +18,31 @@ import {
 } from "./opencode-probe-rig";
 
 /**
- * MIN-364 (lot 8, §5.6 de l'audit du 15/08) — CE QUE COÛTE UN ALLER-RETOUR DE
- * PERMISSION, ET CE QU'UNE ACL COÛTERAIT À LA PLACE.
+ * MIN-364 (lot 8, §5.6 of the audit of 08/15) — WHAT A ROUND TRIP COSTS
+ * PERMISSION, AND WHAT AN ACL WOULD COST INSTEAD.
  *
- * Ne tourne PAS avec `npm test` : `describe.skipIf` la saute tant que
- * `MDY_OPENCODE_COST_PROBE=1` n'est pas posé. Aucun modèle n'est dépensé — un
- * faux fournisseur scripte les appels de tool.
+ * Does NOT run with `npm test`: `describe.skipIf` skips it as long as
+ * `MDY_OPENCODE_COST_PROBE=1` is not set. No models are spent — one
+ * fake provider scripts tool calls.
  *
  *   MDY_OPENCODE_COST_PROBE=1 MDY_OPENCODE_BIN=<…>/bin/opencode \
  *     npx vitest run lib/server/agent/vm/opencode-cost.probe.test.ts --testTimeout=900000
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * LA QUESTION POSÉE PAR L'AUDIT
+ * THE QUESTION ASKED BY THE AUDIT
  *
- * `read: "ask"` et `bash: "ask"` font payer **un aller-retour HTTP en boucle
- * locale par lecture et par commande**. Sur un tour à 300 lectures, c'est 300
- * allers-retours pour appliquer une règle qui tient en un glob (`*.env`), et
- * 100 % des commandes pour une liste qui ne vise que git. L'audit dit la mesure
- * « la plus rentable à faire », parce que la sortie est simple : les deux règles
- * s'expriment en ACL de config, où un `deny` court-circuite AVANT publication.
+ * `read: "ask"` and `bash: "ask"` charge **for an HTTP loop round trip
+ * local by reading and by command**. On a 300 reading round, it's 300
+ * back and forth to apply a rule that fits in a glob (`*.env`), and
+ * 100% of orders for a list that only targets git. The audit says the measure
+ * “the most profitable to do”, because the exit is simple: the two rules
+ * are expressed in config ACL, where a `deny` bypasses BEFORE publication.
  *
- * Et il nomme le prix de cette sortie : une ACL en glob ne sait pas lire
+ * And he names the price of this output: a global ACL cannot read
  * `bash -lc "git reset --hard"` ni `env -i git push`.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * RELEVÉ DU 2026-08-15 sur `opencode-ai@1.18.16` (Mac, 12 cœurs, N=30)
+ * STATEMENT OF 2026-08-15 on `opencode-ai@1.18.16` (Mac, 12 cores, N=30)
  *
  * ```
  * read: allow             1 318 ms   43,93 ms/appel    0 demande
@@ -51,33 +51,33 @@ import {
  * bash: ask + verdict     1 572 ms   52,40 ms/appel   30 demandes   → +5,67 ms/commande
  * ```
  *
- * **LA MESURE TRANCHE CONTRE L'ACL, et sans hésitation.**
+ * **THE MEASURE CLOSE AGAINST THE ACL, and without hesitation.**
  *
- * 1. **L'aller-retour est quasi gratuit.** Une socket de boucle locale et un
- *    handler qui ne fait rien : 0,4 ms par lecture, 5,7 ms par commande. Le tour
- *    à 300 lectures que l'audit prend en exemple paie donc **~120 ms de mur** —
- *    à comparer aux secondes d'un round de modèle, et aux minutes d'un tour. Ce
- *    n'était pas un coût, c'était une intuition.
- * 2. **Le motif `*.env` PORTE, lui — contrairement à ce qu'on craignait.** Mesuré
- *    aux trois emplacements qui comptent depuis D5 : racine du dépôt, sous-dossier
- *    du dépôt, et **hors du dépôt** — les trois sont refusés. La grammaire de
- *    `read` juge le nom de base, pas un chemin relatif à la racine (c'est celle
- *    d'`edit` qui est ancrée sur le dépôt, cf. la sonde de permissions).
- * 3. **Mais un `deny` de config NE PARLE PAS AU MODÈLE.** Il rend « The user has
+ * 1. **The round trip is almost free.** A local loop socket and a
+ * handler which does nothing: 0.4 ms per read, 5.7 ms per command. The tour
+ * at 300 readings that the audit takes as an example therefore pays **~120 ms of wall** —
+ * compare to the seconds of a model round, and the minutes of a round. This
+ * was not a cost, it was an intuition.
+ * 2. **The `*.env` DOOR pattern — contrary to what was feared.** Measured
+ * in the three locations that matter since D5: repository root, subfolder
+ * from the deposit, and **outside the deposit** — all three are refused. The grammar of
+ * `read` judges the base name, not a path relative to the root (this is the one
+ * d'`edit` which is anchored on the repository, cf. the permissions probe).
+ * 3. **But a `deny` of config DOES NOT SPEAK TO THE MODEL.** It renders “The user has
  *    specified a rule which prevents you from using this specific tool call »,
- *    suivi du vidage brut de l'ACL. Notre refus, lui, dit une phrase : « ce sont
- *    les vraies clés de cette machine ; si tu veux savoir quelles variables
- *    existent, lis le `.env.example` d'à côté ». C'est ce qui fait qu'un modèle
- *    corrige au lieu de réessayer — et c'est ce qu'on perdrait pour 0,4 ms.
+ * followed by raw ACL dump. Our refusal says a sentence: “these are
+ * the real keys to this machine; if you want to know which variables
+ * exist, read the `.env.example` next to it”. This is what makes a model
+ * corrects instead of trying again — and that's what we would lose for 0.4 ms.
  *
- * **Décision : on garde `ask`.** Et le §5.6 se referme sur son propre argument
- * inversé : ce n'est pas l'ACL qui devient tentante, c'est l'aller-retour qui
- * cesse d'être un problème.
+ * **Decision: we keep `ask`.** And §5.6 closes on its own argument
+ * inverted: it's not the ACL that becomes tempting, it's the back and forth that
+ * ceases to be a problem.
  */
 
 const LIVE = process.env.MDY_OPENCODE_COST_PROBE === "1";
 
-/** Combien d'appels de tool par round mesuré. Assez pour que l'écart se voie. */
+/** How many tool calls per round measured. Enough so that the gap is visible. */
 const N = Number(process.env.MDY_OPENCODE_COST_N ?? 30);
 
 let installRoot = "";
@@ -85,7 +85,7 @@ let bin = "";
 const running: ProbeServer[] = [];
 const providers: FakeProvider[] = [];
 const roots: string[] = [];
-/** Le tableau récapitulatif, écrit à la fin — c'est LUI la sortie de la sonde. */
+/** The summary table, written at the end — THIS is the output of the probe. */
 const measures: Array<{ cas: string; ms: number; parAppel: number; demandes: number }> = [];
 
 beforeAll(async () => {
@@ -118,13 +118,13 @@ afterAll(() => {
 });
 
 /**
- * LE RÉPONDEUR, ET IL FAIT CE QUE FAIT LE SUPERVISEUR : il lit le flux, décide
- * (ici : toujours oui), et POSTe `/permission/:id/reply`. C'est ce qui rend la
- * mesure honnête — l'aller-retour mesuré est celui qui existe en production, pas
- * une approximation.
+ * THE ANSWER MACHINE, AND IT DOES WHAT THE SUPERVISOR DOES: it reads the flow, decides
+ * (here: always yes), and POSTe `/permission/:id/reply`. This is what makes the
+ * honest measurement — the measured round trip is the one that exists in production, not
+ * an approximation.
  *
- * Le sondage à 1 ms est le seul écart avec le superviseur, qui lit le flux au fil
- * de l'eau. Il ne peut qu'ALOURDIR le chiffre : ce qu'on mesure est donc une
+ * The 1 ms poll is the only difference with the supervisor, who reads the stream as it goes
+ * water. It can only INCREASE the figure: what we measure is therefore a
  * borne haute.
  */
 function autoAnswer(server: ProbeServer): { stop: () => void; count: () => number } {
@@ -145,7 +145,7 @@ function autoAnswer(server: ProbeServer): { stop: () => void; count: () => numbe
   return { stop: () => (alive = false), count: () => answered.size };
 }
 
-/** Un décor complet, avec N fichiers à lire dans le dépôt. */
+/** A complete decor, with N files to read in the repository. */
 async function boot(
   tag: string,
   turns: Parameters<typeof startProvider>[0],
@@ -168,7 +168,7 @@ async function boot(
 
 const readCall = (filePath: string): ToolCall => ({ name: "read", args: { filePath } });
 
-/** Joue le round et rend le temps de mur du prompt au repos. */
+/** Play the round and return the prompt wall time to rest. */
 async function timeTurn(server: ProbeServer, sessionId: string): Promise<number> {
   const started = Date.now();
   await server.prompt(sessionId);
@@ -200,13 +200,13 @@ describe.skipIf(!LIVE)("le coût d'un aller-retour de permission", () => {
         demandes: responder.count(),
       });
 
-      // CHAQUE lecture publie : c'est le fait que l'audit avance, et il est vrai.
+      // EVERY reading publishes: this is the fact that the audit is moving forward, and it is true.
       expect(responder.count(), "toutes les lectures n'ont pas publié").toBe(N);
       /**
-       * ET LE SURCOÛT EST DÉRISOIRE. La borne est large parce que la machine qui
-       * mesure n'est pas dédiée ; ce qu'elle garde est l'ordre de grandeur, et il
-       * suffit à trancher : un aller-retour de boucle locale coûte une fraction
-       * de milliseconde, quand un round de modèle coûte des secondes.
+       * AND THE EXTRA COST IS IGNORABLE. The terminal is wide because the machine which
+       * measurement is not dedicated; what it keeps is the order of magnitude, and it
+       * is enough to decide: a local loop round trip costs a fraction
+       * of millisecond, when a model round costs seconds.
        */
       const surcout = (msGarde - msLibre) / N;
       expect(surcout, `surcoût mesuré : ${surcout.toFixed(2)} ms par lecture`).toBeLessThan(20);
@@ -245,15 +245,15 @@ describe.skipIf(!LIVE)("le coût d'un aller-retour de permission", () => {
 });
 
 /**
- * CE QU'UNE ACL SAURAIT DIRE, ET CE QU'ELLE NE SAURAIT PAS.
+ * WHAT AN ACL COULD SAY, AND WHAT IT WOULD NOT KNOW.
  *
- * La sortie que l'audit propose est de remplacer l'`ask` par des motifs de
- * config. Ces mesures disent si notre règle y tient — et la réponse est non, pour
- * une raison qui n'existait pas avant D5 : le disque est ouvert, donc un `.env`
- * n'est plus forcément dans le dépôt.
+ * The output that the audit proposes is to replace the `ask` with reasons for
+ * config. These measurements say whether our rule holds up — and the answer is no, for
+ * a reason that did not exist before D5: the disk is open, therefore a `.env`
+ * is no longer necessarily in the repository.
  */
 describe.skipIf(!LIVE)("ce qu'une ACL de `read` sait exprimer", () => {
-  /** Le fichier a été lu si le tool est `completed` et rend son contenu. */
+  /** The file has been read if the tool is `completed` and renders its contents. */
   const readWorked = (server: ProbeServer): boolean =>
     server.toolParts().some((p) => p.tool === "read" && p.status === "completed");
 
@@ -276,15 +276,15 @@ describe.skipIf(!LIVE)("ce qu'une ACL de `read` sait exprimer", () => {
   );
 
   /**
-   * OÙ LE MOTIF `*.env` PORTE VRAIMENT — les trois emplacements qui comptent
-   * depuis D5, mesurés plutôt que supposés.
+   * WHERE THE `*.env` PATTERN REALLY MATTERS — the three locations that matter
+   * since D5, measured rather than assumed.
    *
-   * ⚠ LA PREMIÈRE VERSION DE CETTE MESURE ÉTAIT FAUSSE, et la faute vaut d'être
-   * écrite : la file du faux fournisseur portait un premier tour bidon (le chemin
-   * réel n'est connu qu'après le boot), le prompt consommait CELUI-LÀ, et le
-   * `read` échouait sur un fichier inexistant. La sonde lisait « refusé » et
-   * mesurait un ENOENT. D'où le `boot` à file VIDE, et l'assertion sur le MOTIF
-   * de l'erreur — « rule which prevents you » et pas n'importe quel échec.
+   * ⚠ THE FIRST VERSION OF THIS MEASURE WAS FALSE, and the fault deserves to be
+   * written: the line of the false supplier carried a bogus first turn (the path
+   * real is only known after boot), the prompt consumed THIS ONE, and the
+   * `read` failed on a non-existent file. The probe read “refused” and
+   * measured an ENOENT. Hence the `boot` with EMPTY file, and the assertion on the PATTERN
+   * of the error — “rule which prevents you” and not just any failure.
    */
   it(
     "porte sur le nom de base, dépôt ou pas — mais ne dit toujours rien au modèle",
@@ -328,9 +328,9 @@ describe.skipIf(!LIVE)("ce qu'une ACL de `read` sait exprimer", () => {
           "\n",
       );
 
-      // Le motif porte sur le NOM DE BASE : il couvre les deux emplacements, donc
-      // l'ACL n'est PAS trouée sur ce point-là. Ce qui la disqualifie est ailleurs
-      // — le message rendu au modèle, mesuré juste en dessous.
+      // The pattern is on the BASE NAME: it covers both slots, so
+      // the ACL is NOT holed at this point. What disqualifies it is elsewhere
+      // — the message delivered to the model, measured just below.
       expect(releve["hors du dépôt"]).toBe("refusé par l'ACL");
       expect(releve["imbriqué dans le dépôt"]).toBe("refusé par l'ACL");
     },
@@ -338,9 +338,9 @@ describe.skipIf(!LIVE)("ce qu'une ACL de `read` sait exprimer", () => {
   );
 
   /**
-   * ET UN `deny` NE PARLE PAS AU MODÈLE. Notre refus lui dit « lis le
-   * `.env.example` d'à côté » ; un `deny` de config lui dit qu'une règle
-   * l'empêche, sans dire quoi faire — donc il réessaie.
+   * AND A `deny` DOES NOT TALK TO THE MODEL. Our refusal tells him “read it
+   * `.env.example` next door”; a `deny` of config tells him that a rule
+   * stops him, without saying what to do — so he tries again.
    */
   it(
     "un `deny` de config rend un message générique, pas le mot du harness",
@@ -357,16 +357,16 @@ describe.skipIf(!LIVE)("ce qu'une ACL de `read` sait exprimer", () => {
       const part = server.toolParts().find((p) => p.tool === "read");
       expect(part?.status).toBe("error");
       /**
-       * CE QUE LE MODÈLE LIT VRAIMENT : « The user has specified a rule which
+       * WHAT THE TEMPLATE REALLY READS: “The user has specified a rule which
        * prevents you from using this specific tool call », suivi du VIDAGE DE
-       * L'ACL — nos motifs concaténés après ceux d'opencode (relevé du 15/08 :
+       * The ACL — our patterns concatenated after those of opencode (reported on 08/15:
        * `[{"permission":"*","action":"allow"},…,{"permission":"read",
        * "pattern":"*.env","action":"deny"}]`).
        *
-       * Il y a donc bien `.env.example` dans le texte, mais comme une LIGNE DE
-       * RÈGLE, pas comme un conseil. Notre refus, lui, dit une phrase : « lis le
-       * `.env.example` d'à côté ». C'est ce qui fait qu'un modèle corrige au lieu
-       * de réessayer — et c'est ce qu'un `deny` de config ne sait pas dire.
+       * So there is indeed `.env.example` in the text, but like a LINE OF
+       * RULE, not as advice. Our refusal says a sentence: “read it
+       * `.env.example` next door”. This is what makes a model correct instead
+       * to try again — and that's what a config `deny` can't say.
        */
       expect(part?.error).toContain("rule which prevents you");
       expect(part?.error).toContain('"action":"deny"');

@@ -1,24 +1,24 @@
 import { describe, expect, it } from "vitest";
 
 import { commitAndPush } from "./repo-host";
-// Le fake reste une SANDBOX et passe par `sandboxHost` : depuis MIN-224 ce test
-// couvre donc aussi l'adaptateur RPC, c'est-à-dire le chemin réel de l'ancienne
-// forme — la logique de `commitAndPush`, elle, est désormais commune aux deux.
+// The fake remains a SANDBOX and goes through `sandboxHost`: since MIN-224 this test
+// therefore also covers the RPC adapter, i.e. the real path of the old
+// form — the logic of `commitAndPush` is now common to both.
 import { sandboxHost, type Sandbox } from "./sandbox";
 import { cloudLayout } from "./harness-layout";
 
 /**
- * Fin de tour côté git (MIN-123) : QUAND le harnais touche-t-il au dépôt ?
+ * End of turn on the git side (MIN-123): WHEN does the harness touch the repository?
  *
- * `git push HEAD:refs/heads/<branche>` CRÉE la branche distante, même quand l'arbre
- * est propre — donc une session qui n'a rien changé (question, plan, vérification)
- * laissait une branche vide sur le dépôt de l'utilisateur. Ce qui se teste ici est
- * cette décision, et elle seule : la branche n'atteint le remote qu'à partir du
- * premier commit, et en cas de doute on pousse (ne jamais garder du travail hors
- * du remote). Les mains dans le vrai git sont couvertes par la microVM.
+ * `git push HEAD:refs/heads/<branche>` CREATES the remote branch, even when the tree
+ * is clean — therefore a session that has not changed anything (question, plan, check)
+ * left an empty branch on the user's repository. What is tested here is
+ * this decision, and it alone: ​​the branch only reaches the remote from the
+ * first commit, and in case of doubt we push (never keep work outside
+ * of the remote). Hands in real git are covered by the microVM.
  */
 
-/** Une commande shell vue par la sandbox factice, et ce qu'elle doit répondre. */
+/** A shell command seen by the dummy sandbox, and what it should respond to. */
 interface Reply {
   exitCode?: number;
   stdout?: string;
@@ -29,10 +29,10 @@ const BASE_SHA = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const WORK_SHA = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
 /**
- * Sandbox factice : route chaque commande vers la première clé qui la préfixe et
- * enregistre tout ce qui a été lancé. Une commande non prévue est un échec du test
- * (une commande git inattendue ne doit pas passer inaperçue), sauf `git status`
- * et `git rev-parse` dont les défauts décrivent le cas nominal « rien changé ».
+ * Dummy sandbox: routes each command to the first key that prefixes it and
+ * logs everything that was issued. An unexpected command is a test failure
+ * (an unexpected git command should not go unnoticed), except `git status`
+ * and `git rev-parse` whose faults describe the nominal case "nothing changed".
  */
 function fakeSandbox(routes: Record<string, Reply | ((call: number) => Reply)>): {
   sandbox: Sandbox;
@@ -67,8 +67,8 @@ const OPTS = {
   workBranch: "minddy/agent/min-123-abcd1234",
   baseBranch: "main",
   message: "wip(MIN-123): agent update",
-  // MIN-358 : l'identité voyage jusqu'au commit et se pose par `git -c`, elle
-  // n'est plus écrite dans le `.git/config` du clone.
+  // MIN-358: the identity travels to the commit and is set by `git -c`, it
+  // is no longer written in the clone's `.git/config`.
   committer: { name: "minddy agent", email: "agent@minddy.app" },
 };
 
@@ -88,7 +88,7 @@ describe("commitAndPush", () => {
       headSha: BASE_SHA,
       pushed: false,
     });
-    // Ni push, ni même un ls-remote : le dépôt n'est pas touché du tout.
+    // Neither push, nor even ls-remote: the repository is not affected at all.
     expect(commands.some((c) => c.startsWith("git push"))).toBe(false);
     expect(commands.some((c) => c.startsWith("git ls-remote"))).toBe(false);
   });
@@ -97,9 +97,9 @@ describe("commitAndPush", () => {
     const { sandbox, commands } = fakeSandbox({
       "git status --porcelain": { stdout: " M lib/foo.ts\n" },
       "git add -A": {},
-      // MIN-358 : le commit porte son identité en tête (`git -c user.email=…`).
+      // MIN-358: the commit has its identity at the top (`git -c user.email=…`).
       "git -c 'user.email=": {},
-      // Le commit fait avancer HEAD : c'est LUI qui rend la branche poussable.
+      // The commit advances HEAD: it is HE who makes the branch pushable.
       "git rev-parse HEAD": { stdout: `${WORK_SHA}\n` },
       "git rev-parse --verify": { stdout: `${BASE_SHA}\n` },
       "git ls-remote": { stdout: "" },
@@ -119,8 +119,8 @@ describe("commitAndPush", () => {
   });
 
   it("pousse une branche héritée même sur un tour purement conversationnel", async () => {
-    // Session qui reprend une branche déjà poussée : HEAD est en avance sur la base,
-    // le remote est déjà à jour → push no-op, mais la branche existe et le reste.
+    // Session which resumes a branch already pushed: HEAD is ahead of the base,
+    // the remote is already up to date → push no-op, but the branch exists and remains so.
     const { sandbox, commands } = fakeSandbox({
       "git status --porcelain": { stdout: "" },
       "git rev-parse HEAD": { stdout: `${WORK_SHA}\n` },
@@ -133,7 +133,7 @@ describe("commitAndPush", () => {
 
     expect(res.pushed).toBe(true);
     expect(res.committed).toBe(false);
-    // Le remote n'a pas AVANCÉ : pas de réouverture de PR refusée sur ce tour.
+    // The remote has not ADVANCED: no PR reopening refused on this round.
     expect(res.remoteUpdated).toBe(false);
     expect(commands.some((c) => c.startsWith("git push"))).toBe(true);
   });
@@ -157,7 +157,7 @@ describe("commitAndPush", () => {
     const { sandbox } = fakeSandbox({
       "git status --porcelain": { stdout: " M lib/foo.ts\n" },
       "git add -A": {},
-      // MIN-358 : le commit porte son identité en tête (`git -c user.email=…`).
+      // MIN-358: the commit has its identity at the top (`git -c user.email=…`).
       "git -c 'user.email=": {},
       "git rev-parse HEAD": { stdout: `${WORK_SHA}\n` },
       "git rev-parse --verify": { stdout: `${BASE_SHA}\n` },

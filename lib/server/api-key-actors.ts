@@ -3,11 +3,11 @@ import "server-only";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
- * Résout les clés API « acteurs » d'un lot d'événements/commentaires MCP en
- * { name, agent } pour l'affichage (« Claude Code (mcp) » + logo de l'agent).
- * Service client obligatoire : la policy RLS d'api_keys est owner-only, or
- * tout membre du projet doit voir QUI (quel agent) a agi. Nom + agent ne sont
- * pas des secrets. Les clés révoquées restent résolues (la ligne survit).
+ * Resolves the "actors" API keys of a batch of MCP events/comments to
+ * { name, agent } for display ("Claude Code (mcp)" + agent logo).
+ * Mandatory customer service: the RLS policy of api_keys is owner-only, or
+ * everyone in the project must see WHO (which agent) acted. Name + agent are
+ * not secrets. Revoked keys remain resolved (row survives).
  */
 export interface ApiKeyActor {
   name: string;

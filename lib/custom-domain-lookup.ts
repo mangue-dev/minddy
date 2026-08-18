@@ -1,18 +1,18 @@
 /**
- * Lookup host → cible publique pour le middleware (MIN-36).
+ * Lookup host → public target for the middleware (MIN-36).
  *
- * Volontairement SANS supabase-js ni "server-only" : proxy.ts (middleware)
- * l'importe et son bundle doit rester minimal — on parle à PostgREST en fetch
- * direct avec la clé service. Ne JAMAIS importer ce module côté client (la clé
- * service n'y serait pas définie, et il n'a aucun sens hors serveur).
+ * Deliberately WITHOUT supabase-js nor "server-only": proxy.ts (middleware)
+ * imports it and its bundle must remain minimal — we are talking to PostgREST in fetch
+ * direct with the service key. NEVER import this module client-side (the
+ * service key would not be defined there, and it has no meaning outside of the server).
  *
- * La table custom_domains stocke les ids ; les tokens sont joints ici, donc une
- * rotation de token est répercutée au prochain lookup (modulo le TTL du cache).
+ * The custom_domains table stores the ids; the tokens are attached here, so a
+ * token rotation is passed on to the next lookup (modulo the TTL of the cache).
  *
- * Le lookup rend AUSSI le projet propriétaire (MIN-337) : c'est le locataire du
- * domaine, et le middleware s'en sert pour refuser sous ce nom les tokens des
- * autres. Sans lui, `/f/<token d'un inconnu>` se rendait tel quel sur le
- * domaine du client, en HTTPS valide et sous sa marque.
+ * The lookup ALSO makes the project owner (MIN-337): it is the tenant of the
+ * domain, and the middleware uses it to refuse the tokens under this name des
+ * others. Without it, `/f/<token d'un inconnu>` went as is to the
+ * client domain, in valid HTTPS and under its brand.
  */
 
 export type PublicTokenKind = "feedback" | "share" | "page";
@@ -20,26 +20,26 @@ export type PublicTokenKind = "feedback" | "share" | "page";
 export type DomainTarget = {
   kind: "feedback" | "share";
   token: string;
-  /** Projet propriétaire du board / de la vue partagée servi à la racine. */
+  /** Project owner of the board / shared view served at the root. */
   projectId: string;
 };
 
 const CACHE_TTL_MS = 60_000;
 const CACHE_MAX_ENTRIES = 1_000;
 
-// Cache module-scope : en Fluid Compute l'instance est réutilisée entre
-// requêtes, donc un host actif ne coûte ~1 requête DB par minute. Les négatifs
-// sont aussi cachés (host inconnu marteau → pas de DB à chaque hit).
+// Module-scope cache: in Fluid Compute the instance is reused between
+// requests, so an active host only costs ~1 DB request per minute. The negatives
+// are also hidden (unknown host hammer → no DB on each hit).
 //
-// La clé est le host NORMALISÉ tel qu'il a servi à la requête PostgREST, et la
-// valeur ne vient que de cette requête-là : un `Host:` fabriqué ne peut pas
-// empoisonner l'entrée d'un autre domaine, il ne fait que peupler la sienne
-// (borne : CACHE_MAX_ENTRIES, purge globale au débordement).
+// The key is the STANDARDIZED host as it was used for the PostgREST request, and the
+// value only comes from this request: a manufactured `Host:` cannot
+// poison the entrance to another domain, he only populates his own
+// (terminal: CACHE_MAX_ENTRIES, global purge on overflow).
 const cache = new Map<string, { at: number; value: DomainTarget | null }>();
 
-// Même mécanique pour token → projet : le middleware la consulte sur chaque
-// chemin public d'un domaine client, elle doit coûter une requête par minute et
-// par token, pas une par visite.
+// Same mechanics for token → project: the middleware consults it on each
+// public path of a client domain, it must cost one request per minute and
+// per token, not one per visit.
 const tokenCache = new Map<string, { at: number; value: string | null }>();
 
 export async function lookupCustomDomain(host: string): Promise<DomainTarget | null> {
@@ -54,9 +54,9 @@ export async function lookupCustomDomain(host: string): Promise<DomainTarget | n
 }
 
 /**
- * Projet propriétaire d'un token public (`/f/<t>`, `/share/<t>`, `/p/<t>`).
- * `null` = token inconnu. Les pages publiées et les vues partagées vivent dans
- * la même table depuis MIN-283, d'où la clé de cache par TABLE et non par kind.
+ * Project owning a public token (`/f/<t>`, `/share/<t>`, `/p/<t>`).
+ * `null` = unknown token. Published pages and shared views live in
+ * the same table since MIN-283, hence the cache key by TABLE and not by kind.
  */
 export async function lookupTokenProject(
   kind: PublicTokenKind,
@@ -73,16 +73,16 @@ export async function lookupTokenProject(
   return value;
 }
 
-/** Invalidation immédiate après set/remove côté réglages (même instance). */
+/** Immediate invalidation after set/remove on the settings side (same instance). */
 export function invalidateCustomDomainCache(host?: string): void {
   if (host) cache.delete(host);
   else cache.clear();
-  // Les tokens ne bougent pas avec un domaine, mais un test (et une rotation)
-  // ne doivent pas se traîner l'ancien cache.
+  // Tokens do not move with a domain, but with a test (and a rotation)
+  // must not drag the old cache.
   if (!host) tokenCache.clear();
 }
 
-/** PostgREST en clé service, JSON ou `null` sur toute erreur (jamais de throw). */
+/** PostgREST in service key, JSON or `null` on any error (never throw). */
 async function restRows<T>(query: string, what: string): Promise<T[] | null> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -105,11 +105,10 @@ async function restRows<T>(query: string, what: string): Promise<T[] | null> {
 }
 
 /**
- * `status=eq.verified` (MIN-337) : un domaine était routé DÈS SON INSERTION,
- * c'est-à-dire avant que quiconque ait prouvé le posséder. Le statut est celui
- * que Vercel renvoie (CNAME en place + challenge TXT satisfait) ; tant qu'il
- * n'est pas vérifié, la ligne existe, l'UI affiche les enregistrements DNS à
- * créer — et le host ne sert rien.
+ * `status=eq.verified` (MIN-337): a domain was routed AS SOON AS ITS INSERTION,
+ * that is to say before anyone had proven to own it. The status is that
+ * that Vercel returns (CNAME in place + TXT challenge satisfied); as long as
+ * is not checked, the line exists, the UI shows the DNS records to be created — and the host is of no use.
  */
 async function fetchTarget(host: string): Promise<DomainTarget | null> {
   const rows = await restRows<{

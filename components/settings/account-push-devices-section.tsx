@@ -41,23 +41,23 @@ import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import type { PushDevice } from "@/lib/types";
 
 /**
- * « Notifications push » (MIN-183) — la carte par laquelle on allume, éteint et
- * retire des appareils.
+ * “Push notifications” (MIN-183) — the card by which you turn on, turn off and
+ * remove devices.
  *
- * Deux plans, et ils ne disent pas la même chose :
+ * Two plans, and they don't say the same thing:
  *
- *   1. la rangée de tête parle de CET appareil-ci, celui qu'on a sous les
- *      doigts. C'est le seul qu'on puisse abonner, parce qu'un abonnement naît
- *      d'une permission navigateur, et qu'une permission ne se demande que là où
- *      elle sera utilisée ;
- *   2. la liste parle de TOUS les appareils, celui-ci compris. C'est là qu'on
- *      coupe le portable resté au bureau, ou qu'on retire l'ancien téléphone.
+ * 1. the head row talks about THIS device, the one we have under our
+ * fingers. This is the only one that can be subscribed to, because a subscription is born
+ * from a browser permission, and a permission is only requested where
+ * it will be used;
+ * 2. the list talks about ALL devices, this one included. This is where we
+ * turn off the cell phone left in the office, or remove the old phone.
  *
- * Les états de repli comptent autant que le geste nominal, et chacun dit ce
- * qu'il faut FAIRE plutôt que ce qui manque : navigateur incapable, permission
- * refusée (irrécupérable depuis la page — seuls les réglages du navigateur la
- * rouvrent), iOS hors PWA installée (le push y exige l'ajout à l'écran
- * d'accueil, et l'interrupteur ne pourrait rien faire d'autre qu'échouer).
+ * The fallback states count as much as the nominal gesture, and everyone says what
+ * must DO rather than what is missing: browser unable, permission
+ * refused (unrecoverable from the page — only the browser settings
+ * reopen), iOS without PWA installed (the push there requires adding to the
+ * home screen, and the switch could do nothing other than fail).
  */
 export function AccountPushDevicesSection() {
   const t = useTranslations("Push");
@@ -71,7 +71,7 @@ export function AccountPushDevicesSection() {
     NotificationPermission | "unsupported" | null
   >(null);
   const [needsInstall, setNeedsInstall] = useState(false);
-  /** Comme les capacités du navigateur, lue après le montage (voir l'effet). */
+  /** Like browser capabilities, read after editing (see effect). */
   const [inDesktopApp, setInDesktopApp] = useState(false);
   const [nativeDesktopPush, setNativeDesktopPush] = useState(false);
   const [nativeNotificationSettings, setNativeNotificationSettings] = useState(false);
@@ -80,8 +80,8 @@ export function AccountPushDevicesSection() {
   const [testingId, setTestingId] = useState<string | null>(null);
   const [toRemove, setToRemove] = useState<PushDevice | null>(null);
 
-  // Les capacités du navigateur ne se lisent qu'APRÈS le montage : rendues côté
-  // serveur, elles n'existent pas, et les supposer ferait clignoter la carte.
+  // Browser capabilities are only read AFTER editing: rendered side
+  // server, they don't exist, and assuming them would cause the card to flash.
   useEffect(() => {
     setPermission(pushPermission());
     setNeedsInstall(isIOS() && !isStandalone());
@@ -97,25 +97,25 @@ export function AccountPushDevicesSection() {
     [queryClient]
   );
 
-  /** L'abonnement de CET appareil est-il connu du serveur ET actif ? C'est ce
-   *  que l'interrupteur de tête reflète — pas la seule permission navigateur,
-   *  qui peut être accordée sans qu'aucune ligne n'existe. */
+  /** Is THIS device's subscription known to the server AND active? It's this
+ * that the head switch reflects — not the single browser permission,
+ * that can be granted without any lines existing. */
   const thisDevice = thisEndpoint
     ? (devices.find((d) => d.endpoint === thisEndpoint) ?? null)
     : null;
   const on = !!thisDevice?.enabled;
 
   /**
-   * ⚠ Appelé DIRECTEMENT depuis le geste, sans `await` avant la demande de
-   * permission : Safari (macOS comme iOS) refuse un `requestPermission()` qui
-   * n'est pas dans la pile d'appels d'une interaction utilisateur.
-   */
+ * ⚠ Called DIRECTLY from the gesture, without `await` before the request for
+ * permission: Safari (macOS like iOS) refuses a `requestPermission()` that
+ * is not in the call stack of a user interaction.
+ */
   const toggleThisDevice = async (next: boolean) => {
     setBusy(true);
     try {
       if (next) {
-        // Déjà abonné mais coupé : c'est un simple rallumage, la permission est
-        // acquise et il n'y a pas à la redemander.
+        // Already a subscriber but cut off: it's a simple restart, permission is
+        // acquired and there is no need to ask for it again.
         if (thisDevice) {
           await setPushDeviceEnabledApi(thisDevice.id, true);
           toast.success(t("enabledToast"));
@@ -123,11 +123,11 @@ export function AccountPushDevicesSection() {
           const result = await subscribeThisDevice(locale);
           if (!result.ok) {
             if (result.reason === "denied") {
-              // La permission n'est pas forcément REFUSÉE : fermer la fenêtre du
-              // navigateur sans répondre la laisse à « default », et redemander
-              // marchera. Annoncer « bloqué, rouvrez les réglages du site »
-              // serait alors faux — l'interrupteur qui revient à l'arrêt dit
-              // déjà que ça n'a pas pris.
+              // Permission is not necessarily DENIED: close the window
+              // browser without responding leaves it at “default”, and asks again
+              // will work. Announce “blocked, reopen site settings”
+              // would then be false — the switch which returns to the stop says
+              // already it didn't work.
               const after = pushPermission();
               setPermission(after);
               trackEvent("push_permission_denied", {});
@@ -147,8 +147,8 @@ export function AccountPushDevicesSection() {
           toast.success(t("enabledToast"));
         }
       } else {
-        // Éteindre ne DÉSABONNE pas : la permission reste acquise, et rallumer
-        // ne repasse plus par la fenêtre du navigateur.
+        // Turn off do not UNSUBSCRIBE: permission remains granted, and turn on again
+        // no longer goes through the browser window.
         if (thisDevice) await setPushDeviceEnabledApi(thisDevice.id, false);
         toast.success(t("disabledToast"));
       }
@@ -173,10 +173,10 @@ export function AccountPushDevicesSection() {
   const handleRemove = async () => {
     if (!toRemove) return;
     try {
-      // Retirer L'APPAREIL COURANT le désabonne aussi côté navigateur : sans
-      // ça, la permission resterait accordée avec un abonnement que plus
-      // personne ne connaît, et le prochain « activer » créerait une ligne
-      // portant le même endpoint qu'on vient de supprimer.
+      // Remove THE CURRENT DEVICE also unsubscribe it on the browser side: without
+      // that, permission would remain granted with a subscription that no longer
+      // no one knows, and the next “enable” would create a line
+      // carrying the same endpoint that we just deleted.
       if (toRemove.endpoint === thisEndpoint) {
         await unsubscribeThisDevice();
         setThisEndpoint(null);
@@ -196,7 +196,7 @@ export function AccountPushDevicesSection() {
       toast.success(t("testSentToast"));
     } catch (e) {
       toast.error((e as Error).message);
-      // Un 410 vient de purger la ligne côté serveur : la liste doit bouger.
+      // A 410 has just purged the line on the server side: the list must move.
       await refresh();
     } finally {
       setTestingId(null);
@@ -224,16 +224,16 @@ export function AccountPushDevicesSection() {
     return parts.join(" · ");
   };
 
-  // L'interrupteur de tête n'a de sens que là où il peut aboutir. Partout
-  // ailleurs on met l'indice à sa place : dire pourquoi vaut mieux qu'offrir un
-  // geste qui échouera.
+  // The head switch only makes sense where it can lead. Everywhere
+  // elsewhere we put the clue in its place: saying why is better than offering a
+  // gesture that will fail.
   const blocked =
     capabilities && !(nativeDesktopPush ? capabilities.apns : capabilities.web)
       ? t("notConfiguredHint")
       : // L'app de bureau (MIN-291) : Electron n'embarque pas l'API Push, donc
-        // `permission` y vaut `unsupported` — mais « ce navigateur ne gère pas les
-        // notifications push » se lit comme une panne, alors que c'est un
-        // renoncement assumé, et qu'il a une issue (garder le web ouvert). Le dire.
+        // `permission` is equal to `unsupported` — but “this browser does not manage
+        // push notifications” reads like an outage, when it is actually a
+        // assumed renunciation, and that there is a way out (keeping the web open). Say it.
         inDesktopApp && !nativeDesktopPush
         ? t("desktopHint")
         : permission === "unsupported"
@@ -299,8 +299,7 @@ export function AccountPushDevicesSection() {
               subtitle={subtitleOf(device)}
               action={
                 <>
-                  {/* L'essai n'est offert que sur l'appareil qu'on a sous les
-                      yeux : ailleurs, on ne verrait pas s'il a sonné. */}
+                  {/* The test is only offered on the device you have in front of you: elsewhere, you wouldn't see if it rang. */}
                   {device.endpoint === thisEndpoint &&
                     device.enabled &&
                     (device.transport === "apns"

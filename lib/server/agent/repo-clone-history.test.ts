@@ -19,18 +19,18 @@ const exec = promisify(execFile);
 /**
  * L'HISTORIQUE DU CLONE DE TRAVAIL (MIN-267).
  *
- * Le défaut réparé : le clone était à `--depth 1`. Un run dont le travail EST
- * l'historique — « audite ce qui a changé depuis le dernier rapport » — trouvait
- * un dépôt d'UN commit greffé, sans parent, et rendait un rapport vide en croyant
- * que rien n'avait été livré. C'est exactement ce qu'a fait la routine d'audit de
- * sécurité, et le rapport était sincère : dans cette microVM, il n'y avait rien.
+ * The fault repaired: the clone was at `--depth 1`. A run whose work IS
+ * the history — “audits what has changed since the last report” — found
+ * a repository of ONE grafted commit, without parent, and returned an empty report believing
+ * that nothing had been delivered. This is exactly what the audit routine did
+ * security, and the report was sincere: in this microVM, there was nothing.
  *
- * Deux tests, deux frontières :
- *  - la SUITE de commandes émise (host en mémoire), parce que c'est elle qui
- *    porte la fenêtre — et qu'une reprise de branche de travail à `--depth 1` y
- *    reposerait une greffe sur le tip, annulant la profondeur de la base ;
- *  - le comportement de VRAI git sur un dépôt jetable, parce que `--shallow-since`
- *    ne se relit pas : il se vérifie sur un `git log`.
+ * Two tests, two borders:
+ * - the SEQUENCE of commands issued (host in memory), because it is she who
+ * carries the window — and that a working branch resumption at `--depth 1` y
+ * would rest a graft on the tip, canceling the depth of the base;
+ * - the behavior of TRUE git on a disposable repository, because `--shallow-since`
+ * is not reread: it is verified on a `git log`.
  */
 
 function fakeHost() {
@@ -65,8 +65,8 @@ describe("cloneRepo — la fenêtre d'historique", () => {
     const clone = commands.find((c) => c.includes("git clone")) ?? "";
     expect(clone).toContain(`--shallow-since='${historySince()}'`);
     expect(clone).not.toContain("--depth");
-    // `--depth` impliquait `--single-branch` ; `resolveBaseRef` s'appuie sur le
-    // fait qu'il n'y a QU'UNE ref distante, donc ça se dit dans la commande.
+    // `--depth` implied `--single-branch`; `resolveBaseRef` is based on the
+    // means that there is ONLY ONE remote ref, so it is said in the command.
     expect(clone).toContain("--single-branch");
   });
 
@@ -74,8 +74,8 @@ describe("cloneRepo — la fenêtre d'historique", () => {
     const { host, commands } = fakeHost();
     await cloneRepo(host, OPTS);
 
-    // Un `--depth 1` ici greffe le tip de la branche de travail : `git log` s'y
-    // arrêterait au premier commit, alors même que la base est profonde.
+    // A `--depth 1` here grafts the tip of the work branch: `git log` is there
+    // would stop at the first commit, even though the base is deep.
     const setup = commands.find((c) => c.includes("git fetch")) ?? "";
     expect(setup).toContain(`git fetch --shallow-since='${historySince()}'`);
     expect(setup).not.toContain("--depth");
@@ -96,13 +96,13 @@ describe("cloneRepo — ce que git en fait vraiment", () => {
   });
 
   /**
-   * Host local : `sh -c` sur un vrai disque, sous une racine de run RÉELLE.
+   * Local host: `sh -c` on a real disk, under a REAL run root.
    *
-   * Ce host réécrivait les chemins à la main (`command.replace(REPO_DIR, …)`)
-   * pour ramener `/vercel/sandbox` dans un dossier temporaire — le contournement
-   * exact que MIN-354 supprime. Il reçoit maintenant un layout, et le code sous
-   * test travaille pour de bon hors de `/vercel` : c'est la même vérification,
-   * mais elle exerce enfin le chemin qu'un poste de travail empruntera.
+   * This host rewrote the paths by hand (`command.replace(REPO_DIR, …)`)
+   * to return `/vercel/sandbox` to a temporary folder — the workaround
+   * correct that MIN-354 removes. It now receives a layout, and the code under
+   * test works for good outside of `/vercel`: it's the same verification,
+   * but it finally exercises the path that a workstation will take.
    */
   function localHost(root: string): RepoHost {
     const layout = layoutForRoot(root, join(root, "oc"));
@@ -139,7 +139,7 @@ describe("cloneRepo — ce que git en fait vraiment", () => {
     await sh(`git init -q --bare ${JSON.stringify(origin)}`, root);
     await sh(`git clone -q file://${origin} ${JSON.stringify(seed)}`, root);
     await sh(`git checkout -q -b main`, seed);
-    // Quatre commits étalés : deux DANS la fenêtre, deux bien avant.
+    // Four commits spread out: two IN the window, two well before.
     const day = 86_400_000;
     const now = Date.now();
     const ages = [HISTORY_WINDOW_DAYS + 60, HISTORY_WINDOW_DAYS + 30, 5, 1];
@@ -163,10 +163,10 @@ describe("cloneRepo — ce que git en fait vraiment", () => {
     const repo = join(root, "repo");
     const { stdout } = await sh(`git log --format=%s origin/main`, repo);
     const subjects = stdout.trim().split("\n");
-    // Les deux commits de la fenêtre sont là — c'est tout l'objet du changement.
+    // The two window commits are there — that's the whole point of the change.
     expect(subjects).toContain("c3");
     expect(subjects).toContain("c2");
-    // Et le clone reste borné : le plus vieux n'est pas venu avec.
+    // And the clone remains stubborn: the oldest did not come with it.
     expect(subjects).not.toContain("c0");
   }, 60_000);
 });

@@ -1,33 +1,33 @@
 /**
- * 014 — les pages d'Aurora (le wiki du projet).
+ * 014 — the Aurora pages (the project wiki).
  *
- * Pour quelle capture : `pagesEditor` — « une page du wiki ouverte : à gauche
- * l'arbre des pages du projet avec une page dépliée sur ses sous-pages, à
- * droite le contenu — un titre, un paragraphe, une liste de cases à cocher
- * dont deux cochées, et une pilule de mention vers un ticket dans le texte ».
+ * For which capture: `pagesEditor` — “an open wiki page: on the left
+ * the project page tree with a page unfolded on its subpages, at
+ * right the content — a title, a paragraph, a list of checkboxes
+ * including two checked, and a mention pill towards a ticket in the text”.
  *
- * Ce que ça pose : quatre pages racines dont une (« Product handbook ») porte
- * trois sous-pages. Celle qu'on photographie est « Release process », sous le
- * handbook : c'est elle qui porte la liste de tâches et la mention.
+ * What this poses: four root pages, one of which (“Product handbook”) covers
+ * three subpages. The one we photograph is “Release process”, under the
+ * handbook: it is she who carries the task list and the note.
  *
- * ─── Le corps d'une page est du JSON ProseMirror ────────────────────────────
+ * ─── The body of a page is JSON ProseMirror ────────────────────────────
  *
- * Pas du markdown : la projection markdown est produite ailleurs
- * (lib/pages-markdown.ts) et demande un DOM. On écrit donc le document tel
- * qu'il est stocké, avec les noms de nœuds du registre de blocs
+ * Not markdown: the markdown projection is produced elsewhere
+ * (lib/pages-markdown.ts) and requests a DOM. We therefore write the document as
+ * that it is stored, with the block register node names
  * (components/pages/blocks) — `paragraph`, `heading`, `taskList`, `taskItem` —
- * et l'attribut `blockId` que pose `UniqueID` côté éditeur. Le poser ici évite
- * que l'ouverture de la page écrive aussitôt en base pour se le donner.
+ * and the `blockId` attribute that `UniqueID` sets on the editor side. Placing it here avoids
+ * that the opening of the page immediately writes in base to give it to itself.
  *
- * ─── La mention est un NŒUD, pas du texte ───────────────────────────────────
+ * ─── The mention is a NODE, not text ───────────────────────────────────
  *
- * Contrairement à une description de ticket, l'éditeur de page n'hydrate pas
- * les « @… » écrits en texte : `hydrateMentions` n'est appelée que par
- * components/markdown-editor.tsx. Un « @AUR-2 » posé en texte brut resterait
- * donc du texte. La pilule se stocke en nœud `mention`, avec les attributs que
- * l'éditeur produirait lui-même (`attrsFromScanned`, markdown-mention.tsx) :
+ * Unlike a ticket description, the page editor does not hydrate
+ * the “@…” written in text: `hydrateMentions` is only called by
+ * components/markdown-editor.tsx. An “@AUR-2” placed in plain text would remain
+ * therefore text. The pill is stored in node `mention`, with the attributes that
+ * the editor would itself produce (`attrsFromScanned`, markdown-mention.tsx):
  * `mentionType: "issue"`, `mentionId` = l'id du ticket, `mentionLabel` = son
- * identifiant affiché.
+ * identifier displayed.
  *
  *   node captures/world/seed/014-pages-aurora.mjs --dry-run
  *   node captures/world/seed/014-pages-aurora.mjs
@@ -38,17 +38,17 @@ import { resolvePeople, requireProject } from "./_people.mjs";
 
 const DRY_RUN = process.argv.includes("--dry-run");
 
-/** Le ticket cité par la page — celui qui porte déjà le plan d'implémentation. */
+/** The ticket cited by the page — the one that already has the implementation plan. */
 const MENTIONED_ISSUE = "Add keyboard shortcuts to the command palette";
 
-/* ── Fabriques de nœuds ──────────────────────────────────────────────────── */
+/* ── Node factories ────────────────────────── ────────────────────────── */
 
-/** Un identifiant de bloc, comme `UniqueID` en pose un à la frappe. */
+/** A block identifier, such as `UniqueID` sets one upon typing. */
 const blockId = () => ({ blockId: randomUUID() });
 
 const text = (value) => ({ type: "text", text: value });
 
-/** La pilule d'un ticket. `mentionId` est résolu à l'exécution. */
+/** The pill of a ticket. `mentionId` is resolved at runtime. */
 const issueMention = (issue) => ({
   type: "mention",
   attrs: {
@@ -74,14 +74,14 @@ const heading = (level, value) => ({
 });
 
 /**
- * Une tâche. Les quatre états du plan sont portés par `state`
- * (components/scratchpad/task-nodes.ts) ; `checked` est l'attribut hérité de
- * TipTap, qu'on garde cohérent avec lui — c'est ce qui part dans le DOM.
+ * A task. The four states of the plan are carried by `state`
+ * (components/scratchpad/task-nodes.ts); `checked` is the attribute inherited from
+ * TipTap, which we keep consistent with it — that's what goes into the DOM.
  *
- * Les valeurs sont celles de `PLAN_TASK_STATES` (lib/plan.ts) : `pending`,
- * `in_progress`, `completed`, `cancelled`. Une valeur hors liste ne lève pas —
- * la vue retombe silencieusement sur « à faire », et la page s'affiche avec
- * cinq cases vides sans qu'une seule erreur soit dite.
+ * The values ​​are those of `PLAN_TASK_STATES` (lib/plan.ts): `pending`,
+ * `in_progress`, `completed`, `cancelled`. An off-list value does not raise —
+ * the view silently returns to “to do”, and the page is displayed with
+ * five empty boxes without a single error being said.
  */
 const task = (state, value) => ({
   type: "taskItem",
@@ -112,7 +112,7 @@ const quote = (value) => ({
 
 const doc = (...blocks) => ({ type: "doc", content: blocks });
 
-/** Le texte nu d'un document — ce que `search_text` doit porter. */
+/** The bare text of a document — what `search_text` should carry. */
 function plainText(node) {
   if (node.type === "text") return node.text ?? "";
   if (node.type === "mention") return `@${node.attrs?.mentionLabel ?? ""}`;
@@ -123,32 +123,32 @@ function plainText(node) {
 /* ── L'arbre ─────────────────────────────────────────────────────────────── */
 
 /**
- * Les positions sont des index FRACTIONNAIRES (lib/pages.ts) : des chiffres de
- * l'alphabet à 62 valeurs, comparés comme des chaînes, jamais terminés par
- * zéro. Quatre voisins bien espacés suffisent ici — le seed n'insère pas entre
+ * The positions are FRACTIONAL indexes (lib/pages.ts): digits of
+ * the 62-value alphabet, compared like strings, never ended with
+ * zero. Four well-spaced neighbors are enough here — the seed does not insert between
  * deux pages existantes.
  */
 const POSITIONS = ["V", "a", "g", "m"];
 
 /**
- * Toutes les dates sont ANTÉRIEURES au 15 juillet 2026, l'instant figé des
- * captures (`CAPTURE.frozenNow`) : l'en-tête de la page affiche « Modifiée par
- * Camille Roy · il y a N jours », et une date postérieure à l'horloge du
- * navigateur ferait dire « maintenant » à une page écrite trois semaines plus
- * tôt.
+ * All dates are BEFORE July 15, 2026, the frozen moment of
+ * captures (`CAPTURE.frozenNow`): the page header displays “Modified by
+ * Camille Roy · N days ago", and a date after the clock of
+ * browser would make a page written three weeks later say “now”
+ * early.
  *
- * Conséquence sur l'idempotence : `updated_at` est repris par un trigger
- * `before update` (pages_set_updated_at), une modification ne peut donc PAS le
- * backdater. Une page déjà là est retirée puis réécrite, à identifiant
- * constant — c'est le seul chemin qui tienne la date.
+ * Consequence on idempotence: `updated_at` is taken up by a trigger
+ * `before update` (pages_set_updated_at), a modification can NOT be made
+ * backdate. A page already there is removed then rewritten, to identifier
+ * constant — this is the only way that keeps the date.
  */
 const CREATED_AT = "2026-06-30T09:12:00.000Z";
 
 /**
- * L'arbre, dans l'ordre d'affichage. Les corps sont en ANGLAIS comme le reste
- * du monde de démo : les mêmes données servent les captures FR et EN.
+ * The tree, in display order. The bodies are in ENGLISH like the rest
+ * from the demo world: the same data is used for FR and EN captures.
  *
- * `body` reçoit les tickets résolus pour pouvoir citer l'un d'eux.
+ * `body` receives resolved tickets so it can cite one of them.
  */
 const TREE = [
   {
@@ -176,7 +176,7 @@ const TREE = [
         updated: "2026-07-13T16:20:00.000Z",
         icon: "🚀",
         title: "Release process",
-        /** LA page photographiée. */
+        /** THE photographed page. */
         body: (issue) =>
           doc(
             paragraph(
@@ -290,9 +290,9 @@ const TREE = [
   },
 ];
 
-/* ── Le script ───────────────────────────────────────────────────────────── */
+/* ── The script ────────────────────────────── ─────────────────────────────── */
 
-/** Aplatit l'arbre en lignes prêtes à insérer, parents avant enfants. */
+/** Flattens the tree into lines ready to insert, parents before children. */
 function buildRows({ projectId, authorId, issue, existingByTitle }) {
   const rows = [];
   const ids = new Set();
@@ -322,8 +322,8 @@ function buildRows({ projectId, authorId, issue, existingByTitle }) {
 
   walk(TREE, null);
 
-  // La garde qui remplace `parents` dans le périmètre : aucune page créée ici
-  // ne peut avoir pour parent autre chose qu'une page créée ici.
+  // The guard who replaces `parents` in the perimeter: no page created here
+  // cannot have as parent anything other than a page created here.
   for (const row of rows) {
     if (row.parent_id !== null && !ids.has(row.parent_id)) {
       throw new Error(
@@ -378,12 +378,12 @@ async function main() {
     identifier: `${aurora.key}-${issues[0].number}`,
   };
 
-  // Idempotence : une page déjà là garde son IDENTIFIANT — les liens posés
-  // ailleurs (une mention vers elle, un favori) continuent de tomber juste —,
-  // mais elle est retirée puis réécrite plutôt que modifiée. C'est le trigger
-  // `pages_set_updated_at` qui l'impose : il écrase `updated_at` à `now()` sur
-  // toute modification, et la date affichée repartirait dans le futur de
-  // l'horloge figée. Le titre sert de clé : ils sont uniques dans l'arbre.
+  // Idempotence: a page already there keeps its IDENTIFIER — the links placed
+  // elsewhere (a mention towards her, a favorite) continue to fall just —,
+  // but it is removed and then rewritten rather than modified. This is the trigger
+  // `pages_set_updated_at` which imposes it: it overwrites `updated_at` with `now()` on
+  // any modification, and the date displayed would start again in the future of
+  // the frozen clock. The title serves as a key: they are unique in the tree.
   const { data: current, error: pageError } = await world.admin
     .from("pages")
     .select("id, title")
@@ -402,9 +402,9 @@ async function main() {
   const plan = createPlan(world);
   const known = rows.filter((r) => existingByTitle.has(r.title));
 
-  // Les enfants d'abord : `parent_id` est en `on delete set null`, retirer un
-  // parent avant ses sous-pages orphelinerait celles qu'on s'apprête à
-  // réécrire — et un échec en cours de route laisserait l'arbre à plat.
+  // Children first: `parent_id` is in `on delete set null`, remove one
+  // parent before its subpages would orphan those that we are about to
+  // rewrite — and a failure along the way would leave the tree flat.
   for (const row of [...known].reverse()) {
     plan.remove("pages", { id: row.id }, `page « ${row.title} » à réécrire`);
   }

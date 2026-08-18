@@ -1,13 +1,13 @@
 /**
- * Favoris de sous-agents (MIN-112) : le type, le repli produit et le parseur.
+ * Subagent favorites (MIN-112): type, product fallback and parser.
  *
- * Partagé par les deux bouts de la chaîne — le serveur, qui les sert au prompt du
- * parent (`lib/server/agent/subagent-config.ts`), et le dashboard admin, qui les
- * édite (`components/admin/admin-models-dashboard.tsx`). Le parseur est le MÊME
- * des deux côtés : l'API refuse à l'écriture exactement ce que le runtime
- * ignorerait à la lecture.
+ * Shared by both ends of the chain — the server, which serves them at the parent prompt (
+) (`lib/server/agent/subagent-config.ts`), and the admin dashboard, which
+ * edits (`components/admin/admin-models-dashboard.tsx`). The parser is the SAME
+ * on both sides: the API denies on write exactly what the runtime
+ * would ignore on read.
  *
- * AUCUN import server-only ici : ce module est tiré dans le client.
+ * NO server-only import here: this module is pulled into the client.
  */
 
 export type SubagentThinkingEffort = "low" | "medium" | "high";
@@ -25,32 +25,32 @@ export function isSubagentThinkingEffort(value: unknown): value is SubagentThink
   );
 }
 
-/** Un modèle de la liste « Favorites for sub-agents » (réglable par `app_config`). */
+/** A template from the “Favorites for sub-agents” list (adjustable by `app_config`). */
 export interface FavoriteSubagentModel {
-  /** Id exact du fournisseur, tel qu'OpenRouter le connaît. */
+  /** Exact provider ID, as OpenRouter knows it. */
   id: string;
-  /** Nom lisible — l'agent peut référencer le modèle par là. */
+  /** Readable name — the agent can reference the model by this. */
   label: string;
-  /** Use-case conseillé, servi dans le prompt système du parent. */
+  /** Recommended use-case, served in the parent's system prompt. */
   use_case: string;
-  /** Niveau de réflexion conseillé pour ce modèle (indicatif). */
+  /** Recommended level of reflection for this model (indicative). */
   thinking_effort?: SubagentThinkingEffort;
 }
 
 /**
- * Repli écrit EN CODE, en ANGLAIS — c'est du prompt, pas de l'UI. Un `use_case`
- * écrit pour un humain (« Économique · défaut », le `hint` du picker) ne dit rien
- * à un agent qui choisit un modèle pour une exploration : ces phrases-là sont
- * écrites pour être LUES PAR LE MODÈLE.
+ * Fallback written IN CODE, in ENGLISH — it's from the prompt, not from the UI. A `use_case`
+ * written for a human ("Economic · default", the `hint` of the picker) says nothing
+ * to an agent who chooses a model for an exploration: these sentences are
+ * written to be READ BY THE MODEL.
  *
- * Aucune ligne `app_config` n'est semée pour cette clé : tant que l'admin n'a
- * rien réglé, c'est cette liste qui tourne.
+ * No `app_config` line is seeded for this key: as long as the admin has not set
+ * anything, it is this list that runs.
  *
- * La liste est ÉTAGÉE en coût (cf. `scopeSubagentModels`, qui la taille au
- * plafond du plan avant de la servir) : chaque palier doit garder au moins deux
- * entrées, sinon déléguer perd son sens — un parent qui n'a le choix qu'entre
- * son propre modèle et rien ne délègue plus, il exécute. D'où le cran
- * intermédiaire : sans lui, un compte Go ne voyait plus que DeepSeek.
+ * The list is STAGED in cost (see `scopeSubagentModels`, which sizes it au
+ * ceiling of the plan before serving it): each level must keep at least two
+ * entries, otherwise delegating loses its meaning — a parent who only has the choice between
+ * his own model and nothing delegates anymore, he executes. Hence the intermediate notch
+ *: without it, a Go account only saw DeepSeek.
  */
 export const DEFAULT_SUBAGENT_FAVORITES: FavoriteSubagentModel[] = [
   {
@@ -83,7 +83,7 @@ export const DEFAULT_SUBAGENT_FAVORITES: FavoriteSubagentModel[] = [
   },
 ];
 
-/** Valide une entrée. Une entrée cassée est ignorée, jamais fatale. */
+/** Validates an entry. Broken input is ignored, never fatal. */
 export function parseSubagentFavorite(raw: unknown): FavoriteSubagentModel | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const o = raw as Record<string, unknown>;
@@ -101,12 +101,12 @@ export function parseSubagentFavorite(raw: unknown): FavoriteSubagentModel | nul
 }
 
 /**
- * Liste lisible tirée de la valeur `app_config`, ou `null` quand il n'y a RIEN
- * d'exploitable (vide, JSON illisible, pas un tableau, aucune entrée valide).
+ * Readable list taken from the value `app_config`, or `null` when there is NOTHING
+ * usable (empty, unreadable JSON, not an array, no valid entry).
  *
- * `null` est un verdict, pas une erreur : le serveur y répond par le repli — un
- * réglage cassé ne doit pas tuer un run — et l'API admin par un 400, pour que
- * personne n'enregistre une liste qui ne servira jamais.
+ * `null` is a verdict, not an error: the server responds with a fallback — a
+ * broken setting should not kill a run — and the admin API with a 400, so that
+ * no one saves a list that will never be used.
  */
 export function parseSubagentFavorites(
   raw: string | null | undefined,

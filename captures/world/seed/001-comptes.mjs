@@ -1,17 +1,17 @@
 /**
- * 001 — les comptes du monde de démo.
+ * 001 — demo world accounts.
  *
- * Crée le compte principal et deux collègues fictifs. Les écrans de minddy
- * montrent des assignations, des avatars et de l'activité : il faut plusieurs
- * personnes pour que le board ait l'air vivant.
+ * Creates the main account and two fictitious colleagues. minddy's screens
+ * show assignments, avatars and activity: it takes several
+ * people so that the board looks alive.
  *
- * Idempotent : relancé, il renvoie les comptes existants sans rien recréer.
+ * Idempotent: restarted, it returns the existing accounts without recreating anything.
  *
- * Le mot de passe est généré au premier passage et affiché UNE fois. Il doit
- * être collé à la main dans `.env` sous `CAPTURES_DEMO_PASSWORD` — il n'est
- * écrit dans aucun fichier versionné, ni dans le registre.
+ * The password is generated on the first pass and displayed ONCE. He must
+ * be pasted by hand in `.env` under `CAPTURES_DEMO_PASSWORD` — it is not
+ * written to any versioned file or the registry.
  *
- * Accord de l'utilisateur : lot « compte + projet + board », données en anglais.
+ * User agreement: “account + project + board” batch, data in English.
  */
 import { randomBytes } from "node:crypto";
 import { createDemoUser } from "../../lib/guards.mjs";
@@ -19,19 +19,19 @@ import { loadEnv } from "../../lib/env.mjs";
 
 loadEnv();
 
-/** La famille de démo. Tous les emails suivent le motif reconnu par les garde-fous. */
+/** The demo family. All emails follow the pattern recognized by the safeguards. */
 export const DEMO_ACCOUNTS = [
   { email: "captures-demo@minddy.app", fullName: "Camille Roy", role: "owner" },
   { email: "captures-demo+alice@minddy.app", fullName: "Alice Fontaine", role: "member" },
   { email: "captures-demo+tom@minddy.app", fullName: "Tom Berger", role: "member" },
 ];
 
-/** Mot de passe partagé par la famille : une seule variable à tenir dans `.env`. */
+/** Password shared by the family: a single variable to hold in `.env`. */
 function resolvePassword() {
   const existing = process.env.CAPTURES_DEMO_PASSWORD;
   if (existing) return { password: existing, generated: false };
-  // 32 caractères base64url : assez long pour ne pas être devinable, assez
-  // simple pour être collé sans échappement.
+  // 32 base64url characters: long enough not to be guessable, enough
+  // simple to be glued without exhaust.
   return { password: randomBytes(24).toString("base64url"), generated: true };
 }
 

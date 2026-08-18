@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { shouldShowNewVersion } from "./new-version";
 
 /**
- * La règle qui décide d'un bandeau « nouvelle version » (MIN-157). Elle doit
- * surtout savoir SE TAIRE : un faux positif, c'est un nag de rechargement
- * permanent sur une app qui est déjà à jour.
+ * The rule that decides on a “new version” banner (MIN-157). She must
+ * above all know how to KEEP QUIET: a false positive is a permanent reloading problem
+ * on an app that is already up to date.
  */
 describe("shouldShowNewVersion", () => {
   it("se tait sans SHA de build (dev local, variables système décochées)", () => {
@@ -25,7 +25,7 @@ describe("shouldShowNewVersion", () => {
         dismissedCommit: null,
       })
     ).toBe(false);
-    // Première requête pas encore revenue : `data` est undefined, pas "".
+    // First request not yet returned: `data` is undefined, not "".
     expect(
       shouldShowNewVersion({
         buildCommit: "abc123",
@@ -65,8 +65,8 @@ describe("shouldShowNewVersion", () => {
     ).toBe(false);
   });
 
-  // Le cœur du choix de mémoriser un SHA plutôt qu'un booléen : refuser une
-  // version ne doit pas rendre l'onglet sourd à toutes les suivantes.
+  // The heart of the choice to memorize an SHA rather than a Boolean: refuse a
+  // version must not make the tab deaf to all subsequent ones.
   it("revient au déploiement d'après un refus", () => {
     expect(
       shouldShowNewVersion({

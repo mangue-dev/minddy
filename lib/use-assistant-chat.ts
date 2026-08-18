@@ -54,9 +54,9 @@ function buildToolCallResultsFromMessages(messages: AssistantMessage[]): Map<str
         result = message.content;
       }
     }
-    // Un résultat trop gros pour le modèle voyage sur la métadonnée : `content`
-    // ne porte alors que le résumé qu'il relit, et l'écran a besoin du tout (la
-    // proposition d'amorce et ses quarante titres, MIN-173).
+    // A result too big for the travel model on the metadata: `content`
+    // then only carries the summary which it rereads, and the screen needs the whole (the
+    // primer proposal and its forty titles, MIN-173).
     const stored = (message.metadata as { result?: unknown } | null)?.result;
     if (stored !== undefined) result = stored;
 
@@ -81,10 +81,10 @@ export interface AssistantChatState {
   toolCallResults: Map<string, ToolCallResult>;
   conversationId: string | null;
   /**
-   * Le projet de la conversation vivante (`null` = conversation globale). Figé
-   * à sa création, il voyage avec elle : c'est LUI qui fixe la portée de Numo,
-   * plus l'URL du moment (MIN-353, cf. lib/assistant-scope.ts).
-   */
+ * The living conversation project (`null` = global conversation). Frozen
+ * upon its creation, it travels with it: it is HE who sets the scope of Numo,
+ * plus the current URL (MIN-353, cf. lib/assistant-scope.ts).
+ */
   conversationProjectId: string | null;
   error: string | null;
 }
@@ -366,11 +366,11 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
   // current one without re-creating sendMessage on every render.
   const onToolResultRef = useRef(options?.onToolResult);
   onToolResultRef.current = options?.onToolResult;
-  // La conversation vivante, lisible SANS attendre un rendu. Le chemin de reprise
-  // (flux coupé en vol) s'exécute dans la closure de l'envoi : il y lisait
-  // `state.conversationId`, donc `null` pour une conversation qui venait tout
-  // juste de naître — le tour partait alors en erreur au lieu de basculer sur le
-  // suivi côté serveur, et le fil semblait perdu.
+  // The lively conversation, readable WITHOUT waiting for a rendering. The recovery path
+  // (flow cut in flight) executes in the send closure: it read there
+  // `state.conversationId`, therefore `null` for a conversation that just happened
+  // just being born — the turn then started in error instead of switching to the
+  // followed server side, and the thread seemed lost.
   const liveConvRef = useRef<{ id: string | null; projectId: string | null }>({
     id: null,
     projectId: null,
@@ -446,16 +446,16 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       options?: {
         pageContext?: AssistantPageContext | null;
         attachments?: ResourceInput[];
-        /** Les « @ » écrits dans le message (membres, projets). */
+        /** The “@” written in the message (members, projects). */
         mentions?: AssistantMention[];
-        /** La commande « / » posée en tête du message (menu slash). */
+        /** The “/” command placed at the top of the message (slash menu). */
         command?: AssistantCommandId;
       },
     ) => {
       if (!message.trim()) return;
 
-      // Analytics (MIN-78) : le message N'EST PAS envoyé — seulement sa
-      // longueur en tranche, et de quoi mesurer l'usage réel de Numo.
+      // Analytics (MIN-78): the message is NOT sent — only its
+      // slice length, and enough to measure the real use of Numo.
       trackEvent("assistant_message_sent", {
         has_page_context: !!options?.pageContext,
         length_bucket: lengthBucket(message),
@@ -467,10 +467,10 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       const startedAt = performance.now();
       let toolCalls = 0;
 
-      // Le shell ne prend que des FICHIERS : ses envois vivent sous le préfixe
-      // `chat/{uid}`, hors projet, et une pièce du chat n'a pas de ligne en base
-      // où poser l'url d'un lien. Le composer n'en produit donc jamais (addLink
-      // refuse ce préfixe) — le filtre est la borne de type qui le dit.
+      // The shell only takes FILES: its sendings live under the prefix
+      // `chat/{uid}`, outside the project, and a cat piece has no base line
+      // where to put the url of a link. Composer therefore never produces any (addLink
+      // refuse this prefix) — the filter is the type terminal that says so.
       const files = (options?.attachments ?? []).filter(
         (a): a is FileResourceInput => a.kind !== "link"
       );
@@ -499,8 +499,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           ...(files.length ? { attachments: files } : {}),
           ...(options?.mentions?.length ? { mentions: options.mentions } : {}),
           ...(options?.command ? { command: options.command } : {}),
-          // Le fuseau du navigateur voyage avec chaque message : Numo en a
-          // besoin pour poser une routine à l'heure qu'on lui dit (MIN-185).
+          // The browser's time zone travels with each message: Numo has it
+          // need to set a routine at the time we tell him (MIN-185).
           ...(browserTimezone() ? { timezone: browserTimezone() } : {}),
         };
 
@@ -565,8 +565,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
           }
         }
 
-        // Le flux est allé au bout : c'est la seule mesure fiable du temps de
-        // réponse de Numo et de son recours réel aux outils.
+        // The flow has gone to the end: it is the only reliable measurement of the time of
+        // response from Numo and its real use of tools.
         trackEvent("assistant_response_received", {
           had_tool_calls: toolCalls > 0,
           tool_count: toolCalls,
@@ -575,9 +575,9 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
 
-        // Connection lost - check if server is still processing. Le ref, pas
-        // `state` : une conversation née pendant CET envoi n'existe pas encore
-        // dans la closure, et c'est justement celle qu'on perdrait.
+        // Connection lost - check if server is still processing. The ref, not
+        // `state`: a conversation born during THIS sending does not yet exist
+        // in the closure, and this is precisely the one we would lose.
         const convId = liveConvRef.current.id ?? state.conversationId;
         const convProjectId = liveConvRef.current.id
           ? liveConvRef.current.projectId
@@ -619,10 +619,10 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     [state.conversationId, startPolling, stopPolling, tApi]
   );
 
-  /** `projectId` = la portée de CETTE conversation, telle qu'elle est en base.
-   *  L'appelant la connaît toujours (la liste d'historique la porte, comme le
-   *  pointeur de conversation ouverte) : c'est elle qui fixe la portée à la
-   *  reprise, au lieu du projet de l'URL du moment (MIN-353). */
+  /** `projectId` = the scope of THIS conversation, as it is in base.
+ * The caller always knows it (the history list carries it, like the
+ * open conversation pointer): it is this which sets the scope to the
+ * resume, instead of the project of the current URL (MIN-353). */
   const loadConversation = useCallback(
     async (conversationId: string, projectId: string | null) => {
       stopPolling();
@@ -691,7 +691,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
 // ── SSE event dispatcher ───────────────────────────────────────────────
 
 interface SSEContext {
-  /** La portée de l'envoi en cours — celle que porte la conversation créée. */
+  /** The scope of the current send — the scope of the created conversation. */
   projectId: string | null;
   onConversationId?: (conversationId: string) => void;
   onToolResult?: (name: string, success: boolean, result: unknown) => void;

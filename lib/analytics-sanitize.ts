@@ -1,40 +1,39 @@
 /**
- * Dernier rempart avant l'envoi à PostHog (MIN-78).
+ * Last defense before sending to PostHog (MIN-78).
  *
- * Le catalogue typé (`lib/analytics-events.ts`) empêche déjà d'inventer un nom
- * d'événement ou une prop hors contrat À LA COMPILATION. Ces fonctions couvrent
- * ce que le typage ne peut pas voir : une VALEUR calculée à l'exécution qui
- * serait du texte utilisateur trop long, un objet imbriqué, un `NaN`, ou une
- * clé `$`-préfixée qui écraserait une propriété réservée de PostHog.
+ * The typed catalog (`lib/analytics-events.ts`) already prevents inventing an event name
+ * or an out-of-contract prop AT COMPILATION. These functions cover
+ * what typing cannot see: a runtime-calculated VALUE that
+ * would be too long user text, a nested object, a `NaN`, or a
+ * `$` * prefixed key that would override a reserved property of PostHog.
  *
- * Règle de fond : on n'envoie que des MÉTADONNÉES (compteurs, booléens, enums,
- * ids, tranches de longueur). Jamais un titre de ticket, un commentaire, ni un
- * message adressé à Numo.
+ * Basic rule: we only send METADATA (counters, booleans, enums,
+ * ids, length slices). Never a ticket title, a comment, nor a
+ * message addressed to Numo.
  */
 
-/** Longueur max d'une valeur texte — bien au-delà de tout enum légitime. */
+/** Max length of a text value — well beyond any legitimate enum. */
 const MAX_STRING_LENGTH = 512;
-/** Au-delà, c'est qu'on essaie de sérialiser un objet métier entier. */
+/** Beyond that, we are trying to serialize an entire business object. */
 const MAX_PROP_KEYS = 24;
 const MAX_EVENT_NAME_LENGTH = 64;
 
-/** snake_case (plus `:` et `-`), le format de nommage du catalogue. */
+/** snake_case (plus `:` and `-`), the catalog naming format. */
 const SAFE_KEY_PATTERN = /^[a-z0-9_:-]+$/;
 
-/** Caractères de contrôle (dont \n, \t) — remplacés par une espace. */
-// Le propos de cette constante EST de matcher des caractères de contrôle.
+/** Control characters (including \n, \t) — replaced by a space. */
+// The purpose of this constant IS to match control characters.
 // oxlint-disable-next-line no-control-regex
 const CONTROL_CHARS = /[\u0000-\u001F\u007F]/g;
 
-/** Neutralise les caractères de contrôle et borne la longueur. */
+/** Neutralizes control characters and bounds the length. */
 function clampText(value: string, maxLength: number): string {
   return value.replace(CONTROL_CHARS, " ").trim().slice(0, maxLength);
 }
 
 /**
- * Normalise un nom d'événement, ou renvoie "" s'il est inexploitable — l'appelant
- * (`useAnalytics().track`) abandonne alors l'envoi plutôt que de créer une
- * définition d'événement parasite dans PostHog.
+ * Normalizes an event name, or returns "" if it is unusable — the caller
+ * (`useAnalytics().track`) then aborts sending rather than creating a spurious event definition in PostHog.
  */
 export function sanitizeAnalyticsEventName(value: unknown): string {
   if (typeof value !== "string") return "";
@@ -43,10 +42,10 @@ export function sanitizeAnalyticsEventName(value: unknown): string {
 }
 
 /**
- * Ne garde que des primitives sûres. Tout le reste (objets, tableaux,
- * fonctions, `undefined`, `NaN`, clés `$`-préfixées) est SILENCIEUSEMENT écarté :
- * une prop manquante est un moindre mal comparé à un événement rejeté par
- * l'ingestion ou à une fuite de donnée personnelle.
+ * Keep only safe primitives. Everything else (objects, arrays,
+ * functions, `undefined`, `NaN`, `$`-prefixed keys) is SILENTLY discarded:
+ * a missing prop is a lesser evil compared to an event rejected by
+ * ingestion or a leak of personal data.
  */
 export function sanitizeAnalyticsProps(
   value: Record<string, unknown> | undefined
@@ -64,7 +63,7 @@ export function sanitizeAnalyticsProps(
       continue;
     }
     if (typeof rawValue === "number") {
-      // NaN / Infinity cassent la sérialisation JSON côté ingestion.
+      // NaN/Infinity break JSON serialization on the ingestion side.
       if (Number.isFinite(rawValue)) sanitized[key] = rawValue;
       continue;
     }
@@ -72,7 +71,7 @@ export function sanitizeAnalyticsProps(
       sanitized[key] = rawValue;
       continue;
     }
-    // `null` est une information ("pas de valeur"), `undefined` n'en est pas une.
+    // `null` is information ("no value"), `undefined` is not.
     if (rawValue === null) sanitized[key] = null;
   }
 
@@ -80,9 +79,9 @@ export function sanitizeAnalyticsProps(
 }
 
 /**
- * Tranche de longueur d'un texte libre, pour mesurer l'usage SANS envoyer le
- * contenu. À utiliser partout où l'on serait tenté de tracker un message
- * (commentaire, prompt Numo, retour du board public).
+ * Length slice of free text, to measure usage WITHOUT sending the
+ * content. To be used wherever you would be tempted to track a message
+ * (comment, Numo prompt, feedback from the public board).
  */
 export function lengthBucket(text: string | null | undefined): string {
   const length = text?.length ?? 0;
@@ -94,7 +93,7 @@ export function lengthBucket(text: string | null | undefined): string {
   return "xl";
 }
 
-/** Même idée pour une durée en millisecondes (runs d'agent, réponses Numo). */
+/** Same idea for a duration in milliseconds (agent runs, Numo responses). */
 export function durationBucket(ms: number): string {
   if (!Number.isFinite(ms) || ms < 0) return "unknown";
   if (ms < 1_000) return "under_1s";
@@ -106,13 +105,13 @@ export function durationBucket(ms: number): string {
 }
 
 /**
- * Réduit une erreur à une CATÉGORIE stable, jamais son message brut.
+ * Reduces an error to a stable CATEGORY, never its raw message.
  *
- * Un message d'erreur peut contenir une adresse email, un identifiant ou un
- * fragment de requête ; il change aussi à chaque mise à jour du fournisseur, ce
- * qui fragmente les statistiques. On mappe donc les cas connus vers une poignée
- * de valeurs, et tout le reste vers `unknown` — largement suffisant pour savoir
- * *pourquoi* les gens n'arrivent pas à se connecter.
+ * An error message can contain an email address, an identifier or a
+ * request fragment; it also changes with each update of the provider, this
+ * which fragments the statistics. So we map the known cases to a handful
+ * of values, and everything else to `unknown` — more than enough to know
+ * *why* people can't connect.
  */
 export function errorReason(error: unknown): string {
   const message = (error instanceof Error ? error.message : String(error ?? "")).toLowerCase();
@@ -134,7 +133,7 @@ export function errorReason(error: unknown): string {
   return "unknown";
 }
 
-/** Et pour une taille de fichier en octets (pièces jointes). */
+/** And for a file size in bytes (attachments). */
 export function sizeBucket(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes < 0) return "unknown";
   if (bytes < 100_000) return "under_100kb";

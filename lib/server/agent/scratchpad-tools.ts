@@ -17,35 +17,35 @@ import {
 import { parsePlan, isPlanTaskState } from "@/lib/plan";
 
 /**
- * Tools CARNET de l'agent de code (MIN-84, étendus en MIN-125) : le carnet de
- * tâches PERSONNEL du lanceur du run — une seule note markdown, sans notion de
- * projet. Servis aux DEUX ancrages : un run de ticket tient le carnet de son
- * lanceur aussi bien qu'un run lancé depuis le carnet lui-même.
- *  - `read_scratchpad`         → l'état VIVANT du carnet (contenu, tâches
- *                                 indexées, rev) — l'amorce n'est qu'un snapshot.
- *  - `add_scratchpad_tasks`    → ajoute des tâches, à la fin ou sous une section.
- *  - `update_scratchpad_task`  → coche/décoche des tâches par index (même logique
- *                                 que le tool MCP, partagée via
- *                                 applyScratchpadTaskChanges).
- *  - `set_scratchpad`          → réécrit le carnet en entier (la voie pour
- *                                 SUPPRIMER une tâche), sous compare-and-swap.
- * Service client : le carnet est celui du PROPRIÉTAIRE du run (il est strictement
- * personnel), et la ligne est clé par user_id.
+ * Tools NOTEBOOK of the code agent (MIN-84, extended to MIN-125): the notebook of
+ * PERSONAL tasks of the run launcher — a single markdown note, without notion of
+ * project. Served at BOTH anchors: a ticket run holds the notebook of its
+ * launcher as well as a run launched from the notebook itself.
+ * - `read_scratchpad` → the LIVE state of the notebook (contents, tasks
+ * indexed, rev) — the leader is just one snapshot.
+ * - `add_scratchpad_tasks` → adds tasks, at the end or under a section.
+ * - `update_scratchpad_task` → checks/unchecks tasks by index (same logic
+ * as the MCP tool, shared via
+ * applyScratchpadTaskChanges).
+ * - `set_scratchpad` → rewrites the entire notebook (the way to
+ * DELETE a task), under compare-and-swap.
+ * Customer service: the notebook is that of the OWNER of the run (it is strictly
+ * personal), and the line is keyed by user_id.
  */
 
 export interface ScratchpadToolContext {
-  /** Propriétaire du run — son carnet est celui qu'on lit/écrit. */
+  /** Run owner — his notebook is the one we read/write. */
   userId: string | null;
 }
 
-/** Noms des tools de ce module. Ils vivent dans `platform-tool-names.ts` depuis
- *  MIN-224 — le ROUTAGE descend dans la microVM, l'EXÉCUTION reste ici — et sont
- *  ré-exportés pour que rien n'ait à changer d'import. */
+/** Names of the tools in this module. They live in `platform-tool-names.ts` since
+ * MIN-224 — ROUTING goes down to the microVM, EXECUTION stays here — and are
+ * re-exported so nothing has to change import. */
 export { SCRATCHPAD_TOOL_NAMES } from "./platform-tool-names";
 
-/** Nombre max de tâches par appel (aligné sur Numo chat et le MCP). */
+/** Max number of tasks per call (aligned with Numo chat and MCP). */
 const MAX_TASKS_PER_CALL = 50;
-/** Cap du libellé d'une tâche ajoutée. */
+/** Cap of the label of an added task. */
 const MAX_TASK_TEXT = 2000;
 
 const CONCURRENT_EDIT =
@@ -63,8 +63,8 @@ function scratchpadPayload(content: string, rev: number) {
       task_index: t.index,
       text: t.text,
       state: t.state,
-      // La profondeur d'imbrication : sans elle, la liste à plat fait passer une
-      // sous-tâche pour une tâche à part, et l'agent perd ce que le carnet dit.
+      // The nesting depth: without it, the flat list passes a
+      // subtask for a separate task, and the agent loses what the notebook says.
       depth: t.depth,
     })),
   };
@@ -119,9 +119,9 @@ async function addScratchpadTasks(
     typeof args.section === "string" && args.section.trim() ? args.section.trim() : undefined;
 
   const service = getServiceClient();
-  // L'ajout est POSITION-INDÉPENDANT : mutateScratchpad relit et réapplique sous
-  // CAS en cas de conflit, donc les tâches atterrissent sur le texte le plus récent
-  // de l'utilisateur au lieu d'écraser son édition en cours.
+  // The addition is POSITION-INDEPENDENT: mutateScratchpad rereads and reapplies under
+  // CAS in case of conflict, so tasks land on the most recent text
+  // of the user instead of overwriting their current edition.
   const outcome = await mutateScratchpad(service, userId, (content) =>
     appendScratchpadTasks(content, tasks, section),
   );
@@ -209,7 +209,7 @@ async function updateScratchpadTask(
   }
   return {
     result: {
-      // Le fil d'exécution compte dessus pour dire « 2 tâches mises à jour ».
+      // The thread counts on it to say "2 tasks updated".
       updated: changes.length,
       ...scratchpadPayload(outcome.state.content, outcome.state.rev),
     },
@@ -218,10 +218,10 @@ async function updateScratchpadTask(
 }
 
 /**
- * Réécriture TOTALE du carnet — et la seule voie pour SUPPRIMER une tâche.
- * `expected_rev` est OBLIGATOIRE ici, là où Numo chat et le MCP le laissent
- * optionnel : c'est l'écrasement d'un document personnel sans historique ni undo,
- * écrit par un agent autonome — un `rev` périmé doit être refusé, pas arbitré.
+ * TOTAL rewriting of the notebook — and the only way to DELETE a task.
+ * `expected_rev` is MANDATORY here, where Numo chat and MCP leave it
+ * optional: this is the overwriting of a personal document without history or undo,
+ * written by an autonomous agent — an expired `rev` should be refused, not arbitrated.
  */
 async function setScratchpadTool(
   userId: string,
@@ -266,7 +266,7 @@ async function setScratchpadTool(
   return { result: scratchpadPayload(write.content, write.rev), success: true };
 }
 
-/** Exécute un tool carnet. L'appelant a déjà routé sur `SCRATCHPAD_TOOL_NAMES`. */
+/** Runs a notebook tool. The caller has already routed to `SCRATCHPAD_TOOL_NAMES`. */
 export async function executeScratchpadTool(
   ctx: ScratchpadToolContext,
   name: string,

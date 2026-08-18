@@ -1,45 +1,45 @@
 /**
- * La PROJECTION markdown d'une page — dans les deux sens (MIN-269).
+ * Markdown PROJECTION of a page — in both directions (MIN-269).
  *
- * Le corps d'une page est stocké en JSON ProseMirror, parce que c'est ce
- * qu'exige un éditeur par blocs avec ID stables, poignée et glisser-déposer.
- * Mais un agent ne lit pas du JSON ProseMirror : il lit du markdown, et lire et
- * écrire les pages depuis Numo est l'argument central de la feature. Le JSON est
- * donc le STOCKAGE, le markdown la projection — pour le MCP (MIN-273), l'agent
- * de code et les exports.
+ * The body of a page is stored in JSON ProseMirror, because that's what
+ * what a block editor with stable IDs, handle and drag and drop requires.
+ * But an agent does not read JSON ProseMirror: it reads markdown, and reads and
+ * writing pages from Numo is the central argument of the feature. The JSON is
+ * so the STORAGE, the markdown the projection — for the MCP (MIN-273), the agent
+ * code and exports.
  *
- * La règle : **un aller-retour ne perd jamais de CONTENU.** Seulement de la
- * présentation, et seulement là où c'est écrit ci-dessous.
+ * The rule: **a round trip never loses CONTENT.** Only content
+ * presentation, and only where it is written below.
  *
- * ## Les pertes assumées
+ * ## Losses assumed
  *
  * | Ce qui tombe | Pourquoi | Ce qui reste |
  * | --- | --- | --- |
- * | La couleur d'un passage (texte et fond) | Markdown n'a pas de couleur. La mark est retirée à l'écriture plutôt que recopiée en `<span>` : une perte franche vaut mieux qu'une balise au milieu de ce que lit Numo (cf. blocks/color.ts) | Le texte, mot pour mot |
- * | L'état PLIÉ d'un dépliant (`open`) | `<details>` porte l'attribut, mais c'est un état de lecture, propre à qui regarde, pas du contenu | Le résumé et le corps replié |
- * | La pilule d'une mention | Une mention EST du texte (`@Nom`, `@MIN-42`) — le nœud n'est qu'un habit, reposé à la relecture par lib/mention-scan | `@Nom`, à la lettre |
- * | L'ID de bloc (`blockId`) | Il n'a de sens qu'à l'intérieur d'un document ; un markdown venu de Numo n'en porte pas | Un ID NEUF, posé à la relecture (`stampBlockIds`) |
- * | Le titre d'une sous-page | Il n'est jamais recopié dans le corps du parent, par construction : il est résolu à l'affichage (cf. blocks/subpage.ts) | `[[page:<id>]]`, donc la cible |
- * | La LARGEUR d'une image | `![…](…)` n'a pas d'attribut. La largeur est un réglage d'affichage — combien de colonne l'image occupe —, jamais du contenu (cf. blocks/image.ts) | L'image, à sa largeur par défaut |
- * | Le POIDS et le type d'un fichier | Un lien markdown ne porte que son texte et son adresse. Ce sont deux indications de confort, relisibles de `page_files` : le nom et le fichier lui-même, eux, sont là | `[nom](url)`, donc le fichier |
+ * | The color of a passage (text and background) | Markdown has no color. The mark is removed when writing rather than copied into `<span>`: a clear loss is better than a tag in the middle of what Numo reads (see blocks/color.ts) | The text, word for word |
+ * | The FOLDED state of a leaflet (`open`) | `<details>` carries the attribute, but it is a reading state, specific to the viewer, not content | The summary and the folded body |
+ * | The pill of a mention | A mention IS of the text (`@Nom`, `@MIN-42`) — the node is only a habit, restated upon rereading by lib/mention-scan | `@Nom`, literally |
+ * | The block ID (`blockId`) | It only makes sense within a document; a markdown from Numo does not carry any | A NEW ID, added during rereading (`stampBlockIds`) |
+ * | The title of a subpage | It is never copied into the parent body, by construction: it is resolved on display (see blocks/subpage.ts) | `[[page:<id>]]`, therefore the target |
+ * | The WIDTH of an image | `![…](…)` has no attribute. The width is a display setting - how many columns the image occupies -, never the content (see blocks/image.ts) | The image, at its default width |
+ * | The WEIGHT and type of a file | A markdown link only carries its text and address. These are two comfort indications, rereadable from `page_files`: the name and the file itself are there | `[nom](url)`, so the file |
  *
- * La LÉGENDE d'une image, elle, ne tombe PAS, et c'est un choix : elle est le
- * texte alternatif (`![légende](…)`), un seul champ pour les deux. Une bonne
- * légende est un bon texte alternatif — en garder deux dans le nœud aurait voulu
- * dire en perdre un à chaque aller-retour.
+ * The LEGEND of an image does NOT fall, and it is a choice: it is the
+ * alternative text (`![caption](…)`), a single field for both. A good
+ * caption is a good alt text — keeping two in the node would have liked
+ * say losing one each time there and back.
  *
- * Tout le reste — titres, listes, tâches et leurs quatre états, imbrication,
- * citation, code, séparateur, dépliant, sous-page, gras/italique/code/lien —
- * revient identique, et lib/pages-markdown.test.ts le joue bloc par bloc, en
- * PARCOURANT le registre : un bloc ajouté sans sa projection fait tomber la suite.
+ * Everything else — titles, lists, tasks and their four states, nesting,
+ * quote, code, separator, leaflet, subpage, bold/italic/code/link —
+ * returns identical, and lib/pages-markdown.test.ts plays it block by block, in
+ * BROADCASTING the register: a block added without its projection causes the sequence to fall.
  *
  * ## Ce que ce module suppose
  *
- * Un DOM global (`window.DOMParser`) : tiptap-markdown lit le markdown en
- * passant par du HTML. Dans un navigateur et sous jsdom, il est là. Ailleurs —
- * une fonction serveur, l'outil MCP de MIN-273 — c'est à l'appelant de
- * l'installer avant le premier appel. C'est une contrainte connue et écrite,
- * pas une surprise.
+ * A global DOM (`window.DOMParser`): tiptap-markdown reads the markdown in
+ * passing through HTML. In a browser and under jsdom, it is there. Elsewhere -
+ * a server function, the MCP tool of MIN-273 — it is up to the caller to
+ * install it before the first call. It is a known and written constraint,
+ * not a surprise.
  */
 
 import { Editor, type JSONContent } from "@tiptap/core";
@@ -49,40 +49,40 @@ import {
   BLOCK_ID_TYPES,
 } from "@/components/pages/blocks";
 
-/** Une page telle que la projection la voit : son en-tête, et son corps. */
+/** A page as the projection sees it: its header, and its body. */
 export interface PageProjection {
   title: string;
-  /** Emoji, ou `null` quand la page prend l'icône par défaut. */
+  /** Emoji, or `null` when the page takes the default icon. */
   icon: string | null;
-  /** Le document ProseMirror. `null` pour une page vide. */
+  /** The ProseMirror document. `null` for an empty page. */
   content: JSONContent | null;
 }
 
 /**
- * L'emoji en tête du titre. `Extended_Pictographic` couvre les émojis d'un seul
- * point de code, la séquence `‍` les composés (« 👩‍💻 »), et `️` le
- * sélecteur de présentation ; les drapeaux (deux indicateurs régionaux) et les
- * touches (« 1️⃣ ») ont leur propre branche. Un titre qui COMMENCE par un émoji
- * sans en être un — « 🎉 la sortie » — perdrait le sien à la relecture : c'est le
- * prix d'un en-tête qui tient sur une ligne, et l'icône est de toute façon
- * choisie dans un sélecteur, jamais tapée dans le titre.
+ * The emoji at the top of the title. `Extended_Pictographic` covers the emojis of a single
+ * code point, the sequence `‍` the compounds (“👩‍💻”), and `️` the
+ * presentation selector; flags (two regional indicators) and
+ * keys (“1️⃣”) have their own branch. A title that STARTS with an emoji
+ * without being one — “🎉 the exit” — would lose its own on rereading: it is the
+ * price of a header that fits on one line, and the icon is anyway
+ * chosen in a selector, never typed in the title.
  */
 const ICON_PREFIX =
   /^(?:\p{RI}\p{RI}|[0-9#*]️?⃣|\p{Extended_Pictographic}️?(?:‍\p{Extended_Pictographic}️?)*)\s+/u;
 
-/** L'en-tête : `# 📘 Titre`. Le titre et l'icône ne sont pas dans le corps (ce
-    sont deux colonnes), mais Numo doit recevoir la page en UN SEUL morceau. */
+/** The header: `# 📘 Titre`. The title and icon are not in the body (this
+    are two columns), but Numo should receive the page in ONE piece. */
 const HEAD = /^#[ \t]+(.*)$/;
 
-/* ── Le sens ÉCRITURE : JSON → markdown ───────────────────────────────── */
+/* ── The WRITING direction: JSON → markdown ───────────────────────────────── */
 
 /**
- * La page en markdown, en-tête compris.
+ * The page in markdown, including the header.
  *
- * Le corps est sérialisé par le registre : ce fichier ne connaît aucun bloc
- * nommément, et n'en connaîtra jamais. Chaque descripteur porte son
- * `toMarkdown` (ou s'en remet à celui de son nœud), le registre le greffe, et
- * ajouter un bloc tableau ne touchera pas une ligne d'ici.
+ * The body is serialized by the register: this file does not know any blocks
+ * by name, and will never know any. Each descriptor carries its
+ * `toMarkdown` (or relies on that of its node), the register grafts it, and
+ * adding a table block will not touch a row from here.
  */
 export function pageToMarkdown(page: PageProjection): string {
   const head = headLine(page);
@@ -97,7 +97,7 @@ function headLine({ title, icon }: PageProjection): string {
   return `# ${icon ? `${icon} ` : ""}${trimmed}`.trimEnd();
 }
 
-/** Le corps seul — ce que voit une surface qui a déjà le titre par ailleurs. */
+/** The body alone - what a surface sees which already has the title elsewhere. */
 export function bodyToMarkdown(content: JSONContent | null | undefined): string {
   if (!content) return "";
   const editor = pageEditor(content);
@@ -108,23 +108,23 @@ export function bodyToMarkdown(content: JSONContent | null | undefined): string 
   }
 }
 
-/* ── Le sens LECTURE : markdown → JSON ────────────────────────────────── */
+/* ── READING direction: markdown → JSON ────────────────────────────────── */
 
 /**
- * Le markdown d'une page, relu en page.
+ * The markdown of a page, reread on page.
  *
- * L'en-tête est CONSOMMÉ : un titre de niveau 1 en tête du document devient le
- * titre de la page, son émoji de tête son icône. C'est ce qui permet à Numo
- * d'écrire une page entière d'un seul jet — et c'est aussi pourquoi un corps
- * qui commence par un `# ` voit sa première ligne remonter dans le titre. Les
- * niveaux 2 et 3 restent du corps, eux.
+ * The header is CONSUMED: a level 1 heading at the head of the document becomes the
+ * page title, its head emoji its icon. This is what allows Numo
+ * to write an entire page in one go — and this is also why a body
+ * which begins with a `# ` sees its first line go up in the title. THE
+ * levels 2 and 3 remain of the body.
  */
 export function markdownToPage(markdown: string): PageProjection {
   const { title, icon, body } = splitHead(markdown);
   return { title, icon, content: bodyFromMarkdown(body) };
 }
 
-/** Le corps seul — le pendant de `bodyToMarkdown`. */
+/** The body alone — the counterpart of `bodyToMarkdown`. */
 export function bodyFromMarkdown(markdown: string): JSONContent {
   const editor = pageEditor(markdown);
   try {
@@ -135,18 +135,18 @@ export function bodyFromMarkdown(markdown: string): JSONContent {
 }
 
 /**
- * Donner son ID stable à chaque bloc qui n'en a pas.
+ * Give its stable ID to each block that does not have one.
  *
- * `UniqueID` est bien monté (c'est lui qui met l'attribut au schéma, donc qui
- * empêche un `blockId` existant d'être jeté à la relecture d'un JSON), mais il
- * ne le POSE qu'au tick suivant la création de l'éditeur : tiptap émet `create`
- * dans un `setTimeout`. Une projection, elle, est synchrone et jette son éditeur
- * aussitôt — sans ce passage, une page écrite en markdown par Numo arriverait en
- * base avec des blocs sans identité, et la sauvegarde par bloc (MIN-271) comme
- * les ancres de lien n'auraient rien sur quoi se tenir.
+ * `UniqueID` is correctly mounted (it is he who puts the attribute in the schema, therefore which
+ * prevents an existing `blockId` from being thrown away when rereading a JSON), but it
+ * only PUT it down on the tick following the creation of the editor: tiptap emits `create`
+ * in a `setTimeout`. A projection is synchronous and throws its editor
+ * immediately — without this passage, a page written in markdown by Numo would arrive in
+ * base with blocks without identity, and backup by block (MIN-271) like
+ * the link anchors would have nothing to hold on to.
  *
- * Les types viennent du registre (`BLOCK_ID_TYPES`) : un bloc neuf est identifié
- * d'office, ici comme dans l'éditeur.
+ * The types come from the register (`BLOCK_ID_TYPES`): a new block is identified
+ * automatically, here as in the editor.
  */
 function stampBlockIds(json: JSONContent): JSONContent {
   const types = new Set(BLOCK_ID_TYPES);
@@ -166,8 +166,8 @@ function stampBlockIds(json: JSONContent): JSONContent {
 function newBlockId(): string {
   const uuid = globalThis.crypto?.randomUUID?.();
   if (uuid) return uuid;
-  // jsdom ancien, contexte non sécurisé : un id de secours, unique de fait. Un
-  // ID de bloc n'a de portée QUE dans son document.
+  // old jsdom, insecure context: a backup id, unique in fact. A
+  // Block ID ONLY has scope in its document.
   return `b-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
 }
 
@@ -183,8 +183,8 @@ function splitHead(markdown: string): {
   const head = first < lines.length ? HEAD.exec(lines[first]) : null;
   if (!head) return { title: "", icon: null, body: markdown.trim() };
 
-  // Un `# titre` suivi immédiatement d'un `===` serait un titre setext, pas cet
-  // en-tête — mais markdown-it lit d'abord le `#`, donc rien à démêler ici.
+  // A `# titre` immediately followed by a `===` would be a setext title, not this
+  // header — but markdown-it reads the `#` first, so nothing to untangle here.
   const rest = head[1].trim();
   const emoji = ICON_PREFIX.exec(rest);
   return {
@@ -194,17 +194,17 @@ function splitHead(markdown: string): {
   };
 }
 
-/* ── Le montage ───────────────────────────────────────────────────────── */
+/* ── The assembly ──────────────────────────── ───────────────────────────── */
 
 /**
- * Un éditeur monté sur le schéma de la page, sans une ligne de React ni de vue
- * de nœud. C'est le MÊME schéma que l'éditeur (components/pages/page-extensions.ts) :
- * un bloc que l'un sait produire, l'autre sait le lire.
+ * An editor mounted on the page schema, without a line of React or view
+ * of knot. This is the SAME schema as the editor (components/pages/page-extensions.ts):
+ * a block that one knows how to produce, the other knows how to read it.
  *
- * L'éditeur est jetable — un par appel, détruit dans la foulée. Le garder
- * ouvert entre deux conversions ferait porter à la projection un état
- * (historique, sélection, plugins) dont elle n'a que faire, et rendrait deux
- * appels concurrents dépendants l'un de l'autre.
+ * The editor is disposable — one per call, destroyed in the process. keep it
+ * open between two conversions would bring the projection to a state
+ * (history, selection, plugins) which it has no use for, and would return two
+ * concurrent calls dependent on each other.
  */
 function pageEditor(content: JSONContent | string): Editor {
   return new Editor({

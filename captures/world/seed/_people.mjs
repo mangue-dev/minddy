@@ -1,27 +1,27 @@
 /**
- * Résolution des comptes de démo, partagée par tous les scripts de seed.
+ * Resolution of demo accounts, shared by all seed scripts.
  *
- * Les scripts manipulent des clés courtes (`camille`, `alice`, `tom`) et ne
- * collent jamais d'identifiant en dur : ils sont résolus à chaque exécution
- * depuis la base, ce qui rend les seeds rejouables même après une recréation
- * du monde de démo.
+ * The scripts manipulate short keys (`camille`, `alice`, `tom`) and do not
+ * never paste a hard identifier: they are resolved at each execution
+ * from the ground up, making seeds replayable even after a replay
+ * from the demo world.
  */
 
-/** Clé courte → email. Tous suivent le motif reconnu par les garde-fous. */
+/** Short key → email. All follow the pattern recognized by the guardrails. */
 export const PEOPLE = {
   camille: "captures-demo@minddy.app",
   alice: "captures-demo+alice@minddy.app",
   tom: "captures-demo+tom@minddy.app",
 };
 
-/** Nom affiché, pour les résumés lisibles en français. */
+/** Name displayed, for summaries readable in French. */
 export const PEOPLE_NAMES = {
   camille: "Camille Roy",
   alice: "Alice Fontaine",
   tom: "Tom Berger",
 };
 
-/** Résout les emails de la famille de démo en identifiants de comptes. */
+/** Resolves demo family emails to account IDs. */
 export function resolvePeople(world) {
   const byEmail = new Map(world.demoUsers.map((u) => [u.email, u.id]));
   const ids = {};
@@ -37,7 +37,7 @@ export function resolvePeople(world) {
   return ids;
 }
 
-/** Retrouve un projet de démo par sa clé (AUR, BCN…). */
+/** Find a demo project by its key (AUR, BCN, etc.). */
 export function requireProject(world, key) {
   const project = world.demoProjects.find((p) => p.key === key && !p.deleted_at);
   if (!project) {

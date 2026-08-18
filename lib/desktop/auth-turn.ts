@@ -1,28 +1,26 @@
 /**
- * Le tour d'authentification de l'app de bureau, vu de la fenêtre (MIN-345).
+ * The authentication round of the desktop app, seen from the window (MIN-345).
  *
- * L'app tire un nonce quand ELLE démarre un tour, le glisse dans le
- * `redirectTo`, et ne traite au retour qu'un deep link qui le rapporte. Sans
- * ça, `minddy://auth?code=…` est une porte ouverte : macOS livre à l'app tout
- * ce qui porte notre schéma, y compris ce qu'on n'a jamais émis, et la fenêtre
- * se connectait au compte de qui avait envoyé le lien.
+ * The app pulls a nonce when IT starts a round, slides it into the
+ * `redirectTo`, and only processes a deep link that brings it back. Without
+ * that, `minddy://auth?code=…` is an open door: macOS delivers to the app everything
+ * that carries our schema, including what we have never issued, and the window
+ * connected to the account of which had sent the link.
  *
- * ## Pourquoi `localStorage` et pas le main process
+ * ## Why `localStorage` and not the main process
  *
- * Parce que c'est le RENDERER qui a besoin de la réponse, et lui seul : le
- * vérificateur PKCE de supabase-js vit dans ce même stockage, dans cette même
- * fenêtre. Un nonce gardé côté main devrait redescendre par le pont pour être
- * comparé, sans rien protéger de plus — le nonce n'est pas un secret contre un
- * attaquant distant, c'est une preuve que le tour est parti d'ici.
+ * Because it is the RENDERER which needs the answer, and only it: the
+ * PKCE checker of supabase-js lives in this same storage, in this same
+ * window. A nonce guarded on the main side should come back down the bridge to be
+ * compared, without protecting anything more — the nonce is not a secret against a remote attacker, it is proof that the turn has left here.
  *
- * Il survit à un rechargement de la fenêtre, ce qui est nécessaire : le tour
- * OAuth se fait dans le navigateur système et peut prendre une minute.
+ * It survives a reload of the window, which is necessary: the tour
+ * OAuth is done in the system browser and may take a minute.
  */
 
 const STORAGE_KEY = "minddy.desktop.auth-turn";
 
-/** Au-delà, le tour est considéré abandonné : un lien qui s'en réclame n'est
-    plus la réponse à celui qu'on attendait. */
+/** Beyond that, the round is considered abandoned: a link that calls for it is no longer the answer to the one we expected. */
 const TURN_TTL_MS = 15 * 60 * 1000;
 
 interface StoredTurn {
@@ -44,7 +42,7 @@ function read(): StoredTurn | null {
   }
 }
 
-/** Démarre un tour et rend son nonce, à poser dans le `redirectTo`. */
+/** Starts a turn and returns its nonce, to be placed in the `redirectTo`. */
 export function beginDesktopAuthTurn(): string {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
@@ -55,16 +53,16 @@ export function beginDesktopAuthTurn(): string {
       JSON.stringify({ nonce, startedAt: Date.now() } satisfies StoredTurn)
     );
   } catch {
-    // Stockage indisponible : le tour partira sans nonce, et le retour demandera
-    // une confirmation à la main. Dégradé, jamais ouvert.
+    // Storage unavailable: the tour will leave without a nonce, and the return will ask
+    // a confirmation by hand. Degraded, never opened.
     return nonce;
   }
   return nonce;
 }
 
 /**
- * Ce lien répond-il au tour que l'app attend ? Consomme le tour dans tous les
- * cas où il y en avait un : un nonce ne vaut qu'une réponse.
+ * Does this link respond to the turn the app is waiting for? Consumes the turn in all
+ * cases where there was one: a nonce is only worth one response.
  */
 export function consumeDesktopAuthTurn(turn: string | undefined): boolean {
   const stored = read();
@@ -78,6 +76,6 @@ export function clearDesktopAuthTurn(): void {
   try {
     window.localStorage.removeItem(STORAGE_KEY);
   } catch {
-    // Rien à faire : au pire un nonce périmé traîne, et il ne vaut plus rien.
+    // Nothing to do: at worst an expired nonce is lying around, and it is no longer worth anything.
   }
 }

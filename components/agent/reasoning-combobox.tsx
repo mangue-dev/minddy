@@ -22,25 +22,25 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Picker du niveau de RAISONNEMENT d'une session d'agent (MIN-122) — le pendant
- * du BranchCombobox, en plus simple : liste courte et FERMÉE, donc pas de champ
+ * Picker of the REASONING level of an agent session (MIN-122) — the counterpart
+ * of the BranchCombobox, simpler: short and CLOSED list, therefore no field
  * de recherche ni de saisie libre.
  *
- * CE QU'IL LISTE DÉPEND DU MODÈLE, et ne peut pas ne pas en dépendre : les
- * paliers sont ceux que le modèle choisi publie (`levels`, résolu par
- * `reasoningLevelsFor` chez l'appelant, qui seul sait quel modèle est retenu).
+ * WHAT IT LISTS DEPENDS ON THE MODEL, and cannot not depend on it: the
+ * levels are those that the chosen model publishes (`levels`, resolved by
+ * `reasoningLevelsFor` at the caller, who alone knows which model is chosen).
  * Un `gpt-5.1-codex-max` en accepte cinq dont `xhigh`, un `gemini-3` quatre dont
- * `minimal` et sans « sans raisonnement », un Claude n'en publie aucun — on
- * retombe alors sur les quatre historiques. Proposer les sept partout offrirait
- * des choix sans effet ; en proposer trois partout cachait ce que les modèles
+ * `minimal` and without “without reasoning”, a Claude does not publish any — we
+ * then falls back on the four histories. Proposing the seven everywhere would offer
+ * choices without effect; offering three everywhere hid what the models
  * savent faire.
  *
- * Comme le modèle et la branche, le niveau est choisi au lancement puis FIGÉ pour
- * la session : partout ailleurs, le picker est un chip verrouillé + tooltip.
+ * Like the model and the branch, the level is chosen at launch then FROZEN for
+ * the session: everywhere else, the picker is a locked chip + tooltip.
  *
- * Tous les niveaux sont ouverts à tous, quota minddy compris — l'abonnement est
- * payé, il doit être utilisable en entier. Ce qui borne la dépense est le budget
- * d'usage lui-même, pas une restriction sur le niveau.
+ * All levels are open to everyone, minddy quota included — subscription is
+ * paid, it must be usable in its entirety. What limits the expense is the budget
+ * of use itself, not a restriction on the level.
  */
 
 const LABEL_KEYS: Record<ReasoningLevel, MessageKey<"Agent">> = {
@@ -64,15 +64,15 @@ export function ReasoningCombobox({
   value: ReasoningLevel;
   onChange: (value: ReasoningLevel) => void;
   disabled?: boolean;
-  /** Tooltip du chip verrouillé (niveau figé pour la session). */
+  /** Tooltip of the locked chip (frozen level for the session). */
   disabledTooltip?: string;
   /**
-   * Les paliers du modèle choisi (`reasoningLevelsFor`). Absent = les quatre
-   * historiques : c'est le repli d'un appelant qui ne sait pas encore quel modèle
-   * sera retenu (le catalogue n'est pas arrivé), pas un choix d'affichage.
+   * The levels of the chosen model (`reasoningLevelsFor`). Absent = all four
+   * historical: it is the withdrawal of a caller who does not yet know which model
+   * will be retained (the catalog has not arrived), not a choice of display.
    */
   levels?: ReasoningLevel[];
-  /** Champ pleine largeur, pour les formulaires qui le posent sous le modèle. */
+  /** Full width field, for forms that place it below the template. */
   variant?: "compact" | "field";
 }) {
   const t = useTranslations("Agent");
@@ -80,9 +80,9 @@ export function ReasoningCombobox({
 
   const label = t(LABEL_KEYS[value]);
 
-  // Verrouillé : chip statique + tooltip, SANS popover — le <span> extérieur porte
-  // le hover, un bouton `disabled` n'émettant pas d'événement pointer (même
-  // montage que le picker de branche et celui de modèle).
+  // Locked: static chip + tooltip, WITHOUT popover — the exterior <span> door
+  // the hover, a `disabled` button not emitting a pointer event (even
+  // assembly as the branch picker and the model picker).
   if (disabled && disabledTooltip) {
     return (
       <Tooltip>
@@ -101,11 +101,11 @@ export function ReasoningCombobox({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      {/* `shrink-0` et pas `shrink` : les libellés forment un jeu FERMÉ de sept
-          mots courts, dont le plus long (« Sans raisonnement ») tient largement.
-          Rien ici ne justifie de rogner — c'est la barre du composer qui
-          comprimait le chip. Le nom de modèle à côté, lui, garde sa troncature :
-          il est de longueur arbitraire. */}
+      {/* `shrink-0` and not `shrink`: the labels form a CLOSED set of seven
+ short words, the longest of which ("Without reasoning") fits well.
+ Nothing here justifies cutting back — it's the composer's bar which
+ was compressing the chip. The model name next to it keeps its truncation:
+ it is of arbitrary length. */}
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -126,21 +126,19 @@ export function ReasoningCombobox({
           <ChevronsUpDown className="size-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      {/* Le nom du palier suffit à le désigner : la liste est courte, ordonnée du
-          plus léger au plus lourd, et c'est cet ORDRE qui dit ce qu'ils valent
-          les uns par rapport aux autres. Une glose sous chaque ligne rallongeait
-          le menu de sept phrases pour redire ça.
-          Aucune largeur imposée : `PopoverContent` est déjà `w-max`, donc la
-          boîte se dimensionne sur SON contenu. On ne lui donne qu'un plancher,
-          pour qu'elle ne se réduise pas à « Léger ». Le `w-72` d'avant, puis le
-          `w-48` que j'avais mis, redonnaient l'ellipse qu'on vient d'ôter dès
-          qu'une traduction rallonge un palier. */}
-      {/* `rounded-xl` : c'est `Command` qui peint la surface et il s'impose déjà
-          20px. Avec les 8px de retrait de la liste, les options (12px) sont
-          concentriques. */}
+      {/* The name of the level is enough to designate it: the list is short, ordered from
+ lightest to heaviest, and it is this ORDER which says what they are worth
+ in relation to each other. A gloss under each line extended
+ the menu by seven sentences to repeat that.
+ No imposed width: `PopoverContent` is already `w-max`, so the
+ box is sized on ITS contents. We only give it a floor,
+ so that it is not reduced to “Light”. The `w-72` from before, then the
+ `w-48` that I had put, gave back the ellipse that we have just removed as soon as a translation extends a level. */}
+      {/* `rounded-xl`: it is `Command` which paints the surface and it is already imposed
+ 20px. With the 8px removal from the list, the options (12px) are concentric. */}
       <PopoverContent className="min-w-44 rounded-xl p-0" align="start">
         <Command shouldFilter={false}>
-          {/* `p-1` : mêmes 8px de retrait des QUATRE côtés que les autres
+          {/* `p-1`: same 8px indentation on FOUR sides as the others
               pickers du composer. */}
           <CommandList className="p-1">
             {levels.map((level) => (

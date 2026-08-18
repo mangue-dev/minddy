@@ -9,33 +9,33 @@ import type { RepoProviderId } from "@/lib/repo-providers";
 import type { AgentRun } from "./runs";
 
 /**
- * Aligne le statut de l'issue sur le cycle de vie de l'agent de code (MIN-46) :
- *  - agent lancé, aucune PR encore disponible → `in_progress`
- *  - PR BROUILLON (pas encore proposée)        → `in_progress`
+ * Aligns the status of the issue with the code agent lifecycle (MIN-46):
+ * - agent launched, no PR yet available → `in_progress`
+ * - PR DRAFT (not yet proposed) → `in_progress`
  *  - PR ouverte (disponible en revue)          → `in_review`
- *  - PR mergée (acceptée)                       → `done`
- *  - PR fermée (refusée)                        → `todo` (retour à faire, PAS annulée)
+ * - Merged PR (accepted) → `done`
+ * - PR closed (refused) → `todo` (return to be made, NOT canceled)
  *
- * `syncIssueStatusOnAgentStart` est appelé au démarrage / à la reprise sans PR
- * (launch.ts). `syncIssueStatusFromPr` est appelé à l'ouverture de la PR
- * (execute.ts), sur les actions de review in-app (merge/close) et sur le webhook
- * GitHub (merge/close/reopen). Best-effort : la synchro ne doit jamais faire
- * échouer le flux appelant.
+ * `syncIssueStatusOnAgentStart` is called at startup/resume without PR
+ * (launch.ts). `syncIssueStatusFromPr` is called when opening the PR
+ * (execute.ts), on in-app review actions (merge/close) and on the webhook
+ * GitHub (merge/close/reopen). Best effort: sync should never
+ * Fail the calling flow.
  */
 
-// La TABLE, elle, vit en pur dans `lib/pr-issue-status` : le dialog qui lie un
-// ticket à une PR à la main (MIN-163) l'annonce avant de faire le geste, et un
-// module `server-only` ne se lit pas depuis le navigateur. Ré-exportée ici, où
-// tous ses appelants serveur la cherchent déjà.
+// The TABLE, for its part, lives in pure form in `lib/pr-issue-status`: the dialog which links a
+// ticket to a PR in hand (MIN-163) announces it before making the gesture, and a
+// module `server-only` cannot be read from the browser. Re-exported here, where
+// all her server callers are already looking for her.
 export { issueStatusForPrState } from "@/lib/pr-issue-status";
 
 /**
- * Écrit le statut sur l'issue (best-effort, via Numo). Point de passage unique.
+ * Writes the status on the issue (best-effort, via Numo). Single crossing point.
  *
- * `forgeSync` bascule l'attribution : l'écriture porte toujours techniquement un
- * membre (elle traverse le garde d'accès de `updateIssueFields`), mais la
- * timeline crédite la FORGE. C'est la convention de MIN-97, reprise ici pour les
- * PR sans run — personne dans minddy n'a fait ce geste (MIN-143).
+ * `forgeSync` switches the attribution: the writing still technically carries a
+ * member (she crosses the gatekeeper of `updateIssueFields`), but the
+ * timeline credits FORGE. This is the MIN-97 convention, repeated here for
+ * PR without a run — no one in minddy made this move (MIN-143).
  */
 async function applyIssueStatus(
   issueId: string,
@@ -48,12 +48,12 @@ async function applyIssueStatus(
       issueId,
       actorId,
       input: { status },
-      // Une PR humaine ne passe pas par Numo : le crédit va à la forge, pas à lui.
+      // A human PR does not go through Numo: the credit goes to the forge, not to him.
       viaAssistant: !forgeSync,
       forgeSync,
-      // CE point de passage est le cycle de vie d'un run, jamais une demande
-      // (MIN-147). Sans ce drapeau, il se lit comme l'assistant Numo relayant une
-      // instruction — et « PR refusée → à faire » redémarrait la boucle entière.
+      // THIS waypoint is the lifecycle of a run, never a request
+      // (MIN-147). Without this flag it reads like the Numo assistant relaying a
+      // instruction — and “PR denied → to do” restarted the entire loop.
       viaAgentRun: true,
     });
     if (!result.ok) {
@@ -68,8 +68,8 @@ async function applyIssueStatus(
 }
 
 /**
- * L'agent démarre (ou reprend) le travail sans PR disponible → l'issue passe en
- * `in_progress`. Appelé au lancement d'un run et à la reprise d'une session qui
+ * The agent starts (or resumes) the work without PR available → the issue goes to
+ * `in_progress`. Called at the start of a run and at the resumption of a session which
  * n'a pas (ou plus) de PR ouverte.
  */
 export async function syncIssueStatusOnAgentStart(opts: {
@@ -81,10 +81,10 @@ export async function syncIssueStatusOnAgentStart(opts: {
 
 export async function syncIssueStatusFromPr(opts: {
   issueId: string;
-  /** Acteur du changement (auteur du run pour l'agent/webhook, user pour merge/close in-app). */
+  /** Actor of the change (author of the run for the agent/webhook, user for merge/close in-app). */
   actorId: string;
   prState: AgentRun["pr_state"];
-  /** Forge à créditer à la place de l'acteur — une PR sans run (MIN-143). */
+  /** Forge to be credited in place of the actor — a PR without a run (MIN-143). */
   forgeSync?: RepoProviderId | null;
 }): Promise<void> {
   const status = issueStatusForPrState(opts.prState);

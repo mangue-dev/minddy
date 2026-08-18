@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// Frise des captures — outil local, pour regarder l'interface de minddy bouger.
+// Capture timeline — local tool, to watch Minddy's interface move.
 //
 // Croise deux historiques qui ne se superposent pas :
-//   - git, qui dit à quoi l'image ressemblait ;
-//   - history.jsonl, qui dit pourquoi elle a été refaite.
+// - git, which says what the image looked like;
+// - history.jsonl, which says why it was redone.
 //
-// Rien n'est écrit dans le dépôt : les blobs extraits et les mesures vont dans
-// .cache/, ignoré par git. Relancer après chaque capture, l'index se recalcule
-// (seuls les blobs nouveaux sont mesurés).
+// Nothing is written in the repository: the extracted blobs and the measurements go into
+// .cache/, ignored by git. Relaunch after each capture, the index is recalculated
+// (only new blobs are measured).
 
 import { createServer } from "node:http";
 import { execFile } from "node:child_process";
@@ -29,15 +29,15 @@ const PUBLIC = join(HERE, "public");
 
 const PORT = Number(process.env.PORT ?? 4321);
 
-// Les dossiers dont un commit signifie « le produit a bougé ». Sert à dire de
-// combien de commits une capture est en retard sur l'interface réelle.
+// Files where a commit means “the product has moved”. Used to say
+// how many commits a capture is behind the actual interface.
 const PRODUCT_PATHS = ["app", "components", "lib"];
 
 // Largeur de travail du diff de pixels. Comparer 3472×2170 en pleine
-// résolution coûte des secondes par paire pour un chiffre identique à 0,1 %
-// près : on redescend, on compare, on garde le pourcentage.
+// resolution costs seconds per pair for a figure identical to 0.1%
+// close: we go back down, we compare, we keep the percentage.
 const DIFF_WIDTH = 480;
-// En dessous de ce delta sur un canal, c'est du ré-encodage ou de
+// Below this delta on a channel, it is re-encoding or
 // l'antialiasing, pas un changement d'interface.
 const DIFF_THRESHOLD = 12;
 
@@ -61,16 +61,16 @@ async function gitBuffer(args) {
   return stdout;
 }
 
-/** Toutes les images suivies par git sous captures/shots/<nom>/out/. */
+/** All images tracked by git under captures/shots/<nom>/out/. */
 async function listImages() {
   const out = await git(["ls-files", "captures/shots/*/out/*.png"]);
   return out.split("\n").filter(Boolean).sort();
 }
 
 /**
- * L'historique d'un fichier, de la version la plus récente à la plus ancienne.
- * --follow suit les renommages ; on lit le chemin tel qu'il était à chaque
- * commit, sans quoi rev-parse échouerait sur les versions d'avant le renommage.
+ * The history of a file, from the most recent version to the oldest.
+ * --follow follows renames; we read the path as it was at each
+ * commit, otherwise rev-parse would fail on versions before the renaming.
  */
 async function fileHistory(path) {
   const out = await git([
@@ -78,8 +78,8 @@ async function fileHistory(path) {
     "--follow",
     "--name-status",
     "--date=iso-strict",
-    // \x1e sépare les commits, \x1f les champs. Pas \x00 : Node refuse
-    // l'octet nul dans un argument de process.
+    // \x1e separates commits, \x1f fields. Not \x00: Node refuses
+    // the null byte in a process argument.
     "--format=\x1e%H\x1f%aI\x1f%s\x1f%an",
     "--",
     path,
@@ -89,7 +89,7 @@ async function fileHistory(path) {
   for (const chunk of out.split("\x1e").slice(1)) {
     const [header, ...rest] = chunk.split("\n");
     const [sha, date, subject, author] = header.split("\x1f");
-    // La dernière colonne d'une ligne --name-status est le chemin à ce commit.
+    // The last column of a --name-status line is the path to that commit.
     const line = rest.find((l) => l.trim() && /^[A-Z]\d*\t/.test(l));
     const pathAtCommit = line ? line.split("\t").pop().trim() : path;
     versions.push({ sha, date, subject, author, pathAtCommit });
@@ -97,7 +97,7 @@ async function fileHistory(path) {
   return versions;
 }
 
-/** Le blob d'un chemin à un commit donné, ou null si absent. */
+/** The blob of a path to a given commit, or null if absent. */
 async function blobAt(sha, path) {
   try {
     return (await git(["rev-parse", `${sha}:${path}`])).trim();
@@ -106,7 +106,7 @@ async function blobAt(sha, path) {
   }
 }
 
-/** Les fichiers modifiés dans l'arbre de travail, non commités. */
+/** Modified files in the working tree, not committed. */
 async function dirtyFiles() {
   const out = await git(["status", "--porcelain", "--", "captures/shots"]);
   const dirty = new Set();
@@ -117,7 +117,7 @@ async function dirtyFiles() {
   return dirty;
 }
 
-/** Combien de commits produit séparent ce commit de HEAD. */
+/** How many product commits separate this commit from HEAD. */
 const behindCache = new Map();
 async function commitsBehind(sha) {
   if (behindCache.has(sha)) return behindCache.get(sha);
@@ -145,7 +145,7 @@ async function loadMeta() {
       meta.blobs ??= {};
       meta.diffs ??= {};
     } catch {
-      /* cache illisible : on repart de zéro, ce n'est que du dérivé */
+      /* unreadable cache: we start from scratch, it's just a derivative */
     }
   }
 }
@@ -158,7 +158,7 @@ function blobPath(id) {
   return join(BLOBS, `${id}.png`);
 }
 
-/** Matérialise un blob git dans le cache. Renvoie son chemin sur disque. */
+/** Materializes a git blob in the cache. Returns its path to disk. */
 async function materialize(id, { fromWorktree } = {}) {
   const dest = blobPath(id);
   if (existsSync(dest)) return dest;
@@ -169,7 +169,7 @@ async function materialize(id, { fromWorktree } = {}) {
   return dest;
 }
 
-/** Dimensions et poids d'un blob, mesurés une fois pour toutes. */
+/** Dimensions and weight of a blob, measured once and for all. */
 async function measure(id) {
   if (meta.blobs[id]) return meta.blobs[id];
   const file = blobPath(id);
@@ -184,9 +184,9 @@ async function measure(id) {
 /**
  * Part des pixels qui changent entre deux versions.
  *
- * Les deux images sont ramenées à la même boîte avant comparaison. Quand le
- * cadrage change (hero-board est passé de 1440×900 à 1736×1085), l'étirement
- * rend le chiffre peu parlant : on le signale plutôt que de le taire.
+ * The two images are brought back to the same box before comparison. When the
+ * framing changes (hero-board went from 1440×900 to 1736×1085), stretching
+ * makes the figure not very meaningful: we point it out rather than keeping it quiet.
  */
 async function diff(a, b) {
   const key = `${a}:${b}`;
@@ -226,7 +226,7 @@ async function diff(a, b) {
 
 // ---------------------------------------------------------------- history.jsonl
 
-/** Le journal des runs d'une capture, du plus ancien au plus récent. */
+/** The run log of a capture, from oldest to most recent. */
 async function runLog(shot) {
   const file = join(REPO, "captures", "shots", shot, "history.jsonl");
   if (!existsSync(file)) return [];
@@ -237,7 +237,7 @@ async function runLog(shot) {
     try {
       runs.push({ line: i + 1, ...JSON.parse(line) });
     } catch {
-      /* une ligne cassée ne doit pas emporter le journal */
+      /* a broken line should not take away the log */
     }
   }
   return runs;
@@ -272,7 +272,7 @@ async function buildIndex() {
     const history = await fileHistory(path);
     const versions = [];
 
-    // La version de l'arbre de travail, si elle diffère du dernier commit.
+    // The working tree version, if different from the last commit.
     if (dirty.has(path)) {
       const id = (await git(["hash-object", path])).trim();
       await materialize(id, { fromWorktree: path });
@@ -290,8 +290,8 @@ async function buildIndex() {
     for (const v of history) {
       const id = await blobAt(v.sha, v.pathAtCommit);
       if (!id) continue;
-      // Deux commits peuvent porter le même blob : la capture a été relancée
-      // et a rendu exactement la même image. Ce n'est pas une version de plus.
+      // Two commits can carry the same blob: the capture has been restarted
+      // and rendered exactly the same image. This is not another version.
       if (versions.some((x) => x.blob === id)) continue;
       const known = Boolean(meta.blobs[id]);
       await materialize(id);
@@ -307,7 +307,7 @@ async function buildIndex() {
       });
     }
 
-    // Mesures dérivées, de la plus récente à la plus ancienne.
+    // Derived measurements, from newest to oldest.
     for (const [i, v] of versions.entries()) {
       Object.assign(v, meta.blobs[v.blob]);
       v.behind = v.sha ? await commitsBehind(v.sha) : 0;
@@ -341,7 +341,7 @@ async function buildIndex() {
   return payload;
 }
 
-/** Ce qui se dit d'une capture sans ouvrir ses variantes. */
+/** What is said about a capture without opening its variants. */
 function summarizeShot(shot) {
   const variants = Object.values(shot.variants);
   const reference = shot.variants["en-light"] ?? variants[0];
@@ -358,7 +358,7 @@ function summarizeShot(shot) {
     else verdicts.autre++;
   }
 
-  // Les viewports traversés, dans l'ordre où ils apparaissent au journal.
+  // Viewports traversed, in the order they appear in the log.
   const viewports = [];
   for (const run of shot.runs) {
     if (run.viewport && !viewports.includes(run.viewport))
@@ -420,8 +420,8 @@ const server = createServer(async (req, res) => {
 
   try {
     if (url.pathname === "/api/index") {
-      // Rebâti à la demande : on relance l'outil après une capture, et
-      // l'index doit dire l'état du dépôt maintenant, pas au démarrage.
+      // Rebuilt on demand: we restart the tool after a capture, and
+      // the index should tell the repository status now, not at startup.
       if (url.searchParams.get("refresh") === "1" || !indexPromise) {
         behindCache.clear();
         indexPromise = buildIndex();

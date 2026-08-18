@@ -10,15 +10,15 @@ import { useTriageCountsQuery } from "@/lib/use-triage-counts-query";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 
-/** Même courbe que l'avis Smart Assign, juste à côté : les indications se posent
-    sous le composer quand les chiffres arrivent, au lieu d'y apparaître d'un coup. */
+/** Same curve as the Smart Assign notice, just next to it: the indications arise
+ under the dial when the numbers arrive, instead of appearing there all at once. */
 const MOTION = { duration: 0.22, ease: [0.16, 1, 0.3, 1] as const };
 
 /**
- * Combien de lignes au plus. L'accueil tient en UN écran, et cette colonne est
- * la seule qui grandisse avec le compte : un porteur de huit projets aurait
- * poussé le composer hors du centre, puis la page hors de la fenêtre. Ce qui
- * dépasse se dit en une ligne de plus, pas en huit.
+ * How many lines at most. The home page is on ONE screen, and this column is
+ * the only one that grows with the account: a leader of eight projects would have
+ * pushed the compose out of the center, then the page out of the window. What
+ * exceeds is said in one more line, not in eight.
  */
 const MAX_ROWS = 3;
 
@@ -26,32 +26,32 @@ type Signal = {
   projectId: string;
   projectName: string;
   iconUrl: string | null;
-  /** Déjà résolue (`projectOrbSeed`) : la ligne n'a plus le projet sous la main. */
+  /** Already resolved (`projectOrbSeed`): the line no longer has the project on hand. */
   orbSeed: string;
-  /** Les deux moitiés de `ProjectTriageCount`, nommées comme les ONGLETS du
-      projet : la file et sa destination portent le même mot, et la ligne se
-      contente donc de le poser dans son href. */
+  /** The two halves of `ProjectTriageCount`, named as the TABS of the
+ project: the queue and its destination have the same word, and the line se
+ therefore just puts it in its href. */
   kind: "triage" | "feedback";
   count: number;
 };
 
 /**
- * Ce qui attend dans chacun de mes projets, en une phrase par projet et par
- * file : « minddy a 2 tickets en triage », « mangue-ui a 3 retours à trier ».
+ * What awaits in each of my projects, in one sentence per project and per
+ * file: “minddy has 2 tickets in triage”, “mango-ui has 3 returns to sort”.
  *
- * Les chiffres viennent de la MÊME lecture que les pastilles de la sidebar
- * (GET /api/me/triage-counts, déjà montée par le shell sur toutes les pages
- * hors projet — donc aucune requête de plus ici) : la ligne d'un projet et sa
- * pastille dans la sidebar disent forcément le même nombre, et la somme des
- * deux lignes d'un projet retombe sur son unique pastille.
+ * The numbers come from the SAME reading as the sidebar dots
+ * (GET /api/me/triage-counts, already mounted by the shell on all pages
+ * outside the project — so no further request here): the line of a project and its
+ * tablet in the sidebar necessarily say the same number, and the sum of
+ * two lines of a project falls on its single pellet.
  *
- * Deux lignes plutôt qu'une somme : « en triage » et « à trier » ne mènent pas
- * au même onglet, et un seul chiffre pour les deux n'aurait dit où aller.
+ * Two lines rather than a sum: “in sorting” and “to be sorted” do not lead
+ * to the same tab, and a single number for both would not have told where to go.
  *
- * Le tour se fait sur MES projets, pas sur les clés de la table : un projet à
- * la corbeille garde ses tickets en triage (DELETE /api/projects/[id] n'y
- * touche pas) et continue donc d'y peser, alors qu'il n'est plus dans la liste.
- * Le joindre par la liste, c'est l'écarter sans avoir à le filtrer.
+ * The focus is on MY projects, not on the keys to the table: a project to
+ * the recycle bin keeps its tickets in sorting (DELETE /api/projects/[id] does not
+ * does not touch) and therefore continues to weigh on it, even though it is no longer in the list.
+ * Joining it through the list means dismissing it without having to filter it.
  */
 export function HomeProjectSignals() {
   const t = useTranslations("Home");
@@ -76,8 +76,8 @@ export function HomeProjectSignals() {
         }
       }
     }
-    // La plus grosse file d'abord — c'est celle qui pourrit. Le nom départage,
-    // pour que deux files égales ne changent pas de place d'un rendu à l'autre.
+    // The biggest line first — that's the one that rots. The name decides,
+    // so that two equal queues do not change place from one rendering to another.
     rows.sort(
       (a, b) => b.count - a.count || a.projectName.localeCompare(b.projectName)
     );
@@ -87,8 +87,8 @@ export function HomeProjectSignals() {
   if (signals.length === 0) return null;
 
   const shown = signals.slice(0, MAX_ROWS);
-  // Ce qui reste se compte en ÉLÉMENTS, pas en lignes : « 2 autres lignes » ne
-  // veut rien dire, « 7 autres éléments à trier » est ce qu'on veut savoir.
+  // What remains is counted in ELEMENTS, not lines: “2 more lines” does not
+  // means nothing, “7 other items to sort” is what we want to know.
   const rest = signals
     .slice(MAX_ROWS)
     .reduce((sum, signal) => sum + signal.count, 0);
@@ -128,8 +128,8 @@ export function HomeProjectSignals() {
         </li>
       ))}
 
-      {/* Le reste : dit, mais pas cliquable — il n'y a pas de file « à trier »
-          globale à ouvrir, et la sidebar mène déjà à chaque projet. */}
+      {/* The rest: said, but not clickable — there is no “to sort” global queue
+ to open, and the sidebar already leads to each project. */}
       {rest > 0 ? (
         <li className="px-3.5 text-xs text-muted-foreground">
           {t("signalMore", { count: rest })}

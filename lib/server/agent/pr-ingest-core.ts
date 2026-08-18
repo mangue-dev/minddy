@@ -1,34 +1,33 @@
 /**
- * Rattachement d'une pull request à un ticket minddy (MIN-143) — pur, sans I/O
- * ni `server-only`, donc testable en node (même patron que `checks-core.ts`).
+ * Attachment of a pull request to a minddy ticket (MIN-143) — pure, without I/O
+ * nor `server-only`, therefore testable in node (same pattern as `checks-core.ts`).
  *
- * Depuis que la page montre TOUTES les PR du dépôt et plus seulement celles de
- * Numo, le lien PR ↔ ticket ne peut plus venir du run : une PR humaine n'en a
- * pas. Il vient donc de ce que la PR DIT d'elle-même — et par CONVENTION, jamais
- * par devinette : `<CLÉ>-<n>` dans le nom de branche, dans le titre, ou dans une
- * ligne de fermeture (`Fixes MIN-42`) du corps. Rien d'autre. Une PR non
- * rattachée reste non rattachée : c'est un état normal, pas un échec.
+ * Since the page shows ALL the PRs of the repository and no longer only those of
+ * Numo, the PR ↔ ticket link can no longer come from the run: a human PR does not have
+ *. So it comes from what the PR SAYS about itself — and by CONVENTION, never
+ * by guess: `<KEY>-<n>` in the branch name, in the title, or in a
+ * closing line (`Fixes MIN-42`) of the body. Nothing else. An unattached PR remains unattached: this is a normal state, not a failure.
  *
- * Les clés candidates sont celles des projets qui lient CE dépôt — c'est ce qui
- * empêche `ACME-42` de ramener le ticket 42 d'un projet qui n'a rien à voir.
+ * The candidate keys are those of the projects that bind THIS repository — this is what
+ * prevents `ACME-42` from bringing back ticket 42 of a project that has not nothing to see.
  */
 
-/** Mots-clés de fermeture reconnus dans le corps (ceux de GitHub/GitLab). */
+/** Closing keywords recognized in the body (those of GitHub/GitLab). */
 const CLOSING_KEYWORDS =
   "close|closes|closed|closing|fix|fixes|fixed|fixing|resolve|resolves|resolved|resolving";
 
-/** Échappe une clé de projet avant interpolation dans une regex. */
+/** Escapes a project key before interpolation into a regex. */
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /**
- * Motif d'une référence de ticket pour ces clés.
+ * Reason for a ticket reference for these keys.
  *
- * Les deux gardes de bord font tout le travail anti-faux-positif :
- *  - `(?<![A-Za-z0-9])` — `ADMIN-42` ne contient pas une référence `MIN-42` ;
- *  - `(?![A-Za-z0-9])`  — `MIN-421` n'est pas `MIN-42`, et `MIN-42x` n'est rien.
- * Un `-` ou un `/` autour, en revanche, passent : c'est exactement la forme des
+ * The two edge guards do all the anti-false-positive work:
+ * - `(?<![A-Za-z0-9])` — `ADMIN-42` does not contain a `MIN-42` reference ;
+ * - `(?![A-Za-z0-9])` — `MIN-421` is not `MIN-42`, and `MIN-42x` is nothing.
+ * A `-` or a `/` around, on the other hand, passes: this is exactly the form of the
  * branches (`minddy/agent/min-42-quelque-chose`, `feature/MIN-42`).
  */
 function referencePattern(projectKeys: readonly string[]): RegExp | null {
@@ -38,7 +37,7 @@ function referencePattern(projectKeys: readonly string[]): RegExp | null {
   return new RegExp(`(?<![A-Za-z0-9])(${alternation})-(\\d+)(?![A-Za-z0-9])`, "gi");
 }
 
-/** Première référence trouvée dans `text`, normalisée `CLÉ-n` (clé en casse d'origine). */
+/** First reference found in `text`, normalized to `KEY-n` (key in original case). */
 function firstReference(
   text: string | null | undefined,
   pattern: RegExp,
@@ -50,7 +49,7 @@ function firstReference(
   if (!match) return null;
   const key = keyByLower.get(match[1].toLowerCase());
   if (!key) return null;
-  // `007` est un numéro écrit bizarrement, pas un autre ticket : on le normalise.
+  // `007` is a strangely written number, not another ticket: we standardize it.
   const number = Number.parseInt(match[2], 10);
   if (!Number.isSafeInteger(number) || number < 1) return null;
   return `${key}-${number}`;
@@ -67,7 +66,7 @@ function closingLines(body: string | null | undefined): string {
 }
 
 export interface IssueRefInput {
-  /** Clés des projets qui lient ce dépôt — le périmètre des références valides. */
+  /** Keys to projects that link to this repository — the scope of valid references. */
   projectKeys: readonly string[];
   branch?: string | null;
   title?: string | null;
@@ -75,13 +74,12 @@ export interface IssueRefInput {
 }
 
 /**
- * Identifiant du ticket que cette PR déclare porter (`"MIN-42"`), ou null.
+ * Identifier of the ticket that this PR declares to carry (`"MIN-42"`), or null.
  *
- * L'ordre est celui de l'intention décroissante : la BRANCHE d'abord (on la
- * nomme exprès, c'est la convention que minddy lui-même applique), puis le
- * TITRE, puis les seules lignes de fermeture du corps. Le reste du corps est
- * ignoré volontairement — « comme dans MIN-12 » est une mention, pas un
- * rattachement.
+ * The order is that of decreasing intention: the BRANCH first (we name it on purpose, this is the convention that minddy himself applies), then the
+ * TITLE, then the body closing lines alone. The rest of the body is
+ * intentionally ignored — "as in MIN-12" is a mention, not a
+ * attachment.
  */
 export function issueRefFromPr(input: IssueRefInput): string | null {
   const pattern = referencePattern(input.projectKeys);
@@ -97,21 +95,21 @@ export function issueRefFromPr(input: IssueRefInput): string | null {
 }
 
 /**
- * Numéro d'une pull request DÉSIGNÉE À LA MAIN, ou null (MIN-163bis).
+ * Number of a HAND DESIGNATED pull request, or null (MIN-163bis).
  *
- * Le rattachement conventionnel ci-dessus lit ce que la PR dit d'elle-même ;
- * celui-ci lit ce qu'un HUMAIN (ou l'agent qui l'écoute) en dit : « lie la PR
- * #42 au ticket MIN-12 », ou l'URL qu'il a copiée depuis son navigateur. Les
- * quatre formes qu'on rencontre vraiment, et pas une de plus :
+ * The conventional binding above reads what the PR says about itself;
+ * this one reads what a HUMAN (or the agent listening to it) says about it: "bind the PR
+ * #42 to ticket MIN-12", or the URL he copied from his browser. The
+ * four forms that we really encounter, and not one more:
  *
- *  - `42`, et le nombre nu qu'un modèle renvoie parfois en JSON ;
- *  - `#42` (GitHub) et `!42` (la syntaxe MR de GitLab) ;
- *  - une URL de forge — `…/pull/42`, `…/pulls/42`, `…/-/merge_requests/42`,
- *    avec ce qui suit (`/files`, `#discussion_r…`) qui ne change rien.
+ * - `42`, and the bare number that a model sometimes returns in JSON;
+ * - `#42` (GitHub) and `!42` (GitLab's MR syntax);
+ * - a forge URL — `…/pull/42`, `…/pulls/42`, `…/-/merge_requests/42`,
+ * with the following (`/files`, `#discussion_r…`) which changes nothing.
  *
- * Ce qui est refusé compte autant : une URL d'ISSUE (`…/issues/42`) n'est pas
- * une PR, et la prendre pour telle rattacherait silencieusement la mauvaise
- * chose — les deux numérotations cohabitent dans un même dépôt GitHub.
+ * What is denied counts as much: an ISSUE URL (`…/issues/42`) is not
+ * a PR, and taking it as such would silently attach the wrong
+ * thing — both numberings coexist in the same GitHub repository.
  */
 export function parsePullRequestRef(
   ref: string | number | null | undefined,
@@ -124,7 +122,7 @@ export function parsePullRequestRef(
   const text = ref.trim();
   if (!text) return null;
 
-  // L'URL d'abord : elle CONTIENT un nombre nu, et le motif court le prendrait.
+  // The URL first: it CONTAINS a bare number, and the short pattern would take it.
   const url = /\/(?:pull|pulls|merge_requests)\/(\d+)(?:[/?#]|$)/.exec(text);
   if (url) return asNumber(Number.parseInt(url[1], 10));
   if (/^https?:\/\//i.test(text)) return null;
@@ -133,7 +131,7 @@ export function parsePullRequestRef(
   return short ? asNumber(Number.parseInt(short[1], 10)) : null;
 }
 
-/** `"MIN-42"` → `{ key: "MIN", number: 42 }`. Null si la forme n'y est pas. */
+/** `"MIN-42"` → `{ key: "MIN", number: 42 }`. Null if the form is not there. */
 export function parseIssueRef(ref: string): { key: string; number: number } | null {
   const at = ref.lastIndexOf("-");
   if (at <= 0) return null;

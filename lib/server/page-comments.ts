@@ -13,28 +13,28 @@ import { notificationActorSource } from "@/lib/notification-actor";
 import { normalizeQuote } from "@/lib/page-comments";
 
 /**
- * Le noyau des COMMENTAIRES DE PAGE (MIN-282) — le jumeau d'add-comment.ts, pour
- * la quatrième surface.
+ * PAGE COMMENTS core (MIN-282) — the twin of add-comment.ts, for
+ * the fourth surface.
  *
- * Ce qu'il partage avec les trois autres, mot pour mot : les réponses ramenées
- * sur la RACINE du fil (profondeur ≤ 1), l'accès contrôlé ICI parce que
- * l'écriture passe par le client service, et les notifications posées par le
- * point d'insertion commun (lib/server/notifications.ts, où vit le filtre de
- * préférences de MIN-82).
+ * What he shares with the other three, word for word: the answers brought back
+ * on the ROOT of the wire (depth ≤ 1), access controlled HERE because
+ * the writing goes through the client service, and the notifications placed by the
+ * common insertion point (lib/server/notifications.ts, where the notification filter lives
+ * preferences of MIN-82).
  *
- * Ce qu'il ajoute, et qui n'existe que sur une page : l'ANCRE (`block_id`) et
- * l'extrait figé (`quote`).
+ * What it adds, and which only exists on one page: the ANCHOR (`block_id`) and
+ * the frozen extract (`quote`).
  *
- * Ce qu'il n'a PAS non plus, et c'est un choix : la RÉSOLUTION d'un fil. Elle a
- * du sens sur une remarque de relecture de code — un point à traiter avant de
- * fusionner, et les fils d'une pull request la portent déjà — pas sur une note
- * laissée dans une doc, qui n'a aucune échéance à franchir. Un commentaire de
- * page se supprime quand il n'a plus lieu d'être.
+ * What he does NOT have either, and that is a choice: the RESOLUTION of a thread. She has
+ * meaning on a code review remark — a point to address before
+ * merge, and the threads of a pull request already carry it — not on a note
+ * left in a doc, which has no deadline to meet. A comment from
+ * page is deleted when it no longer exists.
  *
- * Ce qu'il n'a PAS, volontairement : les pièces jointes. Elles pendent à un
- * ticket, à un objectif ou à un retour (`attachments_parent_ck`), et une
- * cinquième branche pour un fil de doc n'a jamais été demandée — le document
- * lui-même accepte déjà les images et les fichiers (MIN-280).
+ * What he does NOT have, on purpose: attachments. They hang from a
+ * ticket, to an objective or to a return (`attachments_parent_ck`), and a
+ * fifth branch for a doc thread was never requested — the document
+ * itself already accepts images and files (MIN-280).
  */
 
 export type PageCommentResult =
@@ -42,7 +42,7 @@ export type PageCommentResult =
   | {
       ok: false;
       status: number;
-      /** Clé du namespace i18n `ApiErrors`. */
+      /** i18n namespace key `ApiErrors`. */
       errorKey:
         | "commentEmpty"
         | "pageNotFound"
@@ -50,10 +50,10 @@ export type PageCommentResult =
         | "databaseError";
     };
 
-/** Même plafond que les trois autres fils (MIN-118). */
+/** Same ceiling as the other three wires (MIN-118). */
 const MAX_COMMENT_LENGTH = 65_536;
 
-/** Ce qu'une lecture rend : tout, la ligne est courte et sans secret. */
+/** What a reading conveys: everything, the line is short and without secrets. */
 const COLUMNS = "*";
 
 export async function addPageComment({
@@ -70,9 +70,9 @@ export async function addPageComment({
   pageId: string;
   actorId: string;
   body: string;
-  /** L'ancre : le bloc commenté. Null = un commentaire sur la page. */
+  /** The anchor: the commented block. Null = a comment on the page. */
   blockId?: string | null;
-  /** L'extrait sélectionné au moment du commentaire, figé avec lui. */
+  /** The extract selected at the time of the comment, frozen with it. */
   quote?: string | null;
   parentId?: string | null;
   mentionedUserIds?: string[];
@@ -84,9 +84,9 @@ export async function addPageComment({
 
   const service = getServiceClient();
 
-  // La page résout le projet pour le contrôle d'accès, et porte l'auteur qu'on
-  // prévient plus bas. Corbeillée, elle ne se commente plus : c'est le pendant
-  // de la RLS, qui masque déjà ses fils.
+  // The page resolves the project for access control, and carries the author that we
+  // warns below. Trashed, it is no longer commented on: it is the counterpart
+  // of the RLS, which already hides its sons.
   const { data: page } = await service
     .from("pages")
     .select("project_id, created_by")
@@ -99,8 +99,8 @@ export async function addPageComment({
   const access = await getProjectAccess(actorId, projectId);
   if (!access) return { ok: false, status: 404, errorKey: "pageNotFound" };
 
-  // Réponses : le `parent_id` stocké est TOUJOURS la racine du fil, et cette
-  // racine doit appartenir à cette page.
+  // Answers: the stored `parent_id` is ALWAYS the root of the thread, and this
+  // root must belong to this page.
   let rootId: string | null = null;
   let rootBlockId: string | null = null;
   const threadAuthorIds: (string | null)[] = [];
@@ -127,9 +127,9 @@ export async function addPageComment({
     }
   }
 
-  // Une RÉPONSE n'a pas d'ancre à elle : elle hérite de celle de son fil. Sans
-  // cette règle, répondre depuis un composeur qui connaît la sélection courante
-  // ancrerait la réponse sur un AUTRE bloc que la question.
+  // A RESPONSE has no anchor of its own: it inherits that of its thread. Without
+  // this rule, respond from a dialer that knows the current selection
+  // would anchor the answer on an OTHER block than the question.
   const anchor = rootId ? rootBlockId : (blockId || null);
 
   const { data, error } = await service
@@ -154,13 +154,13 @@ export async function addPageComment({
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
 
-  // Notifications. Deux types, et ils ne disent pas la même chose :
-  //  - `page_mention` : on m'a cité. Le type de MIN-278, celui-là même que pose
-  //    une citation dans le CORPS de la page — même phrase, même destination,
-  //    et donc la même bascule de préférences.
-  //  - `page_comment` : on a commenté une page que j'ai écrite, ou un fil auquel
-  //    j'ai participé. Le pendant de `comment` sur un ticket.
-  // Jamais les deux pour la même personne : une citation dit déjà tout.
+  // Notifications. Two guys, and they don't say the same thing:
+  // - `page_mention`: I was cited. The type of MIN-278, the same one posed
+  // a quote in the BODY of the page — same sentence, same destination,
+  // and therefore the same preference toggle.
+  // - `page_comment`: someone commented on a page that I wrote, or a thread to which
+  // I participated. The counterpart of `comment` on a ticket.
+  // Never both for the same person: a quote already says it all.
   const valid = await projectMemberIds(service, projectId);
   const mentionSet = new Set(
     mentionedUserIds.filter(
@@ -202,10 +202,10 @@ export async function addPageComment({
 }
 
 /**
- * Les fils d'une page, en markdown compact — ce que lit un agent.
+ * The threads of a page, in compact markdown — what an agent reads.
  *
- * Rendu par `minddy_get_page` : un agent qui relit une spec doit voir les
- * objections en cours, c'est souvent là qu'est la vraie contrainte.
+ * Rendered by `minddy_get_page`: an agent who rereads a spec must see the
+ * ongoing objections, this is often where the real constraint lies.
  */
 export async function openPageThreadsForAgent(
   client: SupabaseClient,
@@ -228,10 +228,10 @@ export async function openPageThreadsForAgent(
   const rows = data ?? [];
   const roots = rows.filter((r) => !r.parent_id);
   return roots.map((root) => ({
-    // La racine du fil : c'est ELLE qu'on repasse en `parent_comment_id` pour
-    // répondre dedans. Sans cet id, un agent ne pouvait répondre qu'aux fils
-    // qu'il venait lui-même d'ouvrir — ceux d'un humain, précisément ceux
-    // auxquels il faut répondre, n'avaient aucune adresse.
+    // The root of the thread: it is SHE that we return to `parent_comment_id` to
+    // answer in. Without this id, an agent could only respond to threads
+    // that he himself had just opened — those of a human, precisely those
+    // which must be answered, had no address.
     thread_id: root.id as string,
     quote: (root.quote as string | null) ?? null,
     block_id: (root.block_id as string | null) ?? null,

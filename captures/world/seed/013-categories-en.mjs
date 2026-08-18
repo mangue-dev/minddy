@@ -1,22 +1,22 @@
 /**
- * 013 — les catégories des projets de démo, en anglais.
+ * 013 — categories of demo projects, in English.
  *
- * Pour quelle capture : `heroBoard` d'abord (chaque carte porte désormais sa
- * catégorie, nommée en toutes lettres à côté d'une pastille de couleur), mais
- * aussi `feedbackBoard` et `feedbackInbox`, qui les affichent depuis toujours.
+ * For which capture: `heroBoard` first (each card now carries its
+ * category, named in full next to a colored dot), but
+ * also `feedbackBoard` and `feedbackInbox`, which have always displayed them.
  *
- * Le problème n'est pas de nous : les six catégories d'un projet sont créées
- * par le trigger `projects_seed_categories`, avec des noms FRANÇAIS. Tout le
- * reste du monde de démo est en anglais — c'est le principe, les mêmes données
- * servent les captures FR et EN. Jusqu'ici ça ne se voyait pas ; à partir du
- * moment où la carte du hero affiche « Fonctionnalité » sur la variante
+ * The problem is not ours: the six categories of a project are created
+ * by the `projects_seed_categories` trigger, with FRENCH names. All the
+ * rest of the world demo is in English — it's the principle, the same data
+ * serve FR and EN captures. Until now it was not visible; from
+ * moment when the hero's card displays "Feature" on the variant
  * anglaise, si.
  *
- * Ce script renomme, et ne fait que ça : mêmes lignes, mêmes identifiants,
- * mêmes couleurs. Rien n'est créé, rien n'est supprimé, aucun rattachement ne
+ * This script renames, and does just that: same lines, same identifiers,
+ * same colors. Nothing is created, nothing is deleted, no attachment
  * bouge (ils pointent des identifiants, pas des noms).
  *
- * Idempotent : seules les lignes encore nommées en français sont modifiées.
+ * Idempotent: only lines still named in French are modified.
  *
  *   node captures/world/seed/013-categories-en.mjs --dry-run
  *   node captures/world/seed/013-categories-en.mjs
@@ -63,8 +63,8 @@ async function main() {
     if (error) throw new Error(`captures: lecture des catégories — ${error.message}`);
 
     for (const row of rows || []) {
-      // On ne touche QUE les noms français du jeu par défaut. Une catégorie
-      // ajoutée à la main garde son nom : elle n'est pas dans la table.
+      // We ONLY touch the French names of the game by default. A category
+      // added to the hand keeps its name: it is not in the table.
       const target = CATEGORIES.find((c) => c.fr === row.name && c.fr !== c.en);
       if (!target) continue;
       plan.update(

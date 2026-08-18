@@ -3,34 +3,31 @@
 import { useCallback, useRef } from "react";
 
 /**
- * Une identité STABLE pour un handler qu'on réécrit à chaque rendu.
+ * A STABLE identity for a handler that is rewritten each time it is rendered.
  *
- * Le cas qui l'a fait naître (MIN-316) : la carte de ticket passe onze handlers
- * à `useAgentMenuActions`, qui les a tous en dépendances de son `useMemo`. Comme
- * chacun est une fléchée fabriquée dans le corps du composant, le mémo ne
- * tombait JAMAIS juste — il refabriquait une vingtaine d'objets d'action et
- * autant d'icônes JSX, par carte et par rendu, pour un menu fermé.
+ * The case that gave rise to it (MIN-316): the ticket card passes eleven handlers
+ * to `useAgentMenuActions`, which has them all as dependencies of its `useMemo`. Like
+ * each is an arrow manufactured in the body of the component, the memo NEVER fell correctly — it remade around twenty action objects and
+ * as many JSX icons, per card and per rendering, for a closed menu.
  *
- * Les stabiliser un par un demanderait onze listes de dépendances à tenir, sur
- * des fonctions qui referment chacune sur une dizaine de valeurs locales : une
- * liste oubliée donnerait un handler qui agit sur un ticket périmé, en silence.
- * Ce crochet renvoie donc une enveloppe dont l'identité ne change jamais et qui
- * appelle toujours la DERNIÈRE version — la lecture se fait à l'appel, donc
- * après le rendu.
+ * The stabilizing one by one would require eleven lists of dependencies to hold, on
+ * functions which each close on around ten local values: a
+ * forgotten list would give a handler which acts on an expired ticket, silently.
+ * This hook therefore returns an envelope whose identity never changes and which
+ * always calls the LAST version — reading is done on call, so
+ * after rendering.
  *
- * ⚠ **Pas pour une valeur lue pendant le rendu.** C'est un handler d'événement :
- * appelé pendant le rendu, il lirait une version dont React ne garantit rien.
- * Pour une valeur, `useMemo` ; pour une dépendance d'effet, un vrai
- * `useCallback` avec ses dépendances — un effet qui ne se rejoue jamais parce
- * que sa dépendance est artificiellement stable est un bug, pas une
- * optimisation.
+ * ⚠ **Not for a value read during rendering.** This is an event handler:
+ * called during rendering, it would read a version of which React does not guarantee nothing.
+ * For a value, `useMemo`; for an effect dependency, a real
+ * `useCallback` with its dependencies — an effect that never replays because its dependency is artificially stable is a bug, not an optimization.
  */
 export function useStableCallback<A extends unknown[], R>(
   fn: (...args: A) => R
 ): (...args: A) => R {
   const latest = useRef(fn);
-  // Pendant le rendu, et non dans un effet : le handler doit être à jour avant
-  // qu'un enfant mémoïsé ne puisse l'appeler, et un effet arrive après.
+  // During rendering, and not in an effect: the handler must be up to date before
+  // that a memorized child cannot call it, and an effect happens afterwards.
   latest.current = fn;
   return useCallback((...args: A) => latest.current(...args), []);
 }

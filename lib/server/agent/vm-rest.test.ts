@@ -3,22 +3,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { VmTurnReport } from "./vm/protocol";
 
 /**
- * MIN-224 — la fin d'un tour joué dans la microVM.
+ * MIN-224 — the end of a trick played in the microVM.
  *
- * DEUX CHOSES DISPARAÎTRAIENT EN SILENCE si personne ne les gardait, et ce sont
- * exactement celles que ces tests tiennent.
+ * TWO THINGS WOULD SILENTLY DISAPPEAR if no one was guarding them, and they are
+ * exactly the ones these tests hold.
  *
- * 1. **Le métrage compute.** `recordSandboxUsage` facturait le wall-clock du
- *    chunk depuis le `finally` de la fonction. Sans chunk, plus personne ne tient
- *    cette horloge : c'est la boucle qui la remonte. Si on l'oublie, la moitié
- *    compute de la facture cesse d'être imputée — et rien ne le dit, jusqu'à ce
- *    qu'on compare la marge à la facture Vercel.
- * 2. **La sortie de `running`.** Un run que la mise au repos laisse `running` est
- *    une conversation bloquée jusqu'au passage du chien de garde. Ça doit arriver
- *    quel que soit ce qui a échoué à côté — forge en panne, event refusé.
+ * 1. **The compute footage.** `recordSandboxUsage` charged the wall-clock of the
+ * chunk from the `finally` of the function. Without chunk, no one holds
+ * this clock anymore: it's the loop that winds it. If we forget it, the computed half
+ * of the invoice stops being charged — and nothing says it, until
+ * we compare the margin to the Vercel invoice.
+ * 2. **The output of `running`.** A run that idling leaves behind `running` is
+ * a conversation blocked until the watchdog passes. It must happen
+ * whatever failed nearby — forge down, event refused.
  *
- * On ne moque que ce qui sort du process. Les quatre sorties, l'ordre des events
- * et le contenu des stamps sont le vrai chemin.
+ * We only mock what comes out of the process. The four outputs, the order of events
+ * and the contents of the stamps are the true path.
  */
 
 const h = vi.hoisted(() => ({
@@ -28,9 +28,9 @@ const h = vi.hoisted(() => ({
   notifications: [] as string[],
   revoked: [] as string[],
   pendingMessages: false,
-  /** La base REFUSE une écriture qui porte le checkpoint (octet nul dedans). */
+  /** The database REFUSES a write that carries the checkpoint (null byte in it). */
   stampFails: false,
-  /** La cible de clone. `null` = dépôt délié : l'atterrissage PR doit s'abstenir. */
+  /** The clone target. `null` = deposit untied: landing PR must refrain. */
   target: null as Record<string, unknown> | null,
   run: null as Record<string, unknown> | null,
 }));
@@ -55,12 +55,12 @@ vi.mock("./runs", async (importOriginal) => ({
     h.stamped.push(fields);
     return h.run as never;
   }),
-  // La mise au repos passe par lui depuis MIN-286 : il DIT si la base a refusé,
-  // là où `stampRun` avale son erreur (`h.stampFails` joue ce refus).
+  // The shutdown goes through it from MIN-286: it SAYS if the base refused,
+  // where `stampRun` swallows its error (`h.stampFails` plays this refusal).
   stampRunResult: vi.fn(async (_runId: string, fields: Record<string, unknown>) => {
     h.stamped.push(fields);
-    // Le refus PORTE sur le checkpoint — c'est lui qui charrie ce que le modèle
-    // a écrit, donc l'octet nul. La même écriture sans lui passe.
+    // The refusal DOES concern the checkpoint — it is he who carries what the model
+    // wrote, so the null byte. The same writing without him works.
     return h.stampFails && "checkpoint" in fields
       ? { run: null, failed: true }
       : { run: h.run as never, failed: false };
@@ -97,8 +97,8 @@ vi.mock("./quota", () => ({
 
 vi.mock("./pr-landing", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./pr-landing")>()),
-  // L'atterrissage sur la forge est couvert par l'ancienne forme (il est PARTAGÉ,
-  // c'est tout l'intérêt) : ici on vérifie qu'on l'appelle, pas ce qu'il fait.
+  // Landing on the forge is covered by the old form (it is SHARED,
+  // that's the whole point): here we check that we call it, not what it does.
   reopenIfRejectedWorkPushed: vi.fn(async () => {}),
   notePrCommits: vi.fn(async () => {}),
   resolveRunPrefs: vi.fn(async () => ({ locale: "fr" as const, numoDefaultStatus: "triage" })),
@@ -183,10 +183,10 @@ describe("le métrage de la microVM change de main", () => {
   });
 
   /**
-   * MIN-329 — cette durée devient directement des dollars sur le compte du
-   * propriétaire du run, et elle est envoyée par la microVM. Aucune VM ne vit
-   * plus longtemps que son propre timeout : au-delà, ce n'est plus une horloge.
-   */
+ * MIN-329 — this duration directly becomes dollars in the account of the
+ * owner of the run, and it is sent by the microVM. No VM lives
+ * longer than its own timeout: beyond that, it is no longer a clock.
+ */
   it("coupe une durée que la VM ne peut pas avoir vécue", async () => {
     await landVmTurn(run(), report({ sandboxMs: 1_000 * 24 * 60 * 60_000 }));
     expect(h.sandboxUsage[0]).toMatchObject({ durationMs: 24 * 60 * 60_000 });
@@ -199,14 +199,14 @@ describe("le métrage de la microVM change de main", () => {
   });
 
   /**
-   * MIN-360 — AUCUNE VALEUR PORTANT UNE CONSÉQUENCE FINANCIÈRE NE VIENT D'UN
-   * PROCESS LOCAL SANS BORNE SERVEUR.
-   *
-   * Le rapport vient du process qu'on soupçonne. La marque « run local », elle,
-   * est celle de la LIGNE — posée au lancement, jamais relue du rapport : un
-   * harness détourné se dirait cloud, et facturerait des minutes de Mac à son
-   * propriétaire.
-   */
+ * MIN-360 — NO VALUE OF FINANCIAL CONSEQUENCE COMES FROM A
+ * LOCAL PROCESS WITHOUT SERVER TERMINAL.
+ *
+ * The report comes from the process we suspect. The “run local” mark,
+ * is that of the LINE — placed at launch, never reread from the report: a diverted
+ * harness would be called cloud, and would bill its
+ * owner for Mac minutes.
+ */
   it("ne facture RIEN de compute pour un run local, quoi que dise le rapport", async () => {
     h.run = { ...RUN, local_exec: true };
     await landVmTurn(run(), report({ sandboxMs: 90 * 60_000 }));
@@ -224,8 +224,8 @@ describe("billableSandboxMs — la règle, seule", () => {
   });
 
   it("rend zéro pour un run local, y compris sur une durée plausible", () => {
-    // Il n'y a pas eu de microVM : la machine est celle que l'utilisateur a
-    // fournie, et la lui facturer serait le plus discret des vols.
+    // There was no microVM: the machine is the one the user has
+    // provided, and charging him for it would be the most discreet of thefts.
     expect(billableSandboxMs(7 * 60_000, { localExec: true })).toBe(0);
   });
 });
@@ -239,8 +239,8 @@ describe("les quatre sorties, et elles quittent toutes `running`", () => {
       status: "completed",
       outcome: "C'est fait.",
       awaiting_input: false,
-      // Le process de boucle est fini : laisser son id ferait constater au chien
-      // de garde un décès sur un run déjà au repos, à chaque passage du cron.
+      // The loop process is finished: leaving your id would make the dog notice
+      // guard a death on a run already at rest, each time the cron passes.
       loop_command_id: null,
     });
     expect(rest?.checkpoint).toEqual(report().checkpoint);
@@ -248,26 +248,26 @@ describe("les quatre sorties, et elles quittent toutes `running`", () => {
   });
 
   /**
-   * MIN-286 — LA MISE AU REPOS DOIT ABOUTIR MÊME SI LA BASE REFUSE.
-   *
-   * `stampRun` avale son erreur : un refus laissait le run `running` alors que la
-   * VM venait de rendre son rapport et allait mourir — plus personne pour
-   * conclure, un fil figé « en cours », et le chien de garde qui range ça en
-   * « le processus s'est arrêté » plusieurs minutes plus tard. Vécu le
-   * 2026-08-12, sur un octet nul dans le journal d'opencode.
-   */
+ * MIN-286 — THE STOP MUST SUCCEED EVEN IF THE DATABASE REFUSES.
+ *
+ * `stampRun` swallows its error: a refusal left the run `running` while the
+ * VM had just returned its report and was going to die — no one left to
+ * conclude, a thread frozen "in progress", and the watchdog who files it in
+ * "the process has stopped" several minutes later. Lived on
+ * 2026-08-12, on a null byte in the opencode log.
+ */
   it("repose SANS son checkpoint plutôt que de laisser le run en cours", async () => {
     h.stampFails = true;
     await landVmTurn(run(), report());
 
-    // Deux tentatives : la complète, puis la même sans le champ que la base
-    // refusait — le seul qui soit gros et qui vienne du modèle.
+    // Two attempts: the complete one, then the same without the field as the base
+    // refused — the only one who is big and who comes from the model.
     const attempts = h.stamped.filter((f) => f.status === "completed");
     expect(attempts).toHaveLength(2);
     expect(attempts[0]).toHaveProperty("checkpoint");
     expect(attempts[1]).not.toHaveProperty("checkpoint");
-    // …et l'utilisateur l'apprend, plutôt que de reprendre une conversation qui
-    // aurait silencieusement oublié son dernier tour.
+    // …and the user learns it, rather than resuming a conversation which
+    // would have silently forgotten his last trick.
     expect(h.events.some((e) => e.payload?.code === "checkpointRefused")).toBe(true);
   });
 
@@ -280,8 +280,8 @@ describe("les quatre sorties, et elles quittent toutes `running`", () => {
   });
 
   it("un message arrivé pendant la finalisation RE-QUEUE au lieu de reposer", async () => {
-    // Sans ça, le message reste en file sans personne pour le lire : l'utilisateur
-    // écrit pendant le push, et l'agent ne lui répond jamais.
+    // Without this, the message remains in queue with no one to read it: the user
+    // writes during the push, and the agent never responds to it.
     h.pendingMessages = true;
     await landVmTurn(run(), report());
     expect(h.stamped.find((f) => f.status === "queued")).toBeDefined();
@@ -289,10 +289,10 @@ describe("les quatre sorties, et elles quittent toutes `running`", () => {
   });
 
   it("crash de la boucle : on GARDE le checkpoint périodique, on n'écrit rien dessus", async () => {
-    // Un rapport de SECOURS n'en porte pas : `runVmTurn` a levé, son historique
-    // est resté au milieu d'un round (un `tool_call` sans son `tool_result`) et
-    // l'écrire par-dessus la sauvegarde périodique casserait le tour suivant —
-    // en perdant `lastFilesSha` au passage, donc la base du diff de tour.
+    // An EMERGENCY report does not include one: `runVmTurn` has lifted, its history
+    // stayed in the middle of a round (a `tool_call` without its `tool_result`) and
+    // writing it over the periodic save would break the next round —
+    // losing `lastFilesSha` in the process, therefore the basis of the turn diff.
     const crash = report({ status: "error", errorMessage: "boom" });
     delete crash.checkpoint;
     await landVmTurn(run(), crash);
@@ -318,7 +318,7 @@ describe("les quatre sorties, et elles quittent toutes `running`", () => {
 
   it("budget épuisé : la carte qui dit pourquoi, et PAS de re-queue", async () => {
     // Volontairement insensible au steering en file : re-queuer relancerait
-    // aussitôt un tour sans budget. Le message attend la reprise.
+    // immediately a tour without a budget. The message waits for recovery.
     h.pendingMessages = true;
     await landVmTurn(run(), report({ status: "budget_exhausted" }));
     const quota = h.events.find((e) => e.type === "quota_exhausted");
@@ -386,10 +386,10 @@ describe("ce que le fil doit dire", () => {
 });
 
 /**
- * MIN-219, RENDU À CE CHEMIN-CI. Un tour que la boucle a `suspended` arrive ici
- * en `error` avec sa cause dans `errorCode` — et les deux causes ne se règlent
- * pas pareil : un plafond de tour se raconte et se repose, une panne de
- * fournisseur s'ATTEND.
+ * MIN-219, GOT THIS PATH. A turn that the loop has `suspended` arrives here
+ * in `error` with its cause in `errorCode` — and the two causes are not resolved
+ * not the same: a turn ceiling is told and rests, a breakdown of
+ * supplier EXPECTS.
  */
 describe("un tour arrêté se raconte, et une panne de fournisseur se re-queue", () => {
   const stalled = (over: Partial<VmTurnReport> = {}) =>
@@ -404,12 +404,12 @@ describe("un tour arrêté se raconte, et une panne de fournisseur se re-queue",
     await landVmTurn(run(), stalled());
     const requeue = h.stamped.find((f) => f.status === "queued");
     expect(requeue).toBeDefined();
-    // Le premier palier de `PROVIDER_REQUEUE_DELAYS_MS` : 30 s. Sans délai, le
-    // drain reclaime dans la foulée et retombe dans la même panne.
+    // The first level of `PROVIDER_REQUEUE_DELAYS_MS`: 30 s. Without delay, the
+    // drain reclaims immediately and falls back into the same breakdown.
     const delayMs = Date.parse(String(requeue?.not_before)) - Date.now();
     expect(delayMs).toBeGreaterThan(20_000);
     expect(requeue?.checkpoint).toMatchObject({ providerRetries: 1 });
-    // Ni repos, ni notification d'échec : le tour n'est pas fini.
+    // No rest, no failure notification: the round is not over.
     expect(h.stamped.some((f) => f.status === "completed")).toBe(false);
     expect(h.notifications).toEqual([]);
   });
@@ -425,8 +425,8 @@ describe("un tour arrêté se raconte, et une panne de fournisseur se re-queue",
   });
 
   it("retente TOUT DE SUITE quand l'utilisateur a écrit, mais compte quand même", async () => {
-    // Le faire patienter dix minutes avant d'être seulement LU serait pire que le
-    // défaut d'origine. La sortie de secours, elle, reste bornée.
+    // Making him wait ten minutes before only being READ would be worse than
+    // original default. The emergency exit remains limited.
     h.pendingMessages = true;
     await landVmTurn(run(), stalled());
     const requeue = h.stamped.find((f) => f.status === "queued");
@@ -440,8 +440,8 @@ describe("un tour arrêté se raconte, et une panne de fournisseur se re-queue",
     expect(h.stamped.find((f) => f.status === "queued")?.checkpoint).toMatchObject({
       providerRetries: 3,
     });
-    // Et le checkpoint du tour SAIN ne le repose pas : `buildCheckpoint` ne
-    // connaît pas ce champ, donc la prochaine panne repartira de zéro.
+    // And the checkpoint of the SAIN turn does not rest it: `buildCheckpoint` does not
+    // does not know this field, so the next failure will start from scratch.
     h.stamped.length = 0;
     await landVmTurn(run(), report());
     expect(h.stamped.find((f) => f.status === "completed")?.checkpoint).not.toHaveProperty(
@@ -450,15 +450,15 @@ describe("un tour arrêté se raconte, et une panne de fournisseur se re-queue",
   });
 
   it("à bout de patience : le repos honnête, avec le CODE que le fil traduit", async () => {
-    // `MAX_PROVIDER_REQUEUES` vaut 4 : au cinquième, on ne re-queue plus.
+    // `MAX_PROVIDER_REQUEUES` is 4: at the fifth, we no longer queue.
     h.run = { ...RUN, checkpoint: { messages: [], providerRetries: 4 } };
     await landVmTurn(run(), stalled());
     expect(h.stamped.some((f) => f.status === "queued")).toBe(false);
     expect(h.events.find((e) => e.type === "error")?.payload).toMatchObject({
       code: "providerUnavailable",
     });
-    // Le message du fournisseur reste sur la ligne : la seule trace qui dise
-    // LAQUELLE des pannes a fini par arrêter le tour.
+    // The supplier's message remains on the line: the only trace that says
+    //WHICH of the breakdowns ended up stopping the tour.
     expect(h.stamped.find((f) => f.status === "completed")).toMatchObject({
       error_message: "429 Too Many Requests",
     });
@@ -466,8 +466,8 @@ describe("un tour arrêté se raconte, et une panne de fournisseur se re-queue",
   });
 
   it("le plafond du tour se raconte par un CODE, pas par du silence", async () => {
-    // Rien dans `components/agent/` ne lit `error_message` : sans event, la fin
-    // de tour était MUETTE dans le fil.
+    // Nothing in `components/agent/` reads `error_message`: without event, the end
+    // of turn was MUTE in the thread.
     await landVmTurn(run(), report({ status: "error", errorCode: "turnTooLong" }));
     expect(h.events.find((e) => e.type === "error")?.payload).toMatchObject({
       code: "turnTooLong",
@@ -502,8 +502,8 @@ describe("la branche vient du RAPPORT, pas d'une reconstruction", () => {
 
 describe("la dépense et la clé", () => {
   it("prend le PLUS GRAND du cumul et du ledger — une dépense ne recule pas", async () => {
-    // Les deux sont des MINORANTS : la colonne rate ce qu'un tour mort n'a pas
-    // stampé, le ledger rate une insertion best-effort perdue.
+    // Both are MINORANTS: the column misses what a dead turn does not
+    // stamped, the ledger misses a lost best-effort insertion.
     await landVmTurn(run(), report({ costUsd: 0.1 }));
     expect(h.stamped.find((f) => f.status === "completed")?.cost_usd).toBe(0.5);
   });

@@ -4,39 +4,39 @@ import { OTPInput, REGEXP_ONLY_DIGITS, type SlotProps } from "input-otp";
 import { cn } from "mangue-ui";
 
 /**
- * Saisie d'un code à six chiffres — deux groupes de trois, séparés d'un tiret
- * (MIN-132). Utilisé par l'écran de challenge et par l'enrôlement.
+ * Entering a six-digit code — two groups of three, separated by a hyphen
+ * (MIN-132). Used by the challenge screen and by enlistment.
  *
- * ## Pourquoi une lib, et pas six `<input>`
+ * ## Why one lib, and not six `<input>`
  *
- * Six champs séparés cassent exactement ce qu'on veut ici : le **remplissage
- * automatique**. Safari, l'app Mots de passe d'Apple et les gestionnaires
- * tiers ne proposent leur code que sur UN champ portant
- * `autocomplete="one-time-code"` ; six champs à un caractère ne ressemblent à
- * rien qu'ils sachent remplir, et le collage manuel doit alors être réimplémenté
- * à la main (répartition des caractères, focus, effacement arrière).
+ * Six separate fields break exactly what we want here: the **filling
+ * automatic**. Safari, Apple's Passwords app and managers
+ * third parties only offer their code on ONE field relating to
+ * `autocomplete="one-time-code"` ; six one-character fields don't look like
+ * nothing they know how to fill in, and manual pasting then has to be reimplemented
+ * by hand (character distribution, focus, backspace).
  *
- * `input-otp` résout ça de la seule façon qui marche : il n'y a **qu'un vrai
- * `<input>`**, transparent, superposé aux cases. Le gestionnaire de mots de
- * passe voit un champ unique de six caractères, propose son code et le remplit ;
- * le collage, les flèches, la sélection et le retour arrière sont ceux du
- * navigateur. Les cases ne sont que du dessin.
+ * `input-otp` solves this the only way that works: there is **only one real
+ * `<input>`**, transparent, superimposed on the boxes. The word manager
+ * pass sees a unique six-character field, offers its code and fills it;
+ * the paste, arrows, selection and backspace are those of the
+ * browser. The boxes are just drawing.
  *
- * `pushPasswordManagerStrategy: "increase-width"` (le défaut de la lib) écarte
- * légèrement la zone quand une pastille de gestionnaire de mots de passe est
- * détectée, pour qu'elle ne recouvre pas le dernier chiffre.
+ * `pushPasswordManagerStrategy: "increase-width"` (the default of the lib) excludes
+ * slightly the area when a password manager pad is
+ * detected, so that it does not overlap the last digit.
  */
 
-/** Une case. Purement décorative : le vrai champ est transparent, au-dessus. */
+/** A box. Purely decorative: the real field is transparent, above. */
 function Slot({ char, isActive }: SlotProps) {
   return (
     <div
       className={cn(
         "flex h-11 w-10 items-center justify-center rounded-md border border-input bg-card",
         "font-mono text-base tabular-nums transition-colors",
-        // Pas de faux curseur clignotant : il demanderait un keyframe global
-        // pour ce seul composant, alors que l'anneau dit déjà où on en est —
-        // et c'est l'indication de focus des autres champs de l'app.
+        // No fake blinking cursor: it would require a global keyframe
+        // for this component alone, while the ring already says where we are —
+        // and it is the focus indication of the other fields of the app.
         isActive && "z-10 border-ring ring-2 ring-ring/40"
       )}
     >
@@ -72,13 +72,13 @@ export function OtpInput({
       disabled={disabled}
       autoFocus={autoFocus}
       aria-label={ariaLabel}
-      // Le clavier numérique sur mobile, et rien d'autre que des chiffres —
-      // y compris au collage, où la lib filtre sur ce motif.
+      // The numeric keypad on mobile, and nothing but numbers —
+      // including when pasting, where the lib filters on this pattern.
       inputMode="numeric"
       pattern={REGEXP_ONLY_DIGITS}
-      // Explicite bien que ce soit le défaut de la lib : c'est CE mot-clé que
-      // Safari et les gestionnaires de mots de passe cherchent pour proposer le
-      // code généré. Le perdre casserait silencieusement le remplissage.
+      // Explicit although this is the default of the lib: it is THIS keyword that
+      // Safari and password managers seek to offer the
+      // generated code. Losing it would silently break the filling.
       autoComplete="one-time-code"
       containerClassName={cn(
         "flex items-center gap-2",

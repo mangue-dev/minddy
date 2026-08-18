@@ -9,7 +9,7 @@ import {
   type OnboardingStepId,
 } from "@/lib/onboarding";
 
-/** Compte neuf : rien de créé, rien d'acquitté. */
+/** New account: nothing created, nothing paid. */
 const FRESH = {
   meta: null,
   projectCount: 0,
@@ -18,8 +18,8 @@ const FRESH = {
   cyclesEnabled: false,
 };
 
-/** Compte neuf déjà entré en onboarding (la marque est posée au 1er affichage) —
-    l'état dans lequel se déroulent les étapes 2 à 4. */
+/** New account already entered into onboarding (the mark is placed on the 1st display) —
+ the state in which steps 2 to 4 take place. */
 const STARTED = { [ONBOARDING_STARTED_META_KEY]: true };
 
 const completedIds = (state: { steps: { id: OnboardingStepId; completed: boolean }[] }) =>
@@ -35,7 +35,7 @@ describe("resolveOnboardingState", () => {
     expect(state.allComplete).toBe(false);
     expect(state.eligible).toBe(true);
     expect(state.visible).toBe(true);
-    // Premier affichage : l'appelant doit graver l'entrée en onboarding.
+    // First display: the caller must burn the entry in onboarding.
     expect(state.needsStartStamp).toBe(true);
   });
 
@@ -53,8 +53,8 @@ describe("resolveOnboardingState", () => {
   });
 
   it("ticks the tickets step as soon as a ticket exists, however it got there", () => {
-    // Créé à la main ou importé : la donnée ne fait pas la différence, et cette
-    // étape n'a pas à la faire non plus.
+    // Created by hand or imported: the data does not make the difference, and this
+    // step doesn't have to do it either.
     const state = resolveOnboardingState({
       ...FRESH,
       meta: STARTED,
@@ -64,8 +64,8 @@ describe("resolveOnboardingState", () => {
     expect(completedIds(state)).toEqual(["project", "tickets"]);
     expect(state.currentStepId).toBe("mcp");
     expect(state.currentStepNumber).toBe(3);
-    // Le nerf de la marque d'entrée : le compte n'est plus vierge, l'onboarding
-    // en cours doit quand même continuer.
+    // The nerve of the entry mark: the account is no longer blank, onboarding
+    // in progress must still continue.
     expect(state.visible).toBe(true);
   });
 
@@ -99,8 +99,8 @@ describe("resolveOnboardingState", () => {
   });
 
   it("ticks the key step from the real signal, not an acknowledgement", () => {
-    // Une clé BYOK enregistrée franchit l'étape sans rien acquitter — c'est
-    // exactement ce que l'étape demandait (MIN-149).
+    // A registered BYOK key passes the step without paying anything — this is
+    // exactly what the step asked for (MIN-149).
     const state = resolveOnboardingState({
       ...FRESH,
       meta: { ...STARTED, [ONBOARDING_STEPS_META_KEY]: ["mcp"] },
@@ -127,7 +127,7 @@ describe("resolveOnboardingState", () => {
   it("ticks the cycles step when cycles are enabled, with no acknowledgement", () => {
     const state = resolveOnboardingState({ ...FRESH, cyclesEnabled: true });
     expect(completedIds(state)).toEqual(["cycles"]);
-    // Une étape franchie plus loin ne saute pas les précédentes.
+    // A step taken further does not skip the previous ones.
     expect(state.currentStepId).toBe("project");
   });
 
@@ -146,12 +146,12 @@ describe("resolveOnboardingState", () => {
   });
 
   it("does not reopen the onboarding of an account that finished it in four or five steps", () => {
-    // LE test de non-régression des refontes d'étapes. Ces comptes-là ont
-    // acquitté `mcp` du temps où les étapes s'appelaient autrement : leur home
-    // ne doit pas se faire reconfisquer par un découpage changé après coup.
-    // Depuis MIN-149 il couvre aussi `key`, ajoutée APRÈS eux et qu'ils n'ont
-    // évidemment jamais acquittée : sans exemption, une étape neuve rendrait
-    // leur onboarding incomplet et leur reprendrait leur home.
+    // THE non-regression test of step redesigns. These accounts have
+    // paid `mcp` from the time when the stages were called something else: their home
+    // must not be reconfiscated by a division changed after the fact.
+    // Since MIN-149 it also covers `key`, added AFTER them and they don't have
+    // obviously never paid: without exemption, a new step would make
+    // their incomplete onboarding and would take back their home.
     for (const acknowledged of [["mcp"], ["import", "mcp"], ["issue", "import", "mcp"]]) {
       const state = resolveOnboardingState({
         meta: { ...STARTED, [ONBOARDING_STEPS_META_KEY]: acknowledged },
@@ -167,10 +167,10 @@ describe("resolveOnboardingState", () => {
   });
 
   it("keeps a mid-flight account past the merged tickets step", () => {
-    // Le cas serré : un compte qui avait SAUTÉ l'ancienne étape import, sans
-    // jamais créer de ticket, et qui n'a pas encore acquitté `mcp`. La marque
-    // `import` est le seul témoin qu'il est déjà passé par là — sans elle il
-    // repartirait en arrière, sur une étape qu'il a explicitement passée.
+    // The tight case: an account that had SKIPPPED the old import step, without
+    // never create a ticket, and who has not yet paid `mcp`. The brand
+    // `import` is the only witness that he has already been there — without her he
+    // would go back, to a stage that he has explicitly passed.
     const state = resolveOnboardingState({
       meta: { ...STARTED, [ONBOARDING_STEPS_META_KEY]: ["import"] },
       projectCount: 1,
@@ -189,14 +189,14 @@ describe("resolveOnboardingState", () => {
     });
     expect(state.dismissed).toBe(true);
     expect(state.visible).toBe(false);
-    // L'état reste calculé — la carte est cachée, pas effacée.
+    // The state remains calculated — the card is hidden, not erased.
     expect(state.currentStepId).toBe("project");
   });
 
   it("never shows it to an account that already has projects and tickets", () => {
-    // Le cas qui compte : un compte installé qui n'a JAMAIS vu l'onboarding.
-    // Deux étapes lui manquent (MCP jamais acquitté, cycles éteints), mais son
-    // home ne doit pas se faire confisquer pour autant.
+    // The case that counts: an installed account that has NEVER seen onboarding.
+    // Two steps are missing (MCP never acknowledged, cycles turned off), but its
+    // home should not be confiscated however.
     const state = resolveOnboardingState({
       meta: null,
       projectCount: 4,
@@ -212,10 +212,10 @@ describe("resolveOnboardingState", () => {
   });
 
   it("leaves alone an unstamped account that already made a project", () => {
-    // Un compte neuf est marqué dès le premier affichage de la carte, donc il
-    // garde son onboarding après avoir créé son projet (test plus haut). Un
-    // compte porteur d'un projet SANS la marque n'est donc pas un compte en
-    // cours d'onboarding : c'est un ancien compte, on ne lui prend pas sa home.
+    // A new account is marked from the first display of the card, so it
+    // keep your onboarding after creating your project (test above). A
+    // account carrying a project WITHOUT the brand is therefore not an account in
+    // onboarding course: it's an old account, we won't take his home.
     const state = resolveOnboardingState({ ...FRESH, projectCount: 1 });
     expect(state.eligible).toBe(false);
     expect(state.visible).toBe(false);
@@ -251,7 +251,7 @@ describe("resolveOnboardingState", () => {
       expect(state.dismissed).toBe(false);
       expect(state.visible).toBe(true);
     }
-    // Seul l'id connu du tableau bruité est retenu.
+    // Only the known id of the noisy table is retained.
     expect([
       ...readAcknowledgedSteps({
         [ONBOARDING_STEPS_META_KEY]: ["nope", 42, null, "mcp"],
@@ -269,8 +269,8 @@ describe("withAcknowledgedStep", () => {
     expect(
       withAcknowledgedStep({ [ONBOARDING_STEPS_META_KEY]: ["mcp"] }, "mcp")
     ).toEqual(["mcp"]);
-    // L'ordre canonique, pas l'ordre d'arrivée : tickets précède mcp, et `key`
-    // s'intercale entre mcp et cycles.
+    // The canonical order, not the order of arrival: tickets precedes mcp, and `key`
+    // is inserted between mcp and cycles.
     expect(
       withAcknowledgedStep({ [ONBOARDING_STEPS_META_KEY]: ["mcp"] }, "tickets")
     ).toEqual(["tickets", "mcp"]);

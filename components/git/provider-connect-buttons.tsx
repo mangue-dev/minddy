@@ -24,9 +24,9 @@ import {
 } from "@/lib/repo-providers";
 
 /**
- * Surface de connexion des dépôts (MIN-47), portée d'AutoKap : une action
- * « Connecter {provider} » par provider ACTIF. Lit le catalogue depuis
- * `@/lib/repo-providers` — un nouveau provider apparaît automatiquement.
+ * Depot connection surface (MIN-47), AutoKap scope: an action
+ * “Connect {provider}” by provider ACTIF. Read the catalog since
+ * `@/lib/repo-providers` — a new provider appears automatically.
  */
 const ICONS: Record<RepoProviderIconName, LucideIcon> = {
   github: Github,
@@ -35,15 +35,15 @@ const ICONS: Record<RepoProviderIconName, LucideIcon> = {
 
 interface ProviderConnectButtonsProps {
   onConnect: (provider: RepoProviderId) => void;
-  /** Le provider en cours de connexion (spinner + verrouille les autres). */
+  /** The provider currently connecting (spinner + locks the others). */
   connecting?: RepoProviderId | null;
-  /** Restreint à ces providers (ceux configurés côté serveur). */
+  /** Restricted to these providers (those configured on the server side). */
   only?: RepoProviderId[];
   /**
-   * Côte à côte, chacun à SA largeur, au lieu d'une pile pleine largeur. La
-   * pile est la bonne forme dans une colonne de wizard, où le bouton est la
-   * seule chose à viser ; sous un état vide de réglages, deux barres pleine
-   * largeur pèsent plus lourd que la section qui les contient.
+   * Side by side, each at HIS width, instead of a full width stack. There
+   * stack is the correct shape in a wizard column, where the button is the
+   * only thing to aim for; under an empty state of settings, two full bars
+   * width weigh more than the section that contains them.
    */
   inline?: boolean;
   disabled?: boolean;
@@ -98,9 +98,9 @@ export function ProviderConnectButtons({
             >
               {t("gitConnectWith", { provider: provider.displayName })}
             </span>
-            {/* La flèche ne sert qu'à la pile : elle tire l'œil vers le bord
-                droit d'un bouton qui occupe toute la largeur. Un bouton à sa
-                juste largeur n'a pas de bord lointain. */}
+            {/* The arrow is only used for the stack: it pulls the eye towards the edge
+ right of a button which occupies the entire width. A button at just its
+ width has no far edge. */}
             {!isConnecting && !inline && (
               <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
             )}
@@ -112,13 +112,13 @@ export function ProviderConnectButtons({
 }
 
 /**
- * Le MÊME geste, replié en un seul bouton « Connecter ». Deux boutons de forge
- * côte à côte tiennent dans une colonne de wizard ; en bout de titre d'une carte
- * de réglages, ils pèsent plus lourd que la section. Le menu dit une fois qu'on
- * connecte, et ne déplie les marques qu'au moment de choisir.
+ * The SAME gesture, folded into a single “Connect” button. Two forge buttons
+ * side by side fit in a wizard column; at the end of a card title
+ * adjustments, they weigh more than the section. The menu says once you
+ * connects, and only unfolds the brands when choosing.
  *
- * Une seule forge déployée → pas de menu : un bouton qui n'ouvre qu'un choix
- * fait payer un clic pour rien.
+ * A single forge deployed → no menu: a button that only opens one choice
+ * charges a click for nothing.
  */
 export function ProviderConnectMenu({
   onConnect,

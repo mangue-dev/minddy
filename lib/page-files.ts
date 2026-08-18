@@ -1,52 +1,52 @@
 /**
- * Les FICHIERS d'une page (MIN-280) — l'adresse, et rien d'autre.
+ * One-page FILES (MIN-280) — the address, and nothing else.
  *
- * Ce module est la seule chose que partagent les quatre surfaces du sujet : les
- * deux blocs (image et fichier), l'éditeur qui téléverse, la route qui sert les
- * octets, et le ménage qui compare les corps aux lignes de `page_files`. Il ne
- * parle ni à la base ni au storage — il ne connaît qu'une FORME d'URL et sait la
- * lire dans les deux sens.
+ * This module is the only thing that the four surfaces of the subject share: the
+ * two blocks (image and file), the publisher who uploads, the route which serves the
+ * bytes, and the housekeeping which compares the bodies to the lines of `page_files`. He doesn't
+ * speaks neither to the base nor to the storage — it only knows one FORM of URL and knows the
+ * read both ways.
  *
- * ## Pourquoi une URL, et pas le chemin de storage
+ * ## Why a URL, and not the storage path
  *
- * Le nœud d'un bloc porte `src`, et ce `src` est l'adresse d'une ROUTE de
- * l'application (`/api/projects/{projet}/pages/files/{fichier}`) :
+ * The node of a block carries `src`, and this `src` is the address of a ROUTE of
+ * the application (`/api/projects/{project}/pages/files/{file}`):
  *
- *  - ce n'est pas une URL signée : celles-là expirent en dix minutes, et un
- *    document est relu des mois plus tard ;
- *  - ce n'est pas un chemin de bucket : recopié dans mille documents, il ne se
- *    déplace plus jamais, et il dit à qui lit le corps où sont rangés les octets ;
- *  - c'est une INDIRECTION par identifiant, donc exactement ce que le bloc
- *    sous-page fait avec `pageId` — la ligne `page_files` reste la vérité, et la
- *    route va chercher le chemin du moment.
+ * - this is not a signed URL: those expire in ten minutes, and a
+ * document is reread months later;
+ * - it is not a bucket path: copied in a thousand documents, it is not
+ * never moves again, and it tells whoever reads the body where the bytes are stored;
+ * - it's an INDIRECTION by identifier, so exactly what the block
+ * subpage made with `pageId` — the line `page_files` remains the truth, and the
+ * road will seek the path of the moment.
  *
- * Et c'est aussi ce qui rend la projection markdown possible sans base de
- * données : `![légende](/api/…)` s'écrit et se relit de tête, alors qu'un id nu
- * aurait demandé à la projection — synchrone, montée dans une fonction serveur —
- * d'aller résoudre une URL par fichier.
+ * And this is also what makes markdown projection possible without a base of
+ * data: `![caption](/api/…)` is written and reread in the head, while a bare id
+ * would have asked the projection — synchronous, mounted in a server function —
+ * to resolve one URL per file.
  *
- * L'id, lui, se REDÉDUIT de l'URL ({@link pageFileIdFromSrc}). Le porter en
- * second attribut ferait deux vérités pour une seule chose, et c'est toujours la
- * copie qui se périme.
+ * The id is REDUCED from the URL ({@link pageFileIdFromSrc}). Wear it in
+ * second attribute would make two truths for a single thing, and it is always the
+ * copy that expires.
  */
 
 import { normalizePageUrl } from "@/lib/page-content-schema";
 
-/** Aligné sur les ressources de ticket, en plus serré : un corps de page en
-    porte plusieurs, et 10 Mo est déjà une capture d'écran très généreuse. */
+/** Aligned with ticket resources, but tighter: a page body in
+    carries several, and 10 MB is already a very generous screenshot. */
 export const MAX_PAGE_FILE_BYTES = 10 * 1024 * 1024;
 
-/** Ce que la limite affiche à l'utilisateur, en mégaoctets. */
+/** What the limit displays to the user, in megabytes. */
 export const MAX_PAGE_FILE_MB = 10;
 
-/** `projects/{projet}/pages/{page}/{fichier}/{nom}` — la famille de chemins des
-    fichiers de page, DANS le préfixe des ressources de projet.
+/** `projects/{project}/pages/{page}/{file}/{name}` — the family of paths of
+    page files, IN the project resources prefix.
 
-    Un préfixe `pages/…` à la racine du bucket aurait voulu dire une branche de
-    plus dans la politique d'insertion du storage ET une famille de plus dans la
-    porte de lecture (`/api/attachments/file`), pour la même règle d'accès mot
-    pour mot : « membre du projet ». Ranger sous `projects/{id}/` la donne d'un
-    coup — un fichier de page est un fichier du projet, comme les autres. */
+    A `pages/…` prefix at the root of the bucket would have meant a branch of
+    more in the storage insertion policy AND one more family in the
+    read gate (`/api/attachments/file`), for the same word access rule
+    for word: “project member”. Store under `projects/{id}/` the data of a
+    coup — a page file is a project file, like the others. */
 export function pageFileStoragePrefix(projectId: string, pageId: string): string {
   return `projects/${projectId}/pages/${pageId}`;
 }
@@ -60,22 +60,22 @@ const PAGE_FILE_PATH_RE =
   /^\/api\/projects\/([0-9a-fA-F-]{36})\/pages\/files\/([0-9a-fA-F-]{36})$/;
 
 /**
- * Le couple (projet, fichier) derrière un `src`, quel que soit son ORIGINE.
+ * The couple (project, file) behind a `src`, whatever its ORIGIN.
  *
- * L'origine est là où ce module a déjà perdu une image en production. Le
- * document range une adresse RELATIVE (`/api/…`), mais copier-coller un bloc
- * image ne recopie pas le document : le presse-papiers passe par du HTML, et
- * Chrome y ABSOLUTISE les `src` — la même image revient collée en
- * `http://localhost:3000/api/…`, ce qui marche encore sur le poste, et ne
- * charge plus rien nulle part ailleurs. Le bloc fichier, lui, range son adresse
- * dans un `data-src` que le navigateur ne touche pas : il n'a jamais eu le
- * problème, et c'est ce qui a désigné le coupable.
+ * The origin is where this module has already lost an image in production. THE
+ * document stores a RELATIVE address (`/api/…`), but copy-paste a block
+ * image does not copy the document: the clipboard goes through HTML, and
+ * Chrome ABSOLUTIZES the `src` — the same image comes back pasted in
+ * `http://localhost:3000/api/…`, which still works on the station, and does not
+ * charge nothing else anywhere else. The file block stores its address
+ * in a `data-src` that the browser does not touch: it has never had the
+ * problem, and that's what pointed to the culprit.
  *
- * On lit donc le CHEMIN, pas la chaîne entière. La contrepartie assumée : une
- * adresse de cette forme sur un domaine tiers est comptée comme nôtre. Elle ne
- * se produit pas, et l'asymétrie est du bon côté partout où ce test sert — le
- * balayage des orphelins garde un fichier de trop plutôt que d'en effacer un
- * que le document montre encore (lib/server/page-files.ts).
+ * So we read the PATH, not the entire string. The compensation assumed:
+ * address of this form on a third party domain is counted as ours. She doesn't
+ * does not occur, and the asymmetry is on the right side wherever this test is used — the
+ * orphan scanning keeps one file too many rather than deleting one
+ * which the document still shows (lib/server/page-files.ts).
  */
 function matchPageFileSrc(src: unknown): RegExpExecArray | null {
   if (typeof src !== "string") return null;
@@ -92,35 +92,35 @@ function matchPageFileSrc(src: unknown): RegExpExecArray | null {
   return PAGE_FILE_PATH_RE.exec(path);
 }
 
-/** L'id de la ligne `page_files` derrière un `src`, ou `null` quand le `src`
-    pointe ailleurs — une image externe collée depuis le web en est une, et elle
-    est parfaitement légitime : elle n'a simplement rien à nous coûter. */
+/** The id of the line `page_files` behind a `src`, or `null` when the `src`
+    points elsewhere — an external image pasted from the web is one, and it
+    is perfectly legitimate: it simply does not cost us anything. */
 export function pageFileIdFromSrc(src: unknown): string | null {
   return matchPageFileSrc(src)?.[2] ?? null;
 }
 
-/** Le projet nommé par un `src` de fichier de page, ou `null`. */
+/** The project named by a page file `src`, or `null`. */
 export function pageFileProjectFromSrc(src: unknown): string | null {
   return matchPageFileSrc(src)?.[1] ?? null;
 }
 
 /**
- * L'adresse telle qu'on accepte de la RANGER : la forme relative pour nos
- * fichiers, la chaîne d'origine pour tout le reste — et `null` pour ce qu'on
+ * The address as we agree to STORE it: the relative form for our
+ * files, the original string for everything else — and `null` for what we
  * refuse.
  *
- * À appeler à la PORTE — quand une adresse entre dans un document depuis du
- * HTML ou du markdown (blocks/image.ts, blocks/file.ts). Reconnaître une
- * adresse absolue à la lecture répare l'usage ; la normaliser à l'entrée
- * l'empêche d'être écrite, et c'est la moitié qui compte : un `src` absolu
- * rangé dans un corps porte l'origine du poste qui a collé.
+ * To be called at the DOOR — when an address enters a document from
+ * HTML or markdown (blocks/image.ts, blocks/file.ts). Recognize a
+ * absolute address when reading repairs the use; normalize it on entry
+ * prevents it from being written, and that's the half that counts: an absolute `src`
+ * stored in a body bears the origin of the post which stuck.
  *
- * Et depuis MIN-350, la porte TRIE aussi sur le protocole
- * ({@link normalizePageUrl}) : un `javascript:` collé dans le `data-src` d'un
- * bloc fichier finissait dans le `href` d'une vraie ancre, qu'un clic ordinaire
- * suit vraiment (components/pages/blocks/file-view.tsx). Le garde-fou d'écriture
- * (lib/server/pages.ts) refuse déjà de l'enregistrer ; celui-ci l'empêche
- * d'exister dans l'éditeur, avant même la sauvegarde.
+ * And since MIN-350, the TRIE gate also on the protocol
+ * ({@link normalizePageUrl}): a `javascript:` pasted in the `data-src` of a
+ * block file ended in the `href` of a real anchor, than an ordinary click
+ * really follows (components/pages/blocks/file-view.tsx). The writing guardrail
+ * (lib/server/pages.ts) already refuses to save it; this one prevents it
+ * to exist in the editor, even before saving.
  */
 export function normalizePageFileSrc(src: unknown): string | null {
   const safe = normalizePageUrl(src);
@@ -130,23 +130,23 @@ export function normalizePageFileSrc(src: unknown): string | null {
 }
 
 /**
- * L'adresse à laquelle un bloc fichier TÉLÉCHARGE.
+ * The address to which a block file DOWNLOADS.
  *
- * Deux formes de `src` cohabitent, et une seule sait quoi faire d'un paramètre :
+ * Two forms of `src` coexist, and only one knows what to do with a parameter:
  *
- *  - l'adresse d'APPLICATION (celle qui est rangée dans le document) répond par
- *    une redirection signée, et `?download=1` lui dit d'ajouter la disposition
- *    « pièce jointe » ;
- *  - sur une page publiée (MIN-283), le `src` est déjà une URL SIGNÉE du
- *    storage, dont la disposition a été décidée à la signature. Y recoller un
- *    `download` en fait un SECOND paramètre du même nom, et le storage répond
- *    400 (« querystring/download must be string ») : le lecteur reçoit un
- *    message d'erreur là où il attendait son fichier.
+ * - the APPLICATION address (the one stored in the document) responds with
+ * a signed redirect, and `?download=1` tells it to add the layout
+ * " attachment " ;
+ * - on a published page (MIN-283), the `src` is already a SIGNED URL of the
+ * storage, the disposition of which was decided upon signature. Stick it back on
+ * `download` makes it a SECOND parameter of the same name, and storage responds
+ * 400 (“querystring/download must be string”): the reader receives a
+ * error message where he expected his file.
  *
- * D'où la règle, ici et pas dans la vue : c'est une propriété de l'adresse.
+ * Hence the rule, here and not in the view: it is a property of the address.
  *
- * `null` quand l'adresse est refusée (MIN-350) : la vue n'affiche alors pas
- * d'ancre du tout, plutôt qu'une ancre vers un protocole qu'on ne veut pas
+ * `null` when the address is refused (MIN-350): the view then does not display
+ * anchor at all, rather than an anchor towards a protocol that we don't want
  * suivre.
  */
 export function fileDownloadHref(src: string): string | null {
@@ -157,15 +157,15 @@ export function fileDownloadHref(src: string): string | null {
 }
 
 /**
- * Les fichiers CITÉS par un corps de page, lus sur son JSON.
+ * Files CITED by a page body, read on its JSON.
  *
- * Sur le JSON et non sur un document ProseMirror monté : l'appelant est le
- * ménage (lib/server/retention.ts), qui lit des lignes de base dans une fonction
- * serveur et n'a ni DOM ni éditeur à sa disposition. La traversée est aveugle au
- * TYPE de nœud, volontairement — tout attribut `src` qui ressemble à l'adresse
- * d'un fichier de page compte. Un bloc de plus qui en porterait un (une vidéo,
- * une pièce jointe dans un dépliant) est donc couvert d'avance, et le pire cas
- * de cette largeur est de garder un fichier de trop : jamais d'en effacer un.
+ * On the JSON and not on a mounted ProseMirror document: the caller is the
+ * housekeeping (lib/server/retention.ts), which reads baselines into a function
+ * server and has neither DOM nor editor at its disposal. The crossing is blind to
+ * Node TYPE, intentionally — any `src` attribute that resembles the address
+ * of a page file counts. One more block that would carry one (a video,
+ * an attachment in a leaflet) is therefore covered in advance, and the worst case
+ * of this width is to keep one file too many: never to delete one.
  */
 export function pageFileIdsInBody(body: unknown): Set<string> {
   const ids = new Set<string>();
@@ -191,9 +191,9 @@ export function pageFileIdsInBody(body: unknown): Set<string> {
 
 /* ── Ce qu'on affiche d'un fichier ────────────────────────────────────────── */
 
-/** `1,4 Mo` — le poids d'un fichier, en unités que l'œil lit d'un coup.
-    Volontairement sans i18n : un nombre et un symbole d'unité, identiques dans
-    les deux langues à la virgule près, que `Intl` pose déjà correctement. */
+/** `1,4 Mo` — the size of a file, in units that the eye reads at once.
+    Deliberately without i18n: a number and a unit symbol, identical in
+    both languages ​​up to the comma, which `Intl` already sets correctly. */
 export function formatFileSize(bytes: number, locale = "en"): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return "";
   const units = ["B", "kB", "MB", "GB"];
@@ -209,12 +209,12 @@ export function formatFileSize(bytes: number, locale = "en"): string {
   return `${formatted} ${units[unit]}`;
 }
 
-/** Une image, au sens de ce module : ce qui se rend dans un `<img>`. */
+/** An image, in the sense of this module: what goes into a `<img>`. */
 export function isImageMime(mime: string | null | undefined): boolean {
   return typeof mime === "string" && mime.startsWith("image/");
 }
 
-/** Les clés de storage refusent l'exotique ; le nom AFFICHÉ le garde. Miroir
+/** Storage keys refuse the exotic; the DISPLAYED name keeps it. Mirror
     exact du nettoyeur des ressources (lib/use-attachment-uploads.ts). */
 export function sanitizeFileKey(name: string): string {
   const sanitized = name.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "");

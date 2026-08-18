@@ -1,6 +1,6 @@
 "use client";
 
-// One reusable date + time picker for every échéance in the app (issue cards,
+// One reusable date + time picker for every deadline in the app (issue cards,
 // the ticket side panel, and the issue / objective creation dialogs). Wraps the
 // themed <Calendar> in a popover, adds a clean time field and quick actions,
 // and renders one of three triggers via `variant`. Values are ISO strings
@@ -86,18 +86,18 @@ export function DateTimePicker({
   tooltip?: string;
   /** Key badge (e.g. "D") shown next to the tooltip — surfaces the shortcut. */
   shortcutHint?: string;
-  /** Cadence de répétition du ticket (MIN-136). */
+  /** Ticket repetition rate (MIN-136). */
   recurrence?: RecurrenceCadence | null;
   /**
-   * Rendre le champ récurrençable : sans ce rappel, le popover reste le pur
-   * sélecteur d'échéance qu'il a toujours été (c'est le cas de la date cible
-   * d'un objectif). Avec lui, un sélecteur « Une fois | Récurrent » s'ajoute
-   * en tête, et une ligne de cadence sous le calendrier.
+   * Make the field recursible: without this callback, the popover remains pure
+   * deadline selector that it has always been (this is the case of the target date
+   * of a goal). With it, a selector “Once | Recurring » is added
+   * at the top, and a cadence line below the calendar.
    *
-   * Le rappel porte les DEUX champs parce que les deux bougent d'un même
-   * geste : rendre récurrent un ticket sans date lui en pose une, et effacer
-   * l'échéance coupe la récurrence. Deux rappels séparés, ce seraient deux
-   * écritures concurrentes sur la même ligne.
+   * The callback carries BOTH fields because both move at the same time
+   * gesture: make a ticket recurring without a date, give it one, and delete
+   * the deadline cuts the recurrence. Two separate reminders would be two
+   * concurrent writes on the same line.
    */
   onRecurrenceChange?: (next: {
     due_date: string | null;
@@ -122,30 +122,30 @@ export function DateTimePicker({
   const selected = parseDueDate(value);
 
   /**
-   * Rendre la molette au calendrier.
+   * Return the wheel to the calendar.
    *
-   * Radix porte le popover à `<body>`. Ouvert depuis un panneau latéral ou un
-   * dialog — donc depuis un modal — il atterrit HORS du sous-arbre que
-   * react-remove-scroll autorise, et celui-ci annule la molette sur tout le
-   * reste : le calendrier s'affichait, mais ne défilait qu'en attrapant la
-   * barre. Ici on arrête l'événement au niveau du popover, AVANT qu'il ne
-   * remonte jusqu'au `document` où react-remove-scroll écoute ; le navigateur
-   * fait alors défiler normalement.
+   * Radix takes the popover to `<body>`. Opened from a side panel or
+   * dialog — therefore from a modal — it lands OUTSIDE the subtree that
+   * react-remove-scroll allows, and this cancels the scroll all the way
+   * rest: the calendar was displayed, but only scrolled by grabbing the
+   * rod. Here we stop the event at the popover level, BEFORE it
+   * goes back to `document` where react-remove-scroll is listening; the browser
+   * then scrolls normally.
    *
-   * L'autre voie — porter le popover DANS le modal (`container`) — marche pour
-   * le panneau latéral mais pas pour le dialog de création, dont le
-   * `overflow-y: auto` rogne le calendrier. Une seule mécanique pour les deux,
-   * donc, et le popover reste porté à `<body>` où rien ne le coupe.
+   * The other way — carrying the popover INTO the modal (`container`) — works for
+   * the side panel but not for the creation dialog, whose
+   * `overflow-y: auto` trims the calendar. A single mechanism for both,
+   * so, and the popover remains brought to `<body>` where nothing cuts it.
    *
-   * L'écoute est en phase de CAPTURE sur `document` : react-remove-scroll,
-   * lui, écoute la même cible en phase de bulle, et la capture passe avant.
-   * Un écouteur posé sur le nœud du popover ne suffirait pas (vérifié :
-   * l'événement arrivait quand même `defaultPrevented` au document), et
-   * `onWheel` de React encore moins — React délègue ses écouteurs, sans
-   * garantie d'ordre face à un écouteur natif.
+   * Listening is in the CAPTURE phase on `document`: react-remove-scroll,
+   * he listens to the same target in the bubble phase, and capture comes first.
+   * An earphone placed on the popover node would not be enough (verified:
+   * the event still happened `defaultPrevented` to the document), and
+   * `onWheel` of React even less — React delegates its listeners, without
+   * guaranteed order compared to a native earphone.
    *
-   * `overscroll-contain` complète le tableau : sans lui, la molette
-   * continuerait sur ce qu'il y a derrière une fois le calendrier en bout de
+   * `overscroll-contain` completes the picture: without it, the wheel
+   * would continue on what's behind it once the calendar ends
    * course.
    */
   React.useEffect(() => {
@@ -161,13 +161,13 @@ export function DateTimePicker({
       document.removeEventListener("wheel", keepWheel, { capture: true });
   }, [open]);
 
-  // Le mois affiché suit la valeur. C'est le pendant du recalage : sur un ticket
-  // récurrent, cliquer un jour passé pose l'occurrence SUIVANTE, parfois le mois
-  // d'après — sans ça, plus aucun jour ne serait surligné dans le mois affiché
-  // et le clic aurait l'air de n'avoir rien fait. La navigation manuelle passe
-  // par le même état, elle n'entre donc pas en conflit ; `open` dans les
-  // dépendances la remet sur l'échéance à chaque ouverture, comme le faisait
-  // `defaultMonth` quand le calendrier se remontait.
+  // The month displayed follows the value. This is the counterpart of recalibration: on a ticket
+  // recurring, clicking on a past day brings up the NEXT occurrence, sometimes the month
+  // according to — without that, no day would be highlighted in the displayed month
+  // and the click would look like it didn't do anything. Manual navigation passes
+  // by the same state, it therefore does not enter into conflict; `open` in the
+  // dependencies puts it back on the due date each time it is opened, as did
+  // `defaultMonth` when the calendar went back.
   const [month, setMonth] = React.useState<Date>(() => selected ?? new Date());
   React.useEffect(() => {
     const next = parseDueDate(value);
@@ -190,13 +190,13 @@ export function DateTimePicker({
     : null;
   const placeholderText = placeholder ?? t("placeholder");
 
-  /* ── Récurrence (MIN-136) ─────────────────────────────────────────────── */
+  /* ── Recurrence (MIN-136) ─────────────────────── ──────────────────────── */
 
-  // Le mode récurrent n'existe que si l'appelant l'a ouvert. Ailleurs (date
-  // cible d'un objectif), tout ce bloc est inerte.
+  // Recurring mode only exists if the caller has opened it. Elsewhere (date
+  // target of an objective), this entire block is inert.
   const recurrable = !!onRecurrenceChange;
   const isRecurring = recurrable && !!recurrence;
-  /** Cadence proposée quand on bascule en « Récurrent » : la maintenance, ça
+  /** Proposed cadence when switching to “Recurring”: maintenance, that
       se fait par semaine plus souvent qu'autrement. */
   const DEFAULT_CADENCE: RecurrenceCadence = "weekly";
 
@@ -206,16 +206,16 @@ export function DateTimePicker({
       onRecurrenceChange({ due_date: value, recurrence: null });
       return;
     }
-    // Une cadence sans échéance n'existe pas : à défaut de date choisie, la
-    // série démarre aujourd'hui (le calendrier reste là pour la déplacer).
+    // A cadence without a deadline does not exist: in the absence of a chosen date, the
+    // series starts today (the calendar remains there to move it).
     const start = new Date();
     if (!selected) start.setHours(0, 0, 0, 0);
     setCadence(DEFAULT_CADENCE, value ?? start.toISOString());
   };
 
-  /** Poser (ou changer) la cadence recale l'échéance de départ : c'est le geste
-      qui définit l'horaire, donc celui où « lundi dernier » devient « lundi
-      prochain ». */
+  /** Setting (or changing) the cadence resets the starting deadline: this is the gesture
+ which defines the schedule, therefore the one where “last Monday” becomes “next Monday
+”. */
   const setCadence = (cadence: RecurrenceCadence, from: string | null) => {
     onRecurrenceChange?.({
       due_date: startDueDateISO(from, cadence) ?? from,
@@ -223,14 +223,14 @@ export function DateTimePicker({
     });
   };
 
-  /** Ce que CHAQUE cadence donnerait pour l'échéance courante — « tous les
-      lundis », « tous les 3 du mois » : le choix se lit sans avoir à le faire. */
+  /** What EACH cadence would give for the current deadline — “all
+ Mondays”, “every 3rd of the month”: the choice can be read without having to do so. */
   const cadenceLabel = (c: RecurrenceCadence) =>
     recurrenceLabel(c, selected, tRec, format, locale);
 
-  // Les prochaines échéances, surlignées dans le mois affiché : voir où le
-  // ticket va retomber vaut mieux que de le déduire de la cadence. La grille
-  // déborde du mois (jours voisins), d'où la semaine de marge de chaque côté.
+  // The next deadlines, highlighted in the month displayed: see where the
+  // ticket will fall is better than deducting it from the cadence. The grid
+  // overflows from the month (neighboring days), hence the week margin on each side.
   const occurrences = React.useMemo(() => {
     const base = parseDueDate(value);
     if (!isRecurring || !recurrence || !base) return [];
@@ -241,10 +241,10 @@ export function DateTimePicker({
 
   // Preserve the picked wall-clock time; store as ISO.
   //
-  // Sur un ticket récurrent, la date choisie est un DÉBUT et non une date
-  // figée : choisir lundi dernier en hebdomadaire veut dire « tous les lundis »,
-  // donc lundi prochain. Le serveur applique la même règle — la faire ici aussi
-  // évite que la carte affiche une seconde l'échéance passée avant de se recaler.
+  // On a recurring ticket, the date chosen is a START and not a date
+  // fixed: choosing last Monday as weekly means “every Monday”,
+  // so next Monday. The server applies the same rule — do it here too
+  // prevents the card from displaying the past due date for a second before resetting.
   const commit = (d: Date) => {
     const resolved = isRecurring && recurrence ? startDueDate(d, recurrence) : d;
     onChange(resolved.toISOString());
@@ -283,8 +283,8 @@ export function DateTimePicker({
   };
 
   const clear = () => {
-    // Effacer l'échéance d'un ticket récurrent coupe la récurrence : c'est la
-    // date qui se décale, sans elle la série n'a plus de point de départ.
+    // Clearing the due date of a recurring ticket cuts the recurrence: this is the
+    // date which shifts, without it the series no longer has a starting point.
     if (isRecurring && onRecurrenceChange) {
       onRecurrenceChange({ due_date: null, recurrence: null });
     } else {
@@ -297,9 +297,9 @@ export function DateTimePicker({
     ? (e: React.SyntheticEvent) => e.stopPropagation()
     : undefined;
 
-  // Un ticket récurrent porte l'icône de répétition partout où son échéance
-  // s'affiche : c'est ce qui distingue « le 12 août » de « tous les mois, le
-  // 12 août » sans allonger la puce. La cadence, elle, se lit au survol.
+  // A recurring ticket has the repeat icon wherever its due date
+  // is displayed: this is what distinguishes “August 12” from “every month,
+  // August 12” without extending the chip. The cadence can be read on hover.
   const TriggerIcon = isRecurring ? Repeat : CalendarDays;
 
   let trigger: React.ReactNode;
@@ -348,11 +348,11 @@ export function DateTimePicker({
   // A tooltip (with an optional shortcut badge) wraps triggered variants only —
   // the "anchored" variant has no visible trigger to hang a tooltip on.
   const showTooltip = tooltip && variant !== "anchored";
-  // Sur un ticket récurrent, le survol dit la cadence — la seule chose que ni
-  // la puce ni l'icône ne montrent.
-  // La date de l'info-bulle est SANS heure quand le ticket est récurrent : la
-  // cadence la porte déjà (« tous les lundis à 09:00 »), la répéter deux fois
-  // dans la même phrase ne dit rien de plus.
+  // On a recurring ticket, hovering says cadence — the only thing neither
+  // neither the bullet nor the icon show.
+  // The tooltip date is WITHOUT time when the ticket is recurring: the
+  // pace the door already (“every Monday at 09:00”), repeat it twice
+  // in the same sentence says nothing more.
   const tooltipText =
     isRecurring && recurrence && selected
       ? tRec("chip", {
@@ -375,40 +375,39 @@ export function DateTimePicker({
           />
         </PopoverAnchor>
       ) : (
-        // Le `TooltipTrigger` est là même sans info-bulle (MIN-313) : c'est
-        // l'ouverture qui varie, plus la forme de l'arbre. La variante
-        // « anchored » reste à part — elle n'a pas de déclencheur du tout, c'est
-        // une autre structure et pas une bascule d'exécution.
+        // The `TooltipTrigger` is there even without a tooltip (MIN-313): it is
+        // the opening which varies, the more the shape of the tree. The variant
+        // “anchored” remains separate — it has no trigger at all, it’s
+        // another structure and not an execution switch.
         <PopoverTrigger asChild>
           <TooltipTrigger asChild>{trigger}</TooltipTrigger>
         </PopoverTrigger>
       )}
       <PopoverContent
         align={variant === "field" || variant === "anchored" ? "start" : "end"}
-        // Le contenu est haut (calendrier + heure, et la cadence en plus sur un
-        // ticket récurrent) : sans plafond, ouvert depuis le bas d'un panneau il
-        // débordait par le haut de la fenêtre, mois et onglets coupés. Radix
-        // publie la hauteur disponible ; on s'y tient et on fait défiler.
+        // The content is high (calendar + time, and the cadence in addition on a
+        // recurring ticket): without ceiling, open from the bottom of a panel it
+        // was overflowing the top of the window, months and tabs cut. Radix
+        // publishes the available height; we stick to it and scroll.
         collisionPadding={8}
-        // Repère de l'écouteur de molette ci-dessus — il reconnaît le popover
-        // à cet attribut plutôt qu'à une ref, qui ne traverse pas la façade.
+        // Wheel listener mark above — it recognizes the popover
+        // to this attribute rather than to a ref, which does not cross the facade.
         data-datetime-picker=""
         className="max-h-(--radix-popover-content-available-height) w-auto overflow-y-auto overscroll-contain p-3"
         onClick={stop}
         onPointerDown={stop}
-        // Variante ancrée : elle s'ouvre sur une action (raccourci D, entrée du
-        // menu clic droit), pas sur un trigger. Ouverte depuis le menu, celui-ci
-        // se démonte juste après et le focus retombe sur le document : Radix y
-        // lit un « focus parti dehors » et referme le calendrier avant même
-        // qu'on ait vu s'afficher. Le clic dehors et Échap le ferment toujours —
-        // c'est bien le seul chemin qu'on neutralise ici.
+        // Anchored variant: it opens with an action (shortcut D, entry of
+        // right-click menu), not on a trigger. Opened from the menu, this one
+        // disassembles just after and the focus falls back on the document: Radix y
+        // reads a “focus gone outside” and closes the calendar even before
+        // that we saw displayed. Click out and Escape always close it —
+        // This is the only path that is neutralized here.
         onFocusOutside={
           variant === "anchored" ? (e) => e.preventDefault() : undefined
         }
       >
-        {/* La récurrence se décide AVANT la date : « récurrent, tous les mois »
-            puis « à partir de quel jour ». C'est aussi ce qui reste visible en
-            haut quand la fenêtre est trop courte et que le popover défile. */}
+        {/* The recurrence is decided BEFORE the date: “recurring, every month”
+ then “from which day”. This is also what remains visible at the top when the window is too short and the popover scrolls. */}
         {recurrable && (
           <div className="flex flex-col gap-2.5 pb-3">
             <SegmentedControl
@@ -507,9 +506,9 @@ export function DateTimePicker({
     </Popover>
   );
 
-  // Rendu inconditionnel, ouverture pilotée — même motif que `SearchMenu`, même
-  // raison (MIN-313) : une enveloppe conditionnelle change le type de la racine,
-  // donc remplace le nœud DOM et perd le focus qu'il portait.
+  // Unconditional rendering, controlled opening — same reason as `SearchMenu`, same
+  // reason (MIN-313): a conditional envelope changes the type of the root,
+  // so replaces the DOM node and loses the focus it carried.
   return (
     <Tooltip open={showTooltip ? undefined : false}>
       {popover}

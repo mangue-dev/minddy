@@ -154,8 +154,8 @@ export function useIssueFieldShortcuts(
     setMenuState({ field, position: posRef.current });
   }, enabled);
 
-  // Le survol ne s'enregistre plus nulle part : ces deux handlers ne servent
-  // qu'à retenir OÙ ancrer le picker (le dernier point du curseur sur la zone).
+  // The hover is no longer recorded anywhere: these two handlers are no longer useful
+  // just remember WHERE to anchor the picker (the last point of the cursor on the area).
   const track = (e: React.MouseEvent) => {
     posRef.current = { x: e.clientX, y: e.clientY };
   };
@@ -169,10 +169,10 @@ export function useIssueFieldShortcuts(
   return {
     containerProps,
     menuState,
-    // Ouvrir un picker SANS passer par sa touche : le menu clic droit propose
-    // les champs que la carte n'affiche pas (objectif, échéance) et les ouvre
-    // au point du clic — l'entrée de menu et le raccourci font alors la même
-    // chose, par le même chemin.
+    // Open a picker WITHOUT using its key: the right-click menu offers
+    // the fields that the card does not display (objective, deadline) and opens them
+    // at the point of click — the menu entry and shortcut then do the same
+    // thing, by the same path.
     openField: React.useCallback(
       (field: ShortcutField, position: { x: number; y: number }) =>
         setMenuState({ field, position }),
@@ -209,8 +209,8 @@ export function IssueShortcutMenu({
   const tField = useTranslations("Field");
   const tCommon = useTranslations("Common");
   const tIssue = useTranslations("IssueUI");
-  // Recherche tenue ici (et pas par cmdk) : les lignes « Ajouter… » en font le
-  // nom de ce qu'elles créent.
+  // Search held here (and not by cmdk): the “Add…” lines make it
+  // name of what they create.
   const [query, setQuery] = React.useState("");
   const categoryCreate = useCategoryCreateOption({
     projectId: issue.project_id,
@@ -221,7 +221,7 @@ export function IssueShortcutMenu({
     projectId: issue.project_id,
     onCreated: (objective) => onUpdate({ objective_id: objective.id }),
   });
-  // Chaque ouverture repart d'une recherche vide (le menu reste monté entre deux).
+  // Each opening starts with an empty search (the menu remains mounted between two).
   React.useEffect(() => {
     if (!state) setQuery("");
   }, [state]);
@@ -236,9 +236,9 @@ export function IssueShortcutMenu({
   };
 
   // Due date opens the full calendar (not a cmdk list) at the pointer.
-  // `stopPropagation` : le calendrier est portalisé mais rendu, dans l'arbre
-  // React, à l'intérieur de la carte cliquable — sans lui, choisir un jour
-  // ouvrirait le ticket par-dessus (même précaution que `CommandAnchor`).
+  // `stopPropagation`: the calendar is portalized but rendered in the tree
+  // React, inside the clickable map — without it, choose a day
+  // would open the ticket on top (same precaution as `CommandAnchor`).
   if (field === "dueDate") {
     return (
       <DateTimePicker
@@ -392,8 +392,8 @@ export function IssueShortcutMenu({
     }
   }
 
-  // L'ajout rapide, sur les deux champs qui se créent depuis leur menu — le
-  // même geste que dans les pickers cliquables, ici au raccourci L / O.
+  // Quick addition, on the two fields that are created from their menu — the
+  // same gesture as in the clickable pickers, here at the L/O shortcut.
   const create =
     field === "category"
       ? categoryCreate

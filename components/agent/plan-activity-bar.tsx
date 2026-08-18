@@ -7,37 +7,37 @@ import { CheckCircle2, ChevronRight, Circle, CircleSlash, ListChecks } from "luc
 import type { PlanStep } from "@/lib/agent-plan";
 
 /**
- * La CHECKLIST de la session, juste au-dessus du composer.
+ * The CHECKLIST of the session, just above the composer.
  *
- * Le plan vivait dans le fil, à l'endroit où l'agent l'avait posé — c'est-à-dire
- * à un endroit qui remonte : dix tool-calls plus tard il est sorti de l'écran, et
- * savoir où en est le travail demande de faire défiler vers le haut pour retrouver
- * une carte qu'on relit en entier. Or c'est l'information qu'on consulte le plus
- * souvent, et la seule qui résume le tour en un coup d'œil.
+ * The plan lived in the thread, where the agent had placed it — that is to say
+ * at a place that goes back: ten tool-calls later he left the screen, and
+ * knowing where the work stands requires scrolling up to find
+ * a map that we reread in its entirety. But this is the information we consult the most
+ * often, and the only one that sums up the tour at a glance.
  *
- * Elle prend donc la place où le fil dépose ce qui doit rester sous les yeux :
- * contre le composer, à sa largeur, au dessin exact de la barre des sous-agents
- * ([subagent-activity-bar](./subagent-activity-bar.tsx)) et du bloc « fichiers
- * changés » — même surface, même chevron, même retrait de liste. Le fil n'a
- * qu'une grammaire.
+ * It therefore takes the place where the thread deposits what must remain before the eyes:
+ * against the composition, to its width, to the exact design of the sub-agent bar
+ * ([subagent-activity-bar](./subagent-activity-bar.tsx)) and the “files” block
+ * changed” — same surface, same chevron, same removal from list. The wire does not
+ * than a grammar.
  *
- * Repliée, elle ne dit que ce qu'on cherchait : l'étape EN COURS, et le compte
- * fait/total. Dépliée, le plan entier, du même dessin que la carte qu'il remplace.
- * Une seule ligne de hauteur tant qu'on ne l'ouvre pas : l'input ne descend pas
- * pendant qu'on écrit.
+ * Folded, it only says what we were looking for: the CURRENT step, and the count
+ * done/total. Unfolded, the entire plan, of the same design as the map it replaces.
+ * A single height line as long as you don't open it: the input doesn't go down
+ * while we write.
  *
- * L'étape en cours porte un SPINNER, pas une pastille immobile : c'est la marque
- * « ça tourne » de minddy (les sous-agents, la colonne des conversations), et
- * c'est la seule différence à lire entre l'étape en cours et celles qui ont été
- * cochées. Une icône fixe ne s'en distinguait que par sa forme.
+ * The current step carries a SPINNER, not a stationary pellet: this is the brand
+ * minddy’s “it’s running” (the sub-agents, the conversations column), and
+ * this is the only difference to read between the current step and those which have been
+ * checked. A fixed icon was only distinguished by its shape.
  *
- * Elle ne vit que pendant le tour qui a posé son plan (cf. `livePlan`). Pas de
- * liseré « agent en cours » pour autant, contrairement à la carte des sous-agents :
- * elle se pose contre le composer, qui porte DÉJÀ le sien pendant le tour
- * ([chat-input](../assistant/chat-input.tsx), `beam={working}`). Deux liserés
- * empilés à deux pixels l'un de l'autre ne disent pas deux fois « ça tourne » : ils
- * se lisent comme un cadre. Ce qui avance ici se lit au spinner de l'étape en cours
- * et au shimmer de son libellé.
+ * She only lives during the turn that set her plan (see `livePlan`). No
+ * “current agent” border however, unlike the sub-agent map:
+ * she poses against the composer, who is ALREADY wearing his during the round
+ * ([chat-input](../assistant/chat-input.tsx), `beam={working}`). Two borders
+ * stacked two pixels apart do not say “it’s running” twice: they
+ * read like a frame. What is happening here is read on the current step spinner
+ * and the shimmer of its wording.
  */
 export function PlanActivityBar({ steps }: { steps: PlanStep[] }) {
   const t = useTranslations("Agent");
@@ -56,13 +56,13 @@ export function PlanActivityBar({ steps }: { steps: PlanStep[] }) {
             <CollapsibleTrigger className="group flex min-w-0 flex-1 items-center gap-1.5 text-xs font-medium text-muted-foreground outline-hidden transition-colors hover:text-foreground">
               <ChevronRight className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
               <ListChecks className="size-3.5 shrink-0" />
-              {/* L'étape en cours plutôt que le mot « Plan » : c'est elle qu'on
-                  vient chercher. Le shimmer ne court que tant qu'elle avance. */}
+              {/* The current step rather than the word “Plan”: this is what we
+ are looking for. The shimmer only runs as long as she moves forward. */}
               <span className={cn("truncate", current && "text-shimmer")}>
                 {current ? current.step : t("plan")}
               </span>
-              {/* Collé à droite et tabulaire : un compteur ne doit pas danser
-                  quand l'étape d'à côté change de longueur. */}
+              {/* Pasted to the right and tabular: a counter must not dance
+ when the next step changes length. */}
               <span className="ml-auto shrink-0 pl-2 tabular-nums">
                 {done}/{steps.length}
               </span>

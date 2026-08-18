@@ -7,15 +7,15 @@ import { restorePage } from "@/lib/server/pages";
 type RouteContext = { params: Promise<{ id: string; pageId: string }> };
 
 /**
- * POST /api/projects/[id]/pages/[pageId]/restore — annuler une suppression.
+ * POST /api/projects/[id]/pages/[pageId]/restore — undo a deletion.
  *
- * La page revient AVEC tout ce qui est parti avec elle (`deleted_root_id`).
- * Cette route est le pendant immédiat du DELETE — celle qu'un « Annuler » de
- * toast appelle, dans le contexte du projet où l'on est déjà ; la corbeille
- * (`/api/me/trash/page/[id]`) fait la même chose plus tard, depuis l'écran qui
- * liste tout ce qu'on peut rattraper.
+ * The page returns WITH everything that left with it (`deleted_root_id`).
+ * This route is the immediate counterpart of DELETE — the one that a “Cancel” of
+ * toast calls, in the context of the project where we already are; the trash
+ * (`/api/me/trash/page/[id]`) does the same thing later, from the screen that
+ * lists everything that can be recovered.
  *
- * Si le parent est encore à la corbeille, la page remonte à la racine plutôt
+ * If the parent is still in the trash, the page goes back to the root instead
  * que de revenir invisible.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {

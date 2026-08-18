@@ -37,7 +37,7 @@ import { captureServerEvent } from "./posthog";
 
 /**
  * Shared issue-creation core: builds the row from an untrusted input payload,
- * assigns the CLÉ-number atomically, inserts via the service client, attaches
+ * assigns the KEY-number atomically, inserts via the customer service, attaches
  * categories and records activity events. Used by POST /api/projects/[id]/issues
  * and by the triage accept route.
  *
@@ -62,15 +62,15 @@ export type CreateIssueResult =
         | "resourceInvalid"
         | "issueLimitReached"
         | "remoteIssueAlreadyImported";
-      /** ICU values the message needs (ex. `limit` pour `issueLimitReached`). */
+      /** ICU values ​​the message needs (e.g. `limit` for `issueLimitReached`). */
       params?: Record<string, string | number>;
       /** Verbatim DB message already meant for the user (P0001 trigger raise). */
       rawMessage?: string;
     };
 
 /**
- * Identité de l'issue distante qu'un ticket importé reflète (MIN-97) — posée
- * telle quelle sur la ligne, l'index UNIQUE partiel faisant le dédoublonnage.
+ * Identity of the remote issue that an imported ticket reflects (MIN-97) — set
+ * as is on the line, the partial UNIQUE index doing the deduplication.
  */
 export interface RemoteIssueRef {
   provider: string;
@@ -80,15 +80,15 @@ export interface RemoteIssueRef {
 }
 
 /**
- * D'où vient ce ticket ? Dérivé des marqueurs de provenance que les appelants
- * posent déjà (`viaAssistant`, `mcpKeyId`, `integrationId`) — aucun nouveau
- * paramètre à câbler dans la douzaine de routes qui créent des tickets.
+ * Where does this ticket come from? Derived from provenance markers that callers
+ * already asked (`viaAssistant`, `mcpKeyId`, `integrationId`) — no new ones
+ * parameter to wire into the dozen routes that create tickets.
  */
 export function resolveIssueSource(params: {
   viaAssistant?: boolean;
   mcpKeyId?: string | null;
   integrationId?: string | null;
-  /** Provider derrière l'écriture quand elle vient de la synchro d'un dépôt lié. */
+  /** Provider behind the writing when it comes from the synchronization of a linked repository. */
   forge?: string | null;
   actorId?: string | null;
 }): string {
@@ -100,9 +100,9 @@ export function resolveIssueSource(params: {
   return "web";
 }
 
-// Bornes de longueur (MIN-118). Le cœur tronque en silence — même philosophie
-// que le drop silencieux des enums invalides — pour ne casser aucun appelant
-// (UI, MCP, Numo, import CSV) ; seul le plan garde son rejet explicite.
+// Length terminals (MIN-118). The heart truncates in silence — same philosophy
+// than silently dropping invalid enums — so as not to break any callers
+// (UI, MCP, Numo, CSV import); only the plan keeps its explicit rejection.
 const MAX_TITLE_LENGTH = 500;
 const MAX_DESCRIPTION_LENGTH = 65_536;
 const MAX_CATEGORY_REFS = 100;
@@ -133,20 +133,20 @@ export async function createIssueForProject({
   mcpKeyId?: string | null;
   /** Attributes the issue and its events to a project integration. */
   integrationId?: string | null;
-  /** Issue distante que ce ticket reflète (MIN-97) : pose l'identité `remote_*`
-      et estampille les événements au nom de la forge. */
+  /** Remote issue that this ticket reflects (MIN-97): sets the identity `remote_*`
+      and stamps events in the name of the forge. */
   remote?: RemoteIssueRef | null;
-  /** Série de récurrence à laquelle rattacher le ticket (MIN-136) — posé par
-      lib/server/recurrence.ts sur l'occurrence qu'il crée, jamais par un
-      payload client. Null = ce ticket ouvre sa propre série (voir seriesIdOf). */
+  /** Recurrence series to which to attach the ticket (MIN-136) — posed by
+      lib/server/recurrence.ts on the occurrence it creates, never by a
+      client payload. Null = this ticket opens its own series (see seriesIdOf). */
   recurrenceSeriesId?: string | null;
-  /** Id que le client a DÉJÀ donné à sa carte optimiste : la ligne naît avec,
-      pour que la diffusion temps réel de cette création soit reconnue comme la
-      sienne plutôt qu'adoptée en double (lib/optimistic-issue.ts). Posé par la
-      seule route web, JAMAIS lu dans `input` — les dix autres appelants (MCP,
-      Numo, webhooks de forge, import, récurrence, promotion d'un retour)
-      transmettent des charges qu'ils n'ont pas écrites, et un `id` égaré n'y
-      désignerait pas la ligne à créer. Ignoré s'il n'est pas un UUID, comme les
+  /** ID that the customer has ALREADY given to his optimistic card: the line is born with,
+      so that the real-time broadcast of this creation is recognized as the
+      its own rather than adopted in duplicate (lib/optimistic-issue.ts). Asked by the
+      only web route, NEVER read in `input` — the other ten callers (MCP,
+      Numo, forge webhooks, import, recurrence, promotion of a return)
+      transmit charges that they did not write, and a misplaced `id` is not there
+      would not designate the line to be created. Ignored if it is not a UUID, such as
       enums invalides. */
   rowId?: string | null;
 }): Promise<CreateIssueResult> {
@@ -156,13 +156,13 @@ export async function createIssueForProject({
     return { ok: false, status: 400, errorKey: "titleRequired" };
   }
 
-  // Limite issues/projet du plan du owner (MIN-72) — vérifiée ici pour couvrir
-  // tous les chemins de création (UI, API v1, MCP, Numo, import CSV, triage).
+  // Owner Plan Issues/Draft Limit (MIN-72) — checked here to cover
+  // all creation paths (UI, API v1, MCP, Numo, CSV import, triage).
   try {
     await ensureIssueLimit(projectId);
   } catch (err) {
     if (isPlanLimitError(err)) {
-      // `params` porte la limite du plan — le message l'affiche.
+      // `params` carries the plan limit — the message displays it.
       return {
         ok: false,
         status: err.status,
@@ -233,9 +233,9 @@ export async function createIssueForProject({
   }
   if (isDateOrNull(input.due_date)) row.due_date = input.due_date;
 
-  // Récurrence (MIN-136) : une cadence exige une échéance, qui porte alors la
-  // PREMIÈRE occurrence. Même règle que la mise à jour — un ticket récurrent
-  // sans date n'aurait rien à décaler à sa clôture.
+  // Recurrence (MIN-136): a cadence requires a deadline, which then carries the
+  // FIRST occurrence. Same rule as updating — one recurring ticket
+  // without a date there would be nothing to delay its closing.
   if ("recurrence" in input && input.recurrence !== null) {
     if (!isRecurrenceCadence(input.recurrence)) {
       return { ok: false, status: 400, errorKey: "invalidRecurrence" };
@@ -244,8 +244,8 @@ export async function createIssueForProject({
       return { ok: false, status: 400, errorKey: "recurrenceNeedsDueDate" };
     }
     row.recurrence = input.recurrence;
-    // La date d'une récurrence est un DÉBUT : si elle est déjà passée, le
-    // ticket naît sur la première occurrence à venir plutôt qu'en retard.
+    // The date of a recurrence is a START: if it has already passed, the
+    // ticket is born on the first upcoming occurrence rather than late.
     row.due_date =
       startDueDateISO(row.due_date as string, input.recurrence) ?? row.due_date;
     if (recurrenceSeriesId) row.recurrence_series_id = recurrenceSeriesId;
@@ -262,11 +262,11 @@ export async function createIssueForProject({
     if (!assigneeAccess) row.assignee_id = null;
   }
 
-  // Même exigence pour l'OBJECTIF (MIN-339) : il doit vivre dans ce projet.
-  // Refus explicite, contrairement à l'assigné juste au-dessus — un assigné
-  // étranger arrive légitimement d'une copie inter-projets et se laisse tomber,
-  // là où un objectif étranger n'a aucun cas d'usage ET fait partir le trigger
-  // `SECURITY DEFINER` de recalcul de statut sur l'objectif d'un autre tenant.
+  // Same requirement for the OBJECTIVE (MIN-339): it must live in this project.
+  // Explicit refusal, unlike the assignee just above — an assignee
+  // stranger legitimately arrives from a cross-project copy and drops himself,
+  // where a foreign objective has no use case AND triggers the trigger
+  // `SECURITY DEFINER` for recalculation of status on the objective of another tenant.
   if (typeof row.objective_id === "string") {
     if (!(await objectiveInProject(service, row.objective_id, projectId))) {
       return { ok: false, status: 400, errorKey: "objectiveNotFound" };
@@ -293,25 +293,25 @@ export async function createIssueForProject({
   }
 
   /**
-   * SMART-FILL (MIN-260) — juste AVANT que la ligne existe, et c'est tout le
-   * dessin de la feature : le ticket naît complet, donc il n'y a jamais de
-   * ticket à moitié rempli à masquer dans le board.
+   * SMART-FILL (MIN-260) — just BEFORE the line exists, and that's all
+   * drawing of the feature: the ticket is born complete, so there is never any
+   * half-filled ticket to hide in the board.
    *
-   * Ici et pas plus haut : toutes les validations sont passées (parent, membre,
-   * récurrence), donc on ne paye pas un appel de modèle pour une création qui
-   * va être refusée. Et pas plus bas : après l'insert, il faudrait un UPDATE et
-   * une seconde diffusion temps réel, c'est-à-dire exactement la carte vide
+   * Here and not above: all validations have passed (parent, member,
+   * recurrence), so we do not pay for a model call for a creation that
+   * will be refused. And not lower: after the insert, you would need an UPDATE and
+   * a second real-time broadcast, that is to say exactly the empty card
    * qu'on ne veut pas montrer.
    *
-   * IL NE COMPLÈTE QUE CE QUE L'HUMAIN A LAISSÉ VIDE. Un champ posé à la main
-   * gagne toujours — y compris l'objectif hérité d'un ticket parent juste
-   * au-dessus. C'est une aide à la saisie, pas un correcteur.
+   * HE ONLY COMPLETES WHAT HUMAN LEFT EMPTY. A field laid by hand
+   * always wins — including the goal inherited from a fair parent ticket
+   * above. It is an input aid, not a corrector.
    */
   let smartFillCategoryIds: string[] = [];
-  // Les champs que Smart-fill a RÉELLEMENT posés — pas ceux qu'il a proposés.
-  // C'est cette liste qui part dans l'activité : dire « a rempli la priorité »
-  // d'un ticket dont l'auteur avait déjà mis « urgent » serait un mensonge, et
-  // c'est précisément le genre de ligne qui fait cesser de croire la timeline.
+  // The fields that Smart-fill ACTUALLY asked — not the ones it suggested.
+  // It is this list that goes into the activity: say “met the priority”
+  // of a ticket whose author had already put “urgent” would be a lie, and
+  // it's precisely the kind of line that makes you stop believing in the timeline.
   const smartFilled: string[] = [];
   if (input.smart_fill === true) {
     const patch = await runSmartFill({
@@ -321,14 +321,14 @@ export async function createIssueForProject({
       title: row.title as string,
       description: (row.description as string | null) ?? null,
     });
-    // « none » est le défaut du formulaire, pas un choix : un ticket qui arrive
-    // sans priorité n'en a pas refusé une.
+    // “none” is the default of the form, not a choice: a ticket that arrives
+    // without priority did not refuse one.
     if (patch.priority && (row.priority == null || row.priority === "none")) {
       row.priority = patch.priority;
       smartFilled.push("priority");
     }
-    // `effort: null` est une VRAIE réponse (« rien d'estimable ») — mais elle ne
-    // change rien à un champ déjà nul, et l'annoncer dirait un geste invisible.
+    // `effort: null` is a REAL answer (“nothing valuable”) — but it
+    // changes nothing to an already null field, and announcing it would be an invisible gesture.
     if (patch.effort != null && row.effort == null) {
       row.effort = patch.effort;
       smartFilled.push("effort");
@@ -359,17 +359,17 @@ export async function createIssueForProject({
     if (error.code === "P0001") {
       return { ok: false, status: 400, rawMessage: error.message };
     }
-    // 23505 sur l'index d'identité distante = cette issue est DÉJÀ importée.
-    // C'est le chemin normal d'une redélivrance de webhook, pas une panne : on
-    // le distingue pour que l'appelant l'avale sans bruit (MIN-97).
+    // 23505 on remote identity index = this issue is ALREADY imported.
+    // This is the normal path for a webhook reissue, not a failure: we
+    // distinguishes it so that the appellant swallows it quietly (MIN-97).
     if (error.code === "23505" && remote) {
       return { ok: false, status: 409, errorKey: "remoteIssueAlreadyImported" };
     }
-    // 23505 sur la CLÉ PRIMAIRE alors que c'est le client qui l'a choisie : la
-    // même création rejouée (double soumission, renvoi après une réponse
-    // perdue). Le ticket d'avant EST le résultat attendu — le rendre tel quel
-    // plutôt qu'un second ticket ou une erreur. Les effets de bord, eux, ont
-    // déjà eu lieu au premier passage.
+    // 23505 on the PRIMARY KEY even though it was the customer who chose it: the
+    // same creation replayed (double submission, return after a response
+    // lost). The ticket from before IS the expected result — make it as is
+    // rather than a second ticket or an error. The side effects have
+    // already occurred on the first pass.
     if (error.code === "23505" && clientRowId) {
       const { data: existing } = await service
         .from("issues")
@@ -420,9 +420,9 @@ export async function createIssueForProject({
         .filter((v): v is string => typeof v === "string")
         .slice(0, MAX_CATEGORY_REFS)
     : [];
-  // Smart-fill ne range le ticket que si PERSONNE ne l'a rangé — ni par id ni
-  // par nom. Des catégories choisies à la main sont un choix, et s'y ajouter le
-  // déferait à moitié.
+  // Smart-fill only stores the ticket if NOBODY has stored it — neither by id nor
+  // by name. Hand-picked categories are a choice, and adding the
+  // would undo half.
   const requestedIds =
     pickedIds.length === 0 && requestedNames.length === 0 ? smartFillCategoryIds : pickedIds;
   if (requestedIds.length > 0 || requestedNames.length > 0) {
@@ -452,27 +452,27 @@ export async function createIssueForProject({
   }
 
   /**
-   * NAISSANCE DU TICKET DANS SON JOURNAL — écrite ICI, avant la réponse, et
-   * c'est le point du module qu'il ne faut pas redéplacer dans `after()`.
+   * BIRTH OF THE TICKET IN HIS JOURNAL — written HERE, before the response, and
+   * this is the point of the module that should not be moved back to `after()`.
    *
-   * Ces trois lignes y ont vécu, avec le reste des effets de bord, et ça ne
-   * tenait pas — pour les deux raisons que la timeline racontait de travers :
+   * These three lines lived there, with the rest of the side effects, and that didn't
+   * did not hold up — for the two reasons that the timeline told wrong:
    *
-   *  1. L'ORDRE. Tout ce qui suit la création écrit AVANT la réponse : Smart
-   *     Assign (cas déterministe, plus bas), et les relations que les
-   *     appelants posent au retour de cette fonction. « a créé le ticket »
-   *     arrivait donc APRÈS « a assigné » ou « a lié » — sur 286 tickets de
-   *     prod, 44 racontaient leur naissance en troisième position.
-   *  2. LA PERTE. Le travail d'après la réponse est best-effort : quand
-   *     l'insert tombe (réseau coupé à la gelée de l'invocation), il est
-   *     journalisé et oublié, et le ticket n'a plus AUCUNE activité — pas
-   *     même sa création. MIN-265 est né comme ça.
+   * 1. ORDER. Everything after creation written BEFORE the answer: Smart
+   * Assign (deterministic case, lower), and the relations that the
+   * callers ask when returning from this function. “created the ticket”
+   * therefore arrived AFTER “assigned” or “linked” — on 286 tickets
+   * prod, 44 recounted their birth in third position.
+   * 2. LOSS. The work according to the answer is best-effort: when
+   * the insert falls (network cut to summon jelly), it is
+   * logged and forgotten, and the ticket no longer has ANY activity — no
+   * even its creation. MIN-265 was born like this.
    *
-   * Une insertion, sur un chemin qui vient d'en faire trois : l'attendre coûte
-   * moins cher que de la perdre. Même raisonnement, mot pour mot, que la
-   * découpe de Smart Assign (voir l'en-tête de lib/server/smart-assign.ts).
+   * An insertion, on a path which has just made three: waiting for it costs
+   * cheaper than losing it. Same reasoning, word for word, as the
+   * cutting of Smart Assign (see the header of lib/server/smart-assign.ts).
    *
-   * Les webhooks, eux, restent différés : `insertEvents` les dispatche dans son
+   * The webhooks remain deferred: `insertEvents` dispatches them to its
    * propre `after()`.
    */
   const birthEvents: EventRow[] = [
@@ -487,17 +487,17 @@ export async function createIssueForProject({
     });
   }
   /**
-   * SMART-FILL DANS L'ACTIVITÉ (MIN-260) — un seul événement, après « a créé
-   * le ticket », et attribué à Smart-fill plutôt qu'à l'auteur : ces
-   * propriétés-là, il ne les a pas posées.
+   * SMART-FILL IN ACTIVITY (MIN-260) — a single event, after “created
+   * the ticket", and attributed to Smart-fill rather than the author: these
+   * he did not pose these properties.
    *
-   * `actor_id` reste celui de l'auteur, comme pour Smart Assign : c'est bien
-   * sous son compte que l'écriture a eu lieu, et le drapeau suffit à ce que la
-   * timeline nomme l'automatisation. `to_value` porte la liste des champs, et
-   * la phrase se compose à l'affichage — dans la langue du lecteur.
+   * `actor_id` remains that of the author, as for Smart Assign: that's good
+   * under his account that the writing took place, and the flag is enough for the
+   * timeline names the automation. `to_value` carries the list of fields, and
+   * the sentence is composed on display — in the reader's language.
    *
-   * Rien de rempli, rien à dire : un événement « Smart-fill n'a rien trouvé »
-   * n'apprend rien et se répéterait sur tous les tickets d'une ligne.
+   * Nothing filled, nothing to say: a “Smart-fill found nothing” event
+   * doesn't learn anything and would repeat itself on all tickets in a line.
    */
   if (smartFilled.length > 0 || smartFillCategoryIds.length > 0) {
     const filled = [...smartFilled];
@@ -522,16 +522,16 @@ export async function createIssueForProject({
     )
   );
 
-  // Ledger de stats + notifications : best-effort, sans effet sur l'issue
-  // renvoyée (le client la voit déjà via l'insert optimiste) et reconciliés par
-  // le realtime. Hors du chemin critique du POST via after(). Hors requête HTTP
+  // Stats ledger + notifications: best-effort, with no effect on the outcome
+  // returned (the client already sees it via the optimistic insert) and reconciled by
+  // realtime. Out of the POST critical path via after(). Excluding HTTP request
   // → run synchrone.
   const runSideEffects = async () => {
-    // Ledger de stats : une contribution "créée" (et "terminée" si créée
-    // directement en done) au nom de l'acteur. Skip pour les issues d'intégration
-    // (actorId null) — elles n'appartiennent à aucun utilisateur. Skip aussi pour
-    // un ticket importé du dépôt lié : l'acteur technique est le owner qui a lié
-    // le dépôt, il n'a rien écrit (même raison que l'import CSV, qui ne touche
+    // Stats ledger: a contribution “created” (and “completed” if created)
+    // directly in done) in the name of the actor. Skip for integration issues
+    // (actorId null) — they do not belong to any user. Skip also for
+    // a ticket imported from the linked repository: the technical actor is the owner who linked
+    // the deposit, he did not write anything (same reason as the CSV import, which does not affect
     // pas au ledger).
     if (actorId && !remote) {
       const snapshot = {
@@ -566,15 +566,15 @@ export async function createIssueForProject({
           type: "assigned",
           issue_id: data.id as string,
           actor_id: actorId,
-          // Cf. update-issue : un ticket créé assigné par un agent est l'œuvre
-          // de l'agent, la notification doit le nommer comme la timeline.
+          // See update-issue: a ticket created assigned by an agent is the work
+          // of the agent, the notification should name it like the timeline.
           ...notificationActorSource({ viaAssistant, mcpKeyId }),
         },
       ]);
     }
 
-    // Les gens cités dans la description du ticket qui vient de naître. Pas de
-    // version précédente : tout ce qui y figure est nouveau.
+    // The people mentioned in the description of the ticket which has just been born. No
+    // previous version: everything in it is new.
     await notifyDescriptionMentions(service, {
       projectId,
       actorId,
@@ -584,9 +584,9 @@ export async function createIssueForProject({
       viaAssistant,
     });
 
-    // Les PAGES citées par cette description (MIN-279) : le ticket qui naît en
-    // s'appuyant sur une spec doit apparaître dans le « Cité par » de cette
-    // spec, sans attendre sa première modification.
+    // The PAGES cited by this description (MIN-279): the ticket which is born in
+    // relying on a spec must appear in the "Cited by" of this
+    // spec, without waiting for its first modification.
     queuePageLinks(
       service,
       { kind: "issue", id: data.id as string, projectId },
@@ -607,10 +607,10 @@ export async function createIssueForProject({
   // one (opt-in per project; the run re-checks everything). Integration issues
   // are forced to "triage" by their routes, so never match.
   //
-  // ATTENDU, contrairement aux effets de bord ci-dessus : le cas déterministe
-  // écrit ici même, avant la réponse. Différé, il se perdait — c'est tout le
-  // sujet de MIN-31 revisité (voir l'en-tête de lib/server/smart-assign.ts).
-  // Seul l'appel au modèle repart en `after()`, depuis le run.
+  // EXPECTED, unlike the side effects above: the deterministic case
+  // written here, before the answer. Delayed, he got lost — that's all
+  // topic of MIN-31 revisited (see header of lib/server/smart-assign.ts).
+  // Only the call to the model restarts in `after()`, from the run.
   let smartAssignee: string | null = null;
   if (data.assignee_id == null && isSmartAssignEligibleStatus(data.status)) {
     smartAssignee = await applySmartAssign({
@@ -621,11 +621,11 @@ export async function createIssueForProject({
     });
   }
 
-  // Analytics serveur (MIN-78). C'est le comptage qui FAIT AUTORITÉ : il ne
-  // dépend ni du consentement cookies ni d'un navigateur — or une bonne partie
-  // des tickets de minddy naissent d'un agent MCP, de Numo ou d'une intégration,
-  // là où il n'y a personne devant un écran. `source` est la dimension qui
-  // permet de répondre à « qui crée vraiment les tickets ? ».
+  // Server Analytics (MIN-78). It is the counting that GIVES AUTHORITY: it does not
+  // depends neither on cookie consent nor on a browser — but a good part
+  // minddy tickets arise from an MCP agent, Numo or an integration,
+  // where there is no one in front of a screen. `source` is the dimension that
+  // allows you to answer “who really creates the tickets?” ".
   captureServerEvent({
     distinctId: actorId ?? `integration:${integrationId ?? "unknown"}`,
     event: "issue_created_server",
@@ -645,19 +645,19 @@ export async function createIssueForProject({
       has_parent: data.parent_id != null,
       category_count: categoryIds.length,
       resource_count: parsedResources.length,
-      // Doublon volontaire du groupe : une propriété se découpe gratuitement,
-      // l'agrégation par groupe suppose l'add-on payant (voir useAnalytics).
+      // Voluntary duplicate of the group: a property is cut free of charge,
+      // aggregation by group assumes the paid add-on (see useAnalytics).
       project_id: projectId,
     },
     groups: { project: projectId },
   });
 
-  // `data` reste la ligne TELLE QU'ELLE EST NÉE — les effets de bord différés
-  // s'appuient dessus (la notification « créé assigné » ne doit pas se déclencher
-  // sur le choix de Smart Assign, qui envoie déjà la sienne) et l'analytics
-  // ci-dessus compte les tickets créés AVEC un assigné. Seul le ticket rendu
-  // porte la correction : l'agent MCP lit cette réponse pour savoir à qui il a
-  // affaire, et le direct ne rattrape que ce qu'il voit passer.
+  // `data` remains the line AS IT WAS BORN — delayed side effects
+  // rely on it (the “created assigned” notification should not be triggered
+  // on the choice of Smart Assign, which already sends its own) and analytics
+  // above counts tickets created WITH an assignee. Only the ticket returned
+  // carries the correction: the MCP agent reads this response to know to whom he has
+  // business, and the live broadcast only catches what it sees happening.
   return {
     ok: true,
     issue: {

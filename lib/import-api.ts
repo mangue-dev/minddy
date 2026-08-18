@@ -9,18 +9,18 @@ export interface ImportCommitResponse {
   created: number;
   categories_created: number;
   sub_issues_linked: number;
-  /** Tickets rendus à un membre du projet. */
+  /** Tickets returned to a project member. */
   assigned: number;
   warnings: ImportWarning[];
 }
 
 /**
- * Demande au modèle une correspondance de colonnes pour le fichier en cours de
- * dépôt. N'envoie que le RÉSUMÉ du fichier, jamais le fichier.
+ * Asks the model for a column match for the current file in
+ * repository. Only sends the SUMMARY of the file, never the file.
  *
- * Ne lève jamais : la passe est un bonus. Une panne, un budget épuisé, un
- * drapeau coupé — l'aperçu garde le plan déduit des en-têtes, l'utilisateur
- * garde son tableau de correspondance.
+ * Never raises: the pass is a bonus. A breakdown, an exhausted budget, a
+ * flag cut — the preview keeps the plan deduced from the headers, the user
+ * keeps its correspondence table.
  */
 export async function fetchImportMappingApi(
   projectId: string,

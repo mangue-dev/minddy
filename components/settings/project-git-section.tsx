@@ -35,11 +35,11 @@ import type { CandidateRepo } from "@/lib/types";
 const PROVIDER_ICON = { github: Github, gitlab: Gitlab } as const;
 
 /**
- * Section « Git » des paramètres du projet (MIN-47) : connecter un compte
- * GitHub/GitLab (au niveau compte, réutilisable) et lier un dépôt au projet.
- * La liaison alimente l'agent de code (MIN-46/MIN-69) et, quand le toggle est
- * activé, la synchro unidirectionnelle des issues du dépôt (MIN-97). Owner
- * uniquement pour muter ; les membres voient l'état en lecture seule.
+ * “Git” section of project settings (MIN-47): connect a account
+ * GitHub/GitLab (at account level, reusable) and link a repository to the project.
+ * The link powers the code agent (MIN-46/MIN-69) and, when the toggle is
+ * activated, the unidirectional synchronization of depot exits (MIN-97). Owner
+ * only to mutate; members see read-only status.
  */
 export function ProjectGitSection({ projectId }: { projectId: string }) {
   const t = useTranslations("Settings");
@@ -65,15 +65,15 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
   const [binding, setBinding] = useState(false);
   const [confirmUnlink, setConfirmUnlink] = useState(false);
 
-  // Miroir local du toggle de synchro : il bascule tout de suite, puis se
-  // réconcilie sur la liaison refetchée (pattern smart-assign-section).
+  // Local mirror of the sync toggle: it switches immediately, then
+  // reconcile on the refetched link (pattern smart-assign-section).
   const [issueSync, setIssueSync] = useState(false);
   const [savingIssueSync, setSavingIssueSync] = useState(false);
-  /** L'installation GitHub n'a accordé que `Issues (Read)` : le retour de
-      statut vers la forge a besoin de `write`. Null = rien à signaler.
-      Même miroir que le toggle — la réponse d'activation le pose tout de
-      suite, la lecture suivante fait foi (et le fait DISPARAÎTRE dès que la
-      permission est accordée sur GitHub). */
+  /** GitHub install only granted `Issues (Read)`: returning
+ status to the forge needs `write`. Null = nothing to report.
+ Same mirror as the toggle — the activation response immediately sets it to
+, the following reading takes effect (and makes it DISAPPEAR as soon as the
+ permission is granted on GitHub). */
   const [writeMissingUrl, setWriteMissingUrl] = useState<string | null>(null);
   useEffect(() => {
     setIssueSync(link?.issue_sync_enabled === true);
@@ -96,7 +96,7 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
     } else if (status === "error") {
       toast.error(t("gitConnectError"));
     }
-    // Retire les params de callback en conservant l'onglet.
+    // Remove callback params while keeping the tab.
     const next = new URLSearchParams(searchParams);
     next.delete("git");
     next.delete("connection");
@@ -108,13 +108,13 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
     void queryClient.invalidateQueries({
       queryKey: projectGitLinkQueryKey(projectId),
     });
-    // La liste des projets où l'agent peut travailler change avec ce lien : la
-    // page Agents n'offre que ceux-là, et sans cette invalidation le projet qu'on
-    // vient de lier n'y paraîtrait qu'après péremption du cache.
+    // The list of projects where the agent can work changes with this link: the
+    // Agents page only offers these, and without this invalidation the project that we
+    // just linked would only appear after the cache expires.
     void queryClient.invalidateQueries({ queryKey: GIT_LINKED_PROJECTS_KEY });
   }, [queryClient, projectId]);
 
-  // Charge les dépôts candidats quand une connexion est active.
+  // Load candidate repositories when a connection is active.
   useEffect(() => {
     if (!activeConnectionId) {
       setCandidates(null);
@@ -148,7 +148,7 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
       if (res.mode === "reuse") {
         setActiveConnectionId(res.connectionId);
       } else {
-        window.location.href = res.url; // redirection vers le provider
+        window.location.href = res.url; // redirection to the provider
       }
     } catch (err) {
       toast.error((err as Error).message);
@@ -174,19 +174,19 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
 
   const handleIssueSync = async (next: boolean) => {
     if (!link || !isOwner || savingIssueSync) return;
-    setIssueSync(next); // optimiste — annulé en cas d'échec
+    setIssueSync(next); // optimistic — canceled on failure
     setSavingIssueSync(true);
     try {
       const response = await setGitIssueSyncApi(projectId, next, link.provider);
       toast.success(
         t(next ? "gitIssueSyncEnabledToast" : "gitIssueSyncDisabledToast"),
       );
-      // L'installation n'a accordé que la LECTURE des issues : l'import marche,
-      // mais refermer une issue depuis minddy demande `write`. Posé tout de
-      // suite pour ne pas attendre le refetch — qui le confirmera.
+      // The installation only granted READING of the outputs: the import works,
+      // but closing an issue from minddy requests `write`. Asked everything
+      // continuation so as not to wait for the refetch — which will confirm it.
       setWriteMissingUrl(response.writeMissingUrl ?? null);
-      // Le backfill tourne côté serveur après la réponse : on relit un peu plus
-      // tard pour afficher sa date, en plus du refetch immédiat.
+      // The backfill runs on the server side after the response: we read a little more
+      // late to display its date, in addition to immediate refetch.
       invalidate();
       if (next) setTimeout(invalidate, 4000);
     } catch (err) {
@@ -207,8 +207,8 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
     }
   };
 
-  /** Un seul cadre pour les six états : le groupe est toujours le même, seul
-      son corps change. Avant, chaque branche rendait sa propre mise en page. */
+  /** A single frame for the six states: the group is always the same, only
+ its body changes. Before, each branch rendered its own layout. */
   const group = (variant: "rows" | "block", children: ReactNode) => (
     <SettingsGroup
       anchor={SETTINGS_SECTIONS.projectGit}
@@ -225,7 +225,7 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
     return group("block", <SettingsEmpty className="py-0">{t("gitLoading")}</SettingsEmpty>);
   }
 
-  // ── Sélecteur de dépôt (connexion active) ─────────────────────────────────
+  // ── Repository selector (active connection) ─────────────────────────────────
   if (activeConnectionId) {
     const options = (candidates ?? []).map((c) => ({
       value: c.external_repo_id,
@@ -271,7 +271,7 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
     );
   }
 
-  // ── Dépôt déjà lié ────────────────────────────────────────────────────────
+  // ── Repository already linked ──────────────────────────── ────────────────────────────
   if (link) {
     const Icon = PROVIDER_ICON[link.provider];
     const providerName = getRepoProvider(link.provider).displayName;
@@ -291,12 +291,12 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
                 providerName +
                 (link.account_login ? ` · ${link.account_login}` : "") +
                 (link.default_branch ? ` · ${link.default_branch}` : "") +
-                // Sous quel compte Numo agit sur la forge (MIN-146). GitHub a une
-                // identité de bot (le token d'installation de l'App) : rien à dire.
-                // GitLab n'en a pas — l'agent part de la connexion OAuth du LIEN,
-                // donc du compte de qui a lié le dépôt. Tant qu'une identité de
-                // service n'existe pas, on le DIT plutôt que de le laisser
-                // découvrir dans l'historique du dépôt.
+                // Under what account Numo acts on the forge (MIN-146). GitHub has a
+                // bot identity (the App installation token): nothing to say.
+                // GitLab doesn't have one — the agent starts from the LINK's OAuth connection,
+                // therefore from the account of who linked the deposit. As long as an identity of
+                // service does not exist, we SAY it rather than leaving it
+                // discover in the repository history.
                 (link.provider === "gitlab"
                   ? ` · ${
                       link.account_login
@@ -321,10 +321,9 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
               }
             />
 
-            {/* Synchro des issues du dépôt ↔ minddy (MIN-97). La rangée dit ce
-                que fait l'interrupteur en une ligne ; le détail — ce qui est
-                repris, ce qui remonte, ce qui ne remonte pas — vit dans le ⓘ,
-                pour que la page reste lisible d'un coup d'œil. */}
+            {/* Synchronization of repository issues ↔ minddy (MIN-97). The row says what
+ the switch does in one line; the detail — what is taken, what goes back, what does not go back — lives in the ⓘ,
+ so that the page remains readable at a glance. */}
             <SettingsRow
               htmlFor="git-issue-sync"
               label={t("gitIssueSyncLabel", { provider: providerName })}
@@ -363,8 +362,8 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
               )}
             </SettingsRow>
 
-            {/* Ménage des branches d'agent des PR fermées (MIN-102) — owner seul :
-                supprimer des branches distantes engage le dépôt, comme le déliement. */}
+            {/* Cleaning agent branches of closed PRs (MIN-102) — owner only:
+ removing remote branches commits the repository, like unbinding. */}
             {isOwner && (
               <GitBranchCleanup projectId={projectId} provider={link.provider} />
             )}
@@ -384,7 +383,7 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
     );
   }
 
-  // ── Aucun dépôt lié ───────────────────────────────────────────────────────
+  // ── No linked repository ─────────────────────────── ────────────────────────────
   if (!isOwner) {
     return group(
       "block",

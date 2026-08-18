@@ -172,49 +172,49 @@ export function IssueSidePanel({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [tab, setTab] = useState<"description" | "plan">(initialTab);
   // Remount the description editor when the description is rewritten under it
-  // (dictation, ou une écriture distante) — il ne lit `value` qu'au montage et
+  // (dictation, or distant writing) — it only reads `value` during editing and
   // ne commite qu'au blur.
   const [editorKey, setEditorKey] = useState(0);
 
   /**
-   * Suivre les écritures DISTANTES pendant que le panneau reste ouvert (MIN-89).
+   * Follow the REMOTE writings while the panel remains open (MIN-89).
    *
-   * Le reste du panneau lit `issue` directement : statut, priorité, plan, liens
-   * suivent donc le cache dès que le pont temps réel l'invalide. Le titre et la
-   * description, eux, sont des copies LOCALES — un état pour l'un, une valeur
-   * lue au montage par l'éditeur pour l'autre — semées à l'ouverture du ticket
-   * et jamais reprises ensuite. Un agent (Numo, MCP, coéquipier) pouvait donc
-   * réécrire les deux sans que l'écran bouge, jusqu'au rechargement.
+   * The rest of the panel reads `issue` directly: status, priority, plan, links
+   * therefore follow the cache as soon as the real-time bridge invalidates it. The title and
+   * description, they are LOCAL copies — a state for one, a value
+   * read during editing by the editor for the other — sown when opening the ticket
+   * and never repeated afterwards. An agent (Numo, MCP, teammate) could therefore
+   * rewrite both without the screen moving, until reload.
    *
-   * La règle : adopter la version distante, JAMAIS par-dessus une frappe. Un
-   * champ qui a le focus, ou retouché sans être encore commité, garde la main.
+   * The rule: adopt the remote version, NEVER over a keystroke. A
+   * field which has the focus, or retouched without being committed yet, keeps control.
    */
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const descriptionRef = useRef<HTMLDivElement>(null);
-  /** Ticket dont les copies locales ci-dessous portent la version. */
+  /** Ticket whose local copies below carry the version. */
   const shownFor = useRef<string | null>(null);
-  /** Dernière version SERVEUR déjà reflétée à l'écran : distingue une écriture
-      distante (à adopter) de l'écho de notre propre édition (déjà affichée). */
+  /** Latest SERVER version already reflected on the screen: distinguishes a writing
+      distant (to be adopted) from the echo of our own edition (already displayed). */
   const shownTitle = useRef("");
   const shownDescription = useRef("");
-  /** Retouché à la main depuis la dernière synchro. Sans ces deux drapeaux, un
-      simple aller-retour du focus recommiterait le reflet périmé du champ —
-      c'est-à-dire annulerait la modification que l'agent vient d'écrire. */
+  /** Retouched by hand since the last sync. Without these two flags, one
+      a simple round trip of the focus would recommit the outdated reflection of the field —
+      i.e. would undo the edit the agent just wrote. */
   const titleEdited = useRef(false);
   const descriptionEdited = useRef(false);
-  // Conversation de l'agent, en modal PAR-DESSUS le panneau : la reprise à chaud
-  // ne doit pas coûter le contexte du ticket (la carte, elle, n'a rien à perdre
-  // et navigue vers /agents).
+  // Agent conversation, in modal ABOVE the panel: hot restart
+  // must not cost the context of the ticket (the card has nothing to lose
+  // and navigate to /agents).
   const [chatOpen, setChatOpen] = useState(false);
-  // « Personnalisé » : le dialog de consigne libre, ouvert soit pour copier le
-  // prompt, soit pour lancer l'agent (`null` = fermé).
+  // “Personalized”: the free instructions dialog, opened either to copy the
+  // prompt, or to launch the agent (`null` = closed).
   const [customTarget, setCustomTarget] = useState<CustomPromptTarget | null>(null);
 
   const { items, addComment, updateComment, deleteComment, deleteAttachment } =
     useIssueTimeline(
       issue?.id ?? null,
-      // Le ticket porte sa propre naissance : de quoi ouvrir sa timeline même
-      // quand l'événement `created` manque (cf. lib/use-issue-timeline.ts).
+      // The ticket bears its own birth: enough to open its timeline itself
+      // when the `created` event is missing (see lib/use-issue-timeline.ts).
       issue
         ? {
             createdAt: issue.created_at,
@@ -224,28 +224,28 @@ export function IssueSidePanel({
         : null
     );
 
-  // Agent de code de ce ticket. Mêmes dérivations que les cartes (lib/server/
-  // agent/activity.ts), mais depuis les runs de l'issue seule : le panneau
-  // s'ouvre aussi là où le provider d'activité du board n'existe pas (page Pull
-  // requests, board de feedback). La PR voyage avec, servie par la même route et
-  // lue sur `pull_requests` : un ticket peut en porter une sans aucun run.
+  // Code agent of this ticket. Same derivations as maps (lib/server/
+  // agent/activity.ts), but from the runs of the issue alone: ​​the panel
+  // also opens where the board activity provider does not exist (Pull page
+  // requests, feedback board). The PR travels with it, served by the same route and
+  // read on `pull_requests`: a ticket can carry one without any run.
   const { runs, pullRequest } = useIssueAgentRunsQuery(issue?.id ?? null);
   const { agentsAllowed } = usePlanGates();
-  // Agent + PR indisponibles sans dépôt lié (MIN-80) : le serveur rejette de toute
-  // façon un lancement `noRepo`, on retire donc l'option en amont. Permissif tant
-  // que la requête charge → aucun flash sur le cas courant (projet AVEC dépôt).
+  // Agent + PR unavailable without linked deposit (MIN-80): the server rejects all
+  // way a `noRepo` launch, we therefore remove the option upstream. Permissive as long
+  // that the query loads → no flash on the current case (project WITH repository).
   const { link: repoLink, loading: repoLinkLoading } = useProjectGitLinkQuery(
     issue?.project_id ?? null
   );
   const agentsEnabled = agentsAllowed && (repoLinkLoading || repoLink != null);
   const agentWorking = runs.some((r) => isAgentRunWorking(r.status));
   const latestRun = runs[0] ?? null;
-  // Une conversation reprennable existe (au moins une run non `failed`).
+  // A restartable conversation exists (at least one non-`failed` run).
   const hasAgentSession = runs.some((r) => r.status !== "failed");
 
-  // Cycle (MIN-32) : le panneau lit le cycle courant lui-même plutôt que de le
-  // faire descendre par ses quatre appelants — le hook est déjà gaté par les
-  // préférences utilisateur, donc ne coûte rien quand les cycles sont éteints.
+  // Cycle (MIN-32): the panel reads the current cycle itself rather than
+  // brought down by its four callers — the hook is already spoiled by the
+  // user preferences, so costs nothing when cycles are off.
   const { currentCycle, nextCycle } = useMyCycleQuery();
   const onSetIssueCycle = useCallback(
     (target: Issue, cycleId: string | null) =>
@@ -269,14 +269,14 @@ export function IssueSidePanel({
     setTab(initialTab);
   }, [issue?.id, initialTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Titre et description : semés à l'ouverture du ticket, puis tenus à jour sur
-  // les écritures distantes (voir les refs plus haut).
+  // Title and description: sown when the ticket is opened, then kept up to date on
+  // remote writes (see refs above).
   useEffect(() => {
     if (!issue) return;
     const description = issue.description ?? "";
 
-    // Ticket différent : tout repart de lui. L'éditeur remonte déjà de son côté
-    // (sa `key` porte `issue.id`), il n'y a que l'état du titre à semer.
+    // Different ticket: everything starts from him. The publisher is already going back on his side
+    // (its `key` carries `issue.id`), there is only the state of the title to sow.
     if (shownFor.current !== issue.id) {
       shownFor.current = issue.id;
       shownTitle.current = issue.title;
@@ -287,9 +287,9 @@ export function IssueSidePanel({
       return;
     }
 
-    // Une version qu'on refuse d'adopter n'est PAS notée : elle reste « en
-    // attente », et le champ la prend dès qu'il rend la main (commitTitle pour
-    // le titre, le blur du conteneur pour la description).
+    // A version that we refuse to adopt is NOT noted: it remains “in
+    // waiting", and the field takes it as soon as it returns control (commitTitle for
+    // the title, the blur of the container for the description).
     if (
       issue.title !== shownTitle.current &&
       !titleEdited.current &&
@@ -299,8 +299,8 @@ export function IssueSidePanel({
       setTitle(issue.title);
     }
 
-    // L'éditeur ne relit pas `value` : l'adopter, c'est le remonter — le même
-    // levier que la dictée. Donc jamais pendant qu'on y écrit.
+    // The editor does not reread `value`: to adopt it is to reassemble it — the same
+    // lever than dictation. So never while writing there.
     if (
       description !== shownDescription.current &&
       !descriptionEdited.current &&
@@ -312,8 +312,8 @@ export function IssueSidePanel({
   }, [issue?.id, issue?.title, issue?.description]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const progress = useMemo(() => planProgress(issue?.plan), [issue?.plan]);
-  // Un plan existe déjà → les entrées « plan » (menu ⋯, onglet Plan, prompt
-  // copié, agent Numo) basculent de « générer » à « vérifier ».
+  // A plan already exists → the “plan” entries (menu ⋯, Plan tab, prompt
+  // copied, Numo agent) toggle from “generate” to “verify”.
   const issueHasPlan = hasPlanTasks(issue?.plan);
 
   // This issue's relations, resolved to the display shape (with the other
@@ -332,11 +332,11 @@ export function IssueSidePanel({
   }, [issue?.id, relations, allIssues]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Agent de code (MIN-46 / MIN-68) ──────────────────────────────────────
-  // Deux points d'entrée, comme sur les cartes :
-  //  • ouvrir la conversation existante — ici en modal sur la dernière run, pour
-  //    garder le ticket sous les yeux (la carte, elle, navigue vers /agents) ;
-  //  • lancer une session NEUVE — pose un brouillon de composition optimiste et
-  //    ouvre son composer (`?compose=`), même si le ticket a déjà une session.
+  // Two entry points, as on the maps:
+  // • open the existing conversation — here in modal on the last run, to
+  // keep the ticket in front of you (the card navigates to /agents);
+  // • start a NEW session — create an optimistic draft of the composition and
+  // opens its composer (`?compose=`), even if the ticket already has a session.
   const composeAgentSession = useCallback(
     (prompt: string, intent: AgentComposeIntent = "implement") => {
       if (!issue) return;
@@ -357,25 +357,25 @@ export function IssueSidePanel({
 
   const startNewAgentSession = useCallback(() => {
     if (!issue) return;
-    // « Implémenter le ticket » arrive TOUJOURS avec sa consigne pré-écrite
-    // (contexte du ticket, adaptée à son plan / effort) — comme les trois autres
-    // façons de travailler du même sous-menu. Elle partait vide quand le ticket
-    // avait déjà une session, au motif que le contexte était hérité : de la place
-    // de l'utilisateur, la même entrée de menu remplissait le composer une fois
-    // sur deux, sans que rien n'annonce la différence.
+    // “Implement the ticket” ALWAYS arrives with its pre-written instructions
+    // (ticket context, tailored to their plan/effort) — like the other three
+    // ways of working from the same submenu. She left empty when the ticket
+    // already had a session, on the grounds that the context was inherited: from place
+    // from the user, the same menu entry populated the dial once
+    // out of two, without anything announcing the difference.
     const identifier = issueIdentifier(projectKey, issue.number);
     composeAgentSession(
       `${tAgent("launchPrompt.head", { identifier, title: issue.title })}\n\n${tAgent(`launchPrompt.${agentLaunchPromptVariant(issue)}`)}`,
     );
   }, [issue, projectKey, composeAgentSession, tAgent]);
 
-  // « Écrire avec Numo » / « Vérifier le plan avec Numo » (onglet Plan) :
-  // session neuve dont la consigne est de CADRER le ticket — écrire le plan
-  // quand il n'y en a pas, le reprendre point par point quand il existe — puis
-  // s'arrêter. Toujours une session neuve, même si le ticket en a déjà une : le
-  // composer s'ouvre avec la consigne, l'utilisateur l'envoie (ou l'amende).
-  // `intent: "plan"` : ce lancement-là ne fait PAS démarrer le ticket (le
-  // serveur ne le passe pas « en cours ») — planifier n'est pas commencer.
+  // “Write with Numo” / “Check the plan with Numo” (Plan tab):
+  // new session whose instructions are to FRAME the ticket — write the plan
+  // when there is none, take it again point by point when it exists — then
+  // stop. Always a new session, even if the ticket already has one: the
+  // composer opens with the instruction, the user sends it (or the fine).
+  // `intent: "plan"`: this launch does NOT start the ticket (the
+  // server does not pass it "in progress") — planning is not starting.
   const writePlanWithAgent = useCallback(() => {
     if (!issue) return;
     const identifier = issueIdentifier(projectKey, issue.number);
@@ -385,10 +385,10 @@ export function IssueSidePanel({
     );
   }, [issue, projectKey, composeAgentSession, tAgent]);
 
-  // « Vérifier l'implémentation » : session neuve qui relit le travail DÉJÀ fait
-  // face au plan et aux commentaires du ticket, puis corrige les bugs prouvés.
-  // `intent: "verify"` : le ticket ne bouge pas — contrôler du travail fait
-  // n'est pas le commencer, et un ticket en revue doit y rester.
+  // “Check implementation”: new session that rereads the work ALREADY done
+  // facing the plan and the ticket comments, then fixes the proven bugs.
+  // `intent: "verify"`: the ticket does not move — check the work done
+  // is not the start, and a review ticket must remain there.
   const verifyWithAgent = useCallback(() => {
     if (!issue) return;
     const identifier = issueIdentifier(projectKey, issue.number);
@@ -398,22 +398,22 @@ export function IssueSidePanel({
     );
   }, [issue, projectKey, composeAgentSession, tAgent]);
 
-  // ⇧A : ticket déjà pourvu d'une session → on l'ouvre ; sinon on en démarre une neuve.
-  // Plan sans agents (MIN-72) : le raccourci est inerte, les entrées de menu absentes.
+  // ⇧A: ticket already with a session → we open it; otherwise we start a new one.
+  // Plan without agents (MIN-72): the shortcut is inert, the menu entries absent.
   const launchAgent = useCallback(() => {
     if (!agentsEnabled) return;
     if (hasAgentSession) setChatOpen(true);
     else startNewAgentSession();
   }, [agentsEnabled, hasAgentSession, startNewAgentSession]);
 
-  // `?pr=` et non `?run=` : le lien doit marcher aussi pour une PR qu'aucun run
-  // n'a ouverte — une PR humaine, ou une PR rattachée à la main (MIN-163).
+  // `?pr=` and not `?run=`: the link must work as well for a PR as for no run
+  // has not opened — a human PR, or a hand-attached PR (MIN-163).
   const openPr = useCallback(() => {
     if (pullRequest) router.push(`/pull-requests?pr=${pullRequest.prId}`);
   }, [pullRequest, router]);
 
-  // Contexte partagé par les deux prompts copiables (travailler sur le ticket,
-  // écrire son plan) : relations résolues et noms des catégories.
+  // Context shared by the two copyable prompts (work on the ticket,
+  // write your plan): resolved relationships and category names.
   const promptContext = useMemo(() => {
     if (!issue) return null;
     const titleById = new Map(allIssues.map((i) => [i.id, i.title]));
@@ -423,7 +423,7 @@ export function IssueSidePanel({
         identifier: issueIdentifier(projectKey, r.otherNumber),
         title: titleById.get(r.otherId) ?? "",
       })),
-      // Noms des catégories (les IDs vivent sur l'issue, les noms dans `categories`).
+      // Category names (IDs live on the issue, names in `categories`).
       categories: issue.category_ids
         .map((cid) => categories.find((c) => c.id === cid)?.name)
         .filter((name): name is string => !!name),
@@ -432,20 +432,20 @@ export function IssueSidePanel({
 
   const copyPrompt = useCallback(async () => {
     if (!issue || !promptContext) return;
-    // Copier un prompt, c'est confier le travail à quelqu'un d'autre — un agent
-    // externe, soi-même. La chaîne qui attendait ce ticket en sursis s'annule
-    // donc (MIN-147). ICI et pas dans le menu : les boutons de l'onglet Plan et
-    // le raccourci ⇧P appellent ce callback DIRECTEMENT, et sautaient donc
+    // Copying a prompt means giving the work to someone else — an agent
+    // external, oneself. The chain that was waiting for this suspended ticket is canceled
+    // therefore (MIN-147). HERE and not in the menu: the buttons on the Map tab and
+    // the shortcut ⇧P call this callback DIRECTLY, and therefore skip
     // l'enveloppe qui n'existait qu'au niveau du menu ⋯.
     handOffIssueApi(issue.id);
-    // MIN-20 : copier le prompt démarre le ticket (option activée par défaut,
-    // désactivable dans Compte → Préférences). On n'avance que les statuts
-    // pré-travail, et le toast ne signale le déplacement que s'il a eu lieu.
+    // MIN-20: copy the prompt starts the ticket (option enabled by default,
+    // can be deactivated in Account → Preferences). We only advance the statutes
+    // pre-work, and the toast only signals the trip if it has taken place.
     const autoStart =
       resolvePromptCopyAutoStart(user?.user_metadata) &&
       shouldAutoStartOnPromptCopy(issue.status);
-    // Le XML copié doit refléter l'état RÉEL après déplacement : si on passe le
-    // ticket « En cours », le prompt le décrit déjà `in_progress`, pas l'ancien.
+    // The copied XML must reflect the REAL state after movement: if we pass the
+    // “In progress” ticket, the prompt already describes it `in_progress`, not the old one.
     const promptIssue = autoStart
       ? { ...issue, status: "in_progress" as const }
       : issue;
@@ -469,14 +469,14 @@ export function IssueSidePanel({
     }
   }, [issue, promptContext, projectKey, user?.user_metadata, onUpdate, t]);
 
-  // « Copier le prompt » de l'onglet Plan : le même ticket, mais une consigne
-  // de CADRAGE (écrire le plan quand il manque, le vérifier point par point
-  // quand il existe — `buildIssuePlanPrompt` bascule seul) pour un agent
-  // externe, qui l'enregistrera sur le ticket via le MCP. Aucun démarrage
-  // automatique ici : planifier n'est pas commencer le travail.
+  // “Copy prompt” from the Plan tab: the same ticket, but instructions
+  // FRAMING (write the plan when it is missing, check it point by point
+  // when it exists — `buildIssuePlanPrompt` toggles alone) for an agent
+  // external, which will record it on the ticket via the MCP. No start
+  // automatic here: planning is not starting the work.
   const copyPlanPrompt = useCallback(async () => {
     if (!issue || !promptContext) return;
-    // Prise en main : la chaîne en sursis s'annule (MIN-147).
+    // Getting started: the suspended chain is canceled (MIN-147).
     handOffIssueApi(issue.id);
     await navigator.clipboard.writeText(
       buildIssuePlanPrompt({
@@ -493,13 +493,13 @@ export function IssueSidePanel({
     );
   }, [issue, promptContext, projectKey, issueHasPlan, tPlan]);
 
-  // « Vérifier l'implémentation » côté prompt copié : la consigne de CONTRÔLE
-  // (relire le travail fait face au plan et aux commentaires, corriger les vrais
-  // bugs) pour un agent externe. Pas de démarrage automatique : on relit du
-  // travail déjà fait, on ne le commence pas.
+  // “Check the implementation” on the copied prompt side: the CONTROL instruction
+  // (reread the work against the plan and the comments, correct the real ones
+  // bugs) for an external agent. No automatic start: we reread some
+  // work already done, we are not starting it.
   const copyVerifyPrompt = useCallback(async () => {
     if (!issue || !promptContext) return;
-    // Prise en main : la chaîne en sursis s'annule (MIN-147).
+    // Getting started: the suspended chain is canceled (MIN-147).
     handOffIssueApi(issue.id);
     await navigator.clipboard.writeText(
       buildIssueVerifyPrompt({
@@ -514,16 +514,16 @@ export function IssueSidePanel({
     toast.success(t("verifyPromptCopied"));
   }, [issue, promptContext, projectKey, t]);
 
-  // « Personnalisé » : la consigne saisie dans le dialog remplace la consigne
-  // toute faite — le contexte du ticket, lui, reste fourni par minddy (bloc
-  // <issue> du prompt copié ; contexte de session côté agent Numo). Aucun
-  // démarrage automatique : on ne sait pas si cette consigne est du travail.
+  // “Customized”: the instruction entered in the dialog replaces the instruction
+  // ready made — the context of the ticket remains provided by minddy (block
+  // <issue> of the copied prompt; session context on the Numo agent side). None
+  // automatic start: we do not know if this instruction is work.
   const runCustomPrompt = useCallback(
     async (instructions: string, target: CustomPromptTarget) => {
       if (!issue || !promptContext) return;
-      // Prise en main, que la consigne libre soit copiée OU lancée (MIN-147).
-      // Le lancement est de toute façon couvert côté serveur ; le signal est
-      // idempotent, et ce point-ci couvre la copie.
+      // Getting started, whether the free instruction is copied OR launched (MIN-147).
+      // The launch is covered on the server side anyway; the signal is
+      // idempotent, and this point covers the copy.
       handOffIssueApi(issue.id);
       if (target === "launch") {
         const identifier = issueIdentifier(projectKey, issue.number);
@@ -551,9 +551,9 @@ export function IssueSidePanel({
     [issue, promptContext, projectKey, composeAgentSession, tAgent, t]
   );
 
-  // « Copier le prompt » et « Lancer l'agent Numo » : deux sous-menus, chacun
-  // avec la feuille « plan » (générer ou vérifier, selon le ticket) et
-  // « Implémenter le ticket » (hook partagé avec les cartes du board).
+  // “Copy prompt” and “Launch Numo agent”: two submenus, each
+  // with the “plan” sheet (generate or verify, depending on the ticket) and
+  // “Implement the ticket” (hook shared with the board cards).
   const agentActions = useAgentMenuActions({
     agentsEnabled,
     hasSession: hasAgentSession,
@@ -572,11 +572,11 @@ export function IssueSidePanel({
   // Field shortcuts (S/P/E/A/L/D/O) — active while the pointer hovers the panel
   // body; the picker opens at the cursor, in the key/value section. `d` maps to
   // the due-date picker here just like on board cards (voice dictation lives on
-  // `v`, so nothing needs to be freed). ⇧P / ⇧A doublent le menu « ⋯ », comme sur
-  // les cartes ; le hook ne les déclenche jamais pendant une saisie (titre,
+  // `v`, so nothing needs to be freed). ⇧P / ⇧A double the menu “⋯”, as on
+  // maps; the hook never triggers them during an entry (title,
   // description, commentaire).
-  // Le dialog « Personnalisé » les suspend : il couvre le panneau, et une touche
-  // frappée là-dedans ne doit pas ouvrir un picker sur le ticket en dessous.
+  // The “Custom” dialog suspends them: it covers the panel, and a key
+  // hit in there should not open a picker on the ticket below.
   const { containerProps, menuState, closeMenu } = useIssueFieldShortcuts(
     open && !customTarget,
     {
@@ -602,9 +602,9 @@ export function IssueSidePanel({
         toast.error((err as Error).message)
       );
     }
-    // La dictée écrit CE que le panneau affiche : on note la version au passage,
-    // sinon l'écho de notre propre patch repasserait pour une écriture distante
-    // et remonterait l'éditeur une seconde fois.
+    // The dictation writes WHAT the panel displays: we note the version in passing,
+    // otherwise the echo of our own patch would come back as a distant write
+    // and would go up the editor a second time.
     if (fields.title !== undefined) {
       shownTitle.current = fields.title;
       titleEdited.current = false;
@@ -654,13 +654,13 @@ export function IssueSidePanel({
     resetDictation();
   }, [issue?.id, resetDictation]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Une prise en cours de transcription (l'audio est parti, le texte n'est pas
-  // revenu) : avec la suite Numo, c'est la fenêtre où fermer perd la dictée.
+  // A take being transcribed (the audio is gone, the text is not
+  // income): with the Numo suite, this is the window where closing loses dictation.
   const [transcribing, setTranscribing] = useState(false);
   const handleOpenChange = (next: boolean) => {
-    // La dictée édite CE ticket : le transcript, puis le patch de Numo, vont y
-    // atterrir. Fermer maintenant les jetterait — on refuse, en le disant (une
-    // Échap sans effet passerait pour une panne).
+    // Dictation edits THIS ticket: the transcript, then the Numo patch, goes there
+    // land. Closing them now would throw them away — we refuse, saying so (a
+    // Escape without effect would pass for a failure).
     if (!next && (transcribing || numoBusy)) {
       toast.info(t("dictationInFlight"), { id: "dictation-in-flight" });
       return;
@@ -685,9 +685,9 @@ export function IssueSidePanel({
 
   const commitTitle = () => {
     const trimmed = title.trim();
-    // Le champ n'a fait que perdre le focus, sans une frappe. Si un agent a
-    // renommé le ticket entre-temps, c'est SON titre qui vaut : le nôtre n'est
-    // qu'un reflet, et le recommitter annulerait sa modification.
+    // The field only lost focus, without a strike. If an agent has
+    // renamed the ticket in the meantime, it is HIS title that is valid: ours is not
+    // only a reflection, and recommitting it would undo its modification.
     if (!titleEdited.current) {
       if (trimmed !== issue.title) setTitle(issue.title);
       return;
@@ -700,7 +700,7 @@ export function IssueSidePanel({
   };
 
   const commitDescription = (markdown: string) => {
-    // Même garde que pour le titre : un blur sans frappe ne réécrit rien.
+    // Same caveat as for the title: a blur without typing does not rewrite anything.
     if (!descriptionEdited.current) return;
     descriptionEdited.current = false;
     const next = markdown.trim() || null;
@@ -715,13 +715,13 @@ export function IssueSidePanel({
     onOpenChange(false);
   };
 
-  // Menu « ⋯ » de l'en-tête : la parité d'actions avec le clic droit d'une carte
-  // (prompt, agent, PR, cycle), plus la suppression qui vivait ici avant.
+  // Header “⋯” menu: share parity with right-click on a card
+  // (prompt, agent, PR, cycle), plus the suppression that lived here before.
   const menuActions: ContextMenuAction[] = [
     ...agentActions,
-    // « Voir la pull request » dès qu'il y en a une, QUEL QUE SOIT SON ÉTAT : une
-    // PR fermée reste ce qui s'est passé sur ce ticket, et c'est souvent elle
-    // qu'on cherche. Le chip de l'en-tête, lui, se tait dessus.
+    // “See the pull request” as soon as there is one, REGARDLESS OF ITS STATUS: one
+    // Closed PR remains what happened on this ticket, and it's often her
+    // that we are looking for. The header chip is silent about it.
     ...(agentsEnabled && pullRequest
       ? [
           {
@@ -746,9 +746,9 @@ export function IssueSidePanel({
 
   return (
     <>
-      {/* Le ticket ouvert nomme l'onglet — « MIN-42 · Corriger le redirect ».
-          Ni la page ni un layout ne peuvent le faire : le ticket vit dans un
-          paramètre de recherche, pas dans une route. */}
+      {/* The open ticket names the tab — “MIN-42 · Fix Redirect”.
+          Neither the page nor a layout can do this: the ticket lives in a
+          search parameter, not in a route. */}
       {open && (
         <DocumentTitle
           title={`${issueIdentifier(projectKey, issue.number)} · ${issue.title} · ${SITE_NAME}`}
@@ -781,8 +781,8 @@ export function IssueSidePanel({
                       {issueIdentifier(projectKey, parent.number)}
                     </button>
                   )}
-                  {/* Comme sur la carte : survoler « › MIN-42 » nomme la relation
-                      que le seul chevron laisse deviner. */}
+                  {/* As on the map: hovering over “› MIN-42” names the relationship
+                      that the chevron alone suggests. */}
                   {parent ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -814,8 +814,8 @@ export function IssueSidePanel({
                   className="font-mono text-xs text-muted-foreground"
                 />
               )}
-              {/* Agent de code : le seul état qui mérite l'en-tête (au travail,
-                  ou une PR à relire) — le reste est dans le menu « ⋯ ». */}
+              {/* Code Agent: the only state that deserves the header (at work,
+                  or a PR to reread) — the rest is in the “⋯” menu. */}
               {agentsEnabled && (
                 <IssueAgentChip
                   working={agentWorking}
@@ -895,13 +895,13 @@ export function IssueSidePanel({
               placeholder={t("titlePlaceholder")}
             />
 
-            {/* La chaîne d'automatisation, quand il y en a une (MIN-147). Sous le
-                titre et non dans l'en-tête : ce n'est pas un état d'une ligne,
-                c'est un travail en cours avec deux gestes à offrir. Elle se
-                masque toute seule quand la chaîne est finie.
-                PAS derrière `agentsEnabled` : une chaîne qui EXISTE est un fait,
-                et le cas qui mérite le plus d'être montré est justement celui
-                d'une chaîne arrêtée FAUTE de dépôt lié. */}
+            {/* The automation chain, when there is one (MIN-147). Under the
+                title and not in the header: it is not a one-line report,
+                it’s a work in progress with two gestures to offer. She
+                hides by itself when the chain is finished.
+                NOT behind `agentsEnabled`: a string that EXISTS is a fact,
+                and the case which most deserves to be shown is precisely that
+                of a chain stopped FOR FAULT of linked deposit. */}
             <ChainStatusBar issueId={issue.id} />
 
             <Tabs
@@ -927,9 +927,9 @@ export function IssueSidePanel({
                   key={issue.id}
                   plan={issue.plan}
                   onCommit={(plan) => void patch({ plan })}
-                  // Numo n'apparaît que là où il peut travailler : plan payant
-                  // + dépôt lié (même porte que ⇧A / le menu « ⋯ »). Les prompts
-                  // copiables, eux, marchent avec n'importe quel agent externe.
+                  // Numo only appears where it can work: paid plan
+                  // + linked repository (same door as ⇧A / the “⋯” menu). The prompts
+                  // Copyable ones work with any external agent.
                   onWriteWithAgent={agentsEnabled ? writePlanWithAgent : undefined}
                   onCopyPrompt={() => void copyPlanPrompt()}
                   onImplementWithAgent={
@@ -942,11 +942,11 @@ export function IssueSidePanel({
               </TabsContent>
 
               <TabsContent value="description" className="mt-4 flex flex-col gap-6">
-                {/* Le conteneur sert de repère de focus : tant que le curseur est
-                    DANS l'éditeur, une écriture distante ne le remonte pas — et
-                    au moment où il en sort, l'éditeur prend la version en
-                    attente (le blur ne change rien d'autre : sans frappe, rien
-                    n'est commité, donc rien ne redéclencherait l'effet). */}
+                {/* The container serves as a focus marker: as long as the cursor is
+                    IN the editor, distant writing does not bring it up — and
+                    when it comes out, the publisher takes the version in
+                    waiting (the blur doesn't change anything else: without typing, nothing
+                    is not committed, so nothing would retrigger the effect). */}
                 <div
                   ref={descriptionRef}
                   onBlur={() => {
@@ -1106,17 +1106,17 @@ export function IssueSidePanel({
             />
           </SidePanelFooter>
 
-          {/* Numo reprend la dictée : le liseré souligne le bord du panneau
-            pendant qu'il travaille — même signal que l'icône Numo « thinking »
-            qui remplace le micro dans l'en-tête. */}
+          {/* Numo takes over the dictation: the border highlights the edge of the panel
+            while working — same signal as the Numo “thinking” icon
+            which replaces the mic in the header. */}
           <AgentBeamOverlay active={numoBusy} />
         </SidePanelContent>
       </SidePanel>
 
-      {/* Reprise à chaud de la conversation, PAR-DESSUS le panneau : ouvre la
-          dernière run et donne accès à l'historique des runs du ticket. Montée
-          seulement quand une run existe — sans `initialRunId` la modal
-          retomberait sur un composer, ce que fait déjà « Nouvelle session ». */}
+      {/* Hot restart of the conversation, ABOVE the panel: opens the
+          last run and gives access to the ticket's run history. Rise
+          only when a run exists — without `initialRunId` the modal
+          would fall back on a composer, which “New session” already does. */}
       {latestRun && (
         <AgentChatModal
           open={chatOpen}

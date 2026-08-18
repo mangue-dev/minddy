@@ -9,8 +9,8 @@ import {
 } from "./stats-derive";
 import type { HeatmapDay, StatProjectBucket } from "./types";
 
-/** Série dense à partir de comptes journaliers — la date n'importe pas ici,
- *  seule la position (le dernier élément = aujourd'hui) porte du sens. */
+/** Dense series from daily accounts — the date does not matter here,
+ * only the position (the last element = today) carries meaning. */
 const days = (counts: number[]): HeatmapDay[] =>
   counts.map((count, i) => ({
     date: `2026-01-${String(i + 1).padStart(2, "0")}`,
@@ -34,7 +34,7 @@ describe("computeStreaks", () => {
   });
 
   it("does not break the streak when today is still empty", () => {
-    // Le jour courant n'est pas encore joué : les 2 jours d'avant comptent.
+    // The current day has not yet been played: the 2 days before count.
     expect(computeStreaks(days([0, 1, 1, 0])).current).toBe(2);
   });
 
@@ -106,13 +106,13 @@ describe("projectShare", () => {
 
 describe("dayInZone", () => {
   it("buckets an instant into its local calendar day", () => {
-    // 22 h UTC = déjà le lendemain à Paris (UTC+2 en été).
+    // 10 p.m. UTC = already the next day in Paris (UTC+2 in summer).
     expect(dayInZone("2026-05-17T22:30:00Z", "Europe/Paris")).toBe("2026-05-18");
     expect(dayInZone("2026-05-17T22:30:00Z", "UTC")).toBe("2026-05-17");
   });
 
   it("handles zones behind UTC", () => {
-    // 02 h UTC = encore la veille à New York.
+    // 02 a.m. UTC = still the day before in New York.
     expect(dayInZone("2026-05-17T02:00:00Z", "America/New_York")).toBe("2026-05-16");
   });
 

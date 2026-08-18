@@ -8,10 +8,10 @@ import {
 } from "./model-multiplier";
 
 /**
- * Le multiplicateur affiché dans le picker de modèle, et le plafond de plan qui
- * s'appuie dessus. Ce qui compte ici : que l'écran et le serveur tranchent
- * IDENTIQUEMENT — un modèle montré comme autorisé qui se ferait refuser au
- * lancement serait pire que pas de multiplicateur du tout.
+ * The multiplier displayed in the model picker, and the plan cap that
+ * relies on it. What matters here: that the screen and the server decide
+ * IDENTICALLY — a model shown as authorized which would be refused at
+ * launch would be worse than no multiplier at all.
  */
 
 const priced = (input: number, output: number): ModelPricing => ({
@@ -19,7 +19,7 @@ const priced = (input: number, output: number): ModelPricing => ({
   outputUsdPerMTok: output,
 });
 
-/** Le défaut de minddy du moment : moyenne 1 USD/Mtok — l'origine de l'échelle. */
+/** Minddy's default of the moment: average 1 USD/Mtok — the origin of the scale. */
 const BASELINE = priced(0.5, 1.5);
 
 describe("modelCostMultiplier", () => {
@@ -29,7 +29,7 @@ describe("modelCostMultiplier", () => {
   });
 
   it("moyenne l'entrée et la sortie", () => {
-    // (3 + 15) / 2 = 9, contre 1 pour le baseline.
+    // (3 + 15) / 2 = 9, against 1 for the baseline.
     expect(modelCostMultiplier(priced(3, 15), BASELINE)).toBe(9);
   });
 
@@ -38,8 +38,8 @@ describe("modelCostMultiplier", () => {
   });
 
   it("rend null quand il ne veut rien dire", () => {
-    // Prix inconnus (provider BYOK, modèle hors index) ou baseline gratuit : on
-    // ne fabrique pas un chiffre, et l'appelant n'interdit rien là-dessus.
+    // Prices unknown (provider BYOK, model not included) or free baseline: on
+    // does not make up a cipher, and the caller does not forbid anything about it.
     expect(modelCostMultiplier(null, BASELINE)).toBeNull();
     expect(modelCostMultiplier(BASELINE, null)).toBeNull();
     expect(modelCostMultiplier(BASELINE, priced(0, 0))).toBeNull();
@@ -54,8 +54,8 @@ describe("roundMultiplier", () => {
   });
 
   it("est la SEULE valeur en circulation : l'affichage et le plafond la partagent", () => {
-    // Le cas qui motive l'arrondi canonique : ×1,549 s'écrit « ×1,5 », donc dans
-    // le plafond Free — et doit donc AUSSI passer le contrôle du serveur.
+    // The case which motivates the canonical rounding: ×1.549 is written “×1.5”, therefore in
+    // the Free ceiling — and must ALSO pass server control.
     const shown = modelCostMultiplier(priced(1.549, 1.549), BASELINE);
     expect(shown).toBe(1.5);
     expect(isMultiplierWithinPlan(shown, 1.5)).toBe(true);
@@ -69,7 +69,7 @@ describe("isMultiplierWithinPlan", () => {
   });
 
   it("laisse passer ce qu'on ne sait pas situer", () => {
-    // On ne refuse jamais sur une ignorance : le budget d'usage reste derrière.
+    // We never refuse on ignorance: the usage budget remains behind.
     expect(isMultiplierWithinPlan(null, 1.5)).toBe(true);
     expect(isMultiplierWithinPlan(undefined, 1.5)).toBe(true);
   });

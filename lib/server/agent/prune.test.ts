@@ -8,17 +8,17 @@ describe("headTail", () => {
   it("garde début ET fin quand ça dépasse", () => {
     const s = "A".repeat(100) + "B".repeat(100);
     const out = headTail(s, 80);
-    expect(out).toMatch(/^A+/); // début préservé
-    expect(out).toMatch(/B+$/); // fin préservée
+    expect(out).toMatch(/^A+/); // start preserved
+    expect(out).toMatch(/B+$/); // end preserved
     expect(out).toContain("elided");
     expect(out.length).toBeLessThan(s.length);
   });
 });
 
 /**
- * Tests de l'élagage des sorties de tools. On vérifie : protection de la fenêtre
- * récente, seuil minimum (pas de churn), préservation du pairing tool_call_id et
- * des messages non-tool, idempotence.
+ * Tests tool output pruning. We check: protection of the recent
+ * window, minimum threshold (no churn), preservation of tool_call_id and
+ * pairing of non-tool messages, idempotence.
  */
 
 type Msg = { role: string; content?: string | null; tool_call_id?: string; path?: string };
@@ -36,7 +36,7 @@ describe("pruneToolOutputs", () => {
       { role: "user", content: "do it" },
       tool("a", 30), // ancien, mais petit
       { role: "assistant", content: "thinking" },
-      tool("b", 100), // récent (protégé)
+      tool("b", 100), // recent (protected)
     ];
     const before = messages.map((m) => m.content);
     const reclaimed = pruneToolOutputs(messages, { protectBytes: 100, minimumBytes: 50 });
@@ -57,10 +57,10 @@ describe("pruneToolOutputs", () => {
     const reclaimed = pruneToolOutputs(messages, { protectBytes: 100, minimumBytes: 50 });
 
     expect(reclaimed).toBe(160);
-    expect(messages[3].content).toBe(PRUNE_STUB); // old1 élagué
-    expect(messages[4].content).toBe(PRUNE_STUB); // old2 élagué
+    expect(messages[3].content).toBe(PRUNE_STUB); // old1 pruned
+    expect(messages[4].content).toBe(PRUNE_STUB); // old2 pruned
     expect(messages[6].content).toBe("x".repeat(100)); // recent intact
-    // Pairing préservé.
+    // Pairing preserved.
     expect(messages[3].tool_call_id).toBe("old1");
     expect(messages[4].tool_call_id).toBe("old2");
     // Messages non-tool intacts.
@@ -81,7 +81,7 @@ describe("pruneToolOutputs", () => {
   });
 
   it("garde la DERNIÈRE lecture de chaque chemin, quel que soit son âge", () => {
-    // 60 lectures réparties sur 3 chemins, aucune dans la fenêtre protégée.
+    // 60 readings distributed over 3 paths, none in the protected window.
     const paths = ["a.tsx", "b.tsx", "c.tsx"];
     const messages: Msg[] = [];
     for (let i = 0; i < 60; i++) {
@@ -94,11 +94,11 @@ describe("pruneToolOutputs", () => {
       keepLastPerKey: (m) => m.path ?? null,
     });
 
-    // 60 lectures, 3 gardées → 57 élaguées.
+    // 60 reads, 3 kept → 57 pruned.
     expect(reclaimed).toBe(57 * 100);
     const kept = messages.filter((m) => m.role === "tool" && m.content !== PRUNE_STUB);
     expect(kept.map((m) => m.path).sort()).toEqual(["a.tsx", "b.tsx", "c.tsx"]);
-    // Et ce sont bien les PLUS RÉCENTES : les indices 57, 58, 59.
+    // And these are indeed the MOST RECENT ones: indices 57, 58, 59.
     expect(kept.map((m) => m.tool_call_id).sort()).toEqual(["call_57", "call_58", "call_59"]);
   });
 
@@ -106,7 +106,7 @@ describe("pruneToolOutputs", () => {
     const messages: Msg[] = [
       { ...tool("old", 100), path: "a.tsx" },
       { ...tool("mid", 100), path: "a.tsx" },
-      { ...tool("recent", 100), path: "a.tsx" }, // dans la fenêtre protégée
+      { ...tool("recent", 100), path: "a.tsx" }, // in the protected window
     ];
     const reclaimed = pruneToolOutputs(messages, {
       protectBytes: 100,
@@ -120,8 +120,8 @@ describe("pruneToolOutputs", () => {
   });
 
   it("sans clé (chemin de sauvetage du checkpoint), tout part", () => {
-    // `checkpoint-fit.ts` appelle SANS `keepLastPerKey` : quand le checkpoint
-    // déborde des 8 Mo, aucune lecture n'est sacrée.
+    // `checkpoint-fit.ts` calls WITHOUT `keepLastPerKey`: when the checkpoint
+    // overflows 8 MB, no reading is sacred.
     const messages: Msg[] = [
       { ...tool("a", 100), path: "a.tsx" },
       { ...tool("b", 100), path: "b.tsx" },

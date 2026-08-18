@@ -23,9 +23,9 @@ describe("prLiveQueryKeys", () => {
   });
 
   it("rend les remarques de ligne en PRÉFIXE, sans endpoint", () => {
-    // Deux formes d'endpoint lisent les mêmes commentaires — la page PR
-    // (`prEndpoint`) et la vue diff d'une session (`runPrEndpoint`). Nommer
-    // l'une des deux laisserait l'autre périmée.
+    // Two endpoint forms read the same comments — the PR page
+    // (`prEndpoint`) and the diff view of a session (`runPrEndpoint`). Appoint
+    // one of the two would leave the other obsolete.
     expect(prLiveQueryKeys(PR, ["reviewComments"])).toEqual([["pr-review-comments"]]);
   });
 
@@ -37,8 +37,8 @@ describe("prLiveQueryKeys", () => {
   });
 
   it("dédoublonne les clés d'un même message", () => {
-    // Une review bouge le fil, les remarques ET l'en-tête ; deux parties peuvent
-    // viser la même clé, et invalider deux fois déclencherait deux refetch.
+    // A review moves the thread, the comments AND the header; two parties can
+    // aiming at the same key, and invalidating twice would trigger two refetches.
     expect(
       prLiveQueryKeys(PR, ["pr", "conversation", "reviewComments", "pr", "reviewComments"]),
     ).toEqual([["pull-request", PR], ["pr-comments", PR], ["pr-review-comments"]]);

@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest";
 import { resolveAnalyticsConsent } from "./cookie-consent";
 
 /**
- * La copie du consentement portée par le COMPTE (MIN-293).
+ * The copy of the consent carried by the ACCOUNT (MIN-293).
  *
- * Elle décide d'une seule chose, et c'est celle qui compte : faut-il reposer la
- * question au lancement de l'app de bureau ? Un `null` rendu à tort la repose à
- * quelqu'un qui a déjà répondu — le défaut qu'on corrigeait.
+ * It decides only one thing, and that's the one that counts: should we ask the
+ * question when launching the desktop app? An incorrectly returned `null` returns it to
+ * someone who has already responded — the defect we were correcting.
  */
 describe("resolveAnalyticsConsent", () => {
   it("rend le choix du compte", () => {
@@ -22,8 +22,8 @@ describe("resolveAnalyticsConsent", () => {
   });
 
   it("rend null sur une valeur qui n'est pas une réponse", () => {
-    // Les métadonnées de compte sont MODIFIABLES par le compte lui-même : elles
-    // se lisent comme une entrée, pas comme un état de confiance.
+    // Account metadata can be MODIFIED by the account itself: they
+    // read like an input, not a trust state.
     expect(resolveAnalyticsConsent({ analytics_consent: true })).toBeNull();
     expect(resolveAnalyticsConsent({ analytics_consent: "oui" })).toBeNull();
   });

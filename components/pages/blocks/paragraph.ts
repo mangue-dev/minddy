@@ -2,9 +2,8 @@ import { Paragraph } from "@tiptap/extension-paragraph";
 import { Pilcrow } from "lucide-react";
 import type { PageBlock } from "@/components/pages/blocks/types";
 
-/** Le bloc par défaut : c'est lui que `Entrée` crée, et c'est vers lui que
-    « transformer en » ramène. Rien de spécial à sérialiser — un paragraphe est
-    du markdown nu. */
+/** The default block: this is what `Enter` creates, and it is this that
+ “transform into” brings back. Nothing special to serialize — a paragraph is KEEP_2_TOKEN of bare markdown. */
 export const paragraphBlock: PageBlock = {
   id: "paragraph",
   nodeName: "paragraph",

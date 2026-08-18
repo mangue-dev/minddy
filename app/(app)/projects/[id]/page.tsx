@@ -100,8 +100,8 @@ function ProjectBoard() {
   const { integrations } = useIntegrationsQuery(projectId);
   const { user } = useAuth();
   const myUserId = user?.id ?? null;
-  // Import et amorce par Numo sont réservés au propriétaire (l'API les lui
-  // réserve) : le board vide ne montre que ce qui est réellement à portée.
+  // Import and priming by Numo are reserved for the owner (the API
+  // reserve): the empty board only shows what is actually within range.
   const isOwner = !!project && project.owner_id === myUserId;
   const { open: openAssistant } = useAssistantPanel();
 
@@ -158,16 +158,16 @@ function ProjectBoard() {
   const [openIssueTab, setOpenIssueTab] = useState<"description" | "plan">(
     "description"
   );
-  // L'amorce par import (MIN-171) : `?setup=import` ouvre le panneau d'import
-  // avec le CSV déposé dans le wizard.
+  // The import boot (MIN-171): `?setup=import` opens the import panel
+  // with the CSV deposited in the wizard.
   const [importOpen, setImportOpen] = useState(false);
-  // Ce que le wizard a récolté une étape plus tôt (brief collé, CSV déposé).
-  // Pris une fois : le rouvrir plus tard repart d'une surface vide.
+  // What the wizard collected one step earlier (brief pasted, CSV submitted).
+  // Taken once: reopening it later leaves an empty surface.
   const [handoff, setHandoff] = useState<ReturnType<typeof takeSeedHandoff>>(null);
-  // La remise se PREND, elle ne se relit pas : un effet rejoué (StrictMode en
-  // dev le fait systématiquement) la trouverait vide et effacerait celle qu'on
-  // vient d'obtenir. Le ref en garde donc une copie, que les rejeux relisent
-  // au lieu d'une remise déjà consommée.
+  // The reset is TAKEN, it is not replayed: a replayed effect (StrictMode in
+  // dev does it systematically) would find it empty and delete the one we
+  // just got. The ref therefore keeps a copy, which the replays reread
+  // instead of a discount already consumed.
   const handoffTaken = useRef(false);
   const takenHandoff = useRef<ReturnType<typeof takeSeedHandoff>>(null);
   // Views Numo is currently building from a description (their chip shows a
@@ -190,13 +190,13 @@ function ProjectBoard() {
   // the next time it's viewed. `useIssuesQuery` above only owns the current one.
   const queryClient = useQueryClient();
   const { record } = useUndoHistory();
-  // Optimistic (MIN-40) : le dialog se ferme sans attendre le POST. La carte
-  // est insérée dans le cache du projet cible (visible au prochain affichage),
-  // remplacée par la ligne serveur au succès, retirée + toast à l'échec.
+  // Optimistic (MIN-40): the dialog closes without waiting for POST. The map
+  // is inserted into the cache of the target project (visible on the next display),
+  // replaced by the server line on success, removed + toast on failure.
   const createIssueInProject = useCallback(
     async (targetProjectId: string, input: CreateIssueInput) => {
-      // Smart-fill (MIN-260) : le serveur remplit le ticket AVANT d'insérer la
-      // ligne, donc pas de carte optimiste — elle serait vide le temps du
+      // Smart-fill (MIN-260): the server fills the ticket BEFORE inserting the
+      // line, so no optimistic card — it would be empty for the duration of
       // remplissage. Cf. [create-issue-deferred](../../../../lib/create-issue-deferred.ts).
       if (input.smart_fill) {
         createIssueDeferred({ queryClient, projectId: targetProjectId, input, record });
@@ -208,12 +208,12 @@ function ProjectBoard() {
         myUserId,
         queryClient.getQueryData<Issue[]>(["issues", targetProjectId]) ?? [],
       );
-      // Inscrite au registre AVANT le patch (MIN-156) : une réponse de GET
-      // partie plus tôt ne peut plus faire disparaître la carte à peine créée.
+      // Registered BEFORE the patch (MIN-156): a GET response
+      // played earlier can no longer make the newly created map disappear.
       const handle = issueWrites.begin({ kind: "insert", row: optimistic });
       insertIssueEverywhere(queryClient, targetProjectId, optimistic);
-      // La carte nomme sa ligne : l'écho temps réel de notre création est
-      // reconnu, pas adopté à côté d'elle (lib/optimistic-issue.ts).
+      // The map names its line: the real-time echo of our creation is
+      // recognized, not adopted alongside it (lib/optimistic-issue.ts).
       void createIssueApi(targetProjectId, { ...input, id: optimistic.id }).then(
         (issue) => {
           insertIssueEverywhere(queryClient, targetProjectId, issue);
@@ -315,7 +315,7 @@ function ProjectBoard() {
   };
 
   // Let Numo shape the currently selected view: open the chat carrying the
-  // active view as context so "cette vue" resolves without the user re-stating
+  // active view as context so "this view" resolves without the user re-stating
   // it. Reachable from the "Ask Numo" entry in the filters dropdown.
   const handleAskNumo = () => {
     openAssistant({
@@ -330,12 +330,12 @@ function ProjectBoard() {
     ? issues.find((i) => i.id === openIssueId) ?? null
     : null;
 
-  // « Enregistrer la vue actuelle » (⌘K) : la vue active d'un board vit dans
-  // localStorage, pas dans l'adresse — sans cette publication, la vue
-  // enregistrée rouvrirait le board sur la vue mémorisée du moment, pas sur
-  // celle qu'on regardait. `?view=` est justement l'instruction qui la rétablit
-  // (cf. useBoardViews). Le ticket ouvert dans le panneau latéral, lui, ne part
-  // pas avec : une vue enregistrée retient la page, pas ce qui est posé devant.
+  // “Save current view” (⌘K): the active view of a board lives in
+  // localStorage, not in the address — without this postback, the view
+  // saved would reopen the board on the currently stored view, not on
+  // the one we were looking at. `?view=` is precisely the instruction that restores it
+  // (see useBoardViews). The ticket opened in the side panel does not go away
+  // not with: a saved view retains the page, not what is placed in front of it.
   usePublishCurrentView(
     activeView && project
       ? {
@@ -348,7 +348,7 @@ function ProjectBoard() {
   );
 
   // Publish what this board is showing to Numo (open issue > objective > tab),
-  // so "ce ticket" / "cet objectif" / "cette vue" resolve without searching.
+  // so "this ticket" / "this objective" / "this view" resolve without searching.
   // The selected view rides along in every case so Numo can edit it in place.
   const viewCtx =
     !activeObjective && activeView
@@ -421,14 +421,14 @@ function ProjectBoard() {
     }
   }, [newParam, pathname, router]);
 
-  // Fin du wizard de création : /projects/[id]?setup=numo|import ouvre l'amorce
-  // que l'utilisateur a choisie (MIN-171). L'URL ne porte que l'instruction —
-  // ce qui a été saisi voyage en mémoire (project-seed-handoff) parce qu'un
-  // `File` ne se sérialise pas. L'instruction est à usage unique, comme `?new=`
-  // : la refermer ne doit pas la rouvrir au rendu suivant.
+  // End of the creation wizard: /projects/[id]?setup=numo|import opens the primer
+  // that the user has chosen (MIN-171). The URL only carries the statement —
+  // what was entered travels in memory (project-seed-handoff) because a
+  // `File` does not serialize. The instruction is single-use, like `?new=`
+  // : closing it should not reopen it the next time it is rendered.
   useEffect(() => {
     if (setupParam !== "import" && setupParam !== "numo") return;
-    // Le premier message NOMME le projet : on attend donc de le connaître.
+    // The first message NAMES the project: we are therefore waiting to know it.
     if (setupParam === "numo" && !project) return;
     if (!handoffTaken.current) {
       handoffTaken.current = true;
@@ -436,11 +436,11 @@ function ProjectBoard() {
       setHandoff(takenHandoff.current);
     }
     if (setupParam === "numo") {
-      // Le brief collé (MIN-173) n'ouvre pas une passe en coulisses : il OUVRE
-      // LA CONVERSATION. C'est le même écran que « j'en parle avec Numo », au
-      // premier message près — celui qui n'a rien collé part des questions de
-      // Numo, celui qui a collé part de son texte, et les deux peuvent se
-      // répondre avant qu'un seul ticket existe.
+      // The pasted brief (MIN-173) does not open a backstage pass: it OPENS
+      // THE CONVERSATION. This is the same screen as "I'm talking about it with Numo", on
+      // first message - the one that didn't stick starts with questions from
+      // Numo, the one who pasted shares his text, and the two can
+      // respond before a single ticket exists.
       const taken = takenHandoff.current;
       const brief = taken?.kind === "numo" ? taken.brief?.trim() : null;
       openAssistant({
@@ -498,13 +498,12 @@ function ProjectBoard() {
           </div>
         </div>
       ) : issues.length === 0 ? (
-        /* Board vide : les TROIS façons d'y mettre quelque chose, dans l'ordre
-           de ce qu'on fait le plus — un ticket à la main (le raccourci se
-           montre là où il sert), l'import d'un backlog existant, la
-           conversation avec Numo. Rien à lire pour comprendre : la scène dit
-           « rien ici, une première carte va s'y poser », les boutons disent le
-           reste. Import et amorce restent au propriétaire (l'API les lui
-           réserve, et c'est lui qui paye l'appel). */
+        /* Empty board: the THREE ways to put something on it, in order
+ of what we do most — a ticket in hand (the shortcut se
+ shows where it is used), the import of an existing backlog, the
+ conversation with Numo. Nothing to read to understand: the scene says
+ “nothing here, a first card will land there”, the buttons say the
+ remains. Import and seed remain with the owner (the API reserves them for him, and he pays for the call). */
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
           <div className="mx-auto max-w-5xl">
             <EmptyScene icon={LayoutGrid} title={t("emptyTitle")}>
@@ -663,8 +662,8 @@ function ProjectBoard() {
         onCreate={createIssue}
         onCreateInProject={createIssueInProject}
         initialStatus={createStatus}
-        // Le board projet ouvre son propre dialog (préréglages de colonne) —
-        // distingué du dialog global dans les stats.
+        // The project board opens its own dialog (column presets) —
+        // distinguished from the global dialog in the stats.
         analyticsSource={activeObjective ? "objective" : "board"}
         initialObjectiveId={activeObjective?.id ?? null}
         initialAssigneeId={

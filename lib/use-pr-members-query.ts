@@ -4,18 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchPullRequestMembersApi, type PrEndpoint, type RepoMember } from "@/lib/agent-api";
 
 /**
- * Les comptes de la forge mentionnables sur une PR (MIN-162).
+ * Forge accounts mentionable on a PR (MIN-162).
  *
- * Chargés À LA DEMANDE — `enabled` ne passe à vrai qu'au premier `@` tapé, sur
- * le modèle de `use-numo-mentionables` : ouvrir une PR ne doit déclencher aucune
- * requête de plus, et la plupart des PR se lisent sans qu'on y écrive.
- *
- * `staleTime` long, et pas de refetch au retour de focus : une liste de
- * collaborateurs ne bouge pas pendant qu'on rédige un commentaire, et la
- * réponse porte déjà son propre cache HTTP.
+ * Loaded ON DEMAND — `enabled` only becomes true at the first `@` typed, on
+ * the model of __keep we write a comment, and the
+ * response already carries its own HTTP cache.
  */
 export function usePrMembersQuery(
-  /** Base de la PR : `/api/pull-requests/{id}` ou la façade `/api/agent-runs/{id}/pr`. */
+  /** PR base: `/api/pull-requests/{id}` or facade `/api/agent-runs/{id}/pr`. */
   endpoint: PrEndpoint | null,
   enabled: boolean,
 ): { members: RepoMember[]; loading: boolean } {

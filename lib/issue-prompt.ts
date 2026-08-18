@@ -28,9 +28,9 @@ export interface IssuePromptInput {
 }
 
 /**
- * Le bloc `<issue>` partagé par les prompts (travailler sur le ticket, écrire
- * son plan) : les champs du ticket, tels quels, sans le plan — celui-ci n'est
- * JAMAIS inliné (potentiellement 64 Ko), l'agent le lit via le MCP.
+ * The `<issue>` block shared by the prompts (work on the ticket, write
+ * its plan): the fields of the ticket, as is, without the plan — this one is
+ * NEVER inlined (potentially 64 KB), the agent reads it via the MCP.
  */
 function issueBlock({
   issue,
@@ -86,13 +86,13 @@ function issueBlock({
 }
 
 /**
- * « Copier le prompt » (pattern Linear) : un prompt prêt à coller dans
- * n'importe quel agent (Claude Code, Cursor…) pour travailler sur un ticket.
- * TOUJOURS en anglais — le contenu du ticket est repris tel quel, mais tout
- * ce qui l'entoure est en anglais, quelle que soit la locale de l'UI.
- * Le plan n'est JAMAIS inliné (potentiellement 64 Ko) : le prompt renvoie
- * l'agent vers le MCP pour le lire — ou pour en écrire un s'il n'existe pas —
- * afin que le plan et son avancée restent logués dans minddy.
+ * “Copy prompt” (Linear pattern): a prompt ready to paste into
+ * any agent (Claude Code, Cursor, etc.) to work on a ticket.
+ * ALWAYS in English — the content of the ticket is reproduced as is, but everything
+ * what surrounds it is in English, whatever either the locale of the UI.
+ * The plan is NEVER inlined (potentially 64 KB): the prompt sends
+ * the agent to the MCP to read it — or to write one if it does not exist —
+ * so that the plan and its progress remain logged in minddy.
  */
 export function buildIssuePrompt(input: IssuePromptInput): string {
   const { issue, projectId, projectKey } = input;
@@ -101,8 +101,8 @@ export function buildIssuePrompt(input: IssuePromptInput): string {
   const plan = issue.plan ? parsePlan(issue.plan) : null;
   const hasPlan = !!plan && plan.tasks.length > 0;
 
-  // Le MCP est un PLUS, jamais un prérequis : sans lui l'agent travaille
-  // simplement à partir du bloc <issue>, sans solliciter l'utilisateur.
+  // The MCP is a PLUS, never a prerequisite: without it the agent works
+  // simply from the <issue> block, without asking the user.
   const planLine = hasPlan
     ? `An implementation plan already exists on this issue (${plan.progress.done}/${plan.progress.total} tasks done); it is intentionally not inlined here.`
     : "This issue has no implementation plan yet.";
@@ -125,14 +125,14 @@ If the minddy MCP tools are not available, that's fine — just work on the issu
 }
 
 /**
- * Variante « personnalisée » : la consigne est écrite par l'UTILISATEUR, minddy
- * ne fournit que ce qui l'entoure — le bloc `<issue>` avant, les pas MCP après.
- * Le texte saisi est repris VERBATIM, au milieu, dans la langue où il a été
- * écrit : c'est LA demande, pas une précision ajoutée à « implémente le ticket »
- * (qui n'est donc pas là — sinon les deux consignes se disputeraient l'agent).
+ * “Personalized” variant: the instruction is written by the USER, minddy
+ * only provides what surrounds it — the `<issue>` block before, the MCP steps after.
+ * The text entered is repeated VERBATIM, in the middle, in the language where it was
+ * written : this is THE request, not a clarification added to "implements the ticket"
+ * (which is therefore not there - otherwise the two instructions would compete for the agent).
  *
- * Le plan n'est pas inliné ici non plus : le prompt signale seulement qu'il
- * existe, et l'agent le lit via le MCP si la consigne l'y amène.
+ * The plan is not inlined here either: the prompt only indicates that it
+ * exists, and the agent reads it via the MCP if the instructions lead him there.
  */
 export function buildIssueCustomPrompt(
   input: IssuePromptInput,
@@ -148,9 +148,9 @@ export function buildIssueCustomPrompt(
     ? `An implementation plan already exists on this issue (${plan.progress.done}/${plan.progress.total} tasks done); it is intentionally not inlined here.`
     : "This issue has no implementation plan yet.";
 
-  // Suivre le plan n'est PAS demandé d'office (la consigne est celle de
-  // l'utilisateur) — mais s'il s'y appuie, son avancée doit rester logée dans
-  // minddy plutôt que dans la tête de l'agent.
+  // Following the plan is NOT automatically required (the instruction is that of
+  // the user) — but if he relies on it, his progress must remain lodged in
+  // minddy rather than in the agent's head.
   const planStep = hasPlan
     ? "\n- If the instructions lead you to follow that plan, keep its task states updated with `minddy_update_plan_task` as you work (mark a task '- [~]' when you start it, '- [x]' when done)."
     : "";
@@ -173,17 +173,16 @@ If the minddy MCP tools are not available, that's fine — just work on the issu
 }
 
 /**
- * Variante « vérifier l'implémentation » : le travail a déjà été fait (au moins
- * en partie), on demande à l'agent de le CONFRONTER à ce qui avait été demandé
- * — le plan ET les commentaires du ticket, puisque c'est là que les écarts se
- * discutent — puis de corriger les bugs qu'il trouve.
+ * "Check implementation" variant: the work has already been done (at least
+ * in part), we ask the agent to CONFRONTE it with what had been requested
+ * — the plan AND the comments of the ticket, since this is where the deviations are discussed
+ * — then to fix the bugs that it finds.
  *
- * « Dont il est sûr » est la consigne centrale : une correction spéculative sur
- * du code qui marche coûte plus cher que le bug imaginé, donc ce qui n'est pas
- * prouvé se signale au lieu de se « réparer ».
+ * “It is certain” is the central guideline: a speculative fix on
+ * code that works costs more than the imagined bug, so what is not proven is reported instead of being “fixed”.
  *
- * Le plan n'est JAMAIS inliné (potentiellement 64 Ko) : l'agent le lit via le
- * MCP — et sans MCP il le demande plutôt que de deviner ce qui avait été prévu.
+ * The plan is NEVER inlined (potentially 64 KB): the agent reads it via the
+ * MCP — and without MCP it asks for it rather than guessing what was intended.
  */
 export function buildIssueVerifyPrompt(input: IssuePromptInput): string {
   const { issue, projectId, projectKey } = input;
@@ -222,13 +221,13 @@ ${noMcpLine}`;
 }
 
 /**
- * Variante « cadrer le ticket » du prompt : l'agent travaille le PLAN et rien
- * de plus — il explore le code, écrit le plan sur le ticket (via le MCP quand
- * il l'a, sinon en markdown dans sa réponse) et s'arrête avant d'implémenter.
- * Sert le bouton « Copier le prompt » de l'onglet Plan.
+ * “frame the ticket” variant of the prompt: the agent works the PLAN and nothing
+ * more — it explores the code, writes the plan on the ticket (via the MCP when
+ * it has it, otherwise in markdown in its response) and stops before implementing.
+ * Serves the button “ Copy the prompt » from the Plan tab.
  *
- * Le plan existe déjà → on ne redemande pas de l'écrire : le prompt bascule sur
- * une RELECTURE point par point (`buildIssuePlanReviewPrompt`).
+ * The plan already exists → we do not ask you to write it again: the prompt switches to
+ * a point-by-point REREADING (`buildIssuePlanReviewPrompt`).
  */
 export function buildIssuePlanPrompt(input: IssuePromptInput): string {
   const { issue, projectId, projectKey } = input;
@@ -252,11 +251,11 @@ Stop once the plan is written: don't start implementing until I ask.`;
 }
 
 /**
- * Variante « vérifier le plan » : le ticket a DÉJÀ un plan, on ne demande donc
- * pas d'en écrire un — l'agent le reprend tâche par tâche face au code réel,
- * corrige ce qui a dérivé, et s'arrête avant d'implémenter.
- * Le plan n'est pas inliné (potentiellement 64 Ko) : l'agent le lit via le MCP,
- * et sans MCP il le demande plutôt que de l'inventer.
+ * "Check plan" variant: the ticket ALREADY has a plan, so we don't ask
+ * to write one — the agent takes it task by task when faced with the real code,
+ * corrects what has drifted, and stops before implementing.
+ * The plan is not inlined (potentially 64 KB): the agent reads it via the MCP,
+ * and without MCP it requests it rather than inventing it.
  */
 export function buildIssuePlanReviewPrompt(input: IssuePromptInput): string {
   const { issue, projectId, projectKey } = input;

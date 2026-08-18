@@ -15,18 +15,18 @@ import type {
 } from "@/lib/types";
 
 /**
- * Les trois écrans du webhook sortant — où appeler, sur quoi, pour quels
- * tickets — définis une fois pour les deux endroits qui les montrent : la
- * création d'une intégration, et la reconfiguration d'un webhook existant.
+ * The three screens of the outgoing webhook — where to call, on what, for what
+ * tickets — defined once for the two places that show them: the
+ * creating an integration, and reconfiguring an existing webhook.
  *
- * Ce sont les mêmes questions, posées au même moment du parcours ; les laisser
- * diverger, c'est que le libellé d'un événement ou la valeur par défaut d'un
- * périmètre ne veuille plus dire la même chose selon la porte d'entrée.
+ * These are the same questions, asked at the same moment of the journey; leave them
+ * diverge is that the label of an event or the default value of an
+ * perimeter no longer means the same thing depending on the entrance door.
  *
- * Ce qui change d'un hôte à l'autre est ce qui ENTOURE les questions. À la
- * création, une question préalable décide si ces trois écrans existent — donc
- * arriver ici, c'est avoir dit oui, et l'URL est attendue. En reconfiguration,
- * les trois écrans sont toujours là et vider l'URL est la façon d'éteindre.
+ * What changes from host to host is what SURROUNDS the questions. To the
+ * creation, a preliminary question decides if these three screens exist — therefore
+ * getting here means saying yes, and the URL is expected. In reconfiguration,
+ * all three screens are still there and emptying the url is the way to turn it off.
  */
 
 export type WebhookStepId = "webhookUrl" | "webhookEvents" | "webhookScope";
@@ -44,8 +44,8 @@ const ALL_EVENTS: IntegrationWebhookEvent[] = [
   "issue.updated",
 ];
 
-/** Ce qu'on suit quand on n'a rien dit : le changement de statut, c'est-à-dire
- *  la décision humaine — la seule chose qu'une app ne peut pas déduire seule. */
+/** What we follow when we have said nothing: the change of status, that is to say
+ * human decision — the one thing an app can't deduce on its own. */
 export const DEFAULT_WEBHOOK: WebhookConfig = {
   url: "",
   events: ["issue.status_changed"],
@@ -56,12 +56,12 @@ export function useWebhookSteps({
   value,
   onChange,
   /**
-   * On est ici parce qu'on a dit oui : une URL vide n'est plus « pas de
-   * webhook » mais une réponse manquante. Là où l'on RECONFIGURE, au
-   * contraire, la vider est la façon d'éteindre.
+   * We are here because we said yes: an empty URL is no longer "no
+   * webhook” but a missing response. Where we RECONFIGURE, at
+   * On the contrary, emptying it is the way to extinguish it.
    */
   urlRequired = false,
-  /** CTA de la dernière étape, quand elle termine le parcours. */
+  /** CTA of the last stage, when she finishes the route. */
   scopeSubmitLabel,
 }: {
   value: WebhookConfig;
@@ -87,16 +87,16 @@ export function useWebhookSteps({
       id: "webhookUrl",
       title: t("webhookWizardUrlTitle"),
       subtitle: t("webhookDescription"),
-      // Vide, elle ne bloque que là où une adresse est attendue ; remplie, elle
-      // doit être appelable — sans quoi on enregistre un webhook qui n'appellera
-      // rien, et on ne l'apprendrait qu'en ne recevant jamais de livraison.
+      // Empty, it only blocks where an address is expected; filled, she
+      // must be callable — otherwise we register a webhook which will not call
+      // nothing, and we would only learn it by never receiving a delivery.
       submitDisabled: hasUrl ? !urlOk : urlRequired,
       content: (
         <div className="flex flex-col gap-2 text-left">
-          {/* `type="url"` refuserait « example.com » avant même d'arriver
-              jusqu'ici : la validation native se déclenche à la soumission, donc
-              avant que le schéma manquant ait pu être ajouté. C'est nous qui
-              validons, et `inputMode` garde le bon clavier sur mobile. */}
+          {/* `type="url"` would refuse “example.com” before even arriving
+ so far: native validation triggers on submission, so
+ before the missing schema could be added. We are the ones who validate
+, and `inputMode` keeps the correct keyboard on mobile. */}
           <Input
             autoFocus
             type="text"
@@ -105,8 +105,8 @@ export function useWebhookSteps({
             spellCheck={false}
             value={value.url}
             onChange={(e) => onChange({ ...value, url: e.target.value })}
-            // Compléter à la sortie du champ, pas à la frappe : réécrire sous
-            // les doigts de qui tape empêcherait d'écrire « http://… ».
+            // Complete when leaving the field, not when typing: rewrite under
+            // the typing fingers would prevent writing “http://…”.
             onBlur={() => {
               const normalized = normalizeWebhookUrl(value.url);
               if (normalized !== value.url)
@@ -116,16 +116,15 @@ export function useWebhookSteps({
             aria-label={t("webhookUrlLabel")}
             className="font-mono text-sm"
           />
-          {/* « Laissez vide pour désactiver » ne veut rien dire quand il n'y a
-              rien à désactiver : à la création, l'URL est attendue. */}
+          {/* “Leave blank to disable” means nothing when there is no
+ nothing to disable: upon creation, the URL is expected. */}
           {!urlRequired && (
             <p className="text-xs text-muted-foreground">
               {t("webhookUrlHint")}
             </p>
           )}
-          {/* Ce que le récepteur doit vérifier, à l'endroit où on lui donne
-              l'adresse : la signature est la seule chose qu'il ne peut pas
-              déduire de la charge utile. */}
+          {/* What the receiver must check, at the place where he is given
+ the address: the signature is the only thing it cannot deduce from the payload. */}
           <p className="mt-2 rounded-xl border border-border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
             {t("webhookSignatureHint")}
           </p>
@@ -137,8 +136,8 @@ export function useWebhookSteps({
       id: "webhookEvents",
       title: t("webhookWizardEventsTitle"),
       subtitle: t("webhookWizardEventsDesc"),
-      // Une URL sans événement suivi n'appellera jamais : c'est un webhook qui
-      // a l'air branché et ne l'est pas.
+      // A URL without a tracked event will never call: it is a webhook which
+      // looks hip and isn't.
       submitDisabled: hasUrl && value.events.length === 0,
       content: (
         <div className="flex flex-col gap-3">

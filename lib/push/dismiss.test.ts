@@ -6,11 +6,11 @@ import { showsNotificationTarget } from "./dismiss";
 const P = "11111111-1111-1111-1111-111111111111";
 
 /**
- * Une cible de chaque sorte, en DEUX exemplaires : c'est le seul moyen de
- * vérifier que le paramètre qui les distingue est bien pris en compte. Un
- * paramètre oublié dans `NOTIFICATION_TARGET_PARAMS` ne se voit pas autrement —
- * les deux chemins ne diffèrent que par lui, et tout le reste (le chemin, les
- * autres paramètres) matcherait encore.
+ * A target of each type, in TWO copies: this is the only way to
+ * check that the parameter which distinguishes them is taken into account. A
+ * parameter forgotten in `NOTIFICATION_TARGET_PARAMS` is not seen otherwise —
+ * the two paths only differ by it, and everything else (the path, the
+ * other parameters) would still match.
  */
 const KINDS = [
   {
@@ -45,8 +45,8 @@ describe("showsNotificationTarget", () => {
     expect(showsNotificationTarget(a, a)).toBe(true);
   });
 
-  // LE test de ce module. Sans le paramètre identifiant, arriver sur une
-  // routine refermerait les notifications de toutes les autres.
+  // THE test of this module. Without the identifier parameter, arrive at a
+  // routine would close all other notifications.
   it.each(KINDS)("ne confond pas deux cibles de même sorte ($name)", ({ a, b }) => {
     expect(showsNotificationTarget(a, b)).toBe(false);
     expect(showsNotificationTarget(b, a)).toBe(false);
@@ -62,39 +62,39 @@ describe("showsNotificationTarget", () => {
     }
   });
 
-  it("ignore les paramètres qui ne désignent pas la cible", () => {
+  it("ignores parameters that do not identify the target", () => {
     const target = `/projects/${P}?issue=iss`;
     expect(showsNotificationTarget(`${target}&view=board&group=status`, target)).toBe(
       true
     );
-    // Le chemin identifie la page, le paramètre identifie la routine ; les
-    // paramètres décoratifs ne doivent pas changer la cible.
+    // The path identifies the page, the parameter identifies the routine; THE
+    // decorative parameters should not change the target.
     expect(
       showsNotificationTarget("/routines?routine=rt-a&view=list", "/routines?routine=rt-a")
     ).toBe(true);
   });
 
-  // L'asymétrie voulue : le board qui CONTIENT le ticket n'est pas la page du
-  // ticket. Refermer la notification là serait la perdre avant de l'avoir lue.
+  // The desired asymmetry: the board which CONTAINS the ticket is not the page of the
+  // ticket. Closing the notification there would mean losing it before reading it.
   it("ne referme pas depuis le board quand le ticket n'est pas ouvert", () => {
     expect(showsNotificationTarget(`/projects/${P}`, `/projects/${P}?issue=iss`)).toBe(
       false
     );
   });
 
-  it("tient la barre oblique finale pour du décor", () => {
+  it("keeps the trailing slash as decoration", () => {
     expect(showsNotificationTarget("/inbox/", "/inbox")).toBe(true);
     expect(showsNotificationTarget("/inbox", "/inbox/")).toBe(true);
   });
 
-  it("ne matche pas un autre projet", () => {
+  it("does not match another project", () => {
     const other = "22222222-2222-2222-2222-222222222222";
     expect(
       showsNotificationTarget(`/projects/${other}?issue=iss`, `/projects/${P}?issue=iss`)
     ).toBe(false);
   });
 
-  it("rend false sur une URL illisible plutôt que de lever", () => {
+  it("returns false for an unreadable URL instead of throwing", () => {
     expect(showsNotificationTarget("/inbox", "http://")).toBe(false);
   });
 });

@@ -13,42 +13,42 @@ import { stopSandboxByName } from "@/lib/server/agent/sandbox";
 import { revokeRunKey } from "@/lib/server/agent/run-key";
 
 /**
- * Suppression de compte (MIN-119, RGPD art. 17 — droit à l'effacement).
+ * Account deletion (MIN-119, GDPR art. 17 — right to erasure).
  *
- * Immédiate et définitive : pas de corbeille, pas de délai de grâce. Le schéma
- * est déjà fait pour ça — `auth.users` cascade sur tout ce qui est personnel et
- * met à NULL les colonnes d'auteur, de sorte que le fil d'un ticket partagé
- * reste lisible sans plus désigner personne.
+ * Immediate and definitive: no trash, no grace period. The scheme
+ * is already done for this — `auth.users` cascades over everything that is personal and
+ * sets the author columns to NULL, so that the thread of a shared ticket
+ * remains readable without no longer designating anyone.
  *
- * LA conséquence à ne jamais taire : `projects.owner_id … on delete cascade`.
- * Supprimer son compte détruit les projets dont on est propriétaire, avec leurs
- * tickets, leurs fichiers et l'accès de leurs autres membres. C'est le rôle de
- * `previewAccountDeletion()` de le chiffrer AVANT que la personne confirme —
- * un effacement irréversible n'est acceptable que s'il a été annoncé.
+ * THE consequence to never be silenced : `projects.owner_id … on delete cascade`.
+ * Deleting your account destroys the projects you own, with their
+ * tickets, their files and the access of their other members. It is the role of
+ * `previewAccountDeletion()` to encrypt it BEFORE the person confirms —
+ * an irreversible deletion is only acceptable if it has been announced.
  *
- * L'ordre des opérations compte : ce que la cascade n'emporte pas doit partir
- * d'abord, sinon on perd la trace de ce qu'il fallait nettoyer.
- *   1. l'abonnement Stripe (aucune raison de continuer à prélever) ;
- *   2. les objets de stockage (les LIGNES cascadent, pas les FICHIERS) ;
- *   3. le compte lui-même, qui emporte le reste.
+ * The order of operations counts: what the cascade does not take away must leave
+ * first, otherwise we lose track of what needed to be cleaned.
+ * 1. the Stripe subscription (no reason to continue charging);
+ * 2. the storage objects (LINES cascade, not FILES);
+ * 3. the account itself, which take away the rest.
  */
 
 type Service = ReturnType<typeof getServiceClient>;
 
 export interface DeletionPreview {
-  /** Projets qui seront détruits — ceux dont la personne est propriétaire. */
+  /** Projects that will be destroyed — those that the person owns. */
   ownedProjects: Array<{ id: string; name: string; memberCount: number }>;
-  /** Tickets contenus dans ces projets. */
+  /** Tickets contained in these projects. */
   issueCount: number;
-  /** Membres d'autres comptes qui perdront leur accès. */
+  /** Members of other accounts who will lose access. */
   affectedMemberCount: number;
-  /** Commentaires écrits par la personne, ici comme ailleurs. */
+  /** Comments written by the person, here and elsewhere. */
   commentCount: number;
-  /** Un abonnement payant est-il en cours ? */
+  /** Is a paid subscription in progress? */
   hasActiveSubscription: boolean;
 }
 
-/** Ce que la suppression détruira, chiffré, pour l'écran de confirmation. */
+/** What deletion will destroy, encrypted, for the confirmation screen. */
 export async function previewAccountDeletion(userId: string): Promise<DeletionPreview> {
   const service = getServiceClient();
 
@@ -89,7 +89,7 @@ export async function previewAccountDeletion(userId: string): Promise<DeletionPr
     ownedProjects: (projects ?? []).map((p) => ({
       id: p.id as string,
       name: p.name as string,
-      // +1 : le propriétaire n'a pas de ligne dans project_members.
+      // +1: the owner has no line in project_members.
       memberCount: (perProject.get(p.id as string) ?? 0) + 1,
     })),
     issueCount: issues.count ?? 0,
@@ -105,12 +105,12 @@ export interface DeletionResult {
   deletedProjects: number;
   removedStorageObjects: number;
   subscriptionCanceled: boolean;
-  /** Ce qui n'a pas pu être nettoyé — l'effacement du compte a eu lieu quand
-      même, ces lignes servent à finir le ménage à la main. */
+  /** What could not be cleaned — the deletion of the account took place when
+ itself, these lines are used to finish the cleaning by hand. */
   warnings: string[];
 }
 
-/** Supprime un lot d'objets, sans jamais faire échouer l'effacement du compte. */
+/** Deletes a batch of objects, without ever failing to delete the account. */
 async function removeObjects(
   service: Service,
   bucket: string,
@@ -118,7 +118,7 @@ async function removeObjects(
   warnings: string[]
 ): Promise<number> {
   if (paths.length === 0) return 0;
-  // Storage plafonne un `remove` : on découpe.
+  // Storage caps a `remove`: we cut it.
   let removed = 0;
   for (let i = 0; i < paths.length; i += 100) {
     const chunk = paths.slice(i, i + 100);
@@ -130,9 +130,9 @@ async function removeObjects(
 }
 
 /**
- * Efface le compte et tout ce qui s'y rattache. Idempotent dans les faits : un
- * second appel sur un compte déjà parti échoue à l'étape 3 avec un message
- * clair, il ne détruit rien d'autre.
+ * Clears the account and everything related to it. Idempotent in fact: a
+ * second call to an account that has already left fails at step 3 with a clear
+ * message, it does not destroy anything else.
  */
 export async function deleteAccount(userId: string): Promise<DeletionResult> {
   const service = getServiceClient();
@@ -153,15 +153,15 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
       await cancelStripeSubscription(subscriptionId);
       subscriptionCanceled = true;
     } catch (e) {
-      // On continue : laisser un abonnement pendant est un problème de
-      // facturation à régler à la main, pas une raison de refuser un droit.
+      // We continue: leaving a subscription pending is a problem of
+      // billing to be paid by hand, not a reason to refuse a right.
       warnings.push(`stripe: ${(e as Error).message}`);
     }
   }
 
   // ── 2. Objets de stockage ───────────────────────────────────────────────
-  // Les lignes `attachments` cascadent avec le projet, les FICHIERS non : sans
-  // ce passage ils resteraient dans le bucket sans plus rien pour les désigner.
+  // The `attachments` lines cascade with the project, the FILES do not: without
+  // this passage they would remain in the bucket with nothing left to designate them.
   const { data: projects } = await service
     .from("projects")
     .select("id")
@@ -171,7 +171,7 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
   let removedStorageObjects = 0;
 
   if (ownedIds.length) {
-    // Une ressource de type lien n'a pas d'objet — `storage_path` nul.
+    // A link type resource has no object — `storage_path` null.
     const { data: attachments } = await service
       .from("attachments")
       .select("storage_path")
@@ -184,9 +184,9 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
       warnings
     );
 
-    // Les fichiers posés DANS les corps de page (MIN-280) : même bucket, même
-    // règle, autre table. Sans ce passage, supprimer un compte laisserait dans
-    // le storage toutes les images des wikis de ses projets.
+    // Files placed IN page bodies (MIN-280): same bucket, same
+    // rule, other table. Without this passage, deleting an account would leave
+    // storage all the images from the wikis of its projects.
     removedStorageObjects += await removeObjects(
       service,
       "attachments",
@@ -194,7 +194,7 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
       warnings
     );
 
-    // Icônes de projet : une par projet, extension inconnue → on liste.
+    // Project icons: one per project, extension unknown → we list.
     removedStorageObjects += await removeObjects(
       service,
       "project-icons",
@@ -202,10 +202,10 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
       warnings
     );
 
-    // Pièces jointes des commentaires de PR (MIN-296). Bucket PUBLIC, chemins
-    // `{pr_id}/…` (MIN-162) : sans ce passage, des fichiers déposés depuis un
-    // compte effacé restaient lisibles par URL, indéfiniment et sans plus rien
-    // en base pour les désigner.
+    // Attachments from PR comments (MIN-296). PUBLIC bucket paths
+    // `{pr_id}/…` (MIN-162): without this passage, files deposited from a
+    // deleted account remained readable by URL, indefinitely and with nothing left
+    // in base to designate them.
     removedStorageObjects += await removeObjects(
       service,
       FORGE_ATTACHMENTS_BUCKET,
@@ -214,15 +214,15 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
     );
   }
 
-  // Téléversements du chat de l'assistant : pas de ligne en base, seulement des
+  // Assistant chat uploads: no basic lines, only
   // objets sous `chat/{user_id}/`.
   const chatObjects = await listStoragePrefix(service, "attachments", `chat/${userId}`);
   removedStorageObjects += await removeObjects(service, "attachments", chatObjects, warnings);
 
-  // Conversations personnelles de l'agent de code dans les projets d'AUTRES
-  // propriétaires. `owner_id on delete set null` les anonymiserait au lieu de
-  // les effacer ; on coupe d'abord leur compute et leur clé, puis la cascade de
-  // la conversation emporte runs, tours, messages, événements et lectures.
+  // Personal conversations of the code officer in OTHERS' projects
+  // owners. `owner_id on delete set null` would anonymize them instead of
+  // delete them; we first cut their compute and their key, then the cascade of
+  // the conversation carries runs, turns, messages, events and readings.
   const { data: personalConversations } = await service
     .from("agent_conversations")
     .select("id")
@@ -253,7 +253,7 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
     if (conversationsError) warnings.push(`agent conversations: ${conversationsError.message}`);
   }
 
-  // ── 3. Le compte ────────────────────────────────────────────────────────
+  // ── 3. The account ──────────────────────────── ────────────────────────────
   const { error } = await service.auth.admin.deleteUser(userId);
   if (error) throw new Error(error.message);
 

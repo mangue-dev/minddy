@@ -21,58 +21,58 @@ import type { PlatformToolHandler } from "./agent-contract";
 import type { EmitAgentEvent } from "./agent-contract";
 
 /**
- * LA PORTE DE LIVRAISON — le seul endroit où le harness vérifie quoi que ce soit
+ * THE DELIVERY DOOR — the only place the harness checks anything
  * (MIN-263).
  *
- * CE QUE CE MODULE ÉTAIT, ET POURQUOI IL A CHANGÉ DE NATURE. Il tenait les contrôles
- * de FIN DE TOUR : le modèle écrivait sa réponse, le harness reprenait la parole
- * (type-check, tests, relecture du diff), le tour repartait, et le modèle répondait
- * une seconde fois. Trois tickets successifs ont tenté de rendre ce mécanisme
- * vivable — la règle qui interdit de répondre au contrôle (MIN-256), puis le
- * brouillon rendu au modèle parce que la règle seule ne suffisait pas (MIN-249 bis),
- * puis l'allègement des contrôles eux-mêmes (MIN-262). Aucun n'attaquait la cause :
- * **on rouvrait un tour terminé**, et tout le reste en découlait.
+ * WHAT THIS MODULE WAS, AND WHY IT CHANGED ITS NATURE. He held the controls
+ * END OF TOUR: the model wrote his response, the harness spoke again
+ * (type-check, tests, rereading of the diff), the tour started again, and the model responded
+ * a second time. Three successive tickets attempted to make this mechanism
+ * livable — the rule that prohibits responding to the test (MIN-256), then the
+ * draft returned to the model because the rule alone was not enough (MIN-249 bis),
+ * then the reduction of the controls themselves (MIN-262). None attacked the cause:
+ * **we reopened a completed round**, and everything else flowed from there.
  *
- * CE QUE FONT LES DEUX AUTRES. Codex n'exécute rien : sa section « Validating your
- * work » est du PROMPT, et elle dit même de repousser les tests au moment de
- * finaliser, parce qu'ils coûtent du temps et ralentissent l'itération. OpenCode
- * exécute, mais toujours DANS le résultat d'un tool (les diagnostics LSP recollés
- * au résultat de l'édition). Ni l'un ni l'autre ne rouvre un tour.
+ * WHAT THE OTHER TWO ARE DOING. Codex does not execute anything: its “Validating your
+ * work” is PROMPT, and it even says to postpone the tests until the time of
+ * finalize, because they cost time and slow down the iteration. OpenCode
+ * executes, but always IN the result of a tool (the LSP diagnostics glued
+ * to the editing result). Neither reopens a round.
  *
- * D'OÙ LA FORME D'AUJOURD'HUI, qui prend à chacun ce qu'il a de juste :
+ * HENCE TODAY’S FORM, which takes from each person what is right:
  *
- * - **Pendant le travail, le harness n'exécute RIEN.** Pas de type-check, pas de
- *   tests, pas de relecture. Le modèle itère sans impôt, et la doctrine de
- *   vérification vit dans le prompt (« du plus spécifique au plus large »).
- * - **À la livraison, il exécute tout, d'un coup.** Le premier `create_pr` d'un tour
- *   qui a édité ne pousse rien : il rend les erreurs de typage, les échecs de tests
- *   et le diff, dans le `followUp` d'un résultat de tool. Zéro réponse de plus, zéro
- *   message déclassé — c'est la forme OpenCode appliquée au geste qui compte chez
- *   nous, et le moment que Codex désigne lui-même.
- * - **Le plan garde sa porte** (`gateWritePlan`), pour la même raison : un retour
- *   attaché au geste ne coûte rien.
+ * - **During work, the harness does NOTHING.** No type-check, no
+ * tests, no proofreading. The model iterates without taxes, and the doctrine of
+ * verification lives in the prompt (“from the most specific to the broadest”).
+ * - **On delivery, it executes everything at once.** The first `create_pr` of a turn
+ * who edited does not push anything: it returns typing errors, test failures
+ * and the diff, in the `followUp` of a tool result. Zero response again, zero
+ * declassified message — it is the OpenCode form applied to the gesture that counts at
+ * us, and the moment that Codex itself designates.
+ * - **The plan keeps its door** (`gateWritePlan`), for the same reason: a return
+ * attached to the gesture costs nothing.
  *
- * LA RÈGLE À TENIR, si un contrôle s'ajoute un jour : **il s'accroche à un geste ou
- * il n'existe pas.** Un contrôle qui a besoin de rouvrir un tour pour parler est un
- * contrôle qu'on paie en réponse modèle, et l'histoire de ce fichier dit ce que ça
- * coûte.
+ * THE RULE TO KEEP, if a control is added one day: **it clings to a gesture or
+ * it does not exist.** A control that needs to reopen a turn to speak is a
+ * control that we pay in model response, and the history of this file says what that
+ * costs.
  *
- * CE QU'ON ASSUME. Un tour qui n'ouvre pas de pull request ne voit plus aucun
- * contrôle du harness — c'est le prix de la stabilité, et c'est exactement le régime
- * de Codex. La garantie de MIN-251 (le modèle concluait « *that's working as expected
- * since type checks are passing* » sur une feature cassée) ne tient donc plus par le
- * harness pendant l'itération : elle tient par le prompt, et elle est REPRISE en dur
- * au moment où le code part vers un humain.
+ * WHAT WE ASSUME. A tour that does not open a pull request no longer sees any
+ * harness control — that's the price of stability, and that's exactly the regime
+ * of Codex. The guarantee of MIN-251 (the model concluded “*that's working as expected
+ * since type checks are passing*" on a broken feature) therefore no longer holds by the
+ * harness during the iteration: it is held by the prompt, and it is RESUMED hard
+ * when the code goes to a human.
  */
 
 /**
- * CE QUI FAIT UN « PETIT » TOUR (MIN-262) — celui qui n'a pas à payer la suite
- * entière quand le modèle n'a rien lancé lui-même.
+ * WHAT MAKES A “LITTLE” TOUR (MIN-262) — the one who does not have to pay for the sequel
+ * entire when the model has not launched anything itself.
  *
- * Volontairement bas, et pas calé sur une théorie : le cas qui a ouvert le ticket
- * est « une ligne à retirer » payée quatre minutes. Trois fichiers et quarante
- * lignes couvrent une correction ciblée et son test, pas une feature. Au-dessus,
- * la suite entière reprend la main sans discussion — et le fichier NEUF sort du
+ * Deliberately low, and not based on a theory: the case which opened the ticket
+ * is “a line to withdraw” paid for four minutes. Three files and forty
+ * lines cover a targeted correction and its test, not a feature. Above,
+ * the entire suite takes over without discussion — and the NEW file comes out of
  * lot quelle que soit sa taille (`untracked`, cf. `turnDiffStat`).
  */
 export const SMALL_TURN_MAX_FILES = 3;
@@ -81,95 +81,95 @@ export const SMALL_TURN_MAX_LINES = 40;
 export interface DeliveryGateDeps {
   host: RepoHost;
   emit: EmitAgentEvent;
-  /** Fichiers édités depuis le dernier type-check. VIDÉ par le type-check. */
+  /** Files edited since the last type-check. VOID by type-check. */
   editedPaths: Set<string>;
-  /** Le plan écrit ce tour, noté au passage des tools ticket (`watchPlanWrites`). */
+  /** The written plan for this round, noted in passing the tools ticket (`watchPlanWrites`). */
   planWrites: PlanWriteSink;
   /**
-   * Ce que le MODÈLE a vérifié lui-même ce tour, noté au passage de `run_command`
-   * (MIN-262). Optionnel : un appelant qui ne le câble pas retrouve le crochet
-   * d'avant, qui relance tout — le défaut est le comportement prudent.
+   * What the MODEL itself verified this round, noted in passing `run_command`
+   * (MIN-262). Optional: a caller who does not find the cable finds the hook
+   * from before, which restarts everything — the default is prudent behavior.
    */
   verification?: VerificationSink;
-  /** Baseline du diff du tour (`lastFilesSha` du checkpoint, ou la tête d'origine). */
+  /** Baseline of the turn diff (`lastFilesSha` of the checkpoint, or the original head). */
   filesFromSha: string;
-  /** Graine du verrou « le dépôt a été touché » — vient du checkpoint. */
+  /** Seed of the lock “the depot has been hit” — comes from the checkpoint. */
   repoTouched: boolean;
   /**
-   * LE PÉRIMÈTRE DU TOUR, quand le dépôt n'est pas à nous (MIN-358).
+   * THE PERIMETER OF THE TOUR, when the deposit is not ours (MIN-358).
    *
-   * Les deux lectures ci-dessous qui comparent une référence à l'ARBRE DE
-   * TRAVAIL — la portée des tests et l'auto-relecture — y verraient sinon le WIP
-   * de l'utilisateur : le modèle relirait le travail de quelqu'un d'autre comme
-   * s'il était le sien, et `vitest related` partirait sur ses fichiers à lui.
+   * The two readings below which compare a reference to the TREE OF
+   * WORK — testing scope and self-proofing — would otherwise see it as WIP
+   * of the user: the model would proofread someone else's work as
+   * if it were his, and `vitest related` would go to his files.
    *
-   * ABSENT en mode clone, et c'est le cas courant : là, l'arbre de travail n'a
-   * jamais contenu que le travail de l'agent.
+   * ABSENT in clone mode, and this is the common case: there, the working tree has no
+   * never contained anything other than the work of the agent.
    */
   scopePaths?: () => Promise<readonly string[]>;
-  /** Préfixe des logs du moteur appelant (`[agent-vm]`, `[agent-execute]`). */
+  /** Calling engine log prefix (`[agent-vm]`, `[agent-execute]`). */
   logPrefix: string;
 }
 
 export interface DeliveryGate {
   /**
-   * LES CONTRÔLES DE LIVRAISON, réclamés par la porte de `create_pr` : erreurs de
-   * typage, échecs de tests et diff du tour, en UN SEUL bloc. Un seul passage par
-   * tour — le second `create_pr` ouvre pour de bon. `null` = rien à dire, ou déjà dit.
+   * DELIVERY CONTROLS, requested by the `create_pr` gate: errors
+   * typing, test failures and round diff, in ONE block. A single pass through
+   * round — the second `create_pr` opens for good. `null` = nothing to say, or already said.
    */
   checkBeforeSubmit: (budgetMs: number) => Promise<string | null>;
   /**
-   * Le contrôle du plan RÉCLAMÉ SUR LE GESTE, pour `write_issue_plan` (cf.
-   * `gateWritePlan`). Un seul passage, donc la question n'est jamais posée deux
-   * fois. `null` = rien à dire, ou déjà dit.
+   * Control of the plan CLAIMED ON THE GESTURE, for `write_issue_plan` (cf.
+   * `gateWritePlan`). Only one passage, so the question is never asked twice
+   * times. `null` = nothing to say, or already said.
    */
   checkPlanAfterWrite: (budgetMs: number) => Promise<string | null>;
-  /** `repoTouched` À JOUR — l'appelant l'écrit au checkpoint. */
+  /** `repoTouched` UPDATED — the caller writes it down at the checkpoint. */
   repoTouched: () => boolean;
   /**
-   * Note les éditions en attente comme « dépôt touché » : l'appelant le fait une
-   * dernière fois avant le push, là où la porte peut n'avoir jamais été franchie
+   * Note pending editions as “deposit affected”: the caller does so once
+   * last time before the push, where the door may never have been passed
    * (tour sans pull request, interrompu, suspendu).
    */
   noteEdits: () => void;
   /**
-   * LE DÉPÔT A ÉTÉ TOUCHÉ AUTREMENT QUE PAR UN TOOL D'ÉDITION (MIN-286).
+   * THE DEPOSIT WAS AFFECTED OTHERWISE THAN BY AN EDITING TOOL (MIN-286).
    *
-   * `noteEdits` latche sur `editedPaths`, qui vient des tools d'écriture. Sous
+   * `noteEdits` latches on `editedPaths`, which comes from the writing tools. Below
    * opencode il n'y a plus de `delete_file` ni de `move_file` : un `rm`, un `mv`,
-   * un `sed -i` ou un codemod passent par le SHELL, ne remplissent rien, et la
-   * porte restait alors muette sur un tour qui a pourtant changé le dépôt — ni
-   * type-check, ni tests, ni relecture du diff avant la pull request. L'appelant
-   * qui a constaté la différence (l'état de l'arbre de travail) le dit ici.
+   * a `sed -i` or a codemod goes through the SHELL, fills nothing, and the
+   * door then remained silent on a turn which nevertheless changed the deposit - neither
+   * type-check, neither tests, nor rereading the diff before the pull request. The caller
+   * who noticed the difference (the state of the working tree) says it here.
    */
   noteRepoTouched: () => void;
 }
 
 /**
- * La porte de livraison d'un chunk (fonction) ou d'un tour (microVM). Tout son état
- * est PAR CHUNK et ne voyage pas dans le checkpoint — sauf `repoTouched`, qui porte
- * sur le TOUR et arrive donc semé.
+ * The delivery gate of a chunk (function) or a round (microVM). All his state
+ * is BY CHUNK and does not travel through the checkpoint — except `repoTouched`, which carries
+ * on the TOUR and therefore arrives seeded.
  */
 export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
   const { host, emit, editedPaths, planWrites, filesFromSha, logPrefix } = deps;
   const verification = deps.verification ?? newVerificationSink();
-  /** Le périmètre, ou `undefined` quand rien ne borne (mode clone). Un périmètre
-   *  qui LÈVE ne borne rien non plus : mieux vaut un diff trop large qu'une porte
+  /** The perimeter, or `undefined` when nothing limits (clone mode). A perimeter
+   * which LIFTS limits nothing either: better a diff too wide than a door
    *  de livraison en panne. */
   const scope = async (): Promise<readonly string[] | undefined> => {
     if (!deps.scopePaths) return undefined;
     return await deps.scopePaths().catch(() => undefined);
   };
 
-  /** Le tour a-t-il édité le dépôt ? Verrou LATCHÉ, là où `editedPaths` se vide à
-   *  chaque type-check : après une relance, le tour a toujours édité, même si le
-   *  modèle n'a plus rien touché depuis. */
+  /** Did the tour publish the repository? LATCHED lock, where `editedPaths` empties at
+   * each type-check: after a restart, the round has always edited, even if the
+   * model hasn't touched anything since. */
   let repoTouched = deps.repoTouched;
   /**
-   * LES DEUX SEULS VERROUS QUI RESTENT (MIN-263). Chaque contrôle portait le sien,
-   * du temps où la fin de tour pouvait les rappeler indéfiniment ; ils sont
-   * maintenant réclamés par une porte qui ne s'ouvre qu'une fois, et trois verrous
-   * de plus ne borneraient rien que celui-ci ne borne déjà.
+   * THE ONLY TWO LOCKS REMAINING (MIN-263). Each control carried its own,
+   * from the time when the end of the tour could call them back indefinitely; they are
+   * now claimed by a door that only opens once, and three locks
+   * moreover would not limit anything that this one does not already limit.
    */
   let submitChecked = false;
   let planChecked = false;
@@ -179,11 +179,11 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
   };
 
   /**
-   * Type-check de fin de tour (MIN-110). Se tait — et coûte alors un aller-retour
-   * shell de ~1 ms — dès qu'une condition manque : plus de passage disponible, rien
-   * d'édité, pas de `tsconfig.json`, pas de `node_modules/.bin/tsc`, ou pas assez de
-   * budget mural pour absorber un check à froid (mesuré 22 s). Best-effort de bout
-   * en bout : une panne du checker n'empêche jamais un tour de se terminer.
+   * End of turn type-check (MIN-110). Keeps silent — and then costs a round trip
+   * shell of ~1 ms — as soon as a condition is missing: no more passage available, nothing
+   * edited, no `tsconfig.json`, no `node_modules/.bin/tsc`, or not enough
+   * wall budget to absorb a cold check (measured 22 s). Best-end effort
+   * in the end: a checker failure never prevents a round from ending.
    */
   const typeCheckBlock = async (budgetMs: number): Promise<string | null> => {
     if (editedPaths.size === 0 || budgetMs < TYPECHECK_MIN_BUDGET_MS) return null;
@@ -194,10 +194,10 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
       console.error(`${logPrefix} turn-end typecheck failed:`, (err as Error).message);
       return null;
     });
-    // Event `status` (neutre : invisible dans le fil, comptable en base) — c'est lui
-    // qui répond à « combien de tours se terminent avec des erreurs de typage
-    // introduites par l'agent ? ». `errorsShown` compte les erreurs SERVIES (le bloc
-    // est capé) : ce que le modèle a lu, pas ce que tsc a trouvé.
+    // Event `status` (neutral: invisible in the thread, countable in base) — it's him
+    // which answers "how many rounds end with typing errors
+    // introduced by the agent? ". `errorsShown` counts SERVIES errors (the block
+    // is capped): what the model read, not what tsc found.
     await emit("status", {
       phase: "type_check",
       durationMs: Date.now() - startedAt,
@@ -208,34 +208,34 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
   };
 
   /**
-   * Tests de fin de tour (MIN-251), à la portée que le TOUR justifie (MIN-262).
-   * Mêmes gardes que le type-check : un seul passage, rien sans édition, rien sans
-   * budget — et le même best-effort de bout en bout (pas de script `test`, pas de
-   * binaire installé, runner en panne → silence, jamais un tour bloqué).
+   * End of turn tests (MIN-251), at the range that the TURN justifies (MIN-262).
+   * Same guards as type-check: a single pass, nothing without editing, nothing without
+   * budget — and the same best-effort from start to finish (no `test` script, no
+   * binary installed, runner broken → silence, never a turn blocked).
    *
-   * Le verrou est `repoTouched`, pas `editedPaths` : le type-check vide cette liste
-   * en passant, et il passe AVANT. Un tour qui a édité doit voir ses tests, même
-   * quand le modèle n'a plus rien touché depuis le check.
+   * The lock is `repoTouched`, not `editedPaths`: type-check empties this list
+   * in passing, and it goes BEFORE. A tour that has edited must see its tests, even
+   * when the model has not touched anything since the check.
    *
-   * TROIS ISSUES, ET L'ORDRE EST LE POINT.
+   * THREE OUTCOME, AND THE ORDER IS THE POINT.
    *
-   * 1. **Le modèle l'a déjà fait.** S'il a lancé lui-même les tests du dépôt et
-   *    qu'ils sont sortis verts sans qu'il ait réédité derrière, le harness se tait.
-   *    Ce n'est pas de la confiance : c'est un fait qu'il a lu (`VerificationSink`).
-   *    Relancer par-dessus coûterait 80 s de mur et une réponse entière pour
-   *    apprendre ce qu'on sait déjà — c'est exactement l'impôt que ce ticket lève.
-   * 2. **Petit tour, passage ciblé.** Quelques lignes sur deux ou trois fichiers,
-   *    rien de neuf : le mode `related` du runner remonte le graphe d'imports et
-   *    couvre le « ça casse ailleurs » partout où il est traçable, en quelques
+   * 1. **The model has already done this.** If it has run the repository tests itself and
+   * that they came out green without him having re-edited behind, the harness is silent.
+   * It's not confidence: it's a fact that he read (`VerificationSink`).
+   * Raising over would cost 80s of wall and an entire response for
+   * learning what you already know — that’s exactly the tax this ticket raises.
+   * 2. **Short tour, targeted passage.** A few lines on two or three files,
+   * nothing new: the `related` mode of the runner goes up the import graph and
+   * covers the “it breaks elsewhere” wherever it is traceable, in a few
    *    secondes au lieu de 80.
-   * 3. **Sinon, la suite entière**, inchangée. C'est le cas d'un fichier neuf, d'un
-   *    gros diff, d'un tour dont on n'a pas su mesurer la taille : le doute paie
+   * 3. **Otherwise, the entire sequence**, unchanged. This is the case for a new file, a
+   * big diff, of a turn whose size we were unable to measure: doubt pays
    *    plein tarif, il ne se solde pas en silence.
    */
   const testBlock = async (budgetMs: number): Promise<string | null> => {
     if (!repoTouched) return null;
 
-    // (1) Le geste du modèle fait foi. Aucun budget requis : on ne lance rien.
+    // (1) The gesture of the model is authentic. No budget required: we don't launch anything.
     if (verification.greenCommand) {
       await emit("status", {
         phase: "tests",
@@ -256,10 +256,10 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
       return null;
     });
     const block = out?.block ?? null;
-    // Event `status` (neutre : invisible dans le fil, comptable en base) — c'est lui
-    // qui répondra à « combien de tours se terminent en rouge ? », et depuis MIN-262
-    // à « lesquels ont payé la suite entière ». `failuresShown` compte les échecs
-    // SERVIS (le bloc est capé) : ce que le modèle a lu, pas ce que le runner a trouvé.
+    // Event `status` (neutral: invisible in the thread, countable in base) — it's him
+    // who will answer “how many rounds end in red?” », and since MIN-262
+    // to “who paid the entire suite”. `failuresShown` counts failures
+    // SERVIS (the block is capped): what the model read, not what the runner found.
     await emit("status", {
       phase: "tests",
       scope: out?.scope ?? "none",
@@ -270,11 +270,11 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
   };
 
   /**
-   * La portée que ce tour justifie, ou `null` s'il n'y a pas le budget de la payer.
+   * The scope this trick warrants, or `null` if there isn't the budget to pay for it.
    *
-   * Un tour de taille INCONNUE (git muet, baseline hors de l'historique shallow) est
-   * traité comme un gros tour : la mesure sert à s'épargner du travail, pas à s'en
-   * dispenser sur un doute.
+   * An UNKNOWN size measurement (mute git, baseline outside the shallow history) is
+   * treated as a big trick: the measure is used to save work, not to avoid it
+   * dispense on a doubt.
    */
   const testScopeForTurn = async (budgetMs: number): Promise<TestScope | null> => {
     const stat = await turnDiffStat(host, filesFromSha, await scope()).catch(() => null);
@@ -285,10 +285,10 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
       stat.files.length <= SMALL_TURN_MAX_FILES &&
       stat.lines <= SMALL_TURN_MAX_LINES;
     if (small) {
-      // `allowFullFallback` : un runner sans mode ciblé fait payer la suite entière,
-      // mais seulement si le budget la couvre. Sinon on ne lance rien — déclencher
-      // 80 s de tests avec 90 s au compteur ferait mourir le chunk sur le contrôle
-      // censé l'alléger.
+      // `allowFullFallback`: a runner without a targeted mode charges for the entire suite,
+      // but only if the budget covers it. Otherwise we don’t launch anything — trigger
+      // 80 s of tests with 90 s on the clock would kill the chunk on the control
+      // supposed to lighten it.
       return {
         related: stat.files,
         allowFullFallback: budgetMs >= TEST_MIN_BUDGET_MS,
@@ -298,23 +298,23 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
   };
 
   /**
-   * Auto-relecture : le diff du tour, servi avant la livraison (cf. self-review.ts).
+   * Self-review: the difference of the tour, served before delivery (see self-review.ts).
    *
-   * C'est le SEUL des trois qui parle même quand tout va bien — un diff est une
-   * question, pas un verdict. C'est aussi pour ça qu'il ne peut vivre QU'ICI : en
-   * fin de tour, il coûtait une réponse entière à chaque tour qui édite, y compris
-   * pour trois lignes que le modèle venait d'écrire (MIN-262). Sur la porte, il ne
-   * coûte rien — le modèle le lit, corrige, et rappelle `create_pr`.
+   * He's the ONLY one of the three who speaks even when everything is going well — a diff is a
+   * question, not a verdict. This is also why he can ONLY live HERE: in
+   * end of turn, it cost an entire response each turn that edits, including
+   * for three lines that the model had just written (MIN-262). On the door, he
+   * costs nothing — the model reads it, corrects, and recalls `create_pr`.
    *
-   * Pendant l'itération, la relecture est un geste du modèle, dosé par le prompt
+   * During the iteration, rereading is a gesture of the model, measured by the prompt
    * selon ce qu'il vient de faire (`git diff`, il l'a).
    *
-   * Commandes git en LECTURE SEULE — l'index n'est jamais touché, la fin de tour
-   * reste seule à stager.
+   * READ-ONLY git commands — index is never touched, end of turn
+   * remains alone to stage.
    *
-   * Le diff est suivi, depuis MIN-252, des autres écritures des états qu'il
-   * écrit — des `git grep`, donc toujours en lecture seule, et toujours
-   * best-effort : leur panne coûte le second bloc, jamais la relecture.
+   * The diff is followed, since MIN-252, by the other writings of the states it
+   * written — `git grep`, therefore always read-only, and always
+   * best-effort: their breakdown costs the second block, never the rereading.
    */
   const selfReviewBlock = async (budgetMs: number): Promise<string | null> => {
     if (!repoTouched || budgetMs < SELF_REVIEW_MIN_BUDGET_MS) return null;
@@ -325,8 +325,8 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
     }));
     const overwrites = await overwriteSitesForTurn(host, diff).catch(() => []);
     const block = formatSelfReview({ diff, porcelain, overwrites });
-    // `overwrites` compte les SYMBOLES rapportés : c'est lui qui dira si le bloc
-    // de MIN-252 parle, et à quelle fréquence.
+    // `overwrites` counts the SYMBOLS reported: it is he who will say if the block
+    // of MIN-252 speaks, and how often.
     await emit("status", {
       phase: "self_review",
       at: "create_pr",
@@ -338,26 +338,26 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
   };
 
   /**
-   * LE CONTRÔLE DU PLAN, EN UN SEUL BLOC ET SUR LE GESTE (MIN-236, MIN-237, puis
-   * MIN-256 pour la fusion et le déplacement).
+   * CONTROL OF THE PLAN, IN A SINGLE BLOCK AND ON GESTURE (MIN-236, MIN-237, then
+   * MIN-256 for merging and moving).
    *
-   * Deux choses, indissociables et posées ensemble parce que le modèle y répond
-   * d'un seul geste : le plan qu'il vient d'écrire, relu (`planReviewForTurn`), et
-   * les fichiers que ses identifiants touchent sans qu'il les nomme
-   * (`planClosureForTurn`). La relecture parle toujours, la clôture seulement
-   * quand elle a trouvé quelque chose.
+   * Two things, inseparable and placed together because the model responds to them
+   * with a single gesture: the plan he has just written, reread (`planReviewForTurn`), and
+   * the files that his identifiers touch without him naming them
+   * (`planClosureForTurn`). The proofreading always speaks, the closure only
+   * when she found something.
    *
-   * POURQUOI FUSIONNÉS. Séparés, ils coûtaient DEUX réinjections de fin de tour,
-   * donc deux réponses de plus — et sur un run de plan, la dernière, celle que
-   * l'utilisateur lit, ne parlait plus que du contrôle. Le prix de la fusion est
-   * connu et assumé : la clôture grep le plan tel qu'il a été ÉCRIT, plus tel que
-   * la relecture l'a laissé, donc elle peut nommer un fichier que le modèle
-   * s'apprêtait à ajouter. Un faux « oublié » de plus dans un bloc qui s'annonce
-   * déjà comme une observation, contre une réponse finale qui redevient lisible.
+   * WHY MERGED. Separated, they cost TWO end-of-turn reinjections,
+   * so two more answers — and on a plan run, the last one, the one that
+   * the user reads, only talking about the control. The price of the merger is
+   * known and assumed: the grep closure the plan as it was WRITTEN, no longer as
+   * replay left it, so it can name a file as the template
+   * was about to add. One more false “forgotten” in a block that is coming
+   * already as an observation, against a final response which becomes readable again.
    *
-   * Muet tant qu'aucun `write_issue_plan` n'a réussi, donc gratuit sur l'écrasante
-   * majorité des tours. Le déclencheur est le TOOL, pas `run.intent === "plan"` : le
-   * cas courant est un run ordinaire à qui on demande un plan en cours de route.
+   * Mute as long as no `write_issue_plan` has succeeded, therefore free on the overwhelming
+   * majority of rounds. The trigger is the TOOL, not `run.intent === "plan"`: the
+   * common case is an ordinary run who is asked for a plan along the way.
    */
   const planBlock = async (budgetMs: number): Promise<string | null> => {
     const floor = Math.max(PLAN_REVIEW_MIN_BUDGET_MS, PLAN_CLOSURE_MIN_BUDGET_MS);
@@ -379,22 +379,22 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
   };
 
   /**
-   * LES TROIS CONTRÔLES, SERVIS ENSEMBLE, AU MOMENT DE LIVRER (MIN-263).
+   * ALL THREE CHECKS, SERVED TOGETHER, AT THE TIME OF DELIVERY (MIN-263).
    *
-   * L'ORDRE PORTE DU SENS, et c'est le même qu'avant : les erreurs de typage
-   * d'abord — elles sont concrètes et bloquantes, et des échecs de test sur un dépôt
-   * qui ne compile pas ne se lisent même pas. Les échecs de test ensuite : un échec
-   * est un fait, un diff est une question. Le diff ferme la marche.
+   * THE ORDER MAKES SENSE, and it's the same as before: typing errors
+   * first — they are concrete and blocking, and test failures on a repository
+   * which does not compile does not even read. Test failures next: a failure
+   * is a fact, a diff is a question. The diff brings up the rear.
    *
-   * Ils partent en UN SEUL bloc, là où la fin de tour les servait un par un : elle
-   * n'avait pas le choix (chaque bloc coûtait une réponse, donc il fallait les
-   * étaler), la porte l'a — un `followUp` de tool ne coûte rien, et le modèle traite
-   * les trois d'un même geste avant de rappeler `create_pr`.
+   * They leave in ONE block, where the end of the tour served them one by one: she
+   * had no choice (each block cost a response, so they had to be
+   * spread), the door has it — a tool `followUp` costs nothing, and the model processes
+   * all three with the same gesture before recalling `create_pr`.
    *
-   * UN SEUL PASSAGE PAR TOUR : le second `create_pr` ouvre pour de bon, même si le
-   * modèle n'a rien corrigé. C'est délibéré — une porte qui re-vérifie à chaque
-   * tentative est une porte qui peut refuser de s'ouvrir, et un agent qui ne peut
-   * plus livrer est pire qu'un agent qui livre du rouge en le disant.
+   * ONLY ONE PASS PER LAP: the second `create_pr` opens for good, even if the
+   * model didn't fix anything. It's deliberate — a door that re-checks every time
+   * attempt is a door that can refuse to open, and an agent that cannot
+   * over delivering is worse than an agent who delivers red by saying so.
    */
   const submitChecks = async (budgetMs: number): Promise<string | null> => {
     noteEdits();
@@ -420,22 +420,22 @@ export function makeDeliveryGate(deps: DeliveryGateDeps): DeliveryGate {
 }
 
 /**
- * LE CONTRÔLE DU PLAN SUR LE GESTE, PAS APRÈS LA RÉPONSE (MIN-256).
+ * CONTROL OF THE PLAN OVER THE GESTURE, NOT AFTER THE RESPONSE (MIN-256).
  *
- * Même patron que `gateCreatePr`, et pour une raison de plus. Servi en fin de
- * tour, le contrôle arrivait après que le modèle avait écrit sa réponse : le tour
- * repartait, il répondait une seconde fois, et c'est cette réponse-là — « j'ai
- * vérifié, le plan tient » — que l'utilisateur lisait, le vrai résumé étant
- * redescendu au rang d'étape dans le fil. Accroché au `write_issue_plan`, le même
- * contrôle arrive AVANT toute réponse : le modèle corrige, puis écrit son unique
- * message final, qui raconte le tour.
+ * Same boss as `gateCreatePr`, and for one more reason. Served at the end of
+ * turn, the check arrived after the model had written its answer: the turn
+ * left again, he answered a second time, and it was this answer — “I
+ * verified, the plan holds” — which the user was reading, the real summary being
+ * moved back down to the step rank in the thread. Hooked to `write_issue_plan`, the same
+ * control arrives BEFORE any response: the model corrects, then writes its unique
+ * final message, which tells the story.
  *
- * À la différence de `gateCreatePr`, la porte ne RETIENT rien — le plan est bel et
- * bien écrit, et il doit l'être : c'est le document qu'on relit. Seul le retour
- * s'ajoute, en `followUp`, parce qu'un résultat de tool est élidé par le milieu et
- * qu'un plan amputé de son milieu ne se relit pas.
+ * Unlike `gateCreatePr`, the door DOES NOT HOLD anything — the plan is indeed
+ * well written, and it must be: it is the document that we reread. Only the return
+ * is added, in `followUp`, because a result of tool is elided by the middle and
+ * that a plan cut off from its middle cannot be reread.
  *
- * Best-effort : une panne du contrôle ne doit jamais empêcher un plan d'être écrit.
+ * Best effort: A failure of control should never prevent a plan from being written.
  */
 export function gateWritePlan(
   handler: PlatformToolHandler,
@@ -451,20 +451,20 @@ export function gateWritePlan(
 }
 
 /**
- * LE PREMIER `create_pr` NE SOUMET PAS — il rend les contrôles (MIN-247 pour le
- * diff, emprunté au `review_on_submit` de SWE-agent ; MIN-263 pour les deux autres).
+ * THE FIRST `create_pr` DOES NOT SUBMIT — it returns the controls (MIN-247 for the
+ * diff, borrowed from `review_on_submit` of SWE-agent; MIN-263 for the other two).
  *
- * `create_pr` pousse et ouvre la pull request AU MOMENT DE L'APPEL. Sans porte,
- * l'ordre réel serait : PR ouverte, corps rédigé, relecteur notifié, *puis*
- * vérification — ce que la relecture attrape (l'erreur de JOINTURE entre deux
- * fichiers, cf. self-review.ts) arriverait après la livraison.
+ * `create_pr` pushes and opens the pull request AT THE TIME OF CALL. Without a door,
+ * the actual order would be: PR open, body drafted, reviewer notified, *then*
+ * verification — what the replay catches (the JOIN error between two
+ * files, cf. self-review.ts) would arrive after delivery.
  *
- * La porte ne rajoute pas un round : elle DÉPLACE celui qu'on paie déjà, et depuis
- * que la fin de tour n'exécute plus rien, c'est le SEUL endroit où le harness
- * vérifie le code. Le second `create_pr` ouvre pour de bon, même si le modèle n'a
- * rien corrigé : une porte qui peut refuser indéfiniment est une porte qui empêche
- * de livrer. Un tour qui n'a rien touché — une PR sur du travail poussé au tour
- * précédent — passe du premier coup : il n'y a rien de ce tour à vérifier.
+ * The door does not add a round: it MOVES the one we already paid, and since then
+ * that the end of the turn no longer executes anything, this is the ONLY place where the harness
+ * check the code. The second `create_pr` opens for good, even if the model has no
+ * nothing corrected: a door that can refuse indefinitely is a door that prevents
+ * to deliver. A lathe that didn't hit anything — a PR on some advanced lathe work
+ * previous — passes on the first try: there is nothing from this round to check.
  */
 export function gateCreatePr<A, R extends { result: unknown; success: boolean }>(
   handler: (args: A) => Promise<R>,
@@ -474,14 +474,14 @@ export function gateCreatePr<A, R extends { result: unknown; success: boolean }>
   return async (args) => {
     const checks = await hook.checkBeforeSubmit(remainingMs()).catch(() => null);
     if (!checks) return await handler(args);
-    // Les contrôles partent en `followUp`, PAS dans le résultat : un résultat de
-    // tool est capé à `TOOL_RESULT_MAX_CHARS` avec le milieu élidé, et un diff
-    // amputé de son milieu ne se relit pas — c'est exactement la relecture qu'on
-    // essaie de faire avoir lieu. Le résultat, lui, ne dit que le fait.
+    // The controls leave in `followUp`, NOT in the result: a result of
+    // tool is capped at `TOOL_RESULT_MAX_CHARS` with the middle elided, and a diff
+    // amputated from his middle cannot be reread — it is exactly the rereading that we
+    // trying to make it happen. The result only says the fact.
     //
-    // `success: true` : rien n'a échoué. Le modèle a demandé une livraison, le
-    // harness lui rend d'abord ce qu'il livre — un refus le pousserait à
-    // reformuler ses arguments plutôt qu'à lire.
+    // `success: true`: Nothing failed. The model has requested delivery, the
+    // harness first gives him back what he delivers — a refusal would push him to
+    // rephrase your arguments rather than reading.
     return {
       result: {
         opened: false,

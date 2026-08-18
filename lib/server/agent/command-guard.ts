@@ -1,78 +1,78 @@
 /**
- * Garde-fou des commandes de `run_command` (MIN-108). PUR et testable — comme
- * `repo-path.ts`, la logique protège quelque chose qu'on ne peut pas récupérer.
+ * Guardrail for `run_command` commands (MIN-108). PURE and testable — like
+ * `repo-path.ts`, logic protects something that cannot be recovered.
  *
- * Le prompt système dit depuis toujours « le harness possède git » ; le harness,
- * lui, exécutait la commande telle quelle. Deux `git checkout -- <fichier>` sont
- * réellement passés en production. Ce qui est en jeu n'est pas la microVM (elle
- * est jetable) mais **le travail non commité de la branche** : `checkout --`,
- * `reset`, `restore` le détruisent en silence, et la fin de tour pousse alors une
- * branche amputée sans que personne ne l'ait vu passer.
+ * The system prompt has always said “harness owns git”; the harness,
+ * he executed the order as is. Two `git checkout -- <fichier>` are
+ * actually passed into production. What is at stake is not the microVM (it
+ * is disposable) but **the uncommitted work of the branch**: `checkout --`,
+ * `reset`, `restore` destroy it silently, and the end of the turn then pushes a
+ * amputated branch without anyone seeing it pass.
  *
- * Principe de conception : liste **fermée et courte**, jamais une heuristique de
- * similarité. Un faux positif qui bloque une commande légitime coûte plus cher
- * que le risque couvert — on ne vise que ce qui DÉTRUIT du travail ou ÉCRIT sur
- * le remote. Tout le git de lecture (`status`, `log`, `diff`, `show`, `branch`)
- * et `git add` restent libres.
+ * Design principle: **closed and short** list, never a heuristic of
+ * similarity. A false positive that blocks a legitimate order costs more
+ * than the risk covered — we only target what DESTROYS work or WRITE on it
+ * the remote. All reading git (`status`, `log`, `diff`, `show`, `branch`)
+ * and `git add` remain free.
  *
- * Le parsing est textuel, pas un vrai shell : `g=git; $g reset --hard` passe. La
- * cible est un modèle distrait, pas un attaquant — l'attaquant a déjà `rm -rf`.
+ * The parsing is textual, not a real shell: `g=git; $g reset --hard` passes. There
+ * target is a distracted model, not an attacker — the attacker already has `rm -rf`.
  *
- * Un cas méritait quand même d'être fermé (MIN-244) : `bash -lc "git reset --hard"`
- * n'est pas une astuce d'attaquant mais une forme que le modèle écrit tout seul, et
- * le shell y cachait git derrière son propre `-c`. On re-parse donc l'argument des
- * shells. Le reste ne bouge pas : pas de rails de composition à la OpenHands
- * (`curl … | bash`) — le réseau est ouvert par décision et la VM ne détient aucun
- * secret depuis MIN-223, il n'y a rien à voler en aval.
+ * One case still deserved to be closed (MIN-244): `bash -lc "git reset --hard"`
+ * is not an attacker's trick but a form that the model writes by itself, and
+ * the shell there hid git behind its own `-c`. We therefore re-examine the argument of
+ * shells. The rest doesn't change: no OpenHands-style composition rails
+ * (`curl … | bash`) — the network is open by decision and the VM does not hold any
+ * secret since MIN-223, there is nothing to steal downstream.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * CE QUE LE PASSAGE EN LOCAL ANNULE DE TOUT CE QUI PRÉCÈDE (MIN-360)
+ * WHAT GOING LOCAL CANCELS FROM ALL OF THE ABOVE (MIN-360)
  *
- * Les deux prémisses de l'en-tête — « la VM est jetable », « il n'y a rien à voler
- * en aval » — sont fausses mot pour mot dès que le tour joue dans le dépôt de
- * l'utilisateur, sur sa machine. Trois trous en découlent, et ils ne coûtent rien
- * à fermer des deux côtés :
+ * The two premises of the header — “the VM is disposable”, “there is nothing to steal
+ * downstream” — are false word for word as soon as the trick plays in the deposit of
+ * the user, on his machine. Three holes come from it, and they cost nothing
+ * to close on both sides:
  *
- * 1. **`git config`** n'était gardé par personne. Poser un `core.hooksPath` fait
- *    exécuter du code de l'agent au PROCHAIN COMMIT DE L'UTILISATEUR, dans son
- *    terminal, avec son trousseau déverrouillé — une persistance qui survit à la
- *    fin du run, à la révocation de la clé et à la fermeture de l'app. Même
+ * 1. **`git config`** was not guarded by anyone. Place a `core.hooksPath` done
+ * execute agent code to USER'S NEXT COMMIT, in its
+ * terminal, with its keychain unlocked — a persistence that survives the
+ * end of the run, when the key is revoked and when the app is closed. Even
  *    famille : `core.sshCommand`, `credential.helper`, `filter.*.clean`,
  *    `diff.*.textconv`, `url.*.insteadOf`, un alias qui commence par `!`.
- * 2. **`.git/` par le shell.** `assertNotGit` ([repo-path.ts](repo-path.ts)) garde
- *    les tools de FICHIER ; `bash` passait à côté. Un token de chemin portant un
- *    segment `.git` est donc refusé ici, casse repliée (APFS ne distingue pas
+ * 2. **`.git/` by the shell.** `assertNotGit` ([repo-path.ts](repo-path.ts)) keeps
+ * FILE tools; `bash` was passing by. A path token carrying a
+ * segment `.git` is therefore refused here, folded case (APFS does not distinguish
  *    `.GIT/` de `.git/`).
- * 3. **`git -C` / `--git-dir` / `--work-tree`.** Les options globales étaient
- *    sautées : la sous-commande était bien lue, mais celles qu'on laisse passer
- *    parce qu'elles sont inoffensives DANS NOTRE DÉPÔT (changer de branche) ne le
- *    sont plus dans un autre. Elles sont refusées en bloc — le harness possède un
- *    dépôt, et c'est celui du cwd.
+ * 3. **`git -C` / `--git-dir` / `--work-tree`.** The global options were
+ * skipped: the subcommand was read correctly, but the ones we let pass
+ * because they are harmless IN OUR REPOSITORY (change branch) do not
+ * are more in another. They are refused en bloc — the harness has a
+ * deposit, and it is that of the cwd.
  *
- * Et le bug d'enveloppe qui rendait le reste contournable : `env -i git push`
- * passait, parce que `skipPrefix` s'arrêtait sur `-i`. Les enveloppes voient
- * désormais leurs OPTIONS sautées, avec leur valeur quand elles en portent une.
+ * And the envelope bug which made the rest workable: `env -i git push`
+ * passed, because `skipPrefix` stopped on `-i`. Envelopes see
+ * now their skipped OPTIONS, with their value when they wear one.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * LE COMMIT REND À CELUI QUI TRAVAILLE (MIN-364, décision D6)
+ * THE COMMITTEE GIVES BACK TO THE ONE WHO WORKS (MIN-364, decision D6)
  *
- * `commit` était refusé sur un motif écrit noir sur blanc — « le harness commite
- * et pousse à la fin de chaque tour ». **En mode dépôt courant, il ne commite
- * plus** (D2bis-B) : trois textes disaient trois choses, et le résultat était un
- * tour local qui ne livrait RIEN — le travail restait dans l'arbre, le modèle
- * lisait dans son prompt qu'il était livré, et le garde-fou lui refusait de le
- * livrer lui-même.
+ * `commit` was refused on a reason written in black and white — “the harness commits
+ * and pushes at the end of each round. **In current repository mode, it does not commit
+ * more** (D2bis-B): three texts said three things, and the result was a
+ * local tower which delivered NOTHING — the work remained in the tree, the model
+ * read in his prompt that he was delivered, and the guard refused to let him
+ * deliver himself.
  *
- * D'où le `scope` : c'est le MÊME module, et il rend deux verdicts parce que les
- * deux mondes ne se ressemblent plus sur ce point-là. En microVM, le harness
- * commite : `commit` reste refusé, et le motif est vrai. Sur la machine de
- * quelqu'un, personne ne commite à sa place : `commit` est rendu au modèle, qui
- * ne s'en sert que sur demande (c'est le prompt qui le dit, cf. `prompt.ts`).
+ * Hence the `scope`: it is the SAME module, and it gives two verdicts because the
+ * two worlds are no longer alike on this point. In microVM, the harness
+ * commit: `commit` remains refused, and the reason is true. On the machine
+ * someone, no one commits for them: `commit` is returned to the model, which
+ * only uses it on request (the prompt says so, cf. `prompt.ts`).
  *
- * `push`, lui, reste refusé des DEUX côtés, et pour deux raisons différentes :
- * en microVM c'est la fin de tour qui pousse, en local c'est `create_pr` qui
- * possède le remote (il mint le token, applique la porte de livraison et relie
- * la pull request au ticket). Un `push` nu contournerait les trois.
+ * `push`, remains refused on BOTH sides, and for two different reasons:
+ * in microVM it is the end of the turn which pushes, locally it is `create_pr` which
+ * owns the remote (he mints the token, applies the delivery gate and connects
+ * the pull request to the ticket). A bare `push` would bypass all three.
  */
 
 /** Valeur du champ `reason` de l'event `tool_result` d'un refus (mesurable en base). */
@@ -81,34 +81,34 @@ export const FORBIDDEN_COMMAND_REASON = "forbidden_command";
 export type CommandVerdict = { allowed: true } | { allowed: false; reason: string };
 
 /**
- * LE MONDE OÙ LA COMMANDE S'EXÉCUTE (MIN-364). Un seul champ, et il ne décide
- * que d'une chose : qui commite. Tout le reste du garde-fou est identique des
- * deux côtés — ce qui détruit du travail le détruit partout.
+ * THE WORLD WHERE THE COMMAND EXECUTES (MIN-364). Only one field, and it only decides
+ * only one thing: who commits. All the rest of the guardrail is identical
+ * two sides — what destroys work destroys it everywhere.
  */
 export interface CommandScope {
-  /** Le tour joue-t-il sur la machine de l'utilisateur (`isLocalJob`) ? */
+  /** Does the trick play on the user's machine (`isLocalJob`)? */
   local?: boolean;
 }
 
-/** Caractères qui terminent une commande dans un `sh -c` : chaînage, pipe,
- *  sous-shell, substitution. Le relevé de production montre exactement ce cas —
+/** Characters that end a command in a `sh -c`: chaining, pipe,
+ * subshell, substitution. The production record shows exactly this case —
  *  `cd /vercel/sandbox/repo && git checkout -- package-lock.json`. */
 const SEGMENT_BREAKS = new Set([";", "&", "|", "\n", "(", ")", "`"]);
 
-/** Commandes qui en enveloppent une autre : on regarde ce qu'elles lancent. */
+/** Commands that wrap another: we look at what they launch. */
 const WRAPPERS = new Set(["sudo", "env", "command", "time", "nohup", "xargs"]);
 
 /**
- * LES OPTIONS D'ENVELOPPE QUI PORTENT UNE VALEUR EN MOT SUIVANT (MIN-360).
+ * ENVELOPE OPTIONS THAT HAVE A FOLLOWING WORD VALUE (MIN-360).
  *
- * Sans cette table, `skipPrefix` s'arrêtait au premier mot commençant par `-` :
- * `env -i git push` désignait `-i` comme binaire, donc « pas git », donc passait.
- * En sautant les options on retrouve git — mais sauter une option À VALEUR sans sa
- * valeur rouvrirait le même trou d'un cran plus loin (`sudo -u root git push`
- * désignerait `root`). D'où les deux gestes ensemble, et jamais l'un sans l'autre.
+ * Without this table, `skipPrefix` stopped at the first word starting with `-`:
+ * `env -i git push` designated `-i` as binary, so “not git”, so passed.
+ * By skipping the options we find git — but skipping a VALUE option without its
+ * value would reopen the same hole one step further (`sudo -u root git push`
+ * would designate `root`). Hence the two gestures together, and never one without the other.
  *
- * Une option INCONNUE est sautée seule : c'est la conduite juste pour `-i`, `-p`,
- * `-0` et tous les drapeaux booléens, qui sont l'immense majorité.
+ * An UNKNOWN option is skipped alone: ​​it is the conduct just for `-i`, `-p`,
+ * `-0` and all the Boolean flags, which are the vast majority.
  */
 const WRAPPER_VALUE_OPTIONS: Record<string, ReadonlySet<string>> = {
   sudo: new Set(["-u", "--user", "-g", "--group", "-p", "--prompt", "-C", "--close-from",
@@ -122,22 +122,22 @@ const WRAPPER_VALUE_OPTIONS: Record<string, ReadonlySet<string>> = {
 };
 
 /**
- * Sous-commandes qui DÉTRUISENT ou RÉÉCRIVENT du travail non commité, refusées
- * dans les deux mondes. Aucune ne dépend de qui livre : ce qu'elles jettent
- * n'est pas récupérable, et rien dans git ne distingue le travail de l'agent de
- * celui qui était là avant lui.
+ * Subcommands that DESTROY or REWRITE uncommitted work, refused
+ * in both worlds. None depends on who delivers: what they throw away
+ * is not recoverable, and nothing in git distinguishes the agent's work from
+ * the one who was there before him.
  */
 const DESTRUCTIVE = new Set([
-  "reset", // `--hard` détruit ; `--soft`/`--mixed` n'ont aucune raison d'être ici
-  "restore", // sa raison d'être est de jeter des modifications
+  "reset", // `--hard` destroyed; `--soft`/`--mixed` have no reason to be here
+  "restore", // its reason for being is to throw modifications
   "rebase",
   "cherry-pick",
 ]);
 
 /**
- * Découpe la commande en segments exécutés indépendamment, en respectant les
+ * Cuts the command into segments executed independently, respecting the
  * guillemets — sinon `grep -n "git commit && git push" README.md` se ferait
- * refuser sur du texte qui n'est qu'un argument.
+ * refuse on text which is only an argument.
  */
 function splitSegments(command: string): string[] {
   const segments: string[] = [];
@@ -174,7 +174,7 @@ function splitSegments(command: string): string[] {
   return segments.filter((s) => s.trim().length > 0);
 }
 
-/** Découpe un segment en mots, guillemets retirés (`git "checkout" -- x`). */
+/** Breaks a segment into words, quotation marks removed (`git "checkout" -- x`). */
 function tokenize(segment: string): string[] {
   const tokens: string[] = [];
   let current = "";
@@ -220,13 +220,13 @@ function tokenize(segment: string): string[] {
   return tokens;
 }
 
-/** Index du premier mot qui est vraiment un binaire : saute les affectations
- *  d'environnement (`FOO=bar git …`), les enveloppes (`sudo git …`) et LES OPTIONS
+/** Index of the first word that is truly a binary: skips assignments
+ * environment (`FOO=bar git …`), envelopes (`sudo git …`) and OPTIONS
  *  de ces enveloppes (`env -i git …`, cf. `WRAPPER_VALUE_OPTIONS`). */
 function skipPrefix(tokens: string[]): number {
   let i = 0;
-  /** Les options à valeur de la DERNIÈRE enveloppe vue — null tant qu'il n'y en
-   *  a pas eu : sans enveloppe, un mot en `-` est le binaire, pas une option. */
+  /** Options set to value of LAST envelope seen — null as long as none are present
+   * did not have: without envelope, a word in `-` is binary, not an option. */
   let valueOptions: ReadonlySet<string> | null = null;
   while (i < tokens.length) {
     const t = tokens[i];
@@ -245,7 +245,7 @@ function skipPrefix(tokens: string[]): number {
     }
     if (valueOptions && t.startsWith("-") && t.length > 1) {
       i++;
-      // `--user=root` porte sa valeur ; `-u root` la porte en mot suivant.
+      // `--user=root` carries its value; `-u root` carries it in the following word.
       if (!t.includes("=") && valueOptions.has(t)) i++;
       continue;
     }
@@ -254,36 +254,36 @@ function skipPrefix(tokens: string[]): number {
   return i;
 }
 
-/** Options GLOBALES de git qui portent une valeur en mot suivant (`git -C dir …`). */
+/** GLOBAL git options that carry a next word value (`git -C dir …`). */
 const GIT_GLOBAL_WITH_VALUE = new Set(["-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"]);
 
 /**
- * Les globales qui font travailler git AILLEURS que dans le dépôt du tour.
+ * The globals that make git work ELSEWHERE than in the tour repository.
  *
- * **En microVM elles sont refusées en bloc** plutôt que suivies : le harness y
- * possède UN dépôt, celui du cwd, et le second rideau des permissions
+ * **In microVM they are refused en bloc** rather than followed: the harness
+ * has ONE repository, that of cwd, and the second curtain of permissions
  * (`external_directory: "deny"`) ne voit pas passer un `bash`.
  *
- * **Sur la machine de l'utilisateur, elles passent** (MIN-364, décision D5) :
- * c'est le MÊME périmètre que celui qu'on vient d'ouvrir aux tools de fichier,
- * dit par un autre mot. Un monorepo dont les paquets sont hors du dossier
- * attaché, un dépôt voisin à consulter — les refuser ici pendant que `read` et
- * `edit` y vont serait la cage à l'envers du §2 de l'audit, une fois de plus.
+ * **On the user's machine, they pass** (MIN-364, decision D5):
+ * this is the SAME perimeter as the one we just opened with file tools,
+ * said by another word. A monorepo whose packages are outside the folder
+ * attached, a neighboring repository to consult — refuse them here while `read` and
+ * `edit` going there would be the cage in reverse of §2 of the audit, once again.
  *
- * Ce qui les rend inoffensives est ailleurs et n'a pas bougé : les sous-commandes
- * qui DÉTRUISENT restent refusées quel que soit le dépôt visé — `git -C /autre
+ * What makes them harmless is elsewhere and hasn't changed: the subcommands
+ * which DESTROY remain refused regardless of the target repository — `git -C /other
  * reset --hard` se fait toujours refuser sur `reset`, jamais sur `-C`.
  */
 const GIT_GLOBAL_ELSEWHERE = new Set(["-C", "--git-dir", "--work-tree", "--namespace", "--exec-path"]);
 
 /**
- * La sous-commande git d'un segment, ses arguments et SES GLOBALES — ou null si le
- * segment ne lance pas git. Saute les affectations d'environnement
- * (`FOO=bar git …`) et les enveloppes (`sudo git …`).
+ * The git subcommand of a segment, its arguments and ITS GLOBALS — or null if the
+ * segment does not launch git. Skip environment assignments
+ * (`FOO=bar git …`) and envelopes (`sudo git …`).
  *
- * Les globales sont RENDUES plutôt que sautées en silence (MIN-360) : c'est là que
- * vivent `-C`, `--git-dir` et le `-c <clé>=<valeur>` qui pose un hook le temps
- * d'une commande.
+ * Globals are RENDERED rather than silently skipped (MIN-360): this is where
+ * live `-C`, `--git-dir` and `-c <key>=<value>` which sets a hook for time
+ * of an order.
  */
 function gitInvocation(
   tokens: string[],
@@ -304,17 +304,17 @@ function gitInvocation(
     }
   }
   // `git -C /autre` sans sous-commande ne fait rien, mais ses globales se jugent
-  // quand même : rendre null ici les rendrait invisibles.
+  // anyway: making null here would make them invisible.
   return { sub: tokens[i] ?? "", args: tokens.slice(i + 1), globals };
 }
 
 /**
- * LES CLÉS DE CONFIG QUI EXÉCUTENT DU CODE OU SURVIVENT AU RUN (MIN-360).
+ * CONFIG KEYS THAT EXECUTE CODE OR SURVIVE RUN (MIN-360).
  *
- * Indexées `section.feuille` en minuscules : la section et la clé finale d'un nom
- * git sont insensibles à la casse, seule la sous-section du milieu ne l'est pas —
- * et c'est justement elle qui est libre (`filter.<nom>.clean`,
- * `url.<base>.insteadOf`). On compare donc les deux bouts, jamais le nom entier.
+ * Indexed `section.feuille` in lowercase: the section and the final key of a name
+ * git are case insensitive, only the middle subsection is not —
+ * and it is precisely she who is free (`filter.<nom>.clean`,
+ * `url.<base>.insteadOf`). We therefore compare the two ends, never the whole name.
  */
 const GIT_CONFIG_EXECUTES = new Set([
   "core.hookspath",
@@ -338,7 +338,7 @@ const GIT_CONFIG_EXECUTES = new Set([
   "uploadpack.packobjectshook",
 ]);
 
-/** Sections dont TOUTE clé exécute (`alias.x = !sh -c …`) ou charge un fichier. */
+/** Sections of which ANY key executes (`alias.x = !sh -c …`) or loads a file. */
 const GIT_CONFIG_SECTIONS = new Set(["alias", "includeif"]);
 
 function dangerousConfigKey(raw: string): boolean {
@@ -354,27 +354,27 @@ const GIT_CONFIG_READ_FLAGS = new Set([
   "--get", "--get-all", "--get-regexp", "--get-urlmatch", "--get-color", "--get-colorbool",
   "-l", "--list",
 ]);
-/** Drapeaux qui ÉCRIVENT (ou ouvrent un éditeur sur le fichier). */
+/** Flags that WRITE (or open an editor on the file). */
 const GIT_CONFIG_WRITE_FLAGS = new Set([
   "--add", "--unset", "--unset-all", "--replace-all", "--edit", "-e",
   "--remove-section", "--rename-section",
 ]);
-/** Portées qui sortent du dépôt du tour : le `~/.gitconfig` de l'utilisateur, le
- *  fichier système, un fichier nommé. Une écriture y survit à tout le reste. */
+/** Scopes that leave the tour repository: the user's `~/.gitconfig`, the
+ * system file, a file named. A writing survives everything else. */
 const GIT_CONFIG_ELSEWHERE = new Set(["--global", "--system", "--file", "-f", "--blob"]);
-/** Verbes de la forme moderne (`git config set core.pager x`, git ≥ 2.46). */
+/** Modern form verbs (`git config set core.pager x`, git ≥ 2.46). */
 const GIT_CONFIG_MODES = new Set([
   "get", "set", "unset", "list", "edit", "remove-section", "rename-section",
 ]);
 const GIT_CONFIG_WRITE_MODES = new Set(["set", "unset", "edit", "remove-section", "rename-section"]);
 
-/** Shells qui acceptent une commande en argument (`bash -lc "…"`). */
+/** Shells that accept a command as an argument (`bash -lc "…"`). */
 const SHELLS = new Set(["sh", "bash", "zsh", "dash", "ksh"]);
 
 /**
- * La commande portée par un `sh -c` / `bash -lc` — ou null si le segment ne lance
- * pas un shell avec une commande en argument. Seule la forme `-…c…` compte :
- * `bash script.sh` exécute un fichier, qu'on ne lit pas.
+ * The command carried by a `sh -c` / `bash -lc` — or null if the segment does not launch
+ * not a shell with a command as an argument. Only the `-…c…` form counts:
+ * `bash script.sh` executes a file, which is not read.
  */
 function shellCommandArg(tokens: string[]): string | null {
   const i = skipPrefix(tokens);
@@ -385,18 +385,18 @@ function shellCommandArg(tokens: string[]): string | null {
   let sawC = false;
   for (let j = i + 1; j < tokens.length; j++) {
     const t = tokens[j];
-    // Après `--`, ce qui suit est la commande de `-c` … ou un nom de script sinon.
+    // After `--`, what follows is the command for `-c` ... or a script name otherwise.
     if (t === "--") return sawC ? (tokens[j + 1] ?? null) : null;
     if (!t.startsWith("-")) return sawC ? t : null; // sinon : un script, pas un `-c`
     if (!t.startsWith("--") && t.includes("c")) sawC = true;
-    if (t === "-o" || t === "+o") j++; // `bash -o pipefail -c …` : `-o` porte une valeur
+    if (t === "-o" || t === "+o") j++; // `bash -o pipefail -c …`: `-o` carries a value
   }
   return null;
 }
 
 /**
- * CE QUI DÉTRUIT DU TRAVAIL — le refus qui ne dépend d'aucune décision de
- * livraison, et le seul du lot dont la victime n'est jamais l'agent lui-même.
+ * WHAT DESTROYS WORK — the refusal which does not depend on any decision of
+ * delivery, and the only one of the lot whose victim is never the agent himself.
  */
 function destructiveRefusal(what: string): CommandVerdict {
   return {
@@ -409,7 +409,7 @@ function destructiveRefusal(what: string): CommandVerdict {
   };
 }
 
-/** LE PUSH, refusé des deux côtés — mais pas par le même propriétaire (D6). */
+/** THE PUSH, refused by both sides — but not by the same owner (D6). */
 function pushRefusal(scope: CommandScope): CommandVerdict {
   return {
     allowed: false,
@@ -424,9 +424,9 @@ function pushRefusal(scope: CommandScope): CommandVerdict {
 }
 
 /**
- * LE COMMIT, EN MICROVM SEULEMENT (D6). Sur la machine de quelqu'un, ce refus
- * n'existe plus : personne ne commite à la place du modèle, et le prompt lui dit
- * quand le faire.
+ * THE COMMIT, IN MICROVM ONLY (D6). On someone's machine, this refusal
+ * no longer exists: no one commits in place of the model, and the prompt tells it
+ * when to do it.
  */
 function harnessCommitRefusal(): CommandVerdict {
   return {
@@ -439,15 +439,15 @@ function harnessCommitRefusal(): CommandVerdict {
 }
 
 /**
- * `git config` — ou plutôt la seule partie qui compte : ce qui ÉCRIT (MIN-360).
+ * `git config` — or rather the only part that matters: what WRITES (MIN-360).
  *
- * Lire la config est libre et utile (`git config --get remote.origin.url`). Ce
- * qu'on refuse tient en deux phrases : une écriture qui SORT du dépôt du tour
- * (`--global` réécrit le `~/.gitconfig` de l'utilisateur), et une écriture sur une
- * clé qui fait EXÉCUTER quelque chose plus tard — au prochain commit, au prochain
- * `git fetch`, au prochain `git diff` d'un humain qui ne saura pas d'où ça vient.
+ * Reading the config is free and useful (`git config --get remote.origin.url`). This
+ * that we refuse is contained in two sentences: a writing that COMES OUT of the deposit of the turn
+ * (`--global` rewrites the user's `~/.gitconfig`), and a write to a
+ * key that makes something RUN later — on the next commit, on the next
+ * `git fetch`, to the next `git diff` from a human who won't know where it comes from.
  *
- * `null` = rien à redire.
+ * `null` = nothing to complain about.
  */
 function checkGitConfig(args: string[]): CommandVerdict | null {
   const positionals: string[] = [];
@@ -465,7 +465,7 @@ function checkGitConfig(args: string[]): CommandVerdict | null {
       if (GIT_CONFIG_READ_FLAGS.has(name)) reads = true;
       if (GIT_CONFIG_WRITE_FLAGS.has(name)) writes = true;
       if (GIT_CONFIG_ELSEWHERE.has(name)) elsewhere = name;
-      // `--file <chemin>` porte sa valeur en mot suivant : elle n'est pas une clé.
+      // `--file <chemin>` carries its value in the following word: it is not a key.
       if (!arg.includes("=") && (name === "--file" || name === "-f" || name === "--blob")) i++;
       continue;
     }
@@ -475,8 +475,8 @@ function checkGitConfig(args: string[]): CommandVerdict | null {
   const mode = positionals[0] ?? "";
   const named = GIT_CONFIG_MODES.has(mode) ? positionals.slice(1) : positionals;
   if (GIT_CONFIG_WRITE_MODES.has(mode)) writes = true;
-  // La forme historique n'a pas de verbe : `git config <clé>` LIT, `git config
-  // <clé> <valeur>` ÉCRIT. C'est le nombre d'arguments qui tranche, et lui seul.
+  // The historical form has no verb: `git config <key>` READS, `git config
+  // <key> <value>` WRITES. The number of arguments decides, and that alone.
   if (!reads && !GIT_CONFIG_MODES.has(mode) && named.length >= 2) writes = true;
   if (!writes) return null;
 
@@ -505,17 +505,17 @@ function configKeyRefusal(key: string): CommandVerdict {
 }
 
 /**
- * UN TOKEN QUI DÉSIGNE `.git/` (MIN-360) — le trou que `assertNotGit` ne bouchait
- * pas, parce qu'il garde les tools de FICHIER et que `bash` ne passe pas par eux.
+ * A TOKEN WHICH DESIGNATES `.git/` (MIN-360) — the hole that `assertNotGit` did not plug
+ * not, because it keeps the FILE tools and `bash` does not pass through them.
  *
- * Écrire dans `.git/hooks/` fait exécuter du code au prochain geste git de
- * l'utilisateur ; écrire dans `.git/config` y pose un `insteadOf` ou un
- * `credential.helper` que personne ne relira. Refuser aussi les LECTURES est
+ * Writing to `.git/hooks/` causes code to be executed on the next git gesture of
+ * the user; writing in `.git/config` puts a `insteadOf` or a
+ * `credential.helper` that no one will reread. Also refusing READINGs is
  * volontaire : `.git/config` porte l'URL de push, token de forge compris.
  *
- * La casse est repliée parce qu'APFS est insensible à la casse — `.GIT/hooks`
- * désigne exactement le même dossier. `.gitignore` et `x.git` (une URL de clone)
- * ne matchent pas : c'est un SEGMENT de chemin qu'on cherche, pas une sous-chaîne.
+ * Case is collapsed because APFS is case insensitive — `.GIT/hooks`
+ * denotes exactly the same folder. `.gitignore` and `x.git` (a clone URL)
+ * do not match: it is a path SEGMENT that we are looking for, not a substring.
  */
 const GIT_INTERNALS = /(^|\/)\.git(\/|$)/i;
 
@@ -527,21 +527,21 @@ function gitInternalsToken(tokens: string[]): string | null {
 const shortFlagWith = (letter: string) => (a: string) =>
   a.startsWith("-") && !a.startsWith("--") && a.includes(letter);
 
-/** Ce segment lance-t-il une commande git interdite ? */
+/** Is this segment running a forbidden git command? */
 function checkSegment(segment: string, depth: number, scope: CommandScope): CommandVerdict {
   const tokens = tokenize(segment);
 
-  // `bash -lc "git reset --hard"` : le shell cache git derrière son propre `-c`.
-  // On re-parse son argument comme une commande à part entière. La profondeur
-  // borne `bash -c "bash -c …"`, qui n'a aucune raison d'exister.
+  // `bash -lc "git reset --hard"`: the shell hides git behind its own `-c`.
+  // We re-parse his argument as a command in its own right. The depth
+  // terminal `bash -c "bash -c …"`, which has no reason to exist.
   const inner = shellCommandArg(tokens);
   if (inner != null && depth < 3) {
     const verdict = check(inner, depth + 1, scope);
     if (!verdict.allowed) return verdict;
   }
 
-  // `.git/` par le shell — indépendant de git : `echo … > .git/hooks/pre-commit`
-  // n'appelle pas git du tout, et c'est précisément ce qui le rendait invisible.
+  // `.git/` by the shell — independent of git: `echo … > .git/hooks/pre-commit`
+  // doesn't call git at all, and that's precisely what made it invisible.
   const internals = gitInternalsToken(tokens);
   if (internals) {
     return {
@@ -557,8 +557,8 @@ function checkSegment(segment: string, depth: number, scope: CommandScope): Comm
   if (!git) return { allowed: true };
   const { sub, args, globals } = git;
 
-  // Les globales, AVANT la sous-commande : `git -C /autre checkout main` est
-  // inoffensif ici et ne l'est pas là-bas, et c'est le `-C` qui le dit.
+  // The globals, BEFORE the subcommand: `git -C /autre checkout main` is
+  // harmless here and not there, and it's the `-C` that says so.
   for (const global of globals) {
     const name = global.includes("=") ? global.slice(0, global.indexOf("=")) : global;
     if (!scope.local && GIT_GLOBAL_ELSEWHERE.has(name)) {
@@ -569,8 +569,8 @@ function checkSegment(segment: string, depth: number, scope: CommandScope): Comm
           `Pointing git somewhere else is outside what the harness can vouch for.`,
       };
     }
-    // `git -c core.hooksPath=… <commande>` ne persiste pas, mais il exécute — et
-    // il pose la même chose que `git config`, à un mot près.
+    // `git -c core.hooksPath=… <commande>` does not persist, but it executes — and
+    // it poses the same thing as `git config`, except for one word.
     if (name === "-c") {
       const key = global.slice(global.indexOf("=") + 1).split("=")[0];
       if (dangerousConfigKey(key)) return configKeyRefusal(key);
@@ -584,29 +584,29 @@ function checkSegment(segment: string, depth: number, scope: CommandScope): Comm
 
   if (DESTRUCTIVE.has(sub)) return destructiveRefusal(`git ${sub}`);
   if (sub === "push") return pushRefusal(scope);
-  // Le commit reste au harness dans la microVM, et RIEN QUE là (D6).
+  // The commit remains at the harness in the microVM, and NOTHING BUT there (D6).
   if (sub === "commit" && !scope.local) return harnessCommitRefusal();
-  // `--amend` réécrit le dernier commit — celui du harness dans la microVM,
-  // celui de l'UTILISATEUR sur sa machine. Refusé des deux côtés, donc.
+  // `--amend` rewrites the last commit — that of the harness in the microVM,
+  // that of the USER on his machine. Refused on both sides, therefore.
   if (args.includes("--amend")) return destructiveRefusal(`git ${sub} --amend`);
-  // `checkout` est ambigu (changer de branche est inoffensif) : on ne refuse que
-  // les formes qui visent des FICHIERS, c'est-à-dire qui jettent le travail.
+  // `checkout` is ambiguous (changing branch is harmless): we only refuse
+  // the forms which aim at FILES, that is to say which throw away the work.
   if (sub === "checkout") {
     const discards = args.find((a) => a === "--" || a === "." || a === "-f" || a === "--force");
     if (discards) return destructiveRefusal(`git checkout ${discards}`);
   }
-  // `git stash` seul est récupérable ; `drop`/`clear` ne le sont pas.
+  // `git stash` only is recoverable; `drop`/`clear` are not.
   if (sub === "stash" && (args[0] === "drop" || args[0] === "clear")) {
     return destructiveRefusal(`git stash ${args[0]}`);
   }
-  // `git clean` sans `-f` ne fait rien ; avec, il supprime des fichiers non suivis
-  // — le travail non commité, exactement ce que ce module protège. `-n` reste libre.
+  // `git clean` without `-f` does nothing; with it, it deletes untracked files
+  // — uncommitted work, exactly what this module protects. `-n` remains free.
   if (sub === "clean") {
     const forces = args.find((a) => a === "--force" || shortFlagWith("f")(a));
     if (forces) return destructiveRefusal(`git clean ${forces}`);
   }
-  // `git switch` est l'équivalent moderne de `checkout` : changer de branche est
-  // inoffensif, jeter les modifications pour y arriver ne l'est pas.
+  // `git switch` is the modern equivalent of `checkout`: changing branch is
+  // harmless, throwing away the changes to get there is not.
   if (sub === "switch") {
     const discards = args.find((a) => a === "--discard-changes" || a === "--force" || a === "-f");
     if (discards) return destructiveRefusal(`git switch ${discards}`);
@@ -615,9 +615,9 @@ function checkSegment(segment: string, depth: number, scope: CommandScope): Comm
 }
 
 /**
- * Verdict du harness sur une commande de `run_command`. Un refus revient au
- * modèle comme une ERREUR DE TOOL : le round continue, il lit pourquoi et
- * s'adapte — on ne casse jamais le tour.
+ * Harness verdict on an order for `run_command`. A refusal comes down to
+ * model as a TOOL ERROR: the round continues, it reads why and
+ * adapts — we never break the trick.
  */
 export function checkCommand(command: string, scope: CommandScope = {}): CommandVerdict {
   return check(command, 0, scope);

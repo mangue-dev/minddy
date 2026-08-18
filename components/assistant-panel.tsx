@@ -83,10 +83,10 @@ export function AssistantPanel() {
   // Re-running on `shellReady` flips ensures we don't fire against a null ref.
   useEffect(() => {
     if (!isOpen || !pendingOptions || !shellReady) return;
-    // Ces options imposent une portée que la conversation vivante ne porte pas :
-    // le provider est en train de lui substituer un fil neuf. Envoyer ici partirait
-    // dans celle qui s'en va (MIN-353). Cet effet rejoue quand la bascule est faite
-    // — `pendingOptions` n'a pas bougé, et le garde ci-dessous n'a rien consommé.
+    // These options impose a scope that live conversation does not carry:
+    // the provider is in the process of replacing it with a new wire. Send here would leave
+    // in the one that goes away (MIN-353). This effect replays when the switch is made
+    // — `pendingOptions` did not move, and the guard below did not consume anything.
     if (scopeSwitchPending) return;
     const handle = shellRef.current;
     if (!handle) return;
@@ -108,8 +108,8 @@ export function AssistantPanel() {
     if (prompt) {
       // Pass the context explicitly: the state set above only reaches the shell
       // on the next render, after this synchronous one-shot send. Mentions,
-      // commande et pièces jointes viennent du composer qui a écrit le message
-      // (la home) et voyagent avec lui : le panneau ne fait que les relayer.
+      // command and attachments come from the composer who wrote the message
+      // (the home) and travel with him: the panel only relays them.
       handle.sendMessage(targetProjectId ?? null, prompt, {
         pageContext: pageContext ?? null,
         mentions,
@@ -166,16 +166,14 @@ export function AssistantPanel() {
         <SheetTitle className="sr-only">{t("title")}</SheetTitle>
         <div className="h-full overflow-hidden">
           {/*
-            Keying on the scope repart d'une vue neuve quand la portée change :
-            brouillon, popover d'historique et scroll ne traînent pas d'un projet
-            à l'autre. La CONVERSATION, elle, vit dans AssistantChatProvider —
-            ce remontage ne la touche pas.
+ Keying on the scope starts with a new view when the scope changes:
+ draft, history popover and scroll do not drag from one project
+ to another. The CONVERSATION lives in AssistantChatProvider —
+ this reassembly does not affect it.
 
-            Depuis MIN-353 la portée est celle de la CONVERSATION : ce remontage
-            ne se produit donc plus qu'en ouvrant une autre conversation ou en en
-            commençant une neuve — plus du tout en naviguant, ce qui était
-            justement le geste qui faisait disparaître le fil.
-          */}
+ Since MIN-353 the scope is that of the CONVERSATION: this reassembly
+ therefore only occurs by opening another conversation or by starting a new one. — no longer while browsing, which was precisely the gesture that made the thread disappear.
+ */}
           <AssistantShell
             key={scopeProjectId ?? "__global__"}
             ref={handleShellRef}

@@ -1,63 +1,60 @@
 /**
- * ⌘Q PENDANT QU'UN TOUR TOURNE (MIN-293) — la moitié qui se décide sans fenêtre.
+ * ⌘Q WHILE A TURN IS TURNING (MIN-293) — the half that decides without a window.
  *
- * ## Ce qui change, et pourquoi ce geste devient dangereux
+ * ## What changes, and why this gesture becomes dangerous
  *
- * Aujourd'hui `before-quit` détruit la fenêtre **sans rien demander**
- * ([main.ts](../../desktop/src/main.ts)) : la coquille est une fenêtre sur une
- * origine, quitter ne perd rien qu'un rechargement ne rende. Dès qu'un tour joue
- * ici, le même geste devient **la principale cause de perte d'un tour** — et
- * d'une perte qui coûte, puisqu'un tour peut avoir des heures de travail derrière
- * lui et une pull request devant.
+ * Today `before-quit` destroys the window **without asking anything**
+ * ([main.ts](../../desktop/src/main.ts)): the shell is a window on an
+ * origin, quitting loses nothing that a reload does not return. As soon as a turn plays
+ * here, the same move becomes **the main cause of loss of a turn** — and
+ * a loss that costs, since a turn can have hours of work behind
+ * it and a pull request in front.
  *
- * ## Le tour DOIT mourir avec l'app, et ce n'est pas négociable
+ * ## The turn MUST die with the app, and this is not negotiable
  *
- * On ne propose donc pas « quitter en laissant tourner ». Un harness détaché qui
- * survivrait à ⌘Q garderait vivants un token de forge `contents: write` et une
- * clé de modèle, **sans plus aucune interface pour les arrêter** — et un process
- * réparenté à `launchd` **perd son processus responsable TCC**, donc la fenêtre
- * d'autorisation de macOS ne s'ouvrirait même pas au premier dossier protégé.
- * Les deux moitiés du même argument : ce qui rend le local tenable, c'est que
- * l'app soit la seule chose qui tienne le tour.
+ * We therefore do not suggest “exit while leaving it running”. A detached harness that
+ * survives ⌘Q would keep a forge token `contents: write` and a
+ * template key alive, **with no more interface to stop them** — and a process
+ * repaired to `launchd` **loses its TCC responsible process**, so the macOS permission window wouldn't even open at the first protected folder.
+ * Two halves of the same argument: what makes the local tenable is that the app is the only thing holding up.
  *
- * Le choix offert est donc binaire, et la formulation le dit : **arrêter le tour
- * et quitter**, ou **rester**.
+ * The choice offered is therefore binary, and the wording says it: **stop the round
+ * and exit**, or **stay**.
  *
- * ## Où la session repart
+ * ## Where the session restarts
  *
- * Un tour arrêté n'est pas un tour perdu : le superviseur sauvegarde son
- * checkpoint toutes les deux minutes, et le chien de garde remettra la session au
- * repos sur ce checkpoint-là. C'est ce que la boîte doit dire — sans quoi
- * quelqu'un annulera un ⌘Q légitime par peur de perdre une heure de travail.
+ * A stopped round is not a lost round: the supervisor saves his
+ * checkpoint every two minutes, and the watchdog will put the session back to rest on that checkpoint. This is what the box should say — otherwise
+ * someone will cancel a legitimate ⌘Q for fear of losing an hour of work.
  *
- * En anglais, comme le menu et le rapport de diagnostic : c'est une boîte NATIVE,
- * hors de next-intl, et le reste des surfaces natives est déjà anglais.
+ * In English, like the menu and diagnostic report: it's a NATIVE box,
+ * outside of next-intl, and the rest of the native surfaces are already English.
  */
 
 /** Ce qu'on sait des tours en cours au moment du ⌘Q. */
 export interface RunningTurn {
   readonly runId: string;
-  /** De quoi nommer le tour dans la boîte — `MIN-293`, ou le dossier à défaut. */
+  /** What to name the trick in the box — `MIN-293`, or the folder failing that. */
   readonly label?: string;
 }
 
-/** La boîte, telle que `dialog.showMessageBox` la veut. */
+/** The box, as `dialog.showMessageBox` wants it. */
 export interface QuitPrompt {
   readonly message: string;
   readonly detail: string;
-  /** `[0]` quitte, `[1]` reste. L'ordre est repris par `quitDecision`. */
+  /** `[0]` leaves, `[1]` stays. The order is taken over by `quitDecision`. */
   readonly buttons: readonly [string, string];
   readonly defaultId: 0 | 1;
   readonly cancelId: 0 | 1;
 }
 
 /**
- * FAUT-IL DEMANDER ? `null` = non, on quitte comme avant.
+ * SHOULD YOU ASK? `null` = no, we exit as before.
  *
- * Sans tour en cours, la coquille redevient ce qu'elle est le reste du temps :
- * une fenêtre, dont la fermeture ne coûte rien. Une boîte à chaque ⌘Q serait le
- * genre d'ajout qu'on apprend à cliquer sans lire — et le jour où elle compte
- * vraiment, elle ne compterait plus.
+ * Without a turn in progress, the shell returns to what it is for the rest of the time:
+ * a window, the closing of which costs nothing. A box at each ⌘Q would be the
+ * kind of addition that we learn to click without reading — and the day it counts
+ * really, it would no longer count.
  */
 export function quitPrompt(running: readonly RunningTurn[]): QuitPrompt | null {
   if (running.length === 0) return null;
@@ -77,8 +74,8 @@ export function quitPrompt(running: readonly RunningTurn[]): QuitPrompt | null {
       (one
         ? "The session is saved every couple of minutes — reopen minddy and send a message to carry on from the last save."
         : "The sessions are saved every couple of minutes — reopen minddy and send a message to carry on from the last save."),
-    // Le geste destructeur en premier, comme partout sur macOS ; le défaut est
-    // le bouton SÛR, et c'est lui aussi qu'un Échap déclenche.
+    // The destructive gesture first, like everywhere on macOS; the defect is
+    // the SAFE button, and this is also what an Escape triggers.
     buttons: ["Stop and Quit", "Keep Working"],
     defaultId: 1,
     cancelId: 1,
@@ -88,23 +85,23 @@ export function quitPrompt(running: readonly RunningTurn[]): QuitPrompt | null {
 export type QuitDecision = "quit" | "stay";
 
 /**
- * Ce que le clic veut dire. Trivial, et écrit quand même : un index de bouton
- * inversé ici ferait quitter l'app sur « Keep Working », et c'est exactement le
- * genre de faute qu'aucun type ne rattrape.
+ * What the click means. Trivial, and still written: an inverted
+ * button index here would cause the app to exit to "Keep Working", and that's exactly the
+ * kind of mistake that no type can catch.
  *
- * Tout ce qui n'est pas le bouton 0 vaut « rester » — une boîte fermée par le
- * système, un `response` hors bornes, un Échap.
+ * Anything other than button 0 is worth "stay" — a box closed by the
+ * system, an out-of-bounds `response`, an Escape
  */
 export function quitDecision(response: number): QuitDecision {
   return response === 0 ? "quit" : "stay";
 }
 
 /**
- * Le mot de la fin écrit dans le journal des tours qu'on arrête.
+ * The final word written in the log of the turns that we stop.
  *
- * Il compte plus qu'il n'en a l'air : c'est la seule ligne qui distingue « le
- * harness a planté » de « quelqu'un a quitté l'app », et les deux se lisent
- * autrement dans un rapport de diagnostic.
+ * It counts more than it seems: it is the only line which distinguishes "the
+ * harness crashed" from "someone left the app", and the two are read
+ * otherwise in a diagnostic report.
  */
 export function quitLogNote(): string {
   return "stopped because minddy was quit — the session resumes from its last save";

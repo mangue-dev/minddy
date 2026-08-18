@@ -14,9 +14,9 @@ import type { MessageKey } from "@/lib/i18n-keys";
 import { CONTACT_EMAIL } from "@/lib/site";
 
 /**
- * Pied de page du site public (MIN-73). Reprend la grille du footer d'AutoKap :
- * bloc marque + colonnes de liens, barre de bas de page, et le mot-symbole géant
- * rogné par le bas — la seule fantaisie assumée de la page.
+ * Public site footer (MIN-73). Takes the AutoKap footer grid:
+ * brand block + link columns, footer bar, and the giant wordmark
+ * cropped from the bottom — the only admitted fantasy of the page.
  */
 
 type FooterColumn = {
@@ -28,9 +28,9 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
   {
     titleKey: "footerColProduct",
     links: [
-      // Ordre du nouveau plan de la landing. `#numo`, `#voice`, `#scratchpad`
-      // et `#workflow` ne sont plus des sections mais restent des ancres, posées
-      // sur les blocs qui les ont absorbés : ces liens — et ceux déjà partagés —
+      // Order of the new landing plan. `#numo`, `#voice`, `#scratchpad`
+      // and `#workflow` are no longer sections but remain anchors, placed
+      // on the blocks which absorbed them: these links — and those already shared —
       // tombent toujours au bon endroit.
       { href: "/#tracker", labelKey: "navMenu_tracker_title" },
       { href: "/#agents", labelKey: "footerAgents" },
@@ -49,14 +49,14 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
   {
     titleKey: "footerColResources",
     links: [
-      // La doc du serveur MCP en tête de colonne (MIN-93) : c'est la seule
-      // ressource du site qui en est vraiment une, et le lien interne qui doit
-      // être vu depuis toutes les pages — un crawler compte les liens entrants.
+      // The MCP server doc at the top of the column (MIN-93): it is the only one
+      // site resource which is really one, and the internal link which must
+      // be seen from all pages — a crawler counts incoming links.
       { href: "/mcp", labelKey: "navMenu_mcp_title" },
       { href: "/changelog", labelKey: "footerChangelog" },
-      // Les comparatifs (MIN-93). Ils ne sont NULLE PART ailleurs dans la
-      // navigation : sans ces trois liens, chaque page n'aurait que le sitemap
-      // pour être découverte, et un lien interne vaut plus qu'une ligne de XML.
+      // Comparisons (MIN-93). They are NOWHERE else in the
+      // navigation: without these three links, each page would only have the sitemap
+      // to be discovered, and an internal link is worth more than a line of XML.
       { href: "/alternatives/linear", labelKey: "footerAltLinear" },
       { href: "/alternatives/jira", labelKey: "footerAltJira" },
       { href: "/alternatives/notion", labelKey: "footerAltNotion" },
@@ -77,18 +77,18 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
 ];
 
 /**
- * Le sélecteur de langue n'est chargé QUE quand on arrive au pied de page
+ * The language selector is ONLY loaded when you arrive at the footer
  * (MIN-100).
  *
- * Son `Select` Radix tire le positionneur flottant : 46 Ko gzippés, deuxième
- * poste du bundle des six pages publiques derrière le framework, pour une liste
- * de deux langues qui ne s'ouvre qu'au clic. `ssr: false` seul ne suffisait pas —
- * le composant étant rendu sans condition, React résolvait le `dynamic` dès
- * l'hydratation et les 46 Ko partaient quand même dans la fenêtre du LCP, juste
- * un peu plus tard. L'observer ci-dessous les repousse à l'instant où le pied de
- * page approche, c'est-à-dire jamais pour un visiteur qui ne descend pas.
+ * Its `Select` Radix pulls the floating positioner: 46 KB gzipped, second
+ * six page bundle post public behind the framework, for a list
+ * of two languages which only opens on click. `ssr: false` alone was not enough —
+ * the component being rendered unconditionally, React resolved the `dynamic` as soon as
+ * hydration and the 46 KB still left in the LCP window, just
+ * a little later. Observing it below pushes them back the moment the foot of
+ * approaches, that is to say never for a visitor who does not go down.
  *
- * La place est réservée en dur (`h-8`) : rien ne bouge quand il apparaît.
+ * The place is reserved hard (`h-8`): nothing moves when it appears.
  */
 const LanguageSwitcher = dynamic(
   () => import("./language-switcher").then((m) => m.LanguageSwitcher),
@@ -96,8 +96,8 @@ const LanguageSwitcher = dynamic(
 );
 
 /**
- * Les infobulles de l'adresse de contact, sous le même verrou et pour la même
- * raison : Radix y tire le positionneur flottant. Voir
+ * The contact address tooltips, under the same lock and for the same
+ * reason: Radix pulls the floating positioner there. See
  * [footer-hint.tsx](footer-hint.tsx).
  */
 const FooterHint = dynamic(() => import("./footer-hint").then((m) => m.FooterHint), {
@@ -112,8 +112,8 @@ export function MarketingFooter() {
 
   useEffect(() => {
     const el = slot.current;
-    // Sans IntersectionObserver, on monte tout de suite : mieux vaut le poids
-    // qu'un sélecteur de langue absent.
+    // Without IntersectionObserver, we go straight up: the weight is better
+    // that a missing language selector.
     if (!el || typeof IntersectionObserver === "undefined") {
       setReached(true);
       return;
@@ -124,18 +124,18 @@ export function MarketingFooter() {
         setReached(true);
         io.disconnect();
       },
-      // Une marge confortable : le chargement démarre avant qu'on n'y soit, donc
-      // le sélecteur est déjà là quand le pied de page entre vraiment.
+      // A comfortable margin: loading starts before we get there, so
+      // the selector is already there when the footer actually enters.
       { rootMargin: "600px 0px" },
     );
     io.observe(el);
     return () => io.disconnect();
   }, []);
 
-  // L'élément est écrit une seule fois : nu tant que l'infobulle n'est pas
-  // arrivée, enveloppé ensuite. C'est ce qui garde le lien `mailto:` dans le
-  // HTML rendu côté serveur, alors que l'infobulle, elle, est chargée en
-  // différé.
+  // The element is written only once: bare as long as the tooltip is not
+  // arrival, then wrapped. This is what keeps the `mailto:` link in the
+  // HTML rendered on the server side, while the tooltip is loaded in
+  // deferred.
   const withHint = (label: string, child: ReactElement) =>
     reached ? <FooterHint label={label}>{child}</FooterHint> : child;
 
@@ -162,12 +162,12 @@ export function MarketingFooter() {
             </div>
           </div>
 
-          {/* Colonnes en `<nav aria-labelledby>` et non en `<h2>` : trois titres
-              de section de plus dans le plan de CHAQUE page, entre « Questions
-              fréquentes » et rien du tout, alors que « Produit » ou « Légal »
-              ne sont pas des sections de la page — ce sont les étiquettes de
-              trois listes de liens. Le rôle `navigation` les nomme sans les
-              faire entrer dans la hiérarchie des titres. */}
+          {/* Columns in `<nav aria-labelledby>` and not in `<h2>`: three more section titles
+ in the outline of EACH page, between “Frequently asked questions
+” and nothing at all, while “Product” or “Legal”
+ are not sections of the page — they are the labels de
+ three lists of links. The `navigation` role names them without bringing
+ into the title hierarchy. */}
           {COLUMNS.map((column) => (
             <nav
               key={column.titleKey}
@@ -214,16 +214,12 @@ export function MarketingFooter() {
               })}
             </span>
           </div>
-          {/* L'adresse de contact, et son bouton « copier » posé à gauche. Il ne
-              se montre qu'au survol, mais sa boîte est là en permanence
-              (opacité, pas affichage) : l'adresse ne bouge pas d'un pixel quand
-              il apparaît. Là où il n'y a pas de survol — un écran tactile — il
-              reste visible, d'où l'`opacity-100` de base que seul
-              `@media (hover: hover)` efface.
+          {/* The contact address, and its “copy” button on the left. It only shows KEEP_0_TOKEN on hover, but its box is there permanently KEEP 1 TOKEN (opacity, not display): the address does not move a pixel when KEEP 2 TOKEN it appears. Where there is no hover — a touch screen — it
+ remains visible, hence the basic `opacity-100` that only
+ `@media (hover: hover)` erases.
 
-              Les deux gestes se ressemblent trop pour se passer d'étiquette :
-              une icône « copier » collée à une adresse cliquable, sans rien qui
-              dise laquelle fait quoi. D'où une infobulle sur chacun. */}
+ The two gestures are too similar to do without a label:
+ a “copy” icon stuck to a clickable address, with nothing to say which one does what. Hence a tooltip on each. */}
           <span className="group inline-flex items-center gap-1">
             <span className="inline-flex size-[22px] items-center justify-center">
               {withHint(
@@ -250,9 +246,8 @@ export function MarketingFooter() {
         </div>
       </div>
 
-      {/* Mot-symbole géant : sa moitié basse passe sous le pli du footer
-          (overflow-hidden), ce qui donne du poids à la marque sans occuper la
-          hauteur d'une vraie section. */}
+      {/* Giant wordmark: its lower half passes under the fold of the footer
+ (overflow-hidden), which gives weight to the brand without occupying the height of a real section. */}
       <div aria-hidden className="pointer-events-none mx-auto max-w-7xl px-4 select-none sm:px-6">
         <span className="block translate-y-[38%] text-center font-display text-[clamp(6rem,22vw,22rem)] leading-none font-bold tracking-[-0.06em] text-foreground/[0.06] dark:text-foreground/[0.09]">
           minddy

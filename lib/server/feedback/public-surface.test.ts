@@ -1,34 +1,34 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * MIN-342 — ce qu'un ANONYME (ou un visiteur d'un autre board) atteint.
+ * MIN-342 — what an ANONYMOUS (or a visitor from another board) achieves.
  *
- * Deux surfaces, deux règles, et les deux ne se voient qu'entre les fichiers :
+ * Two surfaces, two rules, and both are only seen between files:
  *
- *  - un vote se résout DANS le projet du visiteur. L'id du post vient du
- *    client ; résolu seul, il désignait n'importe quel retour de la base.
- *  - l'OTP est le seul endroit où un inconnu choisit le destinataire d'un
- *    e-mail parti du domaine vérifié de minddy. Ce qui le tient : un corps sans
- *    aucun texte de tiers, et des compteurs PERSISTANTS — celui en mémoire
- *    repart à zéro à chaque déploiement, et une victime s'arrosait via N boards.
+ * - a vote resolves IN the visitor's project. Post id comes from
+ * client; resolved alone, it designated any return from the base.
+ * - the OTP is the only place where a stranger chooses the recipient of an
+ * e-mail from minddy's verified domain. What holds it: a body without
+ * no third-party text, and PERSISTENT counters — the one in memory
+ * starts from zero each time it is deployed, and a victim is watered via N boards.
  */
 
 interface Row {
   [key: string]: unknown;
 }
 
-/** Les posts de la base, tous projets confondus. */
+/** Base posts, all projects combined. */
 const posts: Row[] = [
   { id: "post-mine", project_id: "proj-a", merged_into_id: null, deleted_at: null },
   { id: "post-theirs", project_id: "proj-b", merged_into_id: null, deleted_at: null },
 ];
 
-/** Les lignes OTP écrites, plus celles qu'on plante avant l'appel. */
+/** The OTP lines written, plus those planted before the call. */
 let otpRows: Row[] = [];
 let voteUpserts: Row[] = [];
 const sentEmails: { to: string; code: string; locale: string }[] = [];
 
-/** Un filtre `.eq()` / `.gte()` / `.is()` accumulé, appliqué à la fin. */
+/** An accumulated `.eq()` / `.gte()` / `.is()` filter, applied at the end. */
 type Filter = (row: Row) => boolean;
 
 function query(rows: () => Row[], onInsert?: (values: Row) => void) {
@@ -145,15 +145,15 @@ describe("votePost", () => {
     expect(
       await votePost({ postId: "post-theirs", userId: "u1", projectId: "proj-a" })
     ).toBe(false);
-    // Le refus vaut par l'absence d'écriture : un `false` rendu après un upsert
-    // aurait laissé la voix en base.
+    // The refusal is valid for the absence of writing: a `false` returned after an upsert
+    // would have left the voice in base.
     expect(voteUpserts).toEqual([]);
   });
 });
 
 describe("requestFeedbackOtp", () => {
-  // Une IP par cas : le premier rempart reste un compteur EN MÉMOIRE, partagé
-  // par tout le module de test — le réutiliser ferait passer un cas pour la
+  // One IP per case: the first barrier remains a shared IN-MEMORY counter
+  // through the entire test module — reusing it would pass off a case for the
   // mauvaise raison.
   const base = { boardId: "board-1", locale: "fr" as const };
 
@@ -172,8 +172,8 @@ describe("requestFeedbackOtp", () => {
       await requestFeedbackOtp({ ...base, ip: "10.0.0.1", email: "Someone@Example.com " })
     ).toEqual({ ok: true });
     expect(sentEmails).toHaveLength(1);
-    // L'adresse est normalisée, et l'appel ne prend plus de nom de projet :
-    // c'est cette absence-là qui ferme le relais.
+    // The address is standardized, and the call no longer takes a project name:
+    // it is this absence that closes the relay.
     expect(sentEmails[0].to).toBe("someone@example.com");
     expect(Object.keys(sentEmails[0]).sort()).toEqual(["code", "locale", "to"]);
   });
@@ -182,13 +182,13 @@ describe("requestFeedbackOtp", () => {
     const p = { ...base, ip: "10.0.0.2", email: "a@b.com" };
     await requestFeedbackOtp(p);
     expect(await requestFeedbackOtp(p)).toEqual({ ok: true });
-    // Réponse identique — mais un seul e-mail est parti.
+    // Same response — but only one email went out.
     expect(sentEmails).toHaveLength(1);
   });
 
   it("refuse d'arroser une adresse via PLUSIEURS boards", async () => {
-    // Cinq demandes déjà passées dans l'heure, sur cinq boards différents :
-    // le plafond par destinataire les compte toutes. C'est le levier du relais
+    // Five requests already submitted within the hour, on five different boards:
+    // the limit per recipient counts them all. This is the relay lever
     // ouvert — un compteur par board ne l'aurait jamais vu.
     otpRows = recent(5, (i) => ({ board_id: `board-${i}`, email: "victim@example.com" }));
     expect(
@@ -204,13 +204,13 @@ describe("requestFeedbackOtp", () => {
 
   it("refuse une origine qui arrose des adresses ARBITRAIRES", async () => {
     const ip = "10.0.0.4";
-    // On apprend l'empreinte de l'origine en laissant passer une demande.
+    // We learn the fingerprint of the origin by letting a request pass.
     await requestFeedbackOtp({ ...base, ip, email: "first@example.com" });
     const ipHash = otpRows[0].ip_hash;
     expect(ipHash).toBeTruthy();
 
-    // Quinze destinataires distincts depuis la même origine : le compteur est
-    // en base, donc il survit au déploiement qui vide celui en mémoire.
+    // Fifteen distinct recipients from the same origin: the counter is
+    // in base, so it survives the deployment which empties the one in memory.
     otpRows = recent(15, (i) => ({
       board_id: "board-1",
       email: `target-${i}@example.com`,
@@ -224,7 +224,7 @@ describe("requestFeedbackOtp", () => {
   });
 });
 
-/** n lignes datées dans l'heure écoulée, mais hors du cooldown d'une minute. */
+/** n lines dated within the past hour, but outside the one minute cooldown. */
 function recent(n: number, shape: (i: number) => Row): Row[] {
   const now = Date.now();
   return Array.from({ length: n }, (_, i) => ({

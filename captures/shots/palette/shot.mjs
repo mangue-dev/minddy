@@ -1,23 +1,23 @@
 /**
- * featurePalette — la palette ⌘K ouverte sur le board d'Aurora.
+ * featurePalette — the ⌘K palette open on the Aurora board.
  *
- * Voir `intent.md` pour ce que l'image doit porter.
+ * See `intent.md` for what the image should carry.
  *
  * Ce que l'inspection a appris :
- *   - la palette s'ouvre bien avec `Meta+K` ;
- *   - la REQUÊTE TAPÉE change tout, et ce qu'elle remonte VIEILLIT. « ticket »
- *     / « issue » donnait l'image voulue en juillet ; depuis, l'export CSV et
- *     les entrées de réglages sont venus grossir les groupes d'actions, et ils
- *     ont poussé le groupe « Tickets » sous la ligne de flottaison. La palette
- *     ne remontait plus que de la navigation — l'exact contraire de l'`alt` de
- *     l'emplacement, « une recherche qui remonte tickets ET actions » ;
- *   - « board » remonte les deux, et tient dans la hauteur de la liste : une
- *     page (le board public) et quatre tickets dont le titre porte le mot ;
- *   - c'est en outre le MÊME mot dans les deux langues, là où « ticket » avait
- *     besoin d'être traduit en « issue ». Une requête de moins à maintenir.
+ * - the palette opens correctly with `Meta+K`;
+ * - the TYPED QUERY changes everything, and what it comes up GETS OLD. “ticket”
+ * / “issue” gave the desired image in July; since then, the CSV export and
+ * the settings entries have been added to the action groups, and they
+ * pushed the “Tickets” group below the waterline. The palette
+ * only came back from navigation — the exact opposite of the `alt` of
+ * location, “a search that goes back to tickets AND actions”;
+ * - “board” goes up both, and fits in the height of the list: one
+ * page (the public board) and four tickets whose title bears the word;
+ * - it is also the SAME word in both languages, where “ticket” had
+ * need to be translated into “outcome”. One less request to maintain.
  *
- *   node captures/shots/palette/shot.mjs             # produit les PNG
- *   node captures/shots/palette/shot.mjs --publish   # + livre sur la landing
+ * node captures/shots/palette/shot.mjs # produces the PNGs
+ * node captures/shots/palette/shot.mjs --publish # + book on the landing
  */
 import { openPage, settle, shoot, CAPTURE, DEFAULT_VIEW_NAMES } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
@@ -26,21 +26,21 @@ const SLOT = "featurePalette";
 const OUT = "captures/shots/palette/out";
 const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";
 
-/** Même fenêtre que heroBoard : les deux images doivent avoir la même échelle. */
+/** Same window as heroBoard: both images must have the same scale. */
 const VIEWPORT = { width: 1736, height: 1085 };
 
 /**
- * La requête tapée. Le même mot dans les deux langues : il est anglais dans les
- * titres de tickets du monde de démo, et il est aussi le nom du board public
- * côté interface — c'est ce qui lui fait remonter une page ET des tickets.
+ * The query typed. The same word in both languages: it is English in both
+ * demo world ticket titles, and it is also the name of the public board
+ * on the interface side — this is what brings up a page AND tickets.
  */
 const QUERY = { fr: "board", en: "board" };
 
 /**
- * Un résultat de ticket se reconnaît à son identifiant. Sans limite de mot en
- * tête : le titre et l'identifiant sont deux nœuds voisins, donc le texte
- * concaténé de la ligne dit « …from the boardAUR-5 » — il n'y a pas de
- * frontière de mot entre « d » et « A », et un `\b` ne matcherait jamais.
+ * A ticket result can be recognized by its identifier. No word limit
+ * head: the title and the identifier are two neighboring nodes, therefore the text
+ * concatenated from the line says “…from the boardAUR-5” — there is no
+ * word boundary between "d" and "A", and a `\b` would never match.
  */
 const ISSUE_ROW = /[A-Z]{2,4}-\d+/;
 
@@ -58,9 +58,9 @@ async function capture({ locale, theme }) {
     await page.goto(`${CAPTURE.baseUrl}/projects/${AURORA}`, { waitUntil: "domcontentloaded" });
     await settle(page, { expect: "text=AUR-1" });
 
-    // Le board doit être ENTIÈREMENT rendu avant d'ouvrir la palette : c'est
-    // lui qu'on verra derrière, et une barre d'onglets vide se remarquerait
-    // autant ici que sur la capture du hero.
+    // The board must be COMPLETELY returned before opening the palette: this is
+    // him that we will see behind, and an empty tab bar would be noticed
+    // as much here as on the capture of the hero.
     await page
       .getByRole("button", { name: DEFAULT_VIEW_NAMES[locale], exact: true })
       .waitFor({ state: "visible", timeout: 15_000 });
@@ -69,10 +69,10 @@ async function capture({ locale, theme }) {
     const dialog = page.getByRole("dialog").first();
     await dialog.waitFor({ state: "visible", timeout: 10_000 });
 
-    // On tape DANS le champ, pas au clavier global : la palette s'anime encore
-    // à l'ouverture, et une frappe globale perd les premiers caractères — un
+    // We type IN the field, not on the global keyboard: the palette comes alive again
+    // when opening, and a global keystroke loses the first characters — a
     // run a produit « ssue » au lieu de « issue ». `pressSequentially` attend
-    // que l'élément soit prêt avant chaque touche.
+    // that the element is ready before each touch.
     const input = dialog.getByRole("textbox").first();
     await input.waitFor({ state: "visible", timeout: 10_000 });
     await input.pressSequentially(QUERY[locale], { delay: 60 });
@@ -84,10 +84,10 @@ async function capture({ locale, theme }) {
       );
     }
 
-    // On attend que la liste se soit REMPLIE, pas un délai arbitraire : la
-    // recherche est asynchrone et la palette s'affiche vide en attendant. Le
-    // dernier résultat attendu est un ticket, et c'est lui qui met le plus de
-    // temps à venir — les actions sont locales, la recherche de tickets non.
+    // We wait until the list is FILLED, not an arbitrary delay: the
+    // search is asynchronous and the palette displays empty while waiting. THE
+    // last expected result is a ticket, and it is he who puts the most
+    // time to come — actions are local, ticket searching is not.
     await page
       .getByRole("option")
       .filter({ hasText: ISSUE_ROW })
@@ -95,13 +95,13 @@ async function capture({ locale, theme }) {
       .waitFor({ state: "visible", timeout: 10_000 });
 
     /**
-     * Ce que l'image doit porter, vérifié sur ce qui est RÉELLEMENT DANS LE
-     * CADRE — un résultat sous la ligne de flottaison de la liste ne se voit
-     * pas plus qu'un résultat absent.
+     * What the image should be about, checked on what is ACTUALLY IN THE
+     * FRAME — a result below the list fold is not seen
+     * no more than an absent result.
      *
-     * L'ancien contrôle comptait les résultats (« au moins 7 ») : il est resté
-     * vert pendant que le groupe « Tickets » sortait du cadre, poussé dehors
-     * par deux entrées d'action neuves. Compter ne dit rien de ce qu'on voit.
+     * The old control counted the results (“at least 7”): it remained
+     * green while the group “Tickets” walked out of the frame, pushed out
+     * by two new action inputs. Counting says nothing about what we see.
      */
     const check = await page.evaluate((pattern) => {
       const list = document.querySelector('[role="listbox"]');

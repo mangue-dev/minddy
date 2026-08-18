@@ -19,14 +19,14 @@ import {
 } from "@/lib/server/vercel-domains";
 
 /**
- * Domaines personnalisés (MIN-36). Une ligne custom_domains = un hostname
- * client qui sert un board de feedback OU une vue partagée à la racine. La
- * table est RLS deny-all : tout passe par ici (service client), les checks
- * d'accès vivent dans les routes API.
+ * Custom domains (MIN-36). A custom_domains line = a hostname
+ * client that serves a feedback board OR a shared view at the root. The
+ * table is RLS deny-all: everything goes through here (customer service), the access checks
+ * live in the API routes.
  *
- * Ordre d'écriture : Vercel d'abord, DB ensuite — un domaine en base sans
- * attachement Vercel serait un mensonge (jamais servi), l'inverse se répare
- * tout seul (le 409 « déjà sur ce projet » est traité en succès à l'ajout).
+ * Writing order: Vercel first, DB then — a base domain without
+ * Vercel attachment would be a lie (never used), the reverse is repaired
+ * on its own (the 409 “already on this project” is treated as a success when added).
  */
 
 export interface CustomDomainRow {
@@ -36,7 +36,7 @@ export interface CustomDomainRow {
   share_id: string | null;
   status: "pending" | "verified";
   verification: VercelVerificationRecord[] | null;
-  /** Cible CNAME recommandée par Vercel pour CE domaine (null → générique). */
+  /** CNAME target recommended by Vercel for THIS domain (null → generic). */
   cname_target: string | null;
   created_at: string;
   updated_at: string;
@@ -51,17 +51,17 @@ export type NormalizeDomainResult =
   | { ok: true; domain: string }
   | { ok: false; error: "invalid" | "apex" | "forbidden" };
 
-// Hostname RFC 1123 : labels alphanumériques + tirets internes, ≤ 63 chars.
+// Hostname RFC 1123: alphanumeric labels + internal hyphens, ≤ 63 chars.
 const HOSTNAME_RE =
   /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/;
 
-// Nos propres domaines et l'infra Vercel ne sont jamais des cibles valides.
+// Our own domains and Vercel infra are never valid targets.
 const FORBIDDEN_SUFFIXES = ["minddy.app", "vercel.app", "vercel-dns.com", "localhost"];
 
 /**
- * Nettoie une saisie utilisateur (« https://feedback.acme.com/ » → hostname) et
- * la valide. v1 : sous-domaines uniquement (≥ 3 labels) — un apex demande un
- * enregistrement A, incompatible avec l'instruction CNAME qu'on affiche.
+ * Cleans up a user entry (“https://feedback.acme.com/” → hostname) and
+ * validates it. v1: subdomains only (≥ 3 labels) — an apex requests a
+ * A record, incompatible with the CNAME instruction displayed.
  */
 export function normalizeDomain(input: string): NormalizeDomainResult {
   let value = input.trim().toLowerCase();
@@ -112,7 +112,7 @@ export type SetDomainResult =
   | { ok: true; row: CustomDomainRow }
   | { ok: false; error: "invalid" | "apex" | "forbidden" | "taken" | "api_error" };
 
-/** Attache `domain` à la cible (remplace l'éventuel domaine précédent). */
+/** Attaches `domain` to the target (replaces any previous domain). */
 export async function setDomain(
   target: DomainTargetRef,
   rawDomain: string,
@@ -124,7 +124,7 @@ export async function setDomain(
 
   const service = getServiceClient();
 
-  // Unicité globale : un domaine déjà mappé ailleurs n'est jamais volé.
+  // Global uniqueness: a domain already mapped elsewhere is never stolen.
   const { data: existingRow } = await service
     .from("custom_domains")
     .select(DOMAIN_SELECT)
@@ -138,10 +138,10 @@ export async function setDomain(
     return { ok: true, row: existing }; // PUT idempotent
   }
 
-  // Remplacement : la cible avait un autre domaine → on le détache proprement.
-  // Le « s'il y en avait un » est DANS `removeDomain`, et pas dans un
-  // `if (previous)` ici : cette garde-là est compilée en `if (true)`.
-  // L'explication tient sur `removeDomain`.
+  // Replacement: the target had another domain → we detach it properly.
+  // The “if there was one” is IN `removeDomain`, not in a
+  // `if (previous)` here: this guard is compiled in `if (true)`.
+  // The explanation is based on `removeDomain`.
   const previous = await getDomainRowForTarget(target);
   if (!(await removeDomain(previous))) {
     return { ok: false, error: "api_error" };
@@ -166,7 +166,7 @@ export async function setDomain(
     .maybeSingle();
 
   if (error || !data) {
-    // Course perdue sur l'unicité → on détache ce qu'on vient d'attacher.
+    // Lost race on uniqueness → we detach what we have just attached.
     console.error("[custom-domains] insert failed:", error?.message);
     void removeDomainFromVercel(domain);
     return { ok: false, error: error?.code === "23505" ? "taken" : "api_error" };
@@ -177,9 +177,9 @@ export async function setDomain(
 }
 
 /**
- * Détachement Vercel seul, quand la ligne custom_domains part (ou est partie)
- * en cascade avec sa cible (suppression d'un share ou d'une vue). Échec = log
- * and continue : l'orphelin côté Vercel se répare au prochain ajout (409-succès).
+ * Vercel detachment alone, when the custom_domains line leaves (or has left)
+ * in cascade with its target (deletion of a share or a view). Failure = log
+ * and continue: the orphan on the Vercel side repairs itself on the next addition (409-success).
  */
 export async function detachDomainFromVercelOnly(row: CustomDomainRow): Promise<void> {
   const removed = await removeDomainFromVercel(row.domain);
@@ -192,27 +192,27 @@ export async function detachDomainFromVercelOnly(row: CustomDomainRow): Promise<
 }
 
 /**
- * Détache de Vercel PUIS supprime la ligne (l'inverse laisse un orphelin).
+ * Detaches from Vercel THEN deletes the row (the reverse leaves an orphan).
  *
- * **`null` = rien à détacher, et c'est un succès.** Les trois appelants partent
- * d'une recherche qui peut ne rien trouver, et un détachement est idempotent par
- * nature : le « s'il y en a un » a sa place ici, une fois, plutôt que recopié
- * sur chaque site d'appel.
+ * **`null` = nothing to detach, and this is a success.** All three callers leave
+ * from a search which may find nothing, and a detach is idempotent by
+ * nature: the "if there is one" has its place here, once, rather than copied
+ * on each call site.
  *
- * Ce n'est pas qu'une commodité, c'est la seule protection qu'on contrôle.
- * Turbopack (Next 16.3) évalue `await getDomainRowForTarget(target)` comme une
- * valeur toujours vraie — la fonction est `async`, donc son retour est une
- * Promise, donc un objet, et l'`await` n'est pas modélisé. Le `if (previous)`
- * qui protégeait cet appel dans `setDomain` était compilé en `if (true)`, en dev
- * COMME en production (vérifié dans les deux sorties) : le premier domaine
- * attaché à un board ou à une vue partagée mourait en
- * `TypeError: Cannot read properties of null (reading 'domain')`, avec une pile
- * qui désigne une branche que la source rend inatteignable.
+ * It's not just a convenience, it's the only protection we control.
+ * Turbopack (Next 16.3) evaluates `await getDomainRowForTarget(target)` as a
+ * always true value — the function is `async`, so its return is a
+ * Promise, therefore an object, and the `await` is not modeled. The `if (previous)`
+ * which protected this call in `setDomain` was compiled in `if (true)`, in dev
+ * AS in production (verified in both outputs): the first domain
+ * attached to a board or a shared view died en
+ * `TypeError: Cannot read properties of null (reading 'domain')`, with a stack
+ * which designates a branch that the source makes unreachable.
  *
- * Donc : **ne pas remettre de garde sur le site d'appel.** Elle serait relue
- * comme une protection, et n'en serait pas une. C'est le seul endroit du dépôt
- * où le compilateur replie une condition portant sur une valeur d'exécution —
- * vérifié sur toute la sortie de `.next` — mais c'est un endroit.
+ * So: **do not put guard back on the call site.** It would be reread
+ * as protection, and wouldn't be one. This is the only place in the repository
+ * where the compiler folds a condition on a runtime value —
+ * checked on all the output of `.next` — but it is a place.
  */
 export async function removeDomain(row: CustomDomainRow | null): Promise<boolean> {
   if (!row) return true;
@@ -237,14 +237,14 @@ export interface DomainStatus {
   dns: Array<{ type: "CNAME" | "TXT"; name: string; value: string }>;
 }
 
-/** Interroge Vercel, persiste le statut, retourne la forme consommée par l'UI. */
+/** Queries Vercel, persists the status, returns the form consumed by the UI. */
 export async function refreshDomainStatus(row: CustomDomainRow): Promise<DomainStatus> {
   const state = await getVercelDomainState(row.domain);
   const status: CustomDomainRow["status"] =
     state.verified && !state.misconfigured ? "verified" : "pending";
   const verification = state.verification.length > 0 ? state.verification : null;
-  // On ne dégrade jamais une recommandation déjà connue vers null (réponse
-  // config en erreur) — la valeur par domaine reste stable côté Vercel.
+  // We never degrade an already known recommendation to null (response
+  // config in error) — the value per domain remains stable on the Vercel side.
   const cname_target = state.cnameTarget ?? row.cname_target;
 
   if (
@@ -262,14 +262,14 @@ export async function refreshDomainStatus(row: CustomDomainRow): Promise<DomainS
   return serializeDomainStatus({ ...row, status, verification, cname_target }, state.misconfigured);
 }
 
-/** Forme API/UI sans appel Vercel (chargement initial des réglages). */
+/** API/UI form without Vercel call (initial loading of settings). */
 export function serializeDomainStatus(
   row: CustomDomainRow,
   misconfigured?: boolean
 ): DomainStatus {
   const dns: DomainStatus["dns"] = [
-    // La cible recommandée par domaine (vercel-dns-016 & co) quand on l'a lue,
-    // sinon la générique — qui fonctionne mais que Vercel déconseille désormais.
+    // The recommended target by domain (vercel-dns-016 & co) when we read it,
+    // otherwise the generic one — which works but which Vercel now advises against.
     { type: "CNAME", name: row.domain, value: row.cname_target ?? VERCEL_CNAME_TARGET },
     ...(row.verification ?? [])
       .filter((v) => v.type?.toUpperCase() === "TXT")
@@ -283,22 +283,22 @@ export function serializeDomainStatus(
   };
 }
 
-// ── Contexte requête : sur quel host la page publique est-elle servie ? ──────
+// ── Request context: on which host is the public page served? ──────
 
 const getRequestHost = cache(async (): Promise<string> => {
   const h = await headers();
   return normalizeHost(h.get("host") ?? "");
 });
 
-/** Host custom (≠ minddy.app / vercel.app / localhost), quel que soit le path. */
+/** Host custom (≠ minddy.app / vercel.app / localhost), whatever the path. */
 export async function isCustomPublicHost(): Promise<boolean> {
   const host = await getRequestHost();
   return Boolean(host) && !isPrimaryHost(host);
 }
 
 /**
- * Cible mappée sur le host de la requête (null sur host primaire). React-cached
- * par requête ; réutilise le cache 60 s du lookup middleware.
+ * Target mapped to the request host (null on primary host). React-cached
+ * per request; reuses the 60 s cache from the middleware lookup.
  */
 export const getRequestDomainTarget = cache(async (): Promise<DomainTarget | null> => {
   const host = await getRequestHost();
@@ -307,10 +307,10 @@ export const getRequestDomainTarget = cache(async (): Promise<DomainTarget | nul
 });
 
 /**
- * Préfixe public des liens du board : "" quand la page est servie par SON
- * domaine custom (URLs propres), sinon /f/<token>. Conscient du MAPPING, pas
- * seulement du host : une vue partagée visitée en pass-through sur le domaine
- * d'un board garde son préfixe token.
+ * Public prefix of board links: "" when the page is served by SON
+ * custom domain (own URLs), otherwise /f/<token>. Aware of the MAPPING, not
+ * only of the host: a shared view visited in pass-through on the domain
+ * of a board keeps its token prefix.
  */
 export function feedbackBasePath(token: string, target: DomainTarget | null): string {
   return target?.kind === "feedback" && target.token === token ? "" : `/f/${token}`;
@@ -321,15 +321,15 @@ export function shareBasePath(token: string, target: DomainTarget | null): strin
 }
 
 /**
- * URL canonique absolue d'une page publique servie sous DEUX hosts (MIN-88).
+ * Absolute canonical URL of a public page served under TWO hosts (MIN-88).
  *
- * Un board de feedback répond à la fois sur `www.minddy.app/f/<token>` et sur
- * le domaine du client — deux URLs, un seul contenu. Le `canonical` désigne
- * celle qui fait foi : le domaine du client quand c'est lui qui sert la page
- * (c'est son site, pas le nôtre), `www.minddy.app` sinon.
+ * A feedback board responds to both `www.minddy.app/f/<token>` and
+ * the client's domain — two URLs, single content. The `canonical` designates
+ * the one which is authentic: the client's domain when it is he who serves the page
+ * (it is his site, not ours), `www.minddy.app` otherwise.
  *
- * `basePath` est ce que renvoie `feedbackBasePath` / `shareBasePath` : la
- * chaîne vide signifie précisément « on est sur le domaine dédié ».
+ * `basePath` is what returns `feedbackBasePath` / `shareBasePath`: the
+ * empty string means precisely “we are on the dedicated domain”.
  */
 export async function publicCanonicalUrl(basePath: string, subPath = ""): Promise<string> {
   const path = `${basePath}${subPath}` || "/";
@@ -341,9 +341,9 @@ export async function publicCanonicalUrl(basePath: string, subPath = ""): Promis
 }
 
 /**
- * Path des cookies publics : conscient du HOST uniquement. Sur un domaine
- * custom, le path visible ne contient jamais /f/<token> — un cookie path-scopé
- * y serait invisible ; et un domaine = un seul site, donc path=/ est sûr.
+ * Public cookie path: HOST aware only. On a custom domain
+ *, the visible path never contains /f/<token> — a path-scoped cookie
+ * would be invisible there; and one domain = only one site, so path=/ is safe.
  */
 export function publicCookiePath(isCustomHost: boolean, defaultPath: string): string {
   return isCustomHost ? "/" : defaultPath;

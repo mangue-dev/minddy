@@ -10,15 +10,15 @@ import type { Project } from "@/lib/types";
 
 /**
  * Shared project-settings update core, used by PATCH /api/projects/[id] and the
- * assistant `update_project` tool. Only the owner may change a project's own
+ * assistant `update_project` tool. Only the owner can change a project's own
  * settings (name / key / color / smart assign); the write bypasses RLS
- * (service client) so ownership is enforced HERE, before touching the row.
+ * (client service) so ownership is enforced HERE, before touching the row.
  *
  * Field semantics mirror the route: `name` trimmed & required-if-present, `key`
  * normalized then validated, `color` nullable (any present value, null clears).
  * A unique-violation on `key` (23505) surfaces as `projectKeyAlreadyUsed`.
  * `smart_assign_enabled` is gated by the billing stub (`canUseSmartAssign`) on
- * activation; `smart_assign_rules` replaces the whole map, keys whitelisted to
+ * enable; `smart_assign_rules` replaces the whole map, keys whitelisted to
  * the current team.
  */
 export type UpdateProjectResult =
@@ -38,8 +38,8 @@ export type UpdateProjectResult =
         | "databaseError";
     };
 
-// Bornes de longueur (MIN-118) : au-delà on tronque, comme les règles Smart
-// Assign plus bas. La couleur est un jeton court (hex ou classe), jamais un texte.
+// Length limits (MIN-118): beyond that we truncate, like the Smart rules
+// Assign below. Color is a short token (hex or class), never text.
 const MAX_NAME_LENGTH = 200;
 const MAX_COLOR_LENGTH = 32;
 
@@ -76,18 +76,18 @@ export async function updateProjectSettings({
   if (typeof input.auto_assign_enabled === "boolean") {
     updates.auto_assign_enabled = input.auto_assign_enabled;
   }
-  // Revue Numo du feedback : deux interrupteurs indépendants du plan (les
-  // désarmer ne coûte rien — c'est les armer qui consomme, et le budget les
-  // arbitre au moment de la passe).
+  // Numo feedback review: two plane-independent switches (the
+  // disarming costs nothing — it’s arming them that consumes them, and the budget consumes them
+  // referee at the time of the pass).
   if (typeof input.feedback_review_enabled === "boolean") {
     updates.feedback_review_enabled = input.feedback_review_enabled;
   }
   if (typeof input.feedback_review_skip_over_budget === "boolean") {
     updates.feedback_review_skip_over_budget = input.feedback_review_skip_over_budget;
   }
-  // Traduction des retours. Les codes de langue sont NORMALISÉS ici et non pris
-  // tels quels : ils sont ensuite comparés entre eux (langue de l'équipe contre
-  // langue détectée contre liste blanche), et deux écritures d'une même langue
+  // Translation of returns. Language codes are STANDARDIZED here and not taken
+  // as is: they are then compared with each other (team language against
+  // language detected versus whitelist), and two scripts of the same language
   // feraient deux langues qui ne se reconnaissent pas.
   if (typeof input.feedback_translate_enabled === "boolean") {
     updates.feedback_translate_enabled = input.feedback_translate_enabled;
@@ -113,10 +113,10 @@ export async function updateProjectSettings({
     }
     updates.smart_assign_enabled = input.smart_assign_enabled;
   }
-  // Automatisations (MIN-147). Même forme que le voisin, gate différente :
-  // `canUseAutomations` exige AUSSI `allowAgents`, puisqu'une règle lance des
-  // runs d'agent. Les RÈGLES, elles, s'écrivent sans gate — les désarmer ne
-  // coûte rien, c'est l'interrupteur qui laisse passer la dépense.
+  // Automations (MIN-147). Same shape as the neighbor, different gate:
+  // `canUseAutomations` ALSO requires `allowAgents`, since a rule throws
+  // agent runs. The RULES are written without gate - disarming them does not
+  // costs nothing, it's the switch that allows the expense to pass.
   if (typeof input.automations_enabled === "boolean") {
     if (
       input.automations_enabled &&
@@ -127,9 +127,9 @@ export async function updateProjectSettings({
     updates.automations_enabled = input.automations_enabled;
   }
   if ("automations" in input) {
-    // `parseAutomations` est la validation : tolérante par construction, elle
-    // laisse tomber ce qu'elle ne comprend pas plutôt que de refuser tout
-    // l'enregistrement pour une règle mal formée.
+    // `parseAutomations` is the validation: tolerant by construction, it
+    // let go of what she doesn't understand rather than refusing everything
+    // registration for a malformed rule.
     updates.automations = parseAutomations(input.automations);
   }
 

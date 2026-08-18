@@ -42,8 +42,8 @@ import { canonicalAppOrigin } from "@/lib/server/app-origin";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// Le backfill d'activation enchaîne une RPC de numérotation par ticket (jusqu'à
-// 500) après la réponse — même budget que la route d'import CSV.
+// The activation backfill chains one dialing RPC per ticket (up to
+// 500) after the response — same budget as the CSV import route.
 export const maxDuration = 120;
 
 function isProviderConfigured(provider: RepoProviderId): boolean {
@@ -51,9 +51,9 @@ function isProviderConfigured(provider: RepoProviderId): boolean {
 }
 
 /**
- * Balaye les pull requests du dépôt qu'on vient de lier (MIN-143). Best-effort :
- * la liaison, elle, a réussi — et le rattrapage paresseux de
- * `/api/pull-requests` repassera de toute façon.
+ * Scans the pull requests from the repository we just linked (MIN-143). Best effort:
+ * the connection was successful - and the lazy catching up of
+ * `/api/pull-requests` will come back anyway.
  */
 async function backfillRepoPullRequests(projectId: string): Promise<void> {
   try {
@@ -74,23 +74,23 @@ async function backfillRepoPullRequests(projectId: string): Promise<void> {
   }
 }
 
-/** La page GitHub où accorder une permission à une installation. */
+/** The GitHub page where to grant permission to an installation. */
 const permissionsUrlFor = (installationId: number | null): string | null =>
   installationId != null
     ? `https://github.com/settings/installations/${installationId}/permissions/update`
     : null;
 
 /**
- * L'URL où accorder « Issues (Write) », ou `null` si rien n'est à signaler.
+ * The URL to grant “Issues (Write)”, or `null` if nothing is to be reported.
  *
- * Interrogé à CHAQUE lecture plutôt que mémorisé à l'activation, pour les deux
- * sens : l'avertissement survit à un rechargement (sans quoi celui qui n'a
- * accordé que la lecture ne le revoit jamais, et le retour de statut échoue en
- * silence dans les logs), et il DISPARAÎT tout seul dès que la permission est
- * accordée sur GitHub, sans rien à rebasculer ici.
+ * Queried on EACH reading rather than memorized on activation, for both
+ * meaning: the warning survives a reload (otherwise anyone who has not
+ * granted that reading never sees it again, and the status return fails in
+ * silence in the logs), and it DISAPPEARS on its own as soon as permission is granted.
+ * granted on GitHub, without anything to re-upload here.
  *
- * Coût : un appel GitHub, et seulement dans le cas étroit qui l'exige — owner,
- * GitHub, synchro active. Un panneau de réglages n'est pas un chemin chaud.
+ * Cost: a GitHub call, and only in the narrow case that requires it — owner,
+ * GitHub, active sync. A settings panel is not a hot path.
  */
 async function issueSyncWriteMissingUrl(
   projectId: string,
@@ -104,13 +104,13 @@ async function issueSyncWriteMissingUrl(
     const sync = await getIssueSyncLink(projectId);
     if (sync?.installationId == null) return null;
     const level = await getIssuesPermission(sync.installationId);
-    // `none` est un autre problème (aucun event ne serait livré) et il a déjà
-    // été dit à l'activation : ici on ne parle que du RETOUR, qui exige `write`.
+    // `none` is another problem (no event would be delivered) and it already has
+    // been said upon activation: here we are only talking about RETURN, which requires `write`.
     return level === "write" ? null : permissionsUrlFor(sync.installationId);
   } catch (err) {
-    // Un avertissement consultatif ne fait pas tomber la page de réglages — et
-    // comme la promesse est lancée AVANT d'être attendue, une rejection nue
-    // ressortirait en `unhandledRejection` plutôt qu'en 500 lisible.
+    // An advisory warning does not bring down the settings page — and
+    // as the promise is launched BEFORE being expected, a naked rejection
+    // would come out as `unhandledRejection` rather than readable 500.
     console.error("[git-link] issues permission probe failed:", (err as Error).message);
     return null;
   }
@@ -118,8 +118,8 @@ async function issueSyncWriteMissingUrl(
 
 /**
  * GET /api/projects/[id]/git-link
- *  - défaut : { link, isOwner, providers[], issueSyncWriteMissingUrl }.
- *  - ?candidates=<connectionId> : { candidates } (dépôts de la connexion, owner).
+ * - default: { link, isOwner, providers[], issueSyncWriteMissingUrl }.
+ * - ?candidates=<connectionId>: { candidates } (connection repositories, owner).
  */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
   }
 
-  // Sous-requête : dépôts candidats d'une connexion (sélecteur de dépôt).
+  // Subquery: candidate repositories of a connection (repository selector).
   const candidatesFor = request.nextUrl.searchParams.get("candidates");
   if (candidatesFor) {
     if (!access.isOwner) {
@@ -157,11 +157,11 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   }
 
   const link = await getProjectLink(id);
-  // En parallèle des providers : c'est un appel GitHub, il n'a aucune raison
-  // d'attendre la fin des lookups de connexion.
+  // In parallel with providers: it's a GitHub call, it has no reason
+  // to wait for the connection lookups to complete.
   const writeMissing = issueSyncWriteMissingUrl(id, link, access.isOwner);
 
-  // Providers configurés + éventuelle connexion réutilisable (owner uniquement).
+  // Providers configured + possible reusable connection (owner only).
   const providers = await Promise.all(
     ACTIVE_PROVIDERS.map(async (p) => {
       const configured = isProviderConfigured(p.id);
@@ -185,7 +185,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
  * POST /api/projects/[id]/git-link — owner uniquement.
  *  - { action:'start', provider } → { mode:'reuse'|'install'|'oauth', url?, connectionId? }
  *  - { action:'bind', connection_id, external_repo_id } → { link }
- *  - { action:'issue_sync', enabled } → { link } (synchro issues dépôt → minddy)
+ * - { action:'issue_sync', enabled } → { link } (sync issues depot → minddy)
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
@@ -221,15 +221,15 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       );
     }
 
-    // Déjà connecté → reuse (pas de round-trip provider), l'UI liste les dépôts.
+    // Already connected → reuse (no round-trip provider), the UI lists the repositories.
     const existing = await findReusableConnection(auth.user.id, provider);
     if (existing) {
       return NextResponse.json({ mode: "reuse", connectionId: existing.id });
     }
 
-    // Toujours depuis les paramètres d'un projet : le wizard de création, lui,
+    // Always from the project settings: the creation wizard,
     // se connecte au niveau compte (/api/account/git-connections), parce qu'il
-    // n'a pas encore de projet à qui rattacher l'install.
+    // does not yet have a project to attach the install to.
     const state = signGitLinkState({
       projectId: id,
       userId: auth.user.id,
@@ -249,8 +249,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (action === "bind") {
     const connectionId = (body as { connection_id?: unknown }).connection_id;
     const externalRepoId = (body as { external_repo_id?: unknown }).external_repo_id;
-    // Bornes larges : un uuid de connexion et un id de dépôt de forge tiennent
-    // très en deçà — au-delà, ce ne sont pas des ids.
+    // Wide bounds: a connection uuid and a forge depot id fit
+    // far below — beyond, these are not ids.
     if (
       typeof connectionId !== "string" ||
       connectionId.length > 64 ||
@@ -273,11 +273,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
             : "gitRepoNotFound";
         return NextResponse.json({ error: t(key) }, { status: result.status });
       }
-      // Rattrapage des pull requests du dépôt (MIN-143) : il faut bien un point
-      // de départ — le webhook n'annonce que ce qui bouge APRÈS la liaison, et
-      // sans ce balayage la page Pull Requests s'ouvrirait vide sur un dépôt qui
-      // en a des dizaines. Hors du chemin critique : la réponse part tout de
-      // suite, et la liste se remplit derrière.
+      // Catching up pull requests from the repository (MIN-143): there needs to be a point
+      // start — the webhook only announces what moves AFTER the link, and
+      // without this scan the Pull Requests page would open empty on a repository which
+      // has dozens of them. Outside the critical path: the answer starts from
+      // continuation, and the list fills up behind.
       after(() => backfillRepoPullRequests(id));
       return NextResponse.json({ link: result.link });
     } catch (err) {
@@ -285,8 +285,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
   }
 
-  // Synchro unidirectionnelle des issues du dépôt → minddy (MIN-97). Le toggle
-  // ne touche PAS aux tickets déjà importés : le couper arrête l'arrivée des
+  // Unidirectional synchronization of depot exits → minddy (MIN-97). The toggle
+  // does NOT touch tickets already imported: cutting it stops the arrival of
   // nouveaux, il ne supprime rien.
   if (action === "issue_sync") {
     const enabled = (body as { enabled?: unknown }).enabled;
@@ -299,15 +299,15 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
 
     let hookId: string | null | undefined;
-    /** L'installation permet-elle d'ÉCRIRE chez la forge ? Renseigné pour
-        GitHub seulement : côté GitLab, le token OAuth de la connexion porte
-        déjà les droits de son propriétaire sur le dépôt. */
+    /** Does the installation allow you to WRITE at the forge? Informed for
+ GitHub only: on the GitLab side, the OAuth token of the connection already carries
+ the rights of its owner on the repository. */
     let permissionsUrl: string | null = null;
     let canWrite = true;
     if (link.provider === "github") {
-      // Une App qui gagne une permission ne l'obtient pas rétroactivement :
-      // l'installation doit accepter `Issues (Read)`. Sans ça, aucun event
-      // `issues` ne serait livré — on le dit AVANT d'activer.
+      // An App that gains permission does not obtain it retroactively:
+      // the installation must accept `Issues (Read)`. Without that, no event
+      // `issues` would not be delivered — we say this BEFORE activating.
       if (enabled) {
         permissionsUrl = permissionsUrlFor(link.installationId);
         const level =
@@ -320,16 +320,16 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
             { status: 400 },
           );
         }
-        // `read` n'est PAS refusé : le sens descendant marche parfaitement avec,
-        // et durcir la porte couperait les liaisons qui tournent déjà. C'est le
-        // RETOUR (refermer l'issue distante) qui a besoin de `write` — on le dit
-        // sans l'imposer, plutôt que de le laisser échouer en 403 silencieux.
+        // `read` is NOT refused: the downward direction works perfectly with it,
+        // and hardening the door would cut the connections that are already running. This is the
+        // RETURN (close remote exit) which needs `write` — we say so
+        // without imposing it, rather than letting it fail in silent 403.
         canWrite = level === "write";
       }
     } else {
-      // GitLab : le hook vit sur le dépôt, on le provisionne/bascule ici. Son
-      // secret est propre à CE dépôt (MIN-333) et minté avant l'appel : le
-      // récepteur ne reconnaîtra le hook qu'à ce secret-là.
+      // GitLab: the hook lives on the repository, we provision/switch it here. Her
+      // secret is specific to THIS deposit (MIN-333) and minted before the call: the
+      // receiver will only recognize the hook by this secret.
       try {
         const secret = await ensureRepoWebhookSecret({
           provider: "gitlab",
@@ -342,9 +342,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         });
       } catch (err) {
         console.error("[git-link] gitlab hook failed:", (err as Error).message);
-        // À la désactivation on continue quand même : couper la synchro ne doit
-        // pas dépendre d'un appel GitLab. Le flag à false suffit — le récepteur
-        // ne trouvera plus de cible.
+        // When deactivating we continue anyway: cutting the sync should not
+        // not depend on a GitLab call. The false flag is enough — the receiver
+        // will no longer find a target.
         if (enabled) {
           return NextResponse.json({ error: t("gitHookFailed") }, { status: 502 });
         }
@@ -358,8 +358,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: t("databaseError") }, { status: 500 });
     }
 
-    // Backfill des issues ouvertes hors du chemin critique : la réponse part
-    // tout de suite, les tickets arrivent ensuite par le realtime.
+    // Backfill of open issues outside the critical path: the response leaves
+    // straight away, the tickets then arrive via realtime.
     if (enabled) {
       after(() =>
         backfillRemoteIssues(link).catch((err) =>
@@ -370,8 +370,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
     return NextResponse.json({
       link: await getProjectLink(id),
-      // Le panneau s'en sert pour inviter à accepter « Issues (Write) » quand
-      // seule la lecture est accordée. Absent à la désactivation.
+      // The panel uses this to prompt you to accept “Issues (Write)” when
+      // only reading is granted. Absent on deactivation.
       ...(enabled && !canWrite ? { writeMissingUrl: permissionsUrl } : {}),
     });
   }
@@ -379,7 +379,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
 }
 
-/** DELETE /api/projects/[id]/git-link — owner délie le dépôt du projet. */
+/** DELETE /api/projects/[id]/git-link — owner unlinks the project repository. */
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const auth = await getAuthedUser(request);

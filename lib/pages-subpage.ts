@@ -1,28 +1,28 @@
 /**
- * Le BLOC sous-page vu depuis le document (MIN-272) — logique pure, aucune IO.
+ * The BLOCK subpage seen from the document (MIN-272) — pure logic, no IO.
  *
- * Le modèle tient en une phrase, et tout le reste en découle : `parent_id` est
- * la VÉRITÉ, le bloc `subpage` n'en est qu'une vue. Une page créée depuis la
- * sidebar n'a aucun bloc dans le corps de son parent, et c'est normal.
+ * The model fits in one sentence, and everything else follows from it: `parent_id` is
+ * the TRUTH, the `subpage` block is only one view of it. A page created from
+ * sidebar has no blocks in its parent's body, and that's normal.
  *
- * Ce module est ce que les deux côtés du miroir se partagent :
+ * This module is what the two sides of the mirror share:
  *
- *  - le serveur (lib/server/pages.ts) s'en sert pour tenir le corps du PARENT à
- *    jour quand une page part à la corbeille ou en revient — c'est le sens
- *    inverse du ticket, et il doit marcher même quand personne n'a le parent
- *    ouvert, donc il ne peut pas vivre dans l'éditeur ;
- *  - l'éditeur s'en sert pour lire les sous-pages présentes dans un document et
- *    repérer celles qui viennent d'en disparaître.
+ * - the server (lib/server/pages.ts) uses it to hold the PARENT's body
+ * day when a page goes to the trash or comes back — that's the meaning
+ * opposite of the ticket, and it must work even when no one has the parent
+ * open, so it can't live in the editor;
+ * - the editor uses it to read the subpages present in a document and
+ * spot those that have just disappeared.
  *
- * La récursion est essentielle : un bloc sous-page peut être posé DANS un
- * dépliant ou un item de liste. Ne regarder que le premier niveau laisserait
- * derrière un bloc pointant vers le vide — précisément ce que le ticket
- * cherche à empêcher.
+ * Recursion is essential: a subpage block can be placed IN a
+ * leaflet or list item. Looking only at the first level would leave
+ * behind a block pointing towards the void — precisely what the ticket
+ * seeks to prevent.
  */
 
 import type { PageDocJSON, PageNodeJSON } from "@/lib/pages-merge";
 
-/** Le nom du nœud, tel que le registre le déclare (components/pages/blocks/subpage.ts). */
+/** The name of the node, as the registry declares it (components/pages/blocks/subpage.ts). */
 export const SUBPAGE_TYPE = "subpage";
 
 function childrenOf(node: PageNodeJSON | null | undefined): PageNodeJSON[] {
@@ -36,9 +36,9 @@ function pageIdOf(node: PageNodeJSON): string | null {
 }
 
 /**
- * Les ids de page citée par le document, dans l'ordre de lecture et sans
- * doublon. Un bloc sans `pageId` (posé avant que la création n'aboutisse) n'en
- * fait pas partie : il ne pointe vers rien, il n'y a rien à corbeiller.
+ * The page ids cited by the document, in reading order and without
+ * duplicate. A block without `pageId` (placed before the creation is successful) does not
+ * is not part: it does not point to anything, there is nothing to trash.
  */
 export function subpageIdsIn(doc: PageDocJSON | null | undefined): string[] {
   const out: string[] = [];
@@ -57,7 +57,7 @@ export function subpageIdsIn(doc: PageDocJSON | null | undefined): string[] {
   return out;
 }
 
-/** Le document cite-t-il cette page ? */
+/** Does the document cite this page? */
 export function hasSubpage(
   doc: PageDocJSON | null | undefined,
   pageId: string
@@ -66,13 +66,13 @@ export function hasSubpage(
 }
 
 /**
- * Retire du document tous les blocs qui pointent vers l'une de ces pages.
+ * Removes from the document all blocks that point to one of these pages.
  *
- * `removed` compte les NŒUDS retirés, pas les pages : un même parent peut citer
- * deux fois la même sous-page (copier-coller), et les deux doivent partir.
+ * `removed` counts the NODES removed, not the pages: the same parent can cite
+ * the same subpage twice (copy-paste), and both should go.
  *
- * Le document rendu est neuf quand quelque chose a bougé, et c'est EXACTEMENT
- * l'objet d'entrée sinon — l'appelant s'en sert pour décider s'il écrit.
+ * The returned document is new when something has moved, and it is EXACTLY
+ * the input object otherwise — the caller uses it to decide whether to write.
  */
 export function removeSubpages(
   doc: PageDocJSON | null | undefined,
@@ -109,16 +109,16 @@ export function removeSubpages(
 }
 
 /**
- * Réécrit les pages citées d'après une table `ancien id → nouvel id`.
+ * Rewrites cited pages based on a `ancien id → nouvel id` table.
  *
- * C'est ce qui rend une DUPLICATION honnête. Copier une page et ses sous-pages
- * en recopiant les corps tels quels donnerait une copie dont les blocs pointent
- * encore vers les ORIGINAUX : deux arbres dans la sidebar, un seul jeu de liens,
- * et une copie qu'on croit indépendante alors qu'elle renvoie ailleurs.
+ * This is what makes a DUPLICATION honest. Copy a page and its subpages
+ * by copying the bodies as they are would give a copy whose blocks point
+ * again towards the ORIGINALS: two trees in the sidebar, a single set of links,
+ * and a copy that we believe to be independent when it refers elsewhere.
  *
- * Une citation HORS de la table n'est pas touchée — un lien vers une page du
- * projet qui ne fait pas partie de la copie doit continuer de pointer où il
- * pointait. On copie une branche, pas le monde autour.
+ * A citation OFF the table is not touched — a link to a page in the
+ * project that is not part of the copy must continue to point where it
+ * pointed. We copy a branch, not the world around it.
  */
 export function remapSubpages(
   doc: PageDocJSON | null | undefined,
@@ -144,16 +144,16 @@ export function remapSubpages(
 }
 
 /**
- * Remet un bloc sous-page à la FIN du document, s'il n'y est plus.
+ * Returns a subpage block to the END of the document, if it is no longer there.
  *
- * En fin de corps, et pas à sa place d'origine : retenir la position exacte
- * demanderait de journaliser le voisinage du bloc au moment de la suppression,
- * pour un gain quasi nul — on restaure une page, pas une mise en page. C'est
- * l'hypothèse assumée du ticket.
+ * At the end of the body, and not in its original place: remember the exact position
+ * would ask to log the neighborhood of the block at the time of deletion,
+ * for almost no gain — we restore a page, not a layout. It is
+ * the assumed hypothesis of the ticket.
  *
- * Sans `blockId` : c'est `UniqueID` qui en pose un au prochain montage de
- * l'éditeur. En inventer un ici demanderait un générateur d'aléatoire dans un
- * module pur, et deux clients pourraient en poser deux différents sur le même
+ * Without `blockId`: it is `UniqueID` which places one on the next editing of
+ * the editor. Inventing one here would require a random generator in a
+ * pure module, and two customers could install two different ones on the same
  * bloc.
  */
 export function appendSubpage(

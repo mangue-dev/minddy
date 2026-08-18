@@ -20,52 +20,52 @@ import { SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
  * Exchanges the auth code (OAuth) for a session, writing the session cookies,
  * then redirects to `next` (default /home).
  *
- * ## Ce qu'il ne fait PLUS : ouvrir une session sur le jeton d'un lien e-mail
+ * ## What it NO LONGER does: log in to an email link token
  *
- * `GET /auth/callback?token_hash=…&type=magiclink` connectait le navigateur
- * (MIN-345). Une navigation, un jeton, et la session était là — sans que rien
- * ne prouve que la personne devant l'écran ait demandé CE tour. Un attaquant
- * demande un lien pour SON compte, l'envoie à sa victime, et tout ce qu'elle
- * écrit ensuite, elle l'écrit chez lui.
+ * `GET /auth/callback?token_hash=…&type=magiclink` connected the browser
+ * (MIN-345). A navigation, a token, and the session was there — without anything
+ * only proves that the person in front of the screen requested THIS trick. An attacker
+ * asks for a link for HIS account, sends it to his victim, and everything she
+ * then writes, she writes it at his house.
  *
- * Le jeton est donc mis en attente dans un cookie et la personne est envoyée à
- * `/auth/confirm`, qui demande. Le détail du pourquoi — et pourquoi ce n'est
- * pas un nonce dans le lien — est dans `lib/auth-otp-pending.ts`.
+ * The token is therefore queued in a cookie and the person is sent to
+ * `/auth/confirm`, which asks. The details of why — and why it's not
+ * not a nonce in the link — is in `lib/auth-otp-pending.ts`.
  *
- * Le chemin OAuth, lui, garde sa navigation directe : le vérificateur PKCE est
- * un cookie posé au DÉPART du tour, dans ce navigateur-ci, et
- * `exchangeCodeForSession` échoue sans lui. Le tour y est déjà lié à son
- * initiateur, par une preuve plus forte que tout ce qu'on ajouterait.
+ * The OAuth path keeps its direct navigation: the PKCE verifier is
+ * a cookie placed at the START of the tour, in this browser, and
+ * `exchangeCodeForSession` fails without it. The turn is already linked to its
+ * initiator, by a proof stronger than anything that could be added.
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const origin = new URL(request.url).origin;
 
   /**
-   * Le tour vient de l'app de bureau (MIN-291) : on ne pose PAS de session ici.
+   * The turn comes from the desktop app (MIN-291): we do NOT set a session here.
    *
-   * Le navigateur qui arrive sur cette route est le navigateur SYSTÈME — poser
-   * un cookie l'authentifierait *lui*, et laisserait l'app dehors. Le
-   * vérificateur PKCE, lui, est resté dans le stockage de l'app, qui a démarré
-   * le tour : elle seule peut échanger ce code. On lui repasse donc la main par
-   * le deep link, sans rien consommer (le `token_hash` d'un lien mail y compris
-   * — il reste à usage unique, c'est simplement l'app qui l'usera).
+   * The navigator that arrives on this route is the SYSTEM navigator — ask
+   * a cookie would authenticate *him*, and leave the app out. THE
+   * PKCE verifier remained in the storage of the app, which started
+   * the trick: only she can exchange this code. So we hand him over
+   * the deep link, without consuming anything (the `token_hash` of an email link including
+   * — it remains for single use, it is simply the app that will use it).
    *
-   * Le marqueur est dans l'URL parce qu'il ne peut pas être ailleurs : l'user
-   * agent d'ici est celui de Safari ou de Chrome, jamais celui de la fenêtre.
+   * The marker is in the URL because it can't be anywhere else: the user
+   * agent here is that of Safari or Chrome, never that of the window.
    *
-   * Ce que cette branche NE FAIT PAS, et qui est traité ailleurs : le compte
-   * n'existe pas encore de notre point de vue quand on redirige, donc
-   * `completeAuthArrival` ne peut pas tourner. Le rattachement des invitations
-   * est repris par `claimPendingInvitationsLate`, que /home déclenche à sa
-   * première lecture (app/api/projects/invitations) — c'est exactement le filet
-   * prévu pour les sessions qui ne passent pas par ici. Les événements PostHog
-   * de connexion, eux, sont bel et bien perdus sur ce chemin ; l'`identify`
-   * client, lui, part comme d'habitude.
+   * What this branch DOES NOT do, and which is covered elsewhere: the account
+   * does not yet exist from our point of view when we redirect, so
+   * `completeAuthArrival` cannot rotate. Attaching invitations
+   * is taken over by `claimPendingInvitationsLate`, which /home triggers when
+   * first read (app/api/projects/invitations) — this is exactly the net
+   * intended for sessions that do not pass through here. PostHog events
+   * of connection, they are indeed lost on this path; the `identify`
+   * client continues as usual.
    *
-   * Ce lien-là est lié à son tour côté APP, pas ici : le `turn` posé par
-   * `signInWithOAuth` traverse le provider et revient dans le deep link, où la
-   * fenêtre le compare à celui qu'elle a gardé (MIN-345).
+   * This link is linked in turn on the APP side, not here: the `turn` set by
+   * `signInWithOAuth` passes through the provider and returns to the deep link, where the
+   * window compares it to the one she kept (MIN-345).
    */
   if (searchParams.get(DESKTOP_CALLBACK_FLAG) === "1") {
     return NextResponse.redirect(
@@ -78,9 +78,9 @@ export async function GET(request: NextRequest) {
   const otpType = parseOtpType(searchParams.get("type"));
   const next = sanitizeInternalRedirectPath(searchParams.get("next"));
 
-  // Le provider (ou GoTrue) a refusé : il rebondit ici avec `error` en query —
-  // jamais de `code`. Distinguer le refus de consentement, qui n'est pas une
-  // panne, du reste (provider désactivé, redirect_uri non allowlistée…).
+  // The provider (or GoTrue) refused: it bounces here with `error` in query —
+  // never `code`. Distinguish between refusal of consent, which is not a
+  // failure, moreover (provider disabled, redirect_uri not allowed listed, etc.).
   const providerError = searchParams.get("error");
   if (providerError) {
     const description =
@@ -93,10 +93,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Lien e-mail : rien n'est consommé ici. Le jeton attend dans un cookie
-  // `httpOnly`, et `/auth/confirm` demande à qui de droit avant d'ouvrir quoi
-  // que ce soit. Le jeton ne reste PAS dans l'URL de l'interstitiel — inutile
-  // de le promener une fois de plus, dans un `Referer` cette fois.
+  // Email link: Nothing is consumed here. The token waits in a cookie
+  // `httpOnly`, and `/auth/confirm` asks who it may concern before opening what
+  // whatever. Token does NOT stay in interstitial URL — useless
+  // to walk him once more, in a `Referer` this time.
   if (!code && tokenHash && otpType) {
     const response = NextResponse.redirect(`${origin}/auth/confirm`);
     response.cookies.set(
@@ -116,9 +116,9 @@ export async function GET(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      // `Secure` sur les cookies de session : le paquet ne le pose pas
-      // (MIN-351, lib/session-cookies.ts). Ici comme dans `cookieOptions` —
-      // c'est cet adaptateur-ci qui écrit, et il reçoit ses options du client.
+      // `Secure` on session cookies: the package does not set it
+      // (MIN-351, lib/session-cookies.ts). Here as in `cookieOptions` —
+      // it is this adapter that writes, and it receives its options from the client.
       cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll() {

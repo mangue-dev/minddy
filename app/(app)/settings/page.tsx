@@ -40,10 +40,10 @@ export default function AccountSettingsPage() {
   const t = useTranslations("Account");
   const tAutomations = useTranslations("Automations");
   const { user } = useAuth();
-  // La pastille d'attention de l'onglet « Sécurité » (MIN-132) : tant que la 2FA
-  // est inactive, la recommandation doit être visible depuis les autres onglets.
-  // Sans ça elle n'existe que pour qui pense à aller la chercher — c'est-à-dire
-  // pour qui n'en a pas besoin.
+  // The attention badge of the “Security” tab (MIN-132): as long as 2FA
+  // is inactive, the recommendation must be visible from the other tabs.
+  // Without that it only exists for those who think to look for it — that is to say
+  // for those who don't need it.
   const { status: mfa } = useMfaStatusQuery();
 
   // The sections read the account; hold off until it resolves.
@@ -56,7 +56,7 @@ export default function AccountSettingsPage() {
       icon: User,
       content: <AccountProfileSection />,
     },
-    // Juste après le profil : qui je suis, puis comment on entre chez moi.
+    // Just after the profile: who I am, then how to get into my home.
     {
       value: "security",
       label: t("securityTab"),
@@ -68,8 +68,8 @@ export default function AccountSettingsPage() {
       value: "preferences",
       label: t("preferencesTab"),
       icon: SlidersHorizontal,
-      // La carte de l'app de bureau se rend d'elle-même à `null` ailleurs
-      // (navigateur, dév) : elle n'a donc pas de condition ici.
+      // Desktop app map goes to `null` elsewhere
+      // (browser, dev): so it has no conditions here.
       content: (
         <>
           <AccountPreferencesSection />
@@ -83,8 +83,8 @@ export default function AccountSettingsPage() {
       icon: IterationCw,
       content: <AccountCyclesSection />,
     },
-    // Les automatisations juste après les cycles : les deux disent comment le
-    // travail avance tout seul, l'un pour moi, l'autre pour l'agent.
+    // Automations just after the cycles: both say how the
+    // work progresses on its own, one for me, the other for the agent.
     {
       value: "automations",
       label: tAutomations("title"),
@@ -95,9 +95,9 @@ export default function AccountSettingsPage() {
       value: "inbox",
       label: t("inboxTab"),
       icon: Inbox,
-      // CE QUI atterrit dans l'inbox d'abord, OÙ ça sonne ensuite (MIN-183) :
-      // les appareils push n'ont de sens qu'une fois les catégories choisies,
-      // et c'est la même bascule qui gouverne les deux surfaces.
+      // WHAT lands in the inbox first, WHERE it rings next (MIN-183):
+      // push devices only make sense once the categories are chosen,
+      // and it is the same rocker which governs the two surfaces.
       content: (
         <>
           <AccountNotificationsSection />
@@ -120,10 +120,10 @@ export default function AccountSettingsPage() {
       value: "git",
       label: t("gitTab"),
       icon: GitBranch,
-      // Une seule carte : l'installation de l'App que les projets réutilisent
-      // pour lier un dépôt, et le compte sous lequel VOUS agissez sur une PR
-      // (MIN-144), sont deux niveaux du même compte de forge. Séparés, ils
-      // s'obligeaient à se citer l'un l'autre pour être compris.
+      // A single card: the installation of the App that the projects reuse
+      // to link a deposit, and the account under which YOU act on a PR
+      // (MIN-144), are two levels of the same forge account. Separated, they
+      // forced themselves to quote each other to be understood.
       content: <AccountGitConnectionsSection />,
     },
     {
@@ -132,16 +132,16 @@ export default function AccountSettingsPage() {
       icon: Bot,
       content: <AccountAiKeysSection />,
     },
-    // Dernier onglet : l'export et la suppression du compte (MIN-119). C'est
-    // là qu'on va quand on part, pas là qu'on passe tous les jours.
+    // Last tab: export and deletion of the account (MIN-119). It is
+    // where we go when we leave, not where we pass every day.
     {
       value: "data",
       label: t("dataTab"),
       icon: ShieldCheck,
       content: (
         <>
-          {/* La mesure d'audience avant l'export et la suppression : c'est le
-              seul réglage de cet onglet qu'on vient CHANGER plutôt que subir. */}
+          {/* Audience measurement before export and deletion: this is the
+ only setting of this tab that we just CHANGE rather than undergo. */}
           <AccountAnalyticsSection />
           <AccountDataSection />
         </>

@@ -8,24 +8,24 @@ import type {
 } from "@/lib/types";
 
 /**
- * Ce que la vue partagée (`/share/[token]`) a le droit de faire traverser la
- * frontière serveur → client (MIN-342).
+ * What the shared view (`/share/[token]`) has the right to cross the
+ * server → client border (MIN-342).
  *
- * Le défaut corrigé ici n'est pas « deux champs de trop » : c'est le MOTIF.
- * Un composant serveur sérialise dans le HTML de la page tout ce qu'il passe à
- * un composant client, mot pour mot. Passer l'objet complet parce qu'il est
- * sous la main, c'est publier des colonnes qu'on n'a jamais décidé de publier —
- * ici le `plan` de chaque ticket, et la table des objectifs du projet en
- * entier, sur une page anonyme qui n'en montre aucun.
+ * The defect corrected here is not "two fields too many": it is the REASON.
+ * A server component serializes into the HTML of the page whatever it passes to
+ * a client component, verbatim. Passing the complete object because it is
+ * at hand, means publishing columns that we never decided to publish —
+ * here the `plan` of each ticket, and the table of project objectives in
+ * entire, on an anonymous page which does not show any.
  *
- * Une projection explicite renverse la charge : ce qui sort est une liste
- * fermée, écrite ici, et un champ neuf sur `Issue` ne s'y invite pas tout seul.
- * C'est aussi ce que le test lit — et, plus sûrement encore, ce que la
- * vérification cherche dans le HTML rendu.
+ * An explicit projection reverses the load: what comes out is a closed list
+ *, written here, and a new field on `Issue` does not prompt itself.
+ * This is also what the test reads — and, even more surely, what the
+ * check looks for in the HTML rendered.
  */
 
-/** Le ticket, réduit à ce qu'une carte affiche. `plan` n'y est pas : la carte
-    n'en tire que l'avancement, et l'avancement n'est pas ce qu'on publie. */
+/** The ticket, reduced to what a card displays. `plan` is not there: the
+ card only draws advancement, and advancement is not what is published. */
 export function toPublicIssue(issue: Issue): IssueCardIssue {
   return {
     id: issue.id,
@@ -48,8 +48,8 @@ export function toPublicIssue(issue: Issue): IssueCardIssue {
   };
 }
 
-/** L'objectif, réduit à sa pastille et à son nom — sans sa description, son
-    échéance, ni qui le porte. */
+/** The objective, reduced to its badge and its name - without its description, its
+ expiration, or who wears it. */
 export function toPublicObjective(objective: Objective): IssueCardObjective {
   return { id: objective.id, name: objective.name, color: objective.color };
 }
@@ -59,9 +59,9 @@ export function toPublicCategory(category: Category): IssueCardCategory {
 }
 
 /**
- * Les objectifs QUE LES CARTES CITENT, et eux seuls. La page en montrait la
- * table complète du projet — y compris ceux qu'aucun ticket visible ne porte,
- * donc y compris ceux que le filtre de la vue avait justement écartés.
+ * The objectives THAT THE CARDS LIST, and them alone. The page showed the
+ * complete table of the project — including those that no visible ticket carries,
+ * therefore including those that the view filter had precisely excluded.
  */
 export function publicObjectivesFor(
   objectives: Objective[],
@@ -73,7 +73,7 @@ export function publicObjectivesFor(
   return objectives.filter((o) => cited.has(o.id)).map(toPublicObjective);
 }
 
-/** Même règle pour les catégories : seules celles qu'une carte peut peindre. */
+/** Same rule for categories: only those that a card can paint. */
 export function publicCategoriesFor(
   categories: Category[],
   issues: Pick<IssueCardIssue, "category_ids">[]
